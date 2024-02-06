@@ -9,6 +9,32 @@
 
 namespace spk
 {
+	/**
+	 * @brief Template class for generating pseudo-random values of a specified numeric type within a given range.
+	 *
+	 * This class leverages a custom pseudo-random number generation algorithm to produce values for various use
+	 * cases, including procedural generation, simulations, and any scenario requiring randomized numeric outputs.
+	 * It supports integral and floating-point types as template parameters and allows customization of the seed,
+	 * range, and precision (for floating-point types).
+	 *
+	 * The generator can produce values based on 2D or 3D coordinates, making it particularly useful for
+	 * applications like noise generation, texture variation, or spatially dependent random events.
+	 * The class ensures that results are reproducible by using a consistent seed and algorithmic approach.
+	 *
+	 * Usage example:
+	 * @code
+	 * spk::PseudoRandomGenerator<float> prg;
+	 * prg.configureRange(0.0f, 1.0f);
+	 * prg.configurePrecision(2);
+	 * float randomValue = prg.sample(42, 13); // Generate a random float between 0.0 and 1.0
+	 * @endcode
+	 *
+	 * @tparam TGeneratedType The numeric type of the values to be generated. Must be an arithmetic type.
+	 * 
+	 * @note The precision configuration is applicable only to floating-point types and dictates the number of decimal places in generated values.
+	 * 
+	 * @see IVector2, IVector3
+	 */
 	template < typename TGeneratedType = int >
 	class PseudoRandomGenerator
 	{

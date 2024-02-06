@@ -11,6 +11,34 @@
 
 namespace spk
 {
+	/**
+	 * @brief Represents a sprite renderer component for rendering sprites in world space.
+	 * 
+	 * This class allows you to create a sprite renderer component that can be attached to game objects.
+	 * It provides settings for specifying the mesh, sprite sheet, sprite, and sprite animation to render.
+	 * 
+	 * Usage example:
+	 * @code
+	 * // Create an object to hold the sprite renderer.
+	 * spk::GameObject gameObject("SpriteObject");
+	 * 
+	 * // Create a sprite renderer component
+	 * SpriteRenderer* spriteRenderer = gameObject.addComponent<spk::SpriteRenderer>("MySpriteRenderer");
+	 * 
+	 * // Set the mesh for rendering the sprite
+	 * spriteRenderer->setMesh(&spk::SpriteRenderer::defaultMesh);
+	 * 
+	 * // Set the sprite sheet and sprite ID
+	 * spriteRenderer->setSpriteSheet(&mySpriteSheet);
+	 * spriteRenderer->setSprite(spk::Vector2UInt(0, 0));
+	 * 
+	 * // Set the sprite animation (optional)
+	 * spriteRenderer->setSpriteAnimation(&mySpriteAnimation);
+	 * @endcode
+	 * 
+	 * @see GameComponent, GameObject, Texture, SpriteAnimation, IVector2
+	 */
+
 	class SpriteRenderer : public spk::GameComponent
 	{
 	public:

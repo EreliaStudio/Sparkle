@@ -12,6 +12,27 @@
 
 namespace spk
 {
+    /**
+     * @brief Manages the rendering pipeline, including shader programs, uniforms, and objects.
+     *
+     * The Pipeline class orchestrates the rendering process by managing shader programs,
+     * uniform variables, and drawable objects. It supports loading shader instructions, defining
+     * uniform structures, and creating objects with specific attributes and textures.
+     * 
+     * The Pipeline facilitates communication with the GPU using OpenGL, allowing for efficient rendering of graphics.
+     * 
+     * Pipeline code must be writed in Lumina code.
+     *
+     * Usage example:
+     * @code
+     * spk::Pipeline pipeline(shaderCode);
+     * auto& constant = pipeline.constant("MyConstant");
+     * auto object = pipeline.createObject();
+     * object.render();
+     * @endcode
+     *
+     * @see Pipeline::Object, Pipeline::Constant, Pipeline::Texture, Lumina (TODO)
+     */
     class Pipeline
     {    
     private:
@@ -42,9 +63,32 @@ namespace spk
 
 	    void _loadStructureFromInstructions(const std::vector<OpenGL::ShaderInstruction>& p_instructions);
 
+        /**
+         * @brief Encapsulates a uniform buffer object (UBO) for Pipeline::Constants and Object::Attribute.
+         *
+         * This class manages a block of memory that stores uniform variables for use in a shader program.
+         * 
+         * It provides a way to set individual uniform values within a structured layout, handling the
+         * underlying OpenGL buffer object creation, data storage, and updating.
+         *
+         * Usage example: See Pipeline::Constant or Pipeline::Object::Attribute
+         *
+         * @see Pipeline::Structure, Pipeline::UniformObject::Element, Pipeline::Constants and Object::Attribute
+         */
         class UniformObject
         {
         public:
+            /**
+             * @brief Provides access and manipulation capabilities for elements within a UniformObject structure.
+             *
+             * This class allows for setting and getting values of specific elements within a UniformObject, using the structure's layout information. It supports type-safe assignments and retrieval of uniform values, ensuring data integrity when communicating with the shader program.
+             *
+             * Usage example:
+             * @code
+             * spk::Pipeline::UniformObject::Element element = uniformObject["elementName"];
+             * element = newValue;
+             * @endcode
+             */
             class Element
             {
                 friend class UniformObject;
@@ -75,6 +119,15 @@ namespace spk
                 }
             };
 
+            /**
+             * @brief Describes the layout of a uniform object, including its type, binding, and structure.
+             *
+             * This struct is used to define the layout and binding information of uniform blocks within the shader programs.
+             * It specifies the uniform's name, its binding point in the shader, and a reference to the structure
+             * defining its internal layout.
+             *
+             * Usage example: Not directly instantiated by users, used internally by Pipeline to organize uniforms.
+             */
             struct Layout
             {
                 std::string type;
@@ -117,7 +170,27 @@ namespace spk
         };
 
     public:
-
+        /**
+         * @brief Specializes UniformObject for managing global constants in Pipeline.
+         *
+         * This class is a specialization of UniformObject designed for handling
+         * global shader constants that do not change per object or draw call.
+         * 
+         * It simplifies the process of managing constants that are common across
+         * multiple objects or the entire render pipeline.
+         *
+         * Usage example:
+         * @code
+         * spk::Pipeline::Constant& constant = pipeline.constant("MyConstant");
+         * constant["myValue"] = 42;
+         * constant.push();
+         * @endcode
+         * 
+         * @note Constant sharing the same name are shared by all Pipeline created, allowing
+         * to use Constant already pushed and configured by the user or Sparkle.
+         * 
+         * @see Pipeline::UniformObject for more information
+         */
         class Constant : public UniformObject
         {
             friend class Pipeline;
@@ -144,16 +217,53 @@ namespace spk
             }
         };
 
+        /**
+         * @brief Represents a drawable object within the Pipeline, including geometry and attributes.
+         *
+         * This class is responsible for managing the vertex array object (VAO), vertex buffer object (VBO),
+         * and any associated attributes or textures.
+         * 
+         * It encapsulates the geometry (vertices and indices) and provides methods to set attribute
+         * values and draw the object using the Pipeline that created the Object.
+         *
+         * Usage example:
+         * @code
+         * spk::Pipeline::Object object = pipeline.createObject();
+         * object.setVertices(myVertices);
+         * object.setAttribute("MyAttribute", value);
+         * object.render();
+         * @endcode
+         * 
+         * @see Pipeline::Object::Attribute
+         */
         class Object
         {
             friend class Pipeline;
 
         public:
+            /**
+             * @brief Manages the storage for vertex and index buffers associated with a drawable object.
+             *
+             * The Storage class encapsulates vertex and index data for an Object, handling the creation
+             * and management of vertex buffer objects (VBOs) and element buffer objects (EBOs).
+             * It supports the setup of vertex attributes based on a defined layout.
+             *
+             * Usage example: Not directly instantiated by users, used internally by Object.
+             */
             class Storage
             {
                 friend class Object;
                 
             public:
+                /**
+                 * @brief Defines the layout of vertex data for the Storage class, including stride and element information.
+                 *
+                 * This structure specifies how vertex data is organized, including the stride between vertices and
+                 * details about each vertex attribute (e.g., position, normal, texture coordinates).
+                 * It is critical for setting up the vertex attribute pointers correctly in OpenGL.
+                 *
+                 * Usage example: Not directly instantiated by users, used internally by Object::Storage.
+                 */
                 struct Layout
                 {
                     struct Element
@@ -205,6 +315,15 @@ namespace spk
                 void deactivate();
             };
 
+            /**
+             * @brief Specializes UniformObject for managing object-specific attributes in shaders.
+             *
+             * This class extends UniformObject to handle attributes specific to an Object, such as material properties or transformation matrices. It provides a mechanism to update these attributes individually, optimizing the rendering process.
+             *
+             * Usage example: Not directly instantiated by users, used internally by Object.
+             * 
+             * @see Pipeline::UniformObject for more information
+             */
             class Attribute : public UniformObject
             {
                 friend class Object;
@@ -277,11 +396,36 @@ namespace spk
         };
 
     public:
+        /**
+         * @brief Manages texture units and binding to shaders.
+         *
+         * This class handles the association of texture data with shader sampler uniforms.
+         * It allows for textures to be attached and activated within the rendering pipeline,
+         * making sure textures are correctly bound to their designated texture units
+         * and accessible within shader programs.
+         *
+         * Usage example:
+         * @code
+         * spk::Pipeline::Texture texture = pipeline.texture("MyTexture");
+         * texture.attach(myTexture);
+         * 
+         * //The texture will be automaticaly activated by the Pipeline when renderer
+         * @endcode
+         *
+         * @see spk::Texture
+         */
         class Texture
         {
             friend class Pipeline;
                         
         public:
+            /**
+             * @brief Defines the name and binding point for the Texture class.
+             *
+             * It is critical for setting up the sampler correctly in OpenGL.
+             *
+             * Usage example: Not directly instantiated by users, used internally by Pipeline::Texture.
+             */
             struct Layout
             {
                 std::string name;

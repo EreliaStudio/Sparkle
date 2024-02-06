@@ -7,6 +7,31 @@
 
 namespace spk
 {
+    /**
+     * @brief A template class for managing a pool of reusable objects of type TType.
+     * 
+     * The Pool class is designed to optimize resource allocation and reusability by maintaining
+     * a pool of preallocated objects of a specified type. It allows for efficient reuse of objects,
+     * reducing the overhead associated with frequent creation and destruction of objects.
+     *
+     * Objects are managed using `std::unique_ptr` with a custom deleter as, ensuring that objects are
+     * automatically returned to the pool when they go out of scope or are otherwise no longer needed.
+     * This mechanism simplifies memory management and helps to prevent memory leaks.
+     *
+     * The class uses a `std::recursive_mutex` to ensure thread safety, making it suitable for use
+     * in multithreaded applications where objects from the pool may be obtained or returned by
+     * multiple threads concurrently.
+     *
+     * Usage:
+     * @code
+     * spk::Pool<MyClass> myPool(10); // Create a pool with 10 pre-allocated objects
+     * 
+     * spk::Pool<MyClass>::Object myObject = myPool.obtain(); // Obtain an object from the pool
+     * // Use myObject as needed; it will be automatically returned to the pool once out of scope
+     * @endcode
+     *
+     * @tparam TType The type of objects to be managed by the pool.
+     */
     template<typename TType>
     class Pool
 	{

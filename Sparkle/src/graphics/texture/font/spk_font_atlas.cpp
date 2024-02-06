@@ -1,4 +1,5 @@
 #include "graphics/texture/font/spk_font.hpp"
+#include <array>
 
 namespace spk
 {
@@ -55,11 +56,41 @@ namespace spk
 			Texture::Wrap::Repeat, Texture::Mipmap::Disable);
 	}
 
-	const Font::Atlas::GlyphData &Font::Atlas::glyph(const char &p_char) const
+	std::string wstringToString(const std::wstring& wstr)
+	{
+		const size_t BUFF_SIZE = 7;
+		std::string result;
+
+		for (const wchar_t wc : wstr)
+		{
+			std::array<char, BUFF_SIZE> buffer;
+			int retLength = 0;
+			errno_t err = wctomb_s(&retLength, buffer.data(), buffer.size(), wc);
+
+			if (err != 0)
+			{
+				throw std::runtime_error("Failed to convert wchar_t to char using wctomb_s.");
+			}
+
+			result.append(buffer.data(), retLength - 1);
+		}
+		return result;
+	}
+
+	const Font::Atlas::GlyphData &Font::Atlas::glyph(const wchar_t &p_char) const
 	{
 		if (_glyphDatas.size() < static_cast<size_t>(p_char))
-			throwException("Char [" + std::string(1, p_char) + "](dec : " + std::to_string(static_cast<size_t>(p_char)) + ") cannot be rendered : it doesn't exist in Font [" + _fontConfiguration.fileName() + "]");
+		{
+			std::string charStr = wstringToString(std::wstring(1, p_char));
+			std::string errorMessage = "Char [" + charStr + "](dec : " + std::to_string(static_cast<size_t>(p_char)) + ") cannot be rendered : it doesn't exist in Font [" + _fontConfiguration.fileName() + "]";
+			throwException(errorMessage);
+		}
 		return (_glyphDatas[static_cast<size_t>(p_char)]);
+	}
+
+	const Font::Atlas::GlyphData &Font::Atlas::operator [](const wchar_t &p_char) const
+	{
+		return (glyph(p_char));
 	}
 
 	const Texture &Font::Atlas::texture() const

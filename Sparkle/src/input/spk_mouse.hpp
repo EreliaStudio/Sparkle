@@ -5,6 +5,42 @@
 
 namespace spk
 {
+	/**
+	 * @brief Manages mouse input, including button states, position, and wheel movement.
+	 *
+	 * This class tracks the state of mouse buttons (pressed, released, up, down), the position of the mouse cursor, and the movement of the mouse wheel. It provides methods to update these states based on input events, making it suitable for integrating mouse-based interaction within applications.
+	 *
+	 * The Mouse class supports a fixed number of buttons and uses an enum to identify these buttons for clarity in handling their state. The position and wheel movement are represented as two-dimensional vectors, allowing for detailed tracking of cursor movement and scroll wheel usage.
+	 *
+	 * Usage example:
+	 * @code
+	 * const spk::Mouse& mouse = myApplication.mouse();
+	 *
+	 * //Getting the mouse position
+	 * spk::Vector2Int mousePosition = mouse.position();
+	 * 
+	 * // Checking button state
+	 * if (mouse.getButton(spk::Mouse::Button::Left) == spk::InputState::Pressed) {
+	 *     // Respond to left button press
+	 * }
+	 *
+	 * // Reading cursor movement
+	 * spk::Vector2Int deltaPosition = mouse.deltaPosition();
+	 * if (deltaPosition != spk::Vector2Int(0, 0)) {
+	 *     // Handle cursor movement
+	 * }
+	 *
+	 * // Handling wheel scrolling
+	 * spk::Vector2Int wheelMovement = mouse.wheel();
+	 * if (wheelMovement.y != 0) {
+	 *     // Scroll content based on wheel movement
+	 * }
+	 * @endcode
+	 *
+	 * @note This class is hold by spk::Application, and accessible from anywhere in the code as const Mouse& via spk::Application::activeApplication()->mouse().
+	 * 
+	 * @see Application, InputState, Vector2Int
+	 */
 	class Mouse
 	{
 	public:

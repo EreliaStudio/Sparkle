@@ -5,6 +5,28 @@
 
 namespace spk
 {
+	/**
+	 * @brief Represents a game object in the game engine hierarchy.
+	 * 
+	 * This class represents a fundamental building block in a game engine hierarchy. It combines the features
+	 * of an activatable object and a tree node, allowing for the creation of hierarchical structures of game objects.
+	 * GameObjects can have child objects, components, and transformations.
+	 * 
+	 * Usage example:
+	 * @code
+	 * spk::GameObject parentObject("Parent");
+	 * spk::GameObject childObject("Child", &parentObject);
+	 * 
+	 * // Adding a custom component to a game object
+	 * MyCustomComponent* customComponent = parentObject.addComponent<MyCustomComponent>("CustomComponent");
+	 * 
+	 * // Accessing and manipulating the game object's transformation
+	 * spk::Transform& transform = parentObject.transform();
+	 * transform.translate({1.0f, 2.0f, 3.0f});
+	 * @endcode
+	 * 
+	 * @see ActivableObject, TreeNode, GameComponent, Transform
+	 */
 	class GameObject : public spk::ActivateObject, public spk::TreeNode<GameObject>
 	{
 		friend class GameEngine;

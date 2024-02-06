@@ -7,6 +7,38 @@
 
 namespace spk
 {
+	/**
+	 * @brief Manages keyboard input states and character input for an application.
+	 *
+	 * This class provides functionality to track the state of individual keys on the keyboard,
+	 * including whether they are currently pressed, released, up, or down. It also handles
+	 * character input, allowing for the capture of typed characters in a thread-safe manner
+	 * using atomic operations.
+	 *
+	 * The Keyboard class defines an enum for key codes that represent various keyboard keys,
+	 * including alphanumeric keys, function keys, control keys, and more.
+	 * This enables the application to respond to specific key events and manage
+	 * keyboard-based interaction efficiently.
+	 *
+	 * Usage example:
+	 * @code
+	 * const spk::Keyboard& keyboard = myApplication.keyboard();
+	 * 
+	 * // In an input handling loop
+	 * if (keyboard.getKey(spk::Keyboard::Key::A) == spk::InputState::Pressed) {
+	 *     // Respond to 'A' key press
+	 * }
+	 * 
+	 * wchar_t typedChar = keyboard.getChar();
+	 * if (typedChar != L'\0') {
+	 *     // Handle character input
+	 * }
+	 * @endcode
+	 *
+	 * @note This class is hold by spk::Application, and accessible from anywhere in the code as const Keyboard& via spk::Application::activeApplication()->keyboard().
+	 * 
+	 * @see Application, InputStatus
+	 */
 	class Keyboard
 	{
 	public:

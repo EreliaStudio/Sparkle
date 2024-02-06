@@ -4,6 +4,28 @@
 
 namespace spk
 {
+	/**
+	 * @brief A generic tree node class for building hierarchical structures.
+	 * 
+	 * The TreeNode class represents a node in a hierarchical structure, such as a tree. It provides
+	 * functionality for managing parent-child relationships within the structure. Each node can have
+	 * only one parent and zero or more children.
+	 * 
+	 * This class is designed to be a base class for creating hierarchical data structures in various
+	 * applications, including scene graphs, organization charts, or other tree-based data representations.
+	 * 
+	 * Usage example:
+	 * @code
+	 * spk::TreeNode<MyTreeNodeType> parentNode;
+	 * spk::TreeNode<MyTreeNodeType> childNode1;
+	 * spk::TreeNode<MyTreeNodeType> childNode2;
+	 * 
+	 * parentNode.addChild(&childNode1);
+	 * parentNode.addChild(&childNode2);
+	 * @endcode
+	 * 
+	 * @tparam TType The type of the tree nodes, typically a derived class.
+	 */
 	template<typename TType>
 	class TreeNode
 	{

@@ -8,22 +8,56 @@
 
 namespace spk
 {
-  /**
-   * @brief Notifier allows creating Contracts by subscribing a Callback.
-   * @details Notifier and Contracts are thread-safe.
-   * All contracts are cancelled if the Notifier is destroyed.
-   */
+    /**
+     * @brief Manages a list of subscribers (via callbacks) and notifies them uppon request.
+     * 
+     * The Notifier class is designed to handle event notification to a set of subscribers. It allows
+     * subscribers to register callback functions that should be called when a specific event occurs.
+     * Subscribers receive a `Contract` object upon subscription, which can be used to manage their
+     * subscription status, including cancellation, pausing, and resuming notifications.
+     *
+     * This class supports moving but not copying to ensure that the notifier and its subscriptions
+     * remain uniquely associated with a specific context.
+     *
+     * Usage example:
+     * @code
+     * spk::Notifier notifier;
+     * auto contract = notifier.subscribe([]{ std::cout << "Event occurred!" << std::endl; });
+     * notifier.notify_all(); // Triggers the callback
+     * @endcode
+     *
+     * @note The Notifier class is thread-safe and ensures that subscription management and event
+     * notification can safely occur from multiple threads.
+     */
     class Notifier
     {
     public:
         using Callback = std::function<void()>;
 
         /**
-         * @brief The Contract represents the subscription to the Notifier.
-         * @details A Contract is valid until it is cancelled. The Contract
-         * cancels itself if it is destroyed.
-         * All of its methods are guaranteed to be safe even after the Notifier
-         * has been destroyed.
+         * @brief Represents a subscription contract between a subscriber and a Notifier.
+         * 
+         * The Contract class encapsulates the relationship between a subscriber and the Notifier, providing
+         * mechanisms to manage the subscription. It allows subscribers to cancel their subscription,
+         * pause and resume notifications, and check their current subscription status.
+         *
+         * Upon subscription to a Notifier, subscribers receive a unique Contract object that must be kept
+         * alive as long as the subscription should remain active. The Contract ensures that callbacks are
+         * not called after it is canceled or while it is paused.
+         *
+         * Usage example:
+         * @code
+         * spk::Notifier notifier;
+         * auto contract = notifier.subscribe([]{ std::cout << "Notification received." << std::endl; });
+         * contract->pause(); // Temporarily stops notifications
+         * contract->resume(); // Resumes notifications
+         * contract->cancel(); // Cancels the subscription
+         * @endcode
+         *
+         * @note The Contract class is designed to be used in conjunction with the Notifier class and is
+         * thread-safe, allowing subscription management from multiple threads.
+         * 
+	     * @see Notifier
          */
         class Contract
         {

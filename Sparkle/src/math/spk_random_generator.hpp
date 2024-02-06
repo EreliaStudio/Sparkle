@@ -5,6 +5,32 @@
 
 namespace spk
 {
+	/**
+	 * @brief Template class for generating random values of a specified numeric type within a given range.
+	 *
+	 * This class offers a versatile random number generation capability for various numeric types,
+	 * supporting both integral and floating-point values. It utilizes the C++ `<random>` library to
+	 * ensure high-quality and statistically uniform random values. Users can customize the seed and range
+	 * to control the behavior of the generator.
+	 *
+	 * The generator employs different distribution types based on the numeric type chosen.
+	 * For integral types, it uses `std::uniform_int_distribution`, while for floating-point types, it
+	 * uses `std::uniform_real_distribution`. This design ensures that random values are generated appropriately
+	 * for each type.
+	 *
+	 * Usage example:
+	 * @code
+	 * spk::RandomGenerator<float> rng;
+	 * rng.configureSeed(42);
+	 * rng.configureRange(0.0f, 1.0f);
+	 * float randomValue = rng.sample(); // Generate a random float between 0.0 and 1.0
+	 * @endcode
+	 *
+	 * @tparam TGeneratedType The numeric type of the values to be generated. Must be an arithmetic type.
+	 *
+	 * @note The configuration options, such as seed and range, provide control over the randomness of generated values, making this class suitable for various applications requiring random data.
+	 */
+
 	template < typename TGeneratedType = int >
 	class RandomGenerator
 	{

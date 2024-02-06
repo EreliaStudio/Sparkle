@@ -28,6 +28,33 @@
 
 namespace spk
 {
+	/**
+	 * @class Application
+	 * @brief Manages a graphical application lifecycle and central functionalities such as time, mouse or keyboard handling.
+	 *
+	 * The Application class serves as the core of the Sparkle library, orchestrating the application lifecycle,
+	 * managing the main event loop, and facilitating graphics rendering and event handling. It supports both
+	 * monothreaded and multithreaded modes of operation for flexibility in application development.
+	 *
+	 * Features include:
+	 * - Window creation and management using OpenGL for rendering.
+	 * - Event handling for keyboard and mouse input.
+	 * - Time metrics collection.
+	 * - Profiling for performance analysis.
+	 *
+	 * The Application class is designed to be the starting point for applications using the Sparkle library,
+	 * allowing developers to easily create, manage, and render graphics content while handling user input
+	 * and other application events via the Sparkle IWidget system.
+	 *
+	 * Usage example:
+	 * @code
+	 * spk::Application app("Example App", spk::Vector2UInt(800, 600), spk::Application::Mode::Monothread);
+	 * 
+	 * return (app.run());
+	 * @endcode
+	 *
+	 * @see IWidget, Pipeline, Keyboard, Mouse, TimeMetrics, Profiler
+	 */
 	class Application
 	{
 	private:

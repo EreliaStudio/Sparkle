@@ -15,7 +15,23 @@
 
 namespace spk
 {
-
+	/**
+	 * @brief A 2D vector template class for storing and manipulating 2D point coordinates.
+	 *
+	 * This template class provides functionality for working with 2D vectors, commonly
+	 * used for representing 2D point coordinates or directions in space.
+	 * It supports various arithmetic and geometric operations, including addition,
+	 * subtraction, dot product, normalization, and more.
+	 *
+	 * Usage example:
+	 * @code
+	 * spk::IVector2<float> point(3.0f, 4.0f);
+	 * float length = point.norm(); // Calculate the length of the vector
+	 * spk::IVector2<float> normalized = point.normalize(); // Normalize the vector
+	 * @endcode
+	 *
+	 * @tparam TType The numeric type used to represent the vector's components. It must be an arithmetic type (e.g., int, float, double).
+	 */
 	template <typename TType>
 	struct IVector2
 	{

@@ -14,6 +14,31 @@ namespace spk
 {
 	class Pipeline;
 
+	/**
+	 * @brief Manages texture data for use in rendering pipelines.
+	 *
+	 * This class encapsulates the functionality required to handle texture images, including loading them
+	 * into GPU memory, setting their format, filtering modes, wrapping modes, and managing mipmaps.
+	 * It supports various formats for texture data, such as RGB, RGBA, and greyscale, and provides options
+	 * for how textures are sampled and how their edges are treated.
+	 *
+	 * Textures are essential for adding detail to rendered objects by applying image data to their
+	 * surfaces. This class provides a straightforward interface for creating textures from image data,
+	 * configuring their properties, and binding them for use in rendering operations.
+	 *
+	 * Usage example:
+	 * @code
+	 * spk::Texture texture(imageData, imageSize, spk::Texture::Format::RGBA, 
+	 *                      spk::Texture::Filtering::Linear, spk::Texture::Wrap::Repeat, 
+	 *                      spk::Texture::Mipmap::Enable);
+	 * texture.uploadToGPU();
+	 * @endcode
+	 *
+	 * @note Before a texture can be used in rendering, it must be uploaded to GPU memory using the `uploadToGPU` method.
+	 * @note If data have been pushed to the GPU, it will be automaticaly release uppon destructor call or uppon re-upload to GPU.
+	 *
+	 * @see Pipeline, Vector2UInt
+	 */
 	class Texture
 	{
 	public:

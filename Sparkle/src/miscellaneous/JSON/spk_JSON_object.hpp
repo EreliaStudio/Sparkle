@@ -14,6 +14,28 @@ namespace spk
 {
 	namespace JSON
 	{
+		/**
+		 * @brief Represents a JSON object for serialization and deserialization.
+		 *
+		 * The Object class provides a versatile structure to represent JSON data, supporting
+		 * various types such as booleans, numbers, strings, nested objects, and arrays.
+		 * It offers functionality to dynamically add, modify, and query the structure of the
+		 * JSON object, making it suitable for complex data manipulation.
+		 *
+		 * This class facilitates the construction and manipulation of JSON data, allowing
+		 * for the creation of structured JSON objects and arrays. It supports serialization
+		 * to and deserialization from string representations of JSON, thereby enabling the
+		 * integration with external systems or storage in human-readable format.
+		 *
+		 * Usage example:
+		 * @code
+		 * spk::JSON::Object myObject;
+		 * myObject.addAttribute("key").set<std::string>("value"); // Adds an attribute "key" with string value "value"
+		 * std::cout << myObject; // Serializes and outputs the JSON object
+		 * @endcode
+		 *
+		 * @note This class uses dynamic memory allocation for nested objects and arrays to manage the JSON structure efficiently. It provides mechanisms to check the type of a contained value, resize arrays, and access nested objects or array elements through overloads of the subscript operator.
+		 */
 		class Object
 		{
 		public:

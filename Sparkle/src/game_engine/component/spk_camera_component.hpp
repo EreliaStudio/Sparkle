@@ -6,6 +6,40 @@
 
 namespace spk
 {
+	/**
+	 * @brief Represents a camera component for rendering scenes.
+	 * 
+	 * This class is responsible for defining a camera component that can be attached to game objects.
+	 * It provides various settings such as camera type (Orthographic or Perspective), field of view (FOV),
+	 * aspect ratio, near and far planes, and orthographic size.
+	 * 
+	 * Usage example:
+	 * @code
+	 * //Create an object to hold the camera.
+	 * spk::GameObject gameObject("CameraObject");
+	 * 
+	 * // Create a camera component
+	 * Camera* camera = gameObject.addComponent<spk::Camera>("MainCamera");
+	 * 
+	 * // Set camera type to Perspective
+	 * camera->setType(Camera::Type::Perspective);
+	 * 
+	 * // Set camera FOV and aspect ratio
+	 * camera->setFOV(60.0f);
+	 * camera->setAspectRatio(16.0f / 9.0f);
+	 * 
+	 * // Set near and far planes
+	 * camera->setNearPlane(0.1f);
+	 * camera->setFarPlane(100.0f);
+	 * 
+	 * // Set this camera as the main camera for rendering
+	 * camera->setAsMainCamera();
+	 * 
+	 * // The main camera will be automaticaly send to the cameraConstants attributes if included inside a Pipeline.
+	 * @endcode
+	 * 
+	 * @see GameComponent, GameObject, Pipeline, Pipeline::Constant
+	 */
 	class Camera : public GameComponent
 	{
 	public:

@@ -113,6 +113,8 @@ namespace spk
 		_fpsCounter(_profiler.metric<TriggerMetric>("FPSCounter")),
 		_upsCounter(_profiler.metric<TriggerMetric>("UPSCounter"))
 	{
+		if (_activeApplication == nullptr)
+			setAsActiveApplication();
 		_centralWidget.setGeometry(spk::Vector2Int(0, 0), size());
 		Viewport::_mainViewport = &(_centralWidget.viewport());
 		_creationComplete = true;

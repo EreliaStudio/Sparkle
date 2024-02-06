@@ -8,6 +8,58 @@
 
 namespace spk::WidgetComponent
 {
+    /**
+     * @brief A component for rendering text within the UI, supporting various alignments, styles, and outlines.
+     *
+     * TextLabel is a versatile UI component designed for displaying text within the SPK engine's widget system.
+     * It supports custom fonts, color, outlines, and alignment, making it suitable for a wide range of UI text rendering
+     * tasks. The component utilizes the SPK engine's rendering pipeline to efficiently render text using font atlases,
+     * ensuring high performance and quality.
+     *
+     * The class allows for detailed customization of text appearance, including font selection, size, color, outline style,
+     * and color. It provides alignment options both vertically (Top, Centered, Bottom) and horizontally (Left, Centered,
+     * Right), enabling precise control over text layout within its bounding box.
+     *
+     * Usage example:
+     * @code
+     * class MyCustomWidget : public spk::IWidget
+     * {
+     * private:
+     *     spk::WidgetComponent::TextLabel _label;
+     *
+     *     void _onGeometryChange() 
+     *     {
+     *         _label.setAnchor(spk::Vector2Int(0, 0));
+     *     }
+     * 
+     *     void _onRender() override
+     *     {
+     *         _label.render();
+     *     }
+     *
+     *     void _onUpdate()
+     *     {
+     * 
+     *     }
+     *
+     * public:
+     *     MyCustomWidget(const std::string& name, spk::IWidget* parent = nullptr) :
+     *         spk::IWidget(name, parent),
+     *         _label()
+     *     {
+     *         _label.setFont(myFont); // Assuming myFont is a preloaded Font instance
+     *         _label.setText("Hello, SPK!");
+     *         _label.setTextSize(24);
+     *         _label.setTextColor(spk::Color::White);
+     *         _label.setAnchor({10, 10});
+     *         _label.setVerticalAlignment(spk::VerticalAlignment::Centred);
+     *         _label.setHorizontalAlignment(spk::HorizontalAlignment::Centred);
+     *     }
+     * };
+     * @endcode
+     *
+     * @see Font, Pipeline
+     */
     class TextLabel
     {
     public:

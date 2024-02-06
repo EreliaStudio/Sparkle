@@ -7,6 +7,33 @@
 
 namespace spk
 {
+    /**
+     * @brief Represents a 4x4 matrix and provides a comprehensive set of operations for graphical
+     * transformations.
+     *
+     * This struct encapsulates a 4x4 matrix, offering basic matrix operations such as multiplication,
+     * inversion, and transposition, along with more specific transformation functions like translation,
+     * scaling, and rotation.
+     * 
+     * It is essential for 3D graphics programming, facilitating transformations in 3D space, including
+     * object positioning, scaling, rotation, and camera setups for perspective and orthogonal projections.
+     *
+     * The Matrix4x4 struct also defines static methods to create transformation matrices for common
+     * operations (e.g., lookAt, perspective, ortho) and supports direct multiplication with Vector3 to
+     * apply transformations.
+     *
+     * Usage example:
+     * @code
+     * spk::Matrix4x4 transform = spk::Matrix4x4::translationMatrix({1.0f, 2.0f, 3.0f}) *
+     *                            spk::Matrix4x4::rotationMatrix({0.0f, 0.0f, 1.0f}) *
+     *                            spk::Matrix4x4::scaleMatrix({1.0f, 2.0f, 3.0f});
+     * spk::Vector3 transformedPoint = transform * spk::Vector3{1.0f, 1.0f, 1.0f};
+     * @endcode
+     *
+     * @note The Matrix4x4 struct is designed for use in systems where performance and precision are crucial, such as real-time 3D rendering engines.
+     * 
+     * @see IVector3
+     */
 	struct Matrix4x4
     {
         float data[4][4] = {

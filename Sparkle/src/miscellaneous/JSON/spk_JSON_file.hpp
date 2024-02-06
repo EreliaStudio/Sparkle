@@ -10,6 +10,44 @@ namespace spk
 {
 	namespace JSON
 	{
+		/**
+		 * @brief Represents a utility class for reading and writing JSON files.
+		 *
+		 * This class provides a convenient interface for loading and saving JSON data
+		 * from/to files. It encapsulates a JSON object, allowing you to easily access
+		 * and manipulate JSON data within your C++ application.
+		 *
+		 * Usage example:
+		 * @code
+		 * // Create a File instance
+		 * spk::JSON::File jsonFile;
+		 * 
+		 * // Load JSON data from a file
+		 * jsonFile.load("example.json");
+		 * 
+		 * // Check if a key exists in the JSON data
+		 * if (jsonFile.contains("intValue"))
+		 * {
+		 *     // Access an integer value from the JSON data using operator[]
+		 *     const spk::JSON::Object& intValueObject = jsonFile["intValue"];
+		 *     
+		 *     // Use the as method to convert the value to an integer
+		 *     int intValue = intValueObject.as<int>();
+		 *     std::cout << "Integer Value: " << intValue << std::endl;
+		 * }
+		 * 
+		 * // Check if another key exists in the JSON data
+		 * if (jsonFile.contains("stringValue"))
+		 * {
+		 *     // Access a string value from the JSON data using operator[]
+		 *     const spk::JSON::Object& stringValueObject = jsonFile["stringValue"];
+		 *     
+		 *     // Use the as method to convert the value to a string
+		 *     std::string stringValue = stringValueObject.as<std::string>();
+		 *     std::cout << "String Value: " << stringValue << std::endl;
+		 * }
+		 * @endcode
+		 */
 		class File
 		{
 		private:

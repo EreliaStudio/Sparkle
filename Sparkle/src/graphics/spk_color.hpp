@@ -4,6 +4,28 @@
 
 namespace spk
 {
+    /**
+     * @brief Represents a color in RGBA format.
+     *
+     * This struct encapsulates a color using the RGBA color model, where R, G, B, and A represent the
+     * red, green, blue, and alpha (transparency) components of the color, respectively.
+     * It provides constructors for initializing a color from integer or floating-point values and
+     * supports basic color arithmetic operations such as addition and subtraction.
+     *
+     * The Color struct can be used to define colors for graphics rendering, user interface elements,
+     * or any other components requiring color specification. The alpha component allows for transparency
+     * effects, with a default value of 1.0f (fully opaque) when not specified.
+     *
+     * Usage example:
+     * @code
+     * spk::Color white(255, 255, 255); // Opaque white
+     * spk::Color semiTransparentRed(1.0f, 0.0f, 0.0f, 0.5f); // Semi-transparent red
+     *
+     * spk::Color mixedColor = white + semiTransparentRed; // Mix white and red
+     * @endcode
+     *
+     * @note Color components are clamped to the range [0, 255] for integers and [0.0f, 1.0f] for floating-point values.
+     */
     struct Color
     {
         float r;
