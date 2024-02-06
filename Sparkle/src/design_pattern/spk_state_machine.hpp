@@ -1,11 +1,11 @@
 #pragma once
 
+#include <iostream>
+#include <unordered_map>
+#include <functional>
+
 namespace spk
 {
-	#include <iostream>
-	#include <unordered_map>
-	#include <functional>
-
 	/**
 	 * @brief A generic state machine for managing states and associated actions.
 	 * 
