@@ -86,19 +86,21 @@ namespace spk
 		 */
 		struct Data
 		{
-			struct Vertex
-			{
-				Vector3 position;
-				Vector2 uvs;
-				Vector3 normal;
-			};
-
 			size_t vertexSize;
 			std::vector<float> vertexes;
 			std::vector<unsigned int> indexes;
 
 		private:
 			friend class Mesh;
+			friend class VertexHash;
+			friend class VertexEqual;
+			
+			struct Vertex
+			{
+				Vector3 position;
+				Vector2 uvs;
+				Vector3 normal;
+			};
 
 			void insert(const Vector2 &p_data);
 			void insert(const Vector3 &p_data);
