@@ -37,30 +37,4 @@ namespace spk
 		spk::Vector2Int frameOffset;
 		int lenght;
 	};
-
-	class SpriteAnimator
-	{
-	public:
-		using Callback = spk::Notifier::Callback;
-		using Contract = spk::Notifier::Contract;
-
-	private:
-		spk::Notifier _animationChangementNotifier;
-
-	public:
-		SpriteAnimator()
-		{
-
-		}
-
-		void activate(const std::string& p_animationName)
-		{
-
-		}
-
-		std::unique_ptr<Contract> subscribe(const Callback& p_callback)
-		{
-			return (_animationChangementNotifier.subscribe(p_callback));
-		}
-	};
 }

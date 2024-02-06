@@ -6,6 +6,33 @@
 
 namespace spk
 {
+	/**
+	 * @brief A thread-safe wrapper around std::deque, enabling safe access and modification across multiple threads.
+	 *
+	 * This template class provides synchronized access to a deque, ensuring that operations such as push, pop, and access
+	 * are safe to call from different threads. It uses mutexes to lock the deque during modifications and provides a
+	 * condition variable to facilitate waiting for new elements to be added when the deque is empty.
+	 *
+	 * Key functionalities include:
+	 * - Thread-safe push and pop operations at both ends of the deque.
+	 * - Access to the front and back elements with thread safety.
+	 * - Ability to wait for new elements when the deque is empty, making it suitable for producer-consumer scenarios.
+	 * - Size and empty checks, and a clear function to empty the deque.
+	 *
+	 * Usage example:
+	 * @code
+	 * spk::ThreadSafeDeque<int> myDeque;
+	 * // Producer thread
+	 * myDeque.push_back(42);
+	 *
+	 * // Consumer thread
+	 * myDeque.wait(); // Wait for an element to be available
+	 * auto value = myDeque.pop_front();
+	 * @endcode
+	 *
+	 * @note This class deletes the copy constructor to prevent accidental copying, which is not safe for a thread-safe container.
+	 * @note This class is expected to be re-done later on
+	 */
 	template <typename TType>
 	class ThreadSafeDeque
 	{
