@@ -76,6 +76,16 @@ namespace spk
 			Multithread
 		};
 
+		/**
+		 * @brief CentralWidget serves as the core widget in an application, managing time-based updates via a custom rendering pipeline.
+		 *
+		 * Usage:
+		 * CentralWidget is designed to be instantiated once and used as the root of an application's widget hierarchy. It
+		 * automatically becomes the default parent for other widgets, ensuring that all UI components can benefit from its
+		 * rendering capabilities and time-based updates.
+		 *
+		 * @note This widget is instancied automaticaly by the spk::Application, and isn't instanciable by any other object.
+		 */
 		class CentralWidget : public IWidget
 		{
 			friend class Application;
