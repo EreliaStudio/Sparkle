@@ -20,6 +20,22 @@ namespace spk::OpenGL
 		Float = GL_FLOAT
 	};
 
+    /**
+     * @brief Encapsulates an OpenGL Vertex Array Object (VAO), managing the state needed for rendering.
+     *
+     * VertexArrayObject simplifies the creation, binding, and deletion of VAOs, which are essential for modern OpenGL rendering. VAOs store
+     * the state needed to supply vertex data to the GPU, including bindings for vertex buffer objects (VBOs) and attribute settings.
+     *
+     * Usage example:
+     * @code
+     * VertexArrayObject vao;
+     * vao.activate();
+     * // Setup your VBOs and attribute pointers here
+     * vao.deactivate();
+     * @endcode
+	 * 
+	 * @note This class isn't suppose to be instanciated by the user, the documentation is provided only for informative propose.
+     */
 	class VertexArrayObject
 	{
 	private:
@@ -35,6 +51,24 @@ namespace spk::OpenGL
 		GLuint handle() const;
 	};
 
+    /**
+     * @brief Wraps an OpenGL Vertex Buffer Object (VBO), used for storing vertex data or indices in GPU memory.
+     *
+     * VertexBufferObject manages the lifecycle of a VBO, including its creation, data storage, and cleanup. VBOs are used to efficiently
+     * store data such as vertex coordinates, normals, texture coordinates, or element indices in the GPU, reducing the need for frequent data transfers.
+     *
+     * The `Mode` enum specifies the buffer's purpose, supporting vertices, indices, and uniform blocks.
+     *
+     * Usage example:
+     * @code
+     * VertexBufferObject vbo(VertexBufferObject::Mode::Vertices);
+     * vbo.activate();
+     * vbo.push(vertices.data(), vertices.size() * sizeof(vertices[0]));
+     * vbo.deactivate();
+     * @endcode
+	 * 
+	 * @note This class isn't suppose to be instanciated by the user, the documentation is provided only for informative propose.
+     */
 	class VertexBufferObject
 	{
 	public:
@@ -75,6 +109,22 @@ namespace spk::OpenGL
 		size_t size() const;
 	};
 
+    /**
+     * @brief Specializes VertexBufferObject for OpenGL Uniform Buffer Objects (UBOs), facilitating shader uniform management.
+     *
+     * UniformBufferObject provides an interface for creating, binding, and managing UBOs. UBOs allow for efficient sharing of uniform data
+     * across multiple shaders, enabling consistent and easy-to-update shader configurations.
+     *
+     * Usage example:
+     * @code
+     * UniformBufferObject ubo(shaderProgram, "GlobalMatrices", 0);
+     * ubo.activate();
+     * ubo.push(&matrices, sizeof(matrices));
+     * ubo.deactivate();
+     * @endcode
+	 * 
+	 * @note This class isn't suppose to be instanciated by the user, the documentation is provided only for informative propose.
+     */
 	class UniformBufferObject : public VertexBufferObject
 	{
 	private:
@@ -89,6 +139,21 @@ namespace spk::OpenGL
 		void deactivate();
 	};
 
+    /**
+     * @brief Manages OpenGL sampler uniforms, linking texture units to shader sampler locations.
+     *
+     * SamplerObject abstracts the association between a shader's sampler uniform and an OpenGL texture unit, facilitating texture binding
+     * and activation within shaders. It simplifies the process of setting which texture unit a shader's sampler should use.
+     *
+     * Usage example:
+     * @code
+     * SamplerObject sampler(shader.getUniformLocation("myTextureSampler"));
+     * sampler = 0; // Bind the sampler to texture unit 0
+     * sampler.activate();
+     * @endcode
+	 * 
+	 * @note This class isn't suppose to be instanciated by the user, the documentation is provided only for informative propose.
+     */
 	class SamplerObject
     {
     private:
