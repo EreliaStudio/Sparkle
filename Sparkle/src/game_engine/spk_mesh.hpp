@@ -108,14 +108,7 @@ namespace spk
 
 		using Contract = Notifier::Contract;
 
-	public:
-		mutable spk::Notifier _editionNotifier;
-		std::vector<Vector3> _points;
-		std::vector<Vector2> _uvs;
-		std::vector<Vector3> _normals;
-
-		std::vector<unsigned int> _indexes;
-
+	private:
 		struct VertexHash
 		{
 			std::size_t operator()(const Data::Vertex &vertex) const;
@@ -125,6 +118,14 @@ namespace spk
 		{
 			bool operator()(const Data::Vertex &lhs, const Data::Vertex &rhs) const;
 		};
+		
+	public:
+		mutable spk::Notifier _editionNotifier;
+		std::vector<Vector3> _points;
+		std::vector<Vector2> _uvs;
+		std::vector<Vector3> _normals;
+
+		std::vector<unsigned int> _indexes;
 
 		Data _bakeWithNormals() const;
 		Data _bakeWithoutNormals() const;
