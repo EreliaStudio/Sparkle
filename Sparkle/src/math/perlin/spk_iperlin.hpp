@@ -40,7 +40,7 @@ namespace spk
 			
 		};
 
-	protected:
+	private:
 		Interpolation _interpolation = Interpolation::Linear;
 
 		static const size_t PermutationTableSize = 256;
