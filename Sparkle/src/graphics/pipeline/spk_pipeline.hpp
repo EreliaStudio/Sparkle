@@ -36,8 +36,39 @@ namespace spk
     class Pipeline
     {    
     private:
+        /**
+         * @brief Represents the layout of a structured data block used within the rendering pipeline, such as a uniform block or vertex attribute structure.
+         *
+         * This class defines the memory layout for complex data structures passed to shaders. It includes information about the overall size of the
+         * structure (both with and without padding), the type of elements it contains, and a collection of `Element` instances that describe each field within
+         * the structure. This detailed layout information is essential for correctly mapping application data to the GPU, ensuring that shader programs can
+         * access structured data efficiently and accurately.
+         *
+         * `Structure` instances can be created directly based on OpenGL types and sizes, or they can be derived from shader instructions, allowing for dynamic
+         * structure generation based on shader code analysis. This flexibility supports a wide range of use cases, from simple uniform blocks to complex
+         * vertex data structures.
+         *
+         * Usage:
+         * Structures are primarily used internally within the `Pipeline` class to manage the data layout for shader inputs, such as uniforms and vertex
+         * attributes. They facilitate the correct binding and buffering of structured data to OpenGL shaders.
+         */
         struct Structure
         {
+                /**
+                 * @brief Describes a single element within a `Structure`, such as a field within a uniform block or a vertex attribute.
+                 *
+                 * This struct provides the offset (both with and without padding), length, and optionally a pointer to another `Structure` if
+                 * the element itself is a structured type. This allows for the definition of nested structures, supporting complex data layouts for
+                 * shader programs.
+                 *
+                 * Elements within a `Structure` are identified by name, enabling direct access and manipulation of specific fields within the structured
+                 * data. This detailed organization is critical for efficient GPU memory utilization and data access patterns.
+                 *
+                 * Usage:
+                 * Elements are defined as part of a `Structure` and used to specify the layout of each piece of data within the structure. This includes
+                 * setting up uniform buffers and vertex attribute arrays, where each element's offset and size information is used to map application
+                 * data correctly to shader inputs.
+                 */
             struct Element
             {
                 size_t offsetWithPadding;
@@ -266,6 +297,20 @@ namespace spk
                  */
                 struct Layout
                 {
+                    /**
+                     * @brief Describes a single element within a uniform or vertex attribute structure for rendering.
+                     *
+                     * This struct provides detailed information about each element within a `Structure`, such as its
+                     * offset within the structure, its length (in bytes), and a pointer to another `Structure` if this
+                     * element is itself a structured type. This enables precise layout descriptions for complex uniform
+                     * or vertex data, facilitating correct shader program interactions.
+                     *
+                     * Element instances are used to map application data to GPU memory layouts, ensuring that data is
+                     * correctly aligned and formatted for efficient access by OpenGL shaders.
+                     *
+                     * Usage is internal and is primarily involved in the setup and management of uniform buffers and
+                     * vertex attribute buffers.
+                     */
                     struct Element
                     {
                         size_t location;
