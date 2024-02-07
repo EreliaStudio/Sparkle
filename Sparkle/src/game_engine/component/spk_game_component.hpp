@@ -48,6 +48,9 @@ namespace spk
 		GameObject* _owner;
 		std::string _name;
 
+		virtual void _onRender() = 0;
+		virtual void _onUpdate() = 0;
+
 	public:
 		/**
 		 * @brief Constructs a GameComponent with a specified name.
@@ -99,22 +102,5 @@ namespace spk
 		 * @return A const reference to the component's name.
 		 */
 		const std::string& name() const;
-
-		/**
-		 * @brief Virtual method for rendering the component.
-		 * 
-		 * Derived classes should override this method to implement the specific rendering logic for the component.
-		 * This method is called by the game engine or owning GameObject to perform rendering operations.
-		 */
-		virtual void onRender() = 0;
-
-		/**
-		 * @brief Virtual method for updating the component.
-		 * 
-		 * Derived classes should override this method to implement the specific logic for updating the component's
-		 * state. This method is called by the game engine or owning GameObject once per frame, allowing the component
-		 * to update its state based on time or user input.
-		 */
-		virtual void onUpdate() = 0;
 	};
 }

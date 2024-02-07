@@ -81,7 +81,7 @@ namespace spk
 		}
 			
 		for (auto& [key, texture] : _textures)
-			texture.activate();
+			texture._activate();
 
 		glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(p_nbTriangle), GL_UNSIGNED_INT, nullptr);
 	}
@@ -100,11 +100,6 @@ namespace spk
 		if (_constants.contains(p_constantName) == false)
 			return (nullptr);
 		return (&(_constants.at(p_constantName)));
-	}
-
-	void Pipeline::insertConstants(const std::string& p_constantCode)
-	{
-		Pipeline tmpPipeline = Pipeline(p_constantCode);
 	}
 
 	Pipeline::Constant& Pipeline::constant(const std::string& p_constantName)

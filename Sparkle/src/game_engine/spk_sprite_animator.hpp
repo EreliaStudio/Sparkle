@@ -33,9 +33,36 @@ namespace spk
 	 */
 	struct SpriteAnimation
 	{
+		/**
+		 * @brief The duration of each frame in the animation.
+		 * 
+		 * Specifies how long (in frames) each frame of the animation should be displayed before moving to the next one.
+		 * This allows for control over the speed of the animation.
+		 */
 		int duration;
+
+		/**
+		 * @brief The coordinates of the first frame of the animation in the sprite sheet.
+		 * 
+		 * Defines the starting point of the animation within the sprite sheet. This vector specifies the row and column
+		 * of the first frame's top-left corner, allowing the animation to begin at any point within the sprite sheet.
+		 */
 		spk::Vector2Int firstFrame;
+
+		/**
+		 * @brief The offset to the next frame in the sprite sheet.
+		 * 
+		 * Specifies the distance (in pixels) to move from one frame to the next within the sprite sheet. This can be
+		 * used to navigate frames that are arranged horizontally or vertically (or both) in the sprite sheet.
+		 */
 		spk::Vector2Int frameOffset;
+
+		/**
+		 * @brief The total number of frames in the animation.
+		 * 
+		 * Indicates how many frames are included in the animation sequence. This determines when the animation should loop
+		 * or end, based on the number of frames that have been displayed.
+		 */
 		int lenght;
 	};
 }

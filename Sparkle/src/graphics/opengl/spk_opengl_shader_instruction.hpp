@@ -41,25 +41,57 @@ namespace spk::OpenGL
 		static inline const std::string ParametersKey = "Parameters";
 		static inline const std::string LocationKey = "Location";
 
+		/**
+		 * @enum Type
+		 * @brief Enumerates the possible types of shader instructions, aiding in their categorization and processing.
+		 */
 		enum class Type : uint8_t
 		{
-			Unknow,
-			Version,
-			Structure,
-			UniformBlock,
-			Sampler,
-			Function,
-			Input,
-			Output
+			Unknow,         ///< Represents an unidentified or unsupported instruction type.
+			Version,        ///< Corresponds to the GLSL version declaration.
+			Structure,      ///< Represents a GLSL structure definition.
+			UniformBlock,   ///< Corresponds to a uniform block declaration.
+			Sampler,        ///< Represents a texture sampler declaration.
+			Function,       ///< Corresponds to a function definition.
+			Input,          ///< Represents an input variable declaration.
+			Output          ///< Corresponds to an output variable declaration.
 		};
 
-		Type type;
-		std::string content;
-		spk::JSON::Object informations;
+		
+		Type type; //!< The type of the shader instruction, determining how it should be processed.
+		std::string content; //!< The raw GLSL code snippet corresponding to this shader instruction.
+		spk::JSON::Object informations; //!< A JSON object containing detailed information extracted from the shader instruction, useful for further processing or analysis.
 
+		/**
+		 * @brief Default constructor.
+		 * 
+		 * Initializes a new instance of ShaderInstruction, setting its type to Unknow and leaving content and informations empty.
+		 */
 		ShaderInstruction();
+
+		/**
+		 * @brief Constructs a ShaderInstruction with a specific type and extracted metadata.
+		 * 
+		 * Initializes a new instance of ShaderInstruction using the provided type and metadata extracted from a regex match
+		 * against shader code. This constructor is used to directly create a structured representation of a shader instruction
+		 * from parsed GLSL code.
+		 * 
+		 * @param p_type The type of the shader instruction.
+		 * @param p_matches A std::smatch object containing the regex match results used to extract instruction metadata.
+		 */
 		ShaderInstruction(const Type& p_type, const std::smatch& p_matches);
 
+		/**
+		 * @brief Parses shader code into a list of ShaderInstructions.
+		 * 
+		 * Analyzes the input shader code, identifying and categorizing individual instructions or declarations. This method
+		 * is key to the internal shader management system, enabling the dynamic handling of shader code for purposes such as
+		 * optimization or conditional inclusion.
+		 * 
+		 * @param p_inputCode The GLSL shader code to be parsed.
+		 * @return A vector of ShaderInstruction instances, each representing a categorized piece of the input shader code.
+		 */
 		static std::vector<ShaderInstruction> parseShaderInstruction(const std::string& p_inputCode);
+
 	};
 }

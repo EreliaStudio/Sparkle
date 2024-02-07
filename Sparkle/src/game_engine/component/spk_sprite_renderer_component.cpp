@@ -162,7 +162,7 @@ namespace spk
 		_updateSpriteAnimation();
 	}
 	
-	void SpriteRenderer::onRender()
+	void SpriteRenderer::_onRender()
 	{
 		if (_needGPUDataUpdate == true)
 		{
@@ -173,7 +173,7 @@ namespace spk
 		_renderingObject.render();
 	}
 
-	void SpriteRenderer::onUpdate()
+	void SpriteRenderer::_onUpdate()
 	{
 		
 	}

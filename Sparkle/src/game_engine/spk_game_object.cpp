@@ -9,7 +9,7 @@ namespace spk
 				
 		for (auto& component : _components)
 		{
-			component->onRender();
+			component->_onRender();
 		}
 
 		for (auto& child : childrens())
@@ -25,7 +25,7 @@ namespace spk
 
 		for (auto& component : _components)
 		{
-			component->onUpdate();
+			component->_onUpdate();
 		}
 
 		for (auto& child : childrens())

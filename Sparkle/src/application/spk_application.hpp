@@ -50,6 +50,10 @@ namespace spk
 	 * @code
 	 * spk::Application app("Example App", spk::Vector2UInt(800, 600), spk::Application::Mode::Monothread);
 	 * 
+	 * MyWidget myWidget = MyWidget("MyCustomWidget"); // This widget will automaticaly be included inside app, and will be rendered and updated by it once activated.
+	 * myWidget.setGeometry(spk::Vector2Int(0, 0), app.size()); // Set the size and anchor of the widget to hold the whole application size.
+	 * myWidget.activate(); // Activate the widget, to allow application to render and update it
+	 * 
 	 * return (app.run());
 	 * @endcode
 	 *

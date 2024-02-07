@@ -96,7 +96,7 @@ namespace spk
 			_needGPUDataUpdate = true;
 	}
 
-	void Camera::onRender()
+	void Camera::_onRender()
 	{
 		if (_cameraConstantsInitialized == false)
 		{
@@ -111,7 +111,7 @@ namespace spk
 		}
 	}
 
-	void Camera::onUpdate()
+	void Camera::_onUpdate()
 	{
 
 	}

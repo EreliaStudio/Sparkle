@@ -89,16 +89,54 @@ namespace spk
 		void _updateSprite();
 		void _updateSpriteAnimation();
 
+		void _onRender();
+		void _onUpdate();
+
 	public:
+		/**
+		 * @brief Constructor
+		 * 
+		 * @param p_name The name of the sprite renderer component, used for identification purposes.
+		 */
 		SpriteRenderer(const std::string& p_name);
 
+		/**
+		 * @brief Sets the mesh used by the sprite renderer.
+		 * 
+		 * Specifies the mesh that will be used to render the sprite. This mesh typically defines the geometry
+		 * on which the sprite texture will be applied.
+		 * 
+		 * @param p_mesh Pointer to the Mesh object to be used for rendering the sprite.
+		 */
 		void setMesh(const spk::Mesh* p_mesh);
 
+		/**
+		 * @brief Sets the sprite sheet used by the renderer.
+		 * 
+		 * Specifies the sprite sheet that contains the sprite textures. The sprite sheet allows for efficient texture
+		 * management by packing multiple sprites into a single texture.
+		 * 
+		 * @param p_spriteSheet Pointer to the SpriteSheet object to be used by the renderer.
+		 */
 		void setSpriteSheet(const spk::SpriteSheet* p_spriteSheet);
+
+		/**
+		 * @brief Sets the sprite to be rendered.
+		 * 
+		 * Specifies the sprite within the sprite sheet to be rendered by identifying its position within the sprite sheet grid.
+		 * 
+		 * @param p_spriteID A Vector2UInt representing the grid position (x, y) of the sprite within the sprite sheet.
+		 */
 		void setSprite(const spk::Vector2UInt& p_spriteID);
+
+		/**
+		 * @brief Sets the sprite animation.
+		 * 
+		 * Specifies the sprite animation to be used for dynamic sprite rendering. This allows the sprite to change over time,
+		 * creating animated effects.
+		 * 
+		 * @param p_spriteAnimation Pointer to the SpriteAnimation object to be used by the renderer.
+		 */
 		void setSpriteAnimation(const spk::SpriteAnimation* p_spriteAnimation);
-		
-		void onRender();
-		void onUpdate();
 	};
 }

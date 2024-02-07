@@ -218,13 +218,6 @@ namespace spk
 		_indexes.reserve(p_expectedNbIndex);
 	}
 
-	void Mesh::addIndex(unsigned int p_pointIndex, unsigned int p_uvsIndex)
-	{
-		_indexes.push_back(p_pointIndex);
-		_indexes.push_back(p_uvsIndex);
-		_indexes.push_back(std::numeric_limits<unsigned int>::max());
-	}
-
 	void Mesh::addIndex(unsigned int p_pointIndex, unsigned int p_uvsIndex, unsigned int p_normalIndex)
 	{
 		_indexes.push_back(p_pointIndex);

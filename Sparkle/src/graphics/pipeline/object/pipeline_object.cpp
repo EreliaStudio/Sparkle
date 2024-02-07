@@ -40,6 +40,17 @@ namespace spk
 		_vao.deactivate();
 	}
 
+	void Pipeline::Object::setVertices(const std::vector<float>& p_verticesData, size_t p_elementSize)
+	{
+		_vao.activate();
+		_storage.activate();
+		
+		_storage.setVertices(p_verticesData, p_elementSize);
+
+		_storage.deactivate();
+		_vao.deactivate();
+	}
+
 	void Pipeline::Object::setIndexes(const std::vector<size_t> p_indexesData)
 	{
 		_vao.activate();

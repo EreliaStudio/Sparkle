@@ -233,20 +233,41 @@ namespace spk
         {
             friend class Pipeline;
 
-        public:
-            static inline const std::string BlockKey = "ConstantBlock";
+        public:        
+            static inline const std::string BlockKey = "ConstantBlock"; //!< Key used for identifying constant blocks within shader code or pipeline configurations.
             using Element = UniformObject::Element;
 
         private:
             Constant(const GLuint& p_program, const Layout& p_layout);
 
         public:
+            /**
+             * @brief Prevents copy construction to ensure unique management of uniform buffer objects.
+             */
             Constant(const Constant& p_other) = delete;
+
+            /**
+             * @brief Prevents copy assignment to ensure unique management of uniform buffer objects.
+             */
             Constant& operator = (const Constant& p_other) = delete;
-            
+
+            /**
+             * @brief Supports move semantics for efficient transfer of uniform buffer resources.
+             */
             Constant(Constant&& p_other) = default;
+
+            /**
+             * @brief Supports move semantics for efficient transfer of uniform buffer resources.
+             */
             Constant& operator = (Constant&& p_other) = default;
 
+            /**
+             * @brief Assigns a value to the constant, updating the underlying uniform buffer with the new value.
+             * 
+             * @tparam TType The data type of the value being assigned to the constant.
+             * @param p_value The new value for the constant.
+             * @return A reference to this Constant object, allowing for method chaining.
+             */
             template <typename TType>
             Constant& operator = (const TType& p_value)
             {
@@ -414,8 +435,21 @@ namespace spk
 
             Object(Pipeline* p_pipeline, const Storage::Layout& p_storageLayout, const std::map<std::string, UniformObject::Layout>& p_layouts);
         public:
+            /**
+             * @brief Destructor.
+             * 
+             * Cleans up the Object instance, ensuring that all associated resources such as vertex arrays
+             * and buffers are properly deleted.
+             */
             ~Object();
 
+            /**
+             * @brief Renders the object using the current Pipeline's shader program.
+             * 
+             * This method binds the object's vertex array and draws it using the appropriate OpenGL draw call.
+             * It is assumed that the Pipeline's shader program is already activated and all necessary uniforms
+             * are set before calling this method.
+             */
             void render();
 
             Object(const Object& p_other) = delete;
@@ -424,6 +458,15 @@ namespace spk
             Object(Object&& p_other) = default;
             Object& operator = (Object&& p_other) = default;
 
+            /**
+             * @brief Sets the vertex data for the object.
+             * 
+             * Template method to set the vertex data of the object. The vertex data is expected to conform to
+             * the layout specified by the Pipeline. This method updates the vertex buffer with the provided data.
+             * 
+             * @tparam TVertexData The data type of the vertex data array.
+             * @param p_verticesData A vector containing the vertex data.
+             */
             template <typename TVertexData>
             void setVertices(const std::vector<TVertexData>& p_verticesData)
             {
@@ -436,23 +479,39 @@ namespace spk
                 _vao.deactivate();
             }
 
-            void setVertices(const std::vector<float>& p_verticesData, size_t p_elementSize)
-            {
-                _vao.activate();
-                _storage.activate();
-                
-                _storage.setVertices(p_verticesData, p_elementSize);
+            /**
+             * @brief Sets the vertex data for the object with a specified element size.
+             * 
+             * This overload allows setting vertex data using a raw float vector and specifying the size of each
+             * element. It is useful when the vertex data does not directly map to a specific struct.
+             * 
+             * @param p_verticesData A vector containing the vertex data as floats.
+             * @param p_elementSize The size in bytes of each element in the vertex data array.
+             */
+            void setVertices(const std::vector<float>& p_verticesData, size_t p_elementSize);
 
-                _storage.deactivate();
-                _vao.deactivate();
-            }
-
+            /**
+             * @brief Sets the index data for the object.
+             * 
+             * Updates the index buffer with the provided index data. Index data is used to specify the order
+             * in which vertices are drawn, enabling the use of vertex reuse and more efficient rendering.
+             * 
+             * @param p_indexesData A vector containing the index data.
+             */
             void setIndexes(const std::vector<size_t> p_indexesData);
 
+            /**
+             * @brief Retrieves a reference to an attribute by name.
+             * 
+             * Provides access to a specific attribute of the object for setting its value. Attributes are
+             * shader-specific properties such as transformation matrices or material properties.
+             * 
+             * @param p_attributeName The name of the attribute to retrieve.
+             * @return A reference to the specified Attribute object, allowing for its value to be set.
+             */
             Attribute& attribute(const std::string& p_attributeName);
         };
 
-    public:
         /**
 	     * @class Texture
          * @brief Manages texture units and binding to shaders.
@@ -500,10 +559,21 @@ namespace spk
 
             Texture(int p_programID, const Layout& p_layout, Constant& p_constant);
 
+            void _activate();
+
         public:
+            /**
+             * @brief Attaches a texture to this Texture instance.
+             * 
+             * This method binds a texture resource to the Texture instance, making it available for use
+             * in the rendering pipeline. The texture is associated with the specified sampler uniform in
+             * the shader, enabling it to be accessed and used for rendering operations.
+             * 
+             * @param p_textureToSet A pointer to the texture resource to be attached. This texture will
+             * be bound to the shader's sampler uniform specified by the Texture instance's layout.
+             */
             void attach(const spk::Texture* p_textureToSet);
 
-            void activate();
         };
 
     private:
@@ -538,17 +608,92 @@ namespace spk
         void launch(size_t p_nbTriangle);
 
     public:
+        /**
+         * @brief Default constructor.
+         * 
+         * Initializes a new Pipeline instance without any associated shader code. This pipeline needs to be
+         * configured with shader code and other resources before it can be used for rendering.
+         */
         Pipeline();
+
+        /**
+         * @brief Constructs a Pipeline with the provided shader code.
+         * 
+         * Initializes a new Pipeline instance and compiles the provided shader code into an OpenGL shader program.
+         * This constructor allows for immediate setup and use of the pipeline for rendering operations.
+         * 
+         * @param p_code The GLSL shader code for both vertex and fragment shaders.
+         */
         Pipeline(const std::string& p_code);
+
+        /**
+         * @brief Destructor.
+         * 
+         * Cleans up the Pipeline instance, deleting the associated OpenGL shader program and freeing any allocated resources.
+         */
         ~Pipeline();
 
+        /**
+         * @brief Activates the shader program managed by this Pipeline.
+         * 
+         * Binds the Pipeline's shader program as the current program for rendering operations. This method must be called
+         * before drawing objects or setting uniforms to ensure that the correct shader program is used.
+         */
         void activate();
 
-        static Constant* globalConstant(const std::string& p_constantName);
+        /**
+         * @brief Creates a drawable Object within the Pipeline.
+         * 
+         * Constructs a new Object that can be rendered using this Pipeline. The Object is configured with the appropriate
+         * shader program and can have its vertices, indices, attributes, and textures set up for rendering.
+         * 
+         * @return An Object instance ready for configuration and rendering.
+         */
+        Object createObject();
+
+        /**
+         * @brief Retrieves a reference to a named Constant within the Pipeline.
+         * 
+         * Accesses a Constant by name, providing a way to set and update global shader constants that are shared
+         * across multiple objects or the entire render pipeline.
+         * 
+         * @param p_constantName The name of the Constant to retrieve.
+         * @return A reference to the specified Constant.
+         */
+        Constant& constant(const std::string& p_constantName);
+
+        /**
+         * @brief Retrieves a reference to a named Texture within the Pipeline.
+         * 
+         * Accesses a Texture by name, allowing for the association of texture data with shader sampler uniforms.
+         * This facilitates the binding and activation of textures within shaders.
+         * 
+         * @param p_textureName The name of the Texture to retrieve.
+         * @return A reference to the specified Texture.
+         */
+        Texture& texture(const std::string& p_textureName);
+
+        /**
+         * @brief Inserts global constants into the Pipeline.
+         * 
+         * Allows for the definition and insertion of global shader constants into the Pipeline. These constants
+         * are shared across all instances of the Pipeline, enabling consistent and centralized management of shader
+         * uniform data.
+         * 
+         * @param p_constantCode The GLSL code defining the constants to be inserted.
+         */
         static void insertConstants(const std::string& p_constantCode);
 
-        Object createObject();
-        Constant& constant(const std::string& p_constantName);
-        Texture& texture(const std::string& p_textureName);
+        /**
+         * @brief Retrieves a pointer to a global Constant shared across Pipelines.
+         * 
+         * Accesses a global Constant by name, enabling the use of shared constants across multiple Pipeline instances.
+         * This method provides a way to work with constants that are common to various parts of the application.
+         * 
+         * @param p_constantName The name of the global Constant to retrieve.
+         * @return A pointer to the specified global Constant.
+         */
+        static Constant* globalConstant(const std::string& p_constantName);
+
     };
 }

@@ -28,7 +28,7 @@ namespace spk
 		_constant.update();
 	}
 
-    void Pipeline::Texture::activate()
+    void Pipeline::Texture::_activate()
 	{
 		if (_activeTexture == nullptr)
 			return ;

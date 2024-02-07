@@ -44,6 +44,12 @@ namespace spk
 	class Camera : public GameComponent
 	{
 	public:
+		/**
+		 * @brief Enum class for camera type.
+		 * 
+		 * Specifies the camera projection type. Orthographic projection is useful for 2D games,
+		 * while Perspective projection is used for 3D scene rendering to simulate depth perception.
+		 */
 		enum class Type
 		{
 			Orthographic,
@@ -73,25 +79,83 @@ namespace spk
 		std::unique_ptr<spk::Transform::Contract> _rotationContract = nullptr;
 
 		void _updateGPUData();
+		
+		void _onRender();
+		void _onUpdate();
 
 	public:
+		/**
+		 * @brief Constructs a Camera component with a specified name.
+		 * 
+		 * Initializes a new Camera component, setting it as activated by default and initializing it with default
+		 * projection settings.
+		 * 
+		 * @param p_name The name of the camera component, used for identification within the game engine.
+		 */
 		Camera(const std::string& p_name);
 
+		/**
+		 * @brief Sets this camera as the main camera for rendering.
+		 * 
+		 * Marks this camera instance as the main camera, which will be used by the rendering system to render scenes.
+		 * Only one camera can be the main camera at a time.
+		 */
 		static Camera* mainCamera(){ return (_mainCamera); }
+
+		/**
+		 * @brief Gets the current main camera.
+		 * 
+		 * @return A pointer to the Camera instance set as the main camera, or nullptr if no main camera has been set.
+		 */
 		void setAsMainCamera();
 
+		/**
+		 * @brief Sets the camera projection type.
+		 * 
+		 * @param p_type The camera type (Orthographic or Perspective).
+		 */
 		void setType(const Type& p_type);
 
+
+		/**
+		 * @brief Sets the near clipping plane distance.
+		 * 
+		 * @param p_nearPlane The distance to the near clipping plane. Objects closer than this distance will not be rendered.
+		 */
 		void setNearPlane(const float& p_nearPlane);
+
+		/**
+		 * @brief Sets the far clipping plane distance.
+		 * 
+		 * @param p_farPlane The distance to the far clipping plane. Objects farther than this distance will not be rendered.
+		 */
 		void setFarPlane(const float& p_farPlane);
 
+		/**
+		 * @brief Sets the field of view (FOV) for the camera.
+		 * 
+		 * Applicable only in Perspective mode. Defines the vertical field of view angle.
+		 * 
+		 * @param p_fov The field of view angle in degrees.
+		 */
 		void setFOV(const float& p_fov);
+
+		/**
+		 * @brief Sets the aspect ratio of the camera.
+		 * 
+		 * Defines the ratio of the camera's viewport width to its height.
+		 * 
+		 * @param p_aspectRatio The aspect ratio value.
+		 */
 		void setAspectRatio(const float& p_aspectRatio);
 
+		/**
+		 * @brief Sets the size for orthographic projection.
+		 * 
+		 * Applicable only in Orthographic mode. Defines the size of the viewable area.
+		 * 
+		 * @param p_orthographicSize The size of the orthographic projection area.
+		 */
 		void setOrthographicSize(const spk::Vector2& p_orthographicSize);
-		
-
-		void onRender();
-		void onUpdate();
 	};
 }
