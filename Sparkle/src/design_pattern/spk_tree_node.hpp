@@ -59,7 +59,7 @@ namespace spk
 			{
 				child->_parent = nullptr;
 			}
-			_parent->removeChild(this);
+			_parent->removeChild(static_cast<TType*>(this));
 		}
 
 		/**

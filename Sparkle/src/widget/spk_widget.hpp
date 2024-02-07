@@ -88,23 +88,81 @@ namespace spk
 		void _computeViewport();
 
 	public:
-		IWidget(const std::string& p_name);
-		IWidget(const std::string& p_name, IWidget* p_parent);
+		/**
+         * Constructor for creating a widget with a specified name.
+         * @param p_name The name of the widget. This is used for identification and debugging purposes.
+         */
+        IWidget(const std::string& p_name);
 
-		~IWidget();
+        /**
+         * Constructor for creating a widget with a specified name and parent widget.
+         * @param p_name The name of the widget. This is used for identification and debugging purposes.
+         * @param p_parent A pointer to the parent widget. This widget will be added as a child of the given parent.
+         */
+        IWidget(const std::string& p_name, IWidget* p_parent);
 
-		void addChild(IWidget* p_children);
-		void setGeometry(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size);
-		void setDepth(const float& p_depth);
+        /**
+         * Destructor for the widget. Cleans up resources and ensures proper deactivation of the widget and its children.
+         */
+        ~IWidget();
 
-		void activateAll();
-		void deactivateAll();
+        /**
+         * Adds a child widget to this widget. The child widget will be hierarchically managed and rendered within this widget's viewport.
+         * @param p_children A pointer to the widget to be added as a child.
+         */
+        void addChild(IWidget* p_children);
 
-		const std::string& name() const;
+        /**
+         * Sets the geometry of the widget, specifying its anchor point and size.
+         * @param p_anchor The anchor point of the widget in its parent's coordinate system.
+         * @param p_size The size of the widget.
+         */
+        void setGeometry(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size);
 
-		const float& depth() const;
-		const spk::Vector2Int& anchor() const;
-		const spk::Vector2UInt& size() const;
-		const spk::Viewport& viewport() const;
+        /**
+         * Sets the depth of the widget, affecting its rendering order relative to its siblings.
+         * @param p_depth The depth value of the widget. Lower values are rendered first.
+         */
+        void setDepth(const float& p_depth);
+
+        /**
+         * Activates this widget and all its child widgets recursively, enabling their functionality and making them eligible for rendering and updates.
+         */
+        void activateAll();
+
+        /**
+         * Deactivates this widget and all its child widgets recursively, disabling their functionality and excluding them from rendering and updates.
+         */
+        void deactivateAll();
+
+        /**
+         * Gets the name of the widget.
+         * @return A constant reference to the widget's name.
+         */
+        const std::string& name() const;
+
+        /**
+         * Gets the depth of the widget.
+         * @return A constant reference to the widget's depth value.
+         */
+        const float& depth() const;
+
+        /**
+         * Gets the anchor point of the widget.
+         * @return A constant reference to the widget's anchor point.
+         */
+        const spk::Vector2Int& anchor() const;
+
+        /**
+         * Gets the size of the widget.
+         * @return A constant reference to the widget's size.
+         */
+        const spk::Vector2UInt& size() const;
+
+        /**
+         * Gets the viewport of the widget.
+         * @return A constant reference to the widget's viewport. The viewport defines the area of the screen where the widget is rendered.
+         */
+        const spk::Viewport& viewport() const;
 	};
 }
