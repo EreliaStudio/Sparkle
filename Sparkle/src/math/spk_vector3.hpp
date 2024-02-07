@@ -9,7 +9,7 @@
 namespace spk
 {
 	/**
-	 * @class IVector3
+	 * @interface IVector3
 	 * 
 	 * @tparam TType The numeric type used to represent the vector's components. It must be an arithmetic type (e.g., int, float, double).
 	 * 
