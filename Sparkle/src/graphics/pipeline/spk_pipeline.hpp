@@ -38,7 +38,7 @@ namespace spk
     {    
     private:
         /**
-	     * @class Structure
+	     * @struct Structure
          * @brief Represents the layout of a structured data block used within the rendering pipeline, such as a uniform block or vertex attribute structure.
          *
          * This class defines the memory layout for complex data structures passed to shaders. It includes information about the overall size of the
@@ -56,22 +56,22 @@ namespace spk
          */
         struct Structure
         {
-                /**
-	             * @class Structure::Element
-                 * @brief Describes a single element within a `Structure`, such as a field within a uniform block or a vertex attribute.
-                 *
-                 * This struct provides the offset (both with and without padding), length, and optionally a pointer to another `Structure` if
-                 * the element itself is a structured type. This allows for the definition of nested structures, supporting complex data layouts for
-                 * shader programs.
-                 *
-                 * Elements within a `Structure` are identified by name, enabling direct access and manipulation of specific fields within the structured
-                 * data. This detailed organization is critical for efficient GPU memory utilization and data access patterns.
-                 *
-                 * Usage:
-                 * Elements are defined as part of a `Structure` and used to specify the layout of each piece of data within the structure. This includes
-                 * setting up uniform buffers and vertex attribute arrays, where each element's offset and size information is used to map application
-                 * data correctly to shader inputs.
-                 */
+            /**
+             * @struct Element
+             * @brief Describes a single element within a `Structure`, such as a field within a uniform block or a vertex attribute.
+             *
+             * This struct provides the offset (both with and without padding), length, and optionally a pointer to another `Structure` if
+             * the element itself is a structured type. This allows for the definition of nested structures, supporting complex data layouts for
+             * shader programs.
+             *
+             * Elements within a `Structure` are identified by name, enabling direct access and manipulation of specific fields within the structured
+             * data. This detailed organization is critical for efficient GPU memory utilization and data access patterns.
+             *
+             * Usage:
+             * Elements are defined as part of a `Structure` and used to specify the layout of each piece of data within the structure. This includes
+             * setting up uniform buffers and vertex attribute arrays, where each element's offset and size information is used to map application
+             * data correctly to shader inputs.
+             */
             struct Element
             {
                 size_t offsetWithPadding;
@@ -114,7 +114,7 @@ namespace spk
         {
         public:
             /**
-	         * @class UniformObject::Element
+	         * @class Element
              * @brief Provides access and manipulation capabilities for elements within a UniformObject structure.
              *
              * This class allows for setting and getting values of specific elements within a UniformObject, using the structure's layout information. It supports type-safe assignments and retrieval of uniform values, ensuring data integrity when communicating with the shader program.
@@ -156,7 +156,7 @@ namespace spk
             };
 
             /**
-	         * @class UniformObject::Layout
+	         * @struct Layout
              * @brief Describes the layout of a uniform object, including its type, binding, and structure.
              *
              * This struct is used to define the layout and binding information of uniform blocks within the shader programs.
@@ -296,7 +296,7 @@ namespace spk
                 
             public:
                 /**
-	             * @class Layout
+	             * @struct Layout
                  * @brief Defines the layout of vertex data for the Storage class, including stride and element information.
                  *
                  * This structure specifies how vertex data is organized, including the stride between vertices and
@@ -308,7 +308,7 @@ namespace spk
                 struct Layout
                 {
                     /**
-	                 * @class Element
+	                 * @struct Element
                      * @brief Describes a single element within a uniform or vertex attribute structure for rendering.
                      *
                      * This struct provides detailed information about each element within a `Structure`, such as its
@@ -478,7 +478,7 @@ namespace spk
                         
         public:
             /**
-	         * @class Layout
+	         * @struct Layout
              * @brief Defines the name and binding point for the Texture class.
              *
              * It is critical for setting up the sampler correctly in OpenGL.

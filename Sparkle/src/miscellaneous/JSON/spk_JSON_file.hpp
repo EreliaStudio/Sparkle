@@ -11,7 +11,7 @@ namespace spk
 	namespace JSON
 	{
 		/**
-		 * @class JSON::File
+		 * @class File
 		 * @brief Represents a utility class for reading and writing JSON files.
 		 *
 		 * This class provides a convenient interface for loading and saving JSON data

@@ -15,7 +15,7 @@ namespace spk
 	namespace JSON
 	{
 		/**
-		 * @class JSON::Object
+		 * @class Object
 		 * @brief Represents a JSON object for serialization and deserialization.
 		 *
 		 * The Object class provides a versatile structure to represent JSON data, supporting
