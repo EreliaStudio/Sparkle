@@ -69,6 +69,17 @@ namespace spk
 		bool _hasCurrentState = false;
 
 	public:
+		/**
+		 * @brief Constructor with initial state and callbacks.
+		 * 
+		 * Initializes the StateMachine with a single state and associated callbacks for
+		 * entering, updating, and exiting the state. Automatically enters the specified state.
+		 * 
+		 * @param p_stateID Initial state identifier.
+		 * @param p_onEnter Callback function to execute upon entering the state.
+		 * @param p_onUpdate Callback function to execute when updating the state.
+		 * @param p_onExit Callback function to execute upon exiting the state.
+		 */
 		StateMachine(TStateType p_stateID, Callback p_onEnter, Callback p_onUpdate, Callback p_onExit) :
 			_currentState(p_stateID),
 			_hasCurrentState(true)
@@ -77,6 +88,15 @@ namespace spk
 			enterState(p_stateID);
 		}
 
+		/**
+		 * @brief Constructor with initial state and update callback.
+		 * 
+		 * Initializes the StateMachine with a single state and an update callback. Automatically
+		 * enters the specified state. Enter and exit actions are not specified.
+		 * 
+		 * @param p_stateID Initial state identifier.
+		 * @param p_onUpdate Callback function to execute when updating the state.
+		 */
 		StateMachine(TStateType p_stateID, Callback p_onUpdate) :
 			_currentState(p_stateID),
 			_hasCurrentState(true)
@@ -85,6 +105,16 @@ namespace spk
 			enterState(p_stateID);
 		}
 
+		/**
+		 * @brief Constructor with initial state and Action struct.
+		 * 
+		 * Initializes the StateMachine with a single state defined by an Action struct,
+		 * which includes callbacks for entering, updating, and exiting the state. Automatically
+		 * enters the specified state.
+		 * 
+		 * @param p_stateID Initial state identifier.
+		 * @param p_action Action struct containing the callbacks for the state.
+		 */
 		StateMachine(TStateType p_stateID, const Action& p_action) :
 			_currentState(p_stateID),
 			_hasCurrentState(true)
@@ -93,12 +123,27 @@ namespace spk
 			enterState(p_stateID);
 		}
 
+		/**
+		 * @brief Default constructor.
+		 * 
+		 * Initializes the StateMachine without any initial state. States must be added
+		 * using addState before the StateMachine can be used.
+		 */
 		StateMachine() :
 			_hasCurrentState(false)
 		{
 
 		}
 		
+		/**
+		 * @brief Retrieves the action associated with a given state identifier.
+		 * 
+		 * Provides direct access to the Action struct for a specified state, allowing modification
+		 * of the callbacks. Throws std::out_of_range if the state does not exist.
+		 * 
+		 * @param p_stateID State identifier.
+		 * @return A reference to the Action struct associated with the state.
+		 */
 		Action& action(TStateType p_stateID)
         {
             if (!_states.contains(p_stateID))
@@ -107,7 +152,16 @@ namespace spk
             }
             return _states[p_stateID];
         }
-		
+
+		/**
+		 * @brief Retrieves the action associated with a given state identifier (const version).
+		 * 
+		 * Provides read-only access to the Action struct for a specified state. Throws std::out_of_range
+		 * if the state does not exist.
+		 * 
+		 * @param p_stateID State identifier.
+		 * @return A const reference to the Action struct associated with the state.
+		 */
 		const Action& action(TStateType p_stateID) const
         {
             if (!_states.contains(p_stateID))
@@ -117,16 +171,42 @@ namespace spk
             return _states[p_stateID];
         }
 		
+		/**
+		 * @brief Retrieves the action of the current state.
+		 * 
+		 * Provides direct access to the Action struct for the current state, allowing modification
+		 * of the callbacks. Useful for dynamically changing the behavior of the current state.
+		 * 
+		 * @return A reference to the Action struct for the current state.
+		 */
 		Action& currentAction()
         {
             return (_currentActions);
         }
-		
+
+		/**
+		 * @brief Retrieves the action of the current state (const version).
+		 * 
+		 * Provides read-only access to the Action struct for the current state.
+		 * 
+		 * @return A const reference to the Action struct for the current state.
+		 */
 		const Action& currentAction() const
         {
             return (_currentActions);
         }
 
+		/**
+		 * @brief Adds a state with specified callbacks.
+		 * 
+		 * Registers a new state in the StateMachine along with callbacks for entering, updating,
+		 * and exiting the state. Throws an exception if the state already exists.
+		 * 
+		 * @param p_stateID State identifier.
+		 * @param p_onEnter Callback for entering the state.
+		 * @param p_onUpdate Callback for updating the state.
+		 * @param p_onExit Callback for exiting the state.
+		 */
 		void addState(TStateType p_stateID, Callback p_onEnter, Callback p_onUpdate, Callback p_onExit)
 		{
 			if (_states.contains(p_stateID) == true)
@@ -134,6 +214,15 @@ namespace spk
 			_states[p_stateID] = {p_onEnter, p_onUpdate, p_onExit};
 		}
 
+		/**
+		 * @brief Adds a state with an update callback only.
+		 * 
+		 * Registers a new state in the StateMachine with only an update callback. Enter and exit
+		 * callbacks are not specified. Throws an exception if the state already exists.
+		 * 
+		 * @param p_stateID State identifier.
+		 * @param p_onUpdate Callback for updating the state.
+		 */
 		void addState(TStateType p_stateID, Callback p_onUpdate)
 		{
 			if (_states.contains(p_stateID) == true)
@@ -141,6 +230,15 @@ namespace spk
 			_states[p_stateID] = {nullptr, p_onUpdate, nullptr};
 		}
 
+		/**
+		 * @brief Adds a state defined by an Action struct.
+		 * 
+		 * Registers a new state in the StateMachine using an Action struct, which includes callbacks
+		 * for entering, updating, and exiting the state. Throws an exception if the state already exists.
+		 * 
+		 * @param p_stateID State identifier.
+		 * @param actions Action struct containing the callbacks for the state.
+		 */
 		void addState(TStateType p_stateID, const Action& actions)
         {
             if (_states.contains(p_stateID))
@@ -150,6 +248,14 @@ namespace spk
             _states[p_stateID] = actions;
         }
 
+		/**
+		 * @brief Transitions to a specified state.
+		 * 
+		 * Changes the current state to the specified state, executing the exit action of the current
+		 * state (if any) and the enter action of the new state (if any).
+		 * 
+		 * @param p_newState The state identifier to transition to.
+		 */
 		void enterState(TStateType p_newState)
 		{
 			if (_hasCurrentState == true)
@@ -167,6 +273,12 @@ namespace spk
 				_currentActions.onEnter();
 		}
 
+		/**
+		 * @brief Executes the update action of the current state.
+		 * 
+		 * Calls the update callback associated with the current state. Does nothing if there
+		 * is no current state or if the current state has no update callback.
+		 */
 		void update()
 		{
 			if (_hasCurrentState == true && _currentActions.onUpdate != nullptr) 

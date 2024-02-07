@@ -54,16 +54,40 @@ namespace spk
         }
 
     public:
+        /**
+         * @brief Constructor
+         * 
+         * Initializes a new instance of the Pool class with a specified initial pool size.
+         * Preallocates a number of objects of type TType according to the provided size.
+         * 
+         * @param p_poolSize The initial size of the pool. Defaults to 0, resulting in an empty pool.
+         */
         Pool(const size_t& p_poolSize = 0)
         {
             resize(p_poolSize);
         }
 
+        /**
+         * @brief Returns the current size of the pool.
+         * 
+         * Retrieves the number of preallocated objects currently available in the pool.
+         * 
+         * @return The size of the pool as a size_t value.
+         */
         size_t size() const
         {
             return (_preallocatedElements.size());
         }
 
+        /**
+         * @brief Resizes the pool to a new size.
+         * 
+         * Adjusts the pool's size to hold a specified number of preallocated objects.
+         * If the new size is larger, additional objects are preallocated. If the new size is
+         * smaller, excess objects are destroyed.
+         * 
+         * @param p_newSize The new size of the pool.
+         */
         void resize(size_t p_newSize)
 		{
             std::lock_guard<std::recursive_mutex> lock(_mutex);
@@ -75,6 +99,15 @@ namespace spk
                 _preallocatedElements.push_front(std::make_unique<TType>());
         }
 
+        /**
+         * @brief Obtains an object from the pool.
+         * 
+         * Provides an object from the pool. If the pool is empty, a new object is created,
+         * added to the pool, and then provided. Objects are created and linked to it by the
+         * pool to ensure they are returned to the pool automatically when no longer needed.
+         * 
+         * @return An Object of type TType.
+         */
         Object obtain()
 		{
             std::lock_guard<std::recursive_mutex> lock(_mutex);

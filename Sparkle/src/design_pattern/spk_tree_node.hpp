@@ -35,7 +35,78 @@ namespace spk
 		TType* _parent;
 		std::vector<TType*> _childrens;
 
-	protected:
+	public:
+		/**
+		 * @brief Default constructor.
+		 * 
+		 * Initializes a new instance of the TreeNode class without any parent or children.
+		 */
+		TreeNode()
+		{
+			_parent = nullptr;
+		}
+
+		
+		/**
+		 * @brief Destructor.
+		 * 
+		 * Cleans up by detaching all children from this node.
+		 * Children will have their parent pointer set to nullptr.
+		 */
+		~TreeNode()
+		{
+			for (const auto& child : _childrens)
+			{
+				child->_parent = nullptr;
+			}
+		}
+
+		/**
+		 * @brief Gets the parent of this node.
+		 * 
+		 * @return A const pointer to the parent node, or nullptr if this node is the root of its tree.
+		 */
+		const TType* parent() const
+		{
+			return (_parent);
+		}
+
+		/**
+		 * @brief Gets the children of this node.
+		 * 
+		 * @return A vector of pointers to the child nodes.
+		 */
+		const std::vector<TType*> childrens() const
+		{
+			return (_childrens);
+		}
+
+		/**
+		 * @brief Adds a child node to this node.
+		 * 
+		 * If the child already has a parent, it is first removed from its current parent. Then, the child is added to this node's
+		 * list of children, and this node is set as the new parent of the child.
+		 * 
+		 * @param p_children Pointer to the child node to add. It must not be nullptr.
+		 */
+		void addChild(TType* p_children)
+		{
+			if (p_children->_parent != nullptr)
+				p_children->_parent->removeChild(p_children);
+
+			_childrens.push_back(p_children);
+
+			p_children->_parent = static_cast<TType*>(this);
+		}
+				
+		/**
+		 * @brief Removes a specific child from this node.
+		 * 
+		 * Searches for the given child in the list of children and removes it if found. This function does not delete the child node;
+		 * it only removes the association between this node and the child.
+		 * 
+		 * @param p_child Pointer to the child node to remove.
+		 */
 		void removeChild(TType* p_child)
 		{
 			auto it = std::find(_childrens.begin(), _childrens.end(), p_child);
@@ -45,46 +116,19 @@ namespace spk
 			}
 		}
 
+		/**
+		 * @brief Transfers all children of this node to another parent node.
+		 * 
+		 * All children of this node are moved to the specified new parent. This node will have no children after this operation.
+		 * 
+		 * @param p_newParent Pointer to the new parent node. It must not be nullptr.
+		 */
 		void transferChildrens(TType* p_newParent)
 		{
 			for (const auto& child : _childrens)
 			{
 				p_newParent->addChild(child);
 			}
-		}
-
-	public:
-		TreeNode()
-		{
-			_parent = nullptr;
-		}
-
-		~TreeNode()
-		{
-			for (const auto& child : _childrens)
-			{
-				child->_parent = nullptr;
-			}
-		}
-
-		const TType* parent() const
-		{
-			return (_parent);
-		}
-
-		const std::vector<TType*> childrens() const
-		{
-			return (_childrens);
-		}
-		
-		void addChild(TType* p_children)
-		{
-			if (p_children->_parent != nullptr)
-				p_children->_parent->removeChild(p_children);
-
-			_childrens.push_back(p_children);
-
-			p_children->_parent = static_cast<TType*>(this);
 		}
 	};
 }

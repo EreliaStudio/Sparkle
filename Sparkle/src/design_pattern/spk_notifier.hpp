@@ -64,18 +64,64 @@ namespace spk
         class Contract
         {
         public:
+            /**
+             * @brief Constructs a default Contract instance.
+             */
             Contract();
+
+            /**
+             * @brief Destructs the Contract instance.
+             */
             ~Contract();
 
+            /**
+             * @brief Assigns the state of another Contract to this one.
+             * 
+             * @param p_other The other Contract to copy state from.
+             * @return A reference to this Contract after copying the state.
+             */
             Contract& operator = (const Contract& p_other);
 
+            /**
+             * @brief Checks if the Contract is canceled.
+             * 
+             * @return True if the Contract has been canceled, false otherwise.
+             */
             bool isCanceled() const;
+
+            /**
+             * @brief Cancels the Contract.
+             * 
+             * Once canceled, the Contract cannot be resumed or receive notifications.
+             */
             void cancel();
 
+            /**
+             * @brief Checks if the Contract is paused.
+             * 
+             * @return True if the Contract is currently paused, false otherwise.
+             */
             bool isPaused() const;
+
+            /**
+             * @brief Pauses the Contract.
+             * 
+             * A paused Contract temporarily stops receiving notifications until resumed.
+             */
             void pause();
+
+            /**
+             * @brief Resumes a paused Contract.
+             * 
+             * Allows a previously paused Contract to start receiving notifications again.
+             */
             void resume();
-            
+
+            /**
+             * @brief Sends a notification using the Contract's callback.
+             * 
+             * This method is typically called by the Notifier to trigger the Contract's callback.
+             */
             void notify();
 
         private:
@@ -88,16 +134,62 @@ namespace spk
             std::atomic_bool _isPaused;
         };
 
+        /**
+         * @brief Constructs a Notifier instance.
+         */
         Notifier();
+
+        /**
+         * @brief Destructs the Notifier instance.
+         */
         ~Notifier();
 
+        /**
+         * @brief Deleted copy constructor.
+         * 
+         * Prevents copying of Notifier instances.
+         */
         Notifier(const Notifier& p_other) = delete;
-        Notifier operator = (const Notifier& p_other) = delete;
 
+        /**
+         * @brief Deleted copy assignment operator.
+         * 
+         * Prevents assignment from another Notifier instance.
+         */
+        Notifier& operator = (const Notifier& p_other) = delete;
+
+        /**
+         * @brief Move constructor.
+         * 
+         * Enables the transfer of ownership of a Notifier instance from one object to another.
+         * 
+         * @param p_other The other Notifier instance to move from.
+         */
         Notifier(Notifier&& p_other);
+
+        /**
+         * @brief Move assignment operator.
+         * 
+         * Allows the Notifier to acquire the state of another Notifier instance using move semantics.
+         * 
+         * @param p_other The other Notifier instance to move from.
+         * @return A reference to this Notifier after acquiring the state.
+         */
         Notifier& operator = (Notifier&& p_other);
 
+        /**
+         * @brief Subscribes to notifications with a specific callback.
+         * 
+         * @param p_callback The callback function to be called when a notification is sent.
+         * @return A unique pointer to a Contract that manages the subscription.
+         */
         std::unique_ptr<Contract> subscribe(const Callback& p_callback);
+
+        /**
+         * @brief Notifies all active Contracts.
+         * 
+         * Calls the callback of each active Contract subscribed to this Notifier.
+         */
         void notify_all();
 
     private:

@@ -49,14 +49,72 @@ namespace spk
 		std::string _name;
 
 	public:
+		/**
+		 * @brief Constructs a GameComponent with a specified name.
+		 * 
+		 * Initializes the component with the provided name and sets it as activated by default. The component is
+		 * initially not associated with any GameObject until it is attached to one.
+		 * 
+		 * @param p_name The name of the component, used for identification purposes.
+		 */
 		GameComponent(const std::string& p_name);
 
+		/**
+		 * @brief Gets the owner GameObject of this component.
+		 * 
+		 * Returns a pointer to the GameObject that this component is attached to. If the component is not attached
+		 * to any GameObject, returns nullptr.
+		 * 
+		 * @return A pointer to the owning GameObject, or nullptr if not attached.
+		 */
 		GameObject* owner();
+
+		/**
+		 * @brief Gets the owner GameObject of this component (const version).
+		 * 
+		 * Returns a const pointer to the GameObject that this component is attached to. This method is const-qualified,
+		 * indicating that it does not modify the GameComponent.
+		 * 
+		 * @return A const pointer to the owning GameObject, or nullptr if not attached.
+		 */
 		const GameObject* owner() const;
+
+		/**
+		 * @brief Gets the full name of the component.
+		 * 
+		 * Constructs and returns the full name of the component, typically by combining the name of the component
+		 * with the name of its owner GameObject. This method can be used to generate unique identifiers for components
+		 * within the context of their owning GameObjects.
+		 * 
+		 * @return A string representing the full name of the component.
+		 */
 		std::string fullName() const;
+
+		/**
+		 * @brief Gets the name of the component.
+		 * 
+		 * Returns the name of the component as specified during construction. The name is used for identification
+		 * purposes within the game engine.
+		 * 
+		 * @return A const reference to the component's name.
+		 */
 		const std::string& name() const;
 
+		/**
+		 * @brief Virtual method for rendering the component.
+		 * 
+		 * Derived classes should override this method to implement the specific rendering logic for the component.
+		 * This method is called by the game engine or owning GameObject to perform rendering operations.
+		 */
 		virtual void onRender() = 0;
+
+		/**
+		 * @brief Virtual method for updating the component.
+		 * 
+		 * Derived classes should override this method to implement the specific logic for updating the component's
+		 * state. This method is called by the game engine or owning GameObject once per frame, allowing the component
+		 * to update its state based on time or user input.
+		 */
 		virtual void onUpdate() = 0;
 	};
 }

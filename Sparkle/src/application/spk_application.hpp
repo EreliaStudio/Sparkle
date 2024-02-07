@@ -60,20 +60,32 @@ namespace spk
 	private:
 		static inline Application* _activeApplication = nullptr;
 	public:
+		/**
+		 * @brief Return a pointer to the currently active application
+		 * @note This method is static, and is not thread local
+		*/
 		static Application* activeApplication()
 		{
 			return (_activeApplication);
 		}
 
+		/**
+		 * @brief Set this Application as the "active" application, allowing activeApplication() to return a pointer to this.
+		*/
 		void setAsActiveApplication()
 		{
 			_activeApplication = this;
 		}
 
+		/**
+		 * @enum Mode
+		 * @brief Define the expected mode of threading for an application
+		 * Will be passed thought the Application constructor.
+		*/
 		enum class Mode
 		{
-			Monothread,
-			Multithread
+			Monothread, //< The application will run on a single thread
+			Multithread //< The application will run on multiples threads (At least 2 threads)
 		};
 
 		/**
@@ -207,24 +219,60 @@ namespace spk
 		int _runMonothread();
 
 	public:
+		/**
+		 * @brief Constructor
+		 * 
+		 * @param p_title A string containing the title of the application. Can contain unicode, expressed as std::string.
+		 * @param p_size The expected size of the window, as unsigned int in both axis and expressed as pixel.
+		 * @param p_mode The expected threading mode of the application. (CF the enum Mode for more information). Monothread by default.
+		*/
 		Application(const std::string& p_title, const Vector2UInt& p_size, const Mode& p_mode = Mode::Monothread);
+
+		/**
+		 * @brief Destructor
+		 */
 		~Application();
 
+		/**
+		 * @brief Launch the application and return an error code once completed and quitted.
+		 * @return The error code of the application.
+		*/
 		int run();
+
+		/**
+		 * @brief Required a closure of the application, with the given error code.
+		 * @param p_error The error to return after the run().
+		*/
 		void quit(int p_error);
 
-		void addRootWidget(IWidget* p_rootWidget)
-		{
-			_centralWidget.addChild(p_rootWidget);
-		}
-
+		/**
+		 * @brief Return a const reference to the size of the screen.
+		 * @return The size of the screen.
+		*/
 		const spk::Vector2UInt& size() const;
 
+		/**
+		 * @brief Return a const reference to the Keyboard.
+		 * @return The Keyboard managed by the application.
+		*/
 		const Keyboard& keyboard() const;
+
+		/**
+		 * @brief Return a const reference to the Mouse.
+		 * @return The Mouse managed by the application.
+		*/
 		const Mouse& mouse() const;
 		
+		/**
+		 * @brief Return a const reference to the TimeMetrics.
+		 * @return The TimeMetrics managed by the application.
+		*/
 		const TimeMetrics& timeMetrics() const;
 		
+		/**
+		 * @brief Return a reference to the Profiler.
+		 * @return The Profiler managed by the application.
+		*/
 		Profiler& profiler();
 	};
 }

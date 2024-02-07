@@ -42,21 +42,41 @@ namespace spk
 		bool _isActive = false;
 
 	public:
+		/**
+		 * @brief Toggles the activation state of the object.
+		 * 
+		 * If the object is currently active, it becomes inactive, and vice versa.
+		 */
 		void switchActivationState()
 		{
 			_isActive = !_isActive;
 		}
 
+		/**
+		 * @brief Activates the object.
+		 * 
+		 * Sets the object's activation state to active.
+		 */
 		void activate()
 		{
 			_isActive = true;
 		}
 
+		/**
+		 * @brief Deactivates the object.
+		 * 
+		 * Sets the object's activation state to inactive.
+		 */
 		void deactivate()
 		{
 			_isActive = false;
 		}
 
+		/**
+		 * @brief Checks if the object is active.
+		 * 
+		 * @return True if the object is active, false otherwise.
+		 */
 		bool isActive() const
 		{
 			return (_isActive);
