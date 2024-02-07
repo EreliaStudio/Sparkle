@@ -11,6 +11,9 @@ namespace spk
 {
 	/**
 	 * @class PseudoRandomGenerator
+	 * 
+	 * @tparam TGeneratedType The type of value to generate. Must be a arithmetic type (e.g., int, float, double).
+	 * 
 	 * @brief Template class for generating pseudo-random values of a specified numeric type within a given range.
 	 *
 	 * This class leverages a custom pseudo-random number generation algorithm to produce values for various use
@@ -29,8 +32,6 @@ namespace spk
 	 * prg.configurePrecision(2);
 	 * float randomValue = prg.sample(42, 13); // Generate a random float between 0.0 and 1.0
 	 * @endcode
-	 *
-	 * @tparam TGeneratedType The numeric type of the values to be generated. Must be an arithmetic type.
 	 * 
 	 * @note The precision configuration is applicable only to floating-point types and dictates the number of decimal places in generated values.
 	 * 

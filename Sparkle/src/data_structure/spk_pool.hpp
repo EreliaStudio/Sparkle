@@ -9,6 +9,9 @@ namespace spk
 {
     /**
 	 * @class Pool
+     *
+     * @tparam TType The type of objects to be managed by the pool.
+     * 
      * @brief A template class for managing a pool of reusable objects of type TType.
      * 
      * The Pool class is designed to optimize resource allocation and reusability by maintaining
@@ -30,8 +33,6 @@ namespace spk
      * spk::Pool<MyClass>::Object myObject = myPool.obtain(); // Obtain an object from the pool
      * // Use myObject as needed; it will be automatically returned to the pool once out of scope
      * @endcode
-     *
-     * @tparam TType The type of objects to be managed by the pool.
      */
     template<typename TType>
     class Pool

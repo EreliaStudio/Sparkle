@@ -16,7 +16,10 @@
 namespace spk
 {
 	/**
-	 * @class IVector2<TType>
+	 * @class IVector2
+	 * 
+	 * @tparam TType The numeric type used to represent the vector's components. It must be an arithmetic type (e.g., int, float, double).
+	 * 
 	 * @brief A 2D vector template class for storing and manipulating 2D point coordinates.
 	 *
 	 * This template class provides functionality for working with 2D vectors, commonly
@@ -31,7 +34,6 @@ namespace spk
 	 * spk::IVector2<float> normalized = point.normalize(); // Normalize the vector
 	 * @endcode
 	 *
-	 * @tparam TType The numeric type used to represent the vector's components. It must be an arithmetic type (e.g., int, float, double).
 	 */
 	template <typename TType>
 	struct IVector2

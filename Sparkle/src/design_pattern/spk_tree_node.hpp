@@ -5,7 +5,10 @@
 namespace spk
 {
 	/**
-	 * @class TreeNode<TType>
+	 * @class TreeNode
+	 * 
+	 * @tparam TType The type of the tree nodes, typically a derived class.
+	 * 
 	 * @brief A generic tree node class for building hierarchical structures.
 	 * 
 	 * The TreeNode class represents a node in a hierarchical structure, such as a tree. It provides
@@ -24,8 +27,6 @@ namespace spk
 	 * parentNode.addChild(&childNode1);
 	 * parentNode.addChild(&childNode2);
 	 * @endcode
-	 * 
-	 * @tparam TType The type of the tree nodes, typically a derived class.
 	 */
 	template<typename TType>
 	class TreeNode

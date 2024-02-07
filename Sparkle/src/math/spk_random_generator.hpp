@@ -7,6 +7,9 @@ namespace spk
 {
 	/**
 	 * @class RandomGenerator
+	 * 
+	 * @tparam TGeneratedType The type of value to generate. Must be a arithmetic type (e.g., int, float, double).
+	 * 
 	 * @brief Template class for generating random values of a specified numeric type within a given range.
 	 *
 	 * This class offers a versatile random number generation capability for various numeric types,
@@ -26,8 +29,6 @@ namespace spk
 	 * rng.configureRange(0.0f, 1.0f);
 	 * float randomValue = rng.sample(); // Generate a random float between 0.0 and 1.0
 	 * @endcode
-	 *
-	 * @tparam TGeneratedType The numeric type of the values to be generated. Must be an arithmetic type.
 	 *
 	 * @note The configuration options, such as seed and range, provide control over the randomness of generated values, making this class suitable for various applications requiring random data.
 	 */

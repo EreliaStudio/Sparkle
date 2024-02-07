@@ -5,7 +5,10 @@
 namespace spk
 {
     /**
-	 * @class ObservableValue<TType>
+	 * @class ObservableValue
+     *
+     * @tparam TType The type of the value being observed.
+     * 
      * @brief A template class for creating observable values that notify subscribers when changed.
      * 
      * The ObservableValue class wraps a value of a specified type and allows subscribers to be notified
@@ -26,8 +29,6 @@ namespace spk
      * auto contract = observableInt.subscribe([]{ std::cout << "Value changed!" << std::endl; });
      * observableInt = 20; // Subscribers will be notified of this change
      * @endcode
-     *
-     * @tparam TType The type of the value being observed.
      * 
      * @see Notifier 
      */

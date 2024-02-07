@@ -9,15 +9,16 @@
 namespace spk
 {
 	/**
-	 * @class IVector3<TType>
+	 * @class IVector3
+	 * 
+	 * @tparam TType The numeric type used to represent the vector's components. It must be an arithmetic type (e.g., int, float, double).
+	 * 
 	 * @brief Represents a 3D vector with components x, y, and z.
 	 *
 	 * This class provides a template for creating 3D vectors of various types
 	 * (e.g., float, int, unsigned int). It includes common vector operations
 	 * such as addition, subtraction, multiplication, division, dot product,
 	 * cross product, normalization, and more.
-	 *
-	 * @tparam TType The data type of vector components (e.g., float, int).
 	 */
 	template <typename TType>
 	struct IVector3

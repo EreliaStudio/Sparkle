@@ -45,7 +45,10 @@ namespace spk
 	};
 
 	/**
-	 * @class IAnalyticalMetric<TType>
+	 * @class IAnalyticalMetric
+	 * 
+	 * @tparam TType The type of data to manage. Must be a arithmetic type (e.g., int, float, double).
+	 * 
 	 * @brief Template class for analytical metrics collection, extending IMetric.
 	 *
 	 * This class is a generic class designed to collect and analyze numerical

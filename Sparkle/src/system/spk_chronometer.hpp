@@ -5,7 +5,10 @@
 namespace spk
 {
 	/**
-	 * @class IChronometer<TTimeUnit>
+	 * @class IChronometer
+	 * 
+	 * @tparam TTimeUnit The time unit for measuring intervals, defaulting to milliseconds.
+	 * 
 	 * @brief A generic chronometer template class for measuring time intervals with precision.
 	 *
 	 * This class is designed as a template class that allows for precise measurement of elapsed time intervals,

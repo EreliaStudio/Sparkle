@@ -61,7 +61,7 @@ namespace spk
 	public:
 
 		/**
-		 * @class Mesh::Data
+		 * @class Data
 		 * @brief Represents the data structure for a baked mesh.
 		 * 
 		 * This struct holds the final mesh data after baking, including vertex information, vertex size, vertexes, and indexes.

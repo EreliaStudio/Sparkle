@@ -7,7 +7,10 @@
 namespace spk
 {
 	/**
-	 * @class StateMachine<TStateType>
+	 * @class StateMachine
+	 *
+	 * @tparam TStateType The type used to represent state identifiers (e.g., an enumeration).
+	 * 
 	 * @brief A generic state machine for managing states and associated actions.
 	 * 
 	 * The StateMachine class provides a flexible mechanism for managing states and their corresponding
@@ -25,8 +28,6 @@ namespace spk
 	 * stateMachine.enterState(MyStateEnum::Idle); // Transition to the "Idle" state
 	 * stateMachine.update(); // Execute state-specific update action
 	 * @endcode
-	 *
-	 * @tparam TStateType The type used to represent state identifiers (e.g., an enumeration).
 	 */
 	template<typename TStateType>
 	class StateMachine
