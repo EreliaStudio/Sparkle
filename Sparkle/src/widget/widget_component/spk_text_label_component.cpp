@@ -28,7 +28,7 @@ namespace spk::WidgetComponent
     
     void renderPass()
     {
-        float r = texture(fontTexture, fragmentUVs).r;
+        float r = texture(fontTexture.handle, fragmentUVs).r;
 
         if (r == 0.0)
         {

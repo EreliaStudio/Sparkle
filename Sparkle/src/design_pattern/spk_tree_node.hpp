@@ -33,7 +33,7 @@ namespace spk
 	{
 	private:
 		TType* _parent;
-		std::vector<TType*> _childrens;
+		std::vector<TType*> _children;
 
 	public:
 		/**
@@ -55,10 +55,21 @@ namespace spk
 		 */
 		~TreeNode()
 		{
-			for (const auto& child : _childrens)
+			for (const auto& child : _children)
 			{
 				child->_parent = nullptr;
 			}
+			_parent->removeChild(this);
+		}
+
+		/**
+		 * @brief Gets the parent of this node.
+		 * 
+		 * @return A pointer to the parent node, or nullptr if this node is the root of its tree.
+		 */
+		TType* parent()
+		{
+			return (_parent);
 		}
 
 		/**
@@ -76,9 +87,9 @@ namespace spk
 		 * 
 		 * @return A vector of pointers to the child nodes.
 		 */
-		const std::vector<TType*> childrens() const
+		const std::vector<TType*> children() const
 		{
-			return (_childrens);
+			return (_children);
 		}
 
 		/**
@@ -94,7 +105,7 @@ namespace spk
 			if (p_children->_parent != nullptr)
 				p_children->_parent->removeChild(p_children);
 
-			_childrens.push_back(p_children);
+			_children.push_back(p_children);
 
 			p_children->_parent = static_cast<TType*>(this);
 		}
@@ -109,10 +120,10 @@ namespace spk
 		 */
 		void removeChild(TType* p_child)
 		{
-			auto it = std::find(_childrens.begin(), _childrens.end(), p_child);
-			if (it != _childrens.end())
+			auto it = std::find(_children.begin(), _children.end(), p_child);
+			if (it != _children.end())
 			{
-				_childrens.erase(it);
+				_children.erase(it);
 			}
 		}
 
@@ -125,7 +136,7 @@ namespace spk
 		 */
 		void transferChildrens(TType* p_newParent)
 		{
-			for (const auto& child : _childrens)
+			for (const auto& child : _children)
 			{
 				p_newParent->addChild(child);
 			}

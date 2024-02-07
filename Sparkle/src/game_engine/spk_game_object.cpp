@@ -12,7 +12,7 @@ namespace spk
 			component->_onRender();
 		}
 
-		for (auto& child : childrens())
+		for (auto& child : children())
 		{
 			child->render();
 		}
@@ -28,7 +28,7 @@ namespace spk
 			component->_onUpdate();
 		}
 
-		for (auto& child : childrens())
+		for (auto& child : children())
 		{
 			child->update();
 		}
@@ -38,19 +38,19 @@ namespace spk
 		_name(p_name),
 		_transform(),
 		_translationContract(_transform.translation.subscribe([&](){
-			for (auto& child : childrens())
+			for (auto& child : children())
 			{
 				child->transform().translation.notify_all();
 			}
 		})),
 		_sclaeContract(_transform.scale.subscribe([&](){
-			for (auto& child : childrens())
+			for (auto& child : children())
 			{
 				child->transform().scale.notify_all();
 			}
 		})),
 		_rotationContract(_transform.rotation.subscribe([&](){
-			for (auto& child : childrens())
+			for (auto& child : children())
 			{
 				child->transform().rotation.notify_all();
 			}

@@ -79,150 +79,32 @@ namespace spk
 
 		virtual void _onUpdate() = 0;
 
-		void render()
-		{
-			if (_needGeometryChange == true)
-			{
-				_computeViewport();
-				_onGeometryChange();
-				_needGeometryChange = false;
-			}
+		void render();
+		void update();
 
-			_onRender();
+		void resize(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size);
 
-			for (auto& child : childrens())
-			{
-				if (child->isActive() == true)
-				{
-					_viewport.activate();
-					child->render();
-				}
-			}
-		}
-
-		void update()
-		{
-			_onUpdate();
-
-			for (auto& child : childrens())
-			{
-				if (child->isActive() == true)
-				{
-					child->update();
-				}
-			}
-		}
-
-		void resize(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size)
-		{
-			_anchor = p_anchor;
-			_size = p_size;
-			_needGeometryChange = true;
-			
-			for (auto& child : childrens())
-			{
-				child->resize(_size * child->_anchorRatio, _size * child->_sizeRatio);
-			}
-			_onGeometryChange();
-		}
-
-		spk::Vector2Int _computeAbsoluteAnchor()
-		{
-			spk::Vector2Int result = 0;
-			const IWidget* tmp = this;
-
-			while (tmp->parent() != nullptr)
-			{
-				result += tmp->anchor();
-				tmp = tmp->parent();
-			}
-
-			return (result);
-		}
-
-		void _computeViewport()
-		{
-			spk::Vector2Int topLeft = _computeAbsoluteAnchor();
-			spk::Vector2Int rightDown = size() + topLeft;
-
-			if (parent() != nullptr)
-				topLeft = spk::Vector2Int::max(topLeft, parent()->viewport().anchor());
-
-			if (parent() != nullptr)
-				rightDown = spk::Vector2Int::min(rightDown, parent()->viewport().anchor() + parent()->viewport().size());
-
-			_viewport.setGeometry(topLeft, rightDown - topLeft);
-		}
+		spk::Vector2Int _computeAbsoluteAnchor();
+		void _computeViewport();
 
 	public:
-		IWidget(const std::string& p_name) :
-			_name(p_name),
-			_depth(0)
-		{
-			if (defaultParent != nullptr)
-				defaultParent->addChild(this);
-		}
+		IWidget(const std::string& p_name);
+		IWidget(const std::string& p_name, IWidget* p_parent);
 
-		IWidget(const std::string& p_name, IWidget* p_parent) :
-			_name(p_name),
-			_depth(0)
-		{
-			p_parent->addChild(this);
-		}
+		~IWidget();
 
-		~IWidget()
-		{
-			if (defaultParent != nullptr)
-			{
-				transferChildrens(defaultParent);
-			}
-		}
+		void addChild(IWidget* p_children);
+		void setGeometry(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size);
+		void setDepth(const float& p_depth);
 
-		void addChild(IWidget* p_children)
-		{
-			TreeNode<IWidget>::addChild(p_children);
-			p_children->setDepth(depth() + 1);
-		}
+		void activateAll();
+		void deactivateAll();
 
-		void setGeometry(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size)
-		{
-			_anchor = p_anchor;
-			_size = p_size;
+		const std::string& name() const;
 
-			_anchorRatio = (parent() != nullptr && parent()->size() != 0 ? static_cast<spk::Vector2>(_anchor) / static_cast<spk::Vector2>(parent()->size()) : 0);
-			_sizeRatio = (parent() != nullptr && parent()->size() != 0 ? static_cast<spk::Vector2>(_size) / static_cast<spk::Vector2>(parent()->size()) : 1);
-
-			_needGeometryChange = true;
-		}
-
-		void setDepth(const float& p_depth)
-		{
-			_depth = p_depth;
-		}
-
-		const std::string& name() const
-		{
-			return (_name);
-		}
-
-		const spk::Vector2Int& anchor() const
-		{
-			return (_anchor);
-		}
-
-		const float& depth() const
-		{
-			return (_depth);
-		}
-
-		const spk::Vector2UInt& size() const
-		{
-			return (_size);
-		}
-
-		const spk::Viewport& viewport() const
-		{
-			return (_viewport);
-		}
+		const float& depth() const;
+		const spk::Vector2Int& anchor() const;
+		const spk::Vector2UInt& size() const;
+		const spk::Viewport& viewport() const;
 	};
 }

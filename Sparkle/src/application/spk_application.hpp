@@ -62,7 +62,7 @@ namespace spk
 	class Application
 	{
 	private:
-		static inline Application* _activeApplication = nullptr;
+		static thread_local inline Application* _activeApplication = nullptr;
 	public:
 		/**
 		 * @brief Return a pointer to the currently active application

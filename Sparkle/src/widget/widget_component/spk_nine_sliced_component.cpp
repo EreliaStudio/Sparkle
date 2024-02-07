@@ -22,7 +22,7 @@ namespace spk::WidgetComponent
 
 	void renderPass()
 	{
-		pixelColor = texture(spriteSheet, fragmentUVs);
+		pixelColor = texture(spriteSheet.handle, fragmentUVs);
 		if (pixelColor.a == 0)
 			discard;
 	})";
@@ -130,6 +130,9 @@ namespace spk::WidgetComponent
 
 	void NineSlicedBox::render()
 	{
+		if (_spriteSheet == nullptr)
+			return ;
+			
 		if (_needGPUUpdate == true)
 		{
 			_updateVertices();
