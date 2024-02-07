@@ -5,6 +5,7 @@
 namespace spk
 {
 	/**
+	 * @class Perlin1D
 	 * @brief Specializes the IPerlin noise generator for one-dimensional Perlin noise, suitable for procedural content generation in 1D space.
 	 *
 	 * Perlin1D extends the IPerlin class to focus specifically on generating one-dimensional Perlin noise. This class simplifies the creation of

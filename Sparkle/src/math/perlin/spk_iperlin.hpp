@@ -6,6 +6,7 @@
 namespace spk
 {
 	/**
+	 * @class IPerlin
 	 * @brief Provides a flexible implementation of Perlin noise generation, suitable for various procedural content generation tasks.
 	 *
 	 * This class encapsulates the algorithm for generating Perlin noise, a type of gradient noise often used in procedural texturing,

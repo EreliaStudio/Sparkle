@@ -6,6 +6,7 @@
 namespace spk
 {
 	/**
+	 * @class Mouse
 	 * @brief Manages mouse input, including button states, position, and wheel movement.
 	 *
 	 * This class tracks the state of mouse buttons (pressed, released, up, down), the position of the mouse cursor, and the movement of the mouse wheel. It provides methods to update these states based on input events, making it suitable for integrating mouse-based interaction within applications.

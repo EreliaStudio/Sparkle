@@ -5,6 +5,7 @@
 namespace spk
 {
 	/**
+	 * @class ITimer<TTimeUnit>
 	 * @brief A timer class template extending IChronometer for measuring time intervals with a specified duration.
 	 *
 	 * This class leverages the functionality of IChronometer to provide a simple and efficient way to create timers

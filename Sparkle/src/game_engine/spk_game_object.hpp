@@ -6,6 +6,7 @@
 namespace spk
 {
 	/**
+	 * @class GameObject
 	 * @brief Represents a game object in the game engine hierarchy.
 	 * 
 	 * This class represents a fundamental building block in a game engine hierarchy. It combines the features

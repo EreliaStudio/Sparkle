@@ -5,6 +5,7 @@
 namespace spk
 {
     /**
+	 * @class TriggerMetric
      * @brief A metric class for counting and reporting discrete trigger events, extending IAnalyticalMetric<long long>.
      *
      * TriggerMetric is tailored for scenarios where events or actions need to be counted over time. It provides a simple

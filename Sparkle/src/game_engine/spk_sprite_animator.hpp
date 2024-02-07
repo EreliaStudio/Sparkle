@@ -9,6 +9,7 @@
 namespace spk
 {
 	/**
+	 * @class SpriteAnimation
 	 * @brief Represents a sprite animation with duration and frame information.
 	 * 
 	 * This struct defines a sprite animation, including its duration (in frames), the coordinates of the first frame

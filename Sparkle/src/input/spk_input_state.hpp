@@ -5,6 +5,7 @@
 namespace spk
 {
 	/**
+	 * @enum InputState
 	 * @brief Represents the state of an input device (e.g., keyboard key, mouse button).
 	 *
 	 * This enum classifies the various states that an input can be in during application runtime. It is designed to help manage input events more intuitively, making it easier to implement responsive and interactive applications.

@@ -13,6 +13,7 @@
 namespace spk
 {
     /**
+	 * @class Pipeline
      * @brief Manages the rendering pipeline, including shader programs, uniforms, and objects.
      *
      * The Pipeline class orchestrates the rendering process by managing shader programs,
@@ -37,6 +38,7 @@ namespace spk
     {    
     private:
         /**
+	     * @class Structure
          * @brief Represents the layout of a structured data block used within the rendering pipeline, such as a uniform block or vertex attribute structure.
          *
          * This class defines the memory layout for complex data structures passed to shaders. It includes information about the overall size of the
@@ -55,6 +57,7 @@ namespace spk
         struct Structure
         {
                 /**
+	             * @class Structure::Element
                  * @brief Describes a single element within a `Structure`, such as a field within a uniform block or a vertex attribute.
                  *
                  * This struct provides the offset (both with and without padding), length, and optionally a pointer to another `Structure` if
@@ -95,6 +98,7 @@ namespace spk
 	    void _loadStructureFromInstructions(const std::vector<OpenGL::ShaderInstruction>& p_instructions);
 
         /**
+	     * @class UniformObject
          * @brief Encapsulates a uniform buffer object (UBO) for Pipeline::Constants and Object::Attribute.
          *
          * This class manages a block of memory that stores uniform variables for use in a shader program.
@@ -110,6 +114,7 @@ namespace spk
         {
         public:
             /**
+	         * @class UniformObject::Element
              * @brief Provides access and manipulation capabilities for elements within a UniformObject structure.
              *
              * This class allows for setting and getting values of specific elements within a UniformObject, using the structure's layout information. It supports type-safe assignments and retrieval of uniform values, ensuring data integrity when communicating with the shader program.
@@ -151,6 +156,7 @@ namespace spk
             };
 
             /**
+	         * @class UniformObject::Layout
              * @brief Describes the layout of a uniform object, including its type, binding, and structure.
              *
              * This struct is used to define the layout and binding information of uniform blocks within the shader programs.
@@ -202,6 +208,7 @@ namespace spk
 
     public:
         /**
+	     * @class Constant
          * @brief Specializes UniformObject for managing global constants in Pipeline.
          *
          * This class is a specialization of UniformObject designed for handling
@@ -249,6 +256,7 @@ namespace spk
         };
 
         /**
+	     * @class Object
          * @brief Represents a drawable object within the Pipeline, including geometry and attributes.
          *
          * This class is responsible for managing the vertex array object (VAO), vertex buffer object (VBO),
@@ -273,6 +281,7 @@ namespace spk
 
         public:
             /**
+	         * @class Storage
              * @brief Manages the storage for vertex and index buffers associated with a drawable object.
              *
              * The Storage class encapsulates vertex and index data for an Object, handling the creation
@@ -287,6 +296,7 @@ namespace spk
                 
             public:
                 /**
+	             * @class Layout
                  * @brief Defines the layout of vertex data for the Storage class, including stride and element information.
                  *
                  * This structure specifies how vertex data is organized, including the stride between vertices and
@@ -298,6 +308,7 @@ namespace spk
                 struct Layout
                 {
                     /**
+	                 * @class Element
                      * @brief Describes a single element within a uniform or vertex attribute structure for rendering.
                      *
                      * This struct provides detailed information about each element within a `Structure`, such as its
@@ -361,6 +372,7 @@ namespace spk
             };
 
             /**
+	         * @class Attribute
              * @brief Specializes UniformObject for managing object-specific attributes in shaders.
              *
              * This class extends UniformObject to handle attributes specific to an Object, such as material properties or transformation matrices. It provides a mechanism to update these attributes individually, optimizing the rendering process.
@@ -442,6 +454,7 @@ namespace spk
 
     public:
         /**
+	     * @class Texture
          * @brief Manages texture units and binding to shaders.
          *
          * This class handles the association of texture data with shader sampler uniforms.
@@ -465,6 +478,7 @@ namespace spk
                         
         public:
             /**
+	         * @class Layout
              * @brief Defines the name and binding point for the Texture class.
              *
              * It is critical for setting up the sampler correctly in OpenGL.

@@ -3,6 +3,7 @@
 namespace spk
 {
 	/**
+	 * @class ActivateObject
 	 * @brief Manages activation state for objects, intended as a base class.
 	 * 
 	 * This class provides mechanisms to manage the active state of objects and is designed to be

@@ -8,6 +8,7 @@
 namespace spk
 {
     /**
+	 * @class Pool
      * @brief A template class for managing a pool of reusable objects of type TType.
      * 
      * The Pool class is designed to optimize resource allocation and reusability by maintaining

@@ -77,6 +77,7 @@ namespace spk
 		};
 
 		/**
+		 * @class CentralWidget
 		 * @brief CentralWidget serves as the core widget in an application, managing time-based updates via a custom rendering pipeline.
 		 *
 		 * Usage:
@@ -133,7 +134,9 @@ namespace spk
 			}
 
 		public:
-
+			/**
+			 * @brief Will set the default parent widget parent to nullptr
+			 */
 			~CentralWidget()
 			{
 				defaultParent = nullptr;

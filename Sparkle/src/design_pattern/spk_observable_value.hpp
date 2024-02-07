@@ -5,6 +5,7 @@
 namespace spk
 {
     /**
+	 * @class ObservableValue<TType>
      * @brief A template class for creating observable values that notify subscribers when changed.
      * 
      * The ObservableValue class wraps a value of a specified type and allows subscribers to be notified

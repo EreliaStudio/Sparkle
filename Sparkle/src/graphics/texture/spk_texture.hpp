@@ -12,9 +12,8 @@
 
 namespace spk
 {
-	class Pipeline;
-
 	/**
+	 * @class Texture
 	 * @brief Manages texture data for use in rendering pipelines.
 	 *
 	 * This class encapsulates the functionality required to handle texture images, including loading them

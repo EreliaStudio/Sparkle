@@ -5,6 +5,7 @@
 namespace spk
 {
 	/**
+	 * @class TreeNode<TType>
 	 * @brief A generic tree node class for building hierarchical structures.
 	 * 
 	 * The TreeNode class represents a node in a hierarchical structure, such as a tree. It provides

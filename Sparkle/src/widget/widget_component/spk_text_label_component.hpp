@@ -9,9 +9,10 @@
 namespace spk::WidgetComponent
 {
     /**
+	 * @class TextLabel
      * @brief A component for rendering text within the UI, supporting various alignments, styles, and outlines.
      *
-     * TextLabel is a versatile UI component designed for displaying text within the SPK engine's widget system.
+     * This class is a versatile UI component designed for displaying text within the SPK engine's widget system.
      * It supports custom fonts, color, outlines, and alignment, making it suitable for a wide range of UI text rendering
      * tasks. The component utilizes the SPK engine's rendering pipeline to efficiently render text using font atlases,
      * ensuring high performance and quality.

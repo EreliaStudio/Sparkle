@@ -8,6 +8,7 @@
 namespace spk
 {
 	/**
+	 * @class Keyboard
 	 * @brief Manages keyboard input states and character input for an application.
 	 *
 	 * This class provides functionality to track the state of individual keys on the keyboard,

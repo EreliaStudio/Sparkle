@@ -10,6 +10,7 @@
 namespace spk
 {
 	/**
+	 * @class PseudoRandomGenerator
 	 * @brief Template class for generating pseudo-random values of a specified numeric type within a given range.
 	 *
 	 * This class leverages a custom pseudo-random number generation algorithm to produce values for various use

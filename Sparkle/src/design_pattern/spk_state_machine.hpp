@@ -7,6 +7,7 @@
 namespace spk
 {
 	/**
+	 * @class StateMachine<TStateType>
 	 * @brief A generic state machine for managing states and associated actions.
 	 * 
 	 * The StateMachine class provides a flexible mechanism for managing states and their corresponding

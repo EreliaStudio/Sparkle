@@ -9,6 +9,7 @@
 namespace spk
 {
     /**
+	 * @class Notifier
      * @brief Manages a list of subscribers (via callbacks) and notifies them uppon request.
      * 
      * The Notifier class is designed to handle event notification to a set of subscribers. It allows
@@ -35,6 +36,7 @@ namespace spk
         using Callback = std::function<void()>;
 
         /**
+	     * @class Contract
          * @brief Represents a subscription contract between a subscriber and a Notifier.
          * 
          * The Contract class encapsulates the relationship between a subscriber and the Notifier, providing

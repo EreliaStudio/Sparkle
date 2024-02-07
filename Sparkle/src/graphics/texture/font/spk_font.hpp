@@ -9,6 +9,7 @@
 namespace spk
 {
     /**
+     * @class Font
      * @brief Handles font rendering by managing glyph textures and dynamic font atlas creation.
      *
      * The Font class is designed for flexible and efficient text rendering in graphical applications.
@@ -62,6 +63,7 @@ namespace spk
 
     public:
         /**
+         * @class Configuration
          * @brief Holds configuration data for font loading and glyph validation.
          *
          * This nested class within Font is responsible for storing configuration details related to a specific
@@ -94,6 +96,7 @@ namespace spk
 
     public:
         /**
+         * @class Key
          * @brief Represents a unique identifier for font atlas configurations.
          *
          * The Key class defines a set of parameters that uniquely identify a font atlas configuration,
@@ -125,6 +128,7 @@ namespace spk
         };
 
         /**
+         * @class Atlas
          * @brief Manages a texture atlas for a specific font configuration, including glyph data and texture.
          *
          * The Atlas class is a crucial component of the Font system, handling the creation and storage of a
@@ -150,6 +154,7 @@ namespace spk
         {
         public:
             /**
+             * @class GlyphData
              * @brief Holds rendering data for an individual glyph within a font atlas.
              *
              * Nested within the Atlas class, GlyphData contains the texture coordinates (UVs), screen position express
@@ -171,28 +176,13 @@ namespace spk
                 spk::Vector2Int step;
             };
 
-            /**
-             * @brief Contains the data needed to build a texture atlas for font rendering.
-             *
-             * The BuildData struct is an internal component of the Atlas class, used during the atlas construction
-             * process. It includes a buffer for the atlas texture data and the size of the texture, allowing for
-             * dynamic generation of texture atlases based on specific font and rendering configurations.
-             *
-             * This struct is pivotal in converting raw font data into a usable texture atlas, facilitating the
-             * customization of text rendering in applications.
-             *
-             * Usage example: Not directly instantiated by users, utilized within Atlas::_computeBuildData to prepare
-             * the atlas texture.
-             *
-             * @see Atlas
-             */
+        private:
             struct BuildData
             {
                 std::vector<uint8_t> buffer;
                 spk::Vector2Int size = spk::Vector2Int(32, 32);
             };
 
-        private:
             Configuration _fontConfiguration;
             std::vector<GlyphData> _glyphDatas;
             Texture _texture;

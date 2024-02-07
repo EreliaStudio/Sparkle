@@ -6,6 +6,7 @@
 namespace spk
 {
 	/**
+	 * @class RandomGenerator
 	 * @brief Template class for generating random values of a specified numeric type within a given range.
 	 *
 	 * This class offers a versatile random number generation capability for various numeric types,

@@ -6,6 +6,7 @@
 namespace spk
 {
 	/**
+	 * @class Image
 	 * @brief Extends the Texture class to load texture data from image files.
 	 *
 	 * The Image class is designed to facilitate the loading of textures from various image file formats

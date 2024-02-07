@@ -6,6 +6,7 @@
 namespace spk
 {
 	/**
+	 * @class Profiler
 	 * @brief Manages and aggregates metrics for performance profiling or analytical purposes within an application.
 	 *
 	 * This class serves as a central manager for metrics that adhere to the IMetric interface. It allows for the

@@ -6,6 +6,7 @@
 namespace spk
 {
 	/**
+	 * @class Viewport
 	 * @brief Manages the viewport area for rendering within an application window.
 	 *
 	 * The Viewport class defines a specific area of the window where rendering occurs, characterized by an anchor point and size. It supports operations such as setting the viewport geometry, activating a particular viewport for rendering, and converting screen coordinates to GPU-specific positions.

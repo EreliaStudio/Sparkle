@@ -7,6 +7,7 @@
 namespace spk::OpenGL
 {
 	/**
+	 * @class ShaderInstruction
 	 * @brief Represents and categorizes a single instruction or declaration within OpenGL shader code, used internally for shader management.
 	 *
 	 * ShaderInstruction facilitates the parsing and categorization of GLSL shader code, enabling the internal system to interpret and manage

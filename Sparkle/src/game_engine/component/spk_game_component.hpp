@@ -8,6 +8,7 @@ namespace spk
 	class GameObject;
 
 	/**
+	 * @class GameComponent
 	 * @brief Base class for game components that can be attached to GameObjects.
 	 * 
 	 * This class serves as a base class for various game components that can be attached to GameObjects.

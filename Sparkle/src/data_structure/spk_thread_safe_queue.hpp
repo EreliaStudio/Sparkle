@@ -7,6 +7,7 @@
 namespace spk
 {
 	/**
+	 * @class ThreadSafeDeque
 	 * @brief A thread-safe wrapper around std::deque, enabling safe access and modification across multiple threads.
 	 *
 	 * This template class provides synchronized access to a deque, ensuring that operations such as push, pop, and access

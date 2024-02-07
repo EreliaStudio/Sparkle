@@ -7,6 +7,7 @@
 namespace spk
 {
 	/**
+	 * @class Perlin2D
 	 * @brief Extends Perlin1D to generate two-dimensional Perlin noise, suitable for a wide range of procedural content generation in 2D space.
 	 *
 	 * Perlin2D leverages the foundational Perlin noise algorithm provided by Perlin1D, enhancing it to produce noise values across two dimensions.

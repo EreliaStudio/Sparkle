@@ -7,6 +7,7 @@
 namespace spk
 {
 	/**
+	 * @class Perlin3D
 	 * @brief Enhances Perlin2D by generating three-dimensional Perlin noise, ideal for volumetric procedural content generation.
 	 *
 	 * Perlin3D extends the capabilities of Perlin2D to three dimensions, allowing for the creation of complex, naturally

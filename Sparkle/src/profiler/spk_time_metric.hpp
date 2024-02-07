@@ -7,6 +7,7 @@
 namespace spk
 {
     /**
+	 * @class TimeMetric
      * @brief Specialized metric for measuring and reporting time durations, extending IAnalyticalMetric<long long>.
      *
      * This class provides a high-level interface for timing operations within an application, leveraging the Chronometer

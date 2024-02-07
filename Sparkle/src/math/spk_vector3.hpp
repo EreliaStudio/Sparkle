@@ -9,6 +9,7 @@
 namespace spk
 {
 	/**
+	 * @class IVector3<TType>
 	 * @brief Represents a 3D vector with components x, y, and z.
 	 *
 	 * This class provides a template for creating 3D vectors of various types

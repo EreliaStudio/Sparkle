@@ -21,6 +21,7 @@ namespace spk::OpenGL
 	};
 
     /**
+	 * @class VertexArrayObject
      * @brief Encapsulates an OpenGL Vertex Array Object (VAO), managing the state needed for rendering.
      *
      * VertexArrayObject simplifies the creation, binding, and deletion of VAOs, which are essential for modern OpenGL rendering. VAOs store
@@ -52,6 +53,7 @@ namespace spk::OpenGL
 	};
 
     /**
+	 * @class VertexBufferObject
      * @brief Wraps an OpenGL Vertex Buffer Object (VBO), used for storing vertex data or indices in GPU memory.
      *
      * VertexBufferObject manages the lifecycle of a VBO, including its creation, data storage, and cleanup. VBOs are used to efficiently
@@ -110,6 +112,7 @@ namespace spk::OpenGL
 	};
 
     /**
+	 * @class UniformBufferObject
      * @brief Specializes VertexBufferObject for OpenGL Uniform Buffer Objects (UBOs), facilitating shader uniform management.
      *
      * UniformBufferObject provides an interface for creating, binding, and managing UBOs. UBOs allow for efficient sharing of uniform data
@@ -140,6 +143,7 @@ namespace spk::OpenGL
 	};
 
     /**
+	 * @class SamplerObject
      * @brief Manages OpenGL sampler uniforms, linking texture units to shader sampler locations.
      *
      * SamplerObject abstracts the association between a shader's sampler uniform and an OpenGL texture unit, facilitating texture binding

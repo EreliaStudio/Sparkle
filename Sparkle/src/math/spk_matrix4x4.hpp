@@ -8,6 +8,7 @@
 namespace spk
 {
     /**
+	 * @class Matrix4x4
      * @brief Represents a 4x4 matrix and provides a comprehensive set of operations for graphical
      * transformations.
      *

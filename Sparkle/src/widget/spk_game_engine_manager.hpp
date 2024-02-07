@@ -6,6 +6,7 @@
 namespace spk
 {
 	/**
+	 * @class GameEngineManager
 	 * @brief Manages the integration of a game engine within a widget-based user interface framework.
 	 *
 	 * This class is a specialized widget that serves as a bridge between the game engine and the user interface,

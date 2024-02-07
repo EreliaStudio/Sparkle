@@ -8,9 +8,10 @@
 namespace spk::WidgetComponent
 {
     /**
+	 * @class WidgetComponent::NineSlicedBox
      * @brief Implements a nine-sliced box component for UI rendering, supporting scalable and adaptable layouts.
      *
-     * NineSlicedBox utilizes a nine-slice technique to render scalable UI elements where the corners remain
+     * This class utilizes a nine-slice technique to render scalable UI elements where the corners remain
      * unscaled, preserving the element's visual integrity at various sizes. This approach is particularly
      * useful for UI backgrounds, buttons, and other interface elements that need to dynamically resize without
      * distorting their graphical content.

@@ -7,6 +7,7 @@
 namespace spk
 {
 	/**
+	 * @class GameEngine
 	 * @brief Represents the game engine responsible for rendering and updating game objects.
 	 *
 	 * This class serves as the core of the game engine and is responsible for rendering and updating game objects.

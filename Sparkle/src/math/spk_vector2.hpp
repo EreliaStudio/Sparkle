@@ -16,6 +16,7 @@
 namespace spk
 {
 	/**
+	 * @class IVector2<TType>
 	 * @brief A 2D vector template class for storing and manipulating 2D point coordinates.
 	 *
 	 * This template class provides functionality for working with 2D vectors, commonly

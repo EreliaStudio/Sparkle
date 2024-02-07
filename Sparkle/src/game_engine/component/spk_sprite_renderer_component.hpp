@@ -12,6 +12,7 @@
 namespace spk
 {
 	/**
+	 * @class SpriteRenderer
 	 * @brief Represents a sprite renderer component for rendering sprites in world space.
 	 * 
 	 * This class allows you to create a sprite renderer component that can be attached to game objects.

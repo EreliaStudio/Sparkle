@@ -7,6 +7,7 @@
 namespace spk
 {
 	/**
+	 * @class Transform
 	 * @brief Represents the transformation of a game object in 3D space.
 	 *
 	 * This class defines the position, rotation, and scale of a game object within a 3D world.

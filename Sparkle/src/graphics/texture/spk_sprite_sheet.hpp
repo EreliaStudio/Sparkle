@@ -5,6 +5,7 @@
 namespace spk
 {
 	/**
+	 * @class SpriteSheet
 	 * @brief Manages a texture divided into a grid of sprites, extending the Image class.
 	 *
 	 * The SpriteSheet class is designed for handling textures that contain multiple smaller images or sprites,

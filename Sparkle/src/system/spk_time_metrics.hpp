@@ -6,6 +6,7 @@
 namespace spk
 {
 	/**
+	 * @class TimeMetrics
 	 * @brief Provides high-resolution timing metrics, including delta time and absolute time measurements.
 	 *
 	 * This class utilizes the std::chrono high-resolution clock to measure and report time intervals and

@@ -5,6 +5,7 @@
 namespace spk
 {
 	/**
+	 * @class IChronometer<TTimeUnit>
 	 * @brief A generic chronometer template class for measuring time intervals with precision.
 	 *
 	 * This class is designed as a template class that allows for precise measurement of elapsed time intervals,

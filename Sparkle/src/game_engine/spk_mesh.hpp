@@ -11,6 +11,7 @@
 namespace spk
 {
 	/**
+	 * @class Mesh
 	 * @brief Represents a mesh for defining 3D geometry in the game.
 	 *
 	 * This class is used to create and manage 3D meshes, which are essential for defining the geometry of objects in the game.
@@ -60,6 +61,7 @@ namespace spk
 	public:
 
 		/**
+		 * @class Mesh::Data
 		 * @brief Represents the data structure for a baked mesh.
 		 * 
 		 * This struct holds the final mesh data after baking, including vertex information, vertex size, vertexes, and indexes.

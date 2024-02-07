@@ -7,9 +7,10 @@
 namespace spk
 {
 	/**
+	 * @class IWidget
 	 * @brief Defines a widget interface for UI elements, integrating activation state management, hierarchicalorganization, and viewport handling.
 	 *
-	 * IWidget extends both ActivateObject for managing activation states (enabling/disabling functionality) and
+	 * This extends both ActivateObject for managing activation states (enabling/disabling functionality) and
 	 * TreeNode for hierarchical structuring, allowing widgets to be organized in a tree structure.
 	 * This designsupports complex UI hierarchies with nested widgets, facilitating the development of layered
 	 * and structured user interfaces.

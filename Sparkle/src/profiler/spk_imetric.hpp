@@ -7,6 +7,7 @@
 namespace spk
 {
 	/**
+	 * @class IMetric
 	 * @brief Interface defining the structure for metric collection and report emission.
 	 *
 	 * This interface is designed to be implemented by classes that collect and analyze
@@ -44,6 +45,7 @@ namespace spk
 	};
 
 	/**
+	 * @class IAnalyticalMetric<TType>
 	 * @brief Template class for analytical metrics collection, extending IMetric.
 	 *
 	 * This class is a generic class designed to collect and analyze numerical

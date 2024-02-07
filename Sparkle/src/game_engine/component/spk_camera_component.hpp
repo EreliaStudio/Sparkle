@@ -7,6 +7,7 @@
 namespace spk
 {
 	/**
+	 * @class Camera
 	 * @brief Represents a camera component for rendering scenes.
 	 * 
 	 * This class is responsible for defining a camera component that can be attached to game objects.
