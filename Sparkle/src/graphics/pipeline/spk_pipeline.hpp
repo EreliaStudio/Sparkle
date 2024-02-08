@@ -237,7 +237,7 @@ namespace spk
             static inline const std::string BlockKey = "ConstantBlock"; //!< Key used for identifying constant blocks within shader code or pipeline configurations.
             
             /**
-             * @Brief Type alias for UniformObject's Element. See UniformObject::Element for more details.
+             * @brief Type alias for UniformObject's Element. See UniformObject::Element for more details.
             */
             using Element = UniformObject::Element;
 
