@@ -41,6 +41,19 @@ namespace spk
 	class Texture
 	{
 	public:
+		/**
+		 * @enum Format
+		 * @brief Defines the pixel format of the texture.
+		 *
+		 * This enumeration specifies the format of the pixel data in the texture. Different formats represent how the pixel data is laid out in memory and how it should be interpreted when the texture is used for rendering.
+		 *
+		 * - RGB: Standard RGB color space with three components per pixel.
+		 * - RGBA: Standard RGB color space but with an additional alpha channel for transparency.
+		 * - BGR: Reverse of RGB, often used in certain systems or image formats.
+		 * - BGRA: Reverse of RGBA, including an alpha channel for transparency.
+		 * - GreyLevel: Single channel format for grayscale images.
+		 * - Error: Represents an error state or undefined pixel format.
+		 */
 		enum class Format
 		{
 			RGB = GL_RGB,
@@ -51,12 +64,31 @@ namespace spk
 			Error = GL_NONE
 		};
 
+		/**
+		 * @enum Filtering
+		 * @brief Defines texture filtering modes for magnification and minification.
+		 *
+		 * Texture filtering affects how textures are sampled when they are mapped to surfaces that are larger or smaller than the texture itself.
+		 *
+		 * - Nearest: Uses the nearest pixel's color value, resulting in a pixelated look.
+		 * - Linear: Averages the colors of the nearest pixels, resulting in a smoother appearance.
+		 */
 		enum class Filtering
 		{
 			Nearest = GL_NEAREST,
 			Linear = GL_LINEAR
 		};
 
+		/**
+		 * @enum Wrap
+		 * @brief Specifies how textures are sampled outside their standard 0 to 1 UV coordinate range.
+		 *
+		 * Defines the behavior of texture sampling in the S and T directions (equivalent to X and Y) when texture coordinates fall outside the range of [0, 1].
+		 *
+		 * - Repeat: The texture is repeated outside of the [0, 1] range.
+		 * - ClampToEdge: Coordinates outside [0, 1] are clamped to the nearest edge's color.
+		 * - ClampToBorder: Coordinates outside [0, 1] are given a border color.
+		 */
 		enum class Wrap
 		{
 			Repeat = GL_REPEAT,
@@ -64,6 +96,15 @@ namespace spk
 			ClampToBorder = GL_CLAMP_TO_BORDER
 		};
 
+		/**
+		 * @enum Mipmap
+		 * @brief Determines whether mipmaps should be generated for the texture.
+		 *
+		 * Mipmaps are pre-calculated, optimized sequences of images that accompany a main texture, intended to increase rendering speed and reduce aliasing artifacts. They are particularly useful for textures viewed at a distance.
+		 *
+		 * - Disable: Mipmaps are not used.
+		 * - Enable: Mipmaps are generated and used for the texture.
+		 */
 		enum class Mipmap
 		{
 			Disable,

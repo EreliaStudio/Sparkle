@@ -43,6 +43,12 @@ namespace spk
 	class Keyboard
 	{
 	public:
+		/**
+		 * @enum Key
+		 * @brief Represents the key codes for various keyboard keys.
+		 * 
+		 * This enumeration provides a comprehensive list of key codes representing alphanumeric keys, function keys, control keys, and more. It facilitates the handling of keyboard input by providing a clear mapping of physical keys to their logical representations within the application.
+		 */
 		enum Key
 		{
 			Backspace = 8,
@@ -190,16 +196,71 @@ namespace spk
 		std::vector<uint32_t> _keysToUpdate;
 
 	public:
+		/**
+		 * @brief Constructs a Keyboard object.
+		 * 
+		 * Initializes a Keyboard instance, setting up internal structures for tracking the state of keyboard keys and capturing character input.
+		 */
 		Keyboard();
+
+		/**
+		 * @brief Destructs the Keyboard object.
+		 * 
+		 * Cleans up resources associated with the Keyboard instance. This includes resetting the state of any tracked keys and character input.
+		 */
 		~Keyboard();
 
+		/**
+		 * @brief Captures a character input.
+		 * 
+		 * Stores the most recent character typed on the keyboard in a thread-safe manner. This method is intended to be called by the input handling system whenever a character input event is received.
+		 * 
+		 * @param p_char The character that was typed.
+		 */
 		void setChar(const wchar_t& p_char);
+
+		/**
+		 * @brief Marks a keyboard key as pressed.
+		 * 
+		 * Registers a key press event for the specified key in a thread-safe manner. This method should be called by the input handling system when a key press event is detected.
+		 * 
+		 * @param p_key The key code of the pressed key.
+		 */
 		void pressKey(uint32_t p_key);
+
+		/**
+		 * @brief Marks a keyboard key as released.
+		 * 
+		 * Registers a key release event for the specified key in a thread-safe manner. This method should be called by the input handling system when a key release event is detected.
+		 * 
+		 * @param p_key The key code of the released key.
+		 */
 		void releaseKey(uint32_t p_key);
 
+		/**
+		 * @brief Updates the state of all keys.
+		 * 
+		 * Processes any pending key state updates. This method should be called periodically, typically at the beginning of each frame or input polling cycle, to ensure the keyboard state is accurately reflected.
+		 */
 		void update();
 
+		/**
+		 * @brief Retrieves the most recent character input.
+		 * 
+		 * Returns the last character that was typed on the keyboard. If no character has been typed since the last call to `getChar`, it returns L'\0'.
+		 * 
+		 * @return The most recently typed character, or L'\0' if no new character has been typed.
+		 */
 		wchar_t getChar() const;
+
+		/**
+		 * @brief Retrieves the state of a specified key.
+		 * 
+		 * Returns the current state of the specified key, such as pressed, released, up, or down.
+		 * 
+		 * @param p_key The key for which to retrieve the state.
+		 * @return The current state of the key as an InputState value.
+		 */
 		InputState getKey(Key p_key) const;
 	};
 }

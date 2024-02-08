@@ -45,12 +45,52 @@ namespace spk
 		float _computeWaveLength(const float& p_x, const float& p_y, const float& p_z, const float& p_frequency) const;
 
 	public:
+		/**
+		 * @brief Default constructor for the Perlin3D class.
+		 * 
+		 * Initializes a Perlin3D noise generator with default parameters. This sets up the generator to produce three-dimensional Perlin noise using the default seed and noise configuration settings.
+		 */
 		Perlin3D();
+
+		/**
+		 * @brief Constructor for the Perlin3D class with a specified seed.
+		 * 
+		 * Initializes a Perlin3D noise generator with the specified seed, allowing for reproducible three-dimensional noise patterns. This constructor sets the initial seed for noise generation while retaining the default configuration for other noise parameters.
+		 * 
+		 * @param p_seed The seed value to use for noise generation.
+		 */
 		Perlin3D(const unsigned long& p_seed);
+
+		/**
+		 * @brief Constructor for the Perlin3D class that initializes settings from a JSON object.
+		 * 
+		 * Initializes a Perlin3D noise generator with parameters specified in a JSON object. This allows for the configuration of noise parameters such as frequency, persistence, lacunarity, octave count, and more via external data sources, tailored to specific procedural content generation needs.
+		 * 
+		 * @param p_object A spk::JSON::Object containing the configuration for the Perlin noise generator.
+		 */
 		Perlin3D(const spk::JSON::Object& p_object);
 
+		/**
+		 * @brief Samples the Perlin noise at specific x, y, and z coordinates.
+		 * 
+		 * Generates a three-dimensional noise value at the given x, y, and z coordinates based on the current configuration of the noise generator. This method applies the Perlin noise algorithm to produce values that represent the "height" or intensity of the noise at the specified position in 3D space.
+		 * 
+		 * @param p_x The x coordinate at which to sample the noise.
+		 * @param p_y The y coordinate at which to sample the noise.
+		 * @param p_z The z coordinate at which to sample the noise.
+		 * @return A float representing the noise value at the specified coordinates, within the configured range of the noise generator.
+		 */
 		float sample(const float& p_x, const float& p_y, const float& p_z) const;
 
+		/**
+		 * @brief Templated method to sample the Perlin noise using a 3D vector position.
+		 * 
+		 * Provides a convenient way to sample three-dimensional Perlin noise by passing a vector of any type that implements the `x`, `y`, and `z` properties. This method simplifies the interface for obtaining noise values when working with SPK's vector classes or custom vector types for 3D coordinates.
+		 * 
+		 * @tparam TVectorType The type of the vector (must have `x`, `y`, and `z` properties accessible).
+		 * @param p_position The position vector where the noise should be sampled.
+		 * @return A float representing the noise value at the specified vector position.
+		 */
 		template<typename TVectorType>
 		float sample(const spk::IVector3<TVectorType>& p_position) const
 		{

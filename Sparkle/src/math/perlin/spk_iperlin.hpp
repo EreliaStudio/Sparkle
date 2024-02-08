@@ -34,6 +34,14 @@ namespace spk
 	class IPerlin
 	{
 	public:
+		/**
+		 * @enum Interpolation
+		 * @brief Defines the interpolation methods available for noise generation.
+		 * 
+		 * Specifies how the intermediate values between noise points are calculated, affecting the smoothness of the noise.
+		 * - Linear: Produces a straight-line interpolation between points, resulting in a somewhat harsh transition.
+		 * - SmoothStep: Uses a smoother step function to interpolate between points, producing smoother transitions.
+		 */
 		enum class Interpolation
 		{
 			Linear,
@@ -77,18 +85,100 @@ namespace spk
 		float _calcRatio(const float& w) const;
 
 	public:
+		/**
+		 * @brief Default constructor for the IPerlin class.
+		 * 
+		 * Initializes a Perlin noise generator with default parameters. The default seed is used for the noise generation.
+		 */
 		IPerlin();
+
+		/**
+		 * @brief Constructor for the IPerlin class with a specified seed.
+		 * 
+		 * Initializes a Perlin noise generator with the specified seed, allowing for reproducible noise patterns.
+		 * 
+		 * @param p_seed The seed value to use for noise generation.
+		 */
 		IPerlin(unsigned long p_seed);
+
+		/**
+		 * @brief Constructor for the IPerlin class that initializes settings from a JSON object.
+		 * 
+		 * Initializes a Perlin noise generator with parameters specified in a JSON object. This allows for configuration via external data sources.
+		 * 
+		 * @param p_object A JSON::Object containing the configuration for the Perlin noise generator.
+		 */
 		IPerlin(const spk::JSON::Object& p_object);
 
+		/**
+		 * @brief Gets the current seed used for noise generation.
+		 * 
+		 * @return The current seed value.
+		 */
 		const unsigned long &seed() const;
 
+		/**
+		 * @brief Configures the seed used for noise generation.
+		 * 
+		 * Sets the seed value for the Perlin noise generator, allowing for different noise patterns.
+		 * 
+		 * @param p_seed The seed value to use for noise generation.
+		 */
 		void configureSeed(unsigned long p_seed);
+
+		/**
+		 * @brief Configures the frequency of the noise.
+		 * 
+		 * Sets the frequency of the noise, affecting the scale of the noise patterns.
+		 * 
+		 * @param p_frequency The frequency value for the noise.
+		 */
 		void configureFrequency(float p_frequency);
+
+		/**
+		 * @brief Configures the persistence of the noise.
+		 * 
+		 * Sets the persistence value, affecting the amplitude of each octave in the noise generation.
+		 * 
+		 * @param p_persistance The persistence value for the noise.
+		 */
 		void configurePersistance(float p_persistance);
+
+		/**
+		 * @brief Configures the lacunarity of the noise.
+		 * 
+		 * Sets the lacunarity value, affecting the frequency of each octave in the noise generation.
+		 * 
+		 * @param p_lacunarity The lacunarity value for the noise.
+		 */
 		void configureLacunarity(float p_lacunarity);
+
+		/**
+		 * @brief Configures the number of octaves used in noise generation.
+		 * 
+		 * Sets the number of octaves, affecting the level of detail in the noise pattern.
+		 * 
+		 * @param p_octaveValue The number of octaves to use for noise generation.
+		 */
 		void configureOctave(size_t p_octaveValue);
+
+		/**
+		 * @brief Configures the range of the noise output values.
+		 * 
+		 * Sets the minimum and maximum values for the noise output, allowing for control over the value range of the noise.
+		 * 
+		 * @param p_min The minimum value of the noise output.
+		 * @param p_max The maximum value of the noise output.
+		 */
 		void configureRange(float p_min, float p_max);
+
+		/**
+		 * @brief Configures the interpolation method used in noise generation.
+		 * 
+		 * Sets the interpolation method, affecting how intermediate noise values are calculated between known points.
+		 * 
+		 * @param p_interpolation The interpolation method to use (Linear or SmoothStep).
+		 */
 		void configureInterpolation(Interpolation p_interpolation);
 	};
 }

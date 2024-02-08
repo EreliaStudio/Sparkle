@@ -67,20 +67,90 @@ namespace spk
 	private:
 
 	public:
+		/**
+		 * @brief Constructs a Mouse object.
+		 * 
+		 * Initializes a Mouse instance, setting up initial states for mouse buttons, position, delta position, and wheel movement.
+		 */
 		Mouse();
+
+		/**
+		 * @brief Destructs the Mouse object.
+		 * 
+		 * Cleans up any resources or states associated with the Mouse instance.
+		 */
 		~Mouse();
 
+		/**
+		 * @brief Sets the current mouse cursor position.
+		 * 
+		 * This method updates the internal state of the mouse cursor position. Typically called by the application's input handling system when a mouse move event is detected.
+		 * 
+		 * @param p_newPosition The new position of the mouse cursor as a Vector2Int.
+		 */
 		void setMousePosition(const Vector2Int& p_newPosition);
+
+		/**
+		 * @brief Registers a mouse button press event.
+		 * 
+		 * Marks the specified mouse button as pressed in the internal button state array. This method is intended to be called by the input handling system when a mouse button press event is detected.
+		 * 
+		 * @param p_button The button that was pressed.
+		 */
 		void pressButton(const Button& p_button);
+
+		/**
+		 * @brief Registers a mouse button release event.
+		 * 
+		 * Marks the specified mouse button as released in the internal button state array. This method is intended to be called by the input handling system when a mouse button release event is detected.
+		 * 
+		 * @param p_button The button that was released.
+		 */
 		void releaseButton(const Button& p_button);
+
+		/**
+		 * @brief Updates the position of the mouse wheel.
+		 * 
+		 * Modifies the internal state to reflect the movement of the mouse wheel. Typically called by the application's input handling system when a mouse wheel scroll event is detected.
+		 * 
+		 * @param p_delta The change in position of the mouse wheel since the last update, represented as a Vector2Int. The y-component usually represents the scroll amount.
+		 */
 		void editWheelPosition(const Vector2Int& p_delta);
 
+		/**
+		 * @brief Updates the internal states of the mouse.
+		 * 
+		 * Processes any pending updates to the mouse's button states, position, and wheel movement. This method should be called periodically, typically at the beginning of each frame or input polling cycle, to ensure the mouse state is accurately reflected.
+		 */
 		void update();
 
+		/**
+		 * @brief Retrieves the state of a specified mouse button.
+		 * 
+		 * @param p_button The button for which to retrieve the state.
+		 * @return The current state of the button as an InputState value.
+		 */
 		const InputState& getButton(const Button& p_button) const;
 
+		/**
+		 * @brief Gets the current position of the mouse cursor.
+		 * 
+		 * @return The position of the mouse cursor as a Vector2Int.
+		 */
 		const Vector2Int& position() const;
+
+		/**
+		 * @brief Gets the change in position of the mouse cursor.
+		 * 
+		 * @return The delta position of the mouse cursor since the last update as a Vector2Int.
+		 */
 		const Vector2Int& deltaPosition() const;
+
+		/**
+		 * @brief Gets the current wheel movement.
+		 * 
+		 * @return The movement of the mouse wheel since the last update as a Vector2Int. The y-component usually represents the vertical scroll amount.
+		 */
 		const Vector2Int& wheel() const;
 	};
 }

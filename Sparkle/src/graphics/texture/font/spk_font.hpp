@@ -52,10 +52,10 @@ namespace spk
          */
         enum class OutlineStyle
         {
-            Pixelized, ///< Represents a pixelized outline style for glyphs.
-            SharpEdge, ///< Represents a sharp edge outline style for glyphs.
-            Standard,  ///< Represents a standard outline style for glyphs.
-            Manhattan  ///< Represents a Manhattan distance-based outline style for glyphs.
+            Pixelized,
+            SharpEdge,
+            Standard,
+            Manhattan
         };
 
         /**
@@ -70,11 +70,11 @@ namespace spk
          */
         enum class VerticalAlignment
         {
-            Top,    ///< Aligns text to the top of the font bounding box.
-            Middle, ///< Centers text vertically within the font bounding box.
-            Down    ///< Aligns text to the bottom of the font bounding box.
+            Top,
+            Middle,
+            Down
         };
-        
+
         /**
          * @enum HorizontalAlignment
          * @brief Specifies the horizontal alignment of text within its bounding box.
@@ -87,9 +87,9 @@ namespace spk
          */
         enum class HorizontalAlignment
         {
-            Left,   ///< Aligns text to the left of the font bounding box.
-            Middle, ///< Centers text horizontally within the font bounding box.
-            Right   ///< Aligns text to the right of the font bounding box.
+            Left,
+            Middle,
+            Right
         };
 
     public:
