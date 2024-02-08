@@ -19,6 +19,8 @@ namespace spk
 	{
 		for (auto& gameObject : _subscribedObjects)
 		{
+			for (auto& module : _modules)
+				module->_onUpdate(gameObject);
 			gameObject->update();
 		}
 	}

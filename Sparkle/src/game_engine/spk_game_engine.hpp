@@ -3,6 +3,7 @@
 #include <functional>
 #include <vector>
 #include "game_engine/spk_game_object.hpp"
+#include "game_engine/module/spk_game_module.hpp"
 
 namespace spk
 {
@@ -49,6 +50,7 @@ namespace spk
 
 	private:
 		std::vector<GameObject *> _subscribedObjects;
+		std::vector<EngineModule*> _modules;
 
 	public:
 		/**
@@ -58,6 +60,19 @@ namespace spk
 		 * the lifecycle of game objects, including rendering and updating them according to the game loop.
 		 */
 		GameEngine();
+
+		template <typename TModuleName, typename ... Args>
+		TModuleName* addModule(Args&& ... p_args)
+		{
+			EngineModule::_creatingEngine = this;
+
+			TModuleName* result = new TModuleName(std::forward<Args>(p_args)...);
+			_modules.push_back(result);
+
+			EngineModule::_creatingEngine = nullptr;
+
+			return (result);
+		}
 
 		/**
 		 * @brief Renders all subscribed game objects.

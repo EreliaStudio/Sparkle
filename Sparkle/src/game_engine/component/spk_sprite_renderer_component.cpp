@@ -169,7 +169,8 @@ namespace spk
 			_updateGPUData();
 			_needGPUDataUpdate = false;
 		}
-	
+
+		_renderingPipelineTexture.attach(_spriteSheet);
 		_renderingObject.render();
 	}
 
