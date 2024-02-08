@@ -44,27 +44,56 @@ namespace spk
 		TTimeUnit _duration;
 
 	public:
+		/**
+		 * @brief Default constructor for ITimer. Initializes the timer without a set duration.
+		 */
 		ITimer() = default;
-        ~ITimer() = default;
 
+		/**
+		 * @brief Destructor for ITimer.
+		 */
+		~ITimer() = default;
+
+		/**
+		 * @brief Constructs an ITimer with a specified duration.
+		 * 
+		 * @param p_duration The duration for the timer, specified in units defined by the TTimeUnit template parameter.
+		 *                   The duration is internally converted to the corresponding std::chrono duration type.
+		 */
 		ITimer(const size_t& p_duration) :
 			_duration(std::chrono::duration_cast<TTimeUnit>(TTimeUnit(p_duration)))
 		{
 
 		}
 
+		/**
+		 * @brief Sets the duration of the timer.
+		 * 
+		 * Allows dynamically updating the timer's duration after instantiation. This method can be called at any time to
+		 * reset the duration to a new value, which is useful for reusing the timer with different intervals.
+		 * 
+		 * @param p_duration The new duration for the timer, specified in units that match the TTimeUnit template parameter.
+		 */
 		void setDuration(const size_t& p_duration)
 		{
 			_duration = std::chrono::duration_cast<TTimeUnit>(TTimeUnit(p_duration));
 		}
 
+		/**
+		 * @brief Checks if the timer's set duration has elapsed.
+		 * 
+		 * This method compares the elapsed time since the timer was started to the set duration. It provides a way to
+		 * determine if a certain period has passed, which can be used to trigger time-dependent actions.
+		 * 
+		 * @return true if the set duration has elapsed since the timer was started, false otherwise.
+		 */
 		bool isTimedOut()
 		{
 			if (this->duration() >= _duration.count())
-				return (true);
-			return (false);
+				return true;
+			return false;
 		}
 	};
 
-	using Timer = ITimer<std::chrono::milliseconds>;
+	using Timer = ITimer<std::chrono::milliseconds>; //!< A using for a Timer in millisecond
 }

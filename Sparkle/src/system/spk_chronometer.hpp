@@ -42,34 +42,68 @@ namespace spk
         std::chrono::steady_clock::time_point _endTime;
 
     public:
-        IChronometer() = default;
+        /**
+		 * @brief Default constructor for IChronometer.
+		 */
+		IChronometer() = default;
+
+		/**
+		 * @brief Destructor for IChronometer.
+		 */
 		~IChronometer() = default;
 
-        void start()
-        {
-            _startTime = std::chrono::steady_clock::now();
-			_isRunning = true;
-        }
-
-        void stop()
-        {
-			_isRunning = false;
-            _endTime = std::chrono::steady_clock::now();
-        }
-
-		bool isRunning()
+		/**
+		 * @brief Starts the chronometer.
+		 *
+		 * Marks the start time using std::chrono::steady_clock. This function sets the chronometer
+		 * to running state, allowing duration measurements to be made from this point.
+		 */
+		void start()
 		{
-			return (_isRunning);
+			_startTime = std::chrono::steady_clock::now();
+			_isRunning = true;
 		}
 
-        long long duration() const
-        {
-			if (_isRunning == false)
-        	    return (std::chrono::duration_cast<TTimeUnit>(_endTime - _startTime).count());
+		/**
+		 * @brief Stops the chronometer.
+		 *
+		 * Marks the end time using std::chrono::steady_clock and sets the chronometer to not running state.
+		 * Duration measurements will calculate the time interval between the start and this stop time.
+		 */
+		void stop()
+		{
+			_endTime = std::chrono::steady_clock::now();
+			_isRunning = false;
+		}
+
+		/**
+		 * @brief Checks if the chronometer is currently running.
+		 *
+		 * @return true if the chronometer is running, false otherwise.
+		 */
+		bool isRunning()
+		{
+			return _isRunning;
+		}
+
+		/**
+		 * @brief Calculates the duration between the start and stop times in the specified time unit.
+		 *
+		 * If the chronometer is still running, it calculates the duration from the start time to the current time.
+		 * If the chronometer has been stopped, it calculates the duration between the start and stop times.
+		 *
+		 * @return The duration between the start and stop times (or current time if still running), converted to
+		 *         the specified TTimeUnit.
+		 */
+		long long duration() const
+		{
+			if (!_isRunning)
+				return std::chrono::duration_cast<TTimeUnit>(_endTime - _startTime).count();
 			else
-        	    return (std::chrono::duration_cast<TTimeUnit>(std::chrono::steady_clock::now() - _startTime).count());
-        }
+				return std::chrono::duration_cast<TTimeUnit>(std::chrono::steady_clock::now() - _startTime).count();
+		}
 	};
 
+	// Aliases for convenience and readability, specifying the time unit for the Chronometer.
 	using Chronometer = IChronometer<std::chrono::milliseconds>;
 }
