@@ -95,13 +95,55 @@ namespace spk::WidgetComponent
         void _updateVertices();
 
     public:
+        /**
+         * @brief Constructs a NineSlicedBox component with default settings.
+         * 
+         * Initializes the nine-sliced box with default values, preparing it for configuration and rendering. This
+         * includes setting up initial geometry, size, and corner size. The actual rendering pipeline and sprite sheet
+         * must be set separately using the provided methods.
+         */
         NineSlicedBox();
 
+        /**
+         * @brief Sets the sprite sheet used for rendering the nine-sliced box.
+         * 
+         * @param p_spriteSheet Pointer to the SpriteSheet object that contains the textures for the nine-sliced box.
+         */
         void setSpriteSheet(const spk::SpriteSheet *p_spriteSheet);
+
+        /**
+         * @brief Sets the geometry of the nine-sliced box.
+         * 
+         * Defines the anchor point and size of the nine-sliced box. The anchor point determines the box's position,
+         * while the size specifies its dimensions.
+         * 
+         * @param p_anchor The position of the nine-sliced box within its parent container.
+         * @param p_size The size of the nine-sliced box.
+         */
         void setGeometry(const spk::Vector2Int &p_anchor, const spk::Vector2UInt &p_size);
+
+        /**
+         * @brief Sets the rendering depth of the nine-sliced box in the pipeline.
+         * 
+         * @param p_depth A float value representing the depth at which the box should be rendered.
+         */
         void setDepth(float p_depth);
+
+        /**
+         * @brief Sets the size of the corners of the nine-sliced box.
+         * 
+         * This size affects how the corners of the box are rendered, ensuring they remain unscaled when the box is resized.
+         * 
+         * @param p_cornerSize The size of the box's corners.
+         */
         void setCornerSize(const spk::Vector2Int &p_cornerSize);
 
+        /**
+         * @brief Renders the nine-sliced box.
+         * 
+         * Executes the rendering process for the nine-sliced box, updating its geometry and texture coordinates as necessary
+         * before drawing it to the screen. This method should be called within the parent widget's rendering cycle.
+         */
         void render();
     };
 }

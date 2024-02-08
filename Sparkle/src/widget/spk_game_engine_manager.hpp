@@ -41,9 +41,38 @@ namespace spk
 		void _onUpdate();
 
 	public:
+		/**
+		 * @brief Constructs a GameEngineManager widget with a specified name.
+		 *
+		 * Initializes a new instance of GameEngineManager without attaching it to a parent widget. This constructor
+		 * sets the name of the widget but does not immediately integrate it into the UI hierarchy. The GameEngine instance
+		 * must be set separately using setGameEngine.
+		 *
+		 * @param p_name The name of the GameEngineManager widget, used for identification within the UI hierarchy.
+		 */
 		GameEngineManager(const std::string& p_name);
+
+		/**
+		 * @brief Constructs a GameEngineManager widget with a specified name and parent widget.
+		 *
+		 * Initializes a new instance of GameEngineManager and attaches it to a parent widget, effectively integrating
+		 * it into the UI hierarchy. This constructor allows for immediate placement of the GameEngineManager within
+		 * the widget tree, facilitating its rendering and event handling within the context of the parent widget.
+		 *
+		 * @param p_name The name of the GameEngineManager widget, used for identification within the UI hierarchy.
+		 * @param p_parent A pointer to the parent IWidget, determining the hierarchical placement of this GameEngineManager.
+		 */
 		GameEngineManager(const std::string& p_name, spk::IWidget* p_parent);
 
+		/**
+		 * @brief Sets the game engine to be managed and integrated within the UI framework.
+		 *
+		 * This method assigns a GameEngine instance to the GameEngineManager, enabling the manager to control the
+		 * game engine's lifecycle, rendering, and updates in alignment with the UI's rendering and update cycles.
+		 * The game engine's visual output will be rendered within the viewport of this GameEngineManager widget.
+		 *
+		 * @param p_engine A pointer to a GameEngine instance that should be managed by this GameEngineManager.
+		 */
 		void setGameEngine(spk::GameEngine* p_engine);
 	};
 }
