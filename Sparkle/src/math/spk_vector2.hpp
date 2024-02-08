@@ -208,27 +208,49 @@ namespace spk
 			return (IVector2<TType>(x / p_value, y / p_value));
 		}
 
-		template <typename TOtherType>
-		void operator+=(const IVector2<TOtherType> &p_other)
-		{
-			x += p_other.x;
-			y += p_other.y;
-		}
+		/**
+         * @brief Adds another vector to this vector component-wise and assigns the result to this vector.
+         * 
+         * @param p_other The vector to add to this vector.
+         */
+        template <typename TOtherType>
+        void operator+=(const IVector2<TOtherType> &p_other)
+        {
+            x += p_other.x;
+            y += p_other.y;
+        }
 
-		template <typename TOtherType>
-		void operator-=(const IVector2<TOtherType> &p_other)
-		{
-			x -= p_other.x;
-			y -= p_other.y;
-		}
+        /**
+         * @brief Subtracts another vector from this vector component-wise and assigns the result to this vector.
+         * 
+         * @param p_other The vector to subtract from this vector.
+         */
+        template <typename TOtherType>
+        void operator-=(const IVector2<TOtherType> &p_other)
+        {
+            x -= p_other.x;
+            y -= p_other.y;
+        }
 
-		template <typename TOtherType>
-		void operator*=(const IVector2<TOtherType> &p_other)
-		{
-			x *= p_other.x;
-			y *= p_other.y;
-		}
+        /**
+         * @brief Multiplies this vector by another vector component-wise and assigns the result to this vector.
+         * 
+         * @param p_other The vector to multiply this vector by.
+         */
+        template <typename TOtherType>
+        void operator*=(const IVector2<TOtherType> &p_other)
+        {
+            x *= p_other.x;
+            y *= p_other.y;
+        }
 
+        /**
+         * @brief Divides this vector by another vector component-wise and assigns the result to this vector.
+         * 
+         * Checks for division by zero and throws an exception if attempted.
+         * 
+         * @param p_other The vector to divide this vector by.
+         */
 		template <typename TOtherType>
 		void operator/=(const IVector2<TOtherType> &p_other)
 		{
@@ -238,99 +260,101 @@ namespace spk
 			y /= p_other.y;
 		}
 		
-		template <typename TOtherType>
-		bool operator==(const IVector2<TOtherType> &delta) const
-		{
-			return (x == delta.x && y == delta.y);
-		}
-		
-		template <typename TOtherType>
-		bool operator==(const TOtherType &p_value) const
-		{
-			return (x == p_value && y == p_value);
-		}
+		        /**
+         * @brief Checks for equality between this vector and another vector.
+         * 
+         * @param p_other The vector to compare with.
+         * @return True if both x and y components are equal, false otherwise.
+         */
+        template <typename TOtherType>
+        bool operator==(const IVector2<TOtherType> &p_other) const
+        {
+            return (x == p_other.x && y == p_other.y);
+        }
 
-		template <typename TOtherType>
-		bool operator!=(const IVector2<TOtherType> &delta) const
-		{
-			return (x != delta.x || y != delta.y);
-		}
+        /**
+         * @brief Checks for equality between this vector and a scalar value.
+         * 
+         * @param p_value The scalar value to compare with both components of the vector.
+         * @return True if both components of the vector are equal to the scalar value, false otherwise.
+         */
+        template <typename TOtherType>
+        bool operator==(const TOtherType &p_value) const
+        {
+            return (x == p_value && y == p_value);
+        }
 
-		template <typename TOtherType>
-		bool operator!=(const TOtherType &p_value) const
-		{
-			return (x != p_value || y != p_value);
-		}
+        /**
+         * @brief Checks for inequality between this vector and another vector.
+         * 
+         * @param p_other The vector to compare with.
+         * @return True if either x or y component is not equal, false otherwise.
+         */
+        template <typename TOtherType>
+        bool operator!=(const IVector2<TOtherType> &p_other) const
+        {
+            return (x != p_other.x || y != p_other.y);
+        }
 
-		template <typename TOtherType>
-		bool operator<(const IVector2<TOtherType> &p_other) const
-		{
-			if (y < p_other.y)
-				return (true);
-			if (y == p_other.y && x < p_other.x)
-				return (true);
-			return (false);
-		}
+        /**
+         * @brief Checks for inequality between this vector and a scalar value.
+         * 
+         * @param p_value The scalar value to compare with both components of the vector.
+         * @return True if either component of the vector is not equal to the scalar value, false otherwise.
+         */
+        template <typename TOtherType>
+        bool operator!=(const TOtherType &p_value) const
+        {
+            return (x != p_value || y != p_value);
+        }
 
-		template <typename TOtherType>
-		bool operator<(const TOtherType &p_value) const
-		{
-			if (y < p_value)
-				return (true);
-			if (y == p_value && x < p_value)
-				return (true);
-			return (false);
-		}
+        /**
+         * @brief Checks if this vector is less than another vector in a lexicographical manner.
+         * 
+         * @param p_other The vector to compare with.
+         * @return True if this vector is lexicographically less than the other vector, false otherwise.
+         */
+        template <typename TOtherType>
+        bool operator<(const IVector2<TOtherType> &p_other) const
+        {
+            return (y < p_other.y) || (y == p_other.y && x < p_other.x);
+        }
 
-		template <typename TOtherType>
-		bool operator>(const IVector2<TOtherType> &p_other) const
-		{
-			if (y > p_other.y)
-				return (true);
-			if (y == p_other.y && x > p_other.x)
-				return (true);
-			return (false);
-		}
+        /**
+         * @brief Checks if this vector is greater than another vector in a lexicographical manner.
+         * 
+         * @param p_other The vector to compare with.
+         * @return True if this vector is lexicographically greater than the other vector, false otherwise.
+         */
+        template <typename TOtherType>
+        bool operator>(const IVector2<TOtherType> &p_other) const
+        {
+            return (y > p_other.y) || (y == p_other.y && x > p_other.x);
+        }
 
-		template <typename TOtherType>
-		bool operator>(const TOtherType &p_value) const
-		{
-			if (y > p_value)
-				return (true);
-			if (y == p_value && x > p_value)
-				return (true);
-			return (false);
-		}
+        /**
+         * @brief Checks if this vector is less than or equal to another vector in a lexicographical manner.
+         * 
+         * @param p_other The vector to compare with.
+         * @return True if this vector is lexicographically less than or equal to the other vector, false otherwise.
+         */
+        template <typename TOtherType>
+        bool operator<=(const IVector2<TOtherType> &p_other) const
+        {
+            return (y < p_other.y) || (y == p_other.y && x <= p_other.x);
+        }
 
-		template <typename TOtherType>
-		bool operator<=(const IVector2<TOtherType> &p_other) const
-		{
-			if (y < p_other.y)
-				return (true);
-			if (y == p_other.y && x <= p_other.x)
-				return (true);
-			return (false);
-		}
-
-		template <typename TOtherType>
-		bool operator<=(const TOtherType &p_value) const
-		{
-			if (y < p_value)
-				return (true);
-			if (y == p_value && x <= p_value)
-				return (true);
-			return (false);
-		}
-
-		template <typename TOtherType>
-		bool operator>=(const TOtherType &p_value) const
-		{
-			if (y > p_value)
-				return (true);
-			if (y == p_value && x >= p_value)
-				return (true);
-			return (false);
-		}
+        /**
+         * @brief Checks if this vector is greater than or equal to another vector in a lexicographical manner.
+         * 
+         * @param p_other The vector to compare with.
+         * @return True if this vector is lexicographically greater than or equal to the other vector, false otherwise.
+         */
+        template <typename TOtherType>
+        bool operator>=(const IVector2<TOtherType> &p_other) const
+        {
+            return (y > p_other.y) || (y == p_other.y && x >= p_other.x);
+        }
 
 		/**
          * @brief Computes the Euclidean norm (length) of the vector.
@@ -338,7 +362,7 @@ namespace spk
          */
         float norm() const
         {
-            return std::sqrt(x * x + y * y);
+            return std::sqrt(squaredNorm());
         }
 
         /**
@@ -357,7 +381,17 @@ namespace spk
          */
         float distance(const IVector2 &p_other) const
         {
-            return std::sqrt((p_other.x - x) * (p_other.x - x) + (p_other.y - y) * (p_other.y - y));
+            return std::sqrt(distanceSquared(p_other));
+        }
+
+        /**
+         * @brief Computes the distance between this vector and another vector.
+         * @param p_other The other vector.
+         * @return The Euclidean distance between the two vectors.
+         */
+        float distanceSquared(const IVector2 &p_other) const
+        {
+            return static_cast<float>((p_other.x - x) * (p_other.x - x) + (p_other.y - y) * (p_other.y - y));
         }
 
         /**
@@ -375,170 +409,288 @@ namespace spk
 
             return IVector2<float>(x / length, y / length);
         }
-		
-		template <typename TOtherType>
-		IVector2 cross(const IVector2<TOtherType> &p_other = IVector2(0, 0)) const
-		{
-			IVector2 result;
 
-			result = IVector2(-(p_other.y - y), p_other.x - x);
+        /**
+         * @brief Calculates the cross product of this vector and another vector, resulting in a vector orthogonal to both.
+         * 
+         * Note: Since this is a 2D vector, the 'cross product' is simulated and results in a vector orthogonal to the plane.
+         * 
+         * @param p_other The other vector involved in the cross product operation.
+         * @return A new vector that is orthogonal to both this vector and `p_other`.
+         */
+        template <typename TOtherType>
+        IVector2 cross(const IVector2<TOtherType> &p_other = IVector2(0, 0)) const
+        {
+            IVector2 result;
+            result = IVector2(-(p_other.y - y), p_other.x - x);
+            return (result);
+        }
 
-			return (result);
-		}
+        /**
+         * @brief Calculates the Z component of the cross product of this vector and another vector.
+         * 
+         * This method is useful in 2D space where the cross product results in a scalar value representing the magnitude in the Z direction.
+         * 
+         * @param p_other The other vector involved in the cross product operation.
+         * @return The scalar Z component of the cross product.
+         */
+        template <typename TOtherType>
+        float crossZ(const IVector2<TOtherType> &p_other) const
+        {
+            return (x * p_other.y - y * p_other.x);
+        }
 
-		template <typename TOtherType>
-		float crossZ(const IVector2<TOtherType> &p_other) const
-		{
-			return (x * p_other.y - y * p_other.x);
-		}
+        /**
+         * @brief Calculates the dot product of this vector and another vector, optionally considering a specific center point.
+         * 
+         * @param p_other The other vector involved in the dot product operation.
+         * @param p_center The point considered as the origin for the vectors (default is the origin of the coordinate system).
+         * @return The scalar result of the dot product.
+         */
+        template <typename TOtherType>
+        float dot(const IVector2<TOtherType> &p_other, const IVector2<TOtherType> &p_center = IVector2(0, 0)) const
+        {
+            return (x - p_center.x) * (p_other.x - p_center.x) + (y - p_center.y) * (p_other.y - p_center.y);
+        }
 
-		template <typename TOtherType>
-		float dot(const IVector2<TOtherType> &p_other, const IVector2<TOtherType> &p_center = IVector2(0, 0)) const
-		{
-			float result;
+        /**
+         * @brief Calculates the angle between this vector and another vector, optionally considering a specific center point.
+         * 
+         * @param p_other The other vector to calculate the angle with.
+         * @param p_center The point considered as the origin for the vectors (default is the origin of the coordinate system).
+         * @return The angle between the two vectors in degrees.
+         */
+        template <typename TOtherType>
+        float angle(const IVector2<TOtherType> &p_other, const IVector2<TOtherType> &p_center = IVector2(0, 0)) const
+        {
+            float rdot = dot(p_other, p_center);
+            rdot = std::clamp(rdot, -1.0f, 1.0f);
+            return spk::radianToDegree(std::acos(rdot));
+        }
 
-			result = (x - p_center.x) * (p_other.x - p_center.x) + (y - p_center.y) * (p_other.y - p_center.y);
+        /**
+         * @brief Rotates this vector around a given center point by a specified angle.
+         * 
+         * @param p_center The center point around which to rotate the vector.
+         * @param p_angle The angle of rotation in degrees.
+         * @return A new vector that is the result of rotating this vector around `p_center` by `p_angle`.
+         */
+        template <typename TOtherType>
+        IVector2 rotate(const IVector2<TOtherType> &p_center, const float &p_angle) const
+        {
+            float theta = spk::degreeToRadian(p_angle);
+            float pcos = std::cos(theta);
+            float psin = std::sin(theta);
+            IVector2 result;
+            result.x = (x - p_center.x) * pcos - (y - p_center.y) * psin;
+            result.y = (x - p_center.x) * psin + (y - p_center.y) * pcos;
+            return (result + p_center);
+        }
+        /**
+         * @brief Rounds down the components of the given vector to the nearest lower integer values.
+         * 
+         * @param p_vector The vector to be rounded down.
+         * @return A new vector with each component rounded down.
+         */
+        static IVector2 floor(const IVector2 &p_vector)
+        {
+            IVector2 result;
+            result.x = std::floor(p_vector.x);
+            result.y = std::floor(p_vector.y);
+            return result;
+        }
 
-			return (result);
-		}
+        /**
+         * @brief Rounds up the components of the given vector to the nearest higher integer values.
+         * 
+         * @param p_vector The vector to be rounded up.
+         * @return A new vector with each component rounded up.
+         */
+        static IVector2 ceiling(const IVector2 &p_vector)
+        {
+            IVector2 result;
+            result.x = std::ceil(p_vector.x);
+            result.y = std::ceil(p_vector.y);
+            return result;
+        }
 
-		template <typename TOtherType>
-		float angle(const IVector2<TOtherType> &p_other, const IVector2<TOtherType> &p_center = IVector2(0, 0)) const
-		{
-			float rdot = dot(p_other, p_center);
+        /**
+         * @brief Rounds the components of the given vector to the nearest integer values.
+         * 
+         * @param p_vector The vector to be rounded.
+         * @return A new vector with each component rounded to the nearest integer.
+         */
+        static IVector2 round(const IVector2 &p_vector)
+        {
+            IVector2 result;
+            result.x = std::round(p_vector.x);
+            result.y = std::round(p_vector.y);
+            return result;
+        }
 
-			rdot = (rdot < -1.0f ? -1.0f : (rdot > 1.0f ? 1.0f : rdot));
+        /**
+         * @brief Determines the component-wise minimum of two vectors.
+         * 
+         * @param p_min The first vector to compare.
+         * @param p_max The second vector to compare.
+         * @return A new vector where each component is the minimum value of the corresponding components of the input vectors.
+         */
+        static IVector2 min(const IVector2 &p_min, const IVector2 &p_max)
+        {
+            return IVector2(std::min(p_min.x, p_max.x), std::min(p_min.y, p_max.y));
+        }
 
-			float angle = std::acos(rdot);
+        /**
+         * @brief Determines the component-wise maximum of two vectors.
+         * 
+         * @param p_min The first vector to compare.
+         * @param p_max The second vector to compare.
+         * @return A new vector where each component is the maximum value of the corresponding components of the input vectors.
+         */
+        static IVector2 max(const IVector2 &p_min, const IVector2 &p_max)
+        {
+            return IVector2(std::max(p_min.x, p_max.x), std::max(p_min.y, p_max.y));
+        }
+        /**
+         * @brief Checks if a point is inside the rectangle defined by two corner points.
+         * 
+         * @param p_point The point to check.
+         * @param p_cornerA One corner of the rectangle.
+         * @param p_cornerB The opposite corner of the rectangle.
+         * @return True if the point is inside the rectangle, false otherwise.
+         */
+        static bool isInsideRectangle(const IVector2 &p_point, const IVector2 &p_cornerA, const IVector2 &p_cornerB)
+        {
+            IVector2 tmpMin = IVector2::min(p_cornerA, p_cornerB);
+            IVector2 tmpMax = IVector2::max(p_cornerA, p_cornerB);
+            return !(p_point.x < tmpMin.x || p_point.y < tmpMin.y || p_point.x > tmpMax.x || p_point.y > tmpMax.y);
+        }
 
-			return (spk::radianToDegree(angle));
-		}
+        /**
+         * @brief Performs linear interpolation between two points.
+         * 
+         * @param p_startingPoint The starting point of the interpolation.
+         * @param p_endingPoint The ending point of the interpolation.
+         * @param t The interpolation factor between 0 and 1.
+         * @return The interpolated point.
+         */
+        static IVector2 lerp(const IVector2 &p_startingPoint, const IVector2 &p_endingPoint, float t)
+        {
+            return IVector2(p_startingPoint.x + (p_endingPoint.x - p_startingPoint.x) * t, p_startingPoint.y + (p_endingPoint.y - p_startingPoint.y) * t);
+        }
 
-		template <typename TOtherType>
-		IVector2 rotate(const IVector2<TOtherType> &p_center, const float &p_angle) const
-		{
-			float theta = spk::degreeToRadian(p_angle);
+        /**
+         * @brief Converts a vector of angles in radians to degrees.
+         * 
+         * @param p_radians The vector containing angles in radians.
+         * @return A vector with angles converted to degrees.
+         */
+        static IVector2 radianToDegree(const IVector2& p_radians)
+        {
+            return IVector2(spk::radianToDegree(p_radians.x), spk::radianToDegree(p_radians.y));
+        }
 
-			float pcos = cos(theta);
-			float psin = sin(theta);
+        /**
+         * @brief Converts a vector of angles in degrees to radians.
+         * 
+         * @param p_degrees The vector containing angles in degrees.
+         * @return A vector with angles converted to radians.
+         */
+        static IVector2 degreeToRadian(const IVector2& p_degrees)
+        {
+            return IVector2(spk::degreeToRadian(p_degrees.x), spk::degreeToRadian(p_degrees.y));
+        }
 
-			IVector2 result;
-			result.x = (x - p_center.x) * pcos - (y - p_center.y) * psin;
-			result.y = (x - p_center.x) * psin + (y - p_center.y) * pcos;
+        /**
+         * @brief Clamps the current vector components between the specified lower and higher values.
+         * 
+         * @param p_lowerValue The lower bound for the vector components.
+         * @param p_higherValue The higher bound for the vector components.
+         * @return A new vector with the clamped values.
+         */
+        IVector2 clamp(const IVector2& p_lowerValue, const IVector2& p_higherValue) const
+        {
+            return IVector2(std::clamp(x, p_lowerValue.x, p_higherValue.x), std::clamp(y, p_lowerValue.y, p_higherValue.y));
+        }
 
-			return (result + p_center);
-		}
-
-		static IVector2 floor(const IVector2 &p_vector)
-		{
-			IVector2 result;
-
-			result.x = ::floorf(p_vector.x);
-			result.y = ::floorf(p_vector.y);
-
-			return (result);
-		}
-
-		static IVector2 ceiling(const IVector2 &p_vector)
-		{
-			IVector2 result;
-
-			result.x = ::ceilf(p_vector.x);
-			result.y = ::ceilf(p_vector.y);
-
-			return (result);
-		}
-
-		static IVector2 round(const IVector2 &p_vector)
-		{
-			IVector2 result;
-
-			result.x = ::roundf(p_vector.x);
-			result.y = ::roundf(p_vector.y);
-
-			return (result);
-		}
-
-		static IVector2 min(const IVector2 &p_min, const IVector2 &p_max)
-		{
-			return (IVector2(std::min(p_min.x, p_max.x), std::min(p_min.y, p_max.y)));
-		}
-
-		static IVector2 max(const IVector2 &p_min, const IVector2 &p_max)
-		{
-			return (IVector2(std::max(p_min.x, p_max.x), std::max(p_min.y, p_max.y)));
-		}
-
-		static bool isInsideRectangle(const IVector2 &p_point, const IVector2 &p_cornerA, const IVector2 &p_cornerB)
-		{
-			IVector2 tmpMin = IVector2::min(p_cornerA, p_cornerB);
-			IVector2 tmpMax = IVector2::max(p_cornerA, p_cornerB);
-
-			if (p_point.x < tmpMin.x || p_point.y < tmpMin.y ||
-				p_point.x > tmpMax.x || p_point.y > tmpMax.y)
-				return (false);
-			return (true);
-		}
-
-		static IVector2 lerp(const IVector2 &p_startingPoint, const IVector2 &p_endingPoint, float t)
-		{
-			return IVector2(
-				p_startingPoint.x + (p_endingPoint.x - p_startingPoint.x) * t,
-				p_startingPoint.y + (p_endingPoint.y - p_startingPoint.y) * t);
-		}
-
-		static IVector2 radianToDegree(const IVector2& p_radians) {
-			return IVector2(
-				spk::radianToDegree(p_radians.x),
-				spk::radianToDegree(p_radians.y));
-		}
-
-		static IVector2 degreeToRadian(const IVector2& p_degrees) {
-			return IVector2(
-				spk::degreeToRadian(p_degrees.x),
-				spk::degreeToRadian(p_degrees.y));
-		}
-
-		IVector2 clamp(const IVector2& p_lowerValue, const IVector2& p_higherValue)
-		{
-			return (IVector2(
-				std::clamp(x, p_lowerValue.x, p_higherValue.x), 
-				std::clamp(y, p_lowerValue.y, p_higherValue.y)
-			));
-		}
 	};
 
+	/**
+	 * @brief Global operator overload for adding a scalar value to a vector.
+	 * 
+	 * @tparam TType Type of the vector components.
+	 * @tparam TValueType Type of the scalar value, must be an arithmetic type.
+	 * @param p_value The scalar value to add.
+	 * @param p_point The vector to which the scalar value is added.
+	 * @return A new vector with the scalar value added to both components of the original vector.
+	 */
 	template <typename TType, typename TValueType, typename = std::enable_if_t<std::is_arithmetic<TValueType>::value>>
 	IVector2<TType> operator+(TValueType p_value, const IVector2<TType> &p_point)
 	{
-		return (IVector2<TType>(p_value, p_value) + p_point);
-	};
+		return IVector2<TType>(p_value + p_point.x, p_value + p_point.y);
+	}
 
+	/**
+	 * @brief Global operator overload for subtracting a vector from a scalar value.
+	 * 
+	 * @tparam TType Type of the vector components.
+	 * @tparam TValueType Type of the scalar value, must be an arithmetic type.
+	 * @param p_value The scalar value from which the vector is subtracted.
+	 * @param p_point The vector to subtract from the scalar value.
+	 * @return A new vector resulting from the scalar value minus each component of the original vector.
+	 */
 	template <typename TType, typename TValueType, typename = std::enable_if_t<std::is_arithmetic<TValueType>::value>>
 	IVector2<TType> operator-(TValueType p_value, const IVector2<TType> &p_point)
 	{
-		return (IVector2<TType>(p_value, p_value) - p_point);
-	};
+		return IVector2<TType>(p_value - p_point.x, p_value - p_point.y);
+	}
 
+	/**
+	 * @brief Global operator overload for multiplying a scalar value with a vector.
+	 * 
+	 * @tparam TType Type of the vector components.
+	 * @tparam TValueType Type of the scalar value, must be an arithmetic type.
+	 * @param p_value The scalar value to multiply.
+	 * @param p_point The vector to be multiplied by the scalar value.
+	 * @return A new vector resulting from the scalar value multiplied with each component of the original vector.
+	 */
 	template <typename TType, typename TValueType, typename = std::enable_if_t<std::is_arithmetic<TValueType>::value>>
 	IVector2<TType> operator*(TValueType p_value, const IVector2<TType> &p_point)
 	{
-		return (IVector2<TType>(p_value, p_value) * p_point);
-	};
+		return IVector2<TType>(p_value * p_point.x, p_value * p_point.y);
+	}
 
+	/**
+	 * @brief Global operator overload for dividing a scalar value by a vector.
+	 * 
+	 * @tparam TType Type of the vector components.
+	 * @tparam TValueType Type of the scalar value, must be an arithmetic type.
+	 * @param p_value The scalar value to be divided.
+	 * @param p_point The vector dividing the scalar value.
+	 * @return A new vector resulting from the scalar value divided by each component of the original vector.
+	 * @note This operation applies the reciprocal of the vector's components to the scalar value.
+	 */
 	template <typename TType, typename TValueType, typename = std::enable_if_t<std::is_arithmetic<TValueType>::value>>
 	IVector2<TType> operator/(TValueType p_value, const IVector2<TType> &p_point)
 	{
-		return (IVector2<TType>(p_value, p_value) / p_point);
-	};
+		return IVector2<TType>(p_value / p_point.x, p_value / p_point.y);
+	}
 
+	/**
+	 * @brief Converts a vector to a string representation.
+	 * 
+	 * @tparam TType Type of the vector components.
+	 * @param p_point The vector to convert to a string.
+	 * @return A string representation of the vector.
+	 */
 	template <typename TType>
 	std::string to_string(const IVector2<TType> &p_point)
 	{
-		return (p_point.to_string());
+		return p_point.to_string();
 	}
 
-	using Vector2 = IVector2<float>;
-	using Vector2Int = IVector2<int>;
-	using Vector2UInt = IVector2<unsigned int>;
+	// Type aliases for commonly used IVector2 types
+	using Vector2 = IVector2<float>; ///< Alias for IVector2 with float components.
+	using Vector2Int = IVector2<int>; ///< Alias for IVector2 with int components.
+	using Vector2UInt = IVector2<unsigned int>; ///< Alias for IVector2 with unsigned int components.
 }
