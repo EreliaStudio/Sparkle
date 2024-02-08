@@ -36,6 +36,9 @@ namespace spk
     class ObservableValue
     {
     public:
+        /**
+         * @brief Describe the required callback type to provide when subscribing to a ObservableValue
+        */
         using Contract = Notifier::Contract;
 
         /**

@@ -40,7 +40,7 @@ namespace spk
 	template <typename TType>
 	class ThreadSafeDeque
 	{
-	protected:
+	private:
 		std::mutex muxQueue;
 		std::mutex muxBlocking;
 

@@ -33,6 +33,9 @@ namespace spk
     class Notifier
     {
     public:
+        /**
+         * @brief Describe the required callback type to provide when subscribing to a Notifier
+        */
         using Callback = std::function<void()>;
 
         /**

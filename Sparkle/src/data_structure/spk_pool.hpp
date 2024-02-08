@@ -38,10 +38,13 @@ namespace spk
     class Pool
 	{
     public:
-        using Destructor = typename std::function<void(TType* p_toReturn)>;
+        /**
+         * @brief Describe the type of the provided object given by the pool uppon request
+        */
         using Object = typename std::unique_ptr<TType, Destructor>;
 
     private:
+        using Destructor = typename std::function<void(TType* p_toReturn)>;
         std::recursive_mutex _mutex;
         std::deque<std::unique_ptr<TType>> _preallocatedElements;
 
