@@ -158,16 +158,21 @@ namespace spk
                 Element(void *p_data, const Structure* p_structureLayout);
 
             public:
-                Element(const Element& p_other) = delete;
-                Element& operator = (const Element& p_other) = delete;
-                
-                Element(Element&& p_other) = default;
-                Element& operator = (Element&& p_other) = default;
-
+                /**
+                 * @brief Overloaded subscript operator for accessing nested elements.
+                 * @param p_elementName The name of the element to access.
+                 * @return Reference to the nested element.
+                 */
                 Element& operator[](const std::string& p_elementName);
 
+                /**
+                 * @brief Overloaded assignment operator for assigning values to the element.
+                 * @tparam TType The type of value being assigned.
+                 * @param p_value The value to assign.
+                 * @return Reference to the modified Element.
+                 */
                 template <typename TType>
-                Element& operator = (const TType& p_value)
+                Element& operator=(const TType& p_value)
                 {
                     if (sizeof(TType) != _structure->sizeWithoutPadding)
                         throwException("Unexpected size received : Expected [" + std::to_string(_structure->sizeWithoutPadding) + "] vs received [" + std::to_string(sizeof(TType)) + "].");
@@ -189,9 +194,9 @@ namespace spk
              */
             struct Layout
             {
-                std::string type;
-                size_t binding;
-                const Structure* structure;
+                std::string type;  ///< Type of the uniform object.
+                size_t binding;  ///< Binding point in the shader.
+                const Structure* structure;  ///< Pointer to the structure layout.
             };
 
         private:
@@ -201,30 +206,83 @@ namespace spk
             Element _generalElement;
         
         protected:
+            /**
+             * @brief Constructor used by inheriting classes.
+             * 
+             * @param p_program The program creating the UniformObject.
+             * @param p_layout The layout used for this UniformObject.
+            */
             UniformObject(const GLuint& p_program, const Layout& p_layout);
+
         public:
+            /**
+             * @brief Prevents copy construction to ensure unique management of uniform buffer objects.
+             */
             UniformObject(const UniformObject& p_other) = delete;
+            /**
+             * @brief Prevents copy assignment to ensure unique management of uniform buffer objects.
+             */
             UniformObject& operator = (const UniformObject& p_other) = delete;
             
+            /**
+             * @brief Supports move semantics for efficient transfer of uniform buffer resources.
+             */
             UniformObject(UniformObject&& p_other) = default;
+            /**
+             * @brief Supports move semantics for efficient transfer of uniform buffer resources.
+             */
             UniformObject& operator = (UniformObject&& p_other) = default;
 
+            /**
+             * @brief Overloaded subscript operator for accessing elements by name.
+             * @param p_elementName The name of the element to access.
+             * @return Reference to the accessed Element.
+             */
             Element& operator[](const std::string& p_elementName);
-            
+
+            /**
+             * @brief Overloaded assignment operator for assigning a value to the uniform object.
+             * @tparam TType The type of value being assigned.
+             * @param p_value The value to assign.
+             * @return Reference to the modified UniformObject.
+             */
             template <typename TType>
-            UniformObject& operator = (const TType& p_value)
+            UniformObject& operator=(const TType& p_value)
             {
                 _generalElement = p_value;
                 return (*this);
             }
 
+            /**
+             * @brief Getter for the buffer containing data.
+             * @return Reference to the buffer.
+             */
             const std::vector<uint8_t>& buffer() const;
-            
+
+            /**
+             * @brief Updates the uniform object with the current data.
+             */
             void update();
+
+            /**
+             * @brief Checks if the uniform object needs updating.
+             * @return True if the object needs updating, otherwise false.
+             */
             bool needUpdate() const;
+
+            /**
+             * @brief Pushes the uniform object data to the GPU.
+             */
             void push();
 
+            /**
+             * @brief Activates the uniform object.
+             */
             void activate();
+
+            /**
+             * @brief Deactivates the uniform object.
+             */
             void deactivate();
         };
 
@@ -254,16 +312,17 @@ namespace spk
         class Constant : public UniformObject
         {
             friend class Pipeline;
+            friend size_t convertConstantBlock(std::string& p_source);
 
         public:        
-            static inline const std::string BlockKey = "ConstantBlock"; //!< Key used for identifying constant blocks within shader code or pipeline configurations.
-            
             /**
              * @brief Type alias for UniformObject's Element. See UniformObject::Element for more details.
             */
             using Element = UniformObject::Element;
 
         private:
+            static inline const std::string BlockKey = "ConstantBlock";
+            
             Constant(const GLuint& p_program, const Layout& p_layout);
 
         public:
@@ -661,8 +720,8 @@ namespace spk
              */
             struct Layout
             {
-                std::string name;
-                int textureBindingPoint;
+                std::string name; //!< The name used inside Lumina.
+                int textureBindingPoint; //!< The binding point defined by Sparkle for this texture.
             };
 
         private:
@@ -701,9 +760,6 @@ namespace spk
         const std::string& p_prefixName);
     std::map<std::string, Texture::Layout> _parseSamplerUniforms(const std::vector<OpenGL::ShaderInstruction>& p_shaderinstruction);
 
-    public:
-
-    private:
         bool _isLoaded = false;
         std::string _vertexString = "";
         std::string _fragmentString = "";
