@@ -102,6 +102,17 @@ namespace spk::OpenGL
 	class VertexBufferObject
 	{
 	public:
+		/**
+		 * @enum Mode
+		 * @brief Defines the usage mode of a Vertex Buffer Object (VBO) in OpenGL.
+		 * 
+		 * This enumeration specifies the intended usage of a Vertex Buffer Object, allowing for the categorization of buffer data types. It is used to optimize the buffer's storage and access patterns by the OpenGL driver. Each mode corresponds to a specific type of buffer data, such as vertex attributes, element indices, or uniform blocks for shader programs.
+		 *
+		 * - Error: Represents an undefined or error state, not a valid usage mode.
+		 * - Vertices: Specifies that the buffer will be used to store vertex attribute data.
+		 * - Indexes: Indicates that the buffer will hold element indices, used for indexed drawing commands.
+		 * - UniformBlock: Designates the buffer for storing uniform block data, which is used to pass uniform variables to shaders.
+		 */
 		enum class Mode
 		{
 			Error = GL_NONE,

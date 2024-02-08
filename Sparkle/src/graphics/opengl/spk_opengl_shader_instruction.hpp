@@ -4,6 +4,11 @@
 
 #include "miscellaneous/JSON/spk_JSON_object.hpp"
 
+namespace spk
+{
+	class Pipeline;
+}
+
 namespace spk::OpenGL
 {
 	/**
@@ -30,6 +35,10 @@ namespace spk::OpenGL
 	 */
 	struct ShaderInstruction
 	{
+		friend class Pipeline;
+		friend void parseBody(spk::JSON::Object& p_objectToFill, const std::string& p_body);
+
+	private:
 		static inline const std::string ValueKey = "Value";
 		static inline const std::string TypeKey = "Type";
 		static inline const std::string NameKey = "Name";
@@ -41,6 +50,7 @@ namespace spk::OpenGL
 		static inline const std::string ParametersKey = "Parameters";
 		static inline const std::string LocationKey = "Location";
 
+	public:
 		/**
 		 * @enum Type
 		 * @brief Enumerates the possible types of shader instructions, aiding in their categorization and processing.
@@ -92,6 +102,5 @@ namespace spk::OpenGL
 		 * @return A vector of ShaderInstruction instances, each representing a categorized piece of the input shader code.
 		 */
 		static std::vector<ShaderInstruction> parseShaderInstruction(const std::string& p_inputCode);
-
 	};
 }
