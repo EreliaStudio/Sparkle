@@ -79,7 +79,7 @@ namespace spk::WidgetComponent
 		spk::Vector2Int stringOffset = 0;
 		for (size_t i = 0; i < _text.size(); i++)
 		{
-			const Font::Atlas::GlyphData& glyphData = _fontAtlas->glyph(_text[i]);
+			const Font::Atlas::GlyphData& glyphData = (*_fontAtlas)[_text[i]];
 			
 			if (topLeftCorner.y > glyphData.position[0].y)
 				topLeftCorner.y = glyphData.position[0].y;
@@ -148,7 +148,7 @@ namespace spk::WidgetComponent
 
     void TextLabel::_updateGPUBuffer()
     {
-        _fontAtlas = _font->atlas(spk::Font::Key(_textSize, _outlineSize, _outlineStyle));
+        _fontAtlas = &(_font->atlas(_textSize, _outlineSize, _outlineStyle));
 
         _renderingPipelineTexture.attach(&(_fontAtlas->texture()));
 

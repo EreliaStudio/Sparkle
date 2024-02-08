@@ -77,7 +77,7 @@ namespace spk
 		return result;
 	}
 
-	const Font::Atlas::GlyphData &Font::Atlas::glyph(const wchar_t &p_char) const
+	const Font::Atlas::GlyphData &Font::Atlas::operator [](const wchar_t &p_char) const
 	{
 		if (_glyphDatas.size() < static_cast<size_t>(p_char))
 		{
@@ -86,11 +86,6 @@ namespace spk
 			throwException(errorMessage);
 		}
 		return (_glyphDatas[static_cast<size_t>(p_char)]);
-	}
-
-	const Font::Atlas::GlyphData &Font::Atlas::operator [](const wchar_t &p_char) const
-	{
-		return (glyph(p_char));
 	}
 
 	const Texture &Font::Atlas::texture() const

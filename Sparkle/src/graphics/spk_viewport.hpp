@@ -29,9 +29,8 @@ namespace spk
 	{
 		friend class Application;
 		
-	public:
-		static inline const Viewport* _mainViewport = nullptr;
 	private:
+		static inline const Viewport* _mainViewport = nullptr;
 		static inline const Viewport* _activeViewport = nullptr;
 		static inline spk::Pipeline::Constant* _screenConstant = nullptr;
 
@@ -39,16 +38,66 @@ namespace spk
 		spk::Vector2UInt _size;
 
 	public:
-		static const Viewport* activeViewport() { return (_activeViewport); }
 
-		Viewport();
+        /**
+         * @brief Retrieves the currently active viewport.
+         * 
+         * This static method returns a pointer to the viewport currently set as active. If no viewport has been activated, it may return nullptr.
+         * 
+         * @return A pointer to the currently active viewport, or nullptr if none is active.
+         */
+        static const Viewport* activeViewport();
 
-		void setGeometry(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size);
-		void activate() const;
+		/**
+         * @brief Constructor for the Viewport class.
+         * 
+         * Initializes a new instance of the Viewport class, setting up default values for the anchor point and size of the viewport. The default viewport covers the entire application window.
+         */
+        Viewport();
 
-		const spk::Vector2Int& anchor() const;
-		const spk::Vector2UInt& size() const;
+        /**
+         * @brief Sets the geometry of the viewport by specifying the anchor point and size.
+         * 
+         * This method defines the area of the window where rendering will occur. The viewport is characterized by an anchor point (bottom-left corner) and its size (width and height).
+         * 
+         * @param p_anchor The anchor point of the viewport as a Vector2Int (x, y).
+         * @param p_size The size of the viewport as a Vector2UInt (width, height).
+         */
+        void setGeometry(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size);
 
-		static spk::Vector2 convertScreenToGPUPosition(const spk::Vector2Int& p_screenPosition);
-	};
+        /**
+         * @brief Activates this viewport for rendering.
+         * 
+         * Sets the current viewport as the active one, meaning that subsequent rendering operations will occur within this viewport's defined area. Only one viewport can be active at a time.
+         */
+        void activate() const;
+
+        /**
+         * @brief Gets the anchor point of the viewport.
+         * 
+         * The anchor point is the bottom-left corner of the viewport within the application window.
+         * 
+         * @return The anchor point of the viewport as a Vector2Int.
+         */
+        const spk::Vector2Int& anchor() const;
+
+        /**
+         * @brief Gets the size of the viewport.
+         * 
+         * The size is defined by the width and height of the viewport area where rendering occurs.
+         * 
+         * @return The size of the viewport as a Vector2UInt.
+         */
+        const spk::Vector2UInt& size() const;
+
+        /**
+         * @brief Converts screen coordinates to GPU-specific positions.
+         * 
+         * This static method is useful for converting screen coordinates (e.g., mouse position) to the GPU's coordinate system, which is helpful for UI interactions and placing objects in a scene.
+         * 
+         * @param p_screenPosition The position on the screen to convert, as a Vector2Int.
+         * @return The corresponding position in the GPU's coordinate system as a Vector2.
+         */
+        static spk::Vector2 convertScreenToGPUPosition(const spk::Vector2Int& p_screenPosition);
+    };
 }

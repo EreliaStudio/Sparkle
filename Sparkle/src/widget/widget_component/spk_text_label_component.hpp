@@ -110,7 +110,7 @@ namespace spk::WidgetComponent
         bool _needGPUBufferUpdate = true;
 
         spk::Font* _font = nullptr;
-        spk::Font::Atlas* _fontAtlas = nullptr;
+        const spk::Font::Atlas* _fontAtlas = nullptr;
 
         std::string _text = "";
 

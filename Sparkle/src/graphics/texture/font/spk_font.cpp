@@ -23,40 +23,13 @@ namespace spk
 		_fontConfiguration = Configuration(p_path.string(), _fontData);
 	}
 
-	Font::Atlas* Font::atlas(const size_t &p_fontSize, const size_t &p_outlineSize) const
+	const Font::Atlas& Font::atlas(const size_t &p_fontSize, const size_t &p_outlineSize, const OutlineStyle& p_outlineStype) const
 	{
-		return (this->operator[](Key(p_fontSize, p_outlineSize)));
-	}
-
-	Font::Atlas* Font::atlas(const size_t &p_fontSize, const size_t &p_outlineSize)
-	{
-		return (this->operator[](Key(p_fontSize, p_outlineSize)));
-	}
-
-	Font::Atlas* Font::atlas(const Font::Key &p_fontAtlasKey) const
-	{
-		return (this->operator[](p_fontAtlasKey));
-	}
-
-	Font::Atlas* Font::atlas(const Font::Key &p_fontAtlasKey)
-	{
-		return (this->operator[](p_fontAtlasKey));
-	}
-
-	Font::Atlas* Font::operator[](const Font::Key &p_fontAtlasKey) const
-	{
-		if (_fontAtlas.contains(p_fontAtlasKey) == false)
-			throwException("Atlas cannot be instancied inside a const Font object");
-		return _fontAtlas.at(p_fontAtlasKey);
-	}
-
-	Font::Atlas* Font::operator[](const Font::Key &p_fontAtlasKey)
-	{
-
-		if (_fontAtlas.contains(p_fontAtlasKey) == false)
+		Key tmpKey = Key(p_fontSize, p_outlineSize, p_outlineStype);
+		if (_fontAtlas.contains(tmpKey) == false)
 		{
-			_fontAtlas.emplace(p_fontAtlasKey, new Atlas(_fontData, _fontConfiguration, p_fontAtlasKey));
+			_fontAtlas[tmpKey] = Atlas(_fontData, _fontConfiguration, tmpKey);
 		}
-		return _fontAtlas[p_fontAtlasKey];
+		return _fontAtlas[tmpKey];
 	}
 }
