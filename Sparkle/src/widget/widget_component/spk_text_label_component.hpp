@@ -53,8 +53,8 @@ namespace spk::WidgetComponent
      *         _label.setTextSize(24);
      *         _label.setTextColor(spk::Color::White);
      *         _label.setAnchor({10, 10});
-     *         _label.setVerticalAlignment(spk::VerticalAlignment::Centred);
-     *         _label.setHorizontalAlignment(spk::HorizontalAlignment::Centred);
+     *         _label.setVerticalAlignment(spk::VerticalAlignment::Centered);
+     *         _label.setHorizontalAlignment(spk::HorizontalAlignment::Centered);
      *     }
      * };
      * @endcode
@@ -63,21 +63,6 @@ namespace spk::WidgetComponent
      */
     class TextLabel
     {
-    public:
-        enum class VerticalAlignment
-        {   
-            Top,
-            Centred,
-            Bottom
-        };
-        
-        enum class HorizontalAlignment
-        {
-            Left,
-            Centred,
-            Right
-        };
-
     private:
         struct RenderingPipelineVertex
         {
@@ -123,8 +108,8 @@ namespace spk::WidgetComponent
 
         spk::Vector2Int _anchor;
 
-        VerticalAlignment _verticalAlignment = VerticalAlignment::Centred;
-        HorizontalAlignment _horizontalAlignment = HorizontalAlignment::Centred;
+        VerticalAlignment _verticalAlignment = VerticalAlignment::Centered;
+        HorizontalAlignment _horizontalAlignment = HorizontalAlignment::Centered;
 
         TextLabel::RenderingData _computeRenderingData();
         spk::Vector2Int _computeBaseAnchor(const TextLabel::RenderingData& p_renderingData);
@@ -224,10 +209,4 @@ namespace spk::WidgetComponent
         void setHorizontalAlignment(const HorizontalAlignment& p_horizontalAlignment);
 
     };
-}
-
-namespace spk
-{
-    using VerticalAlignment = WidgetComponent::TextLabel::VerticalAlignment; //!< Redefinition of the WidgetComponent::TextLabel::VerticalAlignment
-    using HorizontalAlignment = WidgetComponent::TextLabel::HorizontalAlignment; //!< Redefinition of the WidgetComponent::TextLabel::HorizontalAlignment
 }

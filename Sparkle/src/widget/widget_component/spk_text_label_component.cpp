@@ -107,7 +107,7 @@ namespace spk::WidgetComponent
 				break;
 			}
 			
-			case HorizontalAlignment::Centred:
+			case HorizontalAlignment::Centered:
 			{
 				result.x = -(p_renderingData.size.x / 2);
 				break;
@@ -129,13 +129,13 @@ namespace spk::WidgetComponent
 				break;
 			}
 			
-			case VerticalAlignment::Centred:
+			case VerticalAlignment::Centered:
 			{
 				result.y = p_renderingData.size.y / 2;
 				break;
 			}
 			
-			case VerticalAlignment::Bottom:
+			case VerticalAlignment::Down:
 			default:
 			{
 				result.y = 0;
@@ -259,13 +259,13 @@ namespace spk::WidgetComponent
 		_renderingObjectTextRendererAttribute.update();
     }
     
-    void TextLabel::setVerticalAlignment(const TextLabel::VerticalAlignment& p_verticalAlignment)
+    void TextLabel::setVerticalAlignment(const VerticalAlignment& p_verticalAlignment)
     {
         _verticalAlignment = p_verticalAlignment;
         _needGPUBufferUpdate = true;
     }
     
-    void TextLabel::setHorizontalAlignment(const TextLabel::HorizontalAlignment& p_horizontalAlignment)
+    void TextLabel::setHorizontalAlignment(const HorizontalAlignment& p_horizontalAlignment)
     {
         _horizontalAlignment = p_horizontalAlignment;
         _needGPUBufferUpdate = true;
