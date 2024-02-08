@@ -33,7 +33,6 @@ namespace spk
 	class StateMachine
 	{
 	public:
-		using Callback = std::function<void()>;
 
 		/**
 		 * @brief Represents a collection of actions associated with a state in a StateMachine.
@@ -57,9 +56,54 @@ namespace spk
 		 */
 		struct Action
 		{
-			Callback onEnter;
-			Callback onUpdate;
-			Callback onExit;
+			/**
+			 * @brief Describe the required callback type to provide.
+			*/
+			using Callback = std::function<void()>;
+
+			Callback onEnter; //!< Callback called by the state machine when user require a transition to the state linked to this Action
+			Callback onUpdate; //!< Callback called by the state machine when user require an update linked to this Action
+			Callback onExit; //!< Callback called by the state machine when user require a transition from the state linked to this Action
+
+			/**
+			 * @brief Default constructor, setting every callback to nullptr
+			*/
+			Action() :
+				onEnter(nullptr),
+				onUpdate(nullptr),
+				onExit(nullptr)
+			{
+
+			}
+
+			/**
+			 * @brief Constructor with only one callback, used as update callback
+			 * 
+			 * @param p_callback The callback used as update.
+			*/
+			Action(const Callback& p_callback) :
+				onEnter(nullptr),
+				onUpdate(p_callback),
+				onExit(nullptr)
+			{
+
+			}
+
+
+			/**
+			 * @brief Constructor with three callbacks, used as entry/update/exit callbacks
+			 * 
+			 * @param p_entryCallback The callback used as update.
+			 * @param p_onUpdateCallback The callback used as update.
+			 * @param p_exitCallback The callback used as update.
+			*/
+			Action(const Callback& p_entryCallback, const Callback& p_onUpdateCallback, const Callback& p_exitCallback) :
+				onEnter(p_entryCallback),
+				onUpdate(p_onUpdateCallback),
+				onExit(p_exitCallback)
+			{
+
+			}
 		};
 
 	private:
@@ -69,42 +113,6 @@ namespace spk
 		bool _hasCurrentState = false;
 
 	public:
-		/**
-		 * @brief Constructor with initial state and callbacks.
-		 * 
-		 * Initializes the StateMachine with a single state and associated callbacks for
-		 * entering, updating, and exiting the state. Automatically enters the specified state.
-		 * 
-		 * @param p_stateID Initial state identifier.
-		 * @param p_onEnter Callback function to execute upon entering the state.
-		 * @param p_onUpdate Callback function to execute when updating the state.
-		 * @param p_onExit Callback function to execute upon exiting the state.
-		 */
-		StateMachine(TStateType p_stateID, Callback p_onEnter, Callback p_onUpdate, Callback p_onExit) :
-			_currentState(p_stateID),
-			_hasCurrentState(true)
-		{
-			addState(p_stateID, p_onEnter, p_onUpdate, p_onExit);
-			enterState(p_stateID);
-		}
-
-		/**
-		 * @brief Constructor with initial state and update callback.
-		 * 
-		 * Initializes the StateMachine with a single state and an update callback. Automatically
-		 * enters the specified state. Enter and exit actions are not specified.
-		 * 
-		 * @param p_stateID Initial state identifier.
-		 * @param p_onUpdate Callback function to execute when updating the state.
-		 */
-		StateMachine(TStateType p_stateID, Callback p_onUpdate) :
-			_currentState(p_stateID),
-			_hasCurrentState(true)
-		{
-			addState(p_stateID, p_onUpdate);
-			enterState(p_stateID);
-		}
-
 		/**
 		 * @brief Constructor with initial state and Action struct.
 		 * 
@@ -195,40 +203,6 @@ namespace spk
         {
             return (_currentActions);
         }
-
-		/**
-		 * @brief Adds a state with specified callbacks.
-		 * 
-		 * Registers a new state in the StateMachine along with callbacks for entering, updating,
-		 * and exiting the state. Throws an exception if the state already exists.
-		 * 
-		 * @param p_stateID State identifier.
-		 * @param p_onEnter Callback for entering the state.
-		 * @param p_onUpdate Callback for updating the state.
-		 * @param p_onExit Callback for exiting the state.
-		 */
-		void addState(TStateType p_stateID, Callback p_onEnter, Callback p_onUpdate, Callback p_onExit)
-		{
-			if (_states.contains(p_stateID) == true)
-				throw std::runtime_error("State ID [" + std::to_string(static_cast<int>(p_stateID)) + "] already defined");
-			_states[p_stateID] = {p_onEnter, p_onUpdate, p_onExit};
-		}
-
-		/**
-		 * @brief Adds a state with an update callback only.
-		 * 
-		 * Registers a new state in the StateMachine with only an update callback. Enter and exit
-		 * callbacks are not specified. Throws an exception if the state already exists.
-		 * 
-		 * @param p_stateID State identifier.
-		 * @param p_onUpdate Callback for updating the state.
-		 */
-		void addState(TStateType p_stateID, Callback p_onUpdate)
-		{
-			if (_states.contains(p_stateID) == true)
-				throw std::runtime_error("State ID [" + std::to_string(static_cast<int>(p_stateID)) + "] already defined");
-			_states[p_stateID] = {nullptr, p_onUpdate, nullptr};
-		}
 
 		/**
 		 * @brief Adds a state defined by an Action struct.
