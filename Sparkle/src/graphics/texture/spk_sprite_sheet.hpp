@@ -39,17 +39,67 @@ namespace spk
 		std::vector<spk::Vector2> _sprites;
 
 	public:
+		/**
+		 * @brief Constructs a SpriteSheet object from an image file, subdivided into a grid of sprites.
+		 * 
+		 * This constructor loads the texture from the specified path and subdivides it into a grid based on the specified sprite size. It calculates the size of each sprite and the total number of sprites that fit within the image dimensions.
+		 * 
+		 * @param p_path The filesystem path to the spritesheet image file.
+		 * @param p_spriteSize The size (width and height) of each sprite within the sheet, in pixels.
+		 */
 		SpriteSheet(const std::filesystem::path& p_path, const spk::Vector2UInt& p_spriteSize);
 
+		/**
+		 * @brief Gets the grid size of the spritesheet.
+		 * 
+		 * Returns the number of sprites horizontally and vertically within the spritesheet based on the sprite size and the overall image dimensions.
+		 * 
+		 * @return A Vector2UInt representing the grid size (columns, rows) of the spritesheet.
+		 */
 		const spk::Vector2UInt& size() const;
 
+		/**
+		 * @brief Gets the unit size of a single sprite within the spritesheet, expressed as a fraction of the whole image.
+		 * 
+		 * This method returns the size of a single sprite relative to the entire image dimensions, useful for texture mapping operations where coordinates are normalized.
+		 * 
+		 * @return A Vector2 representing the normalized width and height of a single sprite.
+		 */
 		const spk::Vector2& unit() const;
 
+		/**
+		 * @brief Gets a vector of all sprite positions within the spritesheet.
+		 * 
+		 * Each vector element represents the top-left corner of a sprite within the sheet, expressed in normalized texture coordinates (ranging from 0 to 1).
+		 * 
+		 * @return A vector of Vector2, each representing the normalized position of a sprite within the sheet.
+		 */
 		const std::vector<spk::Vector2>& sprites() const;
 
+		/**
+		 * @brief Calculates the sprite ID based on its grid coordinates.
+		 * 
+		 * This method translates grid coordinates (row and column) into a linear sprite ID, which can be used to retrieve the sprite's position or for indexing purposes.
+		 * 
+		 * @param p_spriteCoord A Vector2UInt representing the grid coordinates (column, row) of the sprite.
+		 * @return The linear index (ID) of the sprite at the specified grid coordinates.
+		 */
 		size_t spriteID(const spk::Vector2UInt& p_spriteCoord) const;
 
+		/**
+		 * @brief Retrieves the normalized position of a sprite within the spritesheet by grid coordinates.
+		 * 
+		 * @param p_spriteCoord A Vector2UInt representing the grid coordinates (column, row) of the sprite.
+		 * @return A Vector2 representing the normalized top-left corner position of the specified sprite.
+		 */
 		spk::Vector2 sprite(const spk::Vector2UInt& p_spriteCoord) const;
+
+		/**
+		 * @brief Retrieves the normalized position of a sprite within the spritesheet by sprite ID.
+		 * 
+		 * @param p_spriteID The linear index (ID) of the sprite.
+		 * @return A Vector2 representing the normalized top-left corner position of the specified sprite.
+		 */
 		spk::Vector2 sprite(const size_t& p_spriteID) const;
 	};
 }

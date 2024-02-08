@@ -39,6 +39,17 @@ namespace spk
         static const uint8_t CHAR_PIXEL = 0xFF; //!< The numerical representation of a char pixel inside the texture raw data.
         static const uint8_t EMPTY_PIXEL = 0x00; //!< The numerical representation of an empty pixel inside the texture raw data.
 
+        /**
+         * @enum OutlineStyle
+         * @brief Defines the style of outlines applied to glyphs within a font atlas.
+         * 
+         * This enumeration specifies the various outline styles that can be applied to glyphs when generating a font atlas. Each style affects the visual appearance of text rendered using the font atlas.
+         *
+         * - Pixelized: Applies a pixel-art style outline, giving glyphs a blocky appearance.
+         * - SharpEdge: Applies a sharp, clear outline around glyphs for a defined look.
+         * - Standard: Applies a standard outline, balancing clarity and smoothness.
+         * - Manhattan: Uses the Manhattan distance metric for a unique outline effect.
+         */
         enum class OutlineStyle
         {
             Pixelized, ///< Represents a pixelized outline style for glyphs.
@@ -47,13 +58,33 @@ namespace spk
             Manhattan  ///< Represents a Manhattan distance-based outline style for glyphs.
         };
 
+        /**
+         * @enum VerticalAlignment
+         * @brief Specifies the vertical alignment of text within its bounding box.
+         * 
+         * This enumeration controls how text is vertically aligned within its bounding box when rendered. It allows for precise control over the vertical positioning of text, improving layout options in graphical applications.
+         *
+         * - Top: Aligns text to the top of its bounding box.
+         * - Middle: Centers text vertically within its bounding box.
+         * - Down: Aligns text to the bottom of its bounding box.
+         */
         enum class VerticalAlignment
         {
             Top,    ///< Aligns text to the top of the font bounding box.
             Middle, ///< Centers text vertically within the font bounding box.
             Down    ///< Aligns text to the bottom of the font bounding box.
         };
-
+        
+        /**
+         * @enum HorizontalAlignment
+         * @brief Specifies the horizontal alignment of text within its bounding box.
+         * 
+         * This enumeration controls how text is horizontally aligned within its bounding box when rendered. It provides a means to align text to the left, center, or right of its bounding box, which is essential for text layout and design in graphical user interfaces and other applications.
+         *
+         * - Left: Aligns text to the left of its bounding box.
+         * - Middle: Centers text horizontally within its bounding box.
+         * - Right: Aligns text to the right of its bounding box.
+         */
         enum class HorizontalAlignment
         {
             Left,   ///< Aligns text to the left of the font bounding box.

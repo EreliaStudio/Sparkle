@@ -39,6 +39,17 @@ namespace spk
 		int _channels;
 
 	public:
+		/**
+		 * @brief Constructor for the Image class that loads image data from a file.
+		 * 
+		 * This constructor takes a filesystem path to an image file, reads the file, and initializes the Image object with its data. The image data includes pixel values, dimensions, and color depth information. This method is designed to handle various image file formats, automatically detecting and processing the image's properties.
+		 * 
+		 * The loaded image data is stored in memory and is ready to be uploaded to the GPU. The actual process of uploading to the GPU is done through the `uploadToGPU` method, which is inherited from the Texture class.
+		 * 
+		 * @param p_path The filesystem path to the image file. It should be a valid path to an image file that the system can read and decode.
+		 *
+		 * @note The path provided must point to a valid, readable image file. The supported formats depend on the underlying graphics API and libraries used for image parsing.
+		 */
 		Image(const std::filesystem::path& p_path);
 	};
 }
