@@ -235,6 +235,10 @@ namespace spk
 
         public:        
             static inline const std::string BlockKey = "ConstantBlock"; //!< Key used for identifying constant blocks within shader code or pipeline configurations.
+            
+            /**
+             * @Brief Type alias for UniformObject's Element. See UniformObject::Element for more details.
+            */
             using Element = UniformObject::Element;
 
         private:
@@ -408,18 +412,50 @@ namespace spk
 
             public:
                 static inline const std::string BlockKey = "AttributeBlock";
+                /**
+                 * @brief Type alias for UniformObject's Element. See UniformObject::Element for more details.
+                */
                 using Element = UniformObject::Element;
         
             private:
                 Attribute(const GLuint& p_program, const Layout& p_layout);
 
             public:
+                /**
+                 * @brief Deleted copy constructor to prevent copying of instances.
+                 * @param p_other The other Attribute object to copy from.
+                 */
                 Attribute(const Attribute& p_other) = delete;
+
+                /**
+                 * @brief Deleted assignment operator to prevent copying of instances.
+                 * @param p_other The other Attribute object to assign from.
+                 * @return Reference to this Attribute object.
+                 */
                 Attribute& operator = (const Attribute& p_other) = delete;
                 
+                /**
+                 * @brief Default move constructor.
+                 * @param p_other The other Attribute object to move from.
+                 */
                 Attribute(Attribute&& p_other) = default;
+
+                /**
+                 * @brief Default move assignment operator.
+                 * @param p_other The other Attribute object to move assign from.
+                 * @return Reference to this Attribute object.
+                 */
                 Attribute& operator = (Attribute&& p_other) = default;
 
+                /**
+                 * @brief Templated assignment operator to set the attribute's value.
+                 * 
+                 * This method leverages the assignment operator of the base class (UniformObject) to update the attribute's value.
+                 *
+                 * @tparam TType The type of the value to assign to the attribute.
+                 * @param p_value The value to assign to the attribute.
+                 * @return Reference to this Attribute object, allowing for method chaining.
+                 */
                 template <typename TType>
                 Attribute& operator = (const TType& p_value)
                 {
@@ -452,10 +488,30 @@ namespace spk
              */
             void render();
 
+            /**
+             * @brief Deleted copy constructor to prevent copying of instances.
+             * @param p_other The other Object object to copy from.
+             */
             Object(const Object& p_other) = delete;
+
+            /**
+             * @brief Deleted assignment operator to prevent copying of instances.
+             * @param p_other The other Object object to assign from.
+             * @return Reference to this Object object.
+             */
             Object& operator = (const Object& p_other) = delete;
             
+            /**
+             * @brief Default move constructor.
+             * @param p_other The other Object object to move from.
+             */
             Object(Object&& p_other) = default;
+
+            /**
+             * @brief Default move assignment operator.
+             * @param p_other The other Object object to move assign from.
+             * @return Reference to this Object object.
+             */
             Object& operator = (Object&& p_other) = default;
 
             /**

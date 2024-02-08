@@ -17,7 +17,7 @@ namespace spk
 	 * It is used to specify how a sprite should be animated, providing information about the sequence of frames
 	 * and the timing of the animation.
 	 * 
-	 * It have its equivalent inside Lumina code, named SpriteAnimation, includable by #include <spriteAnimation>.
+	 * It have its equivalent inside Lumina code, named SpriteAnimation, includable by including <spriteAnimation>.
 	 * 
 	 * Usage example:
 	 * @code

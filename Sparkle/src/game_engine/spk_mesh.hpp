@@ -88,9 +88,9 @@ namespace spk
 		 */
 		struct Data
 		{
-			size_t vertexSize;
-			std::vector<float> vertexes;
-			std::vector<unsigned int> indexes;
+			size_t vertexSize; //!< The size of one single element contained in this Data.
+			std::vector<float> vertexes; //!< The list of data, as row float, contained in this Data.
+			std::vector<unsigned int> indexes; //!< The list of indexes as unsigned int, contained in this Data.
 
 		private:
 			friend class Mesh;
@@ -108,6 +108,9 @@ namespace spk
 			void insert(const Vector3 &p_data);
 		};
 
+		/**
+		 * @brief Describe what kind of contract is provided by the mesh uppon subscription to it's edition.
+		*/
 		using Contract = Notifier::Contract;
 
 	private:

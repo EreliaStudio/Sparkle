@@ -42,6 +42,9 @@ namespace spk
 	class GameEngine
 	{
 	public:
+		/**
+		 * @brief Define the lambda type to provide to GameEngine to search for a specific GameObject.
+		*/
 		using Comparator = std::function<bool(GameObject *)>;
 
 	private:

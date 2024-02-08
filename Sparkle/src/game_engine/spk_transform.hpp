@@ -38,6 +38,9 @@ namespace spk
 		using ObservableVector3 = spk::ObservableValue<spk::Vector3>;
 
 	public:
+		/**
+		 * @brief The type of contract provided by the triplet translation/scale/rotation uppon subscription.
+		*/
 		using Contract = spk::ObservableValue<spk::Vector3>::Contract;
 
 		/**
