@@ -27,7 +27,7 @@ namespace spk
 	 * SpriteRenderer* spriteRenderer = gameObject.addComponent<spk::SpriteRenderer>("MySpriteRenderer");
 	 * 
 	 * // Set the mesh for rendering the sprite
-	 * spriteRenderer->setMesh(&spk::SpriteRenderer::defaultMesh);
+	 * spriteRenderer->setMesh(&spk::SpriteRenderer::_defaultMesh);
 	 * 
 	 * // Set the sprite sheet and sprite ID
 	 * spriteRenderer->setSpriteSheet(&mySpriteSheet);
@@ -42,10 +42,8 @@ namespace spk
 
 	class SpriteRenderer : public spk::GameComponent
 	{
-	public:
-		static const spk::Mesh defaultMesh;
-		
 	private:
+		static const spk::Mesh _defaultMesh;
 		static std::string _renderingPipelineCode;
 
 		struct RenderingPipelineVertex

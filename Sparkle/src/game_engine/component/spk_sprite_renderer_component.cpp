@@ -3,7 +3,7 @@
 
 namespace spk
 {
-	const spk::Mesh SpriteRenderer::defaultMesh = spk::createSpriteMesh();
+	const spk::Mesh SpriteRenderer::_defaultMesh = spk::createSpriteMesh();
 	std::string SpriteRenderer::_renderingPipelineCode = R"(#version 450
 
 	#include <transform>
@@ -127,7 +127,7 @@ namespace spk
 		_transformRotationContract(owner()->transform().rotation.subscribe([&](){_updateTransform();})),
 		_renderingPipelineTexture(_renderingPipeline.texture("textureID"))
 	{
-		setMesh(&defaultMesh);
+		setMesh(&_defaultMesh);
 
 		_updateTransform();
 		_updateSprite();
