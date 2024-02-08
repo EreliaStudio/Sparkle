@@ -43,9 +43,36 @@ namespace spk
 		std::map<std::string, IMetric*> _metrics;
 
 	public:
+		/**
+		 * @brief Constructs a Profiler instance.
+		 *
+		 * Initializes the profiler with an empty set of metrics. This constructor prepares
+		 * the profiler for metric management, enabling the dynamic addition and retrieval
+		 * of metrics based on unique names.
+		 */
 		Profiler();
+
+		/**
+		 * @brief Destructs the Profiler instance.
+		 *
+		 * Cleans up all managed metric instances by deallocating memory and clearing the
+		 * internal map of metrics. This ensures that no memory leaks occur from dynamically
+		 * allocated metric objects.
+		 */
 		~Profiler();
 
+		/**
+		 * @brief Retrieves or creates a metric of a specific type associated with a given name.
+		 *
+		 * This method allows for the dynamic management of metrics. If a metric with the specified
+		 * name exists, it is retrieved; otherwise, a new metric of type TMetricType is created,
+		 * added to the profiler's management, and returned. This enables flexible and on-demand
+		 * metric tracking within the application.
+		 *
+		 * @tparam TMetricType The type of the metric to retrieve or create. Must implement the IMetric interface.
+		 * @param p_metricName The unique name associated with the metric.
+		 * @return TMetricType& A reference to the metric instance of the requested type and name.
+		 */
 		template <typename TMetricType>
 		TMetricType& metric(const std::string& p_metricName)
 		{
@@ -54,6 +81,16 @@ namespace spk
 			return (*(static_cast<TMetricType*>(_metrics.at(p_metricName))));
 		}
 
+		/**
+		 * @brief Generates an aggregated report of all managed metrics.
+		 *
+		 * Iterates over all managed metrics, invoking their emitReport() method to generate
+		 * individual reports, and then aggregates these reports into a single JSON object. This
+		 * method provides a unified view of the collected data across all metrics, facilitating
+		 * comprehensive analysis and reporting.
+		 *
+		 * @return spk::JSON::Object A JSON object containing the aggregated report from all metrics.
+		 */
 		spk::JSON::Object emitReport();
 	};
 }

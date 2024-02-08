@@ -40,7 +40,27 @@ namespace spk
 	{
 	private:
 	public:
+		/**
+		 * @brief Determines if the current state warrants the generation of a report.
+		 *
+		 * Implementations should return true if the collected data meets certain conditions
+		 * (e.g., a specific amount of data has been collected, a certain time has elapsed, etc.),
+		 * indicating that a report should be generated.
+		 *
+		 * @return bool True if a report should be emitted based on the implementation's criteria,
+		 *         false otherwise.
+		 */
 		virtual bool shouldEmitReport() = 0;
+		
+		/**
+		 * @brief Generates a report based on the collected data.
+		 *
+		 * This method is called to generate a report, typically after shouldEmitReport() returns
+		 * true. Implementations should construct and return a JSON object that encapsulates
+		 * the relevant data and insights derived from the metric collection.
+		 *
+		 * @return spk::JSON::Object A JSON object containing the report data.
+		 */
 		virtual spk::JSON::Object emitReport() = 0;
 	};
 
@@ -96,6 +116,14 @@ namespace spk
 		size_t _cardinal = 0;
 
 	protected:
+		/**
+		 * @brief Saves a new value into the metric, updating the minimum, maximum, average values, and the total number of data points collected.
+		 * @param p_newValue The new data point to include in the metric analysis.
+		 * 
+		 * This method dynamically updates the metrics with each new data point, recalculating the
+		 * minimum, maximum, and average values to reflect the most current state of the data. It is
+		 * designed to be called whenever a new data point is available for collection.
+		 */
 		void saveValue(const TType &p_newValue)
 		{
 			if (_min > p_newValue)
@@ -108,28 +136,64 @@ namespace spk
 		}
 
 	public:
+		/**
+		 * @brief Determines if enough data has been collected to generate a report.
+		 * @return A boolean value indicating if a report should be emitted.
+		 * 
+		 * This method implements the shouldEmitReport method from the IMetric interface. It checks
+		 * if any data points have been collected and returns true if there is data available for
+		 * reporting, allowing for the dynamic determination of report generation based on the
+		 * collected data.
+		 */
 		bool shouldEmitReport() override
 		{
 			return (_cardinal != 0);
 		}
 
+		/**
+		 * @brief Abstract method to generate a report based on the collected data.
+		 * @return A spk::JSON::Object containing the report data.
+		 * 
+		 * Subclasses must implement this method to define the specific contents and format of the
+		 * report based on the collected metric data. This method provides the flexibility to
+		 * tailor reports to specific analytical needs and data interpretations.
+		 */
 		virtual spk::JSON::Object emitReport() = 0;
 
+		/**
+		 * @brief Retrieves the minimum value recorded.
+		 * @return The minimum value of the collected data points.
+		 */
 		const TType &min() const
 		{
 			return (_min);
 		}
 
+		/**
+		 * @brief Retrieves the maximum value recorded.
+		 * @return The maximum value of the collected data points.
+		 */
 		const TType &max() const
 		{
 			return (_max);
 		}
 
+		/**
+		 * @brief Calculates the average value of the collected data points.
+		 * @return The average value as a floating-point number.
+		 * 
+		 * The average is computed dynamically as new values are saved, providing an up-to-date
+		 * calculation of the mean value of the collected data points.
+		 */
 		float average() const
 		{
 			return (_average);
 		}
 
+		/**
+		 * @brief Retrieves the total number of data points collected.
+		 * @return The total count of data points as a size_t.
+		 */
 		size_t cardinal() const
 		{
 			return (_cardinal);

@@ -51,12 +51,58 @@ namespace spk
         Chronometer _chronometer;
 
     public:
+        /**
+         * @brief Default constructor for TimeMetric.
+         *
+         * Initializes a new instance of TimeMetric. Sets up the internal chronometer used
+         * to measure time intervals but does not start any timing operation. Use start()
+         * to begin timing a code segment or operation.
+         */
         TimeMetric() = default;
+
+        /**
+         * @brief Default destructor for TimeMetric.
+         *
+         * Cleans up any resources used by the TimeMetric instance. This is primarily
+         * relevant if there are any dynamic allocations or system resources in use,
+         * which is not the case here but ensures safe cleanup.
+         */
         virtual ~TimeMetric() = default;
 
-		void start();
-		void stop();
+        /**
+         * @brief Starts the timing operation.
+         *
+         * Begins measuring a time interval by starting the internal chronometer.
+         * This method should be called at the beginning of the code segment or
+         * operation you wish to measure. Can be called multiple times for consecutive
+         * measurements, with each call resetting the timer.
+         */
+        void start();
 
+        /**
+         * @brief Stops the timing operation.
+         *
+         * Ends the current timing operation by stopping the internal chronometer and
+         * saving the elapsed time since start() was called. The measured duration is
+         * automatically added to the analytical metrics for later reporting. This method
+         * does not reset the chronometer; start() must be called again to begin a new
+         * timing operation.
+         */
+        void stop();
+
+        /**
+         * @brief Generates a report of the time metric.
+         *
+         * Creates and returns a JSON object containing the aggregated data collected
+         * by this TimeMetric instance. This includes minimum, maximum, and average
+         * durations, along with the total count of timing operations performed.
+         * This method provides a structured format for analyzing and sharing the
+         * timing data collected.
+         *
+         * @return spk::JSON::Object A JSON object containing the timing metrics report,
+         * including statistical analysis of the measured durations.
+         */
         virtual spk::JSON::Object emitReport() override;
+
     };
 }
