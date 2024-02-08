@@ -1,0 +1,10 @@
+<map id="spk::ActivateObject" name="spk::ActivateObject">
+<area shape="rect" id="node1" title="Manages activation state for objects, intended as a base class." alt="" coords="5,96,155,123"/>
+<area shape="rect" id="node2" href="$classspk_1_1GameComponent.html" title="Base class for game components that can be attached to GameObjects." alt="" coords="203,45,369,72"/>
+<area shape="rect" id="node5" href="$classspk_1_1GameObject.html" title="Represents a game object in the game engine hierarchy." alt="" coords="219,96,353,123"/>
+<area shape="rect" id="node6" href="$classspk_1_1IWidget.html" title="Defines a widget interface for UI elements, integrating activation state management,..." alt="" coords="235,147,337,173"/>
+<area shape="rect" id="node3" href="$classspk_1_1Camera.html" title="Represents a camera component for rendering scenes." alt="" coords="462,5,566,32"/>
+<area shape="rect" id="node4" href="$classspk_1_1SpriteRenderer.html" title="Represents a sprite renderer component for rendering sprites in world space." alt="" coords="439,56,589,83"/>
+<area shape="rect" id="node7" href="$classspk_1_1Application_1_1CentralWidget.html" title="CentralWidget serves as the core widget in an application, managing time&#45;based updates via a custom r..." alt="" coords="423,129,605,170"/>
+<area shape="rect" id="node8" href="$classspk_1_1GameEngineManager.html" title="Manages the integration of a game engine within a widget&#45;based user interface framework." alt="" coords="417,195,611,221"/>
+</map>

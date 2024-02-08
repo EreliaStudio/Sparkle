@@ -1,0 +1,4 @@
+<map id="spk::Image" name="spk::Image">
+<area shape="rect" id="node1" title="Extends the Texture class to load texture data from image files." alt="" coords="9,80,103,107"/>
+<area shape="rect" id="node2" href="$classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines." alt="" coords="5,5,107,32"/>
+</map>

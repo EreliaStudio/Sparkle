@@ -1,0 +1,5 @@
+<map id="spk::TriggerMetric" name="spk::TriggerMetric">
+<area shape="rect" id="node1" title="A metric class for counting and reporting discrete trigger events, extending IAnalyticalMetric&lt;long l..." alt="" coords="17,169,156,196"/>
+<area shape="rect" id="node2" href="$classspk_1_1IAnalyticalMetric.html" title=" " alt="" coords="5,80,168,121"/>
+<area shape="rect" id="node3" href="$classspk_1_1IMetric.html" title="Interface defining the structure for metric collection and report emission." alt="" coords="37,5,136,32"/>
+</map>

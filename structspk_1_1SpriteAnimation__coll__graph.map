@@ -1,0 +1,4 @@
+<map id="spk::SpriteAnimation" name="spk::SpriteAnimation">
+<area shape="rect" id="node1" title="Represents a sprite animation with duration and frame information." alt="" coords="5,109,164,136"/>
+<area shape="rect" id="node2" href="$structspk_1_1IVector2.html" title=" " alt="" coords="8,5,161,32"/>
+</map>

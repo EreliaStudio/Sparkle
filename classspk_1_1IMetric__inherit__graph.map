@@ -1,0 +1,7 @@
+<map id="spk::IMetric" name="spk::IMetric">
+<area shape="rect" id="node1" title="Interface defining the structure for metric collection and report emission." alt="" coords="191,5,290,32"/>
+<area shape="rect" id="node2" href="$classspk_1_1IAnalyticalMetric.html" title=" " alt="" coords="66,80,229,121"/>
+<area shape="rect" id="node5" href="$classspk_1_1IAnalyticalMetric.html" title="Template class for analytical metrics collection, extending IMetric." alt="" coords="253,80,415,121"/>
+<area shape="rect" id="node3" href="$classspk_1_1TimeMetric.html" title="Specialized metric for measuring and reporting time durations, extending IAnalyticalMetric&lt;long long&gt;..." alt="" coords="5,169,132,196"/>
+<area shape="rect" id="node4" href="$classspk_1_1TriggerMetric.html" title="A metric class for counting and reporting discrete trigger events, extending IAnalyticalMetric&lt;long l..." alt="" coords="157,169,295,196"/>
+</map>

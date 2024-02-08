@@ -1,0 +1,4 @@
+<map id="spk::OpenGL::ShaderInstruction" name="spk::OpenGL::ShaderInstruction">
+<area shape="rect" id="node1" title="Represents and categorizes a single instruction or declaration within OpenGL shader code,..." alt="" coords="5,95,232,121"/>
+<area shape="rect" id="node2" href="$classspk_1_1JSON_1_1Object.html" title="Represents a JSON object for serialization and deserialization." alt="" coords="51,5,186,32"/>
+</map>

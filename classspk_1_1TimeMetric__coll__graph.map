@@ -1,0 +1,5 @@
+<map id="spk::TimeMetric" name="spk::TimeMetric">
+<area shape="rect" id="node1" title="Specialized metric for measuring and reporting time durations, extending IAnalyticalMetric&lt;long long&gt;..." alt="" coords="23,169,150,196"/>
+<area shape="rect" id="node2" href="$classspk_1_1IAnalyticalMetric.html" title=" " alt="" coords="5,80,168,121"/>
+<area shape="rect" id="node3" href="$classspk_1_1IMetric.html" title="Interface defining the structure for metric collection and report emission." alt="" coords="37,5,136,32"/>
+</map>

@@ -1,0 +1,4 @@
+<map id="spk::OpenGL::UniformBufferObject" name="spk::OpenGL::UniformBufferObject">
+<area shape="rect" id="node1" title="Specializes VertexBufferObject for OpenGL Uniform Buffer Objects (UBOs), facilitating shader uniform ..." alt="" coords="5,95,209,136"/>
+<area shape="rect" id="node2" href="$classspk_1_1OpenGL_1_1VertexBufferObject.html" title="Wraps an OpenGL Vertex Buffer Object (VBO), used for storing vertex data or indices in GPU memory." alt="" coords="11,5,204,47"/>
+</map>
