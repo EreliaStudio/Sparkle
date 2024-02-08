@@ -23,9 +23,9 @@ namespace spk
 	template <typename TType>
 	struct IVector3
 	{
-		TType x;
-		TType y;
-		TType z;
+		TType x; //!< X component of the vector.
+		TType y; //!< Y component of the vector.
+		TType z; //!< Z component of the vector.
 
 		        /**
          * @brief Default constructor. Initializes x, y, and z components to zero.

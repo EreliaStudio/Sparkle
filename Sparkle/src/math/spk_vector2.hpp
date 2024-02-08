@@ -38,8 +38,8 @@ namespace spk
 	template <typename TType>
 	struct IVector2
 	{
-		TType x;
-		TType y;
+		TType x; //!< X component of the vector.
+		TType y; //!< Y component of the vector.
 
 		/**
          * @brief Default constructor. Initializes x and y to zero.
