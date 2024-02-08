@@ -74,22 +74,44 @@ namespace spk
              */
             struct Element
             {
-                size_t offsetWithPadding;
-                size_t offsetWithoutPadding;
-                size_t length;
-                const Structure* pointer;
+                size_t offsetWithPadding; ///< The byte offset of the element from the start of the structure, including padding.
+                size_t offsetWithoutPadding; ///< The byte offset of the element from the start of the structure, excluding padding.
+                size_t length; ///< The size of the element in bytes.
+                const Structure* pointer; ///< Optional pointer to another `Structure` if this element is a structured type.
             };
 
-            OpenGL::Type type;
-            size_t sizeWithPadding;
-            size_t sizeWithoutPadding;
-            size_t nbElement;
-            std::map<std::string, Element> elements;
+            OpenGL::Type type; ///< The OpenGL type of the structure.
+            size_t sizeWithPadding; ///< Total size of the structure including padding, in bytes.
+            size_t sizeWithoutPadding; ///< Total size of the structure excluding padding, in bytes.
+            size_t nbElement; ///< Number of elements contained within the structure.
+            std::map<std::string, Element> elements; ///< A map of element names to their `Element` descriptions within the structure.
 
+            /**
+             * @brief Default constructor for creating an empty `Structure`.
+             */
             Structure();
+
+            /**
+             * @brief Constructs a `Structure` based on a set of available structures and a shader instruction.
+             * @param p_availibleStructures Map of available `Structure`s by name, used for building nested structures.
+             * @param p_inputInstruction The shader instruction that defines how to interpret the structure.
+             */
             Structure(const std::map<std::string, Pipeline::Structure>& p_availibleStructures, const OpenGL::ShaderInstruction& p_inputInstruction);
+
+            /**
+             * @brief Constructs a `Structure` with specified type, number of elements, and size.
+             * @param p_type The OpenGL type of the structure.
+             * @param p_nbElement The number of elements in the structure.
+             * @param p_size The size of the structure, in bytes.
+             */
             Structure(const OpenGL::Type& p_type, size_t p_nbElement, size_t p_size);
 
+            /**
+             * @brief Writes data from a source to a destination, taking the structure's layout into account.
+             * @param p_destination Pointer to the destination where data should be written.
+             * @param p_source Pointer to the source data to be written.
+             * @param p_size Size of the data to be written, in bytes.
+             */
             void write(void *p_destination, const void *p_source, size_t p_size) const;
         };
 
@@ -349,14 +371,14 @@ namespace spk
                      */
                     struct Element
                     {
-                        size_t location;
-                        size_t nbElement;
-                        OpenGL::Type type;
-                        size_t offset;
+                        size_t location; ///< The location index of the element within the shader.
+                        size_t nbElement; ///< The number of elements within this vertex attribute.
+                        OpenGL::Type type; ///< The data type of the element (e.g., float, vec3).
+                        size_t offset; ///< The byte offset of the element from the start of the structure.
                     };
 
-                    size_t stride;
-                    std::vector<Element> elements;
+                    size_t stride; ///< The stride (in bytes) between consecutive vertices in the buffer.
+                    std::vector<Element> elements; ///< A collection of Element structures defining the attributes of the vertex.
                 };
 
             private:
@@ -382,17 +404,52 @@ namespace spk
                 void setIndexes(const std::vector<size_t> p_indexesData);
 
             public:
+                /**
+                 * @brief Constructs a Storage object with a specified layout.
+                 * @param p_layout The layout definition for the vertex data to be stored.
+                 */
                 Storage(const Layout& p_layout);
 
+                /**
+                 * @brief Deleted copy constructor to prevent copying of Storage instances.
+                 * @param p_other The other Storage object to copy from.
+                 */
                 Storage(const Storage& p_other) = delete;
+
+                /**
+                 * @brief Deleted assignment operator to prevent copying of Storage instances.
+                 * @param p_other The other Storage object to assign from.
+                 * @return Reference to this Storage object.
+                 */
                 Storage& operator = (const Storage& p_other) = delete;
                 
+                /**
+                 * @brief Default move constructor.
+                 * @param p_other The other Storage object to move from.
+                 */
                 Storage(Storage&& p_other) = default;
+
+                /**
+                 * @brief Default move assignment operator.
+                 * @param p_other The other Storage object to move assign from.
+                 * @return Reference to this Storage object.
+                 */
                 Storage& operator = (Storage&& p_other) = default;
 
+                /**
+                 * @brief Returns the number of triangles stored.
+                 * @return The number of triangles, calculated based on the stored indices.
+                 */
                 size_t nbTriangles() const;
 
+                /**
+                 * @brief Activates this Storage object, making it the current target for rendering operations.
+                 */
                 void activate();
+
+                /**
+                 * @brief Deactivates this Storage object, removing it from being the current target for rendering operations.
+                 */
                 void deactivate();
             };
 
@@ -408,16 +465,18 @@ namespace spk
              */
             class Attribute : public UniformObject
             {
+                friend class Pipeline;
+                friend void convertAttributeBlock(std::string& p_source, size_t p_higherBindingPointUsed);
                 friend class Object;
 
             public:
-                static inline const std::string BlockKey = "AttributeBlock";
                 /**
                  * @brief Type alias for UniformObject's Element. See UniformObject::Element for more details.
                 */
                 using Element = UniformObject::Element;
         
             private:
+                static inline const std::string BlockKey = "AttributeBlock";
                 Attribute(const GLuint& p_program, const Layout& p_layout);
 
             public:

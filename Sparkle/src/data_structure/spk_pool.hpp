@@ -37,6 +37,9 @@ namespace spk
     template<typename TType>
     class Pool
 	{
+    private:    
+        using Destructor = typename std::function<void(TType* p_toReturn)>;
+    
     public:
         /**
          * @brief Describe the type of the provided object given by the pool uppon request
