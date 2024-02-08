@@ -9,7 +9,7 @@ namespace spk::OpenGL
 
 	}
 
-	void parseBody(spk::JSON::Object& p_objectToFill, const std::string& p_body)
+	void ShaderInstruction::_parseBody(spk::JSON::Object& p_objectToFill, const std::string& p_body)
 	{
 		std::regex attributeParsing(R"((\w+)\s+(\w+)(?:\[(\d+)\])?)");
 		auto begin = std::sregex_iterator(p_body.begin(), p_body.end(), attributeParsing);
@@ -52,7 +52,7 @@ namespace spk::OpenGL
 				informations[NameKey].set<std::string>(p_matches[4].str());
 				informations[AttributesKey].setAsArray();
 
-				parseBody(informations[AttributesKey], body);
+				_parseBody(informations[AttributesKey], body);
 				break;
 			}
 			case Type::Structure :
@@ -63,7 +63,7 @@ namespace spk::OpenGL
 				informations[BodyKey].set<std::string>(body);
 				informations[AttributesKey].setAsArray();
 
-				parseBody(informations[AttributesKey], body);
+				_parseBody(informations[AttributesKey], body);
 				break;
 			}
 

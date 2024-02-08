@@ -36,7 +36,6 @@ namespace spk::OpenGL
 	struct ShaderInstruction
 	{
 		friend class Pipeline;
-		friend void parseBody(spk::JSON::Object& p_objectToFill, const std::string& p_body);
 
 	private:
 		static inline const std::string ValueKey = "Value";
@@ -50,6 +49,8 @@ namespace spk::OpenGL
 		static inline const std::string ParametersKey = "Parameters";
 		static inline const std::string LocationKey = "Location";
 
+		void _parseBody(spk::JSON::Object& p_objectToFill, const std::string& p_body);
+		
 	public:
 		/**
 		 * @enum Type
