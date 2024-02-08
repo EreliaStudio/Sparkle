@@ -45,6 +45,20 @@ namespace spk
 	class Mouse
 	{
 	public:
+		/**
+		 * @enum Button
+		 * @brief Identifies the buttons on a mouse.
+		 *
+		 * This enumeration provides identifiers for common mouse buttons, facilitating the tracking and handling of mouse button states within applications. It allows for clear and concise representation of which mouse button is being interacted with in mouse input events.
+		 *
+		 * - Left: Represents the left mouse button, typically used for selecting and dragging items.
+		 * - Middle: Represents the middle mouse button, often integrated into the scroll wheel and used for scrolling or special functions in some applications.
+		 * - Right: Represents the right mouse button, commonly used to open contextual menus.
+		 * - Button3: Represents an additional mouse button, which could be one of the side buttons often used for navigating (back/forward in web browsers, for example).
+		 * - Button4: Represents another additional mouse button, similar to Button3, and can be used for various custom actions depending on the application's design.
+		 *
+		 * Usage within the Mouse class allows for checking the state (pressed, released, etc.) of these buttons, enabling responsive and interactive application controls.
+		 */
 		enum Button
 		{
 			Left,
@@ -54,9 +68,10 @@ namespace spk
 			Button4
 		};
 
-		static const size_t NB_BUTTON = 5;
 
 	private:
+		static const size_t NB_BUTTON = 5;
+
 		Vector2Int INITIAL_DELTA_POSITION = Vector2Int(-10000, -10000);
 		InputState _buttons[NB_BUTTON];
 

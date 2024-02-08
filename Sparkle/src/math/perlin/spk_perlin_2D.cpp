@@ -13,12 +13,6 @@ namespace spk
 	{
 
 	}
-	
-	Perlin2D::Perlin2D(const spk::JSON::Object& p_object) :
-		Perlin1D(p_object)
-	{
-
-	}
 
 	float Perlin2D::_computeWaveLength(const float& p_x, const float& p_y, const float& p_frequency) const
 	{

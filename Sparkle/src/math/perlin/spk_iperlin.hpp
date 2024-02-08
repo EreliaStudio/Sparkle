@@ -102,15 +102,6 @@ namespace spk
 		IPerlin(unsigned long p_seed);
 
 		/**
-		 * @brief Constructor for the IPerlin class that initializes settings from a JSON object.
-		 * 
-		 * Initializes a Perlin noise generator with parameters specified in a JSON object. This allows for configuration via external data sources.
-		 * 
-		 * @param p_object A JSON::Object containing the configuration for the Perlin noise generator.
-		 */
-		IPerlin(const spk::JSON::Object& p_object);
-
-		/**
 		 * @brief Gets the current seed used for noise generation.
 		 * 
 		 * @return The current seed value.

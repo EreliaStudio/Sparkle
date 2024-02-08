@@ -30,37 +30,6 @@ namespace spk
 		_onSeedEdition();
 	}
 	
-	IPerlin::IPerlin(const spk::JSON::Object& p_object)
-	{
-		if (p_object.isObject() == true)
-		{
-			_seed = (p_object.contains(L"Seed") == true ? p_object[L"Seed"].as<long>() : 12500);
-			_min = static_cast<float>(p_object.contains(L"MininalRange") == true ? p_object[L"MininalRange"].as<double>() : 0.0);
-			_max = static_cast<float>(p_object.contains(L"MaximalRange") == true ? p_object[L"MaximalRange"].as<double>() : 100.0);
-			_range = _max - _min;
-			_octaveValue = (p_object.contains(L"Octave") == true ? p_object[L"Octave"].as<long>() : 3);
-			_frequency = static_cast<float>(p_object.contains(L"Frequency") == true ? p_object[L"Frequency"].as<double>() : 50.0);
-			_persistance = static_cast<float>(p_object.contains(L"Persistance") == true ? p_object[L"Persistance"].as<double>() : 0.5);
-			_lacunarity = static_cast<float>(p_object.contains(L"Lacunarity") == true ? p_object[L"Lacunarity"].as<double>() : 2.0);
-		}
-		else if (p_object.isArray() == true)
-		{
-			_seed = (p_object.size() >= 1 ? p_object[0].as<long>() : 12500);
-			_octaveValue = (p_object.size() >= 2 ? p_object[3].as<long>() : 3);
-			_frequency = static_cast<float>(p_object.size() >= 3 ? p_object[4].as<double>() : 50.0f);
-			_persistance = static_cast<float>(p_object.size() >= 4 ? p_object[5].as<double>() : 0.5f);
-			_lacunarity = static_cast<float>(p_object.size() >= 5 ? p_object[6].as<double>() : 2.0f);
-			_min = static_cast<float>(p_object.size() >= 6 ? p_object[1].as<double>() : 0);
-			_max = static_cast<float>(p_object.size() >= 7 ? p_object[2].as<double>() : 100);
-			_range = _max - _min;
-		}
-		else
-		{
-			spk::throwException(L"Unexpected JSON type while creating a perlin");
-		}
-		_onSeedEdition();
-	}
-
 	float IPerlin::_calcRatio(const float& w) const
 	{
 		if (w <= 0.0f)

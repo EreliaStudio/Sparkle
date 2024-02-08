@@ -41,89 +41,151 @@ namespace spk
 		TType x;
 		TType y;
 
-		IVector2() : x(0), y(0) {}
+		/**
+         * @brief Default constructor. Initializes x and y to zero.
+         */
+        IVector2() : x(0), y(0) {}
 
-		template <typename TOtherType>
-		IVector2(const TOtherType &p_value) : x(static_cast<TType>(p_value)), y(static_cast<TType>(p_value)) {}
+        /**
+         * @brief Constructs a vector with both x and y set to the provided value.
+         * @param p_value The value to set both x and y components to.
+         */
+        template <typename TOtherType>
+        IVector2(const TOtherType &p_value) : x(static_cast<TType>(p_value)), y(static_cast<TType>(p_value)) {}
 
-		template <typename TTypeA, typename TTypeB>
-		IVector2(const TTypeA &p_x, const TTypeB &p_y) : x(static_cast<TType>(p_x)), y(static_cast<TType>(p_y)) {}
+        /**
+         * @brief Constructs a vector from separate x and y values.
+         * @param p_x The value for the x component.
+         * @param p_y The value for the y component.
+         */
+        template <typename TTypeA, typename TTypeB>
+        IVector2(const TTypeA &p_x, const TTypeB &p_y) : x(static_cast<TType>(p_x)), y(static_cast<TType>(p_y)) {}
 
+        /**
+         * @brief Copy constructor from another vector of possibly different type.
+         * @param p_other The vector to copy from.
+         */
 		template <typename TOtherType>
 		IVector2(const IVector2<TOtherType> &p_other) : x(static_cast<TType>(p_other.x)), y(static_cast<TType>(p_other.y)) {}
 
-		IVector2(const spk::JSON::Object& p_object)
-		{
-			if constexpr (std::is_floating_point<TType>::value)
-			{
-				x = p_object["x"].as<double>();
-				y = p_object["y"].as<double>();
-			}
-			else
-			{
-				x = p_object["x"].as<long>();
-				y = p_object["y"].as<long>();
-			}
-		}
-
+		/**
+         * @brief Conversion operator to another vector of possibly different type.
+         * @return A new vector of the target type with copied components.
+         */
 		template <typename TOtherType>
 		operator IVector2<TOtherType>()
 		{
 			return (IVector2<TOtherType>(static_cast<TOtherType>(x), static_cast<TOtherType>(y)));
 		}
 
+		/**
+         * @brief Unary negation operator.
+         * @return A new vector where both components are negated.
+         */
 		IVector2 operator-() const
 		{
 			return (IVector2(-x, -y));
 		}
 
+        /**
+         * @brief Converts the vector to a string representation.
+         * @return A string in the format "x / y".
+         */
 		std::string to_string() const
 		{
 			return (std::to_string(x) + " / " + std::to_string(y));
 		}
 
+		/**
+         * @brief Stream insertion operator to output the vector to an output stream.
+         * @param p_os The output stream.
+         * @param p_self The vector to output.
+         * @return The output stream after insertion.
+         */
 		friend std::ostream &operator<<(std::ostream &p_os, const IVector2 &p_self)
 		{
 			p_os << p_self.to_string();
 			return p_os;
 		}
 
+		/**
+         * @brief Adds two vectors component-wise.
+         * 
+         * @param p_other Another vector to add to this vector.
+         * @return The resultant vector after addition.
+         */
 		template <typename TOtherType>
 		IVector2<TType> operator+(const IVector2<TOtherType> &p_other) const
 		{
 			return IVector2<TType>(x + p_other.x, y + p_other.y);
 		}
 
+        /**
+         * @brief Adds a scalar value to both components of the vector.
+         * 
+         * @param p_value The scalar value to add.
+         * @return The resultant vector after addition.
+         */
 		template <typename TOtherType>
 		IVector2<TType> operator+(const TOtherType& p_value) const
 		{
 			return IVector2<TType>(x + p_value, y + p_value);
 		}
 
+        /**
+         * @brief Subtracts another vector from this vector component-wise.
+         * 
+         * @param p_other The vector to subtract from this vector.
+         * @return The resultant vector after subtraction.
+         */
 		template <typename TOtherType>
 		IVector2<TType> operator-(const IVector2<TOtherType> &p_other) const
 		{
 			return IVector2<TType>(x - p_other.x, y - p_other.y);
 		}
 
+        /**
+         * @brief Subtracts a scalar value from both components of the vector.
+         * 
+         * @param p_value The scalar value to subtract.
+         * @return The resultant vector after subtraction.
+         */
 		template <typename TOtherType>
 		IVector2<TType> operator-(const TOtherType &p_value) const
 		{
 			return IVector2<TType>(x - p_value, y - p_value);
 		}
 
+        /**
+         * @brief Multiplies this vector by another vector component-wise.
+         * 
+         * @param p_other The vector to multiply with.
+         * @return The resultant vector after multiplication.
+         */
 		template <typename TOtherType>
 		IVector2<TType> operator*(const IVector2<TOtherType> &p_other) const
 		{
 			return (IVector2<TType>(x * p_other.x, y * p_other.y));
 		}
 
+        /**
+         * @brief Multiplies both components of this vector by a scalar value.
+         * 
+         * @param p_value The scalar value to multiply with.
+         * @return The resultant vector after multiplication.
+         */
 		template <typename TOtherType>
 		IVector2<TType> operator*(const TOtherType &p_value) const
 		{
 			return (IVector2<TType>(x * p_value, y * p_value));
 		}
 
+        /**
+         * @brief Divides this vector by another vector component-wise.
+         * 
+         * @param p_other The vector to divide by.
+         * @return The resultant vector after division.
+         */
 		template <typename TOtherType>
 		IVector2<TType> operator/(const IVector2<TOtherType> &p_other) const
 		{
@@ -132,6 +194,12 @@ namespace spk
 			return (IVector2<TType>(x / p_other.x, y / p_other.y));
 		}
 
+        /**
+         * @brief Divides both components of this vector by a scalar value.
+         * 
+         * @param p_value The scalar value to divide by.
+         * @return The resultant vector after division.
+         */
 		template <typename TOtherType>
 		IVector2<TType> operator/(const TOtherType &p_value) const
 		{
@@ -264,35 +332,49 @@ namespace spk
 			return (false);
 		}
 
-		float norm() const
-		{
-			return (sqrt(pow(x, 2.0f) + pow(y, 2.0f)));
-		}
+		/**
+         * @brief Computes the Euclidean norm (length) of the vector.
+         * @return The length of the vector.
+         */
+        float norm() const
+        {
+            return std::sqrt(x * x + y * y);
+        }
 
-		float squaredNorm() const
-		{
-			return (pow(x, 2.0f) + pow(y, 2.0f));
-		}
+        /**
+         * @brief Computes the squared Euclidean norm of the vector.
+         * @return The squared length of the vector.
+         */
+        float squaredNorm() const
+        {
+            return x * x + y * y;
+        }
 
-		float distance(const IVector2 &p_other) const
-		{
-			return (sqrt(pow(p_other.x - x, 2) + pow(p_other.y - y, 2)));
-		}
-		
-		float distanceSquared(const IVector2 &p_other) const
-		{
-			return (static_cast<float>(pow(p_other.x - x, 2) + pow(p_other.y - y, 2)));
-		}
+        /**
+         * @brief Computes the distance between this vector and another vector.
+         * @param p_other The other vector.
+         * @return The Euclidean distance between the two vectors.
+         */
+        float distance(const IVector2 &p_other) const
+        {
+            return std::sqrt((p_other.x - x) * (p_other.x - x) + (p_other.y - y) * (p_other.y - y));
+        }
 
-		IVector2<float> normalize() const
-		{
-			float tmp_norm = norm();
+        /**
+         * @brief Normalizes the vector to unit length.
+         * @return A new vector of float type with unit length in the same direction.
+         */
+        IVector2<float> normalize() const
+        {
+            float length = norm();
 
-			if (tmp_norm == 0)
-				throwException("Trying to divide by 0");
+            if (length == 0)
+			{
+				throw std::runtime_error("Attempt to normalize a zero-length vector.");
+			}
 
-			return (IVector2<float>(x / tmp_norm, y / tmp_norm));
-		}
+            return IVector2<float>(x / length, y / length);
+        }
 		
 		template <typename TOtherType>
 		IVector2 cross(const IVector2<TOtherType> &p_other = IVector2(0, 0)) const

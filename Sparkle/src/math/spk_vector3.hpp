@@ -37,22 +37,6 @@ namespace spk
 
 		IVector3(const TType &p_x, const TType &p_y, const TType &p_z) : x(p_x), y(p_y), z(p_z) {}
 
-		IVector3(const spk::JSON::Object& p_object)
-		{
-			if constexpr (std::is_floating_point<TType>::value)
-			{
-				x = p_object["x"].as<double>();
-				y = p_object["y"].as<double>();
-				z = p_object["z"].as<double>();
-			}
-			else
-			{
-				x = p_object["x"].as<long>();
-				y = p_object["y"].as<long>();
-				z = p_object["z"].as<long>();
-			}
-		}
-
 		operator IVector3<TType>()
 		{
 			return (IVector3<TType>(static_cast<TType>(x), static_cast<TType>(y), static_cast<TType>(z)));

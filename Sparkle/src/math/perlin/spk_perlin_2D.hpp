@@ -63,15 +63,6 @@ namespace spk
 		Perlin2D(const unsigned long& p_seed);
 
 		/**
-		 * @brief Constructor for the Perlin2D class that initializes settings from a JSON object.
-		 * 
-		 * Initializes a Perlin2D noise generator with parameters specified in a JSON object. This allows for the configuration of noise parameters such as frequency, persistence, lacunarity, octave count, and more via external data sources, tailored to specific procedural content generation needs.
-		 * 
-		 * @param p_object A spk::JSON::Object containing the configuration for the Perlin noise generator.
-		 */
-		Perlin2D(const spk::JSON::Object& p_object);
-
-		/**
 		 * @brief Samples the Perlin noise at specific x and y coordinates.
 		 * 
 		 * Generates a two-dimensional noise value at the given x and y coordinates based on the current configuration of the noise generator. This method applies the Perlin noise algorithm to produce values that represent the "height" or intensity of the noise at the specified position in 2D space.

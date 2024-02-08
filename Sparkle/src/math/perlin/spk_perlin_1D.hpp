@@ -58,15 +58,6 @@ namespace spk
 		Perlin1D(const unsigned long& p_seed);
 
 		/**
-		 * @brief Constructor for the Perlin1D class that initializes settings from a JSON object.
-		 * 
-		 * Initializes a Perlin1D noise generator with parameters specified in a JSON object. This allows for configuration via external data sources, setting up the noise generator with custom parameters such as frequency, persistence, lacunarity, and more.
-		 * 
-		 * @param p_object A spk::JSON::Object containing the configuration for the Perlin noise generator.
-		 */
-		Perlin1D(const spk::JSON::Object& p_object);
-
-		/**
 		 * @brief Samples the Perlin noise at a specific point along the 1D axis.
 		 * 
 		 * This method generates a noise value for a given point along the one-dimensional axis, based on the current configuration of the noise generator. It applies the Perlin noise algorithm to produce a value that represents the "height" or intensity of the noise at the specified position.
