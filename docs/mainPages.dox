@@ -22,7 +22,7 @@
     1. **Download or clone the library:** Ensure you have the latest version from our [GitHub repository](https://github.com/EreliaStudio/Sparkle).
 	2. **Compile the library** : Once cloned, you can build via the CMake provided by Sparkle repository
 	3. **Installation** : Install the .lib and the includes folder produced inside the archive folder onto your desired destination.
-    2. **Include the library in your project:** Add the path to your Sparkle installation to your include and lib path, and add the #include <sparkle.hpp> to your project
+    4. **Include the library in your project:** Add the path to your Sparkle installation to your include and lib path, and add the #include <sparkle.hpp> to your project
 
     \section tutoral_sec Tutorial and How To
     You can find tutorials and explaination about Sparkle at [Tutorials and How-To](\ref tutorials_page)
