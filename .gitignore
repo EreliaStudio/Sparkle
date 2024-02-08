@@ -16,6 +16,6 @@ build
 archive
 lib
 executable
-docs
+doxygenGeneratedFiles
 Sparkle/src/external_libraries/glm
 simian-4.0.0.jar

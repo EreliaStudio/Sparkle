@@ -1,0 +1,33 @@
+/*!
+    \mainpage Sparkle Library Documentation
+
+    \section intro_sec Introduction
+
+    Welcome to the Sparkle Library documentation.
+	The Sparkle Library is tailored for developers aiming to create, manage, and render applications specifically on Windows platforms.
+	By leveraging OpenGL for efficient GPU communication, Sparkle provides a solid foundation for developing high-performance graphics applications with ease and efficiency.
+
+    \section features_sec Features
+
+    - **Windows Support:** Optimized for development and deployment on Windows.
+    - **OpenGL Integration:** Harnesses the power of OpenGL for high-performance graphics rendering.
+    - **Networking System:** Features an integrated networking system for building connected applications.
+    - **Comprehensive Class Library:** Includes a wide range of pre-implemented classes and design patterns, streamlining the development process.
+    - **Designed for Extensibility:** Allows for easy expansion and customization to meet the specific needs of your project.
+
+    \section start_sec Getting Started
+
+    To start using the Sparkle Library in your projects, please follow these steps:
+
+    1. **Download or clone the library:** Ensure you have the latest version from our [GitHub repository](https://github.com/EreliaStudio/Sparkle).
+	2. **Compile the library** : Once cloned, you can build via the CMake provided by Sparkle repository
+	3. **Installation** : Install the .lib and the includes folder produced inside the archive folder onto your desired destination.
+    4. **Include the library in your project:** Add the path to your Sparkle installation to your include and lib path, and add the #include <sparkle.hpp> to your project
+
+    \section tutoral_sec Tutorial and How To
+    You can find tutorials and explaination about Sparkle at [Tutorials and How-To](\ref tutorials_page)
+
+    \section help_sec Need Help?
+
+    If you need any assistance or have any questions, please refer to the [FAQ](\ref faq_page) or contact our support team. Contributions, feedback, and bug reports are always welcome.
+*/
