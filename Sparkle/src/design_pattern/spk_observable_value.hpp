@@ -51,9 +51,10 @@ namespace spk
          * @param p_args Arguments to forward to the constructor of the TType.
          */
         template <typename... Args>
-        ObservableValue(Args &&...p_args) :
+        explicit ObservableValue(Args &&...p_args) :
             _value(std::forward<Args>(p_args)...)
         {
+
         }
 
         /**
@@ -63,8 +64,10 @@ namespace spk
          *
          * @param p_value The initial value to set, defaulting to TType's default value.
          */
-        ObservableValue(const TType &p_value = TType()) : _value(p_value)
+        explicit ObservableValue(const TType &p_value = TType()) :
+            _value(p_value)
         {
+
         }
 
         /**
@@ -176,7 +179,7 @@ namespace spk
          */
         std::unique_ptr<Contract> subscribe(const typename Notifier::Callback &callback)
         {
-            return _notifier.subscribe(callback);
+            return std::move(_notifier.subscribe(callback));
         }
 
         /**
@@ -207,6 +210,11 @@ namespace spk
         void notify_all()
         {
             _notifier.notify_all();
+        }
+
+        size_t nbContracts() const
+        {
+            return (_notifier.nbContracts());
         }
 
     private:

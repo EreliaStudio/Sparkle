@@ -1,4 +1,5 @@
 #include "design_pattern/spk_notifier.hpp"
+#include "spk_basic_functions.hpp"
 
 namespace spk
 {
@@ -68,7 +69,7 @@ namespace spk
 
         _contracts.push_back(contract.get());
 
-        return contract;
+        return std::move(contract);
     }
 
     void Notifier::notify_all()
@@ -84,6 +85,11 @@ namespace spk
         {
             contract->notify();
         }
+    }
+
+    size_t Notifier::nbContracts() const
+    {
+        return (_contracts.size());
     }
 
     void Notifier::unsubscribe(Contract *p_contract)

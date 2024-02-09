@@ -1,4 +1,4 @@
-#include "game_engine/component/spk_physic_component.hpp"
+#include "game_engine/component/spk_physics_component.hpp"
 
 namespace spk
 {
@@ -14,6 +14,11 @@ namespace spk
 	
 	Physics::Physics(const std::string& p_name) :
 		GameComponent(p_name)
+	{
+
+	}
+
+	void Physics::applyForce(const spk::Vector3& p_force)
 	{
 
 	}

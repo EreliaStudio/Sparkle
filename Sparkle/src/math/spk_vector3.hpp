@@ -357,7 +357,7 @@ namespace spk
         IVector3<float> normalize() const
         {
             float len = norm();
-            if (len == 0) throw std::runtime_error("Attempt to normalize a zero-length vector.");
+            if (len == 0) return (IVector3<float>(0, 0, 0));
             return IVector3<float>(x / len, y / len, z / len);
         }
 

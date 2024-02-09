@@ -9,6 +9,7 @@
 
 #include "math/spk_vector2.hpp"
 #include "math/spk_vector3.hpp"
+#include "math/spk_quaternion.hpp"
 #include "math/spk_matrix4x4.hpp"
 
 #include "graphics/spk_color.hpp"
@@ -33,6 +34,7 @@
 #include "game_engine/spk_mesh.hpp"
 #include "game_engine/component/spk_camera_component.hpp"
 #include "game_engine/component/spk_sprite_renderer_component.hpp"
+#include "game_engine/component/spk_physics_component.hpp"
 #include "game_engine/spk_game_engine.hpp"
 
 #include "widget/spk_game_engine_manager.hpp"

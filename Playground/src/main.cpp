@@ -1,5 +1,134 @@
 #include "sparkle.hpp"
 
+class PlayerController : public spk::GameComponent
+{
+private:
+    struct Input
+    {
+        spk::Keyboard::Key key;
+        spk::Timer timer;
+        std::function<void()> action;
+
+        Input() :
+            key(spk::Keyboard::A),
+            timer(1),
+            action(nullptr)
+        {
+
+        }
+
+        Input(spk::Keyboard::Key p_key, size_t p_duration, std::function<void()> p_action) :
+            key(p_key),
+            timer(p_duration),
+            action(p_action)
+        {
+
+        }
+
+        void execute()
+        {
+            if (action == nullptr)
+                return ;
+
+            if (timer.isTimedOut() == true && spk::Application::activeApplication()->keyboard().getKey(key) == spk::InputState::Down)
+            {
+                action();
+                timer.start();
+            }
+        }
+    };
+
+    spk::Physics* _physicsComponent;
+    std::vector<Input> _inputs;
+
+	void _onRender()
+    {
+
+    }
+
+	void _onUpdate()
+    {
+        for (auto& input : _inputs)
+        {
+            input.execute();
+        }
+    }
+
+    void _movePlayer(const spk::Vector3& p_velocityToAdd)
+    {
+
+    }
+
+public:
+    spk::GameObject* cameraObject;
+
+    PlayerController(const std::string& p_name) :
+        spk::GameComponent(p_name)
+    {
+        _physicsComponent = owner()->getComponent<spk::Physics>();
+        
+        _inputs.push_back(Input(spk::Keyboard::Z, 20, [&](){
+                owner()->transform().rotation *= spk::Quaternion::fromAxisAngle(spk::Vector3(1, 0, 0), 1);
+                std::cout << "Player Position : " << owner()->globalPosition() << std::endl;
+                std::cout << "Player Rotation : " << owner()->globalRotation() << std::endl;
+                std::cout << "Player Forward : " << owner()->transform().forward() << std::endl;
+                std::cout << "Camera global position : " << cameraObject->globalPosition() << std::endl;
+                std::cout << "Camera global rotation : " << cameraObject->globalRotation() << std::endl;
+                std::cout << "Camera Forward : " << cameraObject->transform().forward() << std::endl;
+            }));
+
+        _inputs.push_back(Input(spk::Keyboard::S, 20, [&](){
+                owner()->transform().rotation *= spk::Quaternion::fromAxisAngle(spk::Vector3(1, 0, 0), -1);
+                std::cout << "Player Position : " << owner()->globalPosition() << std::endl;
+                std::cout << "Player Rotation : " << owner()->globalRotation() << std::endl;
+                std::cout << "Player Forward : " << owner()->transform().forward() << std::endl;
+                std::cout << "Camera global position : " << cameraObject->globalPosition() << std::endl;
+                std::cout << "Camera global rotation : " << cameraObject->globalRotation() << std::endl;
+                std::cout << "Camera Forward : " << cameraObject->transform().forward() << std::endl;
+            }));
+
+        _inputs.push_back(Input(spk::Keyboard::A, 20, [&](){
+                owner()->transform().rotation *= spk::Quaternion::fromAxisAngle(spk::Vector3(0, 1, 0), 1);
+                std::cout << "Player Position : " << owner()->globalPosition() << std::endl;
+                std::cout << "Player Rotation : " << owner()->globalRotation() << std::endl;
+                std::cout << "Player Forward : " << owner()->transform().forward() << std::endl;
+                std::cout << "Camera global position : " << cameraObject->globalPosition() << std::endl;
+                std::cout << "Camera global rotation : " << cameraObject->globalRotation() << std::endl;
+                std::cout << "Camera Forward : " << cameraObject->transform().forward() << std::endl;
+            }));
+
+        _inputs.push_back(Input(spk::Keyboard::E, 20, [&](){
+                owner()->transform().rotation *= spk::Quaternion::fromAxisAngle(spk::Vector3(0, 1, 0), -1);
+                std::cout << "Player Position : " << owner()->globalPosition() << std::endl;
+                std::cout << "Player Rotation : " << owner()->globalRotation() << std::endl;
+                std::cout << "Player Forward : " << owner()->transform().forward() << std::endl;
+                std::cout << "Camera global position : " << cameraObject->globalPosition() << std::endl;
+                std::cout << "Camera global rotation : " << cameraObject->globalRotation() << std::endl;
+                std::cout << "Camera Forward : " << cameraObject->transform().forward() << std::endl;
+            }));
+
+        _inputs.push_back(Input(spk::Keyboard::Q, 20, [&](){
+                owner()->transform().rotation *= spk::Quaternion::fromAxisAngle(spk::Vector3(0, 0, 1), 1);
+                std::cout << "Player Position : " << owner()->globalPosition() << std::endl;
+                std::cout << "Player Rotation : " << owner()->globalRotation() << std::endl;
+                std::cout << "Player Forward : " << owner()->transform().forward() << std::endl;
+                std::cout << "Camera global position : " << cameraObject->globalPosition() << std::endl;
+                std::cout << "Camera global rotation : " << cameraObject->globalRotation() << std::endl;
+                std::cout << "Camera Forward : " << cameraObject->transform().forward() << std::endl;
+            }));
+
+        _inputs.push_back(Input(spk::Keyboard::D, 20, [&](){
+                owner()->transform().rotation *= spk::Quaternion::fromAxisAngle(spk::Vector3(0, 0, 1), -1);
+                std::cout << "Player Position : " << owner()->globalPosition() << std::endl;
+                std::cout << "Player Rotation : " << owner()->globalRotation() << std::endl;
+                std::cout << "Player Forward : " << owner()->transform().forward() << std::endl;
+                std::cout << "Camera global position : " << cameraObject->globalPosition() << std::endl;
+                std::cout << "Camera global rotation : " << cameraObject->globalRotation() << std::endl;
+                std::cout << "Camera Forward : " << cameraObject->transform().forward() << std::endl;
+            }));
+    }
+};
+
 int main()
 {
     spk::Application app = spk::Application("Playground", spk::Vector2UInt(800, 800));
@@ -11,32 +140,59 @@ int main()
 
     spk::GameObject playerObject("Player");
     playerObject.transform().translation = spk::Vector3(0, 0, 0);
+    playerObject.transform().rotation = spk::Vector3(90, 0, 0);
+
     auto* playerSpriteRenderer = playerObject.addComponent<spk::SpriteRenderer>("Renderer");
     playerSpriteRenderer->setSpriteSheet(entitySpriteSheet);
     playerSpriteRenderer->setSprite(spk::Vector2Int(0, 0));
 
+    auto* playerController = playerObject.addComponent<PlayerController>("PlayerController");
+
     spk::GameObject cameraObject("Camera", &playerObject);
+    playerController->cameraObject = &cameraObject;
     cameraObject.transform().translation = spk::Vector3(0, 10, 0);
     cameraObject.transform().lookAt(spk::Vector3(0, 0, 0));
     auto* cameraComponent = cameraObject.addComponent<spk::Camera>("MainCamera");
     cameraComponent->setAsMainCamera();
     cameraComponent->setType(spk::Camera::Type::Perspective);
 
-    spk::GameObject enemyObject("Enemy");
-    enemyObject.transform().translation = spk::Vector3(3, 0, 3);
-    auto* enemySpriteRenderer = enemyObject.addComponent<spk::SpriteRenderer>("Renderer");
-    enemySpriteRenderer->setSpriteSheet(entitySpriteSheet);
-    enemySpriteRenderer->setSprite(spk::Vector2Int(4, 0));
+    std::cout << "Player Position : " << playerObject.globalPosition() << std::endl;
+    std::cout << "Player Rotation : " << playerObject.globalRotation() << std::endl;
+    std::cout << "Player Forward : " << playerObject.transform().forward() << std::endl;
+    std::cout << "Camera global position : " << cameraObject.globalPosition() << std::endl;
+    std::cout << "Camera global rotation : " << cameraObject.globalRotation() << std::endl;
+    std::cout << "Camera Forward : " << cameraObject.transform().forward() << std::endl;
 
-    spk::GameObject obstacleObject("Obstacle");
-    obstacleObject.transform().translation = spk::Vector3(5, 0, 0);
-    auto* obstacleSpriteRenderer = obstacleObject.addComponent<spk::SpriteRenderer>("Renderer");
-    obstacleSpriteRenderer->setSpriteSheet(obstacleSpriteSheet);
-    obstacleSpriteRenderer->setSprite(spk::Vector2Int(0, 0));
+    for (int x = -3; x <= 3; ++x) {
+        // for (int z = -3; z <= 3; ++z) {
+        //     if (x == 0 && z == 0) continue;
+
+        //     spk::GameObject* obstacleObject = new spk::GameObject("Obstacle");
+        //     //obstacleObject->transform().rotation = spk::Vector3(90, 0, 0);
+        //     obstacleObject->transform().translation = spk::Vector3(static_cast<float>(x * 2), 0, static_cast<float>(z * 2));
+        //     auto* obstacleSpriteRenderer = obstacleObject->addComponent<spk::SpriteRenderer>("Renderer");
+        //     obstacleSpriteRenderer->setSpriteSheet(obstacleSpriteSheet);
+        //     obstacleSpriteRenderer->setSprite(spk::Vector2Int(0, 0));
+
+        //     // Subscribe the obstacle to the game engine
+        //     engine.subscribe(obstacleObject);
+        // }
+        for (int z = -3; z <= 3; ++z) {
+            if (x == 0 && z == 0) continue;
+
+            spk::GameObject* obstacleObject = new spk::GameObject("Obstacle");
+            obstacleObject->transform().rotation = spk::Vector3(90, 0, 0);
+            obstacleObject->transform().translation = spk::Vector3(static_cast<float>(x * 2), static_cast<float>(z * 2), 0);
+            auto* obstacleSpriteRenderer = obstacleObject->addComponent<spk::SpriteRenderer>("Renderer");
+            obstacleSpriteRenderer->setSpriteSheet(obstacleSpriteSheet);
+            obstacleSpriteRenderer->setSprite(spk::Vector2Int(0, 0));
+
+            // Subscribe the obstacle to the game engine
+            engine.subscribe(obstacleObject);
+        }
+    }
 
     engine.subscribe(&playerObject);
-    engine.subscribe(&enemyObject);
-    engine.subscribe(&obstacleObject);
 
     spk::GameEngineManager manager("GameEngine manager");
     manager.setGameEngine(&engine);

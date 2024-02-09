@@ -89,6 +89,8 @@ namespace spk
 		 */
 		bool isTimedOut()
 		{
+			if (this->isRunning() == false)
+				return true;
 			if (this->duration() >= _duration.count())
 				return true;
 			return false;

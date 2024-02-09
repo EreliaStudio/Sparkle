@@ -43,7 +43,7 @@ namespace spk
 				child->transform().translation.notify_all();
 			}
 		})),
-		_sclaeContract(_transform.scale.subscribe([&](){
+		_scaleContract(_transform.scale.subscribe([&](){
 			for (auto& child : children())
 			{
 				child->transform().scale.notify_all();
@@ -56,7 +56,7 @@ namespace spk
 			}
 		}))
 	{
-
+		_transform._bind(this);
 	}
 
 	GameObject::GameObject(const std::string& p_name, GameObject* p_parent) :
@@ -89,14 +89,18 @@ namespace spk
 
 	spk::Vector3 GameObject::globalPosition() const
 	{
-		if (parent() == nullptr)
-			return (_transform.translation.get());
+		spk::Vector3 result = 0;
+	
+		result += _transform.translation.get();
 
-		spk::Vector3 result;
+		if (parent() != nullptr)
+		{
+			result *= parent()->globalScale();
+			result = parent()->globalRotation().applyRotation(result);
+			result += parent()->globalPosition();
+		}
 
-		result = _transform.translation.get().rotate(parent()->transform().rotation) * parent()->transform().scale;
-
-		return (result + parent()->globalPosition());
+		return (result);
 	}
 
 	spk::Vector3 GameObject::globalScale() const
@@ -107,11 +111,11 @@ namespace spk
 		return (parent()->globalScale() * _transform.scale.get());
 	}
 
-	spk::Vector3 GameObject::globalRotation() const
+	spk::Quaternion GameObject::globalRotation() const
 	{
 		if (parent() == nullptr)
 			return (_transform.rotation.get());
 
-		return (parent()->globalRotation() + _transform.rotation.get());
+		return (parent()->globalRotation() * _transform.rotation.get());
 	}
 }

@@ -195,6 +195,8 @@ namespace spk
          */
         void notify_all();
 
+        size_t nbContracts() const;
+
     private:
         std::vector<Contract *> _contracts;
         std::vector<Contract *> _inactiveContracts;

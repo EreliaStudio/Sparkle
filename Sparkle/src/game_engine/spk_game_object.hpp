@@ -36,8 +36,8 @@ namespace spk
 		std::string _name;
 		Transform _transform;
 		std::unique_ptr<Transform::Contract> _translationContract;
-		std::unique_ptr<Transform::Contract> _sclaeContract;
-		std::unique_ptr<Transform::Contract> _rotationContract;
+		std::unique_ptr<Transform::Contract> _scaleContract;
+		std::unique_ptr<Transform::RotationContract> _rotationContract;
 		std::vector<GameComponent*> _components;
 
 		void render();
@@ -131,7 +131,7 @@ namespace spk
 		 * 
 		 * @return A Vector3 representing the global rotation of the GameObject.
 		 */
-		spk::Vector3 globalRotation() const;
+		spk::Quaternion globalRotation() const;
 
 		/**
 		 * @brief Adds a component of a specified type to the GameObject.

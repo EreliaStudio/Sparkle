@@ -37,7 +37,7 @@ namespace spk
 		spk::Matrix4x4 view = spk::Matrix4x4::lookAt(
 			owner()->globalPosition(),
 			owner()->globalPosition() + owner()->transform().forward(),
-			spk::Vector3(0, 1, 0));
+			owner()->transform().up());
 
 		*_cameraConstantsMVPElement = projection * view;
 		_cameraConstants->update();
@@ -46,7 +46,7 @@ namespace spk
 	Camera::Camera(const std::string& p_name) :
 		GameComponent(p_name),
 		_translationContract(owner()->transform().translation.subscribe([&](){_needGPUDataUpdate = true;})),
-		_rotationContract(owner()->transform().translation.subscribe([&](){_needGPUDataUpdate = true;}))
+		_rotationContract(owner()->transform().rotation.subscribe([&](){_needGPUDataUpdate = true;}))
 	{
 
 	}
