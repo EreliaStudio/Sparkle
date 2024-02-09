@@ -26,7 +26,7 @@ namespace spk
 		ICollider(const std::string& p_name) :
 			GameComponent(p_name)
 		{
-
+			
 		}
 
 		void setMesh(const Mesh* p_mesh)

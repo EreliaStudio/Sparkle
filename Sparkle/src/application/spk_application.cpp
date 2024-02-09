@@ -73,6 +73,7 @@ namespace spk
 	int Application::_runMultithread()
 	{
 		std::thread updaterThread([&](){
+			setAsActiveApplication();
 			_executeUpdaterLoop();
 		});
 

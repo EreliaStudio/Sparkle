@@ -15,6 +15,9 @@ namespace spk
 
 	void Pipeline::Texture::attach(const spk::Texture* p_textureToSet)
 	{
+		if (p_textureToSet == _activeTexture)
+			return ;
+
 		_activeTexture = p_textureToSet;
 		const spk::SpriteSheet* spriteSheet = dynamic_cast<const spk::SpriteSheet*>(p_textureToSet);
         if (spriteSheet != nullptr)
@@ -30,9 +33,10 @@ namespace spk
 
     void Pipeline::Texture::_activate()
 	{
-		if (_activeTexture == nullptr)
+		if (_activeTexture == nullptr || _lastActiveTexture == _activeTexture)
 			return ;
-			
+		
+		_lastActiveTexture = _activeTexture;
 		_activeTexture->_bind(_textureBindingPoint);
 		_handle.activate();
 	}
