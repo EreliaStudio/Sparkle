@@ -43,7 +43,7 @@ namespace spk
          * @param p_other The 2D vector for the x and y components.
          * @param p_value The value for the z component.
          */
-        IVector3(const IVector2<TType> &p_other, const TType &p_value) : x(p_other.x), y(p_other.y), z(p_value) {}
+        IVector3(const IVector3<TType> &p_other, const TType &p_value) : x(p_other.x), y(p_other.y), z(p_value) {}
 
         /**
          * @brief Copy constructor. Initializes a new vector with the components of another vector.
@@ -316,20 +316,6 @@ namespace spk
         {
             return *this > p_other || *this == p_other;
         }
-        /**
-         * @brief Linearly interpolates between two vectors.
-         * @param a The start vector.
-         * @param b The end vector.
-         * @param t The interpolation parameter (0 <= t <= 1).
-         * @return The interpolated vector.
-         */
-        static IVector3 lerp(const IVector3 &a, const IVector3 &b, float t)
-        {
-            return IVector3(
-                a.x + (b.x - a.x) * t,
-                a.y + (b.y - a.y) * t,
-                a.z + (b.z - a.z) * t);
-        }
 
         /**
          * @brief Calculates the distance between this vector and another vector.
@@ -425,9 +411,9 @@ namespace spk
          * @brief Removes the Y component, effectively projecting the vector onto the XZ plane.
          * @return A 2D vector containing the X and Z components of this vector.
          */
-        IVector2<TType> removeY()
+        IVector3<TType> removeY()
         {
-            return IVector2<TType>(x, z);
+            return IVector3<TType>(x, z);
         }
 
         /**
@@ -480,6 +466,109 @@ namespace spk
                 std::clamp(y, p_lowerValue.y, p_higherValue.y), 
                 std::clamp(z, p_lowerValue.z, p_higherValue.z)
             );
+        }
+
+        /**
+         * @brief Rounds down the components of the given vector to the nearest lower integer values.
+         * 
+         * @param p_vector The vector to be rounded down.
+         * @return A new vector with each component rounded down.
+         */
+        static IVector3 floor(const IVector3 &p_vector)
+        {
+            IVector3 result;
+            result.x = std::floor(p_vector.x);
+            result.y = std::floor(p_vector.y);
+            result.z = std::floor(p_vector.z);
+            return result;
+        }
+
+        /**
+         * @brief Rounds up the components of the given vector to the nearest higher integer values.
+         * 
+         * @param p_vector The vector to be rounded up.
+         * @return A new vector with each component rounded up.
+         */
+        static IVector3 ceiling(const IVector3 &p_vector)
+        {
+            IVector3 result;
+            result.x = std::ceil(p_vector.x);
+            result.y = std::ceil(p_vector.y);
+            result.z = std::ceil(p_vector.z);
+            return result;
+        }
+
+        /**
+         * @brief Rounds the components of the given vector to the nearest integer values.
+         * 
+         * @param p_vector The vector to be rounded.
+         * @return A new vector with each component rounded to the nearest integer.
+         */
+        static IVector3 round(const IVector3 &p_vector)
+        {
+            IVector3 result;
+            result.x = std::round(p_vector.x);
+            result.y = std::round(p_vector.y);
+            result.z = std::round(p_vector.z);
+            return result;
+        }
+
+        /**
+         * @brief Determines the component-wise minimum of two vectors.
+         * 
+         * @param p_min The first vector to compare.
+         * @param p_max The second vector to compare.
+         * @return A new vector where each component is the minimum value of the corresponding components of the input vectors.
+         */
+        static IVector3 min(const IVector3 &p_min, const IVector3 &p_max)
+        {
+            return IVector3(std::min(p_min.x, p_max.x), std::min(p_min.y, p_max.y), std::min(p_min.z, p_max.z));
+        }
+
+        /**
+         * @brief Determines the component-wise maximum of two vectors.
+         * 
+         * @param p_min The first vector to compare.
+         * @param p_max The second vector to compare.
+         * @return A new vector where each component is the maximum value of the corresponding components of the input vectors.
+         */
+        static IVector3 max(const IVector3 &p_min, const IVector3 &p_max)
+        {
+            return IVector3(std::max(p_min.x, p_max.x), std::max(p_min.y, p_max.y), std::max(p_min.z, p_max.z));
+        }
+        /**
+         * @brief Checks if a point is inside the rectangle defined by two corner points.
+         * 
+         * @param p_point The point to check.
+         * @param p_cornerA One corner of the rectangle.
+         * @param p_cornerB The opposite corner of the rectangle.
+         * @return True if the point is inside the rectangle, false otherwise.
+         */
+        static bool isInsideRectangle(const IVector3 &p_point, const IVector3 &p_cornerA, const IVector3 &p_cornerB)
+        {
+            IVector3 tmpMin = IVector3::min(p_cornerA, p_cornerB);
+            IVector3 tmpMax = IVector3::max(p_cornerA, p_cornerB);
+            return (!(
+                    p_point.x < tmpMin.x || p_point.y < tmpMin.y || p_point.z < tmpMin.z ||
+                    p_point.x > tmpMax.x || p_point.y > tmpMax.y || p_point.z > tmpMax.z
+                ));
+        }
+
+        /**
+         * @brief Performs linear interpolation between two points.
+         * 
+         * @param p_startingPoint The starting point of the interpolation.
+         * @param p_endingPoint The ending point of the interpolation.
+         * @param t The interpolation factor between 0 and 1.
+         * @return The interpolated point.
+         */
+        static IVector3 lerp(const IVector3 &p_startingPoint, const IVector3 &p_endingPoint, float t)
+        {
+            return IVector3(
+                    p_startingPoint.x + (p_endingPoint.x - p_startingPoint.x) * t,
+                    p_startingPoint.y + (p_endingPoint.y - p_startingPoint.y) * t,
+                    p_startingPoint.z + (p_endingPoint.z - p_startingPoint.z) * t
+                );
         }
 	};
         /**

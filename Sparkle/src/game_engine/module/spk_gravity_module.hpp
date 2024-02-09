@@ -10,7 +10,9 @@ namespace spk
 	private:
 		spk::Vector3 _gravityAcceleration;
 
-		void _onUpdate(GameObject* p_gameObject);
+		void _applyGravityAcceleration(GameObject* p_gameObject);
+		void _onUpdate();
+		bool _isObjectRelevant(spk::GameObject* p_gameObject);
 	
 	public:
 		GravityModule();

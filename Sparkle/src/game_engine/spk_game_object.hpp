@@ -5,6 +5,8 @@
 
 namespace spk
 {
+	class GameEngine;
+
 	/**
 	 * @class GameObject
 	 * @brief Represents a game object in the game engine hierarchy.
@@ -33,7 +35,9 @@ namespace spk
 		friend class GameEngine;
 
 	private:
+		Notifier _onComponentAdditionNotifier;
 		std::string _name;
+		std::vector<std::string> _tags;
 		Transform _transform;
 		std::unique_ptr<Transform::Contract> _translationContract;
 		std::unique_ptr<Transform::Contract> _scaleContract;
@@ -83,6 +87,10 @@ namespace spk
 		 * @return A const reference to the GameObject's name.
 		 */
 		const std::string& name() const;
+
+		void addTag(const std::string& p_tag);
+		void removeTag(const std::string& p_tag);
+		const std::vector<std::string>& tags() const;
 
 		/**
 		 * @brief Accesses the GameObject's transformation.
@@ -154,6 +162,8 @@ namespace spk
 			_components.push_back(result);
 
 			GameComponent::_creatingObject = nullptr;
+
+			_onComponentAdditionNotifier.notify_all();
 
 			return (result);
 		}

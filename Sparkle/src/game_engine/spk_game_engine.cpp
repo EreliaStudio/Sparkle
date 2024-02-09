@@ -17,10 +17,11 @@ namespace spk
 
 	void GameEngine::update()
 	{
+		for (auto& module : _modules)
+			module->_onUpdate();
+
 		for (auto& gameObject : _subscribedObjects)
 		{
-			for (auto& module : _modules)
-				module->_onUpdate(gameObject);
 			gameObject->update();
 		}
 	}
@@ -30,6 +31,14 @@ namespace spk
 		if (std::find(_subscribedObjects.begin(), _subscribedObjects.end(), p_newObject) == _subscribedObjects.end())
 		{
 			_subscribedObjects.push_back(p_newObject);
+
+			for (auto& module : _modules)
+				module->_onGameObjectSubscription(p_newObject);
+
+			_onComponentAdditionContracts.emplace_back(p_newObject->_onComponentAdditionNotifier.subscribe([&, p_newObject](){
+				for (auto& module : _modules)
+					module->_onGameObjectSubscription(p_newObject);
+			}));
 		}
 	}
 
@@ -38,8 +47,16 @@ namespace spk
 		_subscribedObjects.erase(
 			std::remove(_subscribedObjects.begin(), _subscribedObjects.end(), p_newObject), 
 			_subscribedObjects.end());
+
+		for (auto& module : _modules)
+			module->_onGameObjectUnsubscription(p_newObject);
 	}
 
+	const std::vector<spk::GameObject*>& GameEngine::subscribedGameObjects() const
+	{
+		return (_subscribedObjects);
+	}
+	
 	GameObject* GameEngine::getObject(const Comparator& p_comparator)
 	{
 		for (auto& object : _subscribedObjects)

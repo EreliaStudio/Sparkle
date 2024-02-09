@@ -224,6 +224,8 @@ namespace spk
 		 */
 		void addPoint(const Vector3 &p_point);
 
+		const std::vector<spk::Vector3>& points() const;
+
 		/**
 		 * @brief Reserves space for a specified number of UV coordinates in the mesh.
 		 * 
@@ -244,6 +246,8 @@ namespace spk
 		 */
 		void addUVs(const Vector2 &p_uvs);
 
+		const std::vector<spk::Vector2>& UVs() const;
+
 		/**
 		 * @brief Reserves space for a specified number of normals in the mesh.
 		 * 
@@ -263,6 +267,8 @@ namespace spk
 		 * @param p_normals The normal vector to add.
 		 */
 		void addNormal(const Vector3 &p_normals);
+
+		const std::vector<spk::Vector3>& normals() const;
 
 		/**
 		 * @brief Reserves space for a specified number of indices in the mesh.
@@ -285,6 +291,8 @@ namespace spk
 		 * @param p_normalIndex The index of the normal (optional).
 		 */
 		void addIndex(unsigned int p_pointIndex, unsigned int p_uvsIndex, unsigned int p_normalIndex = std::numeric_limits<unsigned int>::max());
+
+		const std::vector<unsigned int>& indexes() const;
 
 		/**
 		 * @brief Bakes the mesh data, optimizing it for rendering.

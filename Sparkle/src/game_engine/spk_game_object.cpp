@@ -77,6 +77,26 @@ namespace spk
 		return (_name);
 	}
 
+	void GameObject::addTag(const std::string& p_tag)
+	{
+		if (std::find(_tags.begin(), _tags.end(), p_tag) == _tags.end())
+		{
+			_tags.push_back(p_tag);
+		}
+	}
+	
+	void GameObject::removeTag(const std::string& p_tag)
+	{
+		_tags.erase(
+			std::remove(_tags.begin(), _tags.end(), p_tag), 
+			_tags.end());
+	}
+	
+	const std::vector<std::string>& GameObject::tags() const
+	{
+		return (_tags);
+	}
+
 	Transform& GameObject::transform()
 	{
 		return (_transform);

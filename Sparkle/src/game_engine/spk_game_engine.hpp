@@ -52,6 +52,8 @@ namespace spk
 		std::vector<GameObject *> _subscribedObjects;
 		std::vector<GameEngineModule*> _modules;
 
+		std::vector<std::unique_ptr<Notifier::Contract>> _onComponentAdditionContracts;
+
 	public:
 		/**
 		 * @brief Default constructor.
@@ -109,6 +111,8 @@ namespace spk
 		 * @param p_newObject Pointer to the GameObject to unsubscribe.
 		 */
 		void unsubscribe(GameObject *p_newObject);
+
+		const std::vector<spk::GameObject*>& subscribedGameObjects() const;
 
 		/**
 		 * @brief Gets a single game object by a custom comparator.

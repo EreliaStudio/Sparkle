@@ -193,6 +193,11 @@ namespace spk
 		_points.push_back(p_point);
 	}
 
+	const std::vector<spk::Vector3>& Mesh::points() const
+	{
+		return (_points);
+	}
+
 	void Mesh::reserveUVs(size_t p_expectedNbUVs)
 	{
 		_uvs.reserve(p_expectedNbUVs);
@@ -201,6 +206,11 @@ namespace spk
 	void Mesh::addUVs(const Vector2 &p_uvs)
 	{
 		_uvs.push_back(p_uvs);
+	}
+
+	const std::vector<spk::Vector2>& Mesh::UVs() const
+	{
+		return (_uvs);
 	}
 
 	void Mesh::reserveNormal(size_t p_expectedNbNormal)
@@ -213,6 +223,11 @@ namespace spk
 		_normals.push_back(p_normals);
 	}
 
+	const std::vector<spk::Vector3>& Mesh::normals() const
+	{
+		return (_normals);
+	}
+
 	void Mesh::reserveIndex(size_t p_expectedNbIndex)
 	{
 		_indexes.reserve(p_expectedNbIndex);
@@ -223,6 +238,11 @@ namespace spk
 		_indexes.push_back(p_pointIndex);
 		_indexes.push_back(p_uvsIndex);
 		_indexes.push_back(p_normalIndex);
+	}
+
+	const std::vector<unsigned int>& Mesh::indexes() const
+	{
+		return (_indexes);
 	}
 
 	void Mesh::bakeNormals()
