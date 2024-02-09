@@ -4,6 +4,7 @@ set(ProductName "Sparkle")
 
 list(APPEND CMAKE_PREFIX_PATH "C:/Program Files/glew")
 
+list(APPEND CMAKE_PREFIX_PATH "C:/Users/JQ/scoop/apps/vcpkg/current/packages/glew_x64-windows")
 find_package(GLEW REQUIRED)
 
 add_subdirectory(src)

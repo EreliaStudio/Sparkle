@@ -94,12 +94,23 @@ namespace spk
          */
         IWidget(const std::string& p_name);
 
+<<<<<<< Updated upstream
         /**
          * Constructor for creating a widget with a specified name and parent widget.
          * @param p_name The name of the widget. This is used for identification and debugging purposes.
          * @param p_parent A pointer to the parent widget. This widget will be added as a child of the given parent.
          */
         IWidget(const std::string& p_name, IWidget* p_parent);
+=======
+		IWidget(const std::string& p_name, IWidget* p_parent) :
+			IWidget(p_name)
+		{
+			if (p_parent != nullptr) 
+			{
+				p_parent->addChild(this);
+			}
+		}
+>>>>>>> Stashed changes
 
         /**
          * Destructor for the widget. Cleans up resources and ensures proper deactivation of the widget and its children.
