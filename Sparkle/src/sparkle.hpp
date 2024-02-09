@@ -35,7 +35,11 @@
 #include "game_engine/component/spk_camera_component.hpp"
 #include "game_engine/component/spk_sprite_renderer_component.hpp"
 #include "game_engine/component/spk_physics_component.hpp"
+#include "game_engine/component/spk_mesh_collider_2D_component.hpp"
+
 #include "game_engine/spk_game_engine.hpp"
+#include "game_engine/module/spk_gravity_module.hpp"
+#include "game_engine/module/spk_collision_module.hpp"
 
 #include "widget/spk_game_engine_manager.hpp"
 

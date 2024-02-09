@@ -3,7 +3,7 @@
 #include <functional>
 #include <vector>
 #include "game_engine/spk_game_object.hpp"
-#include "game_engine/module/spk_game_module.hpp"
+#include "game_engine/module/spk_game_engine_module.hpp"
 
 namespace spk
 {
@@ -50,7 +50,7 @@ namespace spk
 
 	private:
 		std::vector<GameObject *> _subscribedObjects;
-		std::vector<EngineModule*> _modules;
+		std::vector<GameEngineModule*> _modules;
 
 	public:
 		/**
@@ -64,12 +64,12 @@ namespace spk
 		template <typename TModuleName, typename ... Args>
 		TModuleName* addModule(Args&& ... p_args)
 		{
-			EngineModule::_creatingEngine = this;
+			GameEngineModule::_creatingEngine = this;
 
 			TModuleName* result = new TModuleName(std::forward<Args>(p_args)...);
 			_modules.push_back(result);
 
-			EngineModule::_creatingEngine = nullptr;
+			GameEngineModule::_creatingEngine = nullptr;
 
 			return (result);
 		}

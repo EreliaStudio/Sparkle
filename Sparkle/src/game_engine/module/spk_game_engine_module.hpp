@@ -5,7 +5,7 @@ namespace spk
 	class GameEngine;
 	class GameObject;
 
-	class EngineModule
+	class GameEngineModule
 	{
 		friend class GameEngine;
 
@@ -16,7 +16,7 @@ namespace spk
 		virtual void _onUpdate(GameObject* p_gameObject) = 0;
 
 	public:
-		EngineModule();
+		GameEngineModule();
 		GameEngine* owner();
 		const GameEngine* owner() const;
 	};

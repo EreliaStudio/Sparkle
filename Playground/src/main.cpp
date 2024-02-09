@@ -56,7 +56,15 @@ private:
 
     void _movePlayer(const spk::Vector3& p_velocityToAdd)
     {
+        if (_physicsComponent == nullptr)
+        {
+            _physicsComponent = owner()->getComponent<spk::Physics>();
+        }
 
+        if (_physicsComponent != nullptr)
+        {
+            _physicsComponent->applyForce(p_velocityToAdd);
+        }
     }
 
 public:
@@ -66,41 +74,45 @@ public:
         spk::GameComponent(p_name)
     {
         _physicsComponent = owner()->getComponent<spk::Physics>();
-        
-        _inputs.push_back(Input(spk::Keyboard::Z, 20, [&](){
-                owner()->transform().rotation *= spk::Quaternion::fromAxisAngle(spk::Vector3(1, 0, 0), 1);
+        _inputs.push_back(Input(spk::Keyboard::Z, 100, [&](){
+                _movePlayer(spk::Vector3(0, 1.0f, 0));
             }));
 
-        _inputs.push_back(Input(spk::Keyboard::S, 20, [&](){
-                owner()->transform().rotation *= spk::Quaternion::fromAxisAngle(spk::Vector3(1, 0, 0), -1);
+        _inputs.push_back(Input(spk::Keyboard::S, 100, [&](){
+                _movePlayer(spk::Vector3(0, -1.0f, 0));
             }));
 
-        _inputs.push_back(Input(spk::Keyboard::A, 20, [&](){
-                owner()->transform().rotation *= spk::Quaternion::fromAxisAngle(spk::Vector3(0, 1, 0), 1);
+        _inputs.push_back(Input(spk::Keyboard::Q, 100, [&](){
+                _movePlayer(spk::Vector3(-1.0f, 0, 0));
             }));
 
-        _inputs.push_back(Input(spk::Keyboard::E, 20, [&](){
-                owner()->transform().rotation *= spk::Quaternion::fromAxisAngle(spk::Vector3(0, 1, 0), -1);
+        _inputs.push_back(Input(spk::Keyboard::D, 100, [&](){
+                _movePlayer(spk::Vector3(1.0f, 0, 0));
             }));
 
-        _inputs.push_back(Input(spk::Keyboard::Q, 20, [&](){
-                owner()->transform().rotation *= spk::Quaternion::fromAxisAngle(spk::Vector3(0, 0, 1), 1);
-            }));
-
-        _inputs.push_back(Input(spk::Keyboard::D, 20, [&](){
-                owner()->transform().rotation *= spk::Quaternion::fromAxisAngle(spk::Vector3(0, 0, 1), -1);
+        _inputs.push_back(Input(spk::Keyboard::Space, 100, [&](){
+                if (_physicsComponent == nullptr)
+                {
+                    _physicsComponent = owner()->getComponent<spk::Physics>();
+                }
+                if (_physicsComponent != nullptr)
+                {
+                    _physicsComponent->setKinematicState(!_physicsComponent->isKinematic());
+                }
             }));
     }
 };
 
 int main()
 {
-    spk::Application app = spk::Application("Playground", spk::Vector2UInt(800, 800));
+    spk::Application app = spk::Application("Playground", spk::Vector2UInt(800, 800), spk::Application::Mode::Monothread);
 
     spk::SpriteSheet* entitySpriteSheet = new spk::SpriteSheet("entitySpriteSheet.png", spk::Vector2UInt(8, 4));
     spk::SpriteSheet* obstacleSpriteSheet = new spk::SpriteSheet("obstacleSpriteSheet.png", spk::Vector2UInt(4, 4));
 
     spk::GameEngine engine;
+    engine.addModule<spk::GravityModule>(spk::Vector3(0, -0.009807f, 0));
+    engine.addModule<spk::CollisionModule>();
 
     spk::GameObject playerObject("Player");
     playerObject.transform().translation = spk::Vector3(0, 0, 0);
@@ -110,7 +122,11 @@ int main()
     playerSpriteRenderer->setSpriteSheet(entitySpriteSheet);
     playerSpriteRenderer->setSprite(spk::Vector2Int(0, 0));
 
+    auto* playerPhysics = playerObject.addComponent<spk::Physics>("Physics");
+    playerPhysics->setKinematicState(false);
     auto* playerController = playerObject.addComponent<PlayerController>("PlayerController");
+    auto* playerMeshCollider2D = playerObject.addComponent<spk::MeshCollider2D>("MeshCollider2D");
+    playerMeshCollider2D->setMesh(playerSpriteRenderer->mesh());
 
     spk::GameObject cameraObject("Camera", &playerObject);
     playerController->cameraObject = &cameraObject;
@@ -120,20 +136,15 @@ int main()
     cameraComponent->setAsMainCamera();
     cameraComponent->setType(spk::Camera::Type::Perspective);
 
-    for (int x = 0; x <= 3; ++x) {
-        for (int z = 0; z <= 3; ++z) {
-            if (x == 0 && z == 0) continue;
+    spk::GameObject obstacleObject("Obstacle");
+    obstacleObject.transform().translation = spk::Vector3(5, 0, 0);
+    auto* obstacleSpriteRenderer = obstacleObject.addComponent<spk::SpriteRenderer>("Renderer");
+    obstacleSpriteRenderer->setSpriteSheet(obstacleSpriteSheet);
+    obstacleSpriteRenderer->setSprite(spk::Vector2Int(0, 0));
+    auto* obstacleMeshCollider2D = obstacleObject.addComponent<spk::MeshCollider2D>("MeshCollider2D");
+    obstacleMeshCollider2D->setMesh(obstacleSpriteRenderer->mesh());
 
-            spk::GameObject* obstacleObject = new spk::GameObject("Obstacle");
-            obstacleObject->transform().translation = spk::Vector3(static_cast<float>(x * 2), static_cast<float>(z * 2), 0);
-            auto* obstacleSpriteRenderer = obstacleObject->addComponent<spk::SpriteRenderer>("Renderer");
-            obstacleSpriteRenderer->setSpriteSheet(obstacleSpriteSheet);
-            obstacleSpriteRenderer->setSprite(spk::Vector2Int(0, 0));
-
-            // Subscribe the obstacle to the game engine
-            engine.subscribe(obstacleObject);
-        }
-    }
+    engine.subscribe(&obstacleObject);
 
     engine.subscribe(&playerObject);
 
@@ -142,5 +153,5 @@ int main()
     manager.setGeometry(0, app.size());
     manager.activate();
 
-    return app.run();
+    return (app.run());
 }

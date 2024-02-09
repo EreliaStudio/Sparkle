@@ -9,7 +9,7 @@ namespace spk
 		
 	Profiler::~Profiler()
 	{
-
+		
 	}
 	
 	spk::JSON::Object Profiler::emitReport()

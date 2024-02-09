@@ -107,6 +107,7 @@ namespace spk
 		 * @param p_mesh Pointer to the Mesh object to be used for rendering the sprite.
 		 */
 		void setMesh(const spk::Mesh* p_mesh);
+		const spk::Mesh* mesh() const;
 
 		/**
 		 * @brief Sets the sprite sheet used by the renderer.
@@ -117,6 +118,7 @@ namespace spk
 		 * @param p_spriteSheet Pointer to the SpriteSheet object to be used by the renderer.
 		 */
 		void setSpriteSheet(const spk::SpriteSheet* p_spriteSheet);
+		const spk::SpriteSheet* spriteSheet() const;
 
 		/**
 		 * @brief Sets the sprite to be rendered.
@@ -126,6 +128,7 @@ namespace spk
 		 * @param p_spriteID A Vector2UInt representing the grid position (x, y) of the sprite within the sprite sheet.
 		 */
 		void setSprite(const spk::Vector2UInt& p_spriteID);
+		const Vector2UInt& sprite() const;
 
 		/**
 		 * @brief Sets the sprite animation.
@@ -136,5 +139,6 @@ namespace spk
 		 * @param p_spriteAnimation Pointer to the SpriteAnimation object to be used by the renderer.
 		 */
 		void setSpriteAnimation(const spk::SpriteAnimation* p_spriteAnimation);
+		const spk::SpriteAnimation* spriteAnimation() const;
 	};
 }
