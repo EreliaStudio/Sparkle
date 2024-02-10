@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['object_871',['Object',['../classspk_1_1Pool.html#afa3f9e3c9a02338b938ce468ac85ea51',1,'spk::Pool']]]
+  ['unit_969',['Unit',['../classspk_1_1JSON_1_1Object.html#a57836b651ce8c533ba785c35416d0778',1,'spk::JSON::Object']]]
 ];

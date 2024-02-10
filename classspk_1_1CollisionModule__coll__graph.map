@@ -1,0 +1,4 @@
+<map id="spk::CollisionModule" name="spk::CollisionModule">
+<area shape="rect" id="node1" title="A module for managing and processing collisions between game objects within the game engine." alt="" coords="19,80,176,107"/>
+<area shape="rect" id="node2" href="$classspk_1_1GameEngineModule.html" title="Abstract base class for modules within the game engine, handling game object updates and relevance." alt="" coords="5,5,189,32"/>
+</map>

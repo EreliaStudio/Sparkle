@@ -70,6 +70,7 @@ $(function() {
 <a href="#pub-types">Public Types</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pub-attribs">Public Attributes</a> &#124;
+<a href="#friends">Friends</a> &#124;
 <a href="classspk_1_1Transform-members.html">List of all members</a>  </div>
   <div class="headertitle">
 <div class="title">spk::Transform Class Reference</div>  </div>
@@ -85,8 +86,9 @@ Collaboration diagram for spk::Transform:</div>
 <div class="dyncontent">
 <div class="center"><img src="classspk_1_1Transform__coll__graph.png" border="0" usemap="#aspk_1_1Transform_coll__map" alt="Collaboration graph"/></div>
 <map name="aspk_1_1Transform_coll__map" id="aspk_1_1Transform_coll__map">
-<area shape="rect" title="Represents the transformation of a game object in 3D space." alt="" coords="27,139,146,165"/>
+<area shape="rect" title="Represents the transformation of a game object in 3D space." alt="" coords="121,124,239,151"/>
 <area shape="rect" href="classspk_1_1ObservableValue.html" title=" " alt="" coords="5,5,168,47"/>
+<area shape="rect" href="classspk_1_1ObservableValue.html" title=" " alt="" coords="192,5,355,47"/>
 </map>
 <center><span class="legend">[<a href="graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
@@ -94,8 +96,12 @@ Collaboration diagram for spk::Transform:</div>
 Public Types</h2></td></tr>
 <tr class="memitem:a1b137f3c93ee2b832fd5906550717360"><td class="memItemLeft" align="right" valign="top"><a id="a1b137f3c93ee2b832fd5906550717360"></a>
 using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Transform.html#a1b137f3c93ee2b832fd5906550717360">Contract</a> = <a class="el" href="classspk_1_1ObservableValue.html">spk::ObservableValue</a>&lt; <a class="el" href="structspk_1_1IVector3.html">spk::Vector3</a> &gt;::<a class="el" href="classspk_1_1Transform.html#a1b137f3c93ee2b832fd5906550717360">Contract</a></td></tr>
-<tr class="memdesc:a1b137f3c93ee2b832fd5906550717360"><td class="mdescLeft">&#160;</td><td class="mdescRight">The type of contract provided by the triplet translation/scale/rotation uppon subscription. <br /></td></tr>
+<tr class="memdesc:a1b137f3c93ee2b832fd5906550717360"><td class="mdescLeft">&#160;</td><td class="mdescRight">The type of contract provided by translation and scale uppon subscription. <br /></td></tr>
 <tr class="separator:a1b137f3c93ee2b832fd5906550717360"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a003089d48812963ea2b00457de266e2e"><td class="memItemLeft" align="right" valign="top"><a id="a003089d48812963ea2b00457de266e2e"></a>
+using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Transform.html#a003089d48812963ea2b00457de266e2e">RotationContract</a> = <a class="el" href="classspk_1_1ObservableValue.html">spk::ObservableValue</a>&lt; <a class="el" href="structspk_1_1IVector3.html">spk::Vector3</a> &gt;::<a class="el" href="classspk_1_1Transform.html#a1b137f3c93ee2b832fd5906550717360">Contract</a></td></tr>
+<tr class="memdesc:a003089d48812963ea2b00457de266e2e"><td class="mdescLeft">&#160;</td><td class="mdescRight">The type of contract provided by rotation uppon subscription. <br /></td></tr>
+<tr class="separator:a003089d48812963ea2b00457de266e2e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
@@ -129,9 +135,15 @@ Public Attributes</h2></td></tr>
 <tr class="memitem:a0c8f212ecddaa7a6a2b24284ed11d660"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classspk_1_1ObservableValue.html">ObservableVector3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Transform.html#a0c8f212ecddaa7a6a2b24284ed11d660">scale</a></td></tr>
 <tr class="memdesc:a0c8f212ecddaa7a6a2b24284ed11d660"><td class="mdescLeft">&#160;</td><td class="mdescRight">Observable scale vector.  <a href="classspk_1_1Transform.html#a0c8f212ecddaa7a6a2b24284ed11d660">More...</a><br /></td></tr>
 <tr class="separator:a0c8f212ecddaa7a6a2b24284ed11d660"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3e61a5bec297583ff7f1efa6b590726a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classspk_1_1ObservableValue.html">ObservableVector3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Transform.html#a3e61a5bec297583ff7f1efa6b590726a">rotation</a></td></tr>
-<tr class="memdesc:a3e61a5bec297583ff7f1efa6b590726a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Observable rotation vector.  <a href="classspk_1_1Transform.html#a3e61a5bec297583ff7f1efa6b590726a">More...</a><br /></td></tr>
-<tr class="separator:a3e61a5bec297583ff7f1efa6b590726a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8f39b14caf7d357f526fcddbcebdd0c0"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classspk_1_1ObservableValue.html">ObservableQuaternion</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Transform.html#a8f39b14caf7d357f526fcddbcebdd0c0">rotation</a></td></tr>
+<tr class="memdesc:a8f39b14caf7d357f526fcddbcebdd0c0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Observable rotation vector.  <a href="classspk_1_1Transform.html#a8f39b14caf7d357f526fcddbcebdd0c0">More...</a><br /></td></tr>
+<tr class="separator:a8f39b14caf7d357f526fcddbcebdd0c0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="friends"></a>
+Friends</h2></td></tr>
+<tr class="memitem:a00df87c957d8f7ee0fc51f07a0542f4a"><td class="memItemLeft" align="right" valign="top"><a id="a00df87c957d8f7ee0fc51f07a0542f4a"></a>
+class&#160;</td><td class="memItemRight" valign="bottom"><b>GameObject</b></td></tr>
+<tr class="separator:a00df87c957d8f7ee0fc51f07a0542f4a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Represents the transformation of a game object in 3D space. </p>
@@ -147,7 +159,7 @@ Public Attributes</h2></td></tr>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Change the translation, which triggers the subscribed callback</span></div>
 <div class="line">transform.translation = <a class="code" href="structspk_1_1IVector3.html">spk::Vector3</a>(1.0f, 2.0f, 3.0f);</div>
-<div class="ttc" id="aclassspk_1_1Transform_html_ae70af4e949e736b6dab1ca8448a0ca3c"><div class="ttname"><a href="classspk_1_1Transform.html#ae70af4e949e736b6dab1ca8448a0ca3c">spk::Transform::Transform</a></div><div class="ttdeci">Transform()</div><div class="ttdoc">Default constructor.</div><div class="ttdef"><b>Definition:</b> spk_transform.cpp:25</div></div>
+<div class="ttc" id="aclassspk_1_1Transform_html_ae70af4e949e736b6dab1ca8448a0ca3c"><div class="ttname"><a href="classspk_1_1Transform.html#ae70af4e949e736b6dab1ca8448a0ca3c">spk::Transform::Transform</a></div><div class="ttdeci">Transform()</div><div class="ttdoc">Default constructor.</div><div class="ttdef"><b>Definition:</b> spk_transform.cpp:28</div></div>
 <div class="ttc" id="astructspk_1_1IVector3_html"><div class="ttname"><a href="structspk_1_1IVector3.html">spk::IVector3&lt; float &gt;</a></div></div>
 </div><!-- fragment --><dl class="section see"><dt>See also</dt><dd><a class="el" href="classspk_1_1ObservableValue.html" title="A template class for creating observable values that notify subscribers when changed.">ObservableValue</a>, <a class="el" href="structspk_1_1IVector3.html" title="Represents a 3D vector with components x, y, and z.">IVector3</a>, <a class="el" href="classspk_1_1GameObject.html" title="Represents a game object in the game engine hierarchy.">GameObject</a> </dd></dl>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
@@ -318,14 +330,14 @@ Public Attributes</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Data Documentation</h2>
-<a id="a3e61a5bec297583ff7f1efa6b590726a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3e61a5bec297583ff7f1efa6b590726a">&#9670;&nbsp;</a></span>rotation</h2>
+<a id="a8f39b14caf7d357f526fcddbcebdd0c0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8f39b14caf7d357f526fcddbcebdd0c0">&#9670;&nbsp;</a></span>rotation</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="classspk_1_1ObservableValue.html">ObservableVector3</a> spk::Transform::rotation</td>
+          <td class="memname"><a class="el" href="classspk_1_1ObservableValue.html">ObservableQuaternion</a> spk::Transform::rotation</td>
         </tr>
       </table>
 </div><div class="memdoc">

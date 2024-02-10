@@ -92,6 +92,10 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ac690f16ce6db54b7190972ffa86d0cc9"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1GameEngine.html#ac690f16ce6db54b7190972ffa86d0cc9">GameEngine</a> ()</td></tr>
 <tr class="memdesc:ac690f16ce6db54b7190972ffa86d0cc9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default constructor.  <a href="classspk_1_1GameEngine.html#ac690f16ce6db54b7190972ffa86d0cc9">More...</a><br /></td></tr>
 <tr class="separator:ac690f16ce6db54b7190972ffa86d0cc9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a38a91a4b142c9a9c625a1074640f42ed"><td class="memTemplParams" colspan="2">template&lt;typename TModuleName , typename ... Args&gt; </td></tr>
+<tr class="memitem:a38a91a4b142c9a9c625a1074640f42ed"><td class="memTemplItemLeft" align="right" valign="top">TModuleName *&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classspk_1_1GameEngine.html#a38a91a4b142c9a9c625a1074640f42ed">addModule</a> (Args &amp;&amp;... p_args)</td></tr>
+<tr class="memdesc:a38a91a4b142c9a9c625a1074640f42ed"><td class="mdescLeft">&#160;</td><td class="mdescRight">Adds a new module to the game engine.  <a href="classspk_1_1GameEngine.html#a38a91a4b142c9a9c625a1074640f42ed">More...</a><br /></td></tr>
+<tr class="separator:a38a91a4b142c9a9c625a1074640f42ed"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae5bb77ea1e7ce78fe88b8fd6b08f3b07"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1GameEngine.html#ae5bb77ea1e7ce78fe88b8fd6b08f3b07">render</a> ()</td></tr>
 <tr class="memdesc:ae5bb77ea1e7ce78fe88b8fd6b08f3b07"><td class="mdescLeft">&#160;</td><td class="mdescRight">Renders all subscribed game objects.  <a href="classspk_1_1GameEngine.html#ae5bb77ea1e7ce78fe88b8fd6b08f3b07">More...</a><br /></td></tr>
 <tr class="separator:ae5bb77ea1e7ce78fe88b8fd6b08f3b07"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -104,6 +108,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a0ab2e7d884aa29e3ee5fcf59db75839b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1GameEngine.html#a0ab2e7d884aa29e3ee5fcf59db75839b">unsubscribe</a> (<a class="el" href="classspk_1_1GameObject.html">GameObject</a> *p_newObject)</td></tr>
 <tr class="memdesc:a0ab2e7d884aa29e3ee5fcf59db75839b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Unsubscribes a game object from the engine.  <a href="classspk_1_1GameEngine.html#a0ab2e7d884aa29e3ee5fcf59db75839b">More...</a><br /></td></tr>
 <tr class="separator:a0ab2e7d884aa29e3ee5fcf59db75839b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a974db12772700ee9bae06b69d780c8fd"><td class="memItemLeft" align="right" valign="top">const std::vector&lt; <a class="el" href="classspk_1_1GameObject.html">spk::GameObject</a> * &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1GameEngine.html#a974db12772700ee9bae06b69d780c8fd">subscribedGameObjects</a> () const</td></tr>
+<tr class="memdesc:a974db12772700ee9bae06b69d780c8fd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves a constant reference to the list of subscribed game objects.  <a href="classspk_1_1GameEngine.html#a974db12772700ee9bae06b69d780c8fd">More...</a><br /></td></tr>
+<tr class="separator:a974db12772700ee9bae06b69d780c8fd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a21714eaad90706fd7157fb511353aedc"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classspk_1_1GameObject.html">GameObject</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1GameEngine.html#a21714eaad90706fd7157fb511353aedc">getObject</a> (const <a class="el" href="classspk_1_1GameEngine.html#ae97321c7ae57609ad365bfdeadea36ca">Comparator</a> &amp;p_comparator)</td></tr>
 <tr class="memdesc:a21714eaad90706fd7157fb511353aedc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Gets a single game object by a custom comparator.  <a href="classspk_1_1GameEngine.html#a21714eaad90706fd7157fb511353aedc">More...</a><br /></td></tr>
 <tr class="separator:a21714eaad90706fd7157fb511353aedc"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -139,14 +146,14 @@ Public Member Functions</h2></td></tr>
 <div class="line"><span class="comment">// Query game objects by name</span></div>
 <div class="line"><a class="code" href="classspk_1_1GameObject.html">spk::GameObject</a>* foundObject = gameEngine.<a class="code" href="classspk_1_1GameEngine.html#a21714eaad90706fd7157fb511353aedc">getObject</a>(<span class="stringliteral">&quot;MyObject&quot;</span>);</div>
 <div class="line">std::vector&lt;spk::GameObject*&gt; objectList = gameEngine.<a class="code" href="classspk_1_1GameEngine.html#a9413ffb6489305473d2643b60e641b8c">getObjectList</a>(<span class="stringliteral">&quot;SomeObject&quot;</span>);</div>
-<div class="ttc" id="aclassspk_1_1GameEngine_html"><div class="ttname"><a href="classspk_1_1GameEngine.html">spk::GameEngine</a></div><div class="ttdoc">Represents the game engine responsible for rendering and updating game objects.</div><div class="ttdef"><b>Definition:</b> spk_game_engine.hpp:43</div></div>
-<div class="ttc" id="aclassspk_1_1GameEngine_html_a0ab2e7d884aa29e3ee5fcf59db75839b"><div class="ttname"><a href="classspk_1_1GameEngine.html#a0ab2e7d884aa29e3ee5fcf59db75839b">spk::GameEngine::unsubscribe</a></div><div class="ttdeci">void unsubscribe(GameObject *p_newObject)</div><div class="ttdoc">Unsubscribes a game object from the engine.</div><div class="ttdef"><b>Definition:</b> spk_game_engine.cpp:34</div></div>
-<div class="ttc" id="aclassspk_1_1GameEngine_html_a21714eaad90706fd7157fb511353aedc"><div class="ttname"><a href="classspk_1_1GameEngine.html#a21714eaad90706fd7157fb511353aedc">spk::GameEngine::getObject</a></div><div class="ttdeci">GameObject * getObject(const Comparator &amp;p_comparator)</div><div class="ttdoc">Gets a single game object by a custom comparator.</div><div class="ttdef"><b>Definition:</b> spk_game_engine.cpp:41</div></div>
-<div class="ttc" id="aclassspk_1_1GameEngine_html_a3845fb3a34e4c7b74cbaadab6478e2ac"><div class="ttname"><a href="classspk_1_1GameEngine.html#a3845fb3a34e4c7b74cbaadab6478e2ac">spk::GameEngine::update</a></div><div class="ttdeci">void update()</div><div class="ttdoc">Updates all subscribed game objects.</div><div class="ttdef"><b>Definition:</b> spk_game_engine.cpp:18</div></div>
-<div class="ttc" id="aclassspk_1_1GameEngine_html_a9413ffb6489305473d2643b60e641b8c"><div class="ttname"><a href="classspk_1_1GameEngine.html#a9413ffb6489305473d2643b60e641b8c">spk::GameEngine::getObjectList</a></div><div class="ttdeci">std::vector&lt; GameObject * &gt; getObjectList(const Comparator &amp;p_comparator)</div><div class="ttdoc">Gets a list of game objects by a custom comparator.</div><div class="ttdef"><b>Definition:</b> spk_game_engine.cpp:53</div></div>
-<div class="ttc" id="aclassspk_1_1GameEngine_html_aaceba922dafadac8e052378c881c9c6e"><div class="ttname"><a href="classspk_1_1GameEngine.html#aaceba922dafadac8e052378c881c9c6e">spk::GameEngine::subscribe</a></div><div class="ttdeci">void subscribe(GameObject *p_newObject)</div><div class="ttdoc">Subscribes a game object to the engine.</div><div class="ttdef"><b>Definition:</b> spk_game_engine.cpp:26</div></div>
-<div class="ttc" id="aclassspk_1_1GameEngine_html_ae5bb77ea1e7ce78fe88b8fd6b08f3b07"><div class="ttname"><a href="classspk_1_1GameEngine.html#ae5bb77ea1e7ce78fe88b8fd6b08f3b07">spk::GameEngine::render</a></div><div class="ttdeci">void render()</div><div class="ttdoc">Renders all subscribed game objects.</div><div class="ttdef"><b>Definition:</b> spk_game_engine.cpp:10</div></div>
-<div class="ttc" id="aclassspk_1_1GameObject_html"><div class="ttname"><a href="classspk_1_1GameObject.html">spk::GameObject</a></div><div class="ttdoc">Represents a game object in the game engine hierarchy.</div><div class="ttdef"><b>Definition:</b> spk_game_object.hpp:32</div></div>
+<div class="ttc" id="aclassspk_1_1GameEngine_html"><div class="ttname"><a href="classspk_1_1GameEngine.html">spk::GameEngine</a></div><div class="ttdoc">Represents the game engine responsible for rendering and updating game objects.</div><div class="ttdef"><b>Definition:</b> spk_game_engine.hpp:45</div></div>
+<div class="ttc" id="aclassspk_1_1GameEngine_html_a0ab2e7d884aa29e3ee5fcf59db75839b"><div class="ttname"><a href="classspk_1_1GameEngine.html#a0ab2e7d884aa29e3ee5fcf59db75839b">spk::GameEngine::unsubscribe</a></div><div class="ttdeci">void unsubscribe(GameObject *p_newObject)</div><div class="ttdoc">Unsubscribes a game object from the engine.</div><div class="ttdef"><b>Definition:</b> spk_game_engine.cpp:52</div></div>
+<div class="ttc" id="aclassspk_1_1GameEngine_html_a21714eaad90706fd7157fb511353aedc"><div class="ttname"><a href="classspk_1_1GameEngine.html#a21714eaad90706fd7157fb511353aedc">spk::GameEngine::getObject</a></div><div class="ttdeci">GameObject * getObject(const Comparator &amp;p_comparator)</div><div class="ttdoc">Gets a single game object by a custom comparator.</div><div class="ttdef"><b>Definition:</b> spk_game_engine.cpp:67</div></div>
+<div class="ttc" id="aclassspk_1_1GameEngine_html_a3845fb3a34e4c7b74cbaadab6478e2ac"><div class="ttname"><a href="classspk_1_1GameEngine.html#a3845fb3a34e4c7b74cbaadab6478e2ac">spk::GameEngine::update</a></div><div class="ttdeci">void update()</div><div class="ttdoc">Updates all subscribed game objects.</div><div class="ttdef"><b>Definition:</b> spk_game_engine.cpp:20</div></div>
+<div class="ttc" id="aclassspk_1_1GameEngine_html_a9413ffb6489305473d2643b60e641b8c"><div class="ttname"><a href="classspk_1_1GameEngine.html#a9413ffb6489305473d2643b60e641b8c">spk::GameEngine::getObjectList</a></div><div class="ttdeci">std::vector&lt; GameObject * &gt; getObjectList(const Comparator &amp;p_comparator)</div><div class="ttdoc">Gets a list of game objects by a custom comparator.</div><div class="ttdef"><b>Definition:</b> spk_game_engine.cpp:79</div></div>
+<div class="ttc" id="aclassspk_1_1GameEngine_html_aaceba922dafadac8e052378c881c9c6e"><div class="ttname"><a href="classspk_1_1GameEngine.html#aaceba922dafadac8e052378c881c9c6e">spk::GameEngine::subscribe</a></div><div class="ttdeci">void subscribe(GameObject *p_newObject)</div><div class="ttdoc">Subscribes a game object to the engine.</div><div class="ttdef"><b>Definition:</b> spk_game_engine.cpp:36</div></div>
+<div class="ttc" id="aclassspk_1_1GameEngine_html_ae5bb77ea1e7ce78fe88b8fd6b08f3b07"><div class="ttname"><a href="classspk_1_1GameEngine.html#ae5bb77ea1e7ce78fe88b8fd6b08f3b07">spk::GameEngine::render</a></div><div class="ttdeci">void render()</div><div class="ttdoc">Renders all subscribed game objects.</div><div class="ttdef"><b>Definition:</b> spk_game_engine.cpp:12</div></div>
+<div class="ttc" id="aclassspk_1_1GameObject_html"><div class="ttname"><a href="classspk_1_1GameObject.html">spk::GameObject</a></div><div class="ttdoc">Represents a game object in the game engine hierarchy.</div><div class="ttdef"><b>Definition:</b> spk_game_object.hpp:36</div></div>
 </div><!-- fragment --><dl class="section see"><dt>See also</dt><dd><a class="el" href="classspk_1_1GameObject.html" title="Represents a game object in the game engine hierarchy.">GameObject</a> </dd></dl>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="ac690f16ce6db54b7190972ffa86d0cc9"></a>
@@ -170,6 +177,53 @@ Public Member Functions</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="a38a91a4b142c9a9c625a1074640f42ed"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a38a91a4b142c9a9c625a1074640f42ed">&#9670;&nbsp;</a></span>addModule()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename TModuleName , typename ... Args&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">TModuleName* spk::GameEngine::addModule </td>
+          <td>(</td>
+          <td class="paramtype">Args &amp;&amp;...&#160;</td>
+          <td class="paramname"><em>p_args</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Adds a new module to the game engine. </p>
+<p>This template method dynamically creates and adds a new module of the specified type to the game engine. The module is initialized with the provided arguments and is automatically associated with the game engine. This allows for flexible extension of the game engine's capabilities by adding various types of modules, such as physics, rendering, or input handling modules.</p>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">TModuleName</td><td>The type of the module to be added. </td></tr>
+    <tr><td class="paramname">Args</td><td>The types of the arguments to be passed to the module's constructor. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_args</td><td>The arguments to be passed to the module's constructor. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>TModuleName* A pointer to the newly created module.</dd></dl>
+<p>Usage example: </p><div class="fragment"><div class="line"><span class="keyword">auto</span>* physicsModule = gameEngine.addModule&lt;PhysicsModule&gt;(<a class="code" href="structspk_1_1IVector3.html">spk::Vector3</a>(0, -9.81, 0));</div>
+<div class="ttc" id="astructspk_1_1IVector3_html"><div class="ttname"><a href="structspk_1_1IVector3.html">spk::IVector3&lt; float &gt;</a></div></div>
+</div><!-- fragment --> 
+</div>
+</div>
 <a id="a21714eaad90706fd7157fb511353aedc"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a21714eaad90706fd7157fb511353aedc">&#9670;&nbsp;</a></span>getObject() <span class="overload">[1/2]</span></h2>
 
@@ -326,6 +380,27 @@ Public Member Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
+
+</div>
+</div>
+<a id="a974db12772700ee9bae06b69d780c8fd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a974db12772700ee9bae06b69d780c8fd">&#9670;&nbsp;</a></span>subscribedGameObjects()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::vector&lt; <a class="el" href="classspk_1_1GameObject.html">spk::GameObject</a> * &gt; &amp; spk::GameEngine::subscribedGameObjects </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Retrieves a constant reference to the list of subscribed game objects. </p>
+<p>This method provides read-only access to the internal list of game objects that have been subscribed to the game engine. It allows external entities to query and interact with the current set of active game objects without modifying the subscription state.</p>
+<dl class="section return"><dt>Returns</dt><dd>const std::vector&lt;spk::GameObject*&gt;&amp; A constant reference to the vector of subscribed game objects. </dd></dl>
 
 </div>
 </div>

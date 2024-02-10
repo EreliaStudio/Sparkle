@@ -1,0 +1,5 @@
+<map id="spk::Physics" name="spk::Physics">
+<area shape="rect" id="node1" title="Component for simulating basic physics properties and behaviors for game objects." alt="" coords="37,155,140,181"/>
+<area shape="rect" id="node2" href="$classspk_1_1GameComponent.html" title="Base class for game components that can be attached to GameObjects." alt="" coords="5,80,172,107"/>
+<area shape="rect" id="node3" href="$classspk_1_1ActivateObject.html" title="Manages activation state for objects, intended as a base class." alt="" coords="14,5,163,32"/>
+</map>

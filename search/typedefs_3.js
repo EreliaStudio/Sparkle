@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['nanoseconds_870',['Nanoseconds',['../classspk_1_1TimeMetrics.html#a98763e9d9bbeabab1e7f91a668c7ad08',1,'spk::TimeMetrics']]]
+  ['rotationcontract_968',['RotationContract',['../classspk_1_1Transform.html#a003089d48812963ea2b00457de266e2e',1,'spk::Transform']]]
 ];

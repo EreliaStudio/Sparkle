@@ -1,0 +1,4 @@
+<map id="spk::GravityModule" name="spk::GravityModule">
+<area shape="rect" id="node1" title="A module within the game engine dedicated to applying gravity to game objects." alt="" coords="23,80,172,107"/>
+<area shape="rect" id="node2" href="$classspk_1_1GameEngineModule.html" title="Abstract base class for modules within the game engine, handling game object updates and relevance." alt="" coords="5,5,189,32"/>
+</map>

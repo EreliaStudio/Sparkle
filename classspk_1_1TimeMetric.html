@@ -68,7 +68,6 @@ $(function() {
 <div class="header">
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
-<a href="#pub-static-attribs">Static Public Attributes</a> &#124;
 <a href="classspk_1_1TimeMetric-members.html">List of all members</a>  </div>
   <div class="headertitle">
 <div class="title">spk::TimeMetric Class Reference</div>  </div>
@@ -134,13 +133,6 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:af6bf89a813a048c40f1fa8190cdf6cb5 inherit pub_methods_classspk_1_1IAnalyticalMetric"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the total number of data points collected.  <a href="classspk_1_1IAnalyticalMetric.html#af6bf89a813a048c40f1fa8190cdf6cb5">More...</a><br /></td></tr>
 <tr class="separator:af6bf89a813a048c40f1fa8190cdf6cb5 inherit pub_methods_classspk_1_1IAnalyticalMetric"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-static-attribs"></a>
-Static Public Attributes</h2></td></tr>
-<tr class="memitem:a1d31b369fc82815093eefa6def4f825d"><td class="memItemLeft" align="right" valign="top"><a id="a1d31b369fc82815093eefa6def4f825d"></a>
-static thread_local long&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1TimeMetric.html#a1d31b369fc82815093eefa6def4f825d">ProgramDuration</a> = 0</td></tr>
-<tr class="memdesc:a1d31b369fc82815093eefa6def4f825d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Variable thread local representing the total program duration of the program. <br /></td></tr>
-<tr class="separator:a1d31b369fc82815093eefa6def4f825d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="inherited"></a>
 Additional Inherited Members</h2></td></tr>
 <tr class="inherit_header pro_methods_classspk_1_1IAnalyticalMetric"><td colspan="2" onclick="javascript:toggleInherit('pro_methods_classspk_1_1IAnalyticalMetric')"><img src="closed.png" alt="-"/>&#160;Protected Member Functions inherited from <a class="el" href="classspk_1_1IAnalyticalMetric.html">spk::IAnalyticalMetric&lt; long long &gt;</a></td></tr>
@@ -162,10 +154,10 @@ Additional Inherited Members</h2></td></tr>
 <div class="line">std::cout &lt;&lt; report;</div>
 <div class="ttc" id="aclassspk_1_1JSON_1_1Object_html"><div class="ttname"><a href="classspk_1_1JSON_1_1Object.html">spk::JSON::Object</a></div><div class="ttdoc">Represents a JSON object for serialization and deserialization.</div><div class="ttdef"><b>Definition:</b> spk_JSON_object.hpp:41</div></div>
 <div class="ttc" id="aclassspk_1_1Profiler_html"><div class="ttname"><a href="classspk_1_1Profiler.html">spk::Profiler</a></div><div class="ttdoc">Manages and aggregates metrics for performance profiling or analytical purposes within an application...</div><div class="ttdef"><b>Definition:</b> spk_profiler.hpp:41</div></div>
-<div class="ttc" id="aclassspk_1_1Profiler_html_a701732e3dd5cf629be6b8e86816f8934"><div class="ttname"><a href="classspk_1_1Profiler.html#a701732e3dd5cf629be6b8e86816f8934">spk::Profiler::emitReport</a></div><div class="ttdeci">spk::JSON::Object emitReport()</div><div class="ttdoc">Generates an aggregated report of all managed metrics.</div><div class="ttdef"><b>Definition:</b> spk_profiler.cpp:15</div></div>
+<div class="ttc" id="aclassspk_1_1Profiler_html_a701732e3dd5cf629be6b8e86816f8934"><div class="ttname"><a href="classspk_1_1Profiler.html#a701732e3dd5cf629be6b8e86816f8934">spk::Profiler::emitReport</a></div><div class="ttdeci">spk::JSON::Object emitReport()</div><div class="ttdoc">Generates an aggregated report of all managed metrics.</div><div class="ttdef"><b>Definition:</b> spk_profiler.cpp:16</div></div>
 <div class="ttc" id="aclassspk_1_1Profiler_html_a9b543749d5934e365b94439e2aee7972"><div class="ttname"><a href="classspk_1_1Profiler.html#a9b543749d5934e365b94439e2aee7972">spk::Profiler::metric</a></div><div class="ttdeci">TMetricType &amp; metric(const std::string &amp;p_metricName)</div><div class="ttdoc">Retrieves or creates a metric of a specific type associated with a given name.</div><div class="ttdef"><b>Definition:</b> spk_profiler.hpp:77</div></div>
 <div class="ttc" id="aclassspk_1_1TimeMetric_html"><div class="ttname"><a href="classspk_1_1TimeMetric.html">spk::TimeMetric</a></div><div class="ttdoc">Specialized metric for measuring and reporting time durations, extending IAnalyticalMetric&lt;long long&gt;...</div><div class="ttdef"><b>Definition:</b> spk_time_metric.hpp:47</div></div>
-<div class="ttc" id="aclassspk_1_1TimeMetric_html_a11b578bb3f69205b575764a1cd71ce91"><div class="ttname"><a href="classspk_1_1TimeMetric.html#a11b578bb3f69205b575764a1cd71ce91">spk::TimeMetric::start</a></div><div class="ttdeci">void start()</div><div class="ttdoc">Starts the timing operation.</div><div class="ttdef"><b>Definition:</b> spk_time_metric.cpp:5</div></div>
+<div class="ttc" id="aclassspk_1_1TimeMetric_html_a11b578bb3f69205b575764a1cd71ce91"><div class="ttname"><a href="classspk_1_1TimeMetric.html#a11b578bb3f69205b575764a1cd71ce91">spk::TimeMetric::start</a></div><div class="ttdeci">void start()</div><div class="ttdoc">Starts the timing operation.</div><div class="ttdef"><b>Definition:</b> spk_time_metric.cpp:6</div></div>
 </div><!-- fragment --><dl class="section note"><dt>Note</dt><dd><a class="el" href="classspk_1_1TimeMetric.html" title="Specialized metric for measuring and reporting time durations, extending IAnalyticalMetric&lt;long long&gt;...">TimeMetric</a> supports thread-local storage for program duration tracking, allowing for accurate and isolated timing measurements across different threads. This feature ensures that timing metrics are consistent and meaningful in multi-threaded applications.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="classspk_1_1IAnalyticalMetric.html">IAnalyticalMetric&lt;long long&gt;</a> for the base class functionality. </dd>
 <dd>

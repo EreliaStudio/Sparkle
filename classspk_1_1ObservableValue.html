@@ -129,6 +129,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a6eb8258a644771a2ccb03cdfda1ee718"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1ObservableValue.html#a6eb8258a644771a2ccb03cdfda1ee718">notify_all</a> ()</td></tr>
 <tr class="memdesc:a6eb8258a644771a2ccb03cdfda1ee718"><td class="mdescLeft">&#160;</td><td class="mdescRight">Notifies all subscribers of a change to the <a class="el" href="classspk_1_1ObservableValue.html" title="A template class for creating observable values that notify subscribers when changed.">ObservableValue</a>.  <a href="classspk_1_1ObservableValue.html#a6eb8258a644771a2ccb03cdfda1ee718">More...</a><br /></td></tr>
 <tr class="separator:a6eb8258a644771a2ccb03cdfda1ee718"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3819c28da3a0fa4c8c8e1c7214af4e7c"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1ObservableValue.html#a3819c28da3a0fa4c8c8e1c7214af4e7c">nbContracts</a> () const</td></tr>
+<tr class="memdesc:a3819c28da3a0fa4c8c8e1c7214af4e7c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the number of active contracts.  <a href="classspk_1_1ObservableValue.html#a3819c28da3a0fa4c8c8e1c7214af4e7c">More...</a><br /></td></tr>
+<tr class="separator:a3819c28da3a0fa4c8c8e1c7214af4e7c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><h3>template&lt;typename TType&gt;<br />
@@ -173,7 +176,7 @@ template&lt;typename... Args&gt; </div>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">explicit</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
@@ -216,7 +219,7 @@ template&lt;typename TType &gt; </div>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">explicit</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
@@ -290,6 +293,37 @@ template&lt;typename TType &gt; </div>
 
 <p>Provides immutable access to the internal value. </p>
 <dl class="section return"><dt>Returns</dt><dd>A const reference to the internal value. </dd></dl>
+
+</div>
+</div>
+<a id="a3819c28da3a0fa4c8c8e1c7214af4e7c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3819c28da3a0fa4c8c8e1c7214af4e7c">&#9670;&nbsp;</a></span>nbContracts()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename TType &gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">size_t <a class="el" href="classspk_1_1ObservableValue.html">spk::ObservableValue</a>&lt; TType &gt;::nbContracts </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Returns the number of active contracts. </p>
+<p>This method provides the count of currently active contracts subscribed to the notifier.</p>
+<dl class="section return"><dt>Returns</dt><dd>The number of active contracts. </dd></dl>
 
 </div>
 </div>

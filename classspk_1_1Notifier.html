@@ -123,6 +123,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a1dd154adc30627b07c364abd945c3ccc"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Notifier.html#a1dd154adc30627b07c364abd945c3ccc">notify_all</a> ()</td></tr>
 <tr class="memdesc:a1dd154adc30627b07c364abd945c3ccc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Notifies all active Contracts.  <a href="classspk_1_1Notifier.html#a1dd154adc30627b07c364abd945c3ccc">More...</a><br /></td></tr>
 <tr class="separator:a1dd154adc30627b07c364abd945c3ccc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4565aca18e82a3f8ae339454fc6b90ad"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Notifier.html#a4565aca18e82a3f8ae339454fc6b90ad">nbContracts</a> () const</td></tr>
+<tr class="memdesc:a4565aca18e82a3f8ae339454fc6b90ad"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the number of active contracts.  <a href="classspk_1_1Notifier.html#a4565aca18e82a3f8ae339454fc6b90ad">More...</a><br /></td></tr>
+<tr class="separator:a4565aca18e82a3f8ae339454fc6b90ad"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="friends"></a>
 Friends</h2></td></tr>
@@ -138,8 +141,8 @@ class&#160;</td><td class="memItemRight" valign="bottom"><b>Contract</b></td></t
 <div class="line"><span class="keyword">auto</span> contract = notifier.<a class="code" href="classspk_1_1Notifier.html#a157fc605d61ee4e11e88bb9c25369ab5">subscribe</a>([]{ std::cout &lt;&lt; <span class="stringliteral">&quot;Event occurred!&quot;</span> &lt;&lt; std::endl; });</div>
 <div class="line">notifier.<a class="code" href="classspk_1_1Notifier.html#a1dd154adc30627b07c364abd945c3ccc">notify_all</a>(); <span class="comment">// Triggers the callback</span></div>
 <div class="ttc" id="aclassspk_1_1Notifier_html"><div class="ttname"><a href="classspk_1_1Notifier.html">spk::Notifier</a></div><div class="ttdoc">Manages a list of subscribers (via callbacks) and notifies them uppon request.</div><div class="ttdef"><b>Definition:</b> spk_notifier.hpp:34</div></div>
-<div class="ttc" id="aclassspk_1_1Notifier_html_a157fc605d61ee4e11e88bb9c25369ab5"><div class="ttname"><a href="classspk_1_1Notifier.html#a157fc605d61ee4e11e88bb9c25369ab5">spk::Notifier::subscribe</a></div><div class="ttdeci">std::unique_ptr&lt; Contract &gt; subscribe(const Callback &amp;p_callback)</div><div class="ttdoc">Subscribes to notifications with a specific callback.</div><div class="ttdef"><b>Definition:</b> spk_notifier.cpp:51</div></div>
-<div class="ttc" id="aclassspk_1_1Notifier_html_a1dd154adc30627b07c364abd945c3ccc"><div class="ttname"><a href="classspk_1_1Notifier.html#a1dd154adc30627b07c364abd945c3ccc">spk::Notifier::notify_all</a></div><div class="ttdeci">void notify_all()</div><div class="ttdoc">Notifies all active Contracts.</div><div class="ttdef"><b>Definition:</b> spk_notifier.cpp:74</div></div>
+<div class="ttc" id="aclassspk_1_1Notifier_html_a157fc605d61ee4e11e88bb9c25369ab5"><div class="ttname"><a href="classspk_1_1Notifier.html#a157fc605d61ee4e11e88bb9c25369ab5">spk::Notifier::subscribe</a></div><div class="ttdeci">std::unique_ptr&lt; Contract &gt; subscribe(const Callback &amp;p_callback)</div><div class="ttdoc">Subscribes to notifications with a specific callback.</div><div class="ttdef"><b>Definition:</b> spk_notifier.cpp:52</div></div>
+<div class="ttc" id="aclassspk_1_1Notifier_html_a1dd154adc30627b07c364abd945c3ccc"><div class="ttname"><a href="classspk_1_1Notifier.html#a1dd154adc30627b07c364abd945c3ccc">spk::Notifier::notify_all</a></div><div class="ttdeci">void notify_all()</div><div class="ttdoc">Notifies all active Contracts.</div><div class="ttdef"><b>Definition:</b> spk_notifier.cpp:75</div></div>
 </div><!-- fragment --><dl class="section note"><dt>Note</dt><dd>The <a class="el" href="classspk_1_1Notifier.html" title="Manages a list of subscribers (via callbacks) and notifies them uppon request.">Notifier</a> class is thread-safe and ensures that subscription management and event notification can safely occur from multiple threads. </dd></dl>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="aa4de3147391d99b3980f1527c2746e96"></a>
@@ -199,6 +202,27 @@ class&#160;</td><td class="memItemRight" valign="bottom"><b>Contract</b></td></t
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="a4565aca18e82a3f8ae339454fc6b90ad"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4565aca18e82a3f8ae339454fc6b90ad">&#9670;&nbsp;</a></span>nbContracts()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">size_t spk::Notifier::nbContracts </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Returns the number of active contracts. </p>
+<p>This method provides the count of currently active contracts subscribed to the notifier. It includes only active subscriptions.</p>
+<dl class="section return"><dt>Returns</dt><dd>The number of active contracts. </dd></dl>
+
+</div>
+</div>
 <a id="a1dd154adc30627b07c364abd945c3ccc"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a1dd154adc30627b07c364abd945c3ccc">&#9670;&nbsp;</a></span>notify_all()</h2>
 
