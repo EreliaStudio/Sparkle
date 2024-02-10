@@ -37,4 +37,14 @@ namespace spk
 	{
 
 	}
+
+	void GravityModule::setGravityAcceleration(const spk::Vector3& p_gravityAcceleration)
+	{
+		_gravityAcceleration = p_gravityAcceleration;
+	}
+	
+	const spk::Vector3& GravityModule::gravityAcceleration() const
+	{
+		return (_gravityAcceleration);
+	}
 }

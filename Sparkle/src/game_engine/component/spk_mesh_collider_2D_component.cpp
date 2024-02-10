@@ -1,11 +1,11 @@
-#include "game_engine/component/spk_sprite_collider_2D_component.hpp"
+#include "game_engine/component/spk_mesh_collider_2D_component.hpp"
 #include "game_engine/spk_game_object.hpp"
 #include "game_engine/component/spk_physics_component.hpp"
 #include "application/spk_application.hpp"
 
 namespace spk
 {
-	spk::Vector3 SpriteCollider2D::_computeMin(const spk::Vector3& p_globalPosition, const spk::Vector3& p_globalScale, const spk::Mesh* p_mesh)
+	spk::Vector3 MeshCollider2D::_computeMin(const spk::Vector3& p_globalPosition, const spk::Vector3& p_globalScale, const spk::Mesh* p_mesh)
 	{
 		if (p_mesh == nullptr)
 			return (spk::Vector3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max()));
@@ -20,7 +20,7 @@ namespace spk
 		return (result);
 	}
 
-	spk::Vector3 SpriteCollider2D::_computeMax(const spk::Vector3& p_globalPosition, const spk::Vector3& p_globalScale, const spk::Mesh* p_mesh)
+	spk::Vector3 MeshCollider2D::_computeMax(const spk::Vector3& p_globalPosition, const spk::Vector3& p_globalScale, const spk::Mesh* p_mesh)
 	{
 		if (p_mesh == nullptr)
 			return (spk::Vector3(std::numeric_limits<float>::min(), std::numeric_limits<float>::min(), std::numeric_limits<float>::min()));
@@ -35,9 +35,9 @@ namespace spk
 		return (result);
 	}
 
-	bool SpriteCollider2D::isIntersecting(const ICollider* p_otherCollider)
+	bool MeshCollider2D::isIntersecting(const ICollider* p_otherCollider)
 	{
-		const SpriteCollider2D* castedPointer = dynamic_cast<const SpriteCollider2D*>(p_otherCollider);
+		const MeshCollider2D* castedPointer = dynamic_cast<const MeshCollider2D*>(p_otherCollider);
 
 		auto* physicsComponentA = owner()->getComponent<spk::Physics>();
 		auto* physicsComponentB = p_otherCollider->owner()->getComponent<spk::Physics>();
@@ -67,13 +67,13 @@ namespace spk
 		return !isNotIntersecting;
 	}
 
-	void SpriteCollider2D::_onMeshEdition()
+	void MeshCollider2D::_onMeshEdition()
 	{
 		_min = _computeMin(owner()->globalPosition(), owner()->globalScale(), mesh());
 		_max = _computeMax(owner()->globalPosition(), owner()->globalScale(), mesh());
 	}
 
-	SpriteCollider2D::SpriteCollider2D(const std::string& p_name) :
+	MeshCollider2D::MeshCollider2D(const std::string& p_name) :
 		ICollider(p_name)
 	{
 

@@ -115,8 +115,8 @@ int main()
     auto* playerPhysics = playerObject.addComponent<spk::Physics>("Physics");
     playerPhysics->setKinematicState(true);
     auto* playerController = playerObject.addComponent<PlayerController>("PlayerController");
-    auto* playerSpriteCollider2D = playerObject.addComponent<spk::SpriteCollider2D>("SpriteCollider2D");
-    playerSpriteCollider2D->setMesh(playerSpriteRenderer->mesh());
+    auto* playerMeshCollider2D = playerObject.addComponent<spk::MeshCollider2D>("MeshCollider2D");
+    playerMeshCollider2D->setMesh(playerSpriteRenderer->mesh());
 
     spk::GameObject cameraObject("Camera", &playerObject);
     playerController->cameraObject = &cameraObject;
@@ -133,8 +133,8 @@ int main()
     auto* obstacleSpriteRenderer = obstacleObject.addComponent<spk::SpriteRenderer>("Renderer");
     obstacleSpriteRenderer->setSpriteSheet(obstacleSpriteSheet);
     obstacleSpriteRenderer->setSprite(spk::Vector2Int(0, 0));
-    auto* obstacleSpriteCollider2D = obstacleObject.addComponent<spk::SpriteCollider2D>("SpriteCollider2D");
-    obstacleSpriteCollider2D->setMesh(obstacleSpriteRenderer->mesh());
+    auto* obstacleMeshCollider2D = obstacleObject.addComponent<spk::MeshCollider2D>("MeshCollider2D");
+    obstacleMeshCollider2D->setMesh(obstacleSpriteRenderer->mesh());
 
     spk::GameEngineManager manager("GameEngine manager");
     manager.setGameEngine(&engine);

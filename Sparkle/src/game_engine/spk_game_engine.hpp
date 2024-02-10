@@ -65,6 +65,24 @@ namespace spk
 		 */
 		GameEngine();
 
+		/**
+         * @brief Adds a new module to the game engine.
+         * 
+         * This template method dynamically creates and adds a new module of the specified type to the game engine.
+         * The module is initialized with the provided arguments and is automatically associated with the game engine.
+         * This allows for flexible extension of the game engine's capabilities by adding various types of modules, such
+         * as physics, rendering, or input handling modules.
+         * 
+         * @tparam TModuleName The type of the module to be added.
+         * @tparam Args The types of the arguments to be passed to the module's constructor.
+         * @param p_args The arguments to be passed to the module's constructor.
+         * @return TModuleName* A pointer to the newly created module.
+         * 
+         * Usage example:
+         * @code
+         * auto* physicsModule = gameEngine.addModule<PhysicsModule>(spk::Vector3(0, -9.81, 0));
+         * @endcode
+         */
 		template <typename TModuleName, typename ... Args>
 		TModuleName* addModule(Args&& ... p_args)
 		{
@@ -114,6 +132,15 @@ namespace spk
 		 */
 		void unsubscribe(GameObject *p_newObject);
 
+		/**
+         * @brief Retrieves a constant reference to the list of subscribed game objects.
+         * 
+         * This method provides read-only access to the internal list of game objects that have been subscribed
+         * to the game engine. It allows external entities to query and interact with the current set of active
+         * game objects without modifying the subscription state.
+         * 
+         * @return const std::vector<spk::GameObject*>& A constant reference to the vector of subscribed game objects.
+         */
 		const std::vector<spk::GameObject*>& subscribedGameObjects() const;
 
 		/**

@@ -107,6 +107,15 @@ namespace spk
 		 * @param p_mesh Pointer to the Mesh object to be used for rendering the sprite.
 		 */
 		void setMesh(const spk::Mesh* p_mesh);
+
+		/**
+		 * @brief Gets the current mesh used by the sprite renderer.
+		 * 
+		 * Returns a pointer to the mesh currently set for rendering the sprite. This mesh defines the geometry
+		 * upon which the sprite texture is applied.
+		 * 
+		 * @return const spk::Mesh* Pointer to the currently set Mesh object.
+		 */
 		const spk::Mesh* mesh() const;
 
 		/**
@@ -118,6 +127,15 @@ namespace spk
 		 * @param p_spriteSheet Pointer to the SpriteSheet object to be used by the renderer.
 		 */
 		void setSpriteSheet(const spk::SpriteSheet* p_spriteSheet);
+
+		/**
+		 * @brief Gets the sprite sheet currently used by the renderer.
+		 * 
+		 * Returns a pointer to the sprite sheet from which the sprite textures are sourced. The sprite sheet
+		 * consolidates multiple sprites into a single texture, facilitating efficient texture management.
+		 * 
+		 * @return const spk::SpriteSheet* Pointer to the currently set SpriteSheet object.
+		 */
 		const spk::SpriteSheet* spriteSheet() const;
 
 		/**
@@ -128,6 +146,15 @@ namespace spk
 		 * @param p_spriteID A Vector2UInt representing the grid position (x, y) of the sprite within the sprite sheet.
 		 */
 		void setSprite(const spk::Vector2UInt& p_spriteID);
+
+		/**
+		 * @brief Gets the current sprite identifier within the sprite sheet.
+		 * 
+		 * Returns the grid position of the sprite that is currently set to be rendered. This identifier specifies
+		 * the location of the sprite within the sprite sheet grid.
+		 * 
+		 * @return const Vector2UInt& The grid position (x, y) of the currently set sprite within the sprite sheet.
+		 */
 		const Vector2UInt& sprite() const;
 
 		/**
@@ -139,6 +166,15 @@ namespace spk
 		 * @param p_spriteAnimation Pointer to the SpriteAnimation object to be used by the renderer.
 		 */
 		void setSpriteAnimation(const spk::SpriteAnimation* p_spriteAnimation);
+
+		/**
+		 * @brief Gets the sprite animation currently set for the renderer.
+		 * 
+		 * Returns a pointer to the sprite animation object used for dynamic sprite rendering. The sprite animation
+		 * allows for the sprite to change over time, enabling animated effects.
+		 * 
+		 * @return const spk::SpriteAnimation* Pointer to the currently set SpriteAnimation object.
+		 */
 		const spk::SpriteAnimation* spriteAnimation() const;
 	};
 }

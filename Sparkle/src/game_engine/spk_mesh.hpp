@@ -224,6 +224,11 @@ namespace spk
 		 */
 		void addPoint(const Vector3 &p_point);
 
+		/**
+		 * @brief Retreive the vector containing every points stored by the mesh.
+		 * 
+		 * @return A const reference to the vector containing the mesh's points.
+		 */
 		const std::vector<spk::Vector3>& points() const;
 
 		/**
@@ -246,6 +251,11 @@ namespace spk
 		 */
 		void addUVs(const Vector2 &p_uvs);
 
+		/**
+		 * @brief Retreive the vector containing every uvs stored by the mesh.
+		 * 
+		 * @return A const reference to the vector containing the mesh's uvs.
+		 */
 		const std::vector<spk::Vector2>& UVs() const;
 
 		/**
@@ -268,6 +278,11 @@ namespace spk
 		 */
 		void addNormal(const Vector3 &p_normals);
 
+		/**
+		 * @brief Retreive the vector containing every normals stored by the mesh.
+		 * 
+		 * @return A const reference to the vector containing the mesh's normals.
+		 */
 		const std::vector<spk::Vector3>& normals() const;
 
 		/**
@@ -292,6 +307,11 @@ namespace spk
 		 */
 		void addIndex(unsigned int p_pointIndex, unsigned int p_uvsIndex, unsigned int p_normalIndex = std::numeric_limits<unsigned int>::max());
 
+		/**
+		 * @brief Retreive the vector containing every indexes stored by the mesh.
+		 * 
+		 * @return A const reference to the vector containing the mesh's indexes.
+		 */
 		const std::vector<unsigned int>& indexes() const;
 
 		/**
