@@ -1,6 +1,7 @@
 #include "game_engine/module/spk_game_engine_module.hpp"
 #include "game_engine/spk_game_engine.hpp"
 #include "game_engine/spk_game_object.hpp"
+#include "application/spk_application.hpp"
 
 namespace spk
 {
@@ -14,6 +15,13 @@ namespace spk
 			}
 		}
 	}
+
+	void GameEngineModule::update()
+	{
+		_timeMetric.start();
+		_onUpdate();
+		_timeMetric.stop();
+	}
 	
 	void GameEngineModule::_onGameObjectUnsubscription(spk::GameObject* p_gameObject)
 	{
@@ -22,7 +30,9 @@ namespace spk
 			_relevantObjects.end());
 	}
 
-	GameEngineModule::GameEngineModule()
+	GameEngineModule::GameEngineModule(const std::string& p_name) :
+		_name(p_name),
+		_timeMetric(spk::Application::activeApplication()->profiler().metric<TimeMetric>("Module : " + _name))
 	{
 		_owner = _creatingEngine;
 	}

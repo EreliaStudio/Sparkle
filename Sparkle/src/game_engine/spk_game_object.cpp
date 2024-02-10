@@ -1,4 +1,5 @@
 #include "game_engine/spk_game_object.hpp"
+#include "application/spk_application.hpp"
 
 namespace spk
 {
@@ -9,7 +10,7 @@ namespace spk
 				
 		for (auto& component : _components)
 		{
-			component->_onRender();
+			component->render();
 		}
 
 		for (auto& child : children())
@@ -23,10 +24,12 @@ namespace spk
 		if (isActive() == true)
 			return ;
 
+		_timeMetrics.start();
 		for (auto& component : _components)
 		{
-			component->_onUpdate();
+			component->update();
 		}
+		_timeMetrics.stop();
 
 		for (auto& child : children())
 		{
@@ -35,6 +38,7 @@ namespace spk
 	}
 
 	GameObject::GameObject(const std::string& p_name) :
+		_timeMetrics(spk::Application::activeApplication()->profiler().metric<TimeMetric>("Object : " + p_name)),
 		_name(p_name),
 		_transform(),
 		_translationContract(_transform.translation.subscribe([&](){

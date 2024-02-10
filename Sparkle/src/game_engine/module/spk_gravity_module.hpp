@@ -15,7 +15,6 @@ namespace spk
 		bool _isObjectRelevant(spk::GameObject* p_gameObject);
 	
 	public:
-		GravityModule();
 		GravityModule(const spk::Vector3& p_gravityAcceleration);
 	};
 }

@@ -3,6 +3,7 @@
 #include "game_engine/spk_game_engine.hpp"
 #include "application/spk_application.hpp"
 #include "game_engine/component/spk_icollider_component.hpp"
+#include "game_engine/component/spk_physics_component.hpp"
 
 namespace spk
 {	
@@ -16,16 +17,17 @@ namespace spk
 
 	void CollisionModule::_treatCollision(const CollisionModule::Hit& p_hit)
 	{
-		std::cout << "Collision between " << p_hit.a->name() << " and " << p_hit.b->name() << std::endl;
+		std::cout << "Collision between " << p_hit.a->name() << "(" << p_hit.a->getComponent<spk::Physics>()->velocity() << ") and " << p_hit.b->name() << std::endl;
 	}
 
 	void CollisionModule::_onUpdate()
 	{
-		if (spk::Application::activeApplication()->timeMetrics().deltaTime() != 0)
+		std::vector<Hit> hits;
+		std::vector<spk::GameObject*> objectToCheck = relevantObjects();
+		for (size_t i = 0; i < objectToCheck.size(); i++)
 		{
-			std::vector<Hit> hits;
-			std::vector<spk::GameObject*> objectToCheck = relevantObjects();
-			for (size_t i = 0; i < objectToCheck.size(); i++)
+			spk::Physics* physicsComponent = objectToCheck[i]->getComponent<spk::Physics>();
+			if (physicsComponent != nullptr && physicsComponent->velocity() != 0)
 			{
 				for (size_t j = i + 1; j < objectToCheck.size(); j++)
 				{
@@ -35,11 +37,11 @@ namespace spk
 					}
 				}
 			}
+		}
 
-			for (auto& hit : hits)
-			{
-				_treatCollision(hit);
-			}
+		for (auto& hit : hits)
+		{
+			_treatCollision(hit);
 		}
 	}
 
@@ -51,7 +53,7 @@ namespace spk
 	}
 
 	CollisionModule::CollisionModule() :
-		GameEngineModule()
+		GameEngineModule("CollisionModule")
 	{
 
 	}

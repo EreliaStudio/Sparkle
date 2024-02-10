@@ -3,6 +3,8 @@
 #include "design_pattern/spk_tree_node.hpp"
 #include "game_engine/spk_transform.hpp"
 
+#include "profiler/spk_time_metric.hpp"
+
 namespace spk
 {
 	class GameEngine;
@@ -35,6 +37,7 @@ namespace spk
 		friend class GameEngine;
 
 	private:
+		TimeMetric& _timeMetrics;
 		Notifier _onComponentAdditionNotifier;
 		std::string _name;
 		std::vector<std::string> _tags;
@@ -192,6 +195,20 @@ namespace spk
 			return (nullptr);
 		}
 
+		template<typename TComponentName>
+		const TComponentName* getComponent(const std::string& p_expectedName = "") const
+		{
+			for (auto& component : _components)
+			{
+				TComponentName* castedPointer = dynamic_cast<TComponentName*>(component);
+				if (castedPointer != nullptr && (p_expectedName == "" || castedPointer->name() == p_expectedName))
+				{
+					return (castedPointer);
+				}
+			}
+			return (nullptr);
+		}
+
 		/**
 		 * @brief Retrieves all components of a specified type from the GameObject.
 		 * 
@@ -203,6 +220,23 @@ namespace spk
 		 */
 		template<typename TComponentName>
 		std::vector<TComponentName*> getComponentList()
+		{
+			std::vector<TComponentName*> result;
+
+			for (auto& component : _components)
+			{
+				TComponentName* castedPointer = dynamic_cast<TComponentName*>(component);
+				if (castedPointer != nullptr)
+				{
+					result.push_back(castedPointer);
+				}
+			}
+			return (result);
+		}
+
+		
+		template<typename TComponentName>
+		std::vector<const TComponentName*> getComponentList() const
 		{
 			std::vector<TComponentName*> result;
 

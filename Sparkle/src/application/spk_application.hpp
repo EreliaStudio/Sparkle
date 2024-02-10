@@ -19,7 +19,7 @@
 #include "input/spk_keyboard.hpp"
 #include "input/spk_mouse.hpp"
 #include "system/spk_timer.hpp"
-#include "system/spk_time_metrics.hpp"
+#include "system/spk_time_manager.hpp"
 #include "profiler/spk_profiler.hpp"
 #include "profiler/spk_trigger_metric.hpp"
 #include "data_structure/spk_thread_safe_queue.hpp"
@@ -57,7 +57,7 @@ namespace spk
 	 * return (app.run());
 	 * @endcode
 	 *
-	 * @see IWidget, Pipeline, Keyboard, Mouse, TimeMetrics, Profiler
+	 * @see IWidget, Pipeline, Keyboard, Mouse, TimeManager, Profiler
 	 */
 	class Application
 	{
@@ -202,7 +202,7 @@ namespace spk
 		Mouse _mouse;
 
 		Profiler _profiler;
-		TimeMetrics _timeMetrics;
+		TimeManager _timeMetrics;
 		Timer _counterTimer;
 		TriggerMetric& _fpsCounter;
 		TriggerMetric& _upsCounter;
@@ -268,10 +268,10 @@ namespace spk
 		const Mouse& mouse() const;
 		
 		/**
-		 * @brief Return a const reference to the TimeMetrics.
-		 * @return The TimeMetrics managed by the application.
+		 * @brief Return a const reference to the TimeManager.
+		 * @return The TimeManager managed by the application.
 		*/
-		const TimeMetrics& timeMetrics() const;
+		const TimeManager& timeManager() const;
 		
 		/**
 		 * @brief Return a reference to the Profiler.

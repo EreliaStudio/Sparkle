@@ -157,7 +157,7 @@ namespace spk
 		return (_mouse);
 	}
 
-	const TimeMetrics& Application::timeMetrics() const
+	const TimeManager& Application::timeManager() const
 	{
 		return (_timeMetrics);
 	}

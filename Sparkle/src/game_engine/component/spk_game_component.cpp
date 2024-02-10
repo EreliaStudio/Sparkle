@@ -1,13 +1,27 @@
 #include "game_engine/component/spk_game_component.hpp"
 #include "game_engine/spk_game_object.hpp"
+#include "application/spk_application.hpp"
 
 namespace spk
 {
 	GameComponent::GameComponent(const std::string& p_name) :
 		_owner(_creatingObject),
-		_name(p_name)
+		_name(p_name),
+		_timeMetrics(spk::Application::activeApplication()->profiler().metric<TimeMetric>("Component : " + fullName()))
 	{
 		activate();
+	}
+
+	void GameComponent::update()
+	{
+		_timeMetrics.start();
+		_onUpdate();
+		_timeMetrics.stop();
+	}
+	
+	void GameComponent::render()
+	{
+		_onRender();
 	}
 
 	GameObject* GameComponent::owner()

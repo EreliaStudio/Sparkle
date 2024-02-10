@@ -4,6 +4,7 @@
 #include <vector>
 #include "game_engine/spk_game_object.hpp"
 #include "game_engine/module/spk_game_engine_module.hpp"
+#include "profiler/spk_time_metric.hpp"
 
 namespace spk
 {
@@ -51,6 +52,7 @@ namespace spk
 	private:
 		std::vector<GameObject *> _subscribedObjects;
 		std::vector<GameEngineModule*> _modules;
+		TimeMetric& _timeMetric;
 
 		std::vector<std::unique_ptr<Notifier::Contract>> _onComponentAdditionContracts;
 

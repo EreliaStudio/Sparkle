@@ -11,10 +11,7 @@ namespace spk
 
 	void Physics::_onUpdate()
 	{
-		if (spk::Application::activeApplication()->timeMetrics().deltaTime() != 0)
-		{
-        	owner()->transform().translation += _velocity * static_cast<float>(spk::Application::activeApplication()->timeMetrics().deltaTime());
-		}
+		owner()->transform().translation += nextVelocityTick();
 	}
 	
 	Physics::Physics(const std::string& p_name) :
@@ -41,6 +38,11 @@ namespace spk
 		_mass = p_mass;
 	}
 
+	void Physics::setVelocity(const spk::Vector3& p_velocity)
+	{
+		_velocity = p_velocity;
+	}
+
 	void Physics::applyForce(const spk::Vector3& p_force)
 	{
 		const float SecondToMillisecondRatio = 1000.0f;
@@ -56,5 +58,15 @@ namespace spk
 	const float& Physics::mass() const
 	{
 		return (_mass);
+	}
+
+	const spk::Vector3& Physics::velocity() const
+	{
+		return (_velocity);
+	}
+
+	spk::Vector3 Physics::nextVelocityTick() const
+	{
+		return (_velocity * static_cast<float>(spk::Application::activeApplication()->timeManager().deltaTime()));
 	}
 }

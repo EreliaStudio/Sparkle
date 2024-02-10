@@ -1,4 +1,5 @@
 #include "profiler/spk_profiler.hpp"
+#include "application/spk_application.hpp"
 
 namespace spk
 {
@@ -24,6 +25,7 @@ namespace spk
 				result[metricPair.first] = metric->emitReport();
 			}
 		}
+		result["Total program duration"].set<long>(static_cast<long>(spk::Application::activeApplication()->timeManager().programDuration()));
 		return (result);
 	}
 }

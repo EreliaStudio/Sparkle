@@ -1,8 +1,10 @@
 #include "game_engine/spk_game_engine.hpp"
+#include "application/spk_application.hpp"
 
 namespace spk
 {
-	GameEngine::GameEngine()
+	GameEngine::GameEngine() :
+		_timeMetric(spk::Application::activeApplication()->profiler().metric<TimeMetric>("GameEngine"))
 	{
 
 	}
@@ -17,13 +19,18 @@ namespace spk
 
 	void GameEngine::update()
 	{
+		if (spk::Application::activeApplication()->timeManager().deltaTime() == 0)
+			return ;
+			
+		_timeMetric.start();
 		for (auto& module : _modules)
-			module->_onUpdate();
+			module->update();
 
 		for (auto& gameObject : _subscribedObjects)
 		{
 			gameObject->update();
 		}
+		_timeMetric.stop();
 	}
 
 	void GameEngine::subscribe(GameObject* p_newObject)

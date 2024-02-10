@@ -89,17 +89,6 @@ public:
         _inputs.push_back(Input(spk::Keyboard::D, 100, [&](){
                 _movePlayer(spk::Vector3(1.0f, 0, 0));
             }));
-
-        _inputs.push_back(Input(spk::Keyboard::Space, 100, [&](){
-                if (_physicsComponent == nullptr)
-                {
-                    _physicsComponent = owner()->getComponent<spk::Physics>();
-                }
-                if (_physicsComponent != nullptr)
-                {
-                    _physicsComponent->setKinematicState(!_physicsComponent->isKinematic());
-                }
-            }));
     }
 };
 
@@ -111,6 +100,7 @@ int main()
     spk::SpriteSheet* obstacleSpriteSheet = new spk::SpriteSheet("obstacleSpriteSheet.png", spk::Vector2UInt(4, 4));
 
     spk::GameEngine engine;
+    //engine.addModule<spk::GravityModule>(spk::Vector3(0, -1.0f, 0));
     engine.addModule<spk::CollisionModule>();
 
     spk::GameObject playerObject("Player");
@@ -123,7 +113,7 @@ int main()
     playerSpriteRenderer->setSprite(spk::Vector2Int(0, 0));
 
     auto* playerPhysics = playerObject.addComponent<spk::Physics>("Physics");
-    playerPhysics->setKinematicState(false);
+    playerPhysics->setKinematicState(true);
     auto* playerController = playerObject.addComponent<PlayerController>("PlayerController");
     auto* playerSpriteCollider2D = playerObject.addComponent<spk::SpriteCollider2D>("SpriteCollider2D");
     playerSpriteCollider2D->setMesh(playerSpriteRenderer->mesh());
@@ -138,7 +128,8 @@ int main()
 
     spk::GameObject obstacleObject("Obstacle");
     engine.subscribe(&obstacleObject);
-    obstacleObject.transform().translation = spk::Vector3(5, 0, 0);
+    obstacleObject.transform().translation = spk::Vector3(0, -5, 0);
+    obstacleObject.transform().scale = spk::Vector3(100, 1, 1);
     auto* obstacleSpriteRenderer = obstacleObject.addComponent<spk::SpriteRenderer>("Renderer");
     obstacleSpriteRenderer->setSpriteSheet(obstacleSpriteSheet);
     obstacleSpriteRenderer->setSprite(spk::Vector2Int(0, 0));

@@ -22,9 +22,12 @@ namespace spk
 		void setKinematicState(bool p_state);
 
 		void setMass(const float& p_mass);
+		void setVelocity(const spk::Vector3& p_velocity);
 		void applyForce(const spk::Vector3& p_force);
 		void applyAcceleration(const spk::Vector3& p_acceleration);
 
 		const float& mass() const;
+		const spk::Vector3& velocity() const;
+		spk::Vector3 nextVelocityTick() const;
 	};
 }

@@ -18,28 +18,21 @@ namespace spk
 	
 	void GravityModule::_onUpdate()
 	{
-		if (spk::Application::activeApplication()->timeMetrics().deltaTime() != 0)
+		for (auto& object : owner()->subscribedGameObjects())
 		{
-			for (auto& object : owner()->subscribedGameObjects())
-			{
-				_applyGravityAcceleration(object);
-			}
+			_applyGravityAcceleration(object);
 		}
 	}
 
 	bool GravityModule::_isObjectRelevant(spk::GameObject* p_gameObject)
 	{
-		return (true);
-	}
-
-	GravityModule::GravityModule() :
-		GameEngineModule(),
-		_gravityAcceleration(0.0f, 0.0f, 0.0f)
-	{
-
+		if (p_gameObject->getComponent<spk::Physics>() != nullptr)
+			return (true);
+		return (false);
 	}
 
 	GravityModule::GravityModule(const spk::Vector3& p_gravityAcceleration) :
+		GameEngineModule("GravityModule"),
 		_gravityAcceleration(p_gravityAcceleration)
 	{
 

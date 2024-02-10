@@ -2,10 +2,11 @@
 
 #include <chrono>
 #include <stdexcept>
+#include "profiler/spk_time_metric.hpp"
 
 namespace spk
 {
-	class TimeMetrics
+	class TimeManager
 	{
 	private:
 		long long _time;
@@ -17,7 +18,7 @@ namespace spk
 		long long _programDuration;
 
 	public:
-		TimeMetrics():
+		TimeManager():
 			_time(0),
 			_deltaTime(0)
 		{
@@ -43,6 +44,8 @@ namespace spk
 		constexpr const long long& time() const { return (_time); }
 
 		constexpr const long long& deltaTime() const { return (_deltaTime); }
+
+		constexpr const long long& programDuration() const { return (_programDuration); }
 
 		static void sleepAtLeast(long long p_millisecond)
 		{

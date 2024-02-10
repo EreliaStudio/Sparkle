@@ -11,8 +11,8 @@ namespace spk
 		spk::Vector3 _min;
 		spk::Vector3 _max;
 
-		spk::Vector3 _computeMin(const spk::Vector3& p_globalPosition, const spk::Mesh* p_mesh);
-		spk::Vector3 _computeMax(const spk::Vector3& p_globalPosition, const spk::Mesh* p_mesh);
+		spk::Vector3 _computeMin(const spk::Vector3& p_globalPosition, const spk::Vector3& p_globalScale, const spk::Mesh* p_mesh);
+		spk::Vector3 _computeMax(const spk::Vector3& p_globalPosition, const spk::Vector3& p_globalScale, const spk::Mesh* p_mesh);
 
 		void _onMeshEdition();
 

@@ -3,6 +3,8 @@
 #include <string>
 #include "design_pattern/spk_activable_object.hpp"
 
+#include "profiler/spk_time_metric.hpp"
+
 namespace spk
 {
 	class GameObject;
@@ -47,9 +49,13 @@ namespace spk
 		static inline GameObject* _creatingObject = nullptr;
 		GameObject* _owner;
 		std::string _name;
+		TimeMetric& _timeMetrics;
 
 		virtual void _onRender() = 0;
 		virtual void _onUpdate() = 0;
+
+		void update();
+		void render();
 
 	public:
 		/**
