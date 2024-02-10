@@ -5,7 +5,8 @@ namespace spk
 {
 	void GameEngineManager::_onGeometryChange()
 	{
-		
+		if (spk::Camera::mainCamera() != nullptr)
+			spk::Camera::mainCamera()->setAspectRatio(static_cast<float>(size().x) / static_cast<float>(size().y));
 	}
 
 	void GameEngineManager::_onRender()

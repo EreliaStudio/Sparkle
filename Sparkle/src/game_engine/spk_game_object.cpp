@@ -1,4 +1,5 @@
 #include "game_engine/spk_game_object.hpp"
+#include "application/spk_application.hpp"
 
 namespace spk
 {
@@ -9,7 +10,7 @@ namespace spk
 				
 		for (auto& component : _components)
 		{
-			component->_onRender();
+			component->render();
 		}
 
 		for (auto& child : children())
@@ -23,10 +24,12 @@ namespace spk
 		if (isActive() == true)
 			return ;
 
+		_timeMetrics.start();
 		for (auto& component : _components)
 		{
-			component->_onUpdate();
+			component->update();
 		}
+		_timeMetrics.stop();
 
 		for (auto& child : children())
 		{
@@ -35,6 +38,7 @@ namespace spk
 	}
 
 	GameObject::GameObject(const std::string& p_name) :
+		_timeMetrics(spk::Application::activeApplication()->profiler().metric<TimeMetric>("Object : " + p_name)),
 		_name(p_name),
 		_transform(),
 		_translationContract(_transform.translation.subscribe([&](){
@@ -43,7 +47,7 @@ namespace spk
 				child->transform().translation.notify_all();
 			}
 		})),
-		_sclaeContract(_transform.scale.subscribe([&](){
+		_scaleContract(_transform.scale.subscribe([&](){
 			for (auto& child : children())
 			{
 				child->transform().scale.notify_all();
@@ -56,7 +60,7 @@ namespace spk
 			}
 		}))
 	{
-
+		_transform._bind(this);
 	}
 
 	GameObject::GameObject(const std::string& p_name, GameObject* p_parent) :
@@ -77,6 +81,26 @@ namespace spk
 		return (_name);
 	}
 
+	void GameObject::addTag(const std::string& p_tag)
+	{
+		if (std::find(_tags.begin(), _tags.end(), p_tag) == _tags.end())
+		{
+			_tags.push_back(p_tag);
+		}
+	}
+	
+	void GameObject::removeTag(const std::string& p_tag)
+	{
+		_tags.erase(
+			std::remove(_tags.begin(), _tags.end(), p_tag), 
+			_tags.end());
+	}
+	
+	const std::vector<std::string>& GameObject::tags() const
+	{
+		return (_tags);
+	}
+
 	Transform& GameObject::transform()
 	{
 		return (_transform);
@@ -89,14 +113,18 @@ namespace spk
 
 	spk::Vector3 GameObject::globalPosition() const
 	{
-		if (parent() == nullptr)
-			return (_transform.translation.get());
+		spk::Vector3 result = 0;
+	
+		result += _transform.translation.get();
 
-		spk::Vector3 result;
+		if (parent() != nullptr)
+		{
+			result *= parent()->globalScale();
+			result = parent()->globalRotation().applyRotation(result);
+			result += parent()->globalPosition();
+		}
 
-		result = _transform.translation.get().rotate(parent()->transform().rotation) * parent()->transform().scale;
-
-		return (result + parent()->globalPosition());
+		return (result);
 	}
 
 	spk::Vector3 GameObject::globalScale() const
@@ -107,11 +135,11 @@ namespace spk
 		return (parent()->globalScale() * _transform.scale.get());
 	}
 
-	spk::Vector3 GameObject::globalRotation() const
+	spk::Quaternion GameObject::globalRotation() const
 	{
 		if (parent() == nullptr)
 			return (_transform.rotation.get());
 
-		return (parent()->globalRotation() + _transform.rotation.get());
+		return (parent()->globalRotation() * _transform.rotation.get());
 	}
 }

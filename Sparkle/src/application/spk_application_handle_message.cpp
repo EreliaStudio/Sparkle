@@ -48,7 +48,7 @@ namespace spk
 				_handle.resize(Vector2Int(width, height));
 				if (_creationComplete == true)
 				{
-					_centralWidget.resize(Vector2Int(0, 0), Vector2UInt(width, height));
+					_centralWidget->resize(Vector2Int(0, 0), Vector2UInt(width, height));
 				}
 				_updaterJobs.push_back([&, width, height](){});
 				break;

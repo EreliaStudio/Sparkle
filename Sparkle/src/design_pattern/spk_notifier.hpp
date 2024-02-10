@@ -195,6 +195,16 @@ namespace spk
          */
         void notify_all();
 
+        /**
+         * @brief Returns the number of active contracts.
+         * 
+         * This method provides the count of currently active contracts subscribed to the notifier.
+         * It includes only active subscriptions.
+         *
+         * @return The number of active contracts.
+         */
+        size_t nbContracts() const;
+
     private:
         std::vector<Contract *> _contracts;
         std::vector<Contract *> _inactiveContracts;

@@ -89,6 +89,17 @@ public:
         _inputs.push_back(Input(spk::Keyboard::D, 100, [&](){
                 _movePlayer(spk::Vector3(1.0f, 0, 0));
             }));
+
+        _inputs.push_back(Input(spk::Keyboard::Space, 100, [&](){
+                if (_physicsComponent == nullptr)
+                {
+                    _physicsComponent = owner()->getComponent<spk::Physics>();
+                }
+                if (_physicsComponent != nullptr)
+                {
+                    _physicsComponent->setKinematicState(!_physicsComponent->isKinematic());
+                }
+            }));
     }
 };
 
@@ -100,11 +111,9 @@ int main()
     spk::SpriteSheet* obstacleSpriteSheet = new spk::SpriteSheet("obstacleSpriteSheet.png", spk::Vector2UInt(4, 4));
 
     spk::GameEngine engine;
-    //engine.addModule<spk::GravityModule>(spk::Vector3(0, -1.0f, 0));
     engine.addModule<spk::CollisionModule>();
 
     spk::GameObject playerObject("Player");
-    engine.subscribe(&playerObject);
     playerObject.transform().translation = spk::Vector3(0, 0, 0);
     playerObject.transform().rotation = spk::Vector3(0, 0, 0);
 
@@ -113,10 +122,11 @@ int main()
     playerSpriteRenderer->setSprite(spk::Vector2Int(0, 0));
 
     auto* playerPhysics = playerObject.addComponent<spk::Physics>("Physics");
-    playerPhysics->setKinematicState(true);
+    playerPhysics->setKinematicState(false);
     auto* playerController = playerObject.addComponent<PlayerController>("PlayerController");
-    auto* playerMeshCollider2D = playerObject.addComponent<spk::MeshCollider2D>("MeshCollider2D");
-    playerMeshCollider2D->setMesh(playerSpriteRenderer->mesh());
+    auto* playerSpriteCollider2D = playerObject.addComponent<spk::SpriteCollider2D>("SpriteCollider2D");
+    playerSpriteCollider2D->setMesh(playerSpriteRenderer->mesh());
+    engine.subscribe(&playerObject);
 
     spk::GameObject cameraObject("Camera", &playerObject);
     playerController->cameraObject = &cameraObject;
@@ -127,14 +137,28 @@ int main()
     cameraComponent->setType(spk::Camera::Type::Perspective);
 
     spk::GameObject obstacleObject("Obstacle");
-    engine.subscribe(&obstacleObject);
-    obstacleObject.transform().translation = spk::Vector3(0, -5, 0);
-    obstacleObject.transform().scale = spk::Vector3(100, 1, 1);
+    obstacleObject.transform().translation = spk::Vector3(5, 0, 0);
     auto* obstacleSpriteRenderer = obstacleObject.addComponent<spk::SpriteRenderer>("Renderer");
     obstacleSpriteRenderer->setSpriteSheet(obstacleSpriteSheet);
     obstacleSpriteRenderer->setSprite(spk::Vector2Int(0, 0));
-    auto* obstacleMeshCollider2D = obstacleObject.addComponent<spk::MeshCollider2D>("MeshCollider2D");
-    obstacleMeshCollider2D->setMesh(obstacleSpriteRenderer->mesh());
+    auto* obstacleSpriteCollider2D = obstacleObject.addComponent<spk::SpriteCollider2D>("SpriteCollider2D");
+    obstacleSpriteCollider2D->setMesh(obstacleSpriteRenderer->mesh());
+    engine.subscribe(&obstacleObject);
+
+    for (int i = 0; i < 100; i++)
+    {
+        for (int j = 0; j < 100; j++)
+        {
+            spk::GameObject* tmpObstacle = new spk::GameObject("Obstacle");
+            tmpObstacle->transform().translation = spk::Vector3(i * 2, j * 2, 0);
+            auto* tmpObstacleSpriteRenderer = tmpObstacle->addComponent<spk::SpriteRenderer>("Renderer");
+            tmpObstacleSpriteRenderer->setSpriteSheet(obstacleSpriteSheet);
+            tmpObstacleSpriteRenderer->setSprite(spk::Vector2Int(0, 0));
+            auto* tmpObstacleSpriteCollider2D = tmpObstacle->addComponent<spk::SpriteCollider2D>("SpriteCollider2D");
+            tmpObstacleSpriteCollider2D->setMesh(tmpObstacleSpriteRenderer->mesh());
+            engine.subscribe(tmpObstacle);
+        }
+    }
 
     spk::GameEngineManager manager("GameEngine manager");
     manager.setGameEngine(&engine);

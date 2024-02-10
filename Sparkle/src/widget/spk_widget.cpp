@@ -1,4 +1,5 @@
 #include "widget/spk_widget.hpp"
+#include "application/spk_application.hpp"
 
 namespace spk
 {
@@ -25,7 +26,9 @@ namespace spk
 
 	void IWidget::update()
 	{
+		_timeMetric.start();
 		_onUpdate();
+		_timeMetric.stop();
 
 		for (auto& child : children())
 		{
@@ -79,7 +82,8 @@ namespace spk
 
 	IWidget::IWidget(const std::string& p_name) :
 		_name(p_name),
-		_depth(0)
+		_depth(0),
+		_timeMetric(spk::Application::activeApplication()->profiler().metric<TimeMetric>(name()))
 	{
 		if (defaultParent != nullptr)
 			defaultParent->addChild(this);

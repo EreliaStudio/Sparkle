@@ -3,8 +3,12 @@
 #include "design_pattern/spk_tree_node.hpp"
 #include "game_engine/spk_transform.hpp"
 
+#include "profiler/spk_time_metric.hpp"
+
 namespace spk
 {
+	class GameEngine;
+
 	/**
 	 * @class GameObject
 	 * @brief Represents a game object in the game engine hierarchy.
@@ -33,11 +37,14 @@ namespace spk
 		friend class GameEngine;
 
 	private:
+		TimeMetric& _timeMetrics;
+		Notifier _onComponentAdditionNotifier;
 		std::string _name;
+		std::vector<std::string> _tags;
 		Transform _transform;
 		std::unique_ptr<Transform::Contract> _translationContract;
-		std::unique_ptr<Transform::Contract> _sclaeContract;
-		std::unique_ptr<Transform::Contract> _rotationContract;
+		std::unique_ptr<Transform::Contract> _scaleContract;
+		std::unique_ptr<Transform::RotationContract> _rotationContract;
 		std::vector<GameComponent*> _components;
 
 		void render();
@@ -83,6 +90,37 @@ namespace spk
 		 * @return A const reference to the GameObject's name.
 		 */
 		const std::string& name() const;
+
+		/**
+		 * @brief Adds a tag to the GameObject.
+		 * 
+		 * Tags are simple strings that can be used to categorize or identify game objects within the game world.
+		 * This method adds a new tag to this game object, allowing it to be easily found or grouped with others
+		 * by the tag.
+		 * 
+		 * @param p_tag The tag to add to the GameObject.
+		 */
+		void addTag(const std::string& p_tag);
+
+		/**
+		 * @brief Removes a tag from the GameObject.
+		 * 
+		 * If the game object has been previously tagged with the specified tag, this method removes the tag from
+		 * the game object. If the tag is not present, the method has no effect.
+		 * 
+		 * @param p_tag The tag to remove from the GameObject.
+		 */
+		void removeTag(const std::string& p_tag);
+
+		/**
+		 * @brief Retrieves all tags associated with the GameObject.
+		 * 
+		 * This method provides access to all the tags that have been added to the game object. Tags can be used to
+		 * categorize, identify, or filter game objects within the game world.
+		 * 
+		 * @return A constant reference to a vector containing all tags added to the GameObject.
+		 */
+		const std::vector<std::string>& tags() const;
 
 		/**
 		 * @brief Accesses the GameObject's transformation.
@@ -131,7 +169,7 @@ namespace spk
 		 * 
 		 * @return A Vector3 representing the global rotation of the GameObject.
 		 */
-		spk::Vector3 globalRotation() const;
+		spk::Quaternion globalRotation() const;
 
 		/**
 		 * @brief Adds a component of a specified type to the GameObject.
@@ -154,6 +192,8 @@ namespace spk
 			_components.push_back(result);
 
 			GameComponent::_creatingObject = nullptr;
+
+			_onComponentAdditionNotifier.notify_all();
 
 			return (result);
 		}
@@ -183,6 +223,30 @@ namespace spk
 		}
 
 		/**
+		 * @brief Retrieves the first component of a specified type and name from the GameObject, as a const pointer.
+		 * 
+		 * Searches the GameObject's components for the first component that matches the specified type and,
+		 * optionally, the specified name. Returns a pointer to the component if found, or nullptr otherwise.
+		 * 
+		 * @tparam TComponentName The type of the component to search for.
+		 * @param p_expectedName The name of the component to search for (optional).
+		 * @return A const pointer to the component if found, or nullptr otherwise.
+		 */
+		template<typename TComponentName>
+		const TComponentName* getComponent(const std::string& p_expectedName = "") const
+		{
+			for (auto& component : _components)
+			{
+				TComponentName* castedPointer = dynamic_cast<TComponentName*>(component);
+				if (castedPointer != nullptr && (p_expectedName == "" || castedPointer->name() == p_expectedName))
+				{
+					return (castedPointer);
+				}
+			}
+			return (nullptr);
+		}
+
+		/**
 		 * @brief Retrieves all components of a specified type from the GameObject.
 		 * 
 		 * Searches the GameObject's components for all components that match the specified type and returns
@@ -193,6 +257,31 @@ namespace spk
 		 */
 		template<typename TComponentName>
 		std::vector<TComponentName*> getComponentList()
+		{
+			std::vector<TComponentName*> result;
+
+			for (auto& component : _components)
+			{
+				TComponentName* castedPointer = dynamic_cast<TComponentName*>(component);
+				if (castedPointer != nullptr)
+				{
+					result.push_back(castedPointer);
+				}
+			}
+			return (result);
+		}
+
+		/**
+		 * @brief Retrieves all components of a specified type from the GameObject, as const pointers.
+		 * 
+		 * Searches the GameObject's components for all components that match the specified type and returns
+		 * a vector of pointers to these components.
+		 * 
+		 * @tparam TComponentName The type of the components to search for.
+		 * @return A vector of const pointers to the components of the specified type.
+		 */
+		template<typename TComponentName>
+		std::vector<const TComponentName*> getComponentList() const
 		{
 			std::vector<TComponentName*> result;
 

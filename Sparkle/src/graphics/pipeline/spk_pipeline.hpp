@@ -730,6 +730,7 @@ namespace spk
             Constant& _constant;
             Constant::Element& _unitElement;
             const spk::Texture* _activeTexture;
+            static inline const spk::Texture* _lastActiveTexture = nullptr;
 
             Texture(int p_programID, const Layout& p_layout, Constant& p_constant);
 

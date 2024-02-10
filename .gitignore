@@ -19,3 +19,4 @@ executable
 doxygenGeneratedFiles
 Sparkle/src/external_libraries/glm
 simian-4.0.0.jar
+Playground/src/main copy.cpp.txt

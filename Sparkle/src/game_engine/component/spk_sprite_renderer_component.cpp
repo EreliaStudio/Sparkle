@@ -143,11 +143,21 @@ namespace spk
 		_needGPUDataUpdate = true;
 	}
 
+	const spk::Mesh* SpriteRenderer::mesh() const
+	{
+		return (_mesh);
+	}
+
 	void SpriteRenderer::setSpriteSheet(const spk::SpriteSheet* p_spriteSheet)
 	{
 		_spriteSheet = p_spriteSheet;
 		_renderingPipelineTexture.attach(_spriteSheet);
 		_updateSprite();
+	}
+
+	const spk::SpriteSheet* SpriteRenderer::spriteSheet() const
+	{
+		return (_spriteSheet);
 	}
 
 	void SpriteRenderer::setSprite(const spk::Vector2UInt& p_spriteID)
@@ -156,10 +166,20 @@ namespace spk
 		_updateSprite();
 	}
 
+	const spk::Vector2UInt& SpriteRenderer::sprite() const
+	{
+		return (_spriteID);
+	}
+
 	void SpriteRenderer::setSpriteAnimation(const spk::SpriteAnimation* p_spriteAnimation)
 	{
 		_spriteAnimation = p_spriteAnimation;
 		_updateSpriteAnimation();
+	}
+
+	const spk::SpriteAnimation* SpriteRenderer::spriteAnimation() const
+	{
+		return (_spriteAnimation);
 	}
 	
 	void SpriteRenderer::_onRender()
@@ -169,7 +189,8 @@ namespace spk
 			_updateGPUData();
 			_needGPUDataUpdate = false;
 		}
-	
+
+		_renderingPipelineTexture.attach(_spriteSheet);
 		_renderingObject.render();
 	}
 

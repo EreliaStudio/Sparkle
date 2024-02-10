@@ -20,42 +20,31 @@ namespace spk
 		const std::unordered_map<std::string, std::string> sparkleNativeIncludes = {
 			{"widgetAttribute", "AttributeBlock widgetAttribute { float depth; };"},
 			{"screenConstants", "ConstantBlock screenConstants { mat4 canvasMVP; };"},
-			{"transform", R"(struct Transform { vec3 translation; vec3 scale; vec3 rotation; };)"},
+			{"transform", R"(struct Transform { vec3 translation; vec3 scale; vec4 rotation; };)"},
 			{"transformUtils", R"(#include <transform>
 
-				mat4 createRotationMatrix(vec3 angles)
+				vec4 quatMultiply(vec4 a, vec4 b)
 				{
-					float c1 = cos(radians(angles.x));
-					float s1 = sin(radians(angles.x));
-					float c2 = cos(radians(angles.y));
-					float s2 = sin(radians(angles.y));
-					float c3 = cos(radians(angles.z));
-					float s3 = sin(radians(angles.z));
-
-					mat4 rotationX = mat4(	1.0f, 0.0f, 0.0f, 0.0f,
-											0.0f,   c1,   s1, 0.0f,
-											0.0f,  -s1,   c1, 0.0f,
-											0.0f, 0.0f, 0.0f, 1.0f);
-
-					mat4 rotationY = mat4(    c2, 0.0f,  -s2, 0.0f,
-											0.0f, 1.0f, 0.0f, 0.0f,
-											s2, 0.0f,   c2, 0.0f,
-											0.0f, 0.0f, 0.0f, 1.0f);
-
-					mat4 rotationZ = mat4(    c3,   s3, 0.0f, 0.0f,
-											-s3,   c3, 0.0f, 0.0f,
-											0.0f, 0.0f, 1.0f, 0.0f,
-											0.0f, 0.0f, 0.0f, 1.0f);
-
-					return rotationZ * rotationY * rotationX;
+					return vec4(a.w*b.xyz + b.w*a.xyz + cross(a.xyz, b.xyz), a.w*b.w - dot(a.xyz, b.xyz));
 				}
 
-				vec3 applyTransform(vec3 p_position, Transform p_transform)
+				vec3 rotatePointByQuaternion(vec3 point, vec4 q)
 				{
-					mat4 rotationMatrix = createRotationMatrix(p_transform.rotation);
-					vec3 rotatedPosition = (rotationMatrix * vec4(p_position * p_transform.scale, 1.0)).xyz;
-					return (p_transform.translation + rotatedPosition);
-				})"},
+				vec4 qConjugate = vec4(-q.x, -q.y, -q.z, q.w);
+
+				vec4 p = vec4(point, 0.0);
+
+				vec4 qTimesP = quatMultiply(q, p);
+				vec4 rotatedP = quatMultiply(qTimesP, qConjugate);
+
+				return rotatedP.xyz;
+			}
+
+			vec3 applyTransform(vec3 p_position, Transform p_transform) {
+				vec3 rotatedPosition = rotatePointByQuaternion(p_position, p_transform.rotation);
+
+				return p_transform.translation + (rotatedPosition * p_transform.scale);
+			})"},
 			{"cameraConstants", R"(ConstantBlock mainCamera { mat4 MVP; };)"},
 			{"timeConstants", R"(ConstantBlock timeConstants { int epoch; };)"},
 			{"spriteAnimation", R"(struct SpriteAnimation { int duration; ivec2 firstFrame; ivec2 frameOffset; int lenght; };)"}

@@ -45,11 +45,8 @@ namespace spk
      */
     class TimeMetric : public IAnalyticalMetric<long long>
     {
-	public:
-		static inline thread_local long ProgramDuration = 0; //!< Variable thread local representing the total program duration of the program.
-
     private:
-        Chronometer _chronometer;
+        IChronometer<std::chrono::nanoseconds> _chronometer;
 
     public:
         /**
@@ -104,6 +101,5 @@ namespace spk
          * including statistical analysis of the measured durations.
          */
         virtual spk::JSON::Object emitReport() override;
-
     };
 }

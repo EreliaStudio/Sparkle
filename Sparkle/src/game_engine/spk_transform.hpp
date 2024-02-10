@@ -1,6 +1,7 @@
 #pragma once
 
 #include "math/spk_vector3.hpp"
+#include "math/spk_quaternion.hpp"
 #include "game_engine/component/spk_game_component.hpp"
 #include "design_pattern/spk_observable_value.hpp"
 
@@ -34,14 +35,20 @@ namespace spk
 	 */
 	class Transform
 	{
+		friend class GameObject;
 	private:
 		using ObservableVector3 = spk::ObservableValue<spk::Vector3>;
+		using ObservableQuaternion = spk::ObservableValue<spk::Quaternion>;
 
 	public:
 		/**
-		 * @brief The type of contract provided by the triplet translation/scale/rotation uppon subscription.
+		 * @brief The type of contract provided by translation and scale uppon subscription.
 		*/
 		using Contract = spk::ObservableValue<spk::Vector3>::Contract;
+		/**
+		 * @brief The type of contract provided by rotation uppon subscription.
+		*/
+		using RotationContract = spk::ObservableValue<spk::Vector3>::Contract;
 
 		/**
 		 * @brief Observable translation vector.
@@ -65,15 +72,17 @@ namespace spk
 		 * Represents the rotation of the Transform in 3D space, using Euler angles. Subscribing to this property allows
 		 * for reactions to rotation changes.
 		 */
-		ObservableVector3 rotation;
+		ObservableQuaternion rotation;
 
 	private:
-		
+		GameObject *_owner = nullptr;
 		std::unique_ptr<Contract> rotationContract;
 		spk::Vector3 _forward;
 		spk::Vector3 _right;
 		spk::Vector3 _up;
 		void _computeDirections();
+
+		void _bind(GameObject* p_owner);
 
 	public:
 		/**

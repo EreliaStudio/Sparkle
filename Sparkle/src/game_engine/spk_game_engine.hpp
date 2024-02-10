@@ -3,6 +3,8 @@
 #include <functional>
 #include <vector>
 #include "game_engine/spk_game_object.hpp"
+#include "game_engine/module/spk_game_engine_module.hpp"
+#include "profiler/spk_time_metric.hpp"
 
 namespace spk
 {
@@ -49,6 +51,10 @@ namespace spk
 
 	private:
 		std::vector<GameObject *> _subscribedObjects;
+		std::vector<GameEngineModule*> _modules;
+		TimeMetric& _timeMetric;
+
+		std::vector<std::unique_ptr<Notifier::Contract>> _onComponentAdditionContracts;
 
 	public:
 		/**
@@ -58,6 +64,37 @@ namespace spk
 		 * the lifecycle of game objects, including rendering and updating them according to the game loop.
 		 */
 		GameEngine();
+
+		/**
+         * @brief Adds a new module to the game engine.
+         * 
+         * This template method dynamically creates and adds a new module of the specified type to the game engine.
+         * The module is initialized with the provided arguments and is automatically associated with the game engine.
+         * This allows for flexible extension of the game engine's capabilities by adding various types of modules, such
+         * as physics, rendering, or input handling modules.
+         * 
+         * @tparam TModuleName The type of the module to be added.
+         * @tparam Args The types of the arguments to be passed to the module's constructor.
+         * @param p_args The arguments to be passed to the module's constructor.
+         * @return TModuleName* A pointer to the newly created module.
+         * 
+         * Usage example:
+         * @code
+         * auto* physicsModule = gameEngine.addModule<PhysicsModule>(spk::Vector3(0, -9.81, 0));
+         * @endcode
+         */
+		template <typename TModuleName, typename ... Args>
+		TModuleName* addModule(Args&& ... p_args)
+		{
+			GameEngineModule::_creatingEngine = this;
+
+			TModuleName* result = new TModuleName(std::forward<Args>(p_args)...);
+			_modules.push_back(result);
+
+			GameEngineModule::_creatingEngine = nullptr;
+
+			return (result);
+		}
 
 		/**
 		 * @brief Renders all subscribed game objects.
@@ -94,6 +131,17 @@ namespace spk
 		 * @param p_newObject Pointer to the GameObject to unsubscribe.
 		 */
 		void unsubscribe(GameObject *p_newObject);
+
+		/**
+         * @brief Retrieves a constant reference to the list of subscribed game objects.
+         * 
+         * This method provides read-only access to the internal list of game objects that have been subscribed
+         * to the game engine. It allows external entities to query and interact with the current set of active
+         * game objects without modifying the subscription state.
+         * 
+         * @return const std::vector<spk::GameObject*>& A constant reference to the vector of subscribed game objects.
+         */
+		const std::vector<spk::GameObject*>& subscribedGameObjects() const;
 
 		/**
 		 * @brief Gets a single game object by a custom comparator.
