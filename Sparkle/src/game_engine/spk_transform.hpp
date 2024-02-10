@@ -42,9 +42,12 @@ namespace spk
 
 	public:
 		/**
-		 * @brief The type of contract provided by the triplet translation/scale/rotation uppon subscription.
+		 * @brief The type of contract provided by translation and scale uppon subscription.
 		*/
 		using Contract = spk::ObservableValue<spk::Vector3>::Contract;
+		/**
+		 * @brief The type of contract provided by rotation uppon subscription.
+		*/
 		using RotationContract = spk::ObservableValue<spk::Vector3>::Contract;
 
 		/**
