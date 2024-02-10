@@ -6,50 +6,82 @@
 
 namespace spk
 {
-	class TimeManager
-	{
-	private:
-		long long _time;
+	/**
+     * @class TimeManager
+     * @brief Manages time-related functionalities within an application.
+     *
+     * The TimeManager class provides mechanisms to track the passage of time within an application, including
+     * the current time, delta time (the time elapsed between the current frame and the last frame), and the
+     * total duration the program has been running. It also provides utility functions such as sleeping for a
+     * specified duration.
+	 * 
+	 * @note This class is contained inside spk::Application, and is accessible via the method const TimeManager& timeManager()
+	 * 
+	 * @see Application
+     */
+    class TimeManager
+    {
+    private:
+        long long _time;
+        long long _deltaTime;
+        long long _programStartingTime;
+        long long _programDuration;
 
-		long long _deltaTime;
+    public:
+        /**
+         * @brief Constructs a TimeManager and initializes timing metrics.
+         */
+        TimeManager();
 
-		long long _programStartingTime;
+        /**
+         * @brief Updates the timing metrics.
+         *
+         * Calculates and updates the current time, delta time, and program duration based on the system's clock.
+         */
+        void update();
 
-		long long _programDuration;
+        /**
+         * @brief Gets the current system time in milliseconds since the epoch.
+         *
+         * @return Current system time in milliseconds.
+         */
+        static long long currentTime();
 
-	public:
-		TimeManager():
-			_time(0),
-			_deltaTime(0)
+        /**
+         * @brief Gets the current time tracked by the TimeManager.
+         *
+         * @return The current time in milliseconds since the epoch.
+         */
+        constexpr const long long& time() const
 		{
-			_time = _programStartingTime = currentTime();
-
-			update();
+			return (_time);
 		}
 
-		void update()
+        /**
+         * @brief Gets the delta time since the last update.
+         *
+         * @return Delta time in milliseconds.
+         */
+        constexpr const long long& deltaTime() const
 		{
-			long long now = currentTime();
-
-			_deltaTime = now - _time;
-			_time = now;
-			_programDuration = now - _programStartingTime;
+			return (_deltaTime);
 		}
 
-		static long long currentTime()
+        /**
+         * @brief Gets the total duration the program has been running.
+         *
+         * @return Program duration in milliseconds.
+         */
+        constexpr const long long& programDuration() const
 		{
-			return (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
+			return (_programDuration);
 		}
 
-		constexpr const long long& time() const { return (_time); }
-
-		constexpr const long long& deltaTime() const { return (_deltaTime); }
-
-		constexpr const long long& programDuration() const { return (_programDuration); }
-
-		static void sleepAtLeast(long long p_millisecond)
-		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(p_millisecond));
-		}
-	};
+        /**
+         * @brief Pauses the execution for at least the specified duration.
+         *
+         * @param p_millisecond The minimum amount of time, in milliseconds, to sleep.
+         */
+        static void sleepAtLeast(long long p_millisecond);
+    };
 }
