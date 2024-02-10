@@ -196,19 +196,19 @@ namespace spk
 		std::atomic_bool _isRunning;
 		std::atomic_int _errorCode;
 
-		spk::ThreadSafeDeque<std::function<void()>> _updaterJobs;
-
-		Keyboard _keyboard;
-		Mouse _mouse;
-
 		Profiler _profiler;
 		TimeManager _timeMetrics;
 		Timer _counterTimer;
 		TriggerMetric& _fpsCounter;
 		TriggerMetric& _upsCounter;
 
+		spk::ThreadSafeDeque<std::function<void()>> _updaterJobs;
+
+		Keyboard _keyboard;
+		Mouse _mouse;
+
 		Handle _handle;
-		CentralWidget _centralWidget;
+		CentralWidget* _centralWidget;
 
 		LRESULT _handleMessage(const HWND& p_hwnd, const UINT& p_messageID, const WPARAM& p_firstParam, const LPARAM& p_secondParam);
 		void _pullMessage();

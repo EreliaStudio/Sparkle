@@ -18,6 +18,7 @@ namespace spk
 	void CollisionModule::_treatCollision(const CollisionModule::Hit& p_hit)
 	{
 		std::cout << "Collision between " << p_hit.a->name() << "(" << p_hit.a->getComponent<spk::Physics>()->velocity() << ") and " << p_hit.b->name() << std::endl;
+		std::cout << "Work in progress" << std::endl;
 	}
 
 	void CollisionModule::_onUpdate()

@@ -22,7 +22,7 @@ namespace spk
 
 		_handle.clear();
 
-		_centralWidget.render();
+		_centralWidget->render();
 
 		_handle.swap();
 	}
@@ -36,7 +36,7 @@ namespace spk
 			_updaterJobs.pop_front()();
 		}
 	
-		_centralWidget.update();
+		_centralWidget->update();
 
 		_keyboard.update();
 		_mouse.update();
@@ -116,14 +116,16 @@ namespace spk
 	{
 		if (_activeApplication == nullptr)
 			setAsActiveApplication();
-		_centralWidget.setGeometry(spk::Vector2Int(0, 0), size());
-		Viewport::_mainViewport = &(_centralWidget.viewport());
+		_centralWidget = new CentralWidget();
+		_centralWidget->setGeometry(spk::Vector2Int(0, 0), size());
+		Viewport::_mainViewport = &(_centralWidget->viewport());
 		_creationComplete = true;
 	}
 
 	Application::~Application()
 	{
 		std::cout << _profiler.emitReport() << std::endl;
+		delete _centralWidget;
 	}
 
 	int Application::run()

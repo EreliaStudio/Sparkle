@@ -3,6 +3,7 @@
 #include "design_pattern/spk_activable_object.hpp"
 #include "design_pattern/spk_tree_node.hpp"
 #include "graphics/spk_viewport.hpp"
+#include "profiler/spk_time_metric.hpp"
 
 namespace spk
 {
@@ -72,6 +73,8 @@ namespace spk
 		float _depth;
 
 		spk::Viewport _viewport;
+
+		TimeMetric& _timeMetric;
 
 		virtual void _onGeometryChange() = 0;
 
