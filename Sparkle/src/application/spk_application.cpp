@@ -29,7 +29,7 @@ namespace spk
 
 	void Application::_executeUpdaterTick()
 	{
-		_timeMetrics.update();
+		_timeManager.update();
 
 		while (_updaterJobs.empty() == false)
 		{
@@ -161,7 +161,7 @@ namespace spk
 
 	const TimeManager& Application::timeManager() const
 	{
-		return (_timeMetrics);
+		return (_timeManager);
 	}
 
 	Profiler& Application::profiler()

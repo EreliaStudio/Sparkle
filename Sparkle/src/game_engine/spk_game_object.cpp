@@ -24,12 +24,16 @@ namespace spk
 		if (isActive() == true)
 			return ;
 
-		_timeMetrics.start();
+	#ifndef NDEBUG
+		_timeMetric.start();
+	#endif
 		for (auto& component : _components)
 		{
 			component->update();
 		}
-		_timeMetrics.stop();
+	#ifndef NDEBUG
+		_timeMetric.stop();
+	#endif
 
 		for (auto& child : children())
 		{
@@ -38,7 +42,9 @@ namespace spk
 	}
 
 	GameObject::GameObject(const std::string& p_name) :
-		_timeMetrics(spk::Application::activeApplication()->profiler().metric<TimeMetric>("Object : " + p_name)),
+	#ifndef NDEBUG
+		_timeMetric(spk::Application::activeApplication()->profiler().metric<TimeMetric>("Object : " + p_name)),
+	#endif
 		_name(p_name),
 		_transform(),
 		_translationContract(_transform.translation.subscribe([&](){

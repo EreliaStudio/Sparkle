@@ -5,18 +5,24 @@
 namespace spk
 {
 	GameComponent::GameComponent(const std::string& p_name) :
+	#ifndef NDEBUG
+		_timeMetric(spk::Application::activeApplication()->profiler().metric<TimeMetric>("Component : " + fullName())),
+	#endif
 		_owner(_creatingObject),
-		_name(p_name),
-		_timeMetrics(spk::Application::activeApplication()->profiler().metric<TimeMetric>("Component : " + fullName()))
+		_name(p_name)
 	{
 		activate();
 	}
 
 	void GameComponent::update()
 	{
-		_timeMetrics.start();
+	#ifndef NDEBUG
+		_timeMetric.start();
+	#endif
 		_onUpdate();
-		_timeMetrics.stop();
+	#ifndef NDEBUG
+		_timeMetric.stop();
+	#endif
 	}
 	
 	void GameComponent::render()

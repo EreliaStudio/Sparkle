@@ -37,7 +37,9 @@ namespace spk
 		friend class GameEngine;
 
 	private:
-		TimeMetric& _timeMetrics;
+	#ifndef NDEBUG
+		TimeMetric& _timeMetric;
+	#endif
 		Notifier _onComponentAdditionNotifier;
 		std::string _name;
 		std::vector<std::string> _tags;
