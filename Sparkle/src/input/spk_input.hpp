@@ -48,11 +48,14 @@ namespace spk
         Input(Keyboard::Key p_key, InputState p_state)
             : _type(Type::Keyboard), _key(p_key), _state(p_state) {}
 
+        /// Inputs are identified by their code. Each input has a unique code.
         using Code = size_t;
 
-        static constexpr Code kCodeUnknown = 0; //< A code that is not used by any Input.
+        /// A code that is not used by any Input. Default initializer will give that code.
+        static constexpr Code kCodeUnknown = 0;
 
-        static constexpr Code max_code = Keyboard::Key::Maximum + Mouse::Button::Maximum; //< The largest possible input code.
+        /// The largest possible input code.
+        static constexpr Code max_code = Keyboard::Key::Maximum + Mouse::Button::Maximum;
 
         /**
          * @brief Getter for Code.
@@ -82,6 +85,9 @@ namespace spk
          */
         InputState state() const { return _state; }
 
+        /**
+         * @brief Compares two inputs. True if both the code and state are equal. 
+        */
         bool operator==(const Input &other) const
         {
             return (code() == other.code()) && (state() == other.state());

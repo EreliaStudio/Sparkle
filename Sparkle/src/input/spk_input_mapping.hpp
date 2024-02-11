@@ -24,7 +24,7 @@ namespace spk
          */
         static constexpr size_t kInvalidCode = -1;
 
-        //!< Default name if a debug name was not provided.
+        /// Default name if a debug name was not provided.
         static constexpr char KUnnamedMapping[] = "";
 
         /**
@@ -49,25 +49,26 @@ namespace spk
         {
         }
 
-        //!< Returns true if the mapping is valid. Mapping created with the default constructor will be incomplete.
+        /// Returns true if the mapping is valid. Mapping created with the default constructor will be incomplete.
         bool valid() const { return _code != kInvalidCode; }
 
-        //!< Getter for the mapping's name.
+        /// Getter for the mapping's name.
         const std::string &name() const { return _name; }
 
-        //!< Getter for the Input expected by this mapping.
+        /// Getter for the Input expected by this mapping.
         const Input &expects() const { return _expects; }
 
-        //!< Getter for the event code that this mapping triggers.
+        /// Getter for the event code that this mapping triggers.
         size_t code() const { return _code; }
 
-        //!< Getter for the event code that this mapping triggers.
+        /// Getter for the event code that this mapping triggers.
         template <typename EventType>
         EventType code() const { static_cast<EventType>(_code); }
 
+        /// Compares two mappings. True if other has the same input and event code.
         bool operator==(const InputMapping &other) const
         {
-            return (code() == other.code()) && (expects() == other.expects()) && (name() == other.name());
+            return (code() == other.code()) && (expects() == other.expects());
         }
 
         /**
