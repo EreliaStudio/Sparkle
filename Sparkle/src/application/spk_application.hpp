@@ -197,7 +197,7 @@ namespace spk
 		std::atomic_int _errorCode;
 
 		Profiler _profiler;
-		TimeManager _timeMetrics;
+		TimeManager _timeManager;
 		Timer _counterTimer;
 		TriggerMetric& _fpsCounter;
 		TriggerMetric& _upsCounter;

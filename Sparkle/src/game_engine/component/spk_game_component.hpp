@@ -49,7 +49,9 @@ namespace spk
 		static inline GameObject* _creatingObject = nullptr;
 		GameObject* _owner;
 		std::string _name;
-		TimeMetric& _timeMetrics;
+	#ifndef NDEBUG
+		TimeMetric& _timeMetric;
+	#endif
 
 		virtual void _onRender() = 0;
 		virtual void _onUpdate() = 0;

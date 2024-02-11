@@ -26,9 +26,13 @@ namespace spk
 
 	void IWidget::update()
 	{
+	#ifndef NDEBUG
 		_timeMetric.start();
+	#endif
 		_onUpdate();
+	#ifndef NDEBUG
 		_timeMetric.stop();
+	#endif
 
 		for (auto& child : children())
 		{
@@ -82,8 +86,10 @@ namespace spk
 
 	IWidget::IWidget(const std::string& p_name) :
 		_name(p_name),
-		_depth(0),
-		_timeMetric(spk::Application::activeApplication()->profiler().metric<TimeMetric>(name()))
+		#ifndef NDEBUG
+			_timeMetric(spk::Application::activeApplication()->profiler().metric<TimeMetric>(name())),
+		#endif
+		_depth(0)
 	{
 		if (defaultParent != nullptr)
 			defaultParent->addChild(this);

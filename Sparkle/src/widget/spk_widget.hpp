@@ -74,7 +74,9 @@ namespace spk
 
 		spk::Viewport _viewport;
 
+	#ifndef NDEBUG
 		TimeMetric& _timeMetric;
+	#endif
 
 		virtual void _onGeometryChange() = 0;
 
