@@ -68,6 +68,7 @@ namespace spk
 			{
 				_updaterJobs.push_back([&](){
 						_mouse.pressButton(Mouse::Left);
+						_inputDecoder.add(Input{Mouse::Left, InputState::Pressed});
 					});
 				break;
 			}
@@ -75,6 +76,7 @@ namespace spk
 			{
 				_updaterJobs.push_back([&](){
 						_mouse.pressButton(Mouse::Middle);
+						_inputDecoder.add(Input{Mouse::Middle, InputState::Pressed});
 					});
 				break;
 			}
@@ -82,6 +84,7 @@ namespace spk
 			{
 				_updaterJobs.push_back([&](){
 					_mouse.pressButton(Mouse::Right);
+					_inputDecoder.add(Input{Mouse::Right, InputState::Pressed});
 				});
 				break;
 			}
@@ -89,6 +92,7 @@ namespace spk
 			{
 				_updaterJobs.push_back([&](){
 					_mouse.releaseButton(Mouse::Left);
+					_inputDecoder.add(Input{Mouse::Left, InputState::Released});
 				});
 				break;
 			}
@@ -96,6 +100,7 @@ namespace spk
 			{
 				_updaterJobs.push_back([&](){
 					_mouse.releaseButton(Mouse::Middle);
+					_inputDecoder.add(Input{Mouse::Middle, InputState::Released});
 				});
 				break;
 			}
@@ -103,6 +108,7 @@ namespace spk
 			{
 				_updaterJobs.push_back([&](){
 					_mouse.releaseButton(Mouse::Right);
+					_inputDecoder.add(Input{Mouse::Right, InputState::Released});
 				});
 				break;
 			}
@@ -114,6 +120,7 @@ namespace spk
 					{
 						_updaterJobs.push_back([&](){
 							_mouse.pressButton(Mouse::Button3);
+							_inputDecoder.add(Input{Mouse::Button3, InputState::Pressed});
 						});
 						break;
 					}
@@ -121,6 +128,7 @@ namespace spk
 					{
 						_updaterJobs.push_back([&](){
 							_mouse.pressButton(Mouse::Button4);
+							_inputDecoder.add(Input{Mouse::Button4, InputState::Pressed});
 						});
 						break;
 					}
@@ -139,6 +147,7 @@ namespace spk
 					{
 						_updaterJobs.push_back([&](){
 							_mouse.releaseButton(Mouse::Button3);
+							_inputDecoder.add(Input{Mouse::Button3, InputState::Released});
 						});
 						break;
 					}
@@ -146,6 +155,7 @@ namespace spk
 					{
 						_updaterJobs.push_back([&](){
 							_mouse.releaseButton(Mouse::Button4);
+							_inputDecoder.add(Input{Mouse::Button4, InputState::Released});
 						});
 						break;
 					}
@@ -200,6 +210,7 @@ namespace spk
 
 				_updaterJobs.push_back([&, value](){
 					_keyboard.pressKey(value);
+					_inputDecoder.add(Input{static_cast<Keyboard::Key>(value), InputState::Pressed});
 				});
 				break;
 			}
@@ -210,6 +221,7 @@ namespace spk
 
 				_updaterJobs.push_back([&, value](){
 					_keyboard.releaseKey(value);
+					_inputDecoder.add(Input{static_cast<Keyboard::Key>(value), InputState::Released});
 				});
 				break;
 			}

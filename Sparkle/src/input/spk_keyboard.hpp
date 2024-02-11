@@ -182,7 +182,8 @@ namespace spk
 			Quote = 222,
 			Unknow = 223,
 			AngleBracket = 226,
-			Process = 229
+			Process = 229,
+			Maximum = 255
 		};
 
 	private:
@@ -191,7 +192,7 @@ namespace spk
 		static inline const char kPressed = static_cast<char>(InputState::Pressed); 
 		static inline const char kReleased = static_cast<char>(InputState::Released);
 
-		std::atomic_uint8_t _keys[255];
+		std::atomic_uint8_t _keys[Keyboard::Key::Maximum];
 		std::atomic_wchar_t _char;
 		std::vector<uint32_t> _keysToUpdate;
 

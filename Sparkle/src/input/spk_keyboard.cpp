@@ -6,7 +6,7 @@ namespace spk
 {
 	Keyboard::Keyboard()
 	{
-		for (size_t i = 0; i < 255; i++)
+		for (size_t i = 0; i < Keyboard::Key::Maximum; i++)
 		{
 			_keys[i] = kUp;
 		}

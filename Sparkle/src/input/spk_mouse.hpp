@@ -65,7 +65,8 @@ namespace spk
 			Middle,
 			Right,
 			Button3,
-			Button4
+			Button4,
+			Maximum
 		};
 
 

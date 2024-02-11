@@ -1,5 +1,7 @@
 #include "system/spk_time_manager.hpp"
 
+#include <thread>
+
 namespace spk
 {
 	TimeManager::TimeManager():
