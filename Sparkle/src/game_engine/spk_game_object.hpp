@@ -61,7 +61,7 @@ namespace spk
 		 * 
 		 * @param p_name The name of the GameObject, used for identification within the game engine.
 		 */
-		GameObject(const std::string& p_name);
+		GameObject(const std::string& p_name = "Unnamed");
 
 		/**
 		 * @brief Constructs a GameObject with a specified name and parent.

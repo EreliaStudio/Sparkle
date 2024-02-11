@@ -33,7 +33,7 @@
 
 #include "game_engine/spk_mesh.hpp"
 #include "game_engine/component/spk_camera_component.hpp"
-#include "game_engine/component/spk_sprite_renderer_component.hpp"
+#include "game_engine/component/spk_mesh_renderer_component.hpp"
 #include "game_engine/component/spk_physics_component.hpp"
 #include "game_engine/component/spk_mesh_collider_2D_component.hpp"
 

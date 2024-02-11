@@ -1,10 +1,10 @@
-#include "game_engine/component/spk_sprite_renderer_component.hpp"
+#include "game_engine/component/spk_mesh_renderer_component.hpp"
 #include "game_engine/spk_game_object.hpp"
 
 namespace spk
 {
-	const spk::Mesh SpriteRenderer::_defaultMesh = spk::createSpriteMesh();
-	std::string SpriteRenderer::_renderingPipelineCode = R"(#version 450
+	const spk::Mesh MeshRenderer::_defaultMesh = spk::createSpriteMesh();
+	std::string MeshRenderer::_renderingPipelineCode = R"(#version 450
 
 	#include <transform>
 	#include <transformUtils>
@@ -53,23 +53,23 @@ namespace spk
 	}
 	)";
 
-	SpriteRenderer::RenderingPipelineVertex::RenderingPipelineVertex() :
+	MeshRenderer::RenderingPipelineVertex::RenderingPipelineVertex() :
 		position(0, 0, 0),
 		uvs(0, 0)
 	{
 
 	}
 
-	SpriteRenderer::RenderingPipelineVertex::RenderingPipelineVertex(const spk::Vector3& p_position, const spk::Vector2& p_uvs) :
+	MeshRenderer::RenderingPipelineVertex::RenderingPipelineVertex(const spk::Vector3& p_position, const spk::Vector2& p_uvs) :
 		position(p_position),
 		uvs(p_uvs)
 	{
 
 	}
 
-	spk::Pipeline SpriteRenderer::_renderingPipeline = spk::Pipeline(_renderingPipelineCode);
+	spk::Pipeline MeshRenderer::_renderingPipeline = spk::Pipeline(_renderingPipelineCode);
 
-	void SpriteRenderer::_updateGPUData()
+	void MeshRenderer::_updateGPUData()
 	{
 		Mesh::Data data = _mesh->bake();
 
@@ -77,7 +77,7 @@ namespace spk
 		_renderingObject.setIndexes(data.indexes);
 	}
 
-	void SpriteRenderer::_updateTransform()
+	void MeshRenderer::_updateTransform()
 	{
 		_renderingObjectSelfTransformTranslationAttribute = owner()->globalPosition();
 		_renderingObjectSelfTransformScaleAttribute = owner()->globalScale();
@@ -85,7 +85,7 @@ namespace spk
 		_renderingObjectSelfAttribute.update();
 	}
 
-	void SpriteRenderer::_updateSprite()
+	void MeshRenderer::_updateSprite()
 	{
 		if (_spriteSheet == nullptr)
 			return ;
@@ -94,7 +94,7 @@ namespace spk
 		_renderingObjectSpriteAttribute.update();
 	}
 
-	void SpriteRenderer::_updateSpriteAnimation()
+	void MeshRenderer::_updateSpriteAnimation()
 	{
 		_renderingObjectSpriteAttributeStartEpoch = static_cast<int>(spk::getTime() % 100000);
 
@@ -110,7 +110,7 @@ namespace spk
 		_renderingObjectSpriteAttribute.update();
 	}
 
-	SpriteRenderer::SpriteRenderer(const std::string& p_name) :
+	MeshRenderer::MeshRenderer(const std::string& p_name) :
 		spk::GameComponent(p_name),
 		_renderingObject(_renderingPipeline.createObject()),
 		_renderingObjectSelfAttribute(_renderingObject.attribute("self")),
@@ -134,7 +134,7 @@ namespace spk
 		_updateSpriteAnimation();
 	}
 
-	void SpriteRenderer::setMesh(const spk::Mesh* p_mesh)
+	void MeshRenderer::setMesh(const spk::Mesh* p_mesh)
 	{
 		_mesh = p_mesh;
 		_meshEditionContract = std::move(_mesh->subscribeToEdition([&](){
@@ -143,46 +143,46 @@ namespace spk
 		_needGPUDataUpdate = true;
 	}
 
-	const spk::Mesh* SpriteRenderer::mesh() const
+	const spk::Mesh* MeshRenderer::mesh() const
 	{
 		return (_mesh);
 	}
 
-	void SpriteRenderer::setSpriteSheet(const spk::SpriteSheet* p_spriteSheet)
+	void MeshRenderer::setSpriteSheet(const spk::SpriteSheet* p_spriteSheet)
 	{
 		_spriteSheet = p_spriteSheet;
 		_renderingPipelineTexture.attach(_spriteSheet);
 		_updateSprite();
 	}
 
-	const spk::SpriteSheet* SpriteRenderer::spriteSheet() const
+	const spk::SpriteSheet* MeshRenderer::spriteSheet() const
 	{
 		return (_spriteSheet);
 	}
 
-	void SpriteRenderer::setSprite(const spk::Vector2UInt& p_spriteID)
+	void MeshRenderer::setSprite(const spk::Vector2UInt& p_spriteID)
 	{
 		_spriteID = p_spriteID;
 		_updateSprite();
 	}
 
-	const spk::Vector2UInt& SpriteRenderer::sprite() const
+	const spk::Vector2UInt& MeshRenderer::sprite() const
 	{
 		return (_spriteID);
 	}
 
-	void SpriteRenderer::setSpriteAnimation(const spk::SpriteAnimation* p_spriteAnimation)
+	void MeshRenderer::setSpriteAnimation(const spk::SpriteAnimation* p_spriteAnimation)
 	{
 		_spriteAnimation = p_spriteAnimation;
 		_updateSpriteAnimation();
 	}
 
-	const spk::SpriteAnimation* SpriteRenderer::spriteAnimation() const
+	const spk::SpriteAnimation* MeshRenderer::spriteAnimation() const
 	{
 		return (_spriteAnimation);
 	}
 	
-	void SpriteRenderer::_onRender()
+	void MeshRenderer::_onRender()
 	{
 		if (_needGPUDataUpdate == true)
 		{
@@ -194,7 +194,7 @@ namespace spk
 		_renderingObject.render();
 	}
 
-	void SpriteRenderer::_onUpdate()
+	void MeshRenderer::_onUpdate()
 	{
 		
 	}

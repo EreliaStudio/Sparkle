@@ -12,7 +12,7 @@
 namespace spk
 {
 	/**
-	 * @class SpriteRenderer
+	 * @class MeshRenderer
 	 * @brief Represents a sprite renderer component for rendering sprites in world space.
 	 * 
 	 * This class allows you to create a sprite renderer component that can be attached to game objects.
@@ -24,23 +24,23 @@ namespace spk
 	 * spk::GameObject gameObject("SpriteObject");
 	 * 
 	 * // Create a sprite renderer component
-	 * SpriteRenderer* spriteRenderer = gameObject.addComponent<spk::SpriteRenderer>("MySpriteRenderer");
+	 * MeshRenderer* MeshRenderer = gameObject.addComponent<spk::MeshRenderer>("MySpriteRenderer");
 	 * 
 	 * // Set the mesh for rendering the sprite
-	 * spriteRenderer->setMesh(&spk::SpriteRenderer::_defaultMesh);
+	 * MeshRenderer->setMesh(&spk::MeshRenderer::_defaultMesh);
 	 * 
 	 * // Set the sprite sheet and sprite ID
-	 * spriteRenderer->setSpriteSheet(&mySpriteSheet);
-	 * spriteRenderer->setSprite(spk::Vector2UInt(0, 0));
+	 * MeshRenderer->setSpriteSheet(&mySpriteSheet);
+	 * MeshRenderer->setSprite(spk::Vector2UInt(0, 0));
 	 * 
 	 * // Set the sprite animation (optional)
-	 * spriteRenderer->setSpriteAnimation(&mySpriteAnimation);
+	 * MeshRenderer->setSpriteAnimation(&mySpriteAnimation);
 	 * @endcode
 	 * 
 	 * @see GameComponent, GameObject, Texture, SpriteAnimation, IVector2
 	 */
 
-	class SpriteRenderer : public spk::GameComponent
+	class MeshRenderer : public spk::GameComponent
 	{
 	private:
 		static const spk::Mesh _defaultMesh;
@@ -96,7 +96,7 @@ namespace spk
 		 * 
 		 * @param p_name The name of the sprite renderer component, used for identification purposes.
 		 */
-		SpriteRenderer(const std::string& p_name);
+		MeshRenderer(const std::string& p_name);
 
 		/**
 		 * @brief Sets the mesh used by the sprite renderer.

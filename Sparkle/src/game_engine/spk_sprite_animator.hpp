@@ -29,7 +29,7 @@ namespace spk
 	 * animation.length = 8; // Number of frames in the animation
 	 * @endcode
 	 * 
-	 * @see SpriteRenderer
+	 * @see MeshRenderer
 	 */
 	struct SpriteAnimation
 	{
