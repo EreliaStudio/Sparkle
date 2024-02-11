@@ -26,11 +26,9 @@ endmacro()
 
 find_package(GLEW REQUIRED)
 
-set(SPARKLE_INCLUDE_DIRS "C:/Program Files (x86)/Sparkle/include")
+set(SPARKLE_INCLUDE_DIRS "C:/Program Files (x86)/Sparkle/include" ${GLEW_INCLUDE_DIRS})
+set(SPARKLE_LIBRARY_DIRS "C:/Program Files (x86)/Sparkle/lib/x32/Debug" ${GLEW_LIBRARY_DIRS})
 
-set(SPARKLE_LIBRARY_DIRS "C:/Program Files (x86)/Sparkle/lib")
+set(SPARKLE_LIBRARIES Sparkle OpenGL32.lib GLEW::GLEW)
 
-set(SPARKLE_LIBRARY_DIRS "C:/Program Files (x86)/Sparkle/lib" ${GLEW_LIBRARY_DIRS})
-set(SPARKLE_LIBRARIES Sparkle ${GLEW_LIBRARIES})
-
-include("${CMAKE_CURRENT_LIST_DIR}/SparkleTargets.cmake")
+include("C:/Program Files (x86)/Sparkle/lib/cmake/Sparkle/SparkleTargets.cmake")

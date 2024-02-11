@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 3.15.2)
 
 set(ProductName "Sparkle")
 
-list(APPEND CMAKE_PREFIX_PATH "C:/Program Files/glew")
-
 find_package(GLEW REQUIRED)
 
 add_subdirectory(src)
@@ -19,26 +17,25 @@ target_include_directories(${ProductName} PUBLIC
 target_link_libraries(${ProductName} OpenGL32.lib GLEW::GLEW)
 
 set(SPARKLE_INCLUDE_DIRECTORY "${CMAKE_INSTALL_PREFIX}/include")
-set(SPARKLE_LIBRARY_DIRECTORY "${CMAKE_INSTALL_PREFIX}/lib")
+set(SPARKLE_LIBRARY_DIRECTORY "${CMAKE_INSTALL_PREFIX}/lib/x${OSBitness}/${CMAKE_BUILD_TYPE}")
 
 # Specify library and runtime destinations
 install(TARGETS ${ProductName}
         EXPORT ${ProductName}Targets
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib
-        RUNTIME DESTINATION bin
+        LIBRARY DESTINATION lib/x${OSBitness}/${CMAKE_BUILD_TYPE}
+        ARCHIVE DESTINATION lib/x${OSBitness}/${CMAKE_BUILD_TYPE}
+        RUNTIME DESTINATION bin/x${OSBitness}/${CMAKE_BUILD_TYPE}
         INCLUDES DESTINATION include
 )
 
 # Install only .hpp files from the src directory
 install(DIRECTORY src/
-        DESTINATION include/${ProductName}
+        DESTINATION include
         FILES_MATCHING PATTERN "*.hpp"
 )
 
 # Export the targets and create the config files
 install(EXPORT ${ProductName}Targets
-        FILE ${ProductName}Targets.cmake
         NAMESPACE ${ProductName}::
         DESTINATION lib/cmake/${ProductName}
 )
