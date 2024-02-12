@@ -55,7 +55,7 @@ namespace spk
         static constexpr Code kCodeUnknown = 0;
 
         /// The largest possible input code.
-        static constexpr Code max_code = Keyboard::Key::Maximum + Mouse::Button::Maximum;
+        static constexpr Code max_code = 1 + Keyboard::Key::Maximum + Mouse::Button::Maximum;
 
         /**
          * @brief Getter for Code.

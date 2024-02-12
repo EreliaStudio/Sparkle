@@ -22,7 +22,7 @@ namespace spk
          *
          * This value is used by the default initializer.
          */
-        static constexpr size_t kInvalidCode = -1;
+        static constexpr size_t kDummyMappingCode = std::numeric_limits<size_t>::max();
 
         /// Default name if a debug name was not provided.
         static constexpr char KUnnamedMapping[] = "";
@@ -32,7 +32,7 @@ namespace spk
          *
          * Used to initialize fixed-sized arrays.
          */
-        InputMapping() : _name(""), _code(kInvalidCode) {}
+        InputMapping() : _name(""), _code(kDummyMappingCode) {}
 
         virtual ~InputMapping() = default;
 
@@ -50,7 +50,7 @@ namespace spk
         }
 
         /// Returns true if the mapping is valid. Mapping created with the default constructor will be incomplete.
-        bool valid() const { return _code != kInvalidCode; }
+        bool valid() const { return _code != kDummyMappingCode; }
 
         /// Getter for the mapping's name.
         const std::string &name() const { return _name; }
@@ -78,7 +78,7 @@ namespace spk
         {
             _name.clear();
             _expects = Input();
-            _code = kInvalidCode;
+            _code = kDummyMappingCode;
         }
 
     private:
