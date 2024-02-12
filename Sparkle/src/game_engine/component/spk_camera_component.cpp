@@ -63,17 +63,32 @@ namespace spk
 		_needGPUDataUpdate = true;
 	}
 
+	const Camera::Type& Camera::type() const
+	{
+		return (_type);
+	}
+
 	void Camera::setOrthographicSize(const spk::Vector2& p_orthographicSize)
 	{
 		_orthoSize = p_orthographicSize;
 		if (_type == Type::Orthographic)
 			_needGPUDataUpdate = true;
 	}
+
+	const spk::Vector2& Camera::orthographicSize() const
+	{
+		return (_orthoSize);
+	}
 	
 	void Camera::setNearPlane(const float& p_nearPlane)
 	{
 		_nearPlane = p_nearPlane;
 		_needGPUDataUpdate = true;
+	}
+
+	const float& Camera::nearPlane() const
+	{
+		return (_nearPlane);
 	}
 	
 	void Camera::setFarPlane(const float& p_farPlane)
@@ -82,11 +97,21 @@ namespace spk
 		_needGPUDataUpdate = true;
 	}
 
+	const float& Camera::farPlane() const
+	{
+		return (_farPlane);
+	}
+
 	void Camera::setFOV(const float& p_fov)
 	{
 		_fov = p_fov;
 		if (_type == Type::Perspective)
 			_needGPUDataUpdate = true;
+	}
+
+	const float& Camera::fov() const
+	{
+		return (_fov);
 	}
 	
 	void Camera::setAspectRatio(const float& p_aspectRatio)
@@ -94,6 +119,11 @@ namespace spk
 		_aspectRatio = p_aspectRatio;
 		if (_type == Type::Perspective)
 			_needGPUDataUpdate = true;
+	}
+
+	const float& Camera::aspectRatio() const
+	{
+		return (_aspectRatio);
 	}
 
 	void Camera::_onRender()

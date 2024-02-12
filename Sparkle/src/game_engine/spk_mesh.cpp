@@ -183,6 +183,14 @@ namespace spk
 		_editionNotifier.notify_all();
 	}
 
+	void Mesh::clear()
+	{
+		clearPoints();
+		clearUVs();
+		clearNormals();
+		clearPoints();
+	}
+
 	void Mesh::reservePoints(size_t p_expectedNbPoints)
 	{
 		_points.reserve(p_expectedNbPoints);
@@ -196,6 +204,11 @@ namespace spk
 	const std::vector<spk::Vector3>& Mesh::points() const
 	{
 		return (_points);
+	}
+
+	void Mesh::clearPoints()
+	{
+		_points.clear();
 	}
 
 	void Mesh::reserveUVs(size_t p_expectedNbUVs)
@@ -213,6 +226,11 @@ namespace spk
 		return (_uvs);
 	}
 
+	void Mesh::clearUVs()
+	{
+		_uvs.clear();
+	}
+
 	void Mesh::reserveNormal(size_t p_expectedNbNormal)
 	{
 		_normals.reserve(p_expectedNbNormal);
@@ -226,6 +244,11 @@ namespace spk
 	const std::vector<spk::Vector3>& Mesh::normals() const
 	{
 		return (_normals);
+	}
+
+	void Mesh::clearNormals()
+	{
+		_normals.clear();
 	}
 
 	void Mesh::reserveIndex(size_t p_expectedNbIndex)
@@ -243,6 +266,11 @@ namespace spk
 	const std::vector<unsigned int>& Mesh::indexes() const
 	{
 		return (_indexes);
+	}
+
+	void Mesh::clearIndexes()
+	{
+		_indexes.clear();
 	}
 
 	void Mesh::bakeNormals()

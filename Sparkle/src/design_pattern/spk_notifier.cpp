@@ -15,14 +15,46 @@ namespace spk
         Deactivating the Notifier ensures that none of the other methods will
         even try to acquire the mutex, and will instead abort instantly.
         */
-        _deactivated = true;
+        if (_deactivated == false)
+        {
+            _deactivated = true;
 
-        std::unique_lock<std::mutex> contractsLk(_mu);
+            std::unique_lock<std::mutex> contractsLk(_mu);
 
-        for (Contract *contract : _contracts)
+            for (Contract *contract : _contracts)
+            {
+                contract->cancel();
+            }
+
+            for (Contract *contract : _inactiveContracts)
+            {
+                contract->cancel();
+            }
+        }
+    }
+
+    Notifier::Notifier(const Notifier& p_other) :
+        _deactivated(false)
+    {
+
+    }
+
+    Notifier& Notifier::operator = (const Notifier& p_other)
+    {
+        _deactivated = false;
+        for (auto* contract : _contracts)
         {
             contract->cancel();
         }
+        _contracts.clear();
+
+        for (auto* contract : _inactiveContracts)
+        {
+            contract->cancel();
+        }
+        _inactiveContracts.clear();
+        
+        return (*this);
     }
 
     Notifier::Notifier(Notifier&& p_other) :
@@ -31,6 +63,9 @@ namespace spk
         _deactivated(p_other._deactivated.load())
     {
         p_other._deactivated = true;
+
+        p_other._contracts.clear();
+        p_other._inactiveContracts.clear();
     }
 
     Notifier& Notifier::operator=(Notifier&& p_other)
@@ -43,6 +78,9 @@ namespace spk
             _contracts = std::move(p_other._contracts);
             _inactiveContracts = std::move(p_other._inactiveContracts);
             _deactivated = p_other._deactivated.load();
+
+            p_other._contracts.clear();
+            p_other._inactiveContracts.clear();
 
             p_other._deactivated = true;
         }

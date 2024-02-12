@@ -4,7 +4,9 @@
 
 #include "data_structure/spk_pool.hpp"
 
+#include "design_pattern/spk_singleton.hpp"
 #include "design_pattern/spk_notifier.hpp"
+#include "design_pattern/spk_event_manager.hpp"
 #include "design_pattern/spk_observable_value.hpp"
 
 #include "math/spk_vector2.hpp"

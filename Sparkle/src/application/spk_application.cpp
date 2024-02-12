@@ -124,7 +124,7 @@ namespace spk
 
 	Application::~Application()
 	{
-		std::cout << _profiler.emitReport() << std::endl;
+		//std::cout << _profiler.emitReport() << std::endl;
 		delete _centralWidget;
 	}
 

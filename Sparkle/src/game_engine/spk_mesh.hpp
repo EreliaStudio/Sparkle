@@ -204,6 +204,8 @@ namespace spk
 		 */
 		void validate();
 
+		void clear();
+
 		/**
 		 * @brief Reserves space for a specified number of points in the mesh.
 		 * 
@@ -230,6 +232,8 @@ namespace spk
 		 * @return A const reference to the vector containing the mesh's points.
 		 */
 		const std::vector<spk::Vector3>& points() const;
+
+		void clearPoints();
 
 		/**
 		 * @brief Reserves space for a specified number of UV coordinates in the mesh.
@@ -258,6 +262,8 @@ namespace spk
 		 */
 		const std::vector<spk::Vector2>& UVs() const;
 
+		void clearUVs();
+
 		/**
 		 * @brief Reserves space for a specified number of normals in the mesh.
 		 * 
@@ -284,6 +290,8 @@ namespace spk
 		 * @return A const reference to the vector containing the mesh's normals.
 		 */
 		const std::vector<spk::Vector3>& normals() const;
+
+		void clearNormals();
 
 		/**
 		 * @brief Reserves space for a specified number of indices in the mesh.
@@ -313,6 +321,8 @@ namespace spk
 		 * @return A const reference to the vector containing the mesh's indexes.
 		 */
 		const std::vector<unsigned int>& indexes() const;
+
+		void clearIndexes();
 
 		/**
 		 * @brief Bakes the mesh data, optimizing it for rendering.

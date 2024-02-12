@@ -147,19 +147,9 @@ namespace spk
          */
         ~Notifier();
 
-        /**
-         * @brief Deleted copy constructor.
-         * 
-         * Prevents copying of Notifier instances.
-         */
-        Notifier(const Notifier& p_other) = delete;
+        Notifier(const Notifier& p_other);
 
-        /**
-         * @brief Deleted copy assignment operator.
-         * 
-         * Prevents assignment from another Notifier instance.
-         */
-        Notifier& operator = (const Notifier& p_other) = delete;
+        Notifier& operator = (const Notifier& p_other);
 
         /**
          * @brief Move constructor.

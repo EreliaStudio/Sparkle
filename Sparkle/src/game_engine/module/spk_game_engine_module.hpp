@@ -69,7 +69,9 @@ namespace spk
 		std::string _name;
 		std::vector<spk::GameObject *> _relevantObjects;
 
-		TimeMetric &_timeMetric;
+	#ifndef NDEBUG
+		TimeMetric& _timeMetric;
+	#endif
 
 		virtual void _onUpdate() = 0;
 		virtual bool _isObjectRelevant(spk::GameObject *p_gameObject) = 0;

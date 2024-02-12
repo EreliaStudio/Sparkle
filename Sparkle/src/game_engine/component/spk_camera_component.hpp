@@ -115,7 +115,7 @@ namespace spk
 		 * @param p_type The camera type (Orthographic or Perspective).
 		 */
 		void setType(const Type& p_type);
-
+		const Type& type() const;
 
 		/**
 		 * @brief Sets the near clipping plane distance.
@@ -123,6 +123,7 @@ namespace spk
 		 * @param p_nearPlane The distance to the near clipping plane. Objects closer than this distance will not be rendered.
 		 */
 		void setNearPlane(const float& p_nearPlane);
+		const float& nearPlane() const;
 
 		/**
 		 * @brief Sets the far clipping plane distance.
@@ -130,6 +131,7 @@ namespace spk
 		 * @param p_farPlane The distance to the far clipping plane. Objects farther than this distance will not be rendered.
 		 */
 		void setFarPlane(const float& p_farPlane);
+		const float& farPlane() const;
 
 		/**
 		 * @brief Sets the field of view (FOV) for the camera.
@@ -139,6 +141,7 @@ namespace spk
 		 * @param p_fov The field of view angle in degrees.
 		 */
 		void setFOV(const float& p_fov);
+		const float& fov() const;
 
 		/**
 		 * @brief Sets the aspect ratio of the camera.
@@ -148,6 +151,7 @@ namespace spk
 		 * @param p_aspectRatio The aspect ratio value.
 		 */
 		void setAspectRatio(const float& p_aspectRatio);
+		const float& aspectRatio() const;
 
 		/**
 		 * @brief Sets the size for orthographic projection.
@@ -157,5 +161,6 @@ namespace spk
 		 * @param p_orthographicSize The size of the orthographic projection area.
 		 */
 		void setOrthographicSize(const spk::Vector2& p_orthographicSize);
+		const spk::Vector2& orthographicSize() const;
 	};
 }

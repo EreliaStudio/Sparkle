@@ -425,6 +425,21 @@ namespace spk
             return IVector3(-x, -y, -z);
         }
 
+        IVector2<TType> xy()
+        {
+            return (IVector2<TType>(x, y));
+        }
+
+        IVector2<TType> xz()
+        {
+            return (IVector2<TType>(x, z));
+        }
+
+        IVector2<TType> yz()
+        {
+            return (IVector2<TType>(y, z));
+        }
+
         /**
          * @brief Converts a vector from radians to degrees.
          * @param radians The vector in radians to be converted.

@@ -74,6 +74,9 @@ namespace spk
 		 */
 		GameObject(const std::string& p_name, GameObject* p_parent);
 
+		GameObject(const GameObject& p_other);
+		GameObject& operator = (const GameObject& p_other);
+
 		/**
 		 * @brief Gets the full name of the GameObject.
 		 * 
