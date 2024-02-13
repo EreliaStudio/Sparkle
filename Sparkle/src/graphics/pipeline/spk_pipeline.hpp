@@ -455,7 +455,7 @@ namespace spk
 
                 void setVertices(const std::vector<float>& p_verticesData, size_t p_elementSize)
                 {
-                    if (p_elementSize != _stride)
+                    if (p_elementSize != _stride && p_elementSize != 0)
                         throwException("Unexpected vertex size inside storage.\nExpected [" + std::to_string(_stride) + "] and received [" + std::to_string(p_elementSize) + "].");
                     _vertices.push(p_verticesData.data(), p_verticesData.size() * sizeof(float));
                 }
@@ -727,12 +727,10 @@ namespace spk
         private:
             int _textureBindingPoint;
             OpenGL::SamplerObject _handle;
-            Constant& _constant;
-            Constant::Element& _unitElement;
             const spk::Texture* _activeTexture;
             static inline const spk::Texture* _lastActiveTexture = nullptr;
 
-            Texture(int p_programID, const Layout& p_layout, Constant& p_constant);
+            Texture(int p_programID, const Layout& p_layout);
 
             void _activate();
 

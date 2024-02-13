@@ -188,7 +188,7 @@ namespace spk
 		clearPoints();
 		clearUVs();
 		clearNormals();
-		clearPoints();
+		clearIndexes();
 	}
 
 	void Mesh::reservePoints(size_t p_expectedNbPoints)
@@ -297,7 +297,6 @@ namespace spk
 	{
 		if (_indexes.size() < 3)
 		{
-			std::cout << "Indexes : " << _indexes.size() << std::endl;
 			return (Data());
 		}
 
@@ -320,6 +319,30 @@ namespace spk
 		result.addUVs(spk::Vector2(0, 0));
 		result.addUVs(spk::Vector2(1, 1));
 		result.addUVs(spk::Vector2(0, 1));
+
+		result.addIndex(0, 0);
+		result.addIndex(1, 1);
+		result.addIndex(2, 2);
+		result.addIndex(2, 2);
+		result.addIndex(1, 1);
+		result.addIndex(3, 3);
+
+		return (result);
+	}
+
+	spk::Mesh createSpriteMesh(const spk::Vector2& p_anchor, const spk::Vector2& p_size)
+	{
+		spk::Mesh result;
+
+		result.addPoint(spk::Vector3(0.5f, 0.5f, 0.0f));
+		result.addPoint(spk::Vector3(-0.5f, 0.5f, 0.0f));
+		result.addPoint(spk::Vector3(0.5f, -0.5f, 0.0f));
+		result.addPoint(spk::Vector3(-0.5f, -0.5f, 0.0f));
+		
+		result.addUVs(p_anchor + spk::Vector2(1, 0) * p_size);
+		result.addUVs(p_anchor + spk::Vector2(0, 0) * p_size);
+		result.addUVs(p_anchor + spk::Vector2(1, 1) * p_size);
+		result.addUVs(p_anchor + spk::Vector2(0, 1) * p_size);
 
 		result.addIndex(0, 0);
 		result.addIndex(1, 1);

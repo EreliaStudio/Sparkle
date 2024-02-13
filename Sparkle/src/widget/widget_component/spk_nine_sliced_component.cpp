@@ -22,7 +22,7 @@ namespace spk::WidgetComponent
 
 	void renderPass()
 	{
-		pixelColor = texture(spriteSheet.handle, fragmentUVs);
+		pixelColor = texture(spriteSheet, fragmentUVs);
 		if (pixelColor.a == 0)
 			discard;
 	})";

@@ -492,7 +492,8 @@ namespace spk
          * @param p_vector The vector to be rounded down.
          * @return A new vector with each component rounded down.
          */
-        static IVector2 floor(const IVector2 &p_vector)
+        template <typename TOtherType>
+        static IVector2 floor(const IVector2<TOtherType> &p_vector)
         {
             IVector2 result;
             result.x = std::floor(p_vector.x);
@@ -506,7 +507,8 @@ namespace spk
          * @param p_vector The vector to be rounded up.
          * @return A new vector with each component rounded up.
          */
-        static IVector2 ceiling(const IVector2 &p_vector)
+        template <typename TOtherType>
+        static IVector2 ceiling(const IVector2<TOtherType> &p_vector)
         {
             IVector2 result;
             result.x = std::ceil(p_vector.x);
@@ -520,7 +522,8 @@ namespace spk
          * @param p_vector The vector to be rounded.
          * @return A new vector with each component rounded to the nearest integer.
          */
-        static IVector2 round(const IVector2 &p_vector)
+        template <typename TOtherType>
+        static IVector2 round(const IVector2<TOtherType> &p_vector)
         {
             IVector2 result;
             result.x = std::round(p_vector.x);

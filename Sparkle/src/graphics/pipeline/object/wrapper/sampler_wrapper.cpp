@@ -3,11 +3,9 @@
 
 namespace spk
 {
-	Pipeline::Texture::Texture(int p_programID, const Pipeline::Texture::Layout& p_layout, Pipeline::Constant& p_constant) :
+	Pipeline::Texture::Texture(int p_programID, const Pipeline::Texture::Layout& p_layout) :
 		_textureBindingPoint(p_layout.textureBindingPoint),
 		_handle(glGetUniformLocation(p_programID, p_layout.name.c_str())),
-		_constant(p_constant),
-        _unitElement(_constant["unit"]),
 		_activeTexture(nullptr)
 	{
 		_handle = _textureBindingPoint;
@@ -19,16 +17,6 @@ namespace spk
 			return ;
 
 		_activeTexture = p_textureToSet;
-		const spk::SpriteSheet* spriteSheet = dynamic_cast<const spk::SpriteSheet*>(p_textureToSet);
-        if (spriteSheet != nullptr)
-        {
-            _unitElement = spriteSheet->unit();
-        }
-        else
-        {
-            _unitElement = spk::Vector2(1, 1);
-        }
-		_constant.update();
 	}
 
     void Pipeline::Texture::_activate()

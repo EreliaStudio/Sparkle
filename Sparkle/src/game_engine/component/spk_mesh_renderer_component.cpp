@@ -25,6 +25,7 @@ namespace spk
 
 	AttributeBlock sprite
 	{
+		vec2 unit;
 		ivec2 anchor;
 		int animationStartEpoch;
 		SpriteAnimation animation;
@@ -90,6 +91,7 @@ namespace spk
 		if (_spriteSheet == nullptr)
 			return ;
 
+		_renderingObjectSpriteAttributeUnit = _spriteSheet->unit();
 		_renderingObjectSpriteAttributeAnchor = _spriteID;
 		_renderingObjectSpriteAttribute.update();
 	}
@@ -118,6 +120,7 @@ namespace spk
 		_renderingObjectSelfTransformScaleAttribute(_renderingObjectSelfAttribute["transform"]["scale"]),
 		_renderingObjectSelfTransformRotationAttribute(_renderingObjectSelfAttribute["transform"]["rotation"]),
 		_renderingObjectSpriteAttribute(_renderingObject.attribute("sprite")),
+		_renderingObjectSpriteAttributeUnit(_renderingObjectSpriteAttribute["unit"]),
 		_renderingObjectSpriteAttributeAnchor(_renderingObjectSpriteAttribute["anchor"]),
 		_renderingObjectSpriteAttributeStartEpoch(_renderingObjectSpriteAttribute["animationStartEpoch"]),
 		_renderingObjectSpriteAttributeAnimation(_renderingObjectSpriteAttribute["animation"]),

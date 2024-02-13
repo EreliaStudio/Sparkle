@@ -375,4 +375,5 @@ namespace spk
 	 * where the depth (z-axis) is not a factor in rendering. Its indexes are (0, 1, 2, 2, 1, 3).
 	 */
 	spk::Mesh createSpriteMesh();
+	spk::Mesh createSpriteMesh(const spk::Vector2& p_anchor, const spk::Vector2& p_size);
 }

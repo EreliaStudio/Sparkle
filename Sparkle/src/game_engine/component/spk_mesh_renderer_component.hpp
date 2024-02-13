@@ -64,6 +64,7 @@ namespace spk
 		spk::Pipeline::Object::Attribute::Element& _renderingObjectSelfTransformRotationAttribute;
 
 		spk::Pipeline::Object::Attribute& _renderingObjectSpriteAttribute;
+		spk::Pipeline::Object::Attribute::Element& _renderingObjectSpriteAttributeUnit;
 		spk::Pipeline::Object::Attribute::Element& _renderingObjectSpriteAttributeAnchor;
 		spk::Pipeline::Object::Attribute::Element& _renderingObjectSpriteAttributeStartEpoch;
 		spk::Pipeline::Object::Attribute::Element& _renderingObjectSpriteAttributeAnimation;
