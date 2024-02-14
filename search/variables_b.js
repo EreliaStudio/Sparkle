@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['pointer_941',['pointer',['../structspk_1_1Pipeline_1_1Structure_1_1Element.html#acf699f40a1ba5a810262b05ff74fcd2d',1,'spk::Pipeline::Structure::Element']]],
-  ['position_942',['position',['../structspk_1_1Font_1_1Atlas_1_1GlyphData.html#a28d3ee1d5654e8365ff2a9f24fe458e6',1,'spk::Font::Atlas::GlyphData']]]
+  ['name_968',['name',['../structspk_1_1Pipeline_1_1Texture_1_1Layout.html#a13671bd3dd89d694546dd908011b85e3',1,'spk::Pipeline::Texture::Layout']]],
+  ['nbelement_969',['nbElement',['../structspk_1_1Pipeline_1_1Object_1_1Storage_1_1Layout_1_1Element.html#ad6eb7ab9094db73c2be102b3a4a1eb81',1,'spk::Pipeline::Object::Storage::Layout::Element']]]
 ];

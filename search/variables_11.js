@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['w_955',['w',['../classspk_1_1Quaternion.html#a9c3edbfd83d7e3537d0d53eae57463b4',1,'spk::Quaternion']]]
+  ['uvs_990',['uvs',['../structspk_1_1Font_1_1Atlas_1_1GlyphData.html#a4971b265dd441116409f8c8ce55cf4da',1,'spk::Font::Atlas::GlyphData']]]
 ];

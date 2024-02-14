@@ -1,7 +1,5 @@
 var searchData=
 [
-  ['scale_945',['scale',['../classspk_1_1Transform.html#a0c8f212ecddaa7a6a2b24284ed11d660',1,'spk::Transform']]],
-  ['step_946',['step',['../structspk_1_1Font_1_1Atlas_1_1GlyphData.html#a6815c03d18e856c864a42a4d4cd8a14c',1,'spk::Font::Atlas::GlyphData']]],
-  ['stride_947',['stride',['../structspk_1_1Pipeline_1_1Object_1_1Storage_1_1Layout.html#a5003266bddcbfc7860b0191ff4aef5f0',1,'spk::Pipeline::Object::Storage::Layout']]],
-  ['structure_948',['structure',['../structspk_1_1Pipeline_1_1UniformObject_1_1Layout.html#afe5c65bddbb425df93a8603f844a0627',1,'spk::Pipeline::UniformObject::Layout']]]
+  ['pointer_979',['pointer',['../structspk_1_1Pipeline_1_1Structure_1_1Element.html#acf699f40a1ba5a810262b05ff74fcd2d',1,'spk::Pipeline::Structure::Element']]],
+  ['position_980',['position',['../structspk_1_1Font_1_1Atlas_1_1GlyphData.html#a28d3ee1d5654e8365ff2a9f24fe458e6',1,'spk::Font::Atlas::GlyphData']]]
 ];

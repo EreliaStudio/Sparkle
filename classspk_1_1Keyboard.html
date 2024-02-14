@@ -247,6 +247,8 @@ Public Types</h2></td></tr>
 , <b>Unknow</b> = 223
 , <b>AngleBracket</b> = 226
 , <b>Process</b> = 229
+, <br />
+&#160;&#160;<b>Maximum</b> = 255
 <br />
  }</td></tr>
 <tr class="memdesc:a13a0bee8478b4e4e8162d4f389134b28"><td class="mdescLeft">&#160;</td><td class="mdescRight">Represents the key codes for various keyboard keys.  <a href="classspk_1_1Keyboard.html#a13a0bee8478b4e4e8162d4f389134b28">More...</a><br /></td></tr>
@@ -295,8 +297,8 @@ Public Member Functions</h2></td></tr>
 <div class="line">    <span class="comment">// Handle character input</span></div>
 <div class="line">}</div>
 <div class="ttc" id="aclassspk_1_1Keyboard_html"><div class="ttname"><a href="classspk_1_1Keyboard.html">spk::Keyboard</a></div><div class="ttdoc">Manages keyboard input states and character input for an application.</div><div class="ttdef"><b>Definition:</b> spk_keyboard.hpp:44</div></div>
-<div class="ttc" id="aclassspk_1_1Keyboard_html_a8cdaa9f69f1b2fbb64af2492150b823a"><div class="ttname"><a href="classspk_1_1Keyboard.html#a8cdaa9f69f1b2fbb64af2492150b823a">spk::Keyboard::getKey</a></div><div class="ttdeci">InputState getKey(Key p_key) const</div><div class="ttdoc">Retrieves the state of a specified key.</div><div class="ttdef"><b>Definition:</b> spk_keyboard.cpp:62</div></div>
-<div class="ttc" id="aclassspk_1_1Keyboard_html_aac47e6636fedbd037a75509c4918832d"><div class="ttname"><a href="classspk_1_1Keyboard.html#aac47e6636fedbd037a75509c4918832d">spk::Keyboard::getChar</a></div><div class="ttdeci">wchar_t getChar() const</div><div class="ttdoc">Retrieves the most recent character input.</div><div class="ttdef"><b>Definition:</b> spk_keyboard.cpp:57</div></div>
+<div class="ttc" id="aclassspk_1_1Keyboard_html_a8cdaa9f69f1b2fbb64af2492150b823a"><div class="ttname"><a href="classspk_1_1Keyboard.html#a8cdaa9f69f1b2fbb64af2492150b823a">spk::Keyboard::getKey</a></div><div class="ttdeci">InputState getKey(Key p_key) const</div><div class="ttdoc">Retrieves the state of a specified key.</div><div class="ttdef"><b>Definition:</b> spk_keyboard.cpp:61</div></div>
+<div class="ttc" id="aclassspk_1_1Keyboard_html_aac47e6636fedbd037a75509c4918832d"><div class="ttname"><a href="classspk_1_1Keyboard.html#aac47e6636fedbd037a75509c4918832d">spk::Keyboard::getChar</a></div><div class="ttdeci">wchar_t getChar() const</div><div class="ttdoc">Retrieves the most recent character input.</div><div class="ttdef"><b>Definition:</b> spk_keyboard.cpp:56</div></div>
 </div><!-- fragment --><dl class="section note"><dt>Note</dt><dd>This class is hold by <a class="el" href="classspk_1_1Application.html" title="Manages a graphical application lifecycle and central functionalities such as time,...">spk::Application</a>, and accessible from anywhere in the code as const <a class="el" href="classspk_1_1Keyboard.html" title="Manages keyboard input states and character input for an application.">Keyboard</a>&amp; via <a class="el" href="classspk_1_1Application.html#a3cb0ea420e7c7475ee06914e2f05eb08" title="Return a pointer to the currently active application.">spk::Application::activeApplication()</a>-&gt;keyboard().</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="classspk_1_1Application.html" title="Manages a graphical application lifecycle and central functionalities such as time,...">Application</a>, InputStatus </dd></dl>
 </div><h2 class="groupheader">Member Enumeration Documentation</h2>
