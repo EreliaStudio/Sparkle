@@ -75,29 +75,6 @@ namespace spk
 		GameObject(const std::string& p_name, GameObject* p_parent);
 
 		/**
-		 * @brief Copy constructor.
-		 * 
-		 * Creates a new instance of a GameObject by copying the properties from another GameObject. This includes
-		 * copying the name, tags, transformation, and components of the GameObject. Note that depending on the
-		 * implementation details, the components might be deeply copied or referenced differently.
-		 * 
-		 * @param p_other The GameObject instance to copy from.
-		 */
-		GameObject(const GameObject& p_other);
-
-		/**
-		 * @brief Copy assignment operator.
-		 * 
-		 * Assigns the properties of another GameObject to this instance. This includes copying the name, tags,
-		 * transformation, and components. Similar to the copy constructor, the exact behavior for components depends
-		 * on their copy semantics. Existing components in this GameObject may be replaced or updated.
-		 * 
-		 * @param p_other The GameObject instance to assign from.
-		 * @return A reference to this GameObject instance after assignment.
-		 */
-		GameObject& operator=(const GameObject& p_other);
-
-		/**
 		 * @brief Destructor.
 		 * 
 		 * Cleans up the GameObject's resources, including destroying all components attached to this GameObject and
