@@ -14,25 +14,25 @@ namespace spk
      * This class allocates a vectors which size is equal to the highest event code in your
      * mappings. Keep that value close to the actual number of event codes unless you want a big
      * bad bloat.
-     * 
+     *
      * InputDecoder is thread safe.
-     * 
+     *
      * @code
      * InputDecoder inputDecoder;
-     * 
+     *
      * // Set some mappings
      * inputDecoder.set_mappings({
      *     InputMapping{Input{Mouse::Left, InputState::Pressed}, MyEventsEnum::First},
      *     InputMapping{Input{Keyboard::Key::A, InputState::Released}, MyEventsEnum::Second},
      * });
-     * 
+     *
      * // Subscribe
      * Notifier::Callback callback = [](){ std::cout << "Triggered and event" << std::endl; };
      * std::unique_ptr<Notifier::Contract> contract = inputDecoder.subscribe(MyEventsEnum::First, callback);
-     * 
+     *
      * // Trigger event
      * inputDecoder.add(Input{Mouse::Left, InputState::Pressed});
-     * 
+     *
      * // Cancel subscription
      * contract->cancel();
      * @endcode
@@ -42,11 +42,11 @@ namespace spk
     class InputDecoder
     {
     public:
-    /**
-     * @brief Default constructor.
-     * 
-     * All public methods are safe to be called right after construction.
-    */
+        /**
+         * @brief Default constructor.
+         *
+         * All public methods are safe to be called right after construction.
+         */
         InputDecoder() = default;
 
         /**
@@ -73,10 +73,10 @@ namespace spk
 
         /**
          * @brief Subscribes a callback that will be called when the event is triggered.
-         * 
+         *
          * @param p_eventCode The event code to which you subscribe.
          * @param p_callback The code to execute when the event occurs.
-         * 
+         *
          * @returns a Notifier::Contract to hold that subscription.
          * @see Notifier
          */
@@ -88,10 +88,10 @@ namespace spk
 
         /**
          * @brief Subscribes a callback that will be called when the event is triggered.
-         * 
+         *
          * @param p_eventCode The event code to which you subscribe.
          * @param p_callback The code to execute when the event occurs.
-         * 
+         *
          * @returns a Notifier::Contract to hold that subscription.
          * @see Notifier
          */
