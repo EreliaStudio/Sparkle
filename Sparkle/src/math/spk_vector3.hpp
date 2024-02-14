@@ -425,19 +425,43 @@ namespace spk
             return IVector3(-x, -y, -z);
         }
 
-        IVector2<TType> xy()
+        /**
+         * @brief Extracts the XY components as a 2D vector.
+         * 
+         * This method creates a new 2D vector from the X and Y components of this 3D vector. It is useful
+         * when you need to work with just the horizontal and vertical components of a vector, ignoring the depth (Z component).
+         * 
+         * @return An IVector2 instance containing the X and Y components of this vector.
+         */
+        IVector2<TType> xy() const
         {
-            return (IVector2<TType>(x, y));
+            return IVector2<TType>(x, y);
         }
 
-        IVector2<TType> xz()
+        /**
+         * @brief Extracts the XZ components as a 2D vector.
+         * 
+         * This method creates a new 2D vector from the X and Z components of this 3D vector. It is useful
+         * when you need to work with horizontal and depth components of a vector, ignoring the vertical (Y component).
+         * 
+         * @return An IVector2 instance containing the X and Z components of this vector.
+         */
+        IVector2<TType> xz() const
         {
-            return (IVector2<TType>(x, z));
+            return IVector2<TType>(x, z);
         }
 
-        IVector2<TType> yz()
+        /**
+         * @brief Extracts the YZ components as a 2D vector.
+         * 
+         * This method creates a new 2D vector from the Y and Z components of this 3D vector. It is useful
+         * when you need to work with the vertical and depth components of a vector, ignoring the horizontal (X component).
+         * 
+         * @return An IVector2 instance containing the Y and Z components of this vector.
+         */
+        IVector2<TType> yz() const
         {
-            return (IVector2<TType>(y, z));
+            return IVector2<TType>(y, z);
         }
 
         /**

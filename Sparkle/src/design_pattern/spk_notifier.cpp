@@ -33,30 +33,6 @@ namespace spk
         }
     }
 
-    Notifier::Notifier(const Notifier& p_other) :
-        _deactivated(false)
-    {
-
-    }
-
-    Notifier& Notifier::operator = (const Notifier& p_other)
-    {
-        _deactivated = false;
-        for (auto* contract : _contracts)
-        {
-            contract->cancel();
-        }
-        _contracts.clear();
-
-        for (auto* contract : _inactiveContracts)
-        {
-            contract->cancel();
-        }
-        _inactiveContracts.clear();
-        
-        return (*this);
-    }
-
     Notifier::Notifier(Notifier&& p_other) :
         _contracts(std::move(p_other._contracts)),
         _inactiveContracts(std::move(p_other._inactiveContracts)),
@@ -210,19 +186,6 @@ namespace spk
         _isPaused(false)
     {
 
-    }
-
-    Notifier::Contract& Notifier::Contract::operator = (const Notifier::Contract& p_other)
-    {
-        if (&p_other != this)
-        {
-            _subject = p_other._subject;
-            _callback = p_other._callback;
-            _isCanceled = p_other._isCanceled.load();
-            _isPaused = p_other._isPaused.load();
-        }
-
-        return (*this);
     }
 
     bool Notifier::Contract::isCanceled() const

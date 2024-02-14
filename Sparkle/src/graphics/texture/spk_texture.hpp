@@ -151,10 +151,42 @@ namespace spk
 		 */
 		virtual ~Texture();
 
+		/**
+		 * @brief Copy constructor (deleted).
+		 * 
+		 * Prevents the creation of a Texture instance by copying from another Texture instance. This deletion ensures that each Texture object maintains unique ownership of its GPU resources. Copying Texture objects could lead to issues like double deletion of resources, hence it is explicitly deleted to avoid such problems.
+		 * 
+		 * @param p_other The other Texture instance to copy from.
+		 */
 		Texture(const Texture& p_other) = delete;
+
+		/**
+		 * @brief Copy assignment operator (deleted).
+		 * 
+		 * Disables the assignment of one Texture object to another through copying. This operation is deleted to prevent the inadvertent copying of GPU resource ownership, which could lead to resource management issues such as double frees. Texture objects should be uniquely owned and managed to ensure resource integrity.
+		 * 
+		 * @param p_other The other Texture instance to assign from.
+		 * @return A reference to this Texture instance after deletion.
+		 */
 		Texture& operator = (const Texture& p_other) = delete;
 
+		/**
+		 * @brief Move constructor.
+		 * 
+		 * Transfers the ownership of the GPU resources from another Texture instance to this instance. This constructor is used to efficiently move a Texture object, including its GPU resources, without the overhead of copying the texture data. It leaves the moved-from object in a valid but unspecified state.
+		 * 
+		 * @param p_other The other Texture instance to move from.
+		 */
 		Texture(Texture&& p_other);
+
+		/**
+		 * @brief Move assignment operator.
+		 * 
+		 * Enables the assignment of a Texture object from another Texture object using move semantics. This operation transfers the GPU resources ownership from one Texture to another, effectively transferring the texture data and leaving the moved-from object in a valid but unspecified state. It ensures efficient resource management and avoids the duplication of GPU resources.
+		 * 
+		 * @param p_other The other Texture instance to move from.
+		 * @return A reference to this Texture instance after acquiring the resources.
+		 */
 		Texture& operator = (Texture&& p_other);
 
 		/**

@@ -77,13 +77,7 @@ namespace spk
              */
             ~Contract();
 
-            /**
-             * @brief Assigns the state of another Contract to this one.
-             * 
-             * @param p_other The other Contract to copy state from.
-             * @return A reference to this Contract after copying the state.
-             */
-            Contract& operator = (const Contract& p_other);
+            Contract& operator = (const Contract& p_other) = delete;
 
             /**
              * @brief Checks if the Contract is canceled.
@@ -147,9 +141,8 @@ namespace spk
          */
         ~Notifier();
 
-        Notifier(const Notifier& p_other);
-
-        Notifier& operator = (const Notifier& p_other);
+        Notifier(const Notifier& p_other) = delete;
+        Notifier& operator = (const Notifier& p_other) = delete;
 
         /**
          * @brief Move constructor.
