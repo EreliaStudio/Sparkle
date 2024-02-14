@@ -76,6 +76,11 @@ namespace spk
 		p_parent->addChild(this);
 	}
 
+	GameObject::~GameObject()
+	{
+		
+	}
+
 	std::string GameObject::fullName() const
 	{
 		if (parent() == nullptr)

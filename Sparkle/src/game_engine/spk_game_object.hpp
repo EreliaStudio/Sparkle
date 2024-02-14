@@ -77,6 +77,8 @@ namespace spk
 		GameObject(const GameObject& p_other);
 		GameObject& operator = (const GameObject& p_other);
 
+		virtual ~GameObject();
+
 		/**
 		 * @brief Gets the full name of the GameObject.
 		 * 

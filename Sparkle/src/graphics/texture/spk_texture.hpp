@@ -151,6 +151,12 @@ namespace spk
 		 */
 		virtual ~Texture();
 
+		Texture(const Texture& p_other) = delete;
+		Texture& operator = (const Texture& p_other) = delete;
+
+		Texture(Texture&& p_other);
+		Texture& operator = (Texture&& p_other);
+
 		/**
 		 * @brief Uploads texture data to GPU memory.
 		 * 

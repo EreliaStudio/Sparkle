@@ -52,7 +52,7 @@ namespace spk
 
 		_texture.uploadToGPU(
 			buildData.buffer.data(), buildData.size,
-			Texture::Format::GreyLevel, Texture::Filtering::Nearest,
+			Texture::Format::GreyLevel, Texture::Filtering::Linear,
 			Texture::Wrap::Repeat, Texture::Mipmap::Disable);
 	}
 

@@ -28,7 +28,7 @@ namespace spk
 		Key tmpKey = Key(p_fontSize, p_outlineSize, p_outlineStype);
 		if (_fontAtlas.contains(tmpKey) == false)
 		{
-			_fontAtlas[tmpKey] = Atlas(_fontData, _fontConfiguration, tmpKey);
+			_fontAtlas.emplace(tmpKey, std::move(Atlas(_fontData, _fontConfiguration, tmpKey)));
 		}
 		return _fontAtlas[tmpKey];
 	}

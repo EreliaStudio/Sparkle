@@ -42,13 +42,13 @@ namespace spk
 	void geometryPass()
 	{
 		vec3 transformedPosition = applyTransform(modelVertex, self.transform);
-		pixelPosition = mainCamera.MVP * vec4(transformedPosition, 1.0f);
-		fragmentUVs = (modelUVs + sprite.anchor + computeSpriteAnimationOffset(sprite.animationStartEpoch, sprite.animation)) * textureID.unit;
+		pixelPosition = cameraConstants.MVP * vec4(transformedPosition, 1.0f);
+		fragmentUVs = (modelUVs + sprite.anchor + computeSpriteAnimationOffset(sprite.animationStartEpoch, sprite.animation)) * sprite.unit + 0.00001f;
 	}
 
 	void renderPass()
 	{
-		pixelColor = texture(textureID.handle, fragmentUVs);
+		pixelColor = texture(textureID, fragmentUVs);
 		if (pixelColor.a == 0)
 			discard;
 	}
