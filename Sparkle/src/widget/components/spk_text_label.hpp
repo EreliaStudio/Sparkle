@@ -6,7 +6,7 @@
 #include "graphics/pipeline/spk_pipeline.hpp"
 #include "graphics/texture/font/spk_font.hpp"
 
-namespace spk::WidgetComponent
+namespace spk::widget::component
 {
     /**
 	 * @class TextLabel

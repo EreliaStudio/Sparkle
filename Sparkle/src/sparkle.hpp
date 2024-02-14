@@ -47,3 +47,5 @@
 
 #include "widget/widget_component/spk_nine_sliced_component.hpp"
 #include "widget/widget_component/spk_text_label_component.hpp"
+
+using spk::GameEngineManager = spk::widget::GameEngineManager;

@@ -1,7 +1,7 @@
 #include "widget/spk_widget.hpp"
 #include "application/spk_application.hpp"
 
-namespace spk
+namespace spk::widget
 {
 	void IWidget::_onGeometryChange()
 	{
@@ -163,6 +163,15 @@ namespace spk
 		{
 			child->deactivateAll();
 		}
+	}
+
+	bool IWidget::hitTest(const Vector2& p_coord)
+	{
+		Vector2 p0 = _viewport.anchor();
+		Vector2 p1 = p0 + _viewport.size();
+		bool vIn = p_coord.x  >= p0.x && p_coord.x <= p1.x;
+		bool hIn = p_coord.y >= p0.y && p_coord.y <= p1.y;
+		return vIn && hIn;
 	}
 
 	const std::string& IWidget::name() const

@@ -1,6 +1,6 @@
-#include "widget/widget_component/spk_text_label_component.hpp"
+#include "widget/widget_component/spk_text_label.hpp"
 
-namespace spk::WidgetComponent
+namespace spk::widget::component
 {
     const std::string TextLabel::_renderingPipelineCode = R"(#version 450
     

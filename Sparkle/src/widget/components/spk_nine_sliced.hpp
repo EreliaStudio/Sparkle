@@ -5,7 +5,7 @@
 #include "graphics/pipeline/spk_pipeline.hpp"
 #include "graphics/texture/spk_sprite_sheet.hpp"
 
-namespace spk::WidgetComponent
+namespace spk::widget::component
 {
     /**
 	 * @class NineSlicedBox

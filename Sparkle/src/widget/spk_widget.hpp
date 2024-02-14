@@ -5,7 +5,7 @@
 #include "graphics/spk_viewport.hpp"
 #include "profiler/spk_time_metric.hpp"
 
-namespace spk
+namespace spk::widget
 {
 	/**
 	 * @class IWidget
@@ -165,6 +165,13 @@ namespace spk
          * Deactivates this widget and all its child widgets recursively, disabling their functionality and excluding them from rendering and updates.
          */
         void deactivateAll();
+		
+		/**
+		 * @brief Tests if the given coordinates in cartesian space is in this widget's viewport.
+		 * This method should be overriden if another behavior is needed.
+		 * @param p_coord The point that needs to be hit tested.
+		*/
+		virtual bool hitTest(const Vector2& p_coord);
 
         /**
          * Gets the name of the widget.
