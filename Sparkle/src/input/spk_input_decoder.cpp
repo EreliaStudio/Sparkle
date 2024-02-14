@@ -2,12 +2,12 @@
 
 namespace spk
 {
-    void InputDecoder::set_mappings(const std::vector<InputMapping> &p_mappings)
+    void InputDecoder::set_mappings(const std::vector<InputMapping>& p_mappings)
     {
         std::unique_lock<std::mutex> lk(_mu);
 
         // Reset everything but subscriptions.
-        for (auto &mapping : _mappings)
+        for (auto& mapping : _mappings)
         {
             mapping.clear();
         }
@@ -16,10 +16,11 @@ namespace spk
             _inputToMappings[i].clear();
         }
 
-        for (const InputMapping &mapping : p_mappings)
+        for (const InputMapping& mapping : p_mappings)
         {
             // Skip mappings that have not been fully initialized.
-            if (!mapping.valid()) {
+            if (!mapping.valid())
+            {
                 continue;
             }
             // Extends mappings if needed.
@@ -37,9 +38,10 @@ namespace spk
         }
     }
 
-    void InputDecoder::update(const InputMapping &p_mapping)
+    void InputDecoder::update(const InputMapping& p_mapping)
     {
-        if (!p_mapping.valid()) {
+        if (!p_mapping.valid())
+        {
             return;
         }
         std::unique_lock<std::mutex> lk(_mu);
@@ -55,10 +57,10 @@ namespace spk
         }
 
         // Cleanup old mapping from the input map.
-        InputMapping &old = _mappings[p_mapping.code()];
+        InputMapping& old = _mappings[p_mapping.code()];
         if (old.valid())
         {
-            std::vector<int> &oldMappings = _inputToMappings[old.expects().code()];
+            std::vector<int>& oldMappings = _inputToMappings[old.expects().code()];
             auto codeIt = std::find(oldMappings.begin(), oldMappings.end(), p_mapping.code());
             oldMappings.erase(codeIt);
         }
@@ -68,7 +70,7 @@ namespace spk
         _mappings[p_mapping.code()] = p_mapping;
     }
 
-    void InputDecoder::add(const Input &p_input)
+    void InputDecoder::add(const Input& p_input)
     {
         std::unique_lock<std::mutex> lk(_mu);
         for (int mappingCode : _inputToMappings[p_input.code()])
@@ -77,7 +79,7 @@ namespace spk
         }
     }
 
-    std::unique_ptr<Notifier::Contract> InputDecoder::subscribe(size_t p_mappingCode, const Notifier::Callback &p_callback)
+    std::unique_ptr<Notifier::Contract> InputDecoder::subscribe(size_t p_mappingCode, const Notifier::Callback& p_callback)
     {
         std::unique_lock<std::mutex> lk(_mu);
         // Extend notifiers if needed

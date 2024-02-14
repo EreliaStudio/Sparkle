@@ -1,9 +1,9 @@
 #pragma once
 
+#include <functional>
 #include <iterator>
 #include <memory>
 #include <vector>
-#include <functional>
 
 #include "input/spk_input.hpp"
 
@@ -32,7 +32,11 @@ namespace spk
          *
          * Used to initialize fixed-sized arrays.
          */
-        InputMapping() : _name(""), _code(kDummyMappingCode) {}
+        InputMapping() :
+            _name(""),
+            _code(kDummyMappingCode)
+        {
+        }
 
         virtual ~InputMapping() = default;
 
@@ -44,8 +48,10 @@ namespace spk
          * @param p_debugName The optional debug name.
          */
         template <typename EventType>
-        InputMapping(const Input &p_expects, EventType p_code, const std::string &p_debugName = std::string(KUnnamedMapping))
-            : _name(p_debugName), _code(static_cast<size_t>(p_code)), _expects(p_expects)
+        InputMapping(const Input& p_expects, EventType p_code, const std::string& p_debugName = std::string(KUnnamedMapping)) :
+            _name(p_debugName),
+            _code(static_cast<size_t>(p_code)),
+            _expects(p_expects)
         {
         }
 
@@ -53,10 +59,10 @@ namespace spk
         bool valid() const { return _code != kDummyMappingCode; }
 
         /// Getter for the mapping's name.
-        const std::string &name() const { return _name; }
+        const std::string& name() const { return _name; }
 
         /// Getter for the Input expected by this mapping.
-        const Input &expects() const { return _expects; }
+        const Input& expects() const { return _expects; }
 
         /// Getter for the event code that this mapping triggers.
         size_t code() const { return _code; }
@@ -66,7 +72,7 @@ namespace spk
         EventType code() const { static_cast<EventType>(_code); }
 
         /// Compares two mappings. True if other has the same input and event code.
-        bool operator==(const InputMapping &other) const
+        bool operator==(const InputMapping& other) const
         {
             return (code() == other.code()) && (expects() == other.expects());
         }

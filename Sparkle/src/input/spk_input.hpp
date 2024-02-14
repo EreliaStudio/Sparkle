@@ -1,7 +1,7 @@
 #pragma once
 
-#include "input/spk_mouse.hpp"
 #include "input/spk_keyboard.hpp"
+#include "input/spk_mouse.hpp"
 
 namespace spk
 {
@@ -30,23 +30,35 @@ namespace spk
         /**
          * @brief Default constructor. The resulting Input cannot be used for anything practical.
          */
-        Input() : _type(Type::None), _state(InputState::Unknown) {}
+        Input() :
+            _type(Type::None),
+            _state(InputState::Unknown)
+        {
+        }
 
         /**
          * @brief Constructs an Input from a Mouse::Button.
          *
          * @see Mouse
          */
-        Input(Mouse::Button p_mouseButton, InputState p_state)
-            : _type(Type::Mouse), _mouseButton(p_mouseButton), _state(p_state) {}
+        Input(Mouse::Button p_mouseButton, InputState p_state) :
+            _type(Type::Mouse),
+            _mouseButton(p_mouseButton),
+            _state(p_state)
+        {
+        }
 
         /**
          * @brief Constructs an Input from a Keyboard::Key.
          *
          * @see Keyboard
          */
-        Input(Keyboard::Key p_key, InputState p_state)
-            : _type(Type::Keyboard), _key(p_key), _state(p_state) {}
+        Input(Keyboard::Key p_key, InputState p_state) :
+            _type(Type::Keyboard),
+            _key(p_key),
+            _state(p_state)
+        {
+        }
 
         /// Inputs are identified by their code. Each input has a unique code.
         using Code = size_t;
@@ -86,9 +98,9 @@ namespace spk
         InputState state() const { return _state; }
 
         /**
-         * @brief Compares two inputs. True if both the code and state are equal. 
-        */
-        bool operator==(const Input &other) const
+         * @brief Compares two inputs. True if both the code and state are equal.
+         */
+        bool operator==(const Input& other) const
         {
             return (code() == other.code()) && (state() == other.state());
         }

@@ -2,9 +2,9 @@
 
 #include <mutex>
 
+#include "design_pattern/spk_notifier.hpp"
 #include "input/spk_input.hpp"
 #include "input/spk_input_mapping.hpp"
-#include "design_pattern/spk_notifier.hpp"
 
 namespace spk
 {
@@ -54,7 +54,7 @@ namespace spk
          *
          * Replacing mappings preserves all existing event subscriptions .
          */
-        void set_mappings(const std::vector<InputMapping> &p_mappings);
+        void set_mappings(const std::vector<InputMapping>& p_mappings);
 
         /**
          * @brief Updates a single mapping.
@@ -62,14 +62,14 @@ namespace spk
          * If the event code was already in use, replaces the previous mapping.
          * Replacing a mapping preserves all existing subscriptions to the associated event.
          */
-        void update(const InputMapping &p_mapping);
+        void update(const InputMapping& p_mapping);
 
         /**
          * @brief Add an input to be decoded.
          *
          * If this call triggers an event, all subscribed callbacks will be called by that method.
          */
-        void add(const Input &p_input);
+        void add(const Input& p_input);
 
         /**
          * @brief Subscribes a callback that will be called when the event is triggered.
@@ -81,7 +81,7 @@ namespace spk
          * @see Notifier
          */
         template <typename EventCodeType>
-        std::unique_ptr<Notifier::Contract> subscribe(EventCodeType p_eventCode, const Notifier::Callback &p_callback)
+        std::unique_ptr<Notifier::Contract> subscribe(EventCodeType p_eventCode, const Notifier::Callback& p_callback)
         {
             return subscribe(static_cast<size_t>(p_eventCode), p_callback);
         }
@@ -95,13 +95,13 @@ namespace spk
          * @returns a Notifier::Contract to hold that subscription.
          * @see Notifier
          */
-        std::unique_ptr<Notifier::Contract> subscribe(size_t p_eventCode, const Notifier::Callback &p_callback);
+        std::unique_ptr<Notifier::Contract> subscribe(size_t p_eventCode, const Notifier::Callback& p_callback);
 
         /**
          * @brief Get the current mapping for an event.
          */
         template <typename EventCodeType>
-        const InputMapping &mapping(EventCodeType p_mappingCode)
+        const InputMapping& mapping(EventCodeType p_mappingCode)
         {
             return _mappings[static_cast<int>(p_mappingCode)];
         }
