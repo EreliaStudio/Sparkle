@@ -44,11 +44,23 @@ namespace spk
 	class Singleton
 	{
 	protected:
-		Singleton()
-		{
-		}
+		/**
+           * @brief Protected constructor.
+           * 
+           * Prevents direct creation of the singleton instance from outside the class, ensuring the singleton pattern is enforced.
+           */
+          Singleton()
+          {
+               
+          }
 
-		static inline std::unique_ptr<TType> _instance = nullptr;
+          /**
+           * @brief Static unique pointer to the singleton instance.
+           * 
+           * This pointer manages the lifetime of the singleton instance. It ensures that there is only one instance of the
+           * singleton class at any time and provides automatic cleanup.
+           */
+          static inline std::unique_ptr<TType> _instance = nullptr;
 
 	public:
 		/**
