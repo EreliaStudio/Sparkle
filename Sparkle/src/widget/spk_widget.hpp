@@ -78,12 +78,14 @@ namespace spk
 		TimeMetric& _timeMetric;
 	#endif
 
-		virtual void _onGeometryChange() = 0;
+	protected:
+		virtual void _onGeometryChange();
 
-		virtual void _onRender() = 0;
+		virtual void _onRender();
 
-		virtual void _onUpdate() = 0;
+		virtual void _onUpdate();
 
+	private:
 		void render();
 		void update();
 
