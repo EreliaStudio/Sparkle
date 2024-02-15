@@ -154,4 +154,9 @@ namespace spk
 
 		return (parent()->globalRotation() * _transform.rotation.get());
 	}
+
+	const std::vector<spk::GameComponent*>& GameObject::components() const
+	{
+		return (_components);
+	}
 }

@@ -37,6 +37,9 @@ namespace spk
     template<typename TType>
     class Pool
 	{
+    public:
+        using Allocator = typename std::function<TType*(void)>;
+
     private:    
         using Destructor = typename std::function<void(TType* p_toReturn)>;
     
@@ -47,13 +50,13 @@ namespace spk
         using Object = typename std::unique_ptr<TType, Destructor>;
 
     private:
-        using Destructor = typename std::function<void(TType* p_toReturn)>;
         std::recursive_mutex _mutex;
+        Allocator _allocator;
         std::deque<std::unique_ptr<TType>> _preallocatedElements;
 
-        const Destructor _destructorLambda = [&](TType* p_toReturn){ _release(p_toReturn); };
+        const Destructor _destructorLambda = [&](TType* p_toReturn){ _insert(p_toReturn); };
 
-        void _release(TType* p_toReturn)
+        void _insert(TType* p_toReturn)
         {
             std::lock_guard<std::recursive_mutex> lock(_mutex);
             _preallocatedElements.push_back(std::unique_ptr<TType>(p_toReturn));
@@ -68,9 +71,20 @@ namespace spk
          * 
          * @param p_poolSize The initial size of the pool. Defaults to 0, resulting in an empty pool.
          */
-        Pool(const size_t& p_poolSize = 0)
+        Pool(const Allocator& p_allocator = [](){return (new TType());}) :
+            _allocator(p_allocator)
         {
-            resize(p_poolSize);
+            
+        }
+
+        void editAllocator(const Allocator& p_allocator)
+        {   
+            _allocator = p_allocator;
+        }
+
+        void allocate()
+        {
+            _insert(_allocator());
         }
 
         /**
@@ -98,11 +112,8 @@ namespace spk
 		{
             std::lock_guard<std::recursive_mutex> lock(_mutex);
 
-            while (_preallocatedElements.size() > p_newSize)
-                _preallocatedElements.pop_back();
-
             while (_preallocatedElements.size() < p_newSize)
-                _preallocatedElements.push_front(std::make_unique<TType>());
+                _insert(_allocator());
         }
 
         /**
@@ -120,7 +131,7 @@ namespace spk
             
             if (_preallocatedElements.empty())
             {
-                _preallocatedElements.push_front(std::make_unique<TType>());
+                _insert(_allocator());
             }
 
             Object item(_preallocatedElements.front().release(), _destructorLambda);

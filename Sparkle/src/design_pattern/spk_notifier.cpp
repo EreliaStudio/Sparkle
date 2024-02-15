@@ -38,6 +38,16 @@ namespace spk
         _inactiveContracts(std::move(p_other._inactiveContracts)),
         _deactivated(p_other._deactivated.load())
     {
+        for (size_t i = 0; i < _contracts.size(); i++)
+        {
+            _contracts[i]->_subject = this;
+        }
+
+        for (size_t i = 0; i < _inactiveContracts.size(); i++)
+        {
+            _inactiveContracts[i]->_subject = this;
+        }
+
         p_other._deactivated = true;
 
         p_other._contracts.clear();
@@ -52,7 +62,15 @@ namespace spk
             _inactiveContracts.clear();
 
             _contracts = std::move(p_other._contracts);
+            for (size_t i = 0; i < _contracts.size(); i++)
+            {
+                _contracts[i]->_subject = this;
+            }
             _inactiveContracts = std::move(p_other._inactiveContracts);
+            for (size_t i = 0; i < _inactiveContracts.size(); i++)
+            {
+                _inactiveContracts[i]->_subject = this;
+            }
             _deactivated = p_other._deactivated.load();
 
             p_other._contracts.clear();

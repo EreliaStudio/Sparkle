@@ -182,6 +182,8 @@ namespace spk
 		 */
 		spk::Quaternion globalRotation() const;
 
+		const std::vector<spk::GameComponent*>& components() const;
+
 		/**
 		 * @brief Adds a component of a specified type to the GameObject.
 		 * 
