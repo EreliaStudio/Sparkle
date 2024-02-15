@@ -68,6 +68,8 @@ $(function() {
 <div class="header">
   <div class="summary">
 <a href="#pub-static-methods">Static Public Member Functions</a> &#124;
+<a href="#pro-methods">Protected Member Functions</a> &#124;
+<a href="#pro-static-attribs">Static Protected Attributes</a> &#124;
 <a href="classspk_1_1Singleton-members.html">List of all members</a>  </div>
   <div class="headertitle">
 <div class="title">spk::Singleton&lt; TType &gt; Class Template Reference</div>  </div>
@@ -81,19 +83,31 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
-<tr class="memitem:a7453a1c0e244b9622222fc82fbcf0c43"><td class="memTemplParams" colspan="2">template&lt;typename... Args&gt; </td></tr>
-<tr class="memitem:a7453a1c0e244b9622222fc82fbcf0c43"><td class="memTemplItemLeft" align="right" valign="top">static constexpr std::unique_ptr&lt; TType &gt; &amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classspk_1_1Singleton.html#a7453a1c0e244b9622222fc82fbcf0c43">instanciate</a> (Args &amp;&amp;...args)</td></tr>
-<tr class="memdesc:a7453a1c0e244b9622222fc82fbcf0c43"><td class="mdescLeft">&#160;</td><td class="mdescRight">Instantiates the singleton instance with the provided arguments.  <a href="classspk_1_1Singleton.html#a7453a1c0e244b9622222fc82fbcf0c43">More...</a><br /></td></tr>
-<tr class="separator:a7453a1c0e244b9622222fc82fbcf0c43"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:abe43f9ebc8787acdb8c0c23979d201fa"><td class="memItemLeft" align="right" valign="top">static constexpr std::unique_ptr&lt; TType &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Singleton.html#abe43f9ebc8787acdb8c0c23979d201fa">instance</a> ()</td></tr>
-<tr class="memdesc:abe43f9ebc8787acdb8c0c23979d201fa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns a reference to the singleton instance.  <a href="classspk_1_1Singleton.html#abe43f9ebc8787acdb8c0c23979d201fa">More...</a><br /></td></tr>
-<tr class="separator:abe43f9ebc8787acdb8c0c23979d201fa"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a90ce6b66cf85951d205b2da3b2e48e1c"><td class="memItemLeft" align="right" valign="top">static constexpr const std::unique_ptr&lt; const TType &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Singleton.html#a90ce6b66cf85951d205b2da3b2e48e1c">c_instance</a> ()</td></tr>
-<tr class="memdesc:a90ce6b66cf85951d205b2da3b2e48e1c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns a const reference to the singleton instance.  <a href="classspk_1_1Singleton.html#a90ce6b66cf85951d205b2da3b2e48e1c">More...</a><br /></td></tr>
-<tr class="separator:a90ce6b66cf85951d205b2da3b2e48e1c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a64a3c2b328c5e2a0f8a36b06d94f6391"><td class="memTemplParams" colspan="2">template&lt;typename... Args&gt; </td></tr>
+<tr class="memitem:a64a3c2b328c5e2a0f8a36b06d94f6391"><td class="memTemplItemLeft" align="right" valign="top">static std::unique_ptr&lt; TType &gt; &amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classspk_1_1Singleton.html#a64a3c2b328c5e2a0f8a36b06d94f6391">instanciate</a> (Args &amp;&amp;...args)</td></tr>
+<tr class="memdesc:a64a3c2b328c5e2a0f8a36b06d94f6391"><td class="mdescLeft">&#160;</td><td class="mdescRight">Instantiates the singleton instance with the provided arguments.  <a href="classspk_1_1Singleton.html#a64a3c2b328c5e2a0f8a36b06d94f6391">More...</a><br /></td></tr>
+<tr class="separator:a64a3c2b328c5e2a0f8a36b06d94f6391"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9f16c91dc8986614789fd2974af3bdd5"><td class="memItemLeft" align="right" valign="top">static std::unique_ptr&lt; TType &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Singleton.html#a9f16c91dc8986614789fd2974af3bdd5">instance</a> ()</td></tr>
+<tr class="memdesc:a9f16c91dc8986614789fd2974af3bdd5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns a reference to the singleton instance.  <a href="classspk_1_1Singleton.html#a9f16c91dc8986614789fd2974af3bdd5">More...</a><br /></td></tr>
+<tr class="separator:a9f16c91dc8986614789fd2974af3bdd5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa09220fb6b556afa8707353cc35c87df"><td class="memItemLeft" align="right" valign="top">static const std::unique_ptr&lt; const TType &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Singleton.html#aa09220fb6b556afa8707353cc35c87df">c_instance</a> ()</td></tr>
+<tr class="memdesc:aa09220fb6b556afa8707353cc35c87df"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns a const reference to the singleton instance.  <a href="classspk_1_1Singleton.html#aa09220fb6b556afa8707353cc35c87df">More...</a><br /></td></tr>
+<tr class="separator:aa09220fb6b556afa8707353cc35c87df"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0fd0698aa7eab7c2a5cfbf11a9ddfad1"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Singleton.html#a0fd0698aa7eab7c2a5cfbf11a9ddfad1">release</a> ()</td></tr>
 <tr class="memdesc:a0fd0698aa7eab7c2a5cfbf11a9ddfad1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Releases the singleton instance.  <a href="classspk_1_1Singleton.html#a0fd0698aa7eab7c2a5cfbf11a9ddfad1">More...</a><br /></td></tr>
 <tr class="separator:a0fd0698aa7eab7c2a5cfbf11a9ddfad1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-methods"></a>
+Protected Member Functions</h2></td></tr>
+<tr class="memitem:a24d01aa8ba49475d195a492d724d43e1"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Singleton.html#a24d01aa8ba49475d195a492d724d43e1">Singleton</a> ()</td></tr>
+<tr class="memdesc:a24d01aa8ba49475d195a492d724d43e1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Protected constructor.  <a href="classspk_1_1Singleton.html#a24d01aa8ba49475d195a492d724d43e1">More...</a><br /></td></tr>
+<tr class="separator:a24d01aa8ba49475d195a492d724d43e1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-static-attribs"></a>
+Static Protected Attributes</h2></td></tr>
+<tr class="memitem:a4ff887faaaf7089cd9730a5dc474fd42"><td class="memItemLeft" align="right" valign="top">static std::unique_ptr&lt; TType &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Singleton.html#a4ff887faaaf7089cd9730a5dc474fd42">_instance</a> = nullptr</td></tr>
+<tr class="memdesc:a4ff887faaaf7089cd9730a5dc474fd42"><td class="mdescLeft">&#160;</td><td class="mdescRight">Static unique pointer to the singleton instance.  <a href="classspk_1_1Singleton.html#a4ff887faaaf7089cd9730a5dc474fd42">More...</a><br /></td></tr>
+<tr class="separator:a4ff887faaaf7089cd9730a5dc474fd42"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><h3>template&lt;typename TType&gt;<br />
@@ -103,7 +117,7 @@ class spk::Singleton&lt; TType &gt;</h3>
 <p>This class template is used to create singleton classes, ensuring that only one instance of the class can exist at any time. It provides methods for instantiating, accessing, and releasing the singleton instance. The <a class="el" href="classspk_1_1Singleton.html" title="Template class for implementing the singleton design pattern.">Singleton</a> class uses std::unique_ptr to manage the singleton instance, providing automatic cleanup when the program exits or when <a class="el" href="classspk_1_1Singleton.html#a0fd0698aa7eab7c2a5cfbf11a9ddfad1" title="Releases the singleton instance.">release()</a> is explicitly called.</p>
 <p>Usage: </p><div class="fragment"><div class="line"><span class="keyword">class </span>MySingletonClass : <span class="keyword">public</span> <a class="code" href="classspk_1_1Singleton.html">spk::Singleton</a>&lt;MySingletonClass&gt;</div>
 <div class="line">{</div>
-<div class="line">    <span class="keyword">friend</span> <span class="keyword">class </span>Singleton&lt;MySingletonClass&gt;; <span class="comment">// Allow Singleton to access the constructor</span></div>
+<div class="line">    <span class="keyword">friend</span> <span class="keyword">class </span><a class="code" href="classspk_1_1Singleton.html#a24d01aa8ba49475d195a492d724d43e1">Singleton</a>&lt;MySingletonClass&gt;; <span class="comment">// Allow Singleton to access the constructor</span></div>
 <div class="line"> </div>
 <div class="line"><span class="keyword">private</span>:</div>
 <div class="line">    MySingletonClass() {} <span class="comment">// Private constructor</span></div>
@@ -121,15 +135,16 @@ class spk::Singleton&lt; TType &gt;</h3>
 <div class="line"><span class="comment">// Release the singleton instance</span></div>
 <div class="line">MySingletonClass::release();</div>
 <div class="ttc" id="aclassspk_1_1Singleton_html"><div class="ttname"><a href="classspk_1_1Singleton.html">spk::Singleton</a></div><div class="ttdoc">Template class for implementing the singleton design pattern.</div><div class="ttdef"><b>Definition:</b> spk_singleton.hpp:45</div></div>
+<div class="ttc" id="aclassspk_1_1Singleton_html_a24d01aa8ba49475d195a492d724d43e1"><div class="ttname"><a href="classspk_1_1Singleton.html#a24d01aa8ba49475d195a492d724d43e1">spk::Singleton::Singleton</a></div><div class="ttdeci">Singleton()</div><div class="ttdoc">Protected constructor.</div><div class="ttdef"><b>Definition:</b> spk_singleton.hpp:52</div></div>
 </div><!-- fragment --><dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
     <tr><td class="paramname">TType</td><td>The type of the singleton class. </td></tr>
   </table>
   </dd>
 </dl>
-</div><h2 class="groupheader">Member Function Documentation</h2>
-<a id="a90ce6b66cf85951d205b2da3b2e48e1c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a90ce6b66cf85951d205b2da3b2e48e1c">&#9670;&nbsp;</a></span>c_instance()</h2>
+</div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
+<a id="a24d01aa8ba49475d195a492d724d43e1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a24d01aa8ba49475d195a492d724d43e1">&#9670;&nbsp;</a></span>Singleton()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -140,7 +155,7 @@ template&lt;typename TType &gt; </div>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">static constexpr const std::unique_ptr&lt;const TType&gt;&amp; <a class="el" href="classspk_1_1Singleton.html">spk::Singleton</a>&lt; TType &gt;::c_instance </td>
+          <td class="memname"><a class="el" href="classspk_1_1Singleton.html">spk::Singleton</a>&lt; TType &gt;::<a class="el" href="classspk_1_1Singleton.html">Singleton</a> </td>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
           <td></td>
@@ -148,7 +163,38 @@ template&lt;typename TType &gt; </div>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">static</span><span class="mlabel">constexpr</span></span>  </td>
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Protected constructor. </p>
+<p>Prevents direct creation of the singleton instance from outside the class, ensuring the singleton pattern is enforced. </p>
+
+</div>
+</div>
+<h2 class="groupheader">Member Function Documentation</h2>
+<a id="aa09220fb6b556afa8707353cc35c87df"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa09220fb6b556afa8707353cc35c87df">&#9670;&nbsp;</a></span>c_instance()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename TType &gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static const std::unique_ptr&lt;const TType&gt;&amp; <a class="el" href="classspk_1_1Singleton.html">spk::Singleton</a>&lt; TType &gt;::c_instance </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">static</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
@@ -158,8 +204,8 @@ template&lt;typename TType &gt; </div>
 
 </div>
 </div>
-<a id="abe43f9ebc8787acdb8c0c23979d201fa"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#abe43f9ebc8787acdb8c0c23979d201fa">&#9670;&nbsp;</a></span>instance()</h2>
+<a id="a9f16c91dc8986614789fd2974af3bdd5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9f16c91dc8986614789fd2974af3bdd5">&#9670;&nbsp;</a></span>instance()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -170,7 +216,7 @@ template&lt;typename TType &gt; </div>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">static constexpr std::unique_ptr&lt;TType&gt;&amp; <a class="el" href="classspk_1_1Singleton.html">spk::Singleton</a>&lt; TType &gt;::instance </td>
+          <td class="memname">static std::unique_ptr&lt;TType&gt;&amp; <a class="el" href="classspk_1_1Singleton.html">spk::Singleton</a>&lt; TType &gt;::instance </td>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
           <td></td>
@@ -178,7 +224,7 @@ template&lt;typename TType &gt; </div>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">static</span><span class="mlabel">constexpr</span></span>  </td>
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">static</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
@@ -188,8 +234,8 @@ template&lt;typename TType &gt; </div>
 
 </div>
 </div>
-<a id="a7453a1c0e244b9622222fc82fbcf0c43"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7453a1c0e244b9622222fc82fbcf0c43">&#9670;&nbsp;</a></span>instanciate()</h2>
+<a id="a64a3c2b328c5e2a0f8a36b06d94f6391"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a64a3c2b328c5e2a0f8a36b06d94f6391">&#9670;&nbsp;</a></span>instanciate()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -202,7 +248,7 @@ template&lt;typename... Args&gt; </div>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">static constexpr std::unique_ptr&lt;TType&gt;&amp; <a class="el" href="classspk_1_1Singleton.html">spk::Singleton</a>&lt; TType &gt;::instanciate </td>
+          <td class="memname">static std::unique_ptr&lt;TType&gt;&amp; <a class="el" href="classspk_1_1Singleton.html">spk::Singleton</a>&lt; TType &gt;::instanciate </td>
           <td>(</td>
           <td class="paramtype">Args &amp;&amp;...&#160;</td>
           <td class="paramname"><em>args</em></td><td>)</td>
@@ -211,7 +257,7 @@ template&lt;typename... Args&gt; </div>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">static</span><span class="mlabel">constexpr</span></span>  </td>
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">static</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
@@ -267,6 +313,34 @@ template&lt;typename TType &gt; </div>
 
 <p>Releases the singleton instance. </p>
 <p>This method destroys the instance of the singleton class and resets the unique pointer. </p>
+
+</div>
+</div>
+<h2 class="groupheader">Member Data Documentation</h2>
+<a id="a4ff887faaaf7089cd9730a5dc474fd42"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4ff887faaaf7089cd9730a5dc474fd42">&#9670;&nbsp;</a></span>_instance</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename TType &gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::unique_ptr&lt;TType&gt; <a class="el" href="classspk_1_1Singleton.html">spk::Singleton</a>&lt; TType &gt;::_instance = nullptr</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">static</span><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Static unique pointer to the singleton instance. </p>
+<p>This pointer manages the lifetime of the singleton instance. It ensures that there is only one instance of the singleton class at any time and provides automatic cleanup. </p>
 
 </div>
 </div>

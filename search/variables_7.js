@@ -1,7 +1,4 @@
 var searchData=
 [
-  ['indexes_957',['indexes',['../structspk_1_1Mesh_1_1Data.html#a2ce0acf5a1da2697f5c4f7b2ef142bca',1,'spk::Mesh::Data']]],
-  ['indexesorder_958',['indexesOrder',['../structspk_1_1Font_1_1Atlas_1_1GlyphData.html#a775a9185998291822f543dd8b8faed50',1,'spk::Font::Atlas::GlyphData']]],
-  ['informations_959',['informations',['../structspk_1_1OpenGL_1_1ShaderInstruction.html#a27e8aced5f62d81760a2efccdfedf5f3',1,'spk::OpenGL::ShaderInstruction']]],
-  ['inverseoutlinesize_960',['inverseOutlineSize',['../structspk_1_1Font_1_1Key.html#ae0f5cf959b2b7130be6500daa50410ef',1,'spk::Font::Key']]]
+  ['g_1002',['g',['../structspk_1_1Color.html#a9941ab3dea75e7cd1d1e6b0cbc9d9eb5',1,'spk::Color']]]
 ];

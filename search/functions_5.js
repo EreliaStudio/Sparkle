@@ -1,12 +1,11 @@
 var searchData=
 [
-  ['file_657',['File',['../classspk_1_1JSON_1_1File.html#a448f3a4b90930b87408c35d9b2b3cb53',1,'spk::JSON::File::File()'],['../classspk_1_1JSON_1_1File.html#ae33058d0101c9fb12709d51c5a8ec655',1,'spk::JSON::File::File(const std::filesystem::path &amp;p_filePath)']]],
-  ['filename_658',['fileName',['../structspk_1_1Font_1_1Configuration.html#a568429a5f274907c6e13c1d3eb40db44',1,'spk::Font::Configuration']]],
-  ['floor_659',['floor',['../structspk_1_1IVector2.html#af58b4937f57ec150690b653144e627f2',1,'spk::IVector2::floor()'],['../structspk_1_1IVector3.html#a3bd9a2cb61a6183c891918a13c40660e',1,'spk::IVector3::floor()']]],
-  ['font_660',['Font',['../classspk_1_1Font.html#aadeccb86c6371918f670f13ffb5612ff',1,'spk::Font']]],
-  ['forward_661',['forward',['../classspk_1_1Transform.html#a3707d0b0a90c9073fbcfe49a789175d4',1,'spk::Transform']]],
-  ['fromaxisangle_662',['fromAxisAngle',['../classspk_1_1Quaternion.html#a6e33a05d6e2bf3334da3040f3d0bcfea',1,'spk::Quaternion']]],
-  ['fromeulerangles_663',['fromEulerAngles',['../classspk_1_1Quaternion.html#a825098d75697972ed24c849edfa77670',1,'spk::Quaternion']]],
-  ['front_664',['front',['../classspk_1_1ThreadSafeDeque.html#a76492d3522e402fdc04c2c17adf5c2c6',1,'spk::ThreadSafeDeque::front()'],['../classspk_1_1ThreadSafeDeque.html#a075534c0c125fdf1dde13685ff3e6e29',1,'spk::ThreadSafeDeque::front() const']]],
-  ['fullname_665',['fullName',['../classspk_1_1GameComponent.html#ac557c11c7c454bc3c23c3ffb8e49910b',1,'spk::GameComponent::fullName()'],['../classspk_1_1GameObject.html#a43cc8fdc34da3c333e78588c09f24155',1,'spk::GameObject::fullName()']]]
+  ['edit_685',['edit',['../classspk_1_1OpenGL_1_1VertexBufferObject.html#a2c54fb6c8b868ee365c31d44ae43a012',1,'spk::OpenGL::VertexBufferObject']]],
+  ['editallocator_686',['editAllocator',['../classspk_1_1Pool.html#a2206a6cc4953e486d22a1d433fff720e',1,'spk::Pool']]],
+  ['editwheelposition_687',['editWheelPosition',['../classspk_1_1Mouse.html#a996fc2b2a53ee6dffe4c49b80d92c31c',1,'spk::Mouse']]],
+  ['emitreport_688',['emitReport',['../classspk_1_1IMetric.html#a53dbcd081303b77f337ce13200d6a195',1,'spk::IMetric::emitReport()'],['../classspk_1_1IAnalyticalMetric.html#abb5bc4f11e1bdc538107d7730bba296b',1,'spk::IAnalyticalMetric::emitReport()'],['../classspk_1_1Profiler.html#a701732e3dd5cf629be6b8e86816f8934',1,'spk::Profiler::emitReport()'],['../classspk_1_1TimeMetric.html#adf0df761fd1c6e1028e73607627ef440',1,'spk::TimeMetric::emitReport()'],['../classspk_1_1TriggerMetric.html#a36581cdf2a4c3fd5eedd64013bc26145',1,'spk::TriggerMetric::emitReport()']]],
+  ['empty_689',['empty',['../classspk_1_1ThreadSafeDeque.html#ab6720f1e79fa1af22cd95e9949d874e9',1,'spk::ThreadSafeDeque']]],
+  ['enterstate_690',['enterState',['../classspk_1_1StateMachine.html#a64a592d0131668a8898f66fc88301093',1,'spk::StateMachine']]],
+  ['eventmanager_691',['EventManager',['../classspk_1_1EventManager.html#af93399f568509c720929499867887452',1,'spk::EventManager']]],
+  ['expects_692',['expects',['../classspk_1_1InputMapping.html#a4e6a42522455cf24bd81edc17323de61',1,'spk::InputMapping']]]
 ];

@@ -105,11 +105,11 @@ Public Member Functions</h2></td></tr>
 &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Notifier.html#ace2a51ee8822fa3297fbf1d15548e1a4">~Notifier</a> ()</td></tr>
 <tr class="memdesc:ace2a51ee8822fa3297fbf1d15548e1a4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Destructs the <a class="el" href="classspk_1_1Notifier.html" title="Manages a list of subscribers (via callbacks) and notifies them uppon request.">Notifier</a> instance. <br /></td></tr>
 <tr class="separator:ace2a51ee8822fa3297fbf1d15548e1a4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa4de3147391d99b3980f1527c2746e96"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Notifier.html#aa4de3147391d99b3980f1527c2746e96">Notifier</a> (const <a class="el" href="classspk_1_1Notifier.html">Notifier</a> &amp;p_other)=delete</td></tr>
-<tr class="memdesc:aa4de3147391d99b3980f1527c2746e96"><td class="mdescLeft">&#160;</td><td class="mdescRight">Deleted copy constructor.  <a href="classspk_1_1Notifier.html#aa4de3147391d99b3980f1527c2746e96">More...</a><br /></td></tr>
+<tr class="memitem:aa4de3147391d99b3980f1527c2746e96"><td class="memItemLeft" align="right" valign="top"><a id="aa4de3147391d99b3980f1527c2746e96"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>Notifier</b> (const <a class="el" href="classspk_1_1Notifier.html">Notifier</a> &amp;p_other)=delete</td></tr>
 <tr class="separator:aa4de3147391d99b3980f1527c2746e96"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8da9425673cf3b91d6f370e18e800aa4"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classspk_1_1Notifier.html">Notifier</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Notifier.html#a8da9425673cf3b91d6f370e18e800aa4">operator=</a> (const <a class="el" href="classspk_1_1Notifier.html">Notifier</a> &amp;p_other)=delete</td></tr>
-<tr class="memdesc:a8da9425673cf3b91d6f370e18e800aa4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Deleted copy assignment operator.  <a href="classspk_1_1Notifier.html#a8da9425673cf3b91d6f370e18e800aa4">More...</a><br /></td></tr>
+<tr class="memitem:a8da9425673cf3b91d6f370e18e800aa4"><td class="memItemLeft" align="right" valign="top"><a id="a8da9425673cf3b91d6f370e18e800aa4"></a>
+<a class="el" href="classspk_1_1Notifier.html">Notifier</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (const <a class="el" href="classspk_1_1Notifier.html">Notifier</a> &amp;p_other)=delete</td></tr>
 <tr class="separator:a8da9425673cf3b91d6f370e18e800aa4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aec9d7ff611ffee79b4f8a9ecf34d38f6"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Notifier.html#aec9d7ff611ffee79b4f8a9ecf34d38f6">Notifier</a> (<a class="el" href="classspk_1_1Notifier.html">Notifier</a> &amp;&amp;p_other)</td></tr>
 <tr class="memdesc:aec9d7ff611ffee79b4f8a9ecf34d38f6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Move constructor.  <a href="classspk_1_1Notifier.html#aec9d7ff611ffee79b4f8a9ecf34d38f6">More...</a><br /></td></tr>
@@ -141,41 +141,12 @@ class&#160;</td><td class="memItemRight" valign="bottom"><b>Contract</b></td></t
 <div class="line"><span class="keyword">auto</span> contract = notifier.<a class="code" href="classspk_1_1Notifier.html#a157fc605d61ee4e11e88bb9c25369ab5">subscribe</a>([]{ std::cout &lt;&lt; <span class="stringliteral">&quot;Event occurred!&quot;</span> &lt;&lt; std::endl; });</div>
 <div class="line">notifier.<a class="code" href="classspk_1_1Notifier.html#a1dd154adc30627b07c364abd945c3ccc">notify_all</a>(); <span class="comment">// Triggers the callback</span></div>
 <div class="ttc" id="aclassspk_1_1Notifier_html"><div class="ttname"><a href="classspk_1_1Notifier.html">spk::Notifier</a></div><div class="ttdoc">Manages a list of subscribers (via callbacks) and notifies them uppon request.</div><div class="ttdef"><b>Definition:</b> spk_notifier.hpp:34</div></div>
-<div class="ttc" id="aclassspk_1_1Notifier_html_a157fc605d61ee4e11e88bb9c25369ab5"><div class="ttname"><a href="classspk_1_1Notifier.html#a157fc605d61ee4e11e88bb9c25369ab5">spk::Notifier::subscribe</a></div><div class="ttdeci">std::unique_ptr&lt; Contract &gt; subscribe(const Callback &amp;p_callback)</div><div class="ttdoc">Subscribes to notifications with a specific callback.</div><div class="ttdef"><b>Definition:</b> spk_notifier.cpp:52</div></div>
-<div class="ttc" id="aclassspk_1_1Notifier_html_a1dd154adc30627b07c364abd945c3ccc"><div class="ttname"><a href="classspk_1_1Notifier.html#a1dd154adc30627b07c364abd945c3ccc">spk::Notifier::notify_all</a></div><div class="ttdeci">void notify_all()</div><div class="ttdoc">Notifies all active Contracts.</div><div class="ttdef"><b>Definition:</b> spk_notifier.cpp:75</div></div>
+<div class="ttc" id="aclassspk_1_1Notifier_html_a157fc605d61ee4e11e88bb9c25369ab5"><div class="ttname"><a href="classspk_1_1Notifier.html#a157fc605d61ee4e11e88bb9c25369ab5">spk::Notifier::subscribe</a></div><div class="ttdeci">std::unique_ptr&lt; Contract &gt; subscribe(const Callback &amp;p_callback)</div><div class="ttdoc">Subscribes to notifications with a specific callback.</div><div class="ttdef"><b>Definition:</b> spk_notifier.cpp:84</div></div>
+<div class="ttc" id="aclassspk_1_1Notifier_html_a1dd154adc30627b07c364abd945c3ccc"><div class="ttname"><a href="classspk_1_1Notifier.html#a1dd154adc30627b07c364abd945c3ccc">spk::Notifier::notify_all</a></div><div class="ttdeci">void notify_all()</div><div class="ttdoc">Notifies all active Contracts.</div><div class="ttdef"><b>Definition:</b> spk_notifier.cpp:107</div></div>
 </div><!-- fragment --><dl class="section note"><dt>Note</dt><dd>The <a class="el" href="classspk_1_1Notifier.html" title="Manages a list of subscribers (via callbacks) and notifies them uppon request.">Notifier</a> class is thread-safe and ensures that subscription management and event notification can safely occur from multiple threads. </dd></dl>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="aa4de3147391d99b3980f1527c2746e96"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa4de3147391d99b3980f1527c2746e96">&#9670;&nbsp;</a></span>Notifier() <span class="overload">[1/2]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">spk::Notifier::Notifier </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="classspk_1_1Notifier.html">Notifier</a> &amp;&#160;</td>
-          <td class="paramname"><em>p_other</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">delete</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Deleted copy constructor. </p>
-<p>Prevents copying of <a class="el" href="classspk_1_1Notifier.html" title="Manages a list of subscribers (via callbacks) and notifies them uppon request.">Notifier</a> instances. </p>
-
-</div>
-</div>
 <a id="aec9d7ff611ffee79b4f8a9ecf34d38f6"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aec9d7ff611ffee79b4f8a9ecf34d38f6">&#9670;&nbsp;</a></span>Notifier() <span class="overload">[2/2]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#aec9d7ff611ffee79b4f8a9ecf34d38f6">&#9670;&nbsp;</a></span>Notifier()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -243,37 +214,8 @@ class&#160;</td><td class="memItemRight" valign="bottom"><b>Contract</b></td></t
 
 </div>
 </div>
-<a id="a8da9425673cf3b91d6f370e18e800aa4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a8da9425673cf3b91d6f370e18e800aa4">&#9670;&nbsp;</a></span>operator=() <span class="overload">[1/2]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="classspk_1_1Notifier.html">Notifier</a>&amp; spk::Notifier::operator= </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="classspk_1_1Notifier.html">Notifier</a> &amp;&#160;</td>
-          <td class="paramname"><em>p_other</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">delete</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Deleted copy assignment operator. </p>
-<p>Prevents assignment from another <a class="el" href="classspk_1_1Notifier.html" title="Manages a list of subscribers (via callbacks) and notifies them uppon request.">Notifier</a> instance. </p>
-
-</div>
-</div>
 <a id="ac133763d299ff92875ff5899884df09c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac133763d299ff92875ff5899884df09c">&#9670;&nbsp;</a></span>operator=() <span class="overload">[2/2]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#ac133763d299ff92875ff5899884df09c">&#9670;&nbsp;</a></span>operator=()</h2>
 
 <div class="memitem">
 <div class="memproto">

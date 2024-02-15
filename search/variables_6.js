@@ -1,4 +1,6 @@
 var searchData=
 [
-  ['g_956',['g',['../structspk_1_1Color.html#a9941ab3dea75e7cd1d1e6b0cbc9d9eb5',1,'spk::Color']]]
+  ['firstframe_999',['firstFrame',['../structspk_1_1SpriteAnimation.html#aef0bd090ea2ed7f907acfeacd10182c2',1,'spk::SpriteAnimation']]],
+  ['fontsize_1000',['fontSize',['../structspk_1_1Font_1_1Key.html#aca9df06cddf688f9c2fbef125674191d',1,'spk::Font::Key']]],
+  ['frameoffset_1001',['frameOffset',['../structspk_1_1SpriteAnimation.html#a6d8527f2eea0bc59e168a08fa3d60b16',1,'spk::SpriteAnimation']]]
 ];

@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['vertexes_991',['vertexes',['../structspk_1_1Mesh_1_1Data.html#ae97fee3df1a59cb630836bedc1a9eaac',1,'spk::Mesh::Data']]],
-  ['vertexsize_992',['vertexSize',['../structspk_1_1Mesh_1_1Data.html#a1c2bcb5c78c08973de783f41de3f9e8e',1,'spk::Mesh::Data']]]
+  ['uvs_1036',['uvs',['../structspk_1_1Font_1_1Atlas_1_1GlyphData.html#a4971b265dd441116409f8c8ce55cf4da',1,'spk::Font::Atlas::GlyphData']]]
 ];

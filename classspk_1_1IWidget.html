@@ -68,10 +68,11 @@ $(function() {
 <div class="header">
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pro-methods">Protected Member Functions</a> &#124;
 <a href="#friends">Friends</a> &#124;
 <a href="classspk_1_1IWidget-members.html">List of all members</a>  </div>
   <div class="headertitle">
-<div class="title">spk::IWidget Class Reference<span class="mlabels"><span class="mlabel">abstract</span></span></div>  </div>
+<div class="title">spk::IWidget Class Reference</div>  </div>
 </div><!--header-->
 <div class="contents">
 
@@ -169,6 +170,18 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:a7e29b604a6fc1f7411551f02e9ad0dbc inherit pub_methods_classspk_1_1TreeNode"><td class="mdescLeft">&#160;</td><td class="mdescRight">Transfers all children of this node to another parent node.  <a href="classspk_1_1TreeNode.html#a7e29b604a6fc1f7411551f02e9ad0dbc">More...</a><br /></td></tr>
 <tr class="separator:a7e29b604a6fc1f7411551f02e9ad0dbc inherit pub_methods_classspk_1_1TreeNode"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-methods"></a>
+Protected Member Functions</h2></td></tr>
+<tr class="memitem:aa7da06f2f0905250b56ce09e9f68c4be"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1IWidget.html#aa7da06f2f0905250b56ce09e9f68c4be">_onGeometryChange</a> ()</td></tr>
+<tr class="memdesc:aa7da06f2f0905250b56ce09e9f68c4be"><td class="mdescLeft">&#160;</td><td class="mdescRight">Virtual method triggered when the widget's geometry changes.  <a href="classspk_1_1IWidget.html#aa7da06f2f0905250b56ce09e9f68c4be">More...</a><br /></td></tr>
+<tr class="separator:aa7da06f2f0905250b56ce09e9f68c4be"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acb101228aaa137af198520e295d9cdae"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1IWidget.html#acb101228aaa137af198520e295d9cdae">_onRender</a> ()</td></tr>
+<tr class="memdesc:acb101228aaa137af198520e295d9cdae"><td class="mdescLeft">&#160;</td><td class="mdescRight">Virtual method for rendering the widget.  <a href="classspk_1_1IWidget.html#acb101228aaa137af198520e295d9cdae">More...</a><br /></td></tr>
+<tr class="separator:acb101228aaa137af198520e295d9cdae"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaf81b0a542adf7c68537b09d95fab4e9"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1IWidget.html#aaf81b0a542adf7c68537b09d95fab4e9">_onUpdate</a> ()</td></tr>
+<tr class="memdesc:aaf81b0a542adf7c68537b09d95fab4e9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Virtual method called during the update phase of the widget lifecycle.  <a href="classspk_1_1IWidget.html#aaf81b0a542adf7c68537b09d95fab4e9">More...</a><br /></td></tr>
+<tr class="separator:aaf81b0a542adf7c68537b09d95fab4e9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="friends"></a>
 Friends</h2></td></tr>
 <tr class="memitem:a23f25bcc02a0e94c2f5a4188496b04d0"><td class="memItemLeft" align="right" valign="top"><a id="a23f25bcc02a0e94c2f5a4188496b04d0"></a>
@@ -182,13 +195,13 @@ class&#160;</td><td class="memItemRight" valign="bottom"><b>Application</b></td>
 <p>Widgets are designed to be extensible, requiring the implementation of key lifecycle methods (_onGeometryChange, _onRender, and _onUpdate) to define their behavior, appearance, and response to events or changes in state. The class also provides methods for resizing andgeometry management, allowing widgets to adapt to layout changes dynamically.</p>
 <p>Usage example: </p><div class="fragment"><div class="line"><span class="keyword">class </span>MyWidget : <span class="keyword">public</span> <a class="code" href="classspk_1_1IWidget.html">spk::IWidget</a> {</div>
 <div class="line">    MyWidget(<span class="keyword">const</span> std::string&amp; <a class="code" href="classspk_1_1IWidget.html#a228715457b410b48c5c94a9091c688b9">name</a>) : spk::<a class="code" href="classspk_1_1IWidget.html#a54d3ddf655bf7c2b87b6c57a0eeebd4c">IWidget</a>(<a class="code" href="classspk_1_1IWidget.html#a228715457b410b48c5c94a9091c688b9">name</a>) {}</div>
-<div class="line">    <span class="keywordtype">void</span> _onGeometryChange()<span class="keyword"> override </span>{</div>
+<div class="line">    <span class="keywordtype">void</span> <a class="code" href="classspk_1_1IWidget.html#aa7da06f2f0905250b56ce09e9f68c4be">_onGeometryChange</a>()<span class="keyword"> override </span>{</div>
 <div class="line">        <span class="comment">// Custom geometry change handling</span></div>
 <div class="line">    }</div>
-<div class="line">    <span class="keywordtype">void</span> _onRender()<span class="keyword"> override </span>{</div>
+<div class="line">    <span class="keywordtype">void</span> <a class="code" href="classspk_1_1IWidget.html#acb101228aaa137af198520e295d9cdae">_onRender</a>()<span class="keyword"> override </span>{</div>
 <div class="line">        <span class="comment">// Rendering code for this widget</span></div>
 <div class="line">    }</div>
-<div class="line">    <span class="keywordtype">void</span> _onUpdate()<span class="keyword"> override </span>{</div>
+<div class="line">    <span class="keywordtype">void</span> <a class="code" href="classspk_1_1IWidget.html#aaf81b0a542adf7c68537b09d95fab4e9">_onUpdate</a>()<span class="keyword"> override </span>{</div>
 <div class="line">        <span class="comment">// Update logic for this widget</span></div>
 <div class="line">    }</div>
 <div class="line">};</div>
@@ -202,8 +215,11 @@ class&#160;</td><td class="memItemRight" valign="bottom"><b>Application</b></td>
 <div class="line"><span class="keywordflow">return</span> (app.run());</div>
 <div class="ttc" id="aclassspk_1_1Application_html"><div class="ttname"><a href="classspk_1_1Application.html">spk::Application</a></div><div class="ttdoc">Manages a graphical application lifecycle and central functionalities such as time,...</div><div class="ttdef"><b>Definition:</b> spk_application.hpp:64</div></div>
 <div class="ttc" id="aclassspk_1_1IWidget_html"><div class="ttname"><a href="classspk_1_1IWidget.html">spk::IWidget</a></div><div class="ttdoc">Defines a widget interface for UI elements, integrating activation state management,...</div><div class="ttdef"><b>Definition:</b> spk_widget.hpp:58</div></div>
-<div class="ttc" id="aclassspk_1_1IWidget_html_a228715457b410b48c5c94a9091c688b9"><div class="ttname"><a href="classspk_1_1IWidget.html#a228715457b410b48c5c94a9091c688b9">spk::IWidget::name</a></div><div class="ttdeci">const std::string &amp; name() const</div><div class="ttdef"><b>Definition:</b> spk_widget.cpp:153</div></div>
-<div class="ttc" id="aclassspk_1_1IWidget_html_a54d3ddf655bf7c2b87b6c57a0eeebd4c"><div class="ttname"><a href="classspk_1_1IWidget.html#a54d3ddf655bf7c2b87b6c57a0eeebd4c">spk::IWidget::IWidget</a></div><div class="ttdeci">IWidget(const std::string &amp;p_name)</div><div class="ttdef"><b>Definition:</b> spk_widget.cpp:87</div></div>
+<div class="ttc" id="aclassspk_1_1IWidget_html_a228715457b410b48c5c94a9091c688b9"><div class="ttname"><a href="classspk_1_1IWidget.html#a228715457b410b48c5c94a9091c688b9">spk::IWidget::name</a></div><div class="ttdeci">const std::string &amp; name() const</div><div class="ttdef"><b>Definition:</b> spk_widget.cpp:168</div></div>
+<div class="ttc" id="aclassspk_1_1IWidget_html_a54d3ddf655bf7c2b87b6c57a0eeebd4c"><div class="ttname"><a href="classspk_1_1IWidget.html#a54d3ddf655bf7c2b87b6c57a0eeebd4c">spk::IWidget::IWidget</a></div><div class="ttdeci">IWidget(const std::string &amp;p_name)</div><div class="ttdef"><b>Definition:</b> spk_widget.cpp:102</div></div>
+<div class="ttc" id="aclassspk_1_1IWidget_html_aa7da06f2f0905250b56ce09e9f68c4be"><div class="ttname"><a href="classspk_1_1IWidget.html#aa7da06f2f0905250b56ce09e9f68c4be">spk::IWidget::_onGeometryChange</a></div><div class="ttdeci">virtual void _onGeometryChange()</div><div class="ttdoc">Virtual method triggered when the widget's geometry changes.</div><div class="ttdef"><b>Definition:</b> spk_widget.cpp:6</div></div>
+<div class="ttc" id="aclassspk_1_1IWidget_html_aaf81b0a542adf7c68537b09d95fab4e9"><div class="ttname"><a href="classspk_1_1IWidget.html#aaf81b0a542adf7c68537b09d95fab4e9">spk::IWidget::_onUpdate</a></div><div class="ttdeci">virtual void _onUpdate()</div><div class="ttdoc">Virtual method called during the update phase of the widget lifecycle.</div><div class="ttdef"><b>Definition:</b> spk_widget.cpp:16</div></div>
+<div class="ttc" id="aclassspk_1_1IWidget_html_acb101228aaa137af198520e295d9cdae"><div class="ttname"><a href="classspk_1_1IWidget.html#acb101228aaa137af198520e295d9cdae">spk::IWidget::_onRender</a></div><div class="ttdeci">virtual void _onRender()</div><div class="ttdoc">Virtual method for rendering the widget.</div><div class="ttdef"><b>Definition:</b> spk_widget.cpp:11</div></div>
 <div class="ttc" id="astructspk_1_1IVector2_html"><div class="ttname"><a href="structspk_1_1IVector2.html">spk::IVector2&lt; unsigned int &gt;</a></div></div>
 </div><!-- fragment --><dl class="section note"><dt>Note</dt><dd>If no parent are set for a widget, this widget will be concidered as child of the default widget of the application. </dd>
 <dd>
@@ -287,6 +303,90 @@ The viewport of a <a class="el" href="classspk_1_1IWidget.html" title="Defines a
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="aa7da06f2f0905250b56ce09e9f68c4be"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa7da06f2f0905250b56ce09e9f68c4be">&#9670;&nbsp;</a></span>_onGeometryChange()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void spk::IWidget::_onGeometryChange </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Virtual method triggered when the widget's geometry changes. </p>
+<p>This method is called during the rendering phase of the widget lifecycle, uppon change in the widget's size, position, or depth. Derived classes should override this method to implement custom behavior that needs to occur when the widget's geometry changes. This can include recalculating layout, resizing child widgets, or any other geometry-related adjustments. </p>
+
+</div>
+</div>
+<a id="acb101228aaa137af198520e295d9cdae"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acb101228aaa137af198520e295d9cdae">&#9670;&nbsp;</a></span>_onRender()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void spk::IWidget::_onRender </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Virtual method for rendering the widget. </p>
+<p>This method is called during the rendering phase of the widget lifecycle. Derived classes should override this method to implement the drawing logic specific to the widget. This can include rendering shapes, text, images, or any other visual elements associated with the widget. Implementations should make use of the widget's viewport to confine rendering to the designated area. </p>
+
+</div>
+</div>
+<a id="aaf81b0a542adf7c68537b09d95fab4e9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aaf81b0a542adf7c68537b09d95fab4e9">&#9670;&nbsp;</a></span>_onUpdate()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void spk::IWidget::_onUpdate </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Virtual method called during the update phase of the widget lifecycle. </p>
+<p>This method is called periodically to allow the widget to update its state. This can include processing input events, animating properties, or making any other state changes that need to occur over time. Derived classes should override this method to implement such behavior, ensuring that the widget remains responsive and dynamic. </p>
+
+</div>
+</div>
 <a id="a3c040f32eaf6da9d098bcfb73e2583cf"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a3c040f32eaf6da9d098bcfb73e2583cf">&#9670;&nbsp;</a></span>activateAll()</h2>
 

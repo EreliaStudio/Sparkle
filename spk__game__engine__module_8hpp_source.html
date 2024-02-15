@@ -91,27 +91,29 @@ $(function() {
 <div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;        std::string _name;</div>
 <div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;        std::vector&lt;spk::GameObject *&gt; _relevantObjects;</div>
 <div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160; </div>
-<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;        <a class="code" href="classspk_1_1TimeMetric.html">TimeMetric</a> &amp;_timeMetric;</div>
-<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160; </div>
-<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;        <span class="keyword">virtual</span> <span class="keywordtype">void</span> _onUpdate() = 0;</div>
-<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160;        <span class="keyword">virtual</span> <span class="keywordtype">bool</span> _isObjectRelevant(<a class="code" href="classspk_1_1GameObject.html">spk::GameObject</a> *p_gameObject) = 0;</div>
-<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160; </div>
-<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;        <span class="keywordtype">void</span> _onGameObjectSubscription(<a class="code" href="classspk_1_1GameObject.html">spk::GameObject</a> *p_gameObject);</div>
-<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;        <span class="keywordtype">void</span> _onGameObjectUnsubscription(<a class="code" href="classspk_1_1GameObject.html">spk::GameObject</a> *p_gameObject);</div>
-<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;        <span class="keywordtype">void</span> update();</div>
-<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160; </div>
-<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;    <span class="keyword">public</span>:</div>
-<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;        <a class="code" href="classspk_1_1GameEngineModule.html#a0ab46352f98960fe80608de6d2cb1197">GameEngineModule</a>(<span class="keyword">const</span> std::string&amp; p_name);</div>
-<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160; </div>
-<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;        <a class="code" href="classspk_1_1GameEngine.html">GameEngine</a>* <a class="code" href="classspk_1_1GameEngineModule.html#aa071b39b92654c987b842887a601bb65">owner</a>();</div>
-<div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160; </div>
-<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160;        <span class="keyword">const</span> <a class="code" href="classspk_1_1GameEngine.html">GameEngine</a>* <a class="code" href="classspk_1_1GameEngineModule.html#aa071b39b92654c987b842887a601bb65">owner</a>() <span class="keyword">const</span>;</div>
-<div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160; </div>
-<div class="line"><a name="l00104"></a><span class="lineno">  104</span>&#160;        std::vector&lt;spk::GameObject*&gt;&amp; <a class="code" href="classspk_1_1GameEngineModule.html#ac722e395e5c419c30f0df624f50917f9">relevantObjects</a>();</div>
-<div class="line"><a name="l00105"></a><span class="lineno">  105</span>&#160; </div>
-<div class="line"><a name="l00110"></a><span class="lineno">  110</span>&#160;        <span class="keyword">const</span> std::vector&lt;spk::GameObject *&gt; &amp;<a class="code" href="classspk_1_1GameEngineModule.html#ac722e395e5c419c30f0df624f50917f9">relevantObjects</a>() <span class="keyword">const</span>;</div>
-<div class="line"><a name="l00111"></a><span class="lineno">  111</span>&#160;    };</div>
-<div class="line"><a name="l00112"></a><span class="lineno">  112</span>&#160;}</div>
+<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;<span class="preprocessor">    #ifndef NDEBUG</span></div>
+<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;        <a class="code" href="classspk_1_1TimeMetric.html">TimeMetric</a>&amp; _timeMetric;</div>
+<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;<span class="preprocessor">    #endif</span></div>
+<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160; </div>
+<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;        <span class="keyword">virtual</span> <span class="keywordtype">void</span> _onUpdate() = 0;</div>
+<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;        <span class="keyword">virtual</span> <span class="keywordtype">bool</span> _isObjectRelevant(<a class="code" href="classspk_1_1GameObject.html">spk::GameObject</a> *p_gameObject) = 0;</div>
+<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160; </div>
+<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;        <span class="keywordtype">void</span> _onGameObjectSubscription(<a class="code" href="classspk_1_1GameObject.html">spk::GameObject</a> *p_gameObject);</div>
+<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;        <span class="keywordtype">void</span> _onGameObjectUnsubscription(<a class="code" href="classspk_1_1GameObject.html">spk::GameObject</a> *p_gameObject);</div>
+<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;        <span class="keywordtype">void</span> update();</div>
+<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160; </div>
+<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;    <span class="keyword">public</span>:</div>
+<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;        <a class="code" href="classspk_1_1GameEngineModule.html#a0ab46352f98960fe80608de6d2cb1197">GameEngineModule</a>(<span class="keyword">const</span> std::string&amp; p_name);</div>
+<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160; </div>
+<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160;        <a class="code" href="classspk_1_1GameEngine.html">GameEngine</a>* <a class="code" href="classspk_1_1GameEngineModule.html#aa071b39b92654c987b842887a601bb65">owner</a>();</div>
+<div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160; </div>
+<div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160;        <span class="keyword">const</span> <a class="code" href="classspk_1_1GameEngine.html">GameEngine</a>* <a class="code" href="classspk_1_1GameEngineModule.html#aa071b39b92654c987b842887a601bb65">owner</a>() <span class="keyword">const</span>;</div>
+<div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160; </div>
+<div class="line"><a name="l00106"></a><span class="lineno">  106</span>&#160;        std::vector&lt;spk::GameObject*&gt;&amp; <a class="code" href="classspk_1_1GameEngineModule.html#ac722e395e5c419c30f0df624f50917f9">relevantObjects</a>();</div>
+<div class="line"><a name="l00107"></a><span class="lineno">  107</span>&#160; </div>
+<div class="line"><a name="l00112"></a><span class="lineno">  112</span>&#160;        <span class="keyword">const</span> std::vector&lt;spk::GameObject *&gt; &amp;<a class="code" href="classspk_1_1GameEngineModule.html#ac722e395e5c419c30f0df624f50917f9">relevantObjects</a>() <span class="keyword">const</span>;</div>
+<div class="line"><a name="l00113"></a><span class="lineno">  113</span>&#160;    };</div>
+<div class="line"><a name="l00114"></a><span class="lineno">  114</span>&#160;}</div>
 <div class="ttc" id="aclassspk_1_1GameEngineModule_html"><div class="ttname"><a href="classspk_1_1GameEngineModule.html">spk::GameEngineModule</a></div><div class="ttdoc">Abstract base class for modules within the game engine, handling game object updates and relevance.</div><div class="ttdef"><b>Definition:</b> spk_game_engine_module.hpp:63</div></div>
 <div class="ttc" id="aclassspk_1_1GameEngineModule_html_a0ab46352f98960fe80608de6d2cb1197"><div class="ttname"><a href="classspk_1_1GameEngineModule.html#a0ab46352f98960fe80608de6d2cb1197">spk::GameEngineModule::GameEngineModule</a></div><div class="ttdeci">GameEngineModule(const std::string &amp;p_name)</div><div class="ttdoc">Constructs a GameEngineModule with a specified name, associating it with the game engine.</div><div class="ttdef"><b>Definition:</b> spk_game_engine_module.cpp:33</div></div>
 <div class="ttc" id="aclassspk_1_1GameEngineModule_html_aa071b39b92654c987b842887a601bb65"><div class="ttname"><a href="classspk_1_1GameEngineModule.html#aa071b39b92654c987b842887a601bb65">spk::GameEngineModule::owner</a></div><div class="ttdeci">GameEngine * owner()</div><div class="ttdoc">Retrieves the game engine that owns this module.</div><div class="ttdef"><b>Definition:</b> spk_game_engine_module.cpp:40</div></div>

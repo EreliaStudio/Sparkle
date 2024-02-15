@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['r_981',['r',['../structspk_1_1Color.html#aae5f0e0ffcfc279a6be0c7436df4f0da',1,'spk::Color']]],
-  ['rotation_982',['rotation',['../classspk_1_1Transform.html#a8f39b14caf7d357f526fcddbcebdd0c0',1,'spk::Transform']]]
+  ['pointer_1025',['pointer',['../structspk_1_1Pipeline_1_1Structure_1_1Element.html#acf699f40a1ba5a810262b05ff74fcd2d',1,'spk::Pipeline::Structure::Element']]],
+  ['position_1026',['position',['../structspk_1_1Font_1_1Atlas_1_1GlyphData.html#a28d3ee1d5654e8365ff2a9f24fe458e6',1,'spk::Font::Atlas::GlyphData']]]
 ];

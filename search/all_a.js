@@ -1,10 +1,9 @@
 var searchData=
 [
-  ['layout_195',['Layout',['../structspk_1_1Pipeline_1_1Object_1_1Storage_1_1Layout.html',1,'spk::Pipeline::Object::Storage::Layout'],['../structspk_1_1Pipeline_1_1Texture_1_1Layout.html',1,'spk::Pipeline::Texture::Layout'],['../structspk_1_1Pipeline_1_1UniformObject_1_1Layout.html',1,'spk::Pipeline::UniformObject::Layout']]],
-  ['lenght_196',['lenght',['../structspk_1_1SpriteAnimation.html#ab6a9eadeb4ab8d121072be8696b8cb55',1,'spk::SpriteAnimation']]],
-  ['length_197',['length',['../structspk_1_1Pipeline_1_1Structure_1_1Element.html#abda8f1524079a6eec921489485af03cb',1,'spk::Pipeline::Structure::Element']]],
-  ['lerp_198',['lerp',['../structspk_1_1IVector2.html#ae564274f20ad50bb14dc2d34806cdec4',1,'spk::IVector2::lerp()'],['../structspk_1_1IVector3.html#a11f5bf056dc14b31a2873778a7df7952',1,'spk::IVector3::lerp()']]],
-  ['load_199',['load',['../classspk_1_1JSON_1_1File.html#a2d14fcfa9698f647011755f022ed9d7c',1,'spk::JSON::File']]],
-  ['location_200',['location',['../structspk_1_1Pipeline_1_1Object_1_1Storage_1_1Layout_1_1Element.html#a4bb25fe60b630daadda618109013a11b',1,'spk::Pipeline::Object::Storage::Layout::Element']]],
-  ['lookat_201',['lookAt',['../classspk_1_1Transform.html#ac7a1f1c2d73a3abc7a74d5f5a9bc2c22',1,'spk::Transform::lookAt()'],['../structspk_1_1Matrix4x4.html#a75a8166262ecfb2ee4a155c398c3e2d8',1,'spk::Matrix4x4::lookAt()'],['../classspk_1_1Quaternion.html#a13371257785a64ac8cfcb413125fdacb',1,'spk::Quaternion::lookAt()']]]
+  ['kcodeunknown_204',['kCodeUnknown',['../classspk_1_1Input.html#a1e08110eaf5ecd4933d977a271c614dd',1,'spk::Input']]],
+  ['kdummymappingcode_205',['kDummyMappingCode',['../classspk_1_1InputMapping.html#aea2d84681d116fdd133435afea2ff2e8',1,'spk::InputMapping']]],
+  ['key_206',['Key',['../classspk_1_1Keyboard.html#a13a0bee8478b4e4e8162d4f389134b28',1,'spk::Keyboard::Key()'],['../structspk_1_1Font_1_1Key.html#a7b1781a880ebac9d23db25f723f56d56',1,'spk::Font::Key::Key()'],['../structspk_1_1Font_1_1Key.html',1,'spk::Font::Key']]],
+  ['keyboard_207',['keyboard',['../classspk_1_1Application.html#ad504aee9106c1174e24a7e1227f09fde',1,'spk::Application']]],
+  ['keyboard_208',['Keyboard',['../classspk_1_1Keyboard.html#a9c899c94ba2045460cd9e035754f80a4',1,'spk::Keyboard::Keyboard()'],['../classspk_1_1Keyboard.html',1,'spk::Keyboard']]],
+  ['kunnamedmapping_209',['KUnnamedMapping',['../classspk_1_1InputMapping.html#ac21f86cc3dab007aeb9f2bfb8669d3f4',1,'spk::InputMapping']]]
 ];

@@ -1,5 +1,5 @@
-<map id="spk::SpriteRenderer" name="spk::SpriteRenderer">
-<area shape="rect" id="node1" title="Represents a sprite renderer component for rendering sprites in world space." alt="" coords="13,155,164,181"/>
+<map id="spk::MeshRenderer" name="spk::MeshRenderer">
+<area shape="rect" id="node1" title="Represents a sprite renderer component for rendering sprites in world space." alt="" coords="15,155,162,181"/>
 <area shape="rect" id="node2" href="$classspk_1_1GameComponent.html" title="Base class for game components that can be attached to GameObjects." alt="" coords="5,80,172,107"/>
 <area shape="rect" id="node3" href="$classspk_1_1ActivateObject.html" title="Manages activation state for objects, intended as a base class." alt="" coords="14,5,163,32"/>
 </map>

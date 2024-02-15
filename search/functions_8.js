@@ -1,31 +1,5 @@
 var searchData=
 [
-  ['ichronometer_687',['IChronometer',['../classspk_1_1IChronometer.html#a50fe1c0f6043a2359f26107e080a8004',1,'spk::IChronometer']]],
-  ['icollider_688',['ICollider',['../classspk_1_1ICollider.html#a28c7b5bab8cfadcecaf0f75915f5fe58',1,'spk::ICollider']]],
-  ['image_689',['Image',['../classspk_1_1Image.html#a337bb053ef8644753894ccc187e055a4',1,'spk::Image']]],
-  ['indexes_690',['indexes',['../classspk_1_1Mesh.html#aafefde3a9647461c345794cf9a58bea5',1,'spk::Mesh']]],
-  ['input_691',['Input',['../classspk_1_1Input.html#ab8e50ac47e73f59fa8f7de06e851faec',1,'spk::Input::Input()'],['../classspk_1_1Input.html#a45b7b4964611f9cb46a63abdc05af710',1,'spk::Input::Input(Mouse::Button p_mouseButton, InputState p_state)'],['../classspk_1_1Input.html#a20e92ac09d4db4ada6ccb4143b629652',1,'spk::Input::Input(Keyboard::Key p_key, InputState p_state)']]],
-  ['inputdecoder_692',['InputDecoder',['../classspk_1_1InputDecoder.html#a248a13b2463bfab3f44d91e964d2f0c6',1,'spk::InputDecoder']]],
-  ['inputdecoder_693',['inputDecoder',['../classspk_1_1Application.html#a3882c126837af2a8f77736502809b2d9',1,'spk::Application']]],
-  ['inputmapping_694',['InputMapping',['../classspk_1_1InputMapping.html#aa369e887813d0ef6c41bb9d59ca003eb',1,'spk::InputMapping::InputMapping()'],['../classspk_1_1InputMapping.html#a9c6335473bbe4969a2dbd0f4fcd64f1c',1,'spk::InputMapping::InputMapping(const Input &amp;p_expects, EventType p_code, const std::string &amp;p_debugName=std::string(KUnnamedMapping))']]],
-  ['insertconstants_695',['insertConstants',['../classspk_1_1Pipeline.html#a2a5fae4e24db9afde3bfb11e7dbbc005',1,'spk::Pipeline']]],
-  ['instance_696',['instance',['../classspk_1_1Singleton.html#abe43f9ebc8787acdb8c0c23979d201fa',1,'spk::Singleton']]],
-  ['instanciate_697',['instanciate',['../classspk_1_1Singleton.html#a7453a1c0e244b9622222fc82fbcf0c43',1,'spk::Singleton']]],
-  ['inverse_698',['inverse',['../structspk_1_1Matrix4x4.html#ad25033b4c06291605ebb74e0ebf9b31a',1,'spk::Matrix4x4::inverse()'],['../classspk_1_1Quaternion.html#af9fbc1e581d84e8712626b2cc873c375',1,'spk::Quaternion::inverse()'],['../structspk_1_1IVector3.html#aaf88d045197166cc4d49631cf16b1663',1,'spk::IVector3::inverse()']]],
-  ['iperlin_699',['IPerlin',['../classspk_1_1IPerlin.html#ad28dda1b58fa9e095d3f05e4bc342084',1,'spk::IPerlin::IPerlin()'],['../classspk_1_1IPerlin.html#a73b47e2c4fd3844598073e573529a788',1,'spk::IPerlin::IPerlin(unsigned long p_seed)']]],
-  ['isactive_700',['isActive',['../classspk_1_1ActivateObject.html#a09dafef71145f3093d6b42aa9397575a',1,'spk::ActivateObject']]],
-  ['isarray_701',['isArray',['../classspk_1_1JSON_1_1Object.html#a3eb7972a7dea608a0c976a2904abafef',1,'spk::JSON::Object']]],
-  ['iscanceled_702',['isCanceled',['../classspk_1_1Notifier_1_1Contract.html#a006a56b84a5622d55c741591355e1be1',1,'spk::Notifier::Contract']]],
-  ['isinsiderectangle_703',['isInsideRectangle',['../structspk_1_1IVector2.html#a34fd8293e2ff4b4bfa398dd70d158081',1,'spk::IVector2::isInsideRectangle()'],['../structspk_1_1IVector3.html#ae877170d311ff691d96cfec7d1ee7e23',1,'spk::IVector3::isInsideRectangle()']]],
-  ['isintersecting_704',['isIntersecting',['../classspk_1_1ICollider.html#a6818f4b88dd0d42e8ffad841cebfc2c8',1,'spk::ICollider::isIntersecting()'],['../classspk_1_1MeshCollider2D.html#a21981f2a1f7e9500f792b35871f942fd',1,'spk::MeshCollider2D::isIntersecting()']]],
-  ['iskinematic_705',['isKinematic',['../classspk_1_1Physics.html#ab7fdde4c989f2078c14eab1083763a91',1,'spk::Physics']]],
-  ['isobject_706',['isObject',['../classspk_1_1JSON_1_1Object.html#abec126fa21bc725fa3448fbb3f11ba90',1,'spk::JSON::Object']]],
-  ['ispaused_707',['isPaused',['../classspk_1_1Notifier_1_1Contract.html#a9fd18029e1a17748ec9ff7333ebfe626',1,'spk::Notifier::Contract']]],
-  ['isrunning_708',['isRunning',['../classspk_1_1IChronometer.html#a4b665ee263ac7fed24a4949356f834fb',1,'spk::IChronometer']]],
-  ['istimedout_709',['isTimedOut',['../classspk_1_1ITimer.html#aa03602587e30206d7b36868096f221c6',1,'spk::ITimer']]],
-  ['isunit_710',['isUnit',['../classspk_1_1JSON_1_1Object.html#acb83a2000eb8f5b7a538cfab797780b2',1,'spk::JSON::Object']]],
-  ['itimer_711',['ITimer',['../classspk_1_1ITimer.html#ada9e7b0ba98a20a595c772276279bdef',1,'spk::ITimer::ITimer()=default'],['../classspk_1_1ITimer.html#a637a67fe18d1a86c125a3fe47458dfbd',1,'spk::ITimer::ITimer(const size_t &amp;p_duration)']]],
-  ['ivector2_712',['IVector2',['../structspk_1_1IVector2.html#ad681cb3d88fd9a4ca1e60c3c44e600b6',1,'spk::IVector2::IVector2()'],['../structspk_1_1IVector2.html#a63bb5410f1e9cca040452b1a81290968',1,'spk::IVector2::IVector2(const IVector2&lt; TOtherType &gt; &amp;p_other)'],['../structspk_1_1IVector2.html#ae19d5113e9d9ee49285b4ac930b37f1f',1,'spk::IVector2::IVector2(const TTypeA &amp;p_x, const TTypeB &amp;p_y)'],['../structspk_1_1IVector2.html#ae197d470bdc2579bd6434f1d23e569bc',1,'spk::IVector2::IVector2(const TOtherType &amp;p_value)']]],
-  ['ivector3_713',['IVector3',['../structspk_1_1IVector3.html#a1a30fd5ff259b409a088fa58a6249bc5',1,'spk::IVector3::IVector3()'],['../structspk_1_1IVector3.html#a0da947bddc0d6f1b9210b427ef191cd8',1,'spk::IVector3::IVector3(const TType &amp;p_value)'],['../structspk_1_1IVector3.html#af3cc38650680d3a70d7582dce7cb7fa4',1,'spk::IVector3::IVector3(const IVector3&lt; TType &gt; &amp;p_other, const TType &amp;p_value)'],['../structspk_1_1IVector3.html#a81feedd14f6cabf9793a2e066d686deb',1,'spk::IVector3::IVector3(const IVector3&lt; TType &gt; &amp;p_other)'],['../structspk_1_1IVector3.html#ad0811a749b9431c45004437595f9457e',1,'spk::IVector3::IVector3(const TType &amp;p_x, const TType &amp;p_y, const TType &amp;p_z)']]],
-  ['iwidget_714',['IWidget',['../classspk_1_1IWidget.html#a54d3ddf655bf7c2b87b6c57a0eeebd4c',1,'spk::IWidget::IWidget(const std::string &amp;p_name)'],['../classspk_1_1IWidget.html#aff73f1bf57dfe443904f30080851f36c',1,'spk::IWidget::IWidget(const std::string &amp;p_name, IWidget *p_parent)']]]
+  ['handle_723',['handle',['../classspk_1_1OpenGL_1_1VertexArrayObject.html#ab73de08f5a30c0541846eb08823be801',1,'spk::OpenGL::VertexArrayObject::handle()'],['../classspk_1_1OpenGL_1_1VertexBufferObject.html#a9910ee5d9a2367fb58f6f7539914dee3',1,'spk::OpenGL::VertexBufferObject::handle()']]],
+  ['hold_724',['hold',['../classspk_1_1JSON_1_1Object.html#a6f6a4453ee749dd2152e019d0786274b',1,'spk::JSON::Object']]]
 ];

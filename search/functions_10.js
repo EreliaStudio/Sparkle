@@ -1,28 +1,5 @@
 var searchData=
 [
-  ['radiantodegree_797',['radianToDegree',['../structspk_1_1IVector3.html#ae0d5bc5a452e848abcd27e91e4fef633',1,'spk::IVector3::radianToDegree()'],['../structspk_1_1IVector2.html#aa9dc029c55d2b542358750905343d827',1,'spk::IVector2::radianToDegree()']]],
-  ['randomgenerator_798',['RandomGenerator',['../classspk_1_1RandomGenerator.html#a11a3b5f092c4f4da26ee3826ac101a3f',1,'spk::RandomGenerator::RandomGenerator()'],['../classspk_1_1RandomGenerator.html#aa944e6c7ea75f0e03bfe01ad0d4a74d3',1,'spk::RandomGenerator::RandomGenerator(const unsigned int &amp;p_seed)'],['../classspk_1_1RandomGenerator.html#a301e58954bd4d01521de6d80c9fa1690',1,'spk::RandomGenerator::RandomGenerator(const RandomGenerator &amp;p_other)=delete']]],
-  ['release_799',['release',['../classspk_1_1Singleton.html#a0fd0698aa7eab7c2a5cfbf11a9ddfad1',1,'spk::Singleton']]],
-  ['releasebutton_800',['releaseButton',['../classspk_1_1Mouse.html#a420dd107e3a5c38e7a201b76b9385d4b',1,'spk::Mouse']]],
-  ['releasegpumemory_801',['releaseGPUMemory',['../classspk_1_1Texture.html#abdfe0609386a355ba5056b29bf8e990e',1,'spk::Texture']]],
-  ['releasekey_802',['releaseKey',['../classspk_1_1Keyboard.html#a9c67b8b4b49838aca2cbf76468f9bc00',1,'spk::Keyboard']]],
-  ['relevantobjects_803',['relevantObjects',['../classspk_1_1GameEngineModule.html#ac722e395e5c419c30f0df624f50917f9',1,'spk::GameEngineModule::relevantObjects()'],['../classspk_1_1GameEngineModule.html#abad90fdc08d9e3ad7997eb3ca22e91db',1,'spk::GameEngineModule::relevantObjects() const']]],
-  ['removechild_804',['removeChild',['../classspk_1_1TreeNode.html#a1599cb422d20ac8a0d6a8699bae7189f',1,'spk::TreeNode']]],
-  ['removetag_805',['removeTag',['../classspk_1_1GameObject.html#ad30183883a594b0fa29184f886fd89f5',1,'spk::GameObject']]],
-  ['removey_806',['removeY',['../structspk_1_1IVector3.html#aa9af8c69c5c0c3434c44363b28720791',1,'spk::IVector3']]],
-  ['render_807',['render',['../classspk_1_1WidgetComponent_1_1TextLabel.html#af1d831dbb8c85ea903b87746d9331d53',1,'spk::WidgetComponent::TextLabel::render()'],['../classspk_1_1WidgetComponent_1_1NineSlicedBox.html#ace1c7eb91bbf2cc23b993bd94f5bfaba',1,'spk::WidgetComponent::NineSlicedBox::render()'],['../classspk_1_1GameEngine.html#ae5bb77ea1e7ce78fe88b8fd6b08f3b07',1,'spk::GameEngine::render()'],['../classspk_1_1Pipeline_1_1Object.html#aacb478b977b034c26354de25c8354d10',1,'spk::Pipeline::Object::render()']]],
-  ['reserveindex_808',['reserveIndex',['../classspk_1_1Mesh.html#af36ee4808febb997aa15353eb8fc02d5',1,'spk::Mesh']]],
-  ['reservenormal_809',['reserveNormal',['../classspk_1_1Mesh.html#a5cdfeaa49b0e8ed9c9243924a031366c',1,'spk::Mesh']]],
-  ['reservepoints_810',['reservePoints',['../classspk_1_1Mesh.html#a7f73bffdbeb31567672f744fbda3447c',1,'spk::Mesh']]],
-  ['reserveuvs_811',['reserveUVs',['../classspk_1_1Mesh.html#ae2d55332850e8a30e79257c154255912',1,'spk::Mesh']]],
-  ['reset_812',['reset',['../classspk_1_1JSON_1_1Object.html#a9026fd2ef8903d031ca351d785dd468e',1,'spk::JSON::Object']]],
-  ['resize_813',['resize',['../classspk_1_1Pool.html#a3ea29c0caff3a8a4c5b059ad6ad85ce9',1,'spk::Pool::resize()'],['../classspk_1_1JSON_1_1Object.html#a8b28dffe678239e617743c19492b681f',1,'spk::JSON::Object::resize()']]],
-  ['resume_814',['resume',['../classspk_1_1Notifier_1_1Contract.html#a1962a9ad850a6094cf2693897f2f4a74',1,'spk::Notifier::Contract']]],
-  ['right_815',['right',['../classspk_1_1Transform.html#a5f70009816b090278d7d87798876b189',1,'spk::Transform']]],
-  ['root_816',['root',['../classspk_1_1JSON_1_1File.html#a165c2e57b670a7f02802e9ecd931c074',1,'spk::JSON::File']]],
-  ['rotate_817',['rotate',['../structspk_1_1IVector2.html#a2a657d838bdfcbb18dd0309977d34d5b',1,'spk::IVector2::rotate()'],['../structspk_1_1IVector3.html#a7cb46bc29df99ee08112e5a36505f6f0',1,'spk::IVector3::rotate()']]],
-  ['rotatearoundaxis_818',['rotateAroundAxis',['../structspk_1_1Matrix4x4.html#a4dab87baafea992da45529bc045f7e24',1,'spk::Matrix4x4']]],
-  ['rotationmatrix_819',['rotationMatrix',['../structspk_1_1Matrix4x4.html#ae495fa76786eb789c17a8dfb7f3cb6df',1,'spk::Matrix4x4']]],
-  ['round_820',['round',['../structspk_1_1IVector2.html#a173f7d72b11d82a87db01e6a6dfe625e',1,'spk::IVector2::round()'],['../structspk_1_1IVector3.html#a44fa721f168b55a9826463f6936a1092',1,'spk::IVector3::round()']]],
-  ['run_821',['run',['../classspk_1_1Application.html#a8d5ca22f595b0ac184bb264502097040',1,'spk::Application']]]
+  ['quaternion_835',['Quaternion',['../classspk_1_1Quaternion.html#a794ceca859d3e30c3cd02f9457f37ca9',1,'spk::Quaternion::Quaternion()'],['../classspk_1_1Quaternion.html#ae69e80b2ef167782c6dc4210972e0449',1,'spk::Quaternion::Quaternion(const float &amp;p_x, const float &amp;p_y, const float &amp;p_z, const float &amp;p_w)'],['../classspk_1_1Quaternion.html#a1fef7c4babd115cf2cb632c18ae4dbea',1,'spk::Quaternion::Quaternion(const spk::Vector3 &amp;p_eulerAngles)']]],
+  ['quit_836',['quit',['../classspk_1_1Application.html#a76122a425227c8d2be90555e045bb132',1,'spk::Application']]]
 ];

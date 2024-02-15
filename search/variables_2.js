@@ -1,6 +1,5 @@
 var searchData=
 [
-  ['char_5fpixel_946',['CHAR_PIXEL',['../classspk_1_1Font.html#a819bd90bab55e93ef265a008821fa47a',1,'spk::Font']]],
-  ['circleindexes_947',['circleIndexes',['../structspk_1_1Font_1_1Key.html#a40f6032a8bf3aa9ac7fb605469edc64c',1,'spk::Font::Key']]],
-  ['content_948',['content',['../structspk_1_1OpenGL_1_1ShaderInstruction.html#acc9e8e94b9e0d3d1bfeb63684e6908fd',1,'spk::OpenGL::ShaderInstruction']]]
+  ['b_990',['b',['../structspk_1_1Color.html#a3b6792ad83c4563b0d9634ab52a96a36',1,'spk::Color']]],
+  ['binding_991',['binding',['../structspk_1_1Pipeline_1_1UniformObject_1_1Layout.html#a0c3cad6a2dc19f5408ce63f1f570a245',1,'spk::Pipeline::UniformObject::Layout']]]
 ];

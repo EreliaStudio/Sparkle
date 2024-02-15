@@ -160,7 +160,7 @@ $(function() {
 </li>
 <li>setMesh()
 : <a class="el" href="classspk_1_1ICollider.html#a1bd922d6f189bc2b3be5992c4d72ab5a">spk::ICollider</a>
-, <a class="el" href="classspk_1_1SpriteRenderer.html#abac34c7db2ff9f6e2fba5ccd4c40ea94">spk::SpriteRenderer</a>
+, <a class="el" href="classspk_1_1MeshRenderer.html#a7441bb5cb7a2d2b1e70ec63a06bc34fa">spk::MeshRenderer</a>
 </li>
 <li>setMousePosition()
 : <a class="el" href="classspk_1_1Mouse.html#a3576d3accda65e374ca0aa404b60f767">spk::Mouse</a>
@@ -181,13 +181,13 @@ $(function() {
 : <a class="el" href="classspk_1_1WidgetComponent_1_1TextLabel.html#a696f1206673df352cbe1f9beb08e8626">spk::WidgetComponent::TextLabel</a>
 </li>
 <li>setSprite()
-: <a class="el" href="classspk_1_1SpriteRenderer.html#acd5e38c7d49c4c41d0ef3b2d6085bb89">spk::SpriteRenderer</a>
+: <a class="el" href="classspk_1_1MeshRenderer.html#a13cbd3be2105009dbcea4eed4788cdaa">spk::MeshRenderer</a>
 </li>
 <li>setSpriteAnimation()
-: <a class="el" href="classspk_1_1SpriteRenderer.html#a1d0c5b574e81576e078ff84f8b706056">spk::SpriteRenderer</a>
+: <a class="el" href="classspk_1_1MeshRenderer.html#a2464ef4cc4b6401240a4663406b03f9e">spk::MeshRenderer</a>
 </li>
 <li>setSpriteSheet()
-: <a class="el" href="classspk_1_1SpriteRenderer.html#a24cb48268f0f70241668a78839cfd4ff">spk::SpriteRenderer</a>
+: <a class="el" href="classspk_1_1MeshRenderer.html#ade7d56926772be30d404bc41930a9676">spk::MeshRenderer</a>
 , <a class="el" href="classspk_1_1WidgetComponent_1_1NineSlicedBox.html#ae818da5886c4778cfcbb77bc082ba8c7">spk::WidgetComponent::NineSlicedBox</a>
 </li>
 <li>setText()
@@ -221,6 +221,9 @@ $(function() {
 : <a class="el" href="classspk_1_1IAnalyticalMetric.html#a4f15ab89ed2c3240dcddedd62e29fed7">spk::IAnalyticalMetric&lt; TType &gt;</a>
 , <a class="el" href="classspk_1_1IMetric.html#a9e15c5f72890ce9b2f8c49ea03810e22">spk::IMetric</a>
 </li>
+<li>Singleton()
+: <a class="el" href="classspk_1_1Singleton.html#a24d01aa8ba49475d195a492d724d43e1">spk::Singleton&lt; TType &gt;</a>
+</li>
 <li>size()
 : <a class="el" href="classspk_1_1Application.html#a625fedcebc59670063a3bcc052b88b51">spk::Application</a>
 , <a class="el" href="classspk_1_1IWidget.html#aa49dede9b15bc250535a6762cf572ba9">spk::IWidget</a>
@@ -235,23 +238,20 @@ $(function() {
 : <a class="el" href="classspk_1_1TimeManager.html#a9712496cf3bd1ed017f55494efdf3704">spk::TimeManager</a>
 </li>
 <li>sprite()
-: <a class="el" href="classspk_1_1SpriteRenderer.html#a08ca68c8164081bf940c8a24724c48ef">spk::SpriteRenderer</a>
+: <a class="el" href="classspk_1_1MeshRenderer.html#a222e70fbad717f827c4fe3000eadd8af">spk::MeshRenderer</a>
 , <a class="el" href="classspk_1_1SpriteSheet.html#a4e13baaf1158ca13543476e5c16721f7">spk::SpriteSheet</a>
 </li>
 <li>spriteAnimation()
-: <a class="el" href="classspk_1_1SpriteRenderer.html#ae56f7689304413f9487b44dfbf497663">spk::SpriteRenderer</a>
+: <a class="el" href="classspk_1_1MeshRenderer.html#a4ba5c908fe88d312a24e499fed08abbf">spk::MeshRenderer</a>
 </li>
 <li>spriteID()
 : <a class="el" href="classspk_1_1SpriteSheet.html#a70e1013197d4e87a97c693023a700fe7">spk::SpriteSheet</a>
-</li>
-<li>SpriteRenderer()
-: <a class="el" href="classspk_1_1SpriteRenderer.html#ae31e28fdf5e9d36978fd93d91b92d5d3">spk::SpriteRenderer</a>
 </li>
 <li>sprites()
 : <a class="el" href="classspk_1_1SpriteSheet.html#a88238fa42d3528c24c28e900ec995750">spk::SpriteSheet</a>
 </li>
 <li>spriteSheet()
-: <a class="el" href="classspk_1_1SpriteRenderer.html#a0a8b125134a30634aa0b0fd7b734018a">spk::SpriteRenderer</a>
+: <a class="el" href="classspk_1_1MeshRenderer.html#a85b8cb2176bb0eebe1ab99967fa33bba">spk::MeshRenderer</a>
 </li>
 <li>SpriteSheet()
 : <a class="el" href="classspk_1_1SpriteSheet.html#aa0a28bd30e8c79c3be223cfa199eed8d">spk::SpriteSheet</a>
@@ -277,7 +277,8 @@ $(function() {
 : <a class="el" href="classspk_1_1Pipeline_1_1Object_1_1Storage.html#ae5d081c6bd69a3205f541e2a51ab890f">spk::Pipeline::Object::Storage</a>
 </li>
 <li>subscribe()
-: <a class="el" href="classspk_1_1GameEngine.html#aaceba922dafadac8e052378c881c9c6e">spk::GameEngine</a>
+: <a class="el" href="classspk_1_1EventManager.html#a5bd5a999ac380a526692a4e8032076fe">spk::EventManager&lt; TEventType &gt;</a>
+, <a class="el" href="classspk_1_1GameEngine.html#aaceba922dafadac8e052378c881c9c6e">spk::GameEngine</a>
 , <a class="el" href="classspk_1_1InputDecoder.html#a0d791843875bb1a93a49286f5e97c8f5">spk::InputDecoder</a>
 , <a class="el" href="classspk_1_1Notifier.html#a157fc605d61ee4e11e88bb9c25369ab5">spk::Notifier</a>
 , <a class="el" href="classspk_1_1ObservableValue.html#af295d84f903d3bbcf3489fd31831da7e">spk::ObservableValue&lt; TType &gt;</a>

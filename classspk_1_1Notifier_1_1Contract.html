@@ -90,9 +90,9 @@ Public Member Functions</h2></td></tr>
 &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Notifier_1_1Contract.html#ac109d2d6df37b87b84db50436612ebdf">~Contract</a> ()</td></tr>
 <tr class="memdesc:ac109d2d6df37b87b84db50436612ebdf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Destructs the <a class="el" href="classspk_1_1Notifier_1_1Contract.html" title="Represents a subscription contract between a subscriber and a Notifier.">Contract</a> instance. <br /></td></tr>
 <tr class="separator:ac109d2d6df37b87b84db50436612ebdf"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1c002d1356c63ec5a7f6eef2c919ae99"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classspk_1_1Notifier_1_1Contract.html">Contract</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Notifier_1_1Contract.html#a1c002d1356c63ec5a7f6eef2c919ae99">operator=</a> (const <a class="el" href="classspk_1_1Notifier_1_1Contract.html">Contract</a> &amp;p_other)</td></tr>
-<tr class="memdesc:a1c002d1356c63ec5a7f6eef2c919ae99"><td class="mdescLeft">&#160;</td><td class="mdescRight">Assigns the state of another <a class="el" href="classspk_1_1Notifier_1_1Contract.html" title="Represents a subscription contract between a subscriber and a Notifier.">Contract</a> to this one.  <a href="classspk_1_1Notifier_1_1Contract.html#a1c002d1356c63ec5a7f6eef2c919ae99">More...</a><br /></td></tr>
-<tr class="separator:a1c002d1356c63ec5a7f6eef2c919ae99"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adcaafa88a04a0dee00d6e67ba27d7e46"><td class="memItemLeft" align="right" valign="top"><a id="adcaafa88a04a0dee00d6e67ba27d7e46"></a>
+<a class="el" href="classspk_1_1Notifier_1_1Contract.html">Contract</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (const <a class="el" href="classspk_1_1Notifier_1_1Contract.html">Contract</a> &amp;p_other)=delete</td></tr>
+<tr class="separator:adcaafa88a04a0dee00d6e67ba27d7e46"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a006a56b84a5622d55c741591355e1be1"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Notifier_1_1Contract.html#a006a56b84a5622d55c741591355e1be1">isCanceled</a> () const</td></tr>
 <tr class="memdesc:a006a56b84a5622d55c741591355e1be1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Checks if the <a class="el" href="classspk_1_1Notifier_1_1Contract.html" title="Represents a subscription contract between a subscriber and a Notifier.">Contract</a> is canceled.  <a href="classspk_1_1Notifier_1_1Contract.html#a006a56b84a5622d55c741591355e1be1">More...</a><br /></td></tr>
 <tr class="separator:a006a56b84a5622d55c741591355e1be1"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -128,7 +128,7 @@ class&#160;</td><td class="memItemRight" valign="bottom"><b>Notifier</b></td></t
 <div class="line">contract-&gt;resume(); <span class="comment">// Resumes notifications</span></div>
 <div class="line">contract-&gt;cancel(); <span class="comment">// Cancels the subscription</span></div>
 <div class="ttc" id="aclassspk_1_1Notifier_html"><div class="ttname"><a href="classspk_1_1Notifier.html">spk::Notifier</a></div><div class="ttdoc">Manages a list of subscribers (via callbacks) and notifies them uppon request.</div><div class="ttdef"><b>Definition:</b> spk_notifier.hpp:34</div></div>
-<div class="ttc" id="aclassspk_1_1Notifier_html_a157fc605d61ee4e11e88bb9c25369ab5"><div class="ttname"><a href="classspk_1_1Notifier.html#a157fc605d61ee4e11e88bb9c25369ab5">spk::Notifier::subscribe</a></div><div class="ttdeci">std::unique_ptr&lt; Contract &gt; subscribe(const Callback &amp;p_callback)</div><div class="ttdoc">Subscribes to notifications with a specific callback.</div><div class="ttdef"><b>Definition:</b> spk_notifier.cpp:52</div></div>
+<div class="ttc" id="aclassspk_1_1Notifier_html_a157fc605d61ee4e11e88bb9c25369ab5"><div class="ttname"><a href="classspk_1_1Notifier.html#a157fc605d61ee4e11e88bb9c25369ab5">spk::Notifier::subscribe</a></div><div class="ttdeci">std::unique_ptr&lt; Contract &gt; subscribe(const Callback &amp;p_callback)</div><div class="ttdoc">Subscribes to notifications with a specific callback.</div><div class="ttdef"><b>Definition:</b> spk_notifier.cpp:84</div></div>
 </div><!-- fragment --><dl class="section note"><dt>Note</dt><dd>The <a class="el" href="classspk_1_1Notifier_1_1Contract.html" title="Represents a subscription contract between a subscriber and a Notifier.">Contract</a> class is designed to be used in conjunction with the <a class="el" href="classspk_1_1Notifier.html" title="Manages a list of subscribers (via callbacks) and notifies them uppon request.">Notifier</a> class and is thread-safe, allowing subscription management from multiple threads.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="classspk_1_1Notifier.html" title="Manages a list of subscribers (via callbacks) and notifies them uppon request.">Notifier</a> </dd></dl>
 </div><h2 class="groupheader">Member Function Documentation</h2>
@@ -209,33 +209,6 @@ class&#160;</td><td class="memItemRight" valign="bottom"><b>Notifier</b></td></t
 
 <p>Sends a notification using the <a class="el" href="classspk_1_1Notifier_1_1Contract.html" title="Represents a subscription contract between a subscriber and a Notifier.">Contract</a>'s callback. </p>
 <p>This method is typically called by the <a class="el" href="classspk_1_1Notifier.html" title="Manages a list of subscribers (via callbacks) and notifies them uppon request.">Notifier</a> to trigger the <a class="el" href="classspk_1_1Notifier_1_1Contract.html" title="Represents a subscription contract between a subscriber and a Notifier.">Contract</a>'s callback. </p>
-
-</div>
-</div>
-<a id="a1c002d1356c63ec5a7f6eef2c919ae99"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a1c002d1356c63ec5a7f6eef2c919ae99">&#9670;&nbsp;</a></span>operator=()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="classspk_1_1Notifier_1_1Contract.html">Notifier::Contract</a> &amp; spk::Notifier::Contract::operator= </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="classspk_1_1Notifier_1_1Contract.html">Contract</a> &amp;&#160;</td>
-          <td class="paramname"><em>p_other</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Assigns the state of another <a class="el" href="classspk_1_1Notifier_1_1Contract.html" title="Represents a subscription contract between a subscriber and a Notifier.">Contract</a> to this one. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">p_other</td><td>The other <a class="el" href="classspk_1_1Notifier_1_1Contract.html" title="Represents a subscription contract between a subscriber and a Notifier.">Contract</a> to copy state from. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>A reference to this <a class="el" href="classspk_1_1Notifier_1_1Contract.html" title="Represents a subscription contract between a subscriber and a Notifier.">Contract</a> after copying the state. </dd></dl>
 
 </div>
 </div>

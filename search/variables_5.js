@@ -1,6 +1,5 @@
 var searchData=
 [
-  ['firstframe_953',['firstFrame',['../structspk_1_1SpriteAnimation.html#aef0bd090ea2ed7f907acfeacd10182c2',1,'spk::SpriteAnimation']]],
-  ['fontsize_954',['fontSize',['../structspk_1_1Font_1_1Key.html#aca9df06cddf688f9c2fbef125674191d',1,'spk::Font::Key']]],
-  ['frameoffset_955',['frameOffset',['../structspk_1_1SpriteAnimation.html#a6d8527f2eea0bc59e168a08fa3d60b16',1,'spk::SpriteAnimation']]]
+  ['elements_997',['elements',['../structspk_1_1Pipeline_1_1Object_1_1Storage_1_1Layout.html#ac3c726fc83fcb524d67cef7b0fd58a99',1,'spk::Pipeline::Object::Storage::Layout']]],
+  ['empty_5fpixel_998',['EMPTY_PIXEL',['../classspk_1_1Font.html#ae48e8b73f43bfc181a1f9362ef3e759a',1,'spk::Font']]]
 ];

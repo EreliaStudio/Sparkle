@@ -1,14 +1,17 @@
 var searchData=
 [
-  ['name_735',['name',['../classspk_1_1GameObject.html#a94582351492ffc044a1f1b9487755da8',1,'spk::GameObject::name()'],['../classspk_1_1InputMapping.html#a3bf2daad373ce7e7704f02ce38dab6f2',1,'spk::InputMapping::name()'],['../classspk_1_1IWidget.html#a228715457b410b48c5c94a9091c688b9',1,'spk::IWidget::name()'],['../classspk_1_1GameComponent.html#a6888b4911e003727ceb506456029a7e3',1,'spk::GameComponent::name()']]],
-  ['nbcontracts_736',['nbContracts',['../classspk_1_1Notifier.html#a4565aca18e82a3f8ae339454fc6b90ad',1,'spk::Notifier::nbContracts()'],['../classspk_1_1ObservableValue.html#a3819c28da3a0fa4c8c8e1c7214af4e7c',1,'spk::ObservableValue::nbContracts()']]],
-  ['nbtriangles_737',['nbTriangles',['../classspk_1_1Pipeline_1_1Object_1_1Storage.html#ac8a3d6a7a13d4e4aca75e48eb2d27fd2',1,'spk::Pipeline::Object::Storage']]],
-  ['nextvelocitytick_738',['nextVelocityTick',['../classspk_1_1Physics.html#af98e446865306daf1207628b0dada599',1,'spk::Physics']]],
-  ['nineslicedbox_739',['NineSlicedBox',['../classspk_1_1WidgetComponent_1_1NineSlicedBox.html#a9b34e3d64e6eb9ba8b8a5096c8b25da1',1,'spk::WidgetComponent::NineSlicedBox']]],
-  ['norm_740',['norm',['../structspk_1_1IVector3.html#a0f8393536cd9515d379fdb5cfa51ce42',1,'spk::IVector3::norm()'],['../structspk_1_1IVector2.html#aa0d0c755988c4ce9ec8e86e1744d997e',1,'spk::IVector2::norm()']]],
-  ['normalize_741',['normalize',['../classspk_1_1Quaternion.html#a21edb010d01014e8a4680ad5177ea7bb',1,'spk::Quaternion::normalize()'],['../structspk_1_1IVector2.html#a6bc80581ee0fb7ce5f10b751b85fa0cb',1,'spk::IVector2::normalize()'],['../structspk_1_1IVector3.html#abea37a463a1e88283763e39ff9910d37',1,'spk::IVector3::normalize()']]],
-  ['normals_742',['normals',['../classspk_1_1Mesh.html#a2651226890af9a5b543b5a7c932b8817',1,'spk::Mesh']]],
-  ['notifier_743',['Notifier',['../classspk_1_1Notifier.html#a7cd831676b58e5e5dc48fca3019b0cb0',1,'spk::Notifier::Notifier()'],['../classspk_1_1Notifier.html#aa4de3147391d99b3980f1527c2746e96',1,'spk::Notifier::Notifier(const Notifier &amp;p_other)=delete'],['../classspk_1_1Notifier.html#aec9d7ff611ffee79b4f8a9ecf34d38f6',1,'spk::Notifier::Notifier(Notifier &amp;&amp;p_other)']]],
-  ['notify_744',['notify',['../classspk_1_1Notifier_1_1Contract.html#a3853633cb57d115d84c81cf5e180c34d',1,'spk::Notifier::Contract']]],
-  ['notify_5fall_745',['notify_all',['../classspk_1_1Notifier.html#a1dd154adc30627b07c364abd945c3ccc',1,'spk::Notifier::notify_all()'],['../classspk_1_1ObservableValue.html#a6eb8258a644771a2ccb03cdfda1ee718',1,'spk::ObservableValue::notify_all()']]]
+  ['maincamera_759',['mainCamera',['../classspk_1_1Camera.html#a71e82f06323b6a3a4eaefa5aee3607de',1,'spk::Camera']]],
+  ['mapping_760',['mapping',['../classspk_1_1InputDecoder.html#a83e1acc92352ea8087a567b28100572d',1,'spk::InputDecoder']]],
+  ['mass_761',['mass',['../classspk_1_1Physics.html#aa52709ff78475884ae43e1953d7d24d3',1,'spk::Physics']]],
+  ['matrix4x4_762',['Matrix4x4',['../structspk_1_1Matrix4x4.html#a3d4ed1df5def9a0886e31e58301d6102',1,'spk::Matrix4x4']]],
+  ['max_763',['max',['../classspk_1_1RandomGenerator.html#ac64780f71057a7db7f87a90033d99a29',1,'spk::RandomGenerator::max()'],['../structspk_1_1IVector2.html#a452209253a7a42351fc09951297f7d4d',1,'spk::IVector2::max()'],['../structspk_1_1IVector3.html#aede8453d5ee49adcea849b22422c8089',1,'spk::IVector3::max()'],['../classspk_1_1IAnalyticalMetric.html#a1cc2e43dc8ff3aafea30df3370bffef8',1,'spk::IAnalyticalMetric::max()']]],
+  ['members_764',['members',['../classspk_1_1JSON_1_1Object.html#a8e2d4b151fe42b878ec80939958fc7e2',1,'spk::JSON::Object']]],
+  ['mesh_765',['Mesh',['../classspk_1_1Mesh.html#a08041de6df6465e8b8a83e2b86c9c7f8',1,'spk::Mesh::Mesh()'],['../classspk_1_1Mesh.html#a56c2272b26e4d56d85ac6d1e8f46d35d',1,'spk::Mesh::Mesh(Mesh &amp;&amp;p_mesh)'],['../classspk_1_1Mesh.html#a795bc4bbdbc8766454f06a0ec3ccf93f',1,'spk::Mesh::Mesh(const Mesh &amp;p_mesh)']]],
+  ['mesh_766',['mesh',['../classspk_1_1MeshRenderer.html#ab66ee127f3b7eaf5018db638f1935931',1,'spk::MeshRenderer::mesh()'],['../classspk_1_1ICollider.html#a7fe345f6e7f0dc568b3cc82f20e35580',1,'spk::ICollider::mesh()']]],
+  ['meshcollider2d_767',['MeshCollider2D',['../classspk_1_1MeshCollider2D.html#af810b86f9705e35a114dc1916bd26a1f',1,'spk::MeshCollider2D']]],
+  ['meshrenderer_768',['MeshRenderer',['../classspk_1_1MeshRenderer.html#ab59bc6033708bc5ecb5926ba8076ba2c',1,'spk::MeshRenderer']]],
+  ['metric_769',['metric',['../classspk_1_1Profiler.html#a9b543749d5934e365b94439e2aee7972',1,'spk::Profiler']]],
+  ['min_770',['min',['../classspk_1_1RandomGenerator.html#a873244e578c872984ca815e396eaabb1',1,'spk::RandomGenerator::min()'],['../structspk_1_1IVector2.html#ae64ebb9cf02e5bbf329ea31d35e29841',1,'spk::IVector2::min()'],['../structspk_1_1IVector3.html#aae389322931ba634a01e3e29b75cd459',1,'spk::IVector3::min()'],['../classspk_1_1IAnalyticalMetric.html#a29128d3ab1668b0fa291f54b8e1ee3be',1,'spk::IAnalyticalMetric::min()']]],
+  ['mouse_771',['Mouse',['../classspk_1_1Mouse.html#a64dd25a9b4c429e82a180bfee7b67601',1,'spk::Mouse']]],
+  ['mouse_772',['mouse',['../classspk_1_1Application.html#a197bb09428fd2f405fd1e38cc030c0ac',1,'spk::Application']]]
 ];

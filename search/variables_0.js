@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['a_943',['a',['../structspk_1_1Color.html#a0bf53c54eac6d68b51c5477d9e695ecc',1,'spk::Color']]]
+  ['_5finstance_988',['_instance',['../classspk_1_1Singleton.html#a4ff887faaaf7089cd9730a5dc474fd42',1,'spk::Singleton']]]
 ];

@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['mipmap_1011',['Mipmap',['../classspk_1_1Texture.html#a9be80f73057f23771837c6a457ad1e37',1,'spk::Texture']]],
-  ['mode_1012',['Mode',['../classspk_1_1Application.html#a8e73cb5742cdf022f05cf18cc8a76dc1',1,'spk::Application::Mode()'],['../classspk_1_1OpenGL_1_1VertexBufferObject.html#a8ed706ed04e550c6deca58ad9a77d90e',1,'spk::OpenGL::VertexBufferObject::Mode()']]]
+  ['mipmap_1058',['Mipmap',['../classspk_1_1Texture.html#a9be80f73057f23771837c6a457ad1e37',1,'spk::Texture']]],
+  ['mode_1059',['Mode',['../classspk_1_1Application.html#a8e73cb5742cdf022f05cf18cc8a76dc1',1,'spk::Application::Mode()'],['../classspk_1_1OpenGL_1_1VertexBufferObject.html#a8ed706ed04e550c6deca58ad9a77d90e',1,'spk::OpenGL::VertexBufferObject::Mode()']]]
 ];
