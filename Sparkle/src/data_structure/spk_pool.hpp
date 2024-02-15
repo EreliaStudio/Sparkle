@@ -37,6 +37,17 @@ namespace spk
     template<typename TType>
     class Pool
 	{
+    public:
+        /**
+         * @brief Type alias for the allocator function.
+         * 
+         * Defines an allocator function type that is used to create new instances of TType.
+         * This function allows for custom allocation logic to be provided when constructing
+         * objects managed by the pool. It should return a pointer to a newly created instance
+         * of TType.
+         */
+        using Allocator = typename std::function<TType*(void)>;
+
     private:    
         using Destructor = typename std::function<void(TType* p_toReturn)>;
     
@@ -47,13 +58,13 @@ namespace spk
         using Object = typename std::unique_ptr<TType, Destructor>;
 
     private:
-        using Destructor = typename std::function<void(TType* p_toReturn)>;
         std::recursive_mutex _mutex;
+        Allocator _allocator;
         std::deque<std::unique_ptr<TType>> _preallocatedElements;
 
-        const Destructor _destructorLambda = [&](TType* p_toReturn){ _release(p_toReturn); };
+        const Destructor _destructorLambda = [&](TType* p_toReturn){ _insert(p_toReturn); };
 
-        void _release(TType* p_toReturn)
+        void _insert(TType* p_toReturn)
         {
             std::lock_guard<std::recursive_mutex> lock(_mutex);
             _preallocatedElements.push_back(std::unique_ptr<TType>(p_toReturn));
@@ -63,14 +74,41 @@ namespace spk
         /**
          * @brief Constructor
          * 
-         * Initializes a new instance of the Pool class with a specified initial pool size.
-         * Preallocates a number of objects of type TType according to the provided size.
+         * Initializes a new instance of the Pool class with a specified allocator.
          * 
-         * @param p_poolSize The initial size of the pool. Defaults to 0, resulting in an empty pool.
+         * @param p_allocator The initial allocator of the pool. Defaults to simply allocated a new TType.
          */
-        Pool(const size_t& p_poolSize = 0)
+        Pool(const Allocator& p_allocator = [](){return (new TType());}) :
+            _allocator(p_allocator)
         {
-            resize(p_poolSize);
+            
+        }
+
+        /**
+         * @brief Edits the allocator used by the pool.
+         * 
+         * Allows for the modification of the allocator function after the pool has been
+         * created. This can be useful for changing the logic used to create new instances
+         * of TType, for example, to use a different constructor or to recycle objects in a
+         * specific way.
+         * 
+         * @param p_allocator The new allocator function to use for object creation.
+         */
+        void editAllocator(const Allocator& p_allocator)
+        {   
+            _allocator = p_allocator;
+        }
+
+        /**
+         * @brief Allocates a new object and adds it to the pool.
+         * 
+         * Uses the current allocator to create a new instance of TType, which is then added
+         * to the pool. This method can be used to manually increase the pool's size or to
+         * prepopulate the pool with a set of objects before they are needed.
+         */
+        void allocate()
+        {
+            _insert(_allocator());
         }
 
         /**
@@ -98,11 +136,8 @@ namespace spk
 		{
             std::lock_guard<std::recursive_mutex> lock(_mutex);
 
-            while (_preallocatedElements.size() > p_newSize)
-                _preallocatedElements.pop_back();
-
             while (_preallocatedElements.size() < p_newSize)
-                _preallocatedElements.push_front(std::make_unique<TType>());
+                _insert(_allocator());
         }
 
         /**
@@ -120,7 +155,7 @@ namespace spk
             
             if (_preallocatedElements.empty())
             {
-                _preallocatedElements.push_front(std::make_unique<TType>());
+                _insert(_allocator());
             }
 
             Object item(_preallocatedElements.front().release(), _destructorLambda);

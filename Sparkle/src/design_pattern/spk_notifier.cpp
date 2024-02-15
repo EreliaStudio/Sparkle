@@ -15,13 +15,21 @@ namespace spk
         Deactivating the Notifier ensures that none of the other methods will
         even try to acquire the mutex, and will instead abort instantly.
         */
-        _deactivated = true;
-
-        std::unique_lock<std::mutex> contractsLk(_mu);
-
-        for (Contract *contract : _contracts)
+        if (_deactivated == false)
         {
-            contract->cancel();
+            _deactivated = true;
+
+            std::unique_lock<std::mutex> contractsLk(_mu);
+
+            for (Contract *contract : _contracts)
+            {
+                contract->cancel();
+            }
+
+            for (Contract *contract : _inactiveContracts)
+            {
+                contract->cancel();
+            }
         }
     }
 
@@ -30,7 +38,20 @@ namespace spk
         _inactiveContracts(std::move(p_other._inactiveContracts)),
         _deactivated(p_other._deactivated.load())
     {
+        for (size_t i = 0; i < _contracts.size(); i++)
+        {
+            _contracts[i]->_subject = this;
+        }
+
+        for (size_t i = 0; i < _inactiveContracts.size(); i++)
+        {
+            _inactiveContracts[i]->_subject = this;
+        }
+
         p_other._deactivated = true;
+
+        p_other._contracts.clear();
+        p_other._inactiveContracts.clear();
     }
 
     Notifier& Notifier::operator=(Notifier&& p_other)
@@ -41,8 +62,19 @@ namespace spk
             _inactiveContracts.clear();
 
             _contracts = std::move(p_other._contracts);
+            for (size_t i = 0; i < _contracts.size(); i++)
+            {
+                _contracts[i]->_subject = this;
+            }
             _inactiveContracts = std::move(p_other._inactiveContracts);
+            for (size_t i = 0; i < _inactiveContracts.size(); i++)
+            {
+                _inactiveContracts[i]->_subject = this;
+            }
             _deactivated = p_other._deactivated.load();
+
+            p_other._contracts.clear();
+            p_other._inactiveContracts.clear();
 
             p_other._deactivated = true;
         }
@@ -172,19 +204,6 @@ namespace spk
         _isPaused(false)
     {
 
-    }
-
-    Notifier::Contract& Notifier::Contract::operator = (const Notifier::Contract& p_other)
-    {
-        if (&p_other != this)
-        {
-            _subject = p_other._subject;
-            _callback = p_other._callback;
-            _isCanceled = p_other._isCanceled.load();
-            _isPaused = p_other._isPaused.load();
-        }
-
-        return (*this);
     }
 
     bool Notifier::Contract::isCanceled() const

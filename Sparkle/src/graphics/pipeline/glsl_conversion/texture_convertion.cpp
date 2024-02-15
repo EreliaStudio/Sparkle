@@ -13,13 +13,10 @@ namespace spk
         while (std::regex_search(sourceCopy, matches, textureRegex))
         {
             std::string textureName = matches[1];
-            std::string replacement = "uniform sampler2D " + textureName + "_handle;\nConstantBlock " + textureName + " { vec2 unit; };";
-            
+            std::string replacement = "uniform sampler2D " + textureName + ";";
+
             std::regex textureDeclRegex("Texture\\s+" + textureName + ";");
             tempSource = std::regex_replace(tempSource, textureDeclRegex, replacement);
-
-            std::regex handleRegex(textureName + "\\.handle");
-            tempSource = std::regex_replace(tempSource, handleRegex, textureName + "_handle");
 
             sourceCopy = matches.suffix().str();
         }

@@ -116,6 +116,15 @@ namespace spk
 		 */
 		void setType(const Type& p_type);
 
+		/**
+         * @brief Gets the current camera projection type.
+         * 
+         * This method returns the current projection type of the camera, which can be either Orthographic or Perspective.
+         * The projection type affects how scenes are rendered through this camera.
+         * 
+         * @return The current Type of the camera's projection.
+         */
+        const Type& type() const;
 
 		/**
 		 * @brief Sets the near clipping plane distance.
@@ -123,6 +132,15 @@ namespace spk
 		 * @param p_nearPlane The distance to the near clipping plane. Objects closer than this distance will not be rendered.
 		 */
 		void setNearPlane(const float& p_nearPlane);
+		
+        /**
+         * @brief Gets the distance to the near clipping plane.
+         * 
+         * The near clipping plane is the minimum distance at which the camera starts rendering scenes. Objects closer than this distance will not be visible.
+         * 
+         * @return The distance to the near clipping plane.
+         */
+		const float& nearPlane() const;
 
 		/**
 		 * @brief Sets the far clipping plane distance.
@@ -130,6 +148,15 @@ namespace spk
 		 * @param p_farPlane The distance to the far clipping plane. Objects farther than this distance will not be rendered.
 		 */
 		void setFarPlane(const float& p_farPlane);
+
+		/**
+         * @brief Gets the distance to the far clipping plane.
+         * 
+         * The far clipping plane is the maximum distance at which the camera can render scenes. Objects beyond this distance will not be visible.
+         * 
+         * @return The distance to the far clipping plane.
+         */
+		const float& farPlane() const;
 
 		/**
 		 * @brief Sets the field of view (FOV) for the camera.
@@ -141,6 +168,15 @@ namespace spk
 		void setFOV(const float& p_fov);
 
 		/**
+         * @brief Gets the field of view (FOV) of the camera.
+         * 
+         * Applicable only when the camera is set to Perspective mode. The FOV is the vertical angle of the camera's view cone, affecting how wide the scene appears.
+         * 
+         * @return The field of view angle in degrees.
+         */
+		const float& fov() const;
+
+		/**
 		 * @brief Sets the aspect ratio of the camera.
 		 * 
 		 * Defines the ratio of the camera's viewport width to its height.
@@ -150,6 +186,15 @@ namespace spk
 		void setAspectRatio(const float& p_aspectRatio);
 
 		/**
+         * @brief Gets the aspect ratio of the camera.
+         * 
+         * The aspect ratio is defined as the ratio of the camera's viewport width to its height. It affects the shape of the rendered scene.
+         * 
+         * @return The aspect ratio of the camera.
+         */
+		const float& aspectRatio() const;
+
+		/**
 		 * @brief Sets the size for orthographic projection.
 		 * 
 		 * Applicable only in Orthographic mode. Defines the size of the viewable area.
@@ -157,5 +202,14 @@ namespace spk
 		 * @param p_orthographicSize The size of the orthographic projection area.
 		 */
 		void setOrthographicSize(const spk::Vector2& p_orthographicSize);
+
+		/**
+         * @brief Gets the size of the orthographic projection.
+         * 
+         * Applicable only when the camera is set to Orthographic mode. This defines the size of the viewable area, controlling how much of the scene is visible.
+         * 
+         * @return The size of the orthographic projection area as a spk::Vector2.
+         */
+		const spk::Vector2& orthographicSize() const;
 	};
 }

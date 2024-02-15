@@ -43,12 +43,24 @@ namespace spk
 	template <typename TType>
 	class Singleton
 	{
-	private:
-		Singleton()
-		{
-		}
+	protected:
+		/**
+           * @brief Protected constructor.
+           * 
+           * Prevents direct creation of the singleton instance from outside the class, ensuring the singleton pattern is enforced.
+           */
+          Singleton()
+          {
+               
+          }
 
-		static inline std::unique_ptr<TType> _instance = nullptr;
+          /**
+           * @brief Static unique pointer to the singleton instance.
+           * 
+           * This pointer manages the lifetime of the singleton instance. It ensures that there is only one instance of the
+           * singleton class at any time and provides automatic cleanup.
+           */
+          static inline std::unique_ptr<TType> _instance = nullptr;
 
 	public:
 		/**
@@ -63,13 +75,13 @@ namespace spk
          * @throws std::runtime_error if the singleton instance already exists.
          */
 		template <typename... Args>
-		static constexpr std::unique_ptr<TType>& instanciate(Args &&...args)
+		static std::unique_ptr<TType>& instanciate(Args &&...args)
 		{
 			if (_instance != nullptr)
 				throw std::runtime_error("Can't instanciate an already instancied singleton");
 			
 			_instance = std::unique_ptr<TType>(new TType(std::forward<Args>(args)...));
-			return _instance;
+			return (_instance);
 		}
 
 		/**
@@ -77,9 +89,9 @@ namespace spk
          *
          * @return A reference to the std::unique_ptr managing the singleton instance.
          */
-		static constexpr std::unique_ptr<TType>& instance()
+		static std::unique_ptr<TType>& instance()
 		{
-			return _instance;
+			return (_instance);
 		}
 
 		/**
@@ -87,7 +99,7 @@ namespace spk
          *
          * @return A const reference to the std::unique_ptr managing the singleton instance.
          */
-		static constexpr const std::unique_ptr<const TType>& c_instance()
+		static const std::unique_ptr<const TType>& c_instance()
 		{
 			return _instance;
 		}

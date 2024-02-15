@@ -61,7 +61,7 @@ namespace spk
 		 * 
 		 * @param p_name The name of the GameObject, used for identification within the game engine.
 		 */
-		GameObject(const std::string& p_name);
+		GameObject(const std::string& p_name = "Unnamed");
 
 		/**
 		 * @brief Constructs a GameObject with a specified name and parent.
@@ -73,6 +73,15 @@ namespace spk
 		 * @param p_parent Pointer to the parent GameObject.
 		 */
 		GameObject(const std::string& p_name, GameObject* p_parent);
+
+		/**
+		 * @brief Destructor.
+		 * 
+		 * Cleans up the GameObject's resources, including destroying all components attached to this GameObject and
+		 * releasing any allocated memory. If the GameObject has any children in the hierarchy, their destructors will
+		 * also be called, ensuring a clean teardown of the object tree.
+		 */
+		virtual ~GameObject();
 
 		/**
 		 * @brief Gets the full name of the GameObject.
@@ -172,6 +181,16 @@ namespace spk
 		 * @return A Vector3 representing the global rotation of the GameObject.
 		 */
 		spk::Quaternion globalRotation() const;
+
+		/**
+         * @brief Retrieves all components associated with the GameObject.
+         * 
+         * This method provides read-only access to the list of components attached to the GameObject.
+         * It allows for inspection of the GameObject's components without modifying them.
+         * 
+         * @return A constant reference to a vector of pointers to the GameObject's components.
+         */
+		const std::vector<spk::GameComponent*>& components() const;
 
 		/**
 		 * @brief Adds a component of a specified type to the GameObject.

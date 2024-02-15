@@ -51,11 +51,11 @@ namespace spk
 			return ("Stack overflow");
 
 		case GL_BYTE:
-			return ("GLbyte");
+			return ("GL_BYTE");
 		case GL_UNSIGNED_BYTE:
-			return ("GLubyte");
+			return ("GL_UNSIGNED_BYTE");
 		case GL_UNSIGNED_SHORT:
-			return ("GLushort");
+			return ("GL_UNSIGNED_SHORT");
 		case GL_2_BYTES:
 			return ("GL_2_BYTES");
 		case GL_3_BYTES:
@@ -302,6 +302,19 @@ namespace spk
 			return ("Transform feedback buffer");
 		case GL_UNIFORM_BUFFER:
 			return ("Uniform block storage");
+
+		case GL_TEXTURE_2D:
+			return ("GL_TEXTURE_2D");
+		case GL_RGB:
+			return ("GL_RGB");
+		case GL_RGBA:
+			return ("GL_RGBA");
+		case GL_BGR:
+			return ("GL_BGR");
+		case GL_BGRA:
+			return ("GL_BGRA");
+		case GL_RED:
+			return ("GL_RED");
 
 		default:
 			return ("not a GLenum type");

@@ -205,6 +205,14 @@ namespace spk
 		void validate();
 
 		/**
+		 * @brief Clears all mesh data.
+		 * 
+		 * Resets the mesh to its initial state, removing all points, UVs, normals, and indices. This method is useful
+		 * when you need to repurpose a mesh object for a different geometry without creating a new instance.
+		 */
+		void clear();
+
+		/**
 		 * @brief Reserves space for a specified number of points in the mesh.
 		 * 
 		 * Preallocates memory for a given number of points (vertices) to optimize memory usage and performance when adding
@@ -230,6 +238,14 @@ namespace spk
 		 * @return A const reference to the vector containing the mesh's points.
 		 */
 		const std::vector<spk::Vector3>& points() const;
+
+		/**
+		 * @brief Clears all points from the mesh.
+		 * 
+		 * Removes all previously added points (vertices) from the mesh. This method allows for selective clearing of
+		 * mesh data, particularly useful when only the points need to be redefined.
+		 */
+		void clearPoints();
 
 		/**
 		 * @brief Reserves space for a specified number of UV coordinates in the mesh.
@@ -259,6 +275,14 @@ namespace spk
 		const std::vector<spk::Vector2>& UVs() const;
 
 		/**
+		 * @brief Clears all UVs from the mesh.
+		 * 
+		 * Removes all previously added UV coordinates from the mesh. Use this method when you need to reset or redefine
+		 * the texture mapping of the mesh without affecting other aspects of the geometry.
+		 */
+		void clearUVs();
+
+		/**
 		 * @brief Reserves space for a specified number of normals in the mesh.
 		 * 
 		 * Preallocates memory for a given number of normals to optimize memory usage and performance when adding new normals
@@ -284,6 +308,14 @@ namespace spk
 		 * @return A const reference to the vector containing the mesh's normals.
 		 */
 		const std::vector<spk::Vector3>& normals() const;
+
+		/**
+		 * @brief Clears all normals from the mesh.
+		 * 
+		 * Removes all normals from the mesh, useful when the surface normals need to be recalculated or if the mesh
+		 * will be used in a context where normals are not required.
+		 */
+		void clearNormals();
 
 		/**
 		 * @brief Reserves space for a specified number of indices in the mesh.
@@ -313,6 +345,14 @@ namespace spk
 		 * @return A const reference to the vector containing the mesh's indexes.
 		 */
 		const std::vector<unsigned int>& indexes() const;
+
+		/**
+		 * @brief Clears all indices from the mesh.
+		 * 
+		 * Removes all indices, effectively resetting the mesh's topology. This method is particularly useful when the
+		 * connectivity of the mesh points needs to be redefined.
+		 */
+		void clearIndexes();
 
 		/**
 		 * @brief Bakes the mesh data, optimizing it for rendering.
@@ -365,4 +405,27 @@ namespace spk
 	 * where the depth (z-axis) is not a factor in rendering. Its indexes are (0, 1, 2, 2, 1, 3).
 	 */
 	spk::Mesh createSpriteMesh();
+
+	/**
+	 * @brief Creates a sprite mesh with a specified anchor point and size.
+	 * 
+	 * Generates a mesh optimized for rendering sprites, with vertices arranged according to the specified anchor point and size.
+	 * This allows for the creation of sprites with custom origins and dimensions, facilitating flexible sprite management
+	 * and rendering, especially in 2D and UI applications.
+	 * 
+	 * @param p_anchor The anchor point of the sprite, typically ranging from (0,0) for bottom-left to (1,1) for top-right.
+	 * @param p_size The size of the sprite, specifying the width and height dimensions.
+	 * 
+	 * @return A Mesh instance containing the geometry for a sprite, including vertices arranged according to the specified anchor and size,
+	 * and corresponding UV coordinates for texture mapping.
+	 * 
+	 * Usage example:
+	 * @code
+	 * spk::Vector2 spriteAnchor(0.5f, 0.5f); // Place the sprite in the center of the texture
+	 * spk::Vector2 size(0.5f, 0.5f); // Set the sprite to fill the right/down panel of the texture
+	 * spk::Mesh centeredSpriteMesh = spk::createSpriteMesh(anchor, size);
+	 * // The centeredSpriteMesh can now be used for rendering sprites.
+	 * @endcode
+	 */
+	spk::Mesh createSpriteMesh(const spk::Vector2& p_anchor, const spk::Vector2& p_size);
 }

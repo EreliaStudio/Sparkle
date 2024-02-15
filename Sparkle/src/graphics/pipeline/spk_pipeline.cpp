@@ -27,7 +27,7 @@ namespace spk
 
 		for (auto& [key, layout] : _samplersLayout)
 		{
-			_textures.emplace(key, Texture(_programID, layout, _constants.at(layout.name.substr(0, layout.name.size() - 7))));
+			_textures.emplace(key, Texture(_programID, layout));
 		}
 
 		_isLoaded = true;
@@ -115,8 +115,8 @@ namespace spk
 	{
 		if (_isLoaded == false)
 			_load();
-		if (_textures.contains(p_textureName + "_handle") == false)
+		if (_textures.contains(p_textureName) == false)
 			throwException("Pipeline don't contain texture [" + p_textureName + "]");
-		return (_textures.at(p_textureName + "_handle"));
+		return (_textures.at(p_textureName));
 	}
 }

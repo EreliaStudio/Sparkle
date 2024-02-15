@@ -28,7 +28,7 @@ namespace spk::WidgetComponent
     
     void renderPass()
     {
-        float r = texture(fontTexture.handle, fragmentUVs).r;
+        float r = texture(fontTexture, fragmentUVs).r;
 
         if (r == 0.0)
         {
@@ -154,7 +154,6 @@ namespace spk::WidgetComponent
 
 		static std::vector<RenderingPipelineVertex> _bufferRenderingPipelineVertex;
 		static std::vector<unsigned int> _bufferRenderingPipelineIndexes;
-        static const unsigned int indexesValues[6] = {0, 1, 2, 2, 1, 3};
 
 		_bufferRenderingPipelineVertex.clear();
 		_bufferRenderingPipelineIndexes.clear();
@@ -180,11 +179,11 @@ namespace spk::WidgetComponent
 
             for (size_t i = 0; i < 6; i++)
             {
-                _bufferRenderingPipelineIndexes.push_back(baseIndexes + indexesValues[i]);
+                _bufferRenderingPipelineIndexes.push_back(baseIndexes + spk::Font::Atlas::GlyphData::indexesOrder[i]);
             }
         }
 
-		_renderingObject.setVertices(_bufferRenderingPipelineVertex);
+        _renderingObject.setVertices(_bufferRenderingPipelineVertex);
 		_renderingObject.setIndexes(_bufferRenderingPipelineIndexes);
     }
 

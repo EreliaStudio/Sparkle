@@ -2,6 +2,7 @@
 
 #include <thread>
 #include "graphics/pipeline/spk_pipeline.hpp"
+#include <fstream>
 
 namespace spk
 {
@@ -124,7 +125,12 @@ namespace spk
 
 	Application::~Application()
 	{
-		std::cout << _profiler.emitReport() << std::endl;
+		std::fstream outputStream;
+		outputStream.open("profilerResult.out", std::ios_base::out);
+
+		outputStream << _profiler.emitReport() << std::endl;
+
+		outputStream.close();
 		delete _centralWidget;
 	}
 

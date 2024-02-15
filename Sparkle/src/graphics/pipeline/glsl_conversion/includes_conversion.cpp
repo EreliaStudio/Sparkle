@@ -45,7 +45,7 @@ namespace spk
 
 				return p_transform.translation + (rotatedPosition * p_transform.scale);
 			})"},
-			{"cameraConstants", R"(ConstantBlock mainCamera { mat4 MVP; };)"},
+			{"cameraConstants", R"(ConstantBlock cameraConstants { mat4 MVP; };)"},
 			{"timeConstants", R"(ConstantBlock timeConstants { int epoch; };)"},
 			{"spriteAnimation", R"(struct SpriteAnimation { int duration; ivec2 firstFrame; ivec2 frameOffset; int lenght; };)"}
 		};

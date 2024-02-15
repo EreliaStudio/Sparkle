@@ -3,6 +3,21 @@
 
 namespace spk
 {
+	void IWidget::_onGeometryChange()
+	{
+
+	}
+
+	void IWidget::_onRender()
+	{
+
+	}
+
+	void IWidget::_onUpdate()
+	{
+
+	}
+
 	void IWidget::render()
 	{
 		if (_needGeometryChange == true)

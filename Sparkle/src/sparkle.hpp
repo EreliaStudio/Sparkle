@@ -4,7 +4,9 @@
 
 #include "data_structure/spk_pool.hpp"
 
+#include "design_pattern/spk_singleton.hpp"
 #include "design_pattern/spk_notifier.hpp"
+#include "design_pattern/spk_event_manager.hpp"
 #include "design_pattern/spk_observable_value.hpp"
 
 #include "math/spk_vector2.hpp"
@@ -33,7 +35,7 @@
 
 #include "game_engine/spk_mesh.hpp"
 #include "game_engine/component/spk_camera_component.hpp"
-#include "game_engine/component/spk_sprite_renderer_component.hpp"
+#include "game_engine/component/spk_mesh_renderer_component.hpp"
 #include "game_engine/component/spk_physics_component.hpp"
 #include "game_engine/component/spk_mesh_collider_2D_component.hpp"
 

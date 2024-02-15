@@ -2,7 +2,7 @@
 
 int main()
 {
-    spk::Application app = spk::Application("Playground", spk::Vector2UInt(800, 800), spk::Application::Mode::Multithread);
+    spk::Application app = spk::Application("Playground", spk::Vector2UInt(800, 800), spk::Application::Mode::Monothread);
 
     return (app.run());
 }

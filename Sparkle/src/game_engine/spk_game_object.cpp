@@ -5,7 +5,7 @@ namespace spk
 {
 	void GameObject::render()
 	{
-		if (isActive() == true)
+		if (isActive() == false)
 			return ;
 				
 		for (auto& component : _components)
@@ -21,7 +21,7 @@ namespace spk
 
 	void GameObject::update()
 	{
-		if (isActive() == true)
+		if (isActive() == false)
 			return ;
 
 	#ifndef NDEBUG
@@ -67,12 +67,18 @@ namespace spk
 		}))
 	{
 		_transform._bind(this);
+		activate();
 	}
 
 	GameObject::GameObject(const std::string& p_name, GameObject* p_parent) :
 		GameObject(p_name)
 	{
 		p_parent->addChild(this);
+	}
+
+	GameObject::~GameObject()
+	{
+		
 	}
 
 	std::string GameObject::fullName() const
@@ -147,5 +153,10 @@ namespace spk
 			return (_transform.rotation.get());
 
 		return (parent()->globalRotation() * _transform.rotation.get());
+	}
+
+	const std::vector<spk::GameComponent*>& GameObject::components() const
+	{
+		return (_components);
 	}
 }

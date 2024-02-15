@@ -426,6 +426,45 @@ namespace spk
         }
 
         /**
+         * @brief Extracts the XY components as a 2D vector.
+         * 
+         * This method creates a new 2D vector from the X and Y components of this 3D vector. It is useful
+         * when you need to work with just the horizontal and vertical components of a vector, ignoring the depth (Z component).
+         * 
+         * @return An IVector2 instance containing the X and Y components of this vector.
+         */
+        IVector2<TType> xy() const
+        {
+            return IVector2<TType>(x, y);
+        }
+
+        /**
+         * @brief Extracts the XZ components as a 2D vector.
+         * 
+         * This method creates a new 2D vector from the X and Z components of this 3D vector. It is useful
+         * when you need to work with horizontal and depth components of a vector, ignoring the vertical (Y component).
+         * 
+         * @return An IVector2 instance containing the X and Z components of this vector.
+         */
+        IVector2<TType> xz() const
+        {
+            return IVector2<TType>(x, z);
+        }
+
+        /**
+         * @brief Extracts the YZ components as a 2D vector.
+         * 
+         * This method creates a new 2D vector from the Y and Z components of this 3D vector. It is useful
+         * when you need to work with the vertical and depth components of a vector, ignoring the horizontal (X component).
+         * 
+         * @return An IVector2 instance containing the Y and Z components of this vector.
+         */
+        IVector2<TType> yz() const
+        {
+            return IVector2<TType>(y, z);
+        }
+
+        /**
          * @brief Converts a vector from radians to degrees.
          * @param radians The vector in radians to be converted.
          * @return A vector where each component has been converted from radians to degrees.
@@ -474,7 +513,8 @@ namespace spk
          * @param p_vector The vector to be rounded down.
          * @return A new vector with each component rounded down.
          */
-        static IVector3 floor(const IVector3 &p_vector)
+        template <typename TOtherType>
+        static IVector3 floor(const IVector3<TOtherType> &p_vector)
         {
             IVector3 result;
             result.x = std::floor(p_vector.x);
@@ -489,7 +529,8 @@ namespace spk
          * @param p_vector The vector to be rounded up.
          * @return A new vector with each component rounded up.
          */
-        static IVector3 ceiling(const IVector3 &p_vector)
+        template <typename TOtherType>
+        static IVector3 ceiling(const IVector3<TOtherType> &p_vector)
         {
             IVector3 result;
             result.x = std::ceil(p_vector.x);
@@ -504,7 +545,8 @@ namespace spk
          * @param p_vector The vector to be rounded.
          * @return A new vector with each component rounded to the nearest integer.
          */
-        static IVector3 round(const IVector3 &p_vector)
+        template <typename TOtherType>
+        static IVector3 round(const IVector3<TOtherType> &p_vector)
         {
             IVector3 result;
             result.x = std::round(p_vector.x);

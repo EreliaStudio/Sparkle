@@ -21,6 +21,25 @@ namespace spk
 		releaseGPUMemory();
 	}
 
+	Texture::Texture(Texture&& p_other) :
+		_loaded(p_other._loaded),
+		_textureID(p_other._textureID)
+	{
+		p_other._loaded = false;
+	}
+	
+	Texture& Texture::operator = (Texture&& p_other)
+	{
+		if (this != &p_other)
+		{
+			_loaded = p_other._loaded;
+			_textureID = p_other._textureID;
+
+			p_other._loaded = false;
+		}
+		return (*this);
+	}
+
 	void Texture::uploadToGPU(const uint8_t* p_textureData, const spk::Vector2UInt& p_textureSize,
 		const Format& p_format, const Filtering& p_filtering,
 		const Wrap& p_wrap, const Mipmap& p_mipmap)

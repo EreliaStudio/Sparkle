@@ -183,6 +183,14 @@ namespace spk
 		_editionNotifier.notify_all();
 	}
 
+	void Mesh::clear()
+	{
+		clearPoints();
+		clearUVs();
+		clearNormals();
+		clearIndexes();
+	}
+
 	void Mesh::reservePoints(size_t p_expectedNbPoints)
 	{
 		_points.reserve(p_expectedNbPoints);
@@ -196,6 +204,11 @@ namespace spk
 	const std::vector<spk::Vector3>& Mesh::points() const
 	{
 		return (_points);
+	}
+
+	void Mesh::clearPoints()
+	{
+		_points.clear();
 	}
 
 	void Mesh::reserveUVs(size_t p_expectedNbUVs)
@@ -213,6 +226,11 @@ namespace spk
 		return (_uvs);
 	}
 
+	void Mesh::clearUVs()
+	{
+		_uvs.clear();
+	}
+
 	void Mesh::reserveNormal(size_t p_expectedNbNormal)
 	{
 		_normals.reserve(p_expectedNbNormal);
@@ -226,6 +244,11 @@ namespace spk
 	const std::vector<spk::Vector3>& Mesh::normals() const
 	{
 		return (_normals);
+	}
+
+	void Mesh::clearNormals()
+	{
+		_normals.clear();
 	}
 
 	void Mesh::reserveIndex(size_t p_expectedNbIndex)
@@ -243,6 +266,11 @@ namespace spk
 	const std::vector<unsigned int>& Mesh::indexes() const
 	{
 		return (_indexes);
+	}
+
+	void Mesh::clearIndexes()
+	{
+		_indexes.clear();
 	}
 
 	void Mesh::bakeNormals()
@@ -269,7 +297,6 @@ namespace spk
 	{
 		if (_indexes.size() < 3)
 		{
-			std::cout << "Indexes : " << _indexes.size() << std::endl;
 			return (Data());
 		}
 
@@ -292,6 +319,30 @@ namespace spk
 		result.addUVs(spk::Vector2(0, 0));
 		result.addUVs(spk::Vector2(1, 1));
 		result.addUVs(spk::Vector2(0, 1));
+
+		result.addIndex(0, 0);
+		result.addIndex(1, 1);
+		result.addIndex(2, 2);
+		result.addIndex(2, 2);
+		result.addIndex(1, 1);
+		result.addIndex(3, 3);
+
+		return (result);
+	}
+
+	spk::Mesh createSpriteMesh(const spk::Vector2& p_anchor, const spk::Vector2& p_size)
+	{
+		spk::Mesh result;
+
+		result.addPoint(spk::Vector3(0.5f, 0.5f, 0.0f));
+		result.addPoint(spk::Vector3(-0.5f, 0.5f, 0.0f));
+		result.addPoint(spk::Vector3(0.5f, -0.5f, 0.0f));
+		result.addPoint(spk::Vector3(-0.5f, -0.5f, 0.0f));
+		
+		result.addUVs(p_anchor + spk::Vector2(1, 0) * p_size);
+		result.addUVs(p_anchor + spk::Vector2(0, 0) * p_size);
+		result.addUVs(p_anchor + spk::Vector2(1, 1) * p_size);
+		result.addUVs(p_anchor + spk::Vector2(0, 1) * p_size);
 
 		result.addIndex(0, 0);
 		result.addIndex(1, 1);
