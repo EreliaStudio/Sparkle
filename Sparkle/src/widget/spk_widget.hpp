@@ -79,10 +79,34 @@ namespace spk
 	#endif
 
 	protected:
+		/**
+         * @brief Virtual method triggered when the widget's geometry changes.
+         * 
+         * This method is called during the rendering phase of the widget lifecycle, uppon change in the widget's size,
+		 * position, or depth. Derived classes should override this method to implement custom behavior that needs to
+		 * occur when the widget's geometry changes.
+		 * This can include recalculating layout, resizing child widgets, or any other geometry-related adjustments.
+         */
 		virtual void _onGeometryChange();
 
-		virtual void _onRender();
+		/**
+         * @brief Virtual method for rendering the widget.
+         * 
+         * This method is called during the rendering phase of the widget lifecycle. Derived classes should override
+         * this method to implement the drawing logic specific to the widget. This can include rendering shapes,
+         * text, images, or any other visual elements associated with the widget. Implementations should make use of
+         * the widget's viewport to confine rendering to the designated area.
+         */
+        virtual void _onRender();
 
+        /**
+         * @brief Virtual method called during the update phase of the widget lifecycle.
+         * 
+         * This method is called periodically to allow the widget to update its state. This can include processing
+         * input events, animating properties, or making any other state changes that need to occur over time. Derived
+         * classes should override this method to implement such behavior, ensuring that the widget remains responsive
+         * and dynamic.
+         */
 		virtual void _onUpdate();
 
 	private:

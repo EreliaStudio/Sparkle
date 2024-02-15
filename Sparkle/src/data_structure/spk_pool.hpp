@@ -38,6 +38,14 @@ namespace spk
     class Pool
 	{
     public:
+        /**
+         * @brief Type alias for the allocator function.
+         * 
+         * Defines an allocator function type that is used to create new instances of TType.
+         * This function allows for custom allocation logic to be provided when constructing
+         * objects managed by the pool. It should return a pointer to a newly created instance
+         * of TType.
+         */
         using Allocator = typename std::function<TType*(void)>;
 
     private:    
@@ -66,10 +74,9 @@ namespace spk
         /**
          * @brief Constructor
          * 
-         * Initializes a new instance of the Pool class with a specified initial pool size.
-         * Preallocates a number of objects of type TType according to the provided size.
+         * Initializes a new instance of the Pool class with a specified allocator.
          * 
-         * @param p_poolSize The initial size of the pool. Defaults to 0, resulting in an empty pool.
+         * @param p_allocator The initial allocator of the pool. Defaults to simply allocated a new TType.
          */
         Pool(const Allocator& p_allocator = [](){return (new TType());}) :
             _allocator(p_allocator)
@@ -77,11 +84,28 @@ namespace spk
             
         }
 
+        /**
+         * @brief Edits the allocator used by the pool.
+         * 
+         * Allows for the modification of the allocator function after the pool has been
+         * created. This can be useful for changing the logic used to create new instances
+         * of TType, for example, to use a different constructor or to recycle objects in a
+         * specific way.
+         * 
+         * @param p_allocator The new allocator function to use for object creation.
+         */
         void editAllocator(const Allocator& p_allocator)
         {   
             _allocator = p_allocator;
         }
 
+        /**
+         * @brief Allocates a new object and adds it to the pool.
+         * 
+         * Uses the current allocator to create a new instance of TType, which is then added
+         * to the pool. This method can be used to manually increase the pool's size or to
+         * prepopulate the pool with a set of objects before they are needed.
+         */
         void allocate()
         {
             _insert(_allocator());

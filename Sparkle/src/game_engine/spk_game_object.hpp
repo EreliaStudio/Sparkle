@@ -182,6 +182,14 @@ namespace spk
 		 */
 		spk::Quaternion globalRotation() const;
 
+		/**
+         * @brief Retrieves all components associated with the GameObject.
+         * 
+         * This method provides read-only access to the list of components attached to the GameObject.
+         * It allows for inspection of the GameObject's components without modifying them.
+         * 
+         * @return A constant reference to a vector of pointers to the GameObject's components.
+         */
 		const std::vector<spk::GameComponent*>& components() const;
 
 		/**
