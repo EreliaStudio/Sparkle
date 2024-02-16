@@ -42,11 +42,11 @@ public:
     MainWidget(const std::string& p_name) :
         spk::IWidget(p_name),
         _listFrame("ListPanel"),
-        _redBackgroundTexture("9SlicedRed.png", spk::Vector2Int(3, 3)),
+        _redBackgroundTexture("Playground/9SlicedRed.png", spk::Vector2Int(3, 3)),
         _twoButtonFrame("TwoButtonPanel"),
-        _darkGreenBackgroundTexture("9SlicedDarkGreen.png", spk::Vector2Int(3, 3)),
+        _darkGreenBackgroundTexture("Playground/9SlicedDarkGreen.png", spk::Vector2Int(3, 3)),
         _blueButton("BlueButton", [&](){std::cout << "Coucou !" << std::endl;}),
-        _blueBackgroundTexture("9SlicedLightBlue.png", spk::Vector2Int(3, 3))
+        _blueBackgroundTexture("Playground/9SlicedLightBlue.png", spk::Vector2Int(3, 3))
     {
         _listFrame.box().setSpriteSheet(&_redBackgroundTexture);
         _listFrame.box().setCornerSize(32);
