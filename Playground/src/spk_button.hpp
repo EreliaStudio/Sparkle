@@ -22,7 +22,7 @@ namespace spk
 			_box.setGeometry(anchor(), size());
 			_box.setDepth(depth());
 			
-			_label.setAnchor((anchor() + size()) / 2);
+			_label.setAnchor(anchor() + (size() / 2));
 			_label.setDepth(depth() + 1);
 		}
 
