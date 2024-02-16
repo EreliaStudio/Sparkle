@@ -160,7 +160,6 @@ namespace spk::WidgetComponent
 
         RenderingData renderingData = _computeRenderingData();
 
-        std::cout << "Anchor : " << _anchor << std::endl;
         spk::Vector2Int glyphAnchor = _anchor + _computeBaseAnchor(renderingData);
 
         for (const spk::Font::Atlas::GlyphData* glyphData : renderingData.glyphs)
