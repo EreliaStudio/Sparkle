@@ -70,14 +70,10 @@ namespace spk::widget
 
         std::string _name;
 
-        bool _needsLayout = true;
-
         spk::Vector2Int _anchor;
         spk::Vector2 _anchorRatio;
         spk::Vector2UInt _size;
         spk::Vector2 _sizeRatio;
-
-        spk::Vector2 _lastLayout;
 
         float _depth;
 
@@ -98,7 +94,7 @@ namespace spk::widget
          * occur when the widget's geometry changes.
          * This can include recalculating layout, resizing child widgets, or any other geometry-related adjustments.
          */
-        virtual Vector2 _onLayout(const BoxConstraints& p_constraints);
+        // virtual Vector2 _onLayout(const BoxConstraints& p_constraints);
 
         /**
          * @brief Virtual method for rendering the widget.
@@ -120,15 +116,14 @@ namespace spk::widget
          */
         virtual void _onUpdate();
 
-        /// @brief  Marks this widget as needing new layout before next render phase.
-        void markNeedsLayout();
-
-        Vector2 layout(const BoxConstraints&);
+    public:
+        Vector2 layoutChildren(const BoxConstraints&);
         void render();
         void update();
 
         // void resize(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size);
 
+    private:
         spk::Vector2Int _computeAbsoluteAnchor();
         void _computeViewport();
 

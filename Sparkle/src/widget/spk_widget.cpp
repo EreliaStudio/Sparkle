@@ -3,17 +3,20 @@
 
 namespace spk::widget
 {
-    Vector2 IWidget::_onLayout(const BoxConstraints& p_constraints)
+    // By default the IWidget will layout its children by restricting their size to the constraints
+    // he has been give, and aligning them to its top-left corner.
+    Vector2 IWidget::layoutChildren(const BoxConstraints& p_constraints)
     {
         // We aim at returning a box that englobes all children.
         Vector2 maxFromChildren;
         for (auto& child : children())
         {
-            maxFromChildren = Vector2::max(maxFromChildren, child->layout(p_constraints));
+            // Get child size but cap it to match the constraints.
+            Vector2 childSize = Vector2::min(p_constraints.max, child->layoutChildren(p_constraints));
+            child->setGeometry({0, 0}, childSize);
+            maxFromChildren = Vector2::max(maxFromChildren, childSize);
         }
-
-        // That box still cannot be bigger than our max from constraints.
-        return Vector2::min(p_constraints.max, maxFromChildren);
+        return maxFromChildren;
     }
 
     void IWidget::_onRender()
@@ -24,30 +27,9 @@ namespace spk::widget
     {
     }
 
-    void IWidget::markNeedsLayout()
-    {
-        _needsLayout = true;
-    }
-
-    Vector2 IWidget::layout(const BoxConstraints& p_constraints)
-    {
-        if (_needsLayout)
-        {
-            _computeViewport();
-            _needsLayout = false;
-            _lastLayout = _onLayout(p_constraints);
-        }
-
-        for (auto& child : children())
-        {
-            child->layout(BoxConstraints({0, 0}, _lastLayout));
-        }
-        return _lastLayout;
-    }
-
     void IWidget::render()
     {
-
+        _computeViewport();
         _onRender();
         for (auto& child : children())
         {
@@ -163,7 +145,6 @@ namespace spk::widget
     void IWidget::setDepth(const float& p_depth)
     {
         _depth = p_depth;
-        markNeedsLayout();
     }
 
     void IWidget::activateAll()
