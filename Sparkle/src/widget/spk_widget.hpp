@@ -7,91 +7,102 @@
 
 namespace spk::widget
 {
-	/**
-	 * @class IWidget
-	 * @brief Defines a widget interface for UI elements, integrating activation state management, hierarchicalorganization, and viewport handling.
-	 *
-	 * This extends both ActivateObject for managing activation states (enabling/disabling functionality) and
-	 * TreeNode for hierarchical structuring, allowing widgets to be organized in a tree structure.
-	 * This designsupports complex UI hierarchies with nested widgets, facilitating the development of layered
-	 * and structured user interfaces.
-	 *
-	 * Each widget is associated with a viewport, automatically managed based on its geometry and the
-	 * hierarchical structure.
-	 * The viewport of a widget is activated upon rendering its children, ensuring that rendering operations
-	 * are confined to the widget's designated area. This mechanism is crucial for rendering efficiency and visual
-	 * correctness, especially in complex UI systems with overlapping elements.
-	 *
-	 * Widgets are designed to be extensible, requiring the implementation of key lifecycle
-	 * methods (_onGeometryChange, _onRender, and _onUpdate) to define their behavior, appearance,
-	 * and response to events or changes in state. The class also provides methods for resizing andgeometry
-	 * management, allowing widgets to adapt to layout changes dynamically.
-	 *
-	 * Usage example:
-	 * @code
-	 * class MyWidget : public spk::IWidget {
-	 *     MyWidget(const std::string& name) : spk::IWidget(name) {}
-	 *     void _onGeometryChange() override {
-	 *         // Custom geometry change handling
-	 *     }
-	 *     void _onRender() override {
-	 *         // Rendering code for this widget
-	 *     }
-	 *     void _onUpdate() override {
-	 *         // Update logic for this widget
-	 *     }
-	 * };
-	 * 
-	 * spk::Application app("MyApplication", spk::Vector2UInt(800, 640));
-	 * 	
-	 * MyWidget a("MyFirstWidget");
-	 * a.setGeometry(spk::Vector2Int(0, 0), app.size());
-	 * a.activate();
-	 * 
-	 * return (app.run());
-	 * @endcode
-	 *
-	 * @note If no parent are set for a widget, this widget will be concidered as child of the default widget of the application.
-	 * @note The viewport of a IWidget will automatically be activated upon rendering its children, as mentioned in the class documentation.
-	 */
-	class IWidget : public ActivateObject, public TreeNode<IWidget>
-	{
-		friend class Application;
+    struct BoxConstraints
+    {
+        Vector2 max;
+        Vector2 min;
+    };
 
-	private:
-		static inline IWidget* defaultParent = nullptr;
+    /**
+     * @class IWidget
+     * @brief Defines a widget interface for UI elements, integrating activation state management, hierarchicalorganization, and viewport handling.
+     *
+     * This extends both ActivateObject for managing activation states (enabling/disabling functionality) and
+     * TreeNode for hierarchical structuring, allowing widgets to be organized in a tree structure.
+     * This designsupports complex UI hierarchies with nested widgets, facilitating the development of layered
+     * and structured user interfaces.
+     *
+     * Each widget is associated with a viewport, automatically managed based on its geometry and the
+     * hierarchical structure.
+     * The viewport of a widget is activated upon rendering its children, ensuring that rendering operations
+     * are confined to the widget's designated area. This mechanism is crucial for rendering efficiency and visual
+     * correctness, especially in complex UI systems with overlapping elements.
+     *
+     * Widgets are designed to be extensible, requiring the implementation of key lifecycle
+     * methods (_onGeometryChange, _onRender, and _onUpdate) to define their behavior, appearance,
+     * and response to events or changes in state. The class also provides methods for resizing andgeometry
+     * management, allowing widgets to adapt to layout changes dynamically.
+     *
+     * Usage example:
+     * @code
+     * class MyWidget : public spk::IWidget {
+     *     MyWidget(const std::string& name) : spk::IWidget(name) {}
+     *     void _onGeometryChange() override {
+     *         // Custom geometry change handling
+     *     }
+     *     void _onRender() override {
+     *         // Rendering code for this widget
+     *     }
+     *     void _onUpdate() override {
+     *         // Update logic for this widget
+     *     }
+     * };
+     *
+     * spk::Application app("MyApplication", spk::Vector2UInt(800, 640));
+     *
+     * MyWidget a("MyFirstWidget");
+     * a.setGeometry(spk::Vector2Int(0, 0), app.size());
+     * a.activate();
+     *
+     * return (app.run());
+     * @endcode
+     *
+     * @note If no parent are set for a widget, this widget will be concidered as child of the default widget of the application.
+     * @note The viewport of a IWidget will automatically be activated upon rendering its children, as mentioned in the class documentation.
+     */
+    class IWidget : public ActivateObject,
+                    public TreeNode<IWidget>
+    {
+        friend class Application;
 
-		std::string _name;
+    private:
+        static inline IWidget* defaultParent = nullptr;
 
-		bool _needGeometryChange = false;
+        std::string _name;
 
-		spk::Vector2Int _anchor;
-		spk::Vector2 _anchorRatio;
-		spk::Vector2UInt _size;
-		spk::Vector2 _sizeRatio;
+        bool _needsLayout = true;
 
-		float _depth;
+        spk::Vector2Int _anchor;
+        spk::Vector2 _anchorRatio;
+        spk::Vector2UInt _size;
+        spk::Vector2 _sizeRatio;
 
-		spk::Viewport _viewport;
+        spk::Vector2 _lastLayout;
 
-	#ifndef NDEBUG
-		TimeMetric& _timeMetric;
-	#endif
+        float _depth;
 
-	protected:
-		/**
+        spk::Viewport _viewport;
+
+#ifndef NDEBUG
+        TimeMetric& _timeMetric;
+#endif
+
+    protected:
+        /**
          * @brief Virtual method triggered when the widget's geometry changes.
-         * 
-         * This method is called during the rendering phase of the widget lifecycle, uppon change in the widget's size,
-		 * position, or depth. Derived classes should override this method to implement custom behavior that needs to
-		 * occur when the widget's geometry changes.
-		 * This can include recalculating layout, resizing child widgets, or any other geometry-related adjustments.
+         *
+         * This method is called during the rendering phase of the widget lifecycle, if the widget or any
+         * of its parents have been marked as needing layout. This can be because of a change in
+         * position, or depth.
+         * Derived classes should override this method to implement custom behavior that needs to
+         * occur when the widget's geometry changes.
+         * This can include recalculating layout, resizing child widgets, or any other geometry-related adjustments.
          */
-		virtual void _onGeometryChange();
+        virtual Vector2 _onLayout(const BoxConstraints& p_constraints);
 
-		/**
+        /**
          * @brief Virtual method for rendering the widget.
-         * 
+         *
          * This method is called during the rendering phase of the widget lifecycle. Derived classes should override
          * this method to implement the drawing logic specific to the widget. This can include rendering shapes,
          * text, images, or any other visual elements associated with the widget. Implementations should make use of
@@ -101,25 +112,28 @@ namespace spk::widget
 
         /**
          * @brief Virtual method called during the update phase of the widget lifecycle.
-         * 
+         *
          * This method is called periodically to allow the widget to update its state. This can include processing
          * input events, animating properties, or making any other state changes that need to occur over time. Derived
          * classes should override this method to implement such behavior, ensuring that the widget remains responsive
          * and dynamic.
          */
-		virtual void _onUpdate();
+        virtual void _onUpdate();
 
-	private:
-		void render();
-		void update();
+        /// @brief  Marks this widget as needing new layout before next render phase.
+        void markNeedsLayout();
 
-		void resize(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size);
+        Vector2 layout(const BoxConstraints&);
+        void render();
+        void update();
 
-		spk::Vector2Int _computeAbsoluteAnchor();
-		void _computeViewport();
+        // void resize(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size);
 
-	public:
-		/**
+        spk::Vector2Int _computeAbsoluteAnchor();
+        void _computeViewport();
+
+    public:
+        /**
          * Constructor for creating a widget with a specified name.
          * @param p_name The name of the widget. This is used for identification and debugging purposes.
          */
@@ -139,9 +153,9 @@ namespace spk::widget
 
         /**
          * Adds a child widget to this widget. The child widget will be hierarchically managed and rendered within this widget's viewport.
-         * @param p_children A pointer to the widget to be added as a child.
+         * @param p_child A pointer to the widget to be added as a child.
          */
-        void addChild(IWidget* p_children);
+        void addChild(IWidget* p_child);
 
         /**
          * Sets the geometry of the widget, specifying its anchor point and size.
@@ -165,13 +179,13 @@ namespace spk::widget
          * Deactivates this widget and all its child widgets recursively, disabling their functionality and excluding them from rendering and updates.
          */
         void deactivateAll();
-		
-		/**
-		 * @brief Tests if the given coordinates in cartesian space is in this widget's viewport.
-		 * This method should be overriden if another behavior is needed.
-		 * @param p_coord The point that needs to be hit tested.
-		*/
-		virtual bool hitTest(const Vector2& p_coord);
+
+        /**
+         * @brief Tests if the given coordinates in cartesian space is in this widget's viewport.
+         * This method should be overriden if another behavior is needed.
+         * @param p_coord The point that needs to be hit tested.
+         */
+        virtual bool hitTest(const Vector2& p_coord);
 
         /**
          * Gets the name of the widget.
@@ -202,5 +216,5 @@ namespace spk::widget
          * @return A constant reference to the widget's viewport. The viewport defines the area of the screen where the widget is rendered.
          */
         const spk::Viewport& viewport() const;
-	};
+    };
 }
