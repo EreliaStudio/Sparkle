@@ -22,7 +22,6 @@ private:
 
     spk::Button _blueButton;
 
-
     void _onGeometryChange()
     {
         _listFrame.setGeometry(spk::Vector2Int(50, 0), spk::Vector2Int(300, size().y));
@@ -91,7 +90,7 @@ public:
 
             _listTextLabel[i].box().setSpriteSheet(&_orangeBackgroundTexture);
             _listTextLabel[i].box().setCornerSize(32);
-            _listTextLabel[i].label().setText("Label " + std::string(1, 'A' + static_cast<int>(i)));
+            _listTextLabel[i].label().setText("Label " + std::string(1, 'A' + static_cast<char>(i)));
             _listTextLabel[i].label().setFont(&_textFont);
             _listTextLabel[i].label().setTextSize(40);
             _listTextLabel[i].label().setTextColor(spk::Color(192 + 10 * i, 50, 12));
