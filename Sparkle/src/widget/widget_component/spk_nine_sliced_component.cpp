@@ -139,6 +139,7 @@ namespace spk::WidgetComponent
 			_needGPUUpdate = false;
 		}
 
+        _renderingPipelineTexture.attach(_spriteSheet);
 		_renderingObject.render();
 	}
 }

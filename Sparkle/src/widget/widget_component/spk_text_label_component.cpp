@@ -201,6 +201,7 @@ namespace spk::WidgetComponent
         if (_fontAtlas == nullptr)
             return ;
 
+        _renderingPipelineTexture.attach(&(_fontAtlas->texture()));
         _renderingObject.render();
     }
 

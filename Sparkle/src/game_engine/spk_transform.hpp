@@ -44,11 +44,11 @@ namespace spk
 		/**
 		 * @brief The type of contract provided by translation and scale uppon subscription.
 		*/
-		using Contract = spk::ObservableValue<spk::Vector3>::Contract;
+		using Contract = ObservableVector3::Contract;
 		/**
 		 * @brief The type of contract provided by rotation uppon subscription.
 		*/
-		using RotationContract = spk::ObservableValue<spk::Vector3>::Contract;
+		using RotationContract = ObservableQuaternion::Contract;
 
 		/**
 		 * @brief Observable translation vector.
