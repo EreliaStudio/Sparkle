@@ -11,11 +11,13 @@ class MainWidget : public spk::IWidget
 private:
     spk::Font _textFont;
     spk::SpriteSheet _redBackgroundTexture;
+    spk::SpriteSheet _orangeBackgroundTexture;
     spk::SpriteSheet _lightGreenBackgroundTexture;
     spk::SpriteSheet _darkGreenBackgroundTexture;
     spk::SpriteSheet _blueBackgroundTexture;
 
     spk::Frame _listFrame;
+    spk::TextLabel _listTextLabel[5];
 
     spk::Frame _twoButtonFrame;
     spk::Button _greenButtons[2];
@@ -26,6 +28,12 @@ private:
     void _onGeometryChange()
     {
         _listFrame.setGeometry(spk::Vector2Int(50, 0), spk::Vector2Int(300, size().y));
+        spk::Vector2Int redTextLabelAnchor = spk::Vector2Int(15, 10);
+        spk::Vector2Int redTextLabelSize = spk::Vector2Int(_listFrame.size().x - 30, (_listFrame.size().y - 10 * 9) / 8);
+        for (size_t i = 0; i < 5; i++)
+        {
+            _listTextLabel[i].setGeometry(redTextLabelAnchor + (spk::Vector2Int(0, redTextLabelSize.y + 15) * i), redTextLabelSize);
+        }
 
         spk::Vector2Int twoButtonFrameAnchor = spk::Vector2Int(_listFrame.anchor().x + _listFrame.size().x, 0);
         _twoButtonFrame.setGeometry(twoButtonFrameAnchor, spk::Vector2Int(size().x - twoButtonFrameAnchor.x, size().y / 2));
@@ -66,11 +74,33 @@ public:
             spk::Button("GreenButtonA", [&](){std::cout << "Green button A" << std::endl;}),
             spk::Button("GreenButtonB", [&](){std::cout << "Green button B" << std::endl;})
         },
-        _lightGreenBackgroundTexture("Playground/9SlicedLightGreen.png", spk::Vector2Int(3, 3))
+        _lightGreenBackgroundTexture("Playground/9SlicedLightGreen.png", spk::Vector2Int(3, 3)),
+        _orangeBackgroundTexture("Playground/9SlicedOrange.png", spk::Vector2Int(3, 3)),
+        _listTextLabel{
+            spk::TextLabel("TextLabelA"),
+            spk::TextLabel("TextLabelB"),
+            spk::TextLabel("TextLabelC"),
+            spk::TextLabel("TextLabelD"),
+            spk::TextLabel("TextLabelE")
+        }
     {
         _listFrame.box().setSpriteSheet(&_redBackgroundTexture);
         _listFrame.box().setCornerSize(32);
         _listFrame.activate();
+        for (size_t i = 0; i < 5; i++)
+        {
+            _listFrame.addChild(&(_listTextLabel[i]));
+
+            _listTextLabel[i].box().setSpriteSheet(&_orangeBackgroundTexture);
+            _listTextLabel[i].box().setCornerSize(32);
+            _listTextLabel[i].label().setText("Label " + std::string(1, 'A' + static_cast<int>(i)));
+            _listTextLabel[i].label().setFont(&_textFont);
+            _listTextLabel[i].label().setTextSize(40);
+            _listTextLabel[i].label().setTextColor(spk::Color(192 + 10 * i, 50, 12));
+            _listTextLabel[i].label().setOutlineSize(0);
+            _listTextLabel[i].label().setOutlineColor(spk::Color(30, 30, 30));
+            _listTextLabel[i].activate();
+        }
 
         _blueButton.box().setSpriteSheet(&_blueBackgroundTexture);
         _blueButton.box().setCornerSize(32);

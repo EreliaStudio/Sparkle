@@ -38,22 +38,22 @@ namespace spk
 	{
 		Font::Atlas::BuildData buildData = _computeBuildData(p_fontData, p_fontConfiguration, p_key);
 
-		_normalizeAtlasData(buildData.buffer, buildData.size);
+		// _normalizeAtlasData(buildData.buffer, buildData.size);
 
-		if (p_key.outlineSize != 0)
-		{		
-			if (p_key.outlineStyle == Font::OutlineStyle::Standard)
-			{
-				(const_cast<Key*>(&p_key))->computeCircle(buildData.size);
-			}
+		// if (p_key.outlineSize != 0)
+		// {		
+		// 	if (p_key.outlineStyle == Font::OutlineStyle::Standard)
+		// 	{
+		// 		(const_cast<Key*>(&p_key))->computeCircle(buildData.size);
+		// 	}
 		
-			_applyOutline(buildData.buffer, buildData.size, p_key);
-		}
+		// 	_applyOutline(buildData.buffer, buildData.size, p_key);
+		// }
 
 		_texture.uploadToGPU(
 			buildData.buffer.data(), buildData.size,
 			Texture::Format::GreyLevel, Texture::Filtering::Linear,
-			Texture::Wrap::Repeat, Texture::Mipmap::Disable);
+			Texture::Wrap::Repeat, Texture::Mipmap::Enable);
 	}
 
 	std::string wstringToString(const std::wstring& wstr)
