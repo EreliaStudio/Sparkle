@@ -4,15 +4,10 @@
 #include "design_pattern/spk_tree_node.hpp"
 #include "graphics/spk_viewport.hpp"
 #include "profiler/spk_time_metric.hpp"
+#include "widget/spk_box_constraints.hpp"
 
 namespace spk::widget
 {
-    struct BoxConstraints
-    {
-        Vector2 max;
-        Vector2 min;
-    };
-
     /**
      * @class IWidget
      * @brief Defines a widget interface for UI elements, integrating activation state management, hierarchicalorganization, and viewport handling.
@@ -94,7 +89,7 @@ namespace spk::widget
          * occur when the widget's geometry changes.
          * This can include recalculating layout, resizing child widgets, or any other geometry-related adjustments.
          */
-        // virtual Vector2 _onLayout(const BoxConstraints& p_constraints);
+        virtual Vector2 _onLayout(const BoxConstraints& p_constraints);
 
         /**
          * @brief Virtual method for rendering the widget.
@@ -117,7 +112,8 @@ namespace spk::widget
         virtual void _onUpdate();
 
     public:
-        Vector2 layoutChildren(const BoxConstraints&);
+        /// @brief layout should be called on the root of the widget tree to trigger a layout before render.
+        void layout(const BoxConstraints&);
         void render();
         void update();
 
@@ -212,4 +208,14 @@ namespace spk::widget
          */
         const spk::Viewport& viewport() const;
     };
+
+class SingleChildWidget :public IWidget {
+  public:
+    IWidget* child() {
+      if (children().size() < 1) {
+        return nullptr;
+      }
+      return &(children()[0]);
+    }
+};
 }

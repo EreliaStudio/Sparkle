@@ -5,7 +5,7 @@ namespace spk::widget
 {
     // By default the IWidget will layout its children by restricting their size to the constraints
     // he has been give, and aligning them to its top-left corner.
-    Vector2 IWidget::layoutChildren(const BoxConstraints& p_constraints)
+    Vector2 IWidget::_onLayout(const BoxConstraints& p_constraints)
     {
         // We aim at returning a box that englobes all children.
         Vector2 maxFromChildren;
@@ -25,6 +25,11 @@ namespace spk::widget
 
     void IWidget::_onUpdate()
     {
+    }
+
+    void IWidget::layout(const BoxConstraints& p_constraints)
+    {
+      _onLayout(p_contraints);
     }
 
     void IWidget::render()
