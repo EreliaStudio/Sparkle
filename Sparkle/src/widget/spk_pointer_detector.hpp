@@ -1,14 +1,20 @@
+#pragma once
+
 #include "widget/spk_widget.hpp"
+#include <functional>
 
 namespace spk::widget
 {
     /**
      * @brief Detects if a pointer enters any of this widget's children.
      */
-    class PointerDetector : public IWidget
+    class PointerDetector : public SingleChildWidget
     {
     public:
-        PointerDetector() = default;
+        PointerDetector(IWidget* p_parent) :
+            SingleChildWidget("PointerDetector", p_parent)
+        {
+        }
 
         using Callback = std::function<void()>;
 
@@ -21,13 +27,15 @@ namespace spk::widget
         bool isHovered() const;
 
     private:
-        void _onGeometryChange() override;
         void _onUpdate() override;
-        void _onRender() override;
+        bool leftMouseDown() const;
 
         Callback _onPressed;
         Callback _onReleased;
         Callback _onEnter;
         Callback _onExit;
+
+        bool _hovered = false;
+        bool _isClicked = false;
     };
 }

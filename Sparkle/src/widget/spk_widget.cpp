@@ -1,5 +1,5 @@
-#include "application/spk_application.hpp"
 #include "widget/spk_widget.hpp"
+#include "application/spk_application.hpp"
 
 namespace spk::widget
 {
@@ -12,7 +12,7 @@ namespace spk::widget
         for (auto& child : children())
         {
             // Get child size but cap it to match the constraints.
-            Vector2 childSize = Vector2::min(p_constraints.max, child->layoutChildren(p_constraints));
+            Vector2 childSize = Vector2::min(p_constraints.max, child->_onLayout(p_constraints));
             child->setGeometry({0, 0}, childSize);
             maxFromChildren = Vector2::max(maxFromChildren, childSize);
         }
@@ -27,13 +27,22 @@ namespace spk::widget
     {
     }
 
+    void IWidget::_onGeometryChange()
+    {
+    }
+
     void IWidget::layout(const BoxConstraints& p_constraints)
     {
-      _onLayout(p_contraints);
+        _onLayout(p_constraints);
     }
 
     void IWidget::render()
     {
+        if (_viewport.size() <= Vector2{0, 0})
+        {
+            std::cout << "Viewport of " << _name << " has a size of " << _viewport.size() << std::endl;
+            return;
+        }
         _computeViewport();
         _onRender();
         for (auto& child : children())
@@ -145,6 +154,7 @@ namespace spk::widget
 
         _anchorRatio = (parent() != nullptr && parent()->size() != 0 ? static_cast<spk::Vector2>(_anchor) / static_cast<spk::Vector2>(parent()->size()) : 0);
         _sizeRatio = (parent() != nullptr && parent()->size() != 0 ? static_cast<spk::Vector2>(_size) / static_cast<spk::Vector2>(parent()->size()) : 1);
+        _onGeometryChange();
     }
 
     void IWidget::setDepth(const float& p_depth)
@@ -174,9 +184,7 @@ namespace spk::widget
     {
         Vector2 p0 = _viewport.anchor();
         Vector2 p1 = p0 + _viewport.size();
-        bool vIn = p_coord.x >= p0.x && p_coord.x <= p1.x;
-        bool hIn = p_coord.y >= p0.y && p_coord.y <= p1.y;
-        return vIn && hIn;
+        return Vector2::isInsideRectangle(p_coord, p0, p1);
     }
 
     const std::string& IWidget::name() const

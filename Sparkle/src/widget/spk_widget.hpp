@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cassert>
+
 #include "design_pattern/spk_activable_object.hpp"
 #include "design_pattern/spk_tree_node.hpp"
 #include "graphics/spk_viewport.hpp"
@@ -78,7 +80,7 @@ namespace spk::widget
         TimeMetric& _timeMetric;
 #endif
 
-    protected:
+    public:
         /**
          * @brief Virtual method triggered when the widget's geometry changes.
          *
@@ -91,6 +93,7 @@ namespace spk::widget
          */
         virtual Vector2 _onLayout(const BoxConstraints& p_constraints);
 
+    protected:
         /**
          * @brief Virtual method for rendering the widget.
          *
@@ -110,6 +113,12 @@ namespace spk::widget
          * and dynamic.
          */
         virtual void _onUpdate();
+
+        /**
+         * @brief Propagate geometry changes to components.
+         *
+         */
+        virtual void _onGeometryChange();
 
     public:
         /// @brief layout should be called on the root of the widget tree to trigger a layout before render.
@@ -209,13 +218,23 @@ namespace spk::widget
         const spk::Viewport& viewport() const;
     };
 
-class SingleChildWidget :public IWidget {
-  public:
-    IWidget* child() {
-      if (children().size() < 1) {
-        return nullptr;
-      }
-      return &(children()[0]);
-    }
-};
+    class SingleChildWidget : public IWidget
+    {
+    public:
+        SingleChildWidget(const std::string& p_name, IWidget* p_parent = nullptr) :
+            IWidget(p_name, p_parent)
+        {
+        }
+
+        IWidget* child()
+        {
+            assert(children().size() < 2);
+
+            if (children().size() < 1)
+            {
+                return nullptr;
+            }
+            return children()[0];
+        }
+    };
 }
