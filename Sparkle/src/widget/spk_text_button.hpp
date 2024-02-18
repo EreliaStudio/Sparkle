@@ -19,7 +19,7 @@ namespace spk::widget
             _ptrDetector = std::make_unique<PointerDetector>(this);
             _ptrDetector->setOnPressed(_onPressed);
 
-            _label = std::make_unique<TextLabel>("TextButton::TextLabel", _ptrDetector.get());
+            _label = std::make_unique<TextLabel>("TextButton::TextLabel", _font, _ptrDetector.get());
             _label->label().setFont(_font); // Assuming myFont is a preloaded Font instance
             _label->label().setText(_text);
             _label->label().setTextSize(50);

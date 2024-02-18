@@ -30,7 +30,7 @@ using spk::widget::Padding;
 using spk::widget::Row;
 using spk::widget::SizedBox;
 
-using spk::widget::TextButton;
+using spk::widget::TextLabel;
 
 using spk::Vector2;
 
@@ -115,12 +115,12 @@ public:
             {
                 auto callback = [label = labels[i]]()
                 { std::cout << label << std::endl; };
-                vault(make_unique<TextButton>(labels[i], callback, &_font, col.get()));
+                vault(make_unique<TextLabel>(labels[i], &_font, col.get()));
 
                 // Only build separators until the last one.
                 if (i < (labels.size() - 1))
                 {
-                    vault(make_unique<SizedBox>(Vector2{1.0f, 10.0f}, col.get()));
+                    vault(make_unique<SizedBox>(Vector2{10.0f, 10.0f}, col.get()));
                 }
             }
             vault(move(col));
@@ -137,17 +137,14 @@ public:
                 auto padding = make_unique<Padding>(Padding::Config{15, 15, 15, 15}, expanded.get());
                 auto innerCol = make_unique<Column>(padding.get());
                 auto top = make_unique<Expanded>(innerCol.get());
-                auto topButton = make_unique<TextButton>(
-                    "TopButton", []()
-                    { std::cout << "TopButton" << std::endl; },
+                auto topButton = make_unique<TextLabel>(
+                    "TopButton",
                     &_font,
                     top.get());
-                auto separator = make_unique<SizedBox>(Vector2{1, 15}, innerCol.get());
+                auto separator = make_unique<SizedBox>(Vector2{10, 15}, innerCol.get());
                 auto bot = make_unique<Expanded>(innerCol.get());
-                auto botButton = make_unique<TextButton>(
-                    "BotButton", []()
-                    { std::cout << "BotButton" << std::endl; },
-                    &_font, top.get());
+                auto botButton = make_unique<TextLabel>(
+                    "BotButton", &_font, top.get());
                 vault(move(expanded), move(padding), move(innerCol), move(top), move(topButton), move(separator), move(bot), move(botButton));
             }
             // Bottom section
@@ -155,9 +152,8 @@ public:
                 auto expanded = make_unique<Expanded>(col.get());
                 auto center = make_unique<Center>(expanded.get());
                 auto frac = make_unique<FractionallySizedBox>(0.5f, 0.5f, center.get());
-                auto button = make_unique<TextButton>(
-                    "Second button", []()
-                    { std::cout << "Second button" << std::endl; },
+                auto button = make_unique<TextLabel>(
+                    "Second button",
                     &_font, frac.get());
                 vault(move(expanded), move(center), move(frac), move(button));
             }
@@ -179,7 +175,7 @@ public:
         Defer defer;
         VWidget1(center, Center, this);
         VWidget2(sb, SizedBox, Vector2(400, 400), center.get());
-        VWidget2(_label, spk::widget::TextLabel, "Bobo", sb.get());
+        VWidget3(_label, spk::widget::TextLabel, "Bobo", &font, sb.get());
 
         _label->label().setFont(&font); // Assuming myFont is a preloaded Font instance
         _label->label().setText("Bobo");
@@ -195,13 +191,13 @@ public:
 
 int main()
 {
-    spk::Application app = spk::Application("Playground", spk::Vector2UInt(1600, 1000), spk::Application::Mode::Monothread);
+    spk::Application app = spk::Application("Playground", spk::Vector2UInt(1000, 1000), spk::Application::Mode::Monothread);
 
-    // MyDemo demo;
-    // demo.activateAll();
-
-    EasyDemo demo;
+    MyDemo demo;
     demo.activateAll();
+
+    // EasyDemo demo;
+    //  demo.activateAll();
 
     return (app.run());
 }

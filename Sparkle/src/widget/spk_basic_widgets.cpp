@@ -4,8 +4,8 @@ namespace spk::widget
 {
     Vector2 SizedBox::_onLayout(const BoxConstraints& p_constraints)
     {
-        IWidget* child = SingleChildWidget::child();
-        if (child == nullptr)
+        IWidget* tmpChild = child();
+        if (tmpChild == nullptr)
         {
             return _size;
         }
@@ -13,8 +13,9 @@ namespace spk::widget
         Vector2 max = Vector2::min(p_constraints.max, _size);
         Vector2 min = Vector2::max(p_constraints.min, _size);
 
-        Vector2 childSize = child->_onLayout(BoxConstraints(min, max));
-        child->setGeometry(anchor(), childSize);
+        Vector2 childSize = tmpChild->_onLayout(BoxConstraints(min, max));
+        tmpChild->setGeometry({0, 0}, childSize);
+
         return max;
     }
 
@@ -44,7 +45,7 @@ namespace spk::widget
         {
             BoxConstraints constraints{p_constraints.min, size};
             Vector2 childSize = child->_onLayout(constraints);
-            child->setGeometry(anchor(), childSize);
+            child->setGeometry({0, 0}, childSize);
         }
 
         return size;
@@ -59,8 +60,8 @@ namespace spk::widget
             Vector2 min = p_constraints.min - padded;
             Vector2 childSize = child->_onLayout({min, max});
 
-            Vector2 childAnchor = anchor() + Vector2Int(_config.left, _config.top);
-            child->setGeometry(childAnchor, childSize);
+            Vector2 anchor{_config.left, _config.top};
+            child->setGeometry(anchor, childSize);
         }
 
         return p_constraints.max;
@@ -74,7 +75,7 @@ namespace spk::widget
             return p_constraints.min;
         }
         Vector2 childSize = child->_onLayout(p_constraints);
-        child->setGeometry(anchor(), childSize);
+        child->setGeometry({0, 0}, childSize);
         return childSize;
     }
 
@@ -170,8 +171,8 @@ namespace spk::widget
                 break;
             }
 
-            Vector2 childAnchor = anchor() + Vector2Int(x, currentY);
-            child->setGeometry(childAnchor, size);
+            Vector2 anchor{x, currentY};
+            child->setGeometry(anchor, size);
 
             // Make sure to update the currentY for the next widget.
             currentY += size.y;
@@ -270,8 +271,8 @@ namespace spk::widget
                 break;
             }
 
-            Vector2 childAnchor = anchor() + Vector2Int(currentX, y);
-            child->setGeometry(childAnchor, size);
+            Vector2 anchor{currentX, y};
+            child->setGeometry(anchor, size);
 
             // Make sure to update the currentX for the next widget.
             currentX += size.x;
@@ -288,8 +289,9 @@ namespace spk::widget
         }
 
         Vector2 childSize = tmpChild->_onLayout(p_constraints);
-        Vector2 childAnchor = anchor() + (p_constraints.max - childSize) / 2;
-        tmpChild->setGeometry(childAnchor, childSize);
-        return childSize;
+        Vector2 anchor = (p_constraints.max - childSize) / 2;
+        DLOG(childSize << anchor);
+        tmpChild->setGeometry(anchor, childSize);
+        return p_constraints.max;
     }
 }

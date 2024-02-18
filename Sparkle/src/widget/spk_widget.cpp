@@ -35,7 +35,7 @@ namespace spk::widget
 
     void IWidget::_onGeometryChange()
     {
-        DLOG(name() << id() << ":" << anchor() << size());
+        DLOG(name() << "#" << id() << ":" << anchor() << size());
     }
 
     void IWidget::layout(const BoxConstraints& p_constraints)
@@ -45,19 +45,11 @@ namespace spk::widget
 
     void IWidget::render()
     {
-        static int i = 0;
-        i++;
-        assert(i < 40);
-        if (size() <= Vector2UInt(0, 0))
-        {
-            DLOG("This widget is too small : " << name() << id());
-            return;
-        }
         _computeViewport();
-        if (_viewport.size() <= Vector2{0, 0})
+        if (true || _viewport.size() <= Vector2{0, 0})
         {
-            std::cout << "Viewport of " << _name << " has a size of " << _viewport.size() << std::endl;
-            return;
+            std::cout << "Viewport of " << _name << "#" << id() << " has a size of " << _viewport.size() << std::endl;
+            // return;
         }
 
         _onRender();
