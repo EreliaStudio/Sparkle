@@ -266,7 +266,8 @@ namespace spk::widget
             float availableHeight = p_constraints.max.y - height;
             if (availableHeight < 0)
             {
-                availableHeight = 0;
+                // We don't like 0 height stuff.
+                availableHeight = totalFlex + 1;
             }
 
             // Now get the sizes of the flexible children.
@@ -369,7 +370,7 @@ namespace spk::widget
         Vector2 _onLayout(const BoxConstraints& p_constraints) override
         {
             size_t len = children().size();
-            std::vector<Vector2> sizes(len, {0, 0});
+            std::vector<Vector2> sizes(len, {1, 1});
 
             float totalFlex = 0;
             float width = 0;
@@ -397,7 +398,7 @@ namespace spk::widget
             float availableWidth = p_constraints.max.x - width;
             if (availableWidth < 0)
             {
-                availableWidth = 0;
+                availableWidth = totalFlex + 1;
             }
 
             // Now get the sizes of the flexible children.
@@ -410,7 +411,7 @@ namespace spk::widget
                     float flexFactor = totalFlex / asExpanded->flex();
                     float childWidth = availableWidth * flexFactor;
                     Vector2 max{childWidth, p_constraints.max.y};
-                    Vector2 min{childWidth, 0};
+                    Vector2 min{childWidth, 1};
 
                     BoxConstraints constraints{min, max};
                     Vector2 childSize = asExpanded->_onLayout(constraints);
@@ -484,7 +485,7 @@ namespace spk::widget
             IWidget* tmpChild = child();
             if (nullptr == tmpChild)
             {
-                return p_constraints.min;
+                return p_constraints.max;
             }
 
             Vector2 childSize = tmpChild->_onLayout(p_constraints);

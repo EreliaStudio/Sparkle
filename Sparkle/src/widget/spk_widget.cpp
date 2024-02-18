@@ -7,12 +7,16 @@ namespace spk::widget
     // he has been give, and aligning them to its top-left corner.
     Vector2 IWidget::_onLayout(const BoxConstraints& p_constraints)
     {
+        if (children().size() == 0)
+        {
+            return p_constraints.max;
+        }
         // We aim at returning a box that englobes all children.
-        Vector2 maxFromChildren;
+        Vector2 maxFromChildren{0, 0};
         for (auto& child : children())
         {
             // Get child size but cap it to match the constraints.
-            Vector2 childSize = Vector2::min(p_constraints.max, child->_onLayout(p_constraints));
+            Vector2 childSize = child->_onLayout(p_constraints);
             child->setGeometry({0, 0}, childSize);
             maxFromChildren = Vector2::max(maxFromChildren, childSize);
         }
@@ -38,12 +42,18 @@ namespace spk::widget
 
     void IWidget::render()
     {
+        std::cout << name() << " : " << size() << std::endl;
+        if (parent() != nullptr)
+        {
+            std::cout << parent()->name() << std::endl;
+        }
+        _computeViewport();
         if (_viewport.size() <= Vector2{0, 0})
         {
             std::cout << "Viewport of " << _name << " has a size of " << _viewport.size() << std::endl;
             return;
         }
-        _computeViewport();
+
         _onRender();
         for (auto& child : children())
         {

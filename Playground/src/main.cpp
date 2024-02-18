@@ -5,10 +5,27 @@
 #include <utility>
 #include <vector>
 
+#define VWidget1(name, type, param1)              \
+    auto name = std::make_unique<type>((param1)); \
+    defer.add([&]() { vault(std::move((name))); })
+
+#define VWidget2(name, type, param1, param2)                \
+    auto name = std::make_unique<type>((param1), (param2)); \
+    defer.add([&]() { vault(std::move((name))); })
+
+#define VWidget3(name, type, param1, param2, param3)                  \
+    auto name = std::make_unique<type>((param1), (param2), (param3)); \
+    defer.add([&]() { vault(std::move((name))); })
+
+#define VWidget4(name, type, param1, param2, param3, param4)                    \
+    auto name = std::make_unique<type>((param1), (param2), (param3), (param4)); \
+    defer.add([&]() { vault(std::move((name))); })
+
 using spk::widget::Center;
 using spk::widget::Column;
 using spk::widget::Expanded;
 using spk::widget::FractionallySizedBox;
+using spk::widget::IWidget;
 using spk::widget::Padding;
 using spk::widget::Row;
 using spk::widget::SizedBox;
@@ -20,19 +37,72 @@ using spk::Vector2;
 using std::make_unique;
 using std::move;
 
-class MyDemo : public spk::widget::SingleChildWidget
+spk::Font font("C:/Users/JQ/dev/Fonts/NotoSans/static/NotoSans-Regular.ttf");
+
+class Defer
+{
+public:
+    Defer() = default;
+    ~Defer() { trigger(); }
+    void add(const std::function<void()>& p_callback) { _callbacks.push_back(p_callback); }
+    void trigger()
+    {
+        for (auto& c : _callbacks)
+        {
+            c();
+        }
+        _callbacks.clear();
+    };
+
+private:
+    std::vector<std::function<void()>> _callbacks;
+};
+
+class WidgetVault : public spk::widget::IWidget
+{
+public:
+    WidgetVault(const std::string& p_name, spk::widget::IWidget* p_parent = nullptr) :
+        spk::widget::IWidget(p_name, p_parent)
+    {
+    }
+
+protected:
+    void vault(std::unique_ptr<IWidget>& item)
+    {
+        vault(std::move(item));
+    }
+
+    template <typename... args>
+    void vault(args&&... p_stash)
+    {
+        auto f = [&](std::unique_ptr<IWidget>&& item)
+        { vault(item); };
+
+        (..., f(std::forward<args>(p_stash)));
+    }
+
+    void vault(std::unique_ptr<IWidget>&& item)
+    {
+        _vault.push_back(move(item));
+    }
+
+private:
+    std::vector<std::unique_ptr<spk::widget::IWidget>> _vault;
+};
+
+class MyDemo : public WidgetVault
 {
 public:
     MyDemo() :
-        SingleChildWidget("MyDemo"),
+        WidgetVault("MyDemo"),
         _font("C:/Users/JQ/dev/Fonts/NotoSans/static/NotoSans-Regular.ttf")
     {
         auto row = make_unique<Row>(this);
 
         // Left empty padding
         {
-            auto leftPad = make_unique<SizedBox>(Vector2{50.0f, std::numeric_limits<float>::max()}, row.get());
-            _vault.push_back(move(leftPad));
+            auto leftPad = make_unique<SizedBox>(Vector2{50.0f, 5000.0f}, row.get());
+            vault(move(leftPad));
         }
 
         // Middle column
@@ -50,7 +120,7 @@ public:
                 // Only build separators until the last one.
                 if (i < (labels.size() - 1))
                 {
-                    vault(make_unique<SizedBox>(Vector2{0.0f, 10.0f}, col.get()));
+                    vault(make_unique<SizedBox>(Vector2{1.0f, 10.0f}, col.get()));
                 }
             }
             vault(move(col));
@@ -72,7 +142,7 @@ public:
                     { std::cout << "TopButton" << std::endl; },
                     &_font,
                     top.get());
-                auto separator = make_unique<SizedBox>(Vector2{0, 15}, innerCol.get());
+                auto separator = make_unique<SizedBox>(Vector2{1, 15}, innerCol.get());
                 auto bot = make_unique<Expanded>(innerCol.get());
                 auto botButton = make_unique<TextButton>(
                     "BotButton", []()
@@ -97,34 +167,34 @@ public:
     }
 
 private:
-    void vault(std::unique_ptr<IWidget>& item)
-    {
-        vault(std::move(item));
-    }
-
-    template <typename... args>
-    void vault(args&&... p_stash)
-    {
-        auto f = [&](std::unique_ptr<IWidget>&& item)
-        { vault(item); };
-
-        (..., f(std::forward<args>(p_stash)));
-    }
-
-    void vault(std::unique_ptr<IWidget>&& item)
-    {
-        _vault.push_back(move(item));
-    }
-
-    std::vector<std::unique_ptr<IWidget>> _vault;
     spk::Font _font;
+};
+
+class EasyDemo : public WidgetVault
+{
+public:
+    EasyDemo() :
+        WidgetVault("EasyDemo", nullptr)
+    {
+        Defer defer;
+        VWidget1(center, Center, this);
+        VWidget2(sb, SizedBox, Vector2(300, 300), center.get());
+        VWidget4(
+            tb, TextButton,
+            "Bobo", []() {}, &font, sb.get());
+        defer.trigger();
+        this->activateAll();
+    }
 };
 
 int main()
 {
     spk::Application app = spk::Application("Playground", spk::Vector2UInt(800, 800), spk::Application::Mode::Monothread);
 
-    MyDemo demo;
+    // MyDemo demo;
+    // demo.activateAll();
+
+    EasyDemo demo;
     demo.activateAll();
 
     return (app.run());

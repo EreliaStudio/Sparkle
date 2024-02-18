@@ -23,8 +23,7 @@ namespace spk
 
         _handle.clear();
 
-        std::cout << size() << std::endl;
-        _centralWidget->layout(widget::BoxConstraints({0, 0}, size()));
+        _centralWidget->layout(widget::BoxConstraints(size(), size()));
         _centralWidget->setGeometry({0, 0}, size());
         _centralWidget->render();
 

@@ -22,7 +22,7 @@ namespace spk::widget
             _label = std::make_unique<TextLabel>("TextButton::TextLabel", _ptrDetector.get());
             _label->label().setFont(_font); // Assuming myFont is a preloaded Font instance
             _label->label().setText(_text);
-            _label->label().setTextSize(24);
+            _label->label().setTextSize(50);
             _label->label().setTextColor(spk::Color{255, 255, 255});
             _label->label().setAnchor({10, 10});
             _label->label().setVerticalAlignment(spk::VerticalAlignment::Centered);

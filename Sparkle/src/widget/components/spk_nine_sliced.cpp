@@ -129,15 +129,19 @@ namespace spk::widget::components
 
     void NineSlicedBox::render()
     {
+        DEBUG_LINE();
         if (_spriteSheet == nullptr)
             return;
 
+        DEBUG_LINE();
         if (_needGPUUpdate == true)
         {
+            DEBUG_LINE();
             _updateVertices();
             _needGPUUpdate = false;
         }
 
+        DEBUG_LINE();
         _renderingObject.render();
     }
 }

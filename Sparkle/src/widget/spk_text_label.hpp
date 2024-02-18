@@ -23,6 +23,8 @@ namespace spk::widget
 
         void _onRender() override
         {
+            std::cout << "Can we render sometimes ?" << std::endl;
+            DEBUG_LINE();
             _box.render();
             _label.render();
         }
