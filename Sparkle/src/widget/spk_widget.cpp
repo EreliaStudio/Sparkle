@@ -3,6 +3,8 @@
 
 namespace spk::widget
 {
+    std::atomic_uint32_t IWidget::_nextId = 0;
+
     // By default the IWidget will layout its children by restricting their size to the constraints
     // he has been give, and aligning them to its top-left corner.
     Vector2 IWidget::_onLayout(const BoxConstraints& p_constraints)
@@ -17,7 +19,7 @@ namespace spk::widget
         {
             // Get child size but cap it to match the constraints.
             Vector2 childSize = child->_onLayout(p_constraints);
-            child->setGeometry({0, 0}, childSize);
+            child->setGeometry(anchor(), childSize);
             maxFromChildren = Vector2::max(maxFromChildren, childSize);
         }
         return maxFromChildren;
@@ -33,6 +35,7 @@ namespace spk::widget
 
     void IWidget::_onGeometryChange()
     {
+        DLOG(name() << id() << ":" << anchor() << size());
     }
 
     void IWidget::layout(const BoxConstraints& p_constraints)
@@ -42,10 +45,13 @@ namespace spk::widget
 
     void IWidget::render()
     {
-        std::cout << name() << " : " << size() << std::endl;
-        if (parent() != nullptr)
+        static int i = 0;
+        i++;
+        assert(i < 40);
+        if (size() <= Vector2UInt(0, 0))
         {
-            std::cout << parent()->name() << std::endl;
+            DLOG("This widget is too small : " << name() << id());
+            return;
         }
         _computeViewport();
         if (_viewport.size() <= Vector2{0, 0})
@@ -126,6 +132,7 @@ namespace spk::widget
     }
 
     IWidget::IWidget(const std::string& p_name) :
+        _id(_nextId++),
         _name(p_name),
 #ifndef NDEBUG
         _timeMetric(spk::Application::activeApplication()->profiler().metric<TimeMetric>(name())),
@@ -220,5 +227,10 @@ namespace spk::widget
     const spk::Viewport& IWidget::viewport() const
     {
         return (_viewport);
+    }
+
+    uint32_t IWidget::id() const
+    {
+        return _id;
     }
 }

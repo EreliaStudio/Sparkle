@@ -1,5 +1,9 @@
 #pragma once
 
+#include <iostream>
+
+#include "math/spk_vector2.hpp"
+#include "spk_basic_functions.hpp"
 #include "widget/components/spk_nine_sliced.hpp"
 #include "widget/components/spk_text_label.hpp"
 #include "widget/spk_widget.hpp"
@@ -14,6 +18,7 @@ namespace spk::widget
 
         void _onGeometryChange() override
         {
+            IWidget::_onGeometryChange();
             _box.setGeometry(anchor(), size());
             _box.setDepth(depth());
 
@@ -23,9 +28,8 @@ namespace spk::widget
 
         void _onRender() override
         {
-            std::cout << "Can we render sometimes ?" << std::endl;
             DEBUG_LINE();
-            _box.render();
+            //_box.render();
             _label.render();
         }
 

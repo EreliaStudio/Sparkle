@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <cassert>
 
 #include "design_pattern/spk_activable_object.hpp"
@@ -64,6 +65,8 @@ namespace spk::widget
 
     private:
         static inline IWidget* defaultParent = nullptr;
+        static std::atomic_uint32_t _nextId;
+        uint32_t _id;
 
         std::string _name;
 
@@ -216,6 +219,8 @@ namespace spk::widget
          * @return A constant reference to the widget's viewport. The viewport defines the area of the screen where the widget is rendered.
          */
         const spk::Viewport& viewport() const;
+
+        uint32_t id() const;
     };
 
     class SingleChildWidget : public IWidget

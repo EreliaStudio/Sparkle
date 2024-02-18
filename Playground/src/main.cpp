@@ -178,10 +178,16 @@ public:
     {
         Defer defer;
         VWidget1(center, Center, this);
-        VWidget2(sb, SizedBox, Vector2(300, 300), center.get());
-        VWidget4(
-            tb, TextButton,
-            "Bobo", []() {}, &font, sb.get());
+        VWidget2(sb, SizedBox, Vector2(400, 400), center.get());
+        VWidget2(_label, spk::widget::TextLabel, "Bobo", sb.get());
+
+        _label->label().setFont(&font); // Assuming myFont is a preloaded Font instance
+        _label->label().setText("Bobo");
+        _label->label().setTextSize(50);
+        _label->label().setTextColor(spk::Color{255, 255, 255});
+        _label->label().setAnchor({100, 100});
+        _label->label().setVerticalAlignment(spk::VerticalAlignment::Centered);
+        _label->label().setHorizontalAlignment(spk::HorizontalAlignment::Left);
         defer.trigger();
         this->activateAll();
     }
@@ -189,7 +195,7 @@ public:
 
 int main()
 {
-    spk::Application app = spk::Application("Playground", spk::Vector2UInt(800, 800), spk::Application::Mode::Monothread);
+    spk::Application app = spk::Application("Playground", spk::Vector2UInt(1600, 1000), spk::Application::Mode::Monothread);
 
     // MyDemo demo;
     // demo.activateAll();
