@@ -8,7 +8,7 @@ namespace spk
 	{
 		if (_cameraConstants == nullptr)
 		{
-			_cameraConstants = spk::Pipeline::globalConstant("mainCamera");
+			_cameraConstants = spk::Pipeline::globalConstant("cameraConstants");
 		}
 
 		if (_cameraConstants != nullptr)
@@ -20,7 +20,9 @@ namespace spk
 		}
 
 		if (_cameraConstants != nullptr && _cameraConstantsMVPElement != nullptr)
+		{
 			_cameraConstantsInitialized = true;
+		}
 
 		return (_cameraConstantsInitialized);
 	}

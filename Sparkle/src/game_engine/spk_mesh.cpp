@@ -308,26 +308,7 @@ namespace spk
 
 	spk::Mesh createSpriteMesh()
 	{
-		spk::Mesh result;
-
-		result.addPoint(spk::Vector3(0.5f, 0.5f, 0.0f));
-		result.addPoint(spk::Vector3(-0.5f, 0.5f, 0.0f));
-		result.addPoint(spk::Vector3(0.5f, -0.5f, 0.0f));
-		result.addPoint(spk::Vector3(-0.5f, -0.5f, 0.0f));
-		
-		result.addUVs(spk::Vector2(1, 0));
-		result.addUVs(spk::Vector2(0, 0));
-		result.addUVs(spk::Vector2(1, 1));
-		result.addUVs(spk::Vector2(0, 1));
-
-		result.addIndex(0, 0);
-		result.addIndex(1, 1);
-		result.addIndex(2, 2);
-		result.addIndex(2, 2);
-		result.addIndex(1, 1);
-		result.addIndex(3, 3);
-
-		return (result);
+		return (createSpriteMesh(spk::Vector2(0, 0), spk::Vector2(1, 1)));
 	}
 
 	spk::Mesh createSpriteMesh(const spk::Vector2& p_anchor, const spk::Vector2& p_size)

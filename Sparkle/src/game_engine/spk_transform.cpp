@@ -72,10 +72,11 @@ namespace spk
         {
 			if (_owner->parent() != nullptr)
 				direction = _owner->parent()->globalRotation().inverse().applyRotation(direction);
+
             rotation = Quaternion::lookAt(
 					direction,
 					Vector3(0.0f, 1.0f, 0.0f)
-				);
+				); 
 		}
 	}
 

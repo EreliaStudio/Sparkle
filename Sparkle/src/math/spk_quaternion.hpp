@@ -110,6 +110,10 @@ namespace spk
          * @param p_quaternion The quaternion to output.
          * @return A reference to the output stream.
          */
-        friend std::ostream& operator<<(std::ostream& os, const Quaternion& p_quaternion);
+        friend std::ostream& operator<<(std::ostream& p_os, const Quaternion& p_quaternion)
+        {
+            p_os << p_quaternion.x << " / " << p_quaternion.y << " / " << p_quaternion.z << " / " << p_quaternion.w;
+            return (p_os);
+        }
     };
 }
