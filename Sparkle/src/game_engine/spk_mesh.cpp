@@ -315,15 +315,15 @@ namespace spk
 	{
 		spk::Mesh result;
 
-		result.addPoint(spk::Vector3(0.5f, 0.5f, 0.0f));
-		result.addPoint(spk::Vector3(-0.5f, 0.5f, 0.0f));
 		result.addPoint(spk::Vector3(0.5f, -0.5f, 0.0f));
 		result.addPoint(spk::Vector3(-0.5f, -0.5f, 0.0f));
+		result.addPoint(spk::Vector3(0.5f, 0.5f, 0.0f));
+		result.addPoint(spk::Vector3(-0.5f, 0.5f, 0.0f));
 		
-		result.addUVs(p_anchor + spk::Vector2(1, 0) * p_size);
-		result.addUVs(p_anchor + spk::Vector2(0, 0) * p_size);
-		result.addUVs(p_anchor + spk::Vector2(1, 1) * p_size);
 		result.addUVs(p_anchor + spk::Vector2(0, 1) * p_size);
+		result.addUVs(p_anchor + spk::Vector2(1, 1) * p_size);
+		result.addUVs(p_anchor + spk::Vector2(0, 0) * p_size);
+		result.addUVs(p_anchor + spk::Vector2(1, 0) * p_size);
 
 		result.addIndex(0, 0);
 		result.addIndex(1, 1);
