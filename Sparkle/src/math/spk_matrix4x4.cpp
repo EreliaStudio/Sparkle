@@ -6,21 +6,6 @@ namespace spk
     {
     }
 
-    Vector3 Matrix4x4::operator*(const Vector3& v) const
-    {
-        float w = data[3][0] * v.x + data[3][1] * v.y + data[3][2] * v.z + data[3][3];
-        return Vector3(
-            (data[0][0] * v.x + data[0][1] * v.y + data[0][2] * v.z + data[0][3]) / w,
-            (data[1][0] * v.x + data[1][1] * v.y + data[1][2] * v.z + data[1][3]) / w,
-            (data[2][0] * v.x + data[2][1] * v.y + data[2][2] * v.z + data[2][3]) / w);
-    }
-
-    Vector2 Matrix4x4::operator*(const Vector2& v) const
-    {
-        spk::Vector3 tmp = this->operator*(spk::Vector3(v.x, v.y, 0.0f));
-        return (spk::Vector2(tmp.x, tmp.y));
-    }
-
     Matrix4x4 Matrix4x4::operator*(const Matrix4x4& other) const
     {
         Matrix4x4 result;

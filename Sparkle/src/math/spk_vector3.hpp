@@ -20,7 +20,7 @@ namespace spk
 	 * such as addition, subtraction, multiplication, division, dot product,
 	 * cross product, normalization, and more.
 	 */
-	template <typename TType>
+	template <typename TType, typename = typename std::enable_if<std::is_arithmetic<TType>::value>::type>
 	struct IVector3
 	{
 		TType x; //!< X component of the vector.
@@ -36,20 +36,23 @@ namespace spk
          * @brief Constructs a vector with all components set to the same specified value.
          * @param p_value The value to set for x, y, and z components.
          */
-        IVector3(const TType &p_value) : x(p_value), y(p_value), z(p_value) {}
+        template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
+        IVector3(const TOtherType& p_value) : x(static_cast<TType>(p_value)), y(static_cast<TType>(p_value)), z(static_cast<TType>(p_value)) {}
 
         /**
          * @brief Constructs a 3D vector from a 2D vector and a separate z component value.
          * @param p_other The 2D vector for the x and y components.
          * @param p_value The value for the z component.
          */
-        IVector3(const IVector3<TType> &p_other, const TType &p_value) : x(p_other.x), y(p_other.y), z(p_value) {}
+        template <typename TTypeA, typename TTypeB, typename = typename std::enable_if<std::is_arithmetic<TTypeA>::value>::type, typename = typename std::enable_if<std::is_arithmetic<TTypeB>::value>::type>
+        IVector3(const IVector2<TTypeA> &p_other, const TTypeB &p_value) : x(static_cast<TType>(p_other.x)), y(static_cast<TType>(p_other.y)), z(static_cast<TType>(p_value)) {}
 
         /**
          * @brief Copy constructor. Initializes a new vector with the components of another vector.
          * @param p_other The vector from which to copy the components.
          */
-        IVector3(const IVector3<TType> &p_other) : x(p_other.x), y(p_other.y), z(p_other.z) {}
+        template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
+        IVector3(const IVector3<TOtherType> &p_other) : x(static_cast<TType>(p_other.x)), y(static_cast<TType>(p_other.y)), z(static_cast<TType>(p_other.z)) {}
 
         /**
          * @brief Constructs a vector with separate values for x, y, and z components.
@@ -57,7 +60,8 @@ namespace spk
          * @param p_y The value for the y component.
          * @param p_z The value for the z component.
          */
-        IVector3(const TType &p_x, const TType &p_y, const TType &p_z) : x(p_x), y(p_y), z(p_z) {}
+        template <typename TTypeA, typename TTypeB, typename TTypeC, typename = typename std::enable_if<std::is_arithmetic<TTypeA>::value>::type, typename = typename std::enable_if<std::is_arithmetic<TTypeB>::value>::type, typename = typename std::enable_if<std::is_arithmetic<TTypeC>::value>::type>
+        IVector3(const TTypeA &p_x, const TTypeB &p_y, const TTypeC &p_z) : x(static_cast<TType>(p_x)), y(static_cast<TType>(p_y)), z(static_cast<TType>(p_z)) {}
 
         /**
          * @brief Conversion operator to allow implicit conversion between vectors of different types.

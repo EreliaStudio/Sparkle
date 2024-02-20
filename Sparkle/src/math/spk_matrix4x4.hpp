@@ -57,23 +57,20 @@ namespace spk
          */
 		Matrix4x4();
 
-        /**
-         * @brief Multiplies this matrix by a Vector3, applying the transformation.
-         * 
-         * @param v The Vector3 to transform.
-         * @return A Vector3 that has been transformed by this matrix.
-         */
-        Vector3 operator*(const Vector3& v) const;
+        IVector3<float> operator*(const IVector3<float>& v) const
+        {
+            float w = data[3][0] * v.x + data[3][1] * v.y + data[3][2] * v.z + data[3][3];
+            return IVector3<float>(
+                (data[0][0] * v.x + data[0][1] * v.y + data[0][2] * v.z + data[0][3]) / w,
+                (data[1][0] * v.x + data[1][1] * v.y + data[1][2] * v.z + data[1][3]) / w,
+                (data[2][0] * v.x + data[2][1] * v.y + data[2][2] * v.z + data[2][3]) / w);
+        }
         
-        /**
-         * @brief Multiplies this matrix by a Vector2, applying the transformation.
-         * 
-         * Assumes the z-coordinate is 0. Useful for transformations in 2D space.
-         * 
-         * @param v The Vector2 to transform.
-         * @return A Vector2 that has been transformed by this matrix.
-         */
-        Vector2 operator*(const Vector2& v) const;
+        IVector2<float> operator*(const IVector2<float>& v) const
+        {
+            spk::Vector3 tmp = this->operator*(spk::Vector3(v.x, v.y, 0.0f));
+            return (spk::IVector2<float>(tmp.x, tmp.y));
+        }
 
         /**
          * @brief Multiplies this matrix by another Matrix4x4.
