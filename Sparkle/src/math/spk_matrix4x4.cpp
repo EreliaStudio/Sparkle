@@ -6,6 +6,26 @@ namespace spk
     {
     }
 
+    Matrix4x4::Matrix4x4(float aa, float ab, float ac, float ad, float ba, float bb, float bc, float bd, float ca, float cb, float cc, float cd, float da, float db, float dc, float dd)
+    {
+        data[0][0] = aa;
+        data[0][1] = ab;
+        data[0][2] = ac;
+        data[0][3] = ad;
+        data[1][0] = ba;
+        data[1][1] = bb;
+        data[1][2] = bc;
+        data[1][3] = bd;
+        data[2][0] = ca;
+        data[2][1] = cb;
+        data[2][2] = cc;
+        data[2][3] = cd;
+        data[3][0] = da;
+        data[3][1] = db;
+        data[3][2] = dc;
+        data[3][3] = dd;
+    }
+
     Matrix4x4 Matrix4x4::operator*(const Matrix4x4& other) const
     {
         Matrix4x4 result;
@@ -164,7 +184,11 @@ namespace spk
         {
             for (int j = 0; j < 4; ++j)
             {
-                if (data[i][j] != other.data[i][j])
+                const float epsilon = 1e-5;
+                float a = data[i][j];
+                float b = other.data[i][j];
+                float tolerance = epsilon * std::max(std::abs(a), std::abs(b)); // scale tolerance to the values.
+                if (std::abs(a - b) > tolerance)
                 {
                     return false;
                 }

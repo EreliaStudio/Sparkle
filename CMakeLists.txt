@@ -23,3 +23,7 @@ add_subdirectory(Sparkle)
 if (BuildPlayground STREQUAL "ON")
 	add_subdirectory(Playground)
 endif()
+
+if (BuildTests STREQUAL "ON")
+    add_subdirectory(tests)
+endif()

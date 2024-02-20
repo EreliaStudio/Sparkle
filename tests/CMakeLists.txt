@@ -18,6 +18,4 @@ include_directories(${rapidcheck_SOURCE_DIR}/extras/gtest/include)
 
 
 
-target_link_libraries(Playground Sparkle)
-
 add_subdirectory(math)
