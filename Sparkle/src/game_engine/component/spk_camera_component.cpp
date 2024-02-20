@@ -41,7 +41,9 @@ namespace spk
 			owner()->globalPosition() + owner()->transform().forward(),
 			owner()->transform().up());
 
-		*_cameraConstantsMVPElement = projection * view;
+		spk::Matrix4x4 model = spk::Matrix4x4();
+
+		*_cameraConstantsMVPElement = projection * view * model;
 		_cameraConstants->update();
 	}
 
