@@ -29,11 +29,11 @@ namespace spk
         {
             for (int j = 0; j < 4; ++j)
             {
-                result.data[j][i] =
-                    data[i][0] * other.data[0][j] +
-                    data[i][1] * other.data[1][j] +
-                    data[i][2] * other.data[2][j] +
-                    data[i][3] * other.data[3][j];
+                result.data[i][j] = 0;
+                for (size_t k = 0; k < 4; k++)
+                {
+                    result.data[i][j] += data[i][k] * other.data[k][j];
+                }
             }
         }
 
@@ -67,9 +67,9 @@ namespace spk
     Matrix4x4 Matrix4x4::translationMatrix(const Vector3& p_translation)
     {
         Matrix4x4 result;
-        result.data[3][0] = p_translation.x;
-        result.data[3][1] = p_translation.y;
-        result.data[3][2] = p_translation.z;
+        result.data[0][3] = p_translation.x;
+        result.data[1][3] = p_translation.y;
+        result.data[2][3] = p_translation.z;
         return result;
     }
 

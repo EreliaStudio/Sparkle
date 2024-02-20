@@ -32,9 +32,23 @@ namespace spk
         if (_screenConstant != nullptr)
         {
             spk::Matrix4x4 canvasMatrix = spk::Matrix4x4::translationMatrix(spk::Vector3(-1, 1, 0)) * spk::Matrix4x4::scaleMatrix(spk::Vector3(2.0f / size().x, -2.0f / size().y, 0.0001f));
+            
             DLOG(spk::Matrix4x4::translationMatrix(spk::Vector3(-1, 1, 0)));
             DLOG(spk::Matrix4x4::scaleMatrix(spk::Vector3(2.0f / size().x, -2.0f / size().y, 0.0001f)));
             DLOG(canvasMatrix);
+
+            spk::Vector2Int points[4] = {
+                spk::Vector3Int(0, 0, 0),
+                spk::Vector3Int(size().x, 0, 0),
+                spk::Vector3Int(0, size().y, 0),
+                spk::Vector3Int(size().x, size().y, 0)
+            };
+
+            std::cout << "Multiplication of : " << spk::Vector3Int(0, 0, 0) << " -> " << canvasMatrix * spk::Vector3Int(0, 0, 0) << std::endl;
+            std::cout << "Multiplication of : " << spk::Vector3Int(size().x, 0, 0) << " -> " << canvasMatrix * spk::Vector3Int(size().x, 0, 0) << std::endl;
+            std::cout << "Multiplication of : " << spk::Vector3Int(0, size().y, 0) << " -> " << canvasMatrix * spk::Vector3Int(0, size().y, 0) << std::endl;
+            std::cout << "Multiplication of : " << spk::Vector3Int(size().x, size().y, 0) << " -> " << canvasMatrix * spk::Vector3Int(size().x, size().y, 0) << std::endl;
+
             _screenConstant->operator[]("canvasMVP") = canvasMatrix;
             _screenConstant->update();
         }

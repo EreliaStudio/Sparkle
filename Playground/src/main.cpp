@@ -37,7 +37,7 @@ using spk::Vector2;
 using std::make_unique;
 using std::move;
 
-spk::Font font("C:/Users/JQ/dev/Fonts/NotoSans/static/NotoSans-Regular.ttf");
+spk::Font font("Playground/upheavtt.ttf");
 
 class Defer
 {
