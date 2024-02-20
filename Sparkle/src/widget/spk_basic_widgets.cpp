@@ -2,6 +2,30 @@
 
 namespace spk::widget
 {
+
+    ColoredBox::ColoredBox(const std::string& p_name, const spk::Color& p_color, IWidget* p_parent) :
+        SingleChildWidget(p_name, p_parent)
+    {
+        _coloredBox.setColor(p_color);
+    }
+
+    ColoredBox::ColoredBox(const spk::Color& p_color, IWidget* p_parent) :
+        ColoredBox("ColoredBox", p_color, p_parent)
+    {
+    }
+
+    void ColoredBox::_onGeometryChange()
+    {
+        IWidget::_onGeometryChange();
+        _coloredBox.setGeometry(anchor(), size());
+        _coloredBox.setDepth(depth());
+    }
+
+    void ColoredBox::_onRender()
+    {
+        _coloredBox.render();
+    }
+
     Vector2 SizedBox::_onLayout(const BoxConstraints& p_constraints)
     {
         IWidget* tmpChild = child();

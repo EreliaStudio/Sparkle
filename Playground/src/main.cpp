@@ -173,17 +173,18 @@ public:
         WidgetVault("EasyDemo", nullptr)
     {
         Defer defer;
-        VWidget1(center, Center, this);
-        VWidget2(sb, SizedBox, Vector2(400, 400), center.get());
-        VWidget3(_label, spk::widget::TextLabel, "Bobo", &font, sb.get());
+        // VWidget1(center, Center, this);
+        // VWidget2(sb, SizedBox, Vector2(400, 400), center.get());
+        VWidget2(redBox, spk::widget::ColoredBox, spk::Color(255, 0, 0), this);
+        // VWidget3(_label, spk::widget::TextLabel, "Bobo", &font, redBox.get());
 
-        _label->label().setFont(&font); // Assuming myFont is a preloaded Font instance
-        _label->label().setText("Bobo");
-        _label->label().setTextSize(50);
-        _label->label().setTextColor(spk::Color{255, 255, 255});
-        _label->label().setAnchor({100, 100});
-        _label->label().setVerticalAlignment(spk::VerticalAlignment::Centered);
-        _label->label().setHorizontalAlignment(spk::HorizontalAlignment::Left);
+        //_label->label().setFont(&font); // Assuming myFont is a preloaded Font instance
+        //_label->label().setText("Bobo");
+        //_label->label().setTextSize(50);
+        //_label->label().setTextColor(spk::Color{255, 255, 255});
+        //_label->label().setAnchor({100, 100});
+        //_label->label().setVerticalAlignment(spk::VerticalAlignment::Centered);
+        //_label->label().setHorizontalAlignment(spk::HorizontalAlignment::Left);
         defer.trigger();
         this->activateAll();
     }
@@ -193,11 +194,11 @@ int main()
 {
     spk::Application app = spk::Application("Playground", spk::Vector2UInt(1000, 1000), spk::Application::Mode::Monothread);
 
-    MyDemo demo;
-    demo.activateAll();
+    // MyDemo demo;
+    // demo.activateAll();
 
-    // EasyDemo demo;
-    //  demo.activateAll();
+    EasyDemo demo;
+    demo.activateAll();
 
     return (app.run());
 }

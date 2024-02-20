@@ -68,13 +68,13 @@ namespace spk::widget::components
     private:
         static std::string _renderingPipelineCode;
 
-        struct RenderingPipelineVertex
+        struct ShaderInput
         {
             spk::Vector2Int position;
             spk::Vector2 uvs;
 
-            RenderingPipelineVertex();
-            RenderingPipelineVertex(const spk::Vector2Int& p_position, const spk::Vector2& p_uvs);
+            ShaderInput();
+            ShaderInput(const spk::Vector2Int& p_position, const spk::Vector2& p_uvs);
         };
 
         static spk::Pipeline _renderingPipeline;

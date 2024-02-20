@@ -122,15 +122,16 @@ namespace spk
             long long oldTime = 0;
 
         private:
-            void _onGeometryChange()
+            void _onGeometryChange() override
+            {
+                IWidget::_onGeometryChange();
+            }
+
+            void _onRender() override
             {
             }
 
-            void _onRender()
-            {
-            }
-
-            void _onUpdate()
+            void _onUpdate() override
             {
                 long long time = spk::getTime();
                 if (time != oldTime)

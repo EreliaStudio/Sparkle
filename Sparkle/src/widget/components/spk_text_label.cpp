@@ -56,13 +56,13 @@ namespace spk::widget::components
     {
     }
 
-    TextLabel::RenderingPipelineVertex::RenderingPipelineVertex() :
+    TextLabel::ShaderInput::ShaderInput() :
         position(0),
         uvs(0)
     {
     }
 
-    TextLabel::RenderingPipelineVertex::RenderingPipelineVertex(const spk::Vector2Int& p_position, const spk::Vector2& p_uvs) :
+    TextLabel::ShaderInput::ShaderInput(const spk::Vector2Int& p_position, const spk::Vector2& p_uvs) :
         position(p_position),
         uvs(p_uvs)
     {
@@ -151,10 +151,10 @@ namespace spk::widget::components
 
         _renderingPipelineTexture.attach(&(_fontAtlas->texture()));
 
-        static std::vector<RenderingPipelineVertex> _bufferRenderingPipelineVertex;
+        static std::vector<ShaderInput> _bufferShaderInput;
         static std::vector<unsigned int> _bufferRenderingPipelineIndexes;
 
-        _bufferRenderingPipelineVertex.clear();
+        _bufferShaderInput.clear();
         _bufferRenderingPipelineIndexes.clear();
 
         RenderingData renderingData = _computeRenderingData();
@@ -163,16 +163,16 @@ namespace spk::widget::components
 
         for (const spk::Font::Atlas::GlyphData* glyphData : renderingData.glyphs)
         {
-            unsigned int baseIndexes = _bufferRenderingPipelineVertex.size();
+            unsigned int baseIndexes = _bufferShaderInput.size();
 
             for (size_t i = 0; i < 4; i++)
             {
-                RenderingPipelineVertex newVertex;
+                ShaderInput newVertex;
 
                 newVertex.position = glyphAnchor + glyphData->position[i];
                 newVertex.uvs = glyphData->uvs[i];
 
-                _bufferRenderingPipelineVertex.push_back(newVertex);
+                _bufferShaderInput.push_back(newVertex);
             }
             glyphAnchor += glyphData->step;
 
@@ -182,7 +182,7 @@ namespace spk::widget::components
             }
         }
 
-        _renderingObject.setVertices(_bufferRenderingPipelineVertex);
+        _renderingObject.setVertices(_bufferShaderInput);
         _renderingObject.setIndexes(_bufferRenderingPipelineIndexes);
     }
 

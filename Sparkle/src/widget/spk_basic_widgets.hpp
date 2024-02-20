@@ -1,12 +1,30 @@
 #pragma once
 
+#include "graphics/spk_color.hpp"
 #include "math/spk_vector2.hpp"
+#include "widget/components/spk_colored_box.hpp"
 #include "widget/spk_box_constraints.hpp"
 #include "widget/spk_widget.hpp"
 #include <functional>
 
 namespace spk::widget
 {
+
+    class ColoredBox : public SingleChildWidget
+    {
+    private:
+        spk::widget::components::ColoredBox _coloredBox;
+
+        void _onGeometryChange() override;
+        void _onRender() override;
+
+    public:
+        ColoredBox(const std::string& name, const spk::Color& color, IWidget* parent);
+
+        ColoredBox(const spk::Color& color, IWidget* parent);
+
+        virtual ~ColoredBox() = default;
+    };
 
     /**
      * @brief LayoutBuilder allows defining _onLayout through a Builder without writing a new class.

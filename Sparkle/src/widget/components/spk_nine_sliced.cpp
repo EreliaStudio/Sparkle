@@ -29,13 +29,13 @@ namespace spk::widget::components
 
     spk::Pipeline NineSlicedBox::_renderingPipeline = spk::Pipeline(_renderingPipelineCode);
 
-    NineSlicedBox::RenderingPipelineVertex::RenderingPipelineVertex() :
+    NineSlicedBox::ShaderInput::ShaderInput() :
         position(0),
         uvs(0)
     {
     }
 
-    NineSlicedBox::RenderingPipelineVertex::RenderingPipelineVertex(const spk::Vector2Int& p_position, const spk::Vector2& p_uvs) :
+    NineSlicedBox::ShaderInput::ShaderInput(const spk::Vector2Int& p_position, const spk::Vector2& p_uvs) :
         position(p_position),
         uvs(p_uvs)
     {
@@ -43,10 +43,10 @@ namespace spk::widget::components
 
     void NineSlicedBox::_updateVertices()
     {
-        static std::vector<RenderingPipelineVertex> _bufferRenderingPipelineVertex;
+        static std::vector<ShaderInput> _bufferShaderInput;
         static std::vector<unsigned int> _bufferRenderingPipelineIndexes;
 
-        _bufferRenderingPipelineVertex.clear();
+        _bufferShaderInput.clear();
         _bufferRenderingPipelineIndexes.clear();
 
         int pointsX[4] = {0, _cornerSize.x, static_cast<int>(_size.x) - _cornerSize.x, static_cast<int>(_size.x)};
@@ -64,17 +64,17 @@ namespace spk::widget::components
         {
             for (size_t y = 0; y < 3; y++)
             {
-                unsigned int baseIndexes = _bufferRenderingPipelineVertex.size();
+                unsigned int baseIndexes = _bufferShaderInput.size();
                 for (size_t i = 0; i < 2; i++)
                 {
                     for (size_t j = 0; j < 2; j++)
                     {
-                        RenderingPipelineVertex newVertex;
+                        ShaderInput newVertex;
 
                         newVertex.position = _anchor + spk::Vector2Int(pointsX[x + i], pointsY[y + j]);
                         newVertex.uvs = _spriteSheet->sprite(spk::Vector2UInt(x, y)) + _spriteSheet->unit() * uvs[j + i * 2];
 
-                        _bufferRenderingPipelineVertex.push_back(newVertex);
+                        _bufferShaderInput.push_back(newVertex);
                     }
                 }
 
@@ -85,7 +85,7 @@ namespace spk::widget::components
             }
         }
 
-        _renderingObject.setVertices(_bufferRenderingPipelineVertex);
+        _renderingObject.setVertices(_bufferShaderInput);
         _renderingObject.setIndexes(_bufferRenderingPipelineIndexes);
     }
 
