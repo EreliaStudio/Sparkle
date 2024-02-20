@@ -47,3 +47,4 @@
 
 #include "widget/widget_component/spk_nine_sliced_component.hpp"
 #include "widget/widget_component/spk_text_label_component.hpp"
+#include "game_engine/spk_tilemap.hpp"

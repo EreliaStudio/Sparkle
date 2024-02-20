@@ -59,14 +59,16 @@ namespace spk
          */
         IVector3(const TType &p_x, const TType &p_y, const TType &p_z) : x(p_x), y(p_y), z(p_z) {}
 
-        /**
-         * @brief Conversion operator to allow implicit conversion between vectors of different types.
+		/**
+         * @brief Conversion operator to another vector of possibly different type.
          * @return A new vector of the target type with copied components.
          */
-        operator IVector3<TType>()
-        {
-            return IVector3<TType>(static_cast<TType>(x), static_cast<TType>(y), static_cast<TType>(z));
-        }
+		template <typename TOtherType>
+		operator IVector3<TOtherType>()
+		{
+			return (IVector3<TOtherType>(static_cast<TOtherType>(x), static_cast<TOtherType>(y), static_cast<TOtherType>(z)));
+		}
+
         /**
          * @brief Unary negation operator. Negates all components of the vector.
          * @return A new vector where each component is the negation of the original vector's components.
