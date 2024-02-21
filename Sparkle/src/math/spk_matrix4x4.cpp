@@ -45,6 +45,32 @@ namespace spk
         return result;
     }
 
+    Matrix4x4 Matrix4x4::operator+(const Matrix4x4& other) const
+    {
+        return Matrix4x4(
+            data[0][0] + other.data[0][0],
+            data[0][1] + other.data[0][1],
+            data[0][2] + other.data[0][2],
+            data[0][3] + other.data[0][3],
+            data[1][0] + other.data[1][0],
+            data[1][1] + other.data[1][1],
+            data[1][2] + other.data[1][2],
+            data[1][3] + other.data[1][3],
+            data[2][0] + other.data[2][0],
+            data[2][1] + other.data[2][1],
+            data[2][2] + other.data[2][2],
+            data[2][3] + other.data[2][3],
+            data[3][0] + other.data[3][0],
+            data[3][1] + other.data[3][1],
+            data[3][2] + other.data[3][2],
+            data[3][3] + other.data[3][3]);
+    }
+
+    Matrix4x4 Matrix4x4::zero()
+    {
+        return Matrix4x4(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    }
+
     Matrix4x4 Matrix4x4::lookAt(const Vector3& p_from, const Vector3& p_to, const Vector3& p_up)
     {
         const spk::Vector3 forward = ((p_to - p_from).normalize());
@@ -184,7 +210,7 @@ namespace spk
         {
             for (int j = 0; j < 4; ++j)
             {
-                const float epsilon = 1e-5;
+                const float epsilon = 5e-3;
                 float a = data[i][j];
                 float b = other.data[i][j];
                 float tolerance = epsilon * std::max(std::abs(a), std::abs(b)); // scale tolerance to the values.

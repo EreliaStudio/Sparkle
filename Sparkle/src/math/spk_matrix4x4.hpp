@@ -81,6 +81,10 @@ namespace spk
          */
         Matrix4x4 operator*(const Matrix4x4& other) const;
 
+        Matrix4x4 operator+(const Matrix4x4& other) const;
+
+        static Matrix4x4 zero();
+
         /**
          * @brief Creates a lookAt matrix for camera transformations.
          *

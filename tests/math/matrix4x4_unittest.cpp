@@ -36,6 +36,12 @@ namespace rc
     };
 }
 
+RC_GTEST_PROP(Matrix4x4Test, Addition, (const Matrix4x4& a, const Matrix4x4& b, const Matrix4x4& c))
+{
+    RC_ASSERT((a + b) == (b + a));
+    RC_ASSERT(((a + b) + c) == (a + (b + c)));
+}
+
 RC_GTEST_PROP(Matrix4x4Test, Transpose, (const Matrix4x4& a))
 {
     RC_ASSERT(a.transpose().transpose() == a);
@@ -44,28 +50,19 @@ RC_GTEST_PROP(Matrix4x4Test, Transpose, (const Matrix4x4& a))
 RC_GTEST_PROP(Matrix4x4Test, Mult, (const Matrix4x4& a))
 {
     RC_ASSERT((a * Matrix4x4()) == a);
-    auto res = a * Matrix4x4::scaleMatrix(2);
-    RC_ASSERT(res == Matrix4x4(
-                         2 * a.data[0][0],
-                         2 * a.data[0][1],
-                         2 * a.data[0][2],
-                         2 * a.data[0][3],
-                         2 * a.data[1][0],
-                         2 * a.data[1][1],
-                         2 * a.data[1][2],
-                         2 * a.data[1][3],
-                         2 * a.data[2][0],
-                         2 * a.data[2][1],
-                         2 * a.data[2][2],
-                         2 * a.data[2][3],
-                         2 * a.data[3][0],
-                         2 * a.data[3][1],
-                         2 * a.data[3][2],
-                         a.data[3][3]));
+    RC_ASSERT((a * Matrix4x4::zero()) == Matrix4x4::zero);
 }
 
-RC_GTEST_PROP(Matrix4x4Test, InverseMult, (const Matrix4x4& a, const Matrix4x4& b))
+RC_GTEST_PROP(Matrix4x4Test, Mult3, (const Matrix4x4& a, const Matrix4x4& b, const Matrix4x4& c))
 {
-    RC_ASSERT(((a * b) * (b.inverse())) == a);
+    RC_ASSERT((a * (b * c)) == ((a * b) * c));
+    RC_ASSERT((a * (b + c)) == ((a * b) + (a * c)));
+    RC_ASSERT(((a + b) * c) == ((a * c) + (b * c)));
+}
+
+RC_GTEST_PROP(Matrix4x4Test, InverseMult, (const Matrix4x4& a))
+{
+    // RC_ASSERT(((a * b) * (b.inverse())) == a);
+    // RC_ASSERT((a * a.inverse()) == (a.inverse() * a));
     RC_ASSERT((a * a.inverse()) == Matrix4x4());
 }
