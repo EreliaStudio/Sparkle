@@ -32,16 +32,34 @@ namespace spk
 		spk::Matrix4x4 projection;
 		
 		if (_type == Type::Orthographic)
-			projection = spk::Matrix4x4::ortho(-_orthoSize.x / 2.0f, _orthoSize.x / 2.0f, _orthoSize.y / 2.0f, -_orthoSize.y / 2.0f, _nearPlane, _farPlane);
+			projection = spk::Matrix4x4::ortho(-_orthoSize.x / 2.0f, _orthoSize.x / 2.0f, -_orthoSize.y / 2.0f, _orthoSize.y / 2.0f, _nearPlane, _farPlane);
 		else
 			projection = spk::Matrix4x4::perspective( _fov, _aspectRatio, _nearPlane, _farPlane );
 
-		spk::Matrix4x4 view = spk::Matrix4x4::lookAt(
-			owner()->globalPosition(),
-			owner()->globalPosition() + owner()->transform().forward(),
-			owner()->transform().up());
+		projection.data[3][2] = 0;
 
-		spk::Matrix4x4 model = spk::Matrix4x4();
+		spk::Matrix4x4 view = spk::Matrix4x4();//spk::Matrix4x4::lookAt(
+			// owner()->globalPosition(),
+			// owner()->globalPosition() + owner()->transform().forward(),
+			// owner()->transform().up());
+
+		spk::Matrix4x4 model = spk::Matrix4x4();//spk::Matrix4x4::translationMatrix(owner()->globalPosition());
+
+		spk::Matrix4x4 mvp = projection * view * model;
+
+		std::cout << "Camera MVP : " << mvp << std::endl;
+
+		spk::Vector3 points[4] = {
+			spk::Vector3(0, 0, 1),
+			spk::Vector3(2, 2, 10),
+			spk::Vector3(2, 2, 100),
+			spk::Vector3(2, 2, 1000)
+		};
+
+		for (size_t i = 0; i < 4; i++)
+		{
+			std::cout << "Point [" << points[i] << "] = " << (mvp * points[i]) << std::endl;
+		}
 
 		*_cameraConstantsMVPElement = projection * view * model;
 		_cameraConstants->update();
