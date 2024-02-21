@@ -17,26 +17,26 @@ public:
         {
             p_vertexData = {
                 VertexData{
-                    spk::Vector3(0.5f, -0.5f, 0.0f),
-                    spk::Vector2(0, 1),
-                    spk::Vector2(0, 0),
-                    0
-                },
-                VertexData{
-                    spk::Vector3(-0.5f, -0.5f, 0.0f),
-                    spk::Vector2(1, 1),
-                    spk::Vector2(0, 0),
-                    0
-                },
-                VertexData{
                     spk::Vector3(0.5f, 0.5f, 0.0f),
-                    spk::Vector2(0, 0),
+                    spk::Vector2(1, 0),
                     spk::Vector2(0, 0),
                     0
                 },
                 VertexData{
                     spk::Vector3(-0.5f, 0.5f, 0.0f),
-                    spk::Vector2(1, 0),
+                    spk::Vector2(0, 0),
+                    spk::Vector2(0, 0),
+                    0
+                },
+                VertexData{
+                    spk::Vector3(0.5f, -0.5f, 0.0f),
+                    spk::Vector2(1, 1),
+                    spk::Vector2(0, 0),
+                    0
+                },
+                VertexData{
+                    spk::Vector3(-0.5f, -0.5f, 0.0f),
+                    spk::Vector2(0, 1),
                     spk::Vector2(0, 0),
                     0
                 }
@@ -162,7 +162,7 @@ public:
         _cameraObject.transform().translation = spk::Vector3(0, 0, 10);  
         _cameraObject.transform().lookAt(spk::Vector3(0, 0, 0));
         _cameraComponent->setAsMainCamera();
-        _cameraComponent->setType(spk::Camera::Type::Perspective);
+        _cameraComponent->setType(spk::Camera::Type::Orthographic);
 
         _backgroundTilemap.transform().translation = spk::Vector3(0, 0, 0);
         Tilemap2D::Chunk::texture = &_backgroundTilemapTexture;
