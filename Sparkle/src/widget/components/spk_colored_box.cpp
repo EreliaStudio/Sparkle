@@ -16,7 +16,7 @@ namespace spk::widget::components
 
 		void geometryPass()
 		{
-			pixelPosition = screenConstants.canvasMVP * vec4(modelPosition, 0, 0);
+			pixelPosition = screenConstants.canvasMVP * vec4(modelPosition, self.depth, 1.0f);
 		}
 		
 		void renderPass()

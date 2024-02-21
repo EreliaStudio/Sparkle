@@ -192,7 +192,7 @@ public:
 
 int main()
 {
-    spk::Application app = spk::Application("Playground", spk::Vector2UInt(1000, 1000), spk::Application::Mode::Monothread);
+    spk::Application app = spk::Application("Playground", spk::Vector2UInt(800, 800), spk::Application::Mode::Monothread);
 
     // MyDemo demo;
     // demo.activateAll();

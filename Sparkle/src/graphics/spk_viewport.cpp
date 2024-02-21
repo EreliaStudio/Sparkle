@@ -31,25 +31,8 @@ namespace spk
 
         if (_screenConstant != nullptr)
         {
-            spk::Matrix4x4 canvasMatrix = spk::Matrix4x4::translationMatrix(spk::Vector3(-1, 1, 0)) * spk::Matrix4x4::scaleMatrix(spk::Vector3(2.0f / size().x, -2.0f / size().y, 0.0001f));
-            
-            DLOG(spk::Matrix4x4::translationMatrix(spk::Vector3(-1, 1, 0)));
-            DLOG(spk::Matrix4x4::scaleMatrix(spk::Vector3(2.0f / size().x, -2.0f / size().y, 0.0001f)));
-            DLOG(canvasMatrix);
-
-            spk::Vector3Int points[4] = {
-                spk::Vector3Int(0, 0, 0),
-                spk::Vector3Int(size().x, 0, 0),
-                spk::Vector3Int(0, size().y, 0),
-                spk::Vector3Int(size().x, size().y, 0)
-            };
-
-            for (size_t i = 0; i < 4; i++)
-            {
-                spk::Vector3 result = canvasMatrix * points[i];
-                std::cout << "Multiplication of : " << points[i] << " -> " << result << std::endl;
-            }
-
+            spk::Matrix4x4 canvasMatrix = spk::Matrix4x4::ortho(0, size().x, size().y, 0, 1000, 0);
+            canvasMatrix.data[3][2] = 0;
 
             _screenConstant->operator[]("canvasMVP") = canvasMatrix;
             _screenConstant->update();
