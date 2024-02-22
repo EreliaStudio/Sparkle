@@ -61,7 +61,8 @@ namespace spk
 			void geometryPass()
 			{
 				vec3 transformedPosition = applyTransform(modelVertex, self.transform);
-				pixelPosition = cameraConstants.MVP * vec4(transformedPosition, 1.0f);
+				vec4 cameraSpacePosition = cameraConstants.view * vec4(transformedPosition, 1.0f);
+				pixelPosition = cameraConstants.projection * cameraSpacePosition;
 				fragmentUVs = modelUVs;
 			}
 

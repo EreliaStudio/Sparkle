@@ -60,7 +60,8 @@ namespace spk
 	private:
 		static inline bool _cameraConstantsInitialized = false;
 		static inline spk::Pipeline::Constant* _cameraConstants = nullptr;
-		static inline spk::Pipeline::Constant::Element* _cameraConstantsMVPElement = nullptr;
+		static inline spk::Pipeline::Constant::Element* _viewElement = nullptr;
+		static inline spk::Pipeline::Constant::Element* _projectionElement = nullptr;
 		static bool _initializeCameraConstants();
 
 		static inline Camera* _mainCamera = nullptr;
@@ -73,14 +74,15 @@ namespace spk
         float _aspectRatio = 1.0f;
 
 		spk::Vector2 _orthoSize = spk::Vector2(10, 10);
-		float _nearPlane = 0.1f;
+		float _nearPlane = 0.0f;
 		float _farPlane = 1000.0f;
 		
 		std::unique_ptr<spk::Transform::Contract> _translationContract = nullptr;
 		std::unique_ptr<spk::Transform::Contract> _rotationContract = nullptr;
 
-		spk::Matrix4x4 _computeOrthographicCameraMVP();
-		spk::Matrix4x4 _computePerspectiveCameraMVP();
+		spk::Matrix4x4 _computeViewMatrix();
+		spk::Matrix4x4 _computeOrthographicProjectionMatrix();
+		spk::Matrix4x4 _computePerspectiveProjectionMatrix();
 		void _updateGPUData();
 		
 		void _onRender();

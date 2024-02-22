@@ -7,7 +7,7 @@ struct Node
 
 };
 
-class Tilemap2D : public spk::ITilemap<Node, short, 2, 2, 5>
+class Tilemap2D : public spk::ITilemap<Node, short, 16, 16, 5>
 {
 public:
     class Chunk : public Tilemap2D::IChunk
@@ -142,6 +142,7 @@ private:
     void _onGeometryChange()
     {
         _gameEngineManager.setGeometry(anchor(), size());
+        _cameraComponent->setOrthographicSize(size() / 64);
     }
 
     void _onUpdate()
@@ -177,7 +178,7 @@ public:
         _backgroundTilemap("BackgroundTilemap"),
         _tilemapComponent(_backgroundTilemap.addComponent<Tilemap2D>("Tilemap"))
     {
-        _playerObject.transform().translation = spk::Vector3(0, 0, 0);
+        _playerObject.transform().translation = spk::Vector3(2, 0, 5);
         _playerBodyRenderer->setSpriteSheet(&_playerSpriteSheet);  
         _playerBodyRenderer->setSprite(spk::Vector2Int(0, 0));
 
