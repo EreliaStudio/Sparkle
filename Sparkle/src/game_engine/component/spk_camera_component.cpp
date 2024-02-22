@@ -13,65 +13,65 @@ namespace spk
 
 		if (_cameraConstants != nullptr)
 		{
-			if (_cameraConstantsMVPElement == nullptr)
+			if (_viewElement == nullptr)
 			{
-				_cameraConstantsMVPElement = &(_cameraConstants->operator[]("MVP"));
+				_viewElement = &(_cameraConstants->operator[]("view"));
+			}
+
+			if (_projectionElement == nullptr)
+			{
+				_projectionElement = &(_cameraConstants->operator[]("projection"));
 			}
 		}
 
-		if (_cameraConstants != nullptr && _cameraConstantsMVPElement != nullptr)
+		if (_cameraConstants != nullptr && _viewElement != nullptr && _projectionElement != nullptr)
 		{
 			_cameraConstantsInitialized = true;
 		}
 
 		return (_cameraConstantsInitialized);
 	}
-	
-	spk::Matrix4x4 Camera::_computeOrthographicCameraMVP()
+
+	spk::Matrix4x4 Camera::_computeViewMatrix()
+	{
+		spk::Vector3 cameraPos = owner()->globalPosition();
+		spk::Vector3 cameraTarget = cameraPos + owner()->transform().forward(); 
+		spk::Vector3 upVector = owner()->transform().up();
+
+		spk::Matrix4x4 result = spk::Matrix4x4::translationMatrix(owner()->globalPosition().inverse());//::lookAt(cameraPos, cameraTarget, upVector);
+
+		return (std::move(result));
+	}
+
+	spk::Matrix4x4 Camera::_computeOrthographicProjectionMatrix()
 	{
 		float right = _orthoSize.x * 0.5f;
 		float left = -right;
 		float top = _orthoSize.y * 0.5f;
 		float bottom = -top;
 
-		spk::Vector3 cameraPos = owner()->globalPosition();
-		spk::Vector3 cameraTarget = cameraPos + owner()->transform().forward(); 
-		spk::Vector3 upVector = owner()->transform().up();
-
-		spk::Matrix4x4 viewMatrix = spk::Matrix4x4::lookAt(cameraPos, cameraTarget, upVector);
 		spk::Matrix4x4 projectionMatrix = spk::Matrix4x4::ortho(left, right, bottom, top, _nearPlane, _farPlane);
-		spk::Matrix4x4 modelMatrix = spk::Matrix4x4();
-
-		spk::Matrix4x4 mvp = projectionMatrix * viewMatrix * modelMatrix;
 		
-		mvp.data[3][3] = 1;
+		projectionMatrix.data[2][3] = 0;
 
-		std::cout << "Mvp : " << mvp << std::endl;
-		for (size_t i = 0; i < 10; i++)
-		{
-			spk::Vector3 point = spk::Vector3(2, 2, i);
-
-			std::cout << "Applyed point [" << point << "] calculation -> " << mvp * point << std::endl;
-		}
-
-		return mvp;
+		return projectionMatrix;
 	}
 	
-	spk::Matrix4x4 Camera::_computePerspectiveCameraMVP()
+	spk::Matrix4x4 Camera::_computePerspectiveProjectionMatrix()
 	{
-		spk::Vector3 cameraPos = owner()->globalPosition();
-		spk::Vector3 cameraTarget = cameraPos + owner()->transform().forward();
-		spk::Vector3 upVector = owner()->transform().up();
-
-		spk::Matrix4x4 viewMatrix = spk::Matrix4x4::lookAt(cameraPos, cameraTarget, upVector);
-		spk::Matrix4x4 projectionMatrix = spk::Matrix4x4::perspective(_fov, _aspectRatio, _nearPlane, _farPlane);
-
-		return projectionMatrix * viewMatrix;
+		return (spk::Matrix4x4::perspective(_fov, _aspectRatio, _nearPlane, _farPlane));
 	}
 
 	void Camera::_updateGPUData()
 	{		
-		*_cameraConstantsMVPElement = (_type == Type::Orthographic ? _computeOrthographicCameraMVP() : _computePerspectiveCameraMVP());
+		spk::Matrix4x4 view = _computeViewMatrix();
+		spk::Matrix4x4 projection = (_type == Type::Orthographic ? _computeOrthographicProjectionMatrix() : _computePerspectiveProjectionMatrix());
+
+		std::cout << "View : " << view << std::endl;
+		std::cout << "Proj : " << projection << std::endl;
+
+		*_viewElement = view;
+		*_projectionElement = projection;
 		_cameraConstants->update();
 	}
 

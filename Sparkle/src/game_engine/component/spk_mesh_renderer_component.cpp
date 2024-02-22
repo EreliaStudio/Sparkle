@@ -42,7 +42,8 @@ namespace spk
 	void geometryPass()
 	{
 		vec3 transformedPosition = applyTransform(modelVertex, self.transform);
-		pixelPosition = cameraConstants.MVP * vec4(transformedPosition, 1.0f);
+		vec4 cameraSpacePosition = cameraConstants.view * vec4(transformedPosition, 1.0f);
+		pixelPosition = cameraConstants.projection * cameraSpacePosition;
 		fragmentUVs = (modelUVs + sprite.anchor + computeSpriteAnimationOffset(sprite.animationStartEpoch, sprite.animation)) * sprite.unit + 0.00001f;
 	}
 
