@@ -9,13 +9,13 @@ namespace spk
 		{
 			_forward = _owner->globalRotation().applyRotation(spk::Vector3(0, 0, 1));
 			_right = _owner->globalRotation().applyRotation(spk::Vector3(1, 0, 0));
-			_up = _owner->globalRotation().applyRotation(spk::Vector3(0, -1, 0));
+			_up = _owner->globalRotation().applyRotation(spk::Vector3(0, 1, 0));
 		}
 		else
 		{
 			_forward = rotation.get().applyRotation(spk::Vector3(0, 0, 1));
 			_right = rotation.get().applyRotation(spk::Vector3(1, 0, 0));
-			_up = rotation.get().applyRotation(spk::Vector3(0, -1, 0));
+			_up = rotation.get().applyRotation(spk::Vector3(0, 1, 0));
 		}
 	}
 
@@ -65,7 +65,7 @@ namespace spk
 
 	void Transform::lookAt(const spk::Vector3& p_target)
 	{
-		Vector3 position = _owner->globalPosition();
+		Vector3 position = _owner->transform().translation.get();
         Vector3 direction = (p_target - position).normalize();
 
         if (direction.norm() != 0)

@@ -211,7 +211,7 @@ namespace spk
                 {
                     if (j != 0)
                         p_os << " ";
-                    p_os << p_matrix.data[i][j];
+                    p_os << p_matrix.data[j][i];
                 }
                 p_os << std::endl;
             }

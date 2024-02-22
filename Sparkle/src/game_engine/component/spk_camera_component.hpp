@@ -3,6 +3,7 @@
 #include "game_engine/component/spk_game_component.hpp"
 #include "graphics/pipeline/spk_pipeline.hpp"
 #include "game_engine/spk_transform.hpp"
+#include "math/spk_matrix4x4.hpp"
 
 namespace spk
 {
@@ -78,6 +79,8 @@ namespace spk
 		std::unique_ptr<spk::Transform::Contract> _translationContract = nullptr;
 		std::unique_ptr<spk::Transform::Contract> _rotationContract = nullptr;
 
+		spk::Matrix4x4 _computeOrthographicCameraMVP();
+		spk::Matrix4x4 _computePerspectiveCameraMVP();
 		void _updateGPUData();
 		
 		void _onRender();
