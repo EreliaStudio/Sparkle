@@ -7,10 +7,10 @@ struct Node
 
 };
 
-class Tilemap2D : public spk::ITilemap<Node, short, 16, 16, 5>
+class Tilemap2D : public spk::ITilemap<Node, short, 2, 2, 5>
 {
 public:
-    class Chunk : public spk::ITilemap<Node, short, 16, 16, 5>::IChunk
+    class Chunk : public Tilemap2D::IChunk
     {
     private:
         spk::Vector2Int _position;
@@ -144,6 +144,26 @@ private:
         _gameEngineManager.setGeometry(anchor(), size());
     }
 
+    void _onUpdate()
+    {
+        if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::Z) == spk::InputState::Pressed)
+        {
+            _playerObject.transform().translation += spk::Vector3(0, 1, 0);
+        }
+        if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::S) == spk::InputState::Pressed)
+        {
+            _playerObject.transform().translation += spk::Vector3(0, -1, 0);
+        }
+        if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::Q) == spk::InputState::Pressed)
+        {
+            _playerObject.transform().translation += spk::Vector3(-1, 0, 0);
+        }
+        if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::D) == spk::InputState::Pressed)
+        {
+            _playerObject.transform().translation += spk::Vector3(1, 0, 0);
+        }
+    }
+
 public:
     MainWidget(const std::string& p_name) :
         spk::IWidget(p_name),
@@ -157,7 +177,7 @@ public:
         _backgroundTilemap("BackgroundTilemap"),
         _tilemapComponent(_backgroundTilemap.addComponent<Tilemap2D>("Tilemap"))
     {
-        _playerObject.transform().translation = spk::Vector3(2, 2, 0);
+        _playerObject.transform().translation = spk::Vector3(0, 0, 0);
         _playerBodyRenderer->setSpriteSheet(&_playerSpriteSheet);  
         _playerBodyRenderer->setSprite(spk::Vector2Int(0, 0));
 
@@ -165,6 +185,7 @@ public:
         _cameraObject.transform().lookAt(spk::Vector3(0, 0, 0));
         _cameraComponent->setAsMainCamera();
         _cameraComponent->setType(spk::Camera::Type::Orthographic);
+        _cameraComponent->setOrthographicSize(10);
 
         _backgroundTilemap.transform().translation = spk::Vector3(0, 0, 0);
         Tilemap2D::Chunk::texture = &_backgroundTilemapTexture;
