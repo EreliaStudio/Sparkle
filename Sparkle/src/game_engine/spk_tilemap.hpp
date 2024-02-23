@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <string>
 #include "math/spk_vector2.hpp"
 #include "math/spk_vector3.hpp"
 #include "graphics/texture/spk_sprite_sheet.hpp"
@@ -10,12 +11,10 @@
 
 namespace spk
 {
-	template <typename TNodeType, typename TNodeIndexType, size_t TSizeX, size_t TSizeY, size_t TSizeZ>
+	template <typename TNodeIndexType, size_t TSizeX, size_t TSizeY, size_t TSizeZ>
 	class ITilemap : public spk::GameComponent
 	{
 	public:
-		using Node = TNodeType;
-
 		class IChunk : public spk::GameComponent
 		{
 			friend class ITilemap;
