@@ -67,9 +67,6 @@ namespace spk
 		spk::Matrix4x4 view = _computeViewMatrix();
 		spk::Matrix4x4 projection = (_type == Type::Orthographic ? _computeOrthographicProjectionMatrix() : _computePerspectiveProjectionMatrix());
 
-		std::cout << "View : " << view << std::endl;
-		std::cout << "Proj : " << projection << std::endl;
-
 		*_viewElement = view;
 		*_projectionElement = projection;
 		_cameraConstants->update();

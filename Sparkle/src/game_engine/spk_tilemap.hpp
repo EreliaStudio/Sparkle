@@ -18,9 +18,8 @@ namespace spk
 
 		class IChunk : public spk::GameComponent
 		{
+			friend class ITilemap;
 		public:
-			static inline spk::Texture* texture = nullptr;
-
 			using NodeIndexType = TNodeIndexType;
 
 			static inline const size_t SizeX = TSizeX;
@@ -34,6 +33,24 @@ namespace spk
 				spk::Vector2 modelUVs;
 				spk::Vector2 modelAnimationOffset;
 				int modelAnimationSize;
+
+				VertexData() :
+					modelVertex(0),
+					modelUVs(0),
+					modelAnimationOffset(0),
+					modelAnimationSize(0)
+				{
+
+				}
+
+				VertexData(const spk::Vector3& p_modelVertex, const spk::Vector2& p_modelUVs, const spk::Vector2& p_modelAnimationOffset, int p_modelAnimationSize) :
+					modelVertex(p_modelVertex),
+					modelUVs(p_modelUVs),
+					modelAnimationOffset(p_modelAnimationOffset),
+					modelAnimationSize(p_modelAnimationSize)
+				{
+
+				}
 			};
 
 		private:
@@ -87,6 +104,7 @@ namespace spk
 			std::unique_ptr<spk::Transform::Contract> _transformRotationContract = nullptr;
 
 			spk::Pipeline::Texture& _textureObject;
+			spk::Texture* _texture;
 
 			TNodeIndexType _data[TSizeX][TSizeY][TSizeZ];
 
@@ -126,7 +144,7 @@ namespace spk
 					_needGPUUpdate = false;
 				}
 
-				_textureObject.attach(texture);
+				_textureObject.attach(_texture);
 				_renderingObject.render();
 			}
 
@@ -152,7 +170,7 @@ namespace spk
 					{
 						for (size_t k = 0; k < SizeZ; k++)
 						{
-							_data[i][j][k] = 0;
+							_data[i][j][k] = -1;
 						}
 					}
 				}
@@ -188,23 +206,38 @@ namespace spk
 				_data[p_x][p_y][p_z] = p_value;
 			}
 
-			void validate()
+			void bake()
 			{
 				_needGPUUpdate = true;
+			}
+
+			void setTexture(spk::Texture* p_texture)
+			{
+				_texture = p_texture;
+			}
+
+			spk::Texture* texture()
+			{
+				return (_texture);
 			}
 		};
 
 	private:
-		std::map<typename IChunk::NodeIndexType, Node> nodes;
-		std::map<spk::Vector2Int, std::unique_ptr<spk::GameObject>> chunksObjects;
+		std::map<spk::Vector2Int, std::unique_ptr<spk::GameObject>> _chunksObjects;
 
 		virtual IChunk* _insertChunk(spk::GameObject* p_object, const spk::Vector2Int& p_chunkPosition) = 0;
+
+	protected:
+		std::map<spk::Vector2Int, std::unique_ptr<spk::GameObject>>& chunksObjects()
+		{
+			return (_chunksObjects);
+		}
 
 	public:
 		ITilemap(const std::string& p_name) :
 			spk::GameComponent(p_name)
 		{
-
+			
 		}
 
 		static spk::Vector2Int convertWorldToChunkPosition(const spk::Vector2Int& p_worldPosition)
@@ -233,35 +266,71 @@ namespace spk
 
 		IChunk* createEmpyChunk(const spk::Vector2Int& p_chunkPosition)
 		{
-			if (chunksObjects.contains(p_chunkPosition) == true)
+			if (_chunksObjects.contains(p_chunkPosition) == true)
 			{
-				return (chunksObjects.at(p_chunkPosition)->getComponent<IChunk>());
+				return (_chunksObjects.at(p_chunkPosition)->getComponent<IChunk>());
 			}
 			std::unique_ptr<spk::GameObject> newObject = std::make_unique<spk::GameObject>("Chunk [" + p_chunkPosition.to_string() + "]", owner());
 			IChunk* chunkComponent = _insertChunk(newObject.get(), p_chunkPosition);
-
-			chunksObjects.emplace(p_chunkPosition, std::move(newObject));
+			chunkComponent->bake();
+			_chunksObjects.emplace(p_chunkPosition, std::move(newObject));
 			return (chunkComponent);
 		}
 
 		spk::GameObject* chunkObject(const spk::Vector2Int& p_chunkPosition)
 		{
-			if (chunksObjects.contains(p_chunkPosition) == true)
+			if (_chunksObjects.contains(p_chunkPosition) == false)
 			{
 				return (nullptr);
 			}
 
-			return (chunksObjects[p_chunkPosition].get());
+			return (_chunksObjects.at(p_chunkPosition).get());
+		}
+
+		const spk::GameObject* chunkObject(const spk::Vector2Int& p_chunkPosition) const
+		{
+			if (_chunksObjects.contains(p_chunkPosition) == false)
+			{
+				return (nullptr);
+			}
+
+			return (_chunksObjects.at(p_chunkPosition).get());
 		}
 
 		void activateChunk(const spk::Vector2Int& p_chunkPosition)
 		{
-			chunksObjects[p_chunkPosition].activate();
+			_chunksObjects[p_chunkPosition].activate();
 		}
 
 		void deactivateChunk(const spk::Vector2Int& p_chunkPosition)
 		{
-			chunksObjects[p_chunkPosition].deactivate();
+			_chunksObjects[p_chunkPosition].deactivate();
+		}
+
+		void rebakeChunk(const spk::Vector2Int& p_chunkPosition)
+		{
+			for (int i = 1; i <= 1; i++)
+			{
+				for (int j = 1; j <= 1; j++)
+				{
+					spk::Vector2Int chunkPosition = p_chunkPosition + spk::Vector2Int(i, j);
+					if (_chunksObjects.contains(chunkPosition) == true)
+					{
+						spk::GameObject* chunkObject = _chunksObjects[chunkPosition];
+
+						if (chunkObject != nullptr)
+						{
+							IChunk* tmpChunk = chunkObject->getComponent<IChunk>();
+
+							if (tmpChunk != nullptr)
+							{
+								tmpChunk->bake();
+							}
+						}
+						
+					}
+				}
+			}
 		}
 	};
 }
