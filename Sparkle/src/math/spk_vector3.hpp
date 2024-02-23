@@ -63,16 +63,14 @@ namespace spk
         template <typename TTypeA, typename TTypeB, typename TTypeC, typename = typename std::enable_if<std::is_arithmetic<TTypeA>::value>::type, typename = typename std::enable_if<std::is_arithmetic<TTypeB>::value>::type, typename = typename std::enable_if<std::is_arithmetic<TTypeC>::value>::type>
         IVector3(const TTypeA &p_x, const TTypeB &p_y, const TTypeC &p_z) : x(static_cast<TType>(p_x)), y(static_cast<TType>(p_y)), z(static_cast<TType>(p_z)) {}
 
-		/**
-         * @brief Conversion operator to another vector of possibly different type.
+        /**
+         * @brief Conversion operator to allow implicit conversion between vectors of different types.
          * @return A new vector of the target type with copied components.
          */
-		template <typename TOtherType>
-		operator IVector3<TOtherType>()
-		{
-			return (IVector3<TOtherType>(static_cast<TOtherType>(x), static_cast<TOtherType>(y), static_cast<TOtherType>(z)));
-		}
-
+        operator IVector3<TType>()
+        {
+            return IVector3<TType>(static_cast<TType>(x), static_cast<TType>(y), static_cast<TType>(z));
+        }
         /**
          * @brief Unary negation operator. Negates all components of the vector.
          * @return A new vector where each component is the negation of the original vector's components.
