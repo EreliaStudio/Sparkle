@@ -4,6 +4,9 @@ struct Node
 {
     spk::Vector2Int sprite = 0;
     bool isAutotiled = false;
+    spk::Vector2Int animationFrameOffset = 0;
+    int nbFrame = 0;
+    int animationDuration = 0;
 
     Node()
     {
@@ -13,6 +16,16 @@ struct Node
     Node(const spk::Vector2Int& p_sprite, bool p_isAutotiled) :
         sprite(p_sprite),
         isAutotiled(p_isAutotiled)
+    {
+
+    }
+
+    Node(const spk::Vector2Int& p_sprite, bool p_isAutotiled, const spk::Vector2& p_animationFrameOffset, int p_nbFrame, int p_animationDuration) :
+        sprite(p_sprite),
+        isAutotiled(p_isAutotiled),
+        animationFrameOffset(p_animationFrameOffset),
+        nbFrame(p_nbFrame),
+        animationDuration(p_animationDuration)
     {
 
     }
@@ -44,7 +57,16 @@ public:
             return (_neightbours[p_neightbourOffset.x + 1][p_neightbourOffset.y + 1]);
         }
 
-        void _insertNodeData(std::vector<VertexData>& p_vertexData, std::vector<unsigned int>& p_indexes, const spk::Vector3& p_position, const spk::Vector3& p_size, const spk::Vector2& p_spritePosition, const spk::Vector2& p_spriteSize, const spk::Vector2& p_animationOffset, int p_animationLenght)
+        void _insertNodeData(
+            std::vector<VertexData>& p_vertexData,
+            std::vector<unsigned int>& p_indexes,
+            const spk::Vector3& p_position,
+            const spk::Vector3& p_size,
+            const spk::Vector2& p_spritePosition, 
+            const spk::Vector2& p_spriteSize,
+            const spk::Vector2& p_animationOffset,
+            int p_animationLenght,
+            int p_animationDuration)
         {
             size_t previousNbVertices = p_vertexData.size();
 
@@ -68,7 +90,8 @@ public:
                     p_position + p_size * offsets[i],
                     p_spritePosition + p_spriteSize * spriteOffsets[i],
                     p_animationOffset, 
-                    p_animationLenght
+                    p_animationLenght,
+                    p_animationDuration 
                 ));
             }
 
@@ -85,7 +108,7 @@ public:
                 spk::Vector3(1, 1, 0),
                 static_cast<spk::SpriteSheet*>(Chunk::texture())->sprite(p_node.sprite),
                 static_cast<spk::SpriteSheet*>(Chunk::texture())->unit(),
-                0, 0);
+                static_cast<spk::Vector2>(p_node.animationFrameOffset) * static_cast<spk::SpriteSheet*>(Chunk::texture())->unit(), p_node.nbFrame, p_node.animationDuration);
         }
 
         const Chunk* _getNeightbourChunk(spk::Vector3Int& p_relativePosition)
@@ -289,7 +312,7 @@ public:
                     spk::Vector3(0.5f, 0.5f, 0),
                     static_cast<spk::SpriteSheet*>(Chunk::texture())->sprite(p_node.sprite + _computeSpriteOffset(p_index, i, p_x, p_y, p_z)),
                     static_cast<spk::SpriteSheet*>(Chunk::texture())->unit(),
-                    0, 0);
+                    static_cast<spk::Vector2>(p_node.animationFrameOffset) * static_cast<spk::SpriteSheet*>(Chunk::texture())->unit(), p_node.nbFrame, p_node.animationDuration);
             }
         }
 
@@ -349,6 +372,10 @@ public:
                     setContent(i, j, 0, (i == 0 || j == 0 ? 0 : 1));
                 }
             }
+
+            setContent(2, 3, 1, 2);
+            setContent(5, 6, 1, 3);
+            setContent(8, 11, 1, 4);
         }
     };
 
@@ -497,7 +524,7 @@ private:
 public:
     MainWidget(const std::string& p_name) :
         spk::IWidget(p_name),
-        _backgroundTilemapTexture("Playground/worldBackground.png", spk::Vector2Int(8, 6)),
+        _backgroundTilemapTexture("Playground/worldBackground.png", spk::Vector2Int(12, 6)),
         _playerSpriteSheet("Playground/playerSpriteSheet.png", spk::Vector2Int(4, 4)),
         _gameEngineManager("GameEngineManager", this),
         _playerObject("Player"),
@@ -526,6 +553,9 @@ public:
         _tilemapComponent->createEmpyChunk(spk::Vector2Int(1, 1));
         _tilemapComponent->insertNodeType(0, Node(spk::Vector2Int(0, 0), true));
         _tilemapComponent->insertNodeType(1, Node(spk::Vector2Int(4, 0), false));
+        _tilemapComponent->insertNodeType(2, Node(spk::Vector2Int(4, 1), false, spk::Vector2Int(1, 0), 5, 1000));
+        _tilemapComponent->insertNodeType(3, Node(spk::Vector2Int(4, 2), false, spk::Vector2Int(1, 0), 3, 600));
+        _tilemapComponent->insertNodeType(4, Node(spk::Vector2Int(4, 3), false, spk::Vector2Int(1, 0), 8, 3000));
         _tilemapComponent->updateActiveChunks();
         
         _gameEngine.subscribe(&_playerObject);

@@ -33,21 +33,24 @@ namespace spk
 				spk::Vector2 modelUVs;
 				spk::Vector2 modelAnimationOffset;
 				int modelAnimationSize;
+				int modelAnimationDuration;
 
 				VertexData() :
 					modelVertex(0),
 					modelUVs(0),
 					modelAnimationOffset(0),
-					modelAnimationSize(0)
+					modelAnimationSize(0),
+					modelAnimationDuration(0)
 				{
 
 				}
 
-				VertexData(const spk::Vector3& p_modelVertex, const spk::Vector2& p_modelUVs, const spk::Vector2& p_modelAnimationOffset, int p_modelAnimationSize) :
+				VertexData(const spk::Vector3& p_modelVertex, const spk::Vector2& p_modelUVs, const spk::Vector2& p_modelAnimationOffset, int p_modelAnimationSize, int p_modelAnimationDuration) :
 					modelVertex(p_modelVertex),
 					modelUVs(p_modelUVs),
 					modelAnimationOffset(p_modelAnimationOffset),
-					modelAnimationSize(p_modelAnimationSize)
+					modelAnimationSize(p_modelAnimationSize),
+					modelAnimationDuration(p_modelAnimationDuration)
 				{
 
 				}
@@ -65,8 +68,10 @@ namespace spk
 			Input -> Geometry : vec2 modelUVs;
 			Input -> Geometry : vec2 modelAnimationOffset;
 			Input -> Geometry : int modelAnimationSize;
+			Input -> Geometry : int modelAnimationDuration;
 
 			Geometry -> Render : vec2 fragmentUVs;
+			Geometry -> Render : vec2 fragmentAnimationOffset;
 
 			AttributeBlock self
 			{
@@ -75,12 +80,22 @@ namespace spk
 
 			Texture textureID;
 
+			vec2 computeSpriteAnimationOffset(int animationDuration, int animationSize, vec2 frameOffset)
+			{
+				if (animationSize == 0)
+					return (vec2(0, 0));
+
+				int nbFrame = (timeConstants.epoch % animationDuration) / (animationDuration / animationSize);
+				return (frameOffset * vec2(nbFrame, nbFrame));
+			}
+			
 			void geometryPass()
 			{
 				vec3 transformedPosition = applyTransform(modelVertex, self.transform);
 				vec4 cameraSpacePosition = cameraConstants.view * vec4(transformedPosition, 1.0f);
 				pixelPosition = cameraConstants.projection * cameraSpacePosition;
-				fragmentUVs = modelUVs;
+				fragmentUVs = modelUVs + computeSpriteAnimationOffset(modelAnimationDuration, modelAnimationSize, modelAnimationOffset);
+				fragmentAnimationOffset = modelAnimationOffset;
 			}
 
 			void renderPass()

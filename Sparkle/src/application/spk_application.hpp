@@ -137,7 +137,7 @@ namespace spk
 				if (time != oldTime)
 				{
 					oldTime = time;
-					_timeConstantEpochElement = static_cast<int>(time % 100000);
+					_timeConstantEpochElement = static_cast<int>(time);
 					_timeConstant.update();
 				}
 			}	
