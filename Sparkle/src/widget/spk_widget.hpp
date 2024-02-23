@@ -230,6 +230,9 @@ namespace spk::widget
          */
         const spk::Viewport& viewport() const;
 
+        /**
+         * @brief The unique id of this widget.
+         */
         uint32_t id() const;
     };
 
