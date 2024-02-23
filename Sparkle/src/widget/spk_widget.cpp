@@ -19,9 +19,11 @@ namespace spk::widget
         {
             // Get child size but cap it to match the constraints.
             Vector2 childSize = child->_onLayout(p_constraints);
+            DLOG(name() << ": childSize " << childSize);
             child->setGeometry(anchor(), childSize);
             maxFromChildren = Vector2::max(maxFromChildren, childSize);
         }
+        DLOG(name() << ": maxFromChildren " << maxFromChildren);
         return maxFromChildren;
     }
 
@@ -199,6 +201,11 @@ namespace spk::widget
     const std::string& IWidget::name() const
     {
         return (_name);
+    }
+
+    void IWidget::setName(const std::string& p_name)
+    {
+        _name = p_name;
     }
 
     const spk::Vector2Int& IWidget::anchor() const

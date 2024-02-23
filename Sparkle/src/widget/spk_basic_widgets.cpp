@@ -94,9 +94,9 @@ namespace spk::widget
     Vector2 Expanded::_onLayout(const BoxConstraints& p_constraints)
     {
         IWidget* child = SingleChildWidget::child();
-        if (child != nullptr)
+        if (child == nullptr)
         {
-            return p_constraints.min;
+            return p_constraints.max;
         }
         Vector2 childSize = child->_onLayout(p_constraints);
         child->setGeometry({0, 0}, childSize);
@@ -152,11 +152,16 @@ namespace spk::widget
 
                 BoxConstraints constraints{min, max};
                 Vector2 childSize = asExpanded->_onLayout(constraints);
+                DLOG(min << max << childSize);
 
                 sizes[i] = childSize;
                 height += childHeight;
             }
         }
+
+        DLOG(p_constraints.min << p_constraints.max);
+        for (auto size : sizes)
+            DLOG(size);
 
         // Finally we can compute positions for each widget.
         // Start by finding out at which position on y we should start.
@@ -314,7 +319,6 @@ namespace spk::widget
 
         Vector2 childSize = tmpChild->_onLayout(p_constraints);
         Vector2 anchor = (p_constraints.max - childSize) / 2;
-        DLOG(childSize << anchor);
         tmpChild->setGeometry(anchor, childSize);
         return p_constraints.max;
     }

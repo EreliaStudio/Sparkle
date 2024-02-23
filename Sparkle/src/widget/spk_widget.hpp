@@ -197,6 +197,11 @@ namespace spk::widget
         const std::string& name() const;
 
         /**
+         * Sets the name of the widget.
+         */
+        void setName(const std::string& p_name);
+
+        /**
          * Gets the depth of the widget.
          * @return A constant reference to the widget's depth value.
          */

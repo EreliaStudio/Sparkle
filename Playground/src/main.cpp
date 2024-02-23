@@ -5,20 +5,24 @@
 #include <utility>
 #include <vector>
 
-#define VWidget1(name, type, param1)              \
-    auto name = std::make_unique<type>((param1)); \
+#define VWidget0(name, type)                  \
+    auto name = std::make_unique<type>(this); \
     defer.add([&]() { vault(std::move((name))); })
 
-#define VWidget2(name, type, param1, param2)                \
-    auto name = std::make_unique<type>((param1), (param2)); \
+#define VWidget1(name, type, param1)                    \
+    auto name = std::make_unique<type>((param1).get()); \
     defer.add([&]() { vault(std::move((name))); })
 
-#define VWidget3(name, type, param1, param2, param3)                  \
-    auto name = std::make_unique<type>((param1), (param2), (param3)); \
+#define VWidget2(name, type, param1, param2)                      \
+    auto name = std::make_unique<type>((param1), (param2).get()); \
     defer.add([&]() { vault(std::move((name))); })
 
-#define VWidget4(name, type, param1, param2, param3, param4)                    \
-    auto name = std::make_unique<type>((param1), (param2), (param3), (param4)); \
+#define VWidget3(name, type, param1, param2, param3)                        \
+    auto name = std::make_unique<type>((param1), (param2), (param3).get()); \
+    defer.add([&]() { vault(std::move((name))); })
+
+#define VWidget4(name, type, param1, param2, param3, param4)                          \
+    auto name = std::make_unique<type>((param1), (param2), (param3), (param4).get()); \
     defer.add([&]() { vault(std::move((name))); })
 
 using spk::widget::Center;
@@ -97,69 +101,6 @@ public:
         WidgetVault("MyDemo"),
         _font("C:/Users/JQ/dev/Fonts/NotoSans/static/NotoSans-Regular.ttf")
     {
-        auto row = make_unique<Row>(this);
-
-        // Left empty padding
-        {
-            auto leftPad = make_unique<SizedBox>(Vector2{50.0f, 5000.0f}, row.get());
-            vault(move(leftPad));
-        }
-
-        // Middle column
-        {
-            auto padding = make_unique<Padding>(Padding::Config{15.0f, 15.0f, 15.0f, 15.0f}, row.get());
-            auto col = make_unique<Column>(padding.get());
-
-            std::vector<std::string> labels{"LabelA", "LabelB", "LabelC", "LabelD", "LabelE"};
-            for (size_t i = 0; i < labels.size(); i++)
-            {
-                auto callback = [label = labels[i]]()
-                { std::cout << label << std::endl; };
-                vault(make_unique<TextLabel>(labels[i], &_font, col.get()));
-
-                // Only build separators until the last one.
-                if (i < (labels.size() - 1))
-                {
-                    vault(make_unique<SizedBox>(Vector2{10.0f, 10.0f}, col.get()));
-                }
-            }
-            vault(move(col));
-            vault(move(padding));
-        }
-
-        // Right column
-        {
-            auto expanded = make_unique<Expanded>(row.get());
-            auto col = make_unique<Column>(expanded.get());
-            // Top section
-            {
-                auto expanded = make_unique<Expanded>(col.get());
-                auto padding = make_unique<Padding>(Padding::Config{15, 15, 15, 15}, expanded.get());
-                auto innerCol = make_unique<Column>(padding.get());
-                auto top = make_unique<Expanded>(innerCol.get());
-                auto topButton = make_unique<TextLabel>(
-                    "TopButton",
-                    &_font,
-                    top.get());
-                auto separator = make_unique<SizedBox>(Vector2{10, 15}, innerCol.get());
-                auto bot = make_unique<Expanded>(innerCol.get());
-                auto botButton = make_unique<TextLabel>(
-                    "BotButton", &_font, top.get());
-                vault(move(expanded), move(padding), move(innerCol), move(top), move(topButton), move(separator), move(bot), move(botButton));
-            }
-            // Bottom section
-            {
-                auto expanded = make_unique<Expanded>(col.get());
-                auto center = make_unique<Center>(expanded.get());
-                auto frac = make_unique<FractionallySizedBox>(0.5f, 0.5f, center.get());
-                auto button = make_unique<TextLabel>(
-                    "Second button",
-                    &_font, frac.get());
-                vault(move(expanded), move(center), move(frac), move(button));
-            }
-            vault(move(col), move(expanded));
-        }
-        vault(move(row));
     }
 
 private:
@@ -173,18 +114,29 @@ public:
         WidgetVault("EasyDemo", nullptr)
     {
         Defer defer;
-        // VWidget1(center, Center, this);
-        // VWidget2(sb, SizedBox, Vector2(400, 400), center.get());
-        VWidget2(redBox, spk::widget::ColoredBox, spk::Color(255, 0, 0), this);
-        // VWidget3(_label, spk::widget::TextLabel, "Bobo", &font, redBox.get());
+        VWidget0(center, Center);
+        VWidget1(col, Column, center);
+        VWidget2(sb, SizedBox, Vector2(400, 400), col);
+        VWidget2(redBox, spk::widget::ColoredBox, spk::Color(255, 0, 0), sb);
+        redBox->setName("redBox");
+        VWidget3(_label, spk::widget::TextLabel, "Bobo", &font, redBox);
 
-        //_label->label().setFont(&font); // Assuming myFont is a preloaded Font instance
-        //_label->label().setText("Bobo");
-        //_label->label().setTextSize(50);
-        //_label->label().setTextColor(spk::Color{255, 255, 255});
-        //_label->label().setAnchor({100, 100});
-        //_label->label().setVerticalAlignment(spk::VerticalAlignment::Centered);
-        //_label->label().setHorizontalAlignment(spk::HorizontalAlignment::Left);
+        VWidget1(exp, Expanded, col);
+        VWidget2(greenBox, spk::widget::ColoredBox, spk::Color(0, 255, 0), exp);
+        greenBox->setName("greenBox");
+        VWidget3(_label2, spk::widget::TextLabel, "Popo", &font, greenBox);
+        _label2->setName("Popo");
+
+        redBox->setDepth(100);
+        greenBox->setDepth(100);
+
+        _label2->setDepth(1);
+        _label->setDepth(1);
+
+        _label->label().setFont(&font); // Assuming myFont is a preloaded Font instance
+        _label->label().setText("Bobo");
+        _label->label().setTextSize(50);
+        _label->label().setTextColor(spk::Color{255, 255, 255});
         defer.trigger();
         this->activateAll();
     }
@@ -194,11 +146,11 @@ int main()
 {
     spk::Application app = spk::Application("Playground", spk::Vector2UInt(800, 800), spk::Application::Mode::Monothread);
 
-    // MyDemo demo;
-    // demo.activateAll();
-
-    EasyDemo demo;
+    MyDemo demo;
     demo.activateAll();
+
+    // EasyDemo demo;
+    // demo.activateAll();
 
     return (app.run());
 }

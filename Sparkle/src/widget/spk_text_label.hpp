@@ -21,17 +21,14 @@ namespace spk::widget
         void _onGeometryChange() override
         {
             IWidget::_onGeometryChange();
-            _box.setGeometry(anchor(), size());
-            _box.setDepth(depth());
 
-            _label.setAnchor(anchor() + (size() / 2));
-            _label.setDepth(depth() + 1);
+            _label.setAnchor(anchor());
+            _label.setDepth(depth());
         }
 
         void _onRender() override
         {
             DEBUG_LINE();
-            //_box.render();
             _label.render();
         }
 
@@ -46,8 +43,8 @@ namespace spk::widget
             label().setText(_text);
             label().setTextSize(50);
             label().setTextColor(spk::Color{255, 255, 255});
-            label().setAnchor({10, 10});
-            label().setVerticalAlignment(spk::VerticalAlignment::Centered);
+            label().setAnchor(anchor());
+            label().setVerticalAlignment(spk::VerticalAlignment::Top);
             label().setHorizontalAlignment(spk::HorizontalAlignment::Left);
         }
 
