@@ -7,17 +7,9 @@ namespace spk
     {
         Chunk* result = p_object->addComponent<Chunk>(this, p_chunkPosition);
 
-        result->setTexture(_spriteSheet);
+        result->setSpriteSheet(_spriteSheet);
 
         return (result);
-    }
-
-    void Tilemap2D::_onUpdate()
-    {
-    }
-
-    void Tilemap2D::_onRender()
-    {
     }
 
     Tilemap2D::Tilemap2D(const std::string& p_name) :
@@ -30,7 +22,7 @@ namespace spk
         _spriteSheet = p_spriteSheet;
         for (auto& [key, element] : chunksObjects())
         {
-            element->getComponent<Chunk>()->setTexture(_spriteSheet);
+            element->getComponent<Chunk>()->setSpriteSheet(_spriteSheet);
         }
     }
 
@@ -49,19 +41,19 @@ namespace spk
         return (_nodes.at(p_nodeIndex));
     }
 
-	void Tilemap2D::setActiveChunkRange(const spk::Vector2Int& p_start, const spk::Vector2Int& p_end)
+	void Tilemap2D::setActiveChunkRange(const spk::Vector2Int& p_activeChunkStart, const spk::Vector2Int& p_activeChunkEnd)
 	{
-		_start = p_start;
-		_end = p_end;
+		_activeChunkStart = p_activeChunkStart;
+		_activeChunkEnd = p_activeChunkEnd;
 	}
 
     void Tilemap2D::updateActiveChunks()
     {
         std::vector<spk::GameObject*> chunksToActivate;
 
-        for (int x = _start.x; x <= _end.x; x++)
+        for (int x = _activeChunkStart.x; x <= _activeChunkEnd.x; x++)
         {
-            for (int y = _start.y; y <= _end.y; y++)
+            for (int y = _activeChunkStart.y; y <= _activeChunkEnd.y; y++)
             {
                 spk::GameObject* chunkToActivate = chunkObject(spk::Vector2Int(x, y));
 

@@ -16,7 +16,8 @@ namespace spk
 		if (p_textureToSet == _activeTexture)
 			return ;
 
-		_activeTexture = p_textureToSet;}
+		_activeTexture = p_textureToSet;
+	}
 
     void Pipeline::Texture::_activate()
 	{
