@@ -1,0 +1,86 @@
+#include "game_engine/spk_tilemap2D.hpp"
+#include "game_engine/component/spk_camera_component.hpp"
+
+namespace spk
+{
+    Tilemap2D::IChunk* Tilemap2D::_insertChunk(spk::GameObject* p_object, const spk::Vector2Int& p_chunkPosition)
+    {
+        Chunk* result = p_object->addComponent<Chunk>(this, p_chunkPosition);
+
+        result->setTexture(_spriteSheet);
+
+        return (result);
+    }
+
+    void Tilemap2D::_onUpdate()
+    {
+    }
+
+    void Tilemap2D::_onRender()
+    {
+    }
+
+    Tilemap2D::Tilemap2D(const std::string& p_name) :
+        ITilemap(p_name)
+    {
+    }
+
+    void Tilemap2D::setSpriteSheet(spk::SpriteSheet* p_spriteSheet)
+    {
+        _spriteSheet = p_spriteSheet;
+        for (auto& [key, element] : chunksObjects())
+        {
+            element->getComponent<Chunk>()->setTexture(_spriteSheet);
+        }
+    }
+
+    bool Tilemap2D::containsNode(const typename IChunk::NodeIndexType& p_nodeIndex) const
+    {
+        return (_nodes.contains(p_nodeIndex));
+    }
+
+    void Tilemap2D::insertNodeType(const typename IChunk::NodeIndexType& p_nodeIndex, const Tilemap2D::Node& p_node)
+    {
+        _nodes[p_nodeIndex] = p_node;
+    }
+
+    const Tilemap2D::Node& Tilemap2D::node(const typename IChunk::NodeIndexType& p_nodeIndex) const
+    {
+        return (_nodes.at(p_nodeIndex));
+    }
+
+	void Tilemap2D::setActiveChunkRange(const spk::Vector2Int& p_start, const spk::Vector2Int& p_end)
+	{
+		_start = p_start;
+		_end = p_end;
+	}
+
+    void Tilemap2D::updateActiveChunks()
+    {
+        std::vector<spk::GameObject*> chunksToActivate;
+
+        for (int x = _start.x; x <= _end.x; x++)
+        {
+            for (int y = _start.y; y <= _end.y; y++)
+            {
+                spk::GameObject* chunkToActivate = chunkObject(spk::Vector2Int(x, y));
+
+                if (chunkToActivate != nullptr)
+                    chunksToActivate.push_back(chunkToActivate);
+            }
+        }
+
+        for (auto& element : _activeChunks)
+        {
+            if (std::find(chunksToActivate.begin(), chunksToActivate.end(), element) == chunksToActivate.end())
+                element->deactivate();
+        }
+
+        _activeChunks = chunksToActivate;
+        for (auto& element : _activeChunks)
+        {
+            if (element->isActive() == false)
+                element->activate();
+        }
+    }
+}
