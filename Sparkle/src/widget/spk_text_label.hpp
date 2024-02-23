@@ -10,52 +10,39 @@
 
 namespace spk::widget
 {
+    /**
+     * @class
+     * @brief A simple TextLabel :)
+     */
     class TextLabel : public IWidget
     {
     private:
-        spk::widget::components::NineSlicedBox _box;
         spk::widget::components::TextLabel _label;
         Font* _font;
         std::string _text;
 
-        void _onGeometryChange() override
-        {
-            IWidget::_onGeometryChange();
+        void _onGeometryChange() override;
 
-            _label.setAnchor(anchor());
-            _label.setDepth(depth());
-        }
-
-        void _onRender() override
-        {
-            DEBUG_LINE();
-            _label.render();
-        }
+        void _onRender() override;
 
     public:
-        TextLabel(const std::string& p_text, Font* p_font, IWidget* p_parent = nullptr) :
-            IWidget("TextLabel", p_parent),
-            _font(p_font),
-            _text(p_text)
-        {
+        /**
+         * @brief Constructor.
+         *
+         * @param p_text The text to display.
+         * @param p_font The font used to display the text.
+         * @param p_parent The parent widget.
+         */
+        TextLabel(const std::string& p_text, Font* p_font, IWidget* p_parent = nullptr);
 
-            label().setFont(_font); // Assuming myFont is a preloaded Font instance
-            label().setText(_text);
-            label().setTextSize(50);
-            label().setTextColor(spk::Color{255, 255, 255});
-            label().setAnchor(anchor());
-            label().setVerticalAlignment(spk::VerticalAlignment::Top);
-            label().setHorizontalAlignment(spk::HorizontalAlignment::Left);
-        }
+        /**
+         * @brief Implement layout to be able to tell the size of this label.
+         */
+        Vector2 layout(const BoxConstraints& p_constraints);
 
-        Vector2 _onLayout(const BoxConstraints& p_constraints) override
-        {
-            // TODO: need to return textlabel layout inside those constraints;
-            std::cout << "MAX " << p_constraints.max << std::endl;
-            return p_constraints.max;
-        }
-
-        spk::widget::components::NineSlicedBox& box() { return (_box); }
-        spk::widget::components::TextLabel& label() { return (_label); }
+        /**
+         * @brief Getter for the underlying label component.
+         */
+        spk::widget::components::TextLabel& label();
     };
 }

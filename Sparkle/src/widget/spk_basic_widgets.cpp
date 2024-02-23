@@ -26,7 +26,24 @@ namespace spk::widget
         _coloredBox.render();
     }
 
-    Vector2 SizedBox::_onLayout(const BoxConstraints& p_constraints)
+    LayoutBuilder::LayoutBuilder(const Builder& p_builder, IWidget* p_parent) :
+        SingleChildWidget("LayoutBuilder", p_parent),
+        _builder(p_builder)
+    {
+    }
+
+    Vector2 LayoutBuilder::layout(const BoxConstraints& p_constraints)
+    {
+        return _builder(p_constraints, child());
+    }
+
+    SizedBox::SizedBox(const Vector2& p_size, IWidget* p_parent) :
+        SingleChildWidget("SizedBox", p_parent),
+        _size(p_size)
+    {
+    }
+
+    Vector2 SizedBox::layout(const BoxConstraints& p_constraints)
     {
         IWidget* tmpChild = child();
         if (tmpChild == nullptr)
@@ -37,7 +54,7 @@ namespace spk::widget
         Vector2 max = Vector2::min(p_constraints.max, _size);
         Vector2 min = Vector2::max(p_constraints.min, _size);
 
-        Vector2 childSize = tmpChild->_onLayout(BoxConstraints(min, max));
+        Vector2 childSize = tmpChild->layout(BoxConstraints(min, max));
         tmpChild->setGeometry({0, 0}, childSize);
 
         return max;
@@ -48,7 +65,14 @@ namespace spk::widget
         return _size;
     }
 
-    Vector2 FractionallySizedBox::_onLayout(const BoxConstraints& p_constraints)
+    FractionallySizedBox::FractionallySizedBox(float p_horizontal, float p_vertical, IWidget* p_parent) :
+        SingleChildWidget("FractionallySizedBox", p_parent),
+        _horizontal(p_horizontal),
+        _vertical(p_vertical)
+    {
+    }
+
+    Vector2 FractionallySizedBox::layout(const BoxConstraints& p_constraints)
     {
         float w = p_constraints.max.x * _horizontal;
         if (w < p_constraints.min.x)
@@ -68,13 +92,46 @@ namespace spk::widget
         if (nullptr != child)
         {
             BoxConstraints constraints{p_constraints.min, size};
-            Vector2 childSize = child->_onLayout(constraints);
+            Vector2 childSize = child->layout(constraints);
             child->setGeometry({0, 0}, childSize);
         }
 
         return size;
     }
-    Vector2 Padding::_onLayout(const BoxConstraints& p_constraints)
+
+    Padding::Config::Config() :
+        left(0.0f),
+        right(0.0f),
+        top(0.0f),
+        bottom(0.0f)
+    {
+    }
+
+    Padding::Config::Config(float p_left, float p_right, float p_top, float p_bottom) :
+        left(p_left),
+        right(p_right),
+        top(p_top),
+        bottom(p_bottom)
+    {
+    }
+
+    Padding::Padding(const Config& p_config, IWidget* p_parent) :
+        SingleChildWidget("Padding", p_parent),
+        _config(p_config)
+    {
+    }
+
+    Padding Padding::symmetric(float p_horizontal, float p_vertical, IWidget* p_parent)
+    {
+        return Padding(Padding::Config{p_horizontal, p_horizontal, p_vertical, p_vertical}, p_parent);
+    }
+
+    Padding Padding::all(float p_value, IWidget* p_parent)
+    {
+        return Padding(Padding::Config{p_value, p_value, p_value, p_value}, p_parent);
+    }
+
+    Vector2 Padding::layout(const BoxConstraints& p_constraints)
     {
         IWidget* child = SingleChildWidget::child();
         if (nullptr != child)
@@ -82,7 +139,7 @@ namespace spk::widget
             Vector2 padded = Vector2{_config.left + _config.right, _config.top + _config.bottom};
             Vector2 max = p_constraints.max - padded;
             Vector2 min = p_constraints.min - padded;
-            Vector2 childSize = child->_onLayout({min, max});
+            Vector2 childSize = child->layout({min, max});
 
             Vector2 anchor{_config.left, _config.top};
             child->setGeometry(anchor, childSize);
@@ -91,19 +148,53 @@ namespace spk::widget
         return p_constraints.max;
     }
 
-    Vector2 Expanded::_onLayout(const BoxConstraints& p_constraints)
+    Expanded::Expanded(float p_flex, IWidget* p_parent) :
+        SingleChildWidget("Expanded", p_parent),
+        _flex(p_flex)
     {
-        IWidget* child = SingleChildWidget::child();
-        if (child == nullptr)
+    }
+
+    Expanded::Expanded(IWidget* p_parent) :
+        Expanded(1.0f, p_parent)
+    {
+    }
+
+    Vector2 Expanded::layout(const BoxConstraints& p_constraints)
+    {
+        IWidget* tmpChild = child();
+        if (nullptr == tmpChild)
         {
             return p_constraints.max;
         }
-        Vector2 childSize = child->_onLayout(p_constraints);
-        child->setGeometry({0, 0}, childSize);
-        return childSize;
+        Vector2 childSize = tmpChild->layout(p_constraints);
+        Vector2 anchor = (p_constraints.max - childSize) / 2;
+        tmpChild->setGeometry(anchor, childSize);
+        return p_constraints.max;
     }
 
-    Vector2 Column::_onLayout(const BoxConstraints& p_constraints)
+    float Expanded::flex() const
+    {
+        return _flex;
+    }
+
+    Column::Config::Config() :
+        mainAxisAlignment(MainAxisAlignment::start),
+        crossAxisAlignment(CrossAxisAlignment::start)
+    {
+    }
+
+    Column::Column(const Config& p_config, IWidget* p_parent) :
+        IWidget("Column", p_parent),
+        _config(p_config)
+    {
+    }
+
+    Column::Column(IWidget* p_parent) :
+        Column(Config(), p_parent)
+    {
+    }
+
+    Vector2 Column::layout(const BoxConstraints& p_constraints)
     {
         size_t len = children().size();
         std::vector<Vector2> sizes(len, {0, 0});
@@ -117,7 +208,7 @@ namespace spk::widget
             Expanded* asExpanded = dynamic_cast<Expanded*>(child);
             if (nullptr == asExpanded)
             {
-                Vector2 childSize = child->_onLayout(p_constraints);
+                Vector2 childSize = child->layout(p_constraints);
                 sizes[i] = childSize;
 
                 // Keep track of the total height from these widgets.
@@ -145,13 +236,13 @@ namespace spk::widget
             Expanded* asExpanded = dynamic_cast<Expanded*>(child);
             if (nullptr != asExpanded)
             {
-                float flexFactor = totalFlex / asExpanded->flex();
+                float flexFactor = asExpanded->flex() / totalFlex;
                 float childHeight = availableHeight * flexFactor;
                 Vector2 max{p_constraints.max.x, childHeight};
                 Vector2 min{0, childHeight};
 
                 BoxConstraints constraints{min, max};
-                Vector2 childSize = asExpanded->_onLayout(constraints);
+                Vector2 childSize = asExpanded->layout(constraints);
                 DLOG(min << max << childSize);
 
                 sizes[i] = childSize;
@@ -209,7 +300,25 @@ namespace spk::widget
 
         return p_constraints.max;
     }
-    Vector2 Row::_onLayout(const BoxConstraints& p_constraints)
+
+    Row::Config::Config() :
+        mainAxisAlignment(MainAxisAlignment::start),
+        crossAxisAlignment(CrossAxisAlignment::start)
+    {
+    }
+
+    Row::Row(const Config& p_config, IWidget* p_parent) :
+        IWidget("Row", p_parent),
+        _config(p_config)
+    {
+    }
+
+    Row::Row(IWidget* p_parent) :
+        Row(Config(), p_parent)
+    {
+    }
+
+    Vector2 Row::layout(const BoxConstraints& p_constraints)
     {
         size_t len = children().size();
         std::vector<Vector2> sizes(len, {1, 1});
@@ -223,7 +332,7 @@ namespace spk::widget
             Expanded* asExpanded = dynamic_cast<Expanded*>(child);
             if (nullptr == asExpanded)
             {
-                Vector2 childSize = child->_onLayout(p_constraints);
+                Vector2 childSize = child->layout(p_constraints);
                 sizes[i] = childSize;
 
                 // Keep track of the total width from these widgets.
@@ -250,13 +359,13 @@ namespace spk::widget
             Expanded* asExpanded = dynamic_cast<Expanded*>(child);
             if (nullptr != asExpanded)
             {
-                float flexFactor = totalFlex / asExpanded->flex();
+                float flexFactor = asExpanded->flex() / totalFlex;
                 float childWidth = availableWidth * flexFactor;
                 Vector2 max{childWidth, p_constraints.max.y};
                 Vector2 min{childWidth, 1};
 
                 BoxConstraints constraints{min, max};
-                Vector2 childSize = asExpanded->_onLayout(constraints);
+                Vector2 childSize = asExpanded->layout(constraints);
 
                 sizes[i] = childSize;
                 width += childWidth;
@@ -309,7 +418,13 @@ namespace spk::widget
 
         return p_constraints.max;
     }
-    Vector2 Center::_onLayout(const BoxConstraints& p_constraints)
+
+    Center::Center(IWidget* p_parent) :
+        SingleChildWidget("Center", p_parent)
+    {
+    }
+
+    Vector2 Center::layout(const BoxConstraints& p_constraints)
     {
         IWidget* tmpChild = child();
         if (nullptr == tmpChild)
@@ -317,7 +432,7 @@ namespace spk::widget
             return p_constraints.max;
         }
 
-        Vector2 childSize = tmpChild->_onLayout(p_constraints);
+        Vector2 childSize = tmpChild->layout(p_constraints);
         Vector2 anchor = (p_constraints.max - childSize) / 2;
         tmpChild->setGeometry(anchor, childSize);
         return p_constraints.max;

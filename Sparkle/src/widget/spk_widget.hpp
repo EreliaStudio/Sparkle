@@ -83,19 +83,6 @@ namespace spk::widget
         TimeMetric& _timeMetric;
 #endif
 
-    public:
-        /**
-         * @brief Virtual method triggered when the widget's geometry changes.
-         *
-         * This method is called during the rendering phase of the widget lifecycle, if the widget or any
-         * of its parents have been marked as needing layout. This can be because of a change in
-         * position, or depth.
-         * Derived classes should override this method to implement custom behavior that needs to
-         * occur when the widget's geometry changes.
-         * This can include recalculating layout, resizing child widgets, or any other geometry-related adjustments.
-         */
-        virtual Vector2 _onLayout(const BoxConstraints& p_constraints);
-
     protected:
         /**
          * @brief Virtual method for rendering the widget.
@@ -120,16 +107,34 @@ namespace spk::widget
         /**
          * @brief Propagate geometry changes to components.
          *
+         * This method is called in reaction to setGeometry.
          */
         virtual void _onGeometryChange();
 
     public:
-        /// @brief layout should be called on the root of the widget tree to trigger a layout before render.
-        void layout(const BoxConstraints&);
-        void render();
-        void update();
+        /**
+         * @brief Does the layout for this node and all its children.
+         *
+         * The layout algorithm is linear, traversing each widget in the tree at most twice (once when going down the tree, and once going back up).
+         * The parent uses the constraints to compute new constraints that it passes down to its children.
+         * The children do the same, until we reach the end nodes. The end node computes its size in accordance to the constraints, which the parent can then use to
+         * layout the child. Each parent lays out its child and then returns its own size to its parent.
+         *
+         * @param p_constraints The constraints for this layout.
+         */
+        virtual Vector2 layout(const BoxConstraints&);
 
-        // void resize(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size);
+        /**
+         * @brief Renders the widget tree from this node.
+         * Only the render thread is allowed to call this method, on the root of the widget tree.
+         */
+        void render();
+
+        /**
+         * @brief Updates the widget tree from this node.
+         * Only the update thread is allowed to call this method, on the root of the widget tree.
+         */
+        void update();
 
     private:
         spk::Vector2Int _computeAbsoluteAnchor();
@@ -228,23 +233,26 @@ namespace spk::widget
         uint32_t id() const;
     };
 
+    /**
+     * @brief A widget that only has one child.
+     *
+     * This is mainly used to simplify the layout logics in widgets that inherit from this class.
+     */
     class SingleChildWidget : public IWidget
     {
     public:
-        SingleChildWidget(const std::string& p_name, IWidget* p_parent = nullptr) :
-            IWidget(p_name, p_parent)
-        {
-        }
+        SingleChildWidget(const std::string& p_name, IWidget* p_parent = nullptr);
 
-        IWidget* child()
-        {
-            assert(children().size() < 2);
+        /**
+         * @brief Getter for the single child of this widget.
+         * @return A pointer to the single child, if any; nullptr if there is none.
+         */
+        IWidget* child();
 
-            if (children().size() < 1)
-            {
-                return nullptr;
-            }
-            return children()[0];
-        }
+        /**
+         * @brief layout will pass down the constraints to the single child.
+         * @param p_constraints The constraints for this layout.
+         */
+        Vector2 layout(const BoxConstraints& p_constraints) override;
     };
 }

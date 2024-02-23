@@ -7,44 +7,71 @@
 #include "widget/spk_widget.hpp"
 #include <functional>
 
+/**
+ * @file
+ *
+ * This file contains a collection of basic widgets that mostly serve to build basic layouts.
+ */
+
 namespace spk::widget
 {
-
+    /**
+     * @class
+     * @brief A box filled with color.
+     */
     class ColoredBox : public SingleChildWidget
     {
     private:
         spk::widget::components::ColoredBox _coloredBox;
 
+    protected:
         void _onGeometryChange() override;
         void _onRender() override;
 
     public:
-        ColoredBox(const std::string& name, const spk::Color& color, IWidget* parent);
+        /**
+         * @brief Contructor with a name parameter.
+         * @param p_name The name of the widget, used for debug.
+         * @param p_color The color used to fill the box.
+         * @param p_parent The parent widget.
+         */
+        ColoredBox(const std::string& p_name, const spk::Color& p_color, IWidget* p_parent);
 
-        ColoredBox(const spk::Color& color, IWidget* parent);
+        /**
+         * @brief Contructor with a default name.
+         * @param p_color The color used to fill the box.
+         * @param p_parent The parent widget.
+         */
+        ColoredBox(const spk::Color& p_color, IWidget* p_parent);
 
         virtual ~ColoredBox() = default;
     };
 
     /**
-     * @brief LayoutBuilder allows defining _onLayout through a Builder without writing a new class.
+     * @class
+     * @brief LayoutBuilder allows defining layout through a Builder without writing a new class.
      */
-    class LayoutBuilder : public IWidget
+    class LayoutBuilder : public SingleChildWidget
     {
     public:
-        using Builder = std::function<Vector2(const BoxConstraints&)>;
-        LayoutBuilder(const Builder& p_builder, IWidget* p_parent) :
-            IWidget("LayoutBuilder", p_parent),
-            _builder(p_builder)
-        {
-        }
+        /**
+         * @brief Builder is used to inject some logic for the layout of LayoutBuilder's child.
+         */
+        using Builder = std::function<Vector2(const BoxConstraints&, IWidget* child)>;
+
+        /**
+         * @brief Constructor.
+         * @param p_builder The builder callback.
+         * @param p_parent The parent widget.
+         */
+        LayoutBuilder(const Builder& p_builder, IWidget* p_parent);
+
+        /**
+         * @brief Implement layout to set the child's size according to the builder method.
+         */
+        Vector2 layout(const BoxConstraints& p_constraints);
 
     private:
-        Vector2 _onLayout(const BoxConstraints& p_constraints)
-        {
-            return _builder(p_constraints);
-        }
-
         Builder _builder;
     };
 
@@ -54,17 +81,21 @@ namespace spk::widget
     class SizedBox : public SingleChildWidget
     {
     public:
-        SizedBox(const Vector2& p_size, IWidget* p_parent) :
-            SingleChildWidget("SizedBox", p_parent),
-            _size(p_size)
-        {
-        }
+        /**
+         * @brief Constructor.
+         * @param p_size The desired size of the widget.
+         * @param p_parent The parent widget.
+         */
+        SizedBox(const Vector2& p_size, IWidget* p_parent);
 
         const Vector2& size() const;
 
-    private:
-        Vector2 _onLayout(const BoxConstraints& p_constraints) override;
+        /**
+         * @brief Implement layout to set the child's size to the desired value.
+         */
+        Vector2 layout(const BoxConstraints& p_constraints) override;
 
+    private:
         Vector2 _size;
     };
 
@@ -74,14 +105,18 @@ namespace spk::widget
     class FractionallySizedBox : public SingleChildWidget
     {
     public:
-        FractionallySizedBox(float p_horizontal, float p_vertical, IWidget* p_parent) :
-            SingleChildWidget("FractionallySizedBox", p_parent),
-            _horizontal(p_horizontal),
-            _vertical(p_vertical)
-        {
-        }
+        /**
+         * @brief Constructor.
+         * @param p_horizontal The horizontal fractional value. Set to 1 to get the same width as the parent.
+         * @param p_vertical The vertical fractional value. Set to 1 to get the same height as the parent.
+         * @param p_parent The parent widget.
+         */
+        FractionallySizedBox(float p_horizontal, float p_vertical, IWidget* p_parent);
 
-        Vector2 _onLayout(const BoxConstraints& p_constraints) override;
+        /**
+         * @brief Implement layout to set the child's size to a fraction of the parent's size.
+         */
+        Vector2 layout(const BoxConstraints& p_constraints) override;
 
     private:
         float _horizontal;
@@ -94,24 +129,58 @@ namespace spk::widget
     class Padding : public SingleChildWidget
     {
     public:
+        /**
+         * @brief A padding configuration.
+         */
         struct Config
         {
             float left;
             float right;
             float top;
             float bottom;
+
+            /**
+             * @brief Default constructor to set all sides to 0.
+             */
+            Config();
+
+            /**
+             * @brief Constructor.
+             *
+             * @param p_left left padding.
+             * @param p_right right padding.
+             * @param p_top top padding.
+             * @param p_bottom bottom padding.
+             */
+            Config(float p_left, float p_right, float p_top, float p_bottom);
         };
 
-        Padding(const Config& p_config, IWidget* p_parent) :
-            SingleChildWidget("Padding", p_parent),
-            _config(p_config)
-        {
-        }
+        /**
+         * @brief Constructor.
+         * @param p_config The padding configuration.
+         * @param p_parent The parent widget.
+         */
+        Padding(const Config& p_config, IWidget* p_parent);
 
-        static Padding symmetric(float p_horizontal, float p_vertical, IWidget* p_parent) { return Padding({p_horizontal, p_horizontal, p_vertical, p_vertical}, p_parent); }
-        static Padding all(float p_value, IWidget* p_parent) { return Padding({p_value, p_value, p_value, p_value}, p_parent); }
+        /**
+         * @brief Configure a Padding by setting horizontal and vertical padding.
+         * @param p_horizontal The horizontal (left and right) padding.
+         * @param p_vertical The vertical (top and bottom) padding.
+         * @param p_parent The parent widget.
+         */
+        static Padding symmetric(float p_horizontal, float p_vertical, IWidget* p_parent);
 
-        Vector2 _onLayout(const BoxConstraints& p_constraints) override;
+        /**
+         * @brief Configure a Padding with the same value on all sides.
+         * @param p_value The padding on all sides.
+         * @param p_parent The parent widget.
+         */
+        static Padding all(float p_value, IWidget* p_parent);
+
+        /**
+         * @brief implement layout to add padding to the child.
+         */
+        Vector2 layout(const BoxConstraints& p_constraints) override;
 
     private:
         Config _config;
@@ -129,25 +198,34 @@ namespace spk::widget
         /**
          * @brief Constructor.
          * @param p_flex Set this value to give different portions of the available space to each Expanded widget. Default to 1.0f
+         * @param p_parent The parent widget.
          */
-        Expanded(float p_flex, IWidget* p_parent) :
-            SingleChildWidget("Expanded", p_parent),
-            _flex(p_flex)
-        {
-        }
-        Expanded(IWidget* p_parent) :
-            Expanded(1.0f, p_parent)
-        {
-        }
+        Expanded(float p_flex, IWidget* p_parent);
 
-        float flex() const { return _flex; }
+        /**
+         * Constructor with default flex of 1.0f.
+         * @param p_parent The parent widget.
+         */
+        Expanded(IWidget* p_parent);
 
-        Vector2 _onLayout(const BoxConstraints& p_constraints) override;
+        /**
+         * @brief Implement layout to always use the full size available.
+         */
+        Vector2 layout(const BoxConstraints& p_constraints) override;
+
+        /**
+         * @brief Getter for flex.
+         */
+        float flex() const;
 
     private:
         float _flex;
     };
 
+    /**
+     * @brief MainAxisAlignment describes the alignment for the main axis.
+     * i.e. the vertical axis for Column, the horizontal axis for Row.
+     */
     enum class MainAxisAlignment
     {
         start,
@@ -155,6 +233,10 @@ namespace spk::widget
         end
     };
 
+    /**
+     * @brief MainAxisAlignment describes the alignment for the cross axis.
+     * i.e. the horizontal axis for Column, the vertical axis for Row.
+     */
     enum class CrossAxisAlignment
     {
         start,
@@ -162,65 +244,97 @@ namespace spk::widget
         end
     };
 
+    /**
+     * @brief Column allows laying out multiple widgets vertically.
+     *
+     * The children are either layed out used their intrisic size, or can be wrapped in an Expanded
+     * widget to adapt to the available space.
+     */
     class Column : public IWidget
     {
     public:
+        /**
+         * @brief Configuration for Column.
+         */
         struct Config
         {
-            MainAxisAlignment mainAxisAlignment;
-            CrossAxisAlignment crossAxisAlignment;
+            MainAxisAlignment mainAxisAlignment;   //<! main axis alignment
+            CrossAxisAlignment crossAxisAlignment; //<! cross axis alignment
 
-            Config() :
-                mainAxisAlignment(MainAxisAlignment::start),
-                crossAxisAlignment(CrossAxisAlignment::start)
-            {
-            }
+            /**
+             * @brief Default constructor.
+             *
+             * Sets the MainAxisAlignment to start.
+             * Sets the CrossAxisAlignement to start.
+             */
+            Config();
         };
 
-        Column(const Config& p_config, IWidget* p_parent) :
-            IWidget("Column", p_parent),
-            _config(p_config)
-        {
-        }
+        /**
+         * @brief Constructor.
+         * @param p_config The config for this column.
+         * @param p_parent The parent widget.
+         */
+        Column(const Config& p_config, IWidget* p_parent);
 
-        Column(IWidget* p_parent) :
-            Column(Config(), p_parent)
-        {
-        }
+        /**
+         * @brief Constructor with default configuration.
+         * @param p_parent The parent widget.
+         */
+        Column(IWidget* p_parent);
 
-        Vector2 _onLayout(const BoxConstraints& p_constraints) override;
+        /**
+         * @brief Implement layout to align the children vertically.
+         */
+        Vector2 layout(const BoxConstraints& p_constraints) override;
 
     private:
         Config _config;
     };
 
+    /**
+     * @brief Row allows laying out multiple widgets horizontally.
+     *
+     * The children are either layed out used their intrisic size, or can be wrapped in an Expanded
+     * widget to adapt to the available space.
+     */
     class Row : public IWidget
     {
     public:
+        /**
+         * @brief Configuration for Row.
+         */
         struct Config
         {
-            MainAxisAlignment mainAxisAlignment;
-            CrossAxisAlignment crossAxisAlignment;
+            MainAxisAlignment mainAxisAlignment;   //<! main axis alignment.
+            CrossAxisAlignment crossAxisAlignment; //<! cross axis alignment.
 
-            Config() :
-                mainAxisAlignment(MainAxisAlignment::start),
-                crossAxisAlignment(CrossAxisAlignment::start)
-            {
-            }
+            /**
+             * @brief Default constructor.
+             *
+             * Sets the MainAxisAlignment to start.
+             * Sets the CrossAxisAlignement to start.
+             */
+            Config();
         };
 
-        Row(const Config& p_config, IWidget* p_parent) :
-            IWidget("Row", p_parent),
-            _config(p_config)
-        {
-        }
+        /**
+         * @brief Constructor.
+         * @param p_config The row configuration.
+         * @param p_parent The parent widget.
+         */
+        Row(const Config& p_config, IWidget* p_parent);
 
-        Row(IWidget* p_parent) :
-            Row(Config(), p_parent)
-        {
-        }
+        /**
+         * @brief Constructor with default configuration.
+         * @param p_parent The parent widget.
+         */
+        Row(IWidget* p_parent);
 
-        Vector2 _onLayout(const BoxConstraints& p_constraints) override;
+        /**
+         * @brief Implement layout to align the children horizontally.
+         */
+        Vector2 layout(const BoxConstraints& p_constraints) override;
 
     private:
         Config _config;
@@ -229,11 +343,15 @@ namespace spk::widget
     class Center : public SingleChildWidget
     {
     public:
-        Center(IWidget* p_parent) :
-            SingleChildWidget("Center", p_parent)
-        {
-        }
+        /**
+         * @brief Constructor.
+         * @param p_parent The parent widget.
+         */
+        Center(IWidget* p_parent);
 
-        Vector2 _onLayout(const BoxConstraints& p_constraints);
+        /**
+         * @brief Implement layout to center the child.
+         */
+        Vector2 layout(const BoxConstraints& p_constraints);
     };
 }

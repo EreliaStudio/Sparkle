@@ -5,28 +5,6 @@ namespace spk::widget
 {
     std::atomic_uint32_t IWidget::_nextId = 0;
 
-    // By default the IWidget will layout its children by restricting their size to the constraints
-    // he has been give, and aligning them to its top-left corner.
-    Vector2 IWidget::_onLayout(const BoxConstraints& p_constraints)
-    {
-        if (children().size() == 0)
-        {
-            return p_constraints.max;
-        }
-        // We aim at returning a box that englobes all children.
-        Vector2 maxFromChildren{0, 0};
-        for (auto& child : children())
-        {
-            // Get child size but cap it to match the constraints.
-            Vector2 childSize = child->_onLayout(p_constraints);
-            DLOG(name() << ": childSize " << childSize);
-            child->setGeometry(anchor(), childSize);
-            maxFromChildren = Vector2::max(maxFromChildren, childSize);
-        }
-        DLOG(name() << ": maxFromChildren " << maxFromChildren);
-        return maxFromChildren;
-    }
-
     void IWidget::_onRender()
     {
     }
@@ -40,9 +18,26 @@ namespace spk::widget
         DLOG(name() << "#" << id() << ":" << anchor() << size() << "; depth=" << depth());
     }
 
-    void IWidget::layout(const BoxConstraints& p_constraints)
+    // By default the IWidget will layout its children by restricting their size to the constraints
+    // he has been give, and aligning them to its top-left corner.
+    Vector2 IWidget::layout(const BoxConstraints& p_constraints)
     {
-        _onLayout(p_constraints);
+        if (children().size() == 0)
+        {
+            return p_constraints.max;
+        }
+        // We aim at returning a box that englobes all children.
+        Vector2 maxFromChildren{0, 0};
+        for (auto& child : children())
+        {
+            // Get child size but cap it to match the constraints.
+            Vector2 childSize = child->layout(p_constraints);
+            DLOG(name() << ": childSize " << childSize);
+            child->setGeometry(anchor(), childSize);
+            maxFromChildren = Vector2::max(maxFromChildren, childSize);
+        }
+        DLOG(name() << ": maxFromChildren " << maxFromChildren);
+        return maxFromChildren;
     }
 
     void IWidget::render()
@@ -231,5 +226,33 @@ namespace spk::widget
     uint32_t IWidget::id() const
     {
         return _id;
+    }
+
+    SingleChildWidget::SingleChildWidget(const std::string& p_name, IWidget* p_parent) :
+        IWidget(p_name, p_parent)
+    {
+    }
+
+    IWidget* SingleChildWidget::child()
+    {
+        assert(children().size() < 2);
+
+        if (children().size() < 1)
+        {
+            return nullptr;
+        }
+        return children()[0];
+    }
+
+    Vector2 SingleChildWidget::layout(const BoxConstraints& p_constraints)
+    {
+        IWidget* tmpChild = child();
+        if (nullptr == tmpChild)
+        {
+            return p_constraints.max;
+        }
+        Vector2 childSize = tmpChild->layout(p_constraints);
+        tmpChild->setGeometry({0, 0}, childSize);
+        return childSize;
     }
 }
