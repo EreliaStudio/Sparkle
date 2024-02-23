@@ -16,7 +16,7 @@
 namespace spk::widget
 {
     /**
-     * @class
+     * @class ColoredBox
      * @brief A box filled with color.
      */
     class ColoredBox : public SingleChildWidget
@@ -48,7 +48,7 @@ namespace spk::widget
     };
 
     /**
-     * @class
+     * @class LayoutBuilder
      * @brief LayoutBuilder allows defining layout through a Builder without writing a new class.
      */
     class LayoutBuilder : public SingleChildWidget
@@ -134,10 +134,10 @@ namespace spk::widget
          */
         struct Config
         {
-            float left;
-            float right;
-            float top;
-            float bottom;
+            float left;   //<! left padding in pixels
+            float right;  //<! right padding in pixels
+            float top;    //<! top padding in pixels
+            float bottom; //<! bottom padding in pixels
 
             /**
              * @brief Default constructor to set all sides to 0.
@@ -340,6 +340,9 @@ namespace spk::widget
         Config _config;
     };
 
+    /**
+     * @brief Centers the child.
+     */
     class Center : public SingleChildWidget
     {
     public:

@@ -2,6 +2,7 @@
 #include <iostream>
 #include <limits>
 
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -127,6 +128,19 @@ public:
         VWidget3(_label2, spk::widget::TextLabel, "Popo", &font, greenBox);
         _label2->setName("Popo");
 
+        VWidget1(exp2, Expanded, col);
+        spk::widget::Row::Config rowConfig;
+        rowConfig.crossAxisAlignment = spk::widget::CrossAxisAlignment::center;
+        VWidget2(row, Row, rowConfig, exp2);
+        for (int i = 0; i < 16; i++)
+        {
+            int colorIndex = i % (spk::Colors::values().size());
+            auto e = std::make_unique<spk::widget::Expanded>(row.get());
+            auto sz = std::make_unique<spk::widget::SizedBox>(spk::Vector2{10 * (i + 1), 10 * (i + 1)}, e.get());
+            auto box = std::make_unique<spk::widget::ColoredBox>(spk::Colors::values()[colorIndex], sz.get());
+            vault(std::move(box), std::move(e), std::move(sz));
+        }
+
         redBox->setDepth(100);
         greenBox->setDepth(100);
 
@@ -146,11 +160,11 @@ int main()
 {
     spk::Application app = spk::Application("Playground", spk::Vector2UInt(800, 800), spk::Application::Mode::Monothread);
 
-    MyDemo demo;
-    demo.activateAll();
-
-    // EasyDemo demo;
+    // MyDemo demo;
     // demo.activateAll();
+
+    EasyDemo demo;
+    demo.activateAll();
 
     return (app.run());
 }

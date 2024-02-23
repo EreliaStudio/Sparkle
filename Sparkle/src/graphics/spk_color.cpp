@@ -65,6 +65,9 @@ namespace spk
     const spk::Color Colors::orange = Color(0xFF8000FF);
     const spk::Color Colors::magenta = Color(0xFF007FFF);
     const spk::Color Colors::pink = Color(0xFF00FFFF);
+    const spk::Color Colors::black = Color(0x000000FF);
+    const spk::Color Colors::white = Color(0xFFFFFFFF);
+    const spk::Color Colors::grey = Color(0x7F7F7FFF);
 
     const std::vector<spk::Color> Colors::_values = std::vector<spk::Color>{
         red, blue, green, yellow, purple, cyan, orange, magenta, pink};

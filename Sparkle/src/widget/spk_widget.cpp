@@ -79,19 +79,6 @@ namespace spk::widget
         }
     }
 
-    // void IWidget::resize(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size)
-    // {
-    // 	_anchor = p_anchor;
-    // 	_size = p_size;
-    // 	_needGeometryChange = true;
-    //
-    // 	for (auto& child : children())
-    // 	{
-    // 		child->resize(_size * child->_anchorRatio, _size * child->_sizeRatio);
-    // 	}
-    // 	_onGeometryChange();
-    // }
-
     spk::Vector2Int IWidget::_computeAbsoluteAnchor()
     {
         spk::Vector2Int result = 0;
@@ -155,6 +142,10 @@ namespace spk::widget
 
     void IWidget::setGeometry(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size)
     {
+        if (p_anchor == _anchor && p_size == _size)
+        {
+            return;
+        }
         _anchor = p_anchor;
         _size = p_size;
 
