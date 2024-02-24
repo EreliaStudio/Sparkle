@@ -38,7 +38,8 @@ namespace spk
 		spk::Vector3 cameraTarget = cameraPos + owner()->transform().forward(); 
 		spk::Vector3 upVector = owner()->transform().up();
 
-		spk::Matrix4x4 result = spk::Matrix4x4::translationMatrix(owner()->globalPosition().inverse());//::lookAt(cameraPos, cameraTarget, upVector);
+		//spk::Matrix4x4 result = spk::Matrix4x4::translationMatrix(owner()->globalPosition().inverse());
+		spk::Matrix4x4 result = spk::Matrix4x4::lookAt(cameraPos, cameraTarget, upVector);
 
 		return (std::move(result));
 	}
