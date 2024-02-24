@@ -14,6 +14,7 @@ namespace spk
 	void convertTexture(std::string& p_source);
 	void convertAttributeBlock(std::string& p_source, size_t p_higherBindingPointUsed);
 	size_t convertConstantBlock(std::string& p_source);
+    void insertLinkToDepth(std::string& p_code, const std::string& p_insertionCode);
 
     std::string composeVertexCode(const std::string& p_inputCode)
     {
@@ -25,6 +26,7 @@ namespace spk
 
         auto inputArgument = getArgumentList(result, "Input", "Geometry");
         auto outputArgument = getArgumentList(result, "Geometry", "Render");
+        outputArgument.push_back(std::make_pair("float", "pixelDepth"));
         removeArgumentList(result);
         removeFunction(result, "renderPass");
         
@@ -33,6 +35,7 @@ namespace spk
 
         replaceFunctionDeclaration(result, "void geometryPass()", "void main()");
         swapCodeContent(result, "pixelPosition", "gl_Position");
+        insertLinkToDepth(result, "pixelDepth = gl_Position.z;");
 
         size_t higherBindingPoint = convertConstantBlock(result);
         convertAttributeBlock(result, higherBindingPoint);
@@ -49,6 +52,7 @@ namespace spk
         convertTexture(result);
 
         auto inputArgument = getArgumentList(result, "Geometry", "Render");
+        inputArgument.push_back(std::make_pair("float", "pixelDepth"));
         removeArgumentList(result);
         removeFunction(result, "geometryPass");
 
@@ -56,6 +60,7 @@ namespace spk
         std::string outputLines = composeLayoutLines({std::make_pair("vec4", "pixelColor")}, "out");
 
         replaceFunctionDeclaration(result, "void renderPass()", "void main()");
+        insertLinkToDepth(result, "gl_FragDepth = pixelDepth;");
 
         size_t higherBindingPoint = convertConstantBlock(result);
         convertAttributeBlock(result, higherBindingPoint);

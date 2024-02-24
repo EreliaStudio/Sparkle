@@ -181,7 +181,7 @@ namespace spk
 		glEnable(GL_DEPTH_TEST);
 		glDepthMask(GL_TRUE);
 		glClearDepth(1.0f);
-		glDepthFunc(GL_LEQUAL);
+		glDepthFunc(GL_LESS);
 
 		glDisable(GL_STENCIL_TEST);
 		glStencilFunc(GL_ALWAYS, 0, 0xFF);

@@ -32,19 +32,19 @@ private:
     {
         if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::Z) == spk::InputState::Pressed)
         {
-            _playerObject.transform().translation += spk::Vector3(0, 1, 0);
+            _playerObject.transform().translation += spk::Vector3(0, 0.5f, 0);
         }
         if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::S) == spk::InputState::Pressed)
         {
-            _playerObject.transform().translation += spk::Vector3(0, -1, 0);
+            _playerObject.transform().translation += spk::Vector3(0, -0.5f, 0);
         }
         if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::Q) == spk::InputState::Pressed)
         {
-            _playerObject.transform().translation += spk::Vector3(-1, 0, 0);
+            _playerObject.transform().translation += spk::Vector3(-0.5f, 0, 0);
         }
         if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::D) == spk::InputState::Pressed)
         {
-            _playerObject.transform().translation += spk::Vector3(1, 0, 0);
+            _playerObject.transform().translation += spk::Vector3(0.5f, 0, 0);
         }
 
         if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::Space) == spk::InputState::Pressed)
@@ -97,12 +97,12 @@ public:
         _playerBodyRenderer->setSpriteSheet(&_playerSpriteSheet);
         _playerBodyRenderer->setSprite(spk::Vector2Int(0, 0));
 
-        _cameraObject.transform().translation = spk::Vector3(0, 0, 10);  
+        _cameraObject.transform().translation = spk::Vector3(0, 0, 5);  
         _cameraObject.transform().lookAt(_playerObject.transform().translation.get());
         _cameraComponent->setAsMainCamera();
         _cameraComponent->setType(spk::Camera::Type::Perspective);
         _cameraComponent->setNearPlane(0);
-        _cameraComponent->setFarPlane(100);
+        _cameraComponent->setFarPlane(8);
         _cameraComponent->setOrthographicSize(10);
         _cameraComponent->setAspectRatio(1.0f);
         _cameraComponent->setFOV(75);
