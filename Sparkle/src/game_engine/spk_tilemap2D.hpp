@@ -37,6 +37,7 @@ namespace spk
 			Input -> Geometry : int modelAnimationDuration;
 
 			Geometry -> Render : vec2 fragmentUVs;
+			Geometry -> Render : float depth;
 
 			AttributeBlock self
 			{
@@ -60,10 +61,12 @@ namespace spk
 				vec4 cameraSpacePosition = cameraConstants.view * vec4(transformedPosition, 1.0f);
 				pixelPosition = cameraConstants.projection * cameraSpacePosition;
 				fragmentUVs = modelUVs + computeSpriteAnimationOffset(modelAnimationDuration, modelAnimationSize, modelAnimationOffset);
+				depth = pixelPosition.z;
 			}
 
 			void renderPass()
 			{
+				//pixelColor = vec4(depth, depth, depth, 1.0f);
 				pixelColor = texture(textureID, fragmentUVs);
 				if (pixelColor.a == 0)
 					discard;
@@ -385,11 +388,11 @@ namespace spk
 				_vertexData.clear();
 				_indexes.clear();
 
-				for (int x = 0; x < SizeX; x++)
+				for (int z = 0; z < SizeZ; z++)
 				{
 					for (int y = 0; y < SizeY; y++)
 					{
-						for (int z = 0; z < SizeZ; z++)
+						for (int x = 0; x < SizeX; x++)
 						{
 							spk::Vector3 relativePosition = spk::Vector3Int(x, y, z);
 							NodeIndexType index = content(relativePosition);
@@ -451,13 +454,12 @@ namespace spk
 				{
 					for (size_t j = 0; j < SizeY; j++)
 					{
-						setContent(i, j, 0, (i == 0 || j == 0 ? 0 : 1));
+						for(size_t k = 0; k < SizeZ; k++)
+						{
+							setContent(i, j, k, (i == k || i == SizeX - k - 1 || j == k || j == SizeY - k - 1 ? 0 : -1));
+						}
 					}
 				}
-
-				setContent(2, 3, 1, 2);
-				setContent(5, 6, 1, 3);
-				setContent(8, 11, 1, 4);
 
 				bake();
 			}

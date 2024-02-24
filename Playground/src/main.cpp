@@ -93,23 +93,27 @@ public:
         _backgroundTilemap("BackgroundTilemap"),
         _tilemapComponent(_backgroundTilemap.addComponent<spk::Tilemap2D>("Tilemap"))
     {
-        _playerObject.transform().translation = spk::Vector3(2, 0, 5);
-        _playerBodyRenderer->setSpriteSheet(&_playerSpriteSheet);  
+        _playerObject.transform().translation = spk::Vector3(0, 0, 2.5f);
+        _playerBodyRenderer->setSpriteSheet(&_playerSpriteSheet);
         _playerBodyRenderer->setSprite(spk::Vector2Int(0, 0));
 
         _cameraObject.transform().translation = spk::Vector3(0, 0, 10);  
         _cameraObject.transform().lookAt(_playerObject.transform().translation.get());
         _cameraComponent->setAsMainCamera();
-        _cameraComponent->setType(spk::Camera::Type::Orthographic);
+        _cameraComponent->setType(spk::Camera::Type::Perspective);
+        _cameraComponent->setNearPlane(0);
+        _cameraComponent->setFarPlane(100);
         _cameraComponent->setOrthographicSize(10);
+        _cameraComponent->setAspectRatio(1.0f);
+        _cameraComponent->setFOV(75);
 
         _backgroundTilemap.transform().translation = spk::Vector3(0, 0, 0);
 
         _tilemapComponent->setSpriteSheet(&_backgroundTilemapTexture);
         _tilemapComponent->createEmpyChunk(spk::Vector2Int(0, 0));
-        _tilemapComponent->createEmpyChunk(spk::Vector2Int(1, 0));
-        _tilemapComponent->createEmpyChunk(spk::Vector2Int(0, 1));
-        _tilemapComponent->createEmpyChunk(spk::Vector2Int(1, 1));
+        // _tilemapComponent->createEmpyChunk(spk::Vector2Int(1, 0));
+        // _tilemapComponent->createEmpyChunk(spk::Vector2Int(0, 1));
+        // _tilemapComponent->createEmpyChunk(spk::Vector2Int(1, 1));
         _tilemapComponent->insertNodeType(0, spk::Tilemap2D::Node(spk::Vector2Int(0, 0), true));
         _tilemapComponent->insertNodeType(1, spk::Tilemap2D::Node(spk::Vector2Int(4, 0), false));
         _tilemapComponent->insertNodeType(2, spk::Tilemap2D::Node(spk::Vector2Int(4, 1), false, spk::Vector2Int(1, 0), 5, 1000));

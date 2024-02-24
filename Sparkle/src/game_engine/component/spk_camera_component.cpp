@@ -2,6 +2,8 @@
 #include "math/spk_matrix4x4.hpp"
 #include "game_engine/spk_game_object.hpp"
 
+#include "external_libraries/glm/gtc/matrix_transform.hpp"
+
 namespace spk
 {
 	bool Camera::_initializeCameraConstants()
@@ -32,13 +34,27 @@ namespace spk
 		return (_cameraConstantsInitialized);
 	}
 
+	void printMatrix(const std::string& p_text, const glm::mat4& p_matrix)
+	{
+		std::cout << p_text << std::endl;
+		for (size_t i = 0; i < 4; i++)
+		{
+			for (size_t j = 0; j < 4; j++)
+			{
+				if (j != 0)
+					std::cout << " ";
+				std::cout << std::setw(10) << p_matrix[j][i];
+			}
+			std::cout << std::endl;
+		}
+	}
+
 	spk::Matrix4x4 Camera::_computeViewMatrix()
 	{
 		spk::Vector3 cameraPos = owner()->globalPosition();
 		spk::Vector3 cameraTarget = cameraPos + owner()->transform().forward(); 
 		spk::Vector3 upVector = owner()->transform().up();
 
-		//spk::Matrix4x4 result = spk::Matrix4x4::translationMatrix(owner()->globalPosition().inverse());
 		spk::Matrix4x4 result = spk::Matrix4x4::lookAt(cameraPos, cameraTarget, upVector);
 
 		return (std::move(result));
@@ -60,13 +76,36 @@ namespace spk
 	
 	spk::Matrix4x4 Camera::_computePerspectiveProjectionMatrix()
 	{
-		return (spk::Matrix4x4::perspective(_fov, _aspectRatio, _nearPlane, _farPlane));
+		spk::Matrix4x4 projectionMatrix = spk::Matrix4x4::perspective(_fov, _aspectRatio, _nearPlane, _farPlane);
+
+		return (projectionMatrix);
 	}
 
 	void Camera::_updateGPUData()
 	{		
 		spk::Matrix4x4 view = _computeViewMatrix();
 		spk::Matrix4x4 projection = (_type == Type::Orthographic ? _computeOrthographicProjectionMatrix() : _computePerspectiveProjectionMatrix());
+
+		// std::cout << "Projection : " << projection << std::endl;
+		// for (int k = -1; k <= 7; k++)
+		// {
+		// 	std::cout << "Layer : " << k << std::endl;
+		// 	for (int j = -1; j <= 17; j++)
+		// 	{
+		// 		for (int i = -1; i <= 17; i++)
+		// 		{
+		// 			if (i != -1)
+		// 				std::cout << " ";
+		// 			spk::Vector3 point = spk::Vector3(i, j, k);
+		// 			spk::Vector3 viewedPoint = view * point;
+		// 			spk::Vector3 convertedPoint = projection * viewedPoint;
+					
+		// 			std::cout << convertedPoint.z;
+		// 		}
+		// 		std::cout << std::endl;
+		// 	}
+		// 	std::cout << std::endl;
+		// }
 
 		*_viewElement = view;
 		*_projectionElement = projection;

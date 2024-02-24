@@ -179,6 +179,7 @@ namespace spk
 		glFrontFace(GL_CCW);
 
 		glEnable(GL_DEPTH_TEST);
+		glDepthMask(GL_TRUE);
 		glClearDepth(1.0f);
 		glDepthFunc(GL_LEQUAL);
 
