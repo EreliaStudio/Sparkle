@@ -128,7 +128,6 @@ namespace spk
 		spk::Vector3 result = 0;
 	
 		result += _transform.translation.get();
-		result = globalRotation().applyRotation(result);
 
 		if (parent() != nullptr)
 		{

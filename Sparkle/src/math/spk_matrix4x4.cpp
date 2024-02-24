@@ -54,11 +54,11 @@ namespace spk
 		result.data[0][1] = up.x;
 		result.data[1][1] = up.y;
 		result.data[2][1] = up.z;
-		result.data[0][2] =-forward.x;
-		result.data[1][2] =-forward.y;
-		result.data[2][2] =-forward.z;
-		result.data[3][0] =-right.dot(p_from);
-		result.data[3][1] =-up.dot(p_from);
+		result.data[0][2] = -forward.x;
+		result.data[1][2] = -forward.y;
+		result.data[2][2] = -forward.z;
+		result.data[3][0] = -right.dot(p_from);
+		result.data[3][1] = -up.dot(p_from);
 		result.data[3][2] = forward.dot(p_from);
 
 		return result;
@@ -149,11 +149,14 @@ namespace spk
 		const float rad = spk::degreeToRadian(p_fov);
 		const float tanHalfFov = tan(rad / 2.0f);
 
-		result.data[0][0] = 1.0f / (tanHalfFov * p_aspectRatio);
-		result.data[1][1] = -1.0f / tanHalfFov; 
-		result.data[2][2] = -(p_farPlane + p_nearPlane) / (p_farPlane - p_nearPlane);
+		const float factor = 1.0f / tanHalfFov;
+		const float nearFactor = 1.0f / (p_nearPlane - p_farPlane);
+
+		result.data[0][0] = factor / p_aspectRatio;
+		result.data[1][1] = factor; 
+		result.data[2][2] = (p_nearPlane + p_farPlane) * nearFactor;
 		result.data[2][3] = -1.0f;
-		result.data[3][2] = -(2.0f * p_farPlane * p_nearPlane) / (p_farPlane - p_nearPlane);
+		result.data[3][2] = 2 * p_nearPlane * p_farPlane * nearFactor;
 		result.data[3][3] = 0.0f;
 
 		return result;
