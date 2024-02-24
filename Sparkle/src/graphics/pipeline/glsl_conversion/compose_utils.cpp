@@ -112,4 +112,40 @@ namespace spk
 
         p_code = std::regex_replace(p_code, wordRegex, p_toReplace);
     }
+
+    void insertLinkToDepth(std::string& p_code, const std::string& p_insertionCode)
+    {
+        std::string targetFunction = "void main()";
+        std::size_t funcPos = p_code.find(targetFunction);
+
+        if (funcPos != std::string::npos)
+        {
+            // Find the opening brace of the function
+            std::size_t braceOpenPos = p_code.find('{', funcPos + targetFunction.length());
+            if (braceOpenPos != std::string::npos)
+            {
+                int braceCount = 1; // Start after finding the first opening brace
+                std::size_t pos = braceOpenPos + 1;
+                // Loop through the string until all braces are closed
+                while (pos < p_code.length() && braceCount > 0)
+                {
+                    if (p_code[pos] == '{')
+                    {
+                        braceCount++;
+                    }
+                    else if (p_code[pos] == '}')
+                    {
+                        braceCount--;
+                    }
+                    pos++;
+                }
+
+                // We found the closing brace of the main function, insert before this brace
+                if (braceCount == 0 && pos <= p_code.length())
+                {
+                    p_code.insert(pos - 1, p_insertionCode);
+                }
+            }
+        }
+    }
 }

@@ -86,27 +86,6 @@ namespace spk
 		spk::Matrix4x4 view = _computeViewMatrix();
 		spk::Matrix4x4 projection = (_type == Type::Orthographic ? _computeOrthographicProjectionMatrix() : _computePerspectiveProjectionMatrix());
 
-		// std::cout << "Projection : " << projection << std::endl;
-		// for (int k = -1; k <= 7; k++)
-		// {
-		// 	std::cout << "Layer : " << k << std::endl;
-		// 	for (int j = -1; j <= 17; j++)
-		// 	{
-		// 		for (int i = -1; i <= 17; i++)
-		// 		{
-		// 			if (i != -1)
-		// 				std::cout << " ";
-		// 			spk::Vector3 point = spk::Vector3(i, j, k);
-		// 			spk::Vector3 viewedPoint = view * point;
-		// 			spk::Vector3 convertedPoint = projection * viewedPoint;
-					
-		// 			std::cout << convertedPoint.z;
-		// 		}
-		// 		std::cout << std::endl;
-		// 	}
-		// 	std::cout << std::endl;
-		// }
-
 		*_viewElement = view;
 		*_projectionElement = projection;
 		_cameraConstants->update();
