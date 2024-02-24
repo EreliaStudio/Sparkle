@@ -65,14 +65,12 @@ namespace spk
 
 	void Transform::lookAt(const spk::Vector3& p_target)
 	{
-		Vector3 position = _owner->transform().translation.get();
+		rotation = spk::Quaternion();
+		Vector3 position = _owner->globalPosition();
         Vector3 direction = (p_target - position).normalize();
 
         if (direction.norm() != 0)
         {
-			if (_owner->parent() != nullptr)
-				direction = _owner->parent()->globalRotation().inverse().applyRotation(direction);
-
             rotation = Quaternion::lookAt(
 					direction,
 					Vector3(0.0f, 1.0f, 0.0f)

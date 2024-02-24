@@ -88,6 +88,7 @@ namespace spk
          * @return A quaternion representing the specified Euler angles rotation.
          */
         static Quaternion fromEulerAngles(const Vector3& p_eulerAngles);
+        static Quaternion fromEulerAngles(const float& p_angleX, const float& p_angleY, const float& p_angleZ);
 
 		/**
          * @brief Creates a quaternion from an axis and an angle.
@@ -115,5 +116,7 @@ namespace spk
             p_os << p_quaternion.x << " / " << p_quaternion.y << " / " << p_quaternion.z << " / " << p_quaternion.w;
             return (p_os);
         }
+
+        Vector3 toVector3() const;
     };
 }

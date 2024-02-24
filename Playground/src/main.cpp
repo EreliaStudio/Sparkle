@@ -20,6 +20,8 @@ private:
     spk::GameObject _backgroundTilemap;
     spk::Tilemap2D* _tilemapComponent;
 
+    spk::Vector3 _cameraOffset = 0;
+
     void _onGeometryChange()
     {
         _gameEngineManager.setGeometry(anchor(), size());
@@ -44,9 +46,37 @@ private:
         {
             _playerObject.transform().translation += spk::Vector3(1, 0, 0);
         }
+
         if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::Space) == spk::InputState::Pressed)
         {
             std::cout << "Position : " << _playerObject.transform().translation.get() << std::endl;
+        }
+
+        if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::A) == spk::InputState::Pressed)
+        {
+            _cameraObject.transform().rotation *= spk::Quaternion::fromEulerAngles(0, -10, 0);
+        }
+        if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::E) == spk::InputState::Pressed)
+        {
+            _cameraObject.transform().rotation *= spk::Quaternion::fromEulerAngles(0, 10, 0);
+        }
+
+        if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::W) == spk::InputState::Pressed)
+        {
+            _cameraObject.transform().rotation *= spk::Quaternion::fromEulerAngles(-10, 0, 0);
+        }
+        if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::X) == spk::InputState::Pressed)
+        {
+            _cameraObject.transform().rotation *= spk::Quaternion::fromEulerAngles(10, 0, 0);
+        }
+
+        if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::C) == spk::InputState::Pressed)
+        {
+            _cameraObject.transform().rotation *= spk::Quaternion::fromEulerAngles(0, 0, -10);
+        }
+        if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::V) == spk::InputState::Pressed)
+        {
+            _cameraObject.transform().rotation *= spk::Quaternion::fromEulerAngles(0, 0, 10);
         }
     }
 
@@ -68,7 +98,7 @@ public:
         _playerBodyRenderer->setSprite(spk::Vector2Int(0, 0));
 
         _cameraObject.transform().translation = spk::Vector3(0, 0, 10);  
-        _cameraObject.transform().lookAt(spk::Vector3(0, 0, 0));
+        _cameraObject.transform().lookAt(_playerObject.transform().translation.get());
         _cameraComponent->setAsMainCamera();
         _cameraComponent->setType(spk::Camera::Type::Orthographic);
         _cameraComponent->setOrthographicSize(10);

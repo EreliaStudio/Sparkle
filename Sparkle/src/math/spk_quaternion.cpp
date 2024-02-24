@@ -123,6 +123,11 @@ namespace spk
 		);
 	}
 
+	Quaternion Quaternion::fromEulerAngles(const float& p_angleX, const float& p_angleY, const float& p_angleZ)
+	{
+		return (fromEulerAngles(spk::Vector3(p_angleX, p_angleY, p_angleZ)));
+	}
+
 	Quaternion Quaternion::fromAxisAngle(const Vector3& p_axis, float p_angleDegree)
 	{
 		float halfAngle = spk::degreeToRadian(p_angleDegree) * 0.5f;
@@ -140,5 +145,10 @@ namespace spk
 		Quaternion point(p_inputPoint.x, p_inputPoint.y, p_inputPoint.z, 0);
 		Quaternion result = *this * point * this->normalize().inverse();
 		return Vector3(result.x, result.y, result.z);
+	}
+
+	Vector3 Quaternion::toVector3() const
+	{
+		return (spk::Vector3(x, y, z));
 	}
 }
