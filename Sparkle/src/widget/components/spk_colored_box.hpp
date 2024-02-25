@@ -57,7 +57,7 @@ namespace spk::widget::components
         /**
          * @brief Set the geometry of this component.
          * @param p_anchor The new anchor.
-         * @param p_size The new size.
+         * @param p_newSize The new size.
          */
         void setGeometry(const Vector2 p_anchor, const Vector2 p_newSize);
 

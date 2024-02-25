@@ -60,11 +60,6 @@ namespace spk::widget
         return max;
     }
 
-    const Vector2& SizedBox::size() const
-    {
-        return _size;
-    }
-
     FractionallySizedBox::FractionallySizedBox(float p_horizontal, float p_vertical, IWidget* p_parent) :
         SingleChildWidget("FractionallySizedBox", p_parent),
         _horizontal(p_horizontal),

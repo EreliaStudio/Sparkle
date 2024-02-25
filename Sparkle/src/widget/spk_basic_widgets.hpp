@@ -88,8 +88,6 @@ namespace spk::widget
          */
         SizedBox(const Vector2& p_size, IWidget* p_parent = nullptr);
 
-        const Vector2& size() const;
-
         /**
          * @brief Implement layout to set the child's size to the desired value.
          */
@@ -134,10 +132,10 @@ namespace spk::widget
          */
         struct Config
         {
-            float left;   //<! left padding in pixels
-            float right;  //<! right padding in pixels
-            float top;    //<! top padding in pixels
-            float bottom; //<! bottom padding in pixels
+            float left;   //!< left padding in pixels
+            float right;  //!< right padding in pixels
+            float top;    //!< top padding in pixels
+            float bottom; //!< bottom padding in pixels
 
             /**
              * @brief Default constructor to set all sides to 0.
@@ -154,6 +152,10 @@ namespace spk::widget
              */
             Config(float p_left, float p_right, float p_top, float p_bottom);
 
+            /**
+             * @brief Constructor with all sided equal.
+             *
+             */
             static Config all(float p_pad);
         };
 
@@ -245,8 +247,8 @@ namespace spk::widget
          */
         struct Config
         {
-            MainAxisAlignment mainAxisAlignment;   //<! main axis alignment
-            CrossAxisAlignment crossAxisAlignment; //<! cross axis alignment
+            MainAxisAlignment mainAxisAlignment;   //!< main axis alignment
+            CrossAxisAlignment crossAxisAlignment; //!< cross axis alignment
 
             /**
              * @brief Default constructor.
@@ -293,8 +295,8 @@ namespace spk::widget
          */
         struct Config
         {
-            MainAxisAlignment mainAxisAlignment;   //<! main axis alignment.
-            CrossAxisAlignment crossAxisAlignment; //<! cross axis alignment.
+            MainAxisAlignment mainAxisAlignment;   //!< main axis alignment.
+            CrossAxisAlignment crossAxisAlignment; //!< cross axis alignment.
 
             /**
              * @brief Default constructor.

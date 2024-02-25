@@ -9,8 +9,8 @@ namespace spk::widget
      */
     struct BoxConstraints
     {
-        Vector2 min; //<! minimum size.
-        Vector2 max; //<! maximum size.
+        Vector2 min; //!< minimum size.
+        Vector2 max; //!< maximum size.
 
         /**
          * @brief Constructor.
