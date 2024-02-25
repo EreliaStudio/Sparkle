@@ -44,8 +44,6 @@ using spk::Vector2;
 using std::make_unique;
 using std::move;
 
-spk::Font font("Playground/upheavtt.ttf");
-
 class Defer
 {
 public:
@@ -120,7 +118,7 @@ public:
                                 { std::cout << i << std::endl; });
             SizedBox* sb = point->makeChild<SizedBox>(Vector2{100, 100});
             ColoredBox* cb = sb->makeChild<ColoredBox>(spk::Colors::green);
-            TextLabel* tl = cb->makeChild<TextLabel>(std::to_string(i), &_font);
+            // TextLabel* tl = cb->makeChild<TextLabel>(std::to_string(i), &_font);
             if (i < max - 1)
             {
                 Padding* pad = colMid->makeChild<Padding>(Padding::Config::all(15));
@@ -128,7 +126,8 @@ public:
         }
         Expanded* expRight = row->makeChild<Expanded>();
         ColoredBox* coloRight = expRight->makeChild<ColoredBox>(spk::Colors::purple);
-        // Padding* padRight = expRight->makeChild<Padding>(Padding::Config::all(15));
+        Padding* padRight = coloRight->makeChild<Padding>(Padding::Config::all(15));
+        ColoredBox* coloRight2 = padRight->makeChild<ColoredBox>(spk::Colors::red);
         // Column* colRight = padRight->makeChild<Column>();
         // Expanded* exp1 = colRight->makeChild<Expanded>();
         // ColoredBox* col1 = exp1->makeChild<ColoredBox>(spk::Colors::red);
@@ -140,60 +139,11 @@ private:
     spk::Font _font;
 };
 
-class EasyDemo : public WidgetVault
-{
-public:
-    EasyDemo() :
-        WidgetVault("EasyDemo", nullptr)
-    {
-        Defer defer;
-        VWidget0(center, Center);
-        VWidget1(col, Column, center);
-        VWidget2(sb, SizedBox, Vector2(400, 400), col);
-        VWidget2(redBox, spk::widget::ColoredBox, spk::Color(255, 0, 0), sb);
-        redBox->setName("redBox");
-        VWidget3(_label, spk::widget::TextLabel, "Bobo", &font, redBox);
-
-        VWidget1(exp, Expanded, col);
-        VWidget2(greenBox, spk::widget::ColoredBox, spk::Color(0, 255, 0), exp);
-        greenBox->setName("greenBox");
-        VWidget3(_label2, spk::widget::TextLabel, "Popo", &font, greenBox);
-        _label2->setName("Popo");
-
-        VWidget1(exp2, Expanded, col);
-        spk::widget::Row::Config rowConfig;
-        rowConfig.crossAxisAlignment = spk::widget::CrossAxisAlignment::center;
-        VWidget2(row, Row, rowConfig, exp2);
-        for (int i = 0; i < 16; i++)
-        {
-            int colorIndex = i % (spk::Colors::values().size());
-            auto e = std::make_unique<spk::widget::Expanded>(row.get());
-            auto sz = std::make_unique<spk::widget::SizedBox>(spk::Vector2{10 * (i + 1), 10 * (i + 1)}, e.get());
-            auto box = std::make_unique<spk::widget::ColoredBox>(spk::Colors::values()[colorIndex], sz.get());
-            vault(std::move(box), std::move(e), std::move(sz));
-        }
-
-        redBox->setDepth(100);
-        greenBox->setDepth(100);
-
-        _label2->setDepth(1);
-        _label->setDepth(1);
-
-        _label->label().setFont(&font); // Assuming myFont is a preloaded Font instance
-        _label->label().setText("Bobo");
-        _label->label().setTextSize(50);
-        _label->label().setTextColor(spk::Color{255, 255, 255});
-        defer.trigger();
-        this->activateAll();
-    }
-};
-
 int main()
 {
     spk::Application app = spk::Application("Playground", spk::Vector2UInt(800, 800), spk::Application::Mode::Monothread);
 
     MyDemo demo;
-    // EasyDemo demo;
     demo.activateAll();
 
     return (app.run());

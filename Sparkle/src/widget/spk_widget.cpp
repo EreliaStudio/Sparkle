@@ -224,7 +224,15 @@ namespace spk::widget
 
     IWidget* SingleChildWidget::child()
     {
-        assert(children().size() < 2);
+        if (children().size() > 1)
+        {
+            DLOG("SingleChildWidget " << name() << "#" << id() << " has more than one child: ");
+            for (auto child : children())
+            {
+                DLOG("\t" << child->name() << "#" << child->id());
+            }
+            assert(children().size() > 1);
+        }
 
         if (children().size() < 1)
         {
