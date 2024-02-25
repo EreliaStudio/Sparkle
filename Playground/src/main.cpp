@@ -100,7 +100,7 @@ public:
         _cameraObject.transform().translation = spk::Vector3(0, 0, 5);  
         _cameraObject.transform().lookAt(_playerObject.transform().translation.get());
         _cameraComponent->setAsMainCamera();
-        _cameraComponent->setType(spk::Camera::Type::Perspective);
+        _cameraComponent->setType(spk::Camera::Type::Orthographic);
         _cameraComponent->setNearPlane(0);
         _cameraComponent->setFarPlane(8);
         _cameraComponent->setOrthographicSize(10);
