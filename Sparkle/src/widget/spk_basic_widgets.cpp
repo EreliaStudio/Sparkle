@@ -115,20 +115,19 @@ namespace spk::widget
     {
     }
 
+    Padding::Config Padding::Config::all(float p_pad)
+    {
+        return Padding::Config(
+            p_pad,
+            p_pad,
+            p_pad,
+            p_pad);
+    }
+
     Padding::Padding(const Config& p_config, IWidget* p_parent) :
         SingleChildWidget("Padding", p_parent),
         _config(p_config)
     {
-    }
-
-    Padding Padding::symmetric(float p_horizontal, float p_vertical, IWidget* p_parent)
-    {
-        return Padding(Padding::Config{p_horizontal, p_horizontal, p_vertical, p_vertical}, p_parent);
-    }
-
-    Padding Padding::all(float p_value, IWidget* p_parent)
-    {
-        return Padding(Padding::Config{p_value, p_value, p_value, p_value}, p_parent);
     }
 
     Vector2 Padding::layout(const BoxConstraints& p_constraints)
@@ -243,16 +242,11 @@ namespace spk::widget
 
                 BoxConstraints constraints{min, max};
                 Vector2 childSize = asExpanded->layout(constraints);
-                DLOG(min << max << childSize);
 
                 sizes[i] = childSize;
                 height += childHeight;
             }
         }
-
-        DLOG(p_constraints.min << p_constraints.max);
-        for (auto size : sizes)
-            DLOG(size);
 
         // Finally we can compute positions for each widget.
         // Start by finding out at which position on y we should start.

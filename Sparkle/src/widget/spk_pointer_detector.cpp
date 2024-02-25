@@ -3,6 +3,12 @@
 
 namespace spk::widget
 {
+
+    PointerDetector::PointerDetector(IWidget* p_parent) :
+        SingleChildWidget("PointerDetector", p_parent)
+    {
+    }
+
     void PointerDetector::setOnPressed(const Callback& p_onPressed)
     {
         _onPressed = p_onPressed;
@@ -25,12 +31,12 @@ namespace spk::widget
 
     bool PointerDetector::isPressed() const
     {
-        return _hovered && leftMouseDown();
+        return _isPressed;
     }
 
     bool PointerDetector::isHovered() const
     {
-        return _hovered;
+        return _isHovered;
     }
 
     void PointerDetector::_onUpdate()
@@ -44,14 +50,14 @@ namespace spk::widget
         Vector2Int mousePosition = spk::Application::activeApplication()->mouse().position();
         bool newHovered = tmpChild->hitTest(mousePosition);
 
-        if (newHovered && !_hovered)
+        if (newHovered && !_isHovered)
         {
             if (nullptr != _onEnter)
             {
                 _onEnter();
             }
         }
-        else if (!newHovered && _hovered)
+        else if (!newHovered && _isHovered)
         {
             if (nullptr != _onExit)
             {
@@ -60,22 +66,22 @@ namespace spk::widget
         }
 
         // Update _hovered before checking for click state.
-        _hovered = newHovered;
+        _isHovered = newHovered;
 
         spk::InputState leftMouseState = spk::Application::activeApplication()->mouse().getButton(spk::Mouse::Left);
 
-        if (_hovered && leftMouseState == InputState::Pressed)
+        if (_isHovered && leftMouseState == InputState::Pressed)
         {
-            _isClicked = true;
+            _isPressed = true;
             if (nullptr != _onPressed)
             {
                 _onPressed();
             }
         }
 
-        if (_isClicked && leftMouseState == InputState::Released)
+        if (_isPressed && leftMouseState == InputState::Released)
         {
-            _isClicked = false;
+            _isPressed = false;
             if (nullptr != _onReleased)
             {
                 _onReleased();

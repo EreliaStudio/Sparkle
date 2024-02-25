@@ -42,7 +42,7 @@ namespace spk::widget
          * @param p_color The color used to fill the box.
          * @param p_parent The parent widget.
          */
-        ColoredBox(const spk::Color& p_color, IWidget* p_parent);
+        ColoredBox(const spk::Color& p_color, IWidget* p_parent = nullptr);
 
         virtual ~ColoredBox() = default;
     };
@@ -64,7 +64,7 @@ namespace spk::widget
          * @param p_builder The builder callback.
          * @param p_parent The parent widget.
          */
-        LayoutBuilder(const Builder& p_builder, IWidget* p_parent);
+        LayoutBuilder(const Builder& p_builder, IWidget* p_parent = nullptr);
 
         /**
          * @brief Implement layout to set the child's size according to the builder method.
@@ -86,7 +86,7 @@ namespace spk::widget
          * @param p_size The desired size of the widget.
          * @param p_parent The parent widget.
          */
-        SizedBox(const Vector2& p_size, IWidget* p_parent);
+        SizedBox(const Vector2& p_size, IWidget* p_parent = nullptr);
 
         const Vector2& size() const;
 
@@ -111,7 +111,7 @@ namespace spk::widget
          * @param p_vertical The vertical fractional value. Set to 1 to get the same height as the parent.
          * @param p_parent The parent widget.
          */
-        FractionallySizedBox(float p_horizontal, float p_vertical, IWidget* p_parent);
+        FractionallySizedBox(float p_horizontal, float p_vertical, IWidget* p_parent = nullptr);
 
         /**
          * @brief Implement layout to set the child's size to a fraction of the parent's size.
@@ -153,6 +153,8 @@ namespace spk::widget
              * @param p_bottom bottom padding.
              */
             Config(float p_left, float p_right, float p_top, float p_bottom);
+
+            static Config all(float p_pad);
         };
 
         /**
@@ -160,22 +162,7 @@ namespace spk::widget
          * @param p_config The padding configuration.
          * @param p_parent The parent widget.
          */
-        Padding(const Config& p_config, IWidget* p_parent);
-
-        /**
-         * @brief Configure a Padding by setting horizontal and vertical padding.
-         * @param p_horizontal The horizontal (left and right) padding.
-         * @param p_vertical The vertical (top and bottom) padding.
-         * @param p_parent The parent widget.
-         */
-        static Padding symmetric(float p_horizontal, float p_vertical, IWidget* p_parent);
-
-        /**
-         * @brief Configure a Padding with the same value on all sides.
-         * @param p_value The padding on all sides.
-         * @param p_parent The parent widget.
-         */
-        static Padding all(float p_value, IWidget* p_parent);
+        Padding(const Config& p_config, IWidget* p_parent = nullptr);
 
         /**
          * @brief implement layout to add padding to the child.
@@ -200,13 +187,13 @@ namespace spk::widget
          * @param p_flex Set this value to give different portions of the available space to each Expanded widget. Default to 1.0f
          * @param p_parent The parent widget.
          */
-        Expanded(float p_flex, IWidget* p_parent);
+        Expanded(float p_flex, IWidget* p_parent = nullptr);
 
         /**
          * Constructor with default flex of 1.0f.
          * @param p_parent The parent widget.
          */
-        Expanded(IWidget* p_parent);
+        Expanded(IWidget* p_parent = nullptr);
 
         /**
          * @brief Implement layout to always use the full size available.
@@ -275,13 +262,13 @@ namespace spk::widget
          * @param p_config The config for this column.
          * @param p_parent The parent widget.
          */
-        Column(const Config& p_config, IWidget* p_parent);
+        Column(const Config& p_config, IWidget* p_parent = nullptr);
 
         /**
          * @brief Constructor with default configuration.
          * @param p_parent The parent widget.
          */
-        Column(IWidget* p_parent);
+        Column(IWidget* p_parent = nullptr);
 
         /**
          * @brief Implement layout to align the children vertically.
@@ -323,13 +310,13 @@ namespace spk::widget
          * @param p_config The row configuration.
          * @param p_parent The parent widget.
          */
-        Row(const Config& p_config, IWidget* p_parent);
+        Row(const Config& p_config, IWidget* p_parent = nullptr);
 
         /**
          * @brief Constructor with default configuration.
          * @param p_parent The parent widget.
          */
-        Row(IWidget* p_parent);
+        Row(IWidget* p_parent = nullptr);
 
         /**
          * @brief Implement layout to align the children horizontally.
@@ -350,7 +337,7 @@ namespace spk::widget
          * @brief Constructor.
          * @param p_parent The parent widget.
          */
-        Center(IWidget* p_parent);
+        Center(IWidget* p_parent = nullptr);
 
         /**
          * @brief Implement layout to center the child.

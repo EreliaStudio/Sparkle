@@ -84,6 +84,9 @@ namespace spk
         Color operator-(const Color& p_color) const;
     };
 
+    /**
+     * @brief Colors offers some pre-made colors.
+     */
     class Colors
     {
     public:

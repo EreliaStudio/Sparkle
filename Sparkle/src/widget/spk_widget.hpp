@@ -74,6 +74,7 @@ namespace spk::widget
         spk::Vector2 _anchorRatio;
         spk::Vector2UInt _size;
         spk::Vector2 _sizeRatio;
+        std::vector<std::unique_ptr<IWidget>> _ownedChildren;
 
         float _depth;
 
@@ -166,6 +167,23 @@ namespace spk::widget
         void addChild(IWidget* p_child);
 
         /**
+         * @brief Create a child widget of type TChild.
+         * This parent is then responsible for the lifetime of children created this way.
+         *
+         * @param p_args Arguments used for the TChild constructor.
+         * @return A temporary pointer to the child, without ownership.
+         */
+        template <class TChild, typename... Args>
+        TChild* makeChild(Args&&... p_args)
+        {
+            TChild* child = new TChild(std::forward<Args>(p_args)...);
+            TreeNode<IWidget>::addChild(child);
+            child->setDepth(depth() + 1);
+            _ownedChildren.push_back(std::unique_ptr<IWidget>(child));
+            return child;
+        }
+
+        /**
          * Sets the geometry of the widget, specifying its anchor point and size.
          * @param p_anchor The anchor point of the widget in its parent's coordinate system.
          * @param p_size The size of the widget.
@@ -244,6 +262,12 @@ namespace spk::widget
     class SingleChildWidget : public IWidget
     {
     public:
+        /**
+         * @brief Constructor
+         *
+         * @param p_name The debug name.
+         * @param p_parent The parent widget.
+         */
         SingleChildWidget(const std::string& p_name, IWidget* p_parent = nullptr);
 
         /**

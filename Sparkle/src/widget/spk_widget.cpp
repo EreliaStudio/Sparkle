@@ -32,11 +32,9 @@ namespace spk::widget
         {
             // Get child size but cap it to match the constraints.
             Vector2 childSize = child->layout(p_constraints);
-            DLOG(name() << ": childSize " << childSize);
             child->setGeometry(anchor(), childSize);
             maxFromChildren = Vector2::max(maxFromChildren, childSize);
         }
-        DLOG(name() << ": maxFromChildren " << maxFromChildren);
         return maxFromChildren;
     }
 
@@ -134,10 +132,10 @@ namespace spk::widget
         }
     }
 
-    void IWidget::addChild(IWidget* p_children)
+    void IWidget::addChild(IWidget* p_child)
     {
-        TreeNode<IWidget>::addChild(p_children);
-        p_children->setDepth(depth() + 1);
+        TreeNode<IWidget>::addChild(p_child);
+        p_child->setDepth(depth() + 1);
     }
 
     void IWidget::setGeometry(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size)

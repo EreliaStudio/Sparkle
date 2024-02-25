@@ -48,7 +48,6 @@
 #include "widget/spk_box_constraints.hpp"
 #include "widget/spk_game_engine_manager.hpp"
 #include "widget/spk_pointer_detector.hpp"
-#include "widget/spk_text_button.hpp"
 #include "widget/spk_text_label.hpp"
 #include "widget/spk_widget.hpp"
 
