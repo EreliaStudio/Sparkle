@@ -165,7 +165,7 @@ namespace spk
 
 		result.data[0][0] = 2.0f / (p_right - p_left);
 		result.data[1][1] = 2.0f / (p_top - p_bottom);
-		result.data[2][2] = -2.0f / (p_farPlane - p_nearPlane);
+		result.data[2][2] = -1.0f / (p_farPlane - p_nearPlane);
 		result.data[0][3] = -(p_right + p_left) / (p_right - p_left);
 		result.data[1][3] = -(p_top + p_bottom) / (p_top - p_bottom);
 		result.data[2][3] = -(p_farPlane + p_nearPlane) / (p_farPlane - p_nearPlane);
