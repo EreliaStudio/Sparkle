@@ -90,21 +90,21 @@ namespace spk
     class Colors
     {
     public:
-        static const Color red;     //<! red
-        static const Color blue;    //<! blue
-        static const Color green;   //<! green
-        static const Color yellow;  //<! yellow
-        static const Color purple;  //<! purple
-        static const Color cyan;    //<! cyan
-        static const Color orange;  //<! orange
-        static const Color magenta; //<! magenta
-        static const Color pink;    //<! punk(not a color)
+        static const Color red;     //!< red
+        static const Color blue;    //!< blue
+        static const Color green;   //!< green
+        static const Color yellow;  //!< yellow
+        static const Color purple;  //!< purple
+        static const Color cyan;    //!< cyan
+        static const Color orange;  //!< orange
+        static const Color magenta; //!< magenta
+        static const Color pink;    //!< punk(not a color)
 
-        static const std::vector<Color>& values() { return _values; } //<! Some constant colors.
+        static const std::vector<Color>& values() { return _values; } //!< Some constant colors.
 
-        static const Color black; //<! black(not a color)
-        static const Color white; //<! white(not a color)
-        static const Color grey;  //<! grey(not a color)
+        static const Color black; //!< black(not a color)
+        static const Color white; //!< white(not a color)
+        static const Color grey;  //!< grey(not a color)
 
     private:
         static const std::vector<Color> _values;

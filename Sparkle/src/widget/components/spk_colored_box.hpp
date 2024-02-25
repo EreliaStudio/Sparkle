@@ -5,6 +5,9 @@
 
 namespace spk::widget::components
 {
+    /**
+     * @brief Component to draw a color on a rectangle box.
+     */
     class ColoredBox
     {
     private:
@@ -31,15 +34,43 @@ namespace spk::widget::components
         void _updateGPUData();
 
     public:
+        /**
+         * @brief Constructor.
+         */
         ColoredBox();
 
+        /**
+         * @brief Render the box.
+         */
         void render();
 
+        /**
+         * @brief Getter for anchor.
+         */
         const Vector2& anchor() const;
+
+        /**
+         * @brief Getter for size.
+         */
         const Vector2& size() const;
 
+        /**
+         * @brief Set the geometry of this component.
+         * @param p_anchor The new anchor.
+         * @param p_size The new size.
+         */
         void setGeometry(const Vector2 p_anchor, const Vector2 p_newSize);
+
+        /**
+         * @brief Set the depth of this component.
+         * @param p_newDepth The new depth.
+         */
         void setDepth(float p_newDepth);
+
+        /**
+         * @brief Set the color of the box.
+         * @param p_color The new color.
+         */
         void setColor(const spk::Color& p_color);
     };
 }

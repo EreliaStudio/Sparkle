@@ -56,8 +56,19 @@ namespace spk
          */
         Matrix4x4();
 
+        /**
+         * @brief Constructs a Matrix4x4 by giving the 16 values.
+         *
+         * aa ab ac ad
+         * ba bb bc bd
+         * ca cb cc cd
+         * da db dc dd
+         */
         Matrix4x4(float aa, float ab, float ac, float ad, float ba, float bb, float bc, float bd, float ca, float cb, float cc, float cd, float da, float db, float dc, float dd);
 
+        /**
+         * @brief Multiplication operator between Matrix4x4 with a IVector3<float>.
+         */
         IVector3<float> operator*(const IVector3<float>& v) const
         {
             float w = data[3][0] * v.x + data[3][1] * v.y + data[3][2] * v.z + data[3][3];
@@ -67,6 +78,9 @@ namespace spk
                 (data[2][0] * v.x + data[2][1] * v.y + data[2][2] * v.z + data[2][3]) / w);
         }
 
+        /**
+         * @brief Multiplication operator between Matrix4x4 with a IVector2<float>.
+         */
         IVector2<float> operator*(const IVector2<float>& v) const
         {
             spk::Vector3 tmp = this->operator*(spk::Vector3(v.x, v.y, 0.0f));
@@ -81,8 +95,17 @@ namespace spk
          */
         Matrix4x4 operator*(const Matrix4x4& other) const;
 
+        /**
+         * @brief Add another matrix to this Matrix4x4.
+         *
+         * @param other The matrix to add.
+         * @return The result of matrix addition.
+         */
         Matrix4x4 operator+(const Matrix4x4& other) const;
 
+        /**
+         * @brief Initialize an empty Matrix4x4.
+         */
         static Matrix4x4 zero();
 
         /**

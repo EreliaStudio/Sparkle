@@ -11,7 +11,6 @@
 namespace spk::widget
 {
     /**
-     * @class
      * @brief A simple TextLabel :)
      */
     class TextLabel : public IWidget
