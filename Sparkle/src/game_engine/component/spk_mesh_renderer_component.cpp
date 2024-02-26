@@ -141,8 +141,11 @@ namespace spk
     void MeshRenderer::setMesh(const spk::Mesh* p_mesh)
     {
         _mesh = p_mesh;
-        _meshEditionContract = std::move(_mesh->subscribeToEdition([&]()
-                                                                   { _needGPUDataUpdate = true; }));
+        _meshEditionContract = std::move(_mesh->subscribeToEdition(
+            [&]()
+            {
+                _needGPUDataUpdate = true;
+            }));
         _needGPUDataUpdate = true;
     }
 
