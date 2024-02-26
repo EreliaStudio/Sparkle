@@ -64,7 +64,7 @@ namespace spk
 		 * @class Data
 		 * @brief Represents the data structure for a baked mesh.
 		 * 
-		 * This struct holds the final mesh data after baking, including vertex information, vertex size, vertexes, and indexes.
+		 * This struct holds the final mesh data after baking, including vertex information, vertex size, vertices, and indexes.
 		 * It is used to obtain the mesh data once it has been prepared for rendering.
 		 * 
 		 * Usage example:
@@ -80,7 +80,7 @@ namespace spk
 		 * 
 		 * // Access and use the mesh data
 		 * size_t vertexSize = finalMeshData.vertexSize;
-		 * const std::vector<float>& vertexes = finalMeshData.vertexes;
+		 * const std::vector<float>& vertices = finalMeshData.vertices;
 		 * const std::vector<unsigned int>& indexes = finalMeshData.indexes;
 		 * @endcode
 		 * 
@@ -89,7 +89,7 @@ namespace spk
 		struct Data
 		{
 			size_t vertexSize; //!< The size of one single element contained in this Data.
-			std::vector<float> vertexes; //!< The list of data, as row float, contained in this Data.
+			std::vector<float> vertices; //!< The list of data, as row float, contained in this Data.
 			std::vector<unsigned int> indexes; //!< The list of indexes as unsigned int, contained in this Data.
 
 		private:
@@ -132,8 +132,7 @@ namespace spk
 
 		std::vector<unsigned int> _indexes;
 
-		Data _bakeWithNormals() const;
-		Data _bakeWithoutNormals() const;
+		Data _bake(bool p_pointFlag, bool p_uvFlag, bool p_normalFlag) const;
 
 	public:
 		/**
@@ -337,7 +336,7 @@ namespace spk
 		 * @param p_uvsIndex The index of the UV coordinate.
 		 * @param p_normalIndex The index of the normal (optional).
 		 */
-		void addIndex(unsigned int p_pointIndex, unsigned int p_uvsIndex, unsigned int p_normalIndex = std::numeric_limits<unsigned int>::max());
+		void addIndex(unsigned int p_pointIndex, unsigned int p_uvsIndex = std::numeric_limits<unsigned int>::max(), unsigned int p_normalIndex = std::numeric_limits<unsigned int>::max());
 
 		/**
 		 * @brief Retreive the vector containing every indexes stored by the mesh.
@@ -383,6 +382,8 @@ namespace spk
 		 * @endcode
 		 */
 		void bakeNormals();
+
+		void optimize();
 	};
 
 	/**

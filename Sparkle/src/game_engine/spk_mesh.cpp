@@ -4,15 +4,15 @@ namespace spk
 {
 	void Mesh::Data::insert(const Vector2 &p_data)
 	{
-		vertexes.push_back(p_data.x);
-		vertexes.push_back(p_data.y);
+		vertices.push_back(p_data.x);
+		vertices.push_back(p_data.y);
 	}
 
 	void Mesh::Data::insert(const Vector3 &p_data)
 	{
-		vertexes.push_back(p_data.x);
-		vertexes.push_back(p_data.y);
-		vertexes.push_back(p_data.z);
+		vertices.push_back(p_data.x);
+		vertices.push_back(p_data.y);
+		vertices.push_back(p_data.z);
 	}
 
 	std::size_t Mesh::VertexHash::operator()(const Mesh::Data::Vertex &p_vertex) const
@@ -33,12 +33,13 @@ namespace spk
 		return p_lhs.position == p_rhs.position && p_lhs.uvs == p_rhs.uvs && p_lhs.normal == p_rhs.normal;
 	}
 
-	Mesh::Data Mesh::_bakeWithNormals() const
+	Mesh::Data Mesh::_bake(bool p_pointFlag, bool p_uvFlag, bool p_normalFlag) const
 	{
 		Data result;
 
-		result.vertexSize = 8 * sizeof(float);
-		result.vertexes.reserve(8 * (_indexes.size() / 3));
+		size_t nbFloat = (p_pointFlag == true ? 3 : 0) + (p_uvFlag == true ? 2 : 0) + (p_normalFlag == true ? 3 : 0);
+		result.vertexSize = nbFloat * sizeof(float);
+		result.vertices.reserve(nbFloat * (_indexes.size() / 3));
 		result.indexes.reserve(1 * (_indexes.size() / 3));
 
 		std::unordered_map<Data::Vertex, unsigned int, VertexHash, VertexEqual> uniqueVertexMap;
@@ -50,70 +51,27 @@ namespace spk
 			unsigned int uvsIndex = _indexes[i + 1];
 			unsigned int normalIndex = _indexes[i + 2];
 
-			if (_points.size() <= pointIndex)
-				throw std::runtime_error("Can't obtain point [" + std::to_string(pointIndex) + "] inside a vector of [" + std::to_string(_points.size()) + "] points");
-
-			if (_uvs.size() <= uvsIndex)
-				throw std::runtime_error("Can't obtain uvs [" + std::to_string(uvsIndex) + "] inside a vector of [" + std::to_string(_uvs.size()) + "] uvs");
-
-			if (_normals.size() <= normalIndex)
-				throw std::runtime_error("Can't obtain normal [" + std::to_string(normalIndex) + "] inside a vector of [" + std::to_string(_normals.size()) + "] normals");
-
-			Data::Vertex vertex = {
-				_points[pointIndex],
-				_uvs[uvsIndex],
-				_normals[normalIndex]};
+			Data::Vertex vertex;
+			
+			if (p_pointFlag == true)
+				vertex.position = _points[pointIndex];
+			if (p_uvFlag == true)
+				vertex.uvs = _uvs[uvsIndex];
+			if (p_normalFlag == true)
+				vertex.normal = _normals[normalIndex];
 
 			auto [it, inserted] = uniqueVertexMap.try_emplace(vertex, uniqueVertexMap.size());
 
 			if (inserted == true)
 			{
-				result.insert(_points[pointIndex]);
+				if (p_pointFlag == true)
+					result.insert(_points[pointIndex]);
 
-				result.insert(_uvs[uvsIndex]);
+				if (p_uvFlag == true)
+					result.insert(_uvs[uvsIndex]);
 
-				result.insert(_normals[normalIndex]);
-			}
-			result.indexes.push_back(it->second);
-		}
-
-		return result;
-	}
-
-	Mesh::Data Mesh::_bakeWithoutNormals() const
-	{
-		Data result;
-
-		result.vertexSize = 5 * sizeof(float);
-		result.vertexes.reserve(5 * (_indexes.size() / 3));
-		result.indexes.reserve(1 * (_indexes.size() / 3));
-
-		std::unordered_map<Data::Vertex, unsigned int, VertexHash, VertexEqual> uniqueVertexMap;
-
-		size_t nbVertex = 0;
-		for (size_t i = 0; i < _indexes.size(); i += 3)
-		{
-			unsigned int pointIndex = _indexes[i];
-			unsigned int uvsIndex = _indexes[i + 1];
-
-			if (_points.size() <= pointIndex)
-				throw std::runtime_error("Can't obtain point [" + std::to_string(pointIndex) + "] inside a vector of [" + std::to_string(_points.size()) + "] points");
-
-			if (_uvs.size() <= uvsIndex)
-				throw std::runtime_error("Can't obtain uvs [" + std::to_string(uvsIndex) + "] inside a vector of [" + std::to_string(_uvs.size()) + "] uvs");
-
-			Data::Vertex vertex = {
-				_points[pointIndex],
-				_uvs[uvsIndex],
-				Vector3(0, 0, 0)};
-
-			auto [it, inserted] = uniqueVertexMap.try_emplace(vertex, uniqueVertexMap.size());
-
-			if (inserted == true)
-			{
-				result.insert(_points[pointIndex]);
-
-				result.insert(_uvs[uvsIndex]);
+				if (p_normalFlag == true)
+					result.insert(_normals[normalIndex]);
 			}
 			result.indexes.push_back(it->second);
 		}
@@ -300,10 +258,11 @@ namespace spk
 			return (Data());
 		}
 
-		if (_indexes[2] != std::numeric_limits<unsigned int>::max())
-			return (_bakeWithNormals());
-		else
-			return (_bakeWithoutNormals());
+		return (_bake(
+				_indexes[0] != std::numeric_limits<unsigned int>::max(),
+				_indexes[1] != std::numeric_limits<unsigned int>::max(),
+				_indexes[2] != std::numeric_limits<unsigned int>::max()
+			));
 	}
 
 	spk::Mesh createSpriteMesh()
