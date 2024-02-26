@@ -112,11 +112,8 @@ public:
         // _tilemapComponent->createEmpyChunk(spk::Vector2Int(1, 0));
         // _tilemapComponent->createEmpyChunk(spk::Vector2Int(0, 1));
         // _tilemapComponent->createEmpyChunk(spk::Vector2Int(1, 1));
-        _tilemapComponent->insertNodeType(0, spk::Tilemap2D::Node(spk::Vector2Int(0, 0), true));
-        _tilemapComponent->insertNodeType(1, spk::Tilemap2D::Node(spk::Vector2Int(4, 0), false));
-        _tilemapComponent->insertNodeType(2, spk::Tilemap2D::Node(spk::Vector2Int(4, 1), false, spk::Vector2Int(1, 0), 5, 1000));
-        _tilemapComponent->insertNodeType(3, spk::Tilemap2D::Node(spk::Vector2Int(4, 2), false, spk::Vector2Int(1, 0), 3, 600));
-        _tilemapComponent->insertNodeType(4, spk::Tilemap2D::Node(spk::Vector2Int(4, 3), false, spk::Vector2Int(1, 0), 8, 3000));
+        _tilemapComponent->insertNodeType(0, spk::Tilemap2D::Node(spk::Vector2Int(0, 0), spk::Tilemap2D::Node::OBSTACLE, true));
+        _tilemapComponent->insertNodeType(1, spk::Tilemap2D::Node(spk::Vector2Int(4, 0), spk::Tilemap2D::Node::WALKABLE, false));
         _tilemapComponent->updateActiveChunks();
         
         _gameEngine.subscribe(&_playerObject);
