@@ -6,26 +6,6 @@
 #include <utility>
 #include <vector>
 
-#define VWidget0(name, type)                  \
-    auto name = std::make_unique<type>(this); \
-    defer.add([&]() { vault(std::move((name))); })
-
-#define VWidget1(name, type, param1)                    \
-    auto name = std::make_unique<type>((param1).get()); \
-    defer.add([&]() { vault(std::move((name))); })
-
-#define VWidget2(name, type, param1, param2)                      \
-    auto name = std::make_unique<type>((param1), (param2).get()); \
-    defer.add([&]() { vault(std::move((name))); })
-
-#define VWidget3(name, type, param1, param2, param3)                        \
-    auto name = std::make_unique<type>((param1), (param2), (param3).get()); \
-    defer.add([&]() { vault(std::move((name))); })
-
-#define VWidget4(name, type, param1, param2, param3, param4)                          \
-    auto name = std::make_unique<type>((param1), (param2), (param3), (param4).get()); \
-    defer.add([&]() { vault(std::move((name))); })
-
 using spk::widget::Center;
 using spk::widget::ColoredBox;
 using spk::widget::Column;
@@ -44,90 +24,94 @@ using spk::Vector2;
 using std::make_unique;
 using std::move;
 
-class Defer
+class MyDemo : public IWidget
 {
 public:
-    Defer() = default;
-    ~Defer() { trigger(); }
-    void add(const std::function<void()>& p_callback) { _callbacks.push_back(p_callback); }
-    void trigger()
-    {
-        for (auto& c : _callbacks)
-        {
-            c();
-        }
-        _callbacks.clear();
-    };
-
-private:
-    std::vector<std::function<void()>> _callbacks;
-};
-
-class WidgetVault : public spk::widget::IWidget
-{
-public:
-    WidgetVault(const std::string& p_name, spk::widget::IWidget* p_parent = nullptr) :
-        spk::widget::IWidget(p_name, p_parent)
-    {
-    }
-
-protected:
-    void vault(std::unique_ptr<IWidget>& item)
-    {
-        vault(std::move(item));
-    }
-
-    template <typename... args>
-    void vault(args&&... p_stash)
-    {
-        auto f = [&](std::unique_ptr<IWidget>&& item)
-        { vault(item); };
-
-        (..., f(std::forward<args>(p_stash)));
-    }
-
-    void vault(std::unique_ptr<IWidget>&& item)
-    {
-        _vault.push_back(move(item));
-    }
-
-private:
-    std::vector<std::unique_ptr<spk::widget::IWidget>> _vault;
-};
-
-class MyDemo : public WidgetVault
-{
-public:
-    MyDemo() :
-        WidgetVault("MyDemo"),
-        _font("C:/Users/JQ/dev/Fonts/NotoSans/static/NotoSans-Regular.ttf")
+    MyDemo(spk::Font* p_font) :
+        IWidget("MyDemo"),
+        _font(p_font)
     {
         Row* row = makeChild<Row>();
-        SizedBox* sbLeft = row->makeChild<SizedBox>(Vector2{100, 10000});
-        ColoredBox* coloLeft = sbLeft->makeChild<ColoredBox>(spk::Colors::orange);
+        SizedBox* sbLeft = row->makeChild<SizedBox>(Vector2{50, 10000});
         SizedBox* sbMid = row->makeChild<SizedBox>(Vector2{300, 10000});
-        Padding* padMid = sbMid->makeChild<Padding>(Padding::Config::all(15));
-        Column* colMid = padMid->makeChild<Column>();
+        ColoredBox* colorMid = sbMid->makeChild<ColoredBox>(spk::Colors::red);
+        Column* colMid = colorMid->makeChild<Column>();
         colMid->setName("Where am I.");
-        const size_t max = 2;
+        const size_t max = 5;
         for (size_t i = 0; i < max; i++)
         {
-            Expanded* exp = colMid->makeChild<Expanded>();
-            PointerDetector* point = exp->makeChild<spk::widget::PointerDetector>();
-            point->setOnPressed([&]()
-                                { std::cout << i << std::endl; });
-            SizedBox* sb = point->makeChild<SizedBox>(Vector2{100, 100});
-            ColoredBox* cb = sb->makeChild<ColoredBox>(spk::Colors::green);
-            // TextLabel* tl = cb->makeChild<TextLabel>(std::to_string(i), &_font);
-            if (i < max - 1)
+            Padding* pad;
+            if (i == 0)
             {
-                Padding* pad = colMid->makeChild<Padding>(Padding::Config::all(15));
+                pad = colMid->makeChild<Padding>(Padding::Config::all(15));
             }
+            else
+            {
+                pad = colMid->makeChild<Padding>(Padding::Config(15, 15, 1, 15));
+            }
+            PointerDetector* point = pad->makeChild<spk::widget::PointerDetector>();
+            point->setOnPressed([i]()
+                                { std::cout << i << std::endl; });
+            SizedBox* sb = point->makeChild<SizedBox>(Vector2{10000, 60});
+            ColoredBox* cb = sb->makeChild<ColoredBox>(spk::Colors::black);
+            cb->setDepth(2);
+            TextLabel* tl = cb->makeChild<TextLabel>(std::to_string(i), _font);
+            tl->setDepth(1);
         }
         Expanded* expRight = row->makeChild<Expanded>();
-        ColoredBox* coloRight = expRight->makeChild<ColoredBox>(spk::Colors::purple);
-        Padding* padRight = coloRight->makeChild<Padding>(Padding::Config::all(15));
-        ColoredBox* coloRight2 = padRight->makeChild<ColoredBox>(spk::Colors::red);
+        {
+            Column* col = expRight->makeChild<Column>();
+            // topright
+            {
+                Expanded* exp = col->makeChild<Expanded>();
+                ColoredBox* color = exp->makeChild<ColoredBox>(spk::Colors::green);
+                color->setDepth(10);
+                Padding* pad = color->makeChild<Padding>(Padding::Config::all(15));
+                {
+                    Column* col = pad->makeChild<Column>();
+                    {
+                        Expanded* exp = col->makeChild<Expanded>();
+                        PointerDetector* point = exp->makeChild<spk::widget::PointerDetector>();
+                        point->setOnPressed([]()
+                                            { std::cout << "toto" << std::endl; });
+                        ColoredBox* cb = point->makeChild<ColoredBox>(spk::Colors::black);
+                        cb->setDepth(2);
+                        TextLabel* tl = cb->makeChild<TextLabel>("toto", _font);
+                        tl->setDepth(1);
+                    }
+                    col->makeChild<SizedBox>(Vector2(10000, 15));
+                    {
+                        Expanded* exp = col->makeChild<Expanded>();
+                        PointerDetector* point = exp->makeChild<spk::widget::PointerDetector>();
+                        point->setOnPressed([]()
+                                            { std::cout << "tata" << std::endl; });
+                        ColoredBox* cb = point->makeChild<ColoredBox>(spk::Colors::black);
+                        cb->setDepth(2);
+                        TextLabel* tl = cb->makeChild<TextLabel>("tata", _font);
+                        tl->setDepth(1);
+                    }
+                }
+            }
+            // bottomright
+            {
+                Expanded* exp = col->makeChild<Expanded>();
+                Center* center = exp->makeChild<Center>();
+                spk::widget::LayoutBuilder* builder = center->makeChild<spk::widget::LayoutBuilder>(
+                    [](const spk::widget::BoxConstraints& constraints, IWidget* child)
+                    {
+                        Vector2 min = constraints.min / 2;
+                        Vector2 max = constraints.max / 2;
+                        spk::widget::BoxConstraints newConstraints{min, max};
+                        if (child != nullptr)
+                        {
+                            Vector2 childSize = child->layout(newConstraints);
+                            child->setGeometry({0, 0}, childSize);
+                        }
+                        return max;
+                    });
+                ColoredBox* color = builder->makeChild<ColoredBox>(spk::Colors::cyan);
+            }
+        }
         // Column* colRight = padRight->makeChild<Column>();
         // Expanded* exp1 = colRight->makeChild<Expanded>();
         // ColoredBox* col1 = exp1->makeChild<ColoredBox>(spk::Colors::red);
@@ -136,14 +120,14 @@ public:
     }
 
 private:
-    spk::Font _font;
+    spk::Font* _font;
 };
 
-int main()
+int main(int argc, char* argv[])
 {
-    spk::Application app = spk::Application("Playground", spk::Vector2UInt(800, 800), spk::Application::Mode::Monothread);
-
-    MyDemo demo;
+    spk::Application app = spk::Application("Playground", spk::Vector2UInt(816, 640), spk::Application::Mode::Monothread);
+    spk::Font font{argv[1]};
+    MyDemo demo{&font};
     demo.activateAll();
 
     return (app.run());

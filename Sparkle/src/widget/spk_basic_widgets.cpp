@@ -137,6 +137,7 @@ namespace spk::widget
 
             Vector2 anchor{_config.left, _config.top};
             child->setGeometry(anchor, childSize);
+            return childSize + padded;
         }
 
         return p_constraints.max;
