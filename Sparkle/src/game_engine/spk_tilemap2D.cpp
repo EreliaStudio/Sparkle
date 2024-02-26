@@ -7,6 +7,8 @@ namespace spk
     {
         Chunk* result = p_object->addComponent<Chunk>(this, p_chunkPosition);
 
+        std::cout << "Inserting chunk [" << p_chunkPosition << "]" << std::endl;
+
         result->setSpriteSheet(_spriteSheet);
 
         return (result);
@@ -46,6 +48,23 @@ namespace spk
 		_activeChunkStart = p_activeChunkStart;
 		_activeChunkEnd = p_activeChunkEnd;
 	}
+
+    std::vector<spk::Vector2Int> Tilemap2D::missingChunks() const
+    {
+        std::vector<spk::Vector2Int> result;
+
+        for (int x = _activeChunkStart.x; x <= _activeChunkEnd.x; x++)
+        {
+            for (int y = _activeChunkStart.y; y <= _activeChunkEnd.y; y++)
+            {
+                spk::Vector2Int chunkPosition = spk::Vector2Int(x, y);
+                if (containsChunk(chunkPosition) == false)
+                    result.push_back(chunkPosition);
+            }
+        }
+
+        return (result);
+    }
 
     void Tilemap2D::updateActiveChunks()
     {

@@ -22,29 +22,80 @@ private:
 
     spk::Vector3 _cameraOffset = 0;
 
+    bool _needChunkActivation = false;
+
     void _onGeometryChange()
     {
         _gameEngineManager.setGeometry(anchor(), size());
         _cameraComponent->setOrthographicSize(size() / 64);
+        _needChunkActivation = true;
+    }
+
+    void _onRender()
+    {
+        if (_needChunkActivation == true)
+        {
+            _onPlayerChunkMovement();
+            _needChunkActivation = false;
+        }
+    }
+
+    void _onPlayerChunkMovement()
+    {
+        spk::Vector2 nbChunkOnScreen = spk::Tilemap2D::convertWorldToChunkPosition(spk::Vector2(_cameraComponent->orthographicSize())) + 1;
+
+        spk::Vector2 start = spk::Tilemap2D::convertWorldToChunkPositionXY(_playerObject.transform().translation.get()) - nbChunkOnScreen / 2.0f - 1;
+        spk::Vector2 end = spk::Tilemap2D::convertWorldToChunkPositionXY(_playerObject.transform().translation.get()) + nbChunkOnScreen / 2.0f;
+
+        _tilemapComponent->setActiveChunkRange(start, end);
+
+        static spk::Vector2Int chunkOffsets[8] = {
+            spk::Vector2Int(-1, -1),
+            spk::Vector2Int(0, -1),
+            spk::Vector2Int(1, -1),
+
+            spk::Vector2Int(-1, 0),
+            spk::Vector2Int(1, 0),
+
+            spk::Vector2Int(-1, 1),
+            spk::Vector2Int(0, 1),
+            spk::Vector2Int(1, 1)
+        };
+
+        for (const auto& element : _tilemapComponent->missingChunks())
+        {
+            _tilemapComponent->createEmpyChunk(element);
+            for (size_t i = 0; i < 8; i++)
+            {
+                spk::GameObject* chunkObject = _tilemapComponent->chunkObject(element + chunkOffsets[i]);
+                if (chunkObject != nullptr)
+                    chunkObject->getComponent<spk::Tilemap2D::Chunk>()->bake();
+            }
+        }
+        _tilemapComponent->updateActiveChunks();
     }
 
     void _onUpdate()
     {
         if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::Z) == spk::InputState::Pressed)
         {
-            _playerObject.transform().translation += spk::Vector3(0, 0.5f, 0);
+            _playerObject.transform().translation += spk::Vector3(0, 1, 0);
+            _needChunkActivation = true;
         }
         if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::S) == spk::InputState::Pressed)
         {
-            _playerObject.transform().translation += spk::Vector3(0, -0.5f, 0);
+            _playerObject.transform().translation += spk::Vector3(0, -1, 0);
+            _needChunkActivation = true;
         }
         if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::Q) == spk::InputState::Pressed)
         {
-            _playerObject.transform().translation += spk::Vector3(-0.5f, 0, 0);
+            _playerObject.transform().translation += spk::Vector3(-1, 0, 0);
+            _needChunkActivation = true;
         }
         if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::D) == spk::InputState::Pressed)
         {
-            _playerObject.transform().translation += spk::Vector3(0.5f, 0, 0);
+            _playerObject.transform().translation += spk::Vector3(1, 0, 0);
+            _needChunkActivation = true;
         }
 
         if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::Space) == spk::InputState::Pressed)
@@ -110,18 +161,14 @@ public:
         _backgroundTilemap.transform().translation = spk::Vector3(0, 0, 0);
 
         _tilemapComponent->setSpriteSheet(&_backgroundTilemapTexture);
-        _tilemapComponent->createEmpyChunk(spk::Vector2Int(0, 0));
-        // _tilemapComponent->createEmpyChunk(spk::Vector2Int(1, 0));
-        // _tilemapComponent->createEmpyChunk(spk::Vector2Int(0, 1));
-        // _tilemapComponent->createEmpyChunk(spk::Vector2Int(1, 1));
         _tilemapComponent->insertNodeType(0, spk::Tilemap2D::Node(spk::Vector2Int(0, 0), spk::Tilemap2D::Node::OBSTACLE, true));
         _tilemapComponent->insertNodeType(1, spk::Tilemap2D::Node(spk::Vector2Int(4, 0), spk::Tilemap2D::Node::WALKABLE, false));
-        _tilemapComponent->updateActiveChunks();
         
         _gameEngine.subscribe(&_playerObject);
         _gameEngine.subscribe(&_backgroundTilemap);
         _gameEngineManager.setGameEngine(&_gameEngine);
-        _gameEngineManager.activate();  
+        _gameEngineManager.activate(); 
+        _needChunkActivation = true;
     }
 
     ~MainWidget()
