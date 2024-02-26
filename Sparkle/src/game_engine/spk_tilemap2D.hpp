@@ -551,15 +551,7 @@ namespace spk
 				{
 					for (size_t j = 0; j < SizeY; j++)
 					{
-						setContent(i, j, 0, (i == 0 || j == 0 ? 0 : -1));
-					}
-				}
-
-				for (size_t i = 0; i < SizeX; i++)
-				{
-					for (size_t j = 0; j < SizeY; j++)
-					{
-						setContent(i, j, 1, (i == 1 || j == 1 ? 0 : -1));
+						setContent(i, j, 0, (i == 0 || j == 0 || i == SizeX - 1 || j == SizeY - 1 ? 0 : -1));
 					}
 				}
 				
@@ -620,5 +612,6 @@ namespace spk
 
 		void setActiveChunkRange(const spk::Vector2Int& p_activeChunkStart, const spk::Vector2Int& p_activeChunkEnd);
 		void updateActiveChunks();
+		std::vector<spk::Vector2Int> missingChunks() const;
 	};
 }

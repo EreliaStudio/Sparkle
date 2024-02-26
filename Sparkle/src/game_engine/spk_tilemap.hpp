@@ -54,7 +54,7 @@ namespace spk
 				spk::GameComponent("Chunk " + p_chunkPosition.to_string()),
 				_position(p_chunkPosition)
 			{
-				owner()->transform().translation = spk::Vector3(static_cast<float>(p_chunkPosition.x * SizeX), static_cast<float>(p_chunkPosition.y * SizeY), 0.0f);
+				owner()->transform().translation = spk::Vector3(static_cast<float>(p_chunkPosition.x * static_cast<int>(SizeX)), static_cast<float>(p_chunkPosition.y * static_cast<int>(SizeY)), 0.0f);
 
 				for (size_t i = 0; i < SizeX; i++)
 				{
@@ -137,24 +137,24 @@ namespace spk
 		static spk::Vector2Int convertWorldToChunkPosition(const spk::Vector2Int& p_worldPosition)
 		{
 			return (spk::Vector2Int(
-				p_worldPosition.x / IChunk::SizeX,
-				p_worldPosition.y / IChunk::SizeY
+				std::floorf(p_worldPosition.x / static_cast<float>(IChunk::SizeX)),
+				std::floorf(p_worldPosition.y / static_cast<float>(IChunk::SizeY))
 			));
 		}
 
 		static spk::Vector2Int convertWorldToChunkPositionXY(const spk::Vector3Int& p_worldPosition)
 		{
 			return (spk::Vector2Int(
-				p_worldPosition.x / IChunk::SizeX,
-				p_worldPosition.y / IChunk::SizeY
+				std::floorf(p_worldPosition.x / static_cast<float>(IChunk::SizeX)),
+				std::floorf(p_worldPosition.y / static_cast<float>(IChunk::SizeY))
 			));
 		}
 
 		static spk::Vector2Int convertWorldToChunkPositionXZ(const spk::Vector3Int& p_worldPosition)
 		{
 			return (spk::Vector2Int(
-				p_worldPosition.x / IChunk::SizeX,
-				p_worldPosition.z / IChunk::SizeZ
+				std::floorf(p_worldPosition.x / static_cast<float>(IChunk::SizeX)),
+				std::floorf(p_worldPosition.z / static_cast<float>(IChunk::SizeZ))
 			));
 		}
 
@@ -181,9 +181,14 @@ namespace spk
 			return (_chunksObjects.at(p_chunkPosition).get());
 		}
 
+		bool containsChunk(const spk::Vector2Int& p_chunkPosition) const
+		{
+			return (_chunksObjects.contains(p_chunkPosition));
+		}
+
 		const spk::GameObject* chunkObject(const spk::Vector2Int& p_chunkPosition) const
 		{
-			if (_chunksObjects.contains(p_chunkPosition) == false)
+			if (containsChunk(p_chunkPosition) == false)
 			{
 				return (nullptr);
 			}
