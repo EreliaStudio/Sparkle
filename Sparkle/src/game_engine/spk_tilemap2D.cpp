@@ -7,8 +7,6 @@ namespace spk
     {
         Chunk* result = p_object->addComponent<Chunk>(this, p_chunkPosition);
 
-        std::cout << "Inserting chunk [" << p_chunkPosition << "]" << std::endl;
-
         result->setSpriteSheet(_spriteSheet);
 
         return (result);
@@ -19,7 +17,7 @@ namespace spk
     {
     }
 
-    void Tilemap2D::setSpriteSheet(spk::SpriteSheet* p_spriteSheet)
+    void Tilemap2D::setSpriteSheet(const spk::SpriteSheet* p_spriteSheet)
     {
         _spriteSheet = p_spriteSheet;
         for (auto& [key, element] : chunksObjects())

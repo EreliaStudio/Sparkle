@@ -43,6 +43,9 @@ namespace spk
 	template <typename TType>
 	class Singleton
 	{
+     public:
+          using Type = TType;
+          
 	protected:
 		/**
            * @brief Protected constructor.

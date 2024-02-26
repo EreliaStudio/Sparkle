@@ -595,7 +595,7 @@ namespace spk
 
 		std::vector<spk::GameObject*> _activeChunks;
 		
-		spk::SpriteSheet* _spriteSheet;
+		const spk::SpriteSheet* _spriteSheet;
 		spk::Vector2Int _activeChunkStart;
 		spk::Vector2Int _activeChunkEnd;
 
@@ -604,7 +604,7 @@ namespace spk
 	public:
 		Tilemap2D(const std::string& p_name);
 
-		void setSpriteSheet(spk::SpriteSheet* p_spriteSheet);
+		void setSpriteSheet(const spk::SpriteSheet* p_spriteSheet);
 
 		bool containsNode(const Chunk::NodeIndexType& p_nodeIndex) const;
 		void insertNodeType(const Chunk::NodeIndexType& p_nodeIndex, const Node& p_node);

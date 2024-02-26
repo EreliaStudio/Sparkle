@@ -2,50 +2,168 @@
 #include <iostream>
 #include <limits>
 
-class MainWidget : public spk::IWidget
+enum class Event
 {
+    UpdateVisibleChunk
+};
+
+class TextureManager : public spk::Singleton<TextureManager>
+{
+    friend class spk::Singleton<TextureManager>;
+
 private:
-    spk::SpriteSheet _backgroundTilemapTexture;
-    spk::SpriteSheet _playerSpriteSheet;
-    spk::GameEngineManager _gameEngineManager;
+    std::map<std::string, std::unique_ptr<spk::Texture>> _textures;
 
-    spk::GameEngine _gameEngine;
-
-    spk::GameObject _playerObject;
-    spk::MeshRenderer *_playerBodyRenderer;
-
-    spk::GameObject _cameraObject;
-    spk::Camera* _cameraComponent;
-
-    spk::GameObject _backgroundTilemap;
-    spk::Tilemap2D* _tilemapComponent;
-
-    spk::Vector3 _cameraOffset = 0;
-
-    bool _needChunkActivation = false;
-
-    void _onGeometryChange()
+    TextureManager()
     {
-        _gameEngineManager.setGeometry(anchor(), size());
-        _cameraComponent->setOrthographicSize(size() / 64);
-        _needChunkActivation = true;
+
     }
 
-    void _onRender()
+public:
+    template<typename TTextureType, typename ... Args>
+    void add(const std::string& p_name, Args&& ... p_constructorArguments)
     {
-        if (_needChunkActivation == true)
+        static_assert(std::is_base_of<spk::Texture, TTextureType>::value, "TTextureType must be a derivative of spk::Texture");
+
+        if (_textures.contains(p_name))
         {
-            _onPlayerChunkMovement();
-            _needChunkActivation = false;
+            _textures[p_name] = std::make_unique<TTextureType>(std::forward<Args>(p_constructorArguments)...);
+        }
+        else
+        {
+            _textures.insert(std::make_pair(p_name, std::make_unique<TTextureType>(std::forward<Args>(p_constructorArguments)...)));
         }
     }
 
-    void _onPlayerChunkMovement()
+    const spk::Texture* texture(const std::string& p_name) const
     {
-        spk::Vector2 nbChunkOnScreen = spk::Tilemap2D::convertWorldToChunkPosition(spk::Vector2(_cameraComponent->orthographicSize())) + 1;
+        if (_textures.contains(p_name) == false)
+            return (nullptr);
+        return (_textures.at(p_name).get());        
+    }
+    
+    template<typename TTextureType>
+    const TTextureType* as(const std::string& p_name)
+    {
+        static_assert(std::is_base_of<spk::Texture, TTextureType>::value, "TTextureType must be a derivative of spk::Texture");
 
-        spk::Vector2 start = spk::Tilemap2D::convertWorldToChunkPositionXY(_playerObject.transform().translation.get()) - nbChunkOnScreen / 2.0f - 1;
-        spk::Vector2 end = spk::Tilemap2D::convertWorldToChunkPositionXY(_playerObject.transform().translation.get()) + nbChunkOnScreen / 2.0f;
+        return (dynamic_cast<const TTextureType*>(texture(p_name)));
+    }
+};
+
+using EventController = spk::Singleton<spk::EventManager<Event>>;
+
+class PlayerController : public spk::IWidget
+{
+private:
+    spk::GameObject _playerObject;
+    spk::GameObject _cameraObject;
+    spk::Camera* _cameraComponent;
+    spk::MeshRenderer *_playerBodyRenderer;
+
+    void _onGeometryChange()
+    {
+        _cameraComponent->setOrthographicSize(size() / 64);
+        EventController::instance()->notify_all(Event::UpdateVisibleChunk);
+    }
+
+    void _onUpdate()
+    {
+        static long long nextInput = spk::getTime();
+        long long currentNextInput = nextInput;
+        long long time = spk::getTime();
+
+        spk::Keyboard::Key keys[4] = {
+            spk::Keyboard::Z,
+            spk::Keyboard::S,
+            spk::Keyboard::Q,
+            spk::Keyboard::D
+        };
+
+        spk::Vector3 deltas[4] = {
+            spk::Vector3(0, 1, 0),
+            spk::Vector3(0, -1, 0),
+            spk::Vector3(-1, 0, 0),
+            spk::Vector3(1, 0, 0)
+        };
+
+        spk::Vector3 nextDelta = 0;
+
+        for (size_t i = 0; i < 4; i++)
+        {
+            if (spk::Application::activeApplication()->keyboard().getKey(keys[i]) == spk::InputState::Down && 
+                currentNextInput <= spk::getTime())
+            {
+                nextDelta += deltas[i];
+                nextInput = time + 50;
+            }
+        }
+
+        if (nextDelta != 0)
+        {
+            _playerObject.transform().translation += nextDelta;
+            EventController::instance()->notify_all(Event::UpdateVisibleChunk);
+        }
+    }
+
+public:
+    PlayerController(const std::string& p_name, spk::IWidget* p_parent) :
+        spk::IWidget(p_name, p_parent),
+        _playerObject("Player"),
+        _cameraObject("Camera", &_playerObject),
+        _cameraComponent(_cameraObject.addComponent<spk::Camera>("Camera")),
+        _playerBodyRenderer(_playerObject.addComponent<spk::MeshRenderer>("BodyRenderer"))
+    {
+        _playerObject.transform().translation = spk::Vector3(0, 0, 2.5f);
+        _playerBodyRenderer->setSprite(spk::Vector2Int(0, 0));
+
+        _cameraObject.transform().translation = spk::Vector3(0, 0, 5);  
+        _cameraObject.transform().lookAt(_playerObject.transform().translation.get());
+
+        _cameraComponent->setAsMainCamera();
+        _cameraComponent->setType(spk::Camera::Type::Orthographic);
+        _cameraComponent->setNearPlane(0);
+        _cameraComponent->setFarPlane(8);
+        _cameraComponent->setOrthographicSize(10);
+        _cameraComponent->setAspectRatio(1.0f);
+        _cameraComponent->setFOV(75);
+    }
+
+    spk::GameObject& playerObject()
+    {
+        return (_playerObject);
+    }
+
+    spk::Camera* cameraComponent()
+    {
+        return (_cameraComponent);
+    }
+
+    spk::MeshRenderer* playerBodyRenderer()
+    {
+        return (_playerBodyRenderer);
+    }
+};
+
+class TilemapManager : public spk::IWidget
+{
+private:
+    spk::GameObject _tilemapObject;
+    spk::Tilemap2D* _tilemapComponent;
+    std::unique_ptr<EventController::Type::Contract> _onUpdateVisibleChunkContract;
+    bool _needActiveChunkUpdate = true;
+
+    void _updateChunkVisibleOnScreen()
+    {
+        if (spk::Camera::mainCamera() == nullptr)
+            return ;
+
+        spk::Vector2 nbTileOnScreen = spk::Vector2::ceiling(spk::Camera::mainCamera()->orthographicSize() / 2.0f);
+
+        spk::Vector2Int playerPosition = spk::Camera::mainCamera()->owner()->globalPosition().xy();
+
+        spk::Vector2 start = spk::Tilemap2D::convertWorldToChunkPosition(playerPosition - nbTileOnScreen);
+        spk::Vector2 end = spk::Tilemap2D::convertWorldToChunkPosition(playerPosition + nbTileOnScreen);
 
         _tilemapComponent->setActiveChunkRange(start, end);
 
@@ -64,7 +182,8 @@ private:
 
         for (const auto& element : _tilemapComponent->missingChunks())
         {
-            _tilemapComponent->createEmpyChunk(element);
+            spk::Tilemap2D::Chunk* newChunk = dynamic_cast<spk::Tilemap2D::Chunk*>(_tilemapComponent->createEmpyChunk(element));
+
             for (size_t i = 0; i < 8; i++)
             {
                 spk::GameObject* chunkObject = _tilemapComponent->chunkObject(element + chunkOffsets[i]);
@@ -75,100 +194,75 @@ private:
         _tilemapComponent->updateActiveChunks();
     }
 
-    void _onUpdate()
+    void _onRender()
     {
-        if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::Z) == spk::InputState::Pressed)
+        if (_needActiveChunkUpdate == true)
         {
-            _playerObject.transform().translation += spk::Vector3(0, 1, 0);
-            _needChunkActivation = true;
+            _updateChunkVisibleOnScreen();
+            _needActiveChunkUpdate = false;
         }
-        if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::S) == spk::InputState::Pressed)
-        {
-            _playerObject.transform().translation += spk::Vector3(0, -1, 0);
-            _needChunkActivation = true;
-        }
-        if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::Q) == spk::InputState::Pressed)
-        {
-            _playerObject.transform().translation += spk::Vector3(-1, 0, 0);
-            _needChunkActivation = true;
-        }
-        if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::D) == spk::InputState::Pressed)
-        {
-            _playerObject.transform().translation += spk::Vector3(1, 0, 0);
-            _needChunkActivation = true;
-        }
+    }
 
-        if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::Space) == spk::InputState::Pressed)
-        {
-            std::cout << "Position : " << _playerObject.transform().translation.get() << std::endl;
-        }
+public:
+    TilemapManager(const std::string& p_name, spk::IWidget* p_parent) :
+        spk::IWidget(p_name, p_parent),
+        _tilemapObject("TilemapObject"),
+        _tilemapComponent(_tilemapObject.addComponent<spk::Tilemap2D>("Tilemap")),
+        _onUpdateVisibleChunkContract(EventController::instance()->subscribe(Event::UpdateVisibleChunk, [&](){
+            _needActiveChunkUpdate = true;
+        }))
+    {
+        _tilemapObject.transform().translation = spk::Vector3(0, 0, 0);
+        
+        _tilemapComponent->insertNodeType(0, spk::Tilemap2D::Node(spk::Vector2Int(0, 0), spk::Tilemap2D::Node::OBSTACLE, true));
+        _tilemapComponent->insertNodeType(1, spk::Tilemap2D::Node(spk::Vector2Int(4, 0), spk::Tilemap2D::Node::WALKABLE, false));
+    }
 
-        if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::A) == spk::InputState::Pressed)
-        {
-            _cameraObject.transform().rotation *= spk::Quaternion::fromEulerAngles(0, -10, 0);
-        }
-        if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::E) == spk::InputState::Pressed)
-        {
-            _cameraObject.transform().rotation *= spk::Quaternion::fromEulerAngles(0, 10, 0);
-        }
+    spk::GameObject& tilemapObject()
+    {
+        return (_tilemapObject);
+    }
 
-        if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::W) == spk::InputState::Pressed)
-        {
-            _cameraObject.transform().rotation *= spk::Quaternion::fromEulerAngles(-10, 0, 0);
-        }
-        if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::X) == spk::InputState::Pressed)
-        {
-            _cameraObject.transform().rotation *= spk::Quaternion::fromEulerAngles(10, 0, 0);
-        }
+    spk::Tilemap2D* tilemapComponent()
+    {
+        return (_tilemapComponent);
+    }
+};
 
-        if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::C) == spk::InputState::Pressed)
-        {
-            _cameraObject.transform().rotation *= spk::Quaternion::fromEulerAngles(0, 0, -10);
-        }
-        if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::V) == spk::InputState::Pressed)
-        {
-            _cameraObject.transform().rotation *= spk::Quaternion::fromEulerAngles(0, 0, 10);
-        }
+class MainWidget : public spk::IWidget
+{
+private:
+    spk::GameEngine _gameEngine;
+
+    spk::GameEngineManager _gameEngineManager;
+    PlayerController _playerController;
+    TilemapManager _tilemapManager;
+
+    void _onGeometryChange()
+    {
+        _gameEngineManager.setGeometry(anchor(), size());
+        _playerController.setGeometry(anchor(), size());
+        _tilemapManager.setGeometry(anchor(), size());
     }
 
 public:
     MainWidget(const std::string& p_name) :
         spk::IWidget(p_name),
-        _backgroundTilemapTexture("Playground/worldBackground.png", spk::Vector2Int(12, 6)),
-        _playerSpriteSheet("Playground/playerSpriteSheet.png", spk::Vector2Int(4, 4)),
         _gameEngineManager("GameEngineManager", this),
-        _playerObject("Player"),
-        _playerBodyRenderer(_playerObject.addComponent<spk::MeshRenderer>("BodyRenderer")),
-        _cameraObject("Camera", &_playerObject),
-        _cameraComponent(_cameraObject.addComponent<spk::Camera>("Camera")), 
-        _backgroundTilemap("BackgroundTilemap"),
-        _tilemapComponent(_backgroundTilemap.addComponent<spk::Tilemap2D>("Tilemap"))
+        _playerController("PlayerController", this),
+        _tilemapManager("TilemapManager", this)
     {
-        _playerObject.transform().translation = spk::Vector3(0, 0, 2.5f);
-        _playerBodyRenderer->setSpriteSheet(&_playerSpriteSheet);
-        _playerBodyRenderer->setSprite(spk::Vector2Int(0, 0));
+        _tilemapManager.tilemapComponent()->setSpriteSheet(TextureManager::instance()->as<spk::SpriteSheet>("WorldTileset"));
 
-        _cameraObject.transform().translation = spk::Vector3(0, 0, 5);  
-        _cameraObject.transform().lookAt(_playerObject.transform().translation.get());
-        _cameraComponent->setAsMainCamera();
-        _cameraComponent->setType(spk::Camera::Type::Orthographic);
-        _cameraComponent->setNearPlane(0);
-        _cameraComponent->setFarPlane(8);
-        _cameraComponent->setOrthographicSize(10);
-        _cameraComponent->setAspectRatio(1.0f);
-        _cameraComponent->setFOV(75);
+        _playerController.playerBodyRenderer()->setSpriteSheet(TextureManager::instance()->as<spk::SpriteSheet>("PlayerSprite"));
 
-        _backgroundTilemap.transform().translation = spk::Vector3(0, 0, 0);
+        _gameEngine.subscribe(&(_playerController.playerObject()));
+        _gameEngine.subscribe(&(_tilemapManager.tilemapObject()));
 
-        _tilemapComponent->setSpriteSheet(&_backgroundTilemapTexture);
-        _tilemapComponent->insertNodeType(0, spk::Tilemap2D::Node(spk::Vector2Int(0, 0), spk::Tilemap2D::Node::OBSTACLE, true));
-        _tilemapComponent->insertNodeType(1, spk::Tilemap2D::Node(spk::Vector2Int(4, 0), spk::Tilemap2D::Node::WALKABLE, false));
-        
-        _gameEngine.subscribe(&_playerObject);
-        _gameEngine.subscribe(&_backgroundTilemap);
         _gameEngineManager.setGameEngine(&_gameEngine);
         _gameEngineManager.activate(); 
-        _needChunkActivation = true;
+        _playerController.activate(); 
+        _tilemapManager.activate();
     }
 
     ~MainWidget()
@@ -177,9 +271,12 @@ public:
     }
 };
 
-int main()
+int executeGame()
 {
     spk::Application app = spk::Application("Labi", spk::Vector2UInt(800, 800), spk::Application::Mode::Multithread);
+
+    TextureManager::instance()->add<spk::SpriteSheet>("PlayerSprite", "Playground/playerSpriteSheet.png", spk::Vector2Int(4, 4));
+    TextureManager::instance()->add<spk::SpriteSheet>("WorldTileset", "Playground/worldBackground.png", spk::Vector2Int(16, 24));
 
     MainWidget mainWidget = MainWidget("MainWidget");
     mainWidget.setGeometry(0, app.size());
