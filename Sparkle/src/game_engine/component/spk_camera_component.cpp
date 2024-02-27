@@ -2,53 +2,8 @@
 #include "math/spk_matrix4x4.hpp"
 #include "game_engine/spk_game_object.hpp"
 
-#include "external_libraries/glm/gtc/matrix_transform.hpp"
-
 namespace spk
 {
-	bool Camera::_initializeCameraConstants()
-	{
-		if (_cameraConstants == nullptr)
-		{
-			_cameraConstants = spk::Pipeline::globalConstant("cameraConstants");
-		}
-
-		if (_cameraConstants != nullptr)
-		{
-			if (_viewElement == nullptr)
-			{
-				_viewElement = &(_cameraConstants->operator[]("view"));
-			}
-
-			if (_projectionElement == nullptr)
-			{
-				_projectionElement = &(_cameraConstants->operator[]("projection"));
-			}
-		}
-
-		if (_cameraConstants != nullptr && _viewElement != nullptr && _projectionElement != nullptr)
-		{
-			_cameraConstantsInitialized = true;
-		}
-
-		return (_cameraConstantsInitialized);
-	}
-
-	void printMatrix(const std::string& p_text, const glm::mat4& p_matrix)
-	{
-		std::cout << p_text << std::endl;
-		for (size_t i = 0; i < 4; i++)
-		{
-			for (size_t j = 0; j < 4; j++)
-			{
-				if (j != 0)
-					std::cout << " ";
-				std::cout << std::setw(10) << p_matrix[j][i];
-			}
-			std::cout << std::endl;
-		}
-	}
-
 	spk::Matrix4x4 Camera::_computeViewMatrix()
 	{
 		spk::Vector3 cameraPos = owner()->globalPosition();
@@ -82,19 +37,22 @@ namespace spk
 	}
 
 	void Camera::_updateGPUData()
-	{		
+	{	
 		spk::Matrix4x4 view = _computeViewMatrix();
 		spk::Matrix4x4 projection = (_type == Type::Orthographic ? _computeOrthographicProjectionMatrix() : _computePerspectiveProjectionMatrix());
 
-		*_viewElement = view;
-		*_projectionElement = projection;
-		_cameraConstants->update();
+		_viewElement = view;
+		_projectionElement = projection;
+		_cameraConstants.update();
 	}
 
 	Camera::Camera(const std::string& p_name) :
 		GameComponent(p_name),
-		_translationContract(owner()->transform().translation.subscribe([&](){_needGPUDataUpdate = true;})),
-		_rotationContract(owner()->transform().rotation.subscribe([&](){_needGPUDataUpdate = true;}))
+		_cameraConstants(_preloadPipeline.constant("cameraConstants")),
+		_viewElement(_cameraConstants["view"]),
+		_projectionElement(_cameraConstants["projection"]),
+		_translationContract(owner()->transform().translation.subscribe([&](){_updateGPUData();})),
+		_rotationContract(owner()->transform().rotation.subscribe([&](){_updateGPUData();}))
 	{
 
 	}
@@ -176,11 +134,7 @@ namespace spk
 
 	void Camera::_onRender()
 	{
-		if (_cameraConstantsInitialized == false)
-		{
-			if (_initializeCameraConstants() == false)
-				return ;
-		}
+		
 
 		if (_needGPUDataUpdate == true)
 		{
