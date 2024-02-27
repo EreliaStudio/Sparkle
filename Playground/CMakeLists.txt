@@ -9,7 +9,7 @@ project(Playground
 file(GLOB_RECURSE SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 add_executable(Playground ${SRC_FILES})
 
-target_include_directories(Playground PRIVATE "${CMAKE_SOURCE_DIR}/includes" "${CMAKE_CURRENT_SOURCE_DIR}/includes")
+target_include_directories(Playground PRIVATE "${CMAKE_SOURCE_DIR}/includes" "${CMAKE_CURRENT_SOURCE_DIR}/src")
 target_link_directories(Playground PRIVATE "${CMAKE_SOURCE_DIR}/archive")
 
 target_link_libraries(Playground Sparkle)
