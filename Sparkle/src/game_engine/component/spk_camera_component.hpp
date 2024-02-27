@@ -58,11 +58,24 @@ namespace spk
 		};
 
 	private:
-		static inline bool _cameraConstantsInitialized = false;
-		static inline spk::Pipeline::Constant* _cameraConstants = nullptr;
-		static inline spk::Pipeline::Constant::Element* _viewElement = nullptr;
-		static inline spk::Pipeline::Constant::Element* _projectionElement = nullptr;
-		static bool _initializeCameraConstants();
+		static inline const std::string _preloadPipelineCode = R"(#version 450
+
+		#include <cameraConstants>
+
+		void geometryPass()
+		{
+
+		}
+
+		void renderPass()
+		{
+
+		})";
+		static inline spk::Pipeline _preloadPipeline = spk::Pipeline(_preloadPipelineCode);
+
+		spk::Pipeline::Constant& _cameraConstants;
+		spk::Pipeline::Constant::Element& _viewElement;
+		spk::Pipeline::Constant::Element& _projectionElement;
 
 		static inline Camera* _mainCamera = nullptr;
 
