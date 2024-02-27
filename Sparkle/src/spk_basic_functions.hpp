@@ -56,5 +56,7 @@ namespace spk
     std::string to_string(const GLenum& p_type);
     void checkOpengl(const std::string& msg);
 
-    long long getTime();
+	long long getTime();
+
+	intmax_t positiveModulo(const intmax_t& p_value, const intmax_t& p_modulo);
 }

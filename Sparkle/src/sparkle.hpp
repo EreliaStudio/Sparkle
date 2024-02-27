@@ -13,6 +13,11 @@
 #include "math/spk_quaternion.hpp"
 #include "math/spk_vector2.hpp"
 #include "math/spk_vector3.hpp"
+#include "math/spk_quaternion.hpp"
+#include "math/spk_matrix4x4.hpp"
+#include "math/spk_perlin.hpp"
+#include "math/spk_pseudo_random_generator.hpp"
+#include "math/spk_random_generator.hpp"
 
 #include "graphics/spk_color.hpp"
 #include "graphics/texture/spk_image.hpp"
@@ -36,6 +41,9 @@
 #include "game_engine/component/spk_mesh_renderer_component.hpp"
 #include "game_engine/component/spk_physics_component.hpp"
 #include "game_engine/spk_mesh.hpp"
+#include "game_engine/component/spk_mesh_collider_2D_component.hpp"
+#include "game_engine/component/spk_tilemap.hpp"
+#include "game_engine/component/spk_tilemap2D.hpp"
 
 #include "game_engine/module/spk_collision_module.hpp"
 #include "game_engine/module/spk_gravity_module.hpp"
@@ -50,3 +58,6 @@
 #include "widget/spk_pointer_detector.hpp"
 #include "widget/spk_text_label.hpp"
 #include "widget/spk_widget.hpp"
+
+#include "widget/widget_component/spk_nine_sliced_component.hpp"
+#include "widget/widget_component/spk_text_label_component.hpp"
