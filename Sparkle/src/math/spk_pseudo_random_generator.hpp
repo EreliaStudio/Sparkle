@@ -54,13 +54,17 @@ namespace spk
 		template <typename TOtherType>
 		inline intmax_t _generateValue(const intmax_t& p_seed, const TOtherType& p_x, const TOtherType& p_y, const TOtherType& p_z) const
 		{
-			intmax_t result =
-				p_seed +
-				static_cast<intmax_t>(p_x) * 374761393 +
-				static_cast<intmax_t>(p_y) * 668265263 +
-				static_cast<intmax_t>(p_z) * 982451653;
-			result = (result ^ (result >> 13)) * 1274126177;
-			return (result);
+			intmax_t hash = p_seed;
+			hash ^= static_cast<intmax_t>(p_x) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+			hash ^= static_cast<intmax_t>(p_y) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+			hash ^= static_cast<intmax_t>(p_z) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+			
+			// Final mixing
+			hash ^= hash >> 13;
+			hash *= 1274126177;
+			hash ^= hash >> 15;
+
+			return hash;
 		}
 
 		template <typename TOtherType>
@@ -70,14 +74,14 @@ namespace spk
 
 			if constexpr (std::is_floating_point<TGeneratedType>::value)
 			{
-				return (
-					static_cast<TGeneratedType>(spk::positiveModulo(static_cast<intmax_t>(value), static_cast<intmax_t>(_range))) + //before ,
-					static_cast<TGeneratedType>(spk::positiveModulo(static_cast<intmax_t>(_generateValue(_seed + 11, p_x, p_y, p_z)), _precisionModulo)) / _precisionModulo //After ,
-				);
+				TGeneratedType fixedPart = static_cast<TGeneratedType>((value % _range + _range) % _range) + _min;
+				TGeneratedType floatingPart = ((_generateValue(_seed + 11, p_x, p_y, p_z) % _precisionModulo + _precisionModulo)% _precisionModulo) / _precisionModulo;
+
+				return (fixedPart + floatingPart);
 			}
 			else
 			{
-				return (static_cast<TGeneratedType>(spk::positiveModulo(value, _range) + _min));
+				return (static_cast<TGeneratedType>(((value % _range + _range) % _range) + _min));
 			}
 		}
 
@@ -123,13 +127,13 @@ namespace spk
          * 
          * Sets the minimum and maximum values for the generated numbers. This method defines the range of values that the generator can produce.
          * 
-         * @param p_min The minimum value in the range of generated numbers.
-         * @param p_max The maximum value in the range of generated numbers.
+         * @param p_min The minimum value (included) in the range of generated numbers.
+         * @param p_max The maximum value (excluded) in the range of generated numbers.
          */
 		void configureRange(TGeneratedType p_min, TGeneratedType p_max)
 		{
 			if (p_min >= p_max)
-				spk::throwException(L"Can set a range with min higher or equal to max");
+				spk::throwException("Can set a range with min higher or equal to max");
 
 			_min = p_min;
 			_max = p_max;
