@@ -345,14 +345,4 @@ namespace spk
 	{
 		return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
 	}
-
-	intmax_t positiveModulo(const intmax_t& p_value, const intmax_t& p_modulo)
-	{
-		intmax_t tmpValue = p_value;
-		while (tmpValue < 0)
-		{
-			tmpValue += p_modulo;
-		}
-		return (tmpValue % p_modulo);
-	}
 }
