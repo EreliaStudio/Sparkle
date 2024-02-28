@@ -122,15 +122,6 @@ namespace spk
             long long oldTime = 0;
 
         private:
-            void _onGeometryChange() override
-            {
-                IWidget::_onGeometryChange();
-            }
-
-            void _onRender() override
-            {
-            }
-
             void _onUpdate() override
             {
                 long long time = spk::getTime();
@@ -191,7 +182,6 @@ namespace spk
             const spk::Vector2UInt& size() const;
         };
 
-        bool _creationComplete = false;
         Mode _mode;
         std::atomic_bool _isRunning;
         std::atomic_int _errorCode;

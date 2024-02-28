@@ -1,5 +1,7 @@
-#include "widget/spk_widget.hpp"
+#include <cassert>
+
 #include "application/spk_application.hpp"
+#include "widget/spk_widget.hpp"
 
 namespace spk::widget
 {
@@ -15,7 +17,6 @@ namespace spk::widget
 
     void IWidget::_onGeometryChange()
     {
-        DLOG(name() << "#" << id() << ":" << anchor() << size() << "; depth=" << depth());
     }
 
     // By default the IWidget will layout its children by restricting their size to the constraints
@@ -40,10 +41,18 @@ namespace spk::widget
 
     void IWidget::render()
     {
+        assert(size() >= Vector2(0, 0));
+        if (size() <= Vector2{0, 0})
+        {
+            // Widgets with no size do not need rendering.
+            return;
+        }
+
         _computeViewport();
         if (_viewport.size() <= Vector2{0, 0})
         {
-            std::cout << "Viewport of " << _name << "#" << id() << " has a size of " << _viewport.size() << std::endl;
+            std::cout << "Viewport of " << _name << "(#" << id() << ")"
+                      << " has a size of " << _viewport.size() << std::endl;
             return;
         }
 
@@ -215,41 +224,5 @@ namespace spk::widget
     uint32_t IWidget::id() const
     {
         return _id;
-    }
-
-    SingleChildWidget::SingleChildWidget(const std::string& p_name, IWidget* p_parent) :
-        IWidget(p_name, p_parent)
-    {
-    }
-
-    IWidget* SingleChildWidget::child()
-    {
-        if (children().size() > 1)
-        {
-            DLOG("SingleChildWidget " << name() << "#" << id() << " has more than one child: ");
-            for (auto child : children())
-            {
-                DLOG("\t" << child->name() << "#" << child->id());
-            }
-            assert(children().size() > 1);
-        }
-
-        if (children().size() < 1)
-        {
-            return nullptr;
-        }
-        return children()[0];
-    }
-
-    Vector2 SingleChildWidget::layout(const BoxConstraints& p_constraints)
-    {
-        IWidget* tmpChild = child();
-        if (nullptr == tmpChild)
-        {
-            return p_constraints.max;
-        }
-        Vector2 childSize = tmpChild->layout(p_constraints);
-        tmpChild->setGeometry({0, 0}, childSize);
-        return childSize;
     }
 }

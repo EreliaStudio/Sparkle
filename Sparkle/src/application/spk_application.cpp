@@ -121,7 +121,6 @@ namespace spk
         _centralWidget = new CentralWidget();
         _centralWidget->setGeometry(spk::Vector2Int(0, 0), size());
         Viewport::_mainViewport = &(_centralWidget->viewport());
-        _creationComplete = true;
     }
 
     Application::~Application()

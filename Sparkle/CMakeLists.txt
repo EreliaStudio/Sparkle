@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.15.2)
 
 set(ProductName "Sparkle")
 
-list(APPEND CMAKE_PREFIX_PATH "C:/dev/glew")
 find_package(GLEW REQUIRED)
 
 add_subdirectory(src)

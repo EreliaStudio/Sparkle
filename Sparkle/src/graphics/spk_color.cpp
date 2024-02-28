@@ -69,6 +69,6 @@ namespace spk
     const spk::Color Colors::white = Color(0xFFFFFFFF);
     const spk::Color Colors::grey = Color(0x7F7F7FFF);
 
-    const std::vector<spk::Color> Colors::_values = std::vector<spk::Color>{
+    const std::vector<spk::Color> Colors::values = std::vector<spk::Color>{
         red, blue, green, yellow, purple, cyan, orange, magenta, pink};
 }

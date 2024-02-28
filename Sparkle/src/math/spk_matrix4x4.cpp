@@ -35,10 +35,7 @@ namespace spk
             for (int j = 0; j < 4; ++j)
             {
                 result.data[i][j] =
-                          data[i][0] * other.data[0][j]
-                        + data[i][1] * other.data[1][j]
-                        + data[i][2] * other.data[2][j]
-                        + data[i][3] * other.data[3][j];
+                    data[i][0] * other.data[0][j] + data[i][1] * other.data[1][j] + data[i][2] * other.data[2][j] + data[i][3] * other.data[3][j];
             }
         }
 
@@ -47,23 +44,16 @@ namespace spk
 
     Matrix4x4 Matrix4x4::operator+(const Matrix4x4& other) const
     {
-        return Matrix4x4(
-            data[0][0] + other.data[0][0],
-            data[0][1] + other.data[0][1],
-            data[0][2] + other.data[0][2],
-            data[0][3] + other.data[0][3],
-            data[1][0] + other.data[1][0],
-            data[1][1] + other.data[1][1],
-            data[1][2] + other.data[1][2],
-            data[1][3] + other.data[1][3],
-            data[2][0] + other.data[2][0],
-            data[2][1] + other.data[2][1],
-            data[2][2] + other.data[2][2],
-            data[2][3] + other.data[2][3],
-            data[3][0] + other.data[3][0],
-            data[3][1] + other.data[3][1],
-            data[3][2] + other.data[3][2],
-            data[3][3] + other.data[3][3]);
+        Matrix4x4 result;
+
+        for (int i = 0; i < 4; i++)
+        {
+            for (int j = 0; j < 4; j++)
+            {
+                result.data[i][j] = this->data[i][j] + other.data[i][j];
+            }
+        }
+        return result;
     }
 
     Matrix4x4 Matrix4x4::zero()

@@ -4,6 +4,7 @@
 #include "math/spk_vector2.hpp"
 #include "widget/components/spk_colored_box.hpp"
 #include "widget/spk_box_constraints.hpp"
+#include "widget/spk_single_child_widget.hpp"
 #include "widget/spk_widget.hpp"
 #include <functional>
 

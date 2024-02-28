@@ -4,11 +4,10 @@ namespace spk::widget
 {
     void TextLabel::_onGeometryChange()
     {
-        IWidget::_onGeometryChange();
-
         _label.setAnchor(anchor());
         _label.setDepth(depth());
     }
+
     void TextLabel::_onRender()
     {
         _label.render();

@@ -50,8 +50,3 @@
 #include "widget/spk_pointer_detector.hpp"
 #include "widget/spk_text_label.hpp"
 #include "widget/spk_widget.hpp"
-
-namespace spk
-{
-    using GameEngineManager = spk::widget::GameEngineManager;
-}

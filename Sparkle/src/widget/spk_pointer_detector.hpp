@@ -1,6 +1,6 @@
 #pragma once
 
-#include "widget/spk_widget.hpp"
+#include "widget/spk_single_child_widget.hpp"
 #include <functional>
 
 namespace spk::widget

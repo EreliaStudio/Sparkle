@@ -253,33 +253,4 @@ namespace spk::widget
          */
         uint32_t id() const;
     };
-
-    /**
-     * @brief A widget that only has one child.
-     *
-     * This is mainly used to simplify the layout logics in widgets that inherit from this class.
-     */
-    class SingleChildWidget : public IWidget
-    {
-    public:
-        /**
-         * @brief Constructor
-         *
-         * @param p_name The debug name.
-         * @param p_parent The parent widget.
-         */
-        SingleChildWidget(const std::string& p_name, IWidget* p_parent = nullptr);
-
-        /**
-         * @brief Getter for the single child of this widget.
-         * @return A pointer to the single child, if any; nullptr if there is none.
-         */
-        IWidget* child();
-
-        /**
-         * @brief layout will pass down the constraints to the single child.
-         * @param p_constraints The constraints for this layout.
-         */
-        Vector2 layout(const BoxConstraints& p_constraints) override;
-    };
 }

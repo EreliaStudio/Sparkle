@@ -76,3 +76,8 @@ namespace spk::widget
         void setGameEngine(spk::GameEngine* p_engine);
     };
 }
+
+namespace spk
+{
+    using GameEngineManager = spk::widget::GameEngineManager;
+}
