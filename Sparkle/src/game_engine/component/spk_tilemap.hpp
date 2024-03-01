@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <string>
+#include <fstream>
 #include "math/spk_vector2.hpp"
 #include "math/spk_vector3.hpp"
 #include "graphics/texture/spk_sprite_sheet.hpp"
@@ -101,6 +102,40 @@ namespace spk
 			void bake()
 			{
 				_needGPUUpdate = true;
+			}
+
+			void saveToFile(const std::filesystem::path& p_path) const
+			{
+				std::ofstream outFile(p_path, std::ios::binary | std::ios::out);
+				if (!outFile)
+				{
+					throwException("Could not open file for writing: " + p_path.string());
+				}
+
+				outFile.write(reinterpret_cast<const char*>(&_data), sizeof(_data));
+				if (!outFile)
+				{
+					throwException("Error writing to file: " + p_path.string());
+				}
+
+				outFile.close();
+			}
+
+			void loadFromFile(const std::filesystem::path& p_path)
+			{
+				std::ifstream inFile(p_path, std::ios::binary | std::ios::in);
+				if (!inFile)
+				{
+					throwException("Could not open file for reading: " + p_path.string());
+				}
+
+				inFile.read(reinterpret_cast<char*>(&_data), sizeof(_data));
+				if (inFile.fail())
+				{
+					throwException("Error reading file: " + p_path.string());
+				}
+
+				inFile.close();
 			}
 
 			const spk::Vector2Int& position() const {return (_position); }
