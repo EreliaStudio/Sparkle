@@ -139,6 +139,18 @@ namespace spk
 			}
 
 			const spk::Vector2Int& position() const {return (_position); }
+
+			template<typename TVectorType>
+			spk::IVector3<TVectorType> convertAbsoluteToRelativePosition(const spk::IVector3<TVectorType>& p_absolutePosition)
+			{
+				return (p_absolutePosition - spk::IVector3<TVectorType>(_position.x * SizeX, _position.y * SizeY, 0));
+			}
+
+			template<typename TVectorType>
+			spk::IVector2<TVectorType> convertAbsoluteToRelativePosition(const spk::IVector2<TVectorType>& p_absolutePosition)
+			{
+				return (convertAbsoluteToRelativePosition(spk::IVector3<TVectorType>(p_absolutePosition, 0.0f)).xy());
+			}
 		};
 
 	private:
@@ -250,7 +262,7 @@ namespace spk
 					spk::Vector2Int chunkPosition = p_chunkPosition + spk::Vector2Int(i, j);
 					if (_chunksObjects.contains(chunkPosition) == true)
 					{
-						spk::GameObject* chunkObject = _chunksObjects[chunkPosition];
+						spk::GameObject* chunkObject = _chunksObjects[chunkPosition].get();
 
 						if (chunkObject != nullptr)
 						{
@@ -259,6 +271,14 @@ namespace spk
 						
 					}
 				}
+			}
+		}
+
+		void saveToFolder(const std::filesystem::path& p_folderPath) const
+		{
+			for (auto& [key, element] : _chunksObjects)
+			{
+				element->getComponent<IChunk>()->saveToFile(p_folderPath.string() + "/chunk_" + std::to_string(key.x) + "_" + std::to_string(key.y) + ".chk");
 			}
 		}
 	};

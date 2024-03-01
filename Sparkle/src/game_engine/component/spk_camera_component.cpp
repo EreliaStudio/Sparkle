@@ -159,7 +159,7 @@ namespace spk
 
 		spk::Vector3 clipSpacePos = spk::Vector3(normalizedX, normalizedY, 0.0f);
 
-		spk::Vector3 worldSpacePos = _mainCamera->_inverseProjectionMatrix * clipSpacePos + 0.5f;
+		spk::Vector3 worldSpacePos = _mainCamera->_inverseProjectionMatrix * clipSpacePos + 0.5f + _mainCamera->owner()->globalPosition();
 
 		return spk::Vector2(worldSpacePos.x, worldSpacePos.y);
 	}
