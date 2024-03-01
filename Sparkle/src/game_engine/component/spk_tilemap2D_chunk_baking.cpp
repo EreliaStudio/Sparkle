@@ -197,7 +197,7 @@ namespace spk
 	{
 		const Node& node = _tilemapCreator->node(p_index);
 
-		if (node.isAutotiled == false)
+		if (node.type == Node::Type::Standard)
 		{
 			_bakeStandardTile(node, p_relativePosition);
 		}

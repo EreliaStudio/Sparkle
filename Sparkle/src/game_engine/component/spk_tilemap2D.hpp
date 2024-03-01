@@ -10,19 +10,25 @@ namespace spk
 	public:
 		struct Node
 		{
+			enum class Type
+			{
+				Autotile,
+				Standard
+			};
+
 			static inline const uint16_t WALKABLE = 		0b0000000000000000;
 			static inline const uint16_t OBSTACLE = 		0b0000000000000001;
 
 			spk::Vector2Int sprite = 0;
-			bool isAutotiled = false;
+			Type type = Type::Standard;
 			spk::Vector2Int animationFrameOffset = 0;
 			int nbFrame = 0;
 			int animationDuration = 0;
 			int flags = WALKABLE;
 
 			Node();
-			Node(const spk::Vector2Int& p_sprite, uint16_t p_flags, bool p_isAutotiled);
-			Node(const spk::Vector2Int& p_sprite, uint16_t p_flags, bool p_isAutotiled, const spk::Vector2& p_animationFrameOffset, int p_nbFrame, int p_animationDuration);
+			Node(const spk::Vector2Int& p_sprite, uint16_t p_flags, Type p_type);
+			Node(const spk::Vector2Int& p_sprite, uint16_t p_flags, Type p_type, const spk::Vector2Int& p_animationFrameOffset, int p_nbFrame, int p_animationDuration);
 		};
 
 		class Chunk : public Tilemap2D::IChunk
