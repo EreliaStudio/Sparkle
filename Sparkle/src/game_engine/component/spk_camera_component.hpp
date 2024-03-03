@@ -231,7 +231,5 @@ namespace spk
          * @return The size of the orthographic projection area as a spk::Vector2.
          */
 		const spk::Vector2& orthographicSize() const;
-
-		static spk::Vector2 convertScreenToWorldPosition2D(const spk::Vector2Int& p_screenPosition, const spk::Vector2Int& p_viewportAnchor, const spk::Vector2Int& p_viewportSize);
-	};
+};
 }
