@@ -4,7 +4,7 @@
 
 namespace spk
 {
-	spk::Matrix4x4 Camera::_computeViewMatrix()
+	spk::Matrix4x4 CameraComponent::_computeViewMatrix()
 	{
 		spk::Vector3 cameraPos = owner()->globalPosition();
 		spk::Vector3 cameraTarget = cameraPos + owner()->transform().forward(); 
@@ -15,7 +15,7 @@ namespace spk
 		return (std::move(result));
 	}
 
-	spk::Matrix4x4 Camera::_computeOrthographicProjectionMatrix()
+	spk::Matrix4x4 CameraComponent::_computeOrthographicProjectionMatrix()
 	{
 		float right = _orthoSize.x * 0.5f;
 		float left = -right;
@@ -29,14 +29,14 @@ namespace spk
 		return projectionMatrix;
 	}
 	
-	spk::Matrix4x4 Camera::_computePerspectiveProjectionMatrix()
+	spk::Matrix4x4 CameraComponent::_computePerspectiveProjectionMatrix()
 	{
 		spk::Matrix4x4 projectionMatrix = spk::Matrix4x4::perspective(_fov, _aspectRatio, _nearPlane, _farPlane);
 
 		return (projectionMatrix);
 	}
 
-	void Camera::_updateGPUData()
+	void CameraComponent::_updateGPUData()
 	{	
 		spk::Matrix4x4 view = _computeViewMatrix();
 		spk::Matrix4x4 projection = (_type == Type::Orthographic ? _computeOrthographicProjectionMatrix() : _computePerspectiveProjectionMatrix());
@@ -48,7 +48,7 @@ namespace spk
 		_cameraConstants.update();
 	}
 
-	Camera::Camera(const std::string& p_name) :
+	CameraComponent::CameraComponent(const std::string& p_name) :
 		GameComponent(p_name),
 		_cameraConstants(_preloadPipeline.constant("cameraConstants")),
 		_viewElement(_cameraConstants["view"]),
@@ -59,82 +59,82 @@ namespace spk
 
 	}
 
-	void Camera::setAsMainCamera()
+	void CameraComponent::setAsMainCamera()
 	{
 		_mainCamera = this;
 		_needGPUDataUpdate = true;
 	}
 
-	void Camera::setType(const Camera::Type& p_type)
+	void CameraComponent::setType(const CameraComponent::Type& p_type)
 	{
 		_type = p_type;
 		_needGPUDataUpdate = true;
 	}
 
-	const Camera::Type& Camera::type() const
+	const CameraComponent::Type& CameraComponent::type() const
 	{
 		return (_type);
 	}
 
-	void Camera::setOrthographicSize(const spk::Vector2& p_orthographicSize)
+	void CameraComponent::setOrthographicSize(const spk::Vector2& p_orthographicSize)
 	{
 		_orthoSize = p_orthographicSize;
 		if (_type == Type::Orthographic)
 			_needGPUDataUpdate = true;
 	}
 
-	const spk::Vector2& Camera::orthographicSize() const
+	const spk::Vector2& CameraComponent::orthographicSize() const
 	{
 		return (_orthoSize);
 	}
 	
-	void Camera::setNearPlane(const float& p_nearPlane)
+	void CameraComponent::setNearPlane(const float& p_nearPlane)
 	{
 		_nearPlane = p_nearPlane;
 		_needGPUDataUpdate = true;
 	}
 
-	const float& Camera::nearPlane() const
+	const float& CameraComponent::nearPlane() const
 	{
 		return (_nearPlane);
 	}
 	
-	void Camera::setFarPlane(const float& p_farPlane)
+	void CameraComponent::setFarPlane(const float& p_farPlane)
 	{
 		_farPlane = p_farPlane;
 		_needGPUDataUpdate = true;
 	}
 
-	const float& Camera::farPlane() const
+	const float& CameraComponent::farPlane() const
 	{
 		return (_farPlane);
 	}
 
-	void Camera::setFOV(const float& p_fov)
+	void CameraComponent::setFOV(const float& p_fov)
 	{
 		_fov = p_fov;
 		if (_type == Type::Perspective)
 			_needGPUDataUpdate = true;
 	}
 
-	const float& Camera::fov() const
+	const float& CameraComponent::fov() const
 	{
 		return (_fov);
 	}
 	
-	void Camera::setAspectRatio(const float& p_aspectRatio)
+	void CameraComponent::setAspectRatio(const float& p_aspectRatio)
 	{
 		_aspectRatio = p_aspectRatio;
 		if (_type == Type::Perspective)
 			_needGPUDataUpdate = true;
 	}
 
-	const float& Camera::aspectRatio() const
+	const float& CameraComponent::aspectRatio() const
 	{
 		return (_aspectRatio);
 	}
 
-	void Camera::_onRender()
+	void CameraComponent::_onRender()
 	{
 		
 
@@ -145,7 +145,7 @@ namespace spk
 		}
 	}
 
-	void Camera::_onUpdate()
+	void CameraComponent::_onUpdate()
 	{
 
 	}

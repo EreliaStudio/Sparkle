@@ -8,7 +8,7 @@
 namespace spk
 {
 	/**
-	 * @class Camera
+	 * @class CameraComponent
 	 * @brief Represents a camera component for rendering scenes.
 	 * 
 	 * This class is responsible for defining a camera component that can be attached to game objects.
@@ -21,10 +21,10 @@ namespace spk
 	 * spk::GameObject gameObject("CameraObject");
 	 * 
 	 * // Create a camera component
-	 * Camera* camera = gameObject.addComponent<spk::Camera>("MainCamera");
+	 * CameraComponent* camera = gameObject.addComponent<spk::CameraComponent>("MainCamera");
 	 * 
 	 * // Set camera type to Perspective
-	 * camera->setType(Camera::Type::Perspective);
+	 * camera->setType(CameraComponent::Type::Perspective);
 	 * 
 	 * // Set camera FOV and aspect ratio
 	 * camera->setFOV(60.0f);
@@ -42,7 +42,7 @@ namespace spk
 	 * 
 	 * @see GameComponent, GameObject, Pipeline, Pipeline::Constant
 	 */
-	class Camera : public GameComponent
+	class CameraComponent : public GameComponent
 	{
 	public:
 		/**
@@ -77,7 +77,7 @@ namespace spk
 		spk::Pipeline::Constant::Element& _viewElement;
 		spk::Pipeline::Constant::Element& _projectionElement;
 
-		static inline Camera* _mainCamera = nullptr;
+		static inline CameraComponent* _mainCamera = nullptr;
 
 		bool _needGPUDataUpdate = false;
 
@@ -105,14 +105,14 @@ namespace spk
 
 	public:
 		/**
-		 * @brief Constructs a Camera component with a specified name.
+		 * @brief Constructs a CameraComponent component with a specified name.
 		 * 
-		 * Initializes a new Camera component, setting it as activated by default and initializing it with default
+		 * Initializes a new CameraComponent component, setting it as activated by default and initializing it with default
 		 * projection settings.
 		 * 
 		 * @param p_name The name of the camera component, used for identification within the game engine.
 		 */
-		Camera(const std::string& p_name);
+		CameraComponent(const std::string& p_name);
 
 		/**
 		 * @brief Sets this camera as the main camera for rendering.
@@ -120,12 +120,12 @@ namespace spk
 		 * Marks this camera instance as the main camera, which will be used by the rendering system to render scenes.
 		 * Only one camera can be the main camera at a time.
 		 */
-		static Camera* mainCamera(){ return (_mainCamera); }
+		static CameraComponent* mainCamera(){ return (_mainCamera); }
 
 		/**
 		 * @brief Gets the current main camera.
 		 * 
-		 * @return A pointer to the Camera instance set as the main camera, or nullptr if no main camera has been set.
+		 * @return A pointer to the CameraComponent instance set as the main camera, or nullptr if no main camera has been set.
 		 */
 		void setAsMainCamera();
 

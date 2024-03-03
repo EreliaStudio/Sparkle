@@ -42,8 +42,8 @@
 #include "game_engine/component/spk_physics_component.hpp"
 #include "game_engine/spk_mesh.hpp"
 #include "game_engine/component/spk_mesh_collider_2D_component.hpp"
-#include "game_engine/component/spk_tilemap.hpp"
-#include "game_engine/component/spk_tilemap2D.hpp"
+#include "game_engine/object/spk_itilemap.hpp"
+#include "game_engine/object/spk_tilemap2D.hpp"
 
 #include "game_engine/module/spk_collision_module.hpp"
 #include "game_engine/module/spk_gravity_module.hpp"
