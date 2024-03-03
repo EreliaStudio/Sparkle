@@ -149,18 +149,4 @@ namespace spk
 	{
 
 	}
-
-	spk::Vector2 Camera::convertScreenToWorldPosition2D(const spk::Vector2Int& p_screenPosition, const spk::Vector2Int& p_viewportAnchor, const spk::Vector2Int& p_viewportSize)
-	{
-		spk::Vector2Int adjustedScreenPosition = spk::Vector2Int(p_screenPosition.x - p_viewportAnchor.x, p_screenPosition.y - p_viewportAnchor.y);
-
-		float normalizedX = (adjustedScreenPosition.x / (float)p_viewportSize.x) * 2.0f - 1.0f;
-		float normalizedY = 1.0f - (adjustedScreenPosition.y / (float)p_viewportSize.y) * 2.0f;
-
-		spk::Vector3 clipSpacePos = spk::Vector3(normalizedX, normalizedY, 0.0f);
-
-		spk::Vector3 worldSpacePos = _mainCamera->_inverseProjectionMatrix * clipSpacePos + 0.5f + _mainCamera->owner()->globalPosition();
-
-		return spk::Vector2(worldSpacePos.x, worldSpacePos.y);
-	}
 }
