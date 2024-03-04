@@ -124,7 +124,6 @@ namespace spk
 		 * @param p_action Action struct containing the callbacks for the state.
 		 */
 		StateMachine(TStateType p_stateID, const Action& p_action) :
-			_currentState(p_stateID),
 			_hasCurrentState(true)
 		{
 			addState(p_stateID, p_action);

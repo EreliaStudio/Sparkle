@@ -8,6 +8,7 @@
 #include "design_pattern/spk_notifier.hpp"
 #include "design_pattern/spk_event_manager.hpp"
 #include "design_pattern/spk_observable_value.hpp"
+#include "design_pattern/spk_state_machine.hpp"
 
 #include "math/spk_vector2.hpp"
 #include "math/spk_vector3.hpp"
