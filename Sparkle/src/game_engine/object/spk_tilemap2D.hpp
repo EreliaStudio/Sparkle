@@ -4,7 +4,7 @@
 
 namespace spk
 {
-	class Tilemap2D : spk::ITilemap<short, 16, 16, 5>
+	class Tilemap2D : public spk::ITilemap<short, 16, 16, 5>
 	{
 	public:
 		struct Node
@@ -622,7 +622,7 @@ namespace spk
 			return (result);
 		}
 
-		std::vector<spk::GameObject*> _activeChunks;
+		std::vector<IChunk*> _activeChunks;
 		
 		const spk::SpriteSheet* _spriteSheet;
 		spk::Vector2Int _activeChunkStart;
@@ -686,7 +686,7 @@ namespace spk
 
 		void updateActiveChunks()
 		{
-			std::vector<spk::GameObject*> chunksToActivate;
+			std::vector<IChunk*> chunksToActivate;
 
 			for (int x = _activeChunkStart.x; x <= _activeChunkEnd.x; x++)
 			{

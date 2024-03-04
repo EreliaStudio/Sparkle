@@ -7,6 +7,9 @@ namespace spk
 {
 	class Camera : public spk::GameObject
 	{
+	public:
+		using Type = CameraComponent::Type;
+
 	private:
 		CameraComponent* _cameraComponent;
 
@@ -18,19 +21,19 @@ namespace spk
 
 		}
 
-		static CameraComponent* mainCamera(){ return (_mainCamera); }
+		static CameraComponent* mainCamera(){ return (CameraComponent::mainCamera()); }
 
 		void setAsMainCamera()
 		{
 			_cameraComponent->setAsMainCamera();
 		}
 
-		void setType(const Type& p_type)
+		void setType(const CameraComponent::Type& p_type)
 		{
 			_cameraComponent->setType(p_type);
 		}
 
-        const Type& type() const
+        const CameraComponent::Type& type() const
 		{
 			return (_cameraComponent->type());
 		}
@@ -42,7 +45,7 @@ namespace spk
 		
 		const float& nearPlane() const
 		{
-			return (_cameraComponent->type());
+			return (_cameraComponent->nearPlane());
 		}
 
 		void setFarPlane(const float& p_farPlane)

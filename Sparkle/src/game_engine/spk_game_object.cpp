@@ -8,8 +8,10 @@ namespace spk
 		if (isActive() == false)
 			return ;
 				
+			
 		for (auto& component : _components)
 		{
+			std::cout << "Rending component [" << component->fullName() << "]" << std::endl;
 			component->render();
 		}
 
@@ -73,7 +75,8 @@ namespace spk
 	GameObject::GameObject(const std::string& p_name, GameObject* p_parent) :
 		GameObject(p_name)
 	{
-		p_parent->addChild(this);
+		if (p_parent != nullptr)
+			p_parent->addChild(this);
 	}
 
 	GameObject::~GameObject()
