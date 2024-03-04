@@ -150,13 +150,13 @@ namespace spk
 			const spk::Vector2Int& position() const {return (_position); }
 
 			template<typename TVectorType>
-			spk::IVector3<TVectorType> convertAbsoluteToRelativePosition(const spk::IVector3<TVectorType>& p_absolutePosition)
+			spk::IVector3<TVectorType> convertAbsoluteToRelativePosition(const spk::IVector3<TVectorType>& p_absolutePosition) const
 			{
 				return (p_absolutePosition - spk::IVector3<TVectorType>(_position.x * SizeX, _position.y * SizeY, 0));
 			}
 
 			template<typename TVectorType>
-			spk::IVector2<TVectorType> convertAbsoluteToRelativePosition(const spk::IVector2<TVectorType>& p_absolutePosition)
+			spk::IVector2<TVectorType> convertAbsoluteToRelativePosition(const spk::IVector2<TVectorType>& p_absolutePosition) const
 			{
 				return (convertAbsoluteToRelativePosition(spk::IVector3<TVectorType>(p_absolutePosition, 0.0f)).xy());
 			}
@@ -176,7 +176,7 @@ namespace spk
 		ITilemap(const std::string& p_name, spk::GameObject* p_parent = nullptr) : 
 			spk::GameObject(p_name, p_parent)
 		{
-
+			
 		}
 
 		const std::map<spk::Vector2Int, std::unique_ptr<IChunk>>& chunks() const

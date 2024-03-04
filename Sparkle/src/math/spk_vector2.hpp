@@ -35,7 +35,7 @@ namespace spk
 	 * @endcode
 	 *
 	 */
-	template <typename TType>
+	template <typename TType, typename = typename std::enable_if<std::is_arithmetic<TType>::value>::type>
 	struct IVector2
 	{
 		TType x; //!< X component of the vector.
@@ -50,7 +50,7 @@ namespace spk
          * @brief Constructs a vector with both x and y set to the provided value.
          * @param p_value The value to set both x and y components to.
          */
-        template <typename TOtherType>
+        template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
         IVector2(const TOtherType &p_value) : x(static_cast<TType>(p_value)), y(static_cast<TType>(p_value)) {}
 
         /**
@@ -58,21 +58,21 @@ namespace spk
          * @param p_x The value for the x component.
          * @param p_y The value for the y component.
          */
-        template <typename TTypeA, typename TTypeB>
+        template <typename TTypeA, typename TTypeB, typename = typename std::enable_if<std::is_arithmetic<TTypeA>::value>::type, typename = typename std::enable_if<std::is_arithmetic<TTypeB>::value>::type>
         IVector2(const TTypeA &p_x, const TTypeB &p_y) : x(static_cast<TType>(p_x)), y(static_cast<TType>(p_y)) {}
 
         /**
          * @brief Copy constructor from another vector of possibly different type.
          * @param p_other The vector to copy from.
          */
-		template <typename TOtherType>
+		template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
 		IVector2(const IVector2<TOtherType> &p_other) : x(static_cast<TType>(p_other.x)), y(static_cast<TType>(p_other.y)) {}
 
 		/**
          * @brief Conversion operator to another vector of possibly different type.
          * @return A new vector of the target type with copied components.
          */
-		template <typename TOtherType>
+		template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
 		operator IVector2<TOtherType>()
 		{
 			return (IVector2<TOtherType>(static_cast<TOtherType>(x), static_cast<TOtherType>(y)));
@@ -114,7 +114,7 @@ namespace spk
          * @param p_other Another vector to add to this vector.
          * @return The resultant vector after addition.
          */
-		template <typename TOtherType>
+		template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
 		IVector2<TType> operator+(const IVector2<TOtherType> &p_other) const
 		{
 			return IVector2<TType>(x + p_other.x, y + p_other.y);
@@ -126,7 +126,7 @@ namespace spk
          * @param p_value The scalar value to add.
          * @return The resultant vector after addition.
          */
-		template <typename TOtherType>
+		template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
 		IVector2<TType> operator+(const TOtherType& p_value) const
 		{
 			return IVector2<TType>(x + p_value, y + p_value);
@@ -138,7 +138,7 @@ namespace spk
          * @param p_other The vector to subtract from this vector.
          * @return The resultant vector after subtraction.
          */
-		template <typename TOtherType>
+		template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
 		IVector2<TType> operator-(const IVector2<TOtherType> &p_other) const
 		{
 			return IVector2<TType>(x - p_other.x, y - p_other.y);
@@ -150,7 +150,7 @@ namespace spk
          * @param p_value The scalar value to subtract.
          * @return The resultant vector after subtraction.
          */
-		template <typename TOtherType>
+		template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
 		IVector2<TType> operator-(const TOtherType &p_value) const
 		{
 			return IVector2<TType>(x - p_value, y - p_value);
@@ -162,7 +162,7 @@ namespace spk
          * @param p_other The vector to multiply with.
          * @return The resultant vector after multiplication.
          */
-		template <typename TOtherType>
+		template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
 		IVector2<TType> operator*(const IVector2<TOtherType> &p_other) const
 		{
 			return (IVector2<TType>(x * p_other.x, y * p_other.y));
@@ -174,7 +174,7 @@ namespace spk
          * @param p_value The scalar value to multiply with.
          * @return The resultant vector after multiplication.
          */
-		template <typename TOtherType>
+		template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
 		IVector2<TType> operator*(const TOtherType &p_value) const
 		{
 			return (IVector2<TType>(x * p_value, y * p_value));
@@ -186,7 +186,7 @@ namespace spk
          * @param p_other The vector to divide by.
          * @return The resultant vector after division.
          */
-		template <typename TOtherType>
+		template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
 		IVector2<TType> operator/(const IVector2<TOtherType> &p_other) const
 		{
 			if (p_other.x == 0 || p_other.y == 0)
@@ -200,7 +200,7 @@ namespace spk
          * @param p_value The scalar value to divide by.
          * @return The resultant vector after division.
          */
-		template <typename TOtherType>
+		template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
 		IVector2<TType> operator/(const TOtherType &p_value) const
 		{
 			if (p_value == 0)
@@ -213,7 +213,7 @@ namespace spk
          * 
          * @param p_other The vector to add to this vector.
          */
-        template <typename TOtherType>
+        template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
         void operator+=(const IVector2<TOtherType> &p_other)
         {
             x += p_other.x;
@@ -225,7 +225,7 @@ namespace spk
          * 
          * @param p_other The vector to subtract from this vector.
          */
-        template <typename TOtherType>
+        template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
         void operator-=(const IVector2<TOtherType> &p_other)
         {
             x -= p_other.x;
@@ -237,7 +237,7 @@ namespace spk
          * 
          * @param p_other The vector to multiply this vector by.
          */
-        template <typename TOtherType>
+        template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
         void operator*=(const IVector2<TOtherType> &p_other)
         {
             x *= p_other.x;
@@ -251,7 +251,7 @@ namespace spk
          * 
          * @param p_other The vector to divide this vector by.
          */
-		template <typename TOtherType>
+		template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
 		void operator/=(const IVector2<TOtherType> &p_other)
 		{
 			if (p_other.x == 0 || p_other.y == 0)
@@ -266,7 +266,7 @@ namespace spk
          * @param p_other The vector to compare with.
          * @return True if both x and y components are equal, false otherwise.
          */
-        template <typename TOtherType>
+        template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
         bool operator==(const IVector2<TOtherType> &p_other) const
         {
             return (x == p_other.x && y == p_other.y);
@@ -278,7 +278,7 @@ namespace spk
          * @param p_value The scalar value to compare with both components of the vector.
          * @return True if both components of the vector are equal to the scalar value, false otherwise.
          */
-        template <typename TOtherType>
+        template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
         bool operator==(const TOtherType &p_value) const
         {
             return (x == p_value && y == p_value);
@@ -290,7 +290,7 @@ namespace spk
          * @param p_other The vector to compare with.
          * @return True if either x or y component is not equal, false otherwise.
          */
-        template <typename TOtherType>
+        template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
         bool operator!=(const IVector2<TOtherType> &p_other) const
         {
             return (x != p_other.x || y != p_other.y);
@@ -302,7 +302,7 @@ namespace spk
          * @param p_value The scalar value to compare with both components of the vector.
          * @return True if either component of the vector is not equal to the scalar value, false otherwise.
          */
-        template <typename TOtherType>
+        template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
         bool operator!=(const TOtherType &p_value) const
         {
             return (x != p_value || y != p_value);
@@ -314,7 +314,7 @@ namespace spk
          * @param p_other The vector to compare with.
          * @return True if this vector is lexicographically less than the other vector, false otherwise.
          */
-        template <typename TOtherType>
+        template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
         bool operator<(const IVector2<TOtherType> &p_other) const
         {
             return (y < p_other.y) || (y == p_other.y && x < p_other.x);
@@ -326,7 +326,7 @@ namespace spk
          * @param p_other The vector to compare with.
          * @return True if this vector is lexicographically greater than the other vector, false otherwise.
          */
-        template <typename TOtherType>
+        template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
         bool operator>(const IVector2<TOtherType> &p_other) const
         {
             return (y > p_other.y) || (y == p_other.y && x > p_other.x);
@@ -338,7 +338,7 @@ namespace spk
          * @param p_other The vector to compare with.
          * @return True if this vector is lexicographically less than or equal to the other vector, false otherwise.
          */
-        template <typename TOtherType>
+        template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
         bool operator<=(const IVector2<TOtherType> &p_other) const
         {
             return (y < p_other.y) || (y == p_other.y && x <= p_other.x);
@@ -350,7 +350,7 @@ namespace spk
          * @param p_other The vector to compare with.
          * @return True if this vector is lexicographically greater than or equal to the other vector, false otherwise.
          */
-        template <typename TOtherType>
+        template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
         bool operator>=(const IVector2<TOtherType> &p_other) const
         {
             return (y > p_other.y) || (y == p_other.y && x >= p_other.x);
@@ -418,7 +418,7 @@ namespace spk
          * @param p_other The other vector involved in the cross product operation.
          * @return A new vector that is orthogonal to both this vector and `p_other`.
          */
-        template <typename TOtherType>
+        template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
         IVector2 cross(const IVector2<TOtherType> &p_other = IVector2(0, 0)) const
         {
             IVector2 result;
@@ -434,7 +434,7 @@ namespace spk
          * @param p_other The other vector involved in the cross product operation.
          * @return The scalar Z component of the cross product.
          */
-        template <typename TOtherType>
+        template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
         float crossZ(const IVector2<TOtherType> &p_other) const
         {
             return (x * p_other.y - y * p_other.x);
@@ -447,7 +447,7 @@ namespace spk
          * @param p_center The point considered as the origin for the vectors (default is the origin of the coordinate system).
          * @return The scalar result of the dot product.
          */
-        template <typename TOtherType>
+        template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
         float dot(const IVector2<TOtherType> &p_other, const IVector2<TOtherType> &p_center = IVector2(0, 0)) const
         {
             return (x - p_center.x) * (p_other.x - p_center.x) + (y - p_center.y) * (p_other.y - p_center.y);
@@ -460,7 +460,7 @@ namespace spk
          * @param p_center The point considered as the origin for the vectors (default is the origin of the coordinate system).
          * @return The angle between the two vectors in degrees.
          */
-        template <typename TOtherType>
+        template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
         float angle(const IVector2<TOtherType> &p_other, const IVector2<TOtherType> &p_center = IVector2(0, 0)) const
         {
             float rdot = dot(p_other, p_center);
@@ -475,7 +475,7 @@ namespace spk
          * @param p_angle The angle of rotation in degrees.
          * @return A new vector that is the result of rotating this vector around `p_center` by `p_angle`.
          */
-        template <typename TOtherType>
+        template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
         IVector2 rotate(const IVector2<TOtherType> &p_center, const float &p_angle) const
         {
             float theta = spk::degreeToRadian(p_angle);
@@ -492,7 +492,7 @@ namespace spk
          * @param p_vector The vector to be rounded down.
          * @return A new vector with each component rounded down.
          */
-        template <typename TOtherType>
+        template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
         static IVector2<float> floor(const IVector2<TOtherType> &p_vector)
         {
             IVector2<float> result;
@@ -507,7 +507,7 @@ namespace spk
          * @param p_vector The vector to be rounded up.
          * @return A new vector with each component rounded up.
          */
-        template <typename TOtherType>
+        template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
         static IVector2<float> ceiling(const IVector2<TOtherType> &p_vector)
         {
             IVector2<float> result;
@@ -522,7 +522,7 @@ namespace spk
          * @param p_vector The vector to be rounded.
          * @return A new vector with each component rounded to the nearest integer.
          */
-        template <typename TOtherType>
+        template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
         static IVector2<float> round(const IVector2<TOtherType> &p_vector)
         {
             IVector2<float> result;
