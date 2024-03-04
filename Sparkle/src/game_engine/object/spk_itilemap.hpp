@@ -228,19 +228,23 @@ namespace spk
 
 		IChunk* chunk(const spk::Vector2Int& p_chunkPosition)
 		{
+			if (containsChunk(p_chunkPosition) == false)
+				return (nullptr);
 			return (_chunks.at(p_chunkPosition).get());
 		}
 
 		const IChunk* chunk(const spk::Vector2Int& p_chunkPosition) const
 		{
+			if (containsChunk(p_chunkPosition) == false)
+				return (nullptr);
 			return (_chunks.at(p_chunkPosition).get());
 		}
 
 		void rebakeChunk(const spk::Vector2Int& p_chunkPosition)
 		{
-			for (int i = 1; i <= 1; i++)
+			for (int i = -1; i <= 1; i++)
 			{
-				for (int j = 1; j <= 1; j++)
+				for (int j = -1; j <= 1; j++)
 				{
 					spk::Vector2Int chunkPosition = p_chunkPosition + spk::Vector2Int(i, j);
 					if (containsChunk(chunkPosition) == true)
