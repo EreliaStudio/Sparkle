@@ -200,4 +200,6 @@ namespace spk
         void pause(Contract *p_contract);
         void resume(Contract *p_contract);
     };
+
+    using NotifierContract = std::unique_ptr<spk::Notifier::Contract>;
 }

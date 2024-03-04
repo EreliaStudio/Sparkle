@@ -595,7 +595,7 @@ namespace spk
 				return (_collisionMesh);
 			}
 
-			bool isObstacle(const spk::Vector2Int& p_position)
+			bool isFlag(const spk::Vector2Int& p_position, int p_flags) const
 			{
 				for (size_t k = 0; k < SizeZ; k++)
 				{
@@ -604,11 +604,26 @@ namespace spk
 					{
 						const Node& tmpNode = _tilemapCreator->node(index);
 
-						if ((tmpNode.flags & Node::OBSTACLE) == Node::OBSTACLE)
+						if ((tmpNode.flags & p_flags) == p_flags)
 							return (true);
 					}
 				}
 				return (false);
+			}
+
+			bool isFlag(const spk::Vector3Int& p_position, int p_flags) const
+			{
+				return (isFlag(p_position.xy(), p_flags));
+			}
+
+			bool isObstacle(const spk::Vector2Int& p_position) const
+			{
+				return (isFlag(p_position, Node::OBSTACLE));
+			}
+
+			bool isObstacle(const spk::Vector3Int& p_position) const
+			{
+				return (isFlag(p_position.xy(), Node::OBSTACLE));
 			}
 		};
 
@@ -715,6 +730,34 @@ namespace spk
 					element->activate();
 				}
 			}
+		}
+
+		bool isFlag(const spk::Vector2Int& p_absolutePosition, int p_flags) const
+		{
+			spk::Vector2Int chunkPosition = convertWorldToChunkPosition(p_absolutePosition);
+
+			if (containsChunk(chunkPosition) == true)
+			{
+				const Chunk* tmpChunk = dynamic_cast<const Chunk*>(chunk(chunkPosition));
+
+				return (tmpChunk->isFlag(tmpChunk->convertAbsoluteToRelativePosition(p_absolutePosition), p_flags));
+			}
+			return (true);
+		}
+
+		bool isFlag(const spk::Vector3Int& p_absolutePosition, int p_flags) const
+		{
+			return (isFlag(p_absolutePosition.xy(), p_flags));
+		}
+
+		bool isObstacle(const spk::Vector3Int& p_absolutePosition) const
+		{
+			return (isFlag(p_absolutePosition.xy(), Node::OBSTACLE));
+		}
+
+		bool isObstacle(const spk::Vector2Int& p_absolutePosition) const
+		{
+			return (isFlag(p_absolutePosition, Node::OBSTACLE));
 		}
 	};
 }

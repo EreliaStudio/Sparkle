@@ -287,7 +287,7 @@ namespace spk
          * @return True if both x and y components are equal, false otherwise.
          */
         template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
-        bool operator==(const IVector2<TOtherType>& p_other) const
+        bool operator==(const IVector2<TOtherType> &p_other) const
         {
             return (x == p_other.x && y == p_other.y);
         }
@@ -299,7 +299,7 @@ namespace spk
          * @return True if both components of the vector are equal to the scalar value, false otherwise.
          */
         template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
-        bool operator==(const TOtherType& p_value) const
+        bool operator==(const TOtherType &p_value) const
         {
             return (x == p_value && y == p_value);
         }
@@ -311,7 +311,7 @@ namespace spk
          * @return True if either x or y component is not equal, false otherwise.
          */
         template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
-        bool operator!=(const IVector2<TOtherType>& p_other) const
+        bool operator!=(const IVector2<TOtherType> &p_other) const
         {
             return (x != p_other.x || y != p_other.y);
         }
@@ -323,7 +323,7 @@ namespace spk
          * @return True if either component of the vector is not equal to the scalar value, false otherwise.
          */
         template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
-        bool operator!=(const TOtherType& p_value) const
+        bool operator!=(const TOtherType &p_value) const
         {
             return (x != p_value || y != p_value);
         }
@@ -335,7 +335,7 @@ namespace spk
          * @return True if this vector is lexicographically less than the other vector, false otherwise.
          */
         template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
-        bool operator<(const IVector2<TOtherType>& p_other) const
+        bool operator<(const IVector2<TOtherType> &p_other) const
         {
             return (y < p_other.y) || (y == p_other.y && x < p_other.x);
         }
@@ -347,7 +347,7 @@ namespace spk
          * @return True if this vector is lexicographically greater than the other vector, false otherwise.
          */
         template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
-        bool operator>(const IVector2<TOtherType>& p_other) const
+        bool operator>(const IVector2<TOtherType> &p_other) const
         {
             return (y > p_other.y) || (y == p_other.y && x > p_other.x);
         }
@@ -359,7 +359,7 @@ namespace spk
          * @return True if this vector is lexicographically less than or equal to the other vector, false otherwise.
          */
         template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
-        bool operator<=(const IVector2<TOtherType>& p_other) const
+        bool operator<=(const IVector2<TOtherType> &p_other) const
         {
             return (y < p_other.y) || (y == p_other.y && x <= p_other.x);
         }
@@ -371,7 +371,7 @@ namespace spk
          * @return True if this vector is lexicographically greater than or equal to the other vector, false otherwise.
          */
         template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
-        bool operator>=(const IVector2<TOtherType>& p_other) const
+        bool operator>=(const IVector2<TOtherType> &p_other) const
         {
             return (y > p_other.y) || (y == p_other.y && x >= p_other.x);
         }
