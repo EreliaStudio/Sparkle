@@ -1,5 +1,6 @@
 #pragma once
 
+#include <fstream>
 #include "game_engine/spk_game_object.hpp"
 #include "game_engine/component/spk_game_component.hpp"
 
@@ -216,12 +217,13 @@ namespace spk
 		{
 			if (_chunks.contains(p_chunkPosition) == true)
 			{
-				return (_chunks.at(p_chunkPosition));
+				return (_chunks.at(p_chunkPosition).get());
 			}
 
 			IChunk* result = _instanciateNewChunk(p_chunkPosition);
 
-			_chunks[p_chunkPosition] = std::make_unique<IChunk>(result);
+			this->addChild(result);
+			_chunks[p_chunkPosition] = std::unique_ptr<IChunk>(result);
 
 			return (result);
 		}
