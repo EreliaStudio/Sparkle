@@ -425,7 +425,7 @@ namespace spk
 				}
 			}
 
-			void _onBaking()
+			void _onBaking() override
 			{
 				_vertexData.clear();
 				_indexes.clear();
@@ -532,7 +532,7 @@ namespace spk
 				}
 			}
 
-			void _onObjectRendering()
+			void _onObjectRendering() override
 			{
 				_textureObject.attach(_spriteSheet);
 				_renderingObject.render();
@@ -695,7 +695,9 @@ namespace spk
 					IChunk* chunkToActivate = chunk(spk::Vector2Int(x, y));
 
 					if (chunkToActivate != nullptr)
+					{
 						chunksToActivate.push_back(chunkToActivate);
+					}
 				}
 			}
 
@@ -709,7 +711,9 @@ namespace spk
 			for (auto& element : _activeChunks)
 			{
 				if (element->isActive() == false)
+				{
 					element->activate();
+				}
 			}
 		}
 	};

@@ -11,7 +11,6 @@ namespace spk
 			
 		for (auto& component : _components)
 		{
-			std::cout << "Rending component [" << component->fullName() << "]" << std::endl;
 			component->render();
 		}
 
