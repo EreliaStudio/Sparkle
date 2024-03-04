@@ -19,7 +19,8 @@ namespace spk
 	#ifndef NDEBUG
 		_timeMetric.start();
 	#endif
-		_onUpdate();
+		if (isActive() == true)
+			_onUpdate();
 	#ifndef NDEBUG
 		_timeMetric.stop();
 	#endif
@@ -27,7 +28,8 @@ namespace spk
 	
 	void GameComponent::render()
 	{
-		_onRender();
+		if (isActive() == true)
+			_onRender();
 	}
 
 	GameObject* GameComponent::owner()
