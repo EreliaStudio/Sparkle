@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['element_514',['Element',['../structspk_1_1Pipeline_1_1Object_1_1Storage_1_1Layout_1_1Element.html',1,'spk::Pipeline::Object::Storage::Layout::Element'],['../structspk_1_1Pipeline_1_1Structure_1_1Element.html',1,'spk::Pipeline::Structure::Element'],['../classspk_1_1Pipeline_1_1UniformObject_1_1Element.html',1,'spk::Pipeline::UniformObject::Element']]],
-  ['eventmanager_515',['EventManager',['../classspk_1_1EventManager.html',1,'spk']]]
+  ['data_570',['Data',['../structspk_1_1Mesh_1_1Data.html',1,'spk::Mesh']]]
 ];

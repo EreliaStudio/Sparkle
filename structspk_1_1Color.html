@@ -87,7 +87,7 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:ad4c558f1e3fdf90d50618c46baab36db"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default constructor initializes color to transparent black. <br /></td></tr>
 <tr class="separator:ad4c558f1e3fdf90d50618c46baab36db"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aac18e529b35fafd8a39905fb76c21423"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structspk_1_1Color.html#aac18e529b35fafd8a39905fb76c21423">Color</a> (int p_value)</td></tr>
-<tr class="memdesc:aac18e529b35fafd8a39905fb76c21423"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor to initialize color with grayscale value.  <a href="structspk_1_1Color.html#aac18e529b35fafd8a39905fb76c21423">More...</a><br /></td></tr>
+<tr class="memdesc:aac18e529b35fafd8a39905fb76c21423"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor to initialize color with hexadecimal value.  <a href="structspk_1_1Color.html#aac18e529b35fafd8a39905fb76c21423">More...</a><br /></td></tr>
 <tr class="separator:aac18e529b35fafd8a39905fb76c21423"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1b18a70f57601a90a31a8eaa5db33f65"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structspk_1_1Color.html#a1b18a70f57601a90a31a8eaa5db33f65">Color</a> (int p_r, int p_g, int p_b, int p_a=255)</td></tr>
 <tr class="memdesc:a1b18a70f57601a90a31a8eaa5db33f65"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor to initialize color from integer values.  <a href="structspk_1_1Color.html#a1b18a70f57601a90a31a8eaa5db33f65">More...</a><br /></td></tr>
@@ -129,7 +129,7 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="str
 <div class="line"><a class="code" href="structspk_1_1Color.html">spk::Color</a> semiTransparentRed(1.0f, 0.0f, 0.0f, 0.5f); <span class="comment">// Semi-transparent red</span></div>
 <div class="line"> </div>
 <div class="line"><a class="code" href="structspk_1_1Color.html">spk::Color</a> mixedColor = white + semiTransparentRed; <span class="comment">// Mix white and red</span></div>
-<div class="ttc" id="astructspk_1_1Color_html"><div class="ttname"><a href="structspk_1_1Color.html">spk::Color</a></div><div class="ttdoc">Represents a color in RGBA format.</div><div class="ttdef"><b>Definition:</b> spk_color.hpp:31</div></div>
+<div class="ttc" id="astructspk_1_1Color_html"><div class="ttname"><a href="structspk_1_1Color.html">spk::Color</a></div><div class="ttdoc">Represents a color in RGBA format.</div><div class="ttdef"><b>Definition:</b> spk_color.hpp:32</div></div>
 </div><!-- fragment --><dl class="section note"><dt>Note</dt><dd><a class="el" href="structspk_1_1Color.html" title="Represents a color in RGBA format.">Color</a> components are clamped to the range [0, 255] for integers and [0.0f, 1.0f] for floating-point values. </dd></dl>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="aac18e529b35fafd8a39905fb76c21423"></a>
@@ -148,10 +148,10 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="str
       </table>
 </div><div class="memdoc">
 
-<p>Constructor to initialize color with grayscale value. </p>
+<p>Constructor to initialize color with hexadecimal value. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">p_value</td><td>The grayscale value [0, 255]. </td></tr>
+    <tr><td class="paramname">p_value</td><td>The hex value of the color. </td></tr>
   </table>
   </dd>
 </dl>

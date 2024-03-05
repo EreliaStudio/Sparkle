@@ -1,15 +1,15 @@
 var searchData=
 [
-  ['name_773',['name',['../classspk_1_1GameObject.html#a94582351492ffc044a1f1b9487755da8',1,'spk::GameObject::name()'],['../classspk_1_1InputMapping.html#a3bf2daad373ce7e7704f02ce38dab6f2',1,'spk::InputMapping::name()'],['../classspk_1_1IWidget.html#a228715457b410b48c5c94a9091c688b9',1,'spk::IWidget::name()'],['../classspk_1_1GameComponent.html#a6888b4911e003727ceb506456029a7e3',1,'spk::GameComponent::name()']]],
-  ['nbcontracts_774',['nbContracts',['../classspk_1_1Notifier.html#a4565aca18e82a3f8ae339454fc6b90ad',1,'spk::Notifier::nbContracts()'],['../classspk_1_1ObservableValue.html#a3819c28da3a0fa4c8c8e1c7214af4e7c',1,'spk::ObservableValue::nbContracts()']]],
-  ['nbtriangles_775',['nbTriangles',['../classspk_1_1Pipeline_1_1Object_1_1Storage.html#ac8a3d6a7a13d4e4aca75e48eb2d27fd2',1,'spk::Pipeline::Object::Storage']]],
-  ['nearplane_776',['nearPlane',['../classspk_1_1Camera.html#a3cf2cb4a0a1fbfceae591817f38157de',1,'spk::Camera']]],
-  ['nextvelocitytick_777',['nextVelocityTick',['../classspk_1_1Physics.html#af98e446865306daf1207628b0dada599',1,'spk::Physics']]],
-  ['nineslicedbox_778',['NineSlicedBox',['../classspk_1_1WidgetComponent_1_1NineSlicedBox.html#a9b34e3d64e6eb9ba8b8a5096c8b25da1',1,'spk::WidgetComponent::NineSlicedBox']]],
-  ['norm_779',['norm',['../structspk_1_1IVector3.html#a0f8393536cd9515d379fdb5cfa51ce42',1,'spk::IVector3::norm()'],['../structspk_1_1IVector2.html#aa0d0c755988c4ce9ec8e86e1744d997e',1,'spk::IVector2::norm()']]],
-  ['normalize_780',['normalize',['../classspk_1_1Quaternion.html#a21edb010d01014e8a4680ad5177ea7bb',1,'spk::Quaternion::normalize()'],['../structspk_1_1IVector2.html#a6bc80581ee0fb7ce5f10b751b85fa0cb',1,'spk::IVector2::normalize()'],['../structspk_1_1IVector3.html#abea37a463a1e88283763e39ff9910d37',1,'spk::IVector3::normalize()']]],
-  ['normals_781',['normals',['../classspk_1_1Mesh.html#a2651226890af9a5b543b5a7c932b8817',1,'spk::Mesh']]],
-  ['notifier_782',['Notifier',['../classspk_1_1Notifier.html#a7cd831676b58e5e5dc48fca3019b0cb0',1,'spk::Notifier::Notifier()'],['../classspk_1_1Notifier.html#aec9d7ff611ffee79b4f8a9ecf34d38f6',1,'spk::Notifier::Notifier(Notifier &amp;&amp;p_other)']]],
-  ['notify_783',['notify',['../classspk_1_1Notifier_1_1Contract.html#a3853633cb57d115d84c81cf5e180c34d',1,'spk::Notifier::Contract']]],
-  ['notify_5fall_784',['notify_all',['../classspk_1_1EventManager.html#acf633f27603bb8c0bbf315307f521233',1,'spk::EventManager::notify_all()'],['../classspk_1_1Notifier.html#a1dd154adc30627b07c364abd945c3ccc',1,'spk::Notifier::notify_all()'],['../classspk_1_1ObservableValue.html#a6eb8258a644771a2ccb03cdfda1ee718',1,'spk::ObservableValue::notify_all()']]]
+  ['name_855',['name',['../classspk_1_1GameObject.html#a94582351492ffc044a1f1b9487755da8',1,'spk::GameObject::name()'],['../classspk_1_1InputMapping.html#a3bf2daad373ce7e7704f02ce38dab6f2',1,'spk::InputMapping::name()'],['../classspk_1_1widget_1_1IWidget.html#a69c3b93b11f608e36906d8ffd8a8ff46',1,'spk::widget::IWidget::name()'],['../classspk_1_1GameComponent.html#a6888b4911e003727ceb506456029a7e3',1,'spk::GameComponent::name()']]],
+  ['nbcontracts_856',['nbContracts',['../classspk_1_1Notifier.html#a4565aca18e82a3f8ae339454fc6b90ad',1,'spk::Notifier::nbContracts()'],['../classspk_1_1ObservableValue.html#a3819c28da3a0fa4c8c8e1c7214af4e7c',1,'spk::ObservableValue::nbContracts()']]],
+  ['nbtriangles_857',['nbTriangles',['../classspk_1_1Pipeline_1_1Object_1_1Storage.html#ac8a3d6a7a13d4e4aca75e48eb2d27fd2',1,'spk::Pipeline::Object::Storage']]],
+  ['nearplane_858',['nearPlane',['../classspk_1_1Camera.html#a3cf2cb4a0a1fbfceae591817f38157de',1,'spk::Camera']]],
+  ['nextvelocitytick_859',['nextVelocityTick',['../classspk_1_1Physics.html#af98e446865306daf1207628b0dada599',1,'spk::Physics']]],
+  ['nineslicedbox_860',['NineSlicedBox',['../classspk_1_1widget_1_1components_1_1NineSlicedBox.html#a30932024e8f449b9262ad2c0f83e8aab',1,'spk::widget::components::NineSlicedBox']]],
+  ['norm_861',['norm',['../structspk_1_1IVector3.html#aead4b8d1d93d1be0f5fde44c5734b43f',1,'spk::IVector3::norm()'],['../structspk_1_1IVector2.html#ac93dd9e26eb25cb0d74b3858203ec9ca',1,'spk::IVector2::norm()']]],
+  ['normalize_862',['normalize',['../classspk_1_1Quaternion.html#a21edb010d01014e8a4680ad5177ea7bb',1,'spk::Quaternion::normalize()'],['../structspk_1_1IVector2.html#a25baa4a833896c3368feac990d3743d8',1,'spk::IVector2::normalize()'],['../structspk_1_1IVector3.html#a285b680481dd8e1367d683942c200064',1,'spk::IVector3::normalize()']]],
+  ['normals_863',['normals',['../classspk_1_1Mesh.html#a2651226890af9a5b543b5a7c932b8817',1,'spk::Mesh']]],
+  ['notifier_864',['Notifier',['../classspk_1_1Notifier.html#a7cd831676b58e5e5dc48fca3019b0cb0',1,'spk::Notifier::Notifier()'],['../classspk_1_1Notifier.html#aec9d7ff611ffee79b4f8a9ecf34d38f6',1,'spk::Notifier::Notifier(Notifier &amp;&amp;p_other)']]],
+  ['notify_865',['notify',['../classspk_1_1Notifier_1_1Contract.html#a3853633cb57d115d84c81cf5e180c34d',1,'spk::Notifier::Contract']]],
+  ['notify_5fall_866',['notify_all',['../classspk_1_1EventManager.html#acf633f27603bb8c0bbf315307f521233',1,'spk::EventManager::notify_all()'],['../classspk_1_1Notifier.html#a1dd154adc30627b07c364abd945c3ccc',1,'spk::Notifier::notify_all()'],['../classspk_1_1ObservableValue.html#a6eb8258a644771a2ccb03cdfda1ee718',1,'spk::ObservableValue::notify_all()']]]
 ];

@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['interpolation_1056',['Interpolation',['../classspk_1_1IPerlin.html#a3266c3dd973db71cfd0f81a6b8ff4540',1,'spk::IPerlin']]]
+  ['filtering_1171',['Filtering',['../classspk_1_1Texture.html#a86a03180e180bf4f4473b2d68d56daba',1,'spk::Texture']]],
+  ['format_1172',['Format',['../classspk_1_1Texture.html#a50482c7e8c0571aac8bd5f978ddef49a',1,'spk::Texture']]]
 ];

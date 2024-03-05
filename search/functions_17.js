@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['xy_965',['xy',['../structspk_1_1IVector3.html#af57c965a116af341846cd46a2bda76fb',1,'spk::IVector3']]],
-  ['xz_966',['xz',['../structspk_1_1IVector3.html#a69dc0d5f8df527361f95d220e0ecd41c',1,'spk::IVector3']]]
+  ['xy_1058',['xy',['../structspk_1_1IVector3.html#a31f35fe153cdd55101488964b17dab9f',1,'spk::IVector3']]],
+  ['xz_1059',['xz',['../structspk_1_1IVector3.html#a02865029a7fffcc86b7cfa88c60dc1ae',1,'spk::IVector3']]]
 ];

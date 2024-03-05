@@ -1,0 +1,7 @@
+<map id="spk::widget::FractionallySizedBox" name="spk::widget::FractionallySizedBox">
+<area shape="rect" id="node1" title="FractionallySizedBox sizes its widgets to a fraction of its parent&#39;s constraints." alt="" coords="87,244,268,285"/>
+<area shape="rect" id="node2" href="$classspk_1_1widget_1_1SingleChildWidget.html" title="A widget that only has one child." alt="" coords="88,155,267,196"/>
+<area shape="rect" id="node3" href="$classspk_1_1widget_1_1IWidget.html" title="Defines a widget interface for UI elements, integrating activation state management,..." alt="" coords="100,80,255,107"/>
+<area shape="rect" id="node4" href="$classspk_1_1ActivateObject.html" title="Manages activation state for objects, intended as a base class." alt="" coords="5,5,155,32"/>
+<area shape="rect" id="node5" href="$classspk_1_1TreeNode.html" title=" " alt="" coords="179,5,373,32"/>
+</map>

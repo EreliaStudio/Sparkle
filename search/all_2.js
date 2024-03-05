@@ -5,5 +5,10 @@ var searchData=
   ['bake_45',['bake',['../classspk_1_1Mesh.html#afcd757f4135872873ea451e624e7da9c',1,'spk::Mesh']]],
   ['bakenormals_46',['bakeNormals',['../classspk_1_1Mesh.html#a8a92b1afccca154c13dd8a837f53d5d6',1,'spk::Mesh']]],
   ['binding_47',['binding',['../structspk_1_1Pipeline_1_1UniformObject_1_1Layout.html#a0c3cad6a2dc19f5408ce63f1f570a245',1,'spk::Pipeline::UniformObject::Layout']]],
-  ['button_48',['Button',['../classspk_1_1Mouse.html#a7e51467586bf8952f05461cc3b9fd5b5',1,'spk::Mouse']]]
+  ['black_48',['black',['../classspk_1_1Colors.html#ae6dca032cc5b478bda61efdf4c63e53c',1,'spk::Colors']]],
+  ['blue_49',['blue',['../classspk_1_1Colors.html#a9917224906c1ad8b00e4b9bcb61c6d21',1,'spk::Colors']]],
+  ['bottom_50',['bottom',['../structspk_1_1widget_1_1Padding_1_1Config.html#aac41a95b34cf66cdcfc02e0af7c77bb0',1,'spk::widget::Padding::Config']]],
+  ['boxconstraints_51',['BoxConstraints',['../structspk_1_1widget_1_1BoxConstraints.html#a7292fd9c6a69672508bd45797016e4fc',1,'spk::widget::BoxConstraints::BoxConstraints()'],['../structspk_1_1widget_1_1BoxConstraints.html',1,'spk::widget::BoxConstraints']]],
+  ['builder_52',['Builder',['../classspk_1_1widget_1_1LayoutBuilder.html#ab888f8c71ea99d1918a2d66d661a7a92',1,'spk::widget::LayoutBuilder']]],
+  ['button_53',['Button',['../classspk_1_1Mouse.html#a7e51467586bf8952f05461cc3b9fd5b5',1,'spk::Mouse']]]
 ];

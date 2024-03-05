@@ -1,10 +1,5 @@
 var searchData=
 [
-  ['samplerobject_570',['SamplerObject',['../classspk_1_1OpenGL_1_1SamplerObject.html',1,'spk::OpenGL']]],
-  ['shaderinstruction_571',['ShaderInstruction',['../structspk_1_1OpenGL_1_1ShaderInstruction.html',1,'spk::OpenGL']]],
-  ['singleton_572',['Singleton',['../classspk_1_1Singleton.html',1,'spk']]],
-  ['spriteanimation_573',['SpriteAnimation',['../structspk_1_1SpriteAnimation.html',1,'spk']]],
-  ['spritesheet_574',['SpriteSheet',['../classspk_1_1SpriteSheet.html',1,'spk']]],
-  ['statemachine_575',['StateMachine',['../classspk_1_1StateMachine.html',1,'spk']]],
-  ['storage_576',['Storage',['../classspk_1_1Pipeline_1_1Object_1_1Storage.html',1,'spk::Pipeline::Object']]]
+  ['randomgenerator_631',['RandomGenerator',['../classspk_1_1RandomGenerator.html',1,'spk']]],
+  ['row_632',['Row',['../classspk_1_1widget_1_1Row.html',1,'spk::widget']]]
 ];

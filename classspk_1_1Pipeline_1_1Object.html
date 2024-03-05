@@ -110,10 +110,10 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a41a53f3d8e59514826754edcd098440a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classspk_1_1Pipeline_1_1Object.html">Object</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Pipeline_1_1Object.html#a41a53f3d8e59514826754edcd098440a">operator=</a> (<a class="el" href="classspk_1_1Pipeline_1_1Object.html">Object</a> &amp;&amp;p_other)=default</td></tr>
 <tr class="memdesc:a41a53f3d8e59514826754edcd098440a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default move assignment operator.  <a href="classspk_1_1Pipeline_1_1Object.html#a41a53f3d8e59514826754edcd098440a">More...</a><br /></td></tr>
 <tr class="separator:a41a53f3d8e59514826754edcd098440a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a65d1a2194ab42204bc31ddd484419222"><td class="memTemplParams" colspan="2">template&lt;typename TVertexData &gt; </td></tr>
-<tr class="memitem:a65d1a2194ab42204bc31ddd484419222"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classspk_1_1Pipeline_1_1Object.html#a65d1a2194ab42204bc31ddd484419222">setVertices</a> (const std::vector&lt; TVertexData &gt; &amp;p_verticesData)</td></tr>
-<tr class="memdesc:a65d1a2194ab42204bc31ddd484419222"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the vertex data for the object.  <a href="classspk_1_1Pipeline_1_1Object.html#a65d1a2194ab42204bc31ddd484419222">More...</a><br /></td></tr>
-<tr class="separator:a65d1a2194ab42204bc31ddd484419222"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab1b8b42e46491eb01af00ffc607d6924"><td class="memTemplParams" colspan="2">template&lt;typename TShaderInput &gt; </td></tr>
+<tr class="memitem:ab1b8b42e46491eb01af00ffc607d6924"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classspk_1_1Pipeline_1_1Object.html#ab1b8b42e46491eb01af00ffc607d6924">setVertices</a> (const std::vector&lt; TShaderInput &gt; &amp;p_verticesData)</td></tr>
+<tr class="memdesc:ab1b8b42e46491eb01af00ffc607d6924"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the vertex data for the object.  <a href="classspk_1_1Pipeline_1_1Object.html#ab1b8b42e46491eb01af00ffc607d6924">More...</a><br /></td></tr>
+<tr class="separator:ab1b8b42e46491eb01af00ffc607d6924"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a23e819f19f3e9fff8d9d61495e22ad53"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Pipeline_1_1Object.html#a23e819f19f3e9fff8d9d61495e22ad53">setVertices</a> (const std::vector&lt; float &gt; &amp;p_verticesData, size_t p_elementSize)</td></tr>
 <tr class="memdesc:a23e819f19f3e9fff8d9d61495e22ad53"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the vertex data for the object with a specified element size.  <a href="classspk_1_1Pipeline_1_1Object.html#a23e819f19f3e9fff8d9d61495e22ad53">More...</a><br /></td></tr>
 <tr class="separator:a23e819f19f3e9fff8d9d61495e22ad53"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -135,11 +135,11 @@ class&#160;</td><td class="memItemRight" valign="bottom"><b>Pipeline</b></td></t
 <p>This class is responsible for managing the vertex array object (VAO), vertex buffer object (VBO), and any associated attributes or textures.</p>
 <p>It encapsulates the geometry (vertices and indices) and provides methods to set attribute values and draw the object using the <a class="el" href="classspk_1_1Pipeline.html" title="Manages the rendering pipeline, including shader programs, uniforms, and objects.">Pipeline</a> that created the <a class="el" href="classspk_1_1Pipeline_1_1Object.html" title="Represents a drawable object within the Pipeline, including geometry and attributes.">Object</a>.</p>
 <p>Usage example: </p><div class="fragment"><div class="line"><a class="code" href="classspk_1_1Pipeline_1_1Object.html">spk::Pipeline::Object</a> <span class="keywordtype">object</span> = pipeline.createObject();</div>
-<div class="line"><span class="keywordtype">object</span>.<a class="code" href="classspk_1_1Pipeline_1_1Object.html#a65d1a2194ab42204bc31ddd484419222">setVertices</a>(myVertices);</div>
+<div class="line"><span class="keywordtype">object</span>.<a class="code" href="classspk_1_1Pipeline_1_1Object.html#ab1b8b42e46491eb01af00ffc607d6924">setVertices</a>(myVertices);</div>
 <div class="line"><span class="keywordtype">object</span>.setAttribute(<span class="stringliteral">&quot;MyAttribute&quot;</span>, value);</div>
 <div class="line"><span class="keywordtype">object</span>.render();</div>
-<div class="ttc" id="aclassspk_1_1Pipeline_1_1Object_html"><div class="ttname"><a href="classspk_1_1Pipeline_1_1Object.html">spk::Pipeline::Object</a></div><div class="ttdoc">Represents a drawable object within the Pipeline, including geometry and attributes.</div><div class="ttdef"><b>Definition:</b> spk_pipeline.hpp:385</div></div>
-<div class="ttc" id="aclassspk_1_1Pipeline_1_1Object_html_a65d1a2194ab42204bc31ddd484419222"><div class="ttname"><a href="classspk_1_1Pipeline_1_1Object.html#a65d1a2194ab42204bc31ddd484419222">spk::Pipeline::Object::setVertices</a></div><div class="ttdeci">void setVertices(const std::vector&lt; TVertexData &gt; &amp;p_verticesData)</div><div class="ttdoc">Sets the vertex data for the object.</div><div class="ttdef"><b>Definition:</b> spk_pipeline.hpp:645</div></div>
+<div class="ttc" id="aclassspk_1_1Pipeline_1_1Object_html"><div class="ttname"><a href="classspk_1_1Pipeline_1_1Object.html">spk::Pipeline::Object</a></div><div class="ttdoc">Represents a drawable object within the Pipeline, including geometry and attributes.</div><div class="ttdef"><b>Definition:</b> spk_pipeline.hpp:390</div></div>
+<div class="ttc" id="aclassspk_1_1Pipeline_1_1Object_html_ab1b8b42e46491eb01af00ffc607d6924"><div class="ttname"><a href="classspk_1_1Pipeline_1_1Object.html#ab1b8b42e46491eb01af00ffc607d6924">spk::Pipeline::Object::setVertices</a></div><div class="ttdeci">void setVertices(const std::vector&lt; TShaderInput &gt; &amp;p_verticesData)</div><div class="ttdoc">Sets the vertex data for the object.</div><div class="ttdef"><b>Definition:</b> spk_pipeline.hpp:652</div></div>
 </div><!-- fragment --><dl class="section see"><dt>See also</dt><dd><a class="el" href="classspk_1_1Pipeline_1_1Object_1_1Attribute.html" title="Specializes UniformObject for managing object-specific attributes in shaders.">Pipeline::Object::Attribute</a> </dd></dl>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="acad82c8948336a71a3c713f98126b8cb"></a>
@@ -414,13 +414,13 @@ class&#160;</td><td class="memItemRight" valign="bottom"><b>Pipeline</b></td></t
 
 </div>
 </div>
-<a id="a65d1a2194ab42204bc31ddd484419222"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a65d1a2194ab42204bc31ddd484419222">&#9670;&nbsp;</a></span>setVertices() <span class="overload">[2/2]</span></h2>
+<a id="ab1b8b42e46491eb01af00ffc607d6924"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab1b8b42e46491eb01af00ffc607d6924">&#9670;&nbsp;</a></span>setVertices() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;typename TVertexData &gt; </div>
+template&lt;typename TShaderInput &gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
@@ -428,7 +428,7 @@ template&lt;typename TVertexData &gt; </div>
         <tr>
           <td class="memname">void spk::Pipeline::Object::setVertices </td>
           <td>(</td>
-          <td class="paramtype">const std::vector&lt; TVertexData &gt; &amp;&#160;</td>
+          <td class="paramtype">const std::vector&lt; TShaderInput &gt; &amp;&#160;</td>
           <td class="paramname"><em>p_verticesData</em></td><td>)</td>
           <td></td>
         </tr>
@@ -444,7 +444,7 @@ template&lt;typename TVertexData &gt; </div>
 <p>Template method to set the vertex data of the object. The vertex data is expected to conform to the layout specified by the <a class="el" href="classspk_1_1Pipeline.html" title="Manages the rendering pipeline, including shader programs, uniforms, and objects.">Pipeline</a>. This method updates the vertex buffer with the provided data.</p>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
-    <tr><td class="paramname">TVertexData</td><td>The data type of the vertex data array. </td></tr>
+    <tr><td class="paramname">TShaderInput</td><td>The data type of the vertex data array. </td></tr>
   </table>
   </dd>
 </dl>

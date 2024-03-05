@@ -1,16 +1,16 @@
 var searchData=
 [
-  ['data_97',['data',['../structspk_1_1Matrix4x4.html#a1300d9d8bebad4e73adb1c15d6e28cd8',1,'spk::Matrix4x4']]],
-  ['data_98',['Data',['../structspk_1_1Mesh_1_1Data.html',1,'spk::Mesh']]],
-  ['deactivate_99',['deactivate',['../classspk_1_1ActivateObject.html#a87154f0459deecbfd7a588600f9e1bc4',1,'spk::ActivateObject::deactivate()'],['../classspk_1_1OpenGL_1_1VertexArrayObject.html#a4600956522e996ba3c3382978117a52b',1,'spk::OpenGL::VertexArrayObject::deactivate()'],['../classspk_1_1OpenGL_1_1VertexBufferObject.html#a22b28bf10d6346694764b947f2f585f2',1,'spk::OpenGL::VertexBufferObject::deactivate()'],['../classspk_1_1OpenGL_1_1UniformBufferObject.html#aa2a2d05be14d047cfa016385ff21d74b',1,'spk::OpenGL::UniformBufferObject::deactivate()'],['../classspk_1_1Pipeline_1_1Object_1_1Storage.html#a5647f02abc4d34cd0c3bbe180d8b5685',1,'spk::Pipeline::Object::Storage::deactivate()']]],
-  ['deactivateall_100',['deactivateAll',['../classspk_1_1IWidget.html#ac21ab879dcf571218a6b2ade6207ae28',1,'spk::IWidget']]],
-  ['degreetoradian_101',['degreeToRadian',['../structspk_1_1IVector2.html#a8edafaf78805a713e0825c453a615f29',1,'spk::IVector2::degreeToRadian()'],['../structspk_1_1IVector3.html#afdb9ab5897719f5b34231434a2104416',1,'spk::IVector3::degreeToRadian()']]],
-  ['deltaposition_102',['deltaPosition',['../classspk_1_1Mouse.html#a1561a95f23e5fc8f8d68e00f0d5219f6',1,'spk::Mouse']]],
-  ['deltatime_103',['deltaTime',['../classspk_1_1TimeManager.html#a233c41d01cde4996f5171f965b743c83',1,'spk::TimeManager']]],
-  ['depth_104',['depth',['../classspk_1_1IWidget.html#a76d18b1aceefff7ef6f10ac5ebfadde9',1,'spk::IWidget']]],
-  ['determinant2x2_105',['determinant2x2',['../structspk_1_1Matrix4x4.html#a3f9bb01214faea65c6c82d840409dbca',1,'spk::Matrix4x4']]],
-  ['distance_106',['distance',['../structspk_1_1IVector2.html#a90a14c9fc90937b0521420ccc934c263',1,'spk::IVector2::distance()'],['../structspk_1_1IVector3.html#a115a4fdaacfea3693bd7b009104bb271',1,'spk::IVector3::distance()']]],
-  ['distancesquared_107',['distanceSquared',['../structspk_1_1IVector2.html#a2cfe53a260b1849c53e46d7a70b18f9b',1,'spk::IVector2']]],
-  ['dot_108',['dot',['../structspk_1_1IVector2.html#a5b615184fb3c906955819e01958102bc',1,'spk::IVector2::dot()'],['../structspk_1_1IVector3.html#a04baff13ac8b38a5894f6112a80f2fb0',1,'spk::IVector3::dot()']]],
-  ['duration_109',['duration',['../structspk_1_1SpriteAnimation.html#a05100d66edf75e874fae87b2d61c34de',1,'spk::SpriteAnimation::duration()'],['../classspk_1_1IChronometer.html#a6a8a905002bb53cbc617ea47a9e045c1',1,'spk::IChronometer::duration()']]]
+  ['data_111',['data',['../structspk_1_1Matrix4x4.html#a1300d9d8bebad4e73adb1c15d6e28cd8',1,'spk::Matrix4x4']]],
+  ['data_112',['Data',['../structspk_1_1Mesh_1_1Data.html',1,'spk::Mesh']]],
+  ['deactivate_113',['deactivate',['../classspk_1_1ActivateObject.html#a87154f0459deecbfd7a588600f9e1bc4',1,'spk::ActivateObject::deactivate()'],['../classspk_1_1OpenGL_1_1VertexArrayObject.html#a4600956522e996ba3c3382978117a52b',1,'spk::OpenGL::VertexArrayObject::deactivate()'],['../classspk_1_1OpenGL_1_1VertexBufferObject.html#a22b28bf10d6346694764b947f2f585f2',1,'spk::OpenGL::VertexBufferObject::deactivate()'],['../classspk_1_1OpenGL_1_1UniformBufferObject.html#aa2a2d05be14d047cfa016385ff21d74b',1,'spk::OpenGL::UniformBufferObject::deactivate()'],['../classspk_1_1Pipeline_1_1Object_1_1Storage.html#a5647f02abc4d34cd0c3bbe180d8b5685',1,'spk::Pipeline::Object::Storage::deactivate()']]],
+  ['deactivateall_114',['deactivateAll',['../classspk_1_1widget_1_1IWidget.html#a5ec7e5d83aad0560620515569ed8ac4d',1,'spk::widget::IWidget']]],
+  ['degreetoradian_115',['degreeToRadian',['../structspk_1_1IVector2.html#acda7ac5c406cd6fe7ec40d44c850dba8',1,'spk::IVector2::degreeToRadian()'],['../structspk_1_1IVector3.html#a7f003c47fcf65b125aa5af3241bd22b9',1,'spk::IVector3::degreeToRadian()']]],
+  ['deltaposition_116',['deltaPosition',['../classspk_1_1Mouse.html#a1561a95f23e5fc8f8d68e00f0d5219f6',1,'spk::Mouse']]],
+  ['deltatime_117',['deltaTime',['../classspk_1_1TimeManager.html#a233c41d01cde4996f5171f965b743c83',1,'spk::TimeManager']]],
+  ['depth_118',['depth',['../classspk_1_1widget_1_1IWidget.html#adb0a2a678164b9bbce41804e760e7296',1,'spk::widget::IWidget']]],
+  ['determinant2x2_119',['determinant2x2',['../structspk_1_1Matrix4x4.html#a3f9bb01214faea65c6c82d840409dbca',1,'spk::Matrix4x4']]],
+  ['distance_120',['distance',['../structspk_1_1IVector2.html#a1f21870df9921a5b0552dab6e4e7efb2',1,'spk::IVector2::distance()'],['../structspk_1_1IVector3.html#a21759191a22fe189522d6659bf68298c',1,'spk::IVector3::distance()']]],
+  ['distancesquared_121',['distanceSquared',['../structspk_1_1IVector2.html#abf8a76a06d9665bc6c314b8bac5deab0',1,'spk::IVector2']]],
+  ['dot_122',['dot',['../structspk_1_1IVector2.html#a8e7a6a895814e78712782e5854ae69e7',1,'spk::IVector2::dot()'],['../structspk_1_1IVector3.html#a25c1073f23a15bbcbfb8a9f0f5a42ffd',1,'spk::IVector3::dot()']]],
+  ['duration_123',['duration',['../structspk_1_1SpriteAnimation.html#a05100d66edf75e874fae87b2d61c34de',1,'spk::SpriteAnimation::duration()'],['../classspk_1_1IChronometer.html#a6a8a905002bb53cbc617ea47a9e045c1',1,'spk::IChronometer::duration()']]]
 ];
