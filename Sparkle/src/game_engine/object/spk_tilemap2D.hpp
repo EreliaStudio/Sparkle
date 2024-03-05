@@ -4,32 +4,72 @@
 
 namespace spk
 {
+	/**
+	 * @class Tilemap2D
+	 * @brief A specialized 2D tilemap implementation derived from ITilemap, providing specific functionalities for 2D tile-based environments.
+	 *
+	 * Tilemap2D extends the generic ITilemap with additional features tailored for 2D games. It allows for the management of
+	 * tiles, including their properties, rendering, and collision information. This class integrates with the game's rendering and
+	 * physics systems to display the tilemap and handle interactions.
+	 *
+	 * Usage example:
+	 * @code
+	 * spk::Tilemap2D tilemap("Level1");
+	 * tilemap.setSpriteSheet(spriteSheet);
+	 * tilemap.insertNodeType(1, nodeType);
+	 * tilemap.setActiveChunkRange({0, 0}, {5, 5});
+	 * tilemap.updateActiveChunks();
+	 * @endcode
+	 */
 	class Tilemap2D : public spk::ITilemap<short, 16, 16, 5>
 	{
 	public:
+		/**
+		 * @struct Node
+		 * @brief Represents a single tile node within the tilemap, encapsulating its visual and behavioral properties.
+		 *
+		 * The Node structure is used to define the attributes of individual tiles within the tilemap. It includes
+		 * information about the tile's appearance, such as its sprite and animation, as well as its behavior, defined
+		 * through flags like walkable or obstacle.
+		 */
 		struct Node
 		{
+			/**
+			 * @enum Type
+			 * @brief Defines the type of tile node, influencing how it should be rendered and interacted with.
+			 */
 			enum class Type
 			{
-				Autotile,
-				Standard
+				Autotile,  ///< The node uses autotiling logic to determine its sprite based on neighboring tiles.
+				Standard   ///< The node uses a standard, fixed sprite regardless of its neighbors.
 			};
 
-			static inline const uint16_t WALKABLE = 		0b0000000000000000;
-			static inline const uint16_t OBSTACLE = 		0b0000000000000001;
+			static inline const uint16_t WALKABLE = 0b0000000000000000; ///< Flag indicating the tile is walkable.
+			static inline const uint16_t OBSTACLE = 0b0000000000000001; ///< Flag indicating the tile is an obstacle.
 
-			spk::Vector2Int sprite = 0;
-			Type type = Type::Standard;
-			spk::Vector2Int animationFrameOffset = 0;
-			int nbFrame = 0;
-			int animationDuration = 0;
-			int flags = WALKABLE;
+			spk::Vector2Int sprite = 0;                 ///< The position of the tile's sprite in the sprite sheet.
+			Type type = Type::Standard;                 ///< The type of the node, determining its rendering logic.
+			spk::Vector2Int animationFrameOffset = 0;   ///< The starting offset for the tile's animation frames in the sprite sheet.
+			int nbFrame = 0;                            ///< The number of frames in the tile's animation.
+			int animationDuration = 0;                  ///< The duration of the tile's animation cycle.
+			int flags = WALKABLE;                       ///< Flags indicating the tile's behavior (e.g., walkable, obstacle).
 
+
+			/**
+			 * @brief Default constructor, initializes a Node with default values.
+			 */
 			Node()
 			{
 
 			}
 
+			/**
+			 * @brief Constructs a Node with specified sprite, flags, and type, without animation.
+			 *
+			 * @param p_sprite The position of the tile's sprite in the sprite sheet.
+			 * @param p_flags The behavior flags for the tile (e.g., walkable, obstacle).
+			 * @param p_type The type of the node (e.g., Autotile, Standard).
+			 */
 			Node(const spk::Vector2Int& p_sprite, uint16_t p_flags, Type p_type) :
 				sprite(p_sprite),
 				type(p_type),
@@ -38,6 +78,16 @@ namespace spk
 
 			}
 
+			/**
+			 * @brief Constructs a Node with specified sprite, flags, type, and animation properties.
+			 *
+			 * @param p_sprite The position of the tile's sprite in the sprite sheet.
+			 * @param p_flags The behavior flags for the tile.
+			 * @param p_type The type of the node.
+			 * @param p_animationFrameOffset The starting offset for the animation frames in the sprite sheet.
+			 * @param p_nbFrame The number of frames in the animation.
+			 * @param p_animationDuration The duration of the animation cycle.
+			 */
 			Node(const spk::Vector2Int& p_sprite, uint16_t p_flags, Type p_type, const spk::Vector2Int& p_animationFrameOffset, int p_nbFrame, int p_animationDuration) :
 				sprite(p_sprite),
 				type(p_type),
@@ -50,6 +100,13 @@ namespace spk
 			}
 		};
 
+		/**
+		 * @class Chunk
+		 * @brief Represents a single chunk in the Tilemap2D, encapsulating the rendering and collision data for a section of the tilemap.
+		 *
+		 * This class is a specialized version of the IChunk, designed to work within the Tilemap2D. It holds the data necessary for rendering a chunk
+		 * of tiles and managing its collision mesh. The Chunk class is responsible for baking the tile data into a format suitable for rendering and collision detection.
+		 */
 		class Chunk : public Tilemap2D::IChunk
 		{
 			friend class Tilemap2D;
@@ -580,21 +637,43 @@ namespace spk
 			}
 
 		public:
+		    /**
+			 * @brief Sets the sprite sheet used by this chunk for rendering its tiles.
+			 * 
+			 * @param p_spriteSheet Pointer to the sprite sheet resource.
+			 */
 			void setSpriteSheet(const spk::SpriteSheet* p_spriteSheet)
 			{
 				_spriteSheet = p_spriteSheet;
 			}
 
+			/**
+			 * @brief Retrieves the sprite sheet associated with this chunk.
+			 * 
+			 * @return A pointer to the sprite sheet used by this chunk.
+			 */
 			const spk::SpriteSheet* spriteSheet()
 			{
 				return (_spriteSheet);
 			}
 
+			/**
+			 * @brief Gets the collision mesh associated with this chunk, representing the physical boundaries of the tiles.
+			 * 
+			 * @return A reference to the mesh used for collision detection in this chunk.
+			 */
 			const spk::Mesh& collisionMesh() const
 			{
 				return (_collisionMesh);
 			}
 
+			/**
+			 * @brief Checks if a specific flag is set for a tile at the given position within this chunk.
+			 * 
+			 * @param p_position The position of the tile within the chunk.
+			 * @param p_flags The flag or combination of flags to check for.
+			 * @return True if the specified flag(s) are set, false otherwise.
+			 */
 			bool isFlag(const spk::Vector2Int& p_position, int p_flags) const
 			{
 				for (size_t k = 0; k < SizeZ; k++)
@@ -611,21 +690,46 @@ namespace spk
 				return (false);
 			}
 
+			/**
+			 * @brief Checks if a specific flag is set for a tile at the given 3D position within this chunk.
+			 * 
+			 * @param p_position The 3D position of the tile within the chunk.
+			 * @param p_flags The flag or combination of flags to check for.
+			 * @return True if the specified flag(s) are set, false otherwise.
+			 */
 			bool isFlag(const spk::Vector3Int& p_position, int p_flags) const
 			{
 				return (isFlag(p_position.xy(), p_flags));
 			}
 
+			/**
+			 * @brief Determines if the tile at the specified position is an obstacle.
+			 * 
+			 * @param p_position The position of the tile within the chunk.
+			 * @return True if the tile is an obstacle, false otherwise.
+			 */
 			bool isObstacle(const spk::Vector2Int& p_position) const
 			{
 				return (isFlag(p_position, Node::OBSTACLE));
 			}
 
+			/**
+			 * @brief Determines if the tile at the specified 3D position is an obstacle.
+			 * 
+			 * @param p_position The 3D position of the tile within the chunk.
+			 * @return True if the tile is an obstacle, false otherwise.
+			 */
 			bool isObstacle(const spk::Vector3Int& p_position) const
 			{
 				return (isFlag(p_position.xy(), Node::OBSTACLE));
 			}
 			
+			/**
+			 * @brief Retrieves the combined flag values for the tile at a specified position within this chunk.
+			 * 
+			 * @param p_position The position of the tile within the chunk.
+			 * @return An integer representing the combined flag values for the tile.
+			 */
 			int flag(const spk::Vector2Int& p_position) const
 			{
 				int result = 0;
@@ -644,6 +748,12 @@ namespace spk
 				return (result);
 			}
 
+			/**
+			 * @brief Retrieves the combined flag values for the tile at a specified 3D position within this chunk.
+			 * 
+			 * @param p_position The 3D position of the tile within the chunk.
+			 * @return An integer representing the combined flag values for the tile.
+			 */
 			int flag(const spk::Vector3Int& p_position) const
 			{
 				return (flag(p_position.xy()));
@@ -670,12 +780,23 @@ namespace spk
 		std::map<Chunk::NodeIndexType, Node> _nodes;
 
 	public:
+		/**
+		 * @brief Constructs a Tilemap2D object with a specified name and an optional parent GameObject.
+		 *
+		 * @param p_name The name of the tilemap.
+		 * @param p_parent An optional pointer to a parent GameObject.
+		 */
 		Tilemap2D(const std::string& p_name, spk::GameObject* p_parent = nullptr) :
 			ITilemap(p_name, p_parent)
 		{
 
 		}
 
+		/**
+		 * @brief Sets the sprite sheet used by the tilemap for rendering tiles.
+		 *
+		 * @param p_spriteSheet A pointer to the sprite sheet object.
+		 */
 		void setSpriteSheet(const spk::SpriteSheet* p_spriteSheet)
 		{
 			_spriteSheet = p_spriteSheet;
@@ -685,27 +806,56 @@ namespace spk
 			}
 		}
 
+		/**
+		 * @brief Checks if a node with the specified index exists within the tilemap.
+		 *
+		 * @param p_nodeIndex The index of the node to check.
+		 * @return True if the node exists, otherwise false.
+		 */
 		bool containsNode(const Chunk::NodeIndexType& p_nodeIndex) const
 		{
 			return (_nodes.contains(p_nodeIndex));
 		}
 
+		/**
+		 * @brief Adds a node type to the tilemap, allowing it to be used in subsequent tile definitions.
+		 *
+		 * @param p_nodeIndex The index to associate with the node.
+		 * @param p_node The node object that defines the tile's properties.
+		 */
 		void insertNodeType(const Chunk::NodeIndexType& p_nodeIndex, const Node& p_node)
 		{
 			_nodes[p_nodeIndex] = p_node;
 		}
 
+		/**
+		 * @brief Retrieves the node associated with the given index in the tilemap.
+		 *
+		 * @param p_nodeIndex The index of the node to retrieve.
+		 * @return A reference to the node object.
+		 */
 		const Node& node(const Chunk::NodeIndexType& p_nodeIndex) const
 		{
 			return (_nodes.at(p_nodeIndex));
 		}
 
+		/**
+		 * @brief Sets the range of active chunks in the tilemap, defining the area that should be updated and rendered.
+		 *
+		 * @param p_activeChunkStart The starting position of the active chunk range.
+		 * @param p_activeChunkEnd The ending position of the active chunk range.
+		 */
 		void setActiveChunkRange(const spk::Vector2Int& p_activeChunkStart, const spk::Vector2Int& p_activeChunkEnd)
 		{
 			_activeChunkStart = p_activeChunkStart;
 			_activeChunkEnd = p_activeChunkEnd;
 		}
 
+		/**
+		 * @brief Calculates which chunks are missing within the active range and should be loaded or generated.
+		 *
+		 * @return A vector containing the positions of the missing chunks.
+		 */
 		std::vector<spk::Vector2Int> missingChunks() const
 		{
 			std::vector<spk::Vector2Int> result;
@@ -723,6 +873,9 @@ namespace spk
 			return (result);
 		}
 
+		/**
+		 * @brief Updates the active status of chunks within the specified range, activating or deactivating them as needed.
+		 */
 		void updateActiveChunks()
 		{
 			std::vector<IChunk*> chunksToActivate;
@@ -756,6 +909,13 @@ namespace spk
 			}
 		}
 
+		/**
+		 * @brief Determines if a specific flag is set for a tile at a given absolute position in the tilemap.
+		 *
+		 * @param p_absolutePosition The absolute position of the tile in the tilemap.
+		 * @param p_flags The flag or combination of flags to check for.
+		 * @return True if the specified flag(s) are set for the tile, otherwise false.
+		 */
 		bool isFlag(const spk::Vector2Int& p_absolutePosition, int p_flags) const
 		{
 			spk::Vector2Int chunkPosition = convertWorldToChunkPosition(p_absolutePosition);
@@ -769,21 +929,55 @@ namespace spk
 			return (true);
 		}
 
+		/**
+		 * @brief Determines if a specific flag is set for a tile at a given absolute 3D position in the tilemap.
+		 *
+		 * @param p_absolutePosition The absolute 3D position of the tile in the tilemap.
+		 * @param p_flags The flag or combination of flags to check for.
+		 * @return True if the specified flag(s) are set for the tile, otherwise false.
+		 */
 		bool isFlag(const spk::Vector3Int& p_absolutePosition, int p_flags) const
 		{
 			return (isFlag(p_absolutePosition.xy(), p_flags));
 		}
 
+        /**
+         * @brief Checks if the tile at the specified 3D absolute position is an obstacle.
+         *
+         * This method determines whether the specified tile has the OBSTACLE flag set, indicating
+         * that it should be considered an impassable or solid object within the game world.
+         *
+         * @param p_absolutePosition The 3D absolute position of the tile within the tilemap.
+         * @return True if the tile is an obstacle, otherwise false.
+         */
 		bool isObstacle(const spk::Vector3Int& p_absolutePosition) const
 		{
 			return (isFlag(p_absolutePosition.xy(), Node::OBSTACLE));
 		}
 
+        /**
+         * @brief Checks if the tile at the specified 2D absolute position is an obstacle.
+         *
+         * Similar to the 3D version, this method checks if the specified 2D position in the tilemap
+         * corresponds to a tile marked as an obstacle.
+         *
+         * @param p_absolutePosition The 2D absolute position of the tile within the tilemap.
+         * @return True if the tile is an obstacle, otherwise false.
+         */
 		bool isObstacle(const spk::Vector2Int& p_absolutePosition) const
 		{
 			return (isFlag(p_absolutePosition, Node::OBSTACLE));
 		}
 
+        /**
+         * @brief Retrieves the combined flag values for the tile at a specified 2D absolute position.
+         *
+         * This method aggregates all the flags set for the tile at the given position, providing
+         * a comprehensive status that can be used to determine various properties of the tile.
+         *
+         * @param p_absolutePosition The 2D absolute position of the tile within the tilemap.
+         * @return An integer representing the combined flag values for the tile.
+         */
 		int flag(const spk::Vector2Int& p_absolutePosition) const
 		{
 			spk::Vector2Int chunkPosition = convertWorldToChunkPosition(p_absolutePosition);
@@ -796,6 +990,16 @@ namespace spk
 			}
 			return (Node::OBSTACLE);
 		}
+
+		/**
+         * @brief Retrieves the combined flag values for the tile at a specified 3D absolute position.
+         *
+         * This is the 3D variant of the flag retrieval method, which internally converts the 3D position
+         * to 2D to access the relevant tile data.
+         *
+         * @param p_absolutePosition The 3D absolute position of the tile within the tilemap.
+         * @return An integer representing the combined flag values for the tile.
+         */
 		int flag(const spk::Vector3Int& p_absolutePosition) const
 		{
 			return (flag(p_absolutePosition.xy()));
