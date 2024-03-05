@@ -625,6 +625,30 @@ namespace spk
 			{
 				return (isFlag(p_position.xy(), Node::OBSTACLE));
 			}
+			
+			int flag(const spk::Vector2Int& p_position) const
+			{
+				int result = 0;
+
+				for (size_t k = 0; k < SizeZ; k++)
+				{
+					Chunk::NodeIndexType index = content(p_position, k);
+					if (_tilemapCreator->containsNode(index) == true)
+					{
+						const Node& tmpNode = _tilemapCreator->node(index);
+
+						result |= tmpNode.flags;
+					}
+				}
+
+				return (result);
+			}
+
+			int flag(const spk::Vector3Int& p_position) const
+			{
+				return (flag(p_position.xy()));
+			}
+
 		};
 
 	private:
@@ -758,6 +782,23 @@ namespace spk
 		bool isObstacle(const spk::Vector2Int& p_absolutePosition) const
 		{
 			return (isFlag(p_absolutePosition, Node::OBSTACLE));
+		}
+
+		int flag(const spk::Vector2Int& p_absolutePosition) const
+		{
+			spk::Vector2Int chunkPosition = convertWorldToChunkPosition(p_absolutePosition);
+
+			if (containsChunk(chunkPosition) == true)
+			{
+				const Chunk* tmpChunk = dynamic_cast<const Chunk*>(chunk(chunkPosition));
+
+				return (tmpChunk->flag(tmpChunk->convertAbsoluteToRelativePosition(p_absolutePosition)));
+			}
+			return (Node::OBSTACLE);
+		}
+		int flag(const spk::Vector3Int& p_absolutePosition) const
+		{
+			return (flag(p_absolutePosition.xy()));
 		}
 	};
 }

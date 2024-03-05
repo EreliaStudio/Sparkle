@@ -24,11 +24,11 @@ namespace spk
                 continue;
             }
             // Extends mappings if needed.
-            while (mapping.code() > _notifiers.size())
+            while (mapping.code() >= _notifiers.size())
             {
                 _notifiers.push_back(std::make_unique<Notifier>());
             }
-            while (mapping.code() > _mappings.size())
+            while (mapping.code() >= _mappings.size())
             {
                 _mappings.push_back(InputMapping());
             }

@@ -67,22 +67,34 @@ namespace spk
 			case WM_LBUTTONDOWN:
 			{
 				_updaterJobs.push_back([&](){
-						_mouse.pressButton(Mouse::Left);
-						_inputDecoder.add(Input{Mouse::Left, InputState::Pressed});
-					});
+					spk::InputState inputState = _mouse.getButton(Mouse::Left);
+					if (inputState == spk::InputState::Down ||
+						inputState == spk::InputState::Pressed)
+						return ;
+					_mouse.pressButton(Mouse::Left);
+					_inputDecoder.add(Input{Mouse::Left, InputState::Pressed});
+				});
 				break;
 			}
 			case WM_MBUTTONDOWN:
 			{
 				_updaterJobs.push_back([&](){
-						_mouse.pressButton(Mouse::Middle);
-						_inputDecoder.add(Input{Mouse::Middle, InputState::Pressed});
-					});
+					spk::InputState inputState = _mouse.getButton(Mouse::Middle);
+					if (inputState == spk::InputState::Down ||
+						inputState == spk::InputState::Pressed)
+						return ;
+					_mouse.pressButton(Mouse::Middle);
+					_inputDecoder.add(Input{Mouse::Middle, InputState::Pressed});
+				});
 				break;
 			}
 			case WM_RBUTTONDOWN:
 			{
 				_updaterJobs.push_back([&](){
+					spk::InputState inputState = _mouse.getButton(Mouse::Right);
+					if (inputState == spk::InputState::Down ||
+						inputState == spk::InputState::Pressed)
+						return ;
 					_mouse.pressButton(Mouse::Right);
 					_inputDecoder.add(Input{Mouse::Right, InputState::Pressed});
 				});
@@ -91,6 +103,10 @@ namespace spk
 			case WM_LBUTTONUP:
 			{
 				_updaterJobs.push_back([&](){
+					spk::InputState inputState = _mouse.getButton(Mouse::Left);
+					if (inputState == spk::InputState::Up ||
+						inputState == spk::InputState::Released)
+						return ;
 					_mouse.releaseButton(Mouse::Left);
 					_inputDecoder.add(Input{Mouse::Left, InputState::Released});
 				});
@@ -99,6 +115,10 @@ namespace spk
 			case WM_MBUTTONUP:
 			{
 				_updaterJobs.push_back([&](){
+					spk::InputState inputState = _mouse.getButton(Mouse::Middle);
+					if (inputState == spk::InputState::Up ||
+						inputState == spk::InputState::Released)
+						return ;
 					_mouse.releaseButton(Mouse::Middle);
 					_inputDecoder.add(Input{Mouse::Middle, InputState::Released});
 				});
@@ -107,6 +127,10 @@ namespace spk
 			case WM_RBUTTONUP:
 			{
 				_updaterJobs.push_back([&](){
+					spk::InputState inputState = _mouse.getButton(Mouse::Right);
+					if (inputState == spk::InputState::Up ||
+						inputState == spk::InputState::Released)
+						return ;
 					_mouse.releaseButton(Mouse::Right);
 					_inputDecoder.add(Input{Mouse::Right, InputState::Released});
 				});
@@ -119,6 +143,10 @@ namespace spk
 					case (MK_XBUTTON1):
 					{
 						_updaterJobs.push_back([&](){
+							spk::InputState inputState = _mouse.getButton(Mouse::Button3);
+							if (inputState == spk::InputState::Down ||
+								inputState == spk::InputState::Pressed)
+								return ;
 							_mouse.pressButton(Mouse::Button3);
 							_inputDecoder.add(Input{Mouse::Button3, InputState::Pressed});
 						});
@@ -127,6 +155,10 @@ namespace spk
 					case (MK_XBUTTON2):
 					{
 						_updaterJobs.push_back([&](){
+							spk::InputState inputState = _mouse.getButton(Mouse::Button4);
+							if (inputState == spk::InputState::Down ||
+								inputState == spk::InputState::Pressed)
+								return ;
 							_mouse.pressButton(Mouse::Button4);
 							_inputDecoder.add(Input{Mouse::Button4, InputState::Pressed});
 						});
@@ -146,6 +178,10 @@ namespace spk
 					case (MK_XBUTTON1):
 					{
 						_updaterJobs.push_back([&](){
+							spk::InputState inputState = _mouse.getButton(Mouse::Button3);
+							if (inputState == spk::InputState::Up ||
+								inputState == spk::InputState::Released)
+								return ;
 							_mouse.releaseButton(Mouse::Button3);
 							_inputDecoder.add(Input{Mouse::Button3, InputState::Released});
 						});
@@ -154,6 +190,11 @@ namespace spk
 					case (MK_XBUTTON2):
 					{
 						_updaterJobs.push_back([&](){
+							spk::InputState inputState = _mouse.getButton(Mouse::Button4);
+							if (inputState == spk::InputState::Up ||
+								inputState == spk::InputState::Released)
+								return ;
+
 							_mouse.releaseButton(Mouse::Button4);
 							_inputDecoder.add(Input{Mouse::Button4, InputState::Released});
 						});
@@ -209,6 +250,11 @@ namespace spk
 				unsigned int value = static_cast<unsigned int>(p_firstParam);
 
 				_updaterJobs.push_back([&, value](){
+					spk::InputState inputState = _keyboard.getKey(static_cast<Keyboard::Key>(value));
+					if (inputState == spk::InputState::Down ||
+						inputState == spk::InputState::Pressed)
+						return ;
+
 					_keyboard.pressKey(value);
 					_inputDecoder.add(Input{static_cast<Keyboard::Key>(value), InputState::Pressed});
 				});
@@ -220,6 +266,11 @@ namespace spk
 				unsigned int value = static_cast<unsigned int>(p_firstParam);
 
 				_updaterJobs.push_back([&, value](){
+					spk::InputState inputState = _keyboard.getKey(static_cast<Keyboard::Key>(value));
+					if (inputState == spk::InputState::Up ||
+						inputState == spk::InputState::Released)
+						return ;
+						
 					_keyboard.releaseKey(value);
 					_inputDecoder.add(Input{static_cast<Keyboard::Key>(value), InputState::Released});
 				});

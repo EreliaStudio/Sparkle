@@ -109,6 +109,7 @@ namespace spk
 	private:
 
 		std::unordered_map<TStateType, Action> _states;
+		TStateType _currentState;
 		Action _currentActions;
 		bool _hasCurrentState = false;
 
@@ -239,6 +240,7 @@ namespace spk
 				}
 			}
 
+			_currentState = p_newState;
 			_hasCurrentState = true;
 			_currentActions = _states[p_newState];
 
@@ -258,6 +260,11 @@ namespace spk
 			{
 				_currentActions.onUpdate();
 			}
+		}
+
+		TStateType state() const
+		{
+			return (_currentState);
 		}
 	};
 }
