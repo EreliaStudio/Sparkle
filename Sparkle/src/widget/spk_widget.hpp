@@ -160,6 +160,10 @@ namespace spk::widget
          */
         ~IWidget();
 
+        /**
+         * Reset the name of the widget to a desired value
+         * @param p_name The new name of the widget
+        */
         void rename(const std::string& p_name);
 
         /**
