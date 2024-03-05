@@ -31,7 +31,7 @@ namespace spk
 
         if (_screenConstant != nullptr)
         {
-            spk::Matrix4x4 canvasMatrix = spk::Matrix4x4::ortho(0, size().x, size().y, 0, 1000, 0);
+            spk::Matrix4x4 canvasMatrix = spk::Matrix4x4::ortho(0.0f, static_cast<float>(size().x), static_cast<float>(size().y), 0.0f, 1000.0f, 0.0f);
             canvasMatrix.data[3][2] = 0;
 
             _screenConstant->operator[]("canvasMVP") = canvasMatrix;

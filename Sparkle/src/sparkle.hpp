@@ -65,6 +65,3 @@
 #include "widget/spk_pointer_detector.hpp"
 #include "widget/spk_text_label.hpp"
 #include "widget/spk_widget.hpp"
-
-#include "widget/widget_component/spk_nine_sliced_component.hpp"
-#include "widget/widget_component/spk_text_label_component.hpp"

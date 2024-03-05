@@ -88,7 +88,7 @@ namespace spk
     {
         Mesh::Data data = _mesh->bake();
 
-        _renderingObject.setVertices(data.vertexes, data.vertexSize);
+        _renderingObject.setVertices(data.vertices, data.vertexSize);
         _renderingObject.setIndexes(data.indexes);
     }
 
