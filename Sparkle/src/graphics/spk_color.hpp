@@ -99,13 +99,10 @@ namespace spk
         static const Color orange;  //!< orange
         static const Color magenta; //!< magenta
         static const Color pink;    //!< punk(not a color)
+        static const Color black;   //!< black(not a color)
+        static const Color white;   //!< white(not a color)
+        static const Color grey;    //!< grey(not a color)
 
-        // static const std::vector<Color>& values() { return _values; } //!< Some constant colors.
-
-        static const Color black; //!< black(not a color)
-        static const Color white; //!< white(not a color)
-        static const Color grey;  //!< grey(not a color)
-
-        static const std::vector<Color> values;
+        static const std::vector<Color> values; //!< Some constant colors.
     };
 }
