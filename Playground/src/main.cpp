@@ -57,6 +57,61 @@ public:
     }
 };
 
+enum class Event
+{
+    PlayerIdle,
+    PlayerMotionUp,
+    PlayerMotionLeft,
+    PlayerMotionDown,
+    PlayerMotionRight
+};
+
+class PlayerController : public spk::GameComponent
+{
+private:
+    spk::NotifierContract contracts[5];
+
+    spk::StateMachine<Event> _stateMachine;
+
+    void _onUpdate()
+    {
+        _stateMachine.update();
+    }
+
+public:
+    PlayerController() :
+        spk::GameComponent("PlayerController"),
+        contracts{
+            spk::Application::activeApplication()->inputDecoder().subscribe(Event::PlayerIdle, [&](){ std::cout << "New event treated !" << std::endl; _stateMachine.enterState(Event::PlayerIdle);}),
+            spk::Application::activeApplication()->inputDecoder().subscribe(Event::PlayerMotionUp, [&](){ std::cout << "New event treated !" << std::endl; _stateMachine.enterState(Event::PlayerMotionUp);}),
+            spk::Application::activeApplication()->inputDecoder().subscribe(Event::PlayerMotionLeft, [&](){ std::cout << "New event treated !" << std::endl; _stateMachine.enterState(Event::PlayerMotionLeft);}),
+            spk::Application::activeApplication()->inputDecoder().subscribe(Event::PlayerMotionDown, [&](){ std::cout << "New event treated !" << std::endl; _stateMachine.enterState(Event::PlayerMotionDown);}),
+            spk::Application::activeApplication()->inputDecoder().subscribe(Event::PlayerMotionRight, [&](){ std::cout << "New event treated !" << std::endl; _stateMachine.enterState(Event::PlayerMotionRight);})
+        }
+    {
+        _stateMachine.addState(Event::PlayerIdle, spk::StateMachine<Event>::Action(
+            [&](){std::cout << "Entering Idle mode" << std::endl;},
+            [&](){},
+            [&](){std::cout << "Exiting Idle mode" << std::endl;}));
+        _stateMachine.addState(Event::PlayerMotionUp, spk::StateMachine<Event>::Action(
+            [&](){std::cout << "Entering MotionUp mode" << std::endl;}, 
+            [&](){owner()->transform().translation += spk::Vector3(0, 1, 0);},
+            [&](){std::cout << "Exiting MotionUp mode" << std::endl;}));
+        _stateMachine.addState(Event::PlayerMotionLeft, spk::StateMachine<Event>::Action(
+            [&](){std::cout << "Entering MotionLeft mode" << std::endl;},
+            [&](){owner()->transform().translation += spk::Vector3(-1, 0, 0);},
+            [&](){std::cout << "Exiting MotionLeft mode" << std::endl;}));
+        _stateMachine.addState(Event::PlayerMotionDown, spk::StateMachine<Event>::Action(
+            [&](){std::cout << "Entering MotionDown mode" << std::endl;},
+            [&](){owner()->transform().translation += spk::Vector3(0, -1, 0);},
+            [&](){std::cout << "Exiting MotionDown mode" << std::endl;}));
+        _stateMachine.addState(Event::PlayerMotionRight, spk::StateMachine<Event>::Action(
+            [&](){std::cout << "Entering MotionRight mode" << std::endl;},
+            [&](){ owner()->transform().translation += spk::Vector3(1, 0, 0);},
+            [&](){std::cout << "Exiting MotionRight mode" << std::endl;}));
+    }
+};
+
 int main()
 {
     spk::Application app("Playground", spk::Vector2UInt(800, 800), spk::Application::Mode::Monothread);
