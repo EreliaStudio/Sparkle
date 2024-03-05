@@ -1,6 +1,6 @@
-#include "widget/widget_component/spk_text_label_component.hpp"
+#include "widget/components/spk_text_label.hpp"
 
-namespace spk::WidgetComponent
+namespace spk::widget::components
 {
     const std::string TextLabel::_renderingPipelineCode = R"(#version 450
     
@@ -46,104 +46,103 @@ namespace spk::WidgetComponent
     spk::Pipeline TextLabel::_renderingPipeline = spk::Pipeline(TextLabel::_renderingPipelineCode);
 
     TextLabel::TextLabel() :
-		_renderingObject(_renderingPipeline.createObject()),
-		_renderingObjectWidgetAttribute(_renderingObject.attribute("widgetAttribute")),
-		_depthAttributeElement(_renderingObjectWidgetAttribute["depth"]),
+        _renderingObject(_renderingPipeline.createObject()),
+        _renderingObjectWidgetAttribute(_renderingObject.attribute("widgetAttribute")),
+        _depthAttributeElement(_renderingObjectWidgetAttribute["depth"]),
         _renderingObjectTextRendererAttribute(_renderingObject.attribute("textRendererAttribute")),
-		_textColorAttributeElement(_renderingObjectTextRendererAttribute["textColor"]),
-		_outlineColorAttributeElement(_renderingObjectTextRendererAttribute["outlineColor"]),
+        _textColorAttributeElement(_renderingObjectTextRendererAttribute["textColor"]),
+        _outlineColorAttributeElement(_renderingObjectTextRendererAttribute["outlineColor"]),
         _renderingPipelineTexture(_renderingPipeline.texture("fontTexture"))
     {
-
     }
 
-	TextLabel::RenderingPipelineVertex::RenderingPipelineVertex() :
-		position(0),
-		uvs(0)
-	{
-	}
+    TextLabel::ShaderInput::ShaderInput() :
+        position(0),
+        uvs(0)
+    {
+    }
 
-	TextLabel::RenderingPipelineVertex::RenderingPipelineVertex(const spk::Vector2Int &p_position, const spk::Vector2 &p_uvs) :
-		position(p_position),
-		uvs(p_uvs)
-	{
-	}
+    TextLabel::ShaderInput::ShaderInput(const spk::Vector2Int& p_position, const spk::Vector2& p_uvs) :
+        position(p_position),
+        uvs(p_uvs)
+    {
+    }
 
     TextLabel::RenderingData TextLabel::_computeRenderingData()
     {
         RenderingData result;
 
-		spk::Vector2Int topLeftCorner = 0;
-		spk::Vector2Int downRightCorner = 0;
+        spk::Vector2Int topLeftCorner = 0;
+        spk::Vector2Int downRightCorner = 0;
 
-		spk::Vector2Int stringOffset = 0;
-		for (size_t i = 0; i < _text.size(); i++)
-		{
-			const Font::Atlas::GlyphData& glyphData = (*_fontAtlas)[_text[i]];
-			
-			if (topLeftCorner.y > glyphData.position[0].y)
-				topLeftCorner.y = glyphData.position[0].y;
-			stringOffset += glyphData.step;
+        spk::Vector2Int stringOffset = 0;
+        for (size_t i = 0; i < _text.size(); i++)
+        {
+            const Font::Atlas::GlyphData& glyphData = (*_fontAtlas)[_text[i]];
 
-			result.glyphs.push_back(&glyphData);
-		}
+            if (topLeftCorner.y > glyphData.position[0].y)
+                topLeftCorner.y = glyphData.position[0].y;
+            stringOffset += glyphData.step;
 
-		downRightCorner = stringOffset;
+            result.glyphs.push_back(&glyphData);
+        }
 
-		result.size = downRightCorner - topLeftCorner;
+        downRightCorner = stringOffset;
 
-		return (result);
+        result.size = downRightCorner - topLeftCorner;
+
+        return (result);
     }
 
     spk::Vector2Int TextLabel::_computeBaseAnchor(const TextLabel::RenderingData& p_renderingData)
     {
         spk::Vector2Int result = 0;
 
-		switch (_horizontalAlignment)
-		{
-			case HorizontalAlignment::Left:
-			{
-				result.x = 0;
-				break;
-			}
-			
-			case HorizontalAlignment::Centered:
-			{
-				result.x = -(p_renderingData.size.x / 2);
-				break;
-			}
-			
-			case HorizontalAlignment::Right:
-			default:
-			{
-				result.x = -p_renderingData.size.x;
-				break;
-			}
-		}
+        switch (_horizontalAlignment)
+        {
+        case HorizontalAlignment::Left:
+        {
+            result.x = 0;
+            break;
+        }
 
-		switch (_verticalAlignment)
-		{
-			case VerticalAlignment::Top:
-			{
-				result.y = p_renderingData.size.y;
-				break;
-			}
-			
-			case VerticalAlignment::Centered:
-			{
-				result.y = p_renderingData.size.y / 2;
-				break;
-			}
-			
-			case VerticalAlignment::Down:
-			default:
-			{
-				result.y = 0;
-				break;
-			}
-		}
+        case HorizontalAlignment::Centered:
+        {
+            result.x = -(p_renderingData.size.x / 2);
+            break;
+        }
 
-		return (result);
+        case HorizontalAlignment::Right:
+        default:
+        {
+            result.x = -p_renderingData.size.x;
+            break;
+        }
+        }
+
+        switch (_verticalAlignment)
+        {
+        case VerticalAlignment::Top:
+        {
+            result.y = p_renderingData.size.y;
+            break;
+        }
+
+        case VerticalAlignment::Centered:
+        {
+            result.y = p_renderingData.size.y / 2;
+            break;
+        }
+
+        case VerticalAlignment::Down:
+        default:
+        {
+            result.y = 0;
+            break;
+        }
+        }
+
+        return (result);
     }
 
     void TextLabel::_updateGPUBuffer()
@@ -152,11 +151,11 @@ namespace spk::WidgetComponent
 
         _renderingPipelineTexture.attach(&(_fontAtlas->texture()));
 
-		static std::vector<RenderingPipelineVertex> _bufferRenderingPipelineVertex;
-		static std::vector<unsigned int> _bufferRenderingPipelineIndexes;
+        static std::vector<ShaderInput> _bufferShaderInput;
+        static std::vector<unsigned int> _bufferRenderingPipelineIndexes;
 
-		_bufferRenderingPipelineVertex.clear();
-		_bufferRenderingPipelineIndexes.clear();
+        _bufferShaderInput.clear();
+        _bufferRenderingPipelineIndexes.clear();
 
         RenderingData renderingData = _computeRenderingData();
 
@@ -164,16 +163,16 @@ namespace spk::WidgetComponent
 
         for (const spk::Font::Atlas::GlyphData* glyphData : renderingData.glyphs)
         {
-			unsigned int baseIndexes = _bufferRenderingPipelineVertex.size();
+            unsigned int baseIndexes = _bufferShaderInput.size();
 
             for (size_t i = 0; i < 4; i++)
-            {   
-                RenderingPipelineVertex newVertex;
+            {
+                ShaderInput newVertex;
 
                 newVertex.position = glyphAnchor + glyphData->position[i];
                 newVertex.uvs = glyphData->uvs[i];
 
-                _bufferRenderingPipelineVertex.push_back(newVertex);
+                _bufferShaderInput.push_back(newVertex);
             }
             glyphAnchor += glyphData->step;
 
@@ -183,14 +182,14 @@ namespace spk::WidgetComponent
             }
         }
 
-        _renderingObject.setVertices(_bufferRenderingPipelineVertex);
-		_renderingObject.setIndexes(_bufferRenderingPipelineIndexes);
+        _renderingObject.setVertices(_bufferShaderInput);
+        _renderingObject.setIndexes(_bufferRenderingPipelineIndexes);
     }
 
     void TextLabel::render()
     {
         if (_font == nullptr)
-            return ;
+            return;
 
         if (_needGPUBufferUpdate == true)
         {
@@ -199,7 +198,7 @@ namespace spk::WidgetComponent
         }
 
         if (_fontAtlas == nullptr)
-            return ;
+            return;
 
         _renderingObject.render();
     }
@@ -218,10 +217,10 @@ namespace spk::WidgetComponent
 
     void TextLabel::setDepth(const float& p_depth)
     {
-		_depthAttributeElement = p_depth;
-		_renderingObjectWidgetAttribute.update();
+        _depthAttributeElement = p_depth;
+        _renderingObjectWidgetAttribute.update();
     }
-    
+
     void TextLabel::setText(const std::string& p_text)
     {
         _text = p_text;
@@ -233,13 +232,13 @@ namespace spk::WidgetComponent
         _textSize = p_textSize;
         _needGPUBufferUpdate = true;
     }
-    
+
     void TextLabel::setTextColor(const spk::Color& p_textColor)
     {
-		_textColorAttributeElement = p_textColor;
-		_renderingObjectTextRendererAttribute.update();
+        _textColorAttributeElement = p_textColor;
+        _renderingObjectTextRendererAttribute.update();
     }
-    
+
     void TextLabel::setOutlineStyle(const spk::Font::OutlineStyle& p_outlineStyle)
     {
         _outlineStyle = p_outlineStyle;
@@ -251,19 +250,19 @@ namespace spk::WidgetComponent
         _outlineSize = p_outlineSize;
         _needGPUBufferUpdate = true;
     }
-    
+
     void TextLabel::setOutlineColor(const spk::Color& p_outlineColor)
     {
-		_outlineColorAttributeElement = p_outlineColor;
-		_renderingObjectTextRendererAttribute.update();
+        _outlineColorAttributeElement = p_outlineColor;
+        _renderingObjectTextRendererAttribute.update();
     }
-    
+
     void TextLabel::setVerticalAlignment(const VerticalAlignment& p_verticalAlignment)
     {
         _verticalAlignment = p_verticalAlignment;
         _needGPUBufferUpdate = true;
     }
-    
+
     void TextLabel::setHorizontalAlignment(const HorizontalAlignment& p_horizontalAlignment)
     {
         _horizontalAlignment = p_horizontalAlignment;

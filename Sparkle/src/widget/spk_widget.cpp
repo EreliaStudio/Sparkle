@@ -1,192 +1,228 @@
-#include "widget/spk_widget.hpp"
+#include <cassert>
+
 #include "application/spk_application.hpp"
+#include "widget/spk_widget.hpp"
 
-namespace spk
+namespace spk::widget
 {
-	void IWidget::_onGeometryChange()
-	{
+    std::atomic_uint32_t IWidget::_nextId = 0;
 
-	}
+    void IWidget::_onRender()
+    {
+    }
 
-	void IWidget::_onRender()
-	{
+    void IWidget::_onUpdate()
+    {
+    }
 
-	}
+    void IWidget::_onGeometryChange()
+    {
+    }
 
-	void IWidget::_onUpdate()
-	{
+    // By default the IWidget will layout its children by restricting their size to the constraints
+    // he has been give, and aligning them to its top-left corner.
+    Vector2 IWidget::layout(const BoxConstraints& p_constraints)
+    {
+        if (children().size() == 0)
+        {
+            return p_constraints.max;
+        }
+        // We aim at returning a box that englobes all children.
+        Vector2 maxFromChildren{0, 0};
+        for (auto& child : children())
+        {
+            // Get child size but cap it to match the constraints.
+            Vector2 childSize = child->layout(p_constraints);
+            child->setGeometry(anchor(), childSize);
+            maxFromChildren = Vector2::max(maxFromChildren, childSize);
+        }
+        return maxFromChildren;
+    }
 
-	}
+    void IWidget::render()
+    {
+        assert(size() >= Vector2(0, 0));
+        if (size() <= Vector2{0, 0})
+        {
+            // Widgets with no size do not need rendering.
+            return;
+        }
 
-	void IWidget::render()
-	{
-		if (_needGeometryChange == true)
-		{
-			_computeViewport();
-			_onGeometryChange();
-			_needGeometryChange = false;
-		}
+        _computeViewport();
+        if (_viewport.size() <= Vector2{0, 0})
+        {
+            std::cout << "Viewport of " << _name << "(#" << id() << ")"
+                      << " has a size of " << _viewport.size() << std::endl;
+            return;
+        }
 
-		_onRender();
+        _onRender();
+        for (auto& child : children())
+        {
+            if (child->isActive() == true)
+            {
+                _viewport.activate();
+                child->render();
+            }
+        }
+    }
 
-		for (auto& child : children())
-		{
-			if (child->isActive() == true)
-			{
-				_viewport.activate();
-				child->render();
-			}
-		}
-	}
+    void IWidget::update()
+    {
+#ifndef NDEBUG
+        _timeMetric.start();
+#endif
+        _onUpdate();
+#ifndef NDEBUG
+        _timeMetric.stop();
+#endif
 
-	void IWidget::update()
-	{
-	#ifndef NDEBUG
-		_timeMetric.start();
-	#endif
-		_onUpdate();
-	#ifndef NDEBUG
-		_timeMetric.stop();
-	#endif
+        for (auto& child : children())
+        {
+            if (child->isActive() == true)
+            {
+                child->update();
+            }
+        }
+    }
 
-		for (auto& child : children())
-		{
-			if (child->isActive() == true)
-			{
-				child->update();
-			}
-		}
-	}
+    spk::Vector2Int IWidget::_computeAbsoluteAnchor()
+    {
+        spk::Vector2Int result = 0;
+        const IWidget* tmp = this;
 
-	void IWidget::resize(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size)
-	{
-		_anchor = p_anchor;
-		_size = p_size;
-		_needGeometryChange = true;
-		
-		for (auto& child : children())
-		{
-			child->resize(_size * child->_anchorRatio, _size * child->_sizeRatio);
-		}
-		_onGeometryChange();
-	}
+        while (tmp->parent() != nullptr)
+        {
+            result += tmp->anchor();
+            tmp = tmp->parent();
+        }
 
-	spk::Vector2Int IWidget::_computeAbsoluteAnchor()
-	{
-		spk::Vector2Int result = 0;
-		const IWidget* tmp = this;
+        return (result);
+    }
 
-		while (tmp->parent() != nullptr)
-		{
-			result += tmp->anchor();
-			tmp = tmp->parent();
-		}
+    void IWidget::_computeViewport()
+    {
+        spk::Vector2Int topLeft = _computeAbsoluteAnchor();
+        spk::Vector2Int rightDown = size() + topLeft;
 
-		return (result);
-	}
+        if (parent() != nullptr)
+            topLeft = spk::Vector2Int::max(topLeft, parent()->viewport().anchor());
 
-	void IWidget::_computeViewport()
-	{
-		spk::Vector2Int topLeft = _computeAbsoluteAnchor();
-		spk::Vector2Int rightDown = size() + topLeft;
+        if (parent() != nullptr)
+            rightDown = spk::Vector2Int::min(rightDown, parent()->viewport().anchor() + parent()->viewport().size());
 
-		if (parent() != nullptr)
-			topLeft = spk::Vector2Int::max(topLeft, parent()->viewport().anchor());
+        _viewport.setGeometry(topLeft, rightDown - topLeft);
+    }
 
-		if (parent() != nullptr)
-			rightDown = spk::Vector2Int::min(rightDown, parent()->viewport().anchor() + parent()->viewport().size());
+    IWidget::IWidget(const std::string& p_name) :
+        _id(_nextId++),
+        _name(p_name),
+#ifndef NDEBUG
+        _timeMetric(spk::Application::activeApplication()->profiler().metric<TimeMetric>(name())),
+#endif
+        _depth(0)
+    {
+        if (defaultParent != nullptr)
+            defaultParent->addChild(this);
+    }
 
-		_viewport.setGeometry(topLeft, rightDown - topLeft);
-	}
+    IWidget::IWidget(const std::string& p_name, IWidget* p_parent) :
+        IWidget(p_name)
+    {
+        if (p_parent != nullptr)
+            p_parent->addChild(this);
+    }
 
-	IWidget::IWidget(const std::string& p_name) :
-		_name(p_name),
-		#ifndef NDEBUG
-			_timeMetric(spk::Application::activeApplication()->profiler().metric<TimeMetric>(name())),
-		#endif
-		_depth(0)
-	{
-		if (defaultParent != nullptr)
-			defaultParent->addChild(this);
-	}
+    IWidget::~IWidget()
+    {
+        if (parent() != nullptr)
+        {
+            transferChildrens(parent());
+        }
+    }
 
-	IWidget::IWidget(const std::string& p_name, IWidget* p_parent) :
-		IWidget(p_name)
-	{
-		if (p_parent != nullptr)
-			p_parent->addChild(this);
-	}
+    void IWidget::addChild(IWidget* p_child)
+    {
+        TreeNode<IWidget>::addChild(p_child);
+        p_child->setDepth(depth() + 1);
+    }
 
-	IWidget::~IWidget()
-	{
-		if (parent() != nullptr)
-		{
-			transferChildrens(parent());
-		}
-	}
+    void IWidget::setGeometry(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size)
+    {
+        if (p_anchor == _anchor && p_size == _size)
+        {
+            return;
+        }
+        _anchor = p_anchor;
+        _size = p_size;
 
-	void IWidget::addChild(IWidget* p_children)
-	{
-		TreeNode<IWidget>::addChild(p_children);
-		p_children->setDepth(depth() + 1);
-	}
+        _anchorRatio = (parent() != nullptr && parent()->size() != 0 ? static_cast<spk::Vector2>(_anchor) / static_cast<spk::Vector2>(parent()->size()) : 0);
+        _sizeRatio = (parent() != nullptr && parent()->size() != 0 ? static_cast<spk::Vector2>(_size) / static_cast<spk::Vector2>(parent()->size()) : 1);
+        _onGeometryChange();
+    }
 
-	void IWidget::setGeometry(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size)
-	{
-		_anchor = p_anchor;
-		_size = p_size;
+    void IWidget::setDepth(const float& p_depth)
+    {
+        _depth = p_depth;
+    }
 
-		_anchorRatio = (parent() != nullptr && parent()->size() != 0 ? static_cast<spk::Vector2>(_anchor) / static_cast<spk::Vector2>(parent()->size()) : 0);
-		_sizeRatio = (parent() != nullptr && parent()->size() != 0 ? static_cast<spk::Vector2>(_size) / static_cast<spk::Vector2>(parent()->size()) : 1);
+    void IWidget::activateAll()
+    {
+        activate();
+        for (auto& child : children())
+        {
+            child->activateAll();
+        }
+    }
 
-		_needGeometryChange = true;
-	}
+    void IWidget::deactivateAll()
+    {
+        deactivate();
+        for (auto& child : children())
+        {
+            child->deactivateAll();
+        }
+    }
 
-	void IWidget::setDepth(const float& p_depth)
-	{
-		_depth = p_depth;
-	}
+    bool IWidget::hitTest(const Vector2& p_coord)
+    {
+        Vector2 p0 = _viewport.anchor();
+        Vector2 p1 = p0 + _viewport.size();
+        return Vector2::isInsideRectangle(p_coord, p0, p1);
+    }
 
-	void IWidget::activateAll()
-	{
-		activate();
-		for (auto& child : children())
-		{
-			child->activateAll();
-		}
-	}
-	
-	void IWidget::deactivateAll()
-	{
-		deactivate();
-		for (auto& child : children())
-		{
-			child->deactivateAll();
-		}
-	}
+    const std::string& IWidget::name() const
+    {
+        return (_name);
+    }
 
-	const std::string& IWidget::name() const
-	{
-		return (_name);
-	}
+    void IWidget::setName(const std::string& p_name)
+    {
+        _name = p_name;
+    }
 
-	const spk::Vector2Int& IWidget::anchor() const
-	{
-		return (_anchor);
-	}
+    const spk::Vector2Int& IWidget::anchor() const
+    {
+        return (_anchor);
+    }
 
-	const float& IWidget::depth() const
-	{
-		return (_depth);
-	}
+    const float& IWidget::depth() const
+    {
+        return (_depth);
+    }
 
-	const spk::Vector2UInt& IWidget::size() const
-	{
-		return (_size);
-	}
+    const spk::Vector2UInt& IWidget::size() const
+    {
+        return (_size);
+    }
 
-	const spk::Viewport& IWidget::viewport() const
-	{
-		return (_viewport);
-	}
+    const spk::Viewport& IWidget::viewport() const
+    {
+        return (_viewport);
+    }
+
+    uint32_t IWidget::id() const
+    {
+        return _id;
+    }
 }

@@ -3,8 +3,8 @@
 
 namespace spk
 {
-	const spk::Mesh MeshRenderer::_defaultMesh = spk::createSpriteMesh();
-	std::string MeshRenderer::_renderingPipelineCode = R"(#version 450
+    const spk::Mesh MeshRenderer::_defaultMesh = spk::createSpriteMesh();
+    std::string MeshRenderer::_renderingPipelineCode = R"(#version 450
 
 	#include <transform>
 	#include <transformUtils>
@@ -54,151 +54,153 @@ namespace spk
 	}
 	)";
 
-	MeshRenderer::RenderingPipelineVertex::RenderingPipelineVertex() :
-		position(0, 0, 0),
-		uvs(0, 0)
-	{
+    MeshRenderer::ShaderInput::ShaderInput() :
+        position(0, 0, 0),
+        uvs(0, 0)
+    {
+    }
 
-	}
+    MeshRenderer::ShaderInput::ShaderInput(const spk::Vector3& p_position, const spk::Vector2& p_uvs) :
+        position(p_position),
+        uvs(p_uvs)
+    {
+    }
 
-	MeshRenderer::RenderingPipelineVertex::RenderingPipelineVertex(const spk::Vector3& p_position, const spk::Vector2& p_uvs) :
-		position(p_position),
-		uvs(p_uvs)
-	{
+    spk::Pipeline MeshRenderer::_renderingPipeline = spk::Pipeline(_renderingPipelineCode);
 
-	}
+    void MeshRenderer::_updateGPUData()
+    {
+        Mesh::Data data = _mesh->bake();
 
-	spk::Pipeline MeshRenderer::_renderingPipeline = spk::Pipeline(_renderingPipelineCode);
+        _renderingObject.setVertices(data.vertexes, data.vertexSize);
+        _renderingObject.setIndexes(data.indexes);
+    }
 
-	void MeshRenderer::_updateGPUData()
-	{
-		Mesh::Data data = _mesh->bake();
+    void MeshRenderer::_updateTransform()
+    {
+        _renderingObjectSelfTransformTranslationAttribute = owner()->globalPosition();
+        _renderingObjectSelfTransformScaleAttribute = owner()->globalScale();
+        _renderingObjectSelfTransformRotationAttribute = owner()->globalRotation();
+        _renderingObjectSelfAttribute.update();
+    }
 
-		_renderingObject.setVertices(data.vertexes, data.vertexSize);
-		_renderingObject.setIndexes(data.indexes);
-	}
+    void MeshRenderer::_updateSprite()
+    {
+        if (_spriteSheet == nullptr)
+            return;
 
-	void MeshRenderer::_updateTransform()
-	{
-		_renderingObjectSelfTransformTranslationAttribute = owner()->globalPosition();
-		_renderingObjectSelfTransformScaleAttribute = owner()->globalScale();
-		_renderingObjectSelfTransformRotationAttribute = owner()->globalRotation();
-		_renderingObjectSelfAttribute.update();
-	}
+        _renderingObjectSpriteAttributeUnit = _spriteSheet->unit();
+        _renderingObjectSpriteAttributeAnchor = _spriteID;
+        _renderingObjectSpriteAttribute.update();
+    }
 
-	void MeshRenderer::_updateSprite()
-	{
-		if (_spriteSheet == nullptr)
-			return ;
+    void MeshRenderer::_updateSpriteAnimation()
+    {
+        _renderingObjectSpriteAttributeStartEpoch = static_cast<int>(spk::getTime() % 100000);
 
-		_renderingObjectSpriteAttributeUnit = _spriteSheet->unit();
-		_renderingObjectSpriteAttributeAnchor = _spriteID;
-		_renderingObjectSpriteAttribute.update();
-	}
+        if (_spriteAnimation != nullptr)
+        {
+            _renderingObjectSpriteAttributeAnimation = *_spriteAnimation;
+        }
+        else
+        {
+            _renderingObjectSpriteAttributeAnimationLenght = 0;
+        }
 
-	void MeshRenderer::_updateSpriteAnimation()
-	{
-		_renderingObjectSpriteAttributeStartEpoch = static_cast<int>(spk::getTime() % 100000);
+        _renderingObjectSpriteAttribute.update();
+    }
 
-		if (_spriteAnimation != nullptr)
-		{
-			_renderingObjectSpriteAttributeAnimation = *_spriteAnimation;
-		}
-		else
-		{
-			_renderingObjectSpriteAttributeAnimationLenght = 0;
-		}
-		
-		_renderingObjectSpriteAttribute.update();
-	}
+    MeshRenderer::MeshRenderer(const std::string& p_name) :
+        spk::GameComponent(p_name),
+        _renderingObject(_renderingPipeline.createObject()),
+        _renderingObjectSelfAttribute(_renderingObject.attribute("self")),
+        _renderingObjectSelfTransformTranslationAttribute(_renderingObjectSelfAttribute["transform"]["translation"]),
+        _renderingObjectSelfTransformScaleAttribute(_renderingObjectSelfAttribute["transform"]["scale"]),
+        _renderingObjectSelfTransformRotationAttribute(_renderingObjectSelfAttribute["transform"]["rotation"]),
+        _renderingObjectSpriteAttribute(_renderingObject.attribute("sprite")),
+        _renderingObjectSpriteAttributeUnit(_renderingObjectSpriteAttribute["unit"]),
+        _renderingObjectSpriteAttributeAnchor(_renderingObjectSpriteAttribute["anchor"]),
+        _renderingObjectSpriteAttributeStartEpoch(_renderingObjectSpriteAttribute["animationStartEpoch"]),
+        _renderingObjectSpriteAttributeAnimation(_renderingObjectSpriteAttribute["animation"]),
+        _renderingObjectSpriteAttributeAnimationLenght(_renderingObjectSpriteAttributeAnimation["lenght"]),
+        _transformTranslationContract(owner()->transform().translation.subscribe([&]()
+                                                                                 { _updateTransform(); })),
+        _transformScaleContract(owner()->transform().scale.subscribe([&]()
+                                                                     { _updateTransform(); })),
+        _transformRotationContract(owner()->transform().rotation.subscribe([&]()
+                                                                           { _updateTransform(); })),
+        _renderingPipelineTexture(_renderingPipeline.texture("textureID"))
+    {
+        setMesh(&_defaultMesh);
 
-	MeshRenderer::MeshRenderer(const std::string& p_name) :
-		spk::GameComponent(p_name),
-		_renderingObject(_renderingPipeline.createObject()),
-		_renderingObjectSelfAttribute(_renderingObject.attribute("self")),
-		_renderingObjectSelfTransformTranslationAttribute(_renderingObjectSelfAttribute["transform"]["translation"]),
-		_renderingObjectSelfTransformScaleAttribute(_renderingObjectSelfAttribute["transform"]["scale"]),
-		_renderingObjectSelfTransformRotationAttribute(_renderingObjectSelfAttribute["transform"]["rotation"]),
-		_renderingObjectSpriteAttribute(_renderingObject.attribute("sprite")),
-		_renderingObjectSpriteAttributeUnit(_renderingObjectSpriteAttribute["unit"]),
-		_renderingObjectSpriteAttributeAnchor(_renderingObjectSpriteAttribute["anchor"]),
-		_renderingObjectSpriteAttributeStartEpoch(_renderingObjectSpriteAttribute["animationStartEpoch"]),
-		_renderingObjectSpriteAttributeAnimation(_renderingObjectSpriteAttribute["animation"]),
-		_renderingObjectSpriteAttributeAnimationLenght(_renderingObjectSpriteAttributeAnimation["lenght"]),
-		_transformTranslationContract(owner()->transform().translation.subscribe([&](){_updateTransform();})),
-		_transformScaleContract(owner()->transform().scale.subscribe([&](){_updateTransform();})),
-		_transformRotationContract(owner()->transform().rotation.subscribe([&](){_updateTransform();})),
-		_renderingPipelineTexture(_renderingPipeline.texture("textureID"))
-	{
-		setMesh(&_defaultMesh);
+        _updateTransform();
+        _updateSprite();
+        _updateSpriteAnimation();
+    }
 
-		_updateTransform();
-		_updateSprite();
-		_updateSpriteAnimation();
-	}
+    void MeshRenderer::setMesh(const spk::Mesh* p_mesh)
+    {
+        _mesh = p_mesh;
+        _meshEditionContract = std::move(_mesh->subscribeToEdition(
+            [&]()
+            {
+                _needGPUDataUpdate = true;
+            }));
+        _needGPUDataUpdate = true;
+    }
 
-	void MeshRenderer::setMesh(const spk::Mesh* p_mesh)
-	{
-		_mesh = p_mesh;
-		_meshEditionContract = std::move(_mesh->subscribeToEdition([&](){
-			_needGPUDataUpdate = true;
-		}));
-		_needGPUDataUpdate = true;
-	}
+    const spk::Mesh* MeshRenderer::mesh() const
+    {
+        return (_mesh);
+    }
 
-	const spk::Mesh* MeshRenderer::mesh() const
-	{
-		return (_mesh);
-	}
+    void MeshRenderer::setSpriteSheet(const spk::SpriteSheet* p_spriteSheet)
+    {
+        _spriteSheet = p_spriteSheet;
+        _renderingPipelineTexture.attach(_spriteSheet);
+        _updateSprite();
+    }
 
-	void MeshRenderer::setSpriteSheet(const spk::SpriteSheet* p_spriteSheet)
-	{
-		_spriteSheet = p_spriteSheet;
-		_renderingPipelineTexture.attach(_spriteSheet);
-		_updateSprite();
-	}
+    const spk::SpriteSheet* MeshRenderer::spriteSheet() const
+    {
+        return (_spriteSheet);
+    }
 
-	const spk::SpriteSheet* MeshRenderer::spriteSheet() const
-	{
-		return (_spriteSheet);
-	}
+    void MeshRenderer::setSprite(const spk::Vector2UInt& p_spriteID)
+    {
+        _spriteID = p_spriteID;
+        _updateSprite();
+    }
 
-	void MeshRenderer::setSprite(const spk::Vector2UInt& p_spriteID)
-	{
-		_spriteID = p_spriteID;
-		_updateSprite();
-	}
+    const spk::Vector2UInt& MeshRenderer::sprite() const
+    {
+        return (_spriteID);
+    }
 
-	const spk::Vector2UInt& MeshRenderer::sprite() const
-	{
-		return (_spriteID);
-	}
+    void MeshRenderer::setSpriteAnimation(const spk::SpriteAnimation* p_spriteAnimation)
+    {
+        _spriteAnimation = p_spriteAnimation;
+        _updateSpriteAnimation();
+    }
 
-	void MeshRenderer::setSpriteAnimation(const spk::SpriteAnimation* p_spriteAnimation)
-	{
-		_spriteAnimation = p_spriteAnimation;
-		_updateSpriteAnimation();
-	}
+    const spk::SpriteAnimation* MeshRenderer::spriteAnimation() const
+    {
+        return (_spriteAnimation);
+    }
 
-	const spk::SpriteAnimation* MeshRenderer::spriteAnimation() const
-	{
-		return (_spriteAnimation);
-	}
-	
-	void MeshRenderer::_onRender()
-	{
-		if (_needGPUDataUpdate == true)
-		{
-			_updateGPUData();
-			_needGPUDataUpdate = false;
-		}
+    void MeshRenderer::_onRender()
+    {
+        if (_needGPUDataUpdate == true)
+        {
+            _updateGPUData();
+            _needGPUDataUpdate = false;
+        }
 
-		_renderingPipelineTexture.attach(_spriteSheet);
-		_renderingObject.render();
-	}
+        _renderingPipelineTexture.attach(_spriteSheet);
+        _renderingObject.render();
+    }
 
-	void MeshRenderer::_onUpdate()
-	{
-		
-	}
+    void MeshRenderer::_onUpdate()
+    {
+    }
 }

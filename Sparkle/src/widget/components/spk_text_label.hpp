@@ -1,15 +1,15 @@
 #pragma once
 
-#include <string>
-#include "math/spk_vector2.hpp"
-#include "graphics/spk_color.hpp"
 #include "graphics/pipeline/spk_pipeline.hpp"
+#include "graphics/spk_color.hpp"
 #include "graphics/texture/font/spk_font.hpp"
+#include "math/spk_vector2.hpp"
+#include <string>
 
-namespace spk::WidgetComponent
+namespace spk::widget::components
 {
     /**
-	 * @class TextLabel
+     * @class TextLabel
      * @brief A component for rendering text within the UI, supporting various alignments, styles, and outlines.
      *
      * This class is a versatile UI component designed for displaying text within the SPK engine's widget system.
@@ -28,11 +28,11 @@ namespace spk::WidgetComponent
      * private:
      *     spk::WidgetComponent::TextLabel _label;
      *
-     *     void _onGeometryChange() 
+     *     void _onGeometryChange()
      *     {
      *         _label.setAnchor(spk::Vector2Int(0, 0));
      *     }
-     * 
+     *
      *     void _onRender() override
      *     {
      *         _label.render();
@@ -40,7 +40,7 @@ namespace spk::WidgetComponent
      *
      *     void _onUpdate()
      *     {
-     * 
+     *
      *     }
      *
      * public:
@@ -64,13 +64,13 @@ namespace spk::WidgetComponent
     class TextLabel
     {
     private:
-        struct RenderingPipelineVertex
+        struct ShaderInput
         {
             spk::Vector2Int position;
             spk::Vector2 uvs;
 
-            RenderingPipelineVertex();
-            RenderingPipelineVertex(const spk::Vector2Int& p_position, const spk::Vector2& p_uvs);
+            ShaderInput();
+            ShaderInput(const spk::Vector2Int& p_position, const spk::Vector2& p_uvs);
         };
 
         struct RenderingData
@@ -89,8 +89,8 @@ namespace spk::WidgetComponent
         spk::Pipeline::Object::Attribute& _renderingObjectTextRendererAttribute;
         spk::Pipeline::Object::Attribute::Element& _textColorAttributeElement;
         spk::Pipeline::Object::Attribute::Element& _outlineColorAttributeElement;
-		
-		spk::Pipeline::Texture& _renderingPipelineTexture;
+
+        spk::Pipeline::Texture& _renderingPipelineTexture;
 
         bool _needGPUBufferUpdate = true;
 
@@ -115,7 +115,7 @@ namespace spk::WidgetComponent
         spk::Vector2Int _computeBaseAnchor(const TextLabel::RenderingData& p_renderingData);
 
         void _updateGPUBuffer();
-        
+
     public:
         /**
          * @brief Default constructor for TextLabel, initializing default values for text rendering.
@@ -124,7 +124,7 @@ namespace spk::WidgetComponent
 
         /**
          * @brief Renders the text label according to its configured properties.
-         * 
+         *
          * This method prepares the text for rendering by computing the rendering data, updating the GPU buffer if necessary,
          * and finally executing the rendering pipeline to display the text on the screen. It accounts for the text's font,
          * size, color, alignment, and outline properties.
@@ -133,80 +133,79 @@ namespace spk::WidgetComponent
 
         /**
          * @brief Sets the font used for rendering the text.
-         * 
+         *
          * @param p_font Pointer to a Font instance to be used for rendering the text label.
          */
         void setFont(spk::Font* p_font);
 
         /**
          * @brief Sets the anchor point for the text label within its parent widget.
-         * 
+         *
          * @param p_anchor The position of the anchor point as a Vector2Int.
          */
         void setAnchor(const spk::Vector2Int& p_anchor);
 
         /**
          * @brief Sets the depth of the text label in the rendering pipeline.
-         * 
+         *
          * @param p_depth A float value representing the depth.
          */
         void setDepth(const float& p_depth);
 
         /**
          * @brief Sets the text content of the label.
-         * 
+         *
          * @param p_text The text string to be rendered.
          */
         void setText(const std::string& p_text);
 
         /**
          * @brief Sets the size of the text.
-         * 
+         *
          * @param p_textSize The size of the text in points.
          */
         void setTextSize(const size_t& p_textSize);
 
         /**
          * @brief Sets the color of the text.
-         * 
+         *
          * @param p_textColor A Color object representing the text color.
          */
         void setTextColor(const spk::Color& p_textColor);
 
         /**
          * @brief Sets the outline style of the text.
-         * 
+         *
          * @param p_outlineStyle The outline style to be used.
          */
         void setOutlineStyle(const spk::Font::OutlineStyle& p_outlineStyle);
 
         /**
          * @brief Sets the size of the text outline.
-         * 
+         *
          * @param p_outlineSize The size of the outline in pixels.
          */
         void setOutlineSize(const size_t& p_outlineSize);
 
         /**
          * @brief Sets the color of the text outline.
-         * 
+         *
          * @param p_outlineColor A Color object representing the outline color.
          */
         void setOutlineColor(const spk::Color& p_outlineColor);
 
         /**
          * @brief Sets the vertical alignment of the text within its bounding box.
-         * 
+         *
          * @param p_verticalAlignment The vertical alignment mode.
          */
         void setVerticalAlignment(const VerticalAlignment& p_verticalAlignment);
 
         /**
          * @brief Sets the horizontal alignment of the text within its bounding box.
-         * 
+         *
          * @param p_horizontalAlignment The horizontal alignment mode.
          */
         void setHorizontalAlignment(const HorizontalAlignment& p_horizontalAlignment);
-
     };
 }

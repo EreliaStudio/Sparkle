@@ -2,268 +2,292 @@
 
 namespace spk
 {
-	Matrix4x4::Matrix4x4()
-	{
-	}
+    Matrix4x4::Matrix4x4()
+    {
+    }
 
-	Vector3 Matrix4x4::operator*(const Vector3 &v) const
-	{
-		float w = data[3][0] * v.x + data[3][1] * v.y + data[3][2] * v.z + data[3][3];
-		return Vector3(
-				(data[0][0] * v.x + data[0][1] * v.y + data[0][2] * v.z + data[0][3]) / w,
-				(data[1][0] * v.x + data[1][1] * v.y + data[1][2] * v.z + data[1][3]) / w,
-				(data[2][0] * v.x + data[2][1] * v.y + data[2][2] * v.z + data[2][3]) / w
-			);
-	}
+    Matrix4x4::Matrix4x4(float aa, float ab, float ac, float ad, float ba, float bb, float bc, float bd, float ca, float cb, float cc, float cd, float da, float db, float dc, float dd)
+    {
+        data[0][0] = aa;
+        data[0][1] = ab;
+        data[0][2] = ac;
+        data[0][3] = ad;
+        data[1][0] = ba;
+        data[1][1] = bb;
+        data[1][2] = bc;
+        data[1][3] = bd;
+        data[2][0] = ca;
+        data[2][1] = cb;
+        data[2][2] = cc;
+        data[2][3] = cd;
+        data[3][0] = da;
+        data[3][1] = db;
+        data[3][2] = dc;
+        data[3][3] = dd;
+    }
 
-	Vector2 Matrix4x4::operator*(const Vector2& v) const
-	{
-		spk::Vector3 tmp = this->operator*(spk::Vector3(v.x, v.y, 0.0f));
-		return (spk::Vector2(tmp.x, tmp.y));
-	}
+    Matrix4x4 Matrix4x4::operator*(const Matrix4x4& other) const
+    {
+        Matrix4x4 result;
 
-	Matrix4x4 Matrix4x4::operator*(const Matrix4x4 &other) const
-	{
-		Matrix4x4 result;
+        for (int i = 0; i < 4; ++i)
+        {
+            for (int j = 0; j < 4; ++j)
+            {
+                result.data[i][j] =
+                    data[i][0] * other.data[0][j] + data[i][1] * other.data[1][j] + data[i][2] * other.data[2][j] + data[i][3] * other.data[3][j];
+            }
+        }
 
-		for (int i = 0; i < 4; ++i)
-		{
-			for (int j = 0; j < 4; ++j)
-			{
-				result.data[j][i] = 
-					data[i][0] * other.data[0][j] + 
-					data[i][1] * other.data[1][j] + 
-					data[i][2] * other.data[2][j] + 
-					data[i][3] * other.data[3][j];
-			}
-		}
+        return result;
+    }
 
-		return result;
-	}
+    Matrix4x4 Matrix4x4::operator+(const Matrix4x4& other) const
+    {
+        Matrix4x4 result;
 
-	Matrix4x4 Matrix4x4::lookAt(const Vector3 &p_from, const Vector3 &p_to, const Vector3 &p_up)
-	{
-		const spk::Vector3 forward = ((p_to - p_from).normalize());
-		const spk::Vector3 right = (forward != p_up && forward != p_up.inverse() ? forward.cross(p_up).normalize() : spk::Vector3(1, 0, 0));
-		const spk::Vector3 up = right.cross(forward);
+        for (int i = 0; i < 4; i++)
+        {
+            for (int j = 0; j < 4; j++)
+            {
+                result.data[i][j] = this->data[i][j] + other.data[i][j];
+            }
+        }
+        return result;
+    }
 
-		Matrix4x4 result;
+    Matrix4x4 Matrix4x4::zero()
+    {
+        return Matrix4x4(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    }
 
-		result.data[0][0] = right.x;
-		result.data[0][1] = right.y;
-		result.data[0][2] = right.z;
-		result.data[1][0] = up.x;
-		result.data[1][1] = up.y;
-		result.data[1][2] = up.z;
-		result.data[2][0] =-forward.x;
-		result.data[2][1] =-forward.y;
-		result.data[2][2] =-forward.z;
-		result.data[0][3] =-right.dot(p_from);
-		result.data[1][3] =-up.dot(p_from);
-		result.data[2][3] = forward.dot(p_from);
+    Matrix4x4 Matrix4x4::lookAt(const Vector3& p_from, const Vector3& p_to, const Vector3& p_up)
+    {
+        const spk::Vector3 forward = ((p_to - p_from).normalize());
+        const spk::Vector3 right = (forward != p_up && forward != p_up.inverse() ? forward.cross(p_up).normalize() : spk::Vector3(1, 0, 0));
+        const spk::Vector3 up = right.cross(forward);
 
-		return result;
-	}
+        Matrix4x4 result;
 
-	Matrix4x4 Matrix4x4::translationMatrix(const Vector3 &p_translation)
-	{
-		Matrix4x4 result;
-		result.data[0][3] = p_translation.x;
-		result.data[1][3] = p_translation.y;
-		result.data[2][3] = p_translation.z;
-		return result;
-	}
+        result.data[0][0] = right.x;
+        result.data[0][1] = right.y;
+        result.data[0][2] = right.z;
+        result.data[1][0] = up.x;
+        result.data[1][1] = up.y;
+        result.data[1][2] = up.z;
+        result.data[2][0] = -forward.x;
+        result.data[2][1] = -forward.y;
+        result.data[2][2] = -forward.z;
+        result.data[0][3] = -right.dot(p_from);
+        result.data[1][3] = -up.dot(p_from);
+        result.data[2][3] = forward.dot(p_from);
 
-	Matrix4x4 Matrix4x4::scaleMatrix(const Vector3 &p_scale)
-	{
-		Matrix4x4 result;
-		result.data[0][0] = p_scale.x;
-		result.data[1][1] = p_scale.y;
-		result.data[2][2] = p_scale.z;
-		return result;
-	}
+        return result;
+    }
 
-	Matrix4x4 Matrix4x4::rotationMatrix(const Vector3 &p_rotation)
-	{
-		Matrix4x4 rx, ry, rz;
+    Matrix4x4 Matrix4x4::translationMatrix(const Vector3& p_translation)
+    {
+        Matrix4x4 result;
+        result.data[0][3] = p_translation.x;
+        result.data[1][3] = p_translation.y;
+        result.data[2][3] = p_translation.z;
+        return result;
+    }
 
-		float cosX = cos(p_rotation.x);
-		float sinX = sin(p_rotation.x);
+    Matrix4x4 Matrix4x4::scaleMatrix(const Vector3& p_scale)
+    {
+        Matrix4x4 result;
+        result.data[0][0] = p_scale.x;
+        result.data[1][1] = p_scale.y;
+        result.data[2][2] = p_scale.z;
+        return result;
+    }
 
-		rx.data[1][1] = cosX;
-		rx.data[1][2] = -sinX;
-		rx.data[2][1] = sinX;
-		rx.data[2][2] = cosX;
+    Matrix4x4 Matrix4x4::rotationMatrix(const Vector3& p_rotation)
+    {
+        Matrix4x4 rx, ry, rz;
 
-		float cosY = cos(p_rotation.y);
-		float sinY = sin(p_rotation.y);
+        float cosX = cos(p_rotation.x);
+        float sinX = sin(p_rotation.x);
 
-		ry.data[0][0] = cosY;
-		ry.data[0][2] = sinY;
-		ry.data[2][0] = -sinY;
-		ry.data[2][2] = cosY;
+        rx.data[1][1] = cosX;
+        rx.data[1][2] = -sinX;
+        rx.data[2][1] = sinX;
+        rx.data[2][2] = cosX;
 
-		float cosZ = cos(p_rotation.z);
-		float sinZ = sin(p_rotation.z);
+        float cosY = cos(p_rotation.y);
+        float sinY = sin(p_rotation.y);
 
-		rz.data[0][0] = cosZ;
-		rz.data[0][1] = -sinZ;
-		rz.data[1][0] = sinZ;
-		rz.data[1][1] = cosZ;
+        ry.data[0][0] = cosY;
+        ry.data[0][2] = sinY;
+        ry.data[2][0] = -sinY;
+        ry.data[2][2] = cosY;
 
-		return rz * ry * rx;
-	}
+        float cosZ = cos(p_rotation.z);
+        float sinZ = sin(p_rotation.z);
 
-	Matrix4x4 Matrix4x4::rotateAroundAxis(const Vector3 &p_axis, const float &p_rotationAngle)
-	{
-		Matrix4x4 result;
+        rz.data[0][0] = cosZ;
+        rz.data[0][1] = -sinZ;
+        rz.data[1][0] = sinZ;
+        rz.data[1][1] = cosZ;
 
-		Vector3 v = p_axis.normalize();
+        return rz * ry * rx;
+    }
 
-		float c = cos(p_rotationAngle);
-		float s = sin(p_rotationAngle);
+    Matrix4x4 Matrix4x4::rotateAroundAxis(const Vector3& p_axis, const float& p_rotationAngle)
+    {
+        Matrix4x4 result;
 
-		result.data[0][0] = c + v.x * v.x * (1 - c);
-		result.data[0][1] = v.x * v.y * (1 - c) - v.z * s;
-		result.data[0][2] = v.x * v.z * (1 - c) + v.y * s;
+        Vector3 v = p_axis.normalize();
 
-		result.data[1][0] = v.y * v.x * (1 - c) + v.z * s;
-		result.data[1][1] = c + v.y * v.y * (1 - c);
-		result.data[1][2] = v.y * v.z * (1 - c) - v.x * s;
+        float c = cos(p_rotationAngle);
+        float s = sin(p_rotationAngle);
 
-		result.data[2][0] = v.z * v.x * (1 - c) - v.y * s;
-		result.data[2][1] = v.z * v.y * (1 - c) + v.x * s;
-		result.data[2][2] = c + v.z * v.z * (1 - c);
+        result.data[0][0] = c + v.x * v.x * (1 - c);
+        result.data[0][1] = v.x * v.y * (1 - c) - v.z * s;
+        result.data[0][2] = v.x * v.z * (1 - c) + v.y * s;
 
-		result.data[3][0] = 0.0f;
-		result.data[3][1] = 0.0f;
-		result.data[3][2] = 0.0f;
-		result.data[3][3] = 1.0f;
+        result.data[1][0] = v.y * v.x * (1 - c) + v.z * s;
+        result.data[1][1] = c + v.y * v.y * (1 - c);
+        result.data[1][2] = v.y * v.z * (1 - c) - v.x * s;
 
-		return result;
-	}
+        result.data[2][0] = v.z * v.x * (1 - c) - v.y * s;
+        result.data[2][1] = v.z * v.y * (1 - c) + v.x * s;
+        result.data[2][2] = c + v.z * v.z * (1 - c);
 
-	Matrix4x4 Matrix4x4::perspective(float p_fov, float p_aspectRatio, float p_nearPlane, float p_farPlane)
-	{
-		Matrix4x4 result;
+        result.data[3][0] = 0.0f;
+        result.data[3][1] = 0.0f;
+        result.data[3][2] = 0.0f;
+        result.data[3][3] = 1.0f;
 
-		const float rad = spk::degreeToRadian(p_fov);
-		const float tanHalfFov = tan(rad / 2.0f);
+        return result;
+    }
 
-		result.data[0][0] = 1.0f / (tanHalfFov * p_aspectRatio);
-		result.data[1][1] = -1.0f / tanHalfFov; 
-		result.data[2][2] = -(p_farPlane + p_nearPlane) / (p_farPlane - p_nearPlane);
-		result.data[3][2] = -1.0f;
-		result.data[2][3] = -(2.0f * p_farPlane * p_nearPlane) / (p_farPlane - p_nearPlane);
-		result.data[3][3] = 0.0f;
+    Matrix4x4 Matrix4x4::perspective(float p_fov, float p_aspectRatio, float p_nearPlane, float p_farPlane)
+    {
+        Matrix4x4 result;
 
-		return result;
-	}
+        const float rad = spk::degreeToRadian(p_fov);
+        const float tanHalfFov = tan(rad / 2.0f);
 
-	Matrix4x4 Matrix4x4::ortho(float p_left, float p_right, float p_bottom, float p_top, float p_nearPlane, float p_farPlane)
-	{
-		Matrix4x4 result;
+        result.data[0][0] = 1.0f / (tanHalfFov * p_aspectRatio);
+        result.data[1][1] = -1.0f / tanHalfFov;
+        result.data[2][2] = -(p_farPlane + p_nearPlane) / (p_farPlane - p_nearPlane);
+        result.data[3][2] = -1.0f;
+        result.data[2][3] = -(2.0f * p_farPlane * p_nearPlane) / (p_farPlane - p_nearPlane);
+        result.data[3][3] = 0.0f;
 
-		result.data[0][0] = 2.0f / (p_right - p_left);
-		result.data[1][1] = 2.0f / (p_top - p_bottom);
-		result.data[2][2] = -2.0f / (p_farPlane - p_nearPlane);
-		result.data[0][3] = -(p_right + p_left) / (p_right - p_left);
-		result.data[1][3] = -(p_top + p_bottom) / (p_top - p_bottom);
-		result.data[2][3] = -(p_farPlane + p_nearPlane) / (p_farPlane - p_nearPlane);
+        return result;
+    }
 
-		return result;
-	}
+    Matrix4x4 Matrix4x4::ortho(float p_left, float p_right, float p_bottom, float p_top, float p_nearPlane, float p_farPlane)
+    {
+        Matrix4x4 result;
 
-	bool Matrix4x4::operator==(const Matrix4x4 &other) const
-	{
-		for (int i = 0; i < 4; ++i)
-		{
-			for (int j = 0; j < 4; ++j)
-			{
-				if (data[i][j] != other.data[i][j])
-				{
-					return false;
-				}
-			}
-		}
-		return true;
-	}
+        result.data[0][0] = 2.0f / (p_right - p_left);
+        result.data[1][1] = 2.0f / (p_top - p_bottom);
+        result.data[2][2] = -2.0f / (p_farPlane - p_nearPlane);
+        result.data[3][0] = -(p_right + p_left) / (p_right - p_left);
+        result.data[3][1] = -(p_top + p_bottom) / (p_top - p_bottom);
+        result.data[3][2] = -(p_farPlane + p_nearPlane) / (p_farPlane - p_nearPlane);
 
-	bool Matrix4x4::operator!=(const Matrix4x4 &other) const
-	{
-		return !(*this == other);
-	}
+        return result;
+    }
 
-	Matrix4x4 Matrix4x4::transpose() const
-	{
-		Matrix4x4 result;
-		for (int i = 0; i < 4; ++i)
-		{
-			for (int j = 0; j < 4; ++j)
-			{
-				result.data[j][i] = data[i][j];
-			}
-		}
-		return result;
-	}
+    bool Matrix4x4::operator==(const Matrix4x4& other) const
+    {
+        for (int i = 0; i < 4; ++i)
+        {
+            for (int j = 0; j < 4; ++j)
+            {
+                const float epsilon = 5e-3;
+                float a = data[i][j];
+                float b = other.data[i][j];
+                float tolerance = epsilon * std::max(std::abs(a), std::abs(b)); // scale tolerance to the values.
+                if (std::abs(a - b) > tolerance)
+                {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
 
-	float Matrix4x4::determinant2x2(float a, float b, float c, float d)
-	{
-		return a * d - b * c;
-	}
+    bool Matrix4x4::operator!=(const Matrix4x4& other) const
+    {
+        return !(*this == other);
+    }
 
-	Matrix4x4 Matrix4x4::inverse() const
-	{
-		Matrix4x4 adjugate;
-		float det = 0;
+    Matrix4x4 Matrix4x4::transpose() const
+    {
+        Matrix4x4 result;
+        for (int i = 0; i < 4; ++i)
+        {
+            for (int j = 0; j < 4; ++j)
+            {
+                result.data[j][i] = data[i][j];
+            }
+        }
+        return result;
+    }
 
-		for (int i = 0; i < 4; ++i)
-		{
-			for (int j = 0; j < 4; ++j)
-			{
-				float sub[3][3] = {0};
-				for (int x = 0; x < 3; ++x)
-				{
-					for (int y = 0; y < 3; ++y)
-					{
-						int xi = (x < i) ? x : x + 1;
-						int yj = (y < j) ? y : y + 1;
-						sub[x][y] = data[xi][yj];
-					}
-				}
+    float Matrix4x4::determinant2x2(float a, float b, float c, float d)
+    {
+        return a * d - b * c;
+    }
 
-				float det3x3 = sub[0][0] * (sub[1][1] * sub[2][2] - sub[1][2] * sub[2][1]) - sub[0][1] * (sub[1][0] * sub[2][2] - sub[1][2] * sub[2][0]) + sub[0][2] * (sub[1][0] * sub[2][1] - sub[1][1] * sub[2][0]);
+    Matrix4x4 Matrix4x4::inverse() const
+    {
+        Matrix4x4 adjugate;
+        float det = 0;
 
-				adjugate.data[j][i] = ((i + j) % 2 == 0 ? 1 : -1) * det3x3;
+        for (int i = 0; i < 4; ++i)
+        {
+            for (int j = 0; j < 4; ++j)
+            {
+                float sub[3][3] = {0};
+                for (int x = 0; x < 3; ++x)
+                {
+                    for (int y = 0; y < 3; ++y)
+                    {
+                        int xi = (x < i) ? x : x + 1;
+                        int yj = (y < j) ? y : y + 1;
+                        sub[x][y] = data[xi][yj];
+                    }
+                }
 
-				if (i == 0)
-					det += data[i][j] * adjugate.data[j][i];
-			}
-		}
+                float det3x3 = sub[0][0] * (sub[1][1] * sub[2][2] - sub[1][2] * sub[2][1]) - sub[0][1] * (sub[1][0] * sub[2][2] - sub[1][2] * sub[2][0]) + sub[0][2] * (sub[1][0] * sub[2][1] - sub[1][1] * sub[2][0]);
 
-		if (det == 0)
-		{
-			return Matrix4x4();
-		}
+                adjugate.data[j][i] = ((i + j) % 2 == 0 ? 1 : -1) * det3x3;
 
-		for (int i = 0; i < 4; ++i)
-		{
-			for (int j = 0; j < 4; ++j)
-			{
-				adjugate.data[i][j] /= det;
-			}
-		}
+                if (i == 0)
+                    det += data[i][j] * adjugate.data[j][i];
+            }
+        }
 
-		return adjugate;
-	}
+        if (det == 0)
+        {
+            return Matrix4x4();
+        }
 
-	float *Matrix4x4::ptr()
-	{
-		return (&(data[0][0]));
-	}
+        for (int i = 0; i < 4; ++i)
+        {
+            for (int j = 0; j < 4; ++j)
+            {
+                adjugate.data[i][j] /= det;
+            }
+        }
 
-	const float *Matrix4x4::c_ptr() const
-	{
-		return (&(data[0][0]));
-	}
+        return adjugate;
+    }
+
+    float* Matrix4x4::ptr()
+    {
+        return (&(data[0][0]));
+    }
+
+    const float* Matrix4x4::c_ptr() const
+    {
+        return (&(data[0][0]));
+    }
 }

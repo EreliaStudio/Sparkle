@@ -1,14 +1,14 @@
 #pragma once
 
-#include <string>
-#include "math/spk_vector2.hpp"
 #include "graphics/pipeline/spk_pipeline.hpp"
 #include "graphics/texture/spk_sprite_sheet.hpp"
+#include "math/spk_vector2.hpp"
+#include <string>
 
-namespace spk::WidgetComponent
+namespace spk::widget::components
 {
     /**
-	 * @class NineSlicedBox
+     * @class NineSlicedBox
      * @brief Implements a nine-sliced box component for UI rendering, supporting scalable and adaptable layouts.
      *
      * This class utilizes a nine-slice technique to render scalable UI elements where the corners remain
@@ -32,11 +32,11 @@ namespace spk::WidgetComponent
      * private:
      *     spk::WidgetComponent::NineSlicedBox _background;
      *
-     *     void _onGeometryChange() 
+     *     void _onGeometryChange()
      *     {
      *         _background.setGeometry(spk::Vector2Int(0, 0), size());
      *     }
-     * 
+     *
      *     void _onRender()
      *     {
      *         _background.render();
@@ -44,7 +44,7 @@ namespace spk::WidgetComponent
      *
      *     void _onUpdate()
      *     {
-     * 
+     *
      *     }
      * public:
      *     MyCustomWidget(const std::string& name, spk::IWidget* parent = nullptr) :
@@ -60,7 +60,7 @@ namespace spk::WidgetComponent
      * @note This component requires initialization and setup of a rendering pipeline and sprite sheet before use.
      * It is designed to seamlessly integrate with the SPK engine's rendering system, providing efficient and
      * flexible UI rendering capabilities.
-     * 
+     *
      * @see IVector2, SpriteSheet
      */
     class NineSlicedBox
@@ -68,23 +68,23 @@ namespace spk::WidgetComponent
     private:
         static std::string _renderingPipelineCode;
 
-        struct RenderingPipelineVertex
+        struct ShaderInput
         {
             spk::Vector2Int position;
             spk::Vector2 uvs;
 
-            RenderingPipelineVertex();
-            RenderingPipelineVertex(const spk::Vector2Int &p_position, const spk::Vector2 &p_uvs);
+            ShaderInput();
+            ShaderInput(const spk::Vector2Int& p_position, const spk::Vector2& p_uvs);
         };
 
         static spk::Pipeline _renderingPipeline;
         spk::Pipeline::Object _renderingObject;
-        spk::Pipeline::Object::Attribute &_renderingObjectAttribute;
-        spk::Pipeline::Object::Attribute::Element &_depthAttributeElement;
+        spk::Pipeline::Object::Attribute& _renderingObjectAttribute;
+        spk::Pipeline::Object::Attribute::Element& _depthAttributeElement;
 
-        spk::Pipeline::Texture &_renderingPipelineTexture;
+        spk::Pipeline::Texture& _renderingPipelineTexture;
 
-        const spk::SpriteSheet *_spriteSheet;
+        const spk::SpriteSheet* _spriteSheet;
 
         spk::Vector2Int _anchor;
         spk::Vector2UInt _size;
@@ -97,7 +97,7 @@ namespace spk::WidgetComponent
     public:
         /**
          * @brief Constructs a NineSlicedBox component with default settings.
-         * 
+         *
          * Initializes the nine-sliced box with default values, preparing it for configuration and rendering. This
          * includes setting up initial geometry, size, and corner size. The actual rendering pipeline and sprite sheet
          * must be set separately using the provided methods.
@@ -106,41 +106,41 @@ namespace spk::WidgetComponent
 
         /**
          * @brief Sets the sprite sheet used for rendering the nine-sliced box.
-         * 
+         *
          * @param p_spriteSheet Pointer to the SpriteSheet object that contains the textures for the nine-sliced box.
          */
-        void setSpriteSheet(const spk::SpriteSheet *p_spriteSheet);
+        void setSpriteSheet(const spk::SpriteSheet* p_spriteSheet);
 
         /**
          * @brief Sets the geometry of the nine-sliced box.
-         * 
+         *
          * Defines the anchor point and size of the nine-sliced box. The anchor point determines the box's position,
          * while the size specifies its dimensions.
-         * 
+         *
          * @param p_anchor The position of the nine-sliced box within its parent container.
          * @param p_size The size of the nine-sliced box.
          */
-        void setGeometry(const spk::Vector2Int &p_anchor, const spk::Vector2UInt &p_size);
+        void setGeometry(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size);
 
         /**
          * @brief Sets the rendering depth of the nine-sliced box in the pipeline.
-         * 
+         *
          * @param p_depth A float value representing the depth at which the box should be rendered.
          */
         void setDepth(float p_depth);
 
         /**
          * @brief Sets the size of the corners of the nine-sliced box.
-         * 
+         *
          * This size affects how the corners of the box are rendered, ensuring they remain unscaled when the box is resized.
-         * 
+         *
          * @param p_cornerSize The size of the box's corners.
          */
-        void setCornerSize(const spk::Vector2Int &p_cornerSize);
+        void setCornerSize(const spk::Vector2Int& p_cornerSize);
 
         /**
          * @brief Renders the nine-sliced box.
-         * 
+         *
          * Executes the rendering process for the nine-sliced box, updating its geometry and texture coordinates as necessary
          * before drawing it to the screen. This method should be called within the parent widget's rendering cycle.
          */

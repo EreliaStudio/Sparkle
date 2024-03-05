@@ -1,182 +1,182 @@
 #include "application/spk_application.hpp"
 
-#include <thread>
 #include "graphics/pipeline/spk_pipeline.hpp"
 #include <fstream>
+#include <thread>
 
 namespace spk
 {
-	void Application::_pullMessage()
-	{
-		MSG msg = {};
+    void Application::_pullMessage()
+    {
+        MSG msg = {};
 
-		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-		{
-			int translateResult = TranslateMessage(&msg);
-			int dispatchResult = static_cast<int>(DispatchMessage(&msg));
-		}
-	}
+        while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+        {
+            int translateResult = TranslateMessage(&msg);
+            int dispatchResult = static_cast<int>(DispatchMessage(&msg));
+        }
+    }
 
-	void Application::_executeRendererTick()
-	{
-		_pullMessage();
+    void Application::_executeRendererTick()
+    {
+        _pullMessage();
 
-		_handle.clear();
+        _handle.clear();
 
-		_centralWidget->render();
+        _centralWidget->layout(widget::BoxConstraints(size(), size()));
+        _centralWidget->setGeometry({0, 0}, size());
+        _centralWidget->render();
 
-		_handle.swap();
-	}
+        _handle.swap();
+    }
 
-	void Application::_executeUpdaterTick()
-	{
-		_timeManager.update();
+    void Application::_executeUpdaterTick()
+    {
+        _timeManager.update();
 
-		while (_updaterJobs.empty() == false)
-		{
-			_updaterJobs.pop_front()();
-		}
-	
-		_centralWidget->update();
+        while (_updaterJobs.empty() == false)
+        {
+            _updaterJobs.pop_front()();
+        }
 
-		_keyboard.update();
-		_mouse.update();
+        _centralWidget->update();
 
-	}
+        _keyboard.update();
+        _mouse.update();
+    }
 
-	void Application::_executeRendererLoop()
-	{
-		while (_isRunning == true)
-		{
-			_fpsCounter.trigger(10);
+    void Application::_executeRendererLoop()
+    {
+        while (_isRunning == true)
+        {
+            _fpsCounter.trigger(10);
 
-			_executeRendererTick();
+            _executeRendererTick();
 
-			if (_counterTimer.isTimedOut() == true)
-			{
-				_fpsCounter.save();
-				_upsCounter.save();
-				_counterTimer.start();
-			}
-		}
-	}
+            if (_counterTimer.isTimedOut() == true)
+            {
+                _fpsCounter.save();
+                _upsCounter.save();
+                _counterTimer.start();
+            }
+        }
+    }
 
-	void Application::_executeUpdaterLoop()
-	{
-		while (_isRunning == true)
-		{
-			_upsCounter.trigger(10);
+    void Application::_executeUpdaterLoop()
+    {
+        while (_isRunning == true)
+        {
+            _upsCounter.trigger(10);
 
-			_executeUpdaterTick();
-		}
-	}
+            _executeUpdaterTick();
+        }
+    }
 
-	int Application::_runMultithread()
-	{
-		std::thread updaterThread([&](){
+    int Application::_runMultithread()
+    {
+        std::thread updaterThread([&]()
+                                  {
 			setAsActiveApplication();
-			_executeUpdaterLoop();
-		});
+			_executeUpdaterLoop(); });
 
-		_executeRendererLoop();
+        _executeRendererLoop();
 
-		if (updaterThread.joinable() == true)
-			updaterThread.join();
+        if (updaterThread.joinable() == true)
+            updaterThread.join();
 
-		return (0);
-	}
+        return (0);
+    }
 
-	int Application::_runMonothread()
-	{
-		while (_isRunning == true)
-		{
-			_fpsCounter.trigger(10);
-			_upsCounter.trigger(10);
+    int Application::_runMonothread()
+    {
+        while (_isRunning == true)
+        {
+            _fpsCounter.trigger(10);
+            _upsCounter.trigger(10);
 
-			_executeRendererTick();
-			_executeUpdaterTick();
+            _executeRendererTick();
+            _executeUpdaterTick();
 
-			if (_counterTimer.isTimedOut() == true)
-			{
-				_fpsCounter.save();
-				_upsCounter.save();
-				_counterTimer.start();
-			}
-		}
-		return (0);
-	}
+            if (_counterTimer.isTimedOut() == true)
+            {
+                _fpsCounter.save();
+                _upsCounter.save();
+                _counterTimer.start();
+            }
+        }
+        return (0);
+    }
 
-	Application::Application(const std::string& p_title, const Vector2UInt& p_size, const Mode& p_mode) :
-		_mode(p_mode),
-		_updaterJobs(),
-		_handle(this, p_title, p_size),
-		_counterTimer(100),
-		_profiler(),
-		_fpsCounter(_profiler.metric<TriggerMetric>("FPSCounter")),
-		_upsCounter(_profiler.metric<TriggerMetric>("UPSCounter"))
-	{
-		if (_activeApplication == nullptr)
-			setAsActiveApplication();
-		_centralWidget = new CentralWidget();
-		_centralWidget->setGeometry(spk::Vector2Int(0, 0), size());
-		Viewport::_mainViewport = &(_centralWidget->viewport());
-		_creationComplete = true;
-	}
+    Application::Application(const std::string& p_title, const Vector2UInt& p_size, const Mode& p_mode) :
+        _mode(p_mode),
+        _updaterJobs(),
+        _handle(this, p_title, p_size),
+        _counterTimer(100),
+        _profiler(),
+        _fpsCounter(_profiler.metric<TriggerMetric>("FPSCounter")),
+        _upsCounter(_profiler.metric<TriggerMetric>("UPSCounter"))
+    {
+        if (_activeApplication == nullptr)
+            setAsActiveApplication();
+        _centralWidget = new CentralWidget();
+        _centralWidget->setGeometry(spk::Vector2Int(0, 0), size());
+        Viewport::_mainViewport = &(_centralWidget->viewport());
+    }
 
-	Application::~Application()
-	{
-		std::fstream outputStream;
-		outputStream.open("profilerResult.out", std::ios_base::out);
+    Application::~Application()
+    {
+        std::fstream outputStream;
+        outputStream.open("profilerResult.out", std::ios_base::out);
 
-		outputStream << _profiler.emitReport() << std::endl;
+        outputStream << _profiler.emitReport() << std::endl;
 
-		outputStream.close();
-		delete _centralWidget;
-	}
+        outputStream.close();
+        delete _centralWidget;
+    }
 
-	int Application::run()
-	{
-		_isRunning = true;
-		_counterTimer.start();
-		if (_mode == Mode::Multithread)
-			return (_runMultithread());
-		else
-			return (_runMonothread());
-	}
+    int Application::run()
+    {
+        _isRunning = true;
+        _counterTimer.start();
+        if (_mode == Mode::Multithread)
+            return (_runMultithread());
+        else
+            return (_runMonothread());
+    }
 
-	void Application::quit(int p_errorCode)
-	{
-		_errorCode = p_errorCode;
-		_isRunning = false;
-	}
+    void Application::quit(int p_errorCode)
+    {
+        _errorCode = p_errorCode;
+        _isRunning = false;
+    }
 
-	const spk::Vector2UInt& Application::size() const
-	{
-		return (_handle.size());
-	}
+    const spk::Vector2UInt& Application::size() const
+    {
+        return (_handle.size());
+    }
 
-	const Keyboard& Application::keyboard() const
-	{
-		return (_keyboard);
-	}
+    const Keyboard& Application::keyboard() const
+    {
+        return (_keyboard);
+    }
 
-	const Mouse& Application::mouse() const
-	{
-		return (_mouse);
-	}
+    const Mouse& Application::mouse() const
+    {
+        return (_mouse);
+    }
 
-	InputDecoder& Application::inputDecoder()
-	{
-		return (_inputDecoder);
-	}
+    InputDecoder& Application::inputDecoder()
+    {
+        return (_inputDecoder);
+    }
 
-	const TimeManager& Application::timeManager() const
-	{
-		return (_timeManager);
-	}
+    const TimeManager& Application::timeManager() const
+    {
+        return (_timeManager);
+    }
 
-	Profiler& Application::profiler()
-	{
-		return (_profiler);
-	}
+    Profiler& Application::profiler()
+    {
+        return (_profiler);
+    }
 }

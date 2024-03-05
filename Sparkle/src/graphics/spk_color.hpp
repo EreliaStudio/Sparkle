@@ -1,11 +1,12 @@
 #pragma once
 
 #include <iostream>
+#include <vector>
 
 namespace spk
 {
     /**
-	 * @class Color
+     * @class Color
      * @brief Represents a color in RGBA format.
      *
      * This struct encapsulates a color using the RGBA color model, where R, G, B, and A represent the
@@ -40,9 +41,9 @@ namespace spk
         Color();
 
         /**
-         * @brief Constructor to initialize color with grayscale value.
+         * @brief Constructor to initialize color with hexadecimal value.
          *
-         * @param p_value The grayscale value [0, 255].
+         * @param p_value The hex value of the color.
          */
         Color(int p_value);
 
@@ -72,7 +73,7 @@ namespace spk
          * @param p_color The color to add to the current color.
          * @return A new color resulting from the addition.
          */
-        Color operator + (const Color& p_color) const;
+        Color operator+(const Color& p_color) const;
 
         /**
          * @brief Subtraction operator to subtract a color from the current color.
@@ -80,6 +81,28 @@ namespace spk
          * @param p_color The color to subtract from the current color.
          * @return A new color resulting from the subtraction.
          */
-        Color operator - (const Color& p_color) const;
+        Color operator-(const Color& p_color) const;
+    };
+
+    /**
+     * @brief Colors offers some pre-made colors.
+     */
+    class Colors
+    {
+    public:
+        static const Color red;     //!< red
+        static const Color blue;    //!< blue
+        static const Color green;   //!< green
+        static const Color yellow;  //!< yellow
+        static const Color purple;  //!< purple
+        static const Color cyan;    //!< cyan
+        static const Color orange;  //!< orange
+        static const Color magenta; //!< magenta
+        static const Color pink;    //!< punk(not a color)
+        static const Color black;   //!< black(not a color)
+        static const Color white;   //!< white(not a color)
+        static const Color grey;    //!< grey(not a color)
+
+        static const std::vector<Color> values; //!< Some constant colors.
     };
 }
