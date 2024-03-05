@@ -41,7 +41,7 @@ namespace spk
 	class ActivateObject
 	{
 	public:
-		using Callback = std::function<void()>; //< The callback type used for activation and deactivation
+		using Callback = std::function<void()>; //!< The callback type used for activation and deactivation
 
 	private:
 		bool _isActive = false;
