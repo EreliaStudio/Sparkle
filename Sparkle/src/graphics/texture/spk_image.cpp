@@ -13,7 +13,7 @@ namespace spk
 	{
 		if (!std::filesystem::exists(p_path))
         {
-            throw std::runtime_error("File does not exist: " + p_path.string());
+            throwException("File does not exist: " + p_path.string());
         }
 		
 		_textureData = stbi_load(p_path.string().c_str(), &_size.x, &_size.y, &_channels, 0);

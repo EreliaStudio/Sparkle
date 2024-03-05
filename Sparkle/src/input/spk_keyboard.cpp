@@ -1,6 +1,6 @@
 #include "input/spk_keyboard.hpp"
 
-#include "iostream"
+#include "spk_basic_functions.hpp"
 
 namespace spk
 {

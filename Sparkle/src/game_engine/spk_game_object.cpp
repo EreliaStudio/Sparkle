@@ -6,8 +6,7 @@ namespace spk
 	void GameObject::render()
 	{
 		if (isActive() == false)
-			return ;
-				
+			return ;				
 			
 		for (auto& component : _components)
 		{

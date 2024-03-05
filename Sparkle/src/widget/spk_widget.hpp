@@ -160,6 +160,8 @@ namespace spk::widget
          */
         ~IWidget();
 
+        void rename(const std::string& p_name);
+
         /**
          * Adds a child widget to this widget. The child widget will be hierarchically managed and rendered within this widget's viewport.
          * @param p_child A pointer to the widget to be added as a child.
