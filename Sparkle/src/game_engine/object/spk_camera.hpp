@@ -32,7 +32,7 @@ namespace spk
 	class Camera : public spk::GameObject
 	{
 	public:
-		using Type = CameraComponent::Type; //< Uses the Type enum from CameraComponent for consistency.
+		using Type = CameraComponent::Type; //!< Uses the Type enum from CameraComponent for consistency.
 
 	private:
 		CameraComponent* _cameraComponent;

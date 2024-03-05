@@ -262,6 +262,13 @@ namespace spk
 			}
 		}
 
+		/**
+		 * @brief Retrieves a copy of the current state.
+		 * 
+		 * Provides access to the current state.
+		 * 
+		 * @return A copy of the current state.
+		 */
 		TStateType state() const
 		{
 			return (_currentState);

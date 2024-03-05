@@ -88,6 +88,13 @@ namespace spk
          * @return A quaternion representing the specified Euler angles rotation.
          */
         static Quaternion fromEulerAngles(const Vector3& p_eulerAngles);
+        /**
+         * @brief Creates a quaternion from Euler angles.
+         * @param p_angleX A float representing the Euler angles around the X axis in degrees.
+         * @param p_angleY A float representing the Euler angles around the Y axis in degrees.
+         * @param p_angleZ A float representing the Euler angles around the Z axis in degrees.
+         * @return A quaternion representing the specified Euler angles rotation.
+         */
         static Quaternion fromEulerAngles(const float& p_angleX, const float& p_angleY, const float& p_angleZ);
 
 		/**
@@ -107,7 +114,7 @@ namespace spk
 
         /**
          * @brief Outputs the quaternion to an output stream in the format (x, y, z, w).
-         * @param os The output stream.
+         * @param p_os The output stream.
          * @param p_quaternion The quaternion to output.
          * @return A reference to the output stream.
          */
@@ -117,6 +124,11 @@ namespace spk
             return (p_os);
         }
 
+        /**
+         * @brief Convert the quaternion into a spk::Vector3 using th x, y and z values of the original quaternion
+         * 
+         * @return The vector composed of the x, y and z attributes of the quaternion
+        */
         Vector3 toVector3() const;
     };
 }

@@ -382,8 +382,6 @@ namespace spk
 		 * @endcode
 		 */
 		void bakeNormals();
-
-		void optimize();
 	};
 
 	/**
