@@ -14,7 +14,9 @@ namespace spk
 
 	Input -> Geometry : vec3 modelVertex;
 	Input -> Geometry : vec2 modelUVs;
+
 	Geometry -> Render : vec2 fragmentUVs;
+	Geometry -> Render : float depth;
 
 	Texture textureID;
 
@@ -42,15 +44,29 @@ namespace spk
 	void geometryPass()
 	{
 		vec3 transformedPosition = applyTransform(modelVertex, self.transform);
-		pixelPosition = cameraConstants.MVP * vec4(transformedPosition, 1.0f);
+		vec4 cameraSpacePosition = cameraConstants.view * vec4(transformedPosition, 1.0f);
+		pixelPosition = cameraConstants.projection * cameraSpacePosition;
 		fragmentUVs = (modelUVs + sprite.anchor + computeSpriteAnimationOffset(sprite.animationStartEpoch, sprite.animation)) * sprite.unit + 0.00001f;
+		depth = pixelPosition.z;
 	}
 
 	void renderPass()
 	{
-		pixelColor = texture(textureID, fragmentUVs);
-		if (pixelColor.a == 0)
-			discard;
+		if (false)
+		{
+			if (depth <= 0.001f)
+				pixelColor = vec4(1, 0, 0.5, 1);
+			else if (depth >= 0.999f)
+				pixelColor = vec4(1, 0, 0, 1);
+			else
+				pixelColor = vec4(depth, depth, depth, 1.0f);
+		}
+		else
+		{
+			pixelColor = texture(textureID, fragmentUVs);
+			if (pixelColor.a == 0)
+				discard;
+		}
 	}
 	)";
 
@@ -72,7 +88,7 @@ namespace spk
     {
         Mesh::Data data = _mesh->bake();
 
-        _renderingObject.setVertices(data.vertexes, data.vertexSize);
+        _renderingObject.setVertices(data.vertices, data.vertexSize);
         _renderingObject.setIndexes(data.indexes);
     }
 

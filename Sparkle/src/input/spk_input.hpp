@@ -53,7 +53,7 @@ namespace spk
          *
          * @see Keyboard
          */
-        Input(Keyboard::Key p_key, InputState p_state) :
+        Input(Keyboard::Key p_key, InputState p_state, long long p_duration = 0) :
             _type(Type::Keyboard),
             _key(p_key),
             _state(p_state)

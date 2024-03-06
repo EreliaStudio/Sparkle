@@ -6,8 +6,8 @@ namespace spk
 	void GameObject::render()
 	{
 		if (isActive() == false)
-			return ;
-				
+			return ;				
+			
 		for (auto& component : _components)
 		{
 			component->render();
@@ -73,7 +73,8 @@ namespace spk
 	GameObject::GameObject(const std::string& p_name, GameObject* p_parent) :
 		GameObject(p_name)
 	{
-		p_parent->addChild(this);
+		if (p_parent != nullptr)
+			p_parent->addChild(this);
 	}
 
 	GameObject::~GameObject()

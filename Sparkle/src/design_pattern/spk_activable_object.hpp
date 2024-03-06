@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+
 namespace spk
 {
 	/**
@@ -38,8 +40,13 @@ namespace spk
 	 */
 	class ActivateObject
 	{
+	public:
+		using Callback = std::function<void()>; //!< The callback type used for activation and deactivation
+
 	private:
 		bool _isActive = false;
+		Callback _activationCallback = nullptr;
+		Callback _deactivationCallback = nullptr;
 
 	public:
 		/**
@@ -59,7 +66,12 @@ namespace spk
 		 */
 		void activate()
 		{
+			if (_isActive == true)
+				return ;
+
 			_isActive = true;
+			if (_activationCallback != nullptr)
+				_activationCallback();
 		}
 
 		/**
@@ -69,7 +81,12 @@ namespace spk
 		 */
 		void deactivate()
 		{
+			if (_isActive == false)
+				return ;
+
 			_isActive = false;
+			if (_deactivationCallback != nullptr)
+				_deactivationCallback();
 		}
 
 		/**
@@ -80,6 +97,24 @@ namespace spk
 		bool isActive() const
 		{
 			return (_isActive);
+		}
+
+		/**
+		 * @brief Define the callback to call when activating the object
+		 * @param p_callback The callback to link
+		*/
+		void setActivationCallback(const Callback& p_callback)
+		{
+			_activationCallback = p_callback;
+		}
+
+		/**
+		 * @brief Define the callback to call when deactivating the object
+		 * @param p_callback The callback to link
+		*/
+		void setDeactivationCallback(const Callback& p_callback)
+		{
+			_deactivationCallback = p_callback;
 		}
 	};
 }

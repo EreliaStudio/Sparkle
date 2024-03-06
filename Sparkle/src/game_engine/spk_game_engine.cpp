@@ -18,10 +18,7 @@ namespace spk
 	}
 
 	void GameEngine::update()
-	{
-		if (spk::Application::activeApplication()->timeManager().deltaTime() == 0)
-			return ;
-			
+	{			
 		_timeMetric.start();
 		for (auto& module : _modules)
 			module->update();

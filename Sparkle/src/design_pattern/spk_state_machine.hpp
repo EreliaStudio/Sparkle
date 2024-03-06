@@ -109,6 +109,7 @@ namespace spk
 	private:
 
 		std::unordered_map<TStateType, Action> _states;
+		TStateType _currentState;
 		Action _currentActions;
 		bool _hasCurrentState = false;
 
@@ -124,7 +125,6 @@ namespace spk
 		 * @param p_action Action struct containing the callbacks for the state.
 		 */
 		StateMachine(TStateType p_stateID, const Action& p_action) :
-			_currentState(p_stateID),
 			_hasCurrentState(true)
 		{
 			addState(p_stateID, p_action);
@@ -240,6 +240,7 @@ namespace spk
 				}
 			}
 
+			_currentState = p_newState;
 			_hasCurrentState = true;
 			_currentActions = _states[p_newState];
 
@@ -259,6 +260,18 @@ namespace spk
 			{
 				_currentActions.onUpdate();
 			}
+		}
+
+		/**
+		 * @brief Retrieves a copy of the current state.
+		 * 
+		 * Provides access to the current state.
+		 * 
+		 * @return A copy of the current state.
+		 */
+		TStateType state() const
+		{
+			return (_currentState);
 		}
 	};
 }

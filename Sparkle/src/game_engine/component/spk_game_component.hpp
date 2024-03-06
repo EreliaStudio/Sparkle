@@ -53,8 +53,14 @@ namespace spk
 		TimeMetric& _timeMetric;
 	#endif
 
-		virtual void _onRender() = 0;
-		virtual void _onUpdate() = 0;
+		virtual void _onRender()
+		{
+
+		}
+		virtual void _onUpdate()
+		{
+
+		}
 
 		void update();
 		void render();

@@ -341,8 +341,8 @@ namespace spk
         throw std::runtime_error(p_errorMessage);
     }
 
-    long long getTime()
-    {
-        return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
-    }
+	long long getTime()
+	{
+		return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+	}
 }

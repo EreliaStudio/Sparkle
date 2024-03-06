@@ -8,11 +8,17 @@
 #include "design_pattern/spk_notifier.hpp"
 #include "design_pattern/spk_observable_value.hpp"
 #include "design_pattern/spk_singleton.hpp"
+#include "design_pattern/spk_state_machine.hpp"
 
 #include "math/spk_matrix4x4.hpp"
 #include "math/spk_quaternion.hpp"
 #include "math/spk_vector2.hpp"
 #include "math/spk_vector3.hpp"
+#include "math/spk_quaternion.hpp"
+#include "math/spk_matrix4x4.hpp"
+#include "math/spk_perlin.hpp"
+#include "math/spk_pseudo_random_generator.hpp"
+#include "math/spk_random_generator.hpp"
 
 #include "graphics/spk_color.hpp"
 #include "graphics/texture/spk_image.hpp"
@@ -36,6 +42,15 @@
 #include "game_engine/component/spk_mesh_renderer_component.hpp"
 #include "game_engine/component/spk_physics_component.hpp"
 #include "game_engine/spk_mesh.hpp"
+#include "game_engine/component/spk_mesh_collider_2D_component.hpp"
+
+#include "game_engine/object/spk_camera.hpp"
+#include "game_engine/object/spk_itilemap.hpp"
+#include "game_engine/object/spk_tilemap2D.hpp"
+
+#include "game_engine/spk_game_engine.hpp"
+#include "game_engine/module/spk_gravity_module.hpp"
+#include "game_engine/module/spk_collision_module.hpp"
 
 #include "game_engine/module/spk_collision_module.hpp"
 #include "game_engine/module/spk_gravity_module.hpp"

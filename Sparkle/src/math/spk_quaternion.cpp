@@ -56,53 +56,49 @@ namespace spk
 	Quaternion Quaternion::lookAt(const Vector3& p_direction, const Vector3& p_up)
 	{
 		Vector3 forward = p_direction.normalize();
+        Vector3 right = p_up.cross(forward).normalize();
+        Vector3 up = forward.cross(right);
 
-		Vector3 upVector = p_up;
-		if (fabs(forward.dot(upVector)) > 0.9999f)
-		{
-			upVector = fabs(forward.x) < fabs(forward.z) ? Vector3(1, 0, 0) : Vector3(0, 1, 0);
-		}
+        // Create a rotation matrix from the right, up, and forward vectors
+        float matrix[3][3] = {
+            {right.x, up.x, forward.x},
+            {right.y, up.y, forward.y},
+            {right.z, up.z, forward.z}
+        };
 
-		Vector3 right = upVector.cross(forward).normalize();
-		Vector3 up = forward.cross(right);
+        // Convert the rotation matrix to a quaternion
+        float trace = matrix[0][0] + matrix[1][1] + matrix[2][2];
+        float qw, qx, qy, qz;
 
-		float matrix[3][3] = {
-				{right.x, right.y, right.z},
-				{up.x, up.y, up.z},
-				{-forward.x, -forward.y, -forward.z}
-			};
-		float qw = sqrt(1.0f + matrix[0][0] + matrix[1][1] + matrix[2][2]) / 2.0f;
+        if (trace > 0.0f) {
+            float s = 0.5f / sqrt(trace + 1.0f);
+            qw = 0.25f / s;
+            qx = (matrix[2][1] - matrix[1][2]) * s;
+            qy = (matrix[0][2] - matrix[2][0]) * s;
+            qz = (matrix[1][0] - matrix[0][1]) * s;
+        } else {
+            if (matrix[0][0] > matrix[1][1] && matrix[0][0] > matrix[2][2]) {
+                float s = 2.0f * sqrt(1.0f + matrix[0][0] - matrix[1][1] - matrix[2][2]);
+                qw = (matrix[2][1] - matrix[1][2]) / s;
+                qx = 0.25f * s;
+                qy = (matrix[0][1] + matrix[1][0]) / s;
+                qz = (matrix[0][2] + matrix[2][0]) / s;
+            } else if (matrix[1][1] > matrix[2][2]) {
+                float s = 2.0f * sqrt(1.0f + matrix[1][1] - matrix[0][0] - matrix[2][2]);
+                qw = (matrix[0][2] - matrix[2][0]) / s;
+                qx = (matrix[0][1] + matrix[1][0]) / s;
+                qy = 0.25f * s;
+                qz = (matrix[1][2] + matrix[2][1]) / s;
+            } else {
+                float s = 2.0f * sqrt(1.0f + matrix[2][2] - matrix[0][0] - matrix[1][1]);
+                qw = (matrix[1][0] - matrix[0][1]) / s;
+                qx = (matrix[0][2] + matrix[2][0]) / s;
+                qy = (matrix[1][2] + matrix[2][1]) / s;
+                qz = 0.25f * s;
+            }
+        }
 
-		if (qw <= 0.0f)
-		{
-			const float half = 0.5f;
-			float qx, qy, qz;
-
-			if (matrix[0][0] > matrix[1][1] && matrix[0][0] > matrix[2][2]) {
-				qx = sqrt(1.0f + matrix[0][0] - matrix[1][1] - matrix[2][2]) * half;
-				qy = (matrix[0][1] + matrix[1][0]) / (4.0f * qx);
-				qz = (matrix[0][2] + matrix[2][0]) / (4.0f * qx);
-				qw = 0.0f;
-			} else if (matrix[1][1] > matrix[2][2]) {
-				qy = sqrt(1.0f - matrix[0][0] + matrix[1][1] - matrix[2][2]) * half;
-				qx = (matrix[0][1] + matrix[1][0]) / (4.0f * qy);
-				qz = (matrix[1][2] + matrix[2][1]) / (4.0f * qy);
-				qw = 0.0f;
-			} else {
-				qz = sqrt(1.0f - matrix[0][0] - matrix[1][1] + matrix[2][2]) * half;
-				qx = (matrix[0][2] + matrix[2][0]) / (4.0f * qz);
-				qy = (matrix[1][2] + matrix[2][1]) / (4.0f * qz);
-				qw = 0.0f;
-			}
-
-			return Quaternion(qx, qy, qz, qw);
-		}
-		float w4 = 4.0f * qw;
-		float qx = (matrix[2][1] - matrix[1][2]) / w4;
-		float qy = (matrix[0][2] - matrix[2][0]) / w4;
-		float qz = (matrix[1][0] - matrix[0][1]) / w4;
-
-		return Quaternion(qx, qy, qz, qw).normalize();
+        return Quaternion(qx, qy, qz, qw).normalize();
 	}
 
 
@@ -127,6 +123,11 @@ namespace spk
 		);
 	}
 
+	Quaternion Quaternion::fromEulerAngles(const float& p_angleX, const float& p_angleY, const float& p_angleZ)
+	{
+		return (fromEulerAngles(spk::Vector3(p_angleX, p_angleY, p_angleZ)));
+	}
+
 	Quaternion Quaternion::fromAxisAngle(const Vector3& p_axis, float p_angleDegree)
 	{
 		float halfAngle = spk::degreeToRadian(p_angleDegree) * 0.5f;
@@ -144,5 +145,10 @@ namespace spk
 		Quaternion point(p_inputPoint.x, p_inputPoint.y, p_inputPoint.z, 0);
 		Quaternion result = *this * point * this->normalize().inverse();
 		return Vector3(result.x, result.y, result.z);
+	}
+
+	Vector3 Quaternion::toVector3() const
+	{
+		return (spk::Vector3(x, y, z));
 	}
 }

@@ -161,6 +161,12 @@ namespace spk::widget
         ~IWidget();
 
         /**
+         * Reset the name of the widget to a desired value
+         * @param p_name The new name of the widget
+        */
+        void rename(const std::string& p_name);
+
+        /**
          * Adds a child widget to this widget. The child widget will be hierarchically managed and rendered within this widget's viewport.
          * @param p_child A pointer to the widget to be added as a child.
          */
