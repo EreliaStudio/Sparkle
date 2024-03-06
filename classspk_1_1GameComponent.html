@@ -71,7 +71,7 @@ $(function() {
 <a href="#friends">Friends</a> &#124;
 <a href="classspk_1_1GameComponent-members.html">List of all members</a>  </div>
   <div class="headertitle">
-<div class="title">spk::GameComponent Class Reference<span class="mlabels"><span class="mlabel">abstract</span></span></div>  </div>
+<div class="title">spk::GameComponent Class Reference</div>  </div>
 </div><!--header-->
 <div class="contents">
 
@@ -84,13 +84,13 @@ Inheritance diagram for spk::GameComponent:</div>
 <div class="dyncontent">
 <div class="center"><img src="classspk_1_1GameComponent__inherit__graph.png" border="0" usemap="#aspk_1_1GameComponent_inherit__map" alt="Inheritance graph"/></div>
 <map name="aspk_1_1GameComponent_inherit__map" id="aspk_1_1GameComponent_inherit__map">
-<area shape="rect" title="Base class for game components that can be attached to GameObjects." alt="" coords="178,80,345,107"/>
-<area shape="rect" href="classspk_1_1Camera.html" title="Represents a camera component for rendering scenes." alt="" coords="5,155,109,181"/>
-<area shape="rect" href="classspk_1_1ICollider.html" title="Abstract base class for collider components within the game engine." alt="" coords="133,155,240,181"/>
-<area shape="rect" href="classspk_1_1MeshRenderer.html" title="Represents a sprite renderer component for rendering sprites in world space." alt="" coords="264,155,411,181"/>
-<area shape="rect" href="classspk_1_1Physics.html" title="Component for simulating basic physics properties and behaviors for game objects." alt="" coords="435,155,538,181"/>
-<area shape="rect" href="classspk_1_1ActivateObject.html" title="Manages activation state for objects, intended as a base class." alt="" coords="187,5,336,32"/>
-<area shape="rect" href="classspk_1_1MeshCollider2D.html" title="A 2D collider component for sprites, providing collision detection based on axis&#45;aligned bounding box..." alt="" coords="109,229,265,256"/>
+<area shape="rect" title="Base class for game components that can be attached to GameObjects." alt="" coords="253,80,419,107"/>
+<area shape="rect" href="classspk_1_1CameraComponent.html" title="Represents a camera component for rendering scenes." alt="" coords="5,155,184,181"/>
+<area shape="rect" href="classspk_1_1ICollider.html" title="Abstract base class for collider components within the game engine." alt="" coords="208,155,315,181"/>
+<area shape="rect" href="classspk_1_1MeshRenderer.html" title="Represents a sprite renderer component for rendering sprites in world space." alt="" coords="339,155,485,181"/>
+<area shape="rect" href="classspk_1_1Physics.html" title="Component for simulating basic physics properties and behaviors for game objects." alt="" coords="510,155,613,181"/>
+<area shape="rect" href="classspk_1_1ActivateObject.html" title="Manages activation state for objects, intended as a base class." alt="" coords="261,5,411,32"/>
+<area shape="rect" href="classspk_1_1MeshCollider2D.html" title="A 2D collider component for sprites, providing collision detection based on axis&#45;aligned bounding box..." alt="" coords="183,229,339,256"/>
 </map>
 <center><span class="legend">[<a href="graph_legend.html">legend</a>]</span></center></div>
 <div class="dynheader">
@@ -133,12 +133,26 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a09dafef71145f3093d6b42aa9397575a inherit pub_methods_classspk_1_1ActivateObject"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1ActivateObject.html#a09dafef71145f3093d6b42aa9397575a">isActive</a> () const</td></tr>
 <tr class="memdesc:a09dafef71145f3093d6b42aa9397575a inherit pub_methods_classspk_1_1ActivateObject"><td class="mdescLeft">&#160;</td><td class="mdescRight">Checks if the object is active.  <a href="classspk_1_1ActivateObject.html#a09dafef71145f3093d6b42aa9397575a">More...</a><br /></td></tr>
 <tr class="separator:a09dafef71145f3093d6b42aa9397575a inherit pub_methods_classspk_1_1ActivateObject"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af32ed944ac8b81380090d8cbf611de21 inherit pub_methods_classspk_1_1ActivateObject"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1ActivateObject.html#af32ed944ac8b81380090d8cbf611de21">setActivationCallback</a> (const <a class="el" href="classspk_1_1ActivateObject.html#aaef8608826b3a9fca278d0e84d3700a0">Callback</a> &amp;p_callback)</td></tr>
+<tr class="memdesc:af32ed944ac8b81380090d8cbf611de21 inherit pub_methods_classspk_1_1ActivateObject"><td class="mdescLeft">&#160;</td><td class="mdescRight">Define the callback to call when activating the object.  <a href="classspk_1_1ActivateObject.html#af32ed944ac8b81380090d8cbf611de21">More...</a><br /></td></tr>
+<tr class="separator:af32ed944ac8b81380090d8cbf611de21 inherit pub_methods_classspk_1_1ActivateObject"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae9986a0091f304a905dce59452b44f58 inherit pub_methods_classspk_1_1ActivateObject"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1ActivateObject.html#ae9986a0091f304a905dce59452b44f58">setDeactivationCallback</a> (const <a class="el" href="classspk_1_1ActivateObject.html#aaef8608826b3a9fca278d0e84d3700a0">Callback</a> &amp;p_callback)</td></tr>
+<tr class="memdesc:ae9986a0091f304a905dce59452b44f58 inherit pub_methods_classspk_1_1ActivateObject"><td class="mdescLeft">&#160;</td><td class="mdescRight">Define the callback to call when deactivating the object.  <a href="classspk_1_1ActivateObject.html#ae9986a0091f304a905dce59452b44f58">More...</a><br /></td></tr>
+<tr class="separator:ae9986a0091f304a905dce59452b44f58 inherit pub_methods_classspk_1_1ActivateObject"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="friends"></a>
 Friends</h2></td></tr>
 <tr class="memitem:a00df87c957d8f7ee0fc51f07a0542f4a"><td class="memItemLeft" align="right" valign="top"><a id="a00df87c957d8f7ee0fc51f07a0542f4a"></a>
 class&#160;</td><td class="memItemRight" valign="bottom"><b>GameObject</b></td></tr>
 <tr class="separator:a00df87c957d8f7ee0fc51f07a0542f4a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="inherited"></a>
+Additional Inherited Members</h2></td></tr>
+<tr class="inherit_header pub_types_classspk_1_1ActivateObject"><td colspan="2" onclick="javascript:toggleInherit('pub_types_classspk_1_1ActivateObject')"><img src="closed.png" alt="-"/>&#160;Public Types inherited from <a class="el" href="classspk_1_1ActivateObject.html">spk::ActivateObject</a></td></tr>
+<tr class="memitem:aaef8608826b3a9fca278d0e84d3700a0 inherit pub_types_classspk_1_1ActivateObject"><td class="memItemLeft" align="right" valign="top"><a id="aaef8608826b3a9fca278d0e84d3700a0"></a>
+using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1ActivateObject.html#aaef8608826b3a9fca278d0e84d3700a0">Callback</a> = std::function&lt; void()&gt;</td></tr>
+<tr class="memdesc:aaef8608826b3a9fca278d0e84d3700a0 inherit pub_types_classspk_1_1ActivateObject"><td class="mdescLeft">&#160;</td><td class="mdescRight">The callback type used for activation and deactivation. <br /></td></tr>
+<tr class="separator:aaef8608826b3a9fca278d0e84d3700a0 inherit pub_types_classspk_1_1ActivateObject"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Base class for game components that can be attached to GameObjects. </p>

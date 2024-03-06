@@ -108,9 +108,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a45b7b4964611f9cb46a63abdc05af710"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Input.html#a45b7b4964611f9cb46a63abdc05af710">Input</a> (<a class="el" href="classspk_1_1Mouse.html#a7e51467586bf8952f05461cc3b9fd5b5">Mouse::Button</a> p_mouseButton, InputState p_state)</td></tr>
 <tr class="memdesc:a45b7b4964611f9cb46a63abdc05af710"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructs an <a class="el" href="classspk_1_1Input.html" title="Input offers a unified interface for input events of different sources.">Input</a> from a <a class="el" href="classspk_1_1Mouse.html#a7e51467586bf8952f05461cc3b9fd5b5" title="Identifies the buttons on a mouse.">Mouse::Button</a>.  <a href="classspk_1_1Input.html#a45b7b4964611f9cb46a63abdc05af710">More...</a><br /></td></tr>
 <tr class="separator:a45b7b4964611f9cb46a63abdc05af710"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a20e92ac09d4db4ada6ccb4143b629652"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Input.html#a20e92ac09d4db4ada6ccb4143b629652">Input</a> (<a class="el" href="classspk_1_1Keyboard.html#a13a0bee8478b4e4e8162d4f389134b28">Keyboard::Key</a> p_key, InputState p_state)</td></tr>
-<tr class="memdesc:a20e92ac09d4db4ada6ccb4143b629652"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructs an <a class="el" href="classspk_1_1Input.html" title="Input offers a unified interface for input events of different sources.">Input</a> from a <a class="el" href="classspk_1_1Keyboard.html#a13a0bee8478b4e4e8162d4f389134b28" title="Represents the key codes for various keyboard keys.">Keyboard::Key</a>.  <a href="classspk_1_1Input.html#a20e92ac09d4db4ada6ccb4143b629652">More...</a><br /></td></tr>
-<tr class="separator:a20e92ac09d4db4ada6ccb4143b629652"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad0abbae58a72ffb76597e444a8a7be88"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Input.html#ad0abbae58a72ffb76597e444a8a7be88">Input</a> (<a class="el" href="classspk_1_1Keyboard.html#a13a0bee8478b4e4e8162d4f389134b28">Keyboard::Key</a> p_key, InputState p_state, long long p_duration=0)</td></tr>
+<tr class="memdesc:ad0abbae58a72ffb76597e444a8a7be88"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructs an <a class="el" href="classspk_1_1Input.html" title="Input offers a unified interface for input events of different sources.">Input</a> from a <a class="el" href="classspk_1_1Keyboard.html#a13a0bee8478b4e4e8162d4f389134b28" title="Represents the key codes for various keyboard keys.">Keyboard::Key</a>.  <a href="classspk_1_1Input.html#ad0abbae58a72ffb76597e444a8a7be88">More...</a><br /></td></tr>
+<tr class="separator:ad0abbae58a72ffb76597e444a8a7be88"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af54b5aae622ff8fec4068ce7d181dcfe"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classspk_1_1Input.html#a609a895a1fcfc18d83125426647ffee8">Code</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Input.html#af54b5aae622ff8fec4068ce7d181dcfe">code</a> () const</td></tr>
 <tr class="memdesc:af54b5aae622ff8fec4068ce7d181dcfe"><td class="mdescLeft">&#160;</td><td class="mdescRight">Getter for Code.  <a href="classspk_1_1Input.html#af54b5aae622ff8fec4068ce7d181dcfe">More...</a><br /></td></tr>
 <tr class="separator:af54b5aae622ff8fec4068ce7d181dcfe"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -178,8 +178,8 @@ static constexpr <a class="el" href="classspk_1_1Input.html#a609a895a1fcfc18d831
 
 </div>
 </div>
-<a id="a20e92ac09d4db4ada6ccb4143b629652"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a20e92ac09d4db4ada6ccb4143b629652">&#9670;&nbsp;</a></span>Input() <span class="overload">[2/2]</span></h2>
+<a id="ad0abbae58a72ffb76597e444a8a7be88"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad0abbae58a72ffb76597e444a8a7be88">&#9670;&nbsp;</a></span>Input() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -197,7 +197,13 @@ static constexpr <a class="el" href="classspk_1_1Input.html#a609a895a1fcfc18d831
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">InputState&#160;</td>
-          <td class="paramname"><em>p_state</em>&#160;</td>
+          <td class="paramname"><em>p_state</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">long long&#160;</td>
+          <td class="paramname"><em>p_duration</em> = <code>0</code>&#160;</td>
         </tr>
         <tr>
           <td></td>

@@ -93,30 +93,36 @@ $(function() {
 <div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;        <a class="code" href="classspk_1_1TimeMetric.html">TimeMetric</a>&amp; _timeMetric;</div>
 <div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;<span class="preprocessor">    #endif</span></div>
 <div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160; </div>
-<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;        <span class="keyword">virtual</span> <span class="keywordtype">void</span> _onRender() = 0;</div>
-<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;        <span class="keyword">virtual</span> <span class="keywordtype">void</span> _onUpdate() = 0;</div>
+<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;        <span class="keyword">virtual</span> <span class="keywordtype">void</span> _onRender()</div>
+<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;        {</div>
 <div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160; </div>
-<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;        <span class="keywordtype">void</span> update();</div>
-<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;        <span class="keywordtype">void</span> render();</div>
-<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160; </div>
-<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;    <span class="keyword">public</span>:</div>
-<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;        <a class="code" href="classspk_1_1GameComponent.html#a5798f557a1e74c3b5622b53917b3c76a">GameComponent</a>(<span class="keyword">const</span> std::string&amp; p_name);</div>
-<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160; </div>
-<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;        <a class="code" href="classspk_1_1GameObject.html">GameObject</a>* <a class="code" href="classspk_1_1GameComponent.html#a8517900cdde0d3fb811c4b10d9d1a22b">owner</a>();</div>
-<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160; </div>
-<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160;        <span class="keyword">const</span> <a class="code" href="classspk_1_1GameObject.html">GameObject</a>* <a class="code" href="classspk_1_1GameComponent.html#a8517900cdde0d3fb811c4b10d9d1a22b">owner</a>() <span class="keyword">const</span>;</div>
-<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160; </div>
-<div class="line"><a name="l00102"></a><span class="lineno">  102</span>&#160;        std::string <a class="code" href="classspk_1_1GameComponent.html#ac557c11c7c454bc3c23c3ffb8e49910b">fullName</a>() <span class="keyword">const</span>;</div>
-<div class="line"><a name="l00103"></a><span class="lineno">  103</span>&#160; </div>
-<div class="line"><a name="l00112"></a><span class="lineno">  112</span>&#160;        <span class="keyword">const</span> std::string&amp; <a class="code" href="classspk_1_1GameComponent.html#a6888b4911e003727ceb506456029a7e3">name</a>() <span class="keyword">const</span>;</div>
-<div class="line"><a name="l00113"></a><span class="lineno">  113</span>&#160;    };</div>
-<div class="line"><a name="l00114"></a><span class="lineno">  114</span>&#160;}</div>
-<div class="ttc" id="aclassspk_1_1ActivateObject_html"><div class="ttname"><a href="classspk_1_1ActivateObject.html">spk::ActivateObject</a></div><div class="ttdoc">Manages activation state for objects, intended as a base class.</div><div class="ttdef"><b>Definition:</b> spk_activable_object.hpp:40</div></div>
+<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;        }</div>
+<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;        <span class="keyword">virtual</span> <span class="keywordtype">void</span> _onUpdate()</div>
+<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;        {</div>
+<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160; </div>
+<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;        }</div>
+<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160; </div>
+<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;        <span class="keywordtype">void</span> update();</div>
+<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;        <span class="keywordtype">void</span> render();</div>
+<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160; </div>
+<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;    <span class="keyword">public</span>:</div>
+<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;        <a class="code" href="classspk_1_1GameComponent.html#a5798f557a1e74c3b5622b53917b3c76a">GameComponent</a>(<span class="keyword">const</span> std::string&amp; p_name);</div>
+<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160; </div>
+<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;        <a class="code" href="classspk_1_1GameObject.html">GameObject</a>* <a class="code" href="classspk_1_1GameComponent.html#a8517900cdde0d3fb811c4b10d9d1a22b">owner</a>();</div>
+<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160; </div>
+<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;        <span class="keyword">const</span> <a class="code" href="classspk_1_1GameObject.html">GameObject</a>* <a class="code" href="classspk_1_1GameComponent.html#a8517900cdde0d3fb811c4b10d9d1a22b">owner</a>() <span class="keyword">const</span>;</div>
+<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160; </div>
+<div class="line"><a name="l00108"></a><span class="lineno">  108</span>&#160;        std::string <a class="code" href="classspk_1_1GameComponent.html#ac557c11c7c454bc3c23c3ffb8e49910b">fullName</a>() <span class="keyword">const</span>;</div>
+<div class="line"><a name="l00109"></a><span class="lineno">  109</span>&#160; </div>
+<div class="line"><a name="l00118"></a><span class="lineno">  118</span>&#160;        <span class="keyword">const</span> std::string&amp; <a class="code" href="classspk_1_1GameComponent.html#a6888b4911e003727ceb506456029a7e3">name</a>() <span class="keyword">const</span>;</div>
+<div class="line"><a name="l00119"></a><span class="lineno">  119</span>&#160;    };</div>
+<div class="line"><a name="l00120"></a><span class="lineno">  120</span>&#160;}</div>
+<div class="ttc" id="aclassspk_1_1ActivateObject_html"><div class="ttname"><a href="classspk_1_1ActivateObject.html">spk::ActivateObject</a></div><div class="ttdoc">Manages activation state for objects, intended as a base class.</div><div class="ttdef"><b>Definition:</b> spk_activable_object.hpp:42</div></div>
 <div class="ttc" id="aclassspk_1_1GameComponent_html"><div class="ttname"><a href="classspk_1_1GameComponent.html">spk::GameComponent</a></div><div class="ttdoc">Base class for game components that can be attached to GameObjects.</div><div class="ttdef"><b>Definition:</b> spk_game_component.hpp:45</div></div>
 <div class="ttc" id="aclassspk_1_1GameComponent_html_a5798f557a1e74c3b5622b53917b3c76a"><div class="ttname"><a href="classspk_1_1GameComponent.html#a5798f557a1e74c3b5622b53917b3c76a">spk::GameComponent::GameComponent</a></div><div class="ttdeci">GameComponent(const std::string &amp;p_name)</div><div class="ttdoc">Constructs a GameComponent with a specified name.</div><div class="ttdef"><b>Definition:</b> spk_game_component.cpp:7</div></div>
-<div class="ttc" id="aclassspk_1_1GameComponent_html_a6888b4911e003727ceb506456029a7e3"><div class="ttname"><a href="classspk_1_1GameComponent.html#a6888b4911e003727ceb506456029a7e3">spk::GameComponent::name</a></div><div class="ttdeci">const std::string &amp; name() const</div><div class="ttdoc">Gets the name of the component.</div><div class="ttdef"><b>Definition:</b> spk_game_component.cpp:48</div></div>
-<div class="ttc" id="aclassspk_1_1GameComponent_html_a8517900cdde0d3fb811c4b10d9d1a22b"><div class="ttname"><a href="classspk_1_1GameComponent.html#a8517900cdde0d3fb811c4b10d9d1a22b">spk::GameComponent::owner</a></div><div class="ttdeci">GameObject * owner()</div><div class="ttdoc">Gets the owner GameObject of this component.</div><div class="ttdef"><b>Definition:</b> spk_game_component.cpp:33</div></div>
-<div class="ttc" id="aclassspk_1_1GameComponent_html_ac557c11c7c454bc3c23c3ffb8e49910b"><div class="ttname"><a href="classspk_1_1GameComponent.html#ac557c11c7c454bc3c23c3ffb8e49910b">spk::GameComponent::fullName</a></div><div class="ttdeci">std::string fullName() const</div><div class="ttdoc">Gets the full name of the component.</div><div class="ttdef"><b>Definition:</b> spk_game_component.cpp:43</div></div>
+<div class="ttc" id="aclassspk_1_1GameComponent_html_a6888b4911e003727ceb506456029a7e3"><div class="ttname"><a href="classspk_1_1GameComponent.html#a6888b4911e003727ceb506456029a7e3">spk::GameComponent::name</a></div><div class="ttdeci">const std::string &amp; name() const</div><div class="ttdoc">Gets the name of the component.</div><div class="ttdef"><b>Definition:</b> spk_game_component.cpp:50</div></div>
+<div class="ttc" id="aclassspk_1_1GameComponent_html_a8517900cdde0d3fb811c4b10d9d1a22b"><div class="ttname"><a href="classspk_1_1GameComponent.html#a8517900cdde0d3fb811c4b10d9d1a22b">spk::GameComponent::owner</a></div><div class="ttdeci">GameObject * owner()</div><div class="ttdoc">Gets the owner GameObject of this component.</div><div class="ttdef"><b>Definition:</b> spk_game_component.cpp:35</div></div>
+<div class="ttc" id="aclassspk_1_1GameComponent_html_ac557c11c7c454bc3c23c3ffb8e49910b"><div class="ttname"><a href="classspk_1_1GameComponent.html#ac557c11c7c454bc3c23c3ffb8e49910b">spk::GameComponent::fullName</a></div><div class="ttdeci">std::string fullName() const</div><div class="ttdoc">Gets the full name of the component.</div><div class="ttdef"><b>Definition:</b> spk_game_component.cpp:45</div></div>
 <div class="ttc" id="aclassspk_1_1GameObject_html"><div class="ttname"><a href="classspk_1_1GameObject.html">spk::GameObject</a></div><div class="ttdoc">Represents a game object in the game engine hierarchy.</div><div class="ttdef"><b>Definition:</b> spk_game_object.hpp:36</div></div>
 <div class="ttc" id="aclassspk_1_1TimeMetric_html"><div class="ttname"><a href="classspk_1_1TimeMetric.html">spk::TimeMetric</a></div><div class="ttdoc">Specialized metric for measuring and reporting time durations, extending IAnalyticalMetric&lt;long long&gt;...</div><div class="ttdef"><b>Definition:</b> spk_time_metric.hpp:47</div></div>
 </div><!-- fragment --></div><!-- contents -->

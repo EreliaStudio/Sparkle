@@ -79,6 +79,12 @@ $(function() {
 : <a class="el" href="classspk_1_1JSON_1_1File.html#ad080a2de01ae0eb62145778bb96432d6">spk::JSON::File</a>
 , <a class="el" href="classspk_1_1TriggerMetric.html#ae5b4ae533f5198557f9b2d694fb7bce7">spk::TriggerMetric</a>
 </li>
+<li>saveToFile()
+: <a class="el" href="classspk_1_1ITilemap_1_1IChunk.html#ab25b275297d29903e9b63631401947d6">spk::ITilemap&lt; TNodeIndexType, TSizeX, TSizeY, TSizeZ &gt;::IChunk</a>
+</li>
+<li>saveToFolder()
+: <a class="el" href="classspk_1_1ITilemap.html#ad274f9a73b260e143e8bee38bc22b129">spk::ITilemap&lt; TNodeIndexType, TSizeX, TSizeY, TSizeZ &gt;</a>
+</li>
 <li>saveValue()
 : <a class="el" href="classspk_1_1IAnalyticalMetric.html#a942f17185adba7e9eef1774b8e41d092">spk::IAnalyticalMetric&lt; TType &gt;</a>
 </li>
@@ -97,6 +103,12 @@ $(function() {
 <li>set_mappings()
 : <a class="el" href="classspk_1_1InputDecoder.html#a046c9bbb18a71b9c0618781836f648f4">spk::InputDecoder</a>
 </li>
+<li>setActivationCallback()
+: <a class="el" href="classspk_1_1ActivateObject.html#af32ed944ac8b81380090d8cbf611de21">spk::ActivateObject</a>
+</li>
+<li>setActiveChunkRange()
+: <a class="el" href="classspk_1_1Tilemap2D.html#a7c8136414f5094314c20b2a3d710dd60">spk::Tilemap2D</a>
+</li>
 <li>setAnchor()
 : <a class="el" href="classspk_1_1widget_1_1components_1_1TextLabel.html#ab0fc02b20eb142dfdf72ecb39ec6551f">spk::widget::components::TextLabel</a>
 </li>
@@ -108,12 +120,14 @@ $(function() {
 </li>
 <li>setAsMainCamera()
 : <a class="el" href="classspk_1_1Camera.html#a27dee266b696e321e3cf3a9880b410c9">spk::Camera</a>
+, <a class="el" href="classspk_1_1CameraComponent.html#a72293b48721734609ef81f79fb98b0bd">spk::CameraComponent</a>
 </li>
 <li>setAsObject()
 : <a class="el" href="classspk_1_1JSON_1_1Object.html#a826b822374050478d94d5d294cb6e372">spk::JSON::Object</a>
 </li>
 <li>setAspectRatio()
 : <a class="el" href="classspk_1_1Camera.html#a4bd4b62a02af3a4f56bc2aad96445dd4">spk::Camera</a>
+, <a class="el" href="classspk_1_1CameraComponent.html#ac4fd741b192d8fc273b4e3b1aaf1ae70">spk::CameraComponent</a>
 </li>
 <li>setChar()
 : <a class="el" href="classspk_1_1Keyboard.html#a2fe480ca05dd8a5cc4a97e2a66671d8f">spk::Keyboard</a>
@@ -121,8 +135,14 @@ $(function() {
 <li>setColor()
 : <a class="el" href="classspk_1_1widget_1_1components_1_1ColoredBox.html#ae17fdee4aa8b811e19a78f587257a9b7">spk::widget::components::ColoredBox</a>
 </li>
+<li>setContent()
+: <a class="el" href="classspk_1_1ITilemap_1_1IChunk.html#a6bc9b56cdb2be8ca4e062e0b25dda696">spk::ITilemap&lt; TNodeIndexType, TSizeX, TSizeY, TSizeZ &gt;::IChunk</a>
+</li>
 <li>setCornerSize()
 : <a class="el" href="classspk_1_1widget_1_1components_1_1NineSlicedBox.html#a1151dd47cddf5e3c28a617e6ac393c5f">spk::widget::components::NineSlicedBox</a>
+</li>
+<li>setDeactivationCallback()
+: <a class="el" href="classspk_1_1ActivateObject.html#ae9986a0091f304a905dce59452b44f58">spk::ActivateObject</a>
 </li>
 <li>setDepth()
 : <a class="el" href="classspk_1_1widget_1_1components_1_1ColoredBox.html#af2ad0aca65bffaf00ad4febd94b8ab3d">spk::widget::components::ColoredBox</a>
@@ -135,12 +155,14 @@ $(function() {
 </li>
 <li>setFarPlane()
 : <a class="el" href="classspk_1_1Camera.html#a595f3e54ce2e4228f39611ba85932f43">spk::Camera</a>
+, <a class="el" href="classspk_1_1CameraComponent.html#a588a7940e8a65005b5f2088f9c367f71">spk::CameraComponent</a>
 </li>
 <li>setFont()
 : <a class="el" href="classspk_1_1widget_1_1components_1_1TextLabel.html#ad6833a6abc1c2cf18c27ec5752a3fcea">spk::widget::components::TextLabel</a>
 </li>
 <li>setFOV()
 : <a class="el" href="classspk_1_1Camera.html#a5661398311e5d50eae29e69470a1464e">spk::Camera</a>
+, <a class="el" href="classspk_1_1CameraComponent.html#a65c5f5d9c82f595fdfcf07a8fa4e52df">spk::CameraComponent</a>
 </li>
 <li>setGameEngine()
 : <a class="el" href="classspk_1_1widget_1_1GameEngineManager.html#a8ddf25ad0729146472425dd8843e8b96">spk::widget::GameEngineManager</a>
@@ -178,6 +200,7 @@ $(function() {
 </li>
 <li>setNearPlane()
 : <a class="el" href="classspk_1_1Camera.html#a8594729ac01dd3fa3ca24893cc6d94ca">spk::Camera</a>
+, <a class="el" href="classspk_1_1CameraComponent.html#a574cdafc87803b0da96c51c31376e7e1">spk::CameraComponent</a>
 </li>
 <li>setOnEnter()
 : <a class="el" href="classspk_1_1widget_1_1PointerDetector.html#a66d17a76d97c59ec4621fd34623cecb2">spk::widget::PointerDetector</a>
@@ -193,6 +216,7 @@ $(function() {
 </li>
 <li>setOrthographicSize()
 : <a class="el" href="classspk_1_1Camera.html#a4e7da06b0077579a0576bd236b0bdee9">spk::Camera</a>
+, <a class="el" href="classspk_1_1CameraComponent.html#a84bcb9466a7bae49a3b93c30a1989347">spk::CameraComponent</a>
 </li>
 <li>setOutlineColor()
 : <a class="el" href="classspk_1_1widget_1_1components_1_1TextLabel.html#a2c60cb347c63a4ed125eb9d8b763049b">spk::widget::components::TextLabel</a>
@@ -211,6 +235,8 @@ $(function() {
 </li>
 <li>setSpriteSheet()
 : <a class="el" href="classspk_1_1MeshRenderer.html#ade7d56926772be30d404bc41930a9676">spk::MeshRenderer</a>
+, <a class="el" href="classspk_1_1Tilemap2D_1_1Chunk.html#a7b58b9df6a3587e84f8beb44d3f892ac">spk::Tilemap2D::Chunk</a>
+, <a class="el" href="classspk_1_1Tilemap2D.html#a350e5272d13ddc510b7f0629d6f888a0">spk::Tilemap2D</a>
 , <a class="el" href="classspk_1_1widget_1_1components_1_1NineSlicedBox.html#a2a3bf179d876d5e53127c904b4540284">spk::widget::components::NineSlicedBox</a>
 </li>
 <li>setText()
@@ -223,7 +249,8 @@ $(function() {
 : <a class="el" href="classspk_1_1widget_1_1components_1_1TextLabel.html#ae1102a18904a13b74c74a7543b83e7fb">spk::widget::components::TextLabel</a>
 </li>
 <li>setType()
-: <a class="el" href="classspk_1_1Camera.html#afa91cb70cc1a06c9aaac66971d4d4511">spk::Camera</a>
+: <a class="el" href="classspk_1_1Camera.html#a732710a546985d877d20c4ea022a0dca">spk::Camera</a>
+, <a class="el" href="classspk_1_1CameraComponent.html#ab42c27199bf4eed225d7619bbda20971">spk::CameraComponent</a>
 </li>
 <li>setVelocity()
 : <a class="el" href="classspk_1_1Physics.html#adcba6ca7f5d51484377b149b966bad9d">spk::Physics</a>
@@ -264,12 +291,22 @@ $(function() {
 <li>SizedBox()
 : <a class="el" href="classspk_1_1widget_1_1SizedBox.html#ac84dadc45004e7fe7cd9b9cdb3f0c70e">spk::widget::SizedBox</a>
 </li>
+<li>SizeX
+: <a class="el" href="classspk_1_1ITilemap_1_1IChunk.html#a71db253e0ae8727ff7c91f2f38ec75c1">spk::ITilemap&lt; TNodeIndexType, TSizeX, TSizeY, TSizeZ &gt;::IChunk</a>
+</li>
+<li>SizeY
+: <a class="el" href="classspk_1_1ITilemap_1_1IChunk.html#af9258188a339e2c9f6e33bad26b0030d">spk::ITilemap&lt; TNodeIndexType, TSizeX, TSizeY, TSizeZ &gt;::IChunk</a>
+</li>
+<li>SizeZ
+: <a class="el" href="classspk_1_1ITilemap_1_1IChunk.html#a757995d94d8f842fc28e0932ba048cf7">spk::ITilemap&lt; TNodeIndexType, TSizeX, TSizeY, TSizeZ &gt;::IChunk</a>
+</li>
 <li>sleepAtLeast()
 : <a class="el" href="classspk_1_1TimeManager.html#a9712496cf3bd1ed017f55494efdf3704">spk::TimeManager</a>
 </li>
 <li>sprite()
 : <a class="el" href="classspk_1_1MeshRenderer.html#a222e70fbad717f827c4fe3000eadd8af">spk::MeshRenderer</a>
 , <a class="el" href="classspk_1_1SpriteSheet.html#a93b64184577ba0078b45a38142ee6258">spk::SpriteSheet</a>
+, <a class="el" href="structspk_1_1Tilemap2D_1_1Node.html#ab89f9691b17fa73bc9a7deb0c5ce1f37">spk::Tilemap2D::Node</a>
 </li>
 <li>spriteAnimation()
 : <a class="el" href="classspk_1_1MeshRenderer.html#a4ba5c908fe88d312a24e499fed08abbf">spk::MeshRenderer</a>
@@ -286,6 +323,9 @@ $(function() {
 <li>SpriteSheet()
 : <a class="el" href="classspk_1_1SpriteSheet.html#aa0a28bd30e8c79c3be223cfa199eed8d">spk::SpriteSheet</a>
 </li>
+<li>spriteSheet()
+: <a class="el" href="classspk_1_1Tilemap2D_1_1Chunk.html#a072bd410a4bf6b55c93157d4cbee031b">spk::Tilemap2D::Chunk</a>
+</li>
 <li>squaredNorm()
 : <a class="el" href="structspk_1_1IVector2.html#aa140dafd02d3a4553d7a922cdceb267f">spk::IVector2&lt; TType, typename &gt;</a>
 </li>
@@ -295,9 +335,10 @@ $(function() {
 </li>
 <li>state()
 : <a class="el" href="classspk_1_1Input.html#a51d026eb5e3e20310557959ebc2c96a3">spk::Input</a>
+, <a class="el" href="classspk_1_1StateMachine.html#a481951577bd48bb9a7116a2048bf77b8">spk::StateMachine&lt; TStateType &gt;</a>
 </li>
 <li>StateMachine()
-: <a class="el" href="classspk_1_1StateMachine.html#adeba59ce48ff6b00304c5611e7433da0">spk::StateMachine&lt; TStateType &gt;</a>
+: <a class="el" href="classspk_1_1StateMachine.html#acdd62df1aaaf0cf5b8c0a7016e2d6b70">spk::StateMachine&lt; TStateType &gt;</a>
 </li>
 <li>step
 : <a class="el" href="structspk_1_1Font_1_1Atlas_1_1GlyphData.html#a6815c03d18e856c864a42a4d4cd8a14c">spk::Font::Atlas::GlyphData</a>

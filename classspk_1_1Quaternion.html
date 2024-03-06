@@ -112,6 +112,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a97f73301866c2aceb70e061244bb3eee"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structspk_1_1IVector3.html">Vector3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Quaternion.html#a97f73301866c2aceb70e061244bb3eee">applyRotation</a> (const <a class="el" href="structspk_1_1IVector3.html">spk::Vector3</a> &amp;p_inputPoint) const</td></tr>
 <tr class="memdesc:a97f73301866c2aceb70e061244bb3eee"><td class="mdescLeft">&#160;</td><td class="mdescRight">Applies the rotation represented by this quaternion to a point.  <a href="classspk_1_1Quaternion.html#a97f73301866c2aceb70e061244bb3eee">More...</a><br /></td></tr>
 <tr class="separator:a97f73301866c2aceb70e061244bb3eee"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad9ad7c32c1e312a29219ff7d5dc60428"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structspk_1_1IVector3.html">Vector3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Quaternion.html#ad9ad7c32c1e312a29219ff7d5dc60428">toVector3</a> () const</td></tr>
+<tr class="memdesc:ad9ad7c32c1e312a29219ff7d5dc60428"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convert the quaternion into a spk::Vector3 using th x, y and z values of the original quaternion.  <a href="classspk_1_1Quaternion.html#ad9ad7c32c1e312a29219ff7d5dc60428">More...</a><br /></td></tr>
+<tr class="separator:ad9ad7c32c1e312a29219ff7d5dc60428"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
@@ -121,6 +124,9 @@ Static Public Member Functions</h2></td></tr>
 <tr class="memitem:a825098d75697972ed24c849edfa77670"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="classspk_1_1Quaternion.html">Quaternion</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Quaternion.html#a825098d75697972ed24c849edfa77670">fromEulerAngles</a> (const <a class="el" href="structspk_1_1IVector3.html">Vector3</a> &amp;p_eulerAngles)</td></tr>
 <tr class="memdesc:a825098d75697972ed24c849edfa77670"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a quaternion from Euler angles.  <a href="classspk_1_1Quaternion.html#a825098d75697972ed24c849edfa77670">More...</a><br /></td></tr>
 <tr class="separator:a825098d75697972ed24c849edfa77670"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a80364ed9d0544365c83079e88d0bef43"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="classspk_1_1Quaternion.html">Quaternion</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Quaternion.html#a80364ed9d0544365c83079e88d0bef43">fromEulerAngles</a> (const float &amp;p_angleX, const float &amp;p_angleY, const float &amp;p_angleZ)</td></tr>
+<tr class="memdesc:a80364ed9d0544365c83079e88d0bef43"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a quaternion from Euler angles.  <a href="classspk_1_1Quaternion.html#a80364ed9d0544365c83079e88d0bef43">More...</a><br /></td></tr>
+<tr class="separator:a80364ed9d0544365c83079e88d0bef43"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6e33a05d6e2bf3334da3040f3d0bcfea"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="classspk_1_1Quaternion.html">Quaternion</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Quaternion.html#a6e33a05d6e2bf3334da3040f3d0bcfea">fromAxisAngle</a> (const <a class="el" href="structspk_1_1IVector3.html">Vector3</a> &amp;p_axis, float p_angleDegree)</td></tr>
 <tr class="memdesc:a6e33a05d6e2bf3334da3040f3d0bcfea"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a quaternion from an axis and an angle.  <a href="classspk_1_1Quaternion.html#a6e33a05d6e2bf3334da3040f3d0bcfea">More...</a><br /></td></tr>
 <tr class="separator:a6e33a05d6e2bf3334da3040f3d0bcfea"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -146,9 +152,9 @@ float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="friends"></a>
 Friends</h2></td></tr>
-<tr class="memitem:aaca3d4cdc19ac75eefd410d2a097ba47"><td class="memItemLeft" align="right" valign="top">std::ostream &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Quaternion.html#aaca3d4cdc19ac75eefd410d2a097ba47">operator&lt;&lt;</a> (std::ostream &amp;os, const <a class="el" href="classspk_1_1Quaternion.html">Quaternion</a> &amp;p_quaternion)</td></tr>
-<tr class="memdesc:aaca3d4cdc19ac75eefd410d2a097ba47"><td class="mdescLeft">&#160;</td><td class="mdescRight">Outputs the quaternion to an output stream in the format (x, y, z, w).  <a href="classspk_1_1Quaternion.html#aaca3d4cdc19ac75eefd410d2a097ba47">More...</a><br /></td></tr>
-<tr class="separator:aaca3d4cdc19ac75eefd410d2a097ba47"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7ca907df0cb66d9cd62bfd3685575833"><td class="memItemLeft" align="right" valign="top">std::ostream &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Quaternion.html#a7ca907df0cb66d9cd62bfd3685575833">operator&lt;&lt;</a> (std::ostream &amp;p_os, const <a class="el" href="classspk_1_1Quaternion.html">Quaternion</a> &amp;p_quaternion)</td></tr>
+<tr class="memdesc:a7ca907df0cb66d9cd62bfd3685575833"><td class="mdescLeft">&#160;</td><td class="mdescRight">Outputs the quaternion to an output stream in the format (x, y, z, w).  <a href="classspk_1_1Quaternion.html#a7ca907df0cb66d9cd62bfd3685575833">More...</a><br /></td></tr>
+<tr class="separator:a7ca907df0cb66d9cd62bfd3685575833"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Represents a quaternion for handling rotations in 3D space. </p>
@@ -325,8 +331,61 @@ Friends</h2></td></tr>
 
 </div>
 </div>
+<a id="a80364ed9d0544365c83079e88d0bef43"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a80364ed9d0544365c83079e88d0bef43">&#9670;&nbsp;</a></span>fromEulerAngles() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classspk_1_1Quaternion.html">Quaternion</a> spk::Quaternion::fromEulerAngles </td>
+          <td>(</td>
+          <td class="paramtype">const float &amp;&#160;</td>
+          <td class="paramname"><em>p_angleX</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const float &amp;&#160;</td>
+          <td class="paramname"><em>p_angleY</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const float &amp;&#160;</td>
+          <td class="paramname"><em>p_angleZ</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Creates a quaternion from Euler angles. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_angleX</td><td>A float representing the Euler angles around the X axis in degrees. </td></tr>
+    <tr><td class="paramname">p_angleY</td><td>A float representing the Euler angles around the Y axis in degrees. </td></tr>
+    <tr><td class="paramname">p_angleZ</td><td>A float representing the Euler angles around the Z axis in degrees. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>A quaternion representing the specified Euler angles rotation. </dd></dl>
+
+</div>
+</div>
 <a id="a825098d75697972ed24c849edfa77670"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a825098d75697972ed24c849edfa77670">&#9670;&nbsp;</a></span>fromEulerAngles()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a825098d75697972ed24c849edfa77670">&#9670;&nbsp;</a></span>fromEulerAngles() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -500,9 +559,29 @@ Friends</h2></td></tr>
 
 </div>
 </div>
+<a id="ad9ad7c32c1e312a29219ff7d5dc60428"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad9ad7c32c1e312a29219ff7d5dc60428">&#9670;&nbsp;</a></span>toVector3()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structspk_1_1IVector3.html">Vector3</a> spk::Quaternion::toVector3 </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Convert the quaternion into a spk::Vector3 using th x, y and z values of the original quaternion. </p>
+<dl class="section return"><dt>Returns</dt><dd>The vector composed of the x, y and z attributes of the quaternion </dd></dl>
+
+</div>
+</div>
 <h2 class="groupheader">Friends And Related Function Documentation</h2>
-<a id="aaca3d4cdc19ac75eefd410d2a097ba47"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aaca3d4cdc19ac75eefd410d2a097ba47">&#9670;&nbsp;</a></span>operator&lt;&lt;</h2>
+<a id="a7ca907df0cb66d9cd62bfd3685575833"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7ca907df0cb66d9cd62bfd3685575833">&#9670;&nbsp;</a></span>operator&lt;&lt;</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -514,7 +593,7 @@ Friends</h2></td></tr>
           <td class="memname">std::ostream&amp; operator&lt;&lt; </td>
           <td>(</td>
           <td class="paramtype">std::ostream &amp;&#160;</td>
-          <td class="paramname"><em>os</em>, </td>
+          <td class="paramname"><em>p_os</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -538,7 +617,7 @@ Friends</h2></td></tr>
 <p>Outputs the quaternion to an output stream in the format (x, y, z, w). </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">os</td><td>The output stream. </td></tr>
+    <tr><td class="paramname">p_os</td><td>The output stream. </td></tr>
     <tr><td class="paramname">p_quaternion</td><td>The quaternion to output. </td></tr>
   </table>
   </dd>

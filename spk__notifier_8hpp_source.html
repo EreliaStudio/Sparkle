@@ -145,7 +145,9 @@ $(function() {
 <div class="line"><a name="l00200"></a><span class="lineno">  200</span>&#160;        <span class="keywordtype">void</span> pause(<a class="code" href="classspk_1_1Notifier_1_1Contract.html">Contract</a> *p_contract);</div>
 <div class="line"><a name="l00201"></a><span class="lineno">  201</span>&#160;        <span class="keywordtype">void</span> resume(<a class="code" href="classspk_1_1Notifier_1_1Contract.html">Contract</a> *p_contract);</div>
 <div class="line"><a name="l00202"></a><span class="lineno">  202</span>&#160;    };</div>
-<div class="line"><a name="l00203"></a><span class="lineno">  203</span>&#160;}</div>
+<div class="line"><a name="l00203"></a><span class="lineno">  203</span>&#160; </div>
+<div class="line"><a name="l00204"></a><span class="lineno">  204</span>&#160;    <span class="keyword">using</span> NotifierContract = std::unique_ptr&lt;spk::Notifier::Contract&gt;;</div>
+<div class="line"><a name="l00205"></a><span class="lineno">  205</span>&#160;}</div>
 <div class="ttc" id="aclassspk_1_1Notifier_1_1Contract_html"><div class="ttname"><a href="classspk_1_1Notifier_1_1Contract.html">spk::Notifier::Contract</a></div><div class="ttdoc">Represents a subscription contract between a subscriber and a Notifier.</div><div class="ttdef"><b>Definition:</b> spk_notifier.hpp:68</div></div>
 <div class="ttc" id="aclassspk_1_1Notifier_1_1Contract_html_a006a56b84a5622d55c741591355e1be1"><div class="ttname"><a href="classspk_1_1Notifier_1_1Contract.html#a006a56b84a5622d55c741591355e1be1">spk::Notifier::Contract::isCanceled</a></div><div class="ttdeci">bool isCanceled() const</div><div class="ttdoc">Checks if the Contract is canceled.</div><div class="ttdef"><b>Definition:</b> spk_notifier.cpp:209</div></div>
 <div class="ttc" id="aclassspk_1_1Notifier_1_1Contract_html_a1962a9ad850a6094cf2693897f2f4a74"><div class="ttname"><a href="classspk_1_1Notifier_1_1Contract.html#a1962a9ad850a6094cf2693897f2f4a74">spk::Notifier::Contract::resume</a></div><div class="ttdeci">void resume()</div><div class="ttdoc">Resumes a paused Contract.</div><div class="ttdef"><b>Definition:</b> spk_notifier.cpp:240</div></div>

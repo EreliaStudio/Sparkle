@@ -1,0 +1,5 @@
+<map id="spk::CameraComponent" name="spk::CameraComponent">
+<area shape="rect" id="node1" title="Represents a camera component for rendering scenes." alt="" coords="5,155,184,181"/>
+<area shape="rect" id="node2" href="$classspk_1_1GameComponent.html" title="Base class for game components that can be attached to GameObjects." alt="" coords="11,80,178,107"/>
+<area shape="rect" id="node3" href="$classspk_1_1ActivateObject.html" title="Manages activation state for objects, intended as a base class." alt="" coords="20,5,169,32"/>
+</map>

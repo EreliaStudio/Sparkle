@@ -1,9 +1,9 @@
 <map id="spk::GameComponent" name="spk::GameComponent">
-<area shape="rect" id="node1" title="Base class for game components that can be attached to GameObjects." alt="" coords="178,80,345,107"/>
-<area shape="rect" id="node3" href="$classspk_1_1Camera.html" title="Represents a camera component for rendering scenes." alt="" coords="5,155,109,181"/>
-<area shape="rect" id="node4" href="$classspk_1_1ICollider.html" title="Abstract base class for collider components within the game engine." alt="" coords="133,155,240,181"/>
-<area shape="rect" id="node6" href="$classspk_1_1MeshRenderer.html" title="Represents a sprite renderer component for rendering sprites in world space." alt="" coords="264,155,411,181"/>
-<area shape="rect" id="node7" href="$classspk_1_1Physics.html" title="Component for simulating basic physics properties and behaviors for game objects." alt="" coords="435,155,538,181"/>
-<area shape="rect" id="node2" href="$classspk_1_1ActivateObject.html" title="Manages activation state for objects, intended as a base class." alt="" coords="187,5,336,32"/>
-<area shape="rect" id="node5" href="$classspk_1_1MeshCollider2D.html" title="A 2D collider component for sprites, providing collision detection based on axis&#45;aligned bounding box..." alt="" coords="109,229,265,256"/>
+<area shape="rect" id="node1" title="Base class for game components that can be attached to GameObjects." alt="" coords="253,80,419,107"/>
+<area shape="rect" id="node3" href="$classspk_1_1CameraComponent.html" title="Represents a camera component for rendering scenes." alt="" coords="5,155,184,181"/>
+<area shape="rect" id="node4" href="$classspk_1_1ICollider.html" title="Abstract base class for collider components within the game engine." alt="" coords="208,155,315,181"/>
+<area shape="rect" id="node6" href="$classspk_1_1MeshRenderer.html" title="Represents a sprite renderer component for rendering sprites in world space." alt="" coords="339,155,485,181"/>
+<area shape="rect" id="node7" href="$classspk_1_1Physics.html" title="Component for simulating basic physics properties and behaviors for game objects." alt="" coords="510,155,613,181"/>
+<area shape="rect" id="node2" href="$classspk_1_1ActivateObject.html" title="Manages activation state for objects, intended as a base class." alt="" coords="261,5,411,32"/>
+<area shape="rect" id="node5" href="$classspk_1_1MeshCollider2D.html" title="A 2D collider component for sprites, providing collision detection based on axis&#45;aligned bounding box..." alt="" coords="183,229,339,256"/>
 </map>

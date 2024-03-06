@@ -120,12 +120,12 @@ $(function() {
 <div class="line"><a name="l00109"></a><span class="lineno">  109</span>&#160;    <span class="keyword">private</span>:</div>
 <div class="line"><a name="l00110"></a><span class="lineno">  110</span>&#160; </div>
 <div class="line"><a name="l00111"></a><span class="lineno">  111</span>&#160;        std::unordered_map&lt;TStateType, Action&gt; _states;</div>
-<div class="line"><a name="l00112"></a><span class="lineno">  112</span>&#160;        Action _currentActions;</div>
-<div class="line"><a name="l00113"></a><span class="lineno">  113</span>&#160;        <span class="keywordtype">bool</span> _hasCurrentState = <span class="keyword">false</span>;</div>
-<div class="line"><a name="l00114"></a><span class="lineno">  114</span>&#160; </div>
-<div class="line"><a name="l00115"></a><span class="lineno">  115</span>&#160;    <span class="keyword">public</span>:</div>
-<div class="line"><a name="l00126"></a><span class="lineno"><a class="line" href="classspk_1_1StateMachine.html#adeba59ce48ff6b00304c5611e7433da0">  126</a></span>&#160;        <a class="code" href="classspk_1_1StateMachine.html#adeba59ce48ff6b00304c5611e7433da0">StateMachine</a>(TStateType p_stateID, <span class="keyword">const</span> <a class="code" href="structspk_1_1StateMachine_1_1Action.html">Action</a>&amp; p_action) :</div>
-<div class="line"><a name="l00127"></a><span class="lineno">  127</span>&#160;            _currentState(p_stateID),</div>
+<div class="line"><a name="l00112"></a><span class="lineno">  112</span>&#160;        TStateType _currentState;</div>
+<div class="line"><a name="l00113"></a><span class="lineno">  113</span>&#160;        Action _currentActions;</div>
+<div class="line"><a name="l00114"></a><span class="lineno">  114</span>&#160;        <span class="keywordtype">bool</span> _hasCurrentState = <span class="keyword">false</span>;</div>
+<div class="line"><a name="l00115"></a><span class="lineno">  115</span>&#160; </div>
+<div class="line"><a name="l00116"></a><span class="lineno">  116</span>&#160;    <span class="keyword">public</span>:</div>
+<div class="line"><a name="l00127"></a><span class="lineno"><a class="line" href="classspk_1_1StateMachine.html#adeba59ce48ff6b00304c5611e7433da0">  127</a></span>&#160;        <a class="code" href="classspk_1_1StateMachine.html#adeba59ce48ff6b00304c5611e7433da0">StateMachine</a>(TStateType p_stateID, <span class="keyword">const</span> <a class="code" href="structspk_1_1StateMachine_1_1Action.html">Action</a>&amp; p_action) :</div>
 <div class="line"><a name="l00128"></a><span class="lineno">  128</span>&#160;            _hasCurrentState(true)</div>
 <div class="line"><a name="l00129"></a><span class="lineno">  129</span>&#160;        {</div>
 <div class="line"><a name="l00130"></a><span class="lineno">  130</span>&#160;            <a class="code" href="classspk_1_1StateMachine.html#a8cb5b4536d34297b4a7cbcc7ff2d223b">addState</a>(p_stateID, p_action);</div>
@@ -185,23 +185,30 @@ $(function() {
 <div class="line"><a name="l00240"></a><span class="lineno">  240</span>&#160;                }</div>
 <div class="line"><a name="l00241"></a><span class="lineno">  241</span>&#160;            }</div>
 <div class="line"><a name="l00242"></a><span class="lineno">  242</span>&#160; </div>
-<div class="line"><a name="l00243"></a><span class="lineno">  243</span>&#160;            _hasCurrentState = <span class="keyword">true</span>;</div>
-<div class="line"><a name="l00244"></a><span class="lineno">  244</span>&#160;            _currentActions = _states[p_newState];</div>
-<div class="line"><a name="l00245"></a><span class="lineno">  245</span>&#160; </div>
-<div class="line"><a name="l00246"></a><span class="lineno">  246</span>&#160;            <span class="keywordflow">if</span> (_currentActions.onEnter != <span class="keyword">nullptr</span>)</div>
-<div class="line"><a name="l00247"></a><span class="lineno">  247</span>&#160;                _currentActions.onEnter();</div>
-<div class="line"><a name="l00248"></a><span class="lineno">  248</span>&#160;        }</div>
-<div class="line"><a name="l00249"></a><span class="lineno">  249</span>&#160; </div>
-<div class="line"><a name="l00256"></a><span class="lineno"><a class="line" href="classspk_1_1StateMachine.html#aef7fc2875bb342d989100df7fc64c541">  256</a></span>&#160;        <span class="keywordtype">void</span> <a class="code" href="classspk_1_1StateMachine.html#aef7fc2875bb342d989100df7fc64c541">update</a>()</div>
-<div class="line"><a name="l00257"></a><span class="lineno">  257</span>&#160;        {</div>
-<div class="line"><a name="l00258"></a><span class="lineno">  258</span>&#160;            <span class="keywordflow">if</span> (_hasCurrentState == <span class="keyword">true</span> &amp;&amp; _currentActions.onUpdate != <span class="keyword">nullptr</span>) </div>
-<div class="line"><a name="l00259"></a><span class="lineno">  259</span>&#160;            {</div>
-<div class="line"><a name="l00260"></a><span class="lineno">  260</span>&#160;                _currentActions.onUpdate();</div>
-<div class="line"><a name="l00261"></a><span class="lineno">  261</span>&#160;            }</div>
-<div class="line"><a name="l00262"></a><span class="lineno">  262</span>&#160;        }</div>
-<div class="line"><a name="l00263"></a><span class="lineno">  263</span>&#160;    };</div>
-<div class="line"><a name="l00264"></a><span class="lineno">  264</span>&#160;}</div>
+<div class="line"><a name="l00243"></a><span class="lineno">  243</span>&#160;            _currentState = p_newState;</div>
+<div class="line"><a name="l00244"></a><span class="lineno">  244</span>&#160;            _hasCurrentState = <span class="keyword">true</span>;</div>
+<div class="line"><a name="l00245"></a><span class="lineno">  245</span>&#160;            _currentActions = _states[p_newState];</div>
+<div class="line"><a name="l00246"></a><span class="lineno">  246</span>&#160; </div>
+<div class="line"><a name="l00247"></a><span class="lineno">  247</span>&#160;            <span class="keywordflow">if</span> (_currentActions.onEnter != <span class="keyword">nullptr</span>)</div>
+<div class="line"><a name="l00248"></a><span class="lineno">  248</span>&#160;                _currentActions.onEnter();</div>
+<div class="line"><a name="l00249"></a><span class="lineno">  249</span>&#160;        }</div>
+<div class="line"><a name="l00250"></a><span class="lineno">  250</span>&#160; </div>
+<div class="line"><a name="l00257"></a><span class="lineno"><a class="line" href="classspk_1_1StateMachine.html#aef7fc2875bb342d989100df7fc64c541">  257</a></span>&#160;        <span class="keywordtype">void</span> <a class="code" href="classspk_1_1StateMachine.html#aef7fc2875bb342d989100df7fc64c541">update</a>()</div>
+<div class="line"><a name="l00258"></a><span class="lineno">  258</span>&#160;        {</div>
+<div class="line"><a name="l00259"></a><span class="lineno">  259</span>&#160;            <span class="keywordflow">if</span> (_hasCurrentState == <span class="keyword">true</span> &amp;&amp; _currentActions.onUpdate != <span class="keyword">nullptr</span>) </div>
+<div class="line"><a name="l00260"></a><span class="lineno">  260</span>&#160;            {</div>
+<div class="line"><a name="l00261"></a><span class="lineno">  261</span>&#160;                _currentActions.onUpdate();</div>
+<div class="line"><a name="l00262"></a><span class="lineno">  262</span>&#160;            }</div>
+<div class="line"><a name="l00263"></a><span class="lineno">  263</span>&#160;        }</div>
+<div class="line"><a name="l00264"></a><span class="lineno">  264</span>&#160; </div>
+<div class="line"><a name="l00272"></a><span class="lineno"><a class="line" href="classspk_1_1StateMachine.html#a481951577bd48bb9a7116a2048bf77b8">  272</a></span>&#160;        TStateType <a class="code" href="classspk_1_1StateMachine.html#a481951577bd48bb9a7116a2048bf77b8">state</a>()<span class="keyword"> const</span></div>
+<div class="line"><a name="l00273"></a><span class="lineno">  273</span>&#160;<span class="keyword">        </span>{</div>
+<div class="line"><a name="l00274"></a><span class="lineno">  274</span>&#160;            <span class="keywordflow">return</span> (_currentState);</div>
+<div class="line"><a name="l00275"></a><span class="lineno">  275</span>&#160;        }</div>
+<div class="line"><a name="l00276"></a><span class="lineno">  276</span>&#160;    };</div>
+<div class="line"><a name="l00277"></a><span class="lineno">  277</span>&#160;}</div>
 <div class="ttc" id="aclassspk_1_1StateMachine_html"><div class="ttname"><a href="classspk_1_1StateMachine.html">spk::StateMachine</a></div><div class="ttdoc">A generic state machine for managing states and associated actions.</div><div class="ttdef"><b>Definition:</b> spk_state_machine.hpp:34</div></div>
+<div class="ttc" id="aclassspk_1_1StateMachine_html_a481951577bd48bb9a7116a2048bf77b8"><div class="ttname"><a href="classspk_1_1StateMachine.html#a481951577bd48bb9a7116a2048bf77b8">spk::StateMachine::state</a></div><div class="ttdeci">TStateType state() const</div><div class="ttdoc">Retrieves a copy of the current state.</div><div class="ttdef"><b>Definition:</b> spk_state_machine.hpp:272</div></div>
 <div class="ttc" id="aclassspk_1_1StateMachine_html_a64a592d0131668a8898f66fc88301093"><div class="ttname"><a href="classspk_1_1StateMachine.html#a64a592d0131668a8898f66fc88301093">spk::StateMachine::enterState</a></div><div class="ttdeci">void enterState(TStateType p_newState)</div><div class="ttdoc">Transitions to a specified state.</div><div class="ttdef"><b>Definition:</b> spk_state_machine.hpp:233</div></div>
 <div class="ttc" id="aclassspk_1_1StateMachine_html_a8cb5b4536d34297b4a7cbcc7ff2d223b"><div class="ttname"><a href="classspk_1_1StateMachine.html#a8cb5b4536d34297b4a7cbcc7ff2d223b">spk::StateMachine::addState</a></div><div class="ttdeci">void addState(TStateType p_stateID, const Action &amp;actions)</div><div class="ttdoc">Adds a state defined by an Action struct.</div><div class="ttdef"><b>Definition:</b> spk_state_machine.hpp:216</div></div>
 <div class="ttc" id="aclassspk_1_1StateMachine_html_aaf5c699144b7d0409c532d076bca7435"><div class="ttname"><a href="classspk_1_1StateMachine.html#aaf5c699144b7d0409c532d076bca7435">spk::StateMachine::currentAction</a></div><div class="ttdeci">Action &amp; currentAction()</div><div class="ttdoc">Retrieves the action of the current state.</div><div class="ttdef"><b>Definition:</b> spk_state_machine.hpp:190</div></div>
@@ -209,8 +216,8 @@ $(function() {
 <div class="ttc" id="aclassspk_1_1StateMachine_html_ab439624aba41c3535e040893b428e2ba"><div class="ttname"><a href="classspk_1_1StateMachine.html#ab439624aba41c3535e040893b428e2ba">spk::StateMachine::action</a></div><div class="ttdeci">const Action &amp; action(TStateType p_stateID) const</div><div class="ttdoc">Retrieves the action associated with a given state identifier (const version).</div><div class="ttdef"><b>Definition:</b> spk_state_machine.hpp:173</div></div>
 <div class="ttc" id="aclassspk_1_1StateMachine_html_abf867030ab46b7e5209ee7971643e9d5"><div class="ttname"><a href="classspk_1_1StateMachine.html#abf867030ab46b7e5209ee7971643e9d5">spk::StateMachine::action</a></div><div class="ttdeci">Action &amp; action(TStateType p_stateID)</div><div class="ttdoc">Retrieves the action associated with a given state identifier.</div><div class="ttdef"><b>Definition:</b> spk_state_machine.hpp:155</div></div>
 <div class="ttc" id="aclassspk_1_1StateMachine_html_acdd62df1aaaf0cf5b8c0a7016e2d6b70"><div class="ttname"><a href="classspk_1_1StateMachine.html#acdd62df1aaaf0cf5b8c0a7016e2d6b70">spk::StateMachine::StateMachine</a></div><div class="ttdeci">StateMachine()</div><div class="ttdoc">Default constructor.</div><div class="ttdef"><b>Definition:</b> spk_state_machine.hpp:140</div></div>
-<div class="ttc" id="aclassspk_1_1StateMachine_html_adeba59ce48ff6b00304c5611e7433da0"><div class="ttname"><a href="classspk_1_1StateMachine.html#adeba59ce48ff6b00304c5611e7433da0">spk::StateMachine::StateMachine</a></div><div class="ttdeci">StateMachine(TStateType p_stateID, const Action &amp;p_action)</div><div class="ttdoc">Constructor with initial state and Action struct.</div><div class="ttdef"><b>Definition:</b> spk_state_machine.hpp:126</div></div>
-<div class="ttc" id="aclassspk_1_1StateMachine_html_aef7fc2875bb342d989100df7fc64c541"><div class="ttname"><a href="classspk_1_1StateMachine.html#aef7fc2875bb342d989100df7fc64c541">spk::StateMachine::update</a></div><div class="ttdeci">void update()</div><div class="ttdoc">Executes the update action of the current state.</div><div class="ttdef"><b>Definition:</b> spk_state_machine.hpp:256</div></div>
+<div class="ttc" id="aclassspk_1_1StateMachine_html_adeba59ce48ff6b00304c5611e7433da0"><div class="ttname"><a href="classspk_1_1StateMachine.html#adeba59ce48ff6b00304c5611e7433da0">spk::StateMachine::StateMachine</a></div><div class="ttdeci">StateMachine(TStateType p_stateID, const Action &amp;p_action)</div><div class="ttdoc">Constructor with initial state and Action struct.</div><div class="ttdef"><b>Definition:</b> spk_state_machine.hpp:127</div></div>
+<div class="ttc" id="aclassspk_1_1StateMachine_html_aef7fc2875bb342d989100df7fc64c541"><div class="ttname"><a href="classspk_1_1StateMachine.html#aef7fc2875bb342d989100df7fc64c541">spk::StateMachine::update</a></div><div class="ttdeci">void update()</div><div class="ttdoc">Executes the update action of the current state.</div><div class="ttdef"><b>Definition:</b> spk_state_machine.hpp:257</div></div>
 <div class="ttc" id="astructspk_1_1StateMachine_1_1Action_html"><div class="ttname"><a href="structspk_1_1StateMachine_1_1Action.html">spk::StateMachine::Action</a></div><div class="ttdoc">Represents a collection of actions associated with a state in a StateMachine.</div><div class="ttdef"><b>Definition:</b> spk_state_machine.hpp:58</div></div>
 <div class="ttc" id="astructspk_1_1StateMachine_1_1Action_html_a11e7674a5e9296fd581d107ebe79fc2e"><div class="ttname"><a href="structspk_1_1StateMachine_1_1Action.html#a11e7674a5e9296fd581d107ebe79fc2e">spk::StateMachine::Action::Action</a></div><div class="ttdeci">Action()</div><div class="ttdoc">Default constructor, setting every callback to nullptr.</div><div class="ttdef"><b>Definition:</b> spk_state_machine.hpp:71</div></div>
 <div class="ttc" id="astructspk_1_1StateMachine_1_1Action_html_a1b6e6ccf084dd8fe2be205a6266983b7"><div class="ttname"><a href="structspk_1_1StateMachine_1_1Action.html#a1b6e6ccf084dd8fe2be205a6266983b7">spk::StateMachine::Action::onExit</a></div><div class="ttdeci">Callback onExit</div><div class="ttdoc">Callback called by the state machine when user require a transition from the state linked to this Act...</div><div class="ttdef"><b>Definition:</b> spk_state_machine.hpp:66</div></div>
