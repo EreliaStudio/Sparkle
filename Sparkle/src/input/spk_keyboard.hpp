@@ -4,6 +4,7 @@
 #include <atomic>
 #include <map>
 #include <vector>
+#include <iostream>
 
 namespace spk
 {
@@ -264,4 +265,6 @@ namespace spk
          */
         InputState getKey(Key p_key) const;
     };
+
+    std::ostream& operator << (std::ostream& p_os, const Keyboard::Key& p_key);
 }
