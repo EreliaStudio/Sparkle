@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <iostream>
 
 namespace spk
 {
@@ -12,4 +13,6 @@ namespace spk
         Down,
         Released
     };
+
+    std::ostream& operator << (std::ostream& p_os, const InputState& p_state);
 }

@@ -230,6 +230,13 @@ namespace spk
         {
             unsigned int value = static_cast<unsigned int>(p_firstParam);
 
+            break;
+        }
+        case WM_SYSKEYDOWN:
+        case WM_KEYDOWN:
+        {
+            unsigned int value = static_cast<unsigned int>(p_firstParam);
+
 				_updaterJobs.push_back([&, value](){
 					spk::InputState inputState = _keyboard.getKey(static_cast<Keyboard::Key>(value));
 					if (inputState == spk::InputState::Down ||
