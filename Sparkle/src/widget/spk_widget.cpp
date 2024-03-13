@@ -114,6 +114,17 @@ namespace spk::widget
         _viewport.setGeometry(topLeft, rightDown - topLeft);
     }
 
+    IWidget::IWidget(IWidget* p_parent) :
+        _id(_nextId++),
+        _name("Undefined widget"),
+#ifndef NDEBUG
+        _timeMetric(spk::Application::activeApplication()->profiler().metric<TimeMetric>(name())),
+#endif
+        _depth(0)
+    {
+        
+    }
+
     IWidget::IWidget(const std::string& p_name) :
         _id(_nextId++),
         _name(p_name),
