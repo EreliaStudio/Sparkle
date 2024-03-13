@@ -115,18 +115,9 @@ namespace spk::widget
     }
 
     IWidget::IWidget(IWidget* p_parent) :
-        _id(_nextId++),
-        _name("Undefined widget"),
-#ifndef NDEBUG
-        _timeMetric(spk::Application::activeApplication()->profiler().metric<TimeMetric>(name())),
-#endif
-        _depth(0)
+        IWidget("Unnamed widget", p_parent)
     {
-        if (p_parent == nullptr && defaultParent != nullptr)
-            defaultParent->addChild(this);
-
-        if (p_parent != nullptr)
-            p_parent->addChild(this);
+        
     }
 
     IWidget::IWidget(const std::string& p_name) :
