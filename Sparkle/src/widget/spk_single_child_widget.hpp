@@ -12,6 +12,8 @@ namespace spk::widget
     class SingleChildWidget : public IWidget
     {
     public:
+        SingleChildWidget(IWidget* p_parent = nullptr);
+        
         /**
          * @brief Constructor
          *

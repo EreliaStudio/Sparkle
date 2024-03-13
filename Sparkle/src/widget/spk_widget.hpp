@@ -189,8 +189,7 @@ namespace spk::widget
         TChild* makeChild(Args&&... p_args)
         {
             TChild* child = new TChild(std::forward<Args>(p_args)...);
-            TreeNode<IWidget>::addChild(child);
-            child->setDepth(depth() + 1);   
+            addChild(child); 
             _ownedChildren.push_back(std::unique_ptr<IWidget>(child));
             return child;
         }

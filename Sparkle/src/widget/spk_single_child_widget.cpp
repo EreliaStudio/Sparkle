@@ -8,6 +8,12 @@ namespace spk::widget
     {
     }
 
+    SingleChildWidget::SingleChildWidget(IWidget* p_parent) :
+        IWidget(p_parent)
+    {
+
+    }
+
     IWidget* SingleChildWidget::child()
     {
         if (children().size() > 1)
