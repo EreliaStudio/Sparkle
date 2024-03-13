@@ -141,7 +141,6 @@ namespace spk::widget
             Vector2 childSize = child->layout({min, max});
 
             Vector2 anchor{_config.left, _config.top};
-            std::cout << "Setting child at position : " << anchor << " and size : " << childSize << std::endl;
             child->setGeometry(anchor, childSize);
             return childSize + padded;
         }
