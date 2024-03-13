@@ -134,7 +134,6 @@ namespace spk::widget::components
 
         if (_needGPUUpdate == true)
         {
-            DEBUG_LINE();
             _updateVertices();
             _needGPUUpdate = false;
         }

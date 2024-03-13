@@ -151,13 +151,13 @@ namespace spk::widget
              * @param p_top top padding.
              * @param p_bottom bottom padding.
              */
-            Config(float p_left, float p_right, float p_top, float p_bottom);
+            Config(const float& p_left, const float& p_right, const float& p_top, const float& p_bottom);
 
             /**
              * @brief Constructor with all sided equal.
              *
              */
-            static Config all(float p_pad);
+            static Config all(const float& p_pad);
         };
 
         /**
@@ -166,6 +166,8 @@ namespace spk::widget
          * @param p_parent The parent widget.
          */
         Padding(const Config& p_config, IWidget* p_parent = nullptr);
+
+        Padding(const float& p_left, const float& p_right, const float& p_top, const float& p_bottom, IWidget* p_parent = nullptr);
 
         /**
          * @brief implement layout to add padding to the child.
