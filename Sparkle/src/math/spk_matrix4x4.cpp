@@ -8,10 +8,11 @@ namespace spk
 
 	Vector3 Matrix4x4::operator*(const Vector3 &v) const
 	{
+		float w = data[3][0] * v.x + data[3][1] * v.y + data[3][2] * v.z + data[3][3];
 		return Vector3(
-				(data[0][0] * v.x + data[1][0] * v.y + data[2][0] * v.z + data[3][0]),
-				(data[0][1] * v.x + data[1][1] * v.y + data[2][1] * v.z + data[3][1]),
-				(data[0][2] * v.x + data[1][2] * v.y + data[2][2] * v.z + data[3][2])
+				(data[0][0] * v.x + data[0][1] * v.y + data[0][2] * v.z + data[0][3]) / w,
+				(data[1][0] * v.x + data[1][1] * v.y + data[1][2] * v.z + data[1][3]) / w,
+				(data[2][0] * v.x + data[2][1] * v.y + data[2][2] * v.z + data[2][3]) / w
 			);
 	}
 
@@ -26,16 +27,16 @@ namespace spk
 		Matrix4x4 result;
 
 		for (int i = 0; i < 4; ++i)
-        {
-            for (int j = 0; j < 4; ++j)
-            {
-                result.data[j][i] =
-                          data[0][i] * other.data[j][0]
-                        + data[1][i] * other.data[j][1]
-                        + data[2][i] * other.data[j][2]
-                        + data[3][i] * other.data[j][3];
-            }
-        }
+		{
+			for (int j = 0; j < 4; ++j)
+			{
+				result.data[j][i] = 
+					data[i][0] * other.data[0][j] + 
+					data[i][1] * other.data[1][j] + 
+					data[i][2] * other.data[2][j] + 
+					data[i][3] * other.data[3][j];
+			}
+		}
 
 		return result;
 	}
@@ -49,17 +50,17 @@ namespace spk
 		Matrix4x4 result;
 
 		result.data[0][0] = right.x;
-		result.data[1][0] = right.y;
-		result.data[2][0] = right.z;
-		result.data[0][1] = up.x;
+		result.data[0][1] = right.y;
+		result.data[0][2] = right.z;
+		result.data[1][0] = up.x;
 		result.data[1][1] = up.y;
-		result.data[2][1] = up.z;
-		result.data[0][2] = -forward.x;
-		result.data[1][2] = -forward.y;
-		result.data[2][2] = -forward.z;
-		result.data[3][0] = -right.dot(p_from);
-		result.data[3][1] = -up.dot(p_from);
-		result.data[3][2] = forward.dot(p_from);
+		result.data[1][2] = up.z;
+		result.data[2][0] =-forward.x;
+		result.data[2][1] =-forward.y;
+		result.data[2][2] =-forward.z;
+		result.data[0][3] =-right.dot(p_from);
+		result.data[1][3] =-up.dot(p_from);
+		result.data[2][3] = forward.dot(p_from);
 
 		return result;
 	}
@@ -67,9 +68,9 @@ namespace spk
 	Matrix4x4 Matrix4x4::translationMatrix(const Vector3 &p_translation)
 	{
 		Matrix4x4 result;
-		result.data[3][0] = p_translation.x;
-		result.data[3][1] = p_translation.y;
-		result.data[3][2] = p_translation.z;
+		result.data[0][3] = p_translation.x;
+		result.data[1][3] = p_translation.y;
+		result.data[2][3] = p_translation.z;
 		return result;
 	}
 
@@ -90,24 +91,24 @@ namespace spk
 		float sinX = sin(p_rotation.x);
 
 		rx.data[1][1] = cosX;
-		rx.data[2][1] = -sinX;
-		rx.data[1][2] = sinX;
+		rx.data[1][2] = -sinX;
+		rx.data[2][1] = sinX;
 		rx.data[2][2] = cosX;
 
 		float cosY = cos(p_rotation.y);
 		float sinY = sin(p_rotation.y);
 
 		ry.data[0][0] = cosY;
-		ry.data[2][0] = sinY;
-		ry.data[0][2] = -sinY;
+		ry.data[0][2] = sinY;
+		ry.data[2][0] = -sinY;
 		ry.data[2][2] = cosY;
 
 		float cosZ = cos(p_rotation.z);
 		float sinZ = sin(p_rotation.z);
 
 		rz.data[0][0] = cosZ;
-		rz.data[1][0] = -sinZ;
-		rz.data[0][1] = sinZ;
+		rz.data[0][1] = -sinZ;
+		rz.data[1][0] = sinZ;
 		rz.data[1][1] = cosZ;
 
 		return rz * ry * rx;
@@ -123,20 +124,20 @@ namespace spk
 		float s = sin(p_rotationAngle);
 
 		result.data[0][0] = c + v.x * v.x * (1 - c);
-		result.data[1][0] = v.x * v.y * (1 - c) - v.z * s;
-		result.data[2][0] = v.x * v.z * (1 - c) + v.y * s;
+		result.data[0][1] = v.x * v.y * (1 - c) - v.z * s;
+		result.data[0][2] = v.x * v.z * (1 - c) + v.y * s;
 
-		result.data[0][1] = v.y * v.x * (1 - c) + v.z * s;
+		result.data[1][0] = v.y * v.x * (1 - c) + v.z * s;
 		result.data[1][1] = c + v.y * v.y * (1 - c);
-		result.data[2][1] = v.y * v.z * (1 - c) - v.x * s;
+		result.data[1][2] = v.y * v.z * (1 - c) - v.x * s;
 
-		result.data[0][2] = v.z * v.x * (1 - c) - v.y * s;
-		result.data[1][2] = v.z * v.y * (1 - c) + v.x * s;
+		result.data[2][0] = v.z * v.x * (1 - c) - v.y * s;
+		result.data[2][1] = v.z * v.y * (1 - c) + v.x * s;
 		result.data[2][2] = c + v.z * v.z * (1 - c);
 
-		result.data[0][3] = 0.0f;
-		result.data[1][3] = 0.0f;
-		result.data[2][3] = 0.0f;
+		result.data[3][0] = 0.0f;
+		result.data[3][1] = 0.0f;
+		result.data[3][2] = 0.0f;
 		result.data[3][3] = 1.0f;
 
 		return result;
@@ -150,10 +151,10 @@ namespace spk
 		const float tanHalfFov = tan(rad / 2.0f);
 
 		result.data[0][0] = 1.0f / (tanHalfFov * p_aspectRatio);
-		result.data[1][1] = 1.0f / tanHalfFov; 
-		result.data[2][2] = -1 / (p_farPlane + p_nearPlane) / (p_farPlane - p_nearPlane);
-		result.data[2][3] = -1.0f;
-		result.data[3][2] = (2.0f * p_farPlane * p_nearPlane) / (p_farPlane - p_nearPlane);
+		result.data[1][1] = -1.0f / tanHalfFov; 
+		result.data[2][2] = -(p_farPlane + p_nearPlane) / (p_farPlane - p_nearPlane);
+		result.data[3][2] = -1.0f;
+		result.data[2][3] = -(2.0f * p_farPlane * p_nearPlane) / (p_farPlane - p_nearPlane);
 		result.data[3][3] = 0.0f;
 
 		return result;
@@ -165,10 +166,10 @@ namespace spk
 
 		result.data[0][0] = 2.0f / (p_right - p_left);
 		result.data[1][1] = 2.0f / (p_top - p_bottom);
-		result.data[2][2] = -1.0f / (p_farPlane - p_nearPlane);
-		result.data[0][3] = -(p_right + p_left) / (p_right - p_left);
-		result.data[1][3] = -(p_top + p_bottom) / (p_top - p_bottom);
-		result.data[2][3] = -(p_farPlane + p_nearPlane) / (p_farPlane - p_nearPlane);
+		result.data[2][2] = -2.0f / (p_farPlane - p_nearPlane);
+		result.data[3][0] = -(p_right + p_left) / (p_right - p_left);
+		result.data[3][1] = -(p_top + p_bottom) / (p_top - p_bottom);
+		result.data[3][2] = -(p_farPlane + p_nearPlane) / (p_farPlane - p_nearPlane);
 
 		return result;
 	}
@@ -179,7 +180,7 @@ namespace spk
 		{
 			for (int j = 0; j < 4; ++j)
 			{
-				if (data[j][i] != other.data[j][i])
+				if (data[i][j] != other.data[i][j])
 				{
 					return false;
 				}
@@ -200,7 +201,7 @@ namespace spk
 		{
 			for (int j = 0; j < 4; ++j)
 			{
-				result.data[i][j] = data[j][i];
+				result.data[j][i] = data[i][j];
 			}
 		}
 		return result;
@@ -227,16 +228,16 @@ namespace spk
 					{
 						int xi = (x < i) ? x : x + 1;
 						int yj = (y < j) ? y : y + 1;
-						sub[x][y] = data[yj][xi];
+						sub[x][y] = data[xi][yj];
 					}
 				}
 
 				float det3x3 = sub[0][0] * (sub[1][1] * sub[2][2] - sub[1][2] * sub[2][1]) - sub[0][1] * (sub[1][0] * sub[2][2] - sub[1][2] * sub[2][0]) + sub[0][2] * (sub[1][0] * sub[2][1] - sub[1][1] * sub[2][0]);
 
-				adjugate.data[i][j] = ((i + j) % 2 == 0 ? 1 : -1) * det3x3;
+				adjugate.data[j][i] = ((i + j) % 2 == 0 ? 1 : -1) * det3x3;
 
 				if (i == 0)
-					det += data[j][i] * adjugate.data[i][j];
+					det += data[i][j] * adjugate.data[j][i];
 			}
 		}
 
@@ -249,7 +250,7 @@ namespace spk
 		{
 			for (int j = 0; j < 4; ++j)
 			{
-				adjugate.data[j][i] /= det;
+				adjugate.data[i][j] /= det;
 			}
 		}
 
