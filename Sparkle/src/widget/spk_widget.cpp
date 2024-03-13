@@ -117,11 +117,7 @@ namespace spk::widget
     IWidget::IWidget(IWidget* p_parent) :
         IWidget("Unnamed widget", p_parent)
     {
-        if (p_parent == nullptr && defaultParent != nullptr)
-            defaultParent->addChild(this);
-
-        if (p_parent != nullptr)
-            p_parent->addChild(this);
+        
     }
 
     IWidget::IWidget(const std::string& p_name) :
