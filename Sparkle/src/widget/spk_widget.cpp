@@ -115,7 +115,12 @@ namespace spk::widget
     }
 
     IWidget::IWidget(IWidget* p_parent) :
-        IWidget("Unnamed widget", p_parent)
+        _id(_nextId++),
+        _name("Undefined widget"),
+#ifndef NDEBUG
+        _timeMetric(spk::Application::activeApplication()->profiler().metric<TimeMetric>(name())),
+#endif
+        _depth(0)
     {
         
     }
