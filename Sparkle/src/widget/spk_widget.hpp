@@ -143,6 +143,12 @@ namespace spk::widget
 
     public:
         /**
+         * Constructor for creating a widget without a name and set the parent widget.
+         * @param p_parent A pointer to the parent widget. This widget will be added as a child of the given parent.
+         */
+        IWidget(IWidget* p_parent = nullptr);
+
+        /**
          * Constructor for creating a widget with a specified name.
          * @param p_name The name of the widget. This is used for identification and debugging purposes.
          */

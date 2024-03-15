@@ -114,6 +114,12 @@ namespace spk::widget
         _viewport.setGeometry(topLeft, rightDown - topLeft);
     }
 
+    IWidget::IWidget(IWidget* p_parent) :
+        IWidget("Unnamed widget", p_parent)
+    {
+        
+    }
+
     IWidget::IWidget(const std::string& p_name) :
         _id(_nextId++),
         _name(p_name),
