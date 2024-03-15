@@ -12,6 +12,10 @@ namespace spk::widget
     class SingleChildWidget : public IWidget
     {
     public:
+        /**
+         * Constructor for creating a widget without a name and set the parent widget.
+         * @param p_parent A pointer to the parent widget. This widget will be added as a child of the given parent.
+         */
         SingleChildWidget(IWidget* p_parent = nullptr);
         
         /**
