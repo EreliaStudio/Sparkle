@@ -432,4 +432,27 @@ namespace spk::widget
         tmpChild->setGeometry(anchor, childSize);
         return p_constraints.max;
     }
+
+    spk::Vector2 Offset::layout(const spk::widget::BoxConstraints& p_constraints)
+    {
+        IWidget* child = SingleChildWidget::child();
+        if (nullptr != child)
+        {
+            spk::Vector2 max = p_constraints.max - _childAnchor;
+            spk::Vector2 min = p_constraints.min - _childAnchor;
+            spk::Vector2 childSize = child->layout({min, max});
+
+            child->setGeometry(_childAnchor, childSize);
+            return childSize + _childAnchor;
+        }
+
+        return p_constraints.max;
+    }
+
+    Offset::Offset(const spk::Vector2Int& p_childAnchor, spk::widget::IWidget* p_parent) : 
+        spk::widget::SingleChildWidget(p_parent),
+        _childAnchor(p_childAnchor)
+    {
+
+    }
 }

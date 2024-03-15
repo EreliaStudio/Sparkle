@@ -167,6 +167,14 @@ namespace spk::widget
          */
         Padding(const Config& p_config, IWidget* p_parent = nullptr);
 
+        /**
+         * Constructor for creating a padding by passing it the 4 values to create the configuration needed.
+         * @param p_left The left composant of the padding.
+         * @param p_right The right composant of the padding.
+         * @param p_top The top composant of the padding.
+         * @param p_bottom The bottom composant of the padding.
+         * @param p_parent The parent widget.
+         */
         Padding(const float& p_left, const float& p_right, const float& p_top, const float& p_bottom, IWidget* p_parent = nullptr);
 
         /**
@@ -348,5 +356,23 @@ namespace spk::widget
          * @brief Implement layout to center the child.
          */
         Vector2 layout(const BoxConstraints& p_constraints);
+    };
+
+    /**
+     * @class Offset
+     * @brief Create a singleChildWidget allowing user to place the children at a desired place on screen, relative to the parent of this widget
+    */
+    class Offset : public spk::widget::SingleChildWidget
+    {
+    private:
+        spk::Vector2Int _childAnchor;
+
+        spk::Vector2 layout(const spk::widget::BoxConstraints& p_constraints) override;
+
+    public:
+        /**
+         * @brief Constructor with a Vector2 indicating the anchor needed.
+        */
+        Offset(const spk::Vector2& p_childAnchor, spk::widget::IWidget* p_parent = nullptr);
     };
 }
