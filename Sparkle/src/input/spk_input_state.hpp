@@ -11,7 +11,8 @@ namespace spk
         Up,
         Pressed,
         Down,
-        Released
+        Released,
+        Count
     };
 
     std::ostream& operator << (std::ostream& p_os, const InputState& p_state);

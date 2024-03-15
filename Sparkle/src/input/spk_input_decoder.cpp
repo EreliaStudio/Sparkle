@@ -38,7 +38,7 @@ namespace spk
         }
     }
 
-    void InputDecoder::update(const InputMapping& p_mapping)
+    void InputDecoder::set_mapping(const InputMapping& p_mapping)
     {
         if (!p_mapping.valid())
         {
@@ -73,9 +73,11 @@ namespace spk
     void InputDecoder::add(const Input& p_input)
     {
         std::unique_lock<std::mutex> lk(_mu);
-        for (int mappingCode : _inputToMappings[p_input.code()])
+        unsigned int stateCode = static_cast<unsigned int>(p_input.state());
+
+        for (int mappingCode : _inputToMappings[p_input.code()][stateCode])
         {
-            _notifiers[mappingCode]->notify_all();
+            _notifiers[mappingCode][stateCode]->notify_all();
         }
     }
 

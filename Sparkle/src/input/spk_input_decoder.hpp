@@ -62,7 +62,7 @@ namespace spk
          * If the event code was already in use, replaces the previous mapping.
          * Replacing a mapping preserves all existing subscriptions to the associated event.
          */
-        void update(const InputMapping& p_mapping);
+        void set_mapping(const InputMapping& p_mapping);
 
         /**
          * @brief Add an input to be decoded.

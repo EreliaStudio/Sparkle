@@ -67,7 +67,9 @@ namespace spk
         static constexpr Code kCodeUnknown = 0;
 
         /// The largest possible input code.
-        static constexpr Code max_code = 1 + Keyboard::Key::Maximum + Mouse::Button::Maximum;
+        static constexpr Code max_code = 1 +
+                                         (Keyboard::Key::Maximum + Mouse::Button::Maximum) *
+                                             static_cast<unsigned int>(InputState::Count);
 
         /**
          * @brief Getter for Code.
@@ -77,12 +79,13 @@ namespace spk
          */
         Code code() const
         {
+            const unsigned int stateCount = static_cast<unsigned int>(InputState::Count);
             switch (_type)
             {
             case Type::Keyboard:
-                return 1 + _key;
+                return 1 + (_key * stateCount) + static_cast<unsigned int>(_state);
             case Type::Mouse:
-                return 1 + _mouseButton + Keyboard::Key::Maximum;
+                return 1 + (_mouseButton + Keyboard::Key::Maximum) * stateCount + static_cast<unsigned int>(_state);
             case Type::Controller:
                 // return 1 + _key + Keyboard::Key::Maximum + Mouse::Button::Maximum;
             case Type::Other:
