@@ -167,6 +167,14 @@ namespace spk::widget
          */
         Padding(const Config& p_config, IWidget* p_parent = nullptr);
 
+        /**
+         * Constructor for creating a padding by passing it the 4 values to create the configuration needed.
+         * @param p_left The left composant of the padding.
+         * @param p_right The right composant of the padding.
+         * @param p_top The top composant of the padding.
+         * @param p_bottom The bottom composant of the padding.
+         * @param p_parent The parent widget.
+         */
         Padding(const float& p_left, const float& p_right, const float& p_top, const float& p_bottom, IWidget* p_parent = nullptr);
 
         /**
