@@ -101,7 +101,7 @@ TEST_F(Matrix4x4Test, RotationMatrix_XAxis) {
 }
 
 TEST_F(Matrix4x4Test, RotationMatrix_YAxis) {
-    Vector3 point(1, 0, 0); // Point on X-axis
+    Vector3 point(1, 0, 0);
     Matrix4x4 rotationMatrix = Matrix4x4::rotationMatrix(Vector3(0, 90, 0));
 
     Vector3 result = rotationMatrix * point;
@@ -111,12 +111,13 @@ TEST_F(Matrix4x4Test, RotationMatrix_YAxis) {
 }
 
 TEST_F(Matrix4x4Test, RotationMatrix_ZAxis) {
-    Vector3 point(0, 1, 0); // Point on Y-axis
+    Vector3 point(0, 1, 0);
     Matrix4x4 rotationMatrix = Matrix4x4::rotationMatrix(Vector3(0, 0, 90));
-    Vector3 rotatedV = rotationMatrix * point;
-    ASSERT_NEAR(rotatedV.x, 1, 1e-5);
-    ASSERT_NEAR(rotatedV.y, 0, 1e-5);
-    ASSERT_NEAR(rotatedV.z, 0, 1e-5); // Point should be rotated to -X-axis
+
+    Vector3 result = rotationMatrix * point;
+    Vector3 expected = Vector3(1, 0, 0);
+
+    ASSERT_EQ(result, expected);
 }
 
 
@@ -126,7 +127,7 @@ TEST_F(Matrix4x4Test, RotationMatrix_ZAxis) {
 //     Matrix4x4 identity = m * inverseM;
 //     for (int i = 0; i < 4; ++i) {
 //         for (int j = 0; j < 4; ++j) {
-//             ASSERT_NEAR(identity.data[i][j], i == j ? 1.0f : 0.0f, 1e-5);
+//             ASSERT_NEAR(identity.data[i][j], (i == j ? 1.0f : 0.0f), 1e-5);
 //         }
 //     }
 // }
