@@ -201,7 +201,13 @@ namespace spk
          */
         bool operator==(const TType &p_other) const
         {
-            return x == p_other && y == p_other && z == p_other;
+            if (abs(x - p_other) > FLT_EPSILON)
+                return (false); 
+            if (abs(y - p_other) > FLT_EPSILON)
+                return (false);
+            if (abs(y - p_other) > FLT_EPSILON)
+                return (false);
+            return (true);
         }
 
         /**
@@ -264,7 +270,13 @@ namespace spk
          */
         bool operator==(const IVector3<TType> &p_other) const
         {
-            return x == p_other.x && y == p_other.y && z == p_other.z;
+            if (abs(x - p_other.x) > FLT_EPSILON)
+                return (false); 
+            if (abs(y - p_other.y) > FLT_EPSILON)
+                return (false);
+            if (abs(y - p_other.y) > FLT_EPSILON)
+                return (false);
+            return (true);
         }
 
         /**
@@ -274,7 +286,7 @@ namespace spk
          */
         bool operator!=(const IVector3<TType> &p_other) const
         {
-            return !(*this == p_other);
+            return (!(operator==(p_other)));
         }
 
         /**
