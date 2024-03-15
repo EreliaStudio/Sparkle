@@ -58,6 +58,16 @@ namespace spk
 		Matrix4x4();
 
         /**
+         * @brief Predetermined constructor for Matrix4x4.
+         * 
+         * Initializes a Matrix4x4 with specific values.
+         */  
+		Matrix4x4(float a1, float a2, float a3, float a4, // First row
+                  float b1, float b2, float b3, float b4, // Second row
+                  float c1, float c2, float c3, float c4, // Third row
+                  float d1, float d2, float d3, float d4);// Forth row
+
+        /**
          * @brief Multiplies this matrix by a Vector3, applying the transformation.
          * 
          * @param v The Vector3 to transform.
@@ -112,7 +122,7 @@ namespace spk
         /**
          * @brief Creates a rotation matrix.
          * 
-         * @param p_rotation The rotation angles (pitch, yaw, roll).
+         * @param p_rotation The rotation angles in degree (pitch, yaw, roll).
          * @return A Matrix4x4 representing the rotation.
          */
         static Matrix4x4 rotationMatrix(const Vector3& p_rotation);
@@ -121,7 +131,7 @@ namespace spk
          * @brief Creates a rotation matrix around a given axis.
          * 
          * @param p_axis The axis to rotate around.
-         * @param p_rotationAngle The angle of rotation in radians.
+         * @param p_rotationAngle The angle of rotation in degree.
          * @return A Matrix4x4 representing the rotation around the axis.
          */
 		static Matrix4x4 rotateAroundAxis(const Vector3& p_axis, const float& p_rotationAngle);
@@ -129,7 +139,7 @@ namespace spk
         /**
          * @brief Creates a perspective projection matrix.
          * 
-         * @param fov The field of view in radians.
+         * @param fov The field of view in degree.
          * @param aspectRatio The aspect ratio of the viewport.
          * @param nearPlane The distance to the near clipping plane.
          * @param farPlane The distance to the far clipping plane.
@@ -205,13 +215,13 @@ namespace spk
         friend std::ostream& operator << (std::ostream& p_os, const Matrix4x4& p_matrix)
         {
             p_os << std::endl;
-            for (size_t i = 0; i < 4; i++)
+            for (size_t y = 0; y < 4; y++)
             {
-                for (size_t j = 0; j < 4; j++)
+                for (size_t x = 0; x < 4; x++)
                 {
-                    if (j != 0)
+                    if (x != 0)
                         p_os << " ";
-                    p_os << std::setw(10) << p_matrix.data[j][i];
+                    p_os << std::setw(10) << p_matrix.data[x][y];
                 }
                 p_os << std::endl;
             }

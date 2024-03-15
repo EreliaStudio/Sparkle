@@ -6,14 +6,36 @@ namespace spk
 	{
 	}
 
+	Matrix4x4::Matrix4x4(
+		float a1, float a2, float a3, float a4,
+		float b1, float b2, float b3, float b4,
+		float c1, float c2, float c3, float c4,
+		float d1, float d2, float d3, float d4) :
+		data{
+			{a1, b1, c1, d1},
+			{a2, b2, c2, d2},
+			{a3, b3, c3, d3},
+			{a4, b4, c4, d4}
+		}
+	{
+	
+	}
+
 	Vector3 Matrix4x4::operator*(const Vector3 &v) const
 	{
-		float w = data[3][0] * v.x + data[3][1] * v.y + data[3][2] * v.z + data[3][3];
-		return Vector3(
-				(data[0][0] * v.x + data[0][1] * v.y + data[0][2] * v.z + data[0][3]) / w,
-				(data[1][0] * v.x + data[1][1] * v.y + data[1][2] * v.z + data[1][3]) / w,
-				(data[2][0] * v.x + data[2][1] * v.y + data[2][2] * v.z + data[2][3]) / w
-			);
+		float x = (data[0][0] * v.x + data[1][0] * v.y + data[2][0] * v.z + data[3][0]);
+		float y = (data[0][1] * v.x + data[1][1] * v.y + data[2][1] * v.z + data[3][1]);
+		float z = (data[0][2] * v.x + data[1][2] * v.y + data[2][2] * v.z + data[3][2]);
+		float w = (data[0][3] * v.x + data[1][3] * v.y + data[2][3] * v.z + data[3][3]);
+
+		if (w != 1.0f && w != 0.0f)
+		{
+			x /= w;
+			y /= w;
+			z /= w;
+		}
+
+		return Vector3(x, y, z);
 	}
 
 	Vector2 Matrix4x4::operator*(const Vector2& v) const
@@ -30,7 +52,7 @@ namespace spk
 		{
 			for (int j = 0; j < 4; ++j)
 			{
-				result.data[j][i] = 
+				result.data[i][j] = 
 					data[i][0] * other.data[0][j] + 
 					data[i][1] * other.data[1][j] + 
 					data[i][2] * other.data[2][j] + 
@@ -68,9 +90,9 @@ namespace spk
 	Matrix4x4 Matrix4x4::translationMatrix(const Vector3 &p_translation)
 	{
 		Matrix4x4 result;
-		result.data[0][3] = p_translation.x;
-		result.data[1][3] = p_translation.y;
-		result.data[2][3] = p_translation.z;
+		result.data[3][0] = p_translation.x;
+		result.data[3][1] = p_translation.y;
+		result.data[3][2] = p_translation.z;
 		return result;
 	}
 
@@ -87,24 +109,28 @@ namespace spk
 	{
 		Matrix4x4 rx, ry, rz;
 
-		float cosX = cos(p_rotation.x);
-		float sinX = sin(p_rotation.x);
+		const float radX = spk::degreeToRadian(p_rotation.x);
+		const float radY = spk::degreeToRadian(p_rotation.y);
+		const float radZ = spk::degreeToRadian(p_rotation.z);
+
+		float cosX = cos(radX);
+		float sinX = sin(radX);
 
 		rx.data[1][1] = cosX;
 		rx.data[1][2] = -sinX;
 		rx.data[2][1] = sinX;
 		rx.data[2][2] = cosX;
 
-		float cosY = cos(p_rotation.y);
-		float sinY = sin(p_rotation.y);
+		float cosY = cos(radY);
+		float sinY = sin(radY);
 
 		ry.data[0][0] = cosY;
 		ry.data[0][2] = sinY;
 		ry.data[2][0] = -sinY;
 		ry.data[2][2] = cosY;
 
-		float cosZ = cos(p_rotation.z);
-		float sinZ = sin(p_rotation.z);
+		float cosZ = cos(radZ);
+		float sinZ = sin(radZ);
 
 		rz.data[0][0] = cosZ;
 		rz.data[0][1] = -sinZ;
@@ -118,10 +144,12 @@ namespace spk
 	{
 		Matrix4x4 result;
 
+		const float rad = spk::degreeToRadian(p_rotationAngle);
+
 		Vector3 v = p_axis.normalize();
 
-		float c = cos(p_rotationAngle);
-		float s = sin(p_rotationAngle);
+		float c = cos(rad);
+		float s = sin(rad);
 
 		result.data[0][0] = c + v.x * v.x * (1 - c);
 		result.data[0][1] = v.x * v.y * (1 - c) - v.z * s;
@@ -167,9 +195,9 @@ namespace spk
 		result.data[0][0] = 2.0f / (p_right - p_left);
 		result.data[1][1] = 2.0f / (p_top - p_bottom);
 		result.data[2][2] = -2.0f / (p_farPlane - p_nearPlane);
-		result.data[3][0] = -(p_right + p_left) / (p_right - p_left);
-		result.data[3][1] = -(p_top + p_bottom) / (p_top - p_bottom);
-		result.data[3][2] = -(p_farPlane + p_nearPlane) / (p_farPlane - p_nearPlane);
+		result.data[0][3] = -(p_right + p_left) / (p_right - p_left);
+		result.data[1][3] = -(p_top + p_bottom) / (p_top - p_bottom);
+		result.data[2][3] = -(p_farPlane + p_nearPlane) / (p_farPlane - p_nearPlane);
 
 		return result;
 	}
