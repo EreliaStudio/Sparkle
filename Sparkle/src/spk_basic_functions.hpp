@@ -4,6 +4,10 @@
 #define NOMINMAX
 #endif
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 #include <GL/glew.h>
 #include <GL/wglew.h>
 #include <gl/GL.h>

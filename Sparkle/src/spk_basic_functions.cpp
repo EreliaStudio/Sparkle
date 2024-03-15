@@ -2,10 +2,6 @@
 #include <chrono>
 #include <fstream>
 
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif
-
 namespace spk
 {
     std::string readFileContent(const std::filesystem::path& p_filePath)
