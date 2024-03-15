@@ -122,35 +122,32 @@ TEST_F(Matrix4x4Test, RotationMatrix_ZAxis) {
 }
 
 
-// TEST_F(Matrix4x4Test, InverseMatrix) {
-//     Matrix4x4 m = Matrix4x4::translationMatrix(Vector3(5, 6, 7)) * Matrix4x4::rotationMatrix(Vector3(M_PI * 2, M_PI, M_PI * 4)) * Matrix4x4::scaleMatrix(Vector3(2, 2, 2));
-//     Matrix4x4 inverseM = m.inverse();
-//     Matrix4x4 identity = m * inverseM;
-//     for (int i = 0; i < 4; ++i) {
-//         for (int j = 0; j < 4; ++j) {
-//             ASSERT_NEAR(identity.data[i][j], (i == j ? 1.0f : 0.0f), 1e-5);
-//         }
-//     }
-// }
+TEST_F(Matrix4x4Test, InverseMatrix) {
+    Matrix4x4 m = Matrix4x4::translationMatrix(Vector3(5, 6, 7)) * Matrix4x4::rotationMatrix(Vector3(M_PI * 2, M_PI, M_PI * 4)) * Matrix4x4::scaleMatrix(Vector3(2, 2, 2));
+    Matrix4x4 inverseM = m.inverse();
+    Matrix4x4 identity = m * inverseM;
 
-// TEST_F(Matrix4x4Test, OrthographicMatrix) {
-//     Matrix4x4 orthoMatrix = Matrix4x4::ortho(1, 3, 1, 3, 50, 150);
+    ASSERT_EQ(Matrix4x4(), identity);
+}
+
+TEST_F(Matrix4x4Test, OrthographicMatrix) {
+    Matrix4x4 orthoMatrix = Matrix4x4::ortho(1, 3, 1, 3, 50, 150);
     
-//     Matrix4x4 expectedOrthoMatrix = Matrix4x4(
-//         1,      0,      0,      0,
-//         0,      1,      0,      0,
-//         0,      0,      -0.02f, 0,
-//         -2,     -2,     -2,     1
-//     );
+    Matrix4x4 expectedOrthoMatrix = Matrix4x4(
+        1,      0,      0,      -2,
+        0,      1,      0,      -2,
+        0,      0,      -0.02f, -2,
+        0,      0,      0,      1
+    );
 
-//     ASSERT_EQ(orthoMatrix, expectedOrthoMatrix);
+    ASSERT_EQ(orthoMatrix, expectedOrthoMatrix);
 
-//     Vector3 point(2.5f, 2.5f, 100.0f);
+    Vector3 point(2.5f, 2.5f, 100.0f);
 
-//     Vector3 transformedPoint = orthoMatrix * point;
-//     Vector3 expectedPoint = Vector3(0.5f, 0.5f, 0.0f); //On both axis, we work from -1 to 1
+    Vector3 transformedPoint = orthoMatrix * point;
+    Vector3 expectedPoint = Vector3(0.5f, 0.5f, 0.0f); //On both axis, we work from -1 to 1
 
-//     ASSERT_NEAR(transformedPoint.x, expectedPoint.x, 1e-5);
-//     ASSERT_NEAR(transformedPoint.y, expectedPoint.y, 1e-5);
-//     ASSERT_NEAR(transformedPoint.z, expectedPoint.z, 1e-5);
-// }
+    ASSERT_NEAR(transformedPoint.x, expectedPoint.x, 1e-5);
+    ASSERT_NEAR(transformedPoint.y, expectedPoint.y, 1e-5);
+    ASSERT_NEAR(transformedPoint.z, expectedPoint.z, 1e-5);
+}
