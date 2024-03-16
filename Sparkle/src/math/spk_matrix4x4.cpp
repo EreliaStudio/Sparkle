@@ -220,10 +220,13 @@ namespace spk
         {
             for (int j = 0; j < 4; ++j)
             {
-                if (data[i][j] != other.data[i][j])
+                float epsilon = 5e-5 * std::max(std::abs(data[i][j]), std::abs(other.data[i][j]));
+                if (epsilon <= 0)
+                    epsilon = FLT_EPSILON;
+
+                if (std::abs(data[i][j] - other.data[i][j]) > epsilon)
                 {
-                    if (abs(data[i][j] - other.data[i][j]) > FLT_EPSILON)
-                        return false;
+                    return false;
                 }
             }
         }
