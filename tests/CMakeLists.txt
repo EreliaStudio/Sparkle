@@ -1,21 +1,31 @@
-cmake_policy(SET CMP0135 NEW)
-include(FetchContent)
-FetchContent_Declare(
-  googletest
-  URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
-)
-# For Windows: Prevent overriding the parent project's compiler/linker settings
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(googletest)
+cmake_minimum_required(VERSION 3.14)
+project(SparkleTUs)
 
-FetchContent_Declare(
-  rapidcheck
-  URL https://github.com/emil-e/rapidcheck/archive/ff6af6fc683159deb51c543b065eba14dfcf329b.zip
-)
-FetchContent_MakeAvailable(rapidcheck)
-include_directories(${rapidcheck_SOURCE_DIR}/extras/gtest/include)
+include(${CMAKE_SOURCE_DIR}/cmake/importTestLibraries.cmake)
 
+# # Import testing libraries
+importGoogleTest()
+importRapidCheck()
 
+enable_testing()
 
+# Function to create a test from a source file
+function(create_sparkle_test target_name source_file)
+    add_executable(${target_name} ${source_file})
+    target_link_libraries(${target_name} gtest_main rapidcheck Sparkle)
+    target_include_directories(${target_name} PRIVATE "${CMAKE_SOURCE_DIR}/includes")
+    target_link_directories(${target_name} PRIVATE "${CMAKE_SOURCE_DIR}/archive")
+    include(GoogleTest)
+    gtest_discover_tests(${target_name})
+    add_test(NAME ${target_name} COMMAND ${target_name})
+endfunction()
 
+# Add subdirectories here
 add_subdirectory(math)
+# More add_subdirectory() calls for other directories as needed
+
+# Assuming each subdirectory appends its test sources to SourceFiles
+foreach(SOURCE_FILE IN LISTS SourceFiles)
+    get_filename_component(TARGET_NAME ${SOURCE_FILE} NAME_WE)
+    create_sparkle_test(${TARGET_NAME} ${SOURCE_FILE})
+endforeach()

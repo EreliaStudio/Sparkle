@@ -2,4 +2,4 @@
 #include <rapidcheck.h>
 #include <rapidcheck/gtest.h>
 
-#include "math/spk_vector2.hpp"
+#include "design_pattern/spk_state_machine.hpp"

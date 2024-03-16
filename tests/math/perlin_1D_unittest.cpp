@@ -2,4 +2,4 @@
 #include <rapidcheck.h>
 #include <rapidcheck/gtest.h>
 
-#include "math/spk_vector2.hpp"
+#include "math/perlin/spk_perlin_1D.hpp"
