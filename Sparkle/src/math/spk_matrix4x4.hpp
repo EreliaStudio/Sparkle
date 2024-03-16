@@ -253,5 +253,6 @@ namespace spk
          * @return A constant pointer to the matrix data.
          */
         const float* c_ptr() const;
+
     };
 }
