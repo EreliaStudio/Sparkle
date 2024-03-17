@@ -20,23 +20,23 @@ protected:
     int exitCount = 0;
 
     virtual void SetUp() override {
-        stateMachine.addState(TestState::Idle, {
+        stateMachine.addState(TestState::Idle, StateMachine<TestState>::Action(
             [this] { enterCount++; },  // onEnter
-            [this] { updateCount++; }, // onUpdate
+            [this] { std::cout << "Basic update for idle" << std::endl; updateCount++; }, // onUpdate
             [this] { exitCount++; }    // onExit
-        });
+        ));
 
-        stateMachine.addState(TestState::Running, {
+        stateMachine.addState(TestState::Running, StateMachine<TestState>::Action(
             [this] { enterCount++; },
             [this] { updateCount++; },
             [this] { exitCount++; }
-        });
+        ));
 
-        stateMachine.addState(TestState::Stopping, {
+        stateMachine.addState(TestState::Stopping, StateMachine<TestState>::Action(
             [this] { enterCount++; },
             [this] { updateCount++; },
             [this] { exitCount++; }
-        });
+        ));
 
 		enterCount = 0;
 		updateCount = 0;
@@ -79,7 +79,7 @@ TEST_F(StateMachineTest, ActionModification) {
     stateMachine.enterState(TestState::Idle);
     auto& action = stateMachine.action(TestState::Idle);
     int customActionCount = 0;
-    action.onUpdate = [&customActionCount] { customActionCount++; };
+    action.onUpdate = [&customActionCount]() { customActionCount++; };
     
     stateMachine.update();
     ASSERT_EQ(customActionCount, 1);

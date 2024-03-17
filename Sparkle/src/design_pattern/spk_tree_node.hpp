@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include "spk_basic_functions.hpp"
 
 namespace spk
 {
@@ -103,6 +104,8 @@ namespace spk
 		 */
 		void addChild(TType* p_children)
 		{
+			if (p_children == this)
+				throwException("Can't assign a TreeNode as itself parent");
 			if (p_children->_parent != nullptr)
 				p_children->_parent->removeChild(p_children);
 
@@ -124,6 +127,7 @@ namespace spk
 			auto it = std::find(_children.begin(), _children.end(), p_child);
 			if (it != _children.end())
 			{
+				p_child->_parent = nullptr;
 				_children.erase(it);
 			}
 		}

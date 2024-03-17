@@ -38,6 +38,8 @@ TEST_F(TreeNodeTest, AddChild) {
 }
 
 TEST_F(TreeNodeTest, RemoveChild) {
+    TestNode* expectedParent = nullptr;
+
     parentNode.addChild(&childNode1);
     parentNode.addChild(&childNode2);
 
@@ -45,7 +47,7 @@ TEST_F(TreeNodeTest, RemoveChild) {
 
     ASSERT_EQ(parentNode.children().size(), 1);
     ASSERT_EQ(parentNode.children().front(), &childNode2);
-    ASSERT_EQ(childNode1.parent(), nullptr);
+    ASSERT_EQ(childNode1.parent(), expectedParent);
 }
 
 TEST_F(TreeNodeTest, TransferChildren) {
@@ -71,8 +73,7 @@ TEST_F(TreeNodeTest, DestructorRemovesParentChildAssociation) {
 }
 
 TEST_F(TreeNodeTest, SelfAssignmentProtection) {
-    parentNode.addChild(&parentNode);
-    ASSERT_TRUE(parentNode.children().empty());
+    EXPECT_THROW(parentNode.addChild(&parentNode), std::runtime_error);
 }
 
 TEST_F(TreeNodeTest, AddingExistingChild) {
