@@ -75,6 +75,7 @@ namespace spk
 
 		void _onSeedEdition();
 
+	protected:
 		float _executeSample(const std::function<float(const float& p_frequency)>& p_lambda) const;
 
 		float _dotGridGradient(const int& ix, const int& iy, const int& iz, const float& x, const float& y, const float& z) const;

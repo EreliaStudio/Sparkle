@@ -1,6 +1,7 @@
 #include "math/perlin/spk_iperlin.hpp"
 #include <random>
 #include <cfloat>
+#include "spk_basic_functions.hpp"
 
 namespace spk
 {
@@ -143,14 +144,14 @@ namespace spk
 	void IPerlin::configurePersistance(float p_persistance)
 	{
 		if (p_persistance > 1.0f)
-			spk::throwException(L"Persistance can't be higher than 1");
+			throwException("Persistance can't be higher than 1");
 		_persistance = p_persistance;
 	}
 
 	void IPerlin::configureLacunarity(float p_lacunarity)
 	{
 		if (p_lacunarity <= 1.0f)
-			spk::throwException(L"Lacunarity can't be lower or equal to 1");
+			throwException("Lacunarity can't be lower or equal to 1");
 		_lacunarity = p_lacunarity;
 	}
 
