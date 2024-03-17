@@ -22,7 +22,7 @@ protected:
     virtual void SetUp() override {
         stateMachine.addState(TestState::Idle, StateMachine<TestState>::Action(
             [this] { enterCount++; },  // onEnter
-            [this] { std::cout << "Basic update for idle" << std::endl; updateCount++; }, // onUpdate
+            [this] { updateCount++; }, // onUpdate
             [this] { exitCount++; }    // onExit
         ));
 

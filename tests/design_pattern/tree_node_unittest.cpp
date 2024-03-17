@@ -67,10 +67,11 @@ TEST_F(TreeNodeTest, DestructorRemovesParentChildAssociation) {
     {
         TestNode localNode;
         parentNode.addChild(&localNode);
-    }  // localNode is destructed here
+    }
 
     ASSERT_TRUE(parentNode.children().empty());
 }
+
 
 TEST_F(TreeNodeTest, SelfAssignmentProtection) {
     EXPECT_THROW(parentNode.addChild(&parentNode), std::runtime_error);
