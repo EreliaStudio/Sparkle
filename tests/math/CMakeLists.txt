@@ -1,5 +1,4 @@
-# Collect all C++ files in the current directory
-file(GLOB MATH_TEST_SOURCES "${CMAKE_CURRENT_LIST_DIR}/*.cpp")
+file(GLOB CURRENT_DIR_CPP_FILES "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
+list(APPEND UNITTEST_SOURCE_FILE ${CURRENT_DIR_CPP_FILES})
 
-# Append the collected source files to the global list
-set(SourceFiles ${SourceFiles} ${MATH_TEST_SOURCES} PARENT_SCOPE)
+set(UNITTEST_SOURCE_FILE "${UNITTEST_SOURCE_FILE}" PARENT_SCOPE)

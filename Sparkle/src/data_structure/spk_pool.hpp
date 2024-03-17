@@ -48,6 +48,16 @@ namespace spk
          */
         using Allocator = typename std::function<TType*(void)>;
 
+        /**
+         * @brief Type alias for the cleaner function.
+         * 
+         * Defines an cleaner function type that is used when the user require an element of the pool.
+         * This function allows for custom reset logic to be provided when returning an
+         * objects managed by the pool. It should return nothing and should get a reference to
+         * the object to "clean".
+         */
+        using Cleaner = typename std::function<void(TType&)>;
+
     private:    
         using Destructor = typename std::function<void(TType* p_toReturn)>;
     
@@ -60,6 +70,7 @@ namespace spk
     private:
         std::recursive_mutex _mutex;
         Allocator _allocator;
+        Cleaner _cleaner;
         std::deque<std::unique_ptr<TType>> _preallocatedElements;
 
         const Destructor _destructorLambda = [&](TType* p_toReturn){ _insert(p_toReturn); };
@@ -71,15 +82,24 @@ namespace spk
         }
 
     public:
+        Pool() :
+            _allocator([](){return (new TType());}),
+            _cleaner([](TType& toClean){})
+        {
+            
+        }
+
         /**
          * @brief Constructor
          * 
          * Initializes a new instance of the Pool class with a specified allocator.
          * 
-         * @param p_allocator The initial allocator of the pool. Defaults to simply allocated a new TType.
+         * @param p_allocator The initial allocator of the pool.
+         * @param p_cleaner The initial cleaner of the pool. Called before returning an element from the pool, to "reset" it to value specified by user.
          */
-        Pool(const Allocator& p_allocator = [](){return (new TType());}) :
-            _allocator(p_allocator)
+        Pool(const Allocator& p_allocator, const Cleaner& p_cleaner) :
+            _allocator(p_allocator),
+            _cleaner(p_cleaner)
         {
             
         }
@@ -97,6 +117,21 @@ namespace spk
         void editAllocator(const Allocator& p_allocator)
         {   
             _allocator = p_allocator;
+        }
+
+        /**
+         * @brief Edits the allocator used by the pool.
+         * 
+         * Allows for the modification of the allocator function after the pool has been
+         * created. This can be useful for changing the logic used to create new instances
+         * of TType, for example, to use a different constructor or to recycle objects in a
+         * specific way.
+         * 
+         * @param p_allocator The new allocator function to use for object creation.
+         */
+        void editCleaner(const Cleaner& p_cleaner)
+        {   
+            _cleaner = p_cleaner;
         }
 
         /**
@@ -162,6 +197,7 @@ namespace spk
 
             _preallocatedElements.pop_front();
 
+            _cleaner(*item);
             return (std::move(item));
         }
     };

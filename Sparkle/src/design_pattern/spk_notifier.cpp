@@ -213,7 +213,7 @@ namespace spk
 
     void Notifier::Contract::notify()
     {
-        if (_isCanceled)
+        if (_isCanceled || _isPaused)
         {
             return;
         }
@@ -228,7 +228,7 @@ namespace spk
 
     void Notifier::Contract::pause()
     {
-        if (_isCanceled)
+        if (_isCanceled == true || _isPaused == true)
         {
             return;
         }
@@ -239,11 +239,12 @@ namespace spk
 
     void Notifier::Contract::resume()
     {
-        if (_isCanceled)
+        if (_isCanceled == true || _isPaused == false)
         {
             return;
         }
 
+        _isPaused = false;
         _subject->resume(this);
     }
 

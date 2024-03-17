@@ -56,7 +56,10 @@ namespace spk
 		 */
 		void switchActivationState()
 		{
-			_isActive = !_isActive;
+			if (_isActive == true)
+				deactivate();
+			else
+				activate();
 		}
 
 		/**
