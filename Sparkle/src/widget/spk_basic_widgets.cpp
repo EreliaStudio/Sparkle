@@ -449,7 +449,7 @@ namespace spk::widget
         return p_constraints.max;
     }
 
-    Offset::Offset(const spk::Vector2Int& p_childAnchor, spk::widget::IWidget* p_parent) : 
+    Offset::Offset(const spk::Vector2& p_childAnchor, spk::widget::IWidget* p_parent) : 
         spk::widget::SingleChildWidget(p_parent),
         _childAnchor(p_childAnchor)
     {
