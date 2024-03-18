@@ -214,30 +214,6 @@ namespace spk
         return result;
     }
 
-    bool Matrix4x4::operator==(const Matrix4x4& other) const
-    {
-        for (int i = 0; i < 4; ++i)
-        {
-            for (int j = 0; j < 4; ++j)
-            {
-                float epsilon = 5e-5 * std::max(std::abs(data[i][j]), std::abs(other.data[i][j]));
-                if (epsilon <= 0)
-                    epsilon = FLT_EPSILON;
-
-                if (std::abs(data[i][j] - other.data[i][j]) > epsilon)
-                {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
-    bool Matrix4x4::operator!=(const Matrix4x4& other) const
-    {
-        return !(*this == other);
-    }
-
     Matrix4x4 Matrix4x4::transpose() const
     {
         Matrix4x4 result;
