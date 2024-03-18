@@ -125,12 +125,17 @@ namespace spk
 
     Application::~Application()
     {
+        DEBUG_LINE();
         std::fstream outputStream;
+        DEBUG_LINE();
         outputStream.open("profilerResult.out", std::ios_base::out);
+        DEBUG_LINE();
 
         outputStream << _profiler.emitReport() << std::endl;
+        DEBUG_LINE();
 
         outputStream.close();
+        DEBUG_LINE();
         delete _centralWidget;
     }
 
