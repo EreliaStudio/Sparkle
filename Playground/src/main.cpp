@@ -37,7 +37,12 @@ private:
 
     void _onUpdate() override
     {
-        if (hitTest(spk::Application::activeApplication()->mouse().position()) == true)
+        if (spk::Application::activeApplication()->mouse().getButton(spk::Mouse::Left) == spk::InputState::Released && 
+            _boxIndex == 1)
+            _onClickCallback();
+
+        if (spk::Application::activeApplication()->mouse().getButton(spk::Mouse::Left) == spk::InputState::Down && 
+            hitTest(spk::Application::activeApplication()->mouse().position()) == true)
         {
             _boxIndex = 1;
         }

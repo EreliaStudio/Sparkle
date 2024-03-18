@@ -33,8 +33,6 @@ namespace spk
 
 		for (auto& [key, attribute] : _attributes)
 		{
-			if (attribute.needUpdate() == true)
-				std::cout << "Updating attribute [" << key << "]" << std::endl;
 			attribute.activate();
 		}
 
