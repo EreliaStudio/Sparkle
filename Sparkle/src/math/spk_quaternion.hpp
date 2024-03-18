@@ -42,6 +42,30 @@ namespace spk
          */
         Quaternion(const spk::Vector3& p_eulerAngles);
 
+        Quaternion operator+(const Quaternion& rhs) const;
+        Quaternion& operator+=(const Quaternion& rhs);
+        Quaternion operator-(const Quaternion& rhs) const;
+        Quaternion& operator-=(const Quaternion& rhs);
+        Quaternion operator*(const float& scalar) const;
+        Quaternion& operator*=(const float& scalar);
+        Quaternion operator/(const float& scalar) const;
+        Quaternion& operator/=(const float& scalar);
+        
+        friend Quaternion operator*(const float& scalar, const Quaternion& q) {
+            return (q * scalar);
+        }
+        
+        friend Quaternion operator/(const float& scalar, const Quaternion& q) {
+            return (q / scalar);
+        }
+
+        bool operator==(const Quaternion& p_rhs) const;
+        bool operator!=(const Quaternion& p_rhs) const;
+        bool operator<(const Quaternion& p_rhs) const;
+        bool operator>(const Quaternion& p_rhs) const;
+        bool operator<=(const Quaternion& p_rhs) const;
+        bool operator>=(const Quaternion& p_rhs) const;
+
         /**
          * @brief Normalizes the quaternion.
          * @return A new quaternion that is the normalized version of this quaternion.
