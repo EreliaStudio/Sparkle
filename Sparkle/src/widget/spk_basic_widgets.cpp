@@ -101,7 +101,7 @@ namespace spk::widget
     {
     }
 
-    Padding::Config::Config(float p_left, float p_right, float p_top, float p_bottom) :
+    Padding::Config::Config(const float& p_left, const float& p_right, const float& p_top, const float& p_bottom) :
         left(p_left),
         right(p_right),
         top(p_top),
@@ -109,7 +109,7 @@ namespace spk::widget
     {
     }
 
-    Padding::Config Padding::Config::all(float p_pad)
+    Padding::Config Padding::Config::all(const float& p_pad)
     {
         return Padding::Config(
             p_pad,
@@ -122,6 +122,12 @@ namespace spk::widget
         SingleChildWidget("Padding", p_parent),
         _config(p_config)
     {
+    }
+
+    Padding::Padding(const float& p_left, const float& p_right, const float& p_top, const float& p_bottom, IWidget* p_parent) :
+        Padding(Config(p_left, p_right, p_top, p_bottom), p_parent)
+    {
+        
     }
 
     Vector2 Padding::layout(const BoxConstraints& p_constraints)
@@ -425,5 +431,28 @@ namespace spk::widget
         Vector2 anchor = (p_constraints.max - childSize) / 2;
         tmpChild->setGeometry(anchor, childSize);
         return p_constraints.max;
+    }
+
+    spk::Vector2 Offset::layout(const spk::widget::BoxConstraints& p_constraints)
+    {
+        IWidget* child = SingleChildWidget::child();
+        if (nullptr != child)
+        {
+            spk::Vector2 max = p_constraints.max - _childAnchor;
+            spk::Vector2 min = p_constraints.min - _childAnchor;
+            spk::Vector2 childSize = child->layout({min, max});
+
+            child->setGeometry(_childAnchor, childSize);
+            return childSize + _childAnchor;
+        }
+
+        return p_constraints.max;
+    }
+
+    Offset::Offset(const spk::Vector2& p_childAnchor, spk::widget::IWidget* p_parent) : 
+        spk::widget::SingleChildWidget(p_parent),
+        _childAnchor(p_childAnchor)
+    {
+
     }
 }
