@@ -189,11 +189,26 @@ namespace spk::widget
         TChild* makeChild(Args&&... p_args)
         {
             TChild* child = new TChild(std::forward<Args>(p_args)...);
-            TreeNode<IWidget>::addChild(child);
-            child->setDepth(depth() + 1);
+            addChild(child); 
             _ownedChildren.push_back(std::unique_ptr<IWidget>(child));
             return child;
         }
+
+        /**
+         * @brief Create a child widget of type TChild and activate it.
+         * This parent is then responsible for the lifetime of children created this way.
+         *
+         * @param p_args Arguments used for the TChild constructor.
+         * @return A temporary pointer to the activated child, without ownership.
+         */
+        template <class TChild, typename... Args>
+        TChild* makeActiveChild(Args&&... p_args)
+        {
+            TChild* child = makeChild<TChild>(std::forward<Args>(p_args)...);
+            child->activate();
+            return child;
+        }
+
 
         /**
          * Sets the geometry of the widget, specifying its anchor point and size.

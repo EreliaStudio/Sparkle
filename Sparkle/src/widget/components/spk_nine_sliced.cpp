@@ -134,11 +134,11 @@ namespace spk::widget::components
 
         if (_needGPUUpdate == true)
         {
-            DEBUG_LINE();
             _updateVertices();
             _needGPUUpdate = false;
         }
 
+        _renderingPipelineTexture.attach(_spriteSheet);
         _renderingObject.render();
     }
 }
