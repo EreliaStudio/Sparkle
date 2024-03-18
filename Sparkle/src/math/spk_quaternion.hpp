@@ -127,13 +127,33 @@ namespace spk
         Quaternion& operator/=(const float& scalar);
 
         
-        friend Quaternion operator*(const float& scalar, const Quaternion& q) {
-            return (q * scalar);
-        }
-        
-        friend Quaternion operator/(const float& scalar, const Quaternion& q) {
-            return (q / scalar);
-        }
+        /**
+         * @brief Multiplies a scalar with a quaternion.
+         * 
+         * This function allows for scalar multiplication with a quaternion from the left-hand side, effectively scaling
+         * the quaternion's components. This operation is commutative, so the order of the scalar and quaternion does not
+         * affect the result. It's useful for scaling rotations or blending between quaternions.
+         *
+         * @param scalar The scalar value to multiply.
+         * @param q The quaternion to be multiplied.
+         * @return A new quaternion that is the result of the scalar multiplied with the quaternion's components.
+         */
+        friend Quaternion operator*(const float& scalar, const Quaternion& q);
+
+        /**
+         * @brief Divides a scalar by a quaternion.
+         * 
+         * This operation defines the division of a scalar by a quaternion, which is not a standard mathematical operation
+         * for quaternions and is typically used in specific contexts, like inverse scaling. The function effectively applies
+         * the reciprocal of the quaternion's magnitude to the scalar, provided the quaternion is normalized.
+         *
+         * @note This operation assumes that the quaternion is normalized and will not perform as expected if it's not.
+         *
+         * @param scalar The scalar value to be divided.
+         * @param q The quaternion that divides the scalar.
+         * @return A new quaternion resulting from the division, if applicable under the specific use case.
+         */
+        friend Quaternion operator/(const float& scalar, const Quaternion& q);
 
         /**
          * @brief Checks if this quaternion is equal to another quaternion.
