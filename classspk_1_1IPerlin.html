@@ -69,6 +69,7 @@ $(function() {
   <div class="summary">
 <a href="#pub-types">Public Types</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pro-methods">Protected Member Functions</a> &#124;
 <a href="classspk_1_1IPerlin-members.html">List of all members</a>  </div>
   <div class="headertitle">
 <div class="title">spk::IPerlin Interface Reference</div>  </div>
@@ -131,6 +132,27 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a2f7090cf70be6a370096bad695a3057f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1IPerlin.html#a2f7090cf70be6a370096bad695a3057f">configureInterpolation</a> (<a class="el" href="classspk_1_1IPerlin.html#a3266c3dd973db71cfd0f81a6b8ff4540">Interpolation</a> p_interpolation)</td></tr>
 <tr class="memdesc:a2f7090cf70be6a370096bad695a3057f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Configures the interpolation method used in noise generation.  <a href="classspk_1_1IPerlin.html#a2f7090cf70be6a370096bad695a3057f">More...</a><br /></td></tr>
 <tr class="separator:a2f7090cf70be6a370096bad695a3057f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-methods"></a>
+Protected Member Functions</h2></td></tr>
+<tr class="memitem:a3a61855833853da28efedccfeb3011b9"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1IPerlin.html#a3a61855833853da28efedccfeb3011b9">_executeSample</a> (const std::function&lt; float(const float &amp;p_frequency)&gt; &amp;p_lambda) const</td></tr>
+<tr class="memdesc:a3a61855833853da28efedccfeb3011b9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Executes the sampling process for generating Perlin noise.  <a href="classspk_1_1IPerlin.html#a3a61855833853da28efedccfeb3011b9">More...</a><br /></td></tr>
+<tr class="separator:a3a61855833853da28efedccfeb3011b9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5cf9120c257fcba9cfffab64108a73a6"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1IPerlin.html#a5cf9120c257fcba9cfffab64108a73a6">_dotGridGradient</a> (const int &amp;ix, const int &amp;iy, const int &amp;iz, const float &amp;x, const float &amp;y, const float &amp;z) const</td></tr>
+<tr class="memdesc:a5cf9120c257fcba9cfffab64108a73a6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the dot product of the grid's gradient vector and the distance vector in 3D space.  <a href="classspk_1_1IPerlin.html#a5cf9120c257fcba9cfffab64108a73a6">More...</a><br /></td></tr>
+<tr class="separator:a5cf9120c257fcba9cfffab64108a73a6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a424d0d660b52e78b798fcf07cc1d962b"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1IPerlin.html#a424d0d660b52e78b798fcf07cc1d962b">_dotGridGradient</a> (const int &amp;ix, const int &amp;iy, const float &amp;x, const float &amp;y) const</td></tr>
+<tr class="memdesc:a424d0d660b52e78b798fcf07cc1d962b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the dot product of the grid's gradient vector and the distance vector in 2D space.  <a href="classspk_1_1IPerlin.html#a424d0d660b52e78b798fcf07cc1d962b">More...</a><br /></td></tr>
+<tr class="separator:a424d0d660b52e78b798fcf07cc1d962b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa937568477a45c6f1b1ff020cb9b2c95"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1IPerlin.html#aa937568477a45c6f1b1ff020cb9b2c95">_dotGridGradient</a> (const int &amp;ix, const float &amp;x) const</td></tr>
+<tr class="memdesc:aa937568477a45c6f1b1ff020cb9b2c95"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the dot product of the grid's gradient vector and the distance vector in 1D space.  <a href="classspk_1_1IPerlin.html#aa937568477a45c6f1b1ff020cb9b2c95">More...</a><br /></td></tr>
+<tr class="separator:aa937568477a45c6f1b1ff020cb9b2c95"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5252dcbf6a7abd2b7ec465b563e5b936"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1IPerlin.html#a5252dcbf6a7abd2b7ec465b563e5b936">_interpolate</a> (const float &amp;a0, const float &amp;a1, const float &amp;w) const</td></tr>
+<tr class="memdesc:a5252dcbf6a7abd2b7ec465b563e5b936"><td class="mdescLeft">&#160;</td><td class="mdescRight">Interpolates between two values based on a weight.  <a href="classspk_1_1IPerlin.html#a5252dcbf6a7abd2b7ec465b563e5b936">More...</a><br /></td></tr>
+<tr class="separator:a5252dcbf6a7abd2b7ec465b563e5b936"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa9f4c795ec417c1639eafbc26ac55c74"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1IPerlin.html#aa9f4c795ec417c1639eafbc26ac55c74">_calcRatio</a> (const float &amp;w) const</td></tr>
+<tr class="memdesc:aa9f4c795ec417c1639eafbc26ac55c74"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the smoothing ratio for a given weight.  <a href="classspk_1_1IPerlin.html#aa9f4c795ec417c1639eafbc26ac55c74">More...</a><br /></td></tr>
+<tr class="separator:aa9f4c795ec417c1639eafbc26ac55c74"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Provides a flexible implementation of Perlin noise generation, suitable for various procedural content generation tasks. </p>
@@ -224,6 +246,315 @@ Public Member Functions</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="aa9f4c795ec417c1639eafbc26ac55c74"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa9f4c795ec417c1639eafbc26ac55c74">&#9670;&nbsp;</a></span>_calcRatio()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">float spk::IPerlin::_calcRatio </td>
+          <td>(</td>
+          <td class="paramtype">const float &amp;&#160;</td>
+          <td class="paramname"><em>w</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Calculates the smoothing ratio for a given weight. </p>
+<p>This function calculates a smoothing ratio for the interpolation, enhancing the visual continuity and smoothness of the noise. It applies a smoothstep function (or similar) to the weight, which adjusts the transition between noise values, improving the natural appearance of the noise.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">w</td><td>The weight value, typically between 0 and 1, used to compute the smoothing ratio. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The calculated smoothing ratio, influencing the smoothness of the noise transition. </dd></dl>
+
+</div>
+</div>
+<a id="aa937568477a45c6f1b1ff020cb9b2c95"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa937568477a45c6f1b1ff020cb9b2c95">&#9670;&nbsp;</a></span>_dotGridGradient() <span class="overload">[1/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">float spk::IPerlin::_dotGridGradient </td>
+          <td>(</td>
+          <td class="paramtype">const int &amp;&#160;</td>
+          <td class="paramname"><em>ix</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const float &amp;&#160;</td>
+          <td class="paramname"><em>x</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Calculates the dot product of the grid's gradient vector and the distance vector in 1D space. </p>
+<p>This function is essential for generating 1D Perlin noise, where it computes the dot product between the gradient vector at a grid point in 1D and the distance to the sample point. It facilitates the interpolation of noise values, integral to the Perlin noise effect.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">ix</td><td>The coordinate of the grid point. </td></tr>
+    <tr><td class="paramname">x</td><td>The coordinate of the sample point. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The dot product result, used in the 1D noise value calculation. </dd></dl>
+
+</div>
+</div>
+<a id="a424d0d660b52e78b798fcf07cc1d962b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a424d0d660b52e78b798fcf07cc1d962b">&#9670;&nbsp;</a></span>_dotGridGradient() <span class="overload">[2/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">float spk::IPerlin::_dotGridGradient </td>
+          <td>(</td>
+          <td class="paramtype">const int &amp;&#160;</td>
+          <td class="paramname"><em>ix</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const int &amp;&#160;</td>
+          <td class="paramname"><em>iy</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const float &amp;&#160;</td>
+          <td class="paramname"><em>x</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const float &amp;&#160;</td>
+          <td class="paramname"><em>y</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Calculates the dot product of the grid's gradient vector and the distance vector in 2D space. </p>
+<p>Similar to its 3D counterpart, this function is crucial for generating 2D Perlin noise. It calculates the dot product between the gradient vector at a 2D grid point and the distance vector to the sample point, aiding in the interpolation and generation of noise values.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">ix</td><td>The x-coordinate of the grid point. </td></tr>
+    <tr><td class="paramname">iy</td><td>The y-coordinate of the grid point. </td></tr>
+    <tr><td class="paramname">x</td><td>The x-coordinate of the sample point. </td></tr>
+    <tr><td class="paramname">y</td><td>The y-coordinate of the sample point. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The dot product result, used in the 2D noise value calculation. </dd></dl>
+
+</div>
+</div>
+<a id="a5cf9120c257fcba9cfffab64108a73a6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5cf9120c257fcba9cfffab64108a73a6">&#9670;&nbsp;</a></span>_dotGridGradient() <span class="overload">[3/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">float spk::IPerlin::_dotGridGradient </td>
+          <td>(</td>
+          <td class="paramtype">const int &amp;&#160;</td>
+          <td class="paramname"><em>ix</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const int &amp;&#160;</td>
+          <td class="paramname"><em>iy</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const int &amp;&#160;</td>
+          <td class="paramname"><em>iz</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const float &amp;&#160;</td>
+          <td class="paramname"><em>x</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const float &amp;&#160;</td>
+          <td class="paramname"><em>y</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const float &amp;&#160;</td>
+          <td class="paramname"><em>z</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Calculates the dot product of the grid's gradient vector and the distance vector in 3D space. </p>
+<p>This function is pivotal in generating 3D Perlin noise, where it computes the dot product between the gradient vector at a grid point and the vector from that grid point to the sample point. This calculation is essential for interpolating the noise values and producing the characteristic Perlin noise effect.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">ix</td><td>The x-coordinate of the grid point. </td></tr>
+    <tr><td class="paramname">iy</td><td>The y-coordinate of the grid point. </td></tr>
+    <tr><td class="paramname">iz</td><td>The z-coordinate of the grid point. </td></tr>
+    <tr><td class="paramname">x</td><td>The x-coordinate of the sample point. </td></tr>
+    <tr><td class="paramname">y</td><td>The y-coordinate of the sample point. </td></tr>
+    <tr><td class="paramname">z</td><td>The z-coordinate of the sample point. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The dot product result, contributing to the noise value calculation. </dd></dl>
+
+</div>
+</div>
+<a id="a3a61855833853da28efedccfeb3011b9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3a61855833853da28efedccfeb3011b9">&#9670;&nbsp;</a></span>_executeSample()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">float spk::IPerlin::_executeSample </td>
+          <td>(</td>
+          <td class="paramtype">const std::function&lt; float(const float &amp;p_frequency)&gt; &amp;&#160;</td>
+          <td class="paramname"><em>p_lambda</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Executes the sampling process for generating Perlin noise. </p>
+<p>This function is a core component of the Perlin noise generation process, orchestrating the sampling based on the provided lambda function. It allows for a flexible implementation by accepting a lambda function that dictates the specific sampling behavior, facilitating the adaptation of the sampling process to different contexts and noise characteristics.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_lambda</td><td>A lambda function that takes a frequency and returns a float, defining the sampling behavior for the noise generation. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The resulting noise value from the executed sampling process. </dd></dl>
+
+</div>
+</div>
+<a id="a5252dcbf6a7abd2b7ec465b563e5b936"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5252dcbf6a7abd2b7ec465b563e5b936">&#9670;&nbsp;</a></span>_interpolate()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">float spk::IPerlin::_interpolate </td>
+          <td>(</td>
+          <td class="paramtype">const float &amp;&#160;</td>
+          <td class="paramname"><em>a0</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const float &amp;&#160;</td>
+          <td class="paramname"><em>a1</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const float &amp;&#160;</td>
+          <td class="paramname"><em>w</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Interpolates between two values based on a weight. </p>
+<p>This function performs the interpolation between two values (a0 and a1) based on a weight (w), which dictates the proportion of each value in the final result. This interpolation is fundamental in blending noise values smoothly across the noise field.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">a0</td><td>The first value to interpolate. </td></tr>
+    <tr><td class="paramname">a1</td><td>The second value to interpolate. </td></tr>
+    <tr><td class="paramname">w</td><td>The weight influencing the interpolation, typically a value between 0 and 1. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The interpolated value between a0 and a1. </dd></dl>
+
+</div>
+</div>
 <a id="a7268feb497838e252be7e562e55bc91c"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a7268feb497838e252be7e562e55bc91c">&#9670;&nbsp;</a></span>configureFrequency()</h2>
 

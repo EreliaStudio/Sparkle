@@ -85,6 +85,9 @@ Public Types</h2></td></tr>
 <tr class="memitem:a41b4d948b50b4d497cc2884fbf138842"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Pool.html#a41b4d948b50b4d497cc2884fbf138842">Allocator</a> = typename std::function&lt; TType *(void)&gt;</td></tr>
 <tr class="memdesc:a41b4d948b50b4d497cc2884fbf138842"><td class="mdescLeft">&#160;</td><td class="mdescRight">Type alias for the allocator function.  <a href="classspk_1_1Pool.html#a41b4d948b50b4d497cc2884fbf138842">More...</a><br /></td></tr>
 <tr class="separator:a41b4d948b50b4d497cc2884fbf138842"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8834efbd92cb3bae42aa670b017ee103"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Pool.html#a8834efbd92cb3bae42aa670b017ee103">Cleaner</a> = typename std::function&lt; void(TType &amp;)&gt;</td></tr>
+<tr class="memdesc:a8834efbd92cb3bae42aa670b017ee103"><td class="mdescLeft">&#160;</td><td class="mdescRight">Type alias for the cleaner function.  <a href="classspk_1_1Pool.html#a8834efbd92cb3bae42aa670b017ee103">More...</a><br /></td></tr>
+<tr class="separator:a8834efbd92cb3bae42aa670b017ee103"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afa3f9e3c9a02338b938ce468ac85ea51"><td class="memItemLeft" align="right" valign="top"><a id="afa3f9e3c9a02338b938ce468ac85ea51"></a>
 using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Pool.html#afa3f9e3c9a02338b938ce468ac85ea51">Object</a> = typename std::unique_ptr&lt; TType, Destructor &gt;</td></tr>
 <tr class="memdesc:afa3f9e3c9a02338b938ce468ac85ea51"><td class="mdescLeft">&#160;</td><td class="mdescRight">Describe the type of the provided object given by the pool uppon request. <br /></td></tr>
@@ -92,12 +95,15 @@ using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:ae7adb92f0ef2a0a5e32d6dccb7351fcc"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Pool.html#ae7adb92f0ef2a0a5e32d6dccb7351fcc">Pool</a> (const <a class="el" href="classspk_1_1Pool.html#a41b4d948b50b4d497cc2884fbf138842">Allocator</a> &amp;p_allocator=[](){return(new TType());})</td></tr>
-<tr class="memdesc:ae7adb92f0ef2a0a5e32d6dccb7351fcc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor.  <a href="classspk_1_1Pool.html#ae7adb92f0ef2a0a5e32d6dccb7351fcc">More...</a><br /></td></tr>
-<tr class="separator:ae7adb92f0ef2a0a5e32d6dccb7351fcc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adb0e752e72f6e33704b50b88398c31a6"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Pool.html#adb0e752e72f6e33704b50b88398c31a6">Pool</a> (const <a class="el" href="classspk_1_1Pool.html#a41b4d948b50b4d497cc2884fbf138842">Allocator</a> &amp;p_allocator, const <a class="el" href="classspk_1_1Pool.html#a8834efbd92cb3bae42aa670b017ee103">Cleaner</a> &amp;p_cleaner)</td></tr>
+<tr class="memdesc:adb0e752e72f6e33704b50b88398c31a6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor.  <a href="classspk_1_1Pool.html#adb0e752e72f6e33704b50b88398c31a6">More...</a><br /></td></tr>
+<tr class="separator:adb0e752e72f6e33704b50b88398c31a6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2206a6cc4953e486d22a1d433fff720e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Pool.html#a2206a6cc4953e486d22a1d433fff720e">editAllocator</a> (const <a class="el" href="classspk_1_1Pool.html#a41b4d948b50b4d497cc2884fbf138842">Allocator</a> &amp;p_allocator)</td></tr>
 <tr class="memdesc:a2206a6cc4953e486d22a1d433fff720e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Edits the allocator used by the pool.  <a href="classspk_1_1Pool.html#a2206a6cc4953e486d22a1d433fff720e">More...</a><br /></td></tr>
 <tr class="separator:a2206a6cc4953e486d22a1d433fff720e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a37043d6cfc9dce43a03873b2d92a8ab7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Pool.html#a37043d6cfc9dce43a03873b2d92a8ab7">editCleaner</a> (const <a class="el" href="classspk_1_1Pool.html#a8834efbd92cb3bae42aa670b017ee103">Cleaner</a> &amp;p_cleaner)</td></tr>
+<tr class="memdesc:a37043d6cfc9dce43a03873b2d92a8ab7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Edits the cleaner used by the pool.  <a href="classspk_1_1Pool.html#a37043d6cfc9dce43a03873b2d92a8ab7">More...</a><br /></td></tr>
+<tr class="separator:a37043d6cfc9dce43a03873b2d92a8ab7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7a478fdc76b628a025ddf31e25871d76"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Pool.html#a7a478fdc76b628a025ddf31e25871d76">allocate</a> ()</td></tr>
 <tr class="memdesc:a7a478fdc76b628a025ddf31e25871d76"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocates a new object and adds it to the pool.  <a href="classspk_1_1Pool.html#a7a478fdc76b628a025ddf31e25871d76">More...</a><br /></td></tr>
 <tr class="separator:a7a478fdc76b628a025ddf31e25871d76"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -130,7 +136,7 @@ class spk::Pool&lt; TType &gt;</h3>
 <div class="line"><a class="code" href="classspk_1_1Pool.html#afa3f9e3c9a02338b938ce468ac85ea51">spk::Pool&lt;MyClass&gt;::Object</a> myObject = myPool.obtain(); <span class="comment">// Obtain an object from the pool</span></div>
 <div class="line"><span class="comment">// Use myObject as needed; it will be automatically returned to the pool once out of scope</span></div>
 <div class="ttc" id="aclassspk_1_1Pool_html"><div class="ttname"><a href="classspk_1_1Pool.html">spk::Pool</a></div><div class="ttdoc">A template class for managing a pool of reusable objects of type TType.</div><div class="ttdef"><b>Definition:</b> spk_pool.hpp:39</div></div>
-<div class="ttc" id="aclassspk_1_1Pool_html_afa3f9e3c9a02338b938ce468ac85ea51"><div class="ttname"><a href="classspk_1_1Pool.html#afa3f9e3c9a02338b938ce468ac85ea51">spk::Pool::Object</a></div><div class="ttdeci">typename std::unique_ptr&lt; TType, Destructor &gt; Object</div><div class="ttdoc">Describe the type of the provided object given by the pool uppon request.</div><div class="ttdef"><b>Definition:</b> spk_pool.hpp:58</div></div>
+<div class="ttc" id="aclassspk_1_1Pool_html_afa3f9e3c9a02338b938ce468ac85ea51"><div class="ttname"><a href="classspk_1_1Pool.html#afa3f9e3c9a02338b938ce468ac85ea51">spk::Pool::Object</a></div><div class="ttdeci">typename std::unique_ptr&lt; TType, Destructor &gt; Object</div><div class="ttdoc">Describe the type of the provided object given by the pool uppon request.</div><div class="ttdef"><b>Definition:</b> spk_pool.hpp:68</div></div>
 </div><!-- fragment --> </div><h2 class="groupheader">Member Typedef Documentation</h2>
 <a id="a41b4d948b50b4d497cc2884fbf138842"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a41b4d948b50b4d497cc2884fbf138842">&#9670;&nbsp;</a></span>Allocator</h2>
@@ -151,9 +157,28 @@ template&lt;typename TType &gt; </div>
 
 </div>
 </div>
+<a id="a8834efbd92cb3bae42aa670b017ee103"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8834efbd92cb3bae42aa670b017ee103">&#9670;&nbsp;</a></span>Cleaner</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename TType &gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="classspk_1_1Pool.html">spk::Pool</a>&lt; TType &gt;::<a class="el" href="classspk_1_1Pool.html#a8834efbd92cb3bae42aa670b017ee103">Cleaner</a> =  typename std::function&lt;void(TType&amp;)&gt;</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Type alias for the cleaner function. </p>
+<p>Defines an cleaner function type that is used when the user require an element of the pool. This function allows for custom reset logic to be provided when returning an objects managed by the pool. It should return nothing and should get a reference to the object to "clean". </p>
+
+</div>
+</div>
 <h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="ae7adb92f0ef2a0a5e32d6dccb7351fcc"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae7adb92f0ef2a0a5e32d6dccb7351fcc">&#9670;&nbsp;</a></span>Pool()</h2>
+<a id="adb0e752e72f6e33704b50b88398c31a6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adb0e752e72f6e33704b50b88398c31a6">&#9670;&nbsp;</a></span>Pool()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -167,8 +192,18 @@ template&lt;typename TType &gt; </div>
           <td class="memname"><a class="el" href="classspk_1_1Pool.html">spk::Pool</a>&lt; TType &gt;::<a class="el" href="classspk_1_1Pool.html">Pool</a> </td>
           <td>(</td>
           <td class="paramtype">const <a class="el" href="classspk_1_1Pool.html#a41b4d948b50b4d497cc2884fbf138842">Allocator</a> &amp;&#160;</td>
-          <td class="paramname"><em>p_allocator</em> = <code>[](){return&#160;(new&#160;TType());}</code></td><td>)</td>
+          <td class="paramname"><em>p_allocator</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">const <a class="el" href="classspk_1_1Pool.html#a8834efbd92cb3bae42aa670b017ee103">Cleaner</a> &amp;&#160;</td>
+          <td class="paramname"><em>p_cleaner</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
         </tr>
       </table>
   </td>
@@ -182,7 +217,8 @@ template&lt;typename TType &gt; </div>
 <p>Initializes a new instance of the <a class="el" href="classspk_1_1Pool.html" title="A template class for managing a pool of reusable objects of type TType.">Pool</a> class with a specified allocator.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">p_allocator</td><td>The initial allocator of the pool. Defaults to simply allocated a new TType. </td></tr>
+    <tr><td class="paramname">p_allocator</td><td>The initial allocator of the pool. </td></tr>
+    <tr><td class="paramname">p_cleaner</td><td>The initial cleaner of the pool. Called before returning an element from the pool, to "reset" it to value specified by user. </td></tr>
   </table>
   </dd>
 </dl>
@@ -251,6 +287,43 @@ template&lt;typename TType &gt; </div>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">p_allocator</td><td>The new allocator function to use for object creation. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a37043d6cfc9dce43a03873b2d92a8ab7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a37043d6cfc9dce43a03873b2d92a8ab7">&#9670;&nbsp;</a></span>editCleaner()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename TType &gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void <a class="el" href="classspk_1_1Pool.html">spk::Pool</a>&lt; TType &gt;::editCleaner </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="classspk_1_1Pool.html#a8834efbd92cb3bae42aa670b017ee103">Cleaner</a> &amp;&#160;</td>
+          <td class="paramname"><em>p_cleaner</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Edits the cleaner used by the pool. </p>
+<p>Allows for the modification of the cleaner function after the pool has been created. This can be useful for changing the logic used to provide a "fresh" object to the user.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_cleaner</td><td>The new cleaner function to before giving an object to user. </td></tr>
   </table>
   </dd>
 </dl>

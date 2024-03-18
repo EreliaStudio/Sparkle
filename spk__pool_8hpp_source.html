@@ -85,81 +85,100 @@ $(function() {
 <div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;    <span class="keyword">public</span>:</div>
 <div class="line"><a name="l00049"></a><span class="lineno"><a class="line" href="classspk_1_1Pool.html#a41b4d948b50b4d497cc2884fbf138842">   49</a></span>&#160;        <span class="keyword">using</span> <a class="code" href="classspk_1_1Pool.html#a41b4d948b50b4d497cc2884fbf138842">Allocator</a> = <span class="keyword">typename</span> std::function&lt;TType*(void)&gt;;</div>
 <div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160; </div>
-<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;    <span class="keyword">private</span>:    </div>
-<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;        <span class="keyword">using</span> Destructor = <span class="keyword">typename</span> std::function&lt;void(TType* p_toReturn)&gt;;</div>
-<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;    </div>
-<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;    <span class="keyword">public</span>:</div>
-<div class="line"><a name="l00058"></a><span class="lineno"><a class="line" href="classspk_1_1Pool.html#afa3f9e3c9a02338b938ce468ac85ea51">   58</a></span>&#160;        <span class="keyword">using</span> <a class="code" href="classspk_1_1Pool.html#afa3f9e3c9a02338b938ce468ac85ea51">Object</a> = <span class="keyword">typename</span> std::unique_ptr&lt;TType, Destructor&gt;;</div>
-<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160; </div>
-<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;    <span class="keyword">private</span>:</div>
-<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;        std::recursive_mutex _mutex;</div>
-<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;        <a class="code" href="classspk_1_1Pool.html#a41b4d948b50b4d497cc2884fbf138842">Allocator</a> _allocator;</div>
-<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;        std::deque&lt;std::unique_ptr&lt;TType&gt;&gt; _preallocatedElements;</div>
-<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160; </div>
-<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;        <span class="keyword">const</span> Destructor _destructorLambda = [&amp;](TType* p_toReturn){ _insert(p_toReturn); };</div>
-<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160; </div>
-<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;        <span class="keywordtype">void</span> _insert(TType* p_toReturn)</div>
-<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;        {</div>
-<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;            std::lock_guard&lt;std::recursive_mutex&gt; lock(_mutex);</div>
-<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;            _preallocatedElements.push_back(std::unique_ptr&lt;TType&gt;(p_toReturn));</div>
-<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;        }</div>
-<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160; </div>
-<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;    <span class="keyword">public</span>:</div>
-<div class="line"><a name="l00081"></a><span class="lineno"><a class="line" href="classspk_1_1Pool.html#ae7adb92f0ef2a0a5e32d6dccb7351fcc">   81</a></span>&#160;        <a class="code" href="classspk_1_1Pool.html#ae7adb92f0ef2a0a5e32d6dccb7351fcc">Pool</a>(<span class="keyword">const</span> <a class="code" href="classspk_1_1Pool.html#a41b4d948b50b4d497cc2884fbf138842">Allocator</a>&amp; p_allocator = [](){<span class="keywordflow">return</span> (<span class="keyword">new</span> TType());}) :</div>
-<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;            _allocator(p_allocator)</div>
-<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;        {</div>
-<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;            </div>
-<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;        }</div>
-<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160; </div>
-<div class="line"><a name="l00097"></a><span class="lineno"><a class="line" href="classspk_1_1Pool.html#a2206a6cc4953e486d22a1d433fff720e">   97</a></span>&#160;        <span class="keywordtype">void</span> <a class="code" href="classspk_1_1Pool.html#a2206a6cc4953e486d22a1d433fff720e">editAllocator</a>(<span class="keyword">const</span> <a class="code" href="classspk_1_1Pool.html#a41b4d948b50b4d497cc2884fbf138842">Allocator</a>&amp; p_allocator)</div>
-<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160;        {   </div>
-<div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160;            _allocator = p_allocator;</div>
-<div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160;        }</div>
-<div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160; </div>
-<div class="line"><a name="l00109"></a><span class="lineno"><a class="line" href="classspk_1_1Pool.html#a7a478fdc76b628a025ddf31e25871d76">  109</a></span>&#160;        <span class="keywordtype">void</span> <a class="code" href="classspk_1_1Pool.html#a7a478fdc76b628a025ddf31e25871d76">allocate</a>()</div>
-<div class="line"><a name="l00110"></a><span class="lineno">  110</span>&#160;        {</div>
-<div class="line"><a name="l00111"></a><span class="lineno">  111</span>&#160;            _insert(_allocator());</div>
-<div class="line"><a name="l00112"></a><span class="lineno">  112</span>&#160;        }</div>
-<div class="line"><a name="l00113"></a><span class="lineno">  113</span>&#160; </div>
-<div class="line"><a name="l00121"></a><span class="lineno"><a class="line" href="classspk_1_1Pool.html#ac584858b3175a8feb8cc778542e216c3">  121</a></span>&#160;        <span class="keywordtype">size_t</span> <a class="code" href="classspk_1_1Pool.html#ac584858b3175a8feb8cc778542e216c3">size</a>()<span class="keyword"> const</span></div>
-<div class="line"><a name="l00122"></a><span class="lineno">  122</span>&#160;<span class="keyword">        </span>{</div>
-<div class="line"><a name="l00123"></a><span class="lineno">  123</span>&#160;            <span class="keywordflow">return</span> (_preallocatedElements.size());</div>
-<div class="line"><a name="l00124"></a><span class="lineno">  124</span>&#160;        }</div>
-<div class="line"><a name="l00125"></a><span class="lineno">  125</span>&#160; </div>
-<div class="line"><a name="l00135"></a><span class="lineno"><a class="line" href="classspk_1_1Pool.html#a3ea29c0caff3a8a4c5b059ad6ad85ce9">  135</a></span>&#160;        <span class="keywordtype">void</span> <a class="code" href="classspk_1_1Pool.html#a3ea29c0caff3a8a4c5b059ad6ad85ce9">resize</a>(<span class="keywordtype">size_t</span> p_newSize)</div>
-<div class="line"><a name="l00136"></a><span class="lineno">  136</span>&#160;        {</div>
-<div class="line"><a name="l00137"></a><span class="lineno">  137</span>&#160;            std::lock_guard&lt;std::recursive_mutex&gt; lock(_mutex);</div>
-<div class="line"><a name="l00138"></a><span class="lineno">  138</span>&#160; </div>
-<div class="line"><a name="l00139"></a><span class="lineno">  139</span>&#160;            <span class="keywordflow">while</span> (_preallocatedElements.size() &lt; p_newSize)</div>
-<div class="line"><a name="l00140"></a><span class="lineno">  140</span>&#160;                _insert(_allocator());</div>
-<div class="line"><a name="l00141"></a><span class="lineno">  141</span>&#160;        }</div>
-<div class="line"><a name="l00142"></a><span class="lineno">  142</span>&#160; </div>
-<div class="line"><a name="l00152"></a><span class="lineno"><a class="line" href="classspk_1_1Pool.html#a7fa22297beb2a3709b2d65c1d272f20e">  152</a></span>&#160;        <a class="code" href="classspk_1_1Pool.html#afa3f9e3c9a02338b938ce468ac85ea51">Object</a> <a class="code" href="classspk_1_1Pool.html#a7fa22297beb2a3709b2d65c1d272f20e">obtain</a>()</div>
-<div class="line"><a name="l00153"></a><span class="lineno">  153</span>&#160;        {</div>
-<div class="line"><a name="l00154"></a><span class="lineno">  154</span>&#160;            std::lock_guard&lt;std::recursive_mutex&gt; lock(_mutex);</div>
-<div class="line"><a name="l00155"></a><span class="lineno">  155</span>&#160;            </div>
-<div class="line"><a name="l00156"></a><span class="lineno">  156</span>&#160;            <span class="keywordflow">if</span> (_preallocatedElements.empty())</div>
-<div class="line"><a name="l00157"></a><span class="lineno">  157</span>&#160;            {</div>
-<div class="line"><a name="l00158"></a><span class="lineno">  158</span>&#160;                _insert(_allocator());</div>
-<div class="line"><a name="l00159"></a><span class="lineno">  159</span>&#160;            }</div>
-<div class="line"><a name="l00160"></a><span class="lineno">  160</span>&#160; </div>
-<div class="line"><a name="l00161"></a><span class="lineno">  161</span>&#160;            <a class="code" href="classspk_1_1Pool.html#afa3f9e3c9a02338b938ce468ac85ea51">Object</a> item(_preallocatedElements.front().release(), _destructorLambda);</div>
-<div class="line"><a name="l00162"></a><span class="lineno">  162</span>&#160; </div>
-<div class="line"><a name="l00163"></a><span class="lineno">  163</span>&#160;            _preallocatedElements.pop_front();</div>
-<div class="line"><a name="l00164"></a><span class="lineno">  164</span>&#160; </div>
-<div class="line"><a name="l00165"></a><span class="lineno">  165</span>&#160;            <span class="keywordflow">return</span> (std::move(item));</div>
-<div class="line"><a name="l00166"></a><span class="lineno">  166</span>&#160;        }</div>
-<div class="line"><a name="l00167"></a><span class="lineno">  167</span>&#160;    };</div>
-<div class="line"><a name="l00168"></a><span class="lineno">  168</span>&#160;}</div>
+<div class="line"><a name="l00059"></a><span class="lineno"><a class="line" href="classspk_1_1Pool.html#a8834efbd92cb3bae42aa670b017ee103">   59</a></span>&#160;        <span class="keyword">using</span> <a class="code" href="classspk_1_1Pool.html#a8834efbd92cb3bae42aa670b017ee103">Cleaner</a> = <span class="keyword">typename</span> std::function&lt;void(TType&amp;)&gt;;</div>
+<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160; </div>
+<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;    <span class="keyword">private</span>:    </div>
+<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;        <span class="keyword">using</span> Destructor = <span class="keyword">typename</span> std::function&lt;void(TType* p_toReturn)&gt;;</div>
+<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;    </div>
+<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;    <span class="keyword">public</span>:</div>
+<div class="line"><a name="l00068"></a><span class="lineno"><a class="line" href="classspk_1_1Pool.html#afa3f9e3c9a02338b938ce468ac85ea51">   68</a></span>&#160;        <span class="keyword">using</span> <a class="code" href="classspk_1_1Pool.html#afa3f9e3c9a02338b938ce468ac85ea51">Object</a> = <span class="keyword">typename</span> std::unique_ptr&lt;TType, Destructor&gt;;</div>
+<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160; </div>
+<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;    <span class="keyword">private</span>:</div>
+<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;        std::recursive_mutex _mutex;</div>
+<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;        <a class="code" href="classspk_1_1Pool.html#a41b4d948b50b4d497cc2884fbf138842">Allocator</a> _allocator;</div>
+<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;        <a class="code" href="classspk_1_1Pool.html#a8834efbd92cb3bae42aa670b017ee103">Cleaner</a> _cleaner;</div>
+<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;        std::deque&lt;std::unique_ptr&lt;TType&gt;&gt; _preallocatedElements;</div>
+<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160; </div>
+<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;        <span class="keyword">const</span> Destructor _destructorLambda = [&amp;](TType* p_toReturn){ _insert(p_toReturn); };</div>
+<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160; </div>
+<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;        <span class="keywordtype">void</span> _insert(TType* p_toReturn)</div>
+<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;        {</div>
+<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;            std::lock_guard&lt;std::recursive_mutex&gt; lock(_mutex);</div>
+<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;            _preallocatedElements.push_back(std::unique_ptr&lt;TType&gt;(p_toReturn));</div>
+<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;        }</div>
+<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160; </div>
+<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;    <span class="keyword">public</span>:</div>
+<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;        Pool() :</div>
+<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;            _allocator([](){<span class="keywordflow">return</span> (<span class="keyword">new</span> TType());}),</div>
+<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;            _cleaner([](TType&amp; toClean){})</div>
+<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;        {</div>
+<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;            </div>
+<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;        }</div>
+<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160; </div>
+<div class="line"><a name="l00100"></a><span class="lineno"><a class="line" href="classspk_1_1Pool.html#adb0e752e72f6e33704b50b88398c31a6">  100</a></span>&#160;        <a class="code" href="classspk_1_1Pool.html#adb0e752e72f6e33704b50b88398c31a6">Pool</a>(<span class="keyword">const</span> <a class="code" href="classspk_1_1Pool.html#a41b4d948b50b4d497cc2884fbf138842">Allocator</a>&amp; p_allocator, <span class="keyword">const</span> <a class="code" href="classspk_1_1Pool.html#a8834efbd92cb3bae42aa670b017ee103">Cleaner</a>&amp; p_cleaner) :</div>
+<div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160;            _allocator(p_allocator),</div>
+<div class="line"><a name="l00102"></a><span class="lineno">  102</span>&#160;            _cleaner(p_cleaner)</div>
+<div class="line"><a name="l00103"></a><span class="lineno">  103</span>&#160;        {</div>
+<div class="line"><a name="l00104"></a><span class="lineno">  104</span>&#160;            </div>
+<div class="line"><a name="l00105"></a><span class="lineno">  105</span>&#160;        }</div>
+<div class="line"><a name="l00106"></a><span class="lineno">  106</span>&#160; </div>
+<div class="line"><a name="l00117"></a><span class="lineno"><a class="line" href="classspk_1_1Pool.html#a2206a6cc4953e486d22a1d433fff720e">  117</a></span>&#160;        <span class="keywordtype">void</span> <a class="code" href="classspk_1_1Pool.html#a2206a6cc4953e486d22a1d433fff720e">editAllocator</a>(<span class="keyword">const</span> <a class="code" href="classspk_1_1Pool.html#a41b4d948b50b4d497cc2884fbf138842">Allocator</a>&amp; p_allocator)</div>
+<div class="line"><a name="l00118"></a><span class="lineno">  118</span>&#160;        {   </div>
+<div class="line"><a name="l00119"></a><span class="lineno">  119</span>&#160;            _allocator = p_allocator;</div>
+<div class="line"><a name="l00120"></a><span class="lineno">  120</span>&#160;        }</div>
+<div class="line"><a name="l00121"></a><span class="lineno">  121</span>&#160; </div>
+<div class="line"><a name="l00131"></a><span class="lineno"><a class="line" href="classspk_1_1Pool.html#a37043d6cfc9dce43a03873b2d92a8ab7">  131</a></span>&#160;        <span class="keywordtype">void</span> <a class="code" href="classspk_1_1Pool.html#a37043d6cfc9dce43a03873b2d92a8ab7">editCleaner</a>(<span class="keyword">const</span> <a class="code" href="classspk_1_1Pool.html#a8834efbd92cb3bae42aa670b017ee103">Cleaner</a>&amp; p_cleaner)</div>
+<div class="line"><a name="l00132"></a><span class="lineno">  132</span>&#160;        {   </div>
+<div class="line"><a name="l00133"></a><span class="lineno">  133</span>&#160;            _cleaner = p_cleaner;</div>
+<div class="line"><a name="l00134"></a><span class="lineno">  134</span>&#160;        }</div>
+<div class="line"><a name="l00135"></a><span class="lineno">  135</span>&#160; </div>
+<div class="line"><a name="l00143"></a><span class="lineno"><a class="line" href="classspk_1_1Pool.html#a7a478fdc76b628a025ddf31e25871d76">  143</a></span>&#160;        <span class="keywordtype">void</span> <a class="code" href="classspk_1_1Pool.html#a7a478fdc76b628a025ddf31e25871d76">allocate</a>()</div>
+<div class="line"><a name="l00144"></a><span class="lineno">  144</span>&#160;        {</div>
+<div class="line"><a name="l00145"></a><span class="lineno">  145</span>&#160;            _insert(_allocator());</div>
+<div class="line"><a name="l00146"></a><span class="lineno">  146</span>&#160;        }</div>
+<div class="line"><a name="l00147"></a><span class="lineno">  147</span>&#160; </div>
+<div class="line"><a name="l00155"></a><span class="lineno"><a class="line" href="classspk_1_1Pool.html#ac584858b3175a8feb8cc778542e216c3">  155</a></span>&#160;        <span class="keywordtype">size_t</span> <a class="code" href="classspk_1_1Pool.html#ac584858b3175a8feb8cc778542e216c3">size</a>()<span class="keyword"> const</span></div>
+<div class="line"><a name="l00156"></a><span class="lineno">  156</span>&#160;<span class="keyword">        </span>{</div>
+<div class="line"><a name="l00157"></a><span class="lineno">  157</span>&#160;            <span class="keywordflow">return</span> (_preallocatedElements.size());</div>
+<div class="line"><a name="l00158"></a><span class="lineno">  158</span>&#160;        }</div>
+<div class="line"><a name="l00159"></a><span class="lineno">  159</span>&#160; </div>
+<div class="line"><a name="l00169"></a><span class="lineno"><a class="line" href="classspk_1_1Pool.html#a3ea29c0caff3a8a4c5b059ad6ad85ce9">  169</a></span>&#160;        <span class="keywordtype">void</span> <a class="code" href="classspk_1_1Pool.html#a3ea29c0caff3a8a4c5b059ad6ad85ce9">resize</a>(<span class="keywordtype">size_t</span> p_newSize)</div>
+<div class="line"><a name="l00170"></a><span class="lineno">  170</span>&#160;        {</div>
+<div class="line"><a name="l00171"></a><span class="lineno">  171</span>&#160;            std::lock_guard&lt;std::recursive_mutex&gt; lock(_mutex);</div>
+<div class="line"><a name="l00172"></a><span class="lineno">  172</span>&#160; </div>
+<div class="line"><a name="l00173"></a><span class="lineno">  173</span>&#160;            <span class="keywordflow">while</span> (_preallocatedElements.size() &lt; p_newSize)</div>
+<div class="line"><a name="l00174"></a><span class="lineno">  174</span>&#160;                _insert(_allocator());</div>
+<div class="line"><a name="l00175"></a><span class="lineno">  175</span>&#160;        }</div>
+<div class="line"><a name="l00176"></a><span class="lineno">  176</span>&#160; </div>
+<div class="line"><a name="l00186"></a><span class="lineno"><a class="line" href="classspk_1_1Pool.html#a7fa22297beb2a3709b2d65c1d272f20e">  186</a></span>&#160;        <a class="code" href="classspk_1_1Pool.html#afa3f9e3c9a02338b938ce468ac85ea51">Object</a> <a class="code" href="classspk_1_1Pool.html#a7fa22297beb2a3709b2d65c1d272f20e">obtain</a>()</div>
+<div class="line"><a name="l00187"></a><span class="lineno">  187</span>&#160;        {</div>
+<div class="line"><a name="l00188"></a><span class="lineno">  188</span>&#160;            std::lock_guard&lt;std::recursive_mutex&gt; lock(_mutex);</div>
+<div class="line"><a name="l00189"></a><span class="lineno">  189</span>&#160;            </div>
+<div class="line"><a name="l00190"></a><span class="lineno">  190</span>&#160;            <span class="keywordflow">if</span> (_preallocatedElements.empty())</div>
+<div class="line"><a name="l00191"></a><span class="lineno">  191</span>&#160;            {</div>
+<div class="line"><a name="l00192"></a><span class="lineno">  192</span>&#160;                _insert(_allocator());</div>
+<div class="line"><a name="l00193"></a><span class="lineno">  193</span>&#160;            }</div>
+<div class="line"><a name="l00194"></a><span class="lineno">  194</span>&#160; </div>
+<div class="line"><a name="l00195"></a><span class="lineno">  195</span>&#160;            <a class="code" href="classspk_1_1Pool.html#afa3f9e3c9a02338b938ce468ac85ea51">Object</a> item(_preallocatedElements.front().release(), _destructorLambda);</div>
+<div class="line"><a name="l00196"></a><span class="lineno">  196</span>&#160; </div>
+<div class="line"><a name="l00197"></a><span class="lineno">  197</span>&#160;            _preallocatedElements.pop_front();</div>
+<div class="line"><a name="l00198"></a><span class="lineno">  198</span>&#160; </div>
+<div class="line"><a name="l00199"></a><span class="lineno">  199</span>&#160;            _cleaner(*item);</div>
+<div class="line"><a name="l00200"></a><span class="lineno">  200</span>&#160;            <span class="keywordflow">return</span> (std::move(item));</div>
+<div class="line"><a name="l00201"></a><span class="lineno">  201</span>&#160;        }</div>
+<div class="line"><a name="l00202"></a><span class="lineno">  202</span>&#160;    };</div>
+<div class="line"><a name="l00203"></a><span class="lineno">  203</span>&#160;}</div>
 <div class="ttc" id="aclassspk_1_1Pool_html"><div class="ttname"><a href="classspk_1_1Pool.html">spk::Pool</a></div><div class="ttdoc">A template class for managing a pool of reusable objects of type TType.</div><div class="ttdef"><b>Definition:</b> spk_pool.hpp:39</div></div>
-<div class="ttc" id="aclassspk_1_1Pool_html_a2206a6cc4953e486d22a1d433fff720e"><div class="ttname"><a href="classspk_1_1Pool.html#a2206a6cc4953e486d22a1d433fff720e">spk::Pool::editAllocator</a></div><div class="ttdeci">void editAllocator(const Allocator &amp;p_allocator)</div><div class="ttdoc">Edits the allocator used by the pool.</div><div class="ttdef"><b>Definition:</b> spk_pool.hpp:97</div></div>
-<div class="ttc" id="aclassspk_1_1Pool_html_a3ea29c0caff3a8a4c5b059ad6ad85ce9"><div class="ttname"><a href="classspk_1_1Pool.html#a3ea29c0caff3a8a4c5b059ad6ad85ce9">spk::Pool::resize</a></div><div class="ttdeci">void resize(size_t p_newSize)</div><div class="ttdoc">Resizes the pool to a new size.</div><div class="ttdef"><b>Definition:</b> spk_pool.hpp:135</div></div>
+<div class="ttc" id="aclassspk_1_1Pool_html_a2206a6cc4953e486d22a1d433fff720e"><div class="ttname"><a href="classspk_1_1Pool.html#a2206a6cc4953e486d22a1d433fff720e">spk::Pool::editAllocator</a></div><div class="ttdeci">void editAllocator(const Allocator &amp;p_allocator)</div><div class="ttdoc">Edits the allocator used by the pool.</div><div class="ttdef"><b>Definition:</b> spk_pool.hpp:117</div></div>
+<div class="ttc" id="aclassspk_1_1Pool_html_a37043d6cfc9dce43a03873b2d92a8ab7"><div class="ttname"><a href="classspk_1_1Pool.html#a37043d6cfc9dce43a03873b2d92a8ab7">spk::Pool::editCleaner</a></div><div class="ttdeci">void editCleaner(const Cleaner &amp;p_cleaner)</div><div class="ttdoc">Edits the cleaner used by the pool.</div><div class="ttdef"><b>Definition:</b> spk_pool.hpp:131</div></div>
+<div class="ttc" id="aclassspk_1_1Pool_html_a3ea29c0caff3a8a4c5b059ad6ad85ce9"><div class="ttname"><a href="classspk_1_1Pool.html#a3ea29c0caff3a8a4c5b059ad6ad85ce9">spk::Pool::resize</a></div><div class="ttdeci">void resize(size_t p_newSize)</div><div class="ttdoc">Resizes the pool to a new size.</div><div class="ttdef"><b>Definition:</b> spk_pool.hpp:169</div></div>
 <div class="ttc" id="aclassspk_1_1Pool_html_a41b4d948b50b4d497cc2884fbf138842"><div class="ttname"><a href="classspk_1_1Pool.html#a41b4d948b50b4d497cc2884fbf138842">spk::Pool::Allocator</a></div><div class="ttdeci">typename std::function&lt; TType *(void)&gt; Allocator</div><div class="ttdoc">Type alias for the allocator function.</div><div class="ttdef"><b>Definition:</b> spk_pool.hpp:49</div></div>
-<div class="ttc" id="aclassspk_1_1Pool_html_a7a478fdc76b628a025ddf31e25871d76"><div class="ttname"><a href="classspk_1_1Pool.html#a7a478fdc76b628a025ddf31e25871d76">spk::Pool::allocate</a></div><div class="ttdeci">void allocate()</div><div class="ttdoc">Allocates a new object and adds it to the pool.</div><div class="ttdef"><b>Definition:</b> spk_pool.hpp:109</div></div>
-<div class="ttc" id="aclassspk_1_1Pool_html_a7fa22297beb2a3709b2d65c1d272f20e"><div class="ttname"><a href="classspk_1_1Pool.html#a7fa22297beb2a3709b2d65c1d272f20e">spk::Pool::obtain</a></div><div class="ttdeci">Object obtain()</div><div class="ttdoc">Obtains an object from the pool.</div><div class="ttdef"><b>Definition:</b> spk_pool.hpp:152</div></div>
-<div class="ttc" id="aclassspk_1_1Pool_html_ac584858b3175a8feb8cc778542e216c3"><div class="ttname"><a href="classspk_1_1Pool.html#ac584858b3175a8feb8cc778542e216c3">spk::Pool::size</a></div><div class="ttdeci">size_t size() const</div><div class="ttdoc">Returns the current size of the pool.</div><div class="ttdef"><b>Definition:</b> spk_pool.hpp:121</div></div>
-<div class="ttc" id="aclassspk_1_1Pool_html_ae7adb92f0ef2a0a5e32d6dccb7351fcc"><div class="ttname"><a href="classspk_1_1Pool.html#ae7adb92f0ef2a0a5e32d6dccb7351fcc">spk::Pool::Pool</a></div><div class="ttdeci">Pool(const Allocator &amp;p_allocator=[](){return(new TType());})</div><div class="ttdoc">Constructor.</div><div class="ttdef"><b>Definition:</b> spk_pool.hpp:81</div></div>
-<div class="ttc" id="aclassspk_1_1Pool_html_afa3f9e3c9a02338b938ce468ac85ea51"><div class="ttname"><a href="classspk_1_1Pool.html#afa3f9e3c9a02338b938ce468ac85ea51">spk::Pool::Object</a></div><div class="ttdeci">typename std::unique_ptr&lt; TType, Destructor &gt; Object</div><div class="ttdoc">Describe the type of the provided object given by the pool uppon request.</div><div class="ttdef"><b>Definition:</b> spk_pool.hpp:58</div></div>
+<div class="ttc" id="aclassspk_1_1Pool_html_a7a478fdc76b628a025ddf31e25871d76"><div class="ttname"><a href="classspk_1_1Pool.html#a7a478fdc76b628a025ddf31e25871d76">spk::Pool::allocate</a></div><div class="ttdeci">void allocate()</div><div class="ttdoc">Allocates a new object and adds it to the pool.</div><div class="ttdef"><b>Definition:</b> spk_pool.hpp:143</div></div>
+<div class="ttc" id="aclassspk_1_1Pool_html_a7fa22297beb2a3709b2d65c1d272f20e"><div class="ttname"><a href="classspk_1_1Pool.html#a7fa22297beb2a3709b2d65c1d272f20e">spk::Pool::obtain</a></div><div class="ttdeci">Object obtain()</div><div class="ttdoc">Obtains an object from the pool.</div><div class="ttdef"><b>Definition:</b> spk_pool.hpp:186</div></div>
+<div class="ttc" id="aclassspk_1_1Pool_html_a8834efbd92cb3bae42aa670b017ee103"><div class="ttname"><a href="classspk_1_1Pool.html#a8834efbd92cb3bae42aa670b017ee103">spk::Pool::Cleaner</a></div><div class="ttdeci">typename std::function&lt; void(TType &amp;)&gt; Cleaner</div><div class="ttdoc">Type alias for the cleaner function.</div><div class="ttdef"><b>Definition:</b> spk_pool.hpp:59</div></div>
+<div class="ttc" id="aclassspk_1_1Pool_html_ac584858b3175a8feb8cc778542e216c3"><div class="ttname"><a href="classspk_1_1Pool.html#ac584858b3175a8feb8cc778542e216c3">spk::Pool::size</a></div><div class="ttdeci">size_t size() const</div><div class="ttdoc">Returns the current size of the pool.</div><div class="ttdef"><b>Definition:</b> spk_pool.hpp:155</div></div>
+<div class="ttc" id="aclassspk_1_1Pool_html_adb0e752e72f6e33704b50b88398c31a6"><div class="ttname"><a href="classspk_1_1Pool.html#adb0e752e72f6e33704b50b88398c31a6">spk::Pool::Pool</a></div><div class="ttdeci">Pool(const Allocator &amp;p_allocator, const Cleaner &amp;p_cleaner)</div><div class="ttdoc">Constructor.</div><div class="ttdef"><b>Definition:</b> spk_pool.hpp:100</div></div>
+<div class="ttc" id="aclassspk_1_1Pool_html_afa3f9e3c9a02338b938ce468ac85ea51"><div class="ttname"><a href="classspk_1_1Pool.html#afa3f9e3c9a02338b938ce468ac85ea51">spk::Pool::Object</a></div><div class="ttdeci">typename std::unique_ptr&lt; TType, Destructor &gt; Object</div><div class="ttdoc">Describe the type of the provided object given by the pool uppon request.</div><div class="ttdef"><b>Definition:</b> spk_pool.hpp:68</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
