@@ -42,14 +42,90 @@ namespace spk
          */
         Quaternion(const spk::Vector3& p_eulerAngles);
 
+        /**
+         * @brief Adds this quaternion to another quaternion.
+         * 
+         * This operation adds the corresponding components of two quaternions. It is useful for combining rotations
+         * or interpolations between quaternions.
+         *
+         * @param rhs The quaternion to add to this quaternion.
+         * @return A new quaternion that is the sum of this quaternion and the input quaternion.
+         */
         Quaternion operator+(const Quaternion& rhs) const;
+
+        /**
+         * @brief Adds another quaternion to this quaternion and assigns the result to this quaternion.
+         * 
+         * This operation performs an in-place addition, updating this quaternion with the sum of itself and the input quaternion.
+         *
+         * @param rhs The quaternion to add to this quaternion.
+         * @return A reference to this quaternion after the addition.
+         */
         Quaternion& operator+=(const Quaternion& rhs);
+
+        /**
+         * @brief Subtracts another quaternion from this quaternion.
+         * 
+         * This operation subtracts the corresponding components of the input quaternion from this quaternion, useful
+         * for finding the difference between two rotations.
+         *
+         * @param rhs The quaternion to subtract from this quaternion.
+         * @return A new quaternion that is the result of the subtraction.
+         */
         Quaternion operator-(const Quaternion& rhs) const;
+
+        /**
+         * @brief Subtracts another quaternion from this quaternion and assigns the result to this quaternion.
+         * 
+         * This operation performs an in-place subtraction, updating this quaternion with the result of the subtraction.
+         *
+         * @param rhs The quaternion to subtract from this quaternion.
+         * @return A reference to this quaternion after the subtraction.
+         */
         Quaternion& operator-=(const Quaternion& rhs);
+
+        /**
+         * @brief Multiplies this quaternion by a scalar.
+         * 
+         * This operation scales the components of the quaternion by a scalar value. It's useful for normalizing a quaternion
+         * or adjusting its magnitude.
+         *
+         * @param scalar The scalar value to multiply the quaternion by.
+         * @return A new quaternion that is the result of the multiplication.
+         */
         Quaternion operator*(const float& scalar) const;
+
+        /**
+         * @brief Multiplies this quaternion by a scalar and assigns the result to this quaternion.
+         * 
+         * This operation performs an in-place multiplication, scaling this quaternion by the scalar value.
+         *
+         * @param scalar The scalar value to multiply this quaternion by.
+         * @return A reference to this quaternion after the multiplication.
+         */
         Quaternion& operator*=(const float& scalar);
+
+        /**
+         * @brief Divides this quaternion by a scalar.
+         * 
+         * This operation divides the components of the quaternion by a scalar value. It's useful for adjusting the
+         * magnitude of a quaternion.
+         *
+         * @param scalar The scalar value to divide the quaternion by.
+         * @return A new quaternion that is the result of the division.
+         */
         Quaternion operator/(const float& scalar) const;
+
+        /**
+         * @brief Divides this quaternion by a scalar and assigns the result to this quaternion.
+         * 
+         * This operation performs an in-place division, scaling this quaternion by the reciprocal of the scalar value.
+         *
+         * @param scalar The scalar value to divide this quaternion by.
+         * @return A reference to this quaternion after the division.
+         */
         Quaternion& operator/=(const float& scalar);
+
         
         friend Quaternion operator*(const float& scalar, const Quaternion& q) {
             return (q * scalar);
@@ -59,11 +135,68 @@ namespace spk
             return (q / scalar);
         }
 
+        /**
+         * @brief Checks if this quaternion is equal to another quaternion.
+         * 
+         * Equality is determined by comparing the corresponding components of the two quaternions.
+         *
+         * @param p_rhs The quaternion to compare with this quaternion.
+         * @return true if the quaternions are equal, false otherwise.
+         */
         bool operator==(const Quaternion& p_rhs) const;
+
+        /**
+         * @brief Checks if this quaternion is not equal to another quaternion.
+         * 
+         * Inequality is determined by comparing the corresponding components of the two quaternions.
+         *
+         * @param p_rhs The quaternion to compare with this quaternion.
+         * @return true if the quaternions are not equal, false otherwise.
+         */
         bool operator!=(const Quaternion& p_rhs) const;
+
+        /**
+         * @brief Less than operator for comparing two quaternions.
+         * 
+         * This comparison is based on a lexicographical order, primarily comparing the x component, then y, z, and w sequentially
+         * if previous components are equal. This allows quaternions to be sorted or used in data structures requiring an ordering.
+         *
+         * @param p_rhs The quaternion to compare with this quaternion.
+         * @return true if this quaternion is considered less than the other, false otherwise.
+         */
         bool operator<(const Quaternion& p_rhs) const;
+
+        /**
+         * @brief Greater than operator for comparing two quaternions.
+         * 
+         * Utilizes the less than (<) and equality (==) operators to determine if this quaternion is greater than another.
+         * This is essential for maintaining consistency in sorted data structures or when performing comparisons.
+         *
+         * @param p_rhs The quaternion to compare with this quaternion.
+         * @return true if this quaternion is considered greater than the other, false otherwise.
+         */
         bool operator>(const Quaternion& p_rhs) const;
+
+        /**
+         * @brief Less than or equal to operator for comparing two quaternions.
+         * 
+         * Determines if this quaternion is less than or equal to another by leveraging the greater than (>) operator.
+         * It ensures a consistent ordering mechanism for quaternions within containers or comparison operations.
+         *
+         * @param p_rhs The quaternion to compare with this quaternion.
+         * @return true if this quaternion is less than or equal to the other, false otherwise.
+         */
         bool operator<=(const Quaternion& p_rhs) const;
+
+        /**
+         * @brief Greater than or equal to operator for comparing two quaternions.
+         * 
+         * Checks if this quaternion is greater than or equal to another by using the less than (<) operator.
+         * This comparison is vital for data structures that depend on a defined ordering of elements.
+         *
+         * @param p_rhs The quaternion to compare with this quaternion.
+         * @return true if this quaternion is greater than or equal to the other, false otherwise.
+         */
         bool operator>=(const Quaternion& p_rhs) const;
 
         /**
