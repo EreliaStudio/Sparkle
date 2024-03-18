@@ -138,7 +138,10 @@ namespace spk
          * @param q The quaternion to be multiplied.
          * @return A new quaternion that is the result of the scalar multiplied with the quaternion's components.
          */
-        friend Quaternion operator*(const float& scalar, const Quaternion& q);
+        friend Quaternion operator*(const float& scalar, const Quaternion& q)
+        {
+            return (q * scalar);
+        }
 
         /**
          * @brief Divides a scalar by a quaternion.
@@ -153,7 +156,10 @@ namespace spk
          * @param q The quaternion that divides the scalar.
          * @return A new quaternion resulting from the division, if applicable under the specific use case.
          */
-        friend Quaternion operator/(const float& scalar, const Quaternion& q);
+        friend Quaternion operator/(const float& scalar, const Quaternion& q)
+        {
+            return (q / scalar);
+        }
 
         /**
          * @brief Checks if this quaternion is equal to another quaternion.
