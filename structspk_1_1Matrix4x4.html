@@ -87,6 +87,12 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a3d4ed1df5def9a0886e31e58301d6102"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structspk_1_1Matrix4x4.html#a3d4ed1df5def9a0886e31e58301d6102">Matrix4x4</a> ()</td></tr>
 <tr class="memdesc:a3d4ed1df5def9a0886e31e58301d6102"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default constructor for <a class="el" href="structspk_1_1Matrix4x4.html" title="Represents a 4x4 matrix and provides a comprehensive set of operations for graphical transformations.">Matrix4x4</a>.  <a href="structspk_1_1Matrix4x4.html#a3d4ed1df5def9a0886e31e58301d6102">More...</a><br /></td></tr>
 <tr class="separator:a3d4ed1df5def9a0886e31e58301d6102"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab9acf430b76c4ada83e974eb17cf679f"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structspk_1_1Matrix4x4.html#ab9acf430b76c4ada83e974eb17cf679f">Matrix4x4</a> (float a1, float a2, float a3, float a4, float b1, float b2, float b3, float b4, float c1, float c2, float c3, float c4, float d1, float d2, float d3, float d4)</td></tr>
+<tr class="memdesc:ab9acf430b76c4ada83e974eb17cf679f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Predetermined constructor for <a class="el" href="structspk_1_1Matrix4x4.html" title="Represents a 4x4 matrix and provides a comprehensive set of operations for graphical transformations.">Matrix4x4</a>.  <a href="structspk_1_1Matrix4x4.html#ab9acf430b76c4ada83e974eb17cf679f">More...</a><br /></td></tr>
+<tr class="separator:ab9acf430b76c4ada83e974eb17cf679f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a715cccfdd550a4b84f5e0b97802b8d1a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structspk_1_1Matrix4x4.html">Matrix4x4</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structspk_1_1Matrix4x4.html#a715cccfdd550a4b84f5e0b97802b8d1a">operator+</a> (const <a class="el" href="structspk_1_1Matrix4x4.html">Matrix4x4</a> &amp;other) const</td></tr>
+<tr class="memdesc:a715cccfdd550a4b84f5e0b97802b8d1a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add another matrix to this <a class="el" href="structspk_1_1Matrix4x4.html" title="Represents a 4x4 matrix and provides a comprehensive set of operations for graphical transformations.">Matrix4x4</a>.  <a href="structspk_1_1Matrix4x4.html#a715cccfdd550a4b84f5e0b97802b8d1a">More...</a><br /></td></tr>
+<tr class="separator:a715cccfdd550a4b84f5e0b97802b8d1a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa927e6e0ee3b173ef707d697235b9f14"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structspk_1_1IVector3.html">Vector3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structspk_1_1Matrix4x4.html#aa927e6e0ee3b173ef707d697235b9f14">operator*</a> (const <a class="el" href="structspk_1_1IVector3.html">Vector3</a> &amp;v) const</td></tr>
 <tr class="memdesc:aa927e6e0ee3b173ef707d697235b9f14"><td class="mdescLeft">&#160;</td><td class="mdescRight">Multiplies this matrix by a Vector3, applying the transformation.  <a href="structspk_1_1Matrix4x4.html#aa927e6e0ee3b173ef707d697235b9f14">More...</a><br /></td></tr>
 <tr class="separator:aa927e6e0ee3b173ef707d697235b9f14"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -165,14 +171,14 @@ Friends</h2></td></tr>
 <div class="line"><a class="code" href="structspk_1_1IVector3.html">spk::Vector3</a> transformedPoint = transform * <a class="code" href="structspk_1_1IVector3.html">spk::Vector3</a>{1.0f, 1.0f, 1.0f};</div>
 <div class="ttc" id="astructspk_1_1IVector3_html"><div class="ttname"><a href="structspk_1_1IVector3.html">spk::IVector3&lt; float &gt;</a></div></div>
 <div class="ttc" id="astructspk_1_1Matrix4x4_html"><div class="ttname"><a href="structspk_1_1Matrix4x4.html">spk::Matrix4x4</a></div><div class="ttdoc">Represents a 4x4 matrix and provides a comprehensive set of operations for graphical transformations.</div><div class="ttdef"><b>Definition:</b> spk_matrix4x4.hpp:39</div></div>
-<div class="ttc" id="astructspk_1_1Matrix4x4_html_a8aa6524691064e641712df31bc8d303a"><div class="ttname"><a href="structspk_1_1Matrix4x4.html#a8aa6524691064e641712df31bc8d303a">spk::Matrix4x4::scaleMatrix</a></div><div class="ttdeci">static Matrix4x4 scaleMatrix(const Vector3 &amp;p_scale)</div><div class="ttdoc">Creates a scale matrix.</div><div class="ttdef"><b>Definition:</b> spk_matrix4x4.cpp:76</div></div>
-<div class="ttc" id="astructspk_1_1Matrix4x4_html_aad87b61ae785e20331c164a59bb65c20"><div class="ttname"><a href="structspk_1_1Matrix4x4.html#aad87b61ae785e20331c164a59bb65c20">spk::Matrix4x4::translationMatrix</a></div><div class="ttdeci">static Matrix4x4 translationMatrix(const Vector3 &amp;p_translation)</div><div class="ttdoc">Creates a translation matrix.</div><div class="ttdef"><b>Definition:</b> spk_matrix4x4.cpp:67</div></div>
-<div class="ttc" id="astructspk_1_1Matrix4x4_html_ae495fa76786eb789c17a8dfb7f3cb6df"><div class="ttname"><a href="structspk_1_1Matrix4x4.html#ae495fa76786eb789c17a8dfb7f3cb6df">spk::Matrix4x4::rotationMatrix</a></div><div class="ttdeci">static Matrix4x4 rotationMatrix(const Vector3 &amp;p_rotation)</div><div class="ttdoc">Creates a rotation matrix.</div><div class="ttdef"><b>Definition:</b> spk_matrix4x4.cpp:85</div></div>
+<div class="ttc" id="astructspk_1_1Matrix4x4_html_a8aa6524691064e641712df31bc8d303a"><div class="ttname"><a href="structspk_1_1Matrix4x4.html#a8aa6524691064e641712df31bc8d303a">spk::Matrix4x4::scaleMatrix</a></div><div class="ttdeci">static Matrix4x4 scaleMatrix(const Vector3 &amp;p_scale)</div><div class="ttdoc">Creates a scale matrix.</div><div class="ttdef"><b>Definition:</b> spk_matrix4x4.cpp:111</div></div>
+<div class="ttc" id="astructspk_1_1Matrix4x4_html_aad87b61ae785e20331c164a59bb65c20"><div class="ttname"><a href="structspk_1_1Matrix4x4.html#aad87b61ae785e20331c164a59bb65c20">spk::Matrix4x4::translationMatrix</a></div><div class="ttdeci">static Matrix4x4 translationMatrix(const Vector3 &amp;p_translation)</div><div class="ttdoc">Creates a translation matrix.</div><div class="ttdef"><b>Definition:</b> spk_matrix4x4.cpp:102</div></div>
+<div class="ttc" id="astructspk_1_1Matrix4x4_html_ae495fa76786eb789c17a8dfb7f3cb6df"><div class="ttname"><a href="structspk_1_1Matrix4x4.html#ae495fa76786eb789c17a8dfb7f3cb6df">spk::Matrix4x4::rotationMatrix</a></div><div class="ttdeci">static Matrix4x4 rotationMatrix(const Vector3 &amp;p_rotation)</div><div class="ttdoc">Creates a rotation matrix.</div><div class="ttdef"><b>Definition:</b> spk_matrix4x4.cpp:120</div></div>
 </div><!-- fragment --><dl class="section note"><dt>Note</dt><dd>The <a class="el" href="structspk_1_1Matrix4x4.html" title="Represents a 4x4 matrix and provides a comprehensive set of operations for graphical transformations.">Matrix4x4</a> struct is designed for use in systems where performance and precision are crucial, such as real-time 3D rendering engines.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="structspk_1_1IVector3.html" title="Represents a 3D vector with components x, y, and z.">IVector3</a> </dd></dl>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a3d4ed1df5def9a0886e31e58301d6102"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3d4ed1df5def9a0886e31e58301d6102">&#9670;&nbsp;</a></span>Matrix4x4()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a3d4ed1df5def9a0886e31e58301d6102">&#9670;&nbsp;</a></span>Matrix4x4() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -188,6 +194,121 @@ Friends</h2></td></tr>
 
 <p>Default constructor for <a class="el" href="structspk_1_1Matrix4x4.html" title="Represents a 4x4 matrix and provides a comprehensive set of operations for graphical transformations.">Matrix4x4</a>. </p>
 <p>Initializes a <a class="el" href="structspk_1_1Matrix4x4.html" title="Represents a 4x4 matrix and provides a comprehensive set of operations for graphical transformations.">Matrix4x4</a> to an identity matrix. </p>
+
+</div>
+</div>
+<a id="ab9acf430b76c4ada83e974eb17cf679f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab9acf430b76c4ada83e974eb17cf679f">&#9670;&nbsp;</a></span>Matrix4x4() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">spk::Matrix4x4::Matrix4x4 </td>
+          <td>(</td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>a1</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>a2</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>a3</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>a4</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>b1</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>b2</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>b3</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>b4</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>c1</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>c2</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>c3</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>c4</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>d1</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>d2</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>d3</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>d4</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Predetermined constructor for <a class="el" href="structspk_1_1Matrix4x4.html" title="Represents a 4x4 matrix and provides a comprehensive set of operations for graphical transformations.">Matrix4x4</a>. </p>
+<p>Initializes a <a class="el" href="structspk_1_1Matrix4x4.html" title="Represents a 4x4 matrix and provides a comprehensive set of operations for graphical transformations.">Matrix4x4</a> with specific values. </p>
 
 </div>
 </div>
@@ -447,6 +568,33 @@ Friends</h2></td></tr>
 
 </div>
 </div>
+<a id="a715cccfdd550a4b84f5e0b97802b8d1a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a715cccfdd550a4b84f5e0b97802b8d1a">&#9670;&nbsp;</a></span>operator+()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structspk_1_1Matrix4x4.html">Matrix4x4</a> spk::Matrix4x4::operator+ </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structspk_1_1Matrix4x4.html">Matrix4x4</a> &amp;&#160;</td>
+          <td class="paramname"><em>other</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Add another matrix to this <a class="el" href="structspk_1_1Matrix4x4.html" title="Represents a 4x4 matrix and provides a comprehensive set of operations for graphical transformations.">Matrix4x4</a>. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">other</td><td>The matrix to add. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The result of matrix addition. </dd></dl>
+
+</div>
+</div>
 <a id="ae94eb7753a39f1f076f2ef04bb763bfa"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ae94eb7753a39f1f076f2ef04bb763bfa">&#9670;&nbsp;</a></span>operator==()</h2>
 
@@ -597,7 +745,7 @@ Friends</h2></td></tr>
 <p>Creates a perspective projection matrix. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">fov</td><td>The field of view in radians. </td></tr>
+    <tr><td class="paramname">fov</td><td>The field of view in degree. </td></tr>
     <tr><td class="paramname">aspectRatio</td><td>The aspect ratio of the viewport. </td></tr>
     <tr><td class="paramname">nearPlane</td><td>The distance to the near clipping plane. </td></tr>
     <tr><td class="paramname">farPlane</td><td>The distance to the far clipping plane. </td></tr>
@@ -667,7 +815,7 @@ Friends</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">p_axis</td><td>The axis to rotate around. </td></tr>
-    <tr><td class="paramname">p_rotationAngle</td><td>The angle of rotation in radians. </td></tr>
+    <tr><td class="paramname">p_rotationAngle</td><td>The angle of rotation in degree. </td></tr>
   </table>
   </dd>
 </dl>
@@ -702,7 +850,7 @@ Friends</h2></td></tr>
 <p>Creates a rotation matrix. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">p_rotation</td><td>The rotation angles (pitch, yaw, roll). </td></tr>
+    <tr><td class="paramname">p_rotation</td><td>The rotation angles in degree (pitch, yaw, roll). </td></tr>
   </table>
   </dd>
 </dl>
@@ -864,8 +1012,7 @@ Friends</h2></td></tr>
 <div class="line">            {1, 0, 0, 0},</div>
 <div class="line">            {0, 1, 0, 0},</div>
 <div class="line">            {0, 0, 1, 0},</div>
-<div class="line">            {0, 0, 0, 1}</div>
-<div class="line">        }</div>
+<div class="line">            {0, 0, 0, 1}}</div>
 </div><!-- fragment -->
 <p>4x4 matrix data stored in row-major order. </p>
 <p>This array represents the elements of the matrix, where each sub-array corresponds to a row in the matrix. The matrix is initialized to the identity matrix by default. </p>
