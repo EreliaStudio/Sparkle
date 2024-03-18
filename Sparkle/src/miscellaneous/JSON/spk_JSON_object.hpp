@@ -41,7 +41,7 @@ namespace spk
 		{
 		public:
 			using Unit = std::variant<bool, long, double, std::string, Object *, std::nullptr_t>;			/**< The type for a single JSON value. */
-			using ContentType = std::variant<Unit, std::map<std::string, Object *>, std::vector<Object *>>; /**< The type for the content of the JSON object. */
+			using ContentType = std::variant<std::nullptr_t, Unit, std::map<std::string, Object *>, std::vector<Object *>>; /**< The type for the content of the JSON object. */
 
 		private:
 			bool _initialized;

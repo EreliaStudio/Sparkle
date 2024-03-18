@@ -110,8 +110,7 @@ namespace spk
 
 		std::unordered_map<TStateType, Action> _states;
 		TStateType _currentState;
-		Action _currentActions;
-		bool _hasCurrentState = false;
+		Action* _currentAction;
 
 	public:
 		/**
@@ -125,7 +124,7 @@ namespace spk
 		 * @param p_action Action struct containing the callbacks for the state.
 		 */
 		StateMachine(TStateType p_stateID, const Action& p_action) :
-			_hasCurrentState(true)
+			_currentAction(nullptr)
 		{
 			addState(p_stateID, p_action);
 			enterState(p_stateID);
@@ -138,7 +137,7 @@ namespace spk
 		 * using addState before the StateMachine can be used.
 		 */
 		StateMachine() :
-			_hasCurrentState(false)
+			_currentAction(nullptr)
 		{
 
 		}
@@ -158,7 +157,7 @@ namespace spk
             {
                 throw std::out_of_range("State ID [" + std::to_string(static_cast<int>(p_stateID)) + "] not found");
             }
-            return _states[p_stateID];
+            return _states.at(p_stateID);
         }
 
 		/**
@@ -189,7 +188,7 @@ namespace spk
 		 */
 		Action& currentAction()
         {
-            return (_currentActions);
+            return (_currentAction);
         }
 
 		/**
@@ -201,7 +200,7 @@ namespace spk
 		 */
 		const Action& currentAction() const
         {
-            return (_currentActions);
+            return (_currentAction);
         }
 
 		/**
@@ -232,20 +231,23 @@ namespace spk
 		 */
 		void enterState(TStateType p_newState)
 		{
-			if (_hasCurrentState == true)
+			if (_currentAction != nullptr && _currentAction->onExit != nullptr)
 			{
-				if (_currentActions.onExit != nullptr)
-				{
-					_currentActions.onExit();
-				}
+				_currentAction->onExit();
 			}
 
 			_currentState = p_newState;
-			_hasCurrentState = true;
-			_currentActions = _states[p_newState];
 
-			if (_currentActions.onEnter != nullptr)
-				_currentActions.onEnter();
+			if (_states.contains(p_newState) == false)
+				_currentAction = nullptr;
+			else
+				_currentAction = &(_states.at(p_newState));
+
+
+			if (_currentAction != nullptr && _currentAction->onEnter != nullptr)
+			{
+				_currentAction->onEnter();
+			}
 		}
 
 		/**
@@ -256,9 +258,9 @@ namespace spk
 		 */
 		void update()
 		{
-			if (_hasCurrentState == true && _currentActions.onUpdate != nullptr) 
+			if (_currentAction != nullptr && _currentAction->onUpdate != nullptr) 
 			{
-				_currentActions.onUpdate();
+				_currentAction->onUpdate();
 			}
 		}
 

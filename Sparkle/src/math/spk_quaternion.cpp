@@ -21,6 +21,95 @@ namespace spk
 		*this *= spk::Quaternion::fromAxisAngle(spk::Vector3(0, 0, 1), p_eulerAngles.z);
 	}
 
+	Quaternion Quaternion::operator+(const Quaternion& rhs) const
+	{
+		return Quaternion(x + rhs.x, y + rhs.y, z + rhs.z, w + rhs.w);
+	}
+
+	Quaternion& Quaternion::operator+=(const Quaternion& rhs)
+	{
+		x += rhs.x;
+		y += rhs.y;
+		z += rhs.z;
+		w += rhs.w;
+		return *this;
+	}
+
+	Quaternion Quaternion::operator-(const Quaternion& rhs) const
+	{
+		return Quaternion(x - rhs.x, y - rhs.y, z - rhs.z, w - rhs.w);
+	}
+
+	Quaternion& Quaternion::operator-=(const Quaternion& rhs)
+	{
+		x -= rhs.x;
+		y -= rhs.y;
+		z -= rhs.z;
+		w -= rhs.w;
+		return *this;
+	}
+
+	Quaternion Quaternion::operator*(const float& scalar) const
+	{
+		return Quaternion(x * scalar, y * scalar, z * scalar, w * scalar);
+	}
+
+	Quaternion& Quaternion::operator*=(const float& scalar)
+	{
+		x *= scalar;
+		y *= scalar;
+		z *= scalar;
+		w *= scalar;
+		return *this;
+	}
+
+	Quaternion Quaternion::operator/(const float& scalar) const
+	{
+		return Quaternion(x / scalar, y / scalar, z / scalar, w / scalar);
+	}
+
+	Quaternion& Quaternion::operator/=(const float& scalar)
+	{
+		x /= scalar;
+		y /= scalar;
+		z /= scalar;
+		w /= scalar;
+		return *this;
+	}
+
+	bool Quaternion::operator==(const Quaternion& p_rhs) const
+	{
+		return x == p_rhs.x && y == p_rhs.y && z == p_rhs.z && w == p_rhs.w;
+	}
+
+	bool Quaternion::operator!=(const Quaternion& p_rhs) const
+	{
+		return !(*this == p_rhs);
+	}
+
+	bool Quaternion::operator<(const Quaternion& p_rhs) const
+	{
+		if (x != p_rhs.x) return x < p_rhs.x;
+        if (y != p_rhs.y) return y < p_rhs.y;
+        if (z != p_rhs.z) return z < p_rhs.z;
+        return w < p_rhs.w;
+	}
+
+	bool Quaternion::operator>(const Quaternion& p_rhs) const
+	{
+		return !(*this < p_rhs || *this == p_rhs);
+	}
+
+	bool Quaternion::operator<=(const Quaternion& p_rhs) const
+	{
+		return !(*this > p_rhs);
+	}
+
+	bool Quaternion::operator>=(const Quaternion& p_rhs) const
+	{
+		return !(*this < p_rhs);
+	}
+
 	Quaternion Quaternion::normalize() const
 	{
 		float length = std::sqrt(x * x + y * y + z * z + w * w);

@@ -75,13 +75,84 @@ namespace spk
 
 		void _onSeedEdition();
 
+	protected:
+			/**
+		 * @brief Executes the sampling process for generating Perlin noise.
+		 *
+		 * This function is a core component of the Perlin noise generation process, orchestrating the sampling based on the provided lambda function.
+		 * It allows for a flexible implementation by accepting a lambda function that dictates the specific sampling behavior, facilitating the
+		 * adaptation of the sampling process to different contexts and noise characteristics.
+		 *
+		 * @param p_lambda A lambda function that takes a frequency and returns a float, defining the sampling behavior for the noise generation.
+		 * @return The resulting noise value from the executed sampling process.
+		 */
 		float _executeSample(const std::function<float(const float& p_frequency)>& p_lambda) const;
 
+		/**
+		 * @brief Calculates the dot product of the grid's gradient vector and the distance vector in 3D space.
+		 *
+		 * This function is pivotal in generating 3D Perlin noise, where it computes the dot product between the gradient vector at a grid point
+		 * and the vector from that grid point to the sample point. This calculation is essential for interpolating the noise values and producing
+		 * the characteristic Perlin noise effect.
+		 *
+		 * @param ix The x-coordinate of the grid point.
+		 * @param iy The y-coordinate of the grid point.
+		 * @param iz The z-coordinate of the grid point.
+		 * @param x The x-coordinate of the sample point.
+		 * @param y The y-coordinate of the sample point.
+		 * @param z The z-coordinate of the sample point.
+		 * @return The dot product result, contributing to the noise value calculation.
+		 */
 		float _dotGridGradient(const int& ix, const int& iy, const int& iz, const float& x, const float& y, const float& z) const;
+
+		/**
+		 * @brief Calculates the dot product of the grid's gradient vector and the distance vector in 2D space.
+		 *
+		 * Similar to its 3D counterpart, this function is crucial for generating 2D Perlin noise. It calculates the dot product between the
+		 * gradient vector at a 2D grid point and the distance vector to the sample point, aiding in the interpolation and generation of noise values.
+		 *
+		 * @param ix The x-coordinate of the grid point.
+		 * @param iy The y-coordinate of the grid point.
+		 * @param x The x-coordinate of the sample point.
+		 * @param y The y-coordinate of the sample point.
+		 * @return The dot product result, used in the 2D noise value calculation.
+		 */
 		float _dotGridGradient(const int& ix, const int& iy, const float& x, const float& y) const;
+
+		/**
+		 * @brief Calculates the dot product of the grid's gradient vector and the distance vector in 1D space.
+		 *
+		 * This function is essential for generating 1D Perlin noise, where it computes the dot product between the gradient vector at a grid point
+		 * in 1D and the distance to the sample point. It facilitates the interpolation of noise values, integral to the Perlin noise effect.
+		 *
+		 * @param ix The coordinate of the grid point.
+		 * @param x The coordinate of the sample point.
+		 * @return The dot product result, used in the 1D noise value calculation.
+		 */
 		float _dotGridGradient(const int& ix, const float& x) const;
 
+		/**
+		 * @brief Interpolates between two values based on a weight.
+		 *
+		 * This function performs the interpolation between two values (a0 and a1) based on a weight (w), which dictates the proportion of each value
+		 * in the final result. This interpolation is fundamental in blending noise values smoothly across the noise field.
+		 *
+		 * @param a0 The first value to interpolate.
+		 * @param a1 The second value to interpolate.
+		 * @param w The weight influencing the interpolation, typically a value between 0 and 1.
+		 * @return The interpolated value between a0 and a1.
+		 */
 		float _interpolate(const float& a0, const float& a1, const float& w) const;
+
+		/**
+		 * @brief Calculates the smoothing ratio for a given weight.
+		 *
+		 * This function calculates a smoothing ratio for the interpolation, enhancing the visual continuity and smoothness of the noise. It applies
+		 * a smoothstep function (or similar) to the weight, which adjusts the transition between noise values, improving the natural appearance of the noise.
+		 *
+		 * @param w The weight value, typically between 0 and 1, used to compute the smoothing ratio.
+		 * @return The calculated smoothing ratio, influencing the smoothness of the noise transition.
+		 */
 		float _calcRatio(const float& w) const;
 
 	public:
