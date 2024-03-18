@@ -120,14 +120,13 @@ namespace spk
         }
 
         /**
-         * @brief Edits the allocator used by the pool.
+         * @brief Edits the cleaner used by the pool.
          * 
-         * Allows for the modification of the allocator function after the pool has been
-         * created. This can be useful for changing the logic used to create new instances
-         * of TType, for example, to use a different constructor or to recycle objects in a
-         * specific way.
+         * Allows for the modification of the cleaner function after the pool has been
+         * created. This can be useful for changing the logic used to provide a "fresh" object
+         * to the user.
          * 
-         * @param p_allocator The new allocator function to use for object creation.
+         * @param p_cleaner The new cleaner function to before giving an object to user.
          */
         void editCleaner(const Cleaner& p_cleaner)
         {   
