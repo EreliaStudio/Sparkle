@@ -23,17 +23,17 @@ namespace spk
 
 		bool Object::isObject() const
 		{
-			return (std::holds_alternative<std::map<std::string, Object*>>(_content));
+			return (_initialized && std::holds_alternative<std::map<std::string, Object*>>(_content));
 		}
 
 		bool Object::isArray() const
 		{
-			return (std::holds_alternative<std::vector<Object*>>(_content));
+			return (_initialized && std::holds_alternative<std::vector<Object*>>(_content));
 		}
 
 		bool Object::isUnit() const
 		{
-			return (std::holds_alternative<Unit>(_content));
+			return (_initialized && std::holds_alternative<Unit>(_content));
 		}
 
 		Object& Object::addAttribute(const std::string& p_key)
