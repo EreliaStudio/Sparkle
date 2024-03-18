@@ -80,7 +80,7 @@ namespace spk::widget::components
         static spk::Pipeline _renderingPipeline;
         spk::Pipeline::Object _renderingObject;
         spk::Pipeline::Object::Attribute& _renderingObjectAttribute;
-        spk::Pipeline::Object::Attribute::Element& _depthAttributeElement;
+        spk::Pipeline::Object::Attribute::Element& _layerAttributeElement;
 
         spk::Pipeline::Texture& _renderingPipelineTexture;
 
@@ -123,11 +123,11 @@ namespace spk::widget::components
         void setGeometry(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size);
 
         /**
-         * @brief Sets the rendering depth of the nine-sliced box in the pipeline.
+         * @brief Sets the rendering layer of the nine-sliced box in the pipeline.
          *
-         * @param p_depth A float value representing the depth at which the box should be rendered.
+         * @param p_layer A float value representing the layer at which the box should be rendered.
          */
-        void setDepth(float p_depth);
+        void setLayer(const float& p_layer);
 
         /**
          * @brief Sets the size of the corners of the nine-sliced box.

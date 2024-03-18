@@ -32,7 +32,11 @@ namespace spk
 		_storage.activate();
 
 		for (auto& [key, attribute] : _attributes)
+		{
+			if (attribute.needUpdate() == true)
+				std::cout << "Updating attribute [" << key << "]" << std::endl;
 			attribute.activate();
+		}
 
 		_pipeline->launch(_storage.nbTriangles());
 

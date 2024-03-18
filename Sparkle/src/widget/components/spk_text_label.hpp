@@ -84,7 +84,7 @@ namespace spk::widget::components
 
         spk::Pipeline::Object _renderingObject;
         spk::Pipeline::Object::Attribute& _renderingObjectWidgetAttribute;
-        spk::Pipeline::Object::Attribute::Element& _depthAttributeElement;
+        spk::Pipeline::Object::Attribute::Element& _layerAttributeElement;
 
         spk::Pipeline::Object::Attribute& _renderingObjectTextRendererAttribute;
         spk::Pipeline::Object::Attribute::Element& _textColorAttributeElement;
@@ -150,7 +150,7 @@ namespace spk::widget::components
          *
          * @param p_depth A float value representing the depth.
          */
-        void setDepth(const float& p_depth);
+        void setLayer(const float& p_layer);
 
         /**
          * @brief Sets the text content of the label.

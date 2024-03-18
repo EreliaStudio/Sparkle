@@ -17,7 +17,7 @@ namespace spk::widget
     void ColoredBox::_onGeometryChange()
     {
         _coloredBox.setGeometry(anchor(), size());
-        _coloredBox.setDepth(depth());
+        _coloredBox.setLayer(layer());
     }
 
     void ColoredBox::_onRender()

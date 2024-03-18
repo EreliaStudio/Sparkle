@@ -5,7 +5,10 @@
 
 namespace spk
 {
-	/**
+    namespace widget{
+        class IWidget;
+    }
+    /**
 	 * @class Viewport
 	 * @brief Manages the viewport area for rendering within an application window.
 	 *
@@ -28,11 +31,14 @@ namespace spk
 	class Viewport
 	{
 		friend class Application;
+        friend class widget::IWidget;
 		
 	private:
 		static inline const Viewport* _mainViewport = nullptr;
 		static inline const Viewport* _activeViewport = nullptr;
 		static inline spk::Pipeline::Constant* _screenConstant = nullptr;
+
+        static inline float _maxLayer = 10000;
 
 		spk::Vector2Int _anchor;
 		spk::Vector2UInt _size;

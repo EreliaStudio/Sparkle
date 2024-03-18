@@ -21,7 +21,7 @@ namespace spk::widget::components
 
     void geometryPass()
     {
-		pixelPosition = screenConstants.canvasMVP * vec4(screenPosition, widgetAttribute.depth, 1.0);
+		pixelPosition = screenConstants.canvasMVP * vec4(screenPosition, widgetAttribute.layer, 1.0);
 
 		fragmentUVs = UVs;
     }
@@ -49,7 +49,7 @@ namespace spk::widget::components
     TextLabel::TextLabel() :
         _renderingObject(_renderingPipeline.createObject()),
         _renderingObjectWidgetAttribute(_renderingObject.attribute("widgetAttribute")),
-        _depthAttributeElement(_renderingObjectWidgetAttribute["depth"]),
+        _layerAttributeElement(_renderingObjectWidgetAttribute["layer"]),
         _renderingObjectTextRendererAttribute(_renderingObject.attribute("textRendererAttribute")),
         _textColorAttributeElement(_renderingObjectTextRendererAttribute["textColor"]),
         _outlineColorAttributeElement(_renderingObjectTextRendererAttribute["outlineColor"]),
@@ -217,9 +217,9 @@ namespace spk::widget::components
         _needGPUBufferUpdate = true;
     }
 
-    void TextLabel::setDepth(const float& p_depth)
+    void TextLabel::setLayer(const float& p_layer)
     {
-        _depthAttributeElement = p_depth;
+        _layerAttributeElement = p_layer;
         _renderingObjectWidgetAttribute.update();
     }
 

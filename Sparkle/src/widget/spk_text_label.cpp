@@ -5,7 +5,7 @@ namespace spk::widget
     void TextLabel::_onGeometryChange()
     {
         _label.setAnchor(anchor());
-        _label.setDepth(depth());
+        _label.setLayer(layer());
     }
 
     void TextLabel::_onRender()

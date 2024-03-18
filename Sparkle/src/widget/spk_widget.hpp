@@ -76,7 +76,7 @@ namespace spk::widget
         spk::Vector2 _sizeRatio;
         std::vector<std::unique_ptr<IWidget>> _ownedChildren;
 
-        float _depth;
+        float _layer;
 
         spk::Viewport _viewport;
 
@@ -218,10 +218,10 @@ namespace spk::widget
         void setGeometry(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size);
 
         /**
-         * Sets the depth of the widget, affecting its rendering order relative to its siblings.
-         * @param p_depth The depth value of the widget. Lower values are rendered first.
+         * Sets the layer of the widget, affecting its rendering order relative to its siblings.
+         * @param p_layer The layer value of the widget. Lower values are rendered behind higher values.
          */
-        void setDepth(const float& p_depth);
+        void setLayer(const float& p_layer);
 
         /**
          * Activates this widget and all its child widgets recursively, enabling their functionality and making them eligible for rendering and updates.
@@ -252,10 +252,10 @@ namespace spk::widget
         void setName(const std::string& p_name);
 
         /**
-         * Gets the depth of the widget.
-         * @return A constant reference to the widget's depth value.
+         * Gets the layer of the widget.
+         * @return A constant reference to the widget's layer value.
          */
-        const float& depth() const;
+        const float& layer() const;
 
         /**
          * Gets the anchor point of the widget.

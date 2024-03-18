@@ -126,7 +126,7 @@ namespace spk::widget
 #ifndef NDEBUG
         _timeMetric(spk::Application::activeApplication()->profiler().metric<TimeMetric>(name())),
 #endif
-        _depth(0)
+        _layer(0)
     {
         if (defaultParent != nullptr)
             defaultParent->addChild(this);
@@ -150,7 +150,7 @@ namespace spk::widget
     void IWidget::addChild(IWidget* p_child)
     {
         TreeNode<IWidget>::addChild(p_child);
-        p_child->setDepth(depth() + 1);
+        p_child->setLayer(layer() + 1);
     }
 
     void IWidget::setGeometry(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size)
@@ -167,9 +167,11 @@ namespace spk::widget
         _onGeometryChange();
     }
 
-    void IWidget::setDepth(const float& p_depth)
+    void IWidget::setLayer(const float& p_layer)
     {
-        _depth = p_depth;
+        _layer = p_layer;
+        if (_layer > Viewport::_maxLayer)
+            Viewport::_maxLayer = _layer;
     }
 
     void IWidget::activateAll()
@@ -212,9 +214,9 @@ namespace spk::widget
         return (_anchor);
     }
 
-    const float& IWidget::depth() const
+    const float& IWidget::layer() const
     {
-        return (_depth);
+        return (_layer);
     }
 
     const spk::Vector2UInt& IWidget::size() const
