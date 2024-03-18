@@ -94,14 +94,15 @@ Inheritance diagram for spk::widget::IWidget:</div>
 <area shape="rect" href="classspk_1_1widget_1_1TextLabel.html" title="A simple TextLabel :)" alt="" coords="490,290,657,317"/>
 <area shape="rect" href="classspk_1_1ActivateObject.html" title="Manages activation state for objects, intended as a base class." alt="" coords="28,122,177,149"/>
 <area shape="rect" href="classspk_1_1TreeNode.html" title=" " alt="" coords="5,173,200,199"/>
-<area shape="rect" href="classspk_1_1widget_1_1Center.html" title="Centers the child." alt="" coords="773,42,921,69"/>
-<area shape="rect" href="classspk_1_1widget_1_1ColoredBox.html" title="A box filled with color." alt="" coords="757,93,937,119"/>
-<area shape="rect" href="classspk_1_1widget_1_1Expanded.html" title="Expanded allows flexible sizing of its child." alt="" coords="763,143,932,170"/>
-<area shape="rect" href="classspk_1_1widget_1_1FractionallySizedBox.html" title="FractionallySizedBox sizes its widgets to a fraction of its parent&#39;s constraints." alt="" coords="757,195,938,236"/>
-<area shape="rect" href="classspk_1_1widget_1_1LayoutBuilder.html" title="LayoutBuilder allows defining layout through a Builder without writing a new class." alt="" coords="750,261,945,287"/>
-<area shape="rect" href="classspk_1_1widget_1_1Padding.html" title="Padding adds padding around its child." alt="" coords="769,311,925,338"/>
-<area shape="rect" href="classspk_1_1widget_1_1PointerDetector.html" title="Detects if a pointer enters this widget&#39;s children." alt="" coords="744,362,951,389"/>
-<area shape="rect" href="classspk_1_1widget_1_1SizedBox.html" title="SizedBox forces its child to a fixed size." alt="" coords="765,413,930,439"/>
+<area shape="rect" href="classspk_1_1widget_1_1Center.html" title="Centers the child." alt="" coords="773,13,921,39"/>
+<area shape="rect" href="classspk_1_1widget_1_1ColoredBox.html" title="A box filled with color." alt="" coords="757,63,937,90"/>
+<area shape="rect" href="classspk_1_1widget_1_1Expanded.html" title="Expanded allows flexible sizing of its child." alt="" coords="763,114,932,141"/>
+<area shape="rect" href="classspk_1_1widget_1_1FractionallySizedBox.html" title="FractionallySizedBox sizes its widgets to a fraction of its parent&#39;s constraints." alt="" coords="757,165,938,207"/>
+<area shape="rect" href="classspk_1_1widget_1_1LayoutBuilder.html" title="LayoutBuilder allows defining layout through a Builder without writing a new class." alt="" coords="750,231,945,258"/>
+<area shape="rect" href="classspk_1_1widget_1_1Offset.html" title="Create a singleChildWidget allowing user to place the children at a desired place on screen,..." alt="" coords="775,282,919,309"/>
+<area shape="rect" href="classspk_1_1widget_1_1Padding.html" title="Padding adds padding around its child." alt="" coords="769,333,925,359"/>
+<area shape="rect" href="classspk_1_1widget_1_1PointerDetector.html" title="Detects if a pointer enters this widget&#39;s children." alt="" coords="744,383,951,410"/>
+<area shape="rect" href="classspk_1_1widget_1_1SizedBox.html" title="SizedBox forces its child to a fixed size." alt="" coords="765,434,930,461"/>
 </map>
 <center><span class="legend">[<a href="graph_legend.html">legend</a>]</span></center></div>
 <div class="dynheader">
@@ -144,6 +145,10 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 <tr class="memitem:a5e92b2fd1ef7d863f0bfdce295aeb35f"><td class="memTemplItemLeft" align="right" valign="top">TChild *&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classspk_1_1widget_1_1IWidget.html#a5e92b2fd1ef7d863f0bfdce295aeb35f">makeChild</a> (Args &amp;&amp;... p_args)</td></tr>
 <tr class="memdesc:a5e92b2fd1ef7d863f0bfdce295aeb35f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a child widget of type TChild. This parent is then responsible for the lifetime of children created this way.  <a href="classspk_1_1widget_1_1IWidget.html#a5e92b2fd1ef7d863f0bfdce295aeb35f">More...</a><br /></td></tr>
 <tr class="separator:a5e92b2fd1ef7d863f0bfdce295aeb35f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a746f33ba49b11411315467905db0fa30"><td class="memTemplParams" colspan="2">template&lt;class TChild , typename... Args&gt; </td></tr>
+<tr class="memitem:a746f33ba49b11411315467905db0fa30"><td class="memTemplItemLeft" align="right" valign="top">TChild *&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classspk_1_1widget_1_1IWidget.html#a746f33ba49b11411315467905db0fa30">makeActiveChild</a> (Args &amp;&amp;... p_args)</td></tr>
+<tr class="memdesc:a746f33ba49b11411315467905db0fa30"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a child widget of type TChild and activate it. This parent is then responsible for the lifetime of children created this way.  <a href="classspk_1_1widget_1_1IWidget.html#a746f33ba49b11411315467905db0fa30">More...</a><br /></td></tr>
+<tr class="separator:a746f33ba49b11411315467905db0fa30"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a38b2d897272e7b8a11db07d67d284ea0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1widget_1_1IWidget.html#a38b2d897272e7b8a11db07d67d284ea0">setGeometry</a> (const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2Int</a> &amp;p_anchor, const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2UInt</a> &amp;p_size)</td></tr>
 <tr class="separator:a38b2d897272e7b8a11db07d67d284ea0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1dd44edc513b29819141b18f4d3496da"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1widget_1_1IWidget.html#a1dd44edc513b29819141b18f4d3496da">setDepth</a> (const float &amp;p_depth)</td></tr>
@@ -632,6 +637,43 @@ The viewport of a <a class="el" href="classspk_1_1widget_1_1IWidget.html" title=
 </dl>
 
 <p>Reimplemented in <a class="el" href="classspk_1_1widget_1_1SingleChildWidget.html#a03532419ebfb99cb4e3f465a43a9ae9f">spk::widget::SingleChildWidget</a>, <a class="el" href="classspk_1_1widget_1_1Row.html#a57c19aa5e078f425ae7e7fb26a2f0c4b">spk::widget::Row</a>, <a class="el" href="classspk_1_1widget_1_1Column.html#a4d32282359821377fc88a8fe4656aa7e">spk::widget::Column</a>, <a class="el" href="classspk_1_1widget_1_1Expanded.html#a388d65cd40f33454f657ff0937278146">spk::widget::Expanded</a>, <a class="el" href="classspk_1_1widget_1_1Padding.html#ad6a4cdfebd035959b4ced359c8f97229">spk::widget::Padding</a>, <a class="el" href="classspk_1_1widget_1_1FractionallySizedBox.html#a1f69367fae563d772ab021d0b53dfe8e">spk::widget::FractionallySizedBox</a>, <a class="el" href="classspk_1_1widget_1_1SizedBox.html#a76d3b7c183ec74d9e637dcb8042c3909">spk::widget::SizedBox</a>, <a class="el" href="classspk_1_1widget_1_1TextLabel.html#ac5e8d15a35c08fc535cb1c6c95f892bb">spk::widget::TextLabel</a>, <a class="el" href="classspk_1_1widget_1_1Center.html#a53eb68d58c2e15e2b9099556d5f48b61">spk::widget::Center</a>, and <a class="el" href="classspk_1_1widget_1_1LayoutBuilder.html#a7ff916c9e34f594a127e0ff919c35e69">spk::widget::LayoutBuilder</a>.</p>
+
+</div>
+</div>
+<a id="a746f33ba49b11411315467905db0fa30"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a746f33ba49b11411315467905db0fa30">&#9670;&nbsp;</a></span>makeActiveChild()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class TChild , typename... Args&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">TChild* spk::widget::IWidget::makeActiveChild </td>
+          <td>(</td>
+          <td class="paramtype">Args &amp;&amp;...&#160;</td>
+          <td class="paramname"><em>p_args</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Create a child widget of type TChild and activate it. This parent is then responsible for the lifetime of children created this way. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_args</td><td>Arguments used for the TChild constructor. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>A temporary pointer to the activated child, without ownership. </dd></dl>
 
 </div>
 </div>
