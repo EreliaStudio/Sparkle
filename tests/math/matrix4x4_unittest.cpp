@@ -7,6 +7,24 @@
 
 using namespace spk;
 
+namespace spk {
+  bool Matrix4x4::operator==(const Matrix4x4& a, const Matrix4x4& b) {
+for (size_t i = 0; i < 4; i++)
+    {
+        for (size_t j = 0; j < 4; j++)
+        {
+          // Only use a dynamic value if the the numbers are big enough. This way we don't break near 0.
+          const float largest = std::max(std::fabs(a[i][j]), std::fabs(b[i][j]));
+          const float epsilon = largest >= 1 ? largest * std::numeric_limits<float>::epsilon : std::numeric_limits<float>::epsilon;
+            if (std::fabs() > epsilon) {
+              return false;
+            }
+        }
+    }
+return true;
+  }
+}
+
 class Matrix4x4Test : public ::testing::Test
 {
 protected:
