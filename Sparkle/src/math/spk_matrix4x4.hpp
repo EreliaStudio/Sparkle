@@ -168,22 +168,6 @@ namespace spk
         static Matrix4x4 ortho(float left, float right, float bottom, float top, float nearPlane, float farPlane);
 
         /**
-         * @brief Checks if this matrix is equal to another matrix.
-         *
-         * @param other The matrix to compare with.
-         * @return true if the matrices are equal, false otherwise.
-         */
-        bool operator==(const Matrix4x4& other) const;
-
-        /**
-         * @brief Checks if this matrix is not equal to another matrix.
-         *
-         * @param other The matrix to compare with.
-         * @return true if the matrices are not equal, false otherwise.
-         */
-        bool operator!=(const Matrix4x4& other) const;
-
-        /**
          * @brief Calculates the transpose of this matrix.
          *
          * @return A new Matrix4x4 that is the transpose of this matrix.
@@ -253,6 +237,5 @@ namespace spk
          * @return A constant pointer to the matrix data.
          */
         const float* c_ptr() const;
-
     };
 }
