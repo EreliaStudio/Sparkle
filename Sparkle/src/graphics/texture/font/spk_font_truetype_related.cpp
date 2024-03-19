@@ -60,7 +60,7 @@ namespace spk
 			throwException("Failed to start the packing process for font [" + p_fontConfiguration.fileName() + "] with error [" + std::to_string(errorCode) + "]");
 		
 		if (p_key.outlineSize != 0)
-			context.padding = p_key.outlineSize * 2;
+			context.padding = p_key.outlineSize;
 
 		stbtt_PackSetOversampling(&context, 1, 1);
 		errorCode = stbtt_PackFontRange(&context, p_fontData.data(), 0, static_cast<float>(p_key.fontSize), L' ', p_fontConfiguration.validGlyphs().back() + 1, charInformation);
@@ -118,6 +118,8 @@ namespace spk
 		{
 			_computeCharGlyphData( p_fontConfiguration.validGlyphs()[i], _glyphDatas[p_fontConfiguration.validGlyphs()[i]], charInformation, buildData.size, outlineOffset);
 		}
+
+		delete charInformation;
 
 		return (buildData);
 	}

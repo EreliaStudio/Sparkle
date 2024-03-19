@@ -2,100 +2,49 @@
 
 using Widget = spk::widget::IWidget;
 
-class Button : public Widget
+class FontRenderer : public Widget
 {
-public:
-    using Callback = std::function<void()>;
 private:
-    static inline spk::SpriteSheet* _pressedDefaultTexture = nullptr;
-    static inline spk::SpriteSheet* _releasedDefaultTexture = nullptr;
-    static inline spk::Font* _labelDefaultFont = nullptr;
-
-    int _boxIndex = 0;
-    spk::widget::components::NineSlicedBox _boxes[2];
-    spk::widget::components::TextLabel _label;
-
-    Callback _onClickCallback;
+    std::unique_ptr<spk::Font> _myFont;
+    spk::widget::components::TextureRenderer _textureRenderer;
 
     void _onGeometryChange()
     {
-        for (size_t i = 0; i < 2; i++)
-        {
-            _boxes[i].setGeometry(anchor(), size());
-            _boxes[i].setLayer(layer());
-        }
-
-        _label.setLayer(layer() + 1.0f);
-        _label.setAnchor(anchor() + size() / 2); 
+        _textureRenderer.setGeometry(anchor(), size());
+        float ratio = static_cast<float>(size().x) / static_cast<float>(size().y);
+        _textureRenderer.setTextureGeometry(spk::Vector2(0, 0), spk::Vector2(0.05f * ratio, 0.05f));
+        _textureRenderer.setLayer(layer());
     }
 
-    void _onRender() override
+    void _onRender()
     {
-        _boxes[_boxIndex].render();
-        _label.render();
-    }
-
-    void _onUpdate() override
-    {
-        if (spk::Application::activeApplication()->mouse().getButton(spk::Mouse::Left) == spk::InputState::Released && 
-            _boxIndex == 1)
-            _onClickCallback();
-
-        if (spk::Application::activeApplication()->mouse().getButton(spk::Mouse::Left) == spk::InputState::Down && 
-            hitTest(spk::Application::activeApplication()->mouse().position()) == true)
-        {
-            _boxIndex = 1;
-        }
-        else
-            _boxIndex = 0;
+        _textureRenderer.render();
     }
 
 public:
-    Button(const std::string& p_buttonText, const Callback& p_onClickCallback, Widget* p_parent) :
-        Widget(p_parent),
-        _onClickCallback(p_onClickCallback)
+    FontRenderer(Widget* p_parent = nullptr) :
+        Widget(p_parent)
     {
-        if (_pressedDefaultTexture == nullptr)
-            _pressedDefaultTexture = new spk::SpriteSheet("Playground/resources/texture/buttonPressed.png", spk::Vector2Int(3, 3));
-        if (_releasedDefaultTexture == nullptr)
-            _releasedDefaultTexture = new spk::SpriteSheet("Playground/resources/texture/buttonReleased.png", spk::Vector2Int(3, 3));
-        if (_labelDefaultFont == nullptr)
-            _labelDefaultFont = new spk::Font("Playground/resources/font/Roboto-Regular.ttf");
+        _myFont = std::make_unique<spk::Font>("Playground/resources/font/Heavitas.ttf");
 
-        _boxIndex = 0;
-
-        _boxes[0].setSpriteSheet(_releasedDefaultTexture);
-        _boxes[0].setCornerSize(6);
-
-        _boxes[1].setSpriteSheet(_pressedDefaultTexture);
-        _boxes[1].setCornerSize(6);
-
-        _label.setText(p_buttonText);
-        _label.setTextSize(50); 
-        _label.setTextColor(spk::Colors::black);
-        _label.setFont(_labelDefaultFont);
-        _label.setHorizontalAlignment(spk::HorizontalAlignment::Centered);
-        _label.setVerticalAlignment(spk::VerticalAlignment::Centered);
-        _label.setOutlineSize(2);
-        _label.setOutlineStyle(spk::Font::OutlineStyle::Standard);
-        _label.setOutlineColor(spk::Colors::black);
+        _textureRenderer.setTexture(&(_myFont->atlas(50, 10, spk::Font::OutlineStyle::Standard).texture()));
     }
-}; 
+};
 
 class MainWidget : public Widget
 {
 private:
-    std::unique_ptr<Button> _myButton;
+    std::unique_ptr<FontRenderer> _myFontRenderer;
 
 public:
     MainWidget(const std::string& p_name) :
         Widget(p_name, nullptr)
     { 
-        auto offsetButtonLayout =  makeActiveChild<spk::widget::Offset>(100, this);
-        auto sizeButtonLayout = offsetButtonLayout->makeActiveChild<spk::widget::SizedBox>(spk::Vector2Int(200, 100));
-        _myButton = std::make_unique<Button>("Click Me", [&](){std::cout << "Button pressed" << std::endl;}, sizeButtonLayout);
+        auto paddingParent = makeActiveChild<spk::widget::Padding>(0.0f, 0.0f, 0.0f, 0.0f);
+        auto sizeParent = paddingParent->makeActiveChild<spk::widget::FractionallySizedBox>(1.0f, 1.0f);
 
-        _myButton->activate();
+        _myFontRenderer = std::make_unique<FontRenderer>(sizeParent);
+        _myFontRenderer->activate();    
     } 
 };
 

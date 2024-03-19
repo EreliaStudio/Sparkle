@@ -58,6 +58,8 @@
 
 #include "widget/components/spk_nine_sliced.hpp"
 #include "widget/components/spk_text_label.hpp"
+#include "widget/components/spk_colored_box.hpp"
+#include "widget/components/spk_texture_renderer.hpp"
 
 #include "widget/spk_basic_widgets.hpp"
 #include "widget/spk_box_constraints.hpp"

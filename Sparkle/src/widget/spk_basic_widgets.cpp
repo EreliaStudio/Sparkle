@@ -66,6 +66,12 @@ namespace spk::widget
     {
     }
 
+    FractionallySizedBox::FractionallySizedBox(const spk::Vector2& p_ratio, IWidget* p_parent) :
+        FractionallySizedBox(p_ratio.x, p_ratio.y, p_parent)
+    {
+
+    }
+
     Vector2 FractionallySizedBox::layout(const BoxConstraints& p_constraints)
     {
         float w = p_constraints.max.x * _horizontal;

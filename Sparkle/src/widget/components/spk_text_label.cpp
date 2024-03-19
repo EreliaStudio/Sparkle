@@ -30,19 +30,18 @@ namespace spk::widget::components
     {
         float r = texture(fontTexture, fragmentUVs).r;
 
-        pixelColor = vec4(r, r, r, r);
-        // if (r == 0.0)
-        // {
-        //     discard;
-        // }
-        // else if (r == 1.0)
-        // {
-        //     pixelColor = textRendererAttribute.textColor;
-        // }
-        // else
-        // {
-        //     pixelColor = textRendererAttribute.outlineColor;
-        // }
+        if (r == 0.0)
+        {
+            pixelColor = vec4(1, 0, 0, 1);
+        }
+        else if (r == 1.0)
+        {
+            pixelColor = textRendererAttribute.textColor;
+        }
+        else
+        {
+            pixelColor = textRendererAttribute.outlineColor;
+        }
     })";
     spk::Pipeline TextLabel::_renderingPipeline = spk::Pipeline(TextLabel::_renderingPipelineCode);
 

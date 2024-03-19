@@ -111,6 +111,7 @@ namespace spk::widget
          * @param p_parent The parent widget.
          */
         FractionallySizedBox(float p_horizontal, float p_vertical, IWidget* p_parent = nullptr);
+        FractionallySizedBox(const spk::Vector2& p_ratio, IWidget* p_parent = nullptr);
 
         /**
          * @brief Implement layout to set the child's size to a fraction of the parent's size.
