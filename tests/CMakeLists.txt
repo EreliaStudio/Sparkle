@@ -35,6 +35,7 @@ add_subdirectory(data_structure)
 add_subdirectory(design_pattern)
 add_subdirectory(math)
 add_subdirectory(miscellaneous)
+add_subdirectory(input)
 
 foreach(SOURCE_FILE IN LISTS UNITTEST_SOURCE_FILE)
     get_filename_component(TARGET_NAME ${SOURCE_FILE} NAME_WE)

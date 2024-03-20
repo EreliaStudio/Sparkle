@@ -18,7 +18,6 @@
 
 #include "data_structure/spk_thread_safe_queue.hpp"
 #include "graphics/pipeline/spk_pipeline.hpp"
-#include "input/spk_input_decoder.hpp"
 #include "input/spk_keyboard.hpp"
 #include "input/spk_mouse.hpp"
 #include "profiler/spk_profiler.hpp"
@@ -196,7 +195,6 @@ namespace spk
 
         Keyboard _keyboard;
         Mouse _mouse;
-        InputDecoder _inputDecoder;
 
         Handle _handle;
         CentralWidget* _centralWidget;
@@ -257,12 +255,6 @@ namespace spk
          * @return The Mouse managed by the application.
          */
         const Mouse& mouse() const;
-
-        /**
-         * @brief Return a reference to the InputDecoder.
-         * @return The InputDecoder managed by the application.
-         */
-        InputDecoder& inputDecoder();
 
         /**
          * @brief Return a const reference to the TimeManager.

@@ -165,11 +165,6 @@ namespace spk
         return (_mouse);
     }
 
-    InputDecoder& Application::inputDecoder()
-    {
-        return (_inputDecoder);
-    }
-
     const TimeManager& Application::timeManager() const
     {
         return (_timeManager);
