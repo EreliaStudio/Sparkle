@@ -237,7 +237,8 @@ namespace spk
         private:
             struct BuildData
             {
-                std::vector<uint8_t> buffer;
+                std::vector<uint8_t> fontBuffer;
+                std::vector<uint8_t> outlineBuffer;
                 spk::Vector2Int size = spk::Vector2Int(32, 32);
             };
 
@@ -246,6 +247,10 @@ namespace spk
             Texture _texture;
 
             BuildData _computeBuildData(const std::vector<uint8_t>& p_fontData, const Configuration& p_fontConfiguration, const Key& p_key);
+
+            void computeFontBuffer(BuildData& p_buildData, const Key &p_key);
+            void computeOutlineBuffer(BuildData& p_buildData, const Key &p_key);
+            void pushCombinedTexture(BuildData& p_buildData);
 
         public:
             /**

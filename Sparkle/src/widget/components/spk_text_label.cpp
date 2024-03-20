@@ -28,20 +28,21 @@ namespace spk::widget::components
     
     void renderPass()
     {
-        float r = texture(fontTexture, fragmentUVs).r;
+        vec2 values = texture(fontTexture, fragmentUVs).rg;
 
-        if (r == 0.0)
+        if (values.x == 0.0 && values.y == 0.0)
         {
-            pixelColor = vec4(1, 0, 0, 1);
+            discard;
         }
-        else if (r == 1.0)
-        {
-            pixelColor = textRendererAttribute.textColor;
-        }
-        else
-        {
-            pixelColor = textRendererAttribute.outlineColor;
-        }
+        
+        // Determine the mix factor based on the alpha of the textColor and outlineColor
+        float mixFactor = (1.0 - values.x) * values.y;
+
+        // Blend the colors based on the calculated mix factor
+        pixelColor = mix(textRendererAttribute.textColor, textRendererAttribute.outlineColor, mixFactor);
+
+        // Ensure that the pixel alpha is set correctly
+        pixelColor.a = values.x + (1.0 - values.r) * values.y;
     })";
     spk::Pipeline TextLabel::_renderingPipeline = spk::Pipeline(TextLabel::_renderingPipelineCode);
 

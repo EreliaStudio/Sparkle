@@ -54,14 +54,11 @@ namespace spk
 
 		stbtt_pack_context context;
 		int errorCode;
-
-		errorCode = stbtt_PackBegin(&context, atlasData.data(), atlasSize.x, atlasSize.y, 0, 1, nullptr);
+		
+		errorCode = stbtt_PackBegin(&context, atlasData.data(), atlasSize.x, atlasSize.y, 0, p_key.outlineSize * 2, nullptr);
 		if (errorCode == 0)
 			throwException("Failed to start the packing process for font [" + p_fontConfiguration.fileName() + "] with error [" + std::to_string(errorCode) + "]");
 		
-		if (p_key.outlineSize != 0)
-			context.padding = p_key.outlineSize;
-
 		stbtt_PackSetOversampling(&context, 1, 1);
 		errorCode = stbtt_PackFontRange(&context, p_fontData.data(), 0, static_cast<float>(p_key.fontSize), L' ', p_fontConfiguration.validGlyphs().back() + 1, charInformation);
 		stbtt_PackEnd(&context);
@@ -107,7 +104,7 @@ namespace spk
 
 		static stbtt_packedchar *charInformation = new stbtt_packedchar[0xFFFF];
 
-		while (_executePackingOperation(p_fontData,p_fontConfiguration,p_key, buildData.buffer, buildData.size, charInformation) == false)
+		while (_executePackingOperation(p_fontData,p_fontConfiguration,p_key, buildData.fontBuffer, buildData.size, charInformation) == false)
 		{
 			buildData.size *= spk::Vector2Int(2, 2);
 		}

@@ -25,6 +25,8 @@ namespace spk::widget
         void _onRender() override;
 
     public:
+        TextLabel(IWidget* p_parent = nullptr);
+
         /**
          * @brief Constructor.
          *
