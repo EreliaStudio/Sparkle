@@ -57,7 +57,7 @@ namespace spk
 
 							if (checkX >= 0 && checkX < p_buildData.size.x && checkY >= 0 && checkY < p_buildData.size.y)
 							{
-								if (p_buildData.fontBuffer[checkX + checkY * p_buildData.size.x] != EMPTY_PIXEL)
+								if (p_buildData.fontBuffer[checkX + checkY * p_buildData.size.x] == EMPTY_PIXEL)
 								{
 									isBorder = true;
 									break;
