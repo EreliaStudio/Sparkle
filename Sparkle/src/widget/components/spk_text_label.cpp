@@ -38,11 +38,19 @@ namespace spk::widget::components
         // Determine the mix factor based on the alpha of the textColor and outlineColor
         float mixFactor = (1.0 - values.x) * values.y;
 
-        // Blend the colors based on the calculated mix factor
-        pixelColor = mix(textRendererAttribute.textColor, textRendererAttribute.outlineColor, mixFactor);
+        if (values.x != 0)
+        {
+            // Blend the colors based on the calculated mix factor
+            pixelColor = mix(textRendererAttribute.textColor, textRendererAttribute.outlineColor, mixFactor);
 
-        // Ensure that the pixel alpha is set correctly
-        pixelColor.a = values.x + (1.0 - values.r) * values.y;
+            // Ensure that the pixel alpha is set correctly
+            pixelColor.a = values.x + (1.0 - values.r) * values.y;
+        }
+        else
+        {
+            pixelColor = textRendererAttribute.outlineColor;
+            pixelColor.a = values.y;
+        }
     })";
     spk::Pipeline TextLabel::_renderingPipeline = spk::Pipeline(TextLabel::_renderingPipelineCode);
 
@@ -162,6 +170,13 @@ namespace spk::widget::components
 
         spk::Vector2Int glyphAnchor = _anchor + _computeBaseAnchor(renderingData);
 
+        spk::Vector2Int glyphOutlineOffsets[4] = {
+            spk::Vector2Int(-static_cast<int>(_outlineSize), -static_cast<int>(_outlineSize)),
+            spk::Vector2Int(-static_cast<int>(_outlineSize), static_cast<int>(_outlineSize)),
+            spk::Vector2Int(static_cast<int>(_outlineSize), -static_cast<int>(_outlineSize)),
+            spk::Vector2Int(static_cast<int>(_outlineSize), static_cast<int>(_outlineSize))
+        };
+
         for (const spk::Font::Atlas::GlyphData* glyphData : renderingData.glyphs)
         {
             unsigned int baseIndexes = _bufferShaderInput.size();
@@ -170,12 +185,12 @@ namespace spk::widget::components
             {
                 ShaderInput newVertex;
 
-                newVertex.position = glyphAnchor + glyphData->position[i];
+                newVertex.position = glyphAnchor + glyphData->position[i] + glyphOutlineOffsets[i];
                 newVertex.uvs = glyphData->uvs[i];
 
                 _bufferShaderInput.push_back(newVertex);
             }
-            glyphAnchor += glyphData->step;
+            glyphAnchor += glyphData->step + spk::Vector2Int(_outlineSize * 2, 0);
 
             for (size_t i = 0; i < 6; i++)
             {

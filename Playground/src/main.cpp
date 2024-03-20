@@ -55,8 +55,8 @@ public:
     { 
         _myFont = std::make_unique<spk::Font>("Playground/resources/font/Heavitas.ttf");
 
-        auto paddingParent = makeActiveChild<spk::widget::Padding>(0.0f, 0.0f, 0.0f, 0.0f);
-        auto sizeParent = paddingParent->makeActiveChild<spk::widget::FractionallySizedBox>(1.0f, 1.0f);
+        auto paddingParent = makeActiveChild<spk::widget::Offset>(0.0f, 0.0f);
+        auto sizeParent = paddingParent->makeActiveChild<spk::widget::FractionallySizedBox>(1.0f, 0.5f);
 
         // _myFontRenderer = std::make_unique<FontRenderer>(sizeParent);
         // _myFontRenderer->setFont(_myFont);
@@ -65,9 +65,9 @@ public:
         _myTextLabel = std::make_unique<spk::widget::TextLabel>(sizeParent);
 
         _myTextLabel->label().setFont(_myFont.get());
-        _myTextLabel->label().setText("A");
+        _myTextLabel->label().setText("Ceci est un test");
         _myTextLabel->label().setTextColor(spk::Colors::white);
-        _myTextLabel->label().setTextSize(500);
+        _myTextLabel->label().setTextSize(50);
         _myTextLabel->label().setOutlineColor(spk::Colors::red);
         _myTextLabel->label().setOutlineSize(10);
 

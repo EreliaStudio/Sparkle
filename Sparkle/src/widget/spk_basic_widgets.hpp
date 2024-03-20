@@ -375,5 +375,25 @@ namespace spk::widget
          * @brief Constructor with a Vector2 indicating the anchor needed.
         */
         Offset(const spk::Vector2& p_childAnchor, spk::widget::IWidget* p_parent = nullptr);
+        Offset(const float& p_childAnchorX, const float& p_childAnchorY, spk::widget::IWidget* p_parent = nullptr);
+    };
+
+    /**
+     * @class Offset
+     * @brief Create a singleChildWidget allowing user to place the children at a desired place on screen, relative to the parent of this widget
+    */
+    class FractionallyOffset : public spk::widget::SingleChildWidget
+    {
+    private:
+        spk::Vector2 _childAnchor;
+
+        spk::Vector2 layout(const spk::widget::BoxConstraints& p_constraints) override;
+
+    public:
+        /**
+         * @brief Constructor with a Vector2 indicating the anchor needed.
+        */
+        FractionallyOffset(const spk::Vector2& p_childAnchor, spk::widget::IWidget* p_parent = nullptr);
+        FractionallyOffset(const float& p_childAnchorX, const float& p_childAnchorY, spk::widget::IWidget* p_parent = nullptr);
     };
 }

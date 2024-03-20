@@ -55,9 +55,9 @@ namespace spk
 		stbtt_pack_context context;
 		int errorCode;
 		
-		errorCode = stbtt_PackBegin(&context, atlasData.data(), atlasSize.x, atlasSize.y, 0, p_key.outlineSize * 2, nullptr);
+		errorCode = stbtt_PackBegin(&context, atlasData.data(), atlasSize.x, atlasSize.y, 0, p_key.outlineSize * 2 + 1, nullptr);
 		if (errorCode == 0)
-			throwException("Failed to start the packing process for font [" + p_fontConfiguration.fileName() + "] with error [" + std::to_string(errorCode) + "]");
+			return (errorCode != 0);
 		
 		stbtt_PackSetOversampling(&context, 1, 1);
 		errorCode = stbtt_PackFontRange(&context, p_fontData.data(), 0, static_cast<float>(p_key.fontSize), L' ', p_fontConfiguration.validGlyphs().back() + 1, charInformation);

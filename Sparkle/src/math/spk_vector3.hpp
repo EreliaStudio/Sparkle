@@ -693,4 +693,17 @@ namespace spk
 	using Vector3Int = IVector3<int>; ///< Alias for IVector3 with int components.
 	using Vector3UInt = IVector3<unsigned int>; ///< Alias for IVector3 with unsigned int components.
 
-};
+}
+
+namespace std {
+    template <typename TType>
+    struct hash<spk::IVector3<TType>> {
+        size_t operator()(const spk::IVector3<TType>& vec) const {
+            size_t h1 = std::hash<TType>{}(vec.x);
+            size_t h2 = std::hash<TType>{}(vec.y);
+            size_t h3 = std::hash<TType>{}(vec.z);
+            // Combine the hash of x and y. There are many ways to do this; this is just one example.
+            return h1 ^ (h2 << 1) ^ (h3 << 2); // Shift and XOR for a simple combination
+        }
+    };
+}
