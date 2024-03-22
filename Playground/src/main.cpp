@@ -70,6 +70,7 @@ public:
         _myTextLabel->label().setTextSize(50);
         _myTextLabel->label().setOutlineColor(spk::Colors::red);
         _myTextLabel->label().setOutlineSize(10);
+        _myTextLabel->label().setOutlineStyle(spk::Font::OutlineStyle::SharpEdge);
 
         _myTextLabel->activate();
     } 

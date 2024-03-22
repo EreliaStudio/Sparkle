@@ -9,84 +9,8 @@ namespace spk
 	{
 
 	}
-
-	std::unordered_map<int, unsigned char> populateFadeValueMap(const int& p_outlineSize, const int& p_lineSize)
-	{
-		std::unordered_map<int, unsigned char> result;
-
-		for (int x = -p_outlineSize; x <= p_outlineSize; x++)
-		{
-			for (int y = -p_outlineSize; y <= p_outlineSize; y++)
-			{
-				int distance = static_cast<int>(std::sqrt(x * x + y * y) + 0.5f);
-				if (distance > p_outlineSize)
-					continue;
-
-				float powerFactor = 3.0f;
-				float normalizedDistance = static_cast<float>(distance) / static_cast<float>(p_outlineSize);
-				float fadeFactor = 1 - std::pow(normalizedDistance, powerFactor);
-
-				unsigned char value = static_cast<unsigned char>(255 * fadeFactor);
-				if (value >= 1)
-					result[x + y * p_lineSize] = value;
-			}
-		}
-
-		return (result);
-	}
 	
-	void Font::Atlas::computeOutlineBuffer(BuildData& p_buildData, const Key &p_key)
-	{
-		std::unordered_map<int, unsigned char> fadeValueMap = populateFadeValueMap(p_key.outlineSize, p_buildData.size.x);
-
-		std::vector<spk::Vector2Int> borderPixels;
-		for (int i = 0; i < p_buildData.size.x; i++)
-		{
-			for (int j = 0; j < p_buildData.size.y; j++)
-			{
-				if (p_buildData.fontBuffer[i + j * p_buildData.size.x] != EMPTY_PIXEL)
-				{
-					bool isBorder = false;
-					for (int y = -1; y <= 1 && !isBorder; y++)
-					{
-						for (int x = -1; x <= 1 && !isBorder; x++)
-						{
-							if (x == 0 && y == 0) continue;
-
-							int checkX = i + x;
-							int checkY = j + y;
-
-							if (p_buildData.fontBuffer[checkX + checkY * p_buildData.size.x] == EMPTY_PIXEL)
-							{
-								isBorder = true;
-								break;
-							}
-						}
-					}
-
-					if (isBorder)
-					{
-						borderPixels.emplace_back(i, j);
-					}
-				}
-			}
-		}
-
-		for (const auto& borderPixel : borderPixels)
-		{
-			int index = borderPixel.x + borderPixel.y * p_buildData.size.x;
-			for (const auto& [offset, value] : fadeValueMap)
-			{
-				int tmpIndex = index + offset;
-				if (p_buildData.fontBuffer[tmpIndex] != CHAR_PIXEL)
-				{
-					p_buildData.outlineBuffer[tmpIndex] = std::max(p_buildData.outlineBuffer[tmpIndex], value);
-				}
-			}
-		}
-	}
-	
-	void Font::Atlas::pushCombinedTexture(BuildData& p_buildData)
+	void Font::Atlas::_pushCombinedTexture(BuildData& p_buildData)
 	{
 		std::vector<uint8_t> textureBuffer;
 
@@ -109,12 +33,9 @@ namespace spk
 	{
 		Font::Atlas::BuildData buildData = _computeBuildData(p_fontData, p_fontConfiguration, p_key);
 
-		buildData.outlineBuffer.resize(buildData.size.x * buildData.size.y, 0);
+		_computeOutlineBuffer(buildData, p_key);
 
-		if (p_key.outlineSize != 0)
-			computeOutlineBuffer(buildData, p_key);
-
-		pushCombinedTexture(buildData);
+		_pushCombinedTexture(buildData);
 	}
 
 	std::string wstringToString(const std::wstring& wstr)
