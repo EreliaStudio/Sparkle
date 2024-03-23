@@ -23,12 +23,11 @@ namespace spk
 					continue;
 
 				float powerFactor = 3.0f;
-				float normalizedDistance = static_cast<float>(distance) / static_cast<float>(p_outlineSize);
+				float normalizedDistance = static_cast<float>(distance) / static_cast<float>(toCompare);
 				float fadeFactor = 1 - std::pow(normalizedDistance, powerFactor);
 
 				unsigned char value = static_cast<unsigned char>(255 * fadeFactor);
-				if (value >= 1)
-					result[x + y * p_textureSize.x] = value;
+				result[x + y * p_textureSize.x] = value;
 			}
 		}
 
