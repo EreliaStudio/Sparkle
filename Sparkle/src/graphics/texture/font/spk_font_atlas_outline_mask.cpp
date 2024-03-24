@@ -173,15 +173,49 @@ namespace spk
 
 		for (const auto& borderPixel : borderPixels)
 		{
-			int index = borderPixel.x + borderPixel.y * p_buildData.size.x;
-			for (const auto& [offset, value] : outlineMask)
+			if (borderPixel != borderPixels[0])
+				break;
+			int borderIndex = borderPixel.x + borderPixel.y * p_buildData.size.x;
+
+			std::vector<int> toCalc = {-1, 1, -p_buildData.size.x, p_buildData.size.x};
+			const int offsets[4] = {-1, 1, -p_buildData.size.x, p_buildData.size.x};
+
+			for (size_t i = 0; i < toCalc.size(); i++)
 			{
-				int tmpIndex = index + offset;
-				if (p_buildData.fontBuffer[tmpIndex] != CHAR_PIXEL)
+				if (toCalc.size() > 8)
+					break;
+				std::cout << "Setting up to calc [" << i << "] : " << toCalc[i] << std::endl;
+
+				p_buildData.outlineBuffer[borderIndex + toCalc[i]] = outlineMask[toCalc[i]];
+
+				for (size_t j = 0; j < 4; j++)
 				{
-					p_buildData.outlineBuffer[tmpIndex] = std::max(p_buildData.outlineBuffer[tmpIndex], value);
+					if (j != 0)
+						std::cout << "	----" << std::endl;
+
+					int nextToCalc = toCalc[i] + offsets[j];
+
+					std::cout << "	Index : " << toCalc[i] << " vs " << nextToCalc << std::endl;
+					std::cout << "	Value : " << static_cast<int>(p_buildData.outlineBuffer[borderIndex + nextToCalc]) << " vs " << static_cast<int>(outlineMask[toCalc[i]]) << std::endl;
+					
+					if (p_buildData.outlineBuffer[borderIndex + nextToCalc] == 0 ||
+						p_buildData.outlineBuffer[borderIndex + nextToCalc] > outlineMask[toCalc[i]])
+					{
+						std::cout << "	Inserted" << std::endl;
+						toCalc.push_back(nextToCalc);
+					}
 				}
 			}
+
+			// int index = borderPixel.x + borderPixel.y * p_buildData.size.x;
+			// for (const auto& [offset, value] : outlineMask)
+			// {
+			// 	int tmpIndex = index + offset;
+			// 	if (p_buildData.fontBuffer[tmpIndex] != CHAR_PIXEL)
+			// 	{
+			// 		p_buildData.outlineBuffer[tmpIndex] = std::max(p_buildData.outlineBuffer[tmpIndex], value);
+			// 	}
+			// }
 		}
 	}
 }

@@ -67,9 +67,9 @@ public:
         _myTextLabel->label().setFont(_myFont.get());
         _myTextLabel->label().setText("Ceci est un test");
         _myTextLabel->label().setTextColor(spk::Colors::white);
-        _myTextLabel->label().setTextSize(200);
+        _myTextLabel->label().setTextSize(50);
         _myTextLabel->label().setOutlineColor(spk::Colors::red);
-        _myTextLabel->label().setOutlineSize(40);
+        _myTextLabel->label().setOutlineSize(10);
         _myTextLabel->label().setOutlineStyle(spk::Font::OutlineStyle::Standard);
 
         _myTextLabel->activate();
