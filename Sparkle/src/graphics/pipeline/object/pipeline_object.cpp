@@ -53,7 +53,7 @@ namespace spk
 		_vao.deactivate();
 	}
 
-	void Pipeline::Object::setIndexes(const std::vector<size_t> p_indexesData)
+	void Pipeline::Object::setIndexes(const std::vector<unsigned int> p_indexesData)
 	{
 		_vao.activate();
         _storage.activate();

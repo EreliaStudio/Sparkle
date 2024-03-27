@@ -54,7 +54,7 @@ namespace spk
 		deactivate();
 	}
 
-	void Pipeline::Object::Storage::setIndexes(const std::vector<size_t> p_indexesData)
+	void Pipeline::Object::Storage::setIndexes(const std::vector<unsigned int> p_indexesData)
 	{
 		_indexes.push(p_indexesData.data(), p_indexesData.size() * sizeof(size_t));
 	}
