@@ -28,6 +28,7 @@ find_package(GLEW REQUIRED)
 
 set(SPARKLE_INCLUDE_DIRS "C:/Program Files (x86)/Sparkle/include" ${GLEW_INCLUDE_DIRS})
 set(SPARKLE_LIBRARY_DIRS "C:/Program Files (x86)/Sparkle/lib/x32/Debug" ${GLEW_LIBRARY_DIRS})
+set(SPARKLE_LIBRARY_DIRS "C:/Program Files (x86)/Sparkle/lib/x64/Debug" ${GLEW_LIBRARY_DIRS})
 
 set(SPARKLE_LIBRARIES Sparkle OpenGL32.lib GLEW::GLEW)
 
