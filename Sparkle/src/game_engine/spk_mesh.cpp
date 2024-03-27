@@ -60,7 +60,7 @@ namespace spk
 			if (p_normalFlag == true)
 				vertex.normal = _normals[normalIndex];
 
-			auto [it, inserted] = uniqueVertexMap.try_emplace(vertex, uniqueVertexMap.size());
+			auto [it, inserted] = uniqueVertexMap.try_emplace(vertex, static_cast<unsigned int>(uniqueVertexMap.size()));
 
 			if (inserted == true)
 			{
@@ -243,9 +243,9 @@ namespace spk
 
 			Vector3 normal = (pointB - pointA).cross(pointC - pointA);
 
-			_indexes[i + 2] = _normals.size();
-			_indexes[i + 5] = _normals.size();
-			_indexes[i + 8] = _normals.size();
+			_indexes[i + 2] = static_cast<unsigned int>(_normals.size());
+			_indexes[i + 5] = static_cast<unsigned int>(_normals.size());
+			_indexes[i + 8] = static_cast<unsigned int>(_normals.size());
 
 			_normals.push_back(normal);
 		}

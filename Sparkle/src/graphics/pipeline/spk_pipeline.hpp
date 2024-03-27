@@ -465,7 +465,7 @@ namespace spk
                     _vertices.push(p_verticesData.data(), p_verticesData.size() * sizeof(float));
                 }
 
-                void setIndexes(const std::vector<size_t> p_indexesData);
+                void setIndexes(const std::vector<unsigned int> p_indexesData);
 
             public:
                 /**
@@ -679,7 +679,7 @@ namespace spk
              *
              * @param p_indexesData A vector containing the index data.
              */
-            void setIndexes(const std::vector<size_t> p_indexesData);
+            void setIndexes(const std::vector<unsigned int> p_indexesData);
 
             /**
              * @brief Retrieves a reference to an attribute by name.
