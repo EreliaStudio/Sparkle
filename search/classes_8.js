@@ -1,5 +1,27 @@
 var searchData=
 [
-  ['key_667',['Key',['../structspk_1_1Font_1_1Key.html',1,'spk::Font']]],
-  ['keyboard_668',['Keyboard',['../classspk_1_1Keyboard.html',1,'spk']]]
+  ['ianalyticalmetric_649',['IAnalyticalMetric',['../classspk_1_1IAnalyticalMetric.html',1,'spk']]],
+  ['ianalyticalmetric_3c_20long_20long_20_3e_650',['IAnalyticalMetric&lt; long long &gt;',['../classspk_1_1IAnalyticalMetric.html',1,'spk']]],
+  ['ichronometer_651',['IChronometer',['../classspk_1_1IChronometer.html',1,'spk']]],
+  ['ichronometer_3c_20std_3a_3achrono_3a_3amilliseconds_20_3e_652',['IChronometer&lt; std::chrono::milliseconds &gt;',['../classspk_1_1IChronometer.html',1,'spk']]],
+  ['ichronometer_3c_20std_3a_3achrono_3a_3ananoseconds_20_3e_653',['IChronometer&lt; std::chrono::nanoseconds &gt;',['../classspk_1_1IChronometer.html',1,'spk']]],
+  ['ichunk_654',['IChunk',['../classspk_1_1ITilemap_1_1IChunk.html',1,'spk::ITilemap']]],
+  ['icollider_655',['ICollider',['../classspk_1_1ICollider.html',1,'spk']]],
+  ['image_656',['Image',['../classspk_1_1Image.html',1,'spk']]],
+  ['imetric_657',['IMetric',['../classspk_1_1IMetric.html',1,'spk']]],
+  ['input_658',['Input',['../classspk_1_1Input.html',1,'spk']]],
+  ['inputdecoder_659',['InputDecoder',['../classspk_1_1InputDecoder.html',1,'spk']]],
+  ['inputmapping_660',['InputMapping',['../classspk_1_1InputMapping.html',1,'spk']]],
+  ['iperlin_661',['IPerlin',['../classspk_1_1IPerlin.html',1,'spk']]],
+  ['itilemap_662',['ITilemap',['../classspk_1_1ITilemap.html',1,'spk']]],
+  ['itilemap_3c_20short_2c_2016_2c_2016_2c_205_20_3e_663',['ITilemap&lt; short, 16, 16, 5 &gt;',['../classspk_1_1ITilemap.html',1,'spk']]],
+  ['itimer_664',['ITimer',['../classspk_1_1ITimer.html',1,'spk']]],
+  ['itimer_3c_20std_3a_3achrono_3a_3amilliseconds_20_3e_665',['ITimer&lt; std::chrono::milliseconds &gt;',['../classspk_1_1ITimer.html',1,'spk']]],
+  ['ivector2_666',['IVector2',['../structspk_1_1IVector2.html',1,'spk']]],
+  ['ivector2_3c_20float_20_3e_667',['IVector2&lt; float &gt;',['../structspk_1_1IVector2.html',1,'spk']]],
+  ['ivector2_3c_20int_20_3e_668',['IVector2&lt; int &gt;',['../structspk_1_1IVector2.html',1,'spk']]],
+  ['ivector2_3c_20unsigned_20int_20_3e_669',['IVector2&lt; unsigned int &gt;',['../structspk_1_1IVector2.html',1,'spk']]],
+  ['ivector3_670',['IVector3',['../structspk_1_1IVector3.html',1,'spk']]],
+  ['ivector3_3c_20float_20_3e_671',['IVector3&lt; float &gt;',['../structspk_1_1IVector3.html',1,'spk']]],
+  ['iwidget_672',['IWidget',['../classspk_1_1widget_1_1IWidget.html',1,'spk::widget']]]
 ];

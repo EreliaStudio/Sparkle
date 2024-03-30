@@ -23,7 +23,7 @@ var searchData=
   ['all_28',['all',['../structspk_1_1widget_1_1Padding_1_1Config.html#afcc05f06d394bd49addffec93b0e6264',1,'spk::widget::Padding::Config']]],
   ['allocate_29',['allocate',['../classspk_1_1Pool.html#a7a478fdc76b628a025ddf31e25871d76',1,'spk::Pool']]],
   ['allocator_30',['Allocator',['../classspk_1_1Pool.html#a41b4d948b50b4d497cc2884fbf138842',1,'spk::Pool']]],
-  ['anchor_31',['anchor',['../classspk_1_1Viewport.html#a0b1303f60a682deaecbb45cc2daafedf',1,'spk::Viewport::anchor()'],['../classspk_1_1widget_1_1components_1_1ColoredBox.html#ad155b7fa4ac1917ebed2b58e799bc096',1,'spk::widget::components::ColoredBox::anchor()'],['../classspk_1_1widget_1_1IWidget.html#aadae9c19b13ea12a3fa05e88ce36aace',1,'spk::widget::IWidget::anchor()']]],
+  ['anchor_31',['anchor',['../classspk_1_1widget_1_1components_1_1ColoredBox.html#ad155b7fa4ac1917ebed2b58e799bc096',1,'spk::widget::components::ColoredBox::anchor()'],['../classspk_1_1widget_1_1components_1_1TextureRenderer.html#a7c5c40c636f6f05953c9e2bc6c71be41',1,'spk::widget::components::TextureRenderer::anchor()'],['../classspk_1_1widget_1_1IWidget.html#aadae9c19b13ea12a3fa05e88ce36aace',1,'spk::widget::IWidget::anchor()'],['../classspk_1_1Viewport.html#a0b1303f60a682deaecbb45cc2daafedf',1,'spk::Viewport::anchor()']]],
   ['angle_32',['angle',['../structspk_1_1IVector2.html#abf6fbedf4dff9af9cec60fdeb93991b0',1,'spk::IVector2']]],
   ['animationduration_33',['animationDuration',['../structspk_1_1Tilemap2D_1_1Node.html#ab129e0c18b71016c591bdeb3bfea5746',1,'spk::Tilemap2D::Node']]],
   ['animationframeoffset_34',['animationFrameOffset',['../structspk_1_1Tilemap2D_1_1Node.html#ac39d3df52fe7264a2ce2193e9a761260',1,'spk::Tilemap2D::Node']]],

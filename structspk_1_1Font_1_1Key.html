@@ -88,9 +88,6 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a2f7b51ab8f461caded4103688b1312ce"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structspk_1_1Font_1_1Key.html#a2f7b51ab8f461caded4103688b1312ce">operator&lt;</a> (const <a class="el" href="structspk_1_1Font_1_1Key.html">Key</a> &amp;p_other) const</td></tr>
 <tr class="memdesc:a2f7b51ab8f461caded4103688b1312ce"><td class="mdescLeft">&#160;</td><td class="mdescRight">Comparison operator for <a class="el" href="structspk_1_1Font_1_1Key.html" title="Represents a unique identifier for font atlas configurations.">Key</a> objects.  <a href="structspk_1_1Font_1_1Key.html#a2f7b51ab8f461caded4103688b1312ce">More...</a><br /></td></tr>
 <tr class="separator:a2f7b51ab8f461caded4103688b1312ce"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab043f8ab1b441e4180682753ddf4dc5c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structspk_1_1Font_1_1Key.html#ab043f8ab1b441e4180682753ddf4dc5c">computeCircle</a> (const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2Int</a> &amp;p_atlasSize)</td></tr>
-<tr class="memdesc:ab043f8ab1b441e4180682753ddf4dc5c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes circle indices for rounded outlines.  <a href="structspk_1_1Font_1_1Key.html#ab043f8ab1b441e4180682753ddf4dc5c">More...</a><br /></td></tr>
-<tr class="separator:ab043f8ab1b441e4180682753ddf4dc5c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
@@ -98,26 +95,14 @@ Public Attributes</h2></td></tr>
 size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structspk_1_1Font_1_1Key.html#aca9df06cddf688f9c2fbef125674191d">fontSize</a></td></tr>
 <tr class="memdesc:aca9df06cddf688f9c2fbef125674191d"><td class="mdescLeft">&#160;</td><td class="mdescRight">The size of the font in points. This affects the overall scale of the glyphs within the atlas. <br /></td></tr>
 <tr class="separator:aca9df06cddf688f9c2fbef125674191d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1734caa00266191211a01a7cb54acfaf"><td class="memItemLeft" align="right" valign="top"><a id="a1734caa00266191211a01a7cb54acfaf"></a>
+<a class="el" href="classspk_1_1Font.html#af83504af647f0f7c98c509d3cc2e9f55">OutlineStyle</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structspk_1_1Font_1_1Key.html#a1734caa00266191211a01a7cb54acfaf">outlineStyle</a></td></tr>
+<tr class="memdesc:a1734caa00266191211a01a7cb54acfaf"><td class="mdescLeft">&#160;</td><td class="mdescRight">The outline style needed for a specific atlas. <br /></td></tr>
+<tr class="separator:a1734caa00266191211a01a7cb54acfaf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab91874c31bfc91b9ad494b1fb06f097b"><td class="memItemLeft" align="right" valign="top"><a id="ab91874c31bfc91b9ad494b1fb06f097b"></a>
 size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structspk_1_1Font_1_1Key.html#ab91874c31bfc91b9ad494b1fb06f097b">outlineSize</a></td></tr>
 <tr class="memdesc:ab91874c31bfc91b9ad494b1fb06f097b"><td class="mdescLeft">&#160;</td><td class="mdescRight">The thickness of the outline around the glyphs. A larger value creates a thicker outline. <br /></td></tr>
 <tr class="separator:ab91874c31bfc91b9ad494b1fb06f097b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae0f5cf959b2b7130be6500daa50410ef"><td class="memItemLeft" align="right" valign="top"><a id="ae0f5cf959b2b7130be6500daa50410ef"></a>
-size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structspk_1_1Font_1_1Key.html#ae0f5cf959b2b7130be6500daa50410ef">inverseOutlineSize</a></td></tr>
-<tr class="memdesc:ae0f5cf959b2b7130be6500daa50410ef"><td class="mdescLeft">&#160;</td><td class="mdescRight">An advanced metric for outline rendering, potentially used for shader-based effects or inverse scaling. <br /></td></tr>
-<tr class="separator:ae0f5cf959b2b7130be6500daa50410ef"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a536789303ace0684816045e14721af1b"><td class="memItemLeft" align="right" valign="top"><a id="a536789303ace0684816045e14721af1b"></a>
-size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structspk_1_1Font_1_1Key.html#a536789303ace0684816045e14721af1b">outlineSizeSquared</a></td></tr>
-<tr class="memdesc:a536789303ace0684816045e14721af1b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Precomputed square of the outline size, used for optimization in rendering calculations. <br /></td></tr>
-<tr class="separator:a536789303ace0684816045e14721af1b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1734caa00266191211a01a7cb54acfaf"><td class="memItemLeft" align="right" valign="top"><a id="a1734caa00266191211a01a7cb54acfaf"></a>
-<a class="el" href="classspk_1_1Font.html#af83504af647f0f7c98c509d3cc2e9f55">OutlineStyle</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structspk_1_1Font_1_1Key.html#a1734caa00266191211a01a7cb54acfaf">outlineStyle</a></td></tr>
-<tr class="memdesc:a1734caa00266191211a01a7cb54acfaf"><td class="mdescLeft">&#160;</td><td class="mdescRight">The style of the glyph outlines. Determines how outlines are rendered around each glyph. <br /></td></tr>
-<tr class="separator:a1734caa00266191211a01a7cb54acfaf"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a40f6032a8bf3aa9ac7fb605469edc64c"><td class="memItemLeft" align="right" valign="top"><a id="a40f6032a8bf3aa9ac7fb605469edc64c"></a>
-std::vector&lt; int &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structspk_1_1Font_1_1Key.html#a40f6032a8bf3aa9ac7fb605469edc64c">circleIndexes</a></td></tr>
-<tr class="memdesc:a40f6032a8bf3aa9ac7fb605469edc64c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Precomputed indices for rendering rounded outlines, used with certain outline styles. <br /></td></tr>
-<tr class="separator:a40f6032a8bf3aa9ac7fb605469edc64c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Represents a unique identifier for font atlas configurations. </p>
@@ -172,33 +157,6 @@ std::vector&lt; int &gt;&#160;</td><td class="memItemRight" valign="bottom"><a c
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="ab043f8ab1b441e4180682753ddf4dc5c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab043f8ab1b441e4180682753ddf4dc5c">&#9670;&nbsp;</a></span>computeCircle()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void spk::Font::Key::computeCircle </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2Int</a> &amp;&#160;</td>
-          <td class="paramname"><em>p_atlasSize</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Computes circle indices for rounded outlines. </p>
-<p>Populates the <code>circleIndexes</code> vector based on the atlas size. This method is used for advanced outline styles that require rounded edges, precomputing indices to optimize the rendering process.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">p_atlasSize</td><td>The size of the atlas. This parameter influences the computation of circle indices. </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
 <a id="a2f7b51ab8f461caded4103688b1312ce"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a2f7b51ab8f461caded4103688b1312ce">&#9670;&nbsp;</a></span>operator&lt;()</h2>
 

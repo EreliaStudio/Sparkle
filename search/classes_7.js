@@ -1,27 +1,5 @@
 var searchData=
 [
-  ['ianalyticalmetric_643',['IAnalyticalMetric',['../classspk_1_1IAnalyticalMetric.html',1,'spk']]],
-  ['ianalyticalmetric_3c_20long_20long_20_3e_644',['IAnalyticalMetric&lt; long long &gt;',['../classspk_1_1IAnalyticalMetric.html',1,'spk']]],
-  ['ichronometer_645',['IChronometer',['../classspk_1_1IChronometer.html',1,'spk']]],
-  ['ichronometer_3c_20std_3a_3achrono_3a_3amilliseconds_20_3e_646',['IChronometer&lt; std::chrono::milliseconds &gt;',['../classspk_1_1IChronometer.html',1,'spk']]],
-  ['ichronometer_3c_20std_3a_3achrono_3a_3ananoseconds_20_3e_647',['IChronometer&lt; std::chrono::nanoseconds &gt;',['../classspk_1_1IChronometer.html',1,'spk']]],
-  ['ichunk_648',['IChunk',['../classspk_1_1ITilemap_1_1IChunk.html',1,'spk::ITilemap']]],
-  ['icollider_649',['ICollider',['../classspk_1_1ICollider.html',1,'spk']]],
-  ['image_650',['Image',['../classspk_1_1Image.html',1,'spk']]],
-  ['imetric_651',['IMetric',['../classspk_1_1IMetric.html',1,'spk']]],
-  ['input_652',['Input',['../classspk_1_1Input.html',1,'spk']]],
-  ['inputdecoder_653',['InputDecoder',['../classspk_1_1InputDecoder.html',1,'spk']]],
-  ['inputmapping_654',['InputMapping',['../classspk_1_1InputMapping.html',1,'spk']]],
-  ['iperlin_655',['IPerlin',['../classspk_1_1IPerlin.html',1,'spk']]],
-  ['itilemap_656',['ITilemap',['../classspk_1_1ITilemap.html',1,'spk']]],
-  ['itilemap_3c_20short_2c_2016_2c_2016_2c_205_20_3e_657',['ITilemap&lt; short, 16, 16, 5 &gt;',['../classspk_1_1ITilemap.html',1,'spk']]],
-  ['itimer_658',['ITimer',['../classspk_1_1ITimer.html',1,'spk']]],
-  ['itimer_3c_20std_3a_3achrono_3a_3amilliseconds_20_3e_659',['ITimer&lt; std::chrono::milliseconds &gt;',['../classspk_1_1ITimer.html',1,'spk']]],
-  ['ivector2_660',['IVector2',['../structspk_1_1IVector2.html',1,'spk']]],
-  ['ivector2_3c_20float_20_3e_661',['IVector2&lt; float &gt;',['../structspk_1_1IVector2.html',1,'spk']]],
-  ['ivector2_3c_20int_20_3e_662',['IVector2&lt; int &gt;',['../structspk_1_1IVector2.html',1,'spk']]],
-  ['ivector2_3c_20unsigned_20int_20_3e_663',['IVector2&lt; unsigned int &gt;',['../structspk_1_1IVector2.html',1,'spk']]],
-  ['ivector3_664',['IVector3',['../structspk_1_1IVector3.html',1,'spk']]],
-  ['ivector3_3c_20float_20_3e_665',['IVector3&lt; float &gt;',['../structspk_1_1IVector3.html',1,'spk']]],
-  ['iwidget_666',['IWidget',['../classspk_1_1widget_1_1IWidget.html',1,'spk::widget']]]
+  ['hash_3c_20spk_3a_3aivector2_3c_20ttype_20_3e_20_3e_647',['hash&lt; spk::IVector2&lt; TType &gt; &gt;',['../structstd_1_1hash_3_01spk_1_1IVector2_3_01TType_01_4_01_4.html',1,'std']]],
+  ['hash_3c_20spk_3a_3aivector3_3c_20ttype_20_3e_20_3e_648',['hash&lt; spk::IVector3&lt; TType &gt; &gt;',['../structstd_1_1hash_3_01spk_1_1IVector3_3_01TType_01_4_01_4.html',1,'std']]]
 ];

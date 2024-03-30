@@ -95,9 +95,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ab0fc02b20eb142dfdf72ecb39ec6551f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1widget_1_1components_1_1TextLabel.html#ab0fc02b20eb142dfdf72ecb39ec6551f">setAnchor</a> (const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2Int</a> &amp;p_anchor)</td></tr>
 <tr class="memdesc:ab0fc02b20eb142dfdf72ecb39ec6551f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the anchor point for the text label within its parent widget.  <a href="classspk_1_1widget_1_1components_1_1TextLabel.html#ab0fc02b20eb142dfdf72ecb39ec6551f">More...</a><br /></td></tr>
 <tr class="separator:ab0fc02b20eb142dfdf72ecb39ec6551f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0475166d6a3055a4fc86711627de79c6"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1widget_1_1components_1_1TextLabel.html#a0475166d6a3055a4fc86711627de79c6">setDepth</a> (const float &amp;p_depth)</td></tr>
-<tr class="memdesc:a0475166d6a3055a4fc86711627de79c6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the depth of the text label in the rendering pipeline.  <a href="classspk_1_1widget_1_1components_1_1TextLabel.html#a0475166d6a3055a4fc86711627de79c6">More...</a><br /></td></tr>
-<tr class="separator:a0475166d6a3055a4fc86711627de79c6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af12be4a557531bef5a3de9be4b9f5302"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1widget_1_1components_1_1TextLabel.html#af12be4a557531bef5a3de9be4b9f5302">setLayer</a> (const float &amp;p_layer)</td></tr>
+<tr class="memdesc:af12be4a557531bef5a3de9be4b9f5302"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the layer of the text label in the rendering pipeline.  <a href="classspk_1_1widget_1_1components_1_1TextLabel.html#af12be4a557531bef5a3de9be4b9f5302">More...</a><br /></td></tr>
+<tr class="separator:af12be4a557531bef5a3de9be4b9f5302"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab63a539517c12329ea739878336fb9a5"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1widget_1_1components_1_1TextLabel.html#ab63a539517c12329ea739878336fb9a5">setText</a> (const std::string &amp;p_text)</td></tr>
 <tr class="memdesc:ab63a539517c12329ea739878336fb9a5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the text content of the label.  <a href="classspk_1_1widget_1_1components_1_1TextLabel.html#ab63a539517c12329ea739878336fb9a5">More...</a><br /></td></tr>
 <tr class="separator:ab63a539517c12329ea739878336fb9a5"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -210,32 +210,6 @@ Public Member Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a0475166d6a3055a4fc86711627de79c6"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0475166d6a3055a4fc86711627de79c6">&#9670;&nbsp;</a></span>setDepth()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void spk::widget::components::TextLabel::setDepth </td>
-          <td>(</td>
-          <td class="paramtype">const float &amp;&#160;</td>
-          <td class="paramname"><em>p_depth</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Sets the depth of the text label in the rendering pipeline. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">p_depth</td><td>A float value representing the depth. </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
 <a id="ad6833a6abc1c2cf18c27ec5752a3fcea"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ad6833a6abc1c2cf18c27ec5752a3fcea">&#9670;&nbsp;</a></span>setFont()</h2>
 
@@ -282,6 +256,32 @@ Public Member Functions</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">p_horizontalAlignment</td><td>The horizontal alignment mode. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="af12be4a557531bef5a3de9be4b9f5302"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af12be4a557531bef5a3de9be4b9f5302">&#9670;&nbsp;</a></span>setLayer()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void spk::widget::components::TextLabel::setLayer </td>
+          <td>(</td>
+          <td class="paramtype">const float &amp;&#160;</td>
+          <td class="paramname"><em>p_layer</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Sets the layer of the text label in the rendering pipeline. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_layer</td><td>A float value representing the layer. </td></tr>
   </table>
   </dd>
 </dl>
