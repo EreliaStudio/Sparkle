@@ -1,77 +1,156 @@
-#include "sparkle.hpp"
+#include "playground.hpp"
 
 using Widget = spk::widget::IWidget;
 
-class FontRenderer : public Widget
+class Button : public Widget
 {
+public:
+    using Callback = std::function<void()>;
+
+    enum class State
+    {
+        Pressed = 0,
+        Released = 1
+    };
+
 private:
-    spk::widget::components::TextureRenderer _textureRenderer;
+    State _state;
+    spk::widget::components::NineSlicedBox _boxes[2];
+    spk::widget::components::TextLabel _labels[2];
+
+    Callback _onClickCallback;
 
     void _onGeometryChange()
     {
-        _textureRenderer.setGeometry(anchor(), size());
-        if (false)
+        for (size_t i = 0; i < 2; i++)
         {
-            _textureRenderer.setTextureGeometry(spk::Vector2(0, 0), spk::Vector2(1.0f, 1.0f));
+            _boxes[i].setGeometry(anchor(), size());
+            _boxes[i].setLayer(layer());
+
+            _labels[i].setLayer(layer() + 0.01f);
+            _labels[i].setAnchor(anchor() + size() / 2); 
         }
-        else
-        {
-            float ratio = static_cast<float>(size().x) / static_cast<float>(size().y);
-            float value = 0.1f;
-            _textureRenderer.setTextureGeometry(spk::Vector2(0, 0), spk::Vector2(value * ratio, value));
-        }
-        _textureRenderer.setLayer(layer());
+
     }
 
-    void _onRender()
+    void _onRender() override
     {
-        _textureRenderer.render();
+        _boxes[static_cast<int>(_state)].render();
+        _labels[static_cast<int>(_state)].render();
+    }
+
+    void _onUpdate() override
+    {
+        switch (_state)
+        {
+            case State::Released:
+            {
+                if (spk::Application::activeApplication()->mouse().getButton(spk::Mouse::Left) == spk::InputState::Down && 
+                    hitTest(spk::Application::activeApplication()->mouse().position()) == true)
+                {
+                    _state = State::Pressed;
+                    if (_onClickCallback != nullptr)
+                        _onClickCallback();
+                }
+                break;
+            }
+            default:
+            {
+                if (spk::Application::activeApplication()->mouse().getButton(spk::Mouse::Left) == spk::InputState::Released ||
+                    hitTest(spk::Application::activeApplication()->mouse().position()) == false)
+                {
+                    _state = State::Released;
+                }
+            }
+        }
     }
 
 public:
-    FontRenderer(Widget* p_parent = nullptr) :
-        Widget(p_parent)
+    Button(Widget* p_parent) :
+        Widget(p_parent),
+        _onClickCallback(nullptr)
     {
-
+        _state = State::Released;
     }
 
-    void setFont(spk::Font* p_font)
+    void setOnClickCallback(const Callback p_onClickCallback)
     {
-        _textureRenderer.setTexture(&(p_font->atlas(50, 10, spk::Font::OutlineStyle::Standard).texture()));
+        _onClickCallback = p_onClickCallback;
     }
-};
+
+    spk::widget::components::NineSlicedBox& box(const State& p_state)
+    {
+        return (_boxes[static_cast<int>(p_state)]);
+    }
+
+    spk::widget::components::TextLabel& label(const State& p_state)
+    {
+        return (_labels[static_cast<int>(p_state)]);
+    }
+}; 
 
 class MainWidget : public Widget
 {
 private:
-    std::unique_ptr<spk::Font> _myFont;
-    std::unique_ptr<FontRenderer> _myFontRenderer;
+    spk::SpriteSheet _pressedTexture;
+    spk::SpriteSheet _releasedTexture;
+    spk::SpriteSheet _backgroundTexture;
+
+    spk::Font _font;
+
+    std::unique_ptr<Button> _myButton;
 
     std::unique_ptr<spk::widget::TextLabel> _myTextLabel;
 
 public:
     MainWidget(const std::string& p_name) :
-        Widget(p_name, nullptr)
-    { 
-        _myFont = std::make_unique<spk::Font>("Playground/resources/font/Heavitas.ttf");
+        Widget(p_name, nullptr),
+        _pressedTexture("Playground/resources/texture/buttonPressed.png", spk::Vector2Int(3, 3)),
+        _releasedTexture("Playground/resources/texture/buttonReleased.png", spk::Vector2Int(3, 3)),
+        _backgroundTexture("Playground/resources/texture/buttonReleased.png", spk::Vector2Int(3, 3)),
+        _font("Playground/resources/font/Heavitas.ttf")
+    {
+        auto offsetButtonLayout =  makeActiveChild<spk::widget::Offset>(100, this);
+        auto sizeButtonLayout = offsetButtonLayout->makeActiveChild<spk::widget::SizedBox>(spk::Vector2Int(200, 100));
+        _myButton = std::make_unique<Button>(sizeButtonLayout);
 
-        auto paddingParent = makeActiveChild<spk::widget::Offset>(0.0f, 0.0f);
-        auto sizeParent = paddingParent->makeActiveChild<spk::widget::FractionallySizedBox>(1.0f, 0.5f); 
+        _myButton->box(Button::State::Pressed).setSpriteSheet(&_pressedTexture);
+        _myButton->box(Button::State::Released).setSpriteSheet(&_releasedTexture);
 
-        _myTextLabel = std::make_unique<spk::widget::TextLabel>(sizeParent);
+        _myButton->label(Button::State::Pressed).setFont(&_font);
+        _myButton->label(Button::State::Pressed).setTextSize(25);
+        _myButton->label(Button::State::Pressed).setTextColor(spk::Colors::white);
+        _myButton->label(Button::State::Pressed).setOutlineSize(3);
+        _myButton->label(Button::State::Pressed).setOutlineColor(spk::Colors::red);
+        _myButton->label(Button::State::Pressed).setOutlineStyle(spk::Font::OutlineStyle::Standard);
+        _myButton->label(Button::State::Pressed).setText("Pressed text");
 
-        _myTextLabel->label().setFont(_myFont.get());
-        _myTextLabel->label().setText("Ceci est un test");
+        _myButton->label(Button::State::Released).setFont(&_font);
+        _myButton->label(Button::State::Released).setTextSize(25);
+        _myButton->label(Button::State::Released).setTextColor(spk::Colors::white);
+        _myButton->label(Button::State::Released).setOutlineSize(3);
+        _myButton->label(Button::State::Released).setOutlineColor(spk::Colors::red);
+        _myButton->label(Button::State::Released).setOutlineStyle(spk::Font::OutlineStyle::Standard);
+        _myButton->label(Button::State::Released).setText("Released text");
+
+        _myButton->activate();
+        
+        auto offsetTextLabelLayout =  makeActiveChild<spk::widget::Offset>(100.0f, 300.0f, this);
+        auto sizeTextLabelLayout = offsetTextLabelLayout->makeActiveChild<spk::widget::SizedBox>(spk::Vector2Int(200, 100));
+        _myTextLabel = std::make_unique<spk::widget::TextLabel>(sizeTextLabelLayout);
+
+        _myTextLabel->box().setSpriteSheet(&_releasedTexture);
+        _myTextLabel->label().setText("Text label text");
+        _myTextLabel->label().setFont(&_font);
+        _myTextLabel->label().setTextSize(25);
         _myTextLabel->label().setTextColor(spk::Colors::white);
-        _myTextLabel->label().setTextSize(50);
+        _myTextLabel->label().setOutlineSize(3);
         _myTextLabel->label().setOutlineColor(spk::Colors::red);
-        _myTextLabel->label().setOutlineSize(5);
         _myTextLabel->label().setOutlineStyle(spk::Font::OutlineStyle::Standard);
 
         _myTextLabel->activate();
     } 
 };
-
 
 int main() 
 {

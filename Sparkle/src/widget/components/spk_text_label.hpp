@@ -131,6 +131,8 @@ namespace spk::widget::components
          */
         void render();
 
+        spk::Vector2Int calculateTextArea() const;
+
         /**
          * @brief Sets the font used for rendering the text.
          *

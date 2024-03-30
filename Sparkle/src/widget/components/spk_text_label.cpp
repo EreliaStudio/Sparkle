@@ -61,7 +61,8 @@ namespace spk::widget::components
         _renderingObjectTextRendererAttribute(_renderingObject.attribute("textRendererAttribute")),
         _textColorAttributeElement(_renderingObjectTextRendererAttribute["textColor"]),
         _outlineColorAttributeElement(_renderingObjectTextRendererAttribute["outlineColor"]),
-        _renderingPipelineTexture(_renderingPipeline.texture("fontTexture"))
+        _renderingPipelineTexture(_renderingPipeline.texture("fontTexture")),
+        _font(nullptr)
     {
     }
 
@@ -218,6 +219,11 @@ namespace spk::widget::components
 
         _renderingPipelineTexture.attach(&(_fontAtlas->texture()));
         _renderingObject.render();
+    }
+
+    spk::Vector2Int TextLabel::calculateTextArea() const
+    {
+        return (0);
     }
 
     void TextLabel::setFont(spk::Font* p_font)

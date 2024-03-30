@@ -102,7 +102,7 @@ namespace spk
 	{
 		BuildData buildData;
 
-		static stbtt_packedchar *charInformation = new stbtt_packedchar[0xFFFF];
+		stbtt_packedchar *charInformation = new stbtt_packedchar[0xFFFF];
 
 		while (_executePackingOperation(p_fontData,p_fontConfiguration,p_key, buildData.fontBuffer, buildData.size, charInformation) == false)
 		{

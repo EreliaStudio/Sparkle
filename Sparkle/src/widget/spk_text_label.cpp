@@ -4,30 +4,25 @@ namespace spk::widget
 {
     void TextLabel::_onGeometryChange()
     {
+        _box.setGeometry(anchor(), size());
+        _box.setLayer(layer());
+
         _label.setAnchor(anchor() + size() / 2);
-        _label.setLayer(layer());
+        _label.setLayer(layer() + 0.01f);
     }
 
     void TextLabel::_onRender()
     {
+        _box.render();
         _label.render();
     }
 
     TextLabel::TextLabel(IWidget* p_parent) :
         IWidget(p_parent),
-        _font(nullptr),
-        _text("")
+        _font(nullptr)
     {
-        label().setVerticalAlignment(spk::VerticalAlignment::Centered);
-        label().setHorizontalAlignment(spk::HorizontalAlignment::Centered);
-    }
 
-    TextLabel::TextLabel(const std::string& p_text, Font* p_font, IWidget* p_parent) :
-        TextLabel(p_parent)
-    {
-        _font = p_font;
-        _text = p_text;
-    }   
+    }
 
     Vector2 TextLabel::layout(const BoxConstraints& p_constraints)
     {
@@ -38,5 +33,15 @@ namespace spk::widget
     spk::widget::components::TextLabel& TextLabel::label()
     {
         return (_label);
+    }
+
+    spk::widget::components::NineSlicedBox& TextLabel::box()
+    {
+        return (_box);
+    }
+
+    spk::Vector2Int TextLabel::calculateTextArea() const
+    {
+        return (_label.calculateTextArea());
     }
 }

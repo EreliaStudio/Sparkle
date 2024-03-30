@@ -16,6 +16,7 @@ namespace spk::widget
     class TextLabel : public IWidget
     {
     private:
+        spk::widget::components::NineSlicedBox _box;
         spk::widget::components::TextLabel _label;
         Font* _font;
         std::string _text;
@@ -32,15 +33,6 @@ namespace spk::widget
         TextLabel(IWidget* p_parent = nullptr);
 
         /**
-         * @brief Constructor.
-         *
-         * @param p_text The text to display.
-         * @param p_font The font used to display the text.
-         * @param p_parent The parent widget.
-         */
-        TextLabel(const std::string& p_text, Font* p_font, IWidget* p_parent = nullptr);
-
-        /**
          * @brief Implement layout to be able to tell the size of this label.
          */
         Vector2 layout(const BoxConstraints& p_constraints);
@@ -49,5 +41,9 @@ namespace spk::widget
          * @brief Getter for the underlying label component.
          */
         spk::widget::components::TextLabel& label();
+
+        spk::widget::components::NineSlicedBox& box();
+
+        spk::Vector2Int calculateTextArea() const;
     };
 }
