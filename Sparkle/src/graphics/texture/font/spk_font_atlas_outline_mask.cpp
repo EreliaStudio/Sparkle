@@ -22,7 +22,7 @@ namespace spk
 				if (distance > toCompare)
 					continue;
 
-				float powerFactor = 3.0f;
+				float powerFactor = 4.0f;
 				float normalizedDistance = static_cast<float>(distance) / static_cast<float>(toCompare);
 				float fadeFactor = 1 - std::pow(normalizedDistance, powerFactor);
 
@@ -45,7 +45,7 @@ namespace spk
 				int manhattanDistance = std::abs(x) + std::abs(y);
 				if (manhattanDistance <= static_cast<int>(p_outlineSize))
 				{
-					float powerFactor = 3.0f;
+					float powerFactor = 4.0f;
 					float normalizedDistance = static_cast<float>(manhattanDistance) / static_cast<float>(p_outlineSize);
 					float fadeFactor = 1 - std::pow(normalizedDistance, powerFactor);
 					result[x + y * p_textureSize.x] = static_cast<unsigned char>(255 * fadeFactor);
@@ -64,7 +64,7 @@ namespace spk
 		{
 			if (x != 0)
 			{
-				float powerFactor = 3.0f;
+				float powerFactor = 4.0f;
 				float normalizedDistance = static_cast<float>(std::abs(x)) / static_cast<float>(p_outlineSize);
 				float fadeFactor = 1 - std::pow(normalizedDistance, powerFactor);
 				result[x] = static_cast<unsigned char>(255 * fadeFactor);
@@ -75,7 +75,7 @@ namespace spk
 		{
 			if (y != 0)
 			{
-				float powerFactor = 3.0f;
+				float powerFactor = 4.0f;
 				float normalizedDistance = static_cast<float>(std::abs(y)) / static_cast<float>(p_outlineSize);
 				float fadeFactor = 1 - std::pow(normalizedDistance, powerFactor);
 				result[y * p_textureSize.x] = static_cast<unsigned char>(255 * fadeFactor);
@@ -96,7 +96,7 @@ namespace spk
 				int distance = std::max(std::abs(x), std::abs(y));
 				if (distance <= static_cast<int>(p_outlineSize))
 				{
-					float powerFactor = 3.0f;
+					float powerFactor = 4.0f;
 					float normalizedDistance = static_cast<float>(distance) / static_cast<float>(p_outlineSize);
 					float fadeFactor = 1 - std::pow(normalizedDistance, powerFactor);
 					result[x + y * p_textureSize.x] = static_cast<unsigned char>(255 * fadeFactor);
@@ -173,49 +173,15 @@ namespace spk
 
 		for (const auto& borderPixel : borderPixels)
 		{
-			if (borderPixel != borderPixels[0])
-				break;
-			int borderIndex = borderPixel.x + borderPixel.y * p_buildData.size.x;
-
-			std::vector<int> toCalc = {-1, 1, -p_buildData.size.x, p_buildData.size.x};
-			const int offsets[4] = {-1, 1, -p_buildData.size.x, p_buildData.size.x};
-
-			for (size_t i = 0; i < toCalc.size(); i++)
+			int index = borderPixel.x + borderPixel.y * p_buildData.size.x;
+			for (const auto& [offset, value] : outlineMask)
 			{
-				if (toCalc.size() > 8)
-					break;
-				std::cout << "Setting up to calc [" << i << "] : " << toCalc[i] << std::endl;
-
-				p_buildData.outlineBuffer[borderIndex + toCalc[i]] = outlineMask[toCalc[i]];
-
-				for (size_t j = 0; j < 4; j++)
+				int tmpIndex = index + offset;
+				if (p_buildData.fontBuffer[tmpIndex] != CHAR_PIXEL)
 				{
-					if (j != 0)
-						std::cout << "	----" << std::endl;
-
-					int nextToCalc = toCalc[i] + offsets[j];
-
-					std::cout << "	Index : " << toCalc[i] << " vs " << nextToCalc << std::endl;
-					std::cout << "	Value : " << static_cast<int>(p_buildData.outlineBuffer[borderIndex + nextToCalc]) << " vs " << static_cast<int>(outlineMask[toCalc[i]]) << std::endl;
-					
-					if (p_buildData.outlineBuffer[borderIndex + nextToCalc] == 0 ||
-						p_buildData.outlineBuffer[borderIndex + nextToCalc] > outlineMask[toCalc[i]])
-					{
-						std::cout << "	Inserted" << std::endl;
-						toCalc.push_back(nextToCalc);
-					}
+					p_buildData.outlineBuffer[tmpIndex] = std::max(p_buildData.outlineBuffer[tmpIndex], value);
 				}
 			}
-
-			// int index = borderPixel.x + borderPixel.y * p_buildData.size.x;
-			// for (const auto& [offset, value] : outlineMask)
-			// {
-			// 	int tmpIndex = index + offset;
-			// 	if (p_buildData.fontBuffer[tmpIndex] != CHAR_PIXEL)
-			// 	{
-			// 		p_buildData.outlineBuffer[tmpIndex] = std::max(p_buildData.outlineBuffer[tmpIndex], value);
-			// 	}
-			// }
 		}
 	}
 }
