@@ -146,9 +146,9 @@ namespace spk::widget::components
         void setAnchor(const spk::Vector2Int& p_anchor);
 
         /**
-         * @brief Sets the depth of the text label in the rendering pipeline.
+         * @brief Sets the layer of the text label in the rendering pipeline.
          *
-         * @param p_depth A float value representing the depth.
+         * @param p_layer A float value representing the layer.
          */
         void setLayer(const float& p_layer);
 
