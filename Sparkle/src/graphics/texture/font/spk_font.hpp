@@ -141,7 +141,7 @@ namespace spk
         {
 
             size_t fontSize;                ///< The size of the font in points. This affects the overall scale of the glyphs within the atlas.
-            OutlineStyle outlineStyle;
+            OutlineStyle outlineStyle;      ///< The outline style needed for a specific atlas.
             size_t outlineSize;             ///< The thickness of the outline around the glyphs. A larger value creates a thicker outline.
 
             /**

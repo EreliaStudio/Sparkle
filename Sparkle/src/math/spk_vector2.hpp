@@ -717,13 +717,29 @@ namespace spk
     using Vector2UInt = IVector2<unsigned int>; ///< Alias for IVector2 with unsigned int components.
 }
 
-namespace std {
+namespace std
+{
+    /**
+     * @brief Specialization of std::hash for spk::IVector2<TType>.
+     *
+     * This specialization allows for the use of spk::IVector2<TType> objects in standard hash-based containers
+     * such as std::unordered_map or std::unordered_set. It produces a hash value by combining the hashes of the
+     * vector's x and y components.
+     *
+     * @tparam TType The type of the components of the vector.
+     */
     template <typename TType>
     struct hash<spk::IVector2<TType>> {
+        /**
+         * @brief Generates a hash value for a spk::IVector2<TType>.
+         *
+         * @param vec The vector for which to generate the hash.
+         * @return The generated hash value.
+         */
         size_t operator()(const spk::IVector2<TType>& vec) const {
             size_t h1 = std::hash<TType>{}(vec.x);
             size_t h2 = std::hash<TType>{}(vec.y);
-            // Combine the hash of x and y. There are many ways to do this; this is just one example.
+            // Combine the hash of x and y. This is one approach to hash combination.
             return h1 ^ (h2 << 1); // Shift and XOR for a simple combination
         }
     };

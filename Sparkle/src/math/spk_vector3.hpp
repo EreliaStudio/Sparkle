@@ -695,14 +695,31 @@ namespace spk
 
 }
 
-namespace std {
+namespace std
+{
+    /**
+     * @brief Specialization of std::hash for spk::IVector3<TType>.
+     *
+     * This specialization enables objects of spk::IVector3<TType> to be used with standard hash-based containers
+     * like std::unordered_map or std::unordered_set. It combines the hash values of the vector's x, y, and z
+     * components to produce a single hash value.
+     *
+     * @tparam TType The type of the components of the vector.
+     */
     template <typename TType>
-    struct hash<spk::IVector3<TType>> {
+    struct hash<spk::IVector3<TType>>
+    {
+        /**
+         * @brief Generates a hash value for a spk::IVector3<TType>.
+         *
+         * @param vec The vector for which to generate the hash.
+         * @return The generated hash value.
+         */
         size_t operator()(const spk::IVector3<TType>& vec) const {
             size_t h1 = std::hash<TType>{}(vec.x);
             size_t h2 = std::hash<TType>{}(vec.y);
             size_t h3 = std::hash<TType>{}(vec.z);
-            // Combine the hash of x and y. There are many ways to do this; this is just one example.
+            // Combine the hash of x, y, and z. The combination method here is one of the many ways to combine hashes.
             return h1 ^ (h2 << 1) ^ (h3 << 2); // Shift and XOR for a simple combination
         }
     };
