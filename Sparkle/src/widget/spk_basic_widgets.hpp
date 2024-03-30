@@ -111,6 +111,11 @@ namespace spk::widget
          * @param p_parent The parent widget.
          */
         FractionallySizedBox(float p_horizontal, float p_vertical, IWidget* p_parent = nullptr);
+        /**
+         * @brief Constructor with a ratio already set as Vector2.
+         * @param p_ratio The horizontal and horizontal fractional value.
+         * @param p_parent The parent widget.
+         */
         FractionallySizedBox(const spk::Vector2& p_ratio, IWidget* p_parent = nullptr);
 
         /**
@@ -361,22 +366,58 @@ namespace spk::widget
 
     /**
      * @class Offset
-     * @brief Create a singleChildWidget allowing user to place the children at a desired place on screen, relative to the parent of this widget
-    */
+     * @brief A widget that positions its child at a specific offset relative to its own position.
+     *
+     * The Offset widget is a layout utility that allows for the precise positioning of a single child widget within
+     * its parent. The child widget's position is determined by an offset value, which is added to the child's position,
+     * effectively moving the child widget relative to the Offset widget's position. This is useful for fine-tuning
+     * the placement of widgets within a layout.
+     *
+     * @see SingleChildWidget
+     */
     class Offset : public spk::widget::SingleChildWidget
     {
     private:
         spk::Vector2Int _childAnchor;
 
+        /**
+         * @brief Lays out the child widget based on the offset.
+         *
+         * Overrides the layout method to position the child widget according to the specified offset. The
+         * child widget is positioned within the constraints provided, adjusted by the offset value.
+         *
+         * @param p_constraints The constraints within which the child widget must be laid out.
+         * @return The size of the widget after the layout is applied, taking the offset into account.
+         */
         spk::Vector2 layout(const spk::widget::BoxConstraints& p_constraints) override;
 
     public:
         /**
-         * @brief Constructor with a Vector2 indicating the anchor needed.
-        */
+         * @brief Constructs an Offset widget with a specified vector offset.
+         *
+         * This constructor initializes an Offset widget, setting the offset values that determine the child
+         * widget's position relative to its parent. The offset is specified as a Vector2, representing the
+         * horizontal and vertical offsets.
+         *
+         * @param p_childAnchor A Vector2 specifying the horizontal and vertical offset for the child widget.
+         * @param p_parent A pointer to the parent widget. Default is nullptr if the widget has no parent.
+         */
         Offset(const spk::Vector2& p_childAnchor, spk::widget::IWidget* p_parent = nullptr);
+
+        /**
+         * @brief Constructs an Offset widget with specified horizontal and vertical offsets.
+         *
+         * This constructor initializes an Offset widget, setting the horizontal and vertical offset values
+         * that determine the child widget's position relative to its parent. The offsets are specified using
+         * separate float values.
+         *
+         * @param p_childAnchorX A float specifying the horizontal offset for the child widget.
+         * @param p_childAnchorY A float specifying the vertical offset for the child widget.
+         * @param p_parent A pointer to the parent widget. Default is nullptr if the widget has no parent.
+         */
         Offset(const float& p_childAnchorX, const float& p_childAnchorY, spk::widget::IWidget* p_parent = nullptr);
     };
+
 
     /**
      * @class FractionallyOffset
