@@ -11,12 +11,12 @@ namespace spk::widget::components
 		AttributeBlock self
 		{
 			vec4 color;
-			float depth;
+			float layer;
 		};
 
 		void geometryPass()
 		{
-			pixelPosition = screenConstants.canvasMVP * vec4(modelPosition, self.depth, 1.0f);
+			pixelPosition = screenConstants.canvasMVP * vec4(modelPosition, self.layer, 1.0f);
 		}
 		
 		void renderPass()
@@ -48,7 +48,7 @@ namespace spk::widget::components
         _renderingObject(_renderingPipeline.createObject()),
         _selfAttribute(_renderingObject.attribute("self")),
         _selfColorElement(_selfAttribute["color"]),
-        _selfDepthElement(_selfAttribute["depth"])
+        _selfLayerElement(_selfAttribute["layer"])
     {
     }
 
@@ -79,13 +79,13 @@ namespace spk::widget::components
         return _size;
     }
 
-    void ColoredBox::setDepth(float p_newDepth)
+    void ColoredBox::setLayer(const float& p_layer)
     {
-        _selfDepthElement = p_newDepth;
+        _selfLayerElement = p_layer;
         _selfAttribute.update();
     }
 
-    void ColoredBox::setGeometry(const Vector2 p_anchor, const Vector2 p_newSize)
+    void ColoredBox::setGeometry(const Vector2& p_anchor, const Vector2& p_newSize)
     {
         _anchor = p_anchor;
         _size = p_newSize;

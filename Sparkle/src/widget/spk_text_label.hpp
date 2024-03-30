@@ -26,6 +26,12 @@ namespace spk::widget
 
     public:
         /**
+         * @brief Default constructor
+         * @param p_parent The parent widget.
+        */
+        TextLabel(IWidget* p_parent = nullptr);
+
+        /**
          * @brief Constructor.
          *
          * @param p_text The text to display.

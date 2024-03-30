@@ -84,7 +84,7 @@ namespace spk::widget::components
 
         spk::Pipeline::Object _renderingObject;
         spk::Pipeline::Object::Attribute& _renderingObjectWidgetAttribute;
-        spk::Pipeline::Object::Attribute::Element& _depthAttributeElement;
+        spk::Pipeline::Object::Attribute::Element& _layerAttributeElement;
 
         spk::Pipeline::Object::Attribute& _renderingObjectTextRendererAttribute;
         spk::Pipeline::Object::Attribute::Element& _textColorAttributeElement;
@@ -146,11 +146,11 @@ namespace spk::widget::components
         void setAnchor(const spk::Vector2Int& p_anchor);
 
         /**
-         * @brief Sets the depth of the text label in the rendering pipeline.
+         * @brief Sets the layer of the text label in the rendering pipeline.
          *
-         * @param p_depth A float value representing the depth.
+         * @param p_layer A float value representing the layer.
          */
-        void setDepth(const float& p_depth);
+        void setLayer(const float& p_layer);
 
         /**
          * @brief Sets the text content of the label.

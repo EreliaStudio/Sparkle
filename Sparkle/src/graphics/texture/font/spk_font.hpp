@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <map>
+#include <unordered_map>
 #include <vector>
 
 #include "graphics/texture/spk_texture.hpp"
@@ -138,12 +139,10 @@ namespace spk
          */
         struct Key
         {
+
             size_t fontSize;                ///< The size of the font in points. This affects the overall scale of the glyphs within the atlas.
+            OutlineStyle outlineStyle;      ///< The outline style needed for a specific atlas.
             size_t outlineSize;             ///< The thickness of the outline around the glyphs. A larger value creates a thicker outline.
-            size_t inverseOutlineSize;      ///< An advanced metric for outline rendering, potentially used for shader-based effects or inverse scaling.
-            size_t outlineSizeSquared;      ///< Precomputed square of the outline size, used for optimization in rendering calculations.
-            OutlineStyle outlineStyle;      ///< The style of the glyph outlines. Determines how outlines are rendered around each glyph.
-            std::vector<int> circleIndexes; ///< Precomputed indices for rendering rounded outlines, used with certain outline styles.
 
             /**
              * @brief Constructs a Key with specified font size, outline size, and outline style.
@@ -165,15 +164,6 @@ namespace spk
              * @return True if this Key is considered less than `p_other`, false otherwise.
              */
             bool operator<(const Key& p_other) const;
-
-            /**
-             * @brief Computes circle indices for rounded outlines.
-             *
-             * Populates the `circleIndexes` vector based on the atlas size. This method is used for advanced outline styles that require rounded edges, precomputing indices to optimize the rendering process.
-             *
-             * @param p_atlasSize The size of the atlas. This parameter influences the computation of circle indices.
-             */
-            void computeCircle(const spk::Vector2Int& p_atlasSize);
         };
 
         /**
@@ -237,8 +227,10 @@ namespace spk
         private:
             struct BuildData
             {
-                std::vector<uint8_t> buffer;
+                std::vector<uint8_t> fontBuffer;
+                std::vector<uint8_t> outlineBuffer;
                 spk::Vector2Int size = spk::Vector2Int(32, 32);
+                std::unordered_map<size_t, uint8_t> outlineMask;
             };
 
             Configuration _fontConfiguration;
@@ -246,6 +238,11 @@ namespace spk
             Texture _texture;
 
             BuildData _computeBuildData(const std::vector<uint8_t>& p_fontData, const Configuration& p_fontConfiguration, const Key& p_key);
+
+            void _computeFontBuffer(BuildData& p_buildData, const Key &p_key);
+            
+            void _computeOutlineBuffer(BuildData& p_buildData, const Key &p_key);
+            void _pushCombinedTexture(BuildData& p_buildData);
 
         public:
             /**

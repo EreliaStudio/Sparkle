@@ -17,7 +17,7 @@ namespace spk::widget
     void ColoredBox::_onGeometryChange()
     {
         _coloredBox.setGeometry(anchor(), size());
-        _coloredBox.setDepth(depth());
+        _coloredBox.setLayer(layer());
     }
 
     void ColoredBox::_onRender()
@@ -64,6 +64,12 @@ namespace spk::widget
         _horizontal(p_horizontal),
         _vertical(p_vertical)
     {
+    }
+
+    FractionallySizedBox::FractionallySizedBox(const spk::Vector2& p_ratio, IWidget* p_parent) :
+        FractionallySizedBox(p_ratio.x, p_ratio.y, p_parent)
+    {
+
     }
 
     Vector2 FractionallySizedBox::layout(const BoxConstraints& p_constraints)
@@ -452,6 +458,41 @@ namespace spk::widget
     Offset::Offset(const spk::Vector2& p_childAnchor, spk::widget::IWidget* p_parent) : 
         spk::widget::SingleChildWidget(p_parent),
         _childAnchor(p_childAnchor)
+    {
+
+    }
+
+    Offset::Offset(const float& p_childAnchorX, const float& p_childAnchorY, spk::widget::IWidget* p_parent) :
+        Offset(spk::Vector2(p_childAnchorX, p_childAnchorY), p_parent)
+    {
+
+    }
+
+    spk::Vector2 FractionallyOffset::layout(const spk::widget::BoxConstraints& p_constraints)
+    {
+        IWidget* child = SingleChildWidget::child();
+        if (nullptr != child)
+        {
+            spk::Vector2 max = p_constraints.max - _childAnchor * size();
+            spk::Vector2 min = p_constraints.min - _childAnchor * size();
+            spk::Vector2 childSize = child->layout({min, max});
+
+            child->setGeometry(_childAnchor * size(), childSize);
+            return childSize + _childAnchor * size();
+        }
+
+        return p_constraints.max;
+    }
+
+    FractionallyOffset::FractionallyOffset(const spk::Vector2& p_childAnchor, spk::widget::IWidget* p_parent) : 
+        spk::widget::SingleChildWidget(p_parent),
+        _childAnchor(p_childAnchor)
+    {
+        
+    }
+
+    FractionallyOffset::FractionallyOffset(const float& p_childAnchorX, const float& p_childAnchorY, spk::widget::IWidget* p_parent) :
+        FractionallyOffset(spk::Vector2(p_childAnchorX, p_childAnchorY), p_parent)
     {
 
     }

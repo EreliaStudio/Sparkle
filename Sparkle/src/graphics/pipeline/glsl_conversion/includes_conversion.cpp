@@ -18,7 +18,7 @@ namespace spk
 	std::string getIncludeContent(const std::string& includeKey)
 	{
 		const std::unordered_map<std::string, std::string> sparkleNativeIncludes = {
-			{"widgetAttribute", "AttributeBlock widgetAttribute { float depth; };"},
+			{"widgetAttribute", "AttributeBlock widgetAttribute { float layer; };"},
 			{"screenConstants", "ConstantBlock screenConstants { mat4 canvasMVP; };"},
 			{"transform", R"(struct Transform { vec3 translation; vec3 scale; vec4 rotation; };)"},
 			{"transformUtils", R"(#include <transform>

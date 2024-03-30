@@ -1,59 +1,41 @@
 #include "graphics/texture/font/spk_font.hpp"
 #include <array>
 
+#include "unordered_map"
+
 namespace spk
 {
-	void _applyOutline(std::vector<uint8_t> &p_atlasData, const spk::Vector2Int &p_atlasSize, const spk::Font::Key &p_key);
-
 	Font::Atlas::Atlas()
 	{
-	}
 
-	/**
-	 * @brief Normalizes the atlas data.
-	 *
-	 * This function iterates through all pixels in the atlas and normalizes 
-	 * their values. Any pixel not representing a character (`Font::CHAR_PIXEL`) 
-	 * is set to be empty (`Font::EMPTY_PIXEL`). Pixels representing characters 
-	 * remain unchanged. This ensures the atlas data contains only distinct 
-	 * values corresponding to character pixels and empty pixels.
-	 *
-	 * @param p_atlasData The atlas data where pixels are stored.
-	 * @param p_atlasSize The dimensions of the atlas.
-	 */
-	void _normalizeAtlasData(std::vector<uint8_t> &p_atlasData, const spk::Vector2Int &p_atlasSize)
-	{
-		size_t maxIndex = static_cast<size_t>(p_atlasSize.x * p_atlasSize.y);
-		for (size_t i = 0; i < maxIndex; i++)
-		{
-			if (p_atlasData[i] != Font::CHAR_PIXEL)
-				p_atlasData[i] = Font::EMPTY_PIXEL;
-			else
-				p_atlasData[i] = Font::CHAR_PIXEL;
-		}
 	}
 	
+	void Font::Atlas::_pushCombinedTexture(BuildData& p_buildData)
+	{
+		std::vector<uint8_t> textureBuffer;
+
+		textureBuffer.resize((p_buildData.fontBuffer.size() + 1) * 2);
+	
+		for (size_t i = 0; i < p_buildData.fontBuffer.size(); i++)
+		{
+			textureBuffer[i * 2] = p_buildData.fontBuffer[i];
+			textureBuffer[i * 2 + 1] = p_buildData.outlineBuffer[i];
+		}
+		
+		_texture.uploadToGPU(
+			textureBuffer.data(), p_buildData.size,
+			Texture::Format::DualChannel, Texture::Filtering::Linear,
+			Texture::Wrap::Repeat, Texture::Mipmap::Enable);
+	}
+
 	Font::Atlas::Atlas(const std::vector<uint8_t> &p_fontData, const Configuration &p_fontConfiguration, const Key &p_key) :
 		_glyphDatas(p_fontConfiguration.validGlyphs().back() + 1)
 	{
 		Font::Atlas::BuildData buildData = _computeBuildData(p_fontData, p_fontConfiguration, p_key);
 
-		// _normalizeAtlasData(buildData.buffer, buildData.size);
+		_computeOutlineBuffer(buildData, p_key);
 
-		// if (p_key.outlineSize != 0)
-		// {		
-		// 	if (p_key.outlineStyle == Font::OutlineStyle::Standard)
-		// 	{
-		// 		(const_cast<Key*>(&p_key))->computeCircle(buildData.size);
-		// 	}
-		
-		// 	_applyOutline(buildData.buffer, buildData.size, p_key);
-		// }
-
-		_texture.uploadToGPU(
-			buildData.buffer.data(), buildData.size,
-			Texture::Format::GreyLevel, Texture::Filtering::Linear,
-			Texture::Wrap::Repeat, Texture::Mipmap::Enable);
+		_pushCombinedTexture(buildData);
 	}
 
 	std::string wstringToString(const std::wstring& wstr)

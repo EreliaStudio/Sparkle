@@ -61,6 +61,7 @@ namespace spk
 			BGR = GL_BGR,
 			BGRA = GL_BGRA,
 			GreyLevel = GL_RED,
+			DualChannel = GL_RG,
 			Error = GL_NONE
 		};
 

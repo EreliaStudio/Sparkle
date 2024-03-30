@@ -24,7 +24,7 @@ namespace spk::widget::components
         spk::Pipeline::Object _renderingObject;
         spk::Pipeline::Object::Attribute& _selfAttribute;
         spk::Pipeline::Object::Attribute::Element& _selfColorElement;
-        spk::Pipeline::Object::Attribute::Element& _selfDepthElement;
+        spk::Pipeline::Object::Attribute::Element& _selfLayerElement;
 
         spk::Vector2 _anchor;
         spk::Vector2 _size;
@@ -59,13 +59,13 @@ namespace spk::widget::components
          * @param p_anchor The new anchor.
          * @param p_newSize The new size.
          */
-        void setGeometry(const Vector2 p_anchor, const Vector2 p_newSize);
+        void setGeometry(const Vector2& p_anchor, const Vector2& p_newSize);
 
         /**
-         * @brief Set the depth of this component.
-         * @param p_newDepth The new depth.
+         * @brief Set the layer of this component.
+         * @param p_layer The new layer.
          */
-        void setDepth(float p_newDepth);
+        void setLayer(const float& p_layer);
 
         /**
          * @brief Set the color of the box.

@@ -4,8 +4,8 @@ namespace spk::widget
 {
     void TextLabel::_onGeometryChange()
     {
-        _label.setAnchor(anchor());
-        _label.setDepth(depth());
+        _label.setAnchor(anchor() + size() / 2);
+        _label.setLayer(layer());
     }
 
     void TextLabel::_onRender()
@@ -13,20 +13,21 @@ namespace spk::widget
         _label.render();
     }
 
-    TextLabel::TextLabel(const std::string& p_text, Font* p_font, IWidget* p_parent) :
-        IWidget("TextLabel", p_parent),
-        _font(p_font),
-        _text(p_text)
+    TextLabel::TextLabel(IWidget* p_parent) :
+        IWidget(p_parent),
+        _font(nullptr),
+        _text("")
     {
-
-        label().setFont(_font); // Assuming myFont is a preloaded Font instance
-        label().setText(_text);
-        label().setTextSize(50);
-        label().setTextColor(spk::Color{255, 255, 255});
-        label().setAnchor(anchor());
-        label().setVerticalAlignment(spk::VerticalAlignment::Top);
-        label().setHorizontalAlignment(spk::HorizontalAlignment::Left);
+        label().setVerticalAlignment(spk::VerticalAlignment::Centered);
+        label().setHorizontalAlignment(spk::HorizontalAlignment::Centered);
     }
+
+    TextLabel::TextLabel(const std::string& p_text, Font* p_font, IWidget* p_parent) :
+        TextLabel(p_parent)
+    {
+        _font = p_font;
+        _text = p_text;
+    }   
 
     Vector2 TextLabel::layout(const BoxConstraints& p_constraints)
     {

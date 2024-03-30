@@ -15,7 +15,7 @@ namespace spk::widget::components
 
 	void geometryPass()
 	{
-		pixelPosition = screenConstants.canvasMVP * vec4(screenPosition, widgetAttribute.depth, 1.0);
+		pixelPosition = screenConstants.canvasMVP * vec4(screenPosition, widgetAttribute.layer, 1.0);
 
 		fragmentUVs = UVs;
 	}
@@ -93,7 +93,7 @@ namespace spk::widget::components
         _spriteSheet(nullptr),
         _renderingObject(_renderingPipeline.createObject()),
         _renderingObjectAttribute(_renderingObject.attribute("widgetAttribute")),
-        _depthAttributeElement(_renderingObjectAttribute["depth"]),
+        _layerAttributeElement(_renderingObjectAttribute["layer"]),
         _renderingPipelineTexture(_renderingPipeline.texture("spriteSheet")),
         _needGPUUpdate(false),
         _cornerSize(16)
@@ -114,9 +114,9 @@ namespace spk::widget::components
         _needGPUUpdate = true;
     }
 
-    void NineSlicedBox::setDepth(float p_depth)
+    void NineSlicedBox::setLayer(const float& p_layer)
     {
-        _depthAttributeElement = p_depth;
+        _layerAttributeElement = p_layer;
         _renderingObjectAttribute.update();
     }
 

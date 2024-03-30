@@ -32,7 +32,9 @@ namespace spk
 		_storage.activate();
 
 		for (auto& [key, attribute] : _attributes)
+		{
 			attribute.activate();
+		}
 
 		_pipeline->launch(_storage.nbTriangles());
 
