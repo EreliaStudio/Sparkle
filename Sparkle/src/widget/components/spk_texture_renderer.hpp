@@ -3,7 +3,7 @@
 #include "graphics/pipeline/spk_pipeline.hpp"
 #include "graphics/spk_color.hpp"
 
-namespace spk::widget::components
+namespace spk::WidgetComponent
 {
     /**
      * @class TextureRenderer
@@ -20,10 +20,10 @@ namespace spk::widget::components
      *
      * Usage example:
      * @code
-     * class MyCustomWidget : public spk::IWidget
+     * class MyCustomWidget : public spk::Widget
      * {
      * private:
-     *     spk::WidgetComponent::TextureRenderer _textureRenderer;
+     *     spkComponent::TextureRenderer _textureRenderer;
      *
      *     void _onRender() override
      *     {
@@ -31,8 +31,8 @@ namespace spk::widget::components
      *     }
      *
      * public:
-     *     MyCustomWidget(const std::string& name, spk::IWidget* parent = nullptr) :
-     *         spk::IWidget(name, parent),
+     *     MyCustomWidget(const std::string& name, spk::Widget* parent = nullptr) :
+     *         spk::Widget(name, parent),
      *         _textureRenderer()
      *     {
      *         _textureRenderer.setTexture(myTexture); // Assuming myTexture is a preloaded Texture instance

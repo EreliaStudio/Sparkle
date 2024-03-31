@@ -6,7 +6,7 @@
 namespace spk
 {
     namespace widget{
-        class IWidget;
+        class Widget;
     }
     /**
 	 * @class Viewport
@@ -31,7 +31,7 @@ namespace spk
 	class Viewport
 	{
 		friend class Application;
-        friend class widget::IWidget;
+        friend class Widget;
 		
 	private:
 		static inline const Viewport* _mainViewport = nullptr;

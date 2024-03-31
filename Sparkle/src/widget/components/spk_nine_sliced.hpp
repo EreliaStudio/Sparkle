@@ -5,7 +5,7 @@
 #include "math/spk_vector2.hpp"
 #include <string>
 
-namespace spk::widget::components
+namespace spk::WidgetComponent
 {
     /**
      * @class NineSlicedBox
@@ -27,10 +27,10 @@ namespace spk::widget::components
      *
      * Usage example:
      * @code
-     * class MyCustomWidget : public spk::IWidget
+     * class MyCustomWidget : public spk::Widget
      * {
      * private:
-     *     spk::WidgetComponent::NineSlicedBox _background;
+     *     spkComponent::NineSlicedBox _background;
      *
      *     void _onGeometryChange()
      *     {
@@ -47,8 +47,8 @@ namespace spk::widget::components
      *
      *     }
      * public:
-     *     MyCustomWidget(const std::string& name, spk::IWidget* parent = nullptr) :
-     *          spk::IWidget(name, parent),
+     *     MyCustomWidget(const std::string& name, spk::Widget* parent = nullptr) :
+     *          spk::Widget(name, parent),
      *          _background()
      *     {
      *         _background.setSpriteSheet(&spriteSheet);

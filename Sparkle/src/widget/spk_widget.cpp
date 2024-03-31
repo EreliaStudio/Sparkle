@@ -3,58 +3,23 @@
 #include "application/spk_application.hpp"
 #include "widget/spk_widget.hpp"
 
-namespace spk::widget
+namespace spk
 {
-    std::atomic_uint32_t IWidget::_nextId = 0;
-
-    void IWidget::_onRender()
+    void Widget::_onRender()
     {
     }
 
-    void IWidget::_onUpdate()
+    void Widget::_onUpdate()
     {
     }
 
-    void IWidget::_onGeometryChange()
+    void Widget::_onGeometryChange()
     {
     }
 
-    // By default the IWidget will layout its children by restricting their size to the constraints
-    // he has been give, and aligning them to its top-left corner.
-    Vector2 IWidget::layout(const BoxConstraints& p_constraints)
+    void Widget::render()
     {
-        if (children().size() == 0)
-        {
-            return p_constraints.max;
-        }
-        // We aim at returning a box that englobes all children.
-        Vector2 maxFromChildren{0, 0};
-        for (auto& child : children())
-        {
-            // Get child size but cap it to match the constraints.
-            Vector2 childSize = child->layout(p_constraints);
-            child->setGeometry(anchor(), childSize);
-            maxFromChildren = Vector2::max(maxFromChildren, childSize);
-        }
-        return maxFromChildren;
-    }
-
-    void IWidget::render()
-    {
-        assert(size() >= Vector2(0, 0));
-        if (size() <= Vector2{0, 0})
-        {
-            // Widgets with no size do not need rendering.
-            return;
-        }
-
         _computeViewport();
-        if (_viewport.size() <= Vector2{0, 0})
-        {
-            std::cout << "Viewport of " << _name << "(#" << id() << ")"
-                      << " has a size of " << _viewport.size() << std::endl;
-            return;
-        }
 
         _onRender();
         for (auto& child : children())
@@ -67,7 +32,7 @@ namespace spk::widget
         }
     }
 
-    void IWidget::update()
+    void Widget::update()
     {
 #ifndef NDEBUG
         _timeMetric.start();
@@ -86,10 +51,10 @@ namespace spk::widget
         }
     }
 
-    spk::Vector2Int IWidget::_computeAbsoluteAnchor()
+    spk::Vector2Int Widget::_computeAbsoluteAnchor()
     {
         spk::Vector2Int result = 0;
-        const IWidget* tmp = this;
+        const Widget* tmp = this;
 
         while (tmp->parent() != nullptr)
         {
@@ -100,7 +65,7 @@ namespace spk::widget
         return (result);
     }
 
-    void IWidget::_computeViewport()
+    void Widget::_computeViewport()
     {
         spk::Vector2Int topLeft = _computeAbsoluteAnchor();
         spk::Vector2Int rightDown = size() + topLeft;
@@ -114,14 +79,13 @@ namespace spk::widget
         _viewport.setGeometry(topLeft, rightDown - topLeft);
     }
 
-    IWidget::IWidget(IWidget* p_parent) :
-        IWidget("Unnamed widget", p_parent)
+    Widget::Widget(Widget* p_parent) :
+        Widget("Unnamed widget", p_parent)
     {
         
     }
 
-    IWidget::IWidget(const std::string& p_name) :
-        _id(_nextId++),
+    Widget::Widget(const std::string& p_name) :
         _name(p_name),
 #ifndef NDEBUG
         _timeMetric(spk::Application::activeApplication()->profiler().metric<TimeMetric>(name())),
@@ -132,14 +96,14 @@ namespace spk::widget
             defaultParent->addChild(this);
     }
 
-    IWidget::IWidget(const std::string& p_name, IWidget* p_parent) :
-        IWidget(p_name)
+    Widget::Widget(const std::string& p_name, Widget* p_parent) :
+        Widget(p_name)
     {
         if (p_parent != nullptr)
             p_parent->addChild(this);
     }
 
-    IWidget::~IWidget()
+    Widget::~Widget()
     {
         if (parent() != nullptr)
         {
@@ -147,13 +111,13 @@ namespace spk::widget
         }
     }
 
-    void IWidget::addChild(IWidget* p_child)
+    void Widget::addChild(Widget* p_child)
     {
-        TreeNode<IWidget>::addChild(p_child);
+        TreeNode<Widget>::addChild(p_child);
         p_child->setLayer(layer() + 1);
     }
 
-    void IWidget::setGeometry(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size)
+    void Widget::setGeometry(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size)
     {
         if (p_anchor == _anchor && p_size == _size)
         {
@@ -167,14 +131,14 @@ namespace spk::widget
         _onGeometryChange();
     }
 
-    void IWidget::setLayer(const float& p_layer)
+    void Widget::setLayer(const float& p_layer)
     {
         _layer = p_layer;
         if (_layer > Viewport::_maxLayer)
             Viewport::_maxLayer = _layer;
     }
 
-    void IWidget::activateAll()
+    void Widget::activateAll()
     {
         activate();
         for (auto& child : children())
@@ -183,7 +147,7 @@ namespace spk::widget
         }
     }
 
-    void IWidget::deactivateAll()
+    void Widget::deactivateAll()
     {
         deactivate();
         for (auto& child : children())
@@ -192,45 +156,40 @@ namespace spk::widget
         }
     }
 
-    bool IWidget::hitTest(const Vector2& p_coord)
+    bool Widget::hitTest(const Vector2& p_coord)
     {
         Vector2 p0 = _viewport.anchor();
         Vector2 p1 = p0 + _viewport.size();
         return Vector2::isInsideRectangle(p_coord, p0, p1);
     }
 
-    const std::string& IWidget::name() const
+    const std::string& Widget::name() const
     {
         return (_name);
     }
 
-    void IWidget::setName(const std::string& p_name)
+    void Widget::setName(const std::string& p_name)
     {
         _name = p_name;
     }
 
-    const spk::Vector2Int& IWidget::anchor() const
+    const spk::Vector2Int& Widget::anchor() const
     {
         return (_anchor);
     }
 
-    const float& IWidget::layer() const
+    const float& Widget::layer() const
     {
         return (_layer);
     }
 
-    const spk::Vector2UInt& IWidget::size() const
+    const spk::Vector2UInt& Widget::size() const
     {
         return (_size);
     }
 
-    const spk::Viewport& IWidget::viewport() const
+    const spk::Viewport& Widget::viewport() const
     {
         return (_viewport);
-    }
-
-    uint32_t IWidget::id() const
-    {
-        return _id;
     }
 }

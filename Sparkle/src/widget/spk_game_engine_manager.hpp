@@ -3,14 +3,14 @@
 #include "game_engine/spk_game_engine.hpp"
 #include "widget/spk_widget.hpp"
 
-namespace spk::widget
+namespace spk
 {
     /**
      * @class GameEngineManager
      * @brief Manages the integration of a game engine within a widget-based user interface framework.
      *
      * This class is a specialized widget that serves as a bridge between the game engine and the user interface,
-     * allowing for the game's visual content to be embedded within a UI widget hierarchy. It extends the IWidget class,
+     * allowing for the game's visual content to be embedded within a UI widget hierarchy. It extends the Widget class,
      * inheriting its hierarchical organization and viewport management capabilities, to seamlessly integrate game rendering
      * and update cycles within the UI framework.
      *
@@ -31,7 +31,7 @@ namespace spk::widget
      * @note GameEngineManager provides a flexible way to embed game content within application interfaces, enabling the
      * development of games with complex UI overlays or applications with interactive game-based elements.
      */
-    class GameEngineManager : public IWidget
+    class GameEngineManager : public Widget
     {
     private:
         spk::GameEngine* _engine = nullptr;
@@ -60,9 +60,9 @@ namespace spk::widget
          * the widget tree, facilitating its rendering and event handling within the context of the parent widget.
          *
          * @param p_name The name of the GameEngineManager widget, used for identification within the UI hierarchy.
-         * @param p_parent A pointer to the parent IWidget, determining the hierarchical placement of this GameEngineManager.
+         * @param p_parent A pointer to the parent Widget, determining the hierarchical placement of this GameEngineManager.
          */
-        GameEngineManager(const std::string& p_name, IWidget* p_parent);
+        GameEngineManager(const std::string& p_name, Widget* p_parent);
 
         /**
          * @brief Sets the game engine to be managed and integrated within the UI framework.
@@ -79,5 +79,5 @@ namespace spk::widget
 
 namespace spk
 {
-    using GameEngineManager = spk::widget::GameEngineManager;
+    using GameEngineManager = spk::GameEngineManager;
 }

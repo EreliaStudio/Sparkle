@@ -1,6 +1,6 @@
 #include "widget/components/spk_nine_sliced.hpp"
 
-namespace spk::widget::components
+namespace spk::WidgetComponent
 {
     std::string NineSlicedBox::_renderingPipelineCode = R"(#version 450
         

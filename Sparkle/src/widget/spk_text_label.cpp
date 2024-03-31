@@ -1,6 +1,6 @@
 #include "widget/spk_text_label.hpp"
 
-namespace spk::widget
+namespace spk
 {
     void TextLabel::_onGeometryChange()
     {
@@ -17,25 +17,19 @@ namespace spk::widget
         _label.render();
     }
 
-    TextLabel::TextLabel(IWidget* p_parent) :
-        IWidget(p_parent),
+    TextLabel::TextLabel(Widget* p_parent) :
+        Widget(p_parent),
         _font(nullptr)
     {
 
     }
 
-    Vector2 TextLabel::layout(const BoxConstraints& p_constraints)
-    {
-        // TODO: need to return textlabel layout inside those constraints;
-        return p_constraints.max;
-    }
-
-    spk::widget::components::TextLabel& TextLabel::label()
+    spk::WidgetComponent::TextLabel& TextLabel::label()
     {
         return (_label);
     }
 
-    spk::widget::components::NineSlicedBox& TextLabel::box()
+    spk::WidgetComponent::NineSlicedBox& TextLabel::box()
     {
         return (_box);
     }

@@ -6,7 +6,7 @@
 #include "math/spk_vector2.hpp"
 #include <string>
 
-namespace spk::widget::components
+namespace spk::WidgetComponent
 {
     /**
      * @class TextLabel
@@ -23,10 +23,10 @@ namespace spk::widget::components
      *
      * Usage example:
      * @code
-     * class MyCustomWidget : public spk::IWidget
+     * class MyCustomWidget : public spk::Widget
      * {
      * private:
-     *     spk::WidgetComponent::TextLabel _label;
+     *     spkComponent::TextLabel _label;
      *
      *     void _onGeometryChange()
      *     {
@@ -44,8 +44,8 @@ namespace spk::widget::components
      *     }
      *
      * public:
-     *     MyCustomWidget(const std::string& name, spk::IWidget* parent = nullptr) :
-     *         spk::IWidget(name, parent),
+     *     MyCustomWidget(const std::string& name, spk::Widget* parent = nullptr) :
+     *         spk::Widget(name, parent),
      *         _label()
      *     {
      *         _label.setFont(myFont); // Assuming myFont is a preloaded Font instance

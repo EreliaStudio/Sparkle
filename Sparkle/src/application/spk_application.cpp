@@ -23,8 +23,6 @@ namespace spk
 
         _handle.clear();
 
-        _centralWidget->layout(widget::BoxConstraints(size(), size()));
-        _centralWidget->setGeometry({0, 0}, size());
         _centralWidget->render();
 
         _handle.swap();

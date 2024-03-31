@@ -56,19 +56,19 @@ namespace spk
         return (result);
     }
 
-    const spk::Color Colors::red = Color(0xFF0000FF);
-    const spk::Color Colors::blue = Color(0x0000FFFF);
-    const spk::Color Colors::green = Color(0x00FF00FF);
-    const spk::Color Colors::yellow = Color(0xFFFF00FF);
-    const spk::Color Colors::purple = Color(0x7F00FFFF);
-    const spk::Color Colors::cyan = Color(0x00FFFFFF);
-    const spk::Color Colors::orange = Color(0xFF8000FF);
-    const spk::Color Colors::magenta = Color(0xFF007FFF);
-    const spk::Color Colors::pink = Color(0xFF00FFFF);
-    const spk::Color Colors::black = Color(0x000000FF);
-    const spk::Color Colors::white = Color(0xFFFFFFFF);
-    const spk::Color Colors::grey = Color(0x7F7F7FFF);
+    const spk::Color Color::red = Color(0xFF0000FF);
+    const spk::Color Color::blue = Color(0x0000FFFF);
+    const spk::Color Color::green = Color(0x00FF00FF);
+    const spk::Color Color::yellow = Color(0xFFFF00FF);
+    const spk::Color Color::purple = Color(0x7F00FFFF);
+    const spk::Color Color::cyan = Color(0x00FFFFFF);
+    const spk::Color Color::orange = Color(0xFF8000FF);
+    const spk::Color Color::magenta = Color(0xFF007FFF);
+    const spk::Color Color::pink = Color(0xFF00FFFF);
+    const spk::Color Color::black = Color(0x000000FF);
+    const spk::Color Color::white = Color(0xFFFFFFFF);
+    const spk::Color Color::grey = Color(0x7F7F7FFF);
 
-    const std::vector<spk::Color> Colors::values = std::vector<spk::Color>{
+    const std::vector<spk::Color> Color::values = std::vector<spk::Color>{
         red, blue, green, yellow, purple, cyan, orange, magenta, pink};
 }

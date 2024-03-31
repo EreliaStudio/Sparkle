@@ -1,6 +1,6 @@
 #include "widget/components/spk_texture_renderer.hpp"
 
-namespace spk::widget::components
+namespace spk::WidgetComponent
 {
     const std::string TextureRenderer::_renderingPipelineCode = R"(#version 450
 
