@@ -62,13 +62,17 @@ namespace spk::widget::components
         _renderingObject(_renderingPipeline.createObject()),
         _selfAttribute(_renderingObject.attribute("self")),
         _selfLayerElement(_selfAttribute["layer"]),
-        _renderingPipelineTexture(_renderingPipeline.texture("_texture"))
+        _renderingPipelineTexture(_renderingPipeline.texture("_texture")),
+        _texture(nullptr)
     {
 
     }
 
     void TextureRenderer::render()
     {
+        if (_texture == nullptr)
+            return ;
+
         if (_needGPUInputUpdate == true)
         {
             _updateGPUData();

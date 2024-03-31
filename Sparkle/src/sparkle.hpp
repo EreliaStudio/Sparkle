@@ -67,3 +67,4 @@
 #include "widget/spk_pointer_detector.hpp"
 #include "widget/spk_text_label.hpp"
 #include "widget/spk_widget.hpp"
+#include "widget/spk_button.hpp"
