@@ -213,6 +213,8 @@ namespace spk
                 spk::Vector2 uvs[4];         ///< Texture coordinates (UV mapping) for the glyph.
                 spk::Vector2Int position[4]; ///< Screen position of the glyph's corners, in pixels.
                 spk::Vector2Int step;        ///< Step information for the glyph, used in rendering calculations.
+                spk::Vector2Int size;
+
                 /**
                  * @brief Static vector defining the order of vertex indices for rendering.
                  *
@@ -235,7 +237,11 @@ namespace spk
 
             Configuration _fontConfiguration;
             std::vector<GlyphData> _glyphDatas;
+
             Texture _texture;
+            bool _needUploadToGPU;
+            spk::Vector2Int _textureSize;
+            std::vector<uint8_t> _texturePixelData;
 
             BuildData _computeBuildData(const std::vector<uint8_t>& p_fontData, const Configuration& p_fontConfiguration, const Key& p_key);
 
@@ -283,6 +289,9 @@ namespace spk
              * @return A constant reference to the Texture object for this Atlas.
              */
             const Texture& texture() const;
+
+            bool needUploadToGPU() const;
+            void uploadToGPU();
         };
 
     private:
@@ -322,5 +331,7 @@ namespace spk
          * @return A constant reference to the Atlas object configured with the specified parameters.
          */
         const Atlas& atlas(const size_t& p_fontSize, const size_t& p_outlineSize, const OutlineStyle& p_outlineStype) const;
+
+        Atlas& atlas(const size_t& p_fontSize, const size_t& p_outlineSize, const OutlineStyle& p_outlineStype);
     };
 }

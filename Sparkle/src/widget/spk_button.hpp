@@ -25,8 +25,13 @@ namespace spk
 		WidgetComponent::NineSlicedBox _boxes[2];
 		WidgetComponent::TextLabel _labels[2];
 
+		HorizontalAlignment _horizontalAlignment;
+		VerticalAlignment _verticalAlignment;
+
 		Callback _onClickCallback;
 
+		void _updateBoxesGeometry();
+		void _updateLabelsGeometry();
 		void _onGeometryChange() override;
 		void _onRender() override;
 		void _onUpdate() override;
@@ -38,5 +43,7 @@ namespace spk
 
 		WidgetComponent::NineSlicedBox& box(const State& p_state);
 		WidgetComponent::TextLabel& label(const State& p_state);
+
+		void setLabelAlignment(const HorizontalAlignment& p_horizontalAlignment, const VerticalAlignment& p_verticalAlignment);
 	}; 
 }

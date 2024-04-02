@@ -4,16 +4,30 @@
 
 namespace spk
 {
-	void Button::_onGeometryChange()
+	void Button::_updateBoxesGeometry()
 	{
 		for (size_t i = 0; i < 2; i++)
 		{
 			_boxes[i].setGeometry(anchor(), size());
 			_boxes[i].setLayer(layer());
-
-			_labels[i].setLayer(layer() + 0.01f);
-			_labels[i].setAnchor(anchor() + size() / 2); 
 		}
+	}
+
+	
+	void Button::_updateLabelsGeometry()
+	{
+		for (size_t i = 0; i < 2; i++)
+		{
+			//_labels[i].setGeometry(anchor() + _boxes[i].cornerSize(), size() - _boxes[i].cornerSize() * 2);
+			_labels[i].setGeometry(anchor(), size());
+			_labels[i].setLayer(layer() + 0.01f);
+		}
+	}
+
+	void Button::_onGeometryChange()
+	{
+		_updateBoxesGeometry();
+		_updateLabelsGeometry();
 	}
 
 	void Button::_onRender()
@@ -78,5 +92,13 @@ namespace spk
 	WidgetComponent::TextLabel& Button::label(const State& p_state)
 	{
 		return (_labels[static_cast<int>(p_state)]);
+	}
+
+	void Button::setLabelAlignment(const HorizontalAlignment& p_horizontalAlignment, const VerticalAlignment& p_verticalAlignment)
+	{
+		_horizontalAlignment = p_horizontalAlignment;
+		_verticalAlignment = p_verticalAlignment;
+
+		_updateLabelsGeometry();
 	}
 }

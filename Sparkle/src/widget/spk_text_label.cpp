@@ -7,7 +7,7 @@ namespace spk
         _box.setGeometry(anchor(), size());
         _box.setLayer(layer());
 
-        _label.setAnchor(anchor() + size() / 2);
+        _label.setGeometry(anchor() + _box.cornerSize(), size() - _box.cornerSize() * 2);
         _label.setLayer(layer() + 0.01f);
     }
 

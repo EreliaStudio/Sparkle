@@ -95,7 +95,7 @@ namespace spk::WidgetComponent
         bool _needGPUBufferUpdate = true;
 
         spk::Font* _font = nullptr;
-        const spk::Font::Atlas* _fontAtlas = nullptr;
+        spk::Font::Atlas* _fontAtlas = nullptr;
 
         std::string _text = "";
 
@@ -107,11 +107,12 @@ namespace spk::WidgetComponent
         spk::Color _outlineColor = spk::Color(255, 255, 255);
 
         spk::Vector2Int _anchor;
+        spk::Vector2Int _size;
 
         VerticalAlignment _verticalAlignment = VerticalAlignment::Centered;
         HorizontalAlignment _horizontalAlignment = HorizontalAlignment::Centered;
 
-        TextLabel::RenderingData _computeRenderingData();
+        TextLabel::RenderingData _computeRenderingData(const spk::Font::Atlas* p_fontAtlas) const;
         spk::Vector2Int _computeBaseAnchor(const TextLabel::RenderingData& p_renderingData);
 
         void _updateGPUBuffer();
@@ -140,12 +141,7 @@ namespace spk::WidgetComponent
          */
         void setFont(spk::Font* p_font);
 
-        /**
-         * @brief Sets the anchor point for the text label within its parent widget.
-         *
-         * @param p_anchor The position of the anchor point as a Vector2Int.
-         */
-        void setAnchor(const spk::Vector2Int& p_anchor);
+        void setGeometry(const spk::Vector2Int& p_anchor, const spk::Vector2Int& p_size);
 
         /**
          * @brief Sets the layer of the text label in the rendering pipeline.

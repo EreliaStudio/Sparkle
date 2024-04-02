@@ -96,6 +96,8 @@ namespace spk
 		p_data.position[3] = spk::Vector2Int(static_cast<int>(quad.x1), static_cast<int>(quad.y1));
 
 		p_data.step = quadStep;
+
+		p_data.size = p_data.position[3] - p_data.position[0]; 
 	}
 
 	Font::Atlas::BuildData Font::Atlas::_computeBuildData(const std::vector<uint8_t> &p_fontData, const Configuration &p_fontConfiguration, const Key &p_key)

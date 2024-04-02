@@ -141,4 +141,9 @@ namespace spk::WidgetComponent
         _renderingPipelineTexture.attach(_spriteSheet);
         _renderingObject.render();
     }
+
+    const spk::Vector2Int& NineSlicedBox::cornerSize() const
+    {
+        return (_cornerSize);
+    }
 }

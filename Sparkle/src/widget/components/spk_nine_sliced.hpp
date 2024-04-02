@@ -145,5 +145,7 @@ namespace spk::WidgetComponent
          * before drawing it to the screen. This method should be called within the parent widget's rendering cycle.
          */
         void render();
+
+        const spk::Vector2Int& cornerSize() const;
     };
 }
