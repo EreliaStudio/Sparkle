@@ -76,6 +76,7 @@ namespace spk::WidgetComponent
         struct RenderingData
         {
             std::vector<const spk::Font::Atlas::GlyphData*> glyphs;
+            spk::Vector2Int anchorOffset = spk::Vector2Int(0, 0);
             spk::Vector2Int size = spk::Vector2Int(0, 0);
         };
 

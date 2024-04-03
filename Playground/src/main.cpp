@@ -31,55 +31,56 @@ public:
         _font("Playground/resources/font/Roboto-Regular.ttf")
     {
         _buttonA.box(spk::Button::State::Pressed).setSpriteSheet(&_pressedTexture);
+        _buttonA.box(spk::Button::State::Pressed).setCornerSize(6);
         _buttonA.box(spk::Button::State::Released).setSpriteSheet(&_releasedTexture);
+        _buttonA.box(spk::Button::State::Released).setCornerSize(6);
 
         _buttonA.label(spk::Button::State::Pressed).setFont(&_font);
         _buttonA.label(spk::Button::State::Pressed).setTextSize(25);
         _buttonA.label(spk::Button::State::Pressed).setTextColor(spk::Color::white);
-        _buttonA.label(spk::Button::State::Pressed).setOutlineSize(3);
-        _buttonA.label(spk::Button::State::Pressed).setOutlineColor(spk::Color::red);
+        _buttonA.label(spk::Button::State::Pressed).setOutlineSize(2);
+        _buttonA.label(spk::Button::State::Pressed).setOutlineColor(spk::Color::blue);
         _buttonA.label(spk::Button::State::Pressed).setOutlineStyle(spk::Font::OutlineStyle::Standard);
-        _buttonA.label(spk::Button::State::Pressed).setHorizontalAlignment(spk::HorizontalAlignment::Left);
-        _buttonA.label(spk::Button::State::Pressed).setVerticalAlignment(spk::VerticalAlignment::Top);
-        _buttonA.label(spk::Button::State::Pressed).setText("A");
+        _buttonA.label(spk::Button::State::Pressed).setHorizontalAlignment(spk::HorizontalAlignment::Centered);
+        _buttonA.label(spk::Button::State::Pressed).setVerticalAlignment(spk::VerticalAlignment::Centered);
+        _buttonA.label(spk::Button::State::Pressed).setText("Click me");
 
         _buttonA.label(spk::Button::State::Released).setFont(&_font);
         _buttonA.label(spk::Button::State::Released).setTextSize(25);
         _buttonA.label(spk::Button::State::Released).setTextColor(spk::Color::white);
-        _buttonA.label(spk::Button::State::Released).setOutlineSize(3);
-        _buttonA.label(spk::Button::State::Released).setOutlineColor(spk::Color::red);
+        _buttonA.label(spk::Button::State::Released).setOutlineSize(2);
+        _buttonA.label(spk::Button::State::Released).setOutlineColor(spk::Color::blue);
         _buttonA.label(spk::Button::State::Released).setOutlineStyle(spk::Font::OutlineStyle::Standard);
-        _buttonA.label(spk::Button::State::Released).setHorizontalAlignment(spk::HorizontalAlignment::Right);
-        _buttonA.label(spk::Button::State::Released).setVerticalAlignment(spk::VerticalAlignment::Down);
-        _buttonA.label(spk::Button::State::Released).setText("A");
+        _buttonA.label(spk::Button::State::Released).setHorizontalAlignment(spk::HorizontalAlignment::Centered);
+        _buttonA.label(spk::Button::State::Released).setVerticalAlignment(spk::VerticalAlignment::Centered);
+        _buttonA.label(spk::Button::State::Released).setText("Click me");
 
         _buttonA.activate();
 
-        
         _buttonB.box(spk::Button::State::Pressed).setSpriteSheet(&_pressedTexture);
         _buttonB.box(spk::Button::State::Released).setSpriteSheet(&_releasedTexture);
 
         _buttonB.label(spk::Button::State::Pressed).setFont(&_font);
         _buttonB.label(spk::Button::State::Pressed).setTextSize(25);
         _buttonB.label(spk::Button::State::Pressed).setTextColor(spk::Color::white);
-        _buttonB.label(spk::Button::State::Pressed).setOutlineSize(3);
-        _buttonB.label(spk::Button::State::Pressed).setOutlineColor(spk::Color::red);
+        _buttonB.label(spk::Button::State::Pressed).setOutlineSize(2);
+        _buttonB.label(spk::Button::State::Pressed).setOutlineColor(spk::Color::blue);
         _buttonB.label(spk::Button::State::Pressed).setOutlineStyle(spk::Font::OutlineStyle::Standard);
-        _buttonB.label(spk::Button::State::Pressed).setHorizontalAlignment(spk::HorizontalAlignment::Left);
-        _buttonB.label(spk::Button::State::Pressed).setVerticalAlignment(spk::VerticalAlignment::Top);
-        _buttonB.label(spk::Button::State::Pressed).setText("A");
+        _buttonB.label(spk::Button::State::Pressed).setHorizontalAlignment(spk::HorizontalAlignment::Centered);
+        _buttonB.label(spk::Button::State::Pressed).setVerticalAlignment(spk::VerticalAlignment::Centered);
+        _buttonB.label(spk::Button::State::Pressed).setText("Click me");
 
         _buttonB.label(spk::Button::State::Released).setFont(&_font);
         _buttonB.label(spk::Button::State::Released).setTextSize(25);
         _buttonB.label(spk::Button::State::Released).setTextColor(spk::Color::white);
-        _buttonB.label(spk::Button::State::Released).setOutlineSize(3);
-        _buttonB.label(spk::Button::State::Released).setOutlineColor(spk::Color::red);
+        _buttonB.label(spk::Button::State::Released).setOutlineSize(2);
+        _buttonB.label(spk::Button::State::Released).setOutlineColor(spk::Color::blue);
         _buttonB.label(spk::Button::State::Released).setOutlineStyle(spk::Font::OutlineStyle::Standard);
-        _buttonB.label(spk::Button::State::Released).setHorizontalAlignment(spk::HorizontalAlignment::Right);
-        _buttonB.label(spk::Button::State::Released).setVerticalAlignment(spk::VerticalAlignment::Down);
-        _buttonB.label(spk::Button::State::Released).setText("A");
+        _buttonB.label(spk::Button::State::Released).setHorizontalAlignment(spk::HorizontalAlignment::Centered);
+        _buttonB.label(spk::Button::State::Released).setVerticalAlignment(spk::VerticalAlignment::Centered);
+        _buttonB.label(spk::Button::State::Released).setText("Click me");
 
-        //_buttonB.activate();
+        _buttonB.activate();
     } 
 };
 

@@ -30,27 +30,28 @@ namespace spk::WidgetComponent
     {
         vec2 values = texture(fontTexture, fragmentUVs).rg;
 
-        if (values.x == 0.0 && values.y == 0.0)
-        {
+        if (values.r != 0)
+            pixelColor = vec4(1, 0, 0, 1);
+        else
             pixelColor = vec4(0, 1, 0, 1);
-            return;
+
+        if (values.r == 0.0 && values.g == 0.0)
+        {
+            discard;
         }
         
-        // Determine the mix factor based on the alpha of the textColor and outlineColor
-        float mixFactor = (1.0 - values.x) * values.y;
-
-        if (values.x != 0)
+        if (values.r != 0)
         {
-            // Blend the colors based on the calculated mix factor
+            float mixFactor = (1.0 - values.r) * values.g;
+
             pixelColor = mix(textRendererAttribute.textColor, textRendererAttribute.outlineColor, mixFactor);
 
-            // Ensure that the pixel alpha is set correctly
-            pixelColor.a = values.x + (1.0 - values.r) * values.y;
+            pixelColor.a = values.r + (1.0 - values.r) * values.g;
         }
         else
         {
             pixelColor = textRendererAttribute.outlineColor;
-            pixelColor.a = values.y;
+            pixelColor.a = values.g;
         }
     })";
     spk::Pipeline TextLabel::_renderingPipeline = spk::Pipeline(TextLabel::_renderingPipelineCode);
@@ -90,17 +91,21 @@ namespace spk::WidgetComponent
         {
             const Font::Atlas::GlyphData& glyphData = (*p_fontAtlas)[_text[i]];
 
-            // if (topLeftCorner.y > glyphData.position[0].y)
-            //     topLeftCorner.y = glyphData.position[0].y;
+            if (downRightCorner.y < glyphData.position[3].y)
+                downRightCorner.y = glyphData.position[3].y;
 
-            if (downRightCorner.y < glyphData.size.y)
-                downRightCorner.y = glyphData.size.y;
+            if (i == 0)
+                topLeftCorner.x = glyphData.position[0].x;
+
+            if (topLeftCorner.y > glyphData.position[0].y)
+                topLeftCorner.y = glyphData.position[0].y;
 
             downRightCorner.x += glyphData.step.x;
 
             result.glyphs.push_back(&glyphData);
         }
 
+        result.anchorOffset = -topLeftCorner;
         result.size = downRightCorner - topLeftCorner;
 
         return (result);
@@ -120,14 +125,14 @@ namespace spk::WidgetComponent
 
         case HorizontalAlignment::Centered:
         {
-            result.x = 0;
+            result.x = (_size.x - p_renderingData.size.x) / 2;
             break;
         }
 
         case HorizontalAlignment::Right:
         default:
         {
-            result.x = 0;
+            result.x = _size.x - p_renderingData.size.x;
             break;
         }
         }
@@ -142,19 +147,19 @@ namespace spk::WidgetComponent
 
         case VerticalAlignment::Centered:
         {
-            result.y = 0;
+            result.y = (_size.y - p_renderingData.size.y) / 2;
             break;
         }
 
         case VerticalAlignment::Down:
         default:
         {
-            result.y = 0;
+            result.y = _size.y - p_renderingData.size.y;
             break;
         }
         }
 
-        return (_anchor + result + spk::Vector2Int(0, p_renderingData.size.y));
+        return (_anchor + result + p_renderingData.anchorOffset);
     }
 
     void TextLabel::_updateGPUBuffer()
@@ -188,7 +193,7 @@ namespace spk::WidgetComponent
 
                 _bufferShaderInput.push_back(newVertex);
             }
-            glyphAnchor += glyphData->step + spk::Vector2Int(_outlineSize * 2, 0);
+            glyphAnchor += glyphData->step;
 
             for (size_t i = 0; i < 6; i++)
             {

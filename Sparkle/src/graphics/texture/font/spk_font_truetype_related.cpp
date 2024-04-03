@@ -78,7 +78,7 @@ namespace spk
 	 * @param p_atlasSize The dimensions of the atlas.
 	 * @param outlineOffset The offset for the outline.
 	 */
-	void _computeCharGlyphData(const wchar_t& p_char, spk::Font::Atlas::GlyphData &p_data, const stbtt_packedchar *p_charInformation, const spk::Vector2Int& p_atlasSize, const spk::Vector2& outlineOffset)
+	void _computeCharGlyphData(const wchar_t& p_char, spk::Font::Atlas::GlyphData &p_data, const stbtt_packedchar *p_charInformation, const spk::Vector2Int& p_atlasSize, const spk::Vector2& outlineOffset, const int& p_outlineSize)
 	{
 		stbtt_aligned_quad quad;
 		spk::Vector2 quadStep;
@@ -90,12 +90,12 @@ namespace spk
 		p_data.uvs[2] = {quad.s1 + outlineOffset.x * +1, quad.t0 + outlineOffset.y * -1};
 		p_data.uvs[3] = {quad.s1 + outlineOffset.x * +1, quad.t1 + outlineOffset.y * +1};
 
-		p_data.position[0] = spk::Vector2Int(static_cast<int>(quad.x0), static_cast<int>(quad.y0));
-		p_data.position[1] = spk::Vector2Int(static_cast<int>(quad.x0), static_cast<int>(quad.y1));
-		p_data.position[2] = spk::Vector2Int(static_cast<int>(quad.x1), static_cast<int>(quad.y0));
-		p_data.position[3] = spk::Vector2Int(static_cast<int>(quad.x1), static_cast<int>(quad.y1));
+		p_data.position[0] = spk::Vector2Int(static_cast<int>(quad.x0 - p_outlineSize), static_cast<int>(quad.y0 - p_outlineSize));
+		p_data.position[1] = spk::Vector2Int(static_cast<int>(quad.x0 - p_outlineSize), static_cast<int>(quad.y1 + p_outlineSize));
+		p_data.position[2] = spk::Vector2Int(static_cast<int>(quad.x1 + p_outlineSize), static_cast<int>(quad.y0 - p_outlineSize));
+		p_data.position[3] = spk::Vector2Int(static_cast<int>(quad.x1 + p_outlineSize), static_cast<int>(quad.y1 + p_outlineSize));
 
-		p_data.step = quadStep;
+		p_data.step = quadStep + spk::Vector2Int((p_char == L' ' ? 0 : p_outlineSize * 2), 0);
 
 		p_data.size = p_data.position[3] - p_data.position[0]; 
 	}
@@ -115,7 +115,7 @@ namespace spk
 
 		for (size_t i = 0; i < p_fontConfiguration.validGlyphs().size(); i++)
 		{
-			_computeCharGlyphData( p_fontConfiguration.validGlyphs()[i], _glyphDatas[p_fontConfiguration.validGlyphs()[i]], charInformation, buildData.size, outlineOffset);
+			_computeCharGlyphData( p_fontConfiguration.validGlyphs()[i], _glyphDatas[p_fontConfiguration.validGlyphs()[i]], charInformation, buildData.size, outlineOffset, p_key.outlineSize);
 		}
 
 		delete charInformation;

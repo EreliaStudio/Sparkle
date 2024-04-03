@@ -57,7 +57,8 @@ namespace spk
             Pixelized,
             SharpEdge,
             Standard,
-            Manhattan
+            Manhattan,
+            None
         };
 
     public:

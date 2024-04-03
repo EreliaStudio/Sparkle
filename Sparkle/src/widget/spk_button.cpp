@@ -18,8 +18,7 @@ namespace spk
 	{
 		for (size_t i = 0; i < 2; i++)
 		{
-			//_labels[i].setGeometry(anchor() + _boxes[i].cornerSize(), size() - _boxes[i].cornerSize() * 2);
-			_labels[i].setGeometry(anchor(), size());
+			_labels[i].setGeometry(anchor() + _boxes[i].cornerSize(), size() - _boxes[i].cornerSize() * 2);
 			_labels[i].setLayer(layer() + 0.01f);
 		}
 	}
