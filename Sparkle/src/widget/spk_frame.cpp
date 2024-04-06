@@ -13,7 +13,7 @@ namespace spk
 		_box.render();
 	}
 
-	Frame::Frame(spk::Widget* p_parent = nullptr) :
+	Frame::Frame(spk::Widget* p_parent) :
 		spk::Widget(p_parent)
 	{
 
