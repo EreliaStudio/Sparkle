@@ -66,6 +66,8 @@ namespace spk
 
         std::string _name;
 
+        bool _needGeometryUpdate = false;
+
         spk::Vector2Int _anchor;
         spk::Vector2 _anchorRatio;
         spk::Vector2UInt _size;
@@ -121,6 +123,8 @@ namespace spk
          * Only the update thread is allowed to call this method, on the root of the widget tree.
          */
         void update();
+
+        void resize(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size);
 
     private:
         spk::Vector2Int _computeAbsoluteAnchor();

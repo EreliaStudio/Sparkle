@@ -45,7 +45,10 @@ namespace spk
             unsigned int height = HIWORD(p_secondParam);
 
             _handle.resize(Vector2Int(width, height));
-            _updaterJobs.push_back([&, width, height]() {});
+            _updaterJobs.push_back([&, width, height]() {
+					if (_centralWidget != nullptr)
+						_centralWidget->resize(spk::Vector2Int(0, 0), spk::Vector2UInt(width, height));
+				});
             break;
         }
         case WM_MOVE:

@@ -21,6 +21,12 @@ namespace spk
     {
         _computeViewport();
 
+        if (_needGeometryUpdate == true)
+        {
+            _onGeometryChange();
+            _needGeometryUpdate = false;
+        }
+
         _onRender();
         for (auto& child : children())
         {
@@ -128,8 +134,20 @@ namespace spk
 
         _anchorRatio = (parent() != nullptr && parent()->size() != 0 ? static_cast<spk::Vector2>(_anchor) / static_cast<spk::Vector2>(parent()->size()) : 0);
         _sizeRatio = (parent() != nullptr && parent()->size() != 0 ? static_cast<spk::Vector2>(_size) / static_cast<spk::Vector2>(parent()->size()) : 1);
-        _onGeometryChange();
+        _needGeometryUpdate = true;
     }
+    
+    void Widget::resize(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size)
+	{
+		_anchor = p_anchor;
+		_size = p_size;
+		_needGeometryUpdate = true;
+		
+		for (auto& child : children())
+		{
+			child->resize(_size * child->_anchorRatio, _size * child->_sizeRatio);
+		}
+	}
 
     void Widget::setLayer(const float& p_layer)
     {
