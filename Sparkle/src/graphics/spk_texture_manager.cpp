@@ -7,6 +7,14 @@ namespace spk
 
     }
 
+    TextureManager::~TextureManager()
+    {
+        for (auto& [key, element] : _loadedTexture)
+        {
+            delete element;
+        }
+    }
+
     Texture* TextureManager::loadTexture(const std::string& p_textureName, const uint8_t* p_textureData, const Vector2UInt& p_textureSize,
 			const Texture::Format& p_format, const Texture::Filtering& p_filtering,
 			const Texture::Wrap& p_wrap, const Texture::Mipmap& p_mipmap)

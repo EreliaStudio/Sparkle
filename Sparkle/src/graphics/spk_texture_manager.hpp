@@ -21,6 +21,7 @@ namespace spk
 		TextureManager();
 
 	public:
+		~TextureManager();
 		Texture*  loadTexture(const std::string& p_textureName,
 				const uint8_t* p_textureData, const Vector2UInt& p_textureSize,
 				const Texture::Format& p_format, const Texture::Filtering& p_filtering,
