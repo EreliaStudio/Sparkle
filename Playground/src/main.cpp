@@ -63,8 +63,8 @@ private:
     }
 
 public:
-    MainWidget(const std::string& p_name) :
-        spk::Widget(p_name, nullptr),
+    MainWidget(spk::Widget* p_parent = nullptr) :
+        spk::Widget(p_parent),
         _buttonA(this),
         _buttonB(this)
     {
@@ -84,7 +84,7 @@ int main()
 {
     spk::Application app = spk::Application("Labi", spk::Vector2UInt(800, 800), spk::Application::Mode::Monothread);
 
-    MainWidget mainWidget("ManiWidget");
+    MainWidget mainWidget;
     mainWidget.setGeometry(0, app.size());
     mainWidget.activate();
 
