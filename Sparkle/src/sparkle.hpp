@@ -37,6 +37,7 @@
 #include "graphics/spk_texture_manager.hpp"
 
 #include "graphics/texture/font/spk_font.hpp"
+#include "graphics/spk_font_manager.hpp"
 
 #include "game_engine/component/spk_camera_component.hpp"
 #include "game_engine/component/spk_mesh_collider_2D_component.hpp"
