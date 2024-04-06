@@ -7,27 +7,36 @@ namespace spk
 
     }
 
-    void TextureManager::loadTexture(const std::string& p_textureName, const uint8_t* p_textureData, const Vector2UInt& p_textureSize,
+    Texture* TextureManager::loadTexture(const std::string& p_textureName, const uint8_t* p_textureData, const Vector2UInt& p_textureSize,
 			const Texture::Format& p_format, const Texture::Filtering& p_filtering,
 			const Texture::Wrap& p_wrap, const Texture::Mipmap& p_mipmap)
     {
         if (_loadedTexture.contains(p_textureName) == true)
             throwException("Texture [" + p_textureName + "] is already loaded");
-        _loadedTexture[p_textureName] = new Texture(p_textureData, p_textureSize, p_format, p_filtering, p_wrap, p_mipmap);
+
+		Texture* result = new Texture(p_textureData, p_textureSize, p_format, p_filtering, p_wrap, p_mipmap);
+        _loadedTexture[p_textureName] = result;
+		return (result);
     }
     
-    void TextureManager::loadImage(const std::string& p_textureName, const std::filesystem::path& p_path)
+    Image* TextureManager::loadImage(const std::string& p_textureName, const std::filesystem::path& p_path)
     {
         if (_loadedTexture.contains(p_textureName) == true)
             throwException("Texture [" + p_textureName + "] is already loaded");
-        _loadedTexture[p_textureName] = new Image(p_path);
+
+		Image* result = new Image(p_path);
+        _loadedTexture[p_textureName] = result;
+		return (result);
     }
     
-    void TextureManager::loadSpriteSheet(const std::string& p_textureName, const std::filesystem::path& p_path, const Vector2UInt& p_spriteSheetSize)
+    SpriteSheet* TextureManager::loadSpriteSheet(const std::string& p_textureName, const std::filesystem::path& p_path, const Vector2UInt& p_spriteSheetSize)
     {
         if (_loadedTexture.contains(p_textureName) == true)
             throwException("Texture [" + p_textureName + "] is already loaded");
-        _loadedTexture[p_textureName] = new SpriteSheet(p_path, p_spriteSheetSize);
+
+		SpriteSheet* result = new SpriteSheet(p_path, p_spriteSheetSize);
+        _loadedTexture[p_textureName] = result;
+		return (result);
     }
 
     Texture* TextureManager::texture(const std::string& p_textureName) const

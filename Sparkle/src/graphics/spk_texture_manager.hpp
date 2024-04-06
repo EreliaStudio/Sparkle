@@ -17,16 +17,17 @@ namespace spk
 	private:
 		std::unordered_map<std::string, Texture*> _loadedTexture;
 
+	protected:
 		TextureManager();
 
 	public:
-		void loadTexture(const std::string& p_textureName,
+		Texture*  loadTexture(const std::string& p_textureName,
 				const uint8_t* p_textureData, const Vector2UInt& p_textureSize,
 				const Texture::Format& p_format, const Texture::Filtering& p_filtering,
 				const Texture::Wrap& p_wrap, const Texture::Mipmap& p_mipmap);
-		void loadImage(const std::string& p_textureName,
+		Image* loadImage(const std::string& p_textureName,
 				const std::filesystem::path& p_path);
-		void loadSpriteSheet(const std::string& p_textureName,
+		SpriteSheet* loadSpriteSheet(const std::string& p_textureName,
 				const std::filesystem::path& p_path, const Vector2UInt& p_spriteSheetSize);
 
 		Texture* texture(const std::string& p_textureName) const;
