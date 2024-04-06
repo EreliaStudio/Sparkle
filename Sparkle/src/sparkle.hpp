@@ -34,6 +34,7 @@
 #include "graphics/pipeline/spk_pipeline.hpp"
 
 #include "graphics/texture/spk_sprite_sheet.hpp"
+#include "graphics/spk_texture_manager.hpp"
 
 #include "graphics/texture/font/spk_font.hpp"
 
