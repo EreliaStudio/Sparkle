@@ -38,5 +38,7 @@ namespace spk
 
 		WidgetComponent::NineSlicedBox& box(const State& p_state);
 		WidgetComponent::TextLabel& label(const State& p_state);
+
+		void setText(const std::string& p_buttonText);
 	}; 
 }

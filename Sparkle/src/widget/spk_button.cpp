@@ -79,4 +79,12 @@ namespace spk
 	{
 		return (_labels[static_cast<int>(p_state)]);
 	}
+
+	void Button::setText(const std::string& p_buttonText)
+	{
+		for (size_t i = 0; i < 2; i++)
+		{
+			_labels[i].setText(p_buttonText);
+		}
+	}
 }
