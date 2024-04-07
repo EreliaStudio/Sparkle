@@ -23,4 +23,9 @@ namespace spk
 	{
 		return (_box);
 	}
+
+	const WidgetComponent::NineSlicedBox& Frame::box() const
+	{
+		return (_box);
+	}
 }

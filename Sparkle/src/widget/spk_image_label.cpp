@@ -5,6 +5,7 @@ namespace spk
 	void ImageLabel::_onGeometryChange()
 	{
 		_renderer.setGeometry(anchor(), size());
+		_renderer.setLayer(layer());
 	}
 	
 	void ImageLabel::_onRender()
@@ -12,9 +13,16 @@ namespace spk
 		_renderer.render();
 	}
 
-	ImageLabel::ImageLabel(spk::Widget* p_parent)
+	ImageLabel::ImageLabel(spk::Widget* p_parent) :
+		spk::Widget(p_parent)
 	{
 		_renderer.setTextureGeometry(0, 1);
+	}
+
+	ImageLabel::ImageLabel(const std::string& p_name, spk::Widget* p_parent) :
+		spk::Widget(p_name, p_parent)
+	{
+
 	}
 
 	WidgetComponent::TextureRenderer& ImageLabel::label()

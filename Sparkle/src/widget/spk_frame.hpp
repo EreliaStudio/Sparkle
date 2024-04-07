@@ -17,5 +17,6 @@ namespace spk
 		Frame(spk::Widget* p_parent = nullptr);
 
 		spk::WidgetComponent::NineSlicedBox& box();
+		const spk::WidgetComponent::NineSlicedBox& box() const;
 	};
 }

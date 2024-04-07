@@ -14,7 +14,8 @@ namespace spk
 		void _onRender();
 
 	public:
-		ImageLabel(spk::Widget* p_parent);
+		ImageLabel(spk::Widget* p_parent = nullptr);
+		ImageLabel(const std::string& p_name, spk::Widget* p_parent = nullptr);
 
 		WidgetComponent::TextureRenderer& label();
 		const WidgetComponent::TextureRenderer& label() const;

@@ -135,7 +135,7 @@ namespace spk
          * Constructor for creating a widget without a name and set the parent widget.
          * @param p_parent A pointer to the parent widget. This widget will be added as a child of the given parent.
          */
-        Widget(Widget* p_parent = nullptr);
+        Widget(Widget* p_parent);
 
         /**
          * Constructor for creating a widget with a specified name.
