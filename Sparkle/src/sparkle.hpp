@@ -64,7 +64,8 @@
 #include "widget/components/spk_texture_renderer.hpp"
 
 #include "widget/spk_game_engine_manager.hpp"
-#include "widget/spk_text_label.hpp"
 #include "widget/spk_widget.hpp"
 #include "widget/spk_button.hpp"
 #include "widget/spk_frame.hpp"
+#include "widget/spk_text_label.hpp"
+#include "widget/spk_image_label.hpp"
