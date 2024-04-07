@@ -2,7 +2,7 @@
 
 namespace spk
 {
-    Panel::Panel(spk::Widget* p_parent = nullptr) :
+    Panel::Panel(spk::Widget* p_parent) :
         spk::Widget(p_parent)
     {
         setActivationCallback([&](){
