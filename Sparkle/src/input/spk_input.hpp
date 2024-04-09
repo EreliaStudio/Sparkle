@@ -2,113 +2,112 @@
 
 #include "input/spk_keyboard.hpp"
 #include "input/spk_mouse.hpp"
+#include "system/spk_timer.hpp"
 
 namespace spk
 {
-    /**
-     * @brief Input offers a unified interface for input events of different sources.
-     *
-     * This allows treating inputs from Mouse, Keyboard or Controller with the same methods.
-     *
-     * @see Keyboard, Mouse, InputState
-     */
     class Input
     {
     public:
-        /**
-         * @brief The Type of the Input. Will be set by the constructor.
-         */
-        enum Type
-        {
-            None,
-            Mouse,
-            Keyboard,
-            Controller,
-            Other
-        };
+        using TriggerCallback = std::function<bool()>;
+        using Callback = std::function<void()>;
 
-        /**
-         * @brief Default constructor. The resulting Input cannot be used for anything practical.
-         */
-        Input() :
-            _type(Type::None),
-            _state(InputState::Unknown)
+    private:
+        TriggerCallback _trigger;
+        spk::Timer _timer;
+        Callback _callback;
+
+    public:
+        Input(const TriggerCallback& p_trigger, const long long& p_triggerDelay, const Callback& p_callback) :
+            _trigger(p_trigger),
+            _timer(p_triggerDelay),
+            _callback(p_callback)
         {
+
         }
 
-        /**
-         * @brief Constructs an Input from a Mouse::Button.
-         *
-         * @see Mouse
-         */
-        Input(Mouse::Button p_mouseButton, InputState p_state) :
-            _type(Type::Mouse),
-            _mouseButton(p_mouseButton),
-            _state(p_state)
+        void update()
         {
-        }
-
-        /**
-         * @brief Constructs an Input from a Keyboard::Key.
-         *
-         * @see Keyboard
-         */
-        Input(Keyboard::Key p_key, InputState p_state, long long p_duration = 0) :
-            _type(Type::Keyboard),
-            _key(p_key),
-            _state(p_state)
-        {
-        }
-
-        /// Inputs are identified by their code. Each input has a unique code.
-        using Code = size_t;
-
-        /// A code that is not used by any Input. Default initializer will give that code.
-        static constexpr Code kCodeUnknown = 0;
-
-        /// The largest possible input code.
-        static constexpr Code max_code = 1 + Keyboard::Key::Maximum + Mouse::Button::Maximum;
-
-        /**
-         * @brief Getter for Code.
-         *
-         * A code is unique to all input types, which means that two Inputs with the same code
-         * have the same type and the same value inside that type.
-         */
-        Code code() const
-        {
-            switch (_type)
+            if (_timer.isTimedOut() == true && _trigger() == true)
             {
-            case Type::Keyboard:
-                return 1 + _key;
-            case Type::Mouse:
-                return 1 + _mouseButton + Keyboard::Key::Maximum;
-            case Type::Controller:
-                // return 1 + _key + Keyboard::Key::Maximum + Mouse::Button::Maximum;
-            case Type::Other:
-            case Type::None:
-            default:
-                return kCodeUnknown;
+                _callback();
+                _timer.start();
             }
         }
 
-        /**
-         * @brief Getter for the InputState.
-         */
-        InputState state() const { return _state; }
-
-        /**
-         * @brief Compares two inputs. True if both the code and state are equal.
-         */
-        bool operator==(const Input& other) const
+        void setTriggerDelay(const long long& p_triggerDelay)
         {
-            return (code() == other.code()) && (state() == other.state());
+            _timer.setDuration(p_triggerDelay);
         }
 
-    private:
-        Type _type;
-        Mouse::Button _mouseButton;
-        Keyboard::Key _key;
-        InputState _state;
+        void setTriggerCallback(const TriggerCallback& p_trigger)
+        {
+            _trigger = p_trigger;
+        }
+
+        void setCallback(const Callback& p_callback)
+        {
+            _callback = p_callback;
+        }
     };
+
+    class KeyboardInput : public Input
+    {
+    private:
+        using Input::setTriggerCallback;
+
+    public:
+        KeyboardInput(const spk::Keyboard::Key& p_key, const spk::InputStatus& p_expectedStatus, const long long& p_delay, const Callback& p_callback) :
+            Input([&, p_key, p_expectedStatus](){
+                return (spk::Application::activeApplication()->keyboard().getKey(p_key) == p_expectedStatus);
+            }, p_delay, p_callback)
+        {
+
+        }
+
+        void rebind(const spk::Keyboard::Key& p_key, const spk::InputStatus& p_expectedStatus)
+        {
+            setTriggerCallback([&, p_key, p_expectedStatus](){
+                return (spk::Application::activeApplication()->keyboard().getKey(p_key) == p_expectedStatus);
+            })
+        }
+    }
+
+    class MouseInput : public Input
+    {
+    private:
+        using Input::setTriggerCallback;
+
+    public:
+        MouseInput(const spk::Mouse::Button& p_button, const spk::InputStatus& p_expectedStatus, const long long& p_delay, const Callback& p_callback) :
+            Input([&, p_button, p_expectedStatus](){
+                return (spk::Application::activeApplication()->mouse().getButton(p_button) == p_expectedStatus);
+            }, p_delay, p_callback)
+        {
+
+        }
+
+        void rebind(const spk::Mouse::Button& p_key, const spk::InputStatus& p_expectedStatus)
+        {
+            setTriggerCallback([&, p_button, p_expectedStatus](){
+                return (spk::Application::activeApplication()->mouse().getButton(p_button) == p_expectedStatus);
+            })
+        }
+    }
+
+    class MouseMotionInput : public Input
+    {
+    private:
+        using Input::setTriggerCallback;
+        using Input::setTriggerDelay;
+
+    public:
+        MouseMotionInput(const Callback& p_callback) :
+            Input([&](){
+                return (spk::Application::activeApplication()->mouse().deltaPosition() != spk::Vector2Int(0, 0));
+            }, 0, p_callback)
+        {
+
+        }
+    }
 }

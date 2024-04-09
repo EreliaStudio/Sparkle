@@ -66,6 +66,11 @@ namespace spk
 
 		}
 
+		const TTimeUnit& duration() const
+		{
+			return (_duration);
+		}
+
 		/**
 		 * @brief Sets the duration of the timer.
 		 * 
@@ -91,9 +96,8 @@ namespace spk
 		{
 			if (this->isRunning() == false)
 				return true;
-			if (this->duration() >= _duration.count())
-				return true;
-			return false;
+				
+			return (this->elapsedTime() >= _duration.count());
 		}
 	};
 

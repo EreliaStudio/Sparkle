@@ -7,7 +7,9 @@ namespace spk
     {
         setActivationCallback([&](){
             if (_activePanel != nullptr)
+            {
                 _activePanel->deactivate();
+            }
             _activePanel = this;
         });
     }

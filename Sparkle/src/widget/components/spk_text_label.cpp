@@ -298,4 +298,9 @@ namespace spk::WidgetComponent
         _horizontalAlignment = p_horizontalAlignment;
         _needGPUBufferUpdate = true;
     }
+
+    const std::string& TextLabel::text() const
+    {
+        return (_text);
+    }
 }

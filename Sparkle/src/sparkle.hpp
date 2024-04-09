@@ -68,5 +68,6 @@
 #include "widget/spk_button.hpp"
 #include "widget/spk_frame.hpp"
 #include "widget/spk_text_label.hpp"
+#include "widget/spk_text_entry.hpp"
 #include "widget/spk_image_label.hpp"
 #include "widget/spk_panel.hpp"

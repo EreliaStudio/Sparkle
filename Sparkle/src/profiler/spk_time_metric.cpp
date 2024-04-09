@@ -11,7 +11,7 @@ namespace spk
 	void TimeMetric::stop()
 	{
 		_chronometer.stop();
-		saveValue(_chronometer.duration());
+		saveValue(_chronometer.elapsedTime());
 	}
 
 	spk::JSON::Object TimeMetric::emitReport()

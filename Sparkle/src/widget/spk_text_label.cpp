@@ -18,8 +18,7 @@ namespace spk
     }
 
     TextLabel::TextLabel(Widget* p_parent) :
-        Widget(p_parent),
-        _font(nullptr)
+        Widget(p_parent)
     {
 
     }
@@ -32,10 +31,5 @@ namespace spk
     spk::WidgetComponent::NineSlicedBox& TextLabel::box()
     {
         return (_box);
-    }
-
-    spk::Vector2Int TextLabel::calculateTextArea() const
-    {
-        return (_label.calculateTextArea());
     }
 }

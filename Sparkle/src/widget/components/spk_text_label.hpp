@@ -206,5 +206,7 @@ namespace spk::WidgetComponent
          * @param p_horizontalAlignment The horizontal alignment mode.
          */
         void setHorizontalAlignment(const HorizontalAlignment& p_horizontalAlignment);
+
+        const std::string& text() const;
     };
 }

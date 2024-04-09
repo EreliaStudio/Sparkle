@@ -26,6 +26,7 @@ namespace spk
     {
         if (_keys[p_key] != kDown)
         {
+			std::cout << "Pressing key id : " << std::hex << p_key << std::dec << std::endl;
             _keys[p_key] = kPressed;
             _keysToUpdate.push_back(p_key);
         }
