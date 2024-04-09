@@ -5,6 +5,7 @@
 #include "widget/components/spk_nine_sliced.hpp"
 #include "widget/components/spk_text_label.hpp"
 #include "widget/spk_widget.hpp"
+#include "input/spk_input.hpp"
 
 namespace spk
 {
@@ -13,6 +14,8 @@ namespace spk
     private:
         spk::WidgetComponent::NineSlicedBox _box;
         spk::WidgetComponent::TextLabel _label;
+
+        std::vector<spk::Input> _inputs;
 
 		bool _isSelected = false;
         size_t _cursorPosition = 0;
@@ -24,7 +27,7 @@ namespace spk
         void _updateSelectionStatus();
         void _appendToText(const wchar_t& newChar);
         void _removeFromText();    
-        void _deleteFromText();    
+        void _deleteFromText();
         void _onUpdate() override;
 
     public:

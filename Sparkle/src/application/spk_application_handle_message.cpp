@@ -215,8 +215,7 @@ namespace spk
         {
             spk::Vector2Int mousePosition = Vector2Int(LOWORD(p_secondParam), HIWORD(p_secondParam));
 
-            _updaterJobs.push_back([&, mousePosition]()
-                                   { _mouse.setMousePosition(mousePosition); });
+            _updaterJobs.push_back([&, mousePosition]() { _mouse.setMousePosition(mousePosition); });
             break;
         }
 
@@ -224,9 +223,8 @@ namespace spk
         {
             unsigned int value = static_cast<unsigned int>(p_firstParam);
 
-			_updaterJobs.push_back([&, value](){
-						_keyboard.setChar(wchar_t(value));
-					});
+			if (value >= ' ')
+				_updaterJobs.push_back([&, value](){ _keyboard.setChar(wchar_t(value)); });
 
             break;
         }

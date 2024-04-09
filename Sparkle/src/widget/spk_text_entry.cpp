@@ -73,27 +73,9 @@ namespace spk
 
 		if (_isSelected == true)
 		{
-			if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::Delete) == spk::InputState::Pressed)
+			for (auto& element : _inputs)
 			{
-				_deleteFromText();
-			}
-			else if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::Backspace) == spk::InputState::Pressed)
-			{
-				_removeFromText();
-			}
-			else if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::LeftArrow) == spk::InputState::Pressed)
-			{
-				if (_cursorPosition > 0)
-					_cursorPosition--;
-			}
-			else if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::RightArrow) == spk::InputState::Pressed)
-			{
-				if (_cursorPosition <= _label.text().size())
-					_cursorPosition++;
-			}
-			else if (spk::Application::activeApplication()->keyboard().getChar() != L'\0')
-			{
-				_appendToText(spk::Application::activeApplication()->keyboard().getChar());
+				element.update();
 			}
 		}
 	}
@@ -101,7 +83,16 @@ namespace spk
     TextEntry::TextEntry(Widget* p_parent) :
         Widget(p_parent),
 		_isSelected(false),
-		_cursorPosition(0)
+		_cursorPosition(0),
+		_inputs(
+			{
+				spk::KeyboardCharInput([&](){ _appendToText(spk::Application::activeApplication()->keyboard().getChar()); }),
+				spk::KeyboardInput(spk::Keyboard::LeftArrow, spk::InputState::Down, 150, [&](){if (_cursorPosition > 0) _cursorPosition--;}),
+				spk::KeyboardInput(spk::Keyboard::RightArrow, spk::InputState::Down, 150, [&](){if (_cursorPosition <= _label.text().size()) _cursorPosition++;}),
+				spk::KeyboardInput(spk::Keyboard::Backspace, spk::InputState::Down, 150, [&](){_removeFromText();}),
+				spk::KeyboardInput(spk::Keyboard::Delete, spk::InputState::Down, 150, [&](){_deleteFromText();})
+			}
+		)
     {
 
     }
