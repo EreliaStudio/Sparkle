@@ -113,7 +113,7 @@ namespace spk::WidgetComponent
         VerticalAlignment _verticalAlignment = VerticalAlignment::Centered;
         HorizontalAlignment _horizontalAlignment = HorizontalAlignment::Centered;
 
-        TextLabel::RenderingData _computeRenderingData(const spk::Font::Atlas* p_fontAtlas) const;
+        TextLabel::RenderingData _computeRenderingData(const spk::Font::Atlas* p_fontAtlas, const std::string& p_text) const;
         spk::Vector2Int _computeBaseAnchor(const TextLabel::RenderingData& p_renderingData);
 
         void _updateGPUBuffer();
@@ -134,6 +134,7 @@ namespace spk::WidgetComponent
         void render();
 
         spk::Vector2Int calculateTextArea() const;
+        spk::Vector2Int calculateTextArea(const std::string& p_string) const;
 
         /**
          * @brief Sets the font used for rendering the text.

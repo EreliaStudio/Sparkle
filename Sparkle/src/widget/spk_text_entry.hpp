@@ -4,6 +4,7 @@
 #include "spk_basic_functions.hpp"
 #include "widget/components/spk_nine_sliced.hpp"
 #include "widget/components/spk_text_label.hpp"
+#include "widget/components/spk_colored_box.hpp"
 #include "widget/spk_widget.hpp"
 #include "input/spk_input.hpp"
 
@@ -13,6 +14,7 @@ namespace spk
     {
     private:
         spk::WidgetComponent::NineSlicedBox _box;
+        spk::WidgetComponent::ColoredBox _cursorBox;
         spk::WidgetComponent::TextLabel _label;
 
         std::vector<spk::Input> _inputs;
@@ -24,6 +26,8 @@ namespace spk
 
         void _onRender() override;
 
+	    void _moveCursor(int p_delta);
+        void _updateCursorBox();
         void _updateSelectionStatus();
         void _appendToText(const wchar_t& newChar);
         void _removeFromText();    
@@ -34,7 +38,7 @@ namespace spk
         TextEntry(Widget* p_parent = nullptr);
 
         spk::WidgetComponent::TextLabel& label();
-
+        spk::WidgetComponent::ColoredBox& cursor();
         spk::WidgetComponent::NineSlicedBox& box();
     };
 }

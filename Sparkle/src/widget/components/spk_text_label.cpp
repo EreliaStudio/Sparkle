@@ -80,16 +80,16 @@ namespace spk::WidgetComponent
     {
     }
 
-    TextLabel::RenderingData TextLabel::_computeRenderingData(const spk::Font::Atlas* p_fontAtlas) const
+    TextLabel::RenderingData TextLabel::_computeRenderingData(const spk::Font::Atlas* p_fontAtlas, const std::string& p_text) const
     {
         RenderingData result;
 
         spk::Vector2Int topLeftCorner = 0;
         spk::Vector2Int downRightCorner = 0;
 
-        for (size_t i = 0; i < _text.size(); i++)
+        for (size_t i = 0; i < p_text.size(); i++)
         {
-            const Font::Atlas::GlyphData& glyphData = (*p_fontAtlas)[_text[i]];
+            const Font::Atlas::GlyphData& glyphData = (*p_fontAtlas)[p_text[i]];
 
             if (downRightCorner.y < glyphData.position[3].y)
                 downRightCorner.y = glyphData.position[3].y;
@@ -176,7 +176,7 @@ namespace spk::WidgetComponent
         _bufferShaderInput.clear();
         _bufferRenderingPipelineIndexes.clear();
 
-        RenderingData renderingData = _computeRenderingData(_fontAtlas);
+        RenderingData renderingData = _computeRenderingData(_fontAtlas, _text);
 
         spk::Vector2Int glyphAnchor = _computeBaseAnchor(renderingData);
 
@@ -227,7 +227,16 @@ namespace spk::WidgetComponent
     {
         const spk::Font::Atlas* tmpFontAtlas = &(_font->atlas(_textSize, _outlineSize, _outlineStyle));
 
-        RenderingData renderingData = _computeRenderingData(tmpFontAtlas);
+        RenderingData renderingData = _computeRenderingData(tmpFontAtlas, _text);
+
+        return (renderingData.size);
+    }
+    
+    spk::Vector2Int TextLabel::calculateTextArea(const std::string& p_string) const
+    {
+        const spk::Font::Atlas* tmpFontAtlas = &(_font->atlas(_textSize, _outlineSize, _outlineStyle));
+
+        RenderingData renderingData = _computeRenderingData(tmpFontAtlas, p_string);
 
         return (renderingData.size);
     }
