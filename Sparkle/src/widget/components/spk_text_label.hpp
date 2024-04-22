@@ -77,7 +77,7 @@ namespace spk::WidgetComponent
         {
             std::vector<const spk::Font::Atlas::GlyphData*> glyphs;
             spk::Vector2Int anchorOffset = spk::Vector2Int(0, 0);
-            spk::Vector2Int size = spk::Vector2Int(0, 0);
+            spk::Vector2UInt size = spk::Vector2UInt(0, 0);
         };
 
         static const std::string _renderingPipelineCode;
@@ -133,8 +133,8 @@ namespace spk::WidgetComponent
          */
         void render();
 
-        spk::Vector2Int calculateTextArea() const;
-        spk::Vector2Int calculateTextArea(const std::string& p_string) const;
+        spk::Vector2UInt calculateTextArea() const;
+        spk::Vector2UInt calculateTextArea(const std::string& p_string) const;
 
         /**
          * @brief Sets the font used for rendering the text.

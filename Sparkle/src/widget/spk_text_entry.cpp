@@ -17,6 +17,11 @@ namespace spk
     void TextEntry::_onRender()
     {
         _box.render();
+		if (_isTextEdited == true)
+		{
+			_updateRenderedText();
+			_isTextEdited = false;
+		}
         _label.render();
 		if (_isSelected == true)
 			_cursorBox.render();
@@ -24,7 +29,7 @@ namespace spk
 
 	void TextEntry::_updateCursorBox()
 	{
-		spk::Vector2Int previousTextSize = _label.calculateTextArea(_label.text().substr(0, _cursorPosition));
+		spk::Vector2Int previousTextSize = _label.calculateTextArea(_label.text().substr(0, _currentCursorPosition - _openingCursorPosition));
 
 		_cursorBox.setGeometry(anchor() + spk::Vector2Int(previousTextSize.x, 0) + _box.cornerSize() * spk::Vector2Int(1, 2), spk::Vector2Int(5, size().y - _box.cornerSize().y * 4));
 	}
@@ -45,40 +50,102 @@ namespace spk
 		}
 	}
 
+	void TextEntry::_updateRenderedText()
+	{
+		if (_text.size() == 0)
+		{
+			_label.setText(_placeholderText);
+		}
+		else
+		{
+			if (_currentCursorPosition == _closingCursorPosition)
+				_openingCursorPosition = _currentCursorPosition;
+
+			while (true)
+			{
+				std::string stringToTest = _text.substr(_openingCursorPosition, _currentCursorPosition - _openingCursorPosition + 1);
+				spk::Vector2UInt textSize = _label.calculateTextArea(stringToTest);
+
+				if (textSize.x > (size().x - (_cursorBox.size().x * 2)))
+				{
+					_openingCursorPosition++;
+					break;
+				}
+				else if (_openingCursorPosition == 0)
+				{
+					break;
+				}
+				else
+				{
+					_openingCursorPosition--;
+				}
+			}
+
+			_closingCursorPosition = _currentCursorPosition;
+			while (true)
+			{
+				
+				std::string stringToTest = _text.substr(_openingCursorPosition, _closingCursorPosition - _openingCursorPosition);
+				spk::Vector2UInt textSize = _label.calculateTextArea(stringToTest);
+
+				if (textSize.x > (size().x - (_cursorBox.size().x * 2)))
+				{	
+					_closingCursorPosition--;
+					break;
+				}
+				else if (_closingCursorPosition == _text.size())
+				{
+					break;
+				}
+				else
+				{
+					_closingCursorPosition++;
+				}
+			}
+
+			_label.setText(_text.substr(_openingCursorPosition, _closingCursorPosition - _openingCursorPosition));
+		}
+
+		_updateCursorBox();
+	}
+
 	void TextEntry::_appendToText(const wchar_t& newChar)
 	{
-		std::string currentText = _label.text();
+		if (_currentCursorPosition == _closingCursorPosition)
+			_closingCursorPosition++;
 
-		currentText.insert(_cursorPosition, 1, static_cast<char>(newChar)); 
+		_text.insert(_currentCursorPosition, 1, static_cast<char>(newChar));
 
-		_label.setText(currentText);
+		_currentCursorPosition++;
 
-		_cursorPosition++;
 		_updateCursorBox();
+
+		_isTextEdited = true;
 	}
 	
 	void TextEntry::_removeFromText()
 	{
-		std::string currentText = _label.text();
-
-		if (currentText.size() != 0 && _cursorPosition > 0)
+		if (_text.size() != 0 && _currentCursorPosition > 0)
 		{
-			currentText.erase(_cursorPosition - 1, 1);
-			_label.setText(currentText);
-			_cursorPosition--;
-			_updateCursorBox();
+			if (_currentCursorPosition == _closingCursorPosition)
+				_closingCursorPosition--;
+
+			_text.erase(_currentCursorPosition - 1, 1);
+
+			_currentCursorPosition--;
+
+			_isTextEdited = true;
 		}
 	}  
 
 	void TextEntry::_deleteFromText()
 	{
-		std::string currentText = _label.text();
-
-		if (_cursorPosition < currentText.length())
+		if (_currentCursorPosition < _text.length())
 		{
-			currentText.erase(_cursorPosition, 1);
-			_label.setText(currentText);
-			_updateCursorBox();
+
+			_text.erase(_currentCursorPosition, 1);
+
+			_isTextEdited = true;
 		}
 	}
 
@@ -86,18 +153,20 @@ namespace spk
 	{
 		if (p_delta == -1)
 		{
-			if (_cursorPosition > 0)
+			if (_currentCursorPosition > 0)
 			{
-				_cursorPosition--;
-				_updateCursorBox();
+				_currentCursorPosition--;
+
+				_isTextEdited = true;
 			}
 		}
 		else
 		{
-			if (_cursorPosition <= _label.text().size())
+			if (_currentCursorPosition <= _text.size())
 			{
-				_cursorPosition++;
-				_updateCursorBox();
+				_currentCursorPosition++;
+
+				_isTextEdited = true;
 			}
 		}
 	}
@@ -118,20 +187,37 @@ namespace spk
     TextEntry::TextEntry(Widget* p_parent) :
         Widget(p_parent),
 		_isSelected(false),
-		_cursorPosition(0),
+		_currentCursorPosition(0),
 		_inputs(
 			{
-				spk::KeyboardCharInput([&](){ _appendToText(spk::Application::activeApplication()->keyboard().getChar()); }),
+				spk::KeyboardCharInput([&](){ _appendToText(spk::Application::activeApplication()->keyboard().getChar()); _isTextEdited = true; }),
 				spk::KeyboardInput(spk::Keyboard::LeftArrow, spk::InputState::Down, 150, [&](){_moveCursor(-1);}),
 				spk::KeyboardInput(spk::Keyboard::RightArrow, spk::InputState::Down, 150, [&](){_moveCursor(1);}),
 				spk::KeyboardInput(spk::Keyboard::Backspace, spk::InputState::Down, 150, [&](){_removeFromText();}),
 				spk::KeyboardInput(spk::Keyboard::Delete, spk::InputState::Down, 150, [&](){_deleteFromText();})
 			}
 		),
-		_cursorBox()
+		_cursorBox(),
+		_placeholderText("Enter text ..."),
+		_text(""),
+		_isTextEdited(true)
     {
 		_cursorBox.setColor(spk::Color(10, 10, 10, 255));
     }
+
+	void TextEntry::setPlaceholder(const std::string& p_placeholderText)
+	{
+		_placeholderText = p_placeholderText;
+		
+		_isTextEdited = true;
+	}
+	
+	void TextEntry::setPredefinedText(const std::string& p_text)
+	{
+		_text = p_text;
+		
+		_isTextEdited = true;
+	}
 
     spk::WidgetComponent::TextLabel& TextEntry::label()
     {
@@ -147,4 +233,14 @@ namespace spk
     {
         return (_box);
     }
+
+	const std::string& TextEntry::placeholder() const
+	{
+		return (_placeholderText);
+	}
+	
+	const std::string& TextEntry::text() const
+	{
+		return (_text);
+	}
 }

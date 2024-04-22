@@ -223,7 +223,7 @@ namespace spk::WidgetComponent
         _renderingObject.render();
     }
 
-    spk::Vector2Int TextLabel::calculateTextArea() const
+    spk::Vector2UInt TextLabel::calculateTextArea() const
     {
         const spk::Font::Atlas* tmpFontAtlas = &(_font->atlas(_textSize, _outlineSize, _outlineStyle));
 
@@ -232,7 +232,7 @@ namespace spk::WidgetComponent
         return (renderingData.size);
     }
     
-    spk::Vector2Int TextLabel::calculateTextArea(const std::string& p_string) const
+    spk::Vector2UInt TextLabel::calculateTextArea(const std::string& p_string) const
     {
         const spk::Font::Atlas* tmpFontAtlas = &(_font->atlas(_textSize, _outlineSize, _outlineStyle));
 

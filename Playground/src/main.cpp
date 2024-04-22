@@ -5,7 +5,7 @@ int main()
     spk::Application app = spk::Application("Labi", spk::Vector2UInt(800, 800), spk::Application::Mode::Monothread);
 
     spk::TextEntry entry;
-    entry.setGeometry(100, spk::Vector2Int(app.size().x - 200, 50));
+    entry.setGeometry(100, spk::Vector2Int(150, 50));
     entry.activate();
 
     entry.box().setSpriteSheet(new spk::SpriteSheet("Playground/resources/texture/buttonPressed.png", spk::Vector2Int(3, 3)));
