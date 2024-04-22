@@ -1,6 +1,4 @@
 var searchData=
 [
-  ['w_1277',['w',['../classspk_1_1Quaternion.html#a9c3edbfd83d7e3537d0d53eae57463b4',1,'spk::Quaternion']]],
-  ['walkable_1278',['WALKABLE',['../structspk_1_1Tilemap2D_1_1Node.html#abb59175fecbe2d93b39df55215c8dee9',1,'spk::Tilemap2D::Node']]],
-  ['white_1279',['white',['../classspk_1_1Colors.html#a2a97d28921cfc3da65b899c267a79cc9',1,'spk::Colors']]]
+  ['x_1256',['x',['../classspk_1_1Quaternion.html#a8540bd22c3233c533ba3066a0f97233e',1,'spk::Quaternion::x()'],['../structspk_1_1IVector2.html#a8e232a9dc8b81de2bdd7018b0e698c3f',1,'spk::IVector2::x()'],['../structspk_1_1IVector3.html#a28a4f90e9506b6449b6e87daa9ffb185',1,'spk::IVector3::x()']]]
 ];

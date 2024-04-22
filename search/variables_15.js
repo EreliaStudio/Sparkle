@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['x_1280',['x',['../classspk_1_1Quaternion.html#a8540bd22c3233c533ba3066a0f97233e',1,'spk::Quaternion::x()'],['../structspk_1_1IVector2.html#a8e232a9dc8b81de2bdd7018b0e698c3f',1,'spk::IVector2::x()'],['../structspk_1_1IVector3.html#a28a4f90e9506b6449b6e87daa9ffb185',1,'spk::IVector3::x()']]]
+  ['y_1257',['y',['../classspk_1_1Quaternion.html#adae5d6f1d4113df54e7d11f9c9a2d016',1,'spk::Quaternion::y()'],['../structspk_1_1IVector2.html#acf3fb8bbe6949b4ca26a0984408a4b78',1,'spk::IVector2::y()'],['../structspk_1_1IVector3.html#a3e576a722a5f0b2021e431ddb6aa4567',1,'spk::IVector3::y()']]],
+  ['yellow_1258',['yellow',['../structspk_1_1Color.html#ad4ccd35271411645f1f560feb08eee50',1,'spk::Color']]]
 ];

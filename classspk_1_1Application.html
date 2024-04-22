@@ -124,9 +124,6 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 <tr class="memitem:a197bb09428fd2f405fd1e38cc030c0ac"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="classspk_1_1Mouse.html">Mouse</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Application.html#a197bb09428fd2f405fd1e38cc030c0ac">mouse</a> () const</td></tr>
 <tr class="memdesc:a197bb09428fd2f405fd1e38cc030c0ac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Return a const reference to the <a class="el" href="classspk_1_1Mouse.html" title="Manages mouse input, including button states, position, and wheel movement.">Mouse</a>.  <a href="classspk_1_1Application.html#a197bb09428fd2f405fd1e38cc030c0ac">More...</a><br /></td></tr>
 <tr class="separator:a197bb09428fd2f405fd1e38cc030c0ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3882c126837af2a8f77736502809b2d9"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classspk_1_1InputDecoder.html">InputDecoder</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Application.html#a3882c126837af2a8f77736502809b2d9">inputDecoder</a> ()</td></tr>
-<tr class="memdesc:a3882c126837af2a8f77736502809b2d9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Return a reference to the <a class="el" href="classspk_1_1InputDecoder.html" title="InputDecoder maps Inputs to event codes and notifies of said events.">InputDecoder</a>.  <a href="classspk_1_1Application.html#a3882c126837af2a8f77736502809b2d9">More...</a><br /></td></tr>
-<tr class="separator:a3882c126837af2a8f77736502809b2d9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a59935ffbca32bfa2b9f13ba9dd4ad17e"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="classspk_1_1TimeManager.html">TimeManager</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Application.html#a59935ffbca32bfa2b9f13ba9dd4ad17e">timeManager</a> () const</td></tr>
 <tr class="memdesc:a59935ffbca32bfa2b9f13ba9dd4ad17e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Return a const reference to the <a class="el" href="classspk_1_1TimeManager.html" title="Manages time-related functionalities within an application.">TimeManager</a>.  <a href="classspk_1_1Application.html#a59935ffbca32bfa2b9f13ba9dd4ad17e">More...</a><br /></td></tr>
 <tr class="separator:a59935ffbca32bfa2b9f13ba9dd4ad17e"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -149,7 +146,7 @@ Static Public Member Functions</h2></td></tr>
 <li>Time metrics collection.</li>
 <li>Profiling for performance analysis.</li>
 </ul>
-<p>The <a class="el" href="classspk_1_1Application.html" title="Manages a graphical application lifecycle and central functionalities such as time,...">Application</a> class is designed to be the starting point for applications using the Sparkle library, allowing developers to easily create, manage, and render graphics content while handling user input and other application events via the Sparkle IWidget system.</p>
+<p>The <a class="el" href="classspk_1_1Application.html" title="Manages a graphical application lifecycle and central functionalities such as time,...">Application</a> class is designed to be the starting point for applications using the Sparkle library, allowing developers to easily create, manage, and render graphics content while handling user input and other application events via the Sparkle <a class="el" href="classspk_1_1Widget.html" title="Defines a widget interface for UI elements, integrating activation state management,...">Widget</a> system.</p>
 <p>Usage example: </p><div class="fragment"><div class="line"><a class="code" href="classspk_1_1Application.html">spk::Application</a> app(<span class="stringliteral">&quot;Example App&quot;</span>, <a class="code" href="structspk_1_1IVector2.html">spk::Vector2UInt</a>(800, 600), spk::Application::Mode::Monothread);</div>
 <div class="line"> </div>
 <div class="line">MyWidget myWidget = MyWidget(<span class="stringliteral">&quot;MyCustomWidget&quot;</span>); <span class="comment">// This widget will automaticaly be included inside app, and will be rendered and updated by it once activated.</span></div>
@@ -157,9 +154,9 @@ Static Public Member Functions</h2></td></tr>
 <div class="line">myWidget.activate(); <span class="comment">// Activate the widget, to allow application to render and update it</span></div>
 <div class="line"> </div>
 <div class="line"><span class="keywordflow">return</span> (app.run());</div>
-<div class="ttc" id="aclassspk_1_1Application_html"><div class="ttname"><a href="classspk_1_1Application.html">spk::Application</a></div><div class="ttdoc">Manages a graphical application lifecycle and central functionalities such as time,...</div><div class="ttdef"><b>Definition:</b> spk_application.hpp:64</div></div>
+<div class="ttc" id="aclassspk_1_1Application_html"><div class="ttname"><a href="classspk_1_1Application.html">spk::Application</a></div><div class="ttdoc">Manages a graphical application lifecycle and central functionalities such as time,...</div><div class="ttdef"><b>Definition:</b> spk_application.hpp:63</div></div>
 <div class="ttc" id="astructspk_1_1IVector2_html"><div class="ttname"><a href="structspk_1_1IVector2.html">spk::IVector2&lt; unsigned int &gt;</a></div></div>
-</div><!-- fragment --><dl class="section see"><dt>See also</dt><dd>IWidget, <a class="el" href="classspk_1_1Pipeline.html" title="Manages the rendering pipeline, including shader programs, uniforms, and objects.">Pipeline</a>, <a class="el" href="classspk_1_1Keyboard.html" title="Manages keyboard input states and character input for an application.">Keyboard</a>, <a class="el" href="classspk_1_1Mouse.html" title="Manages mouse input, including button states, position, and wheel movement.">Mouse</a>, <a class="el" href="classspk_1_1TimeManager.html" title="Manages time-related functionalities within an application.">TimeManager</a>, <a class="el" href="classspk_1_1Profiler.html" title="Manages and aggregates metrics for performance profiling or analytical purposes within an application...">Profiler</a> </dd></dl>
+</div><!-- fragment --><dl class="section see"><dt>See also</dt><dd><a class="el" href="classspk_1_1Widget.html" title="Defines a widget interface for UI elements, integrating activation state management,...">Widget</a>, <a class="el" href="classspk_1_1Pipeline.html" title="Manages the rendering pipeline, including shader programs, uniforms, and objects.">Pipeline</a>, <a class="el" href="classspk_1_1Keyboard.html" title="Manages keyboard input states and character input for an application.">Keyboard</a>, <a class="el" href="classspk_1_1Mouse.html" title="Manages mouse input, including button states, position, and wheel movement.">Mouse</a>, <a class="el" href="classspk_1_1TimeManager.html" title="Manages time-related functionalities within an application.">TimeManager</a>, <a class="el" href="classspk_1_1Profiler.html" title="Manages and aggregates metrics for performance profiling or analytical purposes within an application...">Profiler</a> </dd></dl>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a99b21eb813c085d31b42493331f7fb90"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a99b21eb813c085d31b42493331f7fb90">&#9670;&nbsp;</a></span>Application()</h2>
@@ -231,26 +228,6 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Return a pointer to the currently active application. </p>
 <dl class="section note"><dt>Note</dt><dd>This method is static, and is not thread local </dd></dl>
-
-</div>
-</div>
-<a id="a3882c126837af2a8f77736502809b2d9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3882c126837af2a8f77736502809b2d9">&#9670;&nbsp;</a></span>inputDecoder()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="classspk_1_1InputDecoder.html">InputDecoder</a> &amp; spk::Application::inputDecoder </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Return a reference to the <a class="el" href="classspk_1_1InputDecoder.html" title="InputDecoder maps Inputs to event codes and notifies of said events.">InputDecoder</a>. </p>
-<dl class="section return"><dt>Returns</dt><dd>The <a class="el" href="classspk_1_1InputDecoder.html" title="InputDecoder maps Inputs to event codes and notifies of said events.">InputDecoder</a> managed by the application. </dd></dl>
 
 </div>
 </div>

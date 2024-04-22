@@ -1,7 +1,6 @@
 var searchData=
 [
-  ['pink_1253',['pink',['../classspk_1_1Colors.html#a115a57e3187a9e14b091813859798faf',1,'spk::Colors']]],
-  ['pointer_1254',['pointer',['../structspk_1_1Pipeline_1_1Structure_1_1Element.html#acf699f40a1ba5a810262b05ff74fcd2d',1,'spk::Pipeline::Structure::Element']]],
-  ['position_1255',['position',['../structspk_1_1Font_1_1Atlas_1_1GlyphData.html#a28d3ee1d5654e8365ff2a9f24fe458e6',1,'spk::Font::Atlas::GlyphData']]],
-  ['purple_1256',['purple',['../classspk_1_1Colors.html#a5917f04da2f4f5b2c5cda2c60e1d0358',1,'spk::Colors']]]
+  ['r_1234',['r',['../structspk_1_1Color.html#aae5f0e0ffcfc279a6be0c7436df4f0da',1,'spk::Color']]],
+  ['red_1235',['red',['../structspk_1_1Color.html#a4eb69ca6a389242ed3bd23d1afa4aade',1,'spk::Color']]],
+  ['rotation_1236',['rotation',['../classspk_1_1Transform.html#a8f39b14caf7d357f526fcddbcebdd0c0',1,'spk::Transform']]]
 ];

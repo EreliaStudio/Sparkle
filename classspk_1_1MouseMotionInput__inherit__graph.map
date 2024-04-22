@@ -1,0 +1,4 @@
+<map id="spk::MouseMotionInput" name="spk::MouseMotionInput">
+<area shape="rect" id="node1" title="Specialized Input class for handling mouse motion events." alt="" coords="5,80,180,107"/>
+<area shape="rect" id="node2" href="$classspk_1_1Input.html" title="Manages generic input triggers and their associated callbacks." alt="" coords="49,5,136,32"/>
+</map>

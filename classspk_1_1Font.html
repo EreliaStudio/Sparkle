@@ -96,10 +96,14 @@ Classes</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-types"></a>
 Public Types</h2></td></tr>
-<tr class="memitem:af83504af647f0f7c98c509d3cc2e9f55"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Font.html#af83504af647f0f7c98c509d3cc2e9f55">OutlineStyle</a> { <b>Pixelized</b>
+<tr class="memitem:af83504af647f0f7c98c509d3cc2e9f55"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Font.html#af83504af647f0f7c98c509d3cc2e9f55">OutlineStyle</a> { <br />
+&#160;&#160;<b>Pixelized</b>
 , <b>SharpEdge</b>
 , <b>Standard</b>
 , <b>Manhattan</b>
+, <br />
+&#160;&#160;<b>None</b>
+<br />
  }</td></tr>
 <tr class="memdesc:af83504af647f0f7c98c509d3cc2e9f55"><td class="mdescLeft">&#160;</td><td class="mdescRight">Defines the style of outlines applied to glyphs within a font atlas.  <a href="classspk_1_1Font.html#af83504af647f0f7c98c509d3cc2e9f55">More...</a><br /></td></tr>
 <tr class="separator:af83504af647f0f7c98c509d3cc2e9f55"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -112,6 +116,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a2c95509cec9d03a6cf0b8b7dcc4a4593"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="classspk_1_1Font_1_1Atlas.html">Atlas</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Font.html#a2c95509cec9d03a6cf0b8b7dcc4a4593">atlas</a> (const size_t &amp;p_fontSize, const size_t &amp;p_outlineSize, const <a class="el" href="classspk_1_1Font.html#af83504af647f0f7c98c509d3cc2e9f55">OutlineStyle</a> &amp;p_outlineStype) const</td></tr>
 <tr class="memdesc:a2c95509cec9d03a6cf0b8b7dcc4a4593"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves or creates an <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a> with specified font size, outline size, and outline style.  <a href="classspk_1_1Font.html#a2c95509cec9d03a6cf0b8b7dcc4a4593">More...</a><br /></td></tr>
 <tr class="separator:a2c95509cec9d03a6cf0b8b7dcc4a4593"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa864cf50f5a2bb720206703f7779f862"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classspk_1_1Font_1_1Atlas.html">Atlas</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Font.html#aa864cf50f5a2bb720206703f7779f862">atlas</a> (const size_t &amp;p_fontSize, const size_t &amp;p_outlineSize, const <a class="el" href="classspk_1_1Font.html#af83504af647f0f7c98c509d3cc2e9f55">OutlineStyle</a> &amp;p_outlineStype)</td></tr>
+<tr class="memdesc:aa864cf50f5a2bb720206703f7779f862"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves or creates an <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a> with specified font size, outline size, and outline style.  <a href="classspk_1_1Font.html#aa864cf50f5a2bb720206703f7779f862">More...</a><br /></td></tr>
+<tr class="separator:aa864cf50f5a2bb720206703f7779f862"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-static-attribs"></a>
 Static Public Attributes</h2></td></tr>
@@ -131,10 +138,10 @@ static const uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class
 <p>Usage example: </p><div class="fragment"><div class="line"><a class="code" href="classspk_1_1Font.html">spk::Font</a> myFont(<span class="stringliteral">&quot;path/to/fontfile.ttf&quot;</span>);</div>
 <div class="line"><a class="code" href="classspk_1_1Font_1_1Atlas.html">spk::Font::Atlas</a> <a class="code" href="classspk_1_1Font.html#a2c95509cec9d03a6cf0b8b7dcc4a4593">atlas</a> = myFont.atlas(16, 1); <span class="comment">// Get or create a font atlas for font size 16 with 1px outline</span></div>
 <div class="line"><a class="code" href="structspk_1_1Font_1_1Atlas_1_1GlyphData.html">spk::Font::Atlas::GlyphData</a> glyphE = <a class="code" href="classspk_1_1Font.html#a2c95509cec9d03a6cf0b8b7dcc4a4593">atlas</a>.glyph(<span class="charliteral">&#39;E&#39;</span>);</div>
-<div class="ttc" id="aclassspk_1_1Font_1_1Atlas_html"><div class="ttname"><a href="classspk_1_1Font_1_1Atlas.html">spk::Font::Atlas</a></div><div class="ttdoc">Manages a texture atlas for a specific font configuration, including glyph data and texture.</div><div class="ttdef"><b>Definition:</b> spk_font.hpp:193</div></div>
+<div class="ttc" id="aclassspk_1_1Font_1_1Atlas_html"><div class="ttname"><a href="classspk_1_1Font_1_1Atlas.html">spk::Font::Atlas</a></div><div class="ttdoc">Manages a texture atlas for a specific font configuration, including glyph data and texture.</div><div class="ttdef"><b>Definition:</b> spk_font.hpp:194</div></div>
 <div class="ttc" id="aclassspk_1_1Font_html"><div class="ttname"><a href="classspk_1_1Font.html">spk::Font</a></div><div class="ttdoc">Handles font rendering by managing glyph textures and dynamic font atlas creation.</div><div class="ttdef"><b>Definition:</b> spk_font.hpp:39</div></div>
 <div class="ttc" id="aclassspk_1_1Font_html_a2c95509cec9d03a6cf0b8b7dcc4a4593"><div class="ttname"><a href="classspk_1_1Font.html#a2c95509cec9d03a6cf0b8b7dcc4a4593">spk::Font::atlas</a></div><div class="ttdeci">const Atlas &amp; atlas(const size_t &amp;p_fontSize, const size_t &amp;p_outlineSize, const OutlineStyle &amp;p_outlineStype) const</div><div class="ttdoc">Retrieves or creates an Atlas with specified font size, outline size, and outline style.</div><div class="ttdef"><b>Definition:</b> spk_font.cpp:26</div></div>
-<div class="ttc" id="astructspk_1_1Font_1_1Atlas_1_1GlyphData_html"><div class="ttname"><a href="structspk_1_1Font_1_1Atlas_1_1GlyphData.html">spk::Font::Atlas::GlyphData</a></div><div class="ttdoc">Holds rendering data for an individual glyph within a font atlas.</div><div class="ttdef"><b>Definition:</b> spk_font.hpp:212</div></div>
+<div class="ttc" id="astructspk_1_1Font_1_1Atlas_1_1GlyphData_html"><div class="ttname"><a href="structspk_1_1Font_1_1Atlas_1_1GlyphData.html">spk::Font::Atlas::GlyphData</a></div><div class="ttdoc">Holds rendering data for an individual glyph within a font atlas.</div><div class="ttdef"><b>Definition:</b> spk_font.hpp:215</div></div>
 </div><!-- fragment --><dl class="section note"><dt>Note</dt><dd>The class assumes the font file provided at construction exists and is valid. Atlases created are managed internally and should be accessed via the provided methods rather than directly to ensure thread safety and resource management.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a>, <a class="el" href="structspk_1_1Font_1_1Configuration.html" title="Holds configuration data for font loading and glyph validation.">Configuration</a>, <a class="el" href="structspk_1_1Font_1_1Key.html" title="Represents a unique identifier for font atlas configurations.">Key</a> </dd></dl>
 </div><h2 class="groupheader">Member Enumeration Documentation</h2>
@@ -198,8 +205,55 @@ static const uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="aa864cf50f5a2bb720206703f7779f862"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa864cf50f5a2bb720206703f7779f862">&#9670;&nbsp;</a></span>atlas() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classspk_1_1Font_1_1Atlas.html">Font::Atlas</a> &amp; spk::Font::atlas </td>
+          <td>(</td>
+          <td class="paramtype">const size_t &amp;&#160;</td>
+          <td class="paramname"><em>p_fontSize</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const size_t &amp;&#160;</td>
+          <td class="paramname"><em>p_outlineSize</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="classspk_1_1Font.html#af83504af647f0f7c98c509d3cc2e9f55">OutlineStyle</a> &amp;&#160;</td>
+          <td class="paramname"><em>p_outlineStype</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Retrieves or creates an <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a> with specified font size, outline size, and outline style. </p>
+<p>This method generates a texture atlas for the specified font size, outline size, and outline style if it does not already exist. If an atlas with the given parameters already exists, it returns a reference to the existing atlas. This allows for efficient text rendering by reusing atlases for common configurations.</p>
+<p>The method ensures that text rendering is optimized by dynamically generating atlases based on the specific requirements of the text to be rendered, such as font size and outline style.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_fontSize</td><td>The desired font size for the text rendering. This affects the scale of the glyphs within the atlas. </td></tr>
+    <tr><td class="paramname">p_outlineSize</td><td>The thickness of the glyph outlines in the atlas. This parameter allows for customization of the text's appearance. </td></tr>
+    <tr><td class="paramname">p_outlineStype</td><td>The style of the outline applied to the glyphs. This allows for further customization of how text is rendered. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>A reference to the <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a> object configured with the specified parameters. </dd></dl>
+
+</div>
+</div>
 <a id="a2c95509cec9d03a6cf0b8b7dcc4a4593"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2c95509cec9d03a6cf0b8b7dcc4a4593">&#9670;&nbsp;</a></span>atlas()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a2c95509cec9d03a6cf0b8b7dcc4a4593">&#9670;&nbsp;</a></span>atlas() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -231,7 +285,7 @@ static const uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class
 </div><div class="memdoc">
 
 <p>Retrieves or creates an <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a> with specified font size, outline size, and outline style. </p>
-<p>This method generates a texture atlas for the specified font size, outline size, and outline style if it does not already exist. If an atlas with the given parameters already exists, it returns a reference to the existing atlas. This allows for efficient text rendering by reusing atlases for common configurations.</p>
+<p>This method generates a texture atlas for the specified font size, outline size, and outline style if it does not already exist. If an atlas with the given parameters already exists, it returns a const reference to the existing atlas. This allows for efficient text rendering by reusing atlases for common configurations.</p>
 <p>The method ensures that text rendering is optimized by dynamically generating atlases based on the specific requirements of the text to be rendered, such as font size and outline style.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">

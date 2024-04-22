@@ -1,0 +1,4 @@
+<map id="spk::KeyboardCharInput" name="spk::KeyboardCharInput">
+<area shape="rect" id="node1" title="Specializes Input for handling character inputs from the keyboard." alt="" coords="5,80,183,107"/>
+<area shape="rect" id="node2" href="$classspk_1_1Input.html" title="Manages generic input triggers and their associated callbacks." alt="" coords="51,5,137,32"/>
+</map>

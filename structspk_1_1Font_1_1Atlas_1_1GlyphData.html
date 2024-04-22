@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.9.1"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Sparkle: spk::Font::Atlas::GlyphData Class Reference</title>
+<title>Sparkle: spk::Font::Atlas::GlyphData Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -71,7 +71,7 @@ $(function() {
 <a href="#pub-static-attribs">Static Public Attributes</a> &#124;
 <a href="structspk_1_1Font_1_1Atlas_1_1GlyphData-members.html">List of all members</a>  </div>
   <div class="headertitle">
-<div class="title">spk::Font::Atlas::GlyphData Class Reference</div>  </div>
+<div class="title">spk::Font::Atlas::GlyphData Struct Reference</div>  </div>
 </div><!--header-->
 <div class="contents">
 
@@ -84,7 +84,7 @@ Collaboration diagram for spk::Font::Atlas::GlyphData:</div>
 <div class="dyncontent">
 <div class="center"><img src="structspk_1_1Font_1_1Atlas_1_1GlyphData__coll__graph.png" border="0" usemap="#aspk_1_1Font_1_1Atlas_1_1GlyphData_coll__map" alt="Collaboration graph"/></div>
 <map name="aspk_1_1Font_1_1Atlas_1_1GlyphData_coll__map" id="aspk_1_1Font_1_1Atlas_1_1GlyphData_coll__map">
-<area shape="rect" title="Holds rendering data for an individual glyph within a font atlas." alt="" coords="81,109,279,136"/>
+<area shape="rect" title="Holds rendering data for an individual glyph within a font atlas." alt="" coords="81,124,279,151"/>
 <area shape="rect" href="structspk_1_1IVector2.html" title=" " alt="" coords="5,5,171,32"/>
 <area shape="rect" href="structspk_1_1IVector2.html" title=" " alt="" coords="195,5,349,32"/>
 </map>
@@ -104,6 +104,10 @@ Public Attributes</h2></td></tr>
 <a class="el" href="structspk_1_1IVector2.html">spk::Vector2Int</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structspk_1_1Font_1_1Atlas_1_1GlyphData.html#a6815c03d18e856c864a42a4d4cd8a14c">step</a></td></tr>
 <tr class="memdesc:a6815c03d18e856c864a42a4d4cd8a14c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Step information for the glyph, used in rendering calculations. <br /></td></tr>
 <tr class="separator:a6815c03d18e856c864a42a4d4cd8a14c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acbcf1c66d6671329f09cd1acf2d86cc6"><td class="memItemLeft" align="right" valign="top"><a id="acbcf1c66d6671329f09cd1acf2d86cc6"></a>
+<a class="el" href="structspk_1_1IVector2.html">spk::Vector2Int</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structspk_1_1Font_1_1Atlas_1_1GlyphData.html#acbcf1c66d6671329f09cd1acf2d86cc6">size</a></td></tr>
+<tr class="memdesc:acbcf1c66d6671329f09cd1acf2d86cc6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Size of the glyph in pixels, representing width and height. <br /></td></tr>
+<tr class="separator:acbcf1c66d6671329f09cd1acf2d86cc6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-static-attribs"></a>
 Static Public Attributes</h2></td></tr>
@@ -113,10 +117,14 @@ Static Public Attributes</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Holds rendering data for an individual glyph within a font atlas. </p>
-<p>Nested within the <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a> class, <a class="el" href="structspk_1_1Font_1_1Atlas_1_1GlyphData.html" title="Holds rendering data for an individual glyph within a font atlas.">GlyphData</a> contains the texture coordinates (UVs), screen position express in pixels, and step information express in pixel for a single glyph. This data is essential for rendering the glyph on the screen, providing the necessary details to accurately place and scale the glyph as part of text rendering operations.</p>
-<p>This struct is automatically populated when a <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Font::Atlas</a> is created, ensuring that all glyphs within the atlas are ready for efficient rendering.</p>
-<p>Usage example: Not directly instantiated by users, used internally by <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a> to store glyph information.</p>
-<dl class="section see"><dt>See also</dt><dd><a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a> </dd></dl>
+<p>This struct encapsulates all necessary data for rendering a single glyph, including texture coordinates (UVs), positions of glyph corners, and additional rendering metrics like step and size. This data is crucial for precise placement and rendering of glyphs on the screen, ensuring text is displayed accurately according to the font's design.</p>
+<p>Fields:</p><ul>
+<li>uvs: Array of <code>spk::Vector2</code> representing the UV coordinates for texture mapping.</li>
+<li>position: Array of <code>spk::Vector2Int</code> specifying the screen positions of the glyph's corners, used in vertex specification.</li>
+<li>step: <code>spk::Vector2Int</code> used in advanced rendering calculations, such as kerning or glyph alignment.</li>
+<li>size: <code>spk::Vector2Int</code> representing the pixel dimensions of the glyph within the atlas.</li>
+</ul>
+<p>The structure also defines the order of vertex indices for rendering in OpenGL or similar APIs, ensuring that glyphs are drawn correctly as quads using two triangles. </p>
 </div><h2 class="groupheader">Member Data Documentation</h2>
 <a id="a775a9185998291822f543dd8b8faed50"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a775a9185998291822f543dd8b8faed50">&#9670;&nbsp;</a></span>indexesOrder</h2>
@@ -143,7 +151,7 @@ Static Public Attributes</h2></td></tr>
 
 </div>
 </div>
-<hr/>The documentation for this class was generated from the following file:<ul>
+<hr/>The documentation for this struct was generated from the following file:<ul>
 <li>Sparkle/src/graphics/texture/font/<a class="el" href="spk__font_8hpp_source.html">spk_font.hpp</a></li>
 </ul>
 </div><!-- contents -->

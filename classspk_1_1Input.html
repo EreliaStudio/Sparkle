@@ -69,96 +69,96 @@ $(function() {
   <div class="summary">
 <a href="#pub-types">Public Types</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
-<a href="#pub-static-attribs">Static Public Attributes</a> &#124;
 <a href="classspk_1_1Input-members.html">List of all members</a>  </div>
   <div class="headertitle">
 <div class="title">spk::Input Class Reference</div>  </div>
 </div><!--header-->
 <div class="contents">
 
-<p><a class="el" href="classspk_1_1Input.html" title="Input offers a unified interface for input events of different sources.">Input</a> offers a unified interface for input events of different sources.  
+<p>Manages generic input triggers and their associated callbacks.  
  <a href="classspk_1_1Input.html#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="spk__input_8hpp_source.html">spk_input.hpp</a>&gt;</code></p>
+<div class="dynheader">
+Inheritance diagram for spk::Input:</div>
+<div class="dyncontent">
+<div class="center"><img src="classspk_1_1Input__inherit__graph.png" border="0" usemap="#aspk_1_1Input_inherit__map" alt="Inheritance graph"/></div>
+<map name="aspk_1_1Input_inherit__map" id="aspk_1_1Input_inherit__map">
+<area shape="rect" title="Manages generic input triggers and their associated callbacks." alt="" coords="319,5,405,32"/>
+<area shape="rect" href="classspk_1_1KeyboardCharInput.html" title="Specializes Input for handling character inputs from the keyboard." alt="" coords="5,80,183,107"/>
+<area shape="rect" href="classspk_1_1KeyboardInput.html" title="Specialized Input class for handling keyboard&#45;specific triggers." alt="" coords="207,80,354,107"/>
+<area shape="rect" href="classspk_1_1MouseInput.html" title="Specialized Input class for handling mouse button events." alt="" coords="379,80,508,107"/>
+<area shape="rect" href="classspk_1_1MouseMotionInput.html" title="Specialized Input class for handling mouse motion events." alt="" coords="532,80,707,107"/>
+</map>
+<center><span class="legend">[<a href="graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-types"></a>
 Public Types</h2></td></tr>
-<tr class="memitem:a88fc382a44b63483f802b51ea33b579f"><td class="memItemLeft" align="right" valign="top"><a id="a88fc382a44b63483f802b51ea33b579f"></a>enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Input.html#a88fc382a44b63483f802b51ea33b579f">Type</a> { <br />
-&#160;&#160;<b>None</b>
-, <b>Mouse</b>
-, <b>Keyboard</b>
-, <b>Controller</b>
-, <br />
-&#160;&#160;<b>Other</b>
-<br />
- }</td></tr>
-<tr class="memdesc:a88fc382a44b63483f802b51ea33b579f"><td class="mdescLeft">&#160;</td><td class="mdescRight">The Type of the <a class="el" href="classspk_1_1Input.html" title="Input offers a unified interface for input events of different sources.">Input</a>. Will be set by the constructor. <br /></td></tr>
-<tr class="separator:a88fc382a44b63483f802b51ea33b579f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a609a895a1fcfc18d83125426647ffee8"><td class="memItemLeft" align="right" valign="top"><a id="a609a895a1fcfc18d83125426647ffee8"></a>
-using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Input.html#a609a895a1fcfc18d83125426647ffee8">Code</a> = size_t</td></tr>
-<tr class="memdesc:a609a895a1fcfc18d83125426647ffee8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Inputs are identified by their code. Each input has a unique code. <br /></td></tr>
-<tr class="separator:a609a895a1fcfc18d83125426647ffee8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5e14d95172a6d3be562144157a61fd90"><td class="memItemLeft" align="right" valign="top"><a id="a5e14d95172a6d3be562144157a61fd90"></a>
+using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Input.html#a5e14d95172a6d3be562144157a61fd90">TriggerCallback</a> = std::function&lt; bool()&gt;</td></tr>
+<tr class="memdesc:a5e14d95172a6d3be562144157a61fd90"><td class="mdescLeft">&#160;</td><td class="mdescRight">Defines a function type that evaluates to a boolean, used to determine if the input condition has been met. <br /></td></tr>
+<tr class="separator:a5e14d95172a6d3be562144157a61fd90"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab5176041daedc5582ee0fc98bcb69a03"><td class="memItemLeft" align="right" valign="top"><a id="ab5176041daedc5582ee0fc98bcb69a03"></a>
+using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Input.html#ab5176041daedc5582ee0fc98bcb69a03">Callback</a> = std::function&lt; void()&gt;</td></tr>
+<tr class="memdesc:ab5176041daedc5582ee0fc98bcb69a03"><td class="mdescLeft">&#160;</td><td class="mdescRight">Defines a function type that is called when the input condition is met, performing the specified action. <br /></td></tr>
+<tr class="separator:ab5176041daedc5582ee0fc98bcb69a03"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:ab8e50ac47e73f59fa8f7de06e851faec"><td class="memItemLeft" align="right" valign="top"><a id="ab8e50ac47e73f59fa8f7de06e851faec"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Input.html#ab8e50ac47e73f59fa8f7de06e851faec">Input</a> ()</td></tr>
-<tr class="memdesc:ab8e50ac47e73f59fa8f7de06e851faec"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default constructor. The resulting <a class="el" href="classspk_1_1Input.html" title="Input offers a unified interface for input events of different sources.">Input</a> cannot be used for anything practical. <br /></td></tr>
-<tr class="separator:ab8e50ac47e73f59fa8f7de06e851faec"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a45b7b4964611f9cb46a63abdc05af710"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Input.html#a45b7b4964611f9cb46a63abdc05af710">Input</a> (<a class="el" href="classspk_1_1Mouse.html#a7e51467586bf8952f05461cc3b9fd5b5">Mouse::Button</a> p_mouseButton, InputState p_state)</td></tr>
-<tr class="memdesc:a45b7b4964611f9cb46a63abdc05af710"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructs an <a class="el" href="classspk_1_1Input.html" title="Input offers a unified interface for input events of different sources.">Input</a> from a <a class="el" href="classspk_1_1Mouse.html#a7e51467586bf8952f05461cc3b9fd5b5" title="Identifies the buttons on a mouse.">Mouse::Button</a>.  <a href="classspk_1_1Input.html#a45b7b4964611f9cb46a63abdc05af710">More...</a><br /></td></tr>
-<tr class="separator:a45b7b4964611f9cb46a63abdc05af710"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad0abbae58a72ffb76597e444a8a7be88"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Input.html#ad0abbae58a72ffb76597e444a8a7be88">Input</a> (<a class="el" href="classspk_1_1Keyboard.html#a13a0bee8478b4e4e8162d4f389134b28">Keyboard::Key</a> p_key, InputState p_state, long long p_duration=0)</td></tr>
-<tr class="memdesc:ad0abbae58a72ffb76597e444a8a7be88"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructs an <a class="el" href="classspk_1_1Input.html" title="Input offers a unified interface for input events of different sources.">Input</a> from a <a class="el" href="classspk_1_1Keyboard.html#a13a0bee8478b4e4e8162d4f389134b28" title="Represents the key codes for various keyboard keys.">Keyboard::Key</a>.  <a href="classspk_1_1Input.html#ad0abbae58a72ffb76597e444a8a7be88">More...</a><br /></td></tr>
-<tr class="separator:ad0abbae58a72ffb76597e444a8a7be88"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af54b5aae622ff8fec4068ce7d181dcfe"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classspk_1_1Input.html#a609a895a1fcfc18d83125426647ffee8">Code</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Input.html#af54b5aae622ff8fec4068ce7d181dcfe">code</a> () const</td></tr>
-<tr class="memdesc:af54b5aae622ff8fec4068ce7d181dcfe"><td class="mdescLeft">&#160;</td><td class="mdescRight">Getter for Code.  <a href="classspk_1_1Input.html#af54b5aae622ff8fec4068ce7d181dcfe">More...</a><br /></td></tr>
-<tr class="separator:af54b5aae622ff8fec4068ce7d181dcfe"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a51d026eb5e3e20310557959ebc2c96a3"><td class="memItemLeft" align="right" valign="top"><a id="a51d026eb5e3e20310557959ebc2c96a3"></a>
-InputState&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Input.html#a51d026eb5e3e20310557959ebc2c96a3">state</a> () const</td></tr>
-<tr class="memdesc:a51d026eb5e3e20310557959ebc2c96a3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Getter for the InputState. <br /></td></tr>
-<tr class="separator:a51d026eb5e3e20310557959ebc2c96a3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aadfab4db0b60829710879545da345450"><td class="memItemLeft" align="right" valign="top"><a id="aadfab4db0b60829710879545da345450"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Input.html#aadfab4db0b60829710879545da345450">operator==</a> (const <a class="el" href="classspk_1_1Input.html">Input</a> &amp;other) const</td></tr>
-<tr class="memdesc:aadfab4db0b60829710879545da345450"><td class="mdescLeft">&#160;</td><td class="mdescRight">Compares two inputs. True if both the code and state are equal. <br /></td></tr>
-<tr class="separator:aadfab4db0b60829710879545da345450"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-static-attribs"></a>
-Static Public Attributes</h2></td></tr>
-<tr class="memitem:a1e08110eaf5ecd4933d977a271c614dd"><td class="memItemLeft" align="right" valign="top"><a id="a1e08110eaf5ecd4933d977a271c614dd"></a>
-static constexpr <a class="el" href="classspk_1_1Input.html#a609a895a1fcfc18d83125426647ffee8">Code</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Input.html#a1e08110eaf5ecd4933d977a271c614dd">kCodeUnknown</a> = 0</td></tr>
-<tr class="memdesc:a1e08110eaf5ecd4933d977a271c614dd"><td class="mdescLeft">&#160;</td><td class="mdescRight">A code that is not used by any <a class="el" href="classspk_1_1Input.html" title="Input offers a unified interface for input events of different sources.">Input</a>. Default initializer will give that code. <br /></td></tr>
-<tr class="separator:a1e08110eaf5ecd4933d977a271c614dd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac3ee2e8084af51cce368b28cd901e2ce"><td class="memItemLeft" align="right" valign="top"><a id="ac3ee2e8084af51cce368b28cd901e2ce"></a>
-static constexpr <a class="el" href="classspk_1_1Input.html#a609a895a1fcfc18d83125426647ffee8">Code</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Input.html#ac3ee2e8084af51cce368b28cd901e2ce">max_code</a> = 1 + Keyboard::Key::Maximum + Mouse::Button::Maximum</td></tr>
-<tr class="memdesc:ac3ee2e8084af51cce368b28cd901e2ce"><td class="mdescLeft">&#160;</td><td class="mdescRight">The largest possible input code. <br /></td></tr>
-<tr class="separator:ac3ee2e8084af51cce368b28cd901e2ce"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a70a4810ba986a3c1a8a1b89bd79b51f0"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Input.html#a70a4810ba986a3c1a8a1b89bd79b51f0">Input</a> (const <a class="el" href="classspk_1_1Input.html#a5e14d95172a6d3be562144157a61fd90">TriggerCallback</a> &amp;p_trigger, const long long &amp;p_triggerDelay, const <a class="el" href="classspk_1_1Input.html#ab5176041daedc5582ee0fc98bcb69a03">Callback</a> &amp;p_callback)</td></tr>
+<tr class="separator:a70a4810ba986a3c1a8a1b89bd79b51f0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9a80a21e5413c84ec2230f994df05bb3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Input.html#a9a80a21e5413c84ec2230f994df05bb3">update</a> ()</td></tr>
+<tr class="separator:a9a80a21e5413c84ec2230f994df05bb3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af181f27607bf76eb7c5322e64001bf2c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Input.html#af181f27607bf76eb7c5322e64001bf2c">setTriggerDelay</a> (const long long &amp;p_triggerDelay)</td></tr>
+<tr class="separator:af181f27607bf76eb7c5322e64001bf2c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a532b7f56189ff109ab4bd88607496472"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Input.html#a532b7f56189ff109ab4bd88607496472">setTriggerCallback</a> (const <a class="el" href="classspk_1_1Input.html#a5e14d95172a6d3be562144157a61fd90">TriggerCallback</a> &amp;p_trigger)</td></tr>
+<tr class="separator:a532b7f56189ff109ab4bd88607496472"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6c85bf039532db7e0b91464035dd5113"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Input.html#a6c85bf039532db7e0b91464035dd5113">setCallback</a> (const <a class="el" href="classspk_1_1Input.html#ab5176041daedc5582ee0fc98bcb69a03">Callback</a> &amp;p_callback)</td></tr>
+<tr class="separator:a6c85bf039532db7e0b91464035dd5113"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac9659bd51c6ed0c44b66419f61cfa2e9"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classspk_1_1Input.html">Input</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Input.html#ac9659bd51c6ed0c44b66419f61cfa2e9">toInput</a> () const</td></tr>
+<tr class="separator:ac9659bd51c6ed0c44b66419f61cfa2e9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p><a class="el" href="classspk_1_1Input.html" title="Input offers a unified interface for input events of different sources.">Input</a> offers a unified interface for input events of different sources. </p>
-<p>This allows treating inputs from <a class="el" href="classspk_1_1Mouse.html" title="Manages mouse input, including button states, position, and wheel movement.">Mouse</a>, <a class="el" href="classspk_1_1Keyboard.html" title="Manages keyboard input states and character input for an application.">Keyboard</a> or Controller with the same methods.</p>
-<dl class="section see"><dt>See also</dt><dd><a class="el" href="classspk_1_1Keyboard.html" title="Manages keyboard input states and character input for an application.">Keyboard</a>, <a class="el" href="classspk_1_1Mouse.html" title="Manages mouse input, including button states, position, and wheel movement.">Mouse</a>, InputState </dd></dl>
+<div class="textblock"><p>Manages generic input triggers and their associated callbacks. </p>
+<p>The <a class="el" href="classspk_1_1Input.html" title="Manages generic input triggers and their associated callbacks.">Input</a> class provides a framework for handling various types of input triggers, using timers and functional callbacks to execute actions based on input conditions. It supports configurable delay for trigger activation and allows dynamic adjustment of trigger conditions and associated actions.</p>
+<p>This class is designed to be extended for specific input devices like keyboards and mice. It utilizes a functional approach to define trigger conditions and callbacks, making it flexible and easy to integrate into various parts of an application.</p>
+<p>Usage example: </p><div class="fragment"><div class="line"><span class="comment">// Define a trigger condition and callback</span></div>
+<div class="line"><a class="code" href="classspk_1_1Input.html#a5e14d95172a6d3be562144157a61fd90">spk::Input::TriggerCallback</a> onKeyPress = []() { <span class="keywordflow">return</span> spk::Keyboard::isKeyPressed(spk::Keyboard::Key::Space); };</div>
+<div class="line"><a class="code" href="classspk_1_1Input.html#ab5176041daedc5582ee0fc98bcb69a03">spk::Input::Callback</a> onAction = []() { std::cout &lt;&lt; <span class="stringliteral">&quot;Space key pressed!&quot;</span> &lt;&lt; std::endl; };</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Create an Input object with a 500 ms delay</span></div>
+<div class="line"><a class="code" href="classspk_1_1Input.html">spk::Input</a> spaceKeyInput(onKeyPress, 500, onAction);</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// In your main update loop, call update to check and execute the input action</span></div>
+<div class="line">spaceKeyInput.update();</div>
+<div class="ttc" id="aclassspk_1_1Input_html"><div class="ttname"><a href="classspk_1_1Input.html">spk::Input</a></div><div class="ttdoc">Manages generic input triggers and their associated callbacks.</div><div class="ttdef"><b>Definition:</b> spk_input.hpp:40</div></div>
+<div class="ttc" id="aclassspk_1_1Input_html_a5e14d95172a6d3be562144157a61fd90"><div class="ttname"><a href="classspk_1_1Input.html#a5e14d95172a6d3be562144157a61fd90">spk::Input::TriggerCallback</a></div><div class="ttdeci">std::function&lt; bool()&gt; TriggerCallback</div><div class="ttdoc">Defines a function type that evaluates to a boolean, used to determine if the input condition has bee...</div><div class="ttdef"><b>Definition:</b> spk_input.hpp:42</div></div>
+<div class="ttc" id="aclassspk_1_1Input_html_ab5176041daedc5582ee0fc98bcb69a03"><div class="ttname"><a href="classspk_1_1Input.html#ab5176041daedc5582ee0fc98bcb69a03">spk::Input::Callback</a></div><div class="ttdeci">std::function&lt; void()&gt; Callback</div><div class="ttdoc">Defines a function type that is called when the input condition is met, performing the specified acti...</div><div class="ttdef"><b>Definition:</b> spk_input.hpp:43</div></div>
+</div><!-- fragment --><dl class="section note"><dt>Note</dt><dd>Ensure that the update method is called regularly to properly handle trigger checks. </dd></dl>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="a45b7b4964611f9cb46a63abdc05af710"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a45b7b4964611f9cb46a63abdc05af710">&#9670;&nbsp;</a></span>Input() <span class="overload">[1/2]</span></h2>
+<a id="a70a4810ba986a3c1a8a1b89bd79b51f0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a70a4810ba986a3c1a8a1b89bd79b51f0">&#9670;&nbsp;</a></span>Input()</h2>
 
 <div class="memitem">
 <div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">spk::Input::Input </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="classspk_1_1Mouse.html#a7e51467586bf8952f05461cc3b9fd5b5">Mouse::Button</a>&#160;</td>
-          <td class="paramname"><em>p_mouseButton</em>, </td>
+          <td class="paramtype">const <a class="el" href="classspk_1_1Input.html#a5e14d95172a6d3be562144157a61fd90">TriggerCallback</a> &amp;&#160;</td>
+          <td class="paramname"><em>p_trigger</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">InputState&#160;</td>
-          <td class="paramname"><em>p_state</em>&#160;</td>
+          <td class="paramtype">const long long &amp;&#160;</td>
+          <td class="paramname"><em>p_triggerDelay</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="classspk_1_1Input.html#ab5176041daedc5582ee0fc98bcb69a03">Callback</a> &amp;&#160;</td>
+          <td class="paramname"><em>p_callback</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -166,94 +166,130 @@ static constexpr <a class="el" href="classspk_1_1Input.html#a609a895a1fcfc18d831
           <td></td><td></td>
         </tr>
       </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
 </div><div class="memdoc">
-
-<p>Constructs an <a class="el" href="classspk_1_1Input.html" title="Input offers a unified interface for input events of different sources.">Input</a> from a <a class="el" href="classspk_1_1Mouse.html#a7e51467586bf8952f05461cc3b9fd5b5" title="Identifies the buttons on a mouse.">Mouse::Button</a>. </p>
-<dl class="section see"><dt>See also</dt><dd><a class="el" href="classspk_1_1Mouse.html" title="Manages mouse input, including button states, position, and wheel movement.">Mouse</a> </dd></dl>
-
-</div>
-</div>
-<a id="ad0abbae58a72ffb76597e444a8a7be88"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad0abbae58a72ffb76597e444a8a7be88">&#9670;&nbsp;</a></span>Input() <span class="overload">[2/2]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">spk::Input::Input </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="classspk_1_1Keyboard.html#a13a0bee8478b4e4e8162d4f389134b28">Keyboard::Key</a>&#160;</td>
-          <td class="paramname"><em>p_key</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">InputState&#160;</td>
-          <td class="paramname"><em>p_state</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">long long&#160;</td>
-          <td class="paramname"><em>p_duration</em> = <code>0</code>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Constructs an <a class="el" href="classspk_1_1Input.html" title="Input offers a unified interface for input events of different sources.">Input</a> from a <a class="el" href="classspk_1_1Keyboard.html#a13a0bee8478b4e4e8162d4f389134b28" title="Represents the key codes for various keyboard keys.">Keyboard::Key</a>. </p>
-<dl class="section see"><dt>See also</dt><dd><a class="el" href="classspk_1_1Keyboard.html" title="Manages keyboard input states and character input for an application.">Keyboard</a> </dd></dl>
+<p>Constructs an <a class="el" href="classspk_1_1Input.html" title="Manages generic input triggers and their associated callbacks.">Input</a> object with specified trigger conditions and actions. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_trigger</td><td>Function to determine when to trigger the callback. </td></tr>
+    <tr><td class="paramname">p_triggerDelay</td><td>Delay before the trigger can activate, in milliseconds. </td></tr>
+    <tr><td class="paramname">p_callback</td><td>Function to call when the trigger condition is met. </td></tr>
+  </table>
+  </dd>
+</dl>
 
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="af54b5aae622ff8fec4068ce7d181dcfe"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af54b5aae622ff8fec4068ce7d181dcfe">&#9670;&nbsp;</a></span>code()</h2>
+<a id="a6c85bf039532db7e0b91464035dd5113"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6c85bf039532db7e0b91464035dd5113">&#9670;&nbsp;</a></span>setCallback()</h2>
 
 <div class="memitem">
 <div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="classspk_1_1Input.html#a609a895a1fcfc18d83125426647ffee8">Code</a> spk::Input::code </td>
+          <td class="memname">void spk::Input::setCallback </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="classspk_1_1Input.html#ab5176041daedc5582ee0fc98bcb69a03">Callback</a> &amp;&#160;</td>
+          <td class="paramname"><em>p_callback</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Sets the callback function to be called when the trigger condition is met. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_callback</td><td>A function to set as the callback. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a532b7f56189ff109ab4bd88607496472"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a532b7f56189ff109ab4bd88607496472">&#9670;&nbsp;</a></span>setTriggerCallback()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void spk::Input::setTriggerCallback </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="classspk_1_1Input.html#a5e14d95172a6d3be562144157a61fd90">TriggerCallback</a> &amp;&#160;</td>
+          <td class="paramname"><em>p_trigger</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Sets the function that determines when to trigger the callback. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_trigger</td><td>A function returning a bool to set as the new trigger condition. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="af181f27607bf76eb7c5322e64001bf2c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af181f27607bf76eb7c5322e64001bf2c">&#9670;&nbsp;</a></span>setTriggerDelay()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void spk::Input::setTriggerDelay </td>
+          <td>(</td>
+          <td class="paramtype">const long long &amp;&#160;</td>
+          <td class="paramname"><em>p_triggerDelay</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Sets the delay for the trigger. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_triggerDelay</td><td>Delay in milliseconds before the trigger can activate. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="ac9659bd51c6ed0c44b66419f61cfa2e9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac9659bd51c6ed0c44b66419f61cfa2e9">&#9670;&nbsp;</a></span>toInput()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classspk_1_1Input.html">Input</a> spk::Input::toInput </td>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
           <td> const</td>
         </tr>
       </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
 </div><div class="memdoc">
-
-<p>Getter for Code. </p>
-<p>A code is unique to all input types, which means that two Inputs with the same code have the same type and the same value inside that type. </p>
+<p>Returns a copy of this <a class="el" href="classspk_1_1Input.html" title="Manages generic input triggers and their associated callbacks.">Input</a> object. </p><dl class="section return"><dt>Returns</dt><dd>A new instance of <a class="el" href="classspk_1_1Input.html" title="Manages generic input triggers and their associated callbacks.">Input</a> with the same properties. </dd></dl>
 
 </div>
 </div>
-<hr/>The documentation for this class was generated from the following file:<ul>
+<a id="a9a80a21e5413c84ec2230f994df05bb3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9a80a21e5413c84ec2230f994df05bb3">&#9670;&nbsp;</a></span>update()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void spk::Input::update </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Updates the internal state and checks the trigger condition. </p>
+
+</div>
+</div>
+<hr/>The documentation for this class was generated from the following files:<ul>
 <li>Sparkle/src/input/<a class="el" href="spk__input_8hpp_source.html">spk_input.hpp</a></li>
+<li>Sparkle/src/input/spk_input.cpp</li>
 </ul>
 </div><!-- contents -->
 <!-- start footer part -->

@@ -1,7 +1,0 @@
-<map id="spk::widget::Offset" name="spk::widget::Offset">
-<area shape="rect" id="node1" title="A widget that positions its child at a specific offset relative to its own position." alt="" coords="105,244,249,271"/>
-<area shape="rect" id="node2" href="$classspk_1_1widget_1_1SingleChildWidget.html" title="A widget that only has one child." alt="" coords="88,155,267,196"/>
-<area shape="rect" id="node3" href="$classspk_1_1widget_1_1IWidget.html" title="Defines a widget interface for UI elements, integrating activation state management,..." alt="" coords="100,80,255,107"/>
-<area shape="rect" id="node4" href="$classspk_1_1ActivateObject.html" title="Manages activation state for objects, intended as a base class." alt="" coords="5,5,155,32"/>
-<area shape="rect" id="node5" href="$classspk_1_1TreeNode.html" title=" " alt="" coords="179,5,373,32"/>
-</map>

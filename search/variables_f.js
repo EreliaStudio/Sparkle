@@ -1,7 +1,12 @@
 var searchData=
 [
-  ['r_1257',['r',['../structspk_1_1Color.html#aae5f0e0ffcfc279a6be0c7436df4f0da',1,'spk::Color']]],
-  ['red_1258',['red',['../classspk_1_1Colors.html#a836d4386fa37ec075fd05eb206122b1e',1,'spk::Colors']]],
-  ['right_1259',['right',['../structspk_1_1widget_1_1Padding_1_1Config.html#acc339b3fe26f63058e75c23440ef80c1',1,'spk::widget::Padding::Config']]],
-  ['rotation_1260',['rotation',['../classspk_1_1Transform.html#a8f39b14caf7d357f526fcddbcebdd0c0',1,'spk::Transform']]]
+  ['scale_1237',['scale',['../classspk_1_1Transform.html#a0c8f212ecddaa7a6a2b24284ed11d660',1,'spk::Transform']]],
+  ['size_1238',['size',['../structspk_1_1Font_1_1Atlas_1_1GlyphData.html#acbcf1c66d6671329f09cd1acf2d86cc6',1,'spk::Font::Atlas::GlyphData']]],
+  ['sizex_1239',['SizeX',['../classspk_1_1ITilemap_1_1IChunk.html#a71db253e0ae8727ff7c91f2f38ec75c1',1,'spk::ITilemap::IChunk']]],
+  ['sizey_1240',['SizeY',['../classspk_1_1ITilemap_1_1IChunk.html#af9258188a339e2c9f6e33bad26b0030d',1,'spk::ITilemap::IChunk']]],
+  ['sizez_1241',['SizeZ',['../classspk_1_1ITilemap_1_1IChunk.html#a757995d94d8f842fc28e0932ba048cf7',1,'spk::ITilemap::IChunk']]],
+  ['sprite_1242',['sprite',['../structspk_1_1Tilemap2D_1_1Node.html#ab89f9691b17fa73bc9a7deb0c5ce1f37',1,'spk::Tilemap2D::Node']]],
+  ['step_1243',['step',['../structspk_1_1Font_1_1Atlas_1_1GlyphData.html#a6815c03d18e856c864a42a4d4cd8a14c',1,'spk::Font::Atlas::GlyphData']]],
+  ['stride_1244',['stride',['../structspk_1_1Pipeline_1_1Object_1_1Storage_1_1Layout.html#a5003266bddcbfc7860b0191ff4aef5f0',1,'spk::Pipeline::Object::Storage::Layout']]],
+  ['structure_1245',['structure',['../structspk_1_1Pipeline_1_1UniformObject_1_1Layout.html#afe5c65bddbb425df93a8603f844a0627',1,'spk::Pipeline::UniformObject::Layout']]]
 ];

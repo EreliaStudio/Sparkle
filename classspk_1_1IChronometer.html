@@ -98,9 +98,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a4b665ee263ac7fed24a4949356f834fb"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1IChronometer.html#a4b665ee263ac7fed24a4949356f834fb">isRunning</a> ()</td></tr>
 <tr class="memdesc:a4b665ee263ac7fed24a4949356f834fb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Checks if the chronometer is currently running.  <a href="classspk_1_1IChronometer.html#a4b665ee263ac7fed24a4949356f834fb">More...</a><br /></td></tr>
 <tr class="separator:a4b665ee263ac7fed24a4949356f834fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6a8a905002bb53cbc617ea47a9e045c1"><td class="memItemLeft" align="right" valign="top">long long&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1IChronometer.html#a6a8a905002bb53cbc617ea47a9e045c1">duration</a> () const</td></tr>
-<tr class="memdesc:a6a8a905002bb53cbc617ea47a9e045c1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the duration between the start and stop times in the specified time unit.  <a href="classspk_1_1IChronometer.html#a6a8a905002bb53cbc617ea47a9e045c1">More...</a><br /></td></tr>
-<tr class="separator:a6a8a905002bb53cbc617ea47a9e045c1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a984e21bc0efd8e757abe6e87e72f9842"><td class="memItemLeft" align="right" valign="top">long long&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1IChronometer.html#a984e21bc0efd8e757abe6e87e72f9842">elapsedTime</a> () const</td></tr>
+<tr class="memdesc:a984e21bc0efd8e757abe6e87e72f9842"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates the duration between the start and stop times in the specified time unit.  <a href="classspk_1_1IChronometer.html#a984e21bc0efd8e757abe6e87e72f9842">More...</a><br /></td></tr>
+<tr class="separator:a984e21bc0efd8e757abe6e87e72f9842"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><h3>template&lt;typename TTimeUnit = std::chrono::milliseconds&gt;<br />
@@ -119,16 +119,16 @@ class spk::IChronometer&lt; TTimeUnit &gt;</h3>
 <div class="line">microChronometer.<a class="code" href="classspk_1_1IChronometer.html#abf537f43878265a777bf7c6920ede9c7">start</a>(); <span class="comment">// Start timing</span></div>
 <div class="line"><span class="comment">// Code block to measure</span></div>
 <div class="line">microChronometer.<a class="code" href="classspk_1_1IChronometer.html#a7a278b96e6cf123cf1b9805ce89ed71e">stop</a>(); <span class="comment">// Stop timing</span></div>
-<div class="line"><span class="keyword">auto</span> durationMicro = microChronometer.<a class="code" href="classspk_1_1IChronometer.html#a6a8a905002bb53cbc617ea47a9e045c1">duration</a>(); <span class="comment">// Retrieve the duration in microseconds</span></div>
+<div class="line"><span class="keyword">auto</span> durationMicro = microChronometer.<a class="code" href="classspk_1_1IChronometer.html#a984e21bc0efd8e757abe6e87e72f9842">elapsedTime</a>(); <span class="comment">// Retrieve the duration in microseconds</span></div>
 <div class="line">std::cout &lt;&lt; <span class="stringliteral">&quot;Duration: &quot;</span> &lt;&lt; durationMicro &lt;&lt; <span class="stringliteral">&quot; microseconds&quot;</span> &lt;&lt; std::endl;</div>
 <div class="ttc" id="aclassspk_1_1IChronometer_html"><div class="ttname"><a href="classspk_1_1IChronometer.html">spk::IChronometer</a></div><div class="ttdoc">A generic chronometer template class for measuring time intervals with precision.</div><div class="ttdef"><b>Definition:</b> spk_chronometer.hpp:38</div></div>
-<div class="ttc" id="aclassspk_1_1IChronometer_html_a6a8a905002bb53cbc617ea47a9e045c1"><div class="ttname"><a href="classspk_1_1IChronometer.html#a6a8a905002bb53cbc617ea47a9e045c1">spk::IChronometer::duration</a></div><div class="ttdeci">long long duration() const</div><div class="ttdoc">Calculates the duration between the start and stop times in the specified time unit.</div><div class="ttdef"><b>Definition:</b> spk_chronometer.hpp:98</div></div>
 <div class="ttc" id="aclassspk_1_1IChronometer_html_a7a278b96e6cf123cf1b9805ce89ed71e"><div class="ttname"><a href="classspk_1_1IChronometer.html#a7a278b96e6cf123cf1b9805ce89ed71e">spk::IChronometer::stop</a></div><div class="ttdeci">void stop()</div><div class="ttdoc">Stops the chronometer.</div><div class="ttdef"><b>Definition:</b> spk_chronometer.hpp:73</div></div>
+<div class="ttc" id="aclassspk_1_1IChronometer_html_a984e21bc0efd8e757abe6e87e72f9842"><div class="ttname"><a href="classspk_1_1IChronometer.html#a984e21bc0efd8e757abe6e87e72f9842">spk::IChronometer::elapsedTime</a></div><div class="ttdeci">long long elapsedTime() const</div><div class="ttdoc">Calculates the duration between the start and stop times in the specified time unit.</div><div class="ttdef"><b>Definition:</b> spk_chronometer.hpp:98</div></div>
 <div class="ttc" id="aclassspk_1_1IChronometer_html_abf537f43878265a777bf7c6920ede9c7"><div class="ttname"><a href="classspk_1_1IChronometer.html#abf537f43878265a777bf7c6920ede9c7">spk::IChronometer::start</a></div><div class="ttdeci">void start()</div><div class="ttdoc">Starts the chronometer.</div><div class="ttdef"><b>Definition:</b> spk_chronometer.hpp:61</div></div>
-</div><!-- fragment --><dl class="section note"><dt>Note</dt><dd>The class template parameter TTimeUnit determines the unit of time for the <a class="el" href="classspk_1_1IChronometer.html#a6a8a905002bb53cbc617ea47a9e045c1" title="Calculates the duration between the start and stop times in the specified time unit.">duration()</a> method's return value, allowing for flexible and precise timing measurements according to the application's requirements. </dd></dl>
+</div><!-- fragment --><dl class="section note"><dt>Note</dt><dd>The class template parameter TTimeUnit determines the unit of time for the duration() method's return value, allowing for flexible and precise timing measurements according to the application's requirements. </dd></dl>
 </div><h2 class="groupheader">Member Function Documentation</h2>
-<a id="a6a8a905002bb53cbc617ea47a9e045c1"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6a8a905002bb53cbc617ea47a9e045c1">&#9670;&nbsp;</a></span>duration()</h2>
+<a id="a984e21bc0efd8e757abe6e87e72f9842"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a984e21bc0efd8e757abe6e87e72f9842">&#9670;&nbsp;</a></span>elapsedTime()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -139,7 +139,7 @@ template&lt;typename TTimeUnit  = std::chrono::milliseconds&gt; </div>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">long long <a class="el" href="classspk_1_1IChronometer.html">spk::IChronometer</a>&lt; TTimeUnit &gt;::duration </td>
+          <td class="memname">long long <a class="el" href="classspk_1_1IChronometer.html">spk::IChronometer</a>&lt; TTimeUnit &gt;::elapsedTime </td>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
           <td> const</td>

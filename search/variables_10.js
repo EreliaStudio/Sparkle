@@ -1,11 +1,6 @@
 var searchData=
 [
-  ['scale_1261',['scale',['../classspk_1_1Transform.html#a0c8f212ecddaa7a6a2b24284ed11d660',1,'spk::Transform']]],
-  ['sizex_1262',['SizeX',['../classspk_1_1ITilemap_1_1IChunk.html#a71db253e0ae8727ff7c91f2f38ec75c1',1,'spk::ITilemap::IChunk']]],
-  ['sizey_1263',['SizeY',['../classspk_1_1ITilemap_1_1IChunk.html#af9258188a339e2c9f6e33bad26b0030d',1,'spk::ITilemap::IChunk']]],
-  ['sizez_1264',['SizeZ',['../classspk_1_1ITilemap_1_1IChunk.html#a757995d94d8f842fc28e0932ba048cf7',1,'spk::ITilemap::IChunk']]],
-  ['sprite_1265',['sprite',['../structspk_1_1Tilemap2D_1_1Node.html#ab89f9691b17fa73bc9a7deb0c5ce1f37',1,'spk::Tilemap2D::Node']]],
-  ['step_1266',['step',['../structspk_1_1Font_1_1Atlas_1_1GlyphData.html#a6815c03d18e856c864a42a4d4cd8a14c',1,'spk::Font::Atlas::GlyphData']]],
-  ['stride_1267',['stride',['../structspk_1_1Pipeline_1_1Object_1_1Storage_1_1Layout.html#a5003266bddcbfc7860b0191ff4aef5f0',1,'spk::Pipeline::Object::Storage::Layout']]],
-  ['structure_1268',['structure',['../structspk_1_1Pipeline_1_1UniformObject_1_1Layout.html#afe5c65bddbb425df93a8603f844a0627',1,'spk::Pipeline::UniformObject::Layout']]]
+  ['texturebindingpoint_1246',['textureBindingPoint',['../structspk_1_1Pipeline_1_1Texture_1_1Layout.html#a385e8a85a4bc942b240c5339dbf62610',1,'spk::Pipeline::Texture::Layout']]],
+  ['translation_1247',['translation',['../classspk_1_1Transform.html#a4bd86a3e8e313639ba2c17be1e73752f',1,'spk::Transform']]],
+  ['type_1248',['type',['../structspk_1_1Tilemap2D_1_1Node.html#a253e46220389011862826eb7c8e44f6a',1,'spk::Tilemap2D::Node::type()'],['../structspk_1_1OpenGL_1_1ShaderInstruction.html#ad5f7752f5767174003d97345cd759c1d',1,'spk::OpenGL::ShaderInstruction::type()'],['../structspk_1_1Pipeline_1_1UniformObject_1_1Layout.html#aa82ee3449abdb4bb2dbd966613fba544',1,'spk::Pipeline::UniformObject::Layout::type()'],['../structspk_1_1Pipeline_1_1Object_1_1Storage_1_1Layout_1_1Element.html#a6db8e2f3104a7135a485d643e61865b6',1,'spk::Pipeline::Object::Storage::Layout::Element::type()']]]
 ];

@@ -1,0 +1,7 @@
+<map id="spk::Input" name="spk::Input">
+<area shape="rect" id="node1" title="Manages generic input triggers and their associated callbacks." alt="" coords="319,5,405,32"/>
+<area shape="rect" id="node2" href="$classspk_1_1KeyboardCharInput.html" title="Specializes Input for handling character inputs from the keyboard." alt="" coords="5,80,183,107"/>
+<area shape="rect" id="node3" href="$classspk_1_1KeyboardInput.html" title="Specialized Input class for handling keyboard&#45;specific triggers." alt="" coords="207,80,354,107"/>
+<area shape="rect" id="node4" href="$classspk_1_1MouseInput.html" title="Specialized Input class for handling mouse button events." alt="" coords="379,80,508,107"/>
+<area shape="rect" id="node5" href="$classspk_1_1MouseMotionInput.html" title="Specialized Input class for handling mouse motion events." alt="" coords="532,80,707,107"/>
+</map>

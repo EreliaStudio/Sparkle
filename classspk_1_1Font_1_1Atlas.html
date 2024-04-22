@@ -82,7 +82,7 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="nested-classes"></a>
 Classes</h2></td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structspk_1_1Font_1_1Atlas_1_1GlyphData.html">GlyphData</a></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structspk_1_1Font_1_1Atlas_1_1GlyphData.html">GlyphData</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Holds rendering data for an individual glyph within a font atlas.  <a href="structspk_1_1Font_1_1Atlas_1_1GlyphData.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
@@ -100,6 +100,12 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ac1b7486bd57eb45102c13bac9aad77b0"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="classspk_1_1Texture.html">Texture</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Font_1_1Atlas.html#ac1b7486bd57eb45102c13bac9aad77b0">texture</a> () const</td></tr>
 <tr class="memdesc:ac1b7486bd57eb45102c13bac9aad77b0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Gets the texture associated with this <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a>.  <a href="classspk_1_1Font_1_1Atlas.html#ac1b7486bd57eb45102c13bac9aad77b0">More...</a><br /></td></tr>
 <tr class="separator:ac1b7486bd57eb45102c13bac9aad77b0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abe9925b307296efa7338e8ca01238341"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Font_1_1Atlas.html#abe9925b307296efa7338e8ca01238341">needUploadToGPU</a> () const</td></tr>
+<tr class="memdesc:abe9925b307296efa7338e8ca01238341"><td class="mdescLeft">&#160;</td><td class="mdescRight">Checks if the atlas texture needs to be uploaded to the GPU.  <a href="classspk_1_1Font_1_1Atlas.html#abe9925b307296efa7338e8ca01238341">More...</a><br /></td></tr>
+<tr class="separator:abe9925b307296efa7338e8ca01238341"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a665bd3b81551ea25e3c6adff197a5a53"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Font_1_1Atlas.html#a665bd3b81551ea25e3c6adff197a5a53">uploadToGPU</a> ()</td></tr>
+<tr class="memdesc:a665bd3b81551ea25e3c6adff197a5a53"><td class="mdescLeft">&#160;</td><td class="mdescRight">Uploads the atlas texture to the GPU.  <a href="classspk_1_1Font_1_1Atlas.html#a665bd3b81551ea25e3c6adff197a5a53">More...</a><br /></td></tr>
+<tr class="separator:a665bd3b81551ea25e3c6adff197a5a53"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Manages a texture atlas for a specific font configuration, including glyph data and texture. </p>
@@ -108,10 +114,10 @@ Public Member Functions</h2></td></tr>
 <p>Usage example: </p><div class="fragment"><div class="line"><a class="code" href="classspk_1_1Font.html">spk::Font</a> myFont(<span class="stringliteral">&quot;path/to/fontfile.ttf&quot;</span>);</div>
 <div class="line"><a class="code" href="classspk_1_1Font_1_1Atlas.html">spk::Font::Atlas</a> <a class="code" href="classspk_1_1Font.html#a2c95509cec9d03a6cf0b8b7dcc4a4593">atlas</a> = myFont.atlas(16, 1); <span class="comment">// Get or create a font atlas for font size 16 with 1px outline</span></div>
 <div class="line"><a class="code" href="structspk_1_1Font_1_1Atlas_1_1GlyphData.html">spk::Font::Atlas::GlyphData</a> glyphE = <a class="code" href="classspk_1_1Font.html#a2c95509cec9d03a6cf0b8b7dcc4a4593">atlas</a>.glyph(<span class="charliteral">&#39;E&#39;</span>);</div>
-<div class="ttc" id="aclassspk_1_1Font_1_1Atlas_html"><div class="ttname"><a href="classspk_1_1Font_1_1Atlas.html">spk::Font::Atlas</a></div><div class="ttdoc">Manages a texture atlas for a specific font configuration, including glyph data and texture.</div><div class="ttdef"><b>Definition:</b> spk_font.hpp:193</div></div>
+<div class="ttc" id="aclassspk_1_1Font_1_1Atlas_html"><div class="ttname"><a href="classspk_1_1Font_1_1Atlas.html">spk::Font::Atlas</a></div><div class="ttdoc">Manages a texture atlas for a specific font configuration, including glyph data and texture.</div><div class="ttdef"><b>Definition:</b> spk_font.hpp:194</div></div>
 <div class="ttc" id="aclassspk_1_1Font_html"><div class="ttname"><a href="classspk_1_1Font.html">spk::Font</a></div><div class="ttdoc">Handles font rendering by managing glyph textures and dynamic font atlas creation.</div><div class="ttdef"><b>Definition:</b> spk_font.hpp:39</div></div>
 <div class="ttc" id="aclassspk_1_1Font_html_a2c95509cec9d03a6cf0b8b7dcc4a4593"><div class="ttname"><a href="classspk_1_1Font.html#a2c95509cec9d03a6cf0b8b7dcc4a4593">spk::Font::atlas</a></div><div class="ttdeci">const Atlas &amp; atlas(const size_t &amp;p_fontSize, const size_t &amp;p_outlineSize, const OutlineStyle &amp;p_outlineStype) const</div><div class="ttdoc">Retrieves or creates an Atlas with specified font size, outline size, and outline style.</div><div class="ttdef"><b>Definition:</b> spk_font.cpp:26</div></div>
-<div class="ttc" id="astructspk_1_1Font_1_1Atlas_1_1GlyphData_html"><div class="ttname"><a href="structspk_1_1Font_1_1Atlas_1_1GlyphData.html">spk::Font::Atlas::GlyphData</a></div><div class="ttdoc">Holds rendering data for an individual glyph within a font atlas.</div><div class="ttdef"><b>Definition:</b> spk_font.hpp:212</div></div>
+<div class="ttc" id="astructspk_1_1Font_1_1Atlas_1_1GlyphData_html"><div class="ttname"><a href="structspk_1_1Font_1_1Atlas_1_1GlyphData.html">spk::Font::Atlas::GlyphData</a></div><div class="ttdoc">Holds rendering data for an individual glyph within a font atlas.</div><div class="ttdef"><b>Definition:</b> spk_font.hpp:215</div></div>
 </div><!-- fragment --><dl class="section see"><dt>See also</dt><dd><a class="el" href="classspk_1_1Font.html" title="Handles font rendering by managing glyph textures and dynamic font atlas creation.">Font</a>, <a class="el" href="structspk_1_1Font_1_1Configuration.html" title="Holds configuration data for font loading and glyph validation.">Configuration</a>, <a class="el" href="structspk_1_1Font_1_1Key.html" title="Represents a unique identifier for font atlas configurations.">Key</a>, <a class="el" href="structspk_1_1Font_1_1Atlas_1_1GlyphData.html" title="Holds rendering data for an individual glyph within a font atlas.">GlyphData</a> </dd></dl>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="adc445ae37e4133de8ce3cac0d125edf9"></a>
@@ -180,6 +186,27 @@ Public Member Functions</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="abe9925b307296efa7338e8ca01238341"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abe9925b307296efa7338e8ca01238341">&#9670;&nbsp;</a></span>needUploadToGPU()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool spk::Font::Atlas::needUploadToGPU </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Checks if the atlas texture needs to be uploaded to the GPU. </p>
+<p>This method determines whether the atlas texture has been modified since the last upload to the GPU and needs to be re-uploaded. This is typically used to optimize rendering performance by ensuring that textures are only uploaded when necessary.</p>
+<dl class="section return"><dt>Returns</dt><dd>True if the atlas texture needs to be uploaded to the GPU, false otherwise. </dd></dl>
+
+</div>
+</div>
 <a id="a91f05a76a620fb36ba216843f1da7055"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a91f05a76a620fb36ba216843f1da7055">&#9670;&nbsp;</a></span>operator[]()</h2>
 
@@ -225,6 +252,27 @@ Public Member Functions</h2></td></tr>
 <p>Gets the texture associated with this <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a>. </p>
 <p>Returns a reference to the <a class="el" href="classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines.">Texture</a> object representing the atlas texture. This texture contains all the glyphs rendered according to the <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a> configuration and is used for drawing text on screen. Access to this texture allows for direct use in rendering pipelines.</p>
 <dl class="section return"><dt>Returns</dt><dd>A constant reference to the <a class="el" href="classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines.">Texture</a> object for this <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a>. </dd></dl>
+
+</div>
+</div>
+<a id="a665bd3b81551ea25e3c6adff197a5a53"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a665bd3b81551ea25e3c6adff197a5a53">&#9670;&nbsp;</a></span>uploadToGPU()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void spk::Font::Atlas::uploadToGPU </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Uploads the atlas texture to the GPU. </p>
+<p>If the atlas texture has been modified, this method uploads the texture to the GPU to make it available for rendering. This method should be called after any changes to the texture data to ensure that the updated texture is used in subsequent render operations.</p>
+<dl class="section note"><dt>Note</dt><dd>This method should only be called if <a class="el" href="classspk_1_1Font_1_1Atlas.html#abe9925b307296efa7338e8ca01238341" title="Checks if the atlas texture needs to be uploaded to the GPU.">needUploadToGPU()</a> returns true to avoid unnecessary GPU operations. </dd></dl>
 
 </div>
 </div>
