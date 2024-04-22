@@ -82,14 +82,7 @@ namespace spk
          * @return A new color resulting from the subtraction.
          */
         Color operator-(const Color& p_color) const;
-    };
 
-    /**
-     * @brief Colors offers some pre-made colors.
-     */
-    class Colors
-    {
-    public:
         static const Color red;     //!< red
         static const Color blue;    //!< blue
         static const Color green;   //!< green

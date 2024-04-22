@@ -3,6 +3,8 @@
 #include <memory>
 #include <stdexcept>
 
+#include "spk_basic_functions.hpp"
+
 namespace spk
 {
 	/**
@@ -81,7 +83,7 @@ namespace spk
 		static std::unique_ptr<TType>& instanciate(Args &&...args)
 		{
 			if (_instance != nullptr)
-				throw std::runtime_error("Can't instanciate an already instancied singleton");
+				spk::throwException("Can't instanciate an already instancied singleton");
 			
 			_instance = std::unique_ptr<TType>(new TType(std::forward<Args>(args)...));
 			return (_instance);

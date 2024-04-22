@@ -6,7 +6,7 @@
 #include "math/spk_vector2.hpp"
 #include <string>
 
-namespace spk::widget::components
+namespace spk::WidgetComponent
 {
     /**
      * @class TextLabel
@@ -23,10 +23,10 @@ namespace spk::widget::components
      *
      * Usage example:
      * @code
-     * class MyCustomWidget : public spk::IWidget
+     * class MyCustomWidget : public spk::Widget
      * {
      * private:
-     *     spk::WidgetComponent::TextLabel _label;
+     *     spkComponent::TextLabel _label;
      *
      *     void _onGeometryChange()
      *     {
@@ -44,8 +44,8 @@ namespace spk::widget::components
      *     }
      *
      * public:
-     *     MyCustomWidget(const std::string& name, spk::IWidget* parent = nullptr) :
-     *         spk::IWidget(name, parent),
+     *     MyCustomWidget(const std::string& name, spk::Widget* parent = nullptr) :
+     *         spk::Widget(name, parent),
      *         _label()
      *     {
      *         _label.setFont(myFont); // Assuming myFont is a preloaded Font instance
@@ -76,7 +76,8 @@ namespace spk::widget::components
         struct RenderingData
         {
             std::vector<const spk::Font::Atlas::GlyphData*> glyphs;
-            spk::Vector2Int size = spk::Vector2Int(0, 0);
+            spk::Vector2Int anchorOffset = spk::Vector2Int(0, 0);
+            spk::Vector2UInt size = spk::Vector2UInt(0, 0);
         };
 
         static const std::string _renderingPipelineCode;
@@ -95,7 +96,7 @@ namespace spk::widget::components
         bool _needGPUBufferUpdate = true;
 
         spk::Font* _font = nullptr;
-        const spk::Font::Atlas* _fontAtlas = nullptr;
+        spk::Font::Atlas* _fontAtlas = nullptr;
 
         std::string _text = "";
 
@@ -107,11 +108,12 @@ namespace spk::widget::components
         spk::Color _outlineColor = spk::Color(255, 255, 255);
 
         spk::Vector2Int _anchor;
+        spk::Vector2Int _size;
 
         VerticalAlignment _verticalAlignment = VerticalAlignment::Centered;
         HorizontalAlignment _horizontalAlignment = HorizontalAlignment::Centered;
 
-        TextLabel::RenderingData _computeRenderingData();
+        TextLabel::RenderingData _computeRenderingData(const spk::Font::Atlas* p_fontAtlas, const std::string& p_text) const;
         spk::Vector2Int _computeBaseAnchor(const TextLabel::RenderingData& p_renderingData);
 
         void _updateGPUBuffer();
@@ -132,6 +134,31 @@ namespace spk::widget::components
         void render();
 
         /**
+         * @brief Calculates the area required to render the current text based on its font and size.
+         *
+         * This method computes the bounding box dimensions that would encase the currently set text,
+         * taking into account the configured font, text size, and any styling effects like outlines.
+         * The dimensions are returned as a width and height in pixels, providing the minimum space
+         * required to render the text without clipping. This is useful for dynamically sizing elements
+         * based on content or preparing layouts before rendering occurs.
+         *
+         * @return spk::Vector2UInt representing the width and height in pixels needed to render the text.
+         */
+        spk::Vector2UInt calculateTextArea() const;
+
+        /**
+         * @brief Calculates the area required to render a specified string based on the current font and size settings.
+         *
+         * Similar to calculateTextArea(), but allows for the area calculation of an arbitrary string rather than
+         * the one currently set in the TextLabel. This is particularly useful when you need to measure the
+         * space required for different strings without changing the actual content of the TextLabel.
+         *
+         * @param p_string The string for which to calculate the rendering area.
+         * @return spk::Vector2UInt representing the width and height in pixels needed to render the specified string.
+         */
+        spk::Vector2UInt calculateTextArea(const std::string& p_string) const;
+
+        /**
          * @brief Sets the font used for rendering the text.
          *
          * @param p_font Pointer to a Font instance to be used for rendering the text label.
@@ -139,11 +166,16 @@ namespace spk::widget::components
         void setFont(spk::Font* p_font);
 
         /**
-         * @brief Sets the anchor point for the text label within its parent widget.
+         * @brief Sets the geometry of the text label.
          *
-         * @param p_anchor The position of the anchor point as a Vector2Int.
+         * This method configures the anchor point and size of the TextLabel component within its parent container. The anchor point determines where the text label starts within the container, and the size dictates the dimensions within which the text will be rendered. This is crucial for proper placement and scaling of text in diverse UI layouts.
+         *
+         * Setting the geometry correctly is essential for the text to be rendered within the expected area, especially when dealing with responsive or dynamic layouts that may change based on different conditions (such as window resizing or orientation changes).
+         *
+         * @param p_anchor The position of the text label's upper-left corner within its parent container, specified as a `spk::Vector2Int`. This defines the starting point for rendering the text.
+         * @param p_size The size of the area allocated for the text label, specified as a `spk::Vector2Int`. This defines the width and height of the text label within which the text content will be fitted.
          */
-        void setAnchor(const spk::Vector2Int& p_anchor);
+        void setGeometry(const spk::Vector2Int& p_anchor, const spk::Vector2Int& p_size);
 
         /**
          * @brief Sets the layer of the text label in the rendering pipeline.
@@ -207,5 +239,11 @@ namespace spk::widget::components
          * @param p_horizontalAlignment The horizontal alignment mode.
          */
         void setHorizontalAlignment(const HorizontalAlignment& p_horizontalAlignment);
+
+        /**
+         * @brief Get the current label rendered text.
+         * @return The current text of the label
+        */
+        const std::string& text() const;
     };
 }

@@ -26,7 +26,7 @@ namespace spk
 	 * microChronometer.start(); // Start timing
 	 * // Code block to measure
 	 * microChronometer.stop(); // Stop timing
-	 * auto durationMicro = microChronometer.duration(); // Retrieve the duration in microseconds
+	 * auto durationMicro = microChronometer.elapsedTime(); // Retrieve the duration in microseconds
 	 * std::cout << "Duration: " << durationMicro << " microseconds" << std::endl;
 	 * @endcode
 	 *
@@ -95,7 +95,7 @@ namespace spk
 		 * @return The duration between the start and stop times (or current time if still running), converted to
 		 *         the specified TTimeUnit.
 		 */
-		long long duration() const
+		long long elapsedTime() const
 		{
 			if (!_isRunning)
 				return std::chrono::duration_cast<TTimeUnit>(_endTime - _startTime).count();

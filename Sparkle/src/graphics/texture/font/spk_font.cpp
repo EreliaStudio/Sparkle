@@ -30,6 +30,16 @@ namespace spk
 		{
 			_fontAtlas.emplace(tmpKey, std::move(Atlas(_fontData, _fontConfiguration, tmpKey)));
 		}
+		return _fontAtlas.at(tmpKey);
+	}
+
+	Font::Atlas& Font::atlas(const size_t &p_fontSize, const size_t &p_outlineSize, const OutlineStyle& p_outlineStype)
+	{
+		Key tmpKey = Key(p_fontSize, p_outlineSize, p_outlineStype);
+		if (_fontAtlas.contains(tmpKey) == false)
+		{
+			_fontAtlas.emplace(tmpKey, std::move(Atlas(_fontData, _fontConfiguration, tmpKey)));
+		}
 		return _fontAtlas[tmpKey];
 	}
 }

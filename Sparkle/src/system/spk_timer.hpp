@@ -60,10 +60,19 @@ namespace spk
 		 * @param p_duration The duration for the timer, specified in units defined by the TTimeUnit template parameter.
 		 *                   The duration is internally converted to the corresponding std::chrono duration type.
 		 */
-		ITimer(const size_t& p_duration) :
+		ITimer(const long long& p_duration) :
 			_duration(std::chrono::duration_cast<TTimeUnit>(TTimeUnit(p_duration)))
 		{
 
+		}
+
+		/**
+		 * @brief Return the duration consumed by the timer.
+		 * @return The current duration of this timer.
+		*/
+		long long duration() const
+		{
+			return (_duration.count());
 		}
 
 		/**
@@ -74,7 +83,7 @@ namespace spk
 		 * 
 		 * @param p_duration The new duration for the timer, specified in units that match the TTimeUnit template parameter.
 		 */
-		void setDuration(const size_t& p_duration)
+		void setDuration(const long long& p_duration)
 		{
 			_duration = std::chrono::duration_cast<TTimeUnit>(TTimeUnit(p_duration));
 		}
@@ -91,9 +100,8 @@ namespace spk
 		{
 			if (this->isRunning() == false)
 				return true;
-			if (this->duration() >= _duration.count())
-				return true;
-			return false;
+				
+			return (this->elapsedTime() >= _duration.count());
 		}
 	};
 

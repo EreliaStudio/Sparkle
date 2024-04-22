@@ -1,6 +1,6 @@
 #include "widget/components/spk_texture_renderer.hpp"
 
-namespace spk::widget::components
+namespace spk::WidgetComponent
 {
     const std::string TextureRenderer::_renderingPipelineCode = R"(#version 450
 
@@ -62,13 +62,17 @@ namespace spk::widget::components
         _renderingObject(_renderingPipeline.createObject()),
         _selfAttribute(_renderingObject.attribute("self")),
         _selfLayerElement(_selfAttribute["layer"]),
-        _renderingPipelineTexture(_renderingPipeline.texture("_texture"))
+        _renderingPipelineTexture(_renderingPipeline.texture("_texture")),
+        _texture(nullptr)
     {
 
     }
 
     void TextureRenderer::render()
     {
+        if (_texture == nullptr)
+            return ;
+
         if (_needGPUInputUpdate == true)
         {
             _updateGPUData();

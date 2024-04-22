@@ -3,7 +3,7 @@
 #include "graphics/pipeline/spk_pipeline.hpp"
 #include "graphics/spk_color.hpp"
 
-namespace spk::widget::components
+namespace spk::WidgetComponent
 {
     /**
      * @brief Component to draw a color on a rectangle box.

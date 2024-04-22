@@ -18,7 +18,6 @@
 
 #include "data_structure/spk_thread_safe_queue.hpp"
 #include "graphics/pipeline/spk_pipeline.hpp"
-#include "input/spk_input_decoder.hpp"
 #include "input/spk_keyboard.hpp"
 #include "input/spk_mouse.hpp"
 #include "profiler/spk_profiler.hpp"
@@ -45,7 +44,7 @@ namespace spk
      *
      * The Application class is designed to be the starting point for applications using the Sparkle library,
      * allowing developers to easily create, manage, and render graphics content while handling user input
-     * and other application events via the Sparkle IWidget system.
+     * and other application events via the Sparkle Widget system.
      *
      * Usage example:
      * @code
@@ -58,7 +57,7 @@ namespace spk
      * return (app.run());
      * @endcode
      *
-     * @see IWidget, Pipeline, Keyboard, Mouse, TimeManager, Profiler
+     * @see Widget, Pipeline, Keyboard, Mouse, TimeManager, Profiler
      */
     class Application
     {
@@ -105,7 +104,7 @@ namespace spk
          *
          * @note This widget is instancied automaticaly by the spk::Application, and isn't instanciable by any other object.
          */
-        class CentralWidget : public widget::IWidget
+        class CentralWidget : public Widget
         {
             friend class Application;
 
@@ -134,7 +133,7 @@ namespace spk
             }
 
             CentralWidget() :
-                IWidget("CentralWidget"),
+                Widget("CentralWidget"),
                 _timeConstant(_prerenderingPipeline.constant("timeConstants")),
                 _timeConstantEpochElement(_timeConstant["epoch"])
             {
@@ -196,7 +195,6 @@ namespace spk
 
         Keyboard _keyboard;
         Mouse _mouse;
-        InputDecoder _inputDecoder;
 
         Handle _handle;
         CentralWidget* _centralWidget;
@@ -257,12 +255,6 @@ namespace spk
          * @return The Mouse managed by the application.
          */
         const Mouse& mouse() const;
-
-        /**
-         * @brief Return a reference to the InputDecoder.
-         * @return The InputDecoder managed by the application.
-         */
-        InputDecoder& inputDecoder();
 
         /**
          * @brief Return a const reference to the TimeManager.

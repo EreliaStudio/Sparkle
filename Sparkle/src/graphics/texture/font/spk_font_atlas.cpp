@@ -12,20 +12,32 @@ namespace spk
 	
 	void Font::Atlas::_pushCombinedTexture(BuildData& p_buildData)
 	{
-		std::vector<uint8_t> textureBuffer;
-
-		textureBuffer.resize((p_buildData.fontBuffer.size() + 1) * 2);
+		_textureSize = p_buildData.size;
+		_texturePixelData.resize((p_buildData.fontBuffer.size() + 1) * 2);
 	
 		for (size_t i = 0; i < p_buildData.fontBuffer.size(); i++)
 		{
-			textureBuffer[i * 2] = p_buildData.fontBuffer[i];
-			textureBuffer[i * 2 + 1] = p_buildData.outlineBuffer[i];
+			_texturePixelData[i * 2] = p_buildData.fontBuffer[i];
+			_texturePixelData[i * 2 + 1] = p_buildData.outlineBuffer[i];
 		}
-		
-		_texture.uploadToGPU(
-			textureBuffer.data(), p_buildData.size,
-			Texture::Format::DualChannel, Texture::Filtering::Linear,
-			Texture::Wrap::Repeat, Texture::Mipmap::Enable);
+		_needUploadToGPU = true;
+	}
+
+	bool Font::Atlas::needUploadToGPU() const
+	{
+		return (_needUploadToGPU);
+	}
+
+	void Font::Atlas::uploadToGPU()
+	{
+		if (_needUploadToGPU == true)
+		{
+			_texture.uploadToGPU(
+				_texturePixelData.data(), _textureSize,
+				Texture::Format::DualChannel, Texture::Filtering::Linear,
+				Texture::Wrap::Repeat, Texture::Mipmap::Enable);
+			_needUploadToGPU = false;
+		}
 	}
 
 	Font::Atlas::Atlas(const std::vector<uint8_t> &p_fontData, const Configuration &p_fontConfiguration, const Key &p_key) :

@@ -1,7 +1,7 @@
 #include "widget/spk_game_engine_manager.hpp"
 #include "game_engine/component/spk_camera_component.hpp"
 
-namespace spk::widget
+namespace spk
 {
 	void GameEngineManager::_onGeometryChange()
 	{
@@ -26,12 +26,12 @@ namespace spk::widget
     }
 
     GameEngineManager::GameEngineManager(const std::string& p_name) :
-        IWidget(p_name)
+        Widget(p_name)
     {
     }
 
-    GameEngineManager::GameEngineManager(const std::string& p_name, IWidget* p_parent) :
-        IWidget(p_name, p_parent)
+    GameEngineManager::GameEngineManager(const std::string& p_name, Widget* p_parent) :
+        Widget(p_name, p_parent)
     {
     }
 

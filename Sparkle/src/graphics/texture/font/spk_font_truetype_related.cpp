@@ -76,33 +76,36 @@ namespace spk
 	 * @param p_data The resulting glyph data.
 	 * @param p_charInformation The packed character information.
 	 * @param p_atlasSize The dimensions of the atlas.
-	 * @param outlineOffset The offset for the outline.
+	 * @param p_outlineOffset The offset for the outline.
+	 * @param p_outlineSize The desired size of the outline
 	 */
-	void _computeCharGlyphData(const wchar_t& p_char, spk::Font::Atlas::GlyphData &p_data, const stbtt_packedchar *p_charInformation, const spk::Vector2Int& p_atlasSize, const spk::Vector2& outlineOffset)
+	void _computeCharGlyphData(const wchar_t& p_char, spk::Font::Atlas::GlyphData &p_data, const stbtt_packedchar *p_charInformation, const spk::Vector2Int& p_atlasSize, const spk::Vector2& p_outlineOffset, const int& p_outlineSize)
 	{
 		stbtt_aligned_quad quad;
 		spk::Vector2 quadStep;
 
 		stbtt_GetPackedQuad(p_charInformation, p_atlasSize.x, p_atlasSize.y, p_char - L' ', &quadStep.x, &quadStep.y, &quad, 1);
 
-		p_data.uvs[0] = {quad.s0 + outlineOffset.x * -1, quad.t0 + outlineOffset.y * -1};
-		p_data.uvs[1] = {quad.s0 + outlineOffset.x * -1, quad.t1 + outlineOffset.y * +1};
-		p_data.uvs[2] = {quad.s1 + outlineOffset.x * +1, quad.t0 + outlineOffset.y * -1};
-		p_data.uvs[3] = {quad.s1 + outlineOffset.x * +1, quad.t1 + outlineOffset.y * +1};
+		p_data.uvs[0] = {quad.s0 + p_outlineOffset.x * -1, quad.t0 + p_outlineOffset.y * -1};
+		p_data.uvs[1] = {quad.s0 + p_outlineOffset.x * -1, quad.t1 + p_outlineOffset.y * +1};
+		p_data.uvs[2] = {quad.s1 + p_outlineOffset.x * +1, quad.t0 + p_outlineOffset.y * -1};
+		p_data.uvs[3] = {quad.s1 + p_outlineOffset.x * +1, quad.t1 + p_outlineOffset.y * +1};
 
-		p_data.position[0] = spk::Vector2Int(static_cast<int>(quad.x0), static_cast<int>(quad.y0));
-		p_data.position[1] = spk::Vector2Int(static_cast<int>(quad.x0), static_cast<int>(quad.y1));
-		p_data.position[2] = spk::Vector2Int(static_cast<int>(quad.x1), static_cast<int>(quad.y0));
-		p_data.position[3] = spk::Vector2Int(static_cast<int>(quad.x1), static_cast<int>(quad.y1));
+		p_data.position[0] = spk::Vector2Int(static_cast<int>(quad.x0 - p_outlineSize), static_cast<int>(quad.y0 - p_outlineSize));
+		p_data.position[1] = spk::Vector2Int(static_cast<int>(quad.x0 - p_outlineSize), static_cast<int>(quad.y1 + p_outlineSize));
+		p_data.position[2] = spk::Vector2Int(static_cast<int>(quad.x1 + p_outlineSize), static_cast<int>(quad.y0 - p_outlineSize));
+		p_data.position[3] = spk::Vector2Int(static_cast<int>(quad.x1 + p_outlineSize), static_cast<int>(quad.y1 + p_outlineSize));
 
-		p_data.step = quadStep;
+		p_data.step = quadStep + spk::Vector2Int((p_char == L' ' ? 0 : p_outlineSize * 2), 0);
+
+		p_data.size = p_data.position[3] - p_data.position[0]; 
 	}
 
 	Font::Atlas::BuildData Font::Atlas::_computeBuildData(const std::vector<uint8_t> &p_fontData, const Configuration &p_fontConfiguration, const Key &p_key)
 	{
 		BuildData buildData;
 
-		static stbtt_packedchar *charInformation = new stbtt_packedchar[0xFFFF];
+		stbtt_packedchar *charInformation = new stbtt_packedchar[0xFFFF];
 
 		while (_executePackingOperation(p_fontData,p_fontConfiguration,p_key, buildData.fontBuffer, buildData.size, charInformation) == false)
 		{
@@ -113,7 +116,7 @@ namespace spk
 
 		for (size_t i = 0; i < p_fontConfiguration.validGlyphs().size(); i++)
 		{
-			_computeCharGlyphData( p_fontConfiguration.validGlyphs()[i], _glyphDatas[p_fontConfiguration.validGlyphs()[i]], charInformation, buildData.size, outlineOffset);
+			_computeCharGlyphData( p_fontConfiguration.validGlyphs()[i], _glyphDatas[p_fontConfiguration.validGlyphs()[i]], charInformation, buildData.size, outlineOffset, p_key.outlineSize);
 		}
 
 		delete charInformation;

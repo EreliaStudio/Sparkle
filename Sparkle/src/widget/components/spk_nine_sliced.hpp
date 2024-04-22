@@ -5,7 +5,7 @@
 #include "math/spk_vector2.hpp"
 #include <string>
 
-namespace spk::widget::components
+namespace spk::WidgetComponent
 {
     /**
      * @class NineSlicedBox
@@ -27,10 +27,10 @@ namespace spk::widget::components
      *
      * Usage example:
      * @code
-     * class MyCustomWidget : public spk::IWidget
+     * class MyCustomWidget : public spk::Widget
      * {
      * private:
-     *     spk::WidgetComponent::NineSlicedBox _background;
+     *     spkComponent::NineSlicedBox _background;
      *
      *     void _onGeometryChange()
      *     {
@@ -47,8 +47,8 @@ namespace spk::widget::components
      *
      *     }
      * public:
-     *     MyCustomWidget(const std::string& name, spk::IWidget* parent = nullptr) :
-     *          spk::IWidget(name, parent),
+     *     MyCustomWidget(const std::string& name, spk::Widget* parent = nullptr) :
+     *          spk::Widget(name, parent),
      *          _background()
      *     {
      *         _background.setSpriteSheet(&spriteSheet);
@@ -145,5 +145,17 @@ namespace spk::widget::components
          * before drawing it to the screen. This method should be called within the parent widget's rendering cycle.
          */
         void render();
+        
+        /**
+         * @brief Retrieves the current size of the corners of the nine-sliced box.
+         *
+         * This method returns the dimensions of the corners that are maintained unscaled when the nine-sliced box is resized.
+         * Keeping the corners unscaled helps preserve the visual integrity of the box's edges, ensuring that they do not
+         * stretch or shrink with the central sections of the box. This is crucial for maintaining a consistent aesthetic
+         * in UI elements regardless of their size changes.
+         *
+         * @return A constant reference to a spk::Vector2Int containing the width and height of the corners.
+         */
+        const spk::Vector2Int& cornerSize() const;
     };
 }

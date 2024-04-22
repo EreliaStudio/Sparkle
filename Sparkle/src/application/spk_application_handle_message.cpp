@@ -45,7 +45,10 @@ namespace spk
             unsigned int height = HIWORD(p_secondParam);
 
             _handle.resize(Vector2Int(width, height));
-            _updaterJobs.push_back([&, width, height]() {});
+            _updaterJobs.push_back([&, width, height]() {
+					if (_centralWidget != nullptr)
+						_centralWidget->resize(spk::Vector2Int(0, 0), spk::Vector2UInt(width, height));
+				});
             break;
         }
         case WM_MOVE:
@@ -67,7 +70,6 @@ namespace spk
 						inputState == spk::InputState::Pressed)
 						return ;
 					_mouse.pressButton(Mouse::Left);
-					_inputDecoder.add(Input{Mouse::Left, InputState::Pressed});
 				});
 				break;
 			}
@@ -79,7 +81,6 @@ namespace spk
 						inputState == spk::InputState::Pressed)
 						return ;
 					_mouse.pressButton(Mouse::Middle);
-					_inputDecoder.add(Input{Mouse::Middle, InputState::Pressed});
 				});
 				break;
 			}
@@ -91,7 +92,6 @@ namespace spk
 						inputState == spk::InputState::Pressed)
 						return ;
 					_mouse.pressButton(Mouse::Right);
-					_inputDecoder.add(Input{Mouse::Right, InputState::Pressed});
 				});
 				break;
 			}
@@ -103,7 +103,6 @@ namespace spk
 						inputState == spk::InputState::Released)
 						return ;
 					_mouse.releaseButton(Mouse::Left);
-					_inputDecoder.add(Input{Mouse::Left, InputState::Released});
 				});
 				break;
 			}
@@ -115,7 +114,6 @@ namespace spk
 						inputState == spk::InputState::Released)
 						return ;
 					_mouse.releaseButton(Mouse::Middle);
-					_inputDecoder.add(Input{Mouse::Middle, InputState::Released});
 				});
 				break;
 			}
@@ -127,7 +125,6 @@ namespace spk
 						inputState == spk::InputState::Released)
 						return ;
 					_mouse.releaseButton(Mouse::Right);
-					_inputDecoder.add(Input{Mouse::Right, InputState::Released});
 				});
 				break;
 			}
@@ -143,7 +140,6 @@ namespace spk
 								inputState == spk::InputState::Pressed)
 								return ;
 							_mouse.pressButton(Mouse::Button3);
-							_inputDecoder.add(Input{Mouse::Button3, InputState::Pressed});
 						});
 						break;
 					}
@@ -155,7 +151,6 @@ namespace spk
 								inputState == spk::InputState::Pressed)
 								return ;
 							_mouse.pressButton(Mouse::Button4);
-							_inputDecoder.add(Input{Mouse::Button4, InputState::Pressed});
 						});
 						break;
 					}
@@ -178,7 +173,6 @@ namespace spk
 								inputState == spk::InputState::Released)
 								return ;
 							_mouse.releaseButton(Mouse::Button3);
-							_inputDecoder.add(Input{Mouse::Button3, InputState::Released});
 						});
 						break;
 					}
@@ -191,7 +185,7 @@ namespace spk
 								return ;
 
 							_mouse.releaseButton(Mouse::Button4);
-							_inputDecoder.add(Input{Mouse::Button4, InputState::Released}); });
+							});
                 break;
             }
             default:
@@ -221,8 +215,7 @@ namespace spk
         {
             spk::Vector2Int mousePosition = Vector2Int(LOWORD(p_secondParam), HIWORD(p_secondParam));
 
-            _updaterJobs.push_back([&, mousePosition]()
-                                   { _mouse.setMousePosition(mousePosition); });
+            _updaterJobs.push_back([&, mousePosition]() { _mouse.setMousePosition(mousePosition); });
             break;
         }
 
@@ -230,13 +223,15 @@ namespace spk
         {
             unsigned int value = static_cast<unsigned int>(p_firstParam);
 
+			if (value >= ' ')
+				_updaterJobs.push_back([&, value](){ _keyboard.setChar(wchar_t(value)); });
+
             break;
         }
         case WM_SYSKEYDOWN:
         case WM_KEYDOWN:
         {
             unsigned int value = static_cast<unsigned int>(p_firstParam);
-
 				_updaterJobs.push_back([&, value](){
 					spk::InputState inputState = _keyboard.getKey(static_cast<Keyboard::Key>(value));
 					if (inputState == spk::InputState::Down ||
@@ -244,7 +239,7 @@ namespace spk
 						return ;
 
 					_keyboard.pressKey(value);
-					_inputDecoder.add(Input{static_cast<Keyboard::Key>(value), InputState::Pressed}); });
+					});
             break;
         }
         case WM_SYSKEYUP:
@@ -259,7 +254,7 @@ namespace spk
 						return ;
 						
 					_keyboard.releaseKey(value);
-					_inputDecoder.add(Input{static_cast<Keyboard::Key>(value), InputState::Released}); });
+					});
             break;
         }
 

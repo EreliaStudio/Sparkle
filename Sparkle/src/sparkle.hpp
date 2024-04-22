@@ -34,8 +34,10 @@
 #include "graphics/pipeline/spk_pipeline.hpp"
 
 #include "graphics/texture/spk_sprite_sheet.hpp"
+#include "graphics/spk_texture_manager.hpp"
 
 #include "graphics/texture/font/spk_font.hpp"
+#include "graphics/spk_font_manager.hpp"
 
 #include "game_engine/component/spk_camera_component.hpp"
 #include "game_engine/component/spk_mesh_collider_2D_component.hpp"
@@ -61,9 +63,11 @@
 #include "widget/components/spk_colored_box.hpp"
 #include "widget/components/spk_texture_renderer.hpp"
 
-#include "widget/spk_basic_widgets.hpp"
-#include "widget/spk_box_constraints.hpp"
 #include "widget/spk_game_engine_manager.hpp"
-#include "widget/spk_pointer_detector.hpp"
-#include "widget/spk_text_label.hpp"
 #include "widget/spk_widget.hpp"
+#include "widget/spk_button.hpp"
+#include "widget/spk_frame.hpp"
+#include "widget/spk_text_label.hpp"
+#include "widget/spk_text_entry.hpp"
+#include "widget/spk_image_label.hpp"
+#include "widget/spk_panel.hpp"

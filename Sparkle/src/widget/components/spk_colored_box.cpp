@@ -1,6 +1,6 @@
 #include "widget/components/spk_colored_box.hpp"
 
-namespace spk::widget::components
+namespace spk::WidgetComponent
 {
     const std::string ColoredBox::_renderingPipelineCode = R"(#version 450
 

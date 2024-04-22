@@ -12,43 +12,56 @@ namespace spk
 	{
 		OutlineMask result;
 
-		int toCompare = p_outlineSize * p_outlineSize;
+		int outlineDistance = static_cast<int>(p_outlineSize * p_outlineSize);
 
-		for (int x = -static_cast<int>(p_outlineSize); x <= static_cast<int>(p_outlineSize); x++)
-		{
-			for (int y = -static_cast<int>(p_outlineSize); y <= static_cast<int>(p_outlineSize); y++)
-			{
-				int distance = static_cast<int>(x * x + y * y + 0.5f);
-				if (distance > toCompare)
-					continue;
+        // The squared distance at which the fading starts (last two pixels)
+        int fadeStartDistance = static_cast<int>((p_outlineSize - 2) * (p_outlineSize - 2));
 
-				float powerFactor = 4.0f;
-				float normalizedDistance = static_cast<float>(distance) / static_cast<float>(toCompare);
-				float fadeFactor = 1 - std::pow(normalizedDistance, powerFactor);
+        for (int x = -static_cast<int>(p_outlineSize); x <= static_cast<int>(p_outlineSize); x++)
+        {
+            for (int y = -static_cast<int>(p_outlineSize); y <= static_cast<int>(p_outlineSize); y++)
+            {
+                int distance = x * x + y * y;
+                if (distance > outlineDistance)
+                    continue;
 
-				unsigned char value = static_cast<unsigned char>(255 * fadeFactor);
-				result[x + y * p_textureSize.x] = value;
-			}
-		}
+                unsigned char value = 255; // Full intensity by default
+                if (distance > fadeStartDistance)
+                {
+                    // Calculate the fading factor based on the distance
+                    float fadeFactor = 1.0f - static_cast<float>(distance - fadeStartDistance) / ((p_outlineSize * p_outlineSize) - fadeStartDistance);
+                    value = static_cast<unsigned char>(255 * fadeFactor);
+                }
 
-		return (result);
+                result[x + y * p_textureSize.x] = value;
+            }
+        }
+
+        return result;
 	}
 
 	OutlineMask _computeManhattanOutlineMask(const size_t& p_outlineSize, const spk::Vector2Int& p_textureSize)
 	{
 		OutlineMask result;
 
+		int fadeStartDistance = p_outlineSize - 2;
+
 		for (int x = -static_cast<int>(p_outlineSize); x <= static_cast<int>(p_outlineSize); x++)
 		{
 			for (int y = -static_cast<int>(p_outlineSize); y <= static_cast<int>(p_outlineSize); y++)
 			{
 				int manhattanDistance = std::abs(x) + std::abs(y);
+				unsigned char value = 255; // Full intensity by default
+
+				if (manhattanDistance > fadeStartDistance)
+				{
+					float fadeFactor = 1.0f - static_cast<float>(manhattanDistance - fadeStartDistance) / (p_outlineSize - fadeStartDistance);
+					value = static_cast<unsigned char>(255 * fadeFactor);
+				}
+
 				if (manhattanDistance <= static_cast<int>(p_outlineSize))
 				{
-					float powerFactor = 4.0f;
-					float normalizedDistance = static_cast<float>(manhattanDistance) / static_cast<float>(p_outlineSize);
-					float fadeFactor = 1 - std::pow(normalizedDistance, powerFactor);
-					result[x + y * p_textureSize.x] = static_cast<unsigned char>(255 * fadeFactor);
+					result[x + y * p_textureSize.x] = value;
 				}
 			}
 		}
@@ -60,26 +73,34 @@ namespace spk
 	{
 		OutlineMask result;
 
+		int outlineDistance = (p_outlineSize <= 3 ? 0 : static_cast<int>(p_outlineSize - 3));
+
 		for (int x = -static_cast<int>(p_outlineSize); x <= static_cast<int>(p_outlineSize); x++)
 		{
-			if (x != 0)
+			unsigned char value = 255;
+			int absX = std::abs(x);
+
+			if (absX > outlineDistance)
 			{
-				float powerFactor = 4.0f;
-				float normalizedDistance = static_cast<float>(std::abs(x)) / static_cast<float>(p_outlineSize);
-				float fadeFactor = 1 - std::pow(normalizedDistance, powerFactor);
-				result[x] = static_cast<unsigned char>(255 * fadeFactor);
+				float fadeFactor = 1.0f - (absX - outlineDistance) / 3.0f;
+                value = static_cast<unsigned char>(255 * fadeFactor);
 			}
+
+			result[x] = value;
 		}
 
 		for (int y = -static_cast<int>(p_outlineSize); y <= static_cast<int>(p_outlineSize); y++)
 		{
-			if (y != 0)
+			unsigned char value = 255;
+			int absY = std::abs(y);
+
+			if (absY > outlineDistance)
 			{
-				float powerFactor = 4.0f;
-				float normalizedDistance = static_cast<float>(std::abs(y)) / static_cast<float>(p_outlineSize);
-				float fadeFactor = 1 - std::pow(normalizedDistance, powerFactor);
-				result[y * p_textureSize.x] = static_cast<unsigned char>(255 * fadeFactor);
+				float fadeFactor = 1.0f - (absY - outlineDistance) / 3.0f;
+				value = static_cast<unsigned char>(255 * fadeFactor);
 			}
+
+			result[y * p_textureSize.x] = value;
 		}
 
 		return result;
@@ -89,17 +110,24 @@ namespace spk
 	{
 		OutlineMask result;
 
+		int fadeStartDistance = p_outlineSize - 2;
+
 		for (int x = -static_cast<int>(p_outlineSize); x <= static_cast<int>(p_outlineSize); x++)
 		{
 			for (int y = -static_cast<int>(p_outlineSize); y <= static_cast<int>(p_outlineSize); y++)
 			{
 				int distance = std::max(std::abs(x), std::abs(y));
+				unsigned char value = 255; // Full intensity by default
+
+				if (distance > fadeStartDistance)
+				{
+					float fadeFactor = 1.0f - static_cast<float>(distance - fadeStartDistance) / 2;
+					value = static_cast<unsigned char>(255 * fadeFactor);
+				}
+
 				if (distance <= static_cast<int>(p_outlineSize))
 				{
-					float powerFactor = 4.0f;
-					float normalizedDistance = static_cast<float>(distance) / static_cast<float>(p_outlineSize);
-					float fadeFactor = 1 - std::pow(normalizedDistance, powerFactor);
-					result[x + y * p_textureSize.x] = static_cast<unsigned char>(255 * fadeFactor);
+					result[x + y * p_textureSize.x] = value;
 				}
 			}
 		}
@@ -166,6 +194,11 @@ namespace spk
 	void Font::Atlas::_computeOutlineBuffer(BuildData& p_buildData, const Key &p_key)
 	{
 		p_buildData.outlineBuffer.resize(p_buildData.size.x * p_buildData.size.y, 0);
+
+		if (p_key.outlineSize == 0 || p_key.outlineStyle == spk::Font::OutlineStyle::None)
+		{
+			return ;
+		}
 
 		OutlineMask outlineMask = computeOutlineMask(p_key.outlineStyle, p_key.outlineSize, p_buildData.size.x);
 

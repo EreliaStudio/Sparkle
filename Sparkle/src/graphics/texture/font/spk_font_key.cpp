@@ -16,6 +16,8 @@ namespace spk
 			return (true);
 		if (fontSize == p_other.fontSize && outlineSize < p_other.outlineSize)
 			return (true);
+		if (fontSize == p_other.fontSize && outlineSize == p_other.outlineSize && static_cast<int>(outlineStyle) < static_cast<int>(p_other.outlineStyle))
+			return (true);
 		return (false);
 	}
 }
