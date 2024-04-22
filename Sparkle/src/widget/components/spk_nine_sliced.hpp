@@ -145,7 +145,17 @@ namespace spk::WidgetComponent
          * before drawing it to the screen. This method should be called within the parent widget's rendering cycle.
          */
         void render();
-
+        
+        /**
+         * @brief Retrieves the current size of the corners of the nine-sliced box.
+         *
+         * This method returns the dimensions of the corners that are maintained unscaled when the nine-sliced box is resized.
+         * Keeping the corners unscaled helps preserve the visual integrity of the box's edges, ensuring that they do not
+         * stretch or shrink with the central sections of the box. This is crucial for maintaining a consistent aesthetic
+         * in UI elements regardless of their size changes.
+         *
+         * @return A constant reference to a spk::Vector2Int containing the width and height of the corners.
+         */
         const spk::Vector2Int& cornerSize() const;
     };
 }

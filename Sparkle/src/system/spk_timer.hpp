@@ -66,6 +66,10 @@ namespace spk
 
 		}
 
+		/**
+		 * @brief Return the duration consumed by the timer.
+		 * @return The current duration of this timer.
+		*/
 		long long duration() const
 		{
 			return (_duration.count());

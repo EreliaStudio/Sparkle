@@ -133,7 +133,29 @@ namespace spk::WidgetComponent
          */
         void render();
 
+        /**
+         * @brief Calculates the area required to render the current text based on its font and size.
+         *
+         * This method computes the bounding box dimensions that would encase the currently set text,
+         * taking into account the configured font, text size, and any styling effects like outlines.
+         * The dimensions are returned as a width and height in pixels, providing the minimum space
+         * required to render the text without clipping. This is useful for dynamically sizing elements
+         * based on content or preparing layouts before rendering occurs.
+         *
+         * @return spk::Vector2UInt representing the width and height in pixels needed to render the text.
+         */
         spk::Vector2UInt calculateTextArea() const;
+
+        /**
+         * @brief Calculates the area required to render a specified string based on the current font and size settings.
+         *
+         * Similar to calculateTextArea(), but allows for the area calculation of an arbitrary string rather than
+         * the one currently set in the TextLabel. This is particularly useful when you need to measure the
+         * space required for different strings without changing the actual content of the TextLabel.
+         *
+         * @param p_string The string for which to calculate the rendering area.
+         * @return spk::Vector2UInt representing the width and height in pixels needed to render the specified string.
+         */
         spk::Vector2UInt calculateTextArea(const std::string& p_string) const;
 
         /**
@@ -143,6 +165,16 @@ namespace spk::WidgetComponent
          */
         void setFont(spk::Font* p_font);
 
+        /**
+         * @brief Sets the geometry of the text label.
+         *
+         * This method configures the anchor point and size of the TextLabel component within its parent container. The anchor point determines where the text label starts within the container, and the size dictates the dimensions within which the text will be rendered. This is crucial for proper placement and scaling of text in diverse UI layouts.
+         *
+         * Setting the geometry correctly is essential for the text to be rendered within the expected area, especially when dealing with responsive or dynamic layouts that may change based on different conditions (such as window resizing or orientation changes).
+         *
+         * @param p_anchor The position of the text label's upper-left corner within its parent container, specified as a `spk::Vector2Int`. This defines the starting point for rendering the text.
+         * @param p_size The size of the area allocated for the text label, specified as a `spk::Vector2Int`. This defines the width and height of the text label within which the text content will be fitted.
+         */
         void setGeometry(const spk::Vector2Int& p_anchor, const spk::Vector2Int& p_size);
 
         /**
@@ -208,6 +240,10 @@ namespace spk::WidgetComponent
          */
         void setHorizontalAlignment(const HorizontalAlignment& p_horizontalAlignment);
 
+        /**
+         * @brief Get the current label rendered text.
+         * @return The current text of the label
+        */
         const std::string& text() const;
     };
 }

@@ -194,27 +194,29 @@ namespace spk
         {
         public:
             /**
-             * @class GlyphData
+             * @struct GlyphData
              * @brief Holds rendering data for an individual glyph within a font atlas.
              *
-             * Nested within the Atlas class, GlyphData contains the texture coordinates (UVs), screen position express
-             * in pixels, and step information express in pixel for a single glyph. This data is essential for rendering
-             * the glyph on the screen, providing the necessary details to accurately place and scale the glyph as
-             * part of text rendering operations.
+             * This struct encapsulates all necessary data for rendering a single glyph, including
+             * texture coordinates (UVs), positions of glyph corners, and additional rendering metrics like step and size.
+             * This data is crucial for precise placement and rendering of glyphs on the screen, ensuring text is displayed
+             * accurately according to the font's design.
              *
-             * This struct is automatically populated when a Font::Atlas is created, ensuring that all glyphs within
-             * the atlas are ready for efficient rendering.
+             * Fields:
+             * - uvs: Array of `spk::Vector2` representing the UV coordinates for texture mapping.
+             * - position: Array of `spk::Vector2Int` specifying the screen positions of the glyph's corners, used in vertex specification.
+             * - step: `spk::Vector2Int` used in advanced rendering calculations, such as kerning or glyph alignment.
+             * - size: `spk::Vector2Int` representing the pixel dimensions of the glyph within the atlas.
              *
-             * Usage example: Not directly instantiated by users, used internally by Atlas to store glyph information.
-             *
-             * @see Atlas
+             * The structure also defines the order of vertex indices for rendering in OpenGL or similar APIs, ensuring
+             * that glyphs are drawn correctly as quads using two triangles.
              */
             struct GlyphData
             {
                 spk::Vector2 uvs[4];         ///< Texture coordinates (UV mapping) for the glyph.
                 spk::Vector2Int position[4]; ///< Screen position of the glyph's corners, in pixels.
                 spk::Vector2Int step;        ///< Step information for the glyph, used in rendering calculations.
-                spk::Vector2Int size;
+                spk::Vector2Int size;        ///< Size of the glyph in pixels, representing width and height.
 
                 /**
                  * @brief Static vector defining the order of vertex indices for rendering.
@@ -291,7 +293,27 @@ namespace spk
              */
             const Texture& texture() const;
 
+            /**
+             * @brief Checks if the atlas texture needs to be uploaded to the GPU.
+             *
+             * This method determines whether the atlas texture has been modified since the last upload to the GPU
+             * and needs to be re-uploaded. This is typically used to optimize rendering performance by ensuring
+             * that textures are only uploaded when necessary.
+             *
+             * @return True if the atlas texture needs to be uploaded to the GPU, false otherwise.
+             */
             bool needUploadToGPU() const;
+
+            /**
+             * @brief Uploads the atlas texture to the GPU.
+             *
+             * If the atlas texture has been modified, this method uploads the texture to the GPU to make it
+             * available for rendering. This method should be called after any changes to the texture data to ensure
+             * that the updated texture is used in subsequent render operations.
+             *
+             * @note This method should only be called if needUploadToGPU() returns true to avoid unnecessary
+             * GPU operations.
+             */
             void uploadToGPU();
         };
 
@@ -320,7 +342,7 @@ namespace spk
          * @brief Retrieves or creates an Atlas with specified font size, outline size, and outline style.
          *
          * This method generates a texture atlas for the specified font size, outline size, and outline style if it does not
-         * already exist. If an atlas with the given parameters already exists, it returns a reference to the existing atlas.
+         * already exist. If an atlas with the given parameters already exists, it returns a const reference to the existing atlas.
          * This allows for efficient text rendering by reusing atlases for common configurations.
          *
          * The method ensures that text rendering is optimized by dynamically generating atlases based on the specific
@@ -333,6 +355,21 @@ namespace spk
          */
         const Atlas& atlas(const size_t& p_fontSize, const size_t& p_outlineSize, const OutlineStyle& p_outlineStype) const;
 
+        /**
+         * @brief Retrieves or creates an Atlas with specified font size, outline size, and outline style.
+         *
+         * This method generates a texture atlas for the specified font size, outline size, and outline style if it does not
+         * already exist. If an atlas with the given parameters already exists, it returns a reference to the existing atlas.
+         * This allows for efficient text rendering by reusing atlases for common configurations.
+         *
+         * The method ensures that text rendering is optimized by dynamically generating atlases based on the specific
+         * requirements of the text to be rendered, such as font size and outline style.
+         *
+         * @param p_fontSize The desired font size for the text rendering. This affects the scale of the glyphs within the atlas.
+         * @param p_outlineSize The thickness of the glyph outlines in the atlas. This parameter allows for customization of the text's appearance.
+         * @param p_outlineStype The style of the outline applied to the glyphs. This allows for further customization of how text is rendered.
+         * @return A reference to the Atlas object configured with the specified parameters.
+         */
         Atlas& atlas(const size_t& p_fontSize, const size_t& p_outlineSize, const OutlineStyle& p_outlineStype);
     };
 }

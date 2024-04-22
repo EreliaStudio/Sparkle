@@ -110,20 +110,9 @@ namespace spk
          */
         virtual void _onGeometryChange();
 
-    public:
-
-        /**
-         * @brief Renders the widget tree from this node.
-         * Only the render thread is allowed to call this method, on the root of the widget tree.
-         */
+    private:
         void render();
-
-        /**
-         * @brief Updates the widget tree from this node.
-         * Only the update thread is allowed to call this method, on the root of the widget tree.
-         */
         void update();
-
         void resize(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size);
 
     private:
