@@ -1,158 +1,309 @@
-#pragma once 
-
-#include <winsock2.h>
-#include <ws2tcpip.h>
+#include <functional>
 #include <iostream>
-#include <unordered_map>
-#include <vector>
 #include <mutex>
 #include <thread>
-#include <functional>
+#include <unordered_map>
+#include <vector>
+#include <winsock2.h>
+#include <ws2tcpip.h>
 
 #include "network/spk_message.hpp"
+#include "data_structure/spk_pool.hpp"
+#include "data_structure/spk_thread_safe_deque.hpp"
 
 #pragma comment(lib, "Ws2_32.lib")
 
 namespace spk
 {
-	class Server
-	{
-	public:
-		using ClientID = size_t;
-		using ConnectionCallback = std::function<void(ClientID)>;
-		using DisconnectionCallback = std::function<void(ClientID)>;
+    class Server
+    {
+    public:
+        using ClientID = size_t;
+        using ConnectionCallback = std::function<void(const ClientID&)>;
+        using DisconnectionCallback = std::function<void(const ClientID&)>;
 
-	private:
+		using MessagePool = spk::Pool<spk::Message>;
+		using MessageObject = MessagePool::Object;
 
-		class Acceptator
-		{
-		private:
-			SOCKET serverSocket;
-			std::unordered_map<ClientID, SOCKET>& clients;
-			std::mutex& clientsMutex;
-			ClientID& nextClientId;
-			bool isRunning;
-			ConnectionCallback& onConnect;
-			DisconnectionCallback& onDisconnect;
+    private:
+        class Acceptator
+        {
+        private:
+            SOCKET serverSocket;
+            std::unordered_map<ClientID, SOCKET>& clients;
+            std::mutex& clientsMutex;
+            ClientID& nextClientId;
+            bool isRunning;
+            ConnectionCallback& onConnectCallback;
+            DisconnectionCallback& onDisconnectCallback;
 
-		public:
-			Acceptator(std::unordered_map<ClientID, SOCKET>& clientsMap, std::mutex& mutex, ClientID& clientId,
-					ConnectionCallback& connectCallback, DisconnectionCallback& disconnectCallback) :
-				clients(clientsMap), clientsMutex(mutex), nextClientId(clientId), onConnect(connectCallback),
-				onDisconnect(disconnectCallback), isRunning(false), serverSocket(INVALID_SOCKET) {}
+            MessagePool& messagePool;
+            spk::ThreadSafeDeque<MessageObject>& messageQueue;
 
-			void start(int port)
+            std::thread receptionThread;
+
+        public:
+            Acceptator(std::unordered_map<ClientID, SOCKET>& clientsMap, std::mutex& mutex, ClientID& clientId,
+                       ConnectionCallback& connectCallback, DisconnectionCallback& disconnectCallback,
+                       MessagePool& pool, spk::ThreadSafeDeque<MessageObject>& queue) :
+                clients(clientsMap),
+                clientsMutex(mutex),
+                nextClientId(clientId),
+                onConnectCallback(connectCallback),
+                onDisconnectCallback(disconnectCallback),
+                messagePool(pool),
+                messageQueue(queue),
+                isRunning(false),
+                serverSocket(INVALID_SOCKET)
+            {
+            }
+
+			~Acceptator()
 			{
-				WSADATA wsaData;
-				if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
-				{
-					throw std::runtime_error("Failed to initialize Winsock.");
-				}
+				stop();
+			}
 
-				serverSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-				if (serverSocket == INVALID_SOCKET)
-				{
-					WSACleanup();
-					throw std::runtime_error("Cannot create socket.");
-				}
+            void start(int port)
+            {
+                WSADATA wsaData;
+                if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
+                {
+                    throw std::runtime_error("Failed to initialize Winsock.");
+                }
 
-				struct sockaddr_in serverAddress;
-				serverAddress.sin_family = AF_INET;
-				serverAddress.sin_addr.s_addr = INADDR_ANY;
-				serverAddress.sin_port = htons(port);
+                serverSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+                if (serverSocket == INVALID_SOCKET)
+                {
+                    WSACleanup();
+                    throw std::runtime_error("Cannot create socket.");
+                }
 
-				if (bind(serverSocket, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) == SOCKET_ERROR)
-				{
-					closesocket(serverSocket);
-					WSACleanup();
-					throw std::runtime_error("Bind failed.");
-				}
+                struct sockaddr_in serverAddress;
+                serverAddress.sin_family = AF_INET;
+                serverAddress.sin_addr.s_addr = INADDR_ANY;
+                serverAddress.sin_port = htons(port);
 
-				if (listen(serverSocket, SOMAXCONN) == SOCKET_ERROR)
-				{
-					closesocket(serverSocket);
-					WSACleanup();
-					throw std::runtime_error("Listen failed.");
-				}
+                if (bind(serverSocket, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) == SOCKET_ERROR)
+                {
+                    closesocket(serverSocket);
+                    WSACleanup();
+                    throw std::runtime_error("Bind failed.");
+                }
 
-				isRunning = true;
-				while (isRunning)
+                if (listen(serverSocket, SOMAXCONN) == SOCKET_ERROR)
+                {
+                    closesocket(serverSocket);
+                    WSACleanup();
+                    throw std::runtime_error("Listen failed.");
+                }
+
+                isRunning = true;
+                std::thread(&Acceptator::run, this).detach();
+            }
+
+            void run()
+            {
+				std::cout << "Server started and ready to receive new message" << std::endl;
+                while (isRunning)
+                {
+                    fd_set readfds;
+                    FD_ZERO(&readfds);
+                    FD_SET(serverSocket, &readfds);
+                    int max_fd = serverSocket;
+
+                    {
+                        std::lock_guard<std::mutex> lock(clientsMutex);
+                        for (auto& client : clients)
+                        {
+                            FD_SET(client.second, &readfds);
+                            if (static_cast<int>(client.second) > max_fd)
+                                max_fd = static_cast<int>(client.second);
+                        }
+                    }
+
+                    timeval timeout;
+                    timeout.tv_sec = 0;
+                    timeout.tv_usec = 50000; // 50 ms
+
+                    int activity = select(max_fd + 1, &readfds, NULL, NULL, &timeout);
+
+                    if (activity == SOCKET_ERROR)
+                    {
+                        continue;
+                    }
+
+                    if (FD_ISSET(serverSocket, &readfds))
+                    {
+                        acceptNewClient();
+                    }
+
+                    std::vector<ClientID> disconnectedClients;
+                    {
+                        std::lock_guard<std::mutex> lock(clientsMutex);
+                        for (auto& client : clients)
+                        {
+                            if (FD_ISSET(client.second, &readfds))
+                            {
+                                if (!receiveFromClient(client.first, client.second))
+                                {
+                                    closesocket(client.second);
+                                    disconnectedClients.push_back(client.first);
+                                }
+                            }
+                        }
+                    }
+
+                    for (auto id : disconnectedClients)
+                    {
+                        clients.erase(id);
+                        onDisconnectCallback(id);
+                    }
+                }
+				std::cout << "Closing the server" << std::endl;
+            }
+
+            void acceptNewClient()
+            {
+                struct sockaddr_in clientAddress;
+                int clientSize = sizeof(clientAddress);
+                SOCKET clientSocket = accept(serverSocket, (struct sockaddr*)&clientAddress, &clientSize);
+                if (clientSocket != INVALID_SOCKET)
+                {
+                    std::lock_guard<std::mutex> lock(clientsMutex);
+                    ClientID clientId = nextClientId++;
+                    clients[clientId] = clientSocket;
+                    onConnectCallback(clientId);
+                }
+            }
+
+            bool receiveFromClient(ClientID clientId, SOCKET socket)
+			{
+				auto message = messagePool.obtain();
+
+				const int headerSize = sizeof(spk::Message::Header);
+				int bytesRead = ::recv(socket, reinterpret_cast<char*>(&message->header()), headerSize, 0);
+				if (bytesRead == headerSize)
 				{
-					struct sockaddr_in clientAddress;
-					int clientSize = sizeof(clientAddress);
-					SOCKET clientSocket = accept(serverSocket, (struct sockaddr *)&clientAddress, &clientSize);
-					if (clientSocket == INVALID_SOCKET)
+					if (message->header().length() > 0)
 					{
-						std::cout << "Accept failed." << std::endl;
-					}
-					else
-					{
-						std::lock_guard<std::mutex> lock(clientsMutex);
-						ClientID clientId = nextClientId++;
-						clients[clientId] = clientSocket;
-						std::cout << "Client connected: ID = " << clientId << std::endl;
-						if (onConnect)
+						message->resize(message->header().length());
+
+						char* dataBuffer = reinterpret_cast<char*>(message->buffer().data());
+						size_t totalBytesReceived = 0;
+						while (totalBytesReceived < message->header().length())
 						{
-							onConnect(clientId);
+							bytesRead = ::recv(socket, dataBuffer + totalBytesReceived, message->header().length() - totalBytesReceived, 0);
+							if (bytesRead <= 0)
+							{
+								return false;
+							}
+							totalBytesReceived += bytesRead;
 						}
 					}
+					messageQueue.push_back(std::move(message));
+					return true;
 				}
-			}
-
-			void stop()
-			{
-				isRunning = false;
-				for (auto& client : clients)
+				else if (bytesRead < 0)
 				{
-					if (onDisconnect)
-					{
-						onDisconnect(client.first);
-					}
-					closesocket(client.second);
+					return false;
 				}
-				closesocket(serverSocket);
-				WSACleanup();
+				else if (bytesRead == 0)
+				{
+					return false;
+				}
+
+				return false;
 			}
-		};
 
-		std::unordered_map<ClientID, SOCKET> clients;
-		std::mutex clientsMutex;
-		ClientID nextClientId = 0;
-		ConnectionCallback onConnect;
-		DisconnectionCallback onDisconnect;
-		std::unique_ptr<Acceptator> acceptor;
-		std::thread serverThread;
+            void stop()
+            {
+                isRunning = false;
+                closesocket(serverSocket);
+                WSACleanup();
+            }
+        };
 
-	public:
-		Server() : acceptor(std::make_unique<Acceptator>(clients, clientsMutex, nextClientId, onConnect, onDisconnect)) {}
+        std::unordered_map<ClientID, SOCKET> clients;
+        std::mutex clientsMutex;
+        ClientID nextClientId = 0;
+        ConnectionCallback onConnectCallback;
+        DisconnectionCallback onDisconnectCallback;
+        std::unique_ptr<Acceptator> acceptor;
 
-		void start(size_t serverPort)
-		{
-			serverThread = std::thread(&Acceptator::start, acceptor.get(), static_cast<int>(serverPort));
-		}
+        MessagePool messagePool;
+        spk::ThreadSafeDeque<MessageObject> messageQueue;
 
-		void stop()
-		{
-			acceptor->stop();
-			if (serverThread.joinable())
-			{
-				serverThread.join();
+
+		void _internalSendTo(const ClientID& p_clientID, const Message& message)
+        {
+			auto it = clients.find(p_clientID);
+            if (it != clients.end())
+            {
+				SOCKET clientSocket = it->second;
+				int headerSize = sizeof(spk::Message::Header);
+				int sentBytes = ::send(clientSocket, reinterpret_cast<const char*>(&(message.header())), headerSize, 0);
+				if (sentBytes != headerSize)
+				{
+					std::cerr << "Failed to send message header." << std::endl;
+					return;
+				}
+
+				if (message.header().length() > 0)
+				{
+					sentBytes = ::send(clientSocket, reinterpret_cast<const char*>(message.data()), message.header().length(), 0);
+					if (sentBytes != static_cast<int>(message.header().length()))
+					{
+						std::cerr << "Failed to send message data." << std::endl;
+						return;
+					}
+				}
 			}
 		}
 
-		void setConnectionCallback(const ConnectionCallback& callback)
-		{
-			onConnect = callback;
-		}
 
-		void setDisconnectionCallback(const DisconnectionCallback& callback)
-		{
-			onDisconnect = callback;
-		}
+    public:
+        Server() :
+            onConnectCallback([&](const ClientID& p_newlyConnectedClient){std::cout << "New connection detected: client ID [" << p_newlyConnectedClient << "]" << std::endl;}),
+            onDisconnectCallback([&](const ClientID& p_disconnectedClient){std::cout << "Client ID [" << p_disconnectedClient << "] disconnected" << std::endl;}),
+            acceptor(std::make_unique<Acceptator>(clients, clientsMutex, nextClientId, onConnectCallback, onDisconnectCallback, messagePool, messageQueue))
+        {
+        }
 
-		~Server()
-		{
-			stop();
-		}
-	};
+        void start(size_t serverPort)
+        {
+            acceptor->start(static_cast<int>(serverPort));
+        }
+
+        void stop()
+        {
+            acceptor->stop();
+        }
+
+		void sendTo(const ClientID& clientID, const spk::Message& message)
+        {
+            _internalSendTo(clientID, message);
+        }
+
+        void sendTo(const std::vector<ClientID>& clients, const spk::Message& message)
+        {
+            for (const auto& clientID : clients)
+            {
+                _internalSendTo(clientID, message);
+            }
+        }
+
+        void sendToAll(const spk::Message& message)
+        {
+            std::lock_guard<std::mutex> lock(clientsMutex);
+            for (const auto& pair : clients)
+            {
+                _internalSendTo(pair.first, message);
+            }
+        }
+
+        spk::ThreadSafeDeque<MessageObject>& messages()
+        {
+            return messageQueue;
+        }
+    };
 }

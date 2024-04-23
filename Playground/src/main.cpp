@@ -1,78 +1,87 @@
-#include "playground.hpp"
+#include "sparkle.hpp"
 
-namespace spk
+class ServerWidget : public spk::Widget
 {
-    struct CustomData
+private:
+    spk::Server _server;
+
+    void _onUpdate() override
     {
-        int id;
-        size_t test;
-        float value;
-
-        // Serialize
-        friend spk::DataBuffer& operator<<(spk::DataBuffer& db, const CustomData& cd)
+        auto& messages = _server.messages();
+        while (!messages.empty())
         {
-            db << cd.id;
-            db << cd.value;
-            return db;
-        }
+            auto msg = messages.pop_front();  // Retrieve and remove the front message
+            if (msg->header().type == 0)  // Check if the message is of type 0
+            {
+                std::cout << "Received request from client." << std::endl;
 
-        // Deserialize
-        friend const spk::DataBuffer& operator>>(const spk::DataBuffer& db, CustomData& cd)
-        {
-            db >> cd.id;
-            db >> cd.value;
-            return db;
+                // Prepare and send a response message of type 1
+                spk::Message response;
+                response.header().type = 1;  // Set message type to 1
+                std::string responseData = "Hello from Server!";
+                response.append(responseData.data(), responseData.size() + 1);  // Include null terminator
+                _server.sendToAll(response);
+            }
         }
-    };
+    }
+
+public:
+    ServerWidget(spk::Widget* p_parent) :
+        spk::Widget(p_parent),
+        _server()
+    {
+        _server.start(26500);
+    }
+};
+
+class ClientWidget : public spk::Widget
+{
+private:
+    spk::Client _client;
+
+void _onUpdate() override
+{
+    static std::chrono::steady_clock::time_point lastSendTime = std::chrono::steady_clock::now();
+    auto currentTime = std::chrono::steady_clock::now();
+    if (std::chrono::duration_cast<std::chrono::seconds>(currentTime - lastSendTime).count() >= 5)  // Send every 5 seconds
+    {
+        spk::Message msg;
+        msg.header().type = 0;  // Set message type to 0
+        _client.send(msg);
+        lastSendTime = currentTime;
+        std::cout << "Request sent to server." << std::endl;
+    }
+
+    // Listen for response messages
+    while (!_client.messages().empty())
+    {
+        auto msg = _client.messages().pop_front();
+        if (msg->header().type == 1)  // Check if the message is of type 1
+        {
+            std::string response(reinterpret_cast<const char*>(msg->data()));
+            std::cout << "Response from server: " << response << std::endl;
+        }
+    }
 }
+
+public:
+    ClientWidget(spk::Widget* p_parent) :
+        spk::Widget(p_parent),
+        _client()
+    {
+        _client.connect("127.0.0.1", 26500);
+    }
+};
 
 int main()
 {
-    spk::Message msg;
+    spk::Application app("Playground", spk::Vector2UInt(800, 600), spk::Application::Mode::Monothread);
 
-    // Testing with an integer
-    int myInt = 123;
-    msg << myInt;
-    std::cout << "Message size : " << msg.size() << std::endl;
+    ServerWidget serverWidget = ServerWidget(nullptr);
+    serverWidget.activate();
 
-    // Testing with a string
-    std::string myString = "Hello, world!";
-    msg << myString;
-    std::cout << "Message size : " << msg.size() << std::endl;
+    ClientWidget clientWidget = ClientWidget(nullptr);
+    clientWidget.activate();
 
-    // Testing with a vector
-    std::vector<int> myVector = {1, 2, 3, 4, 5};
-    msg << myVector;
-    std::cout << "Message size : " << msg.size() << std::endl;
-
-    // Testing with a custom data structure
-    spk::CustomData myData = {7, 45, 3.14f};
-    msg << myData;
-    std::cout << "Message size : " << msg.size() << std::endl;
-
-    int receivedInt;
-    msg >> receivedInt;
-    std::cout << "Sent integer: " << myInt << ", received integer: " << receivedInt << std::endl;
-    std::string receivedString;
-    msg >> receivedString;
-    std::cout << "Sent string: " << myString << ", received string: " << receivedString << std::endl;
-    std::vector<int> receivedVector;
-    msg >> receivedVector;
-    std::cout << "Sent vector: ";
-    for (int v : myVector) std::cout << v << " ";
-    std::cout << ", received vector: ";
-    for (int v : receivedVector) std::cout << v << " ";
-    std::cout << std::endl;
-    spk::CustomData receivedData;
-    msg >> receivedData;
-    std::cout << "Sent custom data: {id: " << myData.id << ", value: " << myData.value
-              << "}, received custom data: {id: " << receivedData.id << ", value: " << receivedData.value << "}" << std::endl;
-
-    // Resetting and checking size
-    msg.reset();
-    std::cout << "Message size after reset: " << msg.header().length << std::endl;
-    msg.clear();
-    std::cout << "Message size after clear: " << msg.header().length << std::endl;
-
-    return 0;
+    return (app.run());
 }

@@ -74,3 +74,4 @@
 
 #include "network/spk_message.hpp"
 #include "network/spk_server.hpp"
+#include "network/spk_client.hpp"
