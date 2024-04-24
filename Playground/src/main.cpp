@@ -10,16 +10,15 @@ private:
         auto& messages = _server.messages();
         while (!messages.empty())
         {
-            auto msg = messages.pop_front();  // Retrieve and remove the front message
-            if (msg->header().type == 0)  // Check if the message is of type 0
+            auto msg = messages.pop_front();
+            if (msg->header().type == 0)
             {
                 std::cout << "Received request from client." << std::endl;
 
-                // Prepare and send a response message of type 1
                 spk::Message response;
-                response.header().type = 1;  // Set message type to 1
+                response.header().type = 1;
                 std::string responseData = "Hello from Server!";
-                response.append(responseData.data(), responseData.size() + 1);  // Include null terminator
+                response << responseData;
                 _server.sendToAll(response);
             }
         }
@@ -43,22 +42,21 @@ void _onUpdate() override
 {
     static std::chrono::steady_clock::time_point lastSendTime = std::chrono::steady_clock::now();
     auto currentTime = std::chrono::steady_clock::now();
-    if (std::chrono::duration_cast<std::chrono::seconds>(currentTime - lastSendTime).count() >= 5)  // Send every 5 seconds
+    if (std::chrono::duration_cast<std::chrono::seconds>(currentTime - lastSendTime).count() >= 5)
     {
         spk::Message msg;
-        msg.header().type = 0;  // Set message type to 0
+        msg.header().type = 0;
         _client.send(msg);
         lastSendTime = currentTime;
         std::cout << "Request sent to server." << std::endl;
     }
 
-    // Listen for response messages
     while (!_client.messages().empty())
     {
         auto msg = _client.messages().pop_front();
-        if (msg->header().type == 1)  // Check if the message is of type 1
+        if (msg->header().type == 1)
         {
-            std::string response(reinterpret_cast<const char*>(msg->data()));
+            std::string response = msg->get<std::string>();
             std::cout << "Response from server: " << response << std::endl;
         }
     }

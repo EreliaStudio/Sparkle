@@ -1,3 +1,5 @@
+#pragma once
+
 #include <functional>
 #include <iostream>
 #include <mutex>
@@ -18,7 +20,7 @@ namespace spk
     class Server
     {
     public:
-        using ClientID = size_t;
+        using ClientID = Message::Header::ClientID;
         using ConnectionCallback = std::function<void(const ClientID&)>;
         using DisconnectionCallback = std::function<void(const ClientID&)>;
 
@@ -43,12 +45,12 @@ namespace spk
             std::thread receptionThread;
 
         public:
-            Acceptator(std::unordered_map<ClientID, SOCKET>& clientsMap, std::mutex& mutex, ClientID& clientId,
+            Acceptator(std::unordered_map<ClientID, SOCKET>& clientsMap, std::mutex& mutex, ClientID& p_clientId,
                        ConnectionCallback& connectCallback, DisconnectionCallback& disconnectCallback,
                        MessagePool& pool, spk::ThreadSafeDeque<MessageObject>& queue) :
                 clients(clientsMap),
                 clientsMutex(mutex),
-                nextClientId(clientId),
+                nextClientId(p_clientId),
                 onConnectCallback(connectCallback),
                 onDisconnectCallback(disconnectCallback),
                 messagePool(pool),
@@ -63,7 +65,7 @@ namespace spk
 				stop();
 			}
 
-            void start(int port)
+            void start(int p_port)
             {
                 WSADATA wsaData;
                 if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
@@ -81,7 +83,7 @@ namespace spk
                 struct sockaddr_in serverAddress;
                 serverAddress.sin_family = AF_INET;
                 serverAddress.sin_addr.s_addr = INADDR_ANY;
-                serverAddress.sin_port = htons(port);
+                serverAddress.sin_port = htons(p_port);
 
                 if (bind(serverSocket, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) == SOCKET_ERROR)
                 {
@@ -176,12 +178,12 @@ namespace spk
                 }
             }
 
-            bool receiveFromClient(ClientID clientId, SOCKET socket)
+            bool receiveFromClient(ClientID p_clientId, SOCKET p_socket)
 			{
 				auto message = messagePool.obtain();
 
 				const int headerSize = sizeof(spk::Message::Header);
-				int bytesRead = ::recv(socket, reinterpret_cast<char*>(&message->header()), headerSize, 0);
+				int bytesRead = ::recv(p_socket, reinterpret_cast<char*>(&message->header()), headerSize, 0);
 				if (bytesRead == headerSize)
 				{
 					if (message->header().length() > 0)
@@ -192,7 +194,7 @@ namespace spk
 						size_t totalBytesReceived = 0;
 						while (totalBytesReceived < message->header().length())
 						{
-							bytesRead = ::recv(socket, dataBuffer + totalBytesReceived, message->header().length() - totalBytesReceived, 0);
+							bytesRead = ::recv(p_socket, dataBuffer + totalBytesReceived, message->header().length() - totalBytesReceived, 0);
 							if (bytesRead <= 0)
 							{
 								return false;
@@ -200,6 +202,7 @@ namespace spk
 							totalBytesReceived += bytesRead;
 						}
 					}
+                    message->header().clientID = p_clientId;
 					messageQueue.push_back(std::move(message));
 					return true;
 				}
@@ -234,24 +237,24 @@ namespace spk
         spk::ThreadSafeDeque<MessageObject> messageQueue;
 
 
-		void _internalSendTo(const ClientID& p_clientID, const Message& message)
+		void _internalSendTo(const ClientID& p_clientID, const Message& p_message)
         {
 			auto it = clients.find(p_clientID);
             if (it != clients.end())
             {
 				SOCKET clientSocket = it->second;
 				int headerSize = sizeof(spk::Message::Header);
-				int sentBytes = ::send(clientSocket, reinterpret_cast<const char*>(&(message.header())), headerSize, 0);
+				int sentBytes = ::send(clientSocket, reinterpret_cast<const char*>(&(p_message.header())), headerSize, 0);
 				if (sentBytes != headerSize)
 				{
 					std::cerr << "Failed to send message header." << std::endl;
 					return;
 				}
 
-				if (message.header().length() > 0)
+				if (p_message.header().length() > 0)
 				{
-					sentBytes = ::send(clientSocket, reinterpret_cast<const char*>(message.data()), message.header().length(), 0);
-					if (sentBytes != static_cast<int>(message.header().length()))
+					sentBytes = ::send(clientSocket, reinterpret_cast<const char*>(p_message.data()), p_message.header().length(), 0);
+					if (sentBytes != static_cast<int>(p_message.header().length()))
 					{
 						std::cerr << "Failed to send message data." << std::endl;
 						return;
@@ -269,9 +272,9 @@ namespace spk
         {
         }
 
-        void start(size_t serverPort)
+        void start(size_t p_serverPort)
         {
-            acceptor->start(static_cast<int>(serverPort));
+            acceptor->start(static_cast<int>(p_serverPort));
         }
 
         void stop()
@@ -279,25 +282,25 @@ namespace spk
             acceptor->stop();
         }
 
-		void sendTo(const ClientID& clientID, const spk::Message& message)
+		void sendTo(const ClientID& p_clientID, const spk::Message& p_message)
         {
-            _internalSendTo(clientID, message);
+            _internalSendTo(p_clientID, p_message);
         }
 
-        void sendTo(const std::vector<ClientID>& clients, const spk::Message& message)
+        void sendTo(const std::vector<ClientID>& p_clients, const spk::Message& p_message)
         {
-            for (const auto& clientID : clients)
+            for (const auto& clientID : p_clients)
             {
-                _internalSendTo(clientID, message);
+                _internalSendTo(clientID, p_message);
             }
         }
 
-        void sendToAll(const spk::Message& message)
+        void sendToAll(const spk::Message& p_message)
         {
             std::lock_guard<std::mutex> lock(clientsMutex);
             for (const auto& pair : clients)
             {
-                _internalSendTo(pair.first, message);
+                _internalSendTo(pair.first, p_message);
             }
         }
 

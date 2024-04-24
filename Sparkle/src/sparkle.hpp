@@ -75,3 +75,5 @@
 #include "network/spk_message.hpp"
 #include "network/spk_server.hpp"
 #include "network/spk_client.hpp"
+
+#include "network/node_system/spk_central_node.hpp"

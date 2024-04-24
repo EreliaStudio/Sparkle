@@ -12,12 +12,16 @@ namespace spk
     public:
         class Header
         {
-            friend class Message;
+        public:
+            using ClientID = size_t;
+    
         private:
+            friend class Message;
             size_t _length;
 
         public:
-            size_t type;
+            int32_t type;
+            ClientID clientID;
             uint8_t reserved[16];
 
             Header() :
@@ -108,6 +112,12 @@ namespace spk
         {
             _buffer.append(p_data, p_dataSize);
             _header._length = _buffer.size();
+        }
+
+		template <typename OutputType>
+		OutputType get() const
+        {
+            return (_buffer.get<OutputType>());    
         }
 
         template <typename InputType>
