@@ -287,7 +287,7 @@ namespace spk
 				int p_animationLenght,
 				int p_animationDuration)			
 			{
-				size_t previousNbVertices = _vertexData.size();
+				unsigned int previousNbVertices = static_cast<int>(_vertexData.size());
 
 				static const spk::Vector3 offsets[4] = {
 					spk::Vector3(0, 1, 0),
@@ -462,7 +462,7 @@ namespace spk
 				{
 					_insertNodeData(p_relativePosition - spk::Vector3(0.5f, 0.5f, 0.0f) + offsets[i],
 									spk::Vector3(0.5f, 0.5f, 0),
-									_spriteSheet->sprite(p_node.sprite + _computeSpriteOffset(p_index, i, p_relativePosition)),
+									_spriteSheet->sprite(p_node.sprite + _computeSpriteOffset(p_index, static_cast<int>(i), p_relativePosition)),
 									_spriteSheet->unit(),
 									static_cast<spk::Vector2>(p_node.animationFrameOffset) * _spriteSheet->unit(), p_node.nbFrame, p_node.animationDuration);
 				}
@@ -572,8 +572,8 @@ namespace spk
 								}
 							}
 
-							unsigned int baseIndexPoint = _collisionMesh.points().size();
-							unsigned int baseIndexNormal = _collisionMesh.normals().size();
+							unsigned int baseIndexPoint = static_cast<unsigned int>(_collisionMesh.points().size());
+							unsigned int baseIndexNormal = static_cast<unsigned int>(_collisionMesh.normals().size());
 
 							_collisionMesh.addPoint(spk::Vector3(start.x, start.y, 0));
 							_collisionMesh.addPoint(spk::Vector3(start.x, end.y, 0));
@@ -678,7 +678,7 @@ namespace spk
 			{
 				for (size_t k = 0; k < SizeZ; k++)
 				{
-					Chunk::NodeIndexType index = content(p_position, k);
+					Chunk::NodeIndexType index = content(p_position, static_cast<int>(k));
 					if (_tilemapCreator->containsNode(index) == true)
 					{
 						const Node& tmpNode = _tilemapCreator->node(index);
@@ -736,7 +736,7 @@ namespace spk
 
 				for (size_t k = 0; k < SizeZ; k++)
 				{
-					Chunk::NodeIndexType index = content(p_position, k);
+					Chunk::NodeIndexType index = content(p_position, static_cast<int>(k));
 					if (_tilemapCreator->containsNode(index) == true)
 					{
 						const Node& tmpNode = _tilemapCreator->node(index);
