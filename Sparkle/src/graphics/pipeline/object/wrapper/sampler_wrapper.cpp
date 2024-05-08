@@ -40,7 +40,7 @@ namespace spk
 				Pipeline::Texture::Layout newLayout;
 
 				newLayout.name = instruction.informations[OpenGL::ShaderInstruction::NameKey].as<std::string>();
-				newLayout.textureBindingPoint = result.size();
+				newLayout.textureBindingPoint = static_cast<int>(result.size());
 
 				result.emplace(newLayout.name, newLayout);
 			}

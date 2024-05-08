@@ -16,7 +16,7 @@ namespace spk
 
 		for (const auto& element : p_storageLayout.elements)
 		{
-			glEnableVertexAttribArray(element.location);
+			glEnableVertexAttribArray(static_cast<GLint>(element.location));
 
 			switch (element.type)
 			{
@@ -28,10 +28,10 @@ namespace spk
 			case OpenGL::Type::UnsignedInteger:
 			{
 				glVertexAttribIPointer(
-							element.location,
-							element.nbElement,
+							static_cast<GLint>(element.location),
+							static_cast<GLint>(element.nbElement),
 							static_cast<GLenum>(element.type),
-							p_storageLayout.stride,
+							static_cast<GLint>(p_storageLayout.stride),
 							(void *)(element.offset)
 						);
 						break;
@@ -39,11 +39,11 @@ namespace spk
 			default :
 			{
 				glVertexAttribPointer(
-							element.location,
-							element.nbElement,
+							static_cast<GLint>(element.location),
+							static_cast<GLint>(element.nbElement),
 							static_cast<GLenum>(element.type),
 							GL_FALSE,
-							p_storageLayout.stride,
+							static_cast<GLint>(p_storageLayout.stride),
 							(void *)(element.offset)
 						);
 						break;
