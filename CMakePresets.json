@@ -10,7 +10,8 @@
         "name": "VCPKG",
         "description": "Configuration using VCPKG toolchain",
         "cacheVariables": {
-          "CMAKE_TOOLCHAIN_FILE": "${env.VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+          "CMAKE_TOOLCHAIN_FILE": "${env.VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+          "BuildPlayground": "ON"
         }
       }
     ],
