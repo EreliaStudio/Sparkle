@@ -55,7 +55,7 @@ namespace spk
 		stbtt_pack_context context;
 		int errorCode;
 		
-		errorCode = stbtt_PackBegin(&context, atlasData.data(), atlasSize.x, atlasSize.y, 0, p_key.outlineSize * 2 + 1, nullptr);
+		errorCode = stbtt_PackBegin(&context, atlasData.data(), atlasSize.x, atlasSize.y, 0, static_cast<int>(p_key.outlineSize) * 2 + 1, nullptr);
 		if (errorCode == 0)
 			return (errorCode != 0);
 		
@@ -116,7 +116,7 @@ namespace spk
 
 		for (size_t i = 0; i < p_fontConfiguration.validGlyphs().size(); i++)
 		{
-			_computeCharGlyphData( p_fontConfiguration.validGlyphs()[i], _glyphDatas[p_fontConfiguration.validGlyphs()[i]], charInformation, buildData.size, outlineOffset, p_key.outlineSize);
+			_computeCharGlyphData( p_fontConfiguration.validGlyphs()[i], _glyphDatas[p_fontConfiguration.validGlyphs()[i]], charInformation, buildData.size, outlineOffset, static_cast<int>(p_key.outlineSize));
 		}
 
 		delete charInformation;

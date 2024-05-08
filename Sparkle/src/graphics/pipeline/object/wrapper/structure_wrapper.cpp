@@ -44,9 +44,9 @@ namespace spk
 					bytesLeft = 16;
 				}
 
-				currentOffsetWithPadding += attributeStructure.sizeWithPadding;
-				currentOffsetWithoutPadding += attributeStructure.sizeWithoutPadding;
-				bytesLeft -= attributeStructure.sizeWithPadding;
+				currentOffsetWithPadding += static_cast<int>(attributeStructure.sizeWithPadding);
+				currentOffsetWithoutPadding += static_cast<int>(attributeStructure.sizeWithoutPadding);
+				bytesLeft -= static_cast<int>(attributeStructure.sizeWithPadding);
 				while (bytesLeft < 0)
 					bytesLeft += 16;
 			}

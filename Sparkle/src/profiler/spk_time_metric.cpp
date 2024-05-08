@@ -22,7 +22,7 @@ namespace spk
 		result["Max"].set<long>(static_cast<long>(max()));
 		result["Average"].set<float>(average());
 		result["CPU usage"].set<float>(average() * 100 / (spk::Application::activeApplication()->timeManager().programDuration() * 1000000));
-		result["Cardinal"].set<long>(cardinal());
+		result["Cardinal"].set<long>(static_cast<long>(cardinal()));
 		
 		return result;
 	}
