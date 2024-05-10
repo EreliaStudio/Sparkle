@@ -8,9 +8,12 @@ add_subdirectory(src)
 
 add_library(${ProductName} ${SOURCE_FILES})
 
-# Use generator expressions to properly handle include directories
 target_include_directories(${ProductName} PUBLIC
     $<BUILD_INTERFACE:${GLEW_INCLUDE_DIRS}>
+    $<INSTALL_INTERFACE:include/${ProductName}>
+)
+
+target_include_directories(${ProductName} PUBLIC
     $<BUILD_INTERFACE:${INCLUDE_DIRECTORIES}>
     $<INSTALL_INTERFACE:include/${ProductName}>
 )

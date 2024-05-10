@@ -13,7 +13,7 @@ namespace spk
             CREATESTRUCT* pCreate = (CREATESTRUCT*)p_secondParam;
             pThis = (Application*)pCreate->lpCreateParams;
             SetWindowLongPtr(p_hwnd, GWLP_USERDATA, (LONG_PTR)pThis);
-            return (TRUE);
+            return DefWindowProc(p_hwnd, p_messageID, p_firstParam, p_secondParam);
         }
         default:
         {
@@ -257,11 +257,10 @@ namespace spk
 					});
             break;
         }
-
-        default:
-        {
-            return DefWindowProc(p_hwnd, p_messageID, p_firstParam, p_secondParam);
-        }
+		default :
+		{
+       		return DefWindowProc(p_hwnd, p_messageID, p_firstParam, p_secondParam);
+		}
         }
         return (TRUE);
     }

@@ -96,41 +96,42 @@ namespace spk
 		_applicationInstance = GetModuleHandle(NULL);
 
 		_frameClass.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
-		_frameClass.lpfnWndProc = (WNDPROC) WindowProc;
+		_frameClass.lpfnWndProc = (WNDPROC)WindowProc;
 		_frameClass.cbClsExtra = 0;
 		_frameClass.cbWndExtra = 0;
 		_frameClass.hInstance = _applicationInstance;
 		_frameClass.hIcon = LoadIcon(NULL, IDI_WINLOGO);
 		_frameClass.hCursor = LoadCursor(NULL, IDC_ARROW);
-		_frameClass.hbrBackground = NULL;
+		_frameClass.hbrBackground = (HBRUSH)(COLOR_WINDOW+1);
 		_frameClass.lpszMenuName = NULL;
-		_frameClass.lpszClassName = p_title.c_str();
+		_frameClass.lpszClassName = "SparkleApplication";
 
-		RegisterClass(&_frameClass);
+		if (!RegisterClass(&_frameClass))
+		{
+			throw std::runtime_error("Window class registration failed.");
+		}
 
-		RECT windowSize;
-		windowSize.left = (long)0;
-		windowSize.right = (long)p_size.x;
-		windowSize.top = (long)0;
-		windowSize.bottom = (long)p_size.y;
-		
-		DWORD _windowStyle;
-		_windowStyle = WS_OVERLAPPEDWINDOW;
-
-		DWORD _windowExStyle;
-		_windowExStyle = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE;
+		RECT windowSize = {0, 0, (long)p_size.x, (long)p_size.y};
+		DWORD _windowStyle = WS_OVERLAPPEDWINDOW;
+		DWORD _windowExStyle = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE;
 
 		AdjustWindowRectEx(&windowSize, _windowStyle, FALSE, _windowExStyle);
 
-		_windowHandle = CreateWindowEx(
+		_windowHandle = CreateWindowExA(
 			_windowExStyle,
-			p_title.c_str(), p_title.c_str(),
+			_frameClass.lpszClassName, // Use the class name for window creation
+			p_title.c_str(), // Explicitly set the title here
 			_windowStyle,
 			CW_USEDEFAULT, CW_USEDEFAULT,
-			p_size.x, p_size.y,
+			windowSize.right - windowSize.left, windowSize.bottom - windowSize.top,
 			NULL, NULL,
 			_applicationInstance,
 			p_application);
+
+		if (!_windowHandle)
+		{
+			throw std::runtime_error("Window creation failed.");
+		}
 
 		ShowWindow(_windowHandle, SW_SHOW);
 		UpdateWindow(_windowHandle);
