@@ -51,18 +51,21 @@ namespace spk
 		class Instanciator
 		{
 		private:
+			static inline size_t reference = 0;
 
 		public:
 			template <typename... Args>
 			Instanciator(Args &&...p_args)
 			{
-				if (Singleton<TType>::instance() == nullptr)
+				if (reference == 0)
 					Singleton<TType>::instanciate(std::forward<Args>(p_args)...);
+				reference++;
 			}
 
 			~Instanciator()
 			{
-				if (Singleton<TType>::instance() != nullptr)
+				reference--;
+				if (reference == 0)
 					Singleton<TType>::release();
 			}
 		};
