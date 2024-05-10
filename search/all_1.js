@@ -35,12 +35,13 @@ var searchData=
   ['as_40',['as',['../classspk_1_1JSON_1_1File.html#a7f171a1473d5f1d74845653855e62ccd',1,'spk::JSON::File::as()'],['../classspk_1_1JSON_1_1Object.html#a4656a5e45ba6633b43dbdc1dc46d5263',1,'spk::JSON::Object::as() const']]],
   ['asarray_41',['asArray',['../classspk_1_1JSON_1_1Object.html#aa2c19ea31aa2bc72a42595b84a501d12',1,'spk::JSON::Object']]],
   ['aspectratio_42',['aspectRatio',['../classspk_1_1CameraComponent.html#ad5e5a9a80d129edfebe0f687257863a5',1,'spk::CameraComponent::aspectRatio()'],['../classspk_1_1Camera.html#ae896789387e2a91ffa7040b4a5416ba9',1,'spk::Camera::aspectRatio()']]],
-  ['atlas_43',['Atlas',['../classspk_1_1Font_1_1Atlas.html#a37ccac48c7cc5be8b9dc99d78c55150c',1,'spk::Font::Atlas']]],
-  ['atlas_44',['atlas',['../classspk_1_1Font.html#a2c95509cec9d03a6cf0b8b7dcc4a4593',1,'spk::Font::atlas(const size_t &amp;p_fontSize, const size_t &amp;p_outlineSize, const OutlineStyle &amp;p_outlineStype) const'],['../classspk_1_1Font.html#aa864cf50f5a2bb720206703f7779f862',1,'spk::Font::atlas(const size_t &amp;p_fontSize, const size_t &amp;p_outlineSize, const OutlineStyle &amp;p_outlineStype)']]],
-  ['atlas_45',['Atlas',['../classspk_1_1Font_1_1Atlas.html#adc445ae37e4133de8ce3cac0d125edf9',1,'spk::Font::Atlas::Atlas()'],['../classspk_1_1Font_1_1Atlas.html',1,'spk::Font::Atlas']]],
-  ['attach_46',['attach',['../classspk_1_1Pipeline_1_1Texture.html#af4937de412bd16f9a26eaa5c3cfecdbc',1,'spk::Pipeline::Texture']]],
-  ['attribute_47',['attribute',['../classspk_1_1Pipeline_1_1Object.html#ab245edad399cd51a7ef9ee568adc751e',1,'spk::Pipeline::Object']]],
-  ['attribute_48',['Attribute',['../classspk_1_1Pipeline_1_1Object_1_1Attribute.html#ab45938be9a6ee5737fdf15728c446655',1,'spk::Pipeline::Object::Attribute::Attribute(const Attribute &amp;p_other)=delete'],['../classspk_1_1Pipeline_1_1Object_1_1Attribute.html#af38e9d60472c062dbfb1577fe23e91d7',1,'spk::Pipeline::Object::Attribute::Attribute(Attribute &amp;&amp;p_other)=default'],['../classspk_1_1Pipeline_1_1Object_1_1Attribute.html',1,'spk::Pipeline::Object::Attribute']]],
-  ['autotile_49',['Autotile',['../structspk_1_1Tilemap2D_1_1Node.html#a63fe82a5e6a7f8be935c616a74569212adc91eb58b7f2f916f4f26ef7c686b3f8',1,'spk::Tilemap2D::Node']]],
-  ['average_50',['average',['../classspk_1_1IAnalyticalMetric.html#a58522bd3b05bdb226593b2cc58f578a3',1,'spk::IAnalyticalMetric']]]
+  ['atlas_43',['atlas',['../classspk_1_1Font.html#aa864cf50f5a2bb720206703f7779f862',1,'spk::Font']]],
+  ['atlas_44',['Atlas',['../classspk_1_1Font_1_1Atlas.html#adc445ae37e4133de8ce3cac0d125edf9',1,'spk::Font::Atlas::Atlas()'],['../classspk_1_1Font_1_1Atlas.html#a37ccac48c7cc5be8b9dc99d78c55150c',1,'spk::Font::Atlas::Atlas(const std::vector&lt; uint8_t &gt; &amp;p_fontData, const Configuration &amp;p_fontConfiguration, const Key &amp;p_key)']]],
+  ['atlas_45',['atlas',['../classspk_1_1Font.html#a2c95509cec9d03a6cf0b8b7dcc4a4593',1,'spk::Font']]],
+  ['atlas_46',['Atlas',['../classspk_1_1Font_1_1Atlas.html',1,'spk::Font']]],
+  ['attach_47',['attach',['../classspk_1_1Pipeline_1_1Texture.html#af4937de412bd16f9a26eaa5c3cfecdbc',1,'spk::Pipeline::Texture']]],
+  ['attribute_48',['attribute',['../classspk_1_1Pipeline_1_1Object.html#ab245edad399cd51a7ef9ee568adc751e',1,'spk::Pipeline::Object']]],
+  ['attribute_49',['Attribute',['../classspk_1_1Pipeline_1_1Object_1_1Attribute.html#ab45938be9a6ee5737fdf15728c446655',1,'spk::Pipeline::Object::Attribute::Attribute(const Attribute &amp;p_other)=delete'],['../classspk_1_1Pipeline_1_1Object_1_1Attribute.html#af38e9d60472c062dbfb1577fe23e91d7',1,'spk::Pipeline::Object::Attribute::Attribute(Attribute &amp;&amp;p_other)=default'],['../classspk_1_1Pipeline_1_1Object_1_1Attribute.html',1,'spk::Pipeline::Object::Attribute']]],
+  ['autotile_50',['Autotile',['../structspk_1_1Tilemap2D_1_1Node.html#a63fe82a5e6a7f8be935c616a74569212adc91eb58b7f2f916f4f26ef7c686b3f8',1,'spk::Tilemap2D::Node']]],
+  ['average_51',['average',['../classspk_1_1IAnalyticalMetric.html#a58522bd3b05bdb226593b2cc58f578a3',1,'spk::IAnalyticalMetric']]]
 ];
