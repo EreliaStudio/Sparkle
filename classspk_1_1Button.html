@@ -123,6 +123,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a0f408e156cb08ae5474bcb365e613103"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Button.html#a0f408e156cb08ae5474bcb365e613103">Button</a> (<a class="el" href="classspk_1_1Widget.html">Widget</a> *p_parent)</td></tr>
 <tr class="memdesc:a0f408e156cb08ae5474bcb365e613103"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructs a new <a class="el" href="classspk_1_1Button.html" title="Represents a button widget in the SPK UI framework, capable of handling user interactions and display...">Button</a> widget with the given parent.  <a href="classspk_1_1Button.html#a0f408e156cb08ae5474bcb365e613103">More...</a><br /></td></tr>
 <tr class="separator:a0f408e156cb08ae5474bcb365e613103"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aedeaeae11724e51be36046721583ec5a"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Button.html#aedeaeae11724e51be36046721583ec5a">Button</a> (const std::string &amp;p_name, <a class="el" href="classspk_1_1Widget.html">Widget</a> *p_parent)</td></tr>
+<tr class="memdesc:aedeaeae11724e51be36046721583ec5a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a nesw button widget with a specific name and a given parent.  <a href="classspk_1_1Button.html#aedeaeae11724e51be36046721583ec5a">More...</a><br /></td></tr>
+<tr class="separator:aedeaeae11724e51be36046721583ec5a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad09942ce463bd92e90821667e72511b3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Button.html#ad09942ce463bd92e90821667e72511b3">setOnClickCallback</a> (const <a class="el" href="classspk_1_1ActivateObject.html#aaef8608826b3a9fca278d0e84d3700a0">Callback</a> p_onClickCallback)</td></tr>
 <tr class="memdesc:ad09942ce463bd92e90821667e72511b3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the callback function to be called when the button is clicked.  <a href="classspk_1_1Button.html#ad09942ce463bd92e90821667e72511b3">More...</a><br /></td></tr>
 <tr class="separator:ad09942ce463bd92e90821667e72511b3"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -262,7 +265,7 @@ Additional Inherited Members</h2></td></tr>
 </div>
 <h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a0f408e156cb08ae5474bcb365e613103"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0f408e156cb08ae5474bcb365e613103">&#9670;&nbsp;</a></span>Button()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a0f408e156cb08ae5474bcb365e613103">&#9670;&nbsp;</a></span>Button() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -280,6 +283,43 @@ Additional Inherited Members</h2></td></tr>
 <p>Constructs a new <a class="el" href="classspk_1_1Button.html" title="Represents a button widget in the SPK UI framework, capable of handling user interactions and display...">Button</a> widget with the given parent. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
+    <tr><td class="paramname">p_parent</td><td>Pointer to the parent widget. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="aedeaeae11724e51be36046721583ec5a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aedeaeae11724e51be36046721583ec5a">&#9670;&nbsp;</a></span>Button() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">spk::Button::Button </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>p_name</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classspk_1_1Widget.html">Widget</a> *&#160;</td>
+          <td class="paramname"><em>p_parent</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Construct a nesw button widget with a specific name and a given parent. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_name</td><td>The desired name of the widget. </td></tr>
     <tr><td class="paramname">p_parent</td><td>Pointer to the parent widget. </td></tr>
   </table>
   </dd>

@@ -105,6 +105,8 @@ Collaboration diagram for spk::Frame:</div>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:aede98025403fc7bbd537221d3001bb88"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Frame.html#aede98025403fc7bbd537221d3001bb88">Frame</a> (<a class="el" href="classspk_1_1Widget.html">spk::Widget</a> *p_parent)</td></tr>
 <tr class="separator:aede98025403fc7bbd537221d3001bb88"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab40482aa1a98d30039bce22df561a8ef"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Frame.html#ab40482aa1a98d30039bce22df561a8ef">Frame</a> (const std::string &amp;p_name, <a class="el" href="classspk_1_1Widget.html">spk::Widget</a> *p_parent)</td></tr>
+<tr class="separator:ab40482aa1a98d30039bce22df561a8ef"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7d469c21f534cf0c9cc8c0d48aa0b293"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classspk_1_1WidgetComponent_1_1NineSlicedBox.html">spk::WidgetComponent::NineSlicedBox</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Frame.html#a7d469c21f534cf0c9cc8c0d48aa0b293">box</a> ()</td></tr>
 <tr class="separator:a7d469c21f534cf0c9cc8c0d48aa0b293"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab44e31f5eae873d3a6c1d9c54be0f933"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="classspk_1_1WidgetComponent_1_1NineSlicedBox.html">spk::WidgetComponent::NineSlicedBox</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Frame.html#ab44e31f5eae873d3a6c1d9c54be0f933">box</a> () const</td></tr>
@@ -228,7 +230,7 @@ using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 </div><!-- fragment --><dl class="section note"><dt>Note</dt><dd>Ensure that the nine-sliced box is properly initialized and configured to match the frame's requirements. </dd></dl>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="aede98025403fc7bbd537221d3001bb88"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aede98025403fc7bbd537221d3001bb88">&#9670;&nbsp;</a></span>Frame()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#aede98025403fc7bbd537221d3001bb88">&#9670;&nbsp;</a></span>Frame() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -242,9 +244,44 @@ using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Constructs a <a class="el" href="classspk_1_1Frame.html" title="A frame widget that contains a nine-sliced box for UI rendering.">Frame</a> widget with an optional parent. </p><dl class="params"><dt>Parameters</dt><dd>
+<p>Constructs a <a class="el" href="classspk_1_1Frame.html" title="A frame widget that contains a nine-sliced box for UI rendering.">Frame</a> widget with a given parent. </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">p_parent</td><td>The parent widget of this frame, defaulting to nullptr if not specified. </td></tr>
+    <tr><td class="paramname">p_parent</td><td>The parent widget of this frame. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="ab40482aa1a98d30039bce22df561a8ef"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab40482aa1a98d30039bce22df561a8ef">&#9670;&nbsp;</a></span>Frame() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">spk::Frame::Frame </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>p_name</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classspk_1_1Widget.html">spk::Widget</a> *&#160;</td>
+          <td class="paramname"><em>p_parent</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Constructs a <a class="el" href="classspk_1_1Frame.html" title="A frame widget that contains a nine-sliced box for UI rendering.">Frame</a> widget with a specific name and a given parent. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_name</td><td>The desired name of the widget. </td></tr>
+    <tr><td class="paramname">p_parent</td><td>The parent widget of this frame. </td></tr>
   </table>
   </dd>
 </dl>

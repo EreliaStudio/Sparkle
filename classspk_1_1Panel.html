@@ -104,7 +104,11 @@ Collaboration diagram for spk::Panel:</div>
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a436692145daa403a305dfc0b73a74255"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Panel.html#a436692145daa403a305dfc0b73a74255">Panel</a> (<a class="el" href="classspk_1_1Widget.html">spk::Widget</a> *p_parent)</td></tr>
+<tr class="memdesc:a436692145daa403a305dfc0b73a74255"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a new <a class="el" href="classspk_1_1Panel.html" title="A user interface panel that can manage focus within the application.">Panel</a> widget with a given parent.  <a href="classspk_1_1Panel.html#a436692145daa403a305dfc0b73a74255">More...</a><br /></td></tr>
 <tr class="separator:a436692145daa403a305dfc0b73a74255"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad2c293427f43f465dea937ff74c50acb"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Panel.html#ad2c293427f43f465dea937ff74c50acb">Panel</a> (const std::string &amp;p_name, <a class="el" href="classspk_1_1Widget.html">spk::Widget</a> *p_parent)</td></tr>
+<tr class="memdesc:ad2c293427f43f465dea937ff74c50acb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a new <a class="el" href="classspk_1_1Panel.html" title="A user interface panel that can manage focus within the application.">Panel</a> widget with a specific name and a given parent.  <a href="classspk_1_1Panel.html#ad2c293427f43f465dea937ff74c50acb">More...</a><br /></td></tr>
+<tr class="separator:ad2c293427f43f465dea937ff74c50acb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa04a008eef15d454ed08578b0a665ab5"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Panel.html#aa04a008eef15d454ed08578b0a665ab5">setPanelActivationCallback</a> (const std::function&lt; void()&gt; &amp;p_callback)</td></tr>
 <tr class="separator:aa04a008eef15d454ed08578b0a665ab5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_methods_classspk_1_1Widget"><td colspan="2" onclick="javascript:toggleInherit('pub_methods_classspk_1_1Widget')"><img src="closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="classspk_1_1Widget.html">spk::Widget</a></td></tr>
@@ -223,11 +227,11 @@ using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 <div class="line">    std::cout &lt;&lt; <span class="stringliteral">&quot;Settings panel is now active.&quot;</span> &lt;&lt; std::endl;</div>
 <div class="line">});</div>
 <div class="ttc" id="aclassspk_1_1Panel_html"><div class="ttname"><a href="classspk_1_1Panel.html">spk::Panel</a></div><div class="ttdoc">A user interface panel that can manage focus within the application.</div><div class="ttdef"><b>Definition:</b> spk_panel.hpp:32</div></div>
-<div class="ttc" id="aclassspk_1_1Panel_html_aa04a008eef15d454ed08578b0a665ab5"><div class="ttname"><a href="classspk_1_1Panel.html#aa04a008eef15d454ed08578b0a665ab5">spk::Panel::setPanelActivationCallback</a></div><div class="ttdeci">void setPanelActivationCallback(const std::function&lt; void()&gt; &amp;p_callback)</div><div class="ttdef"><b>Definition:</b> spk_panel.cpp:20</div></div>
+<div class="ttc" id="aclassspk_1_1Panel_html_aa04a008eef15d454ed08578b0a665ab5"><div class="ttname"><a href="classspk_1_1Panel.html#aa04a008eef15d454ed08578b0a665ab5">spk::Panel::setPanelActivationCallback</a></div><div class="ttdeci">void setPanelActivationCallback(const std::function&lt; void()&gt; &amp;p_callback)</div><div class="ttdef"><b>Definition:</b> spk_panel.cpp:26</div></div>
 </div><!-- fragment --><dl class="section note"><dt>Note</dt><dd>Setting the panel activation callback allows custom actions to be performed when the panel becomes the active focus within the application. </dd></dl>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a436692145daa403a305dfc0b73a74255"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a436692145daa403a305dfc0b73a74255">&#9670;&nbsp;</a></span>Panel()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a436692145daa403a305dfc0b73a74255">&#9670;&nbsp;</a></span>Panel() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -241,9 +245,48 @@ using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Constructs a <a class="el" href="classspk_1_1Panel.html" title="A user interface panel that can manage focus within the application.">Panel</a> with an optional parent widget. </p><dl class="params"><dt>Parameters</dt><dd>
+
+<p>Construct a new <a class="el" href="classspk_1_1Panel.html" title="A user interface panel that can manage focus within the application.">Panel</a> widget with a given parent. </p>
+<dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">p_parent</td><td>Pointer to the parent widget, which can be nullptr if the panel has no parent. </td></tr>
+    <tr><td class="paramname">p_parent</td><td>Pointer to the parent widget. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="ad2c293427f43f465dea937ff74c50acb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad2c293427f43f465dea937ff74c50acb">&#9670;&nbsp;</a></span>Panel() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">spk::Panel::Panel </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>p_name</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classspk_1_1Widget.html">spk::Widget</a> *&#160;</td>
+          <td class="paramname"><em>p_parent</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Construct a new <a class="el" href="classspk_1_1Panel.html" title="A user interface panel that can manage focus within the application.">Panel</a> widget with a specific name and a given parent. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_name</td><td>The desired name of the widget. </td></tr>
+    <tr><td class="paramname">p_parent</td><td>Pointer to the parent widget. </td></tr>
   </table>
   </dd>
 </dl>
