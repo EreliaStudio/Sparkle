@@ -18,10 +18,16 @@ namespace spk
     }
 
     TextLabel::TextLabel(Widget* p_parent) :
-        Widget(p_parent)
+        TextLabel("Anonymous TextLabel", p_parent)
     {
 
     }
+
+	TextLabel::TextLabel(const std::string& p_name, Widget* p_parent) :
+		spk::Widget(p_name, p_parent)
+	{
+		
+	}
 
     spk::WidgetComponent::TextLabel& TextLabel::label()
     {

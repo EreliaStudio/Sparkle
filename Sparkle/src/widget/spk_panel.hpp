@@ -41,6 +41,8 @@ namespace spk
          * @param p_parent Pointer to the parent widget, which can be nullptr if the panel has no parent.
          */
         Panel(spk::Widget* p_parent);
+		
+        Panel(const std::string& p_name, spk::Widget* p_parent);
 
         /**
          * Sets a callback function that is executed when this panel becomes active.

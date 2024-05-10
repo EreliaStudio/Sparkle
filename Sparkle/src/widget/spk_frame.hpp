@@ -44,6 +44,7 @@ namespace spk
          * @param p_parent The parent widget of this frame, defaulting to nullptr if not specified.
          */
         Frame(spk::Widget* p_parent);
+        Frame(const std::string& p_name, spk::Widget* p_parent);
 
         /**
          * Provides non-const access to the internal nine-sliced box component.

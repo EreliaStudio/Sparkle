@@ -65,7 +65,9 @@ namespace spk
          * Constructs a TextEntry widget with an optional parent.
          * @param p_parent Pointer to the parent widget, which can be nullptr if the text entry is standalone.
          */
-        TextEntry(Widget* p_parent = nullptr);
+        TextEntry(Widget* p_parent);
+
+        TextEntry(const std::string& p_name, Widget* p_parent);
 
         /**
          * Sets the placeholder text to be displayed when there is no user input.

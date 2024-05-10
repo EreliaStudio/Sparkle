@@ -41,16 +41,7 @@ namespace spk
         void _onUpdate() override;
 
     public:
-        /**
-         * @brief Constructs a GameEngineManager widget with a specified name.
-         *
-         * Initializes a new instance of GameEngineManager without attaching it to a parent widget. This constructor
-         * sets the name of the widget but does not immediately integrate it into the UI hierarchy. The GameEngine instance
-         * must be set separately using setGameEngine.
-         *
-         * @param p_name The name of the GameEngineManager widget, used for identification within the UI hierarchy.
-         */
-        GameEngineManager(const std::string& p_name);
+        GameEngineManager(Widget* p_parent);
 
         /**
          * @brief Constructs a GameEngineManager widget with a specified name and parent widget.

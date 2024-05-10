@@ -75,6 +75,8 @@ namespace spk
          */
         Button(Widget* p_parent);
 
+        Button(const std::string& p_name, Widget* p_parent);
+
         /**
          * @brief Sets the callback function to be called when the button is clicked.
          * @param p_onClickCallback The function to call on a button click.

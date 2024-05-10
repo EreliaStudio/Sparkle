@@ -54,7 +54,9 @@ namespace spk
          * Constructs a TextLabel widget with an optional parent widget.
          * @param p_parent The parent widget of this TextLabel, which can be nullptr if the label stands alone.
          */
-        TextLabel(Widget* p_parent = nullptr);
+        TextLabel(Widget* p_parent);
+		
+        TextLabel(const std::string& p_name, Widget* p_parent);
 
         /**
          * Provides non-const access to the internal TextLabel component.
