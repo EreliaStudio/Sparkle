@@ -48,12 +48,26 @@ namespace spk
     public:
         using Type = TType; //!< A redirection to the type stored inside the singleton
 
+		/**
+		 * @class Instanciator
+		 * @brief Utility class to manage the lifecycle of singleton instances within scope.
+		 *
+		 * This class is designed to automatically manage the references to the singleton instance.
+		 * It increments a reference count upon construction and decrements it upon destruction.
+		 * When the reference count reaches zero, the singleton instance is released.
+		 */
 		class Instanciator
 		{
 		private:
-			static inline size_t reference = 0;
+			static inline size_t reference = 0; //!< Static count of active references to the singleton.
 
 		public:
+			/**
+			 * @brief Constructor that instantiates the singleton if it is the first reference.
+			 *
+			 * @tparam Args Variadic template parameters to forward to the singleton's constructor.
+			 * @param p_args Arguments to pass to the singleton's constructor.
+			 */
 			template <typename... Args>
 			Instanciator(Args &&...p_args)
 			{
@@ -62,6 +76,9 @@ namespace spk
 				reference++;
 			}
 
+			/**
+			 * @brief Destructor that releases the singleton instance if this was the last reference.
+			 */
 			~Instanciator()
 			{
 				reference--;
@@ -69,6 +86,11 @@ namespace spk
 					Singleton<TType>::release();
 			}
 
+			/**
+			 * @brief Overloads the arrow operator to provide direct access to the singleton instance.
+			 *
+			 * @return A pointer to the singleton instance.
+			 */
 			std::unique_ptr<TType>& operator ->()
 			{
 				return (Singleton<TType>::instance());
