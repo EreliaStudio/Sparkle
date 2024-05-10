@@ -68,6 +68,11 @@ namespace spk
 				if (reference == 0)
 					Singleton<TType>::release();
 			}
+
+			std::unique_ptr<TType>& operator ->()
+			{
+				return (Singleton<TType>::instance());
+			}
 		};
           
 	protected:
