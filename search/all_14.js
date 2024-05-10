@@ -8,7 +8,7 @@ var searchData=
   ['unsubscribe_547',['unsubscribe',['../classspk_1_1GameEngine.html#a0ab2e7d884aa29e3ee5fcf59db75839b',1,'spk::GameEngine']]],
   ['up_548',['up',['../classspk_1_1Transform.html#a13753664b4bd0afeb2d460dd878a58ec',1,'spk::Transform']]],
   ['update_549',['update',['../classspk_1_1Input.html#a9a80a21e5413c84ec2230f994df05bb3',1,'spk::Input::update()'],['../classspk_1_1TimeManager.html#a3539f646e49a4d1193fea917f29e82a9',1,'spk::TimeManager::update()'],['../classspk_1_1Mouse.html#ac6ac1c7429fdc3e498a2aa6d09e3dffb',1,'spk::Mouse::update()'],['../classspk_1_1Keyboard.html#a63a243d7c2e1a559feb73565f9f0a45e',1,'spk::Keyboard::update()'],['../classspk_1_1GameEngine.html#a3845fb3a34e4c7b74cbaadab6478e2ac',1,'spk::GameEngine::update()'],['../classspk_1_1StateMachine.html#aef7fc2875bb342d989100df7fc64c541',1,'spk::StateMachine::update()']]],
-  ['updateactivechunks_550',['updateActiveChunks',['../classspk_1_1Tilemap2D.html#ab9830b9b2e5491d25bd581c2f5af16d6',1,'spk::Tilemap2D']]],
+  ['updateactivechunks_550',['updateActiveChunks',['../classspk_1_1ITilemap.html#a56273f827b75ecb6d07c0567ee851102',1,'spk::ITilemap']]],
   ['uploadtogpu_551',['uploadToGPU',['../classspk_1_1Font_1_1Atlas.html#a665bd3b81551ea25e3c6adff197a5a53',1,'spk::Font::Atlas::uploadToGPU()'],['../classspk_1_1Texture.html#a3b97971248c607df6def022bd0d2fb98',1,'spk::Texture::uploadToGPU()']]],
   ['uvanchor_552',['uvAnchor',['../classspk_1_1WidgetComponent_1_1TextureRenderer.html#a73d66f0afa2cfe47bedb652dbf0f09b6',1,'spk::WidgetComponent::TextureRenderer']]],
   ['uvs_553',['uvs',['../structspk_1_1Font_1_1Atlas_1_1GlyphData.html#a4971b265dd441116409f8c8ce55cf4da',1,'spk::Font::Atlas::GlyphData']]],

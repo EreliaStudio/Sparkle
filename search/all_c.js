@@ -16,7 +16,7 @@ var searchData=
   ['metric_276',['metric',['../classspk_1_1Profiler.html#a9b543749d5934e365b94439e2aee7972',1,'spk::Profiler']]],
   ['min_277',['min',['../classspk_1_1RandomGenerator.html#a873244e578c872984ca815e396eaabb1',1,'spk::RandomGenerator::min()'],['../structspk_1_1IVector2.html#a178a100da65b1885f43014022e0e131d',1,'spk::IVector2::min()'],['../structspk_1_1IVector3.html#ab0b488197588960ff2d3dde6fc7e9233',1,'spk::IVector3::min()'],['../classspk_1_1IAnalyticalMetric.html#a29128d3ab1668b0fa291f54b8e1ee3be',1,'spk::IAnalyticalMetric::min()']]],
   ['mipmap_278',['Mipmap',['../classspk_1_1Texture.html#a9be80f73057f23771837c6a457ad1e37',1,'spk::Texture']]],
-  ['missingchunks_279',['missingChunks',['../classspk_1_1Tilemap2D.html#ac3fedf3632d6f6b34b920eabe773f0c9',1,'spk::Tilemap2D']]],
+  ['missingchunks_279',['missingChunks',['../classspk_1_1ITilemap.html#ac48d83ecad629d0550d657112fbfba74',1,'spk::ITilemap']]],
   ['mode_280',['Mode',['../classspk_1_1OpenGL_1_1VertexBufferObject.html#a8ed706ed04e550c6deca58ad9a77d90e',1,'spk::OpenGL::VertexBufferObject::Mode()'],['../classspk_1_1Application.html#a8e73cb5742cdf022f05cf18cc8a76dc1',1,'spk::Application::Mode()']]],
   ['mouse_281',['mouse',['../classspk_1_1Application.html#a197bb09428fd2f405fd1e38cc030c0ac',1,'spk::Application']]],
   ['mouse_282',['Mouse',['../classspk_1_1Mouse.html#a64dd25a9b4c429e82a180bfee7b67601',1,'spk::Mouse::Mouse()'],['../classspk_1_1Mouse.html',1,'spk::Mouse']]],

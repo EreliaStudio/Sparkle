@@ -12,7 +12,7 @@ var searchData=
   ['seed_418',['seed',['../classspk_1_1IPerlin.html#a0767d24a26e399c8ac456d39c292e408',1,'spk::IPerlin']]],
   ['set_419',['set',['../classspk_1_1JSON_1_1Object.html#a0c37111c20936c44f2b64773dbaa2246',1,'spk::JSON::Object::set(const TType &amp;p_value)'],['../classspk_1_1JSON_1_1Object.html#a0c37111c20936c44f2b64773dbaa2246',1,'spk::JSON::Object::set(const TType &amp;p_value)']]],
   ['setactivationcallback_420',['setActivationCallback',['../classspk_1_1ActivateObject.html#af32ed944ac8b81380090d8cbf611de21',1,'spk::ActivateObject']]],
-  ['setactivechunkrange_421',['setActiveChunkRange',['../classspk_1_1Tilemap2D.html#a7c8136414f5094314c20b2a3d710dd60',1,'spk::Tilemap2D']]],
+  ['setactivechunkrange_421',['setActiveChunkRange',['../classspk_1_1ITilemap.html#a6b19e8fda34ff6a81fb8634bbb774fdd',1,'spk::ITilemap']]],
   ['setasactiveapplication_422',['setAsActiveApplication',['../classspk_1_1Application.html#ac4c5feab907afb97784a1e4d9015b03c',1,'spk::Application']]],
   ['setasarray_423',['setAsArray',['../classspk_1_1JSON_1_1Object.html#a47453923b2bb7a472691d19f3d60fd89',1,'spk::JSON::Object']]],
   ['setasmaincamera_424',['setAsMainCamera',['../classspk_1_1Camera.html#a27dee266b696e321e3cf3a9880b410c9',1,'spk::Camera::setAsMainCamera()'],['../classspk_1_1CameraComponent.html#a72293b48721734609ef81f79fb98b0bd',1,'spk::CameraComponent::setAsMainCamera()']]],

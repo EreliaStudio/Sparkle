@@ -142,6 +142,19 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a6cf975e1d251347f367677fe3c46bf17"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1ITilemap.html#a6cf975e1d251347f367677fe3c46bf17">deactivateChunk</a> (const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2Int</a> &amp;p_chunkPosition)</td></tr>
 <tr class="memdesc:a6cf975e1d251347f367677fe3c46bf17"><td class="mdescLeft">&#160;</td><td class="mdescRight">Deactivates the chunk at the specified position.  <a href="classspk_1_1ITilemap.html#a6cf975e1d251347f367677fe3c46bf17">More...</a><br /></td></tr>
 <tr class="separator:a6cf975e1d251347f367677fe3c46bf17"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6b19e8fda34ff6a81fb8634bbb774fdd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1ITilemap.html#a6b19e8fda34ff6a81fb8634bbb774fdd">setActiveChunkRange</a> (const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2Int</a> &amp;p_activeChunkStart, const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2Int</a> &amp;p_activeChunkEnd)</td></tr>
+<tr class="memdesc:a6b19e8fda34ff6a81fb8634bbb774fdd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the range of active chunks in the tilemap, defining the area that should be updated and rendered.  <a href="classspk_1_1ITilemap.html#a6b19e8fda34ff6a81fb8634bbb774fdd">More...</a><br /></td></tr>
+<tr class="separator:a6b19e8fda34ff6a81fb8634bbb774fdd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a107095a766c675870f7a5eb02f7d6e4e"><td class="memItemLeft" align="right" valign="top">const std::vector&lt; <a class="el" href="classspk_1_1ITilemap_1_1IChunk.html">IChunk</a> * &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1ITilemap.html#a107095a766c675870f7a5eb02f7d6e4e">activeChunks</a> () const</td></tr>
+<tr class="memdesc:a107095a766c675870f7a5eb02f7d6e4e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Return the list of active chunks.  <a href="classspk_1_1ITilemap.html#a107095a766c675870f7a5eb02f7d6e4e">More...</a><br /></td></tr>
+<tr class="separator:a107095a766c675870f7a5eb02f7d6e4e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac48d83ecad629d0550d657112fbfba74"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structspk_1_1IVector2.html">spk::Vector2Int</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1ITilemap.html#ac48d83ecad629d0550d657112fbfba74">missingChunks</a> () const</td></tr>
+<tr class="memdesc:ac48d83ecad629d0550d657112fbfba74"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculates which chunks are missing within the active range and should be loaded or generated.  <a href="classspk_1_1ITilemap.html#ac48d83ecad629d0550d657112fbfba74">More...</a><br /></td></tr>
+<tr class="separator:ac48d83ecad629d0550d657112fbfba74"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a56273f827b75ecb6d07c0567ee851102"><td class="memItemLeft" align="right" valign="top"><a id="a56273f827b75ecb6d07c0567ee851102"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1ITilemap.html#a56273f827b75ecb6d07c0567ee851102">updateActiveChunks</a> ()</td></tr>
+<tr class="memdesc:a56273f827b75ecb6d07c0567ee851102"><td class="mdescLeft">&#160;</td><td class="mdescRight">Updates the active status of chunks within the specified range, activating or deactivating them as needed. <br /></td></tr>
+<tr class="separator:a56273f827b75ecb6d07c0567ee851102"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_methods_classspk_1_1GameObject"><td colspan="2" onclick="javascript:toggleInherit('pub_methods_classspk_1_1GameObject')"><img src="closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="classspk_1_1GameObject.html">spk::GameObject</a></td></tr>
 <tr class="memitem:a0b5a39e788a3ba24a921eead254155d5 inherit pub_methods_classspk_1_1GameObject"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1GameObject.html#a0b5a39e788a3ba24a921eead254155d5">GameObject</a> (const std::string &amp;p_name=&quot;Unnamed&quot;)</td></tr>
 <tr class="memdesc:a0b5a39e788a3ba24a921eead254155d5 inherit pub_methods_classspk_1_1GameObject"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructs a <a class="el" href="classspk_1_1GameObject.html" title="Represents a game object in the game engine hierarchy.">GameObject</a> with a specified name.  <a href="classspk_1_1GameObject.html#a0b5a39e788a3ba24a921eead254155d5">More...</a><br /></td></tr>
@@ -374,6 +387,36 @@ template&lt;typename TNodeIndexType , size_t TSizeX, size_t TSizeY, size_t TSize
   </table>
   </dd>
 </dl>
+
+</div>
+</div>
+<a id="a107095a766c675870f7a5eb02f7d6e4e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a107095a766c675870f7a5eb02f7d6e4e">&#9670;&nbsp;</a></span>activeChunks()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename TNodeIndexType , size_t TSizeX, size_t TSizeY, size_t TSizeZ&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::vector&lt;<a class="el" href="classspk_1_1ITilemap_1_1IChunk.html">IChunk</a>*&gt;&amp; <a class="el" href="classspk_1_1ITilemap.html">spk::ITilemap</a>&lt; TNodeIndexType, TSizeX, TSizeY, TSizeZ &gt;::activeChunks </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Return the list of active chunks. </p>
+<dl class="section return"><dt>Returns</dt><dd>The list of active chunk </dd></dl>
 
 </div>
 </div>
@@ -737,6 +780,36 @@ template&lt;typename TNodeIndexType , size_t TSizeX, size_t TSizeY, size_t TSize
 
 </div>
 </div>
+<a id="ac48d83ecad629d0550d657112fbfba74"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac48d83ecad629d0550d657112fbfba74">&#9670;&nbsp;</a></span>missingChunks()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename TNodeIndexType , size_t TSizeX, size_t TSizeY, size_t TSizeZ&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;<a class="el" href="structspk_1_1IVector2.html">spk::Vector2Int</a>&gt; <a class="el" href="classspk_1_1ITilemap.html">spk::ITilemap</a>&lt; TNodeIndexType, TSizeX, TSizeY, TSizeZ &gt;::missingChunks </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Calculates which chunks are missing within the active range and should be loaded or generated. </p>
+<dl class="section return"><dt>Returns</dt><dd>A vector containing the positions of the missing chunks. </dd></dl>
+
+</div>
+</div>
 <a id="a6d5b88ecd5e204b60683217187c69b9e"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a6d5b88ecd5e204b60683217187c69b9e">&#9670;&nbsp;</a></span>rebakeChunk()</h2>
 
@@ -805,6 +878,53 @@ template&lt;typename TNodeIndexType , size_t TSizeX, size_t TSizeY, size_t TSize
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">p_folderPath</td><td>The path to the folder where the chunks should be saved. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a6b19e8fda34ff6a81fb8634bbb774fdd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6b19e8fda34ff6a81fb8634bbb774fdd">&#9670;&nbsp;</a></span>setActiveChunkRange()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename TNodeIndexType , size_t TSizeX, size_t TSizeY, size_t TSizeZ&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void <a class="el" href="classspk_1_1ITilemap.html">spk::ITilemap</a>&lt; TNodeIndexType, TSizeX, TSizeY, TSizeZ &gt;::setActiveChunkRange </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2Int</a> &amp;&#160;</td>
+          <td class="paramname"><em>p_activeChunkStart</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2Int</a> &amp;&#160;</td>
+          <td class="paramname"><em>p_activeChunkEnd</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Sets the range of active chunks in the tilemap, defining the area that should be updated and rendered. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_activeChunkStart</td><td>The starting position of the active chunk range. </td></tr>
+    <tr><td class="paramname">p_activeChunkEnd</td><td>The ending position of the active chunk range. </td></tr>
   </table>
   </dd>
 </dl>
