@@ -299,6 +299,10 @@ namespace spk
 	private:
 		std::map<spk::Vector2Int, std::unique_ptr<IChunk>> _chunks;
 
+		spk::Vector2Int _activeChunkStart;
+		spk::Vector2Int _activeChunkEnd;
+		std::vector<IChunk*> _activeChunks;
+
 		virtual IChunk* _instanciateNewChunk(const spk::Vector2Int& p_chunkPosition) = 0;
 
 	protected:
@@ -511,6 +515,86 @@ namespace spk
 		void deactivateChunk(const spk::Vector2Int& p_chunkPosition)
 		{
 			_chunks[p_chunkPosition]->deactivate();
+		}
+
+		/**
+		 * @brief Sets the range of active chunks in the tilemap, defining the area that should be updated and rendered.
+		 *
+		 * @param p_activeChunkStart The starting position of the active chunk range.
+		 * @param p_activeChunkEnd The ending position of the active chunk range.
+		 */
+		void setActiveChunkRange(const spk::Vector2Int& p_activeChunkStart, const spk::Vector2Int& p_activeChunkEnd)
+		{
+			_activeChunkStart = p_activeChunkStart;
+			_activeChunkEnd = p_activeChunkEnd;
+		}
+
+		/**
+		 * @brief Return the list of active chunks
+		 * 
+		 * @return The list of active chunk
+		*/
+		const std::vector<IChunk*>& activeChunks() const
+		{
+			return (_activeChunks);
+		}
+
+		/**
+		 * @brief Calculates which chunks are missing within the active range and should be loaded or generated.
+		 *
+		 * @return A vector containing the positions of the missing chunks.
+		 */
+		std::vector<spk::Vector2Int> missingChunks() const
+		{
+			std::vector<spk::Vector2Int> result;
+
+			for (int x = _activeChunkStart.x; x <= _activeChunkEnd.x; x++)
+			{
+				for (int y = _activeChunkStart.y; y <= _activeChunkEnd.y; y++)
+				{
+					spk::Vector2Int chunkPosition = spk::Vector2Int(x, y);
+					if (containsChunk(chunkPosition) == false)
+						result.push_back(chunkPosition);
+				}
+			}
+
+			return (result);
+		}
+
+		/**
+		 * @brief Updates the active status of chunks within the specified range, activating or deactivating them as needed.
+		 */
+		void updateActiveChunks()
+		{
+			std::vector<IChunk*> chunksToActivate;
+
+			for (int x = _activeChunkStart.x; x <= _activeChunkEnd.x; x++)
+			{
+				for (int y = _activeChunkStart.y; y <= _activeChunkEnd.y; y++)
+				{
+					IChunk* chunkToActivate = chunk(spk::Vector2Int(x, y));
+
+					if (chunkToActivate != nullptr)
+					{
+						chunksToActivate.push_back(chunkToActivate);
+					}
+				}
+			}
+
+			for (auto& element : _activeChunks)
+			{
+				if (std::find(chunksToActivate.begin(), chunksToActivate.end(), element) == chunksToActivate.end())
+					element->deactivate();
+			}
+
+			_activeChunks = chunksToActivate;
+			for (auto& element : _activeChunks)
+			{
+				if (element->isActive() == false)
+				{
+					element->activate();
+				}
+			}
 		}
 	};
 }
