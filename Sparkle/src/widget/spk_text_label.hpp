@@ -50,11 +50,18 @@ namespace spk
         void _onRender() override;
 
     public:
-        /**
-         * Constructs a TextLabel widget with an optional parent widget.
-         * @param p_parent The parent widget of this TextLabel, which can be nullptr if the label stands alone.
-         */
-        TextLabel(Widget* p_parent = nullptr);
+		/**
+		 * @brief Construct a new TextLabel widget with a given parent.
+         * @param p_parent Pointer to the parent widget.
+		*/
+        TextLabel(Widget* p_parent);
+		
+		/**
+		 * @brief Construct a new TextLabel widget with a specific name and a given parent.
+		 * @param p_name The desired name of the widget.
+         * @param p_parent Pointer to the parent widget.
+		*/
+        TextLabel(const std::string& p_name, Widget* p_parent);
 
         /**
          * Provides non-const access to the internal TextLabel component.

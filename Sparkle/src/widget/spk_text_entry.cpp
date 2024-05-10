@@ -184,8 +184,8 @@ namespace spk
 		}
 	}
 
-    TextEntry::TextEntry(Widget* p_parent) :
-        Widget(p_parent),
+    TextEntry::TextEntry(const std::string& p_name, Widget* p_parent) :
+        Widget(p_name, p_parent),
 		_isSelected(false),
 		_currentCursorPosition(0),
 		_inputs(
@@ -203,6 +203,12 @@ namespace spk
 		_isTextEdited(true)
     {
 		_cursorBox.setColor(spk::Color(10, 10, 10, 255));
+    }
+
+    TextEntry::TextEntry(Widget* p_parent) :
+        TextEntry("Anonymous TextEntry", p_parent)
+    {
+
     }
 
 	void TextEntry::setPlaceholder(const std::string& p_placeholderText)

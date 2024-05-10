@@ -14,6 +14,12 @@ namespace spk
 	}
 
 	Frame::Frame(spk::Widget* p_parent) :
+		Frame("Anonymous Frame", p_parent)
+	{
+
+	}
+
+	Frame::Frame(const std::string& p_name, spk::Widget* p_parent) :
 		spk::Widget(p_parent)
 	{
 

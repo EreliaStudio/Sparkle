@@ -4,7 +4,7 @@ int main()
 {
     spk::Application app = spk::Application("Playground", spk::Vector2UInt(800, 800), spk::Application::Mode::Monothread);
 
-    spk::TextEntry entry;
+    spk::TextEntry entry(nullptr);
     entry.setGeometry(100, spk::Vector2Int(150, 50));
     entry.activate();
 
