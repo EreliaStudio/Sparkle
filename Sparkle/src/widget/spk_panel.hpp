@@ -36,12 +36,17 @@ namespace spk
         std::function<void()> _onPanelActivationCallback; ///< Callback function executed when this panel is activated.
 
     public:
-        /**
-         * Constructs a Panel with an optional parent widget.
-         * @param p_parent Pointer to the parent widget, which can be nullptr if the panel has no parent.
-         */
+		/**
+		 * @brief Construct a new Panel widget with a given parent.
+         * @param p_parent Pointer to the parent widget.
+		*/
         Panel(spk::Widget* p_parent);
 		
+		/**
+		 * @brief Construct a new Panel widget with a specific name and a given parent.
+		 * @param p_name The desired name of the widget.
+         * @param p_parent Pointer to the parent widget.
+		*/
         Panel(const std::string& p_name, spk::Widget* p_parent);
 
         /**

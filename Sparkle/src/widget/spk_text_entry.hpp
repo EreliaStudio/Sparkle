@@ -61,12 +61,17 @@ namespace spk
         void _onUpdate() override; ///< Update method to handle logic per frame.
 
     public:
-        /**
-         * Constructs a TextEntry widget with an optional parent.
-         * @param p_parent Pointer to the parent widget, which can be nullptr if the text entry is standalone.
-         */
+		/**
+		 * @brief Construct a new TextEntry widget with a given parent.
+         * @param p_parent Pointer to the parent widget.
+		*/
         TextEntry(Widget* p_parent);
 
+		/**
+		 * @brief Construct a new TextEntry widget with a specific name and a given parent.
+		 * @param p_name The desired name of the widget.
+         * @param p_parent Pointer to the parent widget.
+		*/
         TextEntry(const std::string& p_name, Widget* p_parent);
 
         /**

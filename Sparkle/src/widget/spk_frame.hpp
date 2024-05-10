@@ -40,10 +40,16 @@ namespace spk
 
     public:
         /**
-         * Constructs a Frame widget with an optional parent.
-         * @param p_parent The parent widget of this frame, defaulting to nullptr if not specified.
+         * Constructs a Frame widget with a given parent.
+         * @param p_parent The parent widget of this frame.
          */
         Frame(spk::Widget* p_parent);
+
+        /**
+         * Constructs a Frame widget with a specific name and a given parent.
+		 * @param p_name The desired name of the widget.
+         * @param p_parent The parent widget of this frame.
+         */
         Frame(const std::string& p_name, spk::Widget* p_parent);
 
         /**
