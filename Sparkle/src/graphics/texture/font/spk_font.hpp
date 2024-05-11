@@ -338,6 +338,10 @@ namespace spk
          */
         Font(const std::filesystem::path& p_path);
 
+		Vector2Int computeCharSize(const wchar_t& p_char, size_t p_size, size_t p_outlineSize);
+		Vector2Int computeStringSize(const std::string& p_string, size_t p_size, size_t p_outlineSize);
+		size_t computeOptimalTextSize(const std::string& p_string, size_t p_outlineSize, Vector2Int p_textArea);
+
         /**
          * @brief Retrieves or creates an Atlas with specified font size, outline size, and outline style.
          *

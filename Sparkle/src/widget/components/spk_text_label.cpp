@@ -223,24 +223,6 @@ namespace spk::WidgetComponent
         _renderingObject.render();
     }
 
-    spk::Vector2UInt TextLabel::calculateTextArea() const
-    {
-        const spk::Font::Atlas* tmpFontAtlas = &(_font->atlas(_textSize, _outlineSize, _outlineStyle));
-
-        RenderingData renderingData = _computeRenderingData(tmpFontAtlas, _text);
-
-        return (renderingData.size);
-    }
-    
-    spk::Vector2UInt TextLabel::calculateTextArea(const std::string& p_string) const
-    {
-        const spk::Font::Atlas* tmpFontAtlas = &(_font->atlas(_textSize, _outlineSize, _outlineStyle));
-
-        RenderingData renderingData = _computeRenderingData(tmpFontAtlas, p_string);
-
-        return (renderingData.size);
-    }
-
     void TextLabel::setFont(spk::Font* p_font)
     {
         _font = p_font;
@@ -312,4 +294,44 @@ namespace spk::WidgetComponent
     {
         return (_text);
     }
+
+	spk::Font* TextLabel::font() const
+    {
+		return (_font);
+	}
+
+	size_t TextLabel::textSize() const
+	{
+		return (_textSize);
+	}
+
+	const spk::Color& TextLabel::textColor() const
+	{
+		return (_textColor);
+	}
+
+	const spk::Font::OutlineStyle& TextLabel::outlineStyle() const
+	{
+		return (_outlineStyle);
+	}
+
+	size_t TextLabel::outlineSize() const
+	{
+		return (_outlineSize);
+	}
+
+	const spk::Color& TextLabel::outlineColor() const
+	{
+		return (_outlineColor);
+	}
+
+	const VerticalAlignment& TextLabel::verticalAlignment() const
+	{
+		return (_verticalAlignment);
+	}
+
+	const HorizontalAlignment& TextLabel::horizontalAlignment() const
+	{
+		return (_horizontalAlignment);
+	}
 }
