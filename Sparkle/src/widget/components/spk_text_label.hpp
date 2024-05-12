@@ -133,6 +133,8 @@ namespace spk::WidgetComponent
          */
         void render();
 
+		size_t computeOptimalTextSize(const spk::Vector2Int& p_desiredArea);
+
         /**
          * @brief Sets the font used for rendering the text.
          *

@@ -223,6 +223,14 @@ namespace spk::WidgetComponent
         _renderingObject.render();
     }
 
+
+	size_t TextLabel::computeOptimalTextSize(const spk::Vector2Int& p_desiredArea)
+	{
+		size_t result = _font->computeOptimalTextSize(_text, _outlineSize, _outlineStyle, p_desiredArea);
+		
+		return (result);
+	}
+
     void TextLabel::setFont(spk::Font* p_font)
     {
         _font = p_font;
