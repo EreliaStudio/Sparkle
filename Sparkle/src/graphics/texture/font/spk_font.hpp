@@ -274,6 +274,9 @@ namespace spk
              */
             Atlas(const std::vector<uint8_t>& p_fontData, const Configuration& p_fontConfiguration, const Key& p_key);
 
+			Vector2Int computeCharSize(const wchar_t& p_char) const;
+			Vector2Int computeStringSize(const std::string& p_string) const;
+
             /**
              * @brief Retrieves the GlyphData for a specified character.
              *
@@ -338,9 +341,9 @@ namespace spk
          */
         Font(const std::filesystem::path& p_path);
 
-		Vector2Int computeCharSize(const wchar_t& p_char, size_t p_size, size_t p_outlineSize);
-		Vector2Int computeStringSize(const std::string& p_string, size_t p_size, size_t p_outlineSize);
-		size_t computeOptimalTextSize(const std::string& p_string, size_t p_outlineSize, Vector2Int p_textArea);
+		Vector2Int computeCharSize(const wchar_t& p_char, size_t p_size, size_t p_outlineSize, const spk::Font::OutlineStyle& p_outlineStyle);
+		Vector2Int computeStringSize(const std::string& p_string, size_t p_size, size_t p_outlineSize, const spk::Font::OutlineStyle& p_outlineStyle);
+		size_t computeOptimalTextSize(const std::string& p_string, size_t p_outlineSize, const spk::Font::OutlineStyle& p_outlineStyle, const Vector2Int& p_textArea);
 
         /**
          * @brief Retrieves or creates an Atlas with specified font size, outline size, and outline style.
@@ -377,3 +380,5 @@ namespace spk
         Atlas& atlas(const size_t& p_fontSize, const size_t& p_outlineSize, const OutlineStyle& p_outlineStype);
     };
 }
+
+std::ostream& operator << (std::ostream& p_os, const spk::Font::OutlineStyle& p_outlineStyle);

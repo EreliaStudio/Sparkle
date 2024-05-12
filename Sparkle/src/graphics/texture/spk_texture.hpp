@@ -212,5 +212,7 @@ namespace spk
 		 * If the texture has been uploaded to the GPU, this method releases the allocated GPU memory. This is useful for managing resources explicitly, especially in applications where textures are frequently created and destroyed.
 		 */
 		void releaseGPUMemory();
+
+		const GLint ID() const;
 	};
 }

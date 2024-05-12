@@ -77,7 +77,7 @@ namespace spk::WidgetComponent
         {
             std::vector<const spk::Font::Atlas::GlyphData*> glyphs;
             spk::Vector2Int anchorOffset = spk::Vector2Int(0, 0);
-            spk::Vector2UInt size = spk::Vector2UInt(0, 0);
+            spk::Vector2Int size = spk::Vector2Int(0, 0);
         };
 
         static const std::string _renderingPipelineCode;

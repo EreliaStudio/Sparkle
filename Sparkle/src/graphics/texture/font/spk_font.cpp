@@ -23,14 +23,13 @@ namespace spk
 		_fontConfiguration = Configuration(p_path.string(), _fontData);
 	}
 
-	Vector2Int Font::computeCharSize(const wchar_t& p_char, size_t p_size, size_t p_outlineSize)
+	Vector2Int Font::Atlas::computeCharSize(const wchar_t& p_char) const
 	{
-		const Atlas& atlasRef = atlas(p_size, p_outlineSize, OutlineStyle::Standard);
-		const Atlas::GlyphData& glyphData = atlasRef[p_char];
+		const GlyphData& glyphData = this->operator[](p_char);
 		return Vector2Int(glyphData.size.x, glyphData.size.y);
 	}
 
-	Vector2Int Font::computeStringSize(const std::string& p_string, size_t p_size, size_t p_outlineSize)
+	Vector2Int Font::Atlas::computeStringSize(const std::string& p_string) const
 	{
 		int totalWidth = 0;
 		int maxHeight = 0;
@@ -38,18 +37,28 @@ namespace spk
 
 		for (char ch : p_string)
 		{
-			Vector2Int charSize = computeCharSize(ch, p_size, p_outlineSize);
-			totalWidth += charSize.x;
+			const Atlas::GlyphData& glyphData = this->operator[](ch);
+			totalWidth += glyphData.step.x;
 			
-			maxHeight = std::max(maxHeight, charSize.y);
-			minHeight = std::min(minHeight, 0);
+			maxHeight = std::max(maxHeight, glyphData.position[4].y);
+			minHeight = std::min(minHeight, glyphData.position[0].y);
 		}
 
 		int totalHeight = maxHeight - minHeight;
 		return Vector2Int(totalWidth, totalHeight);
 	}
 
-	size_t Font::computeOptimalTextSize(const std::string& p_string, size_t p_outlineSize, Vector2Int p_textArea)
+	Vector2Int Font::computeCharSize(const wchar_t& p_char, size_t p_size, size_t p_outlineSize, const spk::Font::OutlineStyle& p_outlineStyle)
+	{
+		return (atlas(p_size, p_outlineSize, p_outlineStyle).computeCharSize(p_char));
+	}
+
+	Vector2Int Font::computeStringSize(const std::string& p_string, size_t p_size, size_t p_outlineSize, const spk::Font::OutlineStyle& p_outlineStyle)
+	{
+		return (atlas(p_size, p_outlineSize, p_outlineStyle).computeStringSize(p_string));
+	}
+
+	size_t Font::computeOptimalTextSize(const std::string& p_string, size_t p_outlineSize, const spk::Font::OutlineStyle& p_outlineStyle, const Vector2Int& p_textArea)
 	{
 		std::vector<int> deltas = { 100, 50, 20, 10, 1 };
 		size_t result = 2;
@@ -62,11 +71,15 @@ namespace spk
 			bool enough = false;
 			while (enough == false)
 			{
-				Vector2Int tmp_size = computeStringSize(p_string, result + deltas[i], p_outlineSize);
+				Vector2Int tmp_size = computeStringSize(p_string, result + deltas[i], p_outlineSize, p_outlineStyle);
 				if (tmp_size.x >= p_textArea.x || tmp_size.y >= p_textArea.y)
+				{
 					enough = true;
+				}
 				else
+				{
 					result += deltas[i];
+				}
 			}
 		}
 		return (result);
@@ -90,5 +103,24 @@ namespace spk
 			_fontAtlas.emplace(tmpKey, std::move(Atlas(_fontData, _fontConfiguration, tmpKey)));
 		}
 		return _fontAtlas[tmpKey];
+	}
+}
+
+std::ostream& operator << (std::ostream& p_os, const spk::Font::OutlineStyle& p_outlineStyle)
+{
+	switch (p_outlineStyle)
+	{
+		case spk::Font::OutlineStyle::Manhattan:
+			p_os << "Manhattan"; return (p_os);
+		case spk::Font::OutlineStyle::Pixelized:
+			p_os << "Pixelized"; return (p_os);
+		case spk::Font::OutlineStyle::SharpEdge:
+			p_os << "SharpEdge"; return (p_os);
+		case spk::Font::OutlineStyle::Standard:
+			p_os << "Standard"; return (p_os);
+		case spk::Font::OutlineStyle::None:
+			p_os << "None"; return (p_os);
+		default:
+			p_os << "Unknown outline style"; return (p_os);
 	}
 }

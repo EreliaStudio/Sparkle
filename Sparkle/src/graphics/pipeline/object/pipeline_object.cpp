@@ -36,7 +36,7 @@ namespace spk
 			attribute.activate();
 		}
 
-		_pipeline->launch(_storage.nbTriangles());
+		_pipeline->launch(_storage.nbVertices());
 
 		_storage.deactivate();
 		_vao.deactivate();
@@ -69,5 +69,10 @@ namespace spk
 		if (_attributes.contains(p_attributeName) == false)
 			throwException("Attribute [" + p_attributeName + "] doesn't exist");
 		return (_attributes.at(p_attributeName));
+	}
+
+	const Pipeline::Object::Storage& Pipeline::Object::storage() const
+	{
+		return (_storage);
 	}
 }

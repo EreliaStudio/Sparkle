@@ -83,6 +83,8 @@ namespace spk
          */
         Color operator-(const Color& p_color) const;
 
+		friend std::ostream& operator << (std::ostream& p_os, const spk::Color& p_color);
+
         static const Color red;     //!< red
         static const Color blue;    //!< blue
         static const Color green;   //!< green
@@ -97,5 +99,6 @@ namespace spk
         static const Color grey;    //!< grey(not a color)
 
         static const std::vector<Color> values; //!< Some constant colors.
+
     };
 }

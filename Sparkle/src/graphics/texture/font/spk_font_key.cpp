@@ -7,7 +7,8 @@ namespace spk
 		outlineSize(p_outlineSize),
 		outlineStyle(p_outlineStyle)
 	{
-		
+		if (p_outlineStyle == Font::OutlineStyle::None)
+			outlineSize = 0;
 	}
 
 	bool Font::Key::operator<(const Key &p_other) const

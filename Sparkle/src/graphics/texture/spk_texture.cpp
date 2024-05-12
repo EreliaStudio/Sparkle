@@ -109,4 +109,9 @@ namespace spk
 		glActiveTexture(0);
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
+
+	const GLint Texture::ID() const
+	{
+		return (_textureID);
+	}
 }

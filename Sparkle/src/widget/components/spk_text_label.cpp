@@ -100,7 +100,7 @@ namespace spk::WidgetComponent
             if (topLeftCorner.y > glyphData.position[0].y)
                 topLeftCorner.y = glyphData.position[0].y;
 
-            downRightCorner.x += glyphData.step.x;
+			downRightCorner.x += glyphData.position[4].x;
 
             result.glyphs.push_back(&glyphData);
         }
@@ -200,7 +200,7 @@ namespace spk::WidgetComponent
                 _bufferRenderingPipelineIndexes.push_back(baseIndexes + spk::Font::Atlas::GlyphData::indexesOrder[i]);
             }
         }
-
+		
         _renderingObject.setVertices(_bufferShaderInput);
         _renderingObject.setIndexes(_bufferRenderingPipelineIndexes);
     }
@@ -256,6 +256,7 @@ namespace spk::WidgetComponent
 
     void TextLabel::setTextColor(const spk::Color& p_textColor)
     {
+		_textColor = p_textColor;
         _textColorAttributeElement = p_textColor;
         _renderingObjectTextRendererAttribute.update();
     }
@@ -274,6 +275,7 @@ namespace spk::WidgetComponent
 
     void TextLabel::setOutlineColor(const spk::Color& p_outlineColor)
     {
+		_outlineColor = p_outlineColor;
         _outlineColorAttributeElement = p_outlineColor;
         _renderingObjectTextRendererAttribute.update();
     }

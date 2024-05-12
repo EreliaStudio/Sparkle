@@ -506,6 +506,8 @@ namespace spk
                  */
                 size_t nbTriangles() const;
 
+                size_t nbVertices() const;
+
                 /**
                  * @brief Activates this Storage object, making it the current target for rendering operations.
                  */
@@ -691,6 +693,8 @@ namespace spk
              * @return A reference to the specified Attribute object, allowing for its value to be set.
              */
             Attribute& attribute(const std::string& p_attributeName);
+
+			const Storage& storage() const;
         };
 
         /**
