@@ -27,7 +27,7 @@ namespace spk
 		_stateMachine.update();
 	}
 
-	Button::Button(Widget* p_parent) :
+	Button::Button(const std::string& p_name, Widget* p_parent) :
 		Widget(p_parent),
 		_onClickCallback(nullptr),
 		_stateMachine()
@@ -63,6 +63,12 @@ namespace spk
 			));
 
 		_stateMachine.enterState(State::Released);
+	}
+
+	Button::Button(Widget* p_parent) :
+		Button("Anonymous Button", p_parent)
+	{
+
 	}
 
 	void Button::setOnClickCallback(const Callback p_onClickCallback)

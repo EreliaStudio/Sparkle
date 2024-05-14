@@ -182,7 +182,7 @@ namespace spk::WidgetComponent
 
         for (const spk::Font::Atlas::GlyphData* glyphData : renderingData.glyphs)
         {
-            unsigned int baseIndexes = _bufferShaderInput.size();
+            unsigned int baseIndexes = static_cast<unsigned int>(_bufferShaderInput.size());
 
             for (size_t i = 0; i < 4; i++)
             {

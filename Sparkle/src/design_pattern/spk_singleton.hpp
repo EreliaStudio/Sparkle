@@ -45,27 +45,76 @@ namespace spk
 	template <typename TType>
 	class Singleton
 	{
-     public:
-          using Type = TType; //!< A redirection to the type stored inside the singleton
+    public:
+        using Type = TType; //!< A redirection to the type stored inside the singleton
+
+		/**
+		 * @class Instanciator
+		 * @brief Utility class to manage the lifecycle of singleton instances within scope.
+		 *
+		 * This class is designed to automatically manage the references to the singleton instance.
+		 * It increments a reference count upon construction and decrements it upon destruction.
+		 * When the reference count reaches zero, the singleton instance is released.
+		 */
+		class Instanciator
+		{
+		private:
+			static inline size_t reference = 0; //!< Static count of active references to the singleton.
+
+		public:
+			/**
+			 * @brief Constructor that instantiates the singleton if it is the first reference.
+			 *
+			 * @tparam Args Variadic template parameters to forward to the singleton's constructor.
+			 * @param p_args Arguments to pass to the singleton's constructor.
+			 */
+			template <typename... Args>
+			Instanciator(Args &&...p_args)
+			{
+				if (reference == 0)
+					Singleton<TType>::instanciate(std::forward<Args>(p_args)...);
+				reference++;
+			}
+
+			/**
+			 * @brief Destructor that releases the singleton instance if this was the last reference.
+			 */
+			~Instanciator()
+			{
+				reference--;
+				if (reference == 0)
+					Singleton<TType>::release();
+			}
+
+			/**
+			 * @brief Overloads the arrow operator to provide direct access to the singleton instance.
+			 *
+			 * @return A pointer to the singleton instance.
+			 */
+			std::unique_ptr<TType>& operator ->()
+			{
+				return (Singleton<TType>::instance());
+			}
+		};
           
 	protected:
 		/**
-           * @brief Protected constructor.
-           * 
-           * Prevents direct creation of the singleton instance from outside the class, ensuring the singleton pattern is enforced.
-           */
-          Singleton()
-          {
-               
-          }
+		 * @brief Protected constructor.
+		 * 
+		 * Prevents direct creation of the singleton instance from outside the class, ensuring the singleton pattern is enforced.
+		 */
+		Singleton()
+		{
+			
+		}
 
-          /**
-           * @brief Static unique pointer to the singleton instance.
-           * 
-           * This pointer manages the lifetime of the singleton instance. It ensures that there is only one instance of the
-           * singleton class at any time and provides automatic cleanup.
-           */
-          static inline std::unique_ptr<TType> _instance = nullptr;
+		/**
+		 * @brief Static unique pointer to the singleton instance.
+		 * 
+		 * This pointer manages the lifetime of the singleton instance. It ensures that there is only one instance of the
+		 * singleton class at any time and provides automatic cleanup.
+		 */
+		static inline std::unique_ptr<TType> _instance = nullptr;
 
 	public:
 		/**
@@ -75,17 +124,17 @@ namespace spk
          * already been instantiated. If the instance already exists, it throws a std::runtime_error.
          *
          * @tparam Args Variadic template arguments to forward to the constructor of TType.
-         * @param args Arguments to forward to the constructor of TType.
+         * @param p_args Arguments to forward to the constructor of TType.
          * @return A reference to the std::unique_ptr managing the singleton instance.
          * @throws std::runtime_error if the singleton instance already exists.
          */
 		template <typename... Args>
-		static std::unique_ptr<TType>& instanciate(Args &&...args)
+		static std::unique_ptr<TType>& instanciate(Args &&...p_args)
 		{
 			if (_instance != nullptr)
 				spk::throwException("Can't instanciate an already instancied singleton");
 			
-			_instance = std::unique_ptr<TType>(new TType(std::forward<Args>(args)...));
+			_instance = std::unique_ptr<TType>(new TType(std::forward<Args>(p_args)...));
 			return (_instance);
 		}
 

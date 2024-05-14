@@ -75,6 +75,13 @@ namespace spk
          */
         Button(Widget* p_parent);
 
+		/**
+		 * @brief Construct a nesw button widget with a specific name and a given parent.
+		 * @param p_name The desired name of the widget.
+         * @param p_parent Pointer to the parent widget.
+		*/
+        Button(const std::string& p_name, Widget* p_parent);
+
         /**
          * @brief Sets the callback function to be called when the button is clicked.
          * @param p_onClickCallback The function to call on a button click.

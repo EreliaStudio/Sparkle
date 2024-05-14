@@ -25,8 +25,8 @@ namespace spk
         }
     }
 
-    GameEngineManager::GameEngineManager(const std::string& p_name) :
-        Widget(p_name)
+    GameEngineManager::GameEngineManager(Widget* p_parent) :
+        GameEngineManager("Anonymous GameEngineManager", p_parent)
     {
     }
 

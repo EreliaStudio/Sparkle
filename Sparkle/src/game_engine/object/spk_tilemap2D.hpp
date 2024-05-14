@@ -287,7 +287,7 @@ namespace spk
 				int p_animationLenght,
 				int p_animationDuration)			
 			{
-				size_t previousNbVertices = _vertexData.size();
+				unsigned int previousNbVertices = static_cast<int>(_vertexData.size());
 
 				static const spk::Vector3 offsets[4] = {
 					spk::Vector3(0, 1, 0),
@@ -462,7 +462,7 @@ namespace spk
 				{
 					_insertNodeData(p_relativePosition - spk::Vector3(0.5f, 0.5f, 0.0f) + offsets[i],
 									spk::Vector3(0.5f, 0.5f, 0),
-									_spriteSheet->sprite(p_node.sprite + _computeSpriteOffset(p_index, i, p_relativePosition)),
+									_spriteSheet->sprite(p_node.sprite + _computeSpriteOffset(p_index, static_cast<int>(i), p_relativePosition)),
 									_spriteSheet->unit(),
 									static_cast<spk::Vector2>(p_node.animationFrameOffset) * _spriteSheet->unit(), p_node.nbFrame, p_node.animationDuration);
 				}
@@ -572,8 +572,8 @@ namespace spk
 								}
 							}
 
-							unsigned int baseIndexPoint = _collisionMesh.points().size();
-							unsigned int baseIndexNormal = _collisionMesh.normals().size();
+							unsigned int baseIndexPoint = static_cast<unsigned int>(_collisionMesh.points().size());
+							unsigned int baseIndexNormal = static_cast<unsigned int>(_collisionMesh.normals().size());
 
 							_collisionMesh.addPoint(spk::Vector3(start.x, start.y, 0));
 							_collisionMesh.addPoint(spk::Vector3(start.x, end.y, 0));
@@ -678,7 +678,7 @@ namespace spk
 			{
 				for (size_t k = 0; k < SizeZ; k++)
 				{
-					Chunk::NodeIndexType index = content(p_position, k);
+					Chunk::NodeIndexType index = content(p_position, static_cast<int>(k));
 					if (_tilemapCreator->containsNode(index) == true)
 					{
 						const Node& tmpNode = _tilemapCreator->node(index);
@@ -736,7 +736,7 @@ namespace spk
 
 				for (size_t k = 0; k < SizeZ; k++)
 				{
-					Chunk::NodeIndexType index = content(p_position, k);
+					Chunk::NodeIndexType index = content(p_position, static_cast<int>(k));
 					if (_tilemapCreator->containsNode(index) == true)
 					{
 						const Node& tmpNode = _tilemapCreator->node(index);
@@ -770,12 +770,8 @@ namespace spk
 
 			return (result);
 		}
-
-		std::vector<IChunk*> _activeChunks;
 		
 		const spk::SpriteSheet* _spriteSheet;
-		spk::Vector2Int _activeChunkStart;
-		spk::Vector2Int _activeChunkEnd;
 
 		std::map<Chunk::NodeIndexType, Node> _nodes;
 
@@ -837,76 +833,6 @@ namespace spk
 		const Node& node(const Chunk::NodeIndexType& p_nodeIndex) const
 		{
 			return (_nodes.at(p_nodeIndex));
-		}
-
-		/**
-		 * @brief Sets the range of active chunks in the tilemap, defining the area that should be updated and rendered.
-		 *
-		 * @param p_activeChunkStart The starting position of the active chunk range.
-		 * @param p_activeChunkEnd The ending position of the active chunk range.
-		 */
-		void setActiveChunkRange(const spk::Vector2Int& p_activeChunkStart, const spk::Vector2Int& p_activeChunkEnd)
-		{
-			_activeChunkStart = p_activeChunkStart;
-			_activeChunkEnd = p_activeChunkEnd;
-		}
-
-		/**
-		 * @brief Calculates which chunks are missing within the active range and should be loaded or generated.
-		 *
-		 * @return A vector containing the positions of the missing chunks.
-		 */
-		std::vector<spk::Vector2Int> missingChunks() const
-		{
-			std::vector<spk::Vector2Int> result;
-
-			for (int x = _activeChunkStart.x; x <= _activeChunkEnd.x; x++)
-			{
-				for (int y = _activeChunkStart.y; y <= _activeChunkEnd.y; y++)
-				{
-					spk::Vector2Int chunkPosition = spk::Vector2Int(x, y);
-					if (containsChunk(chunkPosition) == false)
-						result.push_back(chunkPosition);
-				}
-			}
-
-			return (result);
-		}
-
-		/**
-		 * @brief Updates the active status of chunks within the specified range, activating or deactivating them as needed.
-		 */
-		void updateActiveChunks()
-		{
-			std::vector<IChunk*> chunksToActivate;
-
-			for (int x = _activeChunkStart.x; x <= _activeChunkEnd.x; x++)
-			{
-				for (int y = _activeChunkStart.y; y <= _activeChunkEnd.y; y++)
-				{
-					IChunk* chunkToActivate = chunk(spk::Vector2Int(x, y));
-
-					if (chunkToActivate != nullptr)
-					{
-						chunksToActivate.push_back(chunkToActivate);
-					}
-				}
-			}
-
-			for (auto& element : _activeChunks)
-			{
-				if (std::find(chunksToActivate.begin(), chunksToActivate.end(), element) == chunksToActivate.end())
-					element->deactivate();
-			}
-
-			_activeChunks = chunksToActivate;
-			for (auto& element : _activeChunks)
-			{
-				if (element->isActive() == false)
-				{
-					element->activate();
-				}
-			}
 		}
 
 		/**

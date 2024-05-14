@@ -20,7 +20,7 @@ namespace spk
 		result["Min"].set<long>(static_cast<long>(min()));
 		result["Max"].set<long>(static_cast<long>(max()));
 		result["Average"].set<float>(average());
-		result["Cardinal"].set<long>(cardinal());
+		result["Cardinal"].set<long>(static_cast<long>(cardinal()));
 		
 		return result;
 	}

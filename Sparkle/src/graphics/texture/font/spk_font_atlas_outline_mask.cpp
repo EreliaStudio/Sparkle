@@ -44,7 +44,7 @@ namespace spk
 	{
 		OutlineMask result;
 
-		int fadeStartDistance = p_outlineSize - 2;
+		int fadeStartDistance = static_cast<int>(p_outlineSize) - 2;
 
 		for (int x = -static_cast<int>(p_outlineSize); x <= static_cast<int>(p_outlineSize); x++)
 		{
@@ -110,7 +110,7 @@ namespace spk
 	{
 		OutlineMask result;
 
-		int fadeStartDistance = p_outlineSize - 2;
+		int fadeStartDistance = static_cast<int>(p_outlineSize) - 2;
 
 		for (int x = -static_cast<int>(p_outlineSize); x <= static_cast<int>(p_outlineSize); x++)
 		{
@@ -209,7 +209,7 @@ namespace spk
 			int index = borderPixel.x + borderPixel.y * p_buildData.size.x;
 			for (const auto& [offset, value] : outlineMask)
 			{
-				int tmpIndex = index + offset;
+				int tmpIndex = index + static_cast<int>(offset);
 				if (p_buildData.fontBuffer[tmpIndex] != CHAR_PIXEL)
 				{
 					p_buildData.outlineBuffer[tmpIndex] = std::max(p_buildData.outlineBuffer[tmpIndex], value);
