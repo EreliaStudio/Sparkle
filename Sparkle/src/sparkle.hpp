@@ -71,3 +71,9 @@
 #include "widget/spk_text_entry.hpp"
 #include "widget/spk_image_label.hpp"
 #include "widget/spk_panel.hpp"
+
+#include "network/spk_message.hpp"
+#include "network/spk_server.hpp"
+#include "network/spk_client.hpp"
+
+#include "network/node_system/spk_central_node.hpp"

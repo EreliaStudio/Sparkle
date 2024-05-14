@@ -9,7 +9,7 @@ namespace spk
 	/**
 	 * @class ThreadSafeDeque
 	 *
-	 * @tparam TType The type of data to be managed by the ThreadSafeQueue.
+	 * @tparam TType The type of data to be managed by the ThreadSafeDeque.
 	 *
 	 * @brief A thread-safe wrapper around std::deque, enabling safe access and modification across multiple threads.
 	 *

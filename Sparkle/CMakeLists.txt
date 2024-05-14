@@ -18,7 +18,7 @@ target_include_directories(${ProductName} PUBLIC
     $<INSTALL_INTERFACE:include/${ProductName}>
 )
 
-target_link_libraries(${ProductName} OpenGL32.lib GLEW::GLEW)
+target_link_libraries(${ProductName} ws2_32 OpenGL32.lib GLEW::GLEW)
 
 set(SPARKLE_INCLUDE_DIRECTORY "${CMAKE_INSTALL_PREFIX}/include")
 set(SPARKLE_LIBRARY_DIRECTORY "${CMAKE_INSTALL_PREFIX}/lib/x${OSBitness}/${CMAKE_BUILD_TYPE}")
