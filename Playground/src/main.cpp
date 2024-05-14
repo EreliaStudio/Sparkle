@@ -1,23 +1,241 @@
 #include "sparkle.hpp"
 
-int main() 
+#define MESSAGE_A 0
+#define MESSAGE_B 1
+#define MESSAGE_C 2
+#define MESSAGE_D 3
+#define MESSAGE_E 4
+
+class ClientWidget : public spk::Widget
 {
-    spk::Application app = spk::Application("Playground", spk::Vector2UInt(800, 800), spk::Application::Mode::Monothread);
+private:
+    spk::Client _client;
 
-    spk::TextEntry entry(nullptr);
-    entry.setGeometry(100, spk::Vector2Int(150, 50));
-    entry.activate();
+    void _onUpdate() override
+    {
+        while (_client.messages().empty() == false)
+        {
+            spk::Client::MessageObject message = _client.messages().pop_front();
 
-    entry.box().setSpriteSheet(new spk::SpriteSheet("Playground/resources/texture/buttonPressed.png", spk::Vector2Int(3, 3)));
-    entry.box().setCornerSize(2);
+            switch (message->type())
+            {
+                case MESSAGE_A:
+                    std::cout << "Client - Receiving message A" << std::endl;
+                    _client.send(spk::Message(MESSAGE_B));
+                    break;
+                case MESSAGE_B:
+                    std::cout << "Client - Receiving message B" << std::endl;
+                    _client.send(spk::Message(MESSAGE_C));
+                    break;
+                case MESSAGE_C:
+                    std::cout << "Client - Receiving message C" << std::endl;
+                    _client.send(spk::Message(MESSAGE_D));
+                    break;
+                case MESSAGE_D:
+                    std::cout << "Client - Receiving message D" << std::endl;
+                    _client.send(spk::Message(MESSAGE_E));
+                    break;
+                case MESSAGE_E:
+                    std::cout << "Client - Receiving message E" << std::endl;
+                    break;
+            }
+        }
+    }
 
-    entry.label().setFont(new spk::Font("Playground/resources/font/Heavitas.ttf"));
-    entry.label().setHorizontalAlignment(spk::HorizontalAlignment::Left);
-    entry.label().setTextColor(spk::Color(255, 255, 255));
-    entry.label().setTextSize(30);
-    entry.label().setOutlineColor(spk::Color(50, 50, 50));
-    entry.label().setOutlineSize(2);
-    entry.label().setText("Ceci est un test");
+    void _onGeometryChange() override
+    {
 
-    return (app.run());  
+    }
+
+    void _onRender() override
+    {
+
+    }
+
+public:
+    ClientWidget(spk::Widget* p_parent) :
+        ClientWidget("Unnamed", p_parent)
+    {
+
+    }
+
+    ClientWidget(const std::string& p_name, spk::Widget* p_parent) :
+        spk::Widget(p_name, p_parent)
+    {
+        _client.connect("127.0.0.1", 26500);
+
+        _client.send(spk::Message(MESSAGE_A));
+    }
+};
+
+class LocalNodeWidget : public spk::Widget
+{
+private:
+    spk::LocalNode _localNode;
+
+    void _onUpdate() override
+    {
+        while (_localNode.messageReceived().empty() == false)
+        {
+            spk::Client::MessageObject message = _localNode.messageReceived().pop_front();
+
+            switch (message->type())
+            {
+                case MESSAGE_A:
+                    std::cout << "Local server - Receiving message A - ERROR" << std::endl;
+                    break;
+                case MESSAGE_B:
+                    std::cout << "Local server - Receiving message B - ERROR" << std::endl;
+                    break;
+                case MESSAGE_C:
+                    std::cout << "Local server - Receiving message C" << std::endl;
+                    _localNode.insertMessageAwnser(_localNode.obtainAwnerMessage(message->header().emitterID, MESSAGE_C));
+                    break;
+                case MESSAGE_D:
+                    std::cout << "Local server - Receiving message D" << std::endl;
+                    _localNode.insertMessageAwnser(_localNode.obtainAwnerMessage(message->header().emitterID, MESSAGE_D));
+                    break;
+                case MESSAGE_E:
+                    std::cout << "Local server - Receiving message E" << std::endl;
+                    _localNode.insertMessageAwnser(_localNode.obtainAwnerMessage(message->header().emitterID, MESSAGE_E));
+                    break;
+            }
+        }
+    }
+
+    void _onGeometryChange() override
+    {
+
+    }
+
+    void _onRender() override
+    {
+
+    }
+
+public:
+    LocalNodeWidget(spk::Widget* p_parent) :
+        spk::Widget(p_parent)
+    {
+
+    }
+
+    spk::Node* node()
+    {
+        return (&_localNode);
+    }
+};
+
+class RemoteServerWidget : public spk::Widget
+{
+private:
+    spk::Server _server;
+
+    void _onUpdate() override
+    {
+        while (_server.messages().empty() == false)
+        {
+            spk::Client::MessageObject message = _server.messages().pop_front();
+
+            switch (message->type())
+            {
+                case MESSAGE_A:
+                    std::cout << "Remote server - Receiving message A" << std::endl;
+                    _server.sendTo(message->header().emitterID, spk::Message(MESSAGE_A));
+                    break;
+                case MESSAGE_B:
+                    std::cout << "Remote server - Receiving message B" << std::endl;
+                    _server.sendTo(message->header().emitterID, spk::Message(MESSAGE_B));
+                    break;
+                case MESSAGE_C:
+                    std::cout << "Remote server - Receiving message C - ERROR" << std::endl;
+                    break;
+                case MESSAGE_D:
+                    std::cout << "Remote server - Receiving message D - ERROR" << std::endl;
+                    break;
+                case MESSAGE_E:
+                    std::cout << "Remote server - Receiving message E - ERROR" << std::endl;
+                    break;
+            }
+        }
+    }
+
+    void _onGeometryChange() override
+    {
+
+    }
+
+    void _onRender() override
+    {
+
+    }
+
+public:
+    RemoteServerWidget(spk::Widget* p_parent) :
+        spk::Widget(p_parent)
+    {
+        _server.start(26501);
+    }
+};
+
+class CentralNodeWidget : public spk::Widget
+{
+private:
+    spk::CentralNode _centralNode;
+
+    spk::RemoteNode _remoteNode;
+
+    void _onUpdate() override
+    {
+        _centralNode.redirectMessageToNode();
+        _centralNode.redirectMessageToClients();
+    }
+
+    void _onGeometryChange() override
+    {
+
+    }
+
+    void _onRender() override
+    {
+
+    }
+
+public:
+    CentralNodeWidget(spk::Node* p_localNode, spk::Widget* p_parent) :
+        spk::Widget(p_parent)
+    {
+        _remoteNode.connect("127.0.0.1", 26501);
+
+        _centralNode.addNode("RemoteNode", &_remoteNode);
+        _centralNode.addNode("LocalNode", p_localNode);
+
+        _centralNode.setupRedirection(MESSAGE_A, "RemoteNode");
+        _centralNode.setupRedirection(MESSAGE_B, "RemoteNode");
+
+        _centralNode.setupRedirection(MESSAGE_C, "LocalNode");
+        _centralNode.setupRedirection(MESSAGE_D, "LocalNode");
+        _centralNode.setupRedirection(MESSAGE_E, "LocalNode");
+
+        _centralNode.start(26500);
+    }
+};
+
+int main()
+{
+    spk::Application app("Playground", spk::Vector2UInt(800, 600), spk::Application::Mode::Monothread);
+
+    RemoteServerWidget remoteServer(nullptr);
+    remoteServer.activate();
+
+    LocalNodeWidget localNode(nullptr);
+    localNode.activate();
+    
+    CentralNodeWidget centralNode(localNode.node(), nullptr);
+    centralNode.activate();
+    
+    ClientWidget clientWidget(nullptr);
+    clientWidget.activate();
+
+    return (app.run());
 }

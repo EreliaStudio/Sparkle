@@ -16,7 +16,7 @@
 
 #include "math/spk_matrix4x4.hpp"
 
-#include "data_structure/spk_thread_safe_queue.hpp"
+#include "data_structure/spk_thread_safe_deque.hpp"
 #include "graphics/pipeline/spk_pipeline.hpp"
 #include "input/spk_keyboard.hpp"
 #include "input/spk_mouse.hpp"
