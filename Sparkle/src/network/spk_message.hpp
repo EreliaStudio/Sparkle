@@ -14,6 +14,7 @@ namespace spk
         {
         public:
             using ClientID = size_t;
+            using Type = int32_t;
     
         private:
             friend class Message;
@@ -21,11 +22,28 @@ namespace spk
 
         public:
             int32_t type;
-            ClientID clientID;
+            ClientID emitterID;
             uint8_t reserved[16];
 
             Header() :
                 type(0),
+                emitterID(0),
+                _length(0)
+            {
+                std::memset(reserved, 0, sizeof(reserved));
+            }
+
+            Header(Type p_type) :
+                type(p_type),
+                emitterID(0),
+                _length(0)
+            {
+                std::memset(reserved, 0, sizeof(reserved));
+            }
+
+            Header(const ClientID& p_emitterID, const Type& p_type) :
+                type(p_type),
+                emitterID(p_emitterID),
                 _length(0)
             {
                 std::memset(reserved, 0, sizeof(reserved));
@@ -43,6 +61,23 @@ namespace spk
 
     public:
         Message() = default;
+
+        Message(const Header::Type& p_messageType) :
+            _header(p_messageType)
+        {
+
+        }
+
+        Message(const Header::ClientID& p_clientToRedirectMessage, const Header::Type& p_messageType) :
+            _header(p_clientToRedirectMessage, p_messageType)
+        {
+
+        }
+
+        const Header::Type& type() const
+        {
+            return (_header.type);
+        }
 
         Header& header()
         {

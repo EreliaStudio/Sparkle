@@ -9,11 +9,11 @@ namespace spk
 	private:
 
 	public:
-		virtual void treatMessage(const spk::Server::MessageObject& p_message) = 0;
+		virtual void treatMessage(spk::Server::MessageObject&& p_message) = 0;
 		virtual spk::ThreadSafeDeque<spk::Server::MessageObject>& messages() = 0;
 	};
 
-	class RemoteNode
+	class RemoteNode : public Node
 	{
 	private:
 		spk::Client _client;
@@ -31,6 +31,10 @@ namespace spk
 
 		void treatMessage(spk::Server::MessageObject&& p_message)
 		{
+			if (_client.isConnected() == false)
+			{
+                spk::throwException("Can't send a message thought a non-connected RemoteNode");
+			}
 			_client.send(*p_message);
 		}
 
@@ -40,21 +44,43 @@ namespace spk
 		}
 	};
 
-	class LocalNode
+	class LocalNode : public Node
 	{
 	private:
+		spk::Pool<spk::Message> _messagePool;
 		spk::ThreadSafeDeque<spk::Server::MessageObject> _messagesReceived;
 		spk::ThreadSafeDeque<spk::Server::MessageObject> _messagesToReturn;
 
 	public:
 		void treatMessage(spk::Server::MessageObject&& p_message)
 		{
+            DEBUG_LINE();
 			_messagesReceived.push_back(std::move(p_message));
 		}
 
-		spk::ThreadSafeDeque<spk::Server::MessageObject>& messageToParse()
+		spk::ThreadSafeDeque<spk::Server::MessageObject>& messageReceived()
 		{
 			return (_messagesReceived);
+		}
+
+		spk::Server::MessageObject obtainAwnerMessage(const spk::Message::Header::ClientID& p_emitterID, spk::Message::Header::Type p_type = -1)
+		{
+			spk::Server::MessageObject result = _messagePool.obtain();
+
+			result->header().emitterID = p_emitterID;
+			result->header().type = p_type;
+
+			return (result);
+		}
+
+		spk::Server::MessageObject obtainAwnerMessage(spk::Server::MessageObject&& p_questionMessage, spk::Message::Header::Type p_type = -1)
+		{
+			spk::Server::MessageObject result = _messagePool.obtain();
+
+			result->header().emitterID = p_questionMessage->header().emitterID;
+			result->header().type = p_type;
+
+			return (result);
 		}
 
 		void insertMessageAwnser(spk::Server::MessageObject&& p_messageAwnser)
@@ -92,8 +118,9 @@ namespace spk
 		{
 			if (_nodes.contains(p_nodeName) == true)
 			{
-				throw std::runtime_error("Can't set a node named [" + p_nodeName + "] : this node already exist");
+				spk::throwException("Can't set a node named [" + p_nodeName + "] : this node already exist");
 			}
+			std::cout << "Adding node [" << p_nodeName << "](" << p_node << ")" << std::endl;
 			_nodes[p_nodeName] = p_node;
 		}
 
@@ -101,8 +128,9 @@ namespace spk
 		{
 			if (_nodes.contains(p_nodeName) == false)
 			{
-				throw std::runtime_error("Can't set a redirection for message Type [" + std::to_string(p_messageType) + "] to node [" + p_nodeName + "] : this node does not exist");
+				spk::throwException("Can't set a redirection for message Type [" + std::to_string(p_messageType) + "] to node [" + p_nodeName + "] : this node does not exist");
 			}
+			std::cout << "Setting up type " << p_messageType << " to node " << p_nodeName << "(" << _nodes[p_nodeName] << ")" << std::endl;
 			_redirections[p_messageType] = _nodes[p_nodeName];
 		}
 
@@ -112,11 +140,12 @@ namespace spk
 			{
 				spk::Server::MessageObject messageToRedirect = _server.messages().pop_front();
 
-				if (_redirections.contains(messageToRedirect->header().type) == false)
+				if (_redirections.contains(messageToRedirect->type()) == false)
 				{
-					throw std::runtime_error("Unknow message type [" + std::to_string(messageToRedirect->header().type) + "] : no redirection setup");
+					spk::throwException("Unknow message type [" + std::to_string(messageToRedirect->type()) + "] : no redirection setup");
 				}
-				_redirections[messageToRedirect->header().type]->treatMessage(messageToRedirect);
+				std::cout << "Redirecting message [" << messageToRedirect->type() << "] to node (" << _redirections[messageToRedirect->type()] << ")" << std::endl;
+				_redirections[messageToRedirect->type()]->treatMessage(std::move(messageToRedirect));
 			}	
 		}
 
@@ -128,8 +157,8 @@ namespace spk
 				{
 					spk::Server::MessageObject messageToRedirect = node->messages().pop_front();
 
-					if (messageToRedirect->header().clientID != 0)
-						_server.sendTo(messageToRedirect->header().clientID, *messageToRedirect);
+					if (messageToRedirect->header().emitterID != 0)
+						_server.sendTo(messageToRedirect->header().emitterID, *messageToRedirect);
 					else
 						_server.sendToAll(*messageToRedirect);
 				}

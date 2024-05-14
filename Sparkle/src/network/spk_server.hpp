@@ -159,6 +159,7 @@ namespace spk
                     {
                         clients.erase(id);
                         onDisconnectCallback(id);
+                        std::cout << "Disconnecting client " << id << std::endl;
                     }
                 }
 				std::cout << "Closing the server" << std::endl;
@@ -202,7 +203,7 @@ namespace spk
 							totalBytesReceived += bytesRead;
 						}
 					}
-                    message->header().clientID = p_clientId;
+                    message->header().emitterID = p_clientId;
 					messageQueue.push_back(std::move(message));
 					return true;
 				}
@@ -228,7 +229,7 @@ namespace spk
 
         std::unordered_map<ClientID, SOCKET> clients;
         std::mutex clientsMutex;
-        ClientID nextClientId = 0;
+        ClientID nextClientId = 10000;
         ConnectionCallback onConnectCallback;
         DisconnectionCallback onDisconnectCallback;
         std::unique_ptr<Acceptator> acceptor;
@@ -289,9 +290,9 @@ namespace spk
 
         void sendTo(const std::vector<ClientID>& p_clients, const spk::Message& p_message)
         {
-            for (const auto& clientID : p_clients)
+            for (const auto& emitterID : p_clients)
             {
-                _internalSendTo(clientID, p_message);
+                _internalSendTo(emitterID, p_message);
             }
         }
 
