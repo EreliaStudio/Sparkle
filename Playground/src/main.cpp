@@ -15,7 +15,6 @@ private:
     {
         while (_client.messages().empty() == false)
         {
-            DEBUG_LINE();
             spk::Client::MessageObject message = _client.messages().pop_front();
 
             switch (message->type())
@@ -78,29 +77,26 @@ private:
     {
         while (_localNode.messageReceived().empty() == false)
         {
-            DEBUG_LINE();
             spk::Client::MessageObject message = _localNode.messageReceived().pop_front();
-
-            std::cout << "Receiving message from central node : " << message->type() << std::endl;
 
             switch (message->type())
             {
                 case MESSAGE_A:
-                    std::cout << "Remote server - Receiving message A - ERROR" << std::endl;
+                    std::cout << "Local server - Receiving message A - ERROR" << std::endl;
                     break;
                 case MESSAGE_B:
-                    std::cout << "Remote server - Receiving message B - ERROR" << std::endl;
+                    std::cout << "Local server - Receiving message B - ERROR" << std::endl;
                     break;
                 case MESSAGE_C:
-                    std::cout << "Remote server - Receiving message C" << std::endl;
+                    std::cout << "Local server - Receiving message C" << std::endl;
                     _localNode.insertMessageAwnser(_localNode.obtainAwnerMessage(message->header().emitterID, MESSAGE_C));
                     break;
                 case MESSAGE_D:
-                    std::cout << "Remote server - Receiving message D" << std::endl;
+                    std::cout << "Local server - Receiving message D" << std::endl;
                     _localNode.insertMessageAwnser(_localNode.obtainAwnerMessage(message->header().emitterID, MESSAGE_D));
                     break;
                 case MESSAGE_E:
-                    std::cout << "Remote server - Receiving message E" << std::endl;
+                    std::cout << "Local server - Receiving message E" << std::endl;
                     _localNode.insertMessageAwnser(_localNode.obtainAwnerMessage(message->header().emitterID, MESSAGE_E));
                     break;
             }
@@ -140,8 +136,6 @@ private:
         while (_server.messages().empty() == false)
         {
             spk::Client::MessageObject message = _server.messages().pop_front();
-
-            std::cout << "Receiving message from central node : " << message->type() << std::endl;
 
             switch (message->type())
             {

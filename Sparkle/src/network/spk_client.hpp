@@ -1,3 +1,5 @@
+#pragma once
+
 #include <iostream>
 #include <mutex>
 #include <thread>
@@ -12,23 +14,38 @@
 
 namespace spk
 {
+    /**
+     * @class Client
+     * @brief Represents a network client that can connect to a server, send and receive messages.
+     * 
+     * This class provides the functionality to create a client that can connect to a server,
+     * send messages to the server, and receive messages from the server. It uses Winsock for networking
+     * and supports thread-safe operations.
+     */
     class Client
     {
     public:
-        using MessagePool = spk::Pool<spk::Message>;
-        using MessageObject = MessagePool::Object;
-        using ConnectionCallback = std::function<void()>;
-        using DisconnectionCallback = std::function<void()>;
+        using MessagePool = spk::Pool<spk::Message>; ///< Type alias for a pool of messages.
+        using MessageObject = MessagePool::Object; ///< Type alias for a message object from the pool.
+        using ConnectionCallback = std::function<void()>; ///< Callback type for client connection.
+        using DisconnectionCallback = std::function<void()>; ///< Callback type for client disconnection.
 
     private:
-        SOCKET _connectSocket;
-        std::thread _receptionThread;
-        bool _isConnected;
-        MessagePool _messagePool;
-        spk::ThreadSafeDeque<MessageObject> _messageQueue;
-        ConnectionCallback _onConnectCallback;
-        DisconnectionCallback _onDisconnectCallback;
+        SOCKET _connectSocket; ///< The socket for connecting to the server.
+        std::thread _receptionThread; ///< Thread for handling message reception.
+        bool _isConnected; ///< Flag indicating if the client is connected.
+        MessagePool _messagePool; ///< Pool of messages.
+        spk::ThreadSafeDeque<MessageObject> _messageQueue; ///< Thread-safe deque for message objects.
+        ConnectionCallback _onConnectCallback; ///< Callback for client connection.
+        DisconnectionCallback _onDisconnectCallback; ///< Callback for client disconnection.
 
+        /**
+         * @brief Receives messages from the server.
+         * 
+         * This function runs in a separate thread and continuously listens for messages from the server.
+         * It obtains message objects from the pool, reads the message headers and data, and pushes the
+         * messages onto the message queue.
+         */
         void _receive()
         {
             while (_isConnected)
@@ -64,6 +81,9 @@ namespace spk
         }
 
     public:
+        /**
+         * @brief Constructs a Client object and sets up default connection and disconnection callbacks.
+         */
         Client() :
             _connectSocket(INVALID_SOCKET),
             _isConnected(false),
@@ -73,16 +93,29 @@ namespace spk
         {
         }
 
+        /**
+         * @brief Destructor for Client. Disconnects the client if connected.
+         */
         ~Client()
         {
             disconnect();
         }
 
+        /**
+         * @brief Checks if the client is connected to the server.
+         * @return True if the client is connected, false otherwise.
+         */
         bool isConnected() const
         {
             return (_isConnected);
         }
 
+        /**
+         * @brief Connects the client to a server at a specified address and port.
+         * @param p_address The address of the server to connect to.
+         * @param p_port The port number of the server to connect to.
+         * @throw std::runtime_error If Winsock initialization, socket creation, or connection fails.
+         */
         void connect(const std::string& p_address, size_t p_port)
         {
             WSADATA wsaData;
@@ -115,6 +148,9 @@ namespace spk
             std::thread(&Client::_receive, this).detach();
         }
 
+        /**
+         * @brief Disconnects the client from the server.
+         */
         void disconnect()
         {
             if (_isConnected)
@@ -126,6 +162,11 @@ namespace spk
             }
         }
 
+        /**
+         * @brief Sends a message to the server.
+         * @param p_message The message to send.
+         * @throw std::runtime_error If the client is not connected.
+         */
         void send(const Message& p_message)
         {
             if (_isConnected)
@@ -151,10 +192,14 @@ namespace spk
             }
             else
             {
-                spk::throwException("Can't send a message thought a non-connected client");
+                throw std::runtime_error("Can't send a message through a non-connected client.");
             }
         }
 
+        /**
+         * @brief Gets the thread-safe message queue.
+         * @return Reference to the thread-safe message queue.
+         */
         spk::ThreadSafeDeque<MessageObject>& messages()
         {
             return _messageQueue;
