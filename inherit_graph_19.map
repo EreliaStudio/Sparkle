@@ -1,3 +1,7 @@
 <map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
-<area shape="rect" id="node1" href="$structspk_1_1IVector2.html" title=" " alt="" coords="5,5,159,32"/>
+<area shape="rect" id="node1" href="$classspk_1_1Input.html" title="Manages generic input triggers and their associated callbacks." alt="" coords="5,81,92,108"/>
+<area shape="rect" id="node2" href="$classspk_1_1KeyboardCharInput.html" title="Specializes Input for handling character inputs from the keyboard." alt="" coords="140,5,317,32"/>
+<area shape="rect" id="node3" href="$classspk_1_1KeyboardInput.html" title="Specialized Input class for handling keyboard&#45;specific triggers." alt="" coords="155,56,302,83"/>
+<area shape="rect" id="node4" href="$classspk_1_1MouseInput.html" title="Specialized Input class for handling mouse button events." alt="" coords="164,107,293,133"/>
+<area shape="rect" id="node5" href="$classspk_1_1MouseMotionInput.html" title="Specialized Input class for handling mouse motion events." alt="" coords="141,157,316,184"/>
 </map>

@@ -1,0 +1,5 @@
+<map id="spk::Node" name="spk::Node">
+<area shape="rect" id="node1" title="Abstract base class representing a node in the network." alt="" coords="100,5,187,32"/>
+<area shape="rect" id="node2" href="$classspk_1_1LocalNode.html" title="Represents a local node that processes messages locally." alt="" coords="5,80,127,107"/>
+<area shape="rect" id="node3" href="$classspk_1_1RemoteNode.html" title="Represents a remote node that connects to a server and sends/receives messages." alt="" coords="151,80,290,107"/>
+</map>

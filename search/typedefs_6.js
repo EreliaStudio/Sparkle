@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['triggercallback_1281',['TriggerCallback',['../classspk_1_1Input.html#a5e14d95172a6d3be562144157a61fd90',1,'spk::Input']]],
-  ['type_1282',['Type',['../classspk_1_1Singleton.html#a5b752f06c2773b87fd5b1b6ef723a471',1,'spk::Singleton::Type()'],['../classspk_1_1Camera.html#abe7ed979395bc09b601866aba2eae624',1,'spk::Camera::Type()']]]
+  ['object_1370',['Object',['../classspk_1_1Pool.html#afa3f9e3c9a02338b938ce468ac85ea51',1,'spk::Pool']]]
 ];
