@@ -62,7 +62,7 @@ namespace spk
                         size_t totalBytesReceived = 0;
                         while (totalBytesReceived < message->header().length())
                         {
-                            bytesRead = recv(_connectSocket, dataBuffer + totalBytesReceived, message->header().length() - totalBytesReceived, 0);
+                            bytesRead = recv(_connectSocket, dataBuffer + totalBytesReceived, static_cast<int>(message->header().length()) - static_cast<int>(totalBytesReceived), 0);
                             if (bytesRead <= 0)
                             {
                                 break;
@@ -182,7 +182,7 @@ namespace spk
 
                 if (p_message.header().length() > 0)
                 {
-                    sentBytes = ::send(_connectSocket, reinterpret_cast<const char*>(p_message.buffer().data()), p_message.header().length(), 0);
+                    sentBytes = ::send(_connectSocket, reinterpret_cast<const char*>(p_message.buffer().data()), static_cast<int>(p_message.header().length()), 0);
                     if (sentBytes != static_cast<int>(p_message.header().length()))
                     {
                         std::cerr << "Failed to send message data." << std::endl;
