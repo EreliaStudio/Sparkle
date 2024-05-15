@@ -1,4 +1,4 @@
 <map id="spk::Tilemap2D::Node" name="spk::Tilemap2D::Node">
-<area shape="rect" id="node1" title="Represents a single tile node within the tilemap, encapsulating its visual and behavioral properties." alt="" coords="5,109,172,136"/>
-<area shape="rect" id="node2" href="$structspk_1_1IVector2.html" title=" " alt="" coords="12,5,165,32"/>
+<area shape="rect" id="node1" title="Represents a single tile node within the tilemap, encapsulating its visual and behavioral properties." alt="" coords="13,109,179,136"/>
+<area shape="rect" id="node2" href="$structspk_1_1IVector2.html" title=" " alt="" coords="5,5,187,32"/>
 </map>

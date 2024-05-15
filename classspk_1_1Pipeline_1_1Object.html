@@ -123,6 +123,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ab245edad399cd51a7ef9ee568adc751e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classspk_1_1Pipeline_1_1Object_1_1Attribute.html">Attribute</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Pipeline_1_1Object.html#ab245edad399cd51a7ef9ee568adc751e">attribute</a> (const std::string &amp;p_attributeName)</td></tr>
 <tr class="memdesc:ab245edad399cd51a7ef9ee568adc751e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves a reference to an attribute by name.  <a href="classspk_1_1Pipeline_1_1Object.html#ab245edad399cd51a7ef9ee568adc751e">More...</a><br /></td></tr>
 <tr class="separator:ab245edad399cd51a7ef9ee568adc751e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a196b29f0e976d9ce8b92fba3de6e9e3f"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="classspk_1_1Pipeline_1_1Object_1_1Storage.html">Storage</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Pipeline_1_1Object.html#a196b29f0e976d9ce8b92fba3de6e9e3f">storage</a> () const</td></tr>
+<tr class="memdesc:a196b29f0e976d9ce8b92fba3de6e9e3f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Return the storage of the object.  <a href="classspk_1_1Pipeline_1_1Object.html#a196b29f0e976d9ce8b92fba3de6e9e3f">More...</a><br /></td></tr>
+<tr class="separator:a196b29f0e976d9ce8b92fba3de6e9e3f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="friends"></a>
 Friends</h2></td></tr>
@@ -139,7 +142,7 @@ class&#160;</td><td class="memItemRight" valign="bottom"><b>Pipeline</b></td></t
 <div class="line"><span class="keywordtype">object</span>.setAttribute(<span class="stringliteral">&quot;MyAttribute&quot;</span>, value);</div>
 <div class="line"><span class="keywordtype">object</span>.render();</div>
 <div class="ttc" id="aclassspk_1_1Pipeline_1_1Object_html"><div class="ttname"><a href="classspk_1_1Pipeline_1_1Object.html">spk::Pipeline::Object</a></div><div class="ttdoc">Represents a drawable object within the Pipeline, including geometry and attributes.</div><div class="ttdef"><b>Definition:</b> spk_pipeline.hpp:390</div></div>
-<div class="ttc" id="aclassspk_1_1Pipeline_1_1Object_html_ab1b8b42e46491eb01af00ffc607d6924"><div class="ttname"><a href="classspk_1_1Pipeline_1_1Object.html#ab1b8b42e46491eb01af00ffc607d6924">spk::Pipeline::Object::setVertices</a></div><div class="ttdeci">void setVertices(const std::vector&lt; TShaderInput &gt; &amp;p_verticesData)</div><div class="ttdoc">Sets the vertex data for the object.</div><div class="ttdef"><b>Definition:</b> spk_pipeline.hpp:652</div></div>
+<div class="ttc" id="aclassspk_1_1Pipeline_1_1Object_html_ab1b8b42e46491eb01af00ffc607d6924"><div class="ttname"><a href="classspk_1_1Pipeline_1_1Object.html#ab1b8b42e46491eb01af00ffc607d6924">spk::Pipeline::Object::setVertices</a></div><div class="ttdeci">void setVertices(const std::vector&lt; TShaderInput &gt; &amp;p_verticesData)</div><div class="ttdoc">Sets the vertex data for the object.</div><div class="ttdef"><b>Definition:</b> spk_pipeline.hpp:658</div></div>
 </div><!-- fragment --><dl class="section see"><dt>See also</dt><dd><a class="el" href="classspk_1_1Pipeline_1_1Object_1_1Attribute.html" title="Specializes UniformObject for managing object-specific attributes in shaders.">Pipeline::Object::Attribute</a> </dd></dl>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="acad82c8948336a71a3c713f98126b8cb"></a>
@@ -454,6 +457,26 @@ template&lt;typename TShaderInput &gt; </div>
   </table>
   </dd>
 </dl>
+
+</div>
+</div>
+<a id="a196b29f0e976d9ce8b92fba3de6e9e3f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a196b29f0e976d9ce8b92fba3de6e9e3f">&#9670;&nbsp;</a></span>storage()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const <a class="el" href="classspk_1_1Pipeline_1_1Object_1_1Storage.html">Pipeline::Object::Storage</a> &amp; spk::Pipeline::Object::storage </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Return the storage of the object. </p>
+<dl class="section return"><dt>Returns</dt><dd>The storage of the object, as const reference </dd></dl>
 
 </div>
 </div>

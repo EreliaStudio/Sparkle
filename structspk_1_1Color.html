@@ -70,6 +70,7 @@ $(function() {
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pub-attribs">Public Attributes</a> &#124;
 <a href="#pub-static-attribs">Static Public Attributes</a> &#124;
+<a href="#friends">Friends</a> &#124;
 <a href="structspk_1_1Color-members.html">List of all members</a>  </div>
   <div class="headertitle">
 <div class="title">spk::Color Class Reference</div>  </div>
@@ -183,6 +184,12 @@ static const <a class="el" href="structspk_1_1Color.html">Color</a>&#160;</td><t
 <tr class="memitem:a3630435463a706132b5bb8bafea6e5df"><td class="memItemLeft" align="right" valign="top">static const std::vector&lt; <a class="el" href="structspk_1_1Color.html">Color</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structspk_1_1Color.html#a3630435463a706132b5bb8bafea6e5df">values</a></td></tr>
 <tr class="memdesc:a3630435463a706132b5bb8bafea6e5df"><td class="mdescLeft">&#160;</td><td class="mdescRight">Some constant colors.  <a href="structspk_1_1Color.html#a3630435463a706132b5bb8bafea6e5df">More...</a><br /></td></tr>
 <tr class="separator:a3630435463a706132b5bb8bafea6e5df"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="friends"></a>
+Friends</h2></td></tr>
+<tr class="memitem:a578ba47969a1703e156dd6bafb424a86"><td class="memItemLeft" align="right" valign="top">std::ostream &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structspk_1_1Color.html#a578ba47969a1703e156dd6bafb424a86">operator&lt;&lt;</a> (std::ostream &amp;p_os, const <a class="el" href="structspk_1_1Color.html">spk::Color</a> &amp;p_color)</td></tr>
+<tr class="memdesc:a578ba47969a1703e156dd6bafb424a86"><td class="mdescLeft">&#160;</td><td class="mdescRight">Output operator for color.  <a href="structspk_1_1Color.html#a578ba47969a1703e156dd6bafb424a86">More...</a><br /></td></tr>
+<tr class="separator:a578ba47969a1703e156dd6bafb424a86"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Represents a color in RGBA format. </p>
@@ -193,7 +200,7 @@ static const <a class="el" href="structspk_1_1Color.html">Color</a>&#160;</td><t
 <div class="line"> </div>
 <div class="line"><a class="code" href="structspk_1_1Color.html">spk::Color</a> mixedColor = <a class="code" href="structspk_1_1Color.html#a268c963aefda8a7eacec7c6794807839">white</a> + semiTransparentRed; <span class="comment">// Mix white and red</span></div>
 <div class="ttc" id="astructspk_1_1Color_html"><div class="ttname"><a href="structspk_1_1Color.html">spk::Color</a></div><div class="ttdoc">Represents a color in RGBA format.</div><div class="ttdef"><b>Definition:</b> spk_color.hpp:32</div></div>
-<div class="ttc" id="astructspk_1_1Color_html_a268c963aefda8a7eacec7c6794807839"><div class="ttname"><a href="structspk_1_1Color.html#a268c963aefda8a7eacec7c6794807839">spk::Color::white</a></div><div class="ttdeci">static const Color white</div><div class="ttdoc">white(not a color)</div><div class="ttdef"><b>Definition:</b> spk_color.hpp:96</div></div>
+<div class="ttc" id="astructspk_1_1Color_html_a268c963aefda8a7eacec7c6794807839"><div class="ttname"><a href="structspk_1_1Color.html#a268c963aefda8a7eacec7c6794807839">spk::Color::white</a></div><div class="ttdeci">static const Color white</div><div class="ttdoc">white(not a color)</div><div class="ttdef"><b>Definition:</b> spk_color.hpp:106</div></div>
 </div><!-- fragment --><dl class="section note"><dt>Note</dt><dd><a class="el" href="structspk_1_1Color.html" title="Represents a color in RGBA format.">Color</a> components are clamped to the range [0, 255] for integers and [0.0f, 1.0f] for floating-point values. </dd></dl>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="aac18e529b35fafd8a39905fb76c21423"></a>
@@ -379,6 +386,53 @@ static const <a class="el" href="structspk_1_1Color.html">Color</a>&#160;</td><t
 
 </div>
 </div>
+<h2 class="groupheader">Friends And Related Function Documentation</h2>
+<a id="a578ba47969a1703e156dd6bafb424a86"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a578ba47969a1703e156dd6bafb424a86">&#9670;&nbsp;</a></span>operator&lt;&lt;</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::ostream&amp; operator&lt;&lt; </td>
+          <td>(</td>
+          <td class="paramtype">std::ostream &amp;&#160;</td>
+          <td class="paramname"><em>p_os</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structspk_1_1Color.html">spk::Color</a> &amp;&#160;</td>
+          <td class="paramname"><em>p_color</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">friend</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Output operator for color. </p>
+<p>Print the color as hexadecimal values </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_os</td><td>The stream where to output the color </td></tr>
+    <tr><td class="paramname">p_color</td><td>The color to output </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The stream once filled </dd></dl>
+
+</div>
+</div>
 <h2 class="groupheader">Member Data Documentation</h2>
 <a id="a3630435463a706132b5bb8bafea6e5df"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a3630435463a706132b5bb8bafea6e5df">&#9670;&nbsp;</a></span>values</h2>
@@ -401,15 +455,15 @@ static const <a class="el" href="structspk_1_1Color.html">Color</a>&#160;</td><t
 </div><div class="memdoc">
 <b>Initial value:</b><div class="fragment"><div class="line">= std::vector&lt;spk::Color&gt;{</div>
 <div class="line">        <a class="code" href="structspk_1_1Color.html#a4eb69ca6a389242ed3bd23d1afa4aade">red</a>, <a class="code" href="structspk_1_1Color.html#a0f093600808330f0b4326b1e25598bb1">blue</a>, <a class="code" href="structspk_1_1Color.html#a0cb4e1110ed1284e8a8646fcc9b3c605">green</a>, <a class="code" href="structspk_1_1Color.html#ad4ccd35271411645f1f560feb08eee50">yellow</a>, <a class="code" href="structspk_1_1Color.html#a12510bb5d0f0ada45f855a2d02a5b4a0">purple</a>, <a class="code" href="structspk_1_1Color.html#a8b04c7af7dc8d0b475233e3250a7d3a0">cyan</a>, <a class="code" href="structspk_1_1Color.html#a4439c31afd052be2b6875fb75c76cbad">orange</a>, <a class="code" href="structspk_1_1Color.html#a964b26508502fcce91cf1b6bdf911f11">magenta</a>, <a class="code" href="structspk_1_1Color.html#af86b12ae82ff336efb9f59c69cf946d8">pink</a>}</div>
-<div class="ttc" id="astructspk_1_1Color_html_a0cb4e1110ed1284e8a8646fcc9b3c605"><div class="ttname"><a href="structspk_1_1Color.html#a0cb4e1110ed1284e8a8646fcc9b3c605">spk::Color::green</a></div><div class="ttdeci">static const Color green</div><div class="ttdoc">green</div><div class="ttdef"><b>Definition:</b> spk_color.hpp:88</div></div>
-<div class="ttc" id="astructspk_1_1Color_html_a0f093600808330f0b4326b1e25598bb1"><div class="ttname"><a href="structspk_1_1Color.html#a0f093600808330f0b4326b1e25598bb1">spk::Color::blue</a></div><div class="ttdeci">static const Color blue</div><div class="ttdoc">blue</div><div class="ttdef"><b>Definition:</b> spk_color.hpp:87</div></div>
-<div class="ttc" id="astructspk_1_1Color_html_a12510bb5d0f0ada45f855a2d02a5b4a0"><div class="ttname"><a href="structspk_1_1Color.html#a12510bb5d0f0ada45f855a2d02a5b4a0">spk::Color::purple</a></div><div class="ttdeci">static const Color purple</div><div class="ttdoc">purple</div><div class="ttdef"><b>Definition:</b> spk_color.hpp:90</div></div>
-<div class="ttc" id="astructspk_1_1Color_html_a4439c31afd052be2b6875fb75c76cbad"><div class="ttname"><a href="structspk_1_1Color.html#a4439c31afd052be2b6875fb75c76cbad">spk::Color::orange</a></div><div class="ttdeci">static const Color orange</div><div class="ttdoc">orange</div><div class="ttdef"><b>Definition:</b> spk_color.hpp:92</div></div>
-<div class="ttc" id="astructspk_1_1Color_html_a4eb69ca6a389242ed3bd23d1afa4aade"><div class="ttname"><a href="structspk_1_1Color.html#a4eb69ca6a389242ed3bd23d1afa4aade">spk::Color::red</a></div><div class="ttdeci">static const Color red</div><div class="ttdoc">red</div><div class="ttdef"><b>Definition:</b> spk_color.hpp:86</div></div>
-<div class="ttc" id="astructspk_1_1Color_html_a8b04c7af7dc8d0b475233e3250a7d3a0"><div class="ttname"><a href="structspk_1_1Color.html#a8b04c7af7dc8d0b475233e3250a7d3a0">spk::Color::cyan</a></div><div class="ttdeci">static const Color cyan</div><div class="ttdoc">cyan</div><div class="ttdef"><b>Definition:</b> spk_color.hpp:91</div></div>
-<div class="ttc" id="astructspk_1_1Color_html_a964b26508502fcce91cf1b6bdf911f11"><div class="ttname"><a href="structspk_1_1Color.html#a964b26508502fcce91cf1b6bdf911f11">spk::Color::magenta</a></div><div class="ttdeci">static const Color magenta</div><div class="ttdoc">magenta</div><div class="ttdef"><b>Definition:</b> spk_color.hpp:93</div></div>
-<div class="ttc" id="astructspk_1_1Color_html_ad4ccd35271411645f1f560feb08eee50"><div class="ttname"><a href="structspk_1_1Color.html#ad4ccd35271411645f1f560feb08eee50">spk::Color::yellow</a></div><div class="ttdeci">static const Color yellow</div><div class="ttdoc">yellow</div><div class="ttdef"><b>Definition:</b> spk_color.hpp:89</div></div>
-<div class="ttc" id="astructspk_1_1Color_html_af86b12ae82ff336efb9f59c69cf946d8"><div class="ttname"><a href="structspk_1_1Color.html#af86b12ae82ff336efb9f59c69cf946d8">spk::Color::pink</a></div><div class="ttdeci">static const Color pink</div><div class="ttdoc">punk(not a color)</div><div class="ttdef"><b>Definition:</b> spk_color.hpp:94</div></div>
+<div class="ttc" id="astructspk_1_1Color_html_a0cb4e1110ed1284e8a8646fcc9b3c605"><div class="ttname"><a href="structspk_1_1Color.html#a0cb4e1110ed1284e8a8646fcc9b3c605">spk::Color::green</a></div><div class="ttdeci">static const Color green</div><div class="ttdoc">green</div><div class="ttdef"><b>Definition:</b> spk_color.hpp:98</div></div>
+<div class="ttc" id="astructspk_1_1Color_html_a0f093600808330f0b4326b1e25598bb1"><div class="ttname"><a href="structspk_1_1Color.html#a0f093600808330f0b4326b1e25598bb1">spk::Color::blue</a></div><div class="ttdeci">static const Color blue</div><div class="ttdoc">blue</div><div class="ttdef"><b>Definition:</b> spk_color.hpp:97</div></div>
+<div class="ttc" id="astructspk_1_1Color_html_a12510bb5d0f0ada45f855a2d02a5b4a0"><div class="ttname"><a href="structspk_1_1Color.html#a12510bb5d0f0ada45f855a2d02a5b4a0">spk::Color::purple</a></div><div class="ttdeci">static const Color purple</div><div class="ttdoc">purple</div><div class="ttdef"><b>Definition:</b> spk_color.hpp:100</div></div>
+<div class="ttc" id="astructspk_1_1Color_html_a4439c31afd052be2b6875fb75c76cbad"><div class="ttname"><a href="structspk_1_1Color.html#a4439c31afd052be2b6875fb75c76cbad">spk::Color::orange</a></div><div class="ttdeci">static const Color orange</div><div class="ttdoc">orange</div><div class="ttdef"><b>Definition:</b> spk_color.hpp:102</div></div>
+<div class="ttc" id="astructspk_1_1Color_html_a4eb69ca6a389242ed3bd23d1afa4aade"><div class="ttname"><a href="structspk_1_1Color.html#a4eb69ca6a389242ed3bd23d1afa4aade">spk::Color::red</a></div><div class="ttdeci">static const Color red</div><div class="ttdoc">red</div><div class="ttdef"><b>Definition:</b> spk_color.hpp:96</div></div>
+<div class="ttc" id="astructspk_1_1Color_html_a8b04c7af7dc8d0b475233e3250a7d3a0"><div class="ttname"><a href="structspk_1_1Color.html#a8b04c7af7dc8d0b475233e3250a7d3a0">spk::Color::cyan</a></div><div class="ttdeci">static const Color cyan</div><div class="ttdoc">cyan</div><div class="ttdef"><b>Definition:</b> spk_color.hpp:101</div></div>
+<div class="ttc" id="astructspk_1_1Color_html_a964b26508502fcce91cf1b6bdf911f11"><div class="ttname"><a href="structspk_1_1Color.html#a964b26508502fcce91cf1b6bdf911f11">spk::Color::magenta</a></div><div class="ttdeci">static const Color magenta</div><div class="ttdoc">magenta</div><div class="ttdef"><b>Definition:</b> spk_color.hpp:103</div></div>
+<div class="ttc" id="astructspk_1_1Color_html_ad4ccd35271411645f1f560feb08eee50"><div class="ttname"><a href="structspk_1_1Color.html#ad4ccd35271411645f1f560feb08eee50">spk::Color::yellow</a></div><div class="ttdeci">static const Color yellow</div><div class="ttdoc">yellow</div><div class="ttdef"><b>Definition:</b> spk_color.hpp:99</div></div>
+<div class="ttc" id="astructspk_1_1Color_html_af86b12ae82ff336efb9f59c69cf946d8"><div class="ttname"><a href="structspk_1_1Color.html#af86b12ae82ff336efb9f59c69cf946d8">spk::Color::pink</a></div><div class="ttdeci">static const Color pink</div><div class="ttdoc">punk(not a color)</div><div class="ttdef"><b>Definition:</b> spk_color.hpp:104</div></div>
 </div><!-- fragment -->
 <p>Some constant colors. </p>
 

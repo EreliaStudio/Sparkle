@@ -94,6 +94,12 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a37ccac48c7cc5be8b9dc99d78c55150c"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Font_1_1Atlas.html#a37ccac48c7cc5be8b9dc99d78c55150c">Atlas</a> (const std::vector&lt; uint8_t &gt; &amp;p_fontData, const <a class="el" href="structspk_1_1Font_1_1Configuration.html">Configuration</a> &amp;p_fontConfiguration, const <a class="el" href="structspk_1_1Font_1_1Key.html">Key</a> &amp;p_key)</td></tr>
 <tr class="memdesc:a37ccac48c7cc5be8b9dc99d78c55150c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructs an <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a> with specified font data, font configuration, and key.  <a href="classspk_1_1Font_1_1Atlas.html#a37ccac48c7cc5be8b9dc99d78c55150c">More...</a><br /></td></tr>
 <tr class="separator:a37ccac48c7cc5be8b9dc99d78c55150c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a57a24d582a5d89ac751672f5d15194aa"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structspk_1_1IVector2.html">Vector2Int</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Font_1_1Atlas.html#a57a24d582a5d89ac751672f5d15194aa">computeCharSize</a> (const wchar_t &amp;p_char) const</td></tr>
+<tr class="memdesc:a57a24d582a5d89ac751672f5d15194aa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the size of a character in pixels for the specified font configuration within the <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a>.  <a href="classspk_1_1Font_1_1Atlas.html#a57a24d582a5d89ac751672f5d15194aa">More...</a><br /></td></tr>
+<tr class="separator:a57a24d582a5d89ac751672f5d15194aa"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3a07de4450b8bb52002b87d88231848b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structspk_1_1IVector2.html">Vector2Int</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Font_1_1Atlas.html#a3a07de4450b8bb52002b87d88231848b">computeStringSize</a> (const std::string &amp;p_string) const</td></tr>
+<tr class="memdesc:a3a07de4450b8bb52002b87d88231848b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the size of a string in pixels for the specified font configuration within the <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a>.  <a href="classspk_1_1Font_1_1Atlas.html#a3a07de4450b8bb52002b87d88231848b">More...</a><br /></td></tr>
+<tr class="separator:a3a07de4450b8bb52002b87d88231848b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a91f05a76a620fb36ba216843f1da7055"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="structspk_1_1Font_1_1Atlas_1_1GlyphData.html">GlyphData</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Font_1_1Atlas.html#a91f05a76a620fb36ba216843f1da7055">operator[]</a> (const wchar_t &amp;p_char) const</td></tr>
 <tr class="memdesc:a91f05a76a620fb36ba216843f1da7055"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the <a class="el" href="structspk_1_1Font_1_1Atlas_1_1GlyphData.html" title="Holds rendering data for an individual glyph within a font atlas.">GlyphData</a> for a specified character.  <a href="classspk_1_1Font_1_1Atlas.html#a91f05a76a620fb36ba216843f1da7055">More...</a><br /></td></tr>
 <tr class="separator:a91f05a76a620fb36ba216843f1da7055"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -116,7 +122,7 @@ Public Member Functions</h2></td></tr>
 <div class="line"><a class="code" href="structspk_1_1Font_1_1Atlas_1_1GlyphData.html">spk::Font::Atlas::GlyphData</a> glyphE = <a class="code" href="classspk_1_1Font.html#a2c95509cec9d03a6cf0b8b7dcc4a4593">atlas</a>.glyph(<span class="charliteral">&#39;E&#39;</span>);</div>
 <div class="ttc" id="aclassspk_1_1Font_1_1Atlas_html"><div class="ttname"><a href="classspk_1_1Font_1_1Atlas.html">spk::Font::Atlas</a></div><div class="ttdoc">Manages a texture atlas for a specific font configuration, including glyph data and texture.</div><div class="ttdef"><b>Definition:</b> spk_font.hpp:194</div></div>
 <div class="ttc" id="aclassspk_1_1Font_html"><div class="ttname"><a href="classspk_1_1Font.html">spk::Font</a></div><div class="ttdoc">Handles font rendering by managing glyph textures and dynamic font atlas creation.</div><div class="ttdef"><b>Definition:</b> spk_font.hpp:39</div></div>
-<div class="ttc" id="aclassspk_1_1Font_html_a2c95509cec9d03a6cf0b8b7dcc4a4593"><div class="ttname"><a href="classspk_1_1Font.html#a2c95509cec9d03a6cf0b8b7dcc4a4593">spk::Font::atlas</a></div><div class="ttdeci">const Atlas &amp; atlas(const size_t &amp;p_fontSize, const size_t &amp;p_outlineSize, const OutlineStyle &amp;p_outlineStype) const</div><div class="ttdoc">Retrieves or creates an Atlas with specified font size, outline size, and outline style.</div><div class="ttdef"><b>Definition:</b> spk_font.cpp:26</div></div>
+<div class="ttc" id="aclassspk_1_1Font_html_a2c95509cec9d03a6cf0b8b7dcc4a4593"><div class="ttname"><a href="classspk_1_1Font.html#a2c95509cec9d03a6cf0b8b7dcc4a4593">spk::Font::atlas</a></div><div class="ttdeci">const Atlas &amp; atlas(const size_t &amp;p_fontSize, const size_t &amp;p_outlineSize, const OutlineStyle &amp;p_outlineStype) const</div><div class="ttdoc">Retrieves or creates an Atlas with specified font size, outline size, and outline style.</div><div class="ttdef"><b>Definition:</b> spk_font.cpp:88</div></div>
 <div class="ttc" id="astructspk_1_1Font_1_1Atlas_1_1GlyphData_html"><div class="ttname"><a href="structspk_1_1Font_1_1Atlas_1_1GlyphData.html">spk::Font::Atlas::GlyphData</a></div><div class="ttdoc">Holds rendering data for an individual glyph within a font atlas.</div><div class="ttdef"><b>Definition:</b> spk_font.hpp:215</div></div>
 </div><!-- fragment --><dl class="section see"><dt>See also</dt><dd><a class="el" href="classspk_1_1Font.html" title="Handles font rendering by managing glyph textures and dynamic font atlas creation.">Font</a>, <a class="el" href="structspk_1_1Font_1_1Configuration.html" title="Holds configuration data for font loading and glyph validation.">Configuration</a>, <a class="el" href="structspk_1_1Font_1_1Key.html" title="Represents a unique identifier for font atlas configurations.">Key</a>, <a class="el" href="structspk_1_1Font_1_1Atlas_1_1GlyphData.html" title="Holds rendering data for an individual glyph within a font atlas.">GlyphData</a> </dd></dl>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
@@ -186,6 +192,62 @@ Public Member Functions</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="a57a24d582a5d89ac751672f5d15194aa"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a57a24d582a5d89ac751672f5d15194aa">&#9670;&nbsp;</a></span>computeCharSize()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structspk_1_1IVector2.html">Vector2Int</a> spk::Font::Atlas::computeCharSize </td>
+          <td>(</td>
+          <td class="paramtype">const wchar_t &amp;&#160;</td>
+          <td class="paramname"><em>p_char</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Computes the size of a character in pixels for the specified font configuration within the <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a>. </p>
+<p>This function calculates the dimensions (width and height) of a given character (<code>p_char</code>) based on the font configuration used to create this <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a>. It uses the glyph data and font metrics to determine the precise rendering size of the character, including any additional space required for the outline.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_char</td><td>The character to compute the size for. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>A Vector2Int representing the width and height of the character in pixels. </dd></dl>
+
+</div>
+</div>
+<a id="a3a07de4450b8bb52002b87d88231848b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3a07de4450b8bb52002b87d88231848b">&#9670;&nbsp;</a></span>computeStringSize()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structspk_1_1IVector2.html">Vector2Int</a> spk::Font::Atlas::computeStringSize </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>p_string</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Computes the size of a string in pixels for the specified font configuration within the <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a>. </p>
+<p>This function calculates the dimensions (width and height) of a given string (<code>p_string</code>) based on the font configuration used to create this <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a>. It considers the cumulative size of all characters in the string, including any additional space required for the outline.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_string</td><td>The string to compute the size for. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>A Vector2Int representing the width and height of the string in pixels. </dd></dl>
+
+</div>
+</div>
 <a id="abe9925b307296efa7338e8ca01238341"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#abe9925b307296efa7338e8ca01238341">&#9670;&nbsp;</a></span>needUploadToGPU()</h2>
 
@@ -278,6 +340,7 @@ Public Member Functions</h2></td></tr>
 </div>
 <hr/>The documentation for this class was generated from the following files:<ul>
 <li>Sparkle/src/graphics/texture/font/<a class="el" href="spk__font_8hpp_source.html">spk_font.hpp</a></li>
+<li>Sparkle/src/graphics/texture/font/spk_font.cpp</li>
 <li>Sparkle/src/graphics/texture/font/spk_font_atlas.cpp</li>
 <li>Sparkle/src/graphics/texture/font/spk_font_atlas_outline_mask.cpp</li>
 <li>Sparkle/src/graphics/texture/font/spk_font_truetype_related.cpp</li>

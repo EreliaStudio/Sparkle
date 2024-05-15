@@ -113,6 +113,15 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:aadeccb86c6371918f670f13ffb5612ff"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Font.html#aadeccb86c6371918f670f13ffb5612ff">Font</a> (const std::filesystem::path &amp;p_path)</td></tr>
 <tr class="memdesc:aadeccb86c6371918f670f13ffb5612ff"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructs a <a class="el" href="classspk_1_1Font.html" title="Handles font rendering by managing glyph textures and dynamic font atlas creation.">Font</a> object with the specified font file path.  <a href="classspk_1_1Font.html#aadeccb86c6371918f670f13ffb5612ff">More...</a><br /></td></tr>
 <tr class="separator:aadeccb86c6371918f670f13ffb5612ff"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab915eb6588c0f45f66ecc117cf329cd4"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structspk_1_1IVector2.html">Vector2Int</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Font.html#ab915eb6588c0f45f66ecc117cf329cd4">computeCharSize</a> (const wchar_t &amp;p_char, size_t p_size, size_t p_outlineSize, const <a class="el" href="classspk_1_1Font.html#af83504af647f0f7c98c509d3cc2e9f55">spk::Font::OutlineStyle</a> &amp;p_outlineStyle)</td></tr>
+<tr class="memdesc:ab915eb6588c0f45f66ecc117cf329cd4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the size of a character in pixels for the specified font size, outline size, and outline style.  <a href="classspk_1_1Font.html#ab915eb6588c0f45f66ecc117cf329cd4">More...</a><br /></td></tr>
+<tr class="separator:ab915eb6588c0f45f66ecc117cf329cd4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae4155b3d4d73e48d883f7bbd5b36f201"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structspk_1_1IVector2.html">Vector2Int</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Font.html#ae4155b3d4d73e48d883f7bbd5b36f201">computeStringSize</a> (const std::string &amp;p_string, size_t p_size, size_t p_outlineSize, const <a class="el" href="classspk_1_1Font.html#af83504af647f0f7c98c509d3cc2e9f55">spk::Font::OutlineStyle</a> &amp;p_outlineStyle)</td></tr>
+<tr class="memdesc:ae4155b3d4d73e48d883f7bbd5b36f201"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the size of a string in pixels for the specified font size, outline size, and outline style.  <a href="classspk_1_1Font.html#ae4155b3d4d73e48d883f7bbd5b36f201">More...</a><br /></td></tr>
+<tr class="separator:ae4155b3d4d73e48d883f7bbd5b36f201"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1dbd33ac31cf03b880e1351855e99116"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Font.html#a1dbd33ac31cf03b880e1351855e99116">computeOptimalTextSize</a> (const std::string &amp;p_string, size_t p_outlineSize, const <a class="el" href="classspk_1_1Font.html#af83504af647f0f7c98c509d3cc2e9f55">spk::Font::OutlineStyle</a> &amp;p_outlineStyle, const <a class="el" href="structspk_1_1IVector2.html">Vector2Int</a> &amp;p_textArea)</td></tr>
+<tr class="memdesc:a1dbd33ac31cf03b880e1351855e99116"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the optimal text size for a given text area and outline style.  <a href="classspk_1_1Font.html#a1dbd33ac31cf03b880e1351855e99116">More...</a><br /></td></tr>
+<tr class="separator:a1dbd33ac31cf03b880e1351855e99116"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2c95509cec9d03a6cf0b8b7dcc4a4593"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="classspk_1_1Font_1_1Atlas.html">Atlas</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Font.html#a2c95509cec9d03a6cf0b8b7dcc4a4593">atlas</a> (const size_t &amp;p_fontSize, const size_t &amp;p_outlineSize, const <a class="el" href="classspk_1_1Font.html#af83504af647f0f7c98c509d3cc2e9f55">OutlineStyle</a> &amp;p_outlineStype) const</td></tr>
 <tr class="memdesc:a2c95509cec9d03a6cf0b8b7dcc4a4593"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves or creates an <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a> with specified font size, outline size, and outline style.  <a href="classspk_1_1Font.html#a2c95509cec9d03a6cf0b8b7dcc4a4593">More...</a><br /></td></tr>
 <tr class="separator:a2c95509cec9d03a6cf0b8b7dcc4a4593"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -140,7 +149,7 @@ static const uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class
 <div class="line"><a class="code" href="structspk_1_1Font_1_1Atlas_1_1GlyphData.html">spk::Font::Atlas::GlyphData</a> glyphE = <a class="code" href="classspk_1_1Font.html#a2c95509cec9d03a6cf0b8b7dcc4a4593">atlas</a>.glyph(<span class="charliteral">&#39;E&#39;</span>);</div>
 <div class="ttc" id="aclassspk_1_1Font_1_1Atlas_html"><div class="ttname"><a href="classspk_1_1Font_1_1Atlas.html">spk::Font::Atlas</a></div><div class="ttdoc">Manages a texture atlas for a specific font configuration, including glyph data and texture.</div><div class="ttdef"><b>Definition:</b> spk_font.hpp:194</div></div>
 <div class="ttc" id="aclassspk_1_1Font_html"><div class="ttname"><a href="classspk_1_1Font.html">spk::Font</a></div><div class="ttdoc">Handles font rendering by managing glyph textures and dynamic font atlas creation.</div><div class="ttdef"><b>Definition:</b> spk_font.hpp:39</div></div>
-<div class="ttc" id="aclassspk_1_1Font_html_a2c95509cec9d03a6cf0b8b7dcc4a4593"><div class="ttname"><a href="classspk_1_1Font.html#a2c95509cec9d03a6cf0b8b7dcc4a4593">spk::Font::atlas</a></div><div class="ttdeci">const Atlas &amp; atlas(const size_t &amp;p_fontSize, const size_t &amp;p_outlineSize, const OutlineStyle &amp;p_outlineStype) const</div><div class="ttdoc">Retrieves or creates an Atlas with specified font size, outline size, and outline style.</div><div class="ttdef"><b>Definition:</b> spk_font.cpp:26</div></div>
+<div class="ttc" id="aclassspk_1_1Font_html_a2c95509cec9d03a6cf0b8b7dcc4a4593"><div class="ttname"><a href="classspk_1_1Font.html#a2c95509cec9d03a6cf0b8b7dcc4a4593">spk::Font::atlas</a></div><div class="ttdeci">const Atlas &amp; atlas(const size_t &amp;p_fontSize, const size_t &amp;p_outlineSize, const OutlineStyle &amp;p_outlineStype) const</div><div class="ttdoc">Retrieves or creates an Atlas with specified font size, outline size, and outline style.</div><div class="ttdef"><b>Definition:</b> spk_font.cpp:88</div></div>
 <div class="ttc" id="astructspk_1_1Font_1_1Atlas_1_1GlyphData_html"><div class="ttname"><a href="structspk_1_1Font_1_1Atlas_1_1GlyphData.html">spk::Font::Atlas::GlyphData</a></div><div class="ttdoc">Holds rendering data for an individual glyph within a font atlas.</div><div class="ttdef"><b>Definition:</b> spk_font.hpp:215</div></div>
 </div><!-- fragment --><dl class="section note"><dt>Note</dt><dd>The class assumes the font file provided at construction exists and is valid. Atlases created are managed internally and should be accessed via the provided methods rather than directly to ensure thread safety and resource management.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a>, <a class="el" href="structspk_1_1Font_1_1Configuration.html" title="Holds configuration data for font loading and glyph validation.">Configuration</a>, <a class="el" href="structspk_1_1Font_1_1Key.html" title="Represents a unique identifier for font atlas configurations.">Key</a> </dd></dl>
@@ -296,6 +305,165 @@ static const uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>A constant reference to the <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a> object configured with the specified parameters. </dd></dl>
+
+</div>
+</div>
+<a id="ab915eb6588c0f45f66ecc117cf329cd4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab915eb6588c0f45f66ecc117cf329cd4">&#9670;&nbsp;</a></span>computeCharSize()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structspk_1_1IVector2.html">Vector2Int</a> spk::Font::computeCharSize </td>
+          <td>(</td>
+          <td class="paramtype">const wchar_t &amp;&#160;</td>
+          <td class="paramname"><em>p_char</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>p_size</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>p_outlineSize</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="classspk_1_1Font.html#af83504af647f0f7c98c509d3cc2e9f55">spk::Font::OutlineStyle</a> &amp;&#160;</td>
+          <td class="paramname"><em>p_outlineStyle</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Computes the size of a character in pixels for the specified font size, outline size, and outline style. </p>
+<p>This function calculates the dimensions (width and height) of a given character (<code>p_char</code>) based on the specified font size (<code>p_size</code>), outline size (<code>p_outlineSize</code>), and outline style (<code>p_outlineStyle</code>). It uses the font data and configuration to determine the precise rendering size of the character, including any additional space required for the outline.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_char</td><td>The character to compute the size for. </td></tr>
+    <tr><td class="paramname">p_size</td><td>The font size in points. </td></tr>
+    <tr><td class="paramname">p_outlineSize</td><td>The thickness of the outline in pixels. </td></tr>
+    <tr><td class="paramname">p_outlineStyle</td><td>The style of the outline to apply. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>A Vector2Int representing the width and height of the character in pixels. </dd></dl>
+
+</div>
+</div>
+<a id="a1dbd33ac31cf03b880e1351855e99116"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1dbd33ac31cf03b880e1351855e99116">&#9670;&nbsp;</a></span>computeOptimalTextSize()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">size_t spk::Font::computeOptimalTextSize </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>p_string</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>p_outlineSize</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="classspk_1_1Font.html#af83504af647f0f7c98c509d3cc2e9f55">spk::Font::OutlineStyle</a> &amp;&#160;</td>
+          <td class="paramname"><em>p_outlineStyle</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structspk_1_1IVector2.html">Vector2Int</a> &amp;&#160;</td>
+          <td class="paramname"><em>p_textArea</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Computes the optimal text size for a given text area and outline style. </p>
+<p>This function determines the optimal font size to fit a given string (<code>p_string</code>) within a specified text area (<code>p_textArea</code>). It considers the outline size (<code>p_outlineSize</code>) and outline style (<code>p_outlineStyle</code>) to ensure that the text fits well within the given dimensions without overflowing or being too small.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_string</td><td>The string to fit within the text area. </td></tr>
+    <tr><td class="paramname">p_outlineSize</td><td>The thickness of the outline in pixels. </td></tr>
+    <tr><td class="paramname">p_outlineStyle</td><td>The style of the outline to apply. </td></tr>
+    <tr><td class="paramname">p_textArea</td><td>The dimensions of the text area in pixels. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The optimal font size in points that fits the text within the specified area. </dd></dl>
+
+</div>
+</div>
+<a id="ae4155b3d4d73e48d883f7bbd5b36f201"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae4155b3d4d73e48d883f7bbd5b36f201">&#9670;&nbsp;</a></span>computeStringSize()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structspk_1_1IVector2.html">Vector2Int</a> spk::Font::computeStringSize </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>p_string</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>p_size</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>p_outlineSize</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="classspk_1_1Font.html#af83504af647f0f7c98c509d3cc2e9f55">spk::Font::OutlineStyle</a> &amp;&#160;</td>
+          <td class="paramname"><em>p_outlineStyle</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Computes the size of a string in pixels for the specified font size, outline size, and outline style. </p>
+<p>This function calculates the dimensions (width and height) of a given string (<code>p_string</code>) based on the specified font size (<code>p_size</code>), outline size (<code>p_outlineSize</code>), and outline style (<code>p_outlineStyle</code>). It considers the cumulative size of all characters in the string, including any additional space required for the outline.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_string</td><td>The string to compute the size for. </td></tr>
+    <tr><td class="paramname">p_size</td><td>The font size in points. </td></tr>
+    <tr><td class="paramname">p_outlineSize</td><td>The thickness of the outline in pixels. </td></tr>
+    <tr><td class="paramname">p_outlineStyle</td><td>The style of the outline to apply. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>A Vector2Int representing the width and height of the string in pixels. </dd></dl>
 
 </div>
 </div>
