@@ -133,6 +133,11 @@ namespace spk::WidgetComponent
          */
         void render();
 
+        /**
+         * @brief Compute the biggest font size possible to allow the text stored inside the TextLabel to be rendered inside the area described by p_desiredArea
+         * @param p_desiredArea The area where the text need to fit in
+         * @return The font size in pixel
+        */
 		size_t computeOptimalTextSize(const spk::Vector2Int& p_desiredArea);
 
         /**

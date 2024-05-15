@@ -83,6 +83,14 @@ namespace spk
          */
         Color operator-(const Color& p_color) const;
 
+        /**
+         * @brief Output operator for color
+         * 
+         * Print the color as hexadecimal values
+         * @param p_os The stream where to output the color
+         * @param p_color The color to output
+         * @return The stream once filled
+        */
 		friend std::ostream& operator << (std::ostream& p_os, const spk::Color& p_color);
 
         static const Color red;     //!< red

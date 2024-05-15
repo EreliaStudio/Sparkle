@@ -213,6 +213,10 @@ namespace spk
 		 */
 		void releaseGPUMemory();
 
+		/**
+		 * @brief Return the ID provided by sparkle when creating/uploading the texture to the GPU
+		 * @return The ID of the texture allocated on the GPU
+		*/
 		const GLint ID() const;
 	};
 }
