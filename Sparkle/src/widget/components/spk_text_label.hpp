@@ -77,7 +77,7 @@ namespace spk::WidgetComponent
         {
             std::vector<const spk::Font::Atlas::GlyphData*> glyphs;
             spk::Vector2Int anchorOffset = spk::Vector2Int(0, 0);
-            spk::Vector2UInt size = spk::Vector2UInt(0, 0);
+            spk::Vector2Int size = spk::Vector2Int(0, 0);
         };
 
         static const std::string _renderingPipelineCode;
@@ -134,29 +134,11 @@ namespace spk::WidgetComponent
         void render();
 
         /**
-         * @brief Calculates the area required to render the current text based on its font and size.
-         *
-         * This method computes the bounding box dimensions that would encase the currently set text,
-         * taking into account the configured font, text size, and any styling effects like outlines.
-         * The dimensions are returned as a width and height in pixels, providing the minimum space
-         * required to render the text without clipping. This is useful for dynamically sizing elements
-         * based on content or preparing layouts before rendering occurs.
-         *
-         * @return spk::Vector2UInt representing the width and height in pixels needed to render the text.
-         */
-        spk::Vector2UInt calculateTextArea() const;
-
-        /**
-         * @brief Calculates the area required to render a specified string based on the current font and size settings.
-         *
-         * Similar to calculateTextArea(), but allows for the area calculation of an arbitrary string rather than
-         * the one currently set in the TextLabel. This is particularly useful when you need to measure the
-         * space required for different strings without changing the actual content of the TextLabel.
-         *
-         * @param p_string The string for which to calculate the rendering area.
-         * @return spk::Vector2UInt representing the width and height in pixels needed to render the specified string.
-         */
-        spk::Vector2UInt calculateTextArea(const std::string& p_string) const;
+         * @brief Compute the biggest font size possible to allow the text stored inside the TextLabel to be rendered inside the area described by p_desiredArea
+         * @param p_desiredArea The area where the text need to fit in
+         * @return The font size in pixel
+        */
+		size_t computeOptimalTextSize(const spk::Vector2Int& p_desiredArea);
 
         /**
          * @brief Sets the font used for rendering the text.
@@ -245,5 +227,60 @@ namespace spk::WidgetComponent
          * @return The current text of the label
         */
         const std::string& text() const;
+
+		/**
+         * @brief Gets the font used for rendering the text.
+         * @return Pointer to the Font instance currently being used.
+         */
+        spk::Font* font() const;
+
+		/**
+         * @brief Gets the size of the text.
+         *
+         * @return The size of the text in points.
+         */
+        size_t textSize() const;
+
+        /**
+         * @brief Gets the color of the text.
+         *
+         * @return The current text color.
+         */
+        const spk::Color& textColor() const;
+
+        /**
+         * @brief Gets the outline style of the text.
+         *
+         * @return The current outline style.
+         */
+        const spk::Font::OutlineStyle& outlineStyle() const;
+
+        /**
+         * @brief Gets the size of the text outline.
+         *
+         * @return The size of the outline in pixels.
+         */
+        size_t outlineSize() const;
+
+        /**
+         * @brief Gets the color of the text outline.
+         *
+         * @return The current outline color.
+         */
+        const spk::Color& outlineColor() const;
+
+        /**
+         * @brief Gets the vertical alignment of the text within its bounding box.
+         *
+         * @return The current vertical alignment mode.
+         */
+        const VerticalAlignment& verticalAlignment() const;
+
+        /**
+         * @brief Gets the horizontal alignment of the text within its bounding box.
+         *
+         * @return The current horizontal alignment mode.
+         */
+        const HorizontalAlignment& horizontalAlignment() const;
     };
 }

@@ -100,7 +100,7 @@ namespace spk::WidgetComponent
             if (topLeftCorner.y > glyphData.position[0].y)
                 topLeftCorner.y = glyphData.position[0].y;
 
-            downRightCorner.x += glyphData.step.x;
+			downRightCorner.x += glyphData.position[4].x;
 
             result.glyphs.push_back(&glyphData);
         }
@@ -200,7 +200,7 @@ namespace spk::WidgetComponent
                 _bufferRenderingPipelineIndexes.push_back(baseIndexes + spk::Font::Atlas::GlyphData::indexesOrder[i]);
             }
         }
-
+		
         _renderingObject.setVertices(_bufferShaderInput);
         _renderingObject.setIndexes(_bufferRenderingPipelineIndexes);
     }
@@ -223,23 +223,13 @@ namespace spk::WidgetComponent
         _renderingObject.render();
     }
 
-    spk::Vector2UInt TextLabel::calculateTextArea() const
-    {
-        const spk::Font::Atlas* tmpFontAtlas = &(_font->atlas(_textSize, _outlineSize, _outlineStyle));
 
-        RenderingData renderingData = _computeRenderingData(tmpFontAtlas, _text);
-
-        return (renderingData.size);
-    }
-    
-    spk::Vector2UInt TextLabel::calculateTextArea(const std::string& p_string) const
-    {
-        const spk::Font::Atlas* tmpFontAtlas = &(_font->atlas(_textSize, _outlineSize, _outlineStyle));
-
-        RenderingData renderingData = _computeRenderingData(tmpFontAtlas, p_string);
-
-        return (renderingData.size);
-    }
+	size_t TextLabel::computeOptimalTextSize(const spk::Vector2Int& p_desiredArea)
+	{
+		size_t result = _font->computeOptimalTextSize(_text, _outlineSize, _outlineStyle, p_desiredArea);
+		
+		return (result);
+	}
 
     void TextLabel::setFont(spk::Font* p_font)
     {
@@ -274,6 +264,7 @@ namespace spk::WidgetComponent
 
     void TextLabel::setTextColor(const spk::Color& p_textColor)
     {
+		_textColor = p_textColor;
         _textColorAttributeElement = p_textColor;
         _renderingObjectTextRendererAttribute.update();
     }
@@ -292,6 +283,7 @@ namespace spk::WidgetComponent
 
     void TextLabel::setOutlineColor(const spk::Color& p_outlineColor)
     {
+		_outlineColor = p_outlineColor;
         _outlineColorAttributeElement = p_outlineColor;
         _renderingObjectTextRendererAttribute.update();
     }
@@ -312,4 +304,44 @@ namespace spk::WidgetComponent
     {
         return (_text);
     }
+
+	spk::Font* TextLabel::font() const
+    {
+		return (_font);
+	}
+
+	size_t TextLabel::textSize() const
+	{
+		return (_textSize);
+	}
+
+	const spk::Color& TextLabel::textColor() const
+	{
+		return (_textColor);
+	}
+
+	const spk::Font::OutlineStyle& TextLabel::outlineStyle() const
+	{
+		return (_outlineStyle);
+	}
+
+	size_t TextLabel::outlineSize() const
+	{
+		return (_outlineSize);
+	}
+
+	const spk::Color& TextLabel::outlineColor() const
+	{
+		return (_outlineColor);
+	}
+
+	const VerticalAlignment& TextLabel::verticalAlignment() const
+	{
+		return (_verticalAlignment);
+	}
+
+	const HorizontalAlignment& TextLabel::horizontalAlignment() const
+	{
+		return (_horizontalAlignment);
+	}
 }

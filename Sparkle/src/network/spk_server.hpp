@@ -135,13 +135,12 @@ namespace spk
              */
             void run()
             {
-                std::cout << "Server started and ready to receive new messages" << std::endl;
                 while (isRunning)
                 {
                     fd_set readfds;
                     FD_ZERO(&readfds);
                     FD_SET(serverSocket, &readfds);
-                    int max_fd = serverSocket;
+                    int max_fd = static_cast<int>(serverSocket);
 
                     {
                         std::lock_guard<std::mutex> lock(clientsMutex);
@@ -189,10 +188,8 @@ namespace spk
                     {
                         clients.erase(id);
                         onDisconnectCallback(id);
-                        std::cout << "Disconnecting client " << id << std::endl;
                     }
                 }
-                std::cout << "Closing the server" << std::endl;
             }
 
             /**
@@ -234,12 +231,12 @@ namespace spk
                         size_t totalBytesReceived = 0;
                         while (totalBytesReceived < message->header().length())
                         {
-                            bytesRead = ::recv(p_socket, dataBuffer + totalBytesReceived, message->header().length() - totalBytesReceived, 0);
+                            bytesRead = ::recv(p_socket, dataBuffer + totalBytesReceived, static_cast<int>(message->header().length()) - static_cast<int>(totalBytesReceived), 0);
                             if (bytesRead <= 0)
                             {
                                 return false;
                             }
-                            totalBytesReceived += bytesRead;
+                            totalBytesReceived += static_cast<int>(bytesRead);
                         }
                     }
                     message->header().emitterID = p_clientId;
@@ -299,7 +296,7 @@ namespace spk
 
                 if (p_message.header().length() > 0)
                 {
-                    sentBytes = ::send(clientSocket, reinterpret_cast<const char*>(p_message.data()), p_message.header().length(), 0);
+                    sentBytes = ::send(clientSocket, reinterpret_cast<const char*>(p_message.data()), static_cast<int>(p_message.header().length()), 0);
                     if (sentBytes != static_cast<int>(p_message.header().length()))
                     {
                         std::cerr << "Failed to send message data." << std::endl;

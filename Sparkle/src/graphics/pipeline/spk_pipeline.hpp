@@ -507,6 +507,12 @@ namespace spk
                 size_t nbTriangles() const;
 
                 /**
+                 * @brief Returns the number of vertices stored.
+                 * @return The number of vertices, calculated based on the stored indices.
+                 */
+                size_t nbVertices() const;
+
+                /**
                  * @brief Activates this Storage object, making it the current target for rendering operations.
                  */
                 void activate();
@@ -691,6 +697,13 @@ namespace spk
              * @return A reference to the specified Attribute object, allowing for its value to be set.
              */
             Attribute& attribute(const std::string& p_attributeName);
+
+            /**
+             * @brief Return the storage of the object
+             * 
+             * @return The storage of the object, as const reference
+            */
+			const Storage& storage() const;
         };
 
         /**

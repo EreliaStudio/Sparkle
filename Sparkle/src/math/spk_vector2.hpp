@@ -712,9 +712,9 @@ namespace spk
     }
 
     // Type aliases for commonly used IVector2 types
-    using Vector2 = IVector2<float>;            ///< Alias for IVector2 with float components.
-    using Vector2Int = IVector2<int>;           ///< Alias for IVector2 with int components.
-    using Vector2UInt = IVector2<unsigned int>; ///< Alias for IVector2 with unsigned int components.
+    using Vector2 = IVector2<float>;        ///< Alias for IVector2 with float components.
+    using Vector2Int = IVector2<int32_t>;   ///< Alias for IVector2 with int32_t components.
+    using Vector2UInt = IVector2<uint32_t>; ///< Alias for IVector2 with uint32_t components.
 }
 
 namespace std

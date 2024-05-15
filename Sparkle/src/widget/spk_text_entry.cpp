@@ -29,7 +29,7 @@ namespace spk
 
 	void TextEntry::_updateCursorBox()
 	{
-		spk::Vector2Int previousTextSize = _label.calculateTextArea(_label.text().substr(0, _currentCursorPosition - _openingCursorPosition));
+		spk::Vector2Int previousTextSize = _label.font()->computeStringSize(_label.text().substr(0, _currentCursorPosition - _openingCursorPosition), _label.textSize(), _label.outlineSize(), _label.outlineStyle());
 
 		_cursorBox.setGeometry(anchor() + spk::Vector2Int(previousTextSize.x, 0) + _box.cornerSize() * spk::Vector2Int(1, 2), spk::Vector2Int(5, size().y - _box.cornerSize().y * 4));
 	}
@@ -64,7 +64,7 @@ namespace spk
 			while (true)
 			{
 				std::string stringToTest = _text.substr(_openingCursorPosition, _currentCursorPosition - _openingCursorPosition + 1);
-				spk::Vector2UInt textSize = _label.calculateTextArea(stringToTest);
+				spk::Vector2UInt textSize = _label.font()->computeStringSize(stringToTest, _label.textSize(), _label.outlineSize(), _label.outlineStyle());
 
 				if (textSize.x > (size().x - (_cursorBox.size().x * 2)))
 				{
@@ -86,7 +86,7 @@ namespace spk
 			{
 				
 				std::string stringToTest = _text.substr(_openingCursorPosition, _closingCursorPosition - _openingCursorPosition);
-				spk::Vector2UInt textSize = _label.calculateTextArea(stringToTest);
+				spk::Vector2UInt textSize = _label.font()->computeStringSize(stringToTest, _label.textSize(), _label.outlineSize(), _label.outlineStyle());
 
 				if (textSize.x > (size().x - (_cursorBox.size().x * 2)))
 				{	

@@ -212,5 +212,11 @@ namespace spk
 		 * If the texture has been uploaded to the GPU, this method releases the allocated GPU memory. This is useful for managing resources explicitly, especially in applications where textures are frequently created and destroyed.
 		 */
 		void releaseGPUMemory();
+
+		/**
+		 * @brief Return the ID provided by sparkle when creating/uploading the texture to the GPU
+		 * @return The ID of the texture allocated on the GPU
+		*/
+		const GLint ID() const;
 	};
 }

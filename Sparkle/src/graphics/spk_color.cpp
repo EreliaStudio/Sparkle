@@ -1,6 +1,7 @@
 #include "graphics/spk_color.hpp"
 
 #include <algorithm>
+#include <iomanip>
 
 namespace spk
 {
@@ -55,6 +56,22 @@ namespace spk
 
         return (result);
     }
+	
+	std::ostream& operator << (std::ostream& p_os, const spk::Color& p_color)
+	{
+		auto flags = p_os.flags();
+
+		p_os << "0x"
+			 << std::uppercase << std::setfill('0') << std::setw(2) << std::hex
+			 << static_cast<int>(p_color.r * 255)
+			 << static_cast<int>(p_color.g * 255)
+			 << static_cast<int>(p_color.b * 255)
+			 << static_cast<int>(p_color.a * 255);
+
+		p_os.flags(flags);
+
+		return p_os;
+	}
 
     const spk::Color Color::red = Color(0xFF0000FF);
     const spk::Color Color::blue = Color(0x0000FFFF);

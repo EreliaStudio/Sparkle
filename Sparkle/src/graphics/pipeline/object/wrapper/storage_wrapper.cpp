@@ -2,9 +2,14 @@
 
 namespace spk
 {
-	size_t Pipeline::Object::Storage::nbTriangles() const
+	size_t Pipeline::Object::Storage::nbVertices() const
 	{
 		return (_indexes.size() / sizeof(unsigned int));
+	}
+
+	size_t Pipeline::Object::Storage::nbTriangles() const
+	{
+		return (nbVertices() / 3);
 	}
 
 	Pipeline::Object::Storage::Storage(const Storage::Layout& p_storageLayout) :
@@ -56,7 +61,7 @@ namespace spk
 
 	void Pipeline::Object::Storage::setIndexes(const std::vector<unsigned int> p_indexesData)
 	{
-		_indexes.push(p_indexesData.data(), p_indexesData.size() * sizeof(size_t));
+		_indexes.push(p_indexesData.data(), p_indexesData.size() * sizeof(unsigned int));
 	}
 
 	void Pipeline::Object::Storage::activate()

@@ -275,6 +275,30 @@ namespace spk
             Atlas(const std::vector<uint8_t>& p_fontData, const Configuration& p_fontConfiguration, const Key& p_key);
 
             /**
+             * @brief Computes the size of a character in pixels for the specified font configuration within the Atlas.
+             *
+             * This function calculates the dimensions (width and height) of a given character (`p_char`) based on the font
+             * configuration used to create this Atlas. It uses the glyph data and font metrics to determine the precise
+             * rendering size of the character, including any additional space required for the outline.
+             *
+             * @param p_char The character to compute the size for.
+             * @return A Vector2Int representing the width and height of the character in pixels.
+             */
+            Vector2Int computeCharSize(const wchar_t& p_char) const;
+
+            /**
+             * @brief Computes the size of a string in pixels for the specified font configuration within the Atlas.
+             *
+             * This function calculates the dimensions (width and height) of a given string (`p_string`) based on the font
+             * configuration used to create this Atlas. It considers the cumulative size of all characters in the string,
+             * including any additional space required for the outline.
+             *
+             * @param p_string The string to compute the size for.
+             * @return A Vector2Int representing the width and height of the string in pixels.
+             */
+            Vector2Int computeStringSize(const std::string& p_string) const;
+
+            /**
              * @brief Retrieves the GlyphData for a specified character.
              *
              * @param p_char The character to retrieve glyph data for.
@@ -339,6 +363,52 @@ namespace spk
         Font(const std::filesystem::path& p_path);
 
         /**
+         * @brief Computes the size of a character in pixels for the specified font size, outline size, and outline style.
+         *
+         * This function calculates the dimensions (width and height) of a given character (`p_char`) based on the specified
+         * font size (`p_size`), outline size (`p_outlineSize`), and outline style (`p_outlineStyle`). It uses the font data
+         * and configuration to determine the precise rendering size of the character, including any additional space required
+         * for the outline.
+         *
+         * @param p_char The character to compute the size for.
+         * @param p_size The font size in points.
+         * @param p_outlineSize The thickness of the outline in pixels.
+         * @param p_outlineStyle The style of the outline to apply.
+         * @return A Vector2Int representing the width and height of the character in pixels.
+         */
+        Vector2Int computeCharSize(const wchar_t& p_char, size_t p_size, size_t p_outlineSize, const spk::Font::OutlineStyle& p_outlineStyle);
+
+        /**
+         * @brief Computes the size of a string in pixels for the specified font size, outline size, and outline style.
+         *
+         * This function calculates the dimensions (width and height) of a given string (`p_string`) based on the specified
+         * font size (`p_size`), outline size (`p_outlineSize`), and outline style (`p_outlineStyle`). It considers the
+         * cumulative size of all characters in the string, including any additional space required for the outline.
+         *
+         * @param p_string The string to compute the size for.
+         * @param p_size The font size in points.
+         * @param p_outlineSize The thickness of the outline in pixels.
+         * @param p_outlineStyle The style of the outline to apply.
+         * @return A Vector2Int representing the width and height of the string in pixels.
+         */
+        Vector2Int computeStringSize(const std::string& p_string, size_t p_size, size_t p_outlineSize, const spk::Font::OutlineStyle& p_outlineStyle);
+
+        /**
+         * @brief Computes the optimal text size for a given text area and outline style.
+         *
+         * This function determines the optimal font size to fit a given string (`p_string`) within a specified text area
+         * (`p_textArea`). It considers the outline size (`p_outlineSize`) and outline style (`p_outlineStyle`) to ensure
+         * that the text fits well within the given dimensions without overflowing or being too small.
+         *
+         * @param p_string The string to fit within the text area.
+         * @param p_outlineSize The thickness of the outline in pixels.
+         * @param p_outlineStyle The style of the outline to apply.
+         * @param p_textArea The dimensions of the text area in pixels.
+         * @return The optimal font size in points that fits the text within the specified area.
+         */
+        size_t computeOptimalTextSize(const std::string& p_string, size_t p_outlineSize, const spk::Font::OutlineStyle& p_outlineStyle, const Vector2Int& p_textArea);
+
+        /**
          * @brief Retrieves or creates an Atlas with specified font size, outline size, and outline style.
          *
          * This method generates a texture atlas for the specified font size, outline size, and outline style if it does not
@@ -373,3 +443,16 @@ namespace spk
         Atlas& atlas(const size_t& p_fontSize, const size_t& p_outlineSize, const OutlineStyle& p_outlineStype);
     };
 }
+
+/**
+ * @brief Outputs a textual representation of the OutlineStyle enumeration to an output stream.
+ *
+ * This operator overload allows for the `spk::Font::OutlineStyle` enumeration to be printed to an output stream,
+ * such as `std::cout` or a file stream. It provides a human-readable representation of the outline style, which
+ * can be useful for debugging or logging purposes.
+ *
+ * @param p_os The output stream to write to.
+ * @param p_outlineStyle The outline style to output.
+ * @return A reference to the modified output stream.
+ */
+std::ostream& operator << (std::ostream& p_os, const spk::Font::OutlineStyle& p_outlineStyle);
