@@ -58,14 +58,14 @@ namespace spk::OpenGL
 		 */
 		enum class Type : uint8_t
 		{
-			Unknow,         ///< Represents an unidentified or unsupported instruction type.
-			Version,        ///< Corresponds to the GLSL version declaration.
-			Structure,      ///< Represents a GLSL structure definition.
+			Unknow,		 ///< Represents an unidentified or unsupported instruction type.
+			Version,		///< Corresponds to the GLSL version declaration.
+			Structure,	  ///< Represents a GLSL structure definition.
 			UniformBlock,   ///< Corresponds to a uniform block declaration.
-			Sampler,        ///< Represents a texture sampler declaration.
-			Function,       ///< Corresponds to a function definition.
-			Input,          ///< Represents an input variable declaration.
-			Output          ///< Corresponds to an output variable declaration.
+			Sampler,		///< Represents a texture sampler declaration.
+			Function,	   ///< Corresponds to a function definition.
+			Input,		  ///< Represents an input variable declaration.
+			Output		  ///< Corresponds to an output variable declaration.
 		};
 
 		

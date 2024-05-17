@@ -19,12 +19,12 @@ namespace spk
 		}
 	}
 
-    Pipeline::Object::~Object()
+	Pipeline::Object::~Object()
 	{
 
 	}
 
-    void Pipeline::Object::render()
+	void Pipeline::Object::render()
 	{
 		_pipeline->activate();
 		
@@ -56,7 +56,7 @@ namespace spk
 	void Pipeline::Object::setIndexes(const std::vector<unsigned int> p_indexesData)
 	{
 		_vao.activate();
-        _storage.activate();
+		_storage.activate();
 
 		_storage.setIndexes(p_indexesData);
 
@@ -64,7 +64,7 @@ namespace spk
 		_vao.deactivate();
 	}
 
-    Pipeline::Object::Attribute& Pipeline::Object::attribute(const std::string& p_attributeName)
+	Pipeline::Object::Attribute& Pipeline::Object::attribute(const std::string& p_attributeName)
 	{
 		if (_attributes.contains(p_attributeName) == false)
 			throwException("Attribute [" + p_attributeName + "] doesn't exist");

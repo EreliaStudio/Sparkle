@@ -90,9 +90,9 @@ namespace spk
 	bool Quaternion::operator<(const Quaternion& p_rhs) const
 	{
 		if (x != p_rhs.x) return x < p_rhs.x;
-        if (y != p_rhs.y) return y < p_rhs.y;
-        if (z != p_rhs.z) return z < p_rhs.z;
-        return w < p_rhs.w;
+		if (y != p_rhs.y) return y < p_rhs.y;
+		if (z != p_rhs.z) return z < p_rhs.z;
+		return w < p_rhs.w;
 	}
 
 	bool Quaternion::operator>(const Quaternion& p_rhs) const
@@ -145,49 +145,49 @@ namespace spk
 	Quaternion Quaternion::lookAt(const Vector3& p_direction, const Vector3& p_up)
 	{
 		Vector3 forward = p_direction.normalize();
-        Vector3 right = p_up.cross(forward).normalize();
-        Vector3 up = forward.cross(right);
+		Vector3 right = p_up.cross(forward).normalize();
+		Vector3 up = forward.cross(right);
 
-        // Create a rotation matrix from the right, up, and forward vectors
-        float matrix[3][3] = {
-            {right.x, up.x, forward.x},
-            {right.y, up.y, forward.y},
-            {right.z, up.z, forward.z}
-        };
+		// Create a rotation matrix from the right, up, and forward vectors
+		float matrix[3][3] = {
+			{right.x, up.x, forward.x},
+			{right.y, up.y, forward.y},
+			{right.z, up.z, forward.z}
+		};
 
-        // Convert the rotation matrix to a quaternion
-        float trace = matrix[0][0] + matrix[1][1] + matrix[2][2];
-        float qw, qx, qy, qz;
+		// Convert the rotation matrix to a quaternion
+		float trace = matrix[0][0] + matrix[1][1] + matrix[2][2];
+		float qw, qx, qy, qz;
 
-        if (trace > 0.0f) {
-            float s = 0.5f / sqrt(trace + 1.0f);
-            qw = 0.25f / s;
-            qx = (matrix[2][1] - matrix[1][2]) * s;
-            qy = (matrix[0][2] - matrix[2][0]) * s;
-            qz = (matrix[1][0] - matrix[0][1]) * s;
-        } else {
-            if (matrix[0][0] > matrix[1][1] && matrix[0][0] > matrix[2][2]) {
-                float s = 2.0f * sqrt(1.0f + matrix[0][0] - matrix[1][1] - matrix[2][2]);
-                qw = (matrix[2][1] - matrix[1][2]) / s;
-                qx = 0.25f * s;
-                qy = (matrix[0][1] + matrix[1][0]) / s;
-                qz = (matrix[0][2] + matrix[2][0]) / s;
-            } else if (matrix[1][1] > matrix[2][2]) {
-                float s = 2.0f * sqrt(1.0f + matrix[1][1] - matrix[0][0] - matrix[2][2]);
-                qw = (matrix[0][2] - matrix[2][0]) / s;
-                qx = (matrix[0][1] + matrix[1][0]) / s;
-                qy = 0.25f * s;
-                qz = (matrix[1][2] + matrix[2][1]) / s;
-            } else {
-                float s = 2.0f * sqrt(1.0f + matrix[2][2] - matrix[0][0] - matrix[1][1]);
-                qw = (matrix[1][0] - matrix[0][1]) / s;
-                qx = (matrix[0][2] + matrix[2][0]) / s;
-                qy = (matrix[1][2] + matrix[2][1]) / s;
-                qz = 0.25f * s;
-            }
-        }
+		if (trace > 0.0f) {
+			float s = 0.5f / sqrt(trace + 1.0f);
+			qw = 0.25f / s;
+			qx = (matrix[2][1] - matrix[1][2]) * s;
+			qy = (matrix[0][2] - matrix[2][0]) * s;
+			qz = (matrix[1][0] - matrix[0][1]) * s;
+		} else {
+			if (matrix[0][0] > matrix[1][1] && matrix[0][0] > matrix[2][2]) {
+				float s = 2.0f * sqrt(1.0f + matrix[0][0] - matrix[1][1] - matrix[2][2]);
+				qw = (matrix[2][1] - matrix[1][2]) / s;
+				qx = 0.25f * s;
+				qy = (matrix[0][1] + matrix[1][0]) / s;
+				qz = (matrix[0][2] + matrix[2][0]) / s;
+			} else if (matrix[1][1] > matrix[2][2]) {
+				float s = 2.0f * sqrt(1.0f + matrix[1][1] - matrix[0][0] - matrix[2][2]);
+				qw = (matrix[0][2] - matrix[2][0]) / s;
+				qx = (matrix[0][1] + matrix[1][0]) / s;
+				qy = 0.25f * s;
+				qz = (matrix[1][2] + matrix[2][1]) / s;
+			} else {
+				float s = 2.0f * sqrt(1.0f + matrix[2][2] - matrix[0][0] - matrix[1][1]);
+				qw = (matrix[1][0] - matrix[0][1]) / s;
+				qx = (matrix[0][2] + matrix[2][0]) / s;
+				qy = (matrix[1][2] + matrix[2][1]) / s;
+				qz = 0.25f * s;
+			}
+		}
 
-        return Quaternion(qx, qy, qz, qw).normalize();
+		return Quaternion(qx, qy, qz, qw).normalize();
 	}
 
 

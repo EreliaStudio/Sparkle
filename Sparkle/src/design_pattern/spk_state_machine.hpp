@@ -152,13 +152,13 @@ namespace spk
 		 * @return A reference to the Action struct associated with the state.
 		 */
 		Action& action(TStateType p_stateID)
-        {
-            if (!_states.contains(p_stateID))
-            {
-                throw std::out_of_range("State ID [" + std::to_string(static_cast<int>(p_stateID)) + "] not found");
-            }
-            return _states.at(p_stateID);
-        }
+		{
+			if (!_states.contains(p_stateID))
+			{
+				throw std::out_of_range("State ID [" + std::to_string(static_cast<int>(p_stateID)) + "] not found");
+			}
+			return _states.at(p_stateID);
+		}
 
 		/**
 		 * @brief Retrieves the action associated with a given state identifier (const version).
@@ -170,13 +170,13 @@ namespace spk
 		 * @return A const reference to the Action struct associated with the state.
 		 */
 		const Action& action(TStateType p_stateID) const
-        {
-            if (!_states.contains(p_stateID))
-            {
-                throw std::out_of_range("State ID [" + std::to_string(static_cast<int>(p_stateID)) + "] not found");
-            }
-            return _states[p_stateID];
-        }
+		{
+			if (!_states.contains(p_stateID))
+			{
+				throw std::out_of_range("State ID [" + std::to_string(static_cast<int>(p_stateID)) + "] not found");
+			}
+			return _states[p_stateID];
+		}
 		
 		/**
 		 * @brief Retrieves the action of the current state.
@@ -187,9 +187,9 @@ namespace spk
 		 * @return A reference to the Action struct for the current state.
 		 */
 		Action& currentAction()
-        {
-            return (_currentAction);
-        }
+		{
+			return (_currentAction);
+		}
 
 		/**
 		 * @brief Retrieves the action of the current state (const version).
@@ -199,9 +199,9 @@ namespace spk
 		 * @return A const reference to the Action struct for the current state.
 		 */
 		const Action& currentAction() const
-        {
-            return (_currentAction);
-        }
+		{
+			return (_currentAction);
+		}
 
 		/**
 		 * @brief Adds a state defined by an Action struct.
@@ -213,13 +213,13 @@ namespace spk
 		 * @param actions Action struct containing the callbacks for the state.
 		 */
 		void addState(TStateType p_stateID, const Action& actions)
-        {
-            if (_states.contains(p_stateID))
-            {
-                throw std::runtime_error("State ID [" + std::to_string(static_cast<int>(p_stateID)) + "] already defined");
-            }
-            _states[p_stateID] = actions;
-        }
+		{
+			if (_states.contains(p_stateID))
+			{
+				throw std::runtime_error("State ID [" + std::to_string(static_cast<int>(p_stateID)) + "] already defined");
+			}
+			_states[p_stateID] = actions;
+		}
 
 		/**
 		 * @brief Transitions to a specified state.

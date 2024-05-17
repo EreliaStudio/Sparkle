@@ -87,23 +87,23 @@ namespace spk
 
 	public:
 		/**
-         * @brief Constructs a `PseudoRandomGenerator` with a randomly generated seed.
-         * 
-         * Initializes the generator with a seed value obtained from a `std::random_device`. This constructor is suitable for scenarios where a unique sequence of random values is desired across different program executions.
-         */
+		 * @brief Constructs a `PseudoRandomGenerator` with a randomly generated seed.
+		 * 
+		 * Initializes the generator with a seed value obtained from a `std::random_device`. This constructor is suitable for scenarios where a unique sequence of random values is desired across different program executions.
+		 */
 		PseudoRandomGenerator() 
 			: _seed(std::random_device()())
 		{
 
 		}
 
-        /**
-         * @brief Constructs a `PseudoRandomGenerator` with a specified seed.
-         * 
-         * Initializes the generator with the provided seed, allowing for reproducible sequences of random values. This is particularly useful for debugging or when a deterministic output is required.
-         * 
-         * @param p_seed The seed value to initialize the random number generator.
-         */
+		/**
+		 * @brief Constructs a `PseudoRandomGenerator` with a specified seed.
+		 * 
+		 * Initializes the generator with the provided seed, allowing for reproducible sequences of random values. This is particularly useful for debugging or when a deterministic output is required.
+		 * 
+		 * @param p_seed The seed value to initialize the random number generator.
+		 */
 		PseudoRandomGenerator(long long p_seed) 
 			: _seed(p_seed)
 		{
@@ -111,25 +111,25 @@ namespace spk
 		}
 
 		/**
-         * @brief Configures the seed of the pseudo-random number generator.
-         * 
-         * Sets the seed value for the generator, affecting the sequence of generated values. Changing the seed allows for different sequences of numbers to be produced.
-         * 
-         * @param p_seed The new seed value.
-         */
+		 * @brief Configures the seed of the pseudo-random number generator.
+		 * 
+		 * Sets the seed value for the generator, affecting the sequence of generated values. Changing the seed allows for different sequences of numbers to be produced.
+		 * 
+		 * @param p_seed The new seed value.
+		 */
 		void configureSeed(long long p_seed)
 		{
 			_seed = p_seed;
 		}
 
-        /**
-         * @brief Configures the range of generated values.
-         * 
-         * Sets the minimum and maximum values for the generated numbers. This method defines the range of values that the generator can produce.
-         * 
-         * @param p_min The minimum value (included) in the range of generated numbers.
-         * @param p_max The maximum value (excluded) in the range of generated numbers.
-         */
+		/**
+		 * @brief Configures the range of generated values.
+		 * 
+		 * Sets the minimum and maximum values for the generated numbers. This method defines the range of values that the generator can produce.
+		 * 
+		 * @param p_min The minimum value (included) in the range of generated numbers.
+		 * @param p_max The maximum value (excluded) in the range of generated numbers.
+		 */
 		void configureRange(TGeneratedType p_min, TGeneratedType p_max)
 		{
 			if (p_min >= p_max)
@@ -140,13 +140,13 @@ namespace spk
 			_range = _max - _min;
 		}
 
-        /**
-         * @brief Configures the precision for floating-point number generation.
-         * 
-         * Sets the number of decimal places for generated floating-point values. This configuration is applicable only to floating-point types and affects the granularity of the generated numbers.
-         * 
-         * @param p_precision The number of decimal places for floating-point numbers.
-         */
+		/**
+		 * @brief Configures the precision for floating-point number generation.
+		 * 
+		 * Sets the number of decimal places for generated floating-point values. This configuration is applicable only to floating-point types and affects the granularity of the generated numbers.
+		 * 
+		 * @param p_precision The number of decimal places for floating-point numbers.
+		 */
 		template<typename U = TGeneratedType, std::enable_if_t<std::is_floating_point<U>::value, int> = 0>
 		void configurePrecision(uint32_t p_precision)
 		{
@@ -154,14 +154,14 @@ namespace spk
 			_precisionModulo = std::pow(10, p_precision);
 		}
 
-        /**
-         * @brief Samples a pseudo-random value based on 3D coordinates.
-         * 
-         * Generates a random value of the specified type, influenced by the provided 3D coordinates. This method is useful for spatially varying random effects in 3D space.
-         * 
-         * @param p_vector3 A `spk::IVector3` representing the 3D coordinates.
-         * @return A pseudo-random value of the specified type.
-         */
+		/**
+		 * @brief Samples a pseudo-random value based on 3D coordinates.
+		 * 
+		 * Generates a random value of the specified type, influenced by the provided 3D coordinates. This method is useful for spatially varying random effects in 3D space.
+		 * 
+		 * @param p_vector3 A `spk::IVector3` representing the 3D coordinates.
+		 * @return A pseudo-random value of the specified type.
+		 */
 		template <typename TOtherType>
 		TGeneratedType sample(const spk::IVector3<TOtherType>& p_vector3) const {
 			return _generate(
@@ -171,14 +171,14 @@ namespace spk
 				);
 		}
 
-        /**
-         * @brief Samples a pseudo-random value based on 2D coordinates.
-         * 
-         * Generates a random value of the specified type, influenced by the provided 2D coordinates. This method is useful for spatially varying random effects in 2D space.
-         * 
-         * @param p_vector2 A `spk::IVector2` representing the 2D coordinates.
-         * @return A pseudo-random value of the specified type.
-         */
+		/**
+		 * @brief Samples a pseudo-random value based on 2D coordinates.
+		 * 
+		 * Generates a random value of the specified type, influenced by the provided 2D coordinates. This method is useful for spatially varying random effects in 2D space.
+		 * 
+		 * @param p_vector2 A `spk::IVector2` representing the 2D coordinates.
+		 * @return A pseudo-random value of the specified type.
+		 */
 		template <typename TOtherType>
 		TGeneratedType sample(const spk::IVector2<TOtherType>& p_vector2) const {
 			return _generate(
@@ -188,16 +188,16 @@ namespace spk
 				);
 		}
 		
-        /**
-         * @brief Samples a pseudo-random value based on coordinates.
-         * 
-         * Generates a random value of the specified type, influenced by the provided coordinates. This generic method allows for 1D, 2D, or 3D spatial inputs.
-         * 
-         * @param p_x The x-coordinate.
-         * @param p_y The y-coordinate (defaults to 0 if not provided).
-         * @param p_z The z-coordinate (defaults to 0 if not provided).
-         * @return A pseudo-random value of the specified type.
-         */
+		/**
+		 * @brief Samples a pseudo-random value based on coordinates.
+		 * 
+		 * Generates a random value of the specified type, influenced by the provided coordinates. This generic method allows for 1D, 2D, or 3D spatial inputs.
+		 * 
+		 * @param p_x The x-coordinate.
+		 * @param p_y The y-coordinate (defaults to 0 if not provided).
+		 * @param p_z The z-coordinate (defaults to 0 if not provided).
+		 * @return A pseudo-random value of the specified type.
+		 */
 		template <typename TOtherType>
 		TGeneratedType sample(const TOtherType& p_x, const TOtherType& p_y = 0, const TOtherType& p_z = 0) const {
 			return _generate(p_x, p_y, p_z);

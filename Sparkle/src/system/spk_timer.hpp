@@ -27,7 +27,7 @@ namespace spk
 	 * countdownTimer.start();
 	 * while (!countdownTimer.isTimedOut())
 	 * {
-	 *     // Perform tasks while waiting for the timer to time out
+	 *	 // Perform tasks while waiting for the timer to time out
 	 * }
 	 * // Timer has timed out
 	 * @endcode
@@ -58,7 +58,7 @@ namespace spk
 		 * @brief Constructs an ITimer with a specified duration.
 		 * 
 		 * @param p_duration The duration for the timer, specified in units defined by the TTimeUnit template parameter.
-		 *                   The duration is internally converted to the corresponding std::chrono duration type.
+		 *				   The duration is internally converted to the corresponding std::chrono duration type.
 		 */
 		ITimer(const long long& p_duration) :
 			_duration(std::chrono::duration_cast<TTimeUnit>(TTimeUnit(p_duration)))

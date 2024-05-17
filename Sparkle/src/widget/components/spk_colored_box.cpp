@@ -2,7 +2,7 @@
 
 namespace spk::WidgetComponent
 {
-    const std::string ColoredBox::_renderingPipelineCode = R"(#version 450
+	const std::string ColoredBox::_renderingPipelineCode = R"(#version 450
 
 		#include <screenConstants>
 		
@@ -23,72 +23,72 @@ namespace spk::WidgetComponent
 		{
 			pixelColor = self.color;
 		})";
-    spk::Pipeline ColoredBox::_renderingPipeline = spk::Pipeline(_renderingPipelineCode);
+	spk::Pipeline ColoredBox::_renderingPipeline = spk::Pipeline(_renderingPipelineCode);
 
-    ColoredBox::ShaderInput::ShaderInput(const spk::Vector2Int& p_position) :
-        position(p_position)
-    {
-    }
+	ColoredBox::ShaderInput::ShaderInput(const spk::Vector2Int& p_position) :
+		position(p_position)
+	{
+	}
 
-    void ColoredBox::_updateGPUData()
-    {
-        std::vector<ShaderInput> data;
-        std::vector<unsigned int> indexes = {0, 1, 2, 2, 1, 3};
+	void ColoredBox::_updateGPUData()
+	{
+		std::vector<ShaderInput> data;
+		std::vector<unsigned int> indexes = {0, 1, 2, 2, 1, 3};
 
-        data.push_back(ShaderInput(anchor() + size() * spk::Vector2Int(0, 0)));
-        data.push_back(ShaderInput(anchor() + size() * spk::Vector2Int(0, 1)));
-        data.push_back(ShaderInput(anchor() + size() * spk::Vector2Int(1, 0)));
-        data.push_back(ShaderInput(anchor() + size() * spk::Vector2Int(1, 1)));
+		data.push_back(ShaderInput(anchor() + size() * spk::Vector2Int(0, 0)));
+		data.push_back(ShaderInput(anchor() + size() * spk::Vector2Int(0, 1)));
+		data.push_back(ShaderInput(anchor() + size() * spk::Vector2Int(1, 0)));
+		data.push_back(ShaderInput(anchor() + size() * spk::Vector2Int(1, 1)));
 
-        _renderingObject.setVertices(data);
-        _renderingObject.setIndexes(indexes);
-    }
+		_renderingObject.setVertices(data);
+		_renderingObject.setIndexes(indexes);
+	}
 
-    ColoredBox::ColoredBox() :
-        _renderingObject(_renderingPipeline.createObject()),
-        _selfAttribute(_renderingObject.attribute("self")),
-        _selfColorElement(_selfAttribute["color"]),
-        _selfLayerElement(_selfAttribute["layer"])
-    {
-    }
+	ColoredBox::ColoredBox() :
+		_renderingObject(_renderingPipeline.createObject()),
+		_selfAttribute(_renderingObject.attribute("self")),
+		_selfColorElement(_selfAttribute["color"]),
+		_selfLayerElement(_selfAttribute["layer"])
+	{
+	}
 
-    void ColoredBox::render()
-    {
-        if (_needGPUInputUpdate == true)
-        {
-            _updateGPUData();
-            _needGPUInputUpdate = false;
-        }
+	void ColoredBox::render()
+	{
+		if (_needGPUInputUpdate == true)
+		{
+			_updateGPUData();
+			_needGPUInputUpdate = false;
+		}
 
-        _renderingObject.render();
-    }
+		_renderingObject.render();
+	}
 
-    void ColoredBox::setColor(const spk::Color& p_color)
-    {
-        _selfColorElement = p_color;
-        _selfAttribute.update();
-    }
+	void ColoredBox::setColor(const spk::Color& p_color)
+	{
+		_selfColorElement = p_color;
+		_selfAttribute.update();
+	}
 
-    const Vector2& ColoredBox::anchor() const
-    {
-        return _anchor;
-    }
+	const Vector2& ColoredBox::anchor() const
+	{
+		return _anchor;
+	}
 
-    const Vector2& ColoredBox::size() const
-    {
-        return _size;
-    }
+	const Vector2& ColoredBox::size() const
+	{
+		return _size;
+	}
 
-    void ColoredBox::setLayer(const float& p_layer)
-    {
-        _selfLayerElement = p_layer;
-        _selfAttribute.update();
-    }
+	void ColoredBox::setLayer(const float& p_layer)
+	{
+		_selfLayerElement = p_layer;
+		_selfAttribute.update();
+	}
 
-    void ColoredBox::setGeometry(const Vector2& p_anchor, const Vector2& p_newSize)
-    {
-        _anchor = p_anchor;
-        _size = p_newSize;
-        _needGPUInputUpdate = true;
-    }
+	void ColoredBox::setGeometry(const Vector2& p_anchor, const Vector2& p_newSize)
+	{
+		_anchor = p_anchor;
+		_size = p_newSize;
+		_needGPUInputUpdate = true;
+	}
 }

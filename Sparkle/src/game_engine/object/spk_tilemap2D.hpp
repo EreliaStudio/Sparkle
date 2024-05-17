@@ -47,12 +47,12 @@ namespace spk
 			static inline const uint16_t WALKABLE = 0b0000000000000000; ///< Flag indicating the tile is walkable.
 			static inline const uint16_t OBSTACLE = 0b0000000000000001; ///< Flag indicating the tile is an obstacle.
 
-			spk::Vector2Int sprite = 0;                 ///< The position of the tile's sprite in the sprite sheet.
-			Type type = Type::Standard;                 ///< The type of the node, determining its rendering logic.
+			spk::Vector2Int sprite = 0;				 ///< The position of the tile's sprite in the sprite sheet.
+			Type type = Type::Standard;				 ///< The type of the node, determining its rendering logic.
 			spk::Vector2Int animationFrameOffset = 0;   ///< The starting offset for the tile's animation frames in the sprite sheet.
-			int nbFrame = 0;                            ///< The number of frames in the tile's animation.
-			int animationDuration = 0;                  ///< The duration of the tile's animation cycle.
-			int flags = WALKABLE;                       ///< Flags indicating the tile's behavior (e.g., walkable, obstacle).
+			int nbFrame = 0;							///< The number of frames in the tile's animation.
+			int animationDuration = 0;				  ///< The duration of the tile's animation cycle.
+			int flags = WALKABLE;					   ///< Flags indicating the tile's behavior (e.g., walkable, obstacle).
 
 
 			/**
@@ -637,7 +637,7 @@ namespace spk
 			}
 
 		public:
-		    /**
+			/**
 			 * @brief Sets the sprite sheet used by this chunk for rendering its tiles.
 			 * 
 			 * @param p_spriteSheet Pointer to the sprite sheet resource.
@@ -867,43 +867,43 @@ namespace spk
 			return (isFlag(p_absolutePosition.xy(), p_flags));
 		}
 
-        /**
-         * @brief Checks if the tile at the specified 3D absolute position is an obstacle.
-         *
-         * This method determines whether the specified tile has the OBSTACLE flag set, indicating
-         * that it should be considered an impassable or solid object within the game world.
-         *
-         * @param p_absolutePosition The 3D absolute position of the tile within the tilemap.
-         * @return True if the tile is an obstacle, otherwise false.
-         */
+		/**
+		 * @brief Checks if the tile at the specified 3D absolute position is an obstacle.
+		 *
+		 * This method determines whether the specified tile has the OBSTACLE flag set, indicating
+		 * that it should be considered an impassable or solid object within the game world.
+		 *
+		 * @param p_absolutePosition The 3D absolute position of the tile within the tilemap.
+		 * @return True if the tile is an obstacle, otherwise false.
+		 */
 		bool isObstacle(const spk::Vector3Int& p_absolutePosition) const
 		{
 			return (isFlag(p_absolutePosition.xy(), Node::OBSTACLE));
 		}
 
-        /**
-         * @brief Checks if the tile at the specified 2D absolute position is an obstacle.
-         *
-         * Similar to the 3D version, this method checks if the specified 2D position in the tilemap
-         * corresponds to a tile marked as an obstacle.
-         *
-         * @param p_absolutePosition The 2D absolute position of the tile within the tilemap.
-         * @return True if the tile is an obstacle, otherwise false.
-         */
+		/**
+		 * @brief Checks if the tile at the specified 2D absolute position is an obstacle.
+		 *
+		 * Similar to the 3D version, this method checks if the specified 2D position in the tilemap
+		 * corresponds to a tile marked as an obstacle.
+		 *
+		 * @param p_absolutePosition The 2D absolute position of the tile within the tilemap.
+		 * @return True if the tile is an obstacle, otherwise false.
+		 */
 		bool isObstacle(const spk::Vector2Int& p_absolutePosition) const
 		{
 			return (isFlag(p_absolutePosition, Node::OBSTACLE));
 		}
 
-        /**
-         * @brief Retrieves the combined flag values for the tile at a specified 2D absolute position.
-         *
-         * This method aggregates all the flags set for the tile at the given position, providing
-         * a comprehensive status that can be used to determine various properties of the tile.
-         *
-         * @param p_absolutePosition The 2D absolute position of the tile within the tilemap.
-         * @return An integer representing the combined flag values for the tile.
-         */
+		/**
+		 * @brief Retrieves the combined flag values for the tile at a specified 2D absolute position.
+		 *
+		 * This method aggregates all the flags set for the tile at the given position, providing
+		 * a comprehensive status that can be used to determine various properties of the tile.
+		 *
+		 * @param p_absolutePosition The 2D absolute position of the tile within the tilemap.
+		 * @return An integer representing the combined flag values for the tile.
+		 */
 		int flag(const spk::Vector2Int& p_absolutePosition) const
 		{
 			spk::Vector2Int chunkPosition = convertWorldToChunkPosition(p_absolutePosition);
@@ -918,14 +918,14 @@ namespace spk
 		}
 
 		/**
-         * @brief Retrieves the combined flag values for the tile at a specified 3D absolute position.
-         *
-         * This is the 3D variant of the flag retrieval method, which internally converts the 3D position
-         * to 2D to access the relevant tile data.
-         *
-         * @param p_absolutePosition The 3D absolute position of the tile within the tilemap.
-         * @return An integer representing the combined flag values for the tile.
-         */
+		 * @brief Retrieves the combined flag values for the tile at a specified 3D absolute position.
+		 *
+		 * This is the 3D variant of the flag retrieval method, which internally converts the 3D position
+		 * to 2D to access the relevant tile data.
+		 *
+		 * @param p_absolutePosition The 3D absolute position of the tile within the tilemap.
+		 * @return An integer representing the combined flag values for the tile.
+		 */
 		int flag(const spk::Vector3Int& p_absolutePosition) const
 		{
 			return (flag(p_absolutePosition.xy()));

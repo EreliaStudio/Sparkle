@@ -5,14 +5,14 @@
 
 namespace spk
 {
-    enum class InputState : uint8_t
-    {
-        Unknown,
-        Up,
-        Pressed,
-        Down,
-        Released
-    };
+	enum class InputState : uint8_t
+	{
+		Unknown,
+		Up,
+		Pressed,
+		Down,
+		Released
+	};
 
-    std::ostream& operator << (std::ostream& p_os, const InputState& p_state);
+	std::ostream& operator << (std::ostream& p_os, const InputState& p_state);
 }
