@@ -50,21 +50,21 @@ namespace spk
 	Texture* TextureManager::texture(const std::string& p_textureName) const
 	{
 		if (_loadedTextures.contains(p_textureName) == false)
-			throwException("Texture [" + p_textureName + "] isn't loaded");
+			throwException("Can't return a Texture named [" + p_textureName + "] inside TextureManager\nNo such Texture loaded with desired name");
 		return (_loadedTextures.at(p_textureName));
 	}
 
 	Image* TextureManager::image(const std::string& p_textureName) const
 	{
 		if (_loadedTextures.contains(p_textureName) == false)
-			throwException("Image [" + p_textureName + "] isn't loaded");
+			throwException("Can't return a Image named [" + p_textureName + "] inside TextureManager\nNo such Image loaded with desired name");
 		return (dynamic_cast<Image*>(_loadedTextures.at(p_textureName)));
 	}
 	
 	SpriteSheet* TextureManager::spriteSheet(const std::string& p_textureName) const
 	{
 		if (_loadedTextures.contains(p_textureName) == false)
-			throwException("SpriteSheet [" + p_textureName + "] isn't loaded");
+			throwException("Can't return a SpriteSheet named [" + p_textureName + "] inside TextureManager\nNo such SpriteSheet loaded with desired name");
 		return (dynamic_cast<SpriteSheet*>(_loadedTextures.at(p_textureName)));
 	}
 }
