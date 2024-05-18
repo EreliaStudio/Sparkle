@@ -1,13 +1,13 @@
-#include "graphics/spk_texture_manager.hpp"
+#include "graphics/spk_texture_atlas.hpp"
 
 namespace spk
 {
-	TextureManager::TextureManager()
+	TextureAtlas::TextureAtlas()
 	{
 
 	}
 
-	TextureManager::~TextureManager()
+	TextureAtlas::~TextureAtlas()
 	{
 		for (auto& [key, element] : _loadedTextures)
 		{
@@ -15,7 +15,7 @@ namespace spk
 		}
 	}
 
-	Texture* TextureManager::loadTexture(const std::string& p_textureName, const uint8_t* p_textureData, const Vector2UInt& p_textureSize,
+	Texture* TextureAtlas::loadTexture(const std::string& p_textureName, const uint8_t* p_textureData, const Vector2UInt& p_textureSize,
 			const Texture::Format& p_format, const Texture::Filtering& p_filtering,
 			const Texture::Wrap& p_wrap, const Texture::Mipmap& p_mipmap)
 	{
@@ -27,7 +27,7 @@ namespace spk
 		return (result);
 	}
 	
-	Image* TextureManager::loadImage(const std::string& p_textureName, const std::filesystem::path& p_path)
+	Image* TextureAtlas::loadImage(const std::string& p_textureName, const std::filesystem::path& p_path)
 	{
 		if (_loadedTextures.contains(p_textureName) == true)
 			throwException("Texture [" + p_textureName + "] is already loaded");
@@ -37,7 +37,7 @@ namespace spk
 		return (result);
 	}
 	
-	SpriteSheet* TextureManager::loadSpriteSheet(const std::string& p_textureName, const std::filesystem::path& p_path, const Vector2UInt& p_spriteSheetSize)
+	SpriteSheet* TextureAtlas::loadSpriteSheet(const std::string& p_textureName, const std::filesystem::path& p_path, const Vector2UInt& p_spriteSheetSize)
 	{
 		if (_loadedTextures.contains(p_textureName) == true)
 			throwException("Texture [" + p_textureName + "] is already loaded");
@@ -47,24 +47,24 @@ namespace spk
 		return (result);
 	}
 
-	Texture* TextureManager::texture(const std::string& p_textureName) const
+	Texture* TextureAtlas::texture(const std::string& p_textureName) const
 	{
 		if (_loadedTextures.contains(p_textureName) == false)
-			throwException("Can't return a Texture named [" + p_textureName + "] inside TextureManager\nNo such Texture loaded with desired name");
+			throwException("Can't return a Texture named [" + p_textureName + "] inside TextureAtlas\nNo such Texture loaded with desired name");
 		return (_loadedTextures.at(p_textureName));
 	}
 
-	Image* TextureManager::image(const std::string& p_textureName) const
+	Image* TextureAtlas::image(const std::string& p_textureName) const
 	{
 		if (_loadedTextures.contains(p_textureName) == false)
-			throwException("Can't return a Image named [" + p_textureName + "] inside TextureManager\nNo such Image loaded with desired name");
+			throwException("Can't return a Image named [" + p_textureName + "] inside TextureAtlas\nNo such Image loaded with desired name");
 		return (dynamic_cast<Image*>(_loadedTextures.at(p_textureName)));
 	}
 	
-	SpriteSheet* TextureManager::spriteSheet(const std::string& p_textureName) const
+	SpriteSheet* TextureAtlas::spriteSheet(const std::string& p_textureName) const
 	{
 		if (_loadedTextures.contains(p_textureName) == false)
-			throwException("Can't return a SpriteSheet named [" + p_textureName + "] inside TextureManager\nNo such SpriteSheet loaded with desired name");
+			throwException("Can't return a SpriteSheet named [" + p_textureName + "] inside TextureAtlas\nNo such SpriteSheet loaded with desired name");
 		return (dynamic_cast<SpriteSheet*>(_loadedTextures.at(p_textureName)));
 	}
 }

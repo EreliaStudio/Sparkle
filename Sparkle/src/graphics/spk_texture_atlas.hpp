@@ -11,10 +11,10 @@
 namespace spk
 {
 	/**
-	 * @class TextureManager
+	 * @class TextureAtlas
 	 * @brief Manages the loading, storage, and retrieval of textures, images, and sprite sheets.
 	 *
-	 * TextureManager provides a centralized system for managing various types of graphical resources
+	 * TextureAtlas provides a centralized system for managing various types of graphical resources
 	 * like textures, images, and sprite sheets within the application. It ensures that each resource
 	 * is loaded only once and provides an easy access point for retrieving these resources by name.
 	 * This helps in optimizing memory usage and performance by avoiding redundant loads of the same
@@ -29,23 +29,23 @@ namespace spk
 	 * Texture* retrievedTexture = textureManager.texture("myTexture");
 	 * @endcode
 	 *
-	 * @note It is assumed that TextureManager follows the Singleton design pattern, ensuring a single instance.
+	 * @note It is assumed that TextureAtlas follows the Singleton design pattern, ensuring a single instance.
 	 */
-	class TextureManager
+	class TextureAtlas
 	{
 	private:
 		std::unordered_map<std::string, Texture*> _loadedTextures; ///< Stores loaded textures keyed by their names.
 
 	public:
 		/**
-		 * Constructor for TextureManager.
+		 * Constructor for TextureAtlas.
 		 */
-		TextureManager();
+		TextureAtlas();
 
 		/**
-		 * Destructor for TextureManager.
+		 * Destructor for TextureAtlas.
 		 */
-		~TextureManager();
+		~TextureAtlas();
 		
 		/**
 		 * Loads a texture from memory.
