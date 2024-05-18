@@ -38,11 +38,11 @@ namespace spk
 	{
 	private:
 		bool _isRunning = false;
-        std::chrono::steady_clock::time_point _startTime;
-        std::chrono::steady_clock::time_point _endTime;
+		std::chrono::steady_clock::time_point _startTime;
+		std::chrono::steady_clock::time_point _endTime;
 
-    public:
-        /**
+	public:
+		/**
 		 * @brief Default constructor for IChronometer.
 		 */
 		IChronometer() = default;
@@ -93,7 +93,7 @@ namespace spk
 		 * If the chronometer has been stopped, it calculates the duration between the start and stop times.
 		 *
 		 * @return The duration between the start and stop times (or current time if still running), converted to
-		 *         the specified TTimeUnit.
+		 *		 the specified TTimeUnit.
 		 */
 		long long elapsedTime() const
 		{

@@ -3,26 +3,26 @@
 
 namespace spk
 {
-    void TextEntry::_onGeometryChange()
-    {
-        _box.setGeometry(anchor(), size());
-        _box.setLayer(layer());
+	void TextEntry::_onGeometryChange()
+	{
+		_box.setGeometry(anchor(), size());
+		_box.setLayer(layer());
 
-        _label.setGeometry(anchor() + _box.cornerSize(), size() - _box.cornerSize() * 2);
-        _label.setLayer(layer() + 0.01f);
+		_label.setGeometry(anchor() + _box.cornerSize(), size() - _box.cornerSize() * 2);
+		_label.setLayer(layer() + 0.01f);
 
 		_cursorBox.setLayer(layer() + 0.02f);
-    }
+	}
 
-    void TextEntry::_onRender()
-    {
-        _box.render();
+	void TextEntry::_onRender()
+	{
+		_box.render();
 		if (_isTextEdited == true)
 		{
 			_updateRenderedText();
 			_isTextEdited = false;
 		}
-        _label.render();
+		_label.render();
 		if (_isSelected == true)
 			_cursorBox.render();
 	}
@@ -184,8 +184,8 @@ namespace spk
 		}
 	}
 
-    TextEntry::TextEntry(const std::string& p_name, Widget* p_parent) :
-        Widget(p_name, p_parent),
+	TextEntry::TextEntry(const std::string& p_name, Widget* p_parent) :
+		Widget(p_name, p_parent),
 		_isSelected(false),
 		_currentCursorPosition(0),
 		_inputs(
@@ -201,15 +201,15 @@ namespace spk
 		_placeholderText("Enter text ..."),
 		_text(""),
 		_isTextEdited(true)
-    {
+	{
 		_cursorBox.setColor(spk::Color(10, 10, 10, 255));
-    }
+	}
 
-    TextEntry::TextEntry(Widget* p_parent) :
-        TextEntry("Anonymous TextEntry", p_parent)
-    {
+	TextEntry::TextEntry(Widget* p_parent) :
+		TextEntry("Anonymous TextEntry", p_parent)
+	{
 
-    }
+	}
 
 	void TextEntry::setPlaceholder(const std::string& p_placeholderText)
 	{
@@ -225,20 +225,20 @@ namespace spk
 		_isTextEdited = true;
 	}
 
-    spk::WidgetComponent::TextLabel& TextEntry::label()
-    {
-        return (_label);
-    }
+	spk::WidgetComponent::TextLabel& TextEntry::label()
+	{
+		return (_label);
+	}
 
 	spk::WidgetComponent::ColoredBox& TextEntry::cursor()
 	{
 		return (_cursorBox);
 	}
 
-    spk::WidgetComponent::NineSlicedBox& TextEntry::box()
-    {
-        return (_box);
-    }
+	spk::WidgetComponent::NineSlicedBox& TextEntry::box()
+	{
+		return (_box);
+	}
 
 	const std::string& TextEntry::placeholder() const
 	{

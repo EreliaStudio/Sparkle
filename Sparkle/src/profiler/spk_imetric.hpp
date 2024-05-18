@@ -27,12 +27,12 @@ namespace spk
 	 * @code
 	 * class PerformanceMetric : public IMetric {
 	 * public:
-	 *     bool shouldEmitReport() override {
-	 *         // Implementation logic here
-	 *     }
-	 *     spk::JSON::Object emitReport() override {
-	 *         // Implementation logic here
-	 *     }
+	 *	 bool shouldEmitReport() override {
+	 *		 // Implementation logic here
+	 *	 }
+	 *	 spk::JSON::Object emitReport() override {
+	 *		 // Implementation logic here
+	 *	 }
 	 * };
 	 * @endcode
 	 */
@@ -48,7 +48,7 @@ namespace spk
 		 * indicating that a report should be generated.
 		 *
 		 * @return bool True if a report should be emitted based on the implementation's criteria,
-		 *         false otherwise.
+		 *		 false otherwise.
 		 */
 		virtual bool shouldEmitReport() = 0;
 		
@@ -93,16 +93,16 @@ namespace spk
 	 * @code
 	 * class TemperatureMetric : public IAnalyticalMetric<float> {
 	 * public:
-	 *     spk::JSON::Object emitReport() override {
-	 *         spk::JSON::Object report;
-	 *         report.addAttribute("min").set(min());
-	 *         report.addAttribute("max").set(max());
-	 *         report.addAttribute("average").set(average());
-	 *         return report;
-	 *     }
-	 *     void recordTemperature(float temperature) {
-	 *         saveValue(temperature);
-	 *     }
+	 *	 spk::JSON::Object emitReport() override {
+	 *		 spk::JSON::Object report;
+	 *		 report.addAttribute("min").set(min());
+	 *		 report.addAttribute("max").set(max());
+	 *		 report.addAttribute("average").set(average());
+	 *		 return report;
+	 *	 }
+	 *	 void recordTemperature(float temperature) {
+	 *		 saveValue(temperature);
+	 *	 }
 	 * };
 	 * @endcode
 	 */

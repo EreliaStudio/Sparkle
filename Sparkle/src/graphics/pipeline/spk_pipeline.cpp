@@ -6,8 +6,8 @@ namespace spk
 {
 	std::string executeIncludeLines(const std::string& p_source);
 
-    std::string composeVertexCode(const std::string& p_inputCode);
-    std::string composeFragmentCode(const std::string& p_inputCode);
+	std::string composeVertexCode(const std::string& p_inputCode);
+	std::string composeFragmentCode(const std::string& p_inputCode);
 
 	GLuint loadProgram(const std::string& p_vertexCode, const std::string& p_fragmentCode);
 
@@ -35,7 +35,7 @@ namespace spk
 
 	Pipeline::Pipeline()
 	{
-        _isLoaded = false;
+		_isLoaded = false;
 
 		_vertexString = "";
 		_fragmentString = "";
@@ -43,7 +43,7 @@ namespace spk
 
 	Pipeline::Pipeline(const std::string& p_code)
 	{
-        _isLoaded = false;
+		_isLoaded = false;
 
 		std::string inputCode = executeIncludeLines(p_code);
 		

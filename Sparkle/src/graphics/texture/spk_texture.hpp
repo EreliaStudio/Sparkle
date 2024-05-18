@@ -28,8 +28,8 @@ namespace spk
 	 * Usage example:
 	 * @code
 	 * spk::Texture texture(imageData, imageSize, spk::Texture::Format::RGBA, 
-	 *                      spk::Texture::Filtering::Linear, spk::Texture::Wrap::Repeat, 
-	 *                      spk::Texture::Mipmap::Enable);
+	 *					  spk::Texture::Filtering::Linear, spk::Texture::Wrap::Repeat, 
+	 *					  spk::Texture::Mipmap::Enable);
 	 * texture.uploadToGPU();
 	 * @endcode
 	 *

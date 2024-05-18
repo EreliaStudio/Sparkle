@@ -28,114 +28,114 @@
 
 namespace spk
 {
-    /**
-     * @class Application
-     * @brief Manages a graphical application lifecycle and central functionalities such as time, mouse or keyboard handling.
-     *
-     * The Application class serves as the core of the Sparkle library, orchestrating the application lifecycle,
-     * managing the main event loop, and facilitating graphics rendering and event handling. It supports both
-     * monothreaded and multithreaded modes of operation for flexibility in application development.
-     *
-     * Features include:
-     * - Window creation and management using OpenGL for rendering.
-     * - Event handling for keyboard and mouse input.
-     * - Time metrics collection.
-     * - Profiling for performance analysis.
-     *
-     * The Application class is designed to be the starting point for applications using the Sparkle library,
-     * allowing developers to easily create, manage, and render graphics content while handling user input
-     * and other application events via the Sparkle Widget system.
-     *
-     * Usage example:
-     * @code
-     * spk::Application app("Example App", spk::Vector2UInt(800, 600), spk::Application::Mode::Monothread);
-     *
-     * MyWidget myWidget = MyWidget("MyCustomWidget"); // This widget will automaticaly be included inside app, and will be rendered and updated by it once activated.
-     * myWidget.setGeometry(spk::Vector2Int(0, 0), app.size()); // Set the size and anchor of the widget to hold the whole application size.
-     * myWidget.activate(); // Activate the widget, to allow application to render and update it
-     *
-     * return (app.run());
-     * @endcode
-     *
-     * @see Widget, Pipeline, Keyboard, Mouse, TimeManager, Profiler
-     */
-    class Application
-    {
-    private:
-        static thread_local inline Application* _activeApplication = nullptr;
+	/**
+	 * @class Application
+	 * @brief Manages a graphical application lifecycle and central functionalities such as time, mouse or keyboard handling.
+	 *
+	 * The Application class serves as the core of the Sparkle library, orchestrating the application lifecycle,
+	 * managing the main event loop, and facilitating graphics rendering and event handling. It supports both
+	 * monothreaded and multithreaded modes of operation for flexibility in application development.
+	 *
+	 * Features include:
+	 * - Window creation and management using OpenGL for rendering.
+	 * - Event handling for keyboard and mouse input.
+	 * - Time metrics collection.
+	 * - Profiling for performance analysis.
+	 *
+	 * The Application class is designed to be the starting point for applications using the Sparkle library,
+	 * allowing developers to easily create, manage, and render graphics content while handling user input
+	 * and other application events via the Sparkle Widget system.
+	 *
+	 * Usage example:
+	 * @code
+	 * spk::Application app("Example App", spk::Vector2UInt(800, 600), spk::Application::Mode::Monothread);
+	 *
+	 * MyWidget myWidget = MyWidget("MyCustomWidget"); // This widget will automaticaly be included inside app, and will be rendered and updated by it once activated.
+	 * myWidget.setGeometry(spk::Vector2Int(0, 0), app.size()); // Set the size and anchor of the widget to hold the whole application size.
+	 * myWidget.activate(); // Activate the widget, to allow application to render and update it
+	 *
+	 * return (app.run());
+	 * @endcode
+	 *
+	 * @see Widget, Pipeline, Keyboard, Mouse, TimeManager, Profiler
+	 */
+	class Application
+	{
+	private:
+		static thread_local inline Application* _activeApplication = nullptr;
 
-    public:
-        /**
-         * @brief Return a pointer to the currently active application
-         * @note This method is static, and is not thread local
-         */
-        static Application* activeApplication()
-        {
-            return (_activeApplication);
-        }
+	public:
+		/**
+		 * @brief Return a pointer to the currently active application
+		 * @note This method is static, and is not thread local
+		 */
+		static Application* activeApplication()
+		{
+			return (_activeApplication);
+		}
 
-        /**
-         * @brief Set this Application as the "active" application, allowing activeApplication() to return a pointer to this.
-         */
-        void setAsActiveApplication()
-        {
-            _activeApplication = this;
-        }
+		/**
+		 * @brief Set this Application as the "active" application, allowing activeApplication() to return a pointer to this.
+		 */
+		void setAsActiveApplication()
+		{
+			_activeApplication = this;
+		}
 
-        /**
-         * @enum Mode
-         * @brief Define the expected mode of threading for an application
-         * Will be passed thought the Application constructor.
-         */
-        enum class Mode
-        {
-            Monothread, //< The application will run on a single thread
-            Multithread //< The application will run on multiples threads (At least 2 threads)
-        };
+		/**
+		 * @enum Mode
+		 * @brief Define the expected mode of threading for an application
+		 * Will be passed thought the Application constructor.
+		 */
+		enum class Mode
+		{
+			Monothread, //< The application will run on a single thread
+			Multithread //< The application will run on multiples threads (At least 2 threads)
+		};
 
-        /**
-         * @class CentralWidget
-         * @brief CentralWidget serves as the core widget in an application, managing time-based updates via a custom rendering pipeline.
-         *
-         * Usage:
-         * CentralWidget is designed to be instantiated once and used as the root of an application's widget hierarchy. It
-         * automatically becomes the default parent for other widgets, ensuring that all UI components can benefit from its
-         * rendering capabilities and time-based updates.
-         *
-         * @note This widget is instancied automaticaly by the spk::Application, and isn't instanciable by any other object.
-         */
-        class CentralWidget : public Widget
-        {
-            friend class Application;
+		/**
+		 * @class CentralWidget
+		 * @brief CentralWidget serves as the core widget in an application, managing time-based updates via a custom rendering pipeline.
+		 *
+		 * Usage:
+		 * CentralWidget is designed to be instantiated once and used as the root of an application's widget hierarchy. It
+		 * automatically becomes the default parent for other widgets, ensuring that all UI components can benefit from its
+		 * rendering capabilities and time-based updates.
+		 *
+		 * @note This widget is instancied automaticaly by the spk::Application, and isn't instanciable by any other object.
+		 */
+		class CentralWidget : public Widget
+		{
+			friend class Application;
 
-            static inline std::string _prerenderingPipelineCode = R"(#version 450
+			static inline std::string _prerenderingPipelineCode = R"(#version 450
 			
 			#include <timeConstants>
 			#include <screenConstants>
 			
 			void geometryPass() {}
 			void renderPass() {})";
-            static inline spk::Pipeline _prerenderingPipeline = spk::Pipeline(_prerenderingPipelineCode);
-            spk::Pipeline::Constant& _timeConstant;
-            spk::Pipeline::Constant::Element& _timeConstantEpochElement;
-            long long oldTime = 0;
+			static inline spk::Pipeline _prerenderingPipeline = spk::Pipeline(_prerenderingPipelineCode);
+			spk::Pipeline::Constant& _timeConstant;
+			spk::Pipeline::Constant::Element& _timeConstantEpochElement;
+			long long oldTime = 0;
 
-        private:
-            void _onUpdate() override
-            {
-                long long time = spk::getTime();
-                if (time != oldTime)
-                {
-                    oldTime = time;
-                    _timeConstantEpochElement = static_cast<int>(time % 100000);
-                    _timeConstant.update();
-                }
-            }
+		private:
+			void _onUpdate() override
+			{
+				long long time = spk::getTime();
+				if (time != oldTime)
+				{
+					oldTime = time;
+					_timeConstantEpochElement = static_cast<int>(time % 100000);
+					_timeConstant.update();
+				}
+			}
 
-            CentralWidget() :
-                Widget("CentralWidget"),
-                _timeConstant(_prerenderingPipeline.constant("timeConstants")),
-                _timeConstantEpochElement(_timeConstant["epoch"])
+			CentralWidget() :
+				Widget("CentralWidget"),
+				_timeConstant(_prerenderingPipeline.constant("timeConstants")),
+	            _timeConstantEpochElement(_timeConstant["epoch"])
             {
                 defaultParent = this;
             }

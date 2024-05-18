@@ -2,7 +2,7 @@
 
 namespace spk
 {
-    std::ostream& operator << (std::ostream& p_os, const InputState& p_state)
+	std::ostream& operator << (std::ostream& p_os, const InputState& p_state)
 	{
 		switch (p_state)
 		{

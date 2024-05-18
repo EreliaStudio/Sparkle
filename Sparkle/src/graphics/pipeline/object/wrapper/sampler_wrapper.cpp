@@ -19,7 +19,7 @@ namespace spk
 		_activeTexture = p_textureToSet;
 	}
 
-    void Pipeline::Texture::_activate()
+	void Pipeline::Texture::_activate()
 	{
 		if (_activeTexture == nullptr || _lastActiveTexture == _activeTexture)
 			return ;
@@ -29,7 +29,7 @@ namespace spk
 		_handle.activate();
 	}
 
-    std::map<std::string, Pipeline::Texture::Layout> Pipeline::_parseSamplerUniforms(const std::vector<OpenGL::ShaderInstruction>& p_shaderinstruction)
+	std::map<std::string, Pipeline::Texture::Layout> Pipeline::_parseSamplerUniforms(const std::vector<OpenGL::ShaderInstruction>& p_shaderinstruction)
 	{
 		std::map<std::string, Pipeline::Texture::Layout> result;
 

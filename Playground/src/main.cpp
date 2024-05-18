@@ -1,6 +1,6 @@
 #include "sparkle.hpp"
 
-class CustomTextureManager : public spk::TextureManager
+class CustomTextureManager : public spk::TextureAtlas
 {
 private:
 	std::map<std::string, spk::Font*> _fonts;
@@ -13,7 +13,7 @@ public:
 	spk::Font* font(const std::string& p_fontName);
 };
 
-using TextureManager = spk::Singleton<CustomTextureManager>;
+using TextureAtlas = spk::Singleton<CustomTextureManager>;
 
 class Frame : public spk::Frame
 {
@@ -28,7 +28,7 @@ public:
 	Frame(const std::string& p_name, Widget* p_parent) :
 		spk::Frame(p_name, p_parent)
 	{
-		box().setSpriteSheet(TextureManager::instance()->spriteSheet("DefaultFrame"));
+		box().setSpriteSheet(TextureAtlas::instance()->spriteSheet("DefaultFrame"));
 		box().setCornerSize(8);
 	}
 };
@@ -46,10 +46,10 @@ public:
 	TextLabel(const std::string& p_name, Widget* p_parent) :
 		spk::TextLabel(p_name, p_parent)
 	{
-		box().setSpriteSheet(TextureManager::instance()->spriteSheet("DefaultFrame"));
+		box().setSpriteSheet(TextureAtlas::instance()->spriteSheet("DefaultFrame"));
 		box().setCornerSize(8);
 
-		label().setFont(TextureManager::instance()->font("DefaultFont"));
+		label().setFont(TextureAtlas::instance()->font("DefaultFont"));
 		label().setVerticalAlignment(spk::VerticalAlignment::Top);
 		label().setHorizontalAlignment(spk::HorizontalAlignment::Left);
 
@@ -75,12 +75,12 @@ public:
 	TextEntry(const std::string& p_name, Widget* p_parent) :
 		spk::TextEntry(p_name, p_parent)
 	{
-		box().setSpriteSheet(TextureManager::instance()->spriteSheet("DefaultFrame"));
+		box().setSpriteSheet(TextureAtlas::instance()->spriteSheet("DefaultFrame"));
 		box().setCornerSize(8);
 
 		setPlaceholder("Enter text ...");
 
-		label().setFont(TextureManager::instance()->font("DefaultFont"));
+		label().setFont(TextureAtlas::instance()->font("DefaultFont"));
 		label().setVerticalAlignment(spk::VerticalAlignment::Top);
 		label().setHorizontalAlignment(spk::HorizontalAlignment::Left);
 
@@ -106,10 +106,10 @@ public:
 	Button(const std::string& p_name, Widget* p_parent) :
 		spk::Button(p_name, p_parent)
 	{
-		box(spk::Button::State::Released).setSpriteSheet(TextureManager::instance()->spriteSheet("DefaultFrame"));
+		box(spk::Button::State::Released).setSpriteSheet(TextureAtlas::instance()->spriteSheet("DefaultFrame"));
 		box(spk::Button::State::Released).setCornerSize(8);
 		
-		box(spk::Button::State::Pressed).setSpriteSheet(TextureManager::instance()->spriteSheet("DarkFrame"));
+		box(spk::Button::State::Pressed).setSpriteSheet(TextureAtlas::instance()->spriteSheet("DarkFrame"));
 		box(spk::Button::State::Pressed).setCornerSize(8);
 	}
 };
@@ -135,7 +135,7 @@ CustomTextureManager::~CustomTextureManager()
 spk::Font* CustomTextureManager::loadFont(const std::string& p_fontName, const std::filesystem::path& p_fontPath)
 {
 	if (_fonts.contains(p_fontName) == true)
-		spk::throwException("Can't load a font named [" + p_fontName + "] inside TextureManager : font already loaded");
+		spk::throwException("Can't load a font named [" + p_fontName + "] inside TextureAtlas : font already loaded");
 	_fonts[p_fontName] = new spk::Font(p_fontPath);
 	return (_fonts[p_fontName]);
 }
@@ -143,7 +143,7 @@ spk::Font* CustomTextureManager::loadFont(const std::string& p_fontName, const s
 spk::Font* CustomTextureManager::font(const std::string& p_fontName)
 {
 	if (_fonts.contains(p_fontName) == false)
-		spk::throwException("Can't return a font named [" + p_fontName + "] inside TextureManager\nNo font loaded with desired name");
+		spk::throwException("Can't return a font named [" + p_fontName + "] inside TextureAtlas\nNo font loaded with desired name");
 	return (_fonts[p_fontName]);
 }
 
@@ -188,7 +188,7 @@ private:
 			_backgroundFrame.box().setCornerSize(4);
 			_backgroundFrame.activate();
 
-			_titleLabel.label().setFont(TextureManager::instance()->font("TitleFont"));
+			_titleLabel.label().setFont(TextureAtlas::instance()->font("TitleFont"));
 			_titleLabel.label().setText("World Of Electron");
 			_titleLabel.label().setVerticalAlignment(spk::VerticalAlignment::Centered);
 			_titleLabel.label().setHorizontalAlignment(spk::HorizontalAlignment::Centered);
@@ -198,7 +198,7 @@ private:
 			_titleLabel.label().setTextColor(spk::Color(255, 15, 0));
 
 
-			_titleLabel.box().setSpriteSheet(TextureManager::instance()->spriteSheet("TitleBackground"));
+			_titleLabel.box().setSpriteSheet(TextureAtlas::instance()->spriteSheet("TitleBackground"));
 			_titleLabel.box().setCornerSize(16);
 			
 			_titleLabel.activate();
@@ -239,7 +239,7 @@ public:
 class MainWidget : public spk::Widget
 {
 private:
-	TextureManager::Instanciator _textureManagerInstanciator;
+	TextureAtlas::Instanciator _textureManagerInstanciator;
 
 	MainMenuPanel _mainMenuPanel;
 

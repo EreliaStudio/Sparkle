@@ -12,7 +12,7 @@ namespace spk
 			std::string blockContents = match[2].str();
 
 			std::string convertedBlock = "layout (binding = " + std::to_string(p_higherBindingPointUsed) + ") uniform " + Pipeline::Object::Attribute::BlockKey + "_" + blockName + "\n{\n" + blockContents + "\n} " + blockName;
-        	p_source.replace(match.position(), match.length(), convertedBlock);
+			p_source.replace(match.position(), match.length(), convertedBlock);
 			p_higherBindingPointUsed++;
 		}
 	}
