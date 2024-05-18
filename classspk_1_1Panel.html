@@ -224,7 +224,7 @@ using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 <p>The activation logic ensures that any previously active panel is deactivated before this one becomes active, maintaining a clean and controlled focus state within the application.</p>
 <p>Usage example: </p><div class="fragment"><div class="line"><a class="code" href="classspk_1_1Panel.html">spk::Panel</a>* settingsPanel = <span class="keyword">new</span> <a class="code" href="classspk_1_1Panel.html">spk::Panel</a>(parentWidget);</div>
 <div class="line">settingsPanel-&gt;<a class="code" href="classspk_1_1Panel.html#aa04a008eef15d454ed08578b0a665ab5">setPanelActivationCallback</a>([]() {</div>
-<div class="line">    std::cout &lt;&lt; <span class="stringliteral">&quot;Settings panel is now active.&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line">  std::cout &lt;&lt; <span class="stringliteral">&quot;Settings panel is now active.&quot;</span> &lt;&lt; std::endl;</div>
 <div class="line">});</div>
 <div class="ttc" id="aclassspk_1_1Panel_html"><div class="ttname"><a href="classspk_1_1Panel.html">spk::Panel</a></div><div class="ttdoc">A user interface panel that can manage focus within the application.</div><div class="ttdef"><b>Definition:</b> spk_panel.hpp:32</div></div>
 <div class="ttc" id="aclassspk_1_1Panel_html_aa04a008eef15d454ed08578b0a665ab5"><div class="ttname"><a href="classspk_1_1Panel.html#aa04a008eef15d454ed08578b0a665ab5">spk::Panel::setPanelActivationCallback</a></div><div class="ttdeci">void setPanelActivationCallback(const std::function&lt; void()&gt; &amp;p_callback)</div><div class="ttdef"><b>Definition:</b> spk_panel.cpp:26</div></div>

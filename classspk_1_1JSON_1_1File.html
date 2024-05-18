@@ -129,23 +129,23 @@ Friends</h2></td></tr>
 <div class="line"><span class="comment">// Check if a key exists in the JSON data</span></div>
 <div class="line"><span class="keywordflow">if</span> (jsonFile.<a class="code" href="classspk_1_1JSON_1_1File.html#ae3df8067ee966af853245cdcefc30747">contains</a>(<span class="stringliteral">&quot;intValue&quot;</span>))</div>
 <div class="line">{</div>
-<div class="line">    <span class="comment">// Access an integer value from the JSON data using operator[]</span></div>
-<div class="line">    <span class="keyword">const</span> <a class="code" href="classspk_1_1JSON_1_1Object.html">spk::JSON::Object</a>&amp; intValueObject = jsonFile[<span class="stringliteral">&quot;intValue&quot;</span>];</div>
+<div class="line">  <span class="comment">// Access an integer value from the JSON data using operator[]</span></div>
+<div class="line">  <span class="keyword">const</span> <a class="code" href="classspk_1_1JSON_1_1Object.html">spk::JSON::Object</a>&amp; intValueObject = jsonFile[<span class="stringliteral">&quot;intValue&quot;</span>];</div>
 <div class="line"> </div>
-<div class="line">    <span class="comment">// Use the as method to convert the value to an integer</span></div>
-<div class="line">    <span class="keywordtype">int</span> intValue = intValueObject.<a class="code" href="classspk_1_1JSON_1_1Object.html#a4656a5e45ba6633b43dbdc1dc46d5263">as</a>&lt;<span class="keywordtype">int</span>&gt;();</div>
-<div class="line">    std::cout &lt;&lt; <span class="stringliteral">&quot;Integer Value: &quot;</span> &lt;&lt; intValue &lt;&lt; std::endl;</div>
+<div class="line">  <span class="comment">// Use the as method to convert the value to an integer</span></div>
+<div class="line">  <span class="keywordtype">int</span> intValue = intValueObject.<a class="code" href="classspk_1_1JSON_1_1Object.html#a4656a5e45ba6633b43dbdc1dc46d5263">as</a>&lt;<span class="keywordtype">int</span>&gt;();</div>
+<div class="line">  std::cout &lt;&lt; <span class="stringliteral">&quot;Integer Value: &quot;</span> &lt;&lt; intValue &lt;&lt; std::endl;</div>
 <div class="line">}</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Check if another key exists in the JSON data</span></div>
 <div class="line"><span class="keywordflow">if</span> (jsonFile.<a class="code" href="classspk_1_1JSON_1_1File.html#ae3df8067ee966af853245cdcefc30747">contains</a>(<span class="stringliteral">&quot;stringValue&quot;</span>))</div>
 <div class="line">{</div>
-<div class="line">    <span class="comment">// Access a string value from the JSON data using operator[]</span></div>
-<div class="line">    <span class="keyword">const</span> <a class="code" href="classspk_1_1JSON_1_1Object.html">spk::JSON::Object</a>&amp; stringValueObject = jsonFile[<span class="stringliteral">&quot;stringValue&quot;</span>];</div>
+<div class="line">  <span class="comment">// Access a string value from the JSON data using operator[]</span></div>
+<div class="line">  <span class="keyword">const</span> <a class="code" href="classspk_1_1JSON_1_1Object.html">spk::JSON::Object</a>&amp; stringValueObject = jsonFile[<span class="stringliteral">&quot;stringValue&quot;</span>];</div>
 <div class="line"> </div>
-<div class="line">    <span class="comment">// Use the as method to convert the value to a string</span></div>
-<div class="line">    std::string stringValue = stringValueObject.<a class="code" href="classspk_1_1JSON_1_1Object.html#a4656a5e45ba6633b43dbdc1dc46d5263">as</a>&lt;std::string&gt;();</div>
-<div class="line">    std::cout &lt;&lt; <span class="stringliteral">&quot;String Value: &quot;</span> &lt;&lt; stringValue &lt;&lt; std::endl;</div>
+<div class="line">  <span class="comment">// Use the as method to convert the value to a string</span></div>
+<div class="line">  std::string stringValue = stringValueObject.<a class="code" href="classspk_1_1JSON_1_1Object.html#a4656a5e45ba6633b43dbdc1dc46d5263">as</a>&lt;std::string&gt;();</div>
+<div class="line">  std::cout &lt;&lt; <span class="stringliteral">&quot;String Value: &quot;</span> &lt;&lt; stringValue &lt;&lt; std::endl;</div>
 <div class="line">}</div>
 <div class="ttc" id="aclassspk_1_1JSON_1_1File_html"><div class="ttname"><a href="classspk_1_1JSON_1_1File.html">spk::JSON::File</a></div><div class="ttdoc">Represents a utility class for reading and writing JSON files.</div><div class="ttdef"><b>Definition:</b> spk_JSON_file.hpp:53</div></div>
 <div class="ttc" id="aclassspk_1_1JSON_1_1File_html_a2d14fcfa9698f647011755f022ed9d7c"><div class="ttname"><a href="classspk_1_1JSON_1_1File.html#a2d14fcfa9698f647011755f022ed9d7c">spk::JSON::File::load</a></div><div class="ttdeci">void load(const std::filesystem::path &amp;p_filePath)</div><div class="ttdoc">Loads JSON data from a file.</div><div class="ttdef"><b>Definition:</b> spk_JSON_file.cpp:167</div></div>

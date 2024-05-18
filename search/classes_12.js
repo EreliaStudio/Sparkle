@@ -3,7 +3,7 @@ var searchData=
   ['textentry_767',['TextEntry',['../classspk_1_1TextEntry.html',1,'spk']]],
   ['textlabel_768',['TextLabel',['../classspk_1_1TextLabel.html',1,'spk::TextLabel'],['../classspk_1_1WidgetComponent_1_1TextLabel.html',1,'spk::WidgetComponent::TextLabel']]],
   ['texture_769',['Texture',['../classspk_1_1Pipeline_1_1Texture.html',1,'spk::Pipeline::Texture'],['../classspk_1_1Texture.html',1,'spk::Texture']]],
-  ['texturemanager_770',['TextureManager',['../classspk_1_1TextureManager.html',1,'spk']]],
+  ['textureatlas_770',['TextureAtlas',['../classspk_1_1TextureAtlas.html',1,'spk']]],
   ['texturerenderer_771',['TextureRenderer',['../classspk_1_1WidgetComponent_1_1TextureRenderer.html',1,'spk::WidgetComponent']]],
   ['threadsafedeque_772',['ThreadSafeDeque',['../classspk_1_1ThreadSafeDeque.html',1,'spk']]],
   ['threadsafedeque_3c_20messageobject_20_3e_773',['ThreadSafeDeque&lt; MessageObject &gt;',['../classspk_1_1ThreadSafeDeque.html',1,'spk']]],

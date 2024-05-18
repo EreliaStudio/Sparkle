@@ -8,8 +8,8 @@ var searchData=
   ['load_1007',['load',['../classspk_1_1JSON_1_1File.html#a2d14fcfa9698f647011755f022ed9d7c',1,'spk::JSON::File']]],
   ['loadfont_1008',['loadFont',['../classspk_1_1FontManager.html#a70418a0075286fa8379d07d93c1c791c',1,'spk::FontManager']]],
   ['loadfromfile_1009',['loadFromFile',['../classspk_1_1ITilemap_1_1IChunk.html#adcaaca96f58299ba785effdf2818261b',1,'spk::ITilemap::IChunk']]],
-  ['loadimage_1010',['loadImage',['../classspk_1_1TextureManager.html#a37decd5c959bd475049b24c241209d46',1,'spk::TextureManager']]],
-  ['loadspritesheet_1011',['loadSpriteSheet',['../classspk_1_1TextureManager.html#a1bd976bf323a4ef07497d65741ea84e3',1,'spk::TextureManager']]],
-  ['loadtexture_1012',['loadTexture',['../classspk_1_1TextureManager.html#a12eae231968873cfc4f369f36b992ee1',1,'spk::TextureManager']]],
+  ['loadimage_1010',['loadImage',['../classspk_1_1TextureAtlas.html#a193f4847275b7504d04a4b3aa92b1383',1,'spk::TextureAtlas']]],
+  ['loadspritesheet_1011',['loadSpriteSheet',['../classspk_1_1TextureAtlas.html#aee7b35de15054b252280a9e3d08c452a',1,'spk::TextureAtlas']]],
+  ['loadtexture_1012',['loadTexture',['../classspk_1_1TextureAtlas.html#a542392c2ba37e9fb87d895ef6354971f',1,'spk::TextureAtlas']]],
   ['lookat_1013',['lookAt',['../classspk_1_1Transform.html#ac7a1f1c2d73a3abc7a74d5f5a9bc2c22',1,'spk::Transform::lookAt()'],['../structspk_1_1Matrix4x4.html#a75a8166262ecfb2ee4a155c398c3e2d8',1,'spk::Matrix4x4::lookAt()'],['../classspk_1_1Quaternion.html#a13371257785a64ac8cfcb413125fdacb',1,'spk::Quaternion::lookAt()']]]
 ];

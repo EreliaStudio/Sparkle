@@ -16,7 +16,7 @@ var searchData=
   ['_7epipeline_1301',['~Pipeline',['../classspk_1_1Pipeline.html#ae0def94dd0f79511f3b50c014edca812',1,'spk::Pipeline']]],
   ['_7eprofiler_1302',['~Profiler',['../classspk_1_1Profiler.html#ab96403e3f6e2e542d6832868f054cb95',1,'spk::Profiler']]],
   ['_7etexture_1303',['~Texture',['../classspk_1_1Texture.html#aa2bc370398b88f61590078f5e3f65be5',1,'spk::Texture']]],
-  ['_7etexturemanager_1304',['~TextureManager',['../classspk_1_1TextureManager.html#a060a3dc7ebce233b92f30db821a1de77',1,'spk::TextureManager']]],
+  ['_7etextureatlas_1304',['~TextureAtlas',['../classspk_1_1TextureAtlas.html#a2eb903f6cd8e318e82500f78ae6a0cfd',1,'spk::TextureAtlas']]],
   ['_7ethreadsafedeque_1305',['~ThreadSafeDeque',['../classspk_1_1ThreadSafeDeque.html#a770f18cab74b145a14bc12a8813b7be5',1,'spk::ThreadSafeDeque']]],
   ['_7etimemetric_1306',['~TimeMetric',['../classspk_1_1TimeMetric.html#af3051aa60c7f477dd55743f9daa331c5',1,'spk::TimeMetric']]],
   ['_7etreenode_1307',['~TreeNode',['../classspk_1_1TreeNode.html#aed218fda295fb83cd528d00e1670dc87',1,'spk::TreeNode']]],

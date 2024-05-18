@@ -116,30 +116,30 @@ Public Member Functions</h2></td></tr>
 <p>Usage example: </p><div class="fragment"><div class="line"><span class="keyword">class </span>MyCustomWidget : <span class="keyword">public</span> <a class="code" href="classspk_1_1Widget.html">spk::Widget</a></div>
 <div class="line">{</div>
 <div class="line"><span class="keyword">private</span>:</div>
-<div class="line">    spkComponent::NineSlicedBox _background;</div>
+<div class="line">  spkComponent::NineSlicedBox _background;</div>
 <div class="line"> </div>
-<div class="line">    <span class="keywordtype">void</span> _onGeometryChange()</div>
-<div class="line">    {</div>
-<div class="line">        _background.<a class="code" href="classspk_1_1Widget.html#aa66660bed9bd2658eed46b94026a2472">setGeometry</a>(<a class="code" href="structspk_1_1IVector2.html">spk::Vector2Int</a>(0, 0), size());</div>
-<div class="line">    }</div>
+<div class="line">  <span class="keywordtype">void</span> _onGeometryChange()</div>
+<div class="line">  {</div>
+<div class="line">     _background.<a class="code" href="classspk_1_1Widget.html#aa66660bed9bd2658eed46b94026a2472">setGeometry</a>(<a class="code" href="structspk_1_1IVector2.html">spk::Vector2Int</a>(0, 0), size());</div>
+<div class="line">  }</div>
 <div class="line"> </div>
-<div class="line">    <span class="keywordtype">void</span> _onRender()</div>
-<div class="line">    {</div>
-<div class="line">        _background.render();</div>
-<div class="line">    }</div>
+<div class="line">  <span class="keywordtype">void</span> _onRender()</div>
+<div class="line">  {</div>
+<div class="line">     _background.render();</div>
+<div class="line">  }</div>
 <div class="line"> </div>
-<div class="line">    <span class="keywordtype">void</span> _onUpdate()</div>
-<div class="line">    {</div>
+<div class="line">  <span class="keywordtype">void</span> _onUpdate()</div>
+<div class="line">  {</div>
 <div class="line"> </div>
-<div class="line">    }</div>
+<div class="line">  }</div>
 <div class="line"><span class="keyword">public</span>:</div>
-<div class="line">    MyCustomWidget(<span class="keyword">const</span> std::string&amp; name, <a class="code" href="classspk_1_1Widget.html">spk::Widget</a>* parent = <span class="keyword">nullptr</span>) :</div>
-<div class="line">         spk::Widget(name, parent),</div>
-<div class="line">         _background()</div>
-<div class="line">    {</div>
-<div class="line">        _background.setSpriteSheet(&amp;spriteSheet);</div>
-<div class="line">        _background.setCornerSize(<a class="code" href="structspk_1_1IVector2.html">spk::Vector2Int</a>(32, 32)); <span class="comment">// Set the size of the corners</span></div>
-<div class="line">    }</div>
+<div class="line">  MyCustomWidget(<span class="keyword">const</span> std::string&amp; name, <a class="code" href="classspk_1_1Widget.html">spk::Widget</a>* parent = <span class="keyword">nullptr</span>) :</div>
+<div class="line">      spk::Widget(name, parent),</div>
+<div class="line">      _background()</div>
+<div class="line">  {</div>
+<div class="line">     _background.setSpriteSheet(&amp;spriteSheet);</div>
+<div class="line">     _background.setCornerSize(<a class="code" href="structspk_1_1IVector2.html">spk::Vector2Int</a>(32, 32)); <span class="comment">// Set the size of the corners</span></div>
+<div class="line">  }</div>
 <div class="line">};</div>
 <div class="ttc" id="aclassspk_1_1Widget_html"><div class="ttname"><a href="classspk_1_1Widget.html">spk::Widget</a></div><div class="ttdoc">Defines a widget interface for UI elements, integrating activation state management,...</div><div class="ttdef"><b>Definition:</b> spk_widget.hpp:61</div></div>
 <div class="ttc" id="aclassspk_1_1Widget_html_aa66660bed9bd2658eed46b94026a2472"><div class="ttname"><a href="classspk_1_1Widget.html#aa66660bed9bd2658eed46b94026a2472">spk::Widget::setGeometry</a></div><div class="ttdeci">void setGeometry(const spk::Vector2Int &amp;p_anchor, const spk::Vector2UInt &amp;p_size)</div><div class="ttdef"><b>Definition:</b> spk_widget.cpp:126</div></div>

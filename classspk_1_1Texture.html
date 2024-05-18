@@ -167,8 +167,8 @@ class&#160;</td><td class="memItemRight" valign="bottom"><b>Pipeline</b></td></t
 <p>This class encapsulates the functionality required to handle texture images, including loading them into GPU memory, setting their format, filtering modes, wrapping modes, and managing mipmaps. It supports various formats for texture data, such as RGB, RGBA, and greyscale, and provides options for how textures are sampled and how their edges are treated.</p>
 <p>Textures are essential for adding detail to rendered objects by applying image data to their surfaces. This class provides a straightforward interface for creating textures from image data, configuring their properties, and binding them for use in rendering operations.</p>
 <p>Usage example: </p><div class="fragment"><div class="line"><a class="code" href="classspk_1_1Texture.html">spk::Texture</a> texture(imageData, imageSize, spk::Texture::Format::RGBA, </div>
-<div class="line">                     spk::Texture::Filtering::Linear, spk::Texture::Wrap::Repeat, </div>
-<div class="line">                     spk::Texture::Mipmap::Enable);</div>
+<div class="line">                  spk::Texture::Filtering::Linear, spk::Texture::Wrap::Repeat, </div>
+<div class="line">                  spk::Texture::Mipmap::Enable);</div>
 <div class="line">texture.uploadToGPU();</div>
 <div class="ttc" id="aclassspk_1_1Texture_html"><div class="ttname"><a href="classspk_1_1Texture.html">spk::Texture</a></div><div class="ttdoc">Manages texture data for use in rendering pipelines.</div><div class="ttdef"><b>Definition:</b> spk_texture.hpp:42</div></div>
 </div><!-- fragment --><dl class="section note"><dt>Note</dt><dd>Before a texture can be used in rendering, it must be uploaded to GPU memory using the <code>uploadToGPU</code> method. </dd>

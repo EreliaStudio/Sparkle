@@ -9,7 +9,7 @@ var searchData=
   ['icollider_224',['ICollider',['../classspk_1_1ICollider.html#a28c7b5bab8cfadcecaf0f75915f5fe58',1,'spk::ICollider::ICollider()'],['../classspk_1_1ICollider.html',1,'spk::ICollider']]],
   ['id_225',['ID',['../classspk_1_1Texture.html#a7893fb6d36c78e790bbe45d74d7ef3cc',1,'spk::Texture']]],
   ['image_226',['Image',['../classspk_1_1Image.html#a337bb053ef8644753894ccc187e055a4',1,'spk::Image']]],
-  ['image_227',['image',['../classspk_1_1TextureManager.html#abd482e8150e9ca0ca2707a72d9e344d1',1,'spk::TextureManager']]],
+  ['image_227',['image',['../classspk_1_1TextureAtlas.html#a8616ddf783f756dce2154267aaa98178',1,'spk::TextureAtlas']]],
   ['image_228',['Image',['../classspk_1_1Image.html',1,'spk']]],
   ['imagelabel_229',['ImageLabel',['../classspk_1_1ImageLabel.html#abc2a9cbf1c0e7c33c03815688897914c',1,'spk::ImageLabel::ImageLabel(const std::string &amp;p_name, spk::Widget *p_parent)'],['../classspk_1_1ImageLabel.html#af9d85899c95c1a6d26ceaf7b811effe8',1,'spk::ImageLabel::ImageLabel(spk::Widget *p_parent)'],['../classspk_1_1ImageLabel.html',1,'spk::ImageLabel']]],
   ['imetric_230',['IMetric',['../classspk_1_1IMetric.html',1,'spk']]],

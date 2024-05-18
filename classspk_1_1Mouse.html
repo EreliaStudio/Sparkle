@@ -142,19 +142,19 @@ Public Member Functions</h2></td></tr>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Checking button state</span></div>
 <div class="line"><span class="keywordflow">if</span> (mouse.<a class="code" href="classspk_1_1Mouse.html#ad3f2d2d2f3c847e1ec3e550c0e67ee62">getButton</a>(spk::Mouse::Button::Left) == spk::InputState::Pressed) {</div>
-<div class="line">    <span class="comment">// Respond to left button press</span></div>
+<div class="line">  <span class="comment">// Respond to left button press</span></div>
 <div class="line">}</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Reading cursor movement</span></div>
 <div class="line"><a class="code" href="structspk_1_1IVector2.html">spk::Vector2Int</a> <a class="code" href="classspk_1_1Mouse.html#a1561a95f23e5fc8f8d68e00f0d5219f6">deltaPosition</a> = mouse.<a class="code" href="classspk_1_1Mouse.html#a1561a95f23e5fc8f8d68e00f0d5219f6">deltaPosition</a>();</div>
 <div class="line"><span class="keywordflow">if</span> (<a class="code" href="classspk_1_1Mouse.html#a1561a95f23e5fc8f8d68e00f0d5219f6">deltaPosition</a> != <a class="code" href="structspk_1_1IVector2.html">spk::Vector2Int</a>(0, 0)) {</div>
-<div class="line">    <span class="comment">// Handle cursor movement</span></div>
+<div class="line">  <span class="comment">// Handle cursor movement</span></div>
 <div class="line">}</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Handling wheel scrolling</span></div>
 <div class="line"><a class="code" href="structspk_1_1IVector2.html">spk::Vector2Int</a> wheelMovement = mouse.<a class="code" href="classspk_1_1Mouse.html#a58dcd6e132f6b8020f9ab9f317aa0ff0">wheel</a>();</div>
 <div class="line"><span class="keywordflow">if</span> (wheelMovement.<a class="code" href="structspk_1_1IVector2.html#acf3fb8bbe6949b4ca26a0984408a4b78">y</a> != 0) {</div>
-<div class="line">    <span class="comment">// Scroll content based on wheel movement</span></div>
+<div class="line">  <span class="comment">// Scroll content based on wheel movement</span></div>
 <div class="line">}</div>
 <div class="ttc" id="aclassspk_1_1Mouse_html"><div class="ttname"><a href="classspk_1_1Mouse.html">spk::Mouse</a></div><div class="ttdoc">Manages mouse input, including button states, position, and wheel movement.</div><div class="ttdef"><b>Definition:</b> spk_mouse.hpp:46</div></div>
 <div class="ttc" id="aclassspk_1_1Mouse_html_a1561a95f23e5fc8f8d68e00f0d5219f6"><div class="ttname"><a href="classspk_1_1Mouse.html#a1561a95f23e5fc8f8d68e00f0d5219f6">spk::Mouse::deltaPosition</a></div><div class="ttdeci">const Vector2Int &amp; deltaPosition() const</div><div class="ttdoc">Gets the change in position of the mouse cursor.</div><div class="ttdef"><b>Definition:</b> spk_mouse.cpp:74</div></div>

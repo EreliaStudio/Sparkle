@@ -85,14 +85,14 @@ $(function() {
 <div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;        {</div>
 <div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;        <span class="keyword">public</span>:</div>
 <div class="line"><a name="l00031"></a><span class="lineno"><a class="line" href="classspk_1_1Message_1_1Header.html#a005518e3b51748bed0408166a26550dc">   31</a></span>&#160;            <span class="keyword">using</span> <a class="code" href="classspk_1_1Message_1_1Header.html#a005518e3b51748bed0408166a26550dc">ClientID</a> = size_t;  </div>
-<div class="line"><a name="l00032"></a><span class="lineno"><a class="line" href="classspk_1_1Message_1_1Header.html#a18ab3a81fef94f13a0d3298fda5f09c6">   32</a></span>&#160;            <span class="keyword">using</span> <a class="code" href="classspk_1_1Message_1_1Header.html#a18ab3a81fef94f13a0d3298fda5f09c6">Type</a> = int32_t;     </div>
+<div class="line"><a name="l00032"></a><span class="lineno"><a class="line" href="classspk_1_1Message_1_1Header.html#a18ab3a81fef94f13a0d3298fda5f09c6">   32</a></span>&#160;            <span class="keyword">using</span> <a class="code" href="classspk_1_1Message_1_1Header.html#a18ab3a81fef94f13a0d3298fda5f09c6">Type</a> = int32_t;    </div>
 <div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160; </div>
 <div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;        <span class="keyword">private</span>:</div>
 <div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;            <span class="keyword">friend</span> <span class="keyword">class </span><a class="code" href="classspk_1_1Message.html">Message</a>;</div>
 <div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;            <span class="keywordtype">size_t</span> _length;  </div>
 <div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160; </div>
 <div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;        <span class="keyword">public</span>:</div>
-<div class="line"><a name="l00039"></a><span class="lineno"><a class="line" href="classspk_1_1Message_1_1Header.html#a6c3a402fd3c934ec437ce2967a893582">   39</a></span>&#160;            int32_t <a class="code" href="classspk_1_1Message_1_1Header.html#a6c3a402fd3c934ec437ce2967a893582">type</a>;        </div>
+<div class="line"><a name="l00039"></a><span class="lineno"><a class="line" href="classspk_1_1Message_1_1Header.html#a6c3a402fd3c934ec437ce2967a893582">   39</a></span>&#160;            int32_t <a class="code" href="classspk_1_1Message_1_1Header.html#a6c3a402fd3c934ec437ce2967a893582">type</a>;       </div>
 <div class="line"><a name="l00040"></a><span class="lineno"><a class="line" href="classspk_1_1Message_1_1Header.html#a31ee4c962047237ae74533132f6c86f5">   40</a></span>&#160;            <a class="code" href="classspk_1_1Message_1_1Header.html#a005518e3b51748bed0408166a26550dc">ClientID</a> <a class="code" href="classspk_1_1Message_1_1Header.html#a31ee4c962047237ae74533132f6c86f5">emitterID</a>;  </div>
 <div class="line"><a name="l00041"></a><span class="lineno"><a class="line" href="classspk_1_1Message_1_1Header.html#ad9d6be065b75ab9aa52c1598b20fc62e">   41</a></span>&#160;            uint8_t <a class="code" href="classspk_1_1Message_1_1Header.html#ad9d6be065b75ab9aa52c1598b20fc62e">reserved</a>[16]; </div>
 <div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160; </div>
@@ -221,7 +221,7 @@ $(function() {
 <div class="line"><a name="l00257"></a><span class="lineno">  257</span>&#160;        <span class="keyword">template</span> &lt;<span class="keyword">typename</span> OutputType&gt;</div>
 <div class="line"><a name="l00258"></a><span class="lineno"><a class="line" href="classspk_1_1Message.html#a787d2264efd33ecbbecac2b97dd68e43">  258</a></span>&#160;        OutputType <a class="code" href="classspk_1_1Message.html#a787d2264efd33ecbbecac2b97dd68e43">get</a>()<span class="keyword"> const</span></div>
 <div class="line"><a name="l00259"></a><span class="lineno">  259</span>&#160;<span class="keyword">        </span>{</div>
-<div class="line"><a name="l00260"></a><span class="lineno">  260</span>&#160;            <span class="keywordflow">return</span> (_buffer.<a class="code" href="classspk_1_1DataBuffer.html#a62775fb5a5cc3ef25dd87d41976b978f">get</a>&lt;OutputType&gt;());    </div>
+<div class="line"><a name="l00260"></a><span class="lineno">  260</span>&#160;            <span class="keywordflow">return</span> (_buffer.<a class="code" href="classspk_1_1DataBuffer.html#a62775fb5a5cc3ef25dd87d41976b978f">get</a>&lt;OutputType&gt;()); </div>
 <div class="line"><a name="l00261"></a><span class="lineno">  261</span>&#160;        }</div>
 <div class="line"><a name="l00262"></a><span class="lineno">  262</span>&#160; </div>
 <div class="line"><a name="l00269"></a><span class="lineno">  269</span>&#160;        <span class="keyword">template</span> &lt;<span class="keyword">typename</span> InputType&gt;</div>

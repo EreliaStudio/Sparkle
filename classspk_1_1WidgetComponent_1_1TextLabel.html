@@ -160,36 +160,36 @@ Public Member Functions</h2></td></tr>
 <p>Usage example: </p><div class="fragment"><div class="line"><span class="keyword">class </span>MyCustomWidget : <span class="keyword">public</span> <a class="code" href="classspk_1_1Widget.html">spk::Widget</a></div>
 <div class="line">{</div>
 <div class="line"><span class="keyword">private</span>:</div>
-<div class="line">    spkComponent::TextLabel _label;</div>
+<div class="line">  spkComponent::TextLabel _label;</div>
 <div class="line"> </div>
-<div class="line">    <span class="keywordtype">void</span> _onGeometryChange()</div>
-<div class="line">    {</div>
-<div class="line">        _label.setAnchor(<a class="code" href="structspk_1_1IVector2.html">spk::Vector2Int</a>(0, 0));</div>
-<div class="line">    }</div>
+<div class="line">  <span class="keywordtype">void</span> _onGeometryChange()</div>
+<div class="line">  {</div>
+<div class="line">     _label.setAnchor(<a class="code" href="structspk_1_1IVector2.html">spk::Vector2Int</a>(0, 0));</div>
+<div class="line">  }</div>
 <div class="line"> </div>
-<div class="line">    <span class="keywordtype">void</span> _onRender()<span class="keyword"> override</span></div>
-<div class="line"><span class="keyword">    </span>{</div>
-<div class="line">        _label.render();</div>
-<div class="line">    }</div>
+<div class="line">  <span class="keywordtype">void</span> _onRender()<span class="keyword"> override</span></div>
+<div class="line"><span class="keyword">  </span>{</div>
+<div class="line">     _label.render();</div>
+<div class="line">  }</div>
 <div class="line"> </div>
-<div class="line">    <span class="keywordtype">void</span> _onUpdate()</div>
-<div class="line">    {</div>
+<div class="line">  <span class="keywordtype">void</span> _onUpdate()</div>
+<div class="line">  {</div>
 <div class="line"> </div>
-<div class="line">    }</div>
+<div class="line">  }</div>
 <div class="line"> </div>
 <div class="line"><span class="keyword">public</span>:</div>
-<div class="line">    MyCustomWidget(<span class="keyword">const</span> std::string&amp; name, <a class="code" href="classspk_1_1Widget.html">spk::Widget</a>* parent = <span class="keyword">nullptr</span>) :</div>
-<div class="line">        spk::Widget(name, parent),</div>
-<div class="line">        _label()</div>
-<div class="line">    {</div>
-<div class="line">        _label.setFont(myFont); <span class="comment">// Assuming myFont is a preloaded Font instance</span></div>
-<div class="line">        _label.setText(<span class="stringliteral">&quot;Hello, SPK!&quot;</span>);</div>
-<div class="line">        _label.setTextSize(24);</div>
-<div class="line">        _label.setTextColor(spk::Color::White);</div>
-<div class="line">        _label.setAnchor({10, 10});</div>
-<div class="line">        _label.setVerticalAlignment(spk::VerticalAlignment::Centered);</div>
-<div class="line">        _label.setHorizontalAlignment(spk::HorizontalAlignment::Centered);</div>
-<div class="line">    }</div>
+<div class="line">  MyCustomWidget(<span class="keyword">const</span> std::string&amp; name, <a class="code" href="classspk_1_1Widget.html">spk::Widget</a>* parent = <span class="keyword">nullptr</span>) :</div>
+<div class="line">     spk::Widget(name, parent),</div>
+<div class="line">     _label()</div>
+<div class="line">  {</div>
+<div class="line">     _label.setFont(myFont); <span class="comment">// Assuming myFont is a preloaded Font instance</span></div>
+<div class="line">     _label.setText(<span class="stringliteral">&quot;Hello, SPK!&quot;</span>);</div>
+<div class="line">     _label.setTextSize(24);</div>
+<div class="line">     _label.setTextColor(spk::Color::White);</div>
+<div class="line">     _label.setAnchor({10, 10});</div>
+<div class="line">     _label.setVerticalAlignment(spk::VerticalAlignment::Centered);</div>
+<div class="line">     _label.setHorizontalAlignment(spk::HorizontalAlignment::Centered);</div>
+<div class="line">  }</div>
 <div class="line">};</div>
 <div class="ttc" id="aclassspk_1_1Widget_html"><div class="ttname"><a href="classspk_1_1Widget.html">spk::Widget</a></div><div class="ttdoc">Defines a widget interface for UI elements, integrating activation state management,...</div><div class="ttdef"><b>Definition:</b> spk_widget.hpp:61</div></div>
 <div class="ttc" id="astructspk_1_1IVector2_html"><div class="ttname"><a href="structspk_1_1IVector2.html">spk::IVector2&lt; int32_t &gt;</a></div></div>

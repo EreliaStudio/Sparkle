@@ -231,16 +231,16 @@ using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 <p>Each widget is associated with a viewport, automatically managed based on its geometry and the hierarchical structure. The viewport of a widget is activated upon rendering its children, ensuring that rendering operations are confined to the widget's designated area. This mechanism is crucial for rendering efficiency and visual correctness, especially in complex UI systems with overlapping elements.</p>
 <p>Widgets are designed to be extensible, requiring the implementation of key lifecycle methods (_onGeometryChange, _onRender, and _onUpdate) to define their behavior, appearance, and response to events or changes in state. The class also provides methods for resizing andgeometry management, allowing widgets to adapt to layout changes dynamically.</p>
 <p>Usage example: </p><div class="fragment"><div class="line"><span class="keyword">class </span>MyWidget : <span class="keyword">public</span> <a class="code" href="classspk_1_1Widget.html">spk::Widget</a> {</div>
-<div class="line">    MyWidget(<span class="keyword">const</span> std::string&amp; <a class="code" href="classspk_1_1Widget.html#af69341bec5fcec262a0c29a9ba48df62">name</a>) : spk::<a class="code" href="classspk_1_1Widget.html#acbeb0b30a1febf128e5001a55e08179f">Widget</a>(<a class="code" href="classspk_1_1Widget.html#af69341bec5fcec262a0c29a9ba48df62">name</a>) {}</div>
-<div class="line">    <span class="keywordtype">void</span> <a class="code" href="classspk_1_1Widget.html#a1f4178d50a5c2dfaa7f20af58ef1cc6d">_onGeometryChange</a>()<span class="keyword"> override </span>{</div>
-<div class="line">        <span class="comment">// Custom geometry change handling</span></div>
-<div class="line">    }</div>
-<div class="line">    <span class="keywordtype">void</span> <a class="code" href="classspk_1_1Widget.html#ad2b1b524e2581f9f7a4ac827fdf44265">_onRender</a>()<span class="keyword"> override </span>{</div>
-<div class="line">        <span class="comment">// Rendering code for this widget</span></div>
-<div class="line">    }</div>
-<div class="line">    <span class="keywordtype">void</span> <a class="code" href="classspk_1_1Widget.html#a29e8e60771c35cd3c533237219265960">_onUpdate</a>()<span class="keyword"> override </span>{</div>
-<div class="line">        <span class="comment">// Update logic for this widget</span></div>
-<div class="line">    }</div>
+<div class="line">  MyWidget(<span class="keyword">const</span> std::string&amp; <a class="code" href="classspk_1_1Widget.html#af69341bec5fcec262a0c29a9ba48df62">name</a>) : spk::<a class="code" href="classspk_1_1Widget.html#acbeb0b30a1febf128e5001a55e08179f">Widget</a>(<a class="code" href="classspk_1_1Widget.html#af69341bec5fcec262a0c29a9ba48df62">name</a>) {}</div>
+<div class="line">  <span class="keywordtype">void</span> <a class="code" href="classspk_1_1Widget.html#a1f4178d50a5c2dfaa7f20af58ef1cc6d">_onGeometryChange</a>()<span class="keyword"> override </span>{</div>
+<div class="line">     <span class="comment">// Custom geometry change handling</span></div>
+<div class="line">  }</div>
+<div class="line">  <span class="keywordtype">void</span> <a class="code" href="classspk_1_1Widget.html#ad2b1b524e2581f9f7a4ac827fdf44265">_onRender</a>()<span class="keyword"> override </span>{</div>
+<div class="line">     <span class="comment">// Rendering code for this widget</span></div>
+<div class="line">  }</div>
+<div class="line">  <span class="keywordtype">void</span> <a class="code" href="classspk_1_1Widget.html#a29e8e60771c35cd3c533237219265960">_onUpdate</a>()<span class="keyword"> override </span>{</div>
+<div class="line">     <span class="comment">// Update logic for this widget</span></div>
+<div class="line">  }</div>
 <div class="line">};</div>
 <div class="line"> </div>
 <div class="line"><a class="code" href="classspk_1_1Application.html">spk::Application</a> app(<span class="stringliteral">&quot;MyApplication&quot;</span>, <a class="code" href="structspk_1_1IVector2.html">spk::Vector2UInt</a>(800, 640));</div>

@@ -110,12 +110,12 @@ Public Member Functions</h2></td></tr>
 <p>This interface is intended to be used in systems where monitoring and reporting on performance metrics, usage statistics, or other analytical data is required.</p>
 <p>Usage example: </p><div class="fragment"><div class="line"><span class="keyword">class </span>PerformanceMetric : <span class="keyword">public</span> IMetric {</div>
 <div class="line"><span class="keyword">public</span>:</div>
-<div class="line">    <span class="keywordtype">bool</span> <a class="code" href="classspk_1_1IMetric.html#a9e15c5f72890ce9b2f8c49ea03810e22">shouldEmitReport</a>()<span class="keyword"> override </span>{</div>
-<div class="line">        <span class="comment">// Implementation logic here</span></div>
-<div class="line">    }</div>
-<div class="line">    <a class="code" href="classspk_1_1JSON_1_1Object.html">spk::JSON::Object</a> <a class="code" href="classspk_1_1IMetric.html#a53dbcd081303b77f337ce13200d6a195">emitReport</a>()<span class="keyword"> override </span>{</div>
-<div class="line">        <span class="comment">// Implementation logic here</span></div>
-<div class="line">    }</div>
+<div class="line">  <span class="keywordtype">bool</span> <a class="code" href="classspk_1_1IMetric.html#a9e15c5f72890ce9b2f8c49ea03810e22">shouldEmitReport</a>()<span class="keyword"> override </span>{</div>
+<div class="line">     <span class="comment">// Implementation logic here</span></div>
+<div class="line">  }</div>
+<div class="line">  <a class="code" href="classspk_1_1JSON_1_1Object.html">spk::JSON::Object</a> <a class="code" href="classspk_1_1IMetric.html#a53dbcd081303b77f337ce13200d6a195">emitReport</a>()<span class="keyword"> override </span>{</div>
+<div class="line">     <span class="comment">// Implementation logic here</span></div>
+<div class="line">  }</div>
 <div class="line">};</div>
 <div class="ttc" id="aclassspk_1_1IMetric_html_a53dbcd081303b77f337ce13200d6a195"><div class="ttname"><a href="classspk_1_1IMetric.html#a53dbcd081303b77f337ce13200d6a195">spk::IMetric::emitReport</a></div><div class="ttdeci">virtual spk::JSON::Object emitReport()=0</div><div class="ttdoc">Generates a report based on the collected data.</div></div>
 <div class="ttc" id="aclassspk_1_1IMetric_html_a9e15c5f72890ce9b2f8c49ea03810e22"><div class="ttname"><a href="classspk_1_1IMetric.html#a9e15c5f72890ce9b2f8c49ea03810e22">spk::IMetric::shouldEmitReport</a></div><div class="ttdeci">virtual bool shouldEmitReport()=0</div><div class="ttdoc">Determines if the current state warrants the generation of a report.</div></div>
