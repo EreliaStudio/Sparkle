@@ -47,12 +47,12 @@ private:
 			vec4 resultColor;
 			if (distance >= 0.5)
 			{
-				float t = strongInterpolation(distance, 0.5, 1.0, 6.0);
+				float t = strongInterpolation(distance, 0.5, 1.0, 20.0);
 				resultColor = mix(textRendererAttribute.outlineColor, textRendererAttribute.textColor, t);
 			}
 			else
 			{
-				float alpha = strongInterpolation(distance, 0.0, 0.5, 6.0);
+				float alpha = strongInterpolation(distance, 0.0, 0.5, 20.0);
 				resultColor = vec4(textRendererAttribute.outlineColor.rgb, alpha);
 			}
 
@@ -89,12 +89,18 @@ private:
 	bool _needGPUInputUpdate = false;
 	spk::Vector2Int _anchor;
 	spk::Vector2Int _size;
-	size_t outlineSize;
 
-	const spk::Font* _font;
+	size_t _textSize;
+	size_t _outlineSize;
+
+	spk::Font* _font;
+	spk::Font::Atlas* _fontAtlas;
 
 	void _updateGPUData()
 	{
+		_fontAtlas = &(_font->atlas(_textSize, _outlineSize));
+		_fontAtlas->loadGlyphs(L"abcdefghijkl");
+
 		std::vector<ShaderInput> data;
 		std::vector<unsigned int> indexes = {0, 1, 2, 2, 1, 3};
 
@@ -107,7 +113,7 @@ private:
 
 		for (size_t i = 0; i < 4; i++)
 		{
-			data.push_back(ShaderInput(_anchor + _size * deltas[i], deltas[i] / 2));
+			data.push_back(ShaderInput(_anchor + _size * deltas[i], deltas[i] / 10));
 		}
 
 		_renderingObject.setVertices(data);
@@ -139,11 +145,11 @@ public:
 			_needGPUInputUpdate = false;
 		}
 
-		_renderingPipelineTexture.attach(_font);
+		_renderingPipelineTexture.attach(_fontAtlas);
 		_renderingObject.render();
 	}
 
-	void setFont(const spk::Font* p_font)
+	void setFont(spk::Font* p_font)
 	{
 		_font = p_font;
 		_needGPUInputUpdate = true;
@@ -155,10 +161,22 @@ public:
 		_renderingObjectTextRendererAttribute.update();
 	}
 
+	void setTextSize(const size_t& p_textSize)
+	{
+		_textSize = p_textSize;
+		_needGPUInputUpdate = true;
+	}
+
 	void setOutlineColor(const spk::Color& p_outlineColor)
 	{
 		_renderingObjectTextRendererAttributeOutlineColorElement = p_outlineColor;
 		_renderingObjectTextRendererAttribute.update();
+	}
+
+	void setOutlineSize(const size_t& p_outlineSize)
+	{
+		_outlineSize = p_outlineSize;
+		_needGPUInputUpdate = true;
 	}
 
 	const spk::Vector2& anchor() const
@@ -193,9 +211,36 @@ private:
 
 	void _onUpdate() override
 	{
-		if (spk::Application::activeApplication()->keyboard().getChar() != L'\0')
+		if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::F1) == spk::InputState::Pressed)
 		{
-			const auto& glyph = _font->operator[](spk::Application::activeApplication()->keyboard().getChar()); 
+			_renderer.setTextSize(20);
+			_renderer.setOutlineSize(2);
+		}
+		if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::F2) == spk::InputState::Pressed)
+		{
+			_renderer.setTextSize(30);
+			_renderer.setOutlineSize(3);
+		}
+		if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::F3) == spk::InputState::Pressed)
+		{
+			_renderer.setTextSize(40);
+			_renderer.setOutlineSize(4);
+		}
+		
+		if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::F5) == spk::InputState::Pressed)
+		{
+			_renderer.setTextSize(20);
+			_renderer.setOutlineSize(4);
+		}
+		if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::F6) == spk::InputState::Pressed)
+		{
+			_renderer.setTextSize(30);
+			_renderer.setOutlineSize(6);
+		}
+		if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::F7) == spk::InputState::Pressed)
+		{
+			_renderer.setTextSize(40);
+			_renderer.setOutlineSize(8);
 		}
 	}
 
@@ -221,10 +266,11 @@ public:
 		spk::Widget(p_name, p_parent),
 		_font(p_font)
 	{
-		_font->loadGlyphs(L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890");
 		_renderer.setFont(_font);
 		_renderer.setTextColor(spk::Color::blue);
 		_renderer.setOutlineColor(spk::Color::red);
+		_renderer.setTextSize(40);
+		_renderer.setOutlineSize(10);
 	}
 };
 

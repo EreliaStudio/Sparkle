@@ -1,18 +1,25 @@
 #include "graphics/texture/font/spk_font.hpp"
 #include "graphics/pipeline/spk_pipeline.hpp"
+#include <fstream>
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "external_libraries/stb_truetype.h"
 
 namespace spk
 {
-	spk::Vector2UInt Font::_computeGlyphPosition(const spk::Vector2UInt& p_glyphSize)
+	void Font::Atlas::loadAllRenderableGlyphs()
 	{
-		// std::cout << "Next glyph anchor : " << _nextGlyphAnchor << std::endl;
-		// std::cout << "Next line anchor : " << _nextLineAnchor << std::endl;
-		// std::cout << "Texture size : " << _size << std::endl;
-		// std::cout << "Glyph size : " << p_glyphSize << std::endl;
-		
+		for (int codepoint = 0; codepoint <= 0x10FFFF; ++codepoint)
+		{
+			if (stbtt_FindGlyphIndex(&_fontInfo, codepoint) != 0)
+			{
+				operator[](static_cast<wchar_t>(codepoint));
+			}
+		}
+	}
+
+	spk::Vector2UInt Font::Atlas::_computeGlyphPosition(const spk::Vector2UInt& p_glyphSize)
+	{
 		if ((_nextGlyphAnchor.x + p_glyphSize.x) >= (_quadrantAnchor.x + _quadrantSize.x))
 		{
 			_nextGlyphAnchor = _nextLineAnchor;
@@ -98,17 +105,15 @@ namespace spk
 		return (result);
 	}
 
-	void Font::_loadGlyph(const wchar_t& p_glyph)
+
+	void Font::Atlas::_loadGlyph(const wchar_t& p_glyph)
 	{
 		Glyph glyph;
 
-		size_t sizeInPixel = 50;
+		float scale = stbtt_ScaleForMappingEmToPixels(&_fontInfo, static_cast<float>(_textSize));
 
-		float scale = stbtt_ScaleForMappingEmToPixels(&_fontInfo, static_cast<float>(sizeInPixel));
-
-		int padding = 2;
 		int width, height, xOffset, yOffset;
-		uint8_t* glyphBitmap = stbtt_GetCodepointSDF(&_fontInfo, scale, p_glyph, padding * 2 + 1, 255, 255.0f / static_cast<float>(padding * 2), &width, &height, &xOffset, &yOffset);
+		uint8_t* glyphBitmap = stbtt_GetCodepointSDF(&_fontInfo, scale, p_glyph, static_cast<int>(_outlineSize * 2 + 1), 255, 255.0f / static_cast<float>(_outlineSize * 2), &width, &height, &xOffset, &yOffset);
 
 		if (glyphBitmap == nullptr)
 		{
@@ -144,21 +149,10 @@ namespace spk
 		_needUpload = true;
 		spk::Pipeline::Texture::resetLastActiveTexture();
 	}
-
+	
 	void Font::_loadFileData(const std::filesystem::path& p_path)
 	{
-		_fontData = _readFileContent(p_path);
+		_fontData = readFileContentAsBytes(p_path);
 		stbtt_InitFont(&_fontInfo, _fontData.data(), 0);
-	}
-
-	void Font::loadAllRenderableGlyphs()
-	{
-		for (int codepoint = 0; codepoint <= 0x10FFFF; ++codepoint)
-		{
-			if (stbtt_FindGlyphIndex(&_fontInfo, codepoint) != 0)
-			{
-				operator[](static_cast<wchar_t>(codepoint));
-			}
-		}
 	}
 }

@@ -1,5 +1,4 @@
 #include "graphics/texture/font/spk_font.hpp"
-#include <fstream>
 
 namespace spk
 {
@@ -11,38 +10,16 @@ namespace spk
 		}
 	}
 
-	void Font::_bind(int p_textureIndex) const
+	void Font::Atlas::_bind(int p_textureIndex) const
 	{
 		if (_needUpload == true)
 		{
-			const_cast<Font*>(this)->_uploadTexture();
+			const_cast<Atlas*>(this)->_uploadTexture();
 		}
 		spk::Texture::_bind(p_textureIndex);
 	}
 
-	std::vector<uint8_t> Font::_readFileContent(const std::filesystem::path& p_path)
-	{
-		std::vector<uint8_t> result;
-
-		std::ifstream file(p_path, std::ios::binary | std::ios::ate);
-		if (!file.is_open())
-		{
-			spk::throwException("Failed to open font file [" + p_path.string() + "].");
-		}
-
-		std::streamsize size = file.tellg();
-		file.seekg(0, std::ios::beg);
-
-		result.resize(static_cast<size_t>(size));
-		if (!file.read(reinterpret_cast<char *>(result.data()), size))
-		{
-			spk::throwException("Failed to read font file [" + p_path.string() + "].");
-		}
-
-		return result;
-	}
-
-	void Font::_rescaleGlyphs(const spk::Vector2& p_scaleRatio)
+	void Font::Atlas::_rescaleGlyphs(const spk::Vector2& p_scaleRatio)
 	{
 		for (auto& [key, element] : _glyphs)
 		{
@@ -50,7 +27,7 @@ namespace spk
 		}
 	}
 
-	void Font::_resizeData(const spk::Vector2UInt& p_size)
+	void Font::Atlas::_resizeData(const spk::Vector2UInt& p_size)
 	{
 		std::vector<uint8_t> newPixels(p_size.x * p_size.y, 0x00);
 		std::vector<bool> newUsedPixels(p_size.x * p_size.y, false);
@@ -69,7 +46,7 @@ namespace spk
 		_pixels.swap(newPixels);
 	}
 
-	void Font::_applyGlyphPixel(const uint8_t* p_pixelsToApply, const spk::Vector2UInt& p_glyphPosition, const spk::Vector2UInt& p_glyphSize)
+	void Font::Atlas::_applyGlyphPixel(const uint8_t* p_pixelsToApply, const spk::Vector2UInt& p_glyphPosition, const spk::Vector2UInt& p_glyphSize)
 	{
 		for (size_t x = 0; x < p_glyphSize.x; x++)
 		{	
@@ -80,7 +57,7 @@ namespace spk
 		}
 	}
 
-	void Font::_uploadTexture()
+	void Font::Atlas::_uploadTexture()
 	{
 		uploadToGPU(
 			_pixels.data(),
@@ -93,10 +70,9 @@ namespace spk
 		_needUpload = false;
 	}
 	
-	Font::Font(const std::filesystem::path& p_path)
+	Font::Atlas::Atlas(const stbtt_fontinfo& p_fontInfo, const std::vector<uint8_t>& p_fontData, const size_t& p_textSize, const size_t& p_outlineSize) :
+		_textSize(p_textSize), _outlineSize(p_outlineSize), _fontInfo(p_fontInfo)
 	{
-		_loadFileData(p_path);
-
 		_resizeData(spk::Vector2UInt(1024, 1024));
 
 		_currentQuadrant = Quadrant::TopLeft;
@@ -106,7 +82,7 @@ namespace spk
 		_nextLineAnchor = _quadrantAnchor;
 	}
 
-	void Font::loadGlyphs(const std::wstring& p_glyphsToLoad)
+	void Font::Atlas::loadGlyphs(const std::wstring& p_glyphsToLoad)
 	{
 		for (const auto& c : p_glyphsToLoad)
 		{
@@ -114,12 +90,27 @@ namespace spk
 		}
 	}
 
-	const Font::Glyph& Font::operator[](const wchar_t& p_char) const
+	const Font::Glyph& Font::Atlas::operator[](const wchar_t& p_char)
 	{
 		if (_glyphs.contains(p_char) == false)
 		{
-			const_cast<Font*>(this)->_loadGlyph(p_char);			
+			_loadGlyph(p_char);			
 		}
 		return _glyphs.at(p_char);
+	}
+
+	Font::Font(const std::filesystem::path& p_path)
+	{
+		_loadFileData(p_path);
+	}
+
+	Font::Atlas& Font::atlas(const size_t& p_textSize, const size_t& p_outlineSize)
+	{
+		auto key = std::make_tuple(p_textSize, p_outlineSize);
+		if (_atlases.find(key) == _atlases.end())
+		{
+			_atlases.emplace(key, Atlas(_fontInfo, _fontData, p_textSize, p_outlineSize));
+		}
+		return _atlases.at(key);
 	}
 }

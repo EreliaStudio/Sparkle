@@ -15,6 +15,28 @@ namespace spk
 		return buffer.str();
 	}
 
+	std::vector<uint8_t> readFileContentAsBytes(const std::filesystem::path& p_path)
+	{
+		std::vector<uint8_t> result;
+
+		std::ifstream file(p_path, std::ios::binary | std::ios::ate);
+		if (!file.is_open())
+		{
+			spk::throwException("Failed to open font file [" + p_path.string() + "].");
+		}
+
+		std::streamsize size = file.tellg();
+		file.seekg(0, std::ios::beg);
+
+		result.resize(static_cast<size_t>(size));
+		if (!file.read(reinterpret_cast<char *>(result.data()), size))
+		{
+			spk::throwException("Failed to read font file [" + p_path.string() + "].");
+		}
+
+		return result;
+	}
+
 	float degreeToRadian(float p_degrees)
 	{
 		return static_cast<float>(p_degrees * (M_PI / 180.0f));
