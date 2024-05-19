@@ -27,12 +27,19 @@ namespace spk::WidgetComponent
 		
 		void renderPass()
 		{
-			vec4 textureColor = texture(_texture, fragmentUVs).rgba;
 
-			if (textureColor.a == 0)	
-				discard;
+			float smoothing = 0.05f;
+			float sdfValue = texture(_texture, fragmentUVs).r;
+			float alpha = smoothstep(0.5 - smoothing, 0.5 + smoothing, sdfValue);
+			pixelColor = vec4(1, 1, 1, alpha);
 
-			pixelColor = textureColor;
+
+			// vec4 textureColor = texture(_texture, fragmentUVs).rgba;
+			
+			// if (textureColor.a == 0)	
+			// 	discard;
+
+			// pixelColor = textureColor;
 		})";
 	spk::Pipeline TextureRenderer::_renderingPipeline = spk::Pipeline(_renderingPipelineCode);
 

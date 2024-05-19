@@ -19,6 +19,11 @@ namespace spk
 		_activeTexture = p_textureToSet;
 	}
 
+	void Pipeline::Texture::resetLastActiveTexture()
+	{
+		_lastActiveTexture = nullptr;
+	}
+
 	void Pipeline::Texture::_activate()
 	{
 		if (_activeTexture == nullptr || _lastActiveTexture == _activeTexture)

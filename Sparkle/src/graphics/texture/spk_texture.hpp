@@ -118,7 +118,8 @@ namespace spk
 
 		friend class Pipeline;
 
-		void _bind(int p_textureIndex = 0) const;
+	protected:
+		virtual void _bind(int p_textureIndex = 0) const;
 		void _unbind() const;
 
 	public:

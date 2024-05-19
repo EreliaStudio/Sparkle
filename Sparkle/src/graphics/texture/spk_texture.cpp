@@ -1,5 +1,7 @@
 #include "graphics/texture/spk_texture.hpp"
 
+#include "graphics/pipeline/spk_pipeline.hpp"
+
 namespace spk
 {
 	Texture::Texture() :
@@ -85,10 +87,11 @@ namespace spk
 
 		glBindTexture(GL_TEXTURE_2D, 0);
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+		Pipeline::Texture::_lastActiveTexture = nullptr;
 		
 		_loaded = true;
 	}
-
+	
 	void Texture::releaseGPUMemory()
 	{
 		if (_loaded == true)

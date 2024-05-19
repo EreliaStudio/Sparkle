@@ -3,124 +3,124 @@
 
 namespace spk
 {
-	Font::Font(const std::filesystem::path &p_path)
+	void Font::Glyph::rescale(const spk::Vector2& p_scaleRatio)
 	{
+		for (size_t i = 0; i < 4; i++)
+		{
+			UVs[i] *= p_scaleRatio;
+		}
+	}
+
+	void Font::_bind(int p_textureIndex) const
+	{
+		if (_needUpload == true)
+		{
+			const_cast<Font*>(this)->_uploadTexture();
+		}
+		spk::Texture::_bind(p_textureIndex);
+	}
+
+	std::vector<uint8_t> Font::_readFileContent(const std::filesystem::path& p_path)
+	{
+		std::vector<uint8_t> result;
+
 		std::ifstream file(p_path, std::ios::binary | std::ios::ate);
 		if (!file.is_open())
 		{
-			throwException("Failed to open font file [" + p_path.string() + "].");
+			spk::throwException("Failed to open font file [" + p_path.string() + "].");
 		}
 
 		std::streamsize size = file.tellg();
 		file.seekg(0, std::ios::beg);
 
-		_fontData.resize(static_cast<size_t>(size));
-		if (!file.read(reinterpret_cast<char *>(_fontData.data()), size))
+		result.resize(static_cast<size_t>(size));
+		if (!file.read(reinterpret_cast<char *>(result.data()), size))
 		{
-			throwException("Failed to read font file [" + p_path.string() + "].");
+			spk::throwException("Failed to read font file [" + p_path.string() + "].");
 		}
 
-		_fontConfiguration = Configuration(p_path.string(), _fontData);
+		return result;
 	}
 
-	Vector2Int Font::Atlas::computeCharSize(const wchar_t& p_char) const
+	void Font::_rescaleGlyphs(const spk::Vector2& p_scaleRatio)
 	{
-		const GlyphData& glyphData = this->operator[](p_char);
-		return Vector2Int(glyphData.size.x, glyphData.size.y);
-	}
-
-	Vector2Int Font::Atlas::computeStringSize(const std::string& p_string) const
-	{
-		int totalWidth = 0;
-		int maxHeight = 0;
-		int minHeight = 0;
-
-		for (char ch : p_string)
+		for (auto& [key, element] : _glyphs)
 		{
-			const Atlas::GlyphData& glyphData = this->operator[](ch);
-			totalWidth += glyphData.step.x;
-			
-			maxHeight = std::max(maxHeight, glyphData.position[4].y);
-			minHeight = std::min(minHeight, glyphData.position[0].y);
+			element.rescale(p_scaleRatio);
 		}
-
-		int totalHeight = maxHeight - minHeight;
-		return Vector2Int(totalWidth, totalHeight);
 	}
 
-	Vector2Int Font::computeCharSize(const wchar_t& p_char, size_t p_size, size_t p_outlineSize, const spk::Font::OutlineStyle& p_outlineStyle)
+	void Font::_resizeData(const spk::Vector2UInt& p_size)
 	{
-		return (atlas(p_size, p_outlineSize, p_outlineStyle).computeCharSize(p_char));
-	}
+		std::vector<uint8_t> newPixels(p_size.x * p_size.y, 0x00);
+		std::vector<bool> newUsedPixels(p_size.x * p_size.y, false);
 
-	Vector2Int Font::computeStringSize(const std::string& p_string, size_t p_size, size_t p_outlineSize, const spk::Font::OutlineStyle& p_outlineStyle)
-	{
-		return (atlas(p_size, p_outlineSize, p_outlineStyle).computeStringSize(p_string));
-	}
-
-	size_t Font::computeOptimalTextSize(const std::string& p_string, size_t p_outlineSize, const spk::Font::OutlineStyle& p_outlineStyle, const Vector2Int& p_textArea)
-	{
-		std::vector<int> deltas = { 100, 50, 20, 10, 1 };
-		size_t result = 2;
-
-		if (p_string == "")
-			return (p_textArea.y);
-
-		for (int i = 0; i < deltas.size(); i++)
+		for (size_t x = 0; x < _size.x; x++)
 		{
-			bool enough = false;
-			while (enough == false)
+			for (size_t y = 0; y < _size.y; y++)
 			{
-				Vector2Int tmp_size = computeStringSize(p_string, result + deltas[i], p_outlineSize, p_outlineStyle);
-				if (tmp_size.x >= p_textArea.x || tmp_size.y >= p_textArea.y)
-				{
-					enough = true;
-				}
-				else
-				{
-					result += deltas[i];
-				}
+				newPixels[x + y * p_size.x] = _pixels[x + y * _size.x];
 			}
 		}
-		return (result);
+
+		_rescaleGlyphs(static_cast<spk::Vector2>(_size) / static_cast<spk::Vector2>(p_size));	
+		_size = p_size;
+		_quadrantSize = _size / 2;
+		_quadrantAnchor = spk::Vector2UInt(_size.x / 2, 0);
+		_nextGlyphAnchor = _quadrantAnchor;
+		_nextLineAnchor = _quadrantAnchor;
+		_pixels.swap(newPixels);
 	}
 
-	const Font::Atlas& Font::atlas(const size_t &p_fontSize, const size_t &p_outlineSize, const OutlineStyle& p_outlineStype) const
+	void Font::_applyGlyphPixel(const uint8_t* p_pixelsToApply, const spk::Vector2UInt& p_glyphPosition, const spk::Vector2UInt& p_glyphSize)
 	{
-		Key tmpKey = Key(p_fontSize, p_outlineSize, p_outlineStype);
-		if (_fontAtlas.contains(tmpKey) == false)
-		{
-			_fontAtlas.emplace(tmpKey, std::move(Atlas(_fontData, _fontConfiguration, tmpKey)));
+		for (size_t x = 0; x < p_glyphSize.x; x++)
+		{	
+			for (size_t y = 0; y < p_glyphSize.y; y++)
+			{
+				_pixels[(p_glyphPosition.x + x) + (p_glyphPosition.y + y) * _size.x] = p_pixelsToApply[x + y * p_glyphSize.x];
+			}
 		}
-		return _fontAtlas.at(tmpKey);
 	}
 
-	Font::Atlas& Font::atlas(const size_t &p_fontSize, const size_t &p_outlineSize, const OutlineStyle& p_outlineStype)
+	void Font::_uploadTexture()
 	{
-		Key tmpKey = Key(p_fontSize, p_outlineSize, p_outlineStype);
-		if (_fontAtlas.contains(tmpKey) == false)
+		uploadToGPU(
+			_pixels.data(),
+			_size,
+			spk::Texture::Format::GreyLevel,
+			spk::Texture::Filtering::Nearest,
+			spk::Texture::Wrap::Repeat,
+			spk::Texture::Mipmap::Disable
+		);
+		_needUpload = false;
+	}
+	
+	Font::Font(const std::filesystem::path& p_path)
+	{
+		_loadFileData(p_path);
+
+		_resizeData(spk::Vector2UInt(512, 512));
+		_quadrantAnchor = spk::Vector2UInt(0, 0);
+		_quadrantSize = _size;
+		_nextGlyphAnchor = _quadrantAnchor;
+		_nextLineAnchor = _quadrantAnchor;
+	}
+
+	void Font::loadGlyphs(const std::wstring& p_glyphsToLoad)
+	{
+		for (const auto& c : p_glyphsToLoad)
 		{
-			_fontAtlas.emplace(tmpKey, std::move(Atlas(_fontData, _fontConfiguration, tmpKey)));
+			operator[](c);
 		}
-		return _fontAtlas[tmpKey];
 	}
-}
 
-std::ostream& operator << (std::ostream& p_os, const spk::Font::OutlineStyle& p_outlineStyle)
-{
-	switch (p_outlineStyle)
+	const Font::Glyph& Font::operator[](const wchar_t& p_char) const
 	{
-		case spk::Font::OutlineStyle::Manhattan:
-			p_os << "Manhattan"; return (p_os);
-		case spk::Font::OutlineStyle::Pixelized:
-			p_os << "Pixelized"; return (p_os);
-		case spk::Font::OutlineStyle::SharpEdge:
-			p_os << "SharpEdge"; return (p_os);
-		case spk::Font::OutlineStyle::Standard:
-			p_os << "Standard"; return (p_os);
-		case spk::Font::OutlineStyle::None:
-			p_os << "None"; return (p_os);
-		default:
-			p_os << "Unknown outline style"; return (p_os);
+		if (_glyphs.contains(p_char) == false)
+		{
+			const_cast<Font*>(this)->_loadGlyph(p_char);			
+		}
+		return _glyphs.at(p_char);
 	}
 }

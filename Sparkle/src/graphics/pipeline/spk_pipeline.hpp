@@ -728,6 +728,7 @@ namespace spk
 		class Texture
 		{
 			friend class Pipeline;
+			friend class spk::Texture;
 
 		public:
 			/**
@@ -766,6 +767,8 @@ namespace spk
 			 * be bound to the shader's sampler uniform specified by the Texture instance's layout.
 			 */
 			void attach(const spk::Texture* p_textureToSet);
+
+			static void resetLastActiveTexture();
 		};
 
 	private:

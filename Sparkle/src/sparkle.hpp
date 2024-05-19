@@ -59,16 +59,12 @@
 #include "game_engine/spk_game_engine.hpp"
 
 #include "widget/components/spk_nine_sliced.hpp"
-#include "widget/components/spk_text_label.hpp"
 #include "widget/components/spk_colored_box.hpp"
 #include "widget/components/spk_texture_renderer.hpp"
 
 #include "widget/spk_game_engine_manager.hpp"
 #include "widget/spk_widget.hpp"
-#include "widget/spk_button.hpp"
 #include "widget/spk_frame.hpp"
-#include "widget/spk_text_label.hpp"
-#include "widget/spk_text_entry.hpp"
 #include "widget/spk_image_label.hpp"
 #include "widget/spk_panel.hpp"
 
