@@ -34,7 +34,7 @@ public:
 		spk::Widget(p_name, p_parent),
 		_font(p_font)
 	{
-		p_font->loadGlyphs(L"123456789azertyuiopqsdfghjklmwxcvbn,;:!ù*^$&é\"'(-è_çà)=~#{[|`\\^@]}");
+		
 	}
 };
 

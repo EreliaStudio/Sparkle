@@ -66,9 +66,6 @@ namespace spk
 		_rescaleGlyphs(static_cast<spk::Vector2>(_size) / static_cast<spk::Vector2>(p_size));	
 		_size = p_size;
 		_quadrantSize = _size / 2;
-		_quadrantAnchor = spk::Vector2UInt(_size.x / 2, 0);
-		_nextGlyphAnchor = _quadrantAnchor;
-		_nextLineAnchor = _quadrantAnchor;
 		_pixels.swap(newPixels);
 	}
 
@@ -100,7 +97,9 @@ namespace spk
 	{
 		_loadFileData(p_path);
 
-		_resizeData(spk::Vector2UInt(512, 512));
+		_resizeData(spk::Vector2UInt(1024, 1024));
+
+		_currentQuadrant = Quadrant::TopLeft;
 		_quadrantAnchor = spk::Vector2UInt(0, 0);
 		_quadrantSize = _size;
 		_nextGlyphAnchor = _quadrantAnchor;

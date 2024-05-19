@@ -35,6 +35,7 @@ namespace spk
 				{
 					_currentQuadrant = Quadrant::TopRight;
 					_resizeData(_size * 2);
+					_quadrantAnchor = spk::Vector2UInt(_size.x / 2, 0);
 					result = _nextGlyphAnchor = _nextLineAnchor = _quadrantAnchor;
 					_nextGlyphAnchor.x += p_glyphSize.x;
 					if (_nextLineAnchor.y < result.y + p_glyphSize.y)
@@ -79,7 +80,15 @@ namespace spk
 			{	
 				if (_nextLineAnchor.y >= _quadrantAnchor.y + _quadrantSize.y)
 				{
+					_currentQuadrant = Quadrant::TopRight;
 					_resizeData(_size * 2);
+					_quadrantAnchor = spk::Vector2UInt(_size.x / 2, 0);
+					result = _nextGlyphAnchor = _nextLineAnchor = _quadrantAnchor;
+					_nextGlyphAnchor.x += p_glyphSize.x;
+					if (_nextLineAnchor.y < result.y + p_glyphSize.y)
+					{
+						_nextLineAnchor.y = result.y + p_glyphSize.y;
+					}
 				}
 
 				break;
