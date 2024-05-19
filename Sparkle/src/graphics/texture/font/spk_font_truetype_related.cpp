@@ -106,15 +106,18 @@ namespace spk
 
 		float scale = stbtt_ScaleForMappingEmToPixels(&_fontInfo, static_cast<float>(sizeInPixel));
 
-		int padding = static_cast<int>(sizeInPixel) / 2;
+		int padding = 2;
 		int width, height, xOffset, yOffset;
-		uint8_t* glyphBitmap = stbtt_GetCodepointSDF(&_fontInfo, scale, p_glyph, padding, 128, 0.5f, &width, &height, &xOffset, &yOffset);
+		uint8_t* glyphBitmap = stbtt_GetCodepointSDF(&_fontInfo, scale, p_glyph, padding * 2 + 1, 255, 255.0f / static_cast<float>(padding * 2), &width, &height, &xOffset, &yOffset);
 
 		if (glyphBitmap == nullptr)
 		{
 			_glyphs[p_glyph] = _unknownGlyph;
 			return ;
 		}
+
+		int advance;
+		stbtt_GetCodepointHMetrics(&_fontInfo, p_glyph, &advance, NULL);
 
 		spk::Vector2UInt glyphSize = spk::Vector2UInt(width, height);
 
@@ -132,7 +135,7 @@ namespace spk
 		glyph.UVs[2] = spk::Vector2(static_cast<float>(glyphPosition.x + glyphSize.x) / _size.x, static_cast<float>(glyphPosition.y + glyphSize.y) / _size.y);
 		glyph.UVs[3] = spk::Vector2(static_cast<float>(glyphPosition.x) / _size.x, static_cast<float>(glyphPosition.y + glyphSize.y) / _size.y);
 
-		glyph.step = spk::Vector2(static_cast<float>(width), static_cast<float>(height));
+		glyph.step = spk::Vector2(advance * scale, 0);
 
 		_glyphs[p_glyph] = glyph;
 
@@ -146,5 +149,16 @@ namespace spk
 	{
 		_fontData = _readFileContent(p_path);
 		stbtt_InitFont(&_fontInfo, _fontData.data(), 0);
+	}
+
+	void Font::loadAllRenderableGlyphs()
+	{
+		for (int codepoint = 0; codepoint <= 0x10FFFF; ++codepoint)
+		{
+			if (stbtt_FindGlyphIndex(&_fontInfo, codepoint) != 0)
+			{
+				operator[](static_cast<wchar_t>(codepoint));
+			}
+		}
 	}
 }

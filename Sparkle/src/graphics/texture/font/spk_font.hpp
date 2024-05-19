@@ -67,6 +67,7 @@ namespace spk
 	public:
 		Font(const std::filesystem::path& p_path);
 
+		void loadAllRenderableGlyphs();
 		void loadGlyphs(const std::wstring& p_glyphsToLoad);
 
 		const Glyph& operator[](const wchar_t& p_char) const;
