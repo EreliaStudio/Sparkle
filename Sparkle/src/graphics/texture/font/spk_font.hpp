@@ -15,9 +15,10 @@ namespace spk
 	public:
 		struct Glyph
 		{
-			spk::Vector2UInt positions[4];
+			spk::Vector2Int positions[4];
 			spk::Vector2 UVs[4];
-			spk::Vector2 step;
+			spk::Vector2Int step;
+			static inline std::vector<unsigned int> indexesOrder = {0, 1, 2, 2, 1, 3};
 
 			void rescale(const spk::Vector2& p_scaleRatio);
 		};
@@ -61,7 +62,7 @@ namespace spk
 
 			void _applyGlyphPixel(const uint8_t* p_pixelsToApply, const spk::Vector2UInt& p_glyphPosition, const spk::Vector2UInt& p_glyphSize);
 
-			void _loadGlyph(const wchar_t& p_glyph);
+			void _loadGlyph(const wchar_t& p_char);
 
 			void _uploadTexture();
 
@@ -70,6 +71,7 @@ namespace spk
 			void loadGlyphs(const std::wstring& p_glyphsToLoad);
 			void loadAllRenderableGlyphs();
 			const Glyph& operator[](const wchar_t& p_char);
+			const Glyph& glyph(const wchar_t& p_char);
 		};
 
 	private:

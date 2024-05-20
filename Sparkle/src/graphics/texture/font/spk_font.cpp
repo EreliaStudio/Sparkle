@@ -92,6 +92,11 @@ namespace spk
 
 	const Font::Glyph& Font::Atlas::operator[](const wchar_t& p_char)
 	{
+		return (glyph(p_char));
+	}
+
+	const Font::Glyph& Font::Atlas::glyph(const wchar_t& p_char)
+	{
 		if (_glyphs.contains(p_char) == false)
 		{
 			_loadGlyph(p_char);			
