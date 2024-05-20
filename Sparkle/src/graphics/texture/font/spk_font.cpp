@@ -73,6 +73,11 @@ namespace spk
 	Font::Atlas::Atlas(const stbtt_fontinfo& p_fontInfo, const std::vector<uint8_t>& p_fontData, const size_t& p_textSize, const size_t& p_outlineSize) :
 		_textSize(p_textSize), _outlineSize(p_outlineSize), _fontInfo(p_fontInfo)
 	{
+		spk::Font::Glyph spaceGlyph;
+
+		spaceGlyph.step = spk::Vector2Int(p_textSize / 2.0f, 0);
+
+		_glyphs[L' '] = spaceGlyph;
 		_resizeData(spk::Vector2UInt(1024, 1024));
 
 		_currentQuadrant = Quadrant::TopLeft;

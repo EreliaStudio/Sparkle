@@ -113,7 +113,7 @@ namespace spk
 		float scale = stbtt_ScaleForMappingEmToPixels(&_fontInfo, static_cast<float>(_textSize));
 
 		int width, height, xOffset, yOffset;
-		uint8_t* glyphBitmap = stbtt_GetCodepointSDF(&_fontInfo, scale, p_char, static_cast<int>(_outlineSize * 2 + 1), 255, 255.0f / static_cast<float>(_outlineSize * 2), &width, &height, &xOffset, &yOffset);
+		uint8_t* glyphBitmap = stbtt_GetCodepointSDF(&_fontInfo, scale, p_char, static_cast<int>(_outlineSize * 2 + 1), 255, 255.0f / static_cast<float>(_outlineSize), &width, &height, &xOffset, &yOffset);
 
 		if (glyphBitmap == nullptr)
 		{
@@ -130,17 +130,17 @@ namespace spk
 
 		_applyGlyphPixel(glyphBitmap, glyphPosition, glyphSize);
 
-		glyph.positions[0] = spk::Vector2Int(xOffset, yOffset);
-		glyph.positions[1] = spk::Vector2Int(xOffset + width, yOffset);
-		glyph.positions[2] = spk::Vector2Int(xOffset + width, yOffset + height);
-		glyph.positions[3] = spk::Vector2Int(xOffset, yOffset + height);
+		glyph.positions[0] = spk::Vector2Int(0, yOffset);
+		glyph.positions[1] = spk::Vector2Int(0, yOffset + height);
+		glyph.positions[2] = spk::Vector2Int(width, yOffset);
+		glyph.positions[3] = spk::Vector2Int(width, yOffset + height);
 
 		glyph.UVs[0] = spk::Vector2(static_cast<float>(glyphPosition.x) / _size.x, static_cast<float>(glyphPosition.y) / _size.y);
-		glyph.UVs[1] = spk::Vector2(static_cast<float>(glyphPosition.x + glyphSize.x) / _size.x, static_cast<float>(glyphPosition.y) / _size.y);
-		glyph.UVs[2] = spk::Vector2(static_cast<float>(glyphPosition.x + glyphSize.x) / _size.x, static_cast<float>(glyphPosition.y + glyphSize.y) / _size.y);
-		glyph.UVs[3] = spk::Vector2(static_cast<float>(glyphPosition.x) / _size.x, static_cast<float>(glyphPosition.y + glyphSize.y) / _size.y);
+		glyph.UVs[1] = spk::Vector2(static_cast<float>(glyphPosition.x) / _size.x, static_cast<float>(glyphPosition.y + glyphSize.y) / _size.y);
+		glyph.UVs[2] = spk::Vector2(static_cast<float>(glyphPosition.x + glyphSize.x) / _size.x, static_cast<float>(glyphPosition.y) / _size.y);
+		glyph.UVs[3] = spk::Vector2(static_cast<float>(glyphPosition.x + glyphSize.x) / _size.x, static_cast<float>(glyphPosition.y + glyphSize.y) / _size.y);
 
-		glyph.step = spk::Vector2(advance * scale, 0);
+		glyph.step = spk::Vector2(advance * scale + _outlineSize * 2, 0);
 
 		_glyphs[p_char] = glyph;
 

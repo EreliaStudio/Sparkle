@@ -20,7 +20,9 @@ private:
 		AttributeBlock textRendererAttribute
 		{
 			vec4 textColor;
+			float textEdgePower;
 			vec4 outlineColor;
+			float outlineEdgePower;
 		};
 
 		Texture fontTexture;
@@ -43,18 +45,18 @@ private:
 		{
 			float distance = texture(fontTexture, fragmentUVs).r;
 
-			if (distance <= 0.0f)
+			if (distance <= 0.00390f)
 				discard;
 
 			vec4 resultColor;
 			if (distance >= 0.5)
 			{
-				float t = strongInterpolation(distance, 0.5, 1.0, 20.0);
+				float t = strongInterpolation(distance, 0.5, 1.0, textRendererAttribute.textEdgePower);
 				resultColor = mix(textRendererAttribute.outlineColor, textRendererAttribute.textColor, t);
 			}
 			else
 			{
-				float alpha = strongInterpolation(distance, 0.0, 0.5, 20.0);
+				float alpha = strongInterpolation(distance, 0.0, 0.5, textRendererAttribute.outlineEdgePower);
 				resultColor = vec4(textRendererAttribute.outlineColor.rgb, alpha);
 			}
 
@@ -84,7 +86,9 @@ private:
 
 	spk::Pipeline::Object::Attribute& _renderingObjectTextRendererAttribute;
 	spk::Pipeline::Object::Attribute::Element& _renderingObjectTextRendererAttributeTextColorElement;
+	spk::Pipeline::Object::Attribute::Element& _renderingObjectTextRendererAttributeTextEdgePowerElement;
 	spk::Pipeline::Object::Attribute::Element& _renderingObjectTextRendererAttributeOutlineColorElement;
+	spk::Pipeline::Object::Attribute::Element& _renderingObjectTextRendererAttributeOutlineEdgePowerElement;
 
 	spk::Pipeline::Texture& _renderingPipelineTexture;
 
@@ -98,8 +102,10 @@ private:
 
 	size_t _textSize;
 	spk::Color _textColor;
+	float _textEdgeStrenght;
 	size_t _outlineSize;
 	spk::Color _outlineColor;
+	float _outlineEdgeStrenght;
 
 	spk::Font* _font;
 	spk::Font::Atlas* _fontAtlas;
@@ -213,8 +219,6 @@ private:
 
 		RenderingData renderingData = _computeRenderingData(_fontAtlas, _text);
 
-		std::cout << "Text size : " << renderingData.size << std::endl;
-
 		spk::Vector2Int glyphAnchor = _computeBaseAnchor(renderingData);
 
 		for (const spk::Font::Glyph* glyph : renderingData.glyphs)
@@ -249,11 +253,14 @@ public:
 		_renderingObjectWidgetAttributeLayerElement(_renderingObjectWidgetAttribute["layer"]),
 		_renderingObjectTextRendererAttribute(_renderingObject.attribute("textRendererAttribute")),
 		_renderingObjectTextRendererAttributeTextColorElement(_renderingObjectTextRendererAttribute["textColor"]),
+		_renderingObjectTextRendererAttributeTextEdgePowerElement(_renderingObjectTextRendererAttribute["textEdgePower"]),
 		_renderingObjectTextRendererAttributeOutlineColorElement(_renderingObjectTextRendererAttribute["outlineColor"]),
+		_renderingObjectTextRendererAttributeOutlineEdgePowerElement(_renderingObjectTextRendererAttribute["outlineEdgePower"]),
 		_renderingPipelineTexture(_renderingPipeline.texture("fontTexture")),
 		_font(nullptr)
 	{
-
+		setTextEdgeStrenght(20.0f);
+		setOutlineEdgeStrenght(20.0f);
 	}
 
 	void render()
@@ -296,6 +303,15 @@ public:
 		_needGPUBufferUpdate = true;
 	}
 
+	void setTextEdgeStrenght(const float& p_textEdgeStrenght)
+	{
+		_textEdgeStrenght = p_textEdgeStrenght;
+		_renderingObjectTextRendererAttributeTextEdgePowerElement = p_textEdgeStrenght;
+		_renderingObjectTextRendererAttribute.update();
+
+		std::cout << "Set text edge strenght to : " << p_textEdgeStrenght << std::endl;
+	}
+
 	void setOutlineColor(const spk::Color& p_outlineColor)
 	{
 		_outlineColor;
@@ -307,6 +323,14 @@ public:
 	{
 		_outlineSize = p_outlineSize;
 		_needGPUBufferUpdate = true;
+	}
+
+	void setOutlineEdgeStrenght(const float& p_outlineEdgeStrenght)
+	{
+		_outlineEdgeStrenght = p_outlineEdgeStrenght;
+		_renderingObjectTextRendererAttributeOutlineEdgePowerElement = p_outlineEdgeStrenght;
+		_renderingObjectTextRendererAttribute.update();
+		std::cout << "Set text edge strenght to : " << p_outlineEdgeStrenght << std::endl;
 	}
 
 	void setVerticalAlignment(const spk::VerticalAlignment& p_verticalAlignment)
@@ -341,6 +365,11 @@ public:
 		return (_textColor);
 	}
 
+	const float& textEdgeStrenght() const
+	{
+		return (_textEdgeStrenght);
+	}
+
 	size_t outlineSize() const
 	{
 		return (_outlineSize);
@@ -349,6 +378,11 @@ public:
 	const spk::Color& outlineColor() const
 	{
 		return (_outlineColor);
+	}
+
+	const float& outlineEdgeStrenght() const
+	{
+		return (_outlineEdgeStrenght);
 	}
 
 	const spk::VerticalAlignment& verticalAlignment() const
@@ -383,42 +417,22 @@ private:
 
 	void _onUpdate() override
 	{
-		if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::F1) == spk::InputState::Pressed)
+		if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::A) == spk::InputState::Pressed)
 		{
-			_renderer.setTextSize(20);
-			_renderer.setOutlineSize(2);
-			_renderer.setText("Ceci est un test a 20 / 2");
+			_renderer.setTextEdgeStrenght(_renderer.textEdgeStrenght() / 2.0f);
 		}
-		if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::F2) == spk::InputState::Pressed)
+		if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::Z) == spk::InputState::Pressed)
 		{
-			_renderer.setTextSize(30);
-			_renderer.setOutlineSize(3);
-			_renderer.setText("Ceci est un test a 30 / 3");
-		}
-		if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::F3) == spk::InputState::Pressed)
-		{
-			_renderer.setTextSize(40);
-			_renderer.setOutlineSize(4);
-			_renderer.setText("Ceci est un test a 40 / 4");
+			_renderer.setTextEdgeStrenght(_renderer.textEdgeStrenght() * 2.0f);
 		}
 		
-		if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::F5) == spk::InputState::Pressed)
+		if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::W) == spk::InputState::Pressed)
 		{
-			_renderer.setTextSize(20);
-			_renderer.setOutlineSize(4);
-			_renderer.setText("Ceci est un test a 20 / 4");
+			_renderer.setOutlineEdgeStrenght(_renderer.outlineEdgeStrenght() / 2.0f);
 		}
-		if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::F6) == spk::InputState::Pressed)
+		if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::X) == spk::InputState::Pressed)
 		{
-			_renderer.setTextSize(30);
-			_renderer.setOutlineSize(6);
-			_renderer.setText("Ceci est un test a 30 / 6");
-		}
-		if (spk::Application::activeApplication()->keyboard().getKey(spk::Keyboard::F7) == spk::InputState::Pressed)
-		{
-			_renderer.setTextSize(40);
-			_renderer.setOutlineSize(8);
-			_renderer.setText("Ceci est un test a 40 / 8");
+			_renderer.setOutlineEdgeStrenght(_renderer.outlineEdgeStrenght() * 2.0f);
 		}
 	}
 
@@ -445,11 +459,11 @@ public:
 		_font(p_font)
 	{
 		_renderer.setFont(_font);
-		_renderer.setTextColor(spk::Color::blue);
-		_renderer.setOutlineColor(spk::Color::red);
-		_renderer.setTextSize(40);
-		_renderer.setOutlineSize(10);
-		_renderer.setText("Ceci est un test a 40 / 10");
+		_renderer.setTextColor(spk::Color::white);
+		_renderer.setOutlineColor(spk::Color::grey);
+		_renderer.setTextSize(20);
+		_renderer.setOutlineSize(4);
+		_renderer.setText("0123456789'-|:?");
 	}
 };
 
