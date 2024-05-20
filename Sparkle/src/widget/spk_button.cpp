@@ -81,7 +81,7 @@ namespace spk
 		return (_boxes[static_cast<int>(p_state)]);
 	}
 
-	WidgetComponent::TextRenderer& Button::label(const State& p_state)
+	WidgetComponent::FontRenderer& Button::label(const State& p_state)
 	{
 		return (_labels[static_cast<int>(p_state)]);
 	}

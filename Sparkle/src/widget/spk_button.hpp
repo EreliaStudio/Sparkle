@@ -4,7 +4,7 @@
 #include "design_pattern/spk_state_machine.hpp"
 
 #include "widget/components/spk_nine_sliced.hpp"
-#include "widget/components/spk_text_renderer.hpp"
+#include "widget/components/spk_font_renderer.hpp"
 
 namespace spk
 {
@@ -60,7 +60,7 @@ namespace spk
 		StateMachine<State> _stateMachine;
 
 		WidgetComponent::NineSlicedBox _boxes[2];
-		WidgetComponent::TextRenderer _labels[2];
+		WidgetComponent::FontRenderer _labels[2];
 
 		Callback _onClickCallback;
 
@@ -100,7 +100,7 @@ namespace spk
 		 * @param p_state The state for which to retrieve the label.
 		 * @return A reference to the TextLabel component for the specified state.
 		 */
-		WidgetComponent::TextRenderer& label(const State& p_state);
+		WidgetComponent::FontRenderer& label(const State& p_state);
 
 		/**
 		 * @brief Sets the text of the button labels for all states.

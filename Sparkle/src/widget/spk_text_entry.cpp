@@ -225,7 +225,7 @@ namespace spk
 		_isTextEdited = true;
 	}
 
-	spk::WidgetComponent::TextRenderer& TextEntry::label()
+	spk::WidgetComponent::FontRenderer& TextEntry::label()
 	{
 		return (_label);
 	}

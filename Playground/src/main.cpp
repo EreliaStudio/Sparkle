@@ -9,12 +9,15 @@ int main()
 
 	spk::TextLabel textLabel("TextLabelA", nullptr);
 	textLabel.box().setSpriteSheet(&boxSpriteSheet);
-	textLabel.label().setText("AA");
+	textLabel.box().setCornerSize(20);
+	textLabel.label().setText("A");
 	textLabel.label().setFont(&font);
 	textLabel.label().setTextColor(spk::Color::white);
 	textLabel.label().setOutlineColor(spk::Color::grey);
 
-	size_t textSize = font.computeOptimalTextSize(textLabel.label().text(), 0, app.size() / 2 - textLabel.box().cornerSize() * 2);
+	std::cout << "Label size : "<< app.size() / 2 << std::endl;
+	std::cout << "Label text renderer size : "<< (app.size() / 2) - textLabel.box().cornerSize() * 2 << std::endl;
+	size_t textSize = font.computeOptimalTextSize(textLabel.label().text(), 0, (app.size() / 2) - textLabel.box().cornerSize() * 2);
 	size_t outlineSize = static_cast<size_t>(textSize * 0.1f);
 	textSize -= outlineSize * 2;
 
@@ -24,8 +27,9 @@ int main()
 	textLabel.activate();
 
 	spk::TextLabel textLabel2("TextLabelB", nullptr);
+	textLabel2.box().setCornerSize(20);
 	textLabel2.box().setSpriteSheet(&boxSpriteSheet);
-	textLabel2.label().setText("BB");
+	textLabel2.label().setText("B");
 	textLabel2.label().setFont(&font);
 	textLabel2.label().setTextColor(spk::Color(50, 50, 50));
 	textLabel2.label().setOutlineColor(spk::Color(220, 50, 15));
