@@ -124,11 +124,11 @@ namespace spk
 		int advance;
 		stbtt_GetCodepointHMetrics(&_fontInfo, p_char, &advance, NULL);
 
-		spk::Vector2UInt glyphSize = spk::Vector2UInt(width, height);
+		glyph.size = spk::Vector2UInt(width, height);
 
-		spk::Vector2Int glyphPosition = _computeGlyphPosition(glyphSize);
+		spk::Vector2Int glyphPosition = _computeGlyphPosition(glyph.size);
 
-		_applyGlyphPixel(glyphBitmap, glyphPosition, glyphSize);
+		_applyGlyphPixel(glyphBitmap, glyphPosition, glyph.size);
 
 		glyph.positions[0] = spk::Vector2Int(0, yOffset);
 		glyph.positions[1] = spk::Vector2Int(0, yOffset + height);
@@ -136,9 +136,9 @@ namespace spk
 		glyph.positions[3] = spk::Vector2Int(width, yOffset + height);
 
 		glyph.UVs[0] = spk::Vector2(static_cast<float>(glyphPosition.x) / _size.x, static_cast<float>(glyphPosition.y) / _size.y);
-		glyph.UVs[1] = spk::Vector2(static_cast<float>(glyphPosition.x) / _size.x, static_cast<float>(glyphPosition.y + glyphSize.y) / _size.y);
-		glyph.UVs[2] = spk::Vector2(static_cast<float>(glyphPosition.x + glyphSize.x) / _size.x, static_cast<float>(glyphPosition.y) / _size.y);
-		glyph.UVs[3] = spk::Vector2(static_cast<float>(glyphPosition.x + glyphSize.x) / _size.x, static_cast<float>(glyphPosition.y + glyphSize.y) / _size.y);
+		glyph.UVs[1] = spk::Vector2(static_cast<float>(glyphPosition.x) / _size.x, static_cast<float>(glyphPosition.y + glyph.size.y) / _size.y);
+		glyph.UVs[2] = spk::Vector2(static_cast<float>(glyphPosition.x + glyph.size.x) / _size.x, static_cast<float>(glyphPosition.y) / _size.y);
+		glyph.UVs[3] = spk::Vector2(static_cast<float>(glyphPosition.x + glyph.size.x) / _size.x, static_cast<float>(glyphPosition.y + glyph.size.y) / _size.y);
 
 		glyph.step = spk::Vector2(advance * scale + _outlineSize * 2, 0);
 

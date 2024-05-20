@@ -48,6 +48,10 @@ namespace spk
 
 	void Font::Atlas::_applyGlyphPixel(const uint8_t* p_pixelsToApply, const spk::Vector2UInt& p_glyphPosition, const spk::Vector2UInt& p_glyphSize)
 	{
+		while ((p_glyphPosition.x + p_glyphSize.x >= _size.x) || (p_glyphPosition.y + p_glyphSize.y >= _size.y))
+		{
+			_resizeData(_size * 2);
+		}
 		for (size_t x = 0; x < p_glyphSize.x; x++)
 		{	
 			for (size_t y = 0; y < p_glyphSize.y; y++)
@@ -78,7 +82,7 @@ namespace spk
 		spaceGlyph.step = spk::Vector2Int(p_textSize / 2.0f, 0);
 
 		_glyphs[L' '] = spaceGlyph;
-		_resizeData(spk::Vector2UInt(1024, 1024));
+		_resizeData(spk::Vector2UInt(124, 124));
 
 		_currentQuadrant = Quadrant::TopLeft;
 		_quadrantAnchor = spk::Vector2UInt(0, 0);
@@ -112,6 +116,68 @@ namespace spk
 	Font::Font(const std::filesystem::path& p_path)
 	{
 		_loadFileData(p_path);
+	}
+
+	Vector2Int Font::Atlas::computeCharSize(const wchar_t& p_char)
+	{
+		const Glyph& glyph = operator[](p_char);
+		return Vector2Int(glyph.size.x, glyph.size.y);
+	}
+
+	Vector2Int Font::Atlas::computeStringSize(const std::string& p_string)
+	{
+		int totalWidth = 0;
+		int maxHeight = 0;
+		int minHeight = 0;
+
+		for (char ch : p_string)
+		{
+			const Glyph& glyph = operator[](ch);
+			totalWidth += glyph.step.x;
+			
+			maxHeight = std::max(maxHeight, glyph.positions[3].y);
+			minHeight = std::min(minHeight, glyph.positions[0].y);
+		}
+
+		int totalHeight = maxHeight - minHeight;
+		return Vector2Int(totalWidth, totalHeight);
+	}
+	
+	Vector2Int Font::computeCharSize(const wchar_t& p_char, size_t p_size, size_t p_outlineSize)
+	{
+		return (atlas(p_size, p_outlineSize).computeCharSize(p_char));
+	}
+
+	Vector2Int Font::computeStringSize(const std::string& p_string, size_t p_size, size_t p_outlineSize)
+	{
+		return (atlas(p_size, p_outlineSize).computeStringSize(p_string));
+	}
+
+	size_t Font::computeOptimalTextSize(const std::string& p_string, size_t p_outlineSize, const Vector2Int& p_textArea)
+	{
+		std::vector<int> deltas = { 100, 50, 20, 10, 1 };
+		size_t result = 2;
+
+		if (p_string == "")
+			return (p_textArea.y);
+
+		for (int i = 0; i < deltas.size(); i++)
+		{
+			bool enough = false;
+			while (enough == false)
+			{
+				Vector2Int tmp_size = computeStringSize(p_string, result + deltas[i], p_outlineSize);
+				if (tmp_size.x >= p_textArea.x || tmp_size.y >= p_textArea.y)
+				{
+					enough = true;
+				}
+				else
+				{
+					result += deltas[i];
+				}
+			}
+		}
+		return (result);
 	}
 
 	Font::Atlas& Font::atlas(const size_t& p_textSize, const size_t& p_outlineSize)
