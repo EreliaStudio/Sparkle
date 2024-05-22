@@ -26,5 +26,24 @@ int main()
 	textLabel.setGeometry(0, app.size() / 2);
 	textLabel.activate();
 
+	spk::TextLabel textLabelB("TextLabelB", nullptr);
+	textLabelB.box().setSpriteSheet(&boxSpriteSheet);
+	textLabelB.box().setCornerSize(20);
+	textLabelB.label().setText("Bb");
+	textLabelB.label().setFont(&font);
+	textLabelB.label().setTextColor(spk::Color::white);
+	textLabelB.label().setTextEdgeStrenght(10.0f);
+	textLabelB.label().setOutlineEdgeStrenght(0.05f);
+	textLabelB.label().setOutlineColor(spk::Color::grey);
+	textLabelB.label().setVerticalAlignment(spk::VerticalAlignment::Centered);
+	textLabelB.label().setHorizontalAlignment(spk::HorizontalAlignment::Centered);
+
+	fontSize = font.computeOptimalTextSize(textLabelB.label().text(), 0.1f, (app.size() / 2) - textLabelB.box().cornerSize() * 2);
+
+	textLabelB.label().setTextSize(std::get<0>(fontSize));
+	textLabelB.label().setOutlineSize(std::get<1>(fontSize));
+	textLabelB.setGeometry(app.size() / 2, app.size() / 2);
+	textLabelB.activate();
+
     return (app.run());
 }

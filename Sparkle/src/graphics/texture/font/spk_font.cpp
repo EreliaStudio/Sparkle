@@ -180,8 +180,7 @@ namespace spk
 				textSize -= outlineSize * 2;
 
 				Vector2Int tmp_size = computeStringSize(p_string, textSize, outlineSize);
-				std::cout << "String size : " << tmp_size << std::endl;
-				std::cout << "vs max size : " << p_textArea << std::endl;
+				
 				if (tmp_size.x >= p_textArea.x || tmp_size.y >= p_textArea.y)
 				{
 					enough = true;

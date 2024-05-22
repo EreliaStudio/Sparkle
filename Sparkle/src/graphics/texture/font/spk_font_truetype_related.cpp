@@ -157,7 +157,7 @@ void Font::Atlas::loadAllRenderableGlyphs()
 		glyph.UVs[2] = spk::Vector2(static_cast<float>(glyphPosition.x + glyph.size.x) / _size.x, static_cast<float>(glyphPosition.y) / _size.y);
 		glyph.UVs[3] = spk::Vector2(static_cast<float>(glyphPosition.x + glyph.size.x) / _size.x, static_cast<float>(glyphPosition.y + glyph.size.y) / _size.y);
 
-		glyph.step = spk::Vector2(advance * scale, 0);
+		glyph.step = spk::Vector2(advance * scale + _outlineSize, 0);
 		glyph.size = glyph.positions[3] - glyph.positions[0];
 
 		_glyphs[p_char] = glyph;
