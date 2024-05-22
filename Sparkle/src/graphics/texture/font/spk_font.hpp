@@ -92,7 +92,7 @@ namespace spk
 
 		Vector2Int computeCharSize(const wchar_t& p_char, size_t p_size, size_t p_outlineSize);
 		Vector2Int computeStringSize(const std::string& p_string, size_t p_size, size_t p_outlineSize);
-		size_t computeOptimalTextSize(const std::string& p_string, size_t p_outlineSize, const Vector2Int& p_textArea);
+		std::tuple<size_t, size_t> computeOptimalTextSize(const std::string& p_string, float p_outlineSizeRatio, const Vector2Int& p_textArea);
 
 		Atlas& atlas(const size_t& p_textSize, const size_t& p_outlineSize);
 	};

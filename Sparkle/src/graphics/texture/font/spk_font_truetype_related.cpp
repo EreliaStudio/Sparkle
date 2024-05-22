@@ -7,16 +7,33 @@
 
 namespace spk
 {
-	void Font::Atlas::loadAllRenderableGlyphs()
+	std::vector<std::pair<int, int>> UnicodeBlocks = {
+	{0x0000, 0x007F}, // Basic Latin
+	{0x0080, 0x00FF}, // Latin-1 Supplement
+	// Add other ranges as needed
+};
+
+void Font::Atlas::loadAllRenderableGlyphs()
+{
+	std::unordered_set<int> renderableGlyphs;
+
+	for (const auto& block : UnicodeBlocks)
 	{
-		for (int codepoint = 0; codepoint <= 0x10FFFF; ++codepoint)
+		for (int codepoint = block.first; codepoint <= block.second; ++codepoint)
 		{
-			if (stbtt_FindGlyphIndex(&_fontInfo, codepoint) != 0)
+			if (renderableGlyphs.find(codepoint) == renderableGlyphs.end())
 			{
-				operator[](static_cast<wchar_t>(codepoint));
+				int glyphIndex = stbtt_FindGlyphIndex(&_fontInfo, codepoint);
+				if (glyphIndex != 0)
+				{
+					std::wcout << "Setting up char [" << codepoint << "]" << std::endl;
+					operator[](static_cast<wchar_t>(codepoint));
+					renderableGlyphs.insert(codepoint);
+				}
 			}
 		}
 	}
+}
 
 	spk::Vector2UInt Font::Atlas::_computeGlyphPosition(const spk::Vector2UInt& p_glyphSize)
 	{
@@ -113,7 +130,7 @@ namespace spk
 		float scale = stbtt_ScaleForMappingEmToPixels(&_fontInfo, static_cast<float>(_textSize));
 
 		int width, height, xOffset, yOffset;
-		uint8_t* glyphBitmap = stbtt_GetCodepointSDF(&_fontInfo, scale, p_char, static_cast<int>(_outlineSize * 2 + 1), 255, 255.0f / static_cast<float>(_outlineSize), &width, &height, &xOffset, &yOffset);
+		uint8_t* glyphBitmap = stbtt_GetCodepointSDF(&_fontInfo, scale, p_char, static_cast<int>(_outlineSize), 255, 256.0f / static_cast<float>(_outlineSize + 1), &width, &height, &xOffset, &yOffset);
 
 		if (glyphBitmap == nullptr)
 		{
@@ -140,7 +157,8 @@ namespace spk
 		glyph.UVs[2] = spk::Vector2(static_cast<float>(glyphPosition.x + glyph.size.x) / _size.x, static_cast<float>(glyphPosition.y) / _size.y);
 		glyph.UVs[3] = spk::Vector2(static_cast<float>(glyphPosition.x + glyph.size.x) / _size.x, static_cast<float>(glyphPosition.y + glyph.size.y) / _size.y);
 
-		glyph.step = spk::Vector2(advance * scale + _outlineSize * 2, 0);
+		glyph.step = spk::Vector2(advance * scale, 0);
+		glyph.size = glyph.positions[3] - glyph.positions[0];
 
 		_glyphs[p_char] = glyph;
 

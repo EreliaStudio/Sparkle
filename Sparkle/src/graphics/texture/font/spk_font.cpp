@@ -120,8 +120,7 @@ namespace spk
 
 	Vector2Int Font::Atlas::computeCharSize(const wchar_t& p_char)
 	{
-		const Glyph& glyph = operator[](p_char);
-		return Vector2Int(glyph.size.x, glyph.size.y);
+		return (operator[](p_char).size);
 	}
 
 	Vector2Int Font::Atlas::computeStringSize(const std::string& p_string)
@@ -130,11 +129,15 @@ namespace spk
 		int maxHeight = 0;
 		int minHeight = 0;
 
-		for (char ch : p_string)
+		for (size_t i = 0; i < p_string.size(); i++)
 		{
-			const Glyph& glyph = operator[](ch);
-			totalWidth += glyph.step.x;
-			
+			const Glyph& glyph = operator[](p_string[i]);
+
+			if (i != p_string.size() - 1)
+				totalWidth += glyph.step.x;
+			else
+				totalWidth += glyph.size.x;
+
 			maxHeight = std::max(maxHeight, glyph.positions[3].y);
 			minHeight = std::min(minHeight, glyph.positions[0].y);
 		}
@@ -153,20 +156,32 @@ namespace spk
 		return (atlas(p_size, p_outlineSize).computeStringSize(p_string));
 	}
 
-	size_t Font::computeOptimalTextSize(const std::string& p_string, size_t p_outlineSize, const Vector2Int& p_textArea)
+	std::tuple<size_t, size_t> Font::computeOptimalTextSize(const std::string& p_string, float p_outlineSizeRatio, const Vector2Int& p_textArea)
 	{
 		std::vector<int> deltas = { 100, 50, 20, 10, 1 };
 		size_t result = 2;
 
 		if (p_string == "")
-			return (p_textArea.y);
+		{
+			size_t resultTextSize = p_textArea.y;
+			size_t resultOutlineSize = static_cast<size_t>(resultTextSize * p_outlineSizeRatio);
+			resultTextSize -= resultOutlineSize * 2;
+
+			return (std::tuple<size_t, size_t>(resultTextSize, resultOutlineSize));
+		}
 
 		for (int i = 0; i < deltas.size(); i++)
 		{
 			bool enough = false;
 			while (enough == false)
 			{
-				Vector2Int tmp_size = computeStringSize(p_string, result + deltas[i], p_outlineSize);
+				size_t textSize = result + deltas[i];
+				size_t outlineSize = static_cast<size_t>(textSize * p_outlineSizeRatio);
+				textSize -= outlineSize * 2;
+
+				Vector2Int tmp_size = computeStringSize(p_string, textSize, outlineSize);
+				std::cout << "String size : " << tmp_size << std::endl;
+				std::cout << "vs max size : " << p_textArea << std::endl;
 				if (tmp_size.x >= p_textArea.x || tmp_size.y >= p_textArea.y)
 				{
 					enough = true;
@@ -177,7 +192,12 @@ namespace spk
 				}
 			}
 		}
-		return (result);
+
+		size_t resultTextSize = result;
+		size_t resultOutlineSize = static_cast<size_t>(resultTextSize * p_outlineSizeRatio);
+		resultTextSize -= resultOutlineSize * 2;
+
+		return (std::tuple<size_t, size_t>(resultTextSize, resultOutlineSize));
 	}
 
 	Font::Atlas& Font::atlas(const size_t& p_textSize, const size_t& p_outlineSize)

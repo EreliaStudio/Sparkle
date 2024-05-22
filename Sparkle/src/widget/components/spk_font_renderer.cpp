@@ -268,6 +268,13 @@ namespace spk::WidgetComponent
 		{
 			const spk::Font::Glyph& glyph = p_fontAtlas->glyph(p_text[i]);
 
+			std::cout << "Glyph " << p_text[i] << std::endl;
+
+			for (size_t j = 0; j < 4; j++)
+			{
+				std::cout << "	 Position : " << glyph.positions[j] << std::endl;
+			}
+
 			if (downRightCorner.y < glyph.positions[3].y)
 				downRightCorner.y = glyph.positions[3].y;
 
@@ -281,6 +288,9 @@ namespace spk::WidgetComponent
 
 			result.glyphs.push_back(&glyph);
 		}
+
+		std::cout << "Top left corner : " << topLeftCorner << std::endl;
+		std::cout << "Down right corner : " << downRightCorner << std::endl;
 
 		result.anchorOffset = -topLeftCorner;
 		result.size = downRightCorner - topLeftCorner;
@@ -357,8 +367,8 @@ namespace spk::WidgetComponent
 		_bufferRenderingPipelineIndexes.clear();
 
 		std::cout << "String : " << _text << std::endl;
-		std::cout << "Size : " << _size << std::endl;
-		std::cout << "Anchor : " << _anchor << std::endl;
+		std::cout << "Widget component Size : " << _size << std::endl;
+		std::cout << "Widget component Anchor : " << _anchor << std::endl;
 
 		RenderingData renderingData = _computeRenderingData(_fontAtlas, _text);
 
