@@ -43,8 +43,7 @@ namespace spk::WidgetComponent
 
 			if (distance <= 0.00390f)
 			{
-				pixelColor = vec4(1, 0, 1, 1);
-				// discard;
+				discard;
 			}
 			else
 			{
@@ -61,7 +60,6 @@ namespace spk::WidgetComponent
 				}
 
 				pixelColor = resultColor;
-				//pixelColor = vec4(distance, distance, distance, 1.0f);
 			}
 		})";
 

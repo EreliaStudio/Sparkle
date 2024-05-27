@@ -14,12 +14,12 @@ int main()
 	textLabel.label().setFont(&font);
 	textLabel.label().setTextColor(spk::Color::white);
 	textLabel.label().setTextEdgeStrenght(10.0f);
-	textLabel.label().setOutlineEdgeStrenght(0.05f);
-	textLabel.label().setOutlineColor(spk::Color::grey);
+	textLabel.label().setOutlineEdgeStrenght(0.15f);
+	textLabel.label().setOutlineColor(spk::Color::black);
 	textLabel.label().setVerticalAlignment(spk::VerticalAlignment::Centered);
 	textLabel.label().setHorizontalAlignment(spk::HorizontalAlignment::Centered);
 
-	auto fontSize = font.computeOptimalTextSize(textLabel.label().text(), 0.1f, (app.size() / 2) - textLabel.box().cornerSize() * 2);
+	auto fontSize = font.computeOptimalTextSize(textLabel.label().text(), 0.08f, (app.size() / 2) - textLabel.box().cornerSize() * 2);
 
 	textLabel.label().setTextSize(std::get<0>(fontSize));
 	textLabel.label().setOutlineSize(std::get<1>(fontSize));
@@ -29,16 +29,16 @@ int main()
 	spk::TextLabel textLabelB("TextLabelB", nullptr);
 	textLabelB.box().setSpriteSheet(&boxSpriteSheet);
 	textLabelB.box().setCornerSize(20);
-	textLabelB.label().setText("Bb");
+	textLabelB.label().setText("Ceci est un test");
 	textLabelB.label().setFont(&font);
 	textLabelB.label().setTextColor(spk::Color::white);
 	textLabelB.label().setTextEdgeStrenght(10.0f);
-	textLabelB.label().setOutlineEdgeStrenght(0.05f);
-	textLabelB.label().setOutlineColor(spk::Color::grey);
+	textLabelB.label().setOutlineEdgeStrenght(0.15f);
+	textLabelB.label().setOutlineColor(spk::Color::black);
 	textLabelB.label().setVerticalAlignment(spk::VerticalAlignment::Centered);
 	textLabelB.label().setHorizontalAlignment(spk::HorizontalAlignment::Centered);
 
-	fontSize = font.computeOptimalTextSize(textLabelB.label().text(), 0.1f, (app.size() / 2) - textLabelB.box().cornerSize() * 2);
+	fontSize = font.computeOptimalTextSize(textLabelB.label().text(), 0.08f, (app.size() / 2) - textLabelB.box().cornerSize() * 2);
 
 	textLabelB.label().setTextSize(std::get<0>(fontSize));
 	textLabelB.label().setOutlineSize(std::get<1>(fontSize));
