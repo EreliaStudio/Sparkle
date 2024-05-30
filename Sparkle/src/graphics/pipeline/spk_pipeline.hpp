@@ -768,6 +768,9 @@ namespace spk
 			 */
 			void attach(const spk::Texture* p_textureToSet);
 
+			/**
+			 * @brief Force the reupload of the active texture to the GPU
+			*/
 			static void resetLastActiveTexture();
 		};
 
