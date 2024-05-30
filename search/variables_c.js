@@ -1,13 +1,12 @@
 var searchData=
 [
-  ['obstacle_1345',['OBSTACLE',['../structspk_1_1Tilemap2D_1_1Node.html#ae57fcd738a59faa02cafb32548257c5c',1,'spk::Tilemap2D::Node']]],
-  ['offset_1346',['offset',['../structspk_1_1Pipeline_1_1Object_1_1Storage_1_1Layout_1_1Element.html#a619f034a28a024c23886f64be8a20365',1,'spk::Pipeline::Object::Storage::Layout::Element']]],
-  ['offsetwithoutpadding_1347',['offsetWithoutPadding',['../structspk_1_1Pipeline_1_1Structure_1_1Element.html#afbbad321feea2c7379e316ab612fe332',1,'spk::Pipeline::Structure::Element']]],
-  ['offsetwithpadding_1348',['offsetWithPadding',['../structspk_1_1Pipeline_1_1Structure_1_1Element.html#a8a7096b030d8c4600083c868c6866606',1,'spk::Pipeline::Structure::Element']]],
-  ['onenter_1349',['onEnter',['../structspk_1_1StateMachine_1_1Action.html#a9202b83980b96330d44cbbf5a8aa2a63',1,'spk::StateMachine::Action']]],
-  ['onexit_1350',['onExit',['../structspk_1_1StateMachine_1_1Action.html#a1b6e6ccf084dd8fe2be205a6266983b7',1,'spk::StateMachine::Action']]],
-  ['onupdate_1351',['onUpdate',['../structspk_1_1StateMachine_1_1Action.html#a55140b8f76cd38efdd49d674510a54a9',1,'spk::StateMachine::Action']]],
-  ['orange_1352',['orange',['../structspk_1_1Color.html#a4439c31afd052be2b6875fb75c76cbad',1,'spk::Color']]],
-  ['outlinesize_1353',['outlineSize',['../structspk_1_1Font_1_1Key.html#ab91874c31bfc91b9ad494b1fb06f097b',1,'spk::Font::Key']]],
-  ['outlinestyle_1354',['outlineStyle',['../structspk_1_1Font_1_1Key.html#a1734caa00266191211a01a7cb54acfaf',1,'spk::Font::Key']]]
+  ['obstacle_1351',['OBSTACLE',['../structspk_1_1Tilemap2D_1_1Node.html#ae57fcd738a59faa02cafb32548257c5c',1,'spk::Tilemap2D::Node']]],
+  ['offset_1352',['offset',['../structspk_1_1Pipeline_1_1Object_1_1Storage_1_1Layout_1_1Element.html#a619f034a28a024c23886f64be8a20365',1,'spk::Pipeline::Object::Storage::Layout::Element']]],
+  ['offsetwithoutpadding_1353',['offsetWithoutPadding',['../structspk_1_1Pipeline_1_1Structure_1_1Element.html#afbbad321feea2c7379e316ab612fe332',1,'spk::Pipeline::Structure::Element']]],
+  ['offsetwithpadding_1354',['offsetWithPadding',['../structspk_1_1Pipeline_1_1Structure_1_1Element.html#a8a7096b030d8c4600083c868c6866606',1,'spk::Pipeline::Structure::Element']]],
+  ['onenter_1355',['onEnter',['../structspk_1_1StateMachine_1_1Action.html#a9202b83980b96330d44cbbf5a8aa2a63',1,'spk::StateMachine::Action']]],
+  ['onexit_1356',['onExit',['../structspk_1_1StateMachine_1_1Action.html#a1b6e6ccf084dd8fe2be205a6266983b7',1,'spk::StateMachine::Action']]],
+  ['onupdate_1357',['onUpdate',['../structspk_1_1StateMachine_1_1Action.html#a55140b8f76cd38efdd49d674510a54a9',1,'spk::StateMachine::Action']]],
+  ['orange_1358',['orange',['../structspk_1_1Color.html#a4439c31afd052be2b6875fb75c76cbad',1,'spk::Color']]],
+  ['outline_1359',['outline',['../structspk_1_1Font_1_1Size.html#a4126863f5ba1cb276cf024bd84375077',1,'spk::Font::Size']]]
 ];

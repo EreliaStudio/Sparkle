@@ -67,133 +67,139 @@ $(function() {
 </div><!-- top -->
 <div class="header">
   <div class="summary">
-<a href="#nested-classes">Classes</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#friends">Friends</a> &#124;
 <a href="classspk_1_1Font_1_1Atlas-members.html">List of all members</a>  </div>
   <div class="headertitle">
 <div class="title">spk::Font::Atlas Class Reference</div>  </div>
 </div><!--header-->
 <div class="contents">
 
-<p>Manages a texture atlas for a specific font configuration, including glyph data and texture.  
+<p>Manages a texture atlas for font rendering.  
  <a href="classspk_1_1Font_1_1Atlas.html#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="spk__font_8hpp_source.html">spk_font.hpp</a>&gt;</code></p>
+<div class="dynheader">
+Inheritance diagram for spk::Font::Atlas:</div>
+<div class="dyncontent">
+<div class="center"><img src="classspk_1_1Font_1_1Atlas__inherit__graph.png" border="0" usemap="#aspk_1_1Font_1_1Atlas_inherit__map" alt="Inheritance graph"/></div>
+<map name="aspk_1_1Font_1_1Atlas_inherit__map" id="aspk_1_1Font_1_1Atlas_inherit__map">
+<area shape="rect" title="Manages a texture atlas for font rendering." alt="" coords="5,80,128,107"/>
+<area shape="rect" href="classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines." alt="" coords="16,5,117,32"/>
+</map>
+<center><span class="legend">[<a href="graph_legend.html">legend</a>]</span></center></div>
+<div class="dynheader">
+Collaboration diagram for spk::Font::Atlas:</div>
+<div class="dyncontent">
+<div class="center"><img src="classspk_1_1Font_1_1Atlas__coll__graph.png" border="0" usemap="#aspk_1_1Font_1_1Atlas_coll__map" alt="Collaboration graph"/></div>
+<map name="aspk_1_1Font_1_1Atlas_coll__map" id="aspk_1_1Font_1_1Atlas_coll__map">
+<area shape="rect" title="Manages a texture atlas for font rendering." alt="" coords="5,80,128,107"/>
+<area shape="rect" href="classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines." alt="" coords="16,5,117,32"/>
+</map>
+<center><span class="legend">[<a href="graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="nested-classes"></a>
-Classes</h2></td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structspk_1_1Font_1_1Atlas_1_1GlyphData.html">GlyphData</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Holds rendering data for an individual glyph within a font atlas.  <a href="structspk_1_1Font_1_1Atlas_1_1GlyphData.html#details">More...</a><br /></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:adc445ae37e4133de8ce3cac0d125edf9"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Font_1_1Atlas.html#adc445ae37e4133de8ce3cac0d125edf9">Atlas</a> ()</td></tr>
-<tr class="memdesc:adc445ae37e4133de8ce3cac0d125edf9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default constructor for the <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a> class.  <a href="classspk_1_1Font_1_1Atlas.html#adc445ae37e4133de8ce3cac0d125edf9">More...</a><br /></td></tr>
-<tr class="separator:adc445ae37e4133de8ce3cac0d125edf9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a37ccac48c7cc5be8b9dc99d78c55150c"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Font_1_1Atlas.html#a37ccac48c7cc5be8b9dc99d78c55150c">Atlas</a> (const std::vector&lt; uint8_t &gt; &amp;p_fontData, const <a class="el" href="structspk_1_1Font_1_1Configuration.html">Configuration</a> &amp;p_fontConfiguration, const <a class="el" href="structspk_1_1Font_1_1Key.html">Key</a> &amp;p_key)</td></tr>
-<tr class="memdesc:a37ccac48c7cc5be8b9dc99d78c55150c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructs an <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a> with specified font data, font configuration, and key.  <a href="classspk_1_1Font_1_1Atlas.html#a37ccac48c7cc5be8b9dc99d78c55150c">More...</a><br /></td></tr>
-<tr class="separator:a37ccac48c7cc5be8b9dc99d78c55150c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a57a24d582a5d89ac751672f5d15194aa"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structspk_1_1IVector2.html">Vector2Int</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Font_1_1Atlas.html#a57a24d582a5d89ac751672f5d15194aa">computeCharSize</a> (const wchar_t &amp;p_char) const</td></tr>
-<tr class="memdesc:a57a24d582a5d89ac751672f5d15194aa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the size of a character in pixels for the specified font configuration within the <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a>.  <a href="classspk_1_1Font_1_1Atlas.html#a57a24d582a5d89ac751672f5d15194aa">More...</a><br /></td></tr>
-<tr class="separator:a57a24d582a5d89ac751672f5d15194aa"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3a07de4450b8bb52002b87d88231848b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structspk_1_1IVector2.html">Vector2Int</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Font_1_1Atlas.html#a3a07de4450b8bb52002b87d88231848b">computeStringSize</a> (const std::string &amp;p_string) const</td></tr>
-<tr class="memdesc:a3a07de4450b8bb52002b87d88231848b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the size of a string in pixels for the specified font configuration within the <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a>.  <a href="classspk_1_1Font_1_1Atlas.html#a3a07de4450b8bb52002b87d88231848b">More...</a><br /></td></tr>
-<tr class="separator:a3a07de4450b8bb52002b87d88231848b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a91f05a76a620fb36ba216843f1da7055"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="structspk_1_1Font_1_1Atlas_1_1GlyphData.html">GlyphData</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Font_1_1Atlas.html#a91f05a76a620fb36ba216843f1da7055">operator[]</a> (const wchar_t &amp;p_char) const</td></tr>
-<tr class="memdesc:a91f05a76a620fb36ba216843f1da7055"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the <a class="el" href="structspk_1_1Font_1_1Atlas_1_1GlyphData.html" title="Holds rendering data for an individual glyph within a font atlas.">GlyphData</a> for a specified character.  <a href="classspk_1_1Font_1_1Atlas.html#a91f05a76a620fb36ba216843f1da7055">More...</a><br /></td></tr>
-<tr class="separator:a91f05a76a620fb36ba216843f1da7055"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac1b7486bd57eb45102c13bac9aad77b0"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="classspk_1_1Texture.html">Texture</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Font_1_1Atlas.html#ac1b7486bd57eb45102c13bac9aad77b0">texture</a> () const</td></tr>
-<tr class="memdesc:ac1b7486bd57eb45102c13bac9aad77b0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Gets the texture associated with this <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a>.  <a href="classspk_1_1Font_1_1Atlas.html#ac1b7486bd57eb45102c13bac9aad77b0">More...</a><br /></td></tr>
-<tr class="separator:ac1b7486bd57eb45102c13bac9aad77b0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:abe9925b307296efa7338e8ca01238341"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Font_1_1Atlas.html#abe9925b307296efa7338e8ca01238341">needUploadToGPU</a> () const</td></tr>
-<tr class="memdesc:abe9925b307296efa7338e8ca01238341"><td class="mdescLeft">&#160;</td><td class="mdescRight">Checks if the atlas texture needs to be uploaded to the GPU.  <a href="classspk_1_1Font_1_1Atlas.html#abe9925b307296efa7338e8ca01238341">More...</a><br /></td></tr>
-<tr class="separator:abe9925b307296efa7338e8ca01238341"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a665bd3b81551ea25e3c6adff197a5a53"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Font_1_1Atlas.html#a665bd3b81551ea25e3c6adff197a5a53">uploadToGPU</a> ()</td></tr>
-<tr class="memdesc:a665bd3b81551ea25e3c6adff197a5a53"><td class="mdescLeft">&#160;</td><td class="mdescRight">Uploads the atlas texture to the GPU.  <a href="classspk_1_1Font_1_1Atlas.html#a665bd3b81551ea25e3c6adff197a5a53">More...</a><br /></td></tr>
-<tr class="separator:a665bd3b81551ea25e3c6adff197a5a53"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af36e93ce98d01336ba12ca0c524e95de"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Font_1_1Atlas.html#af36e93ce98d01336ba12ca0c524e95de">loadGlyphs</a> (const std::wstring &amp;p_glyphsToLoad)</td></tr>
+<tr class="memdesc:af36e93ce98d01336ba12ca0c524e95de"><td class="mdescLeft">&#160;</td><td class="mdescRight">Loads specified glyphs into the atlas.  <a href="classspk_1_1Font_1_1Atlas.html#af36e93ce98d01336ba12ca0c524e95de">More...</a><br /></td></tr>
+<tr class="separator:af36e93ce98d01336ba12ca0c524e95de"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a91e90e09afff169246fcb008967630f2"><td class="memItemLeft" align="right" valign="top"><a id="a91e90e09afff169246fcb008967630f2"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Font_1_1Atlas.html#a91e90e09afff169246fcb008967630f2">loadAllRenderableGlyphs</a> ()</td></tr>
+<tr class="memdesc:a91e90e09afff169246fcb008967630f2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Loads all renderable glyphs into the atlas. <br /></td></tr>
+<tr class="separator:a91e90e09afff169246fcb008967630f2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5a8babe39e4770c05e620eee5f9eb37e"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="structspk_1_1Font_1_1Glyph.html">Glyph</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Font_1_1Atlas.html#a5a8babe39e4770c05e620eee5f9eb37e">operator[]</a> (const wchar_t &amp;p_char)</td></tr>
+<tr class="memdesc:a5a8babe39e4770c05e620eee5f9eb37e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the glyph for a specific character.  <a href="classspk_1_1Font_1_1Atlas.html#a5a8babe39e4770c05e620eee5f9eb37e">More...</a><br /></td></tr>
+<tr class="separator:a5a8babe39e4770c05e620eee5f9eb37e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a858113264e9bf66f5371c3af868af245"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="structspk_1_1Font_1_1Glyph.html">Glyph</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Font_1_1Atlas.html#a858113264e9bf66f5371c3af868af245">glyph</a> (const wchar_t &amp;p_char)</td></tr>
+<tr class="memdesc:a858113264e9bf66f5371c3af868af245"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the glyph for a specific character.  <a href="classspk_1_1Font_1_1Atlas.html#a858113264e9bf66f5371c3af868af245">More...</a><br /></td></tr>
+<tr class="separator:a858113264e9bf66f5371c3af868af245"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a93d12242d560d6d824a2544dd339e67d"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structspk_1_1IVector2.html">Vector2Int</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Font_1_1Atlas.html#a93d12242d560d6d824a2544dd339e67d">computeCharSize</a> (const wchar_t &amp;p_char)</td></tr>
+<tr class="memdesc:a93d12242d560d6d824a2544dd339e67d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the size of a character.  <a href="classspk_1_1Font_1_1Atlas.html#a93d12242d560d6d824a2544dd339e67d">More...</a><br /></td></tr>
+<tr class="separator:a93d12242d560d6d824a2544dd339e67d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af564ad502662081bb657c0519a14023c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structspk_1_1IVector2.html">Vector2Int</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Font_1_1Atlas.html#af564ad502662081bb657c0519a14023c">computeStringSize</a> (const std::string &amp;p_string)</td></tr>
+<tr class="memdesc:af564ad502662081bb657c0519a14023c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the size of a string.  <a href="classspk_1_1Font_1_1Atlas.html#af564ad502662081bb657c0519a14023c">More...</a><br /></td></tr>
+<tr class="separator:af564ad502662081bb657c0519a14023c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="inherit_header pub_methods_classspk_1_1Texture"><td colspan="2" onclick="javascript:toggleInherit('pub_methods_classspk_1_1Texture')"><img src="closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="classspk_1_1Texture.html">spk::Texture</a></td></tr>
+<tr class="memitem:a3266304be17aa9bcc03089208bb63f73 inherit pub_methods_classspk_1_1Texture"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Texture.html#a3266304be17aa9bcc03089208bb63f73">Texture</a> ()</td></tr>
+<tr class="memdesc:a3266304be17aa9bcc03089208bb63f73 inherit pub_methods_classspk_1_1Texture"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default constructor for the <a class="el" href="classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines.">Texture</a> class.  <a href="classspk_1_1Texture.html#a3266304be17aa9bcc03089208bb63f73">More...</a><br /></td></tr>
+<tr class="separator:a3266304be17aa9bcc03089208bb63f73 inherit pub_methods_classspk_1_1Texture"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0a996fff26e76fed88cbb4a28719642c inherit pub_methods_classspk_1_1Texture"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Texture.html#a0a996fff26e76fed88cbb4a28719642c">Texture</a> (const uint8_t *p_textureData, const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2UInt</a> &amp;p_textureSize, const <a class="el" href="classspk_1_1Texture.html#a50482c7e8c0571aac8bd5f978ddef49a">Format</a> &amp;p_format, const <a class="el" href="classspk_1_1Texture.html#a86a03180e180bf4f4473b2d68d56daba">Filtering</a> &amp;p_filtering, const <a class="el" href="classspk_1_1Texture.html#a182ebf3bb210ddd75938afdc89efa32a">Wrap</a> &amp;p_wrap, const <a class="el" href="classspk_1_1Texture.html#a9be80f73057f23771837c6a457ad1e37">Mipmap</a> &amp;p_mipmap)</td></tr>
+<tr class="memdesc:a0a996fff26e76fed88cbb4a28719642c inherit pub_methods_classspk_1_1Texture"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructs a <a class="el" href="classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines.">Texture</a> with specified parameters and prepares it for GPU upload.  <a href="classspk_1_1Texture.html#a0a996fff26e76fed88cbb4a28719642c">More...</a><br /></td></tr>
+<tr class="separator:a0a996fff26e76fed88cbb4a28719642c inherit pub_methods_classspk_1_1Texture"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa2bc370398b88f61590078f5e3f65be5 inherit pub_methods_classspk_1_1Texture"><td class="memItemLeft" align="right" valign="top">virtual&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Texture.html#aa2bc370398b88f61590078f5e3f65be5">~Texture</a> ()</td></tr>
+<tr class="memdesc:aa2bc370398b88f61590078f5e3f65be5 inherit pub_methods_classspk_1_1Texture"><td class="mdescLeft">&#160;</td><td class="mdescRight">Destructor for the <a class="el" href="classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines.">Texture</a> class.  <a href="classspk_1_1Texture.html#aa2bc370398b88f61590078f5e3f65be5">More...</a><br /></td></tr>
+<tr class="separator:aa2bc370398b88f61590078f5e3f65be5 inherit pub_methods_classspk_1_1Texture"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a17c219c2a96c3f8b64aafbe3dafdef17 inherit pub_methods_classspk_1_1Texture"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Texture.html#a17c219c2a96c3f8b64aafbe3dafdef17">Texture</a> (const <a class="el" href="classspk_1_1Texture.html">Texture</a> &amp;p_other)=delete</td></tr>
+<tr class="memdesc:a17c219c2a96c3f8b64aafbe3dafdef17 inherit pub_methods_classspk_1_1Texture"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copy constructor (deleted).  <a href="classspk_1_1Texture.html#a17c219c2a96c3f8b64aafbe3dafdef17">More...</a><br /></td></tr>
+<tr class="separator:a17c219c2a96c3f8b64aafbe3dafdef17 inherit pub_methods_classspk_1_1Texture"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a027088b93c9e0ce7a87d4c7f093fd44c inherit pub_methods_classspk_1_1Texture"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classspk_1_1Texture.html">Texture</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Texture.html#a027088b93c9e0ce7a87d4c7f093fd44c">operator=</a> (const <a class="el" href="classspk_1_1Texture.html">Texture</a> &amp;p_other)=delete</td></tr>
+<tr class="memdesc:a027088b93c9e0ce7a87d4c7f093fd44c inherit pub_methods_classspk_1_1Texture"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copy assignment operator (deleted).  <a href="classspk_1_1Texture.html#a027088b93c9e0ce7a87d4c7f093fd44c">More...</a><br /></td></tr>
+<tr class="separator:a027088b93c9e0ce7a87d4c7f093fd44c inherit pub_methods_classspk_1_1Texture"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6789b40404ee82ff3530fff45afcd6a8 inherit pub_methods_classspk_1_1Texture"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Texture.html#a6789b40404ee82ff3530fff45afcd6a8">Texture</a> (<a class="el" href="classspk_1_1Texture.html">Texture</a> &amp;&amp;p_other)</td></tr>
+<tr class="memdesc:a6789b40404ee82ff3530fff45afcd6a8 inherit pub_methods_classspk_1_1Texture"><td class="mdescLeft">&#160;</td><td class="mdescRight">Move constructor.  <a href="classspk_1_1Texture.html#a6789b40404ee82ff3530fff45afcd6a8">More...</a><br /></td></tr>
+<tr class="separator:a6789b40404ee82ff3530fff45afcd6a8 inherit pub_methods_classspk_1_1Texture"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab9e3759e24273cd554ebb6ea10c78d54 inherit pub_methods_classspk_1_1Texture"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classspk_1_1Texture.html">Texture</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Texture.html#ab9e3759e24273cd554ebb6ea10c78d54">operator=</a> (<a class="el" href="classspk_1_1Texture.html">Texture</a> &amp;&amp;p_other)</td></tr>
+<tr class="memdesc:ab9e3759e24273cd554ebb6ea10c78d54 inherit pub_methods_classspk_1_1Texture"><td class="mdescLeft">&#160;</td><td class="mdescRight">Move assignment operator.  <a href="classspk_1_1Texture.html#ab9e3759e24273cd554ebb6ea10c78d54">More...</a><br /></td></tr>
+<tr class="separator:ab9e3759e24273cd554ebb6ea10c78d54 inherit pub_methods_classspk_1_1Texture"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3b97971248c607df6def022bd0d2fb98 inherit pub_methods_classspk_1_1Texture"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Texture.html#a3b97971248c607df6def022bd0d2fb98">uploadToGPU</a> (const uint8_t *p_textureData, const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2UInt</a> &amp;p_textureSize, const <a class="el" href="classspk_1_1Texture.html#a50482c7e8c0571aac8bd5f978ddef49a">Format</a> &amp;p_format, const <a class="el" href="classspk_1_1Texture.html#a86a03180e180bf4f4473b2d68d56daba">Filtering</a> &amp;p_filtering, const <a class="el" href="classspk_1_1Texture.html#a182ebf3bb210ddd75938afdc89efa32a">Wrap</a> &amp;p_wrap, const <a class="el" href="classspk_1_1Texture.html#a9be80f73057f23771837c6a457ad1e37">Mipmap</a> &amp;p_mipmap)</td></tr>
+<tr class="memdesc:a3b97971248c607df6def022bd0d2fb98 inherit pub_methods_classspk_1_1Texture"><td class="mdescLeft">&#160;</td><td class="mdescRight">Uploads texture data to GPU memory.  <a href="classspk_1_1Texture.html#a3b97971248c607df6def022bd0d2fb98">More...</a><br /></td></tr>
+<tr class="separator:a3b97971248c607df6def022bd0d2fb98 inherit pub_methods_classspk_1_1Texture"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abdfe0609386a355ba5056b29bf8e990e inherit pub_methods_classspk_1_1Texture"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Texture.html#abdfe0609386a355ba5056b29bf8e990e">releaseGPUMemory</a> ()</td></tr>
+<tr class="memdesc:abdfe0609386a355ba5056b29bf8e990e inherit pub_methods_classspk_1_1Texture"><td class="mdescLeft">&#160;</td><td class="mdescRight">Releases the texture's GPU memory.  <a href="classspk_1_1Texture.html#abdfe0609386a355ba5056b29bf8e990e">More...</a><br /></td></tr>
+<tr class="separator:abdfe0609386a355ba5056b29bf8e990e inherit pub_methods_classspk_1_1Texture"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7893fb6d36c78e790bbe45d74d7ef3cc inherit pub_methods_classspk_1_1Texture"><td class="memItemLeft" align="right" valign="top">const GLint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Texture.html#a7893fb6d36c78e790bbe45d74d7ef3cc">ID</a> () const</td></tr>
+<tr class="memdesc:a7893fb6d36c78e790bbe45d74d7ef3cc inherit pub_methods_classspk_1_1Texture"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the ID of the texture in GPU memory.  <a href="classspk_1_1Texture.html#a7893fb6d36c78e790bbe45d74d7ef3cc">More...</a><br /></td></tr>
+<tr class="separator:a7893fb6d36c78e790bbe45d74d7ef3cc inherit pub_methods_classspk_1_1Texture"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="friends"></a>
+Friends</h2></td></tr>
+<tr class="memitem:ad564b94b59dc295de3dfc4415d95cca8"><td class="memItemLeft" align="right" valign="top"><a id="ad564b94b59dc295de3dfc4415d95cca8"></a>
+class&#160;</td><td class="memItemRight" valign="bottom"><b>Font</b></td></tr>
+<tr class="separator:ad564b94b59dc295de3dfc4415d95cca8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="inherited"></a>
+Additional Inherited Members</h2></td></tr>
+<tr class="inherit_header pub_types_classspk_1_1Texture"><td colspan="2" onclick="javascript:toggleInherit('pub_types_classspk_1_1Texture')"><img src="closed.png" alt="-"/>&#160;Public Types inherited from <a class="el" href="classspk_1_1Texture.html">spk::Texture</a></td></tr>
+<tr class="memitem:a50482c7e8c0571aac8bd5f978ddef49a inherit pub_types_classspk_1_1Texture"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Texture.html#a50482c7e8c0571aac8bd5f978ddef49a">Format</a> { <br />
+&#160;&#160;<b>RGB</b> = GL_RGB
+, <b>RGBA</b> = GL_RGBA
+, <b>BGR</b> = GL_BGR
+, <b>BGRA</b> = GL_BGRA
+, <br />
+&#160;&#160;<b>GreyLevel</b> = GL_RED
+, <b>DualChannel</b> = GL_RG
+, <b>Error</b> = GL_NONE
+<br />
+ }</td></tr>
+<tr class="memdesc:a50482c7e8c0571aac8bd5f978ddef49a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Defines the pixel format of the texture.  <a href="classspk_1_1Texture.html#a50482c7e8c0571aac8bd5f978ddef49a">More...</a><br /></td></tr>
+<tr class="separator:a50482c7e8c0571aac8bd5f978ddef49a inherit pub_types_classspk_1_1Texture"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a86a03180e180bf4f4473b2d68d56daba inherit pub_types_classspk_1_1Texture"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Texture.html#a86a03180e180bf4f4473b2d68d56daba">Filtering</a> { <b>Nearest</b> = GL_NEAREST
+, <b>Linear</b> = GL_LINEAR
+ }</td></tr>
+<tr class="memdesc:a86a03180e180bf4f4473b2d68d56daba"><td class="mdescLeft">&#160;</td><td class="mdescRight">Defines texture filtering modes for magnification and minification.  <a href="classspk_1_1Texture.html#a86a03180e180bf4f4473b2d68d56daba">More...</a><br /></td></tr>
+<tr class="separator:a86a03180e180bf4f4473b2d68d56daba inherit pub_types_classspk_1_1Texture"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a182ebf3bb210ddd75938afdc89efa32a inherit pub_types_classspk_1_1Texture"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Texture.html#a182ebf3bb210ddd75938afdc89efa32a">Wrap</a> { <b>Repeat</b> = GL_REPEAT
+, <b>ClampToEdge</b> = GL_CLAMP_TO_EDGE
+, <b>ClampToBorder</b> = GL_CLAMP_TO_BORDER
+ }</td></tr>
+<tr class="memdesc:a182ebf3bb210ddd75938afdc89efa32a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Specifies how textures are sampled outside their standard 0 to 1 UV coordinate range.  <a href="classspk_1_1Texture.html#a182ebf3bb210ddd75938afdc89efa32a">More...</a><br /></td></tr>
+<tr class="separator:a182ebf3bb210ddd75938afdc89efa32a inherit pub_types_classspk_1_1Texture"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9be80f73057f23771837c6a457ad1e37 inherit pub_types_classspk_1_1Texture"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Texture.html#a9be80f73057f23771837c6a457ad1e37">Mipmap</a> { <b>Disable</b>
+, <b>Enable</b>
+ }</td></tr>
+<tr class="memdesc:a9be80f73057f23771837c6a457ad1e37"><td class="mdescLeft">&#160;</td><td class="mdescRight">Determines whether mipmaps should be generated for the texture.  <a href="classspk_1_1Texture.html#a9be80f73057f23771837c6a457ad1e37">More...</a><br /></td></tr>
+<tr class="separator:a9be80f73057f23771837c6a457ad1e37 inherit pub_types_classspk_1_1Texture"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="inherit_header pro_methods_classspk_1_1Texture"><td colspan="2" onclick="javascript:toggleInherit('pro_methods_classspk_1_1Texture')"><img src="closed.png" alt="-"/>&#160;Protected Member Functions inherited from <a class="el" href="classspk_1_1Texture.html">spk::Texture</a></td></tr>
+<tr class="memitem:a8a1541f3a8f4a012a335cfde85b76255 inherit pro_methods_classspk_1_1Texture"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Texture.html#a8a1541f3a8f4a012a335cfde85b76255">_unbind</a> () const</td></tr>
+<tr class="memdesc:a8a1541f3a8f4a012a335cfde85b76255 inherit pro_methods_classspk_1_1Texture"><td class="mdescLeft">&#160;</td><td class="mdescRight">Unbinds the texture.  <a href="classspk_1_1Texture.html#a8a1541f3a8f4a012a335cfde85b76255">More...</a><br /></td></tr>
+<tr class="separator:a8a1541f3a8f4a012a335cfde85b76255 inherit pro_methods_classspk_1_1Texture"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Manages a texture atlas for a specific font configuration, including glyph data and texture. </p>
-<p>The <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a> class is a crucial component of the <a class="el" href="classspk_1_1Font.html" title="Handles font rendering by managing glyph textures and dynamic font atlas creation.">Font</a> system, handling the creation and storage of a texture atlas for a given font configuration. It includes glyph data for individual characters and the texture itself, allowing for efficient text rendering. The class provides methods to access glyph data, including texture coordinates and positioning, tailored to the rendering requirements specified by a <a class="el" href="structspk_1_1Font_1_1Key.html" title="Represents a unique identifier for font atlas configurations.">Font::Key</a>.</p>
-<p>Atlases are generated dynamically based on font size, outline size, and style, optimizing texture memory usage and rendering performance. The BuildData struct within <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a> facilitates the construction of the atlas texture from raw font data.</p>
-<p>Usage example: </p><div class="fragment"><div class="line"><a class="code" href="classspk_1_1Font.html">spk::Font</a> myFont(<span class="stringliteral">&quot;path/to/fontfile.ttf&quot;</span>);</div>
-<div class="line"><a class="code" href="classspk_1_1Font_1_1Atlas.html">spk::Font::Atlas</a> <a class="code" href="classspk_1_1Font.html#a2c95509cec9d03a6cf0b8b7dcc4a4593">atlas</a> = myFont.atlas(16, 1); <span class="comment">// Get or create a font atlas for font size 16 with 1px outline</span></div>
-<div class="line"><a class="code" href="structspk_1_1Font_1_1Atlas_1_1GlyphData.html">spk::Font::Atlas::GlyphData</a> glyphE = <a class="code" href="classspk_1_1Font.html#a2c95509cec9d03a6cf0b8b7dcc4a4593">atlas</a>.glyph(<span class="charliteral">&#39;E&#39;</span>);</div>
-<div class="ttc" id="aclassspk_1_1Font_1_1Atlas_html"><div class="ttname"><a href="classspk_1_1Font_1_1Atlas.html">spk::Font::Atlas</a></div><div class="ttdoc">Manages a texture atlas for a specific font configuration, including glyph data and texture.</div><div class="ttdef"><b>Definition:</b> spk_font.hpp:194</div></div>
-<div class="ttc" id="aclassspk_1_1Font_html"><div class="ttname"><a href="classspk_1_1Font.html">spk::Font</a></div><div class="ttdoc">Handles font rendering by managing glyph textures and dynamic font atlas creation.</div><div class="ttdef"><b>Definition:</b> spk_font.hpp:39</div></div>
-<div class="ttc" id="aclassspk_1_1Font_html_a2c95509cec9d03a6cf0b8b7dcc4a4593"><div class="ttname"><a href="classspk_1_1Font.html#a2c95509cec9d03a6cf0b8b7dcc4a4593">spk::Font::atlas</a></div><div class="ttdeci">const Atlas &amp; atlas(const size_t &amp;p_fontSize, const size_t &amp;p_outlineSize, const OutlineStyle &amp;p_outlineStype) const</div><div class="ttdoc">Retrieves or creates an Atlas with specified font size, outline size, and outline style.</div><div class="ttdef"><b>Definition:</b> spk_font.cpp:88</div></div>
-<div class="ttc" id="astructspk_1_1Font_1_1Atlas_1_1GlyphData_html"><div class="ttname"><a href="structspk_1_1Font_1_1Atlas_1_1GlyphData.html">spk::Font::Atlas::GlyphData</a></div><div class="ttdoc">Holds rendering data for an individual glyph within a font atlas.</div><div class="ttdef"><b>Definition:</b> spk_font.hpp:215</div></div>
-</div><!-- fragment --><dl class="section see"><dt>See also</dt><dd><a class="el" href="classspk_1_1Font.html" title="Handles font rendering by managing glyph textures and dynamic font atlas creation.">Font</a>, <a class="el" href="structspk_1_1Font_1_1Configuration.html" title="Holds configuration data for font loading and glyph validation.">Configuration</a>, <a class="el" href="structspk_1_1Font_1_1Key.html" title="Represents a unique identifier for font atlas configurations.">Key</a>, <a class="el" href="structspk_1_1Font_1_1Atlas_1_1GlyphData.html" title="Holds rendering data for an individual glyph within a font atlas.">GlyphData</a> </dd></dl>
-</div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="adc445ae37e4133de8ce3cac0d125edf9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#adc445ae37e4133de8ce3cac0d125edf9">&#9670;&nbsp;</a></span>Atlas() <span class="overload">[1/2]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">spk::Font::Atlas::Atlas </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Default constructor for the <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a> class. </p>
-<p>Initializes an empty <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a> object. This constructor is typically used to create an <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a> instance before explicitly setting its properties or generating its content through other methods. An <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a> created this way will not contain any glyph data or texture information until such data is provided and processed. </p>
-
-</div>
-</div>
-<a id="a37ccac48c7cc5be8b9dc99d78c55150c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a37ccac48c7cc5be8b9dc99d78c55150c">&#9670;&nbsp;</a></span>Atlas() <span class="overload">[2/2]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">spk::Font::Atlas::Atlas </td>
-          <td>(</td>
-          <td class="paramtype">const std::vector&lt; uint8_t &gt; &amp;&#160;</td>
-          <td class="paramname"><em>p_fontData</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="structspk_1_1Font_1_1Configuration.html">Configuration</a> &amp;&#160;</td>
-          <td class="paramname"><em>p_fontConfiguration</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="structspk_1_1Font_1_1Key.html">Key</a> &amp;&#160;</td>
-          <td class="paramname"><em>p_key</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Constructs an <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a> with specified font data, font configuration, and key. </p>
-<p>Initializes an <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a> by generating a texture atlas based on the provided font data, configuration, and key, which includes font size, outline size, and outline style.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">p_fontData</td><td>Vector containing the font's raw data. </td></tr>
-    <tr><td class="paramname">p_fontConfiguration</td><td><a class="el" href="structspk_1_1Font_1_1Configuration.html" title="Holds configuration data for font loading and glyph validation.">Configuration</a> for the font, including valid glyphs. </td></tr>
-    <tr><td class="paramname">p_key</td><td><a class="el" href="structspk_1_1Font_1_1Key.html" title="Represents a unique identifier for font atlas configurations.">Key</a> determining the specific atlas configuration to generate. </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<h2 class="groupheader">Member Function Documentation</h2>
-<a id="a57a24d582a5d89ac751672f5d15194aa"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a57a24d582a5d89ac751672f5d15194aa">&#9670;&nbsp;</a></span>computeCharSize()</h2>
+<div class="textblock"><p>Manages a texture atlas for font rendering. </p>
+<p>The <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for font rendering.">Atlas</a> class handles the creation and management of a texture atlas for storing glyphs. It supports loading glyphs, rescaling, and uploading texture data to the GPU. </p>
+</div><h2 class="groupheader">Member Function Documentation</h2>
+<a id="a93d12242d560d6d824a2544dd339e67d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a93d12242d560d6d824a2544dd339e67d">&#9670;&nbsp;</a></span>computeCharSize()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -203,25 +209,24 @@ Public Member Functions</h2></td></tr>
           <td>(</td>
           <td class="paramtype">const wchar_t &amp;&#160;</td>
           <td class="paramname"><em>p_char</em></td><td>)</td>
-          <td> const</td>
+          <td></td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p>Computes the size of a character in pixels for the specified font configuration within the <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a>. </p>
-<p>This function calculates the dimensions (width and height) of a given character (<code>p_char</code>) based on the font configuration used to create this <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a>. It uses the glyph data and font metrics to determine the precise rendering size of the character, including any additional space required for the outline.</p>
+<p>Computes the size of a character. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">p_char</td><td>The character to compute the size for. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>A Vector2Int representing the width and height of the character in pixels. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>The size of the character. </dd></dl>
 
 </div>
 </div>
-<a id="a3a07de4450b8bb52002b87d88231848b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3a07de4450b8bb52002b87d88231848b">&#9670;&nbsp;</a></span>computeStringSize()</h2>
+<a id="af564ad502662081bb657c0519a14023c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af564ad502662081bb657c0519a14023c">&#9670;&nbsp;</a></span>computeStringSize()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -231,118 +236,105 @@ Public Member Functions</h2></td></tr>
           <td>(</td>
           <td class="paramtype">const std::string &amp;&#160;</td>
           <td class="paramname"><em>p_string</em></td><td>)</td>
-          <td> const</td>
+          <td></td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p>Computes the size of a string in pixels for the specified font configuration within the <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a>. </p>
-<p>This function calculates the dimensions (width and height) of a given string (<code>p_string</code>) based on the font configuration used to create this <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a>. It considers the cumulative size of all characters in the string, including any additional space required for the outline.</p>
+<p>Computes the size of a string. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">p_string</td><td>The string to compute the size for. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>A Vector2Int representing the width and height of the string in pixels. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>The size of the string. </dd></dl>
 
 </div>
 </div>
-<a id="abe9925b307296efa7338e8ca01238341"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#abe9925b307296efa7338e8ca01238341">&#9670;&nbsp;</a></span>needUploadToGPU()</h2>
+<a id="a858113264e9bf66f5371c3af868af245"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a858113264e9bf66f5371c3af868af245">&#9670;&nbsp;</a></span>glyph()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">bool spk::Font::Atlas::needUploadToGPU </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Checks if the atlas texture needs to be uploaded to the GPU. </p>
-<p>This method determines whether the atlas texture has been modified since the last upload to the GPU and needs to be re-uploaded. This is typically used to optimize rendering performance by ensuring that textures are only uploaded when necessary.</p>
-<dl class="section return"><dt>Returns</dt><dd>True if the atlas texture needs to be uploaded to the GPU, false otherwise. </dd></dl>
-
-</div>
-</div>
-<a id="a91f05a76a620fb36ba216843f1da7055"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a91f05a76a620fb36ba216843f1da7055">&#9670;&nbsp;</a></span>operator[]()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">const <a class="el" href="structspk_1_1Font_1_1Atlas_1_1GlyphData.html">Font::Atlas::GlyphData</a> &amp; spk::Font::Atlas::operator[] </td>
+          <td class="memname">const <a class="el" href="structspk_1_1Font_1_1Glyph.html">Font::Glyph</a> &amp; spk::Font::Atlas::glyph </td>
           <td>(</td>
           <td class="paramtype">const wchar_t &amp;&#160;</td>
           <td class="paramname"><em>p_char</em></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Retrieves the <a class="el" href="structspk_1_1Font_1_1Atlas_1_1GlyphData.html" title="Holds rendering data for an individual glyph within a font atlas.">GlyphData</a> for a specified character. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">p_char</td><td>The character to retrieve glyph data for. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>A reference to the <a class="el" href="structspk_1_1Font_1_1Atlas_1_1GlyphData.html" title="Holds rendering data for an individual glyph within a font atlas.">GlyphData</a> struct containing rendering information for the specified character. </dd></dl>
-
-</div>
-</div>
-<a id="ac1b7486bd57eb45102c13bac9aad77b0"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac1b7486bd57eb45102c13bac9aad77b0">&#9670;&nbsp;</a></span>texture()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">const <a class="el" href="classspk_1_1Texture.html">Texture</a> &amp; spk::Font::Atlas::texture </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Gets the texture associated with this <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a>. </p>
-<p>Returns a reference to the <a class="el" href="classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines.">Texture</a> object representing the atlas texture. This texture contains all the glyphs rendered according to the <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a> configuration and is used for drawing text on screen. Access to this texture allows for direct use in rendering pipelines.</p>
-<dl class="section return"><dt>Returns</dt><dd>A constant reference to the <a class="el" href="classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines.">Texture</a> object for this <a class="el" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for a specific font configuration, including glyph data and texture.">Atlas</a>. </dd></dl>
-
-</div>
-</div>
-<a id="a665bd3b81551ea25e3c6adff197a5a53"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a665bd3b81551ea25e3c6adff197a5a53">&#9670;&nbsp;</a></span>uploadToGPU()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void spk::Font::Atlas::uploadToGPU </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
           <td></td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p>Uploads the atlas texture to the GPU. </p>
-<p>If the atlas texture has been modified, this method uploads the texture to the GPU to make it available for rendering. This method should be called after any changes to the texture data to ensure that the updated texture is used in subsequent render operations.</p>
-<dl class="section note"><dt>Note</dt><dd>This method should only be called if <a class="el" href="classspk_1_1Font_1_1Atlas.html#abe9925b307296efa7338e8ca01238341" title="Checks if the atlas texture needs to be uploaded to the GPU.">needUploadToGPU()</a> returns true to avoid unnecessary GPU operations. </dd></dl>
+<p>Retrieves the glyph for a specific character. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_char</td><td>The character to retrieve the glyph for. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The glyph for the specified character. </dd></dl>
+
+</div>
+</div>
+<a id="af36e93ce98d01336ba12ca0c524e95de"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af36e93ce98d01336ba12ca0c524e95de">&#9670;&nbsp;</a></span>loadGlyphs()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void spk::Font::Atlas::loadGlyphs </td>
+          <td>(</td>
+          <td class="paramtype">const std::wstring &amp;&#160;</td>
+          <td class="paramname"><em>p_glyphsToLoad</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Loads specified glyphs into the atlas. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_glyphsToLoad</td><td>A string of glyphs to load. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a5a8babe39e4770c05e620eee5f9eb37e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5a8babe39e4770c05e620eee5f9eb37e">&#9670;&nbsp;</a></span>operator[]()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const <a class="el" href="structspk_1_1Font_1_1Glyph.html">Font::Glyph</a> &amp; spk::Font::Atlas::operator[] </td>
+          <td>(</td>
+          <td class="paramtype">const wchar_t &amp;&#160;</td>
+          <td class="paramname"><em>p_char</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Retrieves the glyph for a specific character. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_char</td><td>The character to retrieve the glyph for. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The glyph for the specified character. </dd></dl>
 
 </div>
 </div>
 <hr/>The documentation for this class was generated from the following files:<ul>
 <li>Sparkle/src/graphics/texture/font/<a class="el" href="spk__font_8hpp_source.html">spk_font.hpp</a></li>
 <li>Sparkle/src/graphics/texture/font/spk_font.cpp</li>
-<li>Sparkle/src/graphics/texture/font/spk_font_atlas.cpp</li>
-<li>Sparkle/src/graphics/texture/font/spk_font_atlas_outline_mask.cpp</li>
 <li>Sparkle/src/graphics/texture/font/spk_font_truetype_related.cpp</li>
 </ul>
 </div><!-- contents -->

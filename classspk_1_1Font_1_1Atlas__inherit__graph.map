@@ -1,0 +1,4 @@
+<map id="spk::Font::Atlas" name="spk::Font::Atlas">
+<area shape="rect" id="node1" title="Manages a texture atlas for font rendering." alt="" coords="5,80,128,107"/>
+<area shape="rect" id="node2" href="$classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines." alt="" coords="16,5,117,32"/>
+</map>

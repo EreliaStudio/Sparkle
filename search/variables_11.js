@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['uvs_1375',['uvs',['../structspk_1_1Font_1_1Atlas_1_1GlyphData.html#a4971b265dd441116409f8c8ce55cf4da',1,'spk::Font::Atlas::GlyphData']]]
+  ['uvs_1381',['UVs',['../structspk_1_1Font_1_1Glyph.html#a15451913ebde5f7f52b0c9edccae148a',1,'spk::Font::Glyph']]]
 ];

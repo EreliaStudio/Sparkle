@@ -76,7 +76,7 @@ $(function() {
 <div class="line"><a name="l00004"></a><span class="lineno">    4</span>&#160;<span class="preprocessor">#include &quot;math/spk_vector2.hpp&quot;</span></div>
 <div class="line"><a name="l00005"></a><span class="lineno">    5</span>&#160;<span class="preprocessor">#include &quot;spk_basic_functions.hpp&quot;</span></div>
 <div class="line"><a name="l00006"></a><span class="lineno">    6</span>&#160;<span class="preprocessor">#include &quot;widget/components/spk_nine_sliced.hpp&quot;</span></div>
-<div class="line"><a name="l00007"></a><span class="lineno">    7</span>&#160;<span class="preprocessor">#include &quot;widget/components/spk_text_label.hpp&quot;</span></div>
+<div class="line"><a name="l00007"></a><span class="lineno">    7</span>&#160;<span class="preprocessor">#include &quot;widget/components/spk_font_renderer.hpp&quot;</span></div>
 <div class="line"><a name="l00008"></a><span class="lineno">    8</span>&#160;<span class="preprocessor">#include &quot;widget/spk_widget.hpp&quot;</span></div>
 <div class="line"><a name="l00009"></a><span class="lineno">    9</span>&#160; </div>
 <div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160;<span class="keyword">namespace </span>spk</div>
@@ -85,7 +85,7 @@ $(function() {
 <div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;    {</div>
 <div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;    <span class="keyword">private</span>:</div>
 <div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;        <a class="code" href="classspk_1_1WidgetComponent_1_1NineSlicedBox.html">spk::WidgetComponent::NineSlicedBox</a> _box; </div>
-<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;        <a class="code" href="classspk_1_1WidgetComponent_1_1TextLabel.html">spk::WidgetComponent::TextLabel</a> _label;   </div>
+<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;        <a class="code" href="classspk_1_1WidgetComponent_1_1FontRenderer.html">spk::WidgetComponent::FontRenderer</a> _label;   </div>
 <div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160; </div>
 <div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;        <span class="keywordtype">void</span> _onGeometryChange() <span class="keyword">override</span>;</div>
 <div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160; </div>
@@ -96,17 +96,17 @@ $(function() {
 <div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;        </div>
 <div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;        <a class="code" href="classspk_1_1TextLabel.html#a8307eae8790e65e14285ee8f438297de">TextLabel</a>(<span class="keyword">const</span> std::string&amp; p_name, <a class="code" href="classspk_1_1Widget.html">Widget</a>* p_parent);</div>
 <div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160; </div>
-<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;        <a class="code" href="classspk_1_1WidgetComponent_1_1TextLabel.html">spk::WidgetComponent::TextLabel</a>&amp; <a class="code" href="classspk_1_1TextLabel.html#a5f996bf1893078a7dc1c4c760d3685b0">label</a>();</div>
+<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;        <a class="code" href="classspk_1_1WidgetComponent_1_1FontRenderer.html">spk::WidgetComponent::FontRenderer</a>&amp; <a class="code" href="classspk_1_1TextLabel.html#a3d48152503d44c700ec281ac1310adc1">label</a>();</div>
 <div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160; </div>
 <div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;        <a class="code" href="classspk_1_1WidgetComponent_1_1NineSlicedBox.html">spk::WidgetComponent::NineSlicedBox</a>&amp; <a class="code" href="classspk_1_1TextLabel.html#ac4eb80a26f7df803c6406011a67dd7db">box</a>();</div>
 <div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;    };</div>
 <div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;}</div>
 <div class="ttc" id="aclassspk_1_1TextLabel_html"><div class="ttname"><a href="classspk_1_1TextLabel.html">spk::TextLabel</a></div><div class="ttdoc">A widget class for displaying text within a UI, with a customizable background.</div><div class="ttdef"><b>Definition:</b> spk_text_label.hpp:37</div></div>
-<div class="ttc" id="aclassspk_1_1TextLabel_html_a5f996bf1893078a7dc1c4c760d3685b0"><div class="ttname"><a href="classspk_1_1TextLabel.html#a5f996bf1893078a7dc1c4c760d3685b0">spk::TextLabel::label</a></div><div class="ttdeci">spk::WidgetComponent::TextLabel &amp; label()</div><div class="ttdef"><b>Definition:</b> spk_text_label.cpp:32</div></div>
+<div class="ttc" id="aclassspk_1_1TextLabel_html_a3d48152503d44c700ec281ac1310adc1"><div class="ttname"><a href="classspk_1_1TextLabel.html#a3d48152503d44c700ec281ac1310adc1">spk::TextLabel::label</a></div><div class="ttdeci">spk::WidgetComponent::FontRenderer &amp; label()</div><div class="ttdef"><b>Definition:</b> spk_text_label.cpp:32</div></div>
 <div class="ttc" id="aclassspk_1_1TextLabel_html_a8307eae8790e65e14285ee8f438297de"><div class="ttname"><a href="classspk_1_1TextLabel.html#a8307eae8790e65e14285ee8f438297de">spk::TextLabel::TextLabel</a></div><div class="ttdeci">TextLabel(Widget *p_parent)</div><div class="ttdoc">Construct a new TextLabel widget with a given parent.</div><div class="ttdef"><b>Definition:</b> spk_text_label.cpp:20</div></div>
 <div class="ttc" id="aclassspk_1_1TextLabel_html_ac4eb80a26f7df803c6406011a67dd7db"><div class="ttname"><a href="classspk_1_1TextLabel.html#ac4eb80a26f7df803c6406011a67dd7db">spk::TextLabel::box</a></div><div class="ttdeci">spk::WidgetComponent::NineSlicedBox &amp; box()</div><div class="ttdef"><b>Definition:</b> spk_text_label.cpp:37</div></div>
+<div class="ttc" id="aclassspk_1_1WidgetComponent_1_1FontRenderer_html"><div class="ttname"><a href="classspk_1_1WidgetComponent_1_1FontRenderer.html">spk::WidgetComponent::FontRenderer</a></div><div class="ttdoc">Manages rendering of text using a specified font and properties.</div><div class="ttdef"><b>Definition:</b> spk_font_renderer.hpp:31</div></div>
 <div class="ttc" id="aclassspk_1_1WidgetComponent_1_1NineSlicedBox_html"><div class="ttname"><a href="classspk_1_1WidgetComponent_1_1NineSlicedBox.html">spk::WidgetComponent::NineSlicedBox</a></div><div class="ttdoc">Implements a nine-sliced box component for UI rendering, supporting scalable and adaptable layouts.</div><div class="ttdef"><b>Definition:</b> spk_nine_sliced.hpp:67</div></div>
-<div class="ttc" id="aclassspk_1_1WidgetComponent_1_1TextLabel_html"><div class="ttname"><a href="classspk_1_1WidgetComponent_1_1TextLabel.html">spk::WidgetComponent::TextLabel</a></div><div class="ttdoc">A component for rendering text within the UI, supporting various alignments, styles,...</div><div class="ttdef"><b>Definition:</b> spk_text_label.hpp:65</div></div>
 <div class="ttc" id="aclassspk_1_1Widget_html"><div class="ttname"><a href="classspk_1_1Widget.html">spk::Widget</a></div><div class="ttdoc">Defines a widget interface for UI elements, integrating activation state management,...</div><div class="ttdef"><b>Definition:</b> spk_widget.hpp:61</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->

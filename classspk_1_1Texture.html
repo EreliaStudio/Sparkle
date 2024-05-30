@@ -69,6 +69,7 @@ $(function() {
   <div class="summary">
 <a href="#pub-types">Public Types</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pro-methods">Protected Member Functions</a> &#124;
 <a href="#friends">Friends</a> &#124;
 <a href="classspk_1_1Texture-members.html">List of all members</a>  </div>
   <div class="headertitle">
@@ -85,9 +86,10 @@ Inheritance diagram for spk::Texture:</div>
 <div class="dyncontent">
 <div class="center"><img src="classspk_1_1Texture__inherit__graph.png" border="0" usemap="#aspk_1_1Texture_inherit__map" alt="Inheritance graph"/></div>
 <map name="aspk_1_1Texture_inherit__map" id="aspk_1_1Texture_inherit__map">
-<area shape="rect" title="Manages texture data for use in rendering pipelines." alt="" coords="19,5,120,32"/>
-<area shape="rect" href="classspk_1_1Image.html" title="Extends the Texture class to load texture data from image files." alt="" coords="22,80,117,107"/>
-<area shape="rect" href="classspk_1_1SpriteSheet.html" title="Manages a texture divided into a grid of sprites, extending the Image class." alt="" coords="5,155,133,181"/>
+<area shape="rect" title="Manages texture data for use in rendering pipelines." alt="" coords="83,5,184,32"/>
+<area shape="rect" href="classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for font rendering." alt="" coords="5,80,128,107"/>
+<area shape="rect" href="classspk_1_1Image.html" title="Extends the Texture class to load texture data from image files." alt="" coords="153,80,247,107"/>
+<area shape="rect" href="classspk_1_1SpriteSheet.html" title="Manages a texture divided into a grid of sprites, extending the Image class." alt="" coords="136,155,264,181"/>
 </map>
 <center><span class="legend">[<a href="graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
@@ -153,8 +155,17 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:abdfe0609386a355ba5056b29bf8e990e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Releases the texture's GPU memory.  <a href="classspk_1_1Texture.html#abdfe0609386a355ba5056b29bf8e990e">More...</a><br /></td></tr>
 <tr class="separator:abdfe0609386a355ba5056b29bf8e990e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7893fb6d36c78e790bbe45d74d7ef3cc"><td class="memItemLeft" align="right" valign="top">const GLint&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Texture.html#a7893fb6d36c78e790bbe45d74d7ef3cc">ID</a> () const</td></tr>
-<tr class="memdesc:a7893fb6d36c78e790bbe45d74d7ef3cc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Return the ID provided by sparkle when creating/uploading the texture to the GPU.  <a href="classspk_1_1Texture.html#a7893fb6d36c78e790bbe45d74d7ef3cc">More...</a><br /></td></tr>
+<tr class="memdesc:a7893fb6d36c78e790bbe45d74d7ef3cc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the ID of the texture in GPU memory.  <a href="classspk_1_1Texture.html#a7893fb6d36c78e790bbe45d74d7ef3cc">More...</a><br /></td></tr>
 <tr class="separator:a7893fb6d36c78e790bbe45d74d7ef3cc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-methods"></a>
+Protected Member Functions</h2></td></tr>
+<tr class="memitem:a0de498cbffb8306fb068e4e6abf5320b"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Texture.html#a0de498cbffb8306fb068e4e6abf5320b">_bind</a> (int p_textureIndex=0) const</td></tr>
+<tr class="memdesc:a0de498cbffb8306fb068e4e6abf5320b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Binds the texture for use in rendering.  <a href="classspk_1_1Texture.html#a0de498cbffb8306fb068e4e6abf5320b">More...</a><br /></td></tr>
+<tr class="separator:a0de498cbffb8306fb068e4e6abf5320b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8a1541f3a8f4a012a335cfde85b76255"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Texture.html#a8a1541f3a8f4a012a335cfde85b76255">_unbind</a> () const</td></tr>
+<tr class="memdesc:a8a1541f3a8f4a012a335cfde85b76255"><td class="mdescLeft">&#160;</td><td class="mdescRight">Unbinds the texture.  <a href="classspk_1_1Texture.html#a8a1541f3a8f4a012a335cfde85b76255">More...</a><br /></td></tr>
+<tr class="separator:a8a1541f3a8f4a012a335cfde85b76255"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="friends"></a>
 Friends</h2></td></tr>
@@ -173,7 +184,7 @@ class&#160;</td><td class="memItemRight" valign="bottom"><b>Pipeline</b></td></t
 <div class="ttc" id="aclassspk_1_1Texture_html"><div class="ttname"><a href="classspk_1_1Texture.html">spk::Texture</a></div><div class="ttdoc">Manages texture data for use in rendering pipelines.</div><div class="ttdef"><b>Definition:</b> spk_texture.hpp:42</div></div>
 </div><!-- fragment --><dl class="section note"><dt>Note</dt><dd>Before a texture can be used in rendering, it must be uploaded to GPU memory using the <code>uploadToGPU</code> method. </dd>
 <dd>
-If data have been pushed to the GPU, it will be automaticaly release uppon destructor call or uppon re-upload to GPU.</dd></dl>
+If data have been pushed to the GPU, it will be automatically released upon destructor call or upon re-upload to GPU.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="classspk_1_1Pipeline.html" title="Manages the rendering pipeline, including shader programs, uniforms, and objects.">Pipeline</a>, Vector2UInt </dd></dl>
 </div><h2 class="groupheader">Member Enumeration Documentation</h2>
 <a id="a86a03180e180bf4f4473b2d68d56daba"></a>
@@ -233,6 +244,7 @@ If data have been pushed to the GPU, it will be automaticaly release uppon destr
 <li>BGR: Reverse of RGB, often used in certain systems or image formats.</li>
 <li>BGRA: Reverse of RGBA, including an alpha channel for transparency.</li>
 <li>GreyLevel: Single channel format for grayscale images.</li>
+<li>DualChannel: Two channel format often used for specific purposes.</li>
 <li>Error: Represents an error state or undefined pixel format. </li>
 </ul>
 
@@ -437,7 +449,7 @@ If data have been pushed to the GPU, it will be automaticaly release uppon destr
 </div><div class="memdoc">
 
 <p>Copy constructor (deleted). </p>
-<p>Prevents the creation of a <a class="el" href="classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines.">Texture</a> instance by copying from another <a class="el" href="classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines.">Texture</a> instance. This deletion ensures that each <a class="el" href="classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines.">Texture</a> object maintains unique ownership of its GPU resources. Copying <a class="el" href="classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines.">Texture</a> objects could lead to issues like double deletion of resources, hence it is explicitly deleted to avoid such problems.</p>
+<p>Prevents the creation of a <a class="el" href="classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines.">Texture</a> instance by copying from another <a class="el" href="classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines.">Texture</a> instance. This deletion ensures that each <a class="el" href="classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines.">Texture</a> object maintains unique ownership of its GPU resources.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">p_other</td><td>The other <a class="el" href="classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines.">Texture</a> instance to copy from. </td></tr>
@@ -464,7 +476,7 @@ If data have been pushed to the GPU, it will be automaticaly release uppon destr
 </div><div class="memdoc">
 
 <p>Move constructor. </p>
-<p>Transfers the ownership of the GPU resources from another <a class="el" href="classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines.">Texture</a> instance to this instance. This constructor is used to efficiently move a <a class="el" href="classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines.">Texture</a> object, including its GPU resources, without the overhead of copying the texture data. It leaves the moved-from object in a valid but unspecified state.</p>
+<p>Transfers the ownership of the GPU resources from another <a class="el" href="classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines.">Texture</a> instance to this instance. This constructor is used to efficiently move a <a class="el" href="classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines.">Texture</a> object, including its GPU resources, without the overhead of copying the texture data.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">p_other</td><td>The other <a class="el" href="classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines.">Texture</a> instance to move from. </td></tr>
@@ -475,6 +487,69 @@ If data have been pushed to the GPU, it will be automaticaly release uppon destr
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="a0de498cbffb8306fb068e4e6abf5320b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0de498cbffb8306fb068e4e6abf5320b">&#9670;&nbsp;</a></span>_bind()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void spk::Texture::_bind </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>p_textureIndex</em> = <code>0</code></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Binds the texture for use in rendering. </p>
+<p>This method binds the texture to a specified texture unit, making it active for subsequent rendering operations.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_textureIndex</td><td>The texture unit index to bind the texture to (default is 0). </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a8a1541f3a8f4a012a335cfde85b76255"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8a1541f3a8f4a012a335cfde85b76255">&#9670;&nbsp;</a></span>_unbind()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void spk::Texture::_unbind </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Unbinds the texture. </p>
+<p>This method unbinds the texture, resetting the active texture unit to zero. </p>
+
+</div>
+</div>
 <a id="a7893fb6d36c78e790bbe45d74d7ef3cc"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a7893fb6d36c78e790bbe45d74d7ef3cc">&#9670;&nbsp;</a></span>ID()</h2>
 
@@ -490,8 +565,8 @@ If data have been pushed to the GPU, it will be automaticaly release uppon destr
       </table>
 </div><div class="memdoc">
 
-<p>Return the ID provided by sparkle when creating/uploading the texture to the GPU. </p>
-<dl class="section return"><dt>Returns</dt><dd>The ID of the texture allocated on the GPU </dd></dl>
+<p>Returns the ID of the texture in GPU memory. </p>
+<dl class="section return"><dt>Returns</dt><dd>The texture ID. </dd></dl>
 
 </div>
 </div>
@@ -520,7 +595,7 @@ If data have been pushed to the GPU, it will be automaticaly release uppon destr
 </div><div class="memdoc">
 
 <p>Copy assignment operator (deleted). </p>
-<p>Disables the assignment of one <a class="el" href="classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines.">Texture</a> object to another through copying. This operation is deleted to prevent the inadvertent copying of GPU resource ownership, which could lead to resource management issues such as double frees. <a class="el" href="classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines.">Texture</a> objects should be uniquely owned and managed to ensure resource integrity.</p>
+<p>Disables the assignment of one <a class="el" href="classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines.">Texture</a> object to another through copying. This operation is deleted to prevent the inadvertent copying of GPU resource ownership.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">p_other</td><td>The other <a class="el" href="classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines.">Texture</a> instance to assign from. </td></tr>
@@ -548,7 +623,7 @@ If data have been pushed to the GPU, it will be automaticaly release uppon destr
 </div><div class="memdoc">
 
 <p>Move assignment operator. </p>
-<p>Enables the assignment of a <a class="el" href="classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines.">Texture</a> object from another <a class="el" href="classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines.">Texture</a> object using move semantics. This operation transfers the GPU resources ownership from one <a class="el" href="classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines.">Texture</a> to another, effectively transferring the texture data and leaving the moved-from object in a valid but unspecified state. It ensures efficient resource management and avoids the duplication of GPU resources.</p>
+<p>Enables the assignment of a <a class="el" href="classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines.">Texture</a> object from another <a class="el" href="classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines.">Texture</a> object using move semantics. This operation transfers the GPU resources ownership from one <a class="el" href="classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines.">Texture</a> to another.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">p_other</td><td>The other <a class="el" href="classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines.">Texture</a> instance to move from. </td></tr>

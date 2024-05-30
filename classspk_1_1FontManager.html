@@ -96,7 +96,7 @@ Public Member Functions</h2></td></tr>
 <p>This class is implemented as a part of the <a class="el" href="classspk_1_1Singleton.html" title="Template class for implementing the singleton design pattern.">Singleton</a> design pattern, ensuring that there is a single instance of <a class="el" href="classspk_1_1FontManager.html" title="Manages the loading and accessing of font resources.">FontManager</a> throughout the application.</p>
 <p>Usage example: </p><div class="fragment"><div class="line"><a class="code" href="classspk_1_1Font.html">spk::Font</a>* myFont = FontManager::instance().loadFont(<span class="stringliteral">&quot;OpenSans&quot;</span>, <span class="stringliteral">&quot;path/to/OpenSans.ttf&quot;</span>);</div>
 <div class="line"><a class="code" href="classspk_1_1Font.html">spk::Font</a>* secondPoint = FontManager::instance().font(<span class="stringliteral">&quot;OpenSans&quot;</span>);</div>
-<div class="ttc" id="aclassspk_1_1Font_html"><div class="ttname"><a href="classspk_1_1Font.html">spk::Font</a></div><div class="ttdoc">Handles font rendering by managing glyph textures and dynamic font atlas creation.</div><div class="ttdef"><b>Definition:</b> spk_font.hpp:39</div></div>
+<div class="ttc" id="aclassspk_1_1Font_html"><div class="ttname"><a href="classspk_1_1Font.html">spk::Font</a></div><div class="ttdoc">Manages font loading, glyph handling, and text rendering.</div><div class="ttdef"><b>Definition:</b> spk_font.hpp:30</div></div>
 </div><!-- fragment --> </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="aebcbb48bb8afa53b74ab7cb8804dd0e5"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aebcbb48bb8afa53b74ab7cb8804dd0e5">&#9670;&nbsp;</a></span>FontManager()</h2>
@@ -156,7 +156,7 @@ Public Member Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>Pointer to the <a class="el" href="classspk_1_1Font.html" title="Handles font rendering by managing glyph textures and dynamic font atlas creation.">Font</a> instance if found, nullptr otherwise. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>Pointer to the <a class="el" href="classspk_1_1Font.html" title="Manages font loading, glyph handling, and text rendering.">Font</a> instance if found, nullptr otherwise. </dd></dl>
 
 </div>
 </div>
@@ -192,7 +192,7 @@ Public Member Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>Pointer to the loaded <a class="el" href="classspk_1_1Font.html" title="Handles font rendering by managing glyph textures and dynamic font atlas creation.">Font</a> instance. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>Pointer to the loaded <a class="el" href="classspk_1_1Font.html" title="Manages font loading, glyph handling, and text rendering.">Font</a> instance. </dd></dl>
 
 </div>
 </div>

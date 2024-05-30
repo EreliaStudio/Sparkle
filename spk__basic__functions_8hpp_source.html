@@ -126,16 +126,18 @@ $(function() {
 <div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;    }</div>
 <div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160; </div>
 <div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;    std::string readFileContent(<span class="keyword">const</span> std::filesystem::path&amp; p_filePath);</div>
-<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;    <span class="keywordtype">float</span> degreeToRadian(<span class="keywordtype">float</span> p_degrees);</div>
-<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;    <span class="keywordtype">float</span> radianToDegree(<span class="keywordtype">float</span> p_radians);</div>
-<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160; </div>
-<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;    std::string to_string(<span class="keyword">const</span> GLenum&amp; p_type);</div>
-<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;    <span class="keywordtype">void</span> checkOpengl(<span class="keyword">const</span> std::string&amp; msg);</div>
-<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160; </div>
-<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;    <span class="keywordtype">long</span> <span class="keywordtype">long</span> getTime();</div>
+<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;    std::vector&lt;uint8_t&gt; readFileContentAsBytes(<span class="keyword">const</span> std::filesystem::path&amp; p_path);</div>
+<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160; </div>
+<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;    <span class="keywordtype">float</span> degreeToRadian(<span class="keywordtype">float</span> p_degrees);</div>
+<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;    <span class="keywordtype">float</span> radianToDegree(<span class="keywordtype">float</span> p_radians);</div>
+<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160; </div>
+<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;    std::string to_string(<span class="keyword">const</span> GLenum&amp; p_type);</div>
+<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;    <span class="keywordtype">void</span> checkOpengl(<span class="keyword">const</span> std::string&amp; msg);</div>
 <div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160; </div>
-<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;    intmax_t positiveModulo(<span class="keyword">const</span> intmax_t&amp; p_value, <span class="keyword">const</span> intmax_t&amp; p_modulo);</div>
-<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;}</div>
+<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;    <span class="keywordtype">long</span> <span class="keywordtype">long</span> getTime();</div>
+<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160; </div>
+<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;    intmax_t positiveModulo(<span class="keyword">const</span> intmax_t&amp; p_value, <span class="keyword">const</span> intmax_t&amp; p_modulo);</div>
+<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;}</div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

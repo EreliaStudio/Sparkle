@@ -1,5 +1,6 @@
 <map id="spk::Texture" name="spk::Texture">
-<area shape="rect" id="node1" title="Manages texture data for use in rendering pipelines." alt="" coords="19,5,120,32"/>
-<area shape="rect" id="node2" href="$classspk_1_1Image.html" title="Extends the Texture class to load texture data from image files." alt="" coords="22,80,117,107"/>
-<area shape="rect" id="node3" href="$classspk_1_1SpriteSheet.html" title="Manages a texture divided into a grid of sprites, extending the Image class." alt="" coords="5,155,133,181"/>
+<area shape="rect" id="node1" title="Manages texture data for use in rendering pipelines." alt="" coords="83,5,184,32"/>
+<area shape="rect" id="node2" href="$classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for font rendering." alt="" coords="5,80,128,107"/>
+<area shape="rect" id="node3" href="$classspk_1_1Image.html" title="Extends the Texture class to load texture data from image files." alt="" coords="153,80,247,107"/>
+<area shape="rect" id="node4" href="$classspk_1_1SpriteSheet.html" title="Manages a texture divided into a grid of sprites, extending the Image class." alt="" coords="136,155,264,181"/>
 </map>

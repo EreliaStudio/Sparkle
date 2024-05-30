@@ -1,7 +1,6 @@
 <map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
-<area shape="rect" id="node1" href="$classspk_1_1IMetric.html" title="Interface defining the structure for metric collection and report emission." alt="" coords="5,64,104,91"/>
-<area shape="rect" id="node2" href="$classspk_1_1IAnalyticalMetric.html" title=" " alt="" coords="152,23,315,65"/>
-<area shape="rect" id="node5" href="$classspk_1_1IAnalyticalMetric.html" title="Template class for analytical metrics collection, extending IMetric." alt="" coords="152,89,315,130"/>
-<area shape="rect" id="node3" href="$classspk_1_1TimeMetric.html" title="Specialized metric for measuring and reporting time durations, extending IAnalyticalMetric&lt;long long&gt;..." alt="" coords="369,5,495,32"/>
-<area shape="rect" id="node4" href="$classspk_1_1TriggerMetric.html" title="A metric class for counting and reporting discrete trigger events, extending IAnalyticalMetric&lt;long l..." alt="" coords="363,56,501,83"/>
+<area shape="rect" id="node1" href="$classspk_1_1IPerlin.html" title="Provides a flexible implementation of Perlin noise generation, suitable for various procedural conten..." alt="" coords="5,5,100,32"/>
+<area shape="rect" id="node2" href="$classspk_1_1Perlin1D.html" title="Specializes the IPerlin noise generator for one&#45;dimensional Perlin noise, suitable for procedural con..." alt="" coords="148,5,256,32"/>
+<area shape="rect" id="node3" href="$classspk_1_1Perlin2D.html" title="Extends Perlin1D to generate two&#45;dimensional Perlin noise, suitable for a wide range of procedural co..." alt="" coords="304,5,412,32"/>
+<area shape="rect" id="node4" href="$classspk_1_1Perlin3D.html" title="Enhances Perlin2D by generating three&#45;dimensional Perlin noise, ideal for volumetric procedural conte..." alt="" coords="460,5,568,32"/>
 </map>

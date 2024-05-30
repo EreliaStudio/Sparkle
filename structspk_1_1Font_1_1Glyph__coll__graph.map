@@ -1,5 +1,5 @@
-<map id="spk::Font::Atlas::GlyphData" name="spk::Font::Atlas::GlyphData">
-<area shape="rect" id="node1" title="Holds rendering data for an individual glyph within a font atlas." alt="" coords="95,124,294,151"/>
+<map id="spk::Font::Glyph" name="spk::Font::Glyph">
+<area shape="rect" id="node1" title="Represents a single glyph with its properties." alt="" coords="131,124,258,151"/>
 <area shape="rect" id="node2" href="$structspk_1_1IVector2.html" title=" " alt="" coords="5,5,187,32"/>
 <area shape="rect" id="node3" href="$structspk_1_1IVector2.html" title=" " alt="" coords="211,5,376,32"/>
 </map>

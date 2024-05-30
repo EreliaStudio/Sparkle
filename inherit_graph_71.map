@@ -1,3 +1,6 @@
 <map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
-<area shape="rect" id="node1" href="$classspk_1_1StateMachine.html" title="A generic state machine for managing states and associated actions." alt="" coords="5,5,159,47"/>
+<area shape="rect" id="node1" href="$classspk_1_1Texture.html" title="Manages texture data for use in rendering pipelines." alt="" coords="5,31,107,57"/>
+<area shape="rect" id="node2" href="$classspk_1_1Font_1_1Atlas.html" title="Manages a texture atlas for font rendering." alt="" coords="155,5,277,32"/>
+<area shape="rect" id="node3" href="$classspk_1_1Image.html" title="Extends the Texture class to load texture data from image files." alt="" coords="169,56,263,83"/>
+<area shape="rect" id="node4" href="$classspk_1_1SpriteSheet.html" title="Manages a texture divided into a grid of sprites, extending the Image class." alt="" coords="325,56,453,83"/>
 </map>
