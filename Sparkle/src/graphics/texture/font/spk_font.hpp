@@ -24,6 +24,33 @@ namespace spk
 			void rescale(const spk::Vector2& p_scaleRatio);
 		};
 
+		struct Size
+		{
+			size_t text;
+			size_t outline;
+
+			Size() :
+				text(0),
+				outline(0)
+			{
+
+			}
+
+			Size(size_t p_text) :
+				text(p_text),
+				outline(0)
+			{
+
+			}
+
+			Size(size_t p_text, size_t p_outline) :
+				text(p_text),
+				outline(p_outline)
+			{
+
+			}
+		};
+
 		class Atlas : public spk::Texture
 		{
 			friend class Font;
@@ -92,7 +119,7 @@ namespace spk
 
 		Vector2Int computeCharSize(const wchar_t& p_char, size_t p_size, size_t p_outlineSize);
 		Vector2Int computeStringSize(const std::string& p_string, size_t p_size, size_t p_outlineSize);
-		std::tuple<size_t, size_t> computeOptimalTextSize(const std::string& p_string, float p_outlineSizeRatio, const Vector2Int& p_textArea);
+		Size computeOptimalTextSize(const std::string& p_string, float p_outlineSizeRatio, const Vector2Int& p_textArea);
 
 		Atlas& atlas(const size_t& p_textSize, const size_t& p_outlineSize);
 	};

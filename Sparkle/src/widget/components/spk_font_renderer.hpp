@@ -72,6 +72,7 @@ namespace spk::WidgetComponent
 		void render();
 
 		void setFont(spk::Font* p_font);
+		void setFontSize(const spk::Font::Size& p_fontSize);
 		void setText(const std::string& p_text);
 		void setTextColor(const spk::Color& p_textColor);
 		void setTextSize(const size_t& p_textSize);

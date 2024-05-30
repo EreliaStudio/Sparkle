@@ -40,7 +40,7 @@ namespace spk::WidgetComponent
 		void renderPass()
 		{
 			float distance = texture(fontTexture, fragmentUVs).r;
-
+			
 			if (distance <= 0.00390f)
 			{
 				discard;
@@ -122,6 +122,12 @@ namespace spk::WidgetComponent
 	{
 		_font = p_font;
 		_needGPUBufferUpdate = true;
+	}
+
+	void FontRenderer::setFontSize(const spk::Font::Size& p_fontSize)
+	{
+		setTextSize(p_fontSize.text);
+		setOutlineSize(p_fontSize.outline);
 	}
 
 	void FontRenderer::setText(const std::string& p_text)

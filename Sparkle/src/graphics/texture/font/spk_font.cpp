@@ -156,10 +156,10 @@ namespace spk
 		return (atlas(p_size, p_outlineSize).computeStringSize(p_string));
 	}
 
-	std::tuple<size_t, size_t> Font::computeOptimalTextSize(const std::string& p_string, float p_outlineSizeRatio, const Vector2Int& p_textArea)
+	Font::Size Font::computeOptimalTextSize(const std::string& p_string, float p_outlineSizeRatio, const Vector2Int& p_textArea)
 	{
 		std::vector<int> deltas = { 100, 50, 20, 10, 1 };
-		size_t result = 2;
+		Font::Size result = 2;
 
 		if (p_string == "")
 		{
@@ -167,7 +167,7 @@ namespace spk
 			size_t resultOutlineSize = static_cast<size_t>(resultTextSize * p_outlineSizeRatio);
 			resultTextSize -= resultOutlineSize * 2;
 
-			return (std::tuple<size_t, size_t>(resultTextSize, resultOutlineSize));
+			return (Font::Size(resultTextSize, resultOutlineSize));
 		}
 
 		for (int i = 0; i < deltas.size(); i++)
@@ -175,7 +175,7 @@ namespace spk
 			bool enough = false;
 			while (enough == false)
 			{
-				size_t textSize = result + deltas[i];
+				size_t textSize = result.text + deltas[i];
 				size_t outlineSize = static_cast<size_t>(textSize * p_outlineSizeRatio);
 				textSize -= outlineSize * 2;
 
@@ -187,16 +187,15 @@ namespace spk
 				}
 				else
 				{
-					result += deltas[i];
+					result.text += deltas[i];
 				}
 			}
 		}
 
-		size_t resultTextSize = result;
-		size_t resultOutlineSize = static_cast<size_t>(resultTextSize * p_outlineSizeRatio);
-		resultTextSize -= resultOutlineSize * 2;
+		result.outline = static_cast<size_t>(result.text * p_outlineSizeRatio);
+		result.text -= result.outline * 2;
 
-		return (std::tuple<size_t, size_t>(resultTextSize, resultOutlineSize));
+		return (result);
 	}
 
 	Font::Atlas& Font::atlas(const size_t& p_textSize, const size_t& p_outlineSize)
