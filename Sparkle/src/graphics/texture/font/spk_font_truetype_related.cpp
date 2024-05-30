@@ -1,126 +1,176 @@
 #include "graphics/texture/font/spk_font.hpp"
+#include "graphics/pipeline/spk_pipeline.hpp"
+#include <fstream>
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "external_libraries/stb_truetype.h"
 
 namespace spk
 {
-	std::vector<uint8_t> getCodepointsInFont(const stbtt_fontinfo* p_fontInfo)
+	std::vector<std::pair<int, int>> UnicodeBlocks = {
+	{0x0000, 0x007F}, // Basic Latin
+	{0x0080, 0x00FF}, // Latin-1 Supplement
+	// Add other ranges as needed
+};
+
+void Font::Atlas::loadAllRenderableGlyphs()
+{
+	std::unordered_set<int> renderableGlyphs;
+
+	for (const auto& block : UnicodeBlocks)
 	{
-		std::vector<uint8_t> result;
-
-		uint8_t i = 32;
-		while (i < 0xFF)
+		for (int codepoint = block.first; codepoint <= block.second; ++codepoint)
 		{
-			if (stbtt_FindGlyphIndex(p_fontInfo, i) != 0)
-				result.push_back(i);
+			if (renderableGlyphs.find(codepoint) == renderableGlyphs.end())
+			{
+				int glyphIndex = stbtt_FindGlyphIndex(&_fontInfo, codepoint);
+				if (glyphIndex != 0)
+				{
+					std::wcout << "Setting up char [" << codepoint << "]" << std::endl;
+					operator[](static_cast<wchar_t>(codepoint));
+					renderableGlyphs.insert(codepoint);
+				}
+			}
+		}
+	}
+}
 
-			i++;
+	spk::Vector2UInt Font::Atlas::_computeGlyphPosition(const spk::Vector2UInt& p_glyphSize)
+	{
+		if ((_nextGlyphAnchor.x + p_glyphSize.x) >= (_quadrantAnchor.x + _quadrantSize.x))
+		{
+			_nextGlyphAnchor = _nextLineAnchor;
 		}
 
-		return result;
-	}
+		spk::Vector2UInt result = _nextGlyphAnchor;
 
-	void Font::Configuration::_computeGlyphInformation(const std::vector<uint8_t> &p_fontData)
-	{
-		stbtt_fontinfo fontInfo;
-		stbtt_InitFont(&fontInfo, p_fontData.data(), 0);
+		_nextGlyphAnchor.x += p_glyphSize.x;
 
-		_validGlyphs = getCodepointsInFont(&fontInfo);
-	}
-
-	/**
-	 * @brief Executes the packing operation for the font.
-	 *
-	 * Uses stbtt to pack the glyphs of a font into an atlas.
-	 * 
-	 * @param p_fontData The font data vector.
-	 * @param p_fontConfiguration The font configuration.
-	 * @param p_key The key which defines the font characteristics.
-	 * @param atlasData The resulting atlas data after packing.
-	 * @param atlasSize The dimensions of the atlas.
-	 * @param charInformation The packed character information after packing.
-	 * @return True if the packing operation is successful, false otherwise.
-	 */
-	bool _executePackingOperation(
-		const std::vector<uint8_t> &p_fontData,
-		const Font::Configuration &p_fontConfiguration,
-		const Font::Key &p_key,
-		std::vector<uint8_t>& atlasData,
-		const spk::Vector2Int& atlasSize,
-		stbtt_packedchar *charInformation)
-	{
-		atlasData.resize(atlasSize.x * atlasSize.y);
-
-		stbtt_pack_context context;
-		int errorCode;
-		
-		errorCode = stbtt_PackBegin(&context, atlasData.data(), atlasSize.x, atlasSize.y, 0, static_cast<int>(p_key.outlineSize) * 2 + 1, nullptr);
-		if (errorCode == 0)
-			return (errorCode != 0);
-		
-		stbtt_PackSetOversampling(&context, 1, 1);
-		errorCode = stbtt_PackFontRange(&context, p_fontData.data(), 0, static_cast<float>(p_key.fontSize), L' ', p_fontConfiguration.validGlyphs().back() + 1, charInformation);
-		stbtt_PackEnd(&context);
-
-		return (errorCode != 0);
-	}
-
-	/**
-	 * @brief Computes glyph data for a character.
-	 *
-	 * Using the packed character information, this function extracts the 
-	 * UVs and positions for the character's glyph, considering an outline offset.
-	 * 
-	 * @param p_char The character for which the glyph data is needed.
-	 * @param p_data The resulting glyph data.
-	 * @param p_charInformation The packed character information.
-	 * @param p_atlasSize The dimensions of the atlas.
-	 * @param p_outlineOffset The offset for the outline.
-	 * @param p_outlineSize The desired size of the outline
-	 */
-	void _computeCharGlyphData(const wchar_t& p_char, spk::Font::Atlas::GlyphData &p_data, const stbtt_packedchar *p_charInformation, const spk::Vector2Int& p_atlasSize, const spk::Vector2& p_outlineOffset, const int& p_outlineSize)
-	{
-		stbtt_aligned_quad quad;
-		spk::Vector2 quadStep;
-
-		stbtt_GetPackedQuad(p_charInformation, p_atlasSize.x, p_atlasSize.y, p_char - L' ', &quadStep.x, &quadStep.y, &quad, 1);
-
-		p_data.uvs[0] = {quad.s0 + p_outlineOffset.x * -1, quad.t0 + p_outlineOffset.y * -1};
-		p_data.uvs[1] = {quad.s0 + p_outlineOffset.x * -1, quad.t1 + p_outlineOffset.y * +1};
-		p_data.uvs[2] = {quad.s1 + p_outlineOffset.x * +1, quad.t0 + p_outlineOffset.y * -1};
-		p_data.uvs[3] = {quad.s1 + p_outlineOffset.x * +1, quad.t1 + p_outlineOffset.y * +1};
-
-		p_data.position[0] = spk::Vector2Int(static_cast<int>(quad.x0 - p_outlineSize), static_cast<int>(quad.y0 - p_outlineSize));
-		p_data.position[1] = spk::Vector2Int(static_cast<int>(quad.x0 - p_outlineSize), static_cast<int>(quad.y1 + p_outlineSize));
-		p_data.position[2] = spk::Vector2Int(static_cast<int>(quad.x1 + p_outlineSize), static_cast<int>(quad.y0 - p_outlineSize));
-		p_data.position[3] = spk::Vector2Int(static_cast<int>(quad.x1 + p_outlineSize), static_cast<int>(quad.y1 + p_outlineSize));
-
-		p_data.step = quadStep + spk::Vector2Int((p_char == L' ' ? 0 : p_outlineSize * 2), 0);
-
-		p_data.size = p_data.position[3] - p_data.position[0]; 
-	}
-
-	Font::Atlas::BuildData Font::Atlas::_computeBuildData(const std::vector<uint8_t> &p_fontData, const Configuration &p_fontConfiguration, const Key &p_key)
-	{
-		BuildData buildData;
-
-		stbtt_packedchar *charInformation = new stbtt_packedchar[0xFFFF];
-
-		while (_executePackingOperation(p_fontData,p_fontConfiguration,p_key, buildData.fontBuffer, buildData.size, charInformation) == false)
+		if (_nextLineAnchor.y < result.y + p_glyphSize.y)
 		{
-			buildData.size *= spk::Vector2Int(2, 2);
+			_nextLineAnchor.y = result.y + p_glyphSize.y;
 		}
 
-		spk::Vector2 outlineOffset = (spk::Vector2(1.0f, 1.0f) / static_cast<spk::Vector2>(buildData.size)) * spk::Vector2(static_cast<float>(p_key.outlineSize), static_cast<float>(p_key.outlineSize));
-
-		for (size_t i = 0; i < p_fontConfiguration.validGlyphs().size(); i++)
+		switch (_currentQuadrant)
 		{
-			_computeCharGlyphData( p_fontConfiguration.validGlyphs()[i], _glyphDatas[p_fontConfiguration.validGlyphs()[i]], charInformation, buildData.size, outlineOffset, static_cast<int>(p_key.outlineSize));
+			case Quadrant::TopLeft:
+			{				
+				if (_nextLineAnchor.y >= _quadrantAnchor.y + _quadrantSize.y)
+				{
+					_currentQuadrant = Quadrant::TopRight;
+					_resizeData(_size * 2);
+					_quadrantAnchor = spk::Vector2UInt(_size.x / 2, 0);
+					result = _nextGlyphAnchor = _nextLineAnchor = _quadrantAnchor;
+					_nextGlyphAnchor.x += p_glyphSize.x;
+					if (_nextLineAnchor.y < result.y + p_glyphSize.y)
+					{
+						_nextLineAnchor.y = result.y + p_glyphSize.y;
+					}
+				}
+
+				break;
+			}
+			case Quadrant::TopRight:
+			{
+				if (_nextLineAnchor.y >= _quadrantAnchor.y + _quadrantSize.y)
+				{
+					_currentQuadrant = Quadrant::DownLeft;
+					_quadrantAnchor = spk::Vector2UInt(0, _size.y / 2);
+					result = _nextGlyphAnchor = _nextLineAnchor = _quadrantAnchor;
+					_nextGlyphAnchor.x += p_glyphSize.x;
+					if (_nextLineAnchor.y < result.y + p_glyphSize.y)
+					{
+						_nextLineAnchor.y = result.y + p_glyphSize.y;
+					}
+				}
+				break;
+			}
+			case Quadrant::DownLeft:
+			{
+				if (_nextLineAnchor.y >= _quadrantAnchor.y + _quadrantSize.y)
+				{
+					_currentQuadrant = Quadrant::DownRight;
+					_quadrantAnchor = spk::Vector2UInt(_size.x / 2, _size.y / 2);
+					result = _nextGlyphAnchor = _nextLineAnchor = _quadrantAnchor;
+					_nextGlyphAnchor.x += p_glyphSize.x;
+					if (_nextLineAnchor.y < result.y + p_glyphSize.y)
+					{
+						_nextLineAnchor.y = result.y + p_glyphSize.y;
+					}
+				}
+				break;
+			}
+			case Quadrant::DownRight:
+			{	
+				if (_nextLineAnchor.y >= _quadrantAnchor.y + _quadrantSize.y)
+				{
+					_currentQuadrant = Quadrant::TopRight;
+					_resizeData(_size * 2);
+					_quadrantAnchor = spk::Vector2UInt(_size.x / 2, 0);
+					result = _nextGlyphAnchor = _nextLineAnchor = _quadrantAnchor;
+					_nextGlyphAnchor.x += p_glyphSize.x;
+					if (_nextLineAnchor.y < result.y + p_glyphSize.y)
+					{
+						_nextLineAnchor.y = result.y + p_glyphSize.y;
+					}
+				}
+
+				break;
+			}
 		}
 
-		delete charInformation;
+		return (result);
+	}
 
-		return (buildData);
+
+	void Font::Atlas::_loadGlyph(const wchar_t& p_char)
+	{
+		Glyph glyph;
+
+		float scale = stbtt_ScaleForMappingEmToPixels(&_fontInfo, static_cast<float>(_textSize));
+
+		int width, height, xOffset, yOffset;
+		uint8_t* glyphBitmap = stbtt_GetCodepointSDF(&_fontInfo, scale, p_char, static_cast<int>(_outlineSize), 255, 256.0f / static_cast<float>(_outlineSize), &width, &height, &xOffset, &yOffset);
+
+		if (glyphBitmap == nullptr)
+		{
+			_glyphs[p_char] = _unknownGlyph;
+			return ;
+		}
+
+		int advance;
+		stbtt_GetCodepointHMetrics(&_fontInfo, p_char, &advance, NULL);
+
+		glyph.size = spk::Vector2UInt(width, height);
+
+		spk::Vector2Int glyphPosition = _computeGlyphPosition(glyph.size);
+
+		_applyGlyphPixel(glyphBitmap, glyphPosition, glyph.size);
+
+		glyph.positions[0] = spk::Vector2Int(0, yOffset);
+		glyph.positions[1] = spk::Vector2Int(0, yOffset + height);
+		glyph.positions[2] = spk::Vector2Int(width, yOffset);
+		glyph.positions[3] = spk::Vector2Int(width, yOffset + height);
+
+		glyph.UVs[0] = spk::Vector2(static_cast<float>(glyphPosition.x) / _size.x, static_cast<float>(glyphPosition.y) / _size.y);
+		glyph.UVs[1] = spk::Vector2(static_cast<float>(glyphPosition.x) / _size.x, static_cast<float>(glyphPosition.y + glyph.size.y) / _size.y);
+		glyph.UVs[2] = spk::Vector2(static_cast<float>(glyphPosition.x + glyph.size.x) / _size.x, static_cast<float>(glyphPosition.y) / _size.y);
+		glyph.UVs[3] = spk::Vector2(static_cast<float>(glyphPosition.x + glyph.size.x) / _size.x, static_cast<float>(glyphPosition.y + glyph.size.y) / _size.y);
+
+		glyph.step = spk::Vector2(std::ceil(advance * scale) + _outlineSize * 2, 0);
+		glyph.size = glyph.positions[3] - glyph.positions[0];
+
+		_glyphs[p_char] = glyph;
+
+		stbtt_FreeBitmap(glyphBitmap, nullptr);
+
+		_needUpload = true;
+		spk::Pipeline::Texture::resetLastActiveTexture();
+	}
+	
+	void Font::_loadFileData(const std::filesystem::path& p_path)
+	{
+		_fontData = readFileContentAsBytes(p_path);
+		stbtt_InitFont(&_fontInfo, _fontData.data(), 0);
 	}
 }

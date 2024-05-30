@@ -28,7 +28,7 @@ namespace spk::WidgetComponent
 		void renderPass()
 		{
 			vec4 textureColor = texture(_texture, fragmentUVs).rgba;
-
+			
 			if (textureColor.a == 0)	
 				discard;
 

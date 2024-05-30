@@ -37,7 +37,7 @@
 #include "graphics/spk_texture_atlas.hpp"
 
 #include "graphics/texture/font/spk_font.hpp"
-#include "graphics/spk_font_manager.hpp"
+#include "graphics/spk_font_atlas.hpp"
 
 #include "game_engine/component/spk_camera_component.hpp"
 #include "game_engine/component/spk_mesh_collider_2D_component.hpp"
@@ -59,18 +59,18 @@
 #include "game_engine/spk_game_engine.hpp"
 
 #include "widget/components/spk_nine_sliced.hpp"
-#include "widget/components/spk_text_label.hpp"
 #include "widget/components/spk_colored_box.hpp"
+#include "widget/components/spk_font_renderer.hpp"
 #include "widget/components/spk_texture_renderer.hpp"
 
 #include "widget/spk_game_engine_manager.hpp"
 #include "widget/spk_widget.hpp"
-#include "widget/spk_button.hpp"
 #include "widget/spk_frame.hpp"
-#include "widget/spk_text_label.hpp"
-#include "widget/spk_text_entry.hpp"
 #include "widget/spk_image_label.hpp"
 #include "widget/spk_panel.hpp"
+#include "widget/spk_button.hpp"
+#include "widget/spk_text_entry.hpp"
+#include "widget/spk_text_label.hpp"
 
 #include "network/spk_message.hpp"
 #include "network/spk_server.hpp"

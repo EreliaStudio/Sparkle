@@ -10,38 +10,38 @@
 namespace spk
 {
 	/**
-	 * @class FontManager
+	 * @class FontAtlas
 	 * @brief Manages the loading and accessing of font resources.
 	 *
-	 * FontManager is designed to handle the creation and storage of font resources, ensuring that
+	 * FontAtlas is designed to handle the creation and storage of font resources, ensuring that
 	 * fonts are loaded only once and reused throughout the application. It uses a hash map to store
 	 * font instances associated with their names. The class provides functionality to load new fonts
 	 * from files and retrieve existing font instances by name.
 	 *
 	 * This class is implemented as a part of the Singleton design pattern, ensuring that there is a single
-	 * instance of FontManager throughout the application.
+	 * instance of FontAtlas throughout the application.
 	 *
 	 * Usage example:
 	 * @code
-	 * spk::Font* myFont = FontManager::instance().loadFont("OpenSans", "path/to/OpenSans.ttf");
-	 * spk::Font* secondPoint = FontManager::instance().font("OpenSans");
+	 * spk::Font* myFont = FontAtlas::instance().loadFont("OpenSans", "path/to/OpenSans.ttf");
+	 * spk::Font* secondPoint = FontAtlas::instance().font("OpenSans");
 	 * @endcode
 	 */
-	class FontManager
+	class FontAtlas
 	{
 	private:
 		std::unordered_map<std::string, Font*> _loadedFonts; // Stores loaded font resources, mapped by their names.
 
 	public:
 		/**
-		 * Constructor for the FontManager class. Initializes an empty font storage.
+		 * Constructor for the FontAtlas class. Initializes an empty font storage.
 		 */
-		FontManager();
+		FontAtlas();
 
 		/**
-		 * Destructor for the FontManager class. Ensures proper cleanup of all loaded fonts.
+		 * Destructor for the FontAtlas class. Ensures proper cleanup of all loaded fonts.
 		 */
-		~FontManager();
+		~FontAtlas();
 
 		/**
 		 * Loads a font from a specified file path and registers it under a given name.

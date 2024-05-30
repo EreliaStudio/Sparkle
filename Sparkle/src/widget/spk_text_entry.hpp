@@ -3,7 +3,7 @@
 #include "math/spk_vector2.hpp"
 #include "spk_basic_functions.hpp"
 #include "widget/components/spk_nine_sliced.hpp"
-#include "widget/components/spk_text_label.hpp"
+#include "widget/components/spk_font_renderer.hpp"
 #include "widget/components/spk_colored_box.hpp"
 #include "widget/spk_widget.hpp"
 #include "input/spk_input.hpp"
@@ -36,7 +36,7 @@ namespace spk
 	private:
 		spk::WidgetComponent::NineSlicedBox _box; ///< Background box, resizable according to text length.
 		spk::WidgetComponent::ColoredBox _cursorBox; ///< Cursor representation within the text box.
-		spk::WidgetComponent::TextLabel _label; ///< Label for displaying text content.
+		spk::WidgetComponent::FontRenderer _label; ///< Label for displaying text content.
 
 		std::vector<spk::Input> _inputs; ///< Collection of input handlers for managing keyboard input.
 
@@ -90,7 +90,7 @@ namespace spk
 		 * Access the text label component of the text entry.
 		 * @return Reference to the internal TextLabel component.
 		 */
-		spk::WidgetComponent::TextLabel& label();
+		spk::WidgetComponent::FontRenderer& label();
 
 		/**
 		 * Access the cursor box component of the text entry.

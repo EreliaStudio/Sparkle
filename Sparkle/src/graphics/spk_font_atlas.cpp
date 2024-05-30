@@ -1,13 +1,13 @@
-#include "graphics/spk_font_manager.hpp"
+#include "graphics/spk_font_atlas.hpp"
 
 namespace spk
 {
-	FontManager::FontManager()
+	FontAtlas::FontAtlas()
 	{
 
 	}
 
-	FontManager::~FontManager()
+	FontAtlas::~FontAtlas()
 	{
 		for (auto& [key, element] : _loadedFonts)
 		{
@@ -15,17 +15,17 @@ namespace spk
 		}
 	}
 
-	Font* FontManager::loadFont(const std::string& p_textureName, const std::filesystem::path& p_path)
+	Font* FontAtlas::loadFont(const std::string& p_textureName, const std::filesystem::path& p_path)
 	{
 		if (_loadedFonts.contains(p_textureName) == true)
-			throwException("Texture [" + p_textureName + "] is already loaded");
+			throwException("Font [" + p_textureName + "] is already loaded");
 
 		Font* result = new Font(p_path);
 		_loadedFonts[p_textureName] = result;
 		return (result);
 	}
 
-	Font* FontManager::font(const std::string& p_textureName) const
+	Font* FontAtlas::font(const std::string& p_textureName) const
 	{
 		if (_loadedFonts.contains(p_textureName) == false)
 			return (nullptr);

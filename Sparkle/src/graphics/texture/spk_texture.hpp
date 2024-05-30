@@ -34,7 +34,7 @@ namespace spk
 	 * @endcode
 	 *
 	 * @note Before a texture can be used in rendering, it must be uploaded to GPU memory using the `uploadToGPU` method.
-	 * @note If data have been pushed to the GPU, it will be automaticaly release uppon destructor call or uppon re-upload to GPU.
+	 * @note If data have been pushed to the GPU, it will be automatically released upon destructor call or upon re-upload to GPU.
 	 *
 	 * @see Pipeline, Vector2UInt
 	 */
@@ -52,6 +52,7 @@ namespace spk
 		 * - BGR: Reverse of RGB, often used in certain systems or image formats.
 		 * - BGRA: Reverse of RGBA, including an alpha channel for transparency.
 		 * - GreyLevel: Single channel format for grayscale images.
+		 * - DualChannel: Two channel format often used for specific purposes.
 		 * - Error: Represents an error state or undefined pixel format.
 		 */
 		enum class Format
@@ -111,14 +112,28 @@ namespace spk
 			Disable,
 			Enable
 		};
-		
+
 	private:
-		bool _loaded;
-		GLuint _textureID;
+		bool _loaded; ///< Indicates whether the texture is loaded into GPU memory.
+		GLuint _textureID; ///< The ID of the texture in the GPU.
 
 		friend class Pipeline;
 
-		void _bind(int p_textureIndex = 0) const;
+	protected:
+		/**
+		 * @brief Binds the texture for use in rendering.
+		 *
+		 * This method binds the texture to a specified texture unit, making it active for subsequent rendering operations.
+		 *
+		 * @param p_textureIndex The texture unit index to bind the texture to (default is 0).
+		 */
+		virtual void _bind(int p_textureIndex = 0) const;
+
+		/**
+		 * @brief Unbinds the texture.
+		 *
+		 * This method unbinds the texture, resetting the active texture unit to zero.
+		 */
 		void _unbind() const;
 
 	public:
@@ -155,7 +170,7 @@ namespace spk
 		/**
 		 * @brief Copy constructor (deleted).
 		 * 
-		 * Prevents the creation of a Texture instance by copying from another Texture instance. This deletion ensures that each Texture object maintains unique ownership of its GPU resources. Copying Texture objects could lead to issues like double deletion of resources, hence it is explicitly deleted to avoid such problems.
+		 * Prevents the creation of a Texture instance by copying from another Texture instance. This deletion ensures that each Texture object maintains unique ownership of its GPU resources.
 		 * 
 		 * @param p_other The other Texture instance to copy from.
 		 */
@@ -164,7 +179,7 @@ namespace spk
 		/**
 		 * @brief Copy assignment operator (deleted).
 		 * 
-		 * Disables the assignment of one Texture object to another through copying. This operation is deleted to prevent the inadvertent copying of GPU resource ownership, which could lead to resource management issues such as double frees. Texture objects should be uniquely owned and managed to ensure resource integrity.
+		 * Disables the assignment of one Texture object to another through copying. This operation is deleted to prevent the inadvertent copying of GPU resource ownership.
 		 * 
 		 * @param p_other The other Texture instance to assign from.
 		 * @return A reference to this Texture instance after deletion.
@@ -174,7 +189,7 @@ namespace spk
 		/**
 		 * @brief Move constructor.
 		 * 
-		 * Transfers the ownership of the GPU resources from another Texture instance to this instance. This constructor is used to efficiently move a Texture object, including its GPU resources, without the overhead of copying the texture data. It leaves the moved-from object in a valid but unspecified state.
+		 * Transfers the ownership of the GPU resources from another Texture instance to this instance. This constructor is used to efficiently move a Texture object, including its GPU resources, without the overhead of copying the texture data.
 		 * 
 		 * @param p_other The other Texture instance to move from.
 		 */
@@ -183,7 +198,7 @@ namespace spk
 		/**
 		 * @brief Move assignment operator.
 		 * 
-		 * Enables the assignment of a Texture object from another Texture object using move semantics. This operation transfers the GPU resources ownership from one Texture to another, effectively transferring the texture data and leaving the moved-from object in a valid but unspecified state. It ensures efficient resource management and avoids the duplication of GPU resources.
+		 * Enables the assignment of a Texture object from another Texture object using move semantics. This operation transfers the GPU resources ownership from one Texture to another.
 		 * 
 		 * @param p_other The other Texture instance to move from.
 		 * @return A reference to this Texture instance after acquiring the resources.
@@ -214,9 +229,9 @@ namespace spk
 		void releaseGPUMemory();
 
 		/**
-		 * @brief Return the ID provided by sparkle when creating/uploading the texture to the GPU
-		 * @return The ID of the texture allocated on the GPU
-		*/
+		 * @brief Returns the ID of the texture in GPU memory.
+		 * @return The texture ID.
+		 */
 		const GLint ID() const;
 	};
 }

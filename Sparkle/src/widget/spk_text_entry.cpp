@@ -23,15 +23,52 @@ namespace spk
 			_isTextEdited = false;
 		}
 		_label.render();
-		if (_isSelected == true)
+		if (_isSelected == true && _text != "")
+		{
 			_cursorBox.render();
+		}
 	}
 
 	void TextEntry::_updateCursorBox()
 	{
-		spk::Vector2Int previousTextSize = _label.font()->computeStringSize(_label.text().substr(0, _currentCursorPosition - _openingCursorPosition), _label.textSize(), _label.outlineSize(), _label.outlineStyle());
+		spk::Vector2Int previousTextSize = _label.font()->computeStringSize(_label.text().substr(0, _currentCursorPosition - _openingCursorPosition), _label.textSize(), _label.outlineSize());
+		spk::Vector2Int fullTextSize = _label.font()->computeStringSize(_label.text(), _label.textSize(), _label.outlineSize());
 
-		_cursorBox.setGeometry(anchor() + spk::Vector2Int(previousTextSize.x, 0) + _box.cornerSize() * spk::Vector2Int(1, 2), spk::Vector2Int(5, size().y - _box.cornerSize().y * 4));
+		spk::Vector2Int cursorSize = spk::Vector2Int(5, _label.textSize());
+		spk::Vector2Int textLabelAnchor = 0;
+
+		switch (_label.horizontalAlignment())
+		{
+		case spk::HorizontalAlignment::Centered:
+		{
+			textLabelAnchor.x = (size().x - fullTextSize.x) / 2;
+			break;
+		}
+
+		case spk::HorizontalAlignment::Right:
+		default:
+		{
+			textLabelAnchor.x = size().x - fullTextSize.x;
+			break;
+		}
+		}
+
+		switch (_label.verticalAlignment())
+		{
+		case spk::VerticalAlignment::Centered:
+		{
+			textLabelAnchor.y = (size().y - fullTextSize.y) / 2;
+			break;
+		}
+
+		case spk::VerticalAlignment::Down:
+		default:
+		{
+			textLabelAnchor.y = size().y - fullTextSize.y;
+			break;
+		}
+		}
+		_cursorBox.setGeometry(anchor() + spk::Vector2Int(previousTextSize.x, 0) + textLabelAnchor, cursorSize);
 	}
 
 	void TextEntry::_updateSelectionStatus()
@@ -64,7 +101,7 @@ namespace spk
 			while (true)
 			{
 				std::string stringToTest = _text.substr(_openingCursorPosition, _currentCursorPosition - _openingCursorPosition + 1);
-				spk::Vector2UInt textSize = _label.font()->computeStringSize(stringToTest, _label.textSize(), _label.outlineSize(), _label.outlineStyle());
+				spk::Vector2UInt textSize = _label.font()->computeStringSize(stringToTest, _label.textSize(), _label.outlineSize());
 
 				if (textSize.x > (size().x - (_cursorBox.size().x * 2)))
 				{
@@ -86,7 +123,7 @@ namespace spk
 			{
 				
 				std::string stringToTest = _text.substr(_openingCursorPosition, _closingCursorPosition - _openingCursorPosition);
-				spk::Vector2UInt textSize = _label.font()->computeStringSize(stringToTest, _label.textSize(), _label.outlineSize(), _label.outlineStyle());
+				spk::Vector2UInt textSize = _label.font()->computeStringSize(stringToTest, _label.textSize(), _label.outlineSize());
 
 				if (textSize.x > (size().x - (_cursorBox.size().x * 2)))
 				{	
@@ -225,7 +262,7 @@ namespace spk
 		_isTextEdited = true;
 	}
 
-	spk::WidgetComponent::TextLabel& TextEntry::label()
+	spk::WidgetComponent::FontRenderer& TextEntry::label()
 	{
 		return (_label);
 	}

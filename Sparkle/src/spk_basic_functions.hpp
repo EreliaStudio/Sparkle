@@ -54,6 +54,8 @@ namespace spk
 	}
 
 	std::string readFileContent(const std::filesystem::path& p_filePath);
+	std::vector<uint8_t> readFileContentAsBytes(const std::filesystem::path& p_path);
+
 	float degreeToRadian(float p_degrees);
 	float radianToDegree(float p_radians);
 

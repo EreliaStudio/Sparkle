@@ -4,7 +4,7 @@
 #include "math/spk_vector2.hpp"
 #include "spk_basic_functions.hpp"
 #include "widget/components/spk_nine_sliced.hpp"
-#include "widget/components/spk_text_label.hpp"
+#include "widget/components/spk_font_renderer.hpp"
 #include "widget/spk_widget.hpp"
 
 namespace spk
@@ -37,7 +37,7 @@ namespace spk
 	{
 	private:
 		spk::WidgetComponent::NineSlicedBox _box; ///< Background box that can be styled and resized.
-		spk::WidgetComponent::TextLabel _label;   ///< Text component used for displaying the label's content.
+		spk::WidgetComponent::FontRenderer _label;   ///< Text component used for displaying the label's content.
 
 		/**
 		 * Handles geometry changes, updating the layout of the text and background to fit the new widget size.
@@ -67,7 +67,7 @@ namespace spk
 		 * Provides non-const access to the internal TextLabel component.
 		 * @return Reference to the non-const TextLabel used by this widget for displaying text.
 		 */
-		spk::WidgetComponent::TextLabel& label();
+		spk::WidgetComponent::FontRenderer& label();
 
 		/**
 		 * Provides non-const access to the internal NineSlicedBox component.

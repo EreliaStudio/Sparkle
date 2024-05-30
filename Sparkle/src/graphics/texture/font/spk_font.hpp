@@ -6,453 +6,246 @@
 #include <vector>
 
 #include "graphics/texture/spk_texture.hpp"
-#include "miscellaneous/spk_position_alignment.hpp"
+#include "external_libraries/stb_truetype.h"
 
 namespace spk
 {
 	/**
 	 * @class Font
-	 * @brief Handles font rendering by managing glyph textures and dynamic font atlas creation.
+	 * @brief Manages font loading, glyph handling, and text rendering.
 	 *
-	 * The Font class is designed for flexible and efficient text rendering in graphical applications.
-	 * It supports the generation of font atlases from font files, allowing for customized text rendering
-	 * with support for different font sizes, outline styles, and alignment options. This class
-	 * facilitates the creation of texture atlases for glyphs, optimizing text rendering by batching draw
-	 * calls.
-	 *
-	 * Font atlases are dynamically generated based on the specific requirements of the text to be rendered,
-	 * such as font size and outline style. The class provides mechanisms to access glyph data for individual
-	 * characters, including their texture coordinates and positioning information.
-	 *
+	 * The Font class provides functionalities to load font data from files, manage glyphs, and render text. It supports text size and outline size customization, glyph rescaling, and texture atlas creation.
+	 * 
 	 * Usage example:
 	 * @code
-	 * spk::Font myFont("path/to/fontfile.ttf");
-	 * spk::Font::Atlas atlas = myFont.atlas(16, 1); // Get or create a font atlas for font size 16 with 1px outline
-	 * spk::Font::Atlas::GlyphData glyphE = atlas.glyph('E');
+	 * spk::Font myFont("path/to/font.ttf");
+	 * spk::Vector2Int charSize = myFont.computeCharSize(L'A', 16, 1);
+	 * spk::Font::Atlas& atlas = myFont.atlas(16, 1);
+	 * const spk::Font::Glyph& glyph = atlas[L'A'];
 	 * @endcode
 	 *
-	 * @note The class assumes the font file provided at construction exists and is valid. Atlases created are managed internally and should be accessed via the provided methods rather than directly to ensure thread safety and resource management.
-	 *
-	 * @see Atlas, Configuration, Key
+	 * @note Ensure the file path provided to the constructor points to a valid font file. The class relies on stb_truetype for font handling.
 	 */
 	class Font
 	{
 	public:
-		static const uint8_t CHAR_PIXEL = 0xFF;  //!< The numerical representation of a char pixel inside the texture raw data.
-		static const uint8_t EMPTY_PIXEL = 0x00; //!< The numerical representation of an empty pixel inside the texture raw data.
-
 		/**
-		 * @enum OutlineStyle
-		 * @brief Defines the style of outlines applied to glyphs within a font atlas.
+		 * @struct Glyph
+		 * @brief Represents a single glyph with its properties.
 		 *
-		 * This enumeration specifies the various outline styles that can be applied to glyphs when generating a font atlas. Each style affects the visual appearance of text rendered using the font atlas.
-		 *
-		 * - Pixelized: Applies a pixel-art style outline, giving glyphs a blocky appearance.
-		 * - SharpEdge: Applies a sharp, clear outline around glyphs for a defined look.
-		 * - Standard: Applies a standard outline, balancing clarity and smoothness.
-		 * - Manhattan: Uses the Manhattan distance metric for a unique outline effect.
+		 * This structure holds the positions, UVs, step size, and dimensions of a glyph. It also provides a method to rescale glyph dimensions.
 		 */
-		enum class OutlineStyle
+		struct Glyph
 		{
-			Pixelized,
-			SharpEdge,
-			Standard,
-			Manhattan,
-			None
+			spk::Vector2Int positions[4]; ///< The positions of the glyph's corners.
+			spk::Vector2 UVs[4]; ///< The UV coordinates of the glyph's texture.
+			spk::Vector2Int step; ///< The step size for the glyph.
+			spk::Vector2Int size; ///< The dimensions of the glyph.
+			static inline std::vector<unsigned int> indexesOrder = {0, 1, 2, 2, 1, 3}; ///< The order of vertex indexes for rendering.
+
+			/**
+			 * @brief Rescales the glyph based on the provided scale ratio.
+			 * @param p_scaleRatio The scale ratio to apply to the glyph.
+			 */
+			void rescale(const spk::Vector2& p_scaleRatio);
 		};
 
-	public:
 		/**
-		 * @class Configuration
-		 * @brief Holds configuration data for font loading and glyph validation.
+		 * @struct Size
+		 * @brief Represents the size of text and its outline.
 		 *
-		 * This nested class within Font is responsible for storing configuration details related to a specific
-		 * font file. It includes the path to the font file and a list of valid glyphs that can be rendered.
-		 * The Configuration class plays a crucial role in pre-processing font data, ensuring that only supported
-		 * glyphs are considered when generating font atlases.
-		 *
-		 * The constructor initializes the configuration with the file path and font data, automatically computing
-		 * glyph information to filter out unsupported characters based on the font's capabilities.
-		 *
-		 * Usage example: Not directly instantiated by users, used internally by Font.
-		 *
-		 * @see Font, Atlas
+		 * This structure holds the text size and outline size, providing multiple constructors for different initializations.
 		 */
-		struct Configuration
+		struct Size
 		{
-		private:
-			std::string _fileName;
-			std::vector<uint8_t> _validGlyphs;
+			size_t text; ///< The size of the text.
+			size_t outline; ///< The size of the outline.
 
-			void _computeGlyphInformation(const std::vector<uint8_t>& p_fontData);
-
-		public:
 			/**
 			 * @brief Default constructor.
-			 *
-			 * This constructor initializes the configuration with an empty path and vector.
+			 * 
+			 * Initializes the text size and outline size to 0.
 			 */
-			Configuration();
+			Size() :
+				text(0),
+				outline(0)
+			{
+
+			}
 
 			/**
-			 * @brief Constructs a font configuration with the specified font file and font data.
-			 *
-			 * This constructor initializes the configuration with a path to the font file and a vector containing the font data. It also computes glyph information to filter out unsupported characters.
-			 *
-			 * @param p_fileName Path to the font file.
-			 * @param p_fontData Vector containing the font data.
+			 * @brief Constructor with text size.
+			 * 
+			 * Initializes the text size to the specified value and the outline size to 0.
+			 * 
+			 * @param p_text The size of the text.
 			 */
-			Configuration(const std::string& p_fileName, const std::vector<uint8_t>& p_fontData);
+			Size(size_t p_text) :
+				text(p_text),
+				outline(0)
+			{
+
+			}
 
 			/**
-			 * @brief Gets the file name of the font.
-			 *
-			 * @return The file name as a string.
+			 * @brief Constructor with text and outline size.
+			 * 
+			 * Initializes the text size and outline size to the specified values.
+			 * 
+			 * @param p_text The size of the text.
+			 * @param p_outline The size of the outline.
 			 */
-			const std::string& fileName() const;
+			Size(size_t p_text, size_t p_outline) :
+				text(p_text),
+				outline(p_outline)
+			{
 
-			/**
-			 * @brief Gets the list of valid glyphs.
-			 *
-			 * @return A vector of valid glyph identifiers.
-			 */
-			const std::vector<uint8_t>& validGlyphs() const;
-		};
-
-	public:
-		/**
-		 * @class Key
-		 * @brief Represents a unique identifier for font atlas configurations.
-		 *
-		 * The Key class defines a set of parameters that uniquely identify a font atlas configuration,
-		 * including font size, outline size, and outline style. This enables the Font class to manage
-		 * multiple atlases for different text rendering settings efficiently. The Key class also includes
-		 * functionality to compute circle indices for pixelized and sharp edge outline styles, facilitating
-		 * advanced outline rendering techniques.
-		 *
-		 * Operators and methods within this class ensure that each Key is uniquely comparable, allowing
-		 * for their use as keys in a map for atlas caching and retrieval.
-		 *
-		 * Usage example: Not directly instantiated by users, used internally by Font to generate and cache
-		 * Atlases.
-		 *
-		 * @see Font, Atlas, OutlineStyle
-		 */
-		struct Key
-		{
-
-			size_t fontSize;				///< The size of the font in points. This affects the overall scale of the glyphs within the atlas.
-			OutlineStyle outlineStyle;	  ///< The outline style needed for a specific atlas.
-			size_t outlineSize;			 ///< The thickness of the outline around the glyphs. A larger value creates a thicker outline.
-
-			/**
-			 * @brief Constructs a Key with specified font size, outline size, and outline style.
-			 *
-			 * Initializes a Key object with the provided parameters, setting the basis for a font atlas configuration. This includes the size of the font, the thickness of the outline, and the style of the outline. Additional metrics such as inverse outline size and circle indexes may be computed as needed based on these parameters.
-			 *
-			 * @param p_fontSize The font size for the atlas configuration, affecting glyph scale.
-			 * @param p_outlineSize The thickness of the outline for glyphs in the atlas.
-			 * @param p_outlineStyle The style of the outline applied to glyphs. Defaults to Standard if not specified.
-			 */
-			Key(const size_t& p_fontSize, const size_t& p_outlineSize, const OutlineStyle& p_outlineStyle = OutlineStyle::Standard);
-
-			/**
-			 * @brief Comparison operator for Key objects.
-			 *
-			 * Defines a strict weak ordering of Key objects, enabling their use as keys in sorted containers such as std::map. This method compares Key objects based on their font size, outline size, and outline style in that order, ensuring that each Key is uniquely identifiable.
-			 *
-			 * @param p_other Another Key object to compare against.
-			 * @return True if this Key is considered less than `p_other`, false otherwise.
-			 */
-			bool operator<(const Key& p_other) const;
+			}
 		};
 
 		/**
 		 * @class Atlas
-		 * @brief Manages a texture atlas for a specific font configuration, including glyph data and texture.
+		 * @brief Manages a texture atlas for font rendering.
 		 *
-		 * The Atlas class is a crucial component of the Font system, handling the creation and storage of a
-		 * texture atlas for a given font configuration. It includes glyph data for individual characters and
-		 * the texture itself, allowing for efficient text rendering.
-		 * The class provides methods to access glyph data, including texture coordinates and positioning,
-		 * tailored to the rendering requirements specified by a Font::Key.
-		 *
-		 * Atlases are generated dynamically based on font size, outline size, and style, optimizing texture
-		 * memory usage and rendering performance. The BuildData struct within Atlas facilitates the construction
-		 * of the atlas texture from raw font data.
-		 *
-		 * Usage example:
-		 * @code
-		 * spk::Font myFont("path/to/fontfile.ttf");
-		 * spk::Font::Atlas atlas = myFont.atlas(16, 1); // Get or create a font atlas for font size 16 with 1px outline
-		 * spk::Font::Atlas::GlyphData glyphE = atlas.glyph('E');
-		 * @endcode
-		 *
-		 * @see Font, Configuration, Key, GlyphData
+		 * The Atlas class handles the creation and management of a texture atlas for storing glyphs. It supports loading glyphs, rescaling, and uploading texture data to the GPU.
 		 */
-		class Atlas
+		class Atlas : public spk::Texture
 		{
-		public:
-			/**
-			 * @struct GlyphData
-			 * @brief Holds rendering data for an individual glyph within a font atlas.
-			 *
-			 * This struct encapsulates all necessary data for rendering a single glyph, including
-			 * texture coordinates (UVs), positions of glyph corners, and additional rendering metrics like step and size.
-			 * This data is crucial for precise placement and rendering of glyphs on the screen, ensuring text is displayed
-			 * accurately according to the font's design.
-			 *
-			 * Fields:
-			 * - uvs: Array of `spk::Vector2` representing the UV coordinates for texture mapping.
-			 * - position: Array of `spk::Vector2Int` specifying the screen positions of the glyph's corners, used in vertex specification.
-			 * - step: `spk::Vector2Int` used in advanced rendering calculations, such as kerning or glyph alignment.
-			 * - size: `spk::Vector2Int` representing the pixel dimensions of the glyph within the atlas.
-			 *
-			 * The structure also defines the order of vertex indices for rendering in OpenGL or similar APIs, ensuring
-			 * that glyphs are drawn correctly as quads using two triangles.
-			 */
-			struct GlyphData
-			{
-				spk::Vector2 uvs[4];		 ///< Texture coordinates (UV mapping) for the glyph.
-				spk::Vector2Int position[4]; ///< Screen position of the glyph's corners, in pixels.
-				spk::Vector2Int step;		///< Step information for the glyph, used in rendering calculations.
-				spk::Vector2Int size;		///< Size of the glyph in pixels, representing width and height.
-
-				/**
-				 * @brief Static vector defining the order of vertex indices for rendering.
-				 *
-				 * This vector specifies the order in which vertices (defined by the `position` and `uvs` arrays)
-				 * should be used to draw the glyph. The order is crucial for properly assembling the triangles that
-				 * make up the glyph's quad in OpenGL or similar rendering APIs. The default order supports a common
-				 * indexing pattern for rendering two triangles to form a rectangle.
-				 */
-				static inline std::vector<unsigned int> indexesOrder = {0, 1, 2, 2, 1, 3};
-			};
+			friend class Font;
 
 		private:
-			struct BuildData
+			const stbtt_fontinfo& _fontInfo; ///< The font information.
+			std::unordered_map<wchar_t, Glyph> _glyphs; ///< The map of glyphs.
+			Glyph _unknownGlyph; ///< The glyph for unknown characters.
+
+			std::vector<uint8_t> _pixels; ///< The pixel data for the texture atlas.
+			enum class Quadrant
 			{
-				std::vector<uint8_t> fontBuffer;
-				std::vector<uint8_t> outlineBuffer;
-				spk::Vector2Int size = spk::Vector2Int(32, 32);
-				std::unordered_map<size_t, uint8_t> outlineMask;
+				TopLeft,
+				TopRight,
+				DownLeft,
+				DownRight
 			};
+			Quadrant _currentQuadrant = Quadrant::TopLeft; ///< The current quadrant being filled.
+			spk::Vector2UInt _quadrantAnchor = 0; ///< The anchor position for the current quadrant.
+			spk::Vector2UInt _quadrantSize = 0; ///< The size of the current quadrant.
+			spk::Vector2UInt _nextGlyphAnchor = 0; ///< The anchor position for the next glyph.
+			spk::Vector2UInt _nextLineAnchor = 0; ///< The anchor position for the next line.
+			spk::Vector2UInt _size; ///< The size of the atlas.
 
-			Configuration _fontConfiguration;
-			std::vector<GlyphData> _glyphDatas;
+			bool _needUpload = false; ///< Flag indicating if the texture needs to be uploaded.
 
-			Texture _texture;
-			bool _needUploadToGPU;
-			spk::Vector2Int _textureSize;
-			std::vector<uint8_t> _texturePixelData;
+			size_t _textSize; ///< The size of the text.
+			size_t _outlineSize; ///< The size of the outline.
 
-			BuildData _computeBuildData(const std::vector<uint8_t>& p_fontData, const Configuration& p_fontConfiguration, const Key& p_key);
+			void _bind(int p_textureIndex) const;
 
-			void _computeFontBuffer(BuildData& p_buildData, const Key &p_key);
-			
-			void _computeOutlineBuffer(BuildData& p_buildData, const Key &p_key);
-			void _pushCombinedTexture(BuildData& p_buildData);
+			void _rescaleGlyphs(const spk::Vector2& p_scaleRatio);
 
+			void _resizeData(const spk::Vector2UInt& p_size);
+
+			spk::Vector2UInt _computeGlyphPosition(const spk::Vector2UInt& p_glyphSize);
+
+			void _applyGlyphPixel(const uint8_t* p_pixelsToApply, const spk::Vector2UInt& p_glyphPosition, const spk::Vector2UInt& p_glyphSize);
+
+			void _loadGlyph(const wchar_t& p_char);
+
+			void _uploadTexture();
+
+			Atlas(const stbtt_fontinfo& p_fontInfo, const std::vector<uint8_t>& p_fontData, const size_t& p_textSize, const size_t& p_outlineSize);
 		public:
 			/**
-			 * @brief Default constructor for the Atlas class.
-			 *
-			 * Initializes an empty Atlas object. This constructor is typically used to create an Atlas instance before
-			 * explicitly setting its properties or generating its content through other methods. An Atlas created this way
-			 * will not contain any glyph data or texture information until such data is provided and processed.
+			 * @brief Loads specified glyphs into the atlas.
+			 * @param p_glyphsToLoad A string of glyphs to load.
 			 */
-			Atlas();
-			/**
-			 * @brief Constructs an Atlas with specified font data, font configuration, and key.
-			 *
-			 * Initializes an Atlas by generating a texture atlas based on the provided font data, configuration,
-			 * and key, which includes font size, outline size, and outline style.
-			 *
-			 * @param p_fontData Vector containing the font's raw data.
-			 * @param p_fontConfiguration Configuration for the font, including valid glyphs.
-			 * @param p_key Key determining the specific atlas configuration to generate.
-			 */
-			Atlas(const std::vector<uint8_t>& p_fontData, const Configuration& p_fontConfiguration, const Key& p_key);
+			void loadGlyphs(const std::wstring& p_glyphsToLoad);
 
 			/**
-			 * @brief Computes the size of a character in pixels for the specified font configuration within the Atlas.
-			 *
-			 * This function calculates the dimensions (width and height) of a given character (`p_char`) based on the font
-			 * configuration used to create this Atlas. It uses the glyph data and font metrics to determine the precise
-			 * rendering size of the character, including any additional space required for the outline.
-			 *
+			 * @brief Loads all renderable glyphs into the atlas.
+			 */
+			void loadAllRenderableGlyphs();
+
+			/**
+			 * @brief Retrieves the glyph for a specific character.
+			 * @param p_char The character to retrieve the glyph for.
+			 * @return The glyph for the specified character.
+			 */
+			const Glyph& operator[](const wchar_t& p_char);
+
+			/**
+			 * @brief Retrieves the glyph for a specific character.
+			 * @param p_char The character to retrieve the glyph for.
+			 * @return The glyph for the specified character.
+			 */
+			const Glyph& glyph(const wchar_t& p_char);
+
+			/**
+			 * @brief Computes the size of a character.
 			 * @param p_char The character to compute the size for.
-			 * @return A Vector2Int representing the width and height of the character in pixels.
+			 * @return The size of the character.
 			 */
-			Vector2Int computeCharSize(const wchar_t& p_char) const;
+			Vector2Int computeCharSize(const wchar_t& p_char);
 
 			/**
-			 * @brief Computes the size of a string in pixels for the specified font configuration within the Atlas.
-			 *
-			 * This function calculates the dimensions (width and height) of a given string (`p_string`) based on the font
-			 * configuration used to create this Atlas. It considers the cumulative size of all characters in the string,
-			 * including any additional space required for the outline.
-			 *
+			 * @brief Computes the size of a string.
 			 * @param p_string The string to compute the size for.
-			 * @return A Vector2Int representing the width and height of the string in pixels.
+			 * @return The size of the string.
 			 */
-			Vector2Int computeStringSize(const std::string& p_string) const;
-
-			/**
-			 * @brief Retrieves the GlyphData for a specified character.
-			 *
-			 * @param p_char The character to retrieve glyph data for.
-			 * @return A reference to the GlyphData struct containing rendering information for the specified character.
-			 */
-			const GlyphData& operator[](const wchar_t& p_char) const;
-
-			/**
-			 * @brief Gets the texture associated with this Atlas.
-			 *
-			 * Returns a reference to the Texture object representing the atlas texture. This texture contains all the
-			 * glyphs rendered according to the Atlas configuration and is used for drawing text on screen. Access to
-			 * this texture allows for direct use in rendering pipelines.
-			 *
-			 * @return A constant reference to the Texture object for this Atlas.
-			 */
-			const Texture& texture() const;
-
-			/**
-			 * @brief Checks if the atlas texture needs to be uploaded to the GPU.
-			 *
-			 * This method determines whether the atlas texture has been modified since the last upload to the GPU
-			 * and needs to be re-uploaded. This is typically used to optimize rendering performance by ensuring
-			 * that textures are only uploaded when necessary.
-			 *
-			 * @return True if the atlas texture needs to be uploaded to the GPU, false otherwise.
-			 */
-			bool needUploadToGPU() const;
-
-			/**
-			 * @brief Uploads the atlas texture to the GPU.
-			 *
-			 * If the atlas texture has been modified, this method uploads the texture to the GPU to make it
-			 * available for rendering. This method should be called after any changes to the texture data to ensure
-			 * that the updated texture is used in subsequent render operations.
-			 *
-			 * @note This method should only be called if needUploadToGPU() returns true to avoid unnecessary
-			 * GPU operations.
-			 */
-			void uploadToGPU();
+			Vector2Int computeStringSize(const std::string& p_string);
 		};
 
 	private:
-		std::vector<uint8_t> _fontData;
-		Configuration _fontConfiguration;
-		mutable std::map<Key, Atlas> _fontAtlas;
 
-		Atlas& operator[](const Key& p_fontAtlasKey) const;
-		Atlas& operator[](const Key& p_fontAtlasKey);
+		std::vector<uint8_t> _readFileContent(const std::filesystem::path& p_path);
+		void _loadFileData(const std::filesystem::path& p_path);
+
+		std::map<std::tuple<size_t, size_t>, Atlas> _atlases;
+		std::vector<uint8_t> _fontData;
+		stbtt_fontinfo _fontInfo;
 
 	public:
 		/**
-		 * @brief Constructs a Font object with the specified font file path.
-		 *
-		 * Initializes a Font instance by loading font data from a specified file path. This constructor is responsible for
-		 * reading the font file and preparing it for use in generating text rendering atlases. The font file should be a valid
-		 * font format that the system is capable of processing.
-		 *
-		 * @param p_path The filesystem path to the font file. This should be a path to a valid font file from which the font
-		 * data can be loaded.
+		 * @brief Constructor for the Font class.
+		 * 
+		 * This constructor takes a filesystem path to a font file, reads the file, and initializes the Font object with its data. The font data includes glyph information, size, and outline details.
+		 * 
+		 * @param p_path The filesystem path to the font file. It should be a valid path to a font file that the system can read and decode.
 		 */
 		Font(const std::filesystem::path& p_path);
 
 		/**
-		 * @brief Computes the size of a character in pixels for the specified font size, outline size, and outline style.
-		 *
-		 * This function calculates the dimensions (width and height) of a given character (`p_char`) based on the specified
-		 * font size (`p_size`), outline size (`p_outlineSize`), and outline style (`p_outlineStyle`). It uses the font data
-		 * and configuration to determine the precise rendering size of the character, including any additional space required
-		 * for the outline.
-		 *
+		 * @brief Computes the size of a character for a specific text size and outline size.
 		 * @param p_char The character to compute the size for.
-		 * @param p_size The font size in points.
-		 * @param p_outlineSize The thickness of the outline in pixels.
-		 * @param p_outlineStyle The style of the outline to apply.
-		 * @return A Vector2Int representing the width and height of the character in pixels.
+		 * @param p_size The size of the text.
+		 * @param p_outlineSize The size of the outline.
+		 * @return The size of the character.
 		 */
-		Vector2Int computeCharSize(const wchar_t& p_char, size_t p_size, size_t p_outlineSize, const spk::Font::OutlineStyle& p_outlineStyle);
+		Vector2Int computeCharSize(const wchar_t& p_char, size_t p_size, size_t p_outlineSize);
 
 		/**
-		 * @brief Computes the size of a string in pixels for the specified font size, outline size, and outline style.
-		 *
-		 * This function calculates the dimensions (width and height) of a given string (`p_string`) based on the specified
-		 * font size (`p_size`), outline size (`p_outlineSize`), and outline style (`p_outlineStyle`). It considers the
-		 * cumulative size of all characters in the string, including any additional space required for the outline.
-		 *
+		 * @brief Computes the size of a string for a specific text size and outline size.
 		 * @param p_string The string to compute the size for.
-		 * @param p_size The font size in points.
-		 * @param p_outlineSize The thickness of the outline in pixels.
-		 * @param p_outlineStyle The style of the outline to apply.
-		 * @return A Vector2Int representing the width and height of the string in pixels.
+		 * @param p_size The size of the text.
+		 * @param p_outlineSize The size of the outline.
+		 * @return The size of the string.
 		 */
-		Vector2Int computeStringSize(const std::string& p_string, size_t p_size, size_t p_outlineSize, const spk::Font::OutlineStyle& p_outlineStyle);
+		Vector2Int computeStringSize(const std::string& p_string, size_t p_size, size_t p_outlineSize);
 
 		/**
-		 * @brief Computes the optimal text size for a given text area and outline style.
-		 *
-		 * This function determines the optimal font size to fit a given string (`p_string`) within a specified text area
-		 * (`p_textArea`). It considers the outline size (`p_outlineSize`) and outline style (`p_outlineStyle`) to ensure
-		 * that the text fits well within the given dimensions without overflowing or being too small.
-		 *
-		 * @param p_string The string to fit within the text area.
-		 * @param p_outlineSize The thickness of the outline in pixels.
-		 * @param p_outlineStyle The style of the outline to apply.
-		 * @param p_textArea The dimensions of the text area in pixels.
-		 * @return The optimal font size in points that fits the text within the specified area.
+		 * @brief Computes the optimal text size based on the string, outline size ratio, and text area.
+		 * @param p_string The string to compute the optimal text size for.
+		 * @param p_outlineSizeRatio The ratio of the outline size to the text size.
+		 * @param p_textArea The text area dimensions.
+		 * @return The optimal text size.
 		 */
-		size_t computeOptimalTextSize(const std::string& p_string, size_t p_outlineSize, const spk::Font::OutlineStyle& p_outlineStyle, const Vector2Int& p_textArea);
+		Size computeOptimalTextSize(const std::string& p_string, float p_outlineSizeRatio, const Vector2Int& p_textArea);
 
 		/**
-		 * @brief Retrieves or creates an Atlas with specified font size, outline size, and outline style.
-		 *
-		 * This method generates a texture atlas for the specified font size, outline size, and outline style if it does not
-		 * already exist. If an atlas with the given parameters already exists, it returns a const reference to the existing atlas.
-		 * This allows for efficient text rendering by reusing atlases for common configurations.
-		 *
-		 * The method ensures that text rendering is optimized by dynamically generating atlases based on the specific
-		 * requirements of the text to be rendered, such as font size and outline style.
-		 *
-		 * @param p_fontSize The desired font size for the text rendering. This affects the scale of the glyphs within the atlas.
-		 * @param p_outlineSize The thickness of the glyph outlines in the atlas. This parameter allows for customization of the text's appearance.
-		 * @param p_outlineStype The style of the outline applied to the glyphs. This allows for further customization of how text is rendered.
-		 * @return A constant reference to the Atlas object configured with the specified parameters.
+		 * @brief Retrieves the atlas for a specific text size and outline size.
+		 * @param p_textSize The size of the text.
+		 * @param p_outlineSize The size of the outline.
+		 * @return The atlas for the specified text and outline sizes.
 		 */
-		const Atlas& atlas(const size_t& p_fontSize, const size_t& p_outlineSize, const OutlineStyle& p_outlineStype) const;
-
-		/**
-		 * @brief Retrieves or creates an Atlas with specified font size, outline size, and outline style.
-		 *
-		 * This method generates a texture atlas for the specified font size, outline size, and outline style if it does not
-		 * already exist. If an atlas with the given parameters already exists, it returns a reference to the existing atlas.
-		 * This allows for efficient text rendering by reusing atlases for common configurations.
-		 *
-		 * The method ensures that text rendering is optimized by dynamically generating atlases based on the specific
-		 * requirements of the text to be rendered, such as font size and outline style.
-		 *
-		 * @param p_fontSize The desired font size for the text rendering. This affects the scale of the glyphs within the atlas.
-		 * @param p_outlineSize The thickness of the glyph outlines in the atlas. This parameter allows for customization of the text's appearance.
-		 * @param p_outlineStype The style of the outline applied to the glyphs. This allows for further customization of how text is rendered.
-		 * @return A reference to the Atlas object configured with the specified parameters.
-		 */
-		Atlas& atlas(const size_t& p_fontSize, const size_t& p_outlineSize, const OutlineStyle& p_outlineStype);
+		Atlas& atlas(const size_t& p_textSize, const size_t& p_outlineSize);
 	};
 }
-
-/**
- * @brief Outputs a textual representation of the OutlineStyle enumeration to an output stream.
- *
- * This operator overload allows for the `spk::Font::OutlineStyle` enumeration to be printed to an output stream,
- * such as `std::cout` or a file stream. It provides a human-readable representation of the outline style, which
- * can be useful for debugging or logging purposes.
- *
- * @param p_os The output stream to write to.
- * @param p_outlineStyle The outline style to output.
- * @return A reference to the modified output stream.
- */
-std::ostream& operator << (std::ostream& p_os, const spk::Font::OutlineStyle& p_outlineStyle);

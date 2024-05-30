@@ -29,7 +29,7 @@ namespace spk
 		
 	}
 
-	spk::WidgetComponent::TextLabel& TextLabel::label()
+	spk::WidgetComponent::FontRenderer& TextLabel::label()
 	{
 		return (_label);
 	}
