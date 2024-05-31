@@ -36,6 +36,11 @@ install(DIRECTORY src/
         FILES_MATCHING PATTERN "*.hpp"
 )
 
+install(DIRECTORY src/
+        DESTINATION include
+        FILES_MATCHING PATTERN "*.h"
+)
+
 install(EXPORT ${ProductName}Targets
         NAMESPACE ${ProductName}::
         DESTINATION lib/cmake/${ProductName}

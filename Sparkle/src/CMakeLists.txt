@@ -6,6 +6,7 @@ list(APPEND SOURCE_FILES ${CURRENT_DIR_CPP_FILES})
 
 add_subdirectory(application)
 add_subdirectory(data_structure)
+add_subdirectory(external_libraries)
 add_subdirectory(design_pattern)
 add_subdirectory(game_engine)
 add_subdirectory(graphics)
