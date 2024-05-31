@@ -86,6 +86,9 @@ Public Member Functions</h2></td></tr>
 &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1WidgetComponent_1_1FontRenderer.html#a42f2368bdb773149fd2c670104c4e294">FontRenderer</a> ()</td></tr>
 <tr class="memdesc:a42f2368bdb773149fd2c670104c4e294"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default constructor for the <a class="el" href="classspk_1_1WidgetComponent_1_1FontRenderer.html" title="Manages rendering of text using a specified font and properties.">FontRenderer</a> class. <br /></td></tr>
 <tr class="separator:a42f2368bdb773149fd2c670104c4e294"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9da38b07ebe839988e35cdb3db36ffa9"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structspk_1_1Font_1_1Size.html">spk::Font::Size</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1WidgetComponent_1_1FontRenderer.html#a9da38b07ebe839988e35cdb3db36ffa9">computeOptimalFontSize</a> (const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2Int</a> &amp;p_availibleArea, const float &amp;p_outlineRatio)</td></tr>
+<tr class="memdesc:a9da38b07ebe839988e35cdb3db36ffa9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Compute the optimized size of the text for a specific area and outline ratio.  <a href="classspk_1_1WidgetComponent_1_1FontRenderer.html#a9da38b07ebe839988e35cdb3db36ffa9">More...</a><br /></td></tr>
+<tr class="separator:a9da38b07ebe839988e35cdb3db36ffa9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a89c913f1b0725364630d530cd200468c"><td class="memItemLeft" align="right" valign="top"><a id="a89c913f1b0725364630d530cd200468c"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1WidgetComponent_1_1FontRenderer.html#a89c913f1b0725364630d530cd200468c">render</a> ()</td></tr>
 <tr class="memdesc:a89c913f1b0725364630d530cd200468c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Renders the text using the current settings. <br /></td></tr>
@@ -194,6 +197,44 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 
 <p>Gets the anchor point of the rendered text. </p>
 <dl class="section return"><dt>Returns</dt><dd>The anchor point. </dd></dl>
+
+</div>
+</div>
+<a id="a9da38b07ebe839988e35cdb3db36ffa9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9da38b07ebe839988e35cdb3db36ffa9">&#9670;&nbsp;</a></span>computeOptimalFontSize()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structspk_1_1Font_1_1Size.html">spk::Font::Size</a> spk::WidgetComponent::FontRenderer::computeOptimalFontSize </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2Int</a> &amp;&#160;</td>
+          <td class="paramname"><em>p_availibleArea</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const float &amp;&#160;</td>
+          <td class="paramname"><em>p_outlineRatio</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Compute the optimized size of the text for a specific area and outline ratio. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_availibleArea</td><td>The area where the text must stay inside </td></tr>
+    <tr><td class="paramname">p_outlineRatio</td><td>The ratio between the outline size and the text size </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The resulting font size, containing information about text and outline size </dd></dl>
 
 </div>
 </div>

@@ -4,7 +4,7 @@ var searchData=
   ['_7ecentralwidget_645',['~CentralWidget',['../classspk_1_1Application_1_1CentralWidget.html#a2e616a4810564f7dcba2521aac380df9',1,'spk::Application::CentralWidget']]],
   ['_7eclient_646',['~Client',['../classspk_1_1Client.html#a7dd965099ff61099aa6cf3c6f155e57c',1,'spk::Client']]],
   ['_7econtract_647',['~Contract',['../classspk_1_1Notifier_1_1Contract.html#ac109d2d6df37b87b84db50436612ebdf',1,'spk::Notifier::Contract']]],
-  ['_7efontmanager_648',['~FontManager',['../classspk_1_1FontManager.html#a46eda9185febeb3d846fe97a376aa5bb',1,'spk::FontManager']]],
+  ['_7efontatlas_648',['~FontAtlas',['../classspk_1_1FontAtlas.html#ae44471ddba2c6c32c964e8ae5b361098',1,'spk::FontAtlas']]],
   ['_7egameobject_649',['~GameObject',['../classspk_1_1GameObject.html#a36cfa6f8a76ce20abae8f0c2abfd0170',1,'spk::GameObject']]],
   ['_7eichronometer_650',['~IChronometer',['../classspk_1_1IChronometer.html#af24e88aba76676377185bd918f51a44e',1,'spk::IChronometer']]],
   ['_7einstanciator_651',['~Instanciator',['../classspk_1_1Singleton_1_1Instanciator.html#a31434b358027a02a7d61138cda0be88c',1,'spk::Singleton::Instanciator']]],

@@ -38,9 +38,8 @@ var searchData=
   ['atlas_45',['atlas',['../classspk_1_1Font.html#ab1e12cddc46a3f46e02b9d1be4419b27',1,'spk::Font']]],
   ['atlas_46',['Atlas',['../classspk_1_1Font_1_1Atlas.html',1,'spk::Font']]],
   ['attach_47',['attach',['../classspk_1_1Pipeline_1_1Texture.html#af4937de412bd16f9a26eaa5c3cfecdbc',1,'spk::Pipeline::Texture']]],
-  ['attribute_48',['Attribute',['../classspk_1_1Pipeline_1_1Object_1_1Attribute.html#ab45938be9a6ee5737fdf15728c446655',1,'spk::Pipeline::Object::Attribute::Attribute(const Attribute &amp;p_other)=delete'],['../classspk_1_1Pipeline_1_1Object_1_1Attribute.html#af38e9d60472c062dbfb1577fe23e91d7',1,'spk::Pipeline::Object::Attribute::Attribute(Attribute &amp;&amp;p_other)=default']]],
-  ['attribute_49',['attribute',['../classspk_1_1Pipeline_1_1Object.html#ab245edad399cd51a7ef9ee568adc751e',1,'spk::Pipeline::Object']]],
-  ['attribute_50',['Attribute',['../classspk_1_1Pipeline_1_1Object_1_1Attribute.html',1,'spk::Pipeline::Object']]],
-  ['autotile_51',['Autotile',['../structspk_1_1Tilemap2D_1_1Node.html#a63fe82a5e6a7f8be935c616a74569212adc91eb58b7f2f916f4f26ef7c686b3f8',1,'spk::Tilemap2D::Node']]],
-  ['average_52',['average',['../classspk_1_1IAnalyticalMetric.html#a58522bd3b05bdb226593b2cc58f578a3',1,'spk::IAnalyticalMetric']]]
+  ['attribute_48',['attribute',['../classspk_1_1Pipeline_1_1Object.html#ab245edad399cd51a7ef9ee568adc751e',1,'spk::Pipeline::Object']]],
+  ['attribute_49',['Attribute',['../classspk_1_1Pipeline_1_1Object_1_1Attribute.html#ab45938be9a6ee5737fdf15728c446655',1,'spk::Pipeline::Object::Attribute::Attribute(const Attribute &amp;p_other)=delete'],['../classspk_1_1Pipeline_1_1Object_1_1Attribute.html#af38e9d60472c062dbfb1577fe23e91d7',1,'spk::Pipeline::Object::Attribute::Attribute(Attribute &amp;&amp;p_other)=default'],['../classspk_1_1Pipeline_1_1Object_1_1Attribute.html',1,'spk::Pipeline::Object::Attribute']]],
+  ['autotile_50',['Autotile',['../structspk_1_1Tilemap2D_1_1Node.html#a63fe82a5e6a7f8be935c616a74569212adc91eb58b7f2f916f4f26ef7c686b3f8',1,'spk::Tilemap2D::Node']]],
+  ['average_51',['average',['../classspk_1_1IAnalyticalMetric.html#a58522bd3b05bdb226593b2cc58f578a3',1,'spk::IAnalyticalMetric']]]
 ];
