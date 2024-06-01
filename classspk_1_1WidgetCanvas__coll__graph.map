@@ -1,0 +1,6 @@
+<map id="spk::WidgetCanvas" name="spk::WidgetCanvas">
+<area shape="rect" id="node1" title="A class that represents a canvas for widgets." alt="" coords="104,155,251,181"/>
+<area shape="rect" id="node2" href="$classspk_1_1Widget.html" title="Defines a widget interface for UI elements, integrating activation state management,..." alt="" coords="128,80,227,107"/>
+<area shape="rect" id="node3" href="$classspk_1_1ActivateObject.html" title="Manages activation state for objects, intended as a base class." alt="" coords="5,5,155,32"/>
+<area shape="rect" id="node4" href="$classspk_1_1TreeNode.html" title=" " alt="" coords="179,5,370,32"/>
+</map>

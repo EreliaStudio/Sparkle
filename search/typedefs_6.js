@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['object_1405',['Object',['../classspk_1_1Pool.html#afa3f9e3c9a02338b938ce468ac85ea51',1,'spk::Pool']]]
+  ['nodeindextype_1429',['NodeIndexType',['../classspk_1_1ITilemap_1_1IChunk.html#a9b801d10ffa2b51bb1da24745654002a',1,'spk::ITilemap::IChunk']]]
 ];

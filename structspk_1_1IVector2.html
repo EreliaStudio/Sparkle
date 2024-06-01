@@ -100,6 +100,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a724816dd9740afe7b5d91e82568c7f12"><td class="memTemplItemLeft" align="right" valign="top">&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="structspk_1_1IVector2.html#a724816dd9740afe7b5d91e82568c7f12">IVector2</a> (const <a class="el" href="structspk_1_1IVector2.html">IVector2</a>&lt; TOtherType &gt; &amp;p_other)</td></tr>
 <tr class="memdesc:a724816dd9740afe7b5d91e82568c7f12"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copy constructor from another vector of possibly different type.  <a href="structspk_1_1IVector2.html#a724816dd9740afe7b5d91e82568c7f12">More...</a><br /></td></tr>
 <tr class="separator:a724816dd9740afe7b5d91e82568c7f12"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad8020fb5fff76bd25c670bc9983a35f5"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structspk_1_1IVector2.html#ad8020fb5fff76bd25c670bc9983a35f5">IVector2</a> (const <a class="el" href="classspk_1_1JSON_1_1Object.html">spk::JSON::Object</a> &amp;p_object)</td></tr>
+<tr class="memdesc:ad8020fb5fff76bd25c670bc9983a35f5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct the vector using JSON representation.  <a href="structspk_1_1IVector2.html#ad8020fb5fff76bd25c670bc9983a35f5">More...</a><br /></td></tr>
+<tr class="separator:ad8020fb5fff76bd25c670bc9983a35f5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a14c2ede338d49a85e8f1ff53a4db711c"><td class="memTemplParams" colspan="2">template&lt;typename TOtherType , typename  = typename std::enable_if&lt;std::is_arithmetic&lt;TOtherType&gt;::value&gt;::type&gt; </td></tr>
 <tr class="memitem:a14c2ede338d49a85e8f1ff53a4db711c"><td class="memTemplItemLeft" align="right" valign="top">&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="structspk_1_1IVector2.html#a14c2ede338d49a85e8f1ff53a4db711c">operator IVector2&lt; TOtherType &gt;</a> ()</td></tr>
 <tr class="memdesc:a14c2ede338d49a85e8f1ff53a4db711c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Conversion operator to another vector of possibly different type.  <a href="structspk_1_1IVector2.html#a14c2ede338d49a85e8f1ff53a4db711c">More...</a><br /></td></tr>
@@ -295,10 +298,10 @@ interface spk::IVector2&lt; TType, typename &gt;</h3>
 <div class="line"><span class="keywordtype">float</span> length = point.norm(); <span class="comment">// Calculate the length of the vector</span></div>
 <div class="line"><a class="code" href="structspk_1_1IVector2.html">spk::IVector2&lt;float&gt;</a> normalized = point.<a class="code" href="structspk_1_1IVector2.html#a25baa4a833896c3368feac990d3743d8">normalize</a>(); <span class="comment">// Normalize the vector</span></div>
 <div class="ttc" id="astructspk_1_1IVector2_html"><div class="ttname"><a href="structspk_1_1IVector2.html">spk::IVector2&lt; float &gt;</a></div></div>
-<div class="ttc" id="astructspk_1_1IVector2_html_a25baa4a833896c3368feac990d3743d8"><div class="ttname"><a href="structspk_1_1IVector2.html#a25baa4a833896c3368feac990d3743d8">spk::IVector2::normalize</a></div><div class="ttdeci">IVector2&lt; float &gt; normalize() const</div><div class="ttdoc">Normalizes the vector to unit length.</div><div class="ttdef"><b>Definition:</b> spk_vector2.hpp:421</div></div>
+<div class="ttc" id="astructspk_1_1IVector2_html_a25baa4a833896c3368feac990d3743d8"><div class="ttname"><a href="structspk_1_1IVector2.html#a25baa4a833896c3368feac990d3743d8">spk::IVector2::normalize</a></div><div class="ttdeci">IVector2&lt; float &gt; normalize() const</div><div class="ttdoc">Normalizes the vector to unit length.</div><div class="ttdef"><b>Definition:</b> spk_vector2.hpp:473</div></div>
 </div><!-- fragment --> </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a981e2a436e54d03b9741379582594bed"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a981e2a436e54d03b9741379582594bed">&#9670;&nbsp;</a></span>IVector2() <span class="overload">[1/3]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a981e2a436e54d03b9741379582594bed">&#9670;&nbsp;</a></span>IVector2() <span class="overload">[1/4]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -336,7 +339,7 @@ template&lt;typename TOtherType , typename  = typename std::enable_if&lt;std::is
 </div>
 </div>
 <a id="a6e418db595965fccf0d35c17f1a522e6"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6e418db595965fccf0d35c17f1a522e6">&#9670;&nbsp;</a></span>IVector2() <span class="overload">[2/3]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a6e418db595965fccf0d35c17f1a522e6">&#9670;&nbsp;</a></span>IVector2() <span class="overload">[2/4]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -385,7 +388,7 @@ template&lt;typename TTypeA , typename TTypeB , typename  = typename std::enable
 </div>
 </div>
 <a id="a724816dd9740afe7b5d91e82568c7f12"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a724816dd9740afe7b5d91e82568c7f12">&#9670;&nbsp;</a></span>IVector2() <span class="overload">[3/3]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a724816dd9740afe7b5d91e82568c7f12">&#9670;&nbsp;</a></span>IVector2() <span class="overload">[3/4]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -419,6 +422,44 @@ template&lt;typename TOtherType , typename  = typename std::enable_if&lt;std::is
   </table>
   </dd>
 </dl>
+
+</div>
+</div>
+<a id="ad8020fb5fff76bd25c670bc9983a35f5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad8020fb5fff76bd25c670bc9983a35f5">&#9670;&nbsp;</a></span>IVector2() <span class="overload">[4/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename TType , typename  = typename std::enable_if&lt;std::is_arithmetic&lt;TType&gt;::value&gt;::type&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structspk_1_1IVector2.html">spk::IVector2</a>&lt; TType, typename &gt;::<a class="el" href="structspk_1_1IVector2.html">IVector2</a> </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="classspk_1_1JSON_1_1Object.html">spk::JSON::Object</a> &amp;&#160;</td>
+          <td class="paramname"><em>p_object</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Construct the vector using JSON representation. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_object</td><td>The JSON object used as input </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>Expected format : { "X":15, "Y":45 }</dd></dl>
+<p>Or { [15, 45] } </p>
 
 </div>
 </div>

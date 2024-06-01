@@ -83,6 +83,9 @@ $(function() {
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a85488ff0983e9db92d6c45c9ad25c0ea"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1TextureAtlas.html#a85488ff0983e9db92d6c45c9ad25c0ea">TextureAtlas</a> ()</td></tr>
 <tr class="separator:a85488ff0983e9db92d6c45c9ad25c0ea"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad722fa2aa8aea1b6bd979e095ec11b08"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1TextureAtlas.html#ad722fa2aa8aea1b6bd979e095ec11b08">TextureAtlas</a> (const <a class="el" href="classspk_1_1JSON_1_1Object.html">spk::JSON::Object</a> &amp;p_object)</td></tr>
+<tr class="memdesc:ad722fa2aa8aea1b6bd979e095ec11b08"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor using a JSON object to initialize font inside the object.  <a href="classspk_1_1TextureAtlas.html#ad722fa2aa8aea1b6bd979e095ec11b08">More...</a><br /></td></tr>
+<tr class="separator:ad722fa2aa8aea1b6bd979e095ec11b08"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2eb903f6cd8e318e82500f78ae6a0cfd"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1TextureAtlas.html#a2eb903f6cd8e318e82500f78ae6a0cfd">~TextureAtlas</a> ()</td></tr>
 <tr class="separator:a2eb903f6cd8e318e82500f78ae6a0cfd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a542392c2ba37e9fb87d895ef6354971f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classspk_1_1Texture.html">Texture</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1TextureAtlas.html#a542392c2ba37e9fb87d895ef6354971f">loadTexture</a> (const std::string &amp;p_textureName, const uint8_t *p_textureData, const <a class="el" href="structspk_1_1IVector2.html">Vector2UInt</a> &amp;p_textureSize, const <a class="el" href="classspk_1_1Texture.html#a50482c7e8c0571aac8bd5f978ddef49a">Texture::Format</a> &amp;p_format, const <a class="el" href="classspk_1_1Texture.html#a86a03180e180bf4f4473b2d68d56daba">Texture::Filtering</a> &amp;p_filtering, const <a class="el" href="classspk_1_1Texture.html#a182ebf3bb210ddd75938afdc89efa32a">Texture::Wrap</a> &amp;p_wrap, const <a class="el" href="classspk_1_1Texture.html#a9be80f73057f23771837c6a457ad1e37">Texture::Mipmap</a> &amp;p_mipmap)</td></tr>
@@ -109,7 +112,7 @@ Public Member Functions</h2></td></tr>
 </div><!-- fragment --><dl class="section note"><dt>Note</dt><dd>It is assumed that <a class="el" href="classspk_1_1TextureAtlas.html" title="Manages the loading, storage, and retrieval of textures, images, and sprite sheets.">TextureAtlas</a> follows the <a class="el" href="classspk_1_1Singleton.html" title="Template class for implementing the singleton design pattern.">Singleton</a> design pattern, ensuring a single instance. </dd></dl>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a85488ff0983e9db92d6c45c9ad25c0ea"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a85488ff0983e9db92d6c45c9ad25c0ea">&#9670;&nbsp;</a></span>TextureAtlas()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a85488ff0983e9db92d6c45c9ad25c0ea">&#9670;&nbsp;</a></span>TextureAtlas() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -123,6 +126,32 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 <p>Constructor for <a class="el" href="classspk_1_1TextureAtlas.html" title="Manages the loading, storage, and retrieval of textures, images, and sprite sheets.">TextureAtlas</a>. </p>
+
+</div>
+</div>
+<a id="ad722fa2aa8aea1b6bd979e095ec11b08"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad722fa2aa8aea1b6bd979e095ec11b08">&#9670;&nbsp;</a></span>TextureAtlas() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">spk::TextureAtlas::TextureAtlas </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="classspk_1_1JSON_1_1Object.html">spk::JSON::Object</a> &amp;&#160;</td>
+          <td class="paramname"><em>p_object</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Constructor using a JSON object to initialize font inside the object. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_object</td><td>The JSON object who will be used to open textures and save them with proper naming </td></tr>
+  </table>
+  </dd>
+</dl>
 
 </div>
 </div>

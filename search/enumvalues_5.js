@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['uniformblock_1427',['UniformBlock',['../structspk_1_1OpenGL_1_1ShaderInstruction.html#a9e8079e05b963618bc37767ffaee335ba9022452d77d9545e352e90c78b8a6285',1,'spk::OpenGL::ShaderInstruction']]],
-  ['unknow_1428',['Unknow',['../structspk_1_1OpenGL_1_1ShaderInstruction.html#a9e8079e05b963618bc37767ffaee335ba01ae2e552c349bd5608af0f670f8ebc2',1,'spk::OpenGL::ShaderInstruction']]]
+  ['ratio_1452',['Ratio',['../structspk_1_1WidgetCanvas_1_1Geometry_1_1Value.html#a8f6791adc3b7e2f659a407f22433ad66a8334a158298fbcf163f4dcb4a387d150',1,'spk::WidgetCanvas::Geometry::Value']]]
 ];

@@ -104,6 +104,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a9fd50d045f5198f147e2faee41b889d6"><td class="memTemplItemLeft" align="right" valign="top">&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="structspk_1_1IVector3.html#a9fd50d045f5198f147e2faee41b889d6">IVector3</a> (const TTypeA &amp;p_x, const TTypeB &amp;p_y, const TTypeC &amp;p_z)</td></tr>
 <tr class="memdesc:a9fd50d045f5198f147e2faee41b889d6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructs a vector with separate values for x, y, and z components.  <a href="structspk_1_1IVector3.html#a9fd50d045f5198f147e2faee41b889d6">More...</a><br /></td></tr>
 <tr class="separator:a9fd50d045f5198f147e2faee41b889d6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aea65f50dff6ae136bde18960b0f11248"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structspk_1_1IVector3.html#aea65f50dff6ae136bde18960b0f11248">IVector3</a> (const <a class="el" href="classspk_1_1JSON_1_1Object.html">spk::JSON::Object</a> &amp;p_object)</td></tr>
+<tr class="memdesc:aea65f50dff6ae136bde18960b0f11248"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct the vector using JSON representation.  <a href="structspk_1_1IVector3.html#aea65f50dff6ae136bde18960b0f11248">More...</a><br /></td></tr>
+<tr class="separator:aea65f50dff6ae136bde18960b0f11248"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4edcf7543e95627f9c292dbbbe068306"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structspk_1_1IVector3.html#a4edcf7543e95627f9c292dbbbe068306">operator IVector3&lt; TType &gt;</a> ()</td></tr>
 <tr class="memdesc:a4edcf7543e95627f9c292dbbbe068306"><td class="mdescLeft">&#160;</td><td class="mdescRight">Conversion operator to allow implicit conversion between vectors of different types.  <a href="structspk_1_1IVector3.html#a4edcf7543e95627f9c292dbbbe068306">More...</a><br /></td></tr>
 <tr class="separator:a4edcf7543e95627f9c292dbbbe068306"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -281,7 +284,7 @@ interface spk::IVector3&lt; TType, typename &gt;</h3>
 <p>This class provides a template for creating 3D vectors of various types (e.g., float, int, unsigned int). It includes common vector operations such as addition, subtraction, multiplication, division, dot product, cross product, normalization, and more. </p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a436a4c9fd09b43f8759603234b5bacfb"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a436a4c9fd09b43f8759603234b5bacfb">&#9670;&nbsp;</a></span>IVector3() <span class="overload">[1/4]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a436a4c9fd09b43f8759603234b5bacfb">&#9670;&nbsp;</a></span>IVector3() <span class="overload">[1/5]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -319,7 +322,7 @@ template&lt;typename TOtherType , typename  = typename std::enable_if&lt;std::is
 </div>
 </div>
 <a id="af5d9b1c7844649cf0338a5b5b410ba5c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af5d9b1c7844649cf0338a5b5b410ba5c">&#9670;&nbsp;</a></span>IVector3() <span class="overload">[2/4]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#af5d9b1c7844649cf0338a5b5b410ba5c">&#9670;&nbsp;</a></span>IVector3() <span class="overload">[2/5]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -368,7 +371,7 @@ template&lt;typename TTypeA , typename TTypeB , typename  = typename std::enable
 </div>
 </div>
 <a id="a4b41e45fefa728763608435f519dd00a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a4b41e45fefa728763608435f519dd00a">&#9670;&nbsp;</a></span>IVector3() <span class="overload">[3/4]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a4b41e45fefa728763608435f519dd00a">&#9670;&nbsp;</a></span>IVector3() <span class="overload">[3/5]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -406,7 +409,7 @@ template&lt;typename TOtherType , typename  = typename std::enable_if&lt;std::is
 </div>
 </div>
 <a id="a9fd50d045f5198f147e2faee41b889d6"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9fd50d045f5198f147e2faee41b889d6">&#9670;&nbsp;</a></span>IVector3() <span class="overload">[4/4]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a9fd50d045f5198f147e2faee41b889d6">&#9670;&nbsp;</a></span>IVector3() <span class="overload">[4/5]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -458,6 +461,44 @@ template&lt;typename TTypeA , typename TTypeB , typename TTypeC , typename  = ty
   </table>
   </dd>
 </dl>
+
+</div>
+</div>
+<a id="aea65f50dff6ae136bde18960b0f11248"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aea65f50dff6ae136bde18960b0f11248">&#9670;&nbsp;</a></span>IVector3() <span class="overload">[5/5]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename TType , typename  = typename std::enable_if&lt;std::is_arithmetic&lt;TType&gt;::value&gt;::type&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structspk_1_1IVector3.html">spk::IVector3</a>&lt; TType, typename &gt;::<a class="el" href="structspk_1_1IVector3.html">IVector3</a> </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="classspk_1_1JSON_1_1Object.html">spk::JSON::Object</a> &amp;&#160;</td>
+          <td class="paramname"><em>p_object</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Construct the vector using JSON representation. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_object</td><td>The JSON object used as input </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>Expected format : { "X":15, "Y":45, "Z":45 }</dd></dl>
+<p>Or { [15, 45, 45] } </p>
 
 </div>
 </div>

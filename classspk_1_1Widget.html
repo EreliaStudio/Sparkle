@@ -85,7 +85,7 @@ Inheritance diagram for spk::Widget:</div>
 <div class="dyncontent">
 <div class="center"><img src="classspk_1_1Widget__inherit__graph.png" border="0" usemap="#aspk_1_1Widget_inherit__map" alt="Inheritance graph"/></div>
 <map name="aspk_1_1Widget_inherit__map" id="aspk_1_1Widget_inherit__map">
-<area shape="rect" title="Defines a widget interface for UI elements, integrating activation state management,..." alt="" coords="244,198,343,225"/>
+<area shape="rect" title="Defines a widget interface for UI elements, integrating activation state management,..." alt="" coords="244,223,343,250"/>
 <area shape="rect" href="classspk_1_1Application_1_1CentralWidget.html" title="CentralWidget serves as the core widget in an application, managing time&#45;based updates via a custom r..." alt="" coords="397,5,578,47"/>
 <area shape="rect" href="classspk_1_1Button.html" title="Represents a button widget in the SPK UI framework, capable of handling user interactions and display..." alt="" coords="439,71,535,98"/>
 <area shape="rect" href="classspk_1_1Frame.html" title="A frame widget that contains a nine&#45;sliced box for UI rendering." alt="" coords="440,122,535,149"/>
@@ -94,8 +94,9 @@ Inheritance diagram for spk::Widget:</div>
 <area shape="rect" href="classspk_1_1Panel.html" title="A user interface panel that can manage focus within the application." alt="" coords="443,274,531,301"/>
 <area shape="rect" href="classspk_1_1TextEntry.html" title="A user interface component for text input." alt="" coords="430,325,545,351"/>
 <area shape="rect" href="classspk_1_1TextLabel.html" title="A widget class for displaying text within a UI, with a customizable background." alt="" coords="430,375,545,402"/>
-<area shape="rect" href="classspk_1_1ActivateObject.html" title="Manages activation state for objects, intended as a base class." alt="" coords="26,173,175,199"/>
-<area shape="rect" href="classspk_1_1TreeNode.html" title=" " alt="" coords="5,223,196,250"/>
+<area shape="rect" href="classspk_1_1WidgetCanvas.html" title="A class that represents a canvas for widgets." alt="" coords="414,426,561,453"/>
+<area shape="rect" href="classspk_1_1ActivateObject.html" title="Manages activation state for objects, intended as a base class." alt="" coords="26,198,175,225"/>
+<area shape="rect" href="classspk_1_1TreeNode.html" title=" " alt="" coords="5,249,196,275"/>
 </map>
 <center><span class="legend">[<a href="graph_legend.html">legend</a>]</span></center></div>
 <div class="dynheader">
@@ -117,6 +118,9 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a2a6973f0fabff2211db8deae9bc47fc0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a45860ed803f3ab226f15541469898f2a"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Widget.html#a45860ed803f3ab226f15541469898f2a">Widget</a> (const std::string &amp;p_name, <a class="el" href="classspk_1_1Widget.html">Widget</a> *p_parent)</td></tr>
 <tr class="separator:a45860ed803f3ab226f15541469898f2a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afc6467345b48550fbc6454294a18a601"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Widget.html#afc6467345b48550fbc6454294a18a601">Widget</a> (const <a class="el" href="classspk_1_1JSON_1_1Object.html">spk::JSON::Object</a> &amp;p_object, <a class="el" href="classspk_1_1Widget.html">Widget</a> *p_parent)</td></tr>
+<tr class="memdesc:afc6467345b48550fbc6454294a18a601"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct a widget using a JSON object as input.  <a href="classspk_1_1Widget.html#afc6467345b48550fbc6454294a18a601">More...</a><br /></td></tr>
+<tr class="separator:afc6467345b48550fbc6454294a18a601"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abf416152e50590f71fe944342e5a9959"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Widget.html#abf416152e50590f71fe944342e5a9959">~Widget</a> ()</td></tr>
 <tr class="separator:abf416152e50590f71fe944342e5a9959"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a40fb63e18c0e3433adb5d0cf306628a0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Widget.html#a40fb63e18c0e3433adb5d0cf306628a0">rename</a> (const std::string &amp;p_name)</td></tr>
@@ -131,6 +135,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a2fc753692802ffddffa3fb8d8adc686f"><td class="memTemplItemLeft" align="right" valign="top">TChild *&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classspk_1_1Widget.html#a2fc753692802ffddffa3fb8d8adc686f">makeActiveChild</a> (Args &amp;&amp;... p_args)</td></tr>
 <tr class="memdesc:a2fc753692802ffddffa3fb8d8adc686f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a child widget of type TChild and activate it. This parent is then responsible for the lifetime of children created this way.  <a href="classspk_1_1Widget.html#a2fc753692802ffddffa3fb8d8adc686f">More...</a><br /></td></tr>
 <tr class="separator:a2fc753692802ffddffa3fb8d8adc686f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac84edc774826eed6c7f6bc50bf102f8b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classspk_1_1Widget.html">Widget</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Widget.html#ac84edc774826eed6c7f6bc50bf102f8b">findChild</a> (const std::string &amp;p_name)</td></tr>
+<tr class="memdesc:ac84edc774826eed6c7f6bc50bf102f8b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieve a child widget using its name.  <a href="classspk_1_1Widget.html#ac84edc774826eed6c7f6bc50bf102f8b">More...</a><br /></td></tr>
+<tr class="separator:ac84edc774826eed6c7f6bc50bf102f8b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa66660bed9bd2658eed46b94026a2472"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Widget.html#aa66660bed9bd2658eed46b94026a2472">setGeometry</a> (const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2Int</a> &amp;p_anchor, const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2UInt</a> &amp;p_size)</td></tr>
 <tr class="separator:aa66660bed9bd2658eed46b94026a2472"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a63956553f1890f03ca92aa9e7e351f68"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Widget.html#a63956553f1890f03ca92aa9e7e351f68">setLayer</a> (const float &amp;p_layer)</td></tr>
@@ -158,6 +165,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a5d1bc0bea235aef974c4fea60e58bde0 inherit pub_methods_classspk_1_1ActivateObject"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1ActivateObject.html#a5d1bc0bea235aef974c4fea60e58bde0">switchActivationState</a> ()</td></tr>
 <tr class="memdesc:a5d1bc0bea235aef974c4fea60e58bde0 inherit pub_methods_classspk_1_1ActivateObject"><td class="mdescLeft">&#160;</td><td class="mdescRight">Toggles the activation state of the object.  <a href="classspk_1_1ActivateObject.html#a5d1bc0bea235aef974c4fea60e58bde0">More...</a><br /></td></tr>
 <tr class="separator:a5d1bc0bea235aef974c4fea60e58bde0 inherit pub_methods_classspk_1_1ActivateObject"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a692e785b8d1686cece10272aac794bb8 inherit pub_methods_classspk_1_1ActivateObject"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1ActivateObject.html#a692e785b8d1686cece10272aac794bb8">setActivationState</a> (bool p_state)</td></tr>
+<tr class="memdesc:a692e785b8d1686cece10272aac794bb8 inherit pub_methods_classspk_1_1ActivateObject"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the activation state.  <a href="classspk_1_1ActivateObject.html#a692e785b8d1686cece10272aac794bb8">More...</a><br /></td></tr>
+<tr class="separator:a692e785b8d1686cece10272aac794bb8 inherit pub_methods_classspk_1_1ActivateObject"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4d4610f1ecc47ff5ee7464c9393365a7 inherit pub_methods_classspk_1_1ActivateObject"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1ActivateObject.html#a4d4610f1ecc47ff5ee7464c9393365a7">activate</a> ()</td></tr>
 <tr class="memdesc:a4d4610f1ecc47ff5ee7464c9393365a7 inherit pub_methods_classspk_1_1ActivateObject"><td class="mdescLeft">&#160;</td><td class="mdescRight">Activates the object.  <a href="classspk_1_1ActivateObject.html#a4d4610f1ecc47ff5ee7464c9393365a7">More...</a><br /></td></tr>
 <tr class="separator:a4d4610f1ecc47ff5ee7464c9393365a7 inherit pub_methods_classspk_1_1ActivateObject"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -256,14 +266,14 @@ using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 <div class="ttc" id="aclassspk_1_1Widget_html_a29e8e60771c35cd3c533237219265960"><div class="ttname"><a href="classspk_1_1Widget.html#a29e8e60771c35cd3c533237219265960">spk::Widget::_onUpdate</a></div><div class="ttdeci">virtual void _onUpdate()</div><div class="ttdoc">Virtual method called during the update phase of the widget lifecycle.</div><div class="ttdef"><b>Definition:</b> spk_widget.cpp:12</div></div>
 <div class="ttc" id="aclassspk_1_1Widget_html_acbeb0b30a1febf128e5001a55e08179f"><div class="ttname"><a href="classspk_1_1Widget.html#acbeb0b30a1febf128e5001a55e08179f">spk::Widget::Widget</a></div><div class="ttdeci">Widget(Widget *p_parent)</div><div class="ttdef"><b>Definition:</b> spk_widget.cpp:88</div></div>
 <div class="ttc" id="aclassspk_1_1Widget_html_ad2b1b524e2581f9f7a4ac827fdf44265"><div class="ttname"><a href="classspk_1_1Widget.html#ad2b1b524e2581f9f7a4ac827fdf44265">spk::Widget::_onRender</a></div><div class="ttdeci">virtual void _onRender()</div><div class="ttdoc">Virtual method for rendering the widget.</div><div class="ttdef"><b>Definition:</b> spk_widget.cpp:8</div></div>
-<div class="ttc" id="aclassspk_1_1Widget_html_af69341bec5fcec262a0c29a9ba48df62"><div class="ttname"><a href="classspk_1_1Widget.html#af69341bec5fcec262a0c29a9ba48df62">spk::Widget::name</a></div><div class="ttdeci">const std::string &amp; name() const</div><div class="ttdef"><b>Definition:</b> spk_widget.cpp:184</div></div>
+<div class="ttc" id="aclassspk_1_1Widget_html_af69341bec5fcec262a0c29a9ba48df62"><div class="ttname"><a href="classspk_1_1Widget.html#af69341bec5fcec262a0c29a9ba48df62">spk::Widget::name</a></div><div class="ttdeci">const std::string &amp; name() const</div><div class="ttdef"><b>Definition:</b> spk_widget.cpp:197</div></div>
 <div class="ttc" id="astructspk_1_1IVector2_html"><div class="ttname"><a href="structspk_1_1IVector2.html">spk::IVector2&lt; uint32_t &gt;</a></div></div>
 </div><!-- fragment --><dl class="section note"><dt>Note</dt><dd>If no parent are set for a widget, this widget will be concidered as child of the default widget of the application. </dd>
 <dd>
 The viewport of a <a class="el" href="classspk_1_1Widget.html" title="Defines a widget interface for UI elements, integrating activation state management,...">Widget</a> will automatically be activated upon rendering its children, as mentioned in the class documentation. </dd></dl>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="acbeb0b30a1febf128e5001a55e08179f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#acbeb0b30a1febf128e5001a55e08179f">&#9670;&nbsp;</a></span>Widget() <span class="overload">[1/3]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#acbeb0b30a1febf128e5001a55e08179f">&#9670;&nbsp;</a></span>Widget() <span class="overload">[1/4]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -287,7 +297,7 @@ The viewport of a <a class="el" href="classspk_1_1Widget.html" title="Defines a 
 </div>
 </div>
 <a id="a2a6973f0fabff2211db8deae9bc47fc0"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2a6973f0fabff2211db8deae9bc47fc0">&#9670;&nbsp;</a></span>Widget() <span class="overload">[2/3]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a2a6973f0fabff2211db8deae9bc47fc0">&#9670;&nbsp;</a></span>Widget() <span class="overload">[2/4]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -311,7 +321,7 @@ The viewport of a <a class="el" href="classspk_1_1Widget.html" title="Defines a 
 </div>
 </div>
 <a id="a45860ed803f3ab226f15541469898f2a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a45860ed803f3ab226f15541469898f2a">&#9670;&nbsp;</a></span>Widget() <span class="overload">[3/3]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a45860ed803f3ab226f15541469898f2a">&#9670;&nbsp;</a></span>Widget() <span class="overload">[3/4]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -342,6 +352,44 @@ The viewport of a <a class="el" href="classspk_1_1Widget.html" title="Defines a 
   </table>
   </dd>
 </dl>
+
+</div>
+</div>
+<a id="afc6467345b48550fbc6454294a18a601"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afc6467345b48550fbc6454294a18a601">&#9670;&nbsp;</a></span>Widget() <span class="overload">[4/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">spk::Widget::Widget </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="classspk_1_1JSON_1_1Object.html">spk::JSON::Object</a> &amp;&#160;</td>
+          <td class="paramname"><em>p_object</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classspk_1_1Widget.html">Widget</a> *&#160;</td>
+          <td class="paramname"><em>p_parent</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Construct a widget using a JSON object as input. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_object</td><td>The JSON from where widget information will be taken from </td></tr>
+    <tr><td class="paramname">p_parent</td><td>A pointer to the parent widget. This widget will be added as a child of the given parent.</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>JSON format : { "Name":"MyWidgetName", "WidgetType":"MyWidget", "Parent":"MyParentWidget", "Active":false, "MyCustomInformation":15, "MyCustomString":"This is a test" } </dd></dl>
 
 </div>
 </div>
@@ -523,6 +571,41 @@ The viewport of a <a class="el" href="classspk_1_1Widget.html" title="Defines a 
       </table>
 </div><div class="memdoc">
 <p>Deactivates this widget and all its child widgets recursively, disabling their functionality and excluding them from rendering and updates. </p>
+
+</div>
+</div>
+<a id="ac84edc774826eed6c7f6bc50bf102f8b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac84edc774826eed6c7f6bc50bf102f8b">&#9670;&nbsp;</a></span>findChild()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classspk_1_1Widget.html">Widget</a>* spk::Widget::findChild </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>p_name</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Retrieve a child widget using its name. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_name</td><td>The name of the targeted widget </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The widget if found, nullptr if not </dd></dl>
 
 </div>
 </div>
