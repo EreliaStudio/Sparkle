@@ -87,6 +87,21 @@ namespace spk
 
 		}
 
+		/**
+		 * @brief Construct the vector using JSON representation
+		 * @param p_object The JSON object used as input
+		 * @note Expected format :
+		 * {
+		 * "X":15,
+		 * "Y":45,
+		 * "Z":45
+		 * }
+		 * 
+		 * Or
+		 * {
+		 * [15, 45, 45]
+		 * }
+		*/
 		IVector3(const spk::JSON::Object& p_object)
 		{
 			if constexpr (std::is_floating_point<TType>::value)

@@ -204,6 +204,11 @@ namespace spk
 			return child;
 		}
 
+		/**
+		 * @brief Retrieve a child widget using its name
+		 * @param p_name The name of the targeted widget
+		 * @return The widget if found, nullptr if not
+		*/
 		Widget* findChild(const std::string& p_name)
 		{
 			for (auto& child : children())
