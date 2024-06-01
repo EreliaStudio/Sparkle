@@ -7,6 +7,21 @@ namespace spk
 
 	}
 
+	FontAtlas::FontAtlas(const spk::JSON::Object& p_object)
+	{
+		if (p_object.isArray() == true)
+		{
+			for (size_t i = 0; i < p_object.size(); i++)
+			{
+				loadFont(p_object[i]["Name"].as<std::string>(), p_object[i]["Path"].as<std::string>());
+			}
+		}
+		else
+		{
+			spk::throwException("FontAtlas can't be instanciated with the wrong format");
+		}
+	}
+
 	FontAtlas::~FontAtlas()
 	{
 		for (auto& [key, element] : _loadedFonts)

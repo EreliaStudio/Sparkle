@@ -1,30 +1,97 @@
 #include "sparkle.hpp"
 
-int main()
+class WidgetA : public spk::Widget
 {
-    spk::Application app = spk::Application("Playground", spk::Vector2UInt(640, 640), spk::Application::Mode::Multithread);
+	openRegistration(WidgetA);
+	subscribeName("MyWidget");
+	subscribeName("Blablabla");
+	closeRegistration();
 
-	spk::Font font("Playground/resources/font/Roboto-Regular.ttf");
-	spk::SpriteSheet boxSpriteSheet("Playground/resources/texture/Frame1.png", spk::Vector2Int(3, 3));
-
-
-	for (size_t i = 0; i < 8; i++)
+private:
+	void _onUpdate() override
 	{
-		spk::TextLabel* textLabel = new spk::TextLabel("TextLabel", nullptr);
-		textLabel->box().setSpriteSheet(&boxSpriteSheet);
-		textLabel->box().setCornerSize(20);
-		textLabel->label().setText("A");
-		textLabel->label().setFont(&font);
-		textLabel->label().setTextColor(spk::Color::white);
-		textLabel->label().setTextEdgeStrenght(20.0f);
-		textLabel->label().setOutlineEdgeStrenght(20.0f);
-		textLabel->label().setOutlineColor(spk::Color::black);
-		textLabel->label().setVerticalAlignment(spk::VerticalAlignment::Centered);
-		textLabel->label().setHorizontalAlignment(spk::HorizontalAlignment::Centered);
-		textLabel->label().setFontSize(spk::Font::Size(20, i * 2));
-		textLabel->setGeometry(app.size() / spk::Vector2(1, 8) * spk::Vector2Int(0, i), app.size() / spk::Vector2(1, 8));
-		textLabel->activate();
+		
 	}
 
-    return (app.run());
+	void _onGeometryChange() override
+	{
+
+	}
+
+	void _onRender() override
+	{
+
+	}
+
+public:
+	WidgetA(spk::Widget* p_parent) :
+		WidgetA("Unnamed WidgetA", p_parent)
+	{
+
+	}
+
+	WidgetA(const std::string& p_name, spk::Widget* p_parent) :
+		spk::Widget(p_name, p_parent)
+	{
+		
+	}
+
+	WidgetA(const spk::JSON::Object &p_obj, spk::Widget* p_parent) :
+		spk::Widget(p_obj, p_parent)
+	{
+		
+	}
+};
+
+class WidgetB : public spk::Widget
+{
+	openRegistration(WidgetB);
+	subscribeName("MyWidgetB");
+	subscribeName("Other Blablabla");
+	closeRegistration();
+
+private:
+	void _onUpdate() override
+	{
+		
+	}
+
+	void _onGeometryChange() override
+	{
+
+	}
+
+	void _onRender() override
+	{
+
+	}
+
+public:
+	WidgetB(spk::Widget* p_parent) :
+		WidgetB("Unnamed WidgetB", p_parent)
+	{
+
+	}
+
+	WidgetB(const std::string& p_name, spk::Widget* p_parent) :
+		spk::Widget(p_name, p_parent)
+	{
+		
+	}
+
+	WidgetB(const spk::JSON::Object &p_obj, spk::Widget* p_parent) :
+		spk::Widget(p_obj, p_parent)
+	{
+		
+	}
+};
+
+int main()
+{
+	std::cout << "Nb subscribed widget : " << spk::WidgetCanvas::classInstanciatorLambda.size() << std::endl;
+	for (const auto& [key, lambda] : spk::WidgetCanvas::classInstanciatorLambda)
+	{
+		std::cout << "Subscriber : " << key << std::endl;
+	}
+	return (0);
 }

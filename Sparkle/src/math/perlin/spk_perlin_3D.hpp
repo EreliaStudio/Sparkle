@@ -62,6 +62,12 @@ namespace spk
 		Perlin3D(const unsigned long& p_seed);
 
 		/**
+		 * @brief Overloaded constructor for the Perlin3D class that takes a JSON object.
+		 * @param p_object JSON object containing configuration for Perlin noise generation.
+		 */
+		Perlin3D(const spk::JSON::Object& p_object);
+
+		/**
 		 * @brief Samples the Perlin noise at specific x, y, and z coordinates.
 		 * 
 		 * Generates a three-dimensional noise value at the given x, y, and z coordinates based on the current configuration of the noise generator. This method applies the Perlin noise algorithm to produce values that represent the "height" or intensity of the noise at the specified position in 3D space.

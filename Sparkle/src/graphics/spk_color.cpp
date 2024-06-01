@@ -35,6 +35,44 @@ namespace spk
 	{
 	}
 
+	Color::Color(const JSON::Object& p_object)
+	{
+		if (p_object.isObject() == true)
+		{
+			r = static_cast<float>(p_object.contains("r") == true ? p_object["r"].as<double>() : 0.0);
+			g = static_cast<float>(p_object.contains("g") == true ? p_object["g"].as<double>() : 0.0);
+			b = static_cast<float>(p_object.contains("b") == true ? p_object["b"].as<double>() : 0.0);
+			a = static_cast<float>(p_object.contains("a") == true ? p_object["a"].as<double>() : 1.0);
+		}
+		else if (p_object.isArray() == true)
+		{
+			r = static_cast<float>(p_object.size() >= 1 ? p_object[0].as<double>() : 0.0);
+			g = static_cast<float>(p_object.size() >= 2 ? p_object[1].as<double>() : 0.0);
+			b = static_cast<float>(p_object.size() >= 3 ? p_object[2].as<double>() : 0.0);
+			a = static_cast<float>(p_object.size() >= 4 ? p_object[3].as<double>() : 1.0);
+		}
+		else if (p_object.isUnit() == true && p_object.hold<std::string>() == true)
+		{
+			std::string colorString = p_object.as<std::string>();
+			if (colorString.length() == 10 && colorString.substr(0, 2) == "0x")
+			{
+				unsigned int hexValue;
+				std::stringstream ss;
+				ss << std::hex << colorString.substr(2);
+				ss >> hexValue;
+				*this = Color(hexValue);
+			}
+			else
+			{
+				spk::throwException("Invalid color string format");
+			}
+		}
+		else
+		{
+			spk::throwException("Unexpected JSON type while creating a Color");
+		}
+	}
+
 	Color Color::operator+(const Color& p_color) const
 	{
 		Color result;

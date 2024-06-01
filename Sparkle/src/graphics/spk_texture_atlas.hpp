@@ -43,6 +43,12 @@ namespace spk
 		TextureAtlas();
 
 		/**
+		 * @brief Constructor using a JSON object to initialize font inside the object
+		 * @param p_object The JSON object who will be used to open textures and save them with proper naming
+		*/
+		TextureAtlas(const spk::JSON::Object& p_object);
+
+		/**
 		 * Destructor for TextureAtlas.
 		 */
 		~TextureAtlas();
