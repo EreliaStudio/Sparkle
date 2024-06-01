@@ -101,6 +101,11 @@ namespace spk
 			{
 
 			}
+
+			bool operator < (const Size& p_other) const
+			{
+				return ((text + outline) < (p_other.text + p_other.outline));
+			}
 		};
 
 		/**

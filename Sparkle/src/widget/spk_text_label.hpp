@@ -63,6 +63,8 @@ namespace spk
 		*/
 		TextLabel(const std::string& p_name, Widget* p_parent);
 
+		spk::Font::Size computeOptimalFontSize(const float& p_ratio, const spk::Vector2Int& p_padding = 0);
+
 		/**
 		 * Provides non-const access to the internal TextLabel component.
 		 * @return Reference to the non-const TextLabel used by this widget for displaying text.

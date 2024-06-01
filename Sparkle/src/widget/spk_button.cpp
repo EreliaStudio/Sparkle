@@ -71,6 +71,13 @@ namespace spk
 
 	}
 
+	spk::Font::Size Button::computeOptimalFontSize(const float& p_ratio, const spk::Vector2Int& p_padding)
+	{
+		spk::Font::Size pressedSize = _labels[0].font()->computeOptimalTextSize(_labels[0].text(), p_ratio, size() - _boxes[0].cornerSize() * 2 - p_padding * 2);
+		spk::Font::Size releasedSize = _labels[1].font()->computeOptimalTextSize(_labels[1].text(), p_ratio, size() - _boxes[1].cornerSize() * 2 - p_padding * 2);
+		return (spk::Font::Size(std::min(pressedSize.text, releasedSize.text), std::min(pressedSize.outline, releasedSize.outline)));
+	}
+
 	void Button::setOnClickCallback(const Callback p_onClickCallback)
 	{
 		_onClickCallback = p_onClickCallback;

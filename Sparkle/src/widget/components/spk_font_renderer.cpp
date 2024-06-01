@@ -60,6 +60,10 @@ namespace spk::WidgetComponent
 				}
 
 				pixelColor = resultColor;
+				if (pixelColor.a <= 0.00390f)
+				{
+					discard;
+				}
 			}
 		})";
 

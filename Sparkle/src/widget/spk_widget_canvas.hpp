@@ -23,8 +23,8 @@ ClassRegistrar()\
  */
 #define subscribeName(RegistrationName) \
 spk::WidgetCanvas::classInstanciatorLambda[RegistrationName] =\
-[](const spk::JSON::Object &p_obj, spk::Widget* p_parent) -> spk::Widget::Widget* \
-{return (p_parent->makeChild(p_obj, p_parent));}
+[](const spk::JSON::Object &p_obj, spk::Widget* p_parent) -> spk::Widget* \
+{return (p_parent->makeChild<Instanciable>(p_obj, p_parent));}
 
 /**
  * @brief Macro to close a class registration block.

@@ -29,6 +29,11 @@ namespace spk
 		
 	}
 
+	spk::Font::Size TextLabel::computeOptimalFontSize(const float& p_ratio, const spk::Vector2Int& p_padding)
+	{
+		return (_label.font()->computeOptimalTextSize(_label.text(), p_ratio, size() - _box.cornerSize() *  2 - p_padding * 2));
+	}
+
 	spk::WidgetComponent::FontRenderer& TextLabel::label()
 	{
 		return (_label);

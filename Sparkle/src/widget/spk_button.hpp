@@ -82,6 +82,8 @@ namespace spk
 		*/
 		Button(const std::string& p_name, Widget* p_parent);
 
+		spk::Font::Size computeOptimalFontSize(const float& p_ratio, const spk::Vector2Int& p_padding = 0);
+
 		/**
 		 * @brief Sets the callback function to be called when the button is clicked.
 		 * @param p_onClickCallback The function to call on a button click.
