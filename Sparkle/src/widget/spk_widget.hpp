@@ -140,6 +140,23 @@ namespace spk
 		Widget(const std::string& p_name, Widget* p_parent);
 
 		/**
+		 * @brief Construct a widget using a JSON object as input
+		 * @param p_object The JSON from where widget information will be taken from
+		 * @param p_parent A pointer to the parent widget. This widget will be added as a child of the given parent.
+		 * 
+		 * @note JSON format : 
+		 * {
+		 * "Name":"MyWidgetName",
+		 * "WidgetType":"MyWidget",
+		 * "Parent":"MyParentWidget",
+		 * "Active":false,
+		 * "MyCustomInformation":15,
+		 * "MyCustomString":"This is a test"
+		 * }
+		*/
+		Widget(const spk::JSON::Object& p_object, Widget* p_parent);
+
+		/**
 		 * Destructor for the widget. Cleans up resources and ensures proper deactivation of the widget and its children.
 		 */
 		~Widget();
@@ -187,6 +204,23 @@ namespace spk
 			return child;
 		}
 
+		Widget* findChild(const std::string& p_name)
+		{
+			for (auto& child : children())
+			{
+				if (child->name() == p_name)
+					return (child);
+			}
+			
+			for (auto& child : children())
+			{
+				Widget* childResult = child->findChild(p_name);
+				if (childResult != nullptr)
+					return (childResult);
+			}
+
+			return (nullptr);
+		}
 
 		/**
 		 * Sets the geometry of the widget, specifying its anchor point and size.

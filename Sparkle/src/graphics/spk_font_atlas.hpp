@@ -39,6 +39,12 @@ namespace spk
 		FontAtlas();
 
 		/**
+		 * @brief Constructor using a JSON object to initialize font inside the object
+		 * @param p_object The JSON object who will be used to open font and save them with proper naming
+		*/
+		FontAtlas(const spk::JSON::Object& p_object);
+
+		/**
 		 * Destructor for the FontAtlas class. Ensures proper cleanup of all loaded fonts.
 		 */
 		~FontAtlas();

@@ -88,6 +88,44 @@ namespace spk
 		{
 		}
 
+		IVector2(const spk::JSON::Object& p_object)
+		{
+			if constexpr (std::is_floating_point<TType>::value)
+			{
+				if (p_object.isObject())
+				{
+					x = static_cast<TType>(p_object["X"].as<double>());
+					y = static_cast<TType>(p_object["Y"].as<double>());
+				}
+				else if (p_object.isArray() && p_object.size() == 2)
+				{
+					x = static_cast<TType>(p_object[0].as<double>());
+					y = static_cast<TType>(p_object[1].as<double>());
+				}
+				else
+				{
+					spk::throwException("Wrongly formated IVector2 in JSON object");
+				}
+			}
+			else
+			{
+				if (p_object.isObject())
+				{
+					x = static_cast<TType>(p_object["X"].as<long>());
+					y = static_cast<TType>(p_object["Y"].as<long>());
+				}
+				else if (p_object.isArray() && p_object.size() == 2)
+				{
+					x = static_cast<TType>(p_object[0].as<long>());
+					y = static_cast<TType>(p_object[1].as<long>());
+				}
+				else
+				{
+					spk::throwException("Wrongly formated IVector2 in JSON object");
+				}
+			}
+		}
+
 		/**
 		 * @brief Conversion operator to another vector of possibly different type.
 		 * @return A new vector of the target type with copied components.

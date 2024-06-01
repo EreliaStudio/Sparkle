@@ -76,7 +76,7 @@ namespace spk
 		Button(Widget* p_parent);
 
 		/**
-		 * @brief Construct a nesw button widget with a specific name and a given parent.
+		 * @brief Construct a nes button widget with a specific name and a given parent.
 		 * @param p_name The desired name of the widget.
 		 * @param p_parent Pointer to the parent widget.
 		*/
