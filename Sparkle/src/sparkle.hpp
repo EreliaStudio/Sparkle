@@ -9,6 +9,7 @@
 #include "design_pattern/spk_observable_value.hpp"
 #include "design_pattern/spk_singleton.hpp"
 #include "design_pattern/spk_state_machine.hpp"
+#include "design_pattern/spk_event_manager.hpp"
 
 #include "math/spk_matrix4x4.hpp"
 #include "math/spk_quaternion.hpp"

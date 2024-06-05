@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vector>
+#include <map>
 #include <memory>
 #include "design_pattern/spk_notifier.hpp"
 
@@ -39,7 +39,7 @@ namespace spk
 		using Contract = spk::Notifier::Contract;
 
 	private:
-		std::vector<spk::Notifier> _notifiers;
+		std::unordered_map<TEventType, spk::Notifier> _notifiers;
 
 	public:
 		/**
@@ -65,12 +65,7 @@ namespace spk
 		 */
 		std::unique_ptr<Contract> subscribe(const TEventType& p_event, const Callback& p_callback)
 		{
-			size_t index = static_cast<size_t>(p_event);
-
-			if (_notifiers.size() <= index)
-				_notifiers.resize(index + 1);
-
-			return _notifiers[index].subscribe(p_callback);
+			return _notifiers[p_event].subscribe(p_callback);
 		}
 
 		/**
@@ -82,12 +77,7 @@ namespace spk
 		 */
 		void notify_all(const TEventType& p_event)
 		{
-			size_t index = static_cast<size_t>(p_event);
-
-			if (_notifiers.size() <= index)
-				_notifiers.resize(index + 1);
-
-			_notifiers[index].notify_all();
+			_notifiers[p_event].notify_all();
 		}
 	};
 }
