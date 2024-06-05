@@ -234,6 +234,8 @@ namespace spk
 		 */
 		void setGeometry(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size);
 
+		void forceGeometryChange(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size);
+
 		/**
 		 * Sets the layer of the widget, affecting its rendering order relative to its siblings.
 		 * @param p_layer The layer value of the widget. Lower values are rendered behind higher values.
