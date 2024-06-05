@@ -172,6 +172,9 @@ namespace spk
 
 		for (int i = 0; i < deltas.size(); i++)
 		{
+			if (deltas[i] > p_textArea.y)
+				continue;
+
 			bool enough = false;
 			while (enough == false)
 			{
