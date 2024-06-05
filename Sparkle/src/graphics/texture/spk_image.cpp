@@ -22,4 +22,9 @@ namespace spk
 			Texture::Wrap::Repeat,
 			Texture::Mipmap::Disable);
 	}
+
+	const spk::Vector2Int& Image::size() const
+	{
+		return (_size);
+	}
 }

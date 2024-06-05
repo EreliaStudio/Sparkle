@@ -51,5 +51,7 @@ namespace spk
 		 * @note The path provided must point to a valid, readable image file. The supported formats depend on the underlying graphics API and libraries used for image parsing.
 		 */
 		Image(const std::filesystem::path& p_path);
+
+		const spk::Vector2Int& size() const;
 	};
 }

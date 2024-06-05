@@ -5,16 +5,16 @@ namespace spk
 	SpriteSheet::SpriteSheet(const std::filesystem::path& p_path, const spk::Vector2UInt& p_spriteSize) :
 		spk::Image(p_path)
 	{
-		_size = p_spriteSize;
-		_unit = Vector2(1.0f, 1.0f) / _size;
+		_nbSprite = p_spriteSize;
+		_unit = Vector2(1.0f, 1.0f) / _nbSprite;
 
 		if (p_spriteSize == Vector2UInt(1, 1))
 			_sprites.push_back(Vector2(0, 0));
 		else
 		{
-			for (size_t y = 0; y < _size.y; y++)
+			for (size_t y = 0; y < _nbSprite.y; y++)
 			{
-				for (size_t x = 0; x < _size.x; x++)
+				for (size_t x = 0; x < _nbSprite.x; x++)
 				{
 					_sprites.push_back(Vector2(static_cast<float>(x), static_cast<float>(y)) * _unit);
 				}
@@ -22,9 +22,9 @@ namespace spk
 		}
 	}
 
-	const spk::Vector2UInt& SpriteSheet::size() const
+	const spk::Vector2UInt& SpriteSheet::nbSprite() const
 	{
-		return (_size);
+		return (_nbSprite);
 	}
 
 	const spk::Vector2& SpriteSheet::unit() const
@@ -39,7 +39,7 @@ namespace spk
 
 	size_t SpriteSheet::spriteID(const spk::Vector2UInt& p_spriteCoord) const
 	{	
-		return ((_size.x * p_spriteCoord.y) + p_spriteCoord.x);
+		return ((_nbSprite.x * p_spriteCoord.y) + p_spriteCoord.x);
 	}
 
 	spk::Vector2 SpriteSheet::sprite(const spk::Vector2UInt& p_spriteCoord) const
