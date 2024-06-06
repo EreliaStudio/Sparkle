@@ -74,6 +74,7 @@
 #include "widget/spk_text_entry.hpp"
 #include "widget/spk_text_label.hpp"
 #include "widget/spk_widget_canvas.hpp"
+#include "widget/spk_state_widget.hpp"
 
 #include "network/spk_message.hpp"
 #include "network/spk_server.hpp"
