@@ -63,6 +63,7 @@
 #include "widget/components/spk_colored_box.hpp"
 #include "widget/components/spk_font_renderer.hpp"
 #include "widget/components/spk_texture_renderer.hpp"
+#include "widget/components/spk_sprite_sheet_renderer.hpp"
 
 #include "widget/spk_game_engine_manager.hpp"
 #include "widget/spk_widget.hpp"
