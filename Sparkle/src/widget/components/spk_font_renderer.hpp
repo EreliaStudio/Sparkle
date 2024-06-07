@@ -99,13 +99,13 @@ namespace spk::WidgetComponent
 		 * @brief Default constructor for the FontRenderer class.
 		 */
 		FontRenderer();
-
+    
 		/**
 		 * Compute the optimized size of the text for a specific area and outline ratio.
 		 * @param p_availibleArea The area where the text must stay inside
 		 * @param p_outlineRatio The ratio between the outline size and the text size
 		 * @return The resulting font size, containing information about text and outline size
-		*/
+		 */
 		spk::Font::Size computeOptimalFontSize(const spk::Vector2Int& p_availibleArea, const float& p_outlineRatio);
 
 		/**
