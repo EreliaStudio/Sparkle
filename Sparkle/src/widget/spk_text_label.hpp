@@ -38,6 +38,7 @@ namespace spk
 	private:
 		spk::WidgetComponent::NineSlicedBox _box; ///< Background box that can be styled and resized.
 		spk::WidgetComponent::FontRenderer _label;   ///< Text component used for displaying the label's content.
+		spk::Vector2Int _padding;
 
 		/**
 		 * Handles geometry changes, updating the layout of the text and background to fit the new widget size.
@@ -63,7 +64,9 @@ namespace spk
 		*/
 		TextLabel(const std::string& p_name, Widget* p_parent);
 
-		spk::Font::Size computeOptimalFontSize(const float& p_ratio, const spk::Vector2Int& p_padding = 0);
+		spk::Font::Size computeOptimalFontSize(const float& p_ratio);
+
+		void setPadding(const spk::Vector2Int& p_padding);
 
 		/**
 		 * Provides non-const access to the internal TextLabel component.

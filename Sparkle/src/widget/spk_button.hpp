@@ -61,6 +61,7 @@ namespace spk
 
 		WidgetComponent::NineSlicedBox _boxes[2];
 		WidgetComponent::FontRenderer _labels[2];
+		spk::Vector2Int _padding;
 
 		Callback _onClickCallback;
 
@@ -82,7 +83,9 @@ namespace spk
 		*/
 		Button(const std::string& p_name, Widget* p_parent);
 
-		spk::Font::Size computeOptimalFontSize(const float& p_ratio, const spk::Vector2Int& p_padding = 0);
+		spk::Font::Size computeOptimalFontSize(const float& p_ratio);
+
+		void setPadding(const spk::Vector2Int& p_padding);
 
 		/**
 		 * @brief Sets the callback function to be called when the button is clicked.

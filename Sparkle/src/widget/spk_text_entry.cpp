@@ -8,7 +8,7 @@ namespace spk
 		_box.setGeometry(anchor(), size());
 		_box.setLayer(layer());
 
-		_label.setGeometry(anchor() + _box.cornerSize(), size() - _box.cornerSize() * 2);
+		_label.setGeometry(anchor() + _box.cornerSize() + _padding, size() - _box.cornerSize() * 2 - _padding * 2);
 		_label.setLayer(layer() + 0.01f);
 
 		_cursorBox.setLayer(layer() + 0.02f);
@@ -237,7 +237,8 @@ namespace spk
 		_cursorBox(),
 		_placeholderText("Enter text ..."),
 		_text(""),
-		_isTextEdited(true)
+		_isTextEdited(true),
+		_padding(0)
 	{
 		_cursorBox.setColor(spk::Color(10, 10, 10, 255));
 	}

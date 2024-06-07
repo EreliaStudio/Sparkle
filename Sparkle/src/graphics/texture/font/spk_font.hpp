@@ -247,10 +247,9 @@ namespace spk
 
 		/**
 		 * @brief Retrieves the atlas for a specific text size and outline size.
-		 * @param p_textSize The size of the text.
-		 * @param p_outlineSize The size of the outline.
+		 * @param p_size The size of the font.
 		 * @return The atlas for the specified text and outline sizes.
 		 */
-		Atlas& atlas(const size_t& p_textSize, const size_t& p_outlineSize);
+		Atlas& atlas(const Size& p_size);
 	};
 }

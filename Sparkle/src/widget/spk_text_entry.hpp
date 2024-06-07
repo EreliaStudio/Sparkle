@@ -37,6 +37,7 @@ namespace spk
 		spk::WidgetComponent::NineSlicedBox _box; ///< Background box, resizable according to text length.
 		spk::WidgetComponent::ColoredBox _cursorBox; ///< Cursor representation within the text box.
 		spk::WidgetComponent::FontRenderer _label; ///< Label for displaying text content.
+		spk::Vector2Int _padding;
 
 		std::vector<spk::Input> _inputs; ///< Collection of input handlers for managing keyboard input.
 

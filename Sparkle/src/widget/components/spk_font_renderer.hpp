@@ -68,10 +68,9 @@ namespace spk::WidgetComponent
 
 		std::string _text;
 
-		size_t _textSize;
+		spk::Font::Size _fontSize;
 		spk::Color _textColor;
 		float _textEdgeStrenght;
-		size_t _outlineSize;
 		spk::Color _outlineColor;
 		float _outlineEdgeStrenght;
 
@@ -203,6 +202,12 @@ namespace spk::WidgetComponent
 		 * @return The size of the text.
 		 */
 		const spk::Vector2Int& size() const;
+
+		/**
+		 * @brief Get the font size of the renderer.
+		 * @return The text and outline size of the font.
+		*/
+		const spk::Font::Size& fontSize() const;
 
 		/**
 		 * @brief Gets the size of the text.
