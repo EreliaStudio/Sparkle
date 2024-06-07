@@ -61,6 +61,7 @@ namespace spk
 
 		WidgetComponent::NineSlicedBox _boxes[2];
 		WidgetComponent::FontRenderer _labels[2];
+		spk::Vector2Int _padding;
 
 		Callback _onClickCallback;
 
@@ -81,6 +82,19 @@ namespace spk
 		 * @param p_parent Pointer to the parent widget.
 		*/
 		Button(const std::string& p_name, Widget* p_parent);
+
+		/**
+		 * @brief Compute the maximum size of the button font, based on the current label padding and size
+		 * @param p_ratio The expected ration between the text and outline size.
+		 * @return The size describing the expected text and outline size in pixels.
+		*/
+		spk::Font::Size computeOptimalFontSize(const float& p_ratio);
+
+		/**
+		 * @brief Define the padding of the text label inside the box.
+		 * @param p_padding The desired padding in pixels.
+		*/
+		void setPadding(const spk::Vector2Int& p_padding);
 
 		/**
 		 * @brief Sets the callback function to be called when the button is clicked.

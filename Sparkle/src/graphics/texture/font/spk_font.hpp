@@ -101,6 +101,20 @@ namespace spk
 			{
 
 			}
+
+			/**
+			 * @brief Comparator allowing Size to be stored inside std container.
+			 * @param p_other The other Size to compare to.
+			 * @return True if the current size is lower than the other one.
+			*/
+			bool operator < (const Size& p_other) const
+			{
+				if (text < p_other.text)
+					return (true);
+				if (outline < p_other.outline)
+					return (true);
+				return (false);
+			}
 		};
 
 		/**
@@ -242,10 +256,9 @@ namespace spk
 
 		/**
 		 * @brief Retrieves the atlas for a specific text size and outline size.
-		 * @param p_textSize The size of the text.
-		 * @param p_outlineSize The size of the outline.
+		 * @param p_size The size of the font.
 		 * @return The atlas for the specified text and outline sizes.
 		 */
-		Atlas& atlas(const size_t& p_textSize, const size_t& p_outlineSize);
+		Atlas& atlas(const Size& p_size);
 	};
 }

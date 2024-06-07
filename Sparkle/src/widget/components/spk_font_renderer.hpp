@@ -62,16 +62,15 @@ namespace spk::WidgetComponent
 
 		bool _needGPUBufferUpdate;
 		spk::Vector2Int _anchor;
-		spk::Vector2Int _size;
+		spk::Vector2Int _size; ///< The size of the rendered text.
 		spk::VerticalAlignment _verticalAlignment;
 		spk::HorizontalAlignment _horizontalAlignment;
 
 		std::string _text;
 
-		size_t _textSize;
+		spk::Font::Size _fontSize;
 		spk::Color _textColor;
 		float _textEdgeStrenght;
-		size_t _outlineSize;
 		spk::Color _outlineColor;
 		float _outlineEdgeStrenght;
 
@@ -86,9 +85,9 @@ namespace spk::WidgetComponent
 		 */
 		struct RenderingData
 		{
-			std::vector<const spk::Font::Glyph*> glyphs; ///< The glyphs to render.
-			spk::Vector2Int anchorOffset; ///< The offset of the anchor.
-			spk::Vector2Int size; ///< The overall size of the rendered text.
+			std::vector<const spk::Font::Glyph*> glyphs; //!< The glyphs to render.
+			spk::Vector2Int anchorOffset; //!< The offset of the anchor.
+			spk::Vector2Int size; //!< The overall size of the rendered text.
 		};
 
 		RenderingData _computeRenderingData(spk::Font::Atlas* p_fontAtlas, const std::string& p_text) const;
@@ -100,14 +99,16 @@ namespace spk::WidgetComponent
 		 * @brief Default constructor for the FontRenderer class.
 		 */
 		FontRenderer();
-
-		 * @brief Compute the optimized size of the text for a specific area and outline ratio.
+    
+		/**
+		 * Compute the optimized size of the text for a specific area and outline ratio.
 		 * @param p_availibleArea The area where the text must stay inside
 		 * @param p_outlineRatio The ratio between the outline size and the text size
 		 * @return The resulting font size, containing information about text and outline size
-		*/
+		 */
 		spk::Font::Size computeOptimalFontSize(const spk::Vector2Int& p_availibleArea, const float& p_outlineRatio);
 
+		/**
 		 * @brief Renders the text using the current settings.
 		 */
 		void render();
@@ -201,6 +202,12 @@ namespace spk::WidgetComponent
 		 * @return The size of the text.
 		 */
 		const spk::Vector2Int& size() const;
+
+		/**
+		 * @brief Get the font size of the renderer.
+		 * @return The text and outline size of the font.
+		*/
+		const spk::Font::Size& fontSize() const;
 
 		/**
 		 * @brief Gets the size of the text.

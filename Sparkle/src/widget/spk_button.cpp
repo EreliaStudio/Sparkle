@@ -11,7 +11,7 @@ namespace spk
 			_boxes[i].setGeometry(anchor(), size());
 			_boxes[i].setLayer(layer());
 			
-			_labels[i].setGeometry(anchor() + _boxes[i].cornerSize(), size() - _boxes[i].cornerSize() * 2);
+			_labels[i].setGeometry(anchor() + _boxes[i].cornerSize() + _padding, size() - _boxes[i].cornerSize() * 2 - _padding * 2);
 			_labels[i].setLayer(layer() + 0.01f);
 		}
 	}
@@ -30,7 +30,8 @@ namespace spk
 	Button::Button(const std::string& p_name, Widget* p_parent) :
 		Widget(p_parent),
 		_onClickCallback(nullptr),
-		_stateMachine()
+		_stateMachine(),
+		_padding(0)
 	{
 		_stateMachine.addState(State::Released, StateMachine<State>::Action(
 			[&](){},
@@ -69,6 +70,20 @@ namespace spk
 		Button("Anonymous Button", p_parent)
 	{
 
+	}
+
+	spk::Font::Size Button::computeOptimalFontSize(const float& p_ratio)
+	{
+		return (std::min({
+				_labels[0].font()->computeOptimalTextSize(_labels[0].text(), p_ratio, _labels[0].size()),
+				_labels[1].font()->computeOptimalTextSize(_labels[1].text(), p_ratio, _labels[1].size())
+			}));
+	}
+
+	void Button::setPadding(const spk::Vector2Int& p_padding)
+	{
+		_padding = p_padding;
+		setGeometry(anchor(), size());
 	}
 
 	void Button::setOnClickCallback(const Callback p_onClickCallback)

@@ -60,6 +60,10 @@ namespace spk::WidgetComponent
 				}
 
 				pixelColor = resultColor;
+				if (pixelColor.a <= 0.00390f)
+				{
+					discard;
+				}
 			}
 		})";
 
@@ -94,9 +98,8 @@ namespace spk::WidgetComponent
 		_size(0, 0),
 		_verticalAlignment(spk::VerticalAlignment::Centered),
 		_horizontalAlignment(spk::HorizontalAlignment::Centered),
-		_textSize(0),
+		_fontSize(0, 0),
 		_textEdgeStrenght(20.0f),
-		_outlineSize(0),
 		_outlineEdgeStrenght(20.0f)
 	{
 		setTextEdgeStrenght(20.0f);
@@ -105,7 +108,20 @@ namespace spk::WidgetComponent
 
 	spk::Font::Size FontRenderer::computeOptimalFontSize(const spk::Vector2Int& p_availibleArea, const float& p_outlineRatio)
 	{
-		return (_font->computeOptimalTextSize(_text, p_outlineRatio, p_availibleArea));
+		spk::Font::Size result;
+
+		if (_font == nullptr)
+		{
+			result.text = p_availibleArea.y;
+			result.outline = static_cast<size_t>(result.text * p_outlineRatio);
+			result.text -= result.outline * 2;
+		}
+		else
+		{
+			result = _font->computeOptimalTextSize(_text, p_outlineRatio, p_availibleArea);
+		}
+
+		return (result);
 	}
 
 	void FontRenderer::render()
@@ -150,7 +166,7 @@ namespace spk::WidgetComponent
 
 	void FontRenderer::setTextSize(const size_t& p_textSize)
 	{
-		_textSize = p_textSize;
+		_fontSize.text = p_textSize;
 		_needGPUBufferUpdate = true;
 	}
 
@@ -170,7 +186,7 @@ namespace spk::WidgetComponent
 
 	void FontRenderer::setOutlineSize(const size_t& p_outlineSize)
 	{
-		_outlineSize = p_outlineSize;
+		_fontSize.outline = p_outlineSize;
 		_needGPUBufferUpdate = true;
 	}
 
@@ -212,10 +228,15 @@ namespace spk::WidgetComponent
 	{
 		return _size;
 	}
+		
+	const spk::Font::Size& FontRenderer::fontSize() const
+	{
+		return (_fontSize);
+	}
 
 	size_t FontRenderer::textSize() const
 	{
-		return (_textSize);
+		return (_fontSize.text);
 	}
 
 	const spk::Color& FontRenderer::textColor() const
@@ -230,7 +251,7 @@ namespace spk::WidgetComponent
 
 	size_t FontRenderer::outlineSize() const
 	{
-		return (_outlineSize);
+		return (_fontSize.outline);
 	}
 
 	const spk::Color& FontRenderer::outlineColor() const
@@ -353,7 +374,7 @@ namespace spk::WidgetComponent
 
 	void FontRenderer::_updateGPUData()
 	{
-		_fontAtlas = &(_font->atlas(_textSize, _outlineSize));
+		_fontAtlas = &(_font->atlas(_fontSize));
 
 		spk::Vector2 deltas[4] = {
 			spk::Vector2(0, 0),

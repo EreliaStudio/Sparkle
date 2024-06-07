@@ -34,7 +34,7 @@ namespace spk
 	class SpriteSheet : public Image
 	{
 	private:
-		spk::Vector2UInt _size;
+		spk::Vector2UInt _nbSprite;
 		spk::Vector2 _unit;
 		std::vector<spk::Vector2> _sprites;
 
@@ -56,7 +56,7 @@ namespace spk
 		 * 
 		 * @return A Vector2UInt representing the grid size (columns, rows) of the spritesheet.
 		 */
-		const spk::Vector2UInt& size() const;
+		const spk::Vector2UInt& nbSprite() const;
 
 		/**
 		 * @brief Gets the unit size of a single sprite within the spritesheet, expressed as a fraction of the whole image.

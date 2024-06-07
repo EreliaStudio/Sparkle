@@ -37,6 +37,7 @@ namespace spk
 		spk::WidgetComponent::NineSlicedBox _box; ///< Background box, resizable according to text length.
 		spk::WidgetComponent::ColoredBox _cursorBox; ///< Cursor representation within the text box.
 		spk::WidgetComponent::FontRenderer _label; ///< Label for displaying text content.
+		spk::Vector2Int _padding;
 
 		std::vector<spk::Input> _inputs; ///< Collection of input handlers for managing keyboard input.
 
@@ -85,6 +86,12 @@ namespace spk
 		 * @param p_text The text to set initially.
 		 */
 		void setPredefinedText(const std::string& p_text);
+
+		/**
+		 * @brief Define the padding of the text label inside the box.
+		 * @param p_padding The desired padding in pixels.
+		*/
+		void setPadding(const spk::Vector2Int& p_padding);
 
 		/**
 		 * Access the text label component of the text entry.

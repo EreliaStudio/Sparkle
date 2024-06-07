@@ -148,12 +148,12 @@ namespace spk
 	
 	Vector2Int Font::computeCharSize(const wchar_t& p_char, size_t p_size, size_t p_outlineSize)
 	{
-		return (atlas(p_size, p_outlineSize).computeCharSize(p_char));
+		return (atlas(spk::Font::Size(p_size, p_outlineSize)).computeCharSize(p_char));
 	}
 
 	Vector2Int Font::computeStringSize(const std::string& p_string, size_t p_size, size_t p_outlineSize)
 	{
-		return (atlas(p_size, p_outlineSize).computeStringSize(p_string));
+		return (atlas(spk::Font::Size(p_size, p_outlineSize)).computeStringSize(p_string));
 	}
 
 	Font::Size Font::computeOptimalTextSize(const std::string& p_string, float p_outlineSizeRatio, const Vector2Int& p_textArea)
@@ -172,6 +172,9 @@ namespace spk
 
 		for (int i = 0; i < deltas.size(); i++)
 		{
+			if (deltas[i] > p_textArea.y)
+				continue;
+
 			bool enough = false;
 			while (enough == false)
 			{
@@ -198,12 +201,12 @@ namespace spk
 		return (result);
 	}
 
-	Font::Atlas& Font::atlas(const size_t& p_textSize, const size_t& p_outlineSize)
+	Font::Atlas& Font::atlas(const Size& p_size)
 	{
-		auto key = std::make_tuple(p_textSize, p_outlineSize);
+		auto key = std::make_tuple(p_size.text, p_size.outline);
 		if (_atlases.find(key) == _atlases.end())
 		{
-			_atlases.emplace(key, Atlas(_fontInfo, _fontData, p_textSize, p_outlineSize));
+			_atlases.emplace(key, Atlas(_fontInfo, _fontData, p_size.text, p_size.outline));
 		}
 		return _atlases.at(key);
 	}

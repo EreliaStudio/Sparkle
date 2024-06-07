@@ -149,7 +149,14 @@ namespace spk
 		_sizeRatio = (parent() != nullptr && parent()->size() != 0 ? static_cast<spk::Vector2>(_size) / static_cast<spk::Vector2>(parent()->size()) : 1);
 		_needGeometryUpdate = true;
 	}
-	
+
+	void Widget::forceGeometryChange(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size)
+	{
+		setGeometry(p_anchor, p_size);
+		_onGeometryChange();
+		_needGeometryUpdate = false;
+	}
+
 	void Widget::resize(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size)
 	{
 		_anchor = p_anchor;

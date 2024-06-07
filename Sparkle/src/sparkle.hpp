@@ -9,6 +9,7 @@
 #include "design_pattern/spk_observable_value.hpp"
 #include "design_pattern/spk_singleton.hpp"
 #include "design_pattern/spk_state_machine.hpp"
+#include "design_pattern/spk_event_manager.hpp"
 
 #include "math/spk_matrix4x4.hpp"
 #include "math/spk_quaternion.hpp"
@@ -62,6 +63,7 @@
 #include "widget/components/spk_colored_box.hpp"
 #include "widget/components/spk_font_renderer.hpp"
 #include "widget/components/spk_texture_renderer.hpp"
+#include "widget/components/spk_sprite_sheet_renderer.hpp"
 
 #include "widget/spk_game_engine_manager.hpp"
 #include "widget/spk_widget.hpp"
@@ -72,6 +74,8 @@
 #include "widget/spk_text_entry.hpp"
 #include "widget/spk_text_label.hpp"
 #include "widget/spk_widget_canvas.hpp"
+#include "widget/spk_state_widget.hpp"
+#include "widget/spk_value_selecter_widget.hpp"
 
 #include "network/spk_message.hpp"
 #include "network/spk_server.hpp"
