@@ -3,6 +3,8 @@
 #include <iostream>
 #include <vector>
 
+#include "miscellaneous/JSON/spk_JSON_object.hpp"
+
 namespace spk
 {
 	/**
@@ -66,6 +68,11 @@ namespace spk
 		 * @param p_a Alpha component [0.0f, 1.0f] (default is 1.0f).
 		 */
 		Color(float p_r, float p_g, float p_b, float p_a = 1.0f);
+
+		/**
+		 * @brief Constructor to initialize a color using on of the 3 JSON formats possible
+		*/
+		Color(const JSON::Object& p_object);
 
 		/**
 		 * @brief Addition operator to add two colors.

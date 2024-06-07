@@ -2,7 +2,7 @@
 
 int main()
 {
-    spk::Application app = spk::Application("Playground", spk::Vector2UInt(640, 640), spk::Application::Mode::Multithread);
+  spk::Application app = spk::Application("Playground", spk::Vector2UInt(640, 640), spk::Application::Mode::Multithread);
 
 	spk::Font font("Playground/resources/font/Roboto-Regular.ttf");
 	spk::SpriteSheet boxSpriteSheet("Playground/resources/texture/Frame1.png", spk::Vector2Int(3, 3));
@@ -27,4 +27,5 @@ int main()
 	}
 
     return (app.run());
+	return (0);
 }

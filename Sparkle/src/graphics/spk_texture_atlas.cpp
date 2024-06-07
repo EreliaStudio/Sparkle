@@ -7,6 +7,28 @@ namespace spk
 
 	}
 
+	TextureAtlas::TextureAtlas(const spk::JSON::Object& p_object)
+	{
+		if (p_object.isObject() == true)
+		{
+			const spk::JSON::Object& spriteSheetsArray = p_object["SpriteSheets"];
+			for (size_t i = 0; i < spriteSheetsArray.size(); i++)
+			{
+				loadSpriteSheet(spriteSheetsArray[i]["Name"].as<std::string>(), spriteSheetsArray[i]["Path"].as<std::string>(), spk::Vector2Int(spriteSheetsArray[i]["Size"]));
+			}
+
+			const spk::JSON::Object& imagesArray = p_object["Images"];
+			for (size_t i = 0; i < imagesArray.size(); i++)
+			{
+				loadImage(imagesArray[i]["Name"].as<std::string>(), imagesArray[i]["Path"].as<std::string>());
+			}
+		}
+		else
+		{
+			spk::throwException("TextureAtlas can't be instanciated with the wrong format");
+		}
+	}
+
 	TextureAtlas::~TextureAtlas()
 	{
 		for (auto& [key, element] : _loadedTextures)

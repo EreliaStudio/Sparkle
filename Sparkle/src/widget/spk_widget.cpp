@@ -109,6 +109,19 @@ namespace spk
 			p_parent->addChild(this);
 	}
 
+	Widget::Widget(const spk::JSON::Object& p_object, Widget* p_parent) :
+		Widget("Anonym widget", p_parent)
+	{
+		if (p_object.contains("Name") == true)
+		{
+			setName(p_object["Name"].as<std::string>());
+		}
+		if (p_object.contains("Active") == true)
+		{
+			setActivationState(p_object["Active"].as<bool>());
+		}
+	}
+	
 	Widget::~Widget()
 	{
 		if (parent() != nullptr)

@@ -103,6 +103,11 @@ namespace spk::WidgetComponent
 		setOutlineEdgeStrenght(20.0f);
 	}
 
+	spk::Font::Size FontRenderer::computeOptimalFontSize(const spk::Vector2Int& p_availibleArea, const float& p_outlineRatio)
+	{
+		return (_font->computeOptimalTextSize(_text, p_outlineRatio, p_availibleArea));
+	}
+
 	void FontRenderer::render()
 	{
 		if (_font == nullptr)

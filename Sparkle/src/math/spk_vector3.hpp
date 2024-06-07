@@ -37,7 +37,13 @@ namespace spk
 		 * @param p_value The value to set for x, y, and z components.
 		 */
 		template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
-		IVector3(const TOtherType& p_value) : x(static_cast<TType>(p_value)), y(static_cast<TType>(p_value)), z(static_cast<TType>(p_value)) {}
+		IVector3(const TOtherType& p_value) :
+			x(static_cast<TType>(p_value)),
+			y(static_cast<TType>(p_value)),
+			z(static_cast<TType>(p_value))
+		{
+
+		}
 
 		/**
 		 * @brief Constructs a 3D vector from a 2D vector and a separate z component value.
@@ -45,14 +51,26 @@ namespace spk
 		 * @param p_value The value for the z component.
 		 */
 		template <typename TTypeA, typename TTypeB, typename = typename std::enable_if<std::is_arithmetic<TTypeA>::value>::type, typename = typename std::enable_if<std::is_arithmetic<TTypeB>::value>::type>
-		IVector3(const IVector2<TTypeA> &p_other, const TTypeB &p_value) : x(static_cast<TType>(p_other.x)), y(static_cast<TType>(p_other.y)), z(static_cast<TType>(p_value)) {}
+		IVector3(const IVector2<TTypeA> &p_other, const TTypeB &p_value) :
+			x(static_cast<TType>(p_other.x)),
+			y(static_cast<TType>(p_other.y)),
+			z(static_cast<TType>(p_value))
+		{
+
+		}
 
 		/**
 		 * @brief Copy constructor. Initializes a new vector with the components of another vector.
 		 * @param p_other The vector from which to copy the components.
 		 */
 		template <typename TOtherType, typename = typename std::enable_if<std::is_arithmetic<TOtherType>::value>::type>
-		IVector3(const IVector3<TOtherType> &p_other) : x(static_cast<TType>(p_other.x)), y(static_cast<TType>(p_other.y)), z(static_cast<TType>(p_other.z)) {}
+		IVector3(const IVector3<TOtherType> &p_other) :
+			x(static_cast<TType>(p_other.x)),
+			y(static_cast<TType>(p_other.y)),
+			z(static_cast<TType>(p_other.z))
+		{
+
+		}
 
 		/**
 		 * @brief Constructs a vector with separate values for x, y, and z components.
@@ -61,7 +79,44 @@ namespace spk
 		 * @param p_z The value for the z component.
 		 */
 		template <typename TTypeA, typename TTypeB, typename TTypeC, typename = typename std::enable_if<std::is_arithmetic<TTypeA>::value>::type, typename = typename std::enable_if<std::is_arithmetic<TTypeB>::value>::type, typename = typename std::enable_if<std::is_arithmetic<TTypeC>::value>::type>
-		IVector3(const TTypeA &p_x, const TTypeB &p_y, const TTypeC &p_z) : x(static_cast<TType>(p_x)), y(static_cast<TType>(p_y)), z(static_cast<TType>(p_z)) {}
+		IVector3(const TTypeA &p_x, const TTypeB &p_y, const TTypeC &p_z) :
+			x(static_cast<TType>(p_x)),
+			y(static_cast<TType>(p_y)),
+			z(static_cast<TType>(p_z))
+		{
+
+		}
+
+		/**
+		 * @brief Construct the vector using JSON representation
+		 * @param p_object The JSON object used as input
+		 * @note Expected format :
+		 * {
+		 * "X":15,
+		 * "Y":45,
+		 * "Z":45
+		 * }
+		 * 
+		 * Or
+		 * {
+		 * [15, 45, 45]
+		 * }
+		*/
+		IVector3(const spk::JSON::Object& p_object)
+		{
+			if constexpr (std::is_floating_point<TType>::value)
+			{
+				x = p_object["x"].as<double>();
+				y = p_object["y"].as<double>();
+				z = p_object["z"].as<double>();
+			}
+			else
+			{
+				x = p_object["x"].as<long>();
+				y = p_object["y"].as<long>();
+				z = p_object["z"].as<long>();
+			}
+		}
 
 		/**
 		 * @brief Conversion operator to allow implicit conversion between vectors of different types.

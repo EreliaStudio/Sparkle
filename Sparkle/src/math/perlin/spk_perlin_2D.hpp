@@ -61,6 +61,12 @@ namespace spk
 		 * @param p_seed The seed value to use for noise generation.
 		 */
 		Perlin2D(const unsigned long& p_seed);
+		
+		/**
+		 * @brief Overloaded constructor for the Perlin2D class that takes a JSON object.
+		 * @param p_object JSON object containing configuration for Perlin noise generation.
+		 */
+		Perlin2D(const spk::JSON::Object& p_object);
 
 		/**
 		 * @brief Samples the Perlin noise at specific x and y coordinates.

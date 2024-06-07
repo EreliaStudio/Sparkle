@@ -37,7 +37,7 @@
 #include "graphics/spk_texture_atlas.hpp"
 
 #include "graphics/texture/font/spk_font.hpp"
-#include "graphics/spk_font_manager.hpp"
+#include "graphics/spk_font_atlas.hpp"
 
 #include "game_engine/component/spk_camera_component.hpp"
 #include "game_engine/component/spk_mesh_collider_2D_component.hpp"
@@ -71,6 +71,7 @@
 #include "widget/spk_button.hpp"
 #include "widget/spk_text_entry.hpp"
 #include "widget/spk_text_label.hpp"
+#include "widget/spk_widget_canvas.hpp"
 
 #include "network/spk_message.hpp"
 #include "network/spk_server.hpp"

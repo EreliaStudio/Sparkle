@@ -63,6 +63,18 @@ namespace spk
 		}
 
 		/**
+		 * @brief Set the activation state
+		 * @param p_state The new activation state of the object
+		*/
+		void setActivationState(bool p_state)
+		{
+			if (p_state == true)
+				activate();
+			else
+				deactivate();
+		}
+
+		/**
 		 * @brief Activates the object.
 		 * 
 		 * Sets the object's activation state to active.
