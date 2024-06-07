@@ -72,7 +72,7 @@ $(function() {
 <div class="contents">
 <div class="fragment"><div class="line"><a name="l00001"></a><span class="lineno">    1</span>&#160;<span class="preprocessor">#pragma once</span></div>
 <div class="line"><a name="l00002"></a><span class="lineno">    2</span>&#160; </div>
-<div class="line"><a name="l00003"></a><span class="lineno">    3</span>&#160;<span class="preprocessor">#include &lt;vector&gt;</span></div>
+<div class="line"><a name="l00003"></a><span class="lineno">    3</span>&#160;<span class="preprocessor">#include &lt;map&gt;</span></div>
 <div class="line"><a name="l00004"></a><span class="lineno">    4</span>&#160;<span class="preprocessor">#include &lt;memory&gt;</span></div>
 <div class="line"><a name="l00005"></a><span class="lineno">    5</span>&#160;<span class="preprocessor">#include &quot;design_pattern/spk_notifier.hpp&quot;</span></div>
 <div class="line"><a name="l00006"></a><span class="lineno">    6</span>&#160; </div>
@@ -87,7 +87,7 @@ $(function() {
 <div class="line"><a name="l00039"></a><span class="lineno"><a class="line" href="classspk_1_1EventManager.html#a5f833bf2820d073a351f89f7d01c0e38">   39</a></span>&#160;        <span class="keyword">using</span> <a class="code" href="classspk_1_1Notifier_1_1Contract.html">Contract</a> = <a class="code" href="classspk_1_1Notifier_1_1Contract.html">spk::Notifier::Contract</a>;</div>
 <div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160; </div>
 <div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;    <span class="keyword">private</span>:</div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;        std::vector&lt;spk::Notifier&gt; _notifiers;</div>
+<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;        std::unordered_map&lt;TEventType, spk::Notifier&gt; _notifiers;</div>
 <div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160; </div>
 <div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;    <span class="keyword">public</span>:</div>
 <div class="line"><a name="l00050"></a><span class="lineno"><a class="line" href="classspk_1_1EventManager.html#af93399f568509c720929499867887452">   50</a></span>&#160;        <a class="code" href="classspk_1_1EventManager.html#af93399f568509c720929499867887452">EventManager</a>()</div>
@@ -97,29 +97,19 @@ $(function() {
 <div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160; </div>
 <div class="line"><a name="l00066"></a><span class="lineno"><a class="line" href="classspk_1_1EventManager.html#a5bd5a999ac380a526692a4e8032076fe">   66</a></span>&#160;        std::unique_ptr&lt;Contract&gt; <a class="code" href="classspk_1_1EventManager.html#a5bd5a999ac380a526692a4e8032076fe">subscribe</a>(<span class="keyword">const</span> TEventType&amp; p_event, <span class="keyword">const</span> <a class="code" href="classspk_1_1EventManager.html#a26c2cb8cfae68e7a4c5d5d1ee0d7a5d3">Callback</a>&amp; p_callback)</div>
 <div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;        {</div>
-<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;            <span class="keywordtype">size_t</span> index = <span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(p_event);</div>
-<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160; </div>
-<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;            <span class="keywordflow">if</span> (_notifiers.size() &lt;= index)</div>
-<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;                _notifiers.resize(index + 1);</div>
-<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160; </div>
-<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;            <span class="keywordflow">return</span> _notifiers[index].subscribe(p_callback);</div>
-<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;        }</div>
-<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160; </div>
-<div class="line"><a name="l00083"></a><span class="lineno"><a class="line" href="classspk_1_1EventManager.html#acf633f27603bb8c0bbf315307f521233">   83</a></span>&#160;        <span class="keywordtype">void</span> <a class="code" href="classspk_1_1EventManager.html#acf633f27603bb8c0bbf315307f521233">notify_all</a>(<span class="keyword">const</span> TEventType&amp; p_event)</div>
-<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;        {</div>
-<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;            <span class="keywordtype">size_t</span> index = <span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(p_event);</div>
-<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160; </div>
-<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;            <span class="keywordflow">if</span> (_notifiers.size() &lt;= index)</div>
-<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;                _notifiers.resize(index + 1);</div>
-<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160; </div>
-<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;            _notifiers[index].notify_all();</div>
-<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160;        }</div>
-<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;    };</div>
-<div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160;}</div>
+<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;            <span class="keywordflow">return</span> _notifiers[p_event].subscribe(p_callback);</div>
+<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;        }</div>
+<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160; </div>
+<div class="line"><a name="l00078"></a><span class="lineno"><a class="line" href="classspk_1_1EventManager.html#acf633f27603bb8c0bbf315307f521233">   78</a></span>&#160;        <span class="keywordtype">void</span> <a class="code" href="classspk_1_1EventManager.html#acf633f27603bb8c0bbf315307f521233">notify_all</a>(<span class="keyword">const</span> TEventType&amp; p_event)</div>
+<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;        {</div>
+<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;            _notifiers[p_event].notify_all();</div>
+<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;        }</div>
+<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;    };</div>
+<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;}</div>
 <div class="ttc" id="aclassspk_1_1EventManager_html"><div class="ttname"><a href="classspk_1_1EventManager.html">spk::EventManager</a></div><div class="ttdoc">Manages event subscriptions and notifications.</div><div class="ttdef"><b>Definition:</b> spk_event_manager.hpp:29</div></div>
 <div class="ttc" id="aclassspk_1_1EventManager_html_a26c2cb8cfae68e7a4c5d5d1ee0d7a5d3"><div class="ttname"><a href="classspk_1_1EventManager.html#a26c2cb8cfae68e7a4c5d5d1ee0d7a5d3">spk::EventManager::Callback</a></div><div class="ttdeci">spk::Notifier::Callback Callback</div><div class="ttdoc">Describe the required callback type to provide when subscribing to a Notifier.</div><div class="ttdef"><b>Definition:</b> spk_event_manager.hpp:34</div></div>
 <div class="ttc" id="aclassspk_1_1EventManager_html_a5bd5a999ac380a526692a4e8032076fe"><div class="ttname"><a href="classspk_1_1EventManager.html#a5bd5a999ac380a526692a4e8032076fe">spk::EventManager::subscribe</a></div><div class="ttdeci">std::unique_ptr&lt; Contract &gt; subscribe(const TEventType &amp;p_event, const Callback &amp;p_callback)</div><div class="ttdoc">Subscribes to an event with a callback.</div><div class="ttdef"><b>Definition:</b> spk_event_manager.hpp:66</div></div>
-<div class="ttc" id="aclassspk_1_1EventManager_html_acf633f27603bb8c0bbf315307f521233"><div class="ttname"><a href="classspk_1_1EventManager.html#acf633f27603bb8c0bbf315307f521233">spk::EventManager::notify_all</a></div><div class="ttdeci">void notify_all(const TEventType &amp;p_event)</div><div class="ttdoc">Notifies all subscribers of an event.</div><div class="ttdef"><b>Definition:</b> spk_event_manager.hpp:83</div></div>
+<div class="ttc" id="aclassspk_1_1EventManager_html_acf633f27603bb8c0bbf315307f521233"><div class="ttname"><a href="classspk_1_1EventManager.html#acf633f27603bb8c0bbf315307f521233">spk::EventManager::notify_all</a></div><div class="ttdeci">void notify_all(const TEventType &amp;p_event)</div><div class="ttdoc">Notifies all subscribers of an event.</div><div class="ttdef"><b>Definition:</b> spk_event_manager.hpp:78</div></div>
 <div class="ttc" id="aclassspk_1_1EventManager_html_af93399f568509c720929499867887452"><div class="ttname"><a href="classspk_1_1EventManager.html#af93399f568509c720929499867887452">spk::EventManager::EventManager</a></div><div class="ttdeci">EventManager()</div><div class="ttdoc">Default constructor.</div><div class="ttdef"><b>Definition:</b> spk_event_manager.hpp:50</div></div>
 <div class="ttc" id="aclassspk_1_1Notifier_1_1Contract_html"><div class="ttname"><a href="classspk_1_1Notifier_1_1Contract.html">spk::Notifier::Contract</a></div><div class="ttdoc">Represents a subscription contract between a subscriber and a Notifier.</div><div class="ttdef"><b>Definition:</b> spk_notifier.hpp:68</div></div>
 <div class="ttc" id="aclassspk_1_1Notifier_html_ad9385255a81d024e0e7f9d2bf85645a1"><div class="ttname"><a href="classspk_1_1Notifier.html#ad9385255a81d024e0e7f9d2bf85645a1">spk::Notifier::Callback</a></div><div class="ttdeci">std::function&lt; void()&gt; Callback</div><div class="ttdoc">Describe the required callback type to provide when subscribing to a Notifier.</div><div class="ttdef"><b>Definition:</b> spk_notifier.hpp:39</div></div>

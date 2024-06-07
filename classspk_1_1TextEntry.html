@@ -113,6 +113,9 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a587fc1124b29415b8760cce3a080cb1d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af3e2921dfb4f165a6408ea9434fee75d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1TextEntry.html#af3e2921dfb4f165a6408ea9434fee75d">setPredefinedText</a> (const std::string &amp;p_text)</td></tr>
 <tr class="separator:af3e2921dfb4f165a6408ea9434fee75d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af55f56f19e2952a7ea64bb6573fc7d38"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1TextEntry.html#af55f56f19e2952a7ea64bb6573fc7d38">setPadding</a> (const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2Int</a> &amp;p_padding)</td></tr>
+<tr class="memdesc:af55f56f19e2952a7ea64bb6573fc7d38"><td class="mdescLeft">&#160;</td><td class="mdescRight">Define the padding of the text label inside the box.  <a href="classspk_1_1TextEntry.html#af55f56f19e2952a7ea64bb6573fc7d38">More...</a><br /></td></tr>
+<tr class="separator:af55f56f19e2952a7ea64bb6573fc7d38"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af549fd60145c18e718f45f434b0821e5"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classspk_1_1WidgetComponent_1_1FontRenderer.html">spk::WidgetComponent::FontRenderer</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1TextEntry.html#af549fd60145c18e718f45f434b0821e5">label</a> ()</td></tr>
 <tr class="separator:af549fd60145c18e718f45f434b0821e5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3d51221cdf47c03136174824e1c077d2"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classspk_1_1WidgetComponent_1_1ColoredBox.html">spk::WidgetComponent::ColoredBox</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1TextEntry.html#a3d51221cdf47c03136174824e1c077d2">cursor</a> ()</td></tr>
@@ -152,6 +155,8 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:ac84edc774826eed6c7f6bc50bf102f8b inherit pub_methods_classspk_1_1Widget"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa66660bed9bd2658eed46b94026a2472 inherit pub_methods_classspk_1_1Widget"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Widget.html#aa66660bed9bd2658eed46b94026a2472">setGeometry</a> (const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2Int</a> &amp;p_anchor, const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2UInt</a> &amp;p_size)</td></tr>
 <tr class="separator:aa66660bed9bd2658eed46b94026a2472 inherit pub_methods_classspk_1_1Widget"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac3a12469c314551a9e246989e0520c2c inherit pub_methods_classspk_1_1Widget"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Widget.html#ac3a12469c314551a9e246989e0520c2c">forceGeometryChange</a> (const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2Int</a> &amp;p_anchor, const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2UInt</a> &amp;p_size)</td></tr>
+<tr class="separator:ac3a12469c314551a9e246989e0520c2c inherit pub_methods_classspk_1_1Widget"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a63956553f1890f03ca92aa9e7e351f68 inherit pub_methods_classspk_1_1Widget"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Widget.html#a63956553f1890f03ca92aa9e7e351f68">setLayer</a> (const float &amp;p_layer)</td></tr>
 <tr class="separator:a63956553f1890f03ca92aa9e7e351f68 inherit pub_methods_classspk_1_1Widget"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a36dbf53a79fb895de5755eaf015e6d02 inherit pub_methods_classspk_1_1Widget"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Widget.html#a36dbf53a79fb895de5755eaf015e6d02">activateAll</a> ()</td></tr>
@@ -236,7 +241,7 @@ using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 <p>Example usage: </p><div class="fragment"><div class="line"><a class="code" href="classspk_1_1TextEntry.html">spk::TextEntry</a>* myTextEntry = <span class="keyword">new</span> <a class="code" href="classspk_1_1TextEntry.html">spk::TextEntry</a>(parentWidget);</div>
 <div class="line">myTextEntry-&gt;<a class="code" href="classspk_1_1TextEntry.html#a587fc1124b29415b8760cce3a080cb1d">setPlaceholder</a>(<span class="stringliteral">&quot;Enter text here...&quot;</span>);</div>
 <div class="ttc" id="aclassspk_1_1TextEntry_html"><div class="ttname"><a href="classspk_1_1TextEntry.html">spk::TextEntry</a></div><div class="ttdoc">A user interface component for text input.</div><div class="ttdef"><b>Definition:</b> spk_text_entry.hpp:35</div></div>
-<div class="ttc" id="aclassspk_1_1TextEntry_html_a587fc1124b29415b8760cce3a080cb1d"><div class="ttname"><a href="classspk_1_1TextEntry.html#a587fc1124b29415b8760cce3a080cb1d">spk::TextEntry::setPlaceholder</a></div><div class="ttdeci">void setPlaceholder(const std::string &amp;p_placeholderText)</div><div class="ttdef"><b>Definition:</b> spk_text_entry.cpp:251</div></div>
+<div class="ttc" id="aclassspk_1_1TextEntry_html_a587fc1124b29415b8760cce3a080cb1d"><div class="ttname"><a href="classspk_1_1TextEntry.html#a587fc1124b29415b8760cce3a080cb1d">spk::TextEntry::setPlaceholder</a></div><div class="ttdeci">void setPlaceholder(const std::string &amp;p_placeholderText)</div><div class="ttdef"><b>Definition:</b> spk_text_entry.cpp:252</div></div>
 </div><!-- fragment --><dl class="section note"><dt>Note</dt><dd>The <a class="el" href="classspk_1_1TextEntry.html" title="A user interface component for text input.">TextEntry</a> class manages keyboard inputs internally to update text based on user interactions. </dd></dl>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a2ef8033c1fdb2d1897756e663c51de37"></a>
@@ -372,6 +377,32 @@ using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
       </table>
 </div><div class="memdoc">
 <p>Retrieves the current placeholder text. </p><dl class="section return"><dt>Returns</dt><dd>The placeholder text as a const std::string reference. </dd></dl>
+
+</div>
+</div>
+<a id="af55f56f19e2952a7ea64bb6573fc7d38"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af55f56f19e2952a7ea64bb6573fc7d38">&#9670;&nbsp;</a></span>setPadding()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void spk::TextEntry::setPadding </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2Int</a> &amp;&#160;</td>
+          <td class="paramname"><em>p_padding</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Define the padding of the text label inside the box. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_padding</td><td>The desired padding in pixels. </td></tr>
+  </table>
+  </dd>
+</dl>
 
 </div>
 </div>

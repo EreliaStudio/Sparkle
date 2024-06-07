@@ -2,7 +2,7 @@
 <area shape="rect" id="node1" title="Manages activation state for objects, intended as a base class." alt="" coords="5,304,155,331"/>
 <area shape="rect" id="node2" href="$classspk_1_1GameComponent.html" title="Base class for game components that can be attached to GameObjects." alt="" coords="203,107,369,133"/>
 <area shape="rect" id="node8" href="$classspk_1_1GameObject.html" title="Represents a game object in the game engine hierarchy." alt="" coords="219,304,353,331"/>
-<area shape="rect" id="node14" href="$classspk_1_1Widget.html" title="Defines a widget interface for UI elements, integrating activation state management,..." alt="" coords="237,665,335,692"/>
+<area shape="rect" id="node14" href="$classspk_1_1Widget.html" title="Defines a widget interface for UI elements, integrating activation state management,..." alt="" coords="237,741,335,768"/>
 <area shape="rect" id="node3" href="$classspk_1_1CameraComponent.html" title="Represents a camera component for rendering scenes." alt="" coords="439,5,618,32"/>
 <area shape="rect" id="node4" href="$classspk_1_1ICollider.html" title="Abstract base class for collider components within the game engine." alt="" coords="475,56,582,83"/>
 <area shape="rect" id="node6" href="$classspk_1_1MeshRenderer.html" title="Represents a sprite renderer component for rendering sprites in world space." alt="" coords="455,107,602,133"/>
@@ -19,7 +19,10 @@
 <area shape="rect" id="node18" href="$classspk_1_1GameEngineManager.html" title="Manages the integration of a game engine within a widget&#45;based user interface framework." alt="" coords="432,640,625,667"/>
 <area shape="rect" id="node19" href="$classspk_1_1ImageLabel.html" title="A widget that displays an image, using texture rendering." alt="" coords="464,691,593,717"/>
 <area shape="rect" id="node20" href="$classspk_1_1Panel.html" title="A user interface panel that can manage focus within the application." alt="" coords="485,741,573,768"/>
-<area shape="rect" id="node21" href="$classspk_1_1TextEntry.html" title="A user interface component for text input." alt="" coords="471,792,586,819"/>
-<area shape="rect" id="node22" href="$classspk_1_1TextLabel.html" title="A widget class for displaying text within a UI, with a customizable background." alt="" coords="471,843,586,869"/>
-<area shape="rect" id="node23" href="$classspk_1_1WidgetCanvas.html" title="A class that represents a canvas for widgets." alt="" coords="455,893,602,920"/>
+<area shape="rect" id="node21" href="$classspk_1_1SpriteSheetLabel.html" title="A widget that displays an image from a sprite sheet." alt="" coords="447,792,610,819"/>
+<area shape="rect" id="node22" href="$classspk_1_1StatefulWidget.html" title="A widget class that links states to specific sprites and renders a background." alt="" coords="453,843,604,885"/>
+<area shape="rect" id="node23" href="$classspk_1_1TextEntry.html" title="A user interface component for text input." alt="" coords="471,909,586,936"/>
+<area shape="rect" id="node24" href="$classspk_1_1TextLabel.html" title="A widget class for displaying text within a UI, with a customizable background." alt="" coords="471,960,586,987"/>
+<area shape="rect" id="node25" href="$classspk_1_1ValueSelector.html" title="A templated widget class for selecting a value from a list using increment and decrement buttons." alt="" coords="457,1011,600,1053"/>
+<area shape="rect" id="node26" href="$classspk_1_1WidgetCanvas.html" title="A class that represents a canvas for widgets." alt="" coords="455,1077,602,1104"/>
 </map>

@@ -1,0 +1,6 @@
+<map id="spk::ValueSelector&lt; TType &gt;" name="spk::ValueSelector&lt; TType &gt;">
+<area shape="rect" id="node1" title="A templated widget class for selecting a value from a list using increment and decrement buttons." alt="" coords="106,155,249,196"/>
+<area shape="rect" id="node2" href="$classspk_1_1Widget.html" title="Defines a widget interface for UI elements, integrating activation state management,..." alt="" coords="128,80,227,107"/>
+<area shape="rect" id="node3" href="$classspk_1_1ActivateObject.html" title="Manages activation state for objects, intended as a base class." alt="" coords="5,5,155,32"/>
+<area shape="rect" id="node4" href="$classspk_1_1TreeNode.html" title=" " alt="" coords="179,5,370,32"/>
+</map>

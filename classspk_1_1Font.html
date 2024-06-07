@@ -106,20 +106,20 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a13f49be318165c257c5a56f168ff65e3"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structspk_1_1Font_1_1Size.html">Size</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Font.html#a13f49be318165c257c5a56f168ff65e3">computeOptimalTextSize</a> (const std::string &amp;p_string, float p_outlineSizeRatio, const <a class="el" href="structspk_1_1IVector2.html">Vector2Int</a> &amp;p_textArea)</td></tr>
 <tr class="memdesc:a13f49be318165c257c5a56f168ff65e3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the optimal text size based on the string, outline size ratio, and text area.  <a href="classspk_1_1Font.html#a13f49be318165c257c5a56f168ff65e3">More...</a><br /></td></tr>
 <tr class="separator:a13f49be318165c257c5a56f168ff65e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab1e12cddc46a3f46e02b9d1be4419b27"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classspk_1_1Font_1_1Atlas.html">Atlas</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Font.html#ab1e12cddc46a3f46e02b9d1be4419b27">atlas</a> (const size_t &amp;p_textSize, const size_t &amp;p_outlineSize)</td></tr>
-<tr class="memdesc:ab1e12cddc46a3f46e02b9d1be4419b27"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the atlas for a specific text size and outline size.  <a href="classspk_1_1Font.html#ab1e12cddc46a3f46e02b9d1be4419b27">More...</a><br /></td></tr>
-<tr class="separator:ab1e12cddc46a3f46e02b9d1be4419b27"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5195a1f80a0073024535669c5dd7469b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classspk_1_1Font_1_1Atlas.html">Atlas</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Font.html#a5195a1f80a0073024535669c5dd7469b">atlas</a> (const <a class="el" href="structspk_1_1Font_1_1Size.html">Size</a> &amp;p_size)</td></tr>
+<tr class="memdesc:a5195a1f80a0073024535669c5dd7469b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the atlas for a specific text size and outline size.  <a href="classspk_1_1Font.html#a5195a1f80a0073024535669c5dd7469b">More...</a><br /></td></tr>
+<tr class="separator:a5195a1f80a0073024535669c5dd7469b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Manages font loading, glyph handling, and text rendering. </p>
 <p>The <a class="el" href="classspk_1_1Font.html" title="Manages font loading, glyph handling, and text rendering.">Font</a> class provides functionalities to load font data from files, manage glyphs, and render text. It supports text size and outline size customization, glyph rescaling, and texture atlas creation.</p>
 <p>Usage example: </p><div class="fragment"><div class="line"><a class="code" href="classspk_1_1Font.html">spk::Font</a> myFont(<span class="stringliteral">&quot;path/to/font.ttf&quot;</span>);</div>
 <div class="line"><a class="code" href="structspk_1_1IVector2.html">spk::Vector2Int</a> charSize = myFont.computeCharSize(L<span class="charliteral">&#39;A&#39;</span>, 16, 1);</div>
-<div class="line"><a class="code" href="classspk_1_1Font_1_1Atlas.html">spk::Font::Atlas</a>&amp; <a class="code" href="classspk_1_1Font.html#ab1e12cddc46a3f46e02b9d1be4419b27">atlas</a> = myFont.atlas(16, 1);</div>
-<div class="line"><span class="keyword">const</span> <a class="code" href="structspk_1_1Font_1_1Glyph.html">spk::Font::Glyph</a>&amp; glyph = <a class="code" href="classspk_1_1Font.html#ab1e12cddc46a3f46e02b9d1be4419b27">atlas</a>[L<span class="charliteral">&#39;A&#39;</span>];</div>
-<div class="ttc" id="aclassspk_1_1Font_1_1Atlas_html"><div class="ttname"><a href="classspk_1_1Font_1_1Atlas.html">spk::Font::Atlas</a></div><div class="ttdoc">Manages a texture atlas for font rendering.</div><div class="ttdef"><b>Definition:</b> spk_font.hpp:113</div></div>
+<div class="line"><a class="code" href="classspk_1_1Font_1_1Atlas.html">spk::Font::Atlas</a>&amp; <a class="code" href="classspk_1_1Font.html#a5195a1f80a0073024535669c5dd7469b">atlas</a> = myFont.atlas(16, 1);</div>
+<div class="line"><span class="keyword">const</span> <a class="code" href="structspk_1_1Font_1_1Glyph.html">spk::Font::Glyph</a>&amp; glyph = <a class="code" href="classspk_1_1Font.html#a5195a1f80a0073024535669c5dd7469b">atlas</a>[L<span class="charliteral">&#39;A&#39;</span>];</div>
+<div class="ttc" id="aclassspk_1_1Font_1_1Atlas_html"><div class="ttname"><a href="classspk_1_1Font_1_1Atlas.html">spk::Font::Atlas</a></div><div class="ttdoc">Manages a texture atlas for font rendering.</div><div class="ttdef"><b>Definition:</b> spk_font.hpp:127</div></div>
 <div class="ttc" id="aclassspk_1_1Font_html"><div class="ttname"><a href="classspk_1_1Font.html">spk::Font</a></div><div class="ttdoc">Manages font loading, glyph handling, and text rendering.</div><div class="ttdef"><b>Definition:</b> spk_font.hpp:30</div></div>
-<div class="ttc" id="aclassspk_1_1Font_html_ab1e12cddc46a3f46e02b9d1be4419b27"><div class="ttname"><a href="classspk_1_1Font.html#ab1e12cddc46a3f46e02b9d1be4419b27">spk::Font::atlas</a></div><div class="ttdeci">Atlas &amp; atlas(const size_t &amp;p_textSize, const size_t &amp;p_outlineSize)</div><div class="ttdoc">Retrieves the atlas for a specific text size and outline size.</div><div class="ttdef"><b>Definition:</b> spk_font.cpp:201</div></div>
+<div class="ttc" id="aclassspk_1_1Font_html_a5195a1f80a0073024535669c5dd7469b"><div class="ttname"><a href="classspk_1_1Font.html#a5195a1f80a0073024535669c5dd7469b">spk::Font::atlas</a></div><div class="ttdeci">Atlas &amp; atlas(const Size &amp;p_size)</div><div class="ttdoc">Retrieves the atlas for a specific text size and outline size.</div><div class="ttdef"><b>Definition:</b> spk_font.cpp:204</div></div>
 <div class="ttc" id="astructspk_1_1Font_1_1Glyph_html"><div class="ttname"><a href="structspk_1_1Font_1_1Glyph.html">spk::Font::Glyph</a></div><div class="ttdoc">Represents a single glyph with its properties.</div><div class="ttdef"><b>Definition:</b> spk_font.hpp:39</div></div>
 <div class="ttc" id="astructspk_1_1IVector2_html"><div class="ttname"><a href="structspk_1_1IVector2.html">spk::IVector2&lt; int32_t &gt;</a></div></div>
 </div><!-- fragment --><dl class="section note"><dt>Note</dt><dd>Ensure the file path provided to the constructor points to a valid font file. The class relies on stb_truetype for font handling. </dd></dl>
@@ -152,8 +152,8 @@ Public Member Functions</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="ab1e12cddc46a3f46e02b9d1be4419b27"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab1e12cddc46a3f46e02b9d1be4419b27">&#9670;&nbsp;</a></span>atlas()</h2>
+<a id="a5195a1f80a0073024535669c5dd7469b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5195a1f80a0073024535669c5dd7469b">&#9670;&nbsp;</a></span>atlas()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -161,19 +161,9 @@ Public Member Functions</h2></td></tr>
         <tr>
           <td class="memname"><a class="el" href="classspk_1_1Font_1_1Atlas.html">Font::Atlas</a> &amp; spk::Font::atlas </td>
           <td>(</td>
-          <td class="paramtype">const size_t &amp;&#160;</td>
-          <td class="paramname"><em>p_textSize</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
+          <td class="paramtype">const <a class="el" href="structspk_1_1Font_1_1Size.html">Size</a> &amp;&#160;</td>
+          <td class="paramname"><em>p_size</em></td><td>)</td>
           <td></td>
-          <td class="paramtype">const size_t &amp;&#160;</td>
-          <td class="paramname"><em>p_outlineSize</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -181,8 +171,7 @@ Public Member Functions</h2></td></tr>
 <p>Retrieves the atlas for a specific text size and outline size. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">p_textSize</td><td>The size of the text. </td></tr>
-    <tr><td class="paramname">p_outlineSize</td><td>The size of the outline. </td></tr>
+    <tr><td class="paramname">p_size</td><td>The size of the font. </td></tr>
   </table>
   </dd>
 </dl>

@@ -91,6 +91,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:acbf662572af33b9ef9c442d40cd4626f"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structspk_1_1Font_1_1Size.html#acbf662572af33b9ef9c442d40cd4626f">Size</a> (size_t p_text, size_t p_outline)</td></tr>
 <tr class="memdesc:acbf662572af33b9ef9c442d40cd4626f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor with text and outline size.  <a href="structspk_1_1Font_1_1Size.html#acbf662572af33b9ef9c442d40cd4626f">More...</a><br /></td></tr>
 <tr class="separator:acbf662572af33b9ef9c442d40cd4626f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae29fcce0dfcf440911f33e80ec20adb6"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structspk_1_1Font_1_1Size.html#ae29fcce0dfcf440911f33e80ec20adb6">operator&lt;</a> (const <a class="el" href="structspk_1_1Font_1_1Size.html">Size</a> &amp;p_other) const</td></tr>
+<tr class="memdesc:ae29fcce0dfcf440911f33e80ec20adb6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Comparator allowing <a class="el" href="structspk_1_1Font_1_1Size.html" title="Represents the size of text and its outline.">Size</a> to be stored inside std container.  <a href="structspk_1_1Font_1_1Size.html#ae29fcce0dfcf440911f33e80ec20adb6">More...</a><br /></td></tr>
+<tr class="separator:ae29fcce0dfcf440911f33e80ec20adb6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
@@ -213,6 +216,42 @@ size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="st
   </table>
   </dd>
 </dl>
+
+</div>
+</div>
+<h2 class="groupheader">Member Function Documentation</h2>
+<a id="ae29fcce0dfcf440911f33e80ec20adb6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae29fcce0dfcf440911f33e80ec20adb6">&#9670;&nbsp;</a></span>operator&lt;()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool spk::Font::Size::operator&lt; </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structspk_1_1Font_1_1Size.html">Size</a> &amp;&#160;</td>
+          <td class="paramname"><em>p_other</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Comparator allowing <a class="el" href="structspk_1_1Font_1_1Size.html" title="Represents the size of text and its outline.">Size</a> to be stored inside std container. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_other</td><td>The other <a class="el" href="structspk_1_1Font_1_1Size.html" title="Represents the size of text and its outline.">Size</a> to compare to. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>True if the current size is lower than the other one. </dd></dl>
 
 </div>
 </div>

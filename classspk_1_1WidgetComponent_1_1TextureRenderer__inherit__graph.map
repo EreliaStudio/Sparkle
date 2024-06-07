@@ -1,0 +1,4 @@
+<map id="spk::WidgetComponent::TextureRenderer" name="spk::WidgetComponent::TextureRenderer">
+<area shape="rect" id="node1" title="A component for rendering textures within the UI, supporting various transformations and UV mapping." alt="" coords="5,5,180,47"/>
+<area shape="rect" id="node2" href="$classspk_1_1WidgetComponent_1_1SpriteSheetRenderer.html" title="A widget component class for rendering sprites from a sprite sheet." alt="" coords="5,95,180,136"/>
+</map>

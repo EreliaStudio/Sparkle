@@ -90,62 +90,67 @@ $(function() {
 <div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;        <a class="code" href="classspk_1_1WidgetComponent_1_1NineSlicedBox.html">spk::WidgetComponent::NineSlicedBox</a> _box; </div>
 <div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;        <a class="code" href="classspk_1_1WidgetComponent_1_1ColoredBox.html">spk::WidgetComponent::ColoredBox</a> _cursorBox; </div>
 <div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;        <a class="code" href="classspk_1_1WidgetComponent_1_1FontRenderer.html">spk::WidgetComponent::FontRenderer</a> _label; </div>
-<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160; </div>
-<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;        std::vector&lt;spk::Input&gt; _inputs; </div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160; </div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;        <span class="keywordtype">bool</span> _isSelected = <span class="keyword">false</span>; </div>
-<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;        <span class="keywordtype">size_t</span> _currentCursorPosition = 0; </div>
-<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;        <span class="keywordtype">size_t</span> _openingCursorPosition = 0; </div>
-<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;        <span class="keywordtype">size_t</span> _closingCursorPosition = 0; </div>
-<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;        <span class="keywordtype">bool</span> _isTextEdited = <span class="keyword">false</span>; </div>
-<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;        std::string _placeholderText; </div>
-<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;        std::string _text; </div>
-<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160; </div>
-<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;        <span class="keywordtype">void</span> _onGeometryChange() <span class="keyword">override</span>; </div>
-<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;        <span class="keywordtype">void</span> _onRender() <span class="keyword">override</span>; </div>
-<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160; </div>
-<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;        <span class="keywordtype">void</span> _updateRenderedText(); </div>
-<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;        <span class="keywordtype">void</span> _moveCursor(<span class="keywordtype">int</span> p_delta); </div>
-<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;        <span class="keywordtype">void</span> _updateCursorBox(); </div>
-<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;        <span class="keywordtype">void</span> _updateSelectionStatus(); </div>
-<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;        <span class="keywordtype">void</span> _appendToText(<span class="keyword">const</span> <span class="keywordtype">wchar_t</span>&amp; newChar); </div>
-<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;        <span class="keywordtype">void</span> _removeFromText(); </div>
-<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;        <span class="keywordtype">void</span> _deleteFromText(); </div>
-<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;        <span class="keywordtype">void</span> _onUpdate() <span class="keyword">override</span>; </div>
-<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160; </div>
-<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;    <span class="keyword">public</span>:</div>
-<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;        <a class="code" href="classspk_1_1TextEntry.html#a2ef8033c1fdb2d1897756e663c51de37">TextEntry</a>(<a class="code" href="classspk_1_1Widget.html">Widget</a>* p_parent);</div>
-<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160; </div>
-<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160;        <a class="code" href="classspk_1_1TextEntry.html#a2ef8033c1fdb2d1897756e663c51de37">TextEntry</a>(<span class="keyword">const</span> std::string&amp; p_name, <a class="code" href="classspk_1_1Widget.html">Widget</a>* p_parent);</div>
-<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160; </div>
-<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;        <span class="keywordtype">void</span> <a class="code" href="classspk_1_1TextEntry.html#a587fc1124b29415b8760cce3a080cb1d">setPlaceholder</a>(<span class="keyword">const</span> std::string&amp; p_placeholderText);</div>
-<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160; </div>
-<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;        <span class="keywordtype">void</span> <a class="code" href="classspk_1_1TextEntry.html#af3e2921dfb4f165a6408ea9434fee75d">setPredefinedText</a>(<span class="keyword">const</span> std::string&amp; p_text);</div>
-<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160; </div>
-<div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160;        <a class="code" href="classspk_1_1WidgetComponent_1_1FontRenderer.html">spk::WidgetComponent::FontRenderer</a>&amp; <a class="code" href="classspk_1_1TextEntry.html#af549fd60145c18e718f45f434b0821e5">label</a>();</div>
-<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160; </div>
-<div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160;        <a class="code" href="classspk_1_1WidgetComponent_1_1ColoredBox.html">spk::WidgetComponent::ColoredBox</a>&amp; <a class="code" href="classspk_1_1TextEntry.html#a3d51221cdf47c03136174824e1c077d2">cursor</a>();</div>
-<div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160; </div>
-<div class="line"><a name="l00105"></a><span class="lineno">  105</span>&#160;        <a class="code" href="classspk_1_1WidgetComponent_1_1NineSlicedBox.html">spk::WidgetComponent::NineSlicedBox</a>&amp; <a class="code" href="classspk_1_1TextEntry.html#afa08743b377bdeecc8728724fa741f5f">box</a>();</div>
-<div class="line"><a name="l00106"></a><span class="lineno">  106</span>&#160; </div>
-<div class="line"><a name="l00111"></a><span class="lineno">  111</span>&#160;        <span class="keyword">const</span> std::string&amp; <a class="code" href="classspk_1_1TextEntry.html#acf1a1e3a4d637699bacace820a0a026a">placeholder</a>() <span class="keyword">const</span>;</div>
-<div class="line"><a name="l00112"></a><span class="lineno">  112</span>&#160; </div>
-<div class="line"><a name="l00117"></a><span class="lineno">  117</span>&#160;        <span class="keyword">const</span> std::string&amp; <a class="code" href="classspk_1_1TextEntry.html#a6df87fd9db7c913b5eeb8665ae97e963">text</a>() <span class="keyword">const</span>;</div>
-<div class="line"><a name="l00118"></a><span class="lineno">  118</span>&#160;    };</div>
-<div class="line"><a name="l00119"></a><span class="lineno">  119</span>&#160;}</div>
+<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;        <a class="code" href="structspk_1_1IVector2.html">spk::Vector2Int</a> _padding;</div>
+<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160; </div>
+<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;        std::vector&lt;spk::Input&gt; _inputs; </div>
+<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160; </div>
+<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;        <span class="keywordtype">bool</span> _isSelected = <span class="keyword">false</span>; </div>
+<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;        <span class="keywordtype">size_t</span> _currentCursorPosition = 0; </div>
+<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;        <span class="keywordtype">size_t</span> _openingCursorPosition = 0; </div>
+<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;        <span class="keywordtype">size_t</span> _closingCursorPosition = 0; </div>
+<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;        <span class="keywordtype">bool</span> _isTextEdited = <span class="keyword">false</span>; </div>
+<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;        std::string _placeholderText; </div>
+<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;        std::string _text; </div>
+<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160; </div>
+<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;        <span class="keywordtype">void</span> _onGeometryChange() <span class="keyword">override</span>; </div>
+<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;        <span class="keywordtype">void</span> _onRender() <span class="keyword">override</span>; </div>
+<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160; </div>
+<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;        <span class="keywordtype">void</span> _updateRenderedText(); </div>
+<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;        <span class="keywordtype">void</span> _moveCursor(<span class="keywordtype">int</span> p_delta); </div>
+<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;        <span class="keywordtype">void</span> _updateCursorBox(); </div>
+<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;        <span class="keywordtype">void</span> _updateSelectionStatus(); </div>
+<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;        <span class="keywordtype">void</span> _appendToText(<span class="keyword">const</span> <span class="keywordtype">wchar_t</span>&amp; newChar); </div>
+<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;        <span class="keywordtype">void</span> _removeFromText(); </div>
+<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;        <span class="keywordtype">void</span> _deleteFromText(); </div>
+<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;        <span class="keywordtype">void</span> _onUpdate() <span class="keyword">override</span>; </div>
+<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160; </div>
+<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;    <span class="keyword">public</span>:</div>
+<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;        <a class="code" href="classspk_1_1TextEntry.html#a2ef8033c1fdb2d1897756e663c51de37">TextEntry</a>(<a class="code" href="classspk_1_1Widget.html">Widget</a>* p_parent);</div>
+<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160; </div>
+<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;        <a class="code" href="classspk_1_1TextEntry.html#a2ef8033c1fdb2d1897756e663c51de37">TextEntry</a>(<span class="keyword">const</span> std::string&amp; p_name, <a class="code" href="classspk_1_1Widget.html">Widget</a>* p_parent);</div>
+<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160; </div>
+<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;        <span class="keywordtype">void</span> <a class="code" href="classspk_1_1TextEntry.html#a587fc1124b29415b8760cce3a080cb1d">setPlaceholder</a>(<span class="keyword">const</span> std::string&amp; p_placeholderText);</div>
+<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160; </div>
+<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;        <span class="keywordtype">void</span> <a class="code" href="classspk_1_1TextEntry.html#af3e2921dfb4f165a6408ea9434fee75d">setPredefinedText</a>(<span class="keyword">const</span> std::string&amp; p_text);</div>
+<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160; </div>
+<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160;        <span class="keywordtype">void</span> <a class="code" href="classspk_1_1TextEntry.html#af55f56f19e2952a7ea64bb6573fc7d38">setPadding</a>(<span class="keyword">const</span> <a class="code" href="structspk_1_1IVector2.html">spk::Vector2Int</a>&amp; p_padding);</div>
+<div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160; </div>
+<div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160;        <a class="code" href="classspk_1_1WidgetComponent_1_1FontRenderer.html">spk::WidgetComponent::FontRenderer</a>&amp; <a class="code" href="classspk_1_1TextEntry.html#af549fd60145c18e718f45f434b0821e5">label</a>();</div>
+<div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160; </div>
+<div class="line"><a name="l00106"></a><span class="lineno">  106</span>&#160;        <a class="code" href="classspk_1_1WidgetComponent_1_1ColoredBox.html">spk::WidgetComponent::ColoredBox</a>&amp; <a class="code" href="classspk_1_1TextEntry.html#a3d51221cdf47c03136174824e1c077d2">cursor</a>();</div>
+<div class="line"><a name="l00107"></a><span class="lineno">  107</span>&#160; </div>
+<div class="line"><a name="l00112"></a><span class="lineno">  112</span>&#160;        <a class="code" href="classspk_1_1WidgetComponent_1_1NineSlicedBox.html">spk::WidgetComponent::NineSlicedBox</a>&amp; <a class="code" href="classspk_1_1TextEntry.html#afa08743b377bdeecc8728724fa741f5f">box</a>();</div>
+<div class="line"><a name="l00113"></a><span class="lineno">  113</span>&#160; </div>
+<div class="line"><a name="l00118"></a><span class="lineno">  118</span>&#160;        <span class="keyword">const</span> std::string&amp; <a class="code" href="classspk_1_1TextEntry.html#acf1a1e3a4d637699bacace820a0a026a">placeholder</a>() <span class="keyword">const</span>;</div>
+<div class="line"><a name="l00119"></a><span class="lineno">  119</span>&#160; </div>
+<div class="line"><a name="l00124"></a><span class="lineno">  124</span>&#160;        <span class="keyword">const</span> std::string&amp; <a class="code" href="classspk_1_1TextEntry.html#a6df87fd9db7c913b5eeb8665ae97e963">text</a>() <span class="keyword">const</span>;</div>
+<div class="line"><a name="l00125"></a><span class="lineno">  125</span>&#160;    };</div>
+<div class="line"><a name="l00126"></a><span class="lineno">  126</span>&#160;}</div>
 <div class="ttc" id="aclassspk_1_1TextEntry_html"><div class="ttname"><a href="classspk_1_1TextEntry.html">spk::TextEntry</a></div><div class="ttdoc">A user interface component for text input.</div><div class="ttdef"><b>Definition:</b> spk_text_entry.hpp:35</div></div>
-<div class="ttc" id="aclassspk_1_1TextEntry_html_a2ef8033c1fdb2d1897756e663c51de37"><div class="ttname"><a href="classspk_1_1TextEntry.html#a2ef8033c1fdb2d1897756e663c51de37">spk::TextEntry::TextEntry</a></div><div class="ttdeci">TextEntry(Widget *p_parent)</div><div class="ttdoc">Construct a new TextEntry widget with a given parent.</div><div class="ttdef"><b>Definition:</b> spk_text_entry.cpp:245</div></div>
-<div class="ttc" id="aclassspk_1_1TextEntry_html_a3d51221cdf47c03136174824e1c077d2"><div class="ttname"><a href="classspk_1_1TextEntry.html#a3d51221cdf47c03136174824e1c077d2">spk::TextEntry::cursor</a></div><div class="ttdeci">spk::WidgetComponent::ColoredBox &amp; cursor()</div><div class="ttdef"><b>Definition:</b> spk_text_entry.cpp:270</div></div>
-<div class="ttc" id="aclassspk_1_1TextEntry_html_a587fc1124b29415b8760cce3a080cb1d"><div class="ttname"><a href="classspk_1_1TextEntry.html#a587fc1124b29415b8760cce3a080cb1d">spk::TextEntry::setPlaceholder</a></div><div class="ttdeci">void setPlaceholder(const std::string &amp;p_placeholderText)</div><div class="ttdef"><b>Definition:</b> spk_text_entry.cpp:251</div></div>
-<div class="ttc" id="aclassspk_1_1TextEntry_html_a6df87fd9db7c913b5eeb8665ae97e963"><div class="ttname"><a href="classspk_1_1TextEntry.html#a6df87fd9db7c913b5eeb8665ae97e963">spk::TextEntry::text</a></div><div class="ttdeci">const std::string &amp; text() const</div><div class="ttdef"><b>Definition:</b> spk_text_entry.cpp:285</div></div>
-<div class="ttc" id="aclassspk_1_1TextEntry_html_acf1a1e3a4d637699bacace820a0a026a"><div class="ttname"><a href="classspk_1_1TextEntry.html#acf1a1e3a4d637699bacace820a0a026a">spk::TextEntry::placeholder</a></div><div class="ttdeci">const std::string &amp; placeholder() const</div><div class="ttdef"><b>Definition:</b> spk_text_entry.cpp:280</div></div>
-<div class="ttc" id="aclassspk_1_1TextEntry_html_af3e2921dfb4f165a6408ea9434fee75d"><div class="ttname"><a href="classspk_1_1TextEntry.html#af3e2921dfb4f165a6408ea9434fee75d">spk::TextEntry::setPredefinedText</a></div><div class="ttdeci">void setPredefinedText(const std::string &amp;p_text)</div><div class="ttdef"><b>Definition:</b> spk_text_entry.cpp:258</div></div>
-<div class="ttc" id="aclassspk_1_1TextEntry_html_af549fd60145c18e718f45f434b0821e5"><div class="ttname"><a href="classspk_1_1TextEntry.html#af549fd60145c18e718f45f434b0821e5">spk::TextEntry::label</a></div><div class="ttdeci">spk::WidgetComponent::FontRenderer &amp; label()</div><div class="ttdef"><b>Definition:</b> spk_text_entry.cpp:265</div></div>
-<div class="ttc" id="aclassspk_1_1TextEntry_html_afa08743b377bdeecc8728724fa741f5f"><div class="ttname"><a href="classspk_1_1TextEntry.html#afa08743b377bdeecc8728724fa741f5f">spk::TextEntry::box</a></div><div class="ttdeci">spk::WidgetComponent::NineSlicedBox &amp; box()</div><div class="ttdef"><b>Definition:</b> spk_text_entry.cpp:275</div></div>
+<div class="ttc" id="aclassspk_1_1TextEntry_html_a2ef8033c1fdb2d1897756e663c51de37"><div class="ttname"><a href="classspk_1_1TextEntry.html#a2ef8033c1fdb2d1897756e663c51de37">spk::TextEntry::TextEntry</a></div><div class="ttdeci">TextEntry(Widget *p_parent)</div><div class="ttdoc">Construct a new TextEntry widget with a given parent.</div><div class="ttdef"><b>Definition:</b> spk_text_entry.cpp:246</div></div>
+<div class="ttc" id="aclassspk_1_1TextEntry_html_a3d51221cdf47c03136174824e1c077d2"><div class="ttname"><a href="classspk_1_1TextEntry.html#a3d51221cdf47c03136174824e1c077d2">spk::TextEntry::cursor</a></div><div class="ttdeci">spk::WidgetComponent::ColoredBox &amp; cursor()</div><div class="ttdef"><b>Definition:</b> spk_text_entry.cpp:277</div></div>
+<div class="ttc" id="aclassspk_1_1TextEntry_html_a587fc1124b29415b8760cce3a080cb1d"><div class="ttname"><a href="classspk_1_1TextEntry.html#a587fc1124b29415b8760cce3a080cb1d">spk::TextEntry::setPlaceholder</a></div><div class="ttdeci">void setPlaceholder(const std::string &amp;p_placeholderText)</div><div class="ttdef"><b>Definition:</b> spk_text_entry.cpp:252</div></div>
+<div class="ttc" id="aclassspk_1_1TextEntry_html_a6df87fd9db7c913b5eeb8665ae97e963"><div class="ttname"><a href="classspk_1_1TextEntry.html#a6df87fd9db7c913b5eeb8665ae97e963">spk::TextEntry::text</a></div><div class="ttdeci">const std::string &amp; text() const</div><div class="ttdef"><b>Definition:</b> spk_text_entry.cpp:292</div></div>
+<div class="ttc" id="aclassspk_1_1TextEntry_html_acf1a1e3a4d637699bacace820a0a026a"><div class="ttname"><a href="classspk_1_1TextEntry.html#acf1a1e3a4d637699bacace820a0a026a">spk::TextEntry::placeholder</a></div><div class="ttdeci">const std::string &amp; placeholder() const</div><div class="ttdef"><b>Definition:</b> spk_text_entry.cpp:287</div></div>
+<div class="ttc" id="aclassspk_1_1TextEntry_html_af3e2921dfb4f165a6408ea9434fee75d"><div class="ttname"><a href="classspk_1_1TextEntry.html#af3e2921dfb4f165a6408ea9434fee75d">spk::TextEntry::setPredefinedText</a></div><div class="ttdeci">void setPredefinedText(const std::string &amp;p_text)</div><div class="ttdef"><b>Definition:</b> spk_text_entry.cpp:259</div></div>
+<div class="ttc" id="aclassspk_1_1TextEntry_html_af549fd60145c18e718f45f434b0821e5"><div class="ttname"><a href="classspk_1_1TextEntry.html#af549fd60145c18e718f45f434b0821e5">spk::TextEntry::label</a></div><div class="ttdeci">spk::WidgetComponent::FontRenderer &amp; label()</div><div class="ttdef"><b>Definition:</b> spk_text_entry.cpp:272</div></div>
+<div class="ttc" id="aclassspk_1_1TextEntry_html_af55f56f19e2952a7ea64bb6573fc7d38"><div class="ttname"><a href="classspk_1_1TextEntry.html#af55f56f19e2952a7ea64bb6573fc7d38">spk::TextEntry::setPadding</a></div><div class="ttdeci">void setPadding(const spk::Vector2Int &amp;p_padding)</div><div class="ttdoc">Define the padding of the text label inside the box.</div><div class="ttdef"><b>Definition:</b> spk_text_entry.cpp:266</div></div>
+<div class="ttc" id="aclassspk_1_1TextEntry_html_afa08743b377bdeecc8728724fa741f5f"><div class="ttname"><a href="classspk_1_1TextEntry.html#afa08743b377bdeecc8728724fa741f5f">spk::TextEntry::box</a></div><div class="ttdeci">spk::WidgetComponent::NineSlicedBox &amp; box()</div><div class="ttdef"><b>Definition:</b> spk_text_entry.cpp:282</div></div>
 <div class="ttc" id="aclassspk_1_1WidgetComponent_1_1ColoredBox_html"><div class="ttname"><a href="classspk_1_1WidgetComponent_1_1ColoredBox.html">spk::WidgetComponent::ColoredBox</a></div><div class="ttdoc">Component to draw a color on a rectangle box.</div><div class="ttdef"><b>Definition:</b> spk_colored_box.hpp:12</div></div>
 <div class="ttc" id="aclassspk_1_1WidgetComponent_1_1FontRenderer_html"><div class="ttname"><a href="classspk_1_1WidgetComponent_1_1FontRenderer.html">spk::WidgetComponent::FontRenderer</a></div><div class="ttdoc">Manages rendering of text using a specified font and properties.</div><div class="ttdef"><b>Definition:</b> spk_font_renderer.hpp:31</div></div>
 <div class="ttc" id="aclassspk_1_1WidgetComponent_1_1NineSlicedBox_html"><div class="ttname"><a href="classspk_1_1WidgetComponent_1_1NineSlicedBox.html">spk::WidgetComponent::NineSlicedBox</a></div><div class="ttdoc">Implements a nine-sliced box component for UI rendering, supporting scalable and adaptable layouts.</div><div class="ttdef"><b>Definition:</b> spk_nine_sliced.hpp:67</div></div>
 <div class="ttc" id="aclassspk_1_1Widget_html"><div class="ttname"><a href="classspk_1_1Widget.html">spk::Widget</a></div><div class="ttdoc">Defines a widget interface for UI elements, integrating activation state management,...</div><div class="ttdef"><b>Definition:</b> spk_widget.hpp:61</div></div>
+<div class="ttc" id="astructspk_1_1IVector2_html"><div class="ttname"><a href="structspk_1_1IVector2.html">spk::IVector2&lt; int32_t &gt;</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

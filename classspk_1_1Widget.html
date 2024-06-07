@@ -85,18 +85,21 @@ Inheritance diagram for spk::Widget:</div>
 <div class="dyncontent">
 <div class="center"><img src="classspk_1_1Widget__inherit__graph.png" border="0" usemap="#aspk_1_1Widget_inherit__map" alt="Inheritance graph"/></div>
 <map name="aspk_1_1Widget_inherit__map" id="aspk_1_1Widget_inherit__map">
-<area shape="rect" title="Defines a widget interface for UI elements, integrating activation state management,..." alt="" coords="244,223,343,250"/>
+<area shape="rect" title="Defines a widget interface for UI elements, integrating activation state management,..." alt="" coords="244,299,343,326"/>
 <area shape="rect" href="classspk_1_1Application_1_1CentralWidget.html" title="CentralWidget serves as the core widget in an application, managing time&#45;based updates via a custom r..." alt="" coords="397,5,578,47"/>
 <area shape="rect" href="classspk_1_1Button.html" title="Represents a button widget in the SPK UI framework, capable of handling user interactions and display..." alt="" coords="439,71,535,98"/>
 <area shape="rect" href="classspk_1_1Frame.html" title="A frame widget that contains a nine&#45;sliced box for UI rendering." alt="" coords="440,122,535,149"/>
 <area shape="rect" href="classspk_1_1GameEngineManager.html" title="Manages the integration of a game engine within a widget&#45;based user interface framework." alt="" coords="391,173,584,199"/>
 <area shape="rect" href="classspk_1_1ImageLabel.html" title="A widget that displays an image, using texture rendering." alt="" coords="423,223,552,250"/>
 <area shape="rect" href="classspk_1_1Panel.html" title="A user interface panel that can manage focus within the application." alt="" coords="443,274,531,301"/>
-<area shape="rect" href="classspk_1_1TextEntry.html" title="A user interface component for text input." alt="" coords="430,325,545,351"/>
-<area shape="rect" href="classspk_1_1TextLabel.html" title="A widget class for displaying text within a UI, with a customizable background." alt="" coords="430,375,545,402"/>
-<area shape="rect" href="classspk_1_1WidgetCanvas.html" title="A class that represents a canvas for widgets." alt="" coords="414,426,561,453"/>
-<area shape="rect" href="classspk_1_1ActivateObject.html" title="Manages activation state for objects, intended as a base class." alt="" coords="26,198,175,225"/>
-<area shape="rect" href="classspk_1_1TreeNode.html" title=" " alt="" coords="5,249,196,275"/>
+<area shape="rect" href="classspk_1_1SpriteSheetLabel.html" title="A widget that displays an image from a sprite sheet." alt="" coords="406,325,569,351"/>
+<area shape="rect" href="classspk_1_1StatefulWidget.html" title="A widget class that links states to specific sprites and renders a background." alt="" coords="412,376,563,417"/>
+<area shape="rect" href="classspk_1_1TextEntry.html" title="A user interface component for text input." alt="" coords="430,442,545,469"/>
+<area shape="rect" href="classspk_1_1TextLabel.html" title="A widget class for displaying text within a UI, with a customizable background." alt="" coords="430,493,545,519"/>
+<area shape="rect" href="classspk_1_1ValueSelector.html" title="A templated widget class for selecting a value from a list using increment and decrement buttons." alt="" coords="416,544,559,585"/>
+<area shape="rect" href="classspk_1_1WidgetCanvas.html" title="A class that represents a canvas for widgets." alt="" coords="414,610,561,637"/>
+<area shape="rect" href="classspk_1_1ActivateObject.html" title="Manages activation state for objects, intended as a base class." alt="" coords="26,274,175,301"/>
+<area shape="rect" href="classspk_1_1TreeNode.html" title=" " alt="" coords="5,325,196,351"/>
 </map>
 <center><span class="legend">[<a href="graph_legend.html">legend</a>]</span></center></div>
 <div class="dynheader">
@@ -140,6 +143,8 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:ac84edc774826eed6c7f6bc50bf102f8b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa66660bed9bd2658eed46b94026a2472"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Widget.html#aa66660bed9bd2658eed46b94026a2472">setGeometry</a> (const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2Int</a> &amp;p_anchor, const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2UInt</a> &amp;p_size)</td></tr>
 <tr class="separator:aa66660bed9bd2658eed46b94026a2472"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac3a12469c314551a9e246989e0520c2c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Widget.html#ac3a12469c314551a9e246989e0520c2c">forceGeometryChange</a> (const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2Int</a> &amp;p_anchor, const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2UInt</a> &amp;p_size)</td></tr>
+<tr class="separator:ac3a12469c314551a9e246989e0520c2c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a63956553f1890f03ca92aa9e7e351f68"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Widget.html#a63956553f1890f03ca92aa9e7e351f68">setLayer</a> (const float &amp;p_layer)</td></tr>
 <tr class="separator:a63956553f1890f03ca92aa9e7e351f68"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a36dbf53a79fb895de5755eaf015e6d02"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1Widget.html#a36dbf53a79fb895de5755eaf015e6d02">activateAll</a> ()</td></tr>
@@ -266,7 +271,7 @@ using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="cla
 <div class="ttc" id="aclassspk_1_1Widget_html_a29e8e60771c35cd3c533237219265960"><div class="ttname"><a href="classspk_1_1Widget.html#a29e8e60771c35cd3c533237219265960">spk::Widget::_onUpdate</a></div><div class="ttdeci">virtual void _onUpdate()</div><div class="ttdoc">Virtual method called during the update phase of the widget lifecycle.</div><div class="ttdef"><b>Definition:</b> spk_widget.cpp:12</div></div>
 <div class="ttc" id="aclassspk_1_1Widget_html_acbeb0b30a1febf128e5001a55e08179f"><div class="ttname"><a href="classspk_1_1Widget.html#acbeb0b30a1febf128e5001a55e08179f">spk::Widget::Widget</a></div><div class="ttdeci">Widget(Widget *p_parent)</div><div class="ttdef"><b>Definition:</b> spk_widget.cpp:88</div></div>
 <div class="ttc" id="aclassspk_1_1Widget_html_ad2b1b524e2581f9f7a4ac827fdf44265"><div class="ttname"><a href="classspk_1_1Widget.html#ad2b1b524e2581f9f7a4ac827fdf44265">spk::Widget::_onRender</a></div><div class="ttdeci">virtual void _onRender()</div><div class="ttdoc">Virtual method for rendering the widget.</div><div class="ttdef"><b>Definition:</b> spk_widget.cpp:8</div></div>
-<div class="ttc" id="aclassspk_1_1Widget_html_af69341bec5fcec262a0c29a9ba48df62"><div class="ttname"><a href="classspk_1_1Widget.html#af69341bec5fcec262a0c29a9ba48df62">spk::Widget::name</a></div><div class="ttdeci">const std::string &amp; name() const</div><div class="ttdef"><b>Definition:</b> spk_widget.cpp:197</div></div>
+<div class="ttc" id="aclassspk_1_1Widget_html_af69341bec5fcec262a0c29a9ba48df62"><div class="ttname"><a href="classspk_1_1Widget.html#af69341bec5fcec262a0c29a9ba48df62">spk::Widget::name</a></div><div class="ttdeci">const std::string &amp; name() const</div><div class="ttdef"><b>Definition:</b> spk_widget.cpp:204</div></div>
 <div class="ttc" id="astructspk_1_1IVector2_html"><div class="ttname"><a href="structspk_1_1IVector2.html">spk::IVector2&lt; uint32_t &gt;</a></div></div>
 </div><!-- fragment --><dl class="section note"><dt>Note</dt><dd>If no parent are set for a widget, this widget will be concidered as child of the default widget of the application. </dd>
 <dd>
@@ -606,6 +611,41 @@ The viewport of a <a class="el" href="classspk_1_1Widget.html" title="Defines a 
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The widget if found, nullptr if not </dd></dl>
+
+</div>
+</div>
+<a id="ac3a12469c314551a9e246989e0520c2c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac3a12469c314551a9e246989e0520c2c">&#9670;&nbsp;</a></span>forceGeometryChange()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void spk::Widget::forceGeometryChange </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2Int</a> &amp;&#160;</td>
+          <td class="paramname"><em>p_anchor</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2UInt</a> &amp;&#160;</td>
+          <td class="paramname"><em>p_size</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Sets the geometry of the widget, specifying its anchor point and size, and force the application of the modification. Need to be called only on the rendering thread. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">p_anchor</td><td>The anchor point of the widget in its parent's coordinate system. </td></tr>
+    <tr><td class="paramname">p_size</td><td>The size of the widget. </td></tr>
+  </table>
+  </dd>
+</dl>
 
 </div>
 </div>

@@ -1,3 +1,4 @@
 <map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
 <area shape="rect" id="node1" href="$classspk_1_1WidgetComponent_1_1TextureRenderer.html" title="A component for rendering textures within the UI, supporting various transformations and UV mapping." alt="" coords="5,5,180,47"/>
+<area shape="rect" id="node2" href="$classspk_1_1WidgetComponent_1_1SpriteSheetRenderer.html" title="A widget component class for rendering sprites from a sprite sheet." alt="" coords="228,5,403,47"/>
 </map>
