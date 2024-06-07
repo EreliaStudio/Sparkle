@@ -69,6 +69,7 @@ $(function() {
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pub-attribs">Public Attributes</a> &#124;
 <a href="classspk_1_1WidgetComponent_1_1FontRenderer-members.html">List of all members</a>  </div>
   <div class="headertitle">
 <div class="title">spk::WidgetComponent::FontRenderer Class Reference</div>  </div>
@@ -86,13 +87,9 @@ Public Member Functions</h2></td></tr>
 &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1WidgetComponent_1_1FontRenderer.html#a42f2368bdb773149fd2c670104c4e294">FontRenderer</a> ()</td></tr>
 <tr class="memdesc:a42f2368bdb773149fd2c670104c4e294"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default constructor for the <a class="el" href="classspk_1_1WidgetComponent_1_1FontRenderer.html" title="Manages rendering of text using a specified font and properties.">FontRenderer</a> class. <br /></td></tr>
 <tr class="separator:a42f2368bdb773149fd2c670104c4e294"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9da38b07ebe839988e35cdb3db36ffa9"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structspk_1_1Font_1_1Size.html">spk::Font::Size</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1WidgetComponent_1_1FontRenderer.html#a9da38b07ebe839988e35cdb3db36ffa9">computeOptimalFontSize</a> (const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2Int</a> &amp;p_availibleArea, const float &amp;p_outlineRatio)</td></tr>
-<tr class="memdesc:a9da38b07ebe839988e35cdb3db36ffa9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Compute the optimized size of the text for a specific area and outline ratio.  <a href="classspk_1_1WidgetComponent_1_1FontRenderer.html#a9da38b07ebe839988e35cdb3db36ffa9">More...</a><br /></td></tr>
+<tr class="memitem:a9da38b07ebe839988e35cdb3db36ffa9"><td class="memItemLeft" align="right" valign="top"><a id="a9da38b07ebe839988e35cdb3db36ffa9"></a>
+*brief Compute the optimized size of the <a class="el" href="classspk_1_1WidgetComponent_1_1FontRenderer.html#af84f70e04a3e30ae7daf00062794829b">text</a> for a specific area and outline ratio *param p_availibleArea The area where the <a class="el" href="classspk_1_1WidgetComponent_1_1FontRenderer.html#af84f70e04a3e30ae7daf00062794829b">text</a> must stay inside *param p_outlineRatio The ratio between the outline size and the <a class="el" href="classspk_1_1WidgetComponent_1_1FontRenderer.html#af84f70e04a3e30ae7daf00062794829b">text</a> size *return The resulting <a class="el" href="classspk_1_1WidgetComponent_1_1FontRenderer.html#a8641c87cffde209f37e808c82c8c1f76">font</a> containing information about <a class="el" href="classspk_1_1WidgetComponent_1_1FontRenderer.html#af84f70e04a3e30ae7daf00062794829b">text</a> and outline size *<a class="el" href="structspk_1_1Font_1_1Size.html">spk::Font::Size</a>&#160;</td><td class="memItemRight" valign="bottom"><b>computeOptimalFontSize</b> (const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2Int</a> &amp;p_availibleArea, const float &amp;p_outlineRatio)</td></tr>
 <tr class="separator:a9da38b07ebe839988e35cdb3db36ffa9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a89c913f1b0725364630d530cd200468c"><td class="memItemLeft" align="right" valign="top"><a id="a89c913f1b0725364630d530cd200468c"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1WidgetComponent_1_1FontRenderer.html#a89c913f1b0725364630d530cd200468c">render</a> ()</td></tr>
-<tr class="memdesc:a89c913f1b0725364630d530cd200468c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Renders the text using the current settings. <br /></td></tr>
-<tr class="separator:a89c913f1b0725364630d530cd200468c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab83548ddff8cc81406ac7b3daf88573b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1WidgetComponent_1_1FontRenderer.html#ab83548ddff8cc81406ac7b3daf88573b">setFont</a> (<a class="el" href="classspk_1_1Font.html">spk::Font</a> *p_font)</td></tr>
 <tr class="memdesc:ab83548ddff8cc81406ac7b3daf88573b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the font to use for rendering text.  <a href="classspk_1_1WidgetComponent_1_1FontRenderer.html#ab83548ddff8cc81406ac7b3daf88573b">More...</a><br /></td></tr>
 <tr class="separator:ab83548ddff8cc81406ac7b3daf88573b"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -135,9 +132,9 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 <tr class="memitem:a8269fe8e16f9271c24bc1d13c83a11bf"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2Int</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1WidgetComponent_1_1FontRenderer.html#a8269fe8e16f9271c24bc1d13c83a11bf">anchor</a> () const</td></tr>
 <tr class="memdesc:a8269fe8e16f9271c24bc1d13c83a11bf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Gets the anchor point of the rendered text.  <a href="classspk_1_1WidgetComponent_1_1FontRenderer.html#a8269fe8e16f9271c24bc1d13c83a11bf">More...</a><br /></td></tr>
 <tr class="separator:a8269fe8e16f9271c24bc1d13c83a11bf"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afdfdddd032d665204fd1f3da5be1b404"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2Int</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1WidgetComponent_1_1FontRenderer.html#afdfdddd032d665204fd1f3da5be1b404">size</a> () const</td></tr>
-<tr class="memdesc:afdfdddd032d665204fd1f3da5be1b404"><td class="mdescLeft">&#160;</td><td class="mdescRight">Gets the size of the rendered text.  <a href="classspk_1_1WidgetComponent_1_1FontRenderer.html#afdfdddd032d665204fd1f3da5be1b404">More...</a><br /></td></tr>
-<tr class="separator:afdfdddd032d665204fd1f3da5be1b404"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac9c3e86a1a9916390c9f7f1b977bb3be"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2Int</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1WidgetComponent_1_1FontRenderer.html#ac9c3e86a1a9916390c9f7f1b977bb3be">size</a> () const</td></tr>
+<tr class="memdesc:ac9c3e86a1a9916390c9f7f1b977bb3be"><td class="mdescLeft">&#160;</td><td class="mdescRight">Gets the size of the rendered text.  <a href="classspk_1_1WidgetComponent_1_1FontRenderer.html#ac9c3e86a1a9916390c9f7f1b977bb3be">More...</a><br /></td></tr>
+<tr class="separator:ac9c3e86a1a9916390c9f7f1b977bb3be"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a073cb638a059c3711fea71c311b80175"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1WidgetComponent_1_1FontRenderer.html#a073cb638a059c3711fea71c311b80175">textSize</a> () const</td></tr>
 <tr class="memdesc:a073cb638a059c3711fea71c311b80175"><td class="mdescLeft">&#160;</td><td class="mdescRight">Gets the size of the text.  <a href="classspk_1_1WidgetComponent_1_1FontRenderer.html#a073cb638a059c3711fea71c311b80175">More...</a><br /></td></tr>
 <tr class="separator:a073cb638a059c3711fea71c311b80175"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -168,6 +165,12 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 <tr class="memitem:a7b5a0b318f505054030228f188f527eb"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classspk_1_1WidgetComponent_1_1FontRenderer.html#a7b5a0b318f505054030228f188f527eb">setGeometry</a> (const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2Int</a> &amp;p_anchor, const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2Int</a> &amp;p_newSize)</td></tr>
 <tr class="memdesc:a7b5a0b318f505054030228f188f527eb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the geometry of the rendering area.  <a href="classspk_1_1WidgetComponent_1_1FontRenderer.html#a7b5a0b318f505054030228f188f527eb">More...</a><br /></td></tr>
 <tr class="separator:a7b5a0b318f505054030228f188f527eb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-attribs"></a>
+Public Attributes</h2></td></tr>
+<tr class="memitem:ac0a00fa49514fa3f84244cc73571b8d3"><td class="memItemLeft" align="right" valign="top"><a id="ac0a00fa49514fa3f84244cc73571b8d3"></a>
+*brief Compute the optimized size of the <a class="el" href="classspk_1_1WidgetComponent_1_1FontRenderer.html#af84f70e04a3e30ae7daf00062794829b">text</a> for a specific area and outline ratio *param p_availibleArea The area where the <a class="el" href="classspk_1_1WidgetComponent_1_1FontRenderer.html#af84f70e04a3e30ae7daf00062794829b">text</a> must stay inside *param p_outlineRatio The ratio between the outline size and the <a class="el" href="classspk_1_1WidgetComponent_1_1FontRenderer.html#af84f70e04a3e30ae7daf00062794829b">text</a> size *return The resulting <a class="el" href="classspk_1_1WidgetComponent_1_1FontRenderer.html#a8641c87cffde209f37e808c82c8c1f76">font</a>&#160;</td><td class="memItemRight" valign="bottom"><b>size</b></td></tr>
+<tr class="separator:ac0a00fa49514fa3f84244cc73571b8d3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Manages rendering of text using a specified font and properties. </p>
@@ -197,44 +200,6 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 
 <p>Gets the anchor point of the rendered text. </p>
 <dl class="section return"><dt>Returns</dt><dd>The anchor point. </dd></dl>
-
-</div>
-</div>
-<a id="a9da38b07ebe839988e35cdb3db36ffa9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9da38b07ebe839988e35cdb3db36ffa9">&#9670;&nbsp;</a></span>computeOptimalFontSize()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="structspk_1_1Font_1_1Size.html">spk::Font::Size</a> spk::WidgetComponent::FontRenderer::computeOptimalFontSize </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2Int</a> &amp;&#160;</td>
-          <td class="paramname"><em>p_availibleArea</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const float &amp;&#160;</td>
-          <td class="paramname"><em>p_outlineRatio</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Compute the optimized size of the text for a specific area and outline ratio. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">p_availibleArea</td><td>The area where the text must stay inside </td></tr>
-    <tr><td class="paramname">p_outlineRatio</td><td>The ratio between the outline size and the text size </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>The resulting font size, containing information about text and outline size </dd></dl>
 
 </div>
 </div>
@@ -687,14 +652,14 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 
 </div>
 </div>
-<a id="afdfdddd032d665204fd1f3da5be1b404"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afdfdddd032d665204fd1f3da5be1b404">&#9670;&nbsp;</a></span>size()</h2>
+<a id="ac9c3e86a1a9916390c9f7f1b977bb3be"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac9c3e86a1a9916390c9f7f1b977bb3be">&#9670;&nbsp;</a></span>size()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2Int</a> &amp; spk::WidgetComponent::FontRenderer::size </td>
+          <td class="memname">const <a class="el" href="structspk_1_1IVector2.html">spk::Vector2Int</a>&amp; spk::WidgetComponent::FontRenderer::size </td>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
           <td> const</td>
