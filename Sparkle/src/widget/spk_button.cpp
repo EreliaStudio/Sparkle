@@ -83,6 +83,7 @@ namespace spk
 	void Button::setPadding(const spk::Vector2Int& p_padding)
 	{
 		_padding = p_padding;
+		setGeometry(anchor(), size());
 	}
 
 	void Button::setOnClickCallback(const Callback p_onClickCallback)

@@ -263,6 +263,12 @@ namespace spk
 		_isTextEdited = true;
 	}
 
+	void TextEntry::setPadding(const spk::Vector2Int& p_padding)
+	{
+		_padding = p_padding;
+		setGeometry(anchor(), size());
+	}
+
 	spk::WidgetComponent::FontRenderer& TextEntry::label()
 	{
 		return (_label);

@@ -102,9 +102,18 @@ namespace spk
 
 			}
 
+			/**
+			 * @brief Comparator allowing Size to be stored inside std container.
+			 * @param p_other The other Size to compare to.
+			 * @return True if the current size is lower than the other one.
+			*/
 			bool operator < (const Size& p_other) const
 			{
-				return ((text + outline) < (p_other.text + p_other.outline));
+				if (text < p_other.text)
+					return (true);
+				if (outline < p_other.outline)
+					return (true);
+				return (false);
 			}
 		};
 

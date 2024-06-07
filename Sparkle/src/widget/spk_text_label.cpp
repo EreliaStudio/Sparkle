@@ -38,6 +38,7 @@ namespace spk
 	void TextLabel::setPadding(const spk::Vector2Int& p_padding)
 	{
 		_padding = p_padding;
+		setGeometry(anchor(), size());
 	}
 
 	spk::WidgetComponent::FontRenderer& TextLabel::label()

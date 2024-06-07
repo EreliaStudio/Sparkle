@@ -88,6 +88,12 @@ namespace spk
 		void setPredefinedText(const std::string& p_text);
 
 		/**
+		 * @brief Define the padding of the text label inside the box.
+		 * @param p_padding The desired padding in pixels.
+		*/
+		void setPadding(const spk::Vector2Int& p_padding);
+
+		/**
 		 * Access the text label component of the text entry.
 		 * @return Reference to the internal TextLabel component.
 		 */

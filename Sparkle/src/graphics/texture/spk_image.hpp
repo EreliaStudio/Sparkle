@@ -52,6 +52,10 @@ namespace spk
 		 */
 		Image(const std::filesystem::path& p_path);
 
+		/**
+		 * @brief Return the size in pixel of the image
+		 * @return The size loaded when creating the image.
+		*/
 		const spk::Vector2Int& size() const;
 	};
 }

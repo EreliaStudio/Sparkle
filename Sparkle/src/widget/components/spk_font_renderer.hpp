@@ -62,7 +62,7 @@ namespace spk::WidgetComponent
 
 		bool _needGPUBufferUpdate;
 		spk::Vector2Int _anchor;
-		spk::Vector2Int _size;
+		spk::Vector2Int _size; ///< The size of the rendered text.
 		spk::VerticalAlignment _verticalAlignment;
 		spk::HorizontalAlignment _horizontalAlignment;
 
@@ -85,9 +85,9 @@ namespace spk::WidgetComponent
 		 */
 		struct RenderingData
 		{
-			std::vector<const spk::Font::Glyph*> glyphs; ///< The glyphs to render.
-			spk::Vector2Int anchorOffset; ///< The offset of the anchor.
-			spk::Vector2Int size; ///< The overall size of the rendered text.
+			std::vector<const spk::Font::Glyph*> glyphs; //!< The glyphs to render.
+			spk::Vector2Int anchorOffset; //!< The offset of the anchor.
+			spk::Vector2Int size; //!< The overall size of the rendered text.
 		};
 
 		RenderingData _computeRenderingData(spk::Font::Atlas* p_fontAtlas, const std::string& p_text) const;
@@ -101,7 +101,7 @@ namespace spk::WidgetComponent
 		FontRenderer();
 
 		/**
-		 * @brief Compute the optimized size of the text for a specific area and outline ratio.
+		 * Compute the optimized size of the text for a specific area and outline ratio.
 		 * @param p_availibleArea The area where the text must stay inside
 		 * @param p_outlineRatio The ratio between the outline size and the text size
 		 * @return The resulting font size, containing information about text and outline size

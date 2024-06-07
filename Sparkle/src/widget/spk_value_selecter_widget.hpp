@@ -5,6 +5,31 @@
 
 namespace spk
 {
+	/**
+	 * @class ValueSelector
+	 * @brief A templated widget class for selecting a value from a list using increment and decrement buttons.
+	 *
+	 * This class extends Widget and includes buttons for incrementing and decrementing the value, as well as a 
+	 * text label for displaying the current value. It is designed to handle both the graphical representation 
+	 * and interaction logic for value selection, supporting dynamic resizing and customizable value display.
+	 *
+	 * ValueSelector can be used to select values of any type specified by the template parameter TType. The 
+	 * class provides methods to add values, define a conversion callback for displaying values as strings, 
+	 * and manage the currently selected value.
+	 *
+	 * Usage example:
+	 * @code
+	 * spk::ValueSelector<int>* myValueSelector = new spk::ValueSelector<int>(parentWidget);
+	 * myValueSelector->addValue(1);
+	 * myValueSelector->addValue(2);
+	 * myValueSelector->addValue(3);
+	 * myValueSelector->defineConvertionCallback([](const int &value) { return std::to_string(value); });
+	 * myValueSelector->selectValue(2);
+	 * @endcode
+	 *
+	 * @note The class manages layout changes by overriding the `_onGeometryChange` and `_onRender` methods
+	 *       to ensure the buttons and value display are correctly sized and rendered.
+	 */
 	template <typename TType>
 	class ValueSelector : public spk::Widget
 	{
@@ -28,7 +53,6 @@ namespace spk
 
 			_incrementValueButton->setGeometry(_valueDisplayer->anchor() + _valueDisplayer->size() * spk::Vector2Int(1, 0) + space, buttonSize);
 			_incrementValueButton->setLayer(layer() + 0.01f);
-
 		}
 
 		void _onRender() override
@@ -55,10 +79,19 @@ namespace spk
 		spk::Button *_decrementValueButton;
 		spk::Button *_incrementValueButton;
 		spk::TextLabel *_valueDisplayer;
-		
 
 	public:
+		/**
+		 * @brief Constructor for ValueSelector with an unnamed instance.
+		 * @param p_parent The parent widget.
+		 */
 		ValueSelector(spk::Widget *p_parent) : ValueSelector("Unnamed ValueSelector", p_parent) {}
+
+		/**
+		 * @brief Constructor for ValueSelector with a specified name.
+		 * @param p_name The name of the ValueSelector.
+		 * @param p_parent The parent widget.
+		 */
 		ValueSelector(const std::string &p_name, spk::Widget *p_parent) :
 			spk::Widget(p_name, p_parent),
 			_decrementValueButton(makeChild<Button>(p_name + " - Decrement button", this)),
@@ -99,31 +132,56 @@ namespace spk
 			_valueDisplayer->activate();
 		}
 
+		/**
+		 * @brief Gets the decrement value button.
+		 * @return A pointer to the decrement value button.
+		 */
 		Button *decrementValueButton()
 		{
 			return (_decrementValueButton);
 		}
 
+		/**
+		 * @brief Gets the increment value button.
+		 * @return A pointer to the increment value button.
+		 */
 		Button *incrementValueButton()
 		{
 			return (_incrementValueButton);
 		}
 
+		/**
+		 * @brief Gets the value displayer label.
+		 * @return A pointer to the value displayer label.
+		 */
 		TextLabel *valueDisplayer()
 		{
 			return (_valueDisplayer);
 		}
 
+		/**
+		 * @brief Defines a callback function for converting values to strings for display.
+		 * @param p_callback The callback function to convert values.
+		 */
 		void defineConvertionCallback(const std::function<std::string(const TType &)> &p_callback)
 		{
 			_converterCallback = p_callback;
 		}
 
+		/**
+		 * @brief Adds a value to the ValueSelector.
+		 * @param p_value The value to add.
+		 */
 		void addValue(const TType &p_value)
 		{
 			_values.push_back(p_value);
 		}
 
+		/**
+		 * @brief Selects a specific value if it exists in the ValueSelector.
+		 * @param p_value The value to select.
+		 * @throws std::invalid_argument if the value is not found.
+		 */
 		void selectValue(const TType &p_value)
 		{
 			auto it = std::find(_values.begin(), _values.end(), p_value);
@@ -137,6 +195,10 @@ namespace spk
 			}
 		}
 
+		/**
+		 * @brief Sets the index of the currently selected value.
+		 * @param p_index The index to set.
+		 */
 		void setIndex(const size_t& p_index)
 		{
 			_index = p_index;
@@ -144,6 +206,11 @@ namespace spk
 			_valueEdited = true;
 		}
 
+		/**
+		 * @brief Gets the currently selected value.
+		 * @return The currently selected value.
+		 * @throws std::runtime_error if the selected index is invalid.
+		 */
 		const TType &value()
 		{
 			if (_values.size() >= _index)
@@ -151,5 +218,4 @@ namespace spk
 			return (_values[_index]);
 		}
 	};
-		
 }
