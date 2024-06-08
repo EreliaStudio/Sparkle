@@ -72,8 +72,8 @@ namespace spk
 		}
 
 		bool _valueEdited;
-		std::vector<TType> _values;
 		size_t _index;
+		std::vector<TType> _values;
 		std::function<std::string(const TType &)> _converterCallback;
 
 		spk::Button *_decrementValueButton;
@@ -130,6 +130,16 @@ namespace spk
 			_valueDisplayer->label().setVerticalAlignment(spk::VerticalAlignment::Centered);
 			_valueDisplayer->label().setHorizontalAlignment(spk::HorizontalAlignment::Centered);
 			_valueDisplayer->activate();
+		}
+
+		spk::Font::Size computeOptimalFontSize(const float& p_ratio)
+		{
+			spk::Font::Size result = std::min({
+				_decrementValueButton->computeOptimalFontSize(p_ratio),
+				_incrementValueButton->computeOptimalFontSize(p_ratio)
+			});
+
+			return (result);
 		}
 
 		/**
@@ -216,6 +226,90 @@ namespace spk
 			if (_values.size() >= _index)
 				throw std::runtime_error("Can't access invalid selected data inside ValueSelector");
 			return (_values[_index]);
+		}
+
+		
+		void setCornerSize(const spk::Vector2Int& p_cornerSize)
+		{
+			_decrementValueButton->setCornerSize(p_cornerSize);
+			_incrementValueButton->setCornerSize(p_cornerSize);
+			_valueDisplayer->setCornerSize(p_cornerSize);
+		}
+
+		void setFont(spk::Font* p_font)
+		{
+			_decrementValueButton->setFont(p_font);
+			_incrementValueButton->setFont(p_font);
+			_valueDisplayer->setFont(p_font);
+		}
+
+		void setFontSize(const spk::Font::Size& p_fontSize)
+		{
+			_decrementValueButton->setFontSize(p_fontSize);
+			_incrementValueButton->setFontSize(p_fontSize);
+			_valueDisplayer->setFontSize(p_fontSize);
+		}
+
+		void setText(const std::string& p_decrementText, const std::string& p_incrementText)
+		{
+			_decrementValueButton->setText(p_decrementText);
+			_incrementValueButton->setText(p_incrementText);
+		}
+
+		void setTextColor(const spk::Color& p_textColor)
+		{
+			_decrementValueButton->setTextColor(p_textColor);
+			_incrementValueButton->setTextColor(p_textColor);
+			_valueDisplayer->setTextColor(p_textColor);
+		}
+
+		void setTextSize(const size_t& p_textSize)
+		{
+			_decrementValueButton->setTextSize(p_textSize);
+			_incrementValueButton->setTextSize(p_textSize);
+			_valueDisplayer->setTextSize(p_textSize);
+		}
+
+		void setTextEdgeStrenght(const float& p_textEdgeStrenght)
+		{
+			_decrementValueButton->setTextEdgeStrenght(p_textEdgeStrenght);
+			_incrementValueButton->setTextEdgeStrenght(p_textEdgeStrenght);
+			_valueDisplayer->setTextEdgeStrenght(p_textEdgeStrenght);
+		}
+
+		void setOutlineColor(const spk::Color& p_outlineColor)
+		{
+			_decrementValueButton->setOutlineColor(p_outlineColor);
+			_incrementValueButton->setOutlineColor(p_outlineColor);
+			_valueDisplayer->setOutlineColor(p_outlineColor);
+		}
+
+		void setOutlineSize(const size_t& p_outlineSize)
+		{
+			_decrementValueButton->setOutlineSize(p_outlineSize);
+			_incrementValueButton->setOutlineSize(p_outlineSize);
+			_valueDisplayer->setOutlineSize(p_outlineSize);
+		}
+
+		void setOutlineEdgeStrenght(const float& p_outlineEdgeStrenght)
+		{
+			_decrementValueButton->setOutlineEdgeStrenght(p_outlineEdgeStrenght);
+			_incrementValueButton->setOutlineEdgeStrenght(p_outlineEdgeStrenght);
+			_valueDisplayer->setOutlineEdgeStrenght(p_outlineEdgeStrenght);
+		}
+
+		void setVerticalAlignment(const spk::VerticalAlignment& p_verticalAlignment)
+		{
+			_decrementValueButton->setVerticalAlignment(p_verticalAlignment);
+			_incrementValueButton->setVerticalAlignment(p_verticalAlignment);
+			_valueDisplayer->setVerticalAlignment(p_verticalAlignment);
+		}
+
+		void setHorizontalAlignment(const spk::HorizontalAlignment& p_horizontalAlignment)
+		{
+			_decrementValueButton->setHorizontalAlignment(p_horizontalAlignment);
+			_incrementValueButton->setHorizontalAlignment(p_horizontalAlignment);
+			_valueDisplayer->setHorizontalAlignment(p_horizontalAlignment);
 		}
 	};
 }

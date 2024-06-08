@@ -65,6 +65,8 @@ namespace spk
 
 		Callback _onClickCallback;
 
+		void _configureFontRendererGeometry();
+
 		void _onGeometryChange() override;
 		void _onRender() override;
 		void _onUpdate() override;
@@ -116,10 +118,28 @@ namespace spk
 		 */
 		WidgetComponent::FontRenderer& label(const State& p_state);
 
-		/**
-		 * @brief Sets the text of the button labels for all states.
-		 * @param p_buttonText The text to set on the button.
-		 */
-		void setText(const std::string& p_buttonText);
+		void setCornerSize(const spk::Vector2Int& p_cornerSize);
+
+		void setFont(spk::Font* p_font);
+
+		void setFontSize(const spk::Font::Size& p_fontSize);
+
+		void setText(const std::string& p_text);
+
+		void setTextColor(const spk::Color& p_textColor);
+
+		void setTextSize(const size_t& p_textSize);
+
+		void setTextEdgeStrenght(const float& p_textEdgeStrenght);
+
+		void setOutlineColor(const spk::Color& p_outlineColor);
+
+		void setOutlineSize(const size_t& p_outlineSize);
+
+		void setOutlineEdgeStrenght(const float& p_outlineEdgeStrenght);
+
+		void setVerticalAlignment(const spk::VerticalAlignment& p_verticalAlignment);
+
+		void setHorizontalAlignment(const spk::HorizontalAlignment& p_horizontalAlignment);
 	}; 
 }

@@ -75,7 +75,7 @@
 #include "widget/spk_text_label.hpp"
 #include "widget/spk_widget_canvas.hpp"
 #include "widget/spk_state_widget.hpp"
-#include "widget/spk_value_selecter_widget.hpp"
+#include "widget/spk_value_selecter.hpp"
 
 #include "network/spk_message.hpp"
 #include "network/spk_server.hpp"
