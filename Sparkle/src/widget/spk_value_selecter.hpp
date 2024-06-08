@@ -82,6 +82,12 @@ namespace spk
 		spk::Button *_incrementValueButton;
 		spk::TextLabel *_valueDisplayer;
 
+		void _setIndex(const size_t& p_index)
+		{
+			_index = p_index;
+			updateGeometry();
+		}
+		
 	public:
 		/**
 		 * @brief Constructor for ValueSelector with an unnamed instance.
@@ -202,22 +208,12 @@ namespace spk
 			auto it = std::find(_values.begin(), _values.end(), p_value);
 			if (it != _values.end())
 			{
-				setIndex(std::distance(_values.begin(), it));
+				_setIndex(std::distance(_values.begin(), it));
 			}
 			else
 			{
 				throw std::invalid_argument("Value not found in ValueSelector");
 			}
-		}
-
-		/**
-		 * @brief Sets the index of the currently selected value.
-		 * @param p_index The index to set.
-		 */
-		void setIndex(const size_t& p_index)
-		{
-			_index = p_index;
-			updateGeometry();
 		}
 
 		/**

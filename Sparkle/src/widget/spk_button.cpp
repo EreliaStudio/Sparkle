@@ -84,6 +84,9 @@ namespace spk
 		if (needGeometryChange() == true)
 			applyGeometryChange();
 
+		if (_labels[0].font() == nullptr || _labels[1].font() == nullptr)
+			throw std::runtime_error("No font set inside Button::computeOptimalFontSize");
+
         return (std::min({_labels[0].font()->computeOptimalTextSize(_labels[0].text(), p_ratio, _labels[0].size()),
                           _labels[1].font()->computeOptimalTextSize(_labels[1].text(), p_ratio, _labels[1].size())}));
     }

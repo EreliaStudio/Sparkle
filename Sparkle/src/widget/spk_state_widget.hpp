@@ -10,38 +10,16 @@
 
 namespace spk
 {
-	/**
-	 * @class StatefulWidget
-	 * @brief A widget class that links states to specific sprites and renders a background.
-	 *
-	 * This class extends Widget and includes a SpriteSheetRenderer for rendering sprites and a
-	 * NineSlicedBox for the background. It allows the user to define states and link each state
-	 * to a specific sprite ID within a sprite sheet.
-	 *
-	 * The class manages the graphical representation and interaction logic for stateful elements
-	 * in the UI, supporting dynamic resizing and state changes.
-	 *
-	 * Usage example:
-	 * @code
-	 * spk::StatefulWidget<std::string> statefulWidget(parentWidget);
-	 * statefulWidget.addStateSprite("active", 1);
-	 * statefulWidget.addStateSprite("inactive", 2);
-	 * statefulWidget.nextState(); // Cycles to the next state
-	 * @endcode
-	 */
 	template <typename State>
 	class StatefulWidget : public Widget
 	{
 	private:
-		spk::WidgetComponent::NineSlicedBox _box; ///< Background box that can be styled and resized.
-		spk::WidgetComponent::SpriteSheetRenderer _spriteRenderer; ///< Sprite renderer component.
+		spk::WidgetComponent::NineSlicedBox _box;
+		spk::WidgetComponent::SpriteSheetRenderer _spriteRenderer;
 
-		std::vector<std::pair<State, int>> _stateSpritePairs; ///< Vector linking states to sprite IDs.
-		size_t _currentIndex; ///< Current index of the state in the vector.
+		std::vector<std::pair<State, int>> _stateSpritePairs;
+		size_t _index;
 
-		/**
-		 * Handles geometry changes, updating the layout of the sprite and background to fit the new widget size.
-		 */
 		void _onGeometryChange()
 		{
 			_box.setGeometry(anchor(), size());
@@ -51,95 +29,114 @@ namespace spk
 			_spriteRenderer.setLayer(layer() + 0.01f);
 		}
 
-		/**
-		 * Renders the sprite and its background to the screen.
-		 */
 		void _onRender()
 		{
 			_box.render();
 			_spriteRenderer.render();
 		}
 
-		/**
-		 * Updates the widget state based on interactions.
-		 */
 		void _onUpdate()
 		{
 			const auto& mouse = Application::activeApplication()->mouse();
 
 			if (mouse.getButton(Mouse::Left) == InputState::Released && hitTest(mouse.position()))
 			{
-				nextState();
+				_setIndex((_index + 1) % _stateSpritePairs.size());
 			}
+		}
+
+		void _setIndex(const size_t& p_index)
+		{
+			_index = p_index;
+			_spriteRenderer.setSprite(_stateSpritePairs[_index].second);
+			updateGeometry();
 		}
 
 	public:
-		/**
-		 * @brief Construct a new StatefulWidget widget with a given parent.
-		 * @param p_parent Pointer to the parent widget.
-		 */
 		StatefulWidget(Widget* p_parent) :
 			StatefulWidget("Anonymous StatefulWidget", p_parent)
 		{
-			_currentIndex = 0;
+			_index = 0;
 		}
 		
-		/**
-		 * @brief Construct a new StatefulWidget widget with a specific name and a given parent.
-		 * @param p_name The desired name of the widget.
-		 * @param p_parent Pointer to the parent widget.
-		 */
 		StatefulWidget(const std::string& p_name, Widget* p_parent) :
 			spk::Widget(p_name, p_parent),
-			_currentIndex(0)
+			_index(0)
 		{
 
 		}
 
-		/**
-		 * Adds a state and its corresponding sprite ID to the widget.
-		 * @param state The state to link to a sprite.
-		 * @param spriteID The sprite ID to be displayed for the given state.
-		 */
-		void addStateSprite(const State& state, int spriteID)
+		void eraseState(const State& p_state)
 		{
-			_stateSpritePairs.push_back(std::make_pair(state, spriteID));
-			if (_stateSpritePairs.size() == 1)
+			auto it = std::find_if(_stateSpritePairs.begin(), _stateSpritePairs.end(), 
+				[&p_state](const std::pair<State, int>& pair)
+				{
+					return pair.first == p_state;
+				});
+			if (it != _stateSpritePairs.end())
 			{
-				_spriteRenderer.setSprite(spriteID); // Set initial sprite if this is the first state added.
+				if (_index == std::distance(_stateSpritePairs.begin(), it))
+					_setIndex(0);
+				_stateSpritePairs.erase(it);
+			}
+			else
+			{
+				throw std::invalid_argument("State not found in StatefulWidget");
 			}
 		}
 
-		/**
-		 * Cycles to the next state in the vector.
-		 */
-		void nextState()
+		void eraseStates()
 		{
-			if (_stateSpritePairs.empty())
-			{
-				throw std::out_of_range("No states have been added to the StatefulWidget.");
-			}
-
-			_currentIndex = (_currentIndex + 1) % _stateSpritePairs.size();
-			_spriteRenderer.setSprite(_stateSpritePairs[_currentIndex].second);
+			_stateSpritePairs.clear();
+			_index = 0;
 		}
 
-		/**
-		 * Provides non-const access to the internal SpriteSheetRenderer component.
-		 * @return Reference to the non-const SpriteSheetRenderer used by this widget for displaying sprites.
-		 */
+		void addState(const State& p_state, int p_spriteID)
+		{
+			_stateSpritePairs.push_back(std::make_pair(p_state, p_spriteID));
+		}
+
+		void setState(const State& p_state)
+		{
+			auto it = std::find_if(_stateSpritePairs.begin(), _stateSpritePairs.end(), 
+				[&p_state](const std::pair<State, int>& pair)
+				{
+					return pair.first == p_state;
+				});
+			if (it != _stateSpritePairs.end())
+			{
+				_setIndex(std::distance(_stateSpritePairs.begin(), it));
+			}
+			else
+			{
+				throw std::invalid_argument("State not found in StatefulWidget");
+			}
+		}
+
 		spk::WidgetComponent::SpriteSheetRenderer& spriteRenderer()
 		{
 			return (_spriteRenderer);
 		}
 
-		/**
-		 * Provides non-const access to the internal NineSlicedBox component.
-		 * @return Reference to the non-const NineSlicedBox used by this widget for the background.
-		 */
 		spk::WidgetComponent::NineSlicedBox& box()
 		{
 			return (_box);
+		}
+
+		void setBackgroundSpriteSheet(const spk::SpriteSheet* p_spriteSheet)
+		{
+			_box.setSpriteSheet(p_spriteSheet);
+		}
+
+		void setCornerSize(const spk::Vector2Int& p_cornerSize)
+		{
+			_box.setCornerSize(p_cornerSize);
+		}
+
+		void setStateSpriteSheet(const spk::SpriteSheet* p_spriteSheet)
+		{
+			_spriteRenderer.setSpriteSheet(p_spriteSheet);
+			updateGeometry();
 		}
 	};
 }
