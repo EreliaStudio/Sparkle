@@ -63,5 +63,9 @@ namespace spk
 		 * @return Reference to the const NineSlicedBox used by the frame.
 		 */
 		const spk::WidgetComponent::NineSlicedBox& box() const;
+
+		void setCornerSize(const spk::Vector2Int& p_cornerSize);
+
+		void setSpriteSheet(const spk::SpriteSheet* p_spriteSheet);
 	};
 }

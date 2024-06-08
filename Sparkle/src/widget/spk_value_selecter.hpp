@@ -47,31 +47,33 @@ namespace spk
 
 			_decrementValueButton->setGeometry(spk::Vector2Int(0, 0), buttonSize);
 			_decrementValueButton->setLayer(layer() + 0.01f);
+			_decrementValueButton->updateGeometry();
 
 			_valueDisplayer->setGeometry(_decrementValueButton->anchor() + _decrementValueButton->size() * spk::Vector2Int(1, 0) + space, labelSize);
 			_valueDisplayer->setLayer(layer() + 0.01f);
+			_valueDisplayer->updateGeometry();
 
 			_incrementValueButton->setGeometry(_valueDisplayer->anchor() + _valueDisplayer->size() * spk::Vector2Int(1, 0) + space, buttonSize);
 			_incrementValueButton->setLayer(layer() + 0.01f);
+			_incrementValueButton->updateGeometry();
+
+			_valueDisplayer->setText(_converterCallback != nullptr ? _converterCallback(_values[_index]) : "Invalid converter");
+
+			spk::Font::Size fontSize = std::min({
+				_decrementValueButton->label(Button::State::Pressed).fontSize(),
+				_decrementValueButton->label(Button::State::Released).fontSize(),
+				_incrementValueButton->label(Button::State::Pressed).fontSize(),
+				_incrementValueButton->label(Button::State::Released).fontSize(),
+				_valueDisplayer->computeOptimalFontSize(0.1f)
+			});
+			_valueDisplayer->setFontSize(fontSize);
 		}
 
 		void _onRender() override
 		{
-			if (_valueEdited == true)
-			{
-				_valueDisplayer->label().setText(_converterCallback != nullptr ? _converterCallback(_values[_index]) : "Invalid converter");
-
-				spk::Font::Size fontSize = std::min({
-					_decrementValueButton->label().fontSize(),
-					_valueDisplayer->computeOptimalFontSize(0.1f)
-				});
-				_valueDisplayer->label().setFontSize(fontSize);
-
-				_valueEdited = false;	
-			}
+			
 		}
 
-		bool _valueEdited;
 		size_t _index;
 		std::vector<TType> _values;
 		std::function<std::string(const TType &)> _converterCallback;
@@ -113,7 +115,7 @@ namespace spk
 				_index %= _values.size();
 
 				_valueDisplayer->label().setText(_converterCallback != nullptr ? _converterCallback(_values[_index]) : "Invalid converter");
-				_valueEdited = true;
+				updateGeometry();
 			});
 
 			_incrementValueButton->setText("+");
@@ -124,7 +126,7 @@ namespace spk
 				_index %= _values.size();
 
 				_valueDisplayer->label().setText(_converterCallback != nullptr ? _converterCallback(_values[_index]) : "Invalid converter");
-				_valueEdited = true;
+				updateGeometry();
 			});
 			
 			_valueDisplayer->label().setVerticalAlignment(spk::VerticalAlignment::Centered);
@@ -134,6 +136,9 @@ namespace spk
 
 		spk::Font::Size computeOptimalFontSize(const float& p_ratio)
 		{
+			if (needGeometryChange() == true)
+				applyGeometryChange();
+
 			spk::Font::Size result = std::min({
 				_decrementValueButton->computeOptimalFontSize(p_ratio),
 				_incrementValueButton->computeOptimalFontSize(p_ratio)
@@ -212,8 +217,7 @@ namespace spk
 		void setIndex(const size_t& p_index)
 		{
 			_index = p_index;
-			
-			_valueEdited = true;
+			updateGeometry();
 		}
 
 		/**
@@ -228,6 +232,19 @@ namespace spk
 			return (_values[_index]);
 		}
 
+		void setPadding(const spk::Vector2Int& p_padding)
+		{
+			_decrementValueButton->setPadding(p_padding);
+			_incrementValueButton->setPadding(p_padding);
+			_valueDisplayer->setPadding(p_padding);
+		}
+
+		void setSpriteSheet(const spk::SpriteSheet* p_releasedSpriteSheet, const spk::SpriteSheet* p_pressedSpriteSheet)
+		{
+			_decrementValueButton->setSpriteSheet(p_releasedSpriteSheet, p_pressedSpriteSheet);
+			_incrementValueButton->setSpriteSheet(p_releasedSpriteSheet, p_pressedSpriteSheet);
+			_valueDisplayer->box().setSpriteSheet(p_releasedSpriteSheet);
+		}
 		
 		void setCornerSize(const spk::Vector2Int& p_cornerSize)
 		{

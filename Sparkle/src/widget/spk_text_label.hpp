@@ -88,5 +88,20 @@ namespace spk
 		 * @return Reference to the non-const NineSlicedBox used by this widget for the background.
 		 */
 		spk::WidgetComponent::NineSlicedBox& box();
+
+		void setSpriteSheet(const spk::SpriteSheet* p_spriteSheet);
+		void setCornerSize(const spk::Vector2Int& p_cornerSize);	
+		
+		void setFont(spk::Font* p_font);
+		void setFontSize(const spk::Font::Size& p_fontSize);
+		void setText(const std::string& p_text);
+		void setTextColor(const spk::Color& p_textColor);
+		void setTextSize(const size_t& p_textSize);
+		void setTextEdgeStrenght(const float& p_textEdgeStrenght);
+		void setOutlineColor(const spk::Color& p_outlineColor);
+		void setOutlineSize(const size_t& p_outlineSize);
+		void setOutlineEdgeStrenght(const float& p_outlineEdgeStrenght);
+		void setVerticalAlignment(const spk::VerticalAlignment& p_verticalAlignment);
+		void setHorizontalAlignment(const spk::HorizontalAlignment& p_horizontalAlignment);
 	};
 }

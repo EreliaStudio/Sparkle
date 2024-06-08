@@ -234,14 +234,21 @@ namespace spk
 		 */
 		void setGeometry(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size);
 
+		/**
+		 * @brief Request a call to _onGeometryChange to be perform the next time the widget is rendered
+		*/
+		void updateGeometry();
 
 		/**
-		 * Sets the geometry of the widget, specifying its anchor point and size, and force the application of the modification.
-		 * Need to be called only on the rendering thread.
-		 * @param p_anchor The anchor point of the widget in its parent's coordinate system.
-		 * @param p_size The size of the widget.
-		 */
-		void forceGeometryChange(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size);
+		 * @brief Return the need of geometry calculation of the widget
+		 * @return True if a call to _ongeometryChange will be done uppon rendering, false otherwise.
+		*/
+		bool needGeometryChange() const;
+
+		/**
+		 * @brief force the execution of the _onGeometryChange
+		*/
+		void applyGeometryChange();
 
 		/**
 		 * Sets the layer of the widget, affecting its rendering order relative to its siblings.

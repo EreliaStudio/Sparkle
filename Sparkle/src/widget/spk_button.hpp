@@ -120,6 +120,8 @@ namespace spk
 
 		void setCornerSize(const spk::Vector2Int& p_cornerSize);
 
+		void setSpriteSheet(const spk::SpriteSheet* p_releasedSpriteSheet, const spk::SpriteSheet* p_pressedSpriteSheet);
+
 		void setFont(spk::Font* p_font);
 
 		void setFontSize(const spk::Font::Size& p_fontSize);

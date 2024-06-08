@@ -9,6 +9,7 @@ namespace spk
         for (size_t i = 0; i < 2; i++)
         {
             _labels[i].setGeometry(anchor() + _boxes[i].cornerSize() + _padding, size() - _boxes[i].cornerSize() * 2 - _padding * 2);
+			_labels[i].setLayer(layer() + 0.01f);
         }
     }
 
@@ -17,6 +18,7 @@ namespace spk
         for (size_t i = 0; i < 2; i++)
         {
             _boxes[i].setGeometry(anchor(), size());
+			_boxes[i].setLayer(layer());
         }
         _configureFontRendererGeometry();
     }
@@ -79,6 +81,9 @@ namespace spk
 
     spk::Font::Size Button::computeOptimalFontSize(const float& p_ratio)
     {
+		if (needGeometryChange() == true)
+			applyGeometryChange();
+
         return (std::min({_labels[0].font()->computeOptimalTextSize(_labels[0].text(), p_ratio, _labels[0].size()),
                           _labels[1].font()->computeOptimalTextSize(_labels[1].text(), p_ratio, _labels[1].size())}));
     }
@@ -86,7 +91,7 @@ namespace spk
     void Button::setPadding(const spk::Vector2Int& p_padding)
     {
         _padding = p_padding;
-        setGeometry(anchor(), size());
+        updateGeometry();
     }
 
     void Button::setOnClickCallback(const Callback p_onClickCallback)
@@ -110,7 +115,13 @@ namespace spk
         {
             _boxes[i].setCornerSize(p_cornerSize);
         }
-        _configureFontRendererGeometry();
+        updateGeometry();
+	}
+
+	void Button::setSpriteSheet(const spk::SpriteSheet* p_releasedSpriteSheet, const spk::SpriteSheet* p_pressedSpriteSheet)
+	{
+		_boxes[static_cast<int>(State::Released)].setSpriteSheet(p_releasedSpriteSheet);
+		_boxes[static_cast<int>(State::Pressed)].setSpriteSheet(p_pressedSpriteSheet);
 	}
 
     void Button::setFont(spk::Font* p_font)

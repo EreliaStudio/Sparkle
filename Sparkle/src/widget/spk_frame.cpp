@@ -34,4 +34,14 @@ namespace spk
 	{
 		return (_box);
 	}
+
+    void Frame::setCornerSize(const spk::Vector2Int& p_cornerSize)
+	{
+		_box.setCornerSize(p_cornerSize);
+	}
+
+	void Frame::setSpriteSheet(const spk::SpriteSheet* p_spriteSheet)
+	{
+		_box.setSpriteSheet(p_spriteSheet);
+	}
 }

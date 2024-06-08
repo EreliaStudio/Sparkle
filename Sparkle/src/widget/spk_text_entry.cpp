@@ -35,20 +35,20 @@ namespace spk
 		spk::Vector2Int fullTextSize = _label.font()->computeStringSize(_label.text(), _label.textSize(), _label.outlineSize());
 
 		spk::Vector2Int cursorSize = spk::Vector2Int(5, _label.textSize());
-		spk::Vector2Int textLabelAnchor = 0;
+		spk::Vector2Int TextEntryAnchor = 0;
 
 		switch (_label.horizontalAlignment())
 		{
 		case spk::HorizontalAlignment::Centered:
 		{
-			textLabelAnchor.x = (size().x - fullTextSize.x) / 2;
+			TextEntryAnchor.x = (size().x - fullTextSize.x) / 2;
 			break;
 		}
 
 		case spk::HorizontalAlignment::Right:
 		default:
 		{
-			textLabelAnchor.x = size().x - fullTextSize.x;
+			TextEntryAnchor.x = size().x - fullTextSize.x;
 			break;
 		}
 		}
@@ -57,18 +57,18 @@ namespace spk
 		{
 		case spk::VerticalAlignment::Centered:
 		{
-			textLabelAnchor.y = (size().y - fullTextSize.y) / 2;
+			TextEntryAnchor.y = (size().y - fullTextSize.y) / 2;
 			break;
 		}
 
 		case spk::VerticalAlignment::Down:
 		default:
 		{
-			textLabelAnchor.y = size().y - fullTextSize.y;
+			TextEntryAnchor.y = size().y - fullTextSize.y;
 			break;
 		}
 		}
-		_cursorBox.setGeometry(anchor() + spk::Vector2Int(previousTextSize.x, 0) + textLabelAnchor, cursorSize);
+		_cursorBox.setGeometry(anchor() + spk::Vector2Int(previousTextSize.x, 0) + TextEntryAnchor, cursorSize);
 	}
 
 	void TextEntry::_updateSelectionStatus()
@@ -266,7 +266,7 @@ namespace spk
 	void TextEntry::setPadding(const spk::Vector2Int& p_padding)
 	{
 		_padding = p_padding;
-		setGeometry(anchor(), size());
+		updateGeometry();
 	}
 
 	spk::WidgetComponent::FontRenderer& TextEntry::label()
@@ -292,5 +292,66 @@ namespace spk
 	const std::string& TextEntry::text() const
 	{
 		return (_text);
+	}
+
+	void TextEntry::setSpriteSheet(const spk::SpriteSheet* p_spriteSheet)
+	{
+		_box.setSpriteSheet(p_spriteSheet);
+	}
+
+	void TextEntry::setCornerSize(const spk::Vector2Int& p_cornerSize)
+	{
+		_box.setCornerSize(p_cornerSize);
+		updateGeometry();
+	}	
+	
+	void TextEntry::setFont(spk::Font* p_font)
+	{
+		_label.setFont(p_font);
+	}
+
+	void TextEntry::setFontSize(const spk::Font::Size& p_fontSize)
+	{
+		_label.setFontSize(p_fontSize);
+	}
+
+	void TextEntry::setTextColor(const spk::Color& p_textColor)
+	{
+		_label.setTextColor(p_textColor);
+	}
+
+	void TextEntry::setTextSize(const size_t& p_textSize)
+	{
+		_label.setTextSize(p_textSize);
+	}
+
+	void TextEntry::setTextEdgeStrenght(const float& p_textEdgeStrenght)
+	{
+		_label.setTextEdgeStrenght(p_textEdgeStrenght);
+	}
+
+	void TextEntry::setOutlineColor(const spk::Color& p_outlineColor)
+	{
+		_label.setOutlineColor(p_outlineColor);
+	}
+
+	void TextEntry::setOutlineSize(const size_t& p_outlineSize)
+	{
+		_label.setOutlineSize(p_outlineSize);
+	}
+
+	void TextEntry::setOutlineEdgeStrenght(const float& p_outlineEdgeStrenght)
+	{
+		_label.setOutlineEdgeStrenght(p_outlineEdgeStrenght);
+	}
+
+	void TextEntry::setVerticalAlignment(const spk::VerticalAlignment& p_verticalAlignment)
+	{
+		_label.setVerticalAlignment(p_verticalAlignment);
+	}
+
+	void TextEntry::setHorizontalAlignment(const spk::HorizontalAlignment& p_horizontalAlignment)
+	{
+		_label.setHorizontalAlignment(p_horizontalAlignment);
 	}
 }
