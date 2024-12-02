@@ -6,20 +6,20 @@
 class StatefulObjectTest : public ::testing::Test
 {
 protected:
-    enum class State { State1, State2, State3 };
+	enum class State { State1, State2, State3 };
 
-    int executionCount;
-    spk::StatefulObject<State> statefulObject;
+	int executionCount;
+	spk::StatefulObject<State> statefulObject;
 
-    StatefulObjectTest() : statefulObject(State::State1), executionCount(0) {}
+	StatefulObjectTest() : statefulObject(State::State1), executionCount(0) {}
 
-    void SetUp() override
-    {
-        executionCount = 0;
-    }
+	void SetUp() override
+	{
+		executionCount = 0;
+	}
 
-    void incrementCount()
-    {
-        executionCount++;
-    }
+	void incrementCount()
+	{
+		executionCount++;
+	}
 };

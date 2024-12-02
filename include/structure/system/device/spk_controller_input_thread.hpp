@@ -15,6 +15,23 @@
 
 namespace spk
 {
+	/**
+	 * @class ControllerInputThread
+	 * @brief Manages input from a controller device in a separate thread.
+	 *
+	 * The `ControllerInputThread` class initializes and polls controller input using DirectInput
+	 * and posts events based on input changes. It works in conjunction with a `PersistantWorker`
+	 * to process controller states in a background thread.
+	 *
+	 * ### Example
+	 * @code
+	 * spk::ControllerInputThread controllerInputThread;
+	 * controllerInputThread.bind(hWnd);
+	 * controllerInputThread.start();
+	 * // Perform other operations...
+	 * controllerInputThread.stop();
+	 * @endcode
+	 */
 	class ControllerInputThread
 	{
 	private:
@@ -26,6 +43,10 @@ namespace spk
 		DIJOYSTATE  _controllerState = DIJOYSTATE();
 		DIJOYSTATE  _prevControllerState = DIJOYSTATE();
 
+		/**
+		 * @brief Initializes DirectInput and configures the controller device.
+		 * @return True if initialization succeeded; otherwise, false.
+		 */
 		bool InitializeDirectInput()
 		{
 			HRESULT hr = DirectInput8Create(GetModuleHandle(NULL), DIRECTINPUT_VERSION, IID_IDirectInput8, (void**)&_directInput, NULL);
@@ -55,6 +76,9 @@ namespace spk
 			return true;
 		}
 
+		/**
+		 * @brief Polls the controller for input states and posts relevant events.
+		 */
 		void PollController()
 		{
 			if (!_controller)
@@ -156,36 +180,74 @@ namespace spk
 			}
 		}
 
+		/**
+		 * @brief Posts a button press event.
+		 * @param hWnd Handle to the application window.
+		 * @param button The button that was pressed.
+		 */
 		static void PostButtonPress(HWND hWnd, spk::Controller::Button button)
 		{
 			PostMessage(hWnd, WM_CONTROLLER_BUTTON_PRESS, static_cast<int>(button), 0);
 		}
 
+		/**
+		 * @brief Posts a button release event.
+		 * @param hWnd Handle to the application window.
+		 * @param button The button that was released.
+		 */
 		static void PostButtonRelease(HWND hWnd, spk::Controller::Button button)
 		{
 			PostMessage(hWnd, WM_CONTROLLER_BUTTON_RELEASE, static_cast<int>(button), 0);
 		}
 
+		/**
+		 * @brief Posts a left joystick movement event.
+		 * @param hWnd Handle to the application window.
+		 * @param p_x X-axis position of the joystick.
+		 * @param p_y Y-axis position of the joystick.
+		 */
 		static void PostLeftJoystickMove(HWND hWnd, const unsigned short& p_x, const unsigned short& p_y)
 		{
 			PostMessage(hWnd, WM_LEFT_JOYSTICK_MOTION, static_cast<WPARAM>(p_x), static_cast<LPARAM>(p_y));
 		}
 
+		/**
+		 * @brief Posts a right joystick movement event.
+		 * @param hWnd Handle to the application window.
+		 * @param p_x X-axis position of the joystick.
+		 * @param p_y Y-axis position of the joystick.
+		 */
 		static void PostRightJoystickMove(HWND hWnd, const unsigned short& p_x, const unsigned short& p_y)
 		{
 			PostMessage(hWnd, WM_RIGHT_JOYSTICK_MOTION, static_cast<WPARAM>(p_x), static_cast<LPARAM>(p_y));
 		}
 
+		/**
+		 * @brief Posts a left trigger movement event.
+		 * @param hWnd Handle to the application window.
+		 * @param p_x Position of the left trigger.
+		 */
 		static void PostLeftTriggerMove(HWND hWnd, const int& p_x)
 		{
 			PostMessage(hWnd, WM_LEFT_TRIGGER_MOTION, p_x, 0);
 		}
 
+		/**
+		 * @brief Posts a right trigger movement event.
+		 * @param hWnd Handle to the application window.
+		 * @param p_x Position of the right trigger.
+		 */
 		static void PostRightTriggerMove(HWND hWnd, const int& p_x)
 		{
 			PostMessage(hWnd, WM_RIGHT_TRIGGER_MOTION, p_x, 0);
 		}
 
+		/**
+		 * @brief Posts a directional cross movement event.
+		 * @param hWnd Handle to the application window.
+		 * @param p_x X-axis direction of the cross.
+		 * @param p_y Y-axis direction of the cross.
+		 */
 		static void PostRightDirectionalCrossMotion(HWND hWnd, const int& p_x, const int& p_y)
 		{
 			LPARAM packedParams = MAKELPARAM(static_cast<WORD>(p_x), static_cast<WORD>(p_y));
@@ -193,6 +255,11 @@ namespace spk
 		}
 
 	public:
+		/**
+		 * @brief Default constructor.
+		 *
+		 * Initializes the thread worker and sets up default values.
+		 */
 		ControllerInputThread() :
 			_worker(L"ControllerInputThread"),
 			_directInput(nullptr),
@@ -201,6 +268,11 @@ namespace spk
 
 		}
 
+		/**
+		 * @brief Destructor.
+		 *
+		 * Releases any allocated resources and unacquires the controller.
+		 */
 		~ControllerInputThread()
 		{
 			if (_controller)
@@ -214,11 +286,20 @@ namespace spk
 			}
 		}
 
+		/**
+		 * @brief Binds the thread to a specific application window.
+		 * @param hWnd Handle to the application window.
+		 */
 		void bind(HWND hWnd)
 		{
 			_hWnd = hWnd;
 		}
 
+		/**
+		 * @brief Starts the controller input thread.
+		 *
+		 * Initializes DirectInput and begins polling controller input.
+		 */
 		void start()
 		{
 			_worker.addPreparationStep([this](){
@@ -231,6 +312,9 @@ namespace spk
 			_worker.start();
 		}
 
+		/**
+		 * @brief Stops the controller input thread.
+		 */
 		void stop()
 		{
 			_worker.stop();

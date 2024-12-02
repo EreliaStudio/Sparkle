@@ -5,18 +5,18 @@
 
 namespace spk
 {
-    class ImageLabel : public spk::Widget
-    {
-    private:
-        WidgetComponent::TextureRenderer _textureRenderer;
+	class ImageLabel : public spk::Widget
+	{
+	private:
+		WidgetComponent::TextureRenderer _textureRenderer;
 
-        void _onGeometryChange() override;
-        void _onPaintEvent(const spk::PaintEvent& p_event) override;
+		void _onGeometryChange() override;
+		void _onPaintEvent(const spk::PaintEvent& p_event) override;
 
-    public:
-        ImageLabel(const std::wstring& p_name, const spk::SafePointer<Widget>& p_parent);
+	public:
+		ImageLabel(const std::wstring& p_name, const spk::SafePointer<Widget>& p_parent);
 
-        const WidgetComponent::TextureRenderer& renderer() const;
-        WidgetComponent::TextureRenderer& renderer();
-    };
+		const WidgetComponent::TextureRenderer& renderer() const;
+		WidgetComponent::TextureRenderer& renderer();
+	};
 }

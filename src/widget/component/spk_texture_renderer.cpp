@@ -13,17 +13,17 @@ namespace spk::WidgetComponent
 
 ## CONSTANTS DEFINITION ##
 spk_ScreenConstants_Type spk::ScreenConstants 64 64 {
-    canvasMVP 0 64 0 64 1 0 {}
+	canvasMVP 0 64 0 64 1 0 {}
 }
 spk_WidgetConstants_Type spk::WidgetConstants 4 4 {
-    layer 0 4 0 4 1 0 {}
+	layer 0 4 0 4 1 0 {}
 }
 
 
 ## ATTRIBUTES DEFINITION ##
 textureInformations_Type textureInformations 8 8 {
-    layer 0 4 0 4 1 0 {}
-    alpha 4 4 4 4 1 0 {}
+	layer 0 4 0 4 1 0 {}
+	alpha 4 4 4 4 1 0 {}
 }
 
 
@@ -41,27 +41,27 @@ layout (location = 1) out vec2 fragmentUVs;
 
 layout(constants) uniform spk_ScreenConstants_Type
 {
-    mat4 canvasMVP;
+	mat4 canvasMVP;
 } spk_ScreenConstants;
 
 layout(constants) uniform spk_WidgetConstants_Type
 {
-    float layer;
+	float layer;
 } spk_WidgetConstants;
 
 layout(attributes) uniform textureInformations_Type
 {
-    float layer;
-    float alpha;
+	float layer;
+	float alpha;
 } textureInformations;
 
 uniform sampler2D Texture_texture;
 
 void main()
 {
-    (gl_Position) = ((spk_ScreenConstants.canvasMVP) * (vec4(modelPosition, (spk_WidgetConstants.layer) + (textureInformations.layer), 1.0f)));
-    (fragmentUVs) = (modelUVs);
-    out_instanceID = gl_InstanceID;
+	(gl_Position) = ((spk_ScreenConstants.canvasMVP) * (vec4(modelPosition, (spk_WidgetConstants.layer) + (textureInformations.layer), 1.0f)));
+	(fragmentUVs) = (modelUVs);
+	out_instanceID = gl_InstanceID;
 }
 
 ## FRAGMENT SHADER CODE ##
@@ -73,25 +73,25 @@ layout (location = 0) out vec4 pixelColor;
 
 layout(attributes) uniform textureInformations_Type
 {
-    float layer;
-    float alpha;
+	float layer;
+	float alpha;
 } textureInformations;
 
 uniform sampler2D Texture_texture;
 
 void main()
 {
-    if ((textureInformations.alpha) == (0))
-    {
-        discard;
-    }
-    vec4 baseColor = texture(Texture_texture, fragmentUVs);
-    if ((baseColor.a) == (0))
-    {
-        discard;
-    }
-    (pixelColor) = (baseColor);
-    (pixelColor.a) *= (textureInformations.alpha);
+	if ((textureInformations.alpha) == (0))
+	{
+		discard;
+	}
+	vec4 baseColor = texture(Texture_texture, fragmentUVs);
+	if ((baseColor.a) == (0))
+	{
+		discard;
+	}
+	(pixelColor) = (baseColor);
+	(pixelColor.a) *= (textureInformations.alpha);
 })";
 
 	spk::Pipeline TextureRenderer::_pipeline = spk::Pipeline(TextureRenderer::_pipelineCode);

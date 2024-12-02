@@ -7,15 +7,15 @@
 class PoolTest : public ::testing::Test
 {
 protected:
-    struct TestObject
-    {
-        int value;
-        TestObject() : value(0) {}
-    };
+	struct TestObject
+	{
+		int value;
+		TestObject() : value(0) {}
+	};
 
-    using TestPool = spk::Pool<TestObject>;
+	using TestPool = spk::Pool<TestObject>;
 
-    TestPool::Allocator allocator = []() { return new TestObject(); };
-    TestPool::Cleaner cleaner = [](TestObject& obj) { obj.value = 0; };
-    TestPool pool{ allocator, cleaner };
+	TestPool::Allocator allocator = []() { return new TestObject(); };
+	TestPool::Cleaner cleaner = [](TestObject& obj) { obj.value = 0; };
+	TestPool pool{ allocator, cleaner };
 };

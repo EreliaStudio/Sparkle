@@ -6,25 +6,25 @@
 class ActivableObjectTest : public ::testing::Test
 {
 protected:
-    int activationCount;
-    int deactivationCount;
-    spk::ActivableObject activableObject;
+	int activationCount;
+	int deactivationCount;
+	spk::ActivableObject activableObject;
 
-    ActivableObjectTest() : activationCount(0), deactivationCount(0) {}
+	ActivableObjectTest() : activationCount(0), deactivationCount(0) {}
 
-    void SetUp() override
-    {
-        activationCount = 0;
-        deactivationCount = 0;
-    }
+	void SetUp() override
+	{
+		activationCount = 0;
+		deactivationCount = 0;
+	}
 
-    void incrementActivationCount()
-    {
-        activationCount++;
-    }
+	void incrementActivationCount()
+	{
+		activationCount++;
+	}
 
-    void incrementDeactivationCount()
-    {
-        deactivationCount++;
-    }
+	void incrementDeactivationCount()
+	{
+		deactivationCount++;
+	}
 };
