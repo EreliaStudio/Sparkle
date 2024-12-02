@@ -10,6 +10,48 @@ namespace spk
 		}
 	}
 
+	Font::Size::Size() :
+		text(0),
+		outline(0)
+	{
+
+	}
+
+	Font::Size::Size(size_t p_text) :
+		text(p_text),
+		outline(0)
+	{
+
+	}
+
+	Font::Size::Size(size_t p_text, size_t p_outline) :
+		text(p_text),
+		outline(p_outline)
+	{
+
+	}
+
+	bool Font::Size::operator < (const Size& p_other) const
+	{
+		if (text < p_other.text)
+			return (true);
+		if (outline < p_other.outline)
+			return (true);
+		return (false);
+	}
+
+	std::wostream& operator<<(std::wostream& p_os, const Font::Size& size)
+	{
+		p_os << L"(" << size.text << L" / " << size.outline << L")";
+		return p_os;
+	}
+
+	std::ostream& operator<<(std::ostream& p_os, const Font::Size& size)
+	{
+		p_os << "(" << size.text << " / " << size.outline << ")";
+		return p_os;
+	}
+
 	void Font::Atlas::_rescaleGlyphs(const Vector2& p_scaleRatio)
 	{
 		for (auto& [key, element] : _glyphs)

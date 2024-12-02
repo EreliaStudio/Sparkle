@@ -345,7 +345,7 @@ namespace spk::OpenGL
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
-    TextureObject* FrameBufferObject::bindedTexture(const std::wstring& p_name)
+    spk::SafePointer<TextureObject> FrameBufferObject::bindedTexture(const std::wstring& p_name)
     {
         auto it = _attachments.find(p_name);
         if (it != _attachments.end())
