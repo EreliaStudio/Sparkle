@@ -1,13 +1,17 @@
-#include "structure/graphics/opengl/spk_shader_parser.hpp"
+#include "structure/graphics/spk_pipeline.hpp"
 
 #include "utils/spk_string_utils.hpp"
 
+#include <unordered_map>
+#include <regex>
+#include <string>
+
 namespace spk
 {
-	ShaderParser::ConstantInformation::ConstantInformation(const spk::OpenGL::UniformBufferObject::Factory& factory, int bindingPoint, size_t size)
+	Pipeline::ShaderParser::ConstantInformation::ConstantInformation(const spk::OpenGL::UniformBufferObject::Factory& factory, int bindingPoint, size_t size)
 		: factory(factory), bindingPoint(bindingPoint), size(size) {}
 
-	std::string ShaderParser::_getFileSection(const std::string& p_inputCode, const std::string& p_delimiter)
+	std::string Pipeline::ShaderParser::_getFileSection(const std::string& p_inputCode, const std::string& p_delimiter)
 	{
 
 		auto startPos = p_inputCode.find(p_delimiter);
@@ -27,7 +31,7 @@ namespace spk
 		return p_inputCode.substr(startPos, endPos - startPos);
 	}
 
-	std::string ShaderParser::_cleanAndCondenseWhitespace(const std::string& input)
+	std::string Pipeline::ShaderParser::_cleanAndCondenseWhitespace(const std::string& input)
 	{
 		std::string result = input;
 
@@ -42,7 +46,7 @@ namespace spk
 		return result;
 	}
 
-	void ShaderParser::_parseUniformBufferLayout(spk::OpenGL::UniformBufferObject::Layout& p_layoutToFeed, const std::vector<std::string>& p_words, size_t& p_index)
+	void Pipeline::ShaderParser::_parseUniformBufferLayout(spk::OpenGL::UniformBufferObject::Layout& p_layoutToFeed, const std::vector<std::string>& p_words, size_t& p_index)
 	{
 		spk::OpenGL::UniformBufferObject::Layout newLayout;
 
@@ -80,7 +84,7 @@ namespace spk
 		}
 	}
 
-	std::unordered_map<std::wstring, spk::OpenGL::UniformBufferObject::Factory> ShaderParser::_parseUniformDescriptors(const std::string& p_descriptors)
+	std::unordered_map<std::wstring, spk::OpenGL::UniformBufferObject::Factory> Pipeline::ShaderParser::_parseUniformDescriptors(const std::string& p_descriptors)
 	{
 		std::unordered_map<std::wstring, spk::OpenGL::UniformBufferObject::Factory> result;
 
@@ -112,7 +116,7 @@ namespace spk
 		return result;
 	}
 
-	void ShaderParser::_assignBindingPointsToConstants()
+	void Pipeline::ShaderParser::_assignBindingPointsToConstants()
 	{
 		for (auto& [key, factory] : _currentConstantFactories)
 		{
@@ -139,7 +143,7 @@ namespace spk
 		}
 	}
 
-	void ShaderParser::_assignBindingPointsToAttributes()
+	void Pipeline::ShaderParser::_assignBindingPointsToAttributes()
 	{
 		size_t offset = 0;
 		for (auto& [key, factory] : _attributeFactories)
@@ -149,7 +153,7 @@ namespace spk
 		}
 	}
 
-	void ShaderParser::_applyBindingPoints(const std::string& type, const std::unordered_map<std::wstring, spk::OpenGL::UniformBufferObject::Factory>& factories)
+	void Pipeline::ShaderParser::_applyBindingPoints(const std::string& type, const std::unordered_map<std::wstring, spk::OpenGL::UniformBufferObject::Factory>& factories)
 	{
 		for (const auto& [key, factory] : factories)
 		{
@@ -164,7 +168,7 @@ namespace spk
 		}
 	}
 
-	spk::OpenGL::BufferSet::Factory ShaderParser::_parseLayoutDescriptors(const std::string& p_layoutDescriptors)
+	spk::OpenGL::BufferSet::Factory Pipeline::ShaderParser::_parseLayoutDescriptors(const std::string& p_layoutDescriptors)
 	{
 		std::unordered_map<std::string, std::tuple<size_t, OpenGL::LayoutBufferObject::Attribute::Type> > _typeToSizeMap = {
 			{"bool", {1, OpenGL::LayoutBufferObject::Attribute::Type::Byte}},
@@ -208,7 +212,7 @@ namespace spk
 		return (result);
 	}
 
-	std::unordered_map<std::wstring, spk::OpenGL::SamplerObject::Factory> ShaderParser::_parseSamplerDescriptors(const std::string& p_textureDescriptors)
+	std::unordered_map<std::wstring, spk::OpenGL::SamplerObject::Factory> Pipeline::ShaderParser::_parseSamplerDescriptors(const std::string& p_textureDescriptors)
 	{
 		std::unordered_map<std::wstring, spk::OpenGL::SamplerObject::Factory> result;
 
@@ -236,7 +240,7 @@ namespace spk
 		return result;
 	}
 
-	spk::OpenGL::FrameBufferObject::Factory ShaderParser::parseFramebufferDescriptors(const std::string& descriptors)
+	spk::OpenGL::FrameBufferObject::Factory Pipeline::ShaderParser::parseFramebufferDescriptors(const std::string& descriptors)
 	{
 		spk::OpenGL::FrameBufferObject::Factory factory;
 		std::istringstream stream(descriptors);
@@ -297,25 +301,25 @@ namespace spk
 		return factory;
 	}
 
-	ShaderParser::ShaderParser(const std::string& p_fileContent)
+	Pipeline::ShaderParser::ShaderParser(const std::string& p_fileContent)
 	{
-		_vertexShaderCode = _getFileSection(p_fileContent, ShaderParser::VERTEX_DELIMITER);
-		_fragmentShaderCode = _getFileSection(p_fileContent, ShaderParser::FRAGMENT_DELIMITER);
+		_vertexShaderCode = _getFileSection(p_fileContent, Pipeline::ShaderParser::VERTEX_DELIMITER);
+		_fragmentShaderCode = _getFileSection(p_fileContent, Pipeline::ShaderParser::FRAGMENT_DELIMITER);
 
-		std::string layoutDescriptors = _getFileSection(p_fileContent, ShaderParser::LAYOUTS_DELIMITER);
+		std::string layoutDescriptors = _getFileSection(p_fileContent, Pipeline::ShaderParser::LAYOUTS_DELIMITER);
 		_objectBufferFactory = _parseLayoutDescriptors(layoutDescriptors);
 
-		std::string frameBufferDescriptors = _getFileSection(p_fileContent, ShaderParser::FRAMEBUFFER_DELIMITER);
+		std::string frameBufferDescriptors = _getFileSection(p_fileContent, Pipeline::ShaderParser::FRAMEBUFFER_DELIMITER);
 		_frameBufferFactory = parseFramebufferDescriptors(frameBufferDescriptors);
 
-		std::string textureDescriptors = _getFileSection(p_fileContent, ShaderParser::TEXTURES_DELIMITER);
+		std::string textureDescriptors = _getFileSection(p_fileContent, Pipeline::ShaderParser::TEXTURES_DELIMITER);
 		_samplerFactories = _parseSamplerDescriptors(textureDescriptors);
 
-		std::string constantDescriptors = _getFileSection(p_fileContent, ShaderParser::CONSTANTS_DELIMITER);
+		std::string constantDescriptors = _getFileSection(p_fileContent, Pipeline::ShaderParser::CONSTANTS_DELIMITER);
 		_currentConstantFactories = _parseUniformDescriptors(constantDescriptors);
 		_assignBindingPointsToConstants();
 
-		std::string attributeDescriptor = _getFileSection(p_fileContent, ShaderParser::ATTRIBUTES_DELIMITER);
+		std::string attributeDescriptor = _getFileSection(p_fileContent, Pipeline::ShaderParser::ATTRIBUTES_DELIMITER);
 		_attributeFactories = _parseUniformDescriptors(attributeDescriptor);
 		_assignBindingPointsToAttributes();
 
@@ -323,42 +327,42 @@ namespace spk
 		_applyBindingPoints("attributes", _attributeFactories);
 	}
 
-	const std::unordered_map<std::wstring, ShaderParser::ConstantInformation>& ShaderParser::getConstantInfoMap()
+	const std::unordered_map<std::wstring, Pipeline::ShaderParser::ConstantInformation>& Pipeline::ShaderParser::getConstantInfoMap()
 	{
 		return _constantInfoMap;
 	}
 
-	const std::unordered_map<std::wstring, spk::OpenGL::UniformBufferObject::Factory>& ShaderParser::getCurrentConstantFactories() const
+	const std::unordered_map<std::wstring, spk::OpenGL::UniformBufferObject::Factory>& Pipeline::ShaderParser::getCurrentConstantFactories() const
 	{
 		return _currentConstantFactories;
 	}
 
-	const std::unordered_map<std::wstring, spk::OpenGL::UniformBufferObject::Factory>& ShaderParser::getAttributeFactories() const
+	const std::unordered_map<std::wstring, spk::OpenGL::UniformBufferObject::Factory>& Pipeline::ShaderParser::getAttributeFactories() const
 	{
 		return _attributeFactories;
 	}
 
-	const spk::OpenGL::FrameBufferObject::Factory& ShaderParser::getFrameBufferFactory() const
+	const spk::OpenGL::FrameBufferObject::Factory& Pipeline::ShaderParser::getFrameBufferFactory() const
 	{
 		return _frameBufferFactory;
 	}
 
-	const spk::OpenGL::BufferSet::Factory& ShaderParser::getLayoutFactory() const
+	const spk::OpenGL::BufferSet::Factory& Pipeline::ShaderParser::getLayoutFactory() const
 	{
 		return _objectBufferFactory;
 	}
 
-	const std::unordered_map<std::wstring, spk::OpenGL::SamplerObject::Factory>& ShaderParser::getSamplerFactories() const
+	const std::unordered_map<std::wstring, spk::OpenGL::SamplerObject::Factory>& Pipeline::ShaderParser::getSamplerFactories() const
 	{
 		return _samplerFactories;
 	}
 
-	const std::string& ShaderParser::getVertexShaderCode() const
+	const std::string& Pipeline::ShaderParser::getVertexShaderCode() const
 	{
 		return _vertexShaderCode;
 	}
 
-	const std::string& ShaderParser::getFragmentShaderCode() const
+	const std::string& Pipeline::ShaderParser::getFragmentShaderCode() const
 	{
 		return _fragmentShaderCode;
 	}

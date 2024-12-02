@@ -15,6 +15,24 @@ namespace spk
 
 	}
 
+	uint8_t* DataBuffer::data()
+	{
+		return (_data.data());
+	}
+
+	const uint8_t* DataBuffer::data() const
+	{
+		return (_data.data());
+	}
+
+	size_t DataBuffer::size() const { return _data.size(); }
+
+	size_t DataBuffer::bookmark() const { return _bookmark; }
+
+	size_t DataBuffer::leftover() const { return size() - bookmark(); }
+
+	bool DataBuffer::empty() const { return leftover() == 0; }
+
 	void DataBuffer::resize(const size_t& p_newSize)
 	{
 		_data.resize(p_newSize);
@@ -36,5 +54,19 @@ namespace spk
 	void DataBuffer::reset()
 	{
 		_bookmark = 0;
+	}
+
+	void DataBuffer::edit(const size_t& p_offset, const void* p_data, const size_t& p_dataSize)
+	{
+		if (p_offset + p_dataSize > size())
+			throw std::runtime_error("Unable to edit, offset is out of bound.");
+		memcpy(_data.data() + p_offset, p_data, p_dataSize);
+	}
+
+	void DataBuffer::append(const void* p_data, const size_t& p_dataSize)
+	{
+		size_t oldSize = size();
+		resize(size() + p_dataSize);
+		edit(oldSize, p_data, p_dataSize);
 	}
 }

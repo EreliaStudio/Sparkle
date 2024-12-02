@@ -28,6 +28,10 @@ namespace spk
 	public:
 		virtual ~InherenceObject()
 		{
+			if (_parent != nullptr)
+			{
+				_parent->removeChild(static_cast<TType*>(this));
+			}
 			for (ChildObject child : _children)
 			{
 				static_cast<Child>(child.get())->_parent = nullptr;
@@ -39,6 +43,11 @@ namespace spk
 
 		InherenceObject(InherenceObject&& other) noexcept : _parent(nullptr)
 		{
+			if (other._parent != nullptr)
+			{
+				other._parent->addChild(this);
+			}
+
 			transferFrom(std::move(other));
 		}
 

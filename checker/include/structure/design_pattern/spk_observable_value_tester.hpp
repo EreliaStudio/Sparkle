@@ -7,12 +7,12 @@
 class ObservableValueTest : public ::testing::Test
 {
 protected:
-    void SetUp() override
-    {
-        value.set(0);
-    }
+	void SetUp() override
+	{
+		value.set(0);
+	}
 
-    spk::ObservableValue<int> value;
-    int executionCount = 0;
-    spk::ContractProvider::Job incrementCountJob = [this]() { ++executionCount; };
+	spk::ObservableValue<int> value;
+	int executionCount = 0;
+	spk::ContractProvider::Job incrementCountJob = [this]() { ++executionCount; };
 };

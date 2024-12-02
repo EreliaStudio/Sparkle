@@ -6,13 +6,6 @@ namespace spk
 {
 	void SystemModule::_treatEvent(spk::SystemEvent&& p_event)
 	{
-		/* Event types :
-				Resize,
-				TakeFocus,
-				LoseFocus,
-				Quit,
-				Move
-		*/
 		switch (p_event.type)
 		{
 		case spk::SystemEvent::Type::Quit:

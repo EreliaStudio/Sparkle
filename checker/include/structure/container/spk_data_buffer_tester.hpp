@@ -8,5 +8,5 @@
 class DataBufferTest : public ::testing::Test
 {
 protected:
-    spk::DataBuffer buffer;
+	spk::DataBuffer buffer;
 };

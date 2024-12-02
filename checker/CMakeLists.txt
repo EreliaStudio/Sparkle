@@ -16,7 +16,7 @@ add_executable(SparkleChecker ${SPARKLE_CHECKER_SOURCES})
 
 # Link libraries
 target_link_libraries(SparkleChecker PRIVATE 
-    Sparkle 
+    Sparkle
 	GTest::GTest GTest::Main GTest::gmock GTest::gmock_main
 )
 

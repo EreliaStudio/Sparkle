@@ -8,18 +8,18 @@ class TestObject : public spk::InherenceObject<TestObject> {};
 class InherenceObjectTest : public ::testing::Test
 {
 protected:
-    TestObject parentObject;
-    TestObject childObject1;
-    TestObject childObject2;
+	TestObject parentObject;
+	TestObject childObject1;
+	TestObject childObject2;
 
-    void SetUp() override
-    {
+	void SetUp() override
+	{
 
-    }
+	}
 
-    void TearDown() override
-    {
+	void TearDown() override
+	{
 
-    }
+	}
 };
 

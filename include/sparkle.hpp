@@ -65,7 +65,7 @@
 #include "structure/math/spk_vector2.hpp"
 #include "structure/math/spk_vector3.hpp"
 
-#include "structure/system/spk_input_state.hpp"
+#include "structure/system/device/spk_input_state.hpp"
 #include "structure/system/device/spk_controller.hpp"
 #include "structure/system/device/spk_controller_input_thread.hpp"
 #include "structure/system/device/spk_keyboard.hpp"

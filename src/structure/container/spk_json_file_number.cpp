@@ -3,6 +3,8 @@
 #include <fstream>
 #include <algorithm>
 #include <cwctype>
+#include <cfenv>
+#include <cmath>
 
 #include "utils/spk_string_utils.hpp"
 

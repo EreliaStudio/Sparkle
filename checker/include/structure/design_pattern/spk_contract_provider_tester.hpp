@@ -9,13 +9,13 @@
 class ContractProviderTest : public ::testing::Test
 {
 protected:
-    int executionCount;
-    spk::ContractProvider::Job incrementCountJob;
-    spk::ContractProvider provider;
+	int executionCount;
+	spk::ContractProvider::Job incrementCountJob;
+	spk::ContractProvider provider;
 
-    void SetUp() override
-    {
-        executionCount = 0;
-        incrementCountJob = [this]() { executionCount++; };
-    }
+	void SetUp() override
+	{
+		executionCount = 0;
+		incrementCountJob = [this]() { executionCount++; };
+	}
 };

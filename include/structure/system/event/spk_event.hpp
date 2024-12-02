@@ -30,53 +30,130 @@ namespace spk
 {
 	class Window;
 
+	/**
+	 * @struct Modifiers
+	 * @brief Represents the state of modifier keys (Control, Alt, and Shift).
+	 *
+	 * The `Modifiers` struct is used to track the state of modifier keys during an event, such as whether
+	 * the Control, Alt, or Shift key is currently pressed.
+	 *
+	 * ### Example
+	 * @code
+	 * spk::Modifiers modifiers;
+	 * modifiers.control = true; // Control key is pressed.
+	 * modifiers.alt = false;	// Alt key is not pressed.
+	 * modifiers.shift = true;   // Shift key is pressed.
+	 * @endcode
+	 */
 	struct Modifiers
 	{
-		bool control = false;
-		bool alt = false;
-		bool shift = false;
+		bool control = false; ///< Indicates if the Control key is pressed.
+		bool alt = false;	 ///< Indicates if the Alt key is pressed.
+		bool shift = false;   ///< Indicates if the Shift key is pressed.
 	};
 
+/**
+ * @struct IEvent
+ * @brief Base class for all events in the system.
+ *
+ * The `IEvent` struct provides a common interface for handling events, including functionality
+ * to manage consumption status, associated modifiers, and window-specific requests.
+ *
+ * ### Example
+ * @code
+ * spk::IEvent event(hwnd);
+ * event.consume(); // Mark the event as consumed.
+ * if (!event.consumed())
+ * {
+ *	 // Process the event if it has not been consumed.
+ * }
+ * event.requestPaint(); // Request a repaint of the associated window.
+ * @endcode
+ */
 	struct IEvent
 	{
 	private:
 		HWND _hwnd;
+		mutable bool _consumed;
 
 	public:
-		mutable bool _consumed;
-		Modifiers _modifiers;
+		Modifiers modifiers;
 		spk::SafePointer<spk::Window> window = nullptr;
 
-		IEvent(HWND p_hwnd) :
-			_hwnd(p_hwnd),
-			_consumed(false),
-			_modifiers()
-		{}
+		/**
+		 * @brief Constructs an `IEvent` with a specified window handle.
+		 * @param p_hwnd Handle to the originating window.
+		 */
+		IEvent(HWND p_hwnd);
 
-		void consume() const
-		{
-			_consumed = true;
-		}
+		/**
+		 * @brief Marks the event as consumed.
+		 *
+		 * Once consumed, the event should not be processed further.
+		 */
+		void consume() const;
 
-		bool consumed() const
-		{
-			return (_consumed);
-		}
+		/**
+		 * @brief Checks if the event has been consumed.
+		 * @return True if the event is consumed; otherwise, false.
+		 */
+		bool consumed() const;
 
+		/**
+		 * @brief Requests a repaint for the associated window.
+		 *
+		 * The repaint operation is typically handled by the windowing system.
+		 */
 		void requestPaint() const;
+
+		/**
+		 * @brief Requests an update for the associated window.
+		 *
+		 * An update operation may involve recalculating or refreshing content.
+		 */
 		void requestUpdate() const;
 	};
 
+	/**
+	 * @struct PaintEvent
+	 * @brief Represents a paint event for rendering updates in a window.
+	 *
+	 * The `PaintEvent` is a specialized event derived from `IEvent` and is triggered
+	 * when a repaint operation is requested for the associated window.
+	 *
+	 * ### Example
+	 * @code
+	 * spk::PaintEvent event(hwnd);
+	 * event.type = spk::PaintEvent::Type::Requested; // Set the type of paint event.
+	 * if (!event.consumed())
+	 * {
+	 *	 // Handle the paint event.
+	 * }
+	 * @endcode
+	 */
 	struct PaintEvent : public IEvent
 	{
+		/**
+		 * @brief List of message IDs that correspond to paint events.
+		 */
 		static inline std::vector<UINT> EventIDs = { WM_PAINT_REQUEST };
+
+		/**
+		 * @enum Type
+		 * @brief Enumerates the possible types of paint events.
+		 */
 		enum class Type
 		{
-			Unknow,
-			Requested
+			Unknow,	///< Unknown paint event type.
+			Requested  ///< A paint request event.
 		};
-		Type type = Type::Unknow;
 
+		Type type = Type::Unknow; ///< The type of the paint event.
+
+		/**
+		 * @brief Constructs a `PaintEvent` with a specified window handle.
+		 * @param p_hwnd Handle to the originating window.
+		 */
 		PaintEvent(HWND p_hwnd) :
 			IEvent(p_hwnd)
 		{

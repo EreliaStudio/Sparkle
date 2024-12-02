@@ -7,18 +7,18 @@
 class EventNotifierTest : public ::testing::Test
 {
 protected:
-    void SetUp() override
-    {
-        notifier = new spk::EventNotifier<std::string>();
-        executionCount = 0;
-    }
+	void SetUp() override
+	{
+		notifier = new spk::EventNotifier<std::string>();
+		executionCount = 0;
+	}
 
-    void TearDown() override
-    {
-        delete notifier;
-    }
+	void TearDown() override
+	{
+		delete notifier;
+	}
 
-    spk::EventNotifier<std::string>* notifier;
-    int executionCount = 0;
-    spk::ContractProvider::Job incrementCountJob = [this]() { ++executionCount; };
+	spk::EventNotifier<std::string>* notifier;
+	int executionCount = 0;
+	spk::ContractProvider::Job incrementCountJob = [this]() { ++executionCount; };
 };

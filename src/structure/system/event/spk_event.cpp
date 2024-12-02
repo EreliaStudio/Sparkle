@@ -8,6 +8,22 @@
 
 namespace spk
 {
+	IEvent::IEvent(HWND p_hwnd) :
+		_hwnd(p_hwnd),
+		_consumed(false),
+		modifiers()
+	{}
+
+	void IEvent::consume() const
+	{
+		_consumed = true;
+	}
+
+	bool IEvent::consumed() const
+	{
+		return (_consumed);
+	}
+
 	void IEvent::requestPaint() const
 	{
 		window->requestPaint();
@@ -364,9 +380,9 @@ namespace spk
 
 		if (currentEvent)
 		{
-			currentEvent->_modifiers.control = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
-			currentEvent->_modifiers.alt = (GetKeyState(VK_MENU) & 0x8000) != 0;
-			currentEvent->_modifiers.shift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+			currentEvent->modifiers.control = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
+			currentEvent->modifiers.alt = (GetKeyState(VK_MENU) & 0x8000) != 0;
+			currentEvent->modifiers.shift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
 		}
 	}
 }
