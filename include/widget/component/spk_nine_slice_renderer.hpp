@@ -6,43 +6,43 @@
 
 namespace spk::WidgetComponent
 {
-    class NineSliceRenderer
-    {
-    private:
-        static std::string _pipelineCode;
-        static spk::Pipeline _pipeline;
+	class NineSliceRenderer
+	{
+	private:
+		static std::string _pipelineCode;
+		static spk::Pipeline _pipeline;
 
-        spk::Pipeline::Object _object;
-        spk::Pipeline::Object::Attribute& _textureInformations;
-        spk::Pipeline::Object::Attribute::Element& _layerElement;
-        spk::Pipeline::Object::Attribute::Element& _alphaElement;
-        spk::Pipeline::Object::Sampler2D& _textureSampler2D;
+		spk::Pipeline::Object _object;
+		spk::Pipeline::Object::Attribute& _textureInformations;
+		spk::Pipeline::Object::Attribute::Element& _layerElement;
+		spk::Pipeline::Object::Attribute::Element& _alphaElement;
+		spk::Pipeline::Object::Sampler2D& _textureSampler2D;
 
-        bool _needUpdateGPU = false;
+		bool _needUpdateGPU = false;
 
-        float _layer = 0.0f;
-        float _alpha = 1.0f;
-        spk::Geometry2D _geometry = {};
-        spk::SafePointer<spk::SpriteSheet> _texture = nullptr;
-        spk::Vector2UInt _cornerSize = { 16u, 16u };
+		float _layer = 0.0f;
+		float _alpha = 1.0f;
+		spk::Geometry2D _geometry = {};
+		spk::SafePointer<spk::SpriteSheet> _texture = nullptr;
+		spk::Vector2UInt _cornerSize = { 16u, 16u };
 
-        void _updateGPUData();
+		void _updateGPUData();
 
-    public:
-        NineSliceRenderer();
+	public:
+		NineSliceRenderer();
 
-        const float& layer() const;
-        const float& alpha() const;
-        const spk::Geometry2D& geometry() const;
-        const spk::SafePointer<spk::SpriteSheet>& texture() const;
-        const spk::Vector2UInt& cornerSize() const;
+		const float& layer() const;
+		const float& alpha() const;
+		const spk::Geometry2D& geometry() const;
+		const spk::SafePointer<spk::SpriteSheet>& texture() const;
+		const spk::Vector2UInt& cornerSize() const;
 
-        void setLayer(const float& p_layer);
-        void setAlpha(const float& p_alpha);
-        void setGeometry(const spk::Geometry2D& p_geometry);
-        void setTexture(const spk::SafePointer<spk::SpriteSheet>& p_texture);
-        void setCornerSize(const spk::Vector2UInt& p_cornerSize);
+		void setLayer(const float& p_layer);
+		void setAlpha(const float& p_alpha);
+		void setGeometry(const spk::Geometry2D& p_geometry);
+		void setTexture(const spk::SafePointer<spk::SpriteSheet>& p_texture);
+		void setCornerSize(const spk::Vector2UInt& p_cornerSize);
 
-        void render();
-    };
+		void render();
+	};
 }

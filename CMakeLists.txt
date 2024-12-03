@@ -20,10 +20,12 @@ file(GLOB_RECURSE SPARKLE_SOURCES ${SPARKLE_SRC_DIR}/*.cpp)
 add_library(Sparkle STATIC ${SPARKLE_SOURCES} ${SPARKLE_HEADERS})
 
 find_package(GLEW REQUIRED)
-target_link_libraries(Sparkle PRIVATE GLEW::GLEW)
+target_link_libraries(Sparkle PUBLIC GLEW::GLEW)
 
 find_package(OpenGL REQUIRED)
-target_link_libraries(Sparkle PRIVATE OpenGL::GL)
+target_link_libraries(Sparkle PUBLIC OpenGL::GL)
+
+target_link_libraries(Sparkle PUBLIC dinput8 dxguid)
 
 # Include directories
 target_include_directories(Sparkle
