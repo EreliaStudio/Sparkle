@@ -1,0 +1,41 @@
+# Doxyfile configuration file
+
+# Project name
+PROJECT_NAME = "Sparkle"
+
+# Project version
+PROJECT_NUMBER = 0.0.1
+
+# The root directories of the source code
+INPUT = ./src ./include
+
+# File patterns to include
+FILE_PATTERNS = *.cpp *.h
+
+# Sorting classes by full name, including namespace and parent class
+SORT_BY_SCOPE_NAME = YES
+
+# Generate warnings for undocumented and incomplete documentation
+WARN_IF_UNDOCUMENTED = YES
+WARN_IF_DOC_ERROR = YES
+WARN_IF_INCOMPLETE_DOC = YES
+WARN_LEVEL = 3
+
+# Recursively include all subdirectories
+RECURSIVE = YES
+
+# Extract all entities, even if undocumented
+EXTRACT_ALL = YES
+
+# Output directory for the generated documentation
+OUTPUT_DIRECTORY = docs
+
+# Output formats
+GENERATE_HTML = YES
+GENERATE_XML = YES
+
+# Log warnings to a file
+WARN_LOGFILE = doxygen_warnings.log
+
+# Exclude specific directories or patterns
+EXCLUDE_PATTERNS = */checker/* */external_libraries/*
