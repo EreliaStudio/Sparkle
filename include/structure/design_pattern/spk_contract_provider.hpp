@@ -29,6 +29,8 @@ namespace spk
 			}
 
 		public:
+			Contract() = default;
+
 			Contract(const Contract& p_other) = delete;
 			Contract& operator =(const Contract& p_other) = delete;
 

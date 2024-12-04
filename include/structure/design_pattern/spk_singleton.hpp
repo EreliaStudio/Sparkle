@@ -22,7 +22,7 @@ namespace spk
 			template <typename... Args>
 			Instanciator(Args &&...p_args)
 			{
-				if (reference == 0)
+				if (Singleton<TType>::instance() == nullptr)
 					Singleton<TType>::instanciate(std::forward<Args>(p_args)...);
 				reference++;
 			}
