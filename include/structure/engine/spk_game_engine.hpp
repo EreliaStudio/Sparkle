@@ -1,94 +1,51 @@
 #pragma once
 
+#include <mutex>
+#include <set>
 #include <vector>
 
-#include "structure/engine/spk_entity.hpp"
+#include "structure/engine/spk_generic_entity.hpp"
 
 namespace spk
 {
 	class GameEngine
 	{
 	private:
-		std::vector<spk::SafePointer<Entity>> _entities;
+		GenericEntity _rootObject = spk::GenericEntity(L"/root");
+		std::mutex _collisionMutex;
 
 	public:
-		GameEngine() {}
+		GameEngine();
 
-		void addEntity(const spk::SafePointer<Entity>& p_entity)
-		{
-			_entities.push_back(p_entity);
-		}
+		void clear();
 
-		void removeEntity(const spk::SafePointer<Entity>& p_entity)
-		{
-			auto it = std::find_if(_entities.begin(), _entities.end(),
-				[&p_entity](const spk::SafePointer<Entity>& uniquePtr) {
-					return uniquePtr.get() == p_entity.get();
-				});
+		spk::SafePointer<spk::GenericEntity> rootObject();
+		void addEntity(const spk::SafePointer<GenericEntity> &p_entity);
+		void removeEntity(const spk::SafePointer<GenericEntity> &p_entity);
 
-			if (it != _entities.end())
-			{
-				_entities.erase(it);
-			}
-		}
+		spk::SafePointer<GenericEntity> getEntity(const std::wstring &p_name);
+		spk::SafePointer<const GenericEntity> getEntity(const std::wstring &p_name) const;
+		std::vector<spk::SafePointer<GenericEntity>> getEntities(const std::wstring &p_name);
+		std::vector<spk::SafePointer<const GenericEntity>> getEntities(const std::wstring &p_name) const;
 
-		spk::SafePointer<Entity> getEntity(const std::wstring& p_name)
-		{
-			for (const auto& entity : _entities)
-			{
-				if (entity->name() == p_name)
-				{
-					return entity.get();
-				}
-			}
-			return nullptr;
-		}
+		spk::SafePointer<GenericEntity> getEntityByTag(const std::wstring &p_name);
+		spk::SafePointer<const GenericEntity> getEntityByTag(const std::wstring &p_name) const;
+		std::vector<spk::SafePointer<GenericEntity>> getEntitiesByTag(const std::wstring &p_name);
+		std::vector<spk::SafePointer<const GenericEntity>> getEntitiesByTag(const std::wstring &p_name) const;
 
-		std::vector<spk::SafePointer<Entity>> getEntities(const std::wstring& p_name)
-		{
-			std::vector<spk::SafePointer<Entity>> result;
-			for (const auto& entity : _entities)
-			{
-				if (entity->name() == p_name)
-				{
-					result.push_back(entity.get());
-				}
-			}
-			return result;
-		}
+		bool contains(const std::wstring &p_name) const;
 
-		bool contains(const std::wstring& p_name) const
-		{
-			return std::any_of(_entities.begin(), _entities.end(),
-				[&](const spk::SafePointer<Entity>& p_entity)
-				{
-					return p_entity->name() == p_name;
-				});
-		}
+		size_t count(const std::wstring &p_name) const;
 
-		size_t count(const std::wstring& p_name) const
-		{
-			return std::count_if(_entities.begin(), _entities.end(),
-				[&](const spk::SafePointer<Entity>& p_entity)
-				{
-					return p_entity->name() == p_name;
-				});
-		}
+		void onGeometryChange(const spk::Geometry2D &p_geometry);
+		void onPaintEvent(spk::PaintEvent &p_event);
+		void onUpdateEvent(spk::UpdateEvent &p_event);
+		void onKeyboardEvent(spk::KeyboardEvent &p_event);
+		void onMouseEvent(spk::MouseEvent &p_event);
+		void onControllerEvent(spk::ControllerEvent &p_event);
+		void onTimerEvent(spk::TimerEvent &p_event);
 
-		void update(const long long& p_deltaTime)
-		{
-			for (const auto& entity : _entities)
-			{
-				entity->update(p_deltaTime);
-			}
-		}
-
-		void render()
-		{
-			for (const auto& entity : _entities)
-			{
-				entity->render();
-			}
-		}
+	private:
+		friend class GenericEntity;
 	};
 }

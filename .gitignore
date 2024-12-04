@@ -1,3 +1,6 @@
 build
 CMakeCache.txt
 CMakeFiles
+settings.json
+playground/resources/chunks
+.vscode/

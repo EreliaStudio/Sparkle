@@ -7,18 +7,20 @@ namespace spk
 	class ActivableObject : public StatefulObject<bool>
 	{
 	public:
-		using Contract = StatefulObject::Contract;
+		using ActivationContract = StatefulObject::Contract;
+		using DeactivationContract = StatefulObject::Contract;
+		using Job = StatefulObject::Job;
 
 	public:
 		ActivableObject();
-		virtual ~ActivableObject();
+		~ActivableObject() override;
 
 		void activate();
 		void deactivate();
 		bool isActive() const;
 
-		Contract addActivationCallback(const std::function<void()>& p_callback);
-		Contract addDeactivationCallback(const std::function<void()>& p_callback);
+		ActivationContract addActivationCallback(const Job &p_callback);
+		DeactivationContract addDeactivationCallback(const Job &p_callback);
 
 	private:
 		using StatefulObject<bool>::setState;

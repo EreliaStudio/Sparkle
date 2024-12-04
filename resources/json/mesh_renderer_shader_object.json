@@ -1,0 +1,39 @@
+{
+	"UBO": [
+		{
+			"name": "CameraUBO",
+			"data": {
+				"BlockName": "CameraUBO",
+				"BindingPoint": 0,
+				"Size": 128,
+				"Elements": [
+					{"Name": "viewMatrix", "Offset": 0, "Size": 64},
+					{"Name": "projectionMatrix", "Offset": 64, "Size": 64}
+				]
+			}
+		},
+		{
+			"name": "TransformUBO",
+			"data": {
+				"BlockName": "TransformUBO",
+				"BindingPoint": 1,
+				"Size": 64,
+				"Elements": [
+					{"Name": "modelMatrix", "Offset": 0, "Size": 64}
+				]
+			}
+		}
+	],
+	"Sampler": [
+		{
+			"name": "diffuseTexture",
+			"data": {
+				"Name": "diffuseTexture",
+				"Type": "Texture2D",
+				"BindingPoint": 0
+			}
+		}
+	],
+	"SSBO": [
+	]
+}

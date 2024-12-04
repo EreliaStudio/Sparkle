@@ -1,35 +1,44 @@
 #pragma once
 
-#include "spk_vertex_array_object.hpp"
 #include "spk_index_buffer_object.hpp"
 #include "spk_layout_buffer_object.hpp"
+#include "spk_vertex_array_object.hpp"
+
+template <typename Container>
+concept AttributeContainer = requires(const Container &p_c) {
+	{ std::data(p_c) } -> std::convertible_to<const spk::OpenGL::LayoutBufferObject::Attribute *>;
+	{ std::size(p_c) } -> std::convertible_to<std::size_t>;
+};
 
 namespace spk::OpenGL
 {
 	class BufferSet
 	{
-	public:
-		class Factory
-		{
-		private:
-			OpenGL::LayoutBufferObject::Factory _layoutFactory;
-
-		public:
-			void insert(OpenGL::LayoutBufferObject::Attribute::Index p_index, size_t p_size, OpenGL::LayoutBufferObject::Attribute::Type p_type);
-			BufferSet construct() const;
-		};
-
 	private:
-		VertexArrayObject _vao;
+		VertexArrayObject _vertexArrayObject;
 		LayoutBufferObject _layout;
-		IndexBufferObject _indexes;
+		IndexBufferObject _indexBufferObject;
 
 	public:
-		LayoutBufferObject& layout();
-		IndexBufferObject& indexes();
+		BufferSet() = default;
 
-		const LayoutBufferObject& layout() const;
-		const IndexBufferObject& indexes() const;
+		explicit BufferSet(std::span<const LayoutBufferObject::Attribute> p_attributes);
+		BufferSet(std::initializer_list<LayoutBufferObject::Attribute> p_attributes);
+
+		template <AttributeContainer Container>
+		explicit BufferSet(const Container &p_attributes) :
+			BufferSet(std::span(p_attributes.data(), p_attributes.size()))
+		{
+		}
+
+		LayoutBufferObject &layout();
+		IndexBufferObject &indexes();
+
+		const LayoutBufferObject &layout() const;
+		const IndexBufferObject &indexes() const;
+
+		void clear();
+		void validate();
 
 		void activate();
 		void deactivate();

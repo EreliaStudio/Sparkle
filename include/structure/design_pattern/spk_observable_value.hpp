@@ -4,15 +4,19 @@
 
 namespace spk
 {
-	template<typename TType>
+	template <typename TType>
 	class ObservableValue
 	{
+	public:
+		using Contract = ContractProvider::Contract;
+		using Job = ContractProvider::Job;
+
 	private:
 		TType _value;
 		ContractProvider _contractProvider;
 
 	protected:
-		void notifyEdition()
+		void notifyEdition() const
 		{
 			_contractProvider.trigger();
 		}
@@ -20,13 +24,17 @@ namespace spk
 	public:
 		ObservableValue() = default;
 
-		ObservableValue(const TType& p_value) :
+		ObservableValue(const TType &p_value) :
 			_value(p_value)
 		{
-
 		}
 
-		ObservableValue& operator =(const TType& p_value)
+		void trigger() const
+		{
+			notifyEdition();
+		}
+
+		ObservableValue &operator=(const TType &p_value)
 		{
 			set(p_value);
 			return *this;
@@ -42,15 +50,87 @@ namespace spk
 			return (_value);
 		}
 
-		void set(const TType& p_value)
+		void set(const TType &p_value)
 		{
 			_value = p_value;
 			notifyEdition();
 		}
 
-		ContractProvider::Contract subscribe(const ContractProvider::Job& p_job)
+		Contract subscribe(const Job &p_job)
 		{
 			return _contractProvider.subscribe(p_job);
+		}
+
+		// Arithmetic assignment operators
+		ObservableValue &operator+=(const TType &p_value)
+		{
+			_value += p_value;
+			notifyEdition();
+			return *this;
+		}
+
+		ObservableValue &operator-=(const TType &p_value)
+		{
+			_value -= p_value;
+			notifyEdition();
+			return *this;
+		}
+
+		ObservableValue &operator*=(const TType &p_value)
+		{
+			_value *= p_value;
+			notifyEdition();
+			return *this;
+		}
+
+		ObservableValue &operator/=(const TType &p_value)
+		{
+			_value /= p_value;
+			notifyEdition();
+			return *this;
+		}
+
+		ObservableValue &operator%=(const TType &p_value)
+		{
+			_value %= p_value;
+			notifyEdition();
+			return *this;
+		}
+
+		// Bitwise assignment operators
+		ObservableValue &operator&=(const TType &p_value)
+		{
+			_value &= p_value;
+			notifyEdition();
+			return *this;
+		}
+
+		ObservableValue &operator|=(const TType &p_value)
+		{
+			_value |= p_value;
+			notifyEdition();
+			return *this;
+		}
+
+		ObservableValue &operator^=(const TType &p_value)
+		{
+			_value ^= p_value;
+			notifyEdition();
+			return *this;
+		}
+
+		ObservableValue &operator<<=(const TType &p_value)
+		{
+			_value <<= p_value;
+			notifyEdition();
+			return *this;
+		}
+
+		ObservableValue &operator>>=(const TType &p_value)
+		{
+			_value >>= p_value;
+			notifyEdition();
+			return *this;
 		}
 	};
 }

@@ -1,415 +1,378 @@
 #include "structure/graphics/opengl/spk_frame_buffer_object.hpp"
 
-#include <windows.h>
+#ifdef _WIN32
+#	define WIN32_LEAN_AND_MEAN
+#	include <windows.h>
+#	undef WIN32_LEAN_AND_MEAN
+#endif
+
+#include <cassert>
 #include <stdexcept>
+#include <vector>
 
-#include "utils/spk_string_utils.hpp"
-
-#include "structure/spk_iostream.hpp"
-
-namespace
-{
-    void _getTextureFormat(spk::OpenGL::FrameBufferObject::Type p_type, GLenum& p_internalFormat, GLenum& p_format, GLenum& p_dataType)
-    {
-        switch (p_type)
-        {
-        case spk::OpenGL::FrameBufferObject::Type::Float4:
-        {
-            p_internalFormat = GL_RGBA32F;
-            p_format = GL_RGBA;
-            p_dataType = GL_FLOAT;
-            break;
-        }
-        case spk::OpenGL::FrameBufferObject::Type::Float3:
-        {
-            p_internalFormat = GL_RGB32F;
-            p_format = GL_RGB;
-            p_dataType = GL_FLOAT;
-            break;
-        }
-        case spk::OpenGL::FrameBufferObject::Type::Float2:
-        {
-            p_internalFormat = GL_RG32F;
-            p_format = GL_RG;
-            p_dataType = GL_FLOAT;
-            break;
-        }
-        case spk::OpenGL::FrameBufferObject::Type::Float:
-        {
-            p_internalFormat = GL_R32F;
-            p_format = GL_RED;
-            p_dataType = GL_FLOAT;
-            break;
-        }
-        case spk::OpenGL::FrameBufferObject::Type::Int4:
-        {
-            p_internalFormat = GL_RGBA32I;
-            p_format = GL_RGBA_INTEGER;
-            p_dataType = GL_INT;
-            break;
-        }
-        case spk::OpenGL::FrameBufferObject::Type::Int3:
-        {
-            p_internalFormat = GL_RGB32I;
-            p_format = GL_RGB_INTEGER;
-            p_dataType = GL_INT;
-            break;
-        }
-        case spk::OpenGL::FrameBufferObject::Type::Int2:
-        {
-            p_internalFormat = GL_RG32I;
-            p_format = GL_RG_INTEGER;
-            p_dataType = GL_INT;
-            break;
-        }
-        case spk::OpenGL::FrameBufferObject::Type::Int:
-        {
-            p_internalFormat = GL_R32I;
-            p_format = GL_RED_INTEGER;
-            p_dataType = GL_INT;
-            break;
-        }
-        case spk::OpenGL::FrameBufferObject::Type::UInt4:
-        {
-            p_internalFormat = GL_RGBA32UI;
-            p_format = GL_RGBA_INTEGER;
-            p_dataType = GL_UNSIGNED_INT;
-            break;
-        }
-        case spk::OpenGL::FrameBufferObject::Type::UInt3:
-        {
-            p_internalFormat = GL_RGB32UI;
-            p_format = GL_RGB_INTEGER;
-            p_dataType = GL_UNSIGNED_INT;
-            break;
-        }
-        case spk::OpenGL::FrameBufferObject::Type::UInt2:
-        {
-            p_internalFormat = GL_RG32UI;
-            p_format = GL_RG_INTEGER;
-            p_dataType = GL_UNSIGNED_INT;
-            break;
-        }
-        case spk::OpenGL::FrameBufferObject::Type::UInt:
-        {
-            p_internalFormat = GL_R32UI;
-            p_format = GL_RED_INTEGER;
-            p_dataType = GL_UNSIGNED_INT;
-            break;
-        }
-        default:
-        {
-            p_internalFormat = GL_R8;
-            p_format = GL_RED;
-            p_dataType = GL_UNSIGNED_BYTE;
-            break;
-        }
-        }
-    }
-
-    spk::OpenGL::TextureObject::Format _mapFormatToTextureObjectFormat(spk::OpenGL::FrameBufferObject::Type p_type)
-    {
-        switch (p_type)
-        {
-        case spk::OpenGL::FrameBufferObject::Type::Float4:
-        case spk::OpenGL::FrameBufferObject::Type::Int4:
-        case spk::OpenGL::FrameBufferObject::Type::UInt4:
-        {
-            return spk::OpenGL::TextureObject::Format::RGBA;
-        }
-        case spk::OpenGL::FrameBufferObject::Type::Float3:
-        case spk::OpenGL::FrameBufferObject::Type::Int3:
-        case spk::OpenGL::FrameBufferObject::Type::UInt3:
-        {
-            return spk::OpenGL::TextureObject::Format::RGB;
-        }
-        case spk::OpenGL::FrameBufferObject::Type::Float2:
-        case spk::OpenGL::FrameBufferObject::Type::Int2:
-        case spk::OpenGL::FrameBufferObject::Type::UInt2:
-        {
-            return spk::OpenGL::TextureObject::Format::DualChannel;
-        }
-        case spk::OpenGL::FrameBufferObject::Type::Float:
-        case spk::OpenGL::FrameBufferObject::Type::Int:
-        case spk::OpenGL::FrameBufferObject::Type::UInt:
-        {
-            return spk::OpenGL::TextureObject::Format::GreyLevel;
-        }
-        default:
-        {
-            return spk::OpenGL::TextureObject::Format::Error;
-        }
-        }
-    }
-}
+#include "structure/graphics/opengl/spk_texture_collection.hpp"
 
 namespace spk::OpenGL
 {
-    FrameBufferObject::Factory::Factory()
-    {
+	static GLenum internalFormatForAttachment(FrameBufferObject::Attachment::Type p_type)
+	{
+		switch (p_type)
+		{
+		case FrameBufferObject::Attachment::Type::Color:
+			return GL_RGBA8;
+		case FrameBufferObject::Attachment::Type::Depth:
+			return GL_DEPTH_COMPONENT24;
+		case FrameBufferObject::Attachment::Type::DepthStencil:
+			return GL_DEPTH24_STENCIL8;
+		default:
+			return GL_RGBA8;
+		}
+	}
 
-    }
+	static GLenum formatForAttachment(FrameBufferObject::Attachment::Type p_type)
+	{
+		switch (p_type)
+		{
+		case FrameBufferObject::Attachment::Type::Color:
+			return GL_RGBA;
+		case FrameBufferObject::Attachment::Type::Depth:
+			return GL_DEPTH_COMPONENT;
+		case FrameBufferObject::Attachment::Type::DepthStencil:
+			return GL_DEPTH_STENCIL;
+		default:
+			return GL_RGBA;
+		}
+	}
 
-    void FrameBufferObject::Factory::addAttachment(const std::wstring& p_name, int p_colorAttachmentIndex, Type p_type)
-    {
-        AttachmentSpec spec = { p_colorAttachmentIndex, p_type };
-        _attachments[p_name] = spec;
-    }
+	static GLenum typeForAttachment(FrameBufferObject::Attachment::Type p_type)
+	{
+		switch (p_type)
+		{
+		case FrameBufferObject::Attachment::Type::Color:
+			return GL_UNSIGNED_BYTE;
+		case FrameBufferObject::Attachment::Type::Depth:
+			return GL_UNSIGNED_INT;
+		case FrameBufferObject::Attachment::Type::DepthStencil:
+			return GL_UNSIGNED_INT_24_8;
+		default:
+			return GL_UNSIGNED_BYTE;
+		}
+	}
 
-    FrameBufferObject FrameBufferObject::Factory::construct(const spk::Vector2UInt& p_size) const
-    {
-        return FrameBufferObject(_attachments, p_size);
-    }
+	FrameBufferObject::Attachment::Attachment(const std::wstring &p_name, int p_binding, Type p_type) :
+		_name(p_name),
+		_bindingPoint(p_binding),
+		_type(p_type),
+		_needsResize(true),
+		_cpuTexture(nullptr),
+		_gpuTexture(nullptr)
+	{
+	}
 
+	void FrameBufferObject::Attachment::_allocate(const spk::Vector2UInt &p_size)
+	{
+		if (p_size.x == 0 || p_size.y == 0)
+		{
+			return;
+		}
 
-    void FrameBufferObject::_load()
-    {
-        if (_framebufferID == 0)
-        {
-            if (wglGetCurrentContext() != nullptr)
-            {
-                glGenFramebuffers(1, &_framebufferID);
-            }
-            else
-            {
-                throw std::runtime_error("No current OpenGL context.");
-            }
-        }
+		if (_cpuTexture == nullptr)
+		{
+			_cpuTexture = spk::SafePointer<spk::Texture>(new spk::Texture());
+		}
 
-        glBindFramebuffer(GL_FRAMEBUFFER, _framebufferID);
+		_gpuTexture = spk::OpenGL::TextureCollection::textureObject(_cpuTexture);
+		if (_gpuTexture == nullptr)
+		{
+			throw std::runtime_error("Failed to obtain GPU texture object for FBO attachment");
+		}
+		_size = p_size;
 
-        for (auto& [name, attachment] : _attachments)
-        {
-            TextureObject& texture = attachment.textureObject;
-            texture._ownTexture = true;
-            texture._size = _size;
-            texture._format = _mapFormatToTextureObjectFormat(attachment.type);
-            texture._filtering = TextureObject::Filtering::Linear;
-            texture._wrap = TextureObject::Wrap::ClampToEdge;
-            texture._mipmap = TextureObject::Mipmap::Disable;
-            texture._needUpload = false;
-            texture._needSetup = false;
+		GLuint textureIdentifier = _gpuTexture->id();
 
-            glGenTextures(1, &texture._id);
-            glBindTexture(GL_TEXTURE_2D, texture._id);
+		glBindTexture(GL_TEXTURE_2D, textureIdentifier);
 
-            GLenum internalFormat, format, dataType;
-            _getTextureFormat(attachment.type, internalFormat, format, dataType);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-            glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, _size.x, _size.y, 0, format, dataType, nullptr);
+		GLenum internalFmt = internalFormatForAttachment(_type);
+		GLenum format = formatForAttachment(_type);
+		GLenum type = typeForAttachment(_type);
 
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, static_cast<GLint>(texture._filtering));
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, static_cast<GLint>(texture._filtering));
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, static_cast<GLint>(texture._wrap));
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, static_cast<GLint>(texture._wrap));
+		glTexImage2D(
+			GL_TEXTURE_2D,
+			0,
+			static_cast<GLint>(internalFmt),
+			static_cast<GLsizei>(p_size.x),
+			static_cast<GLsizei>(p_size.y),
+			0,
+			format,
+			type,
+			nullptr);
 
-            glBindTexture(GL_TEXTURE_2D, 0);
+		glBindTexture(GL_TEXTURE_2D, 0);
 
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + attachment.colorAttachmentIndex, GL_TEXTURE_2D, texture._id, 0);
-        }
+		_needsResize = false;
+	}
 
-        std::vector<GLenum> drawBuffers;
-        for (const auto& [name, attachment] : _attachments)
-        {
-            drawBuffers.push_back(GL_COLOR_ATTACHMENT0 + attachment.colorAttachmentIndex);
-        }
+	void FrameBufferObject::Attachment::_resize(const spk::Vector2UInt &p_size)
+	{
+		if (_gpuTexture == nullptr)
+		{
+			_allocate(p_size);
+			return;
+		}
 
-        glDrawBuffers(static_cast<GLsizei>(drawBuffers.size()), drawBuffers.data());
+		_size = p_size;
 
-        GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-        if (status != GL_FRAMEBUFFER_COMPLETE)
-        {
-            throw std::runtime_error("Framebuffer is not complete after load().");
-        }
+		GLuint textureIdentifier = _gpuTexture->id();
+		glBindTexture(GL_TEXTURE_2D, textureIdentifier);
 
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    }
+		GLenum internalFmt = internalFormatForAttachment(_type);
+		GLenum format = formatForAttachment(_type);
+		GLenum type = typeForAttachment(_type);
 
-    void FrameBufferObject::_releaseResources()
-    {
-        if (wglGetCurrentContext() != nullptr)
-        {
-            if (_framebufferID != 0)
-            {
-                glDeleteFramebuffers(1, &_framebufferID);
-            }
-            _framebufferID = 0;
-        }
+		glTexImage2D(
+			GL_TEXTURE_2D,
+			0,
+			static_cast<GLint>(internalFmt),
+			static_cast<GLsizei>(p_size.x),
+			static_cast<GLsizei>(p_size.y),
+			0,
+			format,
+			type,
+			nullptr);
 
-        _attachments.clear();
-    }
+		glBindTexture(GL_TEXTURE_2D, 0);
 
-    FrameBufferObject::FrameBufferObject(const std::map<std::wstring, Factory::AttachmentSpec>& p_attachments, const spk::Vector2UInt& p_size) :
-        _size(p_size),
-        _viewport(spk::Geometry2D(0, 0, _size))
-    {
-        for (const auto& [name, spec] : p_attachments)
-        {
-            Attachment attachment;
-            attachment.colorAttachmentIndex = spec.colorAttachmentIndex;
-            attachment.type = spec.type;
+		_needsResize = false;
+	}
 
-            _attachments.emplace(name, std::move(attachment));
-        }
-    }
+	void FrameBufferObject::Attachment::_attach(GLuint p_frameBufferObjectIdentifier) const
+	{
+		if (_gpuTexture == nullptr)
+		{
+			return;
+		}
 
-    FrameBufferObject::FrameBufferObject(const FrameBufferObject& p_other) :
-        _framebufferID(0),
-        _size(p_other._size),
-        _attachments(p_other._attachments),
-        _viewport(spk::Geometry2D(0, 0, _size))
-    {
+		GLuint textureIdentifier = _gpuTexture->id();
 
-    }
+		GLenum attachmentPoint;
+		switch (_type)
+		{
+		case Type::Color:
+			attachmentPoint = GL_COLOR_ATTACHMENT0 + _bindingPoint;
+			break;
+		case Type::Depth:
+			attachmentPoint = GL_DEPTH_ATTACHMENT;
+			break;
+		case Type::DepthStencil:
+			attachmentPoint = GL_DEPTH_STENCIL_ATTACHMENT;
+			break;
+		default:
+			attachmentPoint = GL_COLOR_ATTACHMENT0;
+			break;
+		}
 
-    FrameBufferObject& FrameBufferObject::operator=(const FrameBufferObject& p_other)
-    {
-        if (this != &p_other)
-        {
-            _releaseResources(); 
+		glFramebufferTexture2D(GL_FRAMEBUFFER, attachmentPoint, GL_TEXTURE_2D, textureIdentifier, 0);
+	}
 
-            _framebufferID = 0;
-            _size = p_other._size;
-            _attachments = p_other._attachments;
+	spk::Texture FrameBufferObject::Attachment::save() const
+	{
+		spk::Texture output;
 
-            _viewport.setGeometry(spk::Geometry2D(0, 0, _size));
-        }
-        return *this;
-    }
+		if (_gpuTexture == nullptr)
+		{
+			GENERATE_ERROR("No GPU texture available for FBO attachment");
+		}
 
-    FrameBufferObject::FrameBufferObject(FrameBufferObject&& p_other) noexcept :
-        _framebufferID(p_other._framebufferID),
-        _size(p_other._size),
-        _attachments(std::move(p_other._attachments)),
-        _viewport(p_other._viewport.geometry())
-    {
-        p_other._framebufferID = 0;
-    }
+		const size_t bytesPerPixel = (_type == Type::Color) ? 4 : 4;
+		std::vector<uint8_t> pixels(_size.x * _size.y * bytesPerPixel);
 
-    FrameBufferObject& FrameBufferObject::operator=(FrameBufferObject&& p_other) noexcept
-    {
-        if (this != &p_other)
-        {
-            _releaseResources();
+		glBindTexture(GL_TEXTURE_2D, _gpuTexture->id());
+		glGetTexImage(GL_TEXTURE_2D, 0, formatForAttachment(_type), typeForAttachment(_type), pixels.data());
+		glBindTexture(GL_TEXTURE_2D, 0);
 
-            _framebufferID = p_other._framebufferID;
-            _size = p_other._size;
-            _attachments = std::move(p_other._attachments);
-            _viewport = std::move(p_other._viewport);
+		// colour = RGBA, depth = greyscale
+		const auto fmt = (_type == Type::Color) ? spk::Texture::Format::RGBA : spk::Texture::Format::GreyLevel;
 
-            p_other._framebufferID = 0;
-        }
-        return *this;
-    }
+		output.setPixels(pixels, _size, fmt);
+		return output;
+	}
 
-    FrameBufferObject::~FrameBufferObject()
-    {
-        _releaseResources();
-    }
+	FrameBufferObject::FrameBufferObject() :
+		_identifier(0),
+		_validated(false),
+		_size{0, 0}
+	{
+	}
 
-    void FrameBufferObject::resize(const spk::Vector2UInt& p_size)
-    {
-        if (_size == p_size)
-        {
-            return;
-        }
+	FrameBufferObject::~FrameBufferObject()
+	{
+		_release();
+	}
 
-        _size = p_size;
-        _viewport.setGeometry(Geometry2D(0, 0, p_size));
+	FrameBufferObject::FrameBufferObject(FrameBufferObject &&p_other) noexcept :
+		_identifier(p_other._identifier),
+		_validated(p_other._validated),
+		_size(p_other._size),
+		_attachments(std::move(p_other._attachments))
+	{
+		p_other._identifier = 0;
+		p_other._validated = false;
+		p_other._size = {0, 0};
+	}
 
-        for (auto& [name, attachment] : _attachments)
-        {
-            if (attachment.textureObject._id != 0)
-            {
-                glDeleteTextures(1, &attachment.textureObject._id);
-                attachment.textureObject._id = 0;
-            }
-        }
+	FrameBufferObject &FrameBufferObject::operator=(FrameBufferObject &&p_other) noexcept
+	{
+		if (this != &p_other)
+		{
+			_release();
 
-        _load();
-    }
+			_identifier = p_other._identifier;
+			_validated = p_other._validated;
+			_size = p_other._size;
+			_attachments = std::move(p_other._attachments);
 
-    void FrameBufferObject::activate()
-    {
-        if (_framebufferID == 0)
-        {
-            _load();
-        }
+			p_other._identifier = 0;
+			p_other._validated = false;
+			p_other._size = {0, 0};
+		}
+		return *this;
+	}
 
-        glBindFramebuffer(GL_FRAMEBUFFER, _framebufferID);
-        _viewport.apply();
-    }
+	void FrameBufferObject::_allocate()
+	{
+		if (_identifier == 0)
+		{
+			glGenFramebuffers(1, &_identifier);
+		}
+	}
 
-    void FrameBufferObject::deactivate()
-    {
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    }
+	void FrameBufferObject::_release()
+	{
+		if (_identifier != 0 && wglGetCurrentContext() != nullptr)
+		{
+			glDeleteFramebuffers(1, &_identifier);
+		}
+		_identifier = 0;
+		_validated = false;
+	}
 
-    TextureObject* FrameBufferObject::bindedTexture(const std::wstring& p_name)
-    {
-        auto it = _attachments.find(p_name);
-        if (it != _attachments.end())
-        {
-            return &(it->second.textureObject);
-        }
-        else
-        {
-            return nullptr;
-        }
-    }
+	void FrameBufferObject::addAttachment(const std::wstring &p_attachmentName, const int &p_bindingPoint, const Attachment::Type &p_type)
+	{
+		_attachments.emplace(p_attachmentName, Attachment(p_attachmentName, p_bindingPoint, p_type));
+		_validated = false;
+	}
 
-    TextureObject FrameBufferObject::saveAsTexture(const std::wstring& p_name)
-    {
-        auto it = _attachments.find(p_name);
-        if (it == _attachments.end())
-        {
-            throw std::runtime_error("Attachment not found: " + spk::StringUtils::wstringToString(p_name));
-        }
+	void FrameBufferObject::resize(const spk::Vector2UInt &p_size)
+	{
+		_size = p_size;
 
-        Attachment& attachment = it->second;
+		for (auto &[name, att] : _attachments)
+		{
+			att._needsResize = true;
+			att._size = p_size;
+		}
 
-        if (_framebufferID == 0)
-        {
-            _load();
-        }
+		_viewport.setWindowSize(p_size);
+		_viewport.setGeometry({{0, 0}, p_size});
+		_viewport.setClippedGeometry({{0, 0}, p_size});
 
-        glBindFramebuffer(GL_FRAMEBUFFER, _framebufferID);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + attachment.colorAttachmentIndex, GL_TEXTURE_2D, 0, 0);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		_validated = false;
+	}
 
-        TextureObject savedTexture = std::move(attachment.textureObject);
+	void FrameBufferObject::_prepareAttachments()
+	{
+		if (_size.x == 0 || _size.y == 0)
+		{
+			return;
+		}
 
-        TextureObject newTexture;
-        newTexture._ownTexture = true;
-        newTexture._size = _size;
-        newTexture._format = savedTexture._format;
-        newTexture._filtering = savedTexture._filtering;
-        newTexture._wrap = savedTexture._wrap;
-        newTexture._mipmap = savedTexture._mipmap;
-        newTexture._needUpload = false;
-        newTexture._needSetup = false;
+		for (auto &[name, att] : _attachments)
+		{
+			if (att._gpuTexture == nullptr)
+			{
+				att._allocate(_size);
+			}
+			else if (att._needsResize)
+			{
+				att._resize(_size);
+			}
 
-        glGenTextures(1, &newTexture._id);
-        glBindTexture(GL_TEXTURE_2D, newTexture._id);
+			att._attach(_identifier);
+		}
 
-        GLenum internalFormat, format, dataType;
-        _getTextureFormat(attachment.type, internalFormat, format, dataType);
+		std::vector<GLenum> drawBuffers;
+		for (const auto &[name, att] : _attachments)
+		{
+			if (att._type == Attachment::Type::Color)
+			{
+				drawBuffers.push_back(GL_COLOR_ATTACHMENT0 + att._bindingPoint);
+			}
+		}
 
-        glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, _size.x, _size.y, 0, format, dataType, nullptr);
+		if (drawBuffers.empty())
+		{
+			glDrawBuffer(GL_NONE);
+			glReadBuffer(GL_NONE);
+		}
+		else
+		{
+			glDrawBuffers(static_cast<GLsizei>(drawBuffers.size()), drawBuffers.data());
+		}
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, static_cast<GLint>(newTexture._filtering));
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, static_cast<GLint>(newTexture._filtering));
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, static_cast<GLint>(newTexture._wrap));
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, static_cast<GLint>(newTexture._wrap));
+		GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+		_validated = (status == GL_FRAMEBUFFER_COMPLETE);
+		if (!_validated)
+		{
+			throw std::runtime_error("FBO incomplete after prepareAttachments");
+		}
+	}
 
-        glBindTexture(GL_TEXTURE_2D, 0);
+	void FrameBufferObject::activate()
+	{
+		if (_identifier == 0)
+		{
+			_allocate();
+		}
 
-        glBindFramebuffer(GL_FRAMEBUFFER, _framebufferID);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + attachment.colorAttachmentIndex, GL_TEXTURE_2D, newTexture._id, 0);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glBindFramebuffer(GL_FRAMEBUFFER, _identifier);
 
-        attachment.textureObject = std::move(newTexture);
+		if (!_validated)
+		{
+			_prepareAttachments();
+		}
 
-        return savedTexture;
-    }
+		_lastActiveViewport = spk::Viewport::activeViewport();
+		_viewport.apply();
+	}
+
+	void FrameBufferObject::clear()
+	{
+		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	}
+
+	void FrameBufferObject::deactivate()
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+		if (_lastActiveViewport != nullptr)
+		{
+			_lastActiveViewport->apply();
+		}
+	}
+
+	spk::SafePointer<const FrameBufferObject::Attachment> FrameBufferObject::attachment(const std::wstring &p_attachmentName) const
+	{
+		auto it = _attachments.find(p_attachmentName);
+		if (it == _attachments.end())
+		{
+			return nullptr;
+		}
+		return spk::SafePointer<const Attachment>(&it->second);
+	}
 }

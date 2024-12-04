@@ -4,17 +4,16 @@
 
 #include "structure/system/event/spk_event.hpp"
 
-#include "spk_debug_macro.hpp"
-
 namespace spk
-{	
+{
 	class SystemModule : public spk::Module<spk::SystemEvent>
 	{
-	private:		
-		spk::Geometry2D::Size newWindowSize;
+	private:
+		bool _isResizing;
+		spk::Geometry2D::Size _newWindowSize;
 
-		void _treatEvent(spk::SystemEvent&& p_event) override;
-		spk::SystemEvent _convertEventToEventType(spk::Event&& p_event) override;
+		void _treatEvent(spk::SystemEvent &&p_event) override;
+		spk::SystemEvent _convertEventToEventType(spk::Event &&p_event) override;
 
 	public:
 		SystemModule();

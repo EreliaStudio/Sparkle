@@ -1,9 +1,11 @@
 #include "structure/graphics/spk_color.hpp"
 
-#include <limits>
 #include <algorithm>
 #include <iomanip>
 #include <sstream>
+
+#include "structure/math/spk_constants.hpp"
+#include "structure/system/spk_exception.hpp"
 
 namespace spk
 {
@@ -14,11 +16,9 @@ namespace spk
 		a(1)
 	{
 	}
+
 	Color::Color(int p_value) :
-		Color(((p_value & 0xff000000) >> 24) & 0xff,
-			  (p_value & 0xff0000) >> 16,
-			  (p_value & 0xff00) >> 8,
-			  p_value & 0xff)
+		Color(((p_value & 0xff000000) >> 24) & 0xff, (p_value & 0xff0000) >> 16, (p_value & 0xff00) >> 8, p_value & 0xff)
 	{
 	}
 
@@ -29,6 +29,7 @@ namespace spk
 		a(static_cast<float>(p_a) / 255.0f)
 	{
 	}
+
 	Color::Color(float p_r, float p_g, float p_b, float p_a) :
 		r(p_r),
 		g(p_g),
@@ -37,12 +38,12 @@ namespace spk
 	{
 	}
 
-	Color::Color(const JSON::Object& p_object)
+	Color::Color(const JSON::Object &p_object)
 	{
 		p_object >> *this;
 	}
 
-	Color Color::operator+(const Color& p_color) const
+	Color Color::operator+(const Color &p_color) const
 	{
 		Color result;
 
@@ -53,7 +54,7 @@ namespace spk
 		return (result);
 	}
 
-	Color Color::operator-(const Color& p_color) const
+	Color Color::operator-(const Color &p_color) const
 	{
 		Color result;
 
@@ -63,46 +64,49 @@ namespace spk
 
 		return (result);
 	}
-	
-	bool Color::operator==(const Color& p_color) const
+
+	bool Color::operator==(const Color &p_color) const
 	{
-		return	(std::abs(r - p_color.r) < std::numeric_limits<float>::epsilon()) &&
-				(std::abs(g - p_color.g) < std::numeric_limits<float>::epsilon()) &&
-				(std::abs(b - p_color.b) < std::numeric_limits<float>::epsilon()) &&
-				(std::abs(a - p_color.a) < std::numeric_limits<float>::epsilon());
+		return (std::abs(r - p_color.r) < spk::Constants::colorPrecision) && (std::abs(g - p_color.g) < spk::Constants::colorPrecision) &&
+			   (std::abs(b - p_color.b) < spk::Constants::colorPrecision) && (std::abs(a - p_color.a) < spk::Constants::colorPrecision);
 	}
-	
-	std::ostream& operator << (std::ostream& p_os, const spk::Color& p_color)
+
+	std::ostream &operator<<(std::ostream &p_os, const spk::Color &p_color)
 	{
 		auto flags = p_os.flags();
 
-		p_os << "0x"
-			 << std::uppercase << std::setfill('0') << std::setw(2) << std::hex
-			 << static_cast<int>(p_color.r * 255)
-			 << static_cast<int>(p_color.g * 255)
-			 << static_cast<int>(p_color.b * 255)
-			 << static_cast<int>(p_color.a * 255);
+		p_os << "0x" << std::uppercase << std::setfill('0') << std::setw(2) << std::hex << static_cast<int>(p_color.r * 255)
+			 << static_cast<int>(p_color.g * 255) << static_cast<int>(p_color.b * 255) << static_cast<int>(p_color.a * 255);
 
 		p_os.flags(flags);
 
 		return p_os;
 	}
 
-	spk::JSON::Object& operator<<(spk::JSON::Object& p_object, const spk::Color& p_color)
+	std::wostream &operator<<(std::wostream &p_os, const spk::Color &p_color)
+	{
+		auto flags = p_os.flags();
+
+		p_os << "0x" << std::uppercase << std::setfill(L'0') << std::setw(2) << std::hex << static_cast<int>(p_color.r * 255)
+			 << static_cast<int>(p_color.g * 255) << static_cast<int>(p_color.b * 255) << static_cast<int>(p_color.a * 255);
+
+		p_os.flags(flags);
+
+		return p_os;
+	}
+
+	spk::JSON::Object &operator<<(spk::JSON::Object &p_object, const spk::Color &p_color)
 	{
 		std::wstringstream ss;
-		ss << L"0x"
-			<< std::uppercase << std::setfill(L'0') << std::setw(2) << std::hex
-			<< static_cast<int>(p_color.r * 255)
-			<< std::setw(2) << static_cast<int>(p_color.g * 255)
-			<< std::setw(2) << static_cast<int>(p_color.b * 255)
-			<< std::setw(2) << static_cast<int>(p_color.a * 255);
+		ss << L"0x" << std::uppercase << std::setfill(L'0') << std::setw(2) << std::hex << static_cast<int>(p_color.r * 255) << std::setw(2)
+		   << static_cast<int>(p_color.g * 255) << std::setw(2) << static_cast<int>(p_color.b * 255) << std::setw(2)
+		   << static_cast<int>(p_color.a * 255);
 
 		p_object = ss.str();
 		return p_object;
 	}
 
-	const spk::JSON::Object& operator>>(const spk::JSON::Object& p_object, spk::Color& p_color)
+	const spk::JSON::Object &operator>>(const spk::JSON::Object &p_object, spk::Color &p_color)
 	{
 		if (p_object.isUnit() == true && p_object.hold<std::wstring>())
 		{
@@ -113,9 +117,9 @@ namespace spk
 
 				for (wchar_t c : hexPart)
 				{
-					if (!iswxdigit(c))
+					if (iswxdigit(c) == 0)
 					{
-						throw std::runtime_error("Invalid color string format: Non-hexadecimal character found");
+						GENERATE_ERROR("Invalid color string format: Non-hexadecimal character found");
 					}
 				}
 
@@ -126,19 +130,19 @@ namespace spk
 
 				if (ss.fail())
 				{
-					throw std::runtime_error("Invalid color string format: Conversion failed");
+					GENERATE_ERROR("Invalid color string format: Conversion failed");
 				}
 
 				p_color = spk::Color(hexValue);
 			}
 			else
 			{
-				throw std::runtime_error("Invalid color string format");
+				GENERATE_ERROR("Invalid color string format");
 			}
 		}
 		else
 		{
-			throw std::runtime_error("Invalid JSON object type");
+			GENERATE_ERROR("Invalid JSON object type");
 		}
 		return p_object;
 	}

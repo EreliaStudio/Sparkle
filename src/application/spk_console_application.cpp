@@ -2,43 +2,58 @@
 
 namespace spk
 {
-	HWND ConsoleApplication::createBackgroundHandle(const std::wstring& p_title)
+	HWND ConsoleApplication::_createBackgroundHandle(const std::wstring &p_title)
 	{
-		const wchar_t CLASS_NAME[] = L"DummyWindowClass";
+		const std::wstring className = L"DummyWindowClass";
 
-		WNDCLASSW wc = { };
+		WNDCLASSW windowClass = {};
 
-		wc.lpfnWndProc = DefWindowProc;
-		wc.hInstance = GetModuleHandle(NULL);
-		wc.lpszClassName = CLASS_NAME;
+		windowClass.lpfnWndProc = DefWindowProc;
+		windowClass.hInstance = GetModuleHandle(nullptr);
+		windowClass.lpszClassName = className.c_str();
 
-		RegisterClassW(&wc);
+		RegisterClassW(&windowClass);
 
-		HWND hwnd = CreateWindowExW(
-			0,                              // Optional window styles.
-			CLASS_NAME,                     // Window class
-			p_title.c_str(),                  // Window text
-			WS_OVERLAPPEDWINDOW,            // Window style
+		HWND windowHandle = CreateWindowExW(
+			0,					 // Optional window styles.
+			className.c_str(),	 // Window class
+			p_title.c_str(),	 // Window text
+			WS_OVERLAPPEDWINDOW, // Window style
 
 			// Size and position
-			CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+			CW_USEDEFAULT,
+			CW_USEDEFAULT,
+			CW_USEDEFAULT,
+			CW_USEDEFAULT,
 
-			NULL,       // Parent window    
-			NULL,       // Menu
-			GetModuleHandle(NULL), // Instance handle
-			NULL        // Additional application data
+			nullptr,				  // Parent window
+			nullptr,				  // Menu
+			GetModuleHandle(nullptr), // Instance handle
+			nullptr					  // Additional application data
 		);
 
-		return hwnd;
+		return (windowHandle);
 	}
 
-	ConsoleApplication::ConsoleApplication(const std::wstring& p_title) :
+	ConsoleApplication::ConsoleApplication(const std::wstring &p_title) :
 		Application(),
 		_centralWidget(std::make_unique<Widget>(L"CentralWidget")),
-		_hwnd(createBackgroundHandle(p_title))
+		_updateModule(_centralWidget.get()),
+		_windowHandle(_createBackgroundHandle(p_title))
 	{
 		_centralWidget->activate();
-		addExecutionStep([&]() { centralWidget()->onUpdateEvent(spk::UpdateEvent(_hwnd)); }).relinquish();
+		addExecutionStep(
+			[&]()
+			{
+				spk::Event event(nullptr, WM_UPDATE_REQUEST, 0, 0);
+
+				event.updateEvent.time = SystemUtils::getTime();
+
+				_updateModule.receiveEvent(std::move(event));
+
+				_updateModule.treatMessages();
+			})
+			.relinquish();
 	}
 
 	spk::SafePointer<Widget> ConsoleApplication::centralWidget() const
@@ -48,6 +63,6 @@ namespace spk
 
 	ConsoleApplication::operator spk::SafePointer<Widget>() const
 	{
-		return centralWidget();
+		return (centralWidget());
 	}
 }

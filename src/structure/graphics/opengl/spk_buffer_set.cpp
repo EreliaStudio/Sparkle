@@ -1,50 +1,62 @@
 #include "structure/graphics/opengl/spk_buffer_set.hpp"
 
+#include "spk_debug_macro.hpp"
+
 namespace spk::OpenGL
 {
-	void BufferSet::Factory::insert(OpenGL::LayoutBufferObject::Attribute::Index p_index, size_t p_size, OpenGL::LayoutBufferObject::Attribute::Type p_type)
+	BufferSet::BufferSet(std::span<const LayoutBufferObject::Attribute> p_attributes) :
+		_layout(p_attributes)
 	{
-		_layoutFactory.insert(p_index, p_size, p_type);
 	}
 
-	BufferSet BufferSet::Factory::construct() const
+	BufferSet::BufferSet(std::initializer_list<LayoutBufferObject::Attribute> p_attributes) :
+		BufferSet(std::span(p_attributes.begin(), p_attributes.end()))
 	{
-		BufferSet result;
-		result._layout = _layoutFactory.construct();
-		return result;
 	}
 
-	LayoutBufferObject& BufferSet::layout()
+	LayoutBufferObject &BufferSet::layout()
 	{
-		return _layout;
+		return (_layout);
 	}
 
-	IndexBufferObject& BufferSet::indexes()
+	IndexBufferObject &BufferSet::indexes()
 	{
-		return _indexes;
+		return (_indexBufferObject);
 	}
 
-	const LayoutBufferObject& BufferSet::layout() const
+	const LayoutBufferObject &BufferSet::layout() const
 	{
-		return _layout;
+		return (_layout);
 	}
 
-	const IndexBufferObject& BufferSet::indexes() const
+	const IndexBufferObject &BufferSet::indexes() const
 	{
-		return _indexes;
+		return (_indexBufferObject);
+	}
+
+	void BufferSet::clear()
+	{
+		_layout.clear();
+		_indexBufferObject.clear();
+	}
+
+	void BufferSet::validate()
+	{
+		_layout.validate();
+		_indexBufferObject.validate();
 	}
 
 	void BufferSet::activate()
 	{
-		_vao.activate();
+		_vertexArrayObject.activate();
 		_layout.activate();
-		_indexes.activate();
+		_indexBufferObject.activate();
 	}
 
 	void BufferSet::deactivate()
 	{
-		_vao.deactivate();
+		_vertexArrayObject.deactivate();
 		_layout.deactivate();
-		_indexes.deactivate();
+		_indexBufferObject.deactivate();
 	}
 }

@@ -1,43 +1,51 @@
 #pragma once
 
-#include <queue>
-#include <mutex>
 #include <condition_variable>
+#include <mutex>
+#include <queue>
 
 namespace spk
 {
-    template <typename TType>
-    class ThreadSafeQueue
-    {
-    private:
-        std::queue<TType> m_queue;
-        std::mutex m_mutex;
-        std::condition_variable m_cond;
+	template <typename TType>
+	class ThreadSafeQueue
+	{
+	private:
+		std::queue<TType> _mQueue;
+		std::mutex _mMutex;
+		std::condition_variable _mCond;
 
-    public:
-        bool empty() const
-        {	
-            return (m_queue.empty());
-        }
-
-		void push(TType&& item)
+	public:
+		bool empty() const
 		{
-			std::unique_lock<std::mutex> lock(m_mutex);
-
-			m_queue.push(std::move(item));
-			m_cond.notify_one();
+			return (_mQueue.empty());
 		}
 
-        TType pop()
-        {
-            std::unique_lock<std::mutex> lock(m_mutex);
+		void push(const TType &p_item)
+		{
+			std::unique_lock<std::mutex> lock(_mMutex);
 
-            m_cond.wait(lock, [&]() { return !m_queue.empty(); });
+			_mQueue.push(p_item);
+			_mCond.notify_one();
+		}
 
-            TType item = m_queue.front();
-            m_queue.pop();
+		void push(TType &&p_item)
+		{
+			std::unique_lock<std::mutex> lock(_mMutex);
 
-            return std::move(item);
-        }
-    };
+			_mQueue.push(std::move(p_item));
+			_mCond.notify_one();
+		}
+
+		TType pop()
+		{
+			std::unique_lock<std::mutex> lock(_mMutex);
+
+			_mCond.wait(lock, [&]() { return !_mQueue.empty(); });
+
+			TType item = std::move(_mQueue.front());
+			_mQueue.pop();
+
+			return std::move(item);
+		}
+	};
 }

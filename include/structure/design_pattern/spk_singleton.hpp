@@ -1,9 +1,12 @@
-#pragma once 
+#pragma once
 
 #include <memory>
+#include <mutex>
 #include <stdexcept>
 
 #include "structure/spk_safe_pointer.hpp"
+
+#include "structure/system/spk_exception.hpp"
 
 namespace spk
 {
@@ -22,20 +25,38 @@ namespace spk
 			template <typename... Args>
 			Instanciator(Args &&...p_args)
 			{
-				if (reference == 0)
+				std::lock_guard<std::recursive_mutex> lock(Singleton<TType>::mutex());
+
+				if (Singleton<TType>::instance() == nullptr)
+				{
 					Singleton<TType>::instanciate(std::forward<Args>(p_args)...);
+				}
+
 				reference++;
 			}
 
 			~Instanciator()
 			{
+				std::lock_guard<std::recursive_mutex> lock(Singleton<TType>::mutex());
+
 				reference--;
 				if (reference == 0)
+				{
 					Singleton<TType>::release();
+				}
 			}
 
-			spk::SafePointer<TType> operator ->()
+			spk::SafePointer<TType> operator->()
 			{
+				std::lock_guard<std::recursive_mutex> lock(Singleton<TType>::mutex());
+
+				return (Singleton<TType>::instance());
+			}
+
+			spk::SafePointer<const TType> operator->() const
+			{
+				std::lock_guard<std::recursive_mutex> lock(Singleton<TType>::mutex());
+
 				return (Singleton<TType>::instance());
 			}
 		};
@@ -43,35 +64,50 @@ namespace spk
 	protected:
 		Singleton()
 		{
-
 		}
 
-		static inline TType* _instance = nullptr;
+		static inline std::unique_ptr<TType> _instance = nullptr;
+		static std::recursive_mutex& _mutex()
+		{
+			static std::recursive_mutex result;
+
+			return (result);
+		}
 
 	public:
 		template <typename... Args>
 		static spk::SafePointer<TType> instanciate(Args &&...p_args)
 		{
-			if (_instance != nullptr)
-				throw std::runtime_error("Can't instanciate an already instancied singleton");
+			std::lock_guard<std::recursive_mutex> lock(Singleton<TType>::mutex());
 
-			_instance = new TType(std::forward<Args>(p_args)...);
-			return (_instance);
+			if (_instance != nullptr)
+			{
+				GENERATE_ERROR("Can't instanciate an already instancied singleton");
+			}
+
+			_instance.reset(new TType(std::forward<Args>(p_args)...));
+			return (_instance.get());
 		}
 
 		static spk::SafePointer<TType> instance()
 		{
-			return (_instance);
+			return (_instance.get());
 		}
 
-		static const spk::SafePointer<const TType> c_instance()
+		static const spk::SafePointer<const TType> cInstance()
 		{
-			return _instance;
+			return (_instance.get());
+		}
+
+		static std::recursive_mutex &mutex()
+		{
+			return _mutex();
 		}
 
 		static void release()
 		{
-			delete _instance;
+			std::lock_guard<std::recursive_mutex> lock(Singleton<TType>::mutex());
+
 			_instance = nullptr;
 		}
 	};

@@ -1,270 +1,527 @@
 #include "widget/spk_widget.hpp"
+#include "spk_generated_resources.hpp"
 
-#include "spk_debug_macro.hpp"
+#include "utils/spk_string_utils.hpp"
+
+#include "structure/graphics/painter/spk_color_painter.hpp"
+
+#include "structure/system/spk_exception.hpp"
 
 namespace spk
 {
+	spk::SpriteSheet Widget::_defaultIconset = spk::SpriteSheet::fromRawData(
+		SPARKLE_GET_RESOURCE("resources/textures/defaultIconset.png"), spk::Vector2Int(10, 10), spk::SpriteSheet::Filtering::Linear);
 
-	Widget::Widget(const std::wstring& p_name) :
+	spk::SafePointer<const spk::SpriteSheet> Widget::defaultIconset()
+	{
+		return (&_defaultIconset);
+	}
+
+	spk::Font Widget::_defaultFont = spk::Font::fromRawData(
+		SPARKLE_GET_RESOURCE("resources/font/arial.ttf"), Font::Filtering::Nearest, Font::Wrap::ClampToEdge, Font::Mipmap::Disable);
+
+	spk::SafePointer<spk::Font> Widget::defaultFont()
+	{
+		return (&_defaultFont);
+	}
+
+	spk::SpriteSheet Widget::_defaultNineSlice = spk::SpriteSheet::fromRawData(
+		SPARKLE_GET_RESOURCE("resources/textures/defaultNineSlice.png"), spk::Vector2UInt(3, 3), SpriteSheet::Filtering::Linear);
+
+	spk::SafePointer<const spk::SpriteSheet> Widget::defaultNineSlice()
+	{
+		return (&_defaultNineSlice);
+	}
+
+	Widget::Widget(const std::wstring &p_name) :
 		_name(p_name),
 		_parent(nullptr),
 		_layer(0)
 	{
-
+		_frameBufferObject.addAttachment(L"outputColor", 0, spk::OpenGL::FrameBufferObject::Attachment::Type::Color);
+		_frameBufferObject.addAttachment(L"depth", 0, spk::OpenGL::FrameBufferObject::Attachment::Type::Depth);
 	}
 
-	Widget::Widget(const std::wstring& p_name, spk::SafePointer<Widget> p_parent) :
+	Widget::Widget(const std::wstring &p_name, spk::SafePointer<Widget> p_parent) :
 		Widget(p_name)
 	{
 		if (p_parent != nullptr)
+		{
 			p_parent->addChild(this);
+		}
 	}
 
 	Widget::~Widget()
 	{
+		releaseFocus();
+
 		if (_parent != nullptr)
-		{	
+		{
 			_parent->removeChild(this);
 		}
 
-		for (auto& child : _managedChildren)
-		{
-			delete child;
-		}
+		_managedChildren.clear();
 	}
 
-	const std::wstring& Widget::name() const
+	const std::wstring &Widget::name() const
 	{
 		return (_name);
+	}
+
+	void Widget::setName(const std::wstring &p_name)
+	{
+		_name = p_name;
 	}
 
 	void Widget::addChild(spk::SafePointer<Widget> p_child)
 	{
 		spk::InherenceObject<Widget>::addChild(p_child);
 		p_child->setLayer(layer() + 1);
+		p_child->_viewport.setWindowSize(_viewport.windowSize());
+		_sortChildByLayer();
 	}
 
-	void Widget::setLayer(const float& p_layer)
+	spk::SafePointer<const spk::OpenGL::FrameBufferObject> Widget::frameBufferObject() const
 	{
-		float delta = p_layer - _layer;
-		for (auto& child : children())
-		{
-			static_cast<Widget*>(child)->setLayer(static_cast<Widget*>(child)->layer() + delta);
-		}
-		_layer = p_layer;
+		return (&_frameBufferObject);
 	}
 
-	const float& Widget::layer() const
+	void Widget::renderAsPNJ(const std::filesystem::path &p_path)
+	{
+		if (_frameBufferObject.attachment(L"color0") == nullptr)
+		{
+			GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] Frame buffer object doesn't have a color0 attachment");
+		}
+
+		if (geometry().size.x == 0 || geometry().size.y == 0)
+		{
+			GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] Widget geometry isn't defined");
+		}
+
+		try
+		{
+			_frameBufferObject.activate();
+
+			spk::PaintEvent event = spk::PaintEvent();
+			_onPaintEvent(event);
+
+			_frameBufferObject.deactivate();
+		} catch (const std::exception &e)
+		{
+			PROPAGATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] Impossible to dry-render the widget", e);
+		}
+
+		try
+		{
+			spk::Texture texture = _frameBufferObject.attachment(L"color0")->save();
+
+			texture.saveAsPng(p_path);
+		} catch (const std::exception &e)
+		{
+			PROPAGATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] Render as PNJ invalid", e);
+		}
+	}
+
+	bool Widget::isPointed(const spk::Vector2Int &p_pointerPosition) const
+	{
+		return (viewport().geometry().contains(p_pointerPosition));
+	}
+
+	bool Widget::isPointed(const spk::Mouse &p_mouse) const
+	{
+		return (isPointed(p_mouse.position()));
+	}
+
+	bool Widget::isPointed(const spk::SafePointer<const spk::Mouse> &p_mouse) const
+	{
+		if (p_mouse == nullptr)
+		{
+			return (false);
+		}
+		return (isPointed(*p_mouse));
+	}
+
+	void Widget::setLayer(const float &p_layer)
+	{
+		if (_layer == p_layer)
+		{
+			return;
+		}
+
+		std::vector<float> oldLayers;
+
+		for (auto &child : children())
+		{
+			oldLayers.push_back(child->layer() - _layer);
+		}
+
+		_layer = p_layer;
+
+		for (size_t i = 0; i < oldLayers.size(); i++)
+		{
+			auto &child = children()[i];
+
+			child->setLayer(oldLayers[i] + _layer);
+		}
+
+		parent()->_sortChildByLayer();
+
+		requireGeometryUpdate();
+	}
+
+	const float &Widget::layer() const
 	{
 		return (_layer);
 	}
-	
+
+	spk::SafePointer<Widget> Widget::focusedWidget(FocusType p_focusType)
+	{
+		return (_focusedWidgets[static_cast<int>(p_focusType)]);
+	}
+
+	void Widget::_requestPaint()
+	{
+		_requestedPaint = true;
+	}
+
+	void Widget::takeFocus(FocusType p_focusType)
+	{
+		_focusedWidgets[static_cast<int>(p_focusType)] = this;
+	}
+
+	void Widget::releaseFocus(FocusType p_focusType)
+	{
+		if (_focusedWidgets[static_cast<int>(p_focusType)] == this)
+		{
+			_focusedWidgets[static_cast<int>(p_focusType)] = nullptr;
+		}
+	}
+
+	bool Widget::hasFocus(FocusType p_focusType)
+	{
+		return (focusedWidget(p_focusType) == this);
+	}
+
+	void Widget::takeFocus()
+	{
+		takeFocus(FocusType::KeyboardFocus);
+		takeFocus(FocusType::MouseFocus);
+		takeFocus(FocusType::ControllerFocus);
+	}
+
+	void Widget::releaseFocus()
+	{
+		releaseFocus(FocusType::KeyboardFocus);
+		releaseFocus(FocusType::MouseFocus);
+		releaseFocus(FocusType::ControllerFocus);
+	}
+
 	void Widget::_computeRatio()
 	{
-		if (parent() == nullptr)
-		{
-			_anchorRatio = 1;
-			_sizeRatio = 1;
-		}
-		else
-		{
-			_anchorRatio = spk::Vector2(geometry().anchor) / spk::Vector2(static_cast<Widget*>(parent())->geometry().size);
-			_sizeRatio = spk::Vector2(geometry().size) / spk::Vector2(static_cast<Widget*>(parent())->geometry().size);
-		}
+		spk::Vector2Int parentSize = (parent() == nullptr ? _viewport.windowSize() : parent()->_geometry.size);
+
+		_anchorRatio = {
+			static_cast<float>(_geometry.anchor.x) / static_cast<float>(parentSize.x),
+			static_cast<float>(_geometry.anchor.y) / static_cast<float>(parentSize.y)};
+		_sizeRatio = {
+			static_cast<float>(_geometry.size.x) / static_cast<float>(parentSize.x),
+			static_cast<float>(_geometry.size.y) / static_cast<float>(parentSize.y)};
 	}
 
-	void Widget::_resize()
+	void Widget::setGeometry(const Geometry2D &p_geometry)
 	{
-		_geometry.anchor = static_cast<Widget*>(parent())->geometry().size * _anchorRatio;
-		_geometry.size = static_cast<Widget*>(parent())->geometry().size * _sizeRatio;
+		_geometry = p_geometry;
+		_viewport.setGeometry({absoluteAnchor(), geometry().size});
+		_viewport.setWindowSize((parent() == nullptr ? geometry().size : parent()->viewport().windowSize()));
+
+		try
+		{
+			_computeViewport();
+		} catch (const std::exception &e)
+		{
+			PROPAGATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] ComputeViewport", e);
+		} catch (...)
+		{
+			GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] ComputeViewport - Unknow error type");
+		}
+
+		_computeRatio();
+
 		requireGeometryUpdate();
-
-		for (auto& child : children())
-		{
-			child->_resize();
-		}
 	}
 
-	void Widget::forceGeometryChange(const Geometry2D& p_geometry)
+	void Widget::forceGeometryChange(const Geometry2D &p_geometry)
 	{
-		if (_geometry == p_geometry)
-			return;
-
-		_geometry = p_geometry;
-		_computeRatio();
-		updateGeometry();
-	}
-	
-	void Widget::setGeometry(const Geometry2D& p_geometry)
-	{
-		if (_geometry == p_geometry)
-			return;
-
-		_geometry = p_geometry;
-		_computeRatio();
-		_needGeometryChange = true;
-	}
-	
-	void Widget::forceGeometryChange(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size)
-	{
-		forceGeometryChange({ p_anchor, p_size });
-	}
-	
-	void Widget::setGeometry(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size)
-	{
-		setGeometry({ p_anchor, p_size });
-	}
-	
-	void Widget::updateGeometry()
-	{
-		_onGeometryChange();
+		setGeometry(p_geometry);
+		applyGeometryChange();
 		_needGeometryChange = false;
-		for (auto& child : children())
+	}
+
+	void Widget::place(const spk::Vector2Int &p_delta)
+	{
+		setGeometry({p_delta, _geometry.size});
+		requireGeometryUpdate();
+	}
+
+	void Widget::move(const spk::Vector2Int &p_delta)
+	{
+		setGeometry({_geometry.anchor + p_delta, _geometry.size});
+		requireGeometryUpdate();
+	}
+
+	void Widget::forceGeometryChange(const spk::Vector2Int &p_anchor, const spk::Vector2UInt &p_size)
+	{
+		forceGeometryChange({p_anchor, p_size});
+	}
+
+	void Widget::setGeometry(const spk::Vector2Int &p_anchor, const spk::Vector2UInt &p_size)
+	{
+		setGeometry({p_anchor, p_size});
+	}
+
+	void Widget::_computeViewport()
+	{
+		spk::Geometry2D parentClippedGeometry = (parent() == nullptr ? geometry() : parent()->_viewport.clippedGeometry());
+
+		spk::Geometry2D clippedGeometry = _viewport.geometry().intersect(parentClippedGeometry);
+
+		_viewport.setClippedGeometry(clippedGeometry);
+	}
+
+	void Widget::applyGeometryChange()
+	{
+		_frameBufferObject.resize(geometry().size);
+
+		_frameBufferObject.activate();
+		try
 		{
-			child->requireGeometryUpdate();
+			_onGeometryChange();
+		} catch (const std::exception &e)
+		{
+			PROPAGATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] onGeometryChange", e);
+		} catch (...)
+		{
+			GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] onGeometryChange - Unknow error type");
 		}
+		_frameBufferObject.deactivate();
+
+		_textureRenderer.clear();
+		_textureRenderer.setTexture(_frameBufferObject.attachment(L"outputColor")->bindedTexture());
+		_textureRenderer.prepare(geometry(), {{0.0f, 1.0f}, {1.0f, -1.0f}}, layer());
+		_textureRenderer.validate();
+	}
+
+	void Widget::_applyResize()
+	{
+		if (geometry().size == 0)
+		{
+			return;
+		}
+
+		spk::Vector2Int parentSize = (parent() == nullptr ? _viewport.windowSize() : parent()->_geometry.size);
+
+		for (auto &child : children())
+		{
+			child->_needGeometryChange = false;
+		}
+
+		forceGeometryChange({parentSize * _anchorRatio, parentSize * _sizeRatio});
+
+		for (auto &child : children())
+		{
+			if (child->_needGeometryChange == false)
+			{
+				try
+				{
+					viewport().apply();
+				} catch (const std::runtime_error &e)
+				{
+					PROPAGATE_ERROR(
+						"Error while applying viewport of [" + spk::StringUtils::wstringToString(name()) + "] with viewport of geometry [" +
+							_viewport.geometry().toString() + "]\nAnd a widget geometry [" + geometry().toString() + "]",
+						e);
+				}
+				child->_applyResize();
+			}
+		}
+	}
+
+	void Widget::_sortChildByLayer()
+	{
+		std::sort(
+			children().begin(),
+			children().end(),
+			[](const Widget *p_firstWidget, const Widget *p_secondWidget) -> bool { return (p_firstWidget->layer() > p_secondWidget->layer()); });
 	}
 
 	void Widget::requireGeometryUpdate()
 	{
 		_needGeometryChange = true;
-		for (auto& child : children())
-		{
-			child->requireGeometryUpdate();
-		}
+		_requestPaint();
 	}
 
-	const Geometry2D& Widget::geometry() const
+	void Widget::setMinimalSize(const spk::Vector2UInt &p_size)
+	{
+		_minimalSize = p_size;
+	}
+
+	void Widget::setMaximalSize(const spk::Vector2UInt &p_size)
+	{
+		_maximalSize = p_size;
+	}
+
+	spk::Vector2UInt Widget::minimalSize() const
+	{
+		return _minimalSize;
+	}
+
+	spk::Vector2UInt Widget::maximalSize() const
+	{
+		return _maximalSize;
+	}
+
+	const Geometry2D &Widget::geometry() const
 	{
 		return (_geometry);
 	}
 
-	const Viewport& Widget::viewport() const
+	const Viewport &Widget::viewport() const
 	{
 		return (_viewport);
 	}
 
 	void Widget::_onGeometryChange()
 	{
-
 	}
 
-	void Widget::_onPaintEvent(const spk::PaintEvent& p_event)
+	void Widget::_onPaintEvent(spk::PaintEvent &p_event)
 	{
-
 	}
 
-	spk::Geometry2D::Point Widget::_computeAbsoluteAnchor()
+	spk::Geometry2D::Point Widget::absoluteAnchor()
 	{
-		spk::Geometry2D::Point result = { 0, 0 };
-		const Widget* tmp = this;
+		spk::Geometry2D::Point result = {0, 0};
+		const Widget *tmp = this;
 
-		while (tmp->parent() != nullptr)
+		while (tmp != nullptr)
 		{
 			result += tmp->geometry().anchor;
-			tmp = static_cast<const Widget*>(tmp->parent());
+			tmp = static_cast<const Widget *>(tmp->parent());
 		}
 
 		return (result);
 	}
 
-	void Widget::_computeViewport()
+	void Widget::onPaintEvent(spk::PaintEvent &p_event)
 	{
-		spk::Geometry2D::Point topLeft = _computeAbsoluteAnchor();
-		spk::Geometry2D::Size rightDown = geometry().size + spk::Geometry2D::Size(topLeft.x, topLeft.y);
-		
-		if (parent() != nullptr)
+		if (isActive() == false || p_event.consume == true)
 		{
-			topLeft = Geometry2D::Point::max(topLeft, static_cast<const Widget*>(parent())->viewport().geometry().anchor);
-		}
-
-		if (parent() != nullptr)
-		{
-			spk::Geometry2D::Size tmpSize = static_cast<const Widget*>(parent())->geometry().size;
-			spk::Geometry2D::Size tmpAnchor = { static_cast<const Widget*>(parent())->geometry().x, static_cast<const Widget*>(parent())->geometry().y };
-			rightDown = Geometry2D::Size::min(rightDown, tmpSize + tmpAnchor);
-		}
-
-		spk::Geometry2D::Size size = { rightDown.x - topLeft.x, rightDown.y - topLeft.y };
-
-		_viewport.setGeometry({ topLeft, size });
-	}
-
-	void Widget::onPaintEvent(const spk::PaintEvent& p_event)
-	{
-		if (isActive() == false)
 			return;
+		}
+
+		if (_geometry.size.x == 0 || _geometry.size.y == 0)
+		{
+			GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] onPaintEvent - Widget geometry isn't defined");
+		}
 
 		if (_needGeometryChange == true)
 		{
-			updateGeometry();
-			_computeViewport();
-		}
-
-		if (WidgetConstants == nullptr)
-		{
 			try
 			{
-				WidgetConstants = &(spk::Pipeline::constants(L"spk::WidgetConstants"));
-			}
-			catch (...)
+				applyGeometryChange();
+			} catch (const std::exception &e)
 			{
-				WidgetConstants = nullptr;
+				PROPAGATE_ERROR("Applying geometry change of [" + spk::StringUtils::wstringToString(name()) + "]", e);
+			} catch (...)
+			{
+				GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] onGeometryChange - Unknow error type");
 			}
+			_needGeometryChange = false;
 		}
 
-		if (parent() != nullptr)
+		if (_viewport.clippedGeometry().size.x == 0 || _viewport.clippedGeometry().size.y == 0)
 		{
-			static_cast<const spk::Widget*>(parent())->viewport().apply();
-
-			if (WidgetConstants != nullptr)
-			{
-				(*WidgetConstants)[L"layer"] = _layer;
-				WidgetConstants->validate();
-			}
+			return;
 		}
-		
-		_onPaintEvent(p_event);
 
-		for (auto& child : children())
+		try
 		{
+			_frameBufferObject.activate();
+			_frameBufferObject.clear();
+			_onPaintEvent(p_event);
+			_frameBufferObject.deactivate();
+
+			_textureRenderer.render();
+		} catch (const std::exception &e)
+		{
+			GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] onPaintEvent - " + e.what());
+		} catch (...)
+		{
+			GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] onPaintEvent - Unknow error type");
+		}
+
+		spk::PaintEvent childEvent = p_event;
+		childEvent.geometry = geometry();
+
+		auto &kids = children(); // make sure we have an l-value
+		for (auto it = kids.rbegin(); it != kids.rend(); ++it)
+		{
+			auto &child = *it;
+
 			if (child->isActive() == true)
 			{
-				_viewport.apply();
-				child->onPaintEvent(p_event);
+				try
+				{
+					_viewport.apply();
+				} catch (const std::runtime_error &e)
+				{
+					PROPAGATE_ERROR(
+						"Error while applying viewport of [" + spk::StringUtils::wstringToString(name()) + "] with viewport of geometry [" +
+							_viewport.geometry().toString() + "]",
+						e);
+				}
+				child->onPaintEvent(childEvent);
 			}
 		}
 	}
 
-	void Widget::_onUpdateEvent(const spk::UpdateEvent& p_event)
+	void Widget::_onUpdateEvent(spk::UpdateEvent &p_event)
 	{
-
 	}
 
-	void Widget::onUpdateEvent(const spk::UpdateEvent& p_event)
+	void Widget::onUpdateEvent(spk::UpdateEvent &p_event)
 	{
-		if (isActive() == false)
+		if (isActive() == false || p_event.consume == true)
+		{
 			return;
+		}
 
-		for (auto& child : children())
+		for (auto &child : children())
 		{
 			child->onUpdateEvent(p_event);
 		}
 
 		_onUpdateEvent(p_event);
+
+		if (_requestedPaint == true)
+		{
+			p_event.requestPaint();
+			_requestedPaint = false;
+		}
 	}
 
-	void Widget::_onKeyboardEvent(const spk::KeyboardEvent& p_event)
+	void Widget::_onKeyboardEvent(spk::KeyboardEvent &p_event)
 	{
-
 	}
 
-	void Widget::onKeyboardEvent(const spk::KeyboardEvent& p_event)
+	void Widget::onKeyboardEvent(spk::KeyboardEvent &p_event)
 	{
-		if (isActive() == false || p_event.consumed() == true)
+		if (isActive() == false || p_event.consume == true)
+		{
 			return;
+		}
 
-		for (auto& child : children())
+		for (auto &child : children())
 		{
 			child->onKeyboardEvent(p_event);
 		}
@@ -272,39 +529,60 @@ namespace spk
 		_onKeyboardEvent(p_event);
 	}
 
-	void Widget::_onMouseEvent(const spk::MouseEvent& p_event)
+	void Widget::_onMouseEvent(spk::MouseEvent &p_event)
 	{
-
 	}
 
-	void Widget::onMouseEvent(const spk::MouseEvent& p_event)
+	void Widget::onMouseEvent(spk::MouseEvent &p_event)
 	{
-		if (isActive() == false || p_event.consumed() == true)
+		if (isActive() == false || p_event.consume == true)
+		{
 			return;
+		}
 
-		for (auto& child : children())
+		for (auto &child : children())
 		{
 			child->onMouseEvent(p_event);
 		}
 
 		_onMouseEvent(p_event);
 	}
-	
-	void Widget::_onControllerEvent(const spk::ControllerEvent& p_event)
-	{
 
+	void Widget::_onControllerEvent(spk::ControllerEvent &p_event)
+	{
 	}
-	
-	void Widget::onControllerEvent(const spk::ControllerEvent& p_event)
-	{
-		if (isActive() == false || p_event.consumed() == true)
-			return;
 
-		for (auto& child : children())
+	void Widget::onControllerEvent(spk::ControllerEvent &p_event)
+	{
+		if (isActive() == false || p_event.consume == true)
+		{
+			return;
+		}
+
+		for (auto &child : children())
 		{
 			child->onControllerEvent(p_event);
 		}
 
 		_onControllerEvent(p_event);
+	}
+
+	void Widget::_onTimerEvent(spk::TimerEvent &p_event)
+	{
+	}
+
+	void Widget::onTimerEvent(spk::TimerEvent &p_event)
+	{
+		if (isActive() == false || p_event.consume == true)
+		{
+			return;
+		}
+
+		for (auto &child : children())
+		{
+			child->onTimerEvent(p_event);
+		}
+
+		_onTimerEvent(p_event);
 	}
 }

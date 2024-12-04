@@ -1,10 +1,17 @@
 #pragma once
 
+#include <iostream>
+
+#include "spk_debug_macro.hpp"
+
 namespace spk
 {
-	enum class InputState : bool
+	enum class InputState
 	{
-		Down = true,
-		Up = false
+		Down,
+		Up
 	};
+
+	std::ostream &operator<<(std::ostream &p_os, const spk::InputState &p_state);
+	std::wostream &operator<<(std::wostream &p_os, const spk::InputState &p_state);
 }

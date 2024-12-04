@@ -1,9 +1,11 @@
 #pragma once
 
-#include <algorithm>
-#include <vector>
-#include <stdexcept>
 #include "structure/spk_safe_pointer.hpp"
+#include <algorithm>
+#include <stdexcept>
+#include <vector>
+
+#include "structure/system/spk_exception.hpp"
 
 namespace spk
 {
@@ -11,8 +13,9 @@ namespace spk
 	class InherenceObject
 	{
 	public:
-		using Parent = InherenceObject<TType>*;
-		using Child = InherenceObject<TType>*;
+		using Parent = InherenceObject<TType> *;
+		using Child = InherenceObject<TType> *;
+		using ParentObject = spk::SafePointer<TType>;
 		using ChildObject = spk::SafePointer<TType>;
 		using ChildArray = std::vector<ChildObject>;
 
@@ -21,7 +24,8 @@ namespace spk
 		ChildArray _children;
 
 	protected:
-		InherenceObject() : _parent(nullptr)
+		InherenceObject() :
+			_parent(nullptr)
 		{
 		}
 
@@ -32,23 +36,29 @@ namespace spk
 			{
 				static_cast<Child>(child.get())->_parent = nullptr;
 			}
+
+			if (_parent != nullptr)
+			{
+				_parent->removeChild(this);
+			}
 		}
 
-		InherenceObject(const InherenceObject&) = delete;
-		InherenceObject& operator=(const InherenceObject&) = delete;
+		InherenceObject(const InherenceObject &) = delete;
+		InherenceObject &operator=(const InherenceObject &) = delete;
 
-		InherenceObject(InherenceObject&& other) noexcept : _parent(nullptr)
+		InherenceObject(InherenceObject &&p_other) noexcept :
+			_parent(nullptr)
 		{
-			transferFrom(std::move(other));
+			transferFrom(std::move(p_other));
 		}
 
-		InherenceObject& operator=(InherenceObject&& other) noexcept
+		InherenceObject &operator=(InherenceObject &&p_other) noexcept
 		{
-			if (this != &other)
+			if (this != &p_other)
 			{
 				clearChildren();
 
-				transferFrom(std::move(other));
+				transferFrom(std::move(p_other));
 			}
 			return *this;
 		}
@@ -59,12 +69,23 @@ namespace spk
 			static_cast<Child>(p_child.get())->_parent = static_cast<Child>(this);
 		}
 
+		virtual void removeChild(Child p_child)
+		{
+			auto it = std::find(_children.begin(), _children.end(), p_child);
+			if (it == _children.end())
+			{
+				GENERATE_ERROR("Child not found in children array");
+			}
+			_children.erase(it);
+			p_child->_parent = nullptr;
+		}
+
 		virtual void removeChild(ChildObject p_child)
 		{
 			auto it = std::find(_children.begin(), _children.end(), p_child);
 			if (it == _children.end())
 			{
-				throw std::runtime_error("Child not found in children array");
+				GENERATE_ERROR("Child not found in children array");
 			}
 			_children.erase(it);
 			static_cast<Child>(p_child.get())->_parent = nullptr;
@@ -81,19 +102,24 @@ namespace spk
 
 		void clearChildren()
 		{
-			for (ChildObject& child : _children)
+			for (ChildObject &child : _children)
 			{
 				static_cast<Child>(child.get())->_parent = nullptr;
 			}
 			_children.clear();
 		}
 
-		Parent parent() const
+		ParentObject parent() const
 		{
-			return _parent;
+			return static_cast<TType *>(_parent);
 		}
 
-		const ChildArray& children() const
+		ChildArray &children()
+		{
+			return _children;
+		}
+
+		const ChildArray &children() const
 		{
 			return _children;
 		}

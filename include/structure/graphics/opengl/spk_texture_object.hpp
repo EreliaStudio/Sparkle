@@ -1,10 +1,14 @@
 #pragma once
 
 #include <GL/glew.h>
+
 #include <GL/gl.h>
-#include <vector>
-#include <cstring>
-#include "structure/graphics/spk_geometry_2D.hpp"
+
+#include "structure/graphics/spk_geometry_2d.hpp"
+#include "structure/graphics/texture/spk_texture.hpp"
+#include "structure/spk_safe_pointer.hpp"
+#include "utils/spk_opengl_utils.hpp"
+#include <utility> // std::exchange
 
 namespace spk::OpenGL
 {
@@ -14,83 +18,37 @@ namespace spk::OpenGL
 		friend class FrameBufferObject;
 
 	public:
-		enum class Format
-		{
-			RGB = GL_RGB,
-			RGBA = GL_RGBA,
-			BGR = GL_BGR,
-			BGRA = GL_BGRA,
-			GreyLevel = GL_RED,
-			DualChannel = GL_RG,
-			Error = GL_NONE
-		};
-
-		enum class Filtering
-		{
-			Nearest = GL_NEAREST,
-			Linear = GL_LINEAR
-		};
-
-		enum class Wrap
-		{
-			Repeat = GL_REPEAT,
-			ClampToEdge = GL_CLAMP_TO_EDGE,
-			ClampToBorder = GL_CLAMP_TO_BORDER
-		};
-
-		enum class Mipmap
-		{
-			Disable,
-			Enable
-		};
+		using Format = spk::Texture::Format;
+		using Filtering = spk::Texture::Filtering;
+		using Wrap = spk::Texture::Wrap;
+		using Mipmap = spk::Texture::Mipmap;
 
 	private:
 		GLuint _id;
-		bool _ownTexture;
-		bool _needUpload = false;
-		bool _needSetup = false;
 
-		std::vector<uint8_t> _datas;
-		spk::Vector2UInt _size;
-		Format _format;
-		Filtering _filtering;
-		Wrap _wrap;
-		Mipmap _mipmap;
-
-		void _upload();
-		void _setup();
-		size_t _getBytesPerPixel(const Format& format) const;
+		static void _setupTextureParameters(const Filtering &p_filtering, const Wrap &p_wrap, const Mipmap &p_mipMap);
 
 	public:
 		TextureObject();
-		
-		TextureObject(const TextureObject& other);
-		TextureObject& operator=(const TextureObject& other);
 
-		TextureObject(TextureObject&& p_other) noexcept;
-		TextureObject& operator=(TextureObject&& p_other) noexcept;
+		~TextureObject();
 
-		virtual ~TextureObject();
+		TextureObject(const TextureObject &) = delete;
+		TextureObject &operator=(const TextureObject &) = delete;
 
-		void setData(const std::vector<uint8_t>& p_data, const spk::Vector2UInt& p_size,
-			const Format& p_format, const Filtering& p_filtering,
-			const Wrap& p_wrap, const Mipmap& p_mipmap);
+		TextureObject(TextureObject &&p_other) noexcept;
 
-		void setData(const std::vector<uint8_t>& p_data, const spk::Vector2UInt& p_size, const Format& p_format);
+		TextureObject &operator=(TextureObject &&p_other) noexcept;
 
-		void setData(const uint8_t* p_data, const spk::Vector2UInt& p_size,
-			const Format& p_format, const Filtering& p_filtering,
-			const Wrap& p_wrap, const Mipmap& p_mipmap);
+		void upload(const spk::SafePointer<const spk::Texture> &p_textureInput);
 
-		void setData(const uint8_t* p_data, const spk::Vector2UInt& p_size, const Format& p_format);
+		void updatePixels(const spk::SafePointer<const spk::Texture> &p_textureInput);
 
-		void setProperties(const Filtering& p_filtering, const Wrap& p_wrap, const Mipmap& p_mipmap);
+		void updateSettings(const spk::SafePointer<const spk::Texture> &p_textureInput);
 
-		const std::vector<uint8_t>& data() const;
-		spk::Vector2UInt size() const;
-		Format format() const;
-		Filtering filtering() const;
-		Wrap wrap() const;
-		Mipmap mipmap() const;
+		void allocateStorage(
+			const spk::Vector2UInt &p_size, const Format &p_format, const Filtering &p_filtering, const Wrap &p_wrap, const Mipmap &p_mipmap);
+
+		GLuint id() const;
 	};
 }

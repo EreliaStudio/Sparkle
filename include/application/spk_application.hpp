@@ -1,21 +1,19 @@
 #pragma once
 
-#include <vector>
 #include <map>
+#include <vector>
 
 #include "structure/design_pattern/spk_contract_provider.hpp"
 #include "structure/thread/spk_persistant_worker.hpp"
 
 #include "structure/spk_safe_pointer.hpp"
 
-#include "spk_debug_macro.hpp"
-
 namespace spk
 {
 	class Application
 	{
 	public:
-		static constexpr const wchar_t* MainThreadName = L"MainThread";
+		static constexpr const wchar_t *MainThreadName = L"MainThread";
 		using Job = spk::ContractProvider::Job;
 		using Contract = spk::ContractProvider::Contract;
 
@@ -33,13 +31,13 @@ namespace spk
 		Application();
 		~Application();
 
-		spk::SafePointer<spk::PersistantWorker> worker(const std::wstring& p_threadName);
+		spk::SafePointer<spk::PersistantWorker> worker(const std::wstring &p_threadName);
 
-		Contract addExecutionStep(const std::wstring& p_threadName, const Job& p_job);
-		Contract addExecutionStep(const Job& p_job);
+		Contract addExecutionStep(const std::wstring &p_threadName, const Job &p_job);
+		Contract addExecutionStep(const Job &p_job);
 
-		PreparationContract addPreparationStep(const std::wstring& p_threadName, const PreparationJob& p_job);
-		PreparationContract addPreparationStep(const PreparationJob& p_job);
+		PreparationContract addPreparationStep(const std::wstring &p_threadName, const PreparationJob &p_job);
+		PreparationContract addPreparationStep(const PreparationJob &p_job);
 
 		int run();
 

@@ -1,197 +1,285 @@
 #include "structure/graphics/opengl/spk_uniform_buffer_object.hpp"
 
+#include "spk_debug_macro.hpp"
 #include "utils/spk_string_utils.hpp"
 
-#include <bitset>
-#include <iostream>
-#include <cstring> // For std::memcpy
+#include "structure/system/spk_exception.hpp"
 
 namespace spk::OpenGL
 {
-	// UniformBufferObject::Layout implementation
-
-	UniformBufferObject::Layout::Layout()
-		: _destination(nullptr), _cpu{ 0, 0 }, _gpu{ 0, 0 }, _tightlyPacked(false) {}
-
-	UniformBufferObject::Layout::Layout(const DataRepresentation& p_cpu, const DataRepresentation& p_gpu)
-		: _destination(nullptr), _cpu(p_cpu), _gpu(p_gpu), _tightlyPacked(p_cpu.size == p_gpu.size) {}
-
-	void UniformBufferObject::Layout::bind(char* p_destination)
+	void UniformBufferObject::_loadElement(const spk::JSON::Object &p_elemDesc)
 	{
-		_tightlyPacked = (_cpu.size == _gpu.size);
-		_destination = p_destination;
-		for (auto& [key, element] : _innerLayouts)
+		std::wstring name = p_elemDesc[L"Name"].as<std::wstring>();
+		size_t offset = static_cast<size_t>(p_elemDesc[L"Offset"].as<long>());
+
+		if (p_elemDesc.contains(L"Size") == true)
 		{
-			for (auto& member : element.layouts)
+			size_t size = static_cast<size_t>(p_elemDesc[L"Size"].as<long>());
+			auto &elem = addElement(name, offset, size);
+
+			if (p_elemDesc.contains(L"NestedElements") == true)
 			{
-				member.bind(p_destination + member._gpu.offset);
-			}
-		}
-	}
-
-	UniformBufferObject::Element& UniformBufferObject::Layout::operator[](const std::wstring& p_name)
-	{
-		auto it = _innerLayouts.find(p_name);
-		if (it == _innerLayouts.end())
-			throw std::runtime_error("No layout named [" + spk::StringUtils::wstringToString(p_name) + "] found.");
-		return it->second;
-	}
-
-	void UniformBufferObject::Layout::_pushData(const char* p_basePtr)
-	{
-		if (_tightlyPacked)
-		{
-			std::memcpy(_destination, p_basePtr, _cpu.size);
-		}
-		else
-		{
-			for (auto& [name, element] : _innerLayouts)
-			{
-				for (auto& layout : element.layouts)
+				for (auto &child : p_elemDesc[L"NestedElements"].asArray())
 				{
-					layout._pushData(p_basePtr + layout._cpu.offset);
+					_loadElement(elem, *child);
 				}
 			}
 		}
+		else if (p_elemDesc.contains(L"NbElements") == true)
+		{
+			size_t nbElem = static_cast<size_t>(p_elemDesc[L"NbElements"].as<long>());
+			size_t elemSize = static_cast<size_t>(p_elemDesc[L"ElementSize"].as<long>());
+			size_t padding = static_cast<size_t>(p_elemDesc[L"ElementPadding"].as<long>());
+
+			auto &elemArr = addElement(name, offset, nbElem, elemSize, padding);
+
+			if (p_elemDesc.contains(L"ElementComposition") == true)
+			{
+				for (size_t i = 0; i < elemArr.nbElement(); ++i)
+				{
+					for (auto &comp : p_elemDesc[L"ElementComposition"].asArray())
+					{
+						_loadElement(elemArr[i], *comp);
+					}
+				}
+			}
+		}
+		else
+		{
+			GENERATE_ERROR("[UniformBufferObject] - Element description must contain either 'Size' or 'NbElements'.");
+		}
 	}
 
-	// UniformBufferObject::Factory implementation
-
-	void UniformBufferObject::Factory::setTypeName(const std::string& p_name)
+	void UniformBufferObject::_loadElement(spk::DataBufferLayout::Element &p_parent, const spk::JSON::Object &p_elemDesc)
 	{
-		_typeName = p_name;
+		std::wstring name = p_elemDesc[L"Name"].as<std::wstring>();
+		size_t offset = p_parent.offset() + static_cast<size_t>(p_elemDesc[L"Offset"].as<long>());
+
+		if (p_elemDesc.contains(L"Size") == true)
+		{
+			size_t size = static_cast<size_t>(p_elemDesc[L"Size"].as<long>());
+			auto &elem = p_parent.addElement(name, offset, size);
+
+			if (p_elemDesc.contains(L"NestedElements") == true)
+			{
+				for (auto &child : p_elemDesc[L"NestedElements"].asArray())
+				{
+					_loadElement(elem, *child);
+				}
+			}
+		}
+		else if (p_elemDesc.contains(L"NbElements") == true)
+		{
+			size_t nbElem = static_cast<size_t>(p_elemDesc[L"NbElements"].as<long>());
+			size_t elemSize = static_cast<size_t>(p_elemDesc[L"ElementSize"].as<long>());
+			size_t padding = static_cast<size_t>(p_elemDesc[L"ElementPadding"].as<long>());
+
+			auto &elemArr = p_parent.addElement(name, offset, nbElem, elemSize, padding);
+
+			if (p_elemDesc.contains(L"ElementComposition") == true)
+			{
+				for (size_t i = 0; i < elemArr.nbElement(); ++i)
+				{
+					for (auto &comp : p_elemDesc[L"ElementComposition"].asArray())
+					{
+						_loadElement(elemArr[i], *comp);
+					}
+				}
+			}
+		}
+		else
+		{
+			GENERATE_ERROR("[UniformBufferObject] - Element description must contain either 'Size' or 'NbElements'.");
+		}
 	}
 
-	void UniformBufferObject::Factory::setBindingPoint(BindingPoint p_bindingPoint)
+	UniformBufferObject::UniformBufferObject(const std::wstring &p_blockName, BindingPoint p_bindingPoint, size_t p_size) :
+		VertexBufferObject(VertexBufferObject::Type::Uniform, VertexBufferObject::Usage::Dynamic),
+		_blockName(p_blockName),
+		_bindingPoint(p_bindingPoint),
+		_dataBufferLayout(p_blockName, &(dataBuffer()))
 	{
-		_bindingPoint = p_bindingPoint;
+		VertexBufferObject::resize(p_size);
+		_dataBufferLayout.updateRootSize();
 	}
 
-	const std::string& UniformBufferObject::Factory::typeName() const
+	UniformBufferObject::UniformBufferObject(const spk::JSON::Object &p_desc) :
+		UniformBufferObject(
+			p_desc[L"BlockName"].as<std::wstring>(),
+			static_cast<BindingPoint>(p_desc[L"BindingPoint"].as<long>()),
+			static_cast<size_t>(p_desc[L"Size"].as<long>()))
 	{
-		return _typeName;
+		if (p_desc.contains(L"Elements") == true)
+		{
+			for (auto &elem : p_desc[L"Elements"].asArray())
+			{
+				_loadElement(*elem);
+			}
+		}
 	}
 
-	UniformBufferObject::BindingPoint UniformBufferObject::Factory::bindingPoint() const
-	{
-		return _bindingPoint;
-	}
-
-	UniformBufferObject::Layout& UniformBufferObject::Factory::mainLayout()
-	{
-		return _layout;
-	}
-
-	const UniformBufferObject::Layout& UniformBufferObject::Factory::mainLayout() const
-	{
-		return _layout;
-	}
-
-	UniformBufferObject::Layout& UniformBufferObject::Factory::addInnerLayout(Layout& p_layout, const std::wstring& p_name, const Layout::DataRepresentation& p_cpu, const Layout::DataRepresentation& p_gpu)
-	{
-		p_layout._innerLayouts[p_name].layouts.emplace_back(p_cpu, p_gpu);
-		return p_layout._innerLayouts[p_name].layouts.back();
-	}
-
-	UniformBufferObject UniformBufferObject::Factory::construct() const
-	{
-		UniformBufferObject result;
-
-		result._typeName = _typeName;
-		result._bindingPoint = _bindingPoint;
-		result._layout = _layout;
-		result.resize(result._layout._gpu.size);
-		result._layout.bind(static_cast<char*>(result.data()));
-
-		return std::move(result);
-	}
-
-	UniformBufferObject::UniformBufferObject()
-		: VertexBufferObject(VertexBufferObject::Type::Uniform, VertexBufferObject::Usage::Static),
-		_bindingPoint(-1),
-		_blockIndex(GL_INVALID_ENUM) {}
-
-	UniformBufferObject::UniformBufferObject(const UniformBufferObject& p_other)
-		: VertexBufferObject(p_other),
-		_typeName(p_other._typeName),
+	UniformBufferObject::UniformBufferObject(const UniformBufferObject &p_other) :
+		VertexBufferObject(p_other),
+		_blockName(p_other._blockName),
 		_bindingPoint(p_other._bindingPoint),
-		_blockIndex(p_other._blockIndex),
-		_layout(p_other._layout) 
+		_dataBufferLayout(p_other._dataBufferLayout)
 	{
-
+		_dataBufferLayout.setBuffer(&(dataBuffer()));
+		_dataBufferLayout.updateRootSize();
 	}
 
-	UniformBufferObject& UniformBufferObject::operator=(const UniformBufferObject& p_other)
+	UniformBufferObject::UniformBufferObject(UniformBufferObject &&p_other) :
+		VertexBufferObject(p_other),
+		_blockName(std::move(p_other._blockName)),
+		_bindingPoint(std::move(p_other._bindingPoint)),
+		_dataBufferLayout(std::move(p_other._dataBufferLayout))
+	{
+		_dataBufferLayout.setBuffer(&(dataBuffer()));
+		_dataBufferLayout.updateRootSize();
+	}
+
+	UniformBufferObject &UniformBufferObject::operator=(const UniformBufferObject &p_other)
 	{
 		if (this != &p_other)
 		{
 			VertexBufferObject::operator=(p_other);
-
-			_typeName = p_other._typeName;
+			_blockName = p_other._blockName;
 			_bindingPoint = p_other._bindingPoint;
-			_blockIndex = p_other._blockIndex;
-			_layout = p_other._layout;
+			_dataBufferLayout = std::move(p_other._dataBufferLayout);
+			_dataBufferLayout.setBuffer(&(dataBuffer()));
+			_dataBufferLayout.updateRootSize();
 		}
-		return *this;
+
+		return (*this);
 	}
 
-	UniformBufferObject::UniformBufferObject(UniformBufferObject&& p_other) noexcept
-		: VertexBufferObject(std::move(p_other)),
-		_typeName(std::move(p_other._typeName)),
-		_bindingPoint(p_other._bindingPoint),
-		_blockIndex(p_other._blockIndex),
-		_layout(std::move(p_other._layout))
-	{
-		p_other._bindingPoint = -1;
-		p_other._blockIndex = GL_INVALID_ENUM;
-	}
-
-	UniformBufferObject& UniformBufferObject::operator=(UniformBufferObject&& p_other) noexcept
+	UniformBufferObject &UniformBufferObject::operator=(UniformBufferObject &&p_other)
 	{
 		if (this != &p_other)
 		{
 			VertexBufferObject::operator=(std::move(p_other));
 
-			_typeName = std::move(p_other._typeName);
-			_bindingPoint = p_other._bindingPoint;
-			_blockIndex = p_other._blockIndex;
-			_layout = std::move(p_other._layout);
-
-			p_other._bindingPoint = -1;
-			p_other._blockIndex = GL_INVALID_ENUM;
+			_blockName = std::move(p_other._blockName);
+			_bindingPoint = std::move(p_other._bindingPoint);
+			_dataBufferLayout = std::move(p_other._dataBufferLayout);
+			_dataBufferLayout.setBuffer(&(dataBuffer()));
+			_dataBufferLayout.updateRootSize();
 		}
-		return *this;
+
+		return (*this);
 	}
 
-	const std::string& UniformBufferObject::typeName() const
+	const std::wstring &UniformBufferObject::blockName() const
 	{
-		return _typeName;
+		return (_blockName);
 	}
 
-	const UniformBufferObject::BindingPoint& UniformBufferObject::bindingPoint() const
+	void UniformBufferObject::setBlockName(const std::wstring &p_blockName)
 	{
-		return _bindingPoint;
+		_blockName = p_blockName;
+	}
+
+	UniformBufferObject::BindingPoint UniformBufferObject::bindingPoint() const
+	{
+		return (_bindingPoint);
+	}
+	void UniformBufferObject::setBindingPoint(BindingPoint p_bindingPoint)
+	{
+		_bindingPoint = p_bindingPoint;
+	}
+
+	DataBufferLayout &UniformBufferObject::layout()
+	{
+		return (_dataBufferLayout);
+	}
+
+	const DataBufferLayout &UniformBufferObject::layout() const
+	{
+		return (_dataBufferLayout);
+	}
+
+	bool UniformBufferObject::contains(const std::wstring &p_name)
+	{
+		return (_dataBufferLayout.contains(p_name));
+	}
+
+	void UniformBufferObject::resize(size_t p_size)
+	{
+		VertexBufferObject::resize(p_size);
+		_dataBufferLayout.updateRootSize();
+	}
+
+	DataBufferLayout::Element &UniformBufferObject::addElement(const std::wstring &p_name, size_t p_offset, size_t p_size)
+	{
+		if (size() <= (p_offset + p_size))
+		{
+			resize(p_offset + p_size);
+		}
+		return (_dataBufferLayout.addElement(p_name, p_offset, p_size));
+	}
+
+	DataBufferLayout::Element &UniformBufferObject::addElement(
+		const std::wstring &p_name, size_t p_offset, size_t p_nbElement, size_t p_elementSize, size_t p_elementPadding)
+	{
+		if (size() <= (p_offset + p_nbElement * (p_elementSize + p_elementPadding)))
+		{
+			resize(p_offset + p_nbElement * (p_elementSize + p_elementPadding));
+		}
+		return (_dataBufferLayout.addElement(p_name, p_offset, p_nbElement, p_elementSize, p_elementPadding));
+	}
+
+	void UniformBufferObject::removeElement(const std::wstring &p_name)
+	{
+		_dataBufferLayout.removeElement(p_name);
+	}
+
+	DataBufferLayout::Element &UniformBufferObject::operator[](size_t p_index)
+	{
+		return _dataBufferLayout[p_index];
+	}
+
+	const DataBufferLayout::Element &UniformBufferObject::operator[](size_t p_index) const
+	{
+		return _dataBufferLayout[p_index];
+	}
+
+	DataBufferLayout::Element &UniformBufferObject::operator[](const std::wstring &p_key)
+	{
+		return _dataBufferLayout[p_key];
+	}
+
+	const DataBufferLayout::Element &UniformBufferObject::operator[](const std::wstring &p_key) const
+	{
+		return _dataBufferLayout[p_key];
 	}
 
 	void UniformBufferObject::activate()
 	{
 		VertexBufferObject::activate();
 
-		if (_blockIndex == GL_INVALID_ENUM)
+		GLint prog = 0;
+		glGetIntegerv(GL_CURRENT_PROGRAM, &prog);
+
+		if (prog == 0)
 		{
-			GLint prog = 0;
-			glGetIntegerv(GL_CURRENT_PROGRAM, &prog);
-
-			_blockIndex = glGetUniformBlockIndex(prog, _typeName.c_str());
-
-			glUniformBlockBinding(prog, _blockIndex, _bindingPoint);
+			GENERATE_ERROR("No shader program is currently bound.");
 		}
 
-		glBindBufferBase(GL_UNIFORM_BUFFER, _bindingPoint, _id);
-	}
+		if (_programBlockIndex.contains(prog) == false)
+		{
+			std::string str = spk::StringUtils::wstringToString(_blockName);
 
-	UniformBufferObject::Element& UniformBufferObject::operator[](const std::wstring& p_name)
-	{
-		return _layout[p_name];
+			GLint blockIndex = glGetUniformBlockIndex(prog, str.c_str());
+
+			if (blockIndex == GL_INVALID_INDEX)
+			{
+				GENERATE_ERROR("Uniform block '" + str + "' not found in the shader program.");
+			}
+
+			_programBlockIndex[prog] = blockIndex;
+		}
+
+		glUniformBlockBinding(prog, _programBlockIndex[prog], _bindingPoint);
+		glBindBufferBase(GL_UNIFORM_BUFFER, _bindingPoint, _id);
 	}
 }

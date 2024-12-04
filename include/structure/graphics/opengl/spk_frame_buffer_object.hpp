@@ -1,90 +1,97 @@
 #pragma once
 
 #include <GL/glew.h>
-#include <GL/gl.h>
-#include <map>
+#include <memory>
 #include <string>
-#include "structure/graphics/spk_geometry_2D.hpp"
-#include "structure/graphics/opengl/spk_texture_object.hpp"
+#include <unordered_map>
+
+#include "structure/graphics/opengl/spk_texture_collection.hpp"
+#include "structure/graphics/spk_geometry_2d.hpp"
+#include "structure/graphics/texture/spk_texture.hpp"
+#include "structure/spk_safe_pointer.hpp"
+
 #include "structure/graphics/spk_viewport.hpp"
-#include <cstdint>
 
 namespace spk::OpenGL
 {
-    class FrameBufferObject
-    {
-    public:
-        enum class Type
-        {
-            Float4,
-            Float3,
-            Float2,
-            Float,
-            Int4,
-            Int3,
-            Int2,
-            Int,
-            UInt4,
-            UInt3,
-            UInt2,
-            UInt
-        };
+	class FrameBufferObject
+	{
+	public:
+		class Attachment
+		{
+		public:
+			enum class Type
+			{
+				Color,
+				Depth,
+				DepthStencil
+			};
 
-        class Factory
-        {
-            friend class FrameBufferObject;
-            friend class ShaderParser;
+		private:
+			friend class FrameBufferObject;
 
-        public:
-            Factory();
+			std::wstring _name;
+			int _bindingPoint;
+			Type _type;
+			bool _needsResize = true;
+			spk::Vector2UInt _size{0, 0};
 
-            void addAttachment(const std::wstring& p_name, int p_colorAttachmentIndex, Type p_type);
-            FrameBufferObject construct(const spk::Vector2UInt& p_size) const;
+			spk::SafePointer<spk::Texture> _cpuTexture = nullptr;
+			spk::SafePointer<spk::OpenGL::TextureObject> _gpuTexture = nullptr;
 
-        private:
-            struct AttachmentSpec
-            {
-                int colorAttachmentIndex;
-                Type type;
-            };
+			void _allocate(const spk::Vector2UInt &p_size);
+			void _resize(const spk::Vector2UInt &p_size);
+			void _attach(GLuint p_frameBufferObjectIdentifier) const;
 
-            std::map<std::wstring, AttachmentSpec> _attachments;
-        };
+		public:
+			Attachment() = default;
+			Attachment(const std::wstring &p_name, int p_binding, Type p_type);
 
-    private:
-        FrameBufferObject(const std::map<std::wstring, Factory::AttachmentSpec>& p_attachments, const spk::Vector2UInt& p_size);
+			spk::Texture save() const;
+			spk::SafePointer<const spk::Texture> bindedTexture() const
+			{
+				return _cpuTexture;
+			}
+		};
 
-        void _load();
-        void _releaseResources();
+		FrameBufferObject();
+		~FrameBufferObject();
 
-        GLuint _framebufferID = 0;
-        spk::Vector2UInt _size;
-        Viewport _viewport;
+		FrameBufferObject(const FrameBufferObject &) = delete;
+		FrameBufferObject &operator=(const FrameBufferObject &) = delete;
+		FrameBufferObject(FrameBufferObject &&p_other) noexcept;
+		FrameBufferObject &operator=(FrameBufferObject &&p_other) noexcept;
 
-        struct Attachment
-        {
-            int colorAttachmentIndex;
-            Type type;
-            TextureObject textureObject;
-        };
-        std::map<std::wstring, Attachment> _attachments;
+		void addAttachment(const std::wstring &p_attachmentName, const int &p_bindingPoint, const Attachment::Type &p_type);
 
-    public:
-        FrameBufferObject() = default;
-        FrameBufferObject(const FrameBufferObject& p_other);
-        FrameBufferObject& operator=(const FrameBufferObject& p_other);
+		void resize(const spk::Vector2UInt &p_size);
 
-        FrameBufferObject(FrameBufferObject&& p_other) noexcept;
-        FrameBufferObject& operator=(FrameBufferObject&& p_other) noexcept;
+		void activate();
+		void clear();
+		void deactivate();
 
-        ~FrameBufferObject();
+		spk::SafePointer<const Attachment> attachment(const std::wstring &p_attachmentName) const;
 
-        void resize(const spk::Vector2UInt& p_size);
+		const spk::Vector2UInt &size() const
+		{
+			return _size;
+		}
+		bool ready() const
+		{
+			return _validated;
+		}
 
-        void activate();
-        void deactivate();
+	private:
+		GLuint _identifier = 0;
+		bool _validated = false;
+		spk::Vector2UInt _size = {0, 0};
+		spk::Viewport _viewport;
+		spk::SafePointer<const spk::Viewport> _lastActiveViewport;
 
-        TextureObject* bindedTexture(const std::wstring& p_name);
-        TextureObject saveAsTexture(const std::wstring& p_name);
-    };
+		std::unordered_map<std::wstring, Attachment> _attachments;
+
+		void _allocate();
+		void _release();
+		void _prepareAttachments();
+	};
 }

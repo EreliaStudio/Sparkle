@@ -1,18 +1,27 @@
 #include "application/module/spk_keyboard_module.hpp"
 
+#include "structure/graphics/spk_window.hpp"
+
 namespace spk
 {
-	void KeyboardModule::_treatEvent(spk::KeyboardEvent&& p_event)
+	void KeyboardModule::_treatEvent(spk::KeyboardEvent &&p_event)
 	{
+		_keyboard._window = p_event.window;
+
 		switch (p_event.type)
 		{
 		case spk::KeyboardEvent::Type::Press:
 		{
 			if (p_event.key != spk::Keyboard::Key::Unknow)
 			{
-				if (_keyboard.state[static_cast<int>(p_event.key)] == spk::InputState::Down)
-					return;
-				_keyboard.state[static_cast<int>(p_event.key)] = spk::InputState::Down;
+				if (_keyboard._state[static_cast<int>(p_event.key)] == spk::InputState::Down)
+				{
+					p_event.type = spk::KeyboardEvent::Type::Repeat;
+				}
+				else
+				{
+					_keyboard._state[static_cast<int>(p_event.key)] = spk::InputState::Down;
+				}
 			}
 			break;
 		}
@@ -20,39 +29,47 @@ namespace spk
 		{
 			if (p_event.key != spk::Keyboard::Key::Unknow)
 			{
-				if (_keyboard.state[static_cast<int>(p_event.key)] == spk::InputState::Up)
+				if (_keyboard._state[static_cast<int>(p_event.key)] == spk::InputState::Up)
+				{
 					return;
-				_keyboard.state[static_cast<int>(p_event.key)] = spk::InputState::Up;
+				}
+				_keyboard._state[static_cast<int>(p_event.key)] = spk::InputState::Up;
 			}
 			break;
 		}
 		case spk::KeyboardEvent::Type::Glyph:
 		{
-			_keyboard.glyph = p_event.glyph;
+			_keyboard._glyph = p_event.glyph;
+			break;
+		}
+		default:
+		{
+			GENERATE_ERROR("Invalid KeyboardEvent type");
 			break;
 		}
 		}
 		p_event.keyboard = &_keyboard;
-		_rootWidget->onKeyboardEvent(p_event);
+
+		if (spk::Widget::focusedWidget(Widget::FocusType::KeyboardFocus) != nullptr)
+		{
+			spk::Widget::focusedWidget(Widget::FocusType::KeyboardFocus)->onKeyboardEvent(p_event);
+		}
+		else
+		{
+			p_event.window->widget()->onKeyboardEvent(p_event);
+		}
 	}
 
-	spk::KeyboardEvent KeyboardModule::_convertEventToEventType(spk::Event&& p_event)
+	spk::KeyboardEvent KeyboardModule::_convertEventToEventType(spk::Event &&p_event)
 	{
 		return (p_event.keyboardEvent);
 	}
 
-	KeyboardModule::KeyboardModule() : 
-		_rootWidget(nullptr)
+	KeyboardModule::KeyboardModule()
 	{
-
 	}
 
-	void KeyboardModule::linkToWidget(spk::Widget* p_rootWidget)
-	{
-		_rootWidget = p_rootWidget;
-	}
-
-	const spk::Keyboard& KeyboardModule::keyboard() const
+	const spk::Keyboard &KeyboardModule::keyboard() const
 	{
 		return (_keyboard);
 	}

@@ -3,7 +3,7 @@
 #include <iostream>
 #include <vector>
 
-#include "structure/container/spk_JSON_object.hpp"
+#include "structure/container/spk_json_object.hpp"
 
 namespace spk
 {
@@ -18,15 +18,16 @@ namespace spk
 		Color(int p_value);
 		Color(int p_r, int p_g, int p_b, int p_a = 255);
 		Color(float p_r, float p_g, float p_b, float p_a = 1.0f);
-		Color(const JSON::Object& p_object);
+		Color(const JSON::Object &p_object);
 
-		Color operator+(const Color& p_color) const;
-		Color operator-(const Color& p_color) const;
-		bool operator==(const Color& p_color) const;
+		Color operator+(const Color &p_color) const;
+		Color operator-(const Color &p_color) const;
+		bool operator==(const Color &p_color) const;
 
-		friend std::ostream& operator << (std::ostream& p_os, const spk::Color& p_color);
-		friend spk::JSON::Object& operator<<(spk::JSON::Object& p_object, const spk::Color& p_color);
-		friend const spk::JSON::Object& operator>>(const spk::JSON::Object& p_object, spk::Color& p_color);
+		friend std::ostream &operator<<(std::ostream &p_os, const spk::Color &p_color);
+		friend std::wostream &operator<<(std::wostream &p_os, const spk::Color &p_color);
+		friend spk::JSON::Object &operator<<(spk::JSON::Object &p_object, const spk::Color &p_color);
+		friend const spk::JSON::Object &operator>>(const spk::JSON::Object &p_object, spk::Color &p_color);
 
 		static const Color red;
 		static const Color blue;
@@ -40,5 +41,25 @@ namespace spk
 		static const Color black;
 		static const Color white;
 		static const Color grey;
+	};
+}
+
+namespace std
+{
+	template <>
+	struct hash<spk::Color>
+	{
+		size_t operator()(const spk::Color &p_color) const
+		{
+			size_t h1 = std::hash<float>{}(p_color.r);
+			size_t h2 = std::hash<float>{}(p_color.g);
+			size_t h3 = std::hash<float>{}(p_color.b);
+			size_t h4 = std::hash<float>{}(p_color.a);
+			size_t seed = h1;
+			seed ^= h2 + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+			seed ^= h3 + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+			seed ^= h4 + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+			return (seed);
+		}
 	};
 }

@@ -1,10 +1,12 @@
 #pragma once
 
+#include <functional>
 #include <unordered_map>
 #include <vector>
-#include <functional>
 
 #include "structure/design_pattern/spk_contract_provider.hpp"
+
+#include "spk_debug_macro.hpp"
 
 namespace spk
 {
@@ -13,13 +15,14 @@ namespace spk
 	{
 	public:
 		using Contract = ContractProvider::Contract;
+		using Job = ContractProvider::Job;
 
 	private:
 		TType _state;
 		std::unordered_map<TType, ContractProvider> _callbacks;
 
 	public:
-		StatefulObject(const TType& p_initialState) :
+		StatefulObject(const TType &p_initialState) :
 			_state(p_initialState)
 		{
 		}
@@ -28,11 +31,11 @@ namespace spk
 		{
 		}
 
-		void setState(const TType& newState)
+		void setState(const TType &p_newState)
 		{
-			if (_state != newState)
+			if (_state != p_newState)
 			{
-				_state = newState;
+				_state = p_newState;
 				_callbacks[_state].trigger();
 			}
 		}
@@ -42,9 +45,9 @@ namespace spk
 			return _state;
 		}
 
-		Contract addCallback(const TType& state, const std::function<void()>& callback)
+		Contract addCallback(const TType &p_state, const Job &p_callback)
 		{
-			return (std::move(_callbacks[state].subscribe(callback)));
+			return (std::move(_callbacks[p_state].subscribe(p_callback)));
 		}
 	};
 }

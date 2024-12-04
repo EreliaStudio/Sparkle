@@ -1,16 +1,17 @@
 #pragma once
 
-#include <vector>
 #include <filesystem>
 #include <string>
+#include <vector>
 
 namespace spk
 {
 	namespace FileUtils
 	{
-		std::vector<std::filesystem::path> listFiles(const std::filesystem::path& folderPath);
-		std::wstring readFileAsWString(const std::filesystem::path& p_path);
-		std::string readFileAsString(const std::filesystem::path& p_path);
-		std::vector<uint8_t> readFileAsBytes(const std::filesystem::path& p_path);
+		std::vector<std::filesystem::path> listFolders(const std::filesystem::path &p_folderPath);
+		std::vector<std::filesystem::path> listFiles(const std::filesystem::path &p_folderPath);
+		std::wstring readFileAsWString(const std::filesystem::path &p_path);
+		std::string readFileAsString(const std::filesystem::path &p_path);
+		std::vector<uint8_t> readFileAsBytes(const std::filesystem::path &p_path);
 	}
 }

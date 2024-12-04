@@ -1,52 +1,64 @@
 #pragma once
 
-#include <string>
-#include <stdexcept>
 #include <GL/glew.h>
+
+#include <GL/gl.h>
+
+#include "structure/container/spk_json_object.hpp"
+#include "structure/graphics/opengl/spk_frame_buffer_object.hpp"
+#include "structure/graphics/opengl/spk_texture_object.hpp"
+#include "structure/graphics/texture/spk_texture.hpp"
 #include "structure/spk_safe_pointer.hpp"
-#include "spk_texture_object.hpp"
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <unordered_map>
+#include <variant>
 
 namespace spk::OpenGL
 {
 	class SamplerObject
 	{
 	public:
-		class Factory
+		enum class Type : GLenum
 		{
-		private:
-			std::string _name;
-			std::string _designator;
-			size_t _index;
-
-		public:
-			Factory() = default;
-
-			void setName(const std::string& name);
-			void setDesignator(const std::string& designator);
-			void setIndex(size_t index);
-
-			SamplerObject construct() const;
+			Texture1D = GL_TEXTURE_1D,
+			Texture2D = GL_TEXTURE_2D,
+			Texture3D = GL_TEXTURE_3D,
+			TextureCubeMap = GL_TEXTURE_CUBE_MAP
 		};
 
-	private:
-		std::string _name;
-		std::string _designator;
-		GLint _index;
-		spk::SafePointer<TextureObject> _texture = nullptr;
-		GLint _uniformDestination = -1;
+		using BindingPoint = int;
 
-		SamplerObject(const std::string& p_name, const std::string& p_designator, size_t p_index);
+	private:
+		spk::SafePointer<const Texture> _texture = nullptr;
+		std::string _designator;
+		BindingPoint _bindingPoint = -1;
+		GLint _uniformDestination = -1;
+		Type _type;
 
 	public:
 		SamplerObject();
+		SamplerObject(const std::string &p_name, Type p_type, BindingPoint p_bindingPoint);
+		SamplerObject(const spk::JSON::Object &p_desc);
 
-		SamplerObject(const SamplerObject& p_other);
-		SamplerObject& operator=(const SamplerObject& p_other);
+		SamplerObject(const SamplerObject &p_other);
+		SamplerObject &operator=(const SamplerObject &p_other);
+		SamplerObject(SamplerObject &&p_other) noexcept;
+		SamplerObject &operator=(SamplerObject &&p_other) noexcept;
 
-		SamplerObject(SamplerObject&& p_other) noexcept;
-		SamplerObject& operator=(SamplerObject&& p_other) noexcept;
+		void bind(const spk::SafePointer<const Texture> &p_texture);
 
-		void bind(const spk::SafePointer<TextureObject>& p_texture);
+		spk::SafePointer<const Texture> &texture();
+		const spk::SafePointer<const Texture> &texture() const;
+
+		BindingPoint bindingPoint() const;
+		void setBindingPoint(BindingPoint p_bindingPoint);
+
+		Type type() const;
+		void setType(Type p_type);
+
 		void activate();
+		void deactivate();
 	};
 }

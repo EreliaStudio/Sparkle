@@ -1,143 +1,65 @@
 #include "structure/graphics/opengl/spk_texture_object.hpp"
 
-#include "spk_debug_macro.hpp"
-
 namespace spk::OpenGL
 {
-	void TextureObject::_upload()
+	void TextureObject::_setupTextureParameters(const Filtering &p_filtering, const Wrap &p_wrap, const Mipmap &p_mipMap)
 	{
-		if (_needUpload == true)
+		switch (p_wrap)
 		{
-			if (_id == 0)
-			{
-				glGenTextures(1, &_id);
-			}
-
-			_needSetup = true;
-
-			_setup();
-
-			glBindTexture(GL_TEXTURE_2D, _id);
-
-			glTexImage2D(
-				GL_TEXTURE_2D, 0, static_cast<GLint>(_format),
-				static_cast<GLsizei>(_size.x), static_cast<GLsizei>(_size.y),
-				0, static_cast<GLenum>(_format), GL_UNSIGNED_BYTE, _datas.data());
-
-			glBindTexture(GL_TEXTURE_2D, 0);
-
-			_ownTexture = true;
-			_needUpload = false;
+		case spk::Texture::Wrap::Repeat:
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+			break;
+		case spk::Texture::Wrap::ClampToEdge:
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			break;
+		case spk::Texture::Wrap::ClampToBorder:
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+			break;
 		}
-	}
-	
-	void TextureObject::_setup()
-	{
-		if (_needSetup == true)
+
+		switch (p_filtering)
 		{
-			glBindTexture(GL_TEXTURE_2D, _id);
-
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, static_cast<GLint>(_filtering));
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, static_cast<GLint>(_filtering));
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, static_cast<GLint>(_wrap));
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, static_cast<GLint>(_wrap));
-
-			if (_mipmap == Mipmap::Enable)
-			{
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			}
-
-			if (_mipmap == Mipmap::Enable)
-			{
-				glGenerateMipmap(GL_TEXTURE_2D);
-			}
-
-			glBindTexture(GL_TEXTURE_2D, 0);
-
-			_needSetup = false;
+		case spk::Texture::Filtering::Nearest:
+			glTexParameteri(
+				GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (p_mipMap == spk::Texture::Mipmap::Enable) ? GL_NEAREST_MIPMAP_NEAREST : GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			break;
+		case spk::Texture::Filtering::Linear:
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (p_mipMap == spk::Texture::Mipmap::Enable) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			break;
 		}
-	}
 
-	size_t TextureObject::_getBytesPerPixel(const Format& format) const
-	{
-		switch (format)
+		if (p_mipMap == spk::Texture::Mipmap::Enable)
 		{
-		case Format::GreyLevel: return 1;
-		case Format::DualChannel: return 2;
-		case Format::RGB: return 3;
-		case Format::RGBA: return 4;
-		default: return 0; // Error or unsupported format
+			glGenerateMipmap(GL_TEXTURE_2D);
 		}
 	}
 
 	TextureObject::TextureObject() :
-		_id(0),
-		_ownTexture(true),
-		_size{ 0, 0 },
-		_format(Format::Error),
-		_filtering(Filtering::Nearest),
-		_wrap(Wrap::Repeat),
-		_mipmap(Mipmap::Disable)
+		_id(0)
 	{
+		glGenTextures(1, &_id);
 	}
-
-	TextureObject::TextureObject(const TextureObject& other) :
-		_id(0),
-		_ownTexture(true),
-		_needUpload(true),
-		_needSetup(true),
-		_datas(other._datas),
-		_size(other._size),
-		_format(other._format),
-		_filtering(other._filtering),
-		_wrap(other._wrap),
-		_mipmap(other._mipmap)
-	{
-
-	}
-	TextureObject& TextureObject::operator=(const TextureObject& other)
-	{
-		if (this != &other)
-		{
-			_ownTexture = true;
-			_needUpload = true;
-			_needSetup = true;
-			_datas = other._datas;
-			_size = other._size;
-			_format = other._format;
-			_filtering = other._filtering;
-			_wrap = other._wrap;
-			_mipmap = other._mipmap;
-
-		}
-		return *this;
-	}
-
 
 	TextureObject::~TextureObject()
 	{
-		if (_ownTexture == true && _id != 0)
+		if (_id != 0)
 		{
 			glDeleteTextures(1, &_id);
+			_id = 0;
 		}
 	}
 
-	TextureObject::TextureObject(TextureObject&& p_other) noexcept :
-		_id(p_other._id),
-		_ownTexture(p_other._ownTexture),
-		_needUpload(p_other._needUpload),
-		_datas(std::move(p_other._datas)),
-		_size(p_other._size),
-		_format(p_other._format),
-		_filtering(p_other._filtering),
-		_wrap(p_other._wrap),
-		_mipmap(p_other._mipmap)
+	TextureObject::TextureObject(TextureObject &&p_other) noexcept :
+		_id(std::exchange(p_other._id, 0))
 	{
-		p_other._id = 0;
 	}
 
-	TextureObject& TextureObject::operator=(TextureObject&& p_other) noexcept
+	TextureObject &TextureObject::operator=(TextureObject &&p_other) noexcept
 	{
 		if (this != &p_other)
 		{
@@ -146,115 +68,79 @@ namespace spk::OpenGL
 				glDeleteTextures(1, &_id);
 			}
 
-			_id = p_other._id;
-			_ownTexture = p_other._ownTexture;
-			_needUpload = p_other._needUpload;
-			_datas = std::move(p_other._datas);
-			_size = p_other._size;
-			_format = p_other._format;
-			_filtering = p_other._filtering;
-			_wrap = p_other._wrap;
-			_mipmap = p_other._mipmap;
-
-			p_other._id = 0;
+			_id = std::exchange(p_other._id, 0);
 		}
-		return *this;
+		return (*this);
 	}
 
-	void TextureObject::setData(const std::vector<uint8_t>& p_data, const spk::Vector2UInt& p_size,
-		const Format& p_format, const Filtering& p_filtering,
-		const Wrap& p_wrap, const Mipmap& p_mipmap)
+	void TextureObject::upload(const spk::SafePointer<const spk::Texture> &p_textureInput)
 	{
-		if (_ownTexture == false)
+		updatePixels(p_textureInput);
+		updateSettings(p_textureInput);
+	}
+
+	void TextureObject::updatePixels(const spk::SafePointer<const spk::Texture> &p_textureInput)
+	{
+		if (p_textureInput == nullptr)
 		{
-			throw std::runtime_error("Can't set data on non-owned texture.");
+			return;
 		}
-		_datas = p_data;
-		_size = p_size;
-		_format = p_format;
-		_filtering = p_filtering;
-		_wrap = p_wrap;
-		_mipmap = p_mipmap;
-		_needUpload = true;
-	}
 
-	void TextureObject::setData(const std::vector<uint8_t>& p_data, const spk::Vector2UInt& p_size, const Format& p_format)
-	{
-		if (_ownTexture == false)
+		const spk::Texture &texture = *p_textureInput;
+
+		glBindTexture(GL_TEXTURE_2D, _id);
+
+		GLint internalFormat = GL_NONE;
+		GLenum externalFormat = GL_NONE;
+
+		OpenGLUtils::convertFormatToGLEnum(texture.format(), internalFormat, externalFormat);
+
+		if (internalFormat == GL_NONE || externalFormat == GL_NONE)
 		{
-			throw std::runtime_error("Can't set data on non-owned texture.");
+			glBindTexture(GL_TEXTURE_2D, 0);
+			return;
 		}
-		_datas = p_data;
-		_size = p_size;
-		_format = p_format;
-		_needUpload = true;
+
+		glTexImage2D(
+			GL_TEXTURE_2D, 0, internalFormat, texture.size().x, texture.size().y, 0, externalFormat, GL_UNSIGNED_BYTE, texture.pixels().data());
+
+		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 
-	void TextureObject::setData(const uint8_t* p_data, const spk::Vector2UInt& p_size,
-		const Format& p_format, const Filtering& p_filtering,
-		const Wrap& p_wrap, const Mipmap& p_mipmap)
-	{			
-		if (_ownTexture == false)
+	void TextureObject::updateSettings(const spk::SafePointer<const spk::Texture> &p_textureInput)
+	{
+		if (p_textureInput == nullptr)
 		{
-			throw std::runtime_error("Can't set data on non-owned texture.");
+			return;
 		}
-		
-		_size = p_size;
-		_format = p_format;
-		_filtering = p_filtering;
-		_wrap = p_wrap;
-		_mipmap = p_mipmap;
-		_datas.assign(p_data, p_data + (p_size.x * p_size.y * _getBytesPerPixel(p_format)));
-		_needUpload = true;
+
+		const spk::Texture &texture = *p_textureInput;
+
+		glBindTexture(GL_TEXTURE_2D, _id);
+
+		_setupTextureParameters(texture.filtering(), texture.wrap(), texture.mipmap());
+
+		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 
-	void TextureObject::setData(const uint8_t* p_data, const spk::Vector2UInt& p_size, const Format& p_format)
+	void TextureObject::allocateStorage(
+		const spk::Vector2UInt &p_size, const Format &p_format, const Filtering &p_filtering, const Wrap &p_wrap, const Mipmap &p_mipmap)
 	{
-		if (_ownTexture == false)
-		{
-			throw std::runtime_error("Can't set data on non-owned texture.");
-		}
-		_size = p_size;
-		_format = p_format;
-		_datas.assign(p_data, p_data + (p_size.x * p_size.y * _getBytesPerPixel(p_format)));
-		_needUpload = true;
+		glBindTexture(GL_TEXTURE_2D, _id);
+
+		GLint internalFormat;
+		GLenum externalFormat;
+
+		OpenGLUtils::convertFormatToGLEnum(p_format, internalFormat, externalFormat);
+
+		glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, p_size.x, p_size.y, 0, externalFormat, GL_UNSIGNED_BYTE, nullptr);
+		_setupTextureParameters(p_filtering, p_wrap, p_mipmap);
+
+		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 
-	void TextureObject::setProperties(const Filtering& p_filtering, const Wrap& p_wrap, const Mipmap& p_mipmap)
+	GLuint TextureObject::id() const
 	{
-		_filtering = p_filtering;
-		_wrap = p_wrap;
-		_mipmap = p_mipmap;
-		_needSetup = true;
-	}
-
-	const std::vector<uint8_t>& TextureObject::data() const
-	{
-		return _datas;
-	}
-
-	spk::Vector2UInt TextureObject::size() const
-	{
-		return _size;
-	}
-
-	TextureObject::Format TextureObject::format() const
-	{
-		return _format;
-	}
-
-	TextureObject::Filtering TextureObject::filtering() const
-	{
-		return _filtering;
-	}
-
-	TextureObject::Wrap TextureObject::wrap() const
-	{
-		return _wrap;
-	}
-
-	TextureObject::Mipmap TextureObject::mipmap() const
-	{
-		return _mipmap;
+		return (_id);
 	}
 }

@@ -1,0 +1,11 @@
+{
+	"SpriteSheets":[
+		{
+			"Name":"ChunkTileset",
+			"Path":"playground/resources/texture/chunk_tilemap.png",
+			"Size":[8, 6]
+		}
+	],
+	"Images":[],
+	"Fonts":[]
+}

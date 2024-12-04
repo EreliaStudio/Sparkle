@@ -2,6 +2,8 @@
 
 #include <stdexcept>
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	float degreeToRadian(float p_degrees)
@@ -14,18 +16,20 @@ namespace spk
 		return static_cast<float>(p_radians * (180.0f / M_PI));
 	}
 
-	intmax_t positiveModulo(const intmax_t& p_value, const intmax_t& p_modulo)
+	intmax_t positiveModulo(const intmax_t &p_value, const intmax_t &p_modulo)
 	{
 		if (p_modulo == 0)
 		{
 			throw std::invalid_argument("Modulo by zero is not allowed.");
 		}
 
-		intmax_t result = p_value % p_modulo;
-		if (result < 0)
+		intmax_t tmpValue = p_value;
+		while (tmpValue < 0)
 		{
-			result += p_modulo;
+			tmpValue += p_modulo;
 		}
+		intmax_t result = tmpValue % p_modulo;
+		
 		return result;
 	}
 }

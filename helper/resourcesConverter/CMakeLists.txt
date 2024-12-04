@@ -1,0 +1,1 @@
+add_executable(sparkleResourcesConverter main.cpp)

@@ -1,7 +1,9 @@
 #pragma once
 
 #include <GL/glew.h>
+
 #include <GL/gl.h>
+
 #include "structure/container/spk_data_buffer.hpp"
 
 namespace spk::OpenGL
@@ -57,21 +59,23 @@ namespace spk::OpenGL
 		VertexBufferObject(Type p_type, Usage p_usage);
 		~VertexBufferObject();
 
-		VertexBufferObject(const VertexBufferObject& p_other);
-		VertexBufferObject(VertexBufferObject&& p_other) noexcept;
+		VertexBufferObject(const VertexBufferObject &p_other);
+		VertexBufferObject(VertexBufferObject &&p_other) noexcept;
 
-		VertexBufferObject& operator=(const VertexBufferObject& p_other);
-		VertexBufferObject& operator=(VertexBufferObject&& p_other) noexcept;
+		VertexBufferObject &operator=(const VertexBufferObject &p_other);
+		VertexBufferObject &operator=(VertexBufferObject &&p_other) noexcept;
 
 		virtual void activate();
 		void deactivate();
 
 		void clear();
-		void resize(size_t p_size);
-		void* data();
+		virtual void resize(size_t p_size);
+		DataBuffer &dataBuffer();
+		uint8_t *data();
+		const uint8_t *data() const;
 		size_t size() const;
-		void edit(const void* p_data, size_t p_dataSize, size_t p_offset);
-		void append(const void* p_data, size_t p_dataSize);
+		void edit(const void *p_data, size_t p_dataSize, size_t p_offset);
+		void append(const void *p_data, size_t p_dataSize);
 		void validate();
 	};
 }
