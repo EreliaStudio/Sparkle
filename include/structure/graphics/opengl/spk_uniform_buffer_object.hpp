@@ -101,6 +101,7 @@ namespace spk::OpenGL
 			char* _destination;
 			DataRepresentation _cpu;
 			DataRepresentation _gpu;
+			size_t _arraySize = 1;
 			bool _tightlyPacked;
 
 			std::unordered_map<std::wstring, Element> _innerLayouts;
@@ -114,8 +115,27 @@ namespace spk::OpenGL
 			void bind(char* p_destination);
 
 			template <typename TType>
+			Layout& operator=(const std::vector<TType>& p_data)
+			{
+				if (_arraySize == 1)
+					throw std::invalid_argument("Cannot assign vector data to non-array uniform buffer object layout.");
+
+				if (p_data.size() != _arraySize)
+					throw std::invalid_argument("Data size does not match the size of the uniform buffer object array.");
+
+				if (sizeof(TType) * p_data.size() != _cpu.size)
+					throw std::invalid_argument("Unexpected parameter type provided to uniform buffer object.\nExpected [" + std::to_string(_cpu.size) + "] byte(s), received [" + std::to_string(sizeof(TType) * p_data.size()) + "].");
+
+				_pushData(reinterpret_cast<const char*>(p_data.data()));
+				return *this;
+			}
+
+			template <typename TType>
 			Layout& operator=(const TType& p_data)
 			{
+				if (_arraySize > 1)
+					throw std::invalid_argument("Cannot assign single value to array uniform buffer object layout.");
+
 				if (sizeof(TType) != _cpu.size)
 					throw std::invalid_argument("Unexpected parameter type provided to uniform buffer object.\nExpected [" + std::to_string(_cpu.size) + "] byte(s), received [" + std::to_string(sizeof(TType)) + "].");
 

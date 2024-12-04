@@ -8,6 +8,8 @@
 #include <gl/GL.h>
 #include <gl/GLU.h>
 
+#include "utils/spk_string_utils.hpp"
+
 namespace spk
 {
 	void Window::_initialize(const std::function<void(spk::SafePointer<spk::Window>)>& p_onClosureCallback)
@@ -70,11 +72,13 @@ namespace spk
 		{
 			throw std::runtime_error("Failed to adjust window rect.");
 		}
+		
+		std::string convertedTitle = spk::StringUtils::wstringToString(_title);
 
-		_hwnd = CreateWindowExW(
+		_hwnd = CreateWindowEx(
 			0,
-			L"SPKWindowClass",
-			_title.c_str(),
+			"SPKWindowClass",
+			convertedTitle.c_str(),
 			WS_OVERLAPPEDWINDOW,
 			_viewport.geometry().x, _viewport.geometry().y,
 			adjustedRect.right - adjustedRect.left,

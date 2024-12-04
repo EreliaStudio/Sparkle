@@ -27,6 +27,8 @@ target_link_libraries(Sparkle PUBLIC OpenGL::GL)
 
 target_link_libraries(Sparkle PUBLIC dinput8 dxguid ws2_32)
 
+message("Include : ${SPARKLE_INCLUDE_DIR}")
+
 # Include directories
 target_include_directories(Sparkle
     PUBLIC
@@ -71,12 +73,13 @@ install(TARGETS Sparkle
 )
 
 # Install header files
-install(DIRECTORY ${SPARKLE_INCLUDE_DIR}/
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/
     DESTINATION include
     FILES_MATCHING
         PATTERN "*.hpp"
         PATTERN "*.h"
 )
+
 
 # Create a CMake configuration file for find_package support
 include(CMakePackageConfigHelpers)

@@ -45,11 +45,24 @@ namespace spk::OpenGL
 		}
 		else
 		{
-			for (auto& [name, element] : _innerLayouts)
+			if (_arraySize > 1)
 			{
-				for (auto& layout : element.layouts)
+				for (size_t i = 0; i < _arraySize; ++i)
 				{
-					layout._pushData(p_basePtr + layout._cpu.offset);
+					const char* elementPtr = p_basePtr + i * (_cpu.size / _arraySize);
+					char* destinationPtr = _destination + _gpu.offset + i * (_gpu.size / _arraySize);
+
+					std::memcpy(destinationPtr, elementPtr, _cpu.size / _arraySize);
+				}
+			}
+			else
+			{
+				for (auto& [name, element] : _innerLayouts)
+				{
+					for (auto& layout : element.layouts)
+					{
+						layout._pushData(p_basePtr + layout._cpu.offset);
+					}
 				}
 			}
 		}
