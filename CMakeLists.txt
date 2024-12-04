@@ -25,6 +25,8 @@ target_link_libraries(Sparkle PUBLIC GLEW::GLEW)
 find_package(OpenGL REQUIRED)
 target_link_libraries(Sparkle PUBLIC OpenGL::GL)
 
+target_link_libraries(Sparkle PUBLIC dinput8 dxguid)
+
 # Include directories
 target_include_directories(Sparkle
     PUBLIC
