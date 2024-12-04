@@ -6,9 +6,18 @@ namespace spk
 {
 	void UpdateModule::_treatEvent(spk::UpdateEvent&& p_event)
 	{
+		if (_lastTime == 0)
+		{
+			_lastTime = p_event.time;
+		}
+
+		p_event.deltaTime = p_event.time - _lastTime;
 		p_event.keyboard = _keyboard;
 		p_event.mouse = _mouse;
 		p_event.controller = _controller;
+
+		_lastTime = p_event.time;
+
 		_rootWidget->onUpdateEvent(p_event);
 	}
 
