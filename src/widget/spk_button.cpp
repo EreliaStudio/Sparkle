@@ -13,7 +13,7 @@ namespace spk
             colorBox(state).setCornerSize({ 16, 16 });
 
             textRenderer(state).setLayer(layer() + 0.1f);
-            textRenderer(state).setText(L"Button");
+            textRenderer(state).setText(L"Button text");
             textRenderer(state).setFontSize({ 24, 4 });
             textRenderer(state).setColors(spk::Color::black, spk::Color::white);
 
@@ -85,6 +85,11 @@ namespace spk
         {
             colorBox(currentState).render();
         }
+
+		if (textRenderer(currentState).font() == nullptr)
+		{
+			throw std::runtime_error("No font set for widget [" + spk::StringUtils::wstringToString(name()) + "]");
+		}
 
         textRenderer(currentState).render();
     }
