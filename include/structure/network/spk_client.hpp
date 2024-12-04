@@ -10,8 +10,6 @@
 #include "structure/container/spk_pool.hpp"
 #include "structure/container/spk_thread_safe_queue.hpp"
 
-#pragma comment(lib, "Ws2_32.lib")
-
 namespace spk
 {
 	class Client
