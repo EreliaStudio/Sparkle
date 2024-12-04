@@ -112,10 +112,14 @@ namespace spk
 			return;
 		}
 
+		MSG msg;
+		PeekMessage(&msg, nullptr, 0, 0, PM_NOREMOVE);
+
 		_updateTimerID = SetTimer(_hwnd, 1, static_cast<UINT>(p_durationInMillisecond), nullptr);
 		if (_updateTimerID == 0)
 		{
-			throw std::runtime_error("Failed to set update timer.");
+			DWORD errorCode = GetLastError();
+			throw std::runtime_error("Failed to set update timer. Error code: " + std::to_string(errorCode));
 		}
 	}
 
