@@ -65,6 +65,11 @@
 #include "structure/math/spk_vector2.hpp"
 #include "structure/math/spk_vector3.hpp"
 
+#include "structure/network/spk_message.hpp"
+#include "structure/network/spk_client.hpp"
+#include "structure/network/spk_server.hpp"
+#include "structure/network/spk_node_system.hpp"
+
 #include "structure/system/spk_input_state.hpp"
 #include "structure/system/device/spk_controller.hpp"
 #include "structure/system/device/spk_controller_input_thread.hpp"
