@@ -34,7 +34,7 @@ namespace spk
 
             m_cond.wait(lock, [&]() { return !m_queue.empty(); });
 
-            TType item = m_queue.front();
+            TType item = std::move(m_queue.front());
             m_queue.pop();
 
             return std::move(item);
