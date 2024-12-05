@@ -41,7 +41,8 @@
 		"inherits": "default",
 		"description": "Configure with Test Units enabled",
 		"cacheVariables": {
-		  "ENABLE_TESTS": "ON"
+		  "ENABLE_TESTS": "ON",
+		  "CMAKE_CXX_FLAGS": "--coverage"
 		}
 	  },
 	  {

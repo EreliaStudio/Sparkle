@@ -6,6 +6,8 @@ include(GoogleTest)
 
 set(SPARKLE_CHECKER_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
+set(CMAKE_CXX_FLAGS --coverage)
+
 file(GLOB_RECURSE SPARKLE_CHECKER_SOURCES ${SPARKLE_CHECKER_SRC_DIR}/*.cpp)
 
 # Include directories for tests
