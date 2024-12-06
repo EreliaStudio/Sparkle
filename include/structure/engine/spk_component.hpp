@@ -12,43 +12,27 @@ namespace spk
 		friend class Entity;
 
 	private:
+		int _priority;
 		std::wstring _name;
 		spk::SafePointer<Entity> _owner;
 
 	public:
-		Component(const std::wstring& p_name, spk::SafePointer<Entity> p_owner) :
-			_name(p_name),
-			_owner(p_owner)
-		{
+		Component(const std::wstring& p_name);
 
-		}
+		void setName(const std::wstring& p_name);
+		void setPriority(const int& p_priority);
 
-		void setName(const std::wstring& p_name)
-		{
-			_name = p_name;
-		}
+		const std::wstring& name() const;
+		int priority() const;
+		spk::SafePointer<Entity> owner();
+		const spk::SafePointer<const Entity> owner() const;
 
-		const std::wstring& name() const
-		{
-			return (_name);
-		}
+		virtual void start();
+		virtual void awake();
+		virtual void sleep();
+		virtual void stop();
 
-		spk::SafePointer<Entity> owner()
-		{
-			return (_owner);
-		}
-
-		const spk::SafePointer<const Entity> owner() const
-		{
-			return (_owner);
-		}
-
-		virtual void start() {}
-		virtual void awake() {}
-		virtual void sleep() {}
-		virtual void stop() {}
-
-		virtual void render() {};
-		virtual void update(const long long& p_deltaTime) {}; // Delta time in millisecond
+		virtual void render();
+		virtual void update(const long long& p_deltaTime); // Delta time in millisecond
 	};
 }

@@ -75,6 +75,11 @@ namespace spk
 			}
 		}
 
+		static spk::IMatrix<SizeX, SizeY> identity()
+		{
+			return (spk::IMatrix<SizeX, SizeY>());
+		}
+
 		Column& operator[](size_t p_index)
 		{
 			if (p_index >= SizeX)
