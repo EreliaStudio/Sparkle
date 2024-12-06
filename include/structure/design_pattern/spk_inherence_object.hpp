@@ -93,6 +93,11 @@ namespace spk
 			return _parent;
 		}
 
+		ChildArray& children()
+		{
+			return _children;
+		}
+
 		const ChildArray& children() const
 		{
 			return _children;
