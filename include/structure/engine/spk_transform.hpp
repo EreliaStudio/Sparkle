@@ -12,6 +12,7 @@ namespace spk
     {
     private:
         spk::Matrix4x4 _model;
+        spk::Matrix4x4 _inverseModel;
 
         spk::Vector3 _position;
         spk::Quaternion _rotation;
