@@ -5,6 +5,7 @@
 
 #include "structure/math/spk_vector2.hpp"
 #include "structure/math/spk_vector3.hpp"
+#include "structure/math/spk_quaternion.hpp"
 
 namespace spk
 {
@@ -381,6 +382,106 @@ namespace spk
 			result[3][2] = -(p_farPlane + p_nearPlane) / (p_farPlane - p_nearPlane);
 
 			return result;
+		}
+
+		template <size_t X = SizeX, size_t Y = SizeY, typename std::enable_if_t<(X == 4 && Y == 4), int> = 0>
+		static IMatrix<4,4> rotationMatrix(const spk::Quaternion &q)
+		{
+			float xx = q.x * q.x;
+			float yy = q.y * q.y;
+			float zz = q.z * q.z;
+			float xy = q.x * q.y;
+			float xz = q.x * q.z;
+			float yz = q.y * q.z;
+			float wx = q.w * q.x;
+			float wy = q.w * q.y;
+			float wz = q.w * q.z;
+
+			IMatrix<4,4> rotationMatrix;
+			rotationMatrix[0][0] = 1.0f - 2.0f * (yy + zz);
+			rotationMatrix[0][1] = 2.0f * (xy - wz);
+			rotationMatrix[0][2] = 2.0f * (xz + wy);
+			rotationMatrix[0][3] = 0.0f;
+
+			rotationMatrix[1][0] = 2.0f * (xy + wz);
+			rotationMatrix[1][1] = 1.0f - 2.0f * (xx + zz);
+			rotationMatrix[1][2] = 2.0f * (yz - wx);
+			rotationMatrix[1][3] = 0.0f;
+
+			rotationMatrix[2][0] = 2.0f * (xz - wy);
+			rotationMatrix[2][1] = 2.0f * (yz + wx);
+			rotationMatrix[2][2] = 1.0f - 2.0f * (xx + yy);
+			rotationMatrix[2][3] = 0.0f;
+
+			rotationMatrix[3][0] = 0.0f;
+			rotationMatrix[3][1] = 0.0f;
+			rotationMatrix[3][2] = 0.0f;
+			rotationMatrix[3][3] = 1.0f;
+
+			return rotationMatrix;
+		}
+
+		IMatrix<SizeX, SizeY> inverse() const
+		{
+			if (SizeX != SizeY)
+			{
+				throw std::runtime_error("Matrix inversion requires a square matrix.");
+			}
+
+			const size_t N = SizeX;
+			IMatrix<SizeX, SizeY> A(*this);
+			IMatrix<SizeX, SizeY> B = IMatrix<SizeX, SizeY>::identity();
+
+			for (size_t i = 0; i < N; i++)
+			{
+				float maxElem = std::fabs(A[i][i]);
+				size_t pivotRow = i;
+				for (size_t k = i + 1; k < N; k++)
+				{
+					float val = std::fabs(A[i][k]);
+					if (val > maxElem)
+					{
+						maxElem = val;
+						pivotRow = k;
+					}
+				}
+
+				if (pivotRow != i)
+				{
+					for (size_t col = 0; col < N; col++)
+					{
+						std::swap(A[col][i], A[col][pivotRow]);
+						std::swap(B[col][i], B[col][pivotRow]);
+					}
+				}
+
+				float pivotVal = A[i][i];
+				if (std::fabs(pivotVal) < 1e-9f)
+				{
+					throw std::runtime_error("Matrix is not invertible (singular pivot encountered).");
+				}
+
+				for (size_t col = 0; col < N; col++)
+				{
+					A[col][i] /= pivotVal;
+					B[col][i] /= pivotVal;
+				}
+
+				for (size_t row = 0; row < N; row++)
+				{
+					if (row != i)
+					{
+						float factor = A[i][row];
+						for (size_t col = 0; col < N; col++)
+						{
+							A[col][row] -= factor * A[col][i];
+							B[col][row] -= factor * B[col][i];
+						}
+					}
+				}
+			}
+
+			return B;
 		}
 	};
 

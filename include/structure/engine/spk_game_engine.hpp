@@ -22,6 +22,11 @@ namespace spk
 		std::vector<spk::SafePointer<Entity>> getEntities(const std::wstring& p_name);
 		std::vector<spk::SafePointer<const Entity>> getEntities(const std::wstring& p_name) const;
 
+		spk::SafePointer<Entity> getEntityByTag(const std::wstring& p_name);
+		spk::SafePointer<const Entity> getEntityByTag(const std::wstring& p_name) const;
+		std::vector<spk::SafePointer<Entity>> getEntitiesByTag(const std::wstring& p_name);
+		std::vector<spk::SafePointer<const Entity>> getEntitiesByTag(const std::wstring& p_name) const;
+
 		bool contains(const std::wstring& p_name) const;
 
 		size_t count(const std::wstring& p_name) const;

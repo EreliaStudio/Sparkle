@@ -82,6 +82,13 @@ namespace spk::OpenGL
 					throw std::out_of_range("Index out of range.");
 				return layouts[index];
 			}
+
+			Layout& operator[](const std::wstring& p_name)
+			{
+				if (layouts.empty())
+					throw std::runtime_error("No layouts to convert from.");
+				return layouts[0][p_name];
+			}
 		};
 
 		class Layout

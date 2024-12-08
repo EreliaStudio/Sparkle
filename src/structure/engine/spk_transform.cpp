@@ -18,9 +18,19 @@ namespace spk
 		_updateModel();
 	}
 
+	ContractProvider::Contract Transform::addOnEditionCallback(const std::function<void()>& p_callback)
+	{
+		return (std::move(_onEditContractProvider.subscribe(p_callback)));
+	}
+
 	const spk::Matrix4x4 &Transform::model() const
 	{
 		return (_model);
+	}
+
+	const spk::Matrix4x4 &Transform::inverseModel() const
+	{
+		return (_inverseModel);
 	}
 
 	const spk::Vector3 &Transform::position() const
@@ -121,37 +131,7 @@ namespace spk
 	{
 		spk::Matrix4x4 translationMatrix = spk::Matrix4x4::translationMatrix(_position);
 		spk::Matrix4x4 scaleMatrix = spk::Matrix4x4::scaleMatrix(_scale);
-
-		float xx = _rotation.x * _rotation.x;
-		float yy = _rotation.y * _rotation.y;
-		float zz = _rotation.z * _rotation.z;
-		float xy = _rotation.x * _rotation.y;
-		float xz = _rotation.x * _rotation.z;
-		float yz = _rotation.y * _rotation.z;
-		float wx = _rotation.w * _rotation.x;
-		float wy = _rotation.w * _rotation.y;
-		float wz = _rotation.w * _rotation.z;
-
-		spk::Matrix4x4 rotationMatrix;
-		rotationMatrix[0][0] = 1.0f - 2.0f * (yy + zz);
-		rotationMatrix[0][1] = 2.0f * (xy - wz);
-		rotationMatrix[0][2] = 2.0f * (xz + wy);
-		rotationMatrix[0][3] = 0.0f;
-
-		rotationMatrix[1][0] = 2.0f * (xy + wz);
-		rotationMatrix[1][1] = 1.0f - 2.0f * (xx + zz);
-		rotationMatrix[1][2] = 2.0f * (yz - wx);
-		rotationMatrix[1][3] = 0.0f;
-
-		rotationMatrix[2][0] = 2.0f * (xz - wy);
-		rotationMatrix[2][1] = 2.0f * (yz + wx);
-		rotationMatrix[2][2] = 1.0f - 2.0f * (xx + yy);
-		rotationMatrix[2][3] = 0.0f;
-
-		rotationMatrix[3][0] = 0.0f;
-		rotationMatrix[3][1] = 0.0f;
-		rotationMatrix[3][2] = 0.0f;
-		rotationMatrix[3][3] = 1.0f;
+		spk::Matrix4x4 rotationMatrix = spk::Matrix4x4::rotationMatrix(_rotation);
 
 		spk::Matrix4x4 parentModel = spk::Matrix4x4::identity();
 		spk::SafePointer<Entity> entityOwner = owner();
@@ -163,6 +143,7 @@ namespace spk
 		}
 
 		_model = parentModel * translationMatrix * rotationMatrix * scaleMatrix;
+		_inverseModel = _model.inverse();
 
 		_forward = _rotation * spk::Vector3(0.0f, 0.0f, 1.0f);
 		_right = _rotation * spk::Vector3(1.0f, 0.0f, 0.0f);
