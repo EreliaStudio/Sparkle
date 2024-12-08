@@ -1,5 +1,6 @@
 #pragma once
 
+#include "structure/design_pattern/spk_contract_provider.hpp"
 #include "structure/engine/spk_component.hpp"
 #include "structure/math/spk_vector3.hpp"
 #include "structure/math/spk_matrix.hpp"
@@ -12,6 +13,7 @@ namespace spk
     {
     private:
         spk::Matrix4x4 _model;
+        spk::Matrix4x4 _inverseModel;
 
         spk::Vector3 _position;
         spk::Quaternion _rotation;
@@ -23,10 +25,15 @@ namespace spk
         spk::Vector3 _right;
         spk::Vector3 _up;
 
+		ContractProvider _onEditContractProvider;
+
     public:
         Transform();
 
+		ContractProvider::Contract addOnEditionCallback(const std::function<void()>& p_callback);
+
         const spk::Matrix4x4& model() const;
+        const spk::Matrix4x4& inverseModel() const;
 
         const spk::Vector3& position() const;
         

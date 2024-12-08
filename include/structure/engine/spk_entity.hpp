@@ -1,8 +1,11 @@
 #pragma once
 
+#include "structure/system/spk_boolean_enum.hpp"
 #include "structure/design_pattern/spk_inherence_object.hpp"
 #include "structure/design_pattern/spk_activable_object.hpp"
 
+#include <span>
+#include <set>
 #include <string>
 #include "structure/engine/spk_transform.hpp"
 
@@ -12,6 +15,7 @@ namespace spk
 	{
 	private:
 		std::wstring _name;
+		std::set<std::wstring> _tags;
 
 		int _priority;
 		
@@ -75,7 +79,13 @@ namespace spk
 		void setName(const std::wstring& p_name);
 		void setPriority(const int& p_priority);
 
+		void addTag(const std::wstring& p_tag);
+		void removeTag(const std::wstring& p_tag);
+		void clearTags();
+		bool containTag(const std::wstring& p_tag) const;
+
 		const std::wstring& name() const;
+		const std::set<std::wstring>& tags() const;
 		int priority() const;
 		Transform& transform();
 		const Transform& transform() const;
@@ -187,5 +197,19 @@ namespace spk
 		std::vector<spk::SafePointer<const Entity>> getChildren(const std::wstring& p_name) const;
 		bool contains(const std::wstring& p_name) const;
 		size_t count(const std::wstring& p_name) const;
+
+		spk::SafePointer<Entity> getChildByTag(const std::wstring& p_tag);
+		spk::SafePointer<const Entity> getChildByTag(const std::wstring& p_tag) const;
+		std::vector<spk::SafePointer<Entity>> getChildrenByTag(const std::wstring& p_tag);
+		std::vector<spk::SafePointer<const Entity>> getChildrenByTag(const std::wstring& p_tag) const;
+		bool containsTag(const std::wstring& p_tag) const;
+		size_t countTag(const std::wstring& p_tag) const;
+
+		spk::SafePointer<Entity> getChildByTags(const std::span<const std::wstring>& p_tags, spk::BinaryOperator p_binaryOperator = spk::BinaryOperator::AND);
+		spk::SafePointer<const Entity> getChildByTags(const std::span<const std::wstring>& p_tags, spk::BinaryOperator p_binaryOperator = spk::BinaryOperator::AND) const;
+		std::vector<spk::SafePointer<Entity>> getChildrenByTags(const std::span<const std::wstring>& p_tags, spk::BinaryOperator p_binaryOperator = spk::BinaryOperator::AND);
+		std::vector<spk::SafePointer<const Entity>> getChildrenByTags(const std::span<const std::wstring>& p_tags, spk::BinaryOperator p_binaryOperator = spk::BinaryOperator::AND) const;
+		bool containsTags(const std::span<const std::wstring>& p_tags, spk::BinaryOperator p_binaryOperator = spk::BinaryOperator::AND) const;
+		size_t countTags(const std::span<const std::wstring>& p_tags, spk::BinaryOperator p_binaryOperator = spk::BinaryOperator::AND) const;
 	};
 }

@@ -60,10 +60,35 @@ namespace spk
 			static_cast<Entity*>(parent())->sortChildren();
 		}
 	}
+	
+	void Entity::addTag(const std::wstring& p_tag)
+	{
+		_tags.insert(p_tag);
+	}
+	
+	void Entity::removeTag(const std::wstring& p_tag)
+	{
+		_tags.erase(p_tag);
+	}
+	
+	void Entity::clearTags()
+	{
+		_tags.clear();
+	}
+	
+	bool Entity::containTag(const std::wstring& p_tag) const
+	{
+		return _tags.find(p_tag) != _tags.end();
+	}
 
 	const std::wstring& Entity::name() const
 	{
 		return (_name);
+	}
+
+	const std::set<std::wstring>& Entity::tags() const
+	{
+		return (_tags);
 	}
 
 	int Entity::priority() const
@@ -205,6 +230,122 @@ namespace spk
 			[&](const spk::SafePointer<Entity>& p_entity)
 			{
 				return p_entity->name() == p_name;
+			});
+	}
+
+	spk::SafePointer<Entity> Entity::getChildByTag(const std::wstring& p_tag)
+	{
+		return getChildByTags(std::span<const std::wstring>(&p_tag, 1));
+	}
+
+	spk::SafePointer<const Entity> Entity::getChildByTag(const std::wstring& p_tag) const
+	{
+		return getChildByTags(std::span<const std::wstring>(&p_tag, 1));
+	}
+	
+	std::vector<spk::SafePointer<Entity>> Entity::getChildrenByTag(const std::wstring& p_tag)
+	{
+		return (getChildrenByTag({p_tag}));
+	}
+	
+	std::vector<spk::SafePointer<const Entity>> Entity::getChildrenByTag(const std::wstring& p_tag) const
+	{
+		return (getChildrenByTag({p_tag}));
+	}
+	
+	bool Entity::containsTag(const std::wstring& p_tag) const
+	{
+		return (contains({p_tag}));
+	}
+	
+	size_t Entity::countTag(const std::wstring& p_tag) const
+	{
+		return (count({p_tag}));
+	}
+
+	static bool matchesTags(const Entity& entity, const std::span<const std::wstring>& tags, spk::BinaryOperator op)
+	{
+		if (op == spk::BinaryOperator::AND)
+		{
+			return std::all_of(tags.begin(), tags.end(), [&](const std::wstring& tag) {
+				return entity.containTag(tag);
+			});
+		}
+		else // spk::BinaryOperator::OR
+		{
+			return std::any_of(tags.begin(), tags.end(), [&](const std::wstring& tag) {
+				return entity.containTag(tag);
+			});
+		}
+	}
+
+	spk::SafePointer<Entity> Entity::getChildByTags(const std::span<const std::wstring>& p_tags, spk::BinaryOperator p_binaryOperator)
+	{
+		for (auto& child : children())
+		{
+			if (matchesTags(*child, p_tags, p_binaryOperator))
+			{
+				return child;
+			}
+		}
+		return nullptr;
+	}
+
+	spk::SafePointer<const Entity> Entity::getChildByTags(const std::span<const std::wstring>& p_tags, spk::BinaryOperator p_binaryOperator) const
+	{
+		for (const auto& child : children())
+		{
+			if (matchesTags(*child, p_tags, p_binaryOperator))
+			{
+				return child;
+			}
+		}
+		return nullptr;
+	}
+
+	std::vector<spk::SafePointer<Entity>> Entity::getChildrenByTags(const std::span<const std::wstring>& p_tags, spk::BinaryOperator p_binaryOperator)
+	{
+		std::vector<spk::SafePointer<Entity>> result;
+
+		for (auto& child : children())
+		{
+			if (matchesTags(*child, p_tags, p_binaryOperator))
+			{
+				result.push_back(child);
+			}
+		}
+		return result;
+	}
+
+	std::vector<spk::SafePointer<const Entity>> Entity::getChildrenByTags(const std::span<const std::wstring>& p_tags, spk::BinaryOperator p_binaryOperator) const
+	{
+		std::vector<spk::SafePointer<const Entity>> result;
+
+		for (const auto& child : children())
+		{
+			if (matchesTags(*child, p_tags, p_binaryOperator))
+			{
+				result.push_back(child);
+			}
+		}
+		return result;
+	}
+
+	bool Entity::containsTags(const std::span<const std::wstring>& p_tags, spk::BinaryOperator p_binaryOperator) const
+	{
+		return std::any_of(children().begin(), children().end(),
+			[&](const spk::SafePointer<const Entity>& child)
+			{
+				return matchesTags(*child, p_tags, p_binaryOperator);
+			});
+	}
+
+	size_t Entity::countTags(const std::span<const std::wstring>& p_tags, spk::BinaryOperator p_binaryOperator) const
+	{
+		return std::count_if(children().begin(), children().end(),
+			[&](const spk::SafePointer<const Entity>& child)
+			{
+				return matchesTags(*child, p_tags, p_binaryOperator);
 			});
 	}
 }
