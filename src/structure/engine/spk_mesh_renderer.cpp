@@ -2,6 +2,8 @@
 
 #include "structure/engine/spk_entity.hpp"
 
+#include "spk_debug_macro.hpp"
+
 namespace spk
 {
 	std::string MeshRenderer::_pipelineCode = R"(## LAYOUTS DEFINITION ##
@@ -74,7 +76,7 @@ void main()
     vec4 viewPosition = spk_CameraConstants.view * worldPosition;
     gl_Position = (spk_CameraConstants.projection * viewPosition);
     fragmentUVs = modelUVs;
-    fragmentNormal = (modelInformations.inverseModelMatrix * (vec4(modelNormals, 0)).xyz);
+    fragmentNormal = vec3((modelInformations.inverseModelMatrix * vec4(modelNormals, 0)).xyz);
     out_instanceID = gl_InstanceID;
 }
 
@@ -136,7 +138,7 @@ void main()
 		if (_mesh->baked() == false)
 		{
 			_mesh->bake();
-			_needMeshUpload = false;
+			_needMeshUpload = true;
 		}
 
 		if (_needMeshUpload == true)
@@ -151,7 +153,7 @@ void main()
 			_object.indexes().validate();
 		}
 
-		_object.render(1);
+		_object.render();
 	}
 
 	void MeshRenderer::awake()
@@ -159,7 +161,9 @@ void main()
 		_onTransformEditionContract = owner()->transform().addOnEditionCallback([&](){
 			_modelMatrixElement = owner()->transform().model();
 			_modelInverseMatrixElement = owner()->transform().inverseModel();
+			_modelInformations.validate();
 		});
+		_onTransformEditionContract.trigger();
 	}
 
 	void MeshRenderer::sleep()

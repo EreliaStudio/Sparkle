@@ -94,24 +94,23 @@ namespace spk
 		TComponentType& addComponent(TArgs&&... p_args)
 		{
 			static_assert(std::is_base_of_v<Component, TComponentType>, "TComponentType must inherit from Component");
-			std::unique_ptr<TComponentType> newComponent = std::make_unique<TComponentType>(std::forward<TArgs>(p_args)...);
-			TComponentType* result = newComponent.get();
+			TComponentType* newComponent = new TComponentType(std::forward<TArgs>(p_args)...);
 
 			{
 				std::unique_lock<std::mutex> lock(_componentMutex);
 			
-				_components.emplace_back(std::move(newComponent));
+				_components.emplace_back(std::unique_ptr<Component>(newComponent));
 			}
 
 			newComponent->_owner = this;
-			result->start();
 
+			newComponent->start();
 			if (isActive() == true)
 			{
-				result->awake();
+				newComponent->awake();
 			}
 
-			return (*result);
+			return (*newComponent);
 		}
 
 		void removeComponent(const std::wstring& p_name);
@@ -119,9 +118,9 @@ namespace spk
 		template <typename TComponentType>
 		TComponentType& getComponent(const std::wstring& p_name = L"")
 		{
-			for (auto* component : _components)
+			for (std::unique_ptr<Component>& component : _components)
 			{
-				TComponentType* castedComponent = dynamic_cast<TComponentType*>(component);
+				TComponentType* castedComponent = dynamic_cast<TComponentType*>(component.get());
 				if (castedComponent != nullptr)
 				{
 					if (p_name.empty() || castedComponent->name() == p_name)
@@ -139,9 +138,9 @@ namespace spk
 		{
 			std::vector<spk::SafePointer<TComponentType>> result;
 
-			for (auto* component : _components)
+			for (std::unique_ptr<Component>& component : _components)
 			{
-				TComponentType* castedComponent = dynamic_cast<TComponentType*>(component);
+				TComponentType* castedComponent = dynamic_cast<TComponentType*>(component.get());
 				if (castedComponent != nullptr)
 				{
 					result.emplace_back(castedComponent);
@@ -154,9 +153,9 @@ namespace spk
 		template <typename TComponentType>
 		const TComponentType& getComponent(const std::wstring& p_name = L"") const
 		{
-			for (auto* component : _components)
+			for (std::unique_ptr<Component>& component : _components)
 			{
-				TComponentType* castedComponent = dynamic_cast<TComponentType*>(component);
+				TComponentType* castedComponent = dynamic_cast<TComponentType*>(component.get());
 				if (castedComponent != nullptr)
 				{
 					if (p_name.empty() || castedComponent->name() == p_name)
@@ -174,9 +173,9 @@ namespace spk
 		{
 			std::vector<spk::SafePointer<const TComponentType>> result;
 
-			for (auto* component : _components)
+			for (std::unique_ptr<Component>& component : _components)
 			{
-				TComponentType* castedComponent = dynamic_cast<TComponentType*>(component);
+				TComponentType* castedComponent = dynamic_cast<TComponentType*>(component.get());
 				if (castedComponent != nullptr)
 				{
 					result.emplace_back(castedComponent);

@@ -1,5 +1,7 @@
 #include "application/module/spk_keyboard_module.hpp"
 
+#include "structure/graphics/spk_window.hpp"
+
 namespace spk
 {
 	void KeyboardModule::_treatEvent(spk::KeyboardEvent&& p_event)
@@ -33,7 +35,7 @@ namespace spk
 		}
 		}
 		p_event.keyboard = &_keyboard;
-		_rootWidget->onKeyboardEvent(p_event);
+		p_event.window->widget()->onKeyboardEvent(p_event);
 	}
 
 	spk::KeyboardEvent KeyboardModule::_convertEventToEventType(spk::Event&& p_event)
@@ -41,15 +43,9 @@ namespace spk
 		return (p_event.keyboardEvent);
 	}
 
-	KeyboardModule::KeyboardModule() : 
-		_rootWidget(nullptr)
+	KeyboardModule::KeyboardModule()
 	{
 
-	}
-
-	void KeyboardModule::linkToWidget(spk::Widget* p_rootWidget)
-	{
-		_rootWidget = p_rootWidget;
 	}
 
 	const spk::Keyboard& KeyboardModule::keyboard() const

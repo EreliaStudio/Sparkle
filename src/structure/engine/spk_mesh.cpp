@@ -1,5 +1,7 @@
 #include "structure/engine/spk_mesh.hpp"
 
+#include "spk_debug_macro.hpp"
+
 namespace spk
 {
 	Mesh::VertexIndex::VertexIndex() :
@@ -105,7 +107,7 @@ namespace spk
 	}
 
 	void Mesh::addFace(Mesh::VertexIndex p_vertexA, Mesh::VertexIndex p_vertexB, Mesh::VertexIndex p_vertexC)
-	{
+	{		
 		if (p_vertexA.pointIndex.has_value() == false || _points.size() <= p_vertexA.pointIndex.value())
 		{
 			throw std::runtime_error("Error loading a face with invalid index [" + (p_vertexA.pointIndex.has_value() == true ? std::to_string(p_vertexA.pointIndex.value()) : "No value") + "] over [" + std::to_string(_points.size()) + "] points");	
@@ -123,7 +125,6 @@ namespace spk
 			p_vertexB.normalIndex.has_value() == false ||
 			p_vertexC.normalIndex.has_value() == false)
 		{
-
 			spk::Vector3 pointA = _points[p_vertexA.pointIndex.value()];
 			spk::Vector3 pointB = _points[p_vertexB.pointIndex.value()];
 			spk::Vector3 pointC = _points[p_vertexC.pointIndex.value()];
@@ -142,12 +143,12 @@ namespace spk
 				p_vertexB.normalIndex = value;
 			}
 		
-			if (p_vertexB.normalIndex.has_value() == false)
+			if (p_vertexC.normalIndex.has_value() == false)
 			{
-				p_vertexB.normalIndex = value;
+				p_vertexC.normalIndex = value;
 			}
 		}
-
+		
 		_indexes.push_back(addVertex(p_vertexA));
 		_indexes.push_back(addVertex(p_vertexB));
 		_indexes.push_back(addVertex(p_vertexC));
@@ -176,6 +177,9 @@ namespace spk
 				vertexIndex.uvIndex.has_value() == false || 
 				vertexIndex.normalIndex.has_value() == false)
 			{
+				std::cout << "Point  [" << (vertexIndex.pointIndex.has_value() == true ? std::to_string(vertexIndex.pointIndex.value()) : "Not set") << "]" << std::endl;
+				std::cout << "UVs    [" << (vertexIndex.uvIndex.has_value() == true ? std::to_string(vertexIndex.uvIndex.value()) : "Not set") << "]" << std::endl;
+				std::cout << "Normal [" << (vertexIndex.normalIndex.has_value() == true ? std::to_string(vertexIndex.normalIndex.value()) : "Not set") << "]" << std::endl;
 				throw std::runtime_error("Error: VertexIndex contains unset optional values. Ensure all indices are set before baking.");
 			}
 		

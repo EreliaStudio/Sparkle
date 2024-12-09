@@ -7,8 +7,6 @@
 
 #include "structure/graphics/spk_pipeline.hpp"
 
-#include "spk_debug_macro.hpp"
-
 namespace spk
 {
 	static spk::Pipeline::Constant* ScreenConstants = nullptr;

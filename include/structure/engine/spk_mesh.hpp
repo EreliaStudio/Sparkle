@@ -12,14 +12,7 @@ namespace spk
 {
 	class Mesh
 	{
-	private:
-		struct Vertex
-		{
-			spk::Vector3 point;
-			spk::Vector2 uv;
-			spk::Vector3 normal;
-		};
-
+	public:
 		struct VertexIndex
 		{
 			std::optional<size_t> pointIndex;
@@ -33,6 +26,14 @@ namespace spk
 			bool operator < (const VertexIndex& p_other) const;
 			bool operator == (const VertexIndex& p_other) const;
 			bool operator != (const VertexIndex& p_other) const;
+		};
+
+	private:
+		struct Vertex
+		{
+			spk::Vector3 point;
+			spk::Vector2 uv;
+			spk::Vector3 normal;
 		};
 
 		std::vector<spk::Vector3> _points;

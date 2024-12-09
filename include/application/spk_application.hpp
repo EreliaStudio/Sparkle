@@ -8,8 +8,6 @@
 
 #include "structure/spk_safe_pointer.hpp"
 
-#include "spk_debug_macro.hpp"
-
 namespace spk
 {
 	class Application

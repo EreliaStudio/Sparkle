@@ -4,7 +4,11 @@
 #define NOMINMAX
 #endif
 
+#include <winsock2.h>
+#include <ws2tcpip.h>
+
 #include <Windows.h>
+
 #include "structure/spk_safe_pointer.hpp"
 #include "structure/system/device/spk_mouse.hpp"
 #include "structure/system/device/spk_keyboard.hpp"
@@ -253,6 +257,25 @@ namespace spk
 		}
 	};
 
+	struct TimerEvent : public IEvent
+	{
+		static inline std::vector<UINT> EventIDs = { WM_TIMER };
+		enum class Type
+		{
+			Unknow,
+			Timer
+		};
+		Type type = Type::Unknow;
+		int timerID;
+
+		TimerEvent(HWND p_hwnd) :
+			IEvent(p_hwnd),
+			type(spk::TimerEvent::Type::Timer)
+		{
+
+		}
+	};
+
 	struct Event
 	{
 		using ConstructorLambda = std::function<void(Event* p_event, UINT uMsg, WPARAM wParam, LPARAM lParam)>;
@@ -267,6 +290,7 @@ namespace spk
 			KeyboardEvent keyboardEvent;
 			ControllerEvent controllerEvent;
 			SystemEvent systemEvent;
+			TimerEvent timerEvent;
 		};
 
 		Event();
@@ -291,6 +315,9 @@ std::wostream& operator << (std::wostream& p_os, const spk::SystemEvent::Type& p
 
 std::ostream& operator << (std::ostream& p_os, const spk::PaintEvent::Type& p_type);
 std::wostream& operator << (std::wostream& p_os, const spk::PaintEvent::Type& p_type);
+
+std::ostream& operator << (std::ostream& p_os, const spk::UpdateEvent::Type& p_type);
+std::wostream& operator << (std::wostream& p_os, const spk::UpdateEvent::Type& p_type);
 
 std::ostream& operator << (std::ostream& p_os, const spk::UpdateEvent::Type& p_type);
 std::wostream& operator << (std::wostream& p_os, const spk::UpdateEvent::Type& p_type);

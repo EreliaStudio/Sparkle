@@ -48,7 +48,7 @@ namespace spk
 		if (_windows.contains(p_title) == true)
 			throw std::runtime_error("Can't create a second window named [" + StringUtils::wstringToString(p_title) + "]");
 		_windows[p_title] = std::make_unique<spk::Window>(p_title, p_geometry);
-		_windows[p_title]->setUpdateRate(1);
+		
 		_windows[p_title]->_initialize([&](spk::SafePointer<spk::Window> windowPtr){_windowToRemove.push(std::move(windowPtr));});
 
 		return (_windows[p_title].get());

@@ -199,3 +199,27 @@ std::wostream& operator << (std::wostream& p_os, const spk::UpdateEvent::Type& p
 	}
 	return p_os;
 }
+
+std::ostream& operator << (std::ostream& p_os, const spk::TimerEvent::Type& p_type)
+{
+	switch (p_type)
+	{
+	case spk::TimerEvent::Type::Timer:
+		p_os << "Timer"; break;
+	default:
+		p_os << "Unknown"; break;
+	}
+	return p_os;
+}
+
+std::wostream& operator << (std::wostream& p_os, const spk::TimerEvent::Type& p_type)
+{
+	switch (p_type)
+	{
+	case spk::TimerEvent::Type::Timer:
+		p_os << L"Timer"; break;
+	default:
+		p_os << L"Unknown"; break;
+	}
+	return p_os;
+}

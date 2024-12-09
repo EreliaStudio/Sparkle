@@ -69,6 +69,11 @@ namespace spk
 				_job = nullptr;
 				_originator = nullptr;
 			}
+
+			void trigger() const
+			{
+				(*_job)();
+			}
 		};
 		using Job = Contract::Job;
 

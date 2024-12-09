@@ -22,7 +22,12 @@
 
 #include <deque>
 #include <map>
+#include <set>
 #include <unordered_set>
+
+#include <winsock2.h>
+#include <ws2tcpip.h>
+
 #include <Windows.h>
 
 #include "application/module/spk_mouse_module.hpp"
@@ -31,6 +36,7 @@
 #include "application/module/spk_update_module.hpp"
 #include "application/module/spk_paint_module.hpp"
 #include "application/module/spk_controller_module.hpp"
+#include "application/module/spk_timer_module.hpp"
 
 namespace spk
 {
@@ -52,8 +58,11 @@ namespace spk
 		HWND _hwnd;
 		HDC _hdc;
 		HGLRC _hglrc;
-		std::optional<long long> _pendingUpdateRate;
-		UINT_PTR _updateTimerID = 0;
+		
+		std::recursive_mutex _timerMutex;
+		std::set<UINT_PTR> _timers;
+		std::deque<std::pair<int, long long>> _pendingTimerCreations;
+		std::deque<int> _pendingTimerDeletions;
 
 		MouseModule mouseModule;
 		KeyboardModule keyboardModule;
@@ -61,6 +70,7 @@ namespace spk
 		UpdateModule updateModule;
 		PaintModule paintModule;
 		ControllerModule controllerModule;
+		TimerModule timerModule;
 
 		std::map<UINT, spk::IModule*> _subscribedModules;
 		std::function<void(spk::SafePointer<spk::Window>)> _onClosureCallback = nullptr;
@@ -73,6 +83,11 @@ namespace spk
 
 		bool _receiveEvent(UINT uMsg, WPARAM wParam, LPARAM lParam);
 
+		void _handlePendingTimer();
+		UINT_PTR _createTimer(int p_id, const long long& p_durationInMillisecond);
+		void _deleteTimer(UINT_PTR p_id);
+		void _removeAllTimers();
+
 	public:
 		Window(const std::wstring& p_title, const spk::Geometry2D& p_geometry);
 		~Window();
@@ -83,8 +98,10 @@ namespace spk
 		void clear();
 		void swap() const;
 
-		void setUpdateRate(const long long& p_durationInMillisecond);
-		void clearUpdateRate();
+		void setUpdateTimer(const long long& p_durationInMillisecond);
+		void removeUpdateTimer();
+		void addTimer(int p_id, const long long& p_durationInMillisecond);
+		void removeTimer(int p_id);
 
 		void pullEvents();
 		void bindModule(spk::IModule* p_module);

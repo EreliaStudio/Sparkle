@@ -2,6 +2,8 @@
 
 #include "structure/engine/spk_entity.hpp"
 
+#include "spk_debug_macro.hpp"
+
 namespace spk
 {
 	spk::Pipeline::Constant* Camera::_cameraConstants = nullptr;
@@ -15,6 +17,7 @@ namespace spk
 				_updateConstants();
 			}
 		});
+		_onTransformEditionContract.trigger();
 	}
 	
 	void Camera::sleep()

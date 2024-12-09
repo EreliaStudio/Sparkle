@@ -4,8 +4,6 @@
 
 #include "structure/system/event/spk_event.hpp"
 
-#include "spk_debug_macro.hpp"
-
 namespace spk
 {	
 	class SystemModule : public spk::Module<spk::SystemEvent>

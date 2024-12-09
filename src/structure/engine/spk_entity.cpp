@@ -29,6 +29,7 @@ namespace spk
 		_awakeContract(constructAwakeContract()),
 		_sleepContract(constructSleepContract())
 	{
+		activate();
 		if (p_owner != nullptr)
 			p_owner->addChild(this);
 	}
