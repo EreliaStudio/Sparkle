@@ -1,5 +1,7 @@
 #include "application/module/spk_controller_module.hpp"
 
+#include "structure/graphics/spk_window.hpp"
+
 namespace spk
 {
 	void ControllerModule::_treatEvent(spk::ControllerEvent&& p_event)
@@ -55,7 +57,7 @@ namespace spk
 		}
 		}
 		p_event.controller = &_controller;
-		_rootWidget->onControllerEvent(p_event);
+		p_event.window->widget()->onControllerEvent(p_event);
 	}
 
 	spk::ControllerEvent ControllerModule::_convertEventToEventType(spk::Event&& p_event)
@@ -66,11 +68,6 @@ namespace spk
 	ControllerModule::ControllerModule()
 	{
 
-	}
-
-	void ControllerModule::linkToWidget(spk::Widget* p_rootWidget)
-	{
-		_rootWidget = p_rootWidget;
 	}
 
 	const spk::Controller& ControllerModule::controller() const

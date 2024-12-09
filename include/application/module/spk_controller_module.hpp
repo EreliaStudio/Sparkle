@@ -4,15 +4,11 @@
 
 #include "structure/system/event/spk_event.hpp"
 
-#include "spk_debug_macro.hpp"
-
 namespace spk
 {
 	class ControllerModule : public spk::Module<spk::ControllerEvent>
 	{
 	private:
-		spk::Widget* _rootWidget;
-
 		spk::Controller _controller;
 
 		void _treatEvent(spk::ControllerEvent&& p_event) override;
@@ -20,8 +16,6 @@ namespace spk
 
 	public:
 		ControllerModule();
-
-		void linkToWidget(spk::Widget* p_rootWidget);
 
 		const spk::Controller& controller() const;
 	};

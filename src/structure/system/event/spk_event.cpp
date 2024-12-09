@@ -2,8 +2,6 @@
 
 #include "structure/graphics/spk_window.hpp"
 
-#include "spk_debug_macro.hpp"
-
 #include <chrono>
 
 namespace spk
@@ -300,6 +298,15 @@ namespace spk
 				p_event->updateEvent.controller = &(p_event->rootEvent.window->controllerModule.controller());
 
 				p_event->updateEvent.time = duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+			}
+		},
+		{
+			WM_TIMER,
+			[](Event* p_event, UINT uMsg, WPARAM wParam, LPARAM lParam)
+			{
+				p_event->timerEvent.type = TimerEvent::Type::Timer;
+
+				p_event->timerEvent.timerID = wParam;
 			}
 		}
 	};

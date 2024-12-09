@@ -129,18 +129,22 @@ namespace spk
 
 	void Transform::_updateModel()
 	{
+
 		spk::Matrix4x4 translationMatrix = spk::Matrix4x4::translationMatrix(_position);
 		spk::Matrix4x4 scaleMatrix = spk::Matrix4x4::scaleMatrix(_scale);
 		spk::Matrix4x4 rotationMatrix = spk::Matrix4x4::rotationMatrix(_rotation);
 
 		spk::Matrix4x4 parentModel = spk::Matrix4x4::identity();
 		spk::SafePointer<Entity> entityOwner = owner();
+		
+
 		if (entityOwner != nullptr && entityOwner->parent() != nullptr)
 		{
 			const Entity *parentEntity = static_cast<const Entity *>(entityOwner->parent());
 			const Transform &parentTransform = parentEntity->transform();
 			parentModel = parentTransform.model();
 		}
+
 
 		_model = parentModel * translationMatrix * rotationMatrix * scaleMatrix;
 		_inverseModel = _model.inverse();

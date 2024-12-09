@@ -3,8 +3,6 @@
 
 #include "widget/spk_widget.hpp"
 
-#include "spk_debug_macro.hpp"
-
 namespace 
 {
 	class CustomWidget : public spk::Widget

@@ -1,5 +1,8 @@
 #include "structure/graphics/opengl/spk_frame_buffer_object.hpp"
 
+#include <winsock2.h>
+#include <ws2tcpip.h>
+
 #include <windows.h>
 #include <stdexcept>
 

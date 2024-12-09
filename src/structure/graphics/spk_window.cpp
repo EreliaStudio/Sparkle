@@ -2,7 +2,6 @@
 
 #include "application/spk_graphical_application.hpp"
 
-#include "spk_debug_macro.hpp"
 #include <GL/glew.h>
 #include <GL/wglew.h>
 #include <gl/GL.h>
@@ -35,16 +34,8 @@ namespace spk
 			window = reinterpret_cast<Window*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
 		}
 
-		
-
 		if (window != nullptr)
 		{
-			if (uMsg == WM_TIMER && wParam == 1)
-			{
-				window->requestUpdate();
-				return 0;
-			}
-
 			if (window->_receiveEvent(uMsg, wParam, lParam) == true)
 				return (0);
 		}
@@ -89,13 +80,9 @@ namespace spk
 		{
 			throw std::runtime_error("Failed to create window.");
 		}
-
-		if (_pendingUpdateRate.has_value())
-		{
-			setUpdateRate(_pendingUpdateRate.value());
-			_pendingUpdateRate.reset();
-		}
 		
+		setUpdateTimer(1);
+
 		_controllerInputThread.bind(_hwnd);
 		_createOpenGLContext();
 		
@@ -103,47 +90,83 @@ namespace spk
 		UpdateWindow(_hwnd);
 	}
 
-	void Window::setUpdateRate(const long long& p_durationInMillisecond)
+	void Window::_handlePendingTimer()
 	{
-		if (_updateTimerID != 0)
 		{
-			clearUpdateRate();
+			std::lock_guard<std::recursive_mutex> lock(_timerMutex);
+
+			for (const auto& pair : _pendingTimerCreations)
+			{
+				if (_timers.contains(pair.first + 2))
+				{
+					_deleteTimer(pair.first + 2);
+				}
+				_createTimer(pair.first + 2, pair.second);
+			}
+			_pendingTimerCreations.clear();
+
+			for (const auto& id : _pendingTimerDeletions)
+			{
+				_deleteTimer(id + 2);
+			}
+			_pendingTimerDeletions.clear();
 		}
+	}
 
-		if (_hwnd == nullptr)
-		{
-			_pendingUpdateRate = p_durationInMillisecond;
-			return;
-		}
-
-		MSG msg;
-		PeekMessage(&msg, nullptr, 0, 0, PM_NOREMOVE);
-
-		_updateTimerID = SetTimer(_hwnd, 1, static_cast<UINT>(p_durationInMillisecond), nullptr);
-		if (_updateTimerID == 0)
+	UINT_PTR Window::_createTimer(int p_id, const long long& p_durationInMillisecond)
+	{
+		UINT_PTR result = SetTimer(_hwnd, p_id, static_cast<UINT>(p_durationInMillisecond), nullptr);
+		if (result == 0)
 		{
 			DWORD errorCode = GetLastError();
 			throw std::runtime_error("Failed to set update timer. Error code: " + std::to_string(errorCode));
 		}
+		_timers.erase(result);
+		return (result);
+	}
+	
+	void Window::_deleteTimer(UINT_PTR p_id)
+	{
+		if (!KillTimer(_hwnd, p_id))
+		{
+			throw std::runtime_error("Failed to clear update timer.");
+		}
+		_timers.erase(p_id);
 	}
 
-	void Window::clearUpdateRate()
+	void Window::_removeAllTimers()
 	{
-		if (_updateTimerID == 0 && !_pendingUpdateRate.has_value())
+		std::set<UINT_PTR> oldTimer = _timers;
+		for (const auto& timer : oldTimer)
 		{
-			throw std::runtime_error("No active or pending timer to clear.");
+			_deleteTimer(timer);
 		}
+	}
 
-		if (_updateTimerID != 0)
-		{
-			if (!KillTimer(_hwnd, _updateTimerID))
-			{
-				throw std::runtime_error("Failed to clear update timer.");
-			}
-			_updateTimerID = 0;
-		}
+	void Window::setUpdateTimer(const long long& p_durationInMillisecond)
+	{
+		addTimer(-1, p_durationInMillisecond);
+	}
 
-		_pendingUpdateRate.reset();
+	void Window::removeUpdateTimer()
+	{
+		removeTimer(-1);
+	}
+
+	void Window::addTimer(int p_id, const long long& p_durationInMillisecond)
+	{
+		std::lock_guard<std::recursive_mutex> lock(_timerMutex);
+		std::pair<int, long long> value;
+		
+		value.first = p_id + 2;
+		value.second = p_durationInMillisecond;
+
+		_pendingTimerCreations.push_back(value);
+	}
+	
+	void Window::removeTimer(int p_id)
+	{
+		_pendingTimerDeletions.push_back(p_id);
 	}
 
 	void GLAPIENTRY
@@ -388,6 +411,7 @@ namespace spk
 		_windowRendererThread.addExecutionStep([&]() {
 				try
 				{
+					_handlePendingTimer();
 					pullEvents();
 					paintModule.treatMessages();
 					systemModule.treatMessages();
@@ -420,21 +444,12 @@ namespace spk
 		bindModule(&paintModule);
 		bindModule(&systemModule);
 
-		mouseModule.linkToWidget(_rootWidget.get());
-		keyboardModule.linkToWidget(_rootWidget.get());
-		controllerModule.linkToWidget(_rootWidget.get());
-		updateModule.linkToWidget(_rootWidget.get());
-		paintModule.linkToWidget(_rootWidget.get());
-
-		updateModule.linkToController(&(controllerModule.controller()));
-		updateModule.linkToMouse(&(mouseModule.mouse()));
-		updateModule.linkToKeyboard(&(keyboardModule.keyboard()));
-
 		_rootWidget->activate();
 	}
 
 	Window::~Window()
 	{
+		_removeAllTimers();
 		_rootWidget.release();
 	}
 

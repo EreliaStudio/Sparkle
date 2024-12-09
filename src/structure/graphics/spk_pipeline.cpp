@@ -2,8 +2,6 @@
 
 #include "utils/spk_string_utils.hpp"
 
-#include "spk_debug_macro.hpp"
-
 namespace spk
 {
 	void Pipeline::Object::_activate()

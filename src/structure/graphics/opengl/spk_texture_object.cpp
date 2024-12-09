@@ -1,7 +1,5 @@
 #include "structure/graphics/opengl/spk_texture_object.hpp"
 
-#include "spk_debug_macro.hpp"
-
 namespace spk::OpenGL
 {
 	void TextureObject::_upload()

@@ -1,5 +1,10 @@
 #pragma once
 
+#include <winsock2.h>
+#include <ws2tcpip.h>
+
+#include <windows.h>
+
 #define DIRECTINPUT_VERSION 0x0800
 
 #include "structure/spk_iostream.hpp"
@@ -9,9 +14,6 @@
 #include "structure/system/event/spk_event.hpp"
 #include "structure/math/spk_vector2.hpp"
 #include "structure/system/device/spk_controller.hpp"
-#include <windows.h>
-
-#include "spk_debug_macro.hpp"
 
 namespace spk
 {
