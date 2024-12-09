@@ -366,6 +366,16 @@ namespace spk
 		}
 	}
 
+	UINT_PTR Window::_setupTimer()
+	{
+
+	}
+
+	void Window::_releaseTimer(UINT_PTR p_timerToRelease)
+	{
+		
+	}
+
 	Window::Window(const std::wstring& p_title, const spk::Geometry2D& p_geometry) :
 		_rootWidget(std::make_unique<Widget>(p_title + L" - CentralWidget")),
 		_title(p_title),
@@ -381,7 +391,6 @@ namespace spk
 				}
 				catch (std::exception& e)
 				{
-					std::cout << "Error catched : " << e.what() << std::endl;
 					close();
 				}
 			}).relinquish();

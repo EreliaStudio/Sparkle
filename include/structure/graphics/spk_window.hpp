@@ -53,7 +53,9 @@ namespace spk
 		HDC _hdc;
 		HGLRC _hglrc;
 		std::optional<long long> _pendingUpdateRate;
+
 		UINT_PTR _updateTimerID = 0;
+		long long _expectedTimerDuration = -1;
 
 		MouseModule mouseModule;
 		KeyboardModule keyboardModule;
@@ -70,6 +72,8 @@ namespace spk
 		void _createContext();
 		void _createOpenGLContext();
 		void _destroyOpenGLContext();
+		UINT_PTR _setupTimer();
+		void _releaseTimer(UINT_PTR p_timerToRelease);
 
 		bool _receiveEvent(UINT uMsg, WPARAM wParam, LPARAM lParam);
 
