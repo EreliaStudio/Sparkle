@@ -23,9 +23,6 @@ namespace spk
 		void _updateConstants();
         void _updateViewMatrix();
 
-		void awake() override;
-		void sleep() override;
-
     public:
         Camera(const std::wstring& p_name);
 
@@ -37,5 +34,8 @@ namespace spk
 		const spk::Matrix4x4& viewMatrix();
         const spk::Matrix4x4& projectionMatrix() const;
         spk::Matrix4x4 MVP();
+
+		void awake() override;
+		void sleep() override;
     };
 }

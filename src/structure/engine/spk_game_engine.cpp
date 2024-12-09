@@ -1,5 +1,7 @@
 #include "structure/engine/spk_game_engine.hpp"
 
+#include "spk_debug_macro.hpp"
+
 namespace spk
 {
 	GameEngine::GameEngine()
@@ -54,6 +56,8 @@ namespace spk
 
 	void GameEngine::render()
 	{
+		DEBUG_LINE();
 		_centralEntity.render();
+		DEBUG_LINE();
 	}
 }

@@ -1,5 +1,7 @@
 #include "structure/engine/spk_entity.hpp"
 
+#include "spk_debug_macro.hpp"
+
 namespace spk
 {
 	spk::ActivableObject::Contract Entity::constructAwakeContract()
@@ -121,19 +123,26 @@ namespace spk
 
 	void Entity::render()
 	{
+		DEBUG_LINE();
 		sortByPriority(_components, _needComponentSorting, _componentMutex);
 
+		DEBUG_LINE();
 		for (auto& component : _components)
 		{
+			DEBUG_LINE();
 			component->render();
 		}
 
+		DEBUG_LINE();
 		sortByPriority(children(), _needChildSorting, _childMutex);
 
+		DEBUG_LINE();
 		for (auto& child : children())
 		{
+			DEBUG_LINE();
 			child->render();
 		}
+		DEBUG_LINE();
 	}
 
 	void Entity::update(const long long& p_duration)

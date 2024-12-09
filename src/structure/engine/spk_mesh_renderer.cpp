@@ -2,6 +2,8 @@
 
 #include "structure/engine/spk_entity.hpp"
 
+#include "spk_debug_macro.hpp"
+
 namespace spk
 {
 	std::string MeshRenderer::_pipelineCode = R"(## LAYOUTS DEFINITION ##
@@ -128,19 +130,25 @@ void main()
 
 	void MeshRenderer::render()
 	{
+		DEBUG_LINE();
 		if (_mesh == nullptr)
 		{
 			return ;
 		}
 
+		DEBUG_LINE();
 		if (_mesh->baked() == false)
 		{
+		DEBUG_LINE();
 			_mesh->bake();
 			_needMeshUpload = false;
+		DEBUG_LINE();
 		}
 
+		DEBUG_LINE();
 		if (_needMeshUpload == true)
 		{
+		DEBUG_LINE();
 			_object.layout().clear();
 			_object.indexes().clear();
 
@@ -149,9 +157,12 @@ void main()
 
 			_object.layout().validate();
 			_object.indexes().validate();
+		DEBUG_LINE();
 		}
 
-		_object.render(1);
+		DEBUG_LINE();
+		_object.render();
+		DEBUG_LINE();
 	}
 
 	void MeshRenderer::awake()
