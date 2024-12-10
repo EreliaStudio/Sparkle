@@ -74,10 +74,12 @@ void main()
 {
     vec4 worldPosition = modelInformations.modelMatrix * (vec4(modelPosition, 1.0));
     vec4 viewPosition = spk_CameraConstants.view * worldPosition;
-    gl_Position = (spk_CameraConstants.projection * viewPosition);
-    fragmentUVs = modelUVs;
-    fragmentNormal = vec3((modelInformations.inverseModelMatrix * vec4(modelNormals, 0)).xyz);
-    out_instanceID = gl_InstanceID;
+    // gl_Position = (spk_CameraConstants.projection * viewPosition);
+    // fragmentUVs = modelUVs;
+    // fragmentNormal = vec3((modelInformations.inverseModelMatrix * vec4(modelNormals, 0)).xyz);
+    // out_instanceID = gl_InstanceID;
+
+	gl_Position = viewPosition;
 }
 
 ## FRAGMENT SHADER CODE ##
@@ -106,23 +108,24 @@ uniform sampler2D Texture_specularTexture;
 
 void main()
 {
-    vec3 normalizedNormal = normalize(fragmentNormal);
-    vec3 lightDirection = normalize(vec3(0.0, -1.0, -1.0));
-    vec4 lightColor = vec4(1.0, 1.0, 1.0, 1.0);
-    float ambientStrength = 0.1;
-    vec4 ambient = ambientStrength * lightColor;
-    float diff = max(dot(normalizedNormal, -lightDirection), 0.0);
-    vec4 diffuse = diff * lightColor;
-    vec3 viewDirection = normalize(vec3(0.0, 0.0, 1.0));
-    vec3 reflectDirection = reflect(lightDirection, normalizedNormal);
-    vec4 specularMap = texture(Texture_specularTexture, fragmentUVs);
-    float specIntensity = specularMap.r;
-    float spec = pow(max(dot(viewDirection, reflectDirection), 0.0), modelInformations.modelMaterial.shininess);
-    vec4 specular = (specIntensity * spec) * lightColor;
-    vec4 finalColor = (ambient + diffuse) + specular;
-    vec4 textureColor = texture(Texture_diffuseTexture, fragmentUVs);
-    finalColor *= (vec4(textureColor.rgb, 1.0));
-    pixelColor = (vec4(finalColor.rgb, textureColor.a));
+    // vec3 normalizedNormal = normalize(fragmentNormal);
+    // vec3 lightDirection = normalize(vec3(0.0, -1.0, -1.0));
+    // vec4 lightColor = vec4(1.0, 1.0, 1.0, 1.0);
+    // float ambientStrength = 0.1;
+    // vec4 ambient = ambientStrength * lightColor;
+    // float diff = max(dot(normalizedNormal, -lightDirection), 0.0);
+    // vec4 diffuse = diff * lightColor;
+    // vec3 viewDirection = normalize(vec3(0.0, 0.0, 1.0));
+    // vec3 reflectDirection = reflect(lightDirection, normalizedNormal);
+    // vec4 specularMap = texture(Texture_specularTexture, fragmentUVs);
+    // float specIntensity = specularMap.r;
+    // float spec = pow(max(dot(viewDirection, reflectDirection), 0.0), modelInformations.modelMaterial.shininess);
+    // vec4 specular = (specIntensity * spec) * lightColor;
+    // vec4 finalColor = (ambient + diffuse) + specular;
+    // vec4 textureColor = texture(Texture_diffuseTexture, fragmentUVs);
+    // finalColor *= (vec4(textureColor.rgb, 1.0));
+    // pixelColor = (vec4(finalColor.rgb, textureColor.a));
+	pixelColor = vec4(1, 0, 0, 1);
 }
 )";
 

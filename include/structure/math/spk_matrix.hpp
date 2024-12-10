@@ -360,10 +360,10 @@ namespace spk
 			const float tanHalfFov = tan(rad / 2.0f);
 
 			result[0][0] = 1.0f / (tanHalfFov * p_aspectRatio);
-			result[1][1] = -1.0f / tanHalfFov;
+			result[1][1] = 1.0f / tanHalfFov;
 			result[2][2] = -(p_farPlane + p_nearPlane) / (p_farPlane - p_nearPlane);
-			result[3][2] = -1.0f;
-			result[2][3] = -(2.0f * p_farPlane * p_nearPlane) / (p_farPlane - p_nearPlane);
+			result[2][3] = -1.0f;
+			result[3][2] = -(2.0f * p_farPlane * p_nearPlane) / (p_farPlane - p_nearPlane);
 			result[3][3] = 0.0f;
 
 			return result;
