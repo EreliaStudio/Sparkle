@@ -152,5 +152,7 @@ namespace spk
 		_forward = _rotation * spk::Vector3(0.0f, 0.0f, 1.0f);
 		_right = _rotation * spk::Vector3(1.0f, 0.0f, 0.0f);
 		_up = _rotation * spk::Vector3(0.0f, 1.0f, 0.0f);
+
+		_onEditContractProvider.trigger();
 	}
 }
