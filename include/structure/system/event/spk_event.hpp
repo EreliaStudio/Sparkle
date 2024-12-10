@@ -86,13 +86,16 @@ namespace spk
 
 	struct UpdateEvent : public IEvent
 	{
-		static inline std::vector<UINT> EventIDs = { WM_UPDATE_REQUEST };
+		static inline std::vector<UINT> EventIDs = { WM_UPDATE_REQUEST, WM_TIMER };
 		enum class Type
 		{
 			Unknow,
-			Requested
+			Update,
+			Timer
 		};
+
 		Type type = Type::Unknow;
+		int timerID = -1;
 		long long time;
 		long long deltaTime = 0;
 		spk::SafePointer<const spk::Mouse> mouse = nullptr;
@@ -101,7 +104,7 @@ namespace spk
 
 		UpdateEvent(HWND p_hwnd) :
 			IEvent(p_hwnd),
-			type(spk::UpdateEvent::Type::Requested),
+			type(spk::UpdateEvent::Type::Unknow),
 			time(duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count())
 		{
 

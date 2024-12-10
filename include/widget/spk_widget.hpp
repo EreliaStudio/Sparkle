@@ -42,6 +42,7 @@ namespace spk
 		virtual void _onKeyboardEvent(const spk::KeyboardEvent& p_event);
 		virtual void _onMouseEvent(const spk::MouseEvent& p_event);
 		virtual void _onControllerEvent(const spk::ControllerEvent& p_event);
+		virtual void _onTimerEvent(const spk::TimerEvent& p_event);
 
 		spk::Geometry2D::Point _computeAbsoluteAnchor();
 		void _computeViewport();
@@ -89,5 +90,6 @@ namespace spk
 		void onKeyboardEvent(const spk::KeyboardEvent& p_event);
 		void onMouseEvent(const spk::MouseEvent& p_event);
 		void onControllerEvent(const spk::ControllerEvent& p_event);
+		void onTimerEvent(const spk::TimerEvent& p_event);
 	};
 }

@@ -18,11 +18,19 @@ namespace spk
 
 		long long _lastTime = 0;
 
+		UINT_PTR _updaterTimer = -1;
+		std::unordered_map<UINT_PTR, int> _timerIDs;
+
 		void _treatEvent(spk::UpdateEvent&& p_event) override;
 		spk::UpdateEvent _convertEventToEventType(spk::Event&& p_event) override;
 
 	public:
 		UpdateModule();
+
+		void createUpdateTimer(const long long& p_duration);
+		void removeUpdateTimer();
+		void createTimer(int p_id, const long long& p_duration);
+		void removeTimer(int p_id);
 
 		void linkToMouse(const spk::Mouse* p_mouse);
 		void linkToKeyboard(const spk::Keyboard* p_keyboard);

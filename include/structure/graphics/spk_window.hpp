@@ -23,6 +23,7 @@
 #include <deque>
 #include <map>
 #include <unordered_set>
+#include <utility>
 #include <Windows.h>
 
 #include "application/module/spk_mouse_module.hpp"
@@ -54,8 +55,8 @@ namespace spk
 		HGLRC _hglrc;
 		std::optional<long long> _pendingUpdateRate;
 
-		UINT_PTR _updateTimerID = 0;
-		long long _expectedTimerDuration = -1;
+		std::deque<std::pair<int, long long>> _timerToInitialize;
+		std::deque<int> _timerToRelease;
 
 		MouseModule mouseModule;
 		KeyboardModule keyboardModule;
@@ -89,6 +90,8 @@ namespace spk
 
 		void setUpdateRate(const long long& p_durationInMillisecond);
 		void clearUpdateRate();
+		void addTimer(const int p_id, const long long& p_durationInMillisecond);
+		void removeTimer(const int p_id);
 
 		void pullEvents();
 		void bindModule(spk::IModule* p_module);

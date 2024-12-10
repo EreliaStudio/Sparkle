@@ -51,13 +51,6 @@ namespace spk
 	const std::unordered_map<UINT, Event::ConstructorLambda> Event::_constructionMap =
 	{
 		{
-			WM_PAINT_REQUEST,
-			[](Event* p_event, UINT uMsg, WPARAM wParam, LPARAM lParam)
-			{
-				p_event->paintEvent.type = PaintEvent::Type::Requested;
-			}
-		},
-		{
 			WM_LBUTTONDOWN,
 			[](Event* p_event, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			{
@@ -290,10 +283,32 @@ namespace spk
 			}
 		},
 		{
+			WM_PAINT_REQUEST,
+			[](Event* p_event, UINT uMsg, WPARAM wParam, LPARAM lParam)
+			{
+				p_event->paintEvent.type = PaintEvent::Type::Requested;
+			}
+		},
+		{
 			WM_UPDATE_REQUEST,
 			[](Event* p_event, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			{
-				p_event->updateEvent.type = UpdateEvent::Type::Requested;
+				p_event->updateEvent.timerID = 0;
+				p_event->updateEvent.type = UpdateEvent::Type::Update;
+
+				p_event->updateEvent.mouse = &(p_event->rootEvent.window->mouseModule.mouse());
+				p_event->updateEvent.keyboard = &(p_event->rootEvent.window->keyboardModule.keyboard());
+				p_event->updateEvent.controller = &(p_event->rootEvent.window->controllerModule.controller());
+
+				p_event->updateEvent.time = duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+			}
+		},
+		{
+			WM_TIMER,
+			[](Event* p_event, UINT uMsg, WPARAM wParam, LPARAM lParam)
+			{
+				p_event->updateEvent.timerID = wParam;
+				p_event->updateEvent.type = UpdateEvent::Type::Update;
 
 				p_event->updateEvent.mouse = &(p_event->rootEvent.window->mouseModule.mouse());
 				p_event->updateEvent.keyboard = &(p_event->rootEvent.window->keyboardModule.keyboard());
@@ -308,6 +323,7 @@ namespace spk
 	{
 		if (_constructionMap.contains(uMsg) == false)
 			return (false);
+			
 		if (uMsg == WM_PAINT)
 			ValidateRect(p_window->_hwnd, NULL);
 

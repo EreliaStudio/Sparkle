@@ -39,12 +39,6 @@ namespace spk
 
 		if (window != nullptr)
 		{
-			if (uMsg == WM_TIMER && wParam == 1)
-			{
-				window->requestUpdate();
-				return 0;
-			}
-
 			if (window->_receiveEvent(uMsg, wParam, lParam) == true)
 				return (0);
 		}
@@ -144,6 +138,16 @@ namespace spk
 		}
 
 		_pendingUpdateRate.reset();
+	}
+
+	void Window::addTimer(const int& p_id, const long long& p_durationInMillisecond)
+	{
+		_timerToInitialize.push_back(std::make_pair<int, long long>(p_id, p_durationInMillisecond));
+	}
+	
+	void Window::removeTimer(const int p_id)
+	{
+		_timerToRelease.push_back(p_id);
 	}
 
 	void GLAPIENTRY
@@ -427,6 +431,7 @@ namespace spk
 		bindModule(&controllerModule);
 		bindModule(&updateModule);
 		bindModule(&paintModule);
+		bindModule(&timerModule);
 		bindModule(&systemModule);
 
 		mouseModule.linkToWidget(_rootWidget.get());
@@ -434,6 +439,7 @@ namespace spk
 		controllerModule.linkToWidget(_rootWidget.get());
 		updateModule.linkToWidget(_rootWidget.get());
 		paintModule.linkToWidget(_rootWidget.get());
+		timerModule.linkToWidget(_rootWidget.get());
 
 		updateModule.linkToController(&(controllerModule.controller()));
 		updateModule.linkToMouse(&(mouseModule.mouse()));

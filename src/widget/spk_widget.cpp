@@ -294,7 +294,7 @@ namespace spk
 	{
 
 	}
-	
+
 	void Widget::onControllerEvent(const spk::ControllerEvent& p_event)
 	{
 		if (isActive() == false || p_event.consumed() == true)
@@ -306,5 +306,23 @@ namespace spk
 		}
 
 		_onControllerEvent(p_event);
+	}
+
+	void Widget::_onTimerEvent(const spk::TimerEvent& p_event)
+	{
+
+	}
+	
+	void Widget::onTimerEvent(const spk::TimerEvent& p_event)
+	{
+		if (isActive() == false || p_event.consumed() == true)
+			return;
+
+		for (auto& child : children())
+		{
+			child->onTimerEvent(p_event);
+		}
+
+		_onTimerEvent(p_event);
 	}
 }
