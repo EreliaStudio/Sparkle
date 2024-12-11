@@ -43,6 +43,11 @@ namespace spk
 		return _rotation.toEuler();
 	}
 
+	const spk::Quaternion& Transform::rotationQuaternion() const
+	{
+		return (_rotation);
+	}
+
 	const spk::Vector3 &Transform::scale() const
 	{
 		return (_scale);
@@ -65,13 +70,8 @@ namespace spk
 
 	void Transform::lookAt(const spk::Vector3 &target)
 	{
-		spk::Vector3 direction = (target - _position).normalize();
-
-		float yaw = std::atan2(direction.x, direction.z);
-		float pitch = std::asin(-direction.y);
-		float roll = 0.0f;
-
-		setRotation(spk::Vector3(pitch, yaw, roll));
+		_rotation = spk::Quaternion::lookAt(_position, target, spk::Vector3(0, 1, 0));
+		_updateModel();
 	}
 
 	void Transform::setVelocity(const spk::Vector3 &p_velocity) // unit/second
@@ -98,17 +98,30 @@ namespace spk
 
 	void Transform::rotate(const spk::Vector3 &p_deltaEuler)
 	{
-		spk::Vector3 currentEuler = _rotation.toEuler();
+		spk::Quaternion deltaQ = spk::Quaternion::fromEuler(p_deltaEuler);
 
-		spk::Vector3 newEuler = currentEuler + p_deltaEuler;
+		_rotation = (_rotation * deltaQ).normalize();
 
-		setRotation(newEuler);
+		_updateModel();
 	}
 
 	void Transform::setRotation(const spk::Vector3 &p_euler)
 	{
-		_rotation = spk::Quaternion::fromEuler(p_euler);
-		_rotation.normalize();
+		_rotation = spk::Quaternion::fromEuler(p_euler).normalize();
+		
+		_updateModel();
+	}
+	
+	void Transform::rotateAroundPoint(const spk::Vector3& center, const spk::Vector3& axis, float angle)
+	{
+		spk::Vector3 relativePosition = _position - center;
+
+		spk::Quaternion rotationQuat = spk::Quaternion::fromAxisAngle(axis, angle);
+
+		spk::Vector3 rotatedPosition = rotationQuat.rotate(relativePosition);
+
+		_position = rotatedPosition + center;
+
 		_updateModel();
 	}
 
@@ -129,7 +142,6 @@ namespace spk
 
 	void Transform::_updateModel()
 	{
-
 		spk::Matrix4x4 translationMatrix = spk::Matrix4x4::translationMatrix(_position);
 		spk::Matrix4x4 scaleMatrix = spk::Matrix4x4::scaleMatrix(_scale);
 		spk::Matrix4x4 rotationMatrix = spk::Matrix4x4::rotationMatrix(_rotation);
@@ -137,7 +149,6 @@ namespace spk
 		spk::Matrix4x4 parentModel = spk::Matrix4x4::identity();
 		spk::SafePointer<Entity> entityOwner = owner();
 		
-
 		if (entityOwner != nullptr && entityOwner->parent() != nullptr)
 		{
 			const Entity *parentEntity = static_cast<const Entity *>(entityOwner->parent());
@@ -145,13 +156,19 @@ namespace spk
 			parentModel = parentTransform.model();
 		}
 
-
 		_model = parentModel * translationMatrix * rotationMatrix * scaleMatrix;
 		_inverseModel = _model.inverse();
 
-		_forward = _rotation * spk::Vector3(0.0f, 0.0f, 1.0f);
-		_right = _rotation * spk::Vector3(1.0f, 0.0f, 0.0f);
-		_up = _rotation * spk::Vector3(0.0f, 1.0f, 0.0f);
+		_forward = _rotation * spk::Vector3(0.0f, 0.0f, 1.0f).normalize();
+		float forwardToUpDot = _forward.dot(spk::Vector3(0.0f, 1.0f, 0.0f));
+		_right = Vector3(1, 0, 0);
+
+		if (forwardToUpDot > -1 && forwardToUpDot < 1)
+		{
+			_right = _forward.cross(spk::Vector3(0.0f, 1.0f, 0.0f)).normalize();
+		}
+
+		_up = _right.cross(_forward);
 
 		_onEditContractProvider.trigger();
 	}

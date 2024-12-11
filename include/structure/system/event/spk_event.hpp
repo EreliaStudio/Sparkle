@@ -98,6 +98,7 @@ namespace spk
 		};
 		Type type = Type::Unknow;
 		long long time;
+		long long epoch;
 		long long deltaTime = 0;
 		spk::SafePointer<const spk::Mouse> mouse = nullptr;
 		spk::SafePointer<const spk::Keyboard> keyboard = nullptr;
@@ -105,8 +106,7 @@ namespace spk
 
 		UpdateEvent(HWND p_hwnd) :
 			IEvent(p_hwnd),
-			type(spk::UpdateEvent::Type::Requested),
-			time(duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count())
+			type(spk::UpdateEvent::Type::Unknow)
 		{
 
 		}

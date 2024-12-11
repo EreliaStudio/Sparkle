@@ -129,7 +129,7 @@ namespace spk
 			spk::Vector3 pointB = _points[p_vertexB.pointIndex.value()];
 			spk::Vector3 pointC = _points[p_vertexC.pointIndex.value()];
 
-			spk::Vector3 newNormal = (pointB - pointA).cross(pointC - pointA);
+			spk::Vector3 newNormal = (pointC - pointA).cross(pointB - pointA);
 
 			size_t value = addNormal(newNormal);
 		
@@ -191,6 +191,21 @@ namespace spk
 		}
 		
 		_baked = true;
+	}
+
+	const std::vector<spk::Vector3>& Mesh::points() const
+	{
+		return (_points);
+	}	
+	
+	const std::vector<spk::Vector2>& Mesh::UVs() const
+	{
+		return (_UVs);
+	}
+	
+	const std::vector<spk::Vector3>& Mesh::normals() const
+	{
+		return (_normals);
 	}
 
 	std::vector<Mesh::Vertex>& Mesh::vertices()

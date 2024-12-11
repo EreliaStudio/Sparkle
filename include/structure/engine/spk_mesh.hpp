@@ -61,6 +61,10 @@ namespace spk
 		bool baked() const;
 		void bake();
 
+		const std::vector<spk::Vector3>& points() const;
+		const std::vector<spk::Vector2>& UVs() const;
+		const std::vector<spk::Vector3>& normals() const;
+
 		std::vector<Vertex>& vertices();
 		const std::vector<Vertex>& vertices() const;
 
