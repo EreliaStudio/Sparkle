@@ -38,6 +38,7 @@ namespace spk
         const spk::Vector3& position() const;
         
         spk::Vector3 rotation() const;
+        const spk::Quaternion& rotationQuaternion() const;
         
         const spk::Vector3& scale() const;
 
@@ -55,6 +56,7 @@ namespace spk
 
         void rotate(const spk::Vector3& p_deltaEuler);
         void setRotation(const spk::Vector3& p_euler);
+		void rotateAroundPoint(const spk::Vector3& center, const spk::Vector3& axis, float angle);
 
         void setScale(const spk::Vector3& p_scale);
 

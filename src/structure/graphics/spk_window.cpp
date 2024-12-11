@@ -95,21 +95,27 @@ namespace spk
 		{
 			std::lock_guard<std::recursive_mutex> lock(_timerMutex);
 
-			for (const auto& pair : _pendingTimerCreations)
+			if (_pendingTimerCreations.size() != 0)
 			{
-				if (_timers.contains(pair.first + 2))
+				for (const auto& pair : _pendingTimerCreations)
 				{
-					_deleteTimer(pair.first + 2);
+					if (_timers.contains(pair.first))
+					{
+						_deleteTimer(pair.first);
+					}
+					_createTimer(pair.first, pair.second);
 				}
-				_createTimer(pair.first + 2, pair.second);
+				_pendingTimerCreations.clear();
 			}
-			_pendingTimerCreations.clear();
 
-			for (const auto& id : _pendingTimerDeletions)
+			if (_pendingTimerDeletions.size() != 0)
 			{
-				_deleteTimer(id + 2);
+				for (const auto& id : _pendingTimerDeletions)
+				{
+					_deleteTimer(id);
+				}
+				_pendingTimerDeletions.clear();
 			}
-			_pendingTimerDeletions.clear();
 		}
 	}
 
@@ -166,7 +172,7 @@ namespace spk
 	
 	void Window::removeTimer(int p_id)
 	{
-		_pendingTimerDeletions.push_back(p_id);
+		_pendingTimerDeletions.push_back(p_id + 2);
 	}
 
 	void GLAPIENTRY
@@ -413,6 +419,7 @@ namespace spk
 				{
 					_handlePendingTimer();
 					pullEvents();
+					timerModule.treatMessages();
 					paintModule.treatMessages();
 					systemModule.treatMessages();
 				}
@@ -443,6 +450,7 @@ namespace spk
 		bindModule(&updateModule);
 		bindModule(&paintModule);
 		bindModule(&systemModule);
+		bindModule(&timerModule);
 
 		_rootWidget->activate();
 	}

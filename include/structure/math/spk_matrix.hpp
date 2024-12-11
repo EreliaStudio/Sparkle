@@ -5,7 +5,10 @@
 
 #include "structure/math/spk_vector2.hpp"
 #include "structure/math/spk_vector3.hpp"
+#include "structure/math/spk_vector4.hpp"
 #include "structure/math/spk_quaternion.hpp"
+
+#include "structure/spk_iostream.hpp"
 
 namespace spk
 {
@@ -95,32 +98,42 @@ namespace spk
 			return (cols[p_index]);
 		}
 
+		template <size_t X = SizeX, size_t Y = SizeY, typename std::enable_if_t<(X == 3 && Y == 3), int> = 0>
 		Vector3 operator*(const Vector3& p_vec) const
 		{
-			if (SizeX != 4 || SizeY != 4)
-			{
-				throw std::invalid_argument("Matrix must be 4x4 for this operation.");
-			}
-
 			Vector3 result;
-			result.x = (*this)[0][0] * p_vec.x + (*this)[1][0] * p_vec.y + (*this)[2][0] * p_vec.z + (*this)[3][0] * 1;
-			result.y = (*this)[0][1] * p_vec.x + (*this)[1][1] * p_vec.y + (*this)[2][1] * p_vec.z + (*this)[3][1] * 1;
-			result.z = (*this)[0][2] * p_vec.x + (*this)[1][2] * p_vec.y + (*this)[2][2] * p_vec.z + (*this)[3][2] * 1;
-
+			result.x = (*this)[0][0] * p_vec.x + (*this)[1][0] * p_vec.y + (*this)[2][0] * 1;
+			result.y = (*this)[0][1] * p_vec.x + (*this)[1][1] * p_vec.y + (*this)[2][1] * 1;
+			result.z = (*this)[0][2] * p_vec.x + (*this)[1][2] * p_vec.y + (*this)[2][2] * 1;
 			return result;
 		}
 
+		template <size_t X = SizeX, size_t Y = SizeY, typename std::enable_if_t<(X == 4 && Y == 4), int> = 0>
+		Vector3 operator*(const Vector3& p_vec) const
+		{
+			Vector4 temp(p_vec.x, p_vec.y, p_vec.z, 1.0f);
+			Vector4 transformed = (*this) * temp;
+			return Vector3(transformed.x / transformed.w, transformed.y / transformed.w, transformed.z / transformed.w);
+		}
+
+		template <size_t X = SizeX, size_t Y = SizeY, typename std::enable_if_t<(X == 3 && Y == 3), int> = 0>
 		Vector2 operator*(const Vector2& p_vec) const
 		{
-			if (SizeX != 3 || SizeY != 3)
-			{
-				throw std::invalid_argument("Matrix must be 3x3 for this operation.");
-			}
-
 			Vector2 result;
 			result.x = (*this)[0][0] * p_vec.x + (*this)[1][0] * p_vec.y + (*this)[2][0] * 1;
 			result.y = (*this)[0][1] * p_vec.x + (*this)[1][1] * p_vec.y + (*this)[2][1] * 1;
 
+			return result;
+		}
+
+		template <size_t X = SizeX, size_t Y = SizeY, typename std::enable_if_t<(X == 4 && Y == 4), int> = 0>
+		Vector4 operator*(const Vector4& p_vec) const
+		{
+			Vector4 result;
+			result.x = (*this)[0][0] * p_vec.x + (*this)[1][0] * p_vec.y + (*this)[2][0] * p_vec.z + (*this)[3][0] * p_vec.w;
+			result.y = (*this)[0][1] * p_vec.x + (*this)[1][1] * p_vec.y + (*this)[2][1] * p_vec.z + (*this)[3][1] * p_vec.w;
+			result.z = (*this)[0][2] * p_vec.x + (*this)[1][2] * p_vec.y + (*this)[2][2] * p_vec.z + (*this)[3][2] * p_vec.w;
+			result.w = (*this)[0][3] * p_vec.x + (*this)[1][3] * p_vec.y + (*this)[2][3] * p_vec.z + (*this)[3][3] * p_vec.w;
 			return result;
 		}
 
@@ -421,6 +434,7 @@ namespace spk
 			return rotationMatrix;
 		}
 
+		template <size_t X = SizeX, size_t Y = SizeY, typename std::enable_if_t<(X == Y), int> = 0>
 		IMatrix<SizeX, SizeY> inverse() const
 		{
 			if (SizeX != SizeY)

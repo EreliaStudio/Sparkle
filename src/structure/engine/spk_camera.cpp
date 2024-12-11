@@ -27,53 +27,26 @@ namespace spk
 
 	Camera::Camera(const std::wstring& p_name) :
 		Component(p_name),
-		_viewMatrix(spk::Matrix4x4::identity()),
 		_projectionMatrix(spk::Matrix4x4::identity())
 	{
-		setPerspective(60.0f, 1.77f, 0.1f, 1000.0f);
+		setPerspective(45.0f, 1.0f, 0.1f, 1000.0f);
 	}
 
 	void Camera::setPerspective(float p_fovDegrees, float p_aspectRatio, float p_nearPlane, float p_farPlane)
 	{
 		_projectionMatrix = spk::Matrix4x4::perspective(p_fovDegrees, p_aspectRatio, p_nearPlane, p_farPlane);
+		_updateConstants();
 	}
 
 	void Camera::setOrthographic(float p_left, float p_right, float p_bottom, float p_top, float p_nearPlane, float p_farPlane)
 	{
 		_projectionMatrix = spk::Matrix4x4::ortho(p_left, p_right, p_bottom, p_top, p_nearPlane, p_farPlane);
-	}
-
-	const spk::Matrix4x4& Camera::viewMatrix()
-	{
-		_updateViewMatrix();
-		return _viewMatrix;
+		_updateConstants();
 	}
 
 	const spk::Matrix4x4& Camera::projectionMatrix() const
 	{
 		return _projectionMatrix;
-	}
-
-	spk::Matrix4x4 Camera::MVP()
-	{
-		_updateViewMatrix();
-		return _projectionMatrix * _viewMatrix * owner()->transform().model();
-	}
-
-	void Camera::_updateViewMatrix()
-	{
-		if (owner() == nullptr)
-			return;
-
-		const spk::Transform& t = owner()->transform();
-
-		spk::Vector3 cameraPosition = t.position();
-		spk::Vector3 cameraForward = t.forward();
-		spk::Vector3 cameraUp = t.up();
-
-		spk::Vector3 target = cameraPosition + cameraForward;
-
-		_viewMatrix = spk::Matrix4x4::lookAt(cameraPosition, target, cameraUp);
 	}
 
 	void Camera::_updateConstants()
@@ -86,7 +59,14 @@ namespace spk
 		if (_cameraConstants == nullptr)
 			return ;
 
-		(*_cameraConstants)[L"view"] = viewMatrix();
+		if (owner() != nullptr)
+		{
+			(*_cameraConstants)[L"view"] = owner()->transform().model();
+		}
+		else
+		{
+			(*_cameraConstants)[L"view"] = spk::Matrix4x4::identity();
+		}
 		(*_cameraConstants)[L"projection"] = projectionMatrix();
 
 		_cameraConstants->validate();

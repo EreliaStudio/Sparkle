@@ -297,7 +297,10 @@ namespace spk
 				p_event->updateEvent.keyboard = &(p_event->rootEvent.window->keyboardModule.keyboard());
 				p_event->updateEvent.controller = &(p_event->rootEvent.window->controllerModule.controller());
 
-				p_event->updateEvent.time = duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+				auto currentTime = std::chrono::steady_clock::now().time_since_epoch();
+
+				p_event->updateEvent.time = duration_cast<std::chrono::milliseconds>(currentTime).count();
+				p_event->updateEvent.epoch = duration_cast<std::chrono::nanoseconds>(currentTime).count();
 			}
 		},
 		{

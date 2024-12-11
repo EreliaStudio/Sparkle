@@ -17,11 +17,9 @@ namespace spk
 
 		ContractProvider::Contract _onTransformEditionContract;
 
-        spk::Matrix4x4 _viewMatrix;
         spk::Matrix4x4 _projectionMatrix;
 
 		void _updateConstants();
-        void _updateViewMatrix();
 
     public:
         Camera(const std::wstring& p_name);
