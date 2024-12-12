@@ -87,11 +87,6 @@ namespace spk::OpenGL
 
 	void SamplerObject::activate()
 	{
-		if (_texture == nullptr)
-		{
-			throw std::runtime_error("Can't activate the SamplerObject [" + _name + "] without a linked TextureObject.");
-		}
-
 		if (_uniformDestination == -1)
 		{
 			GLint prog = 0;
@@ -100,6 +95,14 @@ namespace spk::OpenGL
 
 			_uniformDestination = glGetUniformLocation(prog, _designator.c_str());
 			glUniform1i(_uniformDestination, _index);
+		}
+
+		if (_texture == nullptr)
+		{
+			glActiveTexture(GL_TEXTURE0 + _index);
+
+			glBindTexture(GL_TEXTURE_2D, 0);
+			return ;
 		}
 
 		_texture->_upload();

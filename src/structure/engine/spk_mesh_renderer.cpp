@@ -17,18 +17,41 @@ namespace spk
 
 
 ## CONSTANTS DEFINITION ##
-spk_CameraConstants_Type spk::CameraConstants 128 128 {
-    view 0 64 0 64 1 0 {}
-    projection 64 64 64 64 1 0 {}
+spk_CameraConstants_Type spk::CameraConstants 140 144 {
+    position 0 12 0 12 1 4 {
+        x 0 4 0 4 1 0 {}
+        y 4 4 4 4 1 0 {}
+        z 8 4 8 4 1 0 {}
+    }
+    view 12 64 16 64 1 0 {}
+    projection 76 64 80 64 1 0 {}
+}
+WorldConstants_Type WorldConstants 32 36 {
+    directionalLight 0 32 0 36 1 12 {
+        direction 0 12 0 12 1 4 {
+            x 0 4 0 4 1 0 {}
+            y 4 4 4 4 1 0 {}
+            z 8 4 8 4 1 0 {}
+        }
+        color 12 16 16 16 1 0 {
+            r 0 4 0 4 1 0 {}
+            g 4 4 4 4 1 0 {}
+            b 8 4 8 4 1 0 {}
+            a 12 4 12 4 1 0 {}
+        }
+        ambiantPower 28 4 32 4 1 0 {}
+    }
 }
 
 
 ## ATTRIBUTES DEFINITION ##
-modelInformations_Type modelInformations 132 132 {
+modelInformations_Type modelInformations 140 140 {
     modelMatrix 0 64 0 64 1 0 {}
     inverseModelMatrix 64 64 64 64 1 0 {}
-    modelMaterial 128 4 128 4 1 0 {
-        shininess 0 4 0 4 1 0 {}
+    modelMaterial 128 12 128 12 1 4 {
+        hasDiffuseTexture 0 4 0 4 1 0 {}
+        hasSpecularTexture 4 4 4 4 1 0 {}
+        shininess 8 4 8 4 1 0 {}
     }
 }
 
@@ -45,23 +68,34 @@ layout (location = 0) in vec3 modelPosition;
 layout (location = 1) in vec2 modelUVs;
 layout (location = 2) in vec3 modelNormals;
 layout (location = 0) out flat int out_instanceID;
-layout (location = 1) out vec2 fragmentUVs;
-layout (location = 2) out vec3 fragmentNormal;
+layout (location = 1) out vec3 fragmentPosition;
+layout (location = 2) out vec2 fragmentUVs;
+layout (location = 3) out vec3 fragmentNormal;
 
-struct Material
+struct spk_Material
 {
+    bool hasDiffuseTexture;
+    bool hasSpecularTexture;
     float shininess;
+};
+
+struct spk_DirectionalLight
+{
+    vec3 direction;
+    vec4 color;
+    float ambiantPower;
 };
 
 layout(attributes) uniform modelInformations_Type
 {
     mat4 modelMatrix;
     mat4 inverseModelMatrix;
-    Material modelMaterial;
+    spk_Material modelMaterial;
 } modelInformations;
 
 layout(constants) uniform spk_CameraConstants_Type
 {
+    vec3 position;
     mat4 view;
     mat4 projection;
 } spk_CameraConstants;
@@ -74,9 +108,11 @@ void main()
 {
     vec4 worldPosition = modelInformations.modelMatrix * (vec4(modelPosition, 1.0));
     vec4 viewPosition = spk_CameraConstants.view * worldPosition;
-	gl_Position = spk_CameraConstants.projection * viewPosition;
+    gl_Position = (spk_CameraConstants.projection * viewPosition);
+    vec4 worldNormal = modelInformations.modelMatrix * (vec4(modelNormals, 0));
+    fragmentPosition = worldPosition.xyz;
     fragmentUVs = modelUVs;
-    fragmentNormal = vec3((modelInformations.modelMatrix * vec4(modelNormals, 0)).xyz);
+    fragmentNormal = worldNormal.xyz;
     out_instanceID = gl_InstanceID;
 }
 
@@ -84,21 +120,43 @@ void main()
 #version 450
 
 layout (location = 0) in flat int instanceID;
-layout (location = 1) in vec2 fragmentUVs;
-layout (location = 2) in vec3 fragmentNormal;
+layout (location = 1) in vec3 fragmentPosition;
+layout (location = 2) in vec2 fragmentUVs;
+layout (location = 3) in vec3 fragmentNormal;
 layout (location = 0) out vec4 pixelColor;
 
-struct Material
+struct spk_Material
 {
+    bool hasDiffuseTexture;
+    bool hasSpecularTexture;
     float shininess;
 };
+
+struct spk_DirectionalLight
+{
+    vec3 direction;
+    vec4 color;
+    float ambiantPower;
+};
+
+layout(constants) uniform spk_CameraConstants_Type
+{
+    vec3 position;
+    mat4 view;
+    mat4 projection;
+} spk_CameraConstants;
 
 layout(attributes) uniform modelInformations_Type
 {
     mat4 modelMatrix;
     mat4 inverseModelMatrix;
-    Material modelMaterial;
+    spk_Material modelMaterial;
 } modelInformations;
+
+layout(constants) uniform WorldConstants_Type
+{
+    spk_DirectionalLight directionalLight;
+} WorldConstants;
 
 uniform sampler2D Texture_diffuseTexture;
 
@@ -106,23 +164,36 @@ uniform sampler2D Texture_specularTexture;
 
 void main()
 {
-    vec3 normalizedNormal = normalize(fragmentNormal);
-    vec3 lightDirection = normalize(vec3(-1.0, -1.0, -1.0));
-    vec4 lightColor = vec4(1.0, 1.0, 1.0, 1.0);
-    float ambientStrength = 0.1;
-    vec4 ambient = ambientStrength * lightColor;
-    float diff = max(dot(normalizedNormal, -lightDirection), 0.0);
-    vec4 diffuse = diff * lightColor;
-    vec3 viewDirection = normalize(vec3(0.0, 0.0, 1.0));
-    vec3 reflectDirection = reflect(lightDirection, normalizedNormal);
-    vec4 specularMap = texture(Texture_specularTexture, fragmentUVs);
-    float specIntensity = specularMap.r;
-    float spec = pow(max(dot(viewDirection, reflectDirection), 0.0), modelInformations.modelMaterial.shininess);
-    vec4 specular = (specIntensity * spec) * lightColor;
-    vec4 finalColor = (ambient + diffuse) + specular;
-    vec4 textureColor = texture(Texture_diffuseTexture, fragmentUVs);
-    finalColor *= (vec4(textureColor.rgb, 1.0));
-    pixelColor = (vec4(finalColor.rgb, textureColor.a));
+	// Normalize and invert the light direction so it points from the light towards the fragment
+    vec3 lightDir = normalize(WorldConstants.directionalLight.direction);
+
+    // Ambient component
+    vec3 ambient = WorldConstants.directionalLight.color.rgb * WorldConstants.directionalLight.ambiantPower;
+
+    // Diffuse component
+    vec3 norm = normalize(fragmentNormal);
+    float diff = max(dot(norm, lightDir), 0.0);
+    vec3 diffuse = diff * WorldConstants.directionalLight.color.rgb;
+
+    // Specular component
+	float specularStrength = 1.0f;
+	if (modelInformations.modelMaterial.hasSpecularTexture == true)
+	{
+		specularStrength = texture(Texture_specularTexture, fragmentUVs).r;
+	}
+    vec3 viewDir = normalize(spk_CameraConstants.position - fragmentPosition);
+    vec3 reflectDir = reflect(lightDir, norm);
+    float specFactor = pow(max(dot(viewDir, reflectDir), 0.0), modelInformations.modelMaterial.shininess);
+    vec3 specular = specularStrength * specFactor * WorldConstants.directionalLight.color.rgb * diff;
+
+	//Merging color
+    vec3 result = (ambient + specular + diffuse);
+	if (modelInformations.modelMaterial.hasDiffuseTexture == true)
+	{
+		result *= texture(Texture_diffuseTexture, fragmentUVs).rgb;
+	}
+
+    pixelColor = vec4(result, 1.0);
 }
 )";
 
@@ -197,7 +268,10 @@ void main()
 		_modelDiffuseTexture.bind(_material->diffuse());
 		_modelSpecularTexture.bind(_material->specular());
 
+		_modelMaterialElement[L"hasDiffuseTexture"] = static_cast<int>(_material->diffuse() != nullptr);
+		_modelMaterialElement[L"hasSpecularTexture"] = static_cast<int>(_material->specular() != nullptr);
 		_modelMaterialElement[L"shininess"] = _material->shininess();
+
 		_modelInformations.validate();
 	}
 
