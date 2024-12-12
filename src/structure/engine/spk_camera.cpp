@@ -62,10 +62,12 @@ namespace spk
 		if (owner() != nullptr)
 		{
 			(*_cameraConstants)[L"view"] = owner()->transform().model();
+			(*_cameraConstants)[L"position"] = owner()->transform().position();
 		}
 		else
 		{
 			(*_cameraConstants)[L"view"] = spk::Matrix4x4::identity();
+			(*_cameraConstants)[L"position"] = spk::Vector3(0, 0, 0);
 		}
 		(*_cameraConstants)[L"projection"] = projectionMatrix();
 
@@ -74,7 +76,6 @@ namespace spk
 	
 	void Camera::activate()
 	{
-
 		if (_activeCamera != this)
 		{
 			_activeCamera = this;

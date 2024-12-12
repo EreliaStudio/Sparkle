@@ -30,6 +30,7 @@
 #include "structure/design_pattern/spk_stateful_object.hpp"
 #include "structure/engine/spk_camera.hpp"
 #include "structure/engine/spk_component.hpp"
+#include "structure/engine/spk_directional_light.hpp"
 #include "structure/engine/spk_entity.hpp"
 #include "structure/engine/spk_game_engine.hpp"
 #include "structure/engine/spk_material.hpp"
