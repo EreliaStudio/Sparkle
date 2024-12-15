@@ -2,12 +2,14 @@
 
 #include <string>
 #include "structure/spk_safe_pointer.hpp"
+#include "structure/system/event/spk_event.hpp"
+#include "structure/design_pattern/spk_activable_object.hpp"
 
 namespace spk
 {
 	class Entity;
 
-	class Component
+	class Component : public spk::ActivableObject
 	{
 		friend class Entity;
 
@@ -32,7 +34,11 @@ namespace spk
 		virtual void sleep();
 		virtual void stop();
 
-		virtual void render();
-		virtual void update(const long long& p_deltaTime); // Delta time in millisecond
+		virtual void onPaintEvent(spk::PaintEvent& p_event);
+		virtual void onUpdateEvent(spk::UpdateEvent& p_event);
+		virtual void onKeyboardEvent(spk::KeyboardEvent& p_event);
+		virtual void onMouseEvent(spk::MouseEvent& p_event);
+		virtual void onControllerEvent(spk::ControllerEvent& p_event);
+		virtual void onTimerEvent(spk::TimerEvent& p_event);
 	};
 }

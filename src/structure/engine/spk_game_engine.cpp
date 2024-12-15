@@ -47,13 +47,34 @@ namespace spk
 		return (_centralEntity.count(p_name));
 	}
 
-	void GameEngine::update(const long long& p_deltaTime)
+
+	void GameEngine::onPaintEvent(spk::PaintEvent& p_event)
 	{
-		_centralEntity.update(p_deltaTime);
+		_centralEntity.onPaintEvent(p_event);
+	}
+	
+	void GameEngine::onUpdateEvent(spk::UpdateEvent& p_event)
+	{
+		_centralEntity.onUpdateEvent(p_event);
+	}
+	
+	void GameEngine::onKeyboardEvent(spk::KeyboardEvent& p_event)
+	{
+		_centralEntity.onKeyboardEvent(p_event);
+	}
+	
+	void GameEngine::onMouseEvent(spk::MouseEvent& p_event)
+	{
+		_centralEntity.onMouseEvent(p_event);
 	}
 
-	void GameEngine::render()
+	void GameEngine::onControllerEvent(spk::ControllerEvent& p_event)
 	{
-		_centralEntity.render();
+		_centralEntity.onControllerEvent(p_event);
+	}
+	
+	void GameEngine::onTimerEvent(spk::TimerEvent& p_event)
+	{
+		_centralEntity.onTimerEvent(p_event);
 	}
 }

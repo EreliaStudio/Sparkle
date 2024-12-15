@@ -8,7 +8,7 @@ namespace spk
 		_nineSliceComponent.setGeometry(geometry());
 	}
 
-	void Frame::_onPaintEvent(const spk::PaintEvent& p_event)
+	void Frame::_onPaintEvent(spk::PaintEvent& p_event)
 	{
 		if (_nineSliceComponent.texture() == nullptr)
 		{

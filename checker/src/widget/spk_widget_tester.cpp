@@ -18,12 +18,12 @@ namespace
 			_geometryChangeCounter++;
 		}
 
-		void _onPaintEvent(const spk::PaintEvent& p_event) override
+		void _onPaintEvent(spk::PaintEvent& p_event) override
 		{
 			_renderCounter++;
 		}
 
-		void _onUpdateEvent(const spk::UpdateEvent& p_event) override
+		void _onUpdateEvent(spk::UpdateEvent& p_event) override
 		{
 			_updateCounter++;
 		}

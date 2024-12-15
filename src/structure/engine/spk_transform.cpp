@@ -131,11 +131,11 @@ namespace spk
 		_updateModel();
 	}
 
-	void Transform::update(const long long &p_duration)
+	void Transform::onUpdateEvent(spk::UpdateEvent& p_event)
 	{
 		if (_velocity != spk::Vector3())
 		{
-			_position += _velocity * (float)p_duration;
+			_position += _velocity * (float)p_event.deltaTime;
 			_updateModel();
 		}
 	}

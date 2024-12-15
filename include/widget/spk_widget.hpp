@@ -37,12 +37,12 @@ namespace spk
 		float _layer;
 
 		virtual void _onGeometryChange();
-		virtual void _onPaintEvent(const spk::PaintEvent& p_event);
-		virtual void _onUpdateEvent(const spk::UpdateEvent& p_event);
-		virtual void _onKeyboardEvent(const spk::KeyboardEvent& p_event);
-		virtual void _onMouseEvent(const spk::MouseEvent& p_event);
-		virtual void _onControllerEvent(const spk::ControllerEvent& p_event);
-		virtual void _onTimerEvent(const spk::TimerEvent& p_event);
+		virtual void _onPaintEvent(spk::PaintEvent& p_event);
+		virtual void _onUpdateEvent(spk::UpdateEvent& p_event);
+		virtual void _onKeyboardEvent(spk::KeyboardEvent& p_event);
+		virtual void _onMouseEvent(spk::MouseEvent& p_event);
+		virtual void _onControllerEvent(spk::ControllerEvent& p_event);
+		virtual void _onTimerEvent(spk::TimerEvent& p_event);
 
 		spk::Geometry2D::Point _computeAbsoluteAnchor();
 		void _computeViewport();
@@ -85,11 +85,11 @@ namespace spk
 		const Geometry2D& geometry() const;
 		const Viewport& viewport() const;
 
-		void onPaintEvent(const spk::PaintEvent& p_event);
-		void onUpdateEvent(const spk::UpdateEvent& p_event);
-		void onKeyboardEvent(const spk::KeyboardEvent& p_event);
-		void onMouseEvent(const spk::MouseEvent& p_event);
-		void onControllerEvent(const spk::ControllerEvent& p_event);
-		void onTimerEvent(const spk::TimerEvent& p_event);
+		void onPaintEvent(spk::PaintEvent& p_event);
+		void onUpdateEvent(spk::UpdateEvent& p_event);
+		void onKeyboardEvent(spk::KeyboardEvent& p_event);
+		void onMouseEvent(spk::MouseEvent& p_event);
+		void onControllerEvent(spk::ControllerEvent& p_event);
+		void onTimerEvent(spk::TimerEvent& p_event);
 	};
 }

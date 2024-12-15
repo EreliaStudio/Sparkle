@@ -60,7 +60,7 @@ namespace spk
 
         void setScale(const spk::Vector3& p_scale);
 
-        void update(const long long& p_duration) override;
+        void onUpdateEvent(spk::UpdateEvent& p_event) override;
 
     private:
         void _updateModel();

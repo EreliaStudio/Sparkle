@@ -12,7 +12,7 @@ namespace spk
 		WidgetComponent::TextRenderer _textRenderer;
 
 		void _onGeometryChange() override;
-		void _onPaintEvent(const spk::PaintEvent& p_event) override;
+		void _onPaintEvent(spk::PaintEvent& p_event) override;
 
 	public:
 		TextLabel(const std::wstring& p_name, const spk::SafePointer<Widget>& p_parent);

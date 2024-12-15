@@ -7,7 +7,7 @@ namespace spk
 		_textRenderer.setGeometry(geometry());
 	}
 
-	void TextLabel::_onPaintEvent(const spk::PaintEvent& p_event)
+	void TextLabel::_onPaintEvent(spk::PaintEvent& p_event)
 	{
 		_textRenderer.render();
 	}

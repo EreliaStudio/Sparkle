@@ -11,7 +11,7 @@ namespace spk
         WidgetComponent::TextureRenderer _textureRenderer;
 
         void _onGeometryChange() override;
-        void _onPaintEvent(const spk::PaintEvent& p_event) override;
+        void _onPaintEvent(spk::PaintEvent& p_event) override;
 
     public:
         ImageLabel(const std::wstring& p_name, const spk::SafePointer<Widget>& p_parent);

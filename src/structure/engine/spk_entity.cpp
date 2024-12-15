@@ -7,7 +7,10 @@ namespace spk
 		return addActivationCallback([&]() {
 			for (auto& component : _components)
 			{
-				component->awake();
+				if (component->isActive() == true)
+				{
+					component->awake();
+				}
 			}
 			});
 	}
@@ -17,7 +20,10 @@ namespace spk
 		return addDeactivationCallback([&]() {
 			for (auto& component : _components)
 			{
-				component->sleep();
+				if (component->isActive() == true)
+				{
+					component->sleep();
+				}
 			}
 			});
 	}
@@ -120,37 +126,137 @@ namespace spk
 		_components.erase(it, _components.end());
 	}
 
-	void Entity::render()
+	
+
+	void Entity::onPaintEvent(spk::PaintEvent& p_event)
 	{
+		if (p_event.consumed() == true)
+		{
+			return ;
+		}
+
 		sortByPriority(_components, _needComponentSorting, _componentMutex);
 
 		for (auto& component : _components)
 		{
-			component->render();
+			component->onPaintEvent(p_event);
 		}
 
 		sortByPriority(children(), _needChildSorting, _childMutex);
 
 		for (auto& child : children())
 		{
-			child->render();
+			child->onPaintEvent(p_event);
+		}
+	}
+	
+	void Entity::onUpdateEvent(spk::UpdateEvent& p_event)
+	{
+		if (p_event.consumed() == true)
+		{
+			return ;
+		}
+
+		sortByPriority(children(), _needChildSorting, _childMutex);
+
+		for (auto& child : children())
+		{
+			child->onUpdateEvent(p_event);
+		}
+
+		sortByPriority(_components, _needComponentSorting, _componentMutex);
+
+		for (auto& component : _components)
+		{
+			component->onUpdateEvent(p_event);
+		}
+	}
+	
+	void Entity::onKeyboardEvent(spk::KeyboardEvent& p_event)
+	{
+		if (p_event.consumed() == true)
+		{
+			return ;
+		}
+		
+		sortByPriority(children(), _needChildSorting, _childMutex);
+
+		for (auto& child : children())
+		{
+			child->onKeyboardEvent(p_event);
+		}
+
+		sortByPriority(_components, _needComponentSorting, _componentMutex);
+
+		for (auto& component : _components)
+		{
+			component->onKeyboardEvent(p_event);
+		}
+	}
+	
+	void Entity::onMouseEvent(spk::MouseEvent& p_event)
+	{
+		if (p_event.consumed() == true)
+		{
+			return ;
+		}
+		
+		sortByPriority(children(), _needChildSorting, _childMutex);
+
+		for (auto& child : children())
+		{
+			child->onMouseEvent(p_event);
+		}
+
+		sortByPriority(_components, _needComponentSorting, _componentMutex);
+
+		for (auto& component : _components)
+		{
+			component->onMouseEvent(p_event);
 		}
 	}
 
-	void Entity::update(const long long& p_duration)
+	void Entity::onControllerEvent(spk::ControllerEvent& p_event)
 	{
-		sortByPriority(_components, _needComponentSorting, _componentMutex);
-
-		for (auto& component : _components)
+		if (p_event.consumed() == true)
 		{
-			component->update(p_duration);
+			return ;
 		}
-
+		
 		sortByPriority(children(), _needChildSorting, _childMutex);
 
 		for (auto& child : children())
 		{
-			child->update(p_duration);
+			child->onControllerEvent(p_event);
+		}
+
+		sortByPriority(_components, _needComponentSorting, _componentMutex);
+
+		for (auto& component : _components)
+		{
+			component->onControllerEvent(p_event);
+		}
+	}
+	
+	void Entity::onTimerEvent(spk::TimerEvent& p_event)
+	{
+		if (p_event.consumed() == true)
+		{
+			return ;
+		}
+		
+		sortByPriority(children(), _needChildSorting, _childMutex);
+
+		for (auto& child : children())
+		{
+			child->onTimerEvent(p_event);
+		}
+
+		sortByPriority(_components, _needComponentSorting, _componentMutex);
+
+		for (auto& component : _components)
+		{
+			component->onTimerEvent(p_event);
 		}
 	}
 

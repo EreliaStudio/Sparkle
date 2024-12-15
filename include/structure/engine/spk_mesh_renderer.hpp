@@ -41,7 +41,7 @@ namespace spk
 		spk::SafePointer<spk::Mesh> mesh() const;
 		spk::SafePointer<spk::Material> material() const;
 
-		void render();
+		void onPaintEvent(spk::PaintEvent& p_event);
 
 		void awake();
 		void sleep();
