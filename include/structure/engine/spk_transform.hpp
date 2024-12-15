@@ -9,12 +9,17 @@
 
 namespace spk
 {
+	class Entity;
+
     class Transform : public Component
     {
+		friend class Entity;
+ 
     private:
         spk::Matrix4x4 _model;
         spk::Matrix4x4 _inverseModel;
 
+        spk::Vector3 _localPosition;
         spk::Vector3 _position;
         spk::Quaternion _rotation;
         spk::Vector3 _scale;
@@ -36,6 +41,7 @@ namespace spk
         const spk::Matrix4x4& inverseModel() const;
 
         const spk::Vector3& position() const;
+        const spk::Vector3& localPosition() const;
         
         spk::Vector3 rotation() const;
         const spk::Quaternion& rotationQuaternion() const;

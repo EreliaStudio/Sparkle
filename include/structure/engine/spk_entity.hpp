@@ -28,6 +28,7 @@ namespace spk
 		bool _needComponentSorting = false;
 		std::vector<std::unique_ptr<Component>> _components;
 		Transform& _transform;
+		Transform::Contract _ownerTransformEditionContract;
 
 		spk::ActivableObject::Contract _awakeContract;
 		spk::ActivableObject::Contract _sleepContract;
@@ -78,6 +79,8 @@ namespace spk
 
 		~Entity();
 
+		void addChild(spk::SafePointer<Entity> p_child);
+
 		void setName(const std::wstring& p_name);
 		void setPriority(const int& p_priority);
 
@@ -88,6 +91,7 @@ namespace spk
 
 		const std::wstring& name() const;
 		const std::set<std::wstring>& tags() const;
+		const spk::Vector3& position() const;
 		int priority() const;
 		Transform& transform();
 		const Transform& transform() const;
@@ -187,12 +191,12 @@ namespace spk
 			return result;
 		}
 
-		void onPaintEvent(spk::PaintEvent& p_event);
-		void onUpdateEvent(spk::UpdateEvent& p_event);
-		void onKeyboardEvent(spk::KeyboardEvent& p_event);
-		void onMouseEvent(spk::MouseEvent& p_event);
-		void onControllerEvent(spk::ControllerEvent& p_event);
-		void onTimerEvent(spk::TimerEvent& p_event);
+		virtual void onPaintEvent(spk::PaintEvent& p_event) final;
+		virtual void onUpdateEvent(spk::UpdateEvent& p_event) final;
+		virtual void onKeyboardEvent(spk::KeyboardEvent& p_event) final;
+		virtual void onMouseEvent(spk::MouseEvent& p_event) final;
+		virtual void onControllerEvent(spk::ControllerEvent& p_event) final;
+		virtual void onTimerEvent(spk::TimerEvent& p_event) final;
 
 		void sortChildren();
 		void sortComponent();

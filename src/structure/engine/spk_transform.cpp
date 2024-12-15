@@ -38,6 +38,11 @@ namespace spk
 		return (_position);
 	}
 
+	const spk::Vector3& Transform::localPosition() const
+	{
+		return (_localPosition);
+	}
+
 	spk::Vector3 Transform::rotation() const
 	{
 		return _rotation.toEuler();
@@ -92,7 +97,7 @@ namespace spk
 
 	void Transform::place(const spk::Vector3 &p_newPosition)
 	{
-		_position = p_newPosition;
+		_localPosition = p_newPosition;
 		_updateModel();
 	}
 
@@ -120,7 +125,7 @@ namespace spk
 
 		spk::Vector3 rotatedPosition = rotationQuat.rotate(relativePosition);
 
-		_position = rotatedPosition + center;
+		_localPosition = rotatedPosition + center;
 
 		_updateModel();
 	}
@@ -135,14 +140,14 @@ namespace spk
 	{
 		if (_velocity != spk::Vector3())
 		{
-			_position += _velocity * (float)p_event.deltaTime;
+			_localPosition += _velocity * (float)p_event.deltaTime;
 			_updateModel();
 		}
 	}
 
 	void Transform::_updateModel()
 	{
-		spk::Matrix4x4 translationMatrix = spk::Matrix4x4::translationMatrix(_position);
+		spk::Matrix4x4 translationMatrix = spk::Matrix4x4::translationMatrix(_localPosition);
 		spk::Matrix4x4 scaleMatrix = spk::Matrix4x4::scaleMatrix(_scale);
 		spk::Matrix4x4 rotationMatrix = spk::Matrix4x4::rotationMatrix(_rotation);
 
@@ -170,6 +175,12 @@ namespace spk
 
 		_up = _right.cross(_forward);
 
+		_position = _localPosition;
+		if (owner() != nullptr && owner()->parent() != nullptr)
+		{
+			_position += owner()->parent()->transform().position();
+		}
+		
 		_onEditContractProvider.trigger();
 	}
 }
