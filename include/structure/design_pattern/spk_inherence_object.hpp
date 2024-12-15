@@ -13,6 +13,7 @@ namespace spk
 	public:
 		using Parent = InherenceObject<TType>*;
 		using Child = InherenceObject<TType>*;
+		using ParentObject = spk::SafePointer<TType>;
 		using ChildObject = spk::SafePointer<TType>;
 		using ChildArray = std::vector<ChildObject>;
 
@@ -88,9 +89,9 @@ namespace spk
 			_children.clear();
 		}
 
-		Parent parent() const
+		ParentObject parent() const
 		{
-			return _parent;
+			return static_cast<TType*>(_parent);
 		}
 
 		ChildArray& children()

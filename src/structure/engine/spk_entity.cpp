@@ -28,7 +28,7 @@ namespace spk
 			});
 	}
 
-	Entity::Entity(const std::wstring& p_name, const spk::SafePointer<Entity>& p_owner) :
+	Entity::Entity(const std::wstring& p_name, const spk::SafePointer<Entity>& p_parent) :
 		_name(p_name),
 		_components(),
 		_transform(addComponent<Transform>()),
@@ -36,8 +36,10 @@ namespace spk
 		_sleepContract(constructSleepContract())
 	{
 		activate();
-		if (p_owner != nullptr)
-			p_owner->addChild(this);
+		if (p_parent != nullptr)
+		{
+			p_parent->addChild(this);
+		}
 	}
 
 	Entity::Entity() :
@@ -51,6 +53,15 @@ namespace spk
 		for (auto& component : _components)
 		{
 			component->stop();
+		}
+	}
+
+	void Entity::addChild(spk::SafePointer<Entity> p_child)
+	{
+		InherenceObject::addChild(p_child);
+		if (parent() != nullptr)
+		{
+			_ownerTransformEditionContract = parent()->transform().addOnEditionCallback([&](){_transform._updateModel();});
 		}
 	}
 
@@ -98,6 +109,11 @@ namespace spk
 		return (_tags);
 	}
 
+	const spk::Vector3& Entity::position() const
+	{
+		return (_transform.position());
+	}
+
 	int Entity::priority() const
 	{
 		return (_priority);
@@ -125,8 +141,6 @@ namespace spk
 
 		_components.erase(it, _components.end());
 	}
-
-	
 
 	void Entity::onPaintEvent(spk::PaintEvent& p_event)
 	{

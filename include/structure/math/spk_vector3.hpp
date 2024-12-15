@@ -27,6 +27,17 @@ namespace spk
         template<typename UType, typename = std::enable_if_t<std::is_arithmetic<UType>::value>>
         IVector3(UType p_scalar) : x(static_cast<TType>(p_scalar)), y(static_cast<TType>(p_scalar)), z(static_cast<TType>(p_scalar)) {}
 
+		// Constructor with one vector2 and one p_scalar
+        template<typename UType, typename VType,
+            typename = std::enable_if_t<std::is_arithmetic<UType>::value&& std::is_arithmetic<VType>::value>>
+        IVector3(const spk::IVector2<UType>& p_vec2, const VType& p_scalar) : x(static_cast<TType>(p_vec2.x)), y(static_cast<TType>(p_vec2.y)), z(static_cast<TType>(p_scalar)) {}
+
+		// Constructor with one vector2 and one p_scalar
+        template<typename UType, typename VType,
+            typename = std::enable_if_t<std::is_arithmetic<UType>::value&& std::is_arithmetic<VType>::value>>
+        IVector3(const UType& p_scalar, const spk::IVector2<VType>& p_vec2) : x(static_cast<TType>(p_scalar)), y(static_cast<TType>(p_vec2.x)), z(static_cast<TType>(p_vec2.y)) {}
+
+
         // Constructor with three values
         template<typename UType, typename VType, typename WType,
             typename = std::enable_if_t<std::is_arithmetic<UType>::value&& std::is_arithmetic<VType>::value&& std::is_arithmetic<WType>::value>>

@@ -12,12 +12,12 @@ namespace spk
 	private:
 		spk::SafePointer<spk::GameEngine> _gameEngine = nullptr;
 
-		void onPaintEvent(spk::PaintEvent& p_event);
-		void onUpdateEvent(spk::UpdateEvent& p_event);
-		void onMouseEvent(spk::MouseEvent& p_event);
-		void onControllerEvent(spk::ControllerEvent& p_event);
-		void onKeyboardEvent(spk::KeyboardEvent& p_event);
-		void onTimerEvent(spk::TimerEvent& p_event);
+		void _onPaintEvent(spk::PaintEvent& p_event);
+		void _onUpdateEvent(spk::UpdateEvent& p_event);
+		void _onMouseEvent(spk::MouseEvent& p_event);
+		void _onControllerEvent(spk::ControllerEvent& p_event);
+		void _onKeyboardEvent(spk::KeyboardEvent& p_event);
+		void _onTimerEvent(spk::TimerEvent& p_event);
 
 	public:
 		GameEngineWidget(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent);

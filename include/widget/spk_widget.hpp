@@ -85,11 +85,11 @@ namespace spk
 		const Geometry2D& geometry() const;
 		const Viewport& viewport() const;
 
-		void onPaintEvent(spk::PaintEvent& p_event);
-		void onUpdateEvent(spk::UpdateEvent& p_event);
-		void onKeyboardEvent(spk::KeyboardEvent& p_event);
-		void onMouseEvent(spk::MouseEvent& p_event);
-		void onControllerEvent(spk::ControllerEvent& p_event);
-		void onTimerEvent(spk::TimerEvent& p_event);
+		virtual void onPaintEvent(spk::PaintEvent& p_event) final;
+		virtual void onUpdateEvent(spk::UpdateEvent& p_event) final;
+		virtual void onKeyboardEvent(spk::KeyboardEvent& p_event) final;
+		virtual void onMouseEvent(spk::MouseEvent& p_event) final;
+		virtual void onControllerEvent(spk::ControllerEvent& p_event) final;
+		virtual void onTimerEvent(spk::TimerEvent& p_event) final;
 	};
 }
