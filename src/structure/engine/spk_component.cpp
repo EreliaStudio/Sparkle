@@ -65,13 +65,33 @@ namespace spk
 
 	}
 
-	void Component::render()
+	void Component::onPaintEvent(spk::PaintEvent& p_event)
 	{
 
-	};
-
-	void Component::update(const long long& p_deltaTime)
+	}
+	
+	void Component::onUpdateEvent(spk::UpdateEvent& p_event)
 	{
 
-	};
+	}
+	
+	void Component::onKeyboardEvent(spk::KeyboardEvent& p_event)
+	{
+
+	}
+	
+	void Component::onMouseEvent(spk::MouseEvent& p_event)
+	{
+
+	}
+
+	void Component::onControllerEvent(spk::ControllerEvent& p_event)
+	{
+
+	}
+	
+	void Component::onTimerEvent(spk::TimerEvent& p_event)
+	{
+
+	}
 }

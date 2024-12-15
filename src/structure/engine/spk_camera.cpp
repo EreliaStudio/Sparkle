@@ -25,6 +25,11 @@ namespace spk
 		_onTransformEditionContract.resign();
 	}
 
+	spk::SafePointer<Camera> Camera::activeCamera()
+	{
+		return (_activeCamera);
+	}
+
 	Camera::Camera(const std::wstring& p_name) :
 		Component(p_name),
 		_projectionMatrix(spk::Matrix4x4::identity())
@@ -74,7 +79,7 @@ namespace spk
 		_cameraConstants->validate();
 	}
 	
-	void Camera::activate()
+	void Camera::setAsActive()
 	{
 		if (_activeCamera != this)
 		{

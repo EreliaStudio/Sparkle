@@ -4,6 +4,8 @@
 #include "structure/design_pattern/spk_inherence_object.hpp"
 #include "structure/design_pattern/spk_activable_object.hpp"
 
+#include "structure/system/event/spk_event.hpp"
+
 #include <span>
 #include <set>
 #include <string>
@@ -185,8 +187,13 @@ namespace spk
 			return result;
 		}
 
-		void render();
-		void update(const long long& p_duration);
+		void onPaintEvent(spk::PaintEvent& p_event);
+		void onUpdateEvent(spk::UpdateEvent& p_event);
+		void onKeyboardEvent(spk::KeyboardEvent& p_event);
+		void onMouseEvent(spk::MouseEvent& p_event);
+		void onControllerEvent(spk::ControllerEvent& p_event);
+		void onTimerEvent(spk::TimerEvent& p_event);
+
 		void sortChildren();
 		void sortComponent();
 

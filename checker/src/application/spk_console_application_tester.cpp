@@ -10,12 +10,12 @@ namespace
 		int _updateCounter;
 
 	protected:
-		void _onPaintEvent(const spk::PaintEvent& p_event) override
+		void _onPaintEvent(spk::PaintEvent& p_event) override
 		{
 			++_renderCounter;
 		}
 
-		void _onUpdateEvent(const spk::UpdateEvent& p_event) override
+		void _onUpdateEvent(spk::UpdateEvent& p_event) override
 		{
 			++_updateCounter;
 			if (_renderCounter >= 100 && _updateCounter >= 100)

@@ -147,7 +147,7 @@ namespace spk
 
 	}
 
-	void Widget::_onPaintEvent(const spk::PaintEvent& p_event)
+	void Widget::_onPaintEvent(spk::PaintEvent& p_event)
 	{
 
 	}
@@ -188,9 +188,9 @@ namespace spk
 		_viewport.setGeometry({ topLeft, size });
 	}
 
-	void Widget::onPaintEvent(const spk::PaintEvent& p_event)
+	void Widget::onPaintEvent(spk::PaintEvent& p_event)
 	{
-		if (isActive() == false)
+		if (isActive() == false || p_event.consumed() == true)
 			return;
 
 		if (_needGeometryChange == true)
@@ -224,24 +224,27 @@ namespace spk
 		
 		_onPaintEvent(p_event);
 
+		spk::PaintEvent childEvent = p_event;
+		childEvent.geometry = geometry();
+
 		for (auto& child : children())
 		{
 			if (child->isActive() == true)
 			{
 				_viewport.apply();
-				child->onPaintEvent(p_event);
+				child->onPaintEvent(childEvent);
 			}
 		}
 	}
 
-	void Widget::_onUpdateEvent(const spk::UpdateEvent& p_event)
+	void Widget::_onUpdateEvent(spk::UpdateEvent& p_event)
 	{
 
 	}
 
-	void Widget::onUpdateEvent(const spk::UpdateEvent& p_event)
+	void Widget::onUpdateEvent(spk::UpdateEvent& p_event)
 	{
-		if (isActive() == false)
+		if (isActive() == false || p_event.consumed() == true)
 			return;
 
 		for (auto& child : children())
@@ -252,12 +255,12 @@ namespace spk
 		_onUpdateEvent(p_event);
 	}
 
-	void Widget::_onKeyboardEvent(const spk::KeyboardEvent& p_event)
+	void Widget::_onKeyboardEvent(spk::KeyboardEvent& p_event)
 	{
 
 	}
 
-	void Widget::onKeyboardEvent(const spk::KeyboardEvent& p_event)
+	void Widget::onKeyboardEvent(spk::KeyboardEvent& p_event)
 	{
 		if (isActive() == false || p_event.consumed() == true)
 			return;
@@ -270,12 +273,12 @@ namespace spk
 		_onKeyboardEvent(p_event);
 	}
 
-	void Widget::_onMouseEvent(const spk::MouseEvent& p_event)
+	void Widget::_onMouseEvent(spk::MouseEvent& p_event)
 	{
 
 	}
 
-	void Widget::onMouseEvent(const spk::MouseEvent& p_event)
+	void Widget::onMouseEvent(spk::MouseEvent& p_event)
 	{
 		if (isActive() == false || p_event.consumed() == true)
 			return;
@@ -288,12 +291,12 @@ namespace spk
 		_onMouseEvent(p_event);
 	}
 	
-	void Widget::_onControllerEvent(const spk::ControllerEvent& p_event)
+	void Widget::_onControllerEvent(spk::ControllerEvent& p_event)
 	{
 
 	}
 	
-	void Widget::onControllerEvent(const spk::ControllerEvent& p_event)
+	void Widget::onControllerEvent(spk::ControllerEvent& p_event)
 	{
 		if (isActive() == false || p_event.consumed() == true)
 			return;
@@ -306,12 +309,12 @@ namespace spk
 		_onControllerEvent(p_event);
 	}
 
-	void Widget::_onTimerEvent(const spk::TimerEvent& p_event)
+	void Widget::_onTimerEvent(spk::TimerEvent& p_event)
 	{
 
 	}
 
-	void Widget::onTimerEvent(const spk::TimerEvent& p_event)
+	void Widget::onTimerEvent(spk::TimerEvent& p_event)
 	{
 		if (isActive() == false || p_event.consumed() == true)
 			return;

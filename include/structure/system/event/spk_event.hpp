@@ -44,20 +44,18 @@ namespace spk
 	struct IEvent
 	{
 	private:
-		HWND _hwnd;
 
 	public:
-		mutable bool _consumed;
+		bool _consumed;
 		Modifiers _modifiers;
 		spk::SafePointer<spk::Window> window = nullptr;
 
-		IEvent(HWND p_hwnd) :
-			_hwnd(p_hwnd),
+		IEvent() :
 			_consumed(false),
 			_modifiers()
 		{}
 
-		void consume() const
+		void consume()
 		{
 			_consumed = true;
 		}
@@ -67,8 +65,8 @@ namespace spk
 			return (_consumed);
 		}
 
-		void requestPaint() const;
-		void requestUpdate() const;
+		void requestPaint();
+		void requestUpdate();
 	};
 
 	struct PaintEvent : public IEvent
@@ -80,12 +78,7 @@ namespace spk
 			Requested
 		};
 		Type type = Type::Unknow;
-
-		PaintEvent(HWND p_hwnd) :
-			IEvent(p_hwnd)
-		{
-
-		}
+		spk::Geometry2D geometry;
 	};
 
 	struct UpdateEvent : public IEvent
@@ -103,13 +96,6 @@ namespace spk
 		spk::SafePointer<const spk::Mouse> mouse = nullptr;
 		spk::SafePointer<const spk::Keyboard> keyboard = nullptr;
 		spk::SafePointer<const spk::Controller> controller = nullptr;
-
-		UpdateEvent(HWND p_hwnd) :
-			IEvent(p_hwnd),
-			type(spk::UpdateEvent::Type::Unknow)
-		{
-
-		}
 	};
 
 	struct MouseEvent : public IEvent
@@ -137,12 +123,6 @@ namespace spk
 			spk::Vector2Int position;
 			float scrollValue;
 		};
-
-		MouseEvent(HWND p_hwnd) :
-			IEvent(p_hwnd)
-		{
-
-		}
 	};
 
 	struct KeyboardEvent : public IEvent
@@ -164,12 +144,6 @@ namespace spk
 			spk::Keyboard::Key key;
 			wchar_t glyph;
 		};
-
-		KeyboardEvent(HWND p_hwnd) :
-			IEvent(p_hwnd)
-		{
-
-		}
 	};
 
 	struct ControllerEvent : public IEvent
@@ -214,12 +188,6 @@ namespace spk
 				spk::Vector2Int values;
 			} directionalCross;
 		};
-
-		ControllerEvent(HWND p_hwnd) :
-			IEvent(p_hwnd)
-		{
-
-		}
 	};
 
 	struct SystemEvent : public IEvent
@@ -249,12 +217,6 @@ namespace spk
 
 		spk::Geometry2D::Size newSize;
 		spk::Geometry2D::Point newPosition;
-
-		SystemEvent(HWND p_hwnd) :
-			IEvent(p_hwnd)
-		{
-
-		}
 	};
 
 	struct TimerEvent : public IEvent
@@ -267,13 +229,6 @@ namespace spk
 		};
 		Type type = Type::Unknow;
 		int timerID;
-
-		TimerEvent(HWND p_hwnd) :
-			IEvent(p_hwnd),
-			type(spk::TimerEvent::Type::Timer)
-		{
-
-		}
 	};
 
 	struct Event

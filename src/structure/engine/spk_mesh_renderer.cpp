@@ -199,7 +199,7 @@ void main()
 
 	spk::Pipeline MeshRenderer::_pipeline = spk::Pipeline(_pipelineCode);
 
-	void MeshRenderer::render()
+	void MeshRenderer::onPaintEvent(spk::PaintEvent& p_event)
 	{
 		if (_mesh == nullptr)
 		{

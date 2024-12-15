@@ -73,7 +73,7 @@ namespace spk
         _updateRenderers();
     }
 
-    void Button::_onPaintEvent(const spk::PaintEvent& p_event)
+    void Button::_onPaintEvent(spk::PaintEvent& p_event)
     {
         State currentState = _isPressed ? State::Pressed : State::Released;
 
@@ -94,7 +94,7 @@ namespace spk
         textRenderer(currentState).render();
     }
 
-    void Button::_onMouseEvent(const spk::MouseEvent& p_event)
+    void Button::_onMouseEvent(spk::MouseEvent& p_event)
     {
         switch (p_event.type)
         {

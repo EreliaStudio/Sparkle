@@ -31,8 +31,11 @@ namespace spk
 
 		size_t count(const std::wstring& p_name) const;
 
-		void update(const long long& p_deltaTime);
-
-		void render();
+		void onPaintEvent(spk::PaintEvent& p_event);
+		void onUpdateEvent(spk::UpdateEvent& p_event);
+		void onKeyboardEvent(spk::KeyboardEvent& p_event);
+		void onMouseEvent(spk::MouseEvent& p_event);
+		void onControllerEvent(spk::ControllerEvent& p_event);
+		void onTimerEvent(spk::TimerEvent& p_event);
 	};
 }

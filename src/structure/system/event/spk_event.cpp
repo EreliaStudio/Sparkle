@@ -6,12 +6,12 @@
 
 namespace spk
 {
-	void IEvent::requestPaint() const
+	void IEvent::requestPaint()
 	{
 		window->requestPaint();
 	}
 	
-	void IEvent::requestUpdate() const
+	void IEvent::requestUpdate()
 	{
 		window->requestUpdate();
 	}
@@ -53,6 +53,7 @@ namespace spk
 			[](Event* p_event, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			{
 				p_event->paintEvent.type = PaintEvent::Type::Requested;
+				p_event->paintEvent.geometry = p_event->paintEvent.window->geometry();
 			}
 		},
 		{

@@ -14,7 +14,7 @@ namespace spk
         spk::WidgetComponent::NineSliceRenderer _nineSliceComponent;
 
 		void _onGeometryChange() override;
-		void _onPaintEvent(const spk::PaintEvent& p_event) override;
+		void _onPaintEvent(spk::PaintEvent& p_event) override;
 
 	public:
 		Frame(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent);

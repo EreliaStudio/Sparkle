@@ -24,7 +24,9 @@ namespace spk
     public:
         Camera(const std::wstring& p_name);
 
-		void activate();
+		static spk::SafePointer<Camera> activeCamera();
+
+		void setAsActive();
 
         void setPerspective(float p_fovDegrees, float p_aspectRatio, float p_nearPlane = 0.1f, float p_farPlane = 1000.0f);
         void setOrthographic(float p_left, float p_right, float p_bottom, float p_top, float p_nearPlane= 0.1f, float p_farPlane = 1000.0f);
