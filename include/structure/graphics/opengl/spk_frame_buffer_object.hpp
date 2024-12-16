@@ -30,30 +30,7 @@ namespace spk::OpenGL
             UInt
         };
 
-        class Factory
-        {
-            friend class FrameBufferObject;
-            friend class ShaderParser;
-
-        public:
-            Factory();
-
-            void addAttachment(const std::wstring& p_name, int p_colorAttachmentIndex, Type p_type);
-            FrameBufferObject construct(const spk::Vector2UInt& p_size) const;
-
-        private:
-            struct AttachmentSpec
-            {
-                int colorAttachmentIndex;
-                Type type;
-            };
-
-            std::map<std::wstring, AttachmentSpec> _attachments;
-        };
-
     private:
-        FrameBufferObject(const std::map<std::wstring, Factory::AttachmentSpec>& p_attachments, const spk::Vector2UInt& p_size);
-
         void _load();
         void _releaseResources();
 
@@ -63,22 +40,22 @@ namespace spk::OpenGL
 
         struct Attachment
         {
-            int colorAttachmentIndex;
+            int binding;
             Type type;
             TextureObject textureObject;
         };
-        std::map<std::wstring, Attachment> _attachments;
 
+        std::map<std::wstring, Attachment> _attachments;
     public:
         FrameBufferObject() = default;
+        FrameBufferObject(const spk::Vector2UInt& p_size);
         FrameBufferObject(const FrameBufferObject& p_other);
         FrameBufferObject& operator=(const FrameBufferObject& p_other);
-
         FrameBufferObject(FrameBufferObject&& p_other) noexcept;
         FrameBufferObject& operator=(FrameBufferObject&& p_other) noexcept;
-
         ~FrameBufferObject();
 
+        void addAttachment(const std::wstring& p_name, int p_binding, Type p_type);
         void resize(const spk::Vector2UInt& p_size);
 
         void activate();

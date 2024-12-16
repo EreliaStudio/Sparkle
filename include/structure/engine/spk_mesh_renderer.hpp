@@ -2,8 +2,6 @@
 
 #include "structure/design_pattern/spk_contract_provider.hpp"
 
-#include "structure/graphics/spk_pipeline.hpp"
-
 #include "structure/engine/spk_component.hpp"
 
 #include "structure/engine/spk_mesh.hpp"
@@ -14,17 +12,6 @@ namespace spk
 	class MeshRenderer : public spk::Component
 	{
 	private:
-		static std::string _pipelineCode;
-		static spk::Pipeline _pipeline;
-
-		spk::Pipeline::Object _object;
-		spk::Pipeline::Object::Attribute& _modelInformations;
-		spk::Pipeline::Object::Attribute::Element& _modelMatrixElement;
-		spk::Pipeline::Object::Attribute::Element& _modelInverseMatrixElement;
-		spk::Pipeline::Object::Attribute::Element& _modelMaterialElement;
-		spk::Pipeline::Object::Sampler2D& _modelDiffuseTexture;
-		spk::Pipeline::Object::Sampler2D& _modelSpecularTexture;
-
 		ContractProvider::Contract _onTransformEditionContract;
 
 		bool _needMeshUpload;

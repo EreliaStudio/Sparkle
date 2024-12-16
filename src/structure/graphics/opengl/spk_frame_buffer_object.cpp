@@ -148,24 +148,21 @@ namespace
 
 namespace spk::OpenGL
 {
-    FrameBufferObject::Factory::Factory()
+    FrameBufferObject::FrameBufferObject(const spk::Vector2UInt& p_size) :
+        _size(p_size),
+        _viewport(spk::Geometry2D(0, 0, _size))
     {
-
     }
 
-    void FrameBufferObject::Factory::addAttachment(const std::wstring& p_name, int p_colorAttachmentIndex, Type p_type)
+    inline void FrameBufferObject::addAttachment(const std::wstring& p_name, int p_binding, Type p_type)
     {
-        AttachmentSpec spec = { p_colorAttachmentIndex, p_type };
-        _attachments[p_name] = spec;
+        Attachment attachment;
+        attachment.binding = p_binding;
+        attachment.type = p_type;
+        _attachments.emplace(p_name, std::move(attachment));
     }
 
-    FrameBufferObject FrameBufferObject::Factory::construct(const spk::Vector2UInt& p_size) const
-    {
-        return FrameBufferObject(_attachments, p_size);
-    }
-
-
-    void FrameBufferObject::_load()
+    inline void FrameBufferObject::_load()
     {
         if (_framebufferID == 0)
         {
@@ -208,13 +205,13 @@ namespace spk::OpenGL
 
             glBindTexture(GL_TEXTURE_2D, 0);
 
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + attachment.colorAttachmentIndex, GL_TEXTURE_2D, texture._id, 0);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + attachment.binding, GL_TEXTURE_2D, texture._id, 0);
         }
 
         std::vector<GLenum> drawBuffers;
         for (const auto& [name, attachment] : _attachments)
         {
-            drawBuffers.push_back(GL_COLOR_ATTACHMENT0 + attachment.colorAttachmentIndex);
+            drawBuffers.push_back(GL_COLOR_ATTACHMENT0 + attachment.binding);
         }
 
         glDrawBuffers(static_cast<GLsizei>(drawBuffers.size()), drawBuffers.data());
@@ -228,7 +225,7 @@ namespace spk::OpenGL
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
-    void FrameBufferObject::_releaseResources()
+    inline void FrameBufferObject::_releaseResources()
     {
         if (wglGetCurrentContext() != nullptr)
         {
@@ -242,75 +239,7 @@ namespace spk::OpenGL
         _attachments.clear();
     }
 
-    FrameBufferObject::FrameBufferObject(const std::map<std::wstring, Factory::AttachmentSpec>& p_attachments, const spk::Vector2UInt& p_size) :
-        _size(p_size),
-        _viewport(spk::Geometry2D(0, 0, _size))
-    {
-        for (const auto& [name, spec] : p_attachments)
-        {
-            Attachment attachment;
-            attachment.colorAttachmentIndex = spec.colorAttachmentIndex;
-            attachment.type = spec.type;
-
-            _attachments.emplace(name, std::move(attachment));
-        }
-    }
-
-    FrameBufferObject::FrameBufferObject(const FrameBufferObject& p_other) :
-        _framebufferID(0),
-        _size(p_other._size),
-        _attachments(p_other._attachments),
-        _viewport(spk::Geometry2D(0, 0, _size))
-    {
-
-    }
-
-    FrameBufferObject& FrameBufferObject::operator=(const FrameBufferObject& p_other)
-    {
-        if (this != &p_other)
-        {
-            _releaseResources(); 
-
-            _framebufferID = 0;
-            _size = p_other._size;
-            _attachments = p_other._attachments;
-
-            _viewport.setGeometry(spk::Geometry2D(0, 0, _size));
-        }
-        return *this;
-    }
-
-    FrameBufferObject::FrameBufferObject(FrameBufferObject&& p_other) noexcept :
-        _framebufferID(p_other._framebufferID),
-        _size(p_other._size),
-        _attachments(std::move(p_other._attachments)),
-        _viewport(p_other._viewport.geometry())
-    {
-        p_other._framebufferID = 0;
-    }
-
-    FrameBufferObject& FrameBufferObject::operator=(FrameBufferObject&& p_other) noexcept
-    {
-        if (this != &p_other)
-        {
-            _releaseResources();
-
-            _framebufferID = p_other._framebufferID;
-            _size = p_other._size;
-            _attachments = std::move(p_other._attachments);
-            _viewport = std::move(p_other._viewport);
-
-            p_other._framebufferID = 0;
-        }
-        return *this;
-    }
-
-    FrameBufferObject::~FrameBufferObject()
-    {
-        _releaseResources();
-    }
-
-    void FrameBufferObject::resize(const spk::Vector2UInt& p_size)
+    inline void FrameBufferObject::resize(const spk::Vector2UInt& p_size)
     {
         if (_size == p_size)
         {
@@ -332,7 +261,7 @@ namespace spk::OpenGL
         _load();
     }
 
-    void FrameBufferObject::activate()
+    inline void FrameBufferObject::activate()
     {
         if (_framebufferID == 0)
         {
@@ -343,12 +272,12 @@ namespace spk::OpenGL
         _viewport.apply();
     }
 
-    void FrameBufferObject::deactivate()
+    inline void FrameBufferObject::deactivate()
     {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
-    TextureObject* FrameBufferObject::bindedTexture(const std::wstring& p_name)
+    inline TextureObject* FrameBufferObject::bindedTexture(const std::wstring& p_name)
     {
         auto it = _attachments.find(p_name);
         if (it != _attachments.end())
@@ -361,7 +290,7 @@ namespace spk::OpenGL
         }
     }
 
-    TextureObject FrameBufferObject::saveAsTexture(const std::wstring& p_name)
+    inline TextureObject FrameBufferObject::saveAsTexture(const std::wstring& p_name)
     {
         auto it = _attachments.find(p_name);
         if (it == _attachments.end())
@@ -377,7 +306,7 @@ namespace spk::OpenGL
         }
 
         glBindFramebuffer(GL_FRAMEBUFFER, _framebufferID);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + attachment.colorAttachmentIndex, GL_TEXTURE_2D, 0, 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + attachment.binding, GL_TEXTURE_2D, 0, 0);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         TextureObject savedTexture = std::move(attachment.textureObject);
@@ -408,7 +337,7 @@ namespace spk::OpenGL
         glBindTexture(GL_TEXTURE_2D, 0);
 
         glBindFramebuffer(GL_FRAMEBUFFER, _framebufferID);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + attachment.colorAttachmentIndex, GL_TEXTURE_2D, newTexture._id, 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + attachment.binding, GL_TEXTURE_2D, newTexture._id, 0);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         attachment.textureObject = std::move(newTexture);

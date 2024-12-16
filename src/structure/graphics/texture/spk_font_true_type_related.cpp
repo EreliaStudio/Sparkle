@@ -1,11 +1,11 @@
 #include "structure/graphics/texture/spk_font.hpp"
-#include "structure/graphics/spk_pipeline.hpp"
 #include <fstream>
 #include <unordered_set>
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "external_libraries/stb_truetype.h"
 
+#include "utils/spk_file_utils.hpp"
 
 namespace spk
 {

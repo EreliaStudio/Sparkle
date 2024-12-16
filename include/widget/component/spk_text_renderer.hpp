@@ -1,6 +1,5 @@
 #pragma once
 
-#include "structure/graphics/spk_pipeline.hpp"
 #include "structure/spk_safe_pointer.hpp"
 #include "structure/graphics/texture/spk_font.hpp"
 #include "structure/graphics/spk_text_alignment.hpp"
@@ -11,16 +10,6 @@ namespace spk::WidgetComponent
 	class TextRenderer
 	{
 	private:
-		static std::string _pipelineCode;
-		static spk::Pipeline _pipeline;
-
-		spk::Pipeline::Object _object;
-		spk::Pipeline::Object::Attribute& _textInformations;
-		spk::Pipeline::Object::Attribute::Element& _layerElement;
-		spk::Pipeline::Object::Attribute::Element& _outlineColorElement;
-		spk::Pipeline::Object::Attribute::Element& _glyphColorElement;
-		spk::Pipeline::Object::Sampler2D& _fontTextureSampler2D;
-
 		bool _needUpdateGPUData = false;
 
 		float _layer = 0.0f;

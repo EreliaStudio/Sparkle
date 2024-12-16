@@ -2,18 +2,6 @@
 
 namespace spk::OpenGL
 {
-	void BufferSet::Factory::insert(OpenGL::LayoutBufferObject::Attribute::Index p_index, size_t p_size, OpenGL::LayoutBufferObject::Attribute::Type p_type)
-	{
-		_layoutFactory.insert(p_index, p_size, p_type);
-	}
-
-	BufferSet BufferSet::Factory::construct() const
-	{
-		BufferSet result;
-		result._layout = _layoutFactory.construct();
-		return result;
-	}
-
 	LayoutBufferObject& BufferSet::layout()
 	{
 		return _layout;
