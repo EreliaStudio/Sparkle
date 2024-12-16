@@ -2,8 +2,7 @@
 
 #include <string>
 
-#include "structure/graphics/spk_pipeline.hpp"
-
+#include "structure/graphics/spk_geometry_2D.hpp"
 #include "structure/graphics/spk_color.hpp"
 
 namespace spk::WidgetComponent
@@ -11,14 +10,6 @@ namespace spk::WidgetComponent
 	class ColorArea
 	{
 	private:
-		static std::string _pipelineCode;
-		static spk::Pipeline _pipeline;
-
-		spk::Pipeline::Object _object;
-		spk::Pipeline::Object::Attribute& _informations;
-		spk::Pipeline::Object::Attribute::Element& _colorInformation;
-		spk::Pipeline::Object::Attribute::Element& _layerInformation;
-
 		bool _needUpdateGPUData = false;
 		spk::Geometry2D _geometry;
 		spk::Color _color;

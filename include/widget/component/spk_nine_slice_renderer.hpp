@@ -2,22 +2,12 @@
 
 #include "structure/spk_safe_pointer.hpp"
 #include "structure/graphics/texture/spk_sprite_sheet.hpp"
-#include "structure/graphics/spk_pipeline.hpp"
 
 namespace spk::WidgetComponent
 {
     class NineSliceRenderer
     {
     private:
-        static std::string _pipelineCode;
-        static spk::Pipeline _pipeline;
-
-        spk::Pipeline::Object _object;
-        spk::Pipeline::Object::Attribute& _textureInformations;
-        spk::Pipeline::Object::Attribute::Element& _layerElement;
-        spk::Pipeline::Object::Attribute::Element& _alphaElement;
-        spk::Pipeline::Object::Sampler2D& _textureSampler2D;
-
         bool _needUpdateGPU = false;
 
         float _layer = 0.0f;

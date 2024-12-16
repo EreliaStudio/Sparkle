@@ -198,29 +198,6 @@ namespace spk
 			updateGeometry();
 			_computeViewport();
 		}
-
-		if (WidgetConstants == nullptr)
-		{
-			try
-			{
-				WidgetConstants = &(spk::Pipeline::constants(L"spk::WidgetConstants"));
-			}
-			catch (...)
-			{
-				WidgetConstants = nullptr;
-			}
-		}
-
-		if (parent() != nullptr)
-		{
-			static_cast<const spk::Widget*>(parent())->viewport().apply();
-
-			if (WidgetConstants != nullptr)
-			{
-				(*WidgetConstants)[L"layer"] = _layer;
-				WidgetConstants->validate();
-			}
-		}
 		
 		_onPaintEvent(p_event);
 

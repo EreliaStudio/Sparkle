@@ -37,21 +37,10 @@ namespace spk::OpenGL
 			static size_t typeSize(Type p_type);
 		};
 
-		class Factory
-		{
-		private:
-			std::vector<Attribute> _attributes;
-
-		public:
-			void insert(Attribute::Index p_index, size_t p_size, Attribute::Type p_type);
-			LayoutBufferObject construct() const;
-		};
-
 	private:
 		std::vector<Attribute> _attributesToApply;
 		size_t _vertexSize;
 
-		void _insertAttribute(const Attribute& p_attribute);
 		void _applyAttributes();
 
 	public:
@@ -107,5 +96,7 @@ namespace spk::OpenGL
 			}
 			VertexBufferObject::append(data.data(), data.size() * sizeof(TType));
 		}
+		
+		void insertAttribute(const Attribute& p_attribute);
 	};
 }

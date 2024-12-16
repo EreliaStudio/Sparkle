@@ -2,51 +2,18 @@
 
 namespace spk::OpenGL
 {
-	void SamplerObject::Factory::setName(const std::string& name)
-	{
-		_name = name;
-	}
-
-	void SamplerObject::Factory::setDesignator(const std::string& designator)
-	{
-		_designator = designator;
-	}
-	
-	void SamplerObject::Factory::setIndex(size_t index)
-	{
-		_index = index;
-	}
-
-	SamplerObject SamplerObject::Factory::construct() const
-	{
-		return SamplerObject(_name, _designator, _index);
-	}
-
-	SamplerObject::SamplerObject()
-		: _name("unknow name"), _designator("unknow designator"), _index(-1), _texture(nullptr), _uniformDestination(-1)
-	{
-	}
-
-	SamplerObject::SamplerObject(const std::string& p_name, const std::string& p_designator, size_t p_index)
-		: _name(p_name), _designator(p_designator), _index(static_cast<GLint>(p_index)), _texture(nullptr), _uniformDestination(-1)
-	{
-	}
+	SamplerObject::SamplerObject() : _designator(""), _index(-1), _texture(nullptr), _uniformDestination(-1) {}
 
 	SamplerObject::SamplerObject(const SamplerObject& p_other)
-		: _name(p_other._name),
-		_designator(p_other._designator),
-		_index(p_other._index),
-		_texture(p_other._texture),
-		_uniformDestination(p_other._uniformDestination)
-	{
-
-	}
+		: _designator(p_other._designator),
+		  _index(p_other._index),
+		  _texture(p_other._texture),
+		  _uniformDestination(p_other._uniformDestination) {}
 
 	SamplerObject& SamplerObject::operator=(const SamplerObject& p_other)
 	{
 		if (this != &p_other)
 		{
-			_name = p_other._name;
 			_designator = p_other._designator;
 			_index = p_other._index;
 			_texture = p_other._texture;
@@ -56,10 +23,13 @@ namespace spk::OpenGL
 	}
 
 	SamplerObject::SamplerObject(SamplerObject&& p_other) noexcept
-		: _name(std::move(p_other._name)), _designator(std::move(p_other._designator)), _index(p_other._index), _texture(p_other._texture), _uniformDestination(p_other._uniformDestination)
+		: _designator(std::move(p_other._designator)),
+		  _index(p_other._index),
+		  _texture(p_other._texture),
+		  _uniformDestination(p_other._uniformDestination)
 	{
 		p_other._texture = nullptr;
-		p_other._index = static_cast<GLint>(-1);
+		p_other._index = -1;
 		p_other._uniformDestination = -1;
 	}
 
@@ -67,17 +37,27 @@ namespace spk::OpenGL
 	{
 		if (this != &p_other)
 		{
-			_name = std::move(p_other._name);
 			_designator = std::move(p_other._designator);
 			_index = p_other._index;
 			_texture = p_other._texture;
 			_uniformDestination = p_other._uniformDestination;
 
 			p_other._texture = nullptr;
-			p_other._index = static_cast<GLint>(-1);
+			p_other._index = -1;
 			p_other._uniformDestination = -1;
 		}
 		return *this;
+	}
+
+	void SamplerObject::setDesignator(const std::string& designator)
+	{
+		_designator = designator;
+		_uniformDestination = -1;
+	}
+
+	void SamplerObject::setIndex(size_t index)
+	{
+		_index = static_cast<GLint>(index);
 	}
 
 	void SamplerObject::bind(const spk::SafePointer<TextureObject>& p_texture)
@@ -97,19 +77,16 @@ namespace spk::OpenGL
 			glUniform1i(_uniformDestination, _index);
 		}
 
+		glActiveTexture(GL_TEXTURE0 + _index);
+
 		if (_texture == nullptr)
 		{
-			glActiveTexture(GL_TEXTURE0 + _index);
-
 			glBindTexture(GL_TEXTURE_2D, 0);
-			return ;
+			return;
 		}
 
 		_texture->_upload();
 		_texture->_setup();
-
-		glActiveTexture(GL_TEXTURE0 + _index);
-
 		glBindTexture(GL_TEXTURE_2D, _texture->_id);
 	}
 }

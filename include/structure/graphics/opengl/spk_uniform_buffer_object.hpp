@@ -1,208 +1,109 @@
 #pragma once
 
-#include <unordered_map>
+#include <GL/glew.h>
+#include <GL/gl.h>
 #include <string>
+#include <unordered_map>
+#include <variant>
 #include <vector>
-#include "spk_vertex_buffer_object.hpp"
+#include <stdexcept>
+#include <type_traits>
+#include <cstring>
 
-namespace spk
-{
-	class ShaderParser;
-}
+#include "spk_sfinae.hpp"
+
+#include "structure/graphics/opengl/spk_vertex_buffer_object.hpp"
 
 namespace spk::OpenGL
 {
-	class UniformBufferObject : public VertexBufferObject
-	{
-	public:
-		using BindingPoint = int;
-		using BlockIndex = int;
+    class UniformBufferObject : public VertexBufferObject
+    {
+    public:
+        using BindingPoint = int;
 
-		class Factory;
-		class Layout;
+        class Element
+        {
+			friend class UniformBufferObject;
+			
+        private:
+            uint8_t* _buffer; // Pointer to the UBO's data buffer
+            size_t _size;     // Size of a single element
+            std::variant<std::vector<Element>, std::unordered_map<std::wstring, Element>, std::monostate> _content; // Arrays or no additional content
 
-		struct Element
+        public:
+            Element(uint8_t* buffer = nullptr, size_t size = 0);
+
+            // Templated apply for non-container types
+            template <typename TType, typename = std::enable_if_t<!spk::IsContainer<TType>::value>>
+            Element& operator = (const TType& value)
+            {
+                if (sizeof(TType) != _size)
+                    throw std::runtime_error("Size mismatch: Expected size " + std::to_string(_size) +
+                                             " bytes, but received " + std::to_string(sizeof(TType)) + " bytes.");
+
+                if (std::holds_alternative<std::vector<Element>>(_content))
+                    throw std::runtime_error("Cannot apply scalar value to an array.");
+
+                std::memcpy(_buffer, &value, sizeof(TType));
+            }
+
+            // Templated apply for container types
+            template <typename TContainer, typename = std::enable_if_t<spk::IsContainer<TContainer>::value>>
+            Element& operator = (const TContainer& values)
+            {
+                if (!std::holds_alternative<std::vector<Element>>(_content))
+                    throw std::runtime_error("Cannot apply container to a non-array element.");
+
+                auto& elements = std::get<std::vector<Element>>(_content);
+
+                if (values.size() > elements.size())
+                    throw std::runtime_error("Container size exceeds array size.");
+
+                auto it = values.begin();
+                for (size_t i = 0; i < values.size(); ++i, ++it)
+                {
+                    elements[i] = *it;
+                }
+            }
+
+            uint8_t* data();          // Access the buffer pointer
+            size_t size() const;      // Get the size of the element
+
+            Element& operator[](size_t index);               // Access by array index
+            const Element& operator[](size_t index) const;
+
+            void resizeArray(size_t arraySize, size_t elementSize); // Resize the array
+
+            Element& addElement(const std::wstring& name, uint8_t* buffer, size_t elementSize, size_t arraySize = 0); // Add a sub-element
+            Element& operator[](const std::wstring& name);    // Access by name
+        };
+
+    private:
+        std::string _typeName;                               // Name of the uniform block in GLSL
+        BindingPoint _bindingPoint;                          // Binding point for the UBO
+        size_t _blockSize;                                   // Total size of the UBO's buffer
+        std::unordered_map<std::wstring, Element> _elements; // Map of top-level elements
+
+    public:
+        UniformBufferObject(const std::string& typeName, BindingPoint bindingPoint, size_t p_size);
+        ~UniformBufferObject();
+
+        void activate();
+
+		template<typename TType>
+		UniformBufferObject& operator = (const TType& p_data)
 		{
-			std::vector<Layout> layouts;
-
-			template<typename TType,
-				typename std::enable_if_t<!spk::IsContainer<TType>::value &&
-				!spk::IsSpecialization<TType, std::initializer_list>::value>* = nullptr>
-			Element& operator=(const TType& data)
+			if (sizeof(p_data) != _blockSize)
 			{
-				if (layouts.empty())
-					throw std::runtime_error("No layouts to assign to.");
-
-				layouts[0] = data;
-				return *this;
+                throw std::runtime_error("Invalide data size passed to UniformBufferObject.");
 			}
-
-			template<typename TContainer,
-				typename std::enable_if_t<spk::IsContainer<TContainer>::value &&
-				!spk::IsSpecialization<TContainer, std::initializer_list>::value>* = nullptr>
-			Element& operator=(const TContainer& data)
-			{
-				if (layouts.size() != data.size())
-					throw std::invalid_argument("Data size does not match the number of layouts.");
-
-				auto dataIt = std::begin(data);
-				for (auto& layout : layouts)
-				{
-					layout = *dataIt;
-					++dataIt;
-				}
-				return *this;
-			}
-
-			template<typename TType>
-			Element& operator=(std::initializer_list<TType> data)
-			{
-				if (layouts.size() != data.size())
-					throw std::invalid_argument("Data size does not match the number of layouts.");
-
-				auto dataIt = data.begin();
-				for (auto& layout : layouts)
-				{
-					layout = *dataIt;
-					++dataIt;
-				}
-				return *this;
-			}
-
-			operator Layout& ()
-			{
-				if (layouts.empty())
-					throw std::runtime_error("No layouts to convert from.");
-				return layouts[0];
-			}
-
-			Layout& operator[](size_t index)
-			{
-				if (index >= layouts.size())
-					throw std::out_of_range("Index out of range.");
-				return layouts[index];
-			}
-
-			Layout& operator[](const std::wstring& p_name)
-			{
-				if (layouts.empty())
-					throw std::runtime_error("No layouts to convert from.");
-				return layouts[0][p_name];
-			}
-		};
-
-		class Layout
-		{
-			friend class Factory;
-			friend class spk::ShaderParser;
-
-		public:
-
-			struct DataRepresentation
-			{
-				size_t offset;
-				size_t size;
-			};
-
-		private:
-			char* _destination;
-			DataRepresentation _cpu;
-			DataRepresentation _gpu;
-			size_t _arraySize = 1;
-			bool _tightlyPacked;
-
-			std::unordered_map<std::wstring, Element> _innerLayouts;
-
-			void _pushData(const char* p_basePtr);
-
-		public:
-			Layout();
-			Layout(const DataRepresentation& p_cpu, const DataRepresentation& p_gpu);
-
-			void bind(char* p_destination);
-
-			template <typename TType>
-			Layout& operator=(const std::vector<TType>& p_data)
-			{
-				if (_arraySize == 1)
-					throw std::invalid_argument("Cannot assign vector data to non-array uniform buffer object layout.");
-
-				if (p_data.size() != _arraySize)
-					throw std::invalid_argument("Data size does not match the size of the uniform buffer object array.");
-
-				if (sizeof(TType) * p_data.size() != _cpu.size)
-					throw std::invalid_argument("Unexpected parameter type provided to uniform buffer object.\nExpected [" + std::to_string(_cpu.size) + "] byte(s), received [" + std::to_string(sizeof(TType) * p_data.size()) + "].");
-
-				_pushData(reinterpret_cast<const char*>(p_data.data()));
-				return *this;
-			}
-
-			template <typename TType>
-			Layout& operator=(const TType& p_data)
-			{
-				if (_arraySize > 1)
-					throw std::invalid_argument("Cannot assign single value to array uniform buffer object layout.");
-
-				if (sizeof(TType) != _cpu.size)
-					throw std::invalid_argument("Unexpected parameter type provided to uniform buffer object.\nExpected [" + std::to_string(_cpu.size) + "] byte(s), received [" + std::to_string(sizeof(TType)) + "].");
-
-				_pushData(reinterpret_cast<const char*>(&p_data));
-				return *this;
-			}
-
-			Element& operator[](const std::wstring& p_name);
-		};
-
-		class Factory
-		{
-			friend class spk::ShaderParser;
-
-		private:
-			std::string _typeName;
-			BindingPoint _bindingPoint;
-			Layout _layout;
-
-		public:
-			void setTypeName(const std::string& p_name);
-			void setBindingPoint(BindingPoint p_bindingPoint);
-
-			const std::string& typeName() const;
-			BindingPoint bindingPoint() const;
-
-			Layout& mainLayout();
-			const Layout& mainLayout() const;
-			Layout& addInnerLayout(Layout& p_layout, const std::wstring& p_name, const Layout::DataRepresentation& p_cpu, const Layout::DataRepresentation& p_gpu);
-			UniformBufferObject construct() const;
-		};
-
-	private:
-		std::string _typeName;
-		BindingPoint _bindingPoint;
-		BlockIndex _blockIndex;
-		Layout _layout;
-
-	public:
-		UniformBufferObject();
-		
-		UniformBufferObject(const UniformBufferObject& p_other);
-		UniformBufferObject& operator=(const UniformBufferObject& p_other);
-
-		UniformBufferObject(UniformBufferObject&& p_other) noexcept;
-		UniformBufferObject& operator=(UniformBufferObject&& p_other) noexcept;
-
-		const std::string& typeName() const;
-		const BindingPoint& bindingPoint() const;
-
-		void activate();
-
-		template <typename TType>
-		UniformBufferObject& operator=(const TType& p_layout)
-		{
-			_layout = p_layout;
-			validate();
-			return *this;
+			edit(&p_data, _blockSize, 0);
+			return (*this);
 		}
 
-		Element& operator[](const std::wstring& p_name);
-	};
+        Element& operator[](const std::wstring& name);
+        const Element& operator[](const std::wstring& name) const;
+
+        Element& addElement(const std::wstring& name, size_t offset, size_t elementSize, size_t arraySize = 0); // Add a top-level element
+    };
 }

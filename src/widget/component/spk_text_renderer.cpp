@@ -4,126 +4,6 @@
 
 namespace spk::WidgetComponent
 {
-	std::string TextRenderer::_pipelineCode = R"(## LAYOUTS DEFINITION ##
-0 Vector2Int modelPosition
-1 Vector2 modelUVs
-
-
-## FRAMEBUFFER DEFINITION ##
-0 Color pixelColor
-
-
-## CONSTANTS DEFINITION ##
-spk_ScreenConstants_Type spk::ScreenConstants 64 64 {
-    canvasMVP 0 64 0 64 1 0 {}
-}
-spk_WidgetConstants_Type spk::WidgetConstants 4 4 {
-    layer 0 4 0 4 1 0 {}
-}
-
-
-## ATTRIBUTES DEFINITION ##
-textInformations_Type textInformations 36 48 {
-    layer 0 4 0 4 1 0 {}
-    glyphColor 4 16 16 16 1 0 {
-        r 0 4 0 4 1 0 {}
-        g 4 4 4 4 1 0 {}
-        b 8 4 8 4 1 0 {}
-        a 12 4 12 4 1 0 {}
-    }
-    outlineColor 20 16 32 16 1 0 {
-        r 0 4 0 4 1 0 {}
-        g 4 4 4 4 1 0 {}
-        b 8 4 8 4 1 0 {}
-        a 12 4 12 4 1 0 {}
-    }
-}
-
-
-## TEXTURES DEFINITION ##
-fontTexture Texture_fontTexture
-
-
-## VERTEX SHADER CODE ##
-#version 450
-
-layout (location = 0) in ivec2 modelPosition;
-layout (location = 1) in vec2 modelUVs;
-layout (location = 0) out flat int out_instanceID;
-layout (location = 1) out vec2 fragmentUVs;
-
-layout(constants) uniform spk_ScreenConstants_Type
-{
-    mat4 canvasMVP;
-} spk_ScreenConstants;
-
-layout(constants) uniform spk_WidgetConstants_Type
-{
-    float layer;
-} spk_WidgetConstants;
-
-layout(attributes) uniform textInformations_Type
-{
-    float layer;
-    vec4 glyphColor;
-    vec4 outlineColor;
-} textInformations;
-
-uniform sampler2D Texture_fontTexture;
-
-void main()
-{
-    (gl_Position) = ((spk_ScreenConstants.canvasMVP) * (vec4(modelPosition, (spk_WidgetConstants.layer) + (textInformations.layer), 1.0f)));
-    (fragmentUVs) = (modelUVs);
-    out_instanceID = gl_InstanceID;
-}
-
-## FRAGMENT SHADER CODE ##
-#version 450
-
-layout (location = 0) in flat int instanceID;
-layout (location = 1) in vec2 fragmentUVs;
-layout (location = 0) out vec4 pixelColor;
-
-layout(attributes) uniform textInformations_Type
-{
-    float layer;
-    vec4 glyphColor;
-    vec4 outlineColor;
-} textInformations;
-
-uniform sampler2D Texture_fontTexture;
-
-float computeFormula(float x, float k)
-{
-    return ((1.0) - (exp((-k) * (x)))) / ((1.0) - (exp(-k)));
-}
-
-void main()
-{
-    float grayscale = texture(Texture_fontTexture, fragmentUVs).r;
-	
-	if ((grayscale) == (0))
-    {
-        discard;
-    }
-
-    float outlineToGlyphThreshold = 0.2f;
-    if ((grayscale) <= (outlineToGlyphThreshold))
-    {
-		(pixelColor) = (textInformations.outlineColor);
-        (pixelColor.a) = (computeFormula(smoothstep(0, outlineToGlyphThreshold, grayscale), 20));
-    }
-    else
-    {
-		float t = computeFormula(smoothstep(outlineToGlyphThreshold, 1.0, grayscale), -20);
-		(pixelColor) = mix(textInformations.outlineColor, textInformations.glyphColor, t);
-    }
-}
-
-)";
-	spk::Pipeline TextRenderer::_pipeline = spk::Pipeline(_pipelineCode);
-
 	namespace 
 	{
 		struct RenderingData
@@ -227,12 +107,12 @@ void main()
 
 		spk::Vector2Int glyphAnchor = geometry().anchor + computeBaseAnchor(renderingData, _horizontalAlignment, _verticalAlignment, geometry().size);
 
-		_object.layout().clear();
-		_object.indexes().clear();
+		// _object.layout().clear();
+		// _object.indexes().clear();
 
 		for (const auto& glyph : renderingData.glyphs)
 		{
-			unsigned int baseIndexes = static_cast<unsigned int>(_object.layout().size() / sizeof(Vertex));
+			// unsigned int baseIndexes = static_cast<unsigned int>(_object.layout().size() / sizeof(Vertex));
 
 			for (size_t i = 0; i < 4; i++)
 			{
@@ -241,33 +121,27 @@ void main()
 				newVertex.position = glyphAnchor + glyph->positions[i];
 				newVertex.uvs = glyph->UVs[i];
 
-				_object.layout() << newVertex;
+				// _object.layout() << newVertex;
 			}
 			glyphAnchor += glyph->step;
 
 			for (size_t i = 0; i < 6; i++)
 			{
-				_object.indexes() << (baseIndexes + spk::Font::Glyph::indexesOrder[i]);
+				// _object.indexes() << (baseIndexes + spk::Font::Glyph::indexesOrder[i]);
 			}
 		}
 
-		_object.layout().validate();
-		_object.indexes().validate();
+		// _object.layout().validate();
+		// _object.indexes().validate();
 	}
 
-	TextRenderer::TextRenderer() :
-		_object(_pipeline.createObject()),
-		_textInformations(_object.attribute(L"textInformations")),
-		_layerElement(_textInformations[L"layer"]),
-		_outlineColorElement(_textInformations[L"outlineColor"]),
-		_glyphColorElement(_textInformations[L"glyphColor"]),
-		_fontTextureSampler2D(_object.sampler2D(L"fontTexture"))
+	TextRenderer::TextRenderer()
 	{
-		_layerElement = _layer;
-		_outlineColorElement = _outlineColor;
-		_glyphColorElement = _glyphColor;
+		// _layerElement = _layer;
+		// _outlineColorElement = _outlineColor;
+		// _glyphColorElement = _glyphColor;
 
-		_textInformations.validate();
+		// _textInformations.validate();
 	}
 
 	const float& TextRenderer::layer() const
@@ -319,9 +193,9 @@ void main()
 	{
 		_layer = p_layer;
 
-		_layerElement = _layer;
+		// _layerElement = _layer;
 
-		_textInformations.validate();
+		// _textInformations.validate();
 	}
 
 	void TextRenderer::setGeometry(const spk::Geometry2D& p_geometry)
@@ -336,7 +210,7 @@ void main()
 
 		if (_font != nullptr)
 		{
-			_fontTextureSampler2D.bind(&(_font->atlas(_fontSize)));
+			// _fontTextureSampler2D.bind(&(_font->atlas(_fontSize)));
 		}
 
 		_needUpdateGPUData = true;
@@ -347,7 +221,7 @@ void main()
 		_fontSize = p_fontSize;
 		if (_font != nullptr)
 		{
-			_fontTextureSampler2D.bind(&(_font->atlas(_fontSize)));
+			// _fontTextureSampler2D.bind(&(_font->atlas(_fontSize)));
 		}
 		_needUpdateGPUData = true;
 	}
@@ -357,28 +231,28 @@ void main()
 		_outlineColor = p_outlineColor;
 		_glyphColor = p_glyphColor;
 
-		_outlineColorElement = _outlineColor;
-		_glyphColorElement = _glyphColor;
+		// _outlineColorElement = _outlineColor;
+		// _glyphColorElement = _glyphColor;
 
-		_textInformations.validate();
+		// _textInformations.validate();
 	}
 
 	void TextRenderer::setOutlineColor(const spk::Color& p_outlineColor)
 	{
 		_outlineColor = p_outlineColor;
 
-		_outlineColorElement = p_outlineColor;
+		// _outlineColorElement = p_outlineColor;
 
-		_textInformations.validate();
+		// _textInformations.validate();
 	}
 
 	void TextRenderer::setGlyphColor(const spk::Color& p_glyphColor)
 	{
 		_glyphColor = p_glyphColor;
 
-		_glyphColorElement = p_glyphColor;
+		// _glyphColorElement = p_glyphColor;
 
-		_textInformations.validate();
+		// _textInformations.validate();
 	}
 
 	void TextRenderer::setText(const std::wstring& p_text)
@@ -406,6 +280,6 @@ void main()
 			_updateGPUData();
 			_needUpdateGPUData = false;
 		}
-		_object.render();
+		// _object.render();
 	}
 }

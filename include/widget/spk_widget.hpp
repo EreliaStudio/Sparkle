@@ -10,8 +10,6 @@
 
 #include "structure/system/event/spk_event.hpp"
 
-#include "structure/graphics/spk_pipeline.hpp"
-
 namespace spk
 {
 	class Window;
@@ -24,8 +22,6 @@ namespace spk
 	private:
 		std::wstring _name;
 		spk::SafePointer<Widget> _parent;
-		static inline spk::Pipeline::Constant* WidgetConstants = nullptr;
-
 		std::vector<Widget*> _managedChildren;
 
 		bool _needGeometryChange = true;

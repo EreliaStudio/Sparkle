@@ -26,23 +26,6 @@ namespace spk::OpenGL
 		}
 	}
 
-	void LayoutBufferObject::Factory::insert(Attribute::Index p_index, size_t p_size, Attribute::Type p_type)
-	{
-		_attributes.emplace_back(p_index, p_size, p_type);
-	}
-
-	LayoutBufferObject LayoutBufferObject::Factory::construct() const
-	{
-		LayoutBufferObject result;
-
-		for (const auto& attribute : _attributes)
-		{
-			result._insertAttribute(attribute);
-		}
-
-		return result;
-	}
-
 	LayoutBufferObject::LayoutBufferObject() :
 		VertexBufferObject(Type::Storage, Usage::Static),
 		_vertexSize(0)
@@ -89,7 +72,7 @@ namespace spk::OpenGL
 		return *this;
 	}
 
-	void LayoutBufferObject::_insertAttribute(const Attribute& p_attribute)
+	void LayoutBufferObject::insertAttribute(const Attribute& p_attribute)
 	{
 		_attributesToApply.push_back(p_attribute);
 		_vertexSize += p_attribute.size * Attribute::typeSize(p_attribute.type);
