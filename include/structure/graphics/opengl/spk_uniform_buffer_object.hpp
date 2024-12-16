@@ -34,37 +34,42 @@ namespace spk::OpenGL
             Element(uint8_t* buffer = nullptr, size_t size = 0);
 
             // Templated apply for non-container types
-            template <typename TType, typename = std::enable_if_t<!spk::IsContainer<TType>::value>>
-            Element& operator = (const TType& value)
-            {
-                if (sizeof(TType) != _size)
-                    throw std::runtime_error("Size mismatch: Expected size " + std::to_string(_size) +
-                                             " bytes, but received " + std::to_string(sizeof(TType)) + " bytes.");
+			template <typename TType>
+			requires (!spk::IsContainer<TType>::value)
+			Element& operator = (const TType& value)
+			{
+				if (sizeof(TType) != _size)
+					throw std::runtime_error("Size mismatch: Expected size " + std::to_string(_size) +
+											" bytes, but received " + std::to_string(sizeof(TType)) + " bytes.");
 
-                if (std::holds_alternative<std::vector<Element>>(_content))
-                    throw std::runtime_error("Cannot apply scalar value to an array.");
+				if (std::holds_alternative<std::vector<Element>>(_content))
+					throw std::runtime_error("Cannot apply scalar value to an array.");
 
-                std::memcpy(_buffer, &value, sizeof(TType));
-            }
+				std::memcpy(_buffer, &value, sizeof(TType));
+				return *this;
+			}
 
-            // Templated apply for container types
-            template <typename TContainer, typename = std::enable_if_t<spk::IsContainer<TContainer>::value>>
-            Element& operator = (const TContainer& values)
-            {
-                if (!std::holds_alternative<std::vector<Element>>(_content))
-                    throw std::runtime_error("Cannot apply container to a non-array element.");
+			// Templated apply for container types
+			template <typename TContainer>
+			requires (spk::IsContainer<TContainer>::value)
+			Element& operator = (const TContainer& values)
+			{
+				if (!std::holds_alternative<std::vector<Element>>(_content))
+					throw std::runtime_error("Cannot apply container to a non-array element.");
 
-                auto& elements = std::get<std::vector<Element>>(_content);
+				auto& elements = std::get<std::vector<Element>>(_content);
 
-                if (values.size() > elements.size())
-                    throw std::runtime_error("Container size exceeds array size.");
+				if (values.size() > elements.size())
+					throw std::runtime_error("Container size exceeds array size.");
 
-                auto it = values.begin();
-                for (size_t i = 0; i < values.size(); ++i, ++it)
-                {
-                    elements[i] = *it;
-                }
-            }
+				auto it = values.begin();
+				for (size_t i = 0; i < values.size(); ++i, ++it)
+				{
+					elements[i] = *it;
+				}
+
+				return *this;
+			}
 
             uint8_t* data();          // Access the buffer pointer
             size_t size() const;      // Get the size of the element
