@@ -31,6 +31,12 @@ namespace spk
 
 	void Viewport::apply() const
 	{
+		_matrix = spk::Matrix4x4::ortho(0.0f, static_cast<float>(_geometry.width), static_cast<float>(_geometry.heigth), 0.0f, -_maxLayer, 0.0f);
 		glViewport(static_cast<GLint>(_geometry.x), static_cast<GLint>(_geometry.y), static_cast<GLsizei>(_geometry.width), static_cast<GLsizei>(_geometry.heigth));
+	}
+
+	spk::Vector3 Viewport::convertScreenToOpenGL(const spk::Vector2Int p_screenPosition, const float& p_layer)
+	{
+		return ((_matrix * spk::Vector4(p_screenPosition, p_layer, 0)).xyz());
 	}
 }

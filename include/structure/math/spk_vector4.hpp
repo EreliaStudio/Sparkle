@@ -10,6 +10,7 @@
 
 #include "structure/math/spk_math.hpp"
 #include "structure/math/spk_vector2.hpp"
+#include "structure/math/spk_vector3.hpp"
 
 namespace spk
 {
@@ -29,6 +30,16 @@ namespace spk
 			typename = std::enable_if_t<std::is_arithmetic<UxType>::value && std::is_arithmetic<UyType>::value && std::is_arithmetic<UzType>::value && std::is_arithmetic<UwType>::value>>
 		IVector4(UxType px, UyType py, UzType pz, UwType pw) : x(static_cast<TType>(px)), y(static_cast<TType>(py)), z(static_cast<TType>(pz)), w(static_cast<TType>(pw)) {}
 		
+		// Constructor with one vector2 and two p_scalar
+        template<typename UType, typename VType, typename WType,
+            typename = std::enable_if_t<std::is_arithmetic<UType>::value&& std::is_arithmetic<VType>::value&& std::is_arithmetic<WType>::value>>
+        IVector4(const spk::IVector2<UType>& p_vec2, const VType& p_scalarZ, const WType& p_scalarW) : x(static_cast<TType>(p_vec2.x)), y(static_cast<TType>(p_vec2.y)), z(static_cast<TType>(p_scalarZ)), w(static_cast<TType>(p_scalarW)) {}
+
+		// Constructor with one vector3 and one p_scalar
+        template<typename UType, typename VType,
+            typename = std::enable_if_t<std::is_arithmetic<UType>::value&& std::is_arithmetic<VType>::value>>
+        IVector4(const spk::IVector3<UType>& p_vec3, const VType& p_scalar) : x(static_cast<TType>(p_vec3.x)), y(static_cast<TType>(p_vec3.y)), z(static_cast<TType>(p_vec3.z)), w(static_cast<TType>(p_scalar)) {}
+
 		template <typename UType>
 		IVector4(const IVector4<UType>& p_other) : x(static_cast<TType>(p_other.x)), y(static_cast<TType>(p_other.y)), z(static_cast<TType>(p_other.z)), w(static_cast<TType>(p_other.w)) {}
 		
@@ -45,6 +56,16 @@ namespace spk
 			z = static_cast<TType>(p_other.z);
 			w = static_cast<TType>(p_other.w);
 			return (*this);
+		}
+
+		spk::IVector2<TType> xy() const
+		{
+			return (spk::IVector2<TType>(x, y));
+		}
+
+		spk::IVector3<TType> xyz() const
+		{
+			return (spk::IVector3<TType>(x, y, z));
 		}
 
 		friend std::wostream& operator<<(std::wostream& p_os, const IVector4& p_vec)
