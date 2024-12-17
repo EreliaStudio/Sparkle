@@ -110,7 +110,12 @@ install(FILES ${CMAKE_SOURCE_DIR}/LICENSE.txt
 
 # Option to enable tests
 option(ENABLE_TESTS "Enable building of test units" OFF)
+option(ENABLE_PLAYGROUND "Enable building of playground" OFF)
 
 if (ENABLE_TESTS)
     add_subdirectory(checker)
+endif()
+
+if (ENABLE_PLAYGROUND)
+    add_subdirectory(playground)
 endif()
