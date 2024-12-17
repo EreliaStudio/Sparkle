@@ -26,14 +26,13 @@ namespace spk::OpenGL
 			friend class UniformBufferObject;
 			
         private:
-            uint8_t* _buffer; // Pointer to the UBO's data buffer
-            size_t _size;     // Size of a single element
-            std::variant<std::vector<Element>, std::unordered_map<std::wstring, Element>, std::monostate> _content; // Arrays or no additional content
+            uint8_t* _buffer;
+            size_t _size;
+            std::variant<std::vector<Element>, std::unordered_map<std::wstring, Element>, std::monostate> _content;
 
         public:
             Element(uint8_t* buffer = nullptr, size_t size = 0);
 
-            // Templated apply for non-container types
 			template <typename TType>
 			requires (!spk::IsContainer<TType>::value)
 			Element& operator = (const TType& value)
@@ -49,7 +48,6 @@ namespace spk::OpenGL
 				return *this;
 			}
 
-			// Templated apply for container types
 			template <typename TContainer>
 			requires (spk::IsContainer<TContainer>::value)
 			Element& operator = (const TContainer& values)
@@ -71,23 +69,23 @@ namespace spk::OpenGL
 				return *this;
 			}
 
-            uint8_t* data();          // Access the buffer pointer
-            size_t size() const;      // Get the size of the element
+            uint8_t* data();
+            size_t size() const;
 
-            Element& operator[](size_t index);               // Access by array index
+            Element& operator[](size_t index);
             const Element& operator[](size_t index) const;
 
-            void resizeArray(size_t arraySize, size_t elementSize); // Resize the array
+            void resizeArray(size_t arraySize, size_t elementSize);
 
-            Element& addElement(const std::wstring& name, uint8_t* buffer, size_t elementSize, size_t arraySize = 0); // Add a sub-element
-            Element& operator[](const std::wstring& name);    // Access by name
+            Element& addElement(const std::wstring& name, uint8_t* buffer, size_t elementSize, size_t arraySize = 0);
+            Element& operator[](const std::wstring& name);
         };
 
     private:
-        std::string _typeName;                               // Name of the uniform block in GLSL
-        BindingPoint _bindingPoint;                          // Binding point for the UBO
-        size_t _blockSize;                                   // Total size of the UBO's buffer
-        std::unordered_map<std::wstring, Element> _elements; // Map of top-level elements
+        std::string _typeName;
+        BindingPoint _bindingPoint;
+        size_t _blockSize;
+        std::unordered_map<std::wstring, Element> _elements;
 
     public:
         UniformBufferObject(const std::string& typeName, BindingPoint bindingPoint, size_t p_size);
