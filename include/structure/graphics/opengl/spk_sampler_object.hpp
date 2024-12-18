@@ -10,25 +10,35 @@ namespace spk::OpenGL
 {
 	class SamplerObject
 	{
+	public:
+		enum class Type : GLenum
+		{
+			Texture1D = GL_TEXTURE_1D,
+			Texture2D = GL_TEXTURE_2D,
+			Texture3D = GL_TEXTURE_3D,
+			TextureCubeMap = GL_TEXTURE_CUBE_MAP
+		};
+
 	private:
 		spk::SafePointer<TextureObject> _texture = nullptr;
 
 		std::string _designator;
 		GLint _index = -1;
 		GLint _uniformDestination = -1;
+		Type _type;
 
 	public:
 		SamplerObject();
+		SamplerObject(const std::string& p_name, Type p_type, size_t p_textureIndex);
 
 		SamplerObject(const SamplerObject& p_other);
 		SamplerObject& operator=(const SamplerObject& p_other);
 		SamplerObject(SamplerObject&& p_other) noexcept;
 		SamplerObject& operator=(SamplerObject&& p_other) noexcept;
 
-		void setDesignator(const std::string& designator);
-		void setIndex(size_t index);
 		void bind(const spk::SafePointer<TextureObject>& p_texture);
 
 		void activate();
+		void deactivate();
 	};
 }

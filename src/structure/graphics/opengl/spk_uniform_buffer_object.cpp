@@ -1,11 +1,13 @@
 #include "structure/graphics/opengl/spk_uniform_buffer_object.hpp"
 
+#include "spk_debug_macro.hpp"
+
 namespace spk::OpenGL
 {
     UniformBufferObject::Element::Element(uint8_t* buffer, size_t size)
         : _buffer(buffer), _size(size)
     {
-		
+
     }
 
     uint8_t* UniformBufferObject::Element::data()
@@ -17,6 +19,14 @@ namespace spk::OpenGL
     {
         return _size;
     }
+
+	size_t UniformBufferObject::Element::nbElement() const
+	{
+        if (!std::holds_alternative<std::vector<Element>>(_content))
+            throw std::runtime_error("Element is not an array.");
+        auto& elements = std::get<std::vector<Element>>(_content);
+		return (elements.size());
+	}
 
     UniformBufferObject::Element& UniformBufferObject::Element::operator[](size_t index)
     {
@@ -86,18 +96,27 @@ namespace spk::OpenGL
         return it->second;
     }
 
-    UniformBufferObject::UniformBufferObject(const std::string& typeName, BindingPoint bindingPoint, size_t p_size)
-        : VertexBufferObject(VertexBufferObject::Type::Uniform, VertexBufferObject::Usage::Dynamic),
-          _typeName(typeName),
-          _bindingPoint(bindingPoint),
-          _blockSize(p_size)
+	UniformBufferObject::UniformBufferObject() :
+		VertexBufferObject(VertexBufferObject::Type::Uniform, VertexBufferObject::Usage::Dynamic),
+        _typeName("Unnamed type"),
+        _bindingPoint(-1),
+        _blockSize(0)
+	{
+
+	}
+
+    UniformBufferObject::UniformBufferObject(const std::string& typeName, BindingPoint bindingPoint, size_t p_size) :
+		VertexBufferObject(VertexBufferObject::Type::Uniform, VertexBufferObject::Usage::Dynamic),
+        _typeName(typeName),
+        _bindingPoint(bindingPoint),
+        _blockSize(p_size)
     {
         resize(p_size);
     }
 
     UniformBufferObject::~UniformBufferObject()
     {
-        deactivate();
+		
     }
 
     void UniformBufferObject::activate()

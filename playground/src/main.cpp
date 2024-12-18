@@ -3,94 +3,123 @@
 class TestComponent : public spk::Component
 {
 private:
-	spk::OpenGL::Program _program = spk::OpenGL::Program(
-R"(#version 450
+	bool _needUpdate = true;
 
-layout(location = 0) in vec3 modelPosition;
-
-layout(std140, binding = 0) uniform modelInformations {
-    vec3 offsets[3];
-	vec4 color;
-};
-
-void main()
-{
-	vec3 instanceOffset = offsets[gl_InstanceID];
-    gl_Position = vec4(modelPosition + instanceOffset, 1.0);
-})",
-R"(#version 450
-
-layout(location = 0) out vec4 outputColor;
-
-layout(std140, binding = 0) uniform modelInformations {
-    vec3 offsets[3];
-	vec4 color;
-};
-
-void main()
-{
-	outputColor = color;
-})");
-
-	spk::OpenGL::BufferSet _bufferSet;
-
-	spk::OpenGL::UniformBufferObject _modelInformations;
-
-	void onPaintEvent(spk::PaintEvent& p_event)
-	{
-		struct Vertex
-		{
-			spk::Vector3 position;
-			spk::Color color;
-		};
-
-		_bufferSet.layout().clear();
-		_bufferSet.indexes().clear();
-
-		_bufferSet.layout() << Vertex{.position = spk::Vector3( 0.0f,  0.5f, 0.0f), .color = spk::Color::red};		
-		_bufferSet.layout() << Vertex{.position = spk::Vector3(-0.5f, -0.5f, 0.0f), .color = spk::Color::green};	
-		_bufferSet.layout() << Vertex{.position = spk::Vector3( 0.5f, -0.5f, 0.0f), .color = spk::Color::blue};
-
-		_bufferSet.indexes() << std::array<unsigned int, 3>{
-			0u, 1u, 2u
-		};
-
-		_modelInformations["offsets"][0] = spk::Vector3(0, 0.5f, 0);
-		_modelInformations["offsets"][1] = spk::Vector3(-0.5f, -0.5f, 0);
-		_modelInformations["offsets"][2] = spk::Vector3(0.5f, -0.5f, 0);
-		_modelInformations["color"] = spk::Color::green;
-		_modelInformations.validate();
-
-		_bufferSet.layout().validate();
-		_bufferSet.indexes().validate();
-
-		_program.activate();
-
-		_bufferSet.activate();
-
-		_modelInformations.activate();
-
-		size_t nbInstance = 3;
-
-		_program.render(_bufferSet.indexes().nbIndexes(), nbInstance);
-
-		_modelInformations.deactivate();
-
-		_bufferSet.deactivate();
-
-		_program.deactivate();
-	}
+	spk::ColorRenderer colorRenderer;
+    spk::FontRenderer fontRenderer;
+    spk::TextureRenderer textureRenderer;
+	
+	spk::Font font;
+    spk::Image image;
 
 public:
 	TestComponent() :
 		spk::Component(L"TestComponent"),
-		_modelInformations("modelInformations", 0, 64)
+		font("playground/resources/CrystalUniverse-Regular.ttf"),
+		image("playground/resources/test.png")
 	{
-		_bufferSet.layout().addAttribute(0, spk::OpenGL::LayoutBufferObject::Attribute::Type::Vector3);
-		_bufferSet.layout().addAttribute(1, spk::OpenGL::LayoutBufferObject::Attribute::Type::Vector4);
+		fontRenderer.setFont(&font);
+        fontRenderer.setFontSize({26, 3});
+        fontRenderer.setGlyphColor(spk::Color(255, 255, 255, 255));
+        fontRenderer.setOutlineColor(spk::Color(255, 0, 0, 255));
 
-		_modelInformations.addElement("offsets", 0, sizeof(spk::Vector3), 3);
-		_modelInformations.addElement("color", 48, sizeof(spk::Color));
+		textureRenderer.setTexture(&image);
+	}
+
+	void _updateGPUData()
+	{
+		//-------------------------------------------
+        // 1. Example usage of the ColorRenderer (already given)
+        //-------------------------------------------
+		colorRenderer.clear();
+
+		// Add a simple square centered at (0,0), size 0.4
+		float halfSize = 0.2f;
+		colorRenderer << spk::ColorRenderer::Vertex{ spk::Vector2(-halfSize, -halfSize), 0.0f };
+		colorRenderer << spk::ColorRenderer::Vertex{ spk::Vector2( halfSize, -halfSize), 0.0f };
+		colorRenderer << spk::ColorRenderer::Vertex{ spk::Vector2(-halfSize,  halfSize), 0.0f };
+		colorRenderer << spk::ColorRenderer::Vertex{ spk::Vector2( halfSize,  halfSize), 0.0f };
+
+		std::array<unsigned int, 6> indices = { 0,1,2,2,1,3 };
+		colorRenderer << indices;
+
+		colorRenderer.validate();
+
+		//-------------------------------------------
+        // 2. Rendering text using FontRenderer, all at once
+        //-------------------------------------------
+        fontRenderer.clear();
+
+        std::u32string text = U"Hello";
+		
+        spk::Vector2Int glyphAnchor = spk::Vector2Int(0, 0);
+
+        auto& atlas = font.atlas({26,3});
+
+		std::vector<unsigned int> indexes = {0, 1, 2, 2, 1, 3};
+
+        unsigned int baseIndexes = 0; // Index offset for each glyph
+
+        for (char32_t c : text)
+        {
+			const spk::Font::Glyph& glyph = atlas.glyph(c);
+
+            for (size_t i = 0; i < 4; i++)
+			{
+				spk::FontRenderer::Vertex newVertex;
+
+				newVertex.position = spk::Viewport::convertScreenToOpenGL(glyphAnchor + glyph.positions[i]).xy();
+				newVertex.uv = glyph.UVs[i];
+				newVertex.layer = 0.5f;
+
+				fontRenderer << newVertex;
+			}
+
+			glyphAnchor += glyph.step;
+
+			for (size_t i = 0; i < 6; i++)
+			{
+				fontRenderer << (baseIndexes + spk::Font::Glyph::indexesOrder[i]);
+			}
+
+			baseIndexes += 4;
+        }
+
+        fontRenderer.validate();
+
+		//-------------------------------------------
+        // 3. Rendering a textured quad using TextureRenderer
+        //-------------------------------------------
+        textureRenderer.clear();
+
+        float imgHalfSize = 0.1f;
+        float imgX = 0.0f;
+        float imgY = 0.0f;
+
+        std::array<spk::TextureRenderer::Vertex, 4> textureVertices = {
+            spk::TextureRenderer::Vertex{{-0.1f, -0.1f}, 0.0f, {0.0f, 0.0f}},
+            spk::TextureRenderer::Vertex{{+0.1f, -0.1f}, 0.0f, {1.0f, 0.0f}},
+            spk::TextureRenderer::Vertex{{-0.1f, +0.1f}, 0.0f, {0.0f, 1.0f}},
+            spk::TextureRenderer::Vertex{{+0.1f, +0.1f}, 0.0f, {1.0f, 1.0f}}
+        };
+
+        std::array<unsigned int, 6> textureIndices = {0,1,2,2,1,3};
+
+        textureRenderer << textureVertices;
+        textureRenderer << textureIndices;
+        textureRenderer.validate();
+	}
+
+	void onPaintEvent(spk::PaintEvent& p_event)
+	{
+		if (_needUpdate == true)
+		{
+			_updateGPUData();
+			_needUpdate = false;
+		}
+		//colorRenderer.render();
+		fontRenderer.render();
+        //textureRenderer.render();
 	}
 };
 

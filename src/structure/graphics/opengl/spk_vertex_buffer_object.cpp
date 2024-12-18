@@ -44,7 +44,9 @@ namespace spk::OpenGL
 
 	VertexBufferObject::VertexBufferObject() : _id(0), _validated(false), _type(Type::Unknow), _usage(Usage::Unknow), _currentBufferMaxSize(0) {}
 
-	VertexBufferObject::VertexBufferObject(Type p_type, Usage p_usage) : _id(0), _validated(false), _type(p_type), _usage(p_usage), _currentBufferMaxSize(0) {}
+	VertexBufferObject::VertexBufferObject(Type p_type, Usage p_usage) : _id(0), _validated(false), _type(p_type), _usage(p_usage), _currentBufferMaxSize(0)
+	{
+	}
 
 	VertexBufferObject::~VertexBufferObject()
 	{
