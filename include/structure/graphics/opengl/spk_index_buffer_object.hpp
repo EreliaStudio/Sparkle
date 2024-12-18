@@ -4,7 +4,9 @@
 #include <GL/gl.h>
 #include <vector>
 #include <span>
+#include <initializer_list>
 #include <stdexcept>
+#include <type_traits>
 #include "spk_vertex_buffer_object.hpp"
 
 namespace spk::OpenGL
@@ -13,13 +15,29 @@ namespace spk::OpenGL
 	{
 	public:
 		IndexBufferObject();
+
 		void append(const unsigned int& data);
-		void append(const std::vector<unsigned int>& data);
-		void append(const std::span<unsigned int>& data);
+		void append(std::span<const unsigned int> data);
 
 		IndexBufferObject& operator<<(const unsigned int& data);
-		IndexBufferObject& operator<<(const std::vector<unsigned int>& data);
-		IndexBufferObject& operator<<(const std::span<unsigned int>& data);
+
+		template<typename Container>
+		requires requires (const Container& c) {
+			{ c.data() };
+			{ c.size() };
+		}
+		IndexBufferObject& operator<<(const Container& container)
+		{
+			append(std::span<const unsigned int>(container.data(), container.size()));
+			return *this;
+		}
+
+		template <size_t N>
+		IndexBufferObject& operator<<(unsigned int ilist[N])
+		{
+			append(std::span<const unsigned int>(&ilist, N));
+			return *this;
+		}
 
 		size_t nbIndexes() const;
 		size_t nbTriangles() const;
