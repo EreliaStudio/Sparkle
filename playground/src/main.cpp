@@ -1,71 +1,154 @@
 #include "playground.hpp"
 
-class TestComponent : public spk::Component
+struct Node
+{
+
+};
+
+template<size_t Size, size_t Layer>
+class Chunk
 {
 private:
-	bool _needUpdate = true;
-
-	spk::ColorRenderer colorRenderer;
-    spk::FontRenderer fontRenderer;
-    spk::TextureRenderer textureRenderer;
-	
-	spk::Font font;
-    spk::Image image;
+	short _content[Size][Size][Layer];
 
 public:
-	TestComponent() :
-		spk::Component(L"TestComponent"),
-		font("playground/resources/CrystalUniverse-Regular.ttf"),
-		image("playground/resources/test.png")
+	Chunk()
 	{
-		fontRenderer.setFont(&font);
-        fontRenderer.setFontSize({26, 3});
-        fontRenderer.setGlyphColor(spk::Color(255, 255, 255, 255));
-        fontRenderer.setOutlineColor(spk::Color(255, 0, 0, 255));
-
-		textureRenderer.setTexture(&image);
+		std::memset(&_content, -1, sizeof(_content));
 	}
 
-	void _updateGPUData()
+	void setContent(const spk::Vector3Int& p_relPosition, short p_value)
 	{
-		//-------------------------------------------
-        // 1. Example usage of the ColorRenderer (already given)
-        //-------------------------------------------
-		colorRenderer.clear();
-
-		colorRenderer.prepareSquare({{0, 0}, {100, 100}}, 0.0f);
-
-		colorRenderer.validate();
-
-		//-------------------------------------------
-        // 2. Rendering text using FontRenderer, all at once
-        //-------------------------------------------
-        fontRenderer.clear();
-
-        fontRenderer.prepare(L"Hello world", spk::Vector2Int(200, 50), 2.0f);
-
-        fontRenderer.validate();
-
-		//-------------------------------------------
-        // 3. Rendering a textured quad using TextureRenderer
-        //-------------------------------------------
-        textureRenderer.clear();
-
-		textureRenderer.prepare({{100, 100}, {100, 100}}, spk::Image::Section(0, 1), 1.0f);
-
-        textureRenderer.validate();
+		_content[p_relPosition.x][p_relPosition.y][p_relPosition.z] = p_value;
 	}
 
-	void onPaintEvent(spk::PaintEvent& p_event) override
+	void setContent(const spk::Vector2Int& p_relPosition, const int& p_layer, short p_value)
 	{
-		if (p_event.resized == true)
-		{
-			_updateGPUData();
-		}
-		colorRenderer.render();
-		fontRenderer.render();
-        textureRenderer.render();
+		_content[p_relPosition.x][p_relPosition.y][p_layer] = p_value;
 	}
+
+	void setContent(const int& p_x, const int& p_y, const int& p_z, short p_value)
+	{
+		_content[p_x][p_y][p_z] = p_value;
+	}
+
+	void content(const spk::Vector3Int& p_relPosition)
+	{
+		return (_content[p_relPosition.x][p_relPosition.y][p_relPosition.z]);
+	}
+
+	void content(const spk::Vector2Int& p_relPosition, const int& p_layer)
+	{
+		return (_content[p_relPosition.x][p_relPosition.y][p_layer]);
+	}
+
+	void content(const int& p_x, const int& p_y, const int& p_z)
+	{
+		return (_content[p_x][p_y][p_z]);
+	}
+};
+
+
+template<size_t Size, size_t Layer>
+class BakableChunk : public Chunk<Size, Layer>
+{
+private:
+	bool _needBake;
+
+	spk::OpenGL::Program _program;
+	spk::OpenGL::BufferSet _bufferSet;
+	spk::OpenGL::SamplerObject _samplerObject;
+
+	void _initProgram()
+	{
+		const char *vertexShaderSrc = R"(#version 450
+            layout(location = 0) in vec3 inPosition;
+            layout(location = 1) in vec2 inUV;
+
+			layout (std140, binding = 0) uniform Camera_Type
+			{
+				mat4 projection;
+				mat4 view;
+			} camera;
+
+            layout(location = 0) out vec2 fragUV;
+
+            void main()
+            {
+                gl_Position = vec4(inPosition, inLayer, 1.0);
+                fragUV = inUV;
+            }
+            )";
+
+		const char *fragmentShaderSrc = R"(#version 450
+            layout(location = 0) in vec2 fragUV;
+            layout(location = 0) out vec4 outputColor;
+
+            uniform sampler2D diffuseTexture;
+
+            void main()
+            {
+                outputColor = texture(diffuseTexture, fragUV);
+            }
+            )";
+
+		_program = spk::OpenGL::Program(vertexShaderSrc, fragmentShaderSrc);
+	}
+
+	void _initBuffers()
+	{
+		_bufferSet = spk::OpenGL::BufferSet({
+			{0, spk::OpenGL::LayoutBufferObject::Attribute::Type::Vector3}, // position
+			{1, spk::OpenGL::LayoutBufferObject::Attribute::Type::Vector2}	// uv
+		});
+
+		_samplerObject = spk::OpenGL::SamplerObject("diffuseTexture", spk::OpenGL::SamplerObject::Type::Texture2D, 0);
+
+		_cameraUBO = spk::OpenGL::UniformBufferObject("Camera_Type", 0, 128);
+		_cameraUBO.addElement("projection", 0, sizeof(spk::Matrix4));
+		_cameraUBO.addElement("view", 64, sizeof(spk::Matrix4));
+	}
+
+public:
+	BakableChunk() :
+		Chunk()
+	{
+
+	}
+
+	void validate()
+	{
+		_needBake = true;
+	}
+
+	void bake()
+	{
+
+
+		_needBake = false;
+	}
+};
+
+class ChunkRenderer
+{
+private:
+	BakableChunk* _chunk;
+
+public:
+	ChunkRenderer() :
+		_chunk(nullptr)
+	{
+
+	}
+
+	void setChunk(BakableChunk* p_chunk)
+	{
+		_chunk = p_chunk;
+	}
+};
+
+class Tilemap
+{
 
 };
 
@@ -75,21 +158,8 @@ int main()
 
 	spk::SafePointer<spk::Window> win = app.createWindow(L"Playground", {{0, 0}, {840, 680}});
 
-	spk::GameEngine engine;
-
-	spk::Entity player(L"Player");
-	player.addComponent<TestComponent>();
-	
-	spk::Entity camera(L"Camera", &player);
-
-	spk::Entity cube(L"Cube");
-
-	engine.addEntity(&player);
-	engine.addEntity(&cube);
-
 	spk::GameEngineWidget gameEngineWidget = spk::GameEngineWidget(L"Engine widget", win->widget());
 	gameEngineWidget.setGeometry(win->geometry().anchor, win->geometry().size);
-	gameEngineWidget.setGameEngine(&engine);
 	gameEngineWidget.activate();
 
 	return (app.run());
