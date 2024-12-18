@@ -13,6 +13,9 @@ namespace spk
 		{
 			spk::Vector2 anchor;
 			spk::Vector2 size;
+
+			Section() = default;
+			Section(spk::Vector2 p_anchor, spk::Vector2 p_size);
 		};
 
 	public:

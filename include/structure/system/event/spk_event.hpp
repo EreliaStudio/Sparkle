@@ -22,6 +22,7 @@
 
 static const UINT WM_UPDATE_REQUEST = RegisterWindowMessage("WM_UPDATE_REQUEST");
 static const UINT WM_PAINT_REQUEST = RegisterWindowMessage("WM_PAINT_REQUEST");
+static const UINT WM_RESIZE_REQUEST = RegisterWindowMessage("WM_RESIZE_REQUEST");
 static const UINT WM_LEFT_JOYSTICK_MOTION = RegisterWindowMessage("WM_LEFT_JOYSTICK_MOTION");
 static const UINT WM_RIGHT_JOYSTICK_MOTION = RegisterWindowMessage("WM_RIGHT_JOYSTICK_MOTION");
 static const UINT WM_LEFT_TRIGGER_MOTION = RegisterWindowMessage("WM_LEFT_TRIGGER_MOTION");
@@ -71,14 +72,16 @@ namespace spk
 
 	struct PaintEvent : public IEvent
 	{
-		static inline std::vector<UINT> EventIDs = { WM_PAINT_REQUEST };
+		static inline std::vector<UINT> EventIDs = { WM_PAINT_REQUEST, WM_RESIZE_REQUEST };
 		enum class Type
 		{
 			Unknow,
-			Requested
+			Paint,
+			Resize
 		};
 		Type type = Type::Unknow;
 		spk::Geometry2D geometry;
+		bool resized;
 	};
 
 	struct UpdateEvent : public IEvent
