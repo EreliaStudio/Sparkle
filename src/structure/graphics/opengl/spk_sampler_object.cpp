@@ -2,13 +2,34 @@
 
 namespace spk::OpenGL
 {
-	SamplerObject::SamplerObject() : _designator(""), _index(-1), _texture(nullptr), _uniformDestination(-1) {}
+	SamplerObject::SamplerObject() :
+		_designator(""),
+		_index(-1),
+		_texture(nullptr),
+		_uniformDestination(-1),
+		_type(Type::Texture2D)
+	{
 
-	SamplerObject::SamplerObject(const SamplerObject& p_other)
-		: _designator(p_other._designator),
-		  _index(p_other._index),
-		  _texture(p_other._texture),
-		  _uniformDestination(p_other._uniformDestination) {}
+	}
+	SamplerObject::SamplerObject(const std::string& p_name, Type p_type, size_t p_textureIndex)  :
+		_designator(p_name),
+		_index(p_textureIndex),
+		_texture(nullptr),
+		_uniformDestination(-1),
+		_type(p_type)
+	{
+
+	}
+
+	SamplerObject::SamplerObject(const SamplerObject& p_other) :
+		_designator(p_other._designator),
+		_index(p_other._index),
+		_texture(p_other._texture),
+		_type(p_other._type),
+		_uniformDestination(p_other._uniformDestination)
+	{
+
+	}
 
 	SamplerObject& SamplerObject::operator=(const SamplerObject& p_other)
 	{
@@ -17,6 +38,7 @@ namespace spk::OpenGL
 			_designator = p_other._designator;
 			_index = p_other._index;
 			_texture = p_other._texture;
+			_type = p_other._type;
 			_uniformDestination = p_other._uniformDestination;
 		}
 		return *this;
@@ -26,6 +48,7 @@ namespace spk::OpenGL
 		: _designator(std::move(p_other._designator)),
 		  _index(p_other._index),
 		  _texture(p_other._texture),
+		  _type(p_other._type),
 		  _uniformDestination(p_other._uniformDestination)
 	{
 		p_other._texture = nullptr;
@@ -40,6 +63,7 @@ namespace spk::OpenGL
 			_designator = std::move(p_other._designator);
 			_index = p_other._index;
 			_texture = p_other._texture;
+			_type = p_other._type;
 			_uniformDestination = p_other._uniformDestination;
 
 			p_other._texture = nullptr;
@@ -47,17 +71,6 @@ namespace spk::OpenGL
 			p_other._uniformDestination = -1;
 		}
 		return *this;
-	}
-
-	void SamplerObject::setDesignator(const std::string& designator)
-	{
-		_designator = designator;
-		_uniformDestination = -1;
-	}
-
-	void SamplerObject::setIndex(size_t index)
-	{
-		_index = static_cast<GLint>(index);
 	}
 
 	void SamplerObject::bind(const spk::SafePointer<TextureObject>& p_texture)
@@ -81,12 +94,17 @@ namespace spk::OpenGL
 
 		if (_texture == nullptr)
 		{
-			glBindTexture(GL_TEXTURE_2D, 0);
+			glBindTexture(static_cast<GLenum>(_type), 0);
 			return;
 		}
 
 		_texture->_upload();
 		_texture->_setup();
-		glBindTexture(GL_TEXTURE_2D, _texture->_id);
+		glBindTexture(static_cast<GLenum>(_type), _texture->_id);
+	}
+
+	void SamplerObject::deactivate()
+	{
+			glBindTexture(static_cast<GLenum>(_type), 0);
 	}
 }

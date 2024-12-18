@@ -19,6 +19,7 @@ namespace spk::OpenGL
 		void _load();
 
 	public:
+		Program();
 		Program(const std::string& p_vertexShaderCode, const std::string& p_fragmentShaderCode);
 
 		void activate();

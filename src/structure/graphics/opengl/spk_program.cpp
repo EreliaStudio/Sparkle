@@ -11,6 +11,13 @@
 
 namespace spk::OpenGL
 {
+	Program::Program() :
+		_vertexShaderCode(""),
+		_fragmentShaderCode(""),
+		_programID(0)
+	{
+		
+	}
 	Program::Program(const std::string& p_vertexShaderCode, const std::string& p_fragmentShaderCode) :
 		_vertexShaderCode(p_vertexShaderCode),
 		_fragmentShaderCode(p_fragmentShaderCode),

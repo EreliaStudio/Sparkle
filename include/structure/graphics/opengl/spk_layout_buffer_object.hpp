@@ -9,6 +9,8 @@
 
 #include "spk_vertex_buffer_object.hpp"
 
+#include <iostream>
+
 template<typename T>
 using element_type_t = std::remove_reference_t<decltype(*std::begin(std::declval<T&>()))>;
 
@@ -58,7 +60,26 @@ namespace spk::OpenGL
 		void _applyAttributes();
 
 	public:
+
 		LayoutBufferObject();
+
+        explicit LayoutBufferObject(std::span<const LayoutBufferObject::Attribute> attributes);
+
+        LayoutBufferObject(std::initializer_list<LayoutBufferObject::Attribute> attributes);
+
+        template <typename Container>
+        requires (
+            std::is_same_v<std::remove_cv_t<std::remove_reference_t<decltype(*std::declval<Container>().data())>>, LayoutBufferObject::Attribute> &&
+            requires (const Container &c) {
+                { c.data() } -> std::convertible_to<const LayoutBufferObject::Attribute*>;
+                { c.size() } -> std::convertible_to<std::size_t>;
+            }
+        )
+        explicit LayoutBufferObject(const Container& attributes)
+            : LayoutBufferObject(std::span(attributes.data(), attributes.size()))
+        {
+        }
+
 		LayoutBufferObject(const LayoutBufferObject& p_other);
 		LayoutBufferObject& operator=(const LayoutBufferObject& p_other);
 		LayoutBufferObject(LayoutBufferObject&& p_other) noexcept;
@@ -103,4 +124,6 @@ namespace spk::OpenGL
 		void addAttribute(const Attribute& p_attribute);
 		void addAttribute(Attribute::Index p_index, Attribute::Type p_type);
 	};
+
+	std::string to_string(const LayoutBufferObject::Attribute::Type& p_type);
 }

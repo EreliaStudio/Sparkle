@@ -37,12 +37,12 @@ namespace spk::OpenGL
 			requires (!spk::IsContainer<TType>::value)
 			Element& operator = (const TType& value)
 			{
+				if (std::holds_alternative<std::vector<Element>>(_content))
+					throw std::runtime_error("Cannot apply scalar value to an array.");
+
 				if (sizeof(TType) != _size)
 					throw std::runtime_error("Size mismatch: Expected size " + std::to_string(_size) +
 											" bytes, but received " + std::to_string(sizeof(TType)) + " bytes.");
-
-				if (std::holds_alternative<std::vector<Element>>(_content))
-					throw std::runtime_error("Cannot apply scalar value to an array.");
 
 				std::memcpy(_buffer, &value, sizeof(TType));
 				return *this;
@@ -72,6 +72,8 @@ namespace spk::OpenGL
             uint8_t* data();
             size_t size() const;
 
+			size_t nbElement() const;
+
             Element& operator[](size_t index);
             const Element& operator[](size_t index) const;
 
@@ -88,6 +90,7 @@ namespace spk::OpenGL
         std::unordered_map<std::string, Element> _elements;
 
     public:
+		UniformBufferObject();
         UniformBufferObject(const std::string& typeName, BindingPoint bindingPoint, size_t p_size);
         ~UniformBufferObject();
 

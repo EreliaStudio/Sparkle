@@ -35,6 +35,22 @@ namespace spk::OpenGL
         _vertexSize(0)
     {
     }
+	
+	LayoutBufferObject::LayoutBufferObject(std::span<const LayoutBufferObject::Attribute> attributes) :
+		LayoutBufferObject()
+	{
+		for (const auto& attribute : attributes)
+		{
+			addAttribute(attribute);
+		}
+	}
+
+	
+
+	LayoutBufferObject::LayoutBufferObject(std::initializer_list<LayoutBufferObject::Attribute> attributes) :
+		LayoutBufferObject(std::span(attributes.begin(), attributes.end()))
+	{
+	}
 
     LayoutBufferObject::LayoutBufferObject(const LayoutBufferObject& p_other) :
         VertexBufferObject(p_other),
@@ -206,4 +222,31 @@ namespace spk::OpenGL
             _applyAttributes();
         }
     }
+
+	std::string to_string(const LayoutBufferObject::Attribute::Type& p_type)
+	{
+		switch (p_type)
+		{
+			using Type = LayoutBufferObject::Attribute::Type;
+
+			case Type::Float: return ("Float");
+			case Type::Bool: return ("Bool");
+			case Type::Int: return ("Int");
+			case Type::UInt: return ("UInt");
+			case Type::Vector2: return ("Vector2");
+			case Type::Vector3: return ("Vector3");
+			case Type::Vector4: return ("Vector4");
+			case Type::Vector2Int: return ("Vector2Int");
+			case Type::Vector3Int: return ("Vector3Int");
+			case Type::Vector4Int: return ("Vector4Int");
+			case Type::Vector2UInt: return ("Vector2UInt");
+			case Type::Vector3UInt: return ("Vector3UInt");
+			case Type::Vector4UInt: return ("Vector4UInt");
+			case Type::Matrix2x2: return ("Matrix2x2");
+			case Type::Matrix3x3: return ("Matrix3x3");
+			case Type::Matrix4x4: return ("Matrix4x4");
+			default:
+				return ("None");
+		}
+	}
 }
