@@ -28,7 +28,7 @@ namespace spk::OpenGL
         private:
             uint8_t* _buffer;
             size_t _size;
-            std::variant<std::vector<Element>, std::unordered_map<std::wstring, Element>, std::monostate> _content;
+            std::variant<std::monostate, std::vector<Element>, std::unordered_map<std::string, Element>> _content;
 
         public:
             Element(uint8_t* buffer = nullptr, size_t size = 0);
@@ -77,15 +77,15 @@ namespace spk::OpenGL
 
             void resizeArray(size_t arraySize, size_t elementSize);
 
-            Element& addElement(const std::wstring& name, uint8_t* buffer, size_t elementSize, size_t arraySize = 0);
-            Element& operator[](const std::wstring& name);
+            Element& addElement(const std::string& name, uint8_t* buffer, size_t elementSize, size_t arraySize = 0);
+            Element& operator[](const std::string& name);
         };
 
     private:
         std::string _typeName;
         BindingPoint _bindingPoint;
         size_t _blockSize;
-        std::unordered_map<std::wstring, Element> _elements;
+        std::unordered_map<std::string, Element> _elements;
 
     public:
         UniformBufferObject(const std::string& typeName, BindingPoint bindingPoint, size_t p_size);
@@ -104,9 +104,9 @@ namespace spk::OpenGL
 			return (*this);
 		}
 
-        Element& operator[](const std::wstring& name);
-        const Element& operator[](const std::wstring& name) const;
+        Element& operator[](const std::string& name);
+        const Element& operator[](const std::string& name) const;
 
-        Element& addElement(const std::wstring& name, size_t offset, size_t elementSize, size_t arraySize = 0); // Add a top-level element
+        Element& addElement(const std::string& name, size_t offset, size_t elementSize, size_t arraySize = 0); // Add a top-level element
     };
 }

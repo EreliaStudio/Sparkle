@@ -1,5 +1,7 @@
 #include "structure/graphics/opengl/spk_buffer_set.hpp"
 
+#include "spk_debug_macro.hpp"
+
 namespace spk::OpenGL
 {
 	LayoutBufferObject& BufferSet::layout()

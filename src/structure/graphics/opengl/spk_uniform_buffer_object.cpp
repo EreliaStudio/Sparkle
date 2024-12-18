@@ -5,6 +5,7 @@ namespace spk::OpenGL
     UniformBufferObject::Element::Element(uint8_t* buffer, size_t size)
         : _buffer(buffer), _size(size)
     {
+		
     }
 
     uint8_t* UniformBufferObject::Element::data()
@@ -41,12 +42,12 @@ namespace spk::OpenGL
         return elements[index];
     }
 
-    UniformBufferObject::Element& UniformBufferObject::Element::addElement(const std::wstring& name, uint8_t* buffer, size_t elementSize, size_t arraySize)
+    UniformBufferObject::Element& UniformBufferObject::Element::addElement(const std::string& name, uint8_t* buffer, size_t elementSize, size_t arraySize)
     {
-        if (!std::holds_alternative<std::unordered_map<std::wstring, Element>>(_content))
-            _content = std::unordered_map<std::wstring, Element>();
+        if (!std::holds_alternative<std::unordered_map<std::string, Element>>(_content))
+            _content = std::unordered_map<std::string, Element>();
 
-        auto& subElements = std::get<std::unordered_map<std::wstring, Element>>(_content);
+        auto& subElements = std::get<std::unordered_map<std::string, Element>>(_content);
 
         if (subElements.find(name) != subElements.end())
             throw std::runtime_error("Element '" + std::string(name.begin(), name.end()) + "' already exists.");
@@ -72,12 +73,12 @@ namespace spk::OpenGL
         }
     }
 
-    UniformBufferObject::Element& UniformBufferObject::Element::operator[](const std::wstring& name)
+    UniformBufferObject::Element& UniformBufferObject::Element::operator[](const std::string& name)
     {
-        if (!std::holds_alternative<std::unordered_map<std::wstring, Element>>(_content))
+        if (!std::holds_alternative<std::unordered_map<std::string, Element>>(_content))
             throw std::runtime_error("Element is not an object.");
 
-        auto& subElements = std::get<std::unordered_map<std::wstring, Element>>(_content);
+        auto& subElements = std::get<std::unordered_map<std::string, Element>>(_content);
         auto it = subElements.find(name);
         if (it == subElements.end())
             throw std::runtime_error("Sub-element '" + std::string(name.begin(), name.end()) + "' not found.");
@@ -117,20 +118,21 @@ namespace spk::OpenGL
         glBindBufferBase(GL_UNIFORM_BUFFER, _bindingPoint, _id);
     }
 
-    UniformBufferObject::Element& UniformBufferObject::addElement(const std::wstring& name, size_t offset, size_t elementSize, size_t arraySize)
+    UniformBufferObject::Element& UniformBufferObject::addElement(const std::string& name, size_t offset, size_t elementSize, size_t arraySize)
     {
         uint8_t* bufferPtr = static_cast<uint8_t*>(data()) + offset;
 
         if (_elements.find(name) != _elements.end())
-            throw std::runtime_error("Element '" + std::string(name.begin(), name.end()) + "' already exists.");
+            throw std::runtime_error("Element '" + name + "' already exists.");
 
         if (arraySize > 0)
         {
+			size_t padding = (elementSize > 8 ? 16 - (elementSize % 16) : 0);
             std::vector<Element> elements;
             elements.reserve(arraySize);
             for (size_t i = 0; i < arraySize; ++i)
             {
-                elements.emplace_back(Element(bufferPtr + (i * elementSize), elementSize));
+                elements.emplace_back(Element(bufferPtr + (i * (elementSize + padding)), elementSize));
             }
             Element arrayElement(nullptr, 0);
             arrayElement._content = std::move(elements);
@@ -145,12 +147,12 @@ namespace spk::OpenGL
         }
     }
 
-    UniformBufferObject::Element& UniformBufferObject::operator[](const std::wstring& name)
+    UniformBufferObject::Element& UniformBufferObject::operator[](const std::string& name)
     {
         return _elements[name];
     }
 
-    const UniformBufferObject::Element& UniformBufferObject::operator[](const std::wstring& name) const
+    const UniformBufferObject::Element& UniformBufferObject::operator[](const std::string& name) const
     {
         return _elements.at(name);
     }
