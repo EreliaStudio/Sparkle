@@ -52,8 +52,18 @@ namespace spk
 			WM_PAINT_REQUEST,
 			[](Event* p_event, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			{
-				p_event->paintEvent.type = PaintEvent::Type::Requested;
+				p_event->paintEvent.type = PaintEvent::Type::Paint;
 				p_event->paintEvent.geometry = p_event->paintEvent.window->geometry();
+				p_event->paintEvent.resized = false;
+			}
+		},
+		{
+			WM_RESIZE_REQUEST,
+			[](Event* p_event, UINT uMsg, WPARAM wParam, LPARAM lParam)
+			{
+				p_event->paintEvent.type = PaintEvent::Type::Resize;
+				p_event->paintEvent.geometry = p_event->paintEvent.window->geometry();
+				p_event->paintEvent.resized = true;
 			}
 		},
 		{

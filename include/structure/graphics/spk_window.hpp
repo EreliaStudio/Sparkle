@@ -108,6 +108,7 @@ namespace spk
 
 		void requestPaint() const;
 		void requestUpdate() const;
+		void requestResize() const;
 
 		spk::SafePointer<Widget> widget() const;
 		operator spk::SafePointer<Widget>() const;

@@ -33,15 +33,7 @@ public:
         //-------------------------------------------
 		colorRenderer.clear();
 
-		// Add a simple square centered at (0,0), size 0.4
-		float halfSize = 0.2f;
-		colorRenderer << spk::ColorRenderer::Vertex{ spk::Vector2(-halfSize, -halfSize), 0.0f };
-		colorRenderer << spk::ColorRenderer::Vertex{ spk::Vector2( halfSize, -halfSize), 0.0f };
-		colorRenderer << spk::ColorRenderer::Vertex{ spk::Vector2(-halfSize,  halfSize), 0.0f };
-		colorRenderer << spk::ColorRenderer::Vertex{ spk::Vector2( halfSize,  halfSize), 0.0f };
-
-		std::array<unsigned int, 6> indices = { 0,1,2,2,1,3 };
-		colorRenderer << indices;
+		colorRenderer.prepareSquare({{0, 0}, {100, 100}}, 0.0f);
 
 		colorRenderer.validate();
 
@@ -50,40 +42,7 @@ public:
         //-------------------------------------------
         fontRenderer.clear();
 
-        std::u32string text = U"Hello";
-		
-        spk::Vector2Int glyphAnchor = spk::Vector2Int(0, 0);
-
-        auto& atlas = font.atlas({26,3});
-
-		std::vector<unsigned int> indexes = {0, 1, 2, 2, 1, 3};
-
-        unsigned int baseIndexes = 0; // Index offset for each glyph
-
-        for (char32_t c : text)
-        {
-			const spk::Font::Glyph& glyph = atlas.glyph(c);
-
-            for (size_t i = 0; i < 4; i++)
-			{
-				spk::FontRenderer::Vertex newVertex;
-
-				newVertex.position = spk::Viewport::convertScreenToOpenGL(glyphAnchor + glyph.positions[i]).xy();
-				newVertex.uv = glyph.UVs[i];
-				newVertex.layer = 0.5f;
-
-				fontRenderer << newVertex;
-			}
-
-			glyphAnchor += glyph.step;
-
-			for (size_t i = 0; i < 6; i++)
-			{
-				fontRenderer << (baseIndexes + spk::Font::Glyph::indexesOrder[i]);
-			}
-
-			baseIndexes += 4;
-        }
+        fontRenderer.prepare(L"Hello world", spk::Vector2Int(200, 50), 2.0f);
 
         fontRenderer.validate();
 
@@ -92,35 +51,22 @@ public:
         //-------------------------------------------
         textureRenderer.clear();
 
-        float imgHalfSize = 0.1f;
-        float imgX = 0.0f;
-        float imgY = 0.0f;
+		textureRenderer.prepare({{100, 100}, {100, 100}}, spk::Image::Section(0, 1), 1.0f);
 
-        std::array<spk::TextureRenderer::Vertex, 4> textureVertices = {
-            spk::TextureRenderer::Vertex{{-0.1f, -0.1f}, 0.0f, {0.0f, 0.0f}},
-            spk::TextureRenderer::Vertex{{+0.1f, -0.1f}, 0.0f, {1.0f, 0.0f}},
-            spk::TextureRenderer::Vertex{{-0.1f, +0.1f}, 0.0f, {0.0f, 1.0f}},
-            spk::TextureRenderer::Vertex{{+0.1f, +0.1f}, 0.0f, {1.0f, 1.0f}}
-        };
-
-        std::array<unsigned int, 6> textureIndices = {0,1,2,2,1,3};
-
-        textureRenderer << textureVertices;
-        textureRenderer << textureIndices;
         textureRenderer.validate();
 	}
 
-	void onPaintEvent(spk::PaintEvent& p_event)
+	void onPaintEvent(spk::PaintEvent& p_event) override
 	{
-		if (_needUpdate == true)
+		if (p_event.resized == true)
 		{
 			_updateGPUData();
-			_needUpdate = false;
 		}
-		//colorRenderer.render();
+		colorRenderer.render();
 		fontRenderer.render();
-        //textureRenderer.render();
+        textureRenderer.render();
 	}
+
 };
 
 int main()
@@ -142,7 +88,7 @@ int main()
 	engine.addEntity(&cube);
 
 	spk::GameEngineWidget gameEngineWidget = spk::GameEngineWidget(L"Engine widget", win->widget());
-	gameEngineWidget.setGeometry(win->geometry());
+	gameEngineWidget.setGeometry(win->geometry().anchor, win->geometry().size);
 	gameEngineWidget.setGameEngine(&engine);
 	gameEngineWidget.activate();
 

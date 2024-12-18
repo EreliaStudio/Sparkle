@@ -5,6 +5,13 @@
 
 namespace spk
 {
+	Image::Section::Section(spk::Vector2 p_anchor, spk::Vector2 p_size) :
+		anchor(p_anchor),
+		size(p_size)
+	{
+
+	}
+
 	Image::Image(const std::filesystem::path& filePath)
 	{
 		loadFromFile(filePath);

@@ -407,6 +407,7 @@ namespace spk
 				try
 				{
 					_createContext();
+					requestResize();
 				}
 				catch (std::exception& e)
 				{
@@ -551,6 +552,11 @@ namespace spk
 	void Window::requestPaint() const
 	{
 		PostMessage(_hwnd, WM_PAINT_REQUEST, 0, 0);
+	}
+
+	void Window::requestResize() const
+	{
+		PostMessage(_hwnd, WM_RESIZE_REQUEST, 0, 0);
 	}
 
 	void Window::requestUpdate() const

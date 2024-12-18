@@ -10,6 +10,7 @@ namespace spk
 	private:
 		static inline float _maxLayer = 10000;
 		static inline Matrix4x4 _matrix = spk::Matrix4x4();
+		static inline spk::Vector2 _convertionOffset;
 		
 		Geometry2D _geometry;
 
@@ -21,6 +22,7 @@ namespace spk
 		void setGeometry(const Geometry2D& p_geometry);
 
 		void apply() const;
-		static spk::Vector3 convertScreenToOpenGL(const spk::Vector2Int p_screenPosition, const float& p_layer = 0);
+		static spk::Vector2 convertScreenToOpenGL(const spk::Vector2Int p_screenPosition);
+		static spk::Vector3 convertScreenToOpenGL(const spk::Vector2Int p_screenPosition, const float& p_layer);
 	};
 }

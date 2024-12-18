@@ -156,8 +156,10 @@ std::ostream& operator << (std::ostream& p_os, const spk::PaintEvent::Type& p_ty
 {
 	switch (p_type)
 	{
-	case spk::PaintEvent::Type::Requested:
-		p_os << "Requested"; break;
+	case spk::PaintEvent::Type::Paint:
+		p_os << "Paint"; break;
+	case spk::PaintEvent::Type::Resize:
+		p_os << "Resize"; break;
 	default:
 		p_os << "Unknown"; break;
 	}
@@ -168,8 +170,10 @@ std::wostream& operator << (std::wostream& p_os, const spk::PaintEvent::Type& p_
 {
 	switch (p_type)
 	{
-	case spk::PaintEvent::Type::Requested:
-		p_os << L"Requested"; break;
+	case spk::PaintEvent::Type::Paint:
+		p_os << L"Paint"; break;
+	case spk::PaintEvent::Type::Resize:
+		p_os << L"Resize"; break;
 	default:
 		p_os << L"Unknown"; break;
 	}

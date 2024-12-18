@@ -128,6 +128,26 @@ namespace spk
 			return *this;
 		}
 
+		void prepareSquare(const spk::Geometry2D& geom, float layer)
+		{
+			size_t nbVertex = _bufferSet.layout().size() / sizeof(Vertex);
+
+			spk::Vector3 topLeft = spk::Viewport::convertScreenToOpenGL({geom.anchor.x, geom.anchor.y}, layer);
+			spk::Vector3 bottomRight = spk::Viewport::convertScreenToOpenGL({geom.anchor.x + static_cast<int32_t>(geom.size.x),
+																			geom.anchor.y + static_cast<int32_t>(geom.size.y)}, layer);
+
+			*this << Vertex{ { topLeft.x,      bottomRight.y }, topLeft.z }
+				  << Vertex{ { bottomRight.x,  bottomRight.y }, topLeft.z }
+				  << Vertex{ { topLeft.x,      topLeft.y     }, topLeft.z }
+				  << Vertex{ { bottomRight.x,  topLeft.y     }, topLeft.z };
+
+			std::array<unsigned int, 6> indices = {0, 1, 2, 2, 1, 3};
+			for (const auto& index : indices)
+			{
+				*this << index + nbVertex;
+			}
+		}
+
 		void validate()
 		{
             _bufferSet.layout().validate();

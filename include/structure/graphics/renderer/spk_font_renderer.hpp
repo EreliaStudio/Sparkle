@@ -215,6 +215,41 @@ namespace spk
             return *this;
         }
 
+		void prepare(const std::wstring& text, const spk::Vector2Int& anchor, float layer)
+		{
+			spk::Vector2Int glyphAnchor = anchor;
+			unsigned int baseIndexes = 0;
+
+			for (wchar_t c : text)
+			{
+				const spk::Font::Glyph& glyph = _atlas->glyph(c);
+
+				for (size_t i = 0; i < 4; i++)
+				{
+					Vertex newVertex;
+
+					Vector3 convertedPoint = spk::Viewport::convertScreenToOpenGL(glyphAnchor + glyph.positions[i], layer);
+
+					newVertex.position = convertedPoint.xy();
+					newVertex.uv = glyph.UVs[i];
+					newVertex.layer = convertedPoint.z;
+
+					*this << newVertex;
+				}
+
+				glyphAnchor += glyph.step;
+
+				for (size_t i = 0; i < 6; i++)
+				{
+					*this << (baseIndexes + spk::Font::Glyph::indexesOrder[i]);
+				}
+
+				baseIndexes += 4;
+			}
+
+			validate();
+		}
+
         void validate()
         {
             _bufferSet.layout().validate();

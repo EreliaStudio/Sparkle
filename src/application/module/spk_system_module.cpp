@@ -2,6 +2,8 @@
 
 #include "structure/graphics/spk_window.hpp"
 
+#include "spk_debug_macro.hpp"
+
 namespace spk
 {
 	void SystemModule::_treatEvent(spk::SystemEvent&& p_event)
@@ -22,18 +24,24 @@ namespace spk
 		}
 		case spk::SystemEvent::Type::EnterResize:
 		{
+			_isResizing = true;
 
 			break;
 		}
 		case spk::SystemEvent::Type::Resize:
 		{
 			p_event.window->resize(p_event.newSize);
-			p_event.window->requestPaint();
+
+			if (_isResizing == false)
+			{
+				p_event.window->requestResize();
+			}
 			break;
 		}
 		case spk::SystemEvent::Type::ExitResize:
 		{
-			p_event.window->requestPaint();
+			_isResizing = false;
+			p_event.window->requestResize();
 			break;
 		}
 		case spk::SystemEvent::Type::TakeFocus:
