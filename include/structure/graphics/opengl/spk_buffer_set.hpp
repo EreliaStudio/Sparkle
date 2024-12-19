@@ -37,6 +37,9 @@ namespace spk::OpenGL
 		const LayoutBufferObject& layout() const;
 		const IndexBufferObject& indexes() const;
 
+		void clear();
+		void validate();
+
 		void activate();
 		void deactivate();
 	};

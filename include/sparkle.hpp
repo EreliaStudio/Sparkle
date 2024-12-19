@@ -50,6 +50,7 @@
 #include "structure/graphics/opengl/spk_sampler_object.hpp"
 #include "structure/graphics/opengl/spk_texture_object.hpp"
 #include "structure/graphics/opengl/spk_uniform_buffer_object.hpp"
+#include "structure/graphics/opengl/spk_shader_storage_buffer_object.hpp"
 #include "structure/graphics/opengl/spk_vertex_array_object.hpp"
 #include "structure/graphics/opengl/spk_vertex_buffer_object.hpp"
 #include "structure/graphics/renderer/spk_color_renderer.hpp"

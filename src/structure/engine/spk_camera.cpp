@@ -1,9 +1,5 @@
 #include "structure/engine/spk_camera.hpp"
 
-#include "structure/engine/spk_entity.hpp"
-
-#include "spk_debug_macro.hpp"
-
 namespace spk
 {
 	Camera::Camera(const std::wstring& p_name) :
