@@ -34,6 +34,18 @@ namespace spk::OpenGL
 		return _indexes;
 	}
 
+	void BufferSet::clear()
+	{
+		_layout.clear();
+		_indexes.clear();
+	}
+	
+	void BufferSet::validate()
+	{
+		_layout.validate();
+		_indexes.validate();
+	}
+
 	void BufferSet::activate()
 	{
 		_vao.activate();
