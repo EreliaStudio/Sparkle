@@ -11,7 +11,7 @@ namespace spk::OpenGL
 		BindedBufferObject(VertexBufferObject::Type::ShaderStorage, VertexBufferObject::Usage::Dynamic, p_name, p_bindingPoint, p_fixedSize),
 		_dynamicArray(static_cast<uint8_t*>(data()) + p_fixedSize, p_dynamicElementSize)
 	{
-
+		_dynamicArray._content.emplace<std::vector<ShaderStorageBufferObject::Element>>();
 	}
 
 	void ShaderStorageBufferObject::activate()
