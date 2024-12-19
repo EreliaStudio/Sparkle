@@ -55,4 +55,9 @@ namespace spk::OpenGL
 		}
 		std::get<std::vector<Element>>(element._content).swap(elements);
 	}
+
+	ShaderStorageBufferObject::Element& ShaderStorageBufferObject::dynamicArray()
+	{
+		return (_dynamicArray);
+	}
 }
