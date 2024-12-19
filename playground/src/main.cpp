@@ -170,7 +170,6 @@ class ChunkRenderer
 {
 private:
 	BufferObjectCollection::Instanciator _bindingPointInstanciator;
-	BakableChunk* _chunk;
 	spk::SpriteSheet* _spriteSheet = nullptr;
 
 	static inline spk::OpenGL::Program* _program = nullptr;
@@ -181,9 +180,15 @@ private:
 	spk::OpenGL::BufferSet _bufferSet;
 	spk::OpenGL::UniformBufferObject _transformUBO;
 	spk::OpenGL::UniformBufferObject _chunkDataUBO;
+	spk::OpenGL::ShaderStorageBufferObject _instanceDataSSBO;
 
 	void _initProgram()
 	{
+		if (_program != nullptr)
+		{
+			return;
+		}
+
 		const char *vertexShaderSrc = R"(#version 450 core
 
 			layout(location = 0) in vec2 inDelta;
@@ -225,15 +230,15 @@ private:
 
 			layout(std430, binding = 5) buffer InstanceData_Type
 			{
-				ivec2 data[];
+				ivec3 data[];
 			} instanceData;
 
 			layout(location = 0) out vec2 fragmentUVs;
 
 			void main()
 			{
-				vec2 cellPosition = instanceData[gl_InstanceID];
-				vec4 worldPos = transform.model * vec4(cellPosition + inDelta, 0.0, 1.0);
+				vec3 cellPosition = instanceData.data[gl_InstanceID];
+				vec4 worldPos = transform.model * vec4(vec3(inDelta, 0.0) + cellPosition, 1.0);
 				gl_Position = camera.projection * camera.view * worldPos;
 
 				int nodeIndex = chunkData[cellPosition.x][cellPosition.y][cellPosition.z];
@@ -268,55 +273,58 @@ private:
 
 	void _initBuffers()
 	{
-		if (_cameraUBO == nullptr)
+		if (BufferObjectCollection::instance()->isAllocated("camera") == false)
 		{
-			bool needInstanciation = BufferObjectCollection::instance()->isAllocated("camera") == false;
-
 			_cameraUBO = BufferObjectCollection::instance()->allocate<spk::OpenGL::UniformBufferObject>("camera", "Camera_Type", 0, 128);
-			
-			if (needInstanciation == true)
-			{
-				_cameraUBO->addElement("projection", 0, 64);
-				_cameraUBO->addElement("view", 64, 64);
+			_cameraUBO->addElement("projection", 0, 64);
+			_cameraUBO->addElement("view", 64, 64);
 
-				_cameraUBO->operator[]("projection") = spk::Matrix4x4();
-				_cameraUBO->operator[]("view") = spk::Matrix4x4();
+			_cameraUBO->operator[]("projection") = spk::Matrix4x4();
+			_cameraUBO->operator[]("view") = spk::Matrix4x4();
 
-				_cameraUBO->validate();
-			}
+			_cameraUBO->validate();
+		}
+		else
+		{
+			_cameraUBO = BufferObjectCollection::instance()->UBO("camera");
 		}
 		
-		if (_timeUBO == nullptr)
+		if (BufferObjectCollection::instance()->isAllocated("timeConstants") == false)
 		{
-			bool needInstanciation = BufferObjectCollection::instance()->isAllocated("timeConstants") == false;
-
 			_timeUBO = BufferObjectCollection::instance()->allocate<spk::OpenGL::UniformBufferObject>("timeConstants", "TimeConstants_Type", 0, 4);
 			
-			if (needInstanciation == true)
-			{
-				_timeUBO->addElement("time", 0, 4);
+			_timeUBO->addElement("time", 0, 4);
 
-				_timeUBO->operator[]("time") = 0;
+			_timeUBO->operator[]("time") = 0;
 
-				_timeUBO->validate();
-			}
+			_timeUBO->validate();
+		}
+		else
+		{
+			_timeUBO = BufferObjectCollection::instance()->UBO("timeConstants");
 		}
 		
-		if (_nodeMapSSBO == nullptr)
+		if (BufferObjectCollection::instance()->isAllocated("nodeConstants") == false)
 		{
-			bool needInstanciation = BufferObjectCollection::instance()->isAllocated("nodeConstants") == false;
+			_nodeMapSSBO = BufferObjectCollection::instance()->allocate<spk::OpenGL::ShaderStorageBufferObject>("nodeConstants", "NodeConstants_Type", 0, 0, 20);
 
-			_nodeMapSSBO = BufferObjectCollection::instance()->allocate<spk::OpenGL::ShaderStorageBufferObject>("nodeConstants", "NodeConstants_Type", 0, 4, 20);
-			
-			if (needInstanciation == true)
-			{
-				_nodeMapSSBO->addElement("nbNodes", 0, 4);
-			}
+			_nodeMapSSBO->validate();
+		}
+		else
+		{
+			_nodeMapSSBO = BufferObjectCollection::instance()->SSBO("nodeConstants");
 		}
 	
 		_bufferSet = spk::OpenGL::BufferSet({
 			{0, spk::OpenGL::LayoutBufferObject::Attribute::Type::Vector2Int} // inCellIndex
 		});
+
+		_bufferSet.layout() << spk::Vector2Int(0, 0);
+		_bufferSet.layout() << spk::Vector2Int(0, 1);
+		_bufferSet.layout() << spk::Vector2Int(1, 0);
+		_bufferSet.layout() << spk::Vector2Int(1, 1);
+
+		_bufferSet.indexes() << 0 << 1 << 2 << 2 << 1 << 3;
 
 		if (_samplerObject == nullptr)
 		{
@@ -328,50 +336,55 @@ private:
 
 		_chunkDataUBO = spk::OpenGL::UniformBufferObject("chunkData", 3, 5120);	
 		_chunkDataUBO.addElement("chunkData", 0, 4, 16 * 16 * 5);
-	}
 
-	void _bake()
-	{
-		_chunkDataUBO["chunkData"] = *_chunk;
-		_chunkDataUBO.validate();
+		_instanceDataSSBO = spk::OpenGL::ShaderStorageBufferObject("instanceData", 6, 0, 12);
 	}
 
 public:
-	ChunkRenderer() :
-		_chunk(nullptr)
+	ChunkRenderer()
 	{
-		if (_program == nullptr)
-		{
-			_initProgram();
-		}
+		_initProgram();
 		_initBuffers();
 	}
 
-	void setChunk(BakableChunk* p_chunk)
+	void setSpriteSheet(const spk::SafePointer<spk::SpriteSheet>& p_spriteSheet)
 	{
-		_chunk = p_chunk;
+		_samplerObject->bind(p_spriteSheet);
 	}
 
-	void setSpriteSheet(spk::SpriteSheet* p_spriteSheet)
+	void bakeTransform(const spk::SafePointer<spk::Entity>& entity)
 	{
-		_spriteSheet = p_spriteSheet;
-		
-		_samplerObject->bind(_spriteSheet);
+		_transformUBO["model"] = entity->transform().model();
+	}
+
+	void bakeChunk(spk::SafePointer<BakableChunk> p_chunk)
+	{
+		_chunkDataUBO["chunkData"] = *p_chunk;
+		_chunkDataUBO.validate();
+
+		std::vector<spk::Vector3Int> instanceData;
+
+		for (size_t x = 0; x < Chunk::Size; x++)
+		{
+			for (size_t y = 0; y < Chunk::Size; y++)
+			{
+				for (size_t z = 0; z < Chunk::Layer; z++)
+				{
+					int nodeIndex = p_chunk->content(x, y, z);
+					if (nodeIndex != -1)
+					{
+						instanceData.push_back(spk::Vector3Int(x, y, z));
+					}
+				}	
+			}
+		}
+
+		_instanceDataSSBO.dynamicArray() = instanceData;
+		_instanceDataSSBO.validate();
 	}
 
 	void render()
 	{
-		if (_chunk == nullptr)
-		{
-			return;
-		}
-
-		if (_chunk->needBake() == true)
-		{
-			_bake();
-			_chunk->validate();
-		}
-
 		_program->activate();
 
 		_cameraUBO->activate();
@@ -381,7 +394,7 @@ public:
 		_transformUBO.activate();
 		_chunkDataUBO.activate();
 
-		_program->render(_bufferSet.indexes().nbIndexes(), 1);
+		_program->render(_bufferSet.indexes().nbIndexes(), _instanceDataSSBO.dynamicArray().nbElement());
 
 		_chunkDataUBO.deactivate();
 		_transformUBO.deactivate();
@@ -394,20 +407,159 @@ public:
 	}
 };
 
-class Tilemap
+class ChunkComponent : public spk::Component
 {
+private:
+	spk::SafePointer<BakableChunk> _chunk;
+	ChunkRenderer _renderer;
 
+	spk::Entity::Contract _onEditionContract;
+
+public:
+	ChunkComponent() :
+		spk::Component(L"ChunkComponent")
+	{
+
+	}
+
+	void setChunk(spk::SafePointer<BakableChunk> p_chunk)
+	{
+		_chunk = p_chunk;
+	}
+
+	void setSpriteSheet(const spk::SafePointer<spk::SpriteSheet>& p_spriteSheet)
+	{
+		_renderer.setSpriteSheet(p_spriteSheet);
+	}
+
+	void start() override
+	{
+		_onEditionContract = owner()->transform().addOnEditionCallback([&](){
+			_renderer.bakeTransform(owner());
+		});
+		_onEditionContract.trigger();
+	}
+
+	void onPaintEvent(spk::PaintEvent& p_event) override
+	{
+		if (_chunk->needBake() == true)
+		{
+			_renderer.bakeChunk(_chunk);
+			_chunk->validate();
+		}
+		_renderer.render();
+	}
+};
+
+class CameraComponent : public spk::Component
+{
+private:
+	BufferObjectCollection::Instanciator _bindingPointInstanciator;
+	static inline spk::OpenGL::UniformBufferObject* _cameraUBO = nullptr;
+
+	spk::Camera _camera;
+
+	spk::Entity::Contract _onEditionContract;
+
+public:
+	CameraComponent(const std::wstring& p_name) :
+		spk::Component(p_name)
+	{
+	DEBUG_LINE();
+		if (_cameraUBO == nullptr)
+		{
+	DEBUG_LINE();
+			if (BufferObjectCollection::instance()->isAllocated("camera") == false)
+			{
+	DEBUG_LINE();
+				_cameraUBO = BufferObjectCollection::instance()->allocate<spk::OpenGL::UniformBufferObject>("camera", "Camera_Type", 0, 128);
+				_cameraUBO->addElement("projection", 0, 64);
+				_cameraUBO->addElement("view", 64, 64);
+	DEBUG_LINE();
+
+				_cameraUBO->operator[]("projection") = spk::Matrix4x4();
+				_cameraUBO->operator[]("view") = spk::Matrix4x4();
+	DEBUG_LINE();
+
+				_cameraUBO->validate();
+	DEBUG_LINE();
+			}
+			else
+			{
+	DEBUG_LINE();
+				_cameraUBO = BufferObjectCollection::instance()->UBO("camera");
+	DEBUG_LINE();
+			}
+	DEBUG_LINE();
+		}
+
+	DEBUG_LINE();
+		
+	DEBUG_LINE();
+
+		setOrthographic(-10, 10, -10, 10);
+	DEBUG_LINE();
+	}
+
+	void start() override
+	{
+		_onEditionContract = owner()->transform().addOnEditionCallback([&](){
+			(*_cameraUBO)["view"] = owner()->transform().model();
+		});
+		
+		_onEditionContract.trigger();
+	}
+
+	void setPerspective(float p_fovDegrees, float p_aspectRatio, float p_nearPlane = 0.1f, float p_farPlane = 1000.0f)
+	{
+		_camera.setPerspective(p_fovDegrees, p_aspectRatio, p_nearPlane, p_farPlane);
+		(*_cameraUBO)["projection"] = _camera.projectionMatrix();
+	}
+        
+	void setOrthographic(float p_left, float p_right, float p_bottom, float p_top, float p_nearPlane= 0.1f, float p_farPlane = 1000.0f)
+	{
+		_camera.setOrthographic(p_left, p_right, p_bottom, p_top, p_nearPlane, p_farPlane);
+		(*_cameraUBO)["projection"] = _camera.projectionMatrix();
+	}
 };
 
 int main()
 {
+	DEBUG_LINE();
 	spk::GraphicalApplication app = spk::GraphicalApplication();
 
+	DEBUG_LINE();
 	spk::SafePointer<spk::Window> win = app.createWindow(L"Playground", {{0, 0}, {840, 680}});
+
+	DEBUG_LINE();
+	BakableChunk chunk;
+
+	DEBUG_LINE();
+	spk::GameEngine engine;
+
+	DEBUG_LINE();
+	spk::Entity player = spk::Entity(L"Player");
+
+	DEBUG_LINE();
+	spk::Entity camera = spk::Entity(L"Camera", &player);
+	DEBUG_LINE();
+	camera.transform().place(spk::Vector3(0, 0, -10));
+
+	DEBUG_LINE();
+	CameraComponent& cameraComp = camera.addComponent<CameraComponent>(L"Main camera");
+
+	DEBUG_LINE();
+	spk::Entity chunkObject = spk::Entity(L"Chunk");
+	DEBUG_LINE();
+	ChunkComponent& chunkComp = chunkObject.addComponent<ChunkComponent>();
+	DEBUG_LINE();
+	chunkComp.setChunk(&chunk);
+	DEBUG_LINE();
 
 	spk::GameEngineWidget gameEngineWidget = spk::GameEngineWidget(L"Engine widget", win->widget());
 	gameEngineWidget.setGeometry(win->geometry().anchor, win->geometry().size);
 	gameEngineWidget.activate();
+	DEBUG_LINE();
 
 	return (app.run());
 }

@@ -2,8 +2,7 @@
 
 namespace spk
 {
-	Camera::Camera(const std::wstring& p_name) :
-		Component(p_name),
+	Camera::Camera() :
 		_projectionMatrix(spk::Matrix4x4::identity())
 	{
 		setPerspective(45.0f, 1.0f, 0.1f, 1000.0f);
