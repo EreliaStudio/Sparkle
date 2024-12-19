@@ -16,18 +16,25 @@ namespace spk::OpenGL
     size_t LayoutBufferObject::Attribute::typeSize(Type p_type)
     {
         switch (p_type)
-        {
-        case Type::Int: return sizeof(GLint);
-        case Type::UInt: return sizeof(GLuint);
-        case Type::Float: return sizeof(GLfloat);
-        case Type::Vector2: return sizeof(GLfloat) * 2;
-        case Type::Vector3: return sizeof(GLfloat) * 3;
-        case Type::Vector4: return sizeof(GLfloat) * 4;
-        case Type::Matrix2x2: return sizeof(GLfloat) * 4;
-        case Type::Matrix3x3: return sizeof(GLfloat) * 9;
-        case Type::Matrix4x4: return sizeof(GLfloat) * 16;
-        default: return 0;
-        }
+		{
+		case Type::Int: return sizeof(GLint);
+		case Type::UInt: return sizeof(GLuint);
+		case Type::Float: return sizeof(GLfloat);
+		case Type::Bool: return sizeof(GLboolean);
+		case Type::Vector2: return sizeof(GLfloat) * 2;
+		case Type::Vector3: return sizeof(GLfloat) * 3;
+		case Type::Vector4: return sizeof(GLfloat) * 4;
+		case Type::Vector2Int: return sizeof(GLint) * 2;
+		case Type::Vector3Int: return sizeof(GLint) * 3;
+		case Type::Vector4Int: return sizeof(GLint) * 4;
+		case Type::Vector2UInt: return sizeof(GLuint) * 2;
+		case Type::Vector3UInt: return sizeof(GLuint) * 3;
+		case Type::Vector4UInt: return sizeof(GLuint) * 4;
+		case Type::Matrix2x2: return sizeof(GLfloat) * 4;
+		case Type::Matrix3x3: return sizeof(GLfloat) * 9;
+		case Type::Matrix4x4: return sizeof(GLfloat) * 16;
+		default: return 0;
+		}
     }
 
     LayoutBufferObject::LayoutBufferObject() :
