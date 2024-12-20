@@ -18,6 +18,8 @@ namespace spk::OpenGL
     class ShaderStorageBufferObject : public BindedBufferObject
     {
 	private:
+		size_t _fixedSize;
+		size_t _dynamicElementSize;
 		Element _dynamicArray;
 
     public:

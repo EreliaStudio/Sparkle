@@ -25,6 +25,7 @@ namespace spk::OpenGL
 		void activate();
 		void deactivate();
 		void render(GLsizei nbIndexes, GLsizei p_nbInstance);
+		void validate();
 
 		~Program();
 	};

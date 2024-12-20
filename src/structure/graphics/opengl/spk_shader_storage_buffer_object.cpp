@@ -9,7 +9,9 @@ namespace spk::OpenGL
 
 	ShaderStorageBufferObject::ShaderStorageBufferObject(const std::string &p_name, BindingPoint p_bindingPoint, size_t p_fixedSize, size_t p_dynamicElementSize) :
 		BindedBufferObject(VertexBufferObject::Type::ShaderStorage, VertexBufferObject::Usage::Dynamic, p_name, p_bindingPoint, p_fixedSize),
-		_dynamicArray(static_cast<uint8_t*>(data()) + p_fixedSize, p_dynamicElementSize)
+		_dynamicArray(static_cast<uint8_t*>(data()) + p_fixedSize, p_dynamicElementSize),
+		_fixedSize(p_fixedSize),
+		_dynamicElementSize(p_dynamicElementSize)
 	{
 		_dynamicArray._content.emplace<std::vector<ShaderStorageBufferObject::Element>>();
 	}
@@ -34,26 +36,25 @@ namespace spk::OpenGL
 
 	void ShaderStorageBufferObject::resizeDynamicArray(size_t arraySize)
 	{
-		auto& element = _dynamicArray;
+		uint8_t *initialBuffer = static_cast<uint8_t*>(data());
 
-		if (std::holds_alternative<std::monostate>(element._content) ||
-			std::holds_alternative<std::unordered_map<std::string, Element>>(element._content))
-			throw std::runtime_error("Element is not an array.");
+		size_t newSize = _fixedSize + _dynamicElementSize * arraySize;
 
-		if (arraySize > element.nbElement())
+		resize(newSize);
+
+		for (auto& [key, element] : _elements)
 		{
-			size_t sizeToAdd = element._size * (arraySize - element.nbElement());
-		
-			resize(size() + sizeToAdd);
+			element._buffer = (element._buffer - initialBuffer) + static_cast<uint8_t*>(data());
 		}
-
+		_dynamicArray._buffer = static_cast<uint8_t*>(data()) + _fixedSize;
 		std::vector<Element> elements;
 		elements.reserve(arraySize);
 		for (size_t i = 0; i < arraySize; ++i)
 		{
-			elements.emplace_back(Element(element._buffer + (i * element._size), element._size));
+			elements.emplace_back(Element(_dynamicArray._buffer + (i * _dynamicArray._size), _dynamicArray._size));
 		}
-		std::get<std::vector<Element>>(element._content).swap(elements);
+		std::get<std::vector<Element>>(_dynamicArray._content).swap(elements);
+	
 	}
 
 	ShaderStorageBufferObject::Element& ShaderStorageBufferObject::dynamicArray()
