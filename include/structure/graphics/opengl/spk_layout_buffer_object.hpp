@@ -123,6 +123,33 @@ namespace spk::OpenGL
 		
 		void addAttribute(const Attribute& p_attribute);
 		void addAttribute(Attribute::Index p_index, Attribute::Type p_type);
+
+		template<typename TType>
+		std::vector<TType> get()
+		{
+			activate();
+
+			size_t totalSize = this->size(); 
+			if (totalSize == 0)
+			{
+				return {};
+			}
+
+			if (_vertexSize % sizeof(TType) != 0)
+			{
+				throw std::runtime_error(
+					"LayoutBufferObject::get() - The buffer element size (" + std::to_string(_vertexSize) +
+					" bytes) is incompatible with TType size (" + std::to_string(sizeof(TType)) + " bytes)."
+				);
+			}
+
+			size_t elementCount = totalSize / sizeof(TType);
+			std::vector<TType> result(elementCount);
+
+			glGetBufferSubData(GL_ARRAY_BUFFER, 0, totalSize, result.data());
+
+			return result;
+		}
 	};
 
 	std::string to_string(const LayoutBufferObject::Attribute::Type& p_type);

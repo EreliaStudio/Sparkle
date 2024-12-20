@@ -41,5 +41,7 @@ namespace spk::OpenGL
 
 		size_t nbIndexes() const;
 		size_t nbTriangles() const;
+
+		std::vector<unsigned int> get();
 	};
 }

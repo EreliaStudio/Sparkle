@@ -33,4 +33,22 @@ namespace spk::OpenGL
 	{
 		return nbIndexes() / 3;
 	}
+
+	std::vector<unsigned int> IndexBufferObject::get()
+	{
+		activate();
+
+		size_t totalSize = this->size(); 
+		if (totalSize == 0)
+		{
+			return {};
+		}
+
+		size_t elementCount = totalSize / sizeof(unsigned int);
+		std::vector<unsigned int> result(elementCount);
+
+		glGetBufferSubData(GL_ARRAY_BUFFER, 0, totalSize, result.data());
+
+		return result;
+	}
 }
