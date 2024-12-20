@@ -9,6 +9,8 @@
 
 #include <Windows.h>
 
+#include <vector>
+
 namespace spk::OpenGL
 {
 	Program::Program() :
@@ -94,6 +96,20 @@ namespace spk::OpenGL
 			_load();
 
 		glDrawElementsInstanced(GL_TRIANGLES, nbIndexes, GL_UNSIGNED_INT, nullptr, p_nbInstance);
+	}
+
+	void Program::validate()
+	{
+		glValidateProgram(_programID);
+		GLint validationStatus;
+		glGetProgramiv(_programID, GL_VALIDATE_STATUS, &validationStatus);
+		if (validationStatus == GL_FALSE) {
+			GLint infoLogLength;
+			glGetProgramiv(_programID, GL_INFO_LOG_LENGTH, &infoLogLength);
+			std::vector<char> infoLog(infoLogLength);
+			glGetProgramInfoLog(_programID, infoLogLength, &infoLogLength, infoLog.data());
+			throw std::runtime_error("Shader Program validation failed: " + std::string(infoLog.data()));
+		}
 	}
 
 	Program::~Program()

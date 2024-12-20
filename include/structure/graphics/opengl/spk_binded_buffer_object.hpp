@@ -13,6 +13,8 @@
 #include "spk_sfinae.hpp"
 #include "structure/graphics/opengl/spk_vertex_buffer_object.hpp"
 
+#include "iostream"
+
 namespace spk::OpenGL
 {
     class BindedBufferObject : public VertexBufferObject
@@ -39,6 +41,7 @@ namespace spk::OpenGL
             {
                 if (std::holds_alternative<std::vector<Element>>(_content))
 				{
+					std::cout << "Sizeof [" << sizeof(value) << "] vs " << _size << " * " << std::get<std::vector<Element>>(_content).size() << std::endl;
 					if (sizeof(value) == _size * std::get<std::vector<Element>>(_content).size())
 					{
                 		std::memcpy(_buffer, &value, sizeof(TType));

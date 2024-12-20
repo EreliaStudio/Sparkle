@@ -172,7 +172,7 @@ public:
 class BakableChunk : public Chunk
 {
 private:
-	bool _needBake;
+	bool _needBake = true;
 
 public:
 	BakableChunk() :
@@ -242,7 +242,7 @@ private:
 
 			layout(std140, binding = 3) uniform ChunkData_Type
 			{
-				int chunkData[16][16][5];
+				int content[16][16][5];
 			} chunkData;
 
 			struct Node
@@ -268,34 +268,31 @@ private:
 
 			void main()
 			{
-				vec3 cellPosition = instanceData.data[gl_InstanceID];
+				ivec3 cellPosition = instanceData.data[gl_InstanceID];
 				vec4 worldPos = transform.model * vec4(vec3(inDelta, 0.0) + cellPosition, 1.0);
 				gl_Position = camera.projection * camera.view * worldPos;
 
-				// int nodeIndex = chunkData[cellPosition.x][cellPosition.y][cellPosition.z];
-				// if (nodeIndex < 0 || nodeIndex >= nodeConstants.nbNodes)
-				// {
-				// 	fragmentUVs = vec2(0.0, 0.0) + inDelta;
-				// 	return;
-				// }
-				// Node node = nodeConstants.nodes[nodeIndex];
+				int nodeIndex = chunkData.content[cellPosition.x][cellPosition.y][cellPosition.z];
+				if (nodeIndex < 0 || nodeIndex >= nodeConstants.nbNodes)
+				{
+					fragmentUVs = vec2(0.0, 0.0) + inDelta;
+					return;
+				}
+				Node node = nodeConstants.nodes[nodeIndex];
 
-				// if (node.animationLength == 0)
-				// {
-				// 	fragmentUVs = node.animationStartPos + inDelta;
-				// }
-				// else
-				// {
-				// 	int frameIndex = (timeConstants.time / node.frameDuration) % node.animationLength;
+				if (node.animationLength == 0)
+				{
+					fragmentUVs = node.animationStartPos + inDelta;
+				}
+				else
+				{
+					int frameIndex = (timeConstants.time / node.frameDuration) % node.animationLength;
 
-				// 	vec2 baseUV = node.animationStartPos + inDelta;
-				// 	vec2 offsetUV = vec2(frameIndex * node.animationStep, 0.0);
+					vec2 baseUV = node.animationStartPos + inDelta;
+					vec2 offsetUV = vec2(frameIndex * node.animationStep, 0.0);
 
-				// 	fragmentUVs = baseUV + offsetUV;
-				// }
-
-				fragmentUVs = inDelta;
-
+					fragmentUVs = baseUV + offsetUV;
+				}
 			})";
 
 		const char *fragmentShaderSrc = R"(#version 450
@@ -376,13 +373,13 @@ private:
 			_samplerObject = new spk::OpenGL::SamplerObject("diffuseTexture", spk::OpenGL::SamplerObject::Type::Texture2D, 0);
 		}
 
-		_transformUBO = spk::OpenGL::UniformBufferObject("transform", 2, 64);
+		_transformUBO = spk::OpenGL::UniformBufferObject("Transform_Type", 2, 64);
 		_transformUBO.addElement("model", 0, 64);
 
-		_chunkDataUBO = spk::OpenGL::UniformBufferObject("chunkData", 3, 5120);	
-		_chunkDataUBO.addElement("chunkData", 0, 4, 16 * 16 * 5);
+		_chunkDataUBO = spk::OpenGL::UniformBufferObject("ChunkData_Type", 3, 5120);	
+		_chunkDataUBO.addElement("content", 0, 4, 16 * 16 * 5);
 
-		_instanceDataSSBO = spk::OpenGL::ShaderStorageBufferObject("instanceData", 6, 0, 12);
+		_instanceDataSSBO = spk::OpenGL::ShaderStorageBufferObject("InstanceData_Type", 6, 0, 12);
 	}
 
 public:
@@ -409,7 +406,7 @@ public:
 	{
 		std::cout << "Baking chunk" << std::endl;
 
-		_chunkDataUBO["chunkData"] = *p_chunk;
+		_chunkDataUBO["content"] = static_cast<Chunk>(*p_chunk);
 		_chunkDataUBO.validate();
 
 		std::vector<spk::Vector3Int> instanceData;
@@ -431,14 +428,18 @@ public:
 
 		std::cout << "Inserting the instance data with size " << instanceData.size() << std::endl;
 
+		_instanceDataSSBO.resizeDynamicArray(instanceData.size());
 		_instanceDataSSBO.dynamicArray() = instanceData;
 		_instanceDataSSBO.validate();
 	}
 
 	void render()
 	{
+
+		GL_DEBUG_LINE();
 		_program->activate();
 
+		GL_DEBUG_LINE();
 		_cameraUBO->activate();
 		_timeUBO->activate();
 		_nodeMapSSBO->activate();
@@ -446,16 +447,24 @@ public:
 		_transformUBO.activate();
 		_chunkDataUBO.activate();
 
+		GL_DEBUG_LINE();
+		_program->validate();
+
+		GL_DEBUG_LINE();
+		std::cout << "Rendering " << _bufferSet.indexes().nbIndexes() << " indexes and " << _instanceDataSSBO.dynamicArray().nbElement() << " instances" << std::endl;
 		_program->render(_bufferSet.indexes().nbIndexes(), _instanceDataSSBO.dynamicArray().nbElement());
 
+		GL_DEBUG_LINE();
 		_chunkDataUBO.deactivate();
 		_transformUBO.deactivate();
 		_samplerObject->deactivate();
 		_nodeMapSSBO->deactivate();
 		_timeUBO->deactivate();
 		_cameraUBO->deactivate();
+		GL_DEBUG_LINE();
 		
 		_program->deactivate();
+		GL_DEBUG_LINE();
 	}
 };
 
@@ -499,6 +508,7 @@ public:
 			_renderer.bakeChunk(_chunk);
 			_chunk->validate();
 		}
+
 		_renderer.render();
 	}
 };
@@ -568,33 +578,25 @@ public:
 
 int main()
 {
-	DEBUG_LINE();
 	spk::GraphicalApplication app = spk::GraphicalApplication();
 
-	DEBUG_LINE();
 	spk::SafePointer<spk::Window> win = app.createWindow(L"Playground", {{0, 0}, {840, 680}});
 
-	DEBUG_LINE();
 	spk::SpriteSheet chunkSpriteSheet = spk::SpriteSheet(L"playground/resources/test.png", spk::Vector2UInt(1, 1));
 
-	DEBUG_LINE();
 	NodeMap nodeMap;
 
-	DEBUG_LINE();
 	nodeMap.addNode(0, {
 		.animationStartPos = spk::Vector2(0, 0),
 		.frameDuration = 100,
 		.animationLength = 0,
 		.animationStep = 1		
 	});
-	DEBUG_LINE();
 
 	nodeMap.validate();
 
-	DEBUG_LINE();
 	BakableChunk chunk;
 
-	DEBUG_LINE();
 	for (size_t x = 0; x < Chunk::Size; x++)
 	{
 		for (size_t y = 0; y < Chunk::Size; y++)
@@ -602,31 +604,30 @@ int main()
 			chunk.setContent(x, y, 0, 0);
 		}
 	}
-	DEBUG_LINE();
+
+	chunk.invalidate();
 
 	spk::GameEngine engine;
 
-	DEBUG_LINE();
 	spk::Entity player = spk::Entity(L"Player");
 
-	DEBUG_LINE();
 	spk::Entity camera = spk::Entity(L"Camera", &player);
 	camera.transform().place(spk::Vector3(0, 0, -10));
 
-	DEBUG_LINE();
 	CameraComponent& cameraComp = camera.addComponent<CameraComponent>(L"Main camera");
 
-	DEBUG_LINE();
 	spk::Entity chunkObject = spk::Entity(L"Chunk");
 	ChunkComponent& chunkComp = chunkObject.addComponent<ChunkComponent>();
 	chunkComp.setChunk(&chunk);
 	chunkComp.setSpriteSheet(&chunkSpriteSheet);
 
-	DEBUG_LINE();
+	engine.addEntity(&player);
+	engine.addEntity(&chunkObject);
+
 	spk::GameEngineWidget gameEngineWidget = spk::GameEngineWidget(L"Engine widget", win->widget());
 	gameEngineWidget.setGeometry(win->geometry().anchor, win->geometry().size);
+	gameEngineWidget.setGameEngine(&engine);
 	gameEngineWidget.activate();
-	DEBUG_LINE();
 
 	return (app.run());
 }
