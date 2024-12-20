@@ -17,6 +17,14 @@ namespace spk::OpenGL
 {
     class ShaderStorageBufferObject : public BindedBufferObject
     {
+	public:
+		template<typename TFixedType, typename TDynamicType>
+		struct Content
+		{
+			TFixedType fixed;
+			std::vector<TDynamicType> dynamic;
+		};
+
 	private:
 		size_t _fixedSize;
 		size_t _dynamicElementSize;
@@ -30,5 +38,36 @@ namespace spk::OpenGL
 
 		Element& dynamicArray();
 		void resizeDynamicArray(size_t arraySize);
+
+		template<typename TFixedType, typename TDynamicType>
+		Content<TFixedType, TDynamicType> get()
+		{
+			activate();
+
+			if (_fixedSize % sizeof(TFixedType) != 0)
+			{
+				throw std::runtime_error(
+					"ShaderStorageBufferObject::get() - The fixed buffer section size (" + std::to_string(_fixedSize) +
+					" bytes) is incompatible with TFixedType size (" + std::to_string(sizeof(TFixedType)) + " bytes)."
+				);
+			}
+
+			if (_dynamicElementSize % sizeof(TDynamicType) != 0)
+			{
+				throw std::runtime_error(
+					"ShaderStorageBufferObject::get() - The dynamic buffer section element size (" + std::to_string(_dynamicElementSize) +
+					" bytes) is incompatible with TDynamicType size (" + std::to_string(sizeof(TDynamicType)) + " bytes)."
+				);
+			}
+
+			Content<TFixedType, TDynamicType> result;
+
+			result.dynamic.resize(_dynamicArray.nbElement());
+
+			glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, _fixedSize, &(result.fixed));
+			glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, _fixedSize, _fixedSize, result.dynamic.data());
+
+			return result;
+		}
     };
 }

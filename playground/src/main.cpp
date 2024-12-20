@@ -1,5 +1,7 @@
 #include "playground.hpp"
 
+int count = 0;
+
 struct Node
 {
 	spk::Vector2 animationStartPos;
@@ -150,8 +152,6 @@ public:
 		{
 			throw std::runtime_error("Node map is empty");
 		}
-
-		std::cout << "Adding node array of size " << _content.size() << std::endl;
 		
 		_nodeMapSSBO->operator[]("nbNodes") = int(_content.size());
 		_nodeMapSSBO->resizeDynamicArray(_content.size());
@@ -358,15 +358,19 @@ private:
 		}
 	
 		_bufferSet = spk::OpenGL::BufferSet({
-			{0, spk::OpenGL::LayoutBufferObject::Attribute::Type::Vector2Int} // inCellIndex
+			{0, spk::OpenGL::LayoutBufferObject::Attribute::Type::Vector2} // inCellIndex
 		});
 
-		_bufferSet.layout() << spk::Vector2Int(0, 0);
-		_bufferSet.layout() << spk::Vector2Int(1, 0);
-		_bufferSet.layout() << spk::Vector2Int(0, 1);
-		_bufferSet.layout() << spk::Vector2Int(1, 1);
+		_bufferSet.clear();
+
+		_bufferSet.layout() << spk::Vector2(0, 0);
+		_bufferSet.layout() << spk::Vector2(1, 0);
+		_bufferSet.layout() << spk::Vector2(0, 1);
+		_bufferSet.layout() << spk::Vector2(1, 1);
 
 		_bufferSet.indexes() << 0 << 1 << 2 << 2 << 1 << 3;
+
+		_bufferSet.validate();
 
 		if (_samplerObject == nullptr)
 		{
@@ -391,21 +395,16 @@ public:
 
 	void setSpriteSheet(const spk::SafePointer<spk::SpriteSheet>& p_spriteSheet)
 	{
-		std::cout << "Binding sprite sheet" << std::endl;
 		_samplerObject->bind(p_spriteSheet);
 	}
 
 	void bakeTransform(const spk::SafePointer<spk::Entity>& entity)
 	{
-		std::cout << "Baking transform" << std::endl;
-
 		_transformUBO["model"] = entity->transform().model();
 	}
 
 	void bakeChunk(spk::SafePointer<BakableChunk> p_chunk)
 	{
-		std::cout << "Baking chunk" << std::endl;
-
 		_chunkDataUBO["content"] = static_cast<Chunk>(*p_chunk);
 		_chunkDataUBO.validate();
 
@@ -426,8 +425,6 @@ public:
 			}
 		}
 
-		std::cout << "Inserting the instance data with size " << instanceData.size() << std::endl;
-
 		_instanceDataSSBO.resizeDynamicArray(instanceData.size());
 		_instanceDataSSBO.dynamicArray() = instanceData;
 		_instanceDataSSBO.validate();
@@ -436,10 +433,8 @@ public:
 	void render()
 	{
 
-		GL_DEBUG_LINE();
 		_program->activate();
 
-		GL_DEBUG_LINE();
 		_cameraUBO->activate();
 		_timeUBO->activate();
 		_nodeMapSSBO->activate();
@@ -447,24 +442,52 @@ public:
 		_transformUBO.activate();
 		_chunkDataUBO.activate();
 
-		GL_DEBUG_LINE();
 		_program->validate();
 
-		GL_DEBUG_LINE();
+		struct CameraData
+		{
+			spk::Matrix4x4 projection;
+			spk::Matrix4x4 view;
+		};
+
+		struct TimeData
+		{
+			int time;
+		};
+
+		struct TransformData
+		{
+			spk::Matrix4x4 model;
+		};
+
+		struct ChunkData
+		{
+			int content[16][16][5];
+		};
+
+		DEBUG_LINE();
+		CameraData cameraMatrix = _cameraUBO->get<CameraData>();
+		DEBUG_LINE();
+		TimeData timeData = _timeUBO->get<TimeData>();
+		DEBUG_LINE();
+		spk::OpenGL::ShaderStorageBufferObject::Content<int, Node> nodeData = _nodeMapSSBO->get<int, Node>();
+		DEBUG_LINE();
+		TransformData transformData = _transformUBO.get<TransformData>();
+		DEBUG_LINE();
+		ChunkData chunkData = _chunkDataUBO.get<ChunkData>();
+		DEBUG_LINE();
+
 		std::cout << "Rendering " << _bufferSet.indexes().nbIndexes() << " indexes and " << _instanceDataSSBO.dynamicArray().nbElement() << " instances" << std::endl;
 		_program->render(_bufferSet.indexes().nbIndexes(), _instanceDataSSBO.dynamicArray().nbElement());
 
-		GL_DEBUG_LINE();
 		_chunkDataUBO.deactivate();
 		_transformUBO.deactivate();
 		_samplerObject->deactivate();
 		_nodeMapSSBO->deactivate();
 		_timeUBO->deactivate();
 		_cameraUBO->deactivate();
-		GL_DEBUG_LINE();
 		
 		_program->deactivate();
-		GL_DEBUG_LINE();
 	}
 };
 
@@ -554,7 +577,6 @@ public:
 	void start() override
 	{
 		_onEditionContract = owner()->transform().addOnEditionCallback([&](){
-			std::cout << "Sending the view matrix" << std::endl;
 			(*_cameraUBO)["view"] = owner()->transform().model();
 		});
 		
@@ -564,14 +586,12 @@ public:
 	void setPerspective(float p_fovDegrees, float p_aspectRatio, float p_nearPlane = 0.1f, float p_farPlane = 1000.0f)
 	{
 		_camera.setPerspective(p_fovDegrees, p_aspectRatio, p_nearPlane, p_farPlane);
-		std::cout << "Sending the projection matrix" << std::endl;
 		(*_cameraUBO)["projection"] = _camera.projectionMatrix();
 	}
         
 	void setOrthographic(float p_left, float p_right, float p_bottom, float p_top, float p_nearPlane= 0.1f, float p_farPlane = 1000.0f)
 	{
 		_camera.setOrthographic(p_left, p_right, p_bottom, p_top, p_nearPlane, p_farPlane);
-		std::cout << "Sending the projection matrix" << std::endl;
 		(*_cameraUBO)["projection"] = _camera.projectionMatrix();
 	}
 };
