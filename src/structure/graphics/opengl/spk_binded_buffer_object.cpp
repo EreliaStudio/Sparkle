@@ -94,9 +94,17 @@ namespace spk::OpenGL
 		{
 			std::vector<Element> elements;
 			elements.reserve(arraySize);
+
+			size_t padding = 0;
+
+			if (elementSize > 8)
+			{
+				padding = 16 - (elementSize % 16);
+			}
+
 			for (size_t i = 0; i < arraySize; ++i)
 			{
-				elements.emplace_back(Element(bufferPtr + (i * elementSize), elementSize));
+				elements.emplace_back(Element(bufferPtr + (i * (elementSize + padding)), elementSize));
 			}
 			Element arrayElement(bufferPtr, elementSize);
 			arrayElement._content = std::move(elements);

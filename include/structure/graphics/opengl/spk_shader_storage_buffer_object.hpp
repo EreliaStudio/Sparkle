@@ -64,10 +64,15 @@ namespace spk::OpenGL
 
 			result.dynamic.resize(_dynamicArray.nbElement());
 
-			glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, _fixedSize, &(result.fixed));
-			glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, _fixedSize, _fixedSize, result.dynamic.data());
+			/*
+			Retrieve fixed buffer content
+			*/
+		
+			/*
+			Retrieve dynamic buffer content
+			*/
 
-			return result;
+			return std::move(result);
 		}
     };
 }

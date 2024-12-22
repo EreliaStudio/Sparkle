@@ -1,5 +1,7 @@
 #include "structure/graphics/opengl/spk_shader_storage_buffer_object.hpp"
 
+#include "spk_debug_macro.hpp"
+
 namespace spk::OpenGL
 {
 	ShaderStorageBufferObject::ShaderStorageBufferObject() :
@@ -38,23 +40,34 @@ namespace spk::OpenGL
 	{
 		uint8_t *initialBuffer = static_cast<uint8_t*>(data());
 
-		size_t newSize = _fixedSize + _dynamicElementSize * arraySize;
+		size_t padding = 0;
 
+		if (_dynamicElementSize > 8)
+		{
+			padding = 16 - (_dynamicElementSize % 16);
+		}
+
+		size_t newSize = _fixedSize + (_dynamicElementSize + padding) * arraySize;
+	
 		resize(newSize);
 
 		for (auto& [key, element] : _elements)
 		{
-			element._buffer = (element._buffer - initialBuffer) + static_cast<uint8_t*>(data());
+			size_t offset = element._buffer - initialBuffer;
+			element._buffer = static_cast<uint8_t*>(data()) + offset;
 		}
+
+		std::vector<Element>& contentElement = std::get<std::vector<Element>>(_dynamicArray._content);
+		
+		contentElement.resize(arraySize);
+
 		_dynamicArray._buffer = static_cast<uint8_t*>(data()) + _fixedSize;
-		std::vector<Element> elements;
-		elements.reserve(arraySize);
+
 		for (size_t i = 0; i < arraySize; ++i)
 		{
-			elements.emplace_back(Element(_dynamicArray._buffer + (i * _dynamicArray._size), _dynamicArray._size));
+			size_t offset = (i * (_dynamicElementSize + padding));
+			contentElement[i] = Element(static_cast<uint8_t *>(_dynamicArray._buffer) + offset, _dynamicElementSize);
 		}
-		std::get<std::vector<Element>>(_dynamicArray._content).swap(elements);
-	
 	}
 
 	ShaderStorageBufferObject::Element& ShaderStorageBufferObject::dynamicArray()

@@ -31,16 +31,13 @@ namespace spk::OpenGL
 		template<typename TType>
 		TType get()
 		{
-		DEBUG_LINE();
 			activate();
 
-		DEBUG_LINE();
 			size_t totalSize = this->size(); 
 			if (totalSize == 0)
 			{
 				return {};
 			}
-		DEBUG_LINE();
 
 			if (size() % sizeof(TType) != 0)
 			{
@@ -49,13 +46,10 @@ namespace spk::OpenGL
 					" bytes) is incompatible with TType size (" + std::to_string(sizeof(TType)) + " bytes)."
 				);
 			}
-		DEBUG_LINE();
 
 			TType result;
-		DEBUG_LINE();
 
-			glGetBufferSubData(GL_ARRAY_BUFFER, 0, totalSize, &result);
-		DEBUG_LINE();
+			glGetBufferSubData(GL_UNIFORM_BUFFER, 0, totalSize, &result);
 
 			return result;
 		}

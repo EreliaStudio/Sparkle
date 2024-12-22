@@ -40,17 +40,17 @@ public:
 		_content[p_x][p_y][p_z] = p_value;
 	}
 
-	int content(const spk::Vector3Int& p_relPosition)
+	int content(const spk::Vector3Int& p_relPosition) const
 	{
 		return (_content[p_relPosition.x][p_relPosition.y][p_relPosition.z]);
 	}
 
-	int content(const spk::Vector2Int& p_relPosition, const int& p_layer)
+	int content(const spk::Vector2Int& p_relPosition, const int& p_layer) const
 	{
 		return (_content[p_relPosition.x][p_relPosition.y][p_layer]);
 	}
 
-	int content(const int& p_x, const int& p_y, const int& p_z)
+	int content(const int& p_x, const int& p_y, const int& p_z) const
 	{
 		return (_content[p_x][p_y][p_z]);
 	}
@@ -105,7 +105,6 @@ public:
 		return (dynamic_cast<spk::OpenGL::ShaderStorageBufferObject*>(_bindedBufferObjects[p_uniformName]));
 	}
 };
-
 
 class NodeMap
 {
@@ -201,17 +200,15 @@ class ChunkRenderer
 {
 private:
 	BufferObjectCollection::Instanciator _bindingPointInstanciator;
-	spk::SpriteSheet* _spriteSheet = nullptr;
 
 	static inline spk::OpenGL::Program* _program = nullptr;
 	static inline spk::OpenGL::UniformBufferObject* _cameraUBO = nullptr;
-	static inline spk::OpenGL::UniformBufferObject* _timeUBO = nullptr;
 	static inline spk::OpenGL::ShaderStorageBufferObject* _nodeMapSSBO = nullptr;
-	static inline spk::OpenGL::SamplerObject* _samplerObject;
 	spk::OpenGL::BufferSet _bufferSet;
 	spk::OpenGL::UniformBufferObject _transformUBO;
-	spk::OpenGL::UniformBufferObject _chunkDataUBO;
-	spk::OpenGL::ShaderStorageBufferObject _instanceDataSSBO;
+	spk::OpenGL::ShaderStorageBufferObject _cellListSSBO;
+	spk::OpenGL::UniformBufferObject _chunkUBO;
+	spk::OpenGL::SamplerObject _spriteSheetSampler;
 
 	void _initProgram()
 	{
@@ -224,26 +221,26 @@ private:
 
 			layout(location = 0) in vec2 inDelta;
 
-			layout(std140, binding = 0) uniform Camera_Type
-			{
-				mat4 projection;
-				mat4 view;
-			} camera;
-
-			layout(std140, binding = 1) uniform TimeConstants_Type
-			{
-				int time; // Express in milliseconds
-			} timeConstants;
-
-			layout(std140, binding = 2) uniform Transform_Type
+			layout (std140, binding = 0) uniform Transform_Type
 			{
 				mat4 model;
 			} transform;
 
-			layout(std140, binding = 3) uniform ChunkData_Type
+			layout(std140, binding = 1) uniform Camera_Type
+			{
+				mat4 view;
+				mat4 projection;
+			} camera;
+
+			layout(std430, binding = 2) buffer CellList_Type
+			{
+				ivec3 cellList[];
+			};
+
+			layout(std140, binding = 3) uniform Chunk_Type
 			{
 				int content[16][16][5];
-			} chunkData;
+			} chunk;
 
 			struct Node
 			{
@@ -259,51 +256,43 @@ private:
 				Node nodes[];
 			} nodeConstants;
 
-			layout(std430, binding = 5) buffer InstanceData_Type
-			{
-				ivec3 data[];
-			} instanceData;
-
-			layout(location = 0) out vec2 fragmentUVs;
+			layout(location = 0) out vec2 outUV;
 
 			void main()
 			{
-				ivec3 cellPosition = instanceData.data[gl_InstanceID];
-				vec4 worldPos = transform.model * vec4(vec3(inDelta, 0.0) + cellPosition, 1.0);
-				gl_Position = camera.projection * camera.view * worldPos;
+				ivec3 chunkRelPosition = ivec3(inDelta, 0) + cellList[gl_InstanceID];
+				vec4 worldPosition = transform.model * vec4(chunkRelPosition, 1);
+				vec4 viewPosition = camera.view * worldPosition;
+				gl_Position = camera.projection * viewPosition;
 
-				int nodeIndex = chunkData.content[cellPosition.x][cellPosition.y][cellPosition.z];
+				int nodeIndex = chunk.content[chunkRelPosition.x][chunkRelPosition.y][chunkRelPosition.z];
+
 				if (nodeIndex < 0 || nodeIndex >= nodeConstants.nbNodes)
 				{
-					fragmentUVs = vec2(0.0, 0.0) + inDelta;
+					outUV = vec2(-1, -1);
 					return;
 				}
+
 				Node node = nodeConstants.nodes[nodeIndex];
 
-				if (node.animationLength == 0)
-				{
-					fragmentUVs = node.animationStartPos + inDelta;
-				}
-				else
-				{
-					int frameIndex = (timeConstants.time / node.frameDuration) % node.animationLength;
-
-					vec2 baseUV = node.animationStartPos + inDelta;
-					vec2 offsetUV = vec2(frameIndex * node.animationStep, 0.0);
-
-					fragmentUVs = baseUV + offsetUV;
-				}
+				outUV = node.animationStartPos + vec2(node.animationStep * node.frameDuration, 0) + inDelta;
 			})";
 
 		const char *fragmentShaderSrc = R"(#version 450
-            layout(location = 0) in vec2 fragUV;
+
+			layout(location = 0) in vec2 inUV;
+
 			layout(location = 0) out vec4 outputColor;
 
-            uniform sampler2D diffuseTexture;
+			uniform sampler2D spriteSheet;
 
             void main()
             {
-				outputColor = texture(diffuseTexture, fragUV);
+				if (inUV.x < 0 || inUV.y < 0)
+				{
+					discard;
+				}
+				outputColor = texture(spriteSheet, inUV);
 			})";
 
 		_program = new spk::OpenGL::Program(vertexShaderSrc, fragmentShaderSrc);
@@ -311,52 +300,6 @@ private:
 
 	void _initBuffers()
 	{
-		if (BufferObjectCollection::instance()->isAllocated("camera") == false)
-		{
-			_cameraUBO = BufferObjectCollection::instance()->allocate<spk::OpenGL::UniformBufferObject>("camera", "Camera_Type", 0, 128);
-			_cameraUBO->addElement("projection", 0, 64);
-			_cameraUBO->addElement("view", 64, 64);
-
-			_cameraUBO->operator[]("projection") = spk::Matrix4x4();
-			_cameraUBO->operator[]("view") = spk::Matrix4x4();
-
-			_cameraUBO->validate();
-		}
-		else
-		{
-			_cameraUBO = BufferObjectCollection::instance()->UBO("camera");
-		}
-		
-		if (BufferObjectCollection::instance()->isAllocated("timeConstants") == false)
-		{
-			_timeUBO = BufferObjectCollection::instance()->allocate<spk::OpenGL::UniformBufferObject>("timeConstants", "TimeConstants_Type", 0, 4);
-			
-			_timeUBO->addElement("time", 0, 4);
-
-			_timeUBO->operator[]("time") = 0;
-
-			_timeUBO->validate();
-		}
-		else
-		{
-			_timeUBO = BufferObjectCollection::instance()->UBO("timeConstants");
-		}
-		
-		if (BufferObjectCollection::instance()->isAllocated("nodeConstants") == false)
-		{
-			_nodeMapSSBO = BufferObjectCollection::instance()->allocate<spk::OpenGL::ShaderStorageBufferObject>("nodeConstants", "NodeConstants_Type", 0, 4, 20);
-
-			_nodeMapSSBO->addElement("nbNodes", 0, 4);
-
-			_nodeMapSSBO->operator[]("nbNodes") = 0;
-
-			_nodeMapSSBO->validate();
-		}
-		else
-		{
-			_nodeMapSSBO = BufferObjectCollection::instance()->SSBO("nodeConstants");
-		}
-	
 		_bufferSet = spk::OpenGL::BufferSet({
 			{0, spk::OpenGL::LayoutBufferObject::Attribute::Type::Vector2} // inCellIndex
 		});
@@ -372,18 +315,62 @@ private:
 
 		_bufferSet.validate();
 
-		if (_samplerObject == nullptr)
-		{
-			_samplerObject = new spk::OpenGL::SamplerObject("diffuseTexture", spk::OpenGL::SamplerObject::Type::Texture2D, 0);
-		}
-
-		_transformUBO = spk::OpenGL::UniformBufferObject("Transform_Type", 2, 64);
+		_transformUBO = spk::OpenGL::UniformBufferObject("Transform_Type", 0, 64);
 		_transformUBO.addElement("model", 0, 64);
 
-		_chunkDataUBO = spk::OpenGL::UniformBufferObject("ChunkData_Type", 3, 5120);	
-		_chunkDataUBO.addElement("content", 0, 4, 16 * 16 * 5);
+		_transformUBO["model"] = spk::Matrix4x4::identity();
 
-		_instanceDataSSBO = spk::OpenGL::ShaderStorageBufferObject("InstanceData_Type", 6, 0, 12);
+		_transformUBO.validate();
+
+		_cellListSSBO = spk::OpenGL::ShaderStorageBufferObject("CellList_Type", 2, 0, 12);
+
+		if (_cameraUBO == nullptr)
+		{
+			if (BufferObjectCollection::instance()->isAllocated("camera") == false)
+			{
+				_cameraUBO = BufferObjectCollection::instance()->allocate<spk::OpenGL::UniformBufferObject>("camera", "Camera_Type", 1, 128);
+			
+				_cameraUBO->addElement("view", 0, 64);
+				_cameraUBO->addElement("projection", 64, 64);
+
+				(*_cameraUBO)["view"] = spk::Matrix4x4::identity();
+				(*_cameraUBO)["projection"] = spk::Matrix4x4::identity();
+
+				_cameraUBO->validate();
+			}
+			else
+			{
+				_cameraUBO = BufferObjectCollection::instance()->UBO("camera");
+			}
+		}
+
+		if (_nodeMapSSBO == nullptr)
+		{
+			if (BufferObjectCollection::instance()->isAllocated("nodeConstants") == false)
+			{
+				_nodeMapSSBO = BufferObjectCollection::instance()->allocate<spk::OpenGL::ShaderStorageBufferObject>("nodeConstants", "NodeConstants_Type", 0, 4, 20);
+
+				_nodeMapSSBO->addElement("nbNodes", 0, 4);
+
+				_nodeMapSSBO->operator[]("nbNodes") = 0;
+
+				_nodeMapSSBO->validate();
+			}
+			else
+			{
+				_nodeMapSSBO = BufferObjectCollection::instance()->SSBO("nodeConstants");
+			}
+		}
+
+		_chunkUBO = spk::OpenGL::UniformBufferObject("Chunk_Type", 3, 5120);
+
+		_chunkUBO.addElement("content", 0, 4, 1280);
+
+		_chunkUBO["content"] = std::vector<int>(16 * 16 * 5, -1);
+
+		_chunkUBO.validate();
+
+		_spriteSheetSampler = spk::OpenGL::SamplerObject("spriteSheet", spk::OpenGL::SamplerObject::Type::Texture2D, 0);
 	}
 
 public:
@@ -393,100 +380,79 @@ public:
 		_initBuffers();
 	}
 
-	void setSpriteSheet(const spk::SafePointer<spk::SpriteSheet>& p_spriteSheet)
+	void updateSpriteSheet(spk::SafePointer<spk::SpriteSheet> p_spriteSheet)
 	{
-		_samplerObject->bind(p_spriteSheet);
+		_spriteSheetSampler.bind(p_spriteSheet);
 	}
 
-	void bakeTransform(const spk::SafePointer<spk::Entity>& entity)
+	void updateChunk(spk::SafePointer<const BakableChunk> p_chunk)
 	{
-		_transformUBO["model"] = entity->transform().model();
-	}
+		std::vector<int> contentList;
 
-	void bakeChunk(spk::SafePointer<BakableChunk> p_chunk)
-	{
-		_chunkDataUBO["content"] = static_cast<Chunk>(*p_chunk);
-		_chunkDataUBO.validate();
-
-		std::vector<spk::Vector3Int> instanceData;
-
-		for (size_t x = 0; x < Chunk::Size; x++)
+		for (size_t i = 0; i < Chunk::Size; i++)
 		{
-			for (size_t y = 0; y < Chunk::Size; y++)
+			for (size_t j = 0; j < Chunk::Size; j++)
 			{
-				for (size_t z = 0; z < Chunk::Layer; z++)
+				for (size_t k = 0; k < Chunk::Layer; k++)
 				{
-					int nodeIndex = p_chunk->content(x, y, z);
-					if (nodeIndex != -1)
-					{
-						instanceData.push_back(spk::Vector3Int(x, y, z));
-					}
-				}	
+					contentList.push_back(p_chunk->content(i, j, k));
+				}
 			}
 		}
 
-		_instanceDataSSBO.resizeDynamicArray(instanceData.size());
-		_instanceDataSSBO.dynamicArray() = instanceData;
-		_instanceDataSSBO.validate();
+		_chunkUBO["content"] = contentList;
+
+		_chunkUBO.validate();
+	}
+
+	void updateTransform(spk::Transform& p_transform)
+	{
+		_transformUBO["model"] = p_transform.model();
+
+		_transformUBO.validate();
+	}
+
+	void updateChunkData(spk::SafePointer<const Chunk> p_chunk)
+	{
+		std::vector<spk::Vector3Int> cellList;
+
+		for (size_t i = 0; i < Chunk::Size; i++)
+		{
+			for (size_t j = 0; j < Chunk::Size; j++)
+			{
+				cellList.push_back(spk::Vector3Int(i, j, 0));
+			}
+		}
+
+		_cellListSSBO.resizeDynamicArray(cellList.size());
+
+		_cellListSSBO.dynamicArray() = cellList;
+
+		_cellListSSBO.validate();
 	}
 
 	void render()
 	{
-
 		_program->activate();
 
-		_cameraUBO->activate();
-		_timeUBO->activate();
+		_spriteSheetSampler.activate();
+		_chunkUBO.activate();
 		_nodeMapSSBO->activate();
-		_samplerObject->activate();
+		_cellListSSBO.activate();
+		_cameraUBO->activate();
 		_transformUBO.activate();
-		_chunkDataUBO.activate();
-
-		_program->validate();
-
-		struct CameraData
-		{
-			spk::Matrix4x4 projection;
-			spk::Matrix4x4 view;
-		};
-
-		struct TimeData
-		{
-			int time;
-		};
-
-		struct TransformData
-		{
-			spk::Matrix4x4 model;
-		};
-
-		struct ChunkData
-		{
-			int content[16][16][5];
-		};
-
-		DEBUG_LINE();
-		CameraData cameraMatrix = _cameraUBO->get<CameraData>();
-		DEBUG_LINE();
-		TimeData timeData = _timeUBO->get<TimeData>();
-		DEBUG_LINE();
-		spk::OpenGL::ShaderStorageBufferObject::Content<int, Node> nodeData = _nodeMapSSBO->get<int, Node>();
-		DEBUG_LINE();
-		TransformData transformData = _transformUBO.get<TransformData>();
-		DEBUG_LINE();
-		ChunkData chunkData = _chunkDataUBO.get<ChunkData>();
-		DEBUG_LINE();
-
-		std::cout << "Rendering " << _bufferSet.indexes().nbIndexes() << " indexes and " << _instanceDataSSBO.dynamicArray().nbElement() << " instances" << std::endl;
-		_program->render(_bufferSet.indexes().nbIndexes(), _instanceDataSSBO.dynamicArray().nbElement());
-
-		_chunkDataUBO.deactivate();
-		_transformUBO.deactivate();
-		_samplerObject->deactivate();
-		_nodeMapSSBO->deactivate();
-		_timeUBO->deactivate();
-		_cameraUBO->deactivate();
+		_bufferSet.activate();
 		
+		_program->render(_bufferSet.indexes().nbIndexes(), _cellListSSBO.dynamicArray().nbElement());
+
+		_bufferSet.deactivate();
+		_transformUBO.deactivate();
+		_cameraUBO->deactivate();
+		_cellListSSBO.deactivate();
+		_nodeMapSSBO->deactivate();
+		_chunkUBO.deactivate();
+		_spriteSheetSampler.deactivate();
+
 		_program->deactivate();
 	}
 };
@@ -509,17 +475,18 @@ public:
 	void setChunk(spk::SafePointer<BakableChunk> p_chunk)
 	{
 		_chunk = p_chunk;
+		_renderer.updateChunkData(_chunk);
 	}
 
-	void setSpriteSheet(const spk::SafePointer<spk::SpriteSheet>& p_spriteSheet)
+	void setSpriteSheet(spk::SafePointer<spk::SpriteSheet> p_spriteSheet)
 	{
-		_renderer.setSpriteSheet(p_spriteSheet);
+		_renderer.updateSpriteSheet(p_spriteSheet);
 	}
 
 	void start() override
 	{
 		_onEditionContract = owner()->transform().addOnEditionCallback([&](){
-			_renderer.bakeTransform(owner());
+			_renderer.updateTransform(owner()->transform());
 		});
 		_onEditionContract.trigger();
 	}
@@ -528,7 +495,7 @@ public:
 	{
 		if (_chunk->needBake() == true)
 		{
-			_renderer.bakeChunk(_chunk);
+			_renderer.updateChunkData(_chunk);
 			_chunk->validate();
 		}
 
@@ -554,12 +521,13 @@ public:
 		{
 			if (BufferObjectCollection::instance()->isAllocated("camera") == false)
 			{
-				_cameraUBO = BufferObjectCollection::instance()->allocate<spk::OpenGL::UniformBufferObject>("camera", "Camera_Type", 0, 128);
-				_cameraUBO->addElement("projection", 0, 64);
-				_cameraUBO->addElement("view", 64, 64);
+				_cameraUBO = BufferObjectCollection::instance()->allocate<spk::OpenGL::UniformBufferObject>("camera", "Camera_Type", 1, 128);
+			
+				_cameraUBO->addElement("view", 0, 64);
+				_cameraUBO->addElement("projection", 64, 64);
 
-				_cameraUBO->operator[]("projection") = spk::Matrix4x4();
-				_cameraUBO->operator[]("view") = spk::Matrix4x4();
+				(*_cameraUBO)["view"] = spk::Matrix4x4::identity();
+				(*_cameraUBO)["projection"] = spk::Matrix4x4::identity();
 
 				_cameraUBO->validate();
 			}
@@ -569,9 +537,7 @@ public:
 			}
 		}
 
-		
-
-		setOrthographic(-10, 10, -10, 10);
+		setOrthographic(-20, 20, -20, 20);
 	}
 
 	void start() override
@@ -600,14 +566,14 @@ int main()
 {
 	spk::GraphicalApplication app = spk::GraphicalApplication();
 
-	spk::SafePointer<spk::Window> win = app.createWindow(L"Playground", {{0, 0}, {840, 680}});
+	spk::SafePointer<spk::Window> win = app.createWindow(L"Playground", {{0, 0}, {800, 800}});
 
 	spk::SpriteSheet chunkSpriteSheet = spk::SpriteSheet(L"playground/resources/test.png", spk::Vector2UInt(1, 1));
 
 	NodeMap nodeMap;
 
 	nodeMap.addNode(0, {
-		.animationStartPos = spk::Vector2(0, 0),
+	 	.animationStartPos = spk::Vector2(0, 0),
 		.frameDuration = 100,
 		.animationLength = 0,
 		.animationStep = 1		
@@ -637,6 +603,7 @@ int main()
 	CameraComponent& cameraComp = camera.addComponent<CameraComponent>(L"Main camera");
 
 	spk::Entity chunkObject = spk::Entity(L"Chunk");
+	chunkObject.transform().place(spk::Vector3(0, 0, 0));
 	ChunkComponent& chunkComp = chunkObject.addComponent<ChunkComponent>();
 	chunkComp.setChunk(&chunk);
 	chunkComp.setSpriteSheet(&chunkSpriteSheet);
