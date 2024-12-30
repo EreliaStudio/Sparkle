@@ -68,7 +68,7 @@ private:
 
 		nodeMapSSBO.addElement("nbNodes", 0, 4);
 
-		nodeMapSSBO.operator[]("nbNodes") = 0;
+		nodeMapSSBO["nbNodes"] = 0;
 
 		nodeMapSSBO.validate();
 
@@ -86,9 +86,17 @@ private:
 
 		chunkTextureInfo.addElement("unit", 0, 8);
 
-		chunkTextureInfo.operator[]("unit") = spk::Vector2(1, 1);
+		chunkTextureInfo["unit"] = spk::Vector2(1, 1);
 
 		chunkTextureInfo.validate();
+
+		spk::OpenGL::UniformBufferObject& systemInfo = allocate<spk::OpenGL::UniformBufferObject>("systemInfo", "SystemInfo_Type", 6, 4);
+
+		systemInfo.addElement("time", 0, 4);
+
+		systemInfo["time"] = 0;
+
+		systemInfo.validate();
 	}
 
 public:
@@ -230,6 +238,7 @@ private:
 	static inline spk::OpenGL::Program* _program = nullptr;
 	spk::OpenGL::UniformBufferObject& _cameraUBO;
 	spk::OpenGL::UniformBufferObject& _chunkTextureInfo;
+	spk::OpenGL::UniformBufferObject& _systemInfo;
 	spk::OpenGL::ShaderStorageBufferObject& _nodeMapSSBO;
 	spk::OpenGL::BufferSet _bufferSet;
 	spk::OpenGL::UniformBufferObject _transformUBO;
@@ -244,93 +253,9 @@ private:
 			return;
 		}
 
-		const char *vertexShaderSrc = R"(#version 450 core
+		std::string vertexShaderSrc = spk::FileUtils::readFileAsString("playground/resources/shader/chunkShader.vert");
 
-			layout(location = 0) in vec2 inDelta;
-
-			layout (std140, binding = 0) uniform Transform_Type
-			{
-				mat4 model;
-			} transform;
-
-			layout(std140, binding = 1) uniform Camera_Type
-			{
-				mat4 view;
-				mat4 projection;
-			} camera;
-
-			layout(std430, binding = 2) buffer CellList_Type
-			{
-				ivec3 cellList[];
-			};
-
-			layout(std430, binding = 3) buffer Chunk_Type
-			{
-				int content[16][16][5];
-			} chunk;
-
-			struct Node
-			{
-				vec2 animationStartPos;
-				int frameDuration;
-				int animationLength;
-				int animationStep;
-			};
-
-			layout(std430, binding = 4) buffer NodeConstants_Type
-			{
-				int nbNodes;
-				Node nodes[];
-			} nodeConstants;
-
-			layout(std140, binding = 5) uniform ChunkTextureInfo_Type
-			{
-				vec2 unit;
-			} chunkTextureInfo;
-
-			layout(location = 0) out vec2 outUV;
-
-			void main()
-			{
-				ivec3 cellPosition = cellList[gl_InstanceID];
-				ivec3 chunkRelPosition = ivec3(inDelta, 0) + cellPosition;
-				vec4 worldPosition = transform.model * vec4(chunkRelPosition, 1);
-				vec4 viewPosition = camera.view * worldPosition;
-				gl_Position = camera.projection * viewPosition;
-
-				int nodeIndex = chunk.content[cellPosition.x][cellPosition.y][cellPosition.z];
-
-				if (nodeIndex < 0 || nodeIndex >= nodeConstants.nbNodes)
-				{
-					outUV = vec2(-1, -1);
-					return;
-				}
-
-				Node node = nodeConstants.nodes[nodeIndex];
-
-				vec2 spritePos = (node.animationStartPos + vec2(node.animationStep * node.frameDuration, 0) + inDelta);
-				outUV = spritePos * chunkTextureInfo.unit;
-			})";
-
-		const char *fragmentShaderSrc = R"(#version 450
-
-			layout(location = 0) in vec2 inUV;
-
-			layout(location = 0) out vec4 outputColor;
-
-			uniform sampler2D spriteSheet;
-
-            void main()
-            {
-				if (inUV.x < 0 || inUV.y < 0)
-				{
-					discard;
-				}
-				else
-				{
-					outputColor = texture(spriteSheet, inUV);
-				}
-			})";
+		std::string fragmentShaderSrc = spk::FileUtils::readFileAsString("playground/resources/shader/chunkShader.frag");
 
 		_program = new spk::OpenGL::Program(vertexShaderSrc, fragmentShaderSrc);
 	}
@@ -376,7 +301,8 @@ public:
 	ChunkRenderer() :
 		_cameraUBO(BufferObjectCollection::instance()->UBO("camera")),
 		_nodeMapSSBO(BufferObjectCollection::instance()->SSBO("nodeConstants")),
-		_chunkTextureInfo(BufferObjectCollection::instance()->UBO("chunkTextureInfo"))
+		_chunkTextureInfo(BufferObjectCollection::instance()->UBO("chunkTextureInfo")),
+		_systemInfo(BufferObjectCollection::instance()->UBO("systemInfo"))
 	{
 		_initProgram();
 		_initBuffers();
@@ -434,6 +360,7 @@ public:
 	{
 		_program->activate();
 
+		_systemInfo.activate();
 		_spriteSheetSampler.activate();
 		_chunkSSBO.activate();
 		_chunkTextureInfo.activate();
@@ -453,6 +380,7 @@ public:
 		_chunkTextureInfo.deactivate();
 		_chunkSSBO.deactivate();
 		_spriteSheetSampler.deactivate();
+		_systemInfo.deactivate();
 
 		_program->deactivate();
 	}
@@ -508,7 +436,7 @@ class CameraComponent : public spk::Component
 {
 private:
 	BufferObjectCollection::Instanciator _bindingPointInstanciator;
-	static inline spk::OpenGL::UniformBufferObject* _cameraUBO = nullptr;
+	spk::OpenGL::UniformBufferObject& _cameraUBO;
 
 	spk::Camera _camera;
 
@@ -516,28 +444,9 @@ private:
 
 public:
 	CameraComponent(const std::wstring& p_name) :
-		spk::Component(p_name)
+		spk::Component(p_name),
+		_cameraUBO(BufferObjectCollection::instance()->UBO("camera"))
 	{
-		if (_cameraUBO == nullptr)
-		{
-			if (BufferObjectCollection::instance()->isAllocated("camera") == false)
-			{
-				_cameraUBO = BufferObjectCollection::instance()->allocate<spk::OpenGL::UniformBufferObject>("camera", "Camera_Type", 1, 128);
-			
-				_cameraUBO->addElement("view", 0, 64);
-				_cameraUBO->addElement("projection", 64, 64);
-
-				(*_cameraUBO)["view"] = spk::Matrix4x4::identity();
-				(*_cameraUBO)["projection"] = spk::Matrix4x4::identity();
-
-				_cameraUBO->validate();
-			}
-			else
-			{
-				_cameraUBO = BufferObjectCollection::instance()->UBO("camera");
-			}
-		}
-
 		// setPerspective(90, 1, 0.1f, 1000.0f);
 		setOrthographic(-20, 20, -20, 20);
 	}
@@ -545,7 +454,7 @@ public:
 	void start() override
 	{
 		_onEditionContract = owner()->transform().addOnEditionCallback([&](){
-			(*_cameraUBO)["view"] = owner()->transform().model();
+			_cameraUBO["view"] = owner()->transform().model();
 		});
 		
 		_onEditionContract.trigger();
@@ -554,13 +463,39 @@ public:
 	void setPerspective(float p_fovDegrees, float p_aspectRatio, float p_nearPlane = 0.1f, float p_farPlane = 1000.0f)
 	{
 		_camera.setPerspective(p_fovDegrees, p_aspectRatio, p_nearPlane, p_farPlane);
-		(*_cameraUBO)["projection"] = _camera.projectionMatrix();
+		_cameraUBO["projection"] = _camera.projectionMatrix();
 	}
         
 	void setOrthographic(float p_left, float p_right, float p_bottom, float p_top, float p_nearPlane= 0.1f, float p_farPlane = 1000.0f)
 	{
 		_camera.setOrthographic(p_left, p_right, p_bottom, p_top, p_nearPlane, p_farPlane);
-		(*_cameraUBO)["projection"] = _camera.projectionMatrix();
+		_cameraUBO["projection"] = _camera.projectionMatrix();
+	}
+};
+
+struct WorldManagerComponent : public spk::Component
+{
+private:
+	BufferObjectCollection::Instanciator _bindingPointInstanciator;
+	spk::OpenGL::UniformBufferObject& _systemInfo;
+
+public:
+	WorldManagerComponent(const std::wstring& p_name) :
+		spk::Component(p_name),
+		_systemInfo(BufferObjectCollection::instance()->UBO("systemInfo"))
+	{
+
+	}
+
+	void onUpdateEvent(spk::UpdateEvent& p_event) override
+	{
+		if (p_event.deltaTime != 0)
+		{
+			_systemInfo["time"] = static_cast<int>(p_event.time);
+			_systemInfo.validate();
+
+			p_event.requestPaint();
+		}
 	}
 };
 
@@ -576,8 +511,8 @@ int main()
 
 	nodeMap.addNode(0, {
 	 	.animationStartPos = spk::Vector2(0, 0),
-		.frameDuration = 100,
-		.animationLength = 0,
+		.frameDuration = 1000,
+		.animationLength = 2,
 		.animationStep = 1		
 	});
 
@@ -648,6 +583,9 @@ int main()
 
 	spk::GameEngine engine;
 
+	spk::Entity worldManager = spk::Entity(L"World manager");
+	worldManager.addComponent<WorldManagerComponent>(L"world manager component");
+
 	spk::Entity player = spk::Entity(L"Player");
 
 	spk::Entity camera = spk::Entity(L"Camera", &player);
@@ -674,6 +612,7 @@ int main()
 	}
 
 
+	engine.addEntity(&worldManager);
 	engine.addEntity(&player);
 	for (size_t i = 0; i < 4; i++)
 	{
