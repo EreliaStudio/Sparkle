@@ -118,7 +118,7 @@ public:
 	{
 		if (BufferObjectCollection::instance()->isAllocated("nodeConstants") == false)
 		{
-			_nodeMapSSBO = BufferObjectCollection::instance()->allocate<spk::OpenGL::ShaderStorageBufferObject>("nodeConstants", "NodeConstants_Type", 0, 4, 20);
+			_nodeMapSSBO = BufferObjectCollection::instance()->allocate<spk::OpenGL::ShaderStorageBufferObject>("nodeConstants", "NodeConstants_Type", 0, 4, 4, 20, 4);
 
 			_nodeMapSSBO->addElement("nbNodes", 0, 4);
 
@@ -203,11 +203,12 @@ private:
 
 	static inline spk::OpenGL::Program* _program = nullptr;
 	static inline spk::OpenGL::UniformBufferObject* _cameraUBO = nullptr;
+	static inline spk::OpenGL::UniformBufferObject* _chunkTextureInfo = nullptr;
 	static inline spk::OpenGL::ShaderStorageBufferObject* _nodeMapSSBO = nullptr;
 	spk::OpenGL::BufferSet _bufferSet;
 	spk::OpenGL::UniformBufferObject _transformUBO;
 	spk::OpenGL::ShaderStorageBufferObject _cellListSSBO;
-	spk::OpenGL::UniformBufferObject _chunkUBO;
+	spk::OpenGL::ShaderStorageBufferObject _chunkSSBO;
 	spk::OpenGL::SamplerObject _spriteSheetSampler;
 
 	void _initProgram()
@@ -237,7 +238,7 @@ private:
 				ivec3 cellList[];
 			};
 
-			layout(std140, binding = 3) uniform Chunk_Type
+			layout(std430, binding = 3) buffer Chunk_Type
 			{
 				int content[16][16][5];
 			} chunk;
@@ -256,16 +257,22 @@ private:
 				Node nodes[];
 			} nodeConstants;
 
+			layout(std140, binding = 5) uniform ChunkTextureInfo_Type
+			{
+				vec2 unit;
+			} chunkTextureInfo;
+
 			layout(location = 0) out vec2 outUV;
 
 			void main()
 			{
-				ivec3 chunkRelPosition = ivec3(inDelta, 0) + cellList[gl_InstanceID];
+				ivec3 cellPosition = cellList[gl_InstanceID];
+				ivec3 chunkRelPosition = ivec3(inDelta, 0) + cellPosition;
 				vec4 worldPosition = transform.model * vec4(chunkRelPosition, 1);
 				vec4 viewPosition = camera.view * worldPosition;
 				gl_Position = camera.projection * viewPosition;
 
-				int nodeIndex = chunk.content[chunkRelPosition.x][chunkRelPosition.y][chunkRelPosition.z];
+				int nodeIndex = chunk.content[cellPosition.x][cellPosition.y][cellPosition.z];
 
 				if (nodeIndex < 0 || nodeIndex >= nodeConstants.nbNodes)
 				{
@@ -275,7 +282,8 @@ private:
 
 				Node node = nodeConstants.nodes[nodeIndex];
 
-				outUV = node.animationStartPos + vec2(node.animationStep * node.frameDuration, 0) + inDelta;
+				vec2 spritePos = (node.animationStartPos + vec2(node.animationStep * node.frameDuration, 0) + inDelta);
+				outUV = spritePos * chunkTextureInfo.unit;
 			})";
 
 		const char *fragmentShaderSrc = R"(#version 450
@@ -292,7 +300,10 @@ private:
 				{
 					discard;
 				}
-				outputColor = texture(spriteSheet, inUV);
+				else
+				{
+					outputColor = texture(spriteSheet, inUV);
+				}
 			})";
 
 		_program = new spk::OpenGL::Program(vertexShaderSrc, fragmentShaderSrc);
@@ -322,7 +333,7 @@ private:
 
 		_transformUBO.validate();
 
-		_cellListSSBO = spk::OpenGL::ShaderStorageBufferObject("CellList_Type", 2, 0, 12);
+		_cellListSSBO = spk::OpenGL::ShaderStorageBufferObject("CellList_Type", 2, 0, 0, 12, 4);
 
 		if (_cameraUBO == nullptr)
 		{
@@ -348,7 +359,7 @@ private:
 		{
 			if (BufferObjectCollection::instance()->isAllocated("nodeConstants") == false)
 			{
-				_nodeMapSSBO = BufferObjectCollection::instance()->allocate<spk::OpenGL::ShaderStorageBufferObject>("nodeConstants", "NodeConstants_Type", 0, 4, 20);
+				_nodeMapSSBO = BufferObjectCollection::instance()->allocate<spk::OpenGL::ShaderStorageBufferObject>("nodeConstants", "NodeConstants_Type", 0, 4, 4, 20, 4);
 
 				_nodeMapSSBO->addElement("nbNodes", 0, 4);
 
@@ -362,13 +373,31 @@ private:
 			}
 		}
 
-		_chunkUBO = spk::OpenGL::UniformBufferObject("Chunk_Type", 3, 5120);
+		if (_chunkTextureInfo == nullptr)
+		{
+			if (BufferObjectCollection::instance()->isAllocated("chunkTextureInfo") == false)
+			{
+				_chunkTextureInfo = BufferObjectCollection::instance()->allocate<spk::OpenGL::UniformBufferObject>("chunkTextureInfo", "ChunkTextureInfo_Type", 5, 8);
 
-		_chunkUBO.addElement("content", 0, 4, 1280);
+				_chunkTextureInfo->addElement("unit", 0, 8);
 
-		_chunkUBO["content"] = std::vector<int>(16 * 16 * 5, -1);
+				_chunkTextureInfo->operator[]("unit") = spk::Vector2(1, 1);
 
-		_chunkUBO.validate();
+				_chunkTextureInfo->validate();
+			}
+			else
+			{
+				_chunkTextureInfo = BufferObjectCollection::instance()->UBO("chunkTextureInfo");
+			}
+		}
+
+		_chunkSSBO = spk::OpenGL::ShaderStorageBufferObject("Chunk_Type", 3, 5120, 0, 0, 0);
+
+		_chunkSSBO.addElement("content", 0, 4, 1280, 0);
+
+		_chunkSSBO["content"] = std::vector<int>(16 * 16 * 5, -1);
+
+		_chunkSSBO.validate();
 
 		_spriteSheetSampler = spk::OpenGL::SamplerObject("spriteSheet", spk::OpenGL::SamplerObject::Type::Texture2D, 0);
 	}
@@ -383,26 +412,15 @@ public:
 	void updateSpriteSheet(spk::SafePointer<spk::SpriteSheet> p_spriteSheet)
 	{
 		_spriteSheetSampler.bind(p_spriteSheet);
+		(*_chunkTextureInfo)["unit"] = p_spriteSheet->unit();
+		_chunkTextureInfo->validate();
 	}
 
 	void updateChunk(spk::SafePointer<const BakableChunk> p_chunk)
 	{
-		std::vector<int> contentList;
+		_chunkSSBO["content"] = *(dynamic_cast<const Chunk*>(p_chunk.get()));
 
-		for (size_t i = 0; i < Chunk::Size; i++)
-		{
-			for (size_t j = 0; j < Chunk::Size; j++)
-			{
-				for (size_t k = 0; k < Chunk::Layer; k++)
-				{
-					contentList.push_back(p_chunk->content(i, j, k));
-				}
-			}
-		}
-
-		_chunkUBO["content"] = contentList;
-
-		_chunkUBO.validate();
+		_chunkSSBO.validate();
 	}
 
 	void updateTransform(spk::Transform& p_transform)
@@ -420,7 +438,15 @@ public:
 		{
 			for (size_t j = 0; j < Chunk::Size; j++)
 			{
-				cellList.push_back(spk::Vector3Int(i, j, 0));
+				for (size_t k = 0; k < Chunk::Layer; k++)
+				{
+					spk::Vector3Int tmp = spk::Vector3Int(i, j, k);
+
+					if (p_chunk->content(tmp) != -1)
+					{
+						cellList.push_back(tmp);
+					}
+				}
 			}
 		}
 
@@ -436,7 +462,8 @@ public:
 		_program->activate();
 
 		_spriteSheetSampler.activate();
-		_chunkUBO.activate();
+		_chunkSSBO.activate();
+		_chunkTextureInfo->activate();
 		_nodeMapSSBO->activate();
 		_cellListSSBO.activate();
 		_cameraUBO->activate();
@@ -450,7 +477,8 @@ public:
 		_cameraUBO->deactivate();
 		_cellListSSBO.deactivate();
 		_nodeMapSSBO->deactivate();
-		_chunkUBO.deactivate();
+		_chunkTextureInfo->deactivate();
+		_chunkSSBO.deactivate();
 		_spriteSheetSampler.deactivate();
 
 		_program->deactivate();
@@ -475,6 +503,7 @@ public:
 	void setChunk(spk::SafePointer<BakableChunk> p_chunk)
 	{
 		_chunk = p_chunk;
+		_renderer.updateChunk(_chunk);
 		_renderer.updateChunkData(_chunk);
 	}
 
@@ -568,12 +597,33 @@ int main()
 
 	spk::SafePointer<spk::Window> win = app.createWindow(L"Playground", {{0, 0}, {800, 800}});
 
-	spk::SpriteSheet chunkSpriteSheet = spk::SpriteSheet(L"playground/resources/test.png", spk::Vector2UInt(1, 1));
+	spk::SpriteSheet chunkSpriteSheet = spk::SpriteSheet(L"playground/resources/test.png", spk::Vector2UInt(2, 2));
 
 	NodeMap nodeMap;
 
 	nodeMap.addNode(0, {
 	 	.animationStartPos = spk::Vector2(0, 0),
+		.frameDuration = 100,
+		.animationLength = 0,
+		.animationStep = 1		
+	});
+
+	nodeMap.addNode(1, {
+	 	.animationStartPos = spk::Vector2(1, 1),
+		.frameDuration = 100,
+		.animationLength = 0,
+		.animationStep = 1		
+	});
+
+	nodeMap.addNode(2, {
+	 	.animationStartPos = spk::Vector2(1, 0),
+		.frameDuration = 100,
+		.animationLength = 0,
+		.animationStep = 1		
+	});
+
+	nodeMap.addNode(3, {
+	 	.animationStartPos = spk::Vector2(0, 1),
 		.frameDuration = 100,
 		.animationLength = 0,
 		.animationStep = 1		
@@ -587,7 +637,33 @@ int main()
 	{
 		for (size_t y = 0; y < Chunk::Size; y++)
 		{
-			chunk.setContent(x, y, 0, 0);
+			for (size_t z = 0; z < Chunk::Layer; z++)
+			{
+				if (z == 0 && (
+					x == 0 || x == Chunk::Size - 1 || 
+					y == 0 || y == Chunk::Size - 1))
+				{
+					chunk.setContent(x, y, z, 0);
+				}
+				else if (z == 1 && (
+					x == 1 || x == Chunk::Size - 2 || 
+					y == 1 || y == Chunk::Size - 2))
+				{
+					chunk.setContent(x, y, z, 1);
+				}
+				else if (z == 2 && (
+					x == 2 || x == Chunk::Size - 3 || 
+					y == 2 || y == Chunk::Size - 3))
+				{
+					chunk.setContent(x, y, z, 2);
+				}
+				else if (z == 3 && (
+					x == 3 || x == Chunk::Size - 4 || 
+					y == 3 || y == Chunk::Size - 4))
+				{
+					chunk.setContent(x, y, z, 3);
+				}
+			}
 		}
 	}
 

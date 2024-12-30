@@ -83,40 +83,35 @@ namespace spk::OpenGL
 		return it->second;
 	}
 
-	BindedBufferObject::Element &BindedBufferObject::addElement(const std::string &name, size_t offset, size_t elementSize, size_t arraySize)
+	BindedBufferObject::Element& BindedBufferObject::addElement(const std::string& name, size_t offset, size_t elementSize)
 	{
 		uint8_t *bufferPtr = static_cast<uint8_t *>(data()) + offset;
 
 		if (_elements.find(name) != _elements.end())
 			throw std::runtime_error("Element '" + name + "' already exists.");
 
-		if (arraySize > 0)
-		{
-			std::vector<Element> elements;
-			elements.reserve(arraySize);
-
-			size_t padding = 0;
-
-			if (elementSize > 8)
-			{
-				padding = 16 - (elementSize % 16);
-			}
-
-			for (size_t i = 0; i < arraySize; ++i)
-			{
-				elements.emplace_back(Element(bufferPtr + (i * (elementSize + padding)), elementSize));
-			}
-			Element arrayElement(bufferPtr, elementSize);
-			arrayElement._content = std::move(elements);
-
-			auto [it, inserted] = _elements.emplace(name, std::move(arrayElement));
-			return it->second;
-		}
-		else
-		{
-			auto [it, inserted] = _elements.emplace(name, Element(bufferPtr, elementSize));
-			return it->second;
-		}
+		auto [it, inserted] = _elements.emplace(name, Element(bufferPtr, elementSize));
+		return it->second;
 	}
+	
+	BindedBufferObject::Element& BindedBufferObject::addElement(const std::string& name, size_t offset, size_t elementSize, size_t arraySize, size_t arrayPadding)
+	{
+		uint8_t *bufferPtr = static_cast<uint8_t *>(data()) + offset;
 
+		if (_elements.find(name) != _elements.end())
+			throw std::runtime_error("Element '" + name + "' already exists.");
+
+		std::vector<Element> elements;
+		elements.reserve(arraySize);
+
+		for (size_t i = 0; i < arraySize; ++i)
+		{
+			elements.emplace_back(Element(bufferPtr + (i * (elementSize + arrayPadding)), elementSize));
+		}
+		Element arrayElement(bufferPtr, elementSize);
+		arrayElement._content = std::move(elements);
+
+		auto [it, inserted] = _elements.emplace(name, std::move(arrayElement));
+		return it->second;
+	}
 }

@@ -121,6 +121,7 @@ namespace spk::OpenGL
         Element& operator[](const std::string& name);
         const Element& operator[](const std::string& name) const;
 
-        Element& addElement(const std::string& name, size_t offset, size_t elementSize, size_t arraySize = 0);
+        Element& addElement(const std::string& name, size_t offset, size_t elementSize);
+        Element& addElement(const std::string& name, size_t offset, size_t elementSize, size_t arraySize, size_t arrayPadding);
     };
 }

@@ -27,12 +27,14 @@ namespace spk::OpenGL
 
 	private:
 		size_t _fixedSize;
+		size_t _fixedPadding;
 		size_t _dynamicElementSize;
+		size_t _dynamicPadding;
 		Element _dynamicArray;
 
     public:
         ShaderStorageBufferObject();
-        ShaderStorageBufferObject(const std::string& typeName, BindingPoint bindingPoint, size_t p_fixedSize, size_t p_dynamicElementSize);
+        ShaderStorageBufferObject(const std::string& typeName, BindingPoint bindingPoint, size_t p_fixedSize, size_t p_fixedPadding, size_t p_dynamicElementSize, size_t p_dynamicElementPadding);
 
         void activate() override;
 
@@ -63,14 +65,6 @@ namespace spk::OpenGL
 			Content<TFixedType, TDynamicType> result;
 
 			result.dynamic.resize(_dynamicArray.nbElement());
-
-			/*
-			Retrieve fixed buffer content
-			*/
-		
-			/*
-			Retrieve dynamic buffer content
-			*/
 
 			return std::move(result);
 		}

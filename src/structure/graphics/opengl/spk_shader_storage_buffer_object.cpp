@@ -9,11 +9,13 @@ namespace spk::OpenGL
 	{
 	}
 
-	ShaderStorageBufferObject::ShaderStorageBufferObject(const std::string &p_name, BindingPoint p_bindingPoint, size_t p_fixedSize, size_t p_dynamicElementSize) :
+	ShaderStorageBufferObject::ShaderStorageBufferObject(const std::string &p_name, BindingPoint p_bindingPoint, size_t p_fixedSize, size_t p_fixedPadding, size_t p_dynamicElementSize, size_t p_dynamicElementPadding) :
 		BindedBufferObject(VertexBufferObject::Type::ShaderStorage, VertexBufferObject::Usage::Dynamic, p_name, p_bindingPoint, p_fixedSize),
-		_dynamicArray(static_cast<uint8_t*>(data()) + p_fixedSize, p_dynamicElementSize),
 		_fixedSize(p_fixedSize),
-		_dynamicElementSize(p_dynamicElementSize)
+		_fixedPadding(p_fixedPadding),
+		_dynamicElementSize(p_dynamicElementSize),
+		_dynamicPadding(p_dynamicElementPadding),
+		_dynamicArray(static_cast<uint8_t*>(data()) + p_fixedSize + p_fixedPadding, p_dynamicElementSize)
 	{
 		_dynamicArray._content.emplace<std::vector<ShaderStorageBufferObject::Element>>();
 	}
@@ -40,14 +42,7 @@ namespace spk::OpenGL
 	{
 		uint8_t *initialBuffer = static_cast<uint8_t*>(data());
 
-		size_t padding = 0;
-
-		if (_dynamicElementSize > 8)
-		{
-			padding = 16 - (_dynamicElementSize % 16);
-		}
-
-		size_t newSize = _fixedSize + (_dynamicElementSize + padding) * arraySize;
+		size_t newSize = _fixedSize + _fixedPadding + (_dynamicElementSize + _dynamicPadding) * arraySize;
 	
 		resize(newSize);
 
@@ -59,13 +54,13 @@ namespace spk::OpenGL
 
 		std::vector<Element>& contentElement = std::get<std::vector<Element>>(_dynamicArray._content);
 		
-		contentElement.resize(arraySize);
+		_dynamicArray._buffer = static_cast<uint8_t*>(data()) + _fixedSize + _fixedPadding;
 
-		_dynamicArray._buffer = static_cast<uint8_t*>(data()) + _fixedSize;
+		contentElement.resize(arraySize);
 
 		for (size_t i = 0; i < arraySize; ++i)
 		{
-			size_t offset = (i * (_dynamicElementSize + padding));
+			size_t offset = (i * (_dynamicElementSize + _dynamicPadding));
 			contentElement[i] = Element(static_cast<uint8_t *>(_dynamicArray._buffer) + offset, _dynamicElementSize);
 		}
 	}
