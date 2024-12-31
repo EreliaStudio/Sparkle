@@ -45,6 +45,10 @@ namespace spk
 		friend struct Event;
 		friend class GraphicalApplication;
 		friend class SystemModule;
+		friend class ControllerModule;
+		friend class KeyboardModule;
+		friend class MouseModule;
+		friend class UpdateModule;
 
 	private:
 		std::unique_ptr<Widget> _rootWidget;

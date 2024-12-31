@@ -1,6 +1,55 @@
 #include "playground.hpp"
 
-int count = 0;
+enum class Event
+{
+	NoEvent,
+	PlayerMotionUp,
+	PlayerMotionLeft,
+	PlayerMotionDown,
+	PlayerMotionRight,
+	PlayerMotionIdle
+};
+
+
+inline const char* to_string(Event event)
+{
+    switch (event)
+    {
+        case Event::NoEvent:          return "NoEvent";
+        case Event::PlayerMotionUp:   return "PlayerMotionUp";
+        case Event::PlayerMotionLeft: return "PlayerMotionLeft";
+        case Event::PlayerMotionDown: return "PlayerMotionDown";
+        case Event::PlayerMotionRight:return "PlayerMotionRight";
+        case Event::PlayerMotionIdle: return "PlayerMotionIdle";
+        default:                      return "UnknownEvent";
+    }
+}
+
+inline const wchar_t* to_wstring(Event event)
+{
+    switch (event)
+    {
+        case Event::NoEvent:          return L"NoEvent";
+        case Event::PlayerMotionUp:   return L"PlayerMotionUp";
+        case Event::PlayerMotionLeft: return L"PlayerMotionLeft";
+        case Event::PlayerMotionDown: return L"PlayerMotionDown";
+        case Event::PlayerMotionRight:return L"PlayerMotionRight";
+        case Event::PlayerMotionIdle: return L"PlayerMotionIdle";
+        default:                      return L"UnknownEvent";
+    }
+}
+
+std::ostream& operator<<(std::ostream& os, Event event)
+{
+    return os << to_string(event);
+}
+
+std::wostream& operator<<(std::wostream& wos, Event event)
+{
+    return wos << to_wstring(event);
+}
+
+using EventCenter = spk::Singleton<spk::EventNotifier<Event>>;
 
 struct Node
 {
@@ -489,12 +538,167 @@ public:
 
 	void onUpdateEvent(spk::UpdateEvent& p_event) override
 	{
-		if (p_event.deltaTime != 0)
+		if (p_event.deltaTime.milliseconds != 0)
 		{
-			_systemInfo["time"] = static_cast<int>(p_event.time);
+			_systemInfo["time"] = static_cast<int>(p_event.time.milliseconds);
 			_systemInfo.validate();
 
 			p_event.requestPaint();
+		}
+	}
+};
+
+class ControlMapper : public spk::Component
+{
+private:
+
+	EventCenter::Instanciator _eventCenterInstanciator;
+
+	Event _motionEvent = Event::NoEvent;
+
+public:
+	ControlMapper(const std::wstring& p_name) :
+		spk::Component(p_name)
+	{
+
+	}
+
+	void onControllerEvent(spk::ControllerEvent& p_event) override
+	{
+		if (p_event.type == spk::ControllerEvent::Type::JoystickMotion)
+		{
+			if (p_event.joystick.id == spk::Controller::Joystick::Right)
+				return ;
+			_motionEvent = Event::PlayerMotionIdle;
+
+			if (std::abs(p_event.controller->leftJoystick.position.x) > std::abs(p_event.controller->leftJoystick.position.y))
+			{
+				if (p_event.controller->leftJoystick.position.x < -100)
+				{
+					_motionEvent = Event::PlayerMotionLeft;
+				}
+				else if (p_event.controller->leftJoystick.position.x > 100)
+				{
+					_motionEvent = Event::PlayerMotionRight;
+				}
+			}
+			else
+			{
+				if (p_event.controller->leftJoystick.position.y < -100)
+				{
+					_motionEvent = Event::PlayerMotionDown;
+				}
+				else if (p_event.controller->leftJoystick.position.y > 100)
+				{
+					_motionEvent = Event::PlayerMotionUp;
+				}
+			}
+		}
+		else if (p_event.type == spk::ControllerEvent::Type::JoystickReset)
+		{
+			if (p_event.joystick.id == spk::Controller::Joystick::Right)
+				return ;
+				
+			_motionEvent = Event::PlayerMotionIdle;
+		}
+	}
+
+	void onKeyboardEvent(spk::KeyboardEvent& p_event) override
+	{
+
+	}
+
+	void onMouseEvent(spk::MouseEvent& p_event) override
+	{
+
+	}
+
+	void onUpdateEvent(spk::UpdateEvent& p_event) override
+	{
+		static Event _lastEvent = Event::NoEvent;
+
+		if (_lastEvent == Event::PlayerMotionIdle && _motionEvent == Event::PlayerMotionIdle)
+			return;
+
+		if (_motionEvent != Event::NoEvent)
+		{
+			spk::cout << "Emiting event [" << _motionEvent << "]" << std::endl;
+
+			EventCenter::instance()->notifyEvent(_motionEvent);
+			_lastEvent = _motionEvent;
+		}
+	}
+
+};
+
+class PlayerController : public spk::Component
+{
+private:
+	EventCenter::Instanciator _eventCenterInstanciator;
+
+	EventCenter::Type::Contract _upMotionContract;
+	EventCenter::Type::Contract _leftMotionContract;
+	EventCenter::Type::Contract _downMotionContract;
+	EventCenter::Type::Contract _rightMotionContract;
+	EventCenter::Type::Contract _idleMotionContract;
+
+	spk::Timer _motionTimer;
+	spk::Vector3 _origin; // Express in unit per millisecond
+	spk::Vector3 _destination; // Express in unit per millisecond
+
+public:
+	PlayerController(const std::wstring& p_name) :
+		spk::Component(p_name),
+		_motionTimer(5500LL, spk::TimeUnit::Millisecond),
+		_upMotionContract(EventCenter::instance()->subscribe(Event::PlayerMotionUp, [&](){
+			_origin = owner()->transform().localPosition();
+			_destination = _origin + spk::Vector3(0, 1, 0);
+			_motionTimer.start();
+		})),
+		_leftMotionContract(EventCenter::instance()->subscribe(Event::PlayerMotionLeft, [&](){
+			_origin = owner()->transform().localPosition();
+			_destination = _origin + spk::Vector3(-1, 0, 0);
+			_motionTimer.start();
+		})),
+		_downMotionContract(EventCenter::instance()->subscribe(Event::PlayerMotionDown, [&](){
+			_origin = owner()->transform().localPosition();
+			_destination = _origin + spk::Vector3(0, -1, 0);
+			_motionTimer.start();
+		})),
+		_rightMotionContract(EventCenter::instance()->subscribe(Event::PlayerMotionRight, [&](){
+			_origin = owner()->transform().localPosition();
+			_destination = _origin + spk::Vector3(1, 0, 0);
+			_motionTimer.start();
+		})),
+		_idleMotionContract(EventCenter::instance()->subscribe(Event::PlayerMotionIdle, [&](){
+			_origin = owner()->transform().localPosition();
+			_destination = _origin + spk::Vector3(0, 0, 0);
+			_motionTimer.stop();
+		}))
+	{
+
+	}
+
+	void onUpdateEvent(spk::UpdateEvent& p_event) override
+	{
+		if (p_event.deltaTime.milliseconds == 0)
+		{
+			return;
+		}
+
+		if (_motionTimer.state() != spk::Timer::State::Running)
+		{
+			if (_origin != _destination)
+			{
+				owner()->transform().place(_destination);
+			}
+			return;
+		} 
+
+		if (_origin != _destination)
+		{
+			float ratio = static_cast<double>(_motionTimer.elapsed().value) / static_cast<double>(_motionTimer.expectedDuration().value);
+			owner()->transform().place(spk::Vector3::lerp(_origin, _destination, ratio));
 		}
 	}
 };
@@ -584,9 +788,11 @@ int main()
 	spk::GameEngine engine;
 
 	spk::Entity worldManager = spk::Entity(L"World manager");
-	worldManager.addComponent<WorldManagerComponent>(L"world manager component");
+	worldManager.addComponent<WorldManagerComponent>(L"World manager component");
+	worldManager.addComponent<ControlMapper>(L"Control mapper component");
 
 	spk::Entity player = spk::Entity(L"Player");
+	player.addComponent<PlayerController>(L"Player controler component");
 
 	spk::Entity camera = spk::Entity(L"Camera", &player);
 	camera.transform().place(spk::Vector3(0, 0, -20));

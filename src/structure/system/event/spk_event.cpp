@@ -2,7 +2,7 @@
 
 #include "structure/graphics/spk_window.hpp"
 
-#include <chrono>
+#include "utils/spk_system_utils.hpp"
 
 namespace spk
 {
@@ -257,6 +257,26 @@ namespace spk
 			}
 		},
 		{
+			WM_LEFT_JOYSTICK_RESET,
+			[](Event* p_event, UINT uMsg, WPARAM wParam, LPARAM lParam)
+			{
+				static const short halfValue = std::numeric_limits<unsigned short>::max() / 2;
+				p_event->controllerEvent.type = ControllerEvent::Type::JoystickReset;
+				p_event->controllerEvent.joystick.id = Controller::Joystick::ID::Left;
+				p_event->controllerEvent.joystick.values = 0;
+			}
+		},
+		{
+			WM_RIGHT_JOYSTICK_RESET,
+			[](Event* p_event, UINT uMsg, WPARAM wParam, LPARAM lParam)
+			{
+				static const short halfValue = std::numeric_limits<unsigned short>::max() / 2;
+				p_event->controllerEvent.type = ControllerEvent::Type::JoystickReset;
+				p_event->controllerEvent.joystick.id = Controller::Joystick::ID::Right;
+				p_event->controllerEvent.joystick.values = 0;
+			}
+		},
+		{
 			WM_LEFT_TRIGGER_MOTION,
 			[](Event* p_event, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			{
@@ -308,10 +328,7 @@ namespace spk
 				p_event->updateEvent.keyboard = &(p_event->rootEvent.window->keyboardModule.keyboard());
 				p_event->updateEvent.controller = &(p_event->rootEvent.window->controllerModule.controller());
 
-				auto currentTime = std::chrono::steady_clock::now().time_since_epoch();
-
-				p_event->updateEvent.time = duration_cast<std::chrono::milliseconds>(currentTime).count();
-				p_event->updateEvent.epoch = duration_cast<std::chrono::nanoseconds>(currentTime).count();
+				p_event->updateEvent.time = SystemUtils::getTime();
 			}
 		},
 		{

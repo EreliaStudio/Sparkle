@@ -9,7 +9,7 @@ namespace spk
 	class GameEngine
 	{
 	private:
-		Entity _centralEntity;
+		Entity _centralEntity = spk::Entity(L"Root object");
 
 	public:
 		GameEngine();

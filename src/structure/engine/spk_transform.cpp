@@ -91,7 +91,7 @@ namespace spk
 
 	void Transform::move(const spk::Vector3 &p_delta)
 	{
-		_position += p_delta;
+		_localPosition += p_delta;
 		_updateModel();
 	}
 
@@ -140,8 +140,7 @@ namespace spk
 	{
 		if (_velocity != spk::Vector3())
 		{
-			_localPosition += _velocity * (float)p_event.deltaTime;
-			_updateModel();
+			move(_velocity * (float)p_event.deltaTime.milliseconds);
 		}
 	}
 
@@ -180,7 +179,7 @@ namespace spk
 		{
 			_position += owner()->parent()->transform().position();
 		}
-		
+
 		_onEditContractProvider.trigger();
 	}
 }

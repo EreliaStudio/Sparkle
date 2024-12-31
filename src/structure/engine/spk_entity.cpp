@@ -35,6 +35,12 @@ namespace spk
 		_awakeContract(constructAwakeContract()),
 		_sleepContract(constructSleepContract())
 	{
+		_ownerTransformEditionContract = _transform.addOnEditionCallback([&](){
+			for (auto& child : children())
+			{
+				child->transform()._updateModel();
+			}			
+		});
 		activate();
 		if (p_parent != nullptr)
 		{
@@ -59,10 +65,6 @@ namespace spk
 	void Entity::addChild(spk::SafePointer<Entity> p_child)
 	{
 		InherenceObject::addChild(p_child);
-		if (parent() != nullptr)
-		{
-			_ownerTransformEditionContract = parent()->transform().addOnEditionCallback([&](){_transform._updateModel();});
-		}
 	}
 
 	void Entity::setName(const std::wstring& p_name)

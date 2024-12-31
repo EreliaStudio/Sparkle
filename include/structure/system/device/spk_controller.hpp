@@ -33,8 +33,8 @@ namespace spk
 				Left,
 				Right
 			};
-			Vector2Int delta;
-			Vector2Int position;
+			Vector2Int delta = 0;
+			Vector2Int position = 0;
 		};
 
 		struct Trigger
@@ -45,14 +45,14 @@ namespace spk
 				Left,
 				Right
 			};
-			float ratio;
+			float ratio = 0;
 		};
 
 		Joystick leftJoystick;
 		Joystick rightJoystick;
 		Trigger leftTrigger;
 		Trigger rightTrigger;
-		Vector2Int directionalCross;
+		Vector2Int directionalCross = 0;
 		InputState buttons[17];
 	};
 }

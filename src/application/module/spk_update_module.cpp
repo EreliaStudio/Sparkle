@@ -6,7 +6,7 @@ namespace spk
 {
 	void UpdateModule::_treatEvent(spk::UpdateEvent&& p_event)
 	{
-		if (_lastTime == 0)
+		if (_lastTime.nanoseconds == 0)
 		{
 			_lastTime = p_event.time;
 		}

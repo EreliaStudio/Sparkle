@@ -18,16 +18,22 @@
 
 #include <unordered_map>
 #include <functional>
-#include <chrono>
+
+#include "utils/spk_system_utils.hpp"
 
 static const UINT WM_UPDATE_REQUEST = RegisterWindowMessage("WM_UPDATE_REQUEST");
 static const UINT WM_PAINT_REQUEST = RegisterWindowMessage("WM_PAINT_REQUEST");
 static const UINT WM_RESIZE_REQUEST = RegisterWindowMessage("WM_RESIZE_REQUEST");
 static const UINT WM_LEFT_JOYSTICK_MOTION = RegisterWindowMessage("WM_LEFT_JOYSTICK_MOTION");
 static const UINT WM_RIGHT_JOYSTICK_MOTION = RegisterWindowMessage("WM_RIGHT_JOYSTICK_MOTION");
+static const UINT WM_LEFT_JOYSTICK_RESET = RegisterWindowMessage("WM_LEFT_JOYSTICK_RESET");
+static const UINT WM_RIGHT_JOYSTICK_RESET = RegisterWindowMessage("WM_RIGHT_JOYSTICK_RESET");
 static const UINT WM_LEFT_TRIGGER_MOTION = RegisterWindowMessage("WM_LEFT_TRIGGER_MOTION");
 static const UINT WM_RIGHT_TRIGGER_MOTION = RegisterWindowMessage("WM_RIGHT_TRIGGER_MOTION");
+static const UINT WM_LEFT_TRIGGER_RESET = RegisterWindowMessage("WM_LEFT_TRIGGER_RESET");
+static const UINT WM_RIGHT_TRIGGER_RESET = RegisterWindowMessage("WM_RIGHT_TRIGGER_RESET");
 static const UINT WM_DIRECTIONAL_CROSS_MOTION = RegisterWindowMessage("WM_DIRECTIONAL_CROSS_MOTION");
+static const UINT WM_DIRECTIONAL_CROSS_RESET = RegisterWindowMessage("WM_DIRECTIONAL_CROSS_RESET");
 static const UINT WM_CONTROLLER_BUTTON_PRESS = RegisterWindowMessage("WM_CONTROLLER_BUTTON_PRESS");
 static const UINT WM_CONTROLLER_BUTTON_RELEASE = RegisterWindowMessage("WM_CONTROLLER_BUTTON_RELEASE");
 
@@ -93,9 +99,8 @@ namespace spk
 			Requested
 		};
 		Type type = Type::Unknow;
-		long long time;
-		long long epoch;
-		long long deltaTime = 0;
+		Timestamp time;
+		Timestamp deltaTime;
 		spk::SafePointer<const spk::Mouse> mouse = nullptr;
 		spk::SafePointer<const spk::Keyboard> keyboard = nullptr;
 		spk::SafePointer<const spk::Controller> controller = nullptr;
@@ -154,9 +159,14 @@ namespace spk
 		static inline std::vector<UINT> EventIDs = {
 			WM_LEFT_JOYSTICK_MOTION,
 			WM_RIGHT_JOYSTICK_MOTION,
+			WM_LEFT_JOYSTICK_RESET,
+			WM_RIGHT_JOYSTICK_RESET,
 			WM_LEFT_TRIGGER_MOTION,
 			WM_RIGHT_TRIGGER_MOTION,
+			WM_LEFT_TRIGGER_RESET,
+			WM_RIGHT_TRIGGER_RESET,
 			WM_DIRECTIONAL_CROSS_MOTION,
+			WM_DIRECTIONAL_CROSS_RESET,
 			WM_CONTROLLER_BUTTON_PRESS,
 			WM_CONTROLLER_BUTTON_RELEASE
 		};
@@ -167,7 +177,10 @@ namespace spk
 			Release,
 			TriggerMotion,
 			JoystickMotion,
-			DirectionalCrossMotion
+			DirectionalCrossMotion,
+			TriggerReset,
+			JoystickReset,
+			DirectionalCrossReset
 		};
 		static Controller::Button apiValueToControllerButton(int value);
 

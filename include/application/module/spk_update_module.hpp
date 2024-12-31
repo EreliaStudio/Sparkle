@@ -9,7 +9,7 @@ namespace spk
 	class UpdateModule : public spk::Module<spk::UpdateEvent>
 	{
 	private:
-		long long _lastTime = 0;
+		Timestamp _lastTime;
 
 		void _treatEvent(spk::UpdateEvent&& p_event) override;
 		spk::UpdateEvent _convertEventToEventType(spk::Event&& p_event) override;
