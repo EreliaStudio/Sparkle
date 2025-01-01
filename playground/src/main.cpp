@@ -680,6 +680,11 @@ private:
 					}
 				}
 			}
+
+			_chunk.setContent(spk::Vector3Int(3, 3, 1), 3);
+			_chunk.setContent(spk::Vector3Int(6, 3, 1), 3);
+			_chunk.setContent(spk::Vector3Int(3, 6, 1), 3);
+			_chunk.setContent(spk::Vector3Int(6, 6, 1), 3);
 		}
 
 		_chunk.invalidate();
@@ -991,13 +996,13 @@ public:
 		spk::Component(p_name),
 		_motionTimer(150LL, spk::TimeUnit::Millisecond),
 		_upMotionContract(EventCenter::instance()->subscribe(Event::PlayerMotionUp, [&](){
-			movePlayer(spk::Vector3(0, -1, 0));
+			movePlayer(spk::Vector3(0, 1, 0));
 		})),
 		_leftMotionContract(EventCenter::instance()->subscribe(Event::PlayerMotionLeft, [&](){
 			movePlayer(spk::Vector3(-1, 0, 0));
 		})),
 		_downMotionContract(EventCenter::instance()->subscribe(Event::PlayerMotionDown, [&](){
-			movePlayer(spk::Vector3(0, 1, 0));
+			movePlayer(spk::Vector3(0, -1, 0));
 		})),
 		_rightMotionContract(EventCenter::instance()->subscribe(Event::PlayerMotionRight, [&](){
 			movePlayer(spk::Vector3(1, 0, 0));

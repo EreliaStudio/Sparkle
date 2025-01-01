@@ -174,14 +174,6 @@ namespace spk
 
 		_up = _right.cross(_forward);
 
-		if (owner() != nullptr)
-		{
-			spk::cout << "Object : " << owner()->name() << std::endl;
-		}
-		spk::cout << "Forward : " << _forward << std::endl;
-		spk::cout << "Right : " << _right << std::endl;
-		spk::cout << "Up : " << _up << std::endl;
-
 		_position = _localPosition;
 		if (owner() != nullptr && owner()->parent() != nullptr)
 		{
