@@ -38,6 +38,8 @@ namespace spk::OpenGL
 
 		void bind(const spk::SafePointer<TextureObject>& p_texture);
 
+		spk::SafePointer<TextureObject> texture() const;
+
 		void activate();
 		void deactivate();
 	};

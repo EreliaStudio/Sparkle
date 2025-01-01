@@ -1,5 +1,7 @@
 #include "playground.hpp"
 
+#include <fstream>
+
 enum class Event
 {
 	NoEvent,
@@ -7,7 +9,8 @@ enum class Event
 	PlayerMotionUp,
 	PlayerMotionLeft,
 	PlayerMotionDown,
-	PlayerMotionRight
+	PlayerMotionRight,
+	UpdateChunkVisibility
 };
 
 
@@ -15,13 +18,14 @@ inline const char* to_string(Event event)
 {
     switch (event)
     {
-        case Event::NoEvent:          return "NoEvent";
-        case Event::PlayerMotionIdle: return "PlayerMotionIdle";
-        case Event::PlayerMotionUp:   return "PlayerMotionUp";
-        case Event::PlayerMotionLeft: return "PlayerMotionLeft";
-        case Event::PlayerMotionDown: return "PlayerMotionDown";
-        case Event::PlayerMotionRight:return "PlayerMotionRight";
-        default:                      return "UnknownEvent";
+        case Event::NoEvent:            return "NoEvent";
+        case Event::PlayerMotionIdle:   return "PlayerMotionIdle";
+        case Event::PlayerMotionUp:     return "PlayerMotionUp";
+        case Event::PlayerMotionLeft:   return "PlayerMotionLeft";
+        case Event::PlayerMotionDown:   return "PlayerMotionDown";
+        case Event::PlayerMotionRight:  return "PlayerMotionRight";
+        case Event::UpdateChunkVisibility: return "UpdateChunkVisibility";
+        default:                        return "UnknownEvent";
     }
 }
 
@@ -29,13 +33,14 @@ inline const wchar_t* to_wstring(Event event)
 {
     switch (event)
     {
-        case Event::NoEvent:          return L"NoEvent";
-        case Event::PlayerMotionIdle: return L"PlayerMotionIdle";
-        case Event::PlayerMotionUp:   return L"PlayerMotionUp";
-        case Event::PlayerMotionLeft: return L"PlayerMotionLeft";
-        case Event::PlayerMotionDown: return L"PlayerMotionDown";
-        case Event::PlayerMotionRight:return L"PlayerMotionRight";
-        default:                      return L"UnknownEvent";
+        case Event::NoEvent:            return L"NoEvent";
+        case Event::PlayerMotionIdle:   return L"PlayerMotionIdle";
+        case Event::PlayerMotionUp:     return L"PlayerMotionUp";
+        case Event::PlayerMotionLeft:   return L"PlayerMotionLeft";
+        case Event::PlayerMotionDown:   return L"PlayerMotionDown";
+        case Event::PlayerMotionRight:  return L"PlayerMotionRight";
+        case Event::UpdateChunkVisibility: return L"UpdateChunkVisibility";
+        default:                        return L"UnknownEvent";
     }
 }
 
@@ -50,6 +55,80 @@ std::wostream& operator<<(std::wostream& wos, Event event)
 }
 
 using EventCenter = spk::Singleton<spk::EventNotifier<Event>>;
+
+class TextureManager : public spk::Singleton<TextureManager>
+{
+	friend class spk::Singleton<TextureManager>;
+private:
+	std::unordered_map<std::wstring, std::unique_ptr<spk::OpenGL::TextureObject>> _textures;
+
+	TextureManager()
+	{
+		loadSpriteSheet(L"chunkSpriteSheet", new spk::SpriteSheet(L"playground/resources/test.png", spk::Vector2UInt(2, 2)));
+	}
+
+public:
+	spk::SafePointer<spk::Image> loadImage(const std::wstring& p_name, spk::Image* p_image)
+	{
+		if (_textures.contains(p_name) == true)
+		{
+			throw std::runtime_error("Texture already loaded");
+		}
+		_textures[p_name] = std::unique_ptr<spk::Image>(p_image);
+		spk::Image* convertedPtr = dynamic_cast<spk::Image*>(_textures[p_name].get());
+		return (spk::SafePointer<spk::Image>(convertedPtr));
+	}
+	
+	spk::SafePointer<spk::SpriteSheet> loadSpriteSheet(const std::wstring& p_name, spk::SpriteSheet* p_spriteSheet)
+	{
+		if (_textures.contains(p_name) == true)
+		{
+			throw std::runtime_error("Texture already loaded");
+		}
+		_textures[p_name] = std::unique_ptr<spk::SpriteSheet>(p_spriteSheet);
+		spk::SpriteSheet* convertedPtr = dynamic_cast<spk::SpriteSheet*>(_textures[p_name].get());
+		return (spk::SafePointer<spk::SpriteSheet>(convertedPtr));
+	}
+
+	bool contain(const std::wstring& p_name)
+	{
+		return (_textures.contains(p_name));
+	}
+	
+	spk::SafePointer<spk::Image> image(const std::wstring& p_name)
+	{
+		if (!_textures.contains(p_name))
+		{
+			throw std::runtime_error("Texture [" + spk::StringUtils::wstringToString(p_name) + "] not found");
+		}
+
+		spk::Image* convertedPtr = dynamic_cast<spk::Image*>(_textures[p_name].get());
+
+		if (convertedPtr == nullptr)
+		{
+			throw std::runtime_error("Texture [" + spk::StringUtils::wstringToString(p_name) + "] is not a Image");
+		}
+		return (convertedPtr);
+	}
+	
+	spk::SafePointer<spk::SpriteSheet> spriteSheet(const std::wstring& p_name)
+	{
+		if (!_textures.contains(p_name))
+		{
+			throw std::runtime_error("Texture [" + spk::StringUtils::wstringToString(p_name) + "] not found");
+		}
+
+		spk::SpriteSheet* convertedPtr = dynamic_cast<spk::SpriteSheet*>(_textures[p_name].get());
+
+		if (convertedPtr == nullptr)
+		{
+			throw std::runtime_error("Texture [" + spk::StringUtils::wstringToString(p_name) + "] is not a SpriteSheet");
+		}
+
+		return (spk::SafePointer<spk::SpriteSheet>(convertedPtr));
+	}
+
+};
 
 struct Node
 {
@@ -72,6 +151,37 @@ public:
 	Chunk()
 	{
 		std::memset(&_content, -1, sizeof(_content));
+	}
+
+	static spk::Vector2Int convertWorldToChunkPosition(const spk::Vector2& p_worldPosition)
+	{
+		return (spk::Vector2Int(
+			std::floor(p_worldPosition.x / static_cast<float>(Size)), 
+			std::floor(p_worldPosition.y / static_cast<float>(Size)))
+		);
+	}
+
+	static spk::Vector2Int convertWorldToChunkPosition(const spk::Vector3& p_worldPosition)
+	{
+		return (spk::Vector2Int(
+			std::floor(p_worldPosition.x / static_cast<float>(Size)), 
+			std::floor(p_worldPosition.y / static_cast<float>(Size)))
+		);
+	}
+
+	static spk::Vector3 convertChunkToWorldPosition(const spk::Vector2Int& p_chunkPosition)
+	{
+		return (spk::Vector3(p_chunkPosition.x * static_cast<int>(Size), p_chunkPosition.y * static_cast<int>(Size), 0));
+	}
+
+	void serialize(std::ofstream& p_os) const
+	{
+		p_os.write(reinterpret_cast<const char*>(_content), sizeof(_content));
+	}
+
+	void deserialize(std::ifstream& p_is)
+	{
+		p_is.read(reinterpret_cast<char*>(_content), sizeof(_content));
 	}
 
 	void setContent(const spk::Vector3Int& p_relPosition, int p_value)
@@ -318,8 +428,8 @@ private:
 		_bufferSet.clear();
 
 		_bufferSet.layout() << spk::Vector2(0, 0);
-		_bufferSet.layout() << spk::Vector2(1, 0);
 		_bufferSet.layout() << spk::Vector2(0, 1);
+		_bufferSet.layout() << spk::Vector2(1, 0);
 		_bufferSet.layout() << spk::Vector2(1, 1);
 
 		_bufferSet.indexes() << 0 << 1 << 2 << 2 << 1 << 3;
@@ -407,6 +517,11 @@ public:
 
 	void render()
 	{
+		if (_spriteSheetSampler.texture() == nullptr)
+		{
+			throw std::runtime_error("Chunk sprite sheet not set");
+		}
+
 		_program->activate();
 
 		_systemInfo.activate();
@@ -522,18 +637,145 @@ public:
 	}
 };
 
+struct ChunkEntity : public spk::Entity
+{
+private:
+	static inline const std::filesystem::path _chunkFolderPath = "playground/resources/chunks/";
+
+	ChunkComponent& _chunkComponent;
+	spk::Vector2Int _chunkPosition;
+	BakableChunk _chunk;
+
+	void _loadChunk(const spk::Vector2Int& p_chunkPosition)
+	{
+		std::filesystem::path inputFilePath = _chunkFolderPath.string() + "chunk_" + std::to_string(p_chunkPosition.x) + "_" + std::to_string(p_chunkPosition.y) + ".chunk";
+		
+		std::ifstream file(inputFilePath, std::ios::binary);
+
+		if (file.is_open() == true)
+		{
+			_chunk.deserialize(file);
+		}
+		else
+		{
+			for (size_t i = 0; i < Chunk::Size; i++)
+			{
+				for (size_t j = 0; j < Chunk::Size; j++)
+				{
+					if (i == 0 || j == 0 || i == Chunk::Size - 1 || j == Chunk::Size - 1)
+					{
+						_chunk.setContent(spk::Vector3Int(i, j, 0), 0);
+					}
+					else
+					{
+						_chunk.setContent(spk::Vector3Int(i, j, 0), 1);
+					}
+				}
+			}
+		}
+
+		_chunk.invalidate();
+	}
+
+public:
+	ChunkEntity(const spk::Vector2Int& p_chunkPosition, spk::SafePointer<spk::Entity> p_owner) :
+		spk::Entity(L"Chunk " + std::to_wstring(p_chunkPosition.x) + L" " + std::to_wstring(p_chunkPosition.y), p_owner),
+		_chunkComponent(addComponent<ChunkComponent>()),
+		_chunkPosition(p_chunkPosition)
+	{
+		spk::cout << "Placing chunk [" << p_chunkPosition << "] at position [" << Chunk::convertChunkToWorldPosition(p_chunkPosition) << "]" << std::endl;
+		transform().place(Chunk::convertChunkToWorldPosition(p_chunkPosition));
+		_loadChunk(p_chunkPosition);
+		_chunkComponent.setChunk(&_chunk);
+		_chunkComponent.setSpriteSheet(TextureManager::instance()->spriteSheet(L"chunkSpriteSheet"));
+	}
+
+	spk::SafePointer<Chunk> chunk()
+	{
+		return (&_chunk);
+	}
+
+	spk::Vector2Int chunkPosition()
+	{
+		return (_chunkPosition);
+	}
+};
+
 struct WorldManagerComponent : public spk::Component
 {
 private:
+	EventCenter::Instanciator _eventCenterInstanciator;
 	BufferObjectCollection::Instanciator _bindingPointInstanciator;
 	spk::OpenGL::UniformBufferObject& _systemInfo;
+
+	spk::ContractProvider::Contract _updateChunkVisibilityContract;
+
+	spk::SafePointer<spk::Entity> _playerEntity;
+
+	std::filesystem::path _chunkFolderPath;
+
+	std::unordered_map<spk::Vector2Int, std::unique_ptr<ChunkEntity>> _chunkEntities;
+	std::vector<spk::SafePointer<ChunkEntity>> _activeChunkList;
+
+	void _updateChunkVisibility()
+	{
+		spk::cout << "Updating chunk visibility" << std::endl;
+		std::vector<spk::SafePointer<ChunkEntity>> chunkToActivate;
+		spk::Vector2Int downLeftChunk = -1;
+		spk::Vector2Int topRightChunk = 1;
+
+		for (int x = downLeftChunk.x; x <= topRightChunk.x; x++)
+		{
+			for (int y = downLeftChunk.y; y <= topRightChunk.y; y++)
+			{
+				spk::Vector2Int tmp = spk::Vector2Int(x, y);
+
+				if (_chunkEntities.contains(tmp) == false)
+				{
+					_chunkEntities.emplace(tmp, std::make_unique<ChunkEntity>(tmp, owner()));
+				}
+
+				chunkToActivate.push_back(_chunkEntities[tmp].get());
+			}
+		}
+
+		for (auto& chunk : _activeChunkList)
+		{
+			if (std::find(chunkToActivate.begin(), chunkToActivate.end(), chunk) == _activeChunkList.end())
+			{
+				spk::cout << "Deactivate chunk" << chunk->chunkPosition() << std::endl;
+				chunk->deactivate();
+			}
+		}
+
+		_activeChunkList = chunkToActivate;
+		
+		for (auto& chunk : _activeChunkList)
+		{
+			spk::cout << "Activate chunk" << chunk->chunkPosition() << std::endl;
+			chunk->activate();
+		}
+	}
 
 public:
 	WorldManagerComponent(const std::wstring& p_name) :
 		spk::Component(p_name),
-		_systemInfo(BufferObjectCollection::instance()->UBO("systemInfo"))
+		_systemInfo(BufferObjectCollection::instance()->UBO("systemInfo")),
+		_updateChunkVisibilityContract(EventCenter::instance()->subscribe(Event::UpdateChunkVisibility, [&](){
+			_updateChunkVisibility();
+		}))
 	{
 
+	}
+
+	void awake() override
+	{
+		EventCenter::instance()->notifyEvent(Event::UpdateChunkVisibility);
+	}
+
+	void setPlayer(spk::SafePointer<spk::Entity> p_playerEntity)
+	{
+		_playerEntity = p_playerEntity;
 	}
 
 	void onUpdateEvent(spk::UpdateEvent& p_event) override
@@ -675,6 +917,11 @@ private:
 		_origin = owner()->transform().localPosition();
 		_destination = _origin + p_direction;
 		_motionTimer.start();
+
+		if (Chunk::convertWorldToChunkPosition(_destination) != Chunk::convertWorldToChunkPosition(_origin))
+		{
+			EventCenter::instance()->notifyEvent(Event::UpdateChunkVisibility);
+		}
 	}
 
 	void stopPlayer()
@@ -687,13 +934,13 @@ public:
 		spk::Component(p_name),
 		_motionTimer(150LL, spk::TimeUnit::Millisecond),
 		_upMotionContract(EventCenter::instance()->subscribe(Event::PlayerMotionUp, [&](){
-			movePlayer(spk::Vector3(0, 1, 0));
+			movePlayer(spk::Vector3(0, -1, 0));
 		})),
 		_leftMotionContract(EventCenter::instance()->subscribe(Event::PlayerMotionLeft, [&](){
 			movePlayer(spk::Vector3(-1, 0, 0));
 		})),
 		_downMotionContract(EventCenter::instance()->subscribe(Event::PlayerMotionDown, [&](){
-			movePlayer(spk::Vector3(0, -1, 0));
+			movePlayer(spk::Vector3(0, 1, 0));
 		})),
 		_rightMotionContract(EventCenter::instance()->subscribe(Event::PlayerMotionRight, [&](){
 			movePlayer(spk::Vector3(1, 0, 0));
@@ -742,8 +989,8 @@ int main()
 
 	spk::SafePointer<spk::Window> win = app.createWindow(L"Playground", {{0, 0}, {800, 800}});
 
-	spk::SpriteSheet chunkSpriteSheet = spk::SpriteSheet(L"playground/resources/test.png", spk::Vector2UInt(2, 2));
-
+	TextureManager::instanciate();
+	
 	NodeMap nodeMap;
 
 	nodeMap.addNode(0, {
@@ -776,48 +1023,6 @@ int main()
 
 	nodeMap.validate();
 
-	BakableChunk chunk[4];
-
-	for (size_t i = 0; i < 4; i++)
-	{
-		for (size_t x = 0; x < Chunk::Size; x++)
-		{
-			for (size_t y = 0; y < Chunk::Size; y++)
-			{
-				for (size_t z = 0; z < Chunk::Layer; z++)
-				{
-					if (z == 0 && (
-						x == 0 || x == Chunk::Size - 1 || 
-						y == 0 || y == Chunk::Size - 1))
-					{
-						chunk[i].setContent(x, y, z, 0);
-					}
-					else if (z == 1 && (
-						x == 1 || x == Chunk::Size - 2 || 
-						y == 1 || y == Chunk::Size - 2))
-					{
-						chunk[i].setContent(x, y, z, 1);
-					}
-					else if (z == 2 && (
-						x == 2 || x == Chunk::Size - 3 || 
-						y == 2 || y == Chunk::Size - 3))
-					{
-						chunk[i].setContent(x, y, z, 2);
-					}
-					else if (z == 3 && (
-						x == 3 || x == Chunk::Size - 4 || 
-						y == 3 || y == Chunk::Size - 4))
-					{
-						chunk[i].setContent(x, y, z, 3);
-					}
-				}
-			}
-		}	
-		
-		chunk[i].invalidate();
-	}
-
-
 	spk::GameEngine engine;
 
 	spk::Entity worldManager = spk::Entity(L"World manager");
@@ -828,35 +1033,13 @@ int main()
 	player.addComponent<PlayerController>(L"Player controler component");
 
 	spk::Entity camera = spk::Entity(L"Camera", &player);
-	camera.transform().place(spk::Vector3(0, 0, -20));
+	camera.transform().place(spk::Vector3(0, 0, 20));
+	camera.transform().lookAt(spk::Vector3(0, 0, 0));
 
 	CameraComponent& cameraComp = camera.addComponent<CameraComponent>(L"Main camera");
 
-	spk::Entity chunkObject[4] = {
-		spk::Entity(L"Chunk A"),
-		spk::Entity(L"Chunk B"),
-		spk::Entity(L"Chunk C"),
-		spk::Entity(L"Chunk D")
-	};
-
-	for (int x = 0; x < 2; x++)
-	{
-		for (int y = 0; y < 2; y++)
-		{
-			chunkObject[x + y * 2].transform().place(spk::Vector3((x - 1) * static_cast<int>(Chunk::Size), (y - 1) * static_cast<int>(Chunk::Size), 0));
-			ChunkComponent& chunkComp = chunkObject[x + y * 2].addComponent<ChunkComponent>();
-			chunkComp.setChunk(&chunk[x + y * 2]);
-			chunkComp.setSpriteSheet(&chunkSpriteSheet);
-		}	
-	}
-
-
 	engine.addEntity(&worldManager);
 	engine.addEntity(&player);
-	for (size_t i = 0; i < 4; i++)
-	{
-		engine.addEntity(&chunkObject[i]);
-	}
 
 	spk::GameEngineWidget gameEngineWidget = spk::GameEngineWidget(L"Engine widget", win->widget());
 	gameEngineWidget.setGeometry(win->geometry().anchor, win->geometry().size);
