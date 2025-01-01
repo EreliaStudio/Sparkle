@@ -6,8 +6,7 @@ enum class Event
 	PlayerMotionUp,
 	PlayerMotionLeft,
 	PlayerMotionDown,
-	PlayerMotionRight,
-	PlayerMotionIdle
+	PlayerMotionRight
 };
 
 
@@ -20,7 +19,6 @@ inline const char* to_string(Event event)
         case Event::PlayerMotionLeft: return "PlayerMotionLeft";
         case Event::PlayerMotionDown: return "PlayerMotionDown";
         case Event::PlayerMotionRight:return "PlayerMotionRight";
-        case Event::PlayerMotionIdle: return "PlayerMotionIdle";
         default:                      return "UnknownEvent";
     }
 }
@@ -34,7 +32,6 @@ inline const wchar_t* to_wstring(Event event)
         case Event::PlayerMotionLeft: return L"PlayerMotionLeft";
         case Event::PlayerMotionDown: return L"PlayerMotionDown";
         case Event::PlayerMotionRight:return L"PlayerMotionRight";
-        case Event::PlayerMotionIdle: return L"PlayerMotionIdle";
         default:                      return L"UnknownEvent";
     }
 }
@@ -569,7 +566,7 @@ public:
 		{
 			if (p_event.joystick.id == spk::Controller::Joystick::Right)
 				return ;
-			_motionEvent = Event::PlayerMotionIdle;
+			_motionEvent = Event::NoEvent;
 
 			if (std::abs(p_event.controller->leftJoystick.position.x) > std::abs(p_event.controller->leftJoystick.position.y))
 			{
@@ -599,7 +596,7 @@ public:
 			if (p_event.joystick.id == spk::Controller::Joystick::Right)
 				return ;
 				
-			_motionEvent = Event::PlayerMotionIdle;
+			_motionEvent = Event::NoEvent;
 		}
 	}
 
@@ -617,13 +614,8 @@ public:
 	{
 		static Event _lastEvent = Event::NoEvent;
 
-		if (_lastEvent == Event::PlayerMotionIdle && _motionEvent == Event::PlayerMotionIdle)
-			return;
-
-		if (_motionEvent != Event::NoEvent)
+		if (_motionEvent != _lastEvent)
 		{
-			spk::cout << "Emiting event [" << _motionEvent << "]" << std::endl;
-
 			EventCenter::instance()->notifyEvent(_motionEvent);
 			_lastEvent = _motionEvent;
 		}
@@ -640,40 +632,45 @@ private:
 	EventCenter::Type::Contract _leftMotionContract;
 	EventCenter::Type::Contract _downMotionContract;
 	EventCenter::Type::Contract _rightMotionContract;
-	EventCenter::Type::Contract _idleMotionContract;
 
 	spk::Timer _motionTimer;
 	spk::Vector3 _origin; // Express in unit per millisecond
 	spk::Vector3 _destination; // Express in unit per millisecond
 
+	void movePlayer(const spk::Vector3& p_direction)
+	{
+		if (_motionTimer.state() == spk::Timer::State::Running)
+		{
+			return;
+		}
+
+		_origin = owner()->transform().localPosition();
+		_destination = _origin + p_direction;
+		_motionTimer.start();
+	}
+
+	void stopPlayer()
+	{
+		_origin = owner()->transform().localPosition();
+		_destination = _origin;
+		_motionTimer.stop();
+	}
+
 public:
 	PlayerController(const std::wstring& p_name) :
 		spk::Component(p_name),
-		_motionTimer(5500LL, spk::TimeUnit::Millisecond),
+		_motionTimer(150LL, spk::TimeUnit::Millisecond),
 		_upMotionContract(EventCenter::instance()->subscribe(Event::PlayerMotionUp, [&](){
-			_origin = owner()->transform().localPosition();
-			_destination = _origin + spk::Vector3(0, 1, 0);
-			_motionTimer.start();
+			movePlayer(spk::Vector3(0, 1, 0));
 		})),
 		_leftMotionContract(EventCenter::instance()->subscribe(Event::PlayerMotionLeft, [&](){
-			_origin = owner()->transform().localPosition();
-			_destination = _origin + spk::Vector3(-1, 0, 0);
-			_motionTimer.start();
+			movePlayer(spk::Vector3(-1, 0, 0));
 		})),
 		_downMotionContract(EventCenter::instance()->subscribe(Event::PlayerMotionDown, [&](){
-			_origin = owner()->transform().localPosition();
-			_destination = _origin + spk::Vector3(0, -1, 0);
-			_motionTimer.start();
+			movePlayer(spk::Vector3(0, -1, 0));
 		})),
 		_rightMotionContract(EventCenter::instance()->subscribe(Event::PlayerMotionRight, [&](){
-			_origin = owner()->transform().localPosition();
-			_destination = _origin + spk::Vector3(1, 0, 0);
-			_motionTimer.start();
-		})),
-		_idleMotionContract(EventCenter::instance()->subscribe(Event::PlayerMotionIdle, [&](){
-			_origin = owner()->transform().localPosition();
-			_destination = _origin + spk::Vector3(0, 0, 0);
-			_motionTimer.stop();
+			movePlayer(spk::Vector3(1, 0, 0));
 		}))
 	{
 
@@ -690,7 +687,7 @@ public:
 		{
 			if (_origin != _destination)
 			{
-				owner()->transform().place(_destination);
+				stopPlayer();
 			}
 			return;
 		} 

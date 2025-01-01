@@ -2,6 +2,8 @@
 
 #include "utils/spk_system_utils.hpp"
 
+#include <iostream>
+
 namespace spk
 {
     
@@ -37,4 +39,10 @@ namespace spk
     private:
         Duration currentRunDuration() const;
     };
+
+	inline const char* to_string(Chronometer::State state);
+	inline const wchar_t* to_wstring(Chronometer::State state);
 }
+
+std::ostream& operator<<(std::ostream& os, spk::Chronometer::State state);
+std::wostream& operator<<(std::wostream& wos, spk::Chronometer::State state);

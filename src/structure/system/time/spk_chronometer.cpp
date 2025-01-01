@@ -75,4 +75,34 @@ namespace spk
 		
 		return (Duration(diffNs, TimeUnit::Nanosecond));
     }
+
+	const char* to_string(Chronometer::State state)
+	{
+		switch (state)
+		{
+			case Chronometer::State::Idle: return "Idle";
+			case Chronometer::State::Running: return "Running";
+			case Chronometer::State::Paused: return "Paused";
+			default: return "UnknownState";
+		}
+	}
+	const wchar_t* to_wstring(Chronometer::State state)
+	{
+		switch (state)
+		{
+			case Chronometer::State::Idle: return L"Idle";
+			case Chronometer::State::Running: return L"Running";
+			case Chronometer::State::Paused: return L"Paused";
+			default: return L"UnknownState";
+		}
+	}
+}
+
+std::ostream& operator<<(std::ostream& os, spk::Chronometer::State state)
+{
+	return os << to_string(state);
+}
+std::wostream& operator<<(std::wostream& wos, spk::Chronometer::State state)
+{
+	return wos << to_wstring(state);
 }

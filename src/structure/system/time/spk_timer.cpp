@@ -117,37 +117,37 @@ namespace spk
     }
 
 
-	inline const char* to_string(State state)
+	inline const char* to_string(Timer::State state)
 	{
 		switch (state)
 		{
-			case State::Idle:     return "Idle";
-			case State::Running:  return "Running";
-			case State::Paused:   return "Paused";
-			case State::TimedOut: return "TimedOut";
+			case Timer::State::Idle:     return "Idle";
+			case Timer::State::Running:  return "Running";
+			case Timer::State::Paused:   return "Paused";
+			case Timer::State::TimedOut: return "TimedOut";
 			default:              return "UnknownState";
 		}
 	}
 
-	inline const wchar_t* to_wstring(State state)
+	inline const wchar_t* to_wstring(Timer::State state)
 	{
 		switch (state)
 		{
-			case State::Idle:     return L"Idle";
-			case State::Running:  return L"Running";
-			case State::Paused:   return L"Paused";
-			case State::TimedOut: return L"TimedOut";
+			case Timer::State::Idle:     return L"Idle";
+			case Timer::State::Running:  return L"Running";
+			case Timer::State::Paused:   return L"Paused";
+			case Timer::State::TimedOut: return L"TimedOut";
 			default:              return L"UnknownState";
 		}
 	}
 }
 
-std::ostream& operator<<(std::ostream& os, State state)
+std::ostream& operator<<(std::ostream& os, spk::Timer::State state)
 {
     return os << to_string(state);
 }
 
-std::wostream& operator<<(std::wostream& wos, State state)
+std::wostream& operator<<(std::wostream& wos, spk::Timer::State state)
 {
     return wos << to_wstring(state);
 }

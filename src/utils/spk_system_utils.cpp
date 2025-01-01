@@ -24,7 +24,7 @@ namespace spk
 			}
 			case TimeUnit::Millisecond:
 			{
-				value = p_value * 1'000;
+				value = p_value * 1'000'000;
 				break;
 			}
 			case TimeUnit::Nanosecond:
@@ -50,7 +50,7 @@ namespace spk
 			}
 			case TimeUnit::Millisecond:
 			{
-				value = p_value * 1'000.0;
+				value = p_value * 1'000'000.0;
 				break;
 			}
 			case TimeUnit::Nanosecond:

@@ -2,6 +2,8 @@
 
 #include "utils/spk_system_utils.hpp"
 
+#include <iostream>
+
 namespace spk
 {
 
@@ -43,9 +45,9 @@ namespace spk
 
     };
 
-	inline const char* to_string(State state);
-	inline const wchar_t* to_wstring(State state);
+	inline const char* to_string(Timer::State state);
+	inline const wchar_t* to_wstring(Timer::State state);
 }
 
-std::ostream& operator<<(std::ostream& os, spk::State state);
-std::wostream& operator<<(std::wostream& wos, spk::State state);
+std::ostream& operator<<(std::ostream& os, spk::Timer::State state);
+std::wostream& operator<<(std::wostream& wos, spk::Timer::State state);
