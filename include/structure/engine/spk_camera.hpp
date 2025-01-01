@@ -9,6 +9,7 @@ namespace spk
     {
     private:
         spk::Matrix4x4 _projectionMatrix;
+        spk::Matrix4x4 _inverseProjectionMatrix;
 
     public:
         Camera();
@@ -17,5 +18,6 @@ namespace spk
         void setOrthographic(float p_left, float p_right, float p_bottom, float p_top, float p_nearPlane= 0.1f, float p_farPlane = 1000.0f);
 		
         const spk::Matrix4x4& projectionMatrix() const;
+        const spk::Matrix4x4& inverseProjectionMatrix() const;
     };
 }

@@ -159,7 +159,7 @@ namespace spk
 		template <typename TComponentType>
 		const TComponentType& getComponent(const std::wstring& p_name = L"") const
 		{
-			for (std::unique_ptr<Component>& component : _components)
+			for (const std::unique_ptr<Component>& component : _components)
 			{
 				TComponentType* castedComponent = dynamic_cast<TComponentType*>(component.get());
 				if (castedComponent != nullptr)

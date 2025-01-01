@@ -146,7 +146,7 @@ namespace spk
 
 	void Entity::onPaintEvent(spk::PaintEvent& p_event)
 	{
-		if (p_event.consumed() == true)
+		if (isActive() == false || p_event.consumed() == true)
 		{
 			return ;
 		}
@@ -168,7 +168,7 @@ namespace spk
 	
 	void Entity::onUpdateEvent(spk::UpdateEvent& p_event)
 	{
-		if (p_event.consumed() == true)
+		if (isActive() == false || p_event.consumed() == true)
 		{
 			return ;
 		}
@@ -190,7 +190,7 @@ namespace spk
 	
 	void Entity::onKeyboardEvent(spk::KeyboardEvent& p_event)
 	{
-		if (p_event.consumed() == true)
+		if (isActive() == false || p_event.consumed() == true)
 		{
 			return ;
 		}
@@ -212,7 +212,7 @@ namespace spk
 	
 	void Entity::onMouseEvent(spk::MouseEvent& p_event)
 	{
-		if (p_event.consumed() == true)
+		if (isActive() == false || p_event.consumed() == true)
 		{
 			return ;
 		}
@@ -234,7 +234,7 @@ namespace spk
 
 	void Entity::onControllerEvent(spk::ControllerEvent& p_event)
 	{
-		if (p_event.consumed() == true)
+		if (isActive() == false || p_event.consumed() == true)
 		{
 			return ;
 		}
@@ -256,7 +256,7 @@ namespace spk
 	
 	void Entity::onTimerEvent(spk::TimerEvent& p_event)
 	{
-		if (p_event.consumed() == true)
+		if (isActive() == false || p_event.consumed() == true)
 		{
 			return ;
 		}

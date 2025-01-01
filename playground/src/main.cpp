@@ -13,7 +13,6 @@ enum class Event
 	UpdateChunkVisibility
 };
 
-
 inline const char* to_string(Event event)
 {
     switch (event)
@@ -611,8 +610,7 @@ public:
 		spk::Component(p_name),
 		_cameraUBO(BufferObjectCollection::instance()->UBO("camera"))
 	{
-		setPerspective(90, 1, 0.1f, 1000.0f);
-		// setOrthographic(-20, 20, -20, 20);
+		setOrthographic(-20, 20, -20, 20);
 	}
 
 	void start() override
@@ -624,16 +622,27 @@ public:
 		_onEditionContract.trigger();
 	}
 
-	void setPerspective(float p_fovDegrees, float p_aspectRatio, float p_nearPlane = 0.1f, float p_farPlane = 1000.0f)
-	{
-		_camera.setPerspective(p_fovDegrees, p_aspectRatio, p_nearPlane, p_farPlane);
-		_cameraUBO["projection"] = _camera.projectionMatrix();
-	}
-        
 	void setOrthographic(float p_left, float p_right, float p_bottom, float p_top, float p_nearPlane= 0.1f, float p_farPlane = 1000.0f)
 	{
 		_camera.setOrthographic(p_left, p_right, p_bottom, p_top, p_nearPlane, p_farPlane);
 		_cameraUBO["projection"] = _camera.projectionMatrix();
+	}
+
+	const spk::Camera& camera() const
+	{
+		return (_camera);
+	}
+
+	void onPaintEvent(spk::PaintEvent& p_event) override
+	{
+		if (p_event.type == spk::PaintEvent::Type::Resize)
+		{
+			spk::Vector2Int cellSize = 32;
+			spk::Vector2 cellCount = p_event.geometry.size / cellSize;
+
+			setOrthographic(cellCount.x / -2, cellCount.x / 2, cellCount.y / -2, cellCount.y / 2);
+			EventCenter::instance()->notifyEvent(Event::UpdateChunkVisibility);
+		}
 	}
 };
 
@@ -658,17 +667,16 @@ private:
 		}
 		else
 		{
+			bool isEven = (p_chunkPosition.x % 2 == 0 && p_chunkPosition.y % 2 == 0) || (p_chunkPosition.x % 2 != 0 && p_chunkPosition.y % 2 != 0);
 			for (size_t i = 0; i < Chunk::Size; i++)
 			{
 				for (size_t j = 0; j < Chunk::Size; j++)
 				{
-					if (i == 0 || j == 0 || i == Chunk::Size - 1 || j == Chunk::Size - 1)
+					_chunk.setContent(spk::Vector3Int(i, j, 0), (isEven == true ? 0 : 1));
+
+					if (i == spk::positiveModulo(p_chunkPosition.x, Chunk::Size) && j == spk::positiveModulo(p_chunkPosition.y, Chunk::Size))
 					{
-						_chunk.setContent(spk::Vector3Int(i, j, 0), 0);
-					}
-					else
-					{
-						_chunk.setContent(spk::Vector3Int(i, j, 0), 1);
+						_chunk.setContent(spk::Vector3Int(i, j, 0), 2);
 					}
 				}
 			}
@@ -683,7 +691,6 @@ public:
 		_chunkComponent(addComponent<ChunkComponent>()),
 		_chunkPosition(p_chunkPosition)
 	{
-		spk::cout << "Placing chunk [" << p_chunkPosition << "] at position [" << Chunk::convertChunkToWorldPosition(p_chunkPosition) << "]" << std::endl;
 		transform().place(Chunk::convertChunkToWorldPosition(p_chunkPosition));
 		_loadChunk(p_chunkPosition);
 		_chunkComponent.setChunk(&_chunk);
@@ -710,7 +717,10 @@ private:
 
 	spk::ContractProvider::Contract _updateChunkVisibilityContract;
 
-	spk::SafePointer<spk::Entity> _playerEntity;
+	spk::Vector2Int _halfSize;
+
+	spk::SafePointer<const spk::Entity> _cameraEntity = nullptr;
+	spk::SafePointer<const spk::Camera> _camera = nullptr;
 
 	std::filesystem::path _chunkFolderPath;
 
@@ -719,42 +729,63 @@ private:
 
 	void _updateChunkVisibility()
 	{
-		spk::cout << "Updating chunk visibility" << std::endl;
-		std::vector<spk::SafePointer<ChunkEntity>> chunkToActivate;
-		spk::Vector2Int downLeftChunk = -1;
-		spk::Vector2Int topRightChunk = 1;
+		// if (_camera == nullptr || _cameraEntity == nullptr)
+		// {
+		// 	return;
+		// }
 
-		for (int x = downLeftChunk.x; x <= topRightChunk.x; x++)
-		{
-			for (int y = downLeftChunk.y; y <= topRightChunk.y; y++)
-			{
-				spk::Vector2Int tmp = spk::Vector2Int(x, y);
+		// spk::Vector2Int currentCameraChunk = Chunk::convertWorldToChunkPosition(_cameraEntity->transform().position());
 
-				if (_chunkEntities.contains(tmp) == false)
-				{
-					_chunkEntities.emplace(tmp, std::make_unique<ChunkEntity>(tmp, owner()));
-				}
+		// std::vector<spk::SafePointer<ChunkEntity>> chunkToActivate;
 
-				chunkToActivate.push_back(_chunkEntities[tmp].get());
-			}
-		}
+		// spk::Matrix4x4 inverseMatrix = _camera->inverseProjectionMatrix();
 
-		for (auto& chunk : _activeChunkList)
-		{
-			if (std::find(chunkToActivate.begin(), chunkToActivate.end(), chunk) == _activeChunkList.end())
-			{
-				spk::cout << "Deactivate chunk" << chunk->chunkPosition() << std::endl;
-				chunk->deactivate();
-			}
-		}
+		// spk::Vector3 downLeftWorld = inverseMatrix * spk::Vector3(-1, -1, 0);
+		// spk::Vector3 topRightWorld = inverseMatrix * spk::Vector3(1, 1, 0);
 
-		_activeChunkList = chunkToActivate;
+		// spk::Vector2Int downLeftChunk = Chunk::convertWorldToChunkPosition(downLeftWorld) + currentCameraChunk;
+		// spk::Vector2Int topRightChunk = Chunk::convertWorldToChunkPosition(topRightWorld) + currentCameraChunk;
+
+		// spk::cout << "Down left chunk : " << downLeftChunk << std::endl;
+		// spk::cout << "Top right chunk : " << topRightChunk << std::endl;
+
+		// for (int x = downLeftChunk.x; x <= topRightChunk.x; x++)
+		// {
+		// 	for (int y = downLeftChunk.y; y <= topRightChunk.y; y++)
+		// 	{
+		// 		spk::Vector2Int tmp = spk::Vector2Int(x, y);
+
+		// 		if (_chunkEntities.contains(tmp) == false)
+		// 		{
+		// 			spk::cout << "Creating chunk [" << tmp << "]" << std::endl;
+		// 			_chunkEntities.emplace(tmp, std::make_unique<ChunkEntity>(tmp, owner()));
+		// 			_chunkEntities[tmp]->deactivate();
+		// 		}
+
+		// 		chunkToActivate.push_back(_chunkEntities[tmp].get());
+		// 	}
+		// }
+
+		// for (auto& chunk : _activeChunkList)
+		// {
+		// 	if (std::find(chunkToActivate.begin(), chunkToActivate.end(), chunk) == chunkToActivate.end())
+		// 	{
+		// 		spk::cout << "Deactivating chunk [" << chunk->name() << "]" << std::endl;
+		// 		chunk->deactivate();
+		// 	}
+		// }
+
+		// _activeChunkList = chunkToActivate;
 		
-		for (auto& chunk : _activeChunkList)
-		{
-			spk::cout << "Activate chunk" << chunk->chunkPosition() << std::endl;
-			chunk->activate();
-		}
+		// for (auto& chunk : _activeChunkList)
+		// {
+		// 	// spk::cout << "Checking chunk [" << chunk->name() << "]" << std::endl;
+		// 	// if (chunk->isActive() == false)
+		// 	// {
+		// 		spk::cout << "Activating chunk [" << chunk->name() << "]" << std::endl;
+		// 		chunk->activate();
+		// 	// }
+		// }
 	}
 
 public:
@@ -771,11 +802,25 @@ public:
 	void awake() override
 	{
 		EventCenter::instance()->notifyEvent(Event::UpdateChunkVisibility);
+		_chunkEntities.emplace(spk::Vector2Int(0, 0), std::make_unique<ChunkEntity>(spk::Vector2Int(0, 0), owner()));
+		_chunkEntities.emplace(spk::Vector2Int(1, 1), std::make_unique<ChunkEntity>(spk::Vector2Int(1, 1), owner()));
+		_chunkEntities.emplace(spk::Vector2Int(2, 2), std::make_unique<ChunkEntity>(spk::Vector2Int(2, 2), owner()));
+		_chunkEntities.emplace(spk::Vector2Int(3, 3), std::make_unique<ChunkEntity>(spk::Vector2Int(3, 3), owner()));
+		_chunkEntities.emplace(spk::Vector2Int(4, 4), std::make_unique<ChunkEntity>(spk::Vector2Int(4, 4), owner()));
+		_chunkEntities.emplace(spk::Vector2Int(5, 5), std::make_unique<ChunkEntity>(spk::Vector2Int(5, 5), owner()));
 	}
 
-	void setPlayer(spk::SafePointer<spk::Entity> p_playerEntity)
+	void setCamera(spk::SafePointer<const spk::Entity> p_camera)
 	{
-		_playerEntity = p_playerEntity;
+		_cameraEntity = p_camera;
+		auto& _cameraComponent = _cameraEntity->getComponent<CameraComponent>();
+		_camera = &(_cameraComponent.camera());
+		if (_camera == nullptr)
+		{
+			throw std::runtime_error("Camera component not found");
+		}
+
+		EventCenter::instance()->notifyEvent(Event::UpdateChunkVisibility);
 	}
 
 	void onUpdateEvent(spk::UpdateEvent& p_event) override
@@ -788,12 +833,25 @@ public:
 			p_event.requestPaint();
 		}
 	}
+
+	void onPaintEvent(spk::PaintEvent& p_event) override
+	{
+		if (p_event.type == spk::PaintEvent::Type::Resize)
+		{
+			_halfSize = p_event.geometry.size / 2;
+
+			for (auto& chunk : _activeChunkList)
+			{
+				chunk->deactivate();
+			}
+			_activeChunkList.clear();
+		}
+	}
 };
 
 class ControlMapper : public spk::Component
 {
 private:
-
 	EventCenter::Instanciator _eventCenterInstanciator;
 
 	Event _motionEvent = Event::NoEvent;
@@ -886,7 +944,6 @@ public:
 			_lastEvent = _motionEvent;
 		}
 	}
-
 };
 
 class PlayerController : public spk::Component
@@ -977,8 +1034,17 @@ public:
 
 		if (_origin != _destination)
 		{
-			float ratio = static_cast<double>(_motionTimer.elapsed().value) / static_cast<double>(_motionTimer.expectedDuration().value);
-			owner()->transform().place(spk::Vector3::lerp(_origin, _destination, ratio));
+			if (_motionTimer.expectedDuration().value == 0)
+			{
+				owner()->transform().place(_destination);
+				p_event.requestPaint();
+			}
+			else
+			{
+				float ratio = static_cast<double>(_motionTimer.elapsed().value) / static_cast<double>(_motionTimer.expectedDuration().value);
+				owner()->transform().place(spk::Vector3::lerp(_origin, _destination, ratio));
+				p_event.requestPaint();
+			}
 		}
 	}
 };
@@ -996,7 +1062,7 @@ int main()
 	nodeMap.addNode(0, {
 	 	.animationStartPos = spk::Vector2(0, 0),
 		.frameDuration = 1000,
-		.animationLength = 2,
+		.animationLength = 0,
 		.animationStep = 1		
 	});
 
@@ -1026,7 +1092,7 @@ int main()
 	spk::GameEngine engine;
 
 	spk::Entity worldManager = spk::Entity(L"World manager");
-	worldManager.addComponent<WorldManagerComponent>(L"World manager component");
+	auto& worldManagerComponent = worldManager.addComponent<WorldManagerComponent>(L"World manager component");
 	worldManager.addComponent<ControlMapper>(L"Control mapper component");
 
 	spk::Entity player = spk::Entity(L"Player");
@@ -1037,6 +1103,8 @@ int main()
 	camera.transform().lookAt(spk::Vector3(0, 0, 0));
 
 	CameraComponent& cameraComp = camera.addComponent<CameraComponent>(L"Main camera");
+
+	worldManagerComponent.setCamera(&camera);
 
 	engine.addEntity(&worldManager);
 	engine.addEntity(&player);
