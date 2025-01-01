@@ -3,6 +3,7 @@
 enum class Event
 {
 	NoEvent,
+	PlayerMotionIdle,
 	PlayerMotionUp,
 	PlayerMotionLeft,
 	PlayerMotionDown,
@@ -15,6 +16,7 @@ inline const char* to_string(Event event)
     switch (event)
     {
         case Event::NoEvent:          return "NoEvent";
+        case Event::PlayerMotionIdle: return "PlayerMotionIdle";
         case Event::PlayerMotionUp:   return "PlayerMotionUp";
         case Event::PlayerMotionLeft: return "PlayerMotionLeft";
         case Event::PlayerMotionDown: return "PlayerMotionDown";
@@ -28,6 +30,7 @@ inline const wchar_t* to_wstring(Event event)
     switch (event)
     {
         case Event::NoEvent:          return L"NoEvent";
+        case Event::PlayerMotionIdle: return L"PlayerMotionIdle";
         case Event::PlayerMotionUp:   return L"PlayerMotionUp";
         case Event::PlayerMotionLeft: return L"PlayerMotionLeft";
         case Event::PlayerMotionDown: return L"PlayerMotionDown";
@@ -493,8 +496,8 @@ public:
 		spk::Component(p_name),
 		_cameraUBO(BufferObjectCollection::instance()->UBO("camera"))
 	{
-		// setPerspective(90, 1, 0.1f, 1000.0f);
-		setOrthographic(-20, 20, -20, 20);
+		setPerspective(90, 1, 0.1f, 1000.0f);
+		// setOrthographic(-20, 20, -20, 20);
 	}
 
 	void start() override
@@ -596,13 +599,34 @@ public:
 			if (p_event.joystick.id == spk::Controller::Joystick::Right)
 				return ;
 				
-			_motionEvent = Event::NoEvent;
+			_motionEvent = Event::PlayerMotionIdle;
 		}
 	}
 
 	void onKeyboardEvent(spk::KeyboardEvent& p_event) override
 	{
+		if (p_event.type == spk::KeyboardEvent::Type::Press ||
+			p_event.type == spk::KeyboardEvent::Type::Release)
+		{
+			_motionEvent = Event::PlayerMotionIdle;
 
+			if (p_event.keyboard->state[static_cast<int>(spk::Keyboard::Z)] == spk::InputState::Down)
+			{
+				_motionEvent = Event::PlayerMotionUp;
+			}
+			else if (p_event.keyboard->state[static_cast<int>(spk::Keyboard::Q)] == spk::InputState::Down)
+			{
+				_motionEvent = Event::PlayerMotionLeft;
+			}
+			else if (p_event.keyboard->state[static_cast<int>(spk::Keyboard::S)] == spk::InputState::Down)
+			{
+				_motionEvent = Event::PlayerMotionDown;
+			}
+			else if (p_event.keyboard->state[static_cast<int>(spk::Keyboard::D)] == spk::InputState::Down)
+			{
+				_motionEvent = Event::PlayerMotionRight;
+			}
+		}
 	}
 
 	void onMouseEvent(spk::MouseEvent& p_event) override
@@ -632,13 +656,17 @@ private:
 	EventCenter::Type::Contract _leftMotionContract;
 	EventCenter::Type::Contract _downMotionContract;
 	EventCenter::Type::Contract _rightMotionContract;
+	EventCenter::Type::Contract _idleMotionContract;
 
 	spk::Timer _motionTimer;
+	spk::Vector3 _direction;
 	spk::Vector3 _origin; // Express in unit per millisecond
 	spk::Vector3 _destination; // Express in unit per millisecond
 
 	void movePlayer(const spk::Vector3& p_direction)
 	{
+		_direction = p_direction;
+
 		if (_motionTimer.state() == spk::Timer::State::Running)
 		{
 			return;
@@ -651,9 +679,7 @@ private:
 
 	void stopPlayer()
 	{
-		_origin = owner()->transform().localPosition();
-		_destination = _origin;
-		_motionTimer.stop();
+		_direction = 0;
 	}
 
 public:
@@ -671,6 +697,9 @@ public:
 		})),
 		_rightMotionContract(EventCenter::instance()->subscribe(Event::PlayerMotionRight, [&](){
 			movePlayer(spk::Vector3(1, 0, 0));
+		})),
+		_idleMotionContract(EventCenter::instance()->subscribe(Event::PlayerMotionIdle, [&](){
+			stopPlayer();
 		}))
 	{
 
@@ -687,7 +716,14 @@ public:
 		{
 			if (_origin != _destination)
 			{
-				stopPlayer();
+				if (_direction == 0)
+				{
+					stopPlayer();
+				}
+				else
+				{
+					movePlayer(_direction);
+				}
 			}
 			return;
 		} 
