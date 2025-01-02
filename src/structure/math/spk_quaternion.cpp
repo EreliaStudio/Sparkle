@@ -1,5 +1,7 @@
 #include "structure/math/spk_quaternion.hpp"
 
+#include "structure/spk_iostream.hpp"
+
 namespace spk
 {
 	Quaternion::Quaternion() : x(0.f), y(0.f), z(0.f), w(1.f) {}
@@ -136,10 +138,10 @@ namespace spk
 		Vector3 right = Vector3(1, 0, 0);
 		if (forwardToUpDot != -1 && forwardToUpDot != 1)
 		{
-			right = p_up.cross(forward).normalize();
+			right = forward.cross(p_up).normalize();
 		}
 		
-		Vector3 up = forward.cross(right);
+		Vector3 up = right.cross(forward);
 		
 		float m[3][3];
 		m[0][0] = right.x;   m[0][1] = up.x;   m[0][2] = forward.x;
