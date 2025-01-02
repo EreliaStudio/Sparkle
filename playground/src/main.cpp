@@ -691,7 +691,7 @@ private:
 	}
 
 public:
-	ChunkEntity(const spk::Vector2Int& p_chunkPosition, spk::SafePointer<spk::Entity> p_owner) :
+	ChunkEntity(const spk::Vector2Int& p_chunkPosition = spk::Vector2Int(0, 0), spk::SafePointer<spk::Entity> p_owner = nullptr) :
 		spk::Entity(L"Chunk " + std::to_wstring(p_chunkPosition.x) + L" " + std::to_wstring(p_chunkPosition.y), p_owner),
 		_chunkComponent(addComponent<ChunkComponent>()),
 		_chunkPosition(p_chunkPosition)

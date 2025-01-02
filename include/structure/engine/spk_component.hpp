@@ -21,6 +21,8 @@ namespace spk
 	public:
 		Component(const std::wstring& p_name);
 
+		~Component();
+
 		void setName(const std::wstring& p_name);
 		void setPriority(const int& p_priority);
 

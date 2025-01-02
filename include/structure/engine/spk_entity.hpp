@@ -79,8 +79,6 @@ namespace spk
 
 		~Entity();
 
-		void addChild(spk::SafePointer<Entity> p_child);
-
 		void setName(const std::wstring& p_name);
 		void setPriority(const int& p_priority);
 

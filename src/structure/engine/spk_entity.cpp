@@ -61,12 +61,6 @@ namespace spk
 			component->stop();
 		}
 	}
-
-	void Entity::addChild(spk::SafePointer<Entity> p_child)
-	{
-		InherenceObject::addChild(p_child);
-	}
-
 	void Entity::setName(const std::wstring& p_name)
 	{
 		_name = p_name;

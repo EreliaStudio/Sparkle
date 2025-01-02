@@ -11,6 +11,11 @@ namespace spk
 
 	}
 
+	Component::~Component()
+	{
+		
+	}
+
 	void Component::setName(const std::wstring& p_name)
 	{
 		_name = p_name;
