@@ -5,7 +5,7 @@
 		"name": "Launch Debug",
 		"type": "cppdbg",
 		"request": "launch",
-		"program": "${workspaceFolder}/build/debug/out/bin/Debug/x64/Playground.exe",
+		"program": "${workspaceFolder}/build/playground-debug/out/bin/Debug/x64/Playground.exe",
 		"args": [],
 		"stopAtEntry": false,
 		"cwd": "${workspaceFolder}",

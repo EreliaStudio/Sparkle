@@ -1,40 +1,35 @@
 {
-	"version": "2.0.0",
-	"tasks": [
-	  {
-		"label": "Configure Debug",
-		"type": "shell",
-		"command": "cmake",
-		"args": [
-		  "-S",
-		  ".",
-		  "-B",
-		  "build/debug",
-		  "-DENABLE_PLAYGROUND=ON",
-		  "-DCMAKE_BUILD_TYPE=Debug"
-		],
-		"problemMatcher": [],
-		"group": {
-		  "kind": "build",
-		  "isDefault": true
-		}
-	  },
-	  {
-		"label": "Build Debug",
-		"type": "shell",
-		"command": "cmake",
-		"args": [
-		  "--build",
-		  "build/debug",
-		  "--config",
-		  "Debug"
-		],
-		"problemMatcher": [],
-		"group": {
-		  "kind": "build",
-		  "isDefault": true
-		},
-		"dependsOn": "Configure Debug"
-	  }
-	]
-  }
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Configure Debug",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "--preset",
+                "playground-debug"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Build Debug",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "--build",
+                "--preset",
+                "playground-debug"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [],
+            "dependsOn": "Configure Debug"
+        }
+    ]
+}
