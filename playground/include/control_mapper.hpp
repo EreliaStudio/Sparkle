@@ -9,7 +9,9 @@ class ControlMapper : public spk::Component
 private:
 	EventCenter::Instanciator _eventCenterInstanciator;
 
-	Event _motionEvent = Event::NoEvent;
+	std::vector<std::function<Event(const spk::ControllerEvent&)>> _controllerControls;
+	std::vector<std::function<Event(const spk::KeyboardEvent&)>> _keyboardControls;
+	std::vector<std::function<Event(const spk::MouseEvent&)>> _mouseControls;
 
 public:
 	ControlMapper(const std::wstring& p_name);

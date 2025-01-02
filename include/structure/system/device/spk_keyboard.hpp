@@ -146,6 +146,11 @@ namespace spk
 
 		InputState state[Key::MaxNbKey];
 		wchar_t glyph;
+
+		InputState operator[](Key p_key) const
+		{
+			return (state[static_cast<int>(p_key)]);
+		}
 	};
 }
 
