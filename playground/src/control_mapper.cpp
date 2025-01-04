@@ -6,6 +6,7 @@ ControlMapper::ControlMapper(const std::wstring& p_name) :
 	_controllerControls.push_back([&](const spk::ControllerEvent& p_event) -> Event {
 				if (p_event.type == spk::ControllerEvent::Type::JoystickMotion &&
 					p_event.joystick.id == spk::Controller::Joystick::Left && 
+					std::abs(p_event.controller->leftJoystick.position.x) > std::abs(p_event.controller->leftJoystick.position.y) && 
 					p_event.controller->leftJoystick.position.x < -100)
 				{
 					return (Event::PlayerMotionLeft);
@@ -15,6 +16,7 @@ ControlMapper::ControlMapper(const std::wstring& p_name) :
 	_controllerControls.push_back([&](const spk::ControllerEvent& p_event) -> Event {
 				if (p_event.type == spk::ControllerEvent::Type::JoystickMotion &&
 					p_event.joystick.id == spk::Controller::Joystick::Left && 
+					std::abs(p_event.controller->leftJoystick.position.x) > std::abs(p_event.controller->leftJoystick.position.y) && 
 					p_event.controller->leftJoystick.position.x > 100)
 				{
 					return (Event::PlayerMotionRight);
@@ -24,6 +26,7 @@ ControlMapper::ControlMapper(const std::wstring& p_name) :
 	_controllerControls.push_back([&](const spk::ControllerEvent& p_event) -> Event {
 				if (p_event.type == spk::ControllerEvent::Type::JoystickMotion &&
 					p_event.joystick.id == spk::Controller::Joystick::Left && 
+					std::abs(p_event.controller->leftJoystick.position.y) > std::abs(p_event.controller->leftJoystick.position.x) && 
 					p_event.controller->leftJoystick.position.y < -100)
 				{
 					return (Event::PlayerMotionDown);
@@ -33,6 +36,7 @@ ControlMapper::ControlMapper(const std::wstring& p_name) :
 	_controllerControls.push_back([&](const spk::ControllerEvent& p_event) -> Event {
 				if (p_event.type == spk::ControllerEvent::Type::JoystickMotion &&
 					p_event.joystick.id == spk::Controller::Joystick::Left && 
+					std::abs(p_event.controller->leftJoystick.position.y) > std::abs(p_event.controller->leftJoystick.position.x) && 
 					p_event.controller->leftJoystick.position.y > 100)
 				{
 					return (Event::PlayerMotionUp);
