@@ -5,6 +5,10 @@
 
 #include "structure/engine/spk_game_engine.hpp"
 
+#include "structure/graphics/opengl/spk_frame_buffer_object.hpp"
+
+#include "structure/graphics/renderer/spk_texture_renderer.hpp"
+
 namespace spk
 {
 	class GameEngineWidget : public spk::Widget
@@ -12,6 +16,10 @@ namespace spk
 	private:
 		spk::SafePointer<spk::GameEngine> _gameEngine = nullptr;
 
+		spk::OpenGL::FrameBufferObject _fbo;
+		spk::TextureRenderer _textureRenderer;
+
+		void _onGeometryChange();
 		void _onPaintEvent(spk::PaintEvent& p_event);
 		void _onUpdateEvent(spk::UpdateEvent& p_event);
 		void _onMouseEvent(spk::MouseEvent& p_event);

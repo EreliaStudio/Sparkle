@@ -33,7 +33,7 @@ namespace spk
 		float _layer;
 
 		virtual void _onGeometryChange();
-		virtual void _onPaintEvent(spk::PaintEvent& p_event);
+		virtual void _onPaintEvent(spk::PaintEvent& p_event); 
 		virtual void _onUpdateEvent(spk::UpdateEvent& p_event);
 		virtual void _onKeyboardEvent(spk::KeyboardEvent& p_event);
 		virtual void _onMouseEvent(spk::MouseEvent& p_event);

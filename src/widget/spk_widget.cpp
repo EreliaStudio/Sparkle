@@ -50,6 +50,7 @@ namespace spk
 			static_cast<Widget*>(child)->setLayer(static_cast<Widget*>(child)->layer() + delta);
 		}
 		_layer = p_layer;
+		requireGeometryUpdate();
 	}
 
 	const float& Widget::layer() const

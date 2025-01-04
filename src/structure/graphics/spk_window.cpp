@@ -9,6 +9,8 @@
 
 #include "utils/spk_string_utils.hpp"
 
+#include "structure/spk_iostream.hpp"
+
 namespace spk
 {
 	void Window::_initialize(const std::function<void(spk::SafePointer<spk::Window>)>& p_onClosureCallback)
@@ -187,78 +189,78 @@ namespace spk
 		if (id == 131169 || id == 131185 || id == 131218 || id == 131204)
 			return;
 
-		std::cout << "---------------" << std::endl;
+		spk::cout << "---------------" << std::endl;
 
 		switch (source)
 		{
 		case GL_DEBUG_SOURCE_API:
-			std::cout << "Source: API" << std::endl;
+			spk::cout << "Source: API" << std::endl;
 			break;
 		case GL_DEBUG_SOURCE_WINDOW_SYSTEM:
-			std::cout << "Source: Window System" << std::endl;
+			spk::cout << "Source: Window System" << std::endl;
 			break;
 		case GL_DEBUG_SOURCE_SHADER_COMPILER:
-			std::cout << "Source: Shader Compiler" << std::endl;
+			spk::cout << "Source: Shader Compiler" << std::endl;
 			break;
 		case GL_DEBUG_SOURCE_THIRD_PARTY:
-			std::cout << "Source: Third Party" << std::endl;
+			spk::cout << "Source: Third Party" << std::endl;
 			break;
 		case GL_DEBUG_SOURCE_APPLICATION:
-			std::cout << "Source: Application" << std::endl;
+			spk::cout << "Source: Application" << std::endl;
 			break;
 		case GL_DEBUG_SOURCE_OTHER:
-			std::cout << "Source: Other" << std::endl;
+			spk::cout << "Source: Other" << std::endl;
 			break;
 		}
 
 		switch (type)
 		{
 		case GL_DEBUG_TYPE_ERROR:
-			std::cout << "Type: Error" << std::endl;
+			spk::cout << "Type: Error" << std::endl;
 			break;
 		case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
-			std::cout << "Type: Deprecated Behaviour" << std::endl;
+			spk::cout << "Type: Deprecated Behaviour" << std::endl;
 			break;
 		case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
-			std::cout << "Type: Undefined Behaviour" << std::endl;
+			spk::cout << "Type: Undefined Behaviour" << std::endl;
 			break;
 		case GL_DEBUG_TYPE_PORTABILITY:
-			std::cout << "Type: Portability" << std::endl;
+			spk::cout << "Type: Portability" << std::endl;
 			break;
 		case GL_DEBUG_TYPE_PERFORMANCE:
-			std::cout << "Type: Performance" << std::endl;
+			spk::cout << "Type: Performance" << std::endl;
 			break;
 		case GL_DEBUG_TYPE_MARKER:
-			std::cout << "Type: Marker" << std::endl;
+			spk::cout << "Type: Marker" << std::endl;
 			break;
 		case GL_DEBUG_TYPE_PUSH_GROUP:
-			std::cout << "Type: Push Group" << std::endl;
+			spk::cout << "Type: Push Group" << std::endl;
 			break;
 		case GL_DEBUG_TYPE_POP_GROUP:
-			std::cout << "Type: Pop Group" << std::endl;
+			spk::cout << "Type: Pop Group" << std::endl;
 			break;
 		case GL_DEBUG_TYPE_OTHER:
-			std::cout << "Type: Other" << std::endl;
+			spk::cout << "Type: Other" << std::endl;
 			break;
 		}
 
 		switch (severity)
 		{
 		case GL_DEBUG_SEVERITY_HIGH:
-			std::cout << "Severity: high" << std::endl;
+			spk::cout << "Severity: high" << std::endl;
 			break;
 		case GL_DEBUG_SEVERITY_MEDIUM:
-			std::cout << "Severity: medium" << std::endl;
+			spk::cout << "Severity: medium" << std::endl;
 			break;
 		case GL_DEBUG_SEVERITY_LOW:
-			std::cout << "Severity: low" << std::endl;
+			spk::cout << "Severity: low" << std::endl;
 			break;
 		case GL_DEBUG_SEVERITY_NOTIFICATION:
-			std::cout << "Severity: notification" << std::endl;
+			spk::cout << "Severity: notification" << std::endl;
 			break;
 		}
 			
-		std::cout << "Debug message (" << id << "): " << message << std::endl;
+		spk::cout << "Debug message (" << id << "): " << message << std::endl;
 		if (severity != GL_DEBUG_SEVERITY_NOTIFICATION)
 			throw std::runtime_error("Unexpected opengl error detected");
 	}
@@ -411,7 +413,7 @@ namespace spk
 				}
 				catch (std::exception& e)
 				{
-					std::cout << "Error catched : " << e.what() << std::endl;
+					spk::cout << "Error catched : " << e.what() << std::endl;
 					close();
 				}
 			}).relinquish();
@@ -426,7 +428,7 @@ namespace spk
 				}
 				catch (std::exception& e)
 				{
-					std::cout << "Renderer - Error catched : " << e.what() << std::endl;
+					spk::cout << "Renderer - Error catched : " << e.what() << std::endl;
 					close();
 				}
 			}).relinquish();
@@ -440,7 +442,7 @@ namespace spk
 				}
 				catch (std::exception& e)
 				{
-					std::cout << "Updater - Error catched : " << e.what() << std::endl;
+					spk::cout << "Updater - Error catched : " << e.what() << std::endl;
 					close();
 				}
 			}).relinquish();

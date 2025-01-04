@@ -87,3 +87,5 @@
 #include "utils/spk_system_utils.hpp"
 #include "widget/spk_game_engine_widget.hpp"
 #include "widget/spk_widget.hpp"
+#include "widget/spk_frame.hpp"
+#include "widget/spk_push_button.hpp"

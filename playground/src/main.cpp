@@ -32,6 +32,7 @@ int main()
 	engine.addEntity(&player);
 
 	spk::GameEngineWidget gameEngineWidget = spk::GameEngineWidget(L"Engine widget", win->widget());
+	gameEngineWidget.setLayer(0);
 	gameEngineWidget.setGeometry(win->geometry().anchor, win->geometry().size);
 	gameEngineWidget.setGameEngine(&engine);
 	gameEngineWidget.activate();

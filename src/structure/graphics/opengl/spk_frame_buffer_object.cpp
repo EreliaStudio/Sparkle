@@ -154,7 +154,7 @@ namespace spk::OpenGL
     {
     }
 
-    inline void FrameBufferObject::addAttachment(const std::wstring& p_name, int p_binding, Type p_type)
+    void FrameBufferObject::addAttachment(const std::wstring& p_name, int p_binding, Type p_type)
     {
         Attachment attachment;
         attachment.binding = p_binding;
@@ -162,7 +162,7 @@ namespace spk::OpenGL
         _attachments.emplace(p_name, std::move(attachment));
     }
 
-    inline void FrameBufferObject::_load()
+    void FrameBufferObject::_load()
     {
         if (_framebufferID == 0)
         {
@@ -225,7 +225,12 @@ namespace spk::OpenGL
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
-    inline void FrameBufferObject::_releaseResources()
+    FrameBufferObject::~FrameBufferObject()
+	{
+		_releaseResources();
+	}
+
+    void FrameBufferObject::_releaseResources()
     {
         if (wglGetCurrentContext() != nullptr)
         {
@@ -239,7 +244,7 @@ namespace spk::OpenGL
         _attachments.clear();
     }
 
-    inline void FrameBufferObject::resize(const spk::Vector2UInt& p_size)
+    void FrameBufferObject::resize(const spk::Vector2UInt& p_size)
     {
         if (_size == p_size)
         {
@@ -261,7 +266,7 @@ namespace spk::OpenGL
         _load();
     }
 
-    inline void FrameBufferObject::activate()
+    void FrameBufferObject::activate()
     {
         if (_framebufferID == 0)
         {
@@ -272,12 +277,12 @@ namespace spk::OpenGL
         _viewport.apply();
     }
 
-    inline void FrameBufferObject::deactivate()
+    void FrameBufferObject::deactivate()
     {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
-    inline TextureObject* FrameBufferObject::bindedTexture(const std::wstring& p_name)
+    TextureObject* FrameBufferObject::bindedTexture(const std::wstring& p_name)
     {
         auto it = _attachments.find(p_name);
         if (it != _attachments.end())
@@ -290,7 +295,7 @@ namespace spk::OpenGL
         }
     }
 
-    inline TextureObject FrameBufferObject::saveAsTexture(const std::wstring& p_name)
+    TextureObject FrameBufferObject::saveAsTexture(const std::wstring& p_name)
     {
         auto it = _attachments.find(p_name);
         if (it == _attachments.end())

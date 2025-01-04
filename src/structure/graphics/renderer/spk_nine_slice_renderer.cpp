@@ -58,10 +58,10 @@ namespace spk
                 subGeom.height = yValues[row + 1] - yValues[row];
 
                 Image::Section section;
-                section.x = xValues[col];
-                section.y = yValues[row];
-                section.width = xValues[col + 1] - xValues[col];
-                section.height = yValues[row + 1] - yValues[row];
+                section.x = uValues[col];
+                section.y = vValues[row];
+                section.width = uValues[col + 1] - uValues[col];
+                section.height = vValues[row + 1] - vValues[row];
 
                 _textureRenderer.prepare(
                     subGeom,
@@ -74,7 +74,7 @@ namespace spk
 
 	void NineSliceRenderer::setSpriteSheet(const SafePointer<SpriteSheet>& p_spriteSheet)
 	{
-		if (p_spriteSheet->size().x != GRID_SIZE || p_spriteSheet->size().y != GRID_SIZE)
+		if (p_spriteSheet->nbSprite().x != GRID_SIZE || p_spriteSheet->nbSprite().y != GRID_SIZE)
 		{
 			throw std::runtime_error("Invalid sprite sheet size. NineSlicedTextureRenderer expects a 3x3 sprite sheet.");
 		}
