@@ -57,7 +57,7 @@ namespace spk
 			static_cast<LONG>(0),
 			static_cast<LONG>(0),
 			static_cast<LONG>(_viewport.geometry().width),
-			static_cast<LONG>(_viewport.geometry().heigth)
+			static_cast<LONG>(_viewport.geometry().height)
 		};
 		if (!AdjustWindowRectEx(&adjustedRect, WS_OVERLAPPEDWINDOW, FALSE, 0))
 		{

@@ -6,7 +6,6 @@ namespace spk
 {
 	void FontRenderer::_initProgram()
 	{
-		// Vertex Shader
 		const char *vertexShaderSrc = R"(
             #version 450
 
@@ -30,7 +29,6 @@ namespace spk
             }
             )";
 
-		// Fragment Shader
 		const char *fragmentShaderSrc = R"(
             #version 450
 
@@ -86,11 +84,6 @@ namespace spk
 
 		_samplerObject = spk::OpenGL::SamplerObject("diffuseTexture", spk::OpenGL::SamplerObject::Type::Texture2D, 0);
 
-		// The UBO layout:
-		// vec4 glyphColor;   // offset 0
-		// vec4 outlineColor; // offset 16
-		// total size: 32 bytes
-
 		_textInformationsUbo = spk::OpenGL::UniformBufferObject("TextInformations", 0, 32);
 		_textInformationsUbo.addElement("glyphColor", 0, sizeof(spk::Color));
 		_textInformationsUbo.addElement("outlineColor", 16, sizeof(spk::Color));
@@ -142,18 +135,6 @@ namespace spk
 		_bufferSet.indexes().clear();
 	}
 
-	FontRenderer &FontRenderer::operator<<(const Vertex &p_element)
-	{
-		_bufferSet.layout() << p_element;
-		return *this;
-	}
-
-	FontRenderer &FontRenderer::operator<<(const unsigned int &p_index)
-	{
-		_bufferSet.indexes() << p_index;
-		return *this;
-	}
-
 	void FontRenderer::prepare(const std::wstring &text, const spk::Vector2Int &anchor, float layer)
 	{
 		spk::Vector2Int glyphAnchor = anchor;
@@ -173,14 +154,14 @@ namespace spk
 				newVertex.uv = glyph.UVs[i];
 				newVertex.layer = convertedPoint.z;
 
-				*this << newVertex;
+				_bufferSet.layout() << newVertex;
 			}
 
 			glyphAnchor += glyph.step;
 
 			for (size_t i = 0; i < 6; i++)
 			{
-				*this << (baseIndexes + spk::Font::Glyph::indexesOrder[i]);
+				_bufferSet.indexes() << (baseIndexes + spk::Font::Glyph::indexesOrder[i]);
 			}
 
 			baseIndexes += 4;

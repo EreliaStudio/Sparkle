@@ -9,6 +9,7 @@ namespace spk
 			return ;
 		}
 
+		
 		_gameEngine->onPaintEvent(p_event);
 	}
 

@@ -3,7 +3,35 @@
 NodeMap::NodeMap() :
 	_nodeMapSSBO(BufferObjectCollection::instance()->SSBO("nodeConstants"))
 {
+	addNode(0, {
+	 	.animationStartPos = spk::Vector2(0, 0),
+		.frameDuration = 1000,
+		.animationLength = 0,
+		.animationStep = 1		
+	});
 
+	addNode(1, {
+	 	.animationStartPos = spk::Vector2(1, 1),
+		.frameDuration = 100,
+		.animationLength = 0,
+		.animationStep = 1		
+	});
+
+	addNode(2, {
+	 	.animationStartPos = spk::Vector2(1, 0),
+		.frameDuration = 100,
+		.animationLength = 0,
+		.animationStep = 1		
+	});
+
+	addNode(3, {
+	 	.animationStartPos = spk::Vector2(0, 1),
+		.frameDuration = 100,
+		.animationLength = 0,
+		.animationStep = 1		
+	});
+
+	validate();
 }
 
 void NodeMap::addNode(const int& p_id, const Node& p_node)

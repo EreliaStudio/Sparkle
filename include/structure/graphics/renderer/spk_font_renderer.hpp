@@ -57,31 +57,6 @@ namespace spk
 
         void clear();
 
-        FontRenderer& operator<<(const Vertex& p_element);
-        FontRenderer& operator<<(const unsigned int& p_index);
-
-        template<typename Container>
-        requires requires (const Container& c) {
-            { std::data(c) } -> std::convertible_to<const Vertex*>;
-            { std::size(c) } -> std::convertible_to<std::size_t>;
-        }
-        FontRenderer& operator<<(const Container& p_container)
-        {
-            _bufferSet.layout() << p_container;
-            return *this;
-        }
-
-        template<typename Container>
-        requires requires (const Container& c) {
-            { std::data(c) } -> std::convertible_to<const unsigned int*>;
-            { std::size(c) } -> std::convertible_to<std::size_t>;
-        }
-        FontRenderer& operator<<(const Container& p_container)
-        {
-            _bufferSet.indexes() << p_container;
-            return *this;
-        }
-
 		void prepare(const std::wstring& text, const spk::Vector2Int& anchor, float layer);
 
         void validate();

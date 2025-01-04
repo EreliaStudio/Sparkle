@@ -39,31 +39,6 @@ namespace spk
 
         void clear();
 		
-		ColorRenderer& operator<<(const Vertex& p_element);
-		ColorRenderer& operator<<(const unsigned int& p_index);
-
-		template<typename Container>
-		requires  requires (const Container& c) {
-			{ std::data(c) } -> std::convertible_to<const Vertex*>;
-			{ std::size(c) } -> std::convertible_to<std::size_t>;
-		}
-		ColorRenderer& operator<<(const Container& p_container)
-		{
-			_bufferSet.layout() << p_container;
-			return *this;
-		}
-
-		template<typename Container>
-		requires  requires (const Container& c) {
-			{ std::data(c) } -> std::convertible_to<const unsigned int*>;
-			{ std::size(c) } -> std::convertible_to<std::size_t>;
-		}
-		ColorRenderer& operator<<(const Container& p_container)
-		{
-			_bufferSet.indexes() << p_container;
-			return *this;
-		}
-
 		void prepareSquare(const spk::Geometry2D& geom, float layer);
 
 		void validate();

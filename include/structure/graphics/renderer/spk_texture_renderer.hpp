@@ -24,7 +24,7 @@ namespace spk
         spk::OpenGL::BufferSet _bufferSet;
         spk::OpenGL::SamplerObject _samplerObject;
 
-        spk::Image* _image = nullptr;
+        spk::SafePointer<spk::OpenGL::TextureObject> _image = nullptr;
 
         void _initProgram();
         void _initBuffers();
@@ -32,34 +32,9 @@ namespace spk
     public:
         TextureRenderer();
 
-        void setTexture(spk::Image* p_image);
+        void setTexture(spk::SafePointer<spk::OpenGL::TextureObject> p_image);
 
         void clear();
-
-        TextureRenderer& operator<<(const Vertex& p_element);
-		TextureRenderer& operator<<(const unsigned int& p_index);
-
-        template<typename Container>
-        requires requires (const Container& c) {
-            { std::data(c) } -> std::convertible_to<const Vertex*>;
-            { std::size(c) } -> std::convertible_to<std::size_t>;
-        }
-        TextureRenderer& operator<<(const Container& p_container)
-        {
-            _bufferSet.layout() << p_container;
-            return *this;
-        }
-
-        template<typename Container>
-        requires requires (const Container& c) {
-            { std::data(c) } -> std::convertible_to<const unsigned int*>;
-            { std::size(c) } -> std::convertible_to<std::size_t>;
-        }
-        TextureRenderer& operator<<(const Container& p_container)
-        {
-            _bufferSet.indexes() << p_container;
-            return *this;
-        }
 
 		void prepare(const spk::Geometry2D& geom, const spk::Image::Section& section, float layer);
 

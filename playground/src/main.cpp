@@ -1,6 +1,6 @@
 #include "playground.hpp"
 
-int executeMain()
+int main()
 {
 	spk::GraphicalApplication app = spk::GraphicalApplication();
 
@@ -9,36 +9,6 @@ int executeMain()
 	TextureManager::instanciate();
 	
 	NodeMap nodeMap;
-
-	nodeMap.addNode(0, {
-	 	.animationStartPos = spk::Vector2(0, 0),
-		.frameDuration = 1000,
-		.animationLength = 0,
-		.animationStep = 1		
-	});
-
-	nodeMap.addNode(1, {
-	 	.animationStartPos = spk::Vector2(1, 1),
-		.frameDuration = 100,
-		.animationLength = 0,
-		.animationStep = 1		
-	});
-
-	nodeMap.addNode(2, {
-	 	.animationStartPos = spk::Vector2(1, 0),
-		.frameDuration = 100,
-		.animationLength = 0,
-		.animationStep = 1		
-	});
-
-	nodeMap.addNode(3, {
-	 	.animationStartPos = spk::Vector2(0, 1),
-		.frameDuration = 100,
-		.animationLength = 0,
-		.animationStep = 1		
-	});
-
-	nodeMap.validate();
 
 	spk::GameEngine engine;
 
@@ -67,10 +37,4 @@ int executeMain()
 	gameEngineWidget.activate();
 
 	return (app.run());
-}
-
-int main()
-{
-	int result = executeMain();
-	return (result);
 }

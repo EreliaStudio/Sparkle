@@ -11,10 +11,27 @@ namespace spk
 	public:
 		struct Section
 		{
-			spk::Vector2 anchor;
-			spk::Vector2 size;
+			union
+			{
+				spk::Vector2 anchor;
+				struct
+				{
+					float x;
+					float y;
+				};
+			};
 
-			Section() = default;
+			union
+			{
+				spk::Vector2 size;
+				struct
+				{
+					float width;
+					float height;
+				};
+			};
+
+			Section();
 			Section(spk::Vector2 p_anchor, spk::Vector2 p_size);
 		};
 

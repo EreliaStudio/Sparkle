@@ -4,7 +4,6 @@
 
 namespace spk
 {
-
 	void ColorRenderer::_initProgram()
 	{
 		const char *vertexShaderSrc = R"(#version 450
@@ -70,18 +69,6 @@ namespace spk
 		_bufferSet.indexes().clear();
 	}
 
-	ColorRenderer &ColorRenderer::operator<<(const Vertex &p_element)
-	{
-		_bufferSet.layout() << p_element;
-		return *this;
-	}
-
-	ColorRenderer &ColorRenderer::operator<<(const unsigned int &p_index)
-	{
-		_bufferSet.indexes() << p_index;
-		return *this;
-	}
-
 	void ColorRenderer::prepareSquare(const spk::Geometry2D &geom, float layer)
 	{
 		size_t nbVertex = _bufferSet.layout().size() / sizeof(Vertex);
@@ -91,15 +78,15 @@ namespace spk
 																		 geom.anchor.y + static_cast<int32_t>(geom.size.y)},
 																		layer);
 
-		*this << Vertex{{topLeft.x, bottomRight.y}, topLeft.z}
-			  << Vertex{{bottomRight.x, bottomRight.y}, topLeft.z}
-			  << Vertex{{topLeft.x, topLeft.y}, topLeft.z}
-			  << Vertex{{bottomRight.x, topLeft.y}, topLeft.z};
+		_bufferSet.layout() << Vertex{{topLeft.x, bottomRight.y}, topLeft.z}
+							<< Vertex{{bottomRight.x, bottomRight.y}, topLeft.z}
+							<< Vertex{{topLeft.x, topLeft.y}, topLeft.z}
+							<< Vertex{{bottomRight.x, topLeft.y}, topLeft.z};
 
 		std::array<unsigned int, 6> indices = {0, 1, 2, 2, 1, 3};
 		for (const auto &index : indices)
 		{
-			*this << index + nbVertex;
+			_bufferSet.indexes() << index + nbVertex;
 		}
 	}
 

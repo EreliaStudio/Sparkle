@@ -26,7 +26,7 @@ namespace spk
 			struct
 			{
 				uint32_t width;
-				uint32_t heigth;
+				uint32_t height;
 			};
 		};
 
@@ -44,9 +44,9 @@ namespace spk
 
 		}
 
-		Geometry2D(const Point& p_anchor, size_t p_width, size_t p_heigth) :
+		Geometry2D(const Point& p_anchor, size_t p_width, size_t p_height) :
 			anchor(p_anchor),
-			size(p_width, p_heigth)
+			size(p_width, p_height)
 		{
 
 		}
@@ -58,9 +58,9 @@ namespace spk
 
 		}
 
-		Geometry2D(int p_x, int p_y, size_t p_width, size_t p_heigth) :
+		Geometry2D(int p_x, int p_y, size_t p_width, size_t p_height) :
 			anchor(p_x, p_y),
-			size(p_width, p_heigth)
+			size(p_width, p_height)
 		{
 
 		}

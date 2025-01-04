@@ -52,7 +52,7 @@ namespace spk
 		_initBuffers();
 	}
 
-	void TextureRenderer::setTexture(spk::Image *p_image)
+	void TextureRenderer::setTexture(spk::SafePointer<spk::OpenGL::TextureObject> p_image)
 	{
 		_image = p_image;
 		_samplerObject.bind(_image);
@@ -62,18 +62,6 @@ namespace spk
 	{
 		_bufferSet.layout().clear();
 		_bufferSet.indexes().clear();
-	}
-
-	TextureRenderer &TextureRenderer::operator<<(const Vertex &p_element)
-	{
-		_bufferSet.layout() << p_element;
-		return *this;
-	}
-
-	TextureRenderer &TextureRenderer::operator<<(const unsigned int &p_index)
-	{
-		_bufferSet.indexes() << p_index;
-		return *this;
 	}
 
 	void TextureRenderer::prepare(const spk::Geometry2D &geom, const spk::Image::Section &section, float layer)
@@ -90,15 +78,15 @@ namespace spk
 		float u2 = section.anchor.x + section.size.x;
 		float v2 = section.anchor.y + section.size.y;
 
-		*this << Vertex{{topLeft.x, bottomRight.y}, topLeft.z, {u1, v2}}
-			  << Vertex{{bottomRight.x, bottomRight.y}, topLeft.z, {u2, v2}}
-			  << Vertex{{topLeft.x, topLeft.y}, topLeft.z, {u1, v1}}
-			  << Vertex{{bottomRight.x, topLeft.y}, topLeft.z, {u2, v1}};
+		_bufferSet.layout()	<< Vertex{{topLeft.x, bottomRight.y}, topLeft.z, {u1, v2}}
+							<< Vertex{{bottomRight.x, bottomRight.y}, topLeft.z, {u2, v2}}
+							<< Vertex{{topLeft.x, topLeft.y}, topLeft.z, {u1, v1}}
+							<< Vertex{{bottomRight.x, topLeft.y}, topLeft.z, {u2, v1}};
 
 		std::array<unsigned int, 6> indices = {0, 1, 2, 2, 1, 3};
 		for (const auto &index : indices)
 		{
-			*this << index + nbVertex;
+			_bufferSet.indexes() << index + nbVertex;
 		}
 	}
 

@@ -22,7 +22,11 @@ namespace spk
 		void setGeometry(const Geometry2D& p_geometry);
 
 		void apply() const;
+		static spk::Matrix4x4 matrix();
 		static spk::Vector2 convertScreenToOpenGL(const spk::Vector2Int p_screenPosition);
+		static spk::Vector2 convertScreenToOpenGL(int p_screenPositionX, int p_screenPositionY);
+		static float convertLayerToOpenGL(const float& p_layer);
 		static spk::Vector3 convertScreenToOpenGL(const spk::Vector2Int p_screenPosition, const float& p_layer);
+		static spk::Vector3 convertScreenToOpenGL(int p_screenPositionX, int p_screenPositionY, const float& p_layer);
 	};
 }
