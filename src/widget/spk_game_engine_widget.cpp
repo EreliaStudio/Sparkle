@@ -13,26 +13,19 @@ namespace spk
 
 		_fbo.activate();
 
-		DEBUG_LINE();
 		_gameEngine->onPaintEvent(p_event);
 
-		DEBUG_LINE();
 		_fbo.deactivate();
-
-		DEBUG_LINE();
+		
 		_textureRenderer.render();
-		DEBUG_LINE();
 	}
 
 	void GameEngineWidget::_onGeometryChange()
 	{
-		DEBUG_LINE();
 		_fbo.resize(geometry().size);
-		DEBUG_LINE();
 		_textureRenderer.setTexture(_fbo.bindedTexture(L"outputColor"));
-		DEBUG_LINE();
 		_textureRenderer.prepare(geometry(), {{0.0f, 0.0f}, {1.0f, 1.0f}}, layer());
-		DEBUG_LINE();
+		_textureRenderer.validate();
 	}
 
 	void GameEngineWidget::_onUpdateEvent(spk::UpdateEvent& p_event)
