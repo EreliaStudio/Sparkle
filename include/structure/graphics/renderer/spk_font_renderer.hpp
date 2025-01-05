@@ -27,7 +27,7 @@ namespace spk
         };
 
     private:
-        spk::OpenGL::Program _program;
+        static inline spk::OpenGL::Program* _program;
         spk::OpenGL::BufferSet _bufferSet;
         spk::OpenGL::SamplerObject _samplerObject;
 

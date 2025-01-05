@@ -6,35 +6,38 @@ namespace spk
 {
 	void ColorRenderer::_initProgram()
 	{
-		const char *vertexShaderSrc = R"(#version 450
-            layout(location = 0) in vec2 inPosition;
-            layout(location = 1) in float inLayer;
+		if (_program == nullptr)
+		{
+			const char *vertexShaderSrc = R"(#version 450
+				layout(location = 0) in vec2 inPosition;
+				layout(location = 1) in float inLayer;
 
-            layout(std140, binding = 0) uniform ColorData {
-                vec4 uColor;
-            };
+				layout(std140, binding = 0) uniform ColorData {
+					vec4 uColor;
+				};
 
-            void main()
-            {
-                // We can expand this if needed for transformations
-                gl_Position = vec4(inPosition, inLayer, 1.0);
-            }
-            )";
+				void main()
+				{
+					// We can expand this if needed for transformations
+					gl_Position = vec4(inPosition, inLayer, 1.0);
+				}
+				)";
 
-		const char *fragmentShaderSrc = R"(#version 450
-            layout(std140, binding = 0) uniform ColorData {
-                vec4 uColor;
-            };
+			const char *fragmentShaderSrc = R"(#version 450
+				layout(std140, binding = 0) uniform ColorData {
+					vec4 uColor;
+				};
 
-            layout(location = 0) out vec4 outputColor;
+				layout(location = 0) out vec4 outputColor;
 
-            void main()
-            {
-                outputColor = uColor;
-            }
-            )";
+				void main()
+				{
+					outputColor = uColor;
+				}
+				)";
 
-		_program = spk::OpenGL::Program(vertexShaderSrc, fragmentShaderSrc);
+			_program = new spk::OpenGL::Program(vertexShaderSrc, fragmentShaderSrc);
+		}
 	}
 
 	void ColorRenderer::_initBuffers()
@@ -98,14 +101,14 @@ namespace spk
 
 	void ColorRenderer::render()
 	{
-		_program.activate();
+		_program->activate();
 		_bufferSet.activate();
 		_colorUbo.activate();
 
-		_program.render(_bufferSet.indexes().nbIndexes(), 1);
+		_program->render(_bufferSet.indexes().nbIndexes(), 1);
 
 		_colorUbo.deactivate();
 		_bufferSet.deactivate();
-		_program.deactivate();
+		_program->deactivate();
 	}
 }

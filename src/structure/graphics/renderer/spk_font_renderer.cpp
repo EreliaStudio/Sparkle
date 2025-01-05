@@ -6,72 +6,75 @@ namespace spk
 {
 	void FontRenderer::_initProgram()
 	{
-		const char *vertexShaderSrc = R"(
-            #version 450
+		if (_program == nullptr)
+		{
+			const char *vertexShaderSrc = R"(
+				#version 450
 
-            layout (location = 0) in vec2 inPosition;
-            layout (location = 1) in float inLayer;
-            layout (location = 2) in vec2 inUV;
-            layout (location = 0) out vec2 fragmentUVs;
+				layout (location = 0) in vec2 inPosition;
+				layout (location = 1) in float inLayer;
+				layout (location = 2) in vec2 inUV;
+				layout (location = 0) out vec2 fragmentUVs;
 
-            layout(std140, binding = 0) uniform TextInformations
-            {
-                vec4 glyphColor;
-                vec4 outlineColor;
-            };
+				layout(std140, binding = 0) uniform TextInformations
+				{
+					vec4 glyphColor;
+					vec4 outlineColor;
+				};
 
-            uniform sampler2D diffuseTexture;
+				uniform sampler2D diffuseTexture;
 
-            void main()
-            {
-                gl_Position = vec4(inPosition, inLayer, 1.0f);
-                fragmentUVs = inUV;
-            }
-            )";
+				void main()
+				{
+					gl_Position = vec4(inPosition, inLayer, 1.0f);
+					fragmentUVs = inUV;
+				}
+				)";
 
-		const char *fragmentShaderSrc = R"(
-            #version 450
+			const char *fragmentShaderSrc = R"(
+				#version 450
 
-            layout (location = 0) in vec2 fragmentUVs;
-            layout (location = 0) out vec4 outputColor;
+				layout (location = 0) in vec2 fragmentUVs;
+				layout (location = 0) out vec4 outputColor;
 
-            layout(std140, binding = 0) uniform TextInformations
-            {
-                vec4 glyphColor;
-                vec4 outlineColor;
-            };
+				layout(std140, binding = 0) uniform TextInformations
+				{
+					vec4 glyphColor;
+					vec4 outlineColor;
+				};
 
-            uniform sampler2D diffuseTexture;
+				uniform sampler2D diffuseTexture;
 
-            float computeFormula(float x, float k)
-            {
-                return (1.0 - (exp(-k * x))) / (1.0 - exp(-k));
-            }
+				float computeFormula(float x, float k)
+				{
+					return (1.0 - (exp(-k * x))) / (1.0 - exp(-k));
+				}
 
-            void main()
-            {
-                float grayscale = texture(diffuseTexture, fragmentUVs).r;
+				void main()
+				{
+					float grayscale = texture(diffuseTexture, fragmentUVs).r;
 
-                if (grayscale == 0)
-                {
-                    discard;
-                }
+					if (grayscale == 0)
+					{
+						discard;
+					}
 
-                float outlineToGlyphThreshold = 0.2f;
-                if (grayscale <= outlineToGlyphThreshold)
-                {
-                    outputColor = outlineColor;
-                    outputColor.a = computeFormula(smoothstep(0, outlineToGlyphThreshold, grayscale), 20);
-                }
-                else
-                {
-                    float t = computeFormula(smoothstep(outlineToGlyphThreshold, 1.0, grayscale), -20);
-                    outputColor = mix(outlineColor, glyphColor, t);
-                }
-            }
-            )";
+					float outlineToGlyphThreshold = 0.2f;
+					if (grayscale <= outlineToGlyphThreshold)
+					{
+						outputColor = outlineColor;
+						outputColor.a = computeFormula(smoothstep(0, outlineToGlyphThreshold, grayscale), 20);
+					}
+					else
+					{
+						float t = computeFormula(smoothstep(outlineToGlyphThreshold, 1.0, grayscale), -20);
+						outputColor = mix(outlineColor, glyphColor, t);
+					}
+				}
+				)";
 
-		_program = spk::OpenGL::Program(vertexShaderSrc, fragmentShaderSrc);
+			_program = new spk::OpenGL::Program(vertexShaderSrc, fragmentShaderSrc);
+		}
 	}
 
 	void FontRenderer::_initBuffers()
@@ -183,16 +186,16 @@ namespace spk
 			return;
 		}
 
-		_program.activate();
+		_program->activate();
 		_bufferSet.activate();
 		_samplerObject.activate();
 		_textInformationsUbo.activate();
 
-		_program.render(_bufferSet.indexes().nbIndexes(), 1);
+		_program->render(_bufferSet.indexes().nbIndexes(), 1);
 
 		_textInformationsUbo.deactivate();
 		_samplerObject.deactivate();
 		_bufferSet.deactivate();
-		_program.deactivate();
+		_program->deactivate();
 	}
 }

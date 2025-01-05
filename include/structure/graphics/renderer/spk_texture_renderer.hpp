@@ -20,11 +20,9 @@ namespace spk
         };
 
     private:
-        spk::OpenGL::Program _program;
+        static inline spk::OpenGL::Program* _program = nullptr;
         spk::OpenGL::BufferSet _bufferSet;
         spk::OpenGL::SamplerObject _samplerObject;
-
-        spk::SafePointer<spk::OpenGL::TextureObject> _image = nullptr;
 
         void _initProgram();
         void _initBuffers();

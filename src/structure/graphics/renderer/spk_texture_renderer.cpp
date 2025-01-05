@@ -2,37 +2,42 @@
 
 #include "structure/graphics/spk_viewport.hpp"
 
+#include "spk_debug_macro.hpp"
+
 namespace spk
 {
 	void TextureRenderer::_initProgram()
 	{
-		const char *vertexShaderSrc = R"(#version 450
-            layout(location = 0) in vec2 inPosition;
-            layout(location = 1) in float inLayer;
-            layout(location = 2) in vec2 inUV;
+		if (_program == nullptr)
+		{
+			const char *vertexShaderSrc = R"(#version 450
+				layout(location = 0) in vec2 inPosition;
+				layout(location = 1) in float inLayer;
+				layout(location = 2) in vec2 inUV;
 
-            out vec2 fragUV;
+				layout(location = 0) out vec2 fragUV;
 
-            void main()
-            {
-                gl_Position = vec4(inPosition, inLayer, 1.0);
-                fragUV = inUV;
-            }
-            )";
+				void main()
+				{
+					gl_Position = vec4(inPosition, inLayer, 1.0);
+					fragUV = inUV;
+				}
+				)";
 
-		const char *fragmentShaderSrc = R"(#version 450
-            in vec2 fragUV;
-            layout(location = 0) out vec4 outputColor;
+			const char *fragmentShaderSrc = R"(#version 450
+				layout(location = 0) in vec2 fragUV;
+				layout(location = 0) out vec4 outputColor;
 
-            uniform sampler2D diffuseTexture;
+				uniform sampler2D diffuseTexture;
 
-            void main()
-            {
-                outputColor = texture(diffuseTexture, fragUV);
-            }
-            )";
+				void main()
+				{
+					outputColor = texture(diffuseTexture, fragUV);
+				}
+				)";
 
-		_program = spk::OpenGL::Program(vertexShaderSrc, fragmentShaderSrc);
+			_program = new spk::OpenGL::Program(vertexShaderSrc, fragmentShaderSrc);
+		}
 	}
 
 	void TextureRenderer::_initBuffers()
@@ -54,8 +59,7 @@ namespace spk
 
 	void TextureRenderer::setTexture(spk::SafePointer<spk::OpenGL::TextureObject> p_image)
 	{
-		_image = p_image;
-		_samplerObject.bind(_image);
+		_samplerObject.bind(p_image);
 	}
 
 	void TextureRenderer::clear()
@@ -98,17 +102,14 @@ namespace spk
 
 	void TextureRenderer::render()
 	{
-		if (!_image)
-			return;
-
-		_program.activate();
+		_program->activate();
 		_bufferSet.activate();
 		_samplerObject.activate();
 
-		_program.render(_bufferSet.indexes().nbIndexes(), 1);
+		_program->render(_bufferSet.indexes().nbIndexes(), 1);
 
 		_samplerObject.deactivate();
 		_bufferSet.deactivate();
-		_program.deactivate();
+		_program->deactivate();
 	}
 }
