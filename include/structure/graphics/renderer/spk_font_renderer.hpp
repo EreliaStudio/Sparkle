@@ -34,9 +34,9 @@ namespace spk
         // Uniform buffer object for layer, glyphColor, and outlineColor
         spk::OpenGL::UniformBufferObject _textInformationsUbo;
 
-        Font* _font = nullptr;
+        spk::SafePointer<Font> _font = nullptr;
 		Font::Size _fontSize = {26, 3};
-        Font::Atlas* _atlas = nullptr;
+        spk::SafePointer<Font::Atlas> _atlas = nullptr;
 
         float _layer = 0.0f;
         spk::Color _glyphColor = spk::Color(255, 255, 255, 255);    // white by default
@@ -50,14 +50,20 @@ namespace spk
     public:
         FontRenderer();
 
-        void setFont(Font* p_font);
+        void setFont(const spk::SafePointer<Font>& p_font);
         void setFontSize(const Font::Size& p_fontSize);
         void setGlyphColor(const spk::Color& p_color);
         void setOutlineColor(const spk::Color& p_color);
 
+		const spk::SafePointer<spk::Font>& font() const;
+		const spk::Font::Size& fontSize() const;
+		const spk::Color& glyphColor() const;
+		const spk::Color& outlineColor() const;
+
         void clear();
 
-		void prepare(const std::wstring& text, const spk::Vector2Int& anchor, float layer);
+		spk::Vector2UInt computeTextSize(const std::wstring& p_text);
+		void prepare(const std::wstring& p_text, const spk::Vector2Int& anchor, float layer);
 
         void validate();
 

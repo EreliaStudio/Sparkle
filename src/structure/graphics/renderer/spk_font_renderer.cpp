@@ -106,18 +106,18 @@ namespace spk
 		_updateUbo();
 	}
 
-	void FontRenderer::setFont(Font *p_font)
+	void FontRenderer::setFont(const spk::SafePointer<Font>& p_font)
 	{
 		_font = p_font;
-		_atlas = &_font->atlas(_fontSize);
-		_samplerObject.bind(_atlas);
+		_atlas = nullptr;
+		_samplerObject.bind(nullptr);
 	}
 
 	void FontRenderer::setFontSize(const Font::Size &p_fontSize)
 	{
 		_fontSize = p_fontSize;
-		_atlas = &_font->atlas(_fontSize);
-		_samplerObject.bind(_atlas);
+		_atlas = nullptr;
+		_samplerObject.bind(nullptr);
 	}
 
 	void FontRenderer::setGlyphColor(const spk::Color &p_color)
@@ -132,14 +132,54 @@ namespace spk
 		_updateUbo();
 	}
 
+	const spk::SafePointer<spk::Font>& FontRenderer::font() const
+	{
+		return (_font);
+	}
+	
+	const spk::Font::Size& FontRenderer::fontSize() const
+	{
+		return (_fontSize);
+	}
+	
+	const spk::Color& FontRenderer::glyphColor() const
+	{
+		return (_glyphColor);
+	}
+	
+	const spk::Color& FontRenderer::outlineColor() const
+	{
+		return (_outlineColor);
+	}
+
 	void FontRenderer::clear()
 	{
 		_bufferSet.layout().clear();
 		_bufferSet.indexes().clear();
 	}
 
+	spk::Vector2UInt FontRenderer::computeTextSize(const std::wstring& p_text)
+	{
+		if (_font == nullptr)
+		{
+			throw std::runtime_error("Font not defined in font renderer");
+		}
+		return (_font->computeStringSize(p_text, _fontSize.text, _fontSize.outline));
+	}
+
 	void FontRenderer::prepare(const std::wstring &text, const spk::Vector2Int &anchor, float layer)
 	{
+		if (_font == nullptr)
+		{
+			throw std::runtime_error("Font not defined in font renderer");
+		}
+
+		if (_atlas == nullptr)
+		{
+			_atlas = &_font->atlas(_fontSize);
+			_samplerObject.bind(_atlas);
+		}
+		
 		spk::Vector2Int glyphAnchor = anchor;
 		unsigned int baseIndexes = 0;
 

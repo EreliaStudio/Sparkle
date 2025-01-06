@@ -115,7 +115,7 @@ namespace spk
 		return (operator[](p_char).size);
 	}
 
-	Vector2UInt Font::Atlas::computeStringSize(const std::string& p_string)
+	Vector2UInt Font::Atlas::computeStringSize(const std::wstring& p_string)
 	{
 		int totalWidth = 0;
 		int maxHeight = 0;
@@ -143,17 +143,17 @@ namespace spk
 		return (atlas(Font::Size(p_size, p_outlineSize)).computeCharSize(p_char));
 	}
 
-	Vector2UInt Font::computeStringSize(const std::string& p_string, size_t p_size, size_t p_outlineSize)
+	Vector2UInt Font::computeStringSize(const std::wstring& p_string, size_t p_size, size_t p_outlineSize)
 	{
 		return (atlas(Font::Size(p_size, p_outlineSize)).computeStringSize(p_string));
 	}
 
-	Font::Size Font::computeOptimalTextSize(const std::string& p_string, float p_outlineSizeRatio, const Vector2UInt& p_textArea)
+	Font::Size Font::computeOptimalTextSize(const std::wstring& p_string, float p_outlineSizeRatio, const Vector2UInt& p_textArea)
 	{
 		std::vector<size_t> deltas = { 100u, 50u, 20u, 10u, 1u };
 		Font::Size result = 2;
 
-		if (p_string == "")
+		if (p_string == L"")
 		{
 			size_t resultTextSize = p_textArea.y;
 			size_t resultOutlineSize = static_cast<size_t>(resultTextSize * p_outlineSizeRatio);

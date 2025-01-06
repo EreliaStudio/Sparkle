@@ -13,6 +13,7 @@
 #include "widget/spk_widget.hpp"
 
 #include "structure/graphics/renderer/spk_nine_slice_renderer.hpp"
+#include "structure/graphics/renderer/spk_font_renderer.hpp"
 #include "structure/graphics/texture/spk_sprite_sheet.hpp"
 #include "structure/math/spk_vector2.hpp"
 
@@ -26,16 +27,22 @@ namespace spk
     class PushButton : public Widget
     {
     private:
+        bool _isPressed;
+		
 		ContractProvider _onClickProvider;
 
+		FontRenderer _releasedFontRenderer;
+		FontRenderer _pressedFontRenderer;
         NineSliceRenderer _releasedRenderer;
         NineSliceRenderer _pressedRenderer;
 
         spk::Vector2Int _pressedOffset;
 
-        bool _isPressed;
+        spk::Vector2Int _releasedCornerSize;
+        spk::Vector2Int _pressedCornerSize;
 
-        spk::Vector2Int _cornerSize;
+		std::wstring _releasedText;
+		std::wstring _pressedText;
 
     private:
         virtual void _onGeometryChange() override;
@@ -48,11 +55,23 @@ namespace spk
 
 		ContractProvider::Contract subscribe(const ContractProvider::Job& p_job);
 
+		void setFont(const spk::SafePointer<spk::Font>& p_font);
+		void setFont(const spk::SafePointer<spk::Font>& p_releasedFont, const spk::SafePointer<spk::Font>& p_pressedFont);
+		void setText(const std::wstring& p_text);
+		void setText(const std::wstring& p_releasedText, const std::wstring& p_pressedText);
+		void setTextSize(const spk::Font::Size& p_textSize);
+		void setTextSize(const spk::Font::Size& p_releasedTextSize, const spk::Font::Size& p_pressedTextSize);
+		void setTextColor(const spk::Color& p_glyphColor, const spk::Color& p_outlineColor);
+		void setTextColor(
+			const spk::Color& p_releasedGlyphColor, const spk::Color& p_releasedOutlineColor,
+			const spk::Color& p_pressedGlyphColor, const spk::Color& p_pressedOutlineColor
+		);
+
 		void setCornerSize(const spk::Vector2Int& p_cornerSize);
+		void setCornerSize(const spk::Vector2Int& p_releasedCornerSize, const spk::Vector2Int& p_pressedCornerSize);
 
-        void setReleasedSpriteSheet(const SafePointer<SpriteSheet>& p_spriteSheet);
-
-        void setPressedSpriteSheet(const SafePointer<SpriteSheet>& p_spriteSheet);
+		void setSpriteSheet(const SafePointer<SpriteSheet>& p_spriteSheet);
+		void setSpriteSheet(const SafePointer<SpriteSheet>& p_releasedSpriteSheet, const SafePointer<SpriteSheet>& p_pressedSpriteSheet);
 
         void setPressedOffset(const spk::Vector2Int& p_offset);
 

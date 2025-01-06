@@ -41,10 +41,13 @@ int main()
 	editorPushButton.subscribe([&](){spk::cout << "Button clicked" << std::endl;}).relinquish();
 	editorPushButton.setLayer(100);
 	editorPushButton.setCornerSize(4);
-	editorPushButton.setGeometry({0, 100}, {50, 50});
+	editorPushButton.setText(L"ABCDEFG");
+	editorPushButton.setTextSize({20, 4});
+	editorPushButton.setTextColor(spk::Color::white, spk::Color::black);
+	editorPushButton.setGeometry({300, 300}, {50, 50});
 	editorPushButton.setPressedOffset(2);
-	editorPushButton.setPressedSpriteSheet(TextureManager::instance()->spriteSheet(L"pushButtonNineSlice"));
-	editorPushButton.setReleasedSpriteSheet(TextureManager::instance()->spriteSheet(L"pushButtonNineSlice"));
+	editorPushButton.setSpriteSheet(TextureManager::instance()->spriteSheet(L"pushButtonNineSlice"));
+	editorPushButton.setFont(TextureManager::instance()->font(L"defaultFont"));
 	editorPushButton.activate();
 
 	return (app.run());

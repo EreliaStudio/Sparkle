@@ -7,6 +7,7 @@ TextureManager::TextureManager()
 	loadSpriteSheet(L"chunkSpriteSheet", L"playground/resources/test.png", spk::Vector2UInt(2, 2));
 	loadSpriteSheet(L"frameTexture", L"playground/resources/nineSlice.png", spk::Vector2UInt(3, 3));
 	loadSpriteSheet(L"pushButtonNineSlice", L"playground/resources/pushButton.png", spk::Vector2UInt(3, 3));
+	loadFont(L"defaultFont", "playground/resources/upheavtt.ttf");
 }
 
 spk::SafePointer<spk::Image> TextureManager::loadImage(const std::wstring& p_name, const std::filesystem::path& p_imagePath)
@@ -15,8 +16,10 @@ spk::SafePointer<spk::Image> TextureManager::loadImage(const std::wstring& p_nam
 	{
 		throw std::runtime_error("Texture already loaded");
 	}
+
 	_textures[p_name] = std::make_unique<spk::Image>(p_imagePath);
 	_fonts[p_name] = nullptr;
+
 	return (image(p_name));
 }
 
@@ -26,8 +29,10 @@ spk::SafePointer<spk::SpriteSheet> TextureManager::loadSpriteSheet(const std::ws
 	{
 		throw std::runtime_error("Texture already loaded");
 	}
+
 	_textures[p_name] = std::make_unique<spk::SpriteSheet>(p_spriteSheetPath, p_spriteSheetSize);
 	_fonts[p_name] = nullptr;
+
 	return (spriteSheet(p_name));
 }
 
@@ -37,8 +42,10 @@ spk::SafePointer<spk::Font> TextureManager::loadFont(const std::wstring& p_name,
 	{
 		throw std::runtime_error("Texture already loaded");
 	}
+
 	_fonts[p_name] = std::make_unique<spk::Font>(p_fontPath);
 	_textures[p_name] = nullptr;
+
 	return (font(p_name));
 }
 
@@ -60,6 +67,7 @@ spk::SafePointer<spk::Image> TextureManager::image(const std::wstring& p_name)
 	{
 		throw std::runtime_error("Texture [" + spk::StringUtils::wstringToString(p_name) + "] is not a Image");
 	}
+	
 	return (convertedPtr);
 }
 

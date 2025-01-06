@@ -127,7 +127,7 @@ namespace spk
 
 			Vector2UInt computeCharSize(const wchar_t& p_char);
 
-			Vector2UInt computeStringSize(const std::string& p_string);
+			Vector2UInt computeStringSize(const std::wstring& p_string);
 		};
 
 	private:
@@ -142,9 +142,9 @@ namespace spk
 
 		Vector2UInt computeCharSize(const wchar_t& p_char, size_t p_size, size_t p_outlineSize);
 
-		Vector2UInt computeStringSize(const std::string& p_string, size_t p_size, size_t p_outlineSize);
+		Vector2UInt computeStringSize(const std::wstring& p_string, size_t p_size, size_t p_outlineSize);
 
-		Size computeOptimalTextSize(const std::string& p_string, float p_outlineSizeRatio, const Vector2UInt& p_textArea);
+		Size computeOptimalTextSize(const std::wstring& p_string, float p_outlineSizeRatio, const Vector2UInt& p_textArea);
 
 		Atlas& atlas(const Size& p_size);
 	};
