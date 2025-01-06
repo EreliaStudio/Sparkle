@@ -37,5 +37,20 @@ int main()
 	gameEngineWidget.setGameEngine(&engine);
 	gameEngineWidget.activate();
 
+	DEBUG_LINE();
+	spk::PushButton editorPushButton = spk::PushButton(L"Editor push button", win->widget());
+	editorPushButton.setLayer(100);
+	DEBUG_LINE();
+	editorPushButton.setCornerSize(8);
+	DEBUG_LINE();
+	editorPushButton.setGeometry({0, 100}, {100, 100});
+	DEBUG_LINE();
+	editorPushButton.setPressedSpriteSheet(TextureManager::instance()->spriteSheet(L"pushButtonNineSlice"));
+	DEBUG_LINE();
+	editorPushButton.setReleasedSpriteSheet(TextureManager::instance()->spriteSheet(L"pushButtonNineSlice"));
+	DEBUG_LINE();
+	editorPushButton.activate();
+	DEBUG_LINE();
+
 	return (app.run());
 }

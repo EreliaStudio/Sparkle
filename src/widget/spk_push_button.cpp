@@ -15,61 +15,30 @@ namespace spk
 
     void PushButton::setReleasedSpriteSheet(const SafePointer<SpriteSheet>& p_spriteSheet)
     {
-        if (!p_spriteSheet)
+        if (p_spriteSheet == nullptr)
             throw std::invalid_argument("Released SpriteSheet cannot be null.");
 
-        _releasedSpriteSheet = p_spriteSheet;
         _releasedRenderer.setSpriteSheet(_releasedSpriteSheet);
-
-        _releasedRenderer.prepare(geometry(), layer(), _cornerSize);
-        _releasedRenderer.validate();
     }
 
     void PushButton::setPressedSpriteSheet(const SafePointer<SpriteSheet>& p_spriteSheet)
     {
-        if (!p_spriteSheet)
+        if (p_spriteSheet == nullptr)
             throw std::invalid_argument("Pressed SpriteSheet cannot be null.");
 
-        _pressedSpriteSheet = p_spriteSheet;
         _pressedRenderer.setSpriteSheet(_pressedSpriteSheet);
-
-        Geometry2D pressedGeometry = geometry();
-        pressedGeometry.x += _pressedOffset.x;
-        pressedGeometry.y += _pressedOffset.y;
-        pressedGeometry.width -= 2 * _pressedOffset.x;
-        pressedGeometry.height -= 2 * _pressedOffset.y;
-
-        _pressedRenderer.prepare(pressedGeometry, layer(), _cornerSize);
-        _pressedRenderer.validate();
     }
 
-    void PushButton::_prepareRenderers()
-    {
-        if (_releasedSpriteSheet)
-        {
-            _releasedRenderer.clear();
-            _releasedRenderer.prepare(geometry(), layer(), _cornerSize);
-            _releasedRenderer.validate();
-        }
-
-        if (_pressedSpriteSheet)
-        {
-            Geometry2D pressedGeometry = geometry();
-            pressedGeometry.x += _pressedOffset.x;
-            pressedGeometry.y += _pressedOffset.y;
-            pressedGeometry.width -= 2 * _pressedOffset.x;
-            pressedGeometry.height -= 2 * _pressedOffset.y;
-
-            _pressedRenderer.clear();
-            _pressedRenderer.prepare(pressedGeometry, layer(), _cornerSize);
-            _pressedRenderer.validate();
-        }
-    }
+	void PushButton::setCornerSize(const spk::Vector2Int& p_cornerSize)
+	{
+		_cornerSize = p_cornerSize;
+		requireGeometryUpdate();
+	}
 
     void PushButton::setPressedOffset(const spk::Vector2Int& p_offset)
     {
         _pressedOffset = p_offset;
-        _prepareRenderers();
+		requireGeometryUpdate();
     }
 
     const spk::Vector2Int& PushButton::pressedOffset() const
@@ -122,6 +91,24 @@ namespace spk
 
     void PushButton::_onGeometryChange()
     {
-        _prepareRenderers();
+        if (_releasedSpriteSheet)
+        {
+            _releasedRenderer.clear();
+            _releasedRenderer.prepare(geometry(), layer(), _cornerSize);
+            _releasedRenderer.validate();
+        }
+
+        if (_pressedSpriteSheet)
+        {
+            Geometry2D pressedGeometry = geometry();
+            pressedGeometry.x += _pressedOffset.x;
+            pressedGeometry.y += _pressedOffset.y;
+            pressedGeometry.width -= 2 * _pressedOffset.x;
+            pressedGeometry.height -= 2 * _pressedOffset.y;
+
+            _pressedRenderer.clear();
+            _pressedRenderer.prepare(pressedGeometry, layer(), _cornerSize);
+            _pressedRenderer.validate();
+        }
     }
 }

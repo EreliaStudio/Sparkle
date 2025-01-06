@@ -6,6 +6,7 @@ TextureManager::TextureManager()
 {
 	loadSpriteSheet(L"chunkSpriteSheet", new spk::SpriteSheet(L"playground/resources/test.png", spk::Vector2UInt(2, 2)));
 	loadSpriteSheet(L"frameTexture", new spk::SpriteSheet(L"playground/resources/nineSlice.png", spk::Vector2UInt(3, 3)));
+	loadSpriteSheet(L"pushButtonNineSlice", new spk::SpriteSheet(L"playground/resources/pushButton.png", spk::Vector2UInt(3, 3)));
 }
 
 spk::SafePointer<spk::Image> TextureManager::loadImage(const std::wstring& p_name, spk::Image* p_image)

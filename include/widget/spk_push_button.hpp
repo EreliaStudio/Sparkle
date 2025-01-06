@@ -40,8 +40,6 @@ namespace spk
 
         spk::Vector2Int _cornerSize;
 
-        void _prepareRenderers();
-
     private:
         virtual void _onGeometryChange() override;
 
@@ -52,6 +50,8 @@ namespace spk
         PushButton(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent);
 
 		ContractProvider::Contract subscribe(const std::function<void()>& p_callback);
+
+		void setCornerSize(const spk::Vector2Int& p_cornerSize);
 
         void setReleasedSpriteSheet(const SafePointer<SpriteSheet>& p_spriteSheet);
 
