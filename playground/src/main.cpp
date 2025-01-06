@@ -40,8 +40,9 @@ int main()
 	spk::PushButton editorPushButton = spk::PushButton(L"Editor push button", win->widget());
 	editorPushButton.subscribe([&](){spk::cout << "Button clicked" << std::endl;}).relinquish();
 	editorPushButton.setLayer(100);
-	editorPushButton.setCornerSize(8);
-	editorPushButton.setGeometry({0, 100}, {100, 100});
+	editorPushButton.setCornerSize(4);
+	editorPushButton.setGeometry({0, 100}, {50, 50});
+	editorPushButton.setPressedOffset(2);
 	editorPushButton.setPressedSpriteSheet(TextureManager::instance()->spriteSheet(L"pushButtonNineSlice"));
 	editorPushButton.setReleasedSpriteSheet(TextureManager::instance()->spriteSheet(L"pushButtonNineSlice"));
 	editorPushButton.activate();
