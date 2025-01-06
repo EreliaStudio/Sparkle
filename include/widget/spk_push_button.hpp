@@ -31,9 +31,6 @@ namespace spk
         NineSliceRenderer _releasedRenderer;
         NineSliceRenderer _pressedRenderer;
 
-        SafePointer<SpriteSheet> _releasedSpriteSheet;
-        SafePointer<SpriteSheet> _pressedSpriteSheet;
-
         spk::Vector2Int _pressedOffset;
 
         bool _isPressed;
@@ -49,7 +46,7 @@ namespace spk
     public:
         PushButton(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent);
 
-		ContractProvider::Contract subscribe(const std::function<void()>& p_callback);
+		ContractProvider::Contract subscribe(const ContractProvider::Job& p_job);
 
 		void setCornerSize(const spk::Vector2Int& p_cornerSize);
 

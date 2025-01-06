@@ -2,6 +2,8 @@
 
 #include "structure/graphics/spk_viewport.hpp"
 
+#include "spk_debug_macro.hpp"
+
 namespace spk
 {
 	void NineSliceRenderer::clear()
@@ -52,8 +54,8 @@ namespace spk
             for (int col = 0; col < GRID_SIZE; ++col)
             {
                 Geometry2D subGeom;
-                subGeom.x = xValues[col];
-                subGeom.y = yValues[row];
+                subGeom.x = p_geometry.x + xValues[col];
+                subGeom.y = p_geometry.y + yValues[row];
                 subGeom.width = xValues[col + 1] - xValues[col];
                 subGeom.height = yValues[row + 1] - yValues[row];
 
@@ -74,6 +76,10 @@ namespace spk
 
 	void NineSliceRenderer::setSpriteSheet(const SafePointer<SpriteSheet>& p_spriteSheet)
 	{
+		if (p_spriteSheet == nullptr)
+		{
+			throw std::runtime_error("Invalid sprite sheet : Pointer is nullptr.");
+		}
 		if (p_spriteSheet->nbSprite().x != GRID_SIZE || p_spriteSheet->nbSprite().y != GRID_SIZE)
 		{
 			throw std::runtime_error("Invalid sprite sheet size. NineSlicedTextureRenderer expects a 3x3 sprite sheet.");

@@ -2,6 +2,8 @@
 
 #include "structure/graphics/spk_viewport.hpp"
 
+#include "spk_debug_macro.hpp"
+
 namespace spk
 {
     PushButton::PushButton(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent) :
@@ -13,20 +15,27 @@ namespace spk
 
     }
 
+	ContractProvider::Contract PushButton::subscribe(const ContractProvider::Job& p_job)
+	{
+		return (_onClickProvider.subscribe(p_job));
+	}
+
     void PushButton::setReleasedSpriteSheet(const SafePointer<SpriteSheet>& p_spriteSheet)
     {
         if (p_spriteSheet == nullptr)
             throw std::invalid_argument("Released SpriteSheet cannot be null.");
 
-        _releasedRenderer.setSpriteSheet(_releasedSpriteSheet);
+        _releasedRenderer.setSpriteSheet(p_spriteSheet);
     }
 
     void PushButton::setPressedSpriteSheet(const SafePointer<SpriteSheet>& p_spriteSheet)
     {
         if (p_spriteSheet == nullptr)
+		{
             throw std::invalid_argument("Pressed SpriteSheet cannot be null.");
+		}
 
-        _pressedRenderer.setSpriteSheet(_pressedSpriteSheet);
+        _pressedRenderer.setSpriteSheet(p_spriteSheet);
     }
 
 	void PushButton::setCornerSize(const spk::Vector2Int& p_cornerSize)
@@ -48,33 +57,44 @@ namespace spk
 
     void PushButton::_onMouseEvent(spk::MouseEvent& p_event)
     {
-		if (p_event.type == MouseEvent::Type::Motion)
+		switch (p_event.type)
 		{
-			if (_isPressed == true && geometry().contains(p_event.mouse->position) == false)
-            {
-                _isPressed = true;
-            }
-		}
-        else if (p_event.type == MouseEvent::Type::Press)
-        {
-			if (p_event.button == spk::Mouse::Button::Left)
+			case MouseEvent::Type::Motion:
 			{
-				if (_isPressed == false && geometry().contains(p_event.mouse->position) == true)
+				if (_isPressed == true && geometry().contains(p_event.mouse->position) == false)
 				{
-					_isPressed = true;
+					_isPressed = false;
 				}
+				break;
 			}
-        }
-        else if (p_event.type == MouseEvent::Type::Release)
-        {
-            if (p_event.button == spk::Mouse::Button::Left)
+			case MouseEvent::Type::Press:
 			{
-				if (_isPressed)
-            	{
-            	    _isPressed = false;
-            	}
+				if (p_event.button == spk::Mouse::Button::Left)
+				{
+					if (_isPressed == false && geometry().contains(p_event.mouse->position) == true)
+					{
+						_isPressed = true;
+					}
+				}
+				break;
 			}
-        }
+			case MouseEvent::Type::Release:
+			{
+				if (p_event.button == spk::Mouse::Button::Left)
+				{
+					if (_isPressed)
+					{				
+						_onClickProvider.trigger();
+						_isPressed = false;
+					}
+				}
+				break;
+			}
+			default:
+			{
+				break;
+			}
+		}
     }
 
     void PushButton::_onPaintEvent(spk::PaintEvent& p_event)
@@ -91,24 +111,18 @@ namespace spk
 
     void PushButton::_onGeometryChange()
     {
-        if (_releasedSpriteSheet)
-        {
-            _releasedRenderer.clear();
-            _releasedRenderer.prepare(geometry(), layer(), _cornerSize);
-            _releasedRenderer.validate();
-        }
+        _releasedRenderer.clear();
+        _releasedRenderer.prepare(geometry(), layer(), _cornerSize);
+        _releasedRenderer.validate();
 
-        if (_pressedSpriteSheet)
-        {
-            Geometry2D pressedGeometry = geometry();
-            pressedGeometry.x += _pressedOffset.x;
-            pressedGeometry.y += _pressedOffset.y;
-            pressedGeometry.width -= 2 * _pressedOffset.x;
-            pressedGeometry.height -= 2 * _pressedOffset.y;
+        Geometry2D pressedGeometry = geometry();
+		pressedGeometry.x += _pressedOffset.x;
+		pressedGeometry.y += _pressedOffset.y;
+		pressedGeometry.width -= 2 * _pressedOffset.x;
+		pressedGeometry.height -= 2 * _pressedOffset.y;
 
-            _pressedRenderer.clear();
-            _pressedRenderer.prepare(pressedGeometry, layer(), _cornerSize);
-            _pressedRenderer.validate();
-        }
+		_pressedRenderer.clear();
+		_pressedRenderer.prepare(pressedGeometry, layer(), _cornerSize);
+		_pressedRenderer.validate();
     }
 }
