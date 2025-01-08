@@ -132,7 +132,7 @@ namespace spk
 
 			Vector2UInt computeStringSize(const std::wstring& p_string);
 			Vector2Int computeStringBaselineOffset(const std::wstring& p_string);
-			Vector2Int computeStringAnchor(const std::wstring& p_string, spk::HorizontalAlignment p_horizontalAlignment, spk::VerticalAlignment p_verticalAlignment);
+			Vector2Int computeStringAnchor(const spk::Geometry2D& p_geometry, const std::wstring& p_string, spk::HorizontalAlignment p_horizontalAlignment, spk::VerticalAlignment p_verticalAlignment);
 
 		};
 
@@ -150,7 +150,7 @@ namespace spk
 
 		Vector2UInt computeStringSize(const std::wstring& p_string, const Font::Size& p_size);
 		Vector2Int computeStringBaselineOffset(const std::wstring& p_string, const Font::Size& p_size);
-		Vector2Int computeStringAnchor(const std::wstring& p_string, const Font::Size& p_size, spk::HorizontalAlignment p_horizontalAlignment, spk::VerticalAlignment p_verticalAlignment);
+		Vector2Int computeStringAnchor(const spk::Geometry2D& p_geometry, const std::wstring& p_string, const Font::Size& p_size, spk::HorizontalAlignment p_horizontalAlignment, spk::VerticalAlignment p_verticalAlignment);
 
 		Size computeOptimalTextSize(const std::wstring& p_string, float p_outlineSizeRatio, const Vector2UInt& p_textArea);
 

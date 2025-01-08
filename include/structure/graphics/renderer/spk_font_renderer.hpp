@@ -63,7 +63,7 @@ namespace spk
 
 		spk::Vector2Int computeTextBaselineOffset(const std::wstring& p_text);
 		spk::Vector2UInt computeTextSize(const std::wstring& p_text);
-		spk::Vector2Int computeTextAnchor(const std::wstring& p_string, spk::HorizontalAlignment p_horizontalAlignment, spk::VerticalAlignment p_verticalAlignment);
+		spk::Vector2Int computeTextAnchor(const spk::Geometry2D& p_geometry, const std::wstring& p_string, spk::HorizontalAlignment p_horizontalAlignment, spk::VerticalAlignment p_verticalAlignment);
 
 		void prepare(const std::wstring& p_text, const spk::Vector2Int& anchor, float layer);
 

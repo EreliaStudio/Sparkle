@@ -176,13 +176,13 @@ namespace spk
 		return (_font->computeStringSize(p_text, _fontSize));
 	}
 	
-	spk::Vector2Int FontRenderer::computeTextAnchor(const std::wstring& p_string, spk::HorizontalAlignment p_horizontalAlignment, spk::VerticalAlignment p_verticalAlignment)
+	spk::Vector2Int FontRenderer::computeTextAnchor(const spk::Geometry2D& p_geometry, const std::wstring& p_string, spk::HorizontalAlignment p_horizontalAlignment, spk::VerticalAlignment p_verticalAlignment)
 	{
 		if (_font == nullptr)
 		{
 			throw std::runtime_error("Font not defined in font renderer");
 		}
-		return (_font->computeStringAnchor(p_string, _fontSize, p_horizontalAlignment, p_verticalAlignment));
+		return (_font->computeStringAnchor(p_geometry, p_string, _fontSize, p_horizontalAlignment, p_verticalAlignment));
 	}
 
 	void FontRenderer::prepare(const std::wstring &text, const spk::Vector2Int &anchor, float layer)

@@ -37,37 +37,19 @@ int main()
 	gameEngineWidget.setGameEngine(&engine);
 	gameEngineWidget.activate();
 
-	std::vector<spk::PushButton*> pushButtons;
-
-	spk::HorizontalAlignment horizontalAlignments[3] = {
-		spk::HorizontalAlignment::Left, spk::HorizontalAlignment::Centered, spk::HorizontalAlignment::Right
-	};
-
-	spk::VerticalAlignment verticalAlignments[3] = {
-		spk::VerticalAlignment::Top, spk::VerticalAlignment::Centered, spk::VerticalAlignment::Down
-	};
-
-	for (size_t i = 0; i < 3; i++)
-	{
-		for (size_t j = 0; j < 3; j++)
-		{
-			spk::PushButton* editorPushButton = new spk::PushButton(L"Editor push button", win->widget());
-			editorPushButton->subscribe([&](){spk::cout << "Button clicked" << std::endl;}).relinquish();
-			editorPushButton->setLayer(100);
-			editorPushButton->setCornerSize(4);
-			editorPushButton->setText(L". _Al pf§_", L"A");
-			editorPushButton->setTextSize({20, 4});
-			editorPushButton->setTextColor(spk::Color::white, spk::Color::black);
-			editorPushButton->setTextAlignment(horizontalAlignments[i], verticalAlignments[j]);
-			editorPushButton->setGeometry({100 + i * 300, 100 + j * 300}, {50, 50});
-			editorPushButton->setPressedOffset(2);
-			editorPushButton->setSpriteSheet(TextureManager::instance()->spriteSheet(L"pushButtonNineSlice"));
-			editorPushButton->setFont(TextureManager::instance()->font(L"defaultFont"));
-			editorPushButton->activate();
-
-			pushButtons.push_back(editorPushButton);
-		}	
-	}
+	spk::PushButton editorPushButton = spk::PushButton(L"Editor push button", win->widget());
+	editorPushButton.subscribe([&](){spk::cout << "Button clicked" << std::endl;}).relinquish();
+	editorPushButton.setLayer(100);
+	editorPushButton.setCornerSize(4);
+	editorPushButton.setText(L">");
+	editorPushButton.setTextSize({20, 4});
+	editorPushButton.setTextColor(spk::Color::white, spk::Color::black);
+	editorPushButton.setTextAlignment(spk::HorizontalAlignment::Centered, spk::VerticalAlignment::Centered);
+	editorPushButton.setGeometry({0, 100}, {50, 50});
+	editorPushButton.setPressedOffset(2);
+	editorPushButton.setSpriteSheet(TextureManager::instance()->spriteSheet(L"pushButtonNineSlice"));
+	editorPushButton.setFont(TextureManager::instance()->font(L"defaultFont"));
+	editorPushButton.activate();
 
 
 	return (app.run());

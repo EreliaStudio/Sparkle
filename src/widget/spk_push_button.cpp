@@ -230,83 +230,11 @@ namespace spk
 		_pressedRenderer.validate();
 
 		_releasedFontRenderer.clear();
-		spk::Vector2Int textAnchor = geometry().anchor + _releasedFontRenderer.computeTextAnchor(_releasedText, _releasedHorizontalAlignment, _releasedVerticalAlignment);
-		switch (_releasedHorizontalAlignment)
-		{
-			case spk::HorizontalAlignment::Left:
-			{
-				textAnchor.x += 0;
-				break;
-			}
-			case spk::HorizontalAlignment::Centered:
-			{
-				textAnchor.x += geometry().size.x / 2;
-				break;
-			}
-			case spk::HorizontalAlignment::Right:
-			{
-				textAnchor.x += geometry().size.x;
-				break;
-			}
-		}
-		switch (_releasedVerticalAlignment)
-		{
-			case spk::VerticalAlignment::Top:
-			{
-				textAnchor.y += 0;
-				break;
-			}
-			case spk::VerticalAlignment::Centered:
-			{
-				textAnchor.y += geometry().size.y / 2;
-				break;
-			}
-			case spk::VerticalAlignment::Down:
-			{
-				textAnchor.y += geometry().size.y;
-				break;
-			}
-		}
+		spk::Vector2Int textAnchor = _releasedFontRenderer.computeTextAnchor(geometry(), _releasedText, _releasedHorizontalAlignment, _releasedVerticalAlignment);
 		_releasedFontRenderer.prepare(_releasedText, textAnchor, layer() + 0.01f);
 		_releasedFontRenderer.validate();
 
-		textAnchor = geometry().anchor + _pressedFontRenderer.computeTextAnchor(_pressedText, _pressedHorizontalAlignment, _pressedVerticalAlignment);
-		switch (_pressedHorizontalAlignment)
-		{
-			case spk::HorizontalAlignment::Left:
-			{
-				textAnchor.x += 0;
-				break;
-			}
-			case spk::HorizontalAlignment::Centered:
-			{
-				textAnchor.x += geometry().size.x / 2;
-				break;
-			}
-			case spk::HorizontalAlignment::Right:
-			{
-				textAnchor.x += geometry().size.x;
-				break;
-			}
-		}
-		switch (_pressedVerticalAlignment)
-		{
-			case spk::VerticalAlignment::Top:
-			{
-				textAnchor.y += 0;
-				break;
-			}
-			case spk::VerticalAlignment::Centered:
-			{
-				textAnchor.y += geometry().size.y / 2;
-				break;
-			}
-			case spk::VerticalAlignment::Down:
-			{
-				textAnchor.y += geometry().size.y;
-				break;
-			}
-		}
+		textAnchor = _pressedFontRenderer.computeTextAnchor(geometry(), _pressedText, _pressedHorizontalAlignment, _pressedVerticalAlignment);
 		_pressedFontRenderer.clear();
 		_pressedFontRenderer.prepare(_pressedText, textAnchor, layer() + 0.01f);
 		_pressedFontRenderer.validate();
