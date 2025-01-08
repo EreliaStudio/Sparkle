@@ -7,6 +7,8 @@
 
 #include "utils/spk_file_utils.hpp"
 
+#include "structure/spk_iostream.hpp"
+
 namespace spk
 {
 	std::vector<std::pair<int, int>> UnicodeBlocks = {
@@ -150,6 +152,8 @@ namespace spk
 		Vector2Int glyphPosition = _computeGlyphPosition(glyph.size);
 
 		_applyGlyphPixel(glyphBitmap, glyphPosition, glyph.size);
+
+		glyph.baselineOffset = spk::Vector2Int(xOffset, yOffset);
 
 		glyph.positions[0] = Vector2Int(0, yOffset);
 		glyph.positions[1] = Vector2Int(0, yOffset + height);

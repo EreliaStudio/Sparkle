@@ -26,7 +26,6 @@ namespace spk
             spk::Vector2 uv;
         };
 
-    private:
         static inline spk::OpenGL::Program* _program;
         spk::OpenGL::BufferSet _bufferSet;
         spk::OpenGL::SamplerObject _samplerObject;
@@ -62,6 +61,7 @@ namespace spk
 
         void clear();
 
+		spk::Vector2Int computeTextBaselineOffset(const std::wstring& p_text);
 		spk::Vector2UInt computeTextSize(const std::wstring& p_text);
 		void prepare(const std::wstring& p_text, const spk::Vector2Int& anchor, float layer);
 

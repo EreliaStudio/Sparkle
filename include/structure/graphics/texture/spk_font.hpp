@@ -20,6 +20,7 @@ namespace spk
 			Vector2Int positions[4];
 			Vector2 UVs[4];
 			Vector2Int step;
+			Vector2Int baselineOffset;
 			Vector2UInt size;
 			static inline std::vector<unsigned int> indexesOrder = { 0, 1, 2, 2, 1, 3 };
 
@@ -128,6 +129,7 @@ namespace spk
 			Vector2UInt computeCharSize(const wchar_t& p_char);
 
 			Vector2UInt computeStringSize(const std::wstring& p_string);
+			Vector2Int computeStringBaselineOffset(const std::wstring& p_string);
 		};
 
 	private:
@@ -140,9 +142,10 @@ namespace spk
 	public:
 		Font(const std::filesystem::path& p_path);
 
-		Vector2UInt computeCharSize(const wchar_t& p_char, size_t p_size, size_t p_outlineSize);
+		Vector2UInt computeCharSize(const wchar_t& p_char, const Font::Size& p_size);
 
-		Vector2UInt computeStringSize(const std::wstring& p_string, size_t p_size, size_t p_outlineSize);
+		Vector2UInt computeStringSize(const std::wstring& p_string, const Font::Size& p_size);
+		Vector2Int computeStringBaselineOffset(const std::wstring& p_string, const Font::Size& p_size);
 
 		Size computeOptimalTextSize(const std::wstring& p_string, float p_outlineSizeRatio, const Vector2UInt& p_textArea);
 

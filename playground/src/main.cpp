@@ -41,7 +41,7 @@ int main()
 	editorPushButton.subscribe([&](){spk::cout << "Button clicked" << std::endl;}).relinquish();
 	editorPushButton.setLayer(100);
 	editorPushButton.setCornerSize(4);
-	editorPushButton.setText(L"ABCDEFG");
+	editorPushButton.setText(L"Click me", L"Clicked");
 	editorPushButton.setTextSize({20, 4});
 	editorPushButton.setTextColor(spk::Color::white, spk::Color::black);
 	editorPushButton.setGeometry({300, 300}, {50, 50});

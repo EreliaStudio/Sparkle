@@ -158,13 +158,22 @@ namespace spk
 		_bufferSet.indexes().clear();
 	}
 
+	spk::Vector2Int FontRenderer::computeTextBaselineOffset(const std::wstring& p_text)
+	{
+		if (_font == nullptr)
+		{
+			throw std::runtime_error("Font not defined in font renderer");
+		}
+		return (_font->computeStringBaselineOffset(p_text, _fontSize));
+	}
+
 	spk::Vector2UInt FontRenderer::computeTextSize(const std::wstring& p_text)
 	{
 		if (_font == nullptr)
 		{
 			throw std::runtime_error("Font not defined in font renderer");
 		}
-		return (_font->computeStringSize(p_text, _fontSize.text, _fontSize.outline));
+		return (_font->computeStringSize(p_text, _fontSize));
 	}
 
 	void FontRenderer::prepare(const std::wstring &text, const spk::Vector2Int &anchor, float layer)

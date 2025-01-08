@@ -1,5 +1,7 @@
 #include "structure/graphics/texture/spk_font.hpp"
 
+#include "structure/spk_iostream.hpp"
+
 namespace spk
 {
 	void Font::Glyph::rescale(const Vector2& p_scaleRatio)
@@ -138,14 +140,33 @@ namespace spk
 		return Vector2UInt(totalWidth, totalHeight);
 	}
 
-	Vector2UInt Font::computeCharSize(const wchar_t& p_char, size_t p_size, size_t p_outlineSize)
+	Vector2Int Font::Atlas::computeStringBaselineOffset(const std::wstring& p_string)
 	{
-		return (atlas(Font::Size(p_size, p_outlineSize)).computeCharSize(p_char));
+		int baselineResult = 0;
+
+		for (size_t i = 0; i < p_string.size(); i++)
+		{
+			const Glyph& glyph = operator[](p_string[i]);
+
+			baselineResult = std::min(baselineResult, glyph.baselineOffset.y);
+		}
+
+		return Vector2Int(0, baselineResult);
 	}
 
-	Vector2UInt Font::computeStringSize(const std::wstring& p_string, size_t p_size, size_t p_outlineSize)
+	Vector2UInt Font::computeCharSize(const wchar_t& p_char, const Font::Size& p_size)
 	{
-		return (atlas(Font::Size(p_size, p_outlineSize)).computeStringSize(p_string));
+		return (atlas(p_size).computeCharSize(p_char));
+	}
+
+	Vector2UInt Font::computeStringSize(const std::wstring& p_string, const Font::Size& p_size)
+	{
+		return (atlas(p_size).computeStringSize(p_string));
+	}
+
+	Vector2Int Font::computeStringBaselineOffset(const std::wstring& p_string, const Font::Size& p_size)
+	{
+		return (atlas(p_size).computeStringBaselineOffset(p_string));
 	}
 
 	Font::Size Font::computeOptimalTextSize(const std::wstring& p_string, float p_outlineSizeRatio, const Vector2UInt& p_textArea)
@@ -174,7 +195,7 @@ namespace spk
 				size_t outlineSize = static_cast<size_t>(textSize * p_outlineSizeRatio);
 				textSize -= outlineSize * 2;
 
-				Vector2UInt tmp_size = computeStringSize(p_string, textSize, outlineSize);
+				Vector2UInt tmp_size = computeStringSize(p_string, {textSize, outlineSize});
 
 				if (tmp_size.x >= p_textArea.x || tmp_size.y >= p_textArea.y)
 				{

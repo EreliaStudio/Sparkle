@@ -190,19 +190,22 @@ namespace spk
             _releasedFontRenderer.render();
             _releasedRenderer.render();
         }
+
+		_colorRenderer.render();
     }
 
     void PushButton::_onGeometryChange()
     {
 		spk::Vector2Int textSize = _releasedFontRenderer.computeTextSize(_releasedText);
-		spk::cout << "Text size : " << textSize << std::endl;
+		spk::Vector2Int textBaselineOffset = _releasedFontRenderer.computeTextBaselineOffset(_releasedText);
 		_releasedFontRenderer.clear();
-		_releasedFontRenderer.prepare(_releasedText, geometry().anchor + geometry().size / 2 - spk::Vector2(textSize.x / 2, 0), layer() + 0.01f);
+		_releasedFontRenderer.prepare(_releasedText, geometry().anchor - textBaselineOffset + geometry().size / 2 - textSize / 2, layer() + 0.01f);
 		_releasedFontRenderer.validate();
 
 		textSize = _pressedFontRenderer.computeTextSize(_pressedText);
+		textBaselineOffset = _releasedFontRenderer.computeTextBaselineOffset(_pressedText);
 		_pressedFontRenderer.clear();
-		_pressedFontRenderer.prepare(_pressedText, geometry().anchor + geometry().size / 2 - spk::Vector2(textSize.x / 2, 0), layer() + 0.01f);
+		_pressedFontRenderer.prepare(_pressedText, geometry().anchor - textBaselineOffset + geometry().size / 2 - textSize / 2, layer() + 0.01f);
 		_pressedFontRenderer.validate();
 
         _releasedRenderer.clear();

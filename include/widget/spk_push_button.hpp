@@ -14,6 +14,7 @@
 
 #include "structure/graphics/renderer/spk_nine_slice_renderer.hpp"
 #include "structure/graphics/renderer/spk_font_renderer.hpp"
+#include "structure/graphics/renderer/spk_color_renderer.hpp"
 #include "structure/graphics/texture/spk_sprite_sheet.hpp"
 #include "structure/math/spk_vector2.hpp"
 
@@ -30,6 +31,8 @@ namespace spk
         bool _isPressed;
 		
 		ContractProvider _onClickProvider;
+
+		ColorRenderer _colorRenderer;
 
 		FontRenderer _releasedFontRenderer;
 		FontRenderer _pressedFontRenderer;
