@@ -127,5 +127,6 @@ void WorldManager::onPaintEvent(spk::PaintEvent& p_event)
 			chunk->deactivate();
 		}
 		_activeChunkList.clear();
+		EventCenter::instance()->notifyEvent(Event::UpdateChunkVisibility);
 	}
 }

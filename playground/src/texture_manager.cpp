@@ -7,7 +7,7 @@ TextureManager::TextureManager()
 	loadSpriteSheet(L"chunkSpriteSheet", L"playground/resources/test.png", spk::Vector2UInt(2, 2));
 	loadSpriteSheet(L"frameTexture", L"playground/resources/nineSlice.png", spk::Vector2UInt(3, 3));
 	loadSpriteSheet(L"pushButtonNineSlice", L"playground/resources/pushButton.png", spk::Vector2UInt(3, 3));
-	loadFont(L"defaultFont", "playground/resources/upheavtt.ttf");
+	loadFont(L"defaultFont", "playground/resources/arial.ttf");
 }
 
 spk::SafePointer<spk::Image> TextureManager::loadImage(const std::wstring& p_name, const std::filesystem::path& p_imagePath)

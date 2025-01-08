@@ -32,8 +32,6 @@ namespace spk
 		
 		ContractProvider _onClickProvider;
 
-		ColorRenderer _colorRenderer;
-
 		FontRenderer _releasedFontRenderer;
 		FontRenderer _pressedFontRenderer;
         NineSliceRenderer _releasedRenderer;
@@ -46,6 +44,12 @@ namespace spk
 
 		std::wstring _releasedText;
 		std::wstring _pressedText;
+
+		spk::VerticalAlignment _releasedVerticalAlignment;
+		spk::VerticalAlignment _pressedVerticalAlignment;
+
+		spk::HorizontalAlignment _releasedHorizontalAlignment;
+		spk::HorizontalAlignment _pressedHorizontalAlignment;
 
     private:
         virtual void _onGeometryChange() override;
@@ -68,6 +72,11 @@ namespace spk
 		void setTextColor(
 			const spk::Color& p_releasedGlyphColor, const spk::Color& p_releasedOutlineColor,
 			const spk::Color& p_pressedGlyphColor, const spk::Color& p_pressedOutlineColor
+		);
+		void setTextAlignment(const spk::HorizontalAlignment& p_horizontalAlignment, const spk::VerticalAlignment& p_verticalAlignment);
+		void setTextAlignment(
+			const spk::HorizontalAlignment& p_releasedHorizontalAlignment, const spk::VerticalAlignment& p_releasedVerticalAlignment, 
+			const spk::HorizontalAlignment& p_pressedHorizontalAlignment, const spk::VerticalAlignment& p_pressedVerticalAlignment
 		);
 
 		void setCornerSize(const spk::Vector2Int& p_cornerSize);

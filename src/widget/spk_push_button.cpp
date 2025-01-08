@@ -72,6 +72,27 @@ namespace spk
 		_pressedFontRenderer.setOutlineColor(p_outlineColor);
 	}
 
+	void PushButton::setTextAlignment(const spk::HorizontalAlignment& p_horizontalAlignment, const spk::VerticalAlignment& p_verticalAlignment)
+	{
+		_releasedHorizontalAlignment = p_horizontalAlignment;
+		_releasedVerticalAlignment = p_verticalAlignment;
+		_pressedHorizontalAlignment = p_horizontalAlignment;
+		_pressedVerticalAlignment = p_verticalAlignment;
+		requireGeometryUpdate();
+	}
+	
+	void PushButton::setTextAlignment(
+		const spk::HorizontalAlignment& p_releasedHorizontalAlignment, const spk::VerticalAlignment& p_releasedVerticalAlignment, 
+		const spk::HorizontalAlignment& p_pressedHorizontalAlignment, const spk::VerticalAlignment& p_pressedVerticalAlignment
+	)
+	{
+		_releasedHorizontalAlignment = p_releasedHorizontalAlignment;
+		_releasedVerticalAlignment = p_releasedVerticalAlignment;
+		_pressedHorizontalAlignment = p_pressedHorizontalAlignment;
+		_pressedVerticalAlignment = p_pressedVerticalAlignment;
+		requireGeometryUpdate();
+	}
+
 	void PushButton::setTextColor(
 			const spk::Color& p_releasedGlyphColor, const spk::Color& p_releasedOutlineColor,
 			const spk::Color& p_pressedGlyphColor, const spk::Color& p_pressedOutlineColor
@@ -182,32 +203,18 @@ namespace spk
     {
         if (_isPressed == true)
         {
-            _pressedFontRenderer.render();
             _pressedRenderer.render();
+            _pressedFontRenderer.render();
         }
         else
         {
-            _releasedFontRenderer.render();
             _releasedRenderer.render();
+            _releasedFontRenderer.render();
         }
-
-		_colorRenderer.render();
     }
 
     void PushButton::_onGeometryChange()
     {
-		spk::Vector2Int textSize = _releasedFontRenderer.computeTextSize(_releasedText);
-		spk::Vector2Int textBaselineOffset = _releasedFontRenderer.computeTextBaselineOffset(_releasedText);
-		_releasedFontRenderer.clear();
-		_releasedFontRenderer.prepare(_releasedText, geometry().anchor - textBaselineOffset + geometry().size / 2 - textSize / 2, layer() + 0.01f);
-		_releasedFontRenderer.validate();
-
-		textSize = _pressedFontRenderer.computeTextSize(_pressedText);
-		textBaselineOffset = _releasedFontRenderer.computeTextBaselineOffset(_pressedText);
-		_pressedFontRenderer.clear();
-		_pressedFontRenderer.prepare(_pressedText, geometry().anchor - textBaselineOffset + geometry().size / 2 - textSize / 2, layer() + 0.01f);
-		_pressedFontRenderer.validate();
-
         _releasedRenderer.clear();
         _releasedRenderer.prepare(geometry(), layer(), _releasedCornerSize);
         _releasedRenderer.validate();
@@ -221,5 +228,87 @@ namespace spk
 		_pressedRenderer.clear();
 		_pressedRenderer.prepare(pressedGeometry, layer(), _pressedCornerSize);
 		_pressedRenderer.validate();
+
+		_releasedFontRenderer.clear();
+		spk::Vector2Int textAnchor = geometry().anchor + _releasedFontRenderer.computeTextAnchor(_releasedText, _releasedHorizontalAlignment, _releasedVerticalAlignment);
+		switch (_releasedHorizontalAlignment)
+		{
+			case spk::HorizontalAlignment::Left:
+			{
+				textAnchor.x += 0;
+				break;
+			}
+			case spk::HorizontalAlignment::Centered:
+			{
+				textAnchor.x += geometry().size.x / 2;
+				break;
+			}
+			case spk::HorizontalAlignment::Right:
+			{
+				textAnchor.x += geometry().size.x;
+				break;
+			}
+		}
+		switch (_releasedVerticalAlignment)
+		{
+			case spk::VerticalAlignment::Top:
+			{
+				textAnchor.y += 0;
+				break;
+			}
+			case spk::VerticalAlignment::Centered:
+			{
+				textAnchor.y += geometry().size.y / 2;
+				break;
+			}
+			case spk::VerticalAlignment::Down:
+			{
+				textAnchor.y += geometry().size.y;
+				break;
+			}
+		}
+		_releasedFontRenderer.prepare(_releasedText, textAnchor, layer() + 0.01f);
+		_releasedFontRenderer.validate();
+
+		textAnchor = geometry().anchor + _pressedFontRenderer.computeTextAnchor(_pressedText, _pressedHorizontalAlignment, _pressedVerticalAlignment);
+		switch (_pressedHorizontalAlignment)
+		{
+			case spk::HorizontalAlignment::Left:
+			{
+				textAnchor.x += 0;
+				break;
+			}
+			case spk::HorizontalAlignment::Centered:
+			{
+				textAnchor.x += geometry().size.x / 2;
+				break;
+			}
+			case spk::HorizontalAlignment::Right:
+			{
+				textAnchor.x += geometry().size.x;
+				break;
+			}
+		}
+		switch (_pressedVerticalAlignment)
+		{
+			case spk::VerticalAlignment::Top:
+			{
+				textAnchor.y += 0;
+				break;
+			}
+			case spk::VerticalAlignment::Centered:
+			{
+				textAnchor.y += geometry().size.y / 2;
+				break;
+			}
+			case spk::VerticalAlignment::Down:
+			{
+				textAnchor.y += geometry().size.y;
+				break;
+			}
+		}
+		_pressedFontRenderer.clear();
+		_pressedFontRenderer.prepare(_pressedText, textAnchor, layer() + 0.01f);
+		_pressedFontRenderer.validate();
     }
 }

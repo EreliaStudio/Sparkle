@@ -142,16 +142,81 @@ namespace spk
 
 	Vector2Int Font::Atlas::computeStringBaselineOffset(const std::wstring& p_string)
 	{
-		int baselineResult = 0;
+		Vector2Int baselineResult = 0;
 
 		for (size_t i = 0; i < p_string.size(); i++)
 		{
 			const Glyph& glyph = operator[](p_string[i]);
 
-			baselineResult = std::min(baselineResult, glyph.baselineOffset.y);
+			if (i == 0)
+			{
+				baselineResult.x = glyph.baselineOffset.x;
+			}
+			baselineResult.y = std::min(baselineResult.y, glyph.baselineOffset.y);
 		}
 
-		return Vector2Int(0, baselineResult);
+		return (baselineResult);
+	}
+	
+	Vector2Int Font::Atlas::computeStringAnchor(const std::wstring& p_string, spk::HorizontalAlignment p_horizontalAlignment, spk::VerticalAlignment p_verticalAlignment)
+	{
+		spk::Vector2Int result;
+
+		switch (p_horizontalAlignment)
+		{
+			case HorizontalAlignment::Left:
+			{
+				spk::Vector2Int stringBaseline = computeStringBaselineOffset(p_string);
+
+				result.x = -(stringBaseline.x);
+				break;
+			}
+			case HorizontalAlignment::Centered:
+			{
+				spk::Vector2Int stringSize = computeStringSize(p_string);
+				spk::Vector2Int stringBaseline = computeStringBaselineOffset(p_string);
+
+				result.x = -(stringBaseline.x) - stringSize.x / 2;
+				break;
+			}
+			case HorizontalAlignment::Right:
+			{
+				spk::Vector2Int stringSize = computeStringSize(p_string);
+				spk::Vector2Int stringBaseline = computeStringBaselineOffset(p_string);
+
+				result.x = -(stringBaseline.x) - stringSize.x;
+				break;
+			}
+		}
+
+		switch (p_verticalAlignment)
+		{
+			case VerticalAlignment::Top:
+			{
+				spk::Vector2Int stringBaseline = computeStringBaselineOffset(p_string);
+
+				result.y = -(stringBaseline.y);
+				break;
+			}
+			case VerticalAlignment::Centered:
+			{
+				spk::Vector2Int stringSize = computeStringSize(p_string);
+				spk::Vector2Int stringBaseline = computeStringBaselineOffset(p_string);
+
+				result.y = -(stringBaseline.y) - stringSize.y / 2;
+				break; 
+			}
+			case VerticalAlignment::Down:
+			{
+				spk::Vector2Int stringSize = computeStringSize(p_string);
+				spk::Vector2Int stringBaseline = computeStringBaselineOffset(p_string);
+
+				result.y = -(stringBaseline.y) - stringSize.y;
+				break;
+			}
+		}
+
+		return (result);
 	}
 
 	Vector2UInt Font::computeCharSize(const wchar_t& p_char, const Font::Size& p_size)
@@ -167,6 +232,11 @@ namespace spk
 	Vector2Int Font::computeStringBaselineOffset(const std::wstring& p_string, const Font::Size& p_size)
 	{
 		return (atlas(p_size).computeStringBaselineOffset(p_string));
+	}
+
+	Vector2Int Font::computeStringAnchor(const std::wstring& p_string, const Font::Size& p_size, spk::HorizontalAlignment p_horizontalAlignment, spk::VerticalAlignment p_verticalAlignment)
+	{
+		return (atlas(p_size).computeStringAnchor(p_string, p_horizontalAlignment, p_verticalAlignment));
 	}
 
 	Font::Size Font::computeOptimalTextSize(const std::wstring& p_string, float p_outlineSizeRatio, const Vector2UInt& p_textArea)

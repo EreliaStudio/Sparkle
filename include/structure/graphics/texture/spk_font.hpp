@@ -8,6 +8,8 @@
 #include "structure/graphics/opengl/spk_texture_object.hpp"
 #include "external_libraries/stb_truetype.h"
 
+#include "structure/graphics/spk_text_alignment.hpp"
+
 namespace spk
 {
 	class Font
@@ -130,6 +132,8 @@ namespace spk
 
 			Vector2UInt computeStringSize(const std::wstring& p_string);
 			Vector2Int computeStringBaselineOffset(const std::wstring& p_string);
+			Vector2Int computeStringAnchor(const std::wstring& p_string, spk::HorizontalAlignment p_horizontalAlignment, spk::VerticalAlignment p_verticalAlignment);
+
 		};
 
 	private:
@@ -146,6 +150,7 @@ namespace spk
 
 		Vector2UInt computeStringSize(const std::wstring& p_string, const Font::Size& p_size);
 		Vector2Int computeStringBaselineOffset(const std::wstring& p_string, const Font::Size& p_size);
+		Vector2Int computeStringAnchor(const std::wstring& p_string, const Font::Size& p_size, spk::HorizontalAlignment p_horizontalAlignment, spk::VerticalAlignment p_verticalAlignment);
 
 		Size computeOptimalTextSize(const std::wstring& p_string, float p_outlineSizeRatio, const Vector2UInt& p_textArea);
 
