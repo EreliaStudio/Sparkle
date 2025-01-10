@@ -2,15 +2,17 @@
 
 #include "structure/graphics/spk_geometry_2D.hpp"
 #include "structure/math/spk_matrix.hpp"
+#include "structure/spk_safe_pointer.hpp"
 
 namespace spk
 {
 	class Viewport
 	{
 	private:
-		static inline float _maxLayer = 10000;
-		static inline Matrix4x4 _matrix = spk::Matrix4x4();
-		static inline spk::Vector2 _convertionOffset;
+		static float _maxLayer;
+		static Matrix4x4 _matrix;
+		static spk::Vector2 _convertionOffset;
+		static spk::Vector2UInt _windowSize;
 		
 		Geometry2D _geometry;
 
@@ -22,6 +24,7 @@ namespace spk
 		void setGeometry(const Geometry2D& p_geometry);
 
 		void apply() const;
+		void setAsRootViewport() const;
 		static spk::Matrix4x4 matrix();
 		static spk::Vector2 convertScreenToOpenGL(const spk::Vector2Int p_screenPosition);
 		static spk::Vector2 convertScreenToOpenGL(int p_screenPositionX, int p_screenPositionY);

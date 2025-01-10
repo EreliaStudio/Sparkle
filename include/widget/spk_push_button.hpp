@@ -34,6 +34,8 @@ namespace spk
 
 		FontRenderer _releasedFontRenderer;
 		FontRenderer _pressedFontRenderer;
+		TextureRenderer _releasedIconRenderer;
+		TextureRenderer _pressedIconRenderer;
         NineSliceRenderer _releasedRenderer;
         NineSliceRenderer _pressedRenderer;
 
@@ -44,6 +46,9 @@ namespace spk
 
 		std::wstring _releasedText;
 		std::wstring _pressedText;
+
+		spk::SpriteSheet::Sprite _releasedSprite;
+		spk::SpriteSheet::Sprite _pressedSprite;
 
 		spk::VerticalAlignment _releasedVerticalAlignment;
 		spk::VerticalAlignment _pressedVerticalAlignment;
@@ -59,6 +64,7 @@ namespace spk
 
     public:
         PushButton(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent);
+		~PushButton() = default;
 
 		ContractProvider::Contract subscribe(const ContractProvider::Job& p_job);
 
@@ -78,6 +84,11 @@ namespace spk
 			const spk::HorizontalAlignment& p_releasedHorizontalAlignment, const spk::VerticalAlignment& p_releasedVerticalAlignment, 
 			const spk::HorizontalAlignment& p_pressedHorizontalAlignment, const spk::VerticalAlignment& p_pressedVerticalAlignment
 		);
+
+		void setIconset(spk::SafePointer<spk::SpriteSheet> p_iconset);
+		void setIconset(spk::SafePointer<spk::SpriteSheet> p_pressedIconset, spk::SafePointer<spk::SpriteSheet> p_releasedIconset);
+		void setSprite(const spk::SpriteSheet::Sprite& p_sprite);
+		void setSprite(const spk::SpriteSheet::Sprite& p_pressedSprite, const spk::SpriteSheet::Sprite& p_releasedSprite);
 
 		void setCornerSize(const spk::Vector2Int& p_cornerSize);
 		void setCornerSize(const spk::Vector2Int& p_releasedCornerSize, const spk::Vector2Int& p_pressedCornerSize);

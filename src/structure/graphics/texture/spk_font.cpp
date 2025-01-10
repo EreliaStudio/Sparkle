@@ -2,6 +2,8 @@
 
 #include "structure/spk_iostream.hpp"
 
+#include "spk_debug_macro.hpp"
+
 namespace spk
 {
 	void Font::Glyph::rescale(const Vector2& p_scaleRatio)
@@ -152,7 +154,7 @@ namespace spk
 			{
 				baselineResult.x = glyph.baselineOffset.x;
 			}
-			baselineResult.y = std::min(baselineResult.y, glyph.baselineOffset.y);
+			baselineResult.y = std::max(baselineResult.y, glyph.baselineOffset.y);
 		}
 
 		return (baselineResult);
@@ -168,7 +170,7 @@ namespace spk
 			{
 				spk::Vector2Int stringBaseline = computeStringBaselineOffset(p_string);
 
-				result.x += -(stringBaseline.x);
+				result.x += stringBaseline.x;
 				break;
 			}
 			case HorizontalAlignment::Centered:
@@ -176,7 +178,7 @@ namespace spk
 				spk::Vector2Int stringSize = computeStringSize(p_string);
 				spk::Vector2Int stringBaseline = computeStringBaselineOffset(p_string);
 
-				result.x += p_geometry.size.x / 2 -(stringBaseline.x) - stringSize.x / 2;
+				result.x += p_geometry.size.x / 2 + (stringBaseline.x) - stringSize.x / 2;
 				break;
 			}
 			case HorizontalAlignment::Right:
@@ -184,7 +186,7 @@ namespace spk
 				spk::Vector2Int stringSize = computeStringSize(p_string);
 				spk::Vector2Int stringBaseline = computeStringBaselineOffset(p_string);
 
-				result.x += p_geometry.size.x -(stringBaseline.x) - stringSize.x;
+				result.x += p_geometry.size.x + stringBaseline.x - stringSize.x;
 				break;
 			}
 		}
@@ -195,7 +197,7 @@ namespace spk
 			{
 				spk::Vector2Int stringBaseline = computeStringBaselineOffset(p_string);
 
-				result.y += -(stringBaseline.y);
+				result.y += stringBaseline.y;
 				break;
 			}
 			case VerticalAlignment::Centered:
@@ -203,7 +205,7 @@ namespace spk
 				spk::Vector2Int stringSize = computeStringSize(p_string);
 				spk::Vector2Int stringBaseline = computeStringBaselineOffset(p_string);
 
-				result.y += p_geometry.size.y / 2 -(stringBaseline.y) - stringSize.y / 2;
+				result.y += p_geometry.size.y / 2 + (stringBaseline.y) - stringSize.y / 2;
 				break; 
 			}
 			case VerticalAlignment::Down:
@@ -211,7 +213,7 @@ namespace spk
 				spk::Vector2Int stringSize = computeStringSize(p_string);
 				spk::Vector2Int stringBaseline = computeStringBaselineOffset(p_string);
 
-				result.y += p_geometry.size.y -(stringBaseline.y) - stringSize.y;
+				result.y += p_geometry.size.y + (stringBaseline.y) - stringSize.y;
 				break;
 			}
 		}
@@ -288,7 +290,7 @@ namespace spk
 	{
 		if (_atlases.find(p_size) == _atlases.end())
 		{
-			_atlases.emplace(p_size, Atlas(_fontInfo, _fontData, p_size.text, p_size.outline));
+			_atlases.emplace(p_size, std::move(Atlas(_fontInfo, _fontData, p_size.text, p_size.outline)));
 		}
 		return _atlases.at(p_size);
 	}

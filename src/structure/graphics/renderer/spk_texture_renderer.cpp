@@ -102,6 +102,9 @@ namespace spk
 
 	void TextureRenderer::render()
 	{
+		if (_samplerObject.texture() == nullptr)
+			return;
+
 		_program->activate();
 		_bufferSet.activate();
 		_samplerObject.activate();

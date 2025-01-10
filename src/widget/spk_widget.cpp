@@ -175,15 +175,14 @@ namespace spk
 		if (parent() != nullptr)
 		{
 			topLeft = Geometry2D::Point::max(topLeft, static_cast<const Widget*>(parent())->viewport().geometry().anchor);
-		}
 
-		if (parent() != nullptr)
-		{
-			spk::Geometry2D::Size tmpSize = static_cast<const Widget*>(parent())->geometry().size;
-			spk::Geometry2D::Size tmpAnchor = { static_cast<const Widget*>(parent())->geometry().x, static_cast<const Widget*>(parent())->geometry().y };
-			rightDown = Geometry2D::Size::min(rightDown, tmpSize + tmpAnchor);
+			if (parent()->viewport().geometry().contains(topLeft) == false)
+			{
+				spk::Geometry2D::Size tmpSize = static_cast<const Widget*>(parent())->geometry().size;
+				spk::Geometry2D::Size tmpAnchor = { static_cast<const Widget*>(parent())->geometry().x, static_cast<const Widget*>(parent())->geometry().y };
+				rightDown = Geometry2D::Size::min(rightDown, tmpSize + tmpAnchor);
+			}		
 		}
-
 		spk::Geometry2D::Size size = { rightDown.x - topLeft.x, rightDown.y - topLeft.y };
 
 		_viewport.setGeometry({ topLeft, size });

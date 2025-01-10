@@ -81,7 +81,7 @@ namespace spk
 																		 geom.anchor.y + static_cast<int32_t>(geom.size.y)},
 																		layer);
 
-		_bufferSet.layout() << Vertex{{topLeft.x, bottomRight.y}, topLeft.z}
+		_bufferSet.layout()	<< Vertex{{topLeft.x, bottomRight.y}, topLeft.z}
 							<< Vertex{{bottomRight.x, bottomRight.y}, topLeft.z}
 							<< Vertex{{topLeft.x, topLeft.y}, topLeft.z}
 							<< Vertex{{bottomRight.x, topLeft.y}, topLeft.z};

@@ -93,6 +93,34 @@ namespace spk
 		requireGeometryUpdate();
 	}
 
+	void PushButton::setIconset(spk::SafePointer<spk::SpriteSheet> p_iconset)
+	{
+		_releasedIconRenderer.setTexture(p_iconset);
+		_pressedIconRenderer.setTexture(p_iconset);
+		requireGeometryUpdate();
+	}
+
+	void PushButton::setIconset(spk::SafePointer<spk::SpriteSheet> p_pressedIconset, spk::SafePointer<spk::SpriteSheet> p_releasedIconset)
+	{
+		_releasedIconRenderer.setTexture(p_pressedIconset);
+		_pressedIconRenderer.setTexture(p_releasedIconset);
+		requireGeometryUpdate();
+	}
+
+	void PushButton::setSprite(const spk::SpriteSheet::Sprite& p_sprite)
+	{
+		_releasedSprite = p_sprite;
+		_pressedSprite = p_sprite;
+		requireGeometryUpdate();
+	}
+
+	void PushButton::setSprite(const spk::SpriteSheet::Sprite& p_pressedSprite, const spk::SpriteSheet::Sprite& p_releasedSprite)
+	{
+		_releasedSprite = p_pressedSprite;
+		_pressedSprite = p_releasedSprite;
+		requireGeometryUpdate();
+	}
+	
 	void PushButton::setTextColor(
 			const spk::Color& p_releasedGlyphColor, const spk::Color& p_releasedOutlineColor,
 			const spk::Color& p_pressedGlyphColor, const spk::Color& p_pressedOutlineColor
@@ -163,7 +191,7 @@ namespace spk
 		{
 			case MouseEvent::Type::Motion:
 			{
-				if (_isPressed == true && geometry().contains(p_event.mouse->position) == false)
+				if (_isPressed == true && viewport().geometry().contains(p_event.mouse->position) == false)
 				{
 					_isPressed = false;
 				}
@@ -173,7 +201,7 @@ namespace spk
 			{
 				if (p_event.button == spk::Mouse::Button::Left)
 				{
-					if (_isPressed == false && geometry().contains(p_event.mouse->position) == true)
+					if (_isPressed == false && viewport().geometry().contains(p_event.mouse->position) == true)
 					{
 						_isPressed = true;
 					}
@@ -205,11 +233,13 @@ namespace spk
         {
             _pressedRenderer.render();
             _pressedFontRenderer.render();
+            _pressedIconRenderer.render();
         }
         else
         {
             _releasedRenderer.render();
             _releasedFontRenderer.render();
+            _releasedIconRenderer.render();
         }
     }
 
@@ -230,13 +260,21 @@ namespace spk
 		_pressedRenderer.validate();
 
 		_releasedFontRenderer.clear();
-		spk::Vector2Int textAnchor = _releasedFontRenderer.computeTextAnchor(geometry(), _releasedText, _releasedHorizontalAlignment, _releasedVerticalAlignment);
+		spk::Vector2Int textAnchor = _releasedFontRenderer.computeTextAnchor(geometry().shrink(_releasedCornerSize), _releasedText, _releasedHorizontalAlignment, _releasedVerticalAlignment);
 		_releasedFontRenderer.prepare(_releasedText, textAnchor, layer() + 0.01f);
 		_releasedFontRenderer.validate();
 
-		textAnchor = _pressedFontRenderer.computeTextAnchor(geometry(), _pressedText, _pressedHorizontalAlignment, _pressedVerticalAlignment);
+		textAnchor = _pressedFontRenderer.computeTextAnchor(geometry().shrink(_pressedCornerSize), _pressedText, _pressedHorizontalAlignment, _pressedVerticalAlignment);
 		_pressedFontRenderer.clear();
 		_pressedFontRenderer.prepare(_pressedText, textAnchor, layer() + 0.01f);
 		_pressedFontRenderer.validate();
+
+		_releasedIconRenderer.clear();
+		_releasedIconRenderer.prepare({geometry().anchor + _releasedCornerSize, geometry().size - _releasedCornerSize * 2}, _releasedSprite, layer() + 0.0001f);
+		_releasedIconRenderer.validate();
+
+		_pressedIconRenderer.clear();
+		_pressedIconRenderer.prepare({geometry().anchor + _pressedCornerSize, geometry().size - _pressedCornerSize * 2}, _pressedSprite, layer() + 0.0001f);
+		_pressedIconRenderer.validate();
     }
 }

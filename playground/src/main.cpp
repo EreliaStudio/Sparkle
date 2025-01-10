@@ -1,5 +1,122 @@
 #include "playground.hpp"
 
+class PushButton : public spk::PushButton
+{
+private:
+
+public:
+	PushButton(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent = nullptr) : 
+		spk::PushButton(p_name, p_parent)
+	{
+		setCornerSize(2);
+		setTextSize({14, 2});
+		setTextColor(spk::Color::white, spk::Color::black);
+		setTextAlignment(spk::HorizontalAlignment::Centered, spk::VerticalAlignment::Centered);
+		setPressedOffset(2);
+		setSpriteSheet(TextureManager::instance()->spriteSheet(L"defaultNineSlice"));
+		setFont(TextureManager::instance()->font(L"defaultFont"));
+	}
+};
+
+class TextLabel : public spk::TextLabel
+{
+private:
+
+public:
+	TextLabel(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent = nullptr) : 
+		spk::TextLabel(p_name, p_parent)
+	{
+		setCornerSize(2);
+		setTextSize({14, 2});
+		setTextColor(spk::Color::white, spk::Color::black);
+		setTextAlignment(spk::HorizontalAlignment::Left, spk::VerticalAlignment::Centered);
+		setSpriteSheet(TextureManager::instance()->spriteSheet(L"defaultNineSlice"));
+		setFont(TextureManager::instance()->font(L"defaultFont"));
+	}
+};
+
+class Frame : public spk::Frame
+{
+private:
+
+public:
+	Frame(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent = nullptr) : 
+		spk::Frame(p_name, p_parent)
+	{
+		setCornerSize(2);
+		setSpriteSheet(TextureManager::instance()->spriteSheet(L"defaultNineSlice"));
+	}
+};
+
+class InterfaceWindow : public spk::Widget
+{
+private:
+	class MenuBar : public spk::Widget
+	{
+		friend class InterfaceWindow;
+
+	private:
+		TextLabel _titleLabel;
+		PushButton _reduceButton;
+		PushButton _maximizeButton;
+		PushButton _closeButton;
+
+		void _onGeometryChange()
+		{
+			spk::Vector2Int controlButtonSize = spk::Vector2Int(geometry().size.y * 3 + 2, geometry().size.y);
+			spk::Vector2Int buttonSize = spk::Vector2Int((controlButtonSize.x - 2) / 3, geometry().size.y);
+
+			_titleLabel.setGeometry 	({0, 0}, {geometry().size.x - controlButtonSize.x - 1, buttonSize.y});
+			_reduceButton.setGeometry	({geometry().size.x - controlButtonSize.x + (buttonSize.x + 1) * 0, 0}, buttonSize);
+			_maximizeButton.setGeometry ({geometry().size.x - controlButtonSize.x + (buttonSize.x + 1) * 1, 0}, buttonSize);
+			_closeButton.setGeometry	({geometry().size.x - controlButtonSize.x + (buttonSize.x + 1) * 2, 0}, buttonSize);
+		}
+
+	public:
+		MenuBar(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent) :
+			spk::Widget(p_name + L" - Menu bar", p_parent),
+			_titleLabel(p_name + L" - Title label", this),
+			_closeButton(p_name + L" - Close button", this),
+			_reduceButton(p_name + L" - Reduce button", this),
+			_maximizeButton(p_name + L" - Maximize button", this)
+		{
+			_titleLabel.setText(p_name);
+			_titleLabel.activate();
+
+			_closeButton.setText(L"X");
+			_closeButton.activate();
+
+			_reduceButton.setText(L"_");
+			_reduceButton.activate();
+
+			_maximizeButton.setText(L"M");
+			_maximizeButton.activate();
+		}
+	};
+
+	MenuBar _menuBar;
+	Frame _backgroundFrame;
+
+	void _onGeometryChange()
+	{
+		spk::Vector2Int menuSize = spk::Vector2Int(geometry().size.x, 20);
+		spk::Vector2Int frameSize = spk::Vector2Int(geometry().size.x, geometry().size.y - menuSize.y);
+
+		_menuBar.setGeometry({0, 0}, menuSize);
+		_backgroundFrame.setGeometry({0, menuSize.y}, frameSize);
+	}
+
+public:
+	InterfaceWindow(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent) :
+		spk::Widget(p_name, p_parent),
+		_menuBar(p_name, this),
+		_backgroundFrame(p_name + L" - Background frame", this)
+	{
+		_menuBar.activate();
+		_backgroundFrame.activate();
+	}
+};
+
 int main()
 {
 	spk::GraphicalApplication app = spk::GraphicalApplication();
@@ -37,20 +154,9 @@ int main()
 	gameEngineWidget.setGameEngine(&engine);
 	gameEngineWidget.activate();
 
-	spk::PushButton editorPushButton = spk::PushButton(L"Editor push button", win->widget());
-	editorPushButton.subscribe([&](){spk::cout << "Button clicked" << std::endl;}).relinquish();
-	editorPushButton.setLayer(100);
-	editorPushButton.setCornerSize(4);
-	editorPushButton.setText(L">");
-	editorPushButton.setTextSize({20, 4});
-	editorPushButton.setTextColor(spk::Color::white, spk::Color::black);
-	editorPushButton.setTextAlignment(spk::HorizontalAlignment::Centered, spk::VerticalAlignment::Centered);
-	editorPushButton.setGeometry({0, 100}, {50, 50});
-	editorPushButton.setPressedOffset(2);
-	editorPushButton.setSpriteSheet(TextureManager::instance()->spriteSheet(L"pushButtonNineSlice"));
-	editorPushButton.setFont(TextureManager::instance()->font(L"defaultFont"));
-	editorPushButton.activate();
-
+	InterfaceWindow window = InterfaceWindow(L"Editor inventory", win->widget());
+	window.setGeometry({100, 100}, win->geometry().size / 2);
+	window.activate();
 
 	return (app.run());
 }

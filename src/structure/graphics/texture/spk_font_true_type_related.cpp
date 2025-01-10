@@ -153,7 +153,7 @@ namespace spk
 
 		_applyGlyphPixel(glyphBitmap, glyphPosition, glyph.size);
 
-		glyph.baselineOffset = spk::Vector2Int(xOffset, yOffset);
+		glyph.baselineOffset = spk::Vector2Int(-xOffset, -yOffset);
 
 		glyph.positions[0] = Vector2Int(xOffset, yOffset);
 		glyph.positions[1] = Vector2Int(xOffset, yOffset + height);
@@ -166,7 +166,7 @@ namespace spk
 		glyph.UVs[3] = Vector2(static_cast<float>(glyphPosition.x + glyph.size.x) / _size.x, static_cast<float>(glyphPosition.y + glyph.size.y) / _size.y);
 
 		glyph.step = Vector2(std::ceil(advance * scale) + _outlineSize, 0);
-		glyph.size = glyph.positions[3] - glyph.positions[0];
+		//glyph.size = glyph.positions[3] - glyph.positions[0];
 
 		_glyphs[p_char] = glyph;
 		

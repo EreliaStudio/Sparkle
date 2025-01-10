@@ -14,7 +14,8 @@ namespace spk
 		spk::FontRenderer _fontRenderer;
 
 		std::wstring _text = L"";
-		spk::Font::Size _textSize = {};
+		spk::VerticalAlignment _verticalAlignment;
+		spk::HorizontalAlignment _horizontalAlignment;
 
 		spk::Vector2UInt _cornerSize;
 
@@ -28,6 +29,7 @@ namespace spk
 		void setText(const std::wstring& p_text);
 		void setTextSize(const spk::Font::Size& p_textSize);
 		void setTextColor(const spk::Color& p_glyphColor, const spk::Color& p_outlineColor);
+		void setTextAlignment(const spk::HorizontalAlignment& p_horizontalAlignment, const spk::VerticalAlignment& p_verticalAlignment);
 
 		void setSpriteSheet(spk::SafePointer<spk::SpriteSheet> p_spriteSheet);
 		void setCornerSize(const spk::Vector2UInt& p_cornerSize);

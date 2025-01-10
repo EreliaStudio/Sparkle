@@ -7,6 +7,11 @@
 
 namespace spk
 {
+	float Viewport::_maxLayer = 10000;
+	Matrix4x4 Viewport::_matrix = spk::Matrix4x4();
+	spk::Vector2 Viewport::_convertionOffset = spk::Vector2UInt(0, 0);
+	spk::Vector2UInt Viewport::_windowSize = spk::Vector2UInt(0, 0);
+	
 	Viewport::Viewport() :
 		_geometry({0, 0}, {1, 1})
 	{
@@ -29,11 +34,16 @@ namespace spk
 		_geometry = p_geometry;
 	}
 
+	void Viewport::setAsRootViewport() const
+	{
+		_windowSize = _geometry.size;
+	}
+
 	void Viewport::apply() const
 	{
 		_convertionOffset = _geometry.size / 2.0f;
 		_matrix = spk::Matrix4x4::ortho(0.0f, static_cast<float>(_geometry.width), static_cast<float>(_geometry.height), 0.0f, -_maxLayer, 0.0f);
-		glViewport(static_cast<GLint>(_geometry.x), static_cast<GLint>(_geometry.y), static_cast<GLsizei>(_geometry.width), static_cast<GLsizei>(_geometry.height));
+		glViewport(static_cast<GLint>(_geometry.x), _windowSize.y - static_cast<GLint>(_geometry.y) - static_cast<GLint>(_geometry.height), static_cast<GLsizei>(_geometry.width), static_cast<GLsizei>(_geometry.height));
 	}
 
 	spk::Matrix4x4 Viewport::matrix()

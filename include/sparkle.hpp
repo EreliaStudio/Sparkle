@@ -89,3 +89,4 @@
 #include "widget/spk_widget.hpp"
 #include "widget/spk_frame.hpp"
 #include "widget/spk_push_button.hpp"
+#include "widget/spk_text_label.hpp"
