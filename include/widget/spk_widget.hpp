@@ -72,6 +72,8 @@ namespace spk
 		const float& layer() const;
 
 		void forceGeometryChange(const Geometry2D& p_geometry);
+		void place(const spk::Vector2Int& p_delta);
+		void move(const spk::Vector2Int& p_delta);
 		void setGeometry(const Geometry2D& p_geometry);
 		void forceGeometryChange(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size);
 		void setGeometry(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size);

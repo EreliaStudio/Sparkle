@@ -97,13 +97,50 @@ private:
 	MenuBar _menuBar;
 	Frame _backgroundFrame;
 
-	void _onGeometryChange()
+	void _onGeometryChange() override
 	{
 		spk::Vector2Int menuSize = spk::Vector2Int(geometry().size.x, 20);
 		spk::Vector2Int frameSize = spk::Vector2Int(geometry().size.x, geometry().size.y - menuSize.y);
 
 		_menuBar.setGeometry({0, 0}, menuSize);
 		_backgroundFrame.setGeometry({0, menuSize.y}, frameSize);
+	}
+
+	bool _isMoving = false;
+	spk::Vector2Int _positionDelta;
+
+	void _onMouseEvent(spk::MouseEvent& p_event) override
+	{
+		switch (p_event.type)
+		{
+		case spk::MouseEvent::Type::Motion:
+		{
+			if (_isMoving == true)
+			{
+				place(p_event.mouse->position - _positionDelta);
+				p_event.requestPaint();
+			}
+			break;
+		}
+		case spk::MouseEvent::Type::Press:
+		{
+			if (p_event.button == spk::Mouse::Button::Left &&
+				_menuBar._titleLabel.viewport().geometry().contains(p_event.mouse->position))
+			{
+				_isMoving = true;
+				_positionDelta = p_event.mouse->position - geometry().anchor;
+			}
+			break;
+		}
+		case spk::MouseEvent::Type::Release:
+		{
+			if (p_event.button == spk::Mouse::Button::Left)
+			{
+				_isMoving = false;
+			}
+			break;
+		}
+		}		
 	}
 
 public:

@@ -93,7 +93,19 @@ namespace spk
 		_computeRatio();
 		updateGeometry();
 	}
-	
+
+	void Widget::place(const spk::Vector2Int& p_delta)
+	{
+		_geometry.anchor = p_delta;
+		requireGeometryUpdate();
+	}
+
+	void Widget::move(const spk::Vector2Int& p_delta)
+	{
+		_geometry.anchor += p_delta;
+		requireGeometryUpdate();
+	}
+
 	void Widget::setGeometry(const Geometry2D& p_geometry)
 	{
 		if (_geometry == p_geometry)

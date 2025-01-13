@@ -124,7 +124,7 @@ namespace spk
 			Wheel
 		};
 		Type type = Type::Unknow;
-		const spk::Mouse* mouse = nullptr;
+		spk::SafePointer<const spk::Mouse> mouse = nullptr;
 		union
 		{
 			spk::Mouse::Button button;
