@@ -466,8 +466,8 @@ namespace spk
 
 	void Window::move(const spk::Geometry2D::Point& p_newPosition)
 	{
-		_viewport.setGeometry({ 0, 0, _viewport.geometry().size });
-		_rootWidget->setGeometry(_viewport.geometry());
+		// _viewport.setGeometry({ 0, 0, _viewport.geometry().size });
+		// _rootWidget->setGeometry(_viewport.geometry());
 	}
 	
 	void Window::resize(const spk::Geometry2D::Size& p_newSize)

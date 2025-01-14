@@ -197,7 +197,8 @@ namespace spk
 		}
 		spk::Geometry2D::Size size = { rightDown.x - topLeft.x, rightDown.y - topLeft.y };
 
-		_viewport.setGeometry({ topLeft, size });
+		//_viewport.setGeometry({ topLeft, size });
+		_viewport.setGeometry({_computeAbsoluteAnchor(), geometry().size});
 	}
 
 	void Widget::onPaintEvent(spk::PaintEvent& p_event)

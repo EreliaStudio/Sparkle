@@ -80,10 +80,13 @@ void ChunkEntity::load()
 			}
 		}
 
-		_chunk.setContent(spk::Vector3Int(3, 3, 1), 3);
-		_chunk.setContent(spk::Vector3Int(6, 3, 1), 3);
-		_chunk.setContent(spk::Vector3Int(3, 6, 1), 3);
-		_chunk.setContent(spk::Vector3Int(6, 6, 1), 3);
+		if (_chunkPosition == spk::Vector2Int(1, 1))
+		{
+			_chunk.setContent(spk::Vector3Int(3, 3, 1), 3);
+			_chunk.setContent(spk::Vector3Int(6, 3, 1), 3);
+			_chunk.setContent(spk::Vector3Int(3, 6, 1), 3);
+			_chunk.setContent(spk::Vector3Int(6, 6, 1), 3);
+		}
 	}
 
 	_chunk.invalidate();

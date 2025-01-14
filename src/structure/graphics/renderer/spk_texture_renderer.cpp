@@ -78,9 +78,9 @@ namespace spk
 																		layer);
 
 		float u1 = section.anchor.x;
-		float v1 = section.anchor.y;
+		float v1 = section.anchor.y + section.size.y;
 		float u2 = section.anchor.x + section.size.x;
-		float v2 = section.anchor.y + section.size.y;
+		float v2 = section.anchor.y;
 
 		_bufferSet.layout()	<< Vertex{{topLeft.x, bottomRight.y}, topLeft.z, {u1, v2}}
 							<< Vertex{{bottomRight.x, bottomRight.y}, topLeft.z, {u2, v2}}

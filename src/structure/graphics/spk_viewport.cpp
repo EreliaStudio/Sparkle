@@ -42,7 +42,10 @@ namespace spk
 	void Viewport::apply() const
 	{
 		_convertionOffset = _geometry.size / 2.0f;
-		_matrix = spk::Matrix4x4::ortho(0.0f, static_cast<float>(_geometry.width), static_cast<float>(_geometry.height), 0.0f, -_maxLayer, 0.0f);
+		_matrix = spk::Matrix4x4::ortho(
+			_geometry.x, static_cast<float>(_geometry.x + _geometry.width),
+			static_cast<float>(_geometry.y + _geometry.height), _geometry.y,
+			-_maxLayer, 0.0f);
 		glViewport(static_cast<GLint>(_geometry.x), _windowSize.y - static_cast<GLint>(_geometry.y) - static_cast<GLint>(_geometry.height), static_cast<GLsizei>(_geometry.width), static_cast<GLsizei>(_geometry.height));
 	}
 

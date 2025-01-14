@@ -143,6 +143,41 @@ private:
 		}		
 	}
 
+	spk::ContractProvider::Contract _closeContract;
+	spk::ContractProvider::Contract _reduceContract;
+
+	void reduceEffect()
+	{
+		if (_isMaximized == true)
+			maximizeEffect();
+
+		if (_backgroundFrame.isActive() == true)
+			_backgroundFrame.deactivate();
+		else
+			_backgroundFrame.activate();
+	}
+
+	spk::ContractProvider::Contract _maximizeContract;
+	bool _isMaximized = false;
+	spk::Geometry2D _previousGeometry;
+
+	void maximizeEffect()
+	{
+		_backgroundFrame.activate();
+		
+		if (_isMaximized == false)
+		{
+			_previousGeometry = geometry();
+			setGeometry({0, 0}, parent()->geometry().size);
+			_isMaximized = true;
+		}
+		else
+		{
+			setGeometry(_previousGeometry);
+			_isMaximized = false;
+		}
+	}
+
 public:
 	InterfaceWindow(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent) :
 		spk::Widget(p_name, p_parent),
@@ -151,6 +186,10 @@ public:
 	{
 		_menuBar.activate();
 		_backgroundFrame.activate();
+
+		_reduceContract = _menuBar._reduceButton.subscribe([&](){reduceEffect();});
+		_maximizeContract = _menuBar._maximizeButton.subscribe([&](){maximizeEffect();});
+		_closeContract = _menuBar._closeButton.subscribe([&](){parent()->removeChild(this);});
 	}
 };
 
@@ -192,7 +231,7 @@ int main()
 	gameEngineWidget.activate();
 
 	InterfaceWindow window = InterfaceWindow(L"Editor inventory", win->widget());
-	window.setGeometry({100, 100}, win->geometry().size / 2);
+	window.setGeometry({-100, 100}, win->geometry().size / 2);
 	window.activate();
 
 	return (app.run());
