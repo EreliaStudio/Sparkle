@@ -2,6 +2,8 @@
 
 #include "structure/graphics/texture/spk_image.hpp"
 
+#include "utils/spk_file_utils.hpp"
+
 namespace spk
 {
     class SpriteSheet : public Image
@@ -14,11 +16,43 @@ namespace spk
         spk::Vector2 _unit;
         std::vector<Sprite> _sprites;
 
+		using Image::loadFromFile;
+		using Image::loadFromData;
+
     public:
+		static SpriteSheet fromRawData(const std::vector<uint8_t>& p_rawData, const spk::Vector2UInt& p_spriteSize,
+			const Filtering& p_filtering = Filtering::Nearest,
+			const Wrap& p_wrap = Wrap::Repeat, const Mipmap& p_mipmap = Mipmap::Disable)
+		{
+			SpriteSheet result;
+
+			result.loadFromData(p_rawData, p_spriteSize);
+			result.setProperties(p_filtering, p_wrap, p_mipmap);
+
+			return (result);
+		}
+
+		SpriteSheet()
+		{
+
+		}
+
         SpriteSheet(const std::filesystem::path& p_path, const spk::Vector2UInt& p_spriteSize) :
-            spk::Image(p_path)
+            spk::Image()
         {
-            if (p_spriteSize == Vector2UInt(0, 0))
+            loadFromFile(p_path, p_spriteSize);
+        }
+
+		void loadFromFile(const std::filesystem::path& p_path, const spk::Vector2UInt& p_spriteSize)
+		{
+			loadFromData(spk::FileUtils::readFileAsBytes(p_path), p_spriteSize);
+		}
+
+		void loadFromData(const std::vector<uint8_t>& p_data, const spk::Vector2UInt& p_spriteSize)
+		{
+			Image::loadFromData(p_data);
+
+			if (p_spriteSize == Vector2UInt(0, 0))
             {
                 throw std::invalid_argument("SpriteSheet can't be created with a null sprite size");
             }
@@ -40,7 +74,7 @@ namespace spk
                     }
                 }
             }
-        }
+		}
 
         const spk::Vector2UInt& nbSprite() const
         {

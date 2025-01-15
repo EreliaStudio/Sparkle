@@ -9,11 +9,14 @@ namespace spk
     PushButton::PushButton(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent) :
 		Widget(p_name, p_parent),
 		_isPressed(false),
-		_pressedOffset(10, 10),
+		_pressedOffset(2, 2),
 		_releasedCornerSize(10, 10),
 		_pressedCornerSize(10, 10)
     {
-
+		setTextColor(spk::Color::white, spk::Color::black);
+		setTextAlignment(spk::HorizontalAlignment::Centered, spk::VerticalAlignment::Centered);
+		setSpriteSheet(Widget::defaultNineSlice());
+		setFont(Widget::defaultFont());
     }
 
 	ContractProvider::Contract PushButton::subscribe(const ContractProvider::Job& p_job)

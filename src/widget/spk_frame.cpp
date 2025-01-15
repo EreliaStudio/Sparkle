@@ -8,7 +8,7 @@ namespace spk
 		Widget(p_name, p_parent),
         _cornerSize(8, 8)
     {
-
+		setSpriteSheet(Widget::defaultNineSlice());
     }
 
     void Frame::setSpriteSheet(const SafePointer<SpriteSheet>& p_spriteSheet)

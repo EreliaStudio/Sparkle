@@ -10,6 +10,9 @@
 
 #include "structure/system/event/spk_event.hpp"
 
+#include "structure/graphics/texture/spk_font.hpp"
+#include "structure/graphics/texture/spk_sprite_sheet.hpp"
+
 namespace spk
 {
 	class Window;
@@ -18,8 +21,13 @@ namespace spk
 		public spk::InherenceObject<Widget>, //An object responsible to hold relationship between "child" objects and a unique parent
 		public spk::ActivableObject //An object who must contain a state as boolean, with a method activate and deactivate. It must also contain a set of callback where users can add callback to activation and deactivation
 	{
+
+
 		friend class Window;
 	private:
+		static spk::Font _defaultFont;
+		static spk::SpriteSheet _defaultNineSlice;
+
 		std::wstring _name;
 		spk::SafePointer<Widget> _parent;
 		std::vector<Widget*> _managedChildren;
@@ -47,6 +55,9 @@ namespace spk
 		void _resize();
 
 	public:
+		static spk::SafePointer<spk::Font> defaultFont();
+		static spk::SafePointer<spk::SpriteSheet> defaultNineSlice();
+
 		Widget(const std::wstring& p_name);
 		Widget(const std::wstring& p_name, spk::SafePointer<Widget> p_parent);
 

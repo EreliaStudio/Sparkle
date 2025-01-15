@@ -23,7 +23,15 @@ namespace spk
 	TextLabel::TextLabel(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent):
 		spk::Widget(p_name, p_parent)
 	{
+		setTextColor(spk::Color::white, spk::Color::black);
+		setTextAlignment(spk::HorizontalAlignment::Left, spk::VerticalAlignment::Centered);
+		setSpriteSheet(Widget::defaultNineSlice());
+		setFont(Widget::defaultFont());
+	}
 
+	const spk::Vector2UInt& TextLabel::cornerSize() const
+	{
+		return (_cornerSize);
 	}
 
 	void TextLabel::setFont(spk::SafePointer<spk::Font> p_font)

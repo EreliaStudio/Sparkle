@@ -61,19 +61,19 @@ namespace spk
 		setData(
 			_pixels.data(),
 			_size,
-			OpenGL::TextureObject::Format::GreyLevel,
-			OpenGL::TextureObject::Filtering::Nearest,
-			OpenGL::TextureObject::Wrap::Repeat,
-			OpenGL::TextureObject::Mipmap::Disable
+			OpenGL::TextureObject::Format::GreyLevel
 		);
 	}
 
-	Font::Atlas::Atlas(const stbtt_fontinfo& p_fontInfo, const Data& p_fontData, const size_t& p_textSize, const size_t& p_outlineSize) :
+	Font::Atlas::Atlas(const stbtt_fontinfo& p_fontInfo, const Data& p_fontData, const size_t& p_textSize, const size_t& p_outlineSize, const Filtering& p_filtering,
+			const Wrap& p_wrap, const Mipmap& p_mipmap) :
 		_textSize(p_textSize), _outlineSize(p_outlineSize), _fontInfo(p_fontInfo)
 	{
 		Font::Glyph spaceGlyph;
 
 		spaceGlyph.step = Vector2Int(p_textSize / 2.0f, 0);
+
+		setProperties(p_filtering, p_wrap, p_mipmap);
 
 		_glyphs[L' '] = spaceGlyph;
 		_resizeData(Vector2UInt(124, 124));
@@ -83,6 +83,7 @@ namespace spk
 		_quadrantSize = _size;
 		_nextGlyphAnchor = _quadrantAnchor;
 		_nextLineAnchor = _quadrantAnchor;
+
 	}
 
 	void Font::Atlas::loadGlyphs(const std::wstring& p_glyphsToLoad)
@@ -109,9 +110,36 @@ namespace spk
 		return _glyphs.at(p_char);
 	}
 
+	Font Font::fromRawData(const std::vector<uint8_t>& p_data, const Filtering& p_filtering, const Wrap& p_wrap, const Mipmap& p_mipmap)
+	{
+		Font result;
+
+		result.loadFromData(p_data);
+		result.setProperties(p_filtering, p_wrap, p_mipmap);
+
+		return (result);
+	}
+
+	Font::Font()
+	{
+
+	}
+
 	Font::Font(const std::filesystem::path& p_path)
 	{
-		_loadFileData(p_path);
+		loadFromFile(p_path);
+	}
+
+	void Font::setProperties(const Filtering& p_filtering, const Wrap& p_wrap, const Mipmap& p_mipmap)
+	{
+		_filtering = p_filtering;
+		_wrap = p_wrap;
+		_mipmap = p_mipmap;
+
+		for (auto& atlas : _atlases)
+		{
+			atlas.second.setProperties(_filtering, _wrap, _mipmap);
+		}
 	}
 
 	Vector2UInt Font::Atlas::computeCharSize(const wchar_t& p_char)
@@ -290,7 +318,7 @@ namespace spk
 	{
 		if (_atlases.find(p_size) == _atlases.end())
 		{
-			_atlases.emplace(p_size, std::move(Atlas(_fontInfo, _fontData, p_size.text, p_size.outline)));
+			_atlases.emplace(p_size, std::move(Atlas(_fontInfo, _fontData, p_size.text, p_size.outline, _filtering, _wrap, _mipmap)));
 		}
 		return _atlases.at(p_size);
 	}

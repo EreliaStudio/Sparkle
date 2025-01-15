@@ -3,6 +3,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "external_libraries/stb_image.h"
 
+#include "utils/spk_file_utils.hpp"
+
 namespace spk
 {
 	Image::Section::Section() :
@@ -19,18 +21,35 @@ namespace spk
 
 	}
 
-	Image::Image(const std::filesystem::path& filePath)
+	Image::Image()
 	{
-		loadFromFile(filePath);
+
 	}
 
-	void Image::loadFromFile(const std::filesystem::path& filePath)
+	Image::Image(const std::filesystem::path& p_path)
+	{
+		loadFromFile(p_path);
+	}
+
+	void Image::loadFromFile(const std::filesystem::path& p_path)
+	{
+		loadFromData(spk::FileUtils::readFileAsBytes(p_path));
+	}
+
+	void Image::loadFromData(const std::vector<uint8_t>& p_data)
 	{
 		int width, height, channels;
-		stbi_uc* imageData = stbi_load(filePath.string().c_str(), &width, &height, &channels, 0);
+		stbi_uc* imageData = stbi_load_from_memory(
+			reinterpret_cast<const stbi_uc *>(p_data.data()),
+			static_cast<int>(p_data.size()),
+			&width,
+			&height,
+			&channels,
+			0
+		);
 		if (!imageData)
 		{
-			throw std::runtime_error("Failed to load image: " + filePath.string());
+			throw std::runtime_error("Failed to load image from raw data.");
 		}
 
 		spk::Vector2UInt size{ static_cast<unsigned int>(width), static_cast<unsigned int>(height) };

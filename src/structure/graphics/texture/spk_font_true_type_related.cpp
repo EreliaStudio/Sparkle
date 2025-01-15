@@ -166,17 +166,21 @@ namespace spk
 		glyph.UVs[3] = Vector2(static_cast<float>(glyphPosition.x + glyph.size.x) / _size.x, static_cast<float>(glyphPosition.y + glyph.size.y) / _size.y);
 
 		glyph.step = Vector2(std::ceil(advance * scale) + _outlineSize, 0);
-		//glyph.size = glyph.positions[3] - glyph.positions[0];
 
 		_glyphs[p_char] = glyph;
 		
 		stbtt_FreeBitmap(glyphBitmap, nullptr);
 	}
 
-	void Font::_loadFileData(const std::filesystem::path& p_path)
+	void Font::loadFromData(const std::vector<uint8_t>& p_data)
 	{
-		_fontData = FileUtils::readFileAsBytes(p_path);
+		_fontData = p_data;
 
 		stbtt_InitFont(&_fontInfo, reinterpret_cast<const unsigned char*>(_fontData.data()), 0);
+	}
+	
+	void Font::loadFromFile(const std::filesystem::path& p_path)
+	{
+		loadFromData(FileUtils::readFileAsBytes(p_path));
 	}
 }

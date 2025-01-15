@@ -16,6 +16,9 @@ namespace spk
 	{
 	public:
 		using Data = std::vector<uint8_t>;
+		using Filtering = OpenGL::TextureObject::Filtering;
+		using Wrap = OpenGL::TextureObject::Wrap;
+		using Mipmap = OpenGL::TextureObject::Mipmap;
 
 		struct Glyph
 		{
@@ -122,7 +125,8 @@ namespace spk
 
 			void _uploadTexture();
 
-			Atlas(const stbtt_fontinfo& p_fontInfo, const Data& p_fontData, const size_t& p_textSize, const size_t& p_outlineSize);
+			Atlas(const stbtt_fontinfo& p_fontInfo, const Data& p_fontData, const size_t& p_textSize, const size_t& p_outlineSize, const Filtering& p_filtering = Filtering::Nearest,
+			const Wrap& p_wrap = Wrap::Repeat, const Mipmap& p_mipmap = Mipmap::Disable);
 		public:
 			void loadGlyphs(const std::wstring& p_glyphsToLoad);
 
@@ -141,14 +145,30 @@ namespace spk
 		};
 
 	private:
-		void _loadFileData(const std::filesystem::path& p_path);
+		void loadFromFile(const std::filesystem::path& p_path);
+		void loadFromData(const std::vector<uint8_t>& p_data);
 
 		std::map<Size, Atlas> _atlases;
 		Data _fontData;
 		stbtt_fontinfo _fontInfo;
 
+		Filtering _filtering = Filtering::Nearest;
+		Wrap _wrap = Wrap::Repeat;
+		Mipmap _mipmap = Mipmap::Disable;
+
 	public:
+		static Font fromRawData(const std::vector<uint8_t>& p_data,
+			const Filtering& p_filtering = Filtering::Nearest,
+			const Wrap& p_wrap = Wrap::Repeat, const Mipmap& p_mipmap = Mipmap::Disable);
+
+		Font();
 		Font(const std::filesystem::path& p_path);
+
+		void setProperties(
+			const Filtering& p_filtering,
+			const Wrap& p_wrap,
+			const Mipmap& p_mipmap
+			);
 
 		Vector2UInt computeCharSize(const wchar_t& p_char, const Font::Size& p_size);
 

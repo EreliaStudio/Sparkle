@@ -35,10 +35,13 @@ namespace spk
 			Section(spk::Vector2 p_anchor, spk::Vector2 p_size);
 		};
 
-	public:
-		Image(const std::filesystem::path& filePath);
 
-		void loadFromFile(const std::filesystem::path& filePath);
+	public:
+		Image();
+		Image(const std::filesystem::path& p_path);
+
+		void loadFromFile(const std::filesystem::path& p_path);
+		void loadFromData(const std::vector<uint8_t>& p_data);
 
 	private:
 		Format _determineFormat(int channels) const;

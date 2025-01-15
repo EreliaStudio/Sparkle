@@ -25,6 +25,8 @@ namespace spk
 	public:
 		TextLabel(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent = nullptr);
 
+		const spk::Vector2UInt& cornerSize() const;
+
 		void setFont(spk::SafePointer<spk::Font> p_font);
 		void setText(const std::wstring& p_text);
 		void setTextSize(const spk::Font::Size& p_textSize);

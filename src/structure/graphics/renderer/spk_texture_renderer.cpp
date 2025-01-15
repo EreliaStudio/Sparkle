@@ -33,6 +33,8 @@ namespace spk
 				void main()
 				{
 					outputColor = texture(diffuseTexture, fragUV);
+					if (outputColor.a == 0)
+						discard;
 				}
 				)";
 
@@ -82,10 +84,10 @@ namespace spk
 		float u2 = section.anchor.x + section.size.x;
 		float v2 = section.anchor.y;
 
-		_bufferSet.layout()	<< Vertex{{topLeft.x, bottomRight.y}, topLeft.z, {u1, v2}}
-							<< Vertex{{bottomRight.x, bottomRight.y}, topLeft.z, {u2, v2}}
-							<< Vertex{{topLeft.x, topLeft.y}, topLeft.z, {u1, v1}}
-							<< Vertex{{bottomRight.x, topLeft.y}, topLeft.z, {u2, v1}};
+		_bufferSet.layout()	<< Vertex{{topLeft.x, bottomRight.y}, topLeft.z, {u1, v1}}
+							<< Vertex{{bottomRight.x, bottomRight.y}, topLeft.z, {u2, v1}}
+							<< Vertex{{topLeft.x, topLeft.y}, topLeft.z, {u1, v2}}
+							<< Vertex{{bottomRight.x, topLeft.y}, topLeft.z, {u2, v2}};
 
 		std::array<unsigned int, 6> indices = {0, 1, 2, 2, 1, 3};
 		for (const auto &index : indices)
