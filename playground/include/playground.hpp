@@ -2,6 +2,11 @@
 
 #include "sparkle.hpp"
 
+namespace spk::helper
+{
+	void convertFile(const std::string& p_inputFile, const std::string& p_outputFile);
+}
+
 #include "buffer_object_collection.hpp"
 #include "camera_manager.hpp"
 #include "chunk_entity.hpp"
