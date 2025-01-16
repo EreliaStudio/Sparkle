@@ -137,7 +137,6 @@ namespace spk
 
 		_minimizeContract = _menuBar._minimizeButton.subscribe([&](){minimize();});
 		_maximizeContract = _menuBar._maximizeButton.subscribe([&](){maximize();});
-		_closeContract = _menuBar._closeButton.subscribe([&](){close();});
 	}
 
 	spk::SafePointer<spk::Widget> InterfaceWindow::content()
@@ -185,11 +184,6 @@ namespace spk
 			setGeometry(_previousGeometry);
 			_isMaximized = false;
 		}
-	}
-
-	void InterfaceWindow::close()
-	{
-		parent()->removeChild(this);
 	}
 
 	spk::ContractProvider::Contract InterfaceWindow::subscribeTo(const InterfaceWindow::Event& p_event, const spk::ContractProvider::Job& p_job)

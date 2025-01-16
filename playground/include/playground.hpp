@@ -13,4 +13,3 @@
 #include "player_controller.hpp"
 #include "world_manager.hpp"
 #include "texture_manager.hpp"
-#include "map_editor_manager.hpp"

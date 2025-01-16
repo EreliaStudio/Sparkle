@@ -54,7 +54,6 @@ namespace spk
 
 		spk::ContractProvider::Contract _minimizeContract;
 		spk::ContractProvider::Contract _maximizeContract;
-		spk::ContractProvider::Contract _closeContract;
 
 		bool _isMaximized = false;
 		spk::Geometry2D _previousGeometry;
