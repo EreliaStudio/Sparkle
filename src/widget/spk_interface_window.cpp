@@ -132,6 +132,11 @@ namespace spk
 		_closeContract = _menuBar._closeButton.subscribe([&](){close();});
 	}
 
+	spk::SafePointer<spk::Widget> InterfaceWindow::content()
+	{
+		return (&_contentFrame);
+	}
+
 	void InterfaceWindow::setMenuHeight(const float& p_menuHeight)
 	{
 		_menuHeight = p_menuHeight;

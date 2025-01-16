@@ -65,6 +65,8 @@ namespace spk
 	public:
 		InterfaceWindow(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent);
 
+		spk::SafePointer<spk::Widget> content();
+
 		void setMenuHeight(const float& p_menuHeight);
 
 		void minimize();

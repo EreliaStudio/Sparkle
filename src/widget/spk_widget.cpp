@@ -127,7 +127,6 @@ namespace spk
 			return;
 
 		_geometry = p_geometry;
-		_computeRatio();
 		_needGeometryChange = true;
 	}
 	
@@ -143,6 +142,7 @@ namespace spk
 	
 	void Widget::updateGeometry()
 	{
+		_computeRatio();
 		_onGeometryChange();
 		_needGeometryChange = false;
 		for (auto& child : children())

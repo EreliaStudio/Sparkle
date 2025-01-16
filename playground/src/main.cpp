@@ -39,10 +39,15 @@ int main()
 
 	spk::InterfaceWindow window = spk::InterfaceWindow(L"Editor inventory", win->widget());
 	window.setMenuHeight(24);
-	window.setGeometry({-100, 100}, win->geometry().size / 2);
+	window.setGeometry({100, 100}, win->geometry().size / 2);
 	window.activate();
 
 	window.maximize();
+
+	spk::TextLabel innerTextLabel = spk::TextLabel(L"Inner text label", window.content());
+	innerTextLabel.setGeometry({-100, 100}, {300, 50});
+	innerTextLabel.setText(L"My text realy long to be sure to see it");
+	innerTextLabel.activate();
 
 	spk::ContractProvider::Contract _windowSuppressionContract = window.subscribeTo(spk::InterfaceWindow::Close, [&](){spk::cout << "Deletion of window" << std::endl;});
 
