@@ -43,6 +43,7 @@ namespace spk
 		};
 
 		spk::Frame _backgroundFrame;
+		spk::Frame _minimizedBackgroundFrame;
 		MenuBar _menuBar;
 		spk::Frame _contentFrame;
 

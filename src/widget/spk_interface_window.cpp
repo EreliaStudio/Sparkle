@@ -22,7 +22,7 @@ namespace spk
 
 		spk::Vector2Int anchor = 3;
 
-		_titleLabel.setGeometry 	(anchor, {geometry().size.x - controlButtonSize.x - 15, buttonSize.y});
+		_titleLabel.setGeometry 	(anchor, {geometry().size.x - controlButtonSize.x - 16, buttonSize.y});
 		anchor.x += _titleLabel.geometry().size.x + 3;
 
 		_minimizeButton.setGeometry	(anchor, buttonSize);
@@ -68,6 +68,7 @@ namespace spk
 		spk::Vector2Int frameSize = spk::Vector2Int(geometry().size.x, geometry().size.y - menuSize.y);
 
 		_backgroundFrame.setGeometry(0, geometry().size);
+		_minimizedBackgroundFrame.setGeometry(0, menuSize);
 		_menuBar.setGeometry({0, 0}, menuSize);
 		_contentFrame.setGeometry({0, menuSize.y}, frameSize);
 	}
@@ -110,13 +111,17 @@ namespace spk
 		spk::Widget(p_name, p_parent),
 		_menuBar(p_name, this),
 		_contentFrame(p_name + L" - Content frame", this),
-		_backgroundFrame(p_name + L" - Background frame", this)
+		_backgroundFrame(p_name + L" - Background frame", this),
+		_minimizedBackgroundFrame(p_name + L" - Background frame (Minimized)", this)
 	{
 		_menuBar.setLayer(2);
 		_menuBar.activate();
 
 		_backgroundFrame.setLayer(0);
 		_backgroundFrame.activate();
+
+		_minimizedBackgroundFrame.setLayer(0);
+		_minimizedBackgroundFrame.deactivate();
 
 		_contentFrame.setLayer(1);
 		_contentFrame.setSpriteSheet(nullptr);
@@ -139,9 +144,15 @@ namespace spk
 			maximize();
 
 		if (_backgroundFrame.isActive() == true)
+		{
+			_minimizedBackgroundFrame.activate();
 			_backgroundFrame.deactivate();
+		}
 		else
+		{
+			_minimizedBackgroundFrame.deactivate();
 			_backgroundFrame.activate();
+		}
 	}
 	
 	void InterfaceWindow::maximize()

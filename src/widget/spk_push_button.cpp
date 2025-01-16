@@ -252,12 +252,7 @@ namespace spk
         _releasedRenderer.prepare(geometry(), layer(), _releasedCornerSize);
         _releasedRenderer.validate();
 
-        Geometry2D pressedGeometry = geometry();
-		pressedGeometry.x += _pressedOffset.x;
-		pressedGeometry.y += _pressedOffset.y;
-		pressedGeometry.width -= 2 * _pressedOffset.x;
-		pressedGeometry.height -= 2 * _pressedOffset.y;
-
+        Geometry2D pressedGeometry = geometry().shrink(_pressedOffset);
 		_pressedRenderer.clear();
 		_pressedRenderer.prepare(pressedGeometry, layer(), _pressedCornerSize);
 		_pressedRenderer.validate();
@@ -277,7 +272,7 @@ namespace spk
 		_releasedIconRenderer.validate();
 
 		_pressedIconRenderer.clear();
-		_pressedIconRenderer.prepare({geometry().anchor + _pressedCornerSize, geometry().size - _pressedCornerSize * 2}, _pressedSprite, layer() + 0.0001f);
+		_pressedIconRenderer.prepare(pressedGeometry.shrink(_pressedCornerSize), _pressedSprite, layer() + 0.0001f);
 		_pressedIconRenderer.validate();
     }
 }
