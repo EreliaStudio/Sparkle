@@ -25,8 +25,8 @@ void ChunkRenderer::_initBuffers()
 	_bufferSet.clear();
 
 	_bufferSet.layout() << spk::Vector2(0, 0);
-	_bufferSet.layout() << spk::Vector2(1, 0);
 	_bufferSet.layout() << spk::Vector2(0, 1);
+	_bufferSet.layout() << spk::Vector2(1, 0);
 	_bufferSet.layout() << spk::Vector2(1, 1);
 
 	_bufferSet.indexes() << 0 << 1 << 2 << 2 << 1 << 3;

@@ -15,8 +15,8 @@ void WorldManager::_updateChunkVisibility()
 
 	spk::Matrix4x4 inverseMatrix = _camera->inverseProjectionMatrix();
 
-	spk::Vector3 downLeftWorld = inverseMatrix * spk::Vector3(-1, -1, 0);
-	spk::Vector3 topRightWorld = inverseMatrix * spk::Vector3(1, 1, 0);
+	spk::Vector3 downLeftWorld = inverseMatrix * spk::Vector3(-1, 1, 0);
+	spk::Vector3 topRightWorld = inverseMatrix * spk::Vector3(1, -1, 0);
 
 	spk::Vector2Int downLeftChunk = Chunk::convertWorldToChunkPosition(downLeftWorld) + currentCameraChunk - 1;
 	spk::Vector2Int topRightChunk = Chunk::convertWorldToChunkPosition(topRightWorld) + currentCameraChunk + 1;

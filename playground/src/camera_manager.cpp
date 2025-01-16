@@ -20,7 +20,7 @@ void CameraManager::start()
 
 void CameraManager::setOrthographic(float p_left, float p_right, float p_bottom, float p_top, float p_nearPlane, float p_farPlane)
 {
-	_camera.setOrthographic(p_left, p_right, p_bottom, p_top, p_nearPlane, p_farPlane);
+	_camera.setOrthographic(p_left, p_right, p_top, p_bottom, p_nearPlane, p_farPlane);
 	_cameraUBO["projection"] = _camera.projectionMatrix();
 }
 
@@ -33,10 +33,26 @@ void CameraManager::onPaintEvent(spk::PaintEvent& p_event)
 {
 	if (p_event.type == spk::PaintEvent::Type::Resize)
 	{
-		spk::Vector2Int cellSize = 32;
-		spk::Vector2 cellCount = p_event.geometry.size / cellSize;
+		_geometry = p_event.geometry;
+
+		spk::Vector2 cellCount = _geometry.size / _cellSize;
 
 		setOrthographic(cellCount.x / -2, cellCount.x / 2, cellCount.y / -2, cellCount.y / 2);
 		EventCenter::instance()->notifyEvent(Event::UpdateChunkVisibility);
+	}
+}
+
+void CameraManager::onMouseEvent(spk::MouseEvent& p_event)
+{
+	switch (p_event.type)
+	{
+		case spk::MouseEvent::Type::Motion:
+		{
+			spk::Matrix4x4 inverseMatrix = _camera.inverseProjectionMatrix();
+
+			spk::Vector2 mouseRatio = (static_cast<spk::Vector2>(p_event.mouse->position) / static_cast<spk::Vector2>(_geometry.size)) * 2 - 1;
+
+			spk::cout << "Mouse at tile [" << owner()->position() + (inverseMatrix * spk::Vector3(mouseRatio, 0)) << "]" << std::endl; 
+		}
 	}
 }

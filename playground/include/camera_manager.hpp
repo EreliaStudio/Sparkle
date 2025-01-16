@@ -12,6 +12,8 @@ private:
 	BufferObjectCollection::Instanciator _bindingPointInstanciator;
 	spk::OpenGL::UniformBufferObject& _cameraUBO;
 
+	static inline const spk::Vector2Int _cellSize = 32;
+	spk::Geometry2D _geometry;
 	spk::Camera _camera;
 
 	spk::Entity::Contract _onEditionContract;
@@ -26,4 +28,5 @@ public:
 	const spk::Camera& camera() const;
 
 	void onPaintEvent(spk::PaintEvent& p_event) override;
+	void onMouseEvent(spk::MouseEvent& p_event) override;
 };
