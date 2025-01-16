@@ -1,13 +1,13 @@
 #include "playground.hpp"
 
-class MapEditorWidget : public spk::InterfaceWindow
+class MapEditorWidget : public spk::Widget
 {
 private:
 	spk::SafePointer<MapEditorManager> _mapEditorManager = nullptr;
 
 public:
 	MapEditorWidget(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
-		spk::InterfaceWindow(p_name, p_parent)
+		spk::Widget(p_name, p_parent)
 	{
 
 	}
@@ -35,6 +35,9 @@ int main()
 	worldManager.addComponent<ControlMapper>(L"Control mapper component");
 	auto& mapEditorManagerComp = worldManager.addComponent<MapEditorManager>(L"Map editor component");
 	mapEditorManagerComp.setOnClickLambda([&worldManagerComp](const spk::Vector2Int& p_tilePosition){
+		spk::Vector2Int chunkPosition = Chunk::convertWorldToChunkPosition(p_tilePosition);
+		worldManagerComp.chunkEntity(chunkPosition)->chunk()->setContent(p_tilePosition.positiveModulo(Chunk::Dimensions.xy()), 0, 1);
+		worldManagerComp.invalidateChunk(chunkPosition);
 		spk::cout << "Setting tile [" << p_tilePosition << "] to [1]" << std::endl;
 	});
 
@@ -54,10 +57,15 @@ int main()
 	engine.addEntity(&worldManager);
 	engine.addEntity(&player);
 
-	MapEditorWidget mapEditorWidget = MapEditorWidget(L"Editor window", win->widget());
+	spk::InterfaceWindow mapEditorWindow = spk::InterfaceWindow(L"Editor window", win->widget());
+	mapEditorWindow.setMenuHeight(26);
+	mapEditorWindow.setLayer(10);
+	mapEditorWindow.setGeometry({0, 0}, {250, 500});
+	mapEditorWindow.activate();
+
+	MapEditorWidget mapEditorWidget = MapEditorWidget(L"Editor window", mapEditorWindow.content());
 	mapEditorWidget.bind(&mapEditorManagerComp);
-	mapEditorWidget.setLayer(10);
-	mapEditorWidget.setGeometry({0, 0}, {250, 500});
+	mapEditorWidget.setGeometry({0, 0}, mapEditorWindow.content()->geometry().size);
 	mapEditorWidget.activate();
 
 	spk::GameEngineWidget gameEngineWidget = spk::GameEngineWidget(L"Engine widget", win->widget());

@@ -421,6 +421,14 @@ namespace spk
                 p_startingPoint.y + (p_endingPoint.y - p_startingPoint.y) * t
             );
         }
+
+		IVector2 positiveModulo(const IVector2& p_modulo) const
+		{
+			return (IVector2(
+				spk::positiveModulo(x, p_modulo.x),				
+				spk::positiveModulo(y, p_modulo.y)			
+			));
+		}
     };
 
     using Vector2 = IVector2<float_t>;

@@ -89,12 +89,14 @@ namespace spk
 		}
 		case spk::MouseEvent::Type::Press:
 		{
+			if (viewport().geometry().contains(p_event.mouse->position))
+				p_event.consume();
+
 			if (p_event.button == spk::Mouse::Button::Left &&
 				_menuBar._titleLabel.viewport().geometry().contains(p_event.mouse->position))
 			{
 				_isMoving = true;
 				_positionDelta = p_event.mouse->position - geometry().anchor;
-				p_event.consume();
 			}
 			break;
 		}

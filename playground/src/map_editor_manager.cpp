@@ -28,7 +28,7 @@ void MapEditorManager::onMouseEvent(spk::MouseEvent& p_event)
 			{
 				leftClicked = true;
 
-				spk::Vector2Int currentPosition = _cameraManager->convertScreenToWorldPosition(p_event.mouse->position).xy();
+				spk::Vector2Int currentPosition = spk::Vector2::floor(_cameraManager->convertScreenToWorldPosition(p_event.mouse->position).xy());
 				_lastMousePosition = currentPosition;
 				_onClickLambda(currentPosition);
 			}
@@ -39,7 +39,7 @@ void MapEditorManager::onMouseEvent(spk::MouseEvent& p_event)
 			if (leftClicked == false)
 				break;
 
-			spk::Vector2Int currentPosition = _cameraManager->convertScreenToWorldPosition(p_event.mouse->position).xy();
+			spk::Vector2Int currentPosition = spk::Vector2::floor(_cameraManager->convertScreenToWorldPosition(p_event.mouse->position).xy());
 
 			if (currentPosition != _lastMousePosition)
 			{

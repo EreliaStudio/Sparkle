@@ -9,6 +9,7 @@ class Chunk
 public:
 	static inline const size_t Size = 16;
 	static inline const size_t Layer = 5;
+	static inline const spk::Vector3Int Dimensions = spk::Vector3Int(Size, Size, Layer);
 
 private:
 	int _content[Size][Size][Layer];
