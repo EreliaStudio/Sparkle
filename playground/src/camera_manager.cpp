@@ -44,15 +44,14 @@ void CameraManager::onPaintEvent(spk::PaintEvent& p_event)
 
 void CameraManager::onMouseEvent(spk::MouseEvent& p_event)
 {
-	switch (p_event.type)
-	{
-		case spk::MouseEvent::Type::Motion:
-		{
-			spk::Matrix4x4 inverseMatrix = _camera.inverseProjectionMatrix();
+	
+}
 
-			spk::Vector2 mouseRatio = (static_cast<spk::Vector2>(p_event.mouse->position) / static_cast<spk::Vector2>(_geometry.size)) * 2 - 1;
+spk::Vector3 CameraManager::convertScreenToWorldPosition(const spk::Vector2Int& p_screenPosition)
+{
+	spk::Matrix4x4 inverseMatrix = _camera.inverseProjectionMatrix();
 
-			spk::cout << "Mouse at tile [" << owner()->position() + (inverseMatrix * spk::Vector3(mouseRatio, 0)) << "]" << std::endl; 
-		}
-	}
+	spk::Vector2 mouseRatio = (static_cast<spk::Vector2>(p_screenPosition - _geometry.anchor) / static_cast<spk::Vector2>(_geometry.size)) * 2 - 1;
+
+	return (owner()->position() + (inverseMatrix * spk::Vector3(mouseRatio, 0))); 
 }

@@ -83,6 +83,7 @@ namespace spk
 			{
 				place(p_event.mouse->position - _positionDelta);
 				p_event.requestPaint();
+				p_event.consume();
 			}
 			break;
 		}
@@ -93,6 +94,7 @@ namespace spk
 			{
 				_isMoving = true;
 				_positionDelta = p_event.mouse->position - geometry().anchor;
+				p_event.consume();
 			}
 			break;
 		}
@@ -101,6 +103,10 @@ namespace spk
 			if (p_event.button == spk::Mouse::Button::Left)
 			{
 				_isMoving = false;
+				if (_menuBar._titleLabel.viewport().geometry().contains(p_event.mouse->position))
+				{
+					p_event.consume();
+				}
 			}
 			break;
 		}
@@ -114,16 +120,16 @@ namespace spk
 		_backgroundFrame(p_name + L" - Background frame", this),
 		_minimizedBackgroundFrame(p_name + L" - Background frame (Minimized)", this)
 	{
-		_menuBar.setLayer(2);
+		_menuBar.setLayer(3);
 		_menuBar.activate();
 
-		_backgroundFrame.setLayer(0);
+		_backgroundFrame.setLayer(1);
 		_backgroundFrame.activate();
 
-		_minimizedBackgroundFrame.setLayer(0);
+		_minimizedBackgroundFrame.setLayer(1);
 		_minimizedBackgroundFrame.deactivate();
 
-		_contentFrame.setLayer(1);
+		_contentFrame.setLayer(2);
 		_contentFrame.setSpriteSheet(nullptr);
 		_contentFrame.activate();
 

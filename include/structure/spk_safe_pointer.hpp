@@ -16,7 +16,7 @@ namespace spk
 		template <typename SmartPointer,
 			typename = std::enable_if_t<
 			std::is_pointer_v<decltype(std::declval<SmartPointer>().get())>>>
-			SafePointer(SmartPointer&& p_smartPointer) : _ptr(p_smartPointer.get())
+			SafePointer(SmartPointer&& p_smartPointer) : _ptr(reinterpret_cast<TType*>(p_smartPointer.get()))
 		{
 
 		}

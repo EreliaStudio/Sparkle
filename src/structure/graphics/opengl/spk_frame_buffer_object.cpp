@@ -10,6 +10,8 @@
 
 #include "structure/spk_iostream.hpp"
 
+#include "spk_debug_macro.hpp"
+
 namespace
 {
     void _getTextureFormat(spk::OpenGL::FrameBufferObject::Type p_type, GLenum& p_internalFormat, GLenum& p_format, GLenum& p_dataType)
@@ -164,6 +166,7 @@ namespace spk::OpenGL
 
     void FrameBufferObject::_load()
     {
+
         if (_framebufferID == 0)
         {
             if (wglGetCurrentContext() != nullptr)
@@ -208,6 +211,15 @@ namespace spk::OpenGL
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + attachment.binding, GL_TEXTURE_2D, texture._id, 0);
         }
 
+		if (_depthBufferID == 0) // Ensure only one depth buffer is created
+		{
+			glGenRenderbuffers(1, &_depthBufferID);
+			glBindRenderbuffer(GL_RENDERBUFFER, _depthBufferID);
+			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, _size.x, _size.y);
+			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, _depthBufferID);
+			glBindRenderbuffer(GL_RENDERBUFFER, 0);
+		}
+
         std::vector<GLenum> drawBuffers;
         for (const auto& [name, attachment] : _attachments)
         {
@@ -238,8 +250,13 @@ namespace spk::OpenGL
             {
                 glDeleteFramebuffers(1, &_framebufferID);
             }
+			if (_depthBufferID != 0)
+			{
+				glDeleteRenderbuffers(1, &_depthBufferID);
+			}
             _framebufferID = 0;
-        }
+			_depthBufferID = 0;
+		}
 
         _attachments.clear();
     }
@@ -263,6 +280,13 @@ namespace spk::OpenGL
             }
         }
 
+		if (_depthBufferID != 0)
+		{
+			glBindRenderbuffer(GL_RENDERBUFFER, _depthBufferID);
+			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, _size.x, _size.y);
+			glBindRenderbuffer(GL_RENDERBUFFER, 0);
+		}
+
         _load();
     }
 
@@ -274,11 +298,14 @@ namespace spk::OpenGL
         }
 
         glBindFramebuffer(GL_FRAMEBUFFER, _framebufferID);
+		glBindRenderbuffer(GL_RENDERBUFFER, _depthBufferID);
         _viewport.apply();
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
     void FrameBufferObject::deactivate()
     {
+		glBindRenderbuffer(GL_RENDERBUFFER, 0);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 

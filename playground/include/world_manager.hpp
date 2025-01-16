@@ -40,6 +40,9 @@ public:
 
 	void setCamera(spk::SafePointer<const spk::Entity> p_camera);
 
+	spk::SafePointer<ChunkEntity> chunkEntity(const spk::Vector2Int& p_chunkPosition);
+	void invalidateChunk(const spk::Vector2Int& p_chunkPosition);
+
 	void onUpdateEvent(spk::UpdateEvent& p_event) override;
 	void onPaintEvent(spk::PaintEvent& p_event) override;
 };

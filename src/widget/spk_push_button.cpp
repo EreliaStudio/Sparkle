@@ -197,6 +197,7 @@ namespace spk
 				if (_isPressed == true && viewport().geometry().contains(p_event.mouse->position) == false)
 				{
 					_isPressed = false;
+					p_event.consume();
 				}
 				break;
 			}
@@ -207,6 +208,7 @@ namespace spk
 					if (_isPressed == false && viewport().geometry().contains(p_event.mouse->position) == true)
 					{
 						_isPressed = true;
+						p_event.consume();
 					}
 				}
 				break;
@@ -217,7 +219,11 @@ namespace spk
 				{
 					if (_isPressed)
 					{				
-						_onClickProvider.trigger();
+						if (viewport().geometry().contains(p_event.mouse->position) == true)
+						{
+							_onClickProvider.trigger();
+							p_event.consume();
+						}
 						_isPressed = false;
 					}
 				}

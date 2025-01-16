@@ -16,6 +16,8 @@ namespace spk
 		_gameEngine->onPaintEvent(p_event);
 
 		_fbo.deactivate();
+
+		parent()->viewport().apply();
 		
 		_textureRenderer.render();
 	}

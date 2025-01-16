@@ -35,6 +35,7 @@ namespace spk::OpenGL
         void _releaseResources();
 
         GLuint _framebufferID = 0;
+		GLuint _depthBufferID = 0;
         spk::Vector2UInt _size;
         Viewport _viewport;
 

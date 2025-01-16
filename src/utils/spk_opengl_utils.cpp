@@ -293,4 +293,31 @@ namespace spk::OpenGLUtils
 			return (L"not a GLenum type");
 		}
 	}
+
+	std::wstring getFramebufferErrorString(GLenum status)
+    {
+        switch (status)
+        {
+        case GL_FRAMEBUFFER_COMPLETE:
+            return L"Framebuffer complete";
+        case GL_FRAMEBUFFER_UNDEFINED:
+            return L"Framebuffer undefined (GL_FRAMEBUFFER_UNDEFINED)";
+        case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+            return L"Incomplete attachment (GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT)";
+        case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+            return L"Missing attachment (GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT)";
+        case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
+            return L"Incomplete draw buffer (GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER)";
+        case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
+            return L"Incomplete read buffer (GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER)";
+        case GL_FRAMEBUFFER_UNSUPPORTED:
+            return L"Framebuffer unsupported (GL_FRAMEBUFFER_UNSUPPORTED)";
+        case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
+            return L"Incomplete multisample (GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE)";
+        case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:
+            return L"Incomplete layer targets (GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS)";
+        default:
+            return L"Unknown framebuffer error";
+        }
+    }
 }

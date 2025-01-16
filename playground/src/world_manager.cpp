@@ -25,14 +25,7 @@ void WorldManager::_updateChunkVisibility()
 	{
 		for (int y = downLeftChunk.y; y <= topRightChunk.y; y++)
 		{
-			spk::Vector2Int tmp = spk::Vector2Int(x, y);
-
-			if (_chunkEntities.contains(tmp) == false)
-			{
-				_chunkEntities.emplace(tmp, std::make_unique<ChunkEntity>(tmp, owner()));
-			}
-
-			chunkToActivate.push_back(_chunkEntities[tmp].get());
+			chunkToActivate.push_back(chunkEntity(spk::Vector2Int(x, y)));
 		}
 	}
 
@@ -103,6 +96,20 @@ void WorldManager::setCamera(spk::SafePointer<const spk::Entity> p_camera)
 	}
 
 	EventCenter::instance()->notifyEvent(Event::UpdateChunkVisibility);
+}
+
+spk::SafePointer<ChunkEntity> WorldManager::chunkEntity(const spk::Vector2Int& p_chunkPosition)
+{
+	if (_chunkEntities.contains(p_chunkPosition) == false)
+	{
+		_chunkEntities.emplace(p_chunkPosition, std::make_unique<ChunkEntity>(p_chunkPosition, owner()));
+	}
+	return (_chunkEntities[p_chunkPosition]);
+}
+
+void WorldManager::invalidateChunk(const spk::Vector2Int& p_chunkPosition)
+{
+	static_cast<spk::SafePointer<BakableChunk>>(_chunkEntities[p_chunkPosition]->chunk())->invalidate();
 }
 
 void WorldManager::onUpdateEvent(spk::UpdateEvent& p_event)

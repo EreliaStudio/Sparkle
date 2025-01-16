@@ -2,11 +2,6 @@
 
 #include "sparkle.hpp"
 
-namespace spk::helper
-{
-	void convertFile(const std::string& p_inputFile, const std::string& p_outputFile);
-}
-
 #include "buffer_object_collection.hpp"
 #include "camera_manager.hpp"
 #include "chunk_entity.hpp"
@@ -18,3 +13,4 @@ namespace spk::helper
 #include "player_controller.hpp"
 #include "world_manager.hpp"
 #include "texture_manager.hpp"
+#include "map_editor_manager.hpp"

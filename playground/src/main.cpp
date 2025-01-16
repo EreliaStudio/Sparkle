@@ -1,5 +1,23 @@
 #include "playground.hpp"
 
+class MapEditorWidget : public spk::InterfaceWindow
+{
+private:
+	spk::SafePointer<MapEditorManager> _mapEditorManager = nullptr;
+
+public:
+	MapEditorWidget(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+		spk::InterfaceWindow(p_name, p_parent)
+	{
+
+	}
+
+	void bind(spk::SafePointer<MapEditorManager> p_mapEditorManager)
+	{
+		_mapEditorManager = p_mapEditorManager;
+	}
+};
+
 int main()
 {
 	spk::GraphicalApplication app = spk::GraphicalApplication();
@@ -15,6 +33,10 @@ int main()
 	spk::Entity worldManager = spk::Entity(L"World manager");
 	auto& worldManagerComp = worldManager.addComponent<WorldManager>(L"World manager component");
 	worldManager.addComponent<ControlMapper>(L"Control mapper component");
+	auto& mapEditorManagerComp = worldManager.addComponent<MapEditorManager>(L"Map editor component");
+	mapEditorManagerComp.setOnClickLambda([&worldManagerComp](const spk::Vector2Int& p_tilePosition){
+		spk::cout << "Setting tile [" << p_tilePosition << "] to [1]" << std::endl;
+	});
 
 	spk::Entity player = spk::Entity(L"Player");
 	player.transform().place(spk::Vector3(0, 0, 0));
@@ -26,10 +48,17 @@ int main()
 
 	CameraManager& cameraComp = camera.addComponent<CameraManager>(L"Main camera");
 
+	mapEditorManagerComp.setCameraManager(&cameraComp);
 	worldManagerComp.setCamera(&camera);
 
 	engine.addEntity(&worldManager);
 	engine.addEntity(&player);
+
+	MapEditorWidget mapEditorWidget = MapEditorWidget(L"Editor window", win->widget());
+	mapEditorWidget.bind(&mapEditorManagerComp);
+	mapEditorWidget.setLayer(10);
+	mapEditorWidget.setGeometry({0, 0}, {250, 500});
+	mapEditorWidget.activate();
 
 	spk::GameEngineWidget gameEngineWidget = spk::GameEngineWidget(L"Engine widget", win->widget());
 	gameEngineWidget.setLayer(0);
