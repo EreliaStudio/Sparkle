@@ -25,9 +25,16 @@ namespace spk
 
 		friend class Window;
 	private:
+		static std::vector<uint8_t> _defaultFont_Data;
 		static spk::Font _defaultFont;
+		static std::vector<uint8_t> _defaultNineSlice_Data;
 		static spk::SpriteSheet _defaultNineSlice;
 
+	public:
+		static spk::SafePointer<spk::Font> defaultFont();
+		static spk::SafePointer<spk::SpriteSheet> defaultNineSlice();
+
+	private:
 		std::wstring _name;
 		spk::SafePointer<Widget> _parent;
 		std::vector<Widget*> _managedChildren;
@@ -55,8 +62,6 @@ namespace spk
 		void _resize();
 
 	public:
-		static spk::SafePointer<spk::Font> defaultFont();
-		static spk::SafePointer<spk::SpriteSheet> defaultNineSlice();
 
 		Widget(const std::wstring& p_name);
 		Widget(const std::wstring& p_name, spk::SafePointer<Widget> p_parent);

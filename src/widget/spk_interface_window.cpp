@@ -1,7 +1,16 @@
 #include "widget/spk_interface_window.hpp"
+#include "spk_generated_resources.hpp"
 
 namespace spk
 {
+	spk::SpriteSheet InterfaceWindow::_defaultIconset = spk::SpriteSheet::fromRawData(SPARKLE_GET_RESOURCE("resources/textures/defaultIconset.png"), spk::Vector2Int(10, 10), SpriteSheet::Filtering::Linear);
+
+	spk::SpriteSheet InterfaceWindow::_defaultNineSlice_Light = spk::SpriteSheet::fromRawData(SPARKLE_GET_RESOURCE("resources/textures/defaultNineSlice_Light.png"), spk::Vector2UInt(3, 3), SpriteSheet::Filtering::Linear);
+
+	spk::SpriteSheet InterfaceWindow::_defaultNineSlice_Dark = spk::SpriteSheet::fromRawData(SPARKLE_GET_RESOURCE("resources/textures/defaultNineSlice_Dark.png"), spk::Vector2UInt(3, 3), SpriteSheet::Filtering::Linear);
+
+	spk::SpriteSheet InterfaceWindow::_defaultNineSlice_Darker = spk::SpriteSheet::fromRawData(SPARKLE_GET_RESOURCE("resources/textures/defaultNineSlice_Darker.png"), spk::Vector2UInt(3, 3), SpriteSheet::Filtering::Linear);
+
 	void InterfaceWindow::MenuBar::_onGeometryChange()
 	{
 		spk::Vector2Int buttonSize = geometry().size.y - 6;

@@ -5,6 +5,8 @@ project(Sparkle)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+include(cmake/add_resources.cmake)
+
 # Base directories
 set(SPARKLE_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include)
 set(SPARKLE_SRC_DIR ${CMAKE_SOURCE_DIR}/src)
@@ -14,10 +16,25 @@ file(GLOB_RECURSE SPARKLE_HEADERS
     ${SPARKLE_INCLUDE_DIR}/*.hpp
     ${SPARKLE_INCLUDE_DIR}/*.h
 )
+
 file(GLOB_RECURSE SPARKLE_SOURCES ${SPARKLE_SRC_DIR}/*.cpp)
+
+
+add_resources(
+	"resources/textures/defaultNineSlice.png"
+	"resources/font/arial.ttf"
+	"resources/textures/defaultIconset.png"
+	"resources/textures/defaultNineSlice_Light.png"
+	"resources/textures/defaultNineSlice_Dark.png"
+	"resources/textures/defaultNineSlice_Darker.png"
+)
 
 # Define the library
 add_library(Sparkle STATIC ${SPARKLE_SOURCES} ${SPARKLE_HEADERS})
+
+target_include_directories(Sparkle PRIVATE "${CMAKE_BINARY_DIR}")
+
+add_dependencies(Sparkle SparkleResourcesHeaderTarget)
 
 find_package(GLEW REQUIRED)
 target_link_libraries(Sparkle PUBLIC GLEW::GLEW)
