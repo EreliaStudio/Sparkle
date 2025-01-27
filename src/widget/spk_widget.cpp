@@ -1,6 +1,8 @@
 #include "widget/spk_widget.hpp"
 #include "spk_generated_resources.hpp"
 
+#include "utils/spk_string_utils.hpp"
+
 namespace spk
 {
 
@@ -221,13 +223,29 @@ namespace spk
 		if (isActive() == false || p_event.consumed() == true)
 			return;
 
+		
+
 		if (_needGeometryChange == true)
 		{
-			updateGeometry();
-			_computeViewport();
+			try
+			{
+					updateGeometry();
+					_computeViewport();
+			}
+			catch (const std::exception& e)
+			{
+				throw std::runtime_error("[" + spk::StringUtils::wstringToString(name()) + "] onGeometryChange -  " + e.what());
+			}
 		}
 		
-		_onPaintEvent(p_event);
+		try
+		{
+			_onPaintEvent(p_event);
+		}
+		catch (const std::exception& e)
+		{
+			throw std::runtime_error("[" + spk::StringUtils::wstringToString(name()) + "] onPaintEvent -  " + e.what());
+		}
 
 		spk::PaintEvent childEvent = p_event;
 		childEvent.geometry = geometry();

@@ -120,7 +120,7 @@ namespace spk
 
 		friend std::wostream& operator<<(std::wostream& os, const Geometry2D& p_geometry)
 		{
-			os << L"Anchor : " << p_geometry.anchor << L" - Vector2UInt : " << p_geometry.size;
+			os << L"Anchor : " << p_geometry.anchor << L" - Size : " << p_geometry.size;
 			return os;
 		}
 

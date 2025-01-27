@@ -188,6 +188,11 @@ namespace spk
         return _pressedOffset;
     }
 
+    const spk::Vector2Int& PushButton::cornerSize() const
+    {
+        return _releasedCornerSize;
+    }
+
     void PushButton::_onMouseEvent(spk::MouseEvent& p_event)
     {
 		switch (p_event.type)

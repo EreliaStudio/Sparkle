@@ -99,5 +99,6 @@ namespace spk
         void setPressedOffset(const spk::Vector2Int& p_offset);
 
         const spk::Vector2Int& pressedOffset() const;
+		const spk::Vector2Int& cornerSize() const;
     };
 }

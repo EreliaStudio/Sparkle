@@ -34,6 +34,7 @@ public:
 		spk::Widget(p_name, p_parent),
 		interfaceWindow(L"Editor window", this)
 	{
+		interfaceWindow.setMinimumSize({50, 100});
 		interfaceWindow.setMenuHeight(26);
 		interfaceWindow.setLayer(10);
 		interfaceWindow.activate();

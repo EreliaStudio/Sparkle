@@ -204,6 +204,7 @@ namespace spk::OpenGL
 		_mipmap = p_mipmap;
 		_datas.assign(p_data, p_data + (p_size.x * p_size.y * _getBytesPerPixel(p_format)));
 		_needUpload = true;
+		_needSetup = true;
 	}
 
 	void TextureObject::setData(const uint8_t* p_data, const spk::Vector2UInt& p_size, const Format& p_format)

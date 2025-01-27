@@ -46,11 +46,22 @@ namespace spk
 		spk::Frame _minimizedBackgroundFrame;
 		MenuBar _menuBar;
 		spk::Frame _contentFrame;
+		spk::Geometry2D _topAnchorArea;
+		spk::Geometry2D _leftAnchorArea;
+		spk::Geometry2D _rightAnchorArea;
+		spk::Geometry2D _downAnchorArea;
 
 		float _menuHeight = 20;
+		spk::Vector2UInt _minimumSize = 0;
 
 		bool _isMoving = false;
 		spk::Vector2Int _positionDelta;
+		
+		bool _isLeftResizing = false;
+		bool _isRightResizing = false;
+		bool _isTopResizing = false;
+		bool _isDownResizing = false;
+		spk::Geometry2D _baseGeometry;
 
 		spk::ContractProvider::Contract _minimizeContract;
 		spk::ContractProvider::Contract _maximizeContract;
@@ -67,6 +78,7 @@ namespace spk
 		spk::SafePointer<spk::Widget> content();
 
 		void setMenuHeight(const float& p_menuHeight);
+		void setMinimumSize(const spk::Vector2UInt& p_minimumSize);
 
 		void minimize();
 		void maximize();

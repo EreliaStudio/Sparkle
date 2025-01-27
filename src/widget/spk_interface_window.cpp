@@ -71,6 +71,11 @@ namespace spk
 		_minimizedBackgroundFrame.setGeometry(0, menuSize);
 		_menuBar.setGeometry({0, 0}, menuSize);
 		_contentFrame.setGeometry({0, menuSize.y}, frameSize);
+
+		_topAnchorArea = {geometry().anchor, {geometry().size.x, 20}};
+		_leftAnchorArea = {geometry().anchor, {20, geometry().size.y}};
+		_rightAnchorArea = {{geometry().anchor.x + geometry().size.x - 20, geometry().anchor.y}, {20, geometry().size.y}};
+		_downAnchorArea = {{geometry().anchor.x, geometry().anchor.y + geometry().size.y - 20}, {geometry().size.x, 20}};
 	}
 
 	void InterfaceWindow::_onMouseEvent(spk::MouseEvent& p_event)
@@ -85,6 +90,51 @@ namespace spk
 				p_event.requestPaint();
 				p_event.consume();
 			}
+			else if (_isTopResizing == true || _isDownResizing == true ||
+					 _isLeftResizing == true || _isRightResizing == true)
+			{
+				spk::Vector2Int delta = p_event.mouse->position - _positionDelta;
+				spk::Geometry2D newGeometry = _baseGeometry;
+
+				if (_isTopResizing == true)
+				{
+					if (delta.y > static_cast<int>(_baseGeometry.height - _minimumSize.y))
+						delta.y = static_cast<int>(_baseGeometry.height - _minimumSize.y);
+
+					newGeometry.anchor.y += delta.y;
+					newGeometry.size.y = _baseGeometry.anchor.y + _baseGeometry.size.y - newGeometry.anchor.y;
+				}
+				else if (_isDownResizing == true)
+				{
+					if (static_cast<int>(newGeometry.size.y) + delta.y >= static_cast<int>(_minimumSize.y))
+						newGeometry.size.y += delta.y;
+					else
+						newGeometry.size.y = _minimumSize.y;
+				}
+
+				if (_isLeftResizing == true)
+				{
+					if (delta.x > static_cast<int>(_baseGeometry.width - _minimumSize.x))
+						delta.x = static_cast<int>(_baseGeometry.width - _minimumSize.x);
+
+					newGeometry.anchor.x += delta.x;
+					newGeometry.size.x = _baseGeometry.anchor.x + _baseGeometry.size.x - newGeometry.anchor.x;
+				}
+				else if (_isRightResizing == true)
+				{
+					if (static_cast<int>(newGeometry.size.x) + delta.x >= static_cast<int>(_minimumSize.x))
+						newGeometry.size.x += delta.x;
+					else
+						newGeometry.size.x = _minimumSize.x;
+				}
+
+				if (newGeometry != geometry())
+				{
+					setGeometry(newGeometry);
+					p_event.requestPaint();
+					p_event.consume();
+				}
+			}
 			break;
 		}
 		case spk::MouseEvent::Type::Press:
@@ -92,11 +142,40 @@ namespace spk
 			if (viewport().geometry().contains(p_event.mouse->position))
 				p_event.consume();
 
-			if (p_event.button == spk::Mouse::Button::Left &&
-				_menuBar._titleLabel.viewport().geometry().contains(p_event.mouse->position))
+			if (p_event.button == spk::Mouse::Button::Left)
 			{
-				_isMoving = true;
-				_positionDelta = p_event.mouse->position - geometry().anchor;
+				if (_menuBar._titleLabel.viewport().geometry().contains(p_event.mouse->position))
+				{
+					_isMoving = true;
+					_positionDelta = p_event.mouse->position - geometry().anchor;
+				}
+				else
+				{
+					if (_topAnchorArea.contains(p_event.mouse->position))
+					{
+						_isTopResizing = true;
+					}
+					else if (_downAnchorArea.contains(p_event.mouse->position))
+					{
+						_isDownResizing = true;
+					}
+
+					if (_leftAnchorArea.contains(p_event.mouse->position))
+					{
+						_isLeftResizing = true;
+					}
+					else if (_rightAnchorArea.contains(p_event.mouse->position))
+					{
+						_isRightResizing = true;
+					}	
+
+					if (_isTopResizing == true || _isDownResizing == true ||
+						_isLeftResizing == true || _isRightResizing == true)
+					{
+						_positionDelta = p_event.mouse->position;
+						_baseGeometry = geometry();
+					}
+				}
 			}
 			break;
 		}
@@ -105,6 +184,10 @@ namespace spk
 			if (p_event.button == spk::Mouse::Button::Left)
 			{
 				_isMoving = false;
+				_isTopResizing = false;
+				_isLeftResizing = false;
+				_isRightResizing = false;
+				_isDownResizing = false;
 				if (_menuBar._titleLabel.viewport().geometry().contains(p_event.mouse->position))
 				{
 					p_event.consume();
@@ -148,6 +231,11 @@ namespace spk
 	{
 		_menuHeight = p_menuHeight;
 		requireGeometryUpdate();
+	}
+
+	void InterfaceWindow::setMinimumSize(const spk::Vector2UInt& p_minimumSize)
+	{
+		_minimumSize = p_minimumSize;
 	}
 
 	void InterfaceWindow::minimize()
