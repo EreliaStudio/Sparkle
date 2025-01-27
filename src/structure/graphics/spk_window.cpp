@@ -39,7 +39,7 @@ namespace spk
 		if (window != nullptr)
 		{
 			if (window->_receiveEvent(uMsg, wParam, lParam) == true)
-				return (0);
+				return (TRUE);
 		}
 
 		return DefWindowProc(hwnd, uMsg, wParam, lParam);
@@ -82,8 +82,25 @@ namespace spk
 		{
 			throw std::runtime_error("Failed to create window.");
 		}
+
+		_cursors[L"Arrow"] = ::LoadCursor(nullptr, IDC_ARROW);
+		_cursors[L"TextEdit"] = ::LoadCursor(nullptr, IDC_IBEAM);
+		_cursors[L"Wait"] = ::LoadCursor(nullptr, IDC_WAIT);
+		_cursors[L"Cross"] = ::LoadCursor(nullptr, IDC_CROSS);
+		_cursors[L"AltCross"] = ::LoadCursor(nullptr, IDC_UPARROW);
+		_cursors[L"ResizeNWSE"] = ::LoadCursor(nullptr, IDC_SIZENWSE);
+		_cursors[L"ResizeNESW"] = ::LoadCursor(nullptr, IDC_SIZENESW);
+		_cursors[L"ResizeWE"] = ::LoadCursor(nullptr, IDC_SIZEWE);
+		_cursors[L"ResizeNS"] = ::LoadCursor(nullptr, IDC_SIZENS);
+		_cursors[L"Move"] = ::LoadCursor(nullptr, IDC_SIZEALL);
+		_cursors[L"No"] = ::LoadCursor(nullptr, IDC_NO);
+		_cursors[L"Hand"] = ::LoadCursor(nullptr, IDC_HAND);
+		_cursors[L"Working"] = ::LoadCursor(nullptr, IDC_APPSTARTING);
+		_cursors[L"Help"] = ::LoadCursor(nullptr, IDC_HELP);
 		
 		setUpdateTimer(1);
+
+		setCursor(L"Arrow");
 
 		_controllerInputThread.bind(_hwnd);
 		_createOpenGLContext();
@@ -511,6 +528,34 @@ namespace spk
 	void Window::swap() const
 	{
 		SwapBuffers(_hdc);
+	}
+
+	void Window::addCursor(const std::wstring& p_cursorName, const std::filesystem::path& p_cursorPath)
+	{
+		_cursors[p_cursorName] = LoadCursorFromFileW(p_cursorPath.c_str());
+	}
+
+	void Window::setCursor(const std::wstring& p_cursorName)
+	{
+		if (_cursors.contains(p_cursorName) == false)
+			throw std::runtime_error("Cursor [" + spk::StringUtils::wstringToString(p_cursorName) + "] not found.");
+
+		HCURSOR nextCursor = _cursors[p_cursorName];
+		if (_currentCursor == nextCursor)
+			return;
+
+		_currentCursor = nextCursor;
+		::SetCursor(_currentCursor);
+		::SendMessage(_hwnd,
+              WM_SETCURSOR,
+              reinterpret_cast<WPARAM>(_hwnd),
+              MAKELPARAM(HTCLIENT, WM_MOUSEMOVE));
+	}
+
+	void Window::_applyCursor()
+	{
+		::SetCursor(_currentCursor);
+		_savedCursor = _currentCursor;
 	}
 
 	void Window::pullEvents()

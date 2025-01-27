@@ -369,11 +369,11 @@ namespace spk
             );
         }
 
-        IVector2 clamp(const IVector2& p_lowerValue, const IVector2& p_higherValue)
+        static IVector2 clamp(const IVector2& p_value, const IVector2& p_lowerValue, const IVector2& p_higherValue)
         {
             return IVector2(
-                std::clamp(x, p_lowerValue.x, p_higherValue.x),
-                std::clamp(y, p_lowerValue.y, p_higherValue.y)
+                std::clamp(p_value.x, p_lowerValue.x, p_higherValue.x),
+                std::clamp(p_value.y, p_lowerValue.y, p_higherValue.y)
             );
         }
 

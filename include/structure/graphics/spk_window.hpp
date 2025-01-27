@@ -62,6 +62,10 @@ namespace spk
 		HWND _hwnd;
 		HDC _hdc;
 		HGLRC _hglrc;
+
+		std::unordered_map<std::wstring, HCURSOR> _cursors;
+		HCURSOR _currentCursor;
+		HCURSOR _savedCursor;
 		
 		std::recursive_mutex _timerMutex;
 		std::set<UINT_PTR> _timers;
@@ -92,6 +96,8 @@ namespace spk
 		void _deleteTimer(UINT_PTR p_id);
 		void _removeAllTimers();
 
+		void _applyCursor();
+
 	public:
 		Window(const std::wstring& p_title, const spk::Geometry2D& p_geometry);
 		~Window();
@@ -101,6 +107,9 @@ namespace spk
 		void close();
 		void clear();
 		void swap() const;
+
+		void addCursor(const std::wstring& p_cursorName, const std::filesystem::path& p_cursorPath);
+		void setCursor(const std::wstring& p_cursorName);
 
 		void setUpdateTimer(const long long& p_durationInMillisecond);
 		void removeUpdateTimer();

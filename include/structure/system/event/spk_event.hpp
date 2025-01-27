@@ -216,7 +216,8 @@ namespace spk
 			WM_QUIT,
 			WM_MOVE,
 			WM_ENTERSIZEMOVE,
-			WM_EXITSIZEMOVE
+			WM_EXITSIZEMOVE,
+			WM_SETCURSOR
 		};
 		enum class Type
 		{
@@ -227,7 +228,8 @@ namespace spk
 			TakeFocus,
 			LoseFocus,
 			Quit,
-			Move
+			Move,
+			SetCursor
 		};
 		Type type = Type::Unknow;
 

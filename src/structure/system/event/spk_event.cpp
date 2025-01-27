@@ -230,6 +230,13 @@ namespace spk
 			}
 		},
 		{
+			WM_SETCURSOR,
+			[](Event* p_event, UINT uMsg, WPARAM wParam, LPARAM lParam)
+			{
+				p_event->systemEvent.type = SystemEvent::Type::SetCursor;
+			}
+		},
+		{
 			WM_EXITSIZEMOVE,
 			[](Event* p_event, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			{
