@@ -12,9 +12,23 @@ namespace spk
 
 	}
 
+	const spk::Vector2UInt& ScalableWidget::minimumSize() const
+	{
+		return (_minimumSize);
+	}
+	
+	const spk::Vector2UInt& ScalableWidget::maximumSize() const
+	{
+		return (_maximumSize);
+	}
+
 	void ScalableWidget::setMinimumSize(const spk::Vector2UInt& p_minimumSize)
 	{
 		_minimumSize = p_minimumSize;
+		if (geometry().size.x < _minimumSize.x || geometry().size.y < _minimumSize.y)
+		{
+			setGeometry(geometry().anchor, _minimumSize);
+		}
 	}
 
 	void ScalableWidget::setMaximumSize(const spk::Vector2UInt& p_maximumSize)
@@ -93,8 +107,6 @@ namespace spk
 			{ geometry().anchor.x - offset,         geometry().anchor.y + geometry().size.y - offset },
 			{ geometry().size.x + offset * 2,      offset * 2 }
 		};
-
-		spk::cout << "Top : " << _topAnchorArea << std::endl;
 	}
 
 	void ScalableWidget::_onMouseEvent(spk::MouseEvent& p_event)
@@ -142,11 +154,11 @@ namespace spk
 					float nextSize = static_cast<float>(_baseGeometry.size.y) - static_cast<float>(delta.y);
 
 					if (nextSize < _minimumSize.y)
-						newGeometry.anchor.y = static_cast<int>(_baseGeometry.size.y) - _minimumSize.y;
+						newGeometry.anchor.y += static_cast<int>(_baseGeometry.size.y) - _minimumSize.y;
 					else if (nextSize > _maximumSize.y)
-						newGeometry.anchor.y = static_cast<int>(_baseGeometry.size.y) - _maximumSize.y;
+						newGeometry.anchor.y += static_cast<int>(_baseGeometry.size.y) - _maximumSize.y;
 					else
-						newGeometry.anchor.y = static_cast<int>(_baseGeometry.size.y) - nextSize;
+						newGeometry.anchor.y += static_cast<int>(_baseGeometry.size.y) - nextSize;
 
 					newGeometry.size.y = _baseGeometry.anchor.y + _baseGeometry.size.y - newGeometry.anchor.y;
 				}
@@ -168,11 +180,11 @@ namespace spk
 					float nextSize = static_cast<float>(_baseGeometry.size.x) - static_cast<float>(delta.x);
 
 					if (nextSize < _minimumSize.x)
-						newGeometry.anchor.x = static_cast<int>(_baseGeometry.size.x) - _minimumSize.x;
+						newGeometry.anchor.x += static_cast<int>(_baseGeometry.size.x) - _minimumSize.x;
 					else if (nextSize > _maximumSize.x)
-						newGeometry.anchor.x = static_cast<int>(_baseGeometry.size.x) - _maximumSize.x;
+						newGeometry.anchor.x += static_cast<int>(_baseGeometry.size.x) - _maximumSize.x;
 					else
-						newGeometry.anchor.x = static_cast<int>(_baseGeometry.size.x) - nextSize;
+						newGeometry.anchor.x += static_cast<int>(_baseGeometry.size.x) - nextSize;
 
 					newGeometry.size.x = _baseGeometry.anchor.x + _baseGeometry.size.x - newGeometry.anchor.x;
 				}

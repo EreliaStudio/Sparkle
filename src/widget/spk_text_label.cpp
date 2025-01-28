@@ -29,9 +29,19 @@ namespace spk
 		setFont(Widget::defaultFont());
 	}
 
+	const std::wstring& TextLabel::text() const
+	{
+		return (_text);
+	}
+
 	const spk::Vector2UInt& TextLabel::cornerSize() const
 	{
 		return (_cornerSize);
+	}
+
+	spk::SafePointer<spk::Font> TextLabel::font() const
+	{
+		return (_fontRenderer.font());
 	}
 
 	void TextLabel::setFont(spk::SafePointer<spk::Font> p_font)

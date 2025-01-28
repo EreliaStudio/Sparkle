@@ -13,22 +13,23 @@ namespace spk
 
 	void NineSliceRenderer::prepare(const Geometry2D& p_geometry, float p_layer, const Vector2Int& p_cornerSize)
     {
-        if (p_cornerSize.x * 2 > p_geometry.width || p_cornerSize.y * 2 > p_geometry.height)
+		Vector2Int cornerSize = p_cornerSize;
+        if (cornerSize.x * 2 > p_geometry.width || cornerSize.y * 2 > p_geometry.height)
         {
-            throw std::invalid_argument("Corner size exceeds half of the geometry dimensions. Geometry [" + p_geometry.size.to_string() + "] - Corner size [" + p_cornerSize.to_string() + "]");
+			cornerSize = { 0, 0 };
         }
 
         int xValues[GRID_SIZE + 1] = {
             0,
-            p_cornerSize.x,
-            static_cast<int>(p_geometry.width) - p_cornerSize.x,
+            cornerSize.x,
+            static_cast<int>(p_geometry.width) - cornerSize.x,
             static_cast<int>(p_geometry.width)
         };
 
         int yValues[GRID_SIZE + 1] = {
             0,
-            p_cornerSize.y,
-            static_cast<int>(p_geometry.height) - p_cornerSize.y,
+            cornerSize.y,
+            static_cast<int>(p_geometry.height) - cornerSize.y,
             static_cast<int>(p_geometry.height),
         };
 

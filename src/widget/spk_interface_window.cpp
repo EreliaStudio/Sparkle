@@ -32,7 +32,7 @@ namespace spk
 			spk::Vector2UInt(3, 3),
 			spk::SpriteSheet::Filtering::Linear
 		);
-
+	
 	void InterfaceWindow::MenuBar::_onGeometryChange()
 	{
 		spk::Vector2Int buttonSize = geometry().size.y - 6;
@@ -65,6 +65,7 @@ namespace spk
 		_minimizeButton(p_name + L" - Minimize button", this),
 		_maximizeButton(p_name + L" - Maximize button", this)
 	{
+		
 		_titleLabel.setCornerSize(2);
 		_titleLabel.setSpriteSheet(nullptr);
 		_titleLabel.setText(p_name);
@@ -175,6 +176,7 @@ namespace spk
 	void InterfaceWindow::setMenuHeight(const float& p_menuHeight)
 	{
 		_menuHeight = p_menuHeight;
+
 		requireGeometryUpdate();
 	}
 

@@ -7,7 +7,7 @@ private:
 
 	void _onGeometryChange() override
 	{
-		interfaceWindow.setGeometry({0, 0}, {250, 500});
+		interfaceWindow.setGeometry({0, 0}, {25, 50});
 	}
 	void _onKeyboardEvent(spk::KeyboardEvent& p_event) override
 	{
@@ -34,7 +34,7 @@ public:
 		spk::Widget(p_name, p_parent),
 		interfaceWindow(L"Editor window", this)
 	{
-		interfaceWindow.setMinimumSize({50, 100});
+		interfaceWindow.setMinimumSize({150, 150});
 		interfaceWindow.setMenuHeight(26);
 		interfaceWindow.setLayer(10);
 		interfaceWindow.activate();
