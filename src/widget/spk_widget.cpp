@@ -6,14 +6,21 @@
 namespace spk
 {
 
-	spk::Font Widget::_defaultFont = spk::Font::fromRawData(SPARKLE_GET_RESOURCE("resources/font/arial.ttf"), Font::Filtering::Linear, Font::Wrap::Repeat, Font::Mipmap::Disable);
+	spk::Font Widget::_defaultFont = spk::Font::fromRawData(
+		SPARKLE_GET_RESOURCE("resources/font/arial.ttf"),
+		Font::Filtering::Linear
+	);
 
 	spk::SafePointer<spk::Font> Widget::defaultFont()
 	{
 		return (&_defaultFont);
 	}
 
-	spk::SpriteSheet Widget::_defaultNineSlice = spk::SpriteSheet::fromRawData(SPARKLE_GET_RESOURCE("resources/textures/defaultNineSlice.png"), spk::Vector2UInt(3, 3), SpriteSheet::Filtering::Linear);
+	spk::SpriteSheet Widget::_defaultNineSlice = spk::SpriteSheet::fromRawData(
+		SPARKLE_GET_RESOURCE("resources/textures/defaultNineSlice.png"),
+		spk::Vector2UInt(3, 3),
+		SpriteSheet::Filtering::Linear
+	);
 
 	spk::SafePointer<spk::SpriteSheet> Widget::defaultNineSlice()
 	{

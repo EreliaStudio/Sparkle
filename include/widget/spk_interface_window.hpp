@@ -69,6 +69,8 @@ namespace spk
 
 		void setMenuHeight(const float& p_menuHeight);
 
+		void setCornerSize(const spk::Vector2Int& p_cornerSize);
+
 		void minimize();
 		void maximize();
 		void close();

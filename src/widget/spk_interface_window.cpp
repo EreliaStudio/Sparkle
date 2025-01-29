@@ -42,7 +42,7 @@ namespace spk
 		size_t textSize = buttonSize.y;
 		if (textSize > _titleLabel.cornerSize().y * 2)
 			textSize -= _titleLabel.cornerSize().y * 2;
-		_titleLabel.setTextSize({textSize, 1 });
+		_titleLabel.setTextSize({textSize, 2 });
 
 		spk::Vector2Int anchor = { 3, 3 };
 
@@ -176,6 +176,13 @@ namespace spk
 	void InterfaceWindow::setMenuHeight(const float& p_menuHeight)
 	{
 		_menuHeight = p_menuHeight;
+
+		requireGeometryUpdate();
+	}
+
+	void InterfaceWindow::setCornerSize(const spk::Vector2Int& p_cornerSize)
+	{
+		_backgroundFrame.setCornerSize(p_cornerSize);
 
 		requireGeometryUpdate();
 	}

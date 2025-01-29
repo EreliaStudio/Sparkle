@@ -55,7 +55,7 @@ namespace spk
 		spk::Vector2UInt size{ static_cast<unsigned int>(width), static_cast<unsigned int>(height) };
 		Format format = _determineFormat(channels);
 
-		setData(imageData, size, format, Filtering::Linear, Wrap::Repeat, Mipmap::Disable);
+		setData(imageData, size, format, Filtering::Nearest, Wrap::ClampToEdge, Mipmap::Enable);
 
 		stbi_image_free(imageData);
 	}

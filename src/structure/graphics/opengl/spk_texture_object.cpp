@@ -22,6 +22,11 @@ namespace spk::OpenGL
 				static_cast<GLsizei>(_size.x), static_cast<GLsizei>(_size.y),
 				0, static_cast<GLenum>(_format), GL_UNSIGNED_BYTE, _datas.data());
 
+			if (_mipmap == Mipmap::Enable)
+			{
+				glGenerateTextureMipmap(_id);
+			}
+
 			glBindTexture(GL_TEXTURE_2D, 0);
 
 			_ownTexture = true;
@@ -39,17 +44,6 @@ namespace spk::OpenGL
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, static_cast<GLint>(_filtering));
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, static_cast<GLint>(_wrap));
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, static_cast<GLint>(_wrap));
-
-			if (_mipmap == Mipmap::Enable)
-			{
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			}
-
-			if (_mipmap == Mipmap::Enable)
-			{
-				glGenerateMipmap(GL_TEXTURE_2D);
-			}
 
 			glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -75,8 +69,8 @@ namespace spk::OpenGL
 		_size{ 0, 0 },
 		_format(Format::Error),
 		_filtering(Filtering::Nearest),
-		_wrap(Wrap::Repeat),
-		_mipmap(Mipmap::Disable)
+		_wrap(Wrap::ClampToEdge),
+		_mipmap(Mipmap::Enable)
 	{
 	}
 

@@ -4,6 +4,8 @@
 
 #include "chunk.hpp"
 
+#include "spk_debug_macro.hpp"
+
 void PlayerController::movePlayer(const spk::Vector3& p_direction)
 {
 	_direction = p_direction;

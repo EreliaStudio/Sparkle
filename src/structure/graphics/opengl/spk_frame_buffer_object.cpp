@@ -187,9 +187,9 @@ namespace spk::OpenGL
             texture._ownTexture = true;
             texture._size = _size;
             texture._format = _mapFormatToTextureObjectFormat(attachment.type);
-            texture._filtering = TextureObject::Filtering::Linear;
+            texture._filtering = TextureObject::Filtering::Nearest;
             texture._wrap = TextureObject::Wrap::ClampToEdge;
-            texture._mipmap = TextureObject::Mipmap::Disable;
+            texture._mipmap = TextureObject::Mipmap::Enable;
             texture._needUpload = false;
             texture._needSetup = false;
 

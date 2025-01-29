@@ -22,8 +22,28 @@ private:
 						addChild(&interfaceWindow);
 					}
 				}
+				
 				break;
 			}
+		}
+	}
+
+	void _onUpdateEvent(spk::UpdateEvent& p_event) override
+	{
+		static spk::Timestamp nextTime;
+
+		if (nextTime >= p_event.time)
+			return;
+
+		if (p_event.keyboard->state[spk::Keyboard::Y] == spk::InputState::Down)
+		{
+			interfaceWindow.setGeometry(interfaceWindow.geometry().anchor, interfaceWindow.geometry().size - spk::Vector2UInt(1, 0));
+			nextTime = p_event.time + spk::Duration(10ll, spk::TimeUnit::Millisecond);
+		}
+		if (p_event.keyboard->state[spk::Keyboard::U] == spk::InputState::Down)
+		{
+			interfaceWindow.setGeometry(interfaceWindow.geometry().anchor, interfaceWindow.geometry().size + spk::Vector2UInt(1, 0));
+			nextTime = p_event.time + spk::Duration(10ll, spk::TimeUnit::Millisecond);
 		}
 	}
 
@@ -35,7 +55,8 @@ public:
 		interfaceWindow(L"Editor window", this)
 	{
 		interfaceWindow.setMinimumSize({150, 150});
-		interfaceWindow.setMenuHeight(26);
+		interfaceWindow.setMenuHeight(50);
+		interfaceWindow.setCornerSize(20);
 		interfaceWindow.setLayer(10);
 		interfaceWindow.activate();
 

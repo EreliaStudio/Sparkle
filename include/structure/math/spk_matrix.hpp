@@ -176,7 +176,7 @@ namespace spk
 			return !(*this == p_other);
 		}
 
-		static IMatrix<4, 4> rotationMatrix(float p_angleX, float p_angleY, float p_angleZ)
+		static IMatrix<4, 4> rotation(float p_angleX, float p_angleY, float p_angleZ)
 		{
 			IMatrix<4, 4> mat;
 
@@ -215,12 +215,49 @@ namespace spk
 			return rotation;
 		}
 
-		static IMatrix<4, 4> rotationMatrix(spk::Vector3 p_angle)
+		static IMatrix<4, 4> rotation(spk::Vector3 p_angle)
 		{
-			return (rotationMatrix(p_angle.x, p_angle.y, p_angle.z));
+			return (rotation(p_angle.x, p_angle.y, p_angle.z));
+		}
+		
+		template <size_t X = SizeX, size_t Y = SizeY, typename std::enable_if_t<(X == 4 && Y == 4), int> = 0>
+		static IMatrix<4,4> rotation(const spk::Quaternion &q)
+		{
+			float xx = q.x * q.x;
+			float yy = q.y * q.y;
+			float zz = q.z * q.z;
+			float xy = q.x * q.y;
+			float xz = q.x * q.z;
+			float yz = q.y * q.z;
+			float wx = q.w * q.x;
+			float wy = q.w * q.y;
+			float wz = q.w * q.z;
+
+			IMatrix<4,4> rotationMatrix;
+			rotationMatrix[0][0] = 1.0f - 2.0f * (yy + zz);
+			rotationMatrix[0][1] = 2.0f * (xy - wz);
+			rotationMatrix[0][2] = 2.0f * (xz + wy);
+			rotationMatrix[0][3] = 0.0f;
+
+			rotationMatrix[1][0] = 2.0f * (xy + wz);
+			rotationMatrix[1][1] = 1.0f - 2.0f * (xx + zz);
+			rotationMatrix[1][2] = 2.0f * (yz - wx);
+			rotationMatrix[1][3] = 0.0f;
+
+			rotationMatrix[2][0] = 2.0f * (xz - wy);
+			rotationMatrix[2][1] = 2.0f * (yz + wx);
+			rotationMatrix[2][2] = 1.0f - 2.0f * (xx + yy);
+			rotationMatrix[2][3] = 0.0f;
+
+			rotationMatrix[3][0] = 0.0f;
+			rotationMatrix[3][1] = 0.0f;
+			rotationMatrix[3][2] = 0.0f;
+			rotationMatrix[3][3] = 1.0f;
+
+			return rotationMatrix;
 		}
 
-		static IMatrix<4, 4> translationMatrix(float p_translateX, float p_translateY, float p_translateZ)
+		static IMatrix<4, 4> translation(float p_translateX, float p_translateY, float p_translateZ)
 		{
 			IMatrix<4, 4> mat = {
 				1, 0, 0, p_translateX,
@@ -232,13 +269,13 @@ namespace spk
 			return mat;
 		}
 
-		static IMatrix<4, 4> translationMatrix(spk::Vector3 p_translation)
+		static IMatrix<4, 4> translation(spk::Vector3 p_translation)
 		{
-			return (translationMatrix(p_translation.x, p_translation.y, p_translation.z));
+			return (translation(p_translation.x, p_translation.y, p_translation.z));
 		}
 
 		// Scale Matrix
-		static IMatrix<4, 4> scaleMatrix(float p_scaleX, float p_scaleY, float p_scaleZ)
+		static IMatrix<4, 4> scale(float p_scaleX, float p_scaleY, float p_scaleZ)
 		{
 			IMatrix<4, 4> mat = {
 				p_scaleX, 0, 0, 0,
@@ -250,9 +287,9 @@ namespace spk
 			return mat;
 		}
 
-		static IMatrix<4, 4> scaleMatrix(spk::Vector3 p_scale)
+		static IMatrix<4, 4> scale(spk::Vector3 p_scale)
 		{
-			return (scaleMatrix(p_scale.x, p_scale.y, p_scale.z));
+			return (scale(p_scale.x, p_scale.y, p_scale.z));
 		}
 
 		friend std::wostream& operator<<(std::wostream& p_os, const IMatrix& p_mat)
@@ -395,43 +432,6 @@ namespace spk
 			result[3][2] = -(p_farPlane + p_nearPlane) / (p_farPlane - p_nearPlane);
 
 			return result;
-		}
-
-		template <size_t X = SizeX, size_t Y = SizeY, typename std::enable_if_t<(X == 4 && Y == 4), int> = 0>
-		static IMatrix<4,4> rotationMatrix(const spk::Quaternion &q)
-		{
-			float xx = q.x * q.x;
-			float yy = q.y * q.y;
-			float zz = q.z * q.z;
-			float xy = q.x * q.y;
-			float xz = q.x * q.z;
-			float yz = q.y * q.z;
-			float wx = q.w * q.x;
-			float wy = q.w * q.y;
-			float wz = q.w * q.z;
-
-			IMatrix<4,4> rotationMatrix;
-			rotationMatrix[0][0] = 1.0f - 2.0f * (yy + zz);
-			rotationMatrix[0][1] = 2.0f * (xy - wz);
-			rotationMatrix[0][2] = 2.0f * (xz + wy);
-			rotationMatrix[0][3] = 0.0f;
-
-			rotationMatrix[1][0] = 2.0f * (xy + wz);
-			rotationMatrix[1][1] = 1.0f - 2.0f * (xx + zz);
-			rotationMatrix[1][2] = 2.0f * (yz - wx);
-			rotationMatrix[1][3] = 0.0f;
-
-			rotationMatrix[2][0] = 2.0f * (xz - wy);
-			rotationMatrix[2][1] = 2.0f * (yz + wx);
-			rotationMatrix[2][2] = 1.0f - 2.0f * (xx + yy);
-			rotationMatrix[2][3] = 0.0f;
-
-			rotationMatrix[3][0] = 0.0f;
-			rotationMatrix[3][1] = 0.0f;
-			rotationMatrix[3][2] = 0.0f;
-			rotationMatrix[3][3] = 1.0f;
-
-			return rotationMatrix;
 		}
 
 		template <size_t X = SizeX, size_t Y = SizeY, typename std::enable_if_t<(X == Y), int> = 0>

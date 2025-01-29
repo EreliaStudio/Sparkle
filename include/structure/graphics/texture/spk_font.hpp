@@ -126,7 +126,7 @@ namespace spk
 			void _uploadTexture();
 
 			Atlas(const stbtt_fontinfo& p_fontInfo, const Data& p_fontData, const size_t& p_textSize, const size_t& p_outlineSize, const Filtering& p_filtering = Filtering::Linear,
-			const Wrap& p_wrap = Wrap::Repeat, const Mipmap& p_mipmap = Mipmap::Disable);
+			const Wrap& p_wrap = Wrap::ClampToEdge, const Mipmap& p_mipmap = Mipmap::Enable);
 		public:
 			void loadGlyphs(const std::wstring& p_glyphsToLoad);
 
@@ -152,14 +152,14 @@ namespace spk
 		Data _fontData;
 		stbtt_fontinfo _fontInfo;
 
-		Filtering _filtering = Filtering::Linear;
-		Wrap _wrap = Wrap::Repeat;
+		Filtering _filtering = Filtering::Nearest;
+		Wrap _wrap = Wrap::ClampToEdge;
 		Mipmap _mipmap = Mipmap::Enable;
 
 	public:
 		static Font fromRawData(const std::vector<uint8_t>& p_data,
-			const Filtering& p_filtering = Filtering::Linear,
-			const Wrap& p_wrap = Wrap::Repeat, const Mipmap& p_mipmap = Mipmap::Enable);
+			const Filtering& p_filtering = Filtering::Nearest,
+			const Wrap& p_wrap = Wrap::ClampToEdge, const Mipmap& p_mipmap = Mipmap::Enable);
 
 		Font();
 		Font(const std::filesystem::path& p_path);

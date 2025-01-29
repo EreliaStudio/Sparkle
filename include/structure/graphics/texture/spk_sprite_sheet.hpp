@@ -22,7 +22,7 @@ namespace spk
     public:
 		static SpriteSheet fromRawData(const std::vector<uint8_t>& p_rawData, const spk::Vector2UInt& p_spriteSize,
 			const Filtering& p_filtering = Filtering::Nearest,
-			const Wrap& p_wrap = Wrap::Repeat, const Mipmap& p_mipmap = Mipmap::Disable)
+			const Wrap& p_wrap = Wrap::ClampToEdge, const Mipmap& p_mipmap = Mipmap::Enable)
 		{
 			SpriteSheet result;
 
@@ -58,10 +58,11 @@ namespace spk
             }
             _nbSprite = p_spriteSize;
             _unit = Vector2(1.0f, 1.0f) / _nbSprite;
+			spk::Vector2 halfPixelSize = 0.5f / spk::Vector2(size().x, size().y);
 
             if (p_spriteSize == Vector2UInt(1, 1))
             {
-                _sprites.push_back({ Vector2(0.0f, 0.0f), _unit });
+                _sprites.push_back({ Vector2(0.0f, 0.0f) + halfPixelSize, _unit - halfPixelSize});
             }
             else
             {
@@ -70,7 +71,7 @@ namespace spk
                     for (size_t x = 0; x < _nbSprite.x; x++)
                     {
                         spk::Vector2 anchor = Vector2(static_cast<float>(x), static_cast<float>(y)) * _unit;
-                        _sprites.push_back({ anchor, _unit });
+                        _sprites.push_back({ anchor + halfPixelSize, _unit - halfPixelSize });
                     }
                 }
             }

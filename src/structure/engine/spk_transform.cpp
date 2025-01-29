@@ -146,9 +146,9 @@ namespace spk
 
 	void Transform::_updateModel()
 	{
-		spk::Matrix4x4 translationMatrix = spk::Matrix4x4::translationMatrix(_localPosition);
-		spk::Matrix4x4 scaleMatrix = spk::Matrix4x4::scaleMatrix(_scale);
-		spk::Matrix4x4 rotationMatrix = spk::Matrix4x4::rotationMatrix(_rotation);
+		spk::Matrix4x4 translationMatrix = spk::Matrix4x4::translation(_localPosition);
+		spk::Matrix4x4 scaleMatrix = spk::Matrix4x4::scale(_scale);
+		spk::Matrix4x4 rotationMatrix = spk::Matrix4x4::rotation(_rotation);
 
 		spk::Matrix4x4 parentModel = spk::Matrix4x4::identity();
 		spk::SafePointer<Entity> entityOwner = owner();
