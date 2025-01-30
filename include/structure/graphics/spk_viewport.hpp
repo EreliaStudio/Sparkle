@@ -13,6 +13,7 @@ namespace spk
 		static Matrix4x4 _matrix;
 		static spk::Vector2 _convertionOffset;
 		static spk::Vector2UInt _windowSize;
+		static spk::SafePointer<const Viewport> _appliedViewport;
 		
 		Geometry2D _geometry;
 
@@ -25,6 +26,7 @@ namespace spk
 
 		void apply() const;
 		void setAsRootViewport() const;
+		static spk::SafePointer<const Viewport> activeViewport();
 		static spk::Matrix4x4 matrix();
 		static spk::Vector2 convertScreenToOpenGL(const spk::Vector2Int p_screenPosition);
 		static spk::Vector2 convertScreenToOpenGL(int p_screenPositionX, int p_screenPositionY);

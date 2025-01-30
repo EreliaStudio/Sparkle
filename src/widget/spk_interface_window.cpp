@@ -39,10 +39,10 @@ namespace spk
 		spk::Vector2Int controlButtonSize = spk::Vector2Int(buttonSize.x * 3, buttonSize.y);
 		spk::Vector2Int titleLabelSize = { geometry().size.x - controlButtonSize.x - 16, buttonSize.y };
 
-		size_t textSize = buttonSize.y;
+		size_t textSize = geometry().size.y;
 		if (textSize > _titleLabel.cornerSize().y * 2)
 			textSize -= _titleLabel.cornerSize().y * 2;
-		_titleLabel.setTextSize({textSize, 2 });
+		_titleLabel.setTextSize({textSize, 1 });
 
 		spk::Vector2Int anchor = { 3, 3 };
 

@@ -33,7 +33,7 @@ namespace spk
 				void main()
 				{
 					outputColor = texture(diffuseTexture, fragUV);
-					if (outputColor.a <= 0.001)
+					if (outputColor.a == 0)
 						discard;
 				}
 				)";
