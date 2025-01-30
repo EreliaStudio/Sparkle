@@ -32,30 +32,51 @@ namespace spk
 			spk::Vector2UInt(3, 3),
 			spk::SpriteSheet::Filtering::Linear
 		);
+
+	spk::Font::Size InterfaceWindow::MenuBar::_computeFontSize(const float& p_menuHeight)
+	{
+		spk::Vector2Int buttonSize = _computeControlButtonSize(p_menuHeight);
+		float outlineSize = 1;
+		return (spk::Font::Size(buttonSize.y - outlineSize * 2, outlineSize));
+	}
+	
+	spk::Vector2Int InterfaceWindow::MenuBar::_computeControlButtonSize(const float& p_menuHeight)
+	{
+		if (_titleLabel.cornerSize().y * 4 > p_menuHeight)
+			return (p_menuHeight);
+		return (p_menuHeight - _titleLabel.cornerSize().y * 4);
+	}
 	
 	void InterfaceWindow::MenuBar::_onGeometryChange()
 	{
-		spk::Vector2Int buttonSize = geometry().size.y - 6;
-		spk::Vector2Int controlButtonSize = spk::Vector2Int(buttonSize.x * 3, buttonSize.y);
-		spk::Vector2Int titleLabelSize = { geometry().size.x - controlButtonSize.x - 16, buttonSize.y };
+		float space = 3.0f;
+		spk::Vector2Int buttonSize = _computeControlButtonSize(geometry().size.y);
+		spk::Vector2Int titleLabelSize = { geometry().size.x - buttonSize.x * 3 - space * 4 - _titleLabel.cornerSize().x * 4, buttonSize.y };
 
-		size_t textSize = geometry().size.y;
-		if (textSize > _titleLabel.cornerSize().y * 2)
-			textSize -= _titleLabel.cornerSize().y * 2;
-		_titleLabel.setTextSize({textSize, 1 });
+		_titleLabel.setTextSize(_computeFontSize(geometry().size.y));
 
-		spk::Vector2Int anchor = { 3, 3 };
+		spk::Vector2Int anchor = _titleLabel.cornerSize() * 2;
 
 		_titleLabel.setGeometry(anchor, { titleLabelSize.x, titleLabelSize.y });
-		anchor.x += titleLabelSize.x + 3;
+		anchor.x += titleLabelSize.x + space;
 
 		_minimizeButton.setGeometry(anchor, buttonSize);
-		anchor.x += buttonSize.x + 3;
+		anchor.x += buttonSize.x + space;
 
 		_maximizeButton.setGeometry(anchor, buttonSize);
-		anchor.x += buttonSize.x + 3;
+		anchor.x += buttonSize.x + space;
 
 		_closeButton.setGeometry(anchor, buttonSize);
+	}
+
+	spk::Vector2Int InterfaceWindow::MenuBar::_computeMinimalSize(const float& p_menuHeight)
+	{
+		spk::Vector2Int buttonSize = _computeControlButtonSize(p_menuHeight);
+		spk::Font::Size fontSize = _computeFontSize(p_menuHeight);
+
+		spk::Vector2Int titleLabelSize = _titleLabel.font()->computeStringSize(_titleLabel.text(), fontSize);
+
+		return (spk::Vector2Int(titleLabelSize.x + buttonSize.x * 3 + 3 * 4 + _titleLabel.cornerSize().x * 4, p_menuHeight ));
 	}
 
 	InterfaceWindow::MenuBar::MenuBar(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent) :
@@ -64,8 +85,7 @@ namespace spk
 		_closeButton(p_name + L" - Close button", this),
 		_minimizeButton(p_name + L" - Minimize button", this),
 		_maximizeButton(p_name + L" - Maximize button", this)
-	{
-		
+	{	
 		_titleLabel.setCornerSize(2);
 		_titleLabel.setSpriteSheet(nullptr);
 		_titleLabel.setText(p_name);
@@ -176,6 +196,10 @@ namespace spk
 	void InterfaceWindow::setMenuHeight(const float& p_menuHeight)
 	{
 		_menuHeight = p_menuHeight;
+
+		spk::Vector2Int minimalSize = _menuBar._computeMinimalSize(p_menuHeight) + spk::Vector2Int(0, 10);
+
+		setMinimumSize(minimalSize);
 
 		requireGeometryUpdate();
 	}

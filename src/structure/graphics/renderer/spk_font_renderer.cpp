@@ -59,16 +59,17 @@ namespace spk
 						discard;
 					}
 
-					float outlineToGlyphThreshold = 0.2f;
-					if (grayscale <= outlineToGlyphThreshold)
+					if (grayscale < 1.0f)
 					{
+						//outputColor = outlineColor;
+						//outputColor.a = computeFormula(smoothstep(0, outlineToGlyphThreshold, grayscale), 20);
 						outputColor = outlineColor;
-						outputColor.a = computeFormula(smoothstep(0, outlineToGlyphThreshold, grayscale), 20);
 					}
 					else
 					{
-						float t = computeFormula(smoothstep(outlineToGlyphThreshold, 1.0, grayscale), -20);
-						outputColor = mix(outlineColor, glyphColor, t);
+						// float t = computeFormula(smoothstep(outlineToGlyphThreshold, 1.0, grayscale), -20);
+						// outputColor = mix(outlineColor, glyphColor, t);
+						outputColor = glyphColor;
 					}
 				}
 				)";

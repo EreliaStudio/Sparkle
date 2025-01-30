@@ -37,7 +37,12 @@ namespace spk
 			spk::PushButton _maximizeButton;
 			spk::PushButton _closeButton;
 
+			spk::Font::Size _computeFontSize(const float& p_menuHeight);
+			spk::Vector2Int _computeControlButtonSize(const float& p_menuHeight);
+
 			void _onGeometryChange();
+			
+			spk::Vector2Int _computeMinimalSize(const float& p_menuHeight);
 
 		public:
 			MenuBar(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent);
