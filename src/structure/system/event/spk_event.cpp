@@ -43,6 +43,7 @@ namespace spk
 
 	Event::Event(spk::SafePointer<Window> p_window, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
+		rootEvent._consumed = false;
 		construct(p_window, uMsg, wParam, lParam);
 	}
 
