@@ -29,6 +29,16 @@ namespace spk
 		setFont(Widget::defaultFont());
 	}
 
+	spk::Vector2UInt TextLabel::computeTextSize()
+	{
+		return (_fontRenderer.font()->computeStringSize(_text, _fontRenderer.fontSize()));
+	}
+
+	spk::Vector2UInt TextLabel::computeExpectedTextSize(const spk::Font::Size& p_textSize)
+	{
+		return (_fontRenderer.font()->computeStringSize(_text, p_textSize));
+	}
+
 	const std::wstring& TextLabel::text() const
 	{
 		return (_text);
@@ -42,6 +52,11 @@ namespace spk
 	spk::SafePointer<spk::Font> TextLabel::font() const
 	{
 		return (_fontRenderer.font());
+	}
+
+	const spk::Font::Size& TextLabel::textSize() const
+	{
+		return (_fontRenderer.fontSize());
 	}
 
 	void TextLabel::setFont(spk::SafePointer<spk::Font> p_font)

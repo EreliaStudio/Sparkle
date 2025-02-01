@@ -7,7 +7,7 @@
 
 namespace spk
 {
-	class InterfaceWindow : public spk::ScalableWidget
+	class AbstractInterfaceWindow : public spk::ScalableWidget
 	{
 	public:
 		enum Event
@@ -15,6 +15,17 @@ namespace spk
 			Minimize,
 			Maximize,
 			Close
+		};
+
+		class Content : public spk::Widget
+		{
+		public:
+			Content(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent) :
+				spk::Widget(p_name, p_parent)
+			{
+			}
+
+			virtual spk::Vector2UInt minimalSize() = 0;
 		};
 
 	private:
@@ -27,9 +38,11 @@ namespace spk
 		static std::vector<uint8_t> _defaultNineSlice_Darker_Data;
 		static spk::SpriteSheet     _defaultNineSlice_Darker;
 
+
+
 		class MenuBar : public spk::Widget
 		{
-			friend class InterfaceWindow;
+			friend class AbstractInterfaceWindow;
 
 		private:
 			spk::TextLabel  _titleLabel;
@@ -42,7 +55,7 @@ namespace spk
 
 			void _onGeometryChange();
 			
-			spk::Vector2Int _computeMinimalSize(const float& p_menuHeight);
+			spk::Vector2UInt _computeMinimalSize(const float& p_menuHeight);
 
 		public:
 			MenuBar(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent);
@@ -51,7 +64,7 @@ namespace spk
 		spk::Frame _backgroundFrame;
 		spk::Frame _minimizedBackgroundFrame;
 		MenuBar    _menuBar;
-		spk::Frame _contentFrame;
+		spk::SafePointer<Content> _content;
 
 		float _menuHeight = 20.0f;
 
@@ -67,10 +80,12 @@ namespace spk
 		void _onGeometryChange() override;
 		void _onMouseEvent(spk::MouseEvent& p_event) override;
 
-	public:
-		InterfaceWindow(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent);
+		void _computeMinimalSize();
 
-		spk::SafePointer<spk::Widget> content();
+	public:
+		AbstractInterfaceWindow(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent);
+
+		void setContent(spk::SafePointer<Content> p_content);
 
 		void setMenuHeight(const float& p_menuHeight);
 
@@ -80,6 +95,25 @@ namespace spk
 		void maximize();
 		void close();
 
-		spk::ContractProvider::Contract subscribeTo(const InterfaceWindow::Event& p_event, const spk::ContractProvider::Job& p_job);
+		spk::ContractProvider::Contract subscribeTo(const AbstractInterfaceWindow::Event& p_event, const spk::ContractProvider::Job& p_job);
+	};
+
+	template<typename TContentType,
+	         typename = std::enable_if_t<std::is_base_of<AbstractInterfaceWindow::Content, TContentType>::value>>
+	class InterfaceWindow : public spk::AbstractInterfaceWindow
+	{
+	private:
+		TContentType _content;
+
+		using spk::AbstractInterfaceWindow::setContent;
+
+	public:
+		InterfaceWindow(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent) :
+			spk::AbstractInterfaceWindow(p_name, p_parent),
+			_content(p_name + L" - Content", this)
+		{
+			setContent(&_content);
+			_content.activate();
+		}
 	};
 }

@@ -5,49 +5,49 @@
 
 namespace spk
 {
-	spk::SpriteSheet InterfaceWindow::_defaultIconset =
+	spk::SpriteSheet AbstractInterfaceWindow::_defaultIconset =
 		spk::SpriteSheet::fromRawData(
 			SPARKLE_GET_RESOURCE("resources/textures/defaultIconset.png"),
 			spk::Vector2Int(10, 10),
 			spk::SpriteSheet::Filtering::Linear
 		);
 
-	spk::SpriteSheet InterfaceWindow::_defaultNineSlice_Light =
+	spk::SpriteSheet AbstractInterfaceWindow::_defaultNineSlice_Light =
 		spk::SpriteSheet::fromRawData(
 			SPARKLE_GET_RESOURCE("resources/textures/defaultNineSlice_Light.png"),
 			spk::Vector2UInt(3, 3),
 			spk::SpriteSheet::Filtering::Linear
 		);
 
-	spk::SpriteSheet InterfaceWindow::_defaultNineSlice_Dark =
+	spk::SpriteSheet AbstractInterfaceWindow::_defaultNineSlice_Dark =
 		spk::SpriteSheet::fromRawData(
 			SPARKLE_GET_RESOURCE("resources/textures/defaultNineSlice_Dark.png"),
 			spk::Vector2UInt(3, 3),
 			spk::SpriteSheet::Filtering::Linear
 		);
 
-	spk::SpriteSheet InterfaceWindow::_defaultNineSlice_Darker =
+	spk::SpriteSheet AbstractInterfaceWindow::_defaultNineSlice_Darker =
 		spk::SpriteSheet::fromRawData(
 			SPARKLE_GET_RESOURCE("resources/textures/defaultNineSlice_Darker.png"),
 			spk::Vector2UInt(3, 3),
 			spk::SpriteSheet::Filtering::Linear
 		);
 
-	spk::Font::Size InterfaceWindow::MenuBar::_computeFontSize(const float& p_menuHeight)
+	spk::Font::Size AbstractInterfaceWindow::MenuBar::_computeFontSize(const float& p_menuHeight)
 	{
 		spk::Vector2Int buttonSize = _computeControlButtonSize(p_menuHeight);
 		float outlineSize = 1;
 		return (spk::Font::Size(buttonSize.y - outlineSize * 2, outlineSize));
 	}
 	
-	spk::Vector2Int InterfaceWindow::MenuBar::_computeControlButtonSize(const float& p_menuHeight)
+	spk::Vector2Int AbstractInterfaceWindow::MenuBar::_computeControlButtonSize(const float& p_menuHeight)
 	{
 		if (_titleLabel.cornerSize().y * 4 > p_menuHeight)
 			return (p_menuHeight);
 		return (p_menuHeight - _titleLabel.cornerSize().y * 4);
 	}
 	
-	void InterfaceWindow::MenuBar::_onGeometryChange()
+	void AbstractInterfaceWindow::MenuBar::_onGeometryChange()
 	{
 		float space = 3.0f;
 		spk::Vector2Int buttonSize = _computeControlButtonSize(geometry().size.y);
@@ -69,17 +69,17 @@ namespace spk
 		_closeButton.setGeometry(anchor, buttonSize);
 	}
 
-	spk::Vector2Int InterfaceWindow::MenuBar::_computeMinimalSize(const float& p_menuHeight)
+	spk::Vector2UInt AbstractInterfaceWindow::MenuBar::_computeMinimalSize(const float& p_menuHeight)
 	{
 		spk::Vector2Int buttonSize = _computeControlButtonSize(p_menuHeight);
 		spk::Font::Size fontSize = _computeFontSize(p_menuHeight);
 
 		spk::Vector2Int titleLabelSize = _titleLabel.font()->computeStringSize(_titleLabel.text(), fontSize);
 
-		return (spk::Vector2Int(titleLabelSize.x + buttonSize.x * 3 + 3 * 4 + _titleLabel.cornerSize().x * 4, p_menuHeight ));
+		return (spk::Vector2UInt(titleLabelSize.x + buttonSize.x * 3 + 3 * 4 + _titleLabel.cornerSize().x * 4, p_menuHeight ));
 	}
 
-	InterfaceWindow::MenuBar::MenuBar(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent) :
+	AbstractInterfaceWindow::MenuBar::MenuBar(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent) :
 		spk::Widget(p_name + L" - Menu bar", p_parent),
 		_titleLabel(p_name + L" - Title label", this),
 		_closeButton(p_name + L" - Close button", this),
@@ -107,10 +107,9 @@ namespace spk
 		_maximizeButton.activate();
 	}
 
-	InterfaceWindow::InterfaceWindow(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent) :
+	AbstractInterfaceWindow::AbstractInterfaceWindow(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent) :
 		ScalableWidget(p_name, p_parent),
 		_menuBar(p_name, this) ,
-		_contentFrame(p_name + L" - Content frame", this),
 		_backgroundFrame(p_name + L" - Background frame", this),
 		_minimizedBackgroundFrame(p_name + L" - Background frame (Minimized)", this)
 	{
@@ -123,26 +122,26 @@ namespace spk
 		_minimizedBackgroundFrame.setLayer(1);
 		_minimizedBackgroundFrame.deactivate();
 
-		_contentFrame.setLayer(2);
-		_contentFrame.setSpriteSheet(nullptr);
-		_contentFrame.activate();
-
 		_minimizeContract = _menuBar._minimizeButton.subscribe([&]() { minimize(); });
 		_maximizeContract = _menuBar._maximizeButton.subscribe([&]() { maximize(); });
 	}
 
-	void InterfaceWindow::_onGeometryChange()
+	void AbstractInterfaceWindow::_onGeometryChange()
 	{
 		spk::Vector2Int menuSize = { geometry().size.x, static_cast<int>(_menuHeight) };
-		spk::Vector2Int frameSize = { geometry().size.x, geometry().size.y - menuSize.y };
+		spk::Vector2Int frameSize = {
+			geometry().size.x - _backgroundFrame.cornerSize().x * 2,
+			geometry().size.y - menuSize.y - _backgroundFrame.cornerSize().y * 2 };
 
 		_backgroundFrame.setGeometry(0, geometry().size);
 		_minimizedBackgroundFrame.setGeometry(0, menuSize);
 		_menuBar.setGeometry({ 0, 0 }, menuSize);
-		_contentFrame.setGeometry({ 0, menuSize.y }, frameSize);
+		
+		if (_content != nullptr)
+			_content->setGeometry({ _backgroundFrame.cornerSize().x, menuSize.y + _backgroundFrame.cornerSize().y}, frameSize);
 	}
 
-	void InterfaceWindow::_onMouseEvent(spk::MouseEvent& p_event)
+	void AbstractInterfaceWindow::_onMouseEvent(spk::MouseEvent& p_event)
 	{
 		ScalableWidget::_onMouseEvent(p_event);
 		
@@ -185,33 +184,45 @@ namespace spk
 			break;
 		}
 		}
-
 	}
 
-	spk::SafePointer<spk::Widget> InterfaceWindow::content()
+	void AbstractInterfaceWindow::_computeMinimalSize()
 	{
-		return & _contentFrame;
+		spk::Vector2UInt menuBarSize = _menuBar._computeMinimalSize(_menuHeight);
+
+		spk::Vector2UInt contentSize = (_content == nullptr ? 0 : _content->minimalSize());
+
+		setMinimumSize(spk::Vector2UInt(
+				std::max(menuBarSize.x, contentSize.x),
+				menuBarSize.y + contentSize.y + _backgroundFrame.cornerSize().y * 2
+			));
 	}
 
-	void InterfaceWindow::setMenuHeight(const float& p_menuHeight)
+	void AbstractInterfaceWindow::setContent(spk::SafePointer<Content> p_content)
+	{
+		_content = p_content;
+		_backgroundFrame.addChild(_content);
+		_computeMinimalSize();
+		requireGeometryUpdate();
+	}
+
+	void AbstractInterfaceWindow::setMenuHeight(const float& p_menuHeight)
 	{
 		_menuHeight = p_menuHeight;
 
-		spk::Vector2Int minimalSize = _menuBar._computeMinimalSize(p_menuHeight) + spk::Vector2Int(0, 10);
-
-		setMinimumSize(minimalSize);
+		_computeMinimalSize();
 
 		requireGeometryUpdate();
 	}
 
-	void InterfaceWindow::setCornerSize(const spk::Vector2Int& p_cornerSize)
+	void AbstractInterfaceWindow::setCornerSize(const spk::Vector2Int& p_cornerSize)
 	{
 		_backgroundFrame.setCornerSize(p_cornerSize);
 
 		requireGeometryUpdate();
 	}
 
-	void InterfaceWindow::minimize()
+	void AbstractInterfaceWindow::minimize()
 	{
 		if (_isMaximized)
 			maximize();
@@ -228,7 +239,7 @@ namespace spk
 		}
 	}
 	
-	void InterfaceWindow::maximize()
+	void AbstractInterfaceWindow::maximize()
 	{
 		_backgroundFrame.activate();
 
@@ -247,21 +258,21 @@ namespace spk
 		}
 	}
 
-	void InterfaceWindow::close()
+	void AbstractInterfaceWindow::close()
 	{
 		deactivate();
 	}
 
-	spk::ContractProvider::Contract InterfaceWindow::subscribeTo(const InterfaceWindow::Event& p_event,
+	spk::ContractProvider::Contract AbstractInterfaceWindow::subscribeTo(const AbstractInterfaceWindow::Event& p_event,
 		const spk::ContractProvider::Job& p_job)
 	{
 		switch (p_event)
 		{
-		case InterfaceWindow::Minimize:
+		case AbstractInterfaceWindow::Minimize:
 			return _menuBar._minimizeButton.subscribe(p_job);
-		case InterfaceWindow::Maximize:
+		case AbstractInterfaceWindow::Maximize:
 			return _menuBar._maximizeButton.subscribe(p_job);
-		case InterfaceWindow::Close:
+		case AbstractInterfaceWindow::Close:
 			return _menuBar._closeButton.subscribe(p_job);
 		}
 		throw std::runtime_error("Unknown interface window event");

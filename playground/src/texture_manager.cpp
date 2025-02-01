@@ -5,6 +5,7 @@
 TextureManager::TextureManager()
 {
 	loadSpriteSheet(L"chunkSpriteSheet", L"playground/resources/test.png", spk::Vector2UInt(2, 2));
+	loadSpriteSheet(L"iconset", L"playground/resources/iconset.png", spk::Vector2UInt(10, 10));
 }
 
 spk::SafePointer<spk::Image> TextureManager::loadImage(const std::wstring& p_name, const std::filesystem::path& p_imagePath)

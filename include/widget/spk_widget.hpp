@@ -21,8 +21,6 @@ namespace spk
 		public spk::InherenceObject<Widget>, //An object responsible to hold relationship between "child" objects and a unique parent
 		public spk::ActivableObject //An object who must contain a state as boolean, with a method activate and deactivate. It must also contain a set of callback where users can add callback to activation and deactivation
 	{
-
-
 		friend class Window;
 	private:
 		static std::vector<uint8_t> _defaultFont_Data;

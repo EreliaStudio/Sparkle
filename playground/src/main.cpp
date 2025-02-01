@@ -3,7 +3,95 @@
 class MapEditorHUD : public spk::Widget
 {
 private:
-	spk::InterfaceWindow interfaceWindow;
+	class InterfaceContent : public spk::AbstractInterfaceWindow::Content
+	{
+	private:
+		spk::TextLabel _layerTextlabel;
+		spk::PushButton _layerUpButton;
+		spk::TextLabel _layerValueLabel;
+		spk::PushButton _layerDownButton;
+
+		spk::Font::Size defaultFontSize()
+		{
+			return {16, 1};
+		}
+
+		void _onGeometryChange() override
+		{
+			spk::Font::Size fontSize = defaultFontSize();
+
+			_layerTextlabel.setTextSize(fontSize);
+			spk::Vector2UInt minimalTextLabelSize = _layerTextlabel.computeExpectedTextSize(fontSize) + _layerTextlabel.cornerSize() * 2;
+			spk::Vector2UInt buttonSize = std::max(16u, minimalTextLabelSize.y);
+
+			_layerTextlabel.setGeometry({0, 0}, minimalTextLabelSize);
+
+			_layerUpButton.setTextSize(fontSize);
+			_layerUpButton.setGeometry({_layerTextlabel.geometry().size.x + 3, 0}, buttonSize);
+			
+			_layerValueLabel.setTextSize(fontSize);
+			_layerValueLabel.setGeometry({_layerTextlabel.geometry().size.x + 3 + _layerUpButton.geometry().size.x + 3, 0}, buttonSize);
+			
+			_layerDownButton.setTextSize(fontSize);
+			_layerDownButton.setGeometry({_layerTextlabel.geometry().size.x + 3 + _layerUpButton.geometry().size.x + 3 + _layerValueLabel.geometry().size.x + 3, 0}, buttonSize);
+		}
+
+	public:
+		InterfaceContent(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+			spk::AbstractInterfaceWindow::Content(p_name, p_parent),
+			_layerTextlabel(L"Layer text label", this),
+			_layerUpButton(L"Layer up button", this),
+			_layerValueLabel(L"Layer value label", this),
+			_layerDownButton(L"Layer down button", this)
+		{
+			_layerTextlabel.setText(L"Layer :");
+			_layerTextlabel.setTextAlignment(
+				spk::HorizontalAlignment::Right,
+				spk::VerticalAlignment::Centered
+				);
+			_layerTextlabel.setCornerSize(2);
+			_layerTextlabel.activate();
+
+			_layerUpButton.setText(L"+");
+			_layerUpButton.setTextAlignment(
+				spk::HorizontalAlignment::Centered,
+				spk::VerticalAlignment::Centered
+				);
+			_layerUpButton.setCornerSize(2);
+			_layerUpButton.activate();
+
+			_layerValueLabel.setText(L"0");
+			_layerValueLabel.setTextAlignment(
+				spk::HorizontalAlignment::Centered,
+				spk::VerticalAlignment::Centered
+				);
+			_layerValueLabel.setCornerSize(2);
+			_layerValueLabel.activate();
+
+			_layerDownButton.setText(L"-");
+			_layerDownButton.setTextAlignment(
+				spk::HorizontalAlignment::Centered,
+				spk::VerticalAlignment::Centered
+				);
+			_layerDownButton.setCornerSize(2);
+			_layerDownButton.activate();
+		}
+
+		spk::Vector2UInt minimalSize()
+		{
+			spk::Vector2UInt titleLabelSize = _layerTextlabel.computeExpectedTextSize(defaultFontSize()) + _layerTextlabel.cornerSize() * 2;
+			spk::Vector2UInt buttonSize = 16;
+
+			spk::Vector2UInt result = {
+				titleLabelSize.x + 3 + buttonSize.x + 3 + buttonSize.x + 3 + buttonSize.x,
+				std::max(titleLabelSize.y, buttonSize.y)
+			};
+
+			return (result);
+		}
+	};
+
+	spk::InterfaceWindow<InterfaceContent> interfaceWindow;
 
 	void _onGeometryChange() override
 	{
@@ -40,7 +128,7 @@ public:
 		interfaceWindow.setLayer(10);
 		interfaceWindow.activate();
 
-		_quitContract = interfaceWindow.subscribeTo(spk::InterfaceWindow::Event::Close, [&](){removeChild(&interfaceWindow);});
+		_quitContract = interfaceWindow.subscribeTo(spk::AbstractInterfaceWindow::Event::Close, [&](){removeChild(&interfaceWindow);});
 	}
 };
 
@@ -74,7 +162,6 @@ int main()
 
 	engine.addEntity(&worldManager);
 	engine.addEntity(&player);
-
 
 	MapEditorHUD mapEditorWidget = MapEditorHUD(L"Editor window", win->widget());
 	mapEditorWidget.setGeometry(win->geometry());
