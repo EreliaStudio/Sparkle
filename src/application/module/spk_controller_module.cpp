@@ -119,7 +119,16 @@ namespace spk
 		}
 		}
 		p_event.controller = &_controller;
-		p_event.window->widget()->onControllerEvent(p_event);
+
+
+		if (spk::Widget::focusedWidget(Widget::FocusType::ControllerFocus) != nullptr)
+		{
+			spk::Widget::focusedWidget(Widget::FocusType::ControllerFocus)->onControllerEvent(p_event);
+		}
+		else
+		{
+			p_event.window->widget()->onControllerEvent(p_event);
+		}
 	}
 
 	spk::ControllerEvent ControllerModule::_convertEventToEventType(spk::Event&& p_event)

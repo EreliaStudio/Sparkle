@@ -35,7 +35,15 @@ namespace spk
 		}
 		}
 		p_event.keyboard = &_keyboard;
-		p_event.window->widget()->onKeyboardEvent(p_event);
+
+		if (spk::Widget::focusedWidget(Widget::FocusType::KeyboardFocus) != nullptr)
+		{
+			spk::Widget::focusedWidget(Widget::FocusType::KeyboardFocus)->onKeyboardEvent(p_event);
+		}
+		else
+		{
+			p_event.window->widget()->onKeyboardEvent(p_event);
+		}
 	}
 
 	spk::KeyboardEvent KeyboardModule::_convertEventToEventType(spk::Event&& p_event)

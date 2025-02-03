@@ -44,6 +44,8 @@ namespace spk
 
 	Widget::~Widget()
 	{
+		releaseFocus();
+		
 		if (_parent != nullptr)
 		{	
 			_parent->removeChild(this);
@@ -80,6 +82,36 @@ namespace spk
 	const float& Widget::layer() const
 	{
 		return (_layer);
+	}
+
+	spk::SafePointer<Widget> Widget::focusedWidget(FocusType p_focusType)
+	{
+		return (_focusedWidgets[static_cast<int>(p_focusType)]);
+	}
+
+	void Widget::takeFocus(FocusType p_focusType)
+	{
+		_focusedWidgets[static_cast<int>(p_focusType)] = this;
+	}
+	
+	void Widget::releaseFocus(FocusType p_focusType)
+	{
+		if (_focusedWidgets[static_cast<int>(p_focusType)] == this)
+			_focusedWidgets[static_cast<int>(p_focusType)] = nullptr;
+	}
+
+	void Widget::takeFocus()
+	{
+		takeFocus(FocusType::KeyboardFocus);
+		takeFocus(FocusType::MouseFocus);
+		takeFocus(FocusType::ControllerFocus);
+	}
+	
+	void Widget::releaseFocus()
+	{
+		releaseFocus(FocusType::KeyboardFocus);
+		releaseFocus(FocusType::MouseFocus);
+		releaseFocus(FocusType::ControllerFocus);
 	}
 	
 	void Widget::_computeRatio()

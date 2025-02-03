@@ -43,7 +43,16 @@ namespace spk
 		}
 
 		p_event.mouse = &_mouse;
-		p_event.window->widget()->onMouseEvent(p_event);
+
+
+		if (spk::Widget::focusedWidget(Widget::FocusType::MouseFocus) != nullptr)
+		{
+			spk::Widget::focusedWidget(Widget::FocusType::MouseFocus)->onMouseEvent(p_event);
+		}
+		else
+		{
+			p_event.window->widget()->onMouseEvent(p_event);
+		}
 	}
 
 	spk::MouseEvent MouseModule::_convertEventToEventType(spk::Event&& p_event)

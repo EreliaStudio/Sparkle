@@ -1,5 +1,61 @@
 #include "playground.hpp"
 
+class TextEntry : public spk::Widget
+{
+private:
+	std::wstring _text;
+	std::wstring _placeholder;
+
+	spk::Vector2Int _cornerSize = {2, 2};
+	spk::HorizontalAlignment _horizontalAlignment = spk::HorizontalAlignment::Left;
+	spk::VerticalAlignment _verticalAlignment = spk::VerticalAlignment::Centered;
+
+	spk::NineSliceRenderer _backgroundRenderer;
+	spk::FontRenderer _fontRenderer;
+
+	void _onGeometryChange() override
+	{
+		_backgroundRenderer.clear();
+		_backgroundRenderer.prepare(geometry(), layer(), _cornerSize);
+		_backgroundRenderer.validate();
+
+		_fontRenderer.clear();
+		spk::Vector2Int textAnchor = _fontRenderer.computeTextAnchor(geometry().shrink(_cornerSize), text(), _horizontalAlignment, _verticalAlignment);
+		_fontRenderer.prepare(text(), textAnchor, layer() + 0.01f);
+		_fontRenderer.validate();
+	}
+
+	void _onPaintEvent(spk::PaintEvent& p_event) override
+	{
+		_fontRenderer.render();
+	}
+
+public:
+	TextEntry(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+		spk::Widget(p_name, p_parent)
+	{
+	}
+
+	void setText(const std::wstring& p_text)
+	{
+		_text = p_text;
+	}
+
+	void setPlaceholder(const std::wstring& p_placeholder)
+	{
+		_placeholder = p_placeholder;
+	}
+
+	std::wstring text()
+	{
+		if (_text.empty() == true)
+		{
+			return (_placeholder);
+		}
+		return (_text);
+	}
+};
+
 class MapEditorHUD : public spk::Widget
 {
 private:

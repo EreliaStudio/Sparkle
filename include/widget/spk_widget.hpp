@@ -32,7 +32,18 @@ namespace spk
 		static spk::SafePointer<spk::Font> defaultFont();
 		static spk::SafePointer<spk::SpriteSheet> defaultNineSlice();
 
+		enum class FocusType
+		{
+			KeyboardFocus = 0,
+			MouseFocus = 1,
+			ControllerFocus = 2
+		};
+
+		static spk::SafePointer<Widget> focusedWidget(FocusType p_focusType = FocusType::KeyboardFocus);
+
 	private:
+		static inline spk::SafePointer<Widget> _focusedWidgets[3] = nullptr;
+
 		std::wstring _name;
 		spk::SafePointer<Widget> _parent;
 		std::vector<Widget*> _managedChildren;
@@ -84,6 +95,12 @@ namespace spk
 
 		void setLayer(const float& p_layer);
 		const float& layer() const;
+
+		void takeFocus(FocusType p_focusType);
+		void releaseFocus(FocusType p_focusType);
+
+		void takeFocus();
+		void releaseFocus();
 
 		virtual void forceGeometryChange(const Geometry2D& p_geometry);
 		virtual void place(const spk::Vector2Int& p_delta);
