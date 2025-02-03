@@ -42,7 +42,11 @@ namespace spk
 		static spk::SafePointer<Widget> focusedWidget(FocusType p_focusType = FocusType::KeyboardFocus);
 
 	private:
-		static inline spk::SafePointer<Widget> _focusedWidgets[3] = nullptr;
+		static inline spk::SafePointer<Widget> _focusedWidgets[3] = {
+			nullptr,
+			nullptr,
+			nullptr
+		};
 
 		std::wstring _name;
 		spk::SafePointer<Widget> _parent;

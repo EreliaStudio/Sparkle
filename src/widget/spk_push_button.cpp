@@ -152,27 +152,12 @@ namespace spk
 
 	void PushButton::setSpriteSheet(const SafePointer<SpriteSheet>& p_spriteSheet)
 	{
-		if (p_spriteSheet == nullptr)
-		{
-			throw std::invalid_argument("PushButton spriteSheet cannot be null.");
-		}
-
 		_releasedRenderer.setSpriteSheet(p_spriteSheet);
 		_pressedRenderer.setSpriteSheet(p_spriteSheet);
 	}
 
 	void PushButton::setSpriteSheet(const SafePointer<SpriteSheet>& p_releasedSpriteSheet, const SafePointer<SpriteSheet>& p_pressedSpriteSheet)
 	{
-		if (p_releasedSpriteSheet == nullptr)
-		{
-			throw std::invalid_argument("Released SpriteSheet cannot be null.");
-		}
-		
-		if (p_pressedSpriteSheet == nullptr)
-		{
-			throw std::invalid_argument("Pressed SpriteSheet cannot be null.");
-		}
-
 		_releasedRenderer.setSpriteSheet(p_releasedSpriteSheet);
 		_pressedRenderer.setSpriteSheet(p_pressedSpriteSheet);
 	}

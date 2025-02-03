@@ -3,6 +3,9 @@
 class TextEntry : public spk::Widget
 {
 private:
+	size_t _cursor = 0;
+	size_t _lowerCursor;
+	size_t _higherCursor;
 	std::wstring _text;
 	std::wstring _placeholder;
 
@@ -30,10 +33,122 @@ private:
 		_fontRenderer.render();
 	}
 
+	void _onMouseEvent(spk::MouseEvent& p_event) override
+	{
+		if (p_event.type == spk::MouseEvent::Type::Press)
+		{
+			if (viewport().geometry().contains(p_event.mouse->position) == true)
+			{
+				takeFocus(Widget::FocusType::KeyboardFocus);
+			}
+			else if (focusedWidget(Widget::FocusType::KeyboardFocus) == this)
+			{
+				releaseFocus(Widget::FocusType::KeyboardFocus);
+			}
+		}
+	}
+
+	void _requireTextUpdate()
+	{
+		requireGeometryUpdate();
+	}
+
+	void _onKeyboardEvent(spk::KeyboardEvent& p_event) override
+	{
+		if (focusedWidget(Widget::FocusType::KeyboardFocus) == this)
+		{
+			if (p_event.type == spk::KeyboardEvent::Type::Press)
+			{
+				if (p_event.key == spk::Keyboard::LeftArrow)
+				{
+					if (_cursor > 0)
+					{
+						_cursor--;
+						_requireTextUpdate();
+					}
+				}
+				else if (p_event.key == spk::Keyboard::RightArrow)
+				{
+					if (_cursor < _text.size())
+					{
+						_cursor++;
+						_requireTextUpdate();
+					}
+				}
+				else if (p_event.key == spk::Keyboard::Escape)
+				{
+					releaseFocus(Widget::FocusType::KeyboardFocus);
+				}
+			}
+			else if (p_event.type == spk::KeyboardEvent::Type::Glyph)
+			{
+				if (p_event.glyph == spk::Keyboard::Backspace)
+				{
+					if (_text.empty() == false)
+					{
+						_text.pop_back();
+						requireGeometryUpdate();
+					}
+				}
+				else
+				{
+					if (p_event.glyph >= 32)
+					{
+						_text.insert(_cursor, 1, p_event.glyph);
+						_cursor++;
+						_requireTextUpdate();
+					}
+				}
+			}
+		}
+	}
+
 public:
 	TextEntry(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
-		spk::Widget(p_name, p_parent)
+		spk::Widget(p_name, p_parent),
+		_text(L""),
+		_placeholder(L"Enter text here")
 	{
+		setTextColor(spk::Color::white, spk::Color::black);
+		setTextAlignment(spk::HorizontalAlignment::Left, spk::VerticalAlignment::Centered);
+		setSpriteSheet(Widget::defaultNineSlice());
+		setFont(Widget::defaultFont());
+	}
+
+	void setSpriteSheet(const spk::SafePointer<spk::SpriteSheet>& p_spriteSheet)
+	{
+		_backgroundRenderer.setSpriteSheet(p_spriteSheet);
+	}
+
+	void setCornerSize(const spk::Vector2Int& p_cornerSize)
+	{
+		_cornerSize = p_cornerSize;
+		requireGeometryUpdate();
+	}
+
+	void setFont(const spk::SafePointer<spk::Font>& p_font)
+	{
+		_fontRenderer.setFont(p_font);
+		requireGeometryUpdate();
+	}
+
+	void setTextSize(const spk::Font::Size& p_textSize)
+	{
+		_fontRenderer.setFontSize(p_textSize);
+		requireGeometryUpdate();
+	}
+
+	void setTextColor(const spk::Color& p_glyphColor, const spk::Color& p_outlineColor)
+	{
+		_fontRenderer.setGlyphColor(p_glyphColor);
+		_fontRenderer.setOutlineColor(p_outlineColor);
+	}
+
+	void setTextAlignment(const spk::HorizontalAlignment& p_horizontalAlignment, const spk::VerticalAlignment& p_verticalAlignment)
+	{
+		_horizontalAlignment = p_horizontalAlignment;
+		_verticalAlignment = p_verticalAlignment;
+		requireGeometryUpdate();
 	}
 
 	void setText(const std::wstring& p_text)
@@ -64,7 +179,7 @@ private:
 	private:
 		spk::TextLabel _layerTextlabel;
 		spk::PushButton _layerUpButton;
-		spk::TextLabel _layerValueLabel;
+		TextEntry _layerValueLabel;
 		spk::PushButton _layerDownButton;
 
 		spk::Font::Size defaultFontSize()
@@ -97,7 +212,7 @@ private:
 			spk::AbstractInterfaceWindow::Content(p_name, p_parent),
 			_layerTextlabel(L"Layer text label", this),
 			_layerUpButton(L"Layer up button", this),
-			_layerValueLabel(L"Layer value label", this),
+			_layerValueLabel(L"Layer value entry", this),
 			_layerDownButton(L"Layer down button", this)
 		{
 			_layerTextlabel.setText(L"Layer :");
