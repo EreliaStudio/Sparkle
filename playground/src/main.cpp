@@ -57,7 +57,8 @@ private:
 	{
 		if (focusedWidget(Widget::FocusType::KeyboardFocus) == this)
 		{
-			if (p_event.type == spk::KeyboardEvent::Type::Press)
+			if (p_event.type == spk::KeyboardEvent::Type::Press ||
+				p_event.type == spk::KeyboardEvent::Type::Repeat)
 			{
 				if (p_event.key == spk::Keyboard::LeftArrow)
 				{
@@ -154,6 +155,8 @@ public:
 	void setText(const std::wstring& p_text)
 	{
 		_text = p_text;
+		_cursor = _text.size();
+		_requireTextUpdate();
 	}
 
 	void setPlaceholder(const std::wstring& p_placeholder)

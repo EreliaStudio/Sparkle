@@ -143,6 +143,7 @@ namespace spk
 			Unknow,
 			Press,
 			Release,
+			Repeat,
 			Glyph
 		};
 		Type type = Type::Unknow;
