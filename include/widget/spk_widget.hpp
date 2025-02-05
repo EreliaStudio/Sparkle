@@ -102,6 +102,7 @@ namespace spk
 
 		void takeFocus(FocusType p_focusType);
 		void releaseFocus(FocusType p_focusType);
+		bool hasFocus(FocusType p_focusType);
 
 		void takeFocus();
 		void releaseFocus();

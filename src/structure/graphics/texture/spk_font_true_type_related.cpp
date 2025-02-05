@@ -157,10 +157,10 @@ namespace spk
 
 		spk::Vector2 halfPixelSize = 0.5f / spk::Vector2(_size.x, _size.y);
 
-		glyph.positions[0] = Vector2Int(xOffset, yOffset);
-		glyph.positions[1] = Vector2Int(xOffset, yOffset + height);
-		glyph.positions[2] = Vector2Int(xOffset + width, yOffset);
-		glyph.positions[3] = Vector2Int(xOffset + width, yOffset + height);
+		glyph.positions[0] = Vector2Int(0, yOffset);
+		glyph.positions[1] = Vector2Int(0, yOffset + height);
+		glyph.positions[2] = Vector2Int(width, yOffset);
+		glyph.positions[3] = Vector2Int(width, yOffset + height);
 
 		glyph.UVs[0] = Vector2(static_cast<float>(glyphPosition.x) / _size.x + halfPixelSize.x, static_cast<float>(glyphPosition.y) / _size.y + halfPixelSize.y);
 		glyph.UVs[1] = Vector2(static_cast<float>(glyphPosition.x) / _size.x + halfPixelSize.x, static_cast<float>(glyphPosition.y + glyph.size.y) / _size.y - halfPixelSize.y);

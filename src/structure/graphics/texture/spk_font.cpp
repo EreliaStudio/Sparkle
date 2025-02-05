@@ -157,10 +157,7 @@ namespace spk
 		{
 			const Glyph& glyph = operator[](p_string[i]);
 
-			if (i != p_string.size() - 1)
-				totalWidth += glyph.step.x;
-			else
-				totalWidth += glyph.size.x;
+			totalWidth += glyph.step.x;
 
 			maxHeight = std::max(maxHeight, glyph.positions[3].y);
 			minHeight = std::min(minHeight, glyph.positions[0].y);

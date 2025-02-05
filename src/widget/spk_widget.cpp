@@ -100,6 +100,11 @@ namespace spk
 			_focusedWidgets[static_cast<int>(p_focusType)] = nullptr;
 	}
 
+	bool Widget::hasFocus(FocusType p_focusType)
+	{
+		return (focusedWidget(p_focusType) == this);
+	}
+
 	void Widget::takeFocus()
 	{
 		takeFocus(FocusType::KeyboardFocus);
