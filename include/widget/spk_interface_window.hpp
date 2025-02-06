@@ -85,6 +85,8 @@ namespace spk
 	public:
 		AbstractInterfaceWindow(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent);
 
+		spk::Vector2UInt minimalSize();
+
 		void setContent(spk::SafePointer<Content> p_content);
 
 		void setMenuHeight(const float& p_menuHeight);

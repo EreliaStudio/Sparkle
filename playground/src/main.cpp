@@ -204,7 +204,7 @@ public:
 	{
 		_text = p_text;
 		_cursor = _text.size();
-		_requireTextUpdate();
+		requireGeometryUpdate();
 	}
 
 	void setPlaceholder(const std::wstring& p_placeholder)
@@ -236,7 +236,7 @@ private:
 
 		spk::Font::Size defaultFontSize()
 		{
-			return {16, 1};
+			return {16, 2};
 		}
 
 		void _onGeometryChange() override
@@ -331,7 +331,8 @@ private:
 
 	void _onGeometryChange() override
 	{
-		interfaceWindow.setGeometry({0, 0}, {25, 50});
+		spk::Vector2UInt childSize = interfaceWindow.minimalSize();
+		interfaceWindow.setGeometry((geometry().size - childSize) / 2 , childSize);
 	}
 	void _onKeyboardEvent(spk::KeyboardEvent& p_event) override
 	{

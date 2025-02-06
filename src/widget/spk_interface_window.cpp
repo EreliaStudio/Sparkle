@@ -188,14 +188,7 @@ namespace spk
 
 	void AbstractInterfaceWindow::_computeMinimalSize()
 	{
-		spk::Vector2UInt menuBarSize = _menuBar._computeMinimalSize(_menuHeight);
-
-		spk::Vector2UInt contentSize = (_content == nullptr ? 0 : _content->minimalSize());
-
-		setMinimumSize(spk::Vector2UInt(
-				std::max(menuBarSize.x, contentSize.x),
-				menuBarSize.y + contentSize.y + _backgroundFrame.cornerSize().y * 2
-			));
+		setMinimumSize(minimalSize());
 	}
 
 	void AbstractInterfaceWindow::setContent(spk::SafePointer<Content> p_content)
@@ -204,6 +197,18 @@ namespace spk
 		_backgroundFrame.addChild(_content);
 		_computeMinimalSize();
 		requireGeometryUpdate();
+	}
+
+	spk::Vector2UInt AbstractInterfaceWindow::minimalSize()
+	{
+		spk::Vector2UInt menuBarSize = _menuBar._computeMinimalSize(_menuHeight);
+
+		spk::Vector2UInt contentSize = (_content == nullptr ? 0 : _content->minimalSize());
+
+		return (spk::Vector2UInt(
+				std::max(menuBarSize.x, contentSize.x),
+				menuBarSize.y + contentSize.y + _backgroundFrame.cornerSize().y * 2
+			));
 	}
 
 	void AbstractInterfaceWindow::setMenuHeight(const float& p_menuHeight)

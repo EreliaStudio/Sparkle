@@ -16,14 +16,6 @@ namespace spk
 				layout (location = 2) in vec2 inUV;
 				layout (location = 0) out vec2 fragmentUVs;
 
-				layout(std140, binding = 0) uniform TextInformations
-				{
-					vec4 glyphColor;
-					vec4 outlineColor;
-				};
-
-				uniform sampler2D diffuseTexture;
-
 				void main()
 				{
 					gl_Position = vec4(inPosition, inLayer, 1.0f);
@@ -41,6 +33,7 @@ namespace spk
 				{
 					vec4 glyphColor;
 					vec4 outlineColor;
+					float outlineThreshold;
 				};
 
 				uniform sampler2D diffuseTexture;
@@ -52,24 +45,21 @@ namespace spk
 
 				void main()
 				{
-					float grayscale = texture(diffuseTexture, fragmentUVs).r;
-
-					if (grayscale == 0)
-					{
+					float sdf = texture(diffuseTexture, fragmentUVs).r;
+    
+					if (sdf == 0)
 						discard;
-					}
 
-					if (grayscale < 1.0f)
+					outputColor = vec4(1, 1, 1, sdf);
+
+					if (sdf >= 0.5)
 					{
-						//outputColor = outlineColor;
-						//outputColor.a = computeFormula(smoothstep(0, outlineToGlyphThreshold, grayscale), 20);
-						outputColor = outlineColor;
+						outputColor = glyphColor;
 					}
 					else
 					{
-						// float t = computeFormula(smoothstep(outlineToGlyphThreshold, 1.0, grayscale), -20);
-						// outputColor = mix(outlineColor, glyphColor, t);
-						outputColor = glyphColor;
+						outputColor = outlineColor;
+						outputColor.a = computeFormula(smoothstep(0, 0.5f, sdf), 10);
 					}
 				}
 				)";
@@ -91,6 +81,7 @@ namespace spk
 		_textInformationsUbo = spk::OpenGL::UniformBufferObject("TextInformations", 0, 32);
 		_textInformationsUbo.addElement("glyphColor", 0, sizeof(spk::Color));
 		_textInformationsUbo.addElement("outlineColor", 16, sizeof(spk::Color));
+		_textInformationsUbo.addElement("outlineThreshold", 32, sizeof(float));
 	}
 
 	void FontRenderer::_updateUbo()
@@ -117,6 +108,8 @@ namespace spk
 	void FontRenderer::setFontSize(const Font::Size &p_fontSize)
 	{
 		_fontSize = p_fontSize;
+		_textInformationsUbo["outlineThreshold"] = static_cast<float>(p_fontSize.outline) * ((256.0f / static_cast<float>(10)) / 255.0f);
+		_textInformationsUbo.validate();
 		_atlas = nullptr;
 		_samplerObject.bind(nullptr);
 	}

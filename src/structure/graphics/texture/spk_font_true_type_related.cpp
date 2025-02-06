@@ -136,7 +136,14 @@ namespace spk
 		float scale = stbtt_ScaleForMappingEmToPixels(&_fontInfo, static_cast<float>(_textSize));
 
 		int width, height, xOffset, yOffset;
-		uint8_t* glyphBitmap = stbtt_GetCodepointSDF(&_fontInfo, scale, p_char, static_cast<int>(_outlineSize), 255, 256.0f / static_cast<float>(_outlineSize), &width, &height, &xOffset, &yOffset);
+		uint8_t* glyphBitmap = stbtt_GetCodepointSDF(
+			&_fontInfo,
+			scale,
+			p_char,
+			static_cast<int>(_outlineSize + 1),
+			128,
+			255.0f / static_cast<float>(_outlineSize + 2),
+			&width, &height, &xOffset, &yOffset);
 
 		if (glyphBitmap == nullptr)
 		{
