@@ -36,7 +36,7 @@ namespace spk
 	spk::Font::Size AbstractInterfaceWindow::MenuBar::_computeFontSize(const float& p_menuHeight)
 	{
 		spk::Vector2Int buttonSize = _computeControlButtonSize(p_menuHeight);
-		float outlineSize = 1;
+		float outlineSize = 0;
 		return (spk::Font::Size(buttonSize.y - outlineSize * 2, outlineSize));
 	}
 	

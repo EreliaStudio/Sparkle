@@ -50,17 +50,7 @@ namespace spk
 					if (sdf == 0)
 						discard;
 
-					outputColor = vec4(1, 1, 1, sdf);
-
-					if (sdf >= 0.5)
-					{
-						outputColor = glyphColor;
-					}
-					else
-					{
-						outputColor = outlineColor;
-						outputColor.a = computeFormula(smoothstep(0, 0.5f, sdf), 10);
-					}
+					outputColor = vec4(glyphColor.rgb * sdf, 1);
 				}
 				)";
 

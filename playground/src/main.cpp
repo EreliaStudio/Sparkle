@@ -4,7 +4,8 @@ class TextEntry : public spk::Widget
 {
 private:
 	bool _renderCursor = true;
-	bool _needCursorUpdate = true;
+	bool _needLowerCursorUpdate = true;
+	bool _needHigherCursorUpdate = true;
 	size_t _cursor = 0;
 	size_t _lowerCursor;
 	size_t _higherCursor;
@@ -21,28 +22,39 @@ private:
 
 	void _computeCursorsValues()
 	{
-		std::wstring textToRender = text();
-		_lowerCursor = _cursor;
+		const std::wstring& textToRender = text();
 
-		while (_lowerCursor != 0 && _fontRenderer.computeTextSize(textToRender.substr(_lowerCursor, _cursor - _lowerCursor)).x <= geometry().shrink(_cornerSize).size.x)
+		if (_needLowerCursorUpdate == true)
 		{
-			_lowerCursor--;
+			_lowerCursor = _cursor;
+
+			while (_lowerCursor != 0 && _fontRenderer.computeTextSize(textToRender.substr(_lowerCursor - 1, _cursor - _lowerCursor + 1)).x <= geometry().shrink(_cornerSize).size.x)
+			{
+				_lowerCursor--;
+			}
+
+			_needLowerCursorUpdate = false;
 		}
 		
-		_higherCursor = _cursor;
-
-		while (_higherCursor <= textToRender.size() && _fontRenderer.computeTextSize(textToRender.substr(_lowerCursor, _higherCursor - _lowerCursor + 1)).x < geometry().shrink(_cornerSize).size.x)
+		if (_needHigherCursorUpdate == true)
 		{
-			_higherCursor++;
+			_higherCursor = _cursor;
+
+			while (_higherCursor <= textToRender.size() && _fontRenderer.computeTextSize(textToRender.substr(_lowerCursor, _higherCursor - _lowerCursor + 1)).x < geometry().shrink(_cornerSize).size.x)
+			{
+				_higherCursor++;
+			}
+
+			_needHigherCursorUpdate = false;
 		}
 	}
 
 	void _onGeometryChange() override
 	{
-		if (_needCursorUpdate == true)
+		if (_needLowerCursorUpdate == true ||
+			_needHigherCursorUpdate == true)
 		{
 			_computeCursorsValues();
-			_needCursorUpdate = false;
 		}
 
 		_backgroundRenderer.clear();
@@ -107,7 +119,10 @@ private:
 					{
 						_cursor--;
 						if (_cursor < _lowerCursor)
-							_needCursorUpdate = true;
+						{
+							_lowerCursor = _cursor;
+							_needHigherCursorUpdate = true;
+						}
 						requireGeometryUpdate();
 					}
 				}
@@ -117,13 +132,25 @@ private:
 					{
 						_cursor++;
 						if (_cursor >= _higherCursor)
-							_needCursorUpdate = true;
+						{
+							_higherCursor = _cursor;
+							_needLowerCursorUpdate = true;
+						}
 						requireGeometryUpdate();
 					}
 				}
 				else if (p_event.key == spk::Keyboard::Escape)
 				{
 					releaseFocus(Widget::FocusType::KeyboardFocus);
+				}
+				else if (p_event.key == spk::Keyboard::Delete)
+				{
+					if (_cursor < _text.size())
+					{
+						_text.erase(_cursor, 1);
+						_needHigherCursorUpdate = true;
+						requireGeometryUpdate();
+					}
 				}
 			}
 			else if (p_event.type == spk::KeyboardEvent::Type::Glyph)
@@ -134,6 +161,15 @@ private:
 					{
 						_text.erase(_cursor - 1, 1);
 						_cursor--;
+						if (_cursor <= _lowerCursor)
+						{
+							_lowerCursor = _cursor;
+							if (_lowerCursor != 0)
+							{
+								_lowerCursor--;
+							}
+							_needHigherCursorUpdate = true;
+						}
 						requireGeometryUpdate();
 					}
 				}
@@ -143,6 +179,11 @@ private:
 					{
 						_text.insert(_cursor, 1, p_event.glyph);
 						_cursor++;
+						if (_cursor > _higherCursor)
+						{
+							_higherCursor = _cursor;
+							_needLowerCursorUpdate = true;
+						}
 						requireGeometryUpdate();
 					}
 				}
@@ -204,6 +245,8 @@ public:
 	{
 		_text = p_text;
 		_cursor = _text.size();
+		_needLowerCursorUpdate = true;
+		_needHigherCursorUpdate = true;
 		requireGeometryUpdate();
 	}
 
@@ -212,7 +255,7 @@ public:
 		_placeholder = p_placeholder;
 	}
 
-	std::wstring text()
+	const std::wstring& text() const
 	{
 		if (_text.empty() == true)
 		{
@@ -236,7 +279,7 @@ private:
 
 		spk::Font::Size defaultFontSize()
 		{
-			return {16, 2};
+			return {16, 0};
 		}
 
 		void _onGeometryChange() override
@@ -304,7 +347,7 @@ private:
 			_layerDownButton.activate();
 			
 
-			_textEntry.setText(L"My text not long");
+			_textEntry.setText(L"My text not long but long enought to be a problem");
 			_textEntry.setTextAlignment(
 				spk::HorizontalAlignment::Left,
 				spk::VerticalAlignment::Centered
