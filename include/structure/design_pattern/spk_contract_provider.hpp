@@ -56,7 +56,10 @@ namespace spk
 					throw std::runtime_error("Can't resign an already resigned contract");
 
 				*_job = nullptr;
-				_originator->unsubscribe(*this);
+				if (_originator != nullptr)
+				{
+					_originator->unsubscribe(*this);
+				}
 				_job = nullptr;
 			}
 
@@ -72,7 +75,10 @@ namespace spk
 
 			void trigger() const
 			{
-				(*_job)();
+				if (_job != nullptr && *_job != nullptr)
+				{
+					(*_job)();
+				}
 			}
 		};
 		using Job = Contract::Job;

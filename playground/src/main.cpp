@@ -1,270 +1,5 @@
 #include "playground.hpp"
 
-class TextEntry : public spk::Widget
-{
-private:
-	bool _renderCursor = true;
-	bool _needLowerCursorUpdate = true;
-	bool _needHigherCursorUpdate = true;
-	size_t _cursor = 0;
-	size_t _lowerCursor;
-	size_t _higherCursor;
-	std::wstring _text;
-	std::wstring _placeholder;
-
-	spk::Vector2Int _cornerSize = {2, 2};
-	spk::HorizontalAlignment _horizontalAlignment = spk::HorizontalAlignment::Left;
-	spk::VerticalAlignment _verticalAlignment = spk::VerticalAlignment::Centered;
-
-	spk::NineSliceRenderer _backgroundRenderer;
-	spk::ColorRenderer _cursorRenderer;
-	spk::FontRenderer _fontRenderer;
-
-	void _computeCursorsValues()
-	{
-		const std::wstring& textToRender = text();
-
-		if (_needLowerCursorUpdate == true)
-		{
-			_lowerCursor = _cursor;
-
-			while (_lowerCursor != 0 && _fontRenderer.computeTextSize(textToRender.substr(_lowerCursor - 1, _cursor - _lowerCursor + 1)).x <= geometry().shrink(_cornerSize).size.x)
-			{
-				_lowerCursor--;
-			}
-
-			_needLowerCursorUpdate = false;
-		}
-		
-		if (_needHigherCursorUpdate == true)
-		{
-			_higherCursor = _cursor;
-
-			while (_higherCursor <= textToRender.size() && _fontRenderer.computeTextSize(textToRender.substr(_lowerCursor, _higherCursor - _lowerCursor + 1)).x < geometry().shrink(_cornerSize).size.x)
-			{
-				_higherCursor++;
-			}
-
-			_needHigherCursorUpdate = false;
-		}
-	}
-
-	void _onGeometryChange() override
-	{
-		if (_needLowerCursorUpdate == true ||
-			_needHigherCursorUpdate == true)
-		{
-			_computeCursorsValues();
-		}
-
-		_backgroundRenderer.clear();
-		_backgroundRenderer.prepare(geometry(), layer(), _cornerSize);
-		_backgroundRenderer.validate();
-
-		_fontRenderer.clear();
-		spk::Vector2Int textAnchor = _fontRenderer.computeTextAnchor(geometry().shrink(_cornerSize), text().substr(_lowerCursor, _higherCursor - _lowerCursor), _horizontalAlignment, _verticalAlignment);
-		_fontRenderer.prepare(text().substr(_lowerCursor, _higherCursor - _lowerCursor), textAnchor, layer() + 0.01f);
-		_fontRenderer.validate();
-
-		_cursorRenderer.clear();
-		spk::Vector2UInt prevTextSize = _fontRenderer.computeTextSize(text().substr(_lowerCursor, _cursor - _lowerCursor));
-		_cursorRenderer.prepareSquare(spk::Geometry2D(prevTextSize.x + geometry().anchor.x + _cornerSize.x - 2, _cornerSize.y + geometry().anchor.y, 2, geometry().height - _cornerSize.y * 2), layer() + 0.02f);
-		_cursorRenderer.validate();
-	}
-
-	void _onPaintEvent(spk::PaintEvent& p_event) override
-	{
-		_backgroundRenderer.render();
-		_fontRenderer.render();
-
-		if (hasFocus(Widget::FocusType::KeyboardFocus) == true && _renderCursor == true)
-		{
-			_cursorRenderer.render();
-		}
-	}
-
-	void _onUpdateEvent(spk::UpdateEvent& p_event) override
-	{
-		if (p_event.deltaTime != spk::Duration(0ll, spk::TimeUnit::Millisecond))
-		{
-			_renderCursor = (p_event.time.milliseconds / 250) % 2 == 0;
-		}
-	}
-
-	void _onMouseEvent(spk::MouseEvent& p_event) override
-	{
-		if (p_event.type == spk::MouseEvent::Type::Press)
-		{
-			if (viewport().geometry().contains(p_event.mouse->position) == true)
-			{
-				takeFocus(Widget::FocusType::KeyboardFocus);
-			}
-			else if (focusedWidget(Widget::FocusType::KeyboardFocus) == this)
-			{
-				releaseFocus(Widget::FocusType::KeyboardFocus);
-			}
-		}
-	}
-
-	void _onKeyboardEvent(spk::KeyboardEvent& p_event) override
-	{
-		if (hasFocus(Widget::FocusType::KeyboardFocus) == true)
-		{
-			if (p_event.type == spk::KeyboardEvent::Type::Press ||
-				p_event.type == spk::KeyboardEvent::Type::Repeat)
-			{
-				if (p_event.key == spk::Keyboard::LeftArrow)
-				{
-					if (_cursor > 0)
-					{
-						_cursor--;
-						if (_cursor < _lowerCursor)
-						{
-							_lowerCursor = _cursor;
-							_needHigherCursorUpdate = true;
-						}
-						requireGeometryUpdate();
-					}
-				}
-				else if (p_event.key == spk::Keyboard::RightArrow)
-				{
-					if (_cursor < _text.size())
-					{
-						_cursor++;
-						if (_cursor >= _higherCursor)
-						{
-							_higherCursor = _cursor;
-							_needLowerCursorUpdate = true;
-						}
-						requireGeometryUpdate();
-					}
-				}
-				else if (p_event.key == spk::Keyboard::Escape)
-				{
-					releaseFocus(Widget::FocusType::KeyboardFocus);
-				}
-				else if (p_event.key == spk::Keyboard::Delete)
-				{
-					if (_cursor < _text.size())
-					{
-						_text.erase(_cursor, 1);
-						_needHigherCursorUpdate = true;
-						requireGeometryUpdate();
-					}
-				}
-			}
-			else if (p_event.type == spk::KeyboardEvent::Type::Glyph)
-			{
-				if (p_event.glyph == spk::Keyboard::Backspace)
-				{
-					if (_text.empty() == false && _cursor != 0)
-					{
-						_text.erase(_cursor - 1, 1);
-						_cursor--;
-						if (_cursor <= _lowerCursor)
-						{
-							_lowerCursor = _cursor;
-							if (_lowerCursor != 0)
-							{
-								_lowerCursor--;
-							}
-							_needHigherCursorUpdate = true;
-						}
-						requireGeometryUpdate();
-					}
-				}
-				else
-				{
-					if (p_event.glyph >= 32)
-					{
-						_text.insert(_cursor, 1, p_event.glyph);
-						_cursor++;
-						if (_cursor > _higherCursor)
-						{
-							_higherCursor = _cursor;
-							_needLowerCursorUpdate = true;
-						}
-						requireGeometryUpdate();
-					}
-				}
-			}
-		}
-	}
-
-public:
-	TextEntry(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
-		spk::Widget(p_name, p_parent),
-		_text(L""),
-		_placeholder(L"Enter text here")
-	{
-		_cursorRenderer.setColor(spk::Color(0, 0, 0, 150));
-
-		setTextColor(spk::Color::white, spk::Color::black);
-		setTextAlignment(spk::HorizontalAlignment::Left, spk::VerticalAlignment::Centered);
-		setSpriteSheet(Widget::defaultNineSlice());
-		setFont(Widget::defaultFont());
-	}
-
-	void setSpriteSheet(const spk::SafePointer<spk::SpriteSheet>& p_spriteSheet)
-	{
-		_backgroundRenderer.setSpriteSheet(p_spriteSheet);
-	}
-
-	void setCornerSize(const spk::Vector2Int& p_cornerSize)
-	{
-		_cornerSize = p_cornerSize;
-		requireGeometryUpdate();
-	}
-
-	void setFont(const spk::SafePointer<spk::Font>& p_font)
-	{
-		_fontRenderer.setFont(p_font);
-		requireGeometryUpdate();
-	}
-
-	void setTextSize(const spk::Font::Size& p_textSize)
-	{
-		_fontRenderer.setFontSize(p_textSize);
-		requireGeometryUpdate();
-	}
-
-	void setTextColor(const spk::Color& p_glyphColor, const spk::Color& p_outlineColor)
-	{
-		_fontRenderer.setGlyphColor(p_glyphColor);
-		_fontRenderer.setOutlineColor(p_outlineColor);
-	}
-
-	void setTextAlignment(const spk::HorizontalAlignment& p_horizontalAlignment, const spk::VerticalAlignment& p_verticalAlignment)
-	{
-		_horizontalAlignment = p_horizontalAlignment;
-		_verticalAlignment = p_verticalAlignment;
-		requireGeometryUpdate();
-	}
-
-	void setText(const std::wstring& p_text)
-	{
-		_text = p_text;
-		_cursor = _text.size();
-		_needLowerCursorUpdate = true;
-		_needHigherCursorUpdate = true;
-		requireGeometryUpdate();
-	}
-
-	void setPlaceholder(const std::wstring& p_placeholder)
-	{
-		_placeholder = p_placeholder;
-	}
-
-	const std::wstring& text() const
-	{
-		if (_text.empty() == true)
-		{
-			return (_placeholder);
-		}
-		return (_text);
-	}
-};
-
 class MapEditorHUD : public spk::Widget
 {
 private:
@@ -273,9 +8,14 @@ private:
 	private:
 		spk::TextLabel _layerTextlabel;
 		spk::PushButton _layerUpButton;
-		TextEntry _layerValueLabel;
+		spk::PushButton::Contract _layerUpButtonContract;
+		spk::TextEdit _layerValueLabel;
 		spk::PushButton _layerDownButton;
-		TextEntry _textEntry;
+		spk::PushButton::Contract _layerDownButtonContract;
+
+		spk::ObservableValue<int> _value;
+		spk::ObservableValue<int>::Contract _onValueEditionContract;
+		int _step = 1;
 
 		spk::Font::Size defaultFontSize()
 		{
@@ -300,9 +40,6 @@ private:
 			
 			_layerDownButton.setTextSize(fontSize);
 			_layerDownButton.setGeometry({_layerTextlabel.geometry().size.x + 3 + _layerUpButton.geometry().size.x + 3 + _layerValueLabel.geometry().size.x + 3, 0}, buttonSize);
-		
-			_textEntry.setTextSize(fontSize);
-			_textEntry.setGeometry({0, buttonSize.y + 5}, {geometry().size.x, 20});
 		}
 
 	public:
@@ -312,8 +49,11 @@ private:
 			_layerUpButton(L"Layer up button", this),
 			_layerValueLabel(L"Layer value entry", this),
 			_layerDownButton(L"Layer down button", this),
-			_textEntry(L"Test text entry", this)
+			_value(0),
+			_step(1),
+			_onValueEditionContract(_value.subscribe([&](){_layerValueLabel.setText(std::to_wstring(_value.get()));}))
 		{
+			DEBUG_LINE();
 			_layerTextlabel.setText(L"Layer :");
 			_layerTextlabel.setTextAlignment(
 				spk::HorizontalAlignment::Right,
@@ -321,14 +61,19 @@ private:
 				);
 			_layerTextlabel.setCornerSize(2);
 			_layerTextlabel.activate();
+			DEBUG_LINE();
 
 			_layerUpButton.setText(L"+");
 			_layerUpButton.setTextAlignment(
 				spk::HorizontalAlignment::Centered,
 				spk::VerticalAlignment::Centered
 				);
+			_layerUpButtonContract = _layerUpButton.subscribe([&](){
+				_value += _step;
+			});
 			_layerUpButton.setCornerSize(2);
 			_layerUpButton.activate();
+			DEBUG_LINE();
 
 			_layerValueLabel.setText(L"0");
 			_layerValueLabel.setTextAlignment(
@@ -337,23 +82,19 @@ private:
 				);
 			_layerValueLabel.setCornerSize(2);
 			_layerValueLabel.activate();
+			DEBUG_LINE();
 
 			_layerDownButton.setText(L"-");
 			_layerDownButton.setTextAlignment(
 				spk::HorizontalAlignment::Centered,
 				spk::VerticalAlignment::Centered
 				);
+			_layerDownButtonContract = _layerDownButton.subscribe([&](){
+				_value -= _step;
+			});
 			_layerDownButton.setCornerSize(2);
 			_layerDownButton.activate();
-			
-
-			_textEntry.setText(L"My text not long but long enought to be a problem");
-			_textEntry.setTextAlignment(
-				spk::HorizontalAlignment::Left,
-				spk::VerticalAlignment::Centered
-				);
-			_textEntry.setCornerSize(2);
-			_textEntry.activate();
+			DEBUG_LINE();
 		}
 
 		spk::Vector2UInt minimalSize()
@@ -414,44 +155,58 @@ public:
 
 int main()
 {
+	DEBUG_LINE();
 	spk::GraphicalApplication app = spk::GraphicalApplication();
 
+	DEBUG_LINE();
 	spk::SafePointer<spk::Window> win = app.createWindow(L"Playground", {{0, 0}, {800, 800}});
 
+	DEBUG_LINE();
 	TextureManager::instanciate();
 	
+	DEBUG_LINE();
 	NodeMap nodeMap;
 
+	DEBUG_LINE();
 	spk::GameEngine engine;
 
+	DEBUG_LINE();
 	spk::Entity worldManager = spk::Entity(L"World manager");
 	auto& worldManagerComp = worldManager.addComponent<WorldManager>(L"World manager component");
 	worldManager.addComponent<ControlMapper>(L"Control mapper component");
 
+	DEBUG_LINE();
 	spk::Entity player = spk::Entity(L"Player");
 	player.transform().place(spk::Vector3(0, 0, 0));
 	player.addComponent<PlayerController>(L"Player controler component");
 
+	DEBUG_LINE();
 	spk::Entity camera = spk::Entity(L"Camera", &player);
 	camera.transform().place(spk::Vector3(0, 0, 20));
 	camera.transform().lookAt(player.transform().position());
 
+	DEBUG_LINE();
 	CameraManager& cameraComp = camera.addComponent<CameraManager>(L"Main camera");
 
+	DEBUG_LINE();
 	worldManagerComp.setCamera(&camera);
 
+	DEBUG_LINE();
 	engine.addEntity(&worldManager);
 	engine.addEntity(&player);
 
+	DEBUG_LINE();
 	MapEditorHUD mapEditorWidget = MapEditorHUD(L"Editor window", win->widget());
 	mapEditorWidget.setGeometry(win->geometry());
 	mapEditorWidget.activate();
 
+	DEBUG_LINE();
 	spk::GameEngineWidget gameEngineWidget = spk::GameEngineWidget(L"Engine widget", win->widget());
 	gameEngineWidget.setLayer(0);
 	gameEngineWidget.setGeometry(win->geometry());
 	gameEngineWidget.setGameEngine(&engine);
 	gameEngineWidget.activate();
 	
+	DEBUG_LINE();
 	return (app.run());
 }

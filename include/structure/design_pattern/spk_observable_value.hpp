@@ -7,6 +7,10 @@ namespace spk
 	template<typename TType>
 	class ObservableValue
 	{
+	public:
+		using Contract = ContractProvider::Contract;
+		using Job = ContractProvider::Job;
+
 	private:
 		TType _value;
 		ContractProvider _contractProvider;
@@ -23,7 +27,6 @@ namespace spk
 		ObservableValue(const TType& p_value) :
 			_value(p_value)
 		{
-
 		}
 
 		ObservableValue& operator =(const TType& p_value)
@@ -48,9 +51,81 @@ namespace spk
 			notifyEdition();
 		}
 
-		ContractProvider::Contract subscribe(const ContractProvider::Job& p_job)
+		Contract subscribe(const Job& p_job)
 		{
 			return _contractProvider.subscribe(p_job);
+		}
+
+		// Arithmetic assignment operators
+		ObservableValue& operator +=(const TType& p_value)
+		{
+			_value += p_value;
+			notifyEdition();
+			return *this;
+		}
+
+		ObservableValue& operator -=(const TType& p_value)
+		{
+			_value -= p_value;
+			notifyEdition();
+			return *this;
+		}
+
+		ObservableValue& operator *=(const TType& p_value)
+		{
+			_value *= p_value;
+			notifyEdition();
+			return *this;
+		}
+
+		ObservableValue& operator /=(const TType& p_value)
+		{
+			_value /= p_value;
+			notifyEdition();
+			return *this;
+		}
+
+		ObservableValue& operator %=(const TType& p_value)
+		{
+			_value %= p_value;
+			notifyEdition();
+			return *this;
+		}
+
+		// Bitwise assignment operators
+		ObservableValue& operator &=(const TType& p_value)
+		{
+			_value &= p_value;
+			notifyEdition();
+			return *this;
+		}
+
+		ObservableValue& operator |=(const TType& p_value)
+		{
+			_value |= p_value;
+			notifyEdition();
+			return *this;
+		}
+
+		ObservableValue& operator ^=(const TType& p_value)
+		{
+			_value ^= p_value;
+			notifyEdition();
+			return *this;
+		}
+
+		ObservableValue& operator <<=(const TType& p_value)
+		{
+			_value <<= p_value;
+			notifyEdition();
+			return *this;
+		}
+
+		ObservableValue& operator >>=(const TType& p_value)
+		{
+			_value >>= p_value;
+			notifyEdition();
+			return *this;
 		}
 	};
 }
