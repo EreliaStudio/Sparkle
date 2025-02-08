@@ -5,13 +5,6 @@
 
 namespace spk
 {
-	spk::SpriteSheet AbstractInterfaceWindow::_defaultIconset =
-		spk::SpriteSheet::fromRawData(
-			SPARKLE_GET_RESOURCE("resources/textures/defaultIconset.png"),
-			spk::Vector2Int(10, 10),
-			spk::SpriteSheet::Filtering::Linear
-		);
-
 	spk::SpriteSheet AbstractInterfaceWindow::_defaultNineSlice_Light =
 		spk::SpriteSheet::fromRawData(
 			SPARKLE_GET_RESOURCE("resources/textures/defaultNineSlice_Light.png"),
@@ -91,18 +84,18 @@ namespace spk
 		_titleLabel.setText(p_name);
 		_titleLabel.activate();
 
-		_closeButton.setIconset(&_defaultIconset);
-		_closeButton.setSprite(_defaultIconset.sprite(0));
+		_closeButton.setIconset(spk::Widget::defaultIconset());
+		_closeButton.setSprite(spk::Widget::defaultIconset()->sprite(0));
 		_closeButton.setCornerSize(4);
 		_closeButton.activate();
 
-		_minimizeButton.setIconset(&_defaultIconset);
-		_minimizeButton.setSprite(_defaultIconset.sprite(3));
+		_minimizeButton.setIconset(spk::Widget::defaultIconset());
+		_minimizeButton.setSprite(spk::Widget::defaultIconset()->sprite(3));
 		_minimizeButton.setCornerSize(4);
 		_minimizeButton.activate();
 
-		_maximizeButton.setIconset(&_defaultIconset);
-		_maximizeButton.setSprite(_defaultIconset.sprite(1));
+		_maximizeButton.setIconset(spk::Widget::defaultIconset());
+		_maximizeButton.setSprite(spk::Widget::defaultIconset()->sprite(1));
 		_maximizeButton.setCornerSize(4);
 		_maximizeButton.activate();
 	}
@@ -250,14 +243,14 @@ namespace spk
 
 		if (!_isMaximized)
 		{
-			_menuBar._maximizeButton.setSprite(_defaultIconset.sprite(2));
+			_menuBar._maximizeButton.setSprite(spk::Widget::defaultIconset()->sprite(2));
 			_previousGeometry = geometry();
 			setGeometry({0, 0}, parent()->geometry().size);
 			_isMaximized = true;
 		}
 		else
 		{
-			_menuBar._maximizeButton.setSprite(_defaultIconset.sprite(1));
+			_menuBar._maximizeButton.setSprite(spk::Widget::defaultIconset()->sprite(1));
 			setGeometry(_previousGeometry);
 			_isMaximized = false;
 		}

@@ -50,5 +50,7 @@ namespace spk
 
 		bool hasText() const;
 		const std::wstring& text() const;
+
+		const spk::Vector2Int& cornerSize() const;
 	};
 }

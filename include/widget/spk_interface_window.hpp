@@ -29,13 +29,8 @@ namespace spk
 		};
 
 	private:
-		static std::vector<uint8_t> _defaultIconset_Data;
-		static spk::SpriteSheet     _defaultIconset;
-		static std::vector<uint8_t> _defaultNineSlice_Light_Data;
 		static spk::SpriteSheet     _defaultNineSlice_Light;
-		static std::vector<uint8_t> _defaultNineSlice_Dark_Data;
 		static spk::SpriteSheet     _defaultNineSlice_Dark;
-		static std::vector<uint8_t> _defaultNineSlice_Darker_Data;
 		static spk::SpriteSheet     _defaultNineSlice_Darker;
 
 

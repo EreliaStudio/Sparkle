@@ -23,12 +23,12 @@ namespace spk
 	{
 		friend class Window;
 	private:
-		static std::vector<uint8_t> _defaultFont_Data;
+		static spk::SpriteSheet _defaultIconset;
 		static spk::Font _defaultFont;
-		static std::vector<uint8_t> _defaultNineSlice_Data;
 		static spk::SpriteSheet _defaultNineSlice;
 
 	public:
+		static spk::SafePointer<spk::SpriteSheet> defaultIconset();
 		static spk::SafePointer<spk::Font> defaultFont();
 		static spk::SafePointer<spk::SpriteSheet> defaultNineSlice();
 

@@ -5,6 +5,17 @@
 
 namespace spk
 {
+	spk::SpriteSheet Widget::_defaultIconset =
+		spk::SpriteSheet::fromRawData(
+			SPARKLE_GET_RESOURCE("resources/textures/defaultIconset.png"),
+			spk::Vector2Int(10, 10),
+			spk::SpriteSheet::Filtering::Linear
+		);
+
+	spk::SafePointer<spk::SpriteSheet> Widget::defaultIconset()
+	{
+		return (&_defaultIconset);
+	}
 
 	spk::Font Widget::_defaultFont = spk::Font::fromRawData(
 		SPARKLE_GET_RESOURCE("resources/font/arial.ttf"),

@@ -1,5 +1,92 @@
 #include "playground.hpp"
 
+
+template <typename T>
+class Spinbox : public spk::Widget
+{
+private:
+    spk::PushButton _upButton;
+    spk::PushButton::Contract _upButtonContract;
+    spk::TextEdit _valueEdit;
+    spk::PushButton _downButton;
+    spk::PushButton::Contract _downButtonContract;
+
+    spk::ObservableValue<T> _value;
+    spk::ObservableValue<T>::Contract _onValueEditionContract;
+    T _step = static_cast<T>(1);
+
+    void _onGeometryChange() override
+    {
+        spk::Vector2UInt buttonSize = { std::max(16u, geometry().size.y), geometry().size.y };
+
+        spk::Vector2UInt editSize = {
+            geometry().size.x - (buttonSize.x * 2) - 6,
+            geometry().size.y
+        };
+
+		_valueEdit.setTextSize({static_cast<size_t>((geometry().height - _valueEdit.cornerSize().y * 2 - 2)), 2});
+
+        _valueEdit.setGeometry({ 0, 0 }, editSize);
+        _downButton.setGeometry({editSize.x + 3, 0}, buttonSize);
+        _upButton.setGeometry({editSize.x + 3 + buttonSize.x + 3, 0}, buttonSize);
+    }
+
+public:
+    Spinbox(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent)
+        : spk::Widget(p_name, p_parent),
+          _upButton(L"Increase", this),
+          _valueEdit(L"Value Edit", this),
+          _downButton(L"Decrease", this),
+          _value(static_cast<T>(0)),
+          _onValueEditionContract(_value.subscribe([&]() { _valueEdit.setText(std::to_wstring(_value.get())); }))
+    {
+        _upButton.setTextAlignment(spk::HorizontalAlignment::Centered, spk::VerticalAlignment::Centered);
+        _upButtonContract = _upButton.subscribe([&]() { _value += _step; });
+        _upButton.activate();
+
+        _valueEdit.setText(L"0");
+		_valueEdit.setPlaceholder(L"...");
+        _valueEdit.setTextAlignment(spk::HorizontalAlignment::Centered, spk::VerticalAlignment::Centered);
+        _valueEdit.activate();
+
+        _downButton.setTextAlignment(spk::HorizontalAlignment::Centered, spk::VerticalAlignment::Centered);
+        _downButtonContract = _downButton.subscribe([&]() { _value -= _step; });
+        _downButton.activate();
+
+		setIconSet(spk::Widget::defaultIconset());
+    }
+
+	void setIconSet(spk::SafePointer<spk::SpriteSheet> p_iconSet)
+	{
+		_upButton.setText(L"");
+		_upButton.setIconset(p_iconSet);
+		_upButton.setSprite(p_iconSet->sprite(4));
+
+		_downButton.setIconset(p_iconSet);
+		_downButton.setText(L"");
+		_downButton.setSprite(p_iconSet->sprite(5));
+	}
+
+	void setSpriteSheet(spk::SafePointer<spk::SpriteSheet> p_spriteSheet)
+	{
+		_upButton.setSpriteSheet(p_spriteSheet);
+		_valueEdit.setSpriteSheet(p_spriteSheet);
+		_downButton.setSpriteSheet(p_spriteSheet);
+	}
+
+	void setCornerSize(const spk::Vector2UInt& p_cornerSize)
+	{
+		_upButton.setCornerSize(p_cornerSize);
+		_valueEdit.setCornerSize(p_cornerSize);
+		_downButton.setCornerSize(p_cornerSize);
+	}
+
+    void setValue(T p_value) { _value.set(p_value); }
+    T getValue() const { return _value.get(); }
+    void setStep(T p_step) { _step = p_step; }
+};
+
+
 class MapEditorHUD : public spk::Widget
 {
 private:
@@ -7,15 +94,7 @@ private:
 	{
 	private:
 		spk::TextLabel _layerTextlabel;
-		spk::PushButton _layerUpButton;
-		spk::PushButton::Contract _layerUpButtonContract;
-		spk::TextEdit _layerValueLabel;
-		spk::PushButton _layerDownButton;
-		spk::PushButton::Contract _layerDownButtonContract;
-
-		spk::ObservableValue<int> _value;
-		spk::ObservableValue<int>::Contract _onValueEditionContract;
-		int _step = 1;
+		Spinbox<int> _layerSpinBox;
 
 		spk::Font::Size defaultFontSize()
 		{
@@ -27,87 +106,61 @@ private:
 			spk::Font::Size fontSize = defaultFontSize();
 
 			_layerTextlabel.setTextSize(fontSize);
-			spk::Vector2UInt minimalTextLabelSize = _layerTextlabel.computeExpectedTextSize(fontSize) + _layerTextlabel.cornerSize() * 2;
-			spk::Vector2UInt buttonSize = std::max(16u, minimalTextLabelSize.y);
+			spk::Vector2UInt minimalTextLabelSize = 
+				_layerTextlabel.computeExpectedTextSize(fontSize) + 
+				_layerTextlabel.cornerSize() * 2;
 
 			_layerTextlabel.setGeometry({0, 0}, minimalTextLabelSize);
 
-			_layerUpButton.setTextSize(fontSize);
-			_layerUpButton.setGeometry({_layerTextlabel.geometry().size.x + 3, 0}, buttonSize);
-			
-			_layerValueLabel.setTextSize(fontSize);
-			_layerValueLabel.setGeometry({_layerTextlabel.geometry().size.x + 3 + _layerUpButton.geometry().size.x + 3, 0}, buttonSize);
-			
-			_layerDownButton.setTextSize(fontSize);
-			_layerDownButton.setGeometry({_layerTextlabel.geometry().size.x + 3 + _layerUpButton.geometry().size.x + 3 + _layerValueLabel.geometry().size.x + 3, 0}, buttonSize);
+			const unsigned int spinboxWidth = 100;
+			spk::Vector2UInt spinboxSize = {spinboxWidth, minimalTextLabelSize.y};
+
+			_layerSpinBox.setGeometry(
+				{
+					_layerTextlabel.geometry().anchor.x + 
+					_layerTextlabel.geometry().size.x + 3,
+					0
+				},
+				spinboxSize
+			);
 		}
 
 	public:
-		InterfaceContent(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
-			spk::AbstractInterfaceWindow::Content(p_name, p_parent),
+		InterfaceContent(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent)
+			: spk::AbstractInterfaceWindow::Content(p_name, p_parent),
 			_layerTextlabel(L"Layer text label", this),
-			_layerUpButton(L"Layer up button", this),
-			_layerValueLabel(L"Layer value entry", this),
-			_layerDownButton(L"Layer down button", this),
-			_value(0),
-			_step(1),
-			_onValueEditionContract(_value.subscribe([&](){_layerValueLabel.setText(std::to_wstring(_value.get()));}))
+			_layerSpinBox(L"Layer spinbox", this)
 		{
-			DEBUG_LINE();
 			_layerTextlabel.setText(L"Layer :");
 			_layerTextlabel.setTextAlignment(
 				spk::HorizontalAlignment::Right,
 				spk::VerticalAlignment::Centered
-				);
+			);
 			_layerTextlabel.setCornerSize(2);
 			_layerTextlabel.activate();
-			DEBUG_LINE();
 
-			_layerUpButton.setText(L"+");
-			_layerUpButton.setTextAlignment(
-				spk::HorizontalAlignment::Centered,
-				spk::VerticalAlignment::Centered
-				);
-			_layerUpButtonContract = _layerUpButton.subscribe([&](){
-				_value += _step;
-			});
-			_layerUpButton.setCornerSize(2);
-			_layerUpButton.activate();
-			DEBUG_LINE();
-
-			_layerValueLabel.setText(L"0");
-			_layerValueLabel.setTextAlignment(
-				spk::HorizontalAlignment::Left,
-				spk::VerticalAlignment::Centered
-				);
-			_layerValueLabel.setCornerSize(2);
-			_layerValueLabel.activate();
-			DEBUG_LINE();
-
-			_layerDownButton.setText(L"-");
-			_layerDownButton.setTextAlignment(
-				spk::HorizontalAlignment::Centered,
-				spk::VerticalAlignment::Centered
-				);
-			_layerDownButtonContract = _layerDownButton.subscribe([&](){
-				_value -= _step;
-			});
-			_layerDownButton.setCornerSize(2);
-			//_layerDownButton.activate();
-			DEBUG_LINE();
+			_layerSpinBox.setValue(0);
+			_layerSpinBox.setStep(1);
+			_layerSpinBox.setCornerSize(2);
+			_layerSpinBox.activate();
 		}
 
 		spk::Vector2UInt minimalSize()
 		{
-			spk::Vector2UInt titleLabelSize = _layerTextlabel.computeExpectedTextSize(defaultFontSize()) + _layerTextlabel.cornerSize() * 2;
-			spk::Vector2UInt buttonSize = 16;
+			spk::Vector2UInt labelSize =
+				_layerTextlabel.computeExpectedTextSize(defaultFontSize()) + 
+				_layerTextlabel.cornerSize() * 2;
 
-			spk::Vector2UInt result = {
-				titleLabelSize.x + 3 + buttonSize.x + 3 + buttonSize.x + 3 + buttonSize.x,
-				std::max(titleLabelSize.y, buttonSize.y) + 5 + 20
-			};
+			const unsigned int spinboxWidth = 100;
+			spk::Vector2UInt spinboxSize = {spinboxWidth, labelSize.y};
 
-			return (result);
+			unsigned int spacing = 3;
+
+			unsigned int totalWidth = labelSize.x + spacing + spinboxSize.x;
+
+			unsigned int totalHeight = std::max(labelSize.y, spinboxSize.y) + 5 + 20;
+
+			return {totalWidth, totalHeight};
 		}
 	};
 
