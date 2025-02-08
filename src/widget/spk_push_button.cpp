@@ -192,6 +192,7 @@ namespace spk
 				break;
 			}
 			case MouseEvent::Type::Press:
+			case MouseEvent::Type::DoubleClick:
 			{
 				if (p_event.button == spk::Mouse::Button::Left)
 				{

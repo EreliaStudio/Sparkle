@@ -93,7 +93,7 @@ private:
 				_value -= _step;
 			});
 			_layerDownButton.setCornerSize(2);
-			_layerDownButton.activate();
+			//_layerDownButton.activate();
 			DEBUG_LINE();
 		}
 
@@ -155,58 +155,44 @@ public:
 
 int main()
 {
-	DEBUG_LINE();
 	spk::GraphicalApplication app = spk::GraphicalApplication();
 
-	DEBUG_LINE();
 	spk::SafePointer<spk::Window> win = app.createWindow(L"Playground", {{0, 0}, {800, 800}});
 
-	DEBUG_LINE();
 	TextureManager::instanciate();
 	
-	DEBUG_LINE();
 	NodeMap nodeMap;
 
-	DEBUG_LINE();
 	spk::GameEngine engine;
 
-	DEBUG_LINE();
 	spk::Entity worldManager = spk::Entity(L"World manager");
 	auto& worldManagerComp = worldManager.addComponent<WorldManager>(L"World manager component");
 	worldManager.addComponent<ControlMapper>(L"Control mapper component");
 
-	DEBUG_LINE();
 	spk::Entity player = spk::Entity(L"Player");
 	player.transform().place(spk::Vector3(0, 0, 0));
 	player.addComponent<PlayerController>(L"Player controler component");
 
-	DEBUG_LINE();
 	spk::Entity camera = spk::Entity(L"Camera", &player);
 	camera.transform().place(spk::Vector3(0, 0, 20));
 	camera.transform().lookAt(player.transform().position());
 
-	DEBUG_LINE();
 	CameraManager& cameraComp = camera.addComponent<CameraManager>(L"Main camera");
 
-	DEBUG_LINE();
 	worldManagerComp.setCamera(&camera);
 
-	DEBUG_LINE();
 	engine.addEntity(&worldManager);
 	engine.addEntity(&player);
 
-	DEBUG_LINE();
 	MapEditorHUD mapEditorWidget = MapEditorHUD(L"Editor window", win->widget());
 	mapEditorWidget.setGeometry(win->geometry());
 	mapEditorWidget.activate();
 
-	DEBUG_LINE();
 	spk::GameEngineWidget gameEngineWidget = spk::GameEngineWidget(L"Engine widget", win->widget());
 	gameEngineWidget.setLayer(0);
 	gameEngineWidget.setGeometry(win->geometry());
 	gameEngineWidget.setGameEngine(&engine);
 	gameEngineWidget.activate();
 	
-	DEBUG_LINE();
 	return (app.run());
 }

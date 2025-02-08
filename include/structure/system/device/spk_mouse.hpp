@@ -9,9 +9,9 @@ namespace spk
 	{
 		enum class Button
 		{
-			Left,
-			Middle,
-			Right,
+			Left = 0,
+			Middle = 1,
+			Right = 2,
 			Unknow
 		};
 
