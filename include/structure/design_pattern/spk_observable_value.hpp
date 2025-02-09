@@ -16,7 +16,7 @@ namespace spk
 		ContractProvider _contractProvider;
 
 	protected:
-		void notifyEdition()
+		void notifyEdition() const
 		{
 			_contractProvider.trigger();
 		}
@@ -27,6 +27,11 @@ namespace spk
 		ObservableValue(const TType& p_value) :
 			_value(p_value)
 		{
+		}
+
+		void trigger() const
+		{
+			notifyEdition();
 		}
 
 		ObservableValue& operator =(const TType& p_value)

@@ -86,7 +86,7 @@ namespace spk
 	private:
 		std::vector<std::shared_ptr<Job>> _subscribedJobs;
 		std::vector<Contract> _relinquishedContracts;
-		std::recursive_mutex _mutex;
+		mutable std::recursive_mutex _mutex;
 
 	public:
 		ContractProvider()
@@ -137,7 +137,7 @@ namespace spk
 			}
 		}
 
-		void trigger()
+		void trigger() const
 		{
 			std::lock_guard<std::recursive_mutex> lock(_mutex);
 			for (auto& job : _subscribedJobs)

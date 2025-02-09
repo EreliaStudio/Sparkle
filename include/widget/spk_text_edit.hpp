@@ -12,6 +12,7 @@ namespace spk
 	class TextEdit : public spk::Widget
 	{
 	private:
+		bool _isEditEnable = true;
 		bool _renderCursor = true;
 		bool _needLowerCursorUpdate = true;
 		bool _needHigherCursorUpdate = true;
@@ -48,6 +49,10 @@ namespace spk
 		void setText(const std::wstring& p_text);
 		void setPlaceholder(const std::wstring& p_placeholder);
 
+		void disableEdit();
+		void enableEdit();
+
+		bool isEditEnable() const;
 		bool hasText() const;
 		const std::wstring& text() const;
 

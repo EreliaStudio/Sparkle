@@ -1,7 +1,7 @@
 #include "playground.hpp"
 
 
-template <typename T>
+template <typename TType>
 class Spinbox : public spk::Widget
 {
 private:
@@ -11,9 +11,11 @@ private:
     spk::PushButton _downButton;
     spk::PushButton::Contract _downButtonContract;
 
-    spk::ObservableValue<T> _value;
-    spk::ObservableValue<T>::Contract _onValueEditionContract;
-    T _step = static_cast<T>(1);
+	std::optional<TType> _minLimit;
+	std::optional<TType> _maxLimit;
+    spk::ObservableValue<TType> _value;
+    spk::ObservableValue<TType>::Contract _onValueEditionContract;
+    TType _step = static_cast<TType>(1);
 
     void _onGeometryChange() override
     {
@@ -24,7 +26,7 @@ private:
             geometry().size.y
         };
 
-		_valueEdit.setTextSize({static_cast<size_t>((geometry().height - _valueEdit.cornerSize().y * 2 - 2)), 2});
+		_valueEdit.setTextSize({static_cast<size_t>((geometry().height - _valueEdit.cornerSize().y * 2)), 0});
 
         _valueEdit.setGeometry({ 0, 0 }, editSize);
         _downButton.setGeometry({editSize.x + 3, 0}, buttonSize);
@@ -32,26 +34,45 @@ private:
     }
 
 public:
-    Spinbox(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent)
-        : spk::Widget(p_name, p_parent),
-          _upButton(L"Increase", this),
-          _valueEdit(L"Value Edit", this),
-          _downButton(L"Decrease", this),
-          _value(static_cast<T>(0)),
-          _onValueEditionContract(_value.subscribe([&]() { _valueEdit.setText(std::to_wstring(_value.get())); }))
+    Spinbox(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
+		spk::Widget(p_name, p_parent),
+		_upButton(L"Increase", this),
+		_valueEdit(L"Value Edit", this),
+		_downButton(L"Decrease", this),
+		_value(static_cast<TType>(0)),
+        _onValueEditionContract(_value.subscribe([&]() { _valueEdit.setText(std::to_wstring(_value.get())); }))
     {
         _upButton.setTextAlignment(spk::HorizontalAlignment::Centered, spk::VerticalAlignment::Centered);
-        _upButtonContract = _upButton.subscribe([&]() { _value += _step; });
+        _upButtonContract = _upButton.subscribe([&]() {
+			if (_maxLimit.has_value() == false)
+			{
+				_value += _step;
+			}
+			else if (_value != _maxLimit.value())
+			{
+				_value = std::min(_value + _step, _maxLimit.value());
+			}
+			});
         _upButton.activate();
 
-        _valueEdit.setText(L"0");
 		_valueEdit.setPlaceholder(L"...");
         _valueEdit.setTextAlignment(spk::HorizontalAlignment::Centered, spk::VerticalAlignment::Centered);
         _valueEdit.activate();
 
         _downButton.setTextAlignment(spk::HorizontalAlignment::Centered, spk::VerticalAlignment::Centered);
-        _downButtonContract = _downButton.subscribe([&]() { _value -= _step; });
+        _downButtonContract = _downButton.subscribe([&](){
+			if (_minLimit.has_value() == false)
+			{
+				_value -= _step;
+			}
+			else if (_value != _minLimit.value())
+			{
+				_value = std::max(_value - _step, _minLimit.value());
+			}
+			});
         _downButton.activate();
+
+		_value.trigger();
 
 		setIconSet(spk::Widget::defaultIconset());
     }
@@ -81,11 +102,58 @@ public:
 		_downButton.setCornerSize(p_cornerSize);
 	}
 
-    void setValue(T p_value) { _value.set(p_value); }
-    T getValue() const { return _value.get(); }
-    void setStep(T p_step) { _step = p_step; }
-};
+    void setValue(TType p_value)
+	{
+		_value.set(p_value);
+	}
 
+    TType getValue() const
+	{
+		return _value.get();
+	}
+
+    void setStep(TType p_step)
+	{
+		_step = p_step;
+	}
+
+	void setMinimalLimit(TType p_minimalValue)
+	{
+		_minLimit = p_minimalValue;
+	}
+
+	void setMaximalLimit(TType p_maximalValue)
+	{
+		_maxLimit = p_maximalValue;
+	}
+
+	void setLimits(const TType& p_minimalValue, const TType& p_maximalValue)
+	{
+		setMinimalLimit(p_minimalValue);
+		setMaximalLimit(p_maximalValue);
+	}
+
+	void removeLimits()
+	{
+		_minLimit.reset();
+		_maxLimit.reset();
+	}
+
+	bool isEditEnable() const
+	{
+		return (_valueEdit.isEditEnable());
+	}
+
+	void enableEdit()
+	{
+		_valueEdit.disableEdit();
+	}
+
+	void disableEdit()
+	{
+		_valueEdit.disableEdit();
+	}
+};
 
 class MapEditorHUD : public spk::Widget
 {
@@ -112,7 +180,7 @@ private:
 
 			_layerTextlabel.setGeometry({0, 0}, minimalTextLabelSize);
 
-			const unsigned int spinboxWidth = 100;
+			const unsigned int spinboxWidth = geometry().size.x - 5 - minimalTextLabelSize.x;
 			spk::Vector2UInt spinboxSize = {spinboxWidth, minimalTextLabelSize.y};
 
 			_layerSpinBox.setGeometry(
@@ -142,6 +210,8 @@ private:
 			_layerSpinBox.setValue(0);
 			_layerSpinBox.setStep(1);
 			_layerSpinBox.setCornerSize(2);
+			_layerSpinBox.setLimits(0, 5);
+			_layerSpinBox.disableEdit();
 			_layerSpinBox.activate();
 		}
 
@@ -154,11 +224,9 @@ private:
 			const unsigned int spinboxWidth = 100;
 			spk::Vector2UInt spinboxSize = {spinboxWidth, labelSize.y};
 
-			unsigned int spacing = 3;
+			unsigned int totalWidth = labelSize.x + 70;
 
-			unsigned int totalWidth = labelSize.x + spacing + spinboxSize.x;
-
-			unsigned int totalHeight = std::max(labelSize.y, spinboxSize.y) + 5 + 20;
+			unsigned int totalHeight = std::max(labelSize.y, spinboxSize.y);
 
 			return {totalWidth, totalHeight};
 		}

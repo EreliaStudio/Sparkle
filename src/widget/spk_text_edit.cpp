@@ -75,6 +75,15 @@ namespace spk
 
 	void TextEdit::_onMouseEvent(spk::MouseEvent &p_event)
 	{
+		if (_isEditEnable == false)
+		{
+			if (focusedWidget(Widget::FocusType::KeyboardFocus) == this)
+			{
+				releaseFocus(Widget::FocusType::KeyboardFocus);
+			}
+			return ;
+		}
+
 		if (p_event.type == spk::MouseEvent::Type::Press)
 		{
 			if (viewport().geometry().contains(p_event.mouse->position) == true)
@@ -90,6 +99,15 @@ namespace spk
 
 	void TextEdit::_onKeyboardEvent(spk::KeyboardEvent &p_event)
 	{
+		if (_isEditEnable == false)
+		{
+			if (focusedWidget(Widget::FocusType::KeyboardFocus) == this)
+			{
+				releaseFocus(Widget::FocusType::KeyboardFocus);
+			}
+			return ;
+		}
+		
 		if (hasFocus(Widget::FocusType::KeyboardFocus) == true)
 		{
 			if (p_event.type == spk::KeyboardEvent::Type::Press ||
@@ -240,6 +258,21 @@ namespace spk
 	bool TextEdit::hasText() const
 	{
 		return (_text.empty() == false);
+	}
+
+	bool TextEdit::isEditEnable() const
+	{
+		return (_isEditEnable);
+	}
+
+	void TextEdit::disableEdit()
+	{
+		_isEditEnable = false;
+	}
+
+	void TextEdit::enableEdit()
+	{
+		_isEditEnable = true;
 	}
 
 	const std::wstring &TextEdit::text() const
