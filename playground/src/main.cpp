@@ -1,168 +1,71 @@
 #include "playground.hpp"
 
-
-template <typename TType>
-class Spinbox : public spk::Widget
+class ScrollBar : public spk::Widget
 {
 private:
-    spk::PushButton _upButton;
-    spk::PushButton::Contract _upButtonContract;
-    spk::TextEdit _valueEdit;
-    spk::PushButton _downButton;
-    spk::PushButton::Contract _downButtonContract;
-
-	std::optional<TType> _minLimit;
-	std::optional<TType> _maxLimit;
-    spk::ObservableValue<TType> _value;
-    spk::ObservableValue<TType>::Contract _onValueEditionContract;
-    TType _step = static_cast<TType>(1);
-
-    void _onGeometryChange() override
-    {
-        spk::Vector2UInt buttonSize = { std::max(16u, geometry().size.y), geometry().size.y };
-
-        spk::Vector2UInt editSize = {
-            geometry().size.x - (buttonSize.x * 2) - 6,
-            geometry().size.y
-        };
-
-		_valueEdit.setTextSize({static_cast<size_t>((geometry().height - _valueEdit.cornerSize().y * 2)), 0});
-
-        _valueEdit.setGeometry({ 0, 0 }, editSize);
-        _downButton.setGeometry({editSize.x + 3, 0}, buttonSize);
-        _upButton.setGeometry({editSize.x + 3 + buttonSize.x + 3, 0}, buttonSize);
-    }
 
 public:
-    Spinbox(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
-		spk::Widget(p_name, p_parent),
-		_upButton(L"Increase", this),
-		_valueEdit(L"Value Edit", this),
-		_downButton(L"Decrease", this),
-		_value(static_cast<TType>(0)),
-        _onValueEditionContract(_value.subscribe([&]() { _valueEdit.setText(std::to_wstring(_value.get())); }))
-    {
-        _upButton.setTextAlignment(spk::HorizontalAlignment::Centered, spk::VerticalAlignment::Centered);
-        _upButtonContract = _upButton.subscribe([&]() {
-			if (_maxLimit.has_value() == false)
-			{
-				_value += _step;
-			}
-			else if (_value != _maxLimit.value())
-			{
-				_value = std::min(_value + _step, _maxLimit.value());
-			}
-			});
-        _upButton.activate();
 
-		_valueEdit.setPlaceholder(L"...");
-        _valueEdit.setTextAlignment(spk::HorizontalAlignment::Centered, spk::VerticalAlignment::Centered);
-        _valueEdit.activate();
+};
 
-        _downButton.setTextAlignment(spk::HorizontalAlignment::Centered, spk::VerticalAlignment::Centered);
-        _downButtonContract = _downButton.subscribe([&](){
-			if (_minLimit.has_value() == false)
-			{
-				_value -= _step;
-			}
-			else if (_value != _minLimit.value())
-			{
-				_value = std::max(_value - _step, _minLimit.value());
-			}
-			});
-        _downButton.activate();
+class ScrollableWidget : public spk::Widget
+{
+private:
 
-		_value.trigger();
+public:
+	
+};
 
-		setIconSet(spk::Widget::defaultIconset());
-    }
+class NodeSelectorWidget : public spk::ScrollableWidget
+{
+private:
+	spk::ColorRenderer _backgroundRenderer[4];
 
-	void setIconSet(spk::SafePointer<spk::SpriteSheet> p_iconSet)
+	void _onGeometryChange() override
 	{
-		_upButton.setText(L"");
-		_upButton.setIconset(p_iconSet);
-		_upButton.setSprite(p_iconSet->sprite(4));
+		spk::Vector2UInt sectionPart = {
+			geometry().size.x / 2,
+			geometry().size.x / 2 * 3
+		};
 
-		_downButton.setIconset(p_iconSet);
-		_downButton.setText(L"");
-		_downButton.setSprite(p_iconSet->sprite(5));
+		for (size_t i = 0; i < 4; i++)
+		{
+			_backgroundRenderer[i].clear();
+			_backgroundRenderer[i].prepareSquare(spk::Geometry2D(
+				sectionPart * spk::Vector2UInt(i % 2, i / 2),
+				sectionPart
+			), layer());
+			_backgroundRenderer[i].validate();
+		}
 	}
 
-	void setSpriteSheet(spk::SafePointer<spk::SpriteSheet> p_spriteSheet)
+	void _onPaintEvent(spk::PaintEvent& p_event) override
 	{
-		_upButton.setSpriteSheet(p_spriteSheet);
-		_valueEdit.setSpriteSheet(p_spriteSheet);
-		_downButton.setSpriteSheet(p_spriteSheet);
+		for (size_t i = 0; i < 4; i++)
+		{
+			_backgroundRenderer[i].render();
+		}
 	}
 
-	void setCornerSize(const spk::Vector2UInt& p_cornerSize)
+public:
+	NodeSelectorWidget(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+		spk::Widget(p_name, p_parent)
 	{
-		_upButton.setCornerSize(p_cornerSize);
-		_valueEdit.setCornerSize(p_cornerSize);
-		_downButton.setCornerSize(p_cornerSize);
-	}
-
-    void setValue(TType p_value)
-	{
-		_value.set(p_value);
-	}
-
-    TType getValue() const
-	{
-		return _value.get();
-	}
-
-    void setStep(TType p_step)
-	{
-		_step = p_step;
-	}
-
-	void setMinimalLimit(TType p_minimalValue)
-	{
-		_minLimit = p_minimalValue;
-	}
-
-	void setMaximalLimit(TType p_maximalValue)
-	{
-		_maxLimit = p_maximalValue;
-	}
-
-	void setLimits(const TType& p_minimalValue, const TType& p_maximalValue)
-	{
-		setMinimalLimit(p_minimalValue);
-		setMaximalLimit(p_maximalValue);
-	}
-
-	void removeLimits()
-	{
-		_minLimit.reset();
-		_maxLimit.reset();
-	}
-
-	bool isEditEnable() const
-	{
-		return (_valueEdit.isEditEnable());
-	}
-
-	void enableEdit()
-	{
-		_valueEdit.disableEdit();
-	}
-
-	void disableEdit()
-	{
-		_valueEdit.disableEdit();
+		_backgroundRenderer[0].setColor(spk::Color::red);
+		_backgroundRenderer[1].setColor(spk::Color::blue);
+		_backgroundRenderer[2].setColor(spk::Color::green);
+		_backgroundRenderer[3].setColor(spk::Color::white);
 	}
 };
 
 class MapEditorHUD : public spk::Widget
 {
 private:
-	class InterfaceContent : public spk::AbstractInterfaceWindow::Content
+	class InterfaceContent : public spk::Widget
 	{
 	private:
-		spk::TextLabel _layerTextlabel;
-		Spinbox<int> _layerSpinBox;
+		spk::PushButton _layerSelectionPushButtons[5];
+		NodeSelectorWidget _nodeSelector;
 
 		spk::Font::Size defaultFontSize()
 		{
@@ -171,74 +74,89 @@ private:
 
 		void _onGeometryChange() override
 		{
-			spk::Font::Size fontSize = defaultFontSize();
+			float space = 5;
+			spk::Vector2 nbLayerButtons = {5, 1};
+			spk::Vector2 layerSelectionButtonSize = {32, 32};
 
-			_layerTextlabel.setTextSize(fontSize);
-			spk::Vector2UInt minimalTextLabelSize = 
-				_layerTextlabel.computeExpectedTextSize(fontSize) + 
-				_layerTextlabel.cornerSize() * 2;
+			spk::Vector2 anchorOffset = {
+				(geometry().size.x - (layerSelectionButtonSize.x * 5)) / 4, 
+				0
+			};
 
-			_layerTextlabel.setGeometry({0, 0}, minimalTextLabelSize);
+			for (size_t i = 0; i < 5; i++)
+			{
+				_layerSelectionPushButtons[i].setGeometry(
+					spk::Vector2((layerSelectionButtonSize.x + anchorOffset.x) * i, 0),
+					layerSelectionButtonSize
+				);
+			}	
 
-			const unsigned int spinboxWidth = geometry().size.x - 5 - minimalTextLabelSize.x;
-			spk::Vector2UInt spinboxSize = {spinboxWidth, minimalTextLabelSize.y};
+			spk::Vector2 nodeItemSize = {32, 32};
 
-			_layerSpinBox.setGeometry(
-				{
-					_layerTextlabel.geometry().anchor.x + 
-					_layerTextlabel.geometry().size.x + 3,
-					0
-				},
-				spinboxSize
-			);
+			spk::Vector2 nodeSelectorOffset = {(geometry().size.x - (nodeItemSize.x * 8 + space * (7))) / 2, 0};
+
+			_nodeSelector.setGeometry({nodeSelectorOffset.x, 5 + layerSelectionButtonSize.y}, geometry().size - spk::Vector2UInt(0, layerSelectionButtonSize.y + 5));
 		}
 
 	public:
-		InterfaceContent(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent)
-			: spk::AbstractInterfaceWindow::Content(p_name, p_parent),
-			_layerTextlabel(L"Layer text label", this),
-			_layerSpinBox(L"Layer spinbox", this)
+		InterfaceContent(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+			spk::Widget(p_name, p_parent),
+			_nodeSelector(L"NodeSelector", this),
+			_layerSelectionPushButtons{
+				spk::PushButton(L"Layer selection button A", this),
+				spk::PushButton(L"Layer selection button B", this),
+				spk::PushButton(L"Layer selection button C", this),
+				spk::PushButton(L"Layer selection button D", this),
+				spk::PushButton(L"Layer selection button E", this)
+			}
 		{
-			_layerTextlabel.setText(L"Layer :");
-			_layerTextlabel.setTextAlignment(
-				spk::HorizontalAlignment::Right,
-				spk::VerticalAlignment::Centered
-			);
-			_layerTextlabel.setCornerSize(2);
-			_layerTextlabel.activate();
+			for (size_t i = 0; i < 5; i++)
+			{
+				spk::SafePointer<spk::SpriteSheet> iconset = TextureManager::instance()->spriteSheet(L"iconset");
 
-			_layerSpinBox.setValue(0);
-			_layerSpinBox.setStep(1);
-			_layerSpinBox.setCornerSize(2);
-			_layerSpinBox.setLimits(0, 5);
-			_layerSpinBox.disableEdit();
-			_layerSpinBox.activate();
+				_layerSelectionPushButtons[i].setCornerSize(2);
+				_layerSelectionPushButtons[i].setIconset(iconset);
+				_layerSelectionPushButtons[i].setSprite(iconset->sprite(i));
+				_layerSelectionPushButtons[i].activate();
+			}
+
+			_nodeSelector.activate();
 		}
 
 		spk::Vector2UInt minimalSize()
 		{
-			spk::Vector2UInt labelSize =
-				_layerTextlabel.computeExpectedTextSize(defaultFontSize()) + 
-				_layerTextlabel.cornerSize() * 2;
+			float space = 5.0f;
+			spk::Vector2 nbLayerButtons = {5, 1};
+			spk::Vector2 layerSelectionbutton = {32, 32};
 
-			const unsigned int spinboxWidth = 100;
-			spk::Vector2UInt spinboxSize = {spinboxWidth, labelSize.y};
+			spk::Vector2 layerLineSize = {
+				layerSelectionbutton.x * nbLayerButtons.x + space * (nbLayerButtons.x - 1),
+				layerSelectionbutton.y};	
 
-			unsigned int totalWidth = labelSize.x + 70;
+			spk::Vector2 nodeItemSize = {32, 32};
+			spk::Vector2 nodeRenderedOnSelector = {8, 4};
+			spk::Vector2 nodeSelectorSize = {
+				nodeItemSize.x * nodeRenderedOnSelector.x + space * (nodeRenderedOnSelector.x - 1),
+				nodeItemSize.y * nodeRenderedOnSelector.y + space * (nodeRenderedOnSelector.y - 1)
+			};
 
-			unsigned int totalHeight = std::max(labelSize.y, spinboxSize.y);
+			spk::Vector2UInt result = {
+					std::max(layerLineSize.x, nodeSelectorSize.x),
+					layerLineSize.y + space + nodeSelectorSize.y
+				};
 
-			return {totalWidth, totalHeight};
+			return (result);
 		}
 	};
 
-	spk::InterfaceWindow<InterfaceContent> interfaceWindow;
+	spk::InterfaceWindow<InterfaceContent> _interfaceWindow;
 
 	void _onGeometryChange() override
 	{
-		spk::Vector2UInt childSize = interfaceWindow.minimalSize();
-		interfaceWindow.setGeometry((geometry().size - childSize) / 2 , childSize);
+		spk::Vector2UInt childSize = _interfaceWindow.content()->minimalSize();
+		_interfaceWindow.setGeometry((geometry().size - childSize) / 2 , childSize);
 	}
+
 	void _onKeyboardEvent(spk::KeyboardEvent& p_event) override
 	{
 		switch (p_event.type)
@@ -247,9 +165,9 @@ private:
 			{
 				if (p_event.key == spk::Keyboard::F12)
 				{
-					if (interfaceWindow.parent() == nullptr)
+					if (_interfaceWindow.parent() == nullptr)
 					{
-						addChild(&interfaceWindow);
+						addChild(&_interfaceWindow);
 					}
 				}
 				
@@ -263,14 +181,16 @@ private:
 public:
 	MapEditorHUD(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
 		spk::Widget(p_name, p_parent),
-		interfaceWindow(L"Editor window", this)
+		_interfaceWindow(L"Editor window", this)
 	{
-		interfaceWindow.setMinimumSize({150, 150});
-		interfaceWindow.setMenuHeight(25);
-		interfaceWindow.setLayer(10);
-		interfaceWindow.activate();
+		spk::Vector2UInt minimalSize = _interfaceWindow.content()->minimalSize();
+		_interfaceWindow.setMinimumContentSize(minimalSize);
+		_interfaceWindow.setMaximumContentSize({minimalSize.x, 10000});
+		_interfaceWindow.setMenuHeight(25);
+		_interfaceWindow.setLayer(10);
+		_interfaceWindow.activate();
 
-		_quitContract = interfaceWindow.subscribeTo(spk::AbstractInterfaceWindow::Event::Close, [&](){removeChild(&interfaceWindow);});
+		_quitContract = _interfaceWindow.subscribeTo(spk::IInterfaceWindow::Event::Close, [&](){removeChild(&_interfaceWindow);});
 	}
 };
 
