@@ -64,6 +64,11 @@ namespace spk
 		_samplerObject.bind(p_image);
 	}
 
+	spk::SafePointer<spk::OpenGL::TextureObject> TextureRenderer::texture()
+	{
+		return (_samplerObject.texture());
+	}
+
 	void TextureRenderer::clear()
 	{
 		_bufferSet.layout().clear();

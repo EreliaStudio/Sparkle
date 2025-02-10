@@ -22,6 +22,7 @@ file(GLOB_RECURSE SPARKLE_SOURCES ${SPARKLE_SRC_DIR}/*.cpp)
 
 add_resources(
 	"resources/textures/defaultNineSlice.png"
+	"resources/textures/defaultSliderBody.png"
 	"resources/font/arial.ttf"
 	"resources/textures/defaultIconset.png"
 	"resources/textures/defaultNineSlice_Light.png"

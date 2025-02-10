@@ -27,6 +27,12 @@ namespace spk
 { 
     class PushButton : public Widget
     {
+	public:
+		enum class State
+		{
+			Pressed,
+			Released
+		};
     private:
         bool _isPressed;
 		
@@ -97,6 +103,8 @@ namespace spk
 		void setSpriteSheet(const SafePointer<SpriteSheet>& p_releasedSpriteSheet, const SafePointer<SpriteSheet>& p_pressedSpriteSheet);
 
         void setPressedOffset(const spk::Vector2Int& p_offset);
+
+		spk::SafePointer<spk::SpriteSheet> iconset(State p_state = State::Released);
 
         const spk::Vector2Int& pressedOffset() const;
 		const spk::Vector2Int& cornerSize() const;

@@ -1,22 +1,341 @@
 #include "playground.hpp"
 
-class ScrollBar : public spk::Widget
+namespace spk
 {
-private:
+	class SliderBar : public spk::Widget
+	{
+	public:
+		enum class Orientation
+		{
+			Horizontal,
+			Vertical
+		};
 
-public:
-
-};
-
-class ScrollableWidget : public spk::Widget
-{
-private:
-
-public:
+		using Job = spk::ContractProvider::Job;
+		using Contract = spk::ContractProvider::Contract;
 	
-};
+	private:
+		static spk::SpriteSheet _defaultSliderBody;
 
-class NodeSelectorWidget : public spk::ScrollableWidget
+		spk::Vector2UInt _cornerSize;
+		spk::Vector2UInt _bodyCornerSize;
+		spk::NineSliceRenderer _backgroundRenderer;
+		spk::NineSliceRenderer _bodyRenderer;
+
+		spk::ContractProvider _onEditionContractProvider;
+
+		Orientation _orientation = Orientation::Horizontal;
+
+		bool _isClicked = false;
+		float _scale = 0;
+		float _ratio = 0;
+		float _unit = 1.0f;
+		float _minValue = 0;
+		float _maxValue = 100;
+
+		void _onGeometryChange() override
+		{
+			_backgroundRenderer.clear();
+			_backgroundRenderer.prepare(geometry(), layer(), _cornerSize);
+			_backgroundRenderer.validate();
+
+			spk::Vector2UInt bodySize;
+			spk::Vector2UInt bodyOffset;
+
+			switch (_orientation)
+			{
+				case Orientation::Horizontal:
+				{
+					bodySize = spk::Vector2UInt(geometry().size.x * _scale, geometry().size.y);
+					bodyOffset = spk::Vector2UInt((geometry().size.x * (1 - _scale)), 0);
+					_unit = 1.0f / static_cast<float>(bodyOffset.x);
+					break;
+				}
+				case Orientation::Vertical:
+				{
+					bodySize = spk::Vector2UInt(geometry().size.x, geometry().size.y * _scale);
+					bodyOffset = spk::Vector2UInt(0, (geometry().size.y * (1 - _scale)));
+					_unit = 1.0f / static_cast<float>(bodyOffset.y);
+					break;
+				}
+			}
+
+
+			_bodyRenderer.clear();
+			_bodyRenderer.prepare(spk::Geometry2D(
+				_cornerSize + _ratio * bodyOffset,
+				bodySize
+			), layer() + 0.01f, _bodyCornerSize);
+			_bodyRenderer.validate();
+		}
+
+		void _onPaintEvent(spk::PaintEvent& p_event) override
+		{
+			_backgroundRenderer.render();
+			_bodyRenderer.render();
+		}
+
+		void _onMouseEvent(spk::MouseEvent& p_event) override
+		{
+			switch (p_event.type)
+			{
+				case spk::MouseEvent::Type::Press:
+				{
+					if (p_event.button == spk::Mouse::Button::Left && 
+						viewport().geometry().contains(p_event.mouse->position) == true)
+					{
+						_isClicked = true;
+					}
+					break;
+				}
+				case spk::MouseEvent::Type::Release:
+				{
+					if (p_event.button == spk::Mouse::Button::Left)
+					{
+						_isClicked = false;
+					}
+				}
+				case spk::MouseEvent::Type::Motion:
+				{
+					if (_isClicked == true)
+					{
+						_ratio = std::clamp(_ratio + _unit * (_orientation == Orientation::Horizontal ? p_event.mouse->deltaPosition.x : p_event.mouse->deltaPosition.y), 0.0f, 1.0f);
+						_onEditionContractProvider.trigger();
+						requireGeometryUpdate();
+					}
+				}
+			}
+		}
+
+	public:
+		SliderBar(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+			spk::Widget(p_name, p_parent),
+			_cornerSize(2, 2),
+			_scale(0.1f)
+		{
+			_backgroundRenderer.setSpriteSheet(spk::Widget::defaultNineSlice());
+			_bodyRenderer.setSpriteSheet(&_defaultSliderBody);
+		}
+
+		Contract subscribe(const Job& p_job)
+		{
+			return (std::move(_onEditionContractProvider.subscribe(p_job)));
+		}
+
+		void setCornerSize(const spk::Vector2UInt& p_cornerSize)
+		{
+			_cornerSize = p_cornerSize;
+		}
+
+		void setBodyCornerSize(const spk::Vector2UInt& p_bodyCornerSize)
+		{
+			_bodyCornerSize = p_bodyCornerSize;
+		}
+
+		void setSpriteSheet(spk::SafePointer<spk::SpriteSheet> p_spriteSheet)
+		{
+			_backgroundRenderer.setSpriteSheet(p_spriteSheet);
+		}
+
+		void setBodySpriteSheet(spk::SafePointer<spk::SpriteSheet> p_spriteSheet)
+		{
+			_bodyRenderer.setSpriteSheet(p_spriteSheet);
+		}
+
+		void setScale(const float& p_scale)
+		{
+			_scale = p_scale;
+		}
+
+		void setRange(float p_minValue, float p_maxValue)
+		{
+			_minValue = p_minValue;
+			_maxValue = p_maxValue;
+		}
+
+		float value()
+		{
+			return (std::lerp(_minValue, _maxValue, _ratio));
+		}
+	};
+
+	spk::SpriteSheet SliderBar::_defaultSliderBody = 
+		spk::SpriteSheet::fromRawData(
+			SPARKLE_GET_RESOURCE("resources/textures/defaultSliderBody.png"),
+			spk::Vector2Int(3, 3),
+			spk::SpriteSheet::Filtering::Linear
+		);
+
+	class ScrollBar : public spk::Widget
+	{
+	public:
+		using Orientation = spk::SliderBar::Orientation;
+
+	private:
+		Orientation _orientation;
+
+		spk::PushButton _negativeButton;
+		spk::SliderBar _sliderBar;
+		spk::SliderBar::Contract _sliderBarContract;
+		spk::PushButton _positiveButton;
+
+		void _onGeometryChange() override
+		{
+			switch (_orientation)
+			{
+				case Orientation::Horizontal:
+				{
+					break;
+				}
+				case Orientation::Vertical:
+				{
+
+					break;
+				}
+			}
+		}
+
+		void _updateButtonIcons()
+		{
+			switch (_orientation)
+			{
+				case Orientation::Horizontal:
+				{
+					_negativeButton.setSprite(_negativeButton.iconset()->sprite(6));
+					_positiveButton.setSprite(_positiveButton.iconset()->sprite(7));
+					break;
+				}
+				case Orientation::Vertical:
+				{
+					_negativeButton.setSprite(_negativeButton.iconset()->sprite(4));
+					_positiveButton.setSprite(_positiveButton.iconset()->sprite(5));
+					break;
+				}
+			}
+		}
+
+	public:
+		ScrollBar(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+			spk::Widget(p_name, p_parent),
+			_negativeButton(p_name + L" - Negative button", this),
+			_positiveButton(p_name + L" - Positive button", this),
+			_sliderBar(p_name + L" - Scroll bar", this),
+			_sliderBarContract(_sliderBar.subscribe([&](){requireGeometryUpdate();}))
+		{
+
+		}
+
+		void setIconset(spk::SafePointer<SpriteSheet> p_iconset)
+		{
+			_negativeButton.setIconset(p_iconset);
+			_positiveButton.setIconset(p_iconset);
+
+			_updateButtonIcons();
+			requireGeometryUpdate();
+		}
+
+		void setOrientation(const Orientation& p_orientation)
+		{
+			_orientation = p_orientation;
+
+			_updateButtonIcons();
+			requireGeometryUpdate();
+		}
+	};
+
+	class IScrollableWidget : public spk::Widget
+	{
+	private:
+		ScrollBar _horizontalScrollBar;
+		ScrollBar _verticalScrollBar;
+		spk::SafePointer<Widget> _content;
+
+		float _scrollBarWidth = 16;
+		spk::Vector2UInt _contentSize;
+
+		void _onGeometryChange() override
+		{
+			spk::Vector2UInt contentSize = geometry().size;
+
+			if (geometry().size.x <= _contentSize.x)
+			{
+				contentSize.y -= _scrollBarWidth;
+			}
+			else
+			{
+				_verticalScrollBar.deactivate();
+			}
+
+			if (geometry().size.y <= _contentSize.y)
+			{
+				contentSize.x -= _scrollBarWidth;
+			}
+			else
+			{
+				_horizontalScrollBar.deactivate();
+			}
+
+			if (_content != nullptr)
+			{
+				_content->setGeometry(0, contentSize);
+			}
+
+			_horizontalScrollBar.setGeometry({0, contentSize.y}, {contentSize.x, _scrollBarWidth});
+			_verticalScrollBar.setGeometry({contentSize.x, 0}, {_scrollBarWidth, contentSize.y});
+		}
+
+	public:
+		IScrollableWidget(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+			spk::Widget(p_name, p_parent),
+			_horizontalScrollBar(p_name + L" - Horizontal ScrollBar", this),
+			_verticalScrollBar(p_name + L" - Vertical ScrollBar", this),
+			_content(nullptr)
+		{
+			setScrollBarWidth(16);
+		}	
+
+		void setScrollBarWidth(const float& p_scrollBarWidth)
+		{
+			_scrollBarWidth = p_scrollBarWidth;
+			requireGeometryUpdate();
+		}
+
+		void setContent(spk::SafePointer<Widget> p_content)
+		{
+			_content = p_content;
+		}	
+
+		void setContentSize(const spk::Vector2UInt& p_contentSize)
+		{
+			_contentSize = p_contentSize;
+		}
+	};
+
+	template<typename TContentType,
+	         typename = std::enable_if_t<std::is_base_of<Widget, TContentType>::value>>
+	class ScrollableWidget : public IScrollableWidget
+	{
+	private:
+		TContentType _content;
+
+		using spk::IScrollableWidget::setContent;
+
+	public:
+		ScrollableWidget(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+			IScrollableWidget(p_name, p_parent),
+			_content(p_name + L" - Content", this)
+		{
+			setContent(&_content);
+		}
+
+		spk::SafePointer<TContentType> content()
+		{
+			return (&(_content));
+		}
+	};
+}
+
+class NodeSelectorWidget : public spk::Widget
 {
 private:
 	spk::ColorRenderer _backgroundRenderer[4];
@@ -65,7 +384,7 @@ private:
 	{
 	private:
 		spk::PushButton _layerSelectionPushButtons[5];
-		NodeSelectorWidget _nodeSelector;
+		spk::ScrollableWidget<NodeSelectorWidget> _nodeSelector;
 
 		spk::Font::Size defaultFontSize()
 		{

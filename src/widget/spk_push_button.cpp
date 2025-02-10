@@ -168,6 +168,11 @@ namespace spk
 		requireGeometryUpdate();
     }
 
+	spk::SafePointer<spk::SpriteSheet> PushButton::iconset(State p_state)
+	{
+		return dynamic_cast<spk::SpriteSheet *>((p_state == State::Released ? _releasedIconRenderer.texture() : _pressedIconRenderer.texture()).get());
+	}
+
     const spk::Vector2Int& PushButton::pressedOffset() const
     {
         return _pressedOffset;
