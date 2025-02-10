@@ -92,4 +92,5 @@
 #include "widget/spk_text_label.hpp"
 #include "widget/spk_text_edit.hpp"
 #include "widget/spk_spin_box.hpp"
+#include "widget/spk_slider_bar.hpp"
 #include "widget/spk_interface_window.hpp"
