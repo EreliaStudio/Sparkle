@@ -2,11 +2,88 @@
 
 namespace spk
 {
+	class ScrollBar : public spk::Widget
+	{
+	public:
+		using Orientation = spk::SliderBar::Orientation;
+		
+	private:
+		spk::PushButton _positiveButton;
+		spk::PushButton _negativeButton;
+		spk::SliderBar _sliderBar;
+
+		void _onGeometryChange() override
+		{
+			switch (_sliderBar.orientation())
+			{
+			case Orientation::Horizontal:
+			{
+				spk::Vector2UInt buttonSize = geometry().size.y;
+				spk::Vector2UInt sliderSize = spk::Vector2UInt(geometry().size.x - buttonSize.x * 2, geometry().size.y);
+
+				_negativeButton.setGeometry({0, geometry().size.y - buttonSize.y}, buttonSize);
+				_sliderBar.setGeometry({buttonSize.x, geometry().size.y - buttonSize.y}, sliderSize);
+				_positiveButton.setGeometry({buttonSize.x + sliderSize.x, geometry().size.y - buttonSize.y}, buttonSize);
+				break;
+			}
+			case Orientation::Vertical:
+			{
+				spk::Vector2UInt buttonSize = geometry().size.x;
+				spk::Vector2UInt sliderSize = spk::Vector2UInt(geometry().size.x, geometry().size.y - buttonSize.y * 2);
+
+				_negativeButton.setGeometry({geometry().size.x - buttonSize.x, 0}, buttonSize);
+				_sliderBar.setGeometry({geometry().size.x - buttonSize.x, buttonSize.y}, sliderSize);
+				_positiveButton.setGeometry({geometry().size.x - buttonSize.x, buttonSize.y + sliderSize.y}, buttonSize);
+
+				break;
+			}
+			}
+		}		
+		
+	public:
+		ScrollBar(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+			spk::Widget(p_name, p_parent),
+			_positiveButton(p_name + L" - Positive button", this),
+			_negativeButton(p_name + L" - Negative button", this),
+			_sliderBar(p_name + L" - Slider bar", this)
+		{
+			_positiveButton.setCornerSize(2);
+			_positiveButton.setIconset(spk::Widget::defaultIconset());
+			_positiveButton.activate();
+			
+			_negativeButton.setCornerSize(2);
+			_negativeButton.setIconset(spk::Widget::defaultIconset());
+			_negativeButton.activate();
+
+			_sliderBar.activate();
+		}
+
+		void setOrientation(const Orientation& p_orientation)
+		{
+			_sliderBar.setOrientation(p_orientation);
+			switch (p_orientation)
+			{
+			case Orientation::Horizontal:
+			{
+				_positiveButton.setSprite(spk::Widget::defaultIconset()->sprite(7));
+				_negativeButton.setSprite(spk::Widget::defaultIconset()->sprite(6));
+				break;
+			}
+			case Orientation::Vertical:
+			{
+				_positiveButton.setSprite(spk::Widget::defaultIconset()->sprite(5));
+				_negativeButton.setSprite(spk::Widget::defaultIconset()->sprite(4));
+				break;
+			}
+			}
+		}
+	};
+
 	class IScrollableWidget : public spk::Widget
 	{
 	private:
-		spk::SliderBar _horizontalScrollBar;
-		spk::SliderBar _verticalScrollBar;
+		spk::ScrollBar _horizontalScrollBar;
+		spk::ScrollBar _verticalScrollBar;
 		spk::SafePointer<Widget> _content;
 
 		float _scrollBarWidth = 16;
@@ -16,18 +93,20 @@ namespace spk
 		{
 			spk::Vector2UInt contentSize = geometry().size;
 
-			if (geometry().size.x <= _contentSize.x)
+			if (geometry().size.y <= _contentSize.y)
 			{
-				contentSize.y -= _scrollBarWidth;
+				contentSize.x -= _scrollBarWidth;
+				_verticalScrollBar.activate();
 			}
 			else
 			{
 				_verticalScrollBar.deactivate();
 			}
 
-			if (geometry().size.y <= _contentSize.y)
+			if (geometry().size.x <= _contentSize.x)
 			{
-				contentSize.x -= _scrollBarWidth;
+				contentSize.y -= _scrollBarWidth;
+				_horizontalScrollBar.activate();
 			}
 			else
 			{
@@ -51,6 +130,9 @@ namespace spk
 			_content(nullptr)
 		{
 			setScrollBarWidth(16);
+
+			_horizontalScrollBar.setOrientation(ScrollBar::Orientation::Horizontal);
+			_verticalScrollBar.setOrientation(ScrollBar::Orientation::Vertical);
 		}	
 
 		void setScrollBarWidth(const float& p_scrollBarWidth)
@@ -85,6 +167,7 @@ namespace spk
 			_content(p_name + L" - Content", this)
 		{
 			setContent(&_content);
+			_content.activate();
 		}
 
 		spk::SafePointer<TContentType> content()
@@ -198,6 +281,7 @@ private:
 				_layerSelectionPushButtons[i].activate();
 			}
 
+			_nodeSelector.setContentSize(spk::Vector2(32, 32) * spk::Vector2UInt(8, 10));
 			_nodeSelector.activate();
 		}
 

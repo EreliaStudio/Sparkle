@@ -18,8 +18,8 @@ namespace spk
 			Vertical
 		};
 
-		using Job = spk::ContractProvider::Job;
-		using Contract = spk::ContractProvider::Contract;
+		using Job = spk::TContractProvider<float>::Job;
+		using Contract = spk::TContractProvider<float>::Contract;
 	
 	private:
 		static spk::SpriteSheet _defaultSliderBody;
@@ -29,14 +29,13 @@ namespace spk
 		spk::NineSliceRenderer _backgroundRenderer;
 		spk::NineSliceRenderer _bodyRenderer;
 
-		spk::ContractProvider _onEditionContractProvider;
+		spk::TContractProvider<float> _onEditionContractProvider;
 
 		Orientation _orientation = Orientation::Horizontal;
 
 		bool _isClicked = false;
 		float _scale = 0;
 		float _ratio = 0;
-		float _unit = 1.0f;
 		float _minValue = 0;
 		float _maxValue = 100;
 
@@ -49,6 +48,7 @@ namespace spk
 
 		Contract subscribe(const Job& p_job);
 
+		void setOrientation(const Orientation& p_orientation);
 		void setCornerSize(const spk::Vector2UInt& p_cornerSize);
 		void setBodyCornerSize(const spk::Vector2UInt& p_bodyCornerSize);
 		void setSpriteSheet(spk::SafePointer<spk::SpriteSheet> p_spriteSheet);
@@ -57,6 +57,7 @@ namespace spk
 		void setRange(float p_minValue, float p_maxValue);
 
 		float value();
+		const Orientation& orientation() const;
 	};
 
 }

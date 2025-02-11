@@ -26,22 +26,19 @@ namespace spk
 			{
 				bodySize = spk::Vector2UInt(geometry().size.x * _scale, geometry().size.y);
 				bodyOffset = spk::Vector2UInt((geometry().size.x * (1 - _scale)), 0);
-				_unit = 1.0f / static_cast<float>(bodyOffset.x);
 				break;
 			}
 			case Orientation::Vertical:
 			{
 				bodySize = spk::Vector2UInt(geometry().size.x, geometry().size.y * _scale);
 				bodyOffset = spk::Vector2UInt(0, (geometry().size.y * (1 - _scale)));
-				_unit = 1.0f / static_cast<float>(bodyOffset.y);
 				break;
 			}
 		}
 
-
 		_bodyRenderer.clear();
 		_bodyRenderer.prepare(spk::Geometry2D(
-			_cornerSize + _ratio * bodyOffset,
+			geometry().anchor + _cornerSize + _ratio * bodyOffset,
 			bodySize
 		), layer() + 0.01f, _bodyCornerSize);
 		_bodyRenderer.validate();
@@ -72,13 +69,16 @@ namespace spk
 				{
 					_isClicked = false;
 				}
+				break;
 			}
 			case spk::MouseEvent::Type::Motion:
 			{
 				if (_isClicked == true)
 				{
-					_ratio = std::clamp(_ratio + _unit * (_orientation == Orientation::Horizontal ? p_event.mouse->deltaPosition.x : p_event.mouse->deltaPosition.y), 0.0f, 1.0f);
-					_onEditionContractProvider.trigger();
+					float delta = (_orientation == Orientation::Horizontal ? p_event.mouse->deltaPosition.x : p_event.mouse->deltaPosition.y);
+					float space = (_orientation == Orientation::Horizontal ? geometry().size.x : geometry().size.y) * (1 - _scale);
+					_ratio = std::clamp(_ratio + delta * (1.0f / space), 0.0f, 1.0f);
+					_onEditionContractProvider.trigger(_ratio);
 					requireGeometryUpdate();
 				}
 			}
@@ -97,6 +97,12 @@ namespace spk
 	SliderBar::Contract SliderBar::subscribe(const Job& p_job)
 	{
 		return (std::move(_onEditionContractProvider.subscribe(p_job)));
+	}
+
+	void SliderBar::setOrientation(const SliderBar::Orientation& p_orientation)
+	{
+		_orientation = p_orientation;
+		requireGeometryUpdate();
 	}
 
 	void SliderBar::setCornerSize(const spk::Vector2UInt& p_cornerSize)
@@ -133,5 +139,10 @@ namespace spk
 	float SliderBar::value()
 	{
 		return (std::lerp(_minValue, _maxValue, _ratio));
+	}
+
+	const SliderBar::Orientation& SliderBar::orientation() const
+	{
+		return (_orientation);
 	}
 }
