@@ -237,7 +237,7 @@ namespace spk
 
 	}
 
-	spk::Geometry2D::Point Widget::_computeAbsoluteAnchor()
+	spk::Geometry2D::Point Widget::absoluteAnchor()
 	{
 		spk::Geometry2D::Point result = { 0, 0 };
 		const Widget* tmp = this;
@@ -253,7 +253,7 @@ namespace spk
 
 	void Widget::_computeViewport()
 	{
-		spk::Geometry2D::Point topLeft = _computeAbsoluteAnchor();
+		spk::Geometry2D::Point topLeft = absoluteAnchor();
 		spk::Geometry2D::Size rightDown = geometry().size + spk::Geometry2D::Size(topLeft.x, topLeft.y);
 		
 		if (parent() != nullptr)
@@ -270,7 +270,7 @@ namespace spk
 		spk::Geometry2D::Size size = { rightDown.x - topLeft.x, rightDown.y - topLeft.y };
 
 		//_viewport.setGeometry({ topLeft, size });
-		_viewport.setGeometry({_computeAbsoluteAnchor(), geometry().size});
+		_viewport.setGeometry({absoluteAnchor(), geometry().size});
 	}
 
 	void Widget::onPaintEvent(spk::PaintEvent& p_event)

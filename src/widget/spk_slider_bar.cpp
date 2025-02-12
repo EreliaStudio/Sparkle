@@ -36,18 +36,12 @@ namespace spk
 			}
 		}
 
-		_bodyRenderer.clear();
-		_bodyRenderer.prepare(spk::Geometry2D(
-			geometry().anchor + _cornerSize + _ratio * bodyOffset,
-			bodySize
-		), layer() + 0.01f, _bodyCornerSize);
-		_bodyRenderer.validate();
+		_body.setGeometry(bodyOffset * _ratio, bodySize);
 	}
 
 	void SliderBar::_onPaintEvent(spk::PaintEvent& p_event)
 	{
 		_backgroundRenderer.render();
-		_bodyRenderer.render();
 	}
 
 	void SliderBar::_onMouseEvent(spk::MouseEvent& p_event)
@@ -56,11 +50,14 @@ namespace spk
 		{
 			case spk::MouseEvent::Type::Press:
 			{
-				if (p_event.button == spk::Mouse::Button::Left && 
-					viewport().geometry().contains(p_event.mouse->position) == true)
+				if (p_event.button == spk::Mouse::Button::Left)
 				{
-					_isClicked = true;
+					if (_body.viewport().geometry().contains(p_event.mouse->position) == true)
+					{
+						_isClicked = true;
+					}
 				}
+					
 				break;
 			}
 			case spk::MouseEvent::Type::Release:
@@ -73,11 +70,15 @@ namespace spk
 			}
 			case spk::MouseEvent::Type::Motion:
 			{
-				if (_isClicked == true)
+				if (_isClicked == true && p_event.mouse->deltaPosition != 0)
 				{
-					float delta = (_orientation == Orientation::Horizontal ? p_event.mouse->deltaPosition.x : p_event.mouse->deltaPosition.y);
-					float space = (_orientation == Orientation::Horizontal ? geometry().size.x : geometry().size.y) * (1 - _scale);
-					_ratio = std::clamp(_ratio + delta * (1.0f / space), 0.0f, 1.0f);
+					spk::Vector2Int globalAnchor = absoluteAnchor();
+					float baseValue = (_orientation == Orientation::Horizontal ? globalAnchor.x : globalAnchor.y);
+					float range = (_orientation == Orientation::Horizontal ? geometry().size.x : geometry().size.y);
+					float value = (_orientation == Orientation::Horizontal ? p_event.mouse->position.x : p_event.mouse->position.y);
+
+					_ratio = std::clamp((value - baseValue) / (range), 0.0f, 1.0f);
+
 					_onEditionContractProvider.trigger(_ratio);
 					requireGeometryUpdate();
 				}
@@ -88,10 +89,13 @@ namespace spk
 	SliderBar::SliderBar(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
 		spk::Widget(p_name, p_parent),
 		_cornerSize(2, 2),
-		_scale(0.1f)
+		_scale(0.1f),
+		_body(p_name + L" - Body", this)
 	{
 		_backgroundRenderer.setSpriteSheet(spk::Widget::defaultNineSlice());
-		_bodyRenderer.setSpriteSheet(&_defaultSliderBody);
+
+		_body.setSpriteSheet(&_defaultSliderBody);
+		_body.activate();
 	}
 
 	SliderBar::Contract SliderBar::subscribe(const Job& p_job)
@@ -112,7 +116,7 @@ namespace spk
 
 	void SliderBar::setBodyCornerSize(const spk::Vector2UInt& p_bodyCornerSize)
 	{
-		_bodyCornerSize = p_bodyCornerSize;
+		_body.setCornerSize(p_bodyCornerSize);
 	}
 
 	void SliderBar::setSpriteSheet(spk::SafePointer<spk::SpriteSheet> p_spriteSheet)
@@ -122,7 +126,7 @@ namespace spk
 
 	void SliderBar::setBodySpriteSheet(spk::SafePointer<spk::SpriteSheet> p_spriteSheet)
 	{
-		_bodyRenderer.setSpriteSheet(p_spriteSheet);
+		_body.setSpriteSheet(p_spriteSheet);
 	}
 
 	void SliderBar::setScale(const float& p_scale)

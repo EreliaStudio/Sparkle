@@ -68,7 +68,6 @@ namespace spk
 		virtual void _onControllerEvent(spk::ControllerEvent& p_event);
 		virtual void _onTimerEvent(spk::TimerEvent& p_event);
 
-		spk::Geometry2D::Point _computeAbsoluteAnchor();
 		void _computeViewport();
 
 		void _computeRatio();
@@ -107,6 +106,7 @@ namespace spk
 		void takeFocus();
 		void releaseFocus();
 
+		spk::Geometry2D::Point absoluteAnchor();
 		virtual void forceGeometryChange(const Geometry2D& p_geometry);
 		virtual void place(const spk::Vector2Int& p_delta);
 		virtual void move(const spk::Vector2Int& p_delta);

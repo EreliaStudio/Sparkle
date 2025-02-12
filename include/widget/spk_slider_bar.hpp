@@ -22,12 +22,48 @@ namespace spk
 		using Contract = spk::TContractProvider<float>::Contract;
 	
 	private:
+		class Body : public spk::Widget
+		{
+		private:
+			spk::NineSliceRenderer _renderer;
+			spk::Vector2UInt _cornerSize;
+
+			void _onGeometryChange()
+			{
+				_renderer.clear();
+				_renderer.prepare(geometry(), layer(), _cornerSize);
+				_renderer.validate();
+			}
+
+			void _onPaintEvent(spk::PaintEvent& p_event)
+			{
+				_renderer.render();
+			}
+
+		public:
+			Body(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+				spk::Widget(p_name, p_parent)
+			{
+
+			}
+        	
+			void setSpriteSheet(const SafePointer<SpriteSheet>& p_spriteSheet)
+			{
+				_renderer.setSpriteSheet(p_spriteSheet);
+			}
+
+			void setCornerSize(const spk::Vector2UInt& p_cornerSize)
+			{
+				_cornerSize = p_cornerSize;
+			}
+		};
+
 		static spk::SpriteSheet _defaultSliderBody;
 
 		spk::Vector2UInt _cornerSize;
-		spk::Vector2UInt _bodyCornerSize;
 		spk::NineSliceRenderer _backgroundRenderer;
-		spk::NineSliceRenderer _bodyRenderer;
+		Body _body;
+
 
 		spk::TContractProvider<float> _onEditionContractProvider;
 
