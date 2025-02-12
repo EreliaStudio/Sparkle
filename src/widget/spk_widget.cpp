@@ -282,8 +282,8 @@ namespace spk
 		{
 			try
 			{
-				updateGeometry();
-				_computeViewport();
+					updateGeometry();
+					_computeViewport();
 			}
 			catch (const std::exception& e)
 			{

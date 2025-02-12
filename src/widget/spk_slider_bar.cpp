@@ -144,6 +144,12 @@ namespace spk
 		_maxValue = p_maxValue;
 	}
 
+	void SliderBar::setRatio(float p_ratio)
+	{
+		_ratio = std::clamp(p_ratio, 0.0f, 1.0f);
+		requireGeometryUpdate();
+	}
+
 	float SliderBar::value()
 	{
 		return (std::lerp(_minValue, _maxValue, _ratio));

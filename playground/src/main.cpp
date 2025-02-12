@@ -7,12 +7,18 @@ namespace spk
 	public:
 		using Contract = spk::SliderBar::Contract;
 		using Job = spk::SliderBar::Job;
+		using VoidJob = spk::SliderBar::VoidJob;
 		using Orientation = spk::SliderBar::Orientation;
 		
 	private:
+		spk::TContractProvider<float> _onEditionContractProvider;
+
 		spk::PushButton _positiveButton;
+		spk::PushButton::Contract _positiveButtonContract;
 		spk::PushButton _negativeButton;
+		spk::PushButton::Contract _negativeButtonContract;
 		spk::SliderBar _sliderBar;
+		spk::SliderBar::Contract _sliderBarContract;
 
 		void _onGeometryChange() override
 		{
@@ -54,17 +60,32 @@ namespace spk
 			_positiveButton.setCornerSize(2);
 			_positiveButton.setIconset(spk::Widget::defaultIconset());
 			_positiveButton.activate();
+
+			_positiveButtonContract = _positiveButton.subscribe([&](){
+					_sliderBar.setRatio(_sliderBar.ratio() + 0.1f);
+					_onEditionContractProvider.trigger(_sliderBar.ratio());
+				});
 			
 			_negativeButton.setCornerSize(2);
 			_negativeButton.setIconset(spk::Widget::defaultIconset());
 			_negativeButton.activate();
+			_negativeButtonContract = _negativeButton.subscribe([&](){
+					_sliderBar.setRatio(_sliderBar.ratio() - 0.1f);
+					_onEditionContractProvider.trigger(_sliderBar.ratio());
+				});
 
 			_sliderBar.activate();
+			_sliderBarContract = _sliderBar.subscribe([&](const float& p_ratio){_onEditionContractProvider.trigger(_sliderBar.ratio());});
 		}
 
 		Contract subscribe(const Job& p_job)
 		{
-			return (_sliderBar.subscribe(p_job));
+			return (_onEditionContractProvider.subscribe(p_job));
+		}
+
+		Contract subscribe(const VoidJob& p_job)
+		{
+			return (_onEditionContractProvider.subscribe(p_job));
 		}
 
 		void setOrientation(const Orientation& p_orientation)
@@ -105,47 +126,47 @@ namespace spk
 		spk::ScrollBar::Contract _horizontalBarContract;
 		spk::ScrollBar _verticalScrollBar;
 		spk::ScrollBar::Contract _verticalBarContract;
-		spk::SafePointer<Widget> _content;
+		spk::ContainerWidget _containerWidget;
 
 		float _scrollBarWidth = 16;
-		spk::Vector2UInt _contentSize;
 
 		void _onGeometryChange() override
 		{
-			spk::Vector2UInt contentSize = geometry().size;
+			spk::Vector2UInt containerSize = geometry().size;
 			spk::Vector2Int contentAnchor = 0;
+			spk::Vector2UInt delta = 0;
 
-			if (geometry().size.y <= _contentSize.y)
+			if (geometry().size.y <= _containerWidget.contentSize().y)
 			{
-				contentSize.x -= _scrollBarWidth;
+				containerSize.x -= _scrollBarWidth;
 				_verticalScrollBar.activate();
-				contentAnchor.y += -_verticalScrollBar.ratio() * static_cast<float>(_contentSize.y - contentSize.y);
+				contentAnchor.y += -_verticalScrollBar.ratio() * static_cast<float>(_containerWidget.contentSize().y - containerSize.y);
 			}
 			else
 			{
 				_verticalScrollBar.deactivate();
 			}
 
-			if (geometry().size.x <= _contentSize.x)
+			if (geometry().size.x <= _containerWidget.contentSize().x)
 			{
-				contentSize.y -= _scrollBarWidth;
+				containerSize.y -= _scrollBarWidth;
 				_horizontalScrollBar.activate();
-				contentAnchor.x += -_horizontalScrollBar.ratio() * static_cast<float>(_contentSize.x - contentSize.x);
+				contentAnchor.x += -_horizontalScrollBar.ratio() * static_cast<float>(_containerWidget.contentSize().x - containerSize.x);
 			}
 			else
 			{
 				_horizontalScrollBar.deactivate();
 			}
 
-			if (_content != nullptr)
-			{
-				_content->setGeometry(contentAnchor, _contentSize);
-			}
+			containerSize = spk::Vector2UInt::min(containerSize, _containerWidget.contentSize());
 
-			_horizontalScrollBar.setGeometry({0, contentSize.y}, {contentSize.x, _scrollBarWidth});
-			_horizontalScrollBar.setScale(static_cast<float>(geometry().size.x) / static_cast<float>(_contentSize.x));
-			_verticalScrollBar.setGeometry({contentSize.x, 0}, {_scrollBarWidth, contentSize.y});
-			_verticalScrollBar.setScale(static_cast<float>(geometry().size.y) / static_cast<float>(_contentSize.y));
+			_containerWidget.setContentAnchor(contentAnchor);
+			_containerWidget.setGeometry(0, containerSize);
+
+			_horizontalScrollBar.setGeometry({0, containerSize.y}, {containerSize.x, _scrollBarWidth});
+			_horizontalScrollBar.setScale(static_cast<float>(geometry().size.x) / static_cast<float>(_containerWidget.contentSize().x));
+			_verticalScrollBar.setGeometry({containerSize.x, 0}, {_scrollBarWidth, containerSize.y});
+			_verticalScrollBar.setScale(static_cast<float>(geometry().size.y) / static_cast<float>(_containerWidget.contentSize().y));
 		}
 
 	public:
@@ -155,13 +176,20 @@ namespace spk
 			_verticalScrollBar(p_name + L" - Vertical ScrollBar", this),
 			_horizontalBarContract(_horizontalScrollBar.subscribe([&](const float& p_ratio){requireGeometryUpdate();})),
 			_verticalBarContract(_verticalScrollBar.subscribe([&](const float& p_ratio){requireGeometryUpdate();})),
-			_content(nullptr)
+			_containerWidget(p_name + L" - Container", this)
 		{
+			_containerWidget.activate();
+
 			setScrollBarWidth(16);
 
 			_horizontalScrollBar.setOrientation(ScrollBar::Orientation::Horizontal);
 			_verticalScrollBar.setOrientation(ScrollBar::Orientation::Vertical);
-		}	
+		}
+
+		spk::SafePointer<spk::Widget> container()
+		{
+			return (&(_containerWidget));
+		}
 
 		void setScrollBarWidth(const float& p_scrollBarWidth)
 		{
@@ -171,12 +199,12 @@ namespace spk
 
 		void setContent(spk::SafePointer<Widget> p_content)
 		{
-			_content = p_content;
+			_containerWidget.setContent(p_content);
 		}	
 
 		void setContentSize(const spk::Vector2UInt& p_contentSize)
 		{
-			_contentSize = p_contentSize;
+			_containerWidget.setContentSize(p_contentSize);
 		}
 	};
 
@@ -192,7 +220,7 @@ namespace spk
 	public:
 		ScrollableWidget(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
 			IScrollableWidget(p_name, p_parent),
-			_content(p_name + L" - Content", this)
+			_content(p_name + L" - Content", container())
 		{
 			setContent(&_content);
 			_content.activate();
@@ -245,7 +273,7 @@ public:
 
 	spk::Vector2UInt requiredSize() const
 	{
-		return (_nbElement * _elementSize);
+		return (_nbElement * _elementSize + 5 * (_nbElement - 1));
 	}
 };
 

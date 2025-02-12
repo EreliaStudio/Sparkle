@@ -86,6 +86,7 @@ namespace spk
         };
 
         using Job = typename Contract::Job;
+        using VoidJob = std::function<void()>;
 
     private:
         std::vector<std::shared_ptr<Job>> _subscribedJobs;
@@ -120,6 +121,16 @@ namespace spk
             _subscribedJobs.push_back(toAdd);
             return Contract(this, toAdd);
         }
+
+        template <typename Dummy = void,
+          typename = std::enable_if_t<(sizeof...(TParameterTypes) > 0), Dummy>>
+		Contract subscribe(const VoidJob& p_job)
+		{
+			// Capture p_job by value to avoid dangling references.
+			return subscribe([p_job](TParameterTypes... /*args*/) {
+				p_job();
+			});
+		}
 
         void relinquish(Contract&& p_contract)
         {

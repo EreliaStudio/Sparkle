@@ -19,6 +19,7 @@ namespace spk
 		};
 
 		using Job = spk::TContractProvider<float>::Job;
+		using VoidJob = spk::TContractProvider<float>::VoidJob;
 		using Contract = spk::TContractProvider<float>::Contract;
 	
 	private:
@@ -94,6 +95,7 @@ namespace spk
 		void setBodySpriteSheet(spk::SafePointer<spk::SpriteSheet> p_spriteSheet);
 		void setScale(const float& p_scale);
 		void setRange(float p_minValue, float p_maxValue);
+		void setRatio(float p_ratio);
 
 		float value();
 		float ratio();
