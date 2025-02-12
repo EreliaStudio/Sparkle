@@ -5,6 +5,8 @@ namespace spk
 	class ScrollBar : public spk::Widget
 	{
 	public:
+		using Contract = spk::SliderBar::Contract;
+		using Job = spk::SliderBar::Job;
 		using Orientation = spk::SliderBar::Orientation;
 		
 	private:
@@ -60,6 +62,11 @@ namespace spk
 			_sliderBar.activate();
 		}
 
+		Contract subscribe(const Job& p_job)
+		{
+			return (_sliderBar.subscribe(p_job));
+		}
+
 		void setOrientation(const Orientation& p_orientation)
 		{
 			_sliderBar.setOrientation(p_orientation);
@@ -84,13 +91,20 @@ namespace spk
 		{
 			_sliderBar.setScale(p_scale);
 		}
+
+		float ratio()
+		{
+			return (_sliderBar.ratio());
+		}
 	};
 
 	class IScrollableWidget : public spk::Widget
 	{
 	private:
 		spk::ScrollBar _horizontalScrollBar;
+		spk::ScrollBar::Contract _horizontalBarContract;
 		spk::ScrollBar _verticalScrollBar;
+		spk::ScrollBar::Contract _verticalBarContract;
 		spk::SafePointer<Widget> _content;
 
 		float _scrollBarWidth = 16;
@@ -99,11 +113,13 @@ namespace spk
 		void _onGeometryChange() override
 		{
 			spk::Vector2UInt contentSize = geometry().size;
+			spk::Vector2Int contentAnchor = 0;
 
 			if (geometry().size.y <= _contentSize.y)
 			{
 				contentSize.x -= _scrollBarWidth;
 				_verticalScrollBar.activate();
+				contentAnchor.y += -_verticalScrollBar.ratio() * static_cast<float>(_contentSize.y - contentSize.y);
 			}
 			else
 			{
@@ -114,6 +130,7 @@ namespace spk
 			{
 				contentSize.y -= _scrollBarWidth;
 				_horizontalScrollBar.activate();
+				contentAnchor.x += -_horizontalScrollBar.ratio() * static_cast<float>(_contentSize.x - contentSize.x);
 			}
 			else
 			{
@@ -122,7 +139,7 @@ namespace spk
 
 			if (_content != nullptr)
 			{
-				_content->setGeometry(0, contentSize);
+				_content->setGeometry(contentAnchor, _contentSize);
 			}
 
 			_horizontalScrollBar.setGeometry({0, contentSize.y}, {contentSize.x, _scrollBarWidth});
@@ -136,6 +153,8 @@ namespace spk
 			spk::Widget(p_name, p_parent),
 			_horizontalScrollBar(p_name + L" - Horizontal ScrollBar", this),
 			_verticalScrollBar(p_name + L" - Vertical ScrollBar", this),
+			_horizontalBarContract(_horizontalScrollBar.subscribe([&](const float& p_ratio){requireGeometryUpdate();})),
+			_verticalBarContract(_verticalScrollBar.subscribe([&](const float& p_ratio){requireGeometryUpdate();})),
 			_content(nullptr)
 		{
 			setScrollBarWidth(16);
@@ -189,42 +208,44 @@ namespace spk
 class NodeSelectorWidget : public spk::Widget
 {
 private:
-	spk::ColorRenderer _backgroundRenderer[4];
+	static inline const spk::Vector2UInt _nbElement = {10, 20};
+	static inline const spk::Vector2UInt _elementSize = {32, 32};
+
+	spk::ColorRenderer _backgroundRenderer;
 
 	void _onGeometryChange() override
 	{
-		spk::Vector2UInt sectionPart = {
-			geometry().size.x / 2,
-			geometry().size.x / 2 * 3
-		};
+		_backgroundRenderer.clear();
 
-		for (size_t i = 0; i < 4; i++)
+		for (size_t i = 0; i < _nbElement.x; i++)
 		{
-			_backgroundRenderer[i].clear();
-			_backgroundRenderer[i].prepareSquare(spk::Geometry2D(
-				sectionPart * spk::Vector2UInt(i % 2, i / 2),
-				sectionPart
-			), layer());
-			_backgroundRenderer[i].validate();
+			for (size_t j = 0; j < _nbElement.y; j++)
+			{
+				_backgroundRenderer.prepareSquare(spk::Geometry2D(
+					geometry().anchor + ((_elementSize + 5) * spk::Vector2UInt(i, j)),
+					_elementSize
+				), layer());
+			}
 		}
+		
+		_backgroundRenderer.validate();
 	}
 
 	void _onPaintEvent(spk::PaintEvent& p_event) override
 	{
-		for (size_t i = 0; i < 4; i++)
-		{
-			_backgroundRenderer[i].render();
-		}
+		_backgroundRenderer.render();
 	}
 
 public:
 	NodeSelectorWidget(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
 		spk::Widget(p_name, p_parent)
 	{
-		_backgroundRenderer[0].setColor(spk::Color::red);
-		_backgroundRenderer[1].setColor(spk::Color::blue);
-		_backgroundRenderer[2].setColor(spk::Color::green);
-		_backgroundRenderer[3].setColor(spk::Color::white);
+		_backgroundRenderer.setColor(spk::Color(220, 50, 50));
+	}
+
+	spk::Vector2UInt requiredSize() const
+	{
+		return (_nbElement * _elementSize);
 	}
 };
 
@@ -259,13 +280,9 @@ private:
 					spk::Vector2((layerSelectionButtonSize.x + anchorOffset.x) * i, 0),
 					layerSelectionButtonSize
 				);
-			}	
+			}
 
-			spk::Vector2 nodeItemSize = {32, 32};
-
-			spk::Vector2 nodeSelectorOffset = {(geometry().size.x - (nodeItemSize.x * 8 + space * (7))) / 2, 0};
-
-			_nodeSelector.setGeometry({nodeSelectorOffset.x, 5 + layerSelectionButtonSize.y}, geometry().size - spk::Vector2UInt(0, layerSelectionButtonSize.y + 5));
+			_nodeSelector.setGeometry({0, 5 + layerSelectionButtonSize.y}, geometry().size - spk::Vector2UInt(0, layerSelectionButtonSize.y + 5));
 		}
 
 	public:
@@ -290,7 +307,7 @@ private:
 				_layerSelectionPushButtons[i].activate();
 			}
 
-			_nodeSelector.setContentSize(spk::Vector2(32, 32) * spk::Vector2UInt(8, 10));
+			_nodeSelector.setContentSize(_nodeSelector.content()->requiredSize());
 			_nodeSelector.activate();
 		}
 
@@ -356,7 +373,6 @@ public:
 	{
 		spk::Vector2UInt minimalSize = _interfaceWindow.content()->minimalSize();
 		_interfaceWindow.setMinimumContentSize(minimalSize);
-		_interfaceWindow.setMaximumContentSize({minimalSize.x, 10000});
 		_interfaceWindow.setMenuHeight(25);
 		_interfaceWindow.setLayer(10);
 		_interfaceWindow.activate();

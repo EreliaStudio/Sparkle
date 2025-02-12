@@ -278,14 +278,12 @@ namespace spk
 		if (isActive() == false || p_event.consumed() == true)
 			return;
 
-		
-
 		if (_needGeometryChange == true)
 		{
 			try
 			{
-					updateGeometry();
-					_computeViewport();
+				updateGeometry();
+				_computeViewport();
 			}
 			catch (const std::exception& e)
 			{

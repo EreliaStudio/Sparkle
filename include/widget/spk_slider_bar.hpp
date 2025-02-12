@@ -96,6 +96,7 @@ namespace spk
 		void setRange(float p_minValue, float p_maxValue);
 
 		float value();
+		float ratio();
 		const Orientation& orientation() const;
 	};
 

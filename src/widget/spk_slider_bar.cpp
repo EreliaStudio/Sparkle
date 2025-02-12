@@ -149,6 +149,11 @@ namespace spk
 		return (std::lerp(_minValue, _maxValue, _ratio));
 	}
 
+	float SliderBar::ratio()
+	{
+		return (_ratio);
+	}
+
 	const SliderBar::Orientation& SliderBar::orientation() const
 	{
 		return (_orientation);
