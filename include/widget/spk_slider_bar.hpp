@@ -55,6 +55,7 @@ namespace spk
 			void setCornerSize(const spk::Vector2UInt& p_cornerSize)
 			{
 				_cornerSize = p_cornerSize;
+				requireGeometryUpdate();
 			}
 		};
 
@@ -70,6 +71,8 @@ namespace spk
 		Orientation _orientation = Orientation::Horizontal;
 
 		bool _isClicked = false;
+		spk::Vector2UInt _clickedMousePosition;
+		float _clickedRatio;
 		float _scale = 0;
 		float _ratio = 0;
 		float _minValue = 0;

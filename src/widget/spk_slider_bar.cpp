@@ -55,6 +55,8 @@ namespace spk
 					if (_body.viewport().geometry().contains(p_event.mouse->position) == true)
 					{
 						_isClicked = true;
+						_clickedMousePosition = p_event.mouse->position;
+						_clickedRatio = _ratio;
 					}
 				}
 					
@@ -72,12 +74,14 @@ namespace spk
 			{
 				if (_isClicked == true && p_event.mouse->deltaPosition != 0)
 				{
-					spk::Vector2Int globalAnchor = absoluteAnchor();
-					float baseValue = (_orientation == Orientation::Horizontal ? globalAnchor.x : globalAnchor.y);
-					float range = (_orientation == Orientation::Horizontal ? geometry().size.x : geometry().size.y);
-					float value = (_orientation == Orientation::Horizontal ? p_event.mouse->position.x : p_event.mouse->position.y);
+					float range = (_orientation == Orientation::Horizontal ? geometry().size.x * (1 - _scale) : geometry().size.y * (1 - _scale));
+					float mouseDeltaPosition = (_orientation == Orientation::Horizontal ?
+						static_cast<int>(p_event.mouse->position.x) - static_cast<int>(_clickedMousePosition.x) :
+						static_cast<int>(p_event.mouse->position.y) - static_cast<int>(_clickedMousePosition.y));
 
-					_ratio = std::clamp((value - baseValue) / (range), 0.0f, 1.0f);
+					float delta = mouseDeltaPosition / range;
+
+					_ratio = std::clamp(_clickedRatio + delta, 0.0f, 1.0f);
 
 					_onEditionContractProvider.trigger(_ratio);
 					requireGeometryUpdate();

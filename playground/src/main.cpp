@@ -22,6 +22,7 @@ namespace spk
 				spk::Vector2UInt sliderSize = spk::Vector2UInt(geometry().size.x - buttonSize.x * 2, geometry().size.y);
 
 				_negativeButton.setGeometry({0, geometry().size.y - buttonSize.y}, buttonSize);
+				_sliderBar.setBodyCornerSize(sliderSize.y / 2);
 				_sliderBar.setGeometry({buttonSize.x, geometry().size.y - buttonSize.y}, sliderSize);
 				_positiveButton.setGeometry({buttonSize.x + sliderSize.x, geometry().size.y - buttonSize.y}, buttonSize);
 				break;
@@ -32,6 +33,7 @@ namespace spk
 				spk::Vector2UInt sliderSize = spk::Vector2UInt(geometry().size.x, geometry().size.y - buttonSize.y * 2);
 
 				_negativeButton.setGeometry({geometry().size.x - buttonSize.x, 0}, buttonSize);
+				_sliderBar.setBodyCornerSize(sliderSize.x / 2);
 				_sliderBar.setGeometry({geometry().size.x - buttonSize.x, buttonSize.y}, sliderSize);
 				_positiveButton.setGeometry({geometry().size.x - buttonSize.x, buttonSize.y + sliderSize.y}, buttonSize);
 
@@ -77,6 +79,11 @@ namespace spk
 			}
 			}
 		}
+
+		void setScale(const float p_scale)
+		{
+			_sliderBar.setScale(p_scale);
+		}
 	};
 
 	class IScrollableWidget : public spk::Widget
@@ -119,7 +126,9 @@ namespace spk
 			}
 
 			_horizontalScrollBar.setGeometry({0, contentSize.y}, {contentSize.x, _scrollBarWidth});
+			_horizontalScrollBar.setScale(static_cast<float>(geometry().size.x) / static_cast<float>(_contentSize.x));
 			_verticalScrollBar.setGeometry({contentSize.x, 0}, {_scrollBarWidth, contentSize.y});
+			_verticalScrollBar.setScale(static_cast<float>(geometry().size.y) / static_cast<float>(_contentSize.y));
 		}
 
 	public:
