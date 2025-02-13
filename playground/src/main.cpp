@@ -1,6 +1,45 @@
 #include "playground.hpp"
 
-class NodeSelectorWidget : public spk::Widget
+class LevelSelector : public spk::Widget
+{
+private:
+	spk::PushButton _pushButtons[5];
+	
+	void _onGeometryChange() override
+	{
+		spk::Vector2UInt buttonSize = geometry().size.y;
+		float space = (geometry().size.x - (buttonSize.x * 5)) / 4;
+
+		for (size_t i = 0; i < 5; i++)
+		{
+			_pushButtons[i].setGeometry({(buttonSize.x + space) * i, 0}, buttonSize);
+		}
+	}
+
+public:
+	LevelSelector(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+		spk::Widget(p_name, p_parent),
+		_pushButtons{
+			spk::PushButton(p_name + L" - Button A", this),
+			spk::PushButton(p_name + L" - Button B", this),
+			spk::PushButton(p_name + L" - Button C", this),
+			spk::PushButton(p_name + L" - Button D", this),
+			spk::PushButton(p_name + L" - Button E", this)
+		}
+	{
+		for (size_t i = 0; i < 5; i++)
+		{
+			spk::SafePointer<spk::SpriteSheet> iconset = TextureManager::instance()->spriteSheet(L"iconset");
+
+			_pushButtons[i].setCornerSize(2);
+			_pushButtons[i].setIconset(iconset);
+			_pushButtons[i].setSprite(iconset->sprite(i));
+			_pushButtons[i].activate();
+		}
+	}
+};
+
+class NodeSelector : public spk::ScrollableWidget
 {
 private:
 	static inline const spk::Vector2UInt _nbElement = {10, 20};
@@ -32,8 +71,8 @@ private:
 	}
 
 public:
-	NodeSelectorWidget(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
-		spk::Widget(p_name, p_parent)
+	NodeSelector(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+		spk::ScrollableWidget(p_name, p_parent)
 	{
 		_backgroundRenderer.setColor(spk::Color(220, 50, 50));
 	}
@@ -44,100 +83,68 @@ public:
 	}
 };
 
+class MapEditorInventory : public spk::Widget
+{
+private:
+	LevelSelector _levelSelector;
+	spk::ScrollArea<NodeSelector> _nodeSelector;
+
+	spk::Font::Size defaultFontSize()
+	{
+		return {16, 0};
+	}
+
+	void _onGeometryChange() override
+	{	
+		_levelSelector.setGeometry({0, 0}, {geometry().size.x, 40});
+		_nodeSelector.setGeometry({0, 5 + _levelSelector.geometry().size.y}, geometry().size - spk::Vector2UInt(0, _levelSelector.geometry().size.y + 5));
+	}
+
+public:
+	MapEditorInventory(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+		spk::Widget(p_name, p_parent),
+		_levelSelector(p_name + L" - LevelSelector", this),
+		_nodeSelector(p_name + L" - NodeSelector", this)
+	{
+		_levelSelector.activate();
+		_nodeSelector.activate();
+	}
+
+	spk::Vector2UInt minimalSize()
+	{
+		float space = 5.0f;
+		spk::Vector2 nbLayerButtons = {5, 1};
+		spk::Vector2 layerSelectionbutton = {32, 32};
+
+		spk::Vector2 layerLineSize = {
+			layerSelectionbutton.x * nbLayerButtons.x + space * (nbLayerButtons.x - 1),
+			layerSelectionbutton.y};	
+
+		spk::Vector2 nodeItemSize = {32, 32};
+		spk::Vector2 nodeRenderedOnSelector = {8, 4};
+		spk::Vector2 nodeSelectorSize = {
+			nodeItemSize.x * nodeRenderedOnSelector.x + space * (nodeRenderedOnSelector.x - 1),
+			nodeItemSize.y * nodeRenderedOnSelector.y + space * (nodeRenderedOnSelector.y - 1)
+		};
+
+		spk::Vector2UInt result = {
+				std::max(layerLineSize.x, nodeSelectorSize.x),
+				layerLineSize.y + space + nodeSelectorSize.y
+			};
+
+		return (result);
+	}
+};
+
 class MapEditorHUD : public spk::Widget
 {
 private:
-	class InterfaceContent : public spk::Widget
-	{
-	private:
-		spk::PushButton _layerSelectionPushButtons[5];
-		spk::ScrollableWidget<NodeSelectorWidget> _nodeSelector;
-
-		spk::Font::Size defaultFontSize()
-		{
-			return {16, 0};
-		}
-
-		void _onGeometryChange() override
-		{
-			float space = 5;
-			spk::Vector2 nbLayerButtons = {5, 1};
-			spk::Vector2 layerSelectionButtonSize = {32, 32};
-
-			spk::Vector2 anchorOffset = {
-				(geometry().size.x - (layerSelectionButtonSize.x * 5)) / 4, 
-				0
-			};
-
-			for (size_t i = 0; i < 5; i++)
-			{
-				_layerSelectionPushButtons[i].setGeometry(
-					spk::Vector2((layerSelectionButtonSize.x + anchorOffset.x) * i, 0),
-					layerSelectionButtonSize
-				);
-			}
-
-			_nodeSelector.setGeometry({0, 5 + layerSelectionButtonSize.y}, geometry().size - spk::Vector2UInt(0, layerSelectionButtonSize.y + 5));
-		}
-
-	public:
-		InterfaceContent(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
-			spk::Widget(p_name, p_parent),
-			_nodeSelector(L"NodeSelector", this),
-			_layerSelectionPushButtons{
-				spk::PushButton(L"Layer selection button A", this),
-				spk::PushButton(L"Layer selection button B", this),
-				spk::PushButton(L"Layer selection button C", this),
-				spk::PushButton(L"Layer selection button D", this),
-				spk::PushButton(L"Layer selection button E", this)
-			}
-		{
-			for (size_t i = 0; i < 5; i++)
-			{
-				spk::SafePointer<spk::SpriteSheet> iconset = TextureManager::instance()->spriteSheet(L"iconset");
-
-				_layerSelectionPushButtons[i].setCornerSize(2);
-				_layerSelectionPushButtons[i].setIconset(iconset);
-				_layerSelectionPushButtons[i].setSprite(iconset->sprite(i));
-				_layerSelectionPushButtons[i].activate();
-			}
-
-			_nodeSelector.setContentSize(_nodeSelector.content()->requiredSize());
-			_nodeSelector.activate();
-		}
-
-		spk::Vector2UInt minimalSize()
-		{
-			float space = 5.0f;
-			spk::Vector2 nbLayerButtons = {5, 1};
-			spk::Vector2 layerSelectionbutton = {32, 32};
-
-			spk::Vector2 layerLineSize = {
-				layerSelectionbutton.x * nbLayerButtons.x + space * (nbLayerButtons.x - 1),
-				layerSelectionbutton.y};	
-
-			spk::Vector2 nodeItemSize = {32, 32};
-			spk::Vector2 nodeRenderedOnSelector = {8, 4};
-			spk::Vector2 nodeSelectorSize = {
-				nodeItemSize.x * nodeRenderedOnSelector.x + space * (nodeRenderedOnSelector.x - 1),
-				nodeItemSize.y * nodeRenderedOnSelector.y + space * (nodeRenderedOnSelector.y - 1)
-			};
-
-			spk::Vector2UInt result = {
-					std::max(layerLineSize.x, nodeSelectorSize.x),
-					layerLineSize.y + space + nodeSelectorSize.y
-				};
-
-			return (result);
-		}
-	};
-
-	spk::InterfaceWindow<InterfaceContent> _interfaceWindow;
+	spk::InterfaceWindow<MapEditorInventory> _inventory;
 
 	void _onGeometryChange() override
 	{
-		spk::Vector2UInt childSize = _interfaceWindow.content()->minimalSize();
-		_interfaceWindow.setGeometry((geometry().size - childSize) / 2 , childSize);
+		spk::Vector2UInt childSize = _inventory.content()->minimalSize();
+		_inventory.setGeometry((geometry().size - childSize) / 2 , childSize);
 	}
 
 	void _onKeyboardEvent(spk::KeyboardEvent& p_event) override
@@ -148,9 +155,9 @@ private:
 			{
 				if (p_event.key == spk::Keyboard::F12)
 				{
-					if (_interfaceWindow.parent() == nullptr)
+					if (_inventory.parent() == nullptr)
 					{
-						addChild(&_interfaceWindow);
+						addChild(&_inventory);
 					}
 				}
 				
@@ -164,15 +171,15 @@ private:
 public:
 	MapEditorHUD(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
 		spk::Widget(p_name, p_parent),
-		_interfaceWindow(L"Editor window", this)
+		_inventory(L"Editor window", this)
 	{
-		spk::Vector2UInt minimalSize = _interfaceWindow.content()->minimalSize();
-		_interfaceWindow.setMinimumContentSize(minimalSize);
-		_interfaceWindow.setMenuHeight(25);
-		_interfaceWindow.setLayer(10);
-		_interfaceWindow.activate();
+		spk::Vector2UInt minimalSize = _inventory.content()->minimalSize();
+		_inventory.setMinimumContentSize(minimalSize);
+		_inventory.setMenuHeight(25);
+		_inventory.setLayer(10);
+		_inventory.activate();
 
-		_quitContract = _interfaceWindow.subscribeTo(spk::IInterfaceWindow::Event::Close, [&](){removeChild(&_interfaceWindow);});
+		_quitContract = _inventory.subscribeTo(spk::IInterfaceWindow::Event::Close, [&](){removeChild(&_inventory);});
 	}
 };
 

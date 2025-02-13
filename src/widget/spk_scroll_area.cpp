@@ -1,8 +1,8 @@
-#include "widget/spk_scrollable_widget.hpp"
+#include "widget/spk_scroll_area.hpp"
 
 namespace spk
 {
-	void IScrollableWidget::_onGeometryChange()
+	void IScrollArea::_onGeometryChange()
 	{
 		spk::Vector2UInt containerSize = geometry().size;
 		spk::Vector2Int contentAnchor = 0;
@@ -41,7 +41,7 @@ namespace spk
 		_verticalScrollBar.setScale(static_cast<float>(geometry().size.y) / static_cast<float>(_containerWidget.contentSize().y));
 	}
 
-	IScrollableWidget::IScrollableWidget(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+	IScrollArea::IScrollArea(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
 		spk::Widget(p_name, p_parent),
 		_horizontalScrollBar(p_name + L" - Horizontal ScrollBar", this),
 		_verticalScrollBar(p_name + L" - Vertical ScrollBar", this),
@@ -57,23 +57,24 @@ namespace spk
 		_verticalScrollBar.setOrientation(ScrollBar::Orientation::Vertical);
 	}
 
-	spk::SafePointer<spk::Widget> IScrollableWidget::container()
+	spk::SafePointer<spk::Widget> IScrollArea::container()
 	{
 		return (&(_containerWidget));
 	}
 
-	void IScrollableWidget::setScrollBarWidth(const float& p_scrollBarWidth)
+	void IScrollArea::setScrollBarWidth(const float& p_scrollBarWidth)
 	{
 		_scrollBarWidth = p_scrollBarWidth;
 		requireGeometryUpdate();
 	}
 
-	void IScrollableWidget::setContent(spk::SafePointer<Widget> p_content)
+	void IScrollArea::setContent(spk::SafePointer<ScrollableWidget> p_content)
 	{
 		_containerWidget.setContent(p_content);
+		setContentSize(p_content->requiredSize());
 	}	
 
-	void IScrollableWidget::setContentSize(const spk::Vector2UInt& p_contentSize)
+	void IScrollArea::setContentSize(const spk::Vector2UInt& p_contentSize)
 	{
 		_containerWidget.setContentSize(p_contentSize);
 	}

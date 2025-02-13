@@ -95,5 +95,5 @@
 #include "widget/spk_slider_bar.hpp"
 #include "widget/spk_container_widget.hpp"
 #include "widget/spk_slider_bar.hpp"
-#include "widget/spk_scrollable_widget.hpp"
+#include "widget/spk_scroll_area.hpp"
 #include "widget/spk_interface_window.hpp"

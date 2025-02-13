@@ -179,6 +179,11 @@ namespace spk
 		}
 	}
 
+	spk::SafePointer<Widget> IInterfaceWindow::backgroundFrame()
+	{
+		return (&_backgroundFrame);
+	}
+
 	void IInterfaceWindow::setContent(spk::SafePointer<Widget> p_content)
 	{
 		_content = p_content;

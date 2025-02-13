@@ -68,6 +68,7 @@ namespace spk
 	public:
 		IInterfaceWindow(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent);
 
+		spk::SafePointer<Widget> backgroundFrame();
 		void setContent(spk::SafePointer<Widget> p_content);
 
 		void setMinimumContentSize(const spk::Vector2UInt& p_minimumContentSize);
@@ -96,7 +97,7 @@ namespace spk
 	public:
 		InterfaceWindow(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent) :
 			spk::IInterfaceWindow(p_name, p_parent),
-			_content(p_name + L" - Content", this)
+			_content(p_name + L" - Content", backgroundFrame())
 		{
 			setContent(&_content);
 			_content.activate();
