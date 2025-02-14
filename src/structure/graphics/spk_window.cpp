@@ -421,7 +421,7 @@ namespace spk
 		_windowRendererThread(p_title + L" - Renderer"),
 		_windowUpdaterThread(p_title + L" - Updater")
 	{
-		_rootWidget->setGeometry(p_geometry);
+		resize(p_geometry.size);
 		_windowRendererThread.addPreparationStep([&]() {
 				try
 				{
@@ -493,6 +493,8 @@ namespace spk
 			return ;
 
 		_viewport.setGeometry({ 0, 0, p_newSize});
+		_viewport.setWindowSize(p_newSize);
+		_rootWidget->_viewport.setWindowSize(p_newSize);
 		_rootWidget->setGeometry(_viewport.geometry());
 		for (auto& child : _rootWidget->children())
 		{
@@ -519,8 +521,14 @@ namespace spk
 
 	void Window::clear()
 	{
-		_viewport.setAsRootViewport();
-		_viewport.apply();
+		try
+		{
+			_viewport.apply();
+		}
+		catch (...)
+		{
+			throw std::runtime_error("Error while applying main window viewport");
+		}
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	}

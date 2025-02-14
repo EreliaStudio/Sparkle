@@ -74,29 +74,44 @@ private:
 			_nbElement = spk::Vector2UInt::max(_nbElement, position + 1);
 		}
 	}
-	
-	spk::ColorRenderer colorRenderer;
 
-	void _onGeometryChange() override
-	{
-		_frameBufferObject.resize(geometry().size);
-	}
-
-	void _onPaintEvent(spk::PaintEvent& p_event) override
+	void _prepareTexture()
 	{
 		_frameBufferObject.activate();
 
+		spk::ColorRenderer colorRenderer;
+
+		colorRenderer.setColor(spk::Color(255, 0, 0));
+
 		colorRenderer.clear();
-		colorRenderer.prepareSquare({{0, 0}, geometry().size}, 0);
+		colorRenderer.prepareSquare({{0, 0}, {10, 10}}, 0);
+		colorRenderer.prepareSquare({{15, 0}, {10, 10}}, 0);
+		colorRenderer.prepareSquare({{0, 30}, {10, 10}}, 0);
+		colorRenderer.prepareSquare({{45, 0}, {10, 10}}, 0);
 		colorRenderer.validate();
 		colorRenderer.render();
 
 		_frameBufferObject.deactivate();
 		
-		_textureRenderer.clear();
 		_textureRenderer.setTexture(_frameBufferObject.bindedTexture(L"outputColor"));
+
+		_frameBufferObject.saveAsPNG(L"outputColor", "result.png");
+	}
+
+	void _onGeometryChange() override
+	{
+		_textureRenderer.clear();
 		_textureRenderer.prepare(geometry(), {{0.0f, 0.0f}, {1.0f, 1.0f}}, layer());
 		_textureRenderer.validate();
+	}
+
+	void _onPaintEvent(spk::PaintEvent& p_event) override
+	{
+		if (_texturePrepared == false)
+		{
+			_prepareTexture();
+			_texturePrepared == true;
+		}
 		_textureRenderer.render();
 	}
 
@@ -106,10 +121,9 @@ public:
 	{
 		_computeNbElement();
 
-		_frameBufferObject.addAttachment(L"outputColor", 0, spk::OpenGL::FrameBufferObject::Type::Float4);
 		_frameBufferObject.resize(requiredSize());
 
-		colorRenderer.setColor(spk::Color(255, 0, 0));
+		_frameBufferObject.addAttachment(L"outputColor", 0, spk::OpenGL::FrameBufferObject::Type::Float4);
 	}
 
 	void setNodeMap(spk::SafePointer<NodeMap> p_nodeMap)
@@ -273,7 +287,7 @@ int main()
 	gameEngineWidget.setLayer(0);
 	gameEngineWidget.setGeometry(win->geometry());
 	gameEngineWidget.setGameEngine(&engine);
-	//gameEngineWidget.activate();
+	gameEngineWidget.activate();
 	
 	return (app.run());
 }

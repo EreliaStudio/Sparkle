@@ -3,6 +3,8 @@
 
 #include "utils/spk_string_utils.hpp"
 
+#include "structure/graphics/renderer/spk_color_renderer.hpp"
+
 namespace spk
 {
 	spk::SpriteSheet Widget::_defaultIconset =
@@ -77,6 +79,7 @@ namespace spk
 	{
 		spk::InherenceObject<Widget>::addChild(p_child);
 		p_child->setLayer(layer() + 1);
+		p_child->_viewport.setWindowSize(_viewport.windowSize());
 	}
 
 	void Widget::setLayer(const float& p_layer)
@@ -249,7 +252,7 @@ namespace spk
 
 	void Widget::_onPaintEvent(spk::PaintEvent& p_event)
 	{
-
+		
 	}
 
 	spk::Geometry2D::Point Widget::absoluteAnchor()
@@ -297,8 +300,8 @@ namespace spk
 		{
 			try
 			{
-					updateGeometry();
-					_computeViewport();
+				updateGeometry();
+				_computeViewport();
 			}
 			catch (const std::exception& e)
 			{
@@ -322,7 +325,14 @@ namespace spk
 		{
 			if (child->isActive() == true)
 			{
-				_viewport.apply();
+				try
+				{
+					_viewport.apply();
+				}
+				catch (...)
+				{
+					throw std::runtime_error("Error while applying viewport of [" + spk::StringUtils::wstringToString(name()) + "]");
+				}
 				child->onPaintEvent(childEvent);
 			}
 		}

@@ -89,7 +89,7 @@ namespace spk::OpenGL
 
         std::map<std::wstring, Attachment> _attachments;
     public:
-        FrameBufferObject() = default;
+        FrameBufferObject();
         FrameBufferObject(const spk::Vector2UInt& p_size);
         FrameBufferObject(const FrameBufferObject& p_other);
         FrameBufferObject& operator=(const FrameBufferObject& p_other);
@@ -106,5 +106,7 @@ namespace spk::OpenGL
 
         TextureObject* bindedTexture(const std::wstring& p_name);
         TextureObject saveAsTexture(const std::wstring& p_name);
+
+		void saveAsPNG(const std::wstring& p_attachmentName, const std::string& p_filePath, bool flipVertically = true);
     };
 }

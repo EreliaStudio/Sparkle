@@ -1,5 +1,8 @@
 #include "structure/graphics/opengl/spk_frame_buffer_object.hpp"
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "external_libraries/stb_image_write.h"
+
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
@@ -150,10 +153,16 @@ namespace
 
 namespace spk::OpenGL
 {
+	FrameBufferObject::FrameBufferObject()
+	{
+		_viewport.invertYAxis();
+	}
+
     FrameBufferObject::FrameBufferObject(const spk::Vector2UInt& p_size) :
-        _size(p_size),
-        _viewport(spk::Geometry2D(0, 0, _size))
+		FrameBufferObject()
     {
+		_size = p_size;
+		resize(spk::Geometry2D(0, 0, _size));
     }
 
     void FrameBufferObject::addAttachment(const std::wstring& p_name, int p_binding, Type p_type)
@@ -175,13 +184,6 @@ namespace spk::OpenGL
             }
         }
 
-		if (_depthBufferID != 0)
-		{
-			glBindRenderbuffer(GL_RENDERBUFFER, _depthBufferID);
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, _size.x, _size.y);
-			glBindRenderbuffer(GL_RENDERBUFFER, 0);
-			_depthBufferID = 0;
-		}
 
         if (_framebufferID == 0)
         {
@@ -196,24 +198,6 @@ namespace spk::OpenGL
         }
 
         glBindFramebuffer(GL_FRAMEBUFFER, _framebufferID);
-
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-		glEnable(GL_CULL_FACE);
-		glFrontFace(GL_CCW);
-
-		glEnable(GL_DEPTH_TEST);
-		glDepthMask(GL_TRUE);
-		glClearDepth(1.0f);
-		glDepthFunc(GL_LEQUAL);
-
-		glDisable(GL_STENCIL_TEST);
-		glStencilFunc(GL_ALWAYS, 0, 0xFF);
-		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
-		glStencilMask(0xFF);
-
-		glDisable(GL_SCISSOR_TEST);
 
         for (auto& [name, attachment] : _attachments)
         {
@@ -245,14 +229,15 @@ namespace spk::OpenGL
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + attachment.binding, GL_TEXTURE_2D, texture._id, 0);
         }
 
-		if (_depthBufferID == 0) // Ensure only one depth buffer is created
+		if (_depthBufferID == 0)
 		{
 			glGenRenderbuffers(1, &_depthBufferID);
-			glBindRenderbuffer(GL_RENDERBUFFER, _depthBufferID);
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, _size.x, _size.y);
-			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, _depthBufferID);
-			glBindRenderbuffer(GL_RENDERBUFFER, 0);
 		}
+
+		glBindRenderbuffer(GL_RENDERBUFFER, _depthBufferID);
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, _size.x, _size.y);
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, _depthBufferID);
+		glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
         std::vector<GLenum> drawBuffers;
         for (const auto& [name, attachment] : _attachments)
@@ -269,6 +254,8 @@ namespace spk::OpenGL
         }
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+		_needReload = false;
     }
 
     FrameBufferObject::~FrameBufferObject()
@@ -303,6 +290,7 @@ namespace spk::OpenGL
         }
 
         _size = p_size;
+		_viewport.setWindowSize(p_size);
         _viewport.setGeometry(Geometry2D(0, 0, p_size));
 		_needReload = true;
     }
@@ -348,7 +336,6 @@ namespace spk::OpenGL
 		else
 			glDisable(GL_BLEND);
 
-		// Restore the blend factors
 		glBlendFuncSeparate(
 			blendSrcRGB,
 			blendDstRGB,
@@ -356,16 +343,14 @@ namespace spk::OpenGL
 			blendDstAlpha
 		);
 
-		// Cull face
 		if (cullFaceEnabled == true)
 			glEnable(GL_CULL_FACE);
 		else
 			glDisable(GL_CULL_FACE);
-		// Restore cull mode and front face
+
 		glCullFace(cullFaceMode);
 		glFrontFace(frontFaceMode);
 
-		// Depth
 		if (depthTestEnabled == true)
 			glEnable(GL_DEPTH_TEST);
 		else
@@ -375,7 +360,6 @@ namespace spk::OpenGL
 		glClearDepth(clearDepth);
 		glDepthFunc(depthFunc);
 
-		// Stencil
 		if (stencilTestEnabled == true)
 			glEnable(GL_STENCIL_TEST);
 		else
@@ -393,7 +377,6 @@ namespace spk::OpenGL
 		);
 		glStencilMask(stencilWriteMask);
 
-		// Scissor
 		if (scissorTestEnabled == true)
 			glEnable(GL_SCISSOR_TEST);
 		else
@@ -414,35 +397,25 @@ namespace spk::OpenGL
 		_previousViewport = Viewport::activeViewport();
 
         glBindFramebuffer(GL_FRAMEBUFFER, _framebufferID);
-
 		glBindRenderbuffer(GL_RENDERBUFFER, _depthBufferID);
 
-        _viewport.apply();
+        try
+		{
+			_viewport.apply();
+		}
+		catch (...)
+		{
+			throw std::runtime_error("Error while applying viewport of framebuffer [" + std::to_string(_framebufferID) + "]");
+		}
 
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-		glEnable(GL_CULL_FACE);
-		glFrontFace(GL_CCW);
-
-		glEnable(GL_DEPTH_TEST);
-		glDepthMask(GL_TRUE);
-		glClearDepth(1.0f);
-		glDepthFunc(GL_ALWAYS);
-
-		glDisable(GL_STENCIL_TEST);
-		glStencilFunc(GL_ALWAYS, 0, 0xFF);
-		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
-		glStencilMask(0xFF);
-
-		glDisable(GL_SCISSOR_TEST);
-	
-		glClearColor(0.0, 0.0, 1.0, 1.0);
+		glClearColor(0.0, 0.0, 0.0, 0.0);
 		glClearDepth(1.0f);
 		
 		glDisable(GL_CULL_FACE);
 		glDisable(GL_BLEND);
 		glDisable(GL_DEPTH_TEST);
+		glDisable(GL_STENCIL_TEST);
+		glDisable(GL_SCISSOR_TEST);
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     }
@@ -455,7 +428,16 @@ namespace spk::OpenGL
 		_glState.load();
 
 		if (_previousViewport != nullptr)
-			_previousViewport->apply();
+		{
+			try
+			{
+				_previousViewport->apply();
+			}
+			catch (...)
+			{
+				throw std::runtime_error("Error while applying viewport of framebuffer [" + std::to_string(_framebufferID) + "] previous viewport");
+			}
+		}
     }
 
     TextureObject* FrameBufferObject::bindedTexture(const std::wstring& p_name)
@@ -463,7 +445,6 @@ namespace spk::OpenGL
 		if (_needReload == true || _framebufferID == 0)
         {
             _load();
-			_needReload = false;
         }
 		
 		auto it = _attachments.find(p_name);
@@ -530,5 +511,69 @@ namespace spk::OpenGL
         attachment.textureObject = std::move(newTexture);
 
         return savedTexture;
+    }
+
+	void FrameBufferObject::saveAsPNG(const std::wstring& p_attachmentName, 
+                                      const std::string& p_filePath, 
+                                      bool flipVertically)
+    {
+        auto it = _attachments.find(p_attachmentName);
+        if (it == _attachments.end())
+        {
+            std::cerr << "[FrameBufferObject] Attachment \"" 
+                      << std::string(p_attachmentName.begin(), p_attachmentName.end()) 
+                      << "\" not found.\n";
+            return;
+        }
+
+        glBindFramebuffer(GL_FRAMEBUFFER, _framebufferID);
+
+        const Attachment& attachment = it->second;
+        if (attachment.binding >= 0)
+        {
+            glReadBuffer(GL_COLOR_ATTACHMENT0 + attachment.binding);
+        }
+        else
+        {
+            std::cerr << "[FrameBufferObject] Attachment \""
+                      << std::string(p_attachmentName.begin(), p_attachmentName.end())
+                      << "\" has invalid color attachment binding.\n";
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            return;
+        }
+
+        int width  = static_cast<int>(_size.x);
+        int height = static_cast<int>(_size.y);
+        std::vector<unsigned char> pixels(width * height * 4);
+
+        glPixelStorei(GL_PACK_ALIGNMENT, 1);
+        glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+
+        if (flipVertically)
+        {
+            std::vector<unsigned char> tempRow(width * 4);
+            for (int y = 0; y < height / 2; ++y)
+            {
+                int oppositeY = height - 1 - y;
+                memcpy(tempRow.data(), 
+                       &pixels[y * width * 4], 
+                       width * 4);
+                memcpy(&pixels[y * width * 4], 
+                       &pixels[oppositeY * width * 4], 
+                       width * 4);
+                memcpy(&pixels[oppositeY * width * 4], 
+                       tempRow.data(), 
+                       width * 4);
+            }
+        }
+
+        if (!stbi_write_png(p_filePath.c_str(), width, height, 4, 
+                            pixels.data(), width * 4))
+        {
+            std::cerr << "[FrameBufferObject] Failed to write PNG to \"" 
+                      << p_filePath << "\"\n";
+        }
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 }
