@@ -31,13 +31,54 @@ namespace spk::OpenGL
         };
 
     private:
+		struct GLState
+		{
+			// Blend
+			GLboolean blendEnabled;
+			GLint blendSrcRGB;
+			GLint blendDstRGB;
+			GLint blendSrcAlpha;
+			GLint blendDstAlpha;
+
+			// Cull face
+			GLboolean cullFaceEnabled;
+			GLint cullFaceMode;
+			GLint frontFaceMode;
+
+			// Depth
+			GLboolean depthTestEnabled;
+			GLboolean depthMask;
+			GLfloat clearDepth;
+			GLint depthFunc;
+
+			// Stencil
+			GLboolean stencilTestEnabled;
+			GLint stencilFunc;
+			GLint stencilRef;
+			GLuint stencilValueMask;
+			GLint stencilFail;
+			GLint stencilZFail;
+			GLint stencilZPass;
+			GLuint stencilWriteMask;
+
+			// Scissor
+			GLboolean scissorTestEnabled;
+
+			void save();
+			void load();
+		};
+		GLState _glState;
+
+
         void _load();
         void _releaseResources();
 
+		bool _needReload = false;
         GLuint _framebufferID = 0;
 		GLuint _depthBufferID = 0;
         spk::Vector2UInt _size;
         Viewport _viewport;
+		spk::SafePointer<const Viewport> _previousViewport;
 
         struct Attachment
         {
@@ -58,6 +99,7 @@ namespace spk::OpenGL
 
         void addAttachment(const std::wstring& p_name, int p_binding, Type p_type);
         void resize(const spk::Vector2UInt& p_size);
+		const spk::Vector2UInt& size() const;
 
         void activate();
         void deactivate();

@@ -16,8 +16,6 @@ namespace spk
 		_gameEngine->onPaintEvent(p_event);
 
 		_fbo.deactivate();
-
-		parent()->viewport().apply();
 		
 		_textureRenderer.render();
 	}
@@ -25,6 +23,7 @@ namespace spk
 	void GameEngineWidget::_onGeometryChange()
 	{
 		_fbo.resize(geometry().size);
+		_textureRenderer.clear();
 		_textureRenderer.setTexture(_fbo.bindedTexture(L"outputColor"));
 		_textureRenderer.prepare(geometry(), {{0.0f, 0.0f}, {1.0f, 1.0f}}, layer());
 		_textureRenderer.validate();

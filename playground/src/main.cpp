@@ -4,6 +4,8 @@ class LevelSelector : public spk::Widget
 {
 private:
 	spk::PushButton _pushButtons[5];
+	spk::PushButton::Contract _pushButtonContract[5];
+	int _level = 0;
 	
 	void _onGeometryChange() override
 	{
@@ -31,50 +33,88 @@ public:
 		{
 			spk::SafePointer<spk::SpriteSheet> iconset = TextureManager::instance()->spriteSheet(L"iconset");
 
+			_pushButtons[i].subscribe([&](){_level = i;});
 			_pushButtons[i].setCornerSize(2);
 			_pushButtons[i].setIconset(iconset);
 			_pushButtons[i].setSprite(iconset->sprite(i));
 			_pushButtons[i].activate();
 		}
 	}
+
+	int level() const
+	{
+		return (_level);
+	}
 };
 
 class NodeSelector : public spk::ScrollableWidget
 {
 private:
-	static inline const spk::Vector2UInt _nbElement = {10, 20};
-	static inline const spk::Vector2UInt _elementSize = {32, 32};
+	spk::Vector2UInt _nbElement = {0, 0};
+	spk::Vector2UInt _elementSize = {32, 32};
 
-	spk::ColorRenderer _backgroundRenderer;
+	size_t _nodeIndex = 0;
+	bool _texturePrepared = false;
+	spk::SafePointer<NodeMap> _nodeMap;
+
+	static inline const std::unordered_map<spk::Vector2Int, int> _nodeToTextureIDMap = {
+		{{0, 0}, 0},
+		{{1, 0}, 1},
+		{{0, 1}, 2},
+		{{1, 1}, 3},
+	};
+
+	spk::TextureRenderer _textureRenderer;
+	spk::OpenGL::FrameBufferObject _frameBufferObject;
+
+	void _computeNbElement()
+	{
+		for (const auto& [position, index] : _nodeToTextureIDMap)
+		{
+			_nbElement = spk::Vector2UInt::max(_nbElement, position + 1);
+		}
+	}
+	
+	spk::ColorRenderer colorRenderer;
 
 	void _onGeometryChange() override
 	{
-		_backgroundRenderer.clear();
-
-		for (size_t i = 0; i < _nbElement.x; i++)
-		{
-			for (size_t j = 0; j < _nbElement.y; j++)
-			{
-				_backgroundRenderer.prepareSquare(spk::Geometry2D(
-					geometry().anchor + ((_elementSize + 5) * spk::Vector2UInt(i, j)),
-					_elementSize
-				), layer());
-			}
-		}
-		
-		_backgroundRenderer.validate();
+		_frameBufferObject.resize(geometry().size);
 	}
 
 	void _onPaintEvent(spk::PaintEvent& p_event) override
 	{
-		_backgroundRenderer.render();
+		_frameBufferObject.activate();
+
+		colorRenderer.clear();
+		colorRenderer.prepareSquare({{0, 0}, geometry().size}, 0);
+		colorRenderer.validate();
+		colorRenderer.render();
+
+		_frameBufferObject.deactivate();
+		
+		_textureRenderer.clear();
+		_textureRenderer.setTexture(_frameBufferObject.bindedTexture(L"outputColor"));
+		_textureRenderer.prepare(geometry(), {{0.0f, 0.0f}, {1.0f, 1.0f}}, layer());
+		_textureRenderer.validate();
+		_textureRenderer.render();
 	}
 
 public:
 	NodeSelector(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
 		spk::ScrollableWidget(p_name, p_parent)
 	{
-		_backgroundRenderer.setColor(spk::Color(220, 50, 50));
+		_computeNbElement();
+
+		_frameBufferObject.addAttachment(L"outputColor", 0, spk::OpenGL::FrameBufferObject::Type::Float4);
+		_frameBufferObject.resize(requiredSize());
+
+		colorRenderer.setColor(spk::Color(255, 0, 0));
+	}
+
+	void setNodeMap(spk::SafePointer<NodeMap> p_nodeMap)
+	{
+		_nodeMap = p_nodeMap;
 	}
 
 	spk::Vector2UInt requiredSize() const
@@ -108,6 +148,11 @@ public:
 	{
 		_levelSelector.activate();
 		_nodeSelector.activate();
+	}
+
+	void setNodeMap(spk::SafePointer<NodeMap> p_nodeMap)
+	{
+		_nodeSelector.content()->setNodeMap(p_nodeMap);
 	}
 
 	spk::Vector2UInt minimalSize()
@@ -181,6 +226,11 @@ public:
 
 		_quitContract = _inventory.subscribeTo(spk::IInterfaceWindow::Event::Close, [&](){removeChild(&_inventory);});
 	}
+
+	void setNodeMap(spk::SafePointer<NodeMap> p_nodeMap)
+	{
+		_inventory.content()->setNodeMap(p_nodeMap);
+	}
 };
 
 int main()
@@ -215,6 +265,7 @@ int main()
 	engine.addEntity(&player);
 
 	MapEditorHUD mapEditorWidget = MapEditorHUD(L"Editor window", win->widget());
+	mapEditorWidget.setNodeMap(&nodeMap);
 	mapEditorWidget.setGeometry(win->geometry());
 	mapEditorWidget.activate();
 
@@ -222,7 +273,7 @@ int main()
 	gameEngineWidget.setLayer(0);
 	gameEngineWidget.setGeometry(win->geometry());
 	gameEngineWidget.setGameEngine(&engine);
-	gameEngineWidget.activate();
+	//gameEngineWidget.activate();
 	
 	return (app.run());
 }

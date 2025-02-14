@@ -100,6 +100,11 @@ namespace spk
 		return (_focusedWidgets[static_cast<int>(p_focusType)]);
 	}
 
+		void Widget::requestPaint()
+		{
+			_requestedPaint = true;
+		}
+
 	void Widget::takeFocus(FocusType p_focusType)
 	{
 		_focusedWidgets[static_cast<int>(p_focusType)] = this;
@@ -339,6 +344,11 @@ namespace spk
 		}
 
 		_onUpdateEvent(p_event);
+
+		if (_requestedPaint == true)
+		{
+			p_event.requestPaint();
+		}
 	}
 
 	void Widget::_onKeyboardEvent(spk::KeyboardEvent& p_event)

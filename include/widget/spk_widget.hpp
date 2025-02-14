@@ -40,6 +40,8 @@ namespace spk
 		};
 
 		static spk::SafePointer<Widget> focusedWidget(FocusType p_focusType = FocusType::KeyboardFocus);
+	protected:
+		void requestPaint();
 
 	private:
 		static inline spk::SafePointer<Widget> _focusedWidgets[3] = {
@@ -57,6 +59,8 @@ namespace spk
 		spk::Vector2 _sizeRatio;
 		spk::Geometry2D _geometry;
 		spk::Viewport _viewport;
+
+		bool _requestedPaint = false;
 		
 		float _layer;
 

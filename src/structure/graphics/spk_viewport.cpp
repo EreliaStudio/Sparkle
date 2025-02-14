@@ -51,7 +51,7 @@ namespace spk
 		_matrix = spk::Matrix4x4::ortho(
 			_geometry.x, static_cast<float>(_geometry.x + _geometry.width),
 			static_cast<float>(_geometry.y + _geometry.height), _geometry.y,
-			-_maxLayer, 0.0f);
+			0, _maxLayer);
 		glViewport(static_cast<GLint>(_geometry.x), _windowSize.y - static_cast<GLint>(_geometry.y) - static_cast<GLint>(_geometry.height), static_cast<GLsizei>(_geometry.width), static_cast<GLsizei>(_geometry.height));
 		_appliedViewport = this;
 	}

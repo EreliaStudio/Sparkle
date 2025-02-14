@@ -166,6 +166,22 @@ namespace spk::OpenGL
 
     void FrameBufferObject::_load()
     {
+        for (auto& [name, attachment] : _attachments)
+        {
+            if (attachment.textureObject._id != 0)
+            {
+                glDeleteTextures(1, &attachment.textureObject._id);
+                attachment.textureObject._id = 0;
+            }
+        }
+
+		if (_depthBufferID != 0)
+		{
+			glBindRenderbuffer(GL_RENDERBUFFER, _depthBufferID);
+			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, _size.x, _size.y);
+			glBindRenderbuffer(GL_RENDERBUFFER, 0);
+			_depthBufferID = 0;
+		}
 
         if (_framebufferID == 0)
         {
@@ -180,6 +196,24 @@ namespace spk::OpenGL
         }
 
         glBindFramebuffer(GL_FRAMEBUFFER, _framebufferID);
+
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+		glEnable(GL_CULL_FACE);
+		glFrontFace(GL_CCW);
+
+		glEnable(GL_DEPTH_TEST);
+		glDepthMask(GL_TRUE);
+		glClearDepth(1.0f);
+		glDepthFunc(GL_LEQUAL);
+
+		glDisable(GL_STENCIL_TEST);
+		glStencilFunc(GL_ALWAYS, 0, 0xFF);
+		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+		glStencilMask(0xFF);
+
+		glDisable(GL_SCISSOR_TEST);
 
         for (auto& [name, attachment] : _attachments)
         {
@@ -270,48 +304,169 @@ namespace spk::OpenGL
 
         _size = p_size;
         _viewport.setGeometry(Geometry2D(0, 0, p_size));
-
-        for (auto& [name, attachment] : _attachments)
-        {
-            if (attachment.textureObject._id != 0)
-            {
-                glDeleteTextures(1, &attachment.textureObject._id);
-                attachment.textureObject._id = 0;
-            }
-        }
-
-		if (_depthBufferID != 0)
-		{
-			glBindRenderbuffer(GL_RENDERBUFFER, _depthBufferID);
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, _size.x, _size.y);
-			glBindRenderbuffer(GL_RENDERBUFFER, 0);
-		}
-
-        _load();
+		_needReload = true;
     }
+
+	const spk::Vector2UInt& FrameBufferObject::size() const
+	{
+		return (_size);
+	}
+
+	void FrameBufferObject::GLState::save()
+	{
+		blendEnabled      = glIsEnabled(GL_BLEND);
+		glGetIntegerv(GL_BLEND_SRC_RGB,    &blendSrcRGB);
+		glGetIntegerv(GL_BLEND_DST_RGB,    &blendDstRGB);
+		glGetIntegerv(GL_BLEND_SRC_ALPHA,  &blendSrcAlpha);
+		glGetIntegerv(GL_BLEND_DST_ALPHA,  &blendDstAlpha);
+
+		cullFaceEnabled   = glIsEnabled(GL_CULL_FACE);
+		glGetIntegerv(GL_CULL_FACE_MODE, &cullFaceMode);
+		glGetIntegerv(GL_FRONT_FACE,      &frontFaceMode);
+
+		depthTestEnabled  = glIsEnabled(GL_DEPTH_TEST);
+		glGetBooleanv(GL_DEPTH_WRITEMASK,  &depthMask);
+		glGetFloatv(GL_DEPTH_CLEAR_VALUE,  &clearDepth);
+		glGetIntegerv(GL_DEPTH_FUNC,       &depthFunc);
+
+		stencilTestEnabled = glIsEnabled(GL_STENCIL_TEST);
+		glGetIntegerv(GL_STENCIL_FUNC,   &stencilFunc);
+		glGetIntegerv(GL_STENCIL_REF,    &stencilRef);
+		glGetIntegerv(GL_STENCIL_VALUE_MASK, reinterpret_cast<GLint*>(&stencilValueMask));
+		glGetIntegerv(GL_STENCIL_FAIL,   &stencilFail);
+		glGetIntegerv(GL_STENCIL_PASS_DEPTH_FAIL, &stencilZFail);
+		glGetIntegerv(GL_STENCIL_PASS_DEPTH_PASS, &stencilZPass);
+		glGetIntegerv(GL_STENCIL_WRITEMASK, reinterpret_cast<GLint*>(&stencilWriteMask));
+
+		scissorTestEnabled = glIsEnabled(GL_SCISSOR_TEST);
+	}
+
+	void FrameBufferObject::GLState::load()
+	{
+		if (blendEnabled == true)
+			glEnable(GL_BLEND);
+		else
+			glDisable(GL_BLEND);
+
+		// Restore the blend factors
+		glBlendFuncSeparate(
+			blendSrcRGB,
+			blendDstRGB,
+			blendSrcAlpha,
+			blendDstAlpha
+		);
+
+		// Cull face
+		if (cullFaceEnabled == true)
+			glEnable(GL_CULL_FACE);
+		else
+			glDisable(GL_CULL_FACE);
+		// Restore cull mode and front face
+		glCullFace(cullFaceMode);
+		glFrontFace(frontFaceMode);
+
+		// Depth
+		if (depthTestEnabled == true)
+			glEnable(GL_DEPTH_TEST);
+		else
+			glDisable(GL_DEPTH_TEST);
+
+		glDepthMask(depthMask);
+		glClearDepth(clearDepth);
+		glDepthFunc(depthFunc);
+
+		// Stencil
+		if (stencilTestEnabled == true)
+			glEnable(GL_STENCIL_TEST);
+		else
+			glDisable(GL_STENCIL_TEST);
+
+		glStencilFunc(
+			stencilFunc,
+			stencilRef,
+			stencilValueMask
+		);
+		glStencilOp(
+			stencilFail,
+			stencilZFail,
+			stencilZPass
+		);
+		glStencilMask(stencilWriteMask);
+
+		// Scissor
+		if (scissorTestEnabled == true)
+			glEnable(GL_SCISSOR_TEST);
+		else
+			glDisable(GL_SCISSOR_TEST);
+
+	}
 
     void FrameBufferObject::activate()
     {
-        if (_framebufferID == 0)
+		if (_needReload == true || _framebufferID == 0)
         {
             _load();
+			_needReload = false;
         }
 
+		_glState.save();
+
+		_previousViewport = Viewport::activeViewport();
+
         glBindFramebuffer(GL_FRAMEBUFFER, _framebufferID);
+
 		glBindRenderbuffer(GL_RENDERBUFFER, _depthBufferID);
+
         _viewport.apply();
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+		glEnable(GL_CULL_FACE);
+		glFrontFace(GL_CCW);
+
+		glEnable(GL_DEPTH_TEST);
+		glDepthMask(GL_TRUE);
+		glClearDepth(1.0f);
+		glDepthFunc(GL_ALWAYS);
+
+		glDisable(GL_STENCIL_TEST);
+		glStencilFunc(GL_ALWAYS, 0, 0xFF);
+		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+		glStencilMask(0xFF);
+
+		glDisable(GL_SCISSOR_TEST);
+	
+		glClearColor(0.0, 0.0, 1.0, 1.0);
+		glClearDepth(1.0f);
+		
+		glDisable(GL_CULL_FACE);
+		glDisable(GL_BLEND);
+		glDisable(GL_DEPTH_TEST);
+
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     }
 
     void FrameBufferObject::deactivate()
     {
-		glBindRenderbuffer(GL_RENDERBUFFER, 0);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+		_glState.load();
+
+		if (_previousViewport != nullptr)
+			_previousViewport->apply();
     }
 
     TextureObject* FrameBufferObject::bindedTexture(const std::wstring& p_name)
     {
-        auto it = _attachments.find(p_name);
+		if (_needReload == true || _framebufferID == 0)
+        {
+            _load();
+			_needReload = false;
+        }
+		
+		auto it = _attachments.find(p_name);
         if (it != _attachments.end())
         {
             return &(it->second.textureObject);

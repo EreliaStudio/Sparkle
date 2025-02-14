@@ -115,8 +115,8 @@ namespace spk
 		_minimizedBackgroundFrame.setLayer(1);
 		_minimizedBackgroundFrame.deactivate();
 
-		_minimizeContract = _menuBar._minimizeButton.subscribe([&]() { minimize(); });
-		_maximizeContract = _menuBar._maximizeButton.subscribe([&]() { maximize(); });
+		_minimizeContract = _menuBar._minimizeButton.subscribe([&]() { minimize(); requestPaint(); });
+		_maximizeContract = _menuBar._maximizeButton.subscribe([&]() { maximize(); requestPaint(); });
 	}
 
 	void IInterfaceWindow::_onGeometryChange()

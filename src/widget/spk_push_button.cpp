@@ -192,6 +192,7 @@ namespace spk
 				if (_isPressed == true && viewport().geometry().contains(p_event.mouse->position) == false)
 				{
 					_isPressed = false;
+					requestPaint();
 					p_event.consume();
 				}
 				break;
@@ -204,6 +205,7 @@ namespace spk
 					if (_isPressed == false && viewport().geometry().contains(p_event.mouse->position) == true)
 					{
 						_isPressed = true;
+						requestPaint();
 						p_event.consume();
 					}
 				}
@@ -221,6 +223,7 @@ namespace spk
 							p_event.consume();
 						}
 						_isPressed = false;
+						requestPaint();
 					}
 				}
 				break;
