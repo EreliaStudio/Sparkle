@@ -492,10 +492,12 @@ namespace spk
 		if (p_newSize.x == 0 || p_newSize.y == 0)
 			return ;
 
-		_viewport.setGeometry({ 0, 0, p_newSize});
 		_viewport.setWindowSize(p_newSize);
 		_rootWidget->_viewport.setWindowSize(p_newSize);
+
+		_viewport.setGeometry({ 0, 0, p_newSize});
 		_rootWidget->setGeometry(_viewport.geometry());
+		
 		for (auto& child : _rootWidget->children())
 		{
 			child->_resize();

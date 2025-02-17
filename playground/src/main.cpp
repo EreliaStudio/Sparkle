@@ -53,8 +53,9 @@ private:
 	spk::Vector2UInt _nbElement = {0, 0};
 	spk::Vector2UInt _elementSize = {32, 32};
 
-	size_t _nodeIndex = 0;
+	int _nodeIndex = -1;
 	bool _texturePrepared = false;
+	spk::Vector2Int _selectedNodePosition;
 	spk::SafePointer<NodeMap> _nodeMap;
 
 	static inline const std::unordered_map<spk::Vector2Int, int> _nodeToTextureIDMap = {
@@ -62,9 +63,22 @@ private:
 		{{1, 0}, 1},
 		{{0, 1}, 2},
 		{{1, 1}, 3},
+		{{5, 0}, 0},
+		{{6, 0}, 1},
+		{{5, 1}, 2},
+		{{6, 1}, 3},
+		{{0, 4}, 0},
+		{{1, 4}, 1},
+		{{0, 5}, 2},
+		{{1, 5}, 3},
+		{{5, 4}, 0},
+		{{6, 4}, 1},
+		{{5, 5}, 2},
+		{{6, 5}, 3},
 	};
 
-	spk::TextureRenderer _textureRenderer;
+	spk::TextureRenderer _contentRenderer;
+	spk::TextureRenderer _selectedIconRenderer;
 	spk::OpenGL::FrameBufferObject _frameBufferObject;
 
 	void _computeNbElement()
@@ -105,10 +119,23 @@ private:
 
 	void _onGeometryChange() override
 	{
-		_textureRenderer.clear();
-		_textureRenderer.setTexture(_frameBufferObject.bindedTexture(L"outputColor"));
-		_textureRenderer.prepare(geometry(), {{0.0f, 0.0f}, {1.0f, 1.0f}}, layer());
-		_textureRenderer.validate();
+		_contentRenderer.clear();
+		_contentRenderer.setTexture(_frameBufferObject.bindedTexture(L"outputColor"));
+		_contentRenderer.prepare(geometry(), {{0.0f, 0.0f}, {1.0f, 1.0f}}, layer());
+		_contentRenderer.validate();
+
+		spk::SafePointer<spk::SpriteSheet> iconset = TextureManager::instance()->spriteSheet(L"iconset");
+
+		_selectedIconRenderer.clear();
+		if (_nodeIndex != -1)
+		{
+			_selectedIconRenderer.prepare(
+									spk::Geometry2D(geometry().anchor + _selectedNodePosition * (_elementSize + 5), _elementSize),
+									iconset->sprite(10),
+									layer() + 0.01f
+								);
+		}
+		_selectedIconRenderer.validate();
 	}
 
 	void _onPaintEvent(spk::PaintEvent& p_event) override
@@ -118,7 +145,45 @@ private:
 			_prepareTexture();
 			_texturePrepared = true;
 		}
-		_textureRenderer.render();
+
+		_contentRenderer.render();
+		_selectedIconRenderer.render();
+	}
+
+	void _onMouseEvent(spk::MouseEvent& p_event) override
+	{
+		switch (p_event.type)
+		{
+			case spk::MouseEvent::Type::Press:
+			{
+				if (viewport().geometry().contains(p_event.mouse->position) == true)
+				{
+					spk::Vector2Int relativeMousePosition = p_event.mouse->position - absoluteAnchor();
+
+					spk::Vector2 relativePosition = relativeMousePosition / spk::Vector2Int(_elementSize + 5);
+
+					spk::Vector2Int relativeIcon = relativePosition * spk::Vector2Int(_elementSize + 5);
+					spk::Vector2Int relativeEndIcon = relativeIcon + _elementSize;
+
+					if (relativeMousePosition.isBetween(relativeIcon, relativeEndIcon) == true &&
+						_nodeToTextureIDMap.contains(relativePosition) == true)
+					{
+						_selectedNodePosition = relativePosition;
+						_nodeIndex = _nodeToTextureIDMap.at(relativePosition);
+						requireGeometryUpdate();
+					}
+					else
+					{
+						if (_nodeIndex != -1)
+						{
+							requireGeometryUpdate();
+						}
+						_nodeIndex = -1;
+					}	
+				}
+				break;
+			}
+		}
 	}
 
 public:
@@ -126,6 +191,8 @@ public:
 		spk::ScrollableWidget(p_name, p_parent)
 	{
 		_computeNbElement();
+		
+		_selectedIconRenderer.setTexture(TextureManager::instance()->spriteSheet(L"iconset"));
 
 		_frameBufferObject.resize(requiredSize());
 
@@ -135,6 +202,11 @@ public:
 	void setNodeMap(spk::SafePointer<NodeMap> p_nodeMap)
 	{
 		_nodeMap = p_nodeMap;
+	}
+
+	int selectedNode() const
+	{
+		return (_nodeIndex);
 	}
 
 	spk::Vector2UInt requiredSize() const

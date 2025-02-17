@@ -154,6 +154,7 @@ namespace spk
 
 	void Widget::_resize()
 	{
+		_viewport.setWindowSize(parent()->viewport().windowSize());
 		_geometry.anchor = static_cast<Widget*>(parent())->geometry().size * _anchorRatio;
 		_geometry.size = static_cast<Widget*>(parent())->geometry().size * _sizeRatio;
 		requireGeometryUpdate();

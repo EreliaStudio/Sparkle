@@ -429,6 +429,14 @@ namespace spk
 				spk::positiveModulo(y, p_modulo.y)			
 			));
 		}
+
+		bool isBetween(const IVector2& p_min, const IVector2& p_max)
+		{
+			if (x >= p_min.x && y >= p_min.y && 
+				x <= p_max.x && y <= p_max.y)
+				return (true);
+			return (false);
+		}
     };
 
     using Vector2 = IVector2<float_t>;
