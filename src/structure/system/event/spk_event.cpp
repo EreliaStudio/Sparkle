@@ -152,7 +152,7 @@ namespace spk
 			[](Event* p_event, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			{
 				p_event->mouseEvent.type = MouseEvent::Type::Wheel;
-				p_event->mouseEvent.scrollValue = HIWORD(wParam) / (float)WHEEL_DELTA;
+				p_event->mouseEvent.scrollValue = GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA;
 			}
 		},
 		{

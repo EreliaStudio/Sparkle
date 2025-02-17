@@ -98,4 +98,10 @@ namespace spk
 	{
 		return (_sliderBar.ratio());
 	}
+
+	void ScrollBar::setRatio(const float& p_ratio)
+	{
+		_sliderBar.setRatio(p_ratio);
+		_onEditionContractProvider.trigger(_sliderBar.ratio());
+	}
 }

@@ -41,6 +41,21 @@ namespace spk
 		_verticalScrollBar.setScale(static_cast<float>(geometry().size.y) / static_cast<float>(_containerWidget.contentSize().y));
 	}
 
+	void IScrollArea::_onMouseEvent(spk::MouseEvent& p_event)
+	{
+		if (p_event.type == spk::MouseEvent::Type::Wheel)
+		{
+			if (p_event.scrollValue < 0)
+			{
+				_verticalScrollBar.setRatio(_verticalScrollBar.ratio() + 0.1f);
+			}
+			else if (p_event.scrollValue > 0)
+			{
+				_verticalScrollBar.setRatio(_verticalScrollBar.ratio() - 0.1f);
+			}
+		}
+	}
+
 	IScrollArea::IScrollArea(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
 		spk::Widget(p_name, p_parent),
 		_horizontalScrollBar(p_name + L" - Horizontal ScrollBar", this),

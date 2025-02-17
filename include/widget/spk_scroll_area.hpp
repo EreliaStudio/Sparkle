@@ -32,6 +32,8 @@ namespace spk
 
 		void _onGeometryChange() override;
 
+		void _onMouseEvent(spk::MouseEvent& p_event) override;
+
 	public:
 		IScrollArea(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent);
 

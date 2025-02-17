@@ -37,5 +37,6 @@ namespace spk
 		void setScale(const float p_scale);
 
 		float ratio();
+		void setRatio(const float& p_ratio);
 	};
 }
