@@ -79,28 +79,34 @@ private:
 	{
 		_frameBufferObject.activate();
 
-		spk::ColorRenderer colorRenderer;
+		{
+			spk::TextureRenderer renderer;
 
-		colorRenderer.setColor(spk::Color(255, 0, 0));
+			spk::SafePointer<spk::SpriteSheet> chunkSpriteSheet = TextureManager::instance()->spriteSheet(L"chunkSpriteSheet");
+			renderer.setTexture(chunkSpriteSheet);
 
-		colorRenderer.clear();
-		colorRenderer.prepareSquare({{0, 0}, {10, 10}}, 0);
-		colorRenderer.prepareSquare({{15, 0}, {10, 10}}, 0);
-		colorRenderer.prepareSquare({{0, 30}, {10, 10}}, 0);
-		colorRenderer.prepareSquare({{45, 0}, {10, 10}}, 0);
-		colorRenderer.validate();
-		colorRenderer.render();
+			renderer.clear();
+
+			for (const auto& [key, element] : _nodeToTextureIDMap)
+			{
+				renderer.prepare(
+						spk::Geometry2D(key * (_elementSize + 5), _elementSize),
+						spk::SpriteSheet::Sprite((*_nodeMap)[element].animationStartPos * chunkSpriteSheet->unit(), chunkSpriteSheet->unit()),
+						0
+					);
+			}
+
+			renderer.validate();
+			renderer.render();
+		}
 
 		_frameBufferObject.deactivate();
-		
-		_textureRenderer.setTexture(_frameBufferObject.bindedTexture(L"outputColor"));
-
-		_frameBufferObject.saveAsPNG(L"outputColor", "result.png");
 	}
 
 	void _onGeometryChange() override
 	{
 		_textureRenderer.clear();
+		_textureRenderer.setTexture(_frameBufferObject.bindedTexture(L"outputColor"));
 		_textureRenderer.prepare(geometry(), {{0.0f, 0.0f}, {1.0f, 1.0f}}, layer());
 		_textureRenderer.validate();
 	}
@@ -110,7 +116,7 @@ private:
 		if (_texturePrepared == false)
 		{
 			_prepareTexture();
-			_texturePrepared == true;
+			_texturePrepared = true;
 		}
 		_textureRenderer.render();
 	}

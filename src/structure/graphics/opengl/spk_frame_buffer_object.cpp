@@ -162,7 +162,7 @@ namespace spk::OpenGL
 		FrameBufferObject()
     {
 		_size = p_size;
-		resize(spk::Geometry2D(0, 0, _size));
+		resize(_size);
     }
 
     void FrameBufferObject::addAttachment(const std::wstring& p_name, int p_binding, Type p_type)
