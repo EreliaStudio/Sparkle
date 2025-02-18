@@ -67,26 +67,26 @@ void ChunkEntity::load()
 	else
 	{
 		bool isEven = (_chunkPosition.x % 2 == 0 && _chunkPosition.y % 2 == 0) || (_chunkPosition.x % 2 != 0 && _chunkPosition.y % 2 != 0);
-		for (size_t i = 0; i < Chunk::Size; i++)
-		{
-			for (size_t j = 0; j < Chunk::Size; j++)
-			{
-				_chunk.setContent(spk::Vector3Int(i, j, 0), (isEven == true ? 0 : 1));
+		// for (size_t i = 0; i < Chunk::Size; i++)
+		// {
+		// 	for (size_t j = 0; j < Chunk::Size; j++)
+		// 	{
+		// 		_chunk.setContent(spk::Vector3Int(i, j, 0), (isEven == true ? 0 : 1));
 
-				if (i == spk::positiveModulo(_chunkPosition.x, Chunk::Size) && j == spk::positiveModulo(_chunkPosition.y, Chunk::Size))
-				{
-					_chunk.setContent(spk::Vector3Int(i, j, 0), 2);
-				}
-			}
-		}
+		// 		if (i == spk::positiveModulo(_chunkPosition.x, Chunk::Size) && j == spk::positiveModulo(_chunkPosition.y, Chunk::Size))
+		// 		{
+		// 			_chunk.setContent(spk::Vector3Int(i, j, 0), 2);
+		// 		}
+		// 	}
+		// }
 
-		if (_chunkPosition == spk::Vector2Int(1, 1))
-		{
-			_chunk.setContent(spk::Vector3Int(3, 3, 1), 3);
-			_chunk.setContent(spk::Vector3Int(6, 3, 1), 3);
-			_chunk.setContent(spk::Vector3Int(3, 6, 1), 3);
-			_chunk.setContent(spk::Vector3Int(6, 6, 1), 3);
-		}
+		// if (_chunkPosition == spk::Vector2Int(1, 1))
+		// {
+		// 	_chunk.setContent(spk::Vector3Int(3, 3, 1), 3);
+		// 	_chunk.setContent(spk::Vector3Int(6, 3, 1), 3);
+		// 	_chunk.setContent(spk::Vector3Int(3, 6, 1), 3);
+		// 	_chunk.setContent(spk::Vector3Int(6, 6, 1), 3);
+		// }
 	}
 
 	_chunk.invalidate();

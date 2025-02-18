@@ -56,7 +56,6 @@ private:
 	int _nodeIndex = -1;
 	bool _texturePrepared = false;
 	spk::Vector2Int _selectedNodePosition;
-	spk::SafePointer<NodeMap> _nodeMap;
 
 	static inline const std::unordered_map<spk::Vector2Int, int> _nodeToTextureIDMap = {
 		{{0, 0}, 0},
@@ -105,7 +104,7 @@ private:
 			{
 				renderer.prepare(
 						spk::Geometry2D(key * (_elementSize + 5), _elementSize),
-						spk::SpriteSheet::Sprite((*_nodeMap)[element].animationStartPos * chunkSpriteSheet->unit(), chunkSpriteSheet->unit()),
+						spk::SpriteSheet::Sprite(Context::instance()->nodeMap[element].animationStartPos * chunkSpriteSheet->unit(), chunkSpriteSheet->unit()),
 						0
 					);
 			}
@@ -199,11 +198,6 @@ public:
 		_frameBufferObject.addAttachment(L"outputColor", 0, spk::OpenGL::FrameBufferObject::Type::Float4);
 	}
 
-	void setNodeMap(spk::SafePointer<NodeMap> p_nodeMap)
-	{
-		_nodeMap = p_nodeMap;
-	}
-
 	int selectedNode() const
 	{
 		return (_nodeIndex);
@@ -252,11 +246,6 @@ public:
 		return (_nodeSelector.content());
 	}
 
-	void setNodeMap(spk::SafePointer<NodeMap> p_nodeMap)
-	{
-		_nodeSelector.content()->setNodeMap(p_nodeMap);
-	}
-
 	spk::Vector2UInt minimalSize()
 	{
 		float space = 5.0f;
@@ -288,36 +277,32 @@ class MapEditorInteractor : public spk::Widget
 private:
 	bool _isPlacing;
 
-	spk::SafePointer<const spk::Camera> _camera;
-	spk::SafePointer<MapManager> _mapManager;
 	spk::SafePointer<NodeSelector> _nodeSelector;
 	spk::SafePointer<LevelSelector> _levelSelector;
 
 	spk::Vector2Int convertScreenToWorldPosition(const spk::Vector2Int& p_screenPosition)
 	{
-		spk::Matrix4x4 inverseMatrix = _camera->inverseProjectionMatrix();
+		if (Context::instance() == nullptr)
+			throw std::runtime_error("Can't access Context.");
 
 		spk::Vector2 relPosition = static_cast<spk::Vector2>(p_screenPosition) / static_cast<spk::Vector2>(geometry().size);
 		spk::Vector2 screenPosition = relPosition * 2 - 1;
 
-		spk::Vector3 result = inverseMatrix * spk::Vector3(screenPosition, 0);
+		spk::Vector3 result = Context::instance()->mainCamera.inverseProjectionMatrix() * spk::Vector3(screenPosition, 0);
 
-		return (spk::Vector2Int::floor(result.xy()));
+		return (spk::Vector2Int::floor(result.xy()) + Context::instance()->cameraEntity.transform().position().xy());
 	}
 	
 	void _onMouseEvent(spk::MouseEvent& p_event)
 	{
+		if (Context::instance() == nullptr)
+			return;
+
 		switch (p_event.type)
 		{
 			case spk::MouseEvent::Type::Press:
 			{
 				_isPlacing = true;
-				break;
-			}
-			case spk::MouseEvent::Type::Release:
-			{
-				_isPlacing = false;
-				break;
 			}
 			case spk::MouseEvent::Type::Motion:
 			{
@@ -327,8 +312,13 @@ private:
 					int layer = _levelSelector->level();
 					int node = _nodeSelector->selectedNode();
 
-					_mapManager->setNode(worldPosition, layer, node);
+					Context::instance()->mapManager.setNode(worldPosition, layer, node);
 				}
+				break;
+			}
+			case spk::MouseEvent::Type::Release:
+			{
+				_isPlacing = false;
 				break;
 			}
 		}
@@ -339,16 +329,6 @@ public:
 		spk::Widget(p_name, p_parent)
 	{
 
-	}
-
-	void setCamera(spk::SafePointer<const spk::Camera> p_camera)
-	{
-		_camera = p_camera;
-	}
-
-	void setMapManager(spk::SafePointer<MapManager> p_mapManager)
-	{
-		_mapManager = p_mapManager;
 	}
 
 	void setNodeSelector(spk::SafePointer<NodeSelector> p_nodeSelector)
@@ -368,14 +348,13 @@ private:
 	spk::InterfaceWindow<MapEditorInventory> _inventory;
 	MapEditorInteractor _interactor;
 
-	spk::SafePointer<MapManager> _mapManager;
-
 	spk::ContractProvider::Contract _quitContract;
 
 	void _onGeometryChange() override
 	{
 		spk::Vector2UInt childSize = _inventory.content()->minimalSize();
 		_inventory.setGeometry((geometry().size - childSize) / 2 , childSize);
+		_interactor.setGeometry(geometry());
 	}
 
 	void _onKeyboardEvent(spk::KeyboardEvent& p_event) override
@@ -415,22 +394,6 @@ public:
 
 		_quitContract = _inventory.subscribeTo(spk::IInterfaceWindow::Event::Close, [&](){removeChild(&_inventory);});
 	}
-
-	void setMapManager(spk::SafePointer<MapManager> p_mapManager)
-	{
-		_mapManager = p_mapManager;
-		_interactor.setMapManager(p_mapManager);
-	}
-
-	void setNodeMap(spk::SafePointer<NodeMap> p_nodeMap)
-	{
-		_inventory.content()->setNodeMap(p_nodeMap);
-	}
-
-	void setCamera(spk::SafePointer<const spk::Camera> p_camera)
-	{
-		_interactor.setCamera(p_camera);
-	}
 };
 
 
@@ -441,44 +404,16 @@ int main()
 
 	spk::SafePointer<spk::Window> win = app.createWindow(L"Playground", {{0, 0}, {800, 800}});
 
-	TextureManager::instanciate();
+	Context::instanciate();
 	
-	NodeMap nodeMap;
-
-	spk::GameEngine engine;
-
-	spk::Entity worldManager = spk::Entity(L"World manager");
-	auto& worldManagerComp = worldManager.addComponent<WorldManager>(L"World manager component");
-	auto& mapManagerComp = worldManager.addComponent<MapManager>(L"Map manager component");
-	worldManagerComp.setMapManager(&mapManagerComp);
-	worldManager.addComponent<ControlMapper>(L"Control mapper component");
-
-	spk::Entity player = spk::Entity(L"Player");
-	player.transform().place(spk::Vector3(0, 0, 0));
-	player.addComponent<PlayerController>(L"Player controler component");
-
-	spk::Entity camera = spk::Entity(L"Camera", &player);
-	camera.transform().place(spk::Vector3(0, 0, 20));
-	camera.transform().lookAt(player.transform().position());
-
-	CameraManager& cameraComp = camera.addComponent<CameraManager>(L"Main camera");
-
-	worldManagerComp.setCamera(&camera);
-
-	engine.addEntity(&worldManager);
-	engine.addEntity(&player);
-
 	MapEditorHUD mapEditorWidget = MapEditorHUD(L"Editor window", win->widget());
-	mapEditorWidget.setNodeMap(&nodeMap);
 	mapEditorWidget.setGeometry(win->geometry());
-	mapEditorWidget.setMapManager(&mapManagerComp);
-	mapEditorWidget.setCamera(&cameraComp.camera());
 	mapEditorWidget.activate();
 
 	spk::GameEngineWidget gameEngineWidget = spk::GameEngineWidget(L"Engine widget", win->widget());
 	gameEngineWidget.setLayer(0);
 	gameEngineWidget.setGeometry(win->geometry());
-	gameEngineWidget.setGameEngine(&engine);
+	gameEngineWidget.setGameEngine(&(Context::instance()->gameEngine));
 	gameEngineWidget.activate();
 	
 	return (app.run());

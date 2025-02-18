@@ -20,6 +20,7 @@ public:
 	static spk::Vector2Int convertWorldToChunkPosition(const spk::Vector2& p_worldPosition);
 	static spk::Vector2Int convertWorldToChunkPosition(const spk::Vector3& p_worldPosition);
 	static spk::Vector3 convertChunkToWorldPosition(const spk::Vector2Int& p_chunkPosition);
+	static spk::Vector2Int convertAbsoluteToRelativePosition(const spk::Vector2Int& p_absolutePosition);
 
 	void serialize(std::ofstream& p_os) const;
 	void deserialize(std::ifstream& p_is);

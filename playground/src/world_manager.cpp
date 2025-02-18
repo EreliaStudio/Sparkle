@@ -2,20 +2,18 @@
 
 #include "camera_manager.hpp"
 
+#include "context.hpp"
+
 void WorldManager::_updateChunkVisibility()
 {
-	if (_camera == nullptr ||
-		_cameraEntity == nullptr ||
-		_mapManager == nullptr)
-	{
-		return;
-	}
+	if (Context::instance() == nullptr)
+		return ;
 
-	spk::Vector2Int currentCameraChunk = Chunk::convertWorldToChunkPosition(_cameraEntity->transform().position());
+	spk::Vector2Int currentCameraChunk = Chunk::convertWorldToChunkPosition(Context::instance()->cameraEntity.transform().position());
 
 	std::vector<spk::SafePointer<ChunkEntity>> chunkToActivate;
 
-	spk::Matrix4x4 inverseMatrix = _camera->inverseProjectionMatrix();
+	spk::Matrix4x4 inverseMatrix = Context::instance()->mainCamera.inverseProjectionMatrix();
 
 	spk::Vector3 downLeftWorld = inverseMatrix * spk::Vector3(-1, 1, 0);
 	spk::Vector3 topRightWorld = inverseMatrix * spk::Vector3(1, -1, 0);
@@ -27,7 +25,7 @@ void WorldManager::_updateChunkVisibility()
 	{
 		for (int y = downLeftChunk.y; y <= topRightChunk.y; y++)
 		{
-			chunkToActivate.push_back(_mapManager->chunkEntity(spk::Vector2Int(x, y)));
+			chunkToActivate.push_back(Context::instance()->mapManager.chunkEntity(spk::Vector2Int(x, y)));
 		}
 	}
 
@@ -57,30 +55,12 @@ WorldManager::WorldManager(const std::wstring& p_name) :
 		_updateChunkVisibility();
 	}))
 {
-
+	
 }
 
 void WorldManager::awake()
 {
 	EventCenter::instance()->notifyEvent(Event::UpdateChunkVisibility);
-}
-
-void WorldManager::setCamera(spk::SafePointer<const spk::Entity> p_camera)
-{
-	_cameraEntity = p_camera;
-	auto& _CameraManager = _cameraEntity->getComponent<CameraManager>();
-	_camera = &(_CameraManager.camera());
-	if (_camera == nullptr)
-	{
-		throw std::runtime_error("Camera component not found");
-	}
-
-	EventCenter::instance()->notifyEvent(Event::UpdateChunkVisibility);
-}
-
-void WorldManager::setMapManager(MapManager* p_mapManager)
-{
-	_mapManager = p_mapManager;
 }
 
 void WorldManager::onUpdateEvent(spk::UpdateEvent& p_event)

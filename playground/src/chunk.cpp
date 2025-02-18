@@ -28,6 +28,14 @@ spk::Vector3 Chunk::convertChunkToWorldPosition(const spk::Vector2Int& p_chunkPo
 	return (spk::Vector3(p_chunkPosition.x * static_cast<int>(Size), p_chunkPosition.y * static_cast<int>(Size), 0));
 }
 
+spk::Vector2Int Chunk::convertAbsoluteToRelativePosition(const spk::Vector2Int& p_absolutePosition)
+{
+	return (spk::Vector2Int(
+		static_cast<int>(std::floor(p_absolutePosition.x)) % Size + (p_absolutePosition.x < 0 ? Size : 0), 
+		static_cast<int>(std::floor(p_absolutePosition.y)) % Size + (p_absolutePosition.y < 0 ? Size : 0)
+	));
+}
+
 void Chunk::serialize(std::ofstream& p_os) const
 {
 	p_os.write(reinterpret_cast<const char*>(_content), sizeof(_content));

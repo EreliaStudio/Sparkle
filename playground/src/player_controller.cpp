@@ -45,7 +45,7 @@ PlayerController::PlayerController(const std::wstring& p_name) :
 		stopPlayer();
 	}))
 {
-
+	
 }
 
 void PlayerController::onUpdateEvent(spk::UpdateEvent& p_event)
