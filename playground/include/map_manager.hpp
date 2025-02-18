@@ -19,6 +19,6 @@ private:
 public:
 	MapManager(const std::wstring& p_name);
 
+	void setNode(spk::Vector2Int p_nodePosition, int p_layer, int p_nodeID);
 	spk::SafePointer<ChunkEntity> chunkEntity(const spk::Vector2Int& p_chunkPosition);
-	void invalidateChunk(const spk::Vector2Int& p_chunkPosition);
 };

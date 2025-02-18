@@ -30,6 +30,15 @@ MapManager::MapManager(const std::wstring& p_name) :
 
 }
 
+void MapManager::setNode(spk::Vector2Int p_nodePosition, int p_layer, int p_nodeID)
+{
+	spk::Vector2Int chunkPosition = Chunk::convertWorldToChunkPosition(p_nodePosition);
+	spk::SafePointer<ChunkEntity> targetChunkEntity = chunkEntity(chunkPosition);
+	spk::SafePointer<BakableChunk> targetChunk = targetChunkEntity->chunk();
+	targetChunk->setContent(Chunk::convertWorldToChunkPosition(p_nodePosition), p_layer, p_nodeID);
+	targetChunk->invalidate();
+}
+
 spk::SafePointer<ChunkEntity> MapManager::chunkEntity(const spk::Vector2Int& p_chunkPosition)
 {
 	if (_chunkEntities.contains(p_chunkPosition) == false)
@@ -37,9 +46,4 @@ spk::SafePointer<ChunkEntity> MapManager::chunkEntity(const spk::Vector2Int& p_c
 		_chunkEntities.emplace(p_chunkPosition, std::make_unique<ChunkEntity>(p_chunkPosition, owner()));
 	}
 	return (_chunkEntities[p_chunkPosition]);
-}
-
-void MapManager::invalidateChunk(const spk::Vector2Int& p_chunkPosition)
-{
-	static_cast<spk::SafePointer<BakableChunk>>(_chunkEntities[p_chunkPosition]->chunk())->invalidate();
 }

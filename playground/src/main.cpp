@@ -288,8 +288,22 @@ class MapEditorInteractor : public spk::Widget
 private:
 	bool _isPlacing;
 
+	spk::SafePointer<const spk::Camera> _camera;
+	spk::SafePointer<MapManager> _mapManager;
 	spk::SafePointer<NodeSelector> _nodeSelector;
 	spk::SafePointer<LevelSelector> _levelSelector;
+
+	spk::Vector2Int convertScreenToWorldPosition(const spk::Vector2Int& p_screenPosition)
+	{
+		spk::Matrix4x4 inverseMatrix = _camera->inverseProjectionMatrix();
+
+		spk::Vector2 relPosition = static_cast<spk::Vector2>(p_screenPosition) / static_cast<spk::Vector2>(geometry().size);
+		spk::Vector2 screenPosition = relPosition * 2 - 1;
+
+		spk::Vector3 result = inverseMatrix * spk::Vector3(screenPosition, 0);
+
+		return (spk::Vector2Int::floor(result.xy()));
+	}
 	
 	void _onMouseEvent(spk::MouseEvent& p_event)
 	{
@@ -307,9 +321,13 @@ private:
 			}
 			case spk::MouseEvent::Type::Motion:
 			{
-				if (_nodeSelector != nullptr && _levelSelector != nullptr)
+				if (_isPlacing == true && _nodeSelector != nullptr && _levelSelector != nullptr)
 				{
+					spk::Vector2Int worldPosition = convertScreenToWorldPosition(p_event.mouse->position);
+					int layer = _levelSelector->level();
+					int node = _nodeSelector->selectedNode();
 
+					_mapManager->setNode(worldPosition, layer, node);
 				}
 				break;
 			}
@@ -321,6 +339,16 @@ public:
 		spk::Widget(p_name, p_parent)
 	{
 
+	}
+
+	void setCamera(spk::SafePointer<const spk::Camera> p_camera)
+	{
+		_camera = p_camera;
+	}
+
+	void setMapManager(spk::SafePointer<MapManager> p_mapManager)
+	{
+		_mapManager = p_mapManager;
 	}
 
 	void setNodeSelector(spk::SafePointer<NodeSelector> p_nodeSelector)
@@ -391,11 +419,17 @@ public:
 	void setMapManager(spk::SafePointer<MapManager> p_mapManager)
 	{
 		_mapManager = p_mapManager;
+		_interactor.setMapManager(p_mapManager);
 	}
 
 	void setNodeMap(spk::SafePointer<NodeMap> p_nodeMap)
 	{
 		_inventory.content()->setNodeMap(p_nodeMap);
+	}
+
+	void setCamera(spk::SafePointer<const spk::Camera> p_camera)
+	{
+		_interactor.setCamera(p_camera);
 	}
 };
 
@@ -437,6 +471,8 @@ int main()
 	MapEditorHUD mapEditorWidget = MapEditorHUD(L"Editor window", win->widget());
 	mapEditorWidget.setNodeMap(&nodeMap);
 	mapEditorWidget.setGeometry(win->geometry());
+	mapEditorWidget.setMapManager(&mapManagerComp);
+	mapEditorWidget.setCamera(&cameraComp.camera());
 	mapEditorWidget.activate();
 
 	spk::GameEngineWidget gameEngineWidget = spk::GameEngineWidget(L"Engine widget", win->widget());
