@@ -12,4 +12,5 @@
 #include "node.hpp"
 #include "player_controller.hpp"
 #include "world_manager.hpp"
+#include "map_manager.hpp"
 #include "texture_manager.hpp"

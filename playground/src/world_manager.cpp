@@ -4,7 +4,9 @@
 
 void WorldManager::_updateChunkVisibility()
 {
-	if (_camera == nullptr || _cameraEntity == nullptr)
+	if (_camera == nullptr ||
+		_cameraEntity == nullptr ||
+		_mapManager == nullptr)
 	{
 		return;
 	}
@@ -25,7 +27,7 @@ void WorldManager::_updateChunkVisibility()
 	{
 		for (int y = downLeftChunk.y; y <= topRightChunk.y; y++)
 		{
-			chunkToActivate.push_back(chunkEntity(spk::Vector2Int(x, y)));
+			chunkToActivate.push_back(_mapManager->chunkEntity(spk::Vector2Int(x, y)));
 		}
 	}
 
@@ -48,33 +50,11 @@ void WorldManager::_updateChunkVisibility()
 	}
 }
 
-void WorldManager::_loadMap()
-{
-	for (auto& chunk : _chunkEntities)
-	{
-		chunk.second->load();
-	}
-}
-
-void WorldManager::_saveMap()
-{
-	for (auto& chunk : _chunkEntities)
-	{
-		chunk.second->save();
-	}
-}
-
 WorldManager::WorldManager(const std::wstring& p_name) :
 	spk::Component(p_name),
 	_systemInfo(BufferObjectCollection::instance()->UBO("systemInfo")),
 	_updateChunkVisibilityContract(EventCenter::instance()->subscribe(Event::UpdateChunkVisibility, [&](){
 		_updateChunkVisibility();
-	})),
-	_loadMapContract(EventCenter::instance()->subscribe(Event::LoadMap, [&](){
-		_loadMap();
-	})),
-	_saveMapContract(EventCenter::instance()->subscribe(Event::SaveMap, [&](){
-		_saveMap();
 	}))
 {
 
@@ -98,18 +78,9 @@ void WorldManager::setCamera(spk::SafePointer<const spk::Entity> p_camera)
 	EventCenter::instance()->notifyEvent(Event::UpdateChunkVisibility);
 }
 
-spk::SafePointer<ChunkEntity> WorldManager::chunkEntity(const spk::Vector2Int& p_chunkPosition)
+void WorldManager::setMapManager(MapManager* p_mapManager)
 {
-	if (_chunkEntities.contains(p_chunkPosition) == false)
-	{
-		_chunkEntities.emplace(p_chunkPosition, std::make_unique<ChunkEntity>(p_chunkPosition, owner()));
-	}
-	return (_chunkEntities[p_chunkPosition]);
-}
-
-void WorldManager::invalidateChunk(const spk::Vector2Int& p_chunkPosition)
-{
-	static_cast<spk::SafePointer<BakableChunk>>(_chunkEntities[p_chunkPosition]->chunk())->invalidate();
+	_mapManager = p_mapManager;
 }
 
 void WorldManager::onUpdateEvent(spk::UpdateEvent& p_event)

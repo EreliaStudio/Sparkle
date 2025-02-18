@@ -242,6 +242,16 @@ public:
 		_nodeSelector.activate();
 	}
 
+	spk::SafePointer<LevelSelector> levelSelector()
+	{
+		return (&_levelSelector);
+	}
+
+	spk::SafePointer<NodeSelector> nodeSelector()
+	{
+		return (_nodeSelector.content());
+	}
+
 	void setNodeMap(spk::SafePointer<NodeMap> p_nodeMap)
 	{
 		_nodeSelector.content()->setNodeMap(p_nodeMap);
@@ -273,10 +283,66 @@ public:
 	}
 };
 
+class MapEditorInteractor : public spk::Widget
+{
+private:
+	bool _isPlacing;
+
+	spk::SafePointer<NodeSelector> _nodeSelector;
+	spk::SafePointer<LevelSelector> _levelSelector;
+	
+	void _onMouseEvent(spk::MouseEvent& p_event)
+	{
+		switch (p_event.type)
+		{
+			case spk::MouseEvent::Type::Press:
+			{
+				_isPlacing = true;
+				break;
+			}
+			case spk::MouseEvent::Type::Release:
+			{
+				_isPlacing = false;
+				break;
+			}
+			case spk::MouseEvent::Type::Motion:
+			{
+				if (_nodeSelector != nullptr && _levelSelector != nullptr)
+				{
+
+				}
+				break;
+			}
+		}
+	}
+
+public:
+	MapEditorInteractor(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+		spk::Widget(p_name, p_parent)
+	{
+
+	}
+
+	void setNodeSelector(spk::SafePointer<NodeSelector> p_nodeSelector)
+	{
+		_nodeSelector = p_nodeSelector;
+	}
+
+	void setLevelSelector(spk::SafePointer<LevelSelector> p_levelSelector)
+	{
+		_levelSelector = p_levelSelector;
+	}
+};
+
 class MapEditorHUD : public spk::Widget
 {
 private:
 	spk::InterfaceWindow<MapEditorInventory> _inventory;
+	MapEditorInteractor _interactor;
+
+	spk::SafePointer<MapManager> _mapManager;
+
+	spk::ContractProvider::Contract _quitContract;
 
 	void _onGeometryChange() override
 	{
@@ -303,12 +369,11 @@ private:
 		}
 	}
 
-	spk::ContractProvider::Contract _quitContract;
-
 public:
 	MapEditorHUD(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
 		spk::Widget(p_name, p_parent),
-		_inventory(L"Editor window", this)
+		_inventory(p_name + L" - Inventory", this),
+		_interactor(p_name + L" - Interactor", this)
 	{
 		spk::Vector2UInt minimalSize = _inventory.content()->minimalSize();
 		_inventory.setMinimumContentSize(minimalSize);
@@ -316,7 +381,16 @@ public:
 		_inventory.setLayer(10);
 		_inventory.activate();
 
+		_interactor.activate();
+		_interactor.setNodeSelector(_inventory.content()->nodeSelector());
+		_interactor.setLevelSelector(_inventory.content()->levelSelector());
+
 		_quitContract = _inventory.subscribeTo(spk::IInterfaceWindow::Event::Close, [&](){removeChild(&_inventory);});
+	}
+
+	void setMapManager(spk::SafePointer<MapManager> p_mapManager)
+	{
+		_mapManager = p_mapManager;
 	}
 
 	void setNodeMap(spk::SafePointer<NodeMap> p_nodeMap)
@@ -324,6 +398,8 @@ public:
 		_inventory.content()->setNodeMap(p_nodeMap);
 	}
 };
+
+
 
 int main()
 {
@@ -339,6 +415,8 @@ int main()
 
 	spk::Entity worldManager = spk::Entity(L"World manager");
 	auto& worldManagerComp = worldManager.addComponent<WorldManager>(L"World manager component");
+	auto& mapManagerComp = worldManager.addComponent<MapManager>(L"Map manager component");
+	worldManagerComp.setMapManager(&mapManagerComp);
 	worldManager.addComponent<ControlMapper>(L"Control mapper component");
 
 	spk::Entity player = spk::Entity(L"Player");
