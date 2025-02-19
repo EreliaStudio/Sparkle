@@ -66,27 +66,7 @@ void ChunkEntity::load()
 	}
 	else
 	{
-		bool isEven = (_chunkPosition.x % 2 == 0 && _chunkPosition.y % 2 == 0) || (_chunkPosition.x % 2 != 0 && _chunkPosition.y % 2 != 0);
-		// for (size_t i = 0; i < Chunk::Size; i++)
-		// {
-		// 	for (size_t j = 0; j < Chunk::Size; j++)
-		// 	{
-		// 		_chunk.setContent(spk::Vector3Int(i, j, 0), (isEven == true ? 0 : 1));
-
-		// 		if (i == spk::positiveModulo(_chunkPosition.x, Chunk::Size) && j == spk::positiveModulo(_chunkPosition.y, Chunk::Size))
-		// 		{
-		// 			_chunk.setContent(spk::Vector3Int(i, j, 0), 2);
-		// 		}
-		// 	}
-		// }
-
-		// if (_chunkPosition == spk::Vector2Int(1, 1))
-		// {
-		// 	_chunk.setContent(spk::Vector3Int(3, 3, 1), 3);
-		// 	_chunk.setContent(spk::Vector3Int(6, 3, 1), 3);
-		// 	_chunk.setContent(spk::Vector3Int(3, 6, 1), 3);
-		// 	_chunk.setContent(spk::Vector3Int(6, 6, 1), 3);
-		// }
+		
 	}
 
 	_chunk.invalidate();
@@ -96,7 +76,14 @@ void ChunkEntity::save()
 {
 	std::filesystem::path outputFilePath = _composeFilePath(_chunkPosition);
 	std::ofstream file(outputFilePath, std::ios::binary);
+
+	if (file.is_open() == false)
+	{
+		throw std::runtime_error("Can't open file at [" + outputFilePath.string() + "]");
+	}
+
 	_chunk.serialize(file);
+	file.close();
 }
 
 spk::SafePointer<Chunk> ChunkEntity::chunk()
