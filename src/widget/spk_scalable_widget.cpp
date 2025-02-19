@@ -25,9 +25,10 @@ namespace spk
 	void ScalableWidget::setMinimumSize(const spk::Vector2UInt& p_minimumSize)
 	{
 		_minimumSize = p_minimumSize;
+
 		if (geometry().size.x < _minimumSize.x || geometry().size.y < _minimumSize.y)
 		{
-			setGeometry(geometry().anchor, _minimumSize);
+			setGeometry(geometry().anchor, spk::Vector2UInt::max(_minimumSize, geometry().size));
 		}
 	}
 

@@ -405,7 +405,7 @@ namespace spk::OpenGL
 		}
 		catch (...)
 		{
-			throw std::runtime_error("Error while applying viewport of framebuffer [" + std::to_string(_framebufferID) + "]");
+			throw std::runtime_error("Error while applying viewport of framebuffer [" + std::to_string(_framebufferID) + "] with viewport of geometry [" + _viewport.geometry().to_string() + "]");
 		}
 
 		glClearColor(0.0, 0.0, 0.0, 0.0);
@@ -435,7 +435,7 @@ namespace spk::OpenGL
 			}
 			catch (...)
 			{
-				throw std::runtime_error("Error while applying viewport of framebuffer [" + std::to_string(_framebufferID) + "] previous viewport");
+				throw std::runtime_error("Error while applying viewport of framebuffer [" + std::to_string(_framebufferID) + "] previous viewport with viewport of geometry [" + _previousViewport->geometry().to_string() + "]");
 			}
 		}
     }

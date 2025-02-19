@@ -179,6 +179,7 @@ private:
 						}
 						_nodeIndex = -1;
 					}	
+					p_event.consume();
 				}
 				break;
 			}
@@ -246,7 +247,7 @@ public:
 		return (_nodeSelector.content());
 	}
 
-	spk::Vector2UInt minimalSize()
+	spk::Vector2UInt minimalSize() const
 	{
 		float space = 5.0f;
 		spk::Vector2 nbLayerButtons = {5, 1};
@@ -303,6 +304,7 @@ private:
 			case spk::MouseEvent::Type::Press:
 			{
 				_isPlacing = true;
+				p_event.consume();
 			}
 			case spk::MouseEvent::Type::Motion:
 			{
@@ -313,12 +315,14 @@ private:
 					int node = _nodeSelector->selectedNode();
 
 					Context::instance()->mapManager.setNode(worldPosition, layer, node);
+					p_event.consume();
 				}
 				break;
 			}
 			case spk::MouseEvent::Type::Release:
 			{
 				_isPlacing = false;
+				p_event.consume();
 				break;
 			}
 		}
@@ -342,9 +346,27 @@ public:
 	}
 };
 
+class MapEditorMenu : public spk::Widget
+{
+private:
+
+public:
+	MapEditorMenu(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+		spk::Widget(p_name, p_parent)
+	{
+
+	}
+
+	spk::Vector2UInt minimalSize() const
+	{
+		return {200, 30};
+	}
+};
+
 class MapEditorHUD : public spk::Widget
 {
 private:
+	spk::InterfaceWindow<MapEditorMenu> _menu;
 	spk::InterfaceWindow<MapEditorInventory> _inventory;
 	MapEditorInteractor _interactor;
 
@@ -354,6 +376,7 @@ private:
 	{
 		spk::Vector2UInt childSize = _inventory.content()->minimalSize();
 		_inventory.setGeometry((geometry().size - childSize) / 2 , childSize);
+		_menu.setGeometry({geometry().size.x - 200, 0}, {200, 30});
 		_interactor.setGeometry(geometry());
 	}
 
@@ -380,14 +403,14 @@ public:
 	MapEditorHUD(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
 		spk::Widget(p_name, p_parent),
 		_inventory(p_name + L" - Inventory", this),
-		_interactor(p_name + L" - Interactor", this)
+		_interactor(p_name + L" - Interactor", this),
+		_menu(p_name + L" - Menu", this)
 	{
-		spk::Vector2UInt minimalSize = _inventory.content()->minimalSize();
-		_inventory.setMinimumContentSize(minimalSize);
 		_inventory.setMenuHeight(25);
-		_inventory.setLayer(10);
+		_inventory.setLayer(100);
 		_inventory.activate();
 
+		_interactor.setLayer(10);
 		_interactor.activate();
 		_interactor.setNodeSelector(_inventory.content()->nodeSelector());
 		_interactor.setLevelSelector(_inventory.content()->levelSelector());
@@ -395,8 +418,6 @@ public:
 		_quitContract = _inventory.subscribeTo(spk::IInterfaceWindow::Event::Close, [&](){removeChild(&_inventory);});
 	}
 };
-
-
 
 int main()
 {
@@ -411,7 +432,6 @@ int main()
 	mapEditorWidget.activate();
 
 	spk::GameEngineWidget gameEngineWidget = spk::GameEngineWidget(L"Engine widget", win->widget());
-	gameEngineWidget.setLayer(0);
 	gameEngineWidget.setGeometry(win->geometry());
 	gameEngineWidget.setGameEngine(&(Context::instance()->gameEngine));
 	gameEngineWidget.activate();

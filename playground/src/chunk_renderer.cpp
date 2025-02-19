@@ -118,6 +118,11 @@ void ChunkRenderer::render()
 		throw std::runtime_error("Chunk sprite sheet not set");
 	}
 
+	if (_cellListSSBO.dynamicArray().nbElement() == 0)
+	{
+		return;
+	}
+
 	_program->activate();
 
 	_systemInfo.activate();

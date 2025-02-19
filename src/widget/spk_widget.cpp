@@ -226,12 +226,12 @@ namespace spk
 		}
 	}
 
-	spk::Vector2UInt Widget::minimalSize()
+	spk::Vector2UInt Widget::minimalSize() const
 	{
-		return {0, 0};
+		return {1, 1};
 	}
 	
-	spk::Vector2UInt Widget::maximalSize()
+	spk::Vector2UInt Widget::maximalSize() const
 	{
 		return {std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max()};
 	}
@@ -332,7 +332,7 @@ namespace spk
 				}
 				catch (...)
 				{
-					throw std::runtime_error("Error while applying viewport of [" + spk::StringUtils::wstringToString(name()) + "]");
+					throw std::runtime_error("Error while applying viewport of [" + spk::StringUtils::wstringToString(name()) + "] with viewport of geometry [" + _viewport.geometry().to_string() + "]");
 				}
 				child->onPaintEvent(childEvent);
 			}

@@ -124,6 +124,16 @@ namespace spk
 			return os;
 		}
 
+		std::string to_string() const
+		{
+			return "Anchor : " + anchor.to_string() + " - Size : " + size.to_string();
+		}
+
+		std::wstring to_wstring() const
+		{
+			return L"Anchor : " + anchor.to_wstring() + L" - Size : " + size.to_wstring();
+		}
+
 		bool operator==(const Geometry2D& p_other) const
 		{
 			return anchor == p_other.anchor && size == p_other.size;

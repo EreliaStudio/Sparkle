@@ -122,6 +122,7 @@ namespace spk
 	void IInterfaceWindow::_onGeometryChange()
 	{
 		spk::Vector2Int menuSize = { geometry().size.x, static_cast<int>(_menuHeight) };
+
 		spk::Vector2Int frameSize = {
 			geometry().size.x - _backgroundFrame.cornerSize().x * 2,
 			geometry().size.y - menuSize.y - _backgroundFrame.cornerSize().y * 2 };
@@ -165,6 +166,10 @@ namespace spk
 					p_event.consume();
 				}
 			}
+			if (viewport().geometry().contains(p_event.mouse->position) == true)
+			{
+				p_event.consume();
+			}
 			break;
 		}
 		case spk::MouseEvent::Type::Release:
@@ -188,37 +193,44 @@ namespace spk
 	{
 		_content = p_content;
 		_backgroundFrame.addChild(_content);
+
+		setMinimumContentSize(_content->minimalSize());
+		setMaximumContentSize(_content->maximalSize());
+		
 		requireGeometryUpdate();
 	}
 
+	uint32_t safeAdd(uint32_t a, uint32_t b)
+	{
+		return a > std::numeric_limits<uint32_t>::max() - b
+			? std::numeric_limits<uint32_t>::max()
+			: a + b;
+	};
 
 	void IInterfaceWindow::setMinimumContentSize(const spk::Vector2UInt& p_minimumContentSize)
 	{
 		spk::Vector2UInt menuBarSize = _menuBar._computeMinimalSize(_menuHeight);
-
-		spk::Vector2UInt interfaceWindowMinimalSize = spk::Vector2UInt(
-				std::max(menuBarSize.x, p_minimumContentSize.x + _backgroundFrame.cornerSize().y * 2),
-				menuBarSize.y + p_minimumContentSize.y + _backgroundFrame.cornerSize().y * 2
-			);
-
-		spk::ScalableWidget::setMinimumSize(interfaceWindowMinimalSize);
+		uint32_t extra = _backgroundFrame.cornerSize().y * 2;
+		uint32_t x = std::max(safeAdd(p_minimumContentSize.x, extra), menuBarSize.x);
+		uint32_t y = safeAdd(menuBarSize.y, safeAdd(p_minimumContentSize.y, extra));
+		spk::ScalableWidget::setMinimumSize({x, y});
 	}
 	
 	void IInterfaceWindow::setMaximumContentSize(const spk::Vector2UInt& p_maximumContentSize)
 	{
 		spk::Vector2UInt menuBarSize = _menuBar._computeMinimalSize(_menuHeight);
-
-		spk::Vector2UInt interfaceWindowMaximalSize = spk::Vector2UInt(
-				std::max(menuBarSize.x, p_maximumContentSize.x + _backgroundFrame.cornerSize().y * 2),
-				menuBarSize.y + p_maximumContentSize.y + _backgroundFrame.cornerSize().y * 2
-			);
-
-		spk::ScalableWidget::setMaximumSize(interfaceWindowMaximalSize);
+		uint32_t extra = _backgroundFrame.cornerSize().y * 2;
+		uint32_t x = std::max(safeAdd(p_maximumContentSize.x, extra), menuBarSize.x);
+		uint32_t y = safeAdd(menuBarSize.y, safeAdd(p_maximumContentSize.y, extra));
+		spk::ScalableWidget::setMaximumSize({x, y});
 	}
 
 	void IInterfaceWindow::setMenuHeight(const float& p_menuHeight)
 	{
 		_menuHeight = p_menuHeight;
+
+		setMinimumContentSize(_content->minimalSize());
+		setMaximumContentSize(_content->maximalSize());
 
 		requireGeometryUpdate();
 	}
@@ -227,6 +239,9 @@ namespace spk
 	{
 		_backgroundFrame.setCornerSize(p_cornerSize);
 
+		setMinimumContentSize(_content->minimalSize());
+		setMaximumContentSize(_content->maximalSize());
+		
 		requireGeometryUpdate();
 	}
 

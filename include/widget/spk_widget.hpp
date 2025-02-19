@@ -120,8 +120,8 @@ namespace spk
 		void updateGeometry();
 		void requireGeometryUpdate();
 
-		virtual spk::Vector2UInt minimalSize();
-		virtual spk::Vector2UInt maximalSize();
+		virtual spk::Vector2UInt minimalSize() const;
+		virtual spk::Vector2UInt maximalSize() const;
 
 		const Geometry2D& geometry() const;
 		const Viewport& viewport() const;
