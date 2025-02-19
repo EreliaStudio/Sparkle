@@ -56,6 +56,11 @@ ChunkEntity::ChunkEntity(const spk::Vector2Int& p_chunkPosition, spk::SafePointe
 
 void ChunkEntity::load()
 {
+	if (!std::filesystem::exists(_chunkFolderPath))
+    {
+        std::filesystem::create_directories(_chunkFolderPath);
+    }
+
 	std::filesystem::path inputFilePath = _composeFilePath(_chunkPosition);
 	
 	std::ifstream file(inputFilePath, std::ios::binary);
@@ -74,6 +79,11 @@ void ChunkEntity::load()
 
 void ChunkEntity::save()
 {
+	if (!std::filesystem::exists(_chunkFolderPath))
+    {
+        std::filesystem::create_directories(_chunkFolderPath);
+    }
+	
 	std::filesystem::path outputFilePath = _composeFilePath(_chunkPosition);
 	std::ofstream file(outputFilePath, std::ios::binary);
 
