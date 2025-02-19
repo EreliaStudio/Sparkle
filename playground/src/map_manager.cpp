@@ -2,7 +2,7 @@
 
 #include "event.hpp"
 
-void MapManager::loadMap()
+void MapManager::_loadMap()
 {
 	for (auto& chunk : _chunkEntities)
 	{
@@ -10,7 +10,7 @@ void MapManager::loadMap()
 	}
 }
 
-void MapManager::saveMap()
+void MapManager::_saveMap()
 {
 	for (auto& chunk : _chunkEntities)
 	{
@@ -21,10 +21,10 @@ void MapManager::saveMap()
 MapManager::MapManager(const std::wstring& p_name) :
 	spk::Component(p_name),
 	_loadMapContract(EventCenter::instance()->subscribe(Event::LoadMap, [&](){
-		loadMap();
+		_loadMap();
 	})),
 	_saveMapContract(EventCenter::instance()->subscribe(Event::SaveMap, [&](){
-		saveMap();
+		_saveMap();
 	}))
 {
 }

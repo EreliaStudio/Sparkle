@@ -13,11 +13,11 @@ private:
 
 	std::unordered_map<spk::Vector2Int, std::unique_ptr<ChunkEntity>> _chunkEntities;
 	
+	void _loadMap();
+	void _saveMap();
+
 public:
 	MapManager(const std::wstring& p_name);
-
-	void saveMap();
-	void loadMap();
 
 	void setNode(spk::Vector2Int p_nodePosition, int p_layer, int p_nodeID);
 	spk::SafePointer<ChunkEntity> chunkEntity(const spk::Vector2Int& p_chunkPosition);

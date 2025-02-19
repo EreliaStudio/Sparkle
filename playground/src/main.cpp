@@ -374,13 +374,13 @@ public:
 		_saveButton.setIconset(TextureManager::instance()->spriteSheet(L"iconset"));
 		_saveButton.setSprite(TextureManager::instance()->spriteSheet(L"iconset")->sprite(5));
 		_saveButton.setCornerSize(2);
-		_saveContract = _saveButton.subscribe([&](){Context::instance()->mapManager.saveMap();});
+		_saveContract = _saveButton.subscribe([&](){EventCenter::instance()->notifyEvent(Event::SaveMap);});
 		_saveButton.activate();
 
 		_loadButton.setIconset(TextureManager::instance()->spriteSheet(L"iconset"));
 		_loadButton.setSprite(TextureManager::instance()->spriteSheet(L"iconset")->sprite(6));
 		_loadButton.setCornerSize(2);
-		_loadContract = _loadButton.subscribe([&](){Context::instance()->mapManager.loadMap();});
+		_loadContract = _loadButton.subscribe([&](){EventCenter::instance()->notifyEvent(Event::LoadMap);});
 		_loadButton.activate();
 	}
 
