@@ -42,24 +42,32 @@ namespace spk
 	
 	void IInterfaceWindow::MenuBar::_onGeometryChange()
 	{
-		float space = 3.0f;
-		spk::Vector2Int buttonSize = _computeControlButtonSize(geometry().size.y);
-		spk::Vector2Int titleLabelSize = { geometry().size.x - buttonSize.x * 3 - space * 4 - _titleLabel.cornerSize().x * 4, buttonSize.y };
+		float space = 3.f;
 
+		spk::Vector2Int buttonSize = _computeControlButtonSize(geometry().size.y);
+
+		int activeCount = (_minimizeButton.isActive() ? 1 : 0)
+						+ (_maximizeButton.isActive() ? 1 : 0)
+						+ (_closeButton.isActive() ? 1 : 0);
+		int usedWidth = activeCount * buttonSize.x + (activeCount + 1) * (int)space + _titleLabel.cornerSize().x * 4;
+
+		spk::Vector2Int titleLabelSize = { geometry().size.x - usedWidth, buttonSize.y };
 		_titleLabel.setTextSize(_computeFontSize(geometry().size.y));
 
 		spk::Vector2Int anchor = _titleLabel.cornerSize() * 2;
+		_titleLabel.setGeometry(anchor, titleLabelSize);
 
-		_titleLabel.setGeometry(anchor, { titleLabelSize.x, titleLabelSize.y });
-		anchor.x += titleLabelSize.x + space;
+		anchor.x += titleLabelSize.x + (int)space;
 
-		_minimizeButton.setGeometry(anchor, buttonSize);
-		anchor.x += buttonSize.x + space;
-
-		_maximizeButton.setGeometry(anchor, buttonSize);
-		anchor.x += buttonSize.x + space;
-
-		_closeButton.setGeometry(anchor, buttonSize);
+		auto placeButton = [&](spk::PushButton& b){
+			if(!b.isActive()) return;
+			b.setGeometry(anchor, buttonSize);
+			anchor.x += buttonSize.x + (int)space;
+		};
+		
+		placeButton(_minimizeButton);
+		placeButton(_maximizeButton);
+		placeButton(_closeButton);
 	}
 
 	spk::Vector2UInt IInterfaceWindow::MenuBar::_computeMinimalSize(const float& p_menuHeight)
@@ -70,6 +78,40 @@ namespace spk
 		spk::Vector2Int titleLabelSize = _titleLabel.font()->computeStringSize(_titleLabel.text(), fontSize);
 
 		return (spk::Vector2UInt(titleLabelSize.x + buttonSize.x * 3 + 3 * 4 + _titleLabel.cornerSize().x * 4, p_menuHeight ));
+	}
+
+	void IInterfaceWindow::MenuBar::_activateMenuButton(const MenuBar::Button& p_button)
+	{
+		switch (p_button)
+		{
+		case MenuBar::Button::Minimize:
+			_minimizeButton.activate();
+			break;
+		case MenuBar::Button::Maximize:
+			_maximizeButton.activate();
+			break;
+		case MenuBar::Button::Close:
+			_closeButton.activate();
+			break;
+		}
+		requireGeometryUpdate();
+	}
+
+	void IInterfaceWindow::MenuBar::_deactivateMenuButton(const MenuBar::Button& p_button)
+	{
+		switch (p_button)
+		{
+		case MenuBar::Button::Minimize:
+			_minimizeButton.deactivate();
+			break;
+		case MenuBar::Button::Maximize:
+			_maximizeButton.deactivate();
+			break;
+		case MenuBar::Button::Close:
+			_closeButton.deactivate();
+			break;
+		}
+		requireGeometryUpdate();
 	}
 
 	IInterfaceWindow::MenuBar::MenuBar(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent) :
@@ -284,6 +326,16 @@ namespace spk
 	void IInterfaceWindow::close()
 	{
 		deactivate();
+	}
+
+	void IInterfaceWindow::activateMenuButton(const MenuBar::Button& p_button)
+	{
+		_menuBar._activateMenuButton(p_button);
+	}
+	
+	void IInterfaceWindow::deactivateMenuButton(const MenuBar::Button& p_button)
+	{
+		_menuBar._deactivateMenuButton(p_button);
 	}
 
 	spk::ContractProvider::Contract IInterfaceWindow::subscribeTo(const IInterfaceWindow::Event& p_event,

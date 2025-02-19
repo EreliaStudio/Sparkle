@@ -349,17 +349,49 @@ public:
 class MapEditorMenu : public spk::Widget
 {
 private:
+	spk::PushButton _saveButton;
+	spk::PushButton::Contract _saveContract;
+	spk::PushButton _loadButton;
+	spk::PushButton::Contract _loadContract;
+
+	spk::Vector2UInt buttonSize() const
+	{
+		return {30, 30};
+	}
+
+	void _onGeometryChange()
+	{
+		_saveButton.setGeometry({0, 0}, buttonSize());
+		_loadButton.setGeometry({buttonSize().x + 5, 0}, buttonSize());
+	}
 
 public:
 	MapEditorMenu(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
-		spk::Widget(p_name, p_parent)
+		spk::Widget(p_name, p_parent),
+		_saveButton(p_name + L" - SaveButton", this),
+		_loadButton(p_name + L" - LoadButton", this)
 	{
+		_saveButton.setIconset(TextureManager::instance()->spriteSheet(L"iconset"));
+		_saveButton.setSprite(TextureManager::instance()->spriteSheet(L"iconset")->sprite(5));
+		_saveButton.setCornerSize(2);
+		_saveContract = _saveButton.subscribe([&](){Context::instance()->mapManager.saveMap();});
+		_saveButton.activate();
 
+		_loadButton.setIconset(TextureManager::instance()->spriteSheet(L"iconset"));
+		_loadButton.setSprite(TextureManager::instance()->spriteSheet(L"iconset")->sprite(6));
+		_loadButton.setCornerSize(2);
+		_loadContract = _loadButton.subscribe([&](){Context::instance()->mapManager.loadMap();});
+		_loadButton.activate();
 	}
 
 	spk::Vector2UInt minimalSize() const
 	{
-		return {200, 30};
+		return {buttonSize().x * 2 + 5, buttonSize().y};
+	}
+
+	spk::Vector2UInt maximalSize() const
+	{
+		return minimalSize();
 	}
 };
 
@@ -374,9 +406,11 @@ private:
 
 	void _onGeometryChange() override
 	{
-		spk::Vector2UInt childSize = _inventory.content()->minimalSize();
-		_inventory.setGeometry((geometry().size - childSize) / 2 , childSize);
-		_menu.setGeometry({geometry().size.x - 200, 0}, {200, 30});
+		spk::Vector2UInt inventorySize = _inventory.minimalSize();
+		spk::Vector2UInt menuSize = _menu.minimalSize();
+
+		_inventory.setGeometry((geometry().size - inventorySize) / 2 , inventorySize);
+		_menu.setGeometry({geometry().size.x - menuSize.x, 0}, menuSize);
 		_interactor.setGeometry(geometry());
 	}
 
@@ -406,6 +440,7 @@ public:
 		_interactor(p_name + L" - Interactor", this),
 		_menu(p_name + L" - Menu", this)
 	{
+		_inventory.deactivateMenuButton(spk::IInterfaceWindow::MenuBar::Button::Maximize);
 		_inventory.setMenuHeight(25);
 		_inventory.setLayer(100);
 		_inventory.activate();
@@ -414,6 +449,10 @@ public:
 		_interactor.activate();
 		_interactor.setNodeSelector(_inventory.content()->nodeSelector());
 		_interactor.setLevelSelector(_inventory.content()->levelSelector());
+
+		_menu.setMenuHeight(25);
+		_menu.deactivateMenuButton(spk::IInterfaceWindow::MenuBar::Button::Maximize);
+		_menu.activate();
 
 		_quitContract = _inventory.subscribeTo(spk::IInterfaceWindow::Event::Close, [&](){removeChild(&_inventory);});
 	}

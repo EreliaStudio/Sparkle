@@ -12,12 +12,12 @@ namespace spk
 
 	}
 
-	const spk::Vector2UInt& ScalableWidget::minimumSize() const
+	spk::Vector2UInt ScalableWidget::minimalSize() const
 	{
 		return (_minimumSize);
 	}
 	
-	const spk::Vector2UInt& ScalableWidget::maximumSize() const
+	spk::Vector2UInt ScalableWidget::maximalSize() const
 	{
 		return (_maximumSize);
 	}

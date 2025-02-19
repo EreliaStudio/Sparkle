@@ -30,8 +30,8 @@ namespace spk
 	public:
 		ScalableWidget(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent);
 
-		const spk::Vector2UInt& minimumSize() const;
-		const spk::Vector2UInt& maximumSize() const;
+		spk::Vector2UInt minimalSize() const override;
+		spk::Vector2UInt maximalSize() const override;
 
 		void setMinimumSize(const spk::Vector2UInt& p_minimumSize);
 		void setMaximumSize(const spk::Vector2UInt& p_maximumSize);

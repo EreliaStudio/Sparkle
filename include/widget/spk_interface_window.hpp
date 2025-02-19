@@ -17,14 +17,16 @@ namespace spk
 			Close
 		};
 
-	private:
-		static spk::SpriteSheet     _defaultNineSlice_Light;
-		static spk::SpriteSheet     _defaultNineSlice_Dark;
-		static spk::SpriteSheet     _defaultNineSlice_Darker;
-
 		class MenuBar : public spk::Widget
 		{
 			friend class IInterfaceWindow;
+		public:
+			enum class Button
+			{
+				Minimize,
+				Maximize,
+				Close
+			};
 
 		private:
 			spk::TextLabel  _titleLabel;
@@ -39,9 +41,17 @@ namespace spk
 			
 			spk::Vector2UInt _computeMinimalSize(const float& p_menuHeight);
 
+			void _activateMenuButton(const MenuBar::Button& p_button);
+			void _deactivateMenuButton(const MenuBar::Button& p_button);
+
 		public:
 			MenuBar(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent);
 		};
+
+	private:
+		static spk::SpriteSheet     _defaultNineSlice_Light;
+		static spk::SpriteSheet     _defaultNineSlice_Dark;
+		static spk::SpriteSheet     _defaultNineSlice_Darker;
 
 		spk::Frame _backgroundFrame;
 		spk::Frame _minimizedBackgroundFrame;
@@ -81,6 +91,9 @@ namespace spk
 		void minimize();
 		void maximize();
 		void close();
+
+		void activateMenuButton(const MenuBar::Button& p_button);
+		void deactivateMenuButton(const MenuBar::Button& p_button);
 
 		spk::ContractProvider::Contract subscribeTo(const IInterfaceWindow::Event& p_event, const spk::ContractProvider::Job& p_job);
 	};
