@@ -16,6 +16,8 @@ namespace spk
 		const spk::Keyboard* _keyboard;
 		const spk::Controller* _controller;
 
+		long long _lastTime = 0;
+
 		void _treatEvent(spk::UpdateEvent&& p_event) override;
 		spk::UpdateEvent _convertEventToEventType(spk::Event&& p_event) override;
 
