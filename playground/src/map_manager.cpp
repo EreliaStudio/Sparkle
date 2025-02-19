@@ -2,11 +2,17 @@
 
 #include "event.hpp"
 
+std::string MapManager::_composeChunkFileName(const spk::Vector2Int& p_chunkPosition)
+{
+	return ("Chunk_" + std::to_string(p_chunkPosition.x) + "_" + std::to_string(p_chunkPosition.y) + ".chunk");
+}
+
 void MapManager::_loadMap()
 {
 	for (auto& chunk : _chunkEntities)
 	{
-		chunk.second->load();
+		std::filesystem::path chunkFilePath = _worldFolderPath / _composeChunkFileName(chunk.first);
+		chunk.second->load(chunkFilePath);
 	}
 }
 
@@ -14,7 +20,8 @@ void MapManager::_saveMap()
 {
 	for (auto& chunk : _chunkEntities)
 	{
-		chunk.second->save();
+		std::filesystem::path chunkFilePath = _worldFolderPath / _composeChunkFileName(chunk.first);
+		chunk.second->save(chunkFilePath);
 	}
 }
 
@@ -27,6 +34,17 @@ MapManager::MapManager(const std::wstring& p_name) :
 		_saveMap();
 	}))
 {
+
+}
+
+void MapManager::configure(const spk::JSON::File& p_configurationFile)
+{
+	setWorldFolder(p_configurationFile[L"worldFolder"].as<std::wstring>());
+}
+
+void MapManager::setWorldFolder(const std::filesystem::path& p_worldPath)
+{
+	_worldFolderPath = p_worldPath;
 }
 
 void MapManager::setNode(spk::Vector2Int p_nodePosition, int p_layer, int p_nodeID)

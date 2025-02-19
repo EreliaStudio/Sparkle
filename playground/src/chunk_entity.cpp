@@ -38,58 +38,36 @@ void ChunkEntity::InnerComponent::onPaintEvent(spk::PaintEvent& p_event)
 	_renderer.render();
 }
 
-std::string ChunkEntity::_composeFilePath(const spk::Vector2Int& p_chunkPosition)
-{
-	return (_chunkFolderPath.string() + "chunk_" + std::to_string(p_chunkPosition.x) + "_" + std::to_string(p_chunkPosition.y) + ".chunk");
-}
-
 ChunkEntity::ChunkEntity(const spk::Vector2Int& p_chunkPosition, spk::SafePointer<spk::Entity> p_owner) :
 	spk::Entity(L"Chunk " + std::to_wstring(p_chunkPosition.x) + L" " + std::to_wstring(p_chunkPosition.y), p_owner),
 	_innerComponent(addComponent<InnerComponent>()),
 	_chunkPosition(p_chunkPosition)
 {
 	transform().place(Chunk::convertChunkToWorldPosition(p_chunkPosition));
-	load();
 	_innerComponent.setChunk(&_chunk);
 	_innerComponent.setSpriteSheet(TextureManager::instance()->spriteSheet(L"chunkSpriteSheet"));
 }
 
-void ChunkEntity::load()
+void ChunkEntity::load(const std::filesystem::path& p_chunkFilePath)
 {
-	if (!std::filesystem::exists(_chunkFolderPath))
-    {
-        std::filesystem::create_directories(_chunkFolderPath);
-    }
-
-	std::filesystem::path inputFilePath = _composeFilePath(_chunkPosition);
-	
-	std::ifstream file(inputFilePath, std::ios::binary);
+	std::ifstream file(p_chunkFilePath, std::ios::binary);
 
 	if (file.is_open() == true)
 	{
 		_chunk.deserialize(file);
 	}
-	else
-	{
-		
-	}
 
 	_chunk.invalidate();
+	file.close();
 }
 
-void ChunkEntity::save()
+void ChunkEntity::save(const std::filesystem::path& p_chunkFilePath)
 {
-	if (!std::filesystem::exists(_chunkFolderPath))
-    {
-        std::filesystem::create_directories(_chunkFolderPath);
-    }
-	
-	std::filesystem::path outputFilePath = _composeFilePath(_chunkPosition);
-	std::ofstream file(outputFilePath, std::ios::binary);
+	std::ofstream file(p_chunkFilePath, std::ios::binary);
 
 	if (file.is_open() == false)
 	{
-		throw std::runtime_error("Can't open file at [" + outputFilePath.string() + "]");
+		throw std::runtime_error("Can't open file at [" + p_chunkFilePath.string() + "]");
 	}
 
 	_chunk.serialize(file);

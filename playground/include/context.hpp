@@ -54,4 +54,11 @@ public:
 		gameEngine.addEntity(&worldEntity);
 		gameEngine.addEntity(&playerEntity);
 	}
+
+	void configure(const std::filesystem& p_configurationPath)
+	{
+		spk::JSON::File configurationFile(p_configurationPath);
+
+		
+	}
 };
