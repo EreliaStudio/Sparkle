@@ -34,7 +34,7 @@ namespace spk
 				geometry().size.y
 			};
 
-			_valueEdit.setTextSize({static_cast<size_t>((geometry().height - _valueEdit.cornerSize().y * 2)), 0});
+			_valueEdit.setFontSize({static_cast<size_t>((geometry().height - _valueEdit.cornerSize().y * 2)), 0});
 
 			_valueEdit.setGeometry({ 0, 0 }, editSize);
 			_downButton.setGeometry({editSize.x + 3, 0}, buttonSize);

@@ -52,7 +52,7 @@ namespace spk
 		int usedWidth = activeCount * buttonSize.x + (activeCount + 1) * (int)space + _titleLabel.cornerSize().x * 4;
 
 		spk::Vector2Int titleLabelSize = { geometry().size.x - usedWidth, buttonSize.y };
-		_titleLabel.setTextSize(_computeFontSize(geometry().size.y));
+		_titleLabel.setFontSize(_computeFontSize(geometry().size.y));
 
 		spk::Vector2Int anchor = _titleLabel.cornerSize() * 2;
 		_titleLabel.setGeometry(anchor, titleLabelSize);

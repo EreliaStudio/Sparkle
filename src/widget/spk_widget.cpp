@@ -84,12 +84,12 @@ namespace spk
 
 	void Widget::setLayer(const float& p_layer)
 	{
-		float delta = p_layer - _layer;
+		float delta = (p_layer - _layer);
 		for (auto& child : children())
 		{
 			static_cast<Widget*>(child)->setLayer(static_cast<Widget*>(child)->layer() + delta);
 		}
-		_layer = p_layer;
+		_layer = (parent() == nullptr ? 0 : parent()->layer()) + p_layer;
 		requireGeometryUpdate();
 	}
 

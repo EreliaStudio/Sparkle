@@ -19,6 +19,22 @@ namespace spk
 		setFont(Widget::defaultFont());
     }
 
+	spk::Vector2UInt PushButton::computeTextSize()
+	{
+		return (spk::Vector2UInt::max(
+				_releasedFontRenderer.font()->computeStringSize(_releasedText, _releasedFontRenderer.fontSize()),
+				_pressedFontRenderer.font()->computeStringSize(_pressedText, _pressedFontRenderer.fontSize())
+			));
+	}
+
+	spk::Vector2UInt PushButton::computeExpectedTextSize(const spk::Font::Size& p_textSize)
+	{
+		return (spk::Vector2UInt::max(
+				_releasedFontRenderer.font()->computeStringSize(_releasedText, p_textSize),
+				_pressedFontRenderer.font()->computeStringSize(_pressedText, p_textSize)
+			));
+	}
+
 	ContractProvider::Contract PushButton::subscribe(const ContractProvider::Job& p_job)
 	{
 		return (_onClickProvider.subscribe(p_job));
@@ -52,14 +68,14 @@ namespace spk
 		requireGeometryUpdate();
 	}
 
-	void PushButton::setTextSize(const spk::Font::Size& p_textSize)
+	void PushButton::setFontSize(const spk::Font::Size& p_textSize)
 	{
 		_releasedFontRenderer.setFontSize(p_textSize);
 		_pressedFontRenderer.setFontSize(p_textSize);
 		requireGeometryUpdate();
 	}
 	
-	void PushButton::setTextSize(const spk::Font::Size& p_releasedTextSize, const spk::Font::Size& p_pressedTextSize)
+	void PushButton::setFontSize(const spk::Font::Size& p_releasedTextSize, const spk::Font::Size& p_pressedTextSize)
 	{
 		_releasedFontRenderer.setFontSize(p_releasedTextSize);
 		_pressedFontRenderer.setFontSize(p_pressedTextSize);
@@ -171,6 +187,16 @@ namespace spk
 	spk::SafePointer<spk::SpriteSheet> PushButton::iconset(State p_state)
 	{
 		return dynamic_cast<spk::SpriteSheet *>((p_state == State::Released ? _releasedIconRenderer.texture() : _pressedIconRenderer.texture()).get());
+	}
+
+	spk::SafePointer<spk::Font> PushButton::font(State p_state) const
+	{
+		return (p_state == State::Released ? _releasedFontRenderer.font() : _pressedFontRenderer.font());
+	}
+	
+	const spk::Font::Size& PushButton::fontSize(State p_state) const
+	{
+		return (p_state == State::Released ? _releasedFontRenderer.fontSize() : _pressedFontRenderer.fontSize());
 	}
 
     const spk::Vector2Int& PushButton::pressedOffset() const

@@ -71,7 +71,7 @@ namespace spk
 		requireGeometryUpdate();
 	}
 
-	void TextLabel::setTextSize(const spk::Font::Size& p_textSize)
+	void TextLabel::setFontSize(const spk::Font::Size& p_textSize)
 	{
 		_fontRenderer.setFontSize(p_textSize);
 		requireGeometryUpdate();

@@ -55,7 +55,7 @@ public:
 		gameEngine.addEntity(&playerEntity);
 	}
 
-	void configure(const std::filesystem& p_configurationPath)
+	void configure(const std::filesystem::path& p_configurationPath)
 	{
 		spk::JSON::File configurationFile(p_configurationPath);
 

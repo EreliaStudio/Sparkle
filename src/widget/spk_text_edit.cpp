@@ -222,7 +222,7 @@ namespace spk
 		requireGeometryUpdate();
 	}
 
-	void TextEdit::setTextSize(const spk::Font::Size &p_textSize)
+	void TextEdit::setFontSize(const spk::Font::Size &p_textSize)
 	{
 		_fontRenderer.setFontSize(p_textSize);
 		requireGeometryUpdate();

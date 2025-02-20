@@ -72,14 +72,17 @@ namespace spk
         PushButton(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent);
 		~PushButton() = default;
 
+		spk::Vector2UInt computeTextSize();
+		spk::Vector2UInt computeExpectedTextSize(const spk::Font::Size& p_textSize);
+
 		ContractProvider::Contract subscribe(const ContractProvider::Job& p_job);
 
 		void setFont(const spk::SafePointer<spk::Font>& p_font);
 		void setFont(const spk::SafePointer<spk::Font>& p_releasedFont, const spk::SafePointer<spk::Font>& p_pressedFont);
 		void setText(const std::wstring& p_text);
 		void setText(const std::wstring& p_releasedText, const std::wstring& p_pressedText);
-		void setTextSize(const spk::Font::Size& p_textSize);
-		void setTextSize(const spk::Font::Size& p_releasedTextSize, const spk::Font::Size& p_pressedTextSize);
+		void setFontSize(const spk::Font::Size& p_textSize);
+		void setFontSize(const spk::Font::Size& p_releasedTextSize, const spk::Font::Size& p_pressedTextSize);
 		void setTextColor(const spk::Color& p_glyphColor, const spk::Color& p_outlineColor);
 		void setTextColor(
 			const spk::Color& p_releasedGlyphColor, const spk::Color& p_releasedOutlineColor,
@@ -108,5 +111,8 @@ namespace spk
 
         const spk::Vector2Int& pressedOffset() const;
 		const spk::Vector2Int& cornerSize() const;
+
+		spk::SafePointer<spk::Font> font(State p_state = State::Released) const;
+		const spk::Font::Size& fontSize(State p_state = State::Released) const;
     };
 }
