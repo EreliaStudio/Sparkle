@@ -291,53 +291,11 @@ void MapEditorInteractor::setLevelSelector(spk::SafePointer<LevelSelector> p_lev
 	_levelSelector = p_levelSelector;
 }
 
-
-spk::Vector2UInt MapEditorMenu::buttonSize() const
-{
-	return {30, 30};
-}
-
-void MapEditorMenu::_onGeometryChange()
-{
-	_saveButton.setGeometry({0, 0}, buttonSize());
-	_loadButton.setGeometry({buttonSize().x + 5, 0}, buttonSize());
-}
-
-MapEditorMenu::MapEditorMenu(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
-	spk::Widget(p_name, p_parent),
-	_saveButton(p_name + L" - SaveButton", this),
-	_loadButton(p_name + L" - LoadButton", this)
-{
-	_saveButton.setIconset(TextureManager::instance()->spriteSheet(L"iconset"));
-	_saveButton.setIcon(TextureManager::instance()->spriteSheet(L"iconset")->sprite(5));
-	_saveButton.setCornerSize(2);
-	_saveContract = _saveButton.subscribe([&](){EventCenter::instance()->notifyEvent(Event::SaveMap);});
-	_saveButton.activate();
-
-	_loadButton.setIconset(TextureManager::instance()->spriteSheet(L"iconset"));
-	_loadButton.setIcon(TextureManager::instance()->spriteSheet(L"iconset")->sprite(6));
-	_loadButton.setCornerSize(2);
-	_loadContract = _loadButton.subscribe([&](){EventCenter::instance()->notifyEvent(Event::LoadMap);});
-	_loadButton.activate();
-}
-
-spk::Vector2UInt MapEditorMenu::minimalSize() const
-{
-	return {buttonSize().x * 2 + 5, buttonSize().y};
-}
-
-spk::Vector2UInt MapEditorMenu::maximalSize() const
-{
-	return minimalSize();
-}
-
 void MapEditor::_onGeometryChange()
 {
 	spk::Vector2UInt inventorySize = _inventory.minimalSize();
-	spk::Vector2UInt menuSize = _menu.minimalSize();
 
 	_inventory.setGeometry((geometry().size - inventorySize) / 2 , inventorySize);
-	_menu.setGeometry({geometry().size.x - menuSize.x, 0}, menuSize);
 	_interactor.setGeometry(geometry());
 	_gameEngineWidget.setGeometry(geometry());
 }
@@ -365,7 +323,6 @@ MapEditor::MapEditor(const std::wstring& p_name, spk::SafePointer<spk::Widget> p
 	spk::Widget(p_name, p_parent),
 	_inventory(p_name + L" - Inventory", this),
 	_interactor(p_name + L" - Interactor", this),
-	_menu(p_name + L" - Menu", this),
 	_gameEngineWidget(p_name + L" - GameEngineWidget", this)
 {
 	_gameEngineWidget.setLayer(0);
@@ -381,10 +338,6 @@ MapEditor::MapEditor(const std::wstring& p_name, spk::SafePointer<spk::Widget> p
 	_interactor.activate();
 	_interactor.setNodeSelector(_inventory.content()->nodeSelector());
 	_interactor.setLevelSelector(_inventory.content()->levelSelector());
-
-	_menu.setMenuHeight(25);
-	_menu.deactivateMenuButton(spk::IInterfaceWindow::MenuBar::Button::Maximize);
-	_menu.activate();
 
 	_quitContract = _inventory.subscribeTo(spk::IInterfaceWindow::Event::Close, [&](){removeChild(&_inventory);});
 }

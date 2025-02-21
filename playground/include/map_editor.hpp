@@ -83,29 +83,10 @@ public:
     void setLevelSelector(spk::SafePointer<LevelSelector> p_levelSelector);
 };
 
-class MapEditorMenu : public spk::Widget
-{
-private:
-    spk::PushButton _saveButton;
-    spk::PushButton::Contract _saveContract;
-    spk::PushButton _loadButton;
-    spk::PushButton::Contract _loadContract;
-
-    spk::Vector2UInt buttonSize() const;
-    void _onGeometryChange() override;
-
-public:
-    MapEditorMenu(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent);
-
-    spk::Vector2UInt minimalSize() const;
-    spk::Vector2UInt maximalSize() const;
-};
-
 class MapEditor : public spk::Widget
 {
 private:
     spk::GameEngineWidget _gameEngineWidget;
-    spk::InterfaceWindow<MapEditorMenu> _menu;
     spk::InterfaceWindow<MapEditorInventory> _inventory;
     MapEditorInteractor _interactor;
 

@@ -11,17 +11,12 @@ public:
 		menuBar()->setHeight(25);
 		
 		spk::SafePointer<spk::MenuBar::Menu> fileMenu = menuBar()->addMenu(L"File");
-		fileMenu->addItem(L"Save", [&](){spk::cout << "Saving" << std::endl;});
-		fileMenu->addItem(L"Load", [&](){spk::cout << "Loading" << std::endl;});
-		fileMenu->addBreak()->setHeight(3);
-		fileMenu->addItem(L"Undo", [&](){});
-		fileMenu->addItem(L"Redo", [&](){});
 
 		spk::SafePointer<spk::MenuBar::Menu> editMenu = menuBar()->addMenu(L"Edit");
-		editMenu->addItem(L"Undo", [&](){});
-		editMenu->addItem(L"Redo", [&](){});
 
 		spk::SafePointer<spk::MenuBar::Menu> editorMenu = menuBar()->addMenu(L"Editor");
+		editorMenu->addItem(L"Save", [&](){EventCenter::instance()->notifyEvent(Event::SaveMap);});
+		editorMenu->addItem(L"Load", [&](){EventCenter::instance()->notifyEvent(Event::LoadMap);});
 	}
 };
 
