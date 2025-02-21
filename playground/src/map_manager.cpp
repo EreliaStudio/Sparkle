@@ -53,7 +53,7 @@ void MapManager::setNode(spk::Vector2Int p_nodePosition, int p_layer, int p_node
 
 	spk::SafePointer<ChunkEntity> targetChunkEntity = chunkEntity(chunkPosition);
 
-	spk::SafePointer<BakableChunk> targetChunk = targetChunkEntity->chunk();
+	spk::SafePointer<BakableChunk> targetChunk = spk::safe_pointer_cast<BakableChunk>(targetChunkEntity->chunk());
 
 	spk::Vector2Int relativePosition = p_nodePosition - chunkPosition * Chunk::Size;
 
@@ -71,5 +71,5 @@ spk::SafePointer<ChunkEntity> MapManager::chunkEntity(const spk::Vector2Int& p_c
 	{
 		_chunkEntities.emplace(p_chunkPosition, std::make_unique<ChunkEntity>(p_chunkPosition, owner()));
 	}
-	return (_chunkEntities[p_chunkPosition]);
+	return (_chunkEntities[p_chunkPosition].get());
 }

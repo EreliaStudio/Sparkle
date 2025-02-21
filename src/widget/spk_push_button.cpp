@@ -3,8 +3,22 @@
 #include "structure/graphics/spk_viewport.hpp"
 #include "spk_debug_macro.hpp"
 
+#include "spk_generated_resources.hpp"
+
 namespace spk
 {
+
+	spk::SpriteSheet PushButton::_defaultHoverNineSlice = spk::SpriteSheet::fromRawData(
+		SPARKLE_GET_RESOURCE("resources/textures/defaultNineSlice_Light.png"),
+		spk::Vector2UInt(3, 3),
+		SpriteSheet::Filtering::Linear
+	);
+
+	spk::SafePointer<spk::SpriteSheet> PushButton::defaultHoverNineSlice()
+	{
+		return (&_defaultHoverNineSlice);
+	}
+
 	PushButton::PushButton(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent) :
 		Widget(p_name, p_parent),
 		_isPressed(false),
@@ -41,7 +55,7 @@ namespace spk
 		_fontRenderer.pressed.setOutlineColor(spk::Color::black);
 
 		_nineSliceRenderer.released.setSpriteSheet(Widget::defaultNineSlice());
-		_nineSliceRenderer.hovered.setSpriteSheet(Widget::defaultNineSlice());
+		_nineSliceRenderer.hovered.setSpriteSheet(PushButton::defaultHoverNineSlice());
 		_nineSliceRenderer.pressed.setSpriteSheet(Widget::defaultNineSlice());
 
 		requireGeometryUpdate();
@@ -212,12 +226,12 @@ namespace spk
 
 	const spk::SafePointer<spk::SpriteSheet>& PushButton::spriteSheet(State p_state) const
 	{
-		return _nineSliceRenderer[p_state].spriteSheet();
+		return safe_pointer_cast<spk::SpriteSheet>(_nineSliceRenderer[p_state].spriteSheet());
 	}
 
 	const spk::SafePointer<spk::SpriteSheet>& PushButton::iconset(State p_state) const
 	{
-		return _iconRenderer[p_state].texture();
+		return safe_pointer_cast<spk::SpriteSheet>(_iconRenderer[p_state].texture());
 	}
 
 	const spk::SafePointer<spk::Font>& PushButton::font(State p_state) const

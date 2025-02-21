@@ -68,7 +68,7 @@ namespace spk
 			throw std::runtime_error("Invalid sprite sheet size. NineSlicedTextureRenderer expects a 3x3 sprite sheet.");
 		}
 
-		_textureRenderer.setTexture(p_spriteSheet);
+		_textureRenderer.setTexture(safe_pointer_cast<OpenGL::TextureObject>(p_spriteSheet));
 	}
 
 	spk::SafePointer<spk::OpenGL::TextureObject>& NineSliceRenderer::spriteSheet()

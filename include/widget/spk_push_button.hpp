@@ -35,7 +35,11 @@ namespace spk
 			Hovered
 		};
 
+		static spk::SafePointer<spk::SpriteSheet> defaultHoverNineSlice();
+
     private:
+		static spk::SpriteSheet _defaultHoverNineSlice;
+
 		inline State _currentVisualState() const
 		{
 			if (_isPressed)
