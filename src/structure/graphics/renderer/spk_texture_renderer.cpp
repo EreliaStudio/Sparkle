@@ -65,7 +65,12 @@ namespace spk
 		_samplerObject.bind(p_image);
 	}
 
-	spk::SafePointer<spk::OpenGL::TextureObject> TextureRenderer::texture()
+	spk::SafePointer<spk::OpenGL::TextureObject>& TextureRenderer::texture()
+	{
+		return (_samplerObject.texture());
+	}
+
+	const spk::SafePointer<spk::OpenGL::TextureObject>& TextureRenderer::texture() const
 	{
 		return (_samplerObject.texture());
 	}

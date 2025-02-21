@@ -377,6 +377,36 @@ namespace spk
             );
         }
 
+		IVector2 floor() const
+		{
+			IVector2 result;
+            
+			result.x = std::floor(x);
+            result.y = std::floor(y);
+            
+			return result;
+		}
+
+		IVector2 ceil() const
+		{
+			IVector2 result;
+            
+			result.x = std::ceil(x);
+            result.y = std::ceil(y);
+            
+			return result;
+		}
+
+		IVector2 round() const
+		{
+			IVector2 result;
+            
+			result.x = std::round(x);
+            result.y = std::round(y);
+            
+			return result;
+		}
+
         template <typename TOtherType>
         static IVector2 floor(const IVector2<TOtherType>& p_vector)
         {

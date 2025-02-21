@@ -36,7 +36,7 @@ public:
 			_pushButtons[i].subscribe([&](){_level = i;});
 			_pushButtons[i].setCornerSize(2);
 			_pushButtons[i].setIconset(iconset);
-			_pushButtons[i].setSprite(iconset->sprite(i));
+			_pushButtons[i].setIcon(iconset->sprite(i));
 			_pushButtons[i].activate();
 		}
 	}
@@ -281,19 +281,6 @@ private:
 	spk::SafePointer<NodeSelector> _nodeSelector;
 	spk::SafePointer<LevelSelector> _levelSelector;
 
-	spk::Vector2Int convertScreenToWorldPosition(const spk::Vector2Int& p_screenPosition)
-	{
-		if (Context::instance() == nullptr)
-			throw std::runtime_error("Can't access Context.");
-
-		spk::Vector2 relPosition = static_cast<spk::Vector2>(p_screenPosition) / static_cast<spk::Vector2>(geometry().size);
-		spk::Vector2 screenPosition = relPosition * 2 - 1;
-
-		spk::Vector3 result = Context::instance()->mainCamera.inverseProjectionMatrix() * spk::Vector3(screenPosition, 0);
-
-		return (spk::Vector2Int::floor(result.xy()) + Context::instance()->cameraEntity.transform().position().xy());
-	}
-	
 	void _onMouseEvent(spk::MouseEvent& p_event)
 	{
 		if (Context::instance() == nullptr)
@@ -308,9 +295,9 @@ private:
 			}
 			case spk::MouseEvent::Type::Motion:
 			{
-				if (_isPlacing == true && _nodeSelector != nullptr && _levelSelector != nullptr)
+				if (isPointed(p_event.mouse) == true && _isPlacing == true && _nodeSelector != nullptr && _levelSelector != nullptr)
 				{
-					spk::Vector2Int worldPosition = convertScreenToWorldPosition(p_event.mouse->position);
+					spk::Vector2Int worldPosition = Context::instance()->cameraManager.convertScreenToWorldPosition(p_event.mouse->position - geometry().anchor).floor();
 					int layer = _levelSelector->level();
 					int node = _nodeSelector->selectedNode();
 
@@ -372,13 +359,13 @@ public:
 		_loadButton(p_name + L" - LoadButton", this)
 	{
 		_saveButton.setIconset(TextureManager::instance()->spriteSheet(L"iconset"));
-		_saveButton.setSprite(TextureManager::instance()->spriteSheet(L"iconset")->sprite(5));
+		_saveButton.setIcon(TextureManager::instance()->spriteSheet(L"iconset")->sprite(5));
 		_saveButton.setCornerSize(2);
 		_saveContract = _saveButton.subscribe([&](){EventCenter::instance()->notifyEvent(Event::SaveMap);});
 		_saveButton.activate();
 
 		_loadButton.setIconset(TextureManager::instance()->spriteSheet(L"iconset"));
-		_loadButton.setSprite(TextureManager::instance()->spriteSheet(L"iconset")->sprite(6));
+		_loadButton.setIcon(TextureManager::instance()->spriteSheet(L"iconset")->sprite(6));
 		_loadButton.setCornerSize(2);
 		_loadContract = _loadButton.subscribe([&](){EventCenter::instance()->notifyEvent(Event::LoadMap);});
 		_loadButton.activate();
@@ -409,9 +396,8 @@ private:
 		{
 			size_t glyphSize = geometry().size.y - button->cornerSize().y * 2 - _backgroundFrame.cornerSize().y * 2;
 
-			button->setFontSize(
-				{glyphSize, 2},
-				{glyphSize - 4, 2});
+			button->setFontSize({glyphSize, 0});
+			button->setFontSize({glyphSize - 4, 0}, spk::PushButton::State::Pressed);
 			spk::Vector2Int buttonTextSize = button->computeTextSize();
 
 			float spaceLeft = (geometry().size.y - buttonTextSize.y) / 2.0f;
@@ -441,11 +427,13 @@ public:
 		std::unique_ptr<spk::PushButton> button = std::make_unique<spk::PushButton>(name() + L" - " + p_menuName + L" Menu button", this);
 
 		button->setText(p_menuName);
-		button->setSpriteSheet(nullptr);
+		button->setNineSlice(nullptr);
 		button->setCornerSize(0);
 		button->setLayer(10);
 		button->activate();
+
 		_menuButtons.emplace_back(std::move(button));
+
 		requireGeometryUpdate();
 		requestPaint();
 	}
@@ -455,13 +443,14 @@ template<typename TContent>
 class HUDWidget : public spk::Widget
 {
 private:
+	float _menuBarHeight = 25;
 	MenuBarWidget _menuBarWidget;
 	TContent _content;
 
 	void _onGeometryChange()
 	{
-		_menuBarWidget.setGeometry({0, 0}, {geometry().size.x, 25});
-		_content.setGeometry({0, 25}, {geometry().size.x, geometry().size.y - 25});
+		_menuBarWidget.setGeometry({0, 0}, {geometry().size.x, _menuBarHeight});
+		_content.setGeometry({0, _menuBarHeight}, {geometry().size.x, geometry().size.y - _menuBarHeight});
 	}
 
 public:
@@ -474,15 +463,27 @@ public:
 		_menuBarWidget.activate();
 	}
 
-	void addMenu(const std::wstring& p_menuName)
+	void setMenuBarHeight(const float& p_height)
 	{
-		_menuBarWidget.addMenu(p_menuName);
+		_menuBarHeight = p_height;
+		requireGeometryUpdate();	
+	}
+
+	spk::SafePointer<MenuBarWidget> menuBar()
+	{
+		return (&_menuBarWidget);
+	}
+
+	spk::SafePointer<TContent> content()
+	{
+		return (&_content);
 	}
 };
 
 class MapEditor : public spk::Widget
 {
 private:
+	spk::GameEngineWidget _gameEngineWidget;
 	spk::InterfaceWindow<MapEditorMenu> _menu;
 	spk::InterfaceWindow<MapEditorInventory> _inventory;
 	MapEditorInteractor _interactor;
@@ -497,6 +498,7 @@ private:
 		_inventory.setGeometry((geometry().size - inventorySize) / 2 , inventorySize);
 		_menu.setGeometry({geometry().size.x - menuSize.x, 0}, menuSize);
 		_interactor.setGeometry(geometry());
+		_gameEngineWidget.setGeometry(geometry());
 	}
 
 	void _onKeyboardEvent(spk::KeyboardEvent& p_event) override
@@ -523,8 +525,13 @@ public:
 		spk::Widget(p_name, p_parent),
 		_inventory(p_name + L" - Inventory", this),
 		_interactor(p_name + L" - Interactor", this),
-		_menu(p_name + L" - Menu", this)
+		_menu(p_name + L" - Menu", this),
+		_gameEngineWidget(p_name + L" - GameEngineWidget", this)
 	{
+		_gameEngineWidget.setLayer(0);
+		_gameEngineWidget.setGameEngine(&(Context::instance()->gameEngine));
+		_gameEngineWidget.activate();
+
 		_inventory.deactivateMenuButton(spk::IInterfaceWindow::MenuBar::Button::Maximize);
 		_inventory.setMenuHeight(25);
 		_inventory.setLayer(100);
@@ -551,9 +558,11 @@ public:
 	MapEditorHUD(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
 		HUDWidget<MapEditor>(p_name, p_parent)
 	{
-		addMenu(L"File");
-		addMenu(L"Edit");
-		addMenu(L"Editor");
+		setMenuBarHeight(25);
+		
+		menuBar()->addMenu(L"File");
+		menuBar()->addMenu(L"Edit");
+		menuBar()->addMenu(L"Editor");
 	}
 };
 
@@ -569,12 +578,6 @@ int main()
 	mapEditorWidget.setLayer(10);
 	mapEditorWidget.setGeometry(win->geometry());
 	mapEditorWidget.activate();
-
-	spk::GameEngineWidget gameEngineWidget = spk::GameEngineWidget(L"Engine widget", win->widget());
-	gameEngineWidget.setLayer(0);
-	gameEngineWidget.setGeometry(win->geometry());
-	gameEngineWidget.setGameEngine(&(Context::instance()->gameEngine));
-	gameEngineWidget.activate();
 	
 	return (app.run());
 }

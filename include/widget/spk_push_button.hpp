@@ -31,36 +31,71 @@ namespace spk
 		enum class State
 		{
 			Pressed,
-			Released
+			Released,
+			Hovered
 		};
+
     private:
+		inline State _currentVisualState() const
+		{
+			if (_isPressed)
+				return State::Pressed;
+			if (_isHovered)
+				return State::Hovered;
+			return State::Released;
+		}
+
         bool _isPressed;
+        bool _isHovered;
 		
+		template<typename TType>
+		struct Data
+		{
+			TType released;
+			TType hovered;
+			TType pressed;
+
+			TType& operator[](const State& p_state)
+			{
+				switch (p_state)
+				{
+					case State::Released:
+						return (released);
+					case State::Pressed:
+						return (pressed);
+					default:
+						return (hovered);
+				}
+			}
+
+			const TType& operator[](const State& p_state) const
+			{
+				switch (p_state)
+				{
+					case State::Released:
+						return (released);
+					case State::Pressed:
+						return (pressed);
+					default:
+						return (hovered);
+				}
+			}
+		};
+
 		ContractProvider _onClickProvider;
 
-		FontRenderer _releasedFontRenderer;
-		FontRenderer _pressedFontRenderer;
-		TextureRenderer _releasedIconRenderer;
-		TextureRenderer _pressedIconRenderer;
-        NineSliceRenderer _releasedRenderer;
-        NineSliceRenderer _pressedRenderer;
+		Data<FontRenderer> _fontRenderer;
+		Data<TextureRenderer> _iconRenderer;
+        Data<NineSliceRenderer> _nineSliceRenderer;
+
+		Data<spk::Vector2UInt> _cornerSize;
+
+		Data<std::wstring> _text;
+		Data<spk::SpriteSheet::Sprite> _icon;
+		Data<spk::VerticalAlignment> _verticalAlignment;
+		Data<spk::HorizontalAlignment> _horizontalAlignment;
 
         spk::Vector2Int _pressedOffset;
-
-        spk::Vector2Int _releasedCornerSize;
-        spk::Vector2Int _pressedCornerSize;
-
-		std::wstring _releasedText;
-		std::wstring _pressedText;
-
-		spk::SpriteSheet::Sprite _releasedSprite;
-		spk::SpriteSheet::Sprite _pressedSprite;
-
-		spk::VerticalAlignment _releasedVerticalAlignment;
-		spk::VerticalAlignment _pressedVerticalAlignment;
-
-		spk::HorizontalAlignment _releasedHorizontalAlignment;
-		spk::HorizontalAlignment _pressedHorizontalAlignment;
 
     private:
         virtual void _onGeometryChange() override;
@@ -78,41 +113,45 @@ namespace spk
 		ContractProvider::Contract subscribe(const ContractProvider::Job& p_job);
 
 		void setFont(const spk::SafePointer<spk::Font>& p_font);
-		void setFont(const spk::SafePointer<spk::Font>& p_releasedFont, const spk::SafePointer<spk::Font>& p_pressedFont);
+		void setFont(const spk::SafePointer<spk::Font>& p_font, const State& p_state);
+
 		void setText(const std::wstring& p_text);
-		void setText(const std::wstring& p_releasedText, const std::wstring& p_pressedText);
-		void setFontSize(const spk::Font::Size& p_textSize);
-		void setFontSize(const spk::Font::Size& p_releasedTextSize, const spk::Font::Size& p_pressedTextSize);
+		void setText(const std::wstring& p_text, const State& p_state);
+		
+		void setFontSize(const spk::Font::Size& p_fontSize);
+		void setFontSize(const spk::Font::Size& p_fontSize, const State& p_state);
+
 		void setTextColor(const spk::Color& p_glyphColor, const spk::Color& p_outlineColor);
-		void setTextColor(
-			const spk::Color& p_releasedGlyphColor, const spk::Color& p_releasedOutlineColor,
-			const spk::Color& p_pressedGlyphColor, const spk::Color& p_pressedOutlineColor
-		);
+		void setTextColor(const spk::Color& p_glyphColor, const spk::Color& p_outlineColor, const State& p_state);
+
 		void setTextAlignment(const spk::HorizontalAlignment& p_horizontalAlignment, const spk::VerticalAlignment& p_verticalAlignment);
-		void setTextAlignment(
-			const spk::HorizontalAlignment& p_releasedHorizontalAlignment, const spk::VerticalAlignment& p_releasedVerticalAlignment, 
-			const spk::HorizontalAlignment& p_pressedHorizontalAlignment, const spk::VerticalAlignment& p_pressedVerticalAlignment
-		);
+		void setTextAlignment(const spk::HorizontalAlignment& p_horizontalAlignment, const spk::VerticalAlignment& p_verticalAlignment, const State& p_state);
 
 		void setIconset(spk::SafePointer<spk::SpriteSheet> p_iconset);
-		void setIconset(spk::SafePointer<spk::SpriteSheet> p_pressedIconset, spk::SafePointer<spk::SpriteSheet> p_releasedIconset);
-		void setSprite(const spk::SpriteSheet::Sprite& p_sprite);
-		void setSprite(const spk::SpriteSheet::Sprite& p_pressedSprite, const spk::SpriteSheet::Sprite& p_releasedSprite);
+		void setIconset(spk::SafePointer<spk::SpriteSheet> p_iconset, const State& p_state);
+
+		void setIcon(const spk::SpriteSheet::Sprite& p_icon);
+		void setIcon(const spk::SpriteSheet::Sprite& p_icon, const State& p_state);
 
 		void setCornerSize(const spk::Vector2Int& p_cornerSize);
-		void setCornerSize(const spk::Vector2Int& p_releasedCornerSize, const spk::Vector2Int& p_pressedCornerSize);
+		void setCornerSize(const spk::Vector2Int& p_cornerSize, const State& p_state);
 
-		void setSpriteSheet(const SafePointer<SpriteSheet>& p_spriteSheet);
-		void setSpriteSheet(const SafePointer<SpriteSheet>& p_releasedSpriteSheet, const SafePointer<SpriteSheet>& p_pressedSpriteSheet);
+		void setNineSlice(const SafePointer<SpriteSheet>& p_spriteSheet);
+		void setNineSlice(const SafePointer<SpriteSheet>& p_spriteSheet, const State& p_state);
 
         void setPressedOffset(const spk::Vector2Int& p_offset);
 
-		spk::SafePointer<spk::SpriteSheet> iconset(State p_state = State::Released);
-
         const spk::Vector2Int& pressedOffset() const;
-		const spk::Vector2Int& cornerSize() const;
 
-		spk::SafePointer<spk::Font> font(State p_state = State::Released) const;
+		const spk::SafePointer<spk::SpriteSheet>& spriteSheet(State p_state = State::Released) const;
+		const spk::SafePointer<spk::SpriteSheet>& iconset(State p_state = State::Released) const;
+		const spk::SafePointer<spk::Font>& font(State p_state = State::Released) const;
+
+		const spk::Vector2UInt& cornerSize(State p_state = State::Released) const;
+		const std::wstring& text(State p_state = State::Released) const;
 		const spk::Font::Size& fontSize(State p_state = State::Released) const;
+		const spk::SpriteSheet::Sprite& icon(State p_state = State::Released) const;
+		const spk::VerticalAlignment& verticalAlignment(State p_state = State::Released) const;
+		const spk::HorizontalAlignment& horizontalAlignment(State p_state = State::Released) const;
     };
 }

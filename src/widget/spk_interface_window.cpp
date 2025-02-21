@@ -127,17 +127,17 @@ namespace spk
 		_titleLabel.activate();
 
 		_closeButton.setIconset(spk::Widget::defaultIconset());
-		_closeButton.setSprite(spk::Widget::defaultIconset()->sprite(0));
+		_closeButton.setIcon(spk::Widget::defaultIconset()->sprite(0));
 		_closeButton.setCornerSize(4);
 		_closeButton.activate();
 
 		_minimizeButton.setIconset(spk::Widget::defaultIconset());
-		_minimizeButton.setSprite(spk::Widget::defaultIconset()->sprite(3));
+		_minimizeButton.setIcon(spk::Widget::defaultIconset()->sprite(3));
 		_minimizeButton.setCornerSize(4);
 		_minimizeButton.activate();
 
 		_maximizeButton.setIconset(spk::Widget::defaultIconset());
-		_maximizeButton.setSprite(spk::Widget::defaultIconset()->sprite(1));
+		_maximizeButton.setIcon(spk::Widget::defaultIconset()->sprite(1));
 		_maximizeButton.setCornerSize(4);
 		_maximizeButton.activate();
 	}
@@ -310,14 +310,14 @@ namespace spk
 
 		if (!_isMaximized)
 		{
-			_menuBar._maximizeButton.setSprite(spk::Widget::defaultIconset()->sprite(2));
+			_menuBar._maximizeButton.setIcon(spk::Widget::defaultIconset()->sprite(2));
 			_previousGeometry = geometry();
 			setGeometry({0, 0}, parent()->geometry().size);
 			_isMaximized = true;
 		}
 		else
 		{
-			_menuBar._maximizeButton.setSprite(spk::Widget::defaultIconset()->sprite(1));
+			_menuBar._maximizeButton.setIcon(spk::Widget::defaultIconset()->sprite(1));
 			setGeometry(_previousGeometry);
 			_isMaximized = false;
 		}

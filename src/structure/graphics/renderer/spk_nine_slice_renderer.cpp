@@ -71,6 +71,16 @@ namespace spk
 		_textureRenderer.setTexture(p_spriteSheet);
 	}
 
+	spk::SafePointer<spk::OpenGL::TextureObject>& NineSliceRenderer::spriteSheet()
+	{
+		return (_textureRenderer.texture());
+	}
+	
+	const spk::SafePointer<spk::OpenGL::TextureObject>& NineSliceRenderer::spriteSheet() const
+	{
+		return (_textureRenderer.texture());
+	}
+
 	void NineSliceRenderer::validate()
 	{
 		_textureRenderer.validate();

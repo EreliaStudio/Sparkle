@@ -28,7 +28,7 @@ namespace spk
 
 		if (geometry().size.x < _minimumSize.x || geometry().size.y < _minimumSize.y)
 		{
-			setGeometry(geometry().anchor, spk::Vector2UInt::max(_minimumSize, geometry().size));
+			setGeometry(viewport().geometry().anchor, spk::Vector2UInt::max(_minimumSize, geometry().size));
 		}
 	}
 
@@ -90,22 +90,22 @@ namespace spk
 		constexpr int offset = 5;
 
 		_topAnchorArea = {
-			{ geometry().anchor.x - offset,         geometry().anchor.y - offset },
+			{ viewport().geometry().anchor.x - offset,         viewport().geometry().anchor.y - offset },
 			{ geometry().size.x + offset * 2,      offset * 2 }
 		};
 
 		_leftAnchorArea = {
-			{ geometry().anchor.x - offset,         geometry().anchor.y - offset },
+			{ viewport().geometry().anchor.x - offset,         viewport().geometry().anchor.y - offset },
 			{ offset * 2,                          geometry().size.y + offset * 2 }
 		};
 
 		_rightAnchorArea = {
-			{ geometry().anchor.x + geometry().size.x - offset,  geometry().anchor.y - offset },
+			{ viewport().geometry().anchor.x + geometry().size.x - offset,  viewport().geometry().anchor.y - offset },
 			{ offset * 2,                                       geometry().size.y + offset * 2 }
 		};
 
 		_downAnchorArea = {
-			{ geometry().anchor.x - offset,         geometry().anchor.y + geometry().size.y - offset },
+			{ viewport().geometry().anchor.x - offset,         viewport().geometry().anchor.y + geometry().size.y - offset },
 			{ geometry().size.x + offset * 2,      offset * 2 }
 		};
 	}

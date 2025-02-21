@@ -30,5 +30,5 @@ public:
 	void onPaintEvent(spk::PaintEvent& p_event) override;
 	void onMouseEvent(spk::MouseEvent& p_event) override;
 
-	spk::Vector3 convertScreenToWorldPosition(const spk::Vector2Int& p_screenPosition);
+	spk::Vector2 convertScreenToWorldPosition(const spk::Vector2Int& p_screenPosition);
 };

@@ -1,226 +1,276 @@
 #include "widget/spk_push_button.hpp"
 
 #include "structure/graphics/spk_viewport.hpp"
-
 #include "spk_debug_macro.hpp"
 
 namespace spk
 {
-    PushButton::PushButton(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent) :
+	PushButton::PushButton(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent) :
 		Widget(p_name, p_parent),
 		_isPressed(false),
-		_pressedOffset(2, 2),
-		_releasedCornerSize(10, 10),
-		_pressedCornerSize(10, 10)
-    {
-		setTextColor(spk::Color::white, spk::Color::black);
-		setTextAlignment(spk::HorizontalAlignment::Centered, spk::VerticalAlignment::Centered);
-		setSpriteSheet(Widget::defaultNineSlice());
-		setFont(Widget::defaultFont());
-    }
+		_isHovered(false),
+		_pressedOffset(2, 2)
+	{
+		_cornerSize.released = {10, 10};
+		_cornerSize.hovered  = {10, 10};
+		_cornerSize.pressed  = {10, 10};
+
+		_text.released = L"";
+		_text.hovered  = L"";
+		_text.pressed  = L"";
+
+		_verticalAlignment.released   = spk::VerticalAlignment::Centered;
+		_verticalAlignment.hovered    = spk::VerticalAlignment::Centered;
+		_verticalAlignment.pressed    = spk::VerticalAlignment::Centered;
+
+		_horizontalAlignment.released = spk::HorizontalAlignment::Centered;
+		_horizontalAlignment.hovered  = spk::HorizontalAlignment::Centered;
+		_horizontalAlignment.pressed  = spk::HorizontalAlignment::Centered;
+
+		_fontRenderer.released.setFont(Widget::defaultFont());
+		_fontRenderer.hovered.setFont(Widget::defaultFont());
+		_fontRenderer.pressed.setFont(Widget::defaultFont());
+
+		_fontRenderer.released.setGlyphColor(spk::Color::white);
+		_fontRenderer.released.setOutlineColor(spk::Color::black);
+
+		_fontRenderer.hovered.setGlyphColor(spk::Color::white);
+		_fontRenderer.hovered.setOutlineColor(spk::Color::black);
+
+		_fontRenderer.pressed.setGlyphColor(spk::Color::white);
+		_fontRenderer.pressed.setOutlineColor(spk::Color::black);
+
+		_nineSliceRenderer.released.setSpriteSheet(Widget::defaultNineSlice());
+		_nineSliceRenderer.hovered.setSpriteSheet(Widget::defaultNineSlice());
+		_nineSliceRenderer.pressed.setSpriteSheet(Widget::defaultNineSlice());
+
+		requireGeometryUpdate();
+	}
 
 	spk::Vector2UInt PushButton::computeTextSize()
 	{
-		return (spk::Vector2UInt::max(
-				_releasedFontRenderer.font()->computeStringSize(_releasedText, _releasedFontRenderer.fontSize()),
-				_pressedFontRenderer.font()->computeStringSize(_pressedText, _pressedFontRenderer.fontSize())
-			));
+		spk::Vector2UInt maxSize(0, 0);
+
+		for (auto s : {State::Released, State::Hovered, State::Pressed})
+		{
+			auto size = _fontRenderer[s].font()->computeStringSize(_text[s], _fontRenderer[s].fontSize());
+			maxSize = spk::Vector2UInt::max(maxSize, size);
+		}
+		return maxSize;
 	}
 
 	spk::Vector2UInt PushButton::computeExpectedTextSize(const spk::Font::Size& p_textSize)
 	{
-		return (spk::Vector2UInt::max(
-				_releasedFontRenderer.font()->computeStringSize(_releasedText, p_textSize),
-				_pressedFontRenderer.font()->computeStringSize(_pressedText, p_textSize)
-			));
+		spk::Vector2UInt maxSize(0, 0);
+
+		for (auto s : {State::Released, State::Hovered, State::Pressed})
+		{
+			auto size = _fontRenderer[s].font()->computeStringSize(_text[s], p_textSize);
+			maxSize = spk::Vector2UInt::max(maxSize, size);
+		}
+		return maxSize;
 	}
 
 	ContractProvider::Contract PushButton::subscribe(const ContractProvider::Job& p_job)
 	{
-		return (_onClickProvider.subscribe(p_job));
+		return _onClickProvider.subscribe(p_job);
+	}
+
+	void PushButton::setFont(const spk::SafePointer<spk::Font>& p_font, const State& p_state)
+	{
+		_fontRenderer[p_state].setFont(p_font);
+		requireGeometryUpdate();
+	}
+
+	void PushButton::setText(const std::wstring& p_text, const State& p_state)
+	{
+		_text[p_state] = p_text;
+		requireGeometryUpdate();
+	}
+
+	void PushButton::setFontSize(const spk::Font::Size& p_fontSize, const State& p_state)
+	{
+		_fontRenderer[p_state].setFontSize(p_fontSize);
+		requireGeometryUpdate();
+	}
+
+	void PushButton::setTextColor(const spk::Color& p_glyphColor, const spk::Color& p_outlineColor, const State& p_state)
+	{
+		_fontRenderer[p_state].setGlyphColor(p_glyphColor);
+		_fontRenderer[p_state].setOutlineColor(p_outlineColor);
+		requireGeometryUpdate();
+	}
+
+	void PushButton::setTextAlignment(const spk::HorizontalAlignment& p_horizontalAlignment,
+	                                  const spk::VerticalAlignment& p_verticalAlignment, 
+	                                  const State& p_state)
+	{
+		_horizontalAlignment[p_state] = p_horizontalAlignment;
+		_verticalAlignment[p_state]   = p_verticalAlignment;
+		requireGeometryUpdate();
+	}
+
+	void PushButton::setIconset(spk::SafePointer<spk::SpriteSheet> p_iconset, const State& p_state)
+	{
+		_iconRenderer[p_state].setTexture(p_iconset);
+		requireGeometryUpdate();
+	}
+
+	void PushButton::setIcon(const spk::SpriteSheet::Sprite& p_icon, const State& p_state)
+	{
+		_icon[p_state] = p_icon;
+		requireGeometryUpdate();
+	}
+
+	void PushButton::setCornerSize(const spk::Vector2Int& p_cornerSize, const State& p_state)
+	{
+		_cornerSize[p_state] = p_cornerSize;
+		requireGeometryUpdate();
+	}
+
+	void PushButton::setNineSlice(const spk::SafePointer<spk::SpriteSheet>& p_spriteSheet, const State& p_state)
+	{
+		_nineSliceRenderer[p_state].setSpriteSheet(p_spriteSheet);
+		requireGeometryUpdate();
+	}
+
+	void PushButton::setPressedOffset(const spk::Vector2Int& p_offset)
+	{
+		_pressedOffset = p_offset;
+		requireGeometryUpdate();
 	}
 
 	void PushButton::setFont(const spk::SafePointer<spk::Font>& p_font)
 	{
-		_releasedFontRenderer.setFont(p_font);
-		_pressedFontRenderer.setFont(p_font);
-		requireGeometryUpdate();
-	}
-	
-	void PushButton::setFont(const spk::SafePointer<spk::Font>& p_releasedFont, const spk::SafePointer<spk::Font>& p_pressedFont)
-	{
-		_releasedFontRenderer.setFont(p_releasedFont);
-		_pressedFontRenderer.setFont(p_pressedFont);
-		requireGeometryUpdate();
+		setFont(p_font, State::Released);
+		setFont(p_font, State::Hovered);
+		setFont(p_font, State::Pressed);
 	}
 
 	void PushButton::setText(const std::wstring& p_text)
 	{
-		_releasedText = p_text;
-		_pressedText = p_text;
-		requireGeometryUpdate();
-	}
-	
-	void PushButton::setText(const std::wstring& p_releasedText, const std::wstring& p_pressedText)
-	{
-		_releasedText = p_releasedText;
-		_pressedText = p_pressedText;
-		requireGeometryUpdate();
+		setText(p_text, State::Released);
+		setText(p_text, State::Hovered);
+		setText(p_text, State::Pressed);
 	}
 
-	void PushButton::setFontSize(const spk::Font::Size& p_textSize)
+	void PushButton::setFontSize(const spk::Font::Size& p_fontSize)
 	{
-		_releasedFontRenderer.setFontSize(p_textSize);
-		_pressedFontRenderer.setFontSize(p_textSize);
-		requireGeometryUpdate();
-	}
-	
-	void PushButton::setFontSize(const spk::Font::Size& p_releasedTextSize, const spk::Font::Size& p_pressedTextSize)
-	{
-		_releasedFontRenderer.setFontSize(p_releasedTextSize);
-		_pressedFontRenderer.setFontSize(p_pressedTextSize);
-		requireGeometryUpdate();
+		setFontSize(p_fontSize, State::Released);
+		setFontSize(p_fontSize, State::Hovered);
+		setFontSize(p_fontSize, State::Pressed);
 	}
 
 	void PushButton::setTextColor(const spk::Color& p_glyphColor, const spk::Color& p_outlineColor)
 	{
-		_releasedFontRenderer.setGlyphColor(p_glyphColor);
-		_releasedFontRenderer.setOutlineColor(p_outlineColor);
-		
-		_pressedFontRenderer.setGlyphColor(p_glyphColor);
-		_pressedFontRenderer.setOutlineColor(p_outlineColor);
+		setTextColor(p_glyphColor, p_outlineColor, State::Released);
+		setTextColor(p_glyphColor, p_outlineColor, State::Hovered);
+		setTextColor(p_glyphColor, p_outlineColor, State::Pressed);
 	}
 
-	void PushButton::setTextAlignment(const spk::HorizontalAlignment& p_horizontalAlignment, const spk::VerticalAlignment& p_verticalAlignment)
+	void PushButton::setTextAlignment(const spk::HorizontalAlignment& p_horizontalAlignment, 
+									const spk::VerticalAlignment& p_verticalAlignment)
 	{
-		_releasedHorizontalAlignment = p_horizontalAlignment;
-		_releasedVerticalAlignment = p_verticalAlignment;
-		_pressedHorizontalAlignment = p_horizontalAlignment;
-		_pressedVerticalAlignment = p_verticalAlignment;
-		requireGeometryUpdate();
-	}
-	
-	void PushButton::setTextAlignment(
-		const spk::HorizontalAlignment& p_releasedHorizontalAlignment, const spk::VerticalAlignment& p_releasedVerticalAlignment, 
-		const spk::HorizontalAlignment& p_pressedHorizontalAlignment, const spk::VerticalAlignment& p_pressedVerticalAlignment
-	)
-	{
-		_releasedHorizontalAlignment = p_releasedHorizontalAlignment;
-		_releasedVerticalAlignment = p_releasedVerticalAlignment;
-		_pressedHorizontalAlignment = p_pressedHorizontalAlignment;
-		_pressedVerticalAlignment = p_pressedVerticalAlignment;
-		requireGeometryUpdate();
+		setTextAlignment(p_horizontalAlignment, p_verticalAlignment, State::Released);
+		setTextAlignment(p_horizontalAlignment, p_verticalAlignment, State::Hovered);
+		setTextAlignment(p_horizontalAlignment, p_verticalAlignment, State::Pressed);
 	}
 
 	void PushButton::setIconset(spk::SafePointer<spk::SpriteSheet> p_iconset)
 	{
-		_releasedIconRenderer.setTexture(p_iconset);
-		_pressedIconRenderer.setTexture(p_iconset);
-		requireGeometryUpdate();
+		setIconset(p_iconset, State::Released);
+		setIconset(p_iconset, State::Hovered);
+		setIconset(p_iconset, State::Pressed);
 	}
 
-	void PushButton::setIconset(spk::SafePointer<spk::SpriteSheet> p_pressedIconset, spk::SafePointer<spk::SpriteSheet> p_releasedIconset)
+	void PushButton::setIcon(const spk::SpriteSheet::Sprite& p_icon)
 	{
-		_releasedIconRenderer.setTexture(p_pressedIconset);
-		_pressedIconRenderer.setTexture(p_releasedIconset);
-		requireGeometryUpdate();
-	}
-
-	void PushButton::setSprite(const spk::SpriteSheet::Sprite& p_sprite)
-	{
-		_releasedSprite = p_sprite;
-		_pressedSprite = p_sprite;
-		requireGeometryUpdate();
-	}
-
-	void PushButton::setSprite(const spk::SpriteSheet::Sprite& p_pressedSprite, const spk::SpriteSheet::Sprite& p_releasedSprite)
-	{
-		_releasedSprite = p_pressedSprite;
-		_pressedSprite = p_releasedSprite;
-		requireGeometryUpdate();
-	}
-	
-	void PushButton::setTextColor(
-			const spk::Color& p_releasedGlyphColor, const spk::Color& p_releasedOutlineColor,
-			const spk::Color& p_pressedGlyphColor, const spk::Color& p_pressedOutlineColor
-		)
-	{
-		_releasedFontRenderer.setGlyphColor(p_releasedGlyphColor);
-		_releasedFontRenderer.setOutlineColor(p_releasedOutlineColor);
-		
-		_pressedFontRenderer.setGlyphColor(p_pressedGlyphColor);
-		_pressedFontRenderer.setOutlineColor(p_pressedOutlineColor);
+		setIcon(p_icon, State::Released);
+		setIcon(p_icon, State::Hovered);
+		setIcon(p_icon, State::Pressed);
 	}
 
 	void PushButton::setCornerSize(const spk::Vector2Int& p_cornerSize)
 	{
-		_releasedCornerSize = p_cornerSize;
-		_pressedCornerSize = p_cornerSize;
-		requireGeometryUpdate();
+		setCornerSize(p_cornerSize, State::Released);
+		setCornerSize(p_cornerSize, State::Hovered);
+		setCornerSize(p_cornerSize, State::Pressed);
 	}
 
-	void PushButton::setCornerSize(const spk::Vector2Int& p_releasedCornerSize, const spk::Vector2Int& p_pressedCornerSize)
+	void PushButton::setNineSlice(const SafePointer<SpriteSheet>& p_spriteSheet)
 	{
-		_releasedCornerSize = p_releasedCornerSize;
-		_pressedCornerSize = p_pressedCornerSize;
-		requireGeometryUpdate();
+		setNineSlice(p_spriteSheet, State::Released);
+		setNineSlice(p_spriteSheet, State::Hovered);
+		setNineSlice(p_spriteSheet, State::Pressed);
 	}
 
-	void PushButton::setSpriteSheet(const SafePointer<SpriteSheet>& p_spriteSheet)
+
+	const spk::Vector2Int& PushButton::pressedOffset() const
 	{
-		_releasedRenderer.setSpriteSheet(p_spriteSheet);
-		_pressedRenderer.setSpriteSheet(p_spriteSheet);
+		return _pressedOffset;
 	}
 
-	void PushButton::setSpriteSheet(const SafePointer<SpriteSheet>& p_releasedSpriteSheet, const SafePointer<SpriteSheet>& p_pressedSpriteSheet)
+	const spk::SafePointer<spk::SpriteSheet>& PushButton::spriteSheet(State p_state) const
 	{
-		_releasedRenderer.setSpriteSheet(p_releasedSpriteSheet);
-		_pressedRenderer.setSpriteSheet(p_pressedSpriteSheet);
+		return _nineSliceRenderer[p_state].spriteSheet();
 	}
 
-    void PushButton::setPressedOffset(const spk::Vector2Int& p_offset)
-    {
-        _pressedOffset = p_offset;
-		requireGeometryUpdate();
-    }
-
-	spk::SafePointer<spk::SpriteSheet> PushButton::iconset(State p_state)
+	const spk::SafePointer<spk::SpriteSheet>& PushButton::iconset(State p_state) const
 	{
-		return dynamic_cast<spk::SpriteSheet *>((p_state == State::Released ? _releasedIconRenderer.texture() : _pressedIconRenderer.texture()).get());
+		return _iconRenderer[p_state].texture();
 	}
 
-	spk::SafePointer<spk::Font> PushButton::font(State p_state) const
+	const spk::SafePointer<spk::Font>& PushButton::font(State p_state) const
 	{
-		return (p_state == State::Released ? _releasedFontRenderer.font() : _pressedFontRenderer.font());
+		return _fontRenderer[p_state].font();
 	}
-	
+
+	const spk::Vector2UInt& PushButton::cornerSize(State p_state) const
+	{
+		return _cornerSize[p_state];
+	}
+
+	const std::wstring& PushButton::text(State p_state) const
+	{
+		return _text[p_state];
+	}
+
 	const spk::Font::Size& PushButton::fontSize(State p_state) const
 	{
-		return (p_state == State::Released ? _releasedFontRenderer.fontSize() : _pressedFontRenderer.fontSize());
+		return _fontRenderer[p_state].fontSize();
 	}
 
-    const spk::Vector2Int& PushButton::pressedOffset() const
-    {
-        return _pressedOffset;
-    }
+	const spk::SpriteSheet::Sprite& PushButton::icon(State p_state) const
+	{
+		return _icon[p_state];
+	}
 
-    const spk::Vector2Int& PushButton::cornerSize() const
-    {
-        return _releasedCornerSize;
-    }
+	const spk::VerticalAlignment& PushButton::verticalAlignment(State p_state) const
+	{
+		return _verticalAlignment[p_state];
+	}
 
-    void PushButton::_onMouseEvent(spk::MouseEvent& p_event)
-    {
+	const spk::HorizontalAlignment& PushButton::horizontalAlignment(State p_state) const
+	{
+		return _horizontalAlignment[p_state];
+	}
+
+	void PushButton::_onMouseEvent(spk::MouseEvent& p_event)
+	{
+		bool wasHovered = _isHovered;
+		bool wasPressed = _isPressed;
+		bool inside     = isPointed(p_event.mouse);
+
 		switch (p_event.type)
 		{
 			case MouseEvent::Type::Motion:
 			{
-				if (_isPressed == true && viewport().geometry().contains(p_event.mouse->position) == false)
-				{
+				_isHovered = inside;
+				if (_isPressed && !inside)
 					_isPressed = false;
+
+				if (_isHovered != wasHovered || _isPressed != wasPressed)
 					requestPaint();
-					p_event.consume();
-				}
 				break;
 			}
 			case MouseEvent::Type::Press:
@@ -228,7 +278,8 @@ namespace spk
 			{
 				if (p_event.button == spk::Mouse::Button::Left)
 				{
-					if (_isPressed == false && viewport().geometry().contains(p_event.mouse->position) == true)
+					_isHovered = inside;
+					if (inside && !_isPressed)
 					{
 						_isPressed = true;
 						requestPaint();
@@ -239,71 +290,74 @@ namespace spk
 			}
 			case MouseEvent::Type::Release:
 			{
-				if (p_event.button == spk::Mouse::Button::Left)
+				if (p_event.button == spk::Mouse::Button::Left && _isPressed)
 				{
-					if (_isPressed)
-					{				
-						if (viewport().geometry().contains(p_event.mouse->position) == true)
-						{
-							_onClickProvider.trigger();
-							p_event.consume();
-						}
-						_isPressed = false;
-						requestPaint();
+					if (inside)
+					{
+						_onClickProvider.trigger();
+						p_event.consume();
 					}
+					_isPressed = false;
+					requestPaint();
 				}
 				break;
 			}
 			default:
-			{
 				break;
-			}
 		}
-    }
+	}
 
-    void PushButton::_onPaintEvent(spk::PaintEvent& p_event)
-    {
-        if (_isPressed == true)
-        {
-            _pressedRenderer.render();
-            _pressedFontRenderer.render();
-            _pressedIconRenderer.render();
-        }
-        else
-        {
-            _releasedRenderer.render();
-            _releasedFontRenderer.render();
-            _releasedIconRenderer.render();
-        }
-    }
+	void PushButton::_onPaintEvent(spk::PaintEvent& p_event)
+	{
+		State st = _currentVisualState();
 
-    void PushButton::_onGeometryChange()
-    {
-        _releasedRenderer.clear();
-        _releasedRenderer.prepare(geometry(), layer(), _releasedCornerSize);
-        _releasedRenderer.validate();
+		_nineSliceRenderer[st].render();
+		_fontRenderer[st].render();
+		_iconRenderer[st].render();
+	}
 
-        Geometry2D pressedGeometry = geometry().shrink(_pressedOffset);
-		_pressedRenderer.clear();
-		_pressedRenderer.prepare(pressedGeometry, layer(), _pressedCornerSize);
-		_pressedRenderer.validate();
+	void PushButton::_onGeometryChange()
+	{
+		using namespace spk;
 
-		_releasedFontRenderer.clear();
-		spk::Vector2Int textAnchor = _releasedFontRenderer.computeTextAnchor(geometry().shrink(_releasedCornerSize), _releasedText, _releasedHorizontalAlignment, _releasedVerticalAlignment);
-		_releasedFontRenderer.prepare(_releasedText, textAnchor, layer() + 0.01f);
-		_releasedFontRenderer.validate();
+		Geometry2D releasedGeom = geometry();
+		Geometry2D hoveredGeom  = geometry();
+		Geometry2D pressedGeom  = geometry().shrink(_pressedOffset);
 
-		textAnchor = _pressedFontRenderer.computeTextAnchor(geometry().shrink(_pressedCornerSize), _pressedText, _pressedHorizontalAlignment, _pressedVerticalAlignment);
-		_pressedFontRenderer.clear();
-		_pressedFontRenderer.prepare(_pressedText, textAnchor, layer() + 0.01f);
-		_pressedFontRenderer.validate();
+		for (auto s : {State::Released, State::Hovered, State::Pressed})
+		{
+			_nineSliceRenderer[s].clear();
+			Geometry2D geomToUse = (s == State::Pressed) ? pressedGeom : geometry(); 
+			_nineSliceRenderer[s].prepare(geomToUse, layer(), _cornerSize[s]);
+			_nineSliceRenderer[s].validate();
+		}
 
-		_releasedIconRenderer.clear();
-		_releasedIconRenderer.prepare({geometry().anchor + _releasedCornerSize, geometry().size - _releasedCornerSize * 2}, _releasedSprite, layer() + 0.0001f);
-		_releasedIconRenderer.validate();
+		for (auto s : {State::Released, State::Hovered, State::Pressed})
+		{
+			_fontRenderer[s].clear();
 
-		_pressedIconRenderer.clear();
-		_pressedIconRenderer.prepare(pressedGeometry.shrink(_pressedCornerSize), _pressedSprite, layer() + 0.0001f);
-		_pressedIconRenderer.validate();
-    }
+			Geometry2D geomToUse = (s == State::Pressed) ? pressedGeom : geometry();
+			geomToUse = geomToUse.shrink(_cornerSize[s]);
+
+			auto textAnchor = _fontRenderer[s].computeTextAnchor(
+				geomToUse, 
+				_text[s], 
+				_horizontalAlignment[s], 
+				_verticalAlignment[s]
+			);
+			_fontRenderer[s].prepare(_text[s], textAnchor, layer() + 0.01f);
+			_fontRenderer[s].validate();
+		}
+
+		for (auto s : {State::Released, State::Hovered, State::Pressed})
+		{
+			_iconRenderer[s].clear();
+
+			Geometry2D geomToUse = (s == State::Pressed) ? pressedGeom : geometry();
+			geomToUse = geomToUse.shrink(_cornerSize[s]);
+
+			_iconRenderer[s].prepare(geomToUse, _icon[s], layer() + 0.0001f);
+			_iconRenderer[s].validate();
+		}
+	}
 }

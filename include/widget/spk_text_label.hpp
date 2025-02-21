@@ -31,7 +31,7 @@ namespace spk
 		const std::wstring& text() const;
 		const spk::Vector2UInt& cornerSize() const;
 		spk::SafePointer<spk::Font> font() const;
-		const spk::Font::Size& textSize() const;
+		const spk::Font::Size& fontSize() const;
 
 		void setFont(spk::SafePointer<spk::Font> p_font);
 		void setText(const std::wstring& p_text);

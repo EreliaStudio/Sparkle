@@ -30,6 +30,8 @@ namespace spk
         void prepare(const Geometry2D& p_geometry, float p_layer, const Vector2Int& p_cornerSize);
 
         void setSpriteSheet(const SafePointer<SpriteSheet>& p_spriteSheet);
+		spk::SafePointer<spk::OpenGL::TextureObject>& spriteSheet();
+		const spk::SafePointer<spk::OpenGL::TextureObject>& spriteSheet() const;
 
         void validate();
 

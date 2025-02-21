@@ -76,14 +76,14 @@ namespace spk
 		{
 		case Orientation::Horizontal:
 		{
-			_positiveButton.setSprite(spk::Widget::defaultIconset()->sprite(7));
-			_negativeButton.setSprite(spk::Widget::defaultIconset()->sprite(6));
+			_positiveButton.setIcon(spk::Widget::defaultIconset()->sprite(7));
+			_negativeButton.setIcon(spk::Widget::defaultIconset()->sprite(6));
 			break;
 		}
 		case Orientation::Vertical:
 		{
-			_positiveButton.setSprite(spk::Widget::defaultIconset()->sprite(5));
-			_negativeButton.setSprite(spk::Widget::defaultIconset()->sprite(4));
+			_positiveButton.setIcon(spk::Widget::defaultIconset()->sprite(5));
+			_negativeButton.setIcon(spk::Widget::defaultIconset()->sprite(4));
 			break;
 		}
 		}

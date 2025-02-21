@@ -82,6 +82,23 @@ namespace spk
 		p_child->_viewport.setWindowSize(_viewport.windowSize());
 	}
 
+	bool Widget::isPointed(const spk::Vector2Int& p_pointerPosition) const
+	{
+		return (viewport().geometry().contains(p_pointerPosition));
+	}
+
+	bool Widget::isPointed(const spk::Mouse& p_mouse) const
+	{
+		return (isPointed(p_mouse.position));
+	}
+
+	bool Widget::isPointed(const spk::SafePointer<const spk::Mouse>& p_mouse) const
+	{
+		if (p_mouse == nullptr)
+			return (false);
+		return (isPointed(*p_mouse));
+	}
+
 	void Widget::setLayer(const float& p_layer)
 	{
 		float delta = (p_layer - _layer);

@@ -89,18 +89,18 @@ namespace spk
 		{
 			_upButton.setText(L"");
 			_upButton.setIconset(p_iconSet);
-			_upButton.setSprite(p_iconSet->sprite(4));
+			_upButton.setIcon(p_iconSet->sprite(4));
 
 			_downButton.setIconset(p_iconSet);
 			_downButton.setText(L"");
-			_downButton.setSprite(p_iconSet->sprite(5));
+			_downButton.setIcon(p_iconSet->sprite(5));
 		}
 
-		void setSpriteSheet(spk::SafePointer<spk::SpriteSheet> p_spriteSheet)
+		void setNineSlice(spk::SafePointer<spk::SpriteSheet> p_spriteSheet)
 		{
-			_upButton.setSpriteSheet(p_spriteSheet);
-			_valueEdit.setSpriteSheet(p_spriteSheet);
-			_downButton.setSpriteSheet(p_spriteSheet);
+			_upButton.setNineSlice(p_spriteSheet);
+			_valueEdit.setNineSlice(p_spriteSheet);
+			_downButton.setNineSlice(p_spriteSheet);
 		}
 
 		void setCornerSize(const spk::Vector2UInt& p_cornerSize)

@@ -201,11 +201,11 @@ namespace spk
 
 		setTextColor(spk::Color::white, spk::Color::black);
 		setTextAlignment(spk::HorizontalAlignment::Left, spk::VerticalAlignment::Centered);
-		setSpriteSheet(Widget::defaultNineSlice());
+		setNineSlice(Widget::defaultNineSlice());
 		setFont(Widget::defaultFont());
 	}
 
-	void TextEdit::setSpriteSheet(const spk::SafePointer<spk::SpriteSheet> &p_spriteSheet)
+	void TextEdit::setNineSlice(const spk::SafePointer<spk::SpriteSheet> &p_spriteSheet)
 	{
 		_backgroundRenderer.setSpriteSheet(p_spriteSheet);
 	}

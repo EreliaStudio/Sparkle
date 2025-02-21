@@ -47,11 +47,11 @@ void CameraManager::onMouseEvent(spk::MouseEvent& p_event)
 	
 }
 
-spk::Vector3 CameraManager::convertScreenToWorldPosition(const spk::Vector2Int& p_screenPosition)
+spk::Vector2 CameraManager::convertScreenToWorldPosition(const spk::Vector2Int& p_screenPosition)
 {
 	spk::Matrix4x4 inverseMatrix = _camera.inverseProjectionMatrix();
 
 	spk::Vector2 mouseRatio = (static_cast<spk::Vector2>(p_screenPosition - _geometry.anchor) / static_cast<spk::Vector2>(_geometry.size)) * 2 - 1;
 
-	return (owner()->position() + (inverseMatrix * spk::Vector3(mouseRatio, 0))); 
+	return ((owner()->position() + (inverseMatrix * spk::Vector3(mouseRatio, 0))).xy()); 
 }

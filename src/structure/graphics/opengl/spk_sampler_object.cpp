@@ -78,7 +78,12 @@ namespace spk::OpenGL
 		_texture = p_texture;
 	}
 
-	spk::SafePointer<TextureObject> SamplerObject::texture() const
+	spk::SafePointer<TextureObject>& SamplerObject::texture()
+	{
+		return _texture;
+	}
+
+	const spk::SafePointer<TextureObject>& SamplerObject::texture() const
 	{
 		return _texture;
 	}

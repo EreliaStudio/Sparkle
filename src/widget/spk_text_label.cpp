@@ -54,7 +54,7 @@ namespace spk
 		return (_fontRenderer.font());
 	}
 
-	const spk::Font::Size& TextLabel::textSize() const
+	const spk::Font::Size& TextLabel::fontSize() const
 	{
 		return (_fontRenderer.fontSize());
 	}

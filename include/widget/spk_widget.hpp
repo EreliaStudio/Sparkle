@@ -100,6 +100,10 @@ namespace spk
 			return (spk::SafePointer<TChildType>(newChild));
 		}
 
+		bool isPointed(const spk::Vector2Int& p_pointerPosition) const;
+		bool isPointed(const spk::Mouse& p_mouse) const;
+		bool isPointed(const spk::SafePointer<const spk::Mouse>& p_mouse) const;
+
 		void setLayer(const float& p_layer);
 		const float& layer() const;
 
