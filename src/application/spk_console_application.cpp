@@ -38,7 +38,11 @@ namespace spk
 		_hwnd(createBackgroundHandle(p_title))
 	{
 		_centralWidget->activate();
-		addExecutionStep([&]() { centralWidget()->onUpdateEvent(spk::UpdateEvent(_hwnd)); }).relinquish();
+		addExecutionStep([&]()
+		{
+			spk::UpdateEvent event = spk::UpdateEvent();
+			centralWidget()->onUpdateEvent(event);
+		}).relinquish();
 	}
 
 	spk::SafePointer<Widget> ConsoleApplication::centralWidget() const

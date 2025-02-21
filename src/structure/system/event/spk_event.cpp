@@ -2,18 +2,16 @@
 
 #include "structure/graphics/spk_window.hpp"
 
-#include "spk_debug_macro.hpp"
-
-#include <chrono>
+#include "utils/spk_system_utils.hpp"
 
 namespace spk
 {
-	void IEvent::requestPaint() const
+	void IEvent::requestPaint()
 	{
 		window->requestPaint();
 	}
 	
-	void IEvent::requestUpdate() const
+	void IEvent::requestUpdate()
 	{
 		window->requestUpdate();
 	}
@@ -45,6 +43,7 @@ namespace spk
 
 	Event::Event(spk::SafePointer<Window> p_window, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
+		rootEvent._consumed = false;
 		construct(p_window, uMsg, wParam, lParam);
 	}
 
@@ -54,7 +53,18 @@ namespace spk
 			WM_PAINT_REQUEST,
 			[](Event* p_event, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			{
-				p_event->paintEvent.type = PaintEvent::Type::Requested;
+				p_event->paintEvent.type = PaintEvent::Type::Paint;
+				p_event->paintEvent.geometry = p_event->paintEvent.window->geometry();
+				p_event->paintEvent.resized = false;
+			}
+		},
+		{
+			WM_RESIZE_REQUEST,
+			[](Event* p_event, UINT uMsg, WPARAM wParam, LPARAM lParam)
+			{
+				p_event->paintEvent.type = PaintEvent::Type::Resize;
+				p_event->paintEvent.geometry = p_event->paintEvent.window->geometry();
+				p_event->paintEvent.resized = true;
 			}
 		},
 		{
@@ -142,7 +152,7 @@ namespace spk
 			[](Event* p_event, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			{
 				p_event->mouseEvent.type = MouseEvent::Type::Wheel;
-				p_event->mouseEvent.scrollValue = HIWORD(wParam) / (float)WHEEL_DELTA;
+				p_event->mouseEvent.scrollValue = GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA;
 			}
 		},
 		{
@@ -221,6 +231,13 @@ namespace spk
 			}
 		},
 		{
+			WM_SETCURSOR,
+			[](Event* p_event, UINT uMsg, WPARAM wParam, LPARAM lParam)
+			{
+				p_event->systemEvent.type = SystemEvent::Type::SetCursor;
+			}
+		},
+		{
 			WM_EXITSIZEMOVE,
 			[](Event* p_event, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			{
@@ -245,6 +262,26 @@ namespace spk
 				p_event->controllerEvent.type = ControllerEvent::Type::JoystickMotion;
 				p_event->controllerEvent.joystick.id = Controller::Joystick::ID::Right;
 				p_event->controllerEvent.joystick.values = spk::Vector2Int(static_cast<unsigned short>(wParam) - halfValue, std::numeric_limits<unsigned short>::max() - static_cast<unsigned short>(lParam) - halfValue);
+			}
+		},
+		{
+			WM_LEFT_JOYSTICK_RESET,
+			[](Event* p_event, UINT uMsg, WPARAM wParam, LPARAM lParam)
+			{
+				static const short halfValue = std::numeric_limits<unsigned short>::max() / 2;
+				p_event->controllerEvent.type = ControllerEvent::Type::JoystickReset;
+				p_event->controllerEvent.joystick.id = Controller::Joystick::ID::Left;
+				p_event->controllerEvent.joystick.values = 0;
+			}
+		},
+		{
+			WM_RIGHT_JOYSTICK_RESET,
+			[](Event* p_event, UINT uMsg, WPARAM wParam, LPARAM lParam)
+			{
+				static const short halfValue = std::numeric_limits<unsigned short>::max() / 2;
+				p_event->controllerEvent.type = ControllerEvent::Type::JoystickReset;
+				p_event->controllerEvent.joystick.id = Controller::Joystick::ID::Right;
+				p_event->controllerEvent.joystick.values = 0;
 			}
 		},
 		{
@@ -299,7 +336,16 @@ namespace spk
 				p_event->updateEvent.keyboard = &(p_event->rootEvent.window->keyboardModule.keyboard());
 				p_event->updateEvent.controller = &(p_event->rootEvent.window->controllerModule.controller());
 
-				p_event->updateEvent.time = duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+				p_event->updateEvent.time = SystemUtils::getTime();
+			}
+		},
+		{
+			WM_TIMER,
+			[](Event* p_event, UINT uMsg, WPARAM wParam, LPARAM lParam)
+			{
+				p_event->timerEvent.type = TimerEvent::Type::Timer;
+
+				p_event->timerEvent.timerID = wParam;
 			}
 		}
 	};

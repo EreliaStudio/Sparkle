@@ -3,6 +3,8 @@
 #include "structure/math/spk_vector2.hpp"
 #include "structure/system/spk_input_state.hpp"
 
+#include <cstring>
+
 namespace spk
 {
 	struct Keyboard
@@ -146,6 +148,19 @@ namespace spk
 
 		InputState state[Key::MaxNbKey];
 		wchar_t glyph;
+
+		Keyboard()
+		{
+			for (size_t i = 0; i < Key::MaxNbKey; i++)
+			{
+				state[i] = spk::InputState::Up;
+			}
+		}
+
+		InputState operator[](Key p_key) const
+		{
+			return (state[static_cast<int>(p_key)]);
+		}
 	};
 }
 

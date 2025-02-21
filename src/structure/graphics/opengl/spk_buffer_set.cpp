@@ -1,17 +1,17 @@
 #include "structure/graphics/opengl/spk_buffer_set.hpp"
 
+#include "spk_debug_macro.hpp"
+
 namespace spk::OpenGL
 {
-	void BufferSet::Factory::insert(OpenGL::LayoutBufferObject::Attribute::Index p_index, size_t p_size, OpenGL::LayoutBufferObject::Attribute::Type p_type)
+	BufferSet::BufferSet(std::span<const LayoutBufferObject::Attribute> attributes) :
+		_layout(attributes)
 	{
-		_layoutFactory.insert(p_index, p_size, p_type);
 	}
 
-	BufferSet BufferSet::Factory::construct() const
+	BufferSet::BufferSet(std::initializer_list<LayoutBufferObject::Attribute> attributes) :
+		BufferSet(std::span(attributes.begin(), attributes.end()))
 	{
-		BufferSet result;
-		result._layout = _layoutFactory.construct();
-		return result;
 	}
 
 	LayoutBufferObject& BufferSet::layout()
@@ -32,6 +32,18 @@ namespace spk::OpenGL
 	const IndexBufferObject& BufferSet::indexes() const
 	{
 		return _indexes;
+	}
+
+	void BufferSet::clear()
+	{
+		_layout.clear();
+		_indexes.clear();
+	}
+	
+	void BufferSet::validate()
+	{
+		_layout.validate();
+		_indexes.validate();
 	}
 
 	void BufferSet::activate()

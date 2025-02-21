@@ -2,11 +2,14 @@
 
 #include "application/spk_graphical_application.hpp"
 
-#include "spk_debug_macro.hpp"
 #include <GL/glew.h>
 #include <GL/wglew.h>
 #include <gl/GL.h>
 #include <gl/GLU.h>
+
+#include "utils/spk_string_utils.hpp"
+
+#include "structure/spk_iostream.hpp"
 
 namespace spk
 {
@@ -33,18 +36,10 @@ namespace spk
 			window = reinterpret_cast<Window*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
 		}
 
-		
-
 		if (window != nullptr)
 		{
-			if (uMsg == WM_TIMER && wParam == 1)
-			{
-				window->requestUpdate();
-				return 0;
-			}
-
 			if (window->_receiveEvent(uMsg, wParam, lParam) == true)
-				return (0);
+				return (TRUE);
 		}
 
 		return DefWindowProc(hwnd, uMsg, wParam, lParam);
@@ -64,17 +59,19 @@ namespace spk
 			static_cast<LONG>(0),
 			static_cast<LONG>(0),
 			static_cast<LONG>(_viewport.geometry().width),
-			static_cast<LONG>(_viewport.geometry().heigth)
+			static_cast<LONG>(_viewport.geometry().height)
 		};
 		if (!AdjustWindowRectEx(&adjustedRect, WS_OVERLAPPEDWINDOW, FALSE, 0))
 		{
 			throw std::runtime_error("Failed to adjust window rect.");
 		}
+		
+		std::string convertedTitle = spk::StringUtils::wstringToString(_title);
 
-		_hwnd = CreateWindowExW(
+		_hwnd = CreateWindowEx(
 			0,
-			L"SPKWindowClass",
-			_title.c_str(),
+			"SPKWindowClass",
+			convertedTitle.c_str(),
 			WS_OVERLAPPEDWINDOW,
 			_viewport.geometry().x, _viewport.geometry().y,
 			adjustedRect.right - adjustedRect.left,
@@ -86,12 +83,25 @@ namespace spk
 			throw std::runtime_error("Failed to create window.");
 		}
 
-		if (_pendingUpdateRate.has_value())
-		{
-			setUpdateRate(_pendingUpdateRate.value());
-			_pendingUpdateRate.reset();
-		}
+		_cursors[L"Arrow"] = ::LoadCursor(nullptr, IDC_ARROW);
+		_cursors[L"TextEdit"] = ::LoadCursor(nullptr, IDC_IBEAM);
+		_cursors[L"Wait"] = ::LoadCursor(nullptr, IDC_WAIT);
+		_cursors[L"Cross"] = ::LoadCursor(nullptr, IDC_CROSS);
+		_cursors[L"AltCross"] = ::LoadCursor(nullptr, IDC_UPARROW);
+		_cursors[L"ResizeNWSE"] = ::LoadCursor(nullptr, IDC_SIZENWSE);
+		_cursors[L"ResizeNESW"] = ::LoadCursor(nullptr, IDC_SIZENESW);
+		_cursors[L"ResizeWE"] = ::LoadCursor(nullptr, IDC_SIZEWE);
+		_cursors[L"ResizeNS"] = ::LoadCursor(nullptr, IDC_SIZENS);
+		_cursors[L"Move"] = ::LoadCursor(nullptr, IDC_SIZEALL);
+		_cursors[L"No"] = ::LoadCursor(nullptr, IDC_NO);
+		_cursors[L"Hand"] = ::LoadCursor(nullptr, IDC_HAND);
+		_cursors[L"Working"] = ::LoadCursor(nullptr, IDC_APPSTARTING);
+		_cursors[L"Help"] = ::LoadCursor(nullptr, IDC_HELP);
 		
+		setUpdateTimer(1);
+
+		setCursor(L"Arrow");
+
 		_controllerInputThread.bind(_hwnd);
 		_createOpenGLContext();
 		
@@ -99,43 +109,89 @@ namespace spk
 		UpdateWindow(_hwnd);
 	}
 
-	void Window::setUpdateRate(const long long& p_durationInMillisecond)
+	void Window::_handlePendingTimer()
 	{
-		if (_updateTimerID != 0)
 		{
-			clearUpdateRate();
-		}
+			std::lock_guard<std::recursive_mutex> lock(_timerMutex);
 
-		if (_hwnd == nullptr)
-		{
-			_pendingUpdateRate = p_durationInMillisecond;
-			return;
-		}
+			if (_pendingTimerCreations.size() != 0)
+			{
+				for (const auto& pair : _pendingTimerCreations)
+				{
+					if (_timers.contains(pair.first))
+					{
+						_deleteTimer(pair.first);
+					}
+					_createTimer(pair.first, pair.second);
+				}
+				_pendingTimerCreations.clear();
+			}
 
-		_updateTimerID = SetTimer(_hwnd, 1, static_cast<UINT>(p_durationInMillisecond), nullptr);
-		if (_updateTimerID == 0)
-		{
-			throw std::runtime_error("Failed to set update timer.");
+			if (_pendingTimerDeletions.size() != 0)
+			{
+				for (const auto& id : _pendingTimerDeletions)
+				{
+					_deleteTimer(id);
+				}
+				_pendingTimerDeletions.clear();
+			}
 		}
 	}
 
-	void Window::clearUpdateRate()
+	UINT_PTR Window::_createTimer(int p_id, const long long& p_durationInMillisecond)
 	{
-		if (_updateTimerID == 0 && !_pendingUpdateRate.has_value())
+		UINT_PTR result = SetTimer(_hwnd, p_id, static_cast<UINT>(p_durationInMillisecond), nullptr);
+		if (result == 0)
 		{
-			throw std::runtime_error("No active or pending timer to clear.");
+			DWORD errorCode = GetLastError();
+			throw std::runtime_error("Failed to set update timer. Error code: " + std::to_string(errorCode));
 		}
-
-		if (_updateTimerID != 0)
+		_timers.erase(result);
+		return (result);
+	}
+	
+	void Window::_deleteTimer(UINT_PTR p_id)
+	{
+		if (!KillTimer(_hwnd, p_id))
 		{
-			if (!KillTimer(_hwnd, _updateTimerID))
-			{
-				throw std::runtime_error("Failed to clear update timer.");
-			}
-			_updateTimerID = 0;
+			throw std::runtime_error("Failed to clear update timer.");
 		}
+		_timers.erase(p_id);
+	}
 
-		_pendingUpdateRate.reset();
+	void Window::_removeAllTimers()
+	{
+		std::set<UINT_PTR> oldTimer = _timers;
+		for (const auto& timer : oldTimer)
+		{
+			_deleteTimer(timer);
+		}
+	}
+
+	void Window::setUpdateTimer(const long long& p_durationInMillisecond)
+	{
+		addTimer(-1, p_durationInMillisecond);
+	}
+
+	void Window::removeUpdateTimer()
+	{
+		removeTimer(-1);
+	}
+
+	void Window::addTimer(int p_id, const long long& p_durationInMillisecond)
+	{
+		std::lock_guard<std::recursive_mutex> lock(_timerMutex);
+		std::pair<int, long long> value;
+		
+		value.first = p_id + 2;
+		value.second = p_durationInMillisecond;
+
+		_pendingTimerCreations.push_back(value);
+	}
+	
+	void Window::removeTimer(int p_id)
+	{
+		_pendingTimerDeletions.push_back(p_id + 2);
 	}
 
 	void GLAPIENTRY
@@ -150,78 +206,78 @@ namespace spk
 		if (id == 131169 || id == 131185 || id == 131218 || id == 131204)
 			return;
 
-		std::cout << "---------------" << std::endl;
+		spk::cout << "---------------" << std::endl;
 
 		switch (source)
 		{
 		case GL_DEBUG_SOURCE_API:
-			std::cout << "Source: API" << std::endl;
+			spk::cout << "Source: API" << std::endl;
 			break;
 		case GL_DEBUG_SOURCE_WINDOW_SYSTEM:
-			std::cout << "Source: Window System" << std::endl;
+			spk::cout << "Source: Window System" << std::endl;
 			break;
 		case GL_DEBUG_SOURCE_SHADER_COMPILER:
-			std::cout << "Source: Shader Compiler" << std::endl;
+			spk::cout << "Source: Shader Compiler" << std::endl;
 			break;
 		case GL_DEBUG_SOURCE_THIRD_PARTY:
-			std::cout << "Source: Third Party" << std::endl;
+			spk::cout << "Source: Third Party" << std::endl;
 			break;
 		case GL_DEBUG_SOURCE_APPLICATION:
-			std::cout << "Source: Application" << std::endl;
+			spk::cout << "Source: Application" << std::endl;
 			break;
 		case GL_DEBUG_SOURCE_OTHER:
-			std::cout << "Source: Other" << std::endl;
+			spk::cout << "Source: Other" << std::endl;
 			break;
 		}
 
 		switch (type)
 		{
 		case GL_DEBUG_TYPE_ERROR:
-			std::cout << "Type: Error" << std::endl;
+			spk::cout << "Type: Error" << std::endl;
 			break;
 		case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
-			std::cout << "Type: Deprecated Behaviour" << std::endl;
+			spk::cout << "Type: Deprecated Behaviour" << std::endl;
 			break;
 		case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
-			std::cout << "Type: Undefined Behaviour" << std::endl;
+			spk::cout << "Type: Undefined Behaviour" << std::endl;
 			break;
 		case GL_DEBUG_TYPE_PORTABILITY:
-			std::cout << "Type: Portability" << std::endl;
+			spk::cout << "Type: Portability" << std::endl;
 			break;
 		case GL_DEBUG_TYPE_PERFORMANCE:
-			std::cout << "Type: Performance" << std::endl;
+			spk::cout << "Type: Performance" << std::endl;
 			break;
 		case GL_DEBUG_TYPE_MARKER:
-			std::cout << "Type: Marker" << std::endl;
+			spk::cout << "Type: Marker" << std::endl;
 			break;
 		case GL_DEBUG_TYPE_PUSH_GROUP:
-			std::cout << "Type: Push Group" << std::endl;
+			spk::cout << "Type: Push Group" << std::endl;
 			break;
 		case GL_DEBUG_TYPE_POP_GROUP:
-			std::cout << "Type: Pop Group" << std::endl;
+			spk::cout << "Type: Pop Group" << std::endl;
 			break;
 		case GL_DEBUG_TYPE_OTHER:
-			std::cout << "Type: Other" << std::endl;
+			spk::cout << "Type: Other" << std::endl;
 			break;
 		}
 
 		switch (severity)
 		{
 		case GL_DEBUG_SEVERITY_HIGH:
-			std::cout << "Severity: high" << std::endl;
+			spk::cout << "Severity: high" << std::endl;
 			break;
 		case GL_DEBUG_SEVERITY_MEDIUM:
-			std::cout << "Severity: medium" << std::endl;
+			spk::cout << "Severity: medium" << std::endl;
 			break;
 		case GL_DEBUG_SEVERITY_LOW:
-			std::cout << "Severity: low" << std::endl;
+			spk::cout << "Severity: low" << std::endl;
 			break;
 		case GL_DEBUG_SEVERITY_NOTIFICATION:
-			std::cout << "Severity: notification" << std::endl;
+			spk::cout << "Severity: notification" << std::endl;
 			break;
 		}
 			
-		std::cout << "Debug message (" << id << "): " << message << std::endl;
+		spk::cout << "Debug message (" << id << "): " << message << std::endl;
 		if (severity != GL_DEBUG_SEVERITY_NOTIFICATION)
 			throw std::runtime_error("Unexpected opengl error detected");
 	}
@@ -365,28 +421,31 @@ namespace spk
 		_windowRendererThread(p_title + L" - Renderer"),
 		_windowUpdaterThread(p_title + L" - Updater")
 	{
-		_rootWidget->setGeometry(p_geometry);
+		resize(p_geometry.size);
 		_windowRendererThread.addPreparationStep([&]() {
 				try
 				{
 					_createContext();
+					requestResize();
 				}
 				catch (std::exception& e)
 				{
-					std::cout << "Error catched : " << e.what() << std::endl;
+					spk::cout << "Error catched : " << e.what() << std::endl;
 					close();
 				}
 			}).relinquish();
 		_windowRendererThread.addExecutionStep([&]() {
 				try
 				{
+					_handlePendingTimer();
 					pullEvents();
+					timerModule.treatMessages();
 					paintModule.treatMessages();
 					systemModule.treatMessages();
 				}
 				catch (std::exception& e)
 				{
-					std::cout << "Renderer - Error catched : " << e.what() << std::endl;
+					spk::cout << "Renderer - Error catched : " << e.what() << std::endl;
 					close();
 				}
 			}).relinquish();
@@ -400,7 +459,7 @@ namespace spk
 				}
 				catch (std::exception& e)
 				{
-					std::cout << "Updater - Error catched : " << e.what() << std::endl;
+					spk::cout << "Updater - Error catched : " << e.what() << std::endl;
 					close();
 				}
 			}).relinquish();
@@ -411,29 +470,21 @@ namespace spk
 		bindModule(&updateModule);
 		bindModule(&paintModule);
 		bindModule(&systemModule);
-
-		mouseModule.linkToWidget(_rootWidget.get());
-		keyboardModule.linkToWidget(_rootWidget.get());
-		controllerModule.linkToWidget(_rootWidget.get());
-		updateModule.linkToWidget(_rootWidget.get());
-		paintModule.linkToWidget(_rootWidget.get());
-
-		updateModule.linkToController(&(controllerModule.controller()));
-		updateModule.linkToMouse(&(mouseModule.mouse()));
-		updateModule.linkToKeyboard(&(keyboardModule.keyboard()));
+		bindModule(&timerModule);
 
 		_rootWidget->activate();
 	}
 
 	Window::~Window()
 	{
+		_removeAllTimers();
 		_rootWidget.release();
 	}
 
 	void Window::move(const spk::Geometry2D::Point& p_newPosition)
 	{
-		_viewport.setGeometry({ 0, 0, _viewport.geometry().size });
-		_rootWidget->setGeometry(_viewport.geometry());
+		// _viewport.setGeometry({ 0, 0, _viewport.geometry().size });
+		// _rootWidget->setGeometry(_viewport.geometry());
 	}
 	
 	void Window::resize(const spk::Geometry2D::Size& p_newSize)
@@ -441,8 +492,12 @@ namespace spk
 		if (p_newSize.x == 0 || p_newSize.y == 0)
 			return ;
 
+		_viewport.setWindowSize(p_newSize);
+		_rootWidget->_viewport.setWindowSize(p_newSize);
+
 		_viewport.setGeometry({ 0, 0, p_newSize});
 		_rootWidget->setGeometry(_viewport.geometry());
+		
 		for (auto& child : _rootWidget->children())
 		{
 			child->_resize();
@@ -468,7 +523,14 @@ namespace spk
 
 	void Window::clear()
 	{
-		_viewport.apply();
+		try
+		{
+			_viewport.apply();
+		}
+		catch (...)
+		{
+			throw std::runtime_error("Error while applying main window viewport");
+		}
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	}
@@ -476,6 +538,34 @@ namespace spk
 	void Window::swap() const
 	{
 		SwapBuffers(_hdc);
+	}
+
+	void Window::addCursor(const std::wstring& p_cursorName, const std::filesystem::path& p_cursorPath)
+	{
+		_cursors[p_cursorName] = LoadCursorFromFileW(p_cursorPath.c_str());
+	}
+
+	void Window::setCursor(const std::wstring& p_cursorName)
+	{
+		if (_cursors.contains(p_cursorName) == false)
+			throw std::runtime_error("Cursor [" + spk::StringUtils::wstringToString(p_cursorName) + "] not found.");
+
+		HCURSOR nextCursor = _cursors[p_cursorName];
+		if (_currentCursor == nextCursor)
+			return;
+
+		_currentCursor = nextCursor;
+		::SetCursor(_currentCursor);
+		::SendMessage(_hwnd,
+              WM_SETCURSOR,
+              reinterpret_cast<WPARAM>(_hwnd),
+              MAKELPARAM(HTCLIENT, WM_MOUSEMOVE));
+	}
+
+	void Window::_applyCursor()
+	{
+		::SetCursor(_currentCursor);
+		_savedCursor = _currentCursor;
 	}
 
 	void Window::pullEvents()
@@ -520,6 +610,11 @@ namespace spk
 	void Window::requestPaint() const
 	{
 		PostMessage(_hwnd, WM_PAINT_REQUEST, 0, 0);
+	}
+
+	void Window::requestResize() const
+	{
+		PostMessage(_hwnd, WM_RESIZE_REQUEST, 0, 0);
 	}
 
 	void Window::requestUpdate() const

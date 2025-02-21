@@ -10,7 +10,8 @@
 
 #include "structure/system/event/spk_event.hpp"
 
-#include "structure/graphics/spk_pipeline.hpp"
+#include "structure/graphics/texture/spk_font.hpp"
+#include "structure/graphics/texture/spk_sprite_sheet.hpp"
 
 namespace spk
 {
@@ -22,10 +23,35 @@ namespace spk
 	{
 		friend class Window;
 	private:
+		static spk::SpriteSheet _defaultIconset;
+		static spk::Font _defaultFont;
+		static spk::SpriteSheet _defaultNineSlice;
+
+	public:
+		static spk::SafePointer<spk::SpriteSheet> defaultIconset();
+		static spk::SafePointer<spk::Font> defaultFont();
+		static spk::SafePointer<spk::SpriteSheet> defaultNineSlice();
+
+		enum class FocusType
+		{
+			KeyboardFocus = 0,
+			MouseFocus = 1,
+			ControllerFocus = 2
+		};
+
+		static spk::SafePointer<Widget> focusedWidget(FocusType p_focusType = FocusType::KeyboardFocus);
+	protected:
+		void requestPaint();
+
+	private:
+		static inline spk::SafePointer<Widget> _focusedWidgets[3] = {
+			nullptr,
+			nullptr,
+			nullptr
+		};
+
 		std::wstring _name;
 		spk::SafePointer<Widget> _parent;
-		static inline spk::Pipeline::Constant* WidgetConstants = nullptr;
-
 		std::vector<Widget*> _managedChildren;
 
 		bool _needGeometryChange = true;
@@ -33,23 +59,26 @@ namespace spk
 		spk::Vector2 _sizeRatio;
 		spk::Geometry2D _geometry;
 		spk::Viewport _viewport;
+
+		bool _requestedPaint = false;
 		
 		float _layer;
 
 		virtual void _onGeometryChange();
-		virtual void _onPaintEvent(const spk::PaintEvent& p_event);
-		virtual void _onUpdateEvent(const spk::UpdateEvent& p_event);
-		virtual void _onKeyboardEvent(const spk::KeyboardEvent& p_event);
-		virtual void _onMouseEvent(const spk::MouseEvent& p_event);
-		virtual void _onControllerEvent(const spk::ControllerEvent& p_event);
+		virtual void _onPaintEvent(spk::PaintEvent& p_event); 
+		virtual void _onUpdateEvent(spk::UpdateEvent& p_event);
+		virtual void _onKeyboardEvent(spk::KeyboardEvent& p_event);
+		virtual void _onMouseEvent(spk::MouseEvent& p_event);
+		virtual void _onControllerEvent(spk::ControllerEvent& p_event);
+		virtual void _onTimerEvent(spk::TimerEvent& p_event);
 
-		spk::Geometry2D::Point _computeAbsoluteAnchor();
 		void _computeViewport();
 
 		void _computeRatio();
 		void _resize();
 
 	public:
+
 		Widget(const std::wstring& p_name);
 		Widget(const std::wstring& p_name, spk::SafePointer<Widget> p_parent);
 
@@ -71,23 +100,41 @@ namespace spk
 			return (spk::SafePointer<TChildType>(newChild));
 		}
 
+		bool isPointed(const spk::Vector2Int& p_pointerPosition) const;
+		bool isPointed(const spk::Mouse& p_mouse) const;
+		bool isPointed(const spk::SafePointer<const spk::Mouse>& p_mouse) const;
+
 		void setLayer(const float& p_layer);
 		const float& layer() const;
 
-		void forceGeometryChange(const Geometry2D& p_geometry);
-		void setGeometry(const Geometry2D& p_geometry);
-		void forceGeometryChange(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size);
-		void setGeometry(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size);
+		void takeFocus(FocusType p_focusType);
+		void releaseFocus(FocusType p_focusType);
+		bool hasFocus(FocusType p_focusType);
+
+		void takeFocus();
+		void releaseFocus();
+
+		spk::Geometry2D::Point absoluteAnchor();
+		virtual void forceGeometryChange(const Geometry2D& p_geometry);
+		virtual void place(const spk::Vector2Int& p_delta);
+		virtual void move(const spk::Vector2Int& p_delta);
+		virtual void setGeometry(const Geometry2D& p_geometry);
+		virtual void forceGeometryChange(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size);
+		virtual void setGeometry(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size);
 		void updateGeometry();
 		void requireGeometryUpdate();
+
+		virtual spk::Vector2UInt minimalSize() const;
+		virtual spk::Vector2UInt maximalSize() const;
 
 		const Geometry2D& geometry() const;
 		const Viewport& viewport() const;
 
-		void onPaintEvent(const spk::PaintEvent& p_event);
-		void onUpdateEvent(const spk::UpdateEvent& p_event);
-		void onKeyboardEvent(const spk::KeyboardEvent& p_event);
-		void onMouseEvent(const spk::MouseEvent& p_event);
-		void onControllerEvent(const spk::ControllerEvent& p_event);
+		virtual void onPaintEvent(spk::PaintEvent& p_event) final;
+		virtual void onUpdateEvent(spk::UpdateEvent& p_event) final;
+		virtual void onKeyboardEvent(spk::KeyboardEvent& p_event) final;
+		virtual void onMouseEvent(spk::MouseEvent& p_event) final;
+		virtual void onControllerEvent(spk::ControllerEvent& p_event) final;
+		virtual void onTimerEvent(spk::TimerEvent& p_event) final;
 	};
 }

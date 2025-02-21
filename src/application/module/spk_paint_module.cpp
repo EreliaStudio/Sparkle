@@ -7,7 +7,7 @@ namespace spk
 	void PaintModule::_treatEvent(spk::PaintEvent&& p_event)
 	{
 		p_event.window->clear();
-		_rootWidget->onPaintEvent(p_event);
+		p_event.window->widget()->onPaintEvent(p_event);
 		p_event.window->swap();
 	}
 
@@ -19,10 +19,5 @@ namespace spk
 	PaintModule::PaintModule()
 	{
 
-	}
-
-	void PaintModule::linkToWidget(spk::Widget* p_rootWidget)
-	{
-		_rootWidget = p_rootWidget;
 	}
 }

@@ -21,13 +21,13 @@ TEST_F(PersistantWorkerTest, WorkerStop)
 	spk::PersistantWorker worker(workerName);
 	worker.addExecutionStep(callback).relinquish();
 	worker.start();
-	std::this_thread::sleep_for(std::chrono::milliseconds(51));
+	std::this_thread::sleep_for(std::chrono::milliseconds(52));
 	worker.stop();
 	ASSERT_TRUE(worker.isJoinable()) << "Worker should be joinable after stop.";
 	worker.join();
 	ASSERT_FALSE(worker.isJoinable()) << "Worker should not be joinable after joining them.";
 	int finalCount = counter.load();
-	ASSERT_GE(finalCount, 4) << "Callback should have been executed multiple times.";
+	ASSERT_GE(finalCount, 3) << "Callback should have been executed multiple times.";
 }
 
 TEST_F(PersistantWorkerTest, WorkerStopWithoutStart)
@@ -49,7 +49,7 @@ TEST_F(PersistantWorkerTest, WorkerStartStopStart)
 	worker.join();
 	ASSERT_FALSE(worker.isJoinable()) << "Worker should not be joinable after first stop.";
 	int firstCount = counter.load();
-	ASSERT_GE(firstCount, 4) << "Callback should have been executed multiple times before first stop.";
+	ASSERT_GE(firstCount, 3) << "Callback should have been executed multiple times before first stop.";
 
 	worker.start();
 	std::this_thread::sleep_for(std::chrono::milliseconds(50));

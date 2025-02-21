@@ -8,18 +8,24 @@
 #include "structure/graphics/opengl/spk_texture_object.hpp"
 #include "external_libraries/stb_truetype.h"
 
+#include "structure/graphics/spk_text_alignment.hpp"
+
 namespace spk
 {
 	class Font
 	{
 	public:
 		using Data = std::vector<uint8_t>;
+		using Filtering = OpenGL::TextureObject::Filtering;
+		using Wrap = OpenGL::TextureObject::Wrap;
+		using Mipmap = OpenGL::TextureObject::Mipmap;
 
 		struct Glyph
 		{
 			Vector2Int positions[4];
 			Vector2 UVs[4];
 			Vector2Int step;
+			Vector2Int baselineOffset;
 			Vector2UInt size;
 			static inline std::vector<unsigned int> indexesOrder = { 0, 1, 2, 2, 1, 3 };
 
@@ -52,13 +58,17 @@ namespace spk
 
 			}
 
-			bool operator < (const Size& p_other) const
+			bool operator<(const Size& other) const
 			{
-				if (text < p_other.text)
-					return (true);
-				if (outline < p_other.outline)
-					return (true);
-				return (false);
+				if (text < other.text)
+				{
+					return true;
+				}
+				if (text > other.text)
+				{
+					return false;
+				}
+				return outline < other.outline;
 			}
 
 			friend std::wostream& operator<<(std::wostream& p_os, const Size& size)
@@ -115,7 +125,8 @@ namespace spk
 
 			void _uploadTexture();
 
-			Atlas(const stbtt_fontinfo& p_fontInfo, const Data& p_fontData, const size_t& p_textSize, const size_t& p_outlineSize);
+			Atlas(const stbtt_fontinfo& p_fontInfo, const Data& p_fontData, const size_t& p_textSize, const size_t& p_outlineSize, const Filtering& p_filtering = Filtering::Linear,
+			const Wrap& p_wrap = Wrap::ClampToEdge, const Mipmap& p_mipmap = Mipmap::Enable);
 		public:
 			void loadGlyphs(const std::wstring& p_glyphsToLoad);
 
@@ -127,24 +138,45 @@ namespace spk
 
 			Vector2UInt computeCharSize(const wchar_t& p_char);
 
-			Vector2UInt computeStringSize(const std::string& p_string);
+			Vector2UInt computeStringSize(const std::wstring& p_string);
+			Vector2Int computeStringBaselineOffset(const std::wstring& p_string);
+			Vector2Int computeStringAnchor(const spk::Geometry2D& p_geometry, const std::wstring& p_string, spk::HorizontalAlignment p_horizontalAlignment, spk::VerticalAlignment p_verticalAlignment);
+
 		};
 
 	private:
-		void _loadFileData(const std::filesystem::path& p_path);
+		void loadFromFile(const std::filesystem::path& p_path);
+		void loadFromData(const std::vector<uint8_t>& p_data);
 
 		std::map<Size, Atlas> _atlases;
 		Data _fontData;
 		stbtt_fontinfo _fontInfo;
 
+		Filtering _filtering = Filtering::Nearest;
+		Wrap _wrap = Wrap::ClampToEdge;
+		Mipmap _mipmap = Mipmap::Enable;
+
 	public:
+		static Font fromRawData(const std::vector<uint8_t>& p_data,
+			const Filtering& p_filtering = Filtering::Nearest,
+			const Wrap& p_wrap = Wrap::ClampToEdge, const Mipmap& p_mipmap = Mipmap::Enable);
+
+		Font();
 		Font(const std::filesystem::path& p_path);
 
-		Vector2UInt computeCharSize(const wchar_t& p_char, size_t p_size, size_t p_outlineSize);
+		void setProperties(
+			const Filtering& p_filtering,
+			const Wrap& p_wrap,
+			const Mipmap& p_mipmap
+			);
 
-		Vector2UInt computeStringSize(const std::string& p_string, size_t p_size, size_t p_outlineSize);
+		Vector2UInt computeCharSize(const wchar_t& p_char, const Font::Size& p_size);
 
-		Size computeOptimalTextSize(const std::string& p_string, float p_outlineSizeRatio, const Vector2UInt& p_textArea);
+		Vector2UInt computeStringSize(const std::wstring& p_string, const Font::Size& p_size);
+		Vector2Int computeStringBaselineOffset(const std::wstring& p_string, const Font::Size& p_size);
+		Vector2Int computeStringAnchor(const spk::Geometry2D& p_geometry, const std::wstring& p_string, const Font::Size& p_size, spk::HorizontalAlignment p_horizontalAlignment, spk::VerticalAlignment p_verticalAlignment);
+
+		Size computeOptimalTextSize(const std::wstring& p_string, float p_outlineSizeRatio, const Vector2UInt& p_textArea);
 
 		Atlas& atlas(const Size& p_size);
 	};
