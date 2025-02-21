@@ -8,4 +8,6 @@
 namespace spk::OpenGLUtils
 {
 	std::wstring to_wstring(const GLenum& p_type);
+
+	std::wstring getFramebufferErrorString(GLenum status);
 }

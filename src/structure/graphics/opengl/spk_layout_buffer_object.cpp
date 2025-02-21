@@ -1,101 +1,114 @@
 #include "structure/graphics/opengl/spk_layout_buffer_object.hpp"
 
+#include "spk_debug_macro.hpp"
+
 namespace spk::OpenGL
 {
-	LayoutBufferObject::Attribute::Attribute() : index(0), size(0), type(Type::Float) {}
+    LayoutBufferObject::Attribute::Attribute() : index(0), type(Type::None) {}
 
-	LayoutBufferObject::Attribute::Attribute(Index p_index, size_t p_size, Type p_type)
-		: index(p_index), size(p_size), type(p_type) {}
-
-	size_t LayoutBufferObject::Attribute::typeSize(Type p_type)
+    LayoutBufferObject::Attribute::Attribute(Index p_index, Type p_type) :
+		index(p_index),
+		type(p_type)
 	{
-		switch (p_type)
+
+	}
+
+    size_t LayoutBufferObject::Attribute::typeSize(Type p_type)
+    {
+        switch (p_type)
 		{
-		case Attribute::Type::Byte:
-			return sizeof(GLbyte);
-		case Attribute::Type::UByte:
-			return sizeof(GLubyte);
-		case Attribute::Type::Int:
-			return sizeof(GLint);
-		case Attribute::Type::UInt:
-			return sizeof(GLuint);
-		case Attribute::Type::Float:
-			return sizeof(GLfloat);
-		default:
-			return 0;
+		case Type::Int: return sizeof(GLint);
+		case Type::UInt: return sizeof(GLuint);
+		case Type::Float: return sizeof(GLfloat);
+		case Type::Bool: return sizeof(GLboolean);
+		case Type::Vector2: return sizeof(GLfloat) * 2;
+		case Type::Vector3: return sizeof(GLfloat) * 3;
+		case Type::Vector4: return sizeof(GLfloat) * 4;
+		case Type::Vector2Int: return sizeof(GLint) * 2;
+		case Type::Vector3Int: return sizeof(GLint) * 3;
+		case Type::Vector4Int: return sizeof(GLint) * 4;
+		case Type::Vector2UInt: return sizeof(GLuint) * 2;
+		case Type::Vector3UInt: return sizeof(GLuint) * 3;
+		case Type::Vector4UInt: return sizeof(GLuint) * 4;
+		case Type::Matrix2x2: return sizeof(GLfloat) * 4;
+		case Type::Matrix3x3: return sizeof(GLfloat) * 9;
+		case Type::Matrix4x4: return sizeof(GLfloat) * 16;
+		default: return 0;
 		}
-	}
+    }
 
-	void LayoutBufferObject::Factory::insert(Attribute::Index p_index, size_t p_size, Attribute::Type p_type)
-	{
-		_attributes.emplace_back(p_index, p_size, p_type);
-	}
-
-	LayoutBufferObject LayoutBufferObject::Factory::construct() const
-	{
-		LayoutBufferObject result;
-
-		for (const auto& attribute : _attributes)
-		{
-			result._insertAttribute(attribute);
-		}
-
-		return result;
-	}
-
-	LayoutBufferObject::LayoutBufferObject() :
-		VertexBufferObject(Type::Storage, Usage::Static),
-		_vertexSize(0)
-	{
+    LayoutBufferObject::LayoutBufferObject() :
+        VertexBufferObject(Type::Storage, Usage::Static),
+        _vertexSize(0)
+    {
+    }
 	
-	}
-
-	LayoutBufferObject::LayoutBufferObject(const LayoutBufferObject& p_other) :
-		VertexBufferObject(p_other),
-		_attributesToApply(p_other._attributesToApply),
-		_vertexSize(p_other._vertexSize)
+	LayoutBufferObject::LayoutBufferObject(std::span<const LayoutBufferObject::Attribute> attributes) :
+		LayoutBufferObject()
 	{
-
-	}
-
-	LayoutBufferObject& LayoutBufferObject::operator=(const LayoutBufferObject& p_other)
-	{
-		if (this != &p_other)
+		for (const auto& attribute : attributes)
 		{
-			VertexBufferObject::operator=(p_other);
-			_attributesToApply = p_other._attributesToApply;
-			_vertexSize = p_other._vertexSize;
+			addAttribute(attribute);
 		}
-		return *this;
 	}
+
 	
-	LayoutBufferObject::LayoutBufferObject(LayoutBufferObject&& p_other) noexcept
-		: VertexBufferObject(std::move(p_other)), _attributesToApply(std::move(p_other._attributesToApply)), _vertexSize(p_other._vertexSize)
+
+	LayoutBufferObject::LayoutBufferObject(std::initializer_list<LayoutBufferObject::Attribute> attributes) :
+		LayoutBufferObject(std::span(attributes.begin(), attributes.end()))
 	{
-		p_other._vertexSize = 0;
 	}
 
-	LayoutBufferObject& LayoutBufferObject::operator=(LayoutBufferObject&& p_other) noexcept
-	{
-		if (this != &p_other)
-		{
-			VertexBufferObject::operator=(std::move(p_other));
+    LayoutBufferObject::LayoutBufferObject(const LayoutBufferObject& p_other) :
+        VertexBufferObject(p_other),
+        _attributesToApply(p_other._attributesToApply),
+        _vertexSize(p_other._vertexSize)
+    {
+    }
 
-			_attributesToApply = std::move(p_other._attributesToApply);
-			_vertexSize = p_other._vertexSize;
+    LayoutBufferObject& LayoutBufferObject::operator=(const LayoutBufferObject& p_other)
+    {
+        if (this != &p_other)
+        {
+            VertexBufferObject::operator=(p_other);
+            _attributesToApply = p_other._attributesToApply;
+            _vertexSize = p_other._vertexSize;
+        }
+        return *this;
+    }
 
-			p_other._vertexSize = 0;
-		}
-		return *this;
-	}
+    LayoutBufferObject::LayoutBufferObject(LayoutBufferObject&& p_other) noexcept
+        : VertexBufferObject(std::move(p_other)), _attributesToApply(std::move(p_other._attributesToApply)), _vertexSize(p_other._vertexSize)
+    {
+        p_other._vertexSize = 0;
+    }
 
-	void LayoutBufferObject::_insertAttribute(const Attribute& p_attribute)
-	{
-		_attributesToApply.push_back(p_attribute);
-		_vertexSize += p_attribute.size * Attribute::typeSize(p_attribute.type);
-	}
+    LayoutBufferObject& LayoutBufferObject::operator=(LayoutBufferObject&& p_other) noexcept
+    {
+        if (this != &p_other)
+        {
+            VertexBufferObject::operator=(std::move(p_other));
 
-	void LayoutBufferObject::_applyAttributes()
+            _attributesToApply = std::move(p_other._attributesToApply);
+            _vertexSize = p_other._vertexSize;
+
+            p_other._vertexSize = 0;
+        }
+        return *this;
+    }
+
+    void LayoutBufferObject::addAttribute(const Attribute& p_attribute)
+    {
+        _attributesToApply.push_back(p_attribute);
+        _vertexSize += Attribute::typeSize(p_attribute.type);
+    }
+
+    void LayoutBufferObject::addAttribute(Attribute::Index p_index, Attribute::Type p_type)
+    {
+        addAttribute({p_index, p_type});
+    }
+
+    void LayoutBufferObject::_applyAttributes()
 	{
 		size_t offset = 0;
 		for (const auto& attr : _attributesToApply)
@@ -104,30 +117,143 @@ namespace spk::OpenGL
 
 			switch (attr.type)
 			{
-			case Attribute::Type::Byte:
-			case Attribute::Type::UByte:
 			case Attribute::Type::Int:
+				glVertexAttribIPointer(attr.index, 1, GL_INT, static_cast<GLsizei>(_vertexSize), reinterpret_cast<void*>(offset));
+				break;
 			case Attribute::Type::UInt:
-				glVertexAttribIPointer(attr.index, static_cast<GLint>(attr.size), static_cast<GLenum>(attr.type), static_cast<GLsizei>(_vertexSize), reinterpret_cast<void*>(offset));
+				glVertexAttribIPointer(attr.index, 1, GL_UNSIGNED_INT, static_cast<GLsizei>(_vertexSize), reinterpret_cast<void*>(offset));
 				break;
 			case Attribute::Type::Float:
-				glVertexAttribPointer(attr.index, static_cast<GLint>(attr.size), static_cast<GLenum>(attr.type), GL_FALSE, static_cast<GLsizei>(_vertexSize), reinterpret_cast<void*>(offset));
+				glVertexAttribPointer(attr.index, 1, GL_FLOAT, GL_FALSE, static_cast<GLsizei>(_vertexSize), reinterpret_cast<void*>(offset));
+				break;
+			case Attribute::Type::Bool:
+				glVertexAttribPointer(attr.index, 1, GL_BOOL, GL_FALSE, static_cast<GLsizei>(_vertexSize), reinterpret_cast<void*>(offset));
+				break;
+			case Attribute::Type::Vector2:
+				glVertexAttribPointer(attr.index, 2, GL_FLOAT, GL_FALSE, static_cast<GLsizei>(_vertexSize), reinterpret_cast<void*>(offset));
+				break;
+			case Attribute::Type::Vector3:
+				glVertexAttribPointer(attr.index, 3, GL_FLOAT, GL_FALSE, static_cast<GLsizei>(_vertexSize), reinterpret_cast<void*>(offset));
+				break;
+			case Attribute::Type::Vector4:
+				glVertexAttribPointer(attr.index, 4, GL_FLOAT, GL_FALSE, static_cast<GLsizei>(_vertexSize), reinterpret_cast<void*>(offset));
+				break;
+			case Attribute::Type::Vector2Int:
+				glVertexAttribIPointer(attr.index, 2, GL_INT, static_cast<GLsizei>(_vertexSize), reinterpret_cast<void*>(offset));
+				break;
+			case Attribute::Type::Vector3Int:
+				glVertexAttribIPointer(attr.index, 3, GL_INT, static_cast<GLsizei>(_vertexSize), reinterpret_cast<void*>(offset));
+				break;
+			case Attribute::Type::Vector4Int:
+				glVertexAttribIPointer(attr.index, 4, GL_INT, static_cast<GLsizei>(_vertexSize), reinterpret_cast<void*>(offset));
+				break;
+			case Attribute::Type::Vector2UInt:
+				glVertexAttribIPointer(attr.index, 2, GL_UNSIGNED_INT, static_cast<GLsizei>(_vertexSize), reinterpret_cast<void*>(offset));
+				break;
+			case Attribute::Type::Vector3UInt:
+				glVertexAttribIPointer(attr.index, 3, GL_UNSIGNED_INT, static_cast<GLsizei>(_vertexSize), reinterpret_cast<void*>(offset));
+				break;
+			case Attribute::Type::Vector4UInt:
+				glVertexAttribIPointer(attr.index, 4, GL_UNSIGNED_INT, static_cast<GLsizei>(_vertexSize), reinterpret_cast<void*>(offset));
+				break;
+			case Attribute::Type::Matrix2x2:
+				glVertexAttribPointer(attr.index, 2, GL_FLOAT, GL_FALSE, static_cast<GLsizei>(_vertexSize), reinterpret_cast<void*>(offset));
+				glEnableVertexAttribArray(attr.index + 1);
+				glVertexAttribPointer(attr.index + 1, 2, GL_FLOAT, GL_FALSE, static_cast<GLsizei>(_vertexSize), reinterpret_cast<void*>(offset + sizeof(GLfloat) * 2));
+				break;
+			case Attribute::Type::Matrix3x3:
+				glVertexAttribPointer(attr.index, 3, GL_FLOAT, GL_FALSE, static_cast<GLsizei>(_vertexSize), reinterpret_cast<void*>(offset));
+				glEnableVertexAttribArray(attr.index + 1);
+				glVertexAttribPointer(attr.index + 1, 3, GL_FLOAT, GL_FALSE, static_cast<GLsizei>(_vertexSize), reinterpret_cast<void*>(offset + sizeof(GLfloat) * 3));
+				glEnableVertexAttribArray(attr.index + 2);
+				glVertexAttribPointer(attr.index + 2, 3, GL_FLOAT, GL_FALSE, static_cast<GLsizei>(_vertexSize), reinterpret_cast<void*>(offset + sizeof(GLfloat) * 6));
+				break;
+			case Attribute::Type::Matrix4x4:
+				glVertexAttribPointer(attr.index, 4, GL_FLOAT, GL_FALSE, static_cast<GLsizei>(_vertexSize), reinterpret_cast<void*>(offset));
+				glEnableVertexAttribArray(attr.index + 1);
+				glVertexAttribPointer(attr.index + 1, 4, GL_FLOAT, GL_FALSE, static_cast<GLsizei>(_vertexSize), reinterpret_cast<void*>(offset + sizeof(GLfloat) * 4));
+				glEnableVertexAttribArray(attr.index + 2);
+				glVertexAttribPointer(attr.index + 2, 4, GL_FLOAT, GL_FALSE, static_cast<GLsizei>(_vertexSize), reinterpret_cast<void*>(offset + sizeof(GLfloat) * 8));
+				glEnableVertexAttribArray(attr.index + 3);
+				glVertexAttribPointer(attr.index + 3, 4, GL_FLOAT, GL_FALSE, static_cast<GLsizei>(_vertexSize), reinterpret_cast<void*>(offset + sizeof(GLfloat) * 12));
 				break;
 			default:
 				throw std::runtime_error("Unexpected layout type.");
 			}
 
-			offset += attr.size * Attribute::typeSize(attr.type);
+			// Update offset based on the type
+			switch (attr.type)
+			{
+			case Attribute::Type::Int:
+			case Attribute::Type::UInt:
+			case Attribute::Type::Float:
+			case Attribute::Type::Bool:
+				offset += sizeof(GLfloat);
+				break;
+			case Attribute::Type::Vector2:
+			case Attribute::Type::Vector2Int:
+			case Attribute::Type::Vector2UInt:
+				offset += sizeof(GLfloat) * 2;
+				break;
+			case Attribute::Type::Vector3:
+			case Attribute::Type::Vector3Int:
+			case Attribute::Type::Vector3UInt:
+				offset += sizeof(GLfloat) * 3;
+				break;
+			case Attribute::Type::Vector4:
+			case Attribute::Type::Vector4Int:
+			case Attribute::Type::Vector4UInt:
+				offset += sizeof(GLfloat) * 4;
+				break;
+			case Attribute::Type::Matrix2x2:
+				offset += sizeof(GLfloat) * 4;
+				break;
+			case Attribute::Type::Matrix3x3:
+				offset += sizeof(GLfloat) * 9;
+				break;
+			case Attribute::Type::Matrix4x4:
+				offset += sizeof(GLfloat) * 16;
+				break;
+			default:
+				throw std::runtime_error("Unexpected layout type.");
+			}
 		}
 		_attributesToApply.clear();
 	}
 
-	void LayoutBufferObject::activate()
+    void LayoutBufferObject::activate()
+    {
+        VertexBufferObject::activate();
+        if (!_attributesToApply.empty())
+        {
+            _applyAttributes();
+        }
+    }
+
+	std::string to_string(const LayoutBufferObject::Attribute::Type& p_type)
 	{
-		VertexBufferObject::activate();
-		if (!_attributesToApply.empty())
+		switch (p_type)
 		{
-			_applyAttributes();
+			using Type = LayoutBufferObject::Attribute::Type;
+
+			case Type::Float: return ("Float");
+			case Type::Bool: return ("Bool");
+			case Type::Int: return ("Int");
+			case Type::UInt: return ("UInt");
+			case Type::Vector2: return ("Vector2");
+			case Type::Vector3: return ("Vector3");
+			case Type::Vector4: return ("Vector4");
+			case Type::Vector2Int: return ("Vector2Int");
+			case Type::Vector3Int: return ("Vector3Int");
+			case Type::Vector4Int: return ("Vector4Int");
+			case Type::Vector2UInt: return ("Vector2UInt");
+			case Type::Vector3UInt: return ("Vector3UInt");
+			case Type::Vector4UInt: return ("Vector4UInt");
+			case Type::Matrix2x2: return ("Matrix2x2");
+			case Type::Matrix3x3: return ("Matrix3x3");
+			case Type::Matrix4x4: return ("Matrix4x4");
+			default:
+				return ("None");
 		}
 	}
 }

@@ -5,6 +5,10 @@
 
 #include "structure/math/spk_vector2.hpp"
 #include "structure/math/spk_vector3.hpp"
+#include "structure/math/spk_vector4.hpp"
+#include "structure/math/spk_quaternion.hpp"
+
+#include "structure/spk_iostream.hpp"
 
 namespace spk
 {
@@ -75,6 +79,11 @@ namespace spk
 			}
 		}
 
+		static spk::IMatrix<SizeX, SizeY> identity()
+		{
+			return (spk::IMatrix<SizeX, SizeY>());
+		}
+
 		Column& operator[](size_t p_index)
 		{
 			if (p_index >= SizeX)
@@ -89,32 +98,42 @@ namespace spk
 			return (cols[p_index]);
 		}
 
+		template <size_t X = SizeX, size_t Y = SizeY, typename std::enable_if_t<(X == 3 && Y == 3), int> = 0>
 		Vector3 operator*(const Vector3& p_vec) const
 		{
-			if (SizeX != 4 || SizeY != 4)
-			{
-				throw std::invalid_argument("Matrix must be 4x4 for this operation.");
-			}
-
 			Vector3 result;
-			result.x = (*this)[0][0] * p_vec.x + (*this)[1][0] * p_vec.y + (*this)[2][0] * p_vec.z + (*this)[3][0] * 1;
-			result.y = (*this)[0][1] * p_vec.x + (*this)[1][1] * p_vec.y + (*this)[2][1] * p_vec.z + (*this)[3][1] * 1;
-			result.z = (*this)[0][2] * p_vec.x + (*this)[1][2] * p_vec.y + (*this)[2][2] * p_vec.z + (*this)[3][2] * 1;
-
+			result.x = (*this)[0][0] * p_vec.x + (*this)[1][0] * p_vec.y + (*this)[2][0] * 1;
+			result.y = (*this)[0][1] * p_vec.x + (*this)[1][1] * p_vec.y + (*this)[2][1] * 1;
+			result.z = (*this)[0][2] * p_vec.x + (*this)[1][2] * p_vec.y + (*this)[2][2] * 1;
 			return result;
 		}
 
+		template <size_t X = SizeX, size_t Y = SizeY, typename std::enable_if_t<(X == 4 && Y == 4), int> = 0>
+		Vector3 operator*(const Vector3& p_vec) const
+		{
+			Vector4 temp(p_vec.x, p_vec.y, p_vec.z, 1.0f);
+			Vector4 transformed = (*this) * temp;
+			return Vector3(transformed.x / transformed.w, transformed.y / transformed.w, transformed.z / transformed.w);
+		}
+
+		template <size_t X = SizeX, size_t Y = SizeY, typename std::enable_if_t<(X == 3 && Y == 3), int> = 0>
 		Vector2 operator*(const Vector2& p_vec) const
 		{
-			if (SizeX != 3 || SizeY != 3)
-			{
-				throw std::invalid_argument("Matrix must be 3x3 for this operation.");
-			}
-
 			Vector2 result;
 			result.x = (*this)[0][0] * p_vec.x + (*this)[1][0] * p_vec.y + (*this)[2][0] * 1;
 			result.y = (*this)[0][1] * p_vec.x + (*this)[1][1] * p_vec.y + (*this)[2][1] * 1;
 
+			return result;
+		}
+
+		template <size_t X = SizeX, size_t Y = SizeY, typename std::enable_if_t<(X == 4 && Y == 4), int> = 0>
+		Vector4 operator*(const Vector4& p_vec) const
+		{
+			Vector4 result;
+			result.x = (*this)[0][0] * p_vec.x + (*this)[1][0] * p_vec.y + (*this)[2][0] * p_vec.z + (*this)[3][0] * p_vec.w;
+			result.y = (*this)[0][1] * p_vec.x + (*this)[1][1] * p_vec.y + (*this)[2][1] * p_vec.z + (*this)[3][1] * p_vec.w;
+			result.z = (*this)[0][2] * p_vec.x + (*this)[1][2] * p_vec.y + (*this)[2][2] * p_vec.z + (*this)[3][2] * p_vec.w;
+			result.w = (*this)[0][3] * p_vec.x + (*this)[1][3] * p_vec.y + (*this)[2][3] * p_vec.z + (*this)[3][3] * p_vec.w;
 			return result;
 		}
 
@@ -157,7 +176,7 @@ namespace spk
 			return !(*this == p_other);
 		}
 
-		static IMatrix<4, 4> rotationMatrix(float p_angleX, float p_angleY, float p_angleZ)
+		static IMatrix<4, 4> rotation(float p_angleX, float p_angleY, float p_angleZ)
 		{
 			IMatrix<4, 4> mat;
 
@@ -196,12 +215,49 @@ namespace spk
 			return rotation;
 		}
 
-		static IMatrix<4, 4> rotationMatrix(spk::Vector3 p_angle)
+		static IMatrix<4, 4> rotation(spk::Vector3 p_angle)
 		{
-			return (rotationMatrix(p_angle.x, p_angle.y, p_angle.z));
+			return (rotation(p_angle.x, p_angle.y, p_angle.z));
+		}
+		
+		template <size_t X = SizeX, size_t Y = SizeY, typename std::enable_if_t<(X == 4 && Y == 4), int> = 0>
+		static IMatrix<4,4> rotation(const spk::Quaternion &q)
+		{
+			float xx = q.x * q.x;
+			float yy = q.y * q.y;
+			float zz = q.z * q.z;
+			float xy = q.x * q.y;
+			float xz = q.x * q.z;
+			float yz = q.y * q.z;
+			float wx = q.w * q.x;
+			float wy = q.w * q.y;
+			float wz = q.w * q.z;
+
+			IMatrix<4,4> rotationMatrix;
+			rotationMatrix[0][0] = 1.0f - 2.0f * (yy + zz);
+			rotationMatrix[0][1] = 2.0f * (xy - wz);
+			rotationMatrix[0][2] = 2.0f * (xz + wy);
+			rotationMatrix[0][3] = 0.0f;
+
+			rotationMatrix[1][0] = 2.0f * (xy + wz);
+			rotationMatrix[1][1] = 1.0f - 2.0f * (xx + zz);
+			rotationMatrix[1][2] = 2.0f * (yz - wx);
+			rotationMatrix[1][3] = 0.0f;
+
+			rotationMatrix[2][0] = 2.0f * (xz - wy);
+			rotationMatrix[2][1] = 2.0f * (yz + wx);
+			rotationMatrix[2][2] = 1.0f - 2.0f * (xx + yy);
+			rotationMatrix[2][3] = 0.0f;
+
+			rotationMatrix[3][0] = 0.0f;
+			rotationMatrix[3][1] = 0.0f;
+			rotationMatrix[3][2] = 0.0f;
+			rotationMatrix[3][3] = 1.0f;
+
+			return rotationMatrix;
 		}
 
-		static IMatrix<4, 4> translationMatrix(float p_translateX, float p_translateY, float p_translateZ)
+		static IMatrix<4, 4> translation(float p_translateX, float p_translateY, float p_translateZ)
 		{
 			IMatrix<4, 4> mat = {
 				1, 0, 0, p_translateX,
@@ -213,13 +269,13 @@ namespace spk
 			return mat;
 		}
 
-		static IMatrix<4, 4> translationMatrix(spk::Vector3 p_translation)
+		static IMatrix<4, 4> translation(spk::Vector3 p_translation)
 		{
-			return (translationMatrix(p_translation.x, p_translation.y, p_translation.z));
+			return (translation(p_translation.x, p_translation.y, p_translation.z));
 		}
 
 		// Scale Matrix
-		static IMatrix<4, 4> scaleMatrix(float p_scaleX, float p_scaleY, float p_scaleZ)
+		static IMatrix<4, 4> scale(float p_scaleX, float p_scaleY, float p_scaleZ)
 		{
 			IMatrix<4, 4> mat = {
 				p_scaleX, 0, 0, 0,
@@ -231,9 +287,9 @@ namespace spk
 			return mat;
 		}
 
-		static IMatrix<4, 4> scaleMatrix(spk::Vector3 p_scale)
+		static IMatrix<4, 4> scale(spk::Vector3 p_scale)
 		{
-			return (scaleMatrix(p_scale.x, p_scale.y, p_scale.z));
+			return (scale(p_scale.x, p_scale.y, p_scale.z));
 		}
 
 		friend std::wostream& operator<<(std::wostream& p_os, const IMatrix& p_mat)
@@ -298,8 +354,8 @@ namespace spk
 			IMatrix result;
 
 			result[0][0] = right.x;
-			result[1][0] = right.y;
-			result[2][0] = right.z;
+			result[0][1] = right.y;
+			result[0][2] = right.z;
 			result[1][0] = up.x;
 			result[1][1] = up.y;
 			result[1][2] = up.z;
@@ -354,10 +410,10 @@ namespace spk
 			const float tanHalfFov = tan(rad / 2.0f);
 
 			result[0][0] = 1.0f / (tanHalfFov * p_aspectRatio);
-			result[1][1] = -1.0f / tanHalfFov;
+			result[1][1] = 1.0f / tanHalfFov;
 			result[2][2] = -(p_farPlane + p_nearPlane) / (p_farPlane - p_nearPlane);
-			result[3][2] = -1.0f;
-			result[2][3] = -(2.0f * p_farPlane * p_nearPlane) / (p_farPlane - p_nearPlane);
+			result[2][3] = -1.0f;
+			result[3][2] = -(2.0f * p_farPlane * p_nearPlane) / (p_farPlane - p_nearPlane);
 			result[3][3] = 0.0f;
 
 			return result;
@@ -376,6 +432,70 @@ namespace spk
 			result[3][2] = -(p_farPlane + p_nearPlane) / (p_farPlane - p_nearPlane);
 
 			return result;
+		}
+
+		template <size_t X = SizeX, size_t Y = SizeY, typename std::enable_if_t<(X == Y), int> = 0>
+		IMatrix<SizeX, SizeY> inverse() const
+		{
+			if (SizeX != SizeY)
+			{
+				throw std::runtime_error("Matrix inversion requires a square matrix.");
+			}
+
+			const size_t N = SizeX;
+			IMatrix<SizeX, SizeY> A(*this);
+			IMatrix<SizeX, SizeY> B = IMatrix<SizeX, SizeY>::identity();
+
+			for (size_t i = 0; i < N; i++)
+			{
+				float maxElem = std::fabs(A[i][i]);
+				size_t pivotRow = i;
+				for (size_t k = i + 1; k < N; k++)
+				{
+					float val = std::fabs(A[i][k]);
+					if (val > maxElem)
+					{
+						maxElem = val;
+						pivotRow = k;
+					}
+				}
+
+				if (pivotRow != i)
+				{
+					for (size_t col = 0; col < N; col++)
+					{
+						std::swap(A[col][i], A[col][pivotRow]);
+						std::swap(B[col][i], B[col][pivotRow]);
+					}
+				}
+
+				float pivotVal = A[i][i];
+				if (std::fabs(pivotVal) < 1e-9f)
+				{
+					throw std::runtime_error("Matrix is not invertible (singular pivot encountered).");
+				}
+
+				for (size_t col = 0; col < N; col++)
+				{
+					A[col][i] /= pivotVal;
+					B[col][i] /= pivotVal;
+				}
+
+				for (size_t row = 0; row < N; row++)
+				{
+					if (row != i)
+					{
+						float factor = A[i][row];
+						for (size_t col = 0; col < N; col++)
+						{
+							A[col][row] -= factor * A[col][i];
+							B[col][row] -= factor * B[col][i];
+						}
+					}
+				}
+			}
+
+			return B;
 		}
 	};
 

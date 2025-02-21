@@ -13,6 +13,7 @@ namespace spk
 	public:
 		using Parent = InherenceObject<TType>*;
 		using Child = InherenceObject<TType>*;
+		using ParentObject = spk::SafePointer<TType>;
 		using ChildObject = spk::SafePointer<TType>;
 		using ChildArray = std::vector<ChildObject>;
 
@@ -31,6 +32,11 @@ namespace spk
 			for (ChildObject child : _children)
 			{
 				static_cast<Child>(child.get())->_parent = nullptr;
+			}
+			
+			if (_parent != nullptr)
+			{
+				_parent->removeChild(this);
 			}
 		}
 
@@ -57,6 +63,17 @@ namespace spk
 		{
 			_children.push_back(p_child);
 			static_cast<Child>(p_child.get())->_parent = static_cast<Child>(this);
+		}
+
+		virtual void removeChild(Child p_child)
+		{
+			auto it = std::find(_children.begin(), _children.end(), p_child);
+			if (it == _children.end())
+			{
+				throw std::runtime_error("Child not found in children array");
+			}
+			_children.erase(it);
+			p_child->_parent = nullptr;
 		}
 
 		virtual void removeChild(ChildObject p_child)
@@ -88,9 +105,14 @@ namespace spk
 			_children.clear();
 		}
 
-		Parent parent() const
+		ParentObject parent() const
 		{
-			return _parent;
+			return static_cast<TType*>(_parent);
+		}
+
+		ChildArray& children()
+		{
+			return _children;
 		}
 
 		const ChildArray& children() const

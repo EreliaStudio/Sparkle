@@ -1,5 +1,10 @@
 #pragma once
 
+#include <winsock2.h>
+#include <ws2tcpip.h>
+
+#include <windows.h>
+
 #define DIRECTINPUT_VERSION 0x0800
 
 #include "structure/spk_iostream.hpp"
@@ -9,14 +14,13 @@
 #include "structure/system/event/spk_event.hpp"
 #include "structure/math/spk_vector2.hpp"
 #include "structure/system/device/spk_controller.hpp"
-#include <windows.h>
-
-#include "spk_debug_macro.hpp"
 
 namespace spk
 {
 	class ControllerInputThread
 	{
+		friend class ControllerModule;
+
 	private:
 		PersistantWorker _worker;
 		HWND _hWnd = NULL;
@@ -134,23 +138,23 @@ namespace spk
 				switch (_controllerState.rgdwPOV[0])
 				{
 				case static_cast<long unsigned int>(-1):
-					PostRightDirectionalCrossMotion(_hWnd, 0, 0); break;
+					PostDirectionalCrossMotion(_hWnd, 0, 0); break;
 				case 0:
-					PostRightDirectionalCrossMotion(_hWnd, 0, 1); break;
+					PostDirectionalCrossMotion(_hWnd, 0, 1); break;
 				case 4500:
-					PostRightDirectionalCrossMotion(_hWnd, 1, 1); break;
+					PostDirectionalCrossMotion(_hWnd, 1, 1); break;
 				case 9000:
-					PostRightDirectionalCrossMotion(_hWnd, 1, 0); break;
+					PostDirectionalCrossMotion(_hWnd, 1, 0); break;
 				case 13500:
-					PostRightDirectionalCrossMotion(_hWnd, 1, -1); break;
+					PostDirectionalCrossMotion(_hWnd, 1, -1); break;
 				case 18000:
-					PostRightDirectionalCrossMotion(_hWnd, 0, -1); break;
+					PostDirectionalCrossMotion(_hWnd, 0, -1); break;
 				case 22500:
-					PostRightDirectionalCrossMotion(_hWnd, -1, -1); break;
+					PostDirectionalCrossMotion(_hWnd, -1, -1); break;
 				case 27000:
-					PostRightDirectionalCrossMotion(_hWnd, -1, 0); break;
+					PostDirectionalCrossMotion(_hWnd, -1, 0); break;
 				case 31500:
-					PostRightDirectionalCrossMotion(_hWnd, -1, 1); break;
+					PostDirectionalCrossMotion(_hWnd, -1, 1); break;
 				}
 				_prevControllerState.rgdwPOV[0] = _controllerState.rgdwPOV[0];
 			}
@@ -176,6 +180,16 @@ namespace spk
 			PostMessage(hWnd, WM_RIGHT_JOYSTICK_MOTION, static_cast<WPARAM>(p_x), static_cast<LPARAM>(p_y));
 		}
 
+		static void PostLeftJoystickReset(HWND hWnd)
+		{
+			PostMessage(hWnd, WM_LEFT_JOYSTICK_RESET, 0, 0);
+		}
+
+		static void PostRightJoystickReset(HWND hWnd)
+		{
+			PostMessage(hWnd, WM_RIGHT_JOYSTICK_RESET, 0, 0);
+		}
+
 		static void PostLeftTriggerMove(HWND hWnd, const int& p_x)
 		{
 			PostMessage(hWnd, WM_LEFT_TRIGGER_MOTION, p_x, 0);
@@ -186,10 +200,25 @@ namespace spk
 			PostMessage(hWnd, WM_RIGHT_TRIGGER_MOTION, p_x, 0);
 		}
 
-		static void PostRightDirectionalCrossMotion(HWND hWnd, const int& p_x, const int& p_y)
+		static void PostLeftTriggerReset(HWND hWnd)
+		{
+			PostMessage(hWnd, WM_LEFT_TRIGGER_MOTION, 0, 0);
+		}
+
+		static void PostRightTriggerReset(HWND hWnd)
+		{
+			PostMessage(hWnd, WM_RIGHT_TRIGGER_MOTION, 0, 0);
+		}
+
+		static void PostDirectionalCrossMotion(HWND hWnd, const int& p_x, const int& p_y)
 		{
 			LPARAM packedParams = MAKELPARAM(static_cast<WORD>(p_x), static_cast<WORD>(p_y));
 			PostMessage(hWnd, WM_DIRECTIONAL_CROSS_MOTION, 0, packedParams);
+		}
+
+		static void PostDirectionalCrossReset(HWND hWnd)
+		{
+			PostMessage(hWnd, WM_DIRECTIONAL_CROSS_MOTION, 0, 0);
 		}
 
 	public:

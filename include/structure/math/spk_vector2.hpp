@@ -369,13 +369,43 @@ namespace spk
             );
         }
 
-        IVector2 clamp(const IVector2& p_lowerValue, const IVector2& p_higherValue)
+        static IVector2 clamp(const IVector2& p_value, const IVector2& p_lowerValue, const IVector2& p_higherValue)
         {
             return IVector2(
-                std::clamp(x, p_lowerValue.x, p_higherValue.x),
-                std::clamp(y, p_lowerValue.y, p_higherValue.y)
+                std::clamp(p_value.x, p_lowerValue.x, p_higherValue.x),
+                std::clamp(p_value.y, p_lowerValue.y, p_higherValue.y)
             );
         }
+
+		IVector2 floor() const
+		{
+			IVector2 result;
+            
+			result.x = std::floor(x);
+            result.y = std::floor(y);
+            
+			return result;
+		}
+
+		IVector2 ceil() const
+		{
+			IVector2 result;
+            
+			result.x = std::ceil(x);
+            result.y = std::ceil(y);
+            
+			return result;
+		}
+
+		IVector2 round() const
+		{
+			IVector2 result;
+            
+			result.x = std::round(x);
+            result.y = std::round(y);
+            
+			return result;
+		}
 
         template <typename TOtherType>
         static IVector2 floor(const IVector2<TOtherType>& p_vector)
@@ -421,6 +451,22 @@ namespace spk
                 p_startingPoint.y + (p_endingPoint.y - p_startingPoint.y) * t
             );
         }
+
+		IVector2 positiveModulo(const IVector2& p_modulo) const
+		{
+			return (IVector2(
+				spk::positiveModulo(x, p_modulo.x),				
+				spk::positiveModulo(y, p_modulo.y)			
+			));
+		}
+
+		bool isBetween(const IVector2& p_min, const IVector2& p_max)
+		{
+			if (x >= p_min.x && y >= p_min.y && 
+				x <= p_max.x && y <= p_max.y)
+				return (true);
+			return (false);
+		}
     };
 
     using Vector2 = IVector2<float_t>;

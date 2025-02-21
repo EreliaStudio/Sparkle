@@ -12,29 +12,13 @@ namespace spk::OpenGL
 		VertexBufferObject::append(&data, sizeof(unsigned int));
 	}
 
-	void IndexBufferObject::append(const std::vector<unsigned int>& data)
+	void IndexBufferObject::append(std::span<const unsigned int> data)
 	{
-		VertexBufferObject::append(data.data(), data.size() * sizeof(unsigned int));
-	}
-
-	void IndexBufferObject::append(const std::span<unsigned int>& data)
-	{
-		VertexBufferObject::append(data.data(), data.size() * sizeof(unsigned int));
+		if (!data.empty())
+			VertexBufferObject::append(data.data(), data.size() * sizeof(unsigned int));
 	}
 
 	IndexBufferObject& IndexBufferObject::operator<<(const unsigned int& data)
-	{
-		append(data);
-		return *this;
-	}
-
-	IndexBufferObject& IndexBufferObject::operator<<(const std::vector<unsigned int>& data)
-	{
-		append(data);
-		return *this;
-	}
-
-	IndexBufferObject& IndexBufferObject::operator<<(const std::span<unsigned int>& data)
 	{
 		append(data);
 		return *this;
@@ -48,5 +32,23 @@ namespace spk::OpenGL
 	size_t IndexBufferObject::nbTriangles() const
 	{
 		return nbIndexes() / 3;
+	}
+
+	std::vector<unsigned int> IndexBufferObject::get()
+	{
+		activate();
+
+		size_t totalSize = this->size(); 
+		if (totalSize == 0)
+		{
+			return {};
+		}
+
+		size_t elementCount = totalSize / sizeof(unsigned int);
+		std::vector<unsigned int> result(elementCount);
+
+		glGetBufferSubData(GL_ARRAY_BUFFER, 0, totalSize, result.data());
+
+		return result;
 	}
 }

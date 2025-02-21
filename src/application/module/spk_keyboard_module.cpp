@@ -1,5 +1,7 @@
 #include "application/module/spk_keyboard_module.hpp"
 
+#include "structure/graphics/spk_window.hpp"
+
 namespace spk
 {
 	void KeyboardModule::_treatEvent(spk::KeyboardEvent&& p_event)
@@ -11,8 +13,13 @@ namespace spk
 			if (p_event.key != spk::Keyboard::Key::Unknow)
 			{
 				if (_keyboard.state[static_cast<int>(p_event.key)] == spk::InputState::Down)
-					return;
-				_keyboard.state[static_cast<int>(p_event.key)] = spk::InputState::Down;
+				{
+					p_event.type = spk::KeyboardEvent::Type::Repeat;
+				}
+				else
+				{
+					_keyboard.state[static_cast<int>(p_event.key)] = spk::InputState::Down;
+				}
 			}
 			break;
 		}
@@ -33,7 +40,15 @@ namespace spk
 		}
 		}
 		p_event.keyboard = &_keyboard;
-		_rootWidget->onKeyboardEvent(p_event);
+
+		if (spk::Widget::focusedWidget(Widget::FocusType::KeyboardFocus) != nullptr)
+		{
+			spk::Widget::focusedWidget(Widget::FocusType::KeyboardFocus)->onKeyboardEvent(p_event);
+		}
+		else
+		{
+			p_event.window->widget()->onKeyboardEvent(p_event);
+		}
 	}
 
 	spk::KeyboardEvent KeyboardModule::_convertEventToEventType(spk::Event&& p_event)
@@ -41,15 +56,9 @@ namespace spk
 		return (p_event.keyboardEvent);
 	}
 
-	KeyboardModule::KeyboardModule() : 
-		_rootWidget(nullptr)
+	KeyboardModule::KeyboardModule()
 	{
 
-	}
-
-	void KeyboardModule::linkToWidget(spk::Widget* p_rootWidget)
-	{
-		_rootWidget = p_rootWidget;
 	}
 
 	const spk::Keyboard& KeyboardModule::keyboard() const

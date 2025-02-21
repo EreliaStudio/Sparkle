@@ -27,6 +27,17 @@ namespace spk
         template<typename UType, typename = std::enable_if_t<std::is_arithmetic<UType>::value>>
         IVector3(UType p_scalar) : x(static_cast<TType>(p_scalar)), y(static_cast<TType>(p_scalar)), z(static_cast<TType>(p_scalar)) {}
 
+		// Constructor with one vector2 and one p_scalar
+        template<typename UType, typename VType,
+            typename = std::enable_if_t<std::is_arithmetic<UType>::value&& std::is_arithmetic<VType>::value>>
+        IVector3(const spk::IVector2<UType>& p_vec2, const VType& p_scalar) : x(static_cast<TType>(p_vec2.x)), y(static_cast<TType>(p_vec2.y)), z(static_cast<TType>(p_scalar)) {}
+
+		// Constructor with one vector2 and one p_scalar
+        template<typename UType, typename VType,
+            typename = std::enable_if_t<std::is_arithmetic<UType>::value&& std::is_arithmetic<VType>::value>>
+        IVector3(const UType& p_scalar, const spk::IVector2<VType>& p_vec2) : x(static_cast<TType>(p_scalar)), y(static_cast<TType>(p_vec2.x)), z(static_cast<TType>(p_vec2.y)) {}
+
+
         // Constructor with three values
         template<typename UType, typename VType, typename WType,
             typename = std::enable_if_t<std::is_arithmetic<UType>::value&& std::is_arithmetic<VType>::value&& std::is_arithmetic<WType>::value>>
@@ -413,6 +424,39 @@ namespace spk
             );
         }
 
+		IVector3 floor() const
+		{
+			IVector3 result;
+            
+			result.x = std::floor(x);
+            result.y = std::floor(y);
+            result.z = std::floor(z);
+            
+			return result;
+		}
+
+		IVector3 ceil() const
+		{
+			IVector3 result;
+            
+			result.x = std::ceil(x);
+            result.y = std::ceil(y);
+            result.z = std::ceil(z);
+            
+			return result;
+		}
+
+		IVector3 round() const
+		{
+			IVector3 result;
+            
+			result.x = std::round(x);
+            result.y = std::round(y);
+            result.z = std::round(z);
+            
+			return result;
+		}
+
         template <typename TOtherType>
         static IVector3 floor(const IVector3<TOtherType>& p_vector)
         {
@@ -461,6 +505,15 @@ namespace spk
                 p_startingPoint.z + (p_endingPoint.z - p_startingPoint.z) * t
             );
         }
+
+		IVector3 positiveModulo(const IVector3& p_modulo) const
+		{
+			return (IVector3(
+				spk::positiveModulo(x, p_modulo.x),				
+				spk::positiveModulo(y, p_modulo.y),				
+				spk::positiveModulo(z, p_modulo.z)				
+			));
+		}
     };
 
     using Vector3 = IVector3<float_t>;

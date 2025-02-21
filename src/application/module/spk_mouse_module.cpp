@@ -1,5 +1,7 @@
 #include "application/module/spk_mouse_module.hpp"
 
+#include "structure/graphics/spk_window.hpp"
+
 namespace spk
 {
 	void MouseModule::_treatEvent(spk::MouseEvent&& p_event)
@@ -41,7 +43,16 @@ namespace spk
 		}
 
 		p_event.mouse = &_mouse;
-		_rootWidget->onMouseEvent(p_event);
+
+
+		if (spk::Widget::focusedWidget(Widget::FocusType::MouseFocus) != nullptr)
+		{
+			spk::Widget::focusedWidget(Widget::FocusType::MouseFocus)->onMouseEvent(p_event);
+		}
+		else
+		{
+			p_event.window->widget()->onMouseEvent(p_event);
+		}
 	}
 
 	spk::MouseEvent MouseModule::_convertEventToEventType(spk::Event&& p_event)
@@ -52,11 +63,6 @@ namespace spk
 	MouseModule::MouseModule()
 	{
 
-	}
-
-	void MouseModule::linkToWidget(spk::Widget* p_rootWidget)
-	{
-		_rootWidget = p_rootWidget;
 	}
 
 	const spk::Mouse& MouseModule::mouse() const

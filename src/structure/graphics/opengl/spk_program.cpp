@@ -1,17 +1,29 @@
 #include "structure/graphics/opengl/spk_program.hpp"
 
+#include <winsock2.h>
+#include <ws2tcpip.h>
+
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
 
 #include <Windows.h>
 
-#include "spk_debug_macro.hpp"
+#include <vector>
 
 namespace spk::OpenGL
 {
-	Program::Program(const std::string& p_vertexShaderCode, const std::string& p_fragmentShaderCode)
-		: _vertexShaderCode(p_vertexShaderCode), _fragmentShaderCode(p_fragmentShaderCode), _programID(0)
+	Program::Program() :
+		_vertexShaderCode(""),
+		_fragmentShaderCode(""),
+		_programID(0)
+	{
+		
+	}
+	Program::Program(const std::string& p_vertexShaderCode, const std::string& p_fragmentShaderCode) :
+		_vertexShaderCode(p_vertexShaderCode),
+		_fragmentShaderCode(p_fragmentShaderCode),
+		_programID(0)
 	{
 	}
 
@@ -84,6 +96,20 @@ namespace spk::OpenGL
 			_load();
 
 		glDrawElementsInstanced(GL_TRIANGLES, nbIndexes, GL_UNSIGNED_INT, nullptr, p_nbInstance);
+	}
+
+	void Program::validate()
+	{
+		glValidateProgram(_programID);
+		GLint validationStatus;
+		glGetProgramiv(_programID, GL_VALIDATE_STATUS, &validationStatus);
+		if (validationStatus == GL_FALSE) {
+			GLint infoLogLength;
+			glGetProgramiv(_programID, GL_INFO_LOG_LENGTH, &infoLogLength);
+			std::vector<char> infoLog(infoLogLength);
+			glGetProgramInfoLog(_programID, infoLogLength, &infoLogLength, infoLog.data());
+			throw std::runtime_error("Shader Program validation failed: " + std::string(infoLog.data()));
+		}
 	}
 
 	Program::~Program()

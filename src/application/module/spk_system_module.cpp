@@ -1,6 +1,8 @@
 #include "application/module/spk_system_module.hpp"
 
-#include "application/spk_graphical_application.hpp"
+#include "structure/graphics/spk_window.hpp"
+
+#include "spk_debug_macro.hpp"
 
 namespace spk
 {
@@ -22,18 +24,24 @@ namespace spk
 		}
 		case spk::SystemEvent::Type::EnterResize:
 		{
+			_isResizing = true;
 
 			break;
 		}
 		case spk::SystemEvent::Type::Resize:
 		{
 			p_event.window->resize(p_event.newSize);
-			p_event.window->requestPaint();
+
+			if (_isResizing == false)
+			{
+				p_event.window->requestResize();
+			}
 			break;
 		}
 		case spk::SystemEvent::Type::ExitResize:
 		{
-			p_event.window->requestPaint();
+			_isResizing = false;
+			p_event.window->requestResize();
 			break;
 		}
 		case spk::SystemEvent::Type::TakeFocus:
@@ -51,7 +59,12 @@ namespace spk
 			p_event.window->move(p_event.newPosition);
 			break;
 		}
-
+		case spk::SystemEvent::Type::SetCursor:
+		{
+			if (p_event.window->_savedCursor != p_event.window->_currentCursor)
+				p_event.window->_applyCursor();
+			break;
+		}
 		}
 	}
 
