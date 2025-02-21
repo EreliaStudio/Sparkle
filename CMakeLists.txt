@@ -28,6 +28,7 @@ add_resources(
 	"resources/textures/defaultNineSlice_Light.png"
 	"resources/textures/defaultNineSlice_Dark.png"
 	"resources/textures/defaultNineSlice_Darker.png"
+	"resources/textures/defaultBreak.png"
 )
 
 # Define the library

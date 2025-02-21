@@ -97,3 +97,5 @@
 #include "widget/spk_slider_bar.hpp"
 #include "widget/spk_scroll_area.hpp"
 #include "widget/spk_interface_window.hpp"
+#include "widget/spk_action_bar.hpp"
+#include "widget/spk_hud_widget.hpp"
