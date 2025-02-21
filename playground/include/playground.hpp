@@ -15,3 +15,5 @@
 #include "map_manager.hpp"
 #include "texture_manager.hpp"
 #include "context.hpp"
+
+#include "map_editor.hpp"

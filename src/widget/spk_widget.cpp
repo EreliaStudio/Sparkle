@@ -305,7 +305,6 @@ namespace spk
 		}
 		spk::Geometry2D::Size size = { rightDown.x - topLeft.x, rightDown.y - topLeft.y };
 
-		//_viewport.setGeometry({ topLeft, size });
 		_viewport.setGeometry({absoluteAnchor(), geometry().size});
 	}
 
@@ -325,6 +324,10 @@ namespace spk
 			{
 				throw std::runtime_error("[" + spk::StringUtils::wstringToString(name()) + "] onGeometryChange -  " + e.what());
 			}
+			catch (...)
+			{
+				throw std::runtime_error("[" + spk::StringUtils::wstringToString(name()) + "] onGeometryChange - Unknow error type");
+			}
 		}
 		
 		try
@@ -334,6 +337,10 @@ namespace spk
 		catch (const std::exception& e)
 		{
 			throw std::runtime_error("[" + spk::StringUtils::wstringToString(name()) + "] onPaintEvent -  " + e.what());
+		}
+		catch (...)
+		{
+			throw std::runtime_error("[" + spk::StringUtils::wstringToString(name()) + "] onPaintEvent - Unknow error type");
 		}
 
 		spk::PaintEvent childEvent = p_event;

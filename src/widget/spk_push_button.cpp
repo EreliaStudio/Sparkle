@@ -55,7 +55,7 @@ namespace spk
 		_fontRenderer.pressed.setOutlineColor(spk::Color::black);
 
 		_nineSliceRenderer.released.setSpriteSheet(Widget::defaultNineSlice());
-		_nineSliceRenderer.hovered.setSpriteSheet(PushButton::defaultHoverNineSlice());
+		_nineSliceRenderer.hovered.setSpriteSheet(Widget::defaultNineSlice());
 		_nineSliceRenderer.pressed.setSpriteSheet(Widget::defaultNineSlice());
 
 		requireGeometryUpdate();

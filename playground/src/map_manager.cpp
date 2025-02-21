@@ -9,6 +9,7 @@ std::string MapManager::_composeChunkFileName(const spk::Vector2Int& p_chunkPosi
 
 void MapManager::_loadMap()
 {
+	_chunkEntities.clear();
 	for (auto& chunk : _chunkEntities)
 	{
 		std::filesystem::path chunkFilePath = _worldFolderPath / _composeChunkFileName(chunk.first);

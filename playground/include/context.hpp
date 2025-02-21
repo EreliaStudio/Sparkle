@@ -2,6 +2,8 @@
 
 #include "sparkle.hpp"
 
+#include "world_manager.hpp"
+#include "camera_manager.hpp"
 #include "event.hpp"
 #include "map_manager.hpp"
 #include "node.hpp"
