@@ -1,75 +1,234 @@
 #include "playground.hpp"
 
-
-class MenuBarWidget : public spk::Widget
+class MenuBarItem : public spk::PushButton
 {
 private:
-	spk::Frame _backgroundFrame;
-	std::vector<std::unique_ptr<spk::PushButton>> _menuButtons;
 
-	void _onGeometryChange() override
+public:
+    MenuBarItem(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+		spk::PushButton(p_name, p_parent)
+    {
+		setNineSlice(nullptr, spk::PushButton::State::Pressed);
+		setNineSlice(nullptr, spk::PushButton::State::Released);
+        setCornerSize(0);
+    }
+};
+
+class VerticalMenu : public spk::Widget
+{
+private:
+	struct Element
+	{
+		std::unique_ptr<spk::Widget> item;
+		spk::PushButton::Contract itemContract;
+	};
+
+	bool _selected = false;
+	spk::Frame _backgroundFrame;
+    std::vector<Element> _elements;
+
+	spk::Font::Size _computeElementSize() const
+	{
+		return (spk::Font::Size(17, 0));
+	}
+
+    void _onGeometryChange() override
 	{
 		_backgroundFrame.setGeometry({0, 0}, geometry().size);
+
 		spk::Vector2Int anchor = _backgroundFrame.cornerSize();
-		for (auto& button : _menuButtons)
+		anchor.x += 5;
+		float contentSize = geometry().size.x - _backgroundFrame.cornerSize().x * 2 - 10;
+
+		for (const auto& element : _elements)
 		{
-			size_t glyphSize = geometry().size.y - button->cornerSize().y * 2 - _backgroundFrame.cornerSize().y * 2;
+			spk::Vector2UInt elementTextSize = element.item->minimalSize();
 
-			button->setFontSize({glyphSize, 0});
-			button->setFontSize({glyphSize - 4, 0}, spk::PushButton::State::Pressed);
-			spk::Vector2Int buttonTextSize = button->computeTextSize();
+			element.item->setGeometry(anchor, {contentSize, elementTextSize.y});
 
-			float spaceLeft = (geometry().size.y - buttonTextSize.y) / 2.0f;
+			anchor.y += elementTextSize.y + 5;
+		}
+    }
 
-			spk::Vector2UInt buttonSize = {
-				buttonTextSize.x + button->cornerSize().x * 2 + spaceLeft * 2,
-				geometry().size.y - _backgroundFrame.cornerSize().y * 2
-			};
-
-			button->setGeometry({anchor, buttonSize});
-			anchor.x += buttonSize.x + 5;
+	void _onMouseEvent(spk::MouseEvent& p_event)
+	{
+		if (p_event.type == spk::MouseEvent::Type::Press)
+		{		
+			if (isPointed(p_event.mouse) == false)
+			{
+				deactivate();
+			}		
 		}
 	}
 
 public:
-	MenuBarWidget(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+    VerticalMenu(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
 		spk::Widget(p_name, p_parent),
-		_backgroundFrame(p_name + L" - BackgroundFrame", this)
-	{
-		_backgroundFrame.setLayer(1);
+		_backgroundFrame(p_name + L" - Background frame", this)
+    {
 		_backgroundFrame.setCornerSize(2);
 		_backgroundFrame.activate();
-	}
+    }
 
-	void addMenu(const std::wstring& p_menuName)
+	size_t nbItem() const
 	{
-		std::unique_ptr<spk::PushButton> button = std::make_unique<spk::PushButton>(name() + L" - " + p_menuName + L" Menu button", this);
-
-		button->setText(p_menuName);
-		button->setNineSlice(nullptr);
-		button->setCornerSize(0);
-		button->setLayer(10);
-		button->activate();
-
-		_menuButtons.emplace_back(std::move(button));
-
-		requireGeometryUpdate();
-		requestPaint();
+		return (_elements.size());
 	}
+
+    void addItem(const std::wstring& p_itemName, std::function<void()> p_callback)
+    {
+        auto item = std::make_unique<MenuBarItem>(name() + L" - " + p_itemName, this);
+
+		spk::Font::Size fontSize = _computeElementSize();
+		item->setFontSize(fontSize);
+		item->setFontSize({fontSize.text - 4, 0}, spk::PushButton::State::Pressed);
+        item->setText(p_itemName);
+		item->setNineSlice(nullptr, spk::PushButton::State::Released);
+		item->setNineSlice(nullptr, spk::PushButton::State::Pressed);
+		
+		spk::PushButton::Contract contract = item->subscribe(p_callback);
+
+        item->activate();
+
+        _elements.push_back({std::move(item), std::move(contract)});
+
+        parent()->requireGeometryUpdate();
+    }
+
+	spk::Vector2UInt minimalSize() const
+	{
+		spk::Vector2UInt result = 0;
+
+		for (const auto& element : _elements)
+		{
+			if (result.y != 0)
+				result.y += 5;
+			spk::Vector2UInt elementTextSize = element.item->minimalSize();
+
+			result.x = std::max(result.x, elementTextSize.x + 10);
+			result.y += elementTextSize.y;
+		}
+
+		return (result + _backgroundFrame.cornerSize() * 2);
+	}
+};
+
+class MenuBarWidget : public spk::Widget
+{
+private:
+	float _height = 25;
+    spk::Frame _backgroundFrame;
+
+    struct MenuEntry {
+        std::unique_ptr<spk::PushButton> menuButton;
+		spk::PushButton::Contract menuButtonContract;
+        std::unique_ptr<VerticalMenu> verticalMenu;
+    };
+
+    std::vector<std::unique_ptr<MenuEntry>> _menus;
+
+	spk::Font::Size _computeFontSize() const
+	{
+		return (spk::Font::Size(_height - _backgroundFrame.cornerSize().y * 2, 0));
+	}
+
+    void _onGeometryChange() override
+    {
+        _backgroundFrame.setGeometry({0, 0}, {geometry().size.x, _height});
+        
+		spk::Vector2Int anchor = _backgroundFrame.cornerSize();
+
+        for (auto& entry : _menus)
+        {
+            spk::Font::Size fontSize = _computeFontSize();
+            entry->menuButton->setFontSize(fontSize);
+            entry->menuButton->setFontSize({fontSize.text - 4, 0}, spk::PushButton::State::Pressed);
+
+            spk::Vector2Int buttonTextSize = entry->menuButton->computeTextSize();
+
+            spk::Vector2UInt buttonSize = {
+                buttonTextSize.x + entry->menuButton->cornerSize().x * 2 + (_height - buttonTextSize.y),
+                _height - _backgroundFrame.cornerSize().y * 2
+            };
+
+            entry->menuButton->setGeometry({anchor, buttonSize});
+
+			entry->verticalMenu->setGeometry({anchor.x, _backgroundFrame.geometry().size.y}, entry->verticalMenu->minimalSize());
+
+            anchor.x += buttonSize.x + 5;
+        }
+    }
+
+public:
+    MenuBarWidget(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+        spk::Widget(p_name, p_parent),
+        _backgroundFrame(p_name + L" - BackgroundFrame", this)
+    {
+        _backgroundFrame.setLayer(1);
+        _backgroundFrame.setCornerSize(2);
+        _backgroundFrame.activate();
+    }
+
+	void setHeight(const float& p_height)
+	{
+		_height = p_height;
+		requireGeometryUpdate();	
+	}
+
+	const float& height() const
+	{
+		return (_height);
+	}
+
+    spk::SafePointer<VerticalMenu> addMenu(const std::wstring& p_menuName)
+    {
+		std::unique_ptr<MenuEntry> newMenuEntry = std::make_unique<MenuEntry>();
+
+        newMenuEntry->menuButton = std::make_unique<spk::PushButton>(name() + L" - " + p_menuName + L" Menu button", this);
+        newMenuEntry->menuButton->setText(p_menuName);
+        newMenuEntry->menuButton->setNineSlice(nullptr);
+        newMenuEntry->menuButton->setCornerSize(0);
+        newMenuEntry->menuButton->setLayer(10);
+        newMenuEntry->menuButton->activate();
+
+        newMenuEntry->verticalMenu = std::make_unique<VerticalMenu>(name() + L" - " + p_menuName + L" DropDown", this);
+        newMenuEntry->verticalMenu->setLayer(20);
+
+		MenuEntry* rawMenuEntryPtr = newMenuEntry.get();
+
+        newMenuEntry->menuButtonContract = newMenuEntry->menuButton->subscribe([this, rawMenuEntryPtr]()
+		{
+            for(auto &entry : _menus)
+            {
+                entry->verticalMenu->deactivate();
+            }
+			if (rawMenuEntryPtr->verticalMenu->nbItem() != 0)
+			{
+				rawMenuEntryPtr->verticalMenu->activate();
+			}
+			requireGeometryUpdate();
+        });
+
+        _menus.push_back(std::move(newMenuEntry));
+
+        requireGeometryUpdate();
+        requestPaint();
+
+        return _menus.back()->verticalMenu.get();
+    }
 };
 
 template<typename TContent>
 class HUDWidget : public spk::Widget
 {
 private:
-	float _menuBarHeight = 25;
 	MenuBarWidget _menuBarWidget;
 	TContent _content;
 
 	void _onGeometryChange()
 	{
-		_menuBarWidget.setGeometry({0, 0}, {geometry().size.x, _menuBarHeight});
-		_content.setGeometry({0, _menuBarHeight}, {geometry().size.x, geometry().size.y - _menuBarHeight});
+		_menuBarWidget.setGeometry(geometry());
+		_content.setGeometry({0, _menuBarWidget.height()}, {geometry().size.x, geometry().size.y - _menuBarWidget.height()});
 	}
 
 public:
@@ -80,12 +239,6 @@ public:
 	{
 		_content.activate();
 		_menuBarWidget.activate();
-	}
-
-	void setMenuBarHeight(const float& p_height)
-	{
-		_menuBarHeight = p_height;
-		requireGeometryUpdate();	
 	}
 
 	spk::SafePointer<MenuBarWidget> menuBar()
@@ -107,11 +260,17 @@ public:
 	MapEditorHUD(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
 		HUDWidget<MapEditor>(p_name, p_parent)
 	{
-		setMenuBarHeight(25);
+		menuBar()->setHeight(25);
 		
-		menuBar()->addMenu(L"File");
-		menuBar()->addMenu(L"Edit");
-		menuBar()->addMenu(L"Editor");
+		auto fileMenu = menuBar()->addMenu(L"File");
+		fileMenu->addItem(L"Save", [&](){spk::cout << "Saving" << std::endl;});
+		fileMenu->addItem(L"Load", [&](){spk::cout << "Loading" << std::endl;});
+
+		auto editMenu = menuBar()->addMenu(L"Edit");
+		editMenu->addItem(L"Undo", [&](){});
+		editMenu->addItem(L"Redo", [&](){});
+
+		auto editorMenu = menuBar()->addMenu(L"Editor");
 	}
 };
 

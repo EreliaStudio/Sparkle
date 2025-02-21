@@ -111,8 +111,10 @@ namespace spk
         PushButton(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent);
 		~PushButton() = default;
 
-		spk::Vector2UInt computeTextSize();
-		spk::Vector2UInt computeExpectedTextSize(const spk::Font::Size& p_textSize);
+		spk::Vector2UInt computeTextSize() const;
+		spk::Vector2UInt computeExpectedTextSize(const spk::Font::Size& p_textSize) const;
+
+		spk::Vector2UInt minimalSize() const override;
 
 		ContractProvider::Contract subscribe(const ContractProvider::Job& p_job);
 

@@ -55,13 +55,13 @@ namespace spk
 		_fontRenderer.pressed.setOutlineColor(spk::Color::black);
 
 		_nineSliceRenderer.released.setSpriteSheet(Widget::defaultNineSlice());
-		_nineSliceRenderer.hovered.setSpriteSheet(Widget::defaultNineSlice());
+		_nineSliceRenderer.hovered.setSpriteSheet(PushButton::defaultHoverNineSlice());
 		_nineSliceRenderer.pressed.setSpriteSheet(Widget::defaultNineSlice());
 
 		requireGeometryUpdate();
 	}
 
-	spk::Vector2UInt PushButton::computeTextSize()
+	spk::Vector2UInt PushButton::computeTextSize() const
 	{
 		spk::Vector2UInt maxSize(0, 0);
 
@@ -73,7 +73,7 @@ namespace spk
 		return maxSize;
 	}
 
-	spk::Vector2UInt PushButton::computeExpectedTextSize(const spk::Font::Size& p_textSize)
+	spk::Vector2UInt PushButton::computeExpectedTextSize(const spk::Font::Size& p_textSize) const
 	{
 		spk::Vector2UInt maxSize(0, 0);
 
@@ -83,6 +83,11 @@ namespace spk
 			maxSize = spk::Vector2UInt::max(maxSize, size);
 		}
 		return maxSize;
+	}
+
+	spk::Vector2UInt PushButton::minimalSize() const
+	{
+		return (computeTextSize());
 	}
 
 	ContractProvider::Contract PushButton::subscribe(const ContractProvider::Job& p_job)
