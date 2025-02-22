@@ -99,3 +99,4 @@
 #include "widget/spk_interface_window.hpp"
 #include "widget/spk_action_bar.hpp"
 #include "widget/spk_hud_widget.hpp"
+#include "widget/spk_screen.hpp"
