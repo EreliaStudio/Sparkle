@@ -7,6 +7,11 @@ namespace spk
 		
 	}
 
+	void GameEngine::clear()
+	{
+		_centralEntity.clearChildren();
+	}
+
 	void GameEngine::addEntity(const spk::SafePointer<Entity>& p_entity)
 	{
 		_centralEntity.addChild(p_entity);

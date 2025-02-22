@@ -14,6 +14,8 @@ namespace spk
 	public:
 		GameEngine();
 
+		void clear();
+
 		void addEntity(const spk::SafePointer<Entity>& p_entity);
 		void removeEntity(const spk::SafePointer<Entity>& p_entity);
 
