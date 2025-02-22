@@ -434,15 +434,27 @@ namespace spk
             return result;
         }
 
-        static IVector2 min(const IVector2& p_min, const IVector2& p_max)
+        static IVector2 min(const IVector2& p_valueA, const IVector2& p_valueB)
         {
-            return IVector2(std::min(p_min.x, p_max.x), std::min(p_min.y, p_max.y));
+            return IVector2(std::min(p_valueA.x, p_valueB.x), std::min(p_valueA.y, p_valueB.y));
         }
 
-        static IVector2 max(const IVector2& p_min, const IVector2& p_max)
+        static IVector2 max(const IVector2& p_valueA, const IVector2& p_valueB)
         {
-            return IVector2(std::max(p_min.x, p_max.x), std::max(p_min.y, p_max.y));
+            return IVector2(std::max(p_valueA.x, p_valueB.x), std::max(p_valueA.y, p_valueB.y));
         }
+
+		template<typename... Args>
+		static IVector2 min(const IVector2& p_valueA, const IVector2& p_valueB, const Args&... p_args)
+		{
+			return min(min(p_valueA, p_valueB), p_args...);
+		}
+
+		template<typename... Args>
+		static IVector2 max(const IVector2& p_valueA, const IVector2& p_valueB, const Args&... p_args)
+		{
+			return max(max(p_valueA, p_valueB), p_args...);
+		}
 
         static IVector2 lerp(const IVector2& p_startingPoint, const IVector2& p_endingPoint, float t)
         {
