@@ -11,13 +11,30 @@ namespace spk
 		Nanosecond
 	};
 
+	struct Timestamp;
+
 	struct Duration
 	{
-		long long value; // Saved as nanosecond
+        double seconds = 0;
+        long long milliseconds = 0;
+        long long nanoseconds = 0;
 
 		Duration();
 		Duration(long long p_value, TimeUnit p_unit = TimeUnit::Millisecond);
 		Duration(double p_value, TimeUnit p_unit = TimeUnit::Millisecond);
+
+        Duration operator+(const Duration& p_other) const;
+        Duration operator-(const Duration& p_other) const;
+        Duration& operator+=(const Duration& p_other);
+        Duration& operator-=(const Duration& p_other);
+
+        bool operator==(const Duration& p_other) const;
+        bool operator!=(const Duration& p_other) const;
+
+        bool operator<(const Duration& p_other) const;
+        bool operator>(const Duration& p_other) const;
+        bool operator<=(const Duration& p_other) const;
+        bool operator>=(const Duration& p_other) const;
 	};
 
 	struct Timestamp
@@ -29,18 +46,20 @@ namespace spk
 		Timestamp() = default;
 		Timestamp(const Duration& d);
 
-        Timestamp operator+(const Timestamp& other) const;
-        Timestamp operator-(const Timestamp& other) const;
-        Timestamp& operator+=(const Timestamp& other);
-        Timestamp& operator-=(const Timestamp& other);
+		Duration operator - (const Timestamp& p_other) const;
 
-        bool operator==(const Timestamp& other) const;
-        bool operator!=(const Timestamp& other) const;
+        Timestamp operator+(const Duration& p_other) const;
+        Timestamp operator-(const Duration& p_other) const;
+        Timestamp& operator+=(const Duration& p_other);
+        Timestamp& operator-=(const Duration& p_other);
 
-        bool operator<(const Timestamp& other) const;
-        bool operator>(const Timestamp& other) const;
-        bool operator<=(const Timestamp& other) const;
-        bool operator>=(const Timestamp& other) const;
+        bool operator==(const Timestamp& p_other) const;
+        bool operator!=(const Timestamp& p_other) const;
+
+        bool operator<(const Timestamp& p_other) const;
+        bool operator>(const Timestamp& p_other) const;
+        bool operator<=(const Timestamp& p_other) const;
+        bool operator>=(const Timestamp& p_other) const;
 
     private:
         static Timestamp fromNanoseconds(long long ns);

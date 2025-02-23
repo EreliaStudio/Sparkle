@@ -29,7 +29,7 @@ namespace spk
     {
         if (_state == State::Running)
         {
-            _accumulatedTime = Duration(_accumulatedTime.value + currentRunDuration().value, TimeUnit::Nanosecond);
+            _accumulatedTime = Duration(_accumulatedTime.nanoseconds + currentRunDuration().nanoseconds, TimeUnit::Nanosecond);
             _state = State::Paused;
         }
     }
@@ -55,7 +55,7 @@ namespace spk
         if (_state == State::Running)
         {
             auto currentDiff = currentRunDuration();
-            return (Duration(_accumulatedTime.value + currentDiff.value, TimeUnit::Nanosecond));
+            return (Duration(_accumulatedTime.nanoseconds + currentDiff.nanoseconds, TimeUnit::Nanosecond));
         }
         else
         {
