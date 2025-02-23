@@ -39,6 +39,27 @@ namespace spk::OpenGL
         void activate() override;
 
 		Element& dynamicArray();
+		void pop_back();
+		template<typename TDynamicType>
+		void push_back(const TDynamicType& value)
+		{
+			if (_dynamicElementSize % sizeof(TDynamicType) != 0)
+			{
+				throw std::runtime_error(
+					"ShaderStorageBufferObject::push_back() - The dynamic buffer section element size (" +
+					std::to_string(_dynamicElementSize) + " bytes) is incompatible with TDynamicType size (" +
+					std::to_string(sizeof(TDynamicType)) + " bytes)."
+				);
+			}
+
+			auto& dynArray = std::get<std::vector<Element>>(_dynamicArray._content);
+			size_t currentSize = dynArray.size();
+
+			resizeDynamicArray(currentSize + 1);
+
+			auto& newDynArray = std::get<std::vector<Element>>(_dynamicArray._content);
+			newDynArray[currentSize] = value;
+		}
 		void resizeDynamicArray(size_t arraySize);
 
 		template<typename TFixedType, typename TDynamicType>

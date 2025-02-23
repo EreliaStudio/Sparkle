@@ -65,6 +65,18 @@ namespace spk::OpenGL
 		}
 	}
 
+	void ShaderStorageBufferObject::pop_back()
+	{
+		auto& dynArray = std::get<std::vector<Element>>(_dynamicArray._content);
+		if (dynArray.empty())
+		{
+			throw std::runtime_error("ShaderStorageBufferObject::pop_back() - Cannot pop_back from an empty dynamic array.");
+		}
+
+		size_t newSize = dynArray.size() - 1;
+		resizeDynamicArray(newSize);
+	}
+
 	ShaderStorageBufferObject::Element& ShaderStorageBufferObject::dynamicArray()
 	{
 		return (_dynamicArray);
