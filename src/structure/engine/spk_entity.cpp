@@ -125,6 +125,15 @@ namespace spk
 		return (_transform);
 	}
 
+	void Entity::removeAllComponents()
+	{
+		for (auto& component : _components)
+		{
+			component->stop();
+		}
+		_components.clear();
+	}
+	
 	void Entity::removeComponent(const std::wstring& p_name)
 	{
 		auto it = std::remove_if(_components.begin(), _components.end(),
