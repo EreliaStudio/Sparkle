@@ -49,7 +49,7 @@ namespace spk
 		void resize(const size_t& p_newSize);
 		void clear();
 		void reset();
-		void skip(const size_t& p_number);
+		void skip(const size_t& p_bytesToSkip) const;
 		void edit(const size_t& p_offset, const void* p_data, const size_t& p_dataSize);
 		void append(const void* p_data, const size_t& p_dataSize);
 
@@ -81,7 +81,7 @@ namespace spk
 		}
 
 		template <typename OutputType>
-		OutputType peek() const
+		const OutputType& peek() const
 		{
 			return (_buffer.peek<OutputType>());
 		}

@@ -73,9 +73,9 @@ namespace spk
 		_header.length = _buffer.size();
 	}
 
-	void Message::skip(const size_t &p_number)
+	void Message::skip(const size_t &p_bytesToSkip) const
 	{
-		_buffer.skip(p_number);
+		_buffer.skip(p_bytesToSkip);
 	}
 
 	void Message::edit(const size_t &p_offset, const void *p_data, const size_t &p_dataSize)
