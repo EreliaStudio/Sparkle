@@ -62,6 +62,12 @@ namespace spk
 		}
 	}
 
+	Duration Duration::operator-() const
+	{
+	    return Duration(-nanoseconds, TimeUnit::Nanosecond);
+	}
+
+
 	Duration Duration::operator+(const Duration& p_other) const
 	{
 		return (Duration(nanoseconds + p_other.nanoseconds, TimeUnit::Nanosecond));
