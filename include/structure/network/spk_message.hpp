@@ -80,6 +80,12 @@ namespace spk
 			return (_buffer.get<OutputType>());
 		}
 
+		template <typename OutputType>
+		OutputType peek() const
+		{
+			return (_buffer.peek<OutputType>());
+		}
+
 		const Header& header() const;
 		const DataBuffer& buffer() const;
 		size_t size() const;

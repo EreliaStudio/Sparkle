@@ -58,6 +58,16 @@ namespace spk
             return (result);
         }
 
+        template <typename OutputType>
+        OutputType peek() const
+        {
+            OutputType result;
+			size_t initialBookmark = _bookmark;
+            *this >> result;
+			_bookmark = initialBookmark;
+            return (result);
+        }
+
         template <typename InputType>
         void edit(const size_t& p_offset, const InputType& p_input)
         {
