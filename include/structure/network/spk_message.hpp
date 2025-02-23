@@ -89,5 +89,6 @@ namespace spk
 		const Header& header() const;
 		const DataBuffer& buffer() const;
 		size_t size() const;
+		bool empty() const;
 	};
 }

@@ -103,4 +103,9 @@ namespace spk
 	{
 		return (sizeof(Header) + _buffer.size());
 	}
+
+	bool Message::empty() const
+	{
+		return (_buffer.empty());
+	}
 }
