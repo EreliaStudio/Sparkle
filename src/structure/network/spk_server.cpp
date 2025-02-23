@@ -3,13 +3,10 @@
 namespace spk
 {
 	Server::Acceptator::Acceptator(std::unordered_map<ClientID, SOCKET>& clientsMap, std::mutex& mutex, ClientID& p_clientId,
-									ConnectionCallback& connectCallback, DisconnectionCallback& disconnectCallback,
 									MessagePool& pool, spk::ThreadSafeQueue<MessageObject>& queue) :
 		clients(clientsMap),
 		clientsMutex(mutex),
 		nextClientId(p_clientId),
-		onConnectCallback(connectCallback),
-		onDisconnectCallback(disconnectCallback),
 		messagePool(pool),
 		messageQueue(queue),
 		isRunning(false),
@@ -20,6 +17,16 @@ namespace spk
 	Server::Acceptator::~Acceptator()
 	{
 		stop();
+	}
+
+	Server::Contract Server::Acceptator::addOnConnectionCallback(const ConnectionCallback& p_connectionCallback)
+	{
+		return (onConnectProvider.subscribe(p_connectionCallback));
+	}
+	
+	Server::Contract Server::Acceptator::addOnDisconnectionCallback(const DisconnectionCallback& p_disconnectionCallback)
+	{
+		return (onDisconnectProvider.subscribe(p_disconnectionCallback));
 	}
 
 	void Server::Acceptator::start(int p_port)
@@ -111,7 +118,7 @@ namespace spk
 			for (auto id : disconnectedClients)
 			{
 				clients.erase(id);
-				onDisconnectCallback(id);
+				onDisconnectProvider.trigger(id);
 			}
 		}
 	}
@@ -126,7 +133,7 @@ namespace spk
 			std::lock_guard<std::mutex> lock(clientsMutex);
 			ClientID clientId = nextClientId++;
 			clients[clientId] = clientSocket;
-			onConnectCallback(clientId);
+			onConnectProvider.trigger(clientId);
 		}
 	}
 
@@ -169,12 +176,19 @@ namespace spk
 		WSACleanup();
 	}
 
-	// Server Methods
 	Server::Server() :
-		onConnectCallback([&](const ClientID& p_newlyConnectedClient) { spk::cout << "New connection detected: client ID [" << p_newlyConnectedClient << "]" << std::endl; }),
-		onDisconnectCallback([&](const ClientID& p_disconnectedClient) { spk::cout << "Client ID [" << p_disconnectedClient << "] disconnected" << std::endl; }),
-		acceptor(std::make_unique<Acceptator>(clients, clientsMutex, nextClientId, onConnectCallback, onDisconnectCallback, messagePool, messageQueue))
+		acceptor(std::make_unique<Acceptator>(clients, clientsMutex, nextClientId, messagePool, messageQueue))
 	{
+	}
+	
+	Server::Contract Server::addOnConnectionCallback(const Server::ConnectionCallback& p_connectionCallback)
+	{
+		return (acceptor->addOnConnectionCallback(p_connectionCallback));
+	}
+	
+	Server::Contract Server::addOnDisconnectionCallback(const Server::DisconnectionCallback& p_disconnectionCallback)
+	{
+		return (acceptor->addOnDisconnectionCallback(p_disconnectionCallback));
 	}
 
 	void Server::start(size_t p_serverPort)
