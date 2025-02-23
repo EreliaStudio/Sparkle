@@ -12,6 +12,11 @@ namespace spk
 		_centralEntity.clearChildren();
 	}
 
+	spk::SafePointer<spk::Entity> GameEngine::centralEntity()
+	{
+		return (&_centralEntity);
+	}
+	
 	void GameEngine::addEntity(const spk::SafePointer<Entity>& p_entity)
 	{
 		_centralEntity.addChild(p_entity);

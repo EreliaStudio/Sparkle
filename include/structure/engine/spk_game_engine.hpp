@@ -16,6 +16,7 @@ namespace spk
 
 		void clear();
 
+		spk::SafePointer<spk::Entity> centralEntity();
 		void addEntity(const spk::SafePointer<Entity>& p_entity);
 		void removeEntity(const spk::SafePointer<Entity>& p_entity);
 
