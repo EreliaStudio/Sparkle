@@ -94,6 +94,8 @@ namespace spk
 		Transform& transform();
 		const Transform& transform() const;
 
+		void removeAllComponents();
+
 		template <typename TComponentType, typename... TArgs>
 		TComponentType& addComponent(TArgs&&... p_args)
 		{

@@ -22,7 +22,7 @@ namespace spk
 		std::wstring _text;
 		std::wstring _placeholder;
 
-		spk::Vector2Int _cornerSize = {2, 2};
+		spk::Vector2Int _cornerSize = {10, 10};
 		spk::HorizontalAlignment _horizontalAlignment = spk::HorizontalAlignment::Left;
 		spk::VerticalAlignment _verticalAlignment = spk::VerticalAlignment::Centered;
 

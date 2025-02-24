@@ -8,6 +8,7 @@ namespace spk::OpenGL
 	}
 
 	uint8_t *BindedBufferObject::Element::data() { return _buffer; }
+	const uint8_t *BindedBufferObject::Element::data() const { return _buffer; }
 	size_t BindedBufferObject::Element::size() const { return _size; }
 
 	size_t BindedBufferObject::Element::nbElement() const

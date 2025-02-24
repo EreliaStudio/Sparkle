@@ -44,7 +44,7 @@ namespace spk
 
         void resize(const size_t& p_newSize);
 
-        void skip(const size_t& p_number);
+        void skip(const size_t& p_bytesToSkip) const;
 
         void clear();
 
@@ -55,6 +55,13 @@ namespace spk
         {
             OutputType result;
             *this >> result;
+            return (result);
+        }
+
+        template <typename OutputType>
+        const OutputType& peek() const
+        {
+            const OutputType& result = *(reinterpret_cast<const OutputType*>(_data.data() + bookmark()));
             return (result);
         }
 

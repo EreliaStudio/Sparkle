@@ -8,7 +8,8 @@ namespace spk
 		_name(p_name),
 		_owner(nullptr)
 	{
-
+		addActivationCallback([&](){awake();}).relinquish();
+		addDeactivationCallback([&](){sleep();}).relinquish();
 	}
 
 	Component::~Component()

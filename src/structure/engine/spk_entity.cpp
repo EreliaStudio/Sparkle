@@ -125,6 +125,15 @@ namespace spk
 		return (_transform);
 	}
 
+	void Entity::removeAllComponents()
+	{
+		for (auto& component : _components)
+		{
+			component->stop();
+		}
+		_components.clear();
+	}
+	
 	void Entity::removeComponent(const std::wstring& p_name)
 	{
 		auto it = std::remove_if(_components.begin(), _components.end(),
@@ -178,7 +187,10 @@ namespace spk
 
 		for (auto& component : _components)
 		{
-			component->onUpdateEvent(p_event);
+			if (component->isActive() == true)
+			{
+				component->onUpdateEvent(p_event);
+			}
 		}
 	}
 	
@@ -200,7 +212,10 @@ namespace spk
 
 		for (auto& component : _components)
 		{
-			component->onKeyboardEvent(p_event);
+			if (component->isActive() == true)
+			{
+				component->onKeyboardEvent(p_event);
+			}
 		}
 	}
 	
@@ -222,7 +237,10 @@ namespace spk
 
 		for (auto& component : _components)
 		{
-			component->onMouseEvent(p_event);
+			if (component->isActive() == true)
+			{
+				component->onMouseEvent(p_event);
+			}
 		}
 	}
 
@@ -244,8 +262,12 @@ namespace spk
 
 		for (auto& component : _components)
 		{
-			component->onControllerEvent(p_event);
+			if (component->isActive() == true)
+			{
+				component->onControllerEvent(p_event);
+			}
 		}
+			
 	}
 	
 	void Entity::onTimerEvent(spk::TimerEvent& p_event)
@@ -266,7 +288,10 @@ namespace spk
 
 		for (auto& component : _components)
 		{
-			component->onTimerEvent(p_event);
+			if (component->isActive() == true)
+			{
+				component->onTimerEvent(p_event);
+			}
 		}
 	}
 

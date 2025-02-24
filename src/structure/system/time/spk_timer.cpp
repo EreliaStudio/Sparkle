@@ -16,14 +16,14 @@ namespace spk
 		
 	}
 	
-	Timer::Timer(long long p_value, TimeUnit p_unit = TimeUnit::Millisecond) :
-		Timer(Duration(p_value, p_unit))
+	Timer::Timer(long long p_nanoseconds, TimeUnit p_unit = TimeUnit::Millisecond) :
+		Timer(Duration(p_nanoseconds, p_unit))
 	{
 
 	}
 	
-	Timer::Timer(double p_value, TimeUnit p_unit = TimeUnit::Millisecond) :
-		Timer(Duration(p_value, p_unit))
+	Timer::Timer(double p_nanoseconds, TimeUnit p_unit = TimeUnit::Millisecond) :
+		Timer(Duration(p_nanoseconds, p_unit))
 	{
 
 	}
@@ -66,7 +66,7 @@ namespace spk
     {
         if (_state == State::Running)
         {
-            _accumulatedTime = {_accumulatedTime.value + currentRunDuration().value, TimeUnit::Nanosecond};
+            _accumulatedTime = {_accumulatedTime.nanoseconds + currentRunDuration().nanoseconds, TimeUnit::Nanosecond};
             _state = State::Paused;
         }
     }
@@ -85,7 +85,7 @@ namespace spk
         if (_state == State::Running)
         {
             auto diff = currentRunDuration();
-            return Duration(_accumulatedTime.value + diff.value, TimeUnit::Nanosecond);
+            return Duration(_accumulatedTime.nanoseconds + diff.nanoseconds, TimeUnit::Nanosecond);
         }
         else
         {
@@ -109,7 +109,7 @@ namespace spk
         if (_state == State::Running)
         {
             auto elapsed = this->elapsed();
-            if (elapsed.value >= _expectedDuration.value)
+            if (elapsed >= _expectedDuration)
             {
                 _state = State::TimedOut;
             }

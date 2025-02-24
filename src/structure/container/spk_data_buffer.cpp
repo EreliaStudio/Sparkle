@@ -20,11 +20,11 @@ namespace spk
 		_data.resize(p_newSize);
 	}
 
-	void DataBuffer::skip(const size_t& p_number)
+	void DataBuffer::skip(const size_t& p_bytesToSkip) const
 	{
-		if (leftover() < p_number)
-			throw std::runtime_error(std::string("Unable to skip ") + std::to_string(p_number) + " bytes.");
-		_bookmark += p_number;
+		if (leftover() < p_bytesToSkip)
+			throw std::runtime_error(std::string("Unable to skip ") + std::to_string(p_bytesToSkip) + " bytes.");
+		_bookmark += p_bytesToSkip;
 	}
 
 	void DataBuffer::clear()

@@ -7,10 +7,11 @@
 
 namespace spk
 {
-	Duration::Duration() :
-		value(0)
+	Duration::Duration()
 	{
-
+		seconds = 0;
+		milliseconds = 0;
+		nanoseconds = 0;
 	}
 
 	Duration::Duration(long long p_value, TimeUnit p_unit)
@@ -18,24 +19,22 @@ namespace spk
 		switch (p_unit)
 		{
 			case TimeUnit::Second:
-			{
-				value = p_value * 1'000'000'000;
+				seconds = static_cast<double>(p_value);
+				milliseconds = p_value * 1'000;
+				nanoseconds = p_value * 1'000'000'000;
 				break;
-			}
 			case TimeUnit::Millisecond:
-			{
-				value = p_value * 1'000'000;
+				seconds = p_value / 1'000.0;
+				milliseconds = p_value;
+				nanoseconds = p_value * 1'000'000;
 				break;
-			}
 			case TimeUnit::Nanosecond:
-			{
-				value = p_value;
+				seconds = p_value / 1'000'000'000.0;
+				milliseconds = p_value / 1'000'000;
+				nanoseconds = p_value;
 				break;
-			}
 			default:
-			{
 				throw std::runtime_error("Unexpected duration unit value");
-			}
 		}
 	}
 
@@ -44,90 +43,150 @@ namespace spk
 		switch (p_unit)
 		{
 			case TimeUnit::Second:
-			{
-				value = p_value * 1'000'000'000.0;
+				seconds = p_value;
+				milliseconds = static_cast<long long>(p_value * 1'000);
+				nanoseconds = static_cast<long long>(p_value * 1'000'000'000);
 				break;
-			}
 			case TimeUnit::Millisecond:
-			{
-				value = p_value * 1'000'000.0;
+				seconds = p_value / 1'000.0;
+				milliseconds = static_cast<long long>(p_value);
+				nanoseconds = static_cast<long long>(p_value * 1'000'000);
 				break;
-			}
 			case TimeUnit::Nanosecond:
-			{
-				value = p_value;
+				seconds = p_value / 1'000'000'000.0;
+				milliseconds = static_cast<long long>(p_value / 1'000'000);
+				nanoseconds = static_cast<long long>(p_value);
 				break;
-			}
 			default:
-			{
 				throw std::runtime_error("Unexpected duration unit value");
-			}
 		}
+	}
+
+	Duration Duration::operator-() const
+	{
+	    return Duration(-nanoseconds, TimeUnit::Nanosecond);
+	}
+
+
+	Duration Duration::operator+(const Duration& p_other) const
+	{
+		return (Duration(nanoseconds + p_other.nanoseconds, TimeUnit::Nanosecond));
+	}
+	
+	Duration Duration::operator-(const Duration& p_other) const
+	{
+		return (Duration(nanoseconds - p_other.nanoseconds, TimeUnit::Nanosecond));
+	}
+	
+	Duration& Duration::operator+=(const Duration& p_other)
+	{
+		seconds += p_other.seconds;
+		milliseconds += p_other.milliseconds;
+		nanoseconds += p_other.nanoseconds;
+		return (*this);
+	}        
+	Duration& Duration::operator-=(const Duration& p_other)
+	{
+		seconds -= p_other.seconds;
+		milliseconds -= p_other.milliseconds;
+		nanoseconds -= p_other.nanoseconds;
+		return (*this);
+	}
+
+	bool Duration::operator==(const Duration& p_other) const
+	{
+		return (nanoseconds == p_other.nanoseconds);
+	}
+	bool Duration::operator!=(const Duration& p_other) const
+	{
+		return (nanoseconds != p_other.nanoseconds);
+	}
+
+	bool Duration::operator<(const Duration& p_other) const
+	{
+		return (nanoseconds < p_other.nanoseconds);
+	}
+	bool Duration::operator>(const Duration& p_other) const
+	{
+		return (nanoseconds > p_other.nanoseconds);
+	}
+	bool Duration::operator<=(const Duration& p_other) const
+	{
+		return (nanoseconds <= p_other.nanoseconds);
+	}
+	bool Duration::operator>=(const Duration& p_other) const
+	{
+		return (nanoseconds >= p_other.nanoseconds);
 	}
 
 	Timestamp::Timestamp(const Duration& d)
 	{
-		nanoseconds  = d.value;
-		milliseconds = d.value / 1'000'000LL;
-		seconds      = static_cast<double>(d.value) / 1'000'000'000.0;
+		nanoseconds  = d.nanoseconds;
+		milliseconds = d.milliseconds;
+		seconds      = seconds;
 	}
 
-	Timestamp Timestamp::operator+(const Timestamp& other) const
+	Duration Timestamp::operator-(const Timestamp& p_other) const
 	{
-		long long sumNs = this->nanoseconds + other.nanoseconds;
+		return (Duration(nanoseconds - p_other.nanoseconds, TimeUnit::Nanosecond));
+	}
+
+	Timestamp Timestamp::operator+(const Duration& p_other) const
+	{
+		long long sumNs = this->nanoseconds + p_other.nanoseconds;
 		return fromNanoseconds(sumNs);
 	}
 
-	Timestamp Timestamp::operator-(const Timestamp& other) const
+	Timestamp Timestamp::operator-(const Duration& p_other) const
 	{
-		long long diffNs = this->nanoseconds - other.nanoseconds;
+		long long diffNs = this->nanoseconds - p_other.nanoseconds;
 		return fromNanoseconds(diffNs);
 	}
 
-	Timestamp& Timestamp::operator+=(const Timestamp& other)
+	Timestamp& Timestamp::operator+=(const Duration& p_other)
 	{
-		this->nanoseconds += other.nanoseconds;
-		this->milliseconds = this->nanoseconds / 1'000'000LL;
-		this->seconds      = static_cast<double>(this->nanoseconds) / 1'000'000'000.0;
+		this->nanoseconds += p_other.nanoseconds;
+		this->milliseconds += p_other.milliseconds;
+		this->seconds += p_other.seconds;
 		return *this;
 	}
 
-	Timestamp& Timestamp::operator-=(const Timestamp& other)
+	Timestamp& Timestamp::operator-=(const Duration& p_other)
 	{
-		this->nanoseconds -= other.nanoseconds;
-		this->milliseconds = this->nanoseconds / 1'000'000LL;
-		this->seconds      = static_cast<double>(this->nanoseconds) / 1'000'000'000.0;
+		this->nanoseconds -= p_other.nanoseconds;
+		this->milliseconds -= p_other.milliseconds;
+		this->seconds -= p_other.seconds;
 		return *this;
 	}
 
-	bool Timestamp::operator==(const Timestamp& other) const
+	bool Timestamp::operator==(const Timestamp& p_other) const
 	{
-		return this->milliseconds == other.milliseconds;
+		return this->milliseconds == p_other.milliseconds;
 	}
 
-	bool Timestamp::operator!=(const Timestamp& other) const
+	bool Timestamp::operator!=(const Timestamp& p_other) const
 	{
-		return !(*this == other);
+		return !(*this == p_other);
 	}
 
-	bool Timestamp::operator<(const Timestamp& other) const
+	bool Timestamp::operator<(const Timestamp& p_other) const
 	{
-		return this->milliseconds < other.milliseconds;
+		return this->milliseconds < p_other.milliseconds;
 	}
 
-	bool Timestamp::operator>(const Timestamp& other) const
+	bool Timestamp::operator>(const Timestamp& p_other) const
 	{
-		return this->milliseconds > other.milliseconds;
+		return this->milliseconds > p_other.milliseconds;
 	}
 
-	bool Timestamp::operator<=(const Timestamp& other) const
+	bool Timestamp::operator<=(const Timestamp& p_other) const
 	{
-		return this->milliseconds <= other.milliseconds;
+		return this->milliseconds <= p_other.milliseconds;
 	}
 
-	bool Timestamp::operator>=(const Timestamp& other) const
+	bool Timestamp::operator>=(const Timestamp& p_other) const
 	{
-		return this->milliseconds >= other.milliseconds;
+		return this->milliseconds >= p_other.milliseconds;
 	}
 
 	Timestamp Timestamp::fromNanoseconds(long long ns)

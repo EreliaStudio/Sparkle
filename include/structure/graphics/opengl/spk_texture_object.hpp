@@ -64,8 +64,8 @@ namespace spk::OpenGL
 	public:
 		TextureObject();
 		
-		TextureObject(const TextureObject& other);
-		TextureObject& operator=(const TextureObject& other);
+		TextureObject(const TextureObject& p_other);
+		TextureObject& operator=(const TextureObject& p_other);
 
 		TextureObject(TextureObject&& p_other) noexcept;
 		TextureObject& operator=(TextureObject&& p_other) noexcept;
