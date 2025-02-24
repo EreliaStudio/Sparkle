@@ -49,7 +49,7 @@ namespace spk
 		_fontRenderer.validate();
 
 		_cursorRenderer.clear();
-		spk::Vector2UInt prevTextSize = _fontRenderer.computeTextSize(text().substr(_lowerCursor, _cursor - _lowerCursor)) + textAnchor;
+		spk::Vector2UInt prevTextSize = _fontRenderer.computeTextSize(text().substr(_lowerCursor, _cursor - _lowerCursor));
 		_cursorRenderer.prepareSquare(spk::Geometry2D(prevTextSize.x + geometry().anchor.x + _cornerSize.x - 2, _cornerSize.y + geometry().anchor.y, 2, geometry().height - _cornerSize.y * 2), layer() + 0.02f);
 		_cursorRenderer.validate();
 	}

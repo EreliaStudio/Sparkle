@@ -82,6 +82,7 @@ namespace spk::OpenGL
             }
 
             uint8_t* data();
+            const uint8_t* data() const;
             size_t size() const;
 
             size_t nbElement() const;

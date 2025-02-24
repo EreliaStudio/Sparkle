@@ -10,12 +10,20 @@ namespace spk
 	{
 	private:
 		spk::MenuBar _menuBar;
+		spk::ContractProvider::Contract _menuBarActivationContract;
 		TContent _content;
 
 		void _onGeometryChange()
 		{
-			_menuBar.setGeometry(geometry());
-			_content.setGeometry({0, _menuBar.height()}, {geometry().size.x, geometry().size.y - _menuBar.height()});
+			if (_menuBar.isActive() == true)
+			{
+				_menuBar.setGeometry(geometry());
+				_content.setGeometry({0, _menuBar.height()}, {geometry().size.x, geometry().size.y - _menuBar.height()});
+			}
+			else
+			{
+				_content.setGeometry(geometry());
+			}
 		}
 
 	public:
@@ -24,6 +32,8 @@ namespace spk
 			_menuBar(p_name + L" - MenuBar", this),
 			_content(p_name, this)
 		{
+			_menuBarActivationContract = _menuBar.addActivationCallback([&](){requireGeometryUpdate();});
+			
 			_content.activate();
 			_menuBar.activate();
 		}

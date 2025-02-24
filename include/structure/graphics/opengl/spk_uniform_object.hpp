@@ -94,7 +94,7 @@ namespace spk
             _data.resize(size);
         }
 
-        UniformObject(const UniformObject& other)
+        UniformObject(const UniformObject& p_other)
         {
             std::lock_guard<std::mutex> lock(other._mutex);
             _name = other._name;
@@ -103,7 +103,7 @@ namespace spk
             _data = other._data;
         }
 
-        UniformObject(UniformObject&& other) noexcept
+        UniformObject(UniformObject&& p_other) noexcept
         {
             std::lock_guard<std::mutex> lock(other._mutex);
 			
@@ -118,9 +118,9 @@ namespace spk
             other._data.clear();
         }
 
-        UniformObject& operator=(const UniformObject& other)
+        UniformObject& operator=(const UniformObject& p_other)
         {
-            if (this != &other)
+            if (this != &p_other)
             {
                 std::lock(_mutex, other._mutex);
 
@@ -135,9 +135,9 @@ namespace spk
             return *this;
         }
 
-        UniformObject& operator=(UniformObject&& other) noexcept
+        UniformObject& operator=(UniformObject&& p_other) noexcept
         {
-            if (this != &other)
+            if (this != &p_other)
             {
                 std::lock(_mutex, other._mutex);
                 std::lock_guard<std::mutex> lhs_lock(_mutex, std::adopt_lock);

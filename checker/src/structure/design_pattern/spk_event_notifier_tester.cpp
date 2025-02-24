@@ -1,6 +1,6 @@
 #include "structure/design_pattern/spk_event_notifier_tester.hpp"
 
-TEST_F(EventNotifierTest, SubscribeJob)
+TEST_F(ObserverTest, SubscribeJob)
 {
     auto contract = notifier->subscribe("TestEvent", incrementCountJob);
 
@@ -15,7 +15,7 @@ TEST_F(EventNotifierTest, SubscribeJob)
     ASSERT_EQ(executionCount, expectedExecutionCount) << "Execution count should be 1 after notifying the event";
 }
 
-TEST_F(EventNotifierTest, ResignJob)
+TEST_F(ObserverTest, ResignJob)
 {
     auto contract = notifier->subscribe("TestEvent", incrementCountJob);
 
@@ -33,7 +33,7 @@ TEST_F(EventNotifierTest, ResignJob)
     ASSERT_EQ(executionCount, expectedExecutionCount) << "Execution count should be 0 after notifying an event without contract";
 }
 
-TEST_F(EventNotifierTest, MultipleJobsExecution)
+TEST_F(ObserverTest, MultipleJobsExecution)
 {
     auto contract1 = notifier->subscribe("TestEvent", incrementCountJob);
     auto contract2 = notifier->subscribe("TestEvent", incrementCountJob);
@@ -48,7 +48,7 @@ TEST_F(EventNotifierTest, MultipleJobsExecution)
     ASSERT_EQ(executionCount, expectedExecutionCount) << "Execution count should be 2 after notifying the event";
 }
 
-TEST_F(EventNotifierTest, UnsubscribeJob)
+TEST_F(ObserverTest, UnsubscribeJob)
 {
     auto contract = notifier->subscribe("TestEvent", incrementCountJob);
 
@@ -62,7 +62,7 @@ TEST_F(EventNotifierTest, UnsubscribeJob)
     notifier->notifyEvent("TestEvent");
 }
 
-TEST_F(EventNotifierTest, InvalidatedJob)
+TEST_F(ObserverTest, InvalidatedJob)
 {
     auto contract = notifier->subscribe("TestEvent", incrementCountJob);
 
@@ -78,7 +78,7 @@ TEST_F(EventNotifierTest, InvalidatedJob)
     ASSERT_EQ(executionCount, expectedExecutionCount) << "Execution count should be 0 after notifying invalidated contracts";
 }
 
-TEST_F(EventNotifierTest, ResignRemovesFromProvider)
+TEST_F(ObserverTest, ResignRemovesFromProvider)
 {
     auto contract = notifier->subscribe("TestEvent", incrementCountJob);
 
@@ -93,7 +93,7 @@ TEST_F(EventNotifierTest, ResignRemovesFromProvider)
     ASSERT_EQ(executionCount, expectedExecutionCount) << "Execution count should still be 0 after trying to notify a resigned event";
 }
 
-TEST_F(EventNotifierTest, NotifyExecutesAllJobs)
+TEST_F(ObserverTest, NotifyExecutesAllJobs)
 {
     auto contract1 = notifier->subscribe("TestEvent", incrementCountJob);
     auto contract2 = notifier->subscribe("TestEvent", incrementCountJob);
@@ -109,7 +109,7 @@ TEST_F(EventNotifierTest, NotifyExecutesAllJobs)
     ASSERT_EQ(executionCount, expectedExecutionCount) << "Execution count should be 2 after notifying the event";
 }
 
-TEST_F(EventNotifierTest, RelinquishJob)
+TEST_F(ObserverTest, RelinquishJob)
 {
     auto contract = notifier->subscribe("TestEvent", incrementCountJob);
 

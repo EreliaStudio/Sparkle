@@ -50,7 +50,14 @@ namespace spk
 					if (sdf == 0)
 						discard;
 
-					outputColor = vec4(glyphColor.rgb * sdf, 1);
+					if (sdf < 0.5f)
+					{
+						outputColor = vec4(outlineColor.rgb, smoothstep(0, 0.5f, sdf));
+					}
+					else
+					{
+						outputColor = glyphColor;
+					}
 				}
 				)";
 
@@ -98,7 +105,7 @@ namespace spk
 	void FontRenderer::setFontSize(const Font::Size &p_fontSize)
 	{
 		_fontSize = p_fontSize;
-		_textInformationsUbo["outlineThreshold"] = static_cast<float>(p_fontSize.outline) * ((256.0f / static_cast<float>(10)) / 255.0f);
+		_textInformationsUbo["outlineThreshold"] = 0.5f;
 		_textInformationsUbo.validate();
 		_atlas = nullptr;
 		_samplerObject.bind(nullptr);

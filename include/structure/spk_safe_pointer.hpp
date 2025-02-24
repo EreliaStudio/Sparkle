@@ -18,8 +18,8 @@ namespace spk
         }
 
 		template <typename U>
-		SafePointer(const SafePointer<U>& other) :
-			_ptr(dynamic_cast<TType*>(other.get()))
+		SafePointer(const SafePointer<U>& p_other) :
+			_ptr(dynamic_cast<TType*>(p_other.get()))
 		{
 		}
 

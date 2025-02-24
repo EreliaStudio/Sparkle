@@ -142,7 +142,7 @@ namespace spk
 			p_char,
 			static_cast<int>(_outlineSize),
 			128,
-			255.0f / static_cast<float>(_outlineSize),
+			256.0f / static_cast<float>(_outlineSize),
 			&width, &height, &xOffset, &yOffset);
 
 		if (glyphBitmap == nullptr)

@@ -466,6 +466,18 @@ namespace spk
 			return IVector4(std::max(p_min.x, p_max.x), std::max(p_min.y, p_max.y), std::max(p_min.z, p_max.z), std::max(p_min.w, p_max.w));
 		}
 
+		template<typename... Args>
+		static IVector4 min(const IVector4& p_valueA, const IVector4& p_valueB, const Args&... p_args)
+		{
+			return min(min(p_valueA, p_valueB), p_args...);
+		}
+
+		template<typename... Args>
+		static IVector4 max(const IVector4& p_valueA, const IVector4& p_valueB, const Args&... p_args)
+		{
+			return max(max(p_valueA, p_valueB), p_args...);
+		}
+
 		static IVector4 lerp(const IVector4& p_startingPoint, const IVector4& p_endingPoint, float t)
 		{
 			return IVector4(

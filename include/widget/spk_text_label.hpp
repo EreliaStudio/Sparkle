@@ -17,7 +17,7 @@ namespace spk
 		spk::VerticalAlignment _verticalAlignment;
 		spk::HorizontalAlignment _horizontalAlignment;
 
-		spk::Vector2UInt _cornerSize;
+		spk::Vector2UInt _cornerSize = {10, 10};
 
 		void _onGeometryChange() override;
 		void _onPaintEvent(spk::PaintEvent& p_event) override;

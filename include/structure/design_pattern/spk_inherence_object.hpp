@@ -43,18 +43,18 @@ namespace spk
 		InherenceObject(const InherenceObject&) = delete;
 		InherenceObject& operator=(const InherenceObject&) = delete;
 
-		InherenceObject(InherenceObject&& other) noexcept : _parent(nullptr)
+		InherenceObject(InherenceObject&& p_other) noexcept : _parent(nullptr)
 		{
-			transferFrom(std::move(other));
+			transferFrom(std::move(p_other));
 		}
 
-		InherenceObject& operator=(InherenceObject&& other) noexcept
+		InherenceObject& operator=(InherenceObject&& p_other) noexcept
 		{
-			if (this != &other)
+			if (this != &p_other)
 			{
 				clearChildren();
 
-				transferFrom(std::move(other));
+				transferFrom(std::move(p_other));
 			}
 			return *this;
 		}

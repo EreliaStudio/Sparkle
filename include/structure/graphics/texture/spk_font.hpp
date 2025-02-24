@@ -58,17 +58,17 @@ namespace spk
 
 			}
 
-			bool operator<(const Size& other) const
+			bool operator<(const Size& p_other) const
 			{
-				if (text < other.text)
+				if (text < p_other.text)
 				{
 					return true;
 				}
-				if (text > other.text)
+				if (text > p_other.text)
 				{
 					return false;
 				}
-				return outline < other.outline;
+				return outline < p_other.outline;
 			}
 
 			friend std::wostream& operator<<(std::wostream& p_os, const Size& size)

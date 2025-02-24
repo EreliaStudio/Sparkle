@@ -4,12 +4,12 @@
 
 #include "structure/design_pattern/spk_event_notifier.hpp"
 
-class EventNotifierTest : public ::testing::Test
+class ObserverTest : public ::testing::Test
 {
 protected:
     void SetUp() override
     {
-        notifier = new spk::EventNotifier<std::string>();
+        notifier = new spk::Observer<std::string>();
         executionCount = 0;
     }
 
@@ -18,7 +18,7 @@ protected:
         delete notifier;
     }
 
-    spk::EventNotifier<std::string>* notifier;
+    spk::Observer<std::string>* notifier;
     int executionCount = 0;
     spk::ContractProvider::Job incrementCountJob = [this]() { ++executionCount; };
 };

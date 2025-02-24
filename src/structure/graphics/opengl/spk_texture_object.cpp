@@ -74,33 +74,33 @@ namespace spk::OpenGL
 	{
 	}
 
-	TextureObject::TextureObject(const TextureObject& other) :
+	TextureObject::TextureObject(const TextureObject& p_other) :
 		_id(0),
 		_ownTexture(true),
 		_needUpload(true),
 		_needSetup(true),
-		_datas(other._datas),
-		_size(other._size),
-		_format(other._format),
-		_filtering(other._filtering),
-		_wrap(other._wrap),
-		_mipmap(other._mipmap)
+		_datas(p_other._datas),
+		_size(p_other._size),
+		_format(p_other._format),
+		_filtering(p_other._filtering),
+		_wrap(p_other._wrap),
+		_mipmap(p_other._mipmap)
 	{
 
 	}
-	TextureObject& TextureObject::operator=(const TextureObject& other)
+	TextureObject& TextureObject::operator=(const TextureObject& p_other)
 	{
-		if (this != &other)
+		if (this != &p_other)
 		{
 			_ownTexture = true;
 			_needUpload = true;
 			_needSetup = true;
-			_datas = other._datas;
-			_size = other._size;
-			_format = other._format;
-			_filtering = other._filtering;
-			_wrap = other._wrap;
-			_mipmap = other._mipmap;
+			_datas = p_other._datas;
+			_size = p_other._size;
+			_format = p_other._format;
+			_filtering = p_other._filtering;
+			_wrap = p_other._wrap;
+			_mipmap = p_other._mipmap;
 
 		}
 		return *this;
