@@ -59,6 +59,8 @@ namespace spk::OpenGL
         public:
             void resize(size_t arraySize);
 
+			void clear();
+
             void pop_back();
 
             template<typename TDynamicType>

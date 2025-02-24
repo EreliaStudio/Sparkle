@@ -38,6 +38,12 @@ namespace spk::OpenGL
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, _bindingPoint, _id);
     }
 
+	void ShaderStorageBufferObject::DynamicArray::clear()
+	{
+        auto& vec = std::get<std::vector<Element>>(_element._content);
+        vec.clear();
+	}
+
     void ShaderStorageBufferObject::DynamicArray::resize(size_t arraySize)
     {
         uint8_t* initialBuffer = static_cast<uint8_t*>(_parent->data());
