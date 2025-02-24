@@ -41,12 +41,12 @@ namespace spk
 		return (_priority);
 	}
 
-	spk::SafePointer<Entity> Component::owner()
+	spk::SafePointer<GameObject> Component::owner()
 	{
 		return (_owner);
 	}
 
-	const spk::SafePointer<const Entity> Component::owner() const
+	const spk::SafePointer<const GameObject> Component::owner() const
 	{
 		return (_owner);
 	}

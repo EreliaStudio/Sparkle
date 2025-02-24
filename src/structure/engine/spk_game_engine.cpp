@@ -12,37 +12,37 @@ namespace spk
 		_centralEntity.clearChildren();
 	}
 
-	spk::SafePointer<spk::Entity> GameEngine::centralEntity()
+	spk::SafePointer<spk::GameObject> GameEngine::centralEntity()
 	{
 		return (&_centralEntity);
 	}
 	
-	void GameEngine::addEntity(const spk::SafePointer<Entity>& p_entity)
+	void GameEngine::addEntity(const spk::SafePointer<GameObject>& p_entity)
 	{
 		_centralEntity.addChild(p_entity);
 	}
 
-	void GameEngine::removeEntity(const spk::SafePointer<Entity>& p_entity)
+	void GameEngine::removeEntity(const spk::SafePointer<GameObject>& p_entity)
 	{
 		_centralEntity.removeChild(p_entity);
 	}
 
-	spk::SafePointer<Entity> GameEngine::getEntity(const std::wstring& p_name)
+	spk::SafePointer<GameObject> GameEngine::getEntity(const std::wstring& p_name)
 	{
 		return _centralEntity.getChild(p_name);
 	}
 
-	spk::SafePointer<const Entity> GameEngine::getEntity(const std::wstring& p_name) const
+	spk::SafePointer<const GameObject> GameEngine::getEntity(const std::wstring& p_name) const
 	{
 		return _centralEntity.getChild(p_name);
 	}
 
-	std::vector<spk::SafePointer<Entity>> GameEngine::getEntities(const std::wstring& p_name)
+	std::vector<spk::SafePointer<GameObject>> GameEngine::getEntities(const std::wstring& p_name)
 	{
 		return (_centralEntity.getChildren(p_name));
 	}
 
-	std::vector<spk::SafePointer<const Entity>> GameEngine::getEntities(const std::wstring& p_name) const
+	std::vector<spk::SafePointer<const GameObject>> GameEngine::getEntities(const std::wstring& p_name) const
 	{
 		return (_centralEntity.getChildren(p_name));
 	}

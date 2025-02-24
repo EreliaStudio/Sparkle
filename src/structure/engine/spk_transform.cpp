@@ -151,11 +151,11 @@ namespace spk
 		spk::Matrix4x4 rotationMatrix = spk::Matrix4x4::rotation(_rotation);
 
 		spk::Matrix4x4 parentModel = spk::Matrix4x4::identity();
-		spk::SafePointer<Entity> entityOwner = owner();
+		spk::SafePointer<GameObject> entityOwner = owner();
 		
 		if (entityOwner != nullptr && entityOwner->parent() != nullptr)
 		{
-			const Entity *parentEntity = static_cast<const Entity *>(entityOwner->parent());
+			const GameObject *parentEntity = static_cast<const GameObject *>(entityOwner->parent());
 			const Transform &parentTransform = parentEntity->transform();
 			parentModel = parentTransform.model();
 		}

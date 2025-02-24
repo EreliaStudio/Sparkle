@@ -9,11 +9,11 @@
 
 namespace spk
 {
-	class Entity;
+	class GameObject;
 
     class Transform : public Component
     {
-		friend class Entity;
+		friend class GameObject;
  
     private:
         spk::Matrix4x4 _model;
