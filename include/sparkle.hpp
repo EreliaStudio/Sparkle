@@ -22,6 +22,7 @@
 #include "structure/container/spk_pool.hpp"
 #include "structure/container/spk_thread_safe_queue.hpp"
 #include "structure/design_pattern/spk_activable_object.hpp"
+#include "structure/design_pattern/spk_identifiable_object.hpp"
 #include "structure/design_pattern/spk_contract_provider.hpp"
 #include "structure/design_pattern/spk_observer.hpp"
 #include "structure/design_pattern/spk_event_dispatcher.hpp"

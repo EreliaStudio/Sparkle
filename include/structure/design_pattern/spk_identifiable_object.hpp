@@ -11,8 +11,6 @@ namespace spk
     template <typename TType>
     class IdentifiedObject
     {
-        static_assert(std::is_base_of<IdentifiedObject<TType>, TType>::value,
-                      "TType must inherit from IdentifiedObject<TType>");
                       
     public:
         using ID = long;
@@ -45,6 +43,8 @@ namespace spk
     public:
         IdentifiedObject()
         {
+        	static_assert(std::is_base_of<IdentifiedObject<TType>, TType>::value,
+                      "TType must inherit from IdentifiedObject<TType>");
             assignNewId();
         }
         
