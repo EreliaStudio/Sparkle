@@ -1,4 +1,4 @@
-#include "structure/engine/spk_entity.hpp"
+#include "structure/engine/spk_game_object.hpp"
 
 namespace spk
 {

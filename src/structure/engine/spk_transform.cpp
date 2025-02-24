@@ -1,5 +1,5 @@
 #include "structure/engine/spk_transform.hpp"
-#include "structure/engine/spk_entity.hpp"
+#include "structure/engine/spk_game_object.hpp"
 #include "structure/math/spk_quaternion.hpp"
 
 namespace spk
