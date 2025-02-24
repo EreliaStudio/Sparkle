@@ -51,10 +51,10 @@ namespace spk
         void reset();
 
         template <typename OutputType>
-        OutputType get() const
+        OutputType& get() const
         {
-            OutputType result;
-            *this >> result;
+            OutputType& result = *(reinterpret_cast<const OutputType*>(_data.data() + bookmark()));
+            skip(sizeof(OutputType));
             return (result);
         }
 
