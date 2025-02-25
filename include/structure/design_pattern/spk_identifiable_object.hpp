@@ -35,9 +35,12 @@ namespace spk
             }
             else
             {
-                _id = _nextId++;
+                _id = _nextId;
+				while (_registry.contains(_id) == true)
+					_id++;
             }
             _registry[_id] = this;
+			_nextId = _id + 1;
         }
 
     public:
@@ -46,6 +49,13 @@ namespace spk
         	static_assert(std::is_base_of<IdentifiedObject<TType>, TType>::value,
                       "TType must inherit from IdentifiedObject<TType>");
             assignNewId();
+        }
+
+        IdentifiedObject(const ID& p_id)
+        {
+            std::lock_guard<std::mutex> lock(_mutex);
+			_id = p_id;
+            _registry[_id] = this;
         }
         
         IdentifiedObject(const IdentifiedObject& other)
@@ -97,11 +107,22 @@ namespace spk
             return _id;
         }
 
+		static spk::SafePointer<TType> ContainObjectID(const ID& id)
+		{
+			std::lock_guard<std::mutex> lock(_mutex);
+            auto it = _registry.find(id);
+            return (it != _registry.end()) ? true : false;
+		}
+
         static spk::SafePointer<TType> GetObjectByID(const ID& id)
         {
+			if (ContainObjectID(id) == false)
+			{
+				return (nullptr);
+			}
+
             std::lock_guard<std::mutex> lock(_mutex);
-            auto it = _registry.find(id);
-            return (it != _registry.end()) ? static_cast<TType*>(it->second.get()) : nullptr;
+            return (static_cast<TType*>(_registry[id]));
         }
     };
 }
