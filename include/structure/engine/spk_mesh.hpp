@@ -8,11 +8,16 @@
 #include "structure/math/spk_vector2.hpp"
 #include "structure/math/spk_vector3.hpp"
 
+#include "structure/design_pattern/spk_contract_provider.hpp"
+
 namespace spk
 {
 	class Mesh
 	{
 	public:
+		using Contract = ContractProvider::Contract;
+		using Job = ContractProvider::Job;
+
 		struct VertexIndex
 		{
 			std::optional<size_t> pointIndex;
@@ -42,9 +47,10 @@ namespace spk
 
 		std::vector<VertexIndex> _vertexIndexes;
 
-		bool _baked;
 		std::vector<Vertex> _vertices;
 		std::vector<unsigned int> _indexes;
+
+		spk::ContractProvider _onValidationContractProvider;
 
 		size_t addVertex(VertexIndex p_vertex);
 
@@ -58,8 +64,8 @@ namespace spk
 		void addFace(VertexIndex p_vertexA, VertexIndex p_vertexB, VertexIndex p_vertexC);
 		void addFace(VertexIndex p_vertexA, VertexIndex p_vertexB, VertexIndex p_vertexC, VertexIndex p_vertexD);
 
-		bool baked() const;
-		void bake();
+		void validate();
+		Contract subscribeToValidation(const Job& p_job);
 
 		const std::vector<spk::Vector3>& points() const;
 		const std::vector<spk::Vector2>& UVs() const;

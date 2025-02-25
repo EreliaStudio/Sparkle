@@ -13,10 +13,10 @@ namespace spk
 	{
 	private:
 		ContractProvider::Contract _onTransformEditionContract;
+        ContractProvider::Contract _onMeshValidationContract;
+        ContractProvider::Contract _onMaterialValidationContract;
 
-		bool _needMeshUpload;
 		spk::SafePointer<spk::Mesh> _mesh;
-
 		spk::SafePointer<spk::Material> _material;
 
 	public:	

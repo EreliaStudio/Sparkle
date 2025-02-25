@@ -37,4 +37,14 @@ namespace spk
 	{
 		return (_shininess);
 	}
+
+	void Material::validate()
+	{
+		_onValidationContractProvider.trigger();
+	}
+
+	Material::Contract Material::subscribeToValidation(const Material::Job& p_job)
+	{
+		return (_onValidationContractProvider.subscribe(p_job));
+	}
 }

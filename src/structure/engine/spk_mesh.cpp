@@ -152,8 +152,6 @@ namespace spk
 		_indexes.push_back(addVertex(p_vertexA));
 		_indexes.push_back(addVertex(p_vertexB));
 		_indexes.push_back(addVertex(p_vertexC));
-
-		_baked = false;
 	}
 
 	void Mesh::addFace(Mesh::VertexIndex p_vertexA, Mesh::VertexIndex p_vertexB, Mesh::VertexIndex p_vertexC, Mesh::VertexIndex p_vertexD)
@@ -162,12 +160,7 @@ namespace spk
 		addFace(p_vertexC, p_vertexB, p_vertexD);
 	}
 
-	bool Mesh::baked() const
-	{
-		return (_baked);
-	}
-
-	void Mesh::bake()
+	void Mesh::validate()
 	{
 		_vertices.clear();
 
@@ -190,7 +183,12 @@ namespace spk
 			});
 		}
 		
-		_baked = true;
+		_onValidationContractProvider.trigger();
+	}
+
+	Mesh::Contract Mesh::subscribeToValidation(const Job& p_job)
+	{
+		return _onValidationContractProvider.subscribe(p_job);
 	}
 
 	const std::vector<spk::Vector3>& Mesh::points() const
@@ -210,37 +208,21 @@ namespace spk
 
 	std::vector<Mesh::Vertex>& Mesh::vertices()
 	{
-		if (_baked == false)
-		{
-			throw std::runtime_error("Can't access unbaked mesh vertices. call .bake() before calling .vertices()");
-		}
 		return (_vertices);
 	}		
 
 	const std::vector<Mesh::Vertex>& Mesh::vertices() const
 	{
-		if (_baked == false)
-		{
-			throw std::runtime_error("Can't access unbaked mesh vertices. call .bake() before calling .vertices()");
-		}
 		return (_vertices);
 	}
 
 	std::vector<unsigned int>& Mesh::indexes()
 	{
-		if (_baked == false)
-		{
-			throw std::runtime_error("Can't access unbaked mesh vertices. call .bake() before calling .indexes()");
-		}
 		return (_indexes);
 	}
 
 	const std::vector<unsigned int>& Mesh::indexes() const
 	{
-		if (_baked == false)
-		{
-			throw std::runtime_error("Can't access unbaked mesh vertices. call .bake() before calling .indexes()");
-		}
 		return (_indexes);
 	}
 }
