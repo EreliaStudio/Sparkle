@@ -1,5 +1,7 @@
 #include "structure/network/spk_client.hpp"
 
+#include "spk_debug_macro.hpp"
+
 namespace spk
 {
 	void Client::_receive()
@@ -49,6 +51,16 @@ namespace spk
 		disconnect();
 	}
 
+	Client::Contract Client::addOnConnectionCallback(const ConnectionCallback& p_connectionCallback)
+	{
+		return (_onConnectContractProvider.subscribe(p_connectionCallback));
+	}
+	
+	Client::Contract Client::addOnDisconnectionCallback(const DisconnectionCallback& p_disconnectionCallback)
+	{
+		return (_onDisconnectContractProvider.subscribe(p_disconnectionCallback));
+	}
+
 	bool Client::isConnected() const
 	{
 		return _isConnected;
@@ -82,7 +94,7 @@ namespace spk
 		}
 
 		_isConnected = true;
-		_onConnectCallback();
+		_onConnectContractProvider.trigger();
 		std::thread(&Client::_receive, this).detach();
 	}
 
@@ -93,7 +105,7 @@ namespace spk
 			_isConnected = false;
 			closesocket(_connectSocket);
 			WSACleanup();
-			_onDisconnectCallback();
+			_onDisconnectContractProvider.trigger();
 		}
 	}
 
