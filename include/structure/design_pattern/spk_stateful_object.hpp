@@ -6,6 +6,8 @@
 
 #include "structure/design_pattern/spk_contract_provider.hpp"
 
+#include "spk_debug_macro.hpp"
+
 namespace spk
 {
 	template <typename TType>
