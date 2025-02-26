@@ -9,14 +9,14 @@ namespace spk
 	class GameEngine
 	{
 	private:
-		GameObject _centralEntity = spk::GameObject(L"Root object");
+		GameObject _rootObject = spk::GameObject(L"/");
 
 	public:
 		GameEngine();
 
 		void clear();
 
-		spk::SafePointer<spk::GameObject> centralEntity();
+		spk::SafePointer<spk::GameObject> rootObject();
 		void addEntity(const spk::SafePointer<GameObject>& p_entity);
 		void removeEntity(const spk::SafePointer<GameObject>& p_entity);
 
