@@ -13,6 +13,7 @@ namespace spk
 	{
 	public:
 		using Contract = ContractProvider::Contract;
+		using Job = ContractProvider::Job;
 
 	private:
 		TType _state;
@@ -42,7 +43,7 @@ namespace spk
 			return _state;
 		}
 
-		Contract addCallback(const TType& state, const std::function<void()>& callback)
+		Contract addCallback(const TType& state, const Job& callback)
 		{
 			return (std::move(_callbacks[state].subscribe(callback)));
 		}

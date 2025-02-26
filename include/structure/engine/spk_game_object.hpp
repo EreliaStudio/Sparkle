@@ -16,6 +16,10 @@ namespace spk
 {
 	class GameObject : public spk::InherenceObject<GameObject>, public spk::ActivableObject, public spk::IdentifiedObject<GameObject>
 	{
+	public:
+		using Contract = spk::ActivableObject::Contract;
+		using Job = spk::ActivableObject::Job;
+
 	private:
 		std::wstring _name;
 		std::set<std::wstring> _tags;
@@ -31,11 +35,11 @@ namespace spk
 		Transform& _transform;
 		Transform::Contract _ownerTransformEditionContract;
 
-		spk::ActivableObject::Contract _awakeContract;
-		spk::ActivableObject::Contract _sleepContract;
+		Contract _awakeContract;
+		Contract _sleepContract;
 
-		spk::ActivableObject::Contract constructAwakeContract();
-		spk::ActivableObject::Contract constructSleepContract();
+		Contract constructAwakeContract();
+		Contract constructSleepContract();
 
 		template <typename T>
 		void sortByPriority(std::vector<T>& p_container, bool& p_needSorting, std::mutex& p_mutex)

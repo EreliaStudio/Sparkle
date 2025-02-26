@@ -40,9 +40,7 @@ namespace spk
 	Client::Client() :
 		_connectSocket(INVALID_SOCKET),
 		_isConnected(false),
-		_messageQueue(),
-		_onConnectCallback([&]() { std::cout << "Connected to the server" << std::endl; }),
-		_onDisconnectCallback([&]() { std::cout << "Disconnected from the server" << std::endl; })
+		_messageQueue()
 	{
 	}
 
