@@ -14,7 +14,7 @@
 
 namespace spk
 {
-	class GameObject : public spk::InherenceObject<GameObject>, public spk::ActivableObject, public spk::IdentifiedObject<GameObject>
+	class GameObject : public spk::InherenceObject<GameObject>, public spk::ActivableObject
 	{
 	public:
 		using Contract = spk::ActivableObject::Contract;
