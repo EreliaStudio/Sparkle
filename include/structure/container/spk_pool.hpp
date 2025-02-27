@@ -4,95 +4,122 @@
 #include <memory>
 #include <functional>
 #include <mutex>
+#include <utility>
 
 namespace spk
 {
-	template<typename TType>
-	class Pool
+	template <typename TType>
+	class Pool : public std::enable_shared_from_this<Pool<TType>>
 	{
 	public:
-		using Allocator = typename std::function<TType* (void)>;
-
-		using Cleaner = typename std::function<void(TType&)>;
-
-	private:
-		using Destructor = typename std::function<void(TType* p_toReturn)>;
-
-	public:
-		using Object = typename std::unique_ptr<TType, Destructor>;
+		using Destructor = std::function<void(TType *)>;
+		using Object = std::unique_ptr<TType, Destructor>;
 
 	private:
-		std::recursive_mutex _mutex;
-		Allocator _allocator;
-		Cleaner _cleaner;
+		mutable std::mutex _mutex;
+
+		size_t _preallocationLimit = std::numeric_limits<size_t>::max();
 		std::deque<std::unique_ptr<TType>> _preallocatedElements;
 
-		const Destructor _destructorLambda = [&](TType* p_toReturn) { _insert(p_toReturn); };
-
-		void _insert(TType* p_toReturn)
+		void _recycle(TType *ptr)
 		{
-			std::lock_guard<std::recursive_mutex> lock(_mutex);
-			_preallocatedElements.push_back(std::unique_ptr<TType>(p_toReturn));
+			std::lock_guard<std::mutex> lock(_mutex);
+			if (_preallocatedElements.size() < _preallocationLimit)
+			{
+				_preallocatedElements.emplace_back(ptr);
+			}
+			else
+			{
+				delete ptr;
+			}
+		}
+
+		void _insert(TType *ptr)
+		{
+			std::lock_guard<std::mutex> lock(_mutex);
+
+			std::unique_ptr<TType> bindedPtr = std::unique_ptr<TType>(ptr);
+
+			if (_preallocatedElements.size() < _preallocationLimit)
+			{
+				_preallocatedElements.emplace_back(std::move(bindedPtr));
+			}
 		}
 
 	public:
-		Pool() :
-			_allocator([]() {return (new TType()); }),
-			_cleaner([](TType& toClean) {})
+		Pool() = default;
+		~Pool() = default;
+
+		void setMaximumAllocatedSize(const size_t &p_size)
 		{
+			std::lock_guard<std::mutex> lock(_mutex);
+			_preallocationLimit = p_size;
 
-		}
-
-		Pool(const Allocator& p_allocator, const Cleaner& p_cleaner) :
-			_allocator(p_allocator),
-			_cleaner(p_cleaner)
-		{
-
-		}
-
-		void editAllocator(const Allocator& p_allocator)
-		{
-			_allocator = p_allocator;
-		}
-
-		void editCleaner(const Cleaner& p_cleaner)
-		{
-			_cleaner = p_cleaner;
-		}
-
-		void allocate()
-		{
-			_insert(_allocator());
+			while (_preallocatedElements.size() > _preallocationLimit)
+			{
+				_preallocatedElements.pop_back();
+			}
 		}
 
 		size_t size() const
 		{
-			return (_preallocatedElements.size());
+			std::lock_guard<std::mutex> lock(_mutex);
+			return _preallocatedElements.size();
 		}
 
-		void resize(size_t p_newSize)
+		template <typename... TArgs>
+		void allocate(TArgs &&...args)
 		{
-			std::lock_guard<std::recursive_mutex> lock(_mutex);
+			std::lock_guard<std::mutex> lock(_mutex);
+			_insert(new TType(std::forward<TArgs>(args)...));
+		}
 
+		template <typename... TArgs>
+		void resize(size_t p_newSize, TArgs &&...args)
+		{
+			std::lock_guard<std::mutex> lock(_mutex);
 			while (_preallocatedElements.size() < p_newSize)
-				_insert(_allocator());
+			{
+				_insert(new TType(std::forward<TArgs>(args)...));
+			}
 		}
 
-		Object obtain()
+		template <typename... TArgs>
+		Object obtain(TArgs &&...args)
 		{
-			std::lock_guard<std::recursive_mutex> lock(_mutex);
+			TType *tmpPointer;
 
-			if (_preallocatedElements.empty())
 			{
-				_insert(_allocator());
+				std::lock_guard<std::mutex> lock(_mutex);
+				if (_preallocatedElements.empty())
+				{
+					tmpPointer = new TType(std::forward<TArgs>(args)...);
+				}
+				else
+				{
+					tmpPointer = _preallocatedElements.front().release();
+
+					_preallocatedElements.pop_front();
+
+					tmpPointer->~TType();
+					new (tmpPointer) TType(std::forward<TArgs>(args)...);
+				}
 			}
 
-			Object item(_preallocatedElements.front().release(), _destructorLambda);
+			std::weak_ptr<Pool<TType>> selfWeak = this->shared_from_this();
+			auto deleter = [selfWeak](TType *ptr)
+			{
+				if (auto selfShared = selfWeak.lock())
+				{
+					selfShared->_recycle(p);
+				}
+				else
+				{
+					delete p;
+				}
+			};
 
-			_preallocatedElements.pop_front();
-
-			_cleaner(*item);
-			return (std::move(item));
+			return (Object(tmpPointer, deleter));
 		}
 	};
 }
