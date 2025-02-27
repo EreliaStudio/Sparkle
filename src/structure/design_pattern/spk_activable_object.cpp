@@ -28,11 +28,11 @@ namespace spk
 
 	ActivableObject::Contract ActivableObject::addActivationCallback(const Job& p_callback)
 	{
-		return (std::move(StatefulObject<bool>::addCallback(true, p_callback)));
+		return (std::move(addCallback(true, p_callback)));
 	}
 
 	ActivableObject::Contract ActivableObject::addDeactivationCallback(const Job& p_callback)
 	{
-		return (std::move(StatefulObject<bool>::addCallback(false, p_callback)));
+		return (std::move(addCallback(false, p_callback)));
 	}
 }

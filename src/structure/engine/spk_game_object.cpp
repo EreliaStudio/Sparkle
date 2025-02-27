@@ -41,7 +41,7 @@ namespace spk
 				child->transform()._updateModel();
 			}			
 		});
-		activate();
+		
 		if (p_parent != nullptr)
 		{
 			p_parent->addChild(this);
