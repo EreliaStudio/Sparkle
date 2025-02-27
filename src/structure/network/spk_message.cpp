@@ -5,7 +5,7 @@ namespace spk
 {
 	Message::Header::Header() :
 		type(0),
-		emitterID(0),
+		emitterID(InvalidID),
 		length(0)
 	{
 		std::memset(reserved, 0, sizeof(reserved));
@@ -13,7 +13,7 @@ namespace spk
 
 	Message::Header::Header(Type p_type) :
 		type(p_type),
-		emitterID(0),
+		emitterID(InvalidID),
 		length(0)
 	{
 		std::memset(reserved, 0, sizeof(reserved));

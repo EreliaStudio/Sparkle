@@ -18,7 +18,8 @@ namespace spk
 		class Header
 		{
 		public:
-			using ClientID = size_t;
+			using ClientID = long;
+        	static inline const ClientID InvalidID = -1;
 			using Type = int32_t;
 
 		private:
