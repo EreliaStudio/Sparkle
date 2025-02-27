@@ -107,6 +107,49 @@ namespace spk
             return _id;
         }
 
+		void changeID(const ID& newId)
+		{
+			std::lock_guard<std::mutex> lock(_mutex);
+
+			if (newId == _id)
+				return;
+
+			auto it = _registry.find(newId);
+			if (it == _registry.end())
+			{
+				_registry.erase(_id);
+
+				_releasedIds.erase(_id);
+				_releasedIds.erase(newId);
+
+				_id = newId;
+
+				_registry[_id] = this;
+			}
+			else
+			{
+				spk::SafePointer<IdentifiedObject<TType>> otherPtr = it->second;
+				IdentifiedObject<TType>* otherObj = otherPtr.get();
+
+				if (otherObj == this)
+					return;
+
+				ID oldId = _id;
+
+				_registry.erase(oldId);
+				_registry.erase(newId);
+
+				otherObj->_id = oldId;
+				this->_id = newId;
+
+				_registry[oldId] = otherPtr;
+				_registry[newId] = this;
+
+				_releasedIds.erase(oldId);
+				_releasedIds.erase(newId);
+			}
+		}
+
 		static spk::SafePointer<TType> ContainObjectID(const ID& id)
 		{
 			std::lock_guard<std::mutex> lock(_mutex);
