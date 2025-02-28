@@ -9,7 +9,7 @@ namespace spk
 	class GameEngine
 	{
 	private:
-		GameObject _rootObject = spk::GameObject(L"/");
+		GameObject _rootObject = spk::GameObject(L"/root");
 
 	public:
 		GameEngine();
