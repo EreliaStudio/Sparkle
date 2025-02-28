@@ -76,7 +76,7 @@ namespace spk
 		}
 
 		template <typename OutputType>
-		OutputType get() const
+		const OutputType& get() const
 		{
 			return (_buffer.get<OutputType>());
 		}
