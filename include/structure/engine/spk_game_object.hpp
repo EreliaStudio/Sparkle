@@ -129,6 +129,8 @@ namespace spk
 		template <typename TComponentType>
 		TComponentType& getComponent(const std::wstring& p_name = L"")
 		{
+			std::unique_lock<std::mutex> lock(_componentMutex);
+
 			for (std::unique_ptr<Component>& component : _components)
 			{
 				TComponentType* castedComponent = dynamic_cast<TComponentType*>(component.get());
@@ -147,6 +149,7 @@ namespace spk
 		template <typename TComponentType>
 		std::vector<spk::SafePointer<TComponentType>> getComponents()
 		{
+			std::unique_lock<std::mutex> lock(_componentMutex);
 			std::vector<spk::SafePointer<TComponentType>> result;
 
 			for (std::unique_ptr<Component>& component : _components)
@@ -164,6 +167,7 @@ namespace spk
 		template <typename TComponentType>
 		const TComponentType& getComponent(const std::wstring& p_name = L"") const
 		{
+			std::unique_lock<std::mutex> lock(_componentMutex);
 			for (const std::unique_ptr<Component>& component : _components)
 			{
 				TComponentType* castedComponent = dynamic_cast<TComponentType*>(component.get());
@@ -182,6 +186,7 @@ namespace spk
 		template <typename TComponentType>
 		std::vector<spk::SafePointer<const TComponentType>> getComponents() const
 		{
+			std::unique_lock<std::mutex> lock(_componentMutex);
 			std::vector<spk::SafePointer<const TComponentType>> result;
 
 			for (std::unique_ptr<Component>& component : _components)

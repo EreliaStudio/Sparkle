@@ -4,7 +4,7 @@ namespace spk
 {
 	spk::ActivableObject::Contract GameObject::constructAwakeContract()
 	{
-		return addActivationCallback([&]() {
+		return std::move(addActivationCallback([&]() {
 			for (auto& component : _components)
 			{
 				if (component->isActive() == true)
@@ -12,12 +12,12 @@ namespace spk
 					component->awake();
 				}
 			}
-			});
+			}));
 	}
 
 	spk::ActivableObject::Contract GameObject::constructSleepContract()
 	{
-		return addDeactivationCallback([&]() {
+		return std::move(addDeactivationCallback([&]() {
 			for (auto& component : _components)
 			{
 				if (component->isActive() == true)
@@ -25,7 +25,7 @@ namespace spk
 					component->sleep();
 				}
 			}
-			});
+			}));
 	}
 
 	GameObject::GameObject(const std::wstring& p_name, const spk::SafePointer<GameObject>& p_parent) :
@@ -127,6 +127,7 @@ namespace spk
 
 	void GameObject::removeAllComponents()
 	{
+		std::unique_lock<std::mutex> lock(_componentMutex);
 		for (auto& component : _components)
 		{
 			component->stop();
@@ -136,6 +137,7 @@ namespace spk
 	
 	void GameObject::removeComponent(const std::wstring& p_name)
 	{
+		std::unique_lock<std::mutex> lock(_componentMutex);
 		auto it = std::remove_if(_components.begin(), _components.end(),
 			[&](const std::unique_ptr<Component>& c) {
 				return c->name() == p_name;
@@ -156,16 +158,22 @@ namespace spk
 
 		sortByPriority(_components, _needComponentSorting, _componentMutex);
 
-		for (auto& component : _components)
 		{
-			component->onPaintEvent(p_event);
+			std::unique_lock<std::mutex> lock(_componentMutex);
+			for (auto& component : _components)
+			{
+				component->onPaintEvent(p_event);
+			}
 		}
 
 		sortByPriority(children(), _needChildSorting, _childMutex);
 
-		for (auto& child : children())
 		{
-			child->onPaintEvent(p_event);
+			std::unique_lock<std::mutex> lock(_childMutex);
+			for (auto& child : children())
+			{
+				child->onPaintEvent(p_event);
+			}
 		}
 	}
 	
@@ -178,16 +186,19 @@ namespace spk
 
 		sortByPriority(children(), _needChildSorting, _childMutex);
 
-		for (auto& child : children())
 		{
-			child->onUpdateEvent(p_event);
+			std::unique_lock<std::mutex> lock(_childMutex);
+			for (auto& child : children())
+			{
+				child->onUpdateEvent(p_event);
+			}
 		}
 
 		sortByPriority(_components, _needComponentSorting, _componentMutex);
 
-		for (auto& component : _components)
 		{
-			if (component->isActive() == true)
+			std::unique_lock<std::mutex> lock(_componentMutex);
+			for (auto& component : _components)
 			{
 				component->onUpdateEvent(p_event);
 			}
@@ -203,16 +214,19 @@ namespace spk
 		
 		sortByPriority(children(), _needChildSorting, _childMutex);
 
-		for (auto& child : children())
 		{
-			child->onKeyboardEvent(p_event);
+			std::unique_lock<std::mutex> lock(_childMutex);
+			for (auto& child : children())
+			{
+				child->onKeyboardEvent(p_event);
+			}
 		}
 
 		sortByPriority(_components, _needComponentSorting, _componentMutex);
 
-		for (auto& component : _components)
 		{
-			if (component->isActive() == true)
+			std::unique_lock<std::mutex> lock(_componentMutex);
+			for (auto& component : _components)
 			{
 				component->onKeyboardEvent(p_event);
 			}
@@ -228,16 +242,19 @@ namespace spk
 		
 		sortByPriority(children(), _needChildSorting, _childMutex);
 
-		for (auto& child : children())
 		{
-			child->onMouseEvent(p_event);
+			std::unique_lock<std::mutex> lock(_childMutex);
+			for (auto& child : children())
+			{
+				child->onMouseEvent(p_event);
+			}
 		}
 
 		sortByPriority(_components, _needComponentSorting, _componentMutex);
 
-		for (auto& component : _components)
 		{
-			if (component->isActive() == true)
+			std::unique_lock<std::mutex> lock(_componentMutex);
+			for (auto& component : _components)
 			{
 				component->onMouseEvent(p_event);
 			}
@@ -253,21 +270,23 @@ namespace spk
 		
 		sortByPriority(children(), _needChildSorting, _childMutex);
 
-		for (auto& child : children())
 		{
-			child->onControllerEvent(p_event);
-		}
+			std::unique_lock<std::mutex> lock(_childMutex);
+			for (auto& child : children())
+			{
+				child->onControllerEvent(p_event);
+			}
+		}	
 
-		sortByPriority(_components, _needComponentSorting, _componentMutex);
+		sortByPriority(_components, _needComponentSorting, _componentMutex);	
 
-		for (auto& component : _components)
 		{
-			if (component->isActive() == true)
+			std::unique_lock<std::mutex> lock(_componentMutex);
+			for (auto& component : _components)
 			{
 				component->onControllerEvent(p_event);
 			}
-		}
-			
+		}	
 	}
 	
 	void GameObject::onTimerEvent(spk::TimerEvent& p_event)
@@ -279,16 +298,19 @@ namespace spk
 		
 		sortByPriority(children(), _needChildSorting, _childMutex);
 
-		for (auto& child : children())
 		{
-			child->onTimerEvent(p_event);
+			std::unique_lock<std::mutex> lock(_childMutex);
+			for (auto& child : children())
+			{
+				child->onTimerEvent(p_event);
+			}
 		}
 
 		sortByPriority(_components, _needComponentSorting, _componentMutex);
 
-		for (auto& component : _components)
 		{
-			if (component->isActive() == true)
+			std::unique_lock<std::mutex> lock(_componentMutex);
+			for (auto& component : _components)
 			{
 				component->onTimerEvent(p_event);
 			}
@@ -307,6 +329,7 @@ namespace spk
 
 	spk::SafePointer<GameObject> GameObject::getChild(const std::wstring& p_name)
 	{
+		std::unique_lock<std::mutex> lock(_childMutex);
 		for (auto& child : children())
 		{
 			if (child->name() == p_name)
@@ -319,6 +342,7 @@ namespace spk
 
 	spk::SafePointer<const GameObject> GameObject::getChild(const std::wstring& p_name) const
 	{
+		std::unique_lock<std::mutex> lock(_childMutex);
 		for (const auto& child : children())
 		{
 			if (child->name() == p_name)
@@ -331,6 +355,7 @@ namespace spk
 
 	std::vector<spk::SafePointer<GameObject>> GameObject::getChildren(const std::wstring& p_name)
 	{
+		std::unique_lock<std::mutex> lock(_childMutex);
 		std::vector<spk::SafePointer<GameObject>> result;
 
 		for (auto& child : children())
@@ -345,6 +370,7 @@ namespace spk
 
 	std::vector<spk::SafePointer<const GameObject>> GameObject::getChildren(const std::wstring& p_name) const
 	{
+		std::unique_lock<std::mutex> lock(_childMutex);
 		std::vector<spk::SafePointer<const GameObject>> result;
 
 		for (const auto& child : children())
@@ -359,6 +385,7 @@ namespace spk
 
 	bool GameObject::contains(const std::wstring& p_name) const
 	{
+		std::unique_lock<std::mutex> lock(_childMutex);
 		return std::any_of(children().begin(), children().end(),
 			[&](const spk::SafePointer<GameObject>& p_entity)
 			{
@@ -368,6 +395,7 @@ namespace spk
 
 	size_t GameObject::count(const std::wstring& p_name) const
 	{
+		std::unique_lock<std::mutex> lock(_childMutex);
 		return std::count_if(children().begin(), children().end(),
 			[&](const spk::SafePointer<GameObject>& p_entity)
 			{
@@ -377,21 +405,25 @@ namespace spk
 
 	spk::SafePointer<GameObject> GameObject::getChildByTag(const std::wstring& p_tag)
 	{
+		std::unique_lock<std::mutex> lock(_childMutex);
 		return getChildByTags(std::span<const std::wstring>(&p_tag, 1));
 	}
 
 	spk::SafePointer<const GameObject> GameObject::getChildByTag(const std::wstring& p_tag) const
 	{
+		std::unique_lock<std::mutex> lock(_childMutex);
 		return getChildByTags(std::span<const std::wstring>(&p_tag, 1));
 	}
 	
 	std::vector<spk::SafePointer<GameObject>> GameObject::getChildrenByTag(const std::wstring& p_tag)
 	{
+		std::unique_lock<std::mutex> lock(_childMutex);
 		return (getChildrenByTag({p_tag}));
 	}
 	
 	std::vector<spk::SafePointer<const GameObject>> GameObject::getChildrenByTag(const std::wstring& p_tag) const
 	{
+		std::unique_lock<std::mutex> lock(_childMutex);
 		return (getChildrenByTag({p_tag}));
 	}
 	
@@ -423,6 +455,7 @@ namespace spk
 
 	spk::SafePointer<GameObject> GameObject::getChildByTags(const std::span<const std::wstring>& p_tags, spk::BinaryOperator p_binaryOperator)
 	{
+		std::unique_lock<std::mutex> lock(_childMutex);
 		for (auto& child : children())
 		{
 			if (matchesTags(*child, p_tags, p_binaryOperator))
@@ -435,6 +468,7 @@ namespace spk
 
 	spk::SafePointer<const GameObject> GameObject::getChildByTags(const std::span<const std::wstring>& p_tags, spk::BinaryOperator p_binaryOperator) const
 	{
+		std::unique_lock<std::mutex> lock(_childMutex);
 		for (const auto& child : children())
 		{
 			if (matchesTags(*child, p_tags, p_binaryOperator))
@@ -447,6 +481,7 @@ namespace spk
 
 	std::vector<spk::SafePointer<GameObject>> GameObject::getChildrenByTags(const std::span<const std::wstring>& p_tags, spk::BinaryOperator p_binaryOperator)
 	{
+		std::unique_lock<std::mutex> lock(_childMutex);
 		std::vector<spk::SafePointer<GameObject>> result;
 
 		for (auto& child : children())
@@ -461,6 +496,7 @@ namespace spk
 
 	std::vector<spk::SafePointer<const GameObject>> GameObject::getChildrenByTags(const std::span<const std::wstring>& p_tags, spk::BinaryOperator p_binaryOperator) const
 	{
+		std::unique_lock<std::mutex> lock(_childMutex);
 		std::vector<spk::SafePointer<const GameObject>> result;
 
 		for (const auto& child : children())
@@ -475,6 +511,7 @@ namespace spk
 
 	bool GameObject::containsTags(const std::span<const std::wstring>& p_tags, spk::BinaryOperator p_binaryOperator) const
 	{
+		std::unique_lock<std::mutex> lock(_childMutex);
 		return std::any_of(children().begin(), children().end(),
 			[&](const spk::SafePointer<const GameObject>& child)
 			{
@@ -484,6 +521,7 @@ namespace spk
 
 	size_t GameObject::countTags(const std::span<const std::wstring>& p_tags, spk::BinaryOperator p_binaryOperator) const
 	{
+		std::unique_lock<std::mutex> lock(_childMutex);
 		return std::count_if(children().begin(), children().end(),
 			[&](const spk::SafePointer<const GameObject>& child)
 			{
