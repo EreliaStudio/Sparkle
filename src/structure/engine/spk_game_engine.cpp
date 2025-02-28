@@ -4,7 +4,7 @@ namespace spk
 {
 	GameEngine::GameEngine()
 	{
-		
+		_rootObject.activate();
 	}
 
 	void GameEngine::clear()
