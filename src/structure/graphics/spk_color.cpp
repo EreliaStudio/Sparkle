@@ -87,6 +87,22 @@ namespace spk
 
 		return p_os;
 	}
+	
+	std::wostream& operator << (std::wostream& p_os, const spk::Color& p_color)
+	{
+		auto flags = p_os.flags();
+
+		p_os << "0x"
+			 << std::uppercase << std::setfill(L'0') << std::setw(2) << std::hex
+			 << static_cast<int>(p_color.r * 255)
+			 << static_cast<int>(p_color.g * 255)
+			 << static_cast<int>(p_color.b * 255)
+			 << static_cast<int>(p_color.a * 255);
+
+		p_os.flags(flags);
+
+		return p_os;
+	}
 
 	spk::JSON::Object& operator<<(spk::JSON::Object& p_object, const spk::Color& p_color)
 	{

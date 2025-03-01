@@ -25,6 +25,7 @@ namespace spk
 		bool operator==(const Color& p_color) const;
 
 		friend std::ostream& operator << (std::ostream& p_os, const spk::Color& p_color);
+		friend std::wostream& operator << (std::wostream& p_os, const spk::Color& p_color);
 		friend spk::JSON::Object& operator<<(spk::JSON::Object& p_object, const spk::Color& p_color);
 		friend const spk::JSON::Object& operator>>(const spk::JSON::Object& p_object, spk::Color& p_color);
 
