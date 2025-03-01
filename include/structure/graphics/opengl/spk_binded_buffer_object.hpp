@@ -15,6 +15,8 @@
 
 #include "iostream"
 
+#include "spk_debug_macro.hpp"
+
 namespace spk::OpenGL
 {
     class BindedBufferObject : public VertexBufferObject
@@ -38,7 +40,7 @@ namespace spk::OpenGL
             template <typename TType>
             requires (!spk::IsContainer<TType>::value)
             Element& operator=(const TType& value)
-            {
+            {				
                 if (std::holds_alternative<std::vector<Element>>(_content))
 				{
 					if (sizeof(value) == _size * std::get<std::vector<Element>>(_content).size())
@@ -64,7 +66,7 @@ namespace spk::OpenGL
             requires (spk::IsContainer<TContainer>::value)
             Element& operator=(const TContainer& values)
             {
-                if (!std::holds_alternative<std::vector<Element>>(_content))
+		        if (!std::holds_alternative<std::vector<Element>>(_content))
                     throw std::runtime_error("Cannot apply container to a non-array element.");
 
                 auto& elements = std::get<std::vector<Element>>(_content);

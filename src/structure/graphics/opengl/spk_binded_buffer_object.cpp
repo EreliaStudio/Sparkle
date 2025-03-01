@@ -60,13 +60,14 @@ namespace spk::OpenGL
 		_bindingPoint(p_bindingPoint),
 		_blockSize(p_size)
 	{
-		resize(p_size);
-	}
+        resize(p_size);
+    }
+
 
 	void BindedBufferObject::activate()
 	{
-		VertexBufferObject::activate();
-	}
+        VertexBufferObject::activate();
+    }
 
 	BindedBufferObject::Element &BindedBufferObject::operator[](const std::string &name)
 	{
@@ -85,34 +86,35 @@ namespace spk::OpenGL
 	}
 
 	BindedBufferObject::Element& BindedBufferObject::addElement(const std::string& name, size_t offset, size_t elementSize)
-	{
-		uint8_t *bufferPtr = static_cast<uint8_t *>(data()) + offset;
+    {
+        uint8_t *bufferPtr = static_cast<uint8_t *>(data()) + offset;
 
-		if (_elements.find(name) != _elements.end())
-			throw std::runtime_error("Element '" + name + "' already exists.");
+        if (_elements.find(name) != _elements.end())
+            throw std::runtime_error("Element '" + name + "' already exists.");
 
-		auto [it, inserted] = _elements.emplace(name, Element(bufferPtr, elementSize));
-		return it->second;
-	}
-	
-	BindedBufferObject::Element& BindedBufferObject::addElement(const std::string& name, size_t offset, size_t elementSize, size_t arraySize, size_t arrayPadding)
-	{
-		uint8_t *bufferPtr = static_cast<uint8_t *>(data()) + offset;
+        auto [it, inserted] = _elements.emplace(name, Element(bufferPtr, elementSize));
+        return it->second;
+    }
 
-		if (_elements.find(name) != _elements.end())
-			throw std::runtime_error("Element '" + name + "' already exists.");
+    BindedBufferObject::Element& BindedBufferObject::addElement(const std::string& name, size_t offset, size_t elementSize, size_t arraySize, size_t arrayPadding)
+    {
+        uint8_t *bufferPtr = static_cast<uint8_t *>(data()) + offset;
 
-		std::vector<Element> elements;
-		elements.reserve(arraySize);
+        if (_elements.find(name) != _elements.end())
+            throw std::runtime_error("Element '" + name + "' already exists.");
 
-		for (size_t i = 0; i < arraySize; ++i)
-		{
-			elements.emplace_back(Element(bufferPtr + (i * (elementSize + arrayPadding)), elementSize));
-		}
-		Element arrayElement(bufferPtr, elementSize);
-		arrayElement._content = std::move(elements);
+        std::vector<Element> elements;
+        elements.reserve(arraySize);
 
-		auto [it, inserted] = _elements.emplace(name, std::move(arrayElement));
-		return it->second;
-	}
+        for (size_t i = 0; i < arraySize; ++i)
+        {
+            elements.emplace_back(Element(bufferPtr + (i * (elementSize + arrayPadding)), elementSize));
+        }
+        Element arrayElement(bufferPtr, elementSize);
+        arrayElement._content = std::move(elements);
+
+        auto [it, inserted] = _elements.emplace(name, std::move(arrayElement));
+
+        return it->second;
+    }
 }
