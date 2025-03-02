@@ -24,6 +24,12 @@ namespace spk
 
         DataBuffer(size_t p_dataSize);
 
+		DataBuffer(const DataBuffer& p_other);
+		DataBuffer& operator =(const DataBuffer& p_other);
+
+		DataBuffer(DataBuffer&& p_other);
+		DataBuffer& operator =(DataBuffer&& p_other);
+
         uint8_t* data()
         {
             return (_data.data());

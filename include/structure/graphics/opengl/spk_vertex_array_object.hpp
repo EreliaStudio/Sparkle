@@ -17,6 +17,12 @@ namespace spk::OpenGL
 		VertexArrayObject();
 		~VertexArrayObject();
 
+		VertexArrayObject(const VertexArrayObject& p_other);
+		VertexArrayObject(VertexArrayObject&& p_other);
+
+		VertexArrayObject& operator = (const VertexArrayObject& p_other);
+		VertexArrayObject& operator = (VertexArrayObject&& p_other);
+
 		void activate();
 		void deactivate();
 	};

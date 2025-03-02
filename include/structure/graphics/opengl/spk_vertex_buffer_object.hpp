@@ -69,6 +69,7 @@ namespace spk::OpenGL
 		void clear();
 		void resize(size_t p_size);
 		uint8_t* data();
+		const uint8_t* data() const;
 		size_t size() const;
 		void edit(const void* p_data, size_t p_dataSize, size_t p_offset);
 		void append(const void* p_data, size_t p_dataSize);

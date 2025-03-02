@@ -8,6 +8,10 @@
 #endif
 #include <Windows.h>
 
+#include <iostream>
+#include <iomanip>
+#include "structure/spk_iostream.hpp"
+
 namespace spk::OpenGL
 {
 	void VertexBufferObject::_allocate()
@@ -40,12 +44,36 @@ namespace spk::OpenGL
 		{
 			glBufferSubData(static_cast<GLenum>(_type), 0, size, _buffer.data());
 		}
+
+		if (_type == Type::ShaderStorage)
+		{
+			spk::cout << "Buffer content (" << size << " bytes): ";
+			for (size_t i = 0; i < size; ++i)
+			{
+				spk::cout << std::hex << std::setw(2) << std::setfill(L'0') << static_cast<int>(_buffer.data()[i]) << " ";
+			}
+			spk::cout << std::dec << std::endl;
+		}
 	}
 
-	VertexBufferObject::VertexBufferObject() : _id(0), _validated(false), _type(Type::Unknow), _usage(Usage::Unknow), _currentBufferMaxSize(0) {}
-
-	VertexBufferObject::VertexBufferObject(Type p_type, Usage p_usage) : _id(0), _validated(false), _type(p_type), _usage(p_usage), _currentBufferMaxSize(0)
+	VertexBufferObject::VertexBufferObject() :
+		_id(0),
+		_validated(false),
+		_type(Type::Unknow),
+		_usage(Usage::Unknow),
+		_currentBufferMaxSize(0)
 	{
+
+	}
+
+	VertexBufferObject::VertexBufferObject(Type p_type, Usage p_usage) :
+		_id(0),
+		_validated(false),
+		_type(p_type),
+		_usage(p_usage),
+		_currentBufferMaxSize(0)
+	{
+
 	}
 
 	VertexBufferObject::~VertexBufferObject()
@@ -56,13 +84,23 @@ namespace spk::OpenGL
 		}
 	}
 
-	VertexBufferObject::VertexBufferObject(const VertexBufferObject& p_other) : _validated(p_other._validated), _type(p_other._type), _usage(p_other._usage), _currentBufferMaxSize(p_other._currentBufferMaxSize)
+	VertexBufferObject::VertexBufferObject(const VertexBufferObject& p_other) :
+		_validated(p_other._validated),
+		_buffer(p_other._buffer),
+		_type(p_other._type),
+		_usage(p_other._usage),
+		_currentBufferMaxSize(p_other._currentBufferMaxSize)
 	{
-		edit(p_other._buffer.data(), p_other._buffer.size(), 0);
-		validate();
+		
 	}
 
-	VertexBufferObject::VertexBufferObject(VertexBufferObject&& p_other) noexcept : _validated(p_other._validated), _id(p_other._id), _type(p_other._type), _usage(p_other._usage), _buffer(std::move(p_other._buffer)), _currentBufferMaxSize(p_other._currentBufferMaxSize)
+	VertexBufferObject::VertexBufferObject(VertexBufferObject&& p_other) noexcept :
+		_validated(p_other._validated),
+		_id(p_other._id),
+		_type(p_other._type),
+		_usage(p_other._usage),
+		_buffer(std::move(p_other._buffer)),
+		_currentBufferMaxSize(p_other._currentBufferMaxSize)
 	{
 		p_other._validated = false;
 		p_other._id = 0;
@@ -86,9 +124,6 @@ namespace spk::OpenGL
 			_buffer = p_other._buffer;
 			_currentBufferMaxSize = p_other._currentBufferMaxSize;
 			_validated = p_other._validated;
-
-			edit(p_other._buffer.data(), p_other._buffer.size(), 0);
-			validate();
 		}
 
 		return *this;
@@ -151,6 +186,11 @@ namespace spk::OpenGL
 	}
 
 	uint8_t* VertexBufferObject::data()
+	{
+		return _buffer.data();
+	}
+
+	const uint8_t* VertexBufferObject::data() const
 	{
 		return _buffer.data();
 	}

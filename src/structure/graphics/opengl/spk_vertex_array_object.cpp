@@ -21,6 +21,32 @@ namespace spk::OpenGL
 		}
 	}
 
+	VertexArrayObject::VertexArrayObject(const VertexArrayObject& p_other) : _id(0) {}
+	
+	VertexArrayObject::VertexArrayObject(VertexArrayObject&& p_other) : _id(p_other._id)
+	{
+		p_other._id = 0;
+	}
+
+	VertexArrayObject& VertexArrayObject::operator = (const VertexArrayObject& p_other)
+	{
+		if (this != &p_other)
+		{
+			_id = 0;
+		}
+		return (*this);
+	}
+	
+	VertexArrayObject& VertexArrayObject::operator = (VertexArrayObject&& p_other)
+	{
+		if (this != &p_other)
+		{
+			_id = p_other._id;
+			p_other._id = 0;
+		}
+		return (*this);
+	}
+
 	void VertexArrayObject::_allocate()
 	{
 		if (wglGetCurrentContext() != nullptr)

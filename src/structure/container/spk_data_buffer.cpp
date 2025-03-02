@@ -15,6 +15,40 @@ namespace spk
 
 	}
 
+	DataBuffer::DataBuffer(const DataBuffer& p_other) :
+		_data(p_other._data), _bookmark(p_other._bookmark)
+	{
+		
+	}
+
+	DataBuffer& DataBuffer::operator =(const DataBuffer& p_other)
+	{
+		if (this != &p_other)
+        {
+            _data = p_other._data;
+            _bookmark = p_other._bookmark;
+        }
+        return *this;
+	}
+
+	DataBuffer::DataBuffer(DataBuffer&& p_other) :
+		_data(std::move(p_other._data)),
+		_bookmark(p_other._bookmark)
+    {
+        p_other._bookmark = 0;
+    }
+	
+	DataBuffer& DataBuffer::operator =(DataBuffer&& p_other)
+	{
+		if (this != &p_other)
+        {
+            _data = std::move(p_other._data);
+            _bookmark = p_other._bookmark;
+            p_other._bookmark = 0;
+        }
+        return *this;
+	}
+
 	void DataBuffer::resize(const size_t& p_newSize)
 	{
 		_data.resize(p_newSize);

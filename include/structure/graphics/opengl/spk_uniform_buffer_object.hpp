@@ -26,7 +26,24 @@ namespace spk::OpenGL
 		UniformBufferObject() = default;
         UniformBufferObject(const std::string& p_name, BindingPoint p_bindingPoint, size_t p_size);
 
+		UniformBufferObject(const UniformBufferObject& p_other);
+		UniformBufferObject(UniformBufferObject&& p_other);
+
+		UniformBufferObject& operator =(const UniformBufferObject& p_other);
+		UniformBufferObject& operator =(UniformBufferObject&& p_other);
+
         void activate();
+
+        template<typename TType>
+        BindedBufferObject& operator=(const TType& p_data)
+        {
+            if (sizeof(p_data) != _blockSize)
+            {
+                throw std::runtime_error("Invalid data size passed to ShaderStorageBufferObject. Expected size of [" + std::to_string(sizeof(p_data)) + "] bytes and received [" + std::to_string(_blockSize) + "]");
+            }
+            edit(&p_data, _blockSize, 0);
+            return (*this);
+        }
 
 		template<typename TType>
 		TType get()

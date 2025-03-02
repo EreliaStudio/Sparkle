@@ -11,6 +11,31 @@ namespace spk::OpenGL
 
 	}
 
+	UniformBufferObject::UniformBufferObject(const UniformBufferObject& p_other)
+	{
+		
+	}
+	
+	UniformBufferObject::UniformBufferObject(UniformBufferObject&& p_other)
+	{
+
+	}
+
+	UniformBufferObject& UniformBufferObject::operator =(const UniformBufferObject& p_other)
+	{
+
+	}
+	
+	UniformBufferObject& UniformBufferObject::operator =(UniformBufferObject&& p_other)
+	{
+		if (this != &p_other)
+		{
+			BindedBufferObject::operator=(std::move(p_other));
+		}
+
+		return(*this);
+	}
+
     void UniformBufferObject::activate()
     {
 		BindedBufferObject::activate();
