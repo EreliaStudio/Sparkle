@@ -119,6 +119,44 @@ namespace spk::OpenGL
 				}
 			}
 
+			void extract(uint8_t* p_output, size_t p_size)
+			{
+				if (std::holds_alternative<Structure>(innerElements) == true)
+				{
+					if (p_size != size)
+					{
+						auto& structure = std::get<Structure>(innerElements);
+						for (auto& [name, pair] : structure)
+						{
+							pair.second.extract(p_output + pair.first, pair.second.size);
+						}
+					}
+					else
+					{
+						std::memcpy(buffer, p_output, size);
+					}
+				}
+				else if (std::holds_alternative<Array>(innerElements) == true)
+				{
+					auto& array = std::get<Array>(innerElements);
+					for (auto& element : array)
+					{
+						element.extract(p_output + element.size, element.size);
+					}
+				}
+				else
+				{
+					if (p_size != size)
+					{
+						throw std::runtime_error("Invalid size passed to Element: Expected [" +
+												std::to_string(size) + "] bytes but received [" +
+												std::to_string(p_size) + "]");
+					}
+					
+					std::memcpy(p_output, buffer, size);
+				}
+			}
+
 			template<typename TType>
 			Element& operator = (const TType& p_value)
 			{
@@ -135,9 +173,7 @@ namespace spk::OpenGL
 			{
 				TType result;
 
-				/* i want to feed the result with the content of each elements buffer, iterating
-				thought all the children to set the data inside result, treating it as a uint8_t
-				to export data from the buffer to a "readable data" for the user */
+				extract(static_cast<uint8_t*>(&result), sizeof(TType));
 
 				return (result);
 			}
