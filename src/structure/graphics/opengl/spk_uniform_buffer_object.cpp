@@ -11,31 +11,6 @@ namespace spk::OpenGL
 
 	}
 
-	UniformBufferObject::UniformBufferObject(const UniformBufferObject& p_other)
-	{
-		
-	}
-	
-	UniformBufferObject::UniformBufferObject(UniformBufferObject&& p_other)
-	{
-
-	}
-
-	UniformBufferObject& UniformBufferObject::operator =(const UniformBufferObject& p_other)
-	{
-
-	}
-	
-	UniformBufferObject& UniformBufferObject::operator =(UniformBufferObject&& p_other)
-	{
-		if (this != &p_other)
-		{
-			BindedBufferObject::operator=(std::move(p_other));
-		}
-
-		return(*this);
-	}
-
     void UniformBufferObject::activate()
     {
 		BindedBufferObject::activate();
@@ -48,9 +23,9 @@ namespace spk::OpenGL
 
 		if (_programBlockIndex.contains(prog) == false)
 		{
-			GLint blockIndex = glGetUniformBlockIndex(prog, _name.c_str());
+			GLint blockIndex = glGetUniformBlockIndex(prog, blockName().c_str());
 			if (blockIndex == GL_INVALID_INDEX)
-				throw std::runtime_error("Uniform block '" + _name + "' not found in the shader program.");
+				throw std::runtime_error("Uniform block '" + blockName() + "' not found in the shader program.");
 
 			_programBlockIndex[prog] = blockIndex;
 		}

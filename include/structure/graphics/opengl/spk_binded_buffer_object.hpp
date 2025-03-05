@@ -13,6 +13,8 @@
 #include "spk_sfinae.hpp"
 #include "structure/graphics/opengl/spk_vertex_buffer_object.hpp"
 
+#include "structure/container/spk_data_buffer_layout.hpp"
+
 #include "iostream"
 
 #include "spk_debug_macro.hpp"
@@ -23,226 +25,20 @@ namespace spk::OpenGL
     {
     public:
         using BindingPoint = int;
-
-		struct Element
-		{
-			uint8_t* buffer = nullptr;
-			size_t size;
-
-			using Offset = size_t;
-			using Structure = std::unordered_map<std::string, std::pair<Offset, Element>>;
-			using Array = std::vector<Element>;
-
-			std::variant<std::monostate, Structure, Array> innerElements;
-
-			Element() = default;
-			Element(uint8_t* p_buffer, size_t p_size) : buffer(p_buffer), size(p_size) {}
-
-			Element(const Element& p_other) : buffer(p_other.buffer), size(p_other.size) {}
-			Element(Element&& p_other) : buffer(p_other.buffer), size(p_other.size)
-			{
-				p_other.buffer = nullptr;
-				p_other.size = 0;
-			}
-
-			Element& operator = (const Element& p_other)
-			{
-				if (this != &p_other)
-				{
-					buffer = p_other.buffer;
-					size = p_other.size;
-				}
-				return (*this);
-			}
-
-			Element& operator = (Element&& p_other)
-			{
-				if (this != &p_other)
-				{
-					buffer = p_other.buffer;
-					size = p_other.size;
-
-					p_other.buffer = nullptr;
-					p_other.size = 0;
-				}
-				return (*this);
-			}
-
-			Element& addElement(const std::string& p_name, size_t p_offset, size_t p_size)
-			{
-				if (std::holds_alternative<std::monostate>(innerElements) == true)
-				{
-					innerElements = Structure();
-				}
-				if (std::holds_alternative<Array>(innerElements) == true)
-				{
-					throw std::runtime_error("Can't add a nested data inside an array element");
-				}
-				std::get<Structure>(innerElements)[p_name] = {p_offset, {buffer + p_offset, p_size}};
-			}
-
-			void assign(const uint8_t* p_rawElement, size_t p_size)
-			{
-				if (std::holds_alternative<Structure>(innerElements) == true)
-				{
-					if (p_size != size)
-					{
-						auto& structure = std::get<Structure>(innerElements);
-						for (auto& [name, pair] : structure)
-						{
-							pair.second.assign(p_rawElement + pair.first, pair.second.size);
-						}
-					}
-					else
-					{
-						std::memcpy(buffer, p_rawElement, size);
-					}
-				}
-				else if (std::holds_alternative<Array>(innerElements) == true)
-				{
-					auto& array = std::get<Array>(innerElements);
-					for (auto& element : array)
-					{
-						element.assign(p_rawElement + element.size, element.size);
-					}
-				}
-				else
-				{
-					if (p_size != size)
-					{
-						throw std::runtime_error("Invalid size passed to Element: Expected [" +
-												std::to_string(size) + "] bytes but received [" +
-												std::to_string(p_size) + "]");
-					}
-					
-					std::memcpy(buffer, p_rawElement, size);
-				}
-			}
-
-			void extract(uint8_t* p_output, size_t p_size)
-			{
-				if (std::holds_alternative<Structure>(innerElements) == true)
-				{
-					if (p_size != size)
-					{
-						auto& structure = std::get<Structure>(innerElements);
-						for (auto& [name, pair] : structure)
-						{
-							pair.second.extract(p_output + pair.first, pair.second.size);
-						}
-					}
-					else
-					{
-						std::memcpy(buffer, p_output, size);
-					}
-				}
-				else if (std::holds_alternative<Array>(innerElements) == true)
-				{
-					auto& array = std::get<Array>(innerElements);
-					for (auto& element : array)
-					{
-						element.extract(p_output + element.size, element.size);
-					}
-				}
-				else
-				{
-					if (p_size != size)
-					{
-						throw std::runtime_error("Invalid size passed to Element: Expected [" +
-												std::to_string(size) + "] bytes but received [" +
-												std::to_string(p_size) + "]");
-					}
-					
-					std::memcpy(p_output, buffer, size);
-				}
-			}
-
-			template<typename TType>
-			Element& operator = (const TType& p_value)
-			{
-				if (std::holds_alternative<Array>(innerElements) == true)
-				{
-					throw std::runtime_error("Can't assign an array element");
-				}
-
-				assign(&p_value, sizeof(TType));
-			}
-
-			template<typename TType>
-			TType get() const
-			{
-				TType result;
-
-				extract(static_cast<uint8_t*>(&result), sizeof(TType));
-
-				return (result);
-			}
-
-			Element& operator[](const std::string& p_innerElementsName)
-			{
-				if (std::holds_alternative<Structure>(innerElements) == false)
-				{
-					throw std::runtime_error("Can't access inner element of a non-structured data");
-				}
-				if (std::get<Structure>(innerElements).contains(p_innerElementsName) == false)
-				{
-					throw std::runtime_error("Inner data named [" + p_innerElementsName + "] does not exist");
-				}
-				return (std::get<Structure>(innerElements).at(p_innerElementsName).second);
-			}
-
-			const Element& operator[](const std::string& p_innerElementsName) const
-			{
-				if (std::holds_alternative<Structure>(innerElements) == false)
-				{
-					throw std::runtime_error("Can't access inner element of a non-structured data");
-				}
-				if (std::get<Structure>(innerElements).contains(p_innerElementsName) == false)
-				{
-					throw std::runtime_error("Inner data named [" + p_innerElementsName + "] does not exist");
-				}
-				return (std::get<Structure>(innerElements).at(p_innerElementsName).second);
-			}
-
-			Element& operator[](size_t p_index)
-			{
-				if (std::holds_alternative<Array>(innerElements) == false)
-				{
-					throw std::runtime_error("Can't access element index [" + std::to_string(p_index) + "] of a non-array data");
-				}
-				if (std::get<Array>(innerElements).size() <= p_index)
-				{
-					throw std::out_of_range("Out of range access to inner data array");
-				}
-				return (std::get<Array>(innerElements).at(p_index));
-			}
-
-			const Element& operator[](size_t p_index) const
-			{
-				if (std::holds_alternative<Array>(innerElements) == false)
-				{
-					throw std::runtime_error("Can't access element index [" + std::to_string(p_index) + "] of a non-array data");
-				}
-				if (std::get<Array>(innerElements).size() <= p_index)
-				{
-					throw std::out_of_range("Out of range access to inner data array");
-				}
-				return (std::get<Array>(innerElements).at(p_index));
-			}
-		};
+		using Element = spk::DataBufferLayout::Element;
 
     protected:
 		std::string _blockName ="Unnamed binded buffer object";
         BindingPoint _bindingPoint = -1;
-
-		Element::Structure _elements;
+		spk::DataBufferLayout _dataBufferLayout;
 
     public:
 		BindedBufferObject() = default;
         
 		BindedBufferObject(Type p_type, Usage p_usage, const std::string& p_blockName, BindingPoint p_bindingPoint, size_t p_size) :
 			_blockName(p_blockName),
-			_bindingPoint(p_bindingPoint)
+			_bindingPoint(p_bindingPoint),
+			_dataBufferLayout(&(dataBuffer()))
 		{
 			resize(p_size);
 		}
@@ -251,16 +47,44 @@ namespace spk::OpenGL
 
 		BindedBufferObject(const BindedBufferObject& p_other) :
 			_blockName(p_other._blockName),
-			_bindingPoint(p_other._bindingPoint)
+			_bindingPoint(p_other._bindingPoint),
+			_dataBufferLayout(p_other._dataBufferLayout)
 		{
+			_dataBufferLayout.setBuffer(&(dataBuffer()));
+		}
 
+		BindedBufferObject& operator = (const BindedBufferObject& p_other)
+		{
+			if (this != &p_other)
+			{
+				_blockName = p_other._blockName;
+				_bindingPoint = p_other._bindingPoint;
+				_dataBufferLayout = std::move(p_other._dataBufferLayout);
+				_dataBufferLayout.setBuffer(&(dataBuffer()));
+			}
+
+			return (*this);
 		}
 
 		BindedBufferObject(BindedBufferObject&& p_other) :
-			_blockName(p_other._blockName),
-			_bindingPoint(p_other._bindingPoint)
+			_blockName(std::move(p_other._blockName)),
+			_bindingPoint(std::move(p_other._bindingPoint)),
+			_dataBufferLayout(std::move(p_other._dataBufferLayout))
 		{
+			_dataBufferLayout.setBuffer(&(dataBuffer()));
+		}
 
+		BindedBufferObject& operator = (BindedBufferObject&& p_other)
+		{
+			if (this != &p_other)
+			{
+				_blockName = std::move(p_other._blockName);
+				_bindingPoint = std::move(p_other._bindingPoint);
+				_dataBufferLayout = std::move(p_other._dataBufferLayout);
+				_dataBufferLayout.setBuffer(&(dataBuffer()));
+			}
+
+			return (*this);
 		}
 
 		const std::string& blockName() const
@@ -281,30 +105,55 @@ namespace spk::OpenGL
 			_bindingPoint = p_bindingPoint;
 		}
 
-		Element& addElement(const std::string& p_name, size_t p_offset, size_t p_size)
+		DataBufferLayout& layout()
 		{
-			_elements[p_name] = {p_offset, {data(), p_size}};
+			return (_dataBufferLayout);
 		}
 
-		BindedBufferObject& operator = (const BindedBufferObject& p_other)
+		const DataBufferLayout& layout() const
 		{
-			if (this != &p_other)
-			{
-				_blockName = p_other._blockName;
-				_blockName = p_other._bindingPoint;
-			}
-			return (*this);
+			return (_dataBufferLayout);
 		}
-		
-		BindedBufferObject& operator = (BindedBufferObject&& p_other)
+
+		bool contains(const std::wstring& p_name)
 		{
-			if (this != &p_other)
-			{
-				_blockName = p_other._blockName;
-				_blockName = p_other._bindingPoint;
-			}
-			return (*this);
+			return (_dataBufferLayout.contains(p_name));
 		}
+
+		DataBufferLayout::Element& addElement(const std::wstring& p_name, size_t p_offset, size_t p_size)
+		{
+			return (_dataBufferLayout.addElement(p_name, p_offset, p_size));
+		}
+
+		DataBufferLayout::Element& addElement(const std::wstring& p_name, size_t p_offset, size_t p_nbElement, size_t p_elementSize, size_t p_elementPadding)
+		{
+			return (_dataBufferLayout.addElement(p_name, p_offset, p_nbElement, p_elementSize, p_elementPadding));
+		}
+
+		void removeElement(const std::wstring& p_name)
+		{
+			_dataBufferLayout.removeElement(p_name);
+		}
+
+        DataBufferLayout::Element& operator[](size_t index)
+        {
+            return _dataBufferLayout[index];
+        }
+
+        DataBufferLayout::Element& operator[](const std::wstring& key)
+        {
+            return _dataBufferLayout[key];
+        }
+
+        const DataBufferLayout::Element& operator[](size_t index) const
+        {
+            return _dataBufferLayout[index];
+        }
+
+        const DataBufferLayout::Element& operator[](const std::wstring& key) const
+        {
+            return _dataBufferLayout[key];
+        }
 
 		virtual void activate()
 		{

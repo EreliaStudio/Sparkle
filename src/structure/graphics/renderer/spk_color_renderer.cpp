@@ -48,7 +48,7 @@ namespace spk
 		});
 
 		_colorUbo = spk::OpenGL::UniformBufferObject("ColorData", 0, 16);
-		_colorUbo.addElement("uColor", 0, 16);
+		_colorUbo.addElement(L"uColor", 0, 16);
 	}
 
 	ColorRenderer::ColorRenderer(const spk::Color &p_color)
@@ -62,7 +62,7 @@ namespace spk
 	{
 		_color = p_color;
 
-		_colorUbo["uColor"] = _color;
+		_colorUbo[L"uColor"] = _color;
 		_colorUbo.validate();
 	}
 

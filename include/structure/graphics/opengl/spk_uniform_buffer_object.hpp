@@ -37,11 +37,11 @@ namespace spk::OpenGL
         template<typename TType>
         BindedBufferObject& operator=(const TType& p_data)
         {
-            if (sizeof(p_data) != _blockSize)
+            if (sizeof(p_data) != size())
             {
-                throw std::runtime_error("Invalid data size passed to ShaderStorageBufferObject. Expected size of [" + std::to_string(sizeof(p_data)) + "] bytes and received [" + std::to_string(_blockSize) + "]");
+                throw std::runtime_error("Invalid data size passed to ShaderStorageBufferObject. Expected size of [" + std::to_string(sizeof(p_data)) + "] bytes and received [" + std::to_string(size()) + "]");
             }
-            edit(&p_data, _blockSize, 0);
+            edit(&p_data, size(), 0);
             return (*this);
         }
 

@@ -185,6 +185,11 @@ namespace spk::OpenGL
 		_buffer.resize(p_size);
 	}
 
+	DataBuffer& VertexBufferObject::dataBuffer()
+	{
+		return (_buffer);
+	}
+	
 	uint8_t* VertexBufferObject::data()
 	{
 		return _buffer.data();

@@ -18,7 +18,7 @@ int main()
     layout.addElement(L"charField", 8, sizeof(char));
 
 	DEBUG_LINE();
-    layout.addElement(L"arrayField", 12, 3, sizeof(int), 0);
+    layout.addElement(L"arrayField", 12, 5, sizeof(int), 1);
 
 	DEBUG_LINE();
     layout[L"intField"] = 42;
@@ -29,6 +29,7 @@ int main()
     layout[L"arrayField"][0] = 0xFFFFFFFF;
     layout[L"arrayField"][1] = 0xFFFFFFFF;
     layout[L"arrayField"][2] = 0xFFFFFFFF;
+    layout[L"arrayField"][3] = 0xFFFFFFFF;
 
 	DEBUG_LINE();
     int    readInt    = layout[L"intField"].get<int>();
@@ -37,6 +38,7 @@ int main()
     int  arrVal0    = layout[L"arrayField"][0].get<int>();
     int  arrVal1    = layout[L"arrayField"][1].get<int>();
     int  arrVal2    = layout[L"arrayField"][2].get<int>();
+    int  arrVal3    = layout[L"arrayField"][3].get<int>();
 
 	DEBUG_LINE();
     std::cout << "===== DataBufferLayout Test =====" << std::endl;
@@ -46,6 +48,7 @@ int main()
     std::cout << "arrayField[0] = " << arrVal0 << std::endl;
     std::cout << "arrayField[1] = " << arrVal1 << std::endl;
     std::cout << "arrayField[2] = " << arrVal2 << std::endl;
+    std::cout << "arrayField[3] = " << arrVal3 << std::endl;
 
 	DEBUG_LINE();
     std::cout << "\nRaw buffer (hex): ";

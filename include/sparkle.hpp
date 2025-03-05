@@ -17,6 +17,7 @@
 #include "structure/spk_iostream.hpp"
 #include "structure/spk_safe_pointer.hpp"
 #include "structure/container/spk_data_buffer.hpp"
+#include "structure/container/spk_data_buffer_layout.hpp"
 #include "structure/container/spk_json_file.hpp"
 #include "structure/container/spk_json_object.hpp"
 #include "structure/container/spk_pool.hpp"

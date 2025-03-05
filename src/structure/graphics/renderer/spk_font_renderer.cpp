@@ -76,15 +76,15 @@ namespace spk
 		_samplerObject = spk::OpenGL::SamplerObject("diffuseTexture", spk::OpenGL::SamplerObject::Type::Texture2D, 0);
 
 		_textInformationsUbo = spk::OpenGL::UniformBufferObject("TextInformations", 0, 32);
-		_textInformationsUbo.addElement("glyphColor", 0, sizeof(spk::Color));
-		_textInformationsUbo.addElement("outlineColor", 16, sizeof(spk::Color));
-		_textInformationsUbo.addElement("outlineThreshold", 32, sizeof(float));
+		_textInformationsUbo.addElement(L"glyphColor", 0, sizeof(spk::Color));
+		_textInformationsUbo.addElement(L"outlineColor", 16, sizeof(spk::Color));
+		_textInformationsUbo.addElement(L"outlineThreshold", 32, sizeof(float));
 	}
 
 	void FontRenderer::_updateUbo()
 	{
-		_textInformationsUbo["glyphColor"] = _glyphColor;
-		_textInformationsUbo["outlineColor"] = _outlineColor;
+		_textInformationsUbo[L"glyphColor"] = _glyphColor;
+		_textInformationsUbo[L"outlineColor"] = _outlineColor;
 		_textInformationsUbo.validate();
 	}
 
@@ -105,7 +105,7 @@ namespace spk
 	void FontRenderer::setFontSize(const Font::Size &p_fontSize)
 	{
 		_fontSize = p_fontSize;
-		_textInformationsUbo["outlineThreshold"] = 0.5f;
+		_textInformationsUbo[L"outlineThreshold"] = 0.5f;
 		_textInformationsUbo.validate();
 		_atlas = nullptr;
 		_samplerObject.bind(nullptr);
