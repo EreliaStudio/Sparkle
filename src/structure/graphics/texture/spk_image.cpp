@@ -7,20 +7,6 @@
 
 namespace spk
 {
-	Image::Section::Section() :
-		anchor(0, 0),
-		size(0, 0)
-	{
-
-	}
-
-	Image::Section::Section(spk::Vector2 p_anchor, spk::Vector2 p_size) :
-		anchor(p_anchor),
-		size(p_size)
-	{
-
-	}
-
 	Image::Image()
 	{
 
