@@ -23,11 +23,9 @@ namespace spk
 			using Array = std::vector<Element>;
 			using Structure = std::unordered_map<std::wstring, Element>;
 
-			std::variant<Unit, Array, Structure> _content;
-
 		private:
 			DataBuffer* _buffer = nullptr;
-
+			std::variant<Unit, Array, Structure> _content;
 			size_t _offset = 0;
 			size_t _size   = 0;
 
@@ -68,6 +66,15 @@ namespace spk
 
 			}
 
+			Element duplicate(size_t p_offset)
+			{
+				Element result = *this;
+		
+				result._offset = p_offset;
+
+				return (result);
+			}
+
 			bool isUnit() const
 			{
 				return std::holds_alternative<Unit>(_content);
@@ -98,6 +105,55 @@ namespace spk
 				Structure& structure = std::get<Structure>(_content);
 
 				return structure.contains(p_name);
+			}
+
+			size_t nbElement()
+			{
+				if (isArray() == false)
+				{
+					throw std::runtime_error("Can't check for element array size on non-array element");
+				}
+
+				return (std::get<Array>(_content).size());
+			}
+
+			void resize(size_t p_nbElement, size_t p_elementSize, size_t p_elementPadding)
+			{
+				if (isArray() == false)
+				{
+					throw std::runtime_error("Can't resize a non-array element");
+				}
+
+				if (_buffer == nullptr)
+				{
+					throw std::runtime_error("No DataBuffer associated with this element.");
+				}
+
+				size_t newSize = p_nbElement * (p_elementSize + p_elementPadding);
+
+				if (_offset + newSize > _buffer->size())
+				{
+					throw std::runtime_error(
+						"Resizing would exceed the buffer's capacity. Requested " 
+						+ std::to_string(_offset + newSize) 
+						+ " but buffer size is " 
+						+ std::to_string(_buffer->size()) + "."
+					);
+				}
+
+				Array newArray;
+				newArray.resize(p_nbElement);
+
+				for (size_t i = 0; i < p_nbElement; ++i)
+				{
+					size_t childOffset = _offset + i * (p_elementSize + p_elementPadding);
+
+					newArray[i] = Element(_buffer, childOffset, p_elementSize);
+				}
+
+				_content = std::move(newArray);
+
+				_size = newSize;
 			}
 
 			Element& addElement(const std::wstring& p_name, size_t p_offset, size_t p_size)
@@ -324,6 +380,41 @@ namespace spk
 				}
 
 				return (*(reinterpret_cast<const TType*>((_buffer->data() + _offset))));
+			}
+
+			template<typename TType>
+			std::vector<TType> getArray() const
+			{
+				static_assert(std::is_standard_layout<TType>::value,
+							"DataBufferLayout::Element::getArray<TType>() - TType must be a standard layout type.");
+
+				if (!isArray())
+				{
+					throw std::runtime_error("getArray<TType>() called on a non-array element.");
+				}
+				if (_buffer == nullptr)
+				{
+					throw std::runtime_error("No DataBuffer associated with this element.");
+				}
+
+				const auto& arr = std::get<Array>(_content);
+
+				std::vector<TType> result;
+				result.reserve(arr.size());
+
+				for (const auto& child : arr)
+				{
+					if (child.size() != sizeof(TType))
+					{
+						throw std::runtime_error(
+							"Child element size [" + std::to_string(child.size()) +
+							"] does not match TType size [" + std::to_string(sizeof(TType)) + "]"
+						);
+					}
+					result.push_back(child.get<TType>());
+				}
+
+				return result;
 			}
 
 			size_t offset() const { return _offset; }

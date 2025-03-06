@@ -47,7 +47,7 @@ namespace spk
 			{1, spk::OpenGL::LayoutBufferObject::Attribute::Type::Float}	// layer
 		});
 
-		_colorUbo = spk::OpenGL::UniformBufferObject("ColorData", 0, 16);
+		_colorUbo = spk::OpenGL::UniformBufferObject(L"ColorData", 0, 16);
 		_colorUbo.addElement(L"uColor", 0, 16);
 	}
 

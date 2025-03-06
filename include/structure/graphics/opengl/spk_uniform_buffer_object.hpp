@@ -12,19 +12,28 @@
 
 #include "spk_sfinae.hpp"
 
-#include "structure/graphics/opengl/spk_binded_buffer_object.hpp"
+#include "structure/container/spk_data_buffer_layout.hpp"
+#include "structure/graphics/opengl/spk_vertex_buffer_object.hpp"
 
 #include "spk_debug_macro.hpp"
 
 namespace spk::OpenGL
 {
-    class UniformBufferObject : public BindedBufferObject
+    class UniformBufferObject : public VertexBufferObject
     {
+    public:
+        using BindingPoint = int;
+		using Element = spk::DataBufferLayout::Element;
+
 	private:
+		std::wstring _blockName = L"Unnamed UBO";
+        BindingPoint _bindingPoint = -1;
+		spk::DataBufferLayout _dataBufferLayout;
 		std::unordered_map<GLint, GLint> _programBlockIndex;
+
     public:
 		UniformBufferObject() = default;
-        UniformBufferObject(const std::string& p_name, BindingPoint p_bindingPoint, size_t p_size);
+        UniformBufferObject(const std::wstring& p_name, BindingPoint p_bindingPoint, size_t p_size);
 
 		UniformBufferObject(const UniformBufferObject& p_other);
 		UniformBufferObject(UniformBufferObject&& p_other);
@@ -33,42 +42,26 @@ namespace spk::OpenGL
 		UniformBufferObject& operator =(UniformBufferObject&& p_other);
 
         void activate();
+		
+		const std::wstring& blockName() const;
+		void setBlockName(const std::wstring& p_blockName);
 
-        template<typename TType>
-        BindedBufferObject& operator=(const TType& p_data)
-        {
-            if (sizeof(p_data) != size())
-            {
-                throw std::runtime_error("Invalid data size passed to ShaderStorageBufferObject. Expected size of [" + std::to_string(sizeof(p_data)) + "] bytes and received [" + std::to_string(size()) + "]");
-            }
-            edit(&p_data, size(), 0);
-            return (*this);
-        }
+		BindingPoint bindingPoint() const;
+		void setBindingPoint(BindingPoint p_bindingPoint);
 
-		template<typename TType>
-		TType get()
-		{
-			activate();
+		DataBufferLayout& layout();
+		const DataBufferLayout& layout() const;
 
-			size_t totalSize = this->size(); 
-			if (totalSize == 0)
-			{
-				return {};
-			}
+		bool contains(const std::wstring& p_name);
+		DataBufferLayout::Element& addElement(const std::wstring& p_name, size_t p_offset, size_t p_size);
+		DataBufferLayout::Element& addElement(const std::wstring& p_name, size_t p_offset, size_t p_nbElement, size_t p_elementSize, size_t p_elementPadding);
 
-			if (size() % sizeof(TType) != 0)
-			{
-				throw std::runtime_error(
-					"UniformBufferObject::get() - The buffer size (" + std::to_string(size()) +
-					" bytes) is incompatible with TType size (" + std::to_string(sizeof(TType)) + " bytes)."
-				);
-			}
+		void removeElement(const std::wstring& p_name);
 
-			TType result;
-
-			glGetBufferSubData(GL_UNIFORM_BUFFER, 0, totalSize, &result);
-
-			return result;
-		}
+        DataBufferLayout::Element& operator[](size_t index);
+        const DataBufferLayout::Element& operator[](size_t index) const;
+		
+        DataBufferLayout::Element& operator[](const std::wstring& key);
+        const DataBufferLayout::Element& operator[](const std::wstring& key) const;
 	};
 }

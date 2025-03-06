@@ -9,162 +9,203 @@
 #include <unordered_map>
 #include <variant>
 #include "spk_debug_macro.hpp"
-#include "structure/graphics/opengl/spk_binded_buffer_object.hpp"
+#include "structure/container/spk_data_buffer_layout.hpp"
+#include "structure/graphics/opengl/spk_vertex_buffer_object.hpp"
+#include "structure/design_pattern/spk_contract_provider.hpp"
 
 namespace spk::OpenGL
 {
-
-	class ShaderStorageBufferObject : public BindedBufferObject
+	class ShaderStorageBufferObject : public VertexBufferObject
 	{
 	public:
 		using BindingPoint = int;
 
 		class DynamicArray
 		{
-		private:
-			Element* _dynamicElement;
+			friend class ShaderStorageBufferObject;
 
 		public:
-			DynamicArray()
+			using Element = spk::DataBufferLayout::Element;
+
+		private:
+			spk::TContractProvider<size_t> _resizeContractProvider;
+			spk::DataBuffer* _buffer;
+			std::vector<Element> _elements;
+			Element _defaultElement;
+			size_t _fixedReservedSpace;
+			size_t _elementSize;
+			size_t _elementPadding;
+
+			void redoArray()
+			{
+				for (size_t i = 0; i < _elements.size(); i++)
+				{
+					auto& element = _elements[i];
+
+					element = _defaultElement.duplicate(_fixedReservedSpace + (_elementSize + _elementPadding) * i);
+				}
+			}
+
+		public:
+			DynamicArray(spk::DataBuffer* p_buffer, size_t p_fixedReservedSpace, size_t p_elementSize, size_t p_elementPadding) :
+				_defaultElement(p_buffer, 0, p_elementSize),
+				_fixedReservedSpace(p_fixedReservedSpace),
+				_elementSize(p_elementSize),
+				_elementPadding(p_elementPadding)
 			{
 
 			}
 
-			void resize()
+			bool contains(const std::wstring& p_name)
 			{
-
+				return (_defaultElement.contains(p_name));
 			}
 
-			Element& operator[](const size_t& p_index)
+			Element& addElement(const std::wstring& p_name, size_t p_offset, size_t p_size)
 			{
-				return (_dynamicElement->operator[](p_index));
+				Element& result = _defaultElement.addElement(p_name, p_offset, p_size);
+
+				redoArray();
+
+				return (result);
 			}
 
-			template<TType>
+			Element& addElement(const std::wstring& p_name, size_t p_offset, size_t p_nbElement, size_t p_elementSize, size_t p_elementPadding)
+			{
+				Element& result = _defaultElement.addElement(p_name, p_offset, p_nbElement, p_elementSize, p_elementPadding);
+
+				redoArray();
+
+				return (result);
+			}
+
+			void removeElement(const std::wstring& p_name)
+			{
+				_defaultElement.removeElement(p_name);
+
+				redoArray();
+			}
+
+			void resize(size_t p_nbElement)
+			{
+				_resizeContractProvider.trigger(_fixedReservedSpace + (_elementSize + _elementPadding) * p_nbElement);
+
+				_elements.resize(p_nbElement);
+
+				redoArray();
+			}
+
+			template <typename TType>
 			void push_back(const TType& p_value)
 			{
+				resize(_elements.size() + 1);
 
+				_elements.back() = p_value;
+			}
+
+			Element& operator[](size_t p_index)
+			{
+				return (_elements[p_index]);
+			}
+			
+			const Element& operator[](size_t p_index) const
+			{
+				return (_elements[p_index]);
+			}
+
+			size_t nbElement() const
+			{
+				return (_elements.size());
 			}
 		};
 
 	private:
-		Element _fixedData;
+		std::wstring _blockName;
+		BindingPoint _bindingPoint;
+		GLint _blockIndex;
+
+		spk::DataBufferLayout::Element _fixedData;
+		spk::TContractProvider<size_t>::Contract _onResizeContract;
 		DynamicArray _dynamicArray;
 
 	public:
-		Element &fixedData() { return _fixedData; }
-		const Element &fixedData() const { return _fixedData; }
-
-		DynamicArray &dynamicArray() { return _dynamicArray; }
-		const DynamicArray &dynamicArray() const { return _dynamicArray; }
-
 		ShaderStorageBufferObject() :
-			BindedBufferObject(
-				VertexBufferObject::Type::ShaderStorage,
-				VertexBufferObject::Usage::Dynamic,
-				"", // empty name
-				0,	 // binding point 0
-				0), // initial buffer size is 0
-			_fixedSize(0),
-			_fixedPadding(0),
-			_dynamicElementSize(0),
-			_dynamicPadding(0),
-			_fixedData(data(), 0),
-			_dynamicArray(static_cast<uint8_t *>(data()), 0, 0)
+			VertexBufferObject(VertexBufferObject::Type::ShaderStorage, VertexBufferObject::Usage::Dynamic),
+			_blockName(L"Unnamed SSBO"),
+			_bindingPoint(-1),
+			_blockIndex(-1),
+			_fixedData(&(dataBuffer()), 0, 0),
+			_dynamicArray(&dataBuffer(), 0, 0, 0)
 		{
-
+			_onResizeContract = _dynamicArray._resizeContractProvider.subscribe([&](size_t p_size){resize(p_size);});
 		}
 
-		ShaderStorageBufferObject( const std::string &p_name, BindingPoint p_bindingPoint, size_t p_fixedSize, size_t p_fixedPadding, size_t p_dynamicElementSize, size_t p_dynamicPadding) :
-			BindedBufferObject(
-				VertexBufferObject::Type::ShaderStorage,
-				VertexBufferObject::Usage::Dynamic,
-				p_name,
-				p_bindingPoint,
-				p_fixedSize + p_fixedPadding),
-			_fixedSize(p_fixedSize),
-			_fixedPadding(p_fixedPadding),
-			_dynamicElementSize(p_dynamicElementSize),
-			_dynamicPadding(p_dynamicPadding),
-			_fixedData(data(), p_fixedSize),
-			_dynamicArray(
-				static_cast<uint8_t *>(data()) + p_fixedSize + p_fixedPadding,
-				p_dynamicElementSize, p_dynamicPadding)
+		ShaderStorageBufferObject(const std::wstring& p_blockName, BindingPoint p_bindingPoint, size_t p_fixedSize, size_t p_paddingFixedToDynamic, size_t p_dynamicElementSize, size_t p_dynamicElementPadding) :
+			VertexBufferObject(VertexBufferObject::Type::ShaderStorage, VertexBufferObject::Usage::Dynamic),
+			_blockName(p_blockName),
+			_bindingPoint(p_bindingPoint),
+			_blockIndex(-1),
+			_fixedData(&(dataBuffer()), 0, p_fixedSize),
+			_dynamicArray(&dataBuffer(), p_fixedSize + p_paddingFixedToDynamic, p_dynamicElementSize, p_dynamicElementPadding)
 		{
-			_dynamicArray.contractProvider.subscribe([this]()
-			{
-				this->onDynamicArrayChange();
-			});
+			_onResizeContract = _dynamicArray._resizeContractProvider.subscribe([&](size_t p_size){resize(p_size);});
+		}
+		
+		const std::wstring& blockName() const
+		{
+			return (_blockName);
+		}
+		void setBlockName(const std::wstring& p_blockName)
+		{
+			_blockName = p_blockName;
 		}
 
-		ShaderStorageBufferObject(const ShaderStorageBufferObject &p_other) : ShaderStorageBufferObject(p_other._name, p_other._bindingPoint, p_other._fixedSize, p_other._fixedPadding, p_other._dynamicElementSize, p_other._dynamicPadding)
+		BindingPoint bindingPoint() const
 		{
+			return (_bindingPoint);
+		}
+		void setBindingPoint(BindingPoint p_bindingPoint)
+		{
+			_bindingPoint = p_bindingPoint;
 		}
 
-		ShaderStorageBufferObject(ShaderStorageBufferObject &&other) noexcept : BindedBufferObject(std::move(other)),
-																				_fixedSize(other._fixedSize),
-																				_fixedPadding(other._fixedPadding),
-																				_dynamicElementSize(other._dynamicElementSize),
-																				_dynamicPadding(other._dynamicPadding),
-																				_fixedData(data(), other._fixedSize),
-																				_dynamicArray(static_cast<uint8_t *>(data()) + other._fixedSize + other._fixedPadding, other._dynamicElementSize, other._dynamicPadding)
+		spk::DataBufferLayout::Element& fixedData()
 		{
-			_dynamicArray._elements = std::move(other._dynamicArray._elements);
-			_dynamicArray.setBaseAddress(static_cast<uint8_t *>(data()) + _fixedSize + _fixedPadding);
-			_dynamicArray.contractProvider.subscribe([this]()
-			{
-            	this->onDynamicArrayChange();
-			});
+			return (_fixedData);
 		}
 
-		ShaderStorageBufferObject &operator=(const ShaderStorageBufferObject &other)
+		const spk::DataBufferLayout::Element& fixedData() const
 		{
-			if (this != &other)
-			{
-				BindedBufferObject::operator=(other);
-				_fixedSize = other._fixedSize;
-				_fixedPadding = other._fixedPadding;
-				_dynamicElementSize = other._dynamicElementSize;
-				_dynamicPadding = other._dynamicPadding;
-
-				_fixedData.setBuffer(data());
-
-				_dynamicArray.setBaseAddress(static_cast<uint8_t *>(data()) + _fixedSize + _fixedPadding);
-				_dynamicArray.resize(other._dynamicArray.size());
-			}
-			return *this;
+			return (_fixedData);
 		}
 
-		ShaderStorageBufferObject &operator=(ShaderStorageBufferObject &&other) noexcept
+		DynamicArray& dynamicArray()
 		{
-			if (this != &other)
-			{
-				BindedBufferObject::operator=(std::move(other));
-				_fixedSize = other._fixedSize;
-				_fixedPadding = other._fixedPadding;
-				_dynamicElementSize = other._dynamicElementSize;
-				_dynamicPadding = other._dynamicPadding;
+			return (_dynamicArray);
+		}
 
-				_fixedData.setBuffer(data());
-				_dynamicArray._elements = std::move(other._dynamicArray._elements);
-				_dynamicArray.setBaseAddress(static_cast<uint8_t *>(data()) + _fixedSize + _fixedPadding);
-			}
-			return *this;
+		const DynamicArray& dynamicArray() const
+		{
+			return (_dynamicArray);
 		}
 
 		void activate() override
 		{
-			BindedBufferObject::activate();
+			VertexBufferObject::activate();
 			GLint prog = 0;
 			glGetIntegerv(GL_CURRENT_PROGRAM, &prog);
 			if (prog == 0)
 				throw std::runtime_error("No shader program is currently bound.");
 
-			GLint blockIndex = glGetProgramResourceIndex(prog, GL_SHADER_STORAGE_BLOCK, _name.c_str());
-			if (blockIndex == GL_INVALID_INDEX)
-				throw std::runtime_error("Shader storage block '" + _name + "' not found in the shader program.");
+			if (_blockIndex == -1)
+			{
+				std::string str = spk::StringUtils::wstringToString(_blockName);
+				_blockIndex = glGetProgramResourceIndex(prog, GL_SHADER_STORAGE_BLOCK, str.c_str());
+				if (_blockIndex == GL_INVALID_INDEX)
+					throw std::runtime_error("Shader storage block '" + str + "' not found in the shader program.");
+			}
 
-			glShaderStorageBlockBinding(prog, blockIndex, _bindingPoint);
+			glShaderStorageBlockBinding(prog, _blockIndex, _bindingPoint);
 			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, _bindingPoint, _id);
 		}
 	};
