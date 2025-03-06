@@ -4,7 +4,7 @@
 #include <stdexcept>
 #include <GL/glew.h>
 #include "structure/spk_safe_pointer.hpp"
-#include "spk_texture_object.hpp"
+#include "structure/graphics/texture/spk_texture.hpp"
 
 namespace spk::OpenGL
 {
@@ -20,7 +20,7 @@ namespace spk::OpenGL
 		};
 
 	private:
-		spk::SafePointer<TextureObject> _texture = nullptr;
+		spk::SafePointer<const Texture> _texture = nullptr;
 
 		std::string _designator;
 		GLint _index = -1;
@@ -36,10 +36,10 @@ namespace spk::OpenGL
 		SamplerObject(SamplerObject&& p_other) noexcept;
 		SamplerObject& operator=(SamplerObject&& p_other) noexcept;
 
-		void bind(const spk::SafePointer<TextureObject>& p_texture);
+		void bind(const spk::SafePointer<const Texture>& p_texture);
 
-		spk::SafePointer<TextureObject>& texture();
-		const spk::SafePointer<TextureObject>& texture() const;
+		spk::SafePointer<const Texture>& texture();
+		const spk::SafePointer<const Texture>& texture() const;
 
 		void activate();
 		void deactivate();

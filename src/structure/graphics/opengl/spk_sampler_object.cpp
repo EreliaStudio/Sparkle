@@ -73,17 +73,17 @@ namespace spk::OpenGL
 		return *this;
 	}
 
-	void SamplerObject::bind(const spk::SafePointer<TextureObject>& p_texture)
+	void SamplerObject::bind(const spk::SafePointer<const Texture>& p_texture)
 	{
 		_texture = p_texture;
 	}
 
-	spk::SafePointer<TextureObject>& SamplerObject::texture()
+	spk::SafePointer<const Texture>& SamplerObject::texture()
 	{
 		return _texture;
 	}
 
-	const spk::SafePointer<TextureObject>& SamplerObject::texture() const
+	const spk::SafePointer<const Texture>& SamplerObject::texture() const
 	{
 		return _texture;
 	}
