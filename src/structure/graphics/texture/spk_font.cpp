@@ -61,7 +61,7 @@ namespace spk
 		setData(
 			_pixels.data(),
 			_size,
-			OpenGL::TextureObject::Format::GreyLevel
+			Texture::Format::GreyLevel
 		);
 	}
 

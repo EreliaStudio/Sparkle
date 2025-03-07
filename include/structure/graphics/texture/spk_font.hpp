@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "structure/graphics/opengl/spk_texture_object.hpp"
+#include "structure/graphics/texture/spk_texture.hpp"
 #include "external_libraries/stb_truetype.h"
 
 #include "structure/graphics/spk_text_alignment.hpp"
@@ -16,9 +16,9 @@ namespace spk
 	{
 	public:
 		using Data = std::vector<uint8_t>;
-		using Filtering = OpenGL::TextureObject::Filtering;
-		using Wrap = OpenGL::TextureObject::Wrap;
-		using Mipmap = OpenGL::TextureObject::Mipmap;
+		using Filtering = Texture::Filtering;
+		using Wrap = Texture::Wrap;
+		using Mipmap = Texture::Mipmap;
 
 		struct Glyph
 		{
@@ -84,7 +84,7 @@ namespace spk
 			}
 		};
 
-		class Atlas : public OpenGL::TextureObject
+		class Atlas : public Texture
 		{
 			friend class Font;
 

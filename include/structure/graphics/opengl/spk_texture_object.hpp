@@ -6,6 +6,7 @@
 #include "structure/spk_safe_pointer.hpp"
 #include "structure/graphics/spk_geometry_2D.hpp"
 #include "structure/graphics/texture/spk_texture.hpp"
+#include "utils/spk_opengl_utils.hpp"
 
 namespace spk::OpenGL
 {
@@ -14,49 +15,18 @@ namespace spk::OpenGL
         friend class SamplerObject;
         friend class FrameBufferObject;
 
+	public:
+		using Format = spk::Texture::Format;
+		using Filtering = spk::Texture::Filtering;
+		using Wrap = spk::Texture::Wrap;
+		using Mipmap = spk::Texture::Mipmap;
+
     private:
         GLuint _id;
 
-        static void _retrieveOpenGLFormat(spk::Texture::Format format,
-                                          GLint& internalFormat,
-                                          GLenum& externalFormat,
-                                          GLenum& dataType)
+        static void _setupTextureParameters(const Filtering& p_filtering, const Wrap& p_wrap, const Mipmap& p_mipMap)
         {
-            dataType = GL_UNSIGNED_BYTE;
-
-            switch (format)
-            {
-            case spk::Texture::Format::RGB:
-                internalFormat = GL_RGB8;
-                externalFormat = GL_RGB;
-                break;
-
-            case spk::Texture::Format::RGBA:
-                internalFormat = GL_RGBA8;
-                externalFormat = GL_RGBA;
-                break;
-
-            case spk::Texture::Format::GreyLevel:
-                internalFormat = GL_R8;
-                externalFormat = GL_RED;
-                break;
-
-            case spk::Texture::Format::DualChannel:
-                internalFormat = GL_RG8;
-                externalFormat = GL_RG;
-                break;
-
-            default:
-                internalFormat = 0;
-                externalFormat = 0;
-                dataType = 0;
-                break;
-            }
-        }
-
-        static void _setupTextureParameters(const spk::Texture& texture)
-        {
-            switch (texture.wrap())
+            switch (p_wrap)
             {
             case spk::Texture::Wrap::Repeat:
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -72,20 +42,25 @@ namespace spk::OpenGL
                 break;
             }
 
-            switch (texture.filtering())
+            switch (p_filtering)
             {
             case spk::Texture::Filtering::Nearest:
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-                                (texture.mipmap() == spk::Texture::Mipmap::Enable) ? 
+                                (p_mipMap == spk::Texture::Mipmap::Enable) ? 
 								GL_NEAREST_MIPMAP_NEAREST : GL_NEAREST);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
                 break;
             case spk::Texture::Filtering::Linear:
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-                                (texture.mipmap() == spk::Texture::Mipmap::Enable) ?
+                                (p_mipMap == spk::Texture::Mipmap::Enable) ?
 								GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
                 break;
+            }
+
+			if (p_mipMap == spk::Texture::Mipmap::Enable)
+            {
+                glGenerateMipmap(GL_TEXTURE_2D);
             }
         }
 
@@ -176,15 +151,28 @@ namespace spk::OpenGL
 
             glBindTexture(GL_TEXTURE_2D, _id);
 
-            _setupTextureParameters(texture);
-
-            if (texture.mipmap() == spk::Texture::Mipmap::Enable)
-            {
-                glGenerateMipmap(GL_TEXTURE_2D);
-            }
+            _setupTextureParameters(texture.filtering(), texture.wrap(), texture.mipmap());
 
             glBindTexture(GL_TEXTURE_2D, 0);
         }
+
+		void allocateStorage(const spk::Vector2UInt& p_size, 
+			const Format& p_format,
+			const Filtering& p_filtering,
+			const Wrap& p_wrap,
+			const Mipmap& p_mipmap)
+		{
+			glBindTexture(GL_TEXTURE_2D, _id);
+
+            GLint internalFormat;
+            GLenum externalFormat, dataType;
+            _retrieveOpenGLFormat(p_format, internalFormat, externalFormat, dataType);
+
+            glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, p_size.x, p_size.y, 0, externalFormat, dataType, nullptr);
+            _setupTextureParameters(p_filtering, p_wrap, p_mipmap);
+
+            glBindTexture(GL_TEXTURE_2D, 0);
+		}
 
         GLuint id() const
         {

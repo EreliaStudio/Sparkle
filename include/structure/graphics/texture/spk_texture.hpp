@@ -10,9 +10,18 @@
 
 namespace spk
 {
+	namespace OpenGL
+	{
+		class SamplerObject;
+	}
+
 	class Texture
 	{
+		friend class OpenGL::SamplerObject;
+
 	public:
+		using ID = long;
+
 		struct Section
 		{
 			union
@@ -70,7 +79,6 @@ namespace spk
 		};
 
 	private:
-		using ID = long;
 
 		static inline std::deque<ID> _availableIDs;
 		static inline ID _nextID = 0;
@@ -81,6 +89,8 @@ namespace spk
 
 		ID _id;
 
+		mutable bool _needUpdate = false;
+		mutable bool _needSettings = false;
 		std::vector<uint8_t> _datas;
 		spk::Vector2UInt _size;
 		Format _format;

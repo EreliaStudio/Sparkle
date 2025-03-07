@@ -320,4 +320,39 @@ namespace spk::OpenGLUtils
             return L"Unknown framebuffer error";
         }
     }
+
+	void _retrieveOpenGLFormat(
+			spk::Texture::Format p_format,
+			GLint& p_internalFormat,
+			GLenum& p_externalFormat
+		)
+	{
+		switch (p_format)
+		{
+		case spk::Texture::Format::RGB:
+			p_internalFormat = GL_RGB8;
+			p_externalFormat = GL_RGB;
+			break;
+
+		case spk::Texture::Format::RGBA:
+			p_internalFormat = GL_RGBA8;
+			p_externalFormat = GL_RGBA;
+			break;
+
+		case spk::Texture::Format::GreyLevel:
+			p_internalFormat = GL_R8;
+			p_externalFormat = GL_RED;
+			break;
+
+		case spk::Texture::Format::DualChannel:
+			p_internalFormat = GL_RG8;
+			p_externalFormat = GL_RG;
+			break;
+
+		default:
+			p_internalFormat = 0;
+			p_externalFormat = 0;
+			break;
+		}
+	}
 }

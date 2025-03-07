@@ -110,6 +110,8 @@ namespace spk
 		_filtering = p_filtering;
 		_wrap = p_wrap;
 		_mipmap = p_mipmap;
+		_needUpdate = true;
+		_needSettings = true;
 	}
 
 	void Texture::setData(const std::vector<uint8_t>& p_data, const spk::Vector2UInt& p_size, const Format& p_format)
@@ -117,6 +119,7 @@ namespace spk
 		_datas = p_data;
 		_size = p_size;
 		_format = p_format;
+		_needUpdate = true;
 	}
 
 	void Texture::setData(const uint8_t* p_data, const spk::Vector2UInt& p_size,
@@ -129,6 +132,8 @@ namespace spk
 		_wrap = p_wrap;
 		_mipmap = p_mipmap;
 		_datas.assign(p_data, p_data + (p_size.x * p_size.y * _getBytesPerPixel(p_format)));
+		_needUpdate = true;
+		_needSettings = true;
 	}
 
 	void Texture::setData(const uint8_t* p_data, const spk::Vector2UInt& p_size, const Format& p_format)
@@ -136,6 +141,7 @@ namespace spk
 		_size = p_size;
 		_format = p_format;
 		_datas.assign(p_data, p_data + (p_size.x * p_size.y * _getBytesPerPixel(p_format)));
+		_needUpdate = true;
 	}
 
 	void Texture::setProperties(const Filtering& p_filtering, const Wrap& p_wrap, const Mipmap& p_mipmap)
@@ -143,6 +149,7 @@ namespace spk
 		_filtering = p_filtering;
 		_wrap = p_wrap;
 		_mipmap = p_mipmap;
+		_needSettings = true;
 	}
 
 	const std::vector<uint8_t>& Texture::data() const
