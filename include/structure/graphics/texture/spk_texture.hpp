@@ -13,11 +13,13 @@ namespace spk
 	namespace OpenGL
 	{
 		class SamplerObject;
+		class TextureCollection;
 	}
 
 	class Texture
 	{
 		friend class OpenGL::SamplerObject;
+		friend class OpenGL::TextureCollection;
 
 	public:
 		using ID = long;
@@ -91,7 +93,7 @@ namespace spk
 
 		mutable bool _needUpdate = false;
 		mutable bool _needSettings = false;
-		std::vector<uint8_t> _datas;
+		std::vector<uint8_t> _pixels;
 		spk::Vector2UInt _size;
 		Format _format;
 		Filtering _filtering;
@@ -102,7 +104,7 @@ namespace spk
 
 	public:
 		Texture();
-		~Texture();
+		virtual ~Texture();
 		
 		Texture(const Texture& p_other) = delete;
 		Texture& operator=(const Texture& p_other) = delete;
@@ -110,20 +112,20 @@ namespace spk
 		Texture(Texture&& p_other) noexcept;
 		Texture& operator=(Texture&& p_other) noexcept;
 
-		void setData(const std::vector<uint8_t>& p_data, const spk::Vector2UInt& p_size,
+		void setPixels(const std::vector<uint8_t>& p_data, const spk::Vector2UInt& p_size,
 			const Format& p_format, const Filtering& p_filtering,
 			const Wrap& p_wrap, const Mipmap& p_mipmap);
 
-		void setData(const std::vector<uint8_t>& p_data, const spk::Vector2UInt& p_size, const Format& p_format);
+		void setPixels(const std::vector<uint8_t>& p_data, const spk::Vector2UInt& p_size, const Format& p_format);
 
-		void setData(const uint8_t* p_data, const spk::Vector2UInt& p_size,
+		void setPixels(const uint8_t* p_data, const spk::Vector2UInt& p_size,
 			const Format& p_format, const Filtering& p_filtering,
 			const Wrap& p_wrap, const Mipmap& p_mipmap);
 
-		void setData(const uint8_t* p_data, const spk::Vector2UInt& p_size, const Format& p_format);
+		void setPixels(const uint8_t* p_data, const spk::Vector2UInt& p_size, const Format& p_format);
 		void setProperties(const Filtering& p_filtering, const Wrap& p_wrap, const Mipmap& p_mipmap);
 
-		const std::vector<uint8_t>& data() const;
+		const std::vector<uint8_t>& pixels() const;
 		const spk::Vector2UInt& size() const;
 		Format format() const;
 		Filtering filtering() const;

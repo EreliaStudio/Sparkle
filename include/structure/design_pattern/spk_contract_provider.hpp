@@ -28,14 +28,34 @@ namespace spk
             Contract(TContractProvider* p_originator, const std::shared_ptr<Job>& p_job)
                 : _originator(p_originator), _job(p_job)
             {
+
             }
 
         public:
             Contract() = default;
+			
             Contract(const Contract&) = delete;
             Contract& operator=(const Contract&) = delete;
-            Contract(Contract&&) = default;
-            Contract& operator=(Contract&&) = default;
+
+            Contract(Contract&& p_other) :
+				_job(p_other._job),
+				_originator(p_other._originator)
+			{
+				p_other._job = nullptr;
+				p_other._originator = nullptr;
+			}
+            Contract& operator=(Contract&& p_other)
+			{	
+				if (this != &p_other)
+				{
+					_job = p_other._job;
+					_originator = p_other._originator;
+
+					p_other._job = nullptr;
+					p_other._originator = nullptr;
+				}
+				return (*this);
+			}
 
             ~Contract()
             {
@@ -99,6 +119,25 @@ namespace spk
         {
             invalidateContracts();
         }
+			
+		TContractProvider(const TContractProvider&) = delete;
+		TContractProvider& operator=(const TContractProvider&) = delete;
+
+		TContractProvider(TContractProvider&& p_other) :
+			_subscribedJobs(std::move(p_other._subscribedJobs)),
+			_relinquishedContracts(std::move(p_other._relinquishedContracts))
+		{
+
+		}
+		TContractProvider& operator=(TContractProvider&& p_other)
+		{
+			if (this != &p_other)
+			{
+				_relinquishedContracts = std::move(p_other._relinquishedContracts);
+				_subscribedJobs = std::move(p_other._subscribedJobs);
+			}
+			return (*this);
+		}
 
         void invalidateContracts()
         {

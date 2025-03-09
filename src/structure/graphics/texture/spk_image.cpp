@@ -41,12 +41,12 @@ namespace spk
 		spk::Vector2UInt size{ static_cast<unsigned int>(width), static_cast<unsigned int>(height) };
 		Format format = _determineFormat(channels);
 
-		setData(imageData, size, format, Filtering::Nearest, Wrap::ClampToEdge, Mipmap::Enable);
+		setPixels(imageData, size, format, Filtering::Nearest, Wrap::ClampToEdge, Mipmap::Enable);
 
 		stbi_image_free(imageData);
 	}
 
-	OpenGL::TextureObject::Format Image::_determineFormat(int channels) const
+	Texture::Format Image::_determineFormat(int channels) const
 	{
 		switch (channels)
 		{

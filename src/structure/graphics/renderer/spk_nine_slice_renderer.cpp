@@ -61,24 +61,19 @@ namespace spk
         }
     }
 
-	void NineSliceRenderer::setSpriteSheet(const SafePointer<SpriteSheet>& p_spriteSheet)
+	void NineSliceRenderer::setSpriteSheet(const SafePointer<const SpriteSheet>& p_spriteSheet)
 	{
 		if (p_spriteSheet != nullptr && (p_spriteSheet->nbSprite().x != GRID_SIZE || p_spriteSheet->nbSprite().y != GRID_SIZE))
 		{
 			throw std::runtime_error("Invalid sprite sheet size. NineSlicedTextureRenderer expects a 3x3 sprite sheet.");
 		}
 
-		_textureRenderer.setTexture(safe_pointer_cast<OpenGL::TextureObject>(p_spriteSheet));
+		_textureRenderer.setTexture(p_spriteSheet.downCast<spk::Texture>());
 	}
 
-	spk::SafePointer<spk::OpenGL::TextureObject>& NineSliceRenderer::spriteSheet()
+	const spk::SafePointer<const SpriteSheet>& NineSliceRenderer::spriteSheet() const
 	{
-		return (_textureRenderer.texture());
-	}
-	
-	const spk::SafePointer<spk::OpenGL::TextureObject>& NineSliceRenderer::spriteSheet() const
-	{
-		return (_textureRenderer.texture());
+		return (_textureRenderer.texture().upCast<const SpriteSheet>());
 	}
 
 	void NineSliceRenderer::validate()

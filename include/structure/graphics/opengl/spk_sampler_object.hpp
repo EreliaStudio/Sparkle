@@ -26,16 +26,10 @@ namespace spk::OpenGL
 
     private:
         spk::SafePointer<const Texture> _texture = nullptr;
-		std::variant<
-			spk::SafePointer<const Texture>,
-			spk::SafePointer<const spk::FrameBufferObject::Attachment>
-		> _texture;
         std::string _designator;
         GLint _index = -1;
         GLint _uniformDestination = -1;
         Type _type;
-
-        static inline std::unordered_map<spk::Texture::ID, std::unique_ptr<spk::OpenGL::TextureObject>> _textureObjects;
 
     public:
         SamplerObject();

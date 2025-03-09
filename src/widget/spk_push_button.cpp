@@ -231,12 +231,12 @@ namespace spk
 
 	const spk::SafePointer<spk::SpriteSheet>& PushButton::spriteSheet(State p_state) const
 	{
-		return safe_pointer_cast<spk::SpriteSheet>(_nineSliceRenderer[p_state].spriteSheet());
+		return (_nineSliceRenderer[p_state].spriteSheet().upCast<spk::SpriteSheet>());
 	}
 
 	const spk::SafePointer<spk::SpriteSheet>& PushButton::iconset(State p_state) const
 	{
-		return safe_pointer_cast<spk::SpriteSheet>(_iconRenderer[p_state].texture());
+		return (_iconRenderer[p_state].texture().upCast<spk::SpriteSheet>());
 	}
 
 	const spk::SafePointer<spk::Font>& PushButton::font(State p_state) const

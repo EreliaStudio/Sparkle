@@ -10,7 +10,7 @@ namespace spk::OpenGL
 		VertexBufferObject(VertexBufferObject::Type::Uniform, VertexBufferObject::Usage::Dynamic),
 		_blockName(p_name),
 		_bindingPoint(p_bindingPoint),
-		_dataBufferLayout(&(dataBuffer()))
+		_dataBufferLayout(p_name, &(dataBuffer()))
 	{
 		resize(p_size);
 	}
@@ -91,13 +91,27 @@ namespace spk::OpenGL
 		return (_dataBufferLayout.contains(p_name));
 	}
 
+	void UniformBufferObject::resize(size_t p_size)
+	{
+		VertexBufferObject::resize(p_size);
+		_dataBufferLayout.updateRootSize();
+	}
+
 	DataBufferLayout::Element& UniformBufferObject::addElement(const std::wstring& p_name, size_t p_offset, size_t p_size)
 	{
+		if (size() <= (p_offset + p_size))
+		{
+			resize(p_offset + p_size);
+		}
 		return (_dataBufferLayout.addElement(p_name, p_offset, p_size));
 	}
 
 	DataBufferLayout::Element& UniformBufferObject::addElement(const std::wstring& p_name, size_t p_offset, size_t p_nbElement, size_t p_elementSize, size_t p_elementPadding)
 	{
+		if (size() <= (p_offset + p_nbElement * (p_elementSize + p_elementPadding)))
+		{
+			resize(p_offset + p_nbElement * (p_elementSize + p_elementPadding));
+		}
 		return (_dataBufferLayout.addElement(p_name, p_offset, p_nbElement, p_elementSize, p_elementPadding));
 	}
 

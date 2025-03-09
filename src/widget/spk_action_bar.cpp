@@ -33,7 +33,7 @@ namespace spk
 					geometry().anchor + spk::Vector2Int(0, 0),
 					{_height, _height}
 				},
-				spk::safe_pointer_cast<spk::SpriteSheet>(_renderer.texture())->sprite(0), layer()
+				_renderer.texture().upCast<spk::SpriteSheet>()->sprite(0), layer()
 			);
 
 		_renderer.prepare(
@@ -41,7 +41,7 @@ namespace spk
 					geometry().anchor + spk::Vector2Int(_height, 0),
 					{geometry().size.x - _height *  2, _height}
 				},
-				spk::safe_pointer_cast<spk::SpriteSheet>(_renderer.texture())->sprite(1), layer()
+				_renderer.texture().upCast<spk::SpriteSheet>()->sprite(1), layer()
 			);
 
 		_renderer.prepare(
@@ -49,7 +49,7 @@ namespace spk
 					geometry().anchor + spk::Vector2Int(geometry().size.x - _height, 0),
 					{_height, _height}
 				},
-				spk::safe_pointer_cast<spk::SpriteSheet>(_renderer.texture())->sprite(2), layer()
+				_renderer.texture().upCast<spk::SpriteSheet>()->sprite(2), layer()
 			);
 
 		_renderer.validate();

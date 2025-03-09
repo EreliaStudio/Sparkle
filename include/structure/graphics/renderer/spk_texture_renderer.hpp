@@ -30,9 +30,9 @@ namespace spk
     public:
         TextureRenderer();
 
-        void setTexture(spk::SafePointer<spk::OpenGL::TextureObject> p_image);
-		spk::SafePointer<spk::OpenGL::TextureObject>& texture();
-		const spk::SafePointer<spk::OpenGL::TextureObject>& texture() const;
+        void setTexture(spk::SafePointer<const spk::Texture> p_image);
+		spk::SafePointer<const spk::Texture>& texture();
+		const spk::SafePointer<const spk::Texture>& texture() const;
 
         void clear();
 

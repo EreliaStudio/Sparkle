@@ -58,7 +58,7 @@ namespace spk
 
 	void Font::Atlas::_uploadTexture()
 	{
-		setData(
+		setPixels(
 			_pixels.data(),
 			_size,
 			Texture::Format::GreyLevel

@@ -60,17 +60,12 @@ namespace spk
 		_initBuffers();
 	}
 
-	void TextureRenderer::setTexture(spk::SafePointer<spk::OpenGL::TextureObject> p_image)
+	void TextureRenderer::setTexture(spk::SafePointer<const spk::Texture> p_image)
 	{
 		_samplerObject.bind(p_image);
 	}
 
-	spk::SafePointer<spk::OpenGL::TextureObject>& TextureRenderer::texture()
-	{
-		return (_samplerObject.texture());
-	}
-
-	const spk::SafePointer<spk::OpenGL::TextureObject>& TextureRenderer::texture() const
+	const spk::SafePointer<const spk::Texture>& TextureRenderer::texture() const
 	{
 		return (_samplerObject.texture());
 	}

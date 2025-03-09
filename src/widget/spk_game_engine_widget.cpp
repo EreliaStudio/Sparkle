@@ -24,7 +24,7 @@ namespace spk
 	{
 		_fbo.resize(geometry().size);
 		_textureRenderer.clear();
-		_textureRenderer.setTexture(_fbo.bindedTexture(L"outputColor"));
+		_textureRenderer.setTexture(_fbo.attachment(L"outputColor")->bindedTexture());
 		_textureRenderer.prepare(geometry(), {{0.0f, 0.0f}, {1.0f, 1.0f}}, layer());
 		_textureRenderer.validate();
 	}

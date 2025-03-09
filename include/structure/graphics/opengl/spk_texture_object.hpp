@@ -104,11 +104,11 @@ namespace spk::OpenGL
 
         void upload(const spk::SafePointer<const spk::Texture>& p_textureInput)
         {
-            updateData(p_textureInput);
+            updatePixels(p_textureInput);
             updateSettings(p_textureInput);
         }
 
-		void updateData(const spk::SafePointer<const spk::Texture>& p_textureInput)
+		void updatePixels(const spk::SafePointer<const spk::Texture>& p_textureInput)
 		{
 			if (p_textureInput == nullptr)
                 return;
@@ -117,13 +117,12 @@ namespace spk::OpenGL
 
             glBindTexture(GL_TEXTURE_2D, _id);
 
-            GLint  internalFormat = 0;
-            GLenum externalFormat = 0;
-            GLenum dataType       = 0;
+            GLint  internalFormat = GL_NONE;
+            GLenum externalFormat = GL_NONE;
 
-            _retrieveOpenGLFormat(texture.format(), internalFormat, externalFormat, dataType);
+            OpenGLUtils::convertFormatToGLEnum(texture.format(), internalFormat, externalFormat);
 
-            if (internalFormat == 0 || externalFormat == 0 || dataType == 0)
+            if (internalFormat == GL_NONE || externalFormat == GL_NONE)
             {
                 glBindTexture(GL_TEXTURE_2D, 0);
                 return;
@@ -136,8 +135,8 @@ namespace spk::OpenGL
                          texture.size().y,
                          0,
                          externalFormat,
-                         dataType,
-                         texture.data().data());
+                         GL_UNSIGNED_BYTE,
+                         texture.pixels().data());
 						 
             glBindTexture(GL_TEXTURE_2D, 0);
 		}
@@ -165,10 +164,11 @@ namespace spk::OpenGL
 			glBindTexture(GL_TEXTURE_2D, _id);
 
             GLint internalFormat;
-            GLenum externalFormat, dataType;
-            _retrieveOpenGLFormat(p_format, internalFormat, externalFormat, dataType);
+            GLenum externalFormat;
 
-            glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, p_size.x, p_size.y, 0, externalFormat, dataType, nullptr);
+            OpenGLUtils::convertFormatToGLEnum(p_format, internalFormat, externalFormat);
+
+            glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, p_size.x, p_size.y, 0, externalFormat, GL_UNSIGNED_BYTE, nullptr);
             _setupTextureParameters(p_filtering, p_wrap, p_mipmap);
 
             glBindTexture(GL_TEXTURE_2D, 0);

@@ -1,5 +1,7 @@
 #include "structure/graphics/opengl/spk_sampler_object.hpp"
 
+#include "structure/graphics/opengl/spk_texture_collection.hpp"
+
 namespace spk::OpenGL
 {
     SamplerObject::SamplerObject() :
@@ -113,29 +115,29 @@ namespace spk::OpenGL
             return;
         }
 
-        auto it = _textureObjects.find(cpuID);
-        if (it == _textureObjects.end())
-        {
-            auto newGPUTexture = std::make_unique<spk::OpenGL::TextureObject>();
-            it = _textureObjects.insert({ cpuID, std::move(newGPUTexture) }).first;
-        }
+		spk::SafePointer<OpenGL::TextureObject> gpuTexture = TextureCollection::textureObject(_texture);
 
-        auto& gpuTexture = *(it->second);
+		if (gpuTexture)
+		{
+			if (_texture->_needUpdate)
+			{
+				gpuTexture->upload(_texture);
 
-        if (_texture->_needUpdate)
-        {
-            gpuTexture.upload(_texture);
+				_texture->_needUpdate = false;
+			}
 
-            _texture->_needUpdate = false;
-        }
+			else if (_texture->_needSettings)
+			{
+				gpuTexture->updateSettings(_texture);
+				_texture->_needSettings = false;
+			}
 
-        else if (_texture->_needSettings)
-        {
-            gpuTexture.updateSettings(_texture);
-            _texture->_needSettings = false;
-        }
-
-        glBindTexture(static_cast<GLenum>(_type), gpuTexture.id());
+			glBindTexture(static_cast<GLenum>(_type), gpuTexture->id());
+		}
+		else
+		{
+			glBindTexture(GL_TEXTURE_2D, 0);
+		}
     }
 
     void SamplerObject::deactivate()

@@ -8,6 +8,9 @@ namespace spk
     template <typename TType>
     class SafePointer
     {
+	public:
+		using Type = TType;
+
     private:
         TType* _ptr = nullptr;
 
@@ -17,10 +20,12 @@ namespace spk
         {
         }
 
-		template <typename U>
-		SafePointer(const SafePointer<U>& p_other) :
+		template <typename ToType>
+		SafePointer(const SafePointer<ToType>& p_other) :
 			_ptr(dynamic_cast<TType*>(p_other.get()))
 		{
+			static_assert(std::is_base_of<ToType, TType>::value || std::is_base_of<TType, ToType>::value,
+                  "SafePointer conversion error: TType and ToType must have an inheritance relationship.");
 		}
 
         SafePointer(const SafePointer&) = default;
@@ -57,6 +62,40 @@ namespace spk
         {
             return (_ptr != nullptr);
         }
+		
+		template <typename ToType>
+        SafePointer<ToType>& upCast()
+        {
+            static_assert(std::is_base_of<TType, ToType>::value,
+                          "upCast error: ToType must be derived from TType.");
+
+            return *reinterpret_cast<SafePointer<ToType>*>(this);
+        }
+
+        template <typename ToType>
+        const SafePointer<ToType>& upCast() const
+        {
+            static_assert(std::is_base_of<TType, ToType>::value,
+                          "upCast error: ToType must be derived from TType.");
+
+            return *reinterpret_cast<const SafePointer<ToType>*>(this);
+        }
+
+        template <typename ToType>
+        SafePointer<ToType>& downCast()
+        {
+            static_assert(std::is_base_of<ToType, TType>::value,
+                          "downCast error: TType must be derived from ToType.");
+            return *reinterpret_cast<SafePointer<ToType>*>(this);
+        }
+
+        template <typename ToType>
+        const SafePointer<ToType>& downCast() const
+        {
+            static_assert(std::is_base_of<ToType, TType>::value,
+                          "downCast error: TType must be derived from ToType.");
+            return *reinterpret_cast<const SafePointer<ToType>*>(this);
+        }
 
         friend std::ostream& operator<<(std::ostream& os, const SafePointer<TType>& p_ptr)
         {
@@ -70,21 +109,4 @@ namespace spk
             return wos;
         }
     };
-
-    template <class To, class From>
-    SafePointer<To>& safe_pointer_cast(SafePointer<From>& from)
-    {
-		static_assert(std::is_base_of<From, To>::value || std::is_base_of<To, From>::value, 
-                      "safe_pointer_cast error: 'From' must be derived from 'To'");
-		return *(reinterpret_cast<SafePointer<To>*>(&from));
-    }
-
-    template <class To, class From>
-    const SafePointer<To>& safe_pointer_cast(const SafePointer<From>& from)
-    {
-		static_assert(std::is_base_of<From, To>::value || std::is_base_of<To, From>::value, 
-                      "safe_pointer_cast error: 'From' must be derived from 'To'");
-
-		return *(reinterpret_cast<const SafePointer<To>*>(&from));
-    }
 }

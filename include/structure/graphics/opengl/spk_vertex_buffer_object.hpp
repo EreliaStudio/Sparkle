@@ -67,7 +67,7 @@ namespace spk::OpenGL
 		void deactivate();
 
 		void clear();
-		void resize(size_t p_size);
+		virtual void resize(size_t p_size);
 		DataBuffer& dataBuffer();
 		uint8_t* data();
 		const uint8_t* data() const;

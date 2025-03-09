@@ -321,7 +321,7 @@ namespace spk::OpenGLUtils
         }
     }
 
-	void _retrieveOpenGLFormat(
+	void convertFormatToGLEnum(
 			spk::Texture::Format p_format,
 			GLint& p_internalFormat,
 			GLenum& p_externalFormat
