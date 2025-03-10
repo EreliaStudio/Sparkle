@@ -230,21 +230,27 @@ namespace spk
 
 	void FontRenderer::render()
 	{
+		DEBUG_LINE();
 		if (_atlas == nullptr)
 		{
 			return;
 		}
 
+		DEBUG_LINE();
 		_program->activate();
 		_bufferSet.activate();
 		_samplerObject.activate();
+		DEBUG_LINE();
 		_textInformationsUbo.activate();
 
+		DEBUG_LINE();
 		_program->render(_bufferSet.indexes().nbIndexes(), 1);
 
+		DEBUG_LINE();
 		_textInformationsUbo.deactivate();
 		_samplerObject.deactivate();
 		_bufferSet.deactivate();
 		_program->deactivate();
+		DEBUG_LINE();
 	}
 }

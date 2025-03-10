@@ -13,32 +13,39 @@ namespace spk::OpenGL
 		_dataBufferLayout(p_name, &(dataBuffer()))
 	{
 		resize(p_size);
+		_dataBufferLayout.updateRootSize();
 	}
 
 	UniformBufferObject::UniformBufferObject(const UniformBufferObject& p_other) :
+		VertexBufferObject(p_other),
 		_blockName(p_other._blockName),
 		_bindingPoint(p_other._bindingPoint),
 		_dataBufferLayout(p_other._dataBufferLayout)
 	{
 		_dataBufferLayout.setBuffer(&(dataBuffer()));
+		_dataBufferLayout.updateRootSize();
 	}
 	
 	UniformBufferObject::UniformBufferObject(UniformBufferObject&& p_other) :
-			_blockName(std::move(p_other._blockName)),
-			_bindingPoint(std::move(p_other._bindingPoint)),
-			_dataBufferLayout(std::move(p_other._dataBufferLayout))
-		{
-			_dataBufferLayout.setBuffer(&(dataBuffer()));
-		}
+		VertexBufferObject(p_other),
+		_blockName(std::move(p_other._blockName)),
+		_bindingPoint(std::move(p_other._bindingPoint)),
+		_dataBufferLayout(std::move(p_other._dataBufferLayout))
+	{
+		_dataBufferLayout.setBuffer(&(dataBuffer()));
+		_dataBufferLayout.updateRootSize();
+	}
 
 	UniformBufferObject& UniformBufferObject::operator =(const UniformBufferObject& p_other)
 	{
 		if (this != &p_other)
 		{
+			VertexBufferObject::operator=(p_other);
 			_blockName = p_other._blockName;
 			_bindingPoint = p_other._bindingPoint;
 			_dataBufferLayout = std::move(p_other._dataBufferLayout);
 			_dataBufferLayout.setBuffer(&(dataBuffer()));
+			_dataBufferLayout.updateRootSize();
 		}
 
 		return (*this);
@@ -48,10 +55,13 @@ namespace spk::OpenGL
 	{
 		if (this != &p_other)
 		{
+			VertexBufferObject::operator=(std::move(p_other));
+
 			_blockName = std::move(p_other._blockName);
 			_bindingPoint = std::move(p_other._bindingPoint);
 			_dataBufferLayout = std::move(p_other._dataBufferLayout);
 			_dataBufferLayout.setBuffer(&(dataBuffer()));
+			_dataBufferLayout.updateRootSize();
 		}
 
 		return (*this);
@@ -142,27 +152,38 @@ namespace spk::OpenGL
 
     void UniformBufferObject::activate()
     {
+		DEBUG_LINE();
 		VertexBufferObject::activate();
 
+		DEBUG_LINE();
 		GLint prog = 0;
 		glGetIntegerv(GL_CURRENT_PROGRAM, &prog);
 
+		DEBUG_LINE();
 		if (prog == 0)
 			throw std::runtime_error("No shader program is currently bound.");
 
+		DEBUG_LINE();
 		if (_programBlockIndex.contains(prog) == false)
 		{
+		DEBUG_LINE();
 			std::string str = spk::StringUtils::wstringToString(_blockName);
 
+		DEBUG_LINE();
 			GLint blockIndex = glGetUniformBlockIndex(prog, str.c_str());
 
+		DEBUG_LINE();
 			if (blockIndex == GL_INVALID_INDEX)
 				throw std::runtime_error("Uniform block '" + str + "' not found in the shader program.");
 
+		DEBUG_LINE();
 			_programBlockIndex[prog] = blockIndex;
+		DEBUG_LINE();
 		}
 
+		DEBUG_LINE();
 		glUniformBlockBinding(prog, _programBlockIndex[prog], _bindingPoint);
         glBindBufferBase(GL_UNIFORM_BUFFER, _bindingPoint, _id);
+		DEBUG_LINE();
     }
 }

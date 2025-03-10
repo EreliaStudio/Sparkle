@@ -25,6 +25,7 @@ namespace spk
 		_isHovered(false),
 		_pressedOffset(2, 2)
 	{
+		spk::cout << "Construction of [" << p_name << "]" << std::endl;
 		_cornerSize.released = {10, 10};
 		_cornerSize.hovered  = {10, 10};
 		_cornerSize.pressed  = {10, 10};
@@ -328,11 +329,11 @@ namespace spk
 
 	void PushButton::_onPaintEvent(spk::PaintEvent& p_event)
 	{
-		State st = _currentVisualState();
+		State currentState = _currentVisualState();
 
-		_nineSliceRenderer[st].render();
-		_fontRenderer[st].render();
-		_iconRenderer[st].render();
+		_nineSliceRenderer[currentState].render();
+		_fontRenderer[currentState].render();
+		_iconRenderer[currentState].render();
 	}
 
 	void PushButton::_onGeometryChange()

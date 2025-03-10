@@ -1,16 +1,14 @@
 #include "playground.hpp"
 
-class TextureObject
-{
-private:
-	int objectID;
-	
-public:
-	TextureObject
-};
-
 int main()
 {
+	spk::GraphicalApplication app = spk::GraphicalApplication();
+
+	spk::SafePointer<spk::Window> win = app.createWindow(L"Playground", {800, 800});
 	
-    return 0;
+	spk::PushButton frame = spk::PushButton(L"Main frame", win->widget());
+	frame.setGeometry(0, 300);
+	frame.activate();
+
+	return (app.run());
 }
