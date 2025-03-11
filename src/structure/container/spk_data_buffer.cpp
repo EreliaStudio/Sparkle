@@ -16,7 +16,8 @@ namespace spk
 	}
 
 	DataBuffer::DataBuffer(const DataBuffer& p_other) :
-		_data(p_other._data), _bookmark(p_other._bookmark)
+		_data(p_other._data),
+		_bookmark(p_other._bookmark)
 	{
 		
 	}

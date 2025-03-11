@@ -496,8 +496,10 @@ namespace spk
 
 		void updateRootSize()
 		{
+			spk::cout << "Updating root size" << std::endl;
 			if (_buffer != nullptr)
 			{
+				spk::cout << "Setting root size to [" << _buffer->size() << "]" << std::endl;
 				_root._size = _buffer->size();
 			}
 		}

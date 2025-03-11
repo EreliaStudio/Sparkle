@@ -147,7 +147,10 @@ namespace spk::OpenGL
 			_id = p_other._id;
 			_type = p_other._type;
 			_usage = p_other._usage;
+			spk::cout << "Moving buffer sized [" << p_other._buffer.size() << "]" << std::endl;
 			_buffer = std::move(p_other._buffer);
+			spk::cout << "Copied buffer sized [" << _buffer.size() << "]" << std::endl;
+
 			_currentBufferMaxSize = p_other._currentBufferMaxSize;
 
 			p_other._validated = false;

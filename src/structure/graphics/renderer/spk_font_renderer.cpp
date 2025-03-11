@@ -75,8 +75,11 @@ namespace spk
 
 		_samplerObject = spk::OpenGL::SamplerObject("diffuseTexture", spk::OpenGL::SamplerObject::Type::Texture2D, 0);
 
-		_textInformationsUbo = spk::OpenGL::UniformBufferObject(L"TextInformations", 0, 36);
+		DEBUG_LINE();
+		_textInformationsUbo = std::move(spk::OpenGL::UniformBufferObject(L"TextInformations", 0, 36));
+		DEBUG_LINE();
 		_textInformationsUbo.addElement(L"glyphColor", 0, sizeof(spk::Color));
+		DEBUG_LINE();
 		_textInformationsUbo.addElement(L"outlineColor", 16, sizeof(spk::Color));
 		_textInformationsUbo.addElement(L"outlineThreshold", 32, sizeof(float));
 	}
