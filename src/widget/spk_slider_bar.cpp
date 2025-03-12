@@ -123,7 +123,7 @@ namespace spk
 		_body.setCornerSize(p_bodyCornerSize);
 	}
 
-	void SliderBar::setSpriteSheet(spk::SafePointer<const spk::SpriteSheet> p_spriteSheet)
+	void SliderBar::setNineSlice(spk::SafePointer<const spk::SpriteSheet> p_spriteSheet)
 	{
 		_backgroundRenderer.setSpriteSheet(p_spriteSheet);
 	}
