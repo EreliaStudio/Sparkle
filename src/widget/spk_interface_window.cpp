@@ -122,7 +122,7 @@ namespace spk
 		_maximizeButton(p_name + L" - Maximize button", this)
 	{	
 		_titleLabel.setCornerSize(2);
-		_titleLabel.setSpriteSheet(nullptr);
+		_titleLabel.setNineSlice(nullptr);
 		_titleLabel.setText(p_name);
 		_titleLabel.activate();
 

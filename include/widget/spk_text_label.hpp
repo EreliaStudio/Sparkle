@@ -39,7 +39,7 @@ namespace spk
 		void setTextColor(const spk::Color& p_glyphColor, const spk::Color& p_outlineColor);
 		void setTextAlignment(const spk::HorizontalAlignment& p_horizontalAlignment, const spk::VerticalAlignment& p_verticalAlignment);
 
-		void setSpriteSheet(spk::SafePointer<const spk::SpriteSheet> p_spriteSheet);
+		void setNineSlice(spk::SafePointer<const spk::SpriteSheet> p_spriteSheet);
 		void setCornerSize(const spk::Vector2UInt& p_cornerSize);
 	};
 }

@@ -25,7 +25,7 @@ namespace spk
 	{
 		setTextColor(spk::Color::white, spk::Color::black);
 		setTextAlignment(spk::HorizontalAlignment::Left, spk::VerticalAlignment::Centered);
-		setSpriteSheet(Widget::defaultNineSlice());
+		setNineSlice(Widget::defaultNineSlice());
 		setFont(Widget::defaultFont());
 	}
 
@@ -90,7 +90,7 @@ namespace spk
 		requireGeometryUpdate();
 	}
 
-	void TextLabel::setSpriteSheet(spk::SafePointer<const spk::SpriteSheet> p_spriteSheet)
+	void TextLabel::setNineSlice(spk::SafePointer<const spk::SpriteSheet> p_spriteSheet)
 	{
 		_backgroundRenderer.setSpriteSheet(p_spriteSheet);
 	}
