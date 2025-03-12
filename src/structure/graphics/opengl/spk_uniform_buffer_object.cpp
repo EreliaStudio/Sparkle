@@ -21,7 +21,6 @@ namespace spk::OpenGL
 		_bindingPoint(p_other._bindingPoint),
 		_dataBufferLayout(p_other._dataBufferLayout)
 	{
-			DEBUG_LINE();
 		_dataBufferLayout.setBuffer(&(dataBuffer()));
 		_dataBufferLayout.updateRootSize();
 	}
@@ -32,7 +31,6 @@ namespace spk::OpenGL
 		_bindingPoint(std::move(p_other._bindingPoint)),
 		_dataBufferLayout(std::move(p_other._dataBufferLayout))
 	{
-			DEBUG_LINE();
 		_dataBufferLayout.setBuffer(&(dataBuffer()));
 		_dataBufferLayout.updateRootSize();
 	}
@@ -41,7 +39,6 @@ namespace spk::OpenGL
 	{
 		if (this != &p_other)
 		{
-			DEBUG_LINE();
 			VertexBufferObject::operator=(p_other);
 			_blockName = p_other._blockName;
 			_bindingPoint = p_other._bindingPoint;
@@ -57,7 +54,6 @@ namespace spk::OpenGL
 	{
 		if (this != &p_other)
 		{
-			DEBUG_LINE();
 			VertexBufferObject::operator=(std::move(p_other));
 
 			_blockName = std::move(p_other._blockName);
@@ -106,14 +102,12 @@ namespace spk::OpenGL
 
 	void UniformBufferObject::resize(size_t p_size)
 	{
-		spk::cout << "Resize buffer to size [" << p_size << "]" << std::endl;
 		VertexBufferObject::resize(p_size);
 		_dataBufferLayout.updateRootSize();
 	}
 
 	DataBufferLayout::Element& UniformBufferObject::addElement(const std::wstring& p_name, size_t p_offset, size_t p_size)
 	{
-		spk::cout << "Total size needed : " << (p_offset + p_size) << " vs current size : " << size() << std::endl;
 		if (size() <= (p_offset + p_size))
 		{
 			resize(p_offset + p_size);
@@ -157,38 +151,27 @@ namespace spk::OpenGL
 
     void UniformBufferObject::activate()
     {
-		DEBUG_LINE();
 		VertexBufferObject::activate();
 
-		DEBUG_LINE();
 		GLint prog = 0;
 		glGetIntegerv(GL_CURRENT_PROGRAM, &prog);
 
-		DEBUG_LINE();
 		if (prog == 0)
 			throw std::runtime_error("No shader program is currently bound.");
 
-		DEBUG_LINE();
 		if (_programBlockIndex.contains(prog) == false)
 		{
-		DEBUG_LINE();
 			std::string str = spk::StringUtils::wstringToString(_blockName);
 
-		DEBUG_LINE();
 			GLint blockIndex = glGetUniformBlockIndex(prog, str.c_str());
 
-		DEBUG_LINE();
 			if (blockIndex == GL_INVALID_INDEX)
 				throw std::runtime_error("Uniform block '" + str + "' not found in the shader program.");
 
-		DEBUG_LINE();
 			_programBlockIndex[prog] = blockIndex;
-		DEBUG_LINE();
 		}
 
-		DEBUG_LINE();
 		glUniformBlockBinding(prog, _programBlockIndex[prog], _bindingPoint);
         glBindBufferBase(GL_UNIFORM_BUFFER, _bindingPoint, _id);
-		DEBUG_LINE();
     }
 }

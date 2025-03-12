@@ -35,7 +35,7 @@ namespace spk
 			Hovered
 		};
 
-		static spk::SafePointer<spk::SpriteSheet> defaultHoverNineSlice();
+		static spk::SafePointer<const spk::SpriteSheet> defaultHoverNineSlice();
 
     private:
 		static spk::SpriteSheet _defaultHoverNineSlice;
@@ -133,8 +133,8 @@ namespace spk
 		void setTextAlignment(const spk::HorizontalAlignment& p_horizontalAlignment, const spk::VerticalAlignment& p_verticalAlignment);
 		void setTextAlignment(const spk::HorizontalAlignment& p_horizontalAlignment, const spk::VerticalAlignment& p_verticalAlignment, const State& p_state);
 
-		void setIconset(spk::SafePointer<spk::SpriteSheet> p_iconset);
-		void setIconset(spk::SafePointer<spk::SpriteSheet> p_iconset, const State& p_state);
+		void setIconset(spk::SafePointer<const SpriteSheet> p_iconset);
+		void setIconset(spk::SafePointer<const SpriteSheet> p_iconset, const State& p_state);
 
 		void setIcon(const spk::SpriteSheet::Sprite& p_icon);
 		void setIcon(const spk::SpriteSheet::Sprite& p_icon, const State& p_state);
@@ -142,15 +142,15 @@ namespace spk
 		void setCornerSize(const spk::Vector2Int& p_cornerSize);
 		void setCornerSize(const spk::Vector2Int& p_cornerSize, const State& p_state);
 
-		void setNineSlice(const SafePointer<SpriteSheet>& p_spriteSheet);
-		void setNineSlice(const SafePointer<SpriteSheet>& p_spriteSheet, const State& p_state);
+		void setNineSlice(const SafePointer<const SpriteSheet>& p_spriteSheet);
+		void setNineSlice(const SafePointer<const SpriteSheet>& p_spriteSheet, const State& p_state);
 
         void setPressedOffset(const spk::Vector2Int& p_offset);
 
         const spk::Vector2Int& pressedOffset() const;
 
-		const spk::SafePointer<spk::SpriteSheet>& spriteSheet(State p_state = State::Released) const;
-		const spk::SafePointer<spk::SpriteSheet>& iconset(State p_state = State::Released) const;
+		const spk::SafePointer<const spk::SpriteSheet>& spriteSheet(State p_state = State::Released) const;
+		const spk::SafePointer<const spk::SpriteSheet>& iconset(State p_state = State::Released) const;
 		const spk::SafePointer<spk::Font>& font(State p_state = State::Released) const;
 
 		const spk::Vector2UInt& cornerSize(State p_state = State::Released) const;

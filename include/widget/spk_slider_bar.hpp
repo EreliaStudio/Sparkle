@@ -48,7 +48,7 @@ namespace spk
 
 			}
         	
-			void setSpriteSheet(const SafePointer<SpriteSheet>& p_spriteSheet)
+			void setSpriteSheet(const SafePointer<const spk::SpriteSheet>& p_spriteSheet)
 			{
 				_renderer.setSpriteSheet(p_spriteSheet);
 			}
@@ -91,8 +91,8 @@ namespace spk
 		void setOrientation(const Orientation& p_orientation);
 		void setCornerSize(const spk::Vector2UInt& p_cornerSize);
 		void setBodyCornerSize(const spk::Vector2UInt& p_bodyCornerSize);
-		void setSpriteSheet(spk::SafePointer<spk::SpriteSheet> p_spriteSheet);
-		void setBodySpriteSheet(spk::SafePointer<spk::SpriteSheet> p_spriteSheet);
+		void setSpriteSheet(spk::SafePointer<const spk::SpriteSheet> p_spriteSheet);
+		void setBodySpriteSheet(spk::SafePointer<const spk::SpriteSheet> p_spriteSheet);
 		void setScale(const float& p_scale);
 		void setRange(float p_minValue, float p_maxValue);
 		void setRatio(float p_ratio);

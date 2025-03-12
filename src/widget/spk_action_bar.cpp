@@ -19,7 +19,7 @@ namespace spk
 		SpriteSheet::Filtering::Nearest
 	);
 
-	spk::SafePointer<spk::SpriteSheet> MenuBar::Menu::Break::defaultBreakSpriteSheet()
+	spk::SafePointer<const spk::SpriteSheet> MenuBar::Menu::Break::defaultBreakSpriteSheet()
 	{
 		return (&_defaultBreakSpriteSheet);
 	}
@@ -70,7 +70,7 @@ namespace spk
 		return (spk::Vector2UInt(1, _height));
 	}
 
-	void MenuBar::Menu::Break::setSpriteSheet(const spk::SafePointer<spk::SpriteSheet> &p_spriteSheet)
+	void MenuBar::Menu::Break::setSpriteSheet(const spk::SafePointer<const spk::SpriteSheet> &p_spriteSheet)
 	{
 		if (p_spriteSheet->nbSprite() != spk::Vector2UInt(3, 1))
 		{

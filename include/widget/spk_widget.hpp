@@ -28,9 +28,9 @@ namespace spk
 		static spk::SpriteSheet _defaultNineSlice;
 
 	public:
-		static spk::SafePointer<spk::SpriteSheet> defaultIconset();
+		static spk::SafePointer<const spk::SpriteSheet> defaultIconset();
 		static spk::SafePointer<spk::Font> defaultFont();
-		static spk::SafePointer<spk::SpriteSheet> defaultNineSlice();
+		static spk::SafePointer<const spk::SpriteSheet> defaultNineSlice();
 
 		enum class FocusType
 		{

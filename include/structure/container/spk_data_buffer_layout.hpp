@@ -423,45 +423,28 @@ namespace spk
 		};
 
     private:
-        DataBuffer* _buffer;
         Element _root;
 
     public:
-        DataBufferLayout(DataBuffer* buffer = nullptr) :
-			_buffer(buffer)
+        DataBufferLayout(DataBuffer* p_buffer = nullptr) :
+			DataBufferLayout(L"Root", p_buffer)
         {
-			if (buffer != nullptr)
-			{
-            	_root = Element(L"Root", _buffer, 0, buffer->size());
-			}
-			else
-			{
-				_root = Element(L"Root", nullptr, 0, 0);
-			}
+
         }
 
-        DataBufferLayout(const std::wstring& p_name, DataBuffer* buffer = nullptr) :
-			_buffer(buffer)
+        DataBufferLayout(const std::wstring& p_name, DataBuffer* p_buffer = nullptr) :
+			_root(p_name, nullptr, 0, (p_buffer == nullptr ? 0 : p_buffer->size()))
         {
-			if (buffer != nullptr)
-			{
-            	_root = Element(p_name, _buffer, 0, buffer->size());
-			}
-			else
-			{
-				_root = Element(p_name, nullptr, 0, 0);
-			}
+			
         }
 
 		DataBufferLayout(const DataBufferLayout& p_other) :
-			_buffer(p_other._buffer),
 			_root(p_other._root)
 		{
 
 		}
 
 		DataBufferLayout(DataBufferLayout&& p_other) :
-			_buffer(std::move(p_other._buffer)),
 			_root(std::move(p_other._root))
 		{
 
@@ -471,7 +454,6 @@ namespace spk
 		{
 			if (this != &p_other)
 			{
-				_buffer = p_other._buffer;
 				_root = p_other._root;
 			}
 
@@ -482,25 +464,22 @@ namespace spk
 		{
 			if (this != &p_other)
 			{
-				_buffer = std::move(p_other._buffer);
 				_root = std::move(p_other._root);
 			}
 
 			return (*this);
 		}
 
-		void setBuffer(DataBuffer* buffer)
+		void setBuffer(DataBuffer* p_buffer)
 		{
-			_root.setBuffer(buffer);
+			_root.setBuffer(p_buffer);
 		}
 
 		void updateRootSize()
 		{
-			spk::cout << "Updating root size" << std::endl;
-			if (_buffer != nullptr)
+			if (_root._buffer != nullptr)
 			{
-				spk::cout << "Setting root size to [" << _buffer->size() << "]" << std::endl;
-				_root._size = _buffer->size();
+				_root._size = _root._buffer->size();
 			}
 		}
 

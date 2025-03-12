@@ -85,7 +85,7 @@ namespace spk
 			setIconSet(spk::Widget::defaultIconset());
 		}
 
-		void setIconSet(spk::SafePointer<spk::SpriteSheet> p_iconSet)
+		void setIconSet(spk::SafePointer<const spk::SpriteSheet> p_iconSet)
 		{
 			_upButton.setText(L"");
 			_upButton.setIconset(p_iconSet);
@@ -96,7 +96,7 @@ namespace spk
 			_downButton.setIcon(p_iconSet->sprite(5));
 		}
 
-		void setNineSlice(spk::SafePointer<spk::SpriteSheet> p_spriteSheet)
+		void setNineSlice(spk::SafePointer<const spk::SpriteSheet> p_spriteSheet)
 		{
 			_upButton.setNineSlice(p_spriteSheet);
 			_valueEdit.setNineSlice(p_spriteSheet);

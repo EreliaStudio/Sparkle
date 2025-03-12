@@ -21,7 +21,6 @@ namespace spk::OpenGL
 		if (wglGetCurrentContext() != nullptr)
 		{
 			glGenBuffers(1, &_id);
-			spk::cout << "Allocating id [" << _id << "] to type [" << spk::OpenGLUtils::to_wstring(static_cast<GLenum>(_type)) << "]" << std::endl;
 		}
 	}
 
@@ -66,7 +65,7 @@ namespace spk::OpenGL
 		_usage(Usage::Unknow),
 		_currentBufferMaxSize(0)
 	{
-		spk::cout << "Creating a new vertex buffer with type [" << spk::OpenGLUtils::to_wstring(static_cast<GLenum>(_type)) << "] and usage [" << spk::OpenGLUtils::to_wstring(static_cast<GLenum>(_usage)) << "]" << std::endl;
+
 	}
 
 	VertexBufferObject::VertexBufferObject(Type p_type, Usage p_usage) :
@@ -76,7 +75,7 @@ namespace spk::OpenGL
 		_usage(p_usage),
 		_currentBufferMaxSize(0)
 	{
-		spk::cout << "Creating a new vertex buffer with type [" << spk::OpenGLUtils::to_wstring(static_cast<GLenum>(_type)) << "] and usage [" << spk::OpenGLUtils::to_wstring(static_cast<GLenum>(_usage)) << "]" << std::endl;
+
 	}
 
 	VertexBufferObject::~VertexBufferObject()
@@ -95,7 +94,6 @@ namespace spk::OpenGL
 		_usage(p_other._usage),
 		_currentBufferMaxSize(p_other._currentBufferMaxSize)
 	{
-		spk::cout << "Copying a new vertex buffer with type [" << spk::OpenGLUtils::to_wstring(static_cast<GLenum>(_type)) << "] and usage [" << spk::OpenGLUtils::to_wstring(static_cast<GLenum>(_usage)) << "]" << std::endl;
 	}
 
 	VertexBufferObject::VertexBufferObject(VertexBufferObject&& p_other) noexcept :
@@ -106,7 +104,6 @@ namespace spk::OpenGL
 		_buffer(std::move(p_other._buffer)),
 		_currentBufferMaxSize(p_other._currentBufferMaxSize)
 	{
-		spk::cout << "Moving a new vertex buffer with type [" << spk::OpenGLUtils::to_wstring(static_cast<GLenum>(_type)) << "] and usage [" << spk::OpenGLUtils::to_wstring(static_cast<GLenum>(_usage)) << "]" << std::endl;
 		p_other._validated = false;
 		p_other._id = 0;
 		p_other._type = Type::Unknow;
@@ -147,10 +144,8 @@ namespace spk::OpenGL
 			_id = p_other._id;
 			_type = p_other._type;
 			_usage = p_other._usage;
-			spk::cout << "Moving buffer sized [" << p_other._buffer.size() << "]" << std::endl;
 			_buffer = std::move(p_other._buffer);
-			spk::cout << "Copied buffer sized [" << _buffer.size() << "]" << std::endl;
-
+			
 			_currentBufferMaxSize = p_other._currentBufferMaxSize;
 
 			p_other._validated = false;
@@ -171,7 +166,6 @@ namespace spk::OpenGL
 			_allocate();
 		}
 
-		spk::cout << "Binding id [" << _id << "] to type [" << spk::OpenGLUtils::to_wstring(static_cast<GLenum>(_type)) << "]" << std::endl;
 		glBindBuffer(static_cast<GLenum>(_type), _id);
 		if (_validated == true)
 		{

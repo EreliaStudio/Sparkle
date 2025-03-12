@@ -32,11 +32,11 @@ namespace spk
 				void _onPaintEvent(spk::PaintEvent& p_event);
 
 			public:
-				static spk::SafePointer<spk::SpriteSheet> defaultBreakSpriteSheet();
+				static spk::SafePointer<const spk::SpriteSheet> defaultBreakSpriteSheet();
 
 				Break(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent);
 				spk::Vector2UInt minimalSize() const override;
-				void setSpriteSheet(const spk::SafePointer<spk::SpriteSheet> &p_spriteSheet);
+				void setSpriteSheet(const spk::SafePointer<const spk::SpriteSheet> &p_spriteSheet);
 				void setHeight(const uint32_t& p_height);
 			};
 

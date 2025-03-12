@@ -90,7 +90,7 @@ namespace spk
 		requireGeometryUpdate();
 	}
 
-	void TextLabel::setSpriteSheet(spk::SafePointer<spk::SpriteSheet> p_spriteSheet)
+	void TextLabel::setSpriteSheet(spk::SafePointer<const spk::SpriteSheet> p_spriteSheet)
 	{
 		_backgroundRenderer.setSpriteSheet(p_spriteSheet);
 	}

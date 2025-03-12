@@ -14,7 +14,7 @@ namespace spk
 			spk::SpriteSheet::Filtering::Linear
 		);
 
-	spk::SafePointer<spk::SpriteSheet> Widget::defaultIconset()
+	spk::SafePointer<const spk::SpriteSheet> Widget::defaultIconset()
 	{
 		return (&_defaultIconset);
 	}
@@ -35,7 +35,7 @@ namespace spk
 		SpriteSheet::Filtering::Linear
 	);
 
-	spk::SafePointer<spk::SpriteSheet> Widget::defaultNineSlice()
+	spk::SafePointer<const spk::SpriteSheet> Widget::defaultNineSlice()
 	{
 		return (&_defaultNineSlice);
 	}

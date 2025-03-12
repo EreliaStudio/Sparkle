@@ -11,7 +11,7 @@ namespace spk
 		setSpriteSheet(Widget::defaultNineSlice());
     }
 
-    void Frame::setSpriteSheet(const SafePointer<SpriteSheet>& p_spriteSheet)
+    void Frame::setSpriteSheet(const SafePointer<const spk::SpriteSheet>& p_spriteSheet)
     {
         _frameRenderer.setSpriteSheet(p_spriteSheet);
     }

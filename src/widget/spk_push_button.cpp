@@ -14,7 +14,7 @@ namespace spk
 		SpriteSheet::Filtering::Linear
 	);
 
-	spk::SafePointer<spk::SpriteSheet> PushButton::defaultHoverNineSlice()
+	spk::SafePointer<const spk::SpriteSheet> PushButton::defaultHoverNineSlice()
 	{
 		return (&_defaultHoverNineSlice);
 	}
@@ -25,7 +25,6 @@ namespace spk
 		_isHovered(false),
 		_pressedOffset(2, 2)
 	{
-		spk::cout << "Construction of [" << p_name << "]" << std::endl;
 		_cornerSize.released = {10, 10};
 		_cornerSize.hovered  = {10, 10};
 		_cornerSize.pressed  = {10, 10};
@@ -130,7 +129,7 @@ namespace spk
 		requireGeometryUpdate();
 	}
 
-	void PushButton::setIconset(spk::SafePointer<spk::SpriteSheet> p_iconset, const State& p_state)
+	void PushButton::setIconset(spk::SafePointer<const spk::SpriteSheet> p_iconset, const State& p_state)
 	{
 		_iconRenderer[p_state].setTexture(p_iconset);
 		requireGeometryUpdate();
@@ -148,7 +147,7 @@ namespace spk
 		requireGeometryUpdate();
 	}
 
-	void PushButton::setNineSlice(const spk::SafePointer<spk::SpriteSheet>& p_spriteSheet, const State& p_state)
+	void PushButton::setNineSlice(const spk::SafePointer<const spk::SpriteSheet>& p_spriteSheet, const State& p_state)
 	{
 		_nineSliceRenderer[p_state].setSpriteSheet(p_spriteSheet);
 		requireGeometryUpdate();
@@ -196,7 +195,7 @@ namespace spk
 		setTextAlignment(p_horizontalAlignment, p_verticalAlignment, State::Pressed);
 	}
 
-	void PushButton::setIconset(spk::SafePointer<spk::SpriteSheet> p_iconset)
+	void PushButton::setIconset(spk::SafePointer<const spk::SpriteSheet> p_iconset)
 	{
 		setIconset(p_iconset, State::Released);
 		setIconset(p_iconset, State::Hovered);
@@ -217,7 +216,7 @@ namespace spk
 		setCornerSize(p_cornerSize, State::Pressed);
 	}
 
-	void PushButton::setNineSlice(const SafePointer<SpriteSheet>& p_spriteSheet)
+	void PushButton::setNineSlice(const SafePointer<const spk::SpriteSheet>& p_spriteSheet)
 	{
 		setNineSlice(p_spriteSheet, State::Released);
 		setNineSlice(p_spriteSheet, State::Hovered);
@@ -230,14 +229,14 @@ namespace spk
 		return _pressedOffset;
 	}
 
-	const spk::SafePointer<spk::SpriteSheet>& PushButton::spriteSheet(State p_state) const
+	const spk::SafePointer<const spk::SpriteSheet>& PushButton::spriteSheet(State p_state) const
 	{
-		return (_nineSliceRenderer[p_state].spriteSheet().upCast<spk::SpriteSheet>());
+		return (_nineSliceRenderer[p_state].spriteSheet().upCast<const spk::SpriteSheet>());
 	}
 
-	const spk::SafePointer<spk::SpriteSheet>& PushButton::iconset(State p_state) const
+	const spk::SafePointer<const spk::SpriteSheet>& PushButton::iconset(State p_state) const
 	{
-		return (_iconRenderer[p_state].texture().upCast<spk::SpriteSheet>());
+		return (_iconRenderer[p_state].texture().upCast<const spk::SpriteSheet>());
 	}
 
 	const spk::SafePointer<spk::Font>& PushButton::font(State p_state) const

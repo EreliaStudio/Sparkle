@@ -205,7 +205,7 @@ namespace spk
 		setFont(Widget::defaultFont());
 	}
 
-	void TextEdit::setNineSlice(const spk::SafePointer<spk::SpriteSheet> &p_spriteSheet)
+	void TextEdit::setNineSlice(const spk::SafePointer<const spk::SpriteSheet> &p_spriteSheet)
 	{
 		_backgroundRenderer.setSpriteSheet(p_spriteSheet);
 	}

@@ -123,12 +123,12 @@ namespace spk
 		_body.setCornerSize(p_bodyCornerSize);
 	}
 
-	void SliderBar::setSpriteSheet(spk::SafePointer<spk::SpriteSheet> p_spriteSheet)
+	void SliderBar::setSpriteSheet(spk::SafePointer<const spk::SpriteSheet> p_spriteSheet)
 	{
 		_backgroundRenderer.setSpriteSheet(p_spriteSheet);
 	}
 
-	void SliderBar::setBodySpriteSheet(spk::SafePointer<spk::SpriteSheet> p_spriteSheet)
+	void SliderBar::setBodySpriteSheet(spk::SafePointer<const spk::SpriteSheet> p_spriteSheet)
 	{
 		_body.setSpriteSheet(p_spriteSheet);
 	}
