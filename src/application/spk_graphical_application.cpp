@@ -56,7 +56,7 @@ namespace spk
 		}
 		_windows[p_title] = std::make_unique<spk::Window>(p_title, p_geometry);
 
-		_windows[p_title]->_initialize([&](spk::SafePointer<spk::Window> windowPtr) { _windowToRemove.push(std::move(windowPtr)); });
+		_windows[p_title]->_initialize([&](spk::SafePointer<spk::Window> p_windowPtr) { _windowToRemove.push(std::move(p_windowPtr)); });
 
 		return (_windows[p_title].get());
 	}

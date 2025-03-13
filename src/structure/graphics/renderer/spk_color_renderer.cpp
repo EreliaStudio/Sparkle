@@ -2,6 +2,8 @@
 
 #include "structure/graphics/spk_viewport.hpp"
 
+#include <array>
+
 namespace spk
 {
 	void ColorRenderer::_initProgram()
@@ -72,13 +74,13 @@ namespace spk
 		_bufferSet.indexes().clear();
 	}
 
-	void ColorRenderer::prepareSquare(const spk::Geometry2D &geom, float layer)
+	void ColorRenderer::prepareSquare(const spk::Geometry2D &p_geom, float p_layer)
 	{
 		size_t nbVertex = _bufferSet.layout().size() / sizeof(Vertex);
 
-		spk::Vector3 topLeft = spk::Viewport::convertScreenToOpenGL({geom.anchor.x, geom.anchor.y}, layer);
+		spk::Vector3 topLeft = spk::Viewport::convertScreenToOpenGL({p_geom.anchor.x, p_geom.anchor.y}, p_layer);
 		spk::Vector3 bottomRight = spk::Viewport::convertScreenToOpenGL(
-			{geom.anchor.x + static_cast<int32_t>(geom.size.x), geom.anchor.y + static_cast<int32_t>(geom.size.y)}, layer);
+			{p_geom.anchor.x + static_cast<int32_t>(p_geom.size.x), p_geom.anchor.y + static_cast<int32_t>(p_geom.size.y)}, p_layer);
 
 		_bufferSet.layout() << Vertex{{topLeft.x, bottomRight.y}, topLeft.z} << Vertex{{bottomRight.x, bottomRight.y}, topLeft.z}
 							<< Vertex{{topLeft.x, topLeft.y}, topLeft.z} << Vertex{{bottomRight.x, topLeft.y}, topLeft.z};

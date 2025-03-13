@@ -143,7 +143,7 @@ namespace spk
 	void GameObject::removeComponent(const std::wstring &p_name)
 	{
 		std::unique_lock<std::mutex> lock(_componentMutex);
-		auto it = std::remove_if(_components.begin(), _components.end(), [&](const std::unique_ptr<Component> &c) { return c->name() == p_name; });
+		auto it = std::remove_if(_components.begin(), _components.end(), [&](const std::unique_ptr<Component> &p_c) { return p_c->name() == p_name; });
 
 		it->get()->sleep();
 		it->get()->stop();
@@ -433,15 +433,15 @@ namespace spk
 		return (count({p_tag}));
 	}
 
-	static bool matchesTags(const GameObject &entity, const std::span<const std::wstring> &tags, spk::BinaryOperator op)
+	static bool matchesTags(const GameObject &p_entity, const std::span<const std::wstring> &p_tags, spk::BinaryOperator p_op)
 	{
-		if (op == spk::BinaryOperator::AND)
+		if (p_op == spk::BinaryOperator::AND)
 		{
-			return std::all_of(tags.begin(), tags.end(), [&](const std::wstring &tag) { return entity.containTag(tag); });
+			return std::all_of(p_tags.begin(), p_tags.end(), [&](const std::wstring &p_tag) { return p_entity.containTag(p_tag); });
 		}
-		else // spk::BinaryOperator::OR
+		else
 		{
-			return std::any_of(tags.begin(), tags.end(), [&](const std::wstring &tag) { return entity.containTag(tag); });
+			return std::any_of(p_tags.begin(), p_tags.end(), [&](const std::wstring &p_tag) { return p_entity.containTag(p_tag); });
 		}
 	}
 
@@ -509,7 +509,7 @@ namespace spk
 		std::unique_lock<std::mutex> lock(_childMutex);
 		return std::any_of(children().begin(),
 						   children().end(),
-						   [&](const spk::SafePointer<const GameObject> &child) { return matchesTags(*child, p_tags, p_binaryOperator); });
+						   [&](const spk::SafePointer<const GameObject> &p_child) { return matchesTags(*p_child, p_tags, p_binaryOperator); });
 	}
 
 	size_t GameObject::countTags(const std::span<const std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator) const
@@ -517,6 +517,6 @@ namespace spk
 		std::unique_lock<std::mutex> lock(_childMutex);
 		return std::count_if(children().begin(),
 							 children().end(),
-							 [&](const spk::SafePointer<const GameObject> &child) { return matchesTags(*child, p_tags, p_binaryOperator); });
+							 [&](const spk::SafePointer<const GameObject> &p_child) { return matchesTags(*p_child, p_tags, p_binaryOperator); });
 	}
 }

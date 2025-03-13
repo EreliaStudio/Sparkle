@@ -21,9 +21,9 @@ namespace spk
 				return std::string();
 			}
 
-			int size_needed = WideCharToMultiByte(CP_UTF8, 0, &p_wstr[0], (int)p_wstr.size(), NULL, 0, NULL, NULL);
-			std::string strTo(size_needed, 0);
-			WideCharToMultiByte(CP_UTF8, 0, &p_wstr[0], (int)p_wstr.size(), &strTo[0], size_needed, NULL, NULL);
+			int sizeNeeded = WideCharToMultiByte(CP_UTF8, 0, &p_wstr[0], (int)p_wstr.size(), NULL, 0, NULL, NULL);
+			std::string strTo(sizeNeeded, 0);
+			WideCharToMultiByte(CP_UTF8, 0, &p_wstr[0], (int)p_wstr.size(), &strTo[0], sizeNeeded, NULL, NULL);
 
 			return strTo;
 		}
@@ -67,12 +67,12 @@ namespace spk
 			return result;
 		}
 
-		std::wstring mergeWhitespace(const std::wstring &str)
+		std::wstring mergeWhitespace(const std::wstring &p_str)
 		{
 			std::wstring result;
 			bool spaceInserted = false;
 
-			for (wchar_t ch : str)
+			for (wchar_t ch : p_str)
 			{
 				if (ch == L'\t' || ch == L'\n' || ch == L' ')
 				{
@@ -100,12 +100,12 @@ namespace spk
 			return result.substr(start, end - start + 1);
 		}
 
-		std::string mergeWhitespace(const std::string &str)
+		std::string mergeWhitespace(const std::string &p_str)
 		{
 			std::string result;
 			bool spaceInserted = false;
 
-			for (char ch : str)
+			for (char ch : p_str)
 			{
 				if (ch == '\t' || ch == '\n' || ch == ' ')
 				{

@@ -73,9 +73,9 @@ namespace spk
 		return (_up);
 	}
 
-	void Transform::lookAt(const spk::Vector3 &target)
+	void Transform::lookAt(const spk::Vector3 &p_target)
 	{
-		_rotation = spk::Quaternion::lookAt(_position, target, spk::Vector3(0, 1, 0));
+		_rotation = spk::Quaternion::lookAt(_position, p_target, spk::Vector3(0, 1, 0));
 		_updateModel();
 	}
 
@@ -117,15 +117,15 @@ namespace spk
 		_updateModel();
 	}
 
-	void Transform::rotateAroundPoint(const spk::Vector3 &center, const spk::Vector3 &axis, float angle)
+	void Transform::rotateAroundPoint(const spk::Vector3 &p_center, const spk::Vector3 &axis, float p_angle)
 	{
-		spk::Vector3 relativePosition = _position - center;
+		spk::Vector3 relativePosition = _position - p_center;
 
-		spk::Quaternion rotationQuat = spk::Quaternion::fromAxisAngle(axis, angle);
+		spk::Quaternion rotationQuat = spk::Quaternion::fromAxisAngle(axis, p_angle);
 
 		spk::Vector3 rotatedPosition = rotationQuat.rotate(relativePosition);
 
-		_localPosition = rotatedPosition + center;
+		_localPosition = rotatedPosition + p_center;
 
 		_updateModel();
 	}

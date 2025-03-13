@@ -4,18 +4,18 @@ namespace spk
 {
 	HWND ConsoleApplication::createBackgroundHandle(const std::wstring &p_title)
 	{
-		const wchar_t CLASS_NAME[] = L"DummyWindowClass";
+		const wchar_t className[] = L"DummyWindowClass";
 
 		WNDCLASSW wc = {};
 
 		wc.lpfnWndProc = DefWindowProc;
 		wc.hInstance = GetModuleHandle(NULL);
-		wc.lpszClassName = CLASS_NAME;
+		wc.lpszClassName = className;
 
 		RegisterClassW(&wc);
 
 		HWND hwnd = CreateWindowExW(0,					 // Optional window styles.
-									CLASS_NAME,			 // Window class
+									className,			 // Window class
 									p_title.c_str(),	 // Window text
 									WS_OVERLAPPEDWINDOW, // Window style
 

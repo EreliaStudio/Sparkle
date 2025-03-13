@@ -294,9 +294,9 @@ namespace spk::OpenGLUtils
 		}
 	}
 
-	std::wstring getFramebufferErrorString(GLenum status)
+	std::wstring getFramebufferErrorString(GLenum p_status)
 	{
-		switch (status)
+		switch (p_status)
 		{
 		case GL_FRAMEBUFFER_COMPLETE:
 			return L"Framebuffer complete";

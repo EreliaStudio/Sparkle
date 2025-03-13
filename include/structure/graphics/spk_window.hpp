@@ -1,9 +1,5 @@
 #pragma once
 
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
 #include "structure/spk_safe_pointer.hpp"
 
 #include "structure/container/spk_thread_safe_queue.hpp"

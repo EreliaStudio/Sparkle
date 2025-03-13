@@ -44,9 +44,9 @@ namespace spk
 	{
 	}
 
-	size_t Texture::_getBytesPerPixel(const Format &format) const
+	size_t Texture::_getBytesPerPixel(const Format &p_format) const
 	{
-		switch (format)
+		switch (p_format)
 		{
 		case Format::GreyLevel:
 			return 1;

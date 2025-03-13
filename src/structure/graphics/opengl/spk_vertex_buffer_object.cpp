@@ -3,9 +3,6 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
 #include <Windows.h>
 
 #include "structure/spk_iostream.hpp"

@@ -10,7 +10,7 @@ namespace spk
 {
 	namespace JSON
 	{
-		static bool _isNumberMalformatted(bool p_isNegative, const size_t &p_decimalPos, const size_t &p_exponentPos,
+		static bool isNumberMalformatted(bool p_isNegative, const size_t &p_decimalPos, const size_t &p_exponentPos,
 										  const std::wstring &p_unitSubString)
 		{
 			return (p_exponentPos == p_unitSubString.size() - 1 || (p_isNegative == true && p_unitSubString.size() == 1) ||
@@ -23,7 +23,7 @@ namespace spk
 					std::count(p_unitSubString.begin(), p_unitSubString.end(), L'.') > 1);
 		}
 
-		static long _extractExponent(const std::wstring &p_exponentSubstring)
+		static long extractExponent(const std::wstring &p_exponentSubstring)
 		{
 			bool isExponentSigned(p_exponentSubstring[0] == L'-' || p_exponentSubstring[0] == L'+');
 			long result(0);
@@ -44,11 +44,11 @@ namespace spk
 		}
 
 		template <typename NumericType>
-		static unsigned short numberLength(NumericType p_number, unsigned short base = 10)
+		static unsigned short numberLength(NumericType p_number, unsigned short p_base = 10)
 		{
 			unsigned short result(1);
 
-			if (base == 0)
+			if (p_base == 0)
 			{
 				throw std::runtime_error("numberLength: Base cannot be 0");
 			}
@@ -57,15 +57,15 @@ namespace spk
 				++result;
 				p_number = -p_number;
 			}
-			while (p_number >= base)
+			while (p_number >= p_base)
 			{
-				p_number /= base;
+				p_number /= p_base;
 				++result;
 			}
 			return (result);
 		}
 
-		static bool _resultWillBeDouble(const size_t &p_decimalPos, bool p_hasExponent, const size_t &p_exponentPos, bool p_isNegative,
+		static bool resultWillBeDouble(const size_t &p_decimalPos, bool p_hasExponent, const size_t &p_exponentPos, bool p_isNegative,
 										const long &p_exponent)
 		{
 			if (p_decimalPos == std::wstring::npos && p_exponentPos == false)
@@ -77,7 +77,7 @@ namespace spk
 														   p_exponentPos - p_isNegative + p_exponent <= 0));
 		}
 
-		static long _safePowerOfTen(const long &p_number, const long &p_exponent, const std::wstring &p_unitSubString)
+		static long safePowerOfTen(const long &p_number, const long &p_exponent, const std::wstring &p_unitSubString)
 		{
 			long result(0);
 			errno = 0;
@@ -94,7 +94,7 @@ namespace spk
 			return (result);
 		}
 
-		void _loadUnitNumbers(spk::JSON::Object &p_objectToFill, const std::wstring &p_unitSubString)
+		void loadUnitNumbers(spk::JSON::Object &p_objectToFill, const std::wstring &p_unitSubString)
 		{
 			std::variant<long, double> result;
 
@@ -105,7 +105,7 @@ namespace spk
 
 			size_t decimalPos(p_unitSubString.find_last_of(L"."));
 
-			if (_isNumberMalformatted(isNegative, decimalPos, exponentPos, p_unitSubString) == true)
+			if (isNumberMalformatted(isNegative, decimalPos, exponentPos, p_unitSubString) == true)
 			{
 				throw std::runtime_error("Malformatted JSON number: " + spk::StringUtils::wstringToString(p_unitSubString));
 			}
@@ -119,12 +119,12 @@ namespace spk
 
 			if (exponentPos != p_unitSubString.size())
 			{
-				exponent = _extractExponent(p_unitSubString.substr(exponentPos + 1));
+				exponent = extractExponent(p_unitSubString.substr(exponentPos + 1));
 			}
 
 			try
 			{
-				(_resultWillBeDouble(decimalPos, p_unitSubString.size() != exponentPos, exponentPos, isNegative, exponent) == true)
+				(resultWillBeDouble(decimalPos, p_unitSubString.size() != exponentPos, exponentPos, isNegative, exponent) == true)
 					? result = std::stod(p_unitSubString)
 					: result = std::stol(p_unitSubString);
 			} catch (const std::exception &)
@@ -135,7 +135,7 @@ namespace spk
 
 			if (exponentPos != p_unitSubString.size() && std::holds_alternative<long>(result) == true)
 			{
-				result = _safePowerOfTen(std::get<long>(result), exponent, p_unitSubString);
+				result = safePowerOfTen(std::get<long>(result), exponent, p_unitSubString);
 			}
 
 			if (std::holds_alternative<double>(result) == true)

@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+
 #include "application/module/spk_controller_module.hpp"
 #include "application/module/spk_keyboard_module.hpp"
 #include "application/module/spk_module.hpp"

@@ -149,9 +149,9 @@ namespace spk
 		return (this->operator*(p_vector));
 	}
 
-	Quaternion Quaternion::lookAt(const Vector3 &eye, const Vector3 &target, const Vector3 &p_up)
+	Quaternion Quaternion::lookAt(const Vector3 &p_eye, const Vector3 &p_target, const Vector3 &p_up)
 	{
-		Vector3 forward = (target - eye).normalize();
+		Vector3 forward = (p_target - p_eye).normalize();
 
 		float forwardToUpDot = forward.dot(p_up);
 		Vector3 right = Vector3(1, 0, 0);

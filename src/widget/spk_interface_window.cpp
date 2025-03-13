@@ -47,13 +47,13 @@ namespace spk
 
 		anchor.x += titleLabelSize.x + (int)space;
 
-		auto placeButton = [&](spk::PushButton &b)
+		auto placeButton = [&](spk::PushButton &p_button)
 		{
-			if (!b.isActive())
+			if (!p_button.isActive())
 			{
 				return;
 			}
-			b.setGeometry(anchor, buttonSize);
+			p_button.setGeometry(anchor, buttonSize);
 			anchor.x += buttonSize.x + (int)space;
 		};
 
@@ -247,9 +247,9 @@ namespace spk
 		requireGeometryUpdate();
 	}
 
-	uint32_t safeAdd(uint32_t a, uint32_t b)
+	uint32_t safeAdd(uint32_t p_a, uint32_t p_b)
 	{
-		return a > std::numeric_limits<uint32_t>::max() - b ? std::numeric_limits<uint32_t>::max() : a + b;
+		return p_a > std::numeric_limits<uint32_t>::max() - p_b ? std::numeric_limits<uint32_t>::max() : p_a + p_b;
 	};
 
 	void IInterfaceWindow::setMinimumContentSize(const spk::Vector2UInt &p_minimumContentSize)

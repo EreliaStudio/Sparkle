@@ -7,15 +7,15 @@
 
 namespace spk::JSON
 {
-	std::wstring _applyGrammar(const std::wstring &p_fileContent);
-	std::wstring _extractUnitSubstring(const std::wstring &p_content, size_t &p_index);
-	std::wstring _getAttributeName(const std::wstring &p_content, size_t &p_index);
+	std::wstring applyGrammar(const std::wstring &p_fileContent);
+	std::wstring extractUnitSubstring(const std::wstring &p_content, size_t &p_index);
+	std::wstring getAttributeName(const std::wstring &p_content, size_t &p_index);
 
-	void _loadUnitNumbers(spk::JSON::Object &p_objectToFill, const std::wstring &p_unitSubString);
+	void loadUnitNumbers(spk::JSON::Object &p_objectToFill, const std::wstring &p_unitSubString);
 
-	static void _loadContent(spk::JSON::Object &p_objectToFill, const std::wstring &p_content, size_t &p_index);
+	static void loadContent(spk::JSON::Object &p_objectToFill, const std::wstring &p_content, size_t &p_index);
 
-	static std::wstring _loadFileContent(const std::filesystem::path &p_filePath)
+	static std::wstring loadFileContent(const std::filesystem::path &p_filePath)
 	{
 		std::wifstream wif;
 
@@ -28,15 +28,15 @@ namespace spk::JSON
 		std::wstring result((std::istreambuf_iterator<wchar_t>(wif)), std::istreambuf_iterator<wchar_t>());
 		wif.close();
 
-		return (_applyGrammar(result));
+		return (applyGrammar(result));
 	}
 
-	static void _loadUnitString(spk::JSON::Object &p_objectToFill, const std::wstring &p_unitSubString)
+	static void loadUnitString(spk::JSON::Object &p_objectToFill, const std::wstring &p_unitSubString)
 	{
 		p_objectToFill.set(p_unitSubString.substr(1, p_unitSubString.size() - 2));
 	}
 
-	static void _loadUnitBoolean(spk::JSON::Object &p_objectToFill, const std::wstring &p_unitSubString)
+	static void loadUnitBoolean(spk::JSON::Object &p_objectToFill, const std::wstring &p_unitSubString)
 	{
 		if (p_unitSubString == L"true")
 		{
@@ -52,7 +52,7 @@ namespace spk::JSON
 		}
 	}
 
-	static void _loadUnitNull(spk::JSON::Object &p_objectToFill, const std::wstring &p_unitSubString)
+	static void loadUnitNull(spk::JSON::Object &p_objectToFill, const std::wstring &p_unitSubString)
 	{
 		if (p_unitSubString == L"null")
 		{
@@ -64,14 +64,14 @@ namespace spk::JSON
 		}
 	}
 
-	static void _loadUnit(spk::JSON::Object &p_objectToFill, const std::wstring &p_content, size_t &p_index)
+	static void loadUnit(spk::JSON::Object &p_objectToFill, const std::wstring &p_content, size_t &p_index)
 	{
-		std::wstring substring = _extractUnitSubstring(p_content, p_index);
+		std::wstring substring = extractUnitSubstring(p_content, p_index);
 
 		switch (substring[0])
 		{
 		case '"':
-			_loadUnitString(p_objectToFill, substring);
+			loadUnitString(p_objectToFill, substring);
 			break;
 		case '0':
 		case '1':
@@ -84,14 +84,14 @@ namespace spk::JSON
 		case '8':
 		case '9':
 		case '-':
-			_loadUnitNumbers(p_objectToFill, substring);
+			loadUnitNumbers(p_objectToFill, substring);
 			break;
 		case 't':
 		case 'f':
-			_loadUnitBoolean(p_objectToFill, substring);
+			loadUnitBoolean(p_objectToFill, substring);
 			break;
 		case 'n':
-			_loadUnitNull(p_objectToFill, substring);
+			loadUnitNull(p_objectToFill, substring);
 			break;
 		default:
 			throw std::runtime_error("Invalid JSON value: " + spk::StringUtils::wstringToString(substring));
@@ -99,7 +99,7 @@ namespace spk::JSON
 		}
 	}
 
-	static void _loadObject(spk::JSON::Object &p_objectToFill, const std::wstring &p_content, size_t &p_index)
+	static void loadObject(spk::JSON::Object &p_objectToFill, const std::wstring &p_content, size_t &p_index)
 	{
 		p_objectToFill.setAsObject();
 
@@ -110,11 +110,11 @@ namespace spk::JSON
 		p_index++;
 		for (; p_index < p_content.size() && p_content[p_index] != '}';)
 		{
-			std::wstring attributeName = _getAttributeName(p_content, p_index);
+			std::wstring attributeName = getAttributeName(p_content, p_index);
 
 			spk::JSON::Object &newObject = p_objectToFill.addAttribute(attributeName);
 
-			_loadContent(newObject, p_content, p_index);
+			loadContent(newObject, p_content, p_index);
 
 			if (p_content[p_index] == ',')
 			{
@@ -132,7 +132,7 @@ namespace spk::JSON
 		p_index++;
 	}
 
-	static void _loadArray(spk::JSON::Object &p_objectToFill, const std::wstring &p_content, size_t &p_index)
+	static void loadArray(spk::JSON::Object &p_objectToFill, const std::wstring &p_content, size_t &p_index)
 	{
 		p_objectToFill.setAsArray();
 		if (p_content[p_index] != '[')
@@ -144,7 +144,7 @@ namespace spk::JSON
 		{
 			spk::JSON::Object newObject(L"[" + std::to_wstring(p_objectToFill.size()) + L"]");
 
-			_loadContent(newObject, p_content, p_index);
+			loadContent(newObject, p_content, p_index);
 
 			p_objectToFill.push_back(newObject);
 
@@ -164,7 +164,7 @@ namespace spk::JSON
 		p_index++;
 	}
 
-	static void _loadContent(spk::JSON::Object &p_objectToFill, const std::wstring &p_content, size_t &p_index)
+	static void loadContent(spk::JSON::Object &p_objectToFill, const std::wstring &p_content, size_t &p_index)
 	{
 		switch (p_content[p_index])
 		{
@@ -183,13 +183,13 @@ namespace spk::JSON
 		case '8':
 		case '9':
 		case '-':
-			_loadUnit(p_objectToFill, p_content, p_index);
+			loadUnit(p_objectToFill, p_content, p_index);
 			break;
 		case '{':
-			_loadObject(p_objectToFill, p_content, p_index);
+			loadObject(p_objectToFill, p_content, p_index);
 			break;
 		case '[':
-			_loadArray(p_objectToFill, p_content, p_index);
+			loadArray(p_objectToFill, p_content, p_index);
 			break;
 		default:
 			throw std::runtime_error("Unexpected data type in JSON: " + spk::StringUtils::wstringToString(p_content).substr(p_index, 10));
@@ -209,7 +209,7 @@ namespace spk::JSON
 
 	void File::load(const std::filesystem::path &p_filePath)
 	{
-		std::wstring fileContent = _loadFileContent(p_filePath);
+		std::wstring fileContent = loadFileContent(p_filePath);
 		size_t index = 0;
 
 		if (fileContent.empty())
@@ -217,7 +217,7 @@ namespace spk::JSON
 			throw std::runtime_error("Empty file: " + p_filePath.string());
 		}
 		_root.reset();
-		_loadContent(_root, fileContent, index);
+		loadContent(_root, fileContent, index);
 		if (index != fileContent.size())
 		{
 			throw std::runtime_error("Invalid JSON file: " + p_filePath.string());
@@ -230,7 +230,7 @@ namespace spk::JSON
 		size_t index = 0;
 
 		result._root.reset();
-		_loadContent(result._root, _applyGrammar(p_content), index);
+		loadContent(result._root, applyGrammar(p_content), index);
 
 		return (result);
 	}

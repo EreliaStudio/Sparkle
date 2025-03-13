@@ -192,9 +192,9 @@ namespace spk
 			std::unique_lock<std::mutex> lock(_componentMutex);
 			std::vector<spk::SafePointer<const TComponentType>> result;
 
-			for (std::unique_ptr<Component> &component : _components)
+			for (const std::unique_ptr<Component> &component : _components)
 			{
-				TComponentType *castedComponent = dynamic_cast<TComponentType *>(component.get());
+				const TComponentType *castedComponent = dynamic_cast<const TComponentType *>(component.get());
 				if (castedComponent != nullptr)
 				{
 					result.emplace_back(castedComponent);

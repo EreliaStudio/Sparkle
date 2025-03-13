@@ -2,13 +2,13 @@
 
 namespace spk
 {
-	Server::Acceptator::Acceptator(std::unordered_map<ClientID, SOCKET> &clientsMap, std::mutex &mutex, ClientID &p_clientId, MessagePool &pool,
-								   spk::ThreadSafeQueue<MessageObject> &queue) :
-		clients(clientsMap),
-		clientsMutex(mutex),
+	Server::Acceptator::Acceptator(std::unordered_map<ClientID, SOCKET> &p_clientsMap, std::mutex &p_mutex, ClientID &p_clientId, MessagePool &p_pool,
+								   spk::ThreadSafeQueue<MessageObject> &p_queue) :
+		clients(p_clientsMap),
+		clientsMutex(p_mutex),
 		nextClientId(p_clientId),
-		messagePool(pool),
-		messageQueue(queue),
+		messagePool(p_pool),
+		messageQueue(p_queue),
 		isRunning(false),
 		serverSocket(INVALID_SOCKET)
 	{
@@ -74,22 +74,22 @@ namespace spk
 			fd_set readfds;
 			FD_ZERO(&readfds);
 			FD_SET(serverSocket, &readfds);
-			int max_fd = static_cast<int>(serverSocket);
+			int maxFD = static_cast<int>(serverSocket);
 
 			{
 				std::lock_guard<std::mutex> lock(clientsMutex);
 				for (auto &client : clients)
 				{
 					FD_SET(client.second, &readfds);
-					if (static_cast<int>(client.second) > max_fd)
+					if (static_cast<int>(client.second) > maxFD)
 					{
-						max_fd = static_cast<int>(client.second);
+						maxFD = static_cast<int>(client.second);
 					}
 				}
 			}
 
 			timeval timeout = {0, 50000}; // 50 ms
-			int activity = select(max_fd + 1, &readfds, nullptr, nullptr, &timeout);
+			int activity = select(maxFD + 1, &readfds, nullptr, nullptr, &timeout);
 
 			if (activity == SOCKET_ERROR)
 			{

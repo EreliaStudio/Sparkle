@@ -118,10 +118,10 @@ namespace spk
 		return (nanoseconds >= p_other.nanoseconds);
 	}
 
-	Timestamp::Timestamp(const Duration &d)
+	Timestamp::Timestamp(const Duration &p_duration)
 	{
-		nanoseconds = d.nanoseconds;
-		milliseconds = d.milliseconds;
+		nanoseconds = p_duration.nanoseconds;
+		milliseconds = p_duration.milliseconds;
 		seconds = seconds;
 	}
 
@@ -188,12 +188,12 @@ namespace spk
 		return this->milliseconds >= p_other.milliseconds;
 	}
 
-	Timestamp Timestamp::fromNanoseconds(long long ns)
+	Timestamp Timestamp::fromNanoseconds(long long p_nanoseconds)
 	{
 		Timestamp ts;
-		ts.nanoseconds = ns;
-		ts.milliseconds = ns / 1'000'000LL;
-		ts.seconds = static_cast<double>(ns) / 1'000'000'000.0;
+		ts.nanoseconds = p_nanoseconds;
+		ts.milliseconds = p_nanoseconds / 1'000'000LL;
+		ts.seconds = static_cast<double>(p_nanoseconds) / 1'000'000'000.0;
 		return ts;
 	}
 }
@@ -217,8 +217,8 @@ namespace spk::SystemUtils
 			largeInt.LowPart = fileTime.dwLowDateTime;
 			largeInt.HighPart = fileTime.dwHighDateTime;
 
-			constexpr long long EPOCH_DIFF_100NS = 116444736000000000LL;
-			long long currentTimeFileTimeNs = (static_cast<long long>(largeInt.QuadPart) - EPOCH_DIFF_100NS) * 100LL;
+			constexpr long long epochDiff100Ns = 116444736000000000LL;
+			long long currentTimeFileTimeNs = (static_cast<long long>(largeInt.QuadPart) - epochDiff100Ns) * 100LL;
 
 			double currentTimeFileTimeSec = static_cast<double>(currentTimeFileTimeNs) / 1'000'000'000.0;
 

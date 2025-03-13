@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+
 #include <functional>
 #include <limits>
 #include <memory>
@@ -19,11 +23,11 @@ namespace spk
 	private:
 		struct Data
 		{
-			std::mutex _mutex;
-			std::vector<std::unique_ptr<TType>> _availableElements;
-			size_t _maximumSize = std::numeric_limits<size_t>::max();
+			std::mutex mutex;
+			std::vector<std::unique_ptr<TType>> availableElements;
+			size_t maximumSize = std::numeric_limits<size_t>::max();
 
-			bool _closed = false;
+			bool closed = false;
 		};
 
 		std::shared_ptr<Data> _data;
@@ -36,8 +40,8 @@ namespace spk
 
 		~Pool()
 		{
-			std::scoped_lock<std::mutex> lock(_data->_mutex);
-			_data->_closed = true;
+			std::scoped_lock<std::mutex> lock(_data->mutex);
+			_data->closed = true;
 		}
 
 		Pool(const Pool &) = delete;
@@ -45,80 +49,80 @@ namespace spk
 
 		void setMaximumAllocationSize(size_t p_size)
 		{
-			std::scoped_lock<std::mutex> lock(_data->_mutex);
+			std::scoped_lock<std::mutex> lock(_data->mutex);
 
-			if (_data->_closed == true)
+			if (_data->closed == true)
 			{
 				throw std::runtime_error("Can't edit the maximulm allocated size of a closed pool");
 			}
 
-			_data->_maximumSize = p_size;
+			_data->maximumSize = p_size;
 
-			while (_data->_availableElements.size() > _data->_maximumSize)
+			while (_data->availableElements.size() > _data->maximumSize)
 			{
-				_data->_availableElements.pop_back();
+				_data->availableElements.pop_back();
 			}
 		}
 
 		size_t size() const
 		{
-			std::scoped_lock<std::mutex> lock(_data->_mutex);
-			return _data->_availableElements.size();
+			std::scoped_lock<std::mutex> lock(_data->mutex);
+			return _data->availableElements.size();
 		}
 
 		template <typename... TArgs>
 		void allocate(TArgs &&...args)
 		{
-			std::scoped_lock<std::mutex> lock(_data->_mutex);
+			std::scoped_lock<std::mutex> lock(_data->mutex);
 
-			if (_data->_closed == true)
+			if (_data->closed == true)
 			{
 				throw std::runtime_error("Can't allocate a new object in closed pool");
 			}
 
-			_data->_availableElements.emplace_back(std::make_unique<TType>(std::forward<TArgs>(args)...));
+			_data->availableElements.emplace_back(std::make_unique<TType>(std::forward<TArgs>(args)...));
 		}
 
 		template <typename... TArgs>
 		void resize(size_t p_newSize, TArgs &&...args)
 		{
-			std::scoped_lock<std::mutex> lock(_data->_mutex);
+			std::scoped_lock<std::mutex> lock(_data->mutex);
 
-			if (_data->_closed == true)
+			if (_data->closed == true)
 			{
 				throw std::runtime_error("Can't resize a closed pool");
 			}
 
-			while (_data->_availableElements.size() > p_newSize)
+			while (_data->availableElements.size() > p_newSize)
 			{
-				_data->_availableElements.pop_back();
+				_data->availableElements.pop_back();
 			}
 
-			while (_data->_availableElements.size() < p_newSize)
+			while (_data->availableElements.size() < p_newSize)
 			{
-				_data->_availableElements.emplace_back(std::make_unique<TType>(std::forward<TArgs>(args)...));
+				_data->availableElements.emplace_back(std::make_unique<TType>(std::forward<TArgs>(args)...));
 			}
 		}
 
 		void release()
 		{
-			std::scoped_lock<std::mutex> lock(_data->_mutex);
+			std::scoped_lock<std::mutex> lock(_data->mutex);
 
-			if (_data->_closed == true)
+			if (_data->closed == true)
 			{
 				throw std::runtime_error("Can't release a closed pool");
 			}
 
-			_data->_availableElements.clear();
+			_data->availableElements.clear();
 		}
 
 		template <typename... TArgs>
 		Object obtain(TArgs &&...args)
 		{
 			{
-				std::scoped_lock<std::mutex> lock(_data->_mutex);
+				std::scoped_lock<std::mutex> lock(_data->mutex);
 
-				if (_data->_closed == true)
+				if (_data->closed == true)
 				{
 					throw std::runtime_error("Can't obtain object from a closed pool");
 				}
@@ -127,16 +131,16 @@ namespace spk
 			TType *rawPtr = nullptr;
 
 			{
-				std::scoped_lock<std::mutex> lock(_data->_mutex);
+				std::scoped_lock<std::mutex> lock(_data->mutex);
 
-				if (_data->_availableElements.empty())
+				if (_data->availableElements.empty())
 				{
 					rawPtr = new TType(std::forward<TArgs>(args)...);
 				}
 				else
 				{
-					rawPtr = _data->_availableElements.back().release();
-					_data->_availableElements.pop_back();
+					rawPtr = _data->availableElements.back().release();
+					_data->availableElements.pop_back();
 
 					rawPtr->~TType();
 					new (rawPtr) TType(std::forward<TArgs>(args)...);
@@ -147,13 +151,13 @@ namespace spk
 
 			auto deleter = [weakData](TType *ptr)
 			{
-				if (auto data = weakData.lock())
+				if (auto weakDataContent = weakData.lock())
 				{
-					std::scoped_lock<std::mutex> lock(data->_mutex);
+					std::scoped_lock<std::mutex> lock(weakDataContent->mutex);
 
-					if (data->_closed == false && data->_availableElements.size() < data->_maximumSize)
+					if (weakDataContent->closed == false && weakDataContent->availableElements.size() < weakDataContent->maximumSize)
 					{
-						data->_availableElements.emplace_back(ptr);
+						weakDataContent->availableElements.emplace_back(ptr);
 						return;
 					}
 				}

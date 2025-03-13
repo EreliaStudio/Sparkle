@@ -9,7 +9,7 @@ namespace spk
 {
 	namespace JSON
 	{
-		std::wstring _handleEscapeSequence(const std::wstring &p_fileContent)
+		std::wstring handleEscapeSequence(const std::wstring &p_fileContent)
 		{
 			std::wstring result;
 
@@ -67,12 +67,7 @@ namespace spk
 			return (result);
 		}
 
-		/**
-		 * @brief Applies grammar rules to the file content to ensure valid JSON syntax.
-		 * @param p_fileContent The content of the file that will be parsed.
-		 * @return std::wstring The resulting string after applying grammar rules.
-		 */
-		std::wstring _applyGrammar(const std::wstring &p_fileContent)
+		std::wstring applyGrammar(const std::wstring &p_fileContent)
 		{
 			std::wstring result;
 			bool isLiteral(false);
@@ -80,18 +75,18 @@ namespace spk
 			for (size_t i(0); i < p_fileContent.size(); ++i)
 			{
 				wchar_t c = p_fileContent[i];
-				wchar_t next_c = p_fileContent[i + 1];
+				wchar_t nextChar = p_fileContent[i + 1];
 
 				switch (c)
 				{
 				case L'\\':
-					if (std::wstring(L"\"\\/bfnrtu").find(next_c) == std::wstring::npos)
+					if (std::wstring(L"\"\\/bfnrtu").find(nextChar) == std::wstring::npos)
 					{
 						throw std::runtime_error("Invalid escape sequence at line " +
 												 std::to_string(1 + std::count(p_fileContent.begin(), p_fileContent.begin() + i, L'\n')) +
 												 " column " + std::to_string(1 + i - p_fileContent.rfind('\n', i)) + ".");
 					}
-					if (next_c == L'\\')
+					if (nextChar == L'\\')
 					{
 						result += L"\\";
 						++i;
@@ -128,7 +123,7 @@ namespace spk
 			return (result);
 		}
 
-		std::wstring _getAttributeName(const std::wstring &p_content, size_t &p_index)
+		std::wstring getAttributeName(const std::wstring &p_content, size_t &p_index)
 		{
 			if (p_content[p_index] != L'"')
 			{
@@ -152,7 +147,7 @@ namespace spk
 										 "]");
 			}
 			++p_index;
-			return (_handleEscapeSequence(p_content.substr(start, p_index - start - 2)));
+			return (handleEscapeSequence(p_content.substr(start, p_index - start - 2)));
 		}
 
 		/**
@@ -161,7 +156,7 @@ namespace spk
 		 * @param p_index The current index in the content string. It will be updated to the index after the unit substring.
 		 * @return The extracted unit substring.
 		 */
-		std::wstring _extractUnitSubstring(const std::wstring &p_content, size_t &p_index)
+		std::wstring extractUnitSubstring(const std::wstring &p_content, size_t &p_index)
 		{
 			size_t oldIndex = p_index;
 			bool isAString = false;
@@ -199,7 +194,7 @@ namespace spk
 				}
 			}
 
-			return (_handleEscapeSequence(p_content.substr(oldIndex, p_index - oldIndex)));
+			return (handleEscapeSequence(p_content.substr(oldIndex, p_index - oldIndex)));
 		}
 	}
 }

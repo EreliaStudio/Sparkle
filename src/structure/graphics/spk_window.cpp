@@ -21,39 +21,39 @@ namespace spk
 		_onClosureCallback = p_onClosureCallback;
 	}
 
-	LRESULT CALLBACK Window::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+	LRESULT CALLBACK Window::WindowProc(HWND p_hwnd, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam)
 	{
 		Window *window = nullptr;
 
-		if (uMsg == WM_NCCREATE)
+		if (p_uMsg == WM_NCCREATE)
 		{
-			CREATESTRUCT *pCreate = reinterpret_cast<CREATESTRUCT *>(lParam);
+			CREATESTRUCT *pCreate = reinterpret_cast<CREATESTRUCT *>(p_lParam);
 			window = reinterpret_cast<Window *>(pCreate->lpCreateParams);
-			SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(window));
+			SetWindowLongPtr(p_hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(window));
 		}
 		else
 		{
-			window = reinterpret_cast<Window *>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+			window = reinterpret_cast<Window *>(GetWindowLongPtr(p_hwnd, GWLP_USERDATA));
 		}
 
 		if (window != nullptr)
 		{
-			if (window->_receiveEvent(uMsg, wParam, lParam) == true)
+			if (window->_receiveEvent(p_uMsg, p_wParam, p_lParam) == true)
 			{
 				return (TRUE);
 			}
 		}
 
-		return DefWindowProc(hwnd, uMsg, wParam, lParam);
+		return DefWindowProc(p_hwnd, p_uMsg, p_wParam, p_lParam);
 	}
 
-	bool Window::_receiveEvent(UINT uMsg, WPARAM wParam, LPARAM lParam)
+	bool Window::_receiveEvent(UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam)
 	{
-		if (_subscribedModules.contains(uMsg) == false)
+		if (_subscribedModules.contains(p_uMsg) == false)
 		{
 			return (false);
 		}
-		_subscribedModules[uMsg]->receiveEvent(spk::Event(this, uMsg, wParam, lParam));
+		_subscribedModules[p_uMsg]->receiveEvent(spk::Event(this, p_uMsg, p_wParam, p_lParam));
 		return (true);
 	}
 
@@ -199,17 +199,17 @@ namespace spk
 		_pendingTimerDeletions.push_back(p_id + 2);
 	}
 
-	void GLAPIENTRY OpenGLDebugMessageCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message,
-											   const void *userParam)
+	void GLAPIENTRY OpenGLDebugMessageCallback(GLenum p_source, GLenum p_type, GLuint p_id, GLenum p_severity, GLsizei p_length, const GLchar *p_message,
+											   const void *p_userParam)
 	{
-		if (id == 131169 || id == 131185 || id == 131218 || id == 131204)
+		if (p_id == 131169 || p_id == 131185 || p_id == 131218 || p_id == 131204)
 		{
 			return;
 		}
 
 		spk::cout << "---------------" << std::endl;
 
-		switch (source)
+		switch (p_source)
 		{
 		case GL_DEBUG_SOURCE_API:
 			spk::cout << "Source: API" << std::endl;
@@ -231,7 +231,7 @@ namespace spk
 			break;
 		}
 
-		switch (type)
+		switch (p_type)
 		{
 		case GL_DEBUG_TYPE_ERROR:
 			spk::cout << "Type: Error" << std::endl;
@@ -262,7 +262,7 @@ namespace spk
 			break;
 		}
 
-		switch (severity)
+		switch (p_severity)
 		{
 		case GL_DEBUG_SEVERITY_HIGH:
 			spk::cout << "Severity: high" << std::endl;
@@ -278,8 +278,8 @@ namespace spk
 			break;
 		}
 
-		spk::cout << "Debug message (" << id << "): " << message << std::endl;
-		if (severity != GL_DEBUG_SEVERITY_NOTIFICATION)
+		spk::cout << "Debug message (" << p_id << "): " << p_message << std::endl;
+		if (p_severity != GL_DEBUG_SEVERITY_NOTIFICATION)
 		{
 			throw std::runtime_error("Unexpected opengl error detected");
 		}
@@ -606,9 +606,9 @@ namespace spk
 
 	void Window::bindModule(spk::IModule *p_module)
 	{
-		for (const auto &ID : p_module->eventIDs())
+		for (const auto &id : p_module->eventIDs())
 		{
-			_subscribedModules[ID] = p_module;
+			_subscribedModules[id] = p_module;
 		}
 	}
 
