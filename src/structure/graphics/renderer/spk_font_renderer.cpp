@@ -95,7 +95,7 @@ namespace spk
 		_updateUbo();
 	}
 
-	void FontRenderer::setFont(const spk::SafePointer<Font>& p_font)
+	void FontRenderer::setFont(const spk::SafePointer<Font> &p_font)
 	{
 		_font = p_font;
 		_atlas = nullptr;
@@ -122,23 +122,23 @@ namespace spk
 		_outlineColor = p_color;
 		_updateUbo();
 	}
- 
-	const spk::SafePointer<spk::Font>& FontRenderer::font() const
+
+	const spk::SafePointer<spk::Font> &FontRenderer::font() const
 	{
 		return (_font);
 	}
-	
-	const spk::Font::Size& FontRenderer::fontSize() const
+
+	const spk::Font::Size &FontRenderer::fontSize() const
 	{
 		return (_fontSize);
 	}
-	
-	const spk::Color& FontRenderer::glyphColor() const
+
+	const spk::Color &FontRenderer::glyphColor() const
 	{
 		return (_glyphColor);
 	}
-	
-	const spk::Color& FontRenderer::outlineColor() const
+
+	const spk::Color &FontRenderer::outlineColor() const
 	{
 		return (_outlineColor);
 	}
@@ -149,7 +149,7 @@ namespace spk
 		_bufferSet.indexes().clear();
 	}
 
-	spk::Vector2Int FontRenderer::computeTextBaselineOffset(const std::wstring& p_text)
+	spk::Vector2Int FontRenderer::computeTextBaselineOffset(const std::wstring &p_text)
 	{
 		if (_font == nullptr)
 		{
@@ -158,7 +158,7 @@ namespace spk
 		return (_font->computeStringBaselineOffset(p_text, _fontSize));
 	}
 
-	spk::Vector2UInt FontRenderer::computeTextSize(const std::wstring& p_text)
+	spk::Vector2UInt FontRenderer::computeTextSize(const std::wstring &p_text)
 	{
 		if (_font == nullptr)
 		{
@@ -166,8 +166,9 @@ namespace spk
 		}
 		return (_font->computeStringSize(p_text, _fontSize));
 	}
-	
-	spk::Vector2Int FontRenderer::computeTextAnchor(const spk::Geometry2D& p_geometry, const std::wstring& p_string, spk::HorizontalAlignment p_horizontalAlignment, spk::VerticalAlignment p_verticalAlignment)
+
+	spk::Vector2Int FontRenderer::computeTextAnchor(const spk::Geometry2D &p_geometry, const std::wstring &p_string,
+													spk::HorizontalAlignment p_horizontalAlignment, spk::VerticalAlignment p_verticalAlignment)
 	{
 		if (_font == nullptr)
 		{
@@ -188,7 +189,7 @@ namespace spk
 			_atlas = &_font->atlas(_fontSize);
 			_samplerObject.bind(_atlas);
 		}
-		
+
 		spk::Vector2Int glyphAnchor = anchor;
 		unsigned int baseIndexes = 0;
 

@@ -30,9 +30,9 @@ namespace spk
 			break;
 		}
 		}
-	}		
-	
-	ScrollBar::ScrollBar(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+	}
+
+	ScrollBar::ScrollBar(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
 		spk::Widget(p_name, p_parent),
 		_positiveButton(p_name + L" - Positive button", this),
 		_negativeButton(p_name + L" - Negative button", this),
@@ -42,34 +42,38 @@ namespace spk
 		_positiveButton.setIconset(spk::Widget::defaultIconset());
 		_positiveButton.activate();
 
-		_positiveButtonContract = _positiveButton.subscribe([&](){
+		_positiveButtonContract = _positiveButton.subscribe(
+			[&]()
+			{
 				_sliderBar.setRatio(_sliderBar.ratio() + 0.1f);
 				_onEditionContractProvider.trigger(_sliderBar.ratio());
 			});
-		
+
 		_negativeButton.setCornerSize(2);
 		_negativeButton.setIconset(spk::Widget::defaultIconset());
 		_negativeButton.activate();
-		_negativeButtonContract = _negativeButton.subscribe([&](){
+		_negativeButtonContract = _negativeButton.subscribe(
+			[&]()
+			{
 				_sliderBar.setRatio(_sliderBar.ratio() - 0.1f);
 				_onEditionContractProvider.trigger(_sliderBar.ratio());
 			});
 
 		_sliderBar.activate();
-		_sliderBarContract = _sliderBar.subscribe([&](const float& p_ratio){_onEditionContractProvider.trigger(_sliderBar.ratio());});
+		_sliderBarContract = _sliderBar.subscribe([&](const float &p_ratio) { _onEditionContractProvider.trigger(_sliderBar.ratio()); });
 	}
 
-	ScrollBar::Contract ScrollBar::subscribe(const Job& p_job)
+	ScrollBar::Contract ScrollBar::subscribe(const Job &p_job)
 	{
 		return (_onEditionContractProvider.subscribe(p_job));
 	}
 
-	ScrollBar::Contract ScrollBar::subscribe(const VoidJob& p_job)
+	ScrollBar::Contract ScrollBar::subscribe(const VoidJob &p_job)
 	{
 		return (_onEditionContractProvider.subscribe(p_job));
 	}
 
-	void ScrollBar::setOrientation(const Orientation& p_orientation)
+	void ScrollBar::setOrientation(const Orientation &p_orientation)
 	{
 		_sliderBar.setOrientation(p_orientation);
 		switch (p_orientation)
@@ -99,7 +103,7 @@ namespace spk
 		return (_sliderBar.ratio());
 	}
 
-	void ScrollBar::setRatio(const float& p_ratio)
+	void ScrollBar::setRatio(const float &p_ratio)
 	{
 		_sliderBar.setRatio(p_ratio);
 		_onEditionContractProvider.trigger(_sliderBar.ratio());

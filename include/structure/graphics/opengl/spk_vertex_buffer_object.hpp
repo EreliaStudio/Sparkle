@@ -1,7 +1,9 @@
 #pragma once
 
 #include <GL/glew.h>
+
 #include <GL/gl.h>
+
 #include "structure/container/spk_data_buffer.hpp"
 
 namespace spk::OpenGL
@@ -9,8 +11,7 @@ namespace spk::OpenGL
 	class VertexBufferObject
 	{
 	public:
-		enum class Type : GLenum
-		{
+		enum class Type : GLenum {
 			Unknow = GL_INVALID_ENUM,
 			Storage = GL_ARRAY_BUFFER,
 			Layout = GL_ELEMENT_ARRAY_BUFFER,
@@ -24,8 +25,7 @@ namespace spk::OpenGL
 			AtomicCounter = GL_ATOMIC_COUNTER_BUFFER
 		};
 
-		enum class Usage : GLenum
-		{
+		enum class Usage : GLenum {
 			Unknow = GL_INVALID_ENUM,
 			Static = GL_STATIC_DRAW,
 			Dynamic = GL_DYNAMIC_DRAW,
@@ -57,23 +57,23 @@ namespace spk::OpenGL
 		VertexBufferObject(Type p_type, Usage p_usage);
 		~VertexBufferObject();
 
-		VertexBufferObject(const VertexBufferObject& p_other);
-		VertexBufferObject(VertexBufferObject&& p_other) noexcept;
+		VertexBufferObject(const VertexBufferObject &p_other);
+		VertexBufferObject(VertexBufferObject &&p_other) noexcept;
 
-		VertexBufferObject& operator=(const VertexBufferObject& p_other);
-		VertexBufferObject& operator=(VertexBufferObject&& p_other) noexcept;
+		VertexBufferObject &operator=(const VertexBufferObject &p_other);
+		VertexBufferObject &operator=(VertexBufferObject &&p_other) noexcept;
 
 		virtual void activate();
 		void deactivate();
 
 		void clear();
 		virtual void resize(size_t p_size);
-		DataBuffer& dataBuffer();
-		uint8_t* data();
-		const uint8_t* data() const;
+		DataBuffer &dataBuffer();
+		uint8_t *data();
+		const uint8_t *data() const;
 		size_t size() const;
-		void edit(const void* p_data, size_t p_dataSize, size_t p_offset);
-		void append(const void* p_data, size_t p_dataSize);
+		void edit(const void *p_data, size_t p_dataSize, size_t p_offset);
+		void append(const void *p_data, size_t p_dataSize);
 		void validate();
 	};
 }

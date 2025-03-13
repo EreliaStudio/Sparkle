@@ -1,17 +1,19 @@
 #pragma once
 
 #include <GL/glew.h>
+
 #include <GL/gl.h>
-#include <string>
-#include <vector>
-#include <stdexcept>
-#include <cstring>
-#include <unordered_map>
-#include <variant>
+
 #include "spk_debug_macro.hpp"
 #include "structure/container/spk_data_buffer_layout.hpp"
-#include "structure/graphics/opengl/spk_vertex_buffer_object.hpp"
 #include "structure/design_pattern/spk_contract_provider.hpp"
+#include "structure/graphics/opengl/spk_vertex_buffer_object.hpp"
+#include <cstring>
+#include <stdexcept>
+#include <string>
+#include <unordered_map>
+#include <variant>
+#include <vector>
 
 namespace spk::OpenGL
 {
@@ -29,7 +31,7 @@ namespace spk::OpenGL
 
 		private:
 			spk::TContractProvider<size_t> _resizeContractProvider;
-			spk::DataBuffer* _buffer;
+			spk::DataBuffer *_buffer;
 			std::vector<Element> _elements;
 			Element _defaultElement;
 			size_t _fixedReservedSpace;
@@ -40,26 +42,26 @@ namespace spk::OpenGL
 			{
 				for (size_t i = 0; i < _elements.size(); i++)
 				{
-					auto& element = _elements[i];
+					auto &element = _elements[i];
 
 					element = _defaultElement.duplicate(_fixedReservedSpace + (_elementSize + _elementPadding) * i);
 				}
 			}
 
 		public:
-			DynamicArray(const std::wstring& p_name, spk::DataBuffer* p_buffer, size_t p_fixedReservedSpace, size_t p_elementSize, size_t p_elementPadding) :
+			DynamicArray(const std::wstring &p_name, spk::DataBuffer *p_buffer, size_t p_fixedReservedSpace, size_t p_elementSize,
+						 size_t p_elementPadding) :
 				_defaultElement(p_name, p_buffer, 0, p_elementSize),
 				_fixedReservedSpace(p_fixedReservedSpace),
 				_elementSize(p_elementSize),
 				_elementPadding(p_elementPadding)
 			{
-
 			}
 
-			DynamicArray(const DynamicArray&) = delete;
-			DynamicArray& operator = (const DynamicArray&) = delete;
+			DynamicArray(const DynamicArray &) = delete;
+			DynamicArray &operator=(const DynamicArray &) = delete;
 
-			DynamicArray(DynamicArray&& p_other) :
+			DynamicArray(DynamicArray &&p_other) :
 				_resizeContractProvider(std::move(p_other._resizeContractProvider)),
 				_buffer(std::move(p_other._buffer)),
 				_elements(std::move(p_other._elements)),
@@ -68,10 +70,9 @@ namespace spk::OpenGL
 				_elementSize(std::move(p_other._elementSize)),
 				_elementPadding(std::move(p_other._elementPadding))
 			{
-
 			}
 
-			DynamicArray& operator = (DynamicArray&& p_other)
+			DynamicArray &operator=(DynamicArray &&p_other)
 			{
 				if (this != &p_other)
 				{
@@ -86,30 +87,30 @@ namespace spk::OpenGL
 				return (*this);
 			}
 
-			bool contains(const std::wstring& p_name)
+			bool contains(const std::wstring &p_name)
 			{
 				return (_defaultElement.contains(p_name));
 			}
 
-			Element& addElement(const std::wstring& p_name, size_t p_offset, size_t p_size)
+			Element &addElement(const std::wstring &p_name, size_t p_offset, size_t p_size)
 			{
-				Element& result = _defaultElement.addElement(p_name, p_offset, p_size);
+				Element &result = _defaultElement.addElement(p_name, p_offset, p_size);
 
 				redoArray();
 
 				return (result);
 			}
 
-			Element& addElement(const std::wstring& p_name, size_t p_offset, size_t p_nbElement, size_t p_elementSize, size_t p_elementPadding)
+			Element &addElement(const std::wstring &p_name, size_t p_offset, size_t p_nbElement, size_t p_elementSize, size_t p_elementPadding)
 			{
-				Element& result = _defaultElement.addElement(p_name, p_offset, p_nbElement, p_elementSize, p_elementPadding);
+				Element &result = _defaultElement.addElement(p_name, p_offset, p_nbElement, p_elementSize, p_elementPadding);
 
 				redoArray();
 
 				return (result);
 			}
 
-			void removeElement(const std::wstring& p_name)
+			void removeElement(const std::wstring &p_name)
 			{
 				_defaultElement.removeElement(p_name);
 
@@ -131,19 +132,19 @@ namespace spk::OpenGL
 			}
 
 			template <typename TType>
-			void push_back(const TType& p_value)
+			void push_back(const TType &p_value)
 			{
 				resize(_elements.size() + 1);
 
 				_elements.back() = p_value;
 			}
 
-			Element& operator[](size_t p_index)
+			Element &operator[](size_t p_index)
 			{
 				return (_elements[p_index]);
 			}
-			
-			const Element& operator[](size_t p_index) const
+
+			const Element &operator[](size_t p_index) const
 			{
 				return (_elements[p_index]);
 			}
@@ -172,34 +173,35 @@ namespace spk::OpenGL
 			_fixedData(L"FixedData", &(dataBuffer()), 0, 0),
 			_dynamicArray(L"DynamicArray", &dataBuffer(), 0, 0, 0)
 		{
-			_onResizeContract = _dynamicArray._resizeContractProvider.subscribe([&](size_t p_size){resize(p_size);});
+			_onResizeContract = _dynamicArray._resizeContractProvider.subscribe([&](size_t p_size) { resize(p_size); });
 		}
 
-		ShaderStorageBufferObject(const std::wstring& p_blockName, BindingPoint p_bindingPoint, size_t p_fixedSize, size_t p_paddingFixedToDynamic, size_t p_dynamicElementSize, size_t p_dynamicElementPadding) :
+		ShaderStorageBufferObject(const std::wstring &p_blockName, BindingPoint p_bindingPoint, size_t p_fixedSize, size_t p_paddingFixedToDynamic,
+								  size_t p_dynamicElementSize, size_t p_dynamicElementPadding) :
 			VertexBufferObject(VertexBufferObject::Type::ShaderStorage, VertexBufferObject::Usage::Dynamic),
 			_blockName(p_blockName),
 			_bindingPoint(p_bindingPoint),
 			_blockIndex(-1),
 			_fixedData(p_blockName + L" - FixedData", &(dataBuffer()), 0, p_fixedSize),
-			_dynamicArray(p_blockName + L" - DynamicArray", &dataBuffer(), p_fixedSize + p_paddingFixedToDynamic, p_dynamicElementSize, p_dynamicElementPadding)
+			_dynamicArray(p_blockName + L" - DynamicArray", &dataBuffer(), p_fixedSize + p_paddingFixedToDynamic, p_dynamicElementSize,
+						  p_dynamicElementPadding)
 		{
-			_onResizeContract = _dynamicArray._resizeContractProvider.subscribe([&](size_t p_size){resize(p_size);});
+			_onResizeContract = _dynamicArray._resizeContractProvider.subscribe([&](size_t p_size) { resize(p_size); });
 		}
 
-		ShaderStorageBufferObject(const ShaderStorageBufferObject&) = delete;
-		ShaderStorageBufferObject& operator = (const ShaderStorageBufferObject&) = delete;
+		ShaderStorageBufferObject(const ShaderStorageBufferObject &) = delete;
+		ShaderStorageBufferObject &operator=(const ShaderStorageBufferObject &) = delete;
 
-		ShaderStorageBufferObject(ShaderStorageBufferObject&& p_other) :
+		ShaderStorageBufferObject(ShaderStorageBufferObject &&p_other) :
 			_blockName(p_other._blockName),
 			_bindingPoint(p_other._bindingPoint),
 			_blockIndex(p_other._blockIndex),
 			_fixedData(std::move(p_other._fixedData)),
 			_dynamicArray(std::move(p_other._dynamicArray))
 		{
-
 		}
 
-		ShaderStorageBufferObject& operator = (ShaderStorageBufferObject&& p_other)
+		ShaderStorageBufferObject &operator=(ShaderStorageBufferObject &&p_other)
 		{
 			if (this != &p_other)
 			{
@@ -211,12 +213,12 @@ namespace spk::OpenGL
 			}
 			return (*this);
 		}
-		
-		const std::wstring& blockName() const
+
+		const std::wstring &blockName() const
 		{
 			return (_blockName);
 		}
-		void setBlockName(const std::wstring& p_blockName)
+		void setBlockName(const std::wstring &p_blockName)
 		{
 			_blockName = p_blockName;
 		}
@@ -230,22 +232,22 @@ namespace spk::OpenGL
 			_bindingPoint = p_bindingPoint;
 		}
 
-		spk::DataBufferLayout::Element& fixedData()
+		spk::DataBufferLayout::Element &fixedData()
 		{
 			return (_fixedData);
 		}
 
-		const spk::DataBufferLayout::Element& fixedData() const
+		const spk::DataBufferLayout::Element &fixedData() const
 		{
 			return (_fixedData);
 		}
 
-		DynamicArray& dynamicArray()
+		DynamicArray &dynamicArray()
 		{
 			return (_dynamicArray);
 		}
 
-		const DynamicArray& dynamicArray() const
+		const DynamicArray &dynamicArray() const
 		{
 			return (_dynamicArray);
 		}
@@ -256,14 +258,18 @@ namespace spk::OpenGL
 			GLint prog = 0;
 			glGetIntegerv(GL_CURRENT_PROGRAM, &prog);
 			if (prog == 0)
+			{
 				throw std::runtime_error("No shader program is currently bound.");
+			}
 
 			if (_blockIndex == -1)
 			{
 				std::string str = spk::StringUtils::wstringToString(_blockName);
 				_blockIndex = glGetProgramResourceIndex(prog, GL_SHADER_STORAGE_BLOCK, str.c_str());
 				if (_blockIndex == GL_INVALID_INDEX)
+				{
 					throw std::runtime_error("Shader storage block '" + str + "' not found in the shader program.");
+				}
 			}
 
 			glShaderStorageBlockBinding(prog, _blockIndex, _bindingPoint);

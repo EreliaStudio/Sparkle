@@ -6,7 +6,7 @@
 
 namespace spk
 {
-	void Font::Glyph::rescale(const Vector2& p_scaleRatio)
+	void Font::Glyph::rescale(const Vector2 &p_scaleRatio)
 	{
 		for (size_t i = 0; i < 4; i++)
 		{
@@ -14,15 +14,15 @@ namespace spk
 		}
 	}
 
-	void Font::Atlas::_rescaleGlyphs(const Vector2& p_scaleRatio)
+	void Font::Atlas::_rescaleGlyphs(const Vector2 &p_scaleRatio)
 	{
-		for (auto& [key, element] : _glyphs)
+		for (auto &[key, element] : _glyphs)
 		{
 			element.rescale(p_scaleRatio);
 		}
 	}
 
-	void Font::Atlas::_resizeData(const Vector2UInt& p_size)
+	void Font::Atlas::_resizeData(const Vector2UInt &p_size)
 	{
 		std::vector<uint8_t> newPixels(p_size.x * p_size.y, 0x00);
 		std::vector<bool> newUsedPixels(p_size.x * p_size.y, false);
@@ -41,7 +41,7 @@ namespace spk
 		_pixels.swap(newPixels);
 	}
 
-	void Font::Atlas::_applyGlyphPixel(const uint8_t* p_pixelsToApply, const Vector2Int& p_glyphPosition, const Vector2UInt& p_glyphSize)
+	void Font::Atlas::_applyGlyphPixel(const uint8_t *p_pixelsToApply, const Vector2Int &p_glyphPosition, const Vector2UInt &p_glyphSize)
 	{
 		while ((p_glyphPosition.x + p_glyphSize.x >= _size.x) || (p_glyphPosition.y + p_glyphSize.y >= _size.y))
 		{
@@ -58,16 +58,14 @@ namespace spk
 
 	void Font::Atlas::_uploadTexture()
 	{
-		setPixels(
-			_pixels.data(),
-			_size,
-			Texture::Format::GreyLevel
-		);
+		setPixels(_pixels.data(), _size, Texture::Format::GreyLevel);
 	}
 
-	Font::Atlas::Atlas(const stbtt_fontinfo& p_fontInfo, const Data& p_fontData, const size_t& p_textSize, const size_t& p_outlineSize, const Filtering& p_filtering,
-			const Wrap& p_wrap, const Mipmap& p_mipmap) :
-		_textSize(p_textSize), _outlineSize(p_outlineSize), _fontInfo(p_fontInfo)
+	Font::Atlas::Atlas(const stbtt_fontinfo &p_fontInfo, const Data &p_fontData, const size_t &p_textSize, const size_t &p_outlineSize,
+					   const Filtering &p_filtering, const Wrap &p_wrap, const Mipmap &p_mipmap) :
+		_textSize(p_textSize),
+		_outlineSize(p_outlineSize),
+		_fontInfo(p_fontInfo)
 	{
 		Font::Glyph spaceGlyph;
 
@@ -83,23 +81,22 @@ namespace spk
 		_quadrantSize = _size;
 		_nextGlyphAnchor = _quadrantAnchor;
 		_nextLineAnchor = _quadrantAnchor;
-
 	}
 
-	void Font::Atlas::loadGlyphs(const std::wstring& p_glyphsToLoad)
+	void Font::Atlas::loadGlyphs(const std::wstring &p_glyphsToLoad)
 	{
-		for (const auto& c : p_glyphsToLoad)
+		for (const auto &c : p_glyphsToLoad)
 		{
 			operator[](c);
 		}
 	}
 
-	const Font::Glyph& Font::Atlas::operator[](const wchar_t& p_char)
+	const Font::Glyph &Font::Atlas::operator[](const wchar_t &p_char)
 	{
 		return (glyph(p_char));
 	}
 
-	const Font::Glyph& Font::Atlas::glyph(const wchar_t& p_char)
+	const Font::Glyph &Font::Atlas::glyph(const wchar_t &p_char)
 	{
 		if (_glyphs.contains(p_char) == false)
 		{
@@ -110,7 +107,7 @@ namespace spk
 		return _glyphs.at(p_char);
 	}
 
-	Font Font::fromRawData(const std::vector<uint8_t>& p_data, const Filtering& p_filtering, const Wrap& p_wrap, const Mipmap& p_mipmap)
+	Font Font::fromRawData(const std::vector<uint8_t> &p_data, const Filtering &p_filtering, const Wrap &p_wrap, const Mipmap &p_mipmap)
 	{
 		Font result;
 
@@ -122,32 +119,31 @@ namespace spk
 
 	Font::Font()
 	{
-
 	}
 
-	Font::Font(const std::filesystem::path& p_path)
+	Font::Font(const std::filesystem::path &p_path)
 	{
 		loadFromFile(p_path);
 	}
 
-	void Font::setProperties(const Filtering& p_filtering, const Wrap& p_wrap, const Mipmap& p_mipmap)
+	void Font::setProperties(const Filtering &p_filtering, const Wrap &p_wrap, const Mipmap &p_mipmap)
 	{
 		_filtering = p_filtering;
 		_wrap = p_wrap;
 		_mipmap = p_mipmap;
 
-		for (auto& atlas : _atlases)
+		for (auto &atlas : _atlases)
 		{
 			atlas.second.setProperties(_filtering, _wrap, _mipmap);
 		}
 	}
 
-	Vector2UInt Font::Atlas::computeCharSize(const wchar_t& p_char)
+	Vector2UInt Font::Atlas::computeCharSize(const wchar_t &p_char)
 	{
 		return (operator[](p_char).size);
 	}
 
-	Vector2UInt Font::Atlas::computeStringSize(const std::wstring& p_string)
+	Vector2UInt Font::Atlas::computeStringSize(const std::wstring &p_string)
 	{
 		int totalWidth = 0;
 		int maxHeight = 0;
@@ -155,7 +151,7 @@ namespace spk
 
 		for (size_t i = 0; i < p_string.size(); i++)
 		{
-			const Glyph& glyph = operator[](p_string[i]);
+			const Glyph &glyph = operator[](p_string[i]);
 
 			totalWidth += glyph.step.x;
 
@@ -167,13 +163,13 @@ namespace spk
 		return Vector2UInt(totalWidth, totalHeight);
 	}
 
-	Vector2Int Font::Atlas::computeStringBaselineOffset(const std::wstring& p_string)
+	Vector2Int Font::Atlas::computeStringBaselineOffset(const std::wstring &p_string)
 	{
 		Vector2Int baselineResult = 0;
 
 		for (size_t i = 0; i < p_string.size(); i++)
 		{
-			const Glyph& glyph = operator[](p_string[i]);
+			const Glyph &glyph = operator[](p_string[i]);
 
 			if (i == 0)
 			{
@@ -184,91 +180,93 @@ namespace spk
 
 		return (baselineResult);
 	}
-	
-	Vector2Int Font::Atlas::computeStringAnchor(const spk::Geometry2D& p_geometry, const std::wstring& p_string, spk::HorizontalAlignment p_horizontalAlignment, spk::VerticalAlignment p_verticalAlignment)
+
+	Vector2Int Font::Atlas::computeStringAnchor(const spk::Geometry2D &p_geometry, const std::wstring &p_string,
+												spk::HorizontalAlignment p_horizontalAlignment, spk::VerticalAlignment p_verticalAlignment)
 	{
 		spk::Vector2Int result = p_geometry.anchor;
 
 		switch (p_horizontalAlignment)
 		{
-			case HorizontalAlignment::Left:
-			{
-				spk::Vector2Int stringBaseline = computeStringBaselineOffset(p_string);
+		case HorizontalAlignment::Left:
+		{
+			spk::Vector2Int stringBaseline = computeStringBaselineOffset(p_string);
 
-				result.x += stringBaseline.x;
-				break;
-			}
-			case HorizontalAlignment::Centered:
-			{
-				spk::Vector2Int stringSize = computeStringSize(p_string);
-				spk::Vector2Int stringBaseline = computeStringBaselineOffset(p_string);
+			result.x += stringBaseline.x;
+			break;
+		}
+		case HorizontalAlignment::Centered:
+		{
+			spk::Vector2Int stringSize = computeStringSize(p_string);
+			spk::Vector2Int stringBaseline = computeStringBaselineOffset(p_string);
 
-				result.x += p_geometry.size.x / 2 + (stringBaseline.x) - stringSize.x / 2;
-				break;
-			}
-			case HorizontalAlignment::Right:
-			{
-				spk::Vector2Int stringSize = computeStringSize(p_string);
-				spk::Vector2Int stringBaseline = computeStringBaselineOffset(p_string);
+			result.x += p_geometry.size.x / 2 + (stringBaseline.x) - stringSize.x / 2;
+			break;
+		}
+		case HorizontalAlignment::Right:
+		{
+			spk::Vector2Int stringSize = computeStringSize(p_string);
+			spk::Vector2Int stringBaseline = computeStringBaselineOffset(p_string);
 
-				result.x += p_geometry.size.x + stringBaseline.x - stringSize.x;
-				break;
-			}
+			result.x += p_geometry.size.x + stringBaseline.x - stringSize.x;
+			break;
+		}
 		}
 
 		switch (p_verticalAlignment)
 		{
-			case VerticalAlignment::Top:
-			{
-				spk::Vector2Int stringBaseline = computeStringBaselineOffset(p_string);
+		case VerticalAlignment::Top:
+		{
+			spk::Vector2Int stringBaseline = computeStringBaselineOffset(p_string);
 
-				result.y += stringBaseline.y;
-				break;
-			}
-			case VerticalAlignment::Centered:
-			{
-				spk::Vector2Int stringSize = computeStringSize(p_string);
-				spk::Vector2Int stringBaseline = computeStringBaselineOffset(p_string);
+			result.y += stringBaseline.y;
+			break;
+		}
+		case VerticalAlignment::Centered:
+		{
+			spk::Vector2Int stringSize = computeStringSize(p_string);
+			spk::Vector2Int stringBaseline = computeStringBaselineOffset(p_string);
 
-				result.y += p_geometry.size.y / 2 + (stringBaseline.y) - stringSize.y / 2;
-				break; 
-			}
-			case VerticalAlignment::Down:
-			{
-				spk::Vector2Int stringSize = computeStringSize(p_string);
-				spk::Vector2Int stringBaseline = computeStringBaselineOffset(p_string);
+			result.y += p_geometry.size.y / 2 + (stringBaseline.y) - stringSize.y / 2;
+			break;
+		}
+		case VerticalAlignment::Down:
+		{
+			spk::Vector2Int stringSize = computeStringSize(p_string);
+			spk::Vector2Int stringBaseline = computeStringBaselineOffset(p_string);
 
-				result.y += p_geometry.size.y + (stringBaseline.y) - stringSize.y;
-				break;
-			}
+			result.y += p_geometry.size.y + (stringBaseline.y) - stringSize.y;
+			break;
+		}
 		}
 
 		return (result);
 	}
 
-	Vector2UInt Font::computeCharSize(const wchar_t& p_char, const Font::Size& p_size)
+	Vector2UInt Font::computeCharSize(const wchar_t &p_char, const Font::Size &p_size)
 	{
 		return (atlas(p_size).computeCharSize(p_char));
 	}
 
-	Vector2UInt Font::computeStringSize(const std::wstring& p_string, const Font::Size& p_size)
+	Vector2UInt Font::computeStringSize(const std::wstring &p_string, const Font::Size &p_size)
 	{
 		return (atlas(p_size).computeStringSize(p_string));
 	}
 
-	Vector2Int Font::computeStringBaselineOffset(const std::wstring& p_string, const Font::Size& p_size)
+	Vector2Int Font::computeStringBaselineOffset(const std::wstring &p_string, const Font::Size &p_size)
 	{
 		return (atlas(p_size).computeStringBaselineOffset(p_string));
 	}
 
-	Vector2Int Font::computeStringAnchor(const spk::Geometry2D& p_geometry, const std::wstring& p_string, const Font::Size& p_size, spk::HorizontalAlignment p_horizontalAlignment, spk::VerticalAlignment p_verticalAlignment)
+	Vector2Int Font::computeStringAnchor(const spk::Geometry2D &p_geometry, const std::wstring &p_string, const Font::Size &p_size,
+										 spk::HorizontalAlignment p_horizontalAlignment, spk::VerticalAlignment p_verticalAlignment)
 	{
 		return (atlas(p_size).computeStringAnchor(p_geometry, p_string, p_horizontalAlignment, p_verticalAlignment));
 	}
 
-	Font::Size Font::computeOptimalTextSize(const std::wstring& p_string, float p_outlineSizeRatio, const Vector2UInt& p_textArea)
+	Font::Size Font::computeOptimalTextSize(const std::wstring &p_string, float p_outlineSizeRatio, const Vector2UInt &p_textArea)
 	{
-		std::vector<size_t> deltas = { 100u, 50u, 20u, 10u, 1u };
+		std::vector<size_t> deltas = {100u, 50u, 20u, 10u, 1u};
 		Font::Size result = 2;
 
 		if (p_string == L"")
@@ -283,7 +281,9 @@ namespace spk
 		for (int i = 0; i < static_cast<int>(deltas.size()); i++)
 		{
 			if (deltas[i] > p_textArea.y)
+			{
 				continue;
+			}
 
 			bool enough = false;
 			while (enough == false)
@@ -311,7 +311,7 @@ namespace spk
 		return (result);
 	}
 
-	Font::Atlas& Font::atlas(const Size& p_size)
+	Font::Atlas &Font::atlas(const Size &p_size)
 	{
 		if (_atlases.find(p_size) == _atlases.end())
 		{

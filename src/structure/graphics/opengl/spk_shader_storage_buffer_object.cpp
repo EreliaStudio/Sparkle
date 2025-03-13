@@ -4,5 +4,5 @@
 
 namespace spk::OpenGL
 {
-	
+
 }

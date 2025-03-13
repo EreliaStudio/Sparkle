@@ -65,7 +65,7 @@ namespace spk
 		_samplerObject.bind(p_image);
 	}
 
-	const spk::SafePointer<const spk::Texture>& TextureRenderer::texture() const
+	const spk::SafePointer<const spk::Texture> &TextureRenderer::texture() const
 	{
 		return (_samplerObject.texture());
 	}
@@ -81,19 +81,16 @@ namespace spk
 		size_t nbVertex = _bufferSet.layout().size() / sizeof(Vertex);
 
 		spk::Vector3 topLeft = spk::Viewport::convertScreenToOpenGL({geom.anchor.x, geom.anchor.y}, layer);
-		spk::Vector3 bottomRight = spk::Viewport::convertScreenToOpenGL({geom.anchor.x + static_cast<int32_t>(geom.size.x),
-																		 geom.anchor.y + static_cast<int32_t>(geom.size.y)},
-																		layer);
+		spk::Vector3 bottomRight = spk::Viewport::convertScreenToOpenGL(
+			{geom.anchor.x + static_cast<int32_t>(geom.size.x), geom.anchor.y + static_cast<int32_t>(geom.size.y)}, layer);
 
 		float u1 = section.anchor.x;
 		float v1 = section.anchor.y + section.size.y;
 		float u2 = section.anchor.x + section.size.x;
 		float v2 = section.anchor.y;
 
-		_bufferSet.layout()	<< Vertex{{topLeft.x, bottomRight.y}, topLeft.z, {u1, v1}}
-							<< Vertex{{bottomRight.x, bottomRight.y}, topLeft.z, {u2, v1}}
-							<< Vertex{{topLeft.x, topLeft.y}, topLeft.z, {u1, v2}}
-							<< Vertex{{bottomRight.x, topLeft.y}, topLeft.z, {u2, v2}};
+		_bufferSet.layout() << Vertex{{topLeft.x, bottomRight.y}, topLeft.z, {u1, v1}} << Vertex{{bottomRight.x, bottomRight.y}, topLeft.z, {u2, v1}}
+							<< Vertex{{topLeft.x, topLeft.y}, topLeft.z, {u1, v2}} << Vertex{{bottomRight.x, topLeft.y}, topLeft.z, {u2, v2}};
 
 		std::array<unsigned int, 6> indices = {0, 1, 2, 2, 1, 3};
 		for (const auto &index : indices)
@@ -111,7 +108,9 @@ namespace spk
 	void TextureRenderer::render()
 	{
 		if (_samplerObject.texture() == nullptr)
+		{
 			return;
+		}
 
 		_program->activate();
 		_bufferSet.activate();

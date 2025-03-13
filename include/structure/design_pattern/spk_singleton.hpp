@@ -1,4 +1,4 @@
-#pragma once 
+#pragma once
 
 #include <memory>
 #include <stdexcept>
@@ -23,12 +23,12 @@ namespace spk
 			Instanciator(Args &&...p_args)
 			{
 				std::lock_guard<std::recursive_mutex> lock(Singleton<TType>::mutex());
-				
+
 				if (Singleton<TType>::instance() == nullptr)
 				{
 					Singleton<TType>::instanciate(std::forward<Args>(p_args)...);
 				}
-				
+
 				reference++;
 			}
 
@@ -43,7 +43,7 @@ namespace spk
 				}
 			}
 
-			spk::SafePointer<TType> operator ->()
+			spk::SafePointer<TType> operator->()
 			{
 				std::lock_guard<std::recursive_mutex> lock(Singleton<TType>::mutex());
 
@@ -54,10 +54,9 @@ namespace spk
 	protected:
 		Singleton()
 		{
-
 		}
 
-		static inline TType* _instance = nullptr;
+		static inline TType *_instance = nullptr;
 		static inline std::recursive_mutex _mutex;
 
 	public:
@@ -85,10 +84,10 @@ namespace spk
 			return _instance;
 		}
 
-		static std::recursive_mutex& mutex()
+		static std::recursive_mutex &mutex()
 		{
-            return _mutex;
-        }
+			return _mutex;
+		}
 
 		static void release()
 		{

@@ -7,9 +7,9 @@ namespace spk
 	class Screen : public spk::Widget
 	{
 	private:
-		static inline Screen* _activeMenu = nullptr;
+		static inline Screen *_activeMenu = nullptr;
 
 	public:
-		Screen(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent);
+		Screen(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent);
 	};
 }

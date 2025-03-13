@@ -30,19 +30,16 @@ namespace spk
 	Message::Message() :
 		_header()
 	{
-		
 	}
 
 	Message::Message(const Header::Type &p_messageType) :
 		_header(p_messageType)
 	{
-
 	}
 
 	Message::Message(const Header::ClientID &p_clientToRedirectMessage, const Header::Type &p_messageType) :
 		_header(p_clientToRedirectMessage, p_messageType)
 	{
-
 	}
 
 	void Message::setType(const Header::Type &p_type)

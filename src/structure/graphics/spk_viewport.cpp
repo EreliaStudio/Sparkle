@@ -2,6 +2,8 @@
 
 #include <GL/glew.h>
 
+#include <GL/gl.h>
+
 #include "structure/spk_iostream.hpp"
 #include "structure/math/spk_matrix.hpp"
 

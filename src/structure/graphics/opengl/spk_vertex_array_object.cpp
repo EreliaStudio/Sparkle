@@ -11,7 +11,10 @@
 
 namespace spk::OpenGL
 {
-	VertexArrayObject::VertexArrayObject() : _id(0) {}
+	VertexArrayObject::VertexArrayObject() :
+		_id(0)
+	{
+	}
 
 	VertexArrayObject::~VertexArrayObject()
 	{
@@ -21,14 +24,18 @@ namespace spk::OpenGL
 		}
 	}
 
-	VertexArrayObject::VertexArrayObject(const VertexArrayObject& p_other) : _id(0) {}
-	
-	VertexArrayObject::VertexArrayObject(VertexArrayObject&& p_other) : _id(p_other._id)
+	VertexArrayObject::VertexArrayObject(const VertexArrayObject &p_other) :
+		_id(0)
+	{
+	}
+
+	VertexArrayObject::VertexArrayObject(VertexArrayObject &&p_other) :
+		_id(p_other._id)
 	{
 		p_other._id = 0;
 	}
 
-	VertexArrayObject& VertexArrayObject::operator = (const VertexArrayObject& p_other)
+	VertexArrayObject &VertexArrayObject::operator=(const VertexArrayObject &p_other)
 	{
 		if (this != &p_other)
 		{
@@ -36,8 +43,8 @@ namespace spk::OpenGL
 		}
 		return (*this);
 	}
-	
-	VertexArrayObject& VertexArrayObject::operator = (VertexArrayObject&& p_other)
+
+	VertexArrayObject &VertexArrayObject::operator=(VertexArrayObject &&p_other)
 	{
 		if (this != &p_other)
 		{

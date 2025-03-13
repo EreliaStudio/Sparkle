@@ -4,9 +4,21 @@
 
 namespace spk
 {
-	Quaternion::Quaternion() : x(0.f), y(0.f), z(0.f), w(1.f) {}
-	Quaternion::Quaternion(float p_x, float p_y, float p_z, float p_w) : x(p_x), y(p_y), z(p_z), w(p_w) {}
-        
+	Quaternion::Quaternion() :
+		x(0.f),
+		y(0.f),
+		z(0.f),
+		w(1.f)
+	{
+	}
+	Quaternion::Quaternion(float p_x, float p_y, float p_z, float p_w) :
+		x(p_x),
+		y(p_y),
+		z(p_z),
+		w(p_w)
+	{
+	}
+
 	std::wstring Quaternion::to_wstring() const
 	{
 		std::wstringstream wss;
@@ -21,13 +33,16 @@ namespace spk
 		return ss.str();
 	}
 
-	Quaternion Quaternion::identity() { return Quaternion(0.f, 0.f, 0.f, 1.f); }
+	Quaternion Quaternion::identity()
+	{
+		return Quaternion(0.f, 0.f, 0.f, 1.f);
+	}
 
 	Quaternion Quaternion::fromEuler(const Vector3 &p_euler)
 	{
 		float pitch = spk::degreeToRadian(p_euler.y);
-		float yaw   = spk::degreeToRadian(p_euler.z);
-		float roll  = spk::degreeToRadian(p_euler.x);
+		float yaw = spk::degreeToRadian(p_euler.z);
+		float roll = spk::degreeToRadian(p_euler.x);
 
 		double cr = cos(roll * 0.5);
 		double sr = sin(roll * 0.5);
@@ -55,9 +70,13 @@ namespace spk
 
 		float sinp = 2.f * (w * y - z * x);
 		if (std::abs(sinp) >= 1.f)
+		{
 			euler.x = std::copysign((float)M_PI / 2.f, sinp);
+		}
 		else
+		{
 			euler.x = std::asin(sinp);
+		}
 
 		float siny_cosp = 2.f * (w * z + x * y);
 		float cosy_cosp = 1.f - 2.f * (y * y + z * z);
@@ -130,54 +149,60 @@ namespace spk
 		return (this->operator*(p_vector));
 	}
 
-	Quaternion Quaternion::lookAt(const Vector3& eye, const Vector3& target, const Vector3& p_up)
+	Quaternion Quaternion::lookAt(const Vector3 &eye, const Vector3 &target, const Vector3 &p_up)
 	{
 		Vector3 forward = (target - eye).normalize();
-    
+
 		float forwardToUpDot = forward.dot(p_up);
 		Vector3 right = Vector3(1, 0, 0);
 		if (forwardToUpDot != -1 && forwardToUpDot != 1)
 		{
 			right = forward.cross(p_up).normalize();
 		}
-		
+
 		Vector3 up = right.cross(forward);
-		
+
 		float m[3][3];
-		m[0][0] = right.x;   m[0][1] = up.x;   m[0][2] = forward.x;
-		m[1][0] = right.y;   m[1][1] = up.y;   m[1][2] = forward.y;
-		m[2][0] = right.z;   m[2][1] = up.z;   m[2][2] = forward.z;
-		
+		m[0][0] = right.x;
+		m[0][1] = up.x;
+		m[0][2] = forward.x;
+		m[1][0] = right.y;
+		m[1][1] = up.y;
+		m[1][2] = forward.y;
+		m[2][0] = right.z;
+		m[2][1] = up.z;
+		m[2][2] = forward.z;
+
 		Quaternion q;
 		float trace = m[0][0] + m[1][1] + m[2][2];
 
-		if (trace > 0.0f) 
+		if (trace > 0.0f)
 		{
 			float s = std::sqrt(trace + 1.0f) * 2.0f;
 			q.w = s * 0.25f;
 			q.x = (m[2][1] - m[1][2]) / s;
 			q.y = (m[0][2] - m[2][0]) / s;
 			q.z = (m[1][0] - m[0][1]) / s;
-		} 
-		else 
+		}
+		else
 		{
-			if (m[0][0] > m[1][1] && m[0][0] > m[2][2]) 
+			if (m[0][0] > m[1][1] && m[0][0] > m[2][2])
 			{
 				float s = std::sqrt(1.0f + m[0][0] - m[1][1] - m[2][2]) * 2.0f;
 				q.x = 0.25f * s;
 				q.y = (m[0][1] + m[1][0]) / s;
 				q.z = (m[0][2] + m[2][0]) / s;
 				q.w = (m[2][1] - m[1][2]) / s;
-			} 
-			else if (m[1][1] > m[2][2]) 
+			}
+			else if (m[1][1] > m[2][2])
 			{
 				float s = std::sqrt(1.0f + m[1][1] - m[0][0] - m[2][2]) * 2.0f;
 				q.x = (m[0][1] + m[1][0]) / s;
 				q.y = 0.25f * s;
 				q.z = (m[1][2] + m[2][1]) / s;
 				q.w = (m[0][2] - m[2][0]) / s;
-			} 
-			else 
+			}
+			else
 			{
 				float s = std::sqrt(1.0f + m[2][2] - m[0][0] - m[1][1]) * 2.0f;
 				q.x = (m[0][2] + m[2][0]) / s;

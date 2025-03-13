@@ -12,16 +12,16 @@
 namespace spk
 {
 	std::vector<std::pair<int, int>> UnicodeBlocks = {
-	{0x0000, 0x007F}, // Basic Latin
-	{0x0080, 0x00FF}, // Latin-1 Supplement
-	// Add other ranges as needed
+		{0x0000, 0x007F}, // Basic Latin
+		{0x0080, 0x00FF}, // Latin-1 Supplement
+		// Add other ranges as needed
 	};
 
 	void Font::Atlas::loadAllRenderableGlyphs()
 	{
 		std::unordered_set<int> renderableGlyphs;
 
-		for (const auto& block : UnicodeBlocks)
+		for (const auto &block : UnicodeBlocks)
 		{
 			for (int codepoint = block.first; codepoint <= block.second; ++codepoint)
 			{
@@ -41,7 +41,7 @@ namespace spk
 		_uploadTexture();
 	}
 
-	Vector2Int Font::Atlas::_computeGlyphPosition(const Vector2UInt& p_glyphSize)
+	Vector2Int Font::Atlas::_computeGlyphPosition(const Vector2UInt &p_glyphSize)
 	{
 		if ((_nextGlyphAnchor.x + p_glyphSize.x) >= (_quadrantAnchor.x + _quadrantSize.x))
 		{
@@ -128,22 +128,23 @@ namespace spk
 		return (result);
 	}
 
-
-	void Font::Atlas::_loadGlyph(const wchar_t& p_char)
+	void Font::Atlas::_loadGlyph(const wchar_t &p_char)
 	{
 		Glyph glyph;
 
 		float scale = stbtt_ScaleForMappingEmToPixels(&_fontInfo, static_cast<float>(_textSize));
 
 		int width, height, xOffset, yOffset;
-		uint8_t* glyphBitmap = stbtt_GetCodepointSDF(
-			&_fontInfo,
-			scale,
-			p_char,
-			static_cast<int>(_outlineSize),
-			128,
-			256.0f / static_cast<float>(_outlineSize),
-			&width, &height, &xOffset, &yOffset);
+		uint8_t *glyphBitmap = stbtt_GetCodepointSDF(&_fontInfo,
+													 scale,
+													 p_char,
+													 static_cast<int>(_outlineSize),
+													 128,
+													 256.0f / static_cast<float>(_outlineSize),
+													 &width,
+													 &height,
+													 &xOffset,
+													 &yOffset);
 
 		if (glyphBitmap == nullptr)
 		{
@@ -169,26 +170,30 @@ namespace spk
 		glyph.positions[2] = Vector2Int(xOffset + width, yOffset);
 		glyph.positions[3] = Vector2Int(xOffset + width, yOffset + height);
 
-		glyph.UVs[0] = Vector2(static_cast<float>(glyphPosition.x) / _size.x + halfPixelSize.x, static_cast<float>(glyphPosition.y) / _size.y + halfPixelSize.y);
-		glyph.UVs[1] = Vector2(static_cast<float>(glyphPosition.x) / _size.x + halfPixelSize.x, static_cast<float>(glyphPosition.y + glyph.size.y) / _size.y - halfPixelSize.y);
-		glyph.UVs[2] = Vector2(static_cast<float>(glyphPosition.x + glyph.size.x) / _size.x - halfPixelSize.x, static_cast<float>(glyphPosition.y) / _size.y + halfPixelSize.y);
-		glyph.UVs[3] = Vector2(static_cast<float>(glyphPosition.x + glyph.size.x) / _size.x - halfPixelSize.x, static_cast<float>(glyphPosition.y + glyph.size.y) / _size.y - halfPixelSize.y);
+		glyph.UVs[0] =
+			Vector2(static_cast<float>(glyphPosition.x) / _size.x + halfPixelSize.x, static_cast<float>(glyphPosition.y) / _size.y + halfPixelSize.y);
+		glyph.UVs[1] = Vector2(static_cast<float>(glyphPosition.x) / _size.x + halfPixelSize.x,
+							   static_cast<float>(glyphPosition.y + glyph.size.y) / _size.y - halfPixelSize.y);
+		glyph.UVs[2] = Vector2(static_cast<float>(glyphPosition.x + glyph.size.x) / _size.x - halfPixelSize.x,
+							   static_cast<float>(glyphPosition.y) / _size.y + halfPixelSize.y);
+		glyph.UVs[3] = Vector2(static_cast<float>(glyphPosition.x + glyph.size.x) / _size.x - halfPixelSize.x,
+							   static_cast<float>(glyphPosition.y + glyph.size.y) / _size.y - halfPixelSize.y);
 
 		glyph.step = Vector2(std::ceil(advance * scale) + _outlineSize, 0);
 
 		_glyphs[p_char] = glyph;
-		
+
 		stbtt_FreeBitmap(glyphBitmap, nullptr);
 	}
 
-	void Font::loadFromData(const std::vector<uint8_t>& p_data)
+	void Font::loadFromData(const std::vector<uint8_t> &p_data)
 	{
 		_fontData = p_data;
 
-		stbtt_InitFont(&_fontInfo, reinterpret_cast<const unsigned char*>(_fontData.data()), 0);
+		stbtt_InitFont(&_fontInfo, reinterpret_cast<const unsigned char *>(_fontData.data()), 0);
 	}
-	
-	void Font::loadFromFile(const std::filesystem::path& p_path)
+
+	void Font::loadFromFile(const std::filesystem::path &p_path)
 	{
 		loadFromData(FileUtils::readFileAsBytes(p_path));
 	}

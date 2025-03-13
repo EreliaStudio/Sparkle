@@ -1,12 +1,14 @@
 #pragma once
 
 #include <GL/glew.h>
+
 #include <GL/gl.h>
-#include <vector>
-#include <unordered_map>
-#include <deque>
-#include <cstring>
+
 #include "structure/graphics/spk_geometry_2D.hpp"
+#include <cstring>
+#include <deque>
+#include <unordered_map>
+#include <vector>
 
 namespace spk
 {
@@ -26,8 +28,7 @@ namespace spk
 
 		struct Section
 		{
-			union
-			{
+			union {
 				spk::Vector2 anchor;
 				struct
 				{
@@ -36,8 +37,7 @@ namespace spk
 				};
 			};
 
-			union
-			{
+			union {
 				spk::Vector2 size;
 				struct
 				{
@@ -81,13 +81,12 @@ namespace spk
 		};
 
 	private:
-
 		static inline std::deque<ID> _availableIDs;
 		static inline ID _nextID = 0;
 		static inline ID InvalidID = -1;
 
 		static ID takeID();
-		static void releaseID(const Texture::ID& p_id);
+		static void releaseID(const Texture::ID &p_id);
 
 		ID _id;
 
@@ -100,33 +99,31 @@ namespace spk
 		Wrap _wrap;
 		Mipmap _mipmap;
 
-		size_t _getBytesPerPixel(const Format& format) const;
+		size_t _getBytesPerPixel(const Format &format) const;
 
 	public:
 		Texture();
 		virtual ~Texture();
-		
-		Texture(const Texture& p_other) = delete;
-		Texture& operator=(const Texture& p_other) = delete;
 
-		Texture(Texture&& p_other) noexcept;
-		Texture& operator=(Texture&& p_other) noexcept;
+		Texture(const Texture &p_other) = delete;
+		Texture &operator=(const Texture &p_other) = delete;
 
-		void setPixels(const std::vector<uint8_t>& p_data, const spk::Vector2UInt& p_size,
-			const Format& p_format, const Filtering& p_filtering,
-			const Wrap& p_wrap, const Mipmap& p_mipmap);
+		Texture(Texture &&p_other) noexcept;
+		Texture &operator=(Texture &&p_other) noexcept;
 
-		void setPixels(const std::vector<uint8_t>& p_data, const spk::Vector2UInt& p_size, const Format& p_format);
+		void setPixels(const std::vector<uint8_t> &p_data, const spk::Vector2UInt &p_size, const Format &p_format, const Filtering &p_filtering,
+					   const Wrap &p_wrap, const Mipmap &p_mipmap);
 
-		void setPixels(const uint8_t* p_data, const spk::Vector2UInt& p_size,
-			const Format& p_format, const Filtering& p_filtering,
-			const Wrap& p_wrap, const Mipmap& p_mipmap);
+		void setPixels(const std::vector<uint8_t> &p_data, const spk::Vector2UInt &p_size, const Format &p_format);
 
-		void setPixels(const uint8_t* p_data, const spk::Vector2UInt& p_size, const Format& p_format);
-		void setProperties(const Filtering& p_filtering, const Wrap& p_wrap, const Mipmap& p_mipmap);
+		void setPixels(const uint8_t *p_data, const spk::Vector2UInt &p_size, const Format &p_format, const Filtering &p_filtering,
+					   const Wrap &p_wrap, const Mipmap &p_mipmap);
 
-		const std::vector<uint8_t>& pixels() const;
-		const spk::Vector2UInt& size() const;
+		void setPixels(const uint8_t *p_data, const spk::Vector2UInt &p_size, const Format &p_format);
+		void setProperties(const Filtering &p_filtering, const Wrap &p_wrap, const Mipmap &p_mipmap);
+
+		const std::vector<uint8_t> &pixels() const;
+		const spk::Vector2UInt &size() const;
 		Format format() const;
 		Filtering filtering() const;
 		Wrap wrap() const;

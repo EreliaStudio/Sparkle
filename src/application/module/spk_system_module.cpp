@@ -6,15 +6,8 @@
 
 namespace spk
 {
-	void SystemModule::_treatEvent(spk::SystemEvent&& p_event)
+	void SystemModule::_treatEvent(spk::SystemEvent &&p_event)
 	{
-		/* Event types :
-				Resize,
-				TakeFocus,
-				LoseFocus,
-				Quit,
-				Move
-		*/
 		switch (p_event.type)
 		{
 		case spk::SystemEvent::Type::Quit:
@@ -62,19 +55,20 @@ namespace spk
 		case spk::SystemEvent::Type::SetCursor:
 		{
 			if (p_event.window->_savedCursor != p_event.window->_currentCursor)
+			{
 				p_event.window->_applyCursor();
+			}
 			break;
 		}
 		}
 	}
 
-	spk::SystemEvent SystemModule::_convertEventToEventType(spk::Event&& p_event)
+	spk::SystemEvent SystemModule::_convertEventToEventType(spk::Event &&p_event)
 	{
 		return (p_event.systemEvent);
 	}
 
 	SystemModule::SystemModule()
 	{
-
 	}
 }

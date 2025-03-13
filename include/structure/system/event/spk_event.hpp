@@ -10,14 +10,14 @@
 #include <Windows.h>
 
 #include "structure/spk_safe_pointer.hpp"
-#include "structure/system/device/spk_mouse.hpp"
-#include "structure/system/device/spk_keyboard.hpp"
 #include "structure/system/device/spk_controller.hpp"
+#include "structure/system/device/spk_keyboard.hpp"
+#include "structure/system/device/spk_mouse.hpp"
 
 #include "structure/graphics/spk_geometry_2D.hpp"
 
-#include <unordered_map>
 #include <functional>
+#include <unordered_map>
 
 #include "utils/spk_system_utils.hpp"
 
@@ -51,7 +51,6 @@ namespace spk
 	struct IEvent
 	{
 	private:
-
 	public:
 		bool _consumed;
 		Modifiers _modifiers;
@@ -60,7 +59,8 @@ namespace spk
 		IEvent() :
 			_consumed(false),
 			_modifiers()
-		{}
+		{
+		}
 
 		void consume()
 		{
@@ -78,7 +78,7 @@ namespace spk
 
 	struct PaintEvent : public IEvent
 	{
-		static inline std::vector<UINT> EventIDs = { WM_PAINT_REQUEST, WM_RESIZE_REQUEST };
+		static inline std::vector<UINT> EventIDs = {WM_PAINT_REQUEST, WM_RESIZE_REQUEST};
 		enum class Type
 		{
 			Unknow,
@@ -92,7 +92,7 @@ namespace spk
 
 	struct UpdateEvent : public IEvent
 	{
-		static inline std::vector<UINT> EventIDs = { WM_UPDATE_REQUEST };
+		static inline std::vector<UINT> EventIDs = {WM_UPDATE_REQUEST};
 		enum class Type
 		{
 			Unknow,
@@ -108,12 +108,17 @@ namespace spk
 
 	struct MouseEvent : public IEvent
 	{
-		static inline std::vector<UINT> EventIDs = {
-			WM_LBUTTONDOWN, WM_RBUTTONDOWN, WM_MBUTTONDOWN,
-			WM_LBUTTONUP, WM_RBUTTONUP, WM_MBUTTONUP,
-			WM_LBUTTONDBLCLK, WM_RBUTTONDBLCLK, WM_MBUTTONDBLCLK,
-			WM_MOUSEMOVE, WM_MOUSEWHEEL
-		};
+		static inline std::vector<UINT> EventIDs = {WM_LBUTTONDOWN,
+													WM_RBUTTONDOWN,
+													WM_MBUTTONDOWN,
+													WM_LBUTTONUP,
+													WM_RBUTTONUP,
+													WM_MBUTTONUP,
+													WM_LBUTTONDBLCLK,
+													WM_RBUTTONDBLCLK,
+													WM_MBUTTONDBLCLK,
+													WM_MOUSEMOVE,
+													WM_MOUSEWHEEL};
 		enum class Type
 		{
 			Unknow,
@@ -125,8 +130,7 @@ namespace spk
 		};
 		Type type = Type::Unknow;
 		spk::SafePointer<const spk::Mouse> mouse = nullptr;
-		union
-		{
+		union {
 			spk::Mouse::Button button;
 			spk::Vector2Int position;
 			float scrollValue;
@@ -135,9 +139,7 @@ namespace spk
 
 	struct KeyboardEvent : public IEvent
 	{
-		static inline std::vector<UINT> EventIDs = {
-			WM_KEYDOWN, WM_KEYUP, WM_CHAR
-		};
+		static inline std::vector<UINT> EventIDs = {WM_KEYDOWN, WM_KEYUP, WM_CHAR};
 		enum class Type
 		{
 			Unknow,
@@ -147,9 +149,8 @@ namespace spk
 			Glyph
 		};
 		Type type = Type::Unknow;
-		const spk::Keyboard* keyboard = nullptr;
-		union
-		{
+		const spk::Keyboard *keyboard = nullptr;
+		union {
 			spk::Keyboard::Key key;
 			wchar_t glyph;
 		};
@@ -157,20 +158,18 @@ namespace spk
 
 	struct ControllerEvent : public IEvent
 	{
-		static inline std::vector<UINT> EventIDs = {
-			WM_LEFT_JOYSTICK_MOTION,
-			WM_RIGHT_JOYSTICK_MOTION,
-			WM_LEFT_JOYSTICK_RESET,
-			WM_RIGHT_JOYSTICK_RESET,
-			WM_LEFT_TRIGGER_MOTION,
-			WM_RIGHT_TRIGGER_MOTION,
-			WM_LEFT_TRIGGER_RESET,
-			WM_RIGHT_TRIGGER_RESET,
-			WM_DIRECTIONAL_CROSS_MOTION,
-			WM_DIRECTIONAL_CROSS_RESET,
-			WM_CONTROLLER_BUTTON_PRESS,
-			WM_CONTROLLER_BUTTON_RELEASE
-		};
+		static inline std::vector<UINT> EventIDs = {WM_LEFT_JOYSTICK_MOTION,
+													WM_RIGHT_JOYSTICK_MOTION,
+													WM_LEFT_JOYSTICK_RESET,
+													WM_RIGHT_JOYSTICK_RESET,
+													WM_LEFT_TRIGGER_MOTION,
+													WM_RIGHT_TRIGGER_MOTION,
+													WM_LEFT_TRIGGER_RESET,
+													WM_RIGHT_TRIGGER_RESET,
+													WM_DIRECTIONAL_CROSS_MOTION,
+													WM_DIRECTIONAL_CROSS_RESET,
+													WM_CONTROLLER_BUTTON_PRESS,
+													WM_CONTROLLER_BUTTON_RELEASE};
 		enum class Type
 		{
 			Unknow,
@@ -186,9 +185,8 @@ namespace spk
 		static Controller::Button apiValueToControllerButton(int value);
 
 		Type type = Type::Unknow;
-		const spk::Controller* controller;
-		union
-		{
+		const spk::Controller *controller;
+		union {
 			spk::Controller::Button button;
 			struct
 			{
@@ -209,17 +207,8 @@ namespace spk
 
 	struct SystemEvent : public IEvent
 	{
-		static inline std::vector<UINT> EventIDs = { 
-			WM_SIZE,
-			WM_SETFOCUS,
-			WM_KILLFOCUS,
-			WM_CLOSE,
-			WM_QUIT,
-			WM_MOVE,
-			WM_ENTERSIZEMOVE,
-			WM_EXITSIZEMOVE,
-			WM_SETCURSOR
-		};
+		static inline std::vector<UINT> EventIDs = {
+			WM_SIZE, WM_SETFOCUS, WM_KILLFOCUS, WM_CLOSE, WM_QUIT, WM_MOVE, WM_ENTERSIZEMOVE, WM_EXITSIZEMOVE, WM_SETCURSOR};
 		enum class Type
 		{
 			Unknow,
@@ -240,7 +229,7 @@ namespace spk
 
 	struct TimerEvent : public IEvent
 	{
-		static inline std::vector<UINT> EventIDs = { WM_TIMER };
+		static inline std::vector<UINT> EventIDs = {WM_TIMER};
 		enum class Type
 		{
 			Unknow,
@@ -252,11 +241,10 @@ namespace spk
 
 	struct Event
 	{
-		using ConstructorLambda = std::function<void(Event* p_event, UINT uMsg, WPARAM wParam, LPARAM lParam)>;
+		using ConstructorLambda = std::function<void(Event *p_event, UINT uMsg, WPARAM wParam, LPARAM lParam)>;
 		static const std::unordered_map<UINT, ConstructorLambda> _constructionMap;
-	
-		union
-		{
+
+		union {
 			IEvent rootEvent;
 			PaintEvent paintEvent;
 			UpdateEvent updateEvent;
@@ -274,230 +262,288 @@ namespace spk
 		void setModifiers(UINT uMsg);
 	};
 
-	inline std::ostream& operator << (std::ostream& p_os, const spk::MouseEvent::Type& p_type)
+	inline std::ostream &operator<<(std::ostream &p_os, const spk::MouseEvent::Type &p_type)
 	{
 		switch (p_type)
 		{
 		case spk::MouseEvent::Type::Press:
-			p_os << "Press"; break;
+			p_os << "Press";
+			break;
 		case spk::MouseEvent::Type::Release:
-			p_os << "Release"; break;
+			p_os << "Release";
+			break;
 		case spk::MouseEvent::Type::DoubleClick:
-			p_os << "DoubleClick"; break;
+			p_os << "DoubleClick";
+			break;
 		case spk::MouseEvent::Type::Motion:
-			p_os << "Motion"; break;
+			p_os << "Motion";
+			break;
 		case spk::MouseEvent::Type::Wheel:
-			p_os << "Wheel"; break;
+			p_os << "Wheel";
+			break;
 		default:
-			p_os << "Unknown"; break;
+			p_os << "Unknown";
+			break;
 		}
 		return p_os;
 	}
 
-	inline std::wostream& operator << (std::wostream& p_os, const spk::MouseEvent::Type& p_type)
+	inline std::wostream &operator<<(std::wostream &p_os, const spk::MouseEvent::Type &p_type)
 	{
 		switch (p_type)
 		{
 		case spk::MouseEvent::Type::Press:
-			p_os << L"Press"; break;
+			p_os << L"Press";
+			break;
 		case spk::MouseEvent::Type::Release:
-			p_os << L"Release"; break;
+			p_os << L"Release";
+			break;
 		case spk::MouseEvent::Type::DoubleClick:
-			p_os << L"DoubleClick"; break;
+			p_os << L"DoubleClick";
+			break;
 		case spk::MouseEvent::Type::Motion:
-			p_os << L"Motion"; break;
+			p_os << L"Motion";
+			break;
 		case spk::MouseEvent::Type::Wheel:
-			p_os << L"Wheel"; break;
+			p_os << L"Wheel";
+			break;
 		default:
-			p_os << L"Unknown"; break;
+			p_os << L"Unknown";
+			break;
 		}
 		return p_os;
 	}
 
-	inline std::ostream& operator << (std::ostream& p_os, const spk::KeyboardEvent::Type& p_type)
+	inline std::ostream &operator<<(std::ostream &p_os, const spk::KeyboardEvent::Type &p_type)
 	{
 		switch (p_type)
 		{
 		case spk::KeyboardEvent::Type::Press:
-			p_os << "Press"; break;
+			p_os << "Press";
+			break;
 		case spk::KeyboardEvent::Type::Release:
-			p_os << "Release"; break;
+			p_os << "Release";
+			break;
 		case spk::KeyboardEvent::Type::Glyph:
-			p_os << "Glyph"; break;
+			p_os << "Glyph";
+			break;
 		default:
-			p_os << "Unknown"; break;
+			p_os << "Unknown";
+			break;
 		}
 		return p_os;
 	}
 
-	inline std::wostream& operator << (std::wostream& p_os, const spk::KeyboardEvent::Type& p_type)
+	inline std::wostream &operator<<(std::wostream &p_os, const spk::KeyboardEvent::Type &p_type)
 	{
 		switch (p_type)
 		{
 		case spk::KeyboardEvent::Type::Press:
-			p_os << L"Press"; break;
+			p_os << L"Press";
+			break;
 		case spk::KeyboardEvent::Type::Release:
-			p_os << L"Release"; break;
+			p_os << L"Release";
+			break;
 		case spk::KeyboardEvent::Type::Glyph:
-			p_os << L"Glyph"; break;
+			p_os << L"Glyph";
+			break;
 		default:
-			p_os << L"Unknown"; break;
+			p_os << L"Unknown";
+			break;
 		}
 		return p_os;
 	}
 
-	inline std::ostream& operator << (std::ostream& p_os, const spk::ControllerEvent::Type& p_type)
+	inline std::ostream &operator<<(std::ostream &p_os, const spk::ControllerEvent::Type &p_type)
 	{
 		switch (p_type)
 		{
 		case spk::ControllerEvent::Type::Press:
-			p_os << "Press"; break;
+			p_os << "Press";
+			break;
 		case spk::ControllerEvent::Type::Release:
-			p_os << "Release"; break;
+			p_os << "Release";
+			break;
 		case spk::ControllerEvent::Type::JoystickMotion:
-			p_os << "JoystickMotion"; break;
+			p_os << "JoystickMotion";
+			break;
 		case spk::ControllerEvent::Type::TriggerMotion:
-			p_os << "TriggerMotion"; break;
+			p_os << "TriggerMotion";
+			break;
 		case spk::ControllerEvent::Type::DirectionalCrossMotion:
-			p_os << "DirectionalCrossMotion"; break;
+			p_os << "DirectionalCrossMotion";
+			break;
 		default:
-			p_os << "Unknown"; break;
+			p_os << "Unknown";
+			break;
 		}
 		return p_os;
 	}
 
-	inline std::wostream& operator << (std::wostream& p_os, const spk::ControllerEvent::Type& p_type)
+	inline std::wostream &operator<<(std::wostream &p_os, const spk::ControllerEvent::Type &p_type)
 	{
 		switch (p_type)
 		{
 		case spk::ControllerEvent::Type::Press:
-			p_os << L"Press"; break;
+			p_os << L"Press";
+			break;
 		case spk::ControllerEvent::Type::Release:
-			p_os << L"Release"; break;
+			p_os << L"Release";
+			break;
 		case spk::ControllerEvent::Type::JoystickMotion:
-			p_os << L"JoystickMotion"; break;
+			p_os << L"JoystickMotion";
+			break;
 		case spk::ControllerEvent::Type::TriggerMotion:
-			p_os << L"TriggerMotion"; break;
+			p_os << L"TriggerMotion";
+			break;
 		case spk::ControllerEvent::Type::DirectionalCrossMotion:
-			p_os << L"DirectionalCrossMotion"; break;
+			p_os << L"DirectionalCrossMotion";
+			break;
 		default:
-			p_os << L"Unknown"; break;
+			p_os << L"Unknown";
+			break;
 		}
 		return p_os;
 	}
 
-	inline std::ostream& operator << (std::ostream& p_os, const spk::SystemEvent::Type& p_type)
+	inline std::ostream &operator<<(std::ostream &p_os, const spk::SystemEvent::Type &p_type)
 	{
 		switch (p_type)
 		{
 		case spk::SystemEvent::Type::Resize:
-			p_os << "Resize"; break;
+			p_os << "Resize";
+			break;
 		case spk::SystemEvent::Type::TakeFocus:
-			p_os << "TakeFocus"; break;
+			p_os << "TakeFocus";
+			break;
 		case spk::SystemEvent::Type::LoseFocus:
-			p_os << "LoseFocus"; break;
+			p_os << "LoseFocus";
+			break;
 		case spk::SystemEvent::Type::Quit:
-			p_os << "Quit"; break;
+			p_os << "Quit";
+			break;
 		case spk::SystemEvent::Type::Move:
-			p_os << "Move"; break;
+			p_os << "Move";
+			break;
 		default:
-			p_os << "Unknown"; break;
+			p_os << "Unknown";
+			break;
 		}
 		return p_os;
 	}
 
-	inline std::wostream& operator << (std::wostream& p_os, const spk::SystemEvent::Type& p_type)
+	inline std::wostream &operator<<(std::wostream &p_os, const spk::SystemEvent::Type &p_type)
 	{
 		switch (p_type)
 		{
 		case spk::SystemEvent::Type::Resize:
-			p_os << L"Resize"; break;
+			p_os << L"Resize";
+			break;
 		case spk::SystemEvent::Type::TakeFocus:
-			p_os << L"TakeFocus"; break;
+			p_os << L"TakeFocus";
+			break;
 		case spk::SystemEvent::Type::LoseFocus:
-			p_os << L"LoseFocus"; break;
+			p_os << L"LoseFocus";
+			break;
 		case spk::SystemEvent::Type::Quit:
-			p_os << L"Quit"; break;
+			p_os << L"Quit";
+			break;
 		case spk::SystemEvent::Type::Move:
-			p_os << L"Move"; break;
+			p_os << L"Move";
+			break;
 		default:
-			p_os << L"Unknown"; break;
+			p_os << L"Unknown";
+			break;
 		}
 		return p_os;
 	}
 
-	inline std::ostream& operator << (std::ostream& p_os, const spk::PaintEvent::Type& p_type)
+	inline std::ostream &operator<<(std::ostream &p_os, const spk::PaintEvent::Type &p_type)
 	{
 		switch (p_type)
 		{
 		case spk::PaintEvent::Type::Paint:
-			p_os << "Paint"; break;
+			p_os << "Paint";
+			break;
 		case spk::PaintEvent::Type::Resize:
-			p_os << "Resize"; break;
+			p_os << "Resize";
+			break;
 		default:
-			p_os << "Unknown"; break;
+			p_os << "Unknown";
+			break;
 		}
 		return p_os;
 	}
 
-	inline std::wostream& operator << (std::wostream& p_os, const spk::PaintEvent::Type& p_type)
+	inline std::wostream &operator<<(std::wostream &p_os, const spk::PaintEvent::Type &p_type)
 	{
 		switch (p_type)
 		{
 		case spk::PaintEvent::Type::Paint:
-			p_os << L"Paint"; break;
+			p_os << L"Paint";
+			break;
 		case spk::PaintEvent::Type::Resize:
-			p_os << L"Resize"; break;
+			p_os << L"Resize";
+			break;
 		default:
-			p_os << L"Unknown"; break;
+			p_os << L"Unknown";
+			break;
 		}
 		return p_os;
 	}
 
-	inline std::ostream& operator << (std::ostream& p_os, const spk::UpdateEvent::Type& p_type)
+	inline std::ostream &operator<<(std::ostream &p_os, const spk::UpdateEvent::Type &p_type)
 	{
 		switch (p_type)
 		{
 		case spk::UpdateEvent::Type::Requested:
-			p_os << "Requested"; break;
+			p_os << "Requested";
+			break;
 		default:
-			p_os << "Unknown"; break;
+			p_os << "Unknown";
+			break;
 		}
 		return p_os;
 	}
 
-	inline std::wostream& operator << (std::wostream& p_os, const spk::UpdateEvent::Type& p_type)
+	inline std::wostream &operator<<(std::wostream &p_os, const spk::UpdateEvent::Type &p_type)
 	{
 		switch (p_type)
 		{
 		case spk::UpdateEvent::Type::Requested:
-			p_os << L"Requested"; break;
+			p_os << L"Requested";
+			break;
 		default:
-			p_os << L"Unknown"; break;
+			p_os << L"Unknown";
+			break;
 		}
 		return p_os;
 	}
 
-	inline std::ostream& operator << (std::ostream& p_os, const spk::TimerEvent::Type& p_type)
+	inline std::ostream &operator<<(std::ostream &p_os, const spk::TimerEvent::Type &p_type)
 	{
 		switch (p_type)
 		{
 		case spk::TimerEvent::Type::Timer:
-			p_os << "Timer"; break;
+			p_os << "Timer";
+			break;
 		default:
-			p_os << "Unknown"; break;
+			p_os << "Unknown";
+			break;
 		}
 		return p_os;
 	}
 
-	inline std::wostream& operator << (std::wostream& p_os, const spk::TimerEvent::Type& p_type)
+	inline std::wostream &operator<<(std::wostream &p_os, const spk::TimerEvent::Type &p_type)
 	{
 		switch (p_type)
 		{
 		case spk::TimerEvent::Type::Timer:
-			p_os << L"Timer"; break;
+			p_os << L"Timer";
+			break;
 		default:
-			p_os << L"Unknown"; break;
+			p_os << L"Unknown";
+			break;
 		}
 		return p_os;
 	}

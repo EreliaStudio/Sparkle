@@ -18,19 +18,18 @@ namespace spk::OpenGL
 		_fragmentShaderCode(""),
 		_programID(0)
 	{
-		
 	}
-	Program::Program(const std::string& p_vertexShaderCode, const std::string& p_fragmentShaderCode) :
+	Program::Program(const std::string &p_vertexShaderCode, const std::string &p_fragmentShaderCode) :
 		_vertexShaderCode(p_vertexShaderCode),
 		_fragmentShaderCode(p_fragmentShaderCode),
 		_programID(0)
 	{
 	}
 
-	GLuint Program::_compileShader(const std::string& shaderCode, GLenum shaderType)
+	GLuint Program::_compileShader(const std::string &shaderCode, GLenum shaderType)
 	{
 		GLuint shader = glCreateShader(shaderType);
-		const char* source = shaderCode.c_str();
+		const char *source = shaderCode.c_str();
 		glShaderSource(shader, 1, &source, nullptr);
 		glCompileShader(shader);
 
@@ -79,7 +78,9 @@ namespace spk::OpenGL
 	void Program::activate()
 	{
 		if (_programID == 0)
+		{
 			_load();
+		}
 
 		glUseProgram(_programID);
 	}
@@ -87,13 +88,17 @@ namespace spk::OpenGL
 	void Program::deactivate()
 	{
 		if (_programID != 0)
+		{
 			glUseProgram(0);
+		}
 	}
 
 	void Program::render(GLsizei nbIndexes, GLsizei p_nbInstance)
 	{
 		if (_programID == 0)
+		{
 			_load();
+		}
 
 		glDrawElementsInstanced(GL_TRIANGLES, nbIndexes, GL_UNSIGNED_INT, nullptr, p_nbInstance);
 	}
@@ -103,7 +108,8 @@ namespace spk::OpenGL
 		glValidateProgram(_programID);
 		GLint validationStatus;
 		glGetProgramiv(_programID, GL_VALIDATE_STATUS, &validationStatus);
-		if (validationStatus == GL_FALSE) {
+		if (validationStatus == GL_FALSE)
+		{
 			GLint infoLogLength;
 			glGetProgramiv(_programID, GL_INFO_LOG_LENGTH, &infoLogLength);
 			std::vector<char> infoLog(infoLogLength);

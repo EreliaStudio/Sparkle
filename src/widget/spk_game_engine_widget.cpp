@@ -4,11 +4,11 @@
 
 namespace spk
 {
-	void GameEngineWidget::_onPaintEvent(spk::PaintEvent& p_event)
+	void GameEngineWidget::_onPaintEvent(spk::PaintEvent &p_event)
 	{
 		if (_gameEngine == nullptr)
 		{
-			return ;
+			return;
 		}
 
 		_fbo.activate();
@@ -16,7 +16,7 @@ namespace spk
 		_gameEngine->onPaintEvent(p_event);
 
 		_fbo.deactivate();
-		
+
 		_textureRenderer.render();
 	}
 
@@ -29,57 +29,57 @@ namespace spk
 		_textureRenderer.validate();
 	}
 
-	void GameEngineWidget::_onUpdateEvent(spk::UpdateEvent& p_event)
+	void GameEngineWidget::_onUpdateEvent(spk::UpdateEvent &p_event)
 	{
 		if (_gameEngine == nullptr)
 		{
-			return ;
+			return;
 		}
 
 		_gameEngine->onUpdateEvent(p_event);
 	}
 
-	void GameEngineWidget::_onMouseEvent(spk::MouseEvent& p_event)
+	void GameEngineWidget::_onMouseEvent(spk::MouseEvent &p_event)
 	{
 		if (_gameEngine == nullptr)
 		{
-			return ;
+			return;
 		}
 
 		_gameEngine->onMouseEvent(p_event);
 	}
 
-	void GameEngineWidget::_onControllerEvent(spk::ControllerEvent& p_event)
+	void GameEngineWidget::_onControllerEvent(spk::ControllerEvent &p_event)
 	{
 		if (_gameEngine == nullptr)
 		{
-			return ;
+			return;
 		}
 
 		_gameEngine->onControllerEvent(p_event);
 	}
 
-	void GameEngineWidget::_onKeyboardEvent(spk::KeyboardEvent& p_event)
+	void GameEngineWidget::_onKeyboardEvent(spk::KeyboardEvent &p_event)
 	{
 		if (_gameEngine == nullptr)
 		{
-			return ;
+			return;
 		}
 
 		_gameEngine->onKeyboardEvent(p_event);
 	}
 
-	void GameEngineWidget::_onTimerEvent(spk::TimerEvent& p_event)
+	void GameEngineWidget::_onTimerEvent(spk::TimerEvent &p_event)
 	{
 		if (_gameEngine == nullptr)
 		{
-			return ;
+			return;
 		}
 
 		_gameEngine->onTimerEvent(p_event);
 	}
 
-	GameEngineWidget::GameEngineWidget(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent) :
+	GameEngineWidget::GameEngineWidget(const std::wstring &p_name, const spk::SafePointer<spk::Widget> &p_parent) :
 		spk::Widget(p_name, p_parent)
 	{
 		_fbo.addAttachment(L"outputColor", 0, spk::OpenGL::FrameBufferObject::Type::Float4);

@@ -1,11 +1,11 @@
 #pragma once
 
-#include <vector>
-#include <memory>
 #include <functional>
+#include <limits>
+#include <memory>
 #include <mutex>
 #include <utility>
-#include <limits>
+#include <vector>
 
 namespace spk
 {
@@ -76,8 +76,7 @@ namespace spk
 				throw std::runtime_error("Can't allocate a new object in closed pool");
 			}
 
-			_data->_availableElements.emplace_back(
-				std::make_unique<TType>(std::forward<TArgs>(args)...));
+			_data->_availableElements.emplace_back(std::make_unique<TType>(std::forward<TArgs>(args)...));
 		}
 
 		template <typename... TArgs>
@@ -97,8 +96,7 @@ namespace spk
 
 			while (_data->_availableElements.size() < p_newSize)
 			{
-				_data->_availableElements.emplace_back(
-					std::make_unique<TType>(std::forward<TArgs>(args)...));
+				_data->_availableElements.emplace_back(std::make_unique<TType>(std::forward<TArgs>(args)...));
 			}
 		}
 
@@ -153,8 +151,7 @@ namespace spk
 				{
 					std::scoped_lock<std::mutex> lock(data->_mutex);
 
-					if (data->_closed == false &&
-						data->_availableElements.size() < data->_maximumSize)
+					if (data->_closed == false && data->_availableElements.size() < data->_maximumSize)
 					{
 						data->_availableElements.emplace_back(ptr);
 						return;

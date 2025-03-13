@@ -6,7 +6,7 @@
 
 namespace spk
 {
-	void ControllerModule::_treatEvent(spk::ControllerEvent&& p_event)
+	void ControllerModule::_treatEvent(spk::ControllerEvent &&p_event)
 	{
 		switch (p_event.type)
 		{
@@ -38,7 +38,8 @@ namespace spk
 		{
 			if (p_event.trigger.id == spk::Controller::Trigger::ID::Left)
 			{
-				_controller.leftTrigger.ratio = static_cast<float>(p_event.trigger.value) / static_cast<float>(std::numeric_limits<unsigned short>::max());
+				_controller.leftTrigger.ratio =
+					static_cast<float>(p_event.trigger.value) / static_cast<float>(std::numeric_limits<unsigned short>::max());
 
 				if (p_event.trigger.value > -100 && p_event.trigger.value < 100)
 				{
@@ -47,7 +48,8 @@ namespace spk
 			}
 			else if (p_event.trigger.id == spk::Controller::Trigger::ID::Right)
 			{
-				_controller.rightTrigger.ratio = static_cast<float>(p_event.trigger.value) / static_cast<float>(std::numeric_limits<unsigned short>::max());
+				_controller.rightTrigger.ratio =
+					static_cast<float>(p_event.trigger.value) / static_cast<float>(std::numeric_limits<unsigned short>::max());
 
 				if (p_event.trigger.value > -100 && p_event.trigger.value < 100)
 				{
@@ -113,13 +115,12 @@ namespace spk
 			_controller.directionalCross = 0;
 			break;
 		}
-		default :
+		default:
 		{
 			throw std::runtime_error("Unexpect event type.");
 		}
 		}
 		p_event.controller = &_controller;
-
 
 		if (spk::Widget::focusedWidget(Widget::FocusType::ControllerFocus) != nullptr)
 		{
@@ -131,17 +132,16 @@ namespace spk
 		}
 	}
 
-	spk::ControllerEvent ControllerModule::_convertEventToEventType(spk::Event&& p_event)
+	spk::ControllerEvent ControllerModule::_convertEventToEventType(spk::Event &&p_event)
 	{
 		return (p_event.controllerEvent);
 	}
 
 	ControllerModule::ControllerModule()
 	{
-
 	}
 
-	const spk::Controller& ControllerModule::controller() const
+	const spk::Controller &ControllerModule::controller() const
 	{
 		return (_controller);
 	}

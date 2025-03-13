@@ -4,7 +4,7 @@
 
 namespace spk
 {
-	void MouseModule::_treatEvent(spk::MouseEvent&& p_event)
+	void MouseModule::_treatEvent(spk::MouseEvent &&p_event)
 	{
 		switch (p_event.type)
 		{
@@ -44,7 +44,6 @@ namespace spk
 
 		p_event.mouse = &_mouse;
 
-
 		if (spk::Widget::focusedWidget(Widget::FocusType::MouseFocus) != nullptr)
 		{
 			spk::Widget::focusedWidget(Widget::FocusType::MouseFocus)->onMouseEvent(p_event);
@@ -55,17 +54,16 @@ namespace spk
 		}
 	}
 
-	spk::MouseEvent MouseModule::_convertEventToEventType(spk::Event&& p_event)
+	spk::MouseEvent MouseModule::_convertEventToEventType(spk::Event &&p_event)
 	{
 		return (p_event.mouseEvent);
 	}
 
 	MouseModule::MouseModule()
 	{
-
 	}
 
-	const spk::Mouse& MouseModule::mouse() const
+	const spk::Mouse &MouseModule::mouse() const
 	{
 		return (_mouse);
 	}

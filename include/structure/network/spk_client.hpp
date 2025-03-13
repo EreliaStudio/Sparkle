@@ -1,15 +1,15 @@
 #pragma once
 
-#include <iostream>
-#include <mutex>
-#include <thread>
-#include <functional>
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include "structure/network/spk_message.hpp"
 #include "structure/container/spk_pool.hpp"
 #include "structure/container/spk_thread_safe_queue.hpp"
 #include "structure/design_pattern/spk_contract_provider.hpp"
+#include "structure/network/spk_message.hpp"
+#include <functional>
+#include <iostream>
+#include <mutex>
+#include <thread>
+#include <winsock2.h>
+#include <ws2tcpip.h>
 
 namespace spk
 {
@@ -38,13 +38,13 @@ namespace spk
 		Client();
 		~Client();
 
-		Contract addOnConnectionCallback(const ConnectionCallback& p_connectionCallback);
-		Contract addOnDisconnectionCallback(const DisconnectionCallback& p_disconnectionCallback);
+		Contract addOnConnectionCallback(const ConnectionCallback &p_connectionCallback);
+		Contract addOnDisconnectionCallback(const DisconnectionCallback &p_disconnectionCallback);
 
 		bool isConnected() const;
-		void connect(const std::string& p_address, size_t p_port);
+		void connect(const std::string &p_address, size_t p_port);
 		void disconnect();
-		void send(const Message& p_message);
-		spk::ThreadSafeQueue<MessageObject>& messages();
+		void send(const Message &p_message);
+		spk::ThreadSafeQueue<MessageObject> &messages();
 	};
 }

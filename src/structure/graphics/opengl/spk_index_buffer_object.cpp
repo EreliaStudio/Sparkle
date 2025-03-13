@@ -7,7 +7,7 @@ namespace spk::OpenGL
 	{
 	}
 
-	void IndexBufferObject::append(const unsigned int& data)
+	void IndexBufferObject::append(const unsigned int &data)
 	{
 		VertexBufferObject::append(&data, sizeof(unsigned int));
 	}
@@ -15,10 +15,12 @@ namespace spk::OpenGL
 	void IndexBufferObject::append(std::span<const unsigned int> data)
 	{
 		if (!data.empty())
+		{
 			VertexBufferObject::append(data.data(), data.size() * sizeof(unsigned int));
+		}
 	}
 
-	IndexBufferObject& IndexBufferObject::operator<<(const unsigned int& data)
+	IndexBufferObject &IndexBufferObject::operator<<(const unsigned int &data)
 	{
 		append(data);
 		return *this;
@@ -38,7 +40,7 @@ namespace spk::OpenGL
 	{
 		activate();
 
-		size_t totalSize = this->size(); 
+		size_t totalSize = this->size();
 		if (totalSize == 0)
 		{
 			return {};

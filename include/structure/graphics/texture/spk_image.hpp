@@ -1,8 +1,8 @@
 #pragma once
 
-#include <filesystem>
-#include "structure/math/spk_vector2.hpp"
 #include "structure/graphics/texture/spk_texture.hpp"
+#include "structure/math/spk_vector2.hpp"
+#include <filesystem>
 
 namespace spk
 {
@@ -10,10 +10,10 @@ namespace spk
 	{
 	public:
 		Image();
-		Image(const std::filesystem::path& p_path);
+		Image(const std::filesystem::path &p_path);
 
-		void loadFromFile(const std::filesystem::path& p_path);
-		void loadFromData(const std::vector<uint8_t>& p_data);
+		void loadFromFile(const std::filesystem::path &p_path);
+		void loadFromData(const std::vector<uint8_t> &p_data);
 
 	private:
 		Texture::Format _determineFormat(int channels) const;

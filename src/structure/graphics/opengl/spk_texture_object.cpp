@@ -2,5 +2,5 @@
 
 namespace spk::OpenGL
 {
-	
+
 }

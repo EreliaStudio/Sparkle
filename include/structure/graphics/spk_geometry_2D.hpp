@@ -1,8 +1,8 @@
 #pragma once
 
-#include <iostream>
-#include "structure/spk_iostream.hpp"
 #include "structure/math/spk_vector2.hpp"
+#include "structure/spk_iostream.hpp"
+#include <iostream>
 
 namespace spk
 {
@@ -11,8 +11,7 @@ namespace spk
 		using Point = Vector2Int;
 		using Size = Vector2UInt;
 
-		union
-		{
+		union {
 			Vector2Int anchor;
 			struct
 			{
@@ -21,8 +20,7 @@ namespace spk
 			};
 		};
 
-		union
-		{
+		union {
 			Vector2UInt size;
 			struct
 			{
@@ -35,90 +33,74 @@ namespace spk
 			anchor(0, 0),
 			size(0, 0)
 		{
-
 		}
 
-		Geometry2D(const Vector2Int& p_anchor, const Vector2UInt& p_size) :
+		Geometry2D(const Vector2Int &p_anchor, const Vector2UInt &p_size) :
 			anchor(p_anchor),
 			size(p_size)
 		{
-
 		}
 
-		Geometry2D(const Vector2Int& p_anchor, size_t p_width, size_t p_height) :
+		Geometry2D(const Vector2Int &p_anchor, size_t p_width, size_t p_height) :
 			anchor(p_anchor),
 			size(p_width, p_height)
 		{
-
 		}
 
-		Geometry2D(int p_x, int p_y, const Vector2UInt& p_size) :
+		Geometry2D(int p_x, int p_y, const Vector2UInt &p_size) :
 			anchor(p_x, p_y),
 			size(p_size)
 		{
-
 		}
 
 		Geometry2D(int p_x, int p_y, size_t p_width, size_t p_height) :
 			anchor(p_x, p_y),
 			size(p_width, p_height)
 		{
-
 		}
 
-		bool contains(const Vector2Int& p_point) const
+		bool contains(const Vector2Int &p_point) const
 		{
-			return (p_point.x >= anchor.x) &&
-				(p_point.y >= anchor.y) &&
-				(p_point.x < anchor.x + static_cast<int32_t>(size.x)) &&
-				(p_point.y < anchor.y + static_cast<int32_t>(size.y));
+			return (p_point.x >= anchor.x) && (p_point.y >= anchor.y) && (p_point.x < anchor.x + static_cast<int32_t>(size.x)) &&
+				   (p_point.y < anchor.y + static_cast<int32_t>(size.y));
 		}
 
-		Geometry2D shrink(const Vector2Int& p_offset) const
-        {
+		Geometry2D shrink(const Vector2Int &p_offset) const
+		{
 			Geometry2D result;
 
-            result.anchor = anchor + p_offset;
+			result.anchor = anchor + p_offset;
 
-			result.size = spk::Vector2UInt(
-				static_cast<int>(size.x) - (2 * p_offset.x),
-				static_cast<int>(size.y) - (2 * p_offset.y)
-			);
+			result.size = spk::Vector2UInt(static_cast<int>(size.x) - (2 * p_offset.x), static_cast<int>(size.y) - (2 * p_offset.y));
 
 			return (result);
-        }
+		}
 
-		Geometry2D operator+(const Geometry2D& p_other) const
-        {
-            return Geometry2D(
-                anchor + p_other.anchor,
-                size   + p_other.size
-            );
-        }
-
-        Geometry2D operator-(const Geometry2D& p_other) const
-        {
-            return Geometry2D(
-                anchor - p_other.anchor,
-                size   - p_other.size
-            );
-        }
-		
-		Geometry2D& operator+=(const Geometry2D& p_other)
+		Geometry2D operator+(const Geometry2D &p_other) const
 		{
-			anchor += p_other.anchor; 
-			size   += p_other.size;
+			return Geometry2D(anchor + p_other.anchor, size + p_other.size);
+		}
+
+		Geometry2D operator-(const Geometry2D &p_other) const
+		{
+			return Geometry2D(anchor - p_other.anchor, size - p_other.size);
+		}
+
+		Geometry2D &operator+=(const Geometry2D &p_other)
+		{
+			anchor += p_other.anchor;
+			size += p_other.size;
 			return *this;
 		}
 
-		Geometry2D& operator-=(const Geometry2D& p_other)
+		Geometry2D &operator-=(const Geometry2D &p_other)
 		{
 			anchor -= p_other.anchor;
-			size   -= p_other.size;
+			size -= p_other.size;
 			return *this;
 		}
 
-		friend std::wostream& operator<<(std::wostream& os, const Geometry2D& p_geometry)
+		friend std::wostream &operator<<(std::wostream &os, const Geometry2D &p_geometry)
 		{
 			os << L"Anchor : " << p_geometry.anchor << L" - Size : " << p_geometry.size;
 			return os;
@@ -134,12 +116,12 @@ namespace spk
 			return L"Anchor : " + anchor.to_wstring() + L" - Size : " + size.to_wstring();
 		}
 
-		bool operator==(const Geometry2D& p_other) const
+		bool operator==(const Geometry2D &p_other) const
 		{
 			return anchor == p_other.anchor && size == p_other.size;
 		}
 
-		bool operator!=(const Geometry2D& p_other) const
+		bool operator!=(const Geometry2D &p_other) const
 		{
 			return !(*this == p_other);
 		}

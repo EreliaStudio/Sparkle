@@ -20,15 +20,15 @@ namespace spk
 		spk::TextureRenderer _textureRenderer;
 
 		void _onGeometryChange();
-		void _onPaintEvent(spk::PaintEvent& p_event);
-		void _onUpdateEvent(spk::UpdateEvent& p_event);
-		void _onMouseEvent(spk::MouseEvent& p_event);
-		void _onControllerEvent(spk::ControllerEvent& p_event);
-		void _onKeyboardEvent(spk::KeyboardEvent& p_event);
-		void _onTimerEvent(spk::TimerEvent& p_event);
+		void _onPaintEvent(spk::PaintEvent &p_event);
+		void _onUpdateEvent(spk::UpdateEvent &p_event);
+		void _onMouseEvent(spk::MouseEvent &p_event);
+		void _onControllerEvent(spk::ControllerEvent &p_event);
+		void _onKeyboardEvent(spk::KeyboardEvent &p_event);
+		void _onTimerEvent(spk::TimerEvent &p_event);
 
 	public:
-		GameEngineWidget(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent);
+		GameEngineWidget(const std::wstring &p_name, const spk::SafePointer<spk::Widget> &p_parent);
 
 		void setGameEngine(spk::SafePointer<spk::GameEngine> p_gameEngine);
 	};

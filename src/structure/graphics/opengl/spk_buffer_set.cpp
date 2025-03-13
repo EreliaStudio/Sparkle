@@ -14,22 +14,22 @@ namespace spk::OpenGL
 	{
 	}
 
-	LayoutBufferObject& BufferSet::layout()
+	LayoutBufferObject &BufferSet::layout()
 	{
 		return _layout;
 	}
 
-	IndexBufferObject& BufferSet::indexes()
+	IndexBufferObject &BufferSet::indexes()
 	{
 		return _indexes;
 	}
 
-	const LayoutBufferObject& BufferSet::layout() const
+	const LayoutBufferObject &BufferSet::layout() const
 	{
 		return _layout;
 	}
 
-	const IndexBufferObject& BufferSet::indexes() const
+	const IndexBufferObject &BufferSet::indexes() const
 	{
 		return _indexes;
 	}
@@ -39,7 +39,7 @@ namespace spk::OpenGL
 		_layout.clear();
 		_indexes.clear();
 	}
-	
+
 	void BufferSet::validate()
 	{
 		_layout.validate();

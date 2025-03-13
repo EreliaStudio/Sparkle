@@ -10,7 +10,8 @@ namespace spk
 		{
 			_lowerCursor = _cursor;
 
-			while (_lowerCursor != 0 && _fontRenderer.computeTextSize(textToRender.substr(_lowerCursor - 1, _cursor - _lowerCursor + 1)).x <= geometry().shrink(_cornerSize).size.x)
+			while (_lowerCursor != 0 && _fontRenderer.computeTextSize(textToRender.substr(_lowerCursor - 1, _cursor - _lowerCursor + 1)).x <=
+											geometry().shrink(_cornerSize).size.x)
 			{
 				_lowerCursor--;
 			}
@@ -22,7 +23,9 @@ namespace spk
 		{
 			_higherCursor = _cursor;
 
-			while (_higherCursor <= textToRender.size() && _fontRenderer.computeTextSize(textToRender.substr(_lowerCursor, _higherCursor - _lowerCursor + 1)).x < geometry().shrink(_cornerSize).size.x)
+			while (_higherCursor <= textToRender.size() &&
+				   _fontRenderer.computeTextSize(textToRender.substr(_lowerCursor, _higherCursor - _lowerCursor + 1)).x <
+					   geometry().shrink(_cornerSize).size.x)
 			{
 				_higherCursor++;
 			}
@@ -33,8 +36,7 @@ namespace spk
 
 	void TextEdit::_onGeometryChange()
 	{
-		if (_needLowerCursorUpdate == true ||
-			_needHigherCursorUpdate == true)
+		if (_needLowerCursorUpdate == true || _needHigherCursorUpdate == true)
 		{
 			_computeCursorsValues();
 		}
@@ -44,13 +46,18 @@ namespace spk
 		_backgroundRenderer.validate();
 
 		_fontRenderer.clear();
-		spk::Vector2Int textAnchor = _fontRenderer.computeTextAnchor(geometry().shrink(_cornerSize), text().substr(_lowerCursor, _higherCursor - _lowerCursor), _horizontalAlignment, _verticalAlignment);
+		spk::Vector2Int textAnchor = _fontRenderer.computeTextAnchor(
+			geometry().shrink(_cornerSize), text().substr(_lowerCursor, _higherCursor - _lowerCursor), _horizontalAlignment, _verticalAlignment);
 		_fontRenderer.prepare(text().substr(_lowerCursor, _higherCursor - _lowerCursor), textAnchor, layer() + 0.01f);
 		_fontRenderer.validate();
 
 		_cursorRenderer.clear();
 		spk::Vector2UInt prevTextSize = _fontRenderer.computeTextSize(text().substr(_lowerCursor, _cursor - _lowerCursor));
-		_cursorRenderer.prepareSquare(spk::Geometry2D(prevTextSize.x + geometry().anchor.x + _cornerSize.x - 2, _cornerSize.y + geometry().anchor.y, 2, geometry().height - _cornerSize.y * 2), layer() + 0.02f);
+		_cursorRenderer.prepareSquare(spk::Geometry2D(prevTextSize.x + geometry().anchor.x + _cornerSize.x - 2,
+													  _cornerSize.y + geometry().anchor.y,
+													  2,
+													  geometry().height - _cornerSize.y * 2),
+									  layer() + 0.02f);
 		_cursorRenderer.validate();
 	}
 
@@ -81,7 +88,7 @@ namespace spk
 			{
 				releaseFocus(Widget::FocusType::KeyboardFocus);
 			}
-			return ;
+			return;
 		}
 
 		if (p_event.type == spk::MouseEvent::Type::Press)
@@ -105,13 +112,12 @@ namespace spk
 			{
 				releaseFocus(Widget::FocusType::KeyboardFocus);
 			}
-			return ;
+			return;
 		}
-		
+
 		if (hasFocus(Widget::FocusType::KeyboardFocus) == true)
 		{
-			if (p_event.type == spk::KeyboardEvent::Type::Press ||
-				p_event.type == spk::KeyboardEvent::Type::Repeat)
+			if (p_event.type == spk::KeyboardEvent::Type::Press || p_event.type == spk::KeyboardEvent::Type::Repeat)
 			{
 				if (p_event.key == spk::Keyboard::LeftArrow)
 				{

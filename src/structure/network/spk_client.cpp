@@ -10,18 +10,20 @@ namespace spk
 		{
 			MessageObject message = _messagePool.obtain();
 			int headerSize = sizeof(spk::Message::Header);
-			int bytesRead = recv(_connectSocket, reinterpret_cast<char*>(&message->_header), headerSize, 0);
+			int bytesRead = recv(_connectSocket, reinterpret_cast<char *>(&message->_header), headerSize, 0);
 			if (bytesRead == headerSize)
 			{
 				if (message->_header.length > 0)
 				{
 					message->resize(message->_header.length);
-					char* dataBuffer = reinterpret_cast<char*>(message->_buffer.data());
+					char *dataBuffer = reinterpret_cast<char *>(message->_buffer.data());
 					size_t totalBytesReceived = 0;
 					while (totalBytesReceived < message->_header.length)
 					{
-						bytesRead = recv(_connectSocket, dataBuffer + totalBytesReceived,
-										 static_cast<int>(message->_header.length) - static_cast<int>(totalBytesReceived), 0);
+						bytesRead = recv(_connectSocket,
+										 dataBuffer + totalBytesReceived,
+										 static_cast<int>(message->_header.length) - static_cast<int>(totalBytesReceived),
+										 0);
 						if (bytesRead <= 0)
 						{
 							break;
@@ -51,12 +53,12 @@ namespace spk
 		disconnect();
 	}
 
-	Client::Contract Client::addOnConnectionCallback(const ConnectionCallback& p_connectionCallback)
+	Client::Contract Client::addOnConnectionCallback(const ConnectionCallback &p_connectionCallback)
 	{
 		return (_onConnectContractProvider.subscribe(p_connectionCallback));
 	}
-	
-	Client::Contract Client::addOnDisconnectionCallback(const DisconnectionCallback& p_disconnectionCallback)
+
+	Client::Contract Client::addOnDisconnectionCallback(const DisconnectionCallback &p_disconnectionCallback)
 	{
 		return (_onDisconnectContractProvider.subscribe(p_disconnectionCallback));
 	}
@@ -66,7 +68,7 @@ namespace spk
 		return _isConnected;
 	}
 
-	void Client::connect(const std::string& p_address, size_t p_port)
+	void Client::connect(const std::string &p_address, size_t p_port)
 	{
 		WSADATA wsaData;
 		if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
@@ -86,7 +88,7 @@ namespace spk
 		inet_pton(AF_INET, p_address.c_str(), &serverAddress.sin_addr);
 		serverAddress.sin_port = htons(static_cast<u_short>(p_port));
 
-		if (::connect(_connectSocket, reinterpret_cast<struct sockaddr*>(&serverAddress), sizeof(serverAddress)) == SOCKET_ERROR)
+		if (::connect(_connectSocket, reinterpret_cast<struct sockaddr *>(&serverAddress), sizeof(serverAddress)) == SOCKET_ERROR)
 		{
 			closesocket(_connectSocket);
 			WSACleanup();
@@ -109,12 +111,12 @@ namespace spk
 		}
 	}
 
-	void Client::send(const Message& p_message)
+	void Client::send(const Message &p_message)
 	{
 		if (_isConnected)
 		{
 			int headerSize = sizeof(spk::Message::Header);
-			int sentBytes = ::send(_connectSocket, reinterpret_cast<const char*>(&p_message.header()), headerSize, 0);
+			int sentBytes = ::send(_connectSocket, reinterpret_cast<const char *>(&p_message.header()), headerSize, 0);
 
 			if (sentBytes != headerSize)
 			{
@@ -124,8 +126,8 @@ namespace spk
 
 			if (p_message.header().length > 0)
 			{
-				sentBytes = ::send(_connectSocket, reinterpret_cast<const char*>(p_message.buffer().data()),
-								   static_cast<int>(p_message.header().length), 0);
+				sentBytes =
+					::send(_connectSocket, reinterpret_cast<const char *>(p_message.buffer().data()), static_cast<int>(p_message.header().length), 0);
 				if (sentBytes != static_cast<int>(p_message.header().length))
 				{
 					std::cerr << "Failed to send message data." << std::endl;
@@ -139,7 +141,7 @@ namespace spk
 		}
 	}
 
-	spk::ThreadSafeQueue<Client::MessageObject>& Client::messages()
+	spk::ThreadSafeQueue<Client::MessageObject> &Client::messages()
 	{
 		return _messageQueue;
 	}

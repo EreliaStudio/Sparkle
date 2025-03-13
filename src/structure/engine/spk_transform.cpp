@@ -4,7 +4,7 @@
 
 namespace spk
 {
-	Transform::Transform() : 
+	Transform::Transform() :
 		Component(L"Transform"),
 		_model(),
 		_position(0.0f, 0.0f, 0.0f),
@@ -18,7 +18,7 @@ namespace spk
 		_updateModel();
 	}
 
-	ContractProvider::Contract Transform::addOnEditionCallback(const std::function<void()>& p_callback)
+	ContractProvider::Contract Transform::addOnEditionCallback(const std::function<void()> &p_callback)
 	{
 		return (std::move(_onEditContractProvider.subscribe(p_callback)));
 	}
@@ -38,7 +38,7 @@ namespace spk
 		return (_position);
 	}
 
-	const spk::Vector3& Transform::localPosition() const
+	const spk::Vector3 &Transform::localPosition() const
 	{
 		return (_localPosition);
 	}
@@ -48,7 +48,7 @@ namespace spk
 		return _rotation.toEuler();
 	}
 
-	const spk::Quaternion& Transform::rotationQuaternion() const
+	const spk::Quaternion &Transform::rotationQuaternion() const
 	{
 		return (_rotation);
 	}
@@ -113,11 +113,11 @@ namespace spk
 	void Transform::setRotation(const spk::Vector3 &p_euler)
 	{
 		_rotation = spk::Quaternion::fromEuler(p_euler).normalize();
-		
+
 		_updateModel();
 	}
-	
-	void Transform::rotateAroundPoint(const spk::Vector3& center, const spk::Vector3& axis, float angle)
+
+	void Transform::rotateAroundPoint(const spk::Vector3 &center, const spk::Vector3 &axis, float angle)
 	{
 		spk::Vector3 relativePosition = _position - center;
 
@@ -136,7 +136,7 @@ namespace spk
 		_updateModel();
 	}
 
-	void Transform::onUpdateEvent(spk::UpdateEvent& p_event)
+	void Transform::onUpdateEvent(spk::UpdateEvent &p_event)
 	{
 		if (_velocity != spk::Vector3())
 		{
@@ -152,7 +152,7 @@ namespace spk
 
 		spk::Matrix4x4 parentModel = spk::Matrix4x4::identity();
 		spk::SafePointer<GameObject> entityOwner = owner();
-		
+
 		if (entityOwner != nullptr && entityOwner->parent() != nullptr)
 		{
 			const GameObject *parentEntity = static_cast<const GameObject *>(entityOwner->parent());

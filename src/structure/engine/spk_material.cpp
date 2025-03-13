@@ -7,7 +7,6 @@ namespace spk
 		_specular(nullptr),
 		_shininess(0)
 	{
-
 	}
 
 	void Material::setDiffuse(spk::SafePointer<Image> p_diffuse)
@@ -18,22 +17,22 @@ namespace spk
 	{
 		_specular = p_specular;
 	}
-	void Material::setShininess(const float& p_shininess)
+	void Material::setShininess(const float &p_shininess)
 	{
 		_shininess = p_shininess;
 	}
 
-	const spk::SafePointer<Image>& Material::diffuse() const
+	const spk::SafePointer<Image> &Material::diffuse() const
 	{
 		return (_diffuse);
 	}
 
-	const spk::SafePointer<Image>& Material::specular() const
+	const spk::SafePointer<Image> &Material::specular() const
 	{
 		return (_specular);
 	}
 
-	const float& Material::shininess() const
+	const float &Material::shininess() const
 	{
 		return (_shininess);
 	}
@@ -43,7 +42,7 @@ namespace spk
 		_onValidationContractProvider.trigger();
 	}
 
-	Material::Contract Material::subscribeToValidation(const Material::Job& p_job)
+	Material::Contract Material::subscribeToValidation(const Material::Job &p_job)
 	{
 		return (_onValidationContractProvider.subscribe(p_job));
 	}

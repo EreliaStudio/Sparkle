@@ -6,7 +6,7 @@ namespace spk
 	Texture::ID Texture::takeID()
 	{
 		Texture::ID result;
-		
+
 		if (_availableIDs.empty() == false)
 		{
 			result = _availableIDs.back();
@@ -21,44 +21,49 @@ namespace spk
 
 		return (result);
 	}
-	
-	void Texture::releaseID(const Texture::ID& p_id)
+
+	void Texture::releaseID(const Texture::ID &p_id)
 	{
 		if (p_id == InvalidID)
+		{
 			return;
-		
-    	_availableIDs.push_back(p_id);
+		}
+
+		_availableIDs.push_back(p_id);
 	}
 
 	Texture::Section::Section() :
 		anchor(0, 0),
 		size(0, 0)
 	{
-
 	}
 
 	Texture::Section::Section(spk::Vector2 p_anchor, spk::Vector2 p_size) :
 		anchor(p_anchor),
 		size(p_size)
 	{
-
 	}
 
-	size_t Texture::_getBytesPerPixel(const Format& format) const
+	size_t Texture::_getBytesPerPixel(const Format &format) const
 	{
 		switch (format)
 		{
-			case Format::GreyLevel: return 1;
-			case Format::DualChannel: return 2;
-			case Format::RGB: return 3;
-			case Format::RGBA: return 4;
-			default: return 0; // Error or unsupported format
+		case Format::GreyLevel:
+			return 1;
+		case Format::DualChannel:
+			return 2;
+		case Format::RGB:
+			return 3;
+		case Format::RGBA:
+			return 4;
+		default:
+			return 0; // Error or unsupported format
 		}
 	}
 
 	Texture::Texture() :
 		_id(takeID()),
-		_size{ 0, 0 },
+		_size{0, 0},
 		_format(Format::Error),
 		_filtering(Filtering::Nearest),
 		_wrap(Wrap::ClampToEdge),
@@ -71,7 +76,7 @@ namespace spk
 		releaseID(_id);
 	}
 
-	Texture::Texture(Texture&& p_other) noexcept :
+	Texture::Texture(Texture &&p_other) noexcept :
 		_id(p_other._id),
 		_pixels(std::move(p_other._pixels)),
 		_size(p_other._size),
@@ -83,7 +88,7 @@ namespace spk
 		p_other._id = InvalidID;
 	}
 
-	Texture& Texture::operator=(Texture&& p_other) noexcept
+	Texture &Texture::operator=(Texture &&p_other) noexcept
 	{
 		if (this != &p_other)
 		{
@@ -100,9 +105,8 @@ namespace spk
 		return *this;
 	}
 
-	void Texture::setPixels(const std::vector<uint8_t>& p_data, const spk::Vector2UInt& p_size,
-		const Format& p_format, const Filtering& p_filtering,
-		const Wrap& p_wrap, const Mipmap& p_mipmap)
+	void Texture::setPixels(const std::vector<uint8_t> &p_data, const spk::Vector2UInt &p_size, const Format &p_format, const Filtering &p_filtering,
+							const Wrap &p_wrap, const Mipmap &p_mipmap)
 	{
 		_pixels = p_data;
 		_size = p_size;
@@ -114,7 +118,7 @@ namespace spk
 		_needSettings = true;
 	}
 
-	void Texture::setPixels(const std::vector<uint8_t>& p_data, const spk::Vector2UInt& p_size, const Format& p_format)
+	void Texture::setPixels(const std::vector<uint8_t> &p_data, const spk::Vector2UInt &p_size, const Format &p_format)
 	{
 		_pixels = p_data;
 		_size = p_size;
@@ -122,9 +126,8 @@ namespace spk
 		_needUpdate = true;
 	}
 
-	void Texture::setPixels(const uint8_t* p_data, const spk::Vector2UInt& p_size,
-		const Format& p_format, const Filtering& p_filtering,
-		const Wrap& p_wrap, const Mipmap& p_mipmap)
+	void Texture::setPixels(const uint8_t *p_data, const spk::Vector2UInt &p_size, const Format &p_format, const Filtering &p_filtering,
+							const Wrap &p_wrap, const Mipmap &p_mipmap)
 	{
 		_size = p_size;
 		_format = p_format;
@@ -136,7 +139,7 @@ namespace spk
 		_needSettings = true;
 	}
 
-	void Texture::setPixels(const uint8_t* p_data, const spk::Vector2UInt& p_size, const Format& p_format)
+	void Texture::setPixels(const uint8_t *p_data, const spk::Vector2UInt &p_size, const Format &p_format)
 	{
 		_size = p_size;
 		_format = p_format;
@@ -144,7 +147,7 @@ namespace spk
 		_needUpdate = true;
 	}
 
-	void Texture::setProperties(const Filtering& p_filtering, const Wrap& p_wrap, const Mipmap& p_mipmap)
+	void Texture::setProperties(const Filtering &p_filtering, const Wrap &p_wrap, const Mipmap &p_mipmap)
 	{
 		_filtering = p_filtering;
 		_wrap = p_wrap;
@@ -152,12 +155,12 @@ namespace spk
 		_needSettings = true;
 	}
 
-	const std::vector<uint8_t>& Texture::pixels() const
+	const std::vector<uint8_t> &Texture::pixels() const
 	{
 		return _pixels;
 	}
 
-	const spk::Vector2UInt& Texture::size() const
+	const spk::Vector2UInt &Texture::size() const
 	{
 		return _size;
 	}
