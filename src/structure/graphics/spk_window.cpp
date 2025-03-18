@@ -525,6 +525,8 @@ namespace spk
 		{
 			child->_resize();
 		}
+
+		requestPaint();
 	}
 
 	void Window::close()

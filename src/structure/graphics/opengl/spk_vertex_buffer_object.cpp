@@ -43,16 +43,6 @@ namespace spk::OpenGL
 		{
 			glBufferSubData(static_cast<GLenum>(_type), 0, size, _buffer.data());
 		}
-
-		if (_type == Type::ShaderStorage)
-		{
-			spk::cout << "Buffer content (" << size << " bytes): ";
-			for (size_t i = 0; i < size; ++i)
-			{
-				spk::cout << std::hex << std::setw(2) << std::setfill(L'0') << static_cast<int>(_buffer.data()[i]) << " ";
-			}
-			spk::cout << std::dec << std::endl;
-		}
 	}
 
 	VertexBufferObject::VertexBufferObject() :

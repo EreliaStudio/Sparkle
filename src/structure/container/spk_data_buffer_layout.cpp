@@ -9,6 +9,7 @@ namespace spk
 		_size(0),
 		_content(Unit())
 	{
+
 	}
 
 	DataBufferLayout::Element::Element(const std::wstring &p_name, DataBuffer *p_buffer, size_t p_offset, size_t p_size) :
@@ -18,6 +19,22 @@ namespace spk
 		_size(p_size),
 		_content(Unit())
 	{
+
+	}
+
+	DataBuffer* DataBufferLayout::Element::buffer() const
+	{
+		return (_buffer);
+	}
+
+	const std::wstring& DataBufferLayout::Element::name() const
+	{
+		return (_name);
+	}
+	
+	void DataBufferLayout::Element::setName(const std::wstring& p_name)
+	{
+		_name = p_name;
 	}
 
 	DataBufferLayout::Element DataBufferLayout::Element::duplicate(size_t p_offset)

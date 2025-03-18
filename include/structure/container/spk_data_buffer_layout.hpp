@@ -32,11 +32,16 @@ namespace spk
 			size_t _offset = 0;
 			size_t _size = 0;
 
-			void setBuffer(DataBuffer *p_buffer);
 
 		public:
 			Element();
 			Element(const std::wstring &p_name, DataBuffer *p_buffer, size_t p_offset, size_t p_size);
+
+			DataBuffer* buffer() const;
+			void setBuffer(DataBuffer *p_buffer);
+
+			const std::wstring& name() const;
+			void setName(const std::wstring& p_name);
 
 			Element duplicate(size_t p_offset);
 			bool isUnit() const;
