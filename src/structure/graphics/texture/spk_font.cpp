@@ -292,9 +292,9 @@ namespace spk
 				size_t outlineSize = static_cast<size_t>(textSize * p_outlineSizeRatio);
 				textSize -= outlineSize * 2;
 
-				Vector2UInt tmp_size = computeStringSize(p_string, {textSize, outlineSize});
+				Vector2UInt tmpSize = computeStringSize(p_string, {textSize, outlineSize});
 
-				if (tmp_size.x >= p_textArea.x || tmp_size.y >= p_textArea.y)
+				if (tmpSize.x >= p_textArea.x || tmpSize.y >= p_textArea.y)
 				{
 					enough = true;
 				}

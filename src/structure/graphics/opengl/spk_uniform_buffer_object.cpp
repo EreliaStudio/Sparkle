@@ -129,24 +129,24 @@ namespace spk::OpenGL
 		_dataBufferLayout.removeElement(p_name);
 	}
 
-	DataBufferLayout::Element &UniformBufferObject::operator[](size_t index)
+	DataBufferLayout::Element &UniformBufferObject::operator[](size_t p_index)
 	{
-		return _dataBufferLayout[index];
+		return _dataBufferLayout[p_index];
 	}
 
-	const DataBufferLayout::Element &UniformBufferObject::operator[](size_t index) const
+	const DataBufferLayout::Element &UniformBufferObject::operator[](size_t p_index) const
 	{
-		return _dataBufferLayout[index];
+		return _dataBufferLayout[p_index];
 	}
 
-	DataBufferLayout::Element &UniformBufferObject::operator[](const std::wstring &key)
+	DataBufferLayout::Element &UniformBufferObject::operator[](const std::wstring &p_key)
 	{
-		return _dataBufferLayout[key];
+		return _dataBufferLayout[p_key];
 	}
 
-	const DataBufferLayout::Element &UniformBufferObject::operator[](const std::wstring &key) const
+	const DataBufferLayout::Element &UniformBufferObject::operator[](const std::wstring &p_key) const
 	{
-		return _dataBufferLayout[key];
+		return _dataBufferLayout[p_key];
 	}
 
 	void UniformBufferObject::activate()

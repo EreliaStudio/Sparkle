@@ -199,7 +199,7 @@ namespace spk
 		_pendingTimerDeletions.push_back(p_id + 2);
 	}
 
-	void GLAPIENTRY OpenGLDebugMessageCallback(GLenum p_source, GLenum p_type, GLuint p_id, GLenum p_severity, GLsizei p_length, const GLchar *p_message,
+	void GLAPIENTRY openGLDebugMessageCallback(GLenum p_source, GLenum p_type, GLuint p_id, GLenum p_severity, GLsizei p_length, const GLchar *p_message,
 											   const void *p_userParam)
 	{
 		if (p_id == 131169 || p_id == 131185 || p_id == 131218 || p_id == 131204)
@@ -387,7 +387,7 @@ namespace spk
 		}
 
 		glEnable(GL_DEBUG_OUTPUT);
-		glDebugMessageCallback(OpenGLDebugMessageCallback, 0);
+		glDebugMessageCallback(openGLDebugMessageCallback, 0);
 
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

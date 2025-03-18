@@ -41,9 +41,9 @@ namespace spk
 		Duration currentRunDuration() const;
 	};
 
-	inline const char *to_string(Chronometer::State state);
-	inline const wchar_t *to_wstring(Chronometer::State state);
+	inline const char *to_string(Chronometer::State p_state);
+	inline const wchar_t *to_wstring(Chronometer::State p_state);
 }
 
-std::ostream &operator<<(std::ostream &os, spk::Chronometer::State state);
-std::wostream &operator<<(std::wostream &wos, spk::Chronometer::State state);
+std::ostream &operator<<(std::ostream &p_os, spk::Chronometer::State p_state);
+std::wostream &operator<<(std::wostream &p_wos, spk::Chronometer::State p_state);

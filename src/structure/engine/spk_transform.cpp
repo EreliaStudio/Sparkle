@@ -117,11 +117,11 @@ namespace spk
 		_updateModel();
 	}
 
-	void Transform::rotateAroundPoint(const spk::Vector3 &p_center, const spk::Vector3 &axis, float p_angle)
+	void Transform::rotateAroundPoint(const spk::Vector3 &p_center, const spk::Vector3 &p_axis, float p_angle)
 	{
 		spk::Vector3 relativePosition = _position - p_center;
 
-		spk::Quaternion rotationQuat = spk::Quaternion::fromAxisAngle(axis, p_angle);
+		spk::Quaternion rotationQuat = spk::Quaternion::fromAxisAngle(p_axis, p_angle);
 
 		spk::Vector3 rotatedPosition = rotationQuat.rotate(relativePosition);
 

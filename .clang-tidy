@@ -1,4 +1,7 @@
-Checks: '-*,readability-identifier-naming'
+Checks: >
+  -*,
+  readability-identifier-naming,
+  readability-inconsistent-declaration-parameter-name
 CheckOptions:
   - key: readability-identifier-naming.ClassCase
     value: CamelCase
@@ -38,3 +41,5 @@ CheckOptions:
     value: camelBack
   - key: readability-identifier-naming.ParameterPrefix
     value: 'p_'
+
+HeaderFilterRegex: '^(?!.*include/external_libraries).*'

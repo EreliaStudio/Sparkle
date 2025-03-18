@@ -63,17 +63,17 @@ namespace spk::OpenGL
 	{
 	}
 
-	LayoutBufferObject::LayoutBufferObject(std::span<const LayoutBufferObject::Attribute> attributes) :
+	LayoutBufferObject::LayoutBufferObject(std::span<const LayoutBufferObject::Attribute> p_attributes) :
 		LayoutBufferObject()
 	{
-		for (const auto &attribute : attributes)
+		for (const auto &attribute : p_attributes)
 		{
 			addAttribute(attribute);
 		}
 	}
 
-	LayoutBufferObject::LayoutBufferObject(std::initializer_list<LayoutBufferObject::Attribute> attributes) :
-		LayoutBufferObject(std::span(attributes.begin(), attributes.end()))
+	LayoutBufferObject::LayoutBufferObject(std::initializer_list<LayoutBufferObject::Attribute> p_attributes) :
+		LayoutBufferObject(std::span(p_attributes.begin(), p_attributes.end()))
 	{
 	}
 

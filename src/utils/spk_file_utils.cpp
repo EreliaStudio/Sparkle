@@ -6,16 +6,16 @@ namespace spk
 {
 	namespace FileUtils
 	{
-		std::vector<std::filesystem::path> listFiles(const std::filesystem::path &folderPath)
+		std::vector<std::filesystem::path> listFiles(const std::filesystem::path &p_folderPath)
 		{
 			std::vector<std::filesystem::path> fileList;
 
-			if (!std::filesystem::exists(folderPath) || !std::filesystem::is_directory(folderPath))
+			if (!std::filesystem::exists(p_folderPath) || !std::filesystem::is_directory(p_folderPath))
 			{
 				throw std::invalid_argument("The provided path is not a valid directory.");
 			}
 
-			for (const auto &entry : std::filesystem::directory_iterator(folderPath))
+			for (const auto &entry : std::filesystem::directory_iterator(p_folderPath))
 			{
 				if (std::filesystem::is_regular_file(entry.path()))
 				{

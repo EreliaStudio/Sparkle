@@ -16,6 +16,6 @@ namespace spk
 		void loadFromData(const std::vector<uint8_t> &p_data);
 
 	private:
-		Texture::Format _determineFormat(int channels) const;
+		Texture::Format _determineFormat(int p_channels) const;
 	};
 }

@@ -76,9 +76,9 @@ namespace spk
 		return (Duration(diffNs, TimeUnit::Nanosecond));
 	}
 
-	const char *to_string(Chronometer::State state)
+	const char *to_string(Chronometer::State p_state)
 	{
-		switch (state)
+		switch (p_state)
 		{
 		case Chronometer::State::Idle:
 			return "Idle";
@@ -90,9 +90,9 @@ namespace spk
 			return "UnknownState";
 		}
 	}
-	const wchar_t *to_wstring(Chronometer::State state)
+	const wchar_t *to_wstring(Chronometer::State p_state)
 	{
-		switch (state)
+		switch (p_state)
 		{
 		case Chronometer::State::Idle:
 			return L"Idle";
@@ -106,11 +106,11 @@ namespace spk
 	}
 }
 
-std::ostream &operator<<(std::ostream &os, spk::Chronometer::State state)
+std::ostream &operator<<(std::ostream &p_os, spk::Chronometer::State p_state)
 {
-	return os << to_string(state);
+	return p_os << to_string(p_state);
 }
-std::wostream &operator<<(std::wostream &wos, spk::Chronometer::State state)
+std::wostream &operator<<(std::wostream &p_wos, spk::Chronometer::State p_state)
 {
-	return wos << to_wstring(state);
+	return p_wos << to_wstring(p_state);
 }

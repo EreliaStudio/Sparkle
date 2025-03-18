@@ -39,9 +39,9 @@ namespace spk
 		stbi_image_free(imageData);
 	}
 
-	Texture::Format Image::_determineFormat(int channels) const
+	Texture::Format Image::_determineFormat(int p_channels) const
 	{
-		switch (channels)
+		switch (p_channels)
 		{
 		case 1:
 			return Format::GreyLevel;

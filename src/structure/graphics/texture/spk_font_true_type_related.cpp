@@ -11,17 +11,16 @@
 
 namespace spk
 {
-	std::vector<std::pair<int, int>> UnicodeBlocks = {
+	std::vector<std::pair<int, int>> unicodeBlocks = {
 		{0x0000, 0x007F}, // Basic Latin
 		{0x0080, 0x00FF}, // Latin-1 Supplement
-		// Add other ranges as needed
 	};
 
 	void Font::Atlas::loadAllRenderableGlyphs()
 	{
 		std::unordered_set<int> renderableGlyphs;
 
-		for (const auto &block : UnicodeBlocks)
+		for (const auto &block : unicodeBlocks)
 		{
 			for (int codepoint = block.first; codepoint <= block.second; ++codepoint)
 			{

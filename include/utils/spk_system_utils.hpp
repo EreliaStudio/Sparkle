@@ -46,7 +46,7 @@ namespace spk
 		long long nanoseconds = 0;
 
 		Timestamp() = default;
-		Timestamp(const Duration &d);
+		Timestamp(const Duration &p_duration);
 
 		Duration operator-(const Timestamp &p_other) const;
 
@@ -64,21 +64,21 @@ namespace spk
 		bool operator>=(const Timestamp &p_other) const;
 
 	private:
-		static Timestamp fromNanoseconds(long long ns);
+		static Timestamp fromNanoseconds(long long p_nanoseconds);
 	};
 }
 
-inline spk::Duration operator""_s(long double value)
+inline spk::Duration operator""_s(long double p_value)
 {
-	return spk::Duration(static_cast<double>(value), spk::TimeUnit::Second);
+	return spk::Duration(static_cast<double>(p_value), spk::TimeUnit::Second);
 }
-inline spk::Duration operator""_ms(unsigned long long value)
+inline spk::Duration operator""_ms(unsigned long long p_value)
 {
-	return spk::Duration(static_cast<long long>(value), spk::TimeUnit::Millisecond);
+	return spk::Duration(static_cast<long long>(p_value), spk::TimeUnit::Millisecond);
 }
-inline spk::Duration operator""_ns(unsigned long long value)
+inline spk::Duration operator""_ns(unsigned long long p_value)
 {
-	return spk::Duration(static_cast<long long>(value), spk::TimeUnit::Nanosecond);
+	return spk::Duration(static_cast<long long>(p_value), spk::TimeUnit::Nanosecond);
 }
 
 namespace spk::SystemUtils

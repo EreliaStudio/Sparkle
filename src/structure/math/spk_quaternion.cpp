@@ -64,9 +64,9 @@ namespace spk
 	{
 		Vector3 euler;
 
-		float sinr_cosp = 2.f * (w * x + y * z);
-		float cosr_cosp = 1.f - 2.f * (x * x + y * y);
-		euler.z = std::atan2(sinr_cosp, cosr_cosp);
+		float sinrCosp = 2.f * (w * x + y * z);
+		float cosrCosp = 1.f - 2.f * (x * x + y * y);
+		euler.z = std::atan2(sinrCosp, cosrCosp);
 
 		float sinp = 2.f * (w * y - z * x);
 		if (std::abs(sinp) >= 1.f)
@@ -78,9 +78,9 @@ namespace spk
 			euler.x = std::asin(sinp);
 		}
 
-		float siny_cosp = 2.f * (w * z + x * y);
-		float cosy_cosp = 1.f - 2.f * (y * y + z * z);
-		euler.y = std::atan2(siny_cosp, cosy_cosp);
+		float sinyCosp = 2.f * (w * z + x * y);
+		float cosyCosp = 1.f - 2.f * (y * y + z * z);
+		euler.y = std::atan2(sinyCosp, cosyCosp);
 
 		euler.x = spk::radianToDegree(euler.x);
 		euler.y = spk::radianToDegree(euler.y);

@@ -22,12 +22,12 @@ namespace spk::OpenGL
 	public:
 		BufferSet() = default;
 
-		explicit BufferSet(std::span<const LayoutBufferObject::Attribute> attributes);
-		BufferSet(std::initializer_list<LayoutBufferObject::Attribute> attributes);
+		explicit BufferSet(std::span<const LayoutBufferObject::Attribute> p_attributes);
+		BufferSet(std::initializer_list<LayoutBufferObject::Attribute> p_attributes);
 
 		template <AttributeContainer Container>
-		explicit BufferSet(const Container &attributes) :
-			BufferSet(std::span(attributes.data(), attributes.size()))
+		explicit BufferSet(const Container &p_attributes) :
+			BufferSet(std::span(p_attributes.data(), p_attributes.size()))
 		{
 		}
 

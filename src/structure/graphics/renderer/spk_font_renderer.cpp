@@ -177,7 +177,7 @@ namespace spk
 		return (_font->computeStringAnchor(p_geometry, p_string, _fontSize, p_horizontalAlignment, p_verticalAlignment));
 	}
 
-	void FontRenderer::prepare(const std::wstring &text, const spk::Vector2Int &anchor, float layer)
+	void FontRenderer::prepare(const std::wstring &p_text, const spk::Vector2Int &p_anchor, float p_layer)
 	{
 		if (_font == nullptr)
 		{
@@ -190,10 +190,10 @@ namespace spk
 			_samplerObject.bind(_atlas);
 		}
 
-		spk::Vector2Int glyphAnchor = anchor;
+		spk::Vector2Int glyphAnchor = p_anchor;
 		unsigned int baseIndexes = 0;
 
-		for (wchar_t c : text)
+		for (wchar_t c : p_text)
 		{
 			const spk::Font::Glyph &glyph = _atlas->glyph(c);
 
@@ -201,7 +201,7 @@ namespace spk
 			{
 				Vertex newVertex;
 
-				Vector3 convertedPoint = spk::Viewport::convertScreenToOpenGL(glyphAnchor + glyph.positions[i], layer);
+				Vector3 convertedPoint = spk::Viewport::convertScreenToOpenGL(glyphAnchor + glyph.positions[i], p_layer);
 
 				newVertex.position = convertedPoint.xy();
 				newVertex.uv = glyph.UVs[i];

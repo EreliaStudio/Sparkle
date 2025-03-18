@@ -43,9 +43,9 @@ namespace spk
 		void resume();
 	};
 
-	inline const char *to_string(Timer::State state);
-	inline const wchar_t *to_wstring(Timer::State state);
+	inline const char *to_string(Timer::State p_state);
+	inline const wchar_t *to_wstring(Timer::State p_state);
 }
 
-std::ostream &operator<<(std::ostream &os, spk::Timer::State state);
-std::wostream &operator<<(std::wostream &wos, spk::Timer::State state);
+std::ostream &operator<<(std::ostream &p_os, spk::Timer::State p_state);
+std::wostream &operator<<(std::wostream &p_wos, spk::Timer::State p_state);

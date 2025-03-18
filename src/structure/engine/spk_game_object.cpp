@@ -32,7 +32,7 @@ namespace spk
 			}));
 	}
 
-	GameObject::GameObject(const std::wstring &p_name, const spk::SafePointer<GameObject> &p_parent) :
+	GameObject::GameObject(const std::wstring &p_name, const spk::SafePointer<GameObject> &p_owner) :
 		_name(p_name),
 		_components(),
 		_transform(addComponent<Transform>()),
@@ -48,9 +48,9 @@ namespace spk
 				}
 			});
 
-		if (p_parent != nullptr)
+		if (p_owner != nullptr)
 		{
-			p_parent->addChild(this);
+			p_owner->addChild(this);
 		}
 	}
 

@@ -61,10 +61,10 @@ namespace spk
 		_flushBuffer();
 	}
 
-	IOStream &IOStream::operator<<(Manipulator manip)
+	IOStream &IOStream::operator<<(Manipulator p_manip)
 	{
-		_buffer << manip;
-		if (manip == static_cast<Manipulator &>(std::endl))
+		_buffer << p_manip;
+		if (p_manip == static_cast<Manipulator &>(std::endl))
 		{
 			_flushBuffer();
 		}

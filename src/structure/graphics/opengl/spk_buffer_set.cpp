@@ -4,13 +4,13 @@
 
 namespace spk::OpenGL
 {
-	BufferSet::BufferSet(std::span<const LayoutBufferObject::Attribute> attributes) :
-		_layout(attributes)
+	BufferSet::BufferSet(std::span<const LayoutBufferObject::Attribute> p_attributes) :
+		_layout(p_attributes)
 	{
 	}
 
-	BufferSet::BufferSet(std::initializer_list<LayoutBufferObject::Attribute> attributes) :
-		BufferSet(std::span(attributes.begin(), attributes.end()))
+	BufferSet::BufferSet(std::initializer_list<LayoutBufferObject::Attribute> p_attributes) :
+		BufferSet(std::span(p_attributes.begin(), p_attributes.end()))
 	{
 	}
 

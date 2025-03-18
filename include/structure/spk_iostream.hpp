@@ -26,15 +26,15 @@ namespace spk
 		void flush();
 
 		template <typename T>
-		IOStream &operator<<(const T &value)
+		IOStream &operator<<(const T &p_value)
 		{
-			_buffer << value;
+			_buffer << p_value;
 			return *this;
 		}
 
 		using Manipulator = std::wostream &(std::wostream &);
 
-		IOStream &operator<<(Manipulator manip);
+		IOStream &operator<<(Manipulator p_manip);
 
 		std::wstring str() const;
 	};
