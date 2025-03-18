@@ -12,15 +12,36 @@ private:
 		const std::string vertexShaderSource = R"(#version 450 core
 
 			layout(location = 0) in vec2 position;
+
+			struct Data
+			{
+				vec2 offset;
+				float angle;
+			};
 		
 			layout (std430, binding = 0) buffer ssboType
 			{
-				vec2 offset[];
+				Data datas[];
 			} ssbo;
 
 			void main()
 			{
-				gl_Position = vec4(position + ssbo.offset[gl_InstanceID], 0.0, 1.0);
+				// Convert degrees to radians
+				float rad = radians(ssbo.datas[gl_InstanceID].angle);
+				
+				// Build a 2D rotation matrix
+				float c = cos(rad);
+				float s = sin(rad);
+				mat2 rotationMatrix = mat2(
+					c, -s,
+					s,  c
+				);
+
+				// Apply rotation, then translate
+				vec2 rotatedPosition = rotationMatrix * position;
+				vec2 finalPosition   = rotatedPosition + ssbo.datas[gl_InstanceID].offset;
+
+				gl_Position = vec4(finalPosition, 0.0, 1.0);
 			}
 		)";
 
@@ -47,15 +68,22 @@ private:
 		_bufferSet.indexes() << 0 << 1 << 2;
 		_bufferSet.validate();
 
-		_ssbo = spk::OpenGL::ShaderStorageBufferObject(L"ssboType", 0, 0, 0, sizeof(spk::Vector2), 0);
+		_ssbo = spk::OpenGL::ShaderStorageBufferObject(L"ssboType", 0, 0, 0, 12, 4);
 	
-		_ssbo.dynamicArray().addElement(L"offset", 0, sizeof(spk::Vector2));
+		struct Data
+		{
+			spk::Vector2 offset;
+			float value;
+		};
+
+		_ssbo.dynamicArray().addElement(L"offset", 0, 8);
+		_ssbo.dynamicArray().addElement(L"angle", 8, 4);
 		_ssbo.dynamicArray().resize(4);
 		_ssbo.dynamicArray() = {
-			spk::Vector2(-0.5f, -0.5f), 
-			spk::Vector2( 0.5f, -0.5f), 
-			spk::Vector2(-0.5f,  0.5f), 
-			spk::Vector2( 0.5f,  0.5f)
+			Data{spk::Vector2(-0.5f, -0.5f), 0}, 
+			Data{spk::Vector2( 0.5f, -0.5f), 45}, 
+			Data{spk::Vector2(-0.5f,  0.5f), 20}, 
+			Data{spk::Vector2( 0.5f,  0.5f), -20}
 		};
 		_ssbo.validate();
 	}
