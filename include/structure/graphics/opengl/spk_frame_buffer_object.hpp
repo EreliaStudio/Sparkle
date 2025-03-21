@@ -1,8 +1,7 @@
 #pragma once
 
-#include <GL/glew.h>
-
 #include <GL/gl.h>
+#include <GL/glew.h>
 
 #include "structure/graphics/opengl/spk_texture_collection.hpp"
 #include "structure/graphics/opengl/spk_texture_object.hpp"
@@ -10,6 +9,7 @@
 #include "structure/graphics/spk_viewport.hpp"
 #include "structure/graphics/texture/spk_texture.hpp"
 #include "structure/spk_safe_pointer.hpp"
+
 #include <cstring>
 #include <map>
 #include <memory>
@@ -22,7 +22,21 @@ namespace spk::OpenGL
 	class FrameBufferObject
 	{
 	public:
-		enum class Type { Float4, Float3, Float2, Float, Int4, Int3, Int2, Int, UInt4, UInt3, UInt2, UInt };
+		enum class Type
+		{
+			Float4,
+			Float3,
+			Float2,
+			Float,
+			Int4,
+			Int3,
+			Int2,
+			Int,
+			UInt4,
+			UInt3,
+			UInt2,
+			UInt
+		};
 
 		class Attachment
 		{
@@ -37,96 +51,70 @@ namespace spk::OpenGL
 				switch (p_type)
 				{
 				case Type::Float4:
-				{
 					internalFormat = GL_RGBA32F;
 					externalFormat = GL_RGBA;
 					glType = GL_FLOAT;
 					break;
-				}
 				case Type::Float3:
-				{
 					internalFormat = GL_RGB32F;
 					externalFormat = GL_RGB;
 					glType = GL_FLOAT;
 					break;
-				}
 				case Type::Float2:
-				{
 					internalFormat = GL_RG32F;
 					externalFormat = GL_RG;
 					glType = GL_FLOAT;
 					break;
-				}
 				case Type::Float:
-				{
 					internalFormat = GL_R32F;
 					externalFormat = GL_RED;
 					glType = GL_FLOAT;
 					break;
-				}
 				case Type::Int4:
-				{
 					internalFormat = GL_RGBA32I;
 					externalFormat = GL_RGBA_INTEGER;
 					glType = GL_INT;
 					break;
-				}
 				case Type::Int3:
-				{
 					internalFormat = GL_RGB32I;
 					externalFormat = GL_RGB_INTEGER;
 					glType = GL_INT;
 					break;
-				}
 				case Type::Int2:
-				{
 					internalFormat = GL_RG32I;
 					externalFormat = GL_RG_INTEGER;
 					glType = GL_INT;
 					break;
-				}
 				case Type::Int:
-				{
 					internalFormat = GL_R32I;
 					externalFormat = GL_RED_INTEGER;
 					glType = GL_INT;
 					break;
-				}
 				case Type::UInt4:
-				{
 					internalFormat = GL_RGBA32UI;
 					externalFormat = GL_RGBA_INTEGER;
 					glType = GL_UNSIGNED_INT;
 					break;
-				}
 				case Type::UInt3:
-				{
 					internalFormat = GL_RGB32UI;
 					externalFormat = GL_RGB_INTEGER;
 					glType = GL_UNSIGNED_INT;
 					break;
-				}
 				case Type::UInt2:
-				{
 					internalFormat = GL_RG32UI;
 					externalFormat = GL_RG_INTEGER;
 					glType = GL_UNSIGNED_INT;
 					break;
-				}
 				case Type::UInt:
-				{
 					internalFormat = GL_R32UI;
 					externalFormat = GL_RED_INTEGER;
 					glType = GL_UNSIGNED_INT;
 					break;
-				}
 				default:
-				{
 					internalFormat = GL_RGBA8;
 					externalFormat = GL_RGBA;
 					glType = GL_UNSIGNED_BYTE;
 					break;
-				}
 				}
 			}
 
@@ -142,7 +130,9 @@ namespace spk::OpenGL
 				GLint internalFormat = GL_NONE;
 				GLenum externalFormat = GL_NONE;
 				GLenum glDataType = GL_NONE;
+
 				convertTypeToGL(_type, internalFormat, externalFormat, glDataType);
+
 				spk::Texture::Format spkFormat = spk::Texture::Format::RGBA;
 				if (externalFormat == GL_RGB)
 				{
@@ -160,12 +150,15 @@ namespace spk::OpenGL
 				_bindedTexture.setPixels(nullptr, size, spkFormat, filtering, wrap, mipmap);
 
 				glBindTexture(GL_TEXTURE_2D, _bindedTextureObject.id());
-				glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, size.x, size.y, 0, externalFormat, glDataType, nullptr);
+
+				glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, (GLsizei)size.x, (GLsizei)size.y, 0, externalFormat, glDataType, nullptr);
+
 				_bindedTextureObject.updateSettings(&_bindedTexture);
+
 				glBindTexture(GL_TEXTURE_2D, 0);
 			}
 
-			void activate() const
+			void attachToFBO() const
 			{
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + _bindingPoint, GL_TEXTURE_2D, _bindedTextureObject.id(), 0);
 			}
@@ -173,7 +166,6 @@ namespace spk::OpenGL
 			spk::Texture save() const
 			{
 				const spk::Vector2UInt &sz = _bindedTexture.size();
-
 				if (sz.x == 0 || sz.y == 0)
 				{
 					return spk::Texture{};
@@ -201,42 +193,34 @@ namespace spk::OpenGL
 				}
 
 				newTexture.setPixels(nullptr, sz, spkFormat, _bindedTexture.filtering(), _bindedTexture.wrap(), _bindedTexture.mipmap());
+
 				glBindTexture(GL_TEXTURE_2D, _bindedTextureObject.id());
+
 				size_t pixelCount = sz.x * sz.y;
 				size_t bpp = 4;
-
 				switch (spkFormat)
 				{
 				case spk::Texture::Format::GreyLevel:
-				{
 					bpp = 1;
 					break;
-				}
 				case spk::Texture::Format::DualChannel:
-				{
 					bpp = 2;
 					break;
-				}
 				case spk::Texture::Format::RGB:
-				{
 					bpp = 3;
 					break;
-				}
 				case spk::Texture::Format::RGBA:
-				{
 					bpp = 4;
 					break;
-				}
 				default:
-				{
 					bpp = 4;
 					break;
-				}
 				}
 
 				std::vector<uint8_t> readBackData(pixelCount * bpp, 0);
 				glGetTexImage(GL_TEXTURE_2D, 0, externalFmt, glDataType, readBackData.data());
 				glBindTexture(GL_TEXTURE_2D, 0);
+
 				newTexture.setPixels(readBackData, sz, spkFormat, _bindedTexture.filtering(), _bindedTexture.wrap(), _bindedTexture.mipmap());
 				return newTexture;
 			}
@@ -250,11 +234,15 @@ namespace spk::OpenGL
 	private:
 		GLuint _framebufferID = 0;
 		GLuint _depthBufferID = 0;
-		spk::Vector2UInt _size;
+		spk::Vector2UInt _size = {0, 0};
 		spk::Texture::Filtering _filtering = spk::Texture::Filtering::Nearest;
 		spk::Texture::Wrap _wrap = spk::Texture::Wrap::ClampToEdge;
 		spk::Texture::Mipmap _mipmap = spk::Texture::Mipmap::Disable;
+
 		std::map<std::wstring, std::unique_ptr<Attachment>> _attachments;
+
+		bool _needDepthBufferRebuild = false;
+		bool _needAttachRebuild = false;
 
 		void _setupDepthBuffer()
 		{
@@ -262,27 +250,66 @@ namespace spk::OpenGL
 			{
 				glGenRenderbuffers(1, &_depthBufferID);
 			}
-
 			glBindRenderbuffer(GL_RENDERBUFFER, _depthBufferID);
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, _size.x, _size.y);
+			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, (GLsizei)_size.x, (GLsizei)_size.y);
 			glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
-			glBindFramebuffer(GL_FRAMEBUFFER, _framebufferID);
 			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, _depthBufferID);
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		}
+
+		void _rebuildAttachments()
+		{
+			for (auto &pair : _attachments)
+			{
+				auto &attachmentPtr = pair.second;
+				if (attachmentPtr)
+				{
+					attachmentPtr->initialize(_size, _filtering, _wrap, _mipmap);
+					attachmentPtr->attachToFBO();
+				}
+			}
+
+			if (!_attachments.empty())
+			{
+				std::vector<GLenum> drawBuffers;
+				drawBuffers.reserve(_attachments.size());
+
+				int offset = 0;
+				for (auto &pair : _attachments)
+				{
+					drawBuffers.push_back(GL_COLOR_ATTACHMENT0 + offset);
+					offset++;
+				}
+				glDrawBuffers((GLsizei)drawBuffers.size(), drawBuffers.data());
+			}
+			else
+			{
+				glDrawBuffer(GL_NONE);
+			}
+		}
+
+		void _applyChanges()
+		{
+			if (_needDepthBufferRebuild)
+			{
+				_setupDepthBuffer();
+				_needDepthBufferRebuild = false;
+			}
+
+			if (_needAttachRebuild)
+			{
+				_rebuildAttachments();
+				_needAttachRebuild = false;
+			}
 		}
 
 	public:
-		FrameBufferObject()
-		{
-			glGenFramebuffers(1, &_framebufferID);
-		}
+		FrameBufferObject() = default;
 
 		FrameBufferObject(const spk::Vector2UInt &p_size) :
 			_size(p_size)
 		{
-			glGenFramebuffers(1, &_framebufferID);
-			_setupDepthBuffer();
+			_needDepthBufferRebuild = true;
 		}
 
 		FrameBufferObject(const FrameBufferObject &) = delete;
@@ -291,14 +318,19 @@ namespace spk::OpenGL
 		FrameBufferObject(FrameBufferObject &&p_other) noexcept
 		{
 			_framebufferID = p_other._framebufferID;
-			p_other._framebufferID = 0;
 			_depthBufferID = p_other._depthBufferID;
-			p_other._depthBufferID = 0;
 			_size = p_other._size;
 			_filtering = p_other._filtering;
 			_wrap = p_other._wrap;
 			_mipmap = p_other._mipmap;
 			_attachments = std::move(p_other._attachments);
+			_needDepthBufferRebuild = p_other._needDepthBufferRebuild;
+			_needAttachRebuild = p_other._needAttachRebuild;
+
+			p_other._framebufferID = 0;
+			p_other._depthBufferID = 0;
+			p_other._needDepthBufferRebuild = false;
+			p_other._needAttachRebuild = false;
 		}
 
 		FrameBufferObject &operator=(FrameBufferObject &&p_other) noexcept
@@ -309,7 +341,6 @@ namespace spk::OpenGL
 				{
 					glDeleteFramebuffers(1, &_framebufferID);
 				}
-
 				if (_depthBufferID != 0)
 				{
 					glDeleteRenderbuffers(1, &_depthBufferID);
@@ -322,9 +353,13 @@ namespace spk::OpenGL
 				_wrap = p_other._wrap;
 				_mipmap = p_other._mipmap;
 				_attachments = std::move(p_other._attachments);
+				_needDepthBufferRebuild = p_other._needDepthBufferRebuild;
+				_needAttachRebuild = p_other._needAttachRebuild;
 
 				p_other._framebufferID = 0;
 				p_other._depthBufferID = 0;
+				p_other._needDepthBufferRebuild = false;
+				p_other._needAttachRebuild = false;
 			}
 			return *this;
 		}
@@ -346,46 +381,20 @@ namespace spk::OpenGL
 			_filtering = p_filtering;
 			_wrap = p_wrap;
 			_mipmap = p_mipmap;
+			_needAttachRebuild = true;
 		}
 
 		void resize(const spk::Vector2UInt &p_size)
 		{
 			_size = p_size;
-			_setupDepthBuffer();
-			activate();
-			for (auto &[name, attachmentPtr] : _attachments)
-			{
-				if (attachmentPtr)
-				{
-					attachmentPtr->initialize(_size, _filtering, _wrap, _mipmap);
-					attachmentPtr->activate();
-				}
-			}
-			if (!_attachments.empty())
-			{
-				std::vector<GLenum> drawBufs;
-				drawBufs.reserve(_attachments.size());
-				for (auto &[k, att] : _attachments)
-				{
-					if (att)
-					{
-						drawBufs.push_back(GL_COLOR_ATTACHMENT0 + 0);
-					}
-				}
-				if (!drawBufs.empty())
-				{
-					glDrawBuffers(GLsizei(drawBufs.size()), drawBufs.data());
-				}
-				else
-				{
-					glDrawBuffer(GL_NONE);
-				}
-			}
-			else
-			{
-				glDrawBuffer(GL_NONE);
-			}
-			deactivate();
+			_needDepthBufferRebuild = true;
+			_needAttachRebuild = true;
+		}
+
+		void addAttachment(const std::wstring &p_attachmentName, const int &bindingPoint, const Type &p_type)
+		{
+			_attachments[p_attachmentName] = std::make_unique<Attachment>(bindingPoint, p_type);
+			_needAttachRebuild = true;
 		}
 
 		const spk::Vector2UInt &size() const
@@ -405,19 +414,6 @@ namespace spk::OpenGL
 			return _mipmap;
 		}
 
-		void addAttachment(const std::wstring &p_attachmentName, const int &bindingPoint, const Type &p_type)
-		{
-			auto newAttach = std::make_unique<Attachment>(bindingPoint, p_type);
-			_attachments[p_attachmentName] = std::move(newAttach);
-			if (_size.x > 0 && _size.y > 0)
-			{
-				activate();
-				_attachments[p_attachmentName]->initialize(_size, _filtering, _wrap, _mipmap);
-				_attachments[p_attachmentName]->activate();
-				deactivate();
-			}
-		}
-
 		spk::SafePointer<const Attachment> attachment(const std::wstring &p_attachmentName)
 		{
 			auto it = _attachments.find(p_attachmentName);
@@ -430,8 +426,16 @@ namespace spk::OpenGL
 
 		void activate()
 		{
+			if (_framebufferID == 0)
+			{
+				glGenFramebuffers(1, &_framebufferID);
+			}
+
 			glBindFramebuffer(GL_FRAMEBUFFER, _framebufferID);
+
+			_applyChanges();
 		}
+
 		void deactivate()
 		{
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
