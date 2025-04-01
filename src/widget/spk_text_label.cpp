@@ -14,18 +14,18 @@ namespace spk
 		_fontRenderer.validate();
 	}
 
-	void TextLabel::_onPaintEvent(spk::PaintEvent& p_event)
+	void TextLabel::_onPaintEvent(spk::PaintEvent &p_event)
 	{
 		_backgroundRenderer.render();
 		_fontRenderer.render();
 	}
 
-	TextLabel::TextLabel(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent):
+	TextLabel::TextLabel(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
 		spk::Widget(p_name, p_parent)
 	{
 		setTextColor(spk::Color::white, spk::Color::black);
 		setTextAlignment(spk::HorizontalAlignment::Left, spk::VerticalAlignment::Centered);
-		setSpriteSheet(Widget::defaultNineSlice());
+		setNineSlice(Widget::defaultNineSlice());
 		setFont(Widget::defaultFont());
 	}
 
@@ -34,17 +34,17 @@ namespace spk
 		return (_fontRenderer.font()->computeStringSize(_text, _fontRenderer.fontSize()));
 	}
 
-	spk::Vector2UInt TextLabel::computeExpectedTextSize(const spk::Font::Size& p_textSize)
+	spk::Vector2UInt TextLabel::computeExpectedTextSize(const spk::Font::Size &p_textSize)
 	{
 		return (_fontRenderer.font()->computeStringSize(_text, p_textSize));
 	}
 
-	const std::wstring& TextLabel::text() const
+	const std::wstring &TextLabel::text() const
 	{
 		return (_text);
 	}
 
-	const spk::Vector2UInt& TextLabel::cornerSize() const
+	const spk::Vector2UInt &TextLabel::cornerSize() const
 	{
 		return (_cornerSize);
 	}
@@ -54,7 +54,7 @@ namespace spk
 		return (_fontRenderer.font());
 	}
 
-	const spk::Font::Size& TextLabel::fontSize() const
+	const spk::Font::Size &TextLabel::fontSize() const
 	{
 		return (_fontRenderer.fontSize());
 	}
@@ -65,37 +65,37 @@ namespace spk
 		requireGeometryUpdate();
 	}
 
-	void TextLabel::setText(const std::wstring& p_text)
+	void TextLabel::setText(const std::wstring &p_text)
 	{
 		_text = p_text;
 		requireGeometryUpdate();
 	}
 
-	void TextLabel::setFontSize(const spk::Font::Size& p_textSize)
+	void TextLabel::setFontSize(const spk::Font::Size &p_textSize)
 	{
 		_fontRenderer.setFontSize(p_textSize);
 		requireGeometryUpdate();
 	}
 
-	void TextLabel::setTextColor(const spk::Color& p_glyphColor, const spk::Color& p_outlineColor)
+	void TextLabel::setTextColor(const spk::Color &p_glyphColor, const spk::Color &p_outlineColor)
 	{
 		_fontRenderer.setGlyphColor(p_glyphColor);
 		_fontRenderer.setOutlineColor(p_outlineColor);
 	}
 
-	void TextLabel::setTextAlignment(const spk::HorizontalAlignment& p_horizontalAlignment, const spk::VerticalAlignment& p_verticalAlignment)
+	void TextLabel::setTextAlignment(const spk::HorizontalAlignment &p_horizontalAlignment, const spk::VerticalAlignment &p_verticalAlignment)
 	{
 		_horizontalAlignment = p_horizontalAlignment;
 		_verticalAlignment = p_verticalAlignment;
 		requireGeometryUpdate();
 	}
 
-	void TextLabel::setSpriteSheet(spk::SafePointer<spk::SpriteSheet> p_spriteSheet)
+	void TextLabel::setNineSlice(spk::SafePointer<const spk::SpriteSheet> p_spriteSheet)
 	{
 		_backgroundRenderer.setSpriteSheet(p_spriteSheet);
 	}
 
-	void TextLabel::setCornerSize(const spk::Vector2UInt& p_cornerSize)
+	void TextLabel::setCornerSize(const spk::Vector2UInt &p_cornerSize)
 	{
 		_cornerSize = p_cornerSize;
 		requireGeometryUpdate();

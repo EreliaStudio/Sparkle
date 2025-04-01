@@ -2,7 +2,7 @@
 
 namespace spk
 {
-	void RemoteNode::connect(const std::string& p_address, size_t p_port)
+	void RemoteNode::connect(const std::string &p_address, size_t p_port)
 	{
 		_client.connect(p_address, p_port);
 	}
@@ -12,7 +12,7 @@ namespace spk
 		_client.disconnect();
 	}
 
-	void RemoteNode::treatMessage(spk::Server::MessageObject&& p_message)
+	void RemoteNode::treatMessage(spk::Server::MessageObject &&p_message)
 	{
 		if (_client.isConnected() == false)
 		{
@@ -21,22 +21,22 @@ namespace spk
 		_client.send(*p_message);
 	}
 
-	spk::ThreadSafeQueue<spk::Server::MessageObject>& RemoteNode::messages()
+	spk::ThreadSafeQueue<spk::Server::MessageObject> &RemoteNode::messages()
 	{
 		return _client.messages();
 	}
 
-	void LocalNode::treatMessage(spk::Server::MessageObject&& p_message)
+	void LocalNode::treatMessage(spk::Server::MessageObject &&p_message)
 	{
 		_messagesReceived.push(std::move(p_message));
 	}
 
-	spk::ThreadSafeQueue<spk::Server::MessageObject>& LocalNode::messageReceived()
+	spk::ThreadSafeQueue<spk::Server::MessageObject> &LocalNode::messageReceived()
 	{
 		return _messagesReceived;
 	}
 
-	spk::Server::MessageObject LocalNode::obtainAwnerMessage(const spk::Message::Header::ClientID& p_emitterID, spk::Message::Header::Type p_type)
+	spk::Server::MessageObject LocalNode::obtainAwnerMessage(const spk::Message::Header::ClientID &p_emitterID, spk::Message::Header::Type p_type)
 	{
 		spk::Server::MessageObject result = _messagePool.obtain();
 		result->setEmitterID(p_emitterID);
@@ -44,7 +44,7 @@ namespace spk
 		return result;
 	}
 
-	spk::Server::MessageObject LocalNode::obtainAwnerMessage(spk::Server::MessageObject&& p_questionMessage, spk::Message::Header::Type p_type)
+	spk::Server::MessageObject LocalNode::obtainAwnerMessage(spk::Server::MessageObject &&p_questionMessage, spk::Message::Header::Type p_type)
 	{
 		spk::Server::MessageObject result = _messagePool.obtain();
 		result->setEmitterID(p_questionMessage->header().emitterID);
@@ -52,17 +52,19 @@ namespace spk
 		return result;
 	}
 
-	void LocalNode::insertMessageAwnser(spk::Server::MessageObject&& p_messageAwnser)
+	void LocalNode::insertMessageAwnser(spk::Server::MessageObject &&p_messageAwnser)
 	{
 		_messagesToReturn.push(std::move(p_messageAwnser));
 	}
 
-	spk::ThreadSafeQueue<spk::Server::MessageObject>& LocalNode::messages()
+	spk::ThreadSafeQueue<spk::Server::MessageObject> &LocalNode::messages()
 	{
 		return _messagesToReturn;
 	}
 
-	CentralNode::CentralNode() {}
+	CentralNode::CentralNode()
+	{
+	}
 
 	void CentralNode::start(size_t p_serverPort)
 	{
@@ -82,7 +84,8 @@ namespace spk
 	{
 		if (!_nodes.contains(p_nodeName))
 		{
-			throw std::runtime_error("Can't set a redirection for message type [" + std::to_string(p_messageType) + "] to node [" + p_nodeName + "] : this node does not exist.");
+			throw std::runtime_error("Can't set a redirection for message type [" + std::to_string(p_messageType) + "] to node [" + p_nodeName +
+									 "] : this node does not exist.");
 		}
 		_redirections[p_messageType] = _nodes[p_nodeName];
 	}
@@ -102,7 +105,7 @@ namespace spk
 
 	void CentralNode::redirectMessageToClients()
 	{
-		for (const auto& [key, node] : _nodes)
+		for (const auto &[key, node] : _nodes)
 		{
 			while (!node->messages().empty())
 			{

@@ -3,10 +3,6 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
 #include <Windows.h>
 
 #include <vector>
@@ -18,19 +14,18 @@ namespace spk::OpenGL
 		_fragmentShaderCode(""),
 		_programID(0)
 	{
-		
 	}
-	Program::Program(const std::string& p_vertexShaderCode, const std::string& p_fragmentShaderCode) :
+	Program::Program(const std::string &p_vertexShaderCode, const std::string &p_fragmentShaderCode) :
 		_vertexShaderCode(p_vertexShaderCode),
 		_fragmentShaderCode(p_fragmentShaderCode),
 		_programID(0)
 	{
 	}
 
-	GLuint Program::_compileShader(const std::string& shaderCode, GLenum shaderType)
+	GLuint Program::_compileShader(const std::string &p_shaderCode, GLenum p_shaderType)
 	{
-		GLuint shader = glCreateShader(shaderType);
-		const char* source = shaderCode.c_str();
+		GLuint shader = glCreateShader(p_shaderType);
+		const char *source = p_shaderCode.c_str();
 		glShaderSource(shader, 1, &source, nullptr);
 		glCompileShader(shader);
 
@@ -40,18 +35,18 @@ namespace spk::OpenGL
 		{
 			GLchar infoLog[512];
 			glGetShaderInfoLog(shader, 512, nullptr, infoLog);
-			std::string shaderTypeStr = (shaderType == GL_VERTEX_SHADER) ? "Vertex Shader" : "Fragment Shader";
+			std::string shaderTypeStr = (p_shaderType == GL_VERTEX_SHADER) ? "Vertex Shader" : "Fragment Shader";
 			throw std::runtime_error(shaderTypeStr + " compilation failed: " + std::string(infoLog));
 		}
 
 		return shader;
 	}
 
-	GLuint Program::_linkProgram(GLuint vertexShader, GLuint fragmentShader)
+	GLuint Program::_linkProgram(GLuint p_vertexShader, GLuint p_fragmentShader)
 	{
 		GLuint program = glCreateProgram();
-		glAttachShader(program, vertexShader);
-		glAttachShader(program, fragmentShader);
+		glAttachShader(program, p_vertexShader);
+		glAttachShader(program, p_fragmentShader);
 		glLinkProgram(program);
 
 		GLint success;
@@ -63,8 +58,8 @@ namespace spk::OpenGL
 			throw std::runtime_error("Shader Program linking failed: " + std::string(infoLog));
 		}
 
-		glDeleteShader(vertexShader);
-		glDeleteShader(fragmentShader);
+		glDeleteShader(p_vertexShader);
+		glDeleteShader(p_fragmentShader);
 
 		return program;
 	}
@@ -79,7 +74,9 @@ namespace spk::OpenGL
 	void Program::activate()
 	{
 		if (_programID == 0)
+		{
 			_load();
+		}
 
 		glUseProgram(_programID);
 	}
@@ -87,15 +84,19 @@ namespace spk::OpenGL
 	void Program::deactivate()
 	{
 		if (_programID != 0)
+		{
 			glUseProgram(0);
+		}
 	}
 
-	void Program::render(GLsizei nbIndexes, GLsizei p_nbInstance)
+	void Program::render(GLsizei p_nbIndexes, GLsizei p_nbInstance)
 	{
 		if (_programID == 0)
+		{
 			_load();
+		}
 
-		glDrawElementsInstanced(GL_TRIANGLES, nbIndexes, GL_UNSIGNED_INT, nullptr, p_nbInstance);
+		glDrawElementsInstanced(GL_TRIANGLES, p_nbIndexes, GL_UNSIGNED_INT, nullptr, p_nbInstance);
 	}
 
 	void Program::validate()
@@ -103,7 +104,8 @@ namespace spk::OpenGL
 		glValidateProgram(_programID);
 		GLint validationStatus;
 		glGetProgramiv(_programID, GL_VALIDATE_STATUS, &validationStatus);
-		if (validationStatus == GL_FALSE) {
+		if (validationStatus == GL_FALSE)
+		{
 			GLint infoLogLength;
 			glGetProgramiv(_programID, GL_INFO_LOG_LENGTH, &infoLogLength);
 			std::vector<char> infoLog(infoLogLength);

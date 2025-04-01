@@ -4,87 +4,86 @@ namespace spk
 {
 	GameEngine::GameEngine()
 	{
-		
+		_rootObject.activate();
 	}
 
 	void GameEngine::clear()
 	{
-		_centralEntity.clearChildren();
+		_rootObject.clearChildren();
 	}
 
-	spk::SafePointer<spk::Entity> GameEngine::centralEntity()
+	spk::SafePointer<spk::GameObject> GameEngine::rootObject()
 	{
-		return (&_centralEntity);
-	}
-	
-	void GameEngine::addEntity(const spk::SafePointer<Entity>& p_entity)
-	{
-		_centralEntity.addChild(p_entity);
+		return (&_rootObject);
 	}
 
-	void GameEngine::removeEntity(const spk::SafePointer<Entity>& p_entity)
+	void GameEngine::addEntity(const spk::SafePointer<GameObject> &p_entity)
 	{
-		_centralEntity.removeChild(p_entity);
+		_rootObject.addChild(p_entity);
 	}
 
-	spk::SafePointer<Entity> GameEngine::getEntity(const std::wstring& p_name)
+	void GameEngine::removeEntity(const spk::SafePointer<GameObject> &p_entity)
 	{
-		return _centralEntity.getChild(p_name);
+		_rootObject.removeChild(p_entity);
 	}
 
-	spk::SafePointer<const Entity> GameEngine::getEntity(const std::wstring& p_name) const
+	spk::SafePointer<GameObject> GameEngine::getEntity(const std::wstring &p_name)
 	{
-		return _centralEntity.getChild(p_name);
+		return _rootObject.getChild(p_name);
 	}
 
-	std::vector<spk::SafePointer<Entity>> GameEngine::getEntities(const std::wstring& p_name)
+	spk::SafePointer<const GameObject> GameEngine::getEntity(const std::wstring &p_name) const
 	{
-		return (_centralEntity.getChildren(p_name));
+		return _rootObject.getChild(p_name);
 	}
 
-	std::vector<spk::SafePointer<const Entity>> GameEngine::getEntities(const std::wstring& p_name) const
+	std::vector<spk::SafePointer<GameObject>> GameEngine::getEntities(const std::wstring &p_name)
 	{
-		return (_centralEntity.getChildren(p_name));
+		return (_rootObject.getChildren(p_name));
 	}
 
-	bool GameEngine::contains(const std::wstring& p_name) const
+	std::vector<spk::SafePointer<const GameObject>> GameEngine::getEntities(const std::wstring &p_name) const
 	{
-		return (_centralEntity.contains(p_name));
+		return (_rootObject.getChildren(p_name));
 	}
 
-	size_t GameEngine::count(const std::wstring& p_name) const
+	bool GameEngine::contains(const std::wstring &p_name) const
 	{
-		return (_centralEntity.count(p_name));
+		return (_rootObject.contains(p_name));
 	}
 
-
-	void GameEngine::onPaintEvent(spk::PaintEvent& p_event)
+	size_t GameEngine::count(const std::wstring &p_name) const
 	{
-		_centralEntity.onPaintEvent(p_event);
-	}
-	
-	void GameEngine::onUpdateEvent(spk::UpdateEvent& p_event)
-	{
-		_centralEntity.onUpdateEvent(p_event);
-	}
-	
-	void GameEngine::onKeyboardEvent(spk::KeyboardEvent& p_event)
-	{
-		_centralEntity.onKeyboardEvent(p_event);
-	}
-	
-	void GameEngine::onMouseEvent(spk::MouseEvent& p_event)
-	{
-		_centralEntity.onMouseEvent(p_event);
+		return (_rootObject.count(p_name));
 	}
 
-	void GameEngine::onControllerEvent(spk::ControllerEvent& p_event)
+	void GameEngine::onPaintEvent(spk::PaintEvent &p_event)
 	{
-		_centralEntity.onControllerEvent(p_event);
+		_rootObject.onPaintEvent(p_event);
 	}
-	
-	void GameEngine::onTimerEvent(spk::TimerEvent& p_event)
+
+	void GameEngine::onUpdateEvent(spk::UpdateEvent &p_event)
 	{
-		_centralEntity.onTimerEvent(p_event);
+		_rootObject.onUpdateEvent(p_event);
+	}
+
+	void GameEngine::onKeyboardEvent(spk::KeyboardEvent &p_event)
+	{
+		_rootObject.onKeyboardEvent(p_event);
+	}
+
+	void GameEngine::onMouseEvent(spk::MouseEvent &p_event)
+	{
+		_rootObject.onMouseEvent(p_event);
+	}
+
+	void GameEngine::onControllerEvent(spk::ControllerEvent &p_event)
+	{
+		_rootObject.onControllerEvent(p_event);
+	}
+
+	void GameEngine::onTimerEvent(spk::TimerEvent &p_event)
+	{
+		_rootObject.onTimerEvent(p_event);
 	}
 }

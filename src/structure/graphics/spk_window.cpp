@@ -13,7 +13,7 @@
 
 namespace spk
 {
-	void Window::_initialize(const std::function<void(spk::SafePointer<spk::Window>)>& p_onClosureCallback)
+	void Window::_initialize(const std::function<void(spk::SafePointer<spk::Window>)> &p_onClosureCallback)
 	{
 		_windowRendererThread.start();
 		_windowUpdaterThread.start();
@@ -21,62 +21,67 @@ namespace spk
 		_onClosureCallback = p_onClosureCallback;
 	}
 
-	LRESULT CALLBACK Window::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+	LRESULT CALLBACK Window::WindowProc(HWND p_hwnd, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam)
 	{
-		Window* window = nullptr;
+		Window *window = nullptr;
 
-		if (uMsg == WM_NCCREATE)
+		if (p_uMsg == WM_NCCREATE)
 		{
-			CREATESTRUCT* pCreate = reinterpret_cast<CREATESTRUCT*>(lParam);
-			window = reinterpret_cast<Window*>(pCreate->lpCreateParams);
-			SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(window));
+			CREATESTRUCT *pCreate = reinterpret_cast<CREATESTRUCT *>(p_lParam);
+			window = reinterpret_cast<Window *>(pCreate->lpCreateParams);
+			SetWindowLongPtr(p_hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(window));
 		}
 		else
 		{
-			window = reinterpret_cast<Window*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+			window = reinterpret_cast<Window *>(GetWindowLongPtr(p_hwnd, GWLP_USERDATA));
 		}
 
 		if (window != nullptr)
 		{
-			if (window->_receiveEvent(uMsg, wParam, lParam) == true)
+			if (window->_receiveEvent(p_uMsg, p_wParam, p_lParam) == true)
+			{
 				return (TRUE);
+			}
 		}
 
-		return DefWindowProc(hwnd, uMsg, wParam, lParam);
+		return DefWindowProc(p_hwnd, p_uMsg, p_wParam, p_lParam);
 	}
 
-	bool Window::_receiveEvent(UINT uMsg, WPARAM wParam, LPARAM lParam)
+	bool Window::_receiveEvent(UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam)
 	{
-		if (_subscribedModules.contains(uMsg) == false)
+		if (_subscribedModules.contains(p_uMsg) == false)
+		{
 			return (false);
-		_subscribedModules[uMsg]->receiveEvent(spk::Event(this, uMsg, wParam, lParam));
+		}
+		_subscribedModules[p_uMsg]->receiveEvent(spk::Event(this, p_uMsg, p_wParam, p_lParam));
 		return (true);
 	}
 
 	void Window::_createContext()
 	{
-		RECT adjustedRect = {
-			static_cast<LONG>(0),
-			static_cast<LONG>(0),
-			static_cast<LONG>(_viewport.geometry().width),
-			static_cast<LONG>(_viewport.geometry().height)
-		};
+		RECT adjustedRect = {static_cast<LONG>(0),
+							 static_cast<LONG>(0),
+							 static_cast<LONG>(_viewport.geometry().width),
+							 static_cast<LONG>(_viewport.geometry().height)};
 		if (!AdjustWindowRectEx(&adjustedRect, WS_OVERLAPPEDWINDOW, FALSE, 0))
 		{
 			throw std::runtime_error("Failed to adjust window rect.");
 		}
-		
+
 		std::string convertedTitle = spk::StringUtils::wstringToString(_title);
 
-		_hwnd = CreateWindowEx(
-			0,
-			"SPKWindowClass",
-			convertedTitle.c_str(),
-			WS_OVERLAPPEDWINDOW,
-			_viewport.geometry().x, _viewport.geometry().y,
-			adjustedRect.right - adjustedRect.left,
-			adjustedRect.bottom - adjustedRect.top,
-			nullptr, nullptr, GetModuleHandle(nullptr), this);
+		_hwnd = CreateWindowEx(0,
+							   "SPKWindowClass",
+							   convertedTitle.c_str(),
+							   WS_OVERLAPPEDWINDOW,
+							   _viewport.geometry().x,
+							   _viewport.geometry().y,
+							   adjustedRect.right - adjustedRect.left,
+							   adjustedRect.bottom - adjustedRect.top,
+							   nullptr,
+							   nullptr,
+							   GetModuleHandle(nullptr),
+							   this);
 
 		if (!_hwnd)
 		{
@@ -97,14 +102,14 @@ namespace spk
 		_cursors[L"Hand"] = ::LoadCursor(nullptr, IDC_HAND);
 		_cursors[L"Working"] = ::LoadCursor(nullptr, IDC_APPSTARTING);
 		_cursors[L"Help"] = ::LoadCursor(nullptr, IDC_HELP);
-		
+
 		setUpdateTimer(1);
 
 		setCursor(L"Arrow");
 
 		_controllerInputThread.bind(_hwnd);
 		_createOpenGLContext();
-		
+
 		ShowWindow(_hwnd, SW_SHOW);
 		UpdateWindow(_hwnd);
 	}
@@ -116,7 +121,7 @@ namespace spk
 
 			if (_pendingTimerCreations.size() != 0)
 			{
-				for (const auto& pair : _pendingTimerCreations)
+				for (const auto &pair : _pendingTimerCreations)
 				{
 					if (_timers.contains(pair.first))
 					{
@@ -129,7 +134,7 @@ namespace spk
 
 			if (_pendingTimerDeletions.size() != 0)
 			{
-				for (const auto& id : _pendingTimerDeletions)
+				for (const auto &id : _pendingTimerDeletions)
 				{
 					_deleteTimer(id);
 				}
@@ -138,7 +143,7 @@ namespace spk
 		}
 	}
 
-	UINT_PTR Window::_createTimer(int p_id, const long long& p_durationInMillisecond)
+	UINT_PTR Window::_createTimer(int p_id, const long long &p_durationInMillisecond)
 	{
 		UINT_PTR result = SetTimer(_hwnd, p_id, static_cast<UINT>(p_durationInMillisecond), nullptr);
 		if (result == 0)
@@ -149,7 +154,7 @@ namespace spk
 		_timers.erase(result);
 		return (result);
 	}
-	
+
 	void Window::_deleteTimer(UINT_PTR p_id)
 	{
 		if (!KillTimer(_hwnd, p_id))
@@ -162,13 +167,13 @@ namespace spk
 	void Window::_removeAllTimers()
 	{
 		std::set<UINT_PTR> oldTimer = _timers;
-		for (const auto& timer : oldTimer)
+		for (const auto &timer : oldTimer)
 		{
 			_deleteTimer(timer);
 		}
 	}
 
-	void Window::setUpdateTimer(const long long& p_durationInMillisecond)
+	void Window::setUpdateTimer(const long long &p_durationInMillisecond)
 	{
 		addTimer(-1, p_durationInMillisecond);
 	}
@@ -178,37 +183,33 @@ namespace spk
 		removeTimer(-1);
 	}
 
-	void Window::addTimer(int p_id, const long long& p_durationInMillisecond)
+	void Window::addTimer(int p_id, const long long &p_durationInMillisecond)
 	{
 		std::lock_guard<std::recursive_mutex> lock(_timerMutex);
 		std::pair<int, long long> value;
-		
+
 		value.first = p_id + 2;
 		value.second = p_durationInMillisecond;
 
 		_pendingTimerCreations.push_back(value);
 	}
-	
+
 	void Window::removeTimer(int p_id)
 	{
 		_pendingTimerDeletions.push_back(p_id + 2);
 	}
 
-	void GLAPIENTRY
-		OpenGLDebugMessageCallback(GLenum source,
-			GLenum type,
-			GLuint id,
-			GLenum severity,
-			GLsizei length,
-			const GLchar* message,
-			const void* userParam)
+	void GLAPIENTRY openGLDebugMessageCallback(GLenum p_source, GLenum p_type, GLuint p_id, GLenum p_severity, GLsizei p_length, const GLchar *p_message,
+											   const void *p_userParam)
 	{
-		if (id == 131169 || id == 131185 || id == 131218 || id == 131204)
+		if (p_id == 131169 || p_id == 131185 || p_id == 131218 || p_id == 131204)
+		{
 			return;
+		}
 
 		spk::cout << "---------------" << std::endl;
 
-		switch (source)
+		switch (p_source)
 		{
 		case GL_DEBUG_SOURCE_API:
 			spk::cout << "Source: API" << std::endl;
@@ -230,7 +231,7 @@ namespace spk
 			break;
 		}
 
-		switch (type)
+		switch (p_type)
 		{
 		case GL_DEBUG_TYPE_ERROR:
 			spk::cout << "Type: Error" << std::endl;
@@ -261,7 +262,7 @@ namespace spk
 			break;
 		}
 
-		switch (severity)
+		switch (p_severity)
 		{
 		case GL_DEBUG_SEVERITY_HIGH:
 			spk::cout << "Severity: high" << std::endl;
@@ -276,34 +277,43 @@ namespace spk
 			spk::cout << "Severity: notification" << std::endl;
 			break;
 		}
-			
-		spk::cout << "Debug message (" << id << "): " << message << std::endl;
-		if (severity != GL_DEBUG_SEVERITY_NOTIFICATION)
+
+		spk::cout << "Debug message (" << p_id << "): " << p_message << std::endl;
+		if (p_severity != GL_DEBUG_SEVERITY_NOTIFICATION)
+		{
 			throw std::runtime_error("Unexpected opengl error detected");
+		}
 	}
 
 	void Window::_createOpenGLContext()
 	{
 		_hdc = GetDC(_hwnd);
-		PIXELFORMATDESCRIPTOR pfd =
-		{
-			sizeof(PIXELFORMATDESCRIPTOR),
-			1,
-			PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
-			PFD_TYPE_RGBA,
-			32,
-			0, 0, 0, 0, 0, 0,
-			0,
-			0,
-			0,
-			0, 0, 0, 0,
-			24,
-			8,
-			0,
-			PFD_MAIN_PLANE,
-			0,
-			0, 0, 0
-		};
+		PIXELFORMATDESCRIPTOR pfd = {sizeof(PIXELFORMATDESCRIPTOR),
+									 1,
+									 PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
+									 PFD_TYPE_RGBA,
+									 32,
+									 0,
+									 0,
+									 0,
+									 0,
+									 0,
+									 0,
+									 0,
+									 0,
+									 0,
+									 0,
+									 0,
+									 0,
+									 0,
+									 24,
+									 8,
+									 0,
+									 PFD_MAIN_PLANE,
+									 0,
+									 0,
+									 0,
+									 0};
 
 		int pixelFormat = ChoosePixelFormat(_hdc, &pfd);
 		if (pixelFormat == 0)
@@ -345,12 +355,15 @@ namespace spk
 		}
 
 		// Now create a modern OpenGL context
-		int attributes[] = {
-			WGL_CONTEXT_MAJOR_VERSION_ARB, 4,
-			WGL_CONTEXT_MINOR_VERSION_ARB, 5,
-			WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
-			WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
-			0 };
+		int attributes[] = {WGL_CONTEXT_MAJOR_VERSION_ARB,
+							4,
+							WGL_CONTEXT_MINOR_VERSION_ARB,
+							5,
+							WGL_CONTEXT_FLAGS_ARB,
+							WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
+							WGL_CONTEXT_PROFILE_MASK_ARB,
+							WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
+							0};
 
 		_hglrc = wglCreateContextAttribsARB(_hdc, nullptr, attributes);
 		if (!_hglrc)
@@ -374,7 +387,7 @@ namespace spk
 		}
 
 		glEnable(GL_DEBUG_OUTPUT);
-		glDebugMessageCallback(OpenGLDebugMessageCallback, 0);
+		glDebugMessageCallback(openGLDebugMessageCallback, 0);
 
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -397,7 +410,6 @@ namespace spk
 		wglSwapIntervalEXT(0);
 	}
 
-
 	void Window::_destroyOpenGLContext()
 	{
 		if (_hglrc)
@@ -414,7 +426,7 @@ namespace spk
 		}
 	}
 
-	Window::Window(const std::wstring& p_title, const spk::Geometry2D& p_geometry) :
+	Window::Window(const std::wstring &p_title, const spk::Geometry2D &p_geometry) :
 		_rootWidget(std::make_unique<Widget>(p_title + L" - CentralWidget")),
 		_title(p_title),
 		_viewport(p_geometry),
@@ -422,47 +434,56 @@ namespace spk
 		_windowUpdaterThread(p_title + L" - Updater")
 	{
 		resize(p_geometry.size);
-		_windowRendererThread.addPreparationStep([&]() {
-				try
+		_windowRendererThread
+			.addPreparationStep(
+				[&]()
 				{
-					_createContext();
-					requestResize();
-				}
-				catch (std::exception& e)
+					try
+					{
+						_createContext();
+						requestResize();
+					} catch (std::exception &e)
+					{
+						spk::cout << "Error catched : " << e.what() << std::endl;
+						close();
+					}
+				})
+			.relinquish();
+		_windowRendererThread
+			.addExecutionStep(
+				[&]()
 				{
-					spk::cout << "Error catched : " << e.what() << std::endl;
-					close();
-				}
-			}).relinquish();
-		_windowRendererThread.addExecutionStep([&]() {
-				try
+					try
+					{
+						_handlePendingTimer();
+						pullEvents();
+						timerModule.treatMessages();
+						paintModule.treatMessages();
+						systemModule.treatMessages();
+					} catch (std::exception &e)
+					{
+						spk::cout << "Renderer - Error catched : " << e.what() << std::endl;
+						close();
+					}
+				})
+			.relinquish();
+		_windowUpdaterThread
+			.addExecutionStep(
+				[&]()
 				{
-					_handlePendingTimer();
-					pullEvents();
-					timerModule.treatMessages();
-					paintModule.treatMessages();
-					systemModule.treatMessages();
-				}
-				catch (std::exception& e)
-				{
-					spk::cout << "Renderer - Error catched : " << e.what() << std::endl;
-					close();
-				}
-			}).relinquish();
-		_windowUpdaterThread.addExecutionStep([&]() {
-				try
-				{
-					mouseModule.treatMessages();
-					keyboardModule.treatMessages();
-					controllerModule.treatMessages();
-					updateModule.treatMessages();
-				}
-				catch (std::exception& e)
-				{
-					spk::cout << "Updater - Error catched : " << e.what() << std::endl;
-					close();
-				}
-			}).relinquish();
+					try
+					{
+						mouseModule.treatMessages();
+						keyboardModule.treatMessages();
+						controllerModule.treatMessages();
+						updateModule.treatMessages();
+					} catch (std::exception &e)
+					{
+						spk::cout << "Updater - Error catched : " << e.what() << std::endl;
+						close();
+					}
+				})
+			.relinquish();
 
 		bindModule(&mouseModule);
 		bindModule(&keyboardModule);
@@ -481,27 +502,31 @@ namespace spk
 		_rootWidget.release();
 	}
 
-	void Window::move(const spk::Geometry2D::Point& p_newPosition)
+	void Window::move(const spk::Geometry2D::Point &p_newPosition)
 	{
 		// _viewport.setGeometry({ 0, 0, _viewport.geometry().size });
 		// _rootWidget->setGeometry(_viewport.geometry());
 	}
-	
-	void Window::resize(const spk::Geometry2D::Size& p_newSize)
+
+	void Window::resize(const spk::Geometry2D::Size &p_newSize)
 	{
 		if (p_newSize.x == 0 || p_newSize.y == 0)
-			return ;
+		{
+			return;
+		}
 
 		_viewport.setWindowSize(p_newSize);
 		_rootWidget->_viewport.setWindowSize(p_newSize);
 
-		_viewport.setGeometry({ 0, 0, p_newSize});
+		_viewport.setGeometry({0, 0, p_newSize});
 		_rootWidget->setGeometry(_viewport.geometry());
-		
-		for (auto& child : _rootWidget->children())
+
+		for (auto &child : _rootWidget->children())
 		{
 			child->_resize();
 		}
+
+		requestPaint();
 	}
 
 	void Window::close()
@@ -518,7 +543,9 @@ namespace spk
 		_destroyOpenGLContext();
 
 		if (_onClosureCallback != nullptr)
+		{
 			_onClosureCallback(this);
+		}
 	}
 
 	void Window::clear()
@@ -526,8 +553,7 @@ namespace spk
 		try
 		{
 			_viewport.apply();
-		}
-		catch (...)
+		} catch (...)
 		{
 			throw std::runtime_error("Error while applying main window viewport");
 		}
@@ -540,26 +566,27 @@ namespace spk
 		SwapBuffers(_hdc);
 	}
 
-	void Window::addCursor(const std::wstring& p_cursorName, const std::filesystem::path& p_cursorPath)
+	void Window::addCursor(const std::wstring &p_cursorName, const std::filesystem::path &p_cursorPath)
 	{
 		_cursors[p_cursorName] = LoadCursorFromFileW(p_cursorPath.c_str());
 	}
 
-	void Window::setCursor(const std::wstring& p_cursorName)
+	void Window::setCursor(const std::wstring &p_cursorName)
 	{
 		if (_cursors.contains(p_cursorName) == false)
+		{
 			throw std::runtime_error("Cursor [" + spk::StringUtils::wstringToString(p_cursorName) + "] not found.");
+		}
 
 		HCURSOR nextCursor = _cursors[p_cursorName];
 		if (_currentCursor == nextCursor)
+		{
 			return;
+		}
 
 		_currentCursor = nextCursor;
 		::SetCursor(_currentCursor);
-		::SendMessage(_hwnd,
-              WM_SETCURSOR,
-              reinterpret_cast<WPARAM>(_hwnd),
-              MAKELPARAM(HTCLIENT, WM_MOUSEMOVE));
+		::SendMessage(_hwnd, WM_SETCURSOR, reinterpret_cast<WPARAM>(_hwnd), MAKELPARAM(HTCLIENT, WM_MOUSEMOVE));
 	}
 
 	void Window::_applyCursor()
@@ -578,12 +605,12 @@ namespace spk
 			DispatchMessage(&msg);
 		}
 	}
-	
-	void Window::bindModule(spk::IModule* p_module)
+
+	void Window::bindModule(spk::IModule *p_module)
 	{
-		for (const auto& ID : p_module->eventIDs())
+		for (const auto &id : p_module->eventIDs())
 		{
-			_subscribedModules[ID] = p_module;
+			_subscribedModules[id] = p_module;
 		}
 	}
 
@@ -591,18 +618,18 @@ namespace spk
 	{
 		return (_rootWidget.get());
 	}
-	
+
 	Window::operator spk::SafePointer<Widget>() const
 	{
 		return (_rootWidget.get());
 	}
 
-	const std::wstring& Window::title() const
+	const std::wstring &Window::title() const
 	{
 		return (_title);
 	}
-	
-	const spk::Geometry2D& Window::geometry() const
+
+	const spk::Geometry2D &Window::geometry() const
 	{
 		return (_viewport.geometry());
 	}

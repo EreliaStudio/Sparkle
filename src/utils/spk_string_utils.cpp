@@ -9,29 +9,31 @@ namespace spk
 {
 	namespace StringUtils
 	{
-		std::wstring stringToWString(const std::string& p_str)
+		std::wstring stringToWString(const std::string &p_str)
 		{
 			return std::wstring(p_str.begin(), p_str.end());
 		}
 
-		std::string wstringToString(const std::wstring& p_wstr)
+		std::string wstringToString(const std::wstring &p_wstr)
 		{
 			if (p_wstr.empty())
 			{
 				return std::string();
 			}
 
-			int size_needed = WideCharToMultiByte(CP_UTF8, 0, &p_wstr[0], (int)p_wstr.size(), NULL, 0, NULL, NULL);
-			std::string strTo(size_needed, 0);
-			WideCharToMultiByte(CP_UTF8, 0, &p_wstr[0], (int)p_wstr.size(), &strTo[0], size_needed, NULL, NULL);
+			int sizeNeeded = WideCharToMultiByte(CP_UTF8, 0, &p_wstr[0], (int)p_wstr.size(), NULL, 0, NULL, NULL);
+			std::string strTo(sizeNeeded, 0);
+			WideCharToMultiByte(CP_UTF8, 0, &p_wstr[0], (int)p_wstr.size(), &strTo[0], sizeNeeded, NULL, NULL);
 
 			return strTo;
 		}
 
-		std::vector<std::string> splitString(const std::string& p_str, const std::string& p_delimiter)
+		std::vector<std::string> splitString(const std::string &p_str, const std::string &p_delimiter)
 		{
 			if (p_str == "")
+			{
 				return (std::vector<std::string>());
+			}
 
 			std::vector<std::string> result;
 			size_t start = 0;
@@ -48,7 +50,7 @@ namespace spk
 			return result;
 		}
 
-		std::vector<std::wstring> splitWString(const std::wstring& p_wstr, const std::wstring& p_delimiter)
+		std::vector<std::wstring> splitWString(const std::wstring &p_wstr, const std::wstring &p_delimiter)
 		{
 			std::vector<std::wstring> result;
 			size_t start = 0;
@@ -65,12 +67,12 @@ namespace spk
 			return result;
 		}
 
-		std::wstring mergeWhitespace(const std::wstring& str)
+		std::wstring mergeWhitespace(const std::wstring &p_str)
 		{
 			std::wstring result;
 			bool spaceInserted = false;
 
-			for (wchar_t ch : str)
+			for (wchar_t ch : p_str)
 			{
 				if (ch == L'\t' || ch == L'\n' || ch == L' ')
 				{
@@ -98,12 +100,12 @@ namespace spk
 			return result.substr(start, end - start + 1);
 		}
 
-		std::string mergeWhitespace(const std::string& str)
+		std::string mergeWhitespace(const std::string &p_str)
 		{
 			std::string result;
 			bool spaceInserted = false;
 
-			for (char ch : str)
+			for (char ch : p_str)
 			{
 				if (ch == '\t' || ch == '\n' || ch == ' ')
 				{
@@ -131,17 +133,17 @@ namespace spk
 			return result.substr(start, end - start + 1);
 		}
 
-		std::string trimWhitespace(const std::string& p_str)
+		std::string trimWhitespace(const std::string &p_str)
 		{
-			const char* whitespace = " \t\n\r\f\v";
+			const char *whitespace = " \t\n\r\f\v";
 			size_t start = p_str.find_first_not_of(whitespace);
 			size_t end = p_str.find_last_not_of(whitespace);
 			return (start == std::string::npos || end == std::string::npos) ? "" : p_str.substr(start, end - start + 1);
 		}
-		
-		std::wstring trimWhitespace(const std::wstring& p_str)
+
+		std::wstring trimWhitespace(const std::wstring &p_str)
 		{
-			const wchar_t* whitespace = L" \t\n\r\f\v";
+			const wchar_t *whitespace = L" \t\n\r\f\v";
 			size_t start = p_str.find_first_not_of(whitespace);
 			size_t end = p_str.find_last_not_of(whitespace);
 			return (start == std::string::npos || end == std::string::npos) ? L"" : p_str.substr(start, end - start + 1);

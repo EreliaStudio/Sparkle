@@ -4,7 +4,7 @@
 
 namespace spk
 {
-	void TimerModule::_treatEvent(spk::TimerEvent&& p_event)
+	void TimerModule::_treatEvent(spk::TimerEvent &&p_event)
 	{
 		if (p_event.timerID == UpdaterID)
 		{
@@ -17,13 +17,12 @@ namespace spk
 		}
 	}
 
-	spk::TimerEvent TimerModule::_convertEventToEventType(spk::Event&& p_event)
+	spk::TimerEvent TimerModule::_convertEventToEventType(spk::Event &&p_event)
 	{
 		return (p_event.timerEvent);
 	}
 
 	TimerModule::TimerModule()
 	{
-
 	}
 }

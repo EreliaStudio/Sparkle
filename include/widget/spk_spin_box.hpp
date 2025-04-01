@@ -27,16 +27,13 @@ namespace spk
 
 		void _onGeometryChange() override
 		{
-			spk::Vector2UInt buttonSize = { std::max(16u, geometry().size.y), geometry().size.y };
+			spk::Vector2UInt buttonSize = {std::max(16u, geometry().size.y), geometry().size.y};
 
-			spk::Vector2UInt editSize = {
-				geometry().size.x - (buttonSize.x * 2) - 6,
-				geometry().size.y
-			};
+			spk::Vector2UInt editSize = {geometry().size.x - (buttonSize.x * 2) - 6, geometry().size.y};
 
 			_valueEdit.setFontSize({static_cast<size_t>((geometry().height - _valueEdit.cornerSize().y * 2)), 0});
 
-			_valueEdit.setGeometry({ 0, 0 }, editSize);
+			_valueEdit.setGeometry({0, 0}, editSize);
 			_downButton.setGeometry({editSize.x + 3, 0}, buttonSize);
 			_upButton.setGeometry({editSize.x + 3 + buttonSize.x + 3, 0}, buttonSize);
 		}
@@ -51,15 +48,17 @@ namespace spk
 			_onValueEditionContract(_value.subscribe([&]() { _valueEdit.setText(std::to_wstring(_value.get())); }))
 		{
 			_upButton.setTextAlignment(spk::HorizontalAlignment::Centered, spk::VerticalAlignment::Centered);
-			_upButtonContract = _upButton.subscribe([&]() {
-				if (_maxLimit.has_value() == false)
+			_upButtonContract = _upButton.subscribe(
+				[&]()
 				{
-					_value += _step;
-				}
-				else if (_value != _maxLimit.value())
-				{
-					_value = std::min(_value + _step, _maxLimit.value());
-				}
+					if (_maxLimit.has_value() == false)
+					{
+						_value += _step;
+					}
+					else if (_value != _maxLimit.value())
+					{
+						_value = std::min(_value + _step, _maxLimit.value());
+					}
 				});
 			_upButton.activate();
 
@@ -68,15 +67,17 @@ namespace spk
 			_valueEdit.activate();
 
 			_downButton.setTextAlignment(spk::HorizontalAlignment::Centered, spk::VerticalAlignment::Centered);
-			_downButtonContract = _downButton.subscribe([&](){
-				if (_minLimit.has_value() == false)
+			_downButtonContract = _downButton.subscribe(
+				[&]()
 				{
-					_value -= _step;
-				}
-				else if (_value != _minLimit.value())
-				{
-					_value = std::max(_value - _step, _minLimit.value());
-				}
+					if (_minLimit.has_value() == false)
+					{
+						_value -= _step;
+					}
+					else if (_value != _minLimit.value())
+					{
+						_value = std::max(_value - _step, _minLimit.value());
+					}
 				});
 			_downButton.activate();
 
@@ -85,7 +86,7 @@ namespace spk
 			setIconSet(spk::Widget::defaultIconset());
 		}
 
-		void setIconSet(spk::SafePointer<spk::SpriteSheet> p_iconSet)
+		void setIconSet(spk::SafePointer<const spk::SpriteSheet> p_iconSet)
 		{
 			_upButton.setText(L"");
 			_upButton.setIconset(p_iconSet);
@@ -96,14 +97,14 @@ namespace spk
 			_downButton.setIcon(p_iconSet->sprite(5));
 		}
 
-		void setNineSlice(spk::SafePointer<spk::SpriteSheet> p_spriteSheet)
+		void setNineSlice(spk::SafePointer<const spk::SpriteSheet> p_spriteSheet)
 		{
 			_upButton.setNineSlice(p_spriteSheet);
 			_valueEdit.setNineSlice(p_spriteSheet);
 			_downButton.setNineSlice(p_spriteSheet);
 		}
 
-		void setCornerSize(const spk::Vector2UInt& p_cornerSize)
+		void setCornerSize(const spk::Vector2UInt &p_cornerSize)
 		{
 			_upButton.setCornerSize(p_cornerSize);
 			_valueEdit.setCornerSize(p_cornerSize);
@@ -135,7 +136,7 @@ namespace spk
 			_maxLimit = p_maximalValue;
 		}
 
-		void setLimits(const TType& p_minimalValue, const TType& p_maximalValue)
+		void setLimits(const TType &p_minimalValue, const TType &p_maximalValue)
 		{
 			setMinimalLimit(p_minimalValue);
 			setMaximalLimit(p_maximalValue);

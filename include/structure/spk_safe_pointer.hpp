@@ -1,90 +1,108 @@
 #pragma once
 
-#include <type_traits>
 #include <iostream>
+#include <type_traits>
 
 namespace spk
 {
-    template <typename TType>
-    class SafePointer
-    {
-    private:
-        TType* _ptr = nullptr;
+	template <typename TType>
+	class SafePointer
+	{
+	public:
+		using Type = TType;
 
-    public:
-        SafePointer(TType* p_ptr = nullptr) :
+	private:
+		TType *_ptr = nullptr;
+
+	public:
+		SafePointer(TType *p_ptr = nullptr) :
 			_ptr(p_ptr)
-        {
-        }
-
-		template <typename U>
-		SafePointer(const SafePointer<U>& p_other) :
-			_ptr(dynamic_cast<TType*>(p_other.get()))
 		{
 		}
 
-        SafePointer(const SafePointer&) = default;
-        SafePointer& operator=(const SafePointer&) = default;
+		template <typename ToType>
+		SafePointer(const SafePointer<ToType> &p_other) :
+			_ptr(dynamic_cast<TType *>(p_other.get()))
+		{
+			static_assert(std::is_base_of<ToType, TType>::value || std::is_base_of<TType, ToType>::value,
+						  "SafePointer conversion error: TType and ToType must have an inheritance relationship.");
+		}
 
-        ~SafePointer() = default;
+		SafePointer(const SafePointer &) = default;
+		SafePointer &operator=(const SafePointer &) = default;
 
-        operator TType* () const
-        {
-            return _ptr;
-        }
+		~SafePointer() = default;
 
-        operator SafePointer<const TType>() const
-        {
-            return SafePointer<const TType>(_ptr);
-        }
+		operator TType *() const
+		{
+			return _ptr;
+		}
 
-        TType& operator*() const
-        {
-            return *_ptr;
-        }
+		operator SafePointer<const TType>() const
+		{
+			return SafePointer<const TType>(_ptr);
+		}
 
-        TType* operator->() const
-        {
-            return _ptr;
-        }
+		TType &operator*() const
+		{
+			return *_ptr;
+		}
 
-        TType* get() const
-        {
-            return _ptr;
-        }
+		TType *operator->() const
+		{
+			return _ptr;
+		}
 
-        explicit operator bool() const
-        {
-            return (_ptr != nullptr);
-        }
+		TType *get() const
+		{
+			return _ptr;
+		}
 
-        friend std::ostream& operator<<(std::ostream& os, const SafePointer<TType>& p_ptr)
-        {
-            os << p_ptr.get();
-            return os;
-        }
+		explicit operator bool() const
+		{
+			return (_ptr != nullptr);
+		}
 
-        friend std::wostream& operator<<(std::wostream& wos, const SafePointer<TType>& p_ptr)
-        {
-            wos << p_ptr.get();
-            return wos;
-        }
-    };
+		template <typename ToType>
+		SafePointer<ToType> &upCast()
+		{
+			static_assert(std::is_base_of<TType, ToType>::value, "upCast error: ToType must be derived from TType.");
 
-    template <class To, class From>
-    SafePointer<To>& safe_pointer_cast(SafePointer<From>& from)
-    {
-		static_assert(std::is_base_of<From, To>::value || std::is_base_of<To, From>::value, 
-                      "safe_pointer_cast error: 'From' must be derived from 'To'");
-		return *(reinterpret_cast<SafePointer<To>*>(&from));
-    }
+			return *reinterpret_cast<SafePointer<ToType> *>(this);
+		}
 
-    template <class To, class From>
-    const SafePointer<To>& safe_pointer_cast(const SafePointer<From>& from)
-    {
-		static_assert(std::is_base_of<From, To>::value || std::is_base_of<To, From>::value, 
-                      "safe_pointer_cast error: 'From' must be derived from 'To'");
+		template <typename ToType>
+		const SafePointer<ToType> &upCast() const
+		{
+			static_assert(std::is_base_of<TType, ToType>::value, "upCast error: ToType must be derived from TType.");
 
-		return *(reinterpret_cast<const SafePointer<To>*>(&from));
-    }
+			return *reinterpret_cast<const SafePointer<ToType> *>(this);
+		}
+
+		template <typename ToType>
+		SafePointer<ToType> &downCast()
+		{
+			static_assert(std::is_base_of<ToType, TType>::value, "downCast error: TType must be derived from ToType.");
+			return *reinterpret_cast<SafePointer<ToType> *>(this);
+		}
+
+		template <typename ToType>
+		const SafePointer<ToType> &downCast() const
+		{
+			static_assert(std::is_base_of<ToType, TType>::value, "downCast error: TType must be derived from ToType.");
+			return *reinterpret_cast<const SafePointer<ToType> *>(this);
+		}
+
+		friend std::ostream &operator<<(std::ostream &os, const SafePointer<TType> &p_ptr)
+		{
+			os << p_ptr.get();
+			return os;
+		}
+
+		friend std::wostream &operator<<(std::wostream &wos, const SafePointer<TType> &p_ptr)
+		{
+			wos << p_ptr.get();
+			return wos;
+		}
+	};
 }

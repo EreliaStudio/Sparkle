@@ -1,6 +1,6 @@
 #include "application/spk_graphical_application.hpp"
-#include <locale>
 #include <codecvt>
+#include <locale>
 
 #include "utils/spk_string_utils.hpp"
 
@@ -8,7 +8,7 @@ namespace spk
 {
 	GraphicalApplication::GraphicalApplication()
 	{
-		WNDCLASSEX wc = { 0 };
+		WNDCLASSEX wc = {0};
 		wc.cbSize = sizeof(WNDCLASSEX);
 		wc.style = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
 		wc.lpfnWndProc = Window::WindowProc;
@@ -22,7 +22,7 @@ namespace spk
 		wc.lpszClassName = "SPKWindowClass";
 		wc.hIconSm = LoadIcon(nullptr, IDI_APPLICATION);
 
-		WNDCLASSEX existingClass = { 0 };
+		WNDCLASSEX existingClass = {0};
 		if (!GetClassInfoEx(GetModuleHandle(nullptr), "SPKWindowClass", &existingClass))
 		{
 			if (!RegisterClassEx(&wc))
@@ -33,24 +33,31 @@ namespace spk
 			}
 		}
 
-		this->addExecutionStep([&](){
-			while (_windowToRemove.empty() == false)
-			{
-				closeWindow(_windowToRemove.pop());
-				if (_windows.size() == 0)
-					quit(0);
-			}
-		}).relinquish();
+		this->addExecutionStep(
+				[&]()
+				{
+					while (_windowToRemove.empty() == false)
+					{
+						closeWindow(_windowToRemove.pop());
+						if (_windows.size() == 0)
+						{
+							quit(0);
+						}
+					}
+				})
+			.relinquish();
 	}
 
-	spk::SafePointer<Window> GraphicalApplication::createWindow(const std::wstring& p_title, const spk::Geometry2D& p_geometry)
+	spk::SafePointer<Window> GraphicalApplication::createWindow(const std::wstring &p_title, const spk::Geometry2D &p_geometry)
 	{
 		if (_windows.contains(p_title) == true)
+		{
 			throw std::runtime_error("Can't create a second window named [" + StringUtils::wstringToString(p_title) + "]");
+		}
 		_windows[p_title] = std::make_unique<spk::Window>(p_title, p_geometry);
-		
-		_windows[p_title]->_initialize([&](spk::SafePointer<spk::Window> windowPtr){_windowToRemove.push(std::move(windowPtr));});
-		
+
+		_windows[p_title]->_initialize([&](spk::SafePointer<spk::Window> p_windowPtr) { _windowToRemove.push(std::move(p_windowPtr)); });
+
 		return (_windows[p_title].get());
 	}
 

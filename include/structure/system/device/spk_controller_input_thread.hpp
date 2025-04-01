@@ -7,13 +7,13 @@
 
 #define DIRECTINPUT_VERSION 0x0800
 
+#include "structure/math/spk_vector2.hpp"
 #include "structure/spk_iostream.hpp"
+#include "structure/system/device/spk_controller.hpp"
+#include "structure/system/event/spk_event.hpp"
+#include "structure/thread/spk_persistant_worker.hpp"
 #include <dinput.h>
 #include <iostream>
-#include "structure/thread/spk_persistant_worker.hpp"
-#include "structure/system/event/spk_event.hpp"
-#include "structure/math/spk_vector2.hpp"
-#include "structure/system/device/spk_controller.hpp"
 
 namespace spk
 {
@@ -25,14 +25,14 @@ namespace spk
 		PersistantWorker _worker;
 		HWND _hWnd = NULL;
 		bool _initialization = false;
-		IDirectInput8* _directInput = nullptr;
-		IDirectInputDevice8* _controller = nullptr;
-		DIJOYSTATE  _controllerState = DIJOYSTATE();
-		DIJOYSTATE  _prevControllerState = DIJOYSTATE();
+		IDirectInput8 *_directInput = nullptr;
+		IDirectInputDevice8 *_controller = nullptr;
+		DIJOYSTATE _controllerState = DIJOYSTATE();
+		DIJOYSTATE _prevControllerState = DIJOYSTATE();
 
 		bool InitializeDirectInput()
 		{
-			HRESULT hr = DirectInput8Create(GetModuleHandle(NULL), DIRECTINPUT_VERSION, IID_IDirectInput8, (void**)&_directInput, NULL);
+			HRESULT hr = DirectInput8Create(GetModuleHandle(NULL), DIRECTINPUT_VERSION, IID_IDirectInput8, (void **)&_directInput, NULL);
 			if (FAILED(hr))
 			{
 				return false;
@@ -115,10 +115,10 @@ namespace spk
 			if (_controllerState.lZ != _prevControllerState.lZ)
 			{
 				unsigned short leftTriggerValue = (_controllerState.lZ & 0xFF00) >> 8; // Extract high byte for L2
-				unsigned short rightTriggerValue = _controllerState.lZ & 0x00FF; // Extract low byte for R2
+				unsigned short rightTriggerValue = _controllerState.lZ & 0x00FF;	   // Extract low byte for R2
 
 				unsigned short prevLeftTriggerValue = (_prevControllerState.lZ & 0xFF00) >> 8; // Extract high byte for L2
-				unsigned short prevRightTriggerValue = _prevControllerState.lZ & 0x00FF; // Extract low byte for R2
+				unsigned short prevRightTriggerValue = _prevControllerState.lZ & 0x00FF;	   // Extract low byte for R2
 
 				if (leftTriggerValue != prevLeftTriggerValue)
 				{
@@ -131,30 +131,38 @@ namespace spk
 
 				_prevControllerState.lZ = _controllerState.lZ;
 			}
-			
 
 			if (_controllerState.rgdwPOV[0] != _prevControllerState.rgdwPOV[0])
 			{
 				switch (_controllerState.rgdwPOV[0])
 				{
 				case static_cast<long unsigned int>(-1):
-					PostDirectionalCrossMotion(_hWnd, 0, 0); break;
+					PostDirectionalCrossMotion(_hWnd, 0, 0);
+					break;
 				case 0:
-					PostDirectionalCrossMotion(_hWnd, 0, 1); break;
+					PostDirectionalCrossMotion(_hWnd, 0, 1);
+					break;
 				case 4500:
-					PostDirectionalCrossMotion(_hWnd, 1, 1); break;
+					PostDirectionalCrossMotion(_hWnd, 1, 1);
+					break;
 				case 9000:
-					PostDirectionalCrossMotion(_hWnd, 1, 0); break;
+					PostDirectionalCrossMotion(_hWnd, 1, 0);
+					break;
 				case 13500:
-					PostDirectionalCrossMotion(_hWnd, 1, -1); break;
+					PostDirectionalCrossMotion(_hWnd, 1, -1);
+					break;
 				case 18000:
-					PostDirectionalCrossMotion(_hWnd, 0, -1); break;
+					PostDirectionalCrossMotion(_hWnd, 0, -1);
+					break;
 				case 22500:
-					PostDirectionalCrossMotion(_hWnd, -1, -1); break;
+					PostDirectionalCrossMotion(_hWnd, -1, -1);
+					break;
 				case 27000:
-					PostDirectionalCrossMotion(_hWnd, -1, 0); break;
+					PostDirectionalCrossMotion(_hWnd, -1, 0);
+					break;
 				case 31500:
-					PostDirectionalCrossMotion(_hWnd, -1, 1); break;
+					PostDirectionalCrossMotion(_hWnd, -1, 1);
+					break;
 				}
 				_prevControllerState.rgdwPOV[0] = _controllerState.rgdwPOV[0];
 			}
@@ -170,12 +178,12 @@ namespace spk
 			PostMessage(hWnd, WM_CONTROLLER_BUTTON_RELEASE, static_cast<int>(button), 0);
 		}
 
-		static void PostLeftJoystickMove(HWND hWnd, const unsigned short& p_x, const unsigned short& p_y)
+		static void PostLeftJoystickMove(HWND hWnd, const unsigned short &p_x, const unsigned short &p_y)
 		{
 			PostMessage(hWnd, WM_LEFT_JOYSTICK_MOTION, static_cast<WPARAM>(p_x), static_cast<LPARAM>(p_y));
 		}
 
-		static void PostRightJoystickMove(HWND hWnd, const unsigned short& p_x, const unsigned short& p_y)
+		static void PostRightJoystickMove(HWND hWnd, const unsigned short &p_x, const unsigned short &p_y)
 		{
 			PostMessage(hWnd, WM_RIGHT_JOYSTICK_MOTION, static_cast<WPARAM>(p_x), static_cast<LPARAM>(p_y));
 		}
@@ -190,12 +198,12 @@ namespace spk
 			PostMessage(hWnd, WM_RIGHT_JOYSTICK_RESET, 0, 0);
 		}
 
-		static void PostLeftTriggerMove(HWND hWnd, const int& p_x)
+		static void PostLeftTriggerMove(HWND hWnd, const int &p_x)
 		{
 			PostMessage(hWnd, WM_LEFT_TRIGGER_MOTION, p_x, 0);
 		}
 
-		static void PostRightTriggerMove(HWND hWnd, const int& p_x)
+		static void PostRightTriggerMove(HWND hWnd, const int &p_x)
 		{
 			PostMessage(hWnd, WM_RIGHT_TRIGGER_MOTION, p_x, 0);
 		}
@@ -210,7 +218,7 @@ namespace spk
 			PostMessage(hWnd, WM_RIGHT_TRIGGER_MOTION, 0, 0);
 		}
 
-		static void PostDirectionalCrossMotion(HWND hWnd, const int& p_x, const int& p_y)
+		static void PostDirectionalCrossMotion(HWND hWnd, const int &p_x, const int &p_y)
 		{
 			LPARAM packedParams = MAKELPARAM(static_cast<WORD>(p_x), static_cast<WORD>(p_y));
 			PostMessage(hWnd, WM_DIRECTIONAL_CROSS_MOTION, 0, packedParams);
@@ -227,7 +235,6 @@ namespace spk
 			_directInput(nullptr),
 			_controller(nullptr)
 		{
-
 		}
 
 		~ControllerInputThread()
@@ -250,13 +257,9 @@ namespace spk
 
 		void start()
 		{
-			_worker.addPreparationStep([this](){
-				InitializeDirectInput();
-			}).relinquish();
-			_worker.addExecutionStep([this](){
-					PollController();
-				}).relinquish();
-			
+			_worker.addPreparationStep([this]() { InitializeDirectInput(); }).relinquish();
+			_worker.addExecutionStep([this]() { PollController(); }).relinquish();
+
 			_worker.start();
 		}
 

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "widget/spk_widget.hpp"
-#include "widget/spk_push_button.hpp"
 #include "widget/spk_frame.hpp"
+#include "widget/spk_push_button.hpp"
+#include "widget/spk_widget.hpp"
 
 namespace spk
 {
@@ -15,9 +15,8 @@ namespace spk
 			class Item : public spk::PushButton
 			{
 			private:
-
 			public:
-				Item(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent);
+				Item(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent);
 			};
 
 			class Break : public spk::Widget
@@ -29,19 +28,18 @@ namespace spk
 				spk::TextureRenderer _renderer;
 
 				void _onGeometryChange();
-				void _onPaintEvent(spk::PaintEvent& p_event);
+				void _onPaintEvent(spk::PaintEvent &p_event);
 
 			public:
-				static spk::SafePointer<spk::SpriteSheet> defaultBreakSpriteSheet();
+				static spk::SafePointer<const spk::SpriteSheet> defaultBreakSpriteSheet();
 
-				Break(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent);
+				Break(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent);
 				spk::Vector2UInt minimalSize() const override;
-				void setSpriteSheet(const spk::SafePointer<spk::SpriteSheet> &p_spriteSheet);
-				void setHeight(const uint32_t& p_height);
+				void setSpriteSheet(const spk::SafePointer<const spk::SpriteSheet> &p_spriteSheet);
+				void setHeight(const uint32_t &p_height);
 			};
 
 		private:
-
 			struct Element
 			{
 				std::unique_ptr<spk::Widget> item;
@@ -54,14 +52,14 @@ namespace spk
 
 			spk::Font::Size _computeElementSize() const;
 			void _onGeometryChange() override;
-			void _onMouseEvent(spk::MouseEvent& p_event);
+			void _onMouseEvent(spk::MouseEvent &p_event);
 
 		public:
-			Menu(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent);
+			Menu(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent);
 
 			size_t nbItem() const;
 
-			spk::SafePointer<Item> addItem(const std::wstring& p_itemName, std::function<void()> p_callback);
+			spk::SafePointer<Item> addItem(const std::wstring &p_itemName, std::function<void()> p_callback);
 			spk::SafePointer<Break> addBreak();
 
 			spk::Vector2UInt minimalSize() const;
@@ -71,7 +69,8 @@ namespace spk
 		float _height = 25;
 		spk::Frame _backgroundFrame;
 
-		struct MenuEntry {
+		struct MenuEntry
+		{
 			std::unique_ptr<spk::PushButton> menuButton;
 			spk::PushButton::Contract menuButtonContract;
 			std::unique_ptr<Menu> Menu;
@@ -83,11 +82,11 @@ namespace spk
 		void _onGeometryChange() override;
 
 	public:
-		MenuBar(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent);
+		MenuBar(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent);
 
-		void setHeight(const float& p_height);
-		const float& height() const;
+		void setHeight(const float &p_height);
+		const float &height() const;
 
-		spk::SafePointer<Menu> addMenu(const std::wstring& p_menuName);
+		spk::SafePointer<Menu> addMenu(const std::wstring &p_menuName);
 	};
 }

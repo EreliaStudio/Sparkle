@@ -1,18 +1,20 @@
 #pragma once
 
 #include <GL/glew.h>
+
 #include <GL/gl.h>
-#include <vector>
+
 #include <span>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 #include "spk_vertex_buffer_object.hpp"
 
 #include <iostream>
 
-template<typename T>
-using element_type_t = std::remove_reference_t<decltype(*std::begin(std::declval<T&>()))>;
+template <typename T>
+using element_type_t = std::remove_reference_t<decltype(*std::begin(std::declval<T &>()))>;
 
 namespace spk::OpenGL
 {
@@ -23,8 +25,7 @@ namespace spk::OpenGL
 		{
 			using Index = GLuint;
 
-			enum class Type
-			{
+			enum class Type {
 				None,
 				Float,
 				Bool,
@@ -60,76 +61,74 @@ namespace spk::OpenGL
 		void _applyAttributes();
 
 	public:
-
 		LayoutBufferObject();
 
-        explicit LayoutBufferObject(std::span<const LayoutBufferObject::Attribute> attributes);
+		explicit LayoutBufferObject(std::span<const LayoutBufferObject::Attribute> attributes);
 
-        LayoutBufferObject(std::initializer_list<LayoutBufferObject::Attribute> attributes);
+		LayoutBufferObject(std::initializer_list<LayoutBufferObject::Attribute> attributes);
 
-        template <typename Container>
-        requires (
-            std::is_same_v<std::remove_cv_t<std::remove_reference_t<decltype(*std::declval<Container>().data())>>, LayoutBufferObject::Attribute> &&
-            requires (const Container &c) {
-                { c.data() } -> std::convertible_to<const LayoutBufferObject::Attribute*>;
-                { c.size() } -> std::convertible_to<std::size_t>;
-            }
-        )
-        explicit LayoutBufferObject(const Container& attributes)
-            : LayoutBufferObject(std::span(attributes.data(), attributes.size()))
-        {
-        }
+		template <typename Container>
+			requires(std::is_same_v<std::remove_cv_t<std::remove_reference_t<decltype(*std::declval<Container>().data())>>,
+									LayoutBufferObject::Attribute> &&
+					 requires(const Container &c) {
+						 { c.data() } -> std::convertible_to<const LayoutBufferObject::Attribute *>;
+						 { c.size() } -> std::convertible_to<std::size_t>;
+					 })
+		explicit LayoutBufferObject(const Container &attributes) :
+			LayoutBufferObject(std::span(attributes.data(), attributes.size()))
+		{
+		}
 
-		LayoutBufferObject(const LayoutBufferObject& p_other);
-		LayoutBufferObject& operator=(const LayoutBufferObject& p_other);
-		LayoutBufferObject(LayoutBufferObject&& p_other) noexcept;
-		LayoutBufferObject& operator=(LayoutBufferObject&& p_other) noexcept;
+		LayoutBufferObject(const LayoutBufferObject &p_other);
+		LayoutBufferObject &operator=(const LayoutBufferObject &p_other);
+		LayoutBufferObject(LayoutBufferObject &&p_other) noexcept;
+		LayoutBufferObject &operator=(LayoutBufferObject &&p_other) noexcept;
 
 		virtual void activate() override;
 
-		template<typename TType>
+		template <typename TType>
 		void append(std::span<const TType> data)
 		{
-			if (data.empty()) return;
+			if (data.empty())
+			{
+				return;
+			}
 
 			if (sizeof(TType) != _vertexSize)
 			{
-				throw std::runtime_error(
-					"Size mismatch in LayoutBufferObject: Expected vertex size is " +
-					std::to_string(_vertexSize) + " bytes, but received " +
-					std::to_string(sizeof(TType)) + " bytes."
-				);
+				throw std::runtime_error("Size mismatch in LayoutBufferObject: Expected vertex size is " + std::to_string(_vertexSize) +
+										 " bytes, but received " + std::to_string(sizeof(TType)) + " bytes.");
 			}
 			VertexBufferObject::append(data.data(), data.size() * sizeof(TType));
 		}
 
-		template<typename TType>
-		LayoutBufferObject& operator<<(const TType& element)
+		template <typename TType>
+		LayoutBufferObject &operator<<(const TType &element)
 		{
 			append(std::span<const TType>(&element, 1));
 			return *this;
 		}
 
-		template<typename Container>
-		requires requires (const Container& c) {
-			{ std::data(c) };
-			{ std::size(c) };
-		}
-		LayoutBufferObject& operator<<(const Container& container)
+		template <typename Container>
+			requires requires(const Container &c) {
+				{ std::data(c) };
+				{ std::size(c) };
+			}
+		LayoutBufferObject &operator<<(const Container &container)
 		{
 			append(std::span<const element_type_t<Container>>(std::data(container), std::size(container)));
 			return *this;
 		}
-		
-		void addAttribute(const Attribute& p_attribute);
+
+		void addAttribute(const Attribute &p_attribute);
 		void addAttribute(Attribute::Index p_index, Attribute::Type p_type);
 
-		template<typename TType>
+		template <typename TType>
 		std::vector<TType> get()
 		{
 			activate();
 
-			size_t totalSize = this->size(); 
+			size_t totalSize = this->size();
 			if (totalSize == 0)
 			{
 				return {};
@@ -137,10 +136,8 @@ namespace spk::OpenGL
 
 			if (_vertexSize % sizeof(TType) != 0)
 			{
-				throw std::runtime_error(
-					"LayoutBufferObject::get() - The buffer element size (" + std::to_string(_vertexSize) +
-					" bytes) is incompatible with TType size (" + std::to_string(sizeof(TType)) + " bytes)."
-				);
+				throw std::runtime_error("LayoutBufferObject::get() - The buffer element size (" + std::to_string(_vertexSize) +
+										 " bytes) is incompatible with TType size (" + std::to_string(sizeof(TType)) + " bytes).");
 			}
 
 			size_t elementCount = totalSize / sizeof(TType);
@@ -152,5 +149,5 @@ namespace spk::OpenGL
 		}
 	};
 
-	std::string to_string(const LayoutBufferObject::Attribute::Type& p_type);
+	std::string to_string(const LayoutBufferObject::Attribute::Type &p_type);
 }

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "widget/spk_widget.hpp"
 #include "structure/design_pattern/spk_contract_provider.hpp"
 #include "structure/graphics/texture/spk_sprite_sheet.hpp"
 #include "structure/math/spk_vector2.hpp"
+#include "widget/spk_widget.hpp"
 
 #include "structure/graphics/renderer/spk_nine_slice_renderer.hpp"
 
@@ -21,7 +21,7 @@ namespace spk
 		using Job = spk::TContractProvider<float>::Job;
 		using VoidJob = spk::TContractProvider<float>::VoidJob;
 		using Contract = spk::TContractProvider<float>::Contract;
-	
+
 	private:
 		class Body : public spk::Widget
 		{
@@ -36,24 +36,23 @@ namespace spk
 				_renderer.validate();
 			}
 
-			void _onPaintEvent(spk::PaintEvent& p_event)
+			void _onPaintEvent(spk::PaintEvent &p_event)
 			{
 				_renderer.render();
 			}
 
 		public:
-			Body(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+			Body(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
 				spk::Widget(p_name, p_parent)
 			{
-
 			}
-        	
-			void setSpriteSheet(const SafePointer<SpriteSheet>& p_spriteSheet)
+
+			void setSpriteSheet(const SafePointer<const spk::SpriteSheet> &p_spriteSheet)
 			{
 				_renderer.setSpriteSheet(p_spriteSheet);
 			}
 
-			void setCornerSize(const spk::Vector2UInt& p_cornerSize)
+			void setCornerSize(const spk::Vector2UInt &p_cornerSize)
 			{
 				_cornerSize = p_cornerSize;
 				requireGeometryUpdate();
@@ -65,7 +64,6 @@ namespace spk
 		spk::Vector2UInt _cornerSize;
 		spk::NineSliceRenderer _backgroundRenderer;
 		Body _body;
-
 
 		spk::TContractProvider<float> _onEditionContractProvider;
 
@@ -80,26 +78,26 @@ namespace spk
 		float _maxValue = 100;
 
 		void _onGeometryChange() override;
-		void _onPaintEvent(spk::PaintEvent& p_event) override;
-		void _onMouseEvent(spk::MouseEvent& p_event) override;
+		void _onPaintEvent(spk::PaintEvent &p_event) override;
+		void _onMouseEvent(spk::MouseEvent &p_event) override;
 
 	public:
-		SliderBar(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent);
+		SliderBar(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent);
 
-		Contract subscribe(const Job& p_job);
+		Contract subscribe(const Job &p_job);
 
-		void setOrientation(const Orientation& p_orientation);
-		void setCornerSize(const spk::Vector2UInt& p_cornerSize);
-		void setBodyCornerSize(const spk::Vector2UInt& p_bodyCornerSize);
-		void setSpriteSheet(spk::SafePointer<spk::SpriteSheet> p_spriteSheet);
-		void setBodySpriteSheet(spk::SafePointer<spk::SpriteSheet> p_spriteSheet);
-		void setScale(const float& p_scale);
+		void setOrientation(const Orientation &p_orientation);
+		void setCornerSize(const spk::Vector2UInt &p_cornerSize);
+		void setBodyCornerSize(const spk::Vector2UInt &p_bodyCornerSize);
+		void setNineSlice(spk::SafePointer<const spk::SpriteSheet> p_spriteSheet);
+		void setBodySpriteSheet(spk::SafePointer<const spk::SpriteSheet> p_spriteSheet);
+		void setScale(const float &p_scale);
 		void setRange(float p_minValue, float p_maxValue);
 		void setRatio(float p_ratio);
 
 		float value();
 		float ratio();
-		const Orientation& orientation() const;
+		const Orientation &orientation() const;
 	};
 
 }

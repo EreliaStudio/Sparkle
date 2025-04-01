@@ -164,5 +164,5 @@ namespace spk
 	};
 }
 
-std::ostream& operator << (std::ostream& p_os, const spk::Keyboard::Key& p_key);
-std::wostream& operator << (std::wostream& p_os, const spk::Keyboard::Key& p_key);
+std::ostream &operator<<(std::ostream &p_os, const spk::Keyboard::Key &p_key);
+std::wostream &operator<<(std::wostream &p_os, const spk::Keyboard::Key &p_key);

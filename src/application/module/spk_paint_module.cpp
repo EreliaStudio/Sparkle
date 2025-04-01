@@ -4,20 +4,19 @@
 
 namespace spk
 {
-	void PaintModule::_treatEvent(spk::PaintEvent&& p_event)
+	void PaintModule::_treatEvent(spk::PaintEvent &&p_event)
 	{
 		p_event.window->clear();
 		p_event.window->widget()->onPaintEvent(p_event);
 		p_event.window->swap();
 	}
 
-	spk::PaintEvent PaintModule::_convertEventToEventType(spk::Event&& p_event)
+	spk::PaintEvent PaintModule::_convertEventToEventType(spk::Event &&p_event)
 	{
 		return (p_event.paintEvent);
 	}
 
 	PaintModule::PaintModule()
 	{
-
 	}
 }

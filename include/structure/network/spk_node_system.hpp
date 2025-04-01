@@ -1,17 +1,17 @@
 #pragma once
 
-#include <unordered_map>
-#include "structure/spk_safe_pointer.hpp"
 #include "structure/network/spk_client.hpp"
 #include "structure/network/spk_server.hpp"
+#include "structure/spk_safe_pointer.hpp"
+#include <unordered_map>
 
 namespace spk
 {
 	class Node
 	{
 	public:
-		virtual void treatMessage(spk::Server::MessageObject&& p_message) = 0;
-		virtual spk::ThreadSafeQueue<spk::Server::MessageObject>& messages() = 0;
+		virtual void treatMessage(spk::Server::MessageObject &&p_message) = 0;
+		virtual spk::ThreadSafeQueue<spk::Server::MessageObject> &messages() = 0;
 	};
 
 	class RemoteNode : public Node
@@ -20,10 +20,10 @@ namespace spk
 		spk::Client _client;
 
 	public:
-		void connect(const std::string& p_address, size_t p_port);
+		void connect(const std::string &p_address, size_t p_port);
 		void disconnect();
-		void treatMessage(spk::Server::MessageObject&& p_message) override;
-		spk::ThreadSafeQueue<spk::Server::MessageObject>& messages() override;
+		void treatMessage(spk::Server::MessageObject &&p_message) override;
+		spk::ThreadSafeQueue<spk::Server::MessageObject> &messages() override;
 	};
 
 	class LocalNode : public Node
@@ -34,12 +34,12 @@ namespace spk
 		spk::ThreadSafeQueue<spk::Server::MessageObject> _messagesToReturn;
 
 	public:
-		void treatMessage(spk::Server::MessageObject&& p_message) override;
-		spk::ThreadSafeQueue<spk::Server::MessageObject>& messageReceived();
-		spk::Server::MessageObject obtainAwnerMessage(const spk::Message::Header::ClientID& p_emitterID, spk::Message::Header::Type p_type = -1);
-		spk::Server::MessageObject obtainAwnerMessage(spk::Server::MessageObject&& p_questionMessage, spk::Message::Header::Type p_type = -1);
-		void insertMessageAwnser(spk::Server::MessageObject&& p_messageAwnser);
-		spk::ThreadSafeQueue<spk::Server::MessageObject>& messages() override;
+		void treatMessage(spk::Server::MessageObject &&p_message) override;
+		spk::ThreadSafeQueue<spk::Server::MessageObject> &messageReceived();
+		spk::Server::MessageObject obtainAwnerMessage(const spk::Message::Header::ClientID &p_emitterID, spk::Message::Header::Type p_type = -1);
+		spk::Server::MessageObject obtainAwnerMessage(spk::Server::MessageObject &&p_questionMessage, spk::Message::Header::Type p_type = -1);
+		void insertMessageAwnser(spk::Server::MessageObject &&p_messageAwnser);
+		spk::ThreadSafeQueue<spk::Server::MessageObject> &messages() override;
 	};
 
 	class CentralNode

@@ -21,11 +21,10 @@ namespace spk
 		}
 
 	public:
-		ContainerWidget(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+		ContainerWidget(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
 			spk::Widget(p_name, p_parent),
 			_content(nullptr)
 		{
-
 		}
 
 		void setContent(spk::SafePointer<spk::Widget> p_content)
@@ -39,24 +38,24 @@ namespace spk
 			return (_content);
 		}
 
-		void setContentAnchor(const spk::Vector2Int& p_contentAnchor)
+		void setContentAnchor(const spk::Vector2Int &p_contentAnchor)
 		{
 			_contentAnchor = p_contentAnchor;
 			requireGeometryUpdate();
 		}
 
-		const spk::Vector2Int& contentAnchor() const
+		const spk::Vector2Int &contentAnchor() const
 		{
 			return (_contentAnchor);
 		}
 
-		void setContentSize(const spk::Vector2UInt& p_contentSize)
+		void setContentSize(const spk::Vector2UInt &p_contentSize)
 		{
 			_contentSize = p_contentSize;
 			requireGeometryUpdate();
 		}
 
-		const spk::Vector2UInt& contentSize() const
+		const spk::Vector2UInt &contentSize() const
 		{
 			return (_contentSize);
 		}

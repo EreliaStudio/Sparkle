@@ -6,16 +6,16 @@ namespace spk
 {
 	namespace FileUtils
 	{
-		std::vector<std::filesystem::path> listFiles(const std::filesystem::path& folderPath)
+		std::vector<std::filesystem::path> listFiles(const std::filesystem::path &p_folderPath)
 		{
 			std::vector<std::filesystem::path> fileList;
 
-			if (!std::filesystem::exists(folderPath) || !std::filesystem::is_directory(folderPath))
+			if (!std::filesystem::exists(p_folderPath) || !std::filesystem::is_directory(p_folderPath))
 			{
 				throw std::invalid_argument("The provided path is not a valid directory.");
 			}
 
-			for (const auto& entry : std::filesystem::directory_iterator(folderPath))
+			for (const auto &entry : std::filesystem::directory_iterator(p_folderPath))
 			{
 				if (std::filesystem::is_regular_file(entry.path()))
 				{
@@ -26,7 +26,7 @@ namespace spk
 			return fileList;
 		}
 
-		std::wstring readFileAsWString(const std::filesystem::path& p_path)
+		std::wstring readFileAsWString(const std::filesystem::path &p_path)
 		{
 			std::wfstream inputFile;
 			inputFile.open(p_path, std::ios_base::in);
@@ -43,7 +43,7 @@ namespace spk
 			return (result);
 		}
 
-		std::string readFileAsString(const std::filesystem::path& p_path)
+		std::string readFileAsString(const std::filesystem::path &p_path)
 		{
 			std::fstream inputFile;
 			inputFile.open(p_path, std::ios_base::in);
@@ -65,7 +65,7 @@ namespace spk
 			return (result);
 		}
 
-		std::vector<uint8_t> readFileAsBytes(const std::filesystem::path& p_path)
+		std::vector<uint8_t> readFileAsBytes(const std::filesystem::path &p_path)
 		{
 			std::ifstream inputFile(p_path, std::ios::binary | std::ios::ate);
 
@@ -75,11 +75,11 @@ namespace spk
 			}
 
 			std::streamsize fileSize = inputFile.tellg();
-			inputFile.seekg(0, std::ios::beg); 
+			inputFile.seekg(0, std::ios::beg);
 
 			std::vector<uint8_t> buffer(static_cast<size_t>(fileSize));
 
-			if (!inputFile.read(reinterpret_cast<char*>(buffer.data()), fileSize))
+			if (!inputFile.read(reinterpret_cast<char *>(buffer.data()), fileSize))
 			{
 				throw std::runtime_error("Error reading file [" + p_path.string() + "]");
 			}

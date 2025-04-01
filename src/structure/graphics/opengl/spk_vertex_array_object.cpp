@@ -3,15 +3,14 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
 #include <Windows.h>
 
 namespace spk::OpenGL
 {
-	VertexArrayObject::VertexArrayObject() : _id(0) {}
+	VertexArrayObject::VertexArrayObject() :
+		_id(0)
+	{
+	}
 
 	VertexArrayObject::~VertexArrayObject()
 	{
@@ -19,6 +18,36 @@ namespace spk::OpenGL
 		{
 			_release();
 		}
+	}
+
+	VertexArrayObject::VertexArrayObject(const VertexArrayObject &p_other) :
+		_id(0)
+	{
+	}
+
+	VertexArrayObject::VertexArrayObject(VertexArrayObject &&p_other) :
+		_id(p_other._id)
+	{
+		p_other._id = 0;
+	}
+
+	VertexArrayObject &VertexArrayObject::operator=(const VertexArrayObject &p_other)
+	{
+		if (this != &p_other)
+		{
+			_id = 0;
+		}
+		return (*this);
+	}
+
+	VertexArrayObject &VertexArrayObject::operator=(VertexArrayObject &&p_other)
+	{
+		if (this != &p_other)
+		{
+			_id = p_other._id;
+			p_other._id = 0;
+		}
+		return (*this);
 	}
 
 	void VertexArrayObject::_allocate()

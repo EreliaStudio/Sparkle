@@ -1,172 +1,308 @@
 #pragma once
 
 #include <GL/glew.h>
+
 #include <GL/gl.h>
+
+#include "spk_debug_macro.hpp"
+#include "structure/container/spk_data_buffer_layout.hpp"
+#include "structure/design_pattern/spk_contract_provider.hpp"
+#include "structure/graphics/opengl/spk_vertex_buffer_object.hpp"
+#include <cstring>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <variant>
 #include <vector>
-#include <stdexcept>
-#include <type_traits>
-#include <cstring>
-
-#include "spk_sfinae.hpp"
-#include "structure/graphics/opengl/spk_binded_buffer_object.hpp"
 
 namespace spk::OpenGL
 {
-    class ShaderStorageBufferObject : public BindedBufferObject
-    {
-    public:
-        template<typename TFixedType, typename TDynamicType>
-        struct Content
-        {
-            TFixedType fixed;
-            std::vector<TDynamicType> dynamic;
-        };
+	class ShaderStorageBufferObject : public VertexBufferObject
+	{
+	public:
+		using BindingPoint = int;
 
-        class FixedData
-        {
-            friend class ShaderStorageBufferObject;
-        public:
-            Element& operator[](const std::string& name)
-            {
-                return _element[name];
-            }
+		class DynamicArray
+		{
+			friend class ShaderStorageBufferObject;
 
-            const Element& operator[](const std::string& name) const
-            {
-                return _element[name];
-            }
+		public:
+			using Element = spk::DataBufferLayout::Element;
 
-            uint8_t* data() { return _element.data(); }
-            const uint8_t* data() const { return _element.data(); }
-            size_t size() const { return _element.size(); }
+		private:
+			spk::TContractProvider<size_t> _resizeContractProvider;
+			spk::DataBuffer *_buffer;
+			std::vector<Element> _elements;
+			Element _defaultElement;
+			size_t _fixedReservedSpace;
+			size_t _elementSize;
+			size_t _elementPadding;
 
-        private:
-            FixedData(ShaderStorageBufferObject* parent, uint8_t* buffer, size_t fixedSize) :
-				_parent(parent), _element(buffer, fixedSize)
-            {
-            }
-            ShaderStorageBufferObject* _parent;
-            Element _element;
-        };
+			void redoArray()
+			{
+				for (size_t i = 0; i < _elements.size(); i++)
+				{
+					auto &element = _elements[i];
 
-		
-        class DynamicArray
-        {
-            friend class ShaderStorageBufferObject;
-        public:
-            void resize(size_t arraySize);
+					element = _defaultElement.duplicate(_fixedReservedSpace + (_elementSize + _elementPadding) * i);
+					element.setName(_defaultElement.name() + L"[" + std::to_wstring(i) + L"]");
+					element.setBuffer(_buffer);
+				}
+			}
 
-            void pop_back();
+		public:
+			DynamicArray(const std::wstring &p_name, spk::DataBuffer *p_buffer, size_t p_fixedReservedSpace, size_t p_elementSize,
+						 size_t p_elementPadding) :
+				_defaultElement(p_name, p_buffer, 0, p_elementSize),
+				_fixedReservedSpace(p_fixedReservedSpace),
+				_elementSize(p_elementSize),
+				_elementPadding(p_elementPadding)
+			{
+			
+			}
 
-            template<typename TDynamicType>
-            void push_back(const TDynamicType& value)
-            {
-                if (_dynamicElementSize % sizeof(TDynamicType) != 0)
-                {
-                    throw std::runtime_error(
-                        "DynamicArray::push_back() - The dynamic element size (" +
-                        std::to_string(_dynamicElementSize) + " bytes) is incompatible with TDynamicType size (" +
-                        std::to_string(sizeof(TDynamicType)) + " bytes)."
-                    );
-                }
-                auto& vec = std::get<std::vector<Element>>(_element._content);
-                size_t currentSize = vec.size();
-                resize(currentSize + 1);
-                auto& newVec = std::get<std::vector<Element>>(_element._content);
-                newVec[currentSize] = value;
-            }
+			DynamicArray(const DynamicArray &) = delete;
+			DynamicArray &operator=(const DynamicArray &) = delete;
 
-            Element& operator[](size_t index)
-            {
-                auto& vec = std::get<std::vector<Element>>(_element._content);
-                if (index >= vec.size())
-                    throw std::out_of_range("DynamicArray::operator[] - Index out of range.");
-                return vec[index];
-            }
+			DynamicArray(DynamicArray &&p_other) :
+				_buffer(std::move(p_other._buffer)),
+				_elements(std::move(p_other._elements)),
+				_defaultElement(std::move(p_other._defaultElement)),
+				_fixedReservedSpace(std::move(p_other._fixedReservedSpace)),
+				_elementSize(std::move(p_other._elementSize)),
+				_elementPadding(std::move(p_other._elementPadding))
+			{
+			
+			}
 
-            const Element& operator[](size_t index) const
-            {
-                const auto& vec = std::get<std::vector<Element>>(_element._content);
-                if (index >= vec.size())
-                    throw std::out_of_range("DynamicArray::operator[] - Index out of range.");
-                return vec[index];
-            }
+			DynamicArray &operator=(DynamicArray &&p_other)
+			{
+				if (this != &p_other)
+				{
+					_buffer = std::move(p_other._buffer);
+					_elements = std::move(p_other._elements);
+					_defaultElement = std::move(p_other._defaultElement);
+					_defaultElement.setBuffer(_buffer);
+					_fixedReservedSpace = std::move(p_other._fixedReservedSpace);
+					_elementSize = std::move(p_other._elementSize);
+					_elementPadding = std::move(p_other._elementPadding);
+				}
+				return (*this);
+			}
 
-            size_t nbElement() const
-            {
-                const auto& vec = std::get<std::vector<Element>>(_element._content);
-                return vec.size();
-            }
+			bool contains(const std::wstring &p_name)
+			{
+				return (_defaultElement.contains(p_name));
+			}
 
-            size_t getDynamicElementSize() const { return _dynamicElementSize; }
+			Element &addElement(const std::wstring &p_name, size_t p_offset, size_t p_size)
+			{
+				Element &result = _defaultElement.addElement(p_name, p_offset, p_size);
 
-        private:
-            DynamicArray(ShaderStorageBufferObject* parent, uint8_t* buffer, size_t dynamicElementSize, size_t dynamicPadding)
-                : _parent(parent), _dynamicElementSize(dynamicElementSize), _dynamicPadding(dynamicPadding)
-            {
-                _element = Element(buffer, dynamicElementSize);
-                _element._content = std::vector<Element>();
-            }
-            ShaderStorageBufferObject* _parent;
-            Element _element;
-            size_t _dynamicElementSize;
-            size_t _dynamicPadding;
-        };
+				redoArray();
 
-    private:
-        size_t _fixedSize;
-        size_t _fixedPadding;
+				return (result);
+			}
 
-        FixedData _fixedData;
-        DynamicArray _dynamicArray;
+			Element &addElement(const std::wstring &p_name, size_t p_offset, size_t p_nbElement, size_t p_elementSize, size_t p_elementPadding)
+			{
+				Element &result = _defaultElement.addElement(p_name, p_offset, p_nbElement, p_elementSize, p_elementPadding);
 
-    public:
-        // Constructors
-        ShaderStorageBufferObject();
-        ShaderStorageBufferObject(const std::string& typeName,
-                                  BindingPoint bindingPoint,
-                                  size_t p_fixedSize,
-                                  size_t p_fixedPadding,
-                                  size_t p_dynamicElementSize,
-                                  size_t p_dynamicPadding);
+				redoArray();
 
-        void activate() override;
+				return (result);
+			}
 
-        // Accessors to the nested classes.
-        FixedData& fixedData() { return _fixedData; }
-        const FixedData& fixedData() const { return _fixedData; }
+			void removeElement(const std::wstring &p_name)
+			{
+				_defaultElement.removeElement(p_name);
 
-        DynamicArray& dynamicArray() { return _dynamicArray; }
-        const DynamicArray& dynamicArray() const { return _dynamicArray; }
+				redoArray();
+			}
 
-        template<typename TFixedType, typename TDynamicType>
-        Content<TFixedType, TDynamicType> get()
-        {
-            activate();
+			void clear()
+			{
+				resize(0);
+			}
 
-            if (_fixedSize % sizeof(TFixedType) != 0)
-            {
-                throw std::runtime_error(
-                    "ShaderStorageBufferObject::get() - The fixed buffer section size (" + std::to_string(_fixedSize) +
-                    " bytes) is incompatible with TFixedType size (" + std::to_string(sizeof(TFixedType)) + " bytes)."
-                );
-            }
+			void resize(size_t p_nbElement)
+			{
+				_resizeContractProvider.trigger(_fixedReservedSpace + (_elementSize + _elementPadding) * p_nbElement);
 
-            if (_dynamicArray.getDynamicElementSize() % sizeof(TDynamicType) != 0)
-            {
-                throw std::runtime_error(
-                    "ShaderStorageBufferObject::get() - The dynamic buffer section element size (" +
-                    std::to_string(_dynamicArray.getDynamicElementSize()) + " bytes) is incompatible with TDynamicType size (" +
-                    std::to_string(sizeof(TDynamicType)) + " bytes)."
-                );
-            }
+				_elements.resize(p_nbElement);
 
-            Content<TFixedType, TDynamicType> result;
-            result.dynamic.resize(_dynamicArray.nbElement());
-            return std::move(result);
-        }
-    };
+				redoArray();
+			}
+
+			template <typename TType>
+			void push_back(const TType &p_value)
+			{
+				resize(_elements.size() + 1);
+
+				_elements.back() = p_value;
+			}
+
+			Element &operator[](size_t p_index)
+			{
+				return (_elements[p_index]);
+			}
+
+			const Element &operator[](size_t p_index) const
+			{
+				return (_elements[p_index]);
+			}
+
+			size_t nbElement() const
+			{
+				return (_elements.size());
+			}
+
+			template <typename T>
+			DynamicArray &operator=(std::initializer_list<T> p_list)
+			{
+				resize(p_list.size());
+
+				size_t index = 0;
+				for (auto &value : p_list)
+				{
+					_elements[index] = value;
+					++index;
+				}
+				return *this;
+			}
+		};
+
+	private:
+		std::wstring _blockName;
+		BindingPoint _bindingPoint;
+		GLint _blockIndex;
+
+		spk::DataBufferLayout::Element _fixedData;
+		spk::TContractProvider<size_t>::Contract _onResizeContract;
+		DynamicArray _dynamicArray;
+
+	public:
+		ShaderStorageBufferObject() :
+			VertexBufferObject(VertexBufferObject::Type::ShaderStorage, VertexBufferObject::Usage::Dynamic),
+			_blockName(L"Unnamed SSBO"),
+			_bindingPoint(-1),
+			_blockIndex(-1),
+			_fixedData(L"FixedData", &(dataBuffer()), 0, 0),
+			_dynamicArray(L"DynamicArray", &dataBuffer(), 0, 0, 0)
+		{
+			_onResizeContract = _dynamicArray._resizeContractProvider.subscribe([&](size_t p_size) { resize(p_size); });
+			_dynamicArray._buffer = &dataBuffer();
+		}
+
+		ShaderStorageBufferObject(const std::wstring &p_blockName, BindingPoint p_bindingPoint, size_t p_fixedSize, size_t p_paddingFixedToDynamic,
+								  size_t p_dynamicElementSize, size_t p_dynamicElementPadding) :
+			VertexBufferObject(VertexBufferObject::Type::ShaderStorage, VertexBufferObject::Usage::Dynamic),
+			_blockName(p_blockName),
+			_bindingPoint(p_bindingPoint),
+			_blockIndex(-1),
+			_fixedData(p_blockName + L" - FixedData", &(dataBuffer()), 0, p_fixedSize),
+			_dynamicArray(p_blockName + L" - DynamicArray", &dataBuffer(), p_fixedSize + p_paddingFixedToDynamic, p_dynamicElementSize,
+						  p_dynamicElementPadding)
+		{
+			_dynamicArray._buffer = &dataBuffer();
+
+			_onResizeContract = _dynamicArray._resizeContractProvider.subscribe([&](size_t p_size) { resize(p_size); });
+
+			resize(p_fixedSize + p_paddingFixedToDynamic + p_dynamicElementSize);
+		}
+
+		ShaderStorageBufferObject(const ShaderStorageBufferObject &) = delete;
+		ShaderStorageBufferObject &operator=(const ShaderStorageBufferObject &) = delete;
+
+		ShaderStorageBufferObject(ShaderStorageBufferObject &&p_other) :
+			_blockName(p_other._blockName),
+			_bindingPoint(p_other._bindingPoint),
+			_blockIndex(p_other._blockIndex),
+			_fixedData(std::move(p_other._fixedData)),
+			_dynamicArray(std::move(p_other._dynamicArray))
+		{
+			_dynamicArray._buffer = &dataBuffer();
+
+			_onResizeContract = _dynamicArray._resizeContractProvider.subscribe([&](size_t p_size) { resize(p_size); });
+		}
+
+		ShaderStorageBufferObject &operator=(ShaderStorageBufferObject &&p_other)
+		{
+			if (this != &p_other)
+			{
+				_blockName = p_other._blockName;
+				_bindingPoint = p_other._bindingPoint;
+				_blockIndex = p_other._blockIndex;
+				_fixedData = std::move(p_other._fixedData);
+				_dynamicArray = std::move(p_other._dynamicArray);
+			
+				_dynamicArray._buffer = &dataBuffer();
+
+				_onResizeContract = _dynamicArray._resizeContractProvider.subscribe([&](size_t p_size) { resize(p_size); });
+			}
+			return (*this);
+		}
+
+		const std::wstring &blockName() const
+		{
+			return (_blockName);
+		}
+		void setBlockName(const std::wstring &p_blockName)
+		{
+			_blockName = p_blockName;
+		}
+
+		BindingPoint bindingPoint() const
+		{
+			return (_bindingPoint);
+		}
+		void setBindingPoint(BindingPoint p_bindingPoint)
+		{
+			_bindingPoint = p_bindingPoint;
+		}
+
+		spk::DataBufferLayout::Element &fixedData()
+		{
+			return (_fixedData);
+		}
+
+		const spk::DataBufferLayout::Element &fixedData() const
+		{
+			return (_fixedData);
+		}
+
+		DynamicArray &dynamicArray()
+		{
+			return (_dynamicArray);
+		}
+
+		const DynamicArray &dynamicArray() const
+		{
+			return (_dynamicArray);
+		}
+
+		void activate() override
+		{
+			VertexBufferObject::activate();
+			GLint prog = 0;
+			glGetIntegerv(GL_CURRENT_PROGRAM, &prog);
+			if (prog == 0)
+			{
+				throw std::runtime_error("No shader program is currently bound.");
+			}
+
+			if (_blockIndex == -1)
+			{
+				std::string str = spk::StringUtils::wstringToString(_blockName);
+				_blockIndex = glGetProgramResourceIndex(prog, GL_SHADER_STORAGE_BLOCK, str.c_str());
+				if (_blockIndex == GL_INVALID_INDEX)
+				{
+					throw std::runtime_error("Shader storage block '" + str + "' not found in the shader program.");
+				}
+			}
+
+			glShaderStorageBlockBinding(prog, _blockIndex, _bindingPoint);
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, _bindingPoint, _id);
+		}
+	};
 }

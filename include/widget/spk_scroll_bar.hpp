@@ -1,8 +1,8 @@
 #pragma once
 
-#include "widget/spk_widget.hpp"
-#include "widget/spk_slider_bar.hpp"
 #include "widget/spk_push_button.hpp"
+#include "widget/spk_slider_bar.hpp"
+#include "widget/spk_widget.hpp"
 
 namespace spk
 {
@@ -13,7 +13,7 @@ namespace spk
 		using Job = spk::SliderBar::Job;
 		using VoidJob = spk::SliderBar::VoidJob;
 		using Orientation = spk::SliderBar::Orientation;
-		
+
 	private:
 		spk::TContractProvider<float> _onEditionContractProvider;
 
@@ -25,18 +25,18 @@ namespace spk
 		spk::SliderBar::Contract _sliderBarContract;
 
 		void _onGeometryChange() override;
-		
+
 	public:
-		ScrollBar(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent);
+		ScrollBar(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent);
 
-		Contract subscribe(const Job& p_job);
-		Contract subscribe(const VoidJob& p_job);
+		Contract subscribe(const Job &p_job);
+		Contract subscribe(const VoidJob &p_job);
 
-		void setOrientation(const Orientation& p_orientation);
+		void setOrientation(const Orientation &p_orientation);
 
 		void setScale(const float p_scale);
 
 		float ratio();
-		void setRatio(const float& p_ratio);
+		void setRatio(const float &p_ratio);
 	};
 }

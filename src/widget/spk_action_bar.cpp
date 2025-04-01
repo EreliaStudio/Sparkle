@@ -14,12 +14,9 @@ namespace spk
 	}
 
 	spk::SpriteSheet MenuBar::Menu::Break::_defaultBreakSpriteSheet = spk::SpriteSheet::fromRawData(
-		SPARKLE_GET_RESOURCE("resources/textures/defaultBreak.png"),
-		spk::Vector2UInt(3, 1),
-		SpriteSheet::Filtering::Nearest
-	);
+		SPARKLE_GET_RESOURCE("resources/textures/defaultBreak.png"), spk::Vector2UInt(3, 1), SpriteSheet::Filtering::Nearest);
 
-	spk::SafePointer<spk::SpriteSheet> MenuBar::Menu::Break::defaultBreakSpriteSheet()
+	spk::SafePointer<const spk::SpriteSheet> MenuBar::Menu::Break::defaultBreakSpriteSheet()
 	{
 		return (&_defaultBreakSpriteSheet);
 	}
@@ -29,28 +26,15 @@ namespace spk
 		_renderer.clear();
 
 		_renderer.prepare(
-				{
-					geometry().anchor + spk::Vector2Int(0, 0),
-					{_height, _height}
-				},
-				spk::safe_pointer_cast<spk::SpriteSheet>(_renderer.texture())->sprite(0), layer()
-			);
+			{geometry().anchor + spk::Vector2Int(0, 0), {_height, _height}}, _renderer.texture().upCast<spk::SpriteSheet>()->sprite(0), layer());
 
-		_renderer.prepare(
-				{
-					geometry().anchor + spk::Vector2Int(_height, 0),
-					{geometry().size.x - _height *  2, _height}
-				},
-				spk::safe_pointer_cast<spk::SpriteSheet>(_renderer.texture())->sprite(1), layer()
-			);
+		_renderer.prepare({geometry().anchor + spk::Vector2Int(_height, 0), {geometry().size.x - _height * 2, _height}},
+						  _renderer.texture().upCast<spk::SpriteSheet>()->sprite(1),
+						  layer());
 
-		_renderer.prepare(
-				{
-					geometry().anchor + spk::Vector2Int(geometry().size.x - _height, 0),
-					{_height, _height}
-				},
-				spk::safe_pointer_cast<spk::SpriteSheet>(_renderer.texture())->sprite(2), layer()
-			);
+		_renderer.prepare({geometry().anchor + spk::Vector2Int(geometry().size.x - _height, 0), {_height, _height}},
+						  _renderer.texture().upCast<spk::SpriteSheet>()->sprite(2),
+						  layer());
 
 		_renderer.validate();
 	}
@@ -60,7 +44,8 @@ namespace spk
 		_renderer.render();
 	}
 
-	MenuBar::Menu::Break::Break(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) : spk::Widget(p_name, p_parent)
+	MenuBar::Menu::Break::Break(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
+		spk::Widget(p_name, p_parent)
 	{
 		setSpriteSheet(defaultBreakSpriteSheet());
 	}
@@ -70,7 +55,7 @@ namespace spk
 		return (spk::Vector2UInt(1, _height));
 	}
 
-	void MenuBar::Menu::Break::setSpriteSheet(const spk::SafePointer<spk::SpriteSheet> &p_spriteSheet)
+	void MenuBar::Menu::Break::setSpriteSheet(const spk::SafePointer<const spk::SpriteSheet> &p_spriteSheet)
 	{
 		if (p_spriteSheet->nbSprite() != spk::Vector2UInt(3, 1))
 		{
@@ -121,8 +106,9 @@ namespace spk
 		}
 	}
 
-	MenuBar::Menu::Menu(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) : spk::Widget(p_name, p_parent),
-																								_backgroundFrame(p_name + L" - Background frame", this)
+	MenuBar::Menu::Menu(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
+		spk::Widget(p_name, p_parent),
+		_backgroundFrame(p_name + L" - Background frame", this)
 	{
 		_backgroundFrame.setCornerSize(2);
 		_backgroundFrame.activate();
@@ -175,7 +161,9 @@ namespace spk
 		for (const auto &element : _elements)
 		{
 			if (result.y != 0)
+			{
 				result.y += 5;
+			}
 			spk::Vector2UInt elementTextSize = element.item->minimalSize();
 
 			result.x = std::max(result.x, elementTextSize.x + 10);
@@ -204,9 +192,8 @@ namespace spk
 
 			spk::Vector2Int buttonTextSize = entry->menuButton->computeTextSize();
 
-			spk::Vector2UInt buttonSize = {
-				buttonTextSize.x + entry->menuButton->cornerSize().x * 2 + (_height - buttonTextSize.y),
-				_height - _backgroundFrame.cornerSize().y * 2};
+			spk::Vector2UInt buttonSize = {buttonTextSize.x + entry->menuButton->cornerSize().x * 2 + (_height - buttonTextSize.y),
+										   _height - _backgroundFrame.cornerSize().y * 2};
 
 			entry->menuButton->setGeometry({anchor, buttonSize});
 
@@ -252,17 +239,19 @@ namespace spk
 
 		MenuEntry *rawMenuEntryPtr = newMenuEntry.get();
 
-		newMenuEntry->menuButtonContract = newMenuEntry->menuButton->subscribe([this, rawMenuEntryPtr]()
-																			{
-					for(auto &entry : _menus)
-					{
-						entry->Menu->deactivate();
-					}
-					if (rawMenuEntryPtr->Menu->nbItem() != 0)
-					{
-						rawMenuEntryPtr->Menu->activate();
-					}
-					requireGeometryUpdate(); });
+		newMenuEntry->menuButtonContract = newMenuEntry->menuButton->subscribe(
+			[this, rawMenuEntryPtr]()
+			{
+				for (auto &entry : _menus)
+				{
+					entry->Menu->deactivate();
+				}
+				if (rawMenuEntryPtr->Menu->nbItem() != 0)
+				{
+					rawMenuEntryPtr->Menu->activate();
+				}
+				requireGeometryUpdate();
+			});
 
 		_menus.push_back(std::move(newMenuEntry));
 
