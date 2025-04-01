@@ -20,12 +20,12 @@ namespace spk
 		_inverseProjectionMatrix = _projectionMatrix.inverse();
 	}
 
-	const spk::Matrix4x4& Camera::projectionMatrix() const
+	const spk::Matrix4x4 &Camera::projectionMatrix() const
 	{
 		return _projectionMatrix;
 	}
 
-	const spk::Matrix4x4& Camera::inverseProjectionMatrix() const
+	const spk::Matrix4x4 &Camera::inverseProjectionMatrix() const
 	{
 		return _inverseProjectionMatrix;
 	}

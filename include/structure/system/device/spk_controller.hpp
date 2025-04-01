@@ -57,10 +57,10 @@ namespace spk
 	};
 }
 
-std::ostream& operator << (std::ostream& p_os, const spk::Controller::Button& p_button);
-std::ostream& operator << (std::ostream& p_os, const spk::Controller::Joystick::ID& p_joystickID);
-std::ostream& operator << (std::ostream& p_os, const spk::Controller::Trigger::ID& p_triggerID);
+std::ostream &operator<<(std::ostream &p_os, const spk::Controller::Button &p_button);
+std::ostream &operator<<(std::ostream &p_os, const spk::Controller::Joystick::ID &p_joystickID);
+std::ostream &operator<<(std::ostream &p_os, const spk::Controller::Trigger::ID &p_triggerID);
 
-std::wostream& operator << (std::wostream& p_os, const spk::Controller::Button& p_button);
-std::wostream& operator << (std::wostream& p_os, const spk::Controller::Joystick::ID& p_joystickID);
-std::wostream& operator << (std::wostream& p_os, const spk::Controller::Trigger::ID& p_triggerID);
+std::wostream &operator<<(std::wostream &p_os, const spk::Controller::Button &p_button);
+std::wostream &operator<<(std::wostream &p_os, const spk::Controller::Joystick::ID &p_joystickID);
+std::wostream &operator<<(std::wostream &p_os, const spk::Controller::Trigger::ID &p_triggerID);

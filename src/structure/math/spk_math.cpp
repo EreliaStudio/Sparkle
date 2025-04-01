@@ -14,7 +14,7 @@ namespace spk
 		return static_cast<float>(p_radians * (180.0f / M_PI));
 	}
 
-	intmax_t positiveModulo(const intmax_t& p_value, const intmax_t& p_modulo)
+	intmax_t positiveModulo(const intmax_t &p_value, const intmax_t &p_modulo)
 	{
 		if (p_modulo == 0)
 		{

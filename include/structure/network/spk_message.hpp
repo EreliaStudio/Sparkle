@@ -1,8 +1,8 @@
 #pragma once
 
+#include "structure/container/spk_data_buffer.hpp"
 #include <cstdint>
 #include <cstring>
-#include "structure/container/spk_data_buffer.hpp"
 
 namespace spk
 {
@@ -18,7 +18,8 @@ namespace spk
 		class Header
 		{
 		public:
-			using ClientID = size_t;
+			using ClientID = long;
+			static inline const ClientID InvalidID = -1;
 			using Type = int32_t;
 
 		private:
@@ -32,7 +33,7 @@ namespace spk
 
 			Header();
 			Header(Type p_type);
-			Header(const ClientID& p_emitterID, const Type& p_type);
+			Header(const ClientID &p_emitterID, const Type &p_type);
 		};
 
 	private:
@@ -41,26 +42,26 @@ namespace spk
 
 	public:
 		Message();
-		Message(const Header::Type& p_messageType);
-		Message(const Header::ClientID& p_clientToRedirectMessage, const Header::Type& p_messageType);
+		Message(const Header::Type &p_messageType);
+		Message(const Header::ClientID &p_clientToRedirectMessage, const Header::Type &p_messageType);
 
-		void setType(const Header::Type& p_type);
-		void setEmitterID(const Header::ClientID& p_emitterID);
-		void resize(const size_t& p_newSize);
+		void setType(const Header::Type &p_type);
+		void setEmitterID(const Header::ClientID &p_emitterID);
+		void resize(const size_t &p_newSize);
 		void clear();
 		void reset();
-		void skip(const size_t& p_bytesToSkip) const;
-		void edit(const size_t& p_offset, const void* p_data, const size_t& p_dataSize);
-		void append(const void* p_data, const size_t& p_dataSize);
+		void skip(const size_t &p_bytesToSkip) const;
+		void edit(const size_t &p_offset, const void *p_data, const size_t &p_dataSize);
+		void append(const void *p_data, const size_t &p_dataSize);
 
 		template <typename InputType>
-		void edit(const size_t& p_offset, const InputType& p_input)
+		void edit(const size_t &p_offset, const InputType &p_input)
 		{
 			_buffer.edit(p_offset, p_input);
 		}
 
 		template <typename InputType>
-		Message& operator<<(const InputType& p_input)
+		Message &operator<<(const InputType &p_input)
 		{
 			_buffer << p_input;
 			_header.length = _buffer.size();
@@ -68,26 +69,26 @@ namespace spk
 		}
 
 		template <typename OutputType>
-		const Message& operator>>(OutputType& p_output) const
+		const Message &operator>>(OutputType &p_output) const
 		{
 			_buffer >> p_output;
 			return *this;
 		}
 
 		template <typename OutputType>
-		OutputType get() const
+		const OutputType &get() const
 		{
 			return (_buffer.get<OutputType>());
 		}
 
 		template <typename OutputType>
-		const OutputType& peek() const
+		const OutputType &peek() const
 		{
 			return (_buffer.peek<OutputType>());
 		}
 
-		const Header& header() const;
-		const DataBuffer& buffer() const;
+		const Header &header() const;
+		const DataBuffer &buffer() const;
 		size_t size() const;
 		bool empty() const;
 	};

@@ -41,7 +41,7 @@ namespace spk
 		_verticalScrollBar.setScale(static_cast<float>(geometry().size.y) / static_cast<float>(_containerWidget.contentSize().y));
 	}
 
-	void IScrollArea::_onMouseEvent(spk::MouseEvent& p_event)
+	void IScrollArea::_onMouseEvent(spk::MouseEvent &p_event)
 	{
 		if (p_event.type == spk::MouseEvent::Type::Wheel)
 		{
@@ -56,12 +56,12 @@ namespace spk
 		}
 	}
 
-	IScrollArea::IScrollArea(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+	IScrollArea::IScrollArea(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
 		spk::Widget(p_name, p_parent),
 		_horizontalScrollBar(p_name + L" - Horizontal ScrollBar", this),
 		_verticalScrollBar(p_name + L" - Vertical ScrollBar", this),
-		_horizontalBarContract(_horizontalScrollBar.subscribe([&](const float& p_ratio){requireGeometryUpdate();})),
-		_verticalBarContract(_verticalScrollBar.subscribe([&](const float& p_ratio){requireGeometryUpdate();})),
+		_horizontalBarContract(_horizontalScrollBar.subscribe([&](const float &p_ratio) { requireGeometryUpdate(); })),
+		_verticalBarContract(_verticalScrollBar.subscribe([&](const float &p_ratio) { requireGeometryUpdate(); })),
 		_containerWidget(p_name + L" - Container", this)
 	{
 		_containerWidget.activate();
@@ -77,7 +77,7 @@ namespace spk
 		return (&(_containerWidget));
 	}
 
-	void IScrollArea::setScrollBarWidth(const float& p_scrollBarWidth)
+	void IScrollArea::setScrollBarWidth(const float &p_scrollBarWidth)
 	{
 		_scrollBarWidth = p_scrollBarWidth;
 		requireGeometryUpdate();
@@ -87,9 +87,9 @@ namespace spk
 	{
 		_containerWidget.setContent(p_content);
 		setContentSize(p_content->requiredSize());
-	}	
+	}
 
-	void IScrollArea::setContentSize(const spk::Vector2UInt& p_contentSize)
+	void IScrollArea::setContentSize(const spk::Vector2UInt &p_contentSize)
 	{
 		_containerWidget.setContentSize(p_contentSize);
 	}

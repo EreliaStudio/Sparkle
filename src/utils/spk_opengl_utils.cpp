@@ -2,7 +2,7 @@
 
 namespace spk::OpenGLUtils
 {
-	std::wstring to_wstring(const GLenum& p_type)
+	std::wstring to_wstring(const GLenum &p_type)
 	{
 		switch (p_type)
 		{
@@ -294,30 +294,61 @@ namespace spk::OpenGLUtils
 		}
 	}
 
-	std::wstring getFramebufferErrorString(GLenum status)
-    {
-        switch (status)
-        {
-        case GL_FRAMEBUFFER_COMPLETE:
-            return L"Framebuffer complete";
-        case GL_FRAMEBUFFER_UNDEFINED:
-            return L"Framebuffer undefined (GL_FRAMEBUFFER_UNDEFINED)";
-        case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
-            return L"Incomplete attachment (GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT)";
-        case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
-            return L"Missing attachment (GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT)";
-        case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
-            return L"Incomplete draw buffer (GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER)";
-        case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
-            return L"Incomplete read buffer (GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER)";
-        case GL_FRAMEBUFFER_UNSUPPORTED:
-            return L"Framebuffer unsupported (GL_FRAMEBUFFER_UNSUPPORTED)";
-        case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
-            return L"Incomplete multisample (GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE)";
-        case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:
-            return L"Incomplete layer targets (GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS)";
-        default:
-            return L"Unknown framebuffer error";
-        }
-    }
+	std::wstring getFramebufferErrorString(GLenum p_status)
+	{
+		switch (p_status)
+		{
+		case GL_FRAMEBUFFER_COMPLETE:
+			return L"Framebuffer complete";
+		case GL_FRAMEBUFFER_UNDEFINED:
+			return L"Framebuffer undefined (GL_FRAMEBUFFER_UNDEFINED)";
+		case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+			return L"Incomplete attachment (GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT)";
+		case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+			return L"Missing attachment (GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT)";
+		case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
+			return L"Incomplete draw buffer (GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER)";
+		case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
+			return L"Incomplete read buffer (GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER)";
+		case GL_FRAMEBUFFER_UNSUPPORTED:
+			return L"Framebuffer unsupported (GL_FRAMEBUFFER_UNSUPPORTED)";
+		case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
+			return L"Incomplete multisample (GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE)";
+		case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:
+			return L"Incomplete layer targets (GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS)";
+		default:
+			return L"Unknown framebuffer error";
+		}
+	}
+
+	void convertFormatToGLEnum(spk::Texture::Format p_format, GLint &p_internalFormat, GLenum &p_externalFormat)
+	{
+		switch (p_format)
+		{
+		case spk::Texture::Format::RGB:
+			p_internalFormat = GL_RGB8;
+			p_externalFormat = GL_RGB;
+			break;
+
+		case spk::Texture::Format::RGBA:
+			p_internalFormat = GL_RGBA8;
+			p_externalFormat = GL_RGBA;
+			break;
+
+		case spk::Texture::Format::GreyLevel:
+			p_internalFormat = GL_R8;
+			p_externalFormat = GL_RED;
+			break;
+
+		case spk::Texture::Format::DualChannel:
+			p_internalFormat = GL_RG8;
+			p_externalFormat = GL_RG;
+			break;
+
+		default:
+			p_internalFormat = 0;
+			p_externalFormat = 0;
+			break;
+		}
+	}
 }

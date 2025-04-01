@@ -8,6 +8,7 @@ namespace spk
 	{
 	public:
 		using Contract = StatefulObject::Contract;
+		using Job = StatefulObject::Job;
 
 	public:
 		ActivableObject();
@@ -17,8 +18,8 @@ namespace spk
 		void deactivate();
 		bool isActive() const;
 
-		Contract addActivationCallback(const std::function<void()>& p_callback);
-		Contract addDeactivationCallback(const std::function<void()>& p_callback);
+		Contract addActivationCallback(const Job &p_callback);
+		Contract addDeactivationCallback(const Job &p_callback);
 
 	private:
 		using StatefulObject<bool>::setState;

@@ -4,7 +4,7 @@
 
 namespace spk
 {
-	void UpdateModule::_treatEvent(spk::UpdateEvent&& p_event)
+	void UpdateModule::_treatEvent(spk::UpdateEvent &&p_event)
 	{
 		if (_lastTime.nanoseconds == 0)
 		{
@@ -18,13 +18,12 @@ namespace spk
 		p_event.window->widget()->onUpdateEvent(p_event);
 	}
 
-	spk::UpdateEvent UpdateModule::_convertEventToEventType(spk::Event&& p_event)
+	spk::UpdateEvent UpdateModule::_convertEventToEventType(spk::Event &&p_event)
 	{
 		return (p_event.updateEvent);
 	}
 
 	UpdateModule::UpdateModule()
 	{
-
 	}
 }

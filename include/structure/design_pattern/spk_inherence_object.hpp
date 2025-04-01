@@ -1,9 +1,9 @@
 #pragma once
 
-#include <algorithm>
-#include <vector>
-#include <stdexcept>
 #include "structure/spk_safe_pointer.hpp"
+#include <algorithm>
+#include <stdexcept>
+#include <vector>
 
 namespace spk
 {
@@ -11,8 +11,8 @@ namespace spk
 	class InherenceObject
 	{
 	public:
-		using Parent = InherenceObject<TType>*;
-		using Child = InherenceObject<TType>*;
+		using Parent = InherenceObject<TType> *;
+		using Child = InherenceObject<TType> *;
 		using ParentObject = spk::SafePointer<TType>;
 		using ChildObject = spk::SafePointer<TType>;
 		using ChildArray = std::vector<ChildObject>;
@@ -22,7 +22,8 @@ namespace spk
 		ChildArray _children;
 
 	protected:
-		InherenceObject() : _parent(nullptr)
+		InherenceObject() :
+			_parent(nullptr)
 		{
 		}
 
@@ -33,22 +34,23 @@ namespace spk
 			{
 				static_cast<Child>(child.get())->_parent = nullptr;
 			}
-			
+
 			if (_parent != nullptr)
 			{
 				_parent->removeChild(this);
 			}
 		}
 
-		InherenceObject(const InherenceObject&) = delete;
-		InherenceObject& operator=(const InherenceObject&) = delete;
+		InherenceObject(const InherenceObject &) = delete;
+		InherenceObject &operator=(const InherenceObject &) = delete;
 
-		InherenceObject(InherenceObject&& p_other) noexcept : _parent(nullptr)
+		InherenceObject(InherenceObject &&p_other) noexcept :
+			_parent(nullptr)
 		{
 			transferFrom(std::move(p_other));
 		}
 
-		InherenceObject& operator=(InherenceObject&& p_other) noexcept
+		InherenceObject &operator=(InherenceObject &&p_other) noexcept
 		{
 			if (this != &p_other)
 			{
@@ -98,7 +100,7 @@ namespace spk
 
 		void clearChildren()
 		{
-			for (ChildObject& child : _children)
+			for (ChildObject &child : _children)
 			{
 				static_cast<Child>(child.get())->_parent = nullptr;
 			}
@@ -107,15 +109,15 @@ namespace spk
 
 		ParentObject parent() const
 		{
-			return static_cast<TType*>(_parent);
+			return static_cast<TType *>(_parent);
 		}
 
-		ChildArray& children()
+		ChildArray &children()
 		{
 			return _children;
 		}
 
-		const ChildArray& children() const
+		const ChildArray &children() const
 		{
 			return _children;
 		}

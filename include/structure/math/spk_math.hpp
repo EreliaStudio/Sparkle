@@ -15,6 +15,6 @@ namespace spk
 	float degreeToRadian(float p_degrees);
 	float radianToDegree(float p_radians);
 
-	intmax_t positiveModulo(const intmax_t& p_value, const intmax_t& p_modulo);
+	intmax_t positiveModulo(const intmax_t &p_value, const intmax_t &p_modulo);
 
 }

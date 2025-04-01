@@ -1,9 +1,5 @@
 #pragma once
 
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
 #include "structure/spk_safe_pointer.hpp"
 
 #include "structure/container/spk_thread_safe_queue.hpp"
@@ -30,13 +26,13 @@
 
 #include <Windows.h>
 
-#include "application/module/spk_mouse_module.hpp"
-#include "application/module/spk_keyboard_module.hpp"
-#include "application/module/spk_system_module.hpp"
-#include "application/module/spk_update_module.hpp"
-#include "application/module/spk_paint_module.hpp"
 #include "application/module/spk_controller_module.hpp"
+#include "application/module/spk_keyboard_module.hpp"
+#include "application/module/spk_mouse_module.hpp"
+#include "application/module/spk_paint_module.hpp"
+#include "application/module/spk_system_module.hpp"
 #include "application/module/spk_timer_module.hpp"
+#include "application/module/spk_update_module.hpp"
 
 namespace spk
 {
@@ -52,7 +48,7 @@ namespace spk
 
 	private:
 		std::unique_ptr<Widget> _rootWidget;
-		
+
 		std::wstring _title;
 		spk::Viewport _viewport;
 		spk::PersistantWorker _windowRendererThread;
@@ -66,7 +62,7 @@ namespace spk
 		std::unordered_map<std::wstring, HCURSOR> _cursors;
 		HCURSOR _currentCursor;
 		HCURSOR _savedCursor;
-		
+
 		std::recursive_mutex _timerMutex;
 		std::set<UINT_PTR> _timers;
 		std::deque<std::pair<int, long long>> _pendingTimerCreations;
@@ -80,10 +76,10 @@ namespace spk
 		ControllerModule controllerModule;
 		TimerModule timerModule;
 
-		std::map<UINT, spk::IModule*> _subscribedModules;
+		std::map<UINT, spk::IModule *> _subscribedModules;
 		std::function<void(spk::SafePointer<spk::Window>)> _onClosureCallback = nullptr;
 
-		void _initialize(const std::function<void(spk::SafePointer<spk::Window>)>& p_onClosureCallback);
+		void _initialize(const std::function<void(spk::SafePointer<spk::Window>)> &p_onClosureCallback);
 		static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 		void _createContext();
 		void _createOpenGLContext();
@@ -92,32 +88,32 @@ namespace spk
 		bool _receiveEvent(UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 		void _handlePendingTimer();
-		UINT_PTR _createTimer(int p_id, const long long& p_durationInMillisecond);
+		UINT_PTR _createTimer(int p_id, const long long &p_durationInMillisecond);
 		void _deleteTimer(UINT_PTR p_id);
 		void _removeAllTimers();
 
 		void _applyCursor();
 
 	public:
-		Window(const std::wstring& p_title, const spk::Geometry2D& p_geometry);
+		Window(const std::wstring &p_title, const spk::Geometry2D &p_geometry);
 		~Window();
 
-		void move(const spk::Geometry2D::Point& p_newPosition);
-		void resize(const spk::Geometry2D::Size& p_newSize);
+		void move(const spk::Geometry2D::Point &p_newPosition);
+		void resize(const spk::Geometry2D::Size &p_newSize);
 		void close();
 		void clear();
 		void swap() const;
 
-		void addCursor(const std::wstring& p_cursorName, const std::filesystem::path& p_cursorPath);
-		void setCursor(const std::wstring& p_cursorName);
+		void addCursor(const std::wstring &p_cursorName, const std::filesystem::path &p_cursorPath);
+		void setCursor(const std::wstring &p_cursorName);
 
-		void setUpdateTimer(const long long& p_durationInMillisecond);
+		void setUpdateTimer(const long long &p_durationInMillisecond);
 		void removeUpdateTimer();
-		void addTimer(int p_id, const long long& p_durationInMillisecond);
+		void addTimer(int p_id, const long long &p_durationInMillisecond);
 		void removeTimer(int p_id);
 
 		void pullEvents();
-		void bindModule(spk::IModule* p_module);
+		void bindModule(spk::IModule *p_module);
 
 		void requestPaint() const;
 		void requestUpdate() const;
@@ -126,7 +122,7 @@ namespace spk
 		spk::SafePointer<Widget> widget() const;
 		operator spk::SafePointer<Widget>() const;
 
-		const std::wstring& title() const;
-		const spk::Geometry2D& geometry() const;
+		const std::wstring &title() const;
+		const spk::Geometry2D &geometry() const;
 	};
 }

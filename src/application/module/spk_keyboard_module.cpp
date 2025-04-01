@@ -4,7 +4,7 @@
 
 namespace spk
 {
-	void KeyboardModule::_treatEvent(spk::KeyboardEvent&& p_event)
+	void KeyboardModule::_treatEvent(spk::KeyboardEvent &&p_event)
 	{
 		switch (p_event.type)
 		{
@@ -28,7 +28,9 @@ namespace spk
 			if (p_event.key != spk::Keyboard::Key::Unknow)
 			{
 				if (_keyboard.state[static_cast<int>(p_event.key)] == spk::InputState::Up)
+				{
 					return;
+				}
 				_keyboard.state[static_cast<int>(p_event.key)] = spk::InputState::Up;
 			}
 			break;
@@ -51,17 +53,16 @@ namespace spk
 		}
 	}
 
-	spk::KeyboardEvent KeyboardModule::_convertEventToEventType(spk::Event&& p_event)
+	spk::KeyboardEvent KeyboardModule::_convertEventToEventType(spk::Event &&p_event)
 	{
 		return (p_event.keyboardEvent);
 	}
 
 	KeyboardModule::KeyboardModule()
 	{
-
 	}
 
-	const spk::Keyboard& KeyboardModule::keyboard() const
+	const spk::Keyboard &KeyboardModule::keyboard() const
 	{
 		return (_keyboard);
 	}

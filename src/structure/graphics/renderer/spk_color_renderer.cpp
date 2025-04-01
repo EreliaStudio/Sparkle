@@ -2,6 +2,8 @@
 
 #include "structure/graphics/spk_viewport.hpp"
 
+#include <array>
+
 namespace spk
 {
 	void ColorRenderer::_initProgram()
@@ -47,8 +49,8 @@ namespace spk
 			{1, spk::OpenGL::LayoutBufferObject::Attribute::Type::Float}	// layer
 		});
 
-		_colorUbo = spk::OpenGL::UniformBufferObject("ColorData", 0, 16);
-		_colorUbo.addElement("uColor", 0, 16);
+		_colorUbo = spk::OpenGL::UniformBufferObject(L"ColorData", 0, 16);
+		_colorUbo.addElement(L"uColor", 0, 16);
 	}
 
 	ColorRenderer::ColorRenderer(const spk::Color &p_color)
@@ -62,7 +64,7 @@ namespace spk
 	{
 		_color = p_color;
 
-		_colorUbo["uColor"] = _color;
+		_colorUbo[L"uColor"] = _color;
 		_colorUbo.validate();
 	}
 
@@ -72,19 +74,16 @@ namespace spk
 		_bufferSet.indexes().clear();
 	}
 
-	void ColorRenderer::prepareSquare(const spk::Geometry2D &geom, float layer)
+	void ColorRenderer::prepareSquare(const spk::Geometry2D &p_geom, float p_layer)
 	{
 		size_t nbVertex = _bufferSet.layout().size() / sizeof(Vertex);
 
-		spk::Vector3 topLeft = spk::Viewport::convertScreenToOpenGL({geom.anchor.x, geom.anchor.y}, layer);
-		spk::Vector3 bottomRight = spk::Viewport::convertScreenToOpenGL({geom.anchor.x + static_cast<int32_t>(geom.size.x),
-																		 geom.anchor.y + static_cast<int32_t>(geom.size.y)},
-																		layer);
+		spk::Vector3 topLeft = spk::Viewport::convertScreenToOpenGL({p_geom.anchor.x, p_geom.anchor.y}, p_layer);
+		spk::Vector3 bottomRight = spk::Viewport::convertScreenToOpenGL(
+			{p_geom.anchor.x + static_cast<int32_t>(p_geom.size.x), p_geom.anchor.y + static_cast<int32_t>(p_geom.size.y)}, p_layer);
 
-		_bufferSet.layout()	<< Vertex{{topLeft.x, bottomRight.y}, topLeft.z}
-							<< Vertex{{bottomRight.x, bottomRight.y}, topLeft.z}
-							<< Vertex{{topLeft.x, topLeft.y}, topLeft.z}
-							<< Vertex{{bottomRight.x, topLeft.y}, topLeft.z};
+		_bufferSet.layout() << Vertex{{topLeft.x, bottomRight.y}, topLeft.z} << Vertex{{bottomRight.x, bottomRight.y}, topLeft.z}
+							<< Vertex{{topLeft.x, topLeft.y}, topLeft.z} << Vertex{{bottomRight.x, topLeft.y}, topLeft.z};
 
 		std::array<unsigned int, 6> indices = {0, 1, 2, 2, 1, 3};
 		for (const auto &index : indices)

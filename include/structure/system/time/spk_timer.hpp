@@ -6,10 +6,9 @@
 
 namespace spk
 {
-
-    class Timer
-    {
-	public:	
+	class Timer
+	{
+	public:
 		enum class State
 		{
 			Idle,
@@ -18,36 +17,35 @@ namespace spk
 			TimedOut
 		};
 
-    private:
-        Duration currentRunDuration() const;
-        void updateTimedOutState();
+	private:
+		Duration currentRunDuration() const;
+		void updateTimedOutState();
 
-        State _state;
-        Duration _expectedDuration;
-        Timestamp _startTime;
-        Duration _accumulatedTime;
+		State _state;
+		Duration _expectedDuration;
+		Timestamp _startTime;
+		Duration _accumulatedTime;
 
-    public:
-        explicit Timer(const Duration& p_expectedDuration);
+	public:
+		explicit Timer(const Duration &p_expectedDuration);
 		Timer();
 		Timer(long long p_value, TimeUnit p_unit);
 		Timer(double p_value, TimeUnit p_unit);
 
-        State state();
-        Duration elapsed() const;
-        Duration expectedDuration() const;
-        bool hasTimedOut();
+		State state();
+		Duration elapsed() const;
+		Duration expectedDuration() const;
+		bool hasTimedOut();
 
-        void start();
-        void stop();
-        void pause();
-        void resume();
+		void start();
+		void stop();
+		void pause();
+		void resume();
+	};
 
-    };
-
-	inline const char* to_string(Timer::State state);
-	inline const wchar_t* to_wstring(Timer::State state);
+	inline const char *to_string(Timer::State p_state);
+	inline const wchar_t *to_wstring(Timer::State p_state);
 }
 
-std::ostream& operator<<(std::ostream& os, spk::Timer::State state);
-std::wostream& operator<<(std::wostream& wos, spk::Timer::State state);
+std::ostream &operator<<(std::ostream &p_os, spk::Timer::State p_state);
+std::wostream &operator<<(std::wostream &p_wos, spk::Timer::State p_state);

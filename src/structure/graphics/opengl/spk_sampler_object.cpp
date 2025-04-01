@@ -1,5 +1,7 @@
 #include "structure/graphics/opengl/spk_sampler_object.hpp"
 
+#include "structure/graphics/opengl/spk_texture_collection.hpp"
+
 namespace spk::OpenGL
 {
 	SamplerObject::SamplerObject() :
@@ -9,29 +11,27 @@ namespace spk::OpenGL
 		_uniformDestination(-1),
 		_type(Type::Texture2D)
 	{
-
 	}
-	SamplerObject::SamplerObject(const std::string& p_name, Type p_type, size_t p_textureIndex)  :
+
+	SamplerObject::SamplerObject(const std::string &p_name, Type p_type, size_t p_textureIndex) :
 		_designator(p_name),
-		_index(p_textureIndex),
+		_index(static_cast<GLint>(p_textureIndex)),
 		_texture(nullptr),
 		_uniformDestination(-1),
 		_type(p_type)
 	{
-
 	}
 
-	SamplerObject::SamplerObject(const SamplerObject& p_other) :
+	SamplerObject::SamplerObject(const SamplerObject &p_other) :
 		_designator(p_other._designator),
 		_index(p_other._index),
 		_texture(p_other._texture),
 		_type(p_other._type),
 		_uniformDestination(p_other._uniformDestination)
 	{
-
 	}
 
-	SamplerObject& SamplerObject::operator=(const SamplerObject& p_other)
+	SamplerObject &SamplerObject::operator=(const SamplerObject &p_other)
 	{
 		if (this != &p_other)
 		{
@@ -44,19 +44,19 @@ namespace spk::OpenGL
 		return *this;
 	}
 
-	SamplerObject::SamplerObject(SamplerObject&& p_other) noexcept
-		: _designator(std::move(p_other._designator)),
-		  _index(p_other._index),
-		  _texture(p_other._texture),
-		  _type(p_other._type),
-		  _uniformDestination(p_other._uniformDestination)
+	SamplerObject::SamplerObject(SamplerObject &&p_other) noexcept :
+		_designator(std::move(p_other._designator)),
+		_index(p_other._index),
+		_texture(p_other._texture),
+		_type(p_other._type),
+		_uniformDestination(p_other._uniformDestination)
 	{
 		p_other._texture = nullptr;
 		p_other._index = -1;
 		p_other._uniformDestination = -1;
 	}
 
-	SamplerObject& SamplerObject::operator=(SamplerObject&& p_other) noexcept
+	SamplerObject &SamplerObject::operator=(SamplerObject &&p_other) noexcept
 	{
 		if (this != &p_other)
 		{
@@ -73,17 +73,17 @@ namespace spk::OpenGL
 		return *this;
 	}
 
-	void SamplerObject::bind(const spk::SafePointer<TextureObject>& p_texture)
+	void SamplerObject::bind(const spk::SafePointer<const Texture> &p_texture)
 	{
 		_texture = p_texture;
 	}
 
-	spk::SafePointer<TextureObject>& SamplerObject::texture()
+	spk::SafePointer<const Texture> &SamplerObject::texture()
 	{
 		return _texture;
 	}
 
-	const spk::SafePointer<TextureObject>& SamplerObject::texture() const
+	const spk::SafePointer<const Texture> &SamplerObject::texture() const
 	{
 		return _texture;
 	}
@@ -108,13 +108,40 @@ namespace spk::OpenGL
 			return;
 		}
 
-		_texture->_upload();
-		_texture->_setup();
-		glBindTexture(static_cast<GLenum>(_type), _texture->_id);
+		auto cpuID = _texture->_id;
+		if (cpuID < 0)
+		{
+			glBindTexture(static_cast<GLenum>(_type), 0);
+			return;
+		}
+
+		spk::SafePointer<OpenGL::TextureObject> gpuTexture = TextureCollection::textureObject(_texture);
+
+		if (gpuTexture)
+		{
+			if (_texture->_needUpdate)
+			{
+				gpuTexture->upload(_texture);
+
+				_texture->_needUpdate = false;
+			}
+
+			else if (_texture->_needSettings)
+			{
+				gpuTexture->updateSettings(_texture);
+				_texture->_needSettings = false;
+			}
+
+			glBindTexture(static_cast<GLenum>(_type), gpuTexture->id());
+		}
+		else
+		{
+			glBindTexture(GL_TEXTURE_2D, 0);
+		}
 	}
 
 	void SamplerObject::deactivate()
 	{
-			glBindTexture(static_cast<GLenum>(_type), 0);
+		glBindTexture(static_cast<GLenum>(_type), 0);
 	}
 }

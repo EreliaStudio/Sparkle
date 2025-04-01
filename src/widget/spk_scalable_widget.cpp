@@ -6,23 +6,22 @@
 
 namespace spk
 {
-	ScalableWidget::ScalableWidget(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent) :
+	ScalableWidget::ScalableWidget(const std::wstring &p_name, const spk::SafePointer<spk::Widget> &p_parent) :
 		spk::Widget(p_name, p_parent)
 	{
-
 	}
 
 	spk::Vector2UInt ScalableWidget::minimalSize() const
 	{
 		return (_minimumSize);
 	}
-	
+
 	spk::Vector2UInt ScalableWidget::maximalSize() const
 	{
 		return (_maximumSize);
 	}
 
-	void ScalableWidget::setMinimumSize(const spk::Vector2UInt& p_minimumSize)
+	void ScalableWidget::setMinimumSize(const spk::Vector2UInt &p_minimumSize)
 	{
 		_minimumSize = p_minimumSize;
 
@@ -32,24 +31,24 @@ namespace spk
 		}
 	}
 
-	void ScalableWidget::setMaximumSize(const spk::Vector2UInt& p_maximumSize)
+	void ScalableWidget::setMaximumSize(const spk::Vector2UInt &p_maximumSize)
 	{
 		_maximumSize = p_maximumSize;
 	}
 
-	void ScalableWidget::place(const spk::Vector2Int& p_delta) 
+	void ScalableWidget::place(const spk::Vector2Int &p_delta)
 	{
 		Widget::place(p_delta);
 		_updateAnchorAreas();
 	}
-	
-	void ScalableWidget::move(const spk::Vector2Int& p_delta) 
+
+	void ScalableWidget::move(const spk::Vector2Int &p_delta)
 	{
 		Widget::move(p_delta);
 		_updateAnchorAreas();
 	}
 
-	void ScalableWidget::forceGeometryChange(const Geometry2D& p_geometry)
+	void ScalableWidget::forceGeometryChange(const Geometry2D &p_geometry)
 	{
 		Geometry2D newGeometry = p_geometry;
 
@@ -59,7 +58,7 @@ namespace spk
 		_updateAnchorAreas();
 	}
 
-	void ScalableWidget::setGeometry(const Geometry2D& p_geometry)
+	void ScalableWidget::setGeometry(const Geometry2D &p_geometry)
 	{
 		Geometry2D newGeometry = p_geometry;
 
@@ -68,16 +67,16 @@ namespace spk
 		Widget::setGeometry(newGeometry);
 		_updateAnchorAreas();
 	}
-	
-	void ScalableWidget::forceGeometryChange(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size)
+
+	void ScalableWidget::forceGeometryChange(const spk::Vector2Int &p_anchor, const spk::Vector2UInt &p_size)
 	{
 		Vector2UInt newSize = spk::Vector2UInt::clamp(p_size, _minimumSize, _maximumSize);
 
 		Widget::forceGeometryChange(p_anchor, newSize);
 		_updateAnchorAreas();
 	}
-	
-	void ScalableWidget::setGeometry(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size)
+
+	void ScalableWidget::setGeometry(const spk::Vector2Int &p_anchor, const spk::Vector2UInt &p_size)
 	{
 		Vector2UInt newSize = spk::Vector2UInt::clamp(p_size, _minimumSize, _maximumSize);
 
@@ -89,40 +88,31 @@ namespace spk
 	{
 		constexpr int offset = 5;
 
-		_topAnchorArea = {
-			{ viewport().geometry().anchor.x - offset,         viewport().geometry().anchor.y - offset },
-			{ geometry().size.x + offset * 2,      offset * 2 }
-		};
+		_topAnchorArea = {{viewport().geometry().anchor.x - offset, viewport().geometry().anchor.y - offset},
+						  {geometry().size.x + offset * 2, offset * 2}};
 
-		_leftAnchorArea = {
-			{ viewport().geometry().anchor.x - offset,         viewport().geometry().anchor.y - offset },
-			{ offset * 2,                          geometry().size.y + offset * 2 }
-		};
+		_leftAnchorArea = {{viewport().geometry().anchor.x - offset, viewport().geometry().anchor.y - offset},
+						   {offset * 2, geometry().size.y + offset * 2}};
 
-		_rightAnchorArea = {
-			{ viewport().geometry().anchor.x + geometry().size.x - offset,  viewport().geometry().anchor.y - offset },
-			{ offset * 2,                                       geometry().size.y + offset * 2 }
-		};
+		_rightAnchorArea = {{viewport().geometry().anchor.x + geometry().size.x - offset, viewport().geometry().anchor.y - offset},
+							{offset * 2, geometry().size.y + offset * 2}};
 
-		_downAnchorArea = {
-			{ viewport().geometry().anchor.x - offset,         viewport().geometry().anchor.y + geometry().size.y - offset },
-			{ geometry().size.x + offset * 2,      offset * 2 }
-		};
+		_downAnchorArea = {{viewport().geometry().anchor.x - offset, viewport().geometry().anchor.y + geometry().size.y - offset},
+						   {geometry().size.x + offset * 2, offset * 2}};
 	}
 
-	void ScalableWidget::_onMouseEvent(spk::MouseEvent& p_event)
+	void ScalableWidget::_onMouseEvent(spk::MouseEvent &p_event)
 	{
 		switch (p_event.type)
 		{
 		case spk::MouseEvent::Type::Motion:
 		{
-			if (_isTopResizing == false && _isDownResizing == false &&
-				_isLeftResizing == false && _isRightResizing == false)
+			if (_isTopResizing == false && _isDownResizing == false && _isLeftResizing == false && _isRightResizing == false)
 			{
-				bool topAnchor    = _topAnchorArea.contains(p_event.mouse->position);
-				bool downAnchor   = _downAnchorArea.contains(p_event.mouse->position);
-				bool leftAnchor   = _leftAnchorArea.contains(p_event.mouse->position);
-				bool rightAnchor  = _rightAnchorArea.contains(p_event.mouse->position);
+				bool topAnchor = _topAnchorArea.contains(p_event.mouse->position);
+				bool downAnchor = _downAnchorArea.contains(p_event.mouse->position);
+				bool leftAnchor = _leftAnchorArea.contains(p_event.mouse->position);
+				bool rightAnchor = _rightAnchorArea.contains(p_event.mouse->position);
 
 				if ((topAnchor && leftAnchor) || (downAnchor && rightAnchor))
 				{
@@ -155,11 +145,17 @@ namespace spk
 					float nextSize = static_cast<float>(_baseGeometry.size.y) - static_cast<float>(delta.y);
 
 					if (nextSize < _minimumSize.y)
+					{
 						newGeometry.anchor.y += static_cast<int>(_baseGeometry.size.y) - _minimumSize.y;
+					}
 					else if (nextSize > _maximumSize.y)
+					{
 						newGeometry.anchor.y += static_cast<int>(_baseGeometry.size.y) - _maximumSize.y;
+					}
 					else
+					{
 						newGeometry.anchor.y += static_cast<int>(_baseGeometry.size.y) - nextSize;
+					}
 
 					newGeometry.size.y = _baseGeometry.anchor.y + _baseGeometry.size.y - newGeometry.anchor.y;
 				}
@@ -169,11 +165,17 @@ namespace spk
 					float nextSize = static_cast<float>(_baseGeometry.size.y) + static_cast<float>(delta.y);
 
 					if (nextSize < _minimumSize.y)
+					{
 						newGeometry.size.y = _minimumSize.y;
+					}
 					else if (nextSize > _maximumSize.y)
+					{
 						newGeometry.size.y = _maximumSize.y;
-					else 
+					}
+					else
+					{
 						newGeometry.size.y = nextSize;
+					}
 				}
 
 				if (_isLeftResizing)
@@ -181,11 +183,17 @@ namespace spk
 					float nextSize = static_cast<float>(_baseGeometry.size.x) - static_cast<float>(delta.x);
 
 					if (nextSize < _minimumSize.x)
+					{
 						newGeometry.anchor.x += static_cast<int>(_baseGeometry.size.x) - _minimumSize.x;
+					}
 					else if (nextSize > _maximumSize.x)
+					{
 						newGeometry.anchor.x += static_cast<int>(_baseGeometry.size.x) - _maximumSize.x;
+					}
 					else
+					{
 						newGeometry.anchor.x += static_cast<int>(_baseGeometry.size.x) - nextSize;
+					}
 
 					newGeometry.size.x = _baseGeometry.anchor.x + _baseGeometry.size.x - newGeometry.anchor.x;
 				}
@@ -195,11 +203,17 @@ namespace spk
 					float nextSize = static_cast<float>(_baseGeometry.size.x) + static_cast<float>(delta.x);
 
 					if (nextSize < _minimumSize.x)
+					{
 						newGeometry.size.x = _minimumSize.x;
+					}
 					else if (nextSize > _maximumSize.x)
+					{
 						newGeometry.size.x = _maximumSize.x;
-					else 
+					}
+					else
+					{
 						newGeometry.size.x = nextSize;
+					}
 				}
 
 				if (newGeometry != geometry())
@@ -247,10 +261,10 @@ namespace spk
 		{
 			if (p_event.button == spk::Mouse::Button::Left)
 			{
-				_isTopResizing   = false;
-				_isLeftResizing  = false;
+				_isTopResizing = false;
+				_isLeftResizing = false;
 				_isRightResizing = false;
-				_isDownResizing  = false;
+				_isDownResizing = false;
 
 				p_event.window->setCursor(L"Arrow");
 			}

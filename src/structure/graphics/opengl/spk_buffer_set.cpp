@@ -4,32 +4,32 @@
 
 namespace spk::OpenGL
 {
-	BufferSet::BufferSet(std::span<const LayoutBufferObject::Attribute> attributes) :
-		_layout(attributes)
+	BufferSet::BufferSet(std::span<const LayoutBufferObject::Attribute> p_attributes) :
+		_layout(p_attributes)
 	{
 	}
 
-	BufferSet::BufferSet(std::initializer_list<LayoutBufferObject::Attribute> attributes) :
-		BufferSet(std::span(attributes.begin(), attributes.end()))
+	BufferSet::BufferSet(std::initializer_list<LayoutBufferObject::Attribute> p_attributes) :
+		BufferSet(std::span(p_attributes.begin(), p_attributes.end()))
 	{
 	}
 
-	LayoutBufferObject& BufferSet::layout()
+	LayoutBufferObject &BufferSet::layout()
 	{
 		return _layout;
 	}
 
-	IndexBufferObject& BufferSet::indexes()
+	IndexBufferObject &BufferSet::indexes()
 	{
 		return _indexes;
 	}
 
-	const LayoutBufferObject& BufferSet::layout() const
+	const LayoutBufferObject &BufferSet::layout() const
 	{
 		return _layout;
 	}
 
-	const IndexBufferObject& BufferSet::indexes() const
+	const IndexBufferObject &BufferSet::indexes() const
 	{
 		return _indexes;
 	}
@@ -39,7 +39,7 @@ namespace spk::OpenGL
 		_layout.clear();
 		_indexes.clear();
 	}
-	
+
 	void BufferSet::validate()
 	{
 		_layout.validate();

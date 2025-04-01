@@ -1,7 +1,7 @@
 #pragma once
 
-#include "structure/math/spk_vector3.hpp"
 #include "structure/graphics/spk_color.hpp"
+#include "structure/math/spk_vector3.hpp"
 
 namespace spk
 {

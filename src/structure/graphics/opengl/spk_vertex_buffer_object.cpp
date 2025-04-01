@@ -3,10 +3,13 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
 #include <Windows.h>
+
+#include "structure/spk_iostream.hpp"
+#include <iomanip>
+#include <iostream>
+
+#include "spk_debug_macro.hpp"
 
 namespace spk::OpenGL
 {
@@ -42,9 +45,21 @@ namespace spk::OpenGL
 		}
 	}
 
-	VertexBufferObject::VertexBufferObject() : _id(0), _validated(false), _type(Type::Unknow), _usage(Usage::Unknow), _currentBufferMaxSize(0) {}
+	VertexBufferObject::VertexBufferObject() :
+		_id(0),
+		_validated(false),
+		_type(Type::Unknow),
+		_usage(Usage::Unknow),
+		_currentBufferMaxSize(0)
+	{
+	}
 
-	VertexBufferObject::VertexBufferObject(Type p_type, Usage p_usage) : _id(0), _validated(false), _type(p_type), _usage(p_usage), _currentBufferMaxSize(0)
+	VertexBufferObject::VertexBufferObject(Type p_type, Usage p_usage) :
+		_id(0),
+		_validated(false),
+		_type(p_type),
+		_usage(p_usage),
+		_currentBufferMaxSize(0)
 	{
 	}
 
@@ -56,13 +71,23 @@ namespace spk::OpenGL
 		}
 	}
 
-	VertexBufferObject::VertexBufferObject(const VertexBufferObject& p_other) : _validated(p_other._validated), _type(p_other._type), _usage(p_other._usage), _currentBufferMaxSize(p_other._currentBufferMaxSize)
+	VertexBufferObject::VertexBufferObject(const VertexBufferObject &p_other) :
+		_id(0),
+		_validated(p_other._validated),
+		_buffer(p_other._buffer),
+		_type(p_other._type),
+		_usage(p_other._usage),
+		_currentBufferMaxSize(p_other._currentBufferMaxSize)
 	{
-		edit(p_other._buffer.data(), p_other._buffer.size(), 0);
-		validate();
 	}
 
-	VertexBufferObject::VertexBufferObject(VertexBufferObject&& p_other) noexcept : _validated(p_other._validated), _id(p_other._id), _type(p_other._type), _usage(p_other._usage), _buffer(std::move(p_other._buffer)), _currentBufferMaxSize(p_other._currentBufferMaxSize)
+	VertexBufferObject::VertexBufferObject(VertexBufferObject &&p_other) noexcept :
+		_validated(p_other._validated),
+		_id(p_other._id),
+		_type(p_other._type),
+		_usage(p_other._usage),
+		_buffer(std::move(p_other._buffer)),
+		_currentBufferMaxSize(p_other._currentBufferMaxSize)
 	{
 		p_other._validated = false;
 		p_other._id = 0;
@@ -72,7 +97,7 @@ namespace spk::OpenGL
 		p_other._currentBufferMaxSize = 0;
 	}
 
-	VertexBufferObject& VertexBufferObject::operator=(const VertexBufferObject& p_other)
+	VertexBufferObject &VertexBufferObject::operator=(const VertexBufferObject &p_other)
 	{
 		if (this != &p_other)
 		{
@@ -86,15 +111,12 @@ namespace spk::OpenGL
 			_buffer = p_other._buffer;
 			_currentBufferMaxSize = p_other._currentBufferMaxSize;
 			_validated = p_other._validated;
-
-			edit(p_other._buffer.data(), p_other._buffer.size(), 0);
-			validate();
 		}
 
 		return *this;
 	}
 
-	VertexBufferObject& VertexBufferObject::operator=(VertexBufferObject&& p_other) noexcept
+	VertexBufferObject &VertexBufferObject::operator=(VertexBufferObject &&p_other) noexcept
 	{
 		if (this != &p_other)
 		{
@@ -108,6 +130,7 @@ namespace spk::OpenGL
 			_type = p_other._type;
 			_usage = p_other._usage;
 			_buffer = std::move(p_other._buffer);
+
 			_currentBufferMaxSize = p_other._currentBufferMaxSize;
 
 			p_other._validated = false;
@@ -139,10 +162,10 @@ namespace spk::OpenGL
 	{
 		glBindBuffer(static_cast<GLenum>(_type), 0);
 	}
-	
+
 	void VertexBufferObject::clear()
 	{
-		_buffer.clear();	
+		_buffer.clear();
 	}
 
 	void VertexBufferObject::resize(size_t p_size)
@@ -150,7 +173,17 @@ namespace spk::OpenGL
 		_buffer.resize(p_size);
 	}
 
-	void* VertexBufferObject::data()
+	DataBuffer &VertexBufferObject::dataBuffer()
+	{
+		return (_buffer);
+	}
+
+	uint8_t *VertexBufferObject::data()
+	{
+		return _buffer.data();
+	}
+
+	const uint8_t *VertexBufferObject::data() const
 	{
 		return _buffer.data();
 	}
@@ -160,14 +193,16 @@ namespace spk::OpenGL
 		return _buffer.size();
 	}
 
-	void VertexBufferObject::edit(const void* p_data, size_t p_dataSize, size_t p_offset)
+	void VertexBufferObject::edit(const void *p_data, size_t p_dataSize, size_t p_offset)
 	{
 		if (_buffer.size() <= p_dataSize + p_offset)
+		{
 			_buffer.resize(p_dataSize + p_offset);
+		}
 		_buffer.edit(p_offset, p_data, p_dataSize);
 	}
 
-	void VertexBufferObject::append(const void* p_data, size_t p_dataSize)
+	void VertexBufferObject::append(const void *p_data, size_t p_dataSize)
 	{
 		_buffer.append(p_data, p_dataSize);
 	}

@@ -4,8 +4,8 @@
 
 #include "structure/engine/spk_component.hpp"
 
-#include "structure/engine/spk_mesh.hpp"
 #include "structure/engine/spk_material.hpp"
+#include "structure/engine/spk_mesh.hpp"
 
 namespace spk
 {
@@ -13,14 +13,14 @@ namespace spk
 	{
 	private:
 		ContractProvider::Contract _onTransformEditionContract;
+		ContractProvider::Contract _onMeshValidationContract;
+		ContractProvider::Contract _onMaterialValidationContract;
 
-		bool _needMeshUpload;
 		spk::SafePointer<spk::Mesh> _mesh;
-
 		spk::SafePointer<spk::Material> _material;
 
-	public:	
-		MeshRenderer(const std::wstring& p_name);
+	public:
+		MeshRenderer(const std::wstring &p_name);
 
 		void setMesh(spk::SafePointer<spk::Mesh> p_mesh);
 		void setMaterial(spk::SafePointer<spk::Material> p_material);
@@ -28,7 +28,7 @@ namespace spk
 		spk::SafePointer<spk::Mesh> mesh() const;
 		spk::SafePointer<spk::Material> material() const;
 
-		void onPaintEvent(spk::PaintEvent& p_event);
+		void onPaintEvent(spk::PaintEvent &p_event);
 
 		void awake();
 		void sleep();

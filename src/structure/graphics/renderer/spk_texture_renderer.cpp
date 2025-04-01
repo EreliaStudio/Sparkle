@@ -4,6 +4,8 @@
 
 #include "spk_debug_macro.hpp"
 
+#include <array>
+
 namespace spk
 {
 	void TextureRenderer::_initProgram()
@@ -47,7 +49,7 @@ namespace spk
 	{
 		_bufferSet = spk::OpenGL::BufferSet({
 			{0, spk::OpenGL::LayoutBufferObject::Attribute::Type::Vector2}, // position
-			{1, spk::OpenGL::LayoutBufferObject::Attribute::Type::Float},	// layer
+			{1, spk::OpenGL::LayoutBufferObject::Attribute::Type::Float},	// p_layer
 			{2, spk::OpenGL::LayoutBufferObject::Attribute::Type::Vector2}	// uv
 		});
 
@@ -60,17 +62,12 @@ namespace spk
 		_initBuffers();
 	}
 
-	void TextureRenderer::setTexture(spk::SafePointer<spk::OpenGL::TextureObject> p_image)
+	void TextureRenderer::setTexture(spk::SafePointer<const spk::Texture> p_image)
 	{
 		_samplerObject.bind(p_image);
 	}
 
-	spk::SafePointer<spk::OpenGL::TextureObject>& TextureRenderer::texture()
-	{
-		return (_samplerObject.texture());
-	}
-
-	const spk::SafePointer<spk::OpenGL::TextureObject>& TextureRenderer::texture() const
+	const spk::SafePointer<const spk::Texture> &TextureRenderer::texture() const
 	{
 		return (_samplerObject.texture());
 	}
@@ -81,24 +78,21 @@ namespace spk
 		_bufferSet.indexes().clear();
 	}
 
-	void TextureRenderer::prepare(const spk::Geometry2D &geom, const spk::Image::Section &section, float layer)
+	void TextureRenderer::prepare(const spk::Geometry2D &p_geom, const spk::Image::Section &p_section, float p_layer)
 	{
 		size_t nbVertex = _bufferSet.layout().size() / sizeof(Vertex);
 
-		spk::Vector3 topLeft = spk::Viewport::convertScreenToOpenGL({geom.anchor.x, geom.anchor.y}, layer);
-		spk::Vector3 bottomRight = spk::Viewport::convertScreenToOpenGL({geom.anchor.x + static_cast<int32_t>(geom.size.x),
-																		 geom.anchor.y + static_cast<int32_t>(geom.size.y)},
-																		layer);
+		spk::Vector3 topLeft = spk::Viewport::convertScreenToOpenGL({p_geom.anchor.x, p_geom.anchor.y}, p_layer);
+		spk::Vector3 bottomRight = spk::Viewport::convertScreenToOpenGL(
+			{p_geom.anchor.x + static_cast<int32_t>(p_geom.size.x), p_geom.anchor.y + static_cast<int32_t>(p_geom.size.y)}, p_layer);
 
-		float u1 = section.anchor.x;
-		float v1 = section.anchor.y + section.size.y;
-		float u2 = section.anchor.x + section.size.x;
-		float v2 = section.anchor.y;
+		float u1 = p_section.anchor.x;
+		float v1 = p_section.anchor.y + p_section.size.y;
+		float u2 = p_section.anchor.x + p_section.size.x;
+		float v2 = p_section.anchor.y;
 
-		_bufferSet.layout()	<< Vertex{{topLeft.x, bottomRight.y}, topLeft.z, {u1, v1}}
-							<< Vertex{{bottomRight.x, bottomRight.y}, topLeft.z, {u2, v1}}
-							<< Vertex{{topLeft.x, topLeft.y}, topLeft.z, {u1, v2}}
-							<< Vertex{{bottomRight.x, topLeft.y}, topLeft.z, {u2, v2}};
+		_bufferSet.layout() << Vertex{{topLeft.x, bottomRight.y}, topLeft.z, {u1, v1}} << Vertex{{bottomRight.x, bottomRight.y}, topLeft.z, {u2, v1}}
+							<< Vertex{{topLeft.x, topLeft.y}, topLeft.z, {u1, v2}} << Vertex{{bottomRight.x, topLeft.y}, topLeft.z, {u2, v2}};
 
 		std::array<unsigned int, 6> indices = {0, 1, 2, 2, 1, 3};
 		for (const auto &index : indices)
@@ -116,7 +110,9 @@ namespace spk
 	void TextureRenderer::render()
 	{
 		if (_samplerObject.texture() == nullptr)
+		{
 			return;
+		}
 
 		_program->activate();
 		_bufferSet.activate();
