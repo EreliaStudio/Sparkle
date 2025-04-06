@@ -166,6 +166,18 @@ namespace spk
 
 		void addConstant(const std::wstring& p_name, spk::OpenGL::UniformBufferObject&& p_ubo)
 		{
+			if (_constants.find(p_name) != _constants.end())
+			{
+				throw std::runtime_error("Constant [" + spk::StringUtils::wstringToString(p_name) + "] already created in Pipeline");
+			}
+			if (_usedConstants.find(p_name) != _usedConstants.end())
+			{
+				throw std::runtime_error("Constant [" + spk::StringUtils::wstringToString(p_name) + "] already used in Pipeline");
+			}
+			if (std::holds_alternative<spk::OpenGL::UniformBufferObject>(_constants[p_name]))
+			{
+				throw std::runtime_error("Constant [" + spk::StringUtils::wstringToString(p_name) + "] is not a UBO");
+			}
 			_constants[p_name] = std::move(p_ubo);
 		}
 
@@ -174,24 +186,24 @@ namespace spk
 			_constants[p_name] = std::move(p_ssbo);
 		}
 
-		void addObjectUBO(const std::wstring& p_name, spk::OpenGL::UniformBufferObject&& p_ubo)
+		void addAttribute(const std::wstring& p_name, spk::OpenGL::UniformBufferObject&& p_ubo)
 		{
 			_objectUbos[p_name] = std::move(p_ubo);
 		}
 
-		void addObjectUBO(const std::wstring& p_name, spk::OpenGL::ShaderStorageBufferObject&& p_ssbo)
+		void addAttribute(const std::wstring& p_name, spk::OpenGL::ShaderStorageBufferObject&& p_ssbo)
 		{
 			_objectUbos[p_name] = std::move(p_ssbo);
 		}
 
-		void addObjectLayoutAttribute(const spk::OpenGL::LayoutBufferObject::Attribute& p_attribute)
+		void addLayoutAttribute(const spk::OpenGL::LayoutBufferObject::Attribute& p_attribute)
 		{
 			_objectLayoutAttributes.push_back(p_attribute);
 		}
 
-		void addObjectLayoutAttribute(spk::OpenGL::LayoutBufferObject::Attribute::Index p_index, spk::OpenGL::LayoutBufferObject::Attribute::Type p_type)
+		void addLayoutAttribute(spk::OpenGL::LayoutBufferObject::Attribute::Index p_index, spk::OpenGL::LayoutBufferObject::Attribute::Type p_type)
 		{
-			_objectLayoutAttributes.emplace_back(p_index, p_type);
+			addLayoutAttribute(spk::OpenGL::LayoutBufferObject::Attribute(p_index, p_type));
 		}
 
 		Object createObject()
