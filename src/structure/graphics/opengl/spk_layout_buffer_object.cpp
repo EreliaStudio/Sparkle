@@ -57,6 +57,17 @@ namespace spk::OpenGL
 		}
 	}
 
+	bool LayoutBufferObject::Attribute::operator<(const LayoutBufferObject::Attribute& p_other) const
+    {
+        if (index < p_other.index) {
+            return true;
+        }
+        else if (index > p_other.index) {
+            return false;
+        }
+        return static_cast<int>(type) < static_cast<int>(p_other.type);
+    }
+
 	LayoutBufferObject::LayoutBufferObject() :
 		VertexBufferObject(Type::Storage, Usage::Static),
 		_vertexSize(0)

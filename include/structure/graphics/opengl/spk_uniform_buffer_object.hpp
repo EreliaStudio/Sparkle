@@ -35,7 +35,7 @@ namespace spk::OpenGL
 
 	public:
 		UniformBufferObject() = default;
-		UniformBufferObject(const std::wstring &p_name, BindingPoint p_bindingPoint, size_t p_size);
+		UniformBufferObject(const std::wstring &p_blockName, BindingPoint p_bindingPoint, size_t p_size);
 
 		UniformBufferObject(const UniformBufferObject &p_other);
 		UniformBufferObject(UniformBufferObject &&p_other);

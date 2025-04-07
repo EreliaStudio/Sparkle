@@ -116,41 +116,41 @@ namespace spk
 
 		UniformObject(const UniformObject &p_other)
 		{
-			std::lock_guard<std::mutex> lock(other._mutex);
-			_name = other._name;
-			_location = other._location;
-			_type = other._type;
-			_data = other._data;
+			std::lock_guard<std::mutex> lock(p_other._mutex);
+			_name = p_other._name;
+			_location = p_other._location;
+			_type = p_other._type;
+			_data = p_other._data;
 		}
 
 		UniformObject(UniformObject &&p_other) noexcept
 		{
-			std::lock_guard<std::mutex> lock(other._mutex);
+			std::lock_guard<std::mutex> lock(p_other._mutex);
 
-			_name = std::move(other._name);
-			_location = other._location;
-			_type = other._type;
-			_data = std::move(other._data);
+			_name = std::move(p_other._name);
+			_location = p_other._location;
+			_type = p_other._type;
+			_data = std::move(p_other._data);
 
-			other._name = "Unnamed";
-			other._location = -1;
-			other._type = Type::None;
-			other._data.clear();
+			p_other._name = "Unnamed";
+			p_other._location = -1;
+			p_other._type = Type::None;
+			p_other._data.clear();
 		}
 
 		UniformObject &operator=(const UniformObject &p_other)
 		{
 			if (this != &p_other)
 			{
-				std::lock(_mutex, other._mutex);
+				std::lock(_mutex, p_other._mutex);
 
 				std::lock_guard<std::mutex> lhs_lock(_mutex, std::adopt_lock);
-				std::lock_guard<std::mutex> rhs_lock(other._mutex, std::adopt_lock);
+				std::lock_guard<std::mutex> rhs_lock(p_other._mutex, std::adopt_lock);
 
-				_name = other._name;
-				_location = other._location;
-				_type = other._type;
-				_data = other._data;
+				_name = p_other._name;
+				_location = p_other._location;
+				_type = p_other._type;
+				_data = p_other._data;
 			}
 			return *this;
 		}
@@ -159,18 +159,18 @@ namespace spk
 		{
 			if (this != &p_other)
 			{
-				std::lock(_mutex, other._mutex);
+				std::lock(_mutex, p_other._mutex);
 				std::lock_guard<std::mutex> lhs_lock(_mutex, std::adopt_lock);
-				std::lock_guard<std::mutex> rhs_lock(other._mutex, std::adopt_lock);
-				_name = std::move(other._name);
-				_location = other._location;
-				_type = other._type;
-				_data = std::move(other._data);
+				std::lock_guard<std::mutex> rhs_lock(p_other._mutex, std::adopt_lock);
+				_name = std::move(p_other._name);
+				_location = p_other._location;
+				_type = p_other._type;
+				_data = std::move(p_other._data);
 
-				other._name = "Unnamed";
-				other._location = -1;
-				other._type = Type::None;
-				other._data.clear();
+				p_other._name = "Unnamed";
+				p_other._location = -1;
+				p_other._type = Type::None;
+				p_other._data.clear();
 			}
 			return *this;
 		}

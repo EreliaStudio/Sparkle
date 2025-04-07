@@ -52,6 +52,8 @@ namespace spk::OpenGL
 			Attribute(Index p_index, Type p_type);
 
 			static size_t typeSize(Type p_type);
+
+			bool operator<(const Attribute& other) const;
 		};
 
 	private:
