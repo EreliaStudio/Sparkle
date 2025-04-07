@@ -1,6 +1,11 @@
 #pragma once
 
 #include <set>
+#include <mutex>
+#include <variant>
+#include <unordered_map>
+#include <stdexcept>
+#include <string>
 
 #include "structure/spk_safe_pointer.hpp"
 
@@ -23,7 +28,7 @@ namespace spk
 
 		public:
 			using Attribute = Pipeline::Constant;
-			
+
 		private:
 			spk::SafePointer<Pipeline> _owner;
 			size_t _nbInstance = 0;
@@ -33,23 +38,34 @@ namespace spk
 			Object(spk::SafePointer<Pipeline> p_owner) :
 				_owner(p_owner)
 			{
-
 			}
 
 		public:
 			Object() :
 				_owner(nullptr)
 			{
-
 			}
 
 			void setNbInstance(size_t p_nbInstance)
 			{
-				_nbInstance = p_nbInstance;
+				if (_owner != nullptr)
+				{
+					std::lock_guard<std::mutex> lock(_owner->_mutex);
+					_nbInstance = p_nbInstance;
+				}
+				else
+				{
+					_nbInstance = p_nbInstance;
+				}
 			}
 
 			void render()
 			{
+				if (_owner == nullptr)
+					return;
+
+				std::lock_guard<std::mutex> lock(_owner->_mutex);
+
 				_owner->_preRender();
 
 				_bufferSet.activate();
@@ -66,7 +82,7 @@ namespace spk
 				}
 
 				_owner->_render(_bufferSet.indexes().nbIndexes(), _nbInstance);
-				
+
 				_bufferSet.deactivate();
 				for (auto& attribute : _attributes)
 				{
@@ -78,34 +94,64 @@ namespace spk
 					{
 						std::get<spk::OpenGL::ShaderStorageBufferObject>(attribute.second).deactivate();
 					}
-				}				
+				}
 				_owner->_postRender();
+			}
+
+			spk::OpenGL::BufferSet& bufferSet()
+			{
+				return _bufferSet;
 			}
 
 			spk::OpenGL::UniformBufferObject& ubo(const std::wstring& p_name)
 			{
-				if (_attributes.find(p_name) == _attributes.end())
+				if (_owner != nullptr)
 				{
-					throw std::runtime_error("Attribute [" + spk::StringUtils::wstringToString(p_name) + "] not found");
+					std::lock_guard<std::mutex> lock(_owner->_mutex);
+
+					if (_attributes.find(p_name) == _attributes.end())
+					{
+						if (_owner->contains(p_name))
+						{
+							return _owner->ubo(p_name);
+						}
+						throw std::runtime_error("Attribute [" + spk::StringUtils::wstringToString(p_name) + "] not found");
+					}
+					if (!std::holds_alternative<spk::OpenGL::UniformBufferObject>(_attributes[p_name]))
+					{
+						throw std::runtime_error("Attribute [" + spk::StringUtils::wstringToString(p_name) + "] is not a UBO");
+					}
+					return std::get<spk::OpenGL::UniformBufferObject>(_attributes[p_name]);
 				}
-				if (std::holds_alternative<spk::OpenGL::UniformBufferObject>(_attributes[p_name]) == false)
+				else
 				{
-					throw std::runtime_error("Attribute [" + spk::StringUtils::wstringToString(p_name) + "] is not a UBO");
+					throw std::runtime_error("Object has no valid Pipeline owner.");
 				}
-				return std::get<spk::OpenGL::UniformBufferObject>(_attributes[p_name]);
 			}
 
 			spk::OpenGL::ShaderStorageBufferObject& ssbo(const std::wstring& p_name)
 			{
-				if (_attributes.find(p_name) == _attributes.end())
+				if (_owner != nullptr)
 				{
-					throw std::runtime_error("Attribute [" + spk::StringUtils::wstringToString(p_name) + "] not found");
+					std::lock_guard<std::mutex> lock(_owner->_mutex);
+					if (_attributes.find(p_name) == _attributes.end())
+					{
+						if (_owner->contains(p_name))
+						{
+							return _owner->ssbo(p_name);
+						}
+						throw std::runtime_error("Attribute [" + spk::StringUtils::wstringToString(p_name) + "] not found");
+					}
+					if (!std::holds_alternative<spk::OpenGL::ShaderStorageBufferObject>(_attributes[p_name]))
+					{
+						throw std::runtime_error("Attribute [" + spk::StringUtils::wstringToString(p_name) + "] is not a SSBO");
+					}
+					return std::get<spk::OpenGL::ShaderStorageBufferObject>(_attributes[p_name]);
 				}
-				if (std::holds_alternative<spk::OpenGL::ShaderStorageBufferObject>(_attributes[p_name]) == false)
+				else
 				{
-					throw std::runtime_error("Attribute [" + spk::StringUtils::wstringToString(p_name) + "] is not a SSBO");
+					throw std::runtime_error("Object has no valid Pipeline owner.");
 				}
-				return std::get<spk::OpenGL::ShaderStorageBufferObject>(_attributes[p_name]);
 			}
 		};
 
@@ -116,6 +162,8 @@ namespace spk
 
 		std::unordered_map<std::wstring, Object::Attribute> _objectUbos;
 		std::unordered_map<spk::OpenGL::LayoutBufferObject::Attribute::Index, spk::OpenGL::LayoutBufferObject::Attribute::Type> _objectLayoutAttributes;
+
+		mutable std::mutex _mutex;
 
 		void _preRender()
 		{
@@ -160,114 +208,142 @@ namespace spk
 		Pipeline(const std::string &p_vertexShaderCode, const std::string &p_fragmentShaderCode) :
 			_program(p_vertexShaderCode, p_fragmentShaderCode)
 		{
-
 		}
 
 		spk::OpenGL::UniformBufferObject& addConstant(const std::wstring& p_name, spk::OpenGL::UniformBufferObject&& p_ubo)
 		{
+			std::lock_guard<std::mutex> lock(_mutex);
+
 			if (_constants.find(p_name) != _constants.end())
 			{
 				throw std::runtime_error("Constant [" + spk::StringUtils::wstringToString(p_name) + "] already defined");
 			}
-
 			_constants[p_name] = std::move(p_ubo);
-
-			return (std::get<spk::OpenGL::UniformBufferObject>(_constants[p_name]));
+			return std::get<spk::OpenGL::UniformBufferObject>(_constants[p_name]);
 		}
 
-		spk::OpenGL::UniformBufferObject& addConstant(const std::wstring& p_name, spk::OpenGL::UniformBufferObject::BindingPoint p_bindingPoint, size_t p_size)
+		spk::OpenGL::UniformBufferObject& addConstant(const std::wstring& p_name,
+			spk::OpenGL::UniformBufferObject::BindingPoint p_bindingPoint, size_t p_size)
 		{
-			return (addConstant(p_name, spk::OpenGL::UniformBufferObject(p_name, p_bindingPoint, p_size)));
+			std::lock_guard<std::mutex> lock(_mutex);
+			return addConstant(
+				p_name, 
+				spk::OpenGL::UniformBufferObject(p_name, p_bindingPoint, p_size)
+			);
 		}
 
 		spk::OpenGL::ShaderStorageBufferObject& addConstant(const std::wstring& p_name, spk::OpenGL::ShaderStorageBufferObject&& p_ssbo)
 		{
+			std::lock_guard<std::mutex> lock(_mutex);
+
 			if (_constants.find(p_name) != _constants.end())
 			{
 				throw std::runtime_error("Constant [" + spk::StringUtils::wstringToString(p_name) + "] already defined");
 			}
-
 			_constants[p_name] = std::move(p_ssbo);
-			return (std::get<spk::OpenGL::ShaderStorageBufferObject>(_constants[p_name]));
+			return std::get<spk::OpenGL::ShaderStorageBufferObject>(_constants[p_name]);
 		}
 
 		spk::OpenGL::ShaderStorageBufferObject& addConstant(const std::wstring& p_name,
-			spk::OpenGL::ShaderStorageBufferObject::BindingPoint p_bindingPoint, size_t p_fixedSize, size_t p_paddingFixedToDynamic,
-			size_t p_dynamicElementSize, size_t p_dynamicElementPadding)
+			spk::OpenGL::ShaderStorageBufferObject::BindingPoint p_bindingPoint, size_t p_fixedSize,
+			size_t p_paddingFixedToDynamic, size_t p_dynamicElementSize, size_t p_dynamicElementPadding)
 		{
-			return (addConstant(p_name,
+			std::lock_guard<std::mutex> lock(_mutex);
+			return addConstant(
+				p_name,
 				spk::OpenGL::ShaderStorageBufferObject(
 					p_name, p_bindingPoint,
 					p_fixedSize, p_paddingFixedToDynamic,
 					p_dynamicElementSize, p_dynamicElementPadding
-				)));
+				)
+			);
 		}
 
 		spk::OpenGL::UniformBufferObject& addAttribute(const std::wstring& p_name, spk::OpenGL::UniformBufferObject&& p_ubo)
 		{
+			std::lock_guard<std::mutex> lock(_mutex);
+
 			if (_objectUbos.find(p_name) != _objectUbos.end())
 			{
 				throw std::runtime_error("Attribute [" + spk::StringUtils::wstringToString(p_name) + "] already used in Pipeline");
 			}
-			
+
 			_objectUbos[p_name] = std::move(p_ubo);
-			return (std::get<spk::OpenGL::UniformBufferObject>(_objectUbos[p_name]));
+			return std::get<spk::OpenGL::UniformBufferObject>(_objectUbos[p_name]);
 		}
 
-		spk::OpenGL::UniformBufferObject& addAttribute(const std::wstring& p_name, spk::OpenGL::UniformBufferObject::BindingPoint p_bindingPoint, size_t p_size)
+		spk::OpenGL::UniformBufferObject& addAttribute(const std::wstring& p_name,
+			spk::OpenGL::UniformBufferObject::BindingPoint p_bindingPoint, size_t p_size)
 		{
-			return (addAttribute(p_name, spk::OpenGL::UniformBufferObject(p_name, p_bindingPoint, p_size)));
+			std::lock_guard<std::mutex> lock(_mutex);
+
+			return addAttribute(
+				p_name,
+				spk::OpenGL::UniformBufferObject(p_name, p_bindingPoint, p_size)
+			);
 		}
 
 		spk::OpenGL::ShaderStorageBufferObject& addAttribute(const std::wstring& p_name, spk::OpenGL::ShaderStorageBufferObject&& p_ssbo)
 		{
+			std::lock_guard<std::mutex> lock(_mutex);
+
 			if (_objectUbos.find(p_name) != _objectUbos.end())
 			{
 				throw std::runtime_error("Attribute [" + spk::StringUtils::wstringToString(p_name) + "] already used in Pipeline");
 			}
-			
+
 			_objectUbos[p_name] = std::move(p_ssbo);
-			return (std::get<spk::OpenGL::ShaderStorageBufferObject>(_objectUbos[p_name]));
+			return std::get<spk::OpenGL::ShaderStorageBufferObject>(_objectUbos[p_name]);
 		}
 
 		spk::OpenGL::ShaderStorageBufferObject& addAttribute(const std::wstring& p_name,
-			spk::OpenGL::ShaderStorageBufferObject::BindingPoint p_bindingPoint, size_t p_fixedSize, size_t p_paddingFixedToDynamic,
-			size_t p_dynamicElementSize, size_t p_dynamicElementPadding)
+			spk::OpenGL::ShaderStorageBufferObject::BindingPoint p_bindingPoint, size_t p_fixedSize,
+			size_t p_paddingFixedToDynamic, size_t p_dynamicElementSize, size_t p_dynamicElementPadding)
 		{
-			return (addAttribute(p_name,
+			std::lock_guard<std::mutex> lock(_mutex);
+
+			return addAttribute(
+				p_name,
 				spk::OpenGL::ShaderStorageBufferObject(
 					p_name, p_bindingPoint,
 					p_fixedSize, p_paddingFixedToDynamic,
 					p_dynamicElementSize, p_dynamicElementPadding
-				)));
+				)
+			);
 		}
 
 		void addLayoutAttribute(const spk::OpenGL::LayoutBufferObject::Attribute& p_attribute)
 		{
+			std::lock_guard<std::mutex> lock(_mutex);
+
 			addLayoutAttribute(p_attribute.index, p_attribute.type);
 		}
 
-		void addLayoutAttribute(spk::OpenGL::LayoutBufferObject::Attribute::Index p_index, spk::OpenGL::LayoutBufferObject::Attribute::Type p_type)
+		void addLayoutAttribute(spk::OpenGL::LayoutBufferObject::Attribute::Index p_index,
+			spk::OpenGL::LayoutBufferObject::Attribute::Type p_type)
 		{
+			std::lock_guard<std::mutex> lock(_mutex);
+
 			if (_objectLayoutAttributes.find(p_index) != _objectLayoutAttributes.end())
 			{
 				throw std::runtime_error("Layout index [" + std::to_string(p_index) + "] already used in Pipeline");
 			}
-
 			_objectLayoutAttributes[p_index] = p_type;
 		}
 
 		Object createObject()
 		{
+			std::lock_guard<std::mutex> lock(_mutex);
+
 			Object result(this);
 
 			for (auto& objectUBO : _objectUbos)
 			{
-				if (std::holds_alternative<spk::OpenGL::UniformBufferObject>(objectUBO.second) == true)
+				if (std::holds_alternative<spk::OpenGL::UniformBufferObject>(objectUBO.second))
 				{
 					result._attributes[objectUBO.first] = std::get<spk::OpenGL::UniformBufferObject>(objectUBO.second);
 				}
-				else if (std::holds_alternative<spk::OpenGL::ShaderStorageBufferObject>(objectUBO.second) == true)
+				else if (std::holds_alternative<spk::OpenGL::ShaderStorageBufferObject>(objectUBO.second))
 				{
 					result._attributes[objectUBO.first] = std::get<spk::OpenGL::ShaderStorageBufferObject>(objectUBO.second);
 				}
@@ -277,34 +353,44 @@ namespace spk
 			{
 				result._bufferSet.layout().addAttribute(index, type);
 			}
+			return result;
+		}
 
-			return (result);
+		bool contains(const std::wstring& p_name) const
+		{
+			std::lock_guard<std::mutex> lock(_mutex);
+
+			return _constants.contains(p_name);
 		}
 
 		spk::OpenGL::UniformBufferObject& ubo(const std::wstring& p_name)
 		{
+			std::lock_guard<std::mutex> lock(_mutex);
+
 			if (_constants.find(p_name) == _constants.end())
 			{
 				throw std::runtime_error("Constant [" + spk::StringUtils::wstringToString(p_name) + "] not found");
 			}
-			if (std::holds_alternative<spk::OpenGL::UniformBufferObject>(_constants[p_name]) == false)
+			if (!std::holds_alternative<spk::OpenGL::UniformBufferObject>(_constants[p_name]))
 			{
 				throw std::runtime_error("Constant [" + spk::StringUtils::wstringToString(p_name) + "] is not a UBO");
 			}
-			return (std::get<spk::OpenGL::UniformBufferObject>(_constants[p_name]));
+			return std::get<spk::OpenGL::UniformBufferObject>(_constants[p_name]);
 		}
 
 		spk::OpenGL::ShaderStorageBufferObject& ssbo(const std::wstring& p_name)
 		{
+			std::lock_guard<std::mutex> lock(_mutex);
+
 			if (_constants.find(p_name) == _constants.end())
 			{
 				throw std::runtime_error("Constant [" + spk::StringUtils::wstringToString(p_name) + "] not found");
 			}
-			if (std::holds_alternative<spk::OpenGL::ShaderStorageBufferObject>(_constants[p_name]) == false)
+			if (!std::holds_alternative<spk::OpenGL::ShaderStorageBufferObject>(_constants[p_name]))
 			{
 				throw std::runtime_error("Constant [" + spk::StringUtils::wstringToString(p_name) + "] is not a SSBO");
 			}
-			return (std::get<spk::OpenGL::ShaderStorageBufferObject>(_constants[p_name]));
+			return std::get<spk::OpenGL::ShaderStorageBufferObject>(_constants[p_name]);
 		}
 	};
 }
