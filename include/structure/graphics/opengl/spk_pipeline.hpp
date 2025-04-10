@@ -160,11 +160,7 @@ namespace spk
 		std::unordered_map<std::wstring, spk::OpenGL::SamplerObject> _samplers;
 		std::unordered_map<std::wstring, spk::OpenGL::UniformObject> _uniforms;
 
-		std::unordered_map<spk::OpenGL::LayoutBufferObject::Attribute::Index, spk::OpenGL::LayoutBufferObject::Attribute::Type> _objectLayoutAttributes;
-		std::unordered_map<std::wstring, spk::OpenGL::UniformBufferObject> _objectUBOs;
-		std::unordered_map<std::wstring, spk::OpenGL::ShaderStorageBufferObject> _objectSSBOs;
-		std::unordered_map<std::wstring, spk::OpenGL::SamplerObject> _objectSamplers;
-		std::unordered_map<std::wstring, spk::OpenGL::UniformObject> _objectUniforms;
+		Object _defaultObject;
 
 		void beginRender()
 		{
@@ -307,81 +303,54 @@ namespace spk
 		void addObjectLayoutAttribute(spk::OpenGL::LayoutBufferObject::Attribute::Index p_index,
 									spk::OpenGL::LayoutBufferObject::Attribute::Type p_type)
 		{
-			if (_objectLayoutAttributes.find(p_index) != _objectLayoutAttributes.end())
+			if (_defaultObject._bufferSet.layout().hasAttribute(p_index))
 			{
-				throw std::runtime_error("Layout attribute [" + std::to_string(p_index) + "] already exists in Pipeline.");
+				throw std::runtime_error("Attribute location " + std::to_string(p_index) + " has already been defined.");
 			}
-			_objectLayoutAttributes[p_index] = p_type;
+			_defaultObject._bufferSet.layout().addAttribute(p_index, p_type);
 		}
 
 		void addObjectUniformBufferObject(const std::wstring &p_name, const spk::OpenGL::UniformBufferObject &p_ubo)
 		{
-			if (_objectUBOs.find(p_name) != _objectUBOs.end())
+			if (_defaultObject._ubos.find(p_name) != _defaultObject._ubos.end())
 			{
 				throw std::runtime_error("Uniform Buffer Object [" + spk::StringUtils::wstringToString(p_name) + "] already exists in Pipeline.");
 			}
-			_objectUBOs[p_name] = p_ubo;
+			_defaultObject._ubos[p_name] = p_ubo;
 		}
 
 		void addObjectShaderStorageBufferObject(const std::wstring &p_name, const spk::OpenGL::ShaderStorageBufferObject &p_ssbo)
 		{
-			if (_objectSSBOs.find(p_name) != _objectSSBOs.end())
+			if (_defaultObject._ssbos.find(p_name) != _defaultObject._ssbos.end())
 			{
 				throw std::runtime_error("Shader Storage Buffer Object [" + spk::StringUtils::wstringToString(p_name) + "] already exists in Pipeline.");
 			}
-			_objectSSBOs[p_name] = p_ssbo;
+			_defaultObject._ssbos[p_name] = p_ssbo;
 		}
 
 		void addObjectSamplerObject(const std::wstring &p_name, const spk::OpenGL::SamplerObject &p_sampler)
 		{
-			if (_objectSamplers.find(p_name) != _objectSamplers.end())
+			if (_defaultObject._samplers.find(p_name) != _defaultObject._samplers.end())
 			{
 				throw std::runtime_error("Sampler Object [" + spk::StringUtils::wstringToString(p_name) + "] already exists in Pipeline.");
 			}
-			_objectSamplers[p_name] = p_sampler;
+			_defaultObject._samplers[p_name] = p_sampler;
 		}
 
 		void addObjectUniformObject(const std::wstring &p_name, const spk::OpenGL::UniformObject &p_uniform)
 		{
-			if (_objectUniforms.find(p_name) != _objectUniforms.end())
+			if (_defaultObject._uniforms.find(p_name) != _defaultObject._uniforms.end())
 			{
 				throw std::runtime_error("Uniform Object [" + spk::StringUtils::wstringToString(p_name) + "] already exists in Pipeline.");
 			}
-			_objectUniforms[p_name] = p_uniform;
+			_defaultObject._uniforms[p_name] = p_uniform;
 		}
 
 		Object createObject()
 		{
 			std::lock_guard<std::mutex> lock(_mutex);
 
-			Object result(this);
-
-			for (auto& [index, type] : _objectLayoutAttributes)
-			{
-				result._bufferSet.layout().addAttribute(index, type);
-			}
-
-			for (auto& [name, ubo] : _objectUBOs)
-			{
-				result._ubos[name] = ubo;
-			}
-
-			for (auto& [name, ssbo] : _objectSSBOs)
-			{
-				result._ssbos[name] = ssbo;
-			}
-
-			for (auto& [name, sampler] : _objectSamplers)
-			{
-				result._samplers[name] = sampler;
-			}
-
-			for (auto& [name, uniform] : _objectUniforms)
-			{
-				result._uniforms[name] = uniform;
-			}
-
-			return result;
+			return _defaultObject;
 		}
 	};
 }

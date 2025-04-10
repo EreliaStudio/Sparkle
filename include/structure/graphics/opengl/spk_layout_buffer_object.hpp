@@ -122,6 +122,8 @@ namespace spk::OpenGL
 			return *this;
 		}
 
+		bool hasAttribute(Attribute::Index index) const;
+
 		void addAttribute(const Attribute &p_attribute);
 		void addAttribute(Attribute::Index p_index, Attribute::Type p_type);
 

@@ -128,8 +128,26 @@ namespace spk::OpenGL
 		return *this;
 	}
 
+	bool LayoutBufferObject::hasAttribute(Attribute::Index p_index) const
+	{
+		for (const auto& attr : _attributesToApply)
+		{
+			if (attr.index == p_index)
+				return true;
+		}
+		return false;
+	}
+
 	void LayoutBufferObject::addAttribute(const Attribute &p_attribute)
 	{
+		for (const auto& attr : _attributesToApply)
+		{
+			if (attr.index == p_attribute.index)
+			{
+				throw std::runtime_error("Attribute location " + std::to_string(p_attribute.index) + " has already been defined.");
+			}
+		}
+
 		_attributesToApply.push_back(p_attribute);
 		_vertexSize += Attribute::typeSize(p_attribute.type);
 	}
