@@ -13,7 +13,7 @@
 #include "structure/math/spk_vector3.hpp"
 #include "structure/math/spk_vector4.hpp"
 
-namespace spk
+namespace spk::OpenGL
 {
 	class UniformObject
 	{
@@ -44,6 +44,7 @@ namespace spk
 		Type _type;
 		spk::DataBuffer _data;
 		mutable std::mutex _mutex;
+		bool _needUpdate = false;
 
 		void _retrieveLocation()
 		{
@@ -121,6 +122,7 @@ namespace spk
 			_location = p_other._location;
 			_type = p_other._type;
 			_data = p_other._data;
+			_needUpdate = p_other._needUpdate;
 		}
 
 		UniformObject(UniformObject &&p_other) noexcept
@@ -131,6 +133,7 @@ namespace spk
 			_location = p_other._location;
 			_type = p_other._type;
 			_data = std::move(p_other._data);
+			_needUpdate = p_other._needUpdate;
 
 			p_other._name = "Unnamed";
 			p_other._location = -1;
@@ -151,6 +154,7 @@ namespace spk
 				_location = p_other._location;
 				_type = p_other._type;
 				_data = p_other._data;
+				_needUpdate = p_other._needUpdate;
 			}
 			return *this;
 		}
@@ -166,6 +170,7 @@ namespace spk
 				_location = p_other._location;
 				_type = p_other._type;
 				_data = std::move(p_other._data);
+				_needUpdate = p_other._needUpdate;
 
 				p_other._name = "Unnamed";
 				p_other._location = -1;
@@ -180,73 +185,87 @@ namespace spk
 		template <typename TType>
 		UniformObject &operator=(const TType &value)
 		{
+			std::lock_guard<std::mutex> lock(_mutex);
+
 			size_t size = sizeof(value);
 			if (_data.size() != size)
 			{
 				throw std::runtime_error("Size mismatch for uniform [" + _name + "].");
 			}
 			std::memcpy(_data.data(), &value, size);
+			_needUpdate = true;
 			return *this;
 		}
 
-		void activate() const
+		void activate()
 		{
 			std::lock_guard<std::mutex> lock(_mutex);
 
-			switch (_type)
+			if (_location == -1)
 			{
-			case Type::Float:
-			{
-				glUniform1f(_location, *reinterpret_cast<const float *>(_data.data()));
-				break;
+				_retrieveLocation();
+				_needUpdate = true;
 			}
-			case Type::Bool:
+
+			if (_needUpdate == true)
 			{
-				glUniform1i(_location, *reinterpret_cast<const GLboolean *>(_data.data()));
-				break;
-			}
-			case Type::Int:
-			{
-				glUniform1i(_location, *reinterpret_cast<const GLint *>(_data.data()));
-				break;
-			}
-			case Type::UInt:
-			{
-				glUniform1ui(_location, *reinterpret_cast<const GLuint *>(_data.data()));
-				break;
-			}
-			case Type::Vector2:
-			{
-				glUniform2fv(_location, 1, reinterpret_cast<const float *>(_data.data()));
-				break;
-			}
-			case Type::Vector3:
-			{
-				glUniform3fv(_location, 1, reinterpret_cast<const float *>(_data.data()));
-				break;
-			}
-			case Type::Vector4:
-			{
-				glUniform4fv(_location, 1, reinterpret_cast<const float *>(_data.data()));
-				break;
-			}
-			case Type::Matrix2x2:
-			{
-				glUniformMatrix2fv(_location, 1, GL_FALSE, reinterpret_cast<const float *>(_data.data()));
-				break;
-			}
-			case Type::Matrix3x3:
-			{
-				glUniformMatrix3fv(_location, 1, GL_FALSE, reinterpret_cast<const float *>(_data.data()));
-				break;
-			}
-			case Type::Matrix4x4:
-			{
-				glUniformMatrix4fv(_location, 1, GL_FALSE, reinterpret_cast<const float *>(_data.data()));
-				break;
-			}
-			default:
-				throw std::runtime_error("Unsupported uniform type in UniformObject::activate.");
+				switch (_type)
+				{
+				case Type::Float:
+				{
+					glUniform1f(_location, *reinterpret_cast<const float *>(_data.data()));
+					break;
+				}
+				case Type::Bool:
+				{
+					glUniform1i(_location, *reinterpret_cast<const GLboolean *>(_data.data()));
+					break;
+				}
+				case Type::Int:
+				{
+					glUniform1i(_location, *reinterpret_cast<const GLint *>(_data.data()));
+					break;
+				}
+				case Type::UInt:
+				{
+					glUniform1ui(_location, *reinterpret_cast<const GLuint *>(_data.data()));
+					break;
+				}
+				case Type::Vector2:
+				{
+					glUniform2fv(_location, 1, reinterpret_cast<const float *>(_data.data()));
+					break;
+				}
+				case Type::Vector3:
+				{
+					glUniform3fv(_location, 1, reinterpret_cast<const float *>(_data.data()));
+					break;
+				}
+				case Type::Vector4:
+				{
+					glUniform4fv(_location, 1, reinterpret_cast<const float *>(_data.data()));
+					break;
+				}
+				case Type::Matrix2x2:
+				{
+					glUniformMatrix2fv(_location, 1, GL_FALSE, reinterpret_cast<const float *>(_data.data()));
+					break;
+				}
+				case Type::Matrix3x3:
+				{
+					glUniformMatrix3fv(_location, 1, GL_FALSE, reinterpret_cast<const float *>(_data.data()));
+					break;
+				}
+				case Type::Matrix4x4:
+				{
+					glUniformMatrix4fv(_location, 1, GL_FALSE, reinterpret_cast<const float *>(_data.data()));
+					break;
+				}
+				default:
+					throw std::runtime_error("Unsupported uniform type in UniformObject::activate.");
+				}
+
+				_needUpdate = false;
 			}
 		}
 	};
