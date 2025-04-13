@@ -133,7 +133,9 @@ namespace spk::OpenGL
 		for (const auto& attr : _attributesToApply)
 		{
 			if (attr.index == p_index)
+			{
 				return true;
+			}
 		}
 		return false;
 	}
