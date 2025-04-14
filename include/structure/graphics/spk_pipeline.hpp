@@ -57,7 +57,6 @@ namespace spk
 		};
 
 	private:
-		mutable std::mutex _mutex;
 		spk::OpenGL::Program _program;
 
 		std::unordered_map<std::wstring, spk::OpenGL::UniformBufferObject> _ubos;

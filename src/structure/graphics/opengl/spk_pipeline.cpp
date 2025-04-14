@@ -104,8 +104,6 @@ namespace spk
 			throw std::runtime_error("[Object] - Pipeline owner is null.");
 		}
 
-		std::lock_guard<std::mutex> lock(_owner->_mutex);
-
 		_owner->beginRender();
 
 		_bufferSet.activate();
@@ -411,8 +409,6 @@ namespace spk
 
 	Pipeline::Object Pipeline::createObject()
 	{
-		std::lock_guard<std::mutex> lock(_mutex);
-
 		Object result(this);
 
 		result._bufferSet = _defaultObject._bufferSet;
