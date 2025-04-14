@@ -72,7 +72,10 @@ namespace spk
 		void endRender();
 
 	public:
+		Pipeline();
 		Pipeline(const std::string &p_vertexShaderCode, const std::string &p_fragmentShaderCode);
+
+		void load(const std::string &p_vertexShaderCode, const std::string &p_fragmentShaderCode);
 
 		void addUniformBufferObject(const std::wstring &p_name, spk::OpenGL::UniformBufferObject &&p_ubo);
 		void addShaderStorageBufferObject(const std::wstring &p_name, spk::OpenGL::ShaderStorageBufferObject &&p_ssbo);

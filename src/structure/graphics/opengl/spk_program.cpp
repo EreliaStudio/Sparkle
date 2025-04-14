@@ -15,11 +15,19 @@ namespace spk::OpenGL
 		_programID(0)
 	{
 	}
+
 	Program::Program(const std::string &p_vertexShaderCode, const std::string &p_fragmentShaderCode) :
 		_vertexShaderCode(p_vertexShaderCode),
 		_fragmentShaderCode(p_fragmentShaderCode),
 		_programID(0)
 	{
+	}
+
+	void Program::load(const std::string &p_vertexShaderCode, const std::string &p_fragmentShaderCode)
+	{
+		_vertexShaderCode = p_vertexShaderCode;
+		_fragmentShaderCode = p_fragmentShaderCode;
+		_needCleanup = true;
 	}
 
 	GLuint Program::_compileShader(const std::string &p_shaderCode, GLenum p_shaderType)
@@ -71,8 +79,23 @@ namespace spk::OpenGL
 		_programID = _linkProgram(vertexShader, fragmentShader);
 	}
 
+	void Program::_cleanup()
+	{
+		if (wglGetCurrentContext() != nullptr && _programID != 0)
+		{
+			glDeleteProgram(_programID);
+		}
+		_programID = 0;
+		_needCleanup = false;
+	}
+
 	void Program::activate()
 	{
+		if (_needCleanup == true)
+		{
+			_cleanup();
+		}
+
 		if (_programID == 0)
 		{
 			_load();
@@ -116,9 +139,6 @@ namespace spk::OpenGL
 
 	Program::~Program()
 	{
-		if (wglGetCurrentContext() != nullptr && _programID != 0)
-		{
-			glDeleteProgram(_programID);
-		}
+		_cleanup();
 	}
 }

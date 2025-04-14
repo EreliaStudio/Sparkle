@@ -1,4 +1,4 @@
-#include "structure/graphics/opengl/spk_pipeline.hpp"
+#include "structure/graphics/spk_pipeline.hpp"
 #include "utils/spk_string_utils.hpp"
 
 namespace spk
@@ -214,9 +214,19 @@ namespace spk
 		_program.deactivate();
 	}
 
+	Pipeline::Pipeline() :
+		_program()
+	{
+	}
+
 	Pipeline::Pipeline(const std::string &p_vertexShaderCode, const std::string &p_fragmentShaderCode) :
 		_program(p_vertexShaderCode, p_fragmentShaderCode)
 	{
+	}
+
+	void Pipeline::load(const std::string &p_vertexShaderCode, const std::string &p_fragmentShaderCode)
+	{
+		_program.load(p_vertexShaderCode, p_fragmentShaderCode);
 	}
 
 	void Pipeline::addUniformBufferObject(const std::wstring &p_name, spk::OpenGL::UniformBufferObject &&p_ubo)
