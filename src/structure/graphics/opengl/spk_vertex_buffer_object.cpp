@@ -26,6 +26,7 @@ namespace spk::OpenGL
 		if (wglGetCurrentContext() != nullptr)
 		{
 			glDeleteBuffers(1, &_id);
+			spk::cout << "Release buffer [" << _id << "] with type [" << spk::OpenGLUtils::to_wstring(static_cast<GLenum>(_type)) << "]" << std::endl;
 		}
 		_id = 0;
 	}
@@ -61,6 +62,7 @@ namespace spk::OpenGL
 		_usage(p_usage),
 		_currentBufferMaxSize(0)
 	{
+
 	}
 
 	VertexBufferObject::~VertexBufferObject()

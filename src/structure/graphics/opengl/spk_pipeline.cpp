@@ -177,19 +177,7 @@ namespace spk
 
 	void Pipeline::render(size_t p_nbIndexes, size_t p_nbInstance)
 	{
-		if (p_nbIndexes == 0)
-		{
-			return;
-		}
-
-		if (p_nbInstance > 0)
-		{
-			glDrawArraysInstanced(GL_TRIANGLES, 0, static_cast<GLsizei>(p_nbIndexes), static_cast<GLsizei>(p_nbInstance));
-		}
-		else
-		{
-			glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(p_nbIndexes));
-		}
+		_program.render(p_nbIndexes, p_nbInstance);
 	}
 
 	void Pipeline::endRender()
@@ -234,7 +222,7 @@ namespace spk
 			throw std::runtime_error("[Pipeline] - Uniform Buffer Object [" + spk::StringUtils::wstringToString(p_name) +
 									 "] already exists in Pipeline.");
 		}
-		_ubos.at(p_name) = p_ubo;
+		_ubos.emplace(p_name, std::move(p_ubo));
 	}
 
 	void Pipeline::addShaderStorageBufferObject(const std::wstring &p_name, spk::OpenGL::ShaderStorageBufferObject &&p_ssbo)
@@ -244,7 +232,7 @@ namespace spk
 			throw std::runtime_error("[Pipeline] - Shader Storage Buffer Object [" + spk::StringUtils::wstringToString(p_name) +
 									 "] already exists in Pipeline.");
 		}
-		_ssbos.at(p_name) = p_ssbo;
+		_ssbos.emplace(p_name, std::move(p_ssbo));
 	}
 
 	void Pipeline::addSamplerObject(const std::wstring &p_name, spk::OpenGL::SamplerObject &&p_sampler)
@@ -253,7 +241,7 @@ namespace spk
 		{
 			throw std::runtime_error("[Pipeline] - Sampler Object [" + spk::StringUtils::wstringToString(p_name) + "] already exists in Pipeline.");
 		}
-		_samplers.at(p_name) = p_sampler;
+		_samplers.emplace(p_name, std::move(p_sampler));
 	}
 
 	void Pipeline::addUniformObject(const std::wstring &p_name, spk::OpenGL::UniformObject &&p_uniform)
@@ -262,7 +250,7 @@ namespace spk
 		{
 			throw std::runtime_error("[Pipeline] - Uniform Object [" + spk::StringUtils::wstringToString(p_name) + "] already exists in Pipeline.");
 		}
-		_uniforms.at(p_name) = p_uniform;
+		_uniforms.emplace(p_name, std::move(p_uniform));
 	}
 
 	spk::OpenGL::UniformBufferObject &Pipeline::ubo(const std::wstring &p_name)
@@ -376,7 +364,7 @@ namespace spk
 			throw std::runtime_error("[Object] - Uniform Buffer Object [" + spk::StringUtils::wstringToString(p_name) +
 									 "] already exists in Pipeline.");
 		}
-		_defaultObject._ubos.at(p_name) = p_ubo;
+		_defaultObject._ubos.emplace(p_name, std::move(p_ubo));
 	}
 
 	void Pipeline::addObjectShaderStorageBufferObject(const std::wstring &p_name, spk::OpenGL::ShaderStorageBufferObject &&p_ssbo)
@@ -386,7 +374,7 @@ namespace spk
 			throw std::runtime_error("[Object] - Shader Storage Buffer Object [" + spk::StringUtils::wstringToString(p_name) +
 									 "] already exists in Pipeline.");
 		}
-		_defaultObject._ssbos.at(p_name) = p_ssbo;
+		_defaultObject._ssbos.emplace(p_name, std::move(p_ssbo));
 	}
 
 	void Pipeline::addObjectSamplerObject(const std::wstring &p_name, spk::OpenGL::SamplerObject &&p_sampler)
@@ -395,7 +383,7 @@ namespace spk
 		{
 			throw std::runtime_error("[Object] - Sampler Object [" + spk::StringUtils::wstringToString(p_name) + "] already exists in Pipeline.");
 		}
-		_defaultObject._samplers.at(p_name) = p_sampler;
+		_defaultObject._samplers.emplace(p_name, std::move(p_sampler));
 	}
 
 	void Pipeline::addObjectUniformObject(const std::wstring &p_name, spk::OpenGL::UniformObject &&p_uniform)
@@ -404,7 +392,7 @@ namespace spk
 		{
 			throw std::runtime_error("[Object] - Uniform Object [" + spk::StringUtils::wstringToString(p_name) + "] already exists in Pipeline.");
 		}
-		_defaultObject._uniforms.at(p_name) = p_uniform;
+		_defaultObject._uniforms.emplace(p_name, std::move(p_uniform));
 	}
 
 	Pipeline::Object Pipeline::createObject()
