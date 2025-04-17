@@ -180,7 +180,6 @@ namespace spk
 			 p_event->systemEvent.type = SystemEvent::Type::Resize;
 			 p_event->systemEvent.newSize = spk::Geometry2D::Size(LOWORD(p_lParam), HIWORD(p_lParam));
 		 }},
-		{WM_SETCURSOR, [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam) { p_event->systemEvent.type = SystemEvent::Type::SetCursor; }},
 		{WM_EXITSIZEMOVE, [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam) { p_event->systemEvent.type = SystemEvent::Type::ExitResize; }},
 		{WM_LEFT_JOYSTICK_MOTION,
 		 [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam)

@@ -92,8 +92,6 @@ namespace spk
 		void _deleteTimer(UINT_PTR p_id);
 		void _removeAllTimers();
 
-		void _applyCursor();
-
 	public:
 		Window(const std::wstring &p_title, const spk::Geometry2D &p_geometry);
 		~Window();

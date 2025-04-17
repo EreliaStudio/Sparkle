@@ -49,6 +49,17 @@ namespace spk
 
 	bool Window::_receiveEvent(UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam)
 	{
+		if (p_uMsg == WM_SETCURSOR)
+		{
+			if (LOWORD(p_lParam) == HTCLIENT)
+			{
+				::SetCursor(_currentCursor);
+				return true;
+			}
+
+			return false;
+		}
+
 		if (_subscribedModules.contains(p_uMsg) == false)
 		{
 			return (false);
@@ -427,7 +438,7 @@ namespace spk
 	}
 
 	Window::Window(const std::wstring &p_title, const spk::Geometry2D &p_geometry) :
-		_rootWidget(std::make_unique<Widget>(p_title + L" - CentralWidget")),
+		_rootWidget(std::make_unique<Widget>(p_title + L" - CentralWidget", nullptr)),
 		_title(p_title),
 		_viewport(p_geometry),
 		_windowRendererThread(p_title + L" - Renderer"),
@@ -585,14 +596,6 @@ namespace spk
 		}
 
 		_currentCursor = nextCursor;
-		::SetCursor(_currentCursor);
-		::SendMessage(_hwnd, WM_SETCURSOR, reinterpret_cast<WPARAM>(_hwnd), MAKELPARAM(HTCLIENT, WM_MOUSEMOVE));
-	}
-
-	void Window::_applyCursor()
-	{
-		::SetCursor(_currentCursor);
-		_savedCursor = _currentCursor;
 	}
 
 	void Window::pullEvents()

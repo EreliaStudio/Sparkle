@@ -214,8 +214,7 @@ namespace spk
 			TakeFocus,
 			LoseFocus,
 			Quit,
-			Move,
-			SetCursor
+			Move
 		};
 		Type type = Type::Unknow;
 
