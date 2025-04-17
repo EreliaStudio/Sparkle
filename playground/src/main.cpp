@@ -290,8 +290,8 @@ private:
 		entities.add(Entity(Shape::Circle, spk::Vector2(-10, -4), spk::Color::red));
 		entities.add(Entity(Shape::Pentagon, spk::Vector2(-4, -10), spk::Color::red));
 		entities.add(Entity(Shape::Hexagon, spk::Vector2(-4, -4), spk::Color::red));
-		entities.add(Entity(Shape::Octagon, spk::Vector2(-2, -2), spk::Color::red));
-		entities.add(Entity(Shape::Triangle, spk::Vector2(2, 2), spk::Color::red));
+		entities.add(Entity(Shape::Octagon, spk::Vector2(-1, -1), spk::Color::red));
+		entities.add(Entity(Shape::Triangle, spk::Vector2(1, 1), spk::Color::red));
 		entities.add(Entity(Shape::Triangle, spk::Vector2(4, 4), spk::Color::red));
 		entities.add(Entity(Shape::Triangle, spk::Vector2(4, 10), spk::Color::red));
 		entities.add(Entity(Shape::Triangle, spk::Vector2(10, 4), spk::Color::red));
@@ -348,8 +348,10 @@ private:
 		for (int i = 0; i < pointArraySize; i++)
 		{
 			float angle = angleBetweenPoints * i;
-			points.emplace_back(std::cos(spk::degreeToRadian(angle)),
-								std::sin(spk::degreeToRadian(angle)));
+			points.emplace_back(
+					0.5f * std::cos(spk::degreeToRadian(angle)),
+					0.5f * std::sin(spk::degreeToRadian(angle))
+				);
 		}
 
 		std::vector<unsigned int> indexes;

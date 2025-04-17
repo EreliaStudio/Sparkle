@@ -124,12 +124,10 @@ namespace spk::OpenGL
 
 		if (p_nbInstance == 0)
 		{
-			glDrawElements(GL_TRIANGLES, p_nbIndexes, GL_UNSIGNED_INT, nullptr);
+			return ;
 		}
-		else
-		{
-			glDrawElementsInstanced(GL_TRIANGLES, p_nbIndexes, GL_UNSIGNED_INT, nullptr, p_nbInstance);
-		}
+		
+		glDrawElementsInstanced(GL_TRIANGLES, p_nbIndexes, GL_UNSIGNED_INT, nullptr, p_nbInstance);
 	}
 
 	void Program::validate()
