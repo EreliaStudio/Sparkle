@@ -271,6 +271,7 @@ enum class Event
 	OnObjectListEdition,
 	OnPlayerPositionEdition,
 	OnCameraProjectionEdition,
+	ControlMappingEdition
 };
 
 using EventDispatcher = spk::EventDispatcher<Event>;
@@ -540,6 +541,196 @@ public:
 		_onCameraProjectionEditionContract = EventDispatcher::instance()->subscribe(Event::OnCameraProjectionEdition, [&]()
 		{
 			_updateCameraProjection();
+		});
+	}
+};
+
+class Input
+{
+private:
+	spk::Timer _timer;
+	virtual bool _validation() const = 0;
+
+public:
+	Input(const spk::Duration& p_repeatDuration) :
+		_timer(p_repeatDuration)
+	{
+
+	}
+
+	bool execute()
+	{
+		if (_timer.state() == spk::Timer::State::Running)
+		{
+			return (false);
+		}
+
+		if (_validation() == true)
+		{
+			_timer.start();
+			return (true);
+		}
+		return (false);
+	}
+};
+
+class KeyboardInput : public Input
+{
+private:
+	spk::SafePointer<spk::Keyboard> _keyboard;
+	spk::Keyboard::Key _key;
+	spk::InputState _state;
+
+	bool _validation() const
+	{
+		if (_keyboard->operator[](_key) == _state)
+		{
+			return (true);
+		}
+		return (false);
+	}
+
+public:
+	KeyboardInput(const spk::Keyboard::Key& p_key, const spk::InputState& p_state, spk::SafePointer<spk::Keyboard> p_keyboard, const spk::Duration& p_duration) :
+		Input(p_duration),
+		_keyboard(p_keyboard),
+		_key(p_key),
+		_state(p_state)
+	{
+
+	}
+};
+
+class MouseInput : public Input
+{
+private:
+	spk::SafePointer<spk::Mouse> _mouse;
+	spk::Mouse::Button _button;
+	spk::InputState _state;
+
+	bool _validation() const
+	{
+		if (_mouse->operator[](_button) == _state)
+		{
+			return (true);
+		}
+		return (false);
+	}
+
+public:
+	MouseInput(const spk::Mouse::Button& p_button, const spk::InputState& p_state, spk::SafePointer<spk::Mouse> p_mouse, const spk::Duration& p_duration) :
+		Input(p_duration),
+		_mouse(p_mouse),
+		_button(p_button),
+		_state(p_state)
+	{
+
+	}
+};
+
+class ControllerInput : public Input
+{
+private:
+	spk::SafePointer<spk::Controller> _controller;
+	spk::Controller::Button _button;
+	spk::InputState _state;
+
+	bool _validation() const
+	{
+		if (_controller->operator[](_button) == _state)
+		{
+			return (true);
+		}
+		return (false);
+	}
+
+public:
+	ControllerInput(const spk::Controller::Button& p_button, const spk::InputState& p_state, spk::SafePointer<spk::Controller> p_controller, const spk::Duration& p_duration) :
+		Input(p_duration),
+		_controller(p_controller),
+		_button(p_button),
+		_state(p_state)
+	{
+
+	}
+};
+
+struct Control
+{
+	enum class Type
+	{
+		PlayerMotionUp,
+		PlayerMotionLeft,
+		PlayerMotionDown,
+		PlayerMotionRight
+	};
+
+	std::vector<std::unique_ptr<Input>> inputs;
+};
+
+using ControlEventDispatcher = spk::EventDispatcher<Control::Type>;
+
+struct ControlMapping
+{
+	std::unordered_map<Control::Type, Control> controls;
+};
+
+class InputReceiver : public spk::Widget
+{
+private:
+	ControlEventDispatcher::Instanciator _controlEventDispatcherInstanciator;
+	EventDispatcher::Instanciator _eventDispatcherInstanciator;
+
+	EventDispatcher::Contract _onControlMappingEditionContract;
+
+	std::unordered_map<Control, KeyboardInput> keyboardInputs;
+	std::unordered_map<Control, MouseInput> mouseInputs;
+	std::unordered_map<Control, ControllerInput> controllerInputs;
+
+	void _onKeyboardEvent(spk::KeyboardEvent& p_event)
+	{
+		for (auto& [event, input] : keyboardInputs)
+		{
+			if (input.execute() == true)
+			{
+				ControlEventDispatcher::instance()->emit(event);
+			}
+		}
+	}
+
+	void _onMouseEvent(spk::MouseEvent& p_event)
+	{
+		for (auto& [event, input] : mouseInputs)
+		{
+			if (input.execute() == true)
+			{
+				ControlEventDispatcher::instance()->emit(event);
+			}
+		}
+	}
+
+	void _onControllerEvent(spk::ControllerEvent& p_event)
+	{
+		for (auto& [event, input] : controllerInputs)
+		{
+			if (input.execute() == true)
+			{
+				ControlEventDispatcher::instance()->emit(event);
+			}
+		}
+	}
+
+	void _updateControlMapping()
+	{
+
+	}
+
+public:
+	InputReceiver(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_widget) :
+		spk::Widget(p_name, p_widget)
+	{
+		_onControlMappingEditionContract = EventDispatcher::instance()->subscribe(Event::ControlMappingEdition, [&](){
+			_updateControlMapping();
 		});
 	}
 };

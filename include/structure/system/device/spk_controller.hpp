@@ -54,6 +54,11 @@ namespace spk
 		Trigger rightTrigger;
 		Vector2Int directionalCross = 0;
 		InputState buttons[17];
+
+		InputState operator[](Button p_button) const
+		{
+			return (buttons[static_cast<int>(p_button)]);
+		}
 	};
 }
 
