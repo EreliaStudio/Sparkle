@@ -97,9 +97,6 @@ namespace spk
 		Type type = Type::Unknow;
 		Timestamp time;
 		Duration deltaTime;
-		spk::SafePointer<const spk::Mouse> mouse = nullptr;
-		spk::SafePointer<const spk::Keyboard> keyboard = nullptr;
-		spk::SafePointer<const spk::Controller> controller = nullptr;
 	};
 
 	struct MouseEvent : public IEvent

@@ -442,7 +442,8 @@ namespace spk
 		_title(p_title),
 		_viewport(p_geometry),
 		_windowRendererThread(p_title + L" - Renderer"),
-		_windowUpdaterThread(p_title + L" - Updater")
+		_windowUpdaterThread(p_title + L" - Updater"),
+		_updateModule(_rootWidget.get())
 	{
 		resize(p_geometry.size);
 		_windowRendererThread
@@ -468,9 +469,9 @@ namespace spk
 					{
 						_handlePendingTimer();
 						pullEvents();
-						timerModule.treatMessages();
-						paintModule.treatMessages();
-						systemModule.treatMessages();
+						_timerModule.treatMessages();
+						_paintModule.treatMessages();
+						_systemModule.treatMessages();
 					} catch (std::exception &e)
 					{
 						spk::cout << "Renderer - Error catched : " << e.what() << std::endl;
@@ -484,10 +485,10 @@ namespace spk
 				{
 					try
 					{
-						mouseModule.treatMessages();
-						keyboardModule.treatMessages();
-						controllerModule.treatMessages();
-						updateModule.treatMessages();
+						_mouseModule.treatMessages();
+						_keyboardModule.treatMessages();
+						_controllerModule.treatMessages();
+						_updateModule.treatMessages();
 					} catch (std::exception &e)
 					{
 						spk::cout << "Updater - Error catched : " << e.what() << std::endl;
@@ -496,13 +497,13 @@ namespace spk
 				})
 			.relinquish();
 
-		bindModule(&mouseModule);
-		bindModule(&keyboardModule);
-		bindModule(&controllerModule);
-		bindModule(&updateModule);
-		bindModule(&paintModule);
-		bindModule(&systemModule);
-		bindModule(&timerModule);
+		bindModule(&_mouseModule);
+		bindModule(&_keyboardModule);
+		bindModule(&_controllerModule);
+		bindModule(&_updateModule);
+		bindModule(&_paintModule);
+		bindModule(&_systemModule);
+		bindModule(&_timerModule);
 
 		_rootWidget->activate();
 	}

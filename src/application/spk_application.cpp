@@ -1,5 +1,7 @@
 #include "application/spk_application.hpp"
 
+#include "spk_debug_macro.hpp"
+
 namespace spk
 {
 	Application::Application()
