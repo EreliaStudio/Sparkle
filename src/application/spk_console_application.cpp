@@ -37,14 +37,20 @@ namespace spk
 	ConsoleApplication::ConsoleApplication(const std::wstring &p_title) :
 		Application(),
 		_centralWidget(std::make_unique<Widget>(L"CentralWidget")),
+		_updateModule(_centralWidget.get()),
 		_hwnd(createBackgroundHandle(p_title))
 	{
 		_centralWidget->activate();
 		addExecutionStep(
 			[&]()
 			{
-				spk::UpdateEvent event = spk::UpdateEvent();
-				centralWidget()->onUpdateEvent(event);
+				spk::Event event(nullptr, WM_UPDATE_REQUEST, 0, 0);
+
+			 	event.updateEvent.time = SystemUtils::getTime();
+
+				_updateModule.receiveEvent(std::move(event));
+
+				_updateModule.treatMessages();
 			})
 			.relinquish();
 	}

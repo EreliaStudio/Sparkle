@@ -19,6 +19,11 @@ namespace spk
 		Vector2Int deltaPosition;
 		InputState buttons[3];
 		float wheel;
+
+		InputState operator[](Button p_button) const
+		{
+			return (buttons[static_cast<int>(p_button)]);
+		}
 	};
 }
 

@@ -69,7 +69,9 @@ namespace spk
 	void Viewport::apply() const
 	{
 		if (_windowSize == 0)
+		{
 			throw std::runtime_error("Can't apply a viewport in a window of size = 0");
+		}
 
 		_convertionOffset = static_cast<spk::Vector2>(_geometry.size) / 2.0f;
 

@@ -180,7 +180,6 @@ namespace spk
 			 p_event->systemEvent.type = SystemEvent::Type::Resize;
 			 p_event->systemEvent.newSize = spk::Geometry2D::Size(LOWORD(p_lParam), HIWORD(p_lParam));
 		 }},
-		{WM_SETCURSOR, [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam) { p_event->systemEvent.type = SystemEvent::Type::SetCursor; }},
 		{WM_EXITSIZEMOVE, [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam) { p_event->systemEvent.type = SystemEvent::Type::ExitResize; }},
 		{WM_LEFT_JOYSTICK_MOTION,
 		 [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam)
@@ -254,13 +253,9 @@ namespace spk
 		{WM_UPDATE_REQUEST,
 		 [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam)
 		 {
-			 p_event->updateEvent.type = UpdateEvent::Type::Requested;
+			p_event->updateEvent.type = UpdateEvent::Type::Requested;
 
-			 p_event->updateEvent.mouse = &(p_event->rootEvent.window->mouseModule.mouse());
-			 p_event->updateEvent.keyboard = &(p_event->rootEvent.window->keyboardModule.keyboard());
-			 p_event->updateEvent.controller = &(p_event->rootEvent.window->controllerModule.controller());
-
-			 p_event->updateEvent.time = SystemUtils::getTime();
+			p_event->updateEvent.time = SystemUtils::getTime();
 		 }},
 		{WM_TIMER,
 		 [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam)

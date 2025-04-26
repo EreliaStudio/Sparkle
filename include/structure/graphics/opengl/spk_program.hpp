@@ -15,15 +15,19 @@ namespace spk::OpenGL
 		std::string _vertexShaderCode;
 		std::string _fragmentShaderCode;
 
+		bool _needCleanup = false;
 		GLuint _programID;
 
 		GLuint _compileShader(const std::string &shaderCode, GLenum shaderType);
 		GLuint _linkProgram(GLuint vertexShader, GLuint fragmentShader);
 		void _load();
+		void _cleanup();
 
 	public:
 		Program();
 		Program(const std::string &p_vertexShaderCode, const std::string &p_fragmentShaderCode);
+
+		void load(const std::string &p_vertexShaderCode, const std::string &p_fragmentShaderCode);
 
 		void activate();
 		void deactivate();

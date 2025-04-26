@@ -64,6 +64,7 @@
 #include "structure/graphics/spk_text_alignment.hpp"
 #include "structure/graphics/spk_viewport.hpp"
 #include "structure/graphics/spk_window.hpp"
+#include "structure/graphics/spk_pipeline.hpp"
 #include "structure/graphics/texture/spk_font.hpp"
 #include "structure/graphics/texture/spk_image.hpp"
 #include "structure/graphics/texture/spk_sprite_sheet.hpp"

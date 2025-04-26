@@ -57,6 +57,17 @@ namespace spk::OpenGL
 		}
 	}
 
+	bool LayoutBufferObject::Attribute::operator<(const LayoutBufferObject::Attribute& p_other) const
+    {
+        if (index < p_other.index) {
+            return true;
+        }
+        else if (index > p_other.index) {
+            return false;
+        }
+        return static_cast<int>(type) < static_cast<int>(p_other.type);
+    }
+
 	LayoutBufferObject::LayoutBufferObject() :
 		VertexBufferObject(Type::Storage, Usage::Static),
 		_vertexSize(0)
@@ -117,8 +128,28 @@ namespace spk::OpenGL
 		return *this;
 	}
 
+	bool LayoutBufferObject::hasAttribute(Attribute::Index p_index) const
+	{
+		for (const auto& attr : _attributesToApply)
+		{
+			if (attr.index == p_index)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
 	void LayoutBufferObject::addAttribute(const Attribute &p_attribute)
 	{
+		for (const auto& attr : _attributesToApply)
+		{
+			if (attr.index == p_attribute.index)
+			{
+				throw std::runtime_error("Attribute location " + std::to_string(p_attribute.index) + " has already been defined.");
+			}
+		}
+
 		_attributesToApply.push_back(p_attribute);
 		_vertexSize += Attribute::typeSize(p_attribute.type);
 	}

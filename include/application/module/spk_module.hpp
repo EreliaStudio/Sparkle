@@ -28,7 +28,6 @@ namespace spk
 			_eventQueue.push(std::move(p_event));
 		}
 
-
 	public:
 		Module()
 		{

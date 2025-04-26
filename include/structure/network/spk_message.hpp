@@ -76,13 +76,13 @@ namespace spk
 		}
 
 		template <typename OutputType>
-		const OutputType &get() const
+		OutputType get() const
 		{
 			return (_buffer.get<OutputType>());
 		}
 
 		template <typename OutputType>
-		const OutputType &peek() const
+		OutputType peek() const
 		{
 			return (_buffer.peek<OutputType>());
 		}
