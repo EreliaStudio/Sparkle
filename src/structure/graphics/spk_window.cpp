@@ -11,6 +11,8 @@
 
 #include "structure/spk_iostream.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	void Window::_initialize(const std::function<void(spk::SafePointer<spk::Window>)> &p_onClosureCallback)
@@ -446,6 +448,7 @@ namespace spk
 		_updateModule(_rootWidget.get())
 	{
 		resize(p_geometry.size);
+
 		_windowRendererThread
 			.addPreparationStep(
 				[&]()
@@ -461,24 +464,66 @@ namespace spk
 					}
 				})
 			.relinquish();
+
 		_windowRendererThread
 			.addExecutionStep(
 				[&]()
 				{
 					try
 					{
-						_handlePendingTimer();
-						pullEvents();
-						_timerModule.treatMessages();
-						_paintModule.treatMessages();
-						_systemModule.treatMessages();
-					} catch (std::exception &e)
+						try
+						{
+							_handlePendingTimer();
+						}
+						catch (const std::exception& e)
+						{
+							PROPAGATE_ERROR("Renderer::_handlePendingTimer failed", e);
+						}
+
+						try
+						{
+							pullEvents();
+						}
+						catch (const std::exception& e)
+						{
+							PROPAGATE_ERROR("Renderer::pullEvents failed", e);
+						}
+
+						try
+						{
+							_timerModule.treatMessages();
+						}
+						catch (const std::exception& e)
+						{
+							PROPAGATE_ERROR("Renderer::_timerModule.treatMessages failed", e);
+						}
+
+						try
+						{
+							_paintModule.treatMessages();
+						}
+						catch (const std::exception& e)
+						{
+							PROPAGATE_ERROR("Renderer::_paintModule.treatMessages failed", e);
+						}
+
+						try
+						{
+							_systemModule.treatMessages();
+						}
+						catch (const std::exception& e)
+						{
+							PROPAGATE_ERROR("Renderer::_systemModule.treatMessages failed", e);
+						}
+					}
+					catch (const std::exception& e)
 					{
-						spk::cout << "Renderer - Error catched : " << e.what() << std::endl;
+						spk::cout << "Renderer - Error caught:\n" << e.what() << std::endl;
 						close();
 					}
 				})
 			.relinquish();
+
 		_windowUpdaterThread
 			.addExecutionStep(
 				[&]()
@@ -521,26 +566,68 @@ namespace spk
 	}
 
 	void Window::resize(const spk::Geometry2D::Size &p_newSize)
-	{
+	{	
 		if (p_newSize.x == 0 || p_newSize.y == 0)
-		{
-			return;
-		}
+        {
+            return;
+        }
 
-		_viewport.setWindowSize(p_newSize);
-		_rootWidget->_viewport.setWindowSize(p_newSize);
+        try
+        {
+            _viewport.setWindowSize(p_newSize);
+        }
+        catch (const std::exception& e)
+        {
+            PROPAGATE_ERROR("Window::resize over _viewport.setWindowSize failed", e);
+        }
 
-		_viewport.setGeometry({0, 0, p_newSize});
-		_rootWidget->setGeometry(_viewport.geometry());
+        try
+        {
+            _rootWidget->_viewport.setWindowSize(p_newSize);
+        }
+        catch (const std::exception& e)
+        {
+            PROPAGATE_ERROR("Window::resize over _rootWidget->_viewport.setWindowSize failed", e);
+        }
 
-		_rootWidget->requireGeometryUpdate();
+        try
+        {
+            _viewport.setGeometry({0, 0, p_newSize});
+        }
+        catch (const std::exception& e)
+        {
+            PROPAGATE_ERROR("Window::resize over _viewport.setGeometry failed", e);
+        }
 
-		for (auto &child : _rootWidget->children())
-		{
-			child->_resize();
-		}
+        try
+        {
+            _rootWidget->setGeometry(_viewport.geometry());
+        }
+        catch (const std::exception& e)
+        {
+            PROPAGATE_ERROR("Window::resize over _rootWidget->setGeometry failed", e);
+        }
 
-		requestPaint();
+        for (auto& child : _rootWidget->children())
+        {
+            try
+            {
+                child->_resize();
+            }
+            catch (const std::exception& e)
+            {
+                PROPAGATE_ERROR("Window::resize over child->_resize of [" + spk::StringUtils::wstringToString(child->name()) + "] failed", e);
+            }
+        }
+
+        try
+        {
+            requestPaint();
+        }
+        catch (const std::exception& e)
+        {
+            PROPAGATE_ERROR("Window::resize over requestPaint failed", e);
+        }
 	}
 
 	void Window::close()

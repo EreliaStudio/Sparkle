@@ -1,568 +1,319 @@
-#include "playground.hpp"
+#include <sparkle.hpp>
 
-enum class Shape
+enum class MessageType
 {
-	Triangle,
-	Square,
-	Pentagon,
-	Hexagon,
-	Octagon,
-	Circle
+	Register = 0,
+
+    Connection = 100,
+    Disconnection = 101,
+    PublicNameEdition = 102,
+	IconEdition = 103,
+
+    FriendRequest = 200,
+    FriendRequestResponse = 201,
+
+    PrivateMessage = 300,
+
+	SystemMessage = 400,
+    Error = 401
 };
 
-struct Transform
-{
-	spk::Vector2 position;
-	spk::Vector2 scale;
-	float rotation;
-};
-
-struct Body
-{
-	struct GPUView
-	{
-		spk::Vector2 offset;
-	};
-
-	GPUView gpuView() const
-	{
-		GPUView result;
-		
-		result.offset = transform.position;
-
-		return (result);
-	}
-
-	Shape shape;
-	Transform transform;
-	spk::Color color;
-};
-
-struct Object
-{
-	using ID = long long;
-
-	Body body;	
-
-	Object()
-	{
-
-	}
-
-	Object(const Shape& p_shape, const spk::Vector2& p_position, const spk::Color& p_color) :
-		body{p_shape, {p_position, spk::Vector2(1, 1), 0}, p_color}
-	{
-
-	}
-
-	Object(const Body& p_body) :
-		body(p_body)
-	{
-
-	}
-};
-
-struct Entity : public Object
-{
-	Entity()
-	{
-
-	}
-
-	Entity(const Shape& p_shape, const spk::Vector2& p_position, const spk::Color& p_color) :
-		Object(p_shape, p_position, p_color)
-	{
-
-	}
-
-	Entity(const Body& p_body) :
-		Object(p_body)
-	{
-
-	}
-};
-
-struct Particule : public Object
-{
-	Particule()
-	{
-
-	}
-
-	Particule(const Shape& p_shape, const spk::Vector2& p_position, const spk::Color& p_color) :
-		Object(p_shape, p_position, p_color)
-	{
-
-	}
-
-	Particule(const Body& p_body) :
-		Object(p_body)
-	{
-
-	}
-};
-
-struct Projectile : public Object
-{
-	Projectile()
-	{
-
-	}
-
-	Projectile(const Shape& p_shape, const spk::Vector2& p_position, const spk::Color& p_color) :
-		Object(p_shape, p_position, p_color)
-	{
-
-	}
-
-	Projectile(const Body& p_body) :
-		Object(p_body)
-	{
-
-	}
-};
-
-struct PipelineAtlas : public spk::Singleton<PipelineAtlas>
-{
-	friend class spk::Singleton<PipelineAtlas>;
-
-private:
-	std::unordered_map<std::wstring, std::unique_ptr<spk::Pipeline>> _pipelines;
-
-	std::unique_ptr<spk::Pipeline> _createBodyPipeline()
-	{
-		std::string vertexShaderCode = spk::FileUtils::readFileAsString(L"playground/data/resources/shader/object_renderer.vert");
-		std::string fragmentShaderCode = spk::FileUtils::readFileAsString(L"playground/data/resources/shader/object_renderer.frag");
-
-		std::unique_ptr<spk::Pipeline> result = std::make_unique<spk::Pipeline>(vertexShaderCode, fragmentShaderCode);
-
-		result->addObjectLayoutAttribute(0, spk::OpenGL::LayoutBufferObject::Attribute::Type::Vector2);
-
-		spk::OpenGL::UniformBufferObject cameraDataUBO(L"CameraData", 0, 128);
-		cameraDataUBO.addElement(L"view", 0, sizeof(spk::Matrix4x4));
-		cameraDataUBO.addElement(L"projection", 64, sizeof(spk::Matrix4x4));
-
-		result->addUniformBufferObject(L"CameraData", std::move(cameraDataUBO));
-
-		spk::OpenGL::ShaderStorageBufferObject bodyListSSBO(L"BodyList", 1, 0, 0, 8, 0);
-
-		bodyListSSBO.dynamicArray().addElement(L"offset", 0, sizeof(spk::Vector2));
-
-		// bodyListSSBO.dynamicArray().addElement(L"transform", 0, sizeof(Transform));
-		// bodyListSSBO.dynamicArray().addElement(L"color", 32, sizeof(spk::Color));
-
-		result->addObjectShaderStorageBufferObject(L"BodyList", std::move(bodyListSSBO));
-
-		return (std::move(result)); 
-	}
-
-	PipelineAtlas()
-	{
-		_pipelines[L"objectRenderer"] = std::move(_createBodyPipeline());
-	}
-
-public:
-	spk::SafePointer<spk::Pipeline> pipeline(const std::wstring& p_name)
-	{
-		if (_pipelines.contains(p_name) == false)
-		{
-			throw std::runtime_error("Pipeline [" + spk::StringUtils::wstringToString(p_name) + "] not found");
-		}
-		return (_pipelines[p_name].get());
-	}
-};
-
-template<typename TStorageType>
-class UnorderedGUIDMap
-{
-public:
-    struct AllocationResult
-    {
-        spk::SafePointer<TStorageType> object;
-        Object::ID id;
-    };
-private:
-    Object::ID _nextId = 0;
-
-    std::unordered_map<Object::ID, std::unique_ptr<TStorageType>> _storage;
-
-public:
-    Object::ID nextId()
-    {
-        return _nextId++;
-    }
-
-    AllocationResult add(TStorageType&& p_object)
-    {
-        Object::ID newId = nextId();
-		
-        spk::SafePointer<TStorageType> addedPtr = add(newId, std::move(p_object));
-
-        return { addedPtr, newId };
-    }
-
-    spk::SafePointer<TStorageType> add(Object::ID p_id, TStorageType&& p_object)
-    {
-        if (_storage.contains(p_id))
-		{
-            return nullptr;
-		}
-
-        auto ptr = std::make_unique<TStorageType>(std::move(p_object));
-
-        auto [it, inserted] = _storage.emplace(p_id, std::move(ptr));
-        if (!inserted)
-		{
-            return nullptr;
-		}
-
-        return it->second.get();
-    }
-
-    spk::SafePointer<TStorageType> get(Object::ID p_id) const
-    {
-        auto it = _storage.find(p_id);
-        if (it == _storage.end())
-		{
-            return nullptr;
-		}
-
-        return it->second.get();
-    }
-
-    bool remove(Object::ID p_id)
-    {
-        return _storage.erase(p_id) > 0;
-    }
-
-	auto begin() noexcept
-    {
-        return _storage.begin();
-    }
-    
-    auto end() noexcept
-    {
-        return _storage.end();
-    }
-    
-    auto begin() const noexcept
-    {
-        return _storage.begin();
-    }
-    
-    auto end() const noexcept
-    {
-        return _storage.end();
-    }
-
-    auto cbegin() const noexcept
-    {
-        return _storage.cbegin();
-    }
-    
-    auto cend() const noexcept
-    {
-        return _storage.cend();
-    }
-};
-
-enum class Event
-{
-	OnObjectListEdition,
-	OnPlayerPositionEdition,
-	OnCameraProjectionEdition,
-	ControlMappingEdition
-};
-
-using EventDispatcher = spk::EventDispatcher<Event>;
-
-struct Context : spk::Singleton<Context>
+class ConnectionWidget : public spk::Widget
 {
 private:
-	friend class spk::Singleton<Context>;
-	EventDispatcher::Instanciator _eventDispatcherInstanciator;
+	spk::Frame _backgroundFrame;
 
-	Context()
+	spk::TextLabel _usernameLabel;
+	spk::TextEdit _usernameEdit;
+	spk::TextLabel _passwordLabel;
+	spk::TextEdit _passwordEdit;
+
+	spk::PushButton _connectButton;
+	spk::PushButton::Contract _connectButtonContract;
+	spk::PushButton _registerButton;
+	spk::PushButton::Contract _registerButtonContract;
+
+	void _onGeometryChange() override
 	{
-		auto tmp = entities.add(Entity(Shape::Triangle, spk::Vector2(0, 0), spk::Color::blue));
-		player = tmp.object;
-		playerID = tmp.id;
+		const int margin              = _backgroundFrame.cornerSize().x;
+		constexpr int interLineSpace  = 15;
+		constexpr int btnHPadding     = 20;
+		constexpr int btnVPadding     = 8;
+		constexpr int buttonGap       = 10;
 
-		entities.add(Entity(Shape::Circle, spk::Vector2(-10, -4), spk::Color::red));
-		entities.add(Entity(Shape::Pentagon, spk::Vector2(-4, -10), spk::Color::red));
-		entities.add(Entity(Shape::Hexagon, spk::Vector2(-4, -4), spk::Color::red));
-		entities.add(Entity(Shape::Octagon, spk::Vector2(-1, -1), spk::Color::red));
-		entities.add(Entity(Shape::Triangle, spk::Vector2(1, 1), spk::Color::red));
-		entities.add(Entity(Shape::Triangle, spk::Vector2(4, 4), spk::Color::red));
-		entities.add(Entity(Shape::Triangle, spk::Vector2(4, 10), spk::Color::red));
-		entities.add(Entity(Shape::Triangle, spk::Vector2(10, 4), spk::Color::red));
+		const spk::Geometry2D widgetRect = geometry();
+		_backgroundFrame.setGeometry(0, widgetRect.size);
 
-		camera.setOrthographic(-20, 20, -20, 20, 0, 10);
+		const spk::Vector2Int areaPos  = spk::Vector2Int(margin, margin);
+		const spk::Vector2Int areaSize = widgetRect.size - spk::Vector2Int(margin * 2, margin * 2);
+
+		const int  lineHeight = (areaSize.y - 2 * interLineSpace) / 3;
+		const spk::Vector2Int lineSize(areaSize.x, lineHeight);
+
+		const spk::Vector2Int row0Pos = areaPos;
+
+		const int labelWidth = static_cast<int>(lineSize.x * 0.30f);
+		const int vInset     = static_cast<int>(lineHeight * 0.10f);
+
+		_usernameLabel.setGeometry(row0Pos - spk::Vector2Int(0, 5), {labelWidth, lineHeight});
+
+		_usernameEdit.setGeometry(
+			{row0Pos.x, row0Pos.y + vInset},
+			{lineSize.x, lineHeight - 2 * vInset});
+
+		const spk::Vector2Int row1Pos = areaPos + spk::Vector2Int(0, lineHeight + interLineSpace);
+
+		_passwordLabel.setGeometry(row1Pos - spk::Vector2Int(0, 5), {labelWidth, lineHeight});
+
+		_passwordEdit.setGeometry(
+			{row1Pos.x, row1Pos.y + vInset},
+			{lineSize.x, lineHeight - 2 * vInset});
+
+		const spk::Vector2Int row2Pos = areaPos + spk::Vector2Int(0, 2 * (lineHeight + interLineSpace));
+
+		const spk::Vector2UInt buttonTextSize = spk::Vector2Int::max(
+			_connectButton.computeTextSize(),
+			_registerButton.computeTextSize());
+
+		int buttonWidth  = static_cast<int>(buttonTextSize.x) + btnHPadding * 2;
+		int buttonHeight = std::max<int>(buttonTextSize.y, buttonTextSize.y) + btnVPadding * 2;
+		buttonHeight     = std::max(buttonHeight, lineHeight);
+
+		const int rightEdgeX = row2Pos.x + lineSize.x;
+
+		_registerButton.setGeometry(
+			{rightEdgeX - buttonWidth, row2Pos.y + (lineHeight - buttonHeight) / 2},
+			{buttonWidth, buttonHeight});
+
+		_connectButton.setGeometry(
+			{rightEdgeX - (buttonWidth + buttonGap + buttonWidth), row2Pos.y + (lineHeight - buttonHeight) / 2},
+			{buttonWidth, buttonHeight});
 	}
 
 public:
-	UnorderedGUIDMap<Entity> entities;
-	UnorderedGUIDMap<Particule> particules;
-	UnorderedGUIDMap<Projectile> projectiles;
-
-	spk::Camera camera;
-	spk::SafePointer<Entity> player;
-	Entity::ID playerID;
-};
-
-class ObjectRenderer
-{
-private:
-	PipelineAtlas::Instanciator _pipelineAtlasInstanciator;
-
-	spk::SafePointer<spk::Pipeline> _pipeline;
-
-	spk::OpenGL::UniformBufferObject& _cameraUBO;
-
-	spk::Pipeline::Object _triangleObjects;
-	spk::OpenGL::ShaderStorageBufferObject& _triangleSSBO;
-
-	spk::Pipeline::Object _squareObjects;
-	spk::OpenGL::ShaderStorageBufferObject& _squareSSBO;
-
-	spk::Pipeline::Object _pentagonObjects;
-	spk::OpenGL::ShaderStorageBufferObject& _pentagonSSBO;
-
-	spk::Pipeline::Object _hexagonObjects;
-	spk::OpenGL::ShaderStorageBufferObject& _hexagonSSBO;
-
-	spk::Pipeline::Object _octogonObjects;
-	spk::OpenGL::ShaderStorageBufferObject& _octogonSSBO;
-
-	spk::Pipeline::Object _circleObjects;
-	spk::OpenGL::ShaderStorageBufferObject& _circleSSBO;
-
-	void _feedVertexBufferObject(spk::OpenGL::BufferSet& p_bufferSetObject, float p_nbPoint)
-	{
-		int pointArraySize = static_cast<int>(std::ceil(p_nbPoint));
-
-		std::vector<spk::Vector2> points;
-		points.reserve(pointArraySize);
-
-		float angleBetweenPoints = 360.0f / p_nbPoint;    
-
-		for (int i = 0; i < pointArraySize; i++)
-		{
-			float angle = angleBetweenPoints * i;
-			points.emplace_back(
-					0.5f * std::cos(spk::degreeToRadian(angle)),
-					0.5f * std::sin(spk::degreeToRadian(angle))
-				);
-		}
-
-		std::vector<unsigned int> indexes;
-		indexes.reserve(3 * (pointArraySize - 2));
-		for (int i = 1; i < pointArraySize - 1; i++)
-		{
-			indexes.push_back(0);
-			indexes.push_back(i);
-			indexes.push_back(i + 1);
-		}
-
-		p_bufferSetObject.clear();
-		p_bufferSetObject.layout()  << points;
-		p_bufferSetObject.indexes() << indexes;
-		p_bufferSetObject.validate();
-	}
-
-public:
-	ObjectRenderer() :
-		_pipeline(PipelineAtlas::instance()->pipeline(L"objectRenderer")),
-		_cameraUBO(_pipeline->ubo(L"CameraData")),
-		_triangleObjects(_pipeline->createObject()),
-		_triangleSSBO(_triangleObjects.ssbo(L"BodyList")),
-		_squareObjects(_pipeline->createObject()),
-		_squareSSBO(_squareObjects.ssbo(L"BodyList")),
-		_pentagonObjects(_pipeline->createObject()),
-		_pentagonSSBO(_pentagonObjects.ssbo(L"BodyList")),
-		_hexagonObjects(_pipeline->createObject()),
-		_hexagonSSBO(_hexagonObjects.ssbo(L"BodyList")),
-		_octogonObjects(_pipeline->createObject()),
-		_octogonSSBO(_octogonObjects.ssbo(L"BodyList")),
-		_circleObjects(_pipeline->createObject()),
-		_circleSSBO(_circleObjects.ssbo(L"BodyList"))
-	{
-		_cameraUBO[L"view"] = spk::Matrix4x4::identity();
-		_cameraUBO[L"projection"] = spk::Matrix4x4::identity();
-		_cameraUBO.validate();
-
-		_feedVertexBufferObject(_triangleObjects.bufferSet(), 3);
-		_feedVertexBufferObject(_squareObjects.bufferSet(), 4);
-		_feedVertexBufferObject(_pentagonObjects.bufferSet(), 5);
-		_feedVertexBufferObject(_hexagonObjects.bufferSet(), 6);
-		_feedVertexBufferObject(_octogonObjects.bufferSet(), 8);
-		_feedVertexBufferObject(_circleObjects.bufferSet(), 20);
-	}
-
-	void clear()
-	{
-		_triangleSSBO.dynamicArray().clear();
-		_squareSSBO.dynamicArray().clear();
-		_pentagonSSBO.dynamicArray().clear();
-		_hexagonSSBO.dynamicArray().clear();
-		_octogonSSBO.dynamicArray().clear();
-		_circleSSBO.dynamicArray().clear();
-	}
-	
-	void prepareObject(const spk::SafePointer<Object>& p_object)
-	{
-		switch (p_object->body.shape)
-		{
-			case Shape::Triangle:
-				_triangleSSBO.dynamicArray().push_back(p_object->body.gpuView());
-				_triangleObjects.setNbInstance(_triangleSSBO.dynamicArray().nbElement());
-				break;
-			case Shape::Square:
-				_squareSSBO.dynamicArray().push_back(p_object->body.gpuView());
-				_squareObjects.setNbInstance(_squareSSBO.dynamicArray().nbElement());
-				break;
-			case Shape::Pentagon:
-				_pentagonSSBO.dynamicArray().push_back(p_object->body.gpuView());
-				_pentagonObjects.setNbInstance(_pentagonSSBO.dynamicArray().nbElement());
-				break;
-			case Shape::Hexagon:
-				_hexagonSSBO.dynamicArray().push_back(p_object->body.gpuView());
-				_hexagonObjects.setNbInstance(_hexagonSSBO.dynamicArray().nbElement());
-				break;
-			case Shape::Octagon:
-				_octogonSSBO.dynamicArray().push_back(p_object->body.gpuView());
-				_octogonObjects.setNbInstance(_octogonSSBO.dynamicArray().nbElement());
-				break;
-			case Shape::Circle:
-				_circleSSBO.dynamicArray().push_back(p_object->body.gpuView());
-				_circleObjects.setNbInstance(_circleSSBO.dynamicArray().nbElement());
-				break;
-		}
-	}
-
-	void validate()
-	{
-		_triangleSSBO.validate();
-		_squareSSBO.validate();
-		_pentagonSSBO.validate();
-		_hexagonSSBO.validate();
-		_octogonSSBO.validate();
-		_circleSSBO.validate();
-	}
-
-	void setCameraView(spk::Matrix4x4 p_view)
-	{
-		// _cameraUBO[L"view"] = p_view;
-		// _cameraUBO.validate();
-	}
-
-	void setCameraProjection(spk::Matrix4x4 p_projection)
-	{
-		_cameraUBO[L"projection"] = p_projection;
-		_cameraUBO.validate();
-	}
-
-	void render()
-	{
-		_triangleObjects.render();
-		_squareObjects.render();
-		_pentagonObjects.render();
-		_hexagonObjects.render();
-		_octogonObjects.render();
-		_circleObjects.render();
-	}
-};
-
-class GameScreenWidget : public spk::Widget
-{
-private:
-	Context::Instanciator _contextInstanciator;
-
-	spk::EventDispatcher<Event>::Contract _onObjectListEditionContract;
-	spk::EventDispatcher<Event>::Contract _onPlayerPositionEditionContract;
-	spk::EventDispatcher<Event>::Contract _onCameraProjectionEditionContract;
-
-	ObjectRenderer _objectRenderer;
-
-	void _updateObjectRenderer()
-	{
-		_objectRenderer.clear();
-		
-		for (const auto& [id, entity] : Context::instance()->entities)
-		{
-			_objectRenderer.prepareObject(entity.get());
-		}
-
-		for (const auto& [id, particule] : Context::instance()->particules)
-		{
-			_objectRenderer.prepareObject(particule.get());
-		}
-
-		for (const auto& [id, projectile] : Context::instance()->projectiles)
-		{
-			_objectRenderer.prepareObject(projectile.get());
-		}
-
-		_objectRenderer.validate();
-	}
-
-	void _updateCameraView()
-	{
-		_objectRenderer.setCameraView(spk::Matrix4x4::translation(spk::Vector3(
-				Context::instance()->player->body.transform.position, 0
-			)));
-	}
-
-	void _updateCameraProjection()
-	{
-		_objectRenderer.setCameraProjection(Context::instance()->camera.projectionMatrix());
-	}
-
-	void _onPaintEvent(spk::PaintEvent& p_event) override
-	{
-		_objectRenderer.render();
-	}
-
-public:
-	GameScreenWidget(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+	ConnectionWidget(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
 		spk::Widget(p_name, p_parent),
-		_contextInstanciator()
+		_backgroundFrame(p_name + L"/BackgroundFrame", this),
+		_usernameLabel(p_name + L"/UsernameLabel", this),
+		_usernameEdit(p_name + L"/UsernameEdit", this),
+		_passwordLabel(p_name + L"/PasswordLabel", this),
+		_passwordEdit(p_name + L"/PasswordEdit", this),
+		_connectButton(p_name + L"/ConnectButton", this),
+		_registerButton(p_name + L"/RegisterButton", this)
 	{
-		_onObjectListEditionContract = EventDispatcher::instance()->subscribe(Event::OnObjectListEdition, [&]()
-		{
-			_updateObjectRenderer();
-		});
+		_backgroundFrame.setLayer(0);
+		_backgroundFrame.setCornerSize(32);
+		_backgroundFrame.activate();
 
-		_onPlayerPositionEditionContract = EventDispatcher::instance()->subscribe(Event::OnPlayerPositionEdition, [&]()
-		{
-			_updateCameraView();
-		});
+		_usernameLabel.setLayer(3);
+		_usernameLabel.setCornerSize(0);
+		_usernameLabel.setNineSlice(nullptr);
+		_usernameLabel.setText(L"Username :");
+		_usernameLabel.setFontSize(spk::Font::Size(22, 2));
+		_usernameLabel.setTextAlignment(spk::HorizontalAlignment::Left, spk::VerticalAlignment::Top);
+		_usernameLabel.activate();
 
-		_onCameraProjectionEditionContract = EventDispatcher::instance()->subscribe(Event::OnCameraProjectionEdition, [&]()
-		{
-			_updateCameraProjection();
-		});
+		_usernameEdit.setLayer(1);
+		_usernameEdit.setPlaceholder(L"Enter your username");
+		_usernameEdit.setText(L"Hyarius");
+		_usernameEdit.activate();
+
+		_passwordLabel.setLayer(3);
+		_passwordLabel.setCornerSize(0);
+		_passwordLabel.setNineSlice(nullptr);
+		_passwordLabel.setText(L"Password :");
+		_passwordLabel.setFontSize(spk::Font::Size(22, 2));
+		_passwordLabel.setTextAlignment(spk::HorizontalAlignment::Left, spk::VerticalAlignment::Top);
+		_passwordLabel.activate();
+
+		_passwordEdit.setLayer(1);
+		_passwordEdit.setPlaceholder(L"Enter your password");
+		_passwordEdit.setText(L"61M=j4*Et");
+		_passwordEdit.setObscured(true);
+		_passwordEdit.activate();
+
+		_connectButton.setLayer(1);
+		_connectButton.setText(L"Connect");
+		_connectButton.activate();
+
+		_registerButton.setLayer(1);
+		_registerButton.setText(L"Register");
+		_registerButton.activate();
+	}
+
+	const std::wstring& username() const
+	{
+		return _usernameEdit.text();
+	}
+
+	const std::wstring& password() const
+	{
+		return _passwordEdit.text();
+	}
+
+	void setRegisterAction(const spk::PushButton::Job& p_job)
+	{
+		_registerButtonContract = _registerButton.subscribe(p_job);
+	}
+
+	void setConnectAction(const spk::PushButton::Job& p_job)
+	{
+		_connectButtonContract = _connectButton.subscribe(p_job);
 	}
 };
 
 class MainWidget : public spk::Widget
 {
 private:
-	Context::Instanciator _contextInstanciator;
-	GameScreenWidget _gameScreenWidget;
+	spk::Client _client;
+
+	ConnectionWidget _connectionWidget;
+	spk::TextLabel _errorMessageLabel;
 
 	void _onGeometryChange() override
 	{
-		_gameScreenWidget.setGeometry(geometry());
+		spk::Vector2Int connectionWidgetSize = spk::Vector2Int::min(geometry().size / 2, {400, 300});
+		spk::Vector2Int errorMessageLabelSize = spk::Vector2Int(connectionWidgetSize.x, std::min(connectionWidgetSize.y / 4, 50));
+
+		spk::Vector2Int connectionWidgetPos = (geometry().size - connectionWidgetSize) / 2;
+
+		_connectionWidget.setGeometry(connectionWidgetPos, connectionWidgetSize);
+		_errorMessageLabel.setGeometry(connectionWidgetPos - spk::Vector2Int(0, errorMessageLabelSize.y), errorMessageLabelSize);
+	}
+
+	void _receivedConnectionMessage(spk::Client::MessageObject& p_message)
+	{
+		spk::cout << "Received connection message" << std::endl;
+	}
+
+	void _receivedErrorMessage(spk::Client::MessageObject& p_message)
+	{
+		spk::cout << "Received error message" << std::endl;
+		std::wstring errorMessage = p_message->get<std::wstring>();
+
+		spk::cout << "Error message : " << errorMessage << std::endl;
+	}
+
+	void _receivedSystemMessage(spk::Client::MessageObject& p_message)
+	{
+		spk::cout << "Received system message" << std::endl;
+		std::wstring systemeMessage = p_message->get<std::wstring>();
+
+		spk::cout << "System message : " << systemeMessage << std::endl;
+	}
+
+	void _onUpdateEvent(spk::UpdateEvent& p_event)
+	{
+		while (_client.messages().empty() == false)
+		{
+			spk::Client::MessageObject message = _client.messages().pop();
+
+			MessageType messageType = static_cast<MessageType>(message->header().type);
+
+			switch (messageType)
+			{
+				case MessageType::Connection:
+				{
+					_receivedConnectionMessage(message);
+					break;
+				}
+				case MessageType::Error:
+				{
+					_receivedErrorMessage(message);
+					break;
+				}
+				case MessageType::SystemMessage:
+				{
+					_receivedSystemMessage(message);
+					break;
+				}
+				default:
+					spk::cout << "Unknown message type : " << message->header().type << std::endl;
+					break;
+			}
+			
+		}
+	}
+
+	void _initializeClient(const spk::JSON::File &p_configurationFile)
+	{
+		std::wstring address = p_configurationFile[L"Address"].as<std::wstring>();
+		long port = p_configurationFile[L"Port"].as<long>();
+
+		try
+		{
+			_client.connect(spk::StringUtils::wstringToString(address), port);
+		}
+		catch(const std::runtime_error& e)
+		{
+			std::cerr << e.what() << '\n';
+			return ;
+		}
+
+		spk::cout << "Client connected " << address << ":" << port << std::endl;
+		spk::cout << "Client connected " << std::boolalpha << _client.isConnected() << std::endl;
+	}
+
+	void _onConnectRequest()
+	{
+		spk::Message connectionRequest(static_cast<int>(MessageType::Connection));
+
+		connectionRequest << _connectionWidget.username();
+		connectionRequest << _connectionWidget.password();
+
+		spk::cout << "Send connection request to " << _connectionWidget.username() << " with password " << _connectionWidget.password() << std::endl;
+
+		_client.send(connectionRequest);
+	}
+
+	void _onRegisterRequest()
+	{
+		spk::Message registrationRequest(static_cast<int>(MessageType::Register));
+
+		registrationRequest << _connectionWidget.username();
+		registrationRequest << _connectionWidget.password();
+
+		spk::cout << "Send register request to " << _connectionWidget.username() << " with password " << _connectionWidget.password() << std::endl;
+
+		_client.send(registrationRequest);
 	}
 
 public:
-	MainWidget(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_widget) :
-		spk::Widget(p_name, p_widget),
-		_contextInstanciator(),
-		_gameScreenWidget(p_name + L"/GameScreenWidget", this)
+	MainWidget(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
+		spk::Widget(p_name, p_parent),
+		_connectionWidget(p_name + L"/ConnectionWidget", this),
+		_errorMessageLabel(p_name + L"/ErrorMessageLabel", this)
 	{
-		_gameScreenWidget.activate();
+		spk::JSON::File configurationFile = spk::JSON::File(L"playground/resources/config.json");
+		_initializeClient(configurationFile);
+
+		_connectionWidget.setRegisterAction([&]() {
+				if (_client.isConnected() == true)
+				{
+					_onRegisterRequest();
+				}
+				else
+				{
+					spk::cout << "Client not connected" << std::endl;
+				}
+			});
+
+		_connectionWidget.setConnectAction([&]() {
+				if (_client.isConnected() == true)
+				{
+					_onConnectRequest();
+				}
+				else
+				{
+					spk::cout << "Client not connected" << std::endl;
+				}
+			});
+			
+		_connectionWidget.activate();
+
+		_errorMessageLabel.setNineSlice(nullptr);
+		_errorMessageLabel.setText(L"Default text");
+		_errorMessageLabel.activate();
 	}
 };
 
@@ -570,16 +321,12 @@ int main()
 {
 	spk::GraphicalApplication app = spk::GraphicalApplication();
 
-	spk::SafePointer<spk::Window> win = app.createWindow(L"TAAG", {{0, 0}, {800, 800}});
-	win->setUpdateTimer(1);
+	spk::SafePointer<spk::Window> win = app.createWindow(L"TAAG Client", {{0, 0}, {800, 800}});
 
 	MainWidget mainWidget(L"MainWidget", win->widget());
 	mainWidget.setGeometry(win->geometry());
 	mainWidget.activate();
-	
-	EventDispatcher::instance()->emit(Event::OnObjectListEdition);
-	EventDispatcher::instance()->emit(Event::OnPlayerPositionEdition);
-	EventDispatcher::instance()->emit(Event::OnCameraProjectionEdition);
 
+	DEBUG_LINE();
 	return (app.run());
 }
