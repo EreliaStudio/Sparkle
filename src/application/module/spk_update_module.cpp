@@ -6,16 +6,31 @@ namespace spk
 {
 	void UpdateModule::_treatEvent(spk::UpdateEvent &&p_event)
 	{
-		if (_lastTime.nanoseconds == 0)
+		if (_lastSeconds == 0)
 		{
-			_lastTime = p_event.time;
+			_lastSeconds = p_event.time.seconds;
+		}
+		if (_lastMilliseconds == 0)
+		{
+			_lastMilliseconds = p_event.time.milliseconds;
+		}
+		if (_lastNanoseconds == 0)
+		{
+			_lastNanoseconds = p_event.time.nanoseconds;
 		}
 
-		p_event.deltaTime = p_event.time - _lastTime;
+		p_event.deltaTime.seconds = p_event.time.seconds - _lastSeconds;
+		p_event.deltaTime.milliseconds = p_event.time.milliseconds - _lastMilliseconds;
+		p_event.deltaTime.nanoseconds = p_event.time.nanoseconds - _lastNanoseconds;
 
-		_lastTime = p_event.time;
+		_lastSeconds = p_event.time.seconds;
+		_lastMilliseconds = p_event.time.milliseconds;
+		_lastNanoseconds = p_event.time.nanoseconds;
 
-		p_event.window->widget()->onUpdateEvent(p_event);
+		if (_widget != nullptr)
+		{
+			_widget->onUpdateEvent(p_event);
+		}
 	}
 
 	spk::UpdateEvent UpdateModule::_convertEventToEventType(spk::Event &&p_event)
@@ -23,7 +38,8 @@ namespace spk
 		return (p_event.updateEvent);
 	}
 
-	UpdateModule::UpdateModule()
+	UpdateModule::UpdateModule(spk::SafePointer<spk::Widget> p_widget) :
+		_widget(p_widget)
 	{
 	}
 }

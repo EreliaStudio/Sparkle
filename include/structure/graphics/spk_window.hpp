@@ -68,13 +68,13 @@ namespace spk
 		std::deque<std::pair<int, long long>> _pendingTimerCreations;
 		std::deque<int> _pendingTimerDeletions;
 
-		MouseModule mouseModule;
-		KeyboardModule keyboardModule;
-		SystemModule systemModule;
-		UpdateModule updateModule;
-		PaintModule paintModule;
-		ControllerModule controllerModule;
-		TimerModule timerModule;
+		MouseModule _mouseModule;
+		KeyboardModule _keyboardModule;
+		SystemModule _systemModule;
+		UpdateModule _updateModule;
+		PaintModule _paintModule;
+		ControllerModule _controllerModule;
+		TimerModule _timerModule;
 
 		std::map<UINT, spk::IModule *> _subscribedModules;
 		std::function<void(spk::SafePointer<spk::Window>)> _onClosureCallback = nullptr;
@@ -91,8 +91,6 @@ namespace spk
 		UINT_PTR _createTimer(int p_id, const long long &p_durationInMillisecond);
 		void _deleteTimer(UINT_PTR p_id);
 		void _removeAllTimers();
-
-		void _applyCursor();
 
 	public:
 		Window(const std::wstring &p_title, const spk::Geometry2D &p_geometry);

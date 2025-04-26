@@ -52,6 +52,8 @@ namespace spk::OpenGL
 			Attribute(Index p_index, Type p_type);
 
 			static size_t typeSize(Type p_type);
+
+			bool operator<(const Attribute& other) const;
 		};
 
 	private:
@@ -119,6 +121,8 @@ namespace spk::OpenGL
 			append(std::span<const element_type_t<Container>>(std::data(container), std::size(container)));
 			return *this;
 		}
+
+		bool hasAttribute(Attribute::Index index) const;
 
 		void addAttribute(const Attribute &p_attribute);
 		void addAttribute(Attribute::Index p_index, Attribute::Type p_type);

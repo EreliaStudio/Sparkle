@@ -52,14 +52,6 @@ namespace spk
 			p_event.window->move(p_event.newPosition);
 			break;
 		}
-		case spk::SystemEvent::Type::SetCursor:
-		{
-			if (p_event.window->_savedCursor != p_event.window->_currentCursor)
-			{
-				p_event.window->_applyCursor();
-			}
-			break;
-		}
 		}
 	}
 

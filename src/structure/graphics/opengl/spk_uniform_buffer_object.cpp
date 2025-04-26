@@ -5,11 +5,11 @@
 
 namespace spk::OpenGL
 {
-	UniformBufferObject::UniformBufferObject(const std::wstring &p_name, BindingPoint p_bindingPoint, size_t p_size) :
+	UniformBufferObject::UniformBufferObject(const std::wstring &p_blockName, BindingPoint p_bindingPoint, size_t p_size) :
 		VertexBufferObject(VertexBufferObject::Type::Uniform, VertexBufferObject::Usage::Dynamic),
-		_blockName(p_name),
+		_blockName(p_blockName),
 		_bindingPoint(p_bindingPoint),
-		_dataBufferLayout(p_name, &(dataBuffer()))
+		_dataBufferLayout(p_blockName, &(dataBuffer()))
 	{
 		resize(p_size);
 	}

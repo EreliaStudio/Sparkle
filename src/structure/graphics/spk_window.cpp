@@ -11,6 +11,8 @@
 
 #include "structure/spk_iostream.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	void Window::_initialize(const std::function<void(spk::SafePointer<spk::Window>)> &p_onClosureCallback)
@@ -49,6 +51,17 @@ namespace spk
 
 	bool Window::_receiveEvent(UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam)
 	{
+		if (p_uMsg == WM_SETCURSOR)
+		{
+			if (LOWORD(p_lParam) == HTCLIENT)
+			{
+				::SetCursor(_currentCursor);
+				return true;
+			}
+
+			return false;
+		}
+
 		if (_subscribedModules.contains(p_uMsg) == false)
 		{
 			return (false);
@@ -427,13 +440,15 @@ namespace spk
 	}
 
 	Window::Window(const std::wstring &p_title, const spk::Geometry2D &p_geometry) :
-		_rootWidget(std::make_unique<Widget>(p_title + L" - CentralWidget")),
+		_rootWidget(std::make_unique<Widget>(p_title + L" - CentralWidget", nullptr)),
 		_title(p_title),
 		_viewport(p_geometry),
 		_windowRendererThread(p_title + L" - Renderer"),
-		_windowUpdaterThread(p_title + L" - Updater")
+		_windowUpdaterThread(p_title + L" - Updater"),
+		_updateModule(_rootWidget.get())
 	{
 		resize(p_geometry.size);
+
 		_windowRendererThread
 			.addPreparationStep(
 				[&]()
@@ -449,34 +464,76 @@ namespace spk
 					}
 				})
 			.relinquish();
+
 		_windowRendererThread
 			.addExecutionStep(
 				[&]()
 				{
 					try
 					{
-						_handlePendingTimer();
-						pullEvents();
-						timerModule.treatMessages();
-						paintModule.treatMessages();
-						systemModule.treatMessages();
-					} catch (std::exception &e)
+						try
+						{
+							_handlePendingTimer();
+						}
+						catch (const std::exception& e)
+						{
+							PROPAGATE_ERROR("Renderer::_handlePendingTimer failed", e);
+						}
+
+						try
+						{
+							pullEvents();
+						}
+						catch (const std::exception& e)
+						{
+							PROPAGATE_ERROR("Renderer::pullEvents failed", e);
+						}
+
+						try
+						{
+							_timerModule.treatMessages();
+						}
+						catch (const std::exception& e)
+						{
+							PROPAGATE_ERROR("Renderer::_timerModule.treatMessages failed", e);
+						}
+
+						try
+						{
+							_paintModule.treatMessages();
+						}
+						catch (const std::exception& e)
+						{
+							PROPAGATE_ERROR("Renderer::_paintModule.treatMessages failed", e);
+						}
+
+						try
+						{
+							_systemModule.treatMessages();
+						}
+						catch (const std::exception& e)
+						{
+							PROPAGATE_ERROR("Renderer::_systemModule.treatMessages failed", e);
+						}
+					}
+					catch (const std::exception& e)
 					{
-						spk::cout << "Renderer - Error catched : " << e.what() << std::endl;
+						spk::cout << "Renderer - Error caught:\n" << e.what() << std::endl;
 						close();
 					}
 				})
 			.relinquish();
+
 		_windowUpdaterThread
 			.addExecutionStep(
 				[&]()
 				{
 					try
 					{
-						mouseModule.treatMessages();
-						keyboardModule.treatMessages();
-						controllerModule.treatMessages();
-						updateModule.treatMessages();
+						_mouseModule.treatMessages();
+						_keyboardModule.treatMessages();
+						_controllerModule.treatMessages();
+						_updateModule.treatMessages();
 					} catch (std::exception &e)
 					{
 						spk::cout << "Updater - Error catched : " << e.what() << std::endl;
@@ -485,13 +542,13 @@ namespace spk
 				})
 			.relinquish();
 
-		bindModule(&mouseModule);
-		bindModule(&keyboardModule);
-		bindModule(&controllerModule);
-		bindModule(&updateModule);
-		bindModule(&paintModule);
-		bindModule(&systemModule);
-		bindModule(&timerModule);
+		bindModule(&_mouseModule);
+		bindModule(&_keyboardModule);
+		bindModule(&_controllerModule);
+		bindModule(&_updateModule);
+		bindModule(&_paintModule);
+		bindModule(&_systemModule);
+		bindModule(&_timerModule);
 
 		_rootWidget->activate();
 	}
@@ -509,24 +566,68 @@ namespace spk
 	}
 
 	void Window::resize(const spk::Geometry2D::Size &p_newSize)
-	{
+	{	
 		if (p_newSize.x == 0 || p_newSize.y == 0)
-		{
-			return;
-		}
+        {
+            return;
+        }
 
-		_viewport.setWindowSize(p_newSize);
-		_rootWidget->_viewport.setWindowSize(p_newSize);
+        try
+        {
+            _viewport.setWindowSize(p_newSize);
+        }
+        catch (const std::exception& e)
+        {
+            PROPAGATE_ERROR("Window::resize over _viewport.setWindowSize failed", e);
+        }
 
-		_viewport.setGeometry({0, 0, p_newSize});
-		_rootWidget->setGeometry(_viewport.geometry());
+        try
+        {
+            _rootWidget->_viewport.setWindowSize(p_newSize);
+        }
+        catch (const std::exception& e)
+        {
+            PROPAGATE_ERROR("Window::resize over _rootWidget->_viewport.setWindowSize failed", e);
+        }
 
-		for (auto &child : _rootWidget->children())
-		{
-			child->_resize();
-		}
+        try
+        {
+            _viewport.setGeometry({0, 0, p_newSize});
+        }
+        catch (const std::exception& e)
+        {
+            PROPAGATE_ERROR("Window::resize over _viewport.setGeometry failed", e);
+        }
 
-		requestPaint();
+        try
+        {
+            _rootWidget->setGeometry(_viewport.geometry());
+        }
+        catch (const std::exception& e)
+        {
+            PROPAGATE_ERROR("Window::resize over _rootWidget->setGeometry failed", e);
+        }
+
+        for (auto& child : _rootWidget->children())
+        {
+            try
+            {
+                child->_resize();
+            }
+            catch (const std::exception& e)
+            {
+                PROPAGATE_ERROR("Window::resize over child->_resize of [" + spk::StringUtils::wstringToString(child->name()) + "] failed", e);
+            }
+        }
+
+        try
+        {
+            requestPaint();
+        }
+        catch (const std::exception& e)
+        {
+            PROPAGATE_ERROR("Window::resize over requestPaint failed", e);
+        }
 	}
 
 	void Window::close()
@@ -585,14 +686,6 @@ namespace spk
 		}
 
 		_currentCursor = nextCursor;
-		::SetCursor(_currentCursor);
-		::SendMessage(_hwnd, WM_SETCURSOR, reinterpret_cast<WPARAM>(_hwnd), MAKELPARAM(HTCLIENT, WM_MOUSEMOVE));
-	}
-
-	void Window::_applyCursor()
-	{
-		::SetCursor(_currentCursor);
-		_savedCursor = _currentCursor;
 	}
 
 	void Window::pullEvents()
