@@ -166,9 +166,26 @@ namespace spk
 
 	void Widget::_resize()
 	{
+		if (_needGeometryChange == true)
+		{
+			updateGeometry();
+			_computeViewport();
+		}
+
+		for (auto &child : children())
+		{
+			if (child->_needGeometryChange == true)
+			{
+				child->updateGeometry();
+				child->_computeViewport();
+			}
+			child->_resize();
+		}
+
 		_viewport.setWindowSize(parent()->viewport().windowSize());
 		_geometry.anchor = static_cast<Widget *>(parent())->geometry().size * _anchorRatio;
 		_geometry.size = static_cast<Widget *>(parent())->geometry().size * _sizeRatio;
+		
 		requireGeometryUpdate();
 
 		for (auto &child : children())
@@ -319,10 +336,12 @@ namespace spk
 			{
 				updateGeometry();
 				_computeViewport();
-			} catch (const std::exception &e)
+			}
+			catch (const std::exception &e)
 			{
 				throw std::runtime_error("[" + spk::StringUtils::wstringToString(name()) + "] onGeometryChange -  " + e.what());
-			} catch (...)
+			}
+			catch (...)
 			{
 				throw std::runtime_error("[" + spk::StringUtils::wstringToString(name()) + "] onGeometryChange - Unknow error type");
 			}
@@ -331,10 +350,12 @@ namespace spk
 		try
 		{
 			_onPaintEvent(p_event);
-		} catch (const std::exception &e)
+		}
+		catch (const std::exception &e)
 		{
 			throw std::runtime_error("[" + spk::StringUtils::wstringToString(name()) + "] onPaintEvent -  " + e.what());
-		} catch (...)
+		}
+		catch (...)
 		{
 			throw std::runtime_error("[" + spk::StringUtils::wstringToString(name()) + "] onPaintEvent - Unknow error type");
 		}
@@ -349,7 +370,8 @@ namespace spk
 				try
 				{
 					_viewport.apply();
-				} catch (...)
+				}
+				catch (...)
 				{
 					throw std::runtime_error("Error while applying viewport of [" + spk::StringUtils::wstringToString(name()) +
 											 "] with viewport of geometry [" + _viewport.geometry().to_string() + "]");

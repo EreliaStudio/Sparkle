@@ -4,7 +4,7 @@ namespace spk
 {
 	void TextEdit::_computeCursorsValues()
 	{
-		const std::wstring &textToRender = text();
+		const std::wstring &textToRender = renderedText();
 
 		if (_needLowerCursorUpdate == true)
 		{
@@ -45,14 +45,16 @@ namespace spk
 		_backgroundRenderer.prepare(geometry(), layer(), _cornerSize);
 		_backgroundRenderer.validate();
 
+		std::wstring tmpText = renderedText(); 
+
 		_fontRenderer.clear();
 		spk::Vector2Int textAnchor = _fontRenderer.computeTextAnchor(
-			geometry().shrink(_cornerSize), text().substr(_lowerCursor, _higherCursor - _lowerCursor), _horizontalAlignment, _verticalAlignment);
-		_fontRenderer.prepare(text().substr(_lowerCursor, _higherCursor - _lowerCursor), textAnchor, layer() + 0.01f);
+			geometry().shrink(_cornerSize), tmpText.substr(_lowerCursor, _higherCursor - _lowerCursor), _horizontalAlignment, _verticalAlignment);
+		_fontRenderer.prepare(tmpText.substr(_lowerCursor, _higherCursor - _lowerCursor), textAnchor, layer() + 0.01f);
 		_fontRenderer.validate();
 
 		_cursorRenderer.clear();
-		spk::Vector2UInt prevTextSize = _fontRenderer.computeTextSize(text().substr(_lowerCursor, _cursor - _lowerCursor));
+		spk::Vector2UInt prevTextSize = _fontRenderer.computeTextSize(tmpText.substr(_lowerCursor, _cursor - _lowerCursor));
 		_cursorRenderer.prepareSquare(spk::Geometry2D(prevTextSize.x + geometry().anchor.x + _cornerSize.x - 2,
 													  _cornerSize.y + geometry().anchor.y,
 													  2,
@@ -76,7 +78,14 @@ namespace spk
 	{
 		if (p_event.deltaTime != spk::Duration(0ll, spk::TimeUnit::Millisecond))
 		{
+			bool lastRenderCursor = _renderCursor;
+
 			_renderCursor = (p_event.time.milliseconds / 250) % 2 == 0;
+		
+			if (lastRenderCursor != _renderCursor)
+			{
+				requestPaint();
+			}
 		}
 	}
 
@@ -101,6 +110,7 @@ namespace spk
 			{
 				releaseFocus(Widget::FocusType::KeyboardFocus);
 			}
+			requestPaint();
 		}
 	}
 
@@ -211,6 +221,12 @@ namespace spk
 		setFont(Widget::defaultFont());
 	}
 
+	void TextEdit::setObscured(bool p_state)
+	{	
+		_isObscured = p_state;
+		requireGeometryUpdate();
+	}
+
 	void TextEdit::setNineSlice(const spk::SafePointer<const spk::SpriteSheet> &p_spriteSheet)
 	{
 		_backgroundRenderer.setSpriteSheet(p_spriteSheet);
@@ -265,6 +281,11 @@ namespace spk
 	{
 		return (_text.empty() == false);
 	}
+	
+	bool TextEdit::isObscured() const
+	{
+		return (_isObscured);
+	}
 
 	bool TextEdit::isEditEnable() const
 	{
@@ -279,6 +300,19 @@ namespace spk
 	void TextEdit::enableEdit()
 	{
 		_isEditEnable = true;
+	}
+
+	std::wstring TextEdit::renderedText() const
+	{
+		if (hasText() == true)
+		{
+			if (_isObscured == true)
+			{
+				return (std::wstring(_text.size(), '*'));
+			}
+			return (_text);
+		}
+		return (_placeholder);
 	}
 
 	const std::wstring &TextEdit::text() const

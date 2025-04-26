@@ -49,19 +49,41 @@ namespace spk
 
 		void reset();
 
-		template <typename OutputType>
-		const OutputType &get() const
+		template <typename OutputType,
+				typename std::enable_if_t<!spk::IsContainer<OutputType>::value>* = nullptr>
+		OutputType get() const
 		{
 			const OutputType &result = *(reinterpret_cast<const OutputType *>(_data.data() + bookmark()));
 			skip(sizeof(OutputType));
 			return (result);
 		}
 
-		template <typename OutputType>
-		const OutputType &peek() const
+		template <typename OutputType,
+				typename std::enable_if_t<!spk::IsContainer<OutputType>::value>* = nullptr>
+		OutputType peek() const
 		{
 			const OutputType &result = *(reinterpret_cast<const OutputType *>(_data.data() + bookmark()));
 			return (result);
+		}
+
+		template <typename OutputType,
+				typename std::enable_if_t<spk::IsContainer<OutputType>::value>* = nullptr>
+		OutputType get() const
+		{
+			OutputType result;
+			*this >> result;
+			return result;
+		}
+
+		template <typename OutputType,
+				typename std::enable_if_t<spk::IsContainer<OutputType>::value>* = nullptr>
+		OutputType peek() const
+		{
+			const size_t savedBookmark = bookmark();
+			OutputType result;
+			*this >> result;
+			_bookmark = savedBookmark;
+			return result;
 		}
 
 		template <typename InputType>

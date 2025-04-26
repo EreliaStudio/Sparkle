@@ -16,6 +16,7 @@ namespace spk
 		bool _renderCursor = true;
 		bool _needLowerCursorUpdate = true;
 		bool _needHigherCursorUpdate = true;
+		bool _isObscured = false;
 		size_t _cursor = 0;
 		size_t _lowerCursor;
 		size_t _higherCursor;
@@ -47,13 +48,16 @@ namespace spk
 		void setTextColor(const spk::Color &p_glyphColor, const spk::Color &p_outlineColor);
 		void setTextAlignment(const spk::HorizontalAlignment &p_horizontalAlignment, const spk::VerticalAlignment &p_verticalAlignment);
 		void setText(const std::wstring &p_text);
+		void setObscured(bool p_state);
 		void setPlaceholder(const std::wstring &p_placeholder);
 
 		void disableEdit();
 		void enableEdit();
 
+		bool isObscured() const;
 		bool isEditEnable() const;
 		bool hasText() const;
+		std::wstring renderedText() const;
 		const std::wstring &text() const;
 
 		const spk::Vector2Int &cornerSize() const;

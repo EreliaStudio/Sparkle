@@ -533,6 +533,8 @@ namespace spk
 		_viewport.setGeometry({0, 0, p_newSize});
 		_rootWidget->setGeometry(_viewport.geometry());
 
+		_rootWidget->requireGeometryUpdate();
+
 		for (auto &child : _rootWidget->children())
 		{
 			child->_resize();
