@@ -5,6 +5,8 @@
 
 #include "utils/spk_file_utils.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	Image::Image()
@@ -28,7 +30,7 @@ namespace spk
 			stbi_load_from_memory(reinterpret_cast<const stbi_uc *>(p_data.data()), static_cast<int>(p_data.size()), &width, &height, &channels, 0);
 		if (!imageData)
 		{
-			throw std::runtime_error("Failed to load image from raw data.");
+			GENERATE_ERROR("Failed to load image from raw data.");
 		}
 
 		spk::Vector2UInt size{static_cast<unsigned int>(width), static_cast<unsigned int>(height)};

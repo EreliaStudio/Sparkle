@@ -8,6 +8,8 @@
 #include <utility>
 #include <vector>
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	template <typename... TParameterTypes>
@@ -74,7 +76,7 @@ namespace spk
 			{
 				if (!isValid())
 				{
-					throw std::runtime_error("Can't resign an already resigned contract.");
+					GENERATE_ERROR("Can't resign an already resigned contract.");
 				}
 				*_job = nullptr;
 				if (_originator)
@@ -89,7 +91,7 @@ namespace spk
 			{
 				if (!isValid())
 				{
-					throw std::runtime_error("Can't relinquish an already resigned contract.");
+					GENERATE_ERROR("Can't relinquish an already resigned contract.");
 				}
 				_originator->relinquish(std::move(*this));
 				_job = nullptr;

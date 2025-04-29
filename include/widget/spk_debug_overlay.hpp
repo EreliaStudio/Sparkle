@@ -2,6 +2,8 @@
 
 #include "widget/spk_text_label.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	template <size_t TColumn, size_t TRow>

@@ -4,6 +4,8 @@
 
 #include "spk_debug_macro.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	void NineSliceRenderer::clear()
@@ -56,7 +58,7 @@ namespace spk
 	{
 		if (p_spriteSheet != nullptr && (p_spriteSheet->nbSprite().x != GRID_SIZE || p_spriteSheet->nbSprite().y != GRID_SIZE))
 		{
-			throw std::runtime_error("Invalid sprite sheet size. NineSlicedTextureRenderer expects a 3x3 sprite sheet.");
+			GENERATE_ERROR("Invalid sprite sheet size. NineSlicedTextureRenderer expects a 3x3 sprite sheet.");
 		}
 
 		_textureRenderer.setTexture(p_spriteSheet.downCast<spk::Texture>());

@@ -1,5 +1,7 @@
 #include "structure/container/spk_data_buffer_layout.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	DataBufferLayout::Element::Element() :
@@ -86,12 +88,12 @@ namespace spk
 	{
 		if (isArray())
 		{
-			throw std::runtime_error(spk::StringUtils::wstringToString(_name) + " - Can't check for presence of element by name in array");
+			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Can't check for presence of element by name in array");
 		}
 
 		if (isUnit())
 		{
-			throw std::runtime_error(spk::StringUtils::wstringToString(_name) + " - Can't check for presence of element by name in unit");
+			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Can't check for presence of element by name in unit");
 		}
 
 		auto &structure = std::get<Structure>(_content);
@@ -102,7 +104,7 @@ namespace spk
 	{
 		if (!isArray())
 		{
-			throw std::runtime_error(spk::StringUtils::wstringToString(_name) + " - Can't check for element array size on non-array element");
+			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Can't check for element array size on non-array element");
 		}
 
 		return std::get<Array>(_content).size();
@@ -112,19 +114,19 @@ namespace spk
 	{
 		if (!isArray())
 		{
-			throw std::runtime_error(spk::StringUtils::wstringToString(_name) + " - Can't resize a non-array element");
+			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Can't resize a non-array element");
 		}
 
 		if (_buffer == nullptr)
 		{
-			throw std::runtime_error(spk::StringUtils::wstringToString(_name) + " - No DataBuffer associated with this element.");
+			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - No DataBuffer associated with this element.");
 		}
 
 		size_t newSize = p_nbElement * (p_elementSize + p_elementPadding);
 
 		if (_offset + newSize > _buffer->size())
 		{
-			throw std::runtime_error(spk::StringUtils::wstringToString(_name) + " - Resizing would exceed the buffer's capacity. Requested " +
+			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Resizing would exceed the buffer's capacity. Requested " +
 									 std::to_string(_offset + newSize) + " but buffer size is " + std::to_string(_buffer->size()) + ".");
 		}
 
@@ -145,7 +147,7 @@ namespace spk
 	{
 		if (isArray())
 		{
-			throw std::runtime_error(spk::StringUtils::wstringToString(_name) + " - Can't assign a field to an array");
+			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Can't assign a field to an array");
 		}
 
 		if (isUnit())
@@ -155,13 +157,13 @@ namespace spk
 
 		if (contains(p_name))
 		{
-			throw std::runtime_error(spk::StringUtils::wstringToString(_name) + " - Element [" + spk::StringUtils::wstringToString(p_name) +
+			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Element [" + spk::StringUtils::wstringToString(p_name) +
 									 "] already contained in structure");
 		}
 
 		if ((p_offset + p_size) > (_offset + _size))
 		{
-			throw std::runtime_error(spk::StringUtils::wstringToString(_name) + " - Can't assign a field named [" +
+			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Can't assign a field named [" +
 									 spk::StringUtils::wstringToString(p_name) + "] larger than the current element - Requested [" +
 									 std::to_string(p_size) + "] bytes at offset [" + std::to_string(p_offset) + "] over [" + std::to_string(_size) +
 									 "] allocated bytes at offset [" + std::to_string(_offset) + "]");
@@ -169,7 +171,7 @@ namespace spk
 
 		if ((p_offset + p_size) > _buffer->size())
 		{
-			throw std::runtime_error(spk::StringUtils::wstringToString(_name) + " - Can't create a new element overflowing the buffer");
+			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Can't create a new element overflowing the buffer");
 		}
 
 		auto &structure = std::get<Structure>(_content);
@@ -182,7 +184,7 @@ namespace spk
 	{
 		if (isArray())
 		{
-			throw std::runtime_error(spk::StringUtils::wstringToString(_name) + " - Can't assign a field to an array");
+			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Can't assign a field to an array");
 		}
 
 		Element &newElement = addElement(p_name, p_offset, p_nbElement * (p_elementSize + p_elementPadding));
@@ -204,12 +206,12 @@ namespace spk
 	{
 		if (isArray())
 		{
-			throw std::runtime_error(spk::StringUtils::wstringToString(_name) + " - Can't remove a field from an array");
+			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Can't remove a field from an array");
 		}
 
 		if (!contains(p_name))
 		{
-			throw std::runtime_error(spk::StringUtils::wstringToString(_name) + " - Element [" + spk::StringUtils::wstringToString(p_name) +
+			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Element [" + spk::StringUtils::wstringToString(p_name) +
 									 "] not contained in structure");
 		}
 
@@ -221,13 +223,13 @@ namespace spk
 	{
 		if (!isArray())
 		{
-			throw std::runtime_error(spk::StringUtils::wstringToString(_name) + " - This element is not an array.");
+			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - This element is not an array.");
 		}
 
 		auto &vec = std::get<Array>(_content);
 		if (p_index >= vec.size())
 		{
-			throw std::runtime_error(spk::StringUtils::wstringToString(_name) + " - Array index out of range.");
+			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Array index out of range.");
 		}
 
 		return vec[p_index];
@@ -237,13 +239,13 @@ namespace spk
 	{
 		if (!isArray())
 		{
-			throw std::runtime_error(spk::StringUtils::wstringToString(_name) + " - This element is not an array.");
+			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - This element is not an array.");
 		}
 
 		const auto &vec = std::get<Array>(_content);
 		if (p_index >= vec.size())
 		{
-			throw std::runtime_error(spk::StringUtils::wstringToString(_name) + " - Array index out of range.");
+			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Array index out of range.");
 		}
 
 		return vec[p_index];
@@ -253,14 +255,14 @@ namespace spk
 	{
 		if (!isStructure())
 		{
-			throw std::runtime_error(spk::StringUtils::wstringToString(_name) + " - This element is not a map/struct.");
+			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - This element is not a map/struct.");
 		}
 
 		auto &map = std::get<Structure>(_content);
 		auto it = map.find(p_key);
 		if (it == map.end())
 		{
-			throw std::runtime_error(spk::StringUtils::wstringToString(_name) +
+			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) +
 									 " - Key not found in map: " + spk::StringUtils::wstringToString(p_key));
 		}
 
@@ -271,14 +273,14 @@ namespace spk
 	{
 		if (!isStructure())
 		{
-			throw std::runtime_error(spk::StringUtils::wstringToString(_name) + " - This element is not a structure.");
+			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - This element is not a structure.");
 		}
 
 		const auto &map = std::get<Structure>(_content);
 		auto it = map.find(p_key);
 		if (it == map.end())
 		{
-			throw std::runtime_error(spk::StringUtils::wstringToString(_name) +
+			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) +
 									 " - Key not found in structure: " + spk::StringUtils::wstringToString(p_key));
 		}
 

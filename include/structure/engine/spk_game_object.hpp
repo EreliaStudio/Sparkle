@@ -12,6 +12,8 @@
 #include <span>
 #include <string>
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	class GameObject : public spk::InherenceObject<GameObject>, public spk::ActivableObject
@@ -146,7 +148,7 @@ namespace spk
 				}
 			}
 
-			throw std::runtime_error("Component of specified type and name not found.");
+			GENERATE_ERROR("Component of specified type and name not found.");
 		}
 
 		template <typename TComponentType>
@@ -183,7 +185,7 @@ namespace spk
 				}
 			}
 
-			throw std::runtime_error("Component of specified type and name not found.");
+			GENERATE_ERROR("Component of specified type and name not found.");
 		}
 
 		template <typename TComponentType>

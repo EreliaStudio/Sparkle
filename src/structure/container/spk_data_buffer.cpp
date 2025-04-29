@@ -1,5 +1,7 @@
 #include "structure/container/spk_data_buffer.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	DataBuffer::DataBuffer() :
@@ -87,7 +89,7 @@ namespace spk
 	{
 		if (leftover() < p_bytesToSkip)
 		{
-			throw std::runtime_error(std::string("Unable to skip ") + std::to_string(p_bytesToSkip) + " bytes.");
+			GENERATE_ERROR(std::string("Unable to skip ") + std::to_string(p_bytesToSkip) + " bytes.");
 		}
 		_bookmark += p_bytesToSkip;
 	}

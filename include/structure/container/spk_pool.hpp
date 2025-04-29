@@ -11,6 +11,8 @@
 #include <utility>
 #include <vector>
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	template <typename TType>
@@ -53,7 +55,7 @@ namespace spk
 
 			if (_data->closed == true)
 			{
-				throw std::runtime_error("Can't edit the maximulm allocated size of a closed pool");
+				GENERATE_ERROR("Can't edit the maximulm allocated size of a closed pool");
 			}
 
 			_data->maximumSize = p_size;
@@ -77,7 +79,7 @@ namespace spk
 
 			if (_data->closed == true)
 			{
-				throw std::runtime_error("Can't allocate a new object in closed pool");
+				GENERATE_ERROR("Can't allocate a new object in closed pool");
 			}
 
 			_data->availableElements.emplace_back(std::make_unique<TType>(std::forward<TArgs>(args)...));
@@ -90,7 +92,7 @@ namespace spk
 
 			if (_data->closed == true)
 			{
-				throw std::runtime_error("Can't resize a closed pool");
+				GENERATE_ERROR("Can't resize a closed pool");
 			}
 
 			while (_data->availableElements.size() > p_newSize)
@@ -110,7 +112,7 @@ namespace spk
 
 			if (_data->closed == true)
 			{
-				throw std::runtime_error("Can't release a closed pool");
+				GENERATE_ERROR("Can't release a closed pool");
 			}
 
 			_data->availableElements.clear();
@@ -124,7 +126,7 @@ namespace spk
 
 				if (_data->closed == true)
 				{
-					throw std::runtime_error("Can't obtain object from a closed pool");
+					GENERATE_ERROR("Can't obtain object from a closed pool");
 				}
 			}
 

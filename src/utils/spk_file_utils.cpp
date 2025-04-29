@@ -2,6 +2,8 @@
 
 #include <fstream>
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	namespace FileUtils
@@ -50,7 +52,7 @@ namespace spk
 
 			if (inputFile.is_open() == false)
 			{
-				throw std::runtime_error("Can't open file [" + p_path.string() + "]");
+				GENERATE_ERROR("Can't open file [" + p_path.string() + "]");
 			}
 
 			std::string line;
@@ -71,7 +73,7 @@ namespace spk
 
 			if (!inputFile.is_open())
 			{
-				throw std::runtime_error("Can't open file [" + p_path.string() + "]");
+				GENERATE_ERROR("Can't open file [" + p_path.string() + "]");
 			}
 
 			std::streamsize fileSize = inputFile.tellg();
@@ -81,7 +83,7 @@ namespace spk
 
 			if (!inputFile.read(reinterpret_cast<char *>(buffer.data()), fileSize))
 			{
-				throw std::runtime_error("Error reading file [" + p_path.string() + "]");
+				GENERATE_ERROR("Error reading file [" + p_path.string() + "]");
 			}
 
 			return buffer;

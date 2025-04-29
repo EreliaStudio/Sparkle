@@ -15,6 +15,8 @@
 #include <variant>
 #include <vector>
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk::OpenGL
 {
 	class ShaderStorageBufferObject : public VertexBufferObject
@@ -334,7 +336,7 @@ namespace spk::OpenGL
 			glGetIntegerv(GL_CURRENT_PROGRAM, &prog);
 			if (prog == 0)
 			{
-				throw std::runtime_error("No shader program is currently bound.");
+				GENERATE_ERROR("No shader program is currently bound.");
 			}
 
 			if (_blockIndex == -1)
@@ -343,7 +345,7 @@ namespace spk::OpenGL
 				_blockIndex = glGetProgramResourceIndex(prog, GL_SHADER_STORAGE_BLOCK, str.c_str());
 				if (_blockIndex == GL_INVALID_INDEX)
 				{
-					throw std::runtime_error("Shader storage block '" + str + "' not found in the shader program.");
+					GENERATE_ERROR("Shader storage block '" + str + "' not found in the shader program.");
 				}
 			}
 

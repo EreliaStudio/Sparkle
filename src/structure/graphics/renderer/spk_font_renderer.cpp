@@ -2,6 +2,8 @@
 
 #include "structure/graphics/spk_viewport.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	void FontRenderer::_initProgram()
@@ -153,7 +155,7 @@ namespace spk
 	{
 		if (_font == nullptr)
 		{
-			throw std::runtime_error("Font not defined in font renderer");
+			GENERATE_ERROR("Font not defined in font renderer");
 		}
 		return (_font->computeStringBaselineOffset(p_text, _fontSize));
 	}
@@ -162,7 +164,7 @@ namespace spk
 	{
 		if (_font == nullptr)
 		{
-			throw std::runtime_error("Font not defined in font renderer");
+			GENERATE_ERROR("Font not defined in font renderer");
 		}
 		return (_font->computeStringSize(p_text, _fontSize));
 	}
@@ -172,7 +174,7 @@ namespace spk
 	{
 		if (_font == nullptr)
 		{
-			throw std::runtime_error("Font not defined in font renderer");
+			GENERATE_ERROR("Font not defined in font renderer");
 		}
 		return (_font->computeStringAnchor(p_geometry, p_string, _fontSize, p_horizontalAlignment, p_verticalAlignment));
 	}
@@ -181,7 +183,7 @@ namespace spk
 	{
 		if (_font == nullptr)
 		{
-			throw std::runtime_error("Font not defined in font renderer");
+			GENERATE_ERROR("Font not defined in font renderer");
 		}
 
 		if (_atlas == nullptr)

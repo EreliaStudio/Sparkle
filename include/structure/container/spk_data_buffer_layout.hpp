@@ -11,6 +11,8 @@
 #include "structure/spk_iostream.hpp"
 #include "utils/spk_string_utils.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	class DataBufferLayout
@@ -65,17 +67,17 @@ namespace spk
 
 				if (isArray())
 				{
-					throw std::runtime_error(spk::StringUtils::wstringToString(_name) + " - operator= called on an array element.");
+					GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - operator= called on an array element.");
 				}
 
 				if (_buffer == nullptr)
 				{
-					throw std::runtime_error(spk::StringUtils::wstringToString(_name) + " - No DataBuffer associated with this element.");
+					GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - No DataBuffer associated with this element.");
 				}
 
 				if (sizeof(TType) != _size)
 				{
-					throw std::runtime_error(spk::StringUtils::wstringToString(_name) + " - Invalid TType : expected [" + std::to_string(_size) +
+					GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Invalid TType : expected [" + std::to_string(_size) +
 											 "] bytes, but received [" + std::to_string(sizeof(TType)) + "].");
 				}
 
@@ -96,17 +98,17 @@ namespace spk
 
 				if (isArray())
 				{
-					throw std::runtime_error(spk::StringUtils::wstringToString(_name) + " - operator TType() called on an array element.");
+					GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - operator TType() called on an array element.");
 				}
 
 				if (_buffer == nullptr)
 				{
-					throw std::runtime_error(spk::StringUtils::wstringToString(_name) + " - No DataBuffer associated with this element.");
+					GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - No DataBuffer associated with this element.");
 				}
 
 				if (sizeof(TType) != _size)
 				{
-					throw std::runtime_error(spk::StringUtils::wstringToString(_name) + " - Invalid TType : expected [" + std::to_string(_size) +
+					GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Invalid TType : expected [" + std::to_string(_size) +
 											 "] bytes, but received [" + std::to_string(sizeof(TType)) + "].");
 				}
 
@@ -120,17 +122,17 @@ namespace spk
 
 				if (isArray())
 				{
-					throw std::runtime_error(spk::StringUtils::wstringToString(_name) + " - operator TType() called on an array element.");
+					GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - operator TType() called on an array element.");
 				}
 
 				if (_buffer == nullptr)
 				{
-					throw std::runtime_error(spk::StringUtils::wstringToString(_name) + " - No DataBuffer associated with this element.");
+					GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - No DataBuffer associated with this element.");
 				}
 
 				if (sizeof(TType) != _size)
 				{
-					throw std::runtime_error(spk::StringUtils::wstringToString(_name) + " - Invalid TType : expected [" + std::to_string(_size) +
+					GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Invalid TType : expected [" + std::to_string(_size) +
 											 "] bytes, but received [" + std::to_string(sizeof(TType)) + "].");
 				}
 
@@ -145,12 +147,12 @@ namespace spk
 
 				if (!isArray())
 				{
-					throw std::runtime_error(spk::StringUtils::wstringToString(_name) + " - getArray<TType>() called on a non-array element.");
+					GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - getArray<TType>() called on a non-array element.");
 				}
 
 				if (_buffer == nullptr)
 				{
-					throw std::runtime_error(spk::StringUtils::wstringToString(_name) + " - No DataBuffer associated with this element.");
+					GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - No DataBuffer associated with this element.");
 				}
 
 				const auto &arr = std::get<Array>(_content);
@@ -161,7 +163,7 @@ namespace spk
 				{
 					if (child.size() != sizeof(TType))
 					{
-						throw std::runtime_error(spk::StringUtils::wstringToString(_name) + " - Child element size [" + std::to_string(child.size()) +
+						GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Child element size [" + std::to_string(child.size()) +
 												 "] does not match TType size [" + std::to_string(sizeof(TType)) + "]");
 					}
 					result.push_back(child.get<TType>());

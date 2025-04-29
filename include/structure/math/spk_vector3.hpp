@@ -11,6 +11,8 @@
 #include "structure/math/spk_math.hpp"
 #include "structure/math/spk_vector2.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	template <typename TType>
@@ -238,7 +240,7 @@ namespace spk
 		{
 			if (p_other.x == 0 || p_other.y == 0 || p_other.z == 0)
 			{
-				throw std::runtime_error("Division by zero");
+				GENERATE_ERROR("Division by zero");
 			}
 			return IVector3<TType>(x / p_other.x, y / p_other.y, z / p_other.z);
 		}
@@ -267,7 +269,7 @@ namespace spk
 		{
 			if (p_scalar == 0)
 			{
-				throw std::runtime_error("Division by zero");
+				GENERATE_ERROR("Division by zero");
 			}
 			return IVector3<TType>(x / p_scalar, y / p_scalar, z / p_scalar);
 		}
@@ -305,7 +307,7 @@ namespace spk
 		{
 			if (p_other.x == 0 || p_other.y == 0 || p_other.z == 0)
 			{
-				throw std::runtime_error("Division by zero");
+				GENERATE_ERROR("Division by zero");
 			}
 			x /= p_other.x;
 			y /= p_other.y;
@@ -346,7 +348,7 @@ namespace spk
 		{
 			if (p_scalar == 0)
 			{
-				throw std::runtime_error("Division by zero");
+				GENERATE_ERROR("Division by zero");
 			}
 
 			x /= static_cast<TType>(p_scalar);
@@ -370,7 +372,7 @@ namespace spk
 			float len = norm();
 			if (len == 0)
 			{
-				throw std::runtime_error("Can't calculated a norm for a vector of len 0");
+				GENERATE_ERROR("Can't calculated a norm for a vector of len 0");
 			}
 			return IVector3<float>(x / len, y / len, z / len);
 		}
@@ -565,7 +567,7 @@ spk::IVector3<TType> operator/(UType p_scalar, const spk::IVector3<TType> &p_vec
 {
 	if (p_vec.x == 0 || p_vec.y == 0 || p_vec.z == 0)
 	{
-		throw std::runtime_error("Division by zero");
+		GENERATE_ERROR("Division by zero");
 	}
 	return spk::IVector3<TType>(p_scalar / p_vec.x, p_scalar / p_vec.y, p_scalar / p_vec.z);
 }
