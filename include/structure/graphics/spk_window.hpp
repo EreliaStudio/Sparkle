@@ -50,7 +50,6 @@ namespace spk
 		std::unique_ptr<Widget> _rootWidget;
 
 		std::wstring _title;
-		spk::Viewport _viewport;
 		spk::PersistantWorker _windowRendererThread;
 		spk::PersistantWorker _windowUpdaterThread;
 		ControllerInputThread _controllerInputThread;

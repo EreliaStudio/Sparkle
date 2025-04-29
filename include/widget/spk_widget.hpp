@@ -72,8 +72,9 @@ namespace spk
 
 		void _computeViewport();
 
-		void _computeRatio();
-		void _resize();
+		void _applyGeometryChange();
+
+		void _applyResize(const spk::Vector2& p_ratio);
 
 	public:
 		Widget(const std::wstring &p_name);
@@ -118,7 +119,7 @@ namespace spk
 		virtual void setGeometry(const Geometry2D &p_geometry);
 		virtual void forceGeometryChange(const spk::Vector2Int &p_anchor, const spk::Vector2UInt &p_size);
 		virtual void setGeometry(const spk::Vector2Int &p_anchor, const spk::Vector2UInt &p_size);
-		void updateGeometry();
+		void applyGeometryChange();
 		void requireGeometryUpdate();
 
 		virtual spk::Vector2UInt minimalSize() const;
