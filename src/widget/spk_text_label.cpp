@@ -23,6 +23,10 @@ namespace spk
 	TextLabel::TextLabel(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
 		spk::Widget(p_name, p_parent)
 	{
+		_onFontResizeContract = _fontRenderer.subscribeToFontEdition([&]() {
+				requireGeometryUpdate();
+			});
+			
 		setTextColor(spk::Color::white, spk::Color::black);
 		setTextAlignment(spk::HorizontalAlignment::Left, spk::VerticalAlignment::Centered);
 		setNineSlice(Widget::defaultNineSlice());

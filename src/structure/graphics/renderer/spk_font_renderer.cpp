@@ -97,6 +97,11 @@ namespace spk
 		_updateUbo();
 	}
 
+	FontRenderer::Contract FontRenderer::subscribeToFontEdition(const FontRenderer::Job& p_job)
+	{
+		return (_onFontEditionContractProvider.subscribe(p_job));
+	}
+
 	void FontRenderer::setFont(const spk::SafePointer<Font> &p_font)
 	{
 		_font = p_font;
@@ -179,19 +184,8 @@ namespace spk
 		return (_font->computeStringAnchor(p_geometry, p_string, _fontSize, p_horizontalAlignment, p_verticalAlignment));
 	}
 
-	void FontRenderer::prepare(const std::wstring &p_text, const spk::Vector2Int &p_anchor, float p_layer)
+	void FontRenderer::_prepareText(const std::wstring &p_text, const spk::Vector2Int &p_anchor, float p_layer)
 	{
-		if (_font == nullptr)
-		{
-			GENERATE_ERROR("Font not defined in font renderer");
-		}
-
-		if (_atlas == nullptr)
-		{
-			_atlas = &_font->atlas(_fontSize);
-			_samplerObject.bind(_atlas);
-		}
-
 		spk::Vector2Int glyphAnchor = p_anchor;
 		unsigned int baseIndexes = 0;
 
@@ -221,8 +215,26 @@ namespace spk
 
 			baseIndexes += 4;
 		}
+	}
 
-		validate();
+	void FontRenderer::prepare(const std::wstring &p_text, const spk::Vector2Int &p_anchor, float p_layer)
+	{
+		if (_font == nullptr)
+		{
+			GENERATE_ERROR("Font not defined in font renderer");
+		}
+
+		if (_atlas == nullptr)
+		{
+			_atlas = &_font->atlas(_fontSize);
+			_samplerObject.bind(_atlas);
+
+			_onAtlasEditionContract = _atlas->subscribe([&]() {
+				_onFontEditionContractProvider.trigger();
+			});
+		}
+		
+		_prepareText(p_text, p_anchor, p_layer);
 	}
 
 	void FontRenderer::validate()

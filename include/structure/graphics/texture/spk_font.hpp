@@ -5,6 +5,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "structure/design_pattern/spk_contract_provider.hpp"
+
 #include "external_libraries/stb_truetype.h"
 #include "structure/graphics/texture/spk_texture.hpp"
 
@@ -84,8 +86,12 @@ namespace spk
 		class Atlas : public Texture
 		{
 			friend class Font;
+		public:
+			using Contract = spk::ContractProvider::Contract;
+			using Job = spk::ContractProvider::Job;
 
 		private:
+			spk::ContractProvider _onEditionContractProvider;
 			const stbtt_fontinfo &_fontInfo;
 			std::unordered_map<wchar_t, Glyph> _glyphs;
 			Glyph _unknownGlyph;
@@ -127,6 +133,8 @@ namespace spk
 
 		public:
 			void loadGlyphs(const std::wstring &p_glyphsToLoad);
+
+			Contract subscribe(const Job& p_job);
 
 			void loadAllRenderableGlyphs();
 

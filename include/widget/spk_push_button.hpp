@@ -87,6 +87,7 @@ namespace spk
 		ContractProvider _onClickProvider;
 
 		Data<FontRenderer> _fontRenderer;
+		Data<FontRenderer::Contract> _fontRendererContract;
 		Data<TextureRenderer> _iconRenderer;
 		Data<NineSliceRenderer> _nineSliceRenderer;
 

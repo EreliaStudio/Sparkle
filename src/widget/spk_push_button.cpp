@@ -50,6 +50,16 @@ namespace spk
 		_fontRenderer.pressed.setGlyphColor(spk::Color::white);
 		_fontRenderer.pressed.setOutlineColor(spk::Color::black);
 
+		_fontRendererContract.hovered = _fontRenderer.hovered.subscribeToFontEdition([&]() {
+				requireGeometryUpdate();
+			});
+		_fontRendererContract.released = _fontRenderer.released.subscribeToFontEdition([&]() {
+				requireGeometryUpdate();
+			});
+		_fontRendererContract.pressed = _fontRenderer.pressed.subscribeToFontEdition([&]() {
+				requireGeometryUpdate();
+			});
+
 		_nineSliceRenderer.released.setSpriteSheet(Widget::defaultNineSlice());
 		_nineSliceRenderer.hovered.setSpriteSheet(PushButton::defaultHoverNineSlice());
 		_nineSliceRenderer.pressed.setSpriteSheet(Widget::defaultNineSlice());
