@@ -152,11 +152,22 @@ namespace spk
 		releaseFocus(FocusType::ControllerFocus);
 	}
 
+	void Widget::_computeRatio()
+	{
+		spk::Vector2Int parentSize = (parent() == nullptr ? _viewport.windowSize() : parent()->_geometry.size);
+
+		_anchorRatio = {static_cast<float>(_geometry.anchor.x) / static_cast<float>(parentSize.x),
+						static_cast<float>(_geometry.anchor.y) / static_cast<float>(parentSize.y)};
+		_sizeRatio = {static_cast<float>(_geometry.size.x) / static_cast<float>(parentSize.x),
+					  static_cast<float>(_geometry.size.y) / static_cast<float>(parentSize.y)};
+	}
+
 	void Widget::setGeometry(const Geometry2D &p_geometry)
 	{
 		_geometry = p_geometry;
 		_viewport.setGeometry(p_geometry);
 		_viewport.setWindowSize((parent() == nullptr ? p_geometry.size : parent()->viewport().windowSize()));
+		_computeRatio();
 
 		requireGeometryUpdate();
 	}
@@ -198,13 +209,15 @@ namespace spk
 		requestPaint();
 	}
 
-	void Widget::_applyResize(const spk::Vector2& p_ratio)
+	void Widget::_applyResize()
 	{
-		setGeometry({geometry().anchor * p_ratio, geometry().size * p_ratio});
+		spk::Vector2Int parentSize = (parent() == nullptr ? _viewport.windowSize() : parent()->_geometry.size);
+
+		forceGeometryChange({parentSize * _anchorRatio, parentSize * _sizeRatio});
 
 		for (auto& child : children())
 		{
-			static_cast<Widget*>(child)->_applyResize(p_ratio);
+			child->_applyResize();
 		}
 	}
 

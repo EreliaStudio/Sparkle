@@ -461,7 +461,7 @@ namespace spk
 		bindModule(&_systemModule);
 		bindModule(&_timerModule);
 
-		_rootWidget->setGeometry(p_geometry);
+		_rootWidget->setGeometry({0, p_newSize});
 		_rootWidget->activate();
 	}
 
@@ -483,13 +483,12 @@ namespace spk
         {
             return;
         }
-		
-		spk::Vector2 ratio = {
-			static_cast<float>(p_newSize.x) / static_cast<float>(_rootWidget->viewport().geometry().size.x),
-			static_cast<float>(p_newSize.y) / static_cast<float>(_rootWidget->viewport().geometry().size.y)
-		};
 
-		_rootWidget->_applyResize(ratio);
+		_rootWidget->setGeometry({0, p_newSize});
+		for (auto& child : _rootWidget->children())
+		{
+			child->_applyResize();
+		}
 	}
 
 	void Window::close()

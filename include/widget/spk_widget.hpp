@@ -74,7 +74,8 @@ namespace spk
 
 		void _applyGeometryChange();
 
-		void _applyResize(const spk::Vector2& p_ratio);
+		void _computeRatio();
+		void _applyResize();
 
 	public:
 		Widget(const std::wstring &p_name);

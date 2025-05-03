@@ -39,35 +39,30 @@ namespace spk
 			size_t text;
 			size_t outline;
 
-			Size() :
+			constexpr Size() :
 				text(0),
 				outline(0)
 			{
+
 			}
 
-			Size(size_t p_text) :
+			constexpr Size(size_t p_text) :
 				text(p_text),
 				outline(0)
 			{
-			}
 
-			Size(size_t p_text, size_t p_outline) :
+			}
+			
+			constexpr Size(size_t p_text, size_t p_outline) :
 				text(p_text),
 				outline(p_outline)
 			{
+
 			}
 
-			bool operator<(const Size &p_other) const
+			constexpr bool operator<(const Size &p_other) const
 			{
-				if (text < p_other.text)
-				{
-					return true;
-				}
-				if (text > p_other.text)
-				{
-					return false;
-				}
-				return outline < p_other.outline;
+				return (text < p_other.text) || (text == p_other.text && outline < p_other.outline);
 			}
 
 			friend std::wostream &operator<<(std::wostream &p_os, const Size &size)

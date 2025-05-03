@@ -270,6 +270,7 @@ private:
 
 	void _onGeometryChange() override
 	{
+		spk::cout << std::endl << std::endl << std::endl;
 		_gameHUD.setGeometry(geometry());
 		_menuHUD.setGeometry(geometry());
 	}
