@@ -5,6 +5,8 @@
 
 #include <stdexcept>
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	Duration::Duration()
@@ -34,7 +36,7 @@ namespace spk
 			nanoseconds = p_value;
 			break;
 		default:
-			throw std::runtime_error("Unexpected duration unit value");
+			GENERATE_ERROR("Unexpected duration unit value");
 		}
 	}
 
@@ -58,7 +60,7 @@ namespace spk
 			nanoseconds = static_cast<long long>(p_value);
 			break;
 		default:
-			throw std::runtime_error("Unexpected duration unit value");
+			GENERATE_ERROR("Unexpected duration unit value");
 		}
 	}
 

@@ -23,18 +23,12 @@ namespace spk
 		}
 		case spk::SystemEvent::Type::Resize:
 		{
-			p_event.window->resize(p_event.newSize);
-
-			if (_isResizing == false)
-			{
-				p_event.window->requestResize();
-			}
+			p_event.window->requestResize(p_event.newSize);
 			break;
 		}
 		case spk::SystemEvent::Type::ExitResize:
 		{
 			_isResizing = false;
-			p_event.window->requestResize();
 			break;
 		}
 		case spk::SystemEvent::Type::TakeFocus:

@@ -5,6 +5,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "structure/design_pattern/spk_contract_provider.hpp"
+
 #include "external_libraries/stb_truetype.h"
 #include "structure/graphics/texture/spk_texture.hpp"
 
@@ -37,35 +39,30 @@ namespace spk
 			size_t text;
 			size_t outline;
 
-			Size() :
+			constexpr Size() :
 				text(0),
 				outline(0)
 			{
+
 			}
 
-			Size(size_t p_text) :
+			constexpr Size(size_t p_text) :
 				text(p_text),
 				outline(0)
 			{
-			}
 
-			Size(size_t p_text, size_t p_outline) :
+			}
+			
+			constexpr Size(size_t p_text, size_t p_outline) :
 				text(p_text),
 				outline(p_outline)
 			{
+
 			}
 
-			bool operator<(const Size &p_other) const
+			constexpr bool operator<(const Size &p_other) const
 			{
-				if (text < p_other.text)
-				{
-					return true;
-				}
-				if (text > p_other.text)
-				{
-					return false;
-				}
-				return outline < p_other.outline;
+				return (text < p_other.text) || (text == p_other.text && outline < p_other.outline);
 			}
 
 			friend std::wostream &operator<<(std::wostream &p_os, const Size &size)
@@ -84,8 +81,12 @@ namespace spk
 		class Atlas : public Texture
 		{
 			friend class Font;
+		public:
+			using Contract = spk::ContractProvider::Contract;
+			using Job = spk::ContractProvider::Job;
 
 		private:
+			spk::ContractProvider _onEditionContractProvider;
 			const stbtt_fontinfo &_fontInfo;
 			std::unordered_map<wchar_t, Glyph> _glyphs;
 			Glyph _unknownGlyph;
@@ -127,6 +128,8 @@ namespace spk
 
 		public:
 			void loadGlyphs(const std::wstring &p_glyphsToLoad);
+
+			Contract subscribe(const Job& p_job);
 
 			void loadAllRenderableGlyphs();
 

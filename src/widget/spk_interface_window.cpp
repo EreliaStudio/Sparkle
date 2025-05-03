@@ -3,6 +3,8 @@
 
 #include "structure/graphics/spk_window.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	spk::SpriteSheet IInterfaceWindow::_defaultNineSlice_Light = spk::SpriteSheet::fromRawData(
@@ -354,6 +356,6 @@ namespace spk
 		case IInterfaceWindow::Close:
 			return _menuBar._closeButton.subscribe(p_job);
 		}
-		throw std::runtime_error("Unknown interface window event");
+		GENERATE_ERROR("Unknown interface window event");
 	}
 }

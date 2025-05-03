@@ -2,6 +2,8 @@
 
 #include "spk_debug_macro.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	void Client::_receive()
@@ -73,14 +75,14 @@ namespace spk
 		WSADATA wsaData;
 		if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
 		{
-			throw std::runtime_error("Failed to initialize Winsock.");
+			GENERATE_ERROR("Failed to initialize Winsock.");
 		}
 
 		_connectSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 		if (_connectSocket == INVALID_SOCKET)
 		{
 			WSACleanup();
-			throw std::runtime_error("Cannot create socket.");
+			GENERATE_ERROR("Cannot create socket.");
 		}
 
 		struct sockaddr_in serverAddress;
@@ -92,7 +94,7 @@ namespace spk
 		{
 			closesocket(_connectSocket);
 			WSACleanup();
-			throw std::runtime_error("Failed to connect to server.");
+			GENERATE_ERROR("Failed to connect to server.");
 		}
 
 		_isConnected = true;
@@ -137,7 +139,7 @@ namespace spk
 		}
 		else
 		{
-			throw std::runtime_error("Can't send a message through a non-connected client.");
+			GENERATE_ERROR("Can't send a message through a non-connected client.");
 		}
 	}
 

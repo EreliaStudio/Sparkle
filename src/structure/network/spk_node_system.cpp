@@ -1,5 +1,7 @@
 #include "structure/network/spk_node_system.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	void RemoteNode::connect(const std::string &p_address, size_t p_port)
@@ -16,7 +18,7 @@ namespace spk
 	{
 		if (_client.isConnected() == false)
 		{
-			throw std::runtime_error("Can't send a message through a non-connected RemoteNode.");
+			GENERATE_ERROR("Can't send a message through a non-connected RemoteNode.");
 		}
 		_client.send(*p_message);
 	}
@@ -75,7 +77,7 @@ namespace spk
 	{
 		if (_nodes.contains(p_nodeName))
 		{
-			throw std::runtime_error("Can't set a node named [" + p_nodeName + "] : this node already exists.");
+			GENERATE_ERROR("Can't set a node named [" + p_nodeName + "] : this node already exists.");
 		}
 		_nodes[p_nodeName] = p_node;
 	}
@@ -84,7 +86,7 @@ namespace spk
 	{
 		if (!_nodes.contains(p_nodeName))
 		{
-			throw std::runtime_error("Can't set a redirection for message type [" + std::to_string(p_messageType) + "] to node [" + p_nodeName +
+			GENERATE_ERROR("Can't set a redirection for message type [" + std::to_string(p_messageType) + "] to node [" + p_nodeName +
 									 "] : this node does not exist.");
 		}
 		_redirections[p_messageType] = _nodes[p_nodeName];
@@ -97,7 +99,7 @@ namespace spk
 			spk::Server::MessageObject messageToRedirect = _server.messages().pop();
 			if (!_redirections.contains(messageToRedirect->header().type))
 			{
-				throw std::runtime_error("Unknown message type [" + std::to_string(messageToRedirect->header().type) + "] : no redirection setup.");
+				GENERATE_ERROR("Unknown message type [" + std::to_string(messageToRedirect->header().type) + "] : no redirection setup.");
 			}
 			_redirections[messageToRedirect->header().type]->treatMessage(std::move(messageToRedirect));
 		}

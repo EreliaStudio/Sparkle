@@ -4,6 +4,8 @@
 
 #include "utils/spk_file_utils.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	class SpriteSheet : public Image

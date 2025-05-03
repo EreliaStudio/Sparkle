@@ -68,15 +68,12 @@ namespace spk
 		 [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam)
 		 {
 			 p_event->paintEvent.type = PaintEvent::Type::Paint;
-			 p_event->paintEvent.geometry = p_event->paintEvent.window->geometry();
-			 p_event->paintEvent.resized = false;
 		 }},
 		{WM_RESIZE_REQUEST,
 		 [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam)
 		 {
 			 p_event->paintEvent.type = PaintEvent::Type::Resize;
-			 p_event->paintEvent.geometry = p_event->paintEvent.window->geometry();
-			 p_event->paintEvent.resized = true;
+			 p_event->paintEvent.geometry = {{0, 0}, spk::Vector2Int{static_cast<int>(p_wParam), static_cast<int>(p_lParam)}};
 		 }},
 		{WM_LBUTTONDOWN,
 		 [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam)

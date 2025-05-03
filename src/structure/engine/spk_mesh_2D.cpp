@@ -1,5 +1,7 @@
 #include "structure/engine/spk_mesh_2D.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	Mesh2D::VertexIndex::VertexIndex() :
@@ -79,28 +81,28 @@ namespace spk
 	{
 		if (!p_vertexA.pointIndex.has_value() || p_vertexA.pointIndex.value() >= _points.size())
 		{
-			throw std::runtime_error("Mesh2D::addFace: Invalid pointIndex in VertexA");
+			GENERATE_ERROR("Mesh2D::addFace: Invalid pointIndex in VertexA");
 		}
 		if (!p_vertexB.pointIndex.has_value() || p_vertexB.pointIndex.value() >= _points.size())
 		{
-			throw std::runtime_error("Mesh2D::addFace: Invalid pointIndex in VertexB");
+			GENERATE_ERROR("Mesh2D::addFace: Invalid pointIndex in VertexB");
 		}
 		if (!p_vertexC.pointIndex.has_value() || p_vertexC.pointIndex.value() >= _points.size())
 		{
-			throw std::runtime_error("Mesh2D::addFace: Invalid pointIndex in VertexC");
+			GENERATE_ERROR("Mesh2D::addFace: Invalid pointIndex in VertexC");
 		}
 
 		if (p_vertexA.uvIndex.has_value() && p_vertexA.uvIndex.value() >= _UVs.size())
 		{
-			throw std::runtime_error("Mesh2D::addFace: Invalid uvIndex in VertexA");
+			GENERATE_ERROR("Mesh2D::addFace: Invalid uvIndex in VertexA");
 		}
 		if (p_vertexB.uvIndex.has_value() && p_vertexB.uvIndex.value() >= _UVs.size())
 		{
-			throw std::runtime_error("Mesh2D::addFace: Invalid uvIndex in VertexB");
+			GENERATE_ERROR("Mesh2D::addFace: Invalid uvIndex in VertexB");
 		}
 		if (p_vertexC.uvIndex.has_value() && p_vertexC.uvIndex.value() >= _UVs.size())
 		{
-			throw std::runtime_error("Mesh2D::addFace: Invalid uvIndex in VertexC");
+			GENERATE_ERROR("Mesh2D::addFace: Invalid uvIndex in VertexC");
 		}
 
 		_indexes.push_back(static_cast<unsigned int>(addVertex(p_vertexA)));
@@ -123,7 +125,7 @@ namespace spk
 		{
 			if (!vertexIndex.pointIndex.has_value())
 			{
-				throw std::runtime_error("Mesh2D::bake: VertexIndex has no pointIndex set.");
+				GENERATE_ERROR("Mesh2D::bake: VertexIndex has no pointIndex set.");
 			}
 			size_t pIdx = vertexIndex.pointIndex.value();
 
@@ -133,14 +135,14 @@ namespace spk
 				size_t uvIdx = vertexIndex.uvIndex.value();
 				if (uvIdx >= _UVs.size())
 				{
-					throw std::runtime_error("Mesh2D::bake: VertexIndex uvIndex out of range.");
+					GENERATE_ERROR("Mesh2D::bake: VertexIndex uvIndex out of range.");
 				}
 				uv = _UVs[uvIdx];
 			}
 
 			if (pIdx >= _points.size())
 			{
-				throw std::runtime_error("Mesh2D::bake: VertexIndex pointIndex out of range.");
+				GENERATE_ERROR("Mesh2D::bake: VertexIndex pointIndex out of range.");
 			}
 
 			_vertices.push_back({_points[pIdx], uv});

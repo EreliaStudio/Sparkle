@@ -2,6 +2,8 @@
 
 #include "spk_debug_macro.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	Mesh::VertexIndex::VertexIndex() :
@@ -104,19 +106,19 @@ namespace spk
 	{
 		if (p_vertexA.pointIndex.has_value() == false || _points.size() <= p_vertexA.pointIndex.value())
 		{
-			throw std::runtime_error("Error loading a face with invalid index [" +
+			GENERATE_ERROR("Error loading a face with invalid index [" +
 									 (p_vertexA.pointIndex.has_value() == true ? std::to_string(p_vertexA.pointIndex.value()) : "No value") +
 									 "] over [" + std::to_string(_points.size()) + "] points");
 		}
 		if (p_vertexB.pointIndex.has_value() == false || _points.size() <= p_vertexB.pointIndex.value())
 		{
-			throw std::runtime_error("Error loading a face with invalid index [" +
+			GENERATE_ERROR("Error loading a face with invalid index [" +
 									 (p_vertexB.pointIndex.has_value() == true ? std::to_string(p_vertexB.pointIndex.value()) : "No value") +
 									 "] over [" + std::to_string(_points.size()) + "] points");
 		}
 		if (p_vertexC.pointIndex.has_value() == false || _points.size() <= p_vertexC.pointIndex.value())
 		{
-			throw std::runtime_error("Error loading a face with invalid index [" +
+			GENERATE_ERROR("Error loading a face with invalid index [" +
 									 (p_vertexC.pointIndex.has_value() == true ? std::to_string(p_vertexC.pointIndex.value()) : "No value") +
 									 "] over [" + std::to_string(_points.size()) + "] points");
 		}
@@ -173,7 +175,7 @@ namespace spk
 						  << std::endl;
 				std::cout << "Normal [" << (vertexIndex.normalIndex.has_value() == true ? std::to_string(vertexIndex.normalIndex.value()) : "Not set")
 						  << "]" << std::endl;
-				throw std::runtime_error("Error: VertexIndex contains unset optional values. Ensure all indices are set before baking.");
+				GENERATE_ERROR("Error: VertexIndex contains unset optional values. Ensure all indices are set before baking.");
 			}
 
 			_vertices.push_back({.point = _points[vertexIndex.pointIndex.value()],

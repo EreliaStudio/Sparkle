@@ -50,7 +50,6 @@ namespace spk
 		std::unique_ptr<Widget> _rootWidget;
 
 		std::wstring _title;
-		spk::Viewport _viewport;
 		spk::PersistantWorker _windowRendererThread;
 		spk::PersistantWorker _windowUpdaterThread;
 		ControllerInputThread _controllerInputThread;
@@ -115,7 +114,7 @@ namespace spk
 
 		void requestPaint() const;
 		void requestUpdate() const;
-		void requestResize() const;
+		void requestResize(const spk::Vector2Int& p_size) const;
 
 		spk::SafePointer<Widget> widget() const;
 		operator spk::SafePointer<Widget>() const;
