@@ -461,7 +461,7 @@ namespace spk
 		bindModule(&_systemModule);
 		bindModule(&_timerModule);
 
-		_rootWidget->setGeometry({0, p_newSize});
+		_rootWidget->setGeometry(p_geometry);
 		_rootWidget->activate();
 	}
 
