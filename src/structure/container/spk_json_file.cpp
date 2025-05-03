@@ -5,6 +5,8 @@
 
 #include "utils/spk_string_utils.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk::JSON
 {
 	std::wstring applyGrammar(const std::wstring &p_fileContent);
@@ -22,7 +24,7 @@ namespace spk::JSON
 		wif.open(p_filePath);
 		if (!wif.is_open())
 		{
-			throw std::runtime_error("Failed to open file [" + p_filePath.string() + "]");
+			GENERATE_ERROR("Failed to open file [" + p_filePath.string() + "]");
 		}
 
 		std::wstring result((std::istreambuf_iterator<wchar_t>(wif)), std::istreambuf_iterator<wchar_t>());
@@ -48,7 +50,7 @@ namespace spk::JSON
 		}
 		else
 		{
-			throw std::runtime_error("Invalid boolean JSON value: " + spk::StringUtils::wstringToString(p_unitSubString));
+			GENERATE_ERROR("Invalid boolean JSON value: " + spk::StringUtils::wstringToString(p_unitSubString));
 		}
 	}
 
@@ -60,7 +62,7 @@ namespace spk::JSON
 		}
 		else
 		{
-			throw std::runtime_error("Invalid null JSON value: " + spk::StringUtils::wstringToString(p_unitSubString));
+			GENERATE_ERROR("Invalid null JSON value: " + spk::StringUtils::wstringToString(p_unitSubString));
 		}
 	}
 
@@ -94,7 +96,7 @@ namespace spk::JSON
 			loadUnitNull(p_objectToFill, substring);
 			break;
 		default:
-			throw std::runtime_error("Invalid JSON value: " + spk::StringUtils::wstringToString(substring));
+			GENERATE_ERROR("Invalid JSON value: " + spk::StringUtils::wstringToString(substring));
 			break;
 		}
 	}
@@ -105,7 +107,7 @@ namespace spk::JSON
 
 		if (p_content[p_index] != '{')
 		{
-			throw std::runtime_error("Invalid JSON object (missing '{')");
+			GENERATE_ERROR("Invalid JSON object (missing '{')");
 		}
 		p_index++;
 		for (; p_index < p_content.size() && p_content[p_index] != '}';)
@@ -122,12 +124,12 @@ namespace spk::JSON
 			}
 			else if (p_content[p_index] != '}')
 			{
-				throw std::runtime_error("Invalid JSON object (missing ',' or '}')");
+				GENERATE_ERROR("Invalid JSON object (missing ',' or '}')");
 			}
 		}
 		if (p_content[p_index] != '}')
 		{
-			throw std::runtime_error("Invalid JSON object (missing '}')");
+			GENERATE_ERROR("Invalid JSON object (missing '}')");
 		}
 		p_index++;
 	}
@@ -137,7 +139,7 @@ namespace spk::JSON
 		p_objectToFill.setAsArray();
 		if (p_content[p_index] != '[')
 		{
-			throw std::runtime_error("Invalid JSON array (missing '[')");
+			GENERATE_ERROR("Invalid JSON array (missing '[')");
 		}
 		p_index++;
 		for (; p_index < p_content.size() && p_content[p_index] != ']';)
@@ -154,12 +156,12 @@ namespace spk::JSON
 			}
 			else if (p_content[p_index] != ']')
 			{
-				throw std::runtime_error("Invalid JSON array (missing ',' or ']')");
+				GENERATE_ERROR("Invalid JSON array (missing ',' or ']')");
 			}
 		}
 		if (p_content[p_index] != ']')
 		{
-			throw std::runtime_error("Invalid JSON array (missing ']')");
+			GENERATE_ERROR("Invalid JSON array (missing ']')");
 		}
 		p_index++;
 	}
@@ -192,7 +194,7 @@ namespace spk::JSON
 			loadArray(p_objectToFill, p_content, p_index);
 			break;
 		default:
-			throw std::runtime_error("Unexpected data type in JSON: " + spk::StringUtils::wstringToString(p_content).substr(p_index, 10));
+			GENERATE_ERROR("Unexpected data type in JSON: " + spk::StringUtils::wstringToString(p_content).substr(p_index, 10));
 		}
 	}
 
@@ -214,13 +216,13 @@ namespace spk::JSON
 
 		if (fileContent.empty())
 		{
-			throw std::runtime_error("Empty file: " + p_filePath.string());
+			GENERATE_ERROR("Empty file: " + p_filePath.string());
 		}
 		_root.reset();
 		loadContent(_root, fileContent, index);
 		if (index != fileContent.size())
 		{
-			throw std::runtime_error("Invalid JSON file: " + p_filePath.string());
+			GENERATE_ERROR("Invalid JSON file: " + p_filePath.string());
 		}
 	}
 
@@ -242,7 +244,7 @@ namespace spk::JSON
 		file.open(p_filePath);
 		if (file.is_open() == false)
 		{
-			throw std::runtime_error("Unable to open file: " + p_filePath.string());
+			GENERATE_ERROR("Unable to open file: " + p_filePath.string());
 		}
 		file << _root;
 		file.close();

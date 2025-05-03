@@ -4,6 +4,8 @@
 
 #include "utils/spk_string_utils.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	GraphicalApplication::GraphicalApplication()
@@ -29,7 +31,7 @@ namespace spk
 			{
 				DWORD error = GetLastError();
 				std::cerr << "RegisterClass failed with error: " << error << std::endl;
-				throw std::runtime_error("Failed to register window class.");
+				GENERATE_ERROR("Failed to register window class.");
 			}
 		}
 
@@ -57,7 +59,7 @@ namespace spk
 	{
 		if (_windows.contains(p_title) == true)
 		{
-			throw std::runtime_error("Can't create a second window named [" + StringUtils::wstringToString(p_title) + "]");
+			GENERATE_ERROR("Can't create a second window named [" + StringUtils::wstringToString(p_title) + "]");
 		}
 		_windows[p_title] = std::make_unique<spk::Window>(p_title, p_geometry);
 

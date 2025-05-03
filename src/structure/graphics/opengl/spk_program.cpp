@@ -9,6 +9,8 @@
 
 #include "structure/spk_iostream.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk::OpenGL
 {
 	Program::Program() :
@@ -46,7 +48,7 @@ namespace spk::OpenGL
 			GLchar infoLog[512];
 			glGetShaderInfoLog(shader, 512, nullptr, infoLog);
 			std::string shaderTypeStr = (p_shaderType == GL_VERTEX_SHADER) ? "Vertex Shader" : "Fragment Shader";
-			throw std::runtime_error(shaderTypeStr + " compilation failed: " + std::string(infoLog));
+			GENERATE_ERROR(shaderTypeStr + " compilation failed: " + std::string(infoLog));
 		}
 
 		return shader;
@@ -65,7 +67,7 @@ namespace spk::OpenGL
 		{
 			GLchar infoLog[512];
 			glGetProgramInfoLog(program, 512, nullptr, infoLog);
-			throw std::runtime_error("Shader Program linking failed: " + std::string(infoLog));
+			GENERATE_ERROR("Shader Program linking failed: " + std::string(infoLog));
 		}
 
 		glDeleteShader(p_vertexShader);
@@ -141,7 +143,7 @@ namespace spk::OpenGL
 			glGetProgramiv(_programID, GL_INFO_LOG_LENGTH, &infoLogLength);
 			std::vector<char> infoLog(infoLogLength);
 			glGetProgramInfoLog(_programID, infoLogLength, &infoLogLength, infoLog.data());
-			throw std::runtime_error("Shader Program validation failed: " + std::string(infoLog.data()));
+			GENERATE_ERROR("Shader Program validation failed: " + std::string(infoLog.data()));
 		}
 	}
 

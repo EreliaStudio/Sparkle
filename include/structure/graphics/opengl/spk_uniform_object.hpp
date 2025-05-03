@@ -13,6 +13,8 @@
 #include "structure/math/spk_vector3.hpp"
 #include "structure/math/spk_vector4.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk::OpenGL
 {
 	class UniformObject
@@ -56,7 +58,7 @@ namespace spk::OpenGL
 
 			if (_location == -1)
 			{
-				throw std::runtime_error("Uniform '" + _name + "' not found in shader program.");
+				GENERATE_ERROR("Uniform '" + _name + "' not found in shader program.");
 			}
 		}
 
@@ -110,7 +112,7 @@ namespace spk::OpenGL
 				break;
 
 			default:
-				throw std::runtime_error("Unsupported type in UniformObject constructor.");
+				GENERATE_ERROR("Unsupported type in UniformObject constructor.");
 			}
 			_data.resize(size);
 		}
@@ -190,7 +192,7 @@ namespace spk::OpenGL
 			size_t size = sizeof(value);
 			if (_data.size() != size)
 			{
-				throw std::runtime_error("Size mismatch for uniform [" + _name + "].");
+				GENERATE_ERROR("Size mismatch for uniform [" + _name + "].");
 			}
 			std::memcpy(_data.data(), &value, size);
 			_needUpdate = true;
@@ -262,7 +264,7 @@ namespace spk::OpenGL
 					break;
 				}
 				default:
-					throw std::runtime_error("Unsupported uniform type in UniformObject::activate.");
+					GENERATE_ERROR("Unsupported uniform type in UniformObject::activate.");
 				}
 
 				_needUpdate = false;

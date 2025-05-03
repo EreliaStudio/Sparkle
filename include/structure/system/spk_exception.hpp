@@ -24,4 +24,5 @@ inline std::runtime_error composeErrorMessage(const std::string& msg,
     return std::runtime_error{informationString + formatted};
 }
 
-#define PROPAGATE_ERROR(msg, ex) throw composeErrorMessage((msg), (ex), __FILE__, __LINE__)
+#define PROPAGATE_ERROR(msg, ex) throw composeErrorMessage(std::string(msg), (ex), __FILE__, __LINE__)
+#define GENERATE_ERROR(msg) throw std::runtime_error(std::string(__FILE__) + ':' + std::to_string(__LINE__) + "\n--> " + msg)

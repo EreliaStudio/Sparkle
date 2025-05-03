@@ -351,4 +351,90 @@ namespace spk::OpenGLUtils
 			break;
 		}
 	}
+
+	void GLAPIENTRY openGLDebugMessageCallback(GLenum p_source, GLenum p_type, GLuint p_id, GLenum p_severity, GLsizei p_length, const GLchar *p_message,
+											   const void *p_userParam)
+	{
+		if (p_id == 131169 || p_id == 131185 || p_id == 131218 || p_id == 131204)
+		{
+			return;
+		}
+
+		spk::cout << "---------------" << std::endl;
+
+		switch (p_source)
+		{
+		case GL_DEBUG_SOURCE_API:
+			spk::cout << "Source: API" << std::endl;
+			break;
+		case GL_DEBUG_SOURCE_WINDOW_SYSTEM:
+			spk::cout << "Source: Window System" << std::endl;
+			break;
+		case GL_DEBUG_SOURCE_SHADER_COMPILER:
+			spk::cout << "Source: Shader Compiler" << std::endl;
+			break;
+		case GL_DEBUG_SOURCE_THIRD_PARTY:
+			spk::cout << "Source: Third Party" << std::endl;
+			break;
+		case GL_DEBUG_SOURCE_APPLICATION:
+			spk::cout << "Source: Application" << std::endl;
+			break;
+		case GL_DEBUG_SOURCE_OTHER:
+			spk::cout << "Source: Other" << std::endl;
+			break;
+		}
+
+		switch (p_type)
+		{
+		case GL_DEBUG_TYPE_ERROR:
+			spk::cout << "Type: Error" << std::endl;
+			break;
+		case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
+			spk::cout << "Type: Deprecated Behaviour" << std::endl;
+			break;
+		case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
+			spk::cout << "Type: Undefined Behaviour" << std::endl;
+			break;
+		case GL_DEBUG_TYPE_PORTABILITY:
+			spk::cout << "Type: Portability" << std::endl;
+			break;
+		case GL_DEBUG_TYPE_PERFORMANCE:
+			spk::cout << "Type: Performance" << std::endl;
+			break;
+		case GL_DEBUG_TYPE_MARKER:
+			spk::cout << "Type: Marker" << std::endl;
+			break;
+		case GL_DEBUG_TYPE_PUSH_GROUP:
+			spk::cout << "Type: Push Group" << std::endl;
+			break;
+		case GL_DEBUG_TYPE_POP_GROUP:
+			spk::cout << "Type: Pop Group" << std::endl;
+			break;
+		case GL_DEBUG_TYPE_OTHER:
+			spk::cout << "Type: Other" << std::endl;
+			break;
+		}
+
+		switch (p_severity)
+		{
+		case GL_DEBUG_SEVERITY_HIGH:
+			spk::cout << "Severity: high" << std::endl;
+			break;
+		case GL_DEBUG_SEVERITY_MEDIUM:
+			spk::cout << "Severity: medium" << std::endl;
+			break;
+		case GL_DEBUG_SEVERITY_LOW:
+			spk::cout << "Severity: low" << std::endl;
+			break;
+		case GL_DEBUG_SEVERITY_NOTIFICATION:
+			spk::cout << "Severity: notification" << std::endl;
+			break;
+		}
+
+		spk::cout << "Debug message (" << p_id << "): " << p_message << std::endl;
+		if (p_severity != GL_DEBUG_SEVERITY_NOTIFICATION)
+		{
+			GENERATE_ERROR("Unexpected opengl error detected");
+		}
+	}
 }

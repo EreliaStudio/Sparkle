@@ -214,6 +214,10 @@ namespace spk
 		_placeholder(L"Enter text here")
 	{
 		_cursorRenderer.setColor(spk::Color(0, 0, 0, 150));
+		
+		_onFontResizeContract = _fontRenderer.subscribeToFontEdition([&]() {
+				requireGeometryUpdate();
+			});
 
 		setTextColor(spk::Color::white, spk::Color::black);
 		setTextAlignment(spk::HorizontalAlignment::Left, spk::VerticalAlignment::Centered);
@@ -241,6 +245,7 @@ namespace spk
 	void TextEdit::setFont(const spk::SafePointer<spk::Font> &p_font)
 	{
 		_fontRenderer.setFont(p_font);
+
 		requireGeometryUpdate();
 	}
 

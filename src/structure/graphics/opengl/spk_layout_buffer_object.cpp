@@ -2,6 +2,8 @@
 
 #include "spk_debug_macro.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk::OpenGL
 {
 	LayoutBufferObject::Attribute::Attribute() :
@@ -146,7 +148,7 @@ namespace spk::OpenGL
 		{
 			if (attr.index == p_attribute.index)
 			{
-				throw std::runtime_error("Attribute location " + std::to_string(p_attribute.index) + " has already been defined.");
+				GENERATE_ERROR("Attribute location " + std::to_string(p_attribute.index) + " has already been defined.");
 			}
 		}
 
@@ -239,7 +241,7 @@ namespace spk::OpenGL
 									  reinterpret_cast<void *>(offset + sizeof(GLfloat) * 12));
 				break;
 			default:
-				throw std::runtime_error("Unexpected layout type.");
+				GENERATE_ERROR("Unexpected layout type.");
 			}
 
 			// Update offset based on the type
@@ -276,7 +278,7 @@ namespace spk::OpenGL
 				offset += sizeof(GLfloat) * 16;
 				break;
 			default:
-				throw std::runtime_error("Unexpected layout type.");
+				GENERATE_ERROR("Unexpected layout type.");
 			}
 		}
 		_attributesToApply.clear();

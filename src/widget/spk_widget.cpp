@@ -154,125 +154,29 @@ namespace spk
 
 	void Widget::_computeRatio()
 	{
-		if (parent() == nullptr || parent()->geometry().size.x == 0 || parent()->geometry().size.y == 0)
-		{
-			_anchorRatio = 1;
-			_sizeRatio = 1;
-		}
-		else
-		{
-			_anchorRatio = spk::Vector2(geometry().anchor) / spk::Vector2(parent()->geometry().size);
-			_sizeRatio = spk::Vector2(geometry().size) / spk::Vector2(parent()->geometry().size);
-		}
+		spk::Vector2Int parentSize = (parent() == nullptr ? _viewport.windowSize() : parent()->_geometry.size);
+
+		_anchorRatio = {static_cast<float>(_geometry.anchor.x) / static_cast<float>(parentSize.x),
+						static_cast<float>(_geometry.anchor.y) / static_cast<float>(parentSize.y)};
+		_sizeRatio = {static_cast<float>(_geometry.size.x) / static_cast<float>(parentSize.x),
+					  static_cast<float>(_geometry.size.y) / static_cast<float>(parentSize.y)};
 	}
 
-	void Widget::_resize()
+	void Widget::setGeometry(const Geometry2D &p_geometry)
 	{
-		if (_needGeometryChange)
-        {
-            try
-            {
-                updateGeometry();
-            }
-            catch (const std::exception& e)
-            {
-                PROPAGATE_ERROR("Widget::_resize over updateGeometry failed", e);
-            }
+		_geometry = p_geometry;
+		_viewport.setGeometry(p_geometry);
+		_viewport.setWindowSize((parent() == nullptr ? p_geometry.size : parent()->viewport().windowSize()));
+		_computeRatio();
 
-            try
-            {
-                _computeViewport();
-            }
-            catch (const std::exception& e)
-            {
-                PROPAGATE_ERROR("Widget::_resize over _computeViewport failed", e);
-            }
-        }
-
-        for (auto& child : children())
-        {
-            if (child->_needGeometryChange)
-            {
-                try
-                {
-                    child->updateGeometry();
-                }
-                catch (const std::exception& e)
-                {
-                    PROPAGATE_ERROR("Widget::_resize over child->updateGeometry on [" + spk::StringUtils::wstringToString(child->name()) + "] failed", e);
-                }
-
-                try
-                {
-                    child->_computeViewport();
-                }
-                catch (const std::exception& e)
-                {
-                    PROPAGATE_ERROR("Widget::_resize over child->_computeViewport on [" + spk::StringUtils::wstringToString(child->name()) + "] failed", e);
-                }
-            }
-
-            try
-            {
-                child->_resize();
-            }
-            catch (const std::exception& e)
-            {
-                PROPAGATE_ERROR("Widget::_resize over child->_resize failed", e);
-            }
-        }
-
-        try
-        {
-            _viewport.setWindowSize(parent()->viewport().windowSize());
-        }
-        catch (const std::exception& e)
-        {
-            PROPAGATE_ERROR("Widget::_resize over _viewport.setWindowSize failed", e);
-        }
-
-        try
-        {
-            _geometry.anchor = static_cast<Widget*>(parent())->geometry().size * _anchorRatio;
-            _geometry.size   = static_cast<Widget*>(parent())->geometry().size * _sizeRatio;
-        }
-        catch (const std::exception& e)
-        {
-            PROPAGATE_ERROR("Widget::_resize while computing anchor/size failed", e);
-        }
-
-        try
-        {
-            requireGeometryUpdate();
-        }
-        catch (const std::exception& e)
-        {
-            PROPAGATE_ERROR("Widget::_resize over requireGeometryUpdate failed", e);
-        }
-
-        for (auto& child : children())
-        {
-            try
-            {
-                child->_resize();
-            }
-            catch (const std::exception& e)
-            {
-                PROPAGATE_ERROR("Widget::_resize over child->_resize (second pass) on [" + spk::StringUtils::wstringToString(child->name()) + "] failed", e);
-            }
-        }
+		requireGeometryUpdate();
 	}
 
 	void Widget::forceGeometryChange(const Geometry2D &p_geometry)
 	{
-		if (_geometry == p_geometry)
-		{
-			return;
-		}
-
-		_geometry = p_geometry;
-		_computeRatio();
-		updateGeometry();
+		setGeometry(p_geometry);
+		_applyGeometryChange();
+		_needGeometryChange = false;
 	}
 
 	void Widget::place(const spk::Vector2Int &p_delta)
@@ -287,17 +191,6 @@ namespace spk
 		requireGeometryUpdate();
 	}
 
-	void Widget::setGeometry(const Geometry2D &p_geometry)
-	{
-		if (_geometry == p_geometry || p_geometry.size.x == 0 || p_geometry.size.y == 0)
-		{
-			return;
-		}
-
-		_geometry = p_geometry;
-		_needGeometryChange = true;
-	}
-
 	void Widget::forceGeometryChange(const spk::Vector2Int &p_anchor, const spk::Vector2UInt &p_size)
 	{
 		forceGeometryChange({p_anchor, p_size});
@@ -308,48 +201,29 @@ namespace spk
 		setGeometry({p_anchor, p_size});
 	}
 
-	void Widget::updateGeometry()
+	void Widget::_applyGeometryChange()
 	{
-		try
-        {
-            _computeRatio();
-        }
-        catch (const std::exception& e)
-        {
-            PROPAGATE_ERROR("Widget::updateGeometry over _computeRatio failed", e);
-        }
+		_onGeometryChange();
+		_computeViewport();
 
-        try
-        {
-            _onGeometryChange();
-        }
-        catch (const std::exception& e)
-        {
-            PROPAGATE_ERROR("Widget::updateGeometry over _onGeometryChange failed", e);
-        }
+		requestPaint();
+	}
 
-        _needGeometryChange = false;
+	void Widget::_applyResize()
+	{
+		spk::Vector2Int parentSize = (parent() == nullptr ? _viewport.windowSize() : parent()->_geometry.size);
 
-        for (auto& child : children())
-        {
-            try
-            {
-                child->requireGeometryUpdate();
-            }
-            catch (const std::exception& e)
-            {
-                PROPAGATE_ERROR("Widget::updateGeometry over child->requireGeometryUpdate failed", e);
-            }
-        }
+		forceGeometryChange({parentSize * _anchorRatio, parentSize * _sizeRatio});
+
+		for (auto& child : children())
+		{
+			child->_applyResize();
+		}
 	}
 
 	void Widget::requireGeometryUpdate()
 	{
 		_needGeometryChange = true;
-		for (auto &child : children())
-		{
-			child->requireGeometryUpdate();
-		}
 	}
 
 	spk::Vector2UInt Widget::minimalSize() const
@@ -427,17 +301,17 @@ namespace spk
 		{
 			try
 			{
-				updateGeometry();
-				_computeViewport();
+				_applyGeometryChange();
 			}
 			catch (const std::exception &e)
 			{
-				throw std::runtime_error("[" + spk::StringUtils::wstringToString(name()) + "] onGeometryChange -  " + e.what());
+				PROPAGATE_ERROR("Applying geometry change of [" + spk::StringUtils::wstringToString(name()) + "]", e);
 			}
 			catch (...)
 			{
-				throw std::runtime_error("[" + spk::StringUtils::wstringToString(name()) + "] onGeometryChange - Unknow error type");
+				GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] onGeometryChange - Unknow error type");
 			}
+			_needGeometryChange = false;
 		}
 
 		try
@@ -446,11 +320,11 @@ namespace spk
 		}
 		catch (const std::exception &e)
 		{
-			throw std::runtime_error("[" + spk::StringUtils::wstringToString(name()) + "] onPaintEvent -  " + e.what());
+			GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] onPaintEvent -  " + e.what());
 		}
 		catch (...)
 		{
-			throw std::runtime_error("[" + spk::StringUtils::wstringToString(name()) + "] onPaintEvent - Unknow error type");
+			GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] onPaintEvent - Unknow error type");
 		}
 
 		spk::PaintEvent childEvent = p_event;
@@ -466,7 +340,7 @@ namespace spk
 				}
 				catch (...)
 				{
-					throw std::runtime_error("Error while applying viewport of [" + spk::StringUtils::wstringToString(name()) +
+					GENERATE_ERROR("Error while applying viewport of [" + spk::StringUtils::wstringToString(name()) +
 											 "] with viewport of geometry [" + _viewport.geometry().to_string() + "]");
 				}
 				child->onPaintEvent(childEvent);

@@ -11,6 +11,8 @@
 
 #include "spk_sfinae.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	class DataBuffer
@@ -92,7 +94,7 @@ namespace spk
 			static_assert(std::is_standard_layout<InputType>::value, "Unable to handle this type.");
 			if (p_offset + sizeof(InputType) > size())
 			{
-				throw std::runtime_error("Unable to edit, offset is out of bound.");
+				GENERATE_ERROR("Unable to edit, offset is out of bound.");
 			}
 			memcpy(_data.data() + p_offset, &p_input, sizeof(InputType));
 		}
@@ -101,7 +103,7 @@ namespace spk
 		{
 			if (p_offset + p_dataSize > size())
 			{
-				throw std::runtime_error("Unable to edit, offset is out of bound.");
+				GENERATE_ERROR("Unable to edit, offset is out of bound.");
 			}
 			memcpy(_data.data() + p_offset, p_data, p_dataSize);
 		}
@@ -125,7 +127,7 @@ namespace spk
 			static_assert(std::is_standard_layout<OutputType>::value, "Unable to handle this type.");
 			if (leftover() < sizeof(OutputType))
 			{
-				throw std::runtime_error("Unable to retrieve data buffer content.");
+				GENERATE_ERROR("Unable to retrieve data buffer content.");
 			}
 			std::memcpy(&p_output, _data.data() + bookmark(), sizeof(OutputType));
 			_bookmark += sizeof(OutputType);

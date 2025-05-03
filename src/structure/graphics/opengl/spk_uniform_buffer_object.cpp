@@ -3,6 +3,8 @@
 #include "spk_debug_macro.hpp"
 #include "utils/spk_string_utils.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk::OpenGL
 {
 	UniformBufferObject::UniformBufferObject(const std::wstring &p_blockName, BindingPoint p_bindingPoint, size_t p_size) :
@@ -158,7 +160,7 @@ namespace spk::OpenGL
 
 		if (prog == 0)
 		{
-			throw std::runtime_error("No shader program is currently bound.");
+			GENERATE_ERROR("No shader program is currently bound.");
 		}
 
 		if (_programBlockIndex.contains(prog) == false)
@@ -169,7 +171,7 @@ namespace spk::OpenGL
 
 			if (blockIndex == GL_INVALID_INDEX)
 			{
-				throw std::runtime_error("Uniform block '" + str + "' not found in the shader program.");
+				GENERATE_ERROR("Uniform block '" + str + "' not found in the shader program.");
 			}
 
 			_programBlockIndex[prog] = blockIndex;

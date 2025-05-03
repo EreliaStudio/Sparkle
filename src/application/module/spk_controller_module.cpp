@@ -2,6 +2,8 @@
 
 #include "structure/graphics/spk_window.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 #include "spk_debug_macro.hpp"
 
 namespace spk
@@ -117,7 +119,7 @@ namespace spk
 		}
 		default:
 		{
-			throw std::runtime_error("Unexpect event type.");
+			GENERATE_ERROR("Unexpect event type.");
 		}
 		}
 		p_event.controller = &_controller;

@@ -1,332 +1,307 @@
 #include <sparkle.hpp>
 
-enum class MessageType
-{
-	Register = 0,
-
-    Connection = 100,
-    Disconnection = 101,
-    PublicNameEdition = 102,
-	IconEdition = 103,
-
-    FriendRequest = 200,
-    FriendRequestResponse = 201,
-
-    PrivateMessage = 300,
-
-	SystemMessage = 400,
-    Error = 401
-};
-
-class ConnectionWidget : public spk::Widget
+class Client
 {
 private:
-	spk::Frame _backgroundFrame;
+	static inline std::string address;
+	static inline const size_t port = 26500;
+	static inline spk::Client client;
 
-	spk::TextLabel _usernameLabel;
-	spk::TextEdit _usernameEdit;
-	spk::TextLabel _passwordLabel;
-	spk::TextEdit _passwordEdit;
+public:
+	static spk::Client::Contract addOnConnectionCallback(const spk::Client::ConnectionCallback &p_connectionCallback)
+	{
+		return std::move(client.addOnConnectionCallback(p_connectionCallback));
+	}
+	static spk::Client::Contract addOnDisconnectionCallback(const spk::Client::DisconnectionCallback &p_disconnectionCallback)
+	{
+		return std::move(client.addOnDisconnectionCallback(p_disconnectionCallback));
+	}
 
-	spk::PushButton _connectButton;
-	spk::PushButton::Contract _connectButtonContract;
-	spk::PushButton _registerButton;
-	spk::PushButton::Contract _registerButtonContract;
+	static bool isConnected()
+	{
+		return (client.isConnected());
+	}
+	static void setup(const std::string &p_address)
+	{
+		address = p_address;
+	}
+	static void connect()
+	{
+		client.connect(address, port);
+	}
+	static void disconnect()
+	{
+		client.disconnect();
+	}
+	static void send(const spk::Message &p_message)
+	{
+		client.send(p_message);
+	}
+	static spk::ThreadSafeQueue<spk::Client::MessageObject> &messages()
+	{
+		return (client.messages());
+	}
+};
+
+class Server
+{
+private:
+	static inline const size_t port = 26500;
+	static inline spk::Server server;
+
+public:
+	static void start()
+	{
+		server.start(port);
+	}
+
+	static void stop()
+	{
+		server.stop();
+	}
+
+	static spk::Server::Contract addOnConnectionCallback(const spk::Server::ConnectionCallback &p_connectionCallback)
+	{
+		return std::move(server.addOnConnectionCallback(p_connectionCallback));
+	}
+	
+	static spk::Server::Contract addOnDisconnectionCallback(const spk::Server::DisconnectionCallback &p_disconnectionCallback)
+	{
+		return std::move(server.addOnDisconnectionCallback(p_disconnectionCallback));
+	}
+
+	static void sendTo(spk::Server::ClientID p_clientID, const spk::Message& p_msg)
+	{
+		server.sendTo(p_clientID, p_msg);
+	}
+
+	static void sendTo(const std::vector<spk::Server::ClientID> &p_clients, const spk::Message &p_message)
+	{
+		server.sendTo(p_clients, p_message);
+	}
+
+	static void sendToAll(const spk::Message& p_msg)
+	{
+		server.sendToAll(p_msg);
+	}
+
+	static spk::ThreadSafeQueue<spk::Server::MessageObject> &messages()
+	{
+		return server.messages();
+	}
+};
+
+enum class Event
+{
+	EnterMenuHUD,
+	EnterGameHUD
+};
+
+class EventDispatcher
+{
+public:
+	using Observer = spk::Observer<Event>;
+	using Contract = Observer::Contract;
+	using Job = Observer::Job;
+
+private:
+	static inline Observer observer;
+
+public:
+	static void emit(Event p_event)
+	{
+		observer.notifyEvent(p_event);
+	}
+
+	static void invalidateContracts(Event p_event)
+	{
+		observer.invalidateContracts(p_event);
+	}
+
+	static Observer::Contract subscribe(Event p_event, const Job &p_job)
+	{
+		return (std::move(observer.subscribe(p_event, p_job)));
+	}
+};
+
+class AssetAtlas
+{
+private:
+	static inline std::unordered_map<std::wstring, spk::SafePointer<spk::Image>> images;
+	static inline std::unordered_map<std::wstring, spk::SafePointer<spk::SpriteSheet>> spriteSheets;
+	static inline std::unordered_map<std::wstring, spk::SafePointer<spk::Font>> fonts;
+
+public:
+	static void load(const spk::JSON::File& p_atlasFileConfiguration)
+	{
+		
+	}
+
+	static spk::SafePointer<spk::Image> image(const std::wstring& p_name)
+	{
+		if (images.contains(p_name) == false)
+		{
+			GENERATE_ERROR("Image not found: " + spk::StringUtils::wstringToString(p_name));
+		}
+		return images[p_name];
+	}
+
+	static spk::SafePointer<spk::SpriteSheet> spriteSheet(const std::wstring& p_name)
+	{
+		if (spriteSheets.contains(p_name) == false)
+		{
+			GENERATE_ERROR("SpriteSheet not found: " + spk::StringUtils::wstringToString(p_name));
+		}
+		return spriteSheets[p_name];
+	} 
+
+	static spk::SafePointer<spk::Font> font(const std::wstring& p_name)
+	{
+		if (fonts.contains(p_name) == false)
+		{
+			GENERATE_ERROR("Font not found: " + spk::StringUtils::wstringToString(p_name));
+		}
+		return fonts[p_name];
+	}
+};
+
+class PushButton : public spk::PushButton
+{
+private:
+
+public:
+	PushButton(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+		spk::PushButton(p_name, p_parent)
+	{
+		
+	}
+};
+
+class TextLabel : public spk::TextLabel
+{
+private:
+
+public:
+	TextLabel(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+		spk::TextLabel(p_name, p_parent)
+	{
+		
+	}
+};
+
+class TextEdit : public spk::TextEdit
+{
+private:
+
+public:
+	TextEdit(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+		spk::TextEdit(p_name, p_parent)
+	{
+		
+	}
+};
+
+class GameHUD : public spk::Screen
+{
+private:
+
+public:
+	GameHUD(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+		spk::Screen(p_name, p_parent)
+	{
+		
+	}
+};
+
+class MenuHUD : public spk::Screen
+{
+private:
+	TextEdit _addressTextEdit;
+	PushButton _joinGameButton;
+	PushButton _hostGameButton;
+	PushButton _quitGameButton;
 
 	void _onGeometryChange() override
 	{
-		const int margin              = _backgroundFrame.cornerSize().x;
-		constexpr int interLineSpace  = 15;
-		constexpr int btnHPadding     = 20;
-		constexpr int btnVPadding     = 8;
-		constexpr int buttonGap       = 10;
+		spk::Vector2Int buttonAreaSize = spk::Vector2Int::min(geometry().size / 2, {400, 200});
+		spk::Vector2Int buttonAreaOffset = (geometry().size - buttonAreaSize) / 2;
 
-		const spk::Geometry2D widgetRect = geometry();
-		_backgroundFrame.setGeometry(0, widgetRect.size);
+		float padding = 10;
+		spk::Vector2Int lineSize = {buttonAreaSize.x, (buttonAreaSize.y - padding * 2) / 3};
+		spk::Vector2Int editSize = {buttonAreaSize.x * 0.6f, lineSize.y};
+		spk::Vector2Int joinGameButtonSize = {buttonAreaSize.x * 0.4f - padding, lineSize.y};
 
-		const spk::Vector2Int areaPos  = spk::Vector2Int(margin, margin);
-		const spk::Vector2Int areaSize = widgetRect.size - spk::Vector2Int(margin * 2, margin * 2);
+		_addressTextEdit.setGeometry(buttonAreaOffset, editSize);
+		_joinGameButton.setGeometry({buttonAreaOffset.x + editSize.x + padding, buttonAreaOffset.y}, joinGameButtonSize);
 
-		const int  lineHeight = (areaSize.y - 2 * interLineSpace) / 3;
-		const spk::Vector2Int lineSize(areaSize.x, lineHeight);
-
-		const spk::Vector2Int row0Pos = areaPos;
-
-		const int labelWidth = static_cast<int>(lineSize.x * 0.30f);
-		const int vInset     = static_cast<int>(lineHeight * 0.10f);
-
-		_usernameLabel.setGeometry(row0Pos - spk::Vector2Int(0, 5), {labelWidth, lineHeight});
-
-		_usernameEdit.setGeometry(
-			{row0Pos.x, row0Pos.y + vInset},
-			{lineSize.x, lineHeight - 2 * vInset});
-
-		const spk::Vector2Int row1Pos = areaPos + spk::Vector2Int(0, lineHeight + interLineSpace);
-
-		_passwordLabel.setGeometry(row1Pos - spk::Vector2Int(0, 5), {labelWidth, lineHeight});
-
-		_passwordEdit.setGeometry(
-			{row1Pos.x, row1Pos.y + vInset},
-			{lineSize.x, lineHeight - 2 * vInset});
-
-		const spk::Vector2Int row2Pos = areaPos + spk::Vector2Int(0, 2 * (lineHeight + interLineSpace));
-
-		const spk::Vector2UInt buttonTextSize = spk::Vector2Int::max(
-			_connectButton.computeTextSize(),
-			_registerButton.computeTextSize());
-
-		int buttonWidth  = static_cast<int>(buttonTextSize.x) + btnHPadding * 2;
-		int buttonHeight = std::max<int>(buttonTextSize.y, buttonTextSize.y) + btnVPadding * 2;
-		buttonHeight     = std::max(buttonHeight, lineHeight);
-
-		const int rightEdgeX = row2Pos.x + lineSize.x;
-
-		_registerButton.setGeometry(
-			{rightEdgeX - buttonWidth, row2Pos.y + (lineHeight - buttonHeight) / 2},
-			{buttonWidth, buttonHeight});
-
-		_connectButton.setGeometry(
-			{rightEdgeX - (buttonWidth + buttonGap + buttonWidth), row2Pos.y + (lineHeight - buttonHeight) / 2},
-			{buttonWidth, buttonHeight});
+		_hostGameButton.setGeometry({buttonAreaOffset.x, buttonAreaOffset.y + (lineSize.y + padding) * 1}, lineSize);
+		_quitGameButton.setGeometry({buttonAreaOffset.x, buttonAreaOffset.y + (lineSize.y + padding) * 2}, lineSize);
 	}
 
 public:
-	ConnectionWidget(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
-		spk::Widget(p_name, p_parent),
-		_backgroundFrame(p_name + L"/BackgroundFrame", this),
-		_usernameLabel(p_name + L"/UsernameLabel", this),
-		_usernameEdit(p_name + L"/UsernameEdit", this),
-		_passwordLabel(p_name + L"/PasswordLabel", this),
-		_passwordEdit(p_name + L"/PasswordEdit", this),
-		_connectButton(p_name + L"/ConnectButton", this),
-		_registerButton(p_name + L"/RegisterButton", this)
+	MenuHUD(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+		spk::Screen(p_name, p_parent),
+		_addressTextEdit(p_name + L"/_AddressTextEdit", this),
+		_joinGameButton(p_name + L"/JoinGameButton", this),
+		_hostGameButton(p_name + L"/HostGameButton", this),
+		_quitGameButton(p_name + L"/QuitGameButton", this)
 	{
-		_backgroundFrame.setLayer(0);
-		_backgroundFrame.setCornerSize(32);
-		_backgroundFrame.activate();
+		_addressTextEdit.activate();
+		_addressTextEdit.setPlaceholder(L"Enter server address");
 
-		_usernameLabel.setLayer(3);
-		_usernameLabel.setCornerSize(0);
-		_usernameLabel.setNineSlice(nullptr);
-		_usernameLabel.setText(L"Username :");
-		_usernameLabel.setFontSize(spk::Font::Size(22, 2));
-		_usernameLabel.setTextAlignment(spk::HorizontalAlignment::Left, spk::VerticalAlignment::Top);
-		_usernameLabel.activate();
+		_joinGameButton.setText(L"Join Game");
+		_joinGameButton.activate();
 
-		_usernameEdit.setLayer(1);
-		_usernameEdit.setPlaceholder(L"Enter your username");
-		_usernameEdit.setText(L"Hyarius");
-		_usernameEdit.activate();
+		_hostGameButton.setText(L"Host Game");
+		_hostGameButton.activate();
 
-		_passwordLabel.setLayer(3);
-		_passwordLabel.setCornerSize(0);
-		_passwordLabel.setNineSlice(nullptr);
-		_passwordLabel.setText(L"Password :");
-		_passwordLabel.setFontSize(spk::Font::Size(22, 2));
-		_passwordLabel.setTextAlignment(spk::HorizontalAlignment::Left, spk::VerticalAlignment::Top);
-		_passwordLabel.activate();
-
-		_passwordEdit.setLayer(1);
-		_passwordEdit.setPlaceholder(L"Enter your password");
-		_passwordEdit.setText(L"61M=j4*Et");
-		_passwordEdit.setObscured(true);
-		_passwordEdit.activate();
-
-		_connectButton.setLayer(1);
-		_connectButton.setText(L"Connect");
-		_connectButton.activate();
-
-		_registerButton.setLayer(1);
-		_registerButton.setText(L"Register");
-		_registerButton.activate();
-	}
-
-	const std::wstring& username() const
-	{
-		return _usernameEdit.text();
-	}
-
-	const std::wstring& password() const
-	{
-		return _passwordEdit.text();
-	}
-
-	void setRegisterAction(const spk::PushButton::Job& p_job)
-	{
-		_registerButtonContract = _registerButton.subscribe(p_job);
-	}
-
-	void setConnectAction(const spk::PushButton::Job& p_job)
-	{
-		_connectButtonContract = _connectButton.subscribe(p_job);
+		_quitGameButton.setText(L"Quit");
+		_quitGameButton.activate();
 	}
 };
 
 class MainWidget : public spk::Widget
 {
 private:
-	spk::Client _client;
-
-	ConnectionWidget _connectionWidget;
-	spk::TextLabel _errorMessageLabel;
+	GameHUD _gameHUD;
+	EventDispatcher::Contract _gameHUDContract;
+	MenuHUD _menuHUD;
+	EventDispatcher::Contract _menuHUDContract;
 
 	void _onGeometryChange() override
 	{
-		spk::Vector2Int connectionWidgetSize = spk::Vector2Int::min(geometry().size / 2, {400, 300});
-		spk::Vector2Int errorMessageLabelSize = spk::Vector2Int(connectionWidgetSize.x, std::min(connectionWidgetSize.y / 4, 50));
-
-		spk::Vector2Int connectionWidgetPos = (geometry().size - connectionWidgetSize) / 2;
-
-		_connectionWidget.setGeometry(connectionWidgetPos, connectionWidgetSize);
-		_errorMessageLabel.setGeometry(connectionWidgetPos - spk::Vector2Int(0, errorMessageLabelSize.y), errorMessageLabelSize);
-	}
-
-	void _receivedConnectionMessage(spk::Client::MessageObject& p_message)
-	{
-		spk::cout << "Received connection message" << std::endl;
-	}
-
-	void _receivedErrorMessage(spk::Client::MessageObject& p_message)
-	{
-		spk::cout << "Received error message" << std::endl;
-		std::wstring errorMessage = p_message->get<std::wstring>();
-
-		spk::cout << "Error message : " << errorMessage << std::endl;
-	}
-
-	void _receivedSystemMessage(spk::Client::MessageObject& p_message)
-	{
-		spk::cout << "Received system message" << std::endl;
-		std::wstring systemeMessage = p_message->get<std::wstring>();
-
-		spk::cout << "System message : " << systemeMessage << std::endl;
-	}
-
-	void _onUpdateEvent(spk::UpdateEvent& p_event)
-	{
-		while (_client.messages().empty() == false)
-		{
-			spk::Client::MessageObject message = _client.messages().pop();
-
-			MessageType messageType = static_cast<MessageType>(message->header().type);
-
-			switch (messageType)
-			{
-				case MessageType::Connection:
-				{
-					_receivedConnectionMessage(message);
-					break;
-				}
-				case MessageType::Error:
-				{
-					_receivedErrorMessage(message);
-					break;
-				}
-				case MessageType::SystemMessage:
-				{
-					_receivedSystemMessage(message);
-					break;
-				}
-				default:
-					spk::cout << "Unknown message type : " << message->header().type << std::endl;
-					break;
-			}
-			
-		}
-	}
-
-	void _initializeClient(const spk::JSON::File &p_configurationFile)
-	{
-		std::wstring address = p_configurationFile[L"Address"].as<std::wstring>();
-		long port = p_configurationFile[L"Port"].as<long>();
-
-		try
-		{
-			_client.connect(spk::StringUtils::wstringToString(address), port);
-		}
-		catch(const std::runtime_error& e)
-		{
-			std::cerr << e.what() << '\n';
-			return ;
-		}
-
-		spk::cout << "Client connected " << address << ":" << port << std::endl;
-		spk::cout << "Client connected " << std::boolalpha << _client.isConnected() << std::endl;
-	}
-
-	void _onConnectRequest()
-	{
-		spk::Message connectionRequest(static_cast<int>(MessageType::Connection));
-
-		connectionRequest << _connectionWidget.username();
-		connectionRequest << _connectionWidget.password();
-
-		spk::cout << "Send connection request to " << _connectionWidget.username() << " with password " << _connectionWidget.password() << std::endl;
-
-		_client.send(connectionRequest);
-	}
-
-	void _onRegisterRequest()
-	{
-		spk::Message registrationRequest(static_cast<int>(MessageType::Register));
-
-		registrationRequest << _connectionWidget.username();
-		registrationRequest << _connectionWidget.password();
-
-		spk::cout << "Send register request to " << _connectionWidget.username() << " with password " << _connectionWidget.password() << std::endl;
-
-		_client.send(registrationRequest);
+		spk::cout << std::endl << std::endl << std::endl;
+		_gameHUD.setGeometry(geometry());
+		_menuHUD.setGeometry(geometry());
 	}
 
 public:
-	MainWidget(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
+	MainWidget(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
 		spk::Widget(p_name, p_parent),
-		_connectionWidget(p_name + L"/ConnectionWidget", this),
-		_errorMessageLabel(p_name + L"/ErrorMessageLabel", this)
+		_gameHUD(p_name + L"/GameHUD", this),
+		_menuHUD(p_name + L"/MenuHUD", this)
 	{
-		spk::JSON::File configurationFile = spk::JSON::File(L"playground/resources/config.json");
-		_initializeClient(configurationFile);
+		_gameHUDContract = EventDispatcher::subscribe(Event::EnterGameHUD, [&]() {
+			_gameHUD.activate();
+		});
 
-		_connectionWidget.setRegisterAction([&]() {
-				if (_client.isConnected() == true)
-				{
-					_onRegisterRequest();
-				}
-				else
-				{
-					spk::cout << "Client not connected" << std::endl;
-				}
-			});
-
-		_connectionWidget.setConnectAction([&]() {
-				if (_client.isConnected() == true)
-				{
-					_onConnectRequest();
-				}
-				else
-				{
-					spk::cout << "Client not connected" << std::endl;
-				}
-			});
-			
-		_connectionWidget.activate();
-
-		_errorMessageLabel.setNineSlice(nullptr);
-		_errorMessageLabel.setText(L"Default text");
-		_errorMessageLabel.activate();
+		_menuHUDContract = EventDispatcher::subscribe(Event::EnterMenuHUD, [&]() {
+			_menuHUD.activate();
+		});
 	}
 };
 
 int main()
 {
-	spk::GraphicalApplication app = spk::GraphicalApplication();
+	spk::GraphicalApplication app;
 
-	spk::SafePointer<spk::Window> win = app.createWindow(L"TAAG Client", {{0, 0}, {800, 800}});
+	spk::SafePointer<spk::Window> win = app.createWindow(L"TAAG", {{0, 0}, {800, 600}});
 
 	MainWidget mainWidget(L"MainWidget", win->widget());
 	mainWidget.setGeometry(win->geometry());
 	mainWidget.activate();
 
-	DEBUG_LINE();
+	EventDispatcher::emit(Event::EnterMenuHUD);
+
 	return (app.run());
 }
