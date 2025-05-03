@@ -11,6 +11,8 @@
 
 #include "spk_vertex_buffer_object.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 #include <iostream>
 
 template <typename T>
@@ -98,7 +100,7 @@ namespace spk::OpenGL
 
 			if (sizeof(TType) != _vertexSize)
 			{
-				throw std::runtime_error("Size mismatch in LayoutBufferObject: Expected vertex size is " + std::to_string(_vertexSize) +
+				GENERATE_ERROR("Size mismatch in LayoutBufferObject: Expected vertex size is " + std::to_string(_vertexSize) +
 										 " bytes, but received " + std::to_string(sizeof(TType)) + " bytes.");
 			}
 			VertexBufferObject::append(data.data(), data.size() * sizeof(TType));
@@ -140,7 +142,7 @@ namespace spk::OpenGL
 
 			if (_vertexSize % sizeof(TType) != 0)
 			{
-				throw std::runtime_error("LayoutBufferObject::get() - The buffer element size (" + std::to_string(_vertexSize) +
+				GENERATE_ERROR("LayoutBufferObject::get() - The buffer element size (" + std::to_string(_vertexSize) +
 										 " bytes) is incompatible with TType size (" + std::to_string(sizeof(TType)) + " bytes).");
 			}
 

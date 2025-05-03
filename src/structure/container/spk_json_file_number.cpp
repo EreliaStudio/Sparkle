@@ -6,6 +6,8 @@
 
 #include "utils/spk_string_utils.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	namespace JSON
@@ -30,14 +32,14 @@ namespace spk
 
 			if (p_exponentSubstring.find_first_not_of(L"0123456789", isExponentSigned) != std::wstring::npos)
 			{
-				throw std::runtime_error("Invalid numbers JSON exponent value: " + spk::StringUtils::wstringToString(p_exponentSubstring));
+				GENERATE_ERROR("Invalid numbers JSON exponent value: " + spk::StringUtils::wstringToString(p_exponentSubstring));
 			}
 			try
 			{
 				result = std::stol(p_exponentSubstring);
 			} catch (const std::exception &)
 			{
-				throw std::runtime_error("Invalid numbers JSON value: " + spk::StringUtils::wstringToString(p_exponentSubstring) +
+				GENERATE_ERROR("Invalid numbers JSON value: " + spk::StringUtils::wstringToString(p_exponentSubstring) +
 										 " too big (number overflow)");
 			}
 			return (result);
@@ -50,7 +52,7 @@ namespace spk
 
 			if (p_base == 0)
 			{
-				throw std::runtime_error("numberLength: Base cannot be 0");
+				GENERATE_ERROR("numberLength: Base cannot be 0");
 			}
 			if (p_number < 0)
 			{
@@ -87,7 +89,7 @@ namespace spk
 
 			if (errno == EDOM || errno == ERANGE || std::fetestexcept(FE_ALL_EXCEPT ^ FE_INEXACT) != 0)
 			{
-				throw std::runtime_error("Invalid numbers JSON value: " + spk::StringUtils::wstringToString(p_unitSubString) +
+				GENERATE_ERROR("Invalid numbers JSON value: " + spk::StringUtils::wstringToString(p_unitSubString) +
 										 " too big (power overflow)");
 			}
 
@@ -107,14 +109,14 @@ namespace spk
 
 			if (isNumberMalformatted(isNegative, decimalPos, exponentPos, p_unitSubString) == true)
 			{
-				throw std::runtime_error("Malformatted JSON number: " + spk::StringUtils::wstringToString(p_unitSubString));
+				GENERATE_ERROR("Malformatted JSON number: " + spk::StringUtils::wstringToString(p_unitSubString));
 			}
 
 			exponentPos = (exponentPos == std::wstring::npos) ? p_unitSubString.size() : exponentPos;
 
 			if (p_unitSubString.substr(isNegative, exponentPos - isNegative).find_first_not_of(L".0123456789") != std::wstring::npos)
 			{
-				throw std::runtime_error("JSON number value is not Numerical: " + spk::StringUtils::wstringToString(p_unitSubString));
+				GENERATE_ERROR("JSON number value is not Numerical: " + spk::StringUtils::wstringToString(p_unitSubString));
 			}
 
 			if (exponentPos != p_unitSubString.size())
@@ -129,7 +131,7 @@ namespace spk
 					: result = std::stol(p_unitSubString);
 			} catch (const std::exception &)
 			{
-				throw std::runtime_error("Invalid numbers JSON value: " + spk::StringUtils::wstringToString(p_unitSubString) +
+				GENERATE_ERROR("Invalid numbers JSON value: " + spk::StringUtils::wstringToString(p_unitSubString) +
 										 " too big (number overflow)");
 			}
 

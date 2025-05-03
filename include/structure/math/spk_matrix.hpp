@@ -10,6 +10,8 @@
 
 #include "structure/spk_iostream.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	template <size_t SizeX, size_t SizeY>
@@ -434,7 +436,7 @@ namespace spk
 		{
 			if (SizeX != SizeY)
 			{
-				throw std::runtime_error("Matrix inversion requires a square matrix.");
+				GENERATE_ERROR("Matrix inversion requires a square matrix.");
 			}
 
 			const size_t N = SizeX;
@@ -467,7 +469,7 @@ namespace spk
 				float pivotVal = A[i][i];
 				if (std::fabs(pivotVal) < 1e-9f)
 				{
-					throw std::runtime_error("Matrix is not invertible (singular pivot encountered).");
+					GENERATE_ERROR("Matrix is not invertible (singular pivot encountered).");
 				}
 
 				for (size_t col = 0; col < N; col++)

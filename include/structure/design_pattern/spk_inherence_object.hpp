@@ -5,6 +5,8 @@
 #include <stdexcept>
 #include <vector>
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	template <typename TType>
@@ -72,7 +74,7 @@ namespace spk
 			auto it = std::find(_children.begin(), _children.end(), p_child);
 			if (it == _children.end())
 			{
-				throw std::runtime_error("Child not found in children array");
+				GENERATE_ERROR("Child not found in children array");
 			}
 			_children.erase(it);
 			p_child->_parent = nullptr;
@@ -83,7 +85,7 @@ namespace spk
 			auto it = std::find(_children.begin(), _children.end(), p_child);
 			if (it == _children.end())
 			{
-				throw std::runtime_error("Child not found in children array");
+				GENERATE_ERROR("Child not found in children array");
 			}
 			_children.erase(it);
 			static_cast<Child>(p_child.get())->_parent = nullptr;

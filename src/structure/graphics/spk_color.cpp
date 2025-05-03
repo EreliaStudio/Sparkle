@@ -5,6 +5,8 @@
 #include <limits>
 #include <sstream>
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	Color::Color() :
@@ -118,7 +120,7 @@ namespace spk
 				{
 					if (!iswxdigit(c))
 					{
-						throw std::runtime_error("Invalid color string format: Non-hexadecimal character found");
+						GENERATE_ERROR("Invalid color string format: Non-hexadecimal character found");
 					}
 				}
 
@@ -129,19 +131,19 @@ namespace spk
 
 				if (ss.fail())
 				{
-					throw std::runtime_error("Invalid color string format: Conversion failed");
+					GENERATE_ERROR("Invalid color string format: Conversion failed");
 				}
 
 				p_color = spk::Color(hexValue);
 			}
 			else
 			{
-				throw std::runtime_error("Invalid color string format");
+				GENERATE_ERROR("Invalid color string format");
 			}
 		}
 		else
 		{
-			throw std::runtime_error("Invalid JSON object type");
+			GENERATE_ERROR("Invalid JSON object type");
 		}
 		return p_object;
 	}

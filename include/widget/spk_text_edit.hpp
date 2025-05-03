@@ -30,6 +30,7 @@ namespace spk
 		spk::NineSliceRenderer _backgroundRenderer;
 		spk::ColorRenderer _cursorRenderer;
 		spk::FontRenderer _fontRenderer;
+		spk::FontRenderer::Contract _onFontResizeContract;
 
 		void _computeCursorsValues();
 		void _onGeometryChange() override;

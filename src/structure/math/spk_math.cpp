@@ -2,6 +2,8 @@
 
 #include <stdexcept>
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	float degreeToRadian(float p_degrees)

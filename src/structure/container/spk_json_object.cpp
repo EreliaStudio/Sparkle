@@ -4,6 +4,8 @@
 
 #include "utils/spk_string_utils.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	namespace JSON
@@ -49,7 +51,7 @@ namespace spk
 
 			if (std::get<std::map<std::wstring, Object *>>(_content).count(p_key) != 0)
 			{
-				throw std::runtime_error("Can't add attribute named [" + spk::StringUtils::wstringToString(p_key) + "] : it already exists");
+				GENERATE_ERROR("Can't add attribute named [" + spk::StringUtils::wstringToString(p_key) + "] : it already exists");
 			}
 			std::get<std::map<std::wstring, Object *>>(_content)[p_key] = result;
 			return (*result);
@@ -71,7 +73,7 @@ namespace spk
 
 			if (!std::holds_alternative<std::map<std::wstring, Object *>>(_content))
 			{
-				throw std::runtime_error("Object does not hold a map, cannot access by key");
+				GENERATE_ERROR("Object does not hold a map, cannot access by key");
 			}
 
 			auto &map = std::get<std::map<std::wstring, Object *>>(_content);
@@ -104,14 +106,14 @@ namespace spk
 		{
 			if (!std::holds_alternative<std::map<std::wstring, Object *>>(_content))
 			{
-				throw std::runtime_error("Object does not hold a map, cannot access by key");
+				GENERATE_ERROR("Object does not hold a map, cannot access by key");
 			}
 
 			auto &map = std::get<std::map<std::wstring, Object *>>(_content);
 
 			if (map.count(p_key) == 0)
 			{
-				throw std::runtime_error("Can't acces JSON object named [" + spk::StringUtils::wstringToString(p_key) + "] : it does not exist");
+				GENERATE_ERROR("Can't acces JSON object named [" + spk::StringUtils::wstringToString(p_key) + "] : it does not exist");
 			}
 
 			Object *result = map.at(p_key);
@@ -137,7 +139,7 @@ namespace spk
 		{
 			if (_initialized == false || std::holds_alternative<std::map<std::wstring, Object *>>(_content) == false)
 			{
-				throw std::runtime_error("Can't get object members : object is not initialized or is not of type object");
+				GENERATE_ERROR("Can't get object members : object is not initialized or is not of type object");
 			}
 			return (std::get<std::map<std::wstring, Object *>>(_content));
 		}
@@ -146,7 +148,7 @@ namespace spk
 		{
 			if (_initialized == true)
 			{
-				throw std::runtime_error("Can't set object as object : it is already initialized");
+				GENERATE_ERROR("Can't set object as object : it is already initialized");
 			}
 			_content = std::map<std::wstring, Object *>();
 			_initialized = true;
@@ -156,7 +158,7 @@ namespace spk
 		{
 			if (_initialized == false || std::holds_alternative<std::vector<Object *>>(_content) == false)
 			{
-				throw std::runtime_error("Can't get object as array : object is not initialized or is not of type array");
+				GENERATE_ERROR("Can't get object as array : object is not initialized or is not of type array");
 			}
 			return (std::get<std::vector<Object *>>(_content));
 		}
@@ -209,7 +211,7 @@ namespace spk
 		{
 			if (!std::holds_alternative<std::vector<Object *>>(_content))
 			{
-				throw std::runtime_error("Object does not hold an array, cannot access by index");
+				GENERATE_ERROR("Object does not hold an array, cannot access by index");
 			}
 
 			auto &vec = std::get<std::vector<Object *>>(_content);
@@ -227,7 +229,7 @@ namespace spk
 		{
 			if (!std::holds_alternative<std::vector<Object *>>(_content))
 			{
-				throw std::runtime_error("Object does not hold an array, cannot access by index");
+				GENERATE_ERROR("Object does not hold an array, cannot access by index");
 			}
 
 			const std::vector<Object *> &vec = std::get<std::vector<Object *>>(_content);
@@ -244,7 +246,7 @@ namespace spk
 		{
 			if (_initialized == true)
 			{
-				throw std::runtime_error("Can't set object as Array : it is already initialized");
+				GENERATE_ERROR("Can't set object as Array : it is already initialized");
 			}
 			_content = std::vector<Object *>();
 			_initialized = true;
@@ -254,11 +256,11 @@ namespace spk
 		{
 			if (_initialized == false)
 			{
-				throw std::runtime_error("Can't get object size : it is uninitialized");
+				GENERATE_ERROR("Can't get object size : it is uninitialized");
 			}
 			if (!std::holds_alternative<std::vector<Object *>>(_content))
 			{
-				throw std::runtime_error("Object does not hold a vector, cannot perform size operation");
+				GENERATE_ERROR("Object does not hold a vector, cannot perform size operation");
 			}
 			return (std::get<std::vector<Object *>>(_content).size());
 		}
@@ -267,7 +269,7 @@ namespace spk
 		{
 			if (!std::holds_alternative<std::map<std::wstring, Object *>>(_content))
 			{
-				throw std::runtime_error("Object does not hold a map, cannot perform count operation");
+				GENERATE_ERROR("Object does not hold a map, cannot perform count operation");
 			}
 			return (std::get<std::map<std::wstring, Object *>>(_content).count(p_key));
 		}

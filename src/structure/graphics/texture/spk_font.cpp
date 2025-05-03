@@ -91,6 +91,11 @@ namespace spk
 		}
 	}
 
+	Font::Atlas::Contract Font::Atlas::subscribe(const Font::Atlas::Job &p_job)
+	{
+		return _onEditionContractProvider.subscribe(p_job);
+	}
+
 	const Font::Glyph &Font::Atlas::operator[](const wchar_t &p_char)
 	{
 		return (glyph(p_char));
@@ -103,6 +108,8 @@ namespace spk
 			_loadGlyph(p_char);
 
 			_uploadTexture();
+
+			_onEditionContractProvider.trigger();
 		}
 		return _glyphs.at(p_char);
 	}

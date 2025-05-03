@@ -83,7 +83,6 @@ namespace spk
 		};
 		Type type = Type::Unknow;
 		spk::Geometry2D geometry;
-		bool resized;
 	};
 
 	struct UpdateEvent : public IEvent

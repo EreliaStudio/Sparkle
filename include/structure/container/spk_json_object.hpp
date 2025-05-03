@@ -11,6 +11,8 @@
 
 #include "utils/spk_string_utils.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	namespace JSON
@@ -78,7 +80,7 @@ namespace spk
 			{
 				if (isUnit() == false)
 				{
-					throw std::runtime_error("Can't verify the holding type of an object who isn't a Unit");
+					GENERATE_ERROR("Can't verify the holding type of an object who isn't a Unit");
 				}
 				return (std::holds_alternative<TType>(std::get<Unit>(_content)));
 			}
@@ -112,7 +114,7 @@ namespace spk
 				{
 					Unit tmpUnit = TType();
 					std::string types[] = {"bool", "long", "double", "std::wstring", "Object*", "std::nullptr_t"};
-					throw std::runtime_error("Wrong type request for object [" + spk::StringUtils::wstringToString(_name) +
+					GENERATE_ERROR("Wrong type request for object [" + spk::StringUtils::wstringToString(_name) +
 											 "] as Unit : Request type [" + types[tmpUnit.index()] + "] but unit contain [" + types[unit.index()] +
 											 "]");
 				}

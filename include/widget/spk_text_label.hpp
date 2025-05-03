@@ -12,6 +12,7 @@ namespace spk
 	private:
 		spk::NineSliceRenderer _backgroundRenderer;
 		spk::FontRenderer _fontRenderer;
+		spk::FontRenderer::Contract _onFontResizeContract;
 
 		std::wstring _text = L"";
 		spk::VerticalAlignment _verticalAlignment;

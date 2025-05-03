@@ -74,11 +74,11 @@ namespace spk
 	{
 		RECT adjustedRect = {static_cast<LONG>(0),
 							 static_cast<LONG>(0),
-							 static_cast<LONG>(_viewport.geometry().width),
-							 static_cast<LONG>(_viewport.geometry().height)};
+							 static_cast<LONG>(_rootWidget->viewport().geometry().width),
+							 static_cast<LONG>(_rootWidget->viewport().geometry().height)};
 		if (!AdjustWindowRectEx(&adjustedRect, WS_OVERLAPPEDWINDOW, FALSE, 0))
 		{
-			throw std::runtime_error("Failed to adjust window rect.");
+			GENERATE_ERROR("Failed to adjust window rect.");
 		}
 
 		std::string convertedTitle = spk::StringUtils::wstringToString(_title);
@@ -87,8 +87,8 @@ namespace spk
 							   "SPKWindowClass",
 							   convertedTitle.c_str(),
 							   WS_OVERLAPPEDWINDOW,
-							   _viewport.geometry().x,
-							   _viewport.geometry().y,
+							   _rootWidget->viewport().geometry().x,
+							   _rootWidget->viewport().geometry().y,
 							   adjustedRect.right - adjustedRect.left,
 							   adjustedRect.bottom - adjustedRect.top,
 							   nullptr,
@@ -98,7 +98,7 @@ namespace spk
 
 		if (!_hwnd)
 		{
-			throw std::runtime_error("Failed to create window.");
+			GENERATE_ERROR("Failed to create window.");
 		}
 
 		_cursors[L"Arrow"] = ::LoadCursor(nullptr, IDC_ARROW);
@@ -162,7 +162,7 @@ namespace spk
 		if (result == 0)
 		{
 			DWORD errorCode = GetLastError();
-			throw std::runtime_error("Failed to set update timer. Error code: " + std::to_string(errorCode));
+			GENERATE_ERROR("Failed to set update timer. Error code: " + std::to_string(errorCode));
 		}
 		_timers.erase(result);
 		return (result);
@@ -172,7 +172,7 @@ namespace spk
 	{
 		if (!KillTimer(_hwnd, p_id))
 		{
-			throw std::runtime_error("Failed to clear update timer.");
+			GENERATE_ERROR("Failed to clear update timer.");
 		}
 		_timers.erase(p_id);
 	}
@@ -212,92 +212,6 @@ namespace spk
 		_pendingTimerDeletions.push_back(p_id + 2);
 	}
 
-	void GLAPIENTRY openGLDebugMessageCallback(GLenum p_source, GLenum p_type, GLuint p_id, GLenum p_severity, GLsizei p_length, const GLchar *p_message,
-											   const void *p_userParam)
-	{
-		if (p_id == 131169 || p_id == 131185 || p_id == 131218 || p_id == 131204)
-		{
-			return;
-		}
-
-		spk::cout << "---------------" << std::endl;
-
-		switch (p_source)
-		{
-		case GL_DEBUG_SOURCE_API:
-			spk::cout << "Source: API" << std::endl;
-			break;
-		case GL_DEBUG_SOURCE_WINDOW_SYSTEM:
-			spk::cout << "Source: Window System" << std::endl;
-			break;
-		case GL_DEBUG_SOURCE_SHADER_COMPILER:
-			spk::cout << "Source: Shader Compiler" << std::endl;
-			break;
-		case GL_DEBUG_SOURCE_THIRD_PARTY:
-			spk::cout << "Source: Third Party" << std::endl;
-			break;
-		case GL_DEBUG_SOURCE_APPLICATION:
-			spk::cout << "Source: Application" << std::endl;
-			break;
-		case GL_DEBUG_SOURCE_OTHER:
-			spk::cout << "Source: Other" << std::endl;
-			break;
-		}
-
-		switch (p_type)
-		{
-		case GL_DEBUG_TYPE_ERROR:
-			spk::cout << "Type: Error" << std::endl;
-			break;
-		case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
-			spk::cout << "Type: Deprecated Behaviour" << std::endl;
-			break;
-		case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
-			spk::cout << "Type: Undefined Behaviour" << std::endl;
-			break;
-		case GL_DEBUG_TYPE_PORTABILITY:
-			spk::cout << "Type: Portability" << std::endl;
-			break;
-		case GL_DEBUG_TYPE_PERFORMANCE:
-			spk::cout << "Type: Performance" << std::endl;
-			break;
-		case GL_DEBUG_TYPE_MARKER:
-			spk::cout << "Type: Marker" << std::endl;
-			break;
-		case GL_DEBUG_TYPE_PUSH_GROUP:
-			spk::cout << "Type: Push Group" << std::endl;
-			break;
-		case GL_DEBUG_TYPE_POP_GROUP:
-			spk::cout << "Type: Pop Group" << std::endl;
-			break;
-		case GL_DEBUG_TYPE_OTHER:
-			spk::cout << "Type: Other" << std::endl;
-			break;
-		}
-
-		switch (p_severity)
-		{
-		case GL_DEBUG_SEVERITY_HIGH:
-			spk::cout << "Severity: high" << std::endl;
-			break;
-		case GL_DEBUG_SEVERITY_MEDIUM:
-			spk::cout << "Severity: medium" << std::endl;
-			break;
-		case GL_DEBUG_SEVERITY_LOW:
-			spk::cout << "Severity: low" << std::endl;
-			break;
-		case GL_DEBUG_SEVERITY_NOTIFICATION:
-			spk::cout << "Severity: notification" << std::endl;
-			break;
-		}
-
-		spk::cout << "Debug message (" << p_id << "): " << p_message << std::endl;
-		if (p_severity != GL_DEBUG_SEVERITY_NOTIFICATION)
-		{
-			throw std::runtime_error("Unexpected opengl error detected");
-		}
-	}
-
 	void Window::_createOpenGLContext()
 	{
 		_hdc = GetDC(_hwnd);
@@ -331,24 +245,24 @@ namespace spk
 		int pixelFormat = ChoosePixelFormat(_hdc, &pfd);
 		if (pixelFormat == 0)
 		{
-			throw std::runtime_error("Failed to choose pixel format.");
+			GENERATE_ERROR("Failed to choose pixel format.");
 		}
 
 		if (SetPixelFormat(_hdc, pixelFormat, &pfd) == FALSE)
 		{
-			throw std::runtime_error("Failed to set pixel format.");
+			GENERATE_ERROR("Failed to set pixel format.");
 		}
 
 		// Create a temporary context to initialize modern OpenGL
 		HGLRC tempContext = wglCreateContext(_hdc);
 		if (!tempContext)
 		{
-			throw std::runtime_error("Failed to create temporary OpenGL context.");
+			GENERATE_ERROR("Failed to create temporary OpenGL context.");
 		}
 
 		if (!wglMakeCurrent(_hdc, tempContext))
 		{
-			throw std::runtime_error("Failed to activate temporary OpenGL context.");
+			GENERATE_ERROR("Failed to activate temporary OpenGL context.");
 		}
 
 		// Load OpenGL extensions
@@ -356,7 +270,7 @@ namespace spk
 		GLenum err = glewInit();
 		if (err != GLEW_OK)
 		{
-			throw std::runtime_error("Failed to initialize GLEW.");
+			GENERATE_ERROR("Failed to initialize GLEW.");
 		}
 
 		// Load wglCreateContextAttribsARB extension
@@ -364,7 +278,7 @@ namespace spk
 			(PFNWGLCREATECONTEXTATTRIBSARBPROC)wglGetProcAddress("wglCreateContextAttribsARB");
 		if (!wglCreateContextAttribsARB)
 		{
-			throw std::runtime_error("Failed to load wglCreateContextAttribsARB.");
+			GENERATE_ERROR("Failed to load wglCreateContextAttribsARB.");
 		}
 
 		// Now create a modern OpenGL context
@@ -381,7 +295,7 @@ namespace spk
 		_hglrc = wglCreateContextAttribsARB(_hdc, nullptr, attributes);
 		if (!_hglrc)
 		{
-			throw std::runtime_error("Failed to create modern OpenGL context.");
+			GENERATE_ERROR("Failed to create modern OpenGL context.");
 		}
 
 		// Delete the temporary context and activate the new one
@@ -390,7 +304,7 @@ namespace spk
 
 		if (!wglMakeCurrent(_hdc, _hglrc))
 		{
-			throw std::runtime_error("Failed to activate modern OpenGL context.");
+			GENERATE_ERROR("Failed to activate modern OpenGL context.");
 		}
 
 		// Optionally set VSync
@@ -400,7 +314,7 @@ namespace spk
 		}
 
 		glEnable(GL_DEBUG_OUTPUT);
-		glDebugMessageCallback(openGLDebugMessageCallback, 0);
+		glDebugMessageCallback(spk::OpenGLUtils::openGLDebugMessageCallback, 0);
 
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -442,13 +356,10 @@ namespace spk
 	Window::Window(const std::wstring &p_title, const spk::Geometry2D &p_geometry) :
 		_rootWidget(std::make_unique<Widget>(p_title + L" - CentralWidget", nullptr)),
 		_title(p_title),
-		_viewport(p_geometry),
 		_windowRendererThread(p_title + L" - Renderer"),
 		_windowUpdaterThread(p_title + L" - Updater"),
 		_updateModule(_rootWidget.get())
 	{
-		resize(p_geometry.size);
-
 		_windowRendererThread
 			.addPreparationStep(
 				[&]()
@@ -456,7 +367,7 @@ namespace spk
 					try
 					{
 						_createContext();
-						requestResize();
+						requestPaint();
 					} catch (std::exception &e)
 					{
 						spk::cout << "Error catched : " << e.what() << std::endl;
@@ -550,6 +461,7 @@ namespace spk
 		bindModule(&_systemModule);
 		bindModule(&_timerModule);
 
+		_rootWidget->setGeometry(p_geometry);
 		_rootWidget->activate();
 	}
 
@@ -561,73 +473,23 @@ namespace spk
 
 	void Window::move(const spk::Geometry2D::Point &p_newPosition)
 	{
-		// _viewport.setGeometry({ 0, 0, _viewport.geometry().size });
-		// _rootWidget->setGeometry(_viewport.geometry());
+		// _rootWidget->viewport().setGeometry({ 0, 0, _rootWidget->viewport().geometry().size });
+		// _rootWidget->setGeometry(_rootWidget->viewport().geometry());
 	}
 
 	void Window::resize(const spk::Geometry2D::Size &p_newSize)
-	{	
+	{
 		if (p_newSize.x == 0 || p_newSize.y == 0)
         {
             return;
         }
 
-        try
-        {
-            _viewport.setWindowSize(p_newSize);
-        }
-        catch (const std::exception& e)
-        {
-            PROPAGATE_ERROR("Window::resize over _viewport.setWindowSize failed", e);
-        }
-
-        try
-        {
-            _rootWidget->_viewport.setWindowSize(p_newSize);
-        }
-        catch (const std::exception& e)
-        {
-            PROPAGATE_ERROR("Window::resize over _rootWidget->_viewport.setWindowSize failed", e);
-        }
-
-        try
-        {
-            _viewport.setGeometry({0, 0, p_newSize});
-        }
-        catch (const std::exception& e)
-        {
-            PROPAGATE_ERROR("Window::resize over _viewport.setGeometry failed", e);
-        }
-
-        try
-        {
-            _rootWidget->setGeometry(_viewport.geometry());
-        }
-        catch (const std::exception& e)
-        {
-            PROPAGATE_ERROR("Window::resize over _rootWidget->setGeometry failed", e);
-        }
-
-        for (auto& child : _rootWidget->children())
-        {
-            try
-            {
-                child->_resize();
-            }
-            catch (const std::exception& e)
-            {
-                PROPAGATE_ERROR("Window::resize over child->_resize of [" + spk::StringUtils::wstringToString(child->name()) + "] failed", e);
-            }
-        }
-
-        try
-        {
-            requestPaint();
-        }
-        catch (const std::exception& e)
-        {
-            PROPAGATE_ERROR("Window::resize over requestPaint failed", e);
-        }
+		_rootWidget->setGeometry({0, p_newSize});
+		for (auto& child : _rootWidget->children())
+		{
+			_rootWidget->viewport().apply();
+			child->_applyResize();
+		}
 	}
 
 	void Window::close()
@@ -653,10 +515,11 @@ namespace spk
 	{
 		try
 		{
-			_viewport.apply();
-		} catch (...)
+			_rootWidget->viewport().apply();
+		}
+		catch (std::exception& e)
 		{
-			throw std::runtime_error("Error while applying main window viewport");
+			PROPAGATE_ERROR("Window::clear over _rootWidget->viewport().apply failed", e);
 		}
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -676,7 +539,7 @@ namespace spk
 	{
 		if (_cursors.contains(p_cursorName) == false)
 		{
-			throw std::runtime_error("Cursor [" + spk::StringUtils::wstringToString(p_cursorName) + "] not found.");
+			GENERATE_ERROR("Cursor [" + spk::StringUtils::wstringToString(p_cursorName) + "] not found.");
 		}
 
 		HCURSOR nextCursor = _cursors[p_cursorName];
@@ -724,7 +587,7 @@ namespace spk
 
 	const spk::Geometry2D &Window::geometry() const
 	{
-		return (_viewport.geometry());
+		return (_rootWidget->viewport().geometry());
 	}
 
 	void Window::requestPaint() const
@@ -732,9 +595,9 @@ namespace spk
 		PostMessage(_hwnd, WM_PAINT_REQUEST, 0, 0);
 	}
 
-	void Window::requestResize() const
+	void Window::requestResize(const spk::Vector2Int& p_size) const
 	{
-		PostMessage(_hwnd, WM_RESIZE_REQUEST, 0, 0);
+		PostMessage(_hwnd, WM_RESIZE_REQUEST, static_cast<WPARAM>(p_size.x), static_cast<LPARAM>(p_size.y));
 	}
 
 	void Window::requestUpdate() const

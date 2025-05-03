@@ -2,6 +2,8 @@
 
 #include "spk_generated_resources.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	MenuBar::Menu::Item::Item(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
@@ -59,7 +61,7 @@ namespace spk
 	{
 		if (p_spriteSheet->nbSprite() != spk::Vector2UInt(3, 1))
 		{
-			throw std::runtime_error("Invalid sprite sheet size. Break expects a 3x1 sprite sheet.");
+			GENERATE_ERROR("Invalid sprite sheet size. Break expects a 3x1 sprite sheet.");
 		}
 
 		_renderer.setTexture(p_spriteSheet);

@@ -1,6 +1,8 @@
 #include "structure/graphics/spk_pipeline.hpp"
 #include "utils/spk_string_utils.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	Pipeline::Object::Object(spk::SafePointer<Pipeline> p_owner) :
@@ -27,7 +29,7 @@ namespace spk
 	{
 		if (_ubos.find(p_name) == _ubos.end())
 		{
-			throw std::runtime_error("[Object] - Uniform Buffer Object [" + spk::StringUtils::wstringToString(p_name) + "] not found in Object.");
+			GENERATE_ERROR("[Object] - Uniform Buffer Object [" + spk::StringUtils::wstringToString(p_name) + "] not found in Object.");
 		}
 		return _ubos.at(p_name);
 	}
@@ -36,7 +38,7 @@ namespace spk
 	{
 		if (_ssbos.find(p_name) == _ssbos.end())
 		{
-			throw std::runtime_error("[Object] - Shader Storage Buffer Object [" + spk::StringUtils::wstringToString(p_name) +
+			GENERATE_ERROR("[Object] - Shader Storage Buffer Object [" + spk::StringUtils::wstringToString(p_name) +
 									 "] not found in Object.");
 		}
 		return _ssbos.at(p_name);
@@ -46,7 +48,7 @@ namespace spk
 	{
 		if (_samplers.find(p_name) == _samplers.end())
 		{
-			throw std::runtime_error("[Object] - Sampler Object [" + spk::StringUtils::wstringToString(p_name) + "] not found in Object.");
+			GENERATE_ERROR("[Object] - Sampler Object [" + spk::StringUtils::wstringToString(p_name) + "] not found in Object.");
 		}
 		return _samplers.at(p_name);
 	}
@@ -55,7 +57,7 @@ namespace spk
 	{
 		if (_uniforms.find(p_name) == _uniforms.end())
 		{
-			throw std::runtime_error("[Object] - Uniform Object [" + spk::StringUtils::wstringToString(p_name) + "] not found in Object.");
+			GENERATE_ERROR("[Object] - Uniform Object [" + spk::StringUtils::wstringToString(p_name) + "] not found in Object.");
 		}
 		return _uniforms.at(p_name);
 	}
@@ -64,7 +66,7 @@ namespace spk
 	{
 		if (_ubos.find(p_name) == _ubos.end())
 		{
-			throw std::runtime_error("[Object] - Uniform Buffer Object [" + spk::StringUtils::wstringToString(p_name) + "] not found in Pipeline.");
+			GENERATE_ERROR("[Object] - Uniform Buffer Object [" + spk::StringUtils::wstringToString(p_name) + "] not found in Pipeline.");
 		}
 		return _ubos.at(p_name);
 	}
@@ -73,7 +75,7 @@ namespace spk
 	{
 		if (_ssbos.find(p_name) == _ssbos.end())
 		{
-			throw std::runtime_error("[Object] - Shader Storage Buffer Object [" + spk::StringUtils::wstringToString(p_name) +
+			GENERATE_ERROR("[Object] - Shader Storage Buffer Object [" + spk::StringUtils::wstringToString(p_name) +
 									 "] not found in Pipeline.");
 		}
 		return _ssbos.at(p_name);
@@ -83,7 +85,7 @@ namespace spk
 	{
 		if (_samplers.find(p_name) == _samplers.end())
 		{
-			throw std::runtime_error("[Object] - Sampler Object [" + spk::StringUtils::wstringToString(p_name) + "] not found in Pipeline.");
+			GENERATE_ERROR("[Object] - Sampler Object [" + spk::StringUtils::wstringToString(p_name) + "] not found in Pipeline.");
 		}
 		return _samplers.at(p_name);
 	}
@@ -92,7 +94,7 @@ namespace spk
 	{
 		if (_uniforms.find(p_name) == _uniforms.end())
 		{
-			throw std::runtime_error("[Object] - Uniform Object [" + spk::StringUtils::wstringToString(p_name) + "] not found in Pipeline.");
+			GENERATE_ERROR("[Object] - Uniform Object [" + spk::StringUtils::wstringToString(p_name) + "] not found in Pipeline.");
 		}
 		return _uniforms.at(p_name);
 	}
@@ -101,7 +103,7 @@ namespace spk
 	{
 		if (_owner == nullptr)
 		{
-			throw std::runtime_error("[Object] - Pipeline owner is null.");
+			GENERATE_ERROR("[Object] - Pipeline owner is null.");
 		}
 
 		_owner->beginRender();
@@ -219,7 +221,7 @@ namespace spk
 	{
 		if (_ubos.contains(p_name))
 		{
-			throw std::runtime_error("[Pipeline] - Uniform Buffer Object [" + spk::StringUtils::wstringToString(p_name) +
+			GENERATE_ERROR("[Pipeline] - Uniform Buffer Object [" + spk::StringUtils::wstringToString(p_name) +
 									 "] already exists in Pipeline.");
 		}
 		_ubos.emplace(p_name, std::move(p_ubo));
@@ -229,7 +231,7 @@ namespace spk
 	{
 		if (_ssbos.contains(p_name))
 		{
-			throw std::runtime_error("[Pipeline] - Shader Storage Buffer Object [" + spk::StringUtils::wstringToString(p_name) +
+			GENERATE_ERROR("[Pipeline] - Shader Storage Buffer Object [" + spk::StringUtils::wstringToString(p_name) +
 									 "] already exists in Pipeline.");
 		}
 		_ssbos.emplace(p_name, std::move(p_ssbo));
@@ -239,7 +241,7 @@ namespace spk
 	{
 		if (_samplers.contains(p_name))
 		{
-			throw std::runtime_error("[Pipeline] - Sampler Object [" + spk::StringUtils::wstringToString(p_name) + "] already exists in Pipeline.");
+			GENERATE_ERROR("[Pipeline] - Sampler Object [" + spk::StringUtils::wstringToString(p_name) + "] already exists in Pipeline.");
 		}
 		_samplers.emplace(p_name, std::move(p_sampler));
 	}
@@ -248,7 +250,7 @@ namespace spk
 	{
 		if (_uniforms.contains(p_name))
 		{
-			throw std::runtime_error("[Pipeline] - Uniform Object [" + spk::StringUtils::wstringToString(p_name) + "] already exists in Pipeline.");
+			GENERATE_ERROR("[Pipeline] - Uniform Object [" + spk::StringUtils::wstringToString(p_name) + "] already exists in Pipeline.");
 		}
 		_uniforms.emplace(p_name, std::move(p_uniform));
 	}
@@ -257,7 +259,7 @@ namespace spk
 	{
 		if (_ubos.find(p_name) == _ubos.end())
 		{
-			throw std::runtime_error("[Pipeline] - Uniform Buffer Object [" + spk::StringUtils::wstringToString(p_name) + "] not found in Pipeline.");
+			GENERATE_ERROR("[Pipeline] - Uniform Buffer Object [" + spk::StringUtils::wstringToString(p_name) + "] not found in Pipeline.");
 		}
 		return _ubos.at(p_name);
 	}
@@ -266,7 +268,7 @@ namespace spk
 	{
 		if (_ssbos.find(p_name) == _ssbos.end())
 		{
-			throw std::runtime_error("[Pipeline] - Shader Storage Buffer Object [" + spk::StringUtils::wstringToString(p_name) +
+			GENERATE_ERROR("[Pipeline] - Shader Storage Buffer Object [" + spk::StringUtils::wstringToString(p_name) +
 									 "] not found in Pipeline.");
 		}
 		return _ssbos.at(p_name);
@@ -276,7 +278,7 @@ namespace spk
 	{
 		if (_samplers.find(p_name) == _samplers.end())
 		{
-			throw std::runtime_error("[Pipeline] - Sampler Object [" + spk::StringUtils::wstringToString(p_name) + "] not found in Pipeline.");
+			GENERATE_ERROR("[Pipeline] - Sampler Object [" + spk::StringUtils::wstringToString(p_name) + "] not found in Pipeline.");
 		}
 		return _samplers.at(p_name);
 	}
@@ -285,7 +287,7 @@ namespace spk
 	{
 		if (_uniforms.find(p_name) == _uniforms.end())
 		{
-			throw std::runtime_error("[Pipeline] - Uniform Object [" + spk::StringUtils::wstringToString(p_name) + "] not found in Pipeline.");
+			GENERATE_ERROR("[Pipeline] - Uniform Object [" + spk::StringUtils::wstringToString(p_name) + "] not found in Pipeline.");
 		}
 		return _uniforms.at(p_name);
 	}
@@ -294,7 +296,7 @@ namespace spk
 	{
 		if (_ubos.find(p_name) == _ubos.end())
 		{
-			throw std::runtime_error("[Pipeline] - Uniform Buffer Object [" + spk::StringUtils::wstringToString(p_name) + "] not found in Pipeline.");
+			GENERATE_ERROR("[Pipeline] - Uniform Buffer Object [" + spk::StringUtils::wstringToString(p_name) + "] not found in Pipeline.");
 		}
 		return _ubos.at(p_name);
 	}
@@ -303,7 +305,7 @@ namespace spk
 	{
 		if (_ssbos.find(p_name) == _ssbos.end())
 		{
-			throw std::runtime_error("[Pipeline] - Shader Storage Buffer Object [" + spk::StringUtils::wstringToString(p_name) +
+			GENERATE_ERROR("[Pipeline] - Shader Storage Buffer Object [" + spk::StringUtils::wstringToString(p_name) +
 									 "] not found in Pipeline.");
 		}
 		return _ssbos.at(p_name);
@@ -313,7 +315,7 @@ namespace spk
 	{
 		if (_samplers.find(p_name) == _samplers.end())
 		{
-			throw std::runtime_error("[Pipeline] - Sampler Object [" + spk::StringUtils::wstringToString(p_name) + "] not found in Pipeline.");
+			GENERATE_ERROR("[Pipeline] - Sampler Object [" + spk::StringUtils::wstringToString(p_name) + "] not found in Pipeline.");
 		}
 		return _samplers.at(p_name);
 	}
@@ -322,7 +324,7 @@ namespace spk
 	{
 		if (_uniforms.find(p_name) == _uniforms.end())
 		{
-			throw std::runtime_error("[Pipeline] - Uniform Object [" + spk::StringUtils::wstringToString(p_name) + "] not found in Pipeline.");
+			GENERATE_ERROR("[Pipeline] - Uniform Object [" + spk::StringUtils::wstringToString(p_name) + "] not found in Pipeline.");
 		}
 		return _uniforms.at(p_name);
 	}
@@ -352,7 +354,7 @@ namespace spk
 	{
 		if (_defaultObject._bufferSet.layout().hasAttribute(p_index))
 		{
-			throw std::runtime_error("[Object] - Attribute location " + std::to_string(p_index) + " has already been defined.");
+			GENERATE_ERROR("[Object] - Attribute location " + std::to_string(p_index) + " has already been defined.");
 		}
 		_defaultObject._bufferSet.layout().addAttribute(p_index, p_type);
 	}
@@ -361,7 +363,7 @@ namespace spk
 	{
 		if (_defaultObject._ubos.contains(p_name))
 		{
-			throw std::runtime_error("[Object] - Uniform Buffer Object [" + spk::StringUtils::wstringToString(p_name) +
+			GENERATE_ERROR("[Object] - Uniform Buffer Object [" + spk::StringUtils::wstringToString(p_name) +
 									 "] already exists in Pipeline.");
 		}
 		_defaultObject._ubos.emplace(p_name, std::move(p_ubo));
@@ -371,7 +373,7 @@ namespace spk
 	{
 		if (_defaultObject._ssbos.contains(p_name))
 		{
-			throw std::runtime_error("[Object] - Shader Storage Buffer Object [" + spk::StringUtils::wstringToString(p_name) +
+			GENERATE_ERROR("[Object] - Shader Storage Buffer Object [" + spk::StringUtils::wstringToString(p_name) +
 									 "] already exists in Pipeline.");
 		}
 		_defaultObject._ssbos.emplace(p_name, std::move(p_ssbo));
@@ -381,7 +383,7 @@ namespace spk
 	{
 		if (_defaultObject._samplers.contains(p_name))
 		{
-			throw std::runtime_error("[Object] - Sampler Object [" + spk::StringUtils::wstringToString(p_name) + "] already exists in Pipeline.");
+			GENERATE_ERROR("[Object] - Sampler Object [" + spk::StringUtils::wstringToString(p_name) + "] already exists in Pipeline.");
 		}
 		_defaultObject._samplers.emplace(p_name, std::move(p_sampler));
 	}
@@ -390,7 +392,7 @@ namespace spk
 	{
 		if (_defaultObject._uniforms.contains(p_name))
 		{
-			throw std::runtime_error("[Object] - Uniform Object [" + spk::StringUtils::wstringToString(p_name) + "] already exists in Pipeline.");
+			GENERATE_ERROR("[Object] - Uniform Object [" + spk::StringUtils::wstringToString(p_name) + "] already exists in Pipeline.");
 		}
 		_defaultObject._uniforms.emplace(p_name, std::move(p_uniform));
 	}

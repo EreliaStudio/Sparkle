@@ -19,6 +19,9 @@ namespace spk
 	class FontRenderer
 	{
 	public:
+		using Contract = spk::ContractProvider::Contract;
+		using Job = spk::ContractProvider::Job;
+
 		struct Vertex
 		{
 			spk::Vector2 position;
@@ -36,6 +39,8 @@ namespace spk
 		spk::SafePointer<Font> _font = nullptr;
 		Font::Size _fontSize = {26, 3};
 		spk::SafePointer<Font::Atlas> _atlas = nullptr;
+		spk::Font::Atlas::Contract _onAtlasEditionContract;
+		spk::ContractProvider _onFontEditionContractProvider;
 
 		float _layer = 0.0f;
 		spk::Color _glyphColor = spk::Color(255, 255, 255, 255); // white by default
@@ -46,8 +51,12 @@ namespace spk
 
 		void _updateUbo();
 
+		void _prepareText(const std::wstring &p_text, const spk::Vector2Int &p_anchor, float p_layer);
+
 	public:
 		FontRenderer();
+
+		FontRenderer::Contract subscribeToFontEdition(const Job& p_job);
 
 		void setFont(const spk::SafePointer<Font> &p_font);
 		void setFontSize(const Font::Size &p_fontSize);

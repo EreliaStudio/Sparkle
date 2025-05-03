@@ -15,6 +15,7 @@ namespace spk
 				try
 				{
 					p_event.window->resize(p_event.geometry.size);
+					p_event.window->requestPaint();
 				}
 				catch (std::exception &e)
 				{

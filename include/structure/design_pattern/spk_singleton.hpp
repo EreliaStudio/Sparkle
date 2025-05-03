@@ -5,6 +5,8 @@
 
 #include "structure/spk_safe_pointer.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	template <typename TType>
@@ -67,7 +69,7 @@ namespace spk
 
 			if (_instance != nullptr)
 			{
-				throw std::runtime_error("Can't instanciate an already instancied singleton");
+				GENERATE_ERROR("Can't instanciate an already instancied singleton");
 			}
 
 			_instance = new TType(std::forward<Args>(p_args)...);

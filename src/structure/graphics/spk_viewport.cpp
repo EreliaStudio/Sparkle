@@ -1,5 +1,7 @@
 #include "structure/graphics/spk_viewport.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 #include <GL/glew.h>
 
 #include <GL/gl.h>
@@ -70,7 +72,7 @@ namespace spk
 	{
 		if (_windowSize == 0)
 		{
-			throw std::runtime_error("Can't apply a viewport in a window of size = 0");
+			GENERATE_ERROR("Can't apply a viewport in a window of size == 0");
 		}
 
 		_convertionOffset = static_cast<spk::Vector2>(_geometry.size) / 2.0f;

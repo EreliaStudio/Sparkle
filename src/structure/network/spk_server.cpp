@@ -1,5 +1,7 @@
 #include "structure/network/spk_server.hpp"
 
+#include "structure/system/spk_exception.hpp"
+
 namespace spk
 {
 	Server::Acceptator::Acceptator(std::unordered_map<ClientID, SOCKET> &p_clientsMap, std::mutex &p_mutex, ClientID &p_clientId, MessagePool &p_pool,
@@ -34,14 +36,14 @@ namespace spk
 		WSADATA wsaData;
 		if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
 		{
-			throw std::runtime_error("Failed to initialize Winsock.");
+			GENERATE_ERROR("Failed to initialize Winsock.");
 		}
 
 		serverSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 		if (serverSocket == INVALID_SOCKET)
 		{
 			WSACleanup();
-			throw std::runtime_error("Cannot create socket.");
+			GENERATE_ERROR("Cannot create socket.");
 		}
 
 		struct sockaddr_in serverAddress;
@@ -53,14 +55,14 @@ namespace spk
 		{
 			closesocket(serverSocket);
 			WSACleanup();
-			throw std::runtime_error("Bind failed.");
+			GENERATE_ERROR("Bind failed.");
 		}
 
 		if (listen(serverSocket, SOMAXCONN) == SOCKET_ERROR)
 		{
 			closesocket(serverSocket);
 			WSACleanup();
-			throw std::runtime_error("Listen failed.");
+			GENERATE_ERROR("Listen failed.");
 		}
 
 		isRunning = true;
