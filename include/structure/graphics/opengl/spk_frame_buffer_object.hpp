@@ -10,6 +10,8 @@
 #include "structure/graphics/texture/spk_texture.hpp"
 #include "structure/spk_safe_pointer.hpp"
 
+#include "utils/spk_string_utils.hpp"
+
 #include <cstring>
 #include <map>
 #include <memory>
@@ -22,24 +24,26 @@ namespace spk::OpenGL
 	class FrameBufferObject
 	{
 	public:
-		enum class Type
-		{
-			Float4,
-			Float3,
-			Float2,
-			Float,
-			Int4,
-			Int3,
-			Int2,
-			Int,
-			UInt4,
-			UInt3,
-			UInt2,
-			UInt
-		};
 
 		class Attachment
 		{
+		public:
+			enum class Type
+			{
+				Float4,
+				Float3,
+				Float2,
+				Float,
+				Int4,
+				Int3,
+				Int2,
+				Int,
+				UInt4,
+				UInt3,
+				UInt2,
+				UInt
+			};
+
 		private:
 			int _bindingPoint;
 			Type _type;
@@ -391,7 +395,7 @@ namespace spk::OpenGL
 			_needAttachRebuild = true;
 		}
 
-		void addAttachment(const std::wstring &p_attachmentName, const int &bindingPoint, const Type &p_type)
+		void addAttachment(const std::wstring &p_attachmentName, const int &bindingPoint, const Attachment::Type &p_type)
 		{
 			_attachments[p_attachmentName] = std::make_unique<Attachment>(bindingPoint, p_type);
 			_needAttachRebuild = true;
@@ -419,7 +423,7 @@ namespace spk::OpenGL
 			auto it = _attachments.find(p_attachmentName);
 			if (it == _attachments.end())
 			{
-				return nullptr;
+				throw std::runtime_error("Attachment not found: " + spk::StringUtils::wstringToString(p_attachmentName));
 			}
 			return it->second.get();
 		}
