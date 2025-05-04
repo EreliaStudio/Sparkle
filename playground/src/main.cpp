@@ -7,14 +7,14 @@ private:
 
 	void _onGeometryChange()
 	{
-		spk::SafePointer<spk::Font> font = spk::TextLabel::defaultFont();
-		spk::Font::Size fontSize = {25, 10};
+		//spk::SafePointer<spk::Font> font = spk::TextLabel::defaultFont();
+		//spk::Font::Size fontSize = {25, 10};
 
-		_fontAtlas = &(font->atlas(fontSize));
+		//_fontAtlas = &(font->atlas(fontSize));
 
-		_fontAtlas->loadAllRenderableGlyphs();
+		//_fontAtlas->loadAllRenderableGlyphs();
 
-		_fontAtlas->saveAsPng(L"playground/output.png");
+		//_fontAtlas->saveAsPng(L"playground/output.png");
 	}
 	void _onPaintEvent(spk::PaintEvent& p_event)
 	{

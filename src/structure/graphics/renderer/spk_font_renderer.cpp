@@ -40,27 +40,20 @@ namespace spk
 
 				uniform sampler2D diffuseTexture;
 
-				float computeFormula(float x, float k)
-				{
-					return (1.0 - (exp(-k * x))) / (1.0 - exp(-k));
-				}
-
 				void main()
-				{
-					float sdf = texture(diffuseTexture, fragmentUVs).r;
-    
-					if (sdf == 0)
-						discard;
+	{
+		float sdf = texture(diffuseTexture, fragmentUVs).r;
+		float outlineThreshold = 0.5;
+		// Compute smooth step values for outline and glyph
+		float outlineEdge = smoothstep(0.5 - outlineThreshold, 0.5, sdf);
+		float glyphEdge = smoothstep(0.5, 0.5 + 0.01, sdf); // Smoother edge inside glyph
 
-					if (sdf < 0.5f)
-					{
-						outputColor = vec4(outlineColor.rgb, smoothstep(0, 0.5f, sdf));
-					}
-					else
-					{
-						outputColor = glyphColor;
-					}
-				}
+		// Blend outline and glyph color
+		vec4 color = mix(outlineColor, glyphColor, glyphEdge);
+
+		// Use outlineEdge to fade out the entire glyph+outline
+		outputColor = vec4(color.rgb, outlineEdge * color.a);
+	}
 				)";
 
 			_program = new spk::OpenGL::Program(vertexShaderSrc, fragmentShaderSrc);
