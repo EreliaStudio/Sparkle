@@ -1,5 +1,34 @@
 #include <sparkle.hpp>
 
+class FontGenerator : public spk::Widget
+{
+private:
+	spk::SafePointer<spk::Font::Atlas> _fontAtlas;
+
+	void _onGeometryChange()
+	{
+		spk::SafePointer<spk::Font> font = spk::TextLabel::defaultFont();
+		spk::Font::Size fontSize = {25, 10};
+
+		_fontAtlas = &(font->atlas(fontSize));
+
+		_fontAtlas->loadAllRenderableGlyphs();
+
+		_fontAtlas->saveAsPng(L"playground/output.png");
+	}
+	void _onPaintEvent(spk::PaintEvent& p_event)
+	{
+		
+	}
+
+public:
+	FontGenerator(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+		spk::Widget(p_name, p_parent)
+	{
+		
+	}
+};
+
 int main()
 {
 	spk::GraphicalApplication app;
@@ -32,6 +61,10 @@ int main()
 	labelSmall.activate();
 	labelMedium.activate();
 	labelLarge.activate();
+
+	FontGenerator fontGen = FontGenerator(L"FontGen", root);
+	fontGen.setGeometry({50, 500}, {700, 50});
+	fontGen.activate();
 
 	return app.run();
 }
