@@ -8,6 +8,7 @@
 #include <cstring>
 #include <deque>
 #include <unordered_map>
+#include <filesystem>
 #include <vector>
 
 namespace spk
@@ -128,5 +129,7 @@ namespace spk
 		Filtering filtering() const;
 		Wrap wrap() const;
 		Mipmap mipmap() const;
+
+		void saveAsPng(const std::filesystem::path& p_path) const;
 	};
 }

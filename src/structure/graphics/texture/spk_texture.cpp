@@ -1,5 +1,8 @@
 #include "structure/graphics/texture/spk_texture.hpp"
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <external_libraries/stb_image_write.h>
+
 namespace spk
 {
 
@@ -183,5 +186,26 @@ namespace spk
 	Texture::Mipmap Texture::mipmap() const
 	{
 		return _mipmap;
+	}
+
+	void Texture::saveAsPng(const std::filesystem::path& p_path) const
+	{
+		if (_pixels.empty() || _size.x == 0 || _size.y == 0)
+		{
+			throw std::runtime_error("Cannot save texture: no pixel data.");
+		}
+
+		int channels = static_cast<int>(_getBytesPerPixel(_format));
+		if (channels == 0)
+		{
+			throw std::runtime_error("Unsupported texture format for PNG export.");
+		}
+
+		int stride = _size.x * channels;
+
+		if (!stbi_write_png(p_path.string().c_str(), _size.x, _size.y, channels, _pixels.data(), stride))
+		{
+			throw std::runtime_error("Failed to write PNG file at: " + p_path.string());
+		}
 	}
 }
