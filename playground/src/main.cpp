@@ -1,70 +1,154 @@
 #include <sparkle.hpp>
 
-class FontGenerator : public spk::Widget
-{
+class GridDemo : public spk::Widget {
 private:
-	spk::SafePointer<spk::Font::Atlas> _fontAtlas;
+    spk::GridLayout<3, 3>                                   _layout;      // 3×3 grid
+    std::vector<std::unique_ptr<spk::PushButton>>            _buttons;
 
-	void _onGeometryChange()
+    void _onGeometryChange() override { _layout.setGeometry(geometry()); }
+
+public:
+    GridDemo(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent)
+        : spk::Widget(p_name, p_parent) {
+        _layout.setElementPadding({5, 5});
+
+        for (std::size_t r = 0; r < 3; ++r) {
+            for (std::size_t c = 0; c < 3; ++c) {
+                std::wstring btnName = p_name + L"/Btn_" + std::to_wstring(r) + L"_" + std::to_wstring(c);
+                auto btn = std::make_unique<spk::PushButton>(btnName, this);
+                btn->setText(L"(" + std::to_wstring(r) + L"," + std::to_wstring(c) + L")");
+                btn->activate();
+
+                _layout.setWidget(c, r, btn.get(), spk::Layout::SizePolicy::Extend);
+                _buttons.push_back(std::move(btn));
+            }
+        }
+    }
+};
+
+class HorizontalDemo : public spk::Widget {
+private:
+    spk::HorizontalLayout  _layout;
+    std::vector<std::unique_ptr<spk::PushButton>> _buttons;
+
+    void _onGeometryChange() override { _layout.setGeometry(geometry()); }
+
+public:
+    HorizontalDemo(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent)
+        : spk::Widget(p_name, p_parent) {
+        _layout.setElementPadding({5, 0});
+
+        for (int i = 0; i < 5; ++i) {
+            std::wstring btnName = p_name + L"/HBtn_" + std::to_wstring(i);
+            auto btn = std::make_unique<spk::PushButton>(btnName, this);
+            btn->setText(L"H" + std::to_wstring(i));
+            btn->activate();
+
+            _layout.addWidget(btn.get(), spk::Layout::SizePolicy::Extend);
+            _buttons.push_back(std::move(btn));
+        }
+    }
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+class FormDemo : public spk::Widget {
+private:
+    spk::FormLayout _layout;
+    std::vector<std::unique_ptr<spk::TextLabel>> _labels;
+    std::vector<std::unique_ptr<spk::TextEdit>> _fields;
+
+    void _onGeometryChange() override { _layout.setGeometry(geometry()); }
+
+public:
+    FormDemo(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent)
+        : spk::Widget(p_name, p_parent) {
+        _layout.setElementPadding({5, 5});
+
+        std::array<std::wstring, 3> captions = {L"Player Name", L"Difficulty", L"Seed"};
+        for (std::size_t i = 0; i < captions.size(); ++i) {
+            std::wstring lblName   = p_name + L"/Lbl_"   + std::to_wstring(i);
+            std::wstring fieldName = p_name + L"/Field_" + std::to_wstring(i);
+
+            auto lbl   = std::make_unique<spk::TextLabel>(lblName, this);
+            lbl->setText(captions[i]);
+            lbl->activate();
+
+            auto field = std::make_unique<spk::TextEdit>(fieldName, this);
+            field->setText(L"");
+            field->activate();
+
+            _layout.addRow(lbl.get(), field.get(), spk::Layout::SizePolicy::Minimum, spk::Layout::SizePolicy::Extend);
+
+            _labels.push_back(std::move(lbl));
+            _fields.push_back(std::move(field));
+        }
+    }
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//  Root screen that stacks the three demos vertically                                         ////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+class LayoutTestScreen : public spk::Screen {
+private:
+    GridDemo           _gridDemo;
+    HorizontalDemo     _horizontalDemo;
+    FormDemo           _formDemo;
+
+    void _onGeometryChange() override
 	{
-		spk::SafePointer<spk::Font> font = spk::TextLabel::defaultFont();
-		spk::Font::Size fontSize = {25, 10};
-
-		_fontAtlas = &(font->atlas(fontSize));
-
-		_fontAtlas->loadAllRenderableGlyphs();
-
-		_fontAtlas->saveAsPng(L"playground/output.png");
+		_gridDemo.setGeometry(geometry());
+		_horizontalDemo.setGeometry(geometry());
+		_formDemo.setGeometry(geometry());
 	}
-	void _onPaintEvent(spk::PaintEvent& p_event)
+
+	void _onKeyboardEvent(spk::KeyboardEvent& p_event) override
 	{
-		
+		if (p_event.type == spk::KeyboardEvent::Type::Press)
+		{
+			if (p_event.key == spk::Keyboard::A)
+			{
+				_gridDemo.activate();
+				_horizontalDemo.deactivate();
+				_formDemo.deactivate();
+			}
+			if (p_event.key == spk::Keyboard::Z)
+			{
+				_gridDemo.deactivate();
+				_horizontalDemo.activate();
+				_formDemo.deactivate();
+			}
+			if (p_event.key == spk::Keyboard::E)
+			{
+				_gridDemo.deactivate();
+				_horizontalDemo.deactivate();
+				_formDemo.activate();
+			}
+		}
 	}
 
 public:
-	FontGenerator(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
-		spk::Widget(p_name, p_parent)
+    LayoutTestScreen(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent)
+        : spk::Screen(p_name, p_parent),
+          _gridDemo(p_name + L"/GridDemo", this),
+          _horizontalDemo(p_name + L"/HorizontalDemo", this),
+          _formDemo(p_name + L"/FormDemo", this)
 	{
-		
-	}
+        //_gridDemo.activate();
+        _horizontalDemo.activate();
+        //_formDemo.activate();
+    }
 };
 
-int main()
-{
-	spk::GraphicalApplication app;
+int main() {
+    spk::GraphicalApplication app;
 
-	spk::SafePointer<spk::Window> window = app.createWindow(L"Font Test", {{0, 0}, {800, 600}});
-	spk::SafePointer<spk::Widget> root = window->widget();
+    auto win = app.createWindow(L"Layout Playground", {{0, 0}, {1024, 768}});
 
-	spk::TextLabel labelSmall = spk::TextLabel(L"LabelSmall", root);
-	spk::TextLabel labelMedium = spk::TextLabel(L"LabelMedium", root);
-	spk::TextLabel labelLarge = spk::TextLabel(L"LabelLarge", root);
+    LayoutTestScreen screen(L"LayoutTestScreen", win->widget());
+    screen.setGeometry(win->geometry());
+    screen.activate();
 
-	std::wstring sampleText = L"The quick brown fox jumps over the lazy dog";
-
-	labelSmall.setText(sampleText);
-	labelMedium.setText(sampleText);
-	labelLarge.setText(sampleText);
-
-	labelSmall.setTextColor(spk::Color::white, spk::Color::red);
-	labelMedium.setTextColor(spk::Color::white, spk::Color::red);
-	labelLarge.setTextColor(spk::Color::white, spk::Color::red);
-
-	labelSmall.setFontSize({12, 4});
-	labelMedium.setFontSize({24, 8});
-	labelLarge.setFontSize({48, 16});
-
-	labelSmall.setGeometry({50, 50}, {700, 50});
-	labelMedium.setGeometry({50, 150}, {700, 100});
-	labelLarge.setGeometry({50, 300}, {700, 150});
-
-	labelSmall.activate();
-	labelMedium.activate();
-	labelLarge.activate();
-
-	FontGenerator fontGen = FontGenerator(L"FontGen", root);
-	fontGen.setGeometry({50, 500}, {700, 50});
-	fontGen.activate();
-
-	return app.run();
+    return app.run();
 }

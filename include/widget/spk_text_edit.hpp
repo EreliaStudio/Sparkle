@@ -42,6 +42,8 @@ namespace spk
 	public:
 		TextEdit(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent);
 
+		spk::Vector2UInt minimalSize() const override;
+
 		void setNineSlice(const spk::SafePointer<const spk::SpriteSheet> &p_spriteSheet);
 		void setCornerSize(const spk::Vector2Int &p_cornerSize);
 		void setFont(const spk::SafePointer<spk::Font> &p_font);
