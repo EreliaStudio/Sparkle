@@ -43,6 +43,11 @@ namespace spk
 		return (_fontRenderer.font()->computeStringSize(_text, p_textSize));
 	}
 
+	spk::Vector2UInt TextLabel::minimalSize() const
+	{
+		return (_fontRenderer.computeTextSize(_text) + _cornerSize * 2);
+	}
+
 	const std::wstring &TextLabel::text() const
 	{
 		return (_text);

@@ -225,6 +225,11 @@ namespace spk
 		setFont(Widget::defaultFont());
 	}
 
+	spk::Vector2UInt TextEdit::minimalSize() const
+	{
+		return (_fontRenderer.computeTextSize(_placeholder) + _cornerSize * 2);
+	}
+
 	void TextEdit::setObscured(bool p_state)
 	{	
 		_isObscured = p_state;

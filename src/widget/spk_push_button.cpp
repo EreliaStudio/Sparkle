@@ -93,7 +93,15 @@ namespace spk
 
 	spk::Vector2UInt PushButton::minimalSize() const
 	{
-		return (computeTextSize());
+		spk::Vector2UInt maxCornerSize(0, 0);
+
+		for (auto s : {State::Released, State::Hovered, State::Pressed})
+		{
+			auto tmpCornerSize = _cornerSize[s];
+			maxCornerSize = spk::Vector2UInt::max(maxCornerSize, tmpCornerSize);
+		}
+
+		return (computeTextSize() + maxCornerSize * 2);
 	}
 
 	ContractProvider::Contract PushButton::subscribe(const ContractProvider::Job &p_job)

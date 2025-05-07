@@ -5,6 +5,8 @@
 #include "structure/math/spk_vector2.hpp"
 #include "widget/spk_widget.hpp"
 
+#include "spk_enums.hpp"
+
 #include "structure/graphics/renderer/spk_nine_slice_renderer.hpp"
 
 namespace spk
@@ -12,11 +14,7 @@ namespace spk
 	class SliderBar : public spk::Widget
 	{
 	public:
-		enum class Orientation
-		{
-			Horizontal,
-			Vertical
-		};
+		using Orientation = spk::Orientation;
 
 		using Job = spk::TContractProvider<float>::Job;
 		using VoidJob = spk::TContractProvider<float>::VoidJob;
