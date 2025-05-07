@@ -34,17 +34,19 @@ private:
     void _onGeometryChange() override { _layout.setGeometry(geometry()); }
 
 public:
-    HorizontalDemo(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent)
-        : spk::Widget(p_name, p_parent) {
+    HorizontalDemo(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
+	spk::Widget(p_name, p_parent)
+	{
         _layout.setElementPadding({5, 0});
 
-        for (int i = 0; i < 5; ++i) {
+        for (int i = 0; i < 5; ++i)
+		{
             std::wstring btnName = p_name + L"/HBtn_" + std::to_wstring(i);
             auto btn = std::make_unique<spk::PushButton>(btnName, this);
             btn->setText(L"H" + std::to_wstring(i));
             btn->activate();
 
-            _layout.addWidget(btn.get(), spk::Layout::SizePolicy::Extend);
+            _layout.addWidget(btn.get(), ((i % 2) == 0 ? spk::Layout::SizePolicy::Extend : spk::Layout::SizePolicy::Minimum));
             _buttons.push_back(std::move(btn));
         }
     }
