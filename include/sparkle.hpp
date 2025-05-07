@@ -109,3 +109,7 @@
 #include "widget/spk_text_edit.hpp"
 #include "widget/spk_text_label.hpp"
 #include "widget/spk_widget.hpp"
+#include "widget/spk_layout.hpp"
+#include "widget/spk_grid_layout.hpp"
+#include "widget/spk_linear_layout.hpp"
+#include "widget/spk_form_layout.hpp"

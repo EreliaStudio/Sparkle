@@ -156,7 +156,7 @@ namespace spk
 		_bufferSet.indexes().clear();
 	}
 
-	spk::Vector2Int FontRenderer::computeTextBaselineOffset(const std::wstring &p_text)
+	spk::Vector2Int FontRenderer::computeTextBaselineOffset(const std::wstring &p_text) const
 	{
 		if (_font == nullptr)
 		{
@@ -165,7 +165,7 @@ namespace spk
 		return (_font->computeStringBaselineOffset(p_text, _fontSize));
 	}
 
-	spk::Vector2UInt FontRenderer::computeTextSize(const std::wstring &p_text)
+	spk::Vector2UInt FontRenderer::computeTextSize(const std::wstring &p_text) const
 	{
 		if (_font == nullptr)
 		{
@@ -175,7 +175,7 @@ namespace spk
 	}
 
 	spk::Vector2Int FontRenderer::computeTextAnchor(const spk::Geometry2D &p_geometry, const std::wstring &p_string,
-													spk::HorizontalAlignment p_horizontalAlignment, spk::VerticalAlignment p_verticalAlignment)
+													spk::HorizontalAlignment p_horizontalAlignment, spk::VerticalAlignment p_verticalAlignment) const
 	{
 		if (_font == nullptr)
 		{
