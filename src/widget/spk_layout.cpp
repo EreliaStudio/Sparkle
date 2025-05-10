@@ -51,22 +51,29 @@ namespace spk
 		return (_elements.back().get());
 	}
 
-	void Layout::removeWidget(spk::SafePointer<Element> p_widget)
+	void Layout::removeWidget(spk::SafePointer<spk::Widget> p_widget)
 	{
 		if (p_widget == nullptr)
 		{
-			return;
+			return ;
 		}
 
 		for (auto it = _elements.begin(); it != _elements.end(); ++it)
 		{
-			if (it->get() == p_widget.get())
+			if ((*it)->widget() == p_widget)
 			{
 				_elements.erase(it);
 				resizeElements(_elements.size());
-				break;
+				return ;
 			}
 		}
+		
+		throw std::runtime_error("Widget [" + spk::StringUtils::wstringToString(p_widget->name()) + "] not contained by the layout");
+	}
+
+	void Layout::removeWidget(spk::SafePointer<Element> p_element)
+	{
+		removeWidget(p_element->widget());
 	}
 
 	void Layout::setElementPadding(const spk::Vector2UInt &p_padding)
