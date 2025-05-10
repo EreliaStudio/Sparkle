@@ -31,28 +31,58 @@ namespace spk
 
 				int requested = (isHorizontal ? elt->size().x : elt->size().y);
 
+				spk::Vector2Int minSize = elt->widget()->minimalSize();
+				spk::Vector2Int maxSize = elt->widget()->maximalSize();
+
 				switch (elt->sizePolicy())
 				{
-				case SizePolicy::Fixed:
-					primarySize[i] = requested;
-					break;
-
-				case SizePolicy::Minimum:
-				{
-					spk::Vector2Int minSize = elt->widget()->minimalSize();
-					primarySize[i] = (isHorizontal ? minSize.x : minSize.y);
-					break;
-				}
-				case SizePolicy::Maximum:
-				{
-					spk::Vector2Int maxSize = elt->widget()->maximalSize();
-					primarySize[i] = (isHorizontal ? maxSize.x : maxSize.y);
-					break;
-				}
-				case SizePolicy::Extend:
-					isExt[i] = true;
-					primarySize[i] = requested;
-					break;
+					case SizePolicy::Fixed:
+					{
+						primarySize[i] = requested;
+						break;
+					}
+					case SizePolicy::Minimum:
+					{
+						primarySize[i] = (isHorizontal ? minSize.x : minSize.y);
+						break;
+					}
+					case SizePolicy::Maximum:
+					{
+						primarySize[i] = (isHorizontal ? maxSize.x : maxSize.y);
+						break;
+					}
+					case SizePolicy::Extend:
+					{
+						isExt[i] = true;
+						primarySize[i] = requested;
+						break;
+					}
+					case SizePolicy::HorizontalExtend:
+					{
+						if (isHorizontal == true)
+						{
+							isExt[i]       = true;
+							primarySize[i] = requested;
+						}
+						else
+						{
+							primarySize[i] = minSize.y;
+						}
+						break;
+					}
+					case SizePolicy::VerticalExtend:
+					{
+						if (isHorizontal == false)
+						{
+							isExt[i]       = true;
+							primarySize[i] = requested;
+						}
+						else
+						{
+							primarySize[i] = minSize.x;
+						}
+						break;
+					}
 				}
 			}
 

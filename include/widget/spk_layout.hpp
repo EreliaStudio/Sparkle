@@ -16,7 +16,9 @@ namespace spk
 			Fixed,
 			Minimum,
 			Maximum,
-			Extend
+			Extend,
+			HorizontalExtend,
+			VerticalExtend
 		};
 
 		class Element
