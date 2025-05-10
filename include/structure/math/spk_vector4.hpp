@@ -14,6 +14,8 @@
 
 #include "structure/system/spk_exception.hpp"
 
+#include "structure/container/spk_json_object.hpp"
+
 namespace spk
 {
 	template <typename TType>
@@ -79,6 +81,24 @@ namespace spk
 			y(static_cast<TType>(p_other.y)),
 			z(static_cast<TType>(p_other.z)),
 			w(static_cast<TType>(p_other.w))
+		{
+		}
+
+		template <typename UType = TType, std::enable_if_t<std::is_floating_point<UType>::value, int> = 0>
+		IVector4(const spk::JSON::Object& p_input) :
+			x(static_cast<TType>(p_input[L"x"].as<double>())),
+			y(static_cast<TType>(p_input[L"y"].as<double>())),
+			z(static_cast<TType>(p_input[L"z"].as<double>())),
+			w(static_cast<TType>(p_input[L"w"].as<double>()))
+		{
+		}
+
+		template <typename UType = TType, std::enable_if_t<!std::is_floating_point<UType>::value, int> = 0>
+		IVector4(const spk::JSON::Object& p_input) :
+			x(static_cast<TType>(p_input[L"x"].as<long>())),
+			y(static_cast<TType>(p_input[L"y"].as<long>())),
+			z(static_cast<TType>(p_input[L"z"].as<long>())),
+			w(static_cast<TType>(p_input[L"w"].as<long>()))
 		{
 		}
 
