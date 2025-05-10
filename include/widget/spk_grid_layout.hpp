@@ -67,6 +67,7 @@ namespace spk
 						break;
 					}
 					case SizePolicy::Minimum:
+					case SizePolicy::VerticalExtend:
 					{
 						spk::Vector2Int minSize = elt->widget()->minimalSize();
 						colWidth[c] = std::max(colWidth[c], minSize.x);
@@ -81,6 +82,7 @@ namespace spk
 						break;
 					}
 					case SizePolicy::Extend:
+					case SizePolicy::HorizontalExtend:
 					{
 						break;
 					}
@@ -105,7 +107,7 @@ namespace spk
 				for (size_t r = 0; r < NbRows; ++r)
 				{
 					Element *elt = _elements[r * NbColumns + c].get();
-					if (elt && elt->sizePolicy() == SizePolicy::Extend)
+					if (elt && elt->sizePolicy() == SizePolicy::Extend || elt->sizePolicy() == SizePolicy::HorizontalExtend)
 					{
 						colIsExt[c] = true;
 						break;
@@ -140,7 +142,7 @@ namespace spk
 				for (size_t c = 0; c < NbColumns; ++c)
 				{
 					Element *elt = _elements[r * NbColumns + c].get();
-					if (elt && elt->sizePolicy() == SizePolicy::Extend)
+					if (elt && (elt->sizePolicy() == SizePolicy::Extend || elt->sizePolicy() == SizePolicy::VerticalExtend))
 					{
 						rowIsExt[r] = true;
 						break;

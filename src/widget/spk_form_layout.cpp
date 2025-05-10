@@ -56,6 +56,7 @@ namespace spk
 				break;
 			}
 			case SizePolicy::Minimum:
+			case SizePolicy::VerticalExtend:
 			{
 				p_columnWidth = std::max(p_columnWidth, p_element->widget()->minimalSize().x);
 				break;
@@ -66,6 +67,7 @@ namespace spk
 				break;
 			}
 			case SizePolicy::Extend:
+			case SizePolicy::HorizontalExtend:
 			{
 				p_columnIsExpandable = true;
 				break;
@@ -87,6 +89,7 @@ namespace spk
 				return p_element->size().y;
 			}
 			case SizePolicy::Minimum:
+			case SizePolicy::HorizontalExtend:
 			{
 				return p_element->widget()->minimalSize().y;
 			}
@@ -95,6 +98,7 @@ namespace spk
 				return p_element->widget()->maximalSize().y;
 			}
 			case SizePolicy::Extend:
+			case SizePolicy::VerticalExtend:
 			{
 				return p_element->widget()->minimalSize().y;
 			}
@@ -112,8 +116,10 @@ namespace spk
 
 			rowHeights[row] = std::max(heightForElement(labelElement), heightForElement(fieldElement));
 
-			if ((labelElement != nullptr && labelElement->sizePolicy() == SizePolicy::Extend) ||
-				(fieldElement != nullptr && fieldElement->sizePolicy() == SizePolicy::Extend))
+			if ((labelElement && (labelElement->sizePolicy() == SizePolicy::Extend ||
+                                 labelElement->sizePolicy() == SizePolicy::VerticalExtend)) ||
+				(fieldElement && (fieldElement->sizePolicy() == SizePolicy::Extend ||
+                                 fieldElement->sizePolicy() == SizePolicy::VerticalExtend)))
 			{
 				rowIsExpandable[row] = true;
 			}
