@@ -44,7 +44,7 @@ namespace spk
 			}
 
 			std::unique_ptr<spk::PushButton>& newButton = _buttons.emplace(
-				p_name, std::make_unique<spk::PushButton>(p_name, this)).first->second;
+				p_name, std::make_unique<spk::PushButton>(name() + L"/" + p_name, this)).first->second;
 			
 			newButton->setText(p_label);
 			newButton->activate();
