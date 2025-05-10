@@ -12,6 +12,10 @@ namespace spk
 {
 	class CommandPanel : public spk::Widget
 	{
+	public:
+		using Contract = spk::ContractProvider::Contract;
+		using Job = spk::ContractProvider::Job;
+
 	private:
 		spk::HorizontalLayout _layout;
 		spk::SpacerWidget _spacer;
@@ -59,7 +63,7 @@ namespace spk
 			}
 		}
 
-		spk::PushButton::Contract subscribe(const std::wstring& p_name, const PushButton::Job& p_job)
+		Contract subscribe(const std::wstring& p_name, const Job& p_job)
 		{
 			auto it = _buttons.find(p_name);
 			if (it == _buttons.end())
