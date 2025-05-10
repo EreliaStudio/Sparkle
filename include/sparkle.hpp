@@ -114,3 +114,4 @@
 #include "widget/spk_grid_layout.hpp"
 #include "widget/spk_linear_layout.hpp"
 #include "widget/spk_form_layout.hpp"
+#include "widget/spk_spacer_widget.hpp"
