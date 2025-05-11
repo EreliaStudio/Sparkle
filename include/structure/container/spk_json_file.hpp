@@ -37,6 +37,7 @@ namespace spk
 				return (_root.as<TType>());
 			}
 
+			spk::JSON::Object &root();
 			const spk::JSON::Object &root() const;
 
 			friend std::wostream &operator<<(std::wostream &p_os, const File &p_file);
