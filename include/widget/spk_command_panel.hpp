@@ -36,7 +36,7 @@ namespace spk
 			_layout.addWidget(&_spacer, spk::Layout::SizePolicy::Extend);
 		}
 
-		spk::SafePointer<spk::PushButton> addButton(const std::wstring& p_name, const std::wstring& p_label)
+		virtual spk::SafePointer<spk::PushButton> addButton(const std::wstring& p_name, const std::wstring& p_label)
 		{
 			if (_buttons.find(p_name) != _buttons.end())
 			{

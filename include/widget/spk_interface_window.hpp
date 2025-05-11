@@ -47,6 +47,11 @@ namespace spk
 
 		public:
 			MenuBar(const std::wstring &p_name, const spk::SafePointer<spk::Widget> &p_parent);
+
+			spk::SafePointer<spk::TextLabel> titleLabel();
+			spk::SafePointer<spk::PushButton> minimizeButton();
+			spk::SafePointer<spk::PushButton> maximizeButton();
+			spk::SafePointer<spk::PushButton> closeButton();
 		};
 
 	private:
@@ -79,7 +84,9 @@ namespace spk
 	public:
 		IInterfaceWindow(const std::wstring &p_name, const spk::SafePointer<spk::Widget> &p_parent);
 
-		spk::SafePointer<Widget> backgroundFrame();
+		spk::SafePointer<MenuBar> menuBar();
+
+		spk::SafePointer<Frame> backgroundFrame();
 		void setContent(spk::SafePointer<Widget> p_content);
 
 		void setMinimumContentSize(const spk::Vector2UInt &p_minimumContentSize);

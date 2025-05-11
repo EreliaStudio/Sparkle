@@ -135,6 +135,26 @@ namespace spk
 		_maximizeButton.setCornerSize(4);
 		_maximizeButton.activate();
 	}
+	
+	spk::SafePointer<spk::TextLabel> IInterfaceWindow::MenuBar::titleLabel()
+	{
+		return (&_titleLabel);
+	}
+
+	spk::SafePointer<spk::PushButton> IInterfaceWindow::MenuBar::minimizeButton()
+	{
+		return (&_minimizeButton);
+	}
+
+	spk::SafePointer<spk::PushButton> IInterfaceWindow::MenuBar::maximizeButton()
+	{
+		return (&_maximizeButton);
+	}
+	
+	spk::SafePointer<spk::PushButton> IInterfaceWindow::MenuBar::closeButton()
+	{
+		return (&_closeButton);
+	}
 
 	IInterfaceWindow::IInterfaceWindow(const std::wstring &p_name, const spk::SafePointer<spk::Widget> &p_parent) :
 		ScalableWidget(p_name, p_parent),
@@ -215,10 +235,7 @@ namespace spk
 					p_event.consume();
 				}
 			}
-			if (viewport().geometry().contains(p_event.mouse->position) == true)
-			{
-				p_event.consume();
-			}
+			
 			break;
 		}
 		case spk::MouseEvent::Type::Release:
@@ -231,9 +248,19 @@ namespace spk
 			break;
 		}
 		}
+
+		if (viewport().geometry().contains(p_event.mouse->position) == true)
+		{
+			p_event.consume();
+		}
 	}
 
-	spk::SafePointer<Widget> IInterfaceWindow::backgroundFrame()
+	spk::SafePointer<IInterfaceWindow::MenuBar> IInterfaceWindow::menuBar()
+	{
+		return (&_menuBar);
+	}
+
+	spk::SafePointer<spk::Frame> IInterfaceWindow::backgroundFrame()
 	{
 		return (&_backgroundFrame);
 	}
