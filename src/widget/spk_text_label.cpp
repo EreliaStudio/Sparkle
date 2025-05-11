@@ -45,6 +45,10 @@ namespace spk
 
 	spk::Vector2UInt TextLabel::minimalSize() const
 	{
+		if (_text == L"")
+		{
+			return (0);
+		}
 		return (_fontRenderer.computeTextSize(_text) + _cornerSize * 2);
 	}
 
