@@ -265,6 +265,11 @@ namespace spk::JSON
 		return (_root[p_index]);
 	}
 
+	spk::JSON::Object &File::root()
+	{
+		return (_root);
+	}
+
 	const spk::JSON::Object &File::root() const
 	{
 		return (_root);
