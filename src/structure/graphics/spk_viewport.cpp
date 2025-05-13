@@ -91,7 +91,14 @@ namespace spk
 			down, top,
 			near, far);
 
-		glViewport(static_cast<GLint>(_geometry.x), _windowSize.y - static_cast<GLint>(_geometry.y) - static_cast<GLint>(_geometry.height), static_cast<GLsizei>(_geometry.width), static_cast<GLsizei>(_geometry.height));
+		try
+		{
+			glViewport(static_cast<GLint>(_geometry.x), _windowSize.y - static_cast<GLint>(_geometry.y) - static_cast<GLint>(_geometry.height), static_cast<GLsizei>(_geometry.width), static_cast<GLsizei>(_geometry.height));
+		}
+		catch(const std::exception& e)
+		{
+			GENERATE_ERROR("Error while applying viewport");	
+		}
 		_appliedViewport = this;
 	}
 

@@ -209,13 +209,28 @@ namespace spk
 
 	void Widget::_applyResize()
 	{
-		spk::Vector2Int parentSize = (parent() == nullptr ? _viewport.windowSize() : parent()->_geometry.size);
+		try
+		{
+			spk::Vector2Int parentSize = (parent() == nullptr ? _viewport.windowSize() : parent()->_geometry.size);
 
-		forceGeometryChange({parentSize * _anchorRatio, parentSize * _sizeRatio});
+			forceGeometryChange({parentSize * _anchorRatio, parentSize * _sizeRatio});
+		}
+		catch(const std::exception& e)
+		{
+			PROPAGATE_ERROR("Error while applying resize on ", e);	
+		}
 
 		for (auto& child : children())
 		{
-			viewport().apply();
+			try
+			{
+				viewport().apply();
+			}
+			catch(const std::exception& e)
+			{
+				PROPAGATE_ERROR("Error while applying viewport of widget [" + spk::StringUtils::wstringToString(name()) + "]", e);	
+			}
+			
 			child->_applyResize();
 		}
 	}

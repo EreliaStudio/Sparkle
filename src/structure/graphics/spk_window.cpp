@@ -484,11 +484,26 @@ namespace spk
             return;
         }
 
-		_rootWidget->setGeometry({0, p_newSize});
+		try
+		{
+			_rootWidget->setGeometry({0, p_newSize});
+		}
+		catch(const std::exception& e)
+		{
+			PROPAGATE_ERROR("Error while resizing root widget", e);	
+		}
+		
 		for (auto& child : _rootWidget->children())
 		{
-			_rootWidget->viewport().apply();
-			child->_applyResize();
+			try
+			{
+				_rootWidget->viewport().apply();
+				child->_applyResize();
+			}
+			catch(const std::exception& e)
+			{
+				PROPAGATE_ERROR("Error while resizing window widget", e);	
+			}
 		}
 	}
 
