@@ -97,7 +97,7 @@ namespace spk
 		}
 		catch(const std::exception& e)
 		{
-			GENERATE_ERROR("Error while applying viewport");	
+			GENERATE_ERROR("Error while applying viewport [" + std::to_string(_geometry.x) + " / " + std::to_string(_geometry.y) + " - " + std::to_string(_geometry.width) + " / " + std::to_string(_geometry.height) + "]");	
 		}
 		_appliedViewport = this;
 	}
