@@ -20,10 +20,23 @@ namespace spk
 		spk::HorizontalLayout _layout;
 		spk::SpacerWidget _spacer;
 		std::unordered_map<std::wstring, std::unique_ptr<spk::PushButton>> _buttons;
+		std::vector<spk::SafePointer<spk::PushButton>> _orderedButtons;
 
 		void _onGeometryChange()
 		{
 			_layout.setGeometry({0, geometry().size});
+		}
+
+		void _composeLayout()
+		{
+			_layout.clear();
+			
+			_layout.addWidget(&_spacer, spk::Layout::SizePolicy::Extend);
+
+			for (int i = _orderedButtons.size() - 1; i >= 0 ; i--)
+			{
+				_layout.addWidget(_orderedButtons[i], spk::Layout::SizePolicy::Minimum);
+			}
 		}
 
 	public:
@@ -33,7 +46,7 @@ namespace spk
 		{
 			_layout.setElementPadding({10, 10});
 			_spacer.activate();
-			_layout.addWidget(&_spacer, spk::Layout::SizePolicy::Extend);
+			_composeLayout();
 		}
 
 		virtual spk::SafePointer<spk::PushButton> addButton(const std::wstring& p_name, const std::wstring& p_label)
@@ -48,7 +61,10 @@ namespace spk
 			
 			newButton->setText(p_label);
 			newButton->activate();
-			_layout.addWidget(newButton.get(), spk::Layout::SizePolicy::Minimum);
+
+			_orderedButtons.push_back(newButton.get());
+
+			_composeLayout();
 
 			return (newButton.get());
 		}

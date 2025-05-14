@@ -53,6 +53,8 @@ namespace spk
 	public:
 		virtual void setGeometry(const spk::Geometry2D &p_geometry) = 0;
 
+		void clear();
+
 		spk::SafePointer<Element> addWidget(spk::SafePointer<spk::Widget> p_widget, const SizePolicy &p_sizePolicy = SizePolicy::Extend);
 		void removeWidget(spk::SafePointer<Element> p_element);
 		void removeWidget(spk::SafePointer<spk::Widget> p_widget);

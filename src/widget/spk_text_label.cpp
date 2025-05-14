@@ -33,12 +33,12 @@ namespace spk
 		setFont(Widget::defaultFont());
 	}
 
-	spk::Vector2UInt TextLabel::computeTextSize()
+	spk::Vector2UInt TextLabel::computeTextSize() const
 	{
 		return (_fontRenderer.font()->computeStringSize(_text, _fontRenderer.fontSize()));
 	}
 
-	spk::Vector2UInt TextLabel::computeExpectedTextSize(const spk::Font::Size &p_textSize)
+	spk::Vector2UInt TextLabel::computeExpectedTextSize(const spk::Font::Size &p_textSize) const
 	{
 		return (_fontRenderer.font()->computeStringSize(_text, p_textSize));
 	}
