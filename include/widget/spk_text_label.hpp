@@ -39,7 +39,7 @@ namespace spk
 		void setFont(spk::SafePointer<spk::Font> p_font);
 		void setText(const std::wstring &p_text);
 		void setFontSize(const spk::Font::Size &p_textSize);
-		void setTextColor(const spk::Color &p_glyphColor, const spk::Color &p_outlineColor);
+		void setFontColor(const spk::Color &p_glyphColor, const spk::Color &p_outlineColor);
 		void setTextAlignment(const spk::HorizontalAlignment &p_horizontalAlignment, const spk::VerticalAlignment &p_verticalAlignment);
 
 		void setNineSlice(spk::SafePointer<const spk::SpriteSheet> p_spriteSheet);

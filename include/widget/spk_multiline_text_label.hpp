@@ -1,49 +1,54 @@
+// ────────────────────────────────────────────────────────────────
+//  multiline_text_label.hpp
+// ────────────────────────────────────────────────────────────────
 #pragma once
 
+#include <vector>
+#include <memory>
+#include <string>
+#include <algorithm>
+#include <numeric>
+
 #include "widget/spk_widget.hpp"
-#include "structure/graphics/renderer/spk_font_renderer.hpp"
-#include "structure/graphics/renderer/spk_nine_slice_renderer.hpp"
+#include "widget/spk_linear_layout.hpp"
+#include "structure/math/spk_vector2.hpp"
+#include "structure/graphics/texture/spk_font.hpp"
+
+#include "widget/spk_frame.hpp"
+#include "widget/spk_text_label.hpp"
+#include "widget/spk_spacer_widget.hpp"
 
 namespace spk
 {
-	class MultilineTextLabel : public spk::Widget
-	{
-	private:
-		spk::NineSliceRenderer _backgroundRenderer;
-		std::vector<spk::FontRenderer> _lineRenderers;
-		std::vector<spk::FontRenderer::Contract> _contracts;
+    class MultilineTextLabel : public Widget
+    {
+    private:
+		spk::Frame _backgroundFrame;
 
 		std::wstring _text;
-		spk::VerticalAlignment   _verticalAlignment = spk::VerticalAlignment::Centered;
-		spk::HorizontalAlignment _horizontalAlignment = spk::HorizontalAlignment::Left;
+		spk::SafePointer<spk::Font> _font;
+		spk::Font::Size _fontSize;
 
-		spk::Vector2UInt _cornerSize {10, 10};
+		spk::VerticalLayout _layout;
+		size_t _nbLine = 0;
+		std::vector<std::unique_ptr<spk::TextLabel>> _labels;
+		spk::SpacerWidget _spacer;
 
-		void _refreshLineRenderers();
+        void _onGeometryChange() override;
 
-		void _onGeometryChange() override;
-		void _onPaintEvent(spk::PaintEvent &p_event) override;
+		void _createNewLine();
+		void _composeLayout();
+		void _insertLine(const std::wstring& p_text);
+		void _populateLabels(const spk::Vector2UInt &p_availableSize);
 
-	public:
-		MultilineTextLabel(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent);
+    public:
+        MultilineTextLabel(const std::wstring& p_name, spk::SafePointer<Widget> p_parent);
 
-		spk::Vector2UInt computeTextSize() const;
-		spk::Vector2UInt computeExpectedTextSize(const spk::Font::Size &p_textSize) const;
-		spk::Vector2UInt minimalSize() const override;
+		void setText(const std::wstring& p_text);
 
-		const std::wstring &text() const { return _text; }
-		const spk::Vector2UInt &cornerSize() const { return _cornerSize; }
-		spk::SafePointer<spk::Font> font() const;
-		const spk::Font::Size &fontSize() const;
+		spk::Frame& backgroundFrame() {return (_backgroundFrame);}
+		const spk::Frame& backgroundFrame() const {return (_backgroundFrame);}
 
-		void setFont(spk::SafePointer<spk::Font> p_font);
-		void setText(const std::wstring &p_text);
-		void setFontSize(const spk::Font::Size &p_textSize);
-		void setTextColor(const spk::Color &p_glyphColor, const spk::Color &p_outlineColor);
-		void setTextAlignment(const spk::HorizontalAlignment &p_hAlign,
-						  const spk::VerticalAlignment   &p_vAlign);
-
-		void setNineSlice(spk::SafePointer<const spk::SpriteSheet> p_spriteSheet);
-		void setCornerSize(const spk::Vector2UInt &p_cornerSize);
-	};
+        Vector2UInt minimalSize() const override;
+    };
 }

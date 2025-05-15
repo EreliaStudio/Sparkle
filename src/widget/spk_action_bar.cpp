@@ -127,7 +127,7 @@ namespace spk
 
 		spk::Font::Size fontSize = _computeElementSize();
 		item->setFontSize(fontSize);
-		item->setFontSize({fontSize.text - 4, 0}, spk::PushButton::State::Pressed);
+		item->setFontSize({fontSize.glyph - 4, 0}, spk::PushButton::State::Pressed);
 		item->setText(p_itemName);
 		item->setNineSlice(nullptr, spk::PushButton::State::Released);
 		item->setNineSlice(nullptr, spk::PushButton::State::Pressed);
@@ -190,7 +190,7 @@ namespace spk
 		{
 			spk::Font::Size fontSize = _computeFontSize();
 			entry->menuButton->setFontSize(fontSize);
-			entry->menuButton->setFontSize({fontSize.text - 4, 0}, spk::PushButton::State::Pressed);
+			entry->menuButton->setFontSize({fontSize.glyph - 4, 0}, spk::PushButton::State::Pressed);
 
 			spk::Vector2Int buttonTextSize = entry->menuButton->computeTextSize();
 

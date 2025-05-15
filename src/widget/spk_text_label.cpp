@@ -27,7 +27,7 @@ namespace spk
 				requireGeometryUpdate();
 			});
 			
-		setTextColor(spk::Color::white, spk::Color::black);
+		setFontColor(spk::Color::white, spk::Color::black);
 		setTextAlignment(spk::HorizontalAlignment::Left, spk::VerticalAlignment::Centered);
 		setNineSlice(Widget::defaultNineSlice());
 		setFont(Widget::defaultFont());
@@ -90,7 +90,7 @@ namespace spk
 		requireGeometryUpdate();
 	}
 
-	void TextLabel::setTextColor(const spk::Color &p_glyphColor, const spk::Color &p_outlineColor)
+	void TextLabel::setFontColor(const spk::Color &p_glyphColor, const spk::Color &p_outlineColor)
 	{
 		_fontRenderer.setGlyphColor(p_glyphColor);
 		_fontRenderer.setOutlineColor(p_outlineColor);
