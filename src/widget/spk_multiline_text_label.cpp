@@ -19,51 +19,46 @@ namespace spk
 	static std::vector<std::wstring> composeWordCollection(const std::wstring& p_text)
 	{
 		std::vector<std::wstring> result;
-    const std::size_t n = p_text.size();
+		const std::size_t n = p_text.size();
 
-    std::size_t i = 0;
-    while (i < n)
-    {
-        wchar_t c = p_text[i];
+		std::size_t i = 0;
+		while (i < n)
+		{
+			wchar_t c = p_text[i];
 
-        /*----------- 1) Handle hard line breaks ------------------------*/
-        if (c == L'\r' || c == L'\n')
-        {
-            // Treat CRLF as a single newline
-            if (c == L'\r' && i + 1 < n && p_text[i + 1] == L'\n')
+			if (c == L'\r' || c == L'\n')
 			{
-                ++i;
+				if (c == L'\r' && i + 1 < n && p_text[i + 1] == L'\n')
+				{
+					++i;
+				}
+
+				result.emplace_back(1, L'\n');
+				++i;
+				continue;
 			}
 
-            result.emplace_back(1, L'\n');
-            ++i;
-            continue;
-        }
+			std::wstring token;
 
-        /*----------- 2) Build one “word + trailing-spaces” token -------*/
-        std::wstring token;
+			while (i < n && p_text[i] != L'\n' &&
+				std::iswspace(static_cast<wint_t>(p_text[i])) == false)
+			{
+				token += p_text[i++];
+			}
 
-        // 2a) word part  : read until white-space or newline
-        while (i < n && p_text[i] != L'\n' &&
-               !std::iswspace(static_cast<wint_t>(p_text[i])))
-        {
-            token += p_text[i++];
-        }
+			while (i < n && p_text[i] != L'\n' &&
+				std::iswspace(static_cast<wint_t>(p_text[i])) == true)
+			{
+				token += p_text[i++];
+			}
 
-        // 2b) trailing WS : read spaces/tabs/etc. but stop before '\n'
-        while (i < n && p_text[i] != L'\n' &&
-               std::iswspace(static_cast<wint_t>(p_text[i])))
-        {
-            token += p_text[i++];
-        }
-
-        if (!token.empty())
-		{
-			result.emplace_back(std::move(token));
+			if (!token.empty())
+			{
+				result.emplace_back(std::move(token));
+			}
 		}
-    }
 
-    return result;
+		return result;
 	}
 
 	void MultilineTextLabel::_createNewLine()
@@ -150,17 +145,16 @@ namespace spk
 	{
 		_layout.clear();
 
-		for (size_t i = 0; i < _labels.size(); i++)
+		if (_verticalAlignment != spk::VerticalAlignment::Down)
 		{
-			if (i >= _nbLine)
-			{
-				continue;
-			}
-
-			_layout.addWidget(_labels[i].get(), spk::Layout::SizePolicy::Minimum);
+			_topSpacer.activate();
+			_layout.addWidget(&_topSpacer, spk::Layout::SizePolicy::Extend);
 		}
-		_layout.addWidget(&_spacer, spk::Layout::SizePolicy::Extend);
-		
+		else
+		{
+			_topSpacer.deactivate();
+		}
+
 		for (size_t i = 0; i < _labels.size(); i++)
 		{
 			if (i >= _nbLine)
@@ -170,15 +164,26 @@ namespace spk
 			else
 			{
 				_labels[i]->activate();
+				_layout.addWidget(_labels[i].get(), spk::Layout::SizePolicy::Minimum);
 			}
 		}
-		_spacer.activate();
+
+		if (_verticalAlignment != spk::VerticalAlignment::Top)
+		{
+			_downSpacer.activate();
+			_layout.addWidget(&_downSpacer, spk::Layout::SizePolicy::Extend);
+		}
+		else
+		{
+			_downSpacer.deactivate();
+		}
 	}
 
 	MultilineTextLabel::MultilineTextLabel(const std::wstring& p_name, spk::SafePointer<Widget> p_parent) :
 		spk::Widget(p_name, p_parent),
 		_backgroundFrame(p_name + L"/BackgroundFrame", this),
-		_spacer(p_name + L"/Spacer", this)
+		_topSpacer(p_name + L"/TopSpacer", this),
+		_downSpacer(p_name + L"/DownSpacer", this)
 	{
 		_backgroundFrame.activate();
 		_font = Widget::defaultFont();
@@ -188,6 +193,19 @@ namespace spk
 	void MultilineTextLabel::setText(const std::wstring& p_text)
 	{
 		_text = p_text;
+		requireGeometryUpdate();
+	}
+
+	void MultilineTextLabel::setTextAlignment(const spk::HorizontalAlignment& p_horizontalAlignment, const spk::VerticalAlignment& p_verticalAlignment)
+	{
+		_horizontalAlignment = p_horizontalAlignment;
+		_verticalAlignment = p_verticalAlignment;
+
+		for (auto& label : _labels)
+		{
+			label->setTextAlignment(p_horizontalAlignment, p_verticalAlignment);
+		}
+
 		requireGeometryUpdate();
 	}
 

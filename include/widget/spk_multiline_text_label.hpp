@@ -28,11 +28,14 @@ namespace spk
 		std::wstring _text;
 		spk::SafePointer<spk::Font> _font;
 		spk::Font::Size _fontSize;
+		spk::HorizontalAlignment _horizontalAlignment;
+		spk::VerticalAlignment _verticalAlignment;
 
 		spk::VerticalLayout _layout;
 		size_t _nbLine = 0;
 		std::vector<std::unique_ptr<spk::TextLabel>> _labels;
-		spk::SpacerWidget _spacer;
+		spk::SpacerWidget _topSpacer;
+		spk::SpacerWidget _downSpacer;
 
         void _onGeometryChange() override;
 
@@ -45,6 +48,7 @@ namespace spk
         MultilineTextLabel(const std::wstring& p_name, spk::SafePointer<Widget> p_parent);
 
 		void setText(const std::wstring& p_text);
+		void setTextAlignment(const spk::HorizontalAlignment& p_horizontalAlignment, const spk::VerticalAlignment& p_verticalAlignment);
 
 		spk::Frame& backgroundFrame() {return (_backgroundFrame);}
 		const spk::Frame& backgroundFrame() const {return (_backgroundFrame);}

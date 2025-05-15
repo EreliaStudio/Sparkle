@@ -7,6 +7,7 @@ int main() {
 
     spk::MultilineTextLabel screen(L"LayoutTestScreen", win->widget());
 	screen.setText(L"Ceci est un        test un        peu trop long\nCeci est un deuxieme test\nCeci est un troisieme test");
+	screen.setTextAlignment(spk::HorizontalAlignment::Left, spk::VerticalAlignment::Down);
     screen.setGeometry({win->geometry().size / 4, win->geometry().size / 2});
     screen.activate();
 
