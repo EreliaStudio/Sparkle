@@ -2,8 +2,13 @@
 
 #include <cwctype>
 
+#include "spk_generated_resources.hpp"
+
 namespace spk
 {
+	spk::SpriteSheet defaultHoverNineSlice = spk::SpriteSheet::fromRawData(
+		SPARKLE_GET_RESOURCE("resources/textures/defaultNineSlice_Light.png"), spk::Vector2UInt(3, 3), SpriteSheet::Filtering::Linear);
+
 	void TextArea::_onGeometryChange()
 	{
 		spk::Geometry2D backgroundGeometry = {0, geometry().size};
@@ -67,6 +72,7 @@ namespace spk
 	{
 		std::unique_ptr<spk::TextLabel> newLabel = std::make_unique<spk::TextLabel>(name() + L"/LabelLine[" + std::to_wstring(_nbLine) + L"]", this);
 
+		newLabel->setLayer(_backgroundFrame.layer() + 1);
 		newLabel->setNineSlice(nullptr);
 		newLabel->setCornerSize(0);
 		newLabel->setFont(_font);
@@ -194,6 +200,7 @@ namespace spk
 	{
 		_layout.setElementPadding({0, 0});
 
+		_backgroundFrame.setNineSlice(&defaultHoverNineSlice);
 		_backgroundFrame.setCornerSize(_cornerSize);
 		_backgroundFrame.activate();
 
@@ -206,10 +213,20 @@ namespace spk
 		_layout.setElementPadding({0, p_nbPixels});
 	}
 
+	size_t TextArea::linePadding() const
+	{
+		return _layout.elementPadding().y;
+	}
+
 	void TextArea::setText(const std::wstring& p_text)
 	{
 		_text = p_text;
 		requireGeometryUpdate();
+	}
+
+	const std::wstring& TextArea::text() const
+	{
+		return _text;
 	}
 
 	void TextArea::setTextAlignment(const spk::HorizontalAlignment& p_horizontalAlignment, const spk::VerticalAlignment& p_verticalAlignment)
@@ -225,6 +242,16 @@ namespace spk
 		requireGeometryUpdate();
 	}
 
+	spk::HorizontalAlignment TextArea::horizontalAlignment() const
+	{
+		return _horizontalAlignment;
+	}
+
+	spk::VerticalAlignment TextArea::verticalAlignment() const
+	{
+		return _verticalAlignment;
+	}
+
 	void TextArea::setFont(spk::SafePointer<spk::Font> p_font)
 	{
 		_font = p_font;
@@ -235,6 +262,11 @@ namespace spk
 		}
 
 		requireGeometryUpdate();
+	}
+
+	spk::SafePointer<spk::Font> TextArea::font() const
+	{
+		return _font;
 	}
 
 	void TextArea::setFontSize(const spk::Font::Size& p_size)
@@ -249,6 +281,11 @@ namespace spk
 		requireGeometryUpdate();
 	}
 
+	spk::Font::Size TextArea::fontSize() const
+	{
+		return _fontSize;
+	}
+
 	void TextArea::setFontColor(const spk::Color& p_glyphColor, const spk::Color& p_outlineColor)
 	{
 		_glyphColor = p_glyphColor;
@@ -260,6 +297,16 @@ namespace spk
 		}
 	}
 
+	spk::Color TextArea::glyphColor() const
+	{
+		return _glyphColor;
+	}
+
+	spk::Color TextArea::outlineColor() const
+	{
+		return _outlineColor;
+	}
+
 	void TextArea::setCornerSize(const spk::Vector2UInt& p_cornerSize)
 	{
 		_cornerSize = p_cornerSize;
@@ -267,18 +314,101 @@ namespace spk
 		requireGeometryUpdate();
 	}
 
+	spk::Vector2UInt TextArea::cornerSize() const
+	{
+		return _cornerSize;
+	}
+
 	void TextArea::setNineSlice(spk::SafePointer<const spk::SpriteSheet> p_spriteSheet)
 	{
 		_backgroundFrame.setNineSlice(p_spriteSheet);
 	}
 
-	void TextArea::setMinimalSize(const spk::Vector2UInt& p_minimalSize)
+	spk::SafePointer<const spk::SpriteSheet> TextArea::nineSlice() const
 	{
-		_minimalSize = p_minimalSize;
+		return _backgroundFrame.nineslice();
 	}
 
-	Vector2UInt TextArea::minimalSize() const
+	spk::Vector2UInt TextArea::computeMinimalSize(const size_t& p_minimalWidth)
 	{
-		return _minimalSize;
+		spk::Vector2UInt result{0, 0};
+
+		const uint32_t horizontalMargin = _backgroundFrame.cornerSize().x * 2;
+		const uint32_t verticalMargin   = _backgroundFrame.cornerSize().y * 2;
+		const uint32_t padding          = static_cast<uint32_t>(_layout.elementPadding().y);
+
+		const size_t availableWidth = (p_minimalWidth > horizontalMargin)
+										? (p_minimalWidth - horizontalMargin)
+										: 0;
+
+		if (_font == nullptr)
+		{
+			return result;
+		}
+
+		const std::vector<std::wstring> tokens = composeWordCollection(_text);
+
+		std::wstring currentLine;
+		size_t       maxLineWidth = 0U;
+
+		const auto flushLine = [&](spk::Vector2UInt p_textSize)
+		{
+			if (p_textSize.x != 0)
+			{
+				maxLineWidth = std::max(maxLineWidth, static_cast<size_t>(p_textSize.x));
+			}
+
+			if (result.y != 0)
+			{
+				result.y += padding;
+			}
+
+			result.y += p_textSize.y;
+			currentLine.clear();
+		};
+
+		for (const std::wstring& token : tokens)
+		{
+			spk::Vector2UInt currentLineSize = _font->computeStringSize(currentLine, _fontSize);
+
+			if (token == L"\n")
+			{
+				flushLine(currentLineSize);
+				continue;
+			}
+
+			std::wstring candidate = currentLine + token;
+			spk::Vector2UInt candidateSize = _font->computeStringSize(candidate, _fontSize);
+
+			if (candidateSize.x < availableWidth)
+			{
+				currentLine = std::move(candidate);
+				continue;
+			}
+
+			std::wstring trimmedCandidate = trimSpaces(candidate);
+			spk::Vector2UInt trimmedSize   = _font->computeStringSize(trimmedCandidate, _fontSize);
+
+			if (trimmedSize.x < availableWidth)
+			{
+				flushLine(trimmedSize);
+				continue;
+			}
+
+			flushLine(currentLineSize);
+			currentLine = token;
+		}
+
+		if (!trimSpaces(currentLine).empty())
+		{
+			spk::Vector2UInt currentLineSize = _font->computeStringSize(currentLine, _fontSize);
+			flushLine(currentLineSize);
+		}
+
+		result.x = static_cast<uint32_t>(maxLineWidth + horizontalMargin);
+
+		result.y += verticalMargin;
+
+		return result;
 	}
 } 

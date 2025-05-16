@@ -69,6 +69,24 @@ namespace spk
 			return (newButton.get());
 		}
 
+		spk::SafePointer<spk::PushButton> button(const std::wstring& p_name)
+		{
+			if (_buttons.contains(p_name) == false)
+			{
+				throw std::runtime_error("Button [" + spk::StringUtils::wstringToString(p_name) + "] doesn't exist in the command panel [" + spk::StringUtils::wstringToString(name()) + "]");
+			}
+			return (_buttons.at(p_name).get());
+		}
+
+		spk::SafePointer<const spk::PushButton> button(const std::wstring& p_name) const
+		{
+			if (_buttons.contains(p_name) == false)
+			{
+				throw std::runtime_error("Button [" + spk::StringUtils::wstringToString(p_name) + "] doesn't exist in the command panel [" + spk::StringUtils::wstringToString(name()) + "]");
+			}
+			return (_buttons.at(p_name).get());
+		}
+
 		void removeButton(const std::wstring& p_name)
 		{
 			auto it = _buttons.find(p_name);
@@ -91,14 +109,20 @@ namespace spk
 
 		spk::Vector2UInt minimalSize() const override
 		{
-			spk::Vector2UInt padding = _layout.elementPadding();
-			spk::Vector2UInt result = { padding.x, 0 };
-
-			for (const auto& [name, button] : _buttons)
+			spk::Vector2UInt result = { 0, 0 };
+			
+			if (_buttons.size() != 0)
 			{
-				spk::Vector2UInt buttonSize = button->minimalSize();
-				result.x += buttonSize.x + padding.x;
-				result.y = std::max(result.y, buttonSize.y);
+				spk::Vector2UInt padding = _layout.elementPadding();
+
+				for (const auto& [name, button] : _buttons)
+				{
+					spk::Vector2UInt buttonSize = button->minimalSize();
+					result.x += buttonSize.x;
+					result.y = std::max(result.y, buttonSize.y);
+				}
+
+				result.x += padding.x * (_buttons.size() - 1);
 			}
 
 			return result;

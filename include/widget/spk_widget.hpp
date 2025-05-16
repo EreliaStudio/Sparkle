@@ -62,6 +62,7 @@ namespace spk
 
 		float _layer;
 
+	protected:
 		virtual void _onGeometryChange();
 		virtual void _onPaintEvent(spk::PaintEvent &p_event);
 		virtual void _onUpdateEvent(spk::UpdateEvent &p_event);
@@ -70,6 +71,7 @@ namespace spk
 		virtual void _onControllerEvent(spk::ControllerEvent &p_event);
 		virtual void _onTimerEvent(spk::TimerEvent &p_event);
 
+	private:
 		void _computeViewport();
 
 		void _applyGeometryChange();

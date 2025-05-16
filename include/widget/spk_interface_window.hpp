@@ -10,6 +10,8 @@ namespace spk
 	class IInterfaceWindow : public spk::ScalableWidget
 	{
 	public:
+		using ResizeContractProvider = spk::TContractProvider<const spk::Vector2UInt&>;
+
 		enum Event
 		{
 			Minimize,
@@ -69,20 +71,26 @@ namespace spk
 		bool _isMoving = false;
 		spk::Vector2Int _positionDelta;
 
+		ResizeContractProvider _onResizeContractProvider;
+
 		spk::ContractProvider::Contract _minimizeContract;
 		spk::ContractProvider::Contract _maximizeContract;
 
 		bool _isMaximized = false;
 		spk::Geometry2D _previousGeometry;
 
+	protected:
 		void _onGeometryChange() override;
 		void _onMouseEvent(spk::MouseEvent &p_event) override;
 
+	private:
 		using spk::ScalableWidget::setMaximumSize;
 		using spk::ScalableWidget::setMinimumSize;
 
 	public:
 		IInterfaceWindow(const std::wstring &p_name, const spk::SafePointer<spk::Widget> &p_parent);
+
+		ResizeContractProvider::Contract subscribeOnResize(const ResizeContractProvider::Job& p_job);
 
 		spk::SafePointer<MenuBar> menuBar();
 
