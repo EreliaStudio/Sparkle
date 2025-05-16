@@ -116,4 +116,4 @@
 #include "widget/spk_form_layout.hpp"
 #include "widget/spk_spacer_widget.hpp"
 #include "widget/spk_command_panel.hpp"
-#include "widget/spk_multiline_text_label.hpp"
+#include "widget/spk_text_area.hpp"

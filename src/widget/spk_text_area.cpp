@@ -1,10 +1,10 @@
-#include "widget/spk_multiline_text_label.hpp"
+#include "widget/spk_text_area.hpp"
 
 #include <cwctype>
 
 namespace spk
 {
-	void MultilineTextLabel::_onGeometryChange()
+	void TextArea::_onGeometryChange()
 	{
 		spk::Geometry2D backgroundGeometry = {0, geometry().size};
 		spk::Geometry2D layoutGeometry = backgroundGeometry.shrink(_backgroundFrame.cornerSize());
@@ -41,15 +41,17 @@ namespace spk
 			std::wstring token;
 
 			while (i < n && p_text[i] != L'\n' &&
-				std::iswspace(static_cast<wint_t>(p_text[i])) == false)
+				std::iswspace(static_cast<wint_t>(p_text[i])) == 0)
 			{
-				token += p_text[i++];
+				token += p_text[i];
+				i++;
 			}
 
 			while (i < n && p_text[i] != L'\n' &&
-				std::iswspace(static_cast<wint_t>(p_text[i])) == true)
+				std::iswspace(static_cast<wint_t>(p_text[i])) != 0)
 			{
-				token += p_text[i++];
+				token += p_text[i];
+				i++;
 			}
 
 			if (!token.empty())
@@ -61,17 +63,22 @@ namespace spk
 		return result;
 	}
 
-	void MultilineTextLabel::_createNewLine()
+	void TextArea::_createNewLine()
 	{
 		std::unique_ptr<spk::TextLabel> newLabel = std::make_unique<spk::TextLabel>(name() + L"/LabelLine[" + std::to_wstring(_nbLine) + L"]", this);
 
+		newLabel->setNineSlice(nullptr);
+		newLabel->setCornerSize(0);
 		newLabel->setFont(_font);
 		newLabel->setFontSize(_fontSize);
+		newLabel->setFontColor(_glyphColor, _outlineColor);
+
+		newLabel->setTextAlignment(_horizontalAlignment, spk::VerticalAlignment::Centered);
 
 		_labels.push_back(std::move(newLabel));
 	}
 
-	void MultilineTextLabel::_insertLine(const std::wstring& p_text)
+	void TextArea::_insertLine(const std::wstring& p_text)
 	{
 		if (_nbLine >= _labels.size())
 		{
@@ -95,7 +102,7 @@ namespace spk
 		return (result);
     }
 
-	void MultilineTextLabel::_populateLabels(const spk::Vector2UInt &p_availableSize)
+	void TextArea::_populateLabels(const spk::Vector2UInt &p_availableSize)
 	{
 		_nbLine = 0;
 		std::wstring currentLine;
@@ -141,11 +148,11 @@ namespace spk
 		}
 	}
 
-	void MultilineTextLabel::_composeLayout()
+	void TextArea::_composeLayout()
 	{
 		_layout.clear();
 
-		if (_verticalAlignment != spk::VerticalAlignment::Down)
+		if (_verticalAlignment != spk::VerticalAlignment::Top)
 		{
 			_topSpacer.activate();
 			_layout.addWidget(&_topSpacer, spk::Layout::SizePolicy::Extend);
@@ -168,7 +175,7 @@ namespace spk
 			}
 		}
 
-		if (_verticalAlignment != spk::VerticalAlignment::Top)
+		if (_verticalAlignment != spk::VerticalAlignment::Down)
 		{
 			_downSpacer.activate();
 			_layout.addWidget(&_downSpacer, spk::Layout::SizePolicy::Extend);
@@ -179,40 +186,99 @@ namespace spk
 		}
 	}
 
-	MultilineTextLabel::MultilineTextLabel(const std::wstring& p_name, spk::SafePointer<Widget> p_parent) :
+	TextArea::TextArea(const std::wstring& p_name, spk::SafePointer<Widget> p_parent) :
 		spk::Widget(p_name, p_parent),
 		_backgroundFrame(p_name + L"/BackgroundFrame", this),
 		_topSpacer(p_name + L"/TopSpacer", this),
 		_downSpacer(p_name + L"/DownSpacer", this)
 	{
+		_layout.setElementPadding({0, 0});
+
+		_backgroundFrame.setCornerSize(_cornerSize);
 		_backgroundFrame.activate();
+
 		_font = Widget::defaultFont();
 		_fontSize = {35, 0};
 	}
 
-	void MultilineTextLabel::setText(const std::wstring& p_text)
+	void TextArea::setLinePadding(size_t p_nbPixels)
+	{
+		_layout.setElementPadding({0, p_nbPixels});
+	}
+
+	void TextArea::setText(const std::wstring& p_text)
 	{
 		_text = p_text;
 		requireGeometryUpdate();
 	}
 
-	void MultilineTextLabel::setTextAlignment(const spk::HorizontalAlignment& p_horizontalAlignment, const spk::VerticalAlignment& p_verticalAlignment)
+	void TextArea::setTextAlignment(const spk::HorizontalAlignment& p_horizontalAlignment, const spk::VerticalAlignment& p_verticalAlignment)
 	{
 		_horizontalAlignment = p_horizontalAlignment;
 		_verticalAlignment = p_verticalAlignment;
 
 		for (auto& label : _labels)
 		{
-			label->setTextAlignment(p_horizontalAlignment, p_verticalAlignment);
+			label->setTextAlignment(p_horizontalAlignment, spk::VerticalAlignment::Centered);
 		}
 
 		requireGeometryUpdate();
 	}
 
-	Vector2UInt MultilineTextLabel::minimalSize() const
+	void TextArea::setFont(spk::SafePointer<spk::Font> p_font)
 	{
-		Vector2UInt minimalLabelSize = {0, 0};
+		_font = p_font;
 
-		return minimalLabelSize + _backgroundFrame.cornerSize() * 2;
+		for (auto& lbl : _labels)
+		{
+			lbl->setFont(_font);
+		}
+
+		requireGeometryUpdate();
+	}
+
+	void TextArea::setFontSize(const spk::Font::Size& p_size)
+	{
+		_fontSize = p_size;
+
+		for (auto& lbl : _labels)
+		{
+			lbl->setFontSize(_fontSize);
+		}
+
+		requireGeometryUpdate();
+	}
+
+	void TextArea::setFontColor(const spk::Color& p_glyphColor, const spk::Color& p_outlineColor)
+	{
+		_glyphColor = p_glyphColor;
+		_outlineColor = p_outlineColor;
+
+		for (auto& lbl : _labels)
+		{
+			lbl->setFontColor(_glyphColor, _outlineColor);
+		}
+	}
+
+	void TextArea::setCornerSize(const spk::Vector2UInt& p_cornerSize)
+	{
+		_cornerSize = p_cornerSize;
+		_backgroundFrame.setCornerSize(_cornerSize);
+		requireGeometryUpdate();
+	}
+
+	void TextArea::setNineSlice(spk::SafePointer<const spk::SpriteSheet> p_spriteSheet)
+	{
+		_backgroundFrame.setNineSlice(p_spriteSheet);
+	}
+
+	void TextArea::setMinimalSize(const spk::Vector2UInt& p_minimalSize)
+	{
+		_minimalSize = p_minimalSize;
+	}
+
+	Vector2UInt TextArea::minimalSize() const
+	{
+		return _minimalSize;
 	}
 } 
