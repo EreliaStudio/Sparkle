@@ -127,7 +127,7 @@ namespace spk
 		requireGeometryUpdate();
 	}
 
-	void PushButton::setTextColor(const spk::Color &p_glyphColor, const spk::Color &p_outlineColor, const State &p_state)
+	void PushButton::setFontColor(const spk::Color &p_glyphColor, const spk::Color &p_outlineColor, const State &p_state)
 	{
 		_fontRenderer[p_state].setGlyphColor(p_glyphColor);
 		_fontRenderer[p_state].setOutlineColor(p_outlineColor);
@@ -193,11 +193,11 @@ namespace spk
 		setFontSize(p_fontSize, State::Pressed);
 	}
 
-	void PushButton::setTextColor(const spk::Color &p_glyphColor, const spk::Color &p_outlineColor)
+	void PushButton::setFontColor(const spk::Color &p_glyphColor, const spk::Color &p_outlineColor)
 	{
-		setTextColor(p_glyphColor, p_outlineColor, State::Released);
-		setTextColor(p_glyphColor, p_outlineColor, State::Hovered);
-		setTextColor(p_glyphColor, p_outlineColor, State::Pressed);
+		setFontColor(p_glyphColor, p_outlineColor, State::Released);
+		setFontColor(p_glyphColor, p_outlineColor, State::Hovered);
+		setFontColor(p_glyphColor, p_outlineColor, State::Pressed);
 	}
 
 	void PushButton::setTextAlignment(const spk::HorizontalAlignment &p_horizontalAlignment, const spk::VerticalAlignment &p_verticalAlignment)

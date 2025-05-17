@@ -185,12 +185,19 @@ namespace spk
 			});
 	}
 
+	IInterfaceWindow::ResizeContractProvider::Contract IInterfaceWindow::subscribeOnResize(const IInterfaceWindow::ResizeContractProvider::Job& p_job)
+	{
+		return (_onResizeContractProvider.subscribe(p_job));
+	}
+
 	void IInterfaceWindow::_onGeometryChange()
 	{
-		spk::Vector2Int menuSize = {geometry().size.x, static_cast<int>(_menuHeight)};
+		spk::Vector2UInt menuSize = {geometry().size.x, static_cast<int>(_menuHeight)};
 
-		spk::Vector2Int frameSize = {geometry().size.x - _backgroundFrame.cornerSize().x * 2,
+		spk::Vector2UInt frameSize = {geometry().size.x - _backgroundFrame.cornerSize().x * 2,
 									 geometry().size.y - menuSize.y - _backgroundFrame.cornerSize().y * 2};
+
+		_onResizeContractProvider.trigger(frameSize);
 
 		_backgroundFrame.setGeometry(0, geometry().size);
 		_minimizedBackgroundFrame.setGeometry(0, menuSize);
@@ -288,6 +295,7 @@ namespace spk
 		uint32_t x = std::max(safeAdd(p_minimumContentSize.x, extra), menuBarSize.x);
 		uint32_t y = safeAdd(menuBarSize.y, safeAdd(p_minimumContentSize.y, extra));
 		spk::ScalableWidget::setMinimumSize({x, y});
+		requireGeometryUpdate();
 	}
 
 	void IInterfaceWindow::setMaximumContentSize(const spk::Vector2UInt &p_maximumContentSize)
@@ -297,6 +305,7 @@ namespace spk
 		uint32_t x = std::max(safeAdd(p_maximumContentSize.x, extra), menuBarSize.x);
 		uint32_t y = safeAdd(menuBarSize.y, safeAdd(p_maximumContentSize.y, extra));
 		spk::ScalableWidget::setMaximumSize({x, y});
+		requireGeometryUpdate();
 	}
 
 	void IInterfaceWindow::setMenuHeight(const float &p_menuHeight)

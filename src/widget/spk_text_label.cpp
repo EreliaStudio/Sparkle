@@ -27,18 +27,18 @@ namespace spk
 				requireGeometryUpdate();
 			});
 			
-		setTextColor(spk::Color::white, spk::Color::black);
+		setFontColor(spk::Color::white, spk::Color::black);
 		setTextAlignment(spk::HorizontalAlignment::Left, spk::VerticalAlignment::Centered);
 		setNineSlice(Widget::defaultNineSlice());
 		setFont(Widget::defaultFont());
 	}
 
-	spk::Vector2UInt TextLabel::computeTextSize()
+	spk::Vector2UInt TextLabel::computeTextSize() const
 	{
 		return (_fontRenderer.font()->computeStringSize(_text, _fontRenderer.fontSize()));
 	}
 
-	spk::Vector2UInt TextLabel::computeExpectedTextSize(const spk::Font::Size &p_textSize)
+	spk::Vector2UInt TextLabel::computeExpectedTextSize(const spk::Font::Size &p_textSize) const
 	{
 		return (_fontRenderer.font()->computeStringSize(_text, p_textSize));
 	}
@@ -90,7 +90,7 @@ namespace spk
 		requireGeometryUpdate();
 	}
 
-	void TextLabel::setTextColor(const spk::Color &p_glyphColor, const spk::Color &p_outlineColor)
+	void TextLabel::setFontColor(const spk::Color &p_glyphColor, const spk::Color &p_outlineColor)
 	{
 		_fontRenderer.setGlyphColor(p_glyphColor);
 		_fontRenderer.setOutlineColor(p_outlineColor);

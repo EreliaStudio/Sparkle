@@ -8,7 +8,7 @@ namespace spk
     class SpacerWidget : public Widget
     {
     private:
-        spk::Vector2UInt _minimalSize = {1, 1};
+        spk::Vector2UInt _minimalSize = {0, 0};
         spk::Vector2UInt _maximalSize = {
 				std::numeric_limits<uint32_t>::max(),
 				std::numeric_limits<uint32_t>::max()

@@ -227,7 +227,7 @@ namespace spk
 
 	spk::Vector2UInt Widget::minimalSize() const
 	{
-		return {1, 1};
+		return {0, 0};
 	}
 
 	spk::Vector2UInt Widget::maximalSize() const

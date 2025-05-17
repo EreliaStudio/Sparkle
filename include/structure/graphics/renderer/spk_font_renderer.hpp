@@ -37,7 +37,7 @@ namespace spk
 		spk::OpenGL::UniformBufferObject _textInformationsUbo;
 
 		spk::SafePointer<Font> _font = nullptr;
-		Font::Size _fontSize = {26, 3};
+		Font::Size _fontSize = {16, 1};
 		spk::SafePointer<Font::Atlas> _atlas = nullptr;
 		spk::Font::Atlas::Contract _onAtlasEditionContract;
 		spk::ContractProvider _onFontEditionContractProvider;

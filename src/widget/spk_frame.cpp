@@ -16,6 +16,11 @@ namespace spk
 		_frameRenderer.setSpriteSheet(p_spriteSheet);
 	}
 
+	SafePointer<const spk::SpriteSheet> Frame::nineslice() const
+	{
+		return (_frameRenderer.spriteSheet());
+	}
+		
 	void Frame::setCornerSize(const spk::Vector2Int &p_cornerSize)
 	{
 		_cornerSize = p_cornerSize;

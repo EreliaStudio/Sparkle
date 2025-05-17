@@ -101,14 +101,18 @@ namespace spk
 			int share = extra / static_cast<int>(nbExt);
 			int remain = extra % static_cast<int>(nbExt);
 
-			for (size_t i = 0; i < count; ++i)
+			if (share > 0)
 			{
-				if (isExt[i])
+				for (size_t i = 0; i < count; ++i)
 				{
-					primarySize[i] += share + (remain-- > 0 ? 1 : 0);
+					if (isExt[i])
+					{
+						primarySize[i] += share + (remain-- > 0 ? 1 : 0);
+					}
 				}
 			}
 
+			const int pad = (isHorizontal ? _elementPadding.x : _elementPadding.y);
 			int cursor = (isHorizontal ? p_geometry.anchor.x : p_geometry.anchor.y);
 			for (size_t i = 0; i < count; ++i)
 			{
@@ -131,9 +135,11 @@ namespace spk
 					}
 
 					elt->widget()->setGeometry({pos, size});
+
+					cursor += ((isHorizontal == true ? size.x : size.y) > 0 ? pad : 0);
 				}
 				
-				cursor += primarySize[i] + static_cast<int>((i + 1 < count ? (isHorizontal == true ? _elementPadding.x : _elementPadding.y) : 0));
+				cursor += primarySize[i];
 			}
 		}
 	};

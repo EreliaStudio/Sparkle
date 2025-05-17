@@ -36,44 +36,54 @@ namespace spk
 
 		struct Size
 		{
-			size_t text;
+			size_t glyph;
 			size_t outline;
 
 			constexpr Size() :
-				text(0),
+				glyph(0),
 				outline(0)
 			{
 
 			}
 
-			constexpr Size(size_t p_text) :
-				text(p_text),
+			constexpr Size(size_t p_glyph) :
+				glyph(p_glyph),
 				outline(0)
 			{
 
 			}
 			
-			constexpr Size(size_t p_text, size_t p_outline) :
-				text(p_text),
+			constexpr Size(size_t p_glyph, size_t p_outline) :
+				glyph(p_glyph),
 				outline(p_outline)
 			{
 
 			}
 
+			constexpr bool operator == (const Size &p_other) const
+			{
+				return (glyph == p_other.glyph && outline == p_other.outline);
+			}
+
+			constexpr bool operator != (const Size &p_other) const
+			{
+				return (this->operator==(p_other) == false);
+			}
+
 			constexpr bool operator<(const Size &p_other) const
 			{
-				return (text < p_other.text) || (text == p_other.text && outline < p_other.outline);
+				return (glyph < p_other.glyph) || (glyph == p_other.glyph && outline < p_other.outline);
 			}
 
 			friend std::wostream &operator<<(std::wostream &p_os, const Size &size)
 			{
-				p_os << L"(" << size.text << L" / " << size.outline << L")";
+				p_os << L"(" << size.glyph << L" / " << size.outline << L")";
 				return p_os;
 			}
 
 			friend std::ostream &operator<<(std::ostream &p_os, const Size &size)
 			{
-				p_os << "(" << size.text << " / " << size.outline << ")";
+				p_os << "(" << size.glyph << " / " << size.outline << ")";
 				return p_os;
 			}
 		};

@@ -44,9 +44,14 @@ namespace spk
 		_elements.resize(p_size);
 	}
 
+	void Layout::clear()
+	{
+		_elements.clear();
+	}
+
 	spk::SafePointer<Layout::Element> Layout::addWidget(spk::SafePointer<spk::Widget> p_widget, const SizePolicy &p_sizePolicy)
 	{
-		_elements.push_back(std::unique_ptr<Element>(new Element(p_widget, p_sizePolicy, {1, 1})));
+		_elements.push_back(std::unique_ptr<Element>(new Element(p_widget, p_sizePolicy, {0, 0})));
 
 		return (_elements.back().get());
 	}

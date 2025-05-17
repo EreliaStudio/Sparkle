@@ -31,6 +31,7 @@ namespace spk
 		Frame(const std::wstring &p_name, const spk::SafePointer<spk::Widget> &p_parent);
 
 		void setNineSlice(const SafePointer<const spk::SpriteSheet> &p_spriteSheet);
+		SafePointer<const spk::SpriteSheet> nineslice() const;
 
 		void setCornerSize(const spk::Vector2Int &p_cornerSize);
 

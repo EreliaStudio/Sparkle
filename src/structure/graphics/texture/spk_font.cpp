@@ -295,11 +295,11 @@ namespace spk
 			bool enough = false;
 			while (enough == false)
 			{
-				size_t textSize = result.text + deltas[i];
-				size_t outlineSize = static_cast<size_t>(textSize * p_outlineSizeRatio);
-				textSize -= outlineSize * 2;
+				size_t glyphSize = result.glyph + deltas[i];
+				size_t outlineSize = static_cast<size_t>(glyphSize * p_outlineSizeRatio);
+				glyphSize -= outlineSize * 2;
 
-				Vector2UInt tmpSize = computeStringSize(p_string, {textSize, outlineSize});
+				Vector2UInt tmpSize = computeStringSize(p_string, {glyphSize, outlineSize});
 
 				if (tmpSize.x >= p_textArea.x || tmpSize.y >= p_textArea.y)
 				{
@@ -307,13 +307,13 @@ namespace spk
 				}
 				else
 				{
-					result.text += deltas[i];
+					result.glyph += deltas[i];
 				}
 			}
 		}
 
-		result.outline = static_cast<size_t>(result.text * p_outlineSizeRatio);
-		result.text -= result.outline * 2;
+		result.outline = static_cast<size_t>(result.glyph * p_outlineSizeRatio);
+		result.glyph -= result.outline * 2;
 
 		return (result);
 	}
@@ -322,7 +322,7 @@ namespace spk
 	{
 		if (_atlases.find(p_size) == _atlases.end())
 		{
-			_atlases.emplace(p_size, std::move(Atlas(_fontInfo, _fontData, p_size.text, p_size.outline, _filtering, _wrap, _mipmap)));
+			_atlases.emplace(p_size, std::move(Atlas(_fontInfo, _fontData, p_size.glyph, p_size.outline, _filtering, _wrap, _mipmap)));
 		}
 		return _atlases.at(p_size);
 	}

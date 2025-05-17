@@ -126,8 +126,8 @@ namespace spk
 		void setFontSize(const spk::Font::Size &p_fontSize);
 		void setFontSize(const spk::Font::Size &p_fontSize, const State &p_state);
 
-		void setTextColor(const spk::Color &p_glyphColor, const spk::Color &p_outlineColor);
-		void setTextColor(const spk::Color &p_glyphColor, const spk::Color &p_outlineColor, const State &p_state);
+		void setFontColor(const spk::Color &p_glyphColor, const spk::Color &p_outlineColor);
+		void setFontColor(const spk::Color &p_glyphColor, const spk::Color &p_outlineColor, const State &p_state);
 
 		void setTextAlignment(const spk::HorizontalAlignment &p_horizontalAlignment, const spk::VerticalAlignment &p_verticalAlignment);
 		void setTextAlignment(const spk::HorizontalAlignment &p_horizontalAlignment, const spk::VerticalAlignment &p_verticalAlignment,
