@@ -50,7 +50,7 @@ namespace spk
 				_layout.setElementPadding({8, 8});
 
 				_textArea.backgroundFrame().setCornerSize(0);
-				//_textArea.backgroundFrame().setNineSlice(nullptr);
+				_textArea.backgroundFrame().setNineSlice(nullptr);
 
 				_textArea.activate();
 				_commandPanel.activate();

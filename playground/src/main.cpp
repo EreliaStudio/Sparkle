@@ -17,7 +17,7 @@ int main() {
 
 	box.setMinimalWidth(300);
 
-	spk::Vector2UInt boxSize  = {30, 180};
+	spk::Vector2UInt boxSize  = box.minimalSize();
 	spk::Vector2Int  boxPos   = (win->geometry().size - boxSize) / 2;
 	box.setGeometry({boxPos, boxSize});
 

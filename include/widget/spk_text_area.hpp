@@ -30,7 +30,7 @@ namespace spk
 		spk::Color _glyphColor   = spk::Color::white;
 		spk::Color _outlineColor = spk::Color::black;
 		spk::SafePointer<spk::Font> _font;
-		spk::Font::Size _fontSize;
+		spk::Font::Size _fontSize = {16, 1};
 		spk::HorizontalAlignment _horizontalAlignment;
 		spk::VerticalAlignment _verticalAlignment;
 

@@ -205,7 +205,6 @@ namespace spk
 		_backgroundFrame.activate();
 
 		_font = Widget::defaultFont();
-		_fontSize = {35, 0};
 	}
 
 	void TextArea::setLinePadding(size_t p_nbPixels)
