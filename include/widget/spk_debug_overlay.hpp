@@ -32,7 +32,7 @@ namespace spk
 				{
 					spk::Font::Size tmpSize = _labels[i][j]->font()->computeOptimalTextSize(_labels[i][j]->text(), 0, textLabelSize);
 
-					fontSize.text = std::min(fontSize.text, tmpSize.text - _outlineSize);
+					fontSize.glyph = std::min(fontSize.glyph, tmpSize.glyph - _outlineSize);
 				}
 			}
 
@@ -83,13 +83,13 @@ namespace spk
 			}
 		}
 
-		void setTextColor(const spk::Color &p_glyphColor, const spk::Color &p_outlineColor)
+		void setFontColor(const spk::Color &p_glyphColor, const spk::Color &p_outlineColor)
 		{
 			for (size_t i = 0; i < Column; i++)
 			{
 				for (size_t j = 0; j < Row; j++)
 				{
-					_labels[i][j]->setTextColor(p_glyphColor, p_outlineColor);
+					_labels[i][j]->setFontColor(p_glyphColor, p_outlineColor);
 				}
 			}
 		}

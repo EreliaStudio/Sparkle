@@ -20,10 +20,23 @@ namespace spk
 		spk::HorizontalLayout _layout;
 		spk::SpacerWidget _spacer;
 		std::unordered_map<std::wstring, std::unique_ptr<spk::PushButton>> _buttons;
+		std::vector<spk::SafePointer<spk::PushButton>> _orderedButtons;
 
 		void _onGeometryChange()
 		{
 			_layout.setGeometry({0, geometry().size});
+		}
+
+		void _composeLayout()
+		{
+			_layout.clear();
+			
+			_layout.addWidget(&_spacer, spk::Layout::SizePolicy::Extend);
+
+			for (int i = _orderedButtons.size() - 1; i >= 0 ; i--)
+			{
+				_layout.addWidget(_orderedButtons[i], spk::Layout::SizePolicy::Minimum);
+			}
 		}
 
 	public:
@@ -33,7 +46,7 @@ namespace spk
 		{
 			_layout.setElementPadding({10, 10});
 			_spacer.activate();
-			_layout.addWidget(&_spacer, spk::Layout::SizePolicy::Extend);
+			_composeLayout();
 		}
 
 		virtual spk::SafePointer<spk::PushButton> addButton(const std::wstring& p_name, const std::wstring& p_label)
@@ -48,9 +61,30 @@ namespace spk
 			
 			newButton->setText(p_label);
 			newButton->activate();
-			_layout.addWidget(newButton.get(), spk::Layout::SizePolicy::Minimum);
+
+			_orderedButtons.push_back(newButton.get());
+
+			_composeLayout();
 
 			return (newButton.get());
+		}
+
+		spk::SafePointer<spk::PushButton> button(const std::wstring& p_name)
+		{
+			if (_buttons.contains(p_name) == false)
+			{
+				throw std::runtime_error("Button [" + spk::StringUtils::wstringToString(p_name) + "] doesn't exist in the command panel [" + spk::StringUtils::wstringToString(name()) + "]");
+			}
+			return (_buttons.at(p_name).get());
+		}
+
+		spk::SafePointer<const spk::PushButton> button(const std::wstring& p_name) const
+		{
+			if (_buttons.contains(p_name) == false)
+			{
+				throw std::runtime_error("Button [" + spk::StringUtils::wstringToString(p_name) + "] doesn't exist in the command panel [" + spk::StringUtils::wstringToString(name()) + "]");
+			}
+			return (_buttons.at(p_name).get());
 		}
 
 		void removeButton(const std::wstring& p_name)
@@ -75,14 +109,20 @@ namespace spk
 
 		spk::Vector2UInt minimalSize() const override
 		{
-			spk::Vector2UInt padding = _layout.elementPadding();
-			spk::Vector2UInt result = { padding.x, 0 };
-
-			for (const auto& [name, button] : _buttons)
+			spk::Vector2UInt result = { 0, 0 };
+			
+			if (_buttons.size() != 0)
 			{
-				spk::Vector2UInt buttonSize = button->minimalSize();
-				result.x += buttonSize.x + padding.x;
-				result.y = std::max(result.y, buttonSize.y);
+				spk::Vector2UInt padding = _layout.elementPadding();
+
+				for (const auto& [name, button] : _buttons)
+				{
+					spk::Vector2UInt buttonSize = button->minimalSize();
+					result.x += buttonSize.x;
+					result.y = std::max(result.y, buttonSize.y);
+				}
+
+				result.x += padding.x * (_buttons.size() - 1);
 			}
 
 			return result;
