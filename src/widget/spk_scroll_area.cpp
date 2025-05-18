@@ -8,7 +8,7 @@ namespace spk
 		spk::Vector2Int contentAnchor = 0;
 		spk::Vector2UInt delta = 0;
 
-		if (geometry().size.y <= _containerWidget.contentSize().y)
+		if (geometry().size.y < _containerWidget.contentSize().y)
 		{
 			containerSize.x -= _scrollBarWidth;
 			_verticalScrollBar.activate();
@@ -19,7 +19,7 @@ namespace spk
 			_verticalScrollBar.deactivate();
 		}
 
-		if (geometry().size.x <= _containerWidget.contentSize().x)
+		if (geometry().size.x < _containerWidget.contentSize().x)
 		{
 			containerSize.y -= _scrollBarWidth;
 			_horizontalScrollBar.activate();
@@ -37,6 +37,7 @@ namespace spk
 
 		_horizontalScrollBar.setGeometry({0, containerSize.y}, {containerSize.x, _scrollBarWidth});
 		_horizontalScrollBar.setScale(static_cast<float>(geometry().size.x) / static_cast<float>(_containerWidget.contentSize().x));
+		
 		_verticalScrollBar.setGeometry({containerSize.x, 0}, {_scrollBarWidth, containerSize.y});
 		_verticalScrollBar.setScale(static_cast<float>(geometry().size.y) / static_cast<float>(_containerWidget.contentSize().y));
 	}

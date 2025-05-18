@@ -8,11 +8,31 @@ namespace spk
 {
 	namespace FileUtils
 	{
+		std::vector<std::filesystem::path> listFolders(const std::filesystem::path &p_folderPath)
+		{
+			std::vector<std::filesystem::path> result;
+
+			if (std::filesystem::exists(p_folderPath) == false || std::filesystem::is_directory(p_folderPath) == false)
+			{
+				throw std::invalid_argument("The provided path is not a valid directory.");
+			}
+
+			for (const auto &entry : std::filesystem::directory_iterator(p_folderPath))
+			{
+				if (std::filesystem::is_directory(entry.path()) == true)
+				{
+					result.push_back(entry.path());
+				}
+			}
+
+			return result;
+		}
+
 		std::vector<std::filesystem::path> listFiles(const std::filesystem::path &p_folderPath)
 		{
-			std::vector<std::filesystem::path> fileList;
+			std::vector<std::filesystem::path> result;
 
-			if (!std::filesystem::exists(p_folderPath) || !std::filesystem::is_directory(p_folderPath))
+			if (std::filesystem::exists(p_folderPath) == false || std::filesystem::is_directory(p_folderPath) == false)
 			{
 				throw std::invalid_argument("The provided path is not a valid directory.");
 			}
@@ -21,11 +41,11 @@ namespace spk
 			{
 				if (std::filesystem::is_regular_file(entry.path()))
 				{
-					fileList.push_back(entry.path());
+					result.push_back(entry.path());
 				}
 			}
 
-			return fileList;
+			return result;
 		}
 
 		std::wstring readFileAsWString(const std::filesystem::path &p_path)
