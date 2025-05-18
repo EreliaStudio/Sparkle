@@ -104,6 +104,11 @@ namespace spk
 		spk::TextArea& textArea() { return _content.textArea(); }
 		spk::CommandPanel& commandPanel() { return _content.commandPanel(); }
 
+		void setTitle(const std::wstring& p_title)
+		{
+			menuBar()->titleLabel()->setText(p_title);
+		}
+
 		virtual void setText(const std::wstring& p_text)
 		{
 			_content.textArea().setText(p_text);
@@ -149,6 +154,78 @@ namespace spk
 					std::max(textAreaMinimalSize.x, commandPanelMinimalSize.x),
 					textAreaMinimalSize.y + _content.layout().elementPadding().y + commandPanelMinimalSize.y
 				));
+		}
+	};
+
+	class InformationMessageBox : public MessageBox
+	{
+	private:
+		spk::PushButton::Contract _closeContract;
+		spk::SafePointer<spk::PushButton> _button;
+        spk::PushButton::Contract _contract;
+
+	public:
+		InformationMessageBox(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+			MessageBox(p_name, p_parent)
+		{
+			setTitle(L"Information");
+			_button = addButton(p_name + L"/CloseButton", L"Close");
+			_contract = _button->subscribe([&]{ close(); });
+
+			_closeContract = subscribeTo(spk::IInterfaceWindow::Event::Close, [&]{ close(); });
+		}
+
+		spk::SafePointer<spk::PushButton> button() const
+		{
+			return _button;
+		}
+	};
+
+	class RequestMessageBox : public MessageBox
+	{
+	private:
+		spk::PushButton::Contract _closeContract;
+
+		spk::SafePointer<spk::PushButton> _firstButton;
+		spk::PushButton::Contract _firstContract;
+
+		spk::SafePointer<spk::PushButton> _secondButton;
+		spk::PushButton::Contract _secondContract;
+
+	public:
+		RequestMessageBox(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+			MessageBox(p_name, p_parent)
+		{
+			setTitle(L"Request");
+
+			_firstButton = addButton(p_name + L"/FirstButton",  L"FirstButton");
+			_secondButton = addButton(p_name + L"/SecondButton", L"SecondButton");
+			configure(L"Yes", [&]{ },
+					L"No", [&]{ });
+		}
+
+		void configure(const std::wstring& p_firstCaption, const std::function<void()>& p_firstAction,
+					const std::wstring& p_secondCaption, const std::function<void()>& p_secondAction)
+		{
+			_firstButton->setName(name() + L"/" + p_firstCaption + L"Button");
+			_firstButton->setText(p_firstCaption);
+			_firstContract = _firstButton->subscribe(p_firstAction);
+
+			_secondButton->setName(name() + L"/" + p_secondCaption + L"Button");
+			_secondButton->setText(p_secondCaption);
+			_secondContract = _secondButton->subscribe(p_secondAction);
+
+			_closeContract = subscribeTo(spk::IInterfaceWindow::Event::Close, p_secondAction);
+		}
+
+		spk::SafePointer<spk::PushButton> firstButton() const
+		{
+			return _firstButton;
+		}
+
+		spk::SafePointer<spk::PushButton> secondButton() const
+		{
+			return _secondButton;
 		}
 	};
 }

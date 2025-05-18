@@ -68,6 +68,11 @@ namespace spk
 		return (_name);
 	}
 
+	void Widget::setName(const std::wstring &p_name)
+	{
+		_name = p_name;
+	}
+
 	void Widget::addChild(spk::SafePointer<Widget> p_child)
 	{
 		spk::InherenceObject<Widget>::addChild(p_child);

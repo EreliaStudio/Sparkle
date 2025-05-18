@@ -86,6 +86,7 @@ namespace spk
 		~Widget();
 
 		const std::wstring &name() const;
+		void setName(const std::wstring &p_name);
 
 		void addChild(spk::SafePointer<Widget> p_child) override;
 
