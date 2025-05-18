@@ -33,9 +33,9 @@ namespace spk
 			
 			_layout.addWidget(&_spacer, spk::Layout::SizePolicy::Extend);
 
-			for (int i = _orderedButtons.size() - 1; i >= 0 ; i--)
+			for (auto& tmpButton : _orderedButtons)
 			{
-				_layout.addWidget(_orderedButtons[i], spk::Layout::SizePolicy::Minimum);
+				_layout.addWidget(tmpButton, spk::Layout::SizePolicy::Minimum);
 			}
 		}
 

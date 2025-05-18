@@ -86,10 +86,13 @@ namespace spk
 				size_t textAreaWidth = (commandPanelMinimalSize.x > p_availableSize.x ? commandPanelMinimalSize.x : p_availableSize.x);
 				spk::Vector2UInt textAreaMinimalSize = _content.textArea().computeMinimalSize(textAreaWidth);
 
-				setMinimumContentSize(spk::Vector2UInt(
+				spk::Vector2UInt minimalContentSize = spk::Vector2UInt(
 						std::max(textAreaMinimalSize.x, commandPanelMinimalSize.x),
 						textAreaMinimalSize.y + _content.layout().elementPadding().y + commandPanelMinimalSize.y
-					));
+					);
+
+				setMinimumContentSize(minimalContentSize);
+				requireGeometryUpdate();
 			});
 		}
 
@@ -101,7 +104,7 @@ namespace spk
 		spk::TextArea& textArea() { return _content.textArea(); }
 		spk::CommandPanel& commandPanel() { return _content.commandPanel(); }
 
-		void setText(const std::wstring& p_text)
+		virtual void setText(const std::wstring& p_text)
 		{
 			_content.textArea().setText(p_text);
 		}
