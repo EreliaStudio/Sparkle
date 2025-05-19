@@ -32,6 +32,14 @@ namespace spk
 				label.deactivate();
 				field.deactivate();
 			}
+
+			spk::Vector2UInt minimalSize() const
+			{
+				spk::Vector2UInt labelSize = label.minimalSize();
+				spk::Vector2UInt fieldSize = field.minimalSize();
+
+				return {labelSize.x + fieldSize.x, std::max(labelSize.y, fieldSize.y)};
+			}
 		};
 
 	private:
@@ -67,5 +75,7 @@ namespace spk
 		size_t nbRow() const;
 
 		void setGeometry(const spk::Geometry2D &p_geometry) override;
+
+		spk::Vector2UInt minimalSize() const;
 	};
 }

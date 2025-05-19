@@ -204,4 +204,44 @@ namespace spk
 			currentY += static_cast<uint32_t>(rowHeights[row]) + _elementPadding.y;
 		}
 	}
+
+	spk::Vector2UInt FormLayout::minimalSize() const
+{
+		const std::size_t rowCountValue = nbRow();
+		if (rowCountValue == 0)
+		{
+			return {0, 0};
+		}
+
+		uint32_t labelColumnWidth = 0;
+		uint32_t fieldColumnWidth = 0;
+		std::vector<uint32_t> rowHeights(rowCountValue, 0);
+
+		const auto elementMinW = [](Element* p_element) -> uint32_t
+		{
+			return (p_element && p_element->widget()) ? p_element->widget()->minimalSize().x : 0;
+		};
+		const auto elementMinH = [](Element* p_element) -> uint32_t
+		{
+			return (p_element && p_element->widget()) ? p_element->widget()->minimalSize().y : 0;
+		};
+
+		for (std::size_t row = 0; row < rowCountValue; ++row)
+		{
+			Element* labelElement  = _elements[2 * row].get();
+			Element* fieldElement  = _elements[2 * row + 1].get();
+
+			labelColumnWidth = std::max(labelColumnWidth, elementMinW(labelElement));
+			fieldColumnWidth = std::max(fieldColumnWidth, elementMinW(fieldElement));
+
+			rowHeights[row] = std::max(elementMinH(labelElement), elementMinH(fieldElement));
+		}
+
+		const uint32_t minimumTotalWidth  = labelColumnWidth + fieldColumnWidth + _elementPadding.x;
+		const uint32_t minimumTotalHeight =
+			static_cast<uint32_t>(std::accumulate(rowHeights.begin(), rowHeights.end(), 0U)) +
+			static_cast<uint32_t>((rowCountValue > 0 ? rowCountValue - 1 : 0) * _elementPadding.y);
+
+		return {minimumTotalWidth, minimumTotalHeight};
+	}
 }
