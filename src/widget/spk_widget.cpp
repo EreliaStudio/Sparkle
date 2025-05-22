@@ -208,8 +208,32 @@ namespace spk
 
 	void Widget::_applyGeometryChange()
 	{
-		_onGeometryChange();
-		_computeViewport();
+		try
+		{
+			_onGeometryChange();		
+		}
+		catch(const std::exception& e)
+		{
+			PROPAGATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] onGeometryChange", e);
+		}
+		catch(...)
+		{
+			GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] onGeometryChange - Unknow error type");
+		}
+
+		try
+		{
+			_computeViewport();		
+		}
+		catch(const std::exception& e)
+		{
+			PROPAGATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] ComputeViewport", e);
+		}
+		catch(...)
+		{
+			GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] ComputeViewport - Unknow error type");
+		}
+		
 	}
 
 	void Widget::_applyResize()
@@ -220,7 +244,15 @@ namespace spk
 
 		for (auto& child : children())
 		{
-			viewport().apply();
+			try
+			{
+				viewport().apply();
+			}
+			catch(...)
+			{
+					GENERATE_ERROR("Error while applying viewport of [" + spk::StringUtils::wstringToString(name()) +
+											 "] with viewport of geometry [" + _viewport.geometry().to_string() + "]");
+			}
 			child->_applyResize();
 		}
 	}

@@ -484,7 +484,7 @@ namespace spk
             return;
         }
 
-		_rootWidget->setGeometry({0, p_newSize});
+		_rootWidget->forceGeometryChange({0, p_newSize});
 		for (auto& child : _rootWidget->children())
 		{
 			_rootWidget->viewport().apply();

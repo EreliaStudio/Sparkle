@@ -142,52 +142,6 @@ namespace spk
 				cursor += primarySize[i];
 			}
 		}
-
-		spk::Vector2UInt minimalSize() const override
-		{
-			if (_elements.empty())
-			{
-				return {0u, 0u};
-			}
-
-			const bool isHorizontal = (Orient == spk::Orientation::Horizontal);
-			std::size_t count       = _elements.size();
-
-			uint32_t primaryTotal   = 0u;
-			uint32_t secondaryMax   = 0u;
-
-			for (const auto &holder : _elements)
-			{
-				const Element* elt = holder.get();
-				if (elt == nullptr || elt->widget() == nullptr)
-				{
-					continue;
-				}
-
-				spk::Vector2UInt childMin = elt->widget()->minimalSize();
-
-				uint32_t childPrimary   = isHorizontal ? childMin.x : childMin.y;
-				uint32_t childSecondary = isHorizontal ? childMin.y : childMin.x;
-
-				if (elt->sizePolicy() == SizePolicy::Fixed)
-				{
-					const auto& requested = elt->size();
-					childPrimary = isHorizontal ? requested.x : requested.y;
-				}
-
-				primaryTotal += childPrimary;
-				secondaryMax  = std::max(secondaryMax, childSecondary);
-			}
-
-			if (count > 1)
-			{
-				uint32_t pad = isHorizontal ? _elementPadding.x : _elementPadding.y;
-				primaryTotal += static_cast<uint32_t>((count - 1) * pad);
-			}
-
-			return isHorizontal ? spk::Vector2UInt{primaryTotal, secondaryMax}
-								: spk::Vector2UInt{secondaryMax, primaryTotal};
-		}
 	};
 
 	using HorizontalLayout = LinearLayout<spk::Orientation::Horizontal>;
