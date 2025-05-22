@@ -262,14 +262,24 @@ namespace spk
 		_needGeometryChange = true;
 	}
 
+	void Widget::setMinimalSize(const spk::Vector2UInt &p_size)
+	{
+		_minimalSize = p_size;
+	}
+	
+	void Widget::setMaximalSize(const spk::Vector2UInt &p_size)
+	{
+		_maximalSize = p_size;
+	}
+
 	spk::Vector2UInt Widget::minimalSize() const
 	{
-		return {0, 0};
+		return _minimalSize;
 	}
 
 	spk::Vector2UInt Widget::maximalSize() const
 	{
-		return {std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max()};
+		return _maximalSize;
 	}
 
 	const Geometry2D &Widget::geometry() const
