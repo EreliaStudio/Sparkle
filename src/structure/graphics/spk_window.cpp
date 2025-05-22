@@ -332,7 +332,7 @@ namespace spk
 		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 		glStencilMask(0xFF);
 
-		glDisable(GL_SCISSOR_TEST);
+		glEnable(GL_SCISSOR_TEST);
 
 		wglSwapIntervalEXT(0);
 	}

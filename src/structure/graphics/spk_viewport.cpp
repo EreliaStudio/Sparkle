@@ -91,7 +91,15 @@ namespace spk
 			down, top,
 			near, far);
 
-		glViewport(static_cast<GLint>(_geometry.x), _windowSize.y - static_cast<GLint>(_geometry.y) - static_cast<GLint>(_geometry.height), static_cast<GLsizei>(_geometry.width), static_cast<GLsizei>(_geometry.height));
+		GLint   px = static_cast<GLint>(_geometry.x);
+		GLint   py = static_cast<GLint>(_windowSize.y
+							- _geometry.y - _geometry.height);   // flip Y
+		GLsizei pw = static_cast<GLsizei>(_geometry.width);
+		GLsizei ph = static_cast<GLsizei>(_geometry.height);
+
+		glViewport(px, py, pw, ph);
+    	glScissor(px, py, pw, ph);
+
 		_appliedViewport = this;
 	}
 
