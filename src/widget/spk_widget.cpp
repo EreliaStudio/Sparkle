@@ -25,7 +25,7 @@ namespace spk
 	}
 
 	spk::SpriteSheet Widget::_defaultNineSlice = spk::SpriteSheet::fromRawData(SPARKLE_GET_RESOURCE("resources/textures/defaultNineSlice.png"),
-																			   spk::Vector2UInt(3, 3), SpriteSheet::Filtering::Linear);
+																			 spk::Vector2UInt(3, 3), SpriteSheet::Filtering::Linear);
 
 	spk::SafePointer<const spk::SpriteSheet> Widget::defaultNineSlice()
 	{
@@ -164,7 +164,7 @@ namespace spk
 		_anchorRatio = {static_cast<float>(_geometry.anchor.x) / static_cast<float>(parentSize.x),
 						static_cast<float>(_geometry.anchor.y) / static_cast<float>(parentSize.y)};
 		_sizeRatio = {static_cast<float>(_geometry.size.x) / static_cast<float>(parentSize.x),
-					  static_cast<float>(_geometry.size.y) / static_cast<float>(parentSize.y)};
+					 static_cast<float>(_geometry.size.y) / static_cast<float>(parentSize.y)};
 	}
 
 	void Widget::setGeometry(const Geometry2D &p_geometry)
@@ -238,6 +238,11 @@ namespace spk
 
 	void Widget::_applyResize()
 	{
+		if (geometry().size == 0)
+		{
+			return ;
+		}
+
 		spk::Vector2Int parentSize = (parent() == nullptr ? _viewport.windowSize() : parent()->_geometry.size);
 
 		forceGeometryChange({parentSize * _anchorRatio, parentSize * _sizeRatio});
@@ -260,6 +265,7 @@ namespace spk
 	void Widget::requireGeometryUpdate()
 	{
 		_needGeometryChange = true;
+		requestPaint();
 	}
 
 	void Widget::setMinimalSize(const spk::Vector2UInt &p_size)
@@ -316,24 +322,39 @@ namespace spk
 
 	void Widget::_computeViewport()
 	{
-		spk::Geometry2D::Point topLeft = absoluteAnchor();
-		spk::Geometry2D::Size rightDown = geometry().size + spk::Geometry2D::Size(topLeft.x, topLeft.y);
+		const spk::Geometry2D::Point absAnchor = absoluteAnchor();
+		const spk::Geometry2D::Size desiredSize = geometry().size;
 
-		if (parent() != nullptr)
+		float childLeft = absAnchor.x;
+		float childTop = absAnchor.y;
+		float childRight = absAnchor.x + desiredSize.x;
+		float childBottom = absAnchor.y + desiredSize.y;
+
+		float finalLeft = childLeft;
+		float finalTop = childTop;
+		float finalRight = childRight;
+		float finalBottom = childBottom;
+
+		if (Widget* p = parent())
 		{
-			topLeft = Geometry2D::Point::max(topLeft, static_cast<const Widget *>(parent())->viewport().geometry().anchor);
+			const auto parentGeom = p->viewport().geometry();
 
-			if (parent()->viewport().geometry().contains(topLeft) == false)
-			{
-				spk::Geometry2D::Size tmpSize = static_cast<const Widget *>(parent())->geometry().size;
-				spk::Geometry2D::Size tmpAnchor = {static_cast<const Widget *>(parent())->geometry().x,
-												   static_cast<const Widget *>(parent())->geometry().y};
-				rightDown = Geometry2D::Size::min(rightDown, tmpSize + tmpAnchor);
-			}
+			float parentLeft = parentGeom.anchor.x;
+			float parentTop = parentGeom.anchor.y;
+			float parentRight = parentLeft + parentGeom.size.x;
+			float parentBottom = parentTop + parentGeom.size.y;
+
+			finalLeft = std::max(childLeft, parentLeft);
+			finalTop = std::max(childTop, parentTop);
+			finalRight = std::min(childRight, parentRight);
+			finalBottom = std::min(childBottom, parentBottom);
 		}
-		spk::Geometry2D::Size size = {rightDown.x - topLeft.x, rightDown.y - topLeft.y};
 
-		_viewport.setGeometry({absoluteAnchor(), geometry().size});
+		spk::Geometry2D::Point finalAnchor { finalLeft, finalTop };
+		spk::Geometry2D::Size finalSize { finalRight - finalLeft, finalBottom - finalTop };
+
+		_viewport.setGeometry({ finalAnchor, finalSize });
+		spk::cout << "Viewport of widget [" << name() << "] : " << _viewport.geometry() << std::endl;
 	}
 
 	void Widget::onPaintEvent(spk::PaintEvent &p_event)
@@ -366,7 +387,7 @@ namespace spk
 		}
 		catch (const std::exception &e)
 		{
-			GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] onPaintEvent -  " + e.what());
+			GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] onPaintEvent - " + e.what());
 		}
 		catch (...)
 		{
@@ -415,6 +436,7 @@ namespace spk
 		if (_requestedPaint == true)
 		{
 			p_event.requestPaint();
+			_requestedPaint = false;
 		}
 	}
 

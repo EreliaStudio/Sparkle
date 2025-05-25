@@ -70,9 +70,20 @@ namespace spk
 
 	void Viewport::apply() const
 	{
-		if (_windowSize == 0)
+		if (_windowSize.x <= 0 || _windowSize.y <= 0)
 		{
-			GENERATE_ERROR("Can't apply a viewport in a window of size == 0");
+			GENERATE_ERROR(
+				"Viewport::apply() - window size must be positive "
+				"(got " + std::to_string(_windowSize.x) + " × "
+						+ std::to_string(_windowSize.y) + ')');
+		}
+
+		if (_geometry.width <= 0 || _geometry.height <= 0)
+		{
+			GENERATE_ERROR(
+				"Viewport::apply() - viewport width/height must be positive "
+				"(got " + std::to_string(_geometry.width) + " × "
+						+ std::to_string(_geometry.height) + ')');
 		}
 
 		_convertionOffset = static_cast<spk::Vector2>(_geometry.size) / 2.0f;
@@ -98,7 +109,9 @@ namespace spk
 		GLsizei ph = static_cast<GLsizei>(_geometry.height);
 
 		glViewport(px, py, pw, ph);
-    	glScissor(px, py, pw, ph);
+    	//glScissor(px, py, pw, ph);
+
+		spk::cout << "Applying viewport to [" << px << " / " << py << " - " << pw << " / " << ph << "]" << std::endl;
 
 		_appliedViewport = this;
 	}

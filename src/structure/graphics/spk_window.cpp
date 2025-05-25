@@ -483,13 +483,17 @@ namespace spk
         {
             return;
         }
+		spk::cout << " ----- Resizing the window" << std::endl << std::endl << std::endl;;
 
 		_rootWidget->forceGeometryChange({0, p_newSize});
+		spk::cout << "Root widget window size : " << _rootWidget->viewport().windowSize() << std::endl;
 		for (auto& child : _rootWidget->children())
 		{
 			_rootWidget->viewport().apply();
 			child->_applyResize();
 		}
+		spk::cout << " -----" << std::endl << std::endl << std::endl;;
+
 	}
 
 	void Window::close()
