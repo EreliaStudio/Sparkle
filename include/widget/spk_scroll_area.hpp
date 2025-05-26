@@ -27,7 +27,7 @@ namespace spk
 		IScrollArea(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent);
 
 		void setContent(spk::SafePointer<spk::Widget> p_content);
-		spk::SafePointer<spk::Widget> content();
+		virtual spk::SafePointer<spk::Widget> content();
 
 		void setScrollBarVisible(spk::ScrollBar::Orientation p_orientation, bool p_state);
 		void setScrollBarWidth(const float &p_scrollBarWidth);

@@ -353,8 +353,7 @@ namespace spk
 		spk::Geometry2D::Size finalSize { finalRight - finalLeft, finalBottom - finalTop };
 
 		_viewport.setGeometry({ finalAnchor, finalSize });
-		spk::cout << "Viewport of widget [" << name() << "] : " << _viewport.geometry() << std::endl;
-	}
+		}
 
 	void Widget::onPaintEvent(spk::PaintEvent &p_event)
 	{

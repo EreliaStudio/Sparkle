@@ -483,17 +483,13 @@ namespace spk
         {
             return;
         }
-		spk::cout << " ----- Resizing the window" << std::endl << std::endl << std::endl;;
 
 		_rootWidget->forceGeometryChange({0, p_newSize});
-		spk::cout << "Root widget window size : " << _rootWidget->viewport().windowSize() << std::endl;
-		spk::cout << "Root widget geometry : " << _rootWidget->viewport().geometry() << std::endl;
 		for (auto& child : _rootWidget->children())
 		{
 			_rootWidget->viewport().apply();
 			child->_applyResize();
 		}
-		spk::cout << " -----" << std::endl << std::endl << std::endl;;
 	}
 
 	void Window::close()
@@ -525,7 +521,7 @@ namespace spk
 		{
 			PROPAGATE_ERROR("Window::clear over _rootWidget->viewport().apply failed", e);
 		}
-		glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	}
 

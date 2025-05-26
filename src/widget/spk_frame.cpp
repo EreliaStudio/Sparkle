@@ -34,7 +34,6 @@ namespace spk
 
 	void Frame::_onGeometryChange()
 	{
-		spk::cout << "Active viewport dim : " << Viewport::activeViewport()->geometry() << std::endl;
 		_frameRenderer.clear();
 		_frameRenderer.prepare(geometry(), layer(), _cornerSize);
 		_frameRenderer.validate();
