@@ -11,7 +11,7 @@ private:
 
 	void _onGeometryChange() override
 	{
-		_layout.setGeometry({geometry().anchor + _clickPosition, geometry().size});
+		_layout.setGeometry({_clickPosition, geometry().size});
 	}
 
 	void _onMouseEvent(spk::MouseEvent &p_event) override
@@ -21,6 +21,7 @@ private:
 		{
 			_clickPosition = p_event.mouse->position - (geometry().size / 2);
 			requireGeometryUpdate();
+			requestPaint();
 		}
 	}
 

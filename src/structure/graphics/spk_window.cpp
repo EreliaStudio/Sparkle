@@ -487,13 +487,13 @@ namespace spk
 
 		_rootWidget->forceGeometryChange({0, p_newSize});
 		spk::cout << "Root widget window size : " << _rootWidget->viewport().windowSize() << std::endl;
+		spk::cout << "Root widget geometry : " << _rootWidget->viewport().geometry() << std::endl;
 		for (auto& child : _rootWidget->children())
 		{
 			_rootWidget->viewport().apply();
 			child->_applyResize();
 		}
 		spk::cout << " -----" << std::endl << std::endl << std::endl;;
-
 	}
 
 	void Window::close()
@@ -525,7 +525,7 @@ namespace spk
 		{
 			PROPAGATE_ERROR("Window::clear over _rootWidget->viewport().apply failed", e);
 		}
-		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	}
 
@@ -594,9 +594,18 @@ namespace spk
 		return (_rootWidget->viewport().geometry());
 	}
 
+	void Window::allowPaintRequest()
+	{
+		_isPaintRequestAllowed = true;
+	}
+
 	void Window::requestPaint() const
 	{
-		PostMessage(_hwnd, WM_PAINT_REQUEST, 0, 0);
+		if (_isPaintRequestAllowed == true)
+		{
+			PostMessage(_hwnd, WM_PAINT_REQUEST, 0, 0);
+			_isPaintRequestAllowed = false;
+		}
 	}
 
 	void Window::requestResize(const spk::Vector2Int& p_size) const

@@ -102,9 +102,8 @@ namespace spk
 			down, top,
 			near, far);
 
-		GLint   px = static_cast<GLint>(_geometry.x);
-		GLint   py = static_cast<GLint>(_windowSize.y
-							- _geometry.y - _geometry.height);   // flip Y
+		GLint px = static_cast<GLint>(_geometry.x);
+		GLint py = static_cast<GLint>(_windowSize.y - _geometry.y - _geometry.height);   // flip Y
 		GLsizei pw = static_cast<GLsizei>(_geometry.width);
 		GLsizei ph = static_cast<GLsizei>(_geometry.height);
 

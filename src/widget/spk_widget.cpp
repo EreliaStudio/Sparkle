@@ -210,19 +210,6 @@ namespace spk
 	{
 		try
 		{
-			_onGeometryChange();		
-		}
-		catch(const std::exception& e)
-		{
-			PROPAGATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] onGeometryChange", e);
-		}
-		catch(...)
-		{
-			GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] onGeometryChange - Unknow error type");
-		}
-
-		try
-		{
 			_computeViewport();		
 		}
 		catch(const std::exception& e)
@@ -232,6 +219,19 @@ namespace spk
 		catch(...)
 		{
 			GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] ComputeViewport - Unknow error type");
+		}
+
+		try
+		{
+			_onGeometryChange();		
+		}
+		catch(const std::exception& e)
+		{
+			PROPAGATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] onGeometryChange", e);
+		}
+		catch(...)
+		{
+			GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] onGeometryChange - Unknow error type");
 		}
 		
 	}
@@ -265,7 +265,6 @@ namespace spk
 	void Widget::requireGeometryUpdate()
 	{
 		_needGeometryChange = true;
-		requestPaint();
 	}
 
 	void Widget::setMinimalSize(const spk::Vector2UInt &p_size)

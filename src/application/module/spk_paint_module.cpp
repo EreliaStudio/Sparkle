@@ -30,6 +30,7 @@ namespace spk
 					p_event.window->clear();
 					p_event.window->widget()->onPaintEvent(p_event);
 					p_event.window->swap();
+					p_event.window->allowPaintRequest();
 				}
 				catch (std::exception &e)
 				{
