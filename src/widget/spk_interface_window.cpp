@@ -199,13 +199,13 @@ namespace spk
 
 		_onResizeContractProvider.trigger(frameSize);
 
-		_backgroundFrame.setGeometry(geometry());
-		_minimizedBackgroundFrame.setGeometry(geometry().anchor, menuSize);
-		_menuBar.setGeometry(geometry().anchor, menuSize);
+		_backgroundFrame.setGeometry({0, geometry().size});
+		_minimizedBackgroundFrame.setGeometry(0, menuSize);
+		_menuBar.setGeometry(0, menuSize);
 
 		if (_content != nullptr)
 		{
-			_content->setGeometry(geometry().anchor + spk::Vector2Int(_backgroundFrame.cornerSize().x, menuSize.y + _backgroundFrame.cornerSize().y), frameSize);
+			_content->setGeometry(spk::Vector2Int(_backgroundFrame.cornerSize().x, menuSize.y + _backgroundFrame.cornerSize().y), frameSize);
 		}
 	}
 

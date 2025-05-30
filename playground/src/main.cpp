@@ -1,76 +1,65 @@
 #include <sparkle.hpp>
 
-class CustomWidget : public spk::Widget
+struct ScrollContent : public spk::Widget
 {
-private:
-	spk::VerticalLayout _layout;
+    spk::VerticalLayout            layout;
+    std::vector<std::unique_ptr<spk::TextLabel>> labels;
 
-	spk::Vector2UInt _clickPosition;
+    ScrollContent(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+		spk::Widget(p_name, p_parent)
+    {
+        layout.setElementPadding({10, 10});
 
-	spk::Frame _frame;
+        for (int i = 0; i < 15; ++i)
+        {
+            auto lbl = std::make_unique<spk::TextLabel>(p_name + L"/Label" + std::to_wstring(i + 1), this);
+            lbl->setText(L"Dummy text label #" + std::to_wstring(i + 1));
+            lbl->activate();
+            layout.addWidget(lbl.get(), spk::Layout::SizePolicy::HorizontalExtend);
 
-	void _onGeometryChange() override
-	{
-		_layout.setGeometry({_clickPosition, geometry().size});
-	}
+            labels.emplace_back(std::move(lbl));
+        }
+    }
 
-	void _onMouseEvent(spk::MouseEvent &p_event) override
-	{
-		if (p_event.type == spk::MouseEvent::Type::Press &&
-			p_event.button == spk::Mouse::Button::Left)
-		{
-			_clickPosition = p_event.mouse->position - (geometry().size / 2);
-			requireGeometryUpdate();
-			requestPaint();
-		}
-	}
+    void _onGeometryChange() override
+    {
+        layout.setGeometry({0, geometry().size});
+    }
 
-public:
-	CustomWidget(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
-		spk::Widget(p_name, p_parent),
-		_frame(p_name + L"/Frame", this)
-	{
-		_layout.setElementPadding({10, 10});	
-
-		_layout.addWidget(&_frame, spk::Layout::SizePolicy::Extend);
-
-		_frame.setCornerSize(16);
-		_frame.activate();
-	}
-
-	spk::Vector2UInt minimalSize() const override
-	{
-		return (spk::Vector2UInt{2000, 2000});
-	}
+    spk::Vector2UInt minimalSize() const override
+    {
+        return layout.minimalSize();
+    }
 };
 
 class MainWidget : public spk::Widget
 {
-private:
-	spk::ScrollArea<CustomWidget> _scrollArea;
+    spk::ScrollArea<ScrollContent> _scrollArea;
 
-	void _onGeometryChange() override
-	{
-		_scrollArea.setGeometry({geometry().anchor + 50, geometry().size - 100});
-	}
+    void _onGeometryChange() override
+    {
+        _scrollArea.setGeometry({{50, 50}, geometry().size - spk::Vector2UInt(100, 100)});
+    }
 
 public:
-	MainWidget(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+    MainWidget(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
 		spk::Widget(p_name, p_parent),
-		_scrollArea(L"ScrollArea", this)
-	{
-		_scrollArea.activate();
-	}
+		_scrollArea(p_name + L"/ScrollArea", this)
+    {
+        _scrollArea.setScrollBarVisible(spk::ScrollBar::Orientation::Horizontal, false);
+        _scrollArea.activate();
+    }
 };
 
-int main() {
+int main()
+{
     spk::GraphicalApplication app;
 
-    auto win = app.createWindow(L"Check scroll area - Playground", {{0, 0}, {1024, 768}});
+    auto win = app.createWindow(L"Scroll-area test", {{0, 0}, {800, 600}});
 
-	MainWidget test(L"MainWidget", win->widget());
-	test.setGeometry(0, win->geometry().size);
-	test.activate();
+    MainWidget root(L"MainWidget", win->widget());
+    root.setGeometry(win->geometry());
+    root.activate();
 
     return app.run();
 }

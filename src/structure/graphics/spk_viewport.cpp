@@ -14,6 +14,7 @@ namespace spk
 	float Viewport::_maxLayer = 10000;
 	Matrix4x4 Viewport::_matrix = spk::Matrix4x4();
 	spk::Vector2 Viewport::_convertionOffset = spk::Vector2(0, 0);
+	spk::Vector2 Viewport::_clippingOffset = spk::Vector2(0, 0);
 	spk::SafePointer<const Viewport> Viewport::_appliedViewport = nullptr;
 	
 	Viewport::Viewport() :
@@ -36,6 +37,16 @@ namespace spk
 	void Viewport::setGeometry(const Geometry2D& p_geometry)
 	{
 		_geometry = p_geometry;
+	}
+
+	const Geometry2D &Viewport::clippedGeometry() const
+	{
+		return (_clippedGeometry);
+	}
+	
+	void Viewport::setClippedGeometry(const Geometry2D &p_clippedGeometry)
+	{
+		_clippedGeometry = p_clippedGeometry;
 	}
 
 	void Viewport::setWindowSize(const spk::Vector2UInt& p_windowSize)
@@ -78,12 +89,12 @@ namespace spk
 						+ std::to_string(_windowSize.y) + ')');
 		}
 
-		if (_geometry.width <= 0 || _geometry.height <= 0)
+		if (_clippedGeometry.width <= 0 || _clippedGeometry.height <= 0)
 		{
 			GENERATE_ERROR(
 				"Viewport::apply() - viewport width/height must be positive "
-				"(got " + std::to_string(_geometry.width) + " x "
-						+ std::to_string(_geometry.height) + ')');
+				"(got " + std::to_string(_clippedGeometry.width) + " x "
+						+ std::to_string(_clippedGeometry.height) + ')');
 		}
 
 		_convertionOffset = static_cast<spk::Vector2>(_geometry.size) / 2.0f;
@@ -102,13 +113,32 @@ namespace spk
 			down, top,
 			near, far);
 
-		GLint px = static_cast<GLint>(_geometry.x);
-		GLint py = static_cast<GLint>(_windowSize.y - _geometry.y - _geometry.height);   // flip Y
-		GLsizei pw = static_cast<GLsizei>(_geometry.width);
-		GLsizei ph = static_cast<GLsizei>(_geometry.height);
+		GLint viewportX = static_cast<GLint>(_geometry.x);
+		GLint viewportY = static_cast<GLint>(_windowSize.y - _geometry.y - _geometry.height);   // flip Y
+		GLsizei viewportW = static_cast<GLsizei>(_geometry.width);
+		GLsizei viewportH = static_cast<GLsizei>(_geometry.height);
 
-		glViewport(px, py, pw, ph);
-    	glScissor(px, py, pw, ph);
+		GLint scissorX = static_cast<GLint>(_clippedGeometry.x);
+		GLint scissorY = static_cast<GLint>(_windowSize.y - _clippedGeometry.y - _clippedGeometry.height);   // flip Y
+		GLsizei scissorW = static_cast<GLsizei>(_clippedGeometry.width);
+		GLsizei scissorH = static_cast<GLsizei>(_clippedGeometry.height);
+
+		if (viewportW <= 0 || viewportH <= 0)
+		{
+			GENERATE_ERROR(
+				"Viewport::apply() - viewport width/height must be positive "
+				"(got " + std::to_string(viewportW) + " x " + std::to_string(viewportH) + ')');
+		}
+
+		try
+		{
+			glViewport(viewportX, viewportY, viewportW, viewportH);
+			glScissor(scissorX, scissorY, scissorW, scissorH);
+		}
+		catch(...)
+		{
+			GENERATE_ERROR("Viewport::apply() - Error while applying a viewport");
+		}
 
 		_appliedViewport = this;
 	}
@@ -120,12 +150,12 @@ namespace spk
 
 	spk::Vector2 Viewport::convertScreenToOpenGL(const spk::Vector2Int p_screenPosition)
 	{
-		return ((_matrix * spk::Vector4(static_cast<spk::Vector2>(p_screenPosition) - _convertionOffset, 0, 0)).xy());
+		return ((_matrix * spk::Vector4(static_cast<spk::Vector2>(p_screenPosition) - _convertionOffset, 0, 0)).xy() + _clippingOffset);
 	}
 
 	spk::Vector2 Viewport::convertScreenToOpenGL(int p_screenPositionX, int p_screenPositionY)
 	{
-		return ((_matrix * spk::Vector4(static_cast<float>(p_screenPositionX) - _convertionOffset.x, static_cast<float>(p_screenPositionY) - _convertionOffset.y, 0, 0)).xy());
+		return ((_matrix * spk::Vector4(static_cast<float>(p_screenPositionX) - _convertionOffset.x, static_cast<float>(p_screenPositionY) - _convertionOffset.y, 0, 0)).xy() + _clippingOffset);
 	}
 
 	float Viewport::convertLayerToOpenGL(const float& p_layer)
@@ -135,11 +165,11 @@ namespace spk
 
 	spk::Vector3 Viewport::convertScreenToOpenGL(const spk::Vector2Int p_screenPosition, const float& p_layer)
 	{
-		return ((_matrix * spk::Vector4(static_cast<spk::Vector2>(p_screenPosition) - _convertionOffset, p_layer, 0)).xyz());
+		return ((_matrix * spk::Vector4(static_cast<spk::Vector2>(p_screenPosition) - _convertionOffset, p_layer, 0)).xyz() + spk::Vector3(_clippingOffset, 0));
 	}
 
 	spk::Vector3 Viewport::convertScreenToOpenGL(int p_screenPositionX, int p_screenPositionY, const float& p_layer)
 	{
-		return ((_matrix * spk::Vector4(static_cast<float>(p_screenPositionX) - _convertionOffset.x, static_cast<float>(p_screenPositionY) - _convertionOffset.y, p_layer, 0)).xyz());
+		return ((_matrix * spk::Vector4(static_cast<float>(p_screenPositionX) - _convertionOffset.x, static_cast<float>(p_screenPositionY) - _convertionOffset.y, p_layer, 0)).xyz() + spk::Vector3(_clippingOffset, 0));
 	}
 }

@@ -76,6 +76,24 @@ namespace spk
 			return (result);
 		}
 
+		Geometry2D intersect(const Geometry2D& p_other) const
+		{
+			const int32_t left   = std::max(x, p_other.x);
+			const int32_t top    = std::max(y, p_other.y);
+
+			const int32_t right  = std::min(x + static_cast<int32_t>(width),
+											p_other.x + static_cast<int32_t>(p_other.width));
+			const int32_t bottom = std::min(y + static_cast<int32_t>(height),
+											p_other.y + static_cast<int32_t>(p_other.height));
+
+			if (right <= left || bottom <= top)
+			{
+				return Geometry2D(left, top, 0u, 0u);
+			}
+
+			return Geometry2D(left, top, static_cast<uint32_t>(right  - left), static_cast<uint32_t>(bottom - top));
+		}
+
 		Geometry2D operator+(const Geometry2D &p_other) const
 		{
 			return Geometry2D(anchor + p_other.anchor, size + p_other.size);

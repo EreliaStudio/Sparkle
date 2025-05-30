@@ -513,6 +513,20 @@ namespace spk
 
 	void Window::clear()
 	{
+		if (_rootWidget->_needGeometryChange == true)
+		{
+			try
+			{
+				_rootWidget->_applyGeometryChange();
+			}
+			catch (std::exception& e)
+			{
+				PROPAGATE_ERROR("Window::clear over _rootWidget->applyGeometryChange() failed", e);
+			}
+			
+			_rootWidget->_needGeometryChange = false;
+		}
+		
 		try
 		{
 			_rootWidget->viewport().apply();

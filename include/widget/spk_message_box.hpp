@@ -30,7 +30,7 @@ namespace spk
 
 			void _onGeometryChange() override
 			{
-
+				_compose();
 				_layout.setGeometry({0, geometry().size});
 			}
 
@@ -65,6 +65,21 @@ namespace spk
 			spk::VerticalLayout& layout() {return (_layout);}
 			spk::TextArea& textArea() { return (_textArea); }
 			spk::CommandPanel& commandPanel() { return (_commandPanel); }
+
+			spk::Vector2UInt minimalSize() const override
+			{
+				if (_textArea.text().empty())
+				{
+					return _commandPanel.minimalSize();
+				}
+
+				return (
+					spk::Vector2UInt(
+						std::max(_textArea.minimalSize().x, _commandPanel.minimalSize().x),
+						_textArea.minimalSize().y + _layout.elementPadding().y + _commandPanel.minimalSize().y
+					)
+				);
+			}
 		};
 
 	private:
