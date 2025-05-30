@@ -40,6 +40,35 @@ namespace spk
 
 				return {labelSize.x + fieldSize.x, std::max(labelSize.y, fieldSize.y)};
 			}
+
+			spk::Vector2UInt maximalSize() const
+			{
+				const uint32_t maxVal = std::numeric_limits<uint32_t>::max();
+				spk::Vector2UInt labelSize = label.maximalSize();
+				spk::Vector2UInt fieldSize = field.maximalSize();
+
+				uint32_t width;
+				if (labelSize.x == maxVal || fieldSize.x == maxVal)
+				{
+					width = maxVal;
+				}
+				else
+				{
+					width = labelSize.x + fieldSize.x;
+				}
+
+				uint32_t height;
+				if (labelSize.y == maxVal || fieldSize.y == maxVal)
+				{
+					height = maxVal;
+				}
+				else
+				{
+					height = std::max(labelSize.y, fieldSize.y);
+				}
+
+				return {width, height};
+			}
 		};
 
 	private:
