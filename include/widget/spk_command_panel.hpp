@@ -19,6 +19,7 @@ namespace spk
 	private:
 		spk::HorizontalLayout _layout;
 		spk::SpacerWidget _spacer;
+		spk::Layout::SizePolicy _sizePolicy = spk::Layout::SizePolicy::Minimum;
 		std::unordered_map<std::wstring, std::unique_ptr<spk::PushButton>> _buttons;
 		std::vector<spk::SafePointer<spk::PushButton>> _orderedButtons;
 
@@ -31,11 +32,15 @@ namespace spk
 		{
 			_layout.clear();
 			
-			_layout.addWidget(&_spacer, spk::Layout::SizePolicy::Extend);
+			if (_sizePolicy == spk::Layout::SizePolicy::Minimum || 
+				_sizePolicy == spk::Layout::SizePolicy::VerticalExtend)
+			{
+				_layout.addWidget(&_spacer, spk::Layout::SizePolicy::Extend);
+			}
 
 			for (auto& tmpButton : _orderedButtons)
 			{
-				_layout.addWidget(tmpButton, spk::Layout::SizePolicy::Minimum);
+				_layout.addWidget(tmpButton, _sizePolicy);
 			}
 		}
 
@@ -126,6 +131,17 @@ namespace spk
 			}
 
 			return result;
+		}
+
+		void setSizePolicy(const spk::Layout::SizePolicy &p_sizePolicy)
+		{
+			_sizePolicy = p_sizePolicy;
+			_composeLayout();
+		}
+
+		const spk::Layout::SizePolicy &sizePolicy() const
+		{
+			return _sizePolicy;
 		}
 	};
 }

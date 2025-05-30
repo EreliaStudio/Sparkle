@@ -61,13 +61,13 @@ namespace spk
 						const SizePolicy &p_fieldPolicy = SizePolicy::Extend);
 
 		template <typename WidgetType>
-		FormElement addRow(Row<WidgetType>& p_row,
+		FormElement addRow(Row<WidgetType>* p_row,
 						const SizePolicy &p_labelPolicy = SizePolicy::Minimum,
 						const SizePolicy &p_fieldPolicy = SizePolicy::Extend)
 		{
 			return FormElement{
-				addWidget(&(p_row.label), p_labelPolicy),
-				addWidget(&(p_row.field), p_fieldPolicy)};
+				addWidget(&(p_row->label), p_labelPolicy),
+				addWidget(&(p_row->field), p_fieldPolicy)};
 		}
 
 		void removeRow(const FormElement& p_row);
