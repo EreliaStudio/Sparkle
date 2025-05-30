@@ -467,6 +467,7 @@ namespace spk
 
 	Window::~Window()
 	{
+		close();
 		_removeAllTimers();
 		_rootWidget.release();
 	}

@@ -172,6 +172,20 @@ namespace spk
 		_geometry = p_geometry;
 		_viewport.setGeometry({ absoluteAnchor(), geometry().size });
 		_viewport.setWindowSize((parent() == nullptr ? geometry().size : parent()->viewport().windowSize()));
+		
+		try
+		{
+			_computeViewport();		
+		}
+		catch(const std::exception& e)
+		{
+			PROPAGATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] ComputeViewport", e);
+		}
+		catch(...)
+		{
+			GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] ComputeViewport - Unknow error type");
+		}
+		
 		_computeRatio();
 
 		requireGeometryUpdate();
@@ -208,7 +222,6 @@ namespace spk
 
 	void Widget::_computeViewport()
 	{
-		
 		spk::Geometry2D parentClippedGeometry = (parent() == nullptr ? geometry() : parent()->_viewport.clippedGeometry());
 
 		spk::Geometry2D clippedGeometry = _viewport.geometry().intersect(parentClippedGeometry);
@@ -218,18 +231,6 @@ namespace spk
 
 	void Widget::_applyGeometryChange()
 	{
-		try
-		{
-			_computeViewport();		
-		}
-		catch(const std::exception& e)
-		{
-			PROPAGATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] ComputeViewport", e);
-		}
-		catch(...)
-		{
-			GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] ComputeViewport - Unknow error type");
-		}
 
 		try
 		{

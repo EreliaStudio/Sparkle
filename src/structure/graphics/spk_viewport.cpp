@@ -89,10 +89,18 @@ namespace spk
 						+ std::to_string(_windowSize.y) + ')');
 		}
 
-		if (_clippedGeometry.width <= 0 || _clippedGeometry.height <= 0)
+		if (_geometry.width <= 0 || _geometry.height <= 0)
 		{
 			GENERATE_ERROR(
 				"Viewport::apply() - viewport width/height must be positive "
+				"(got " + std::to_string(_geometry.width) + " x "
+						+ std::to_string(_geometry.height) + ')');
+		}
+
+		if (_clippedGeometry.width <= 0 || _clippedGeometry.height <= 0)
+		{
+			GENERATE_ERROR(
+				"Viewport::apply() - viewport clipped width/height must be positive "
 				"(got " + std::to_string(_clippedGeometry.width) + " x "
 						+ std::to_string(_clippedGeometry.height) + ')');
 		}

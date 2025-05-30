@@ -32,6 +32,13 @@ struct ScrollContent : public spk::Widget
     }
 };
 
+enum class Event
+{
+	Exit
+};
+
+using EventDispatcher = spk::EventDispatcher<Event>;
+
 class MainWidget : public spk::Widget
 {
     spk::ScrollArea<ScrollContent> _scrollArea;
@@ -40,6 +47,15 @@ class MainWidget : public spk::Widget
     {
         _scrollArea.setGeometry({0, geometry().size});
     }
+
+	void _onKeyboardEvent(spk::KeyboardEvent& p_event)
+	{
+		if (p_event.type == spk::KeyboardEvent::Type::Press &&
+			p_event.key == spk::Keyboard::Escape)
+		{
+			EventDispatcher::emit(Event::Exit);
+		}
+	}
 
 public:
     MainWidget(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
@@ -53,13 +69,28 @@ public:
 
 int main()
 {
-    spk::GraphicalApplication app;
+	int errorCode = 0;
+	{
+		spk::GraphicalApplication app;
 
-    auto win = app.createWindow(L"Scroll-area test", {{0, 0}, {800, 600}});
+		{
+			auto win = app.createWindow(L"Scroll-area test", {{0, 0}, {800, 600}});
 
-    MainWidget root(L"MainWidget", win->widget());
-    root.setGeometry(win->geometry().shrink(50));
-    root.activate();
+			{
+				MainWidget root(L"MainWidget", win->widget());
+				root.setGeometry(win->geometry().shrink(50));
+				root.activate();
 
-    return app.run();
+				{
+					EventDispatcher::Contract exitContract = EventDispatcher::subscribe(Event::Exit, [&app]()
+					{
+						app.quit(0);
+					});
+
+					errorCode = app.run();
+				}
+			}
+		}
+	}
+    return errorCode;
 }
