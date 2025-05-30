@@ -49,6 +49,9 @@ namespace spk
 
 			Section();
 			Section(spk::Vector2 p_anchor, spk::Vector2 p_size);
+			
+			bool operator==(const Section& other) const noexcept;
+    		bool operator!=(const Section& other) const noexcept;
 		};
 
 		enum class Format

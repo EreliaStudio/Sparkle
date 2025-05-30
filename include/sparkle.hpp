@@ -118,3 +118,4 @@
 #include "widget/spk_command_panel.hpp"
 #include "widget/spk_text_area.hpp"
 #include "widget/spk_message_box.hpp"
+#include "widget/spk_image_label.hpp"

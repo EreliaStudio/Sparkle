@@ -46,6 +46,15 @@ namespace spk
 		size(p_size)
 	{
 	}
+	bool Texture::Section::operator==(const Section& p_other) const noexcept
+    {
+        return anchor == p_other.anchor && size == p_other.size;
+    }
+
+    bool Texture::Section::operator!=(const Section& p_other) const noexcept
+    {
+        return (*this == p_other) == false;
+    }
 
 	size_t Texture::_getBytesPerPixel(const Format &p_format) const
 	{
