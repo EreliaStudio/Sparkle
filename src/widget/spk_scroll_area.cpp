@@ -31,31 +31,13 @@ namespace spk
 			reserved.x -= std::min(reserved.x, _scrollBarWidth);
 		}
 
-		const spk::Vector2UInt containerSize = spk::Vector2UInt::max(minSize, reserved);
+		const spk::Vector2UInt contentSize = spk::Vector2UInt::max(minSize, reserved);
 
 		needH ? _horizontalScrollBar.activate() : _horizontalScrollBar.deactivate();
 		needV ? _verticalScrollBar.activate()   : _verticalScrollBar.deactivate();
 
-		if (needH)
-		{
-			_horizontalScrollBar.setRatio(std::clamp(_horizontalScrollBar.ratio(), 0.f, 1.f));
-		}
-		else
-		{
-			_horizontalScrollBar.setRatio(0.f);
-		}
-
-		if (needV)
-		{
-			_verticalScrollBar.setRatio( std::clamp(_verticalScrollBar.ratio(), 0.f, 1.f));
-		}
-		else
-		{
-			_verticalScrollBar.setRatio(0.f);
-		}
-
-		const float hScale = float(reserved.x) / float(containerSize.x);
-		const float vScale = float(reserved.y) / float(containerSize.y);
+		const float hScale = float(reserved.x) / float(contentSize.x);
+		const float vScale = float(reserved.y) / float(contentSize.y);
 
 		if (needH)
 		{
@@ -68,19 +50,18 @@ namespace spk
 			_verticalScrollBar.setScale(vScale);
 		}
 
-		_contentContainer.setGeometry({{0,0}, reserved});
-
 		spk::Vector2Int contentAnchor { 0, 0 };
-		if (needH)
+
+		if (contentSize.x > reserved.x)
 		{
-			contentAnchor.x = -int(_horizontalScrollBar.ratio() * (containerSize.x - reserved.x));
+			contentAnchor.x = -int(_horizontalScrollBar.ratio() * (contentSize.x - reserved.x));
 		}
-		if (needV)
+		if (contentSize.y > reserved.y)
 		{
-			contentAnchor.y = -int(_verticalScrollBar.ratio() * (containerSize.y - reserved.y));
+			contentAnchor.y = -int(_verticalScrollBar.ratio() * (contentSize.y - reserved.y));
 		}
 
-		_content->setGeometry({contentAnchor, containerSize});
+		_content->setGeometry({contentAnchor, contentSize});
     }
 
 	void IScrollArea::_onMouseEvent(spk::MouseEvent &p_event)
@@ -103,8 +84,7 @@ namespace spk
 		_horizontalScrollBar(p_name + L"/Horizontal ScrollBar", this),
 		_verticalScrollBar(p_name + L"/Vertical ScrollBar", this),
 		_horizontalBarContract(_horizontalScrollBar.subscribe([&](const float &p_ratio) { requireGeometryUpdate(); })),
-		_verticalBarContract(_verticalScrollBar.subscribe([&](const float &p_ratio) { requireGeometryUpdate(); })),
-		_contentContainer(p_name + L"/Container", this)
+		_verticalBarContract(_verticalScrollBar.subscribe([&](const float &p_ratio) { requireGeometryUpdate(); }))
 	{
 		_horizontalScrollBar.setLayer(layer() + 10.0f);
 		_verticalScrollBar.setLayer(layer() + 10.0f);
@@ -113,18 +93,11 @@ namespace spk
 
 		_horizontalScrollBar.setOrientation(ScrollBar::Orientation::Horizontal);
 		_verticalScrollBar.setOrientation(ScrollBar::Orientation::Vertical);
-
-		_contentContainer.activate();
 	}
 
 	spk::SafePointer<spk::Widget> IScrollArea::content()
 	{
 		return (_content);
-	}
-
-	spk::SafePointer<spk::Widget> IScrollArea::container()
-	{
-		return (&_contentContainer);
 	}
 
 	void IScrollArea::setScrollBarVisible(spk::ScrollBar::Orientation p_orientation, bool p_state)
@@ -155,6 +128,5 @@ namespace spk
 	void IScrollArea::setContent(spk::SafePointer<spk::Widget> p_content)
 	{
 		_content = p_content;
-		_contentContainer.addChild(p_content);
 	}
 }

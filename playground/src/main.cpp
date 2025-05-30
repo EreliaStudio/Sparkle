@@ -38,7 +38,7 @@ class MainWidget : public spk::Widget
 
     void _onGeometryChange() override
     {
-        _scrollArea.setGeometry({{50, 50}, geometry().size - spk::Vector2UInt(100, 100)});
+        _scrollArea.setGeometry({0, geometry().size});
     }
 
 public:
@@ -58,7 +58,7 @@ int main()
     auto win = app.createWindow(L"Scroll-area test", {{0, 0}, {800, 600}});
 
     MainWidget root(L"MainWidget", win->widget());
-    root.setGeometry(win->geometry());
+    root.setGeometry(win->geometry().shrink(50));
     root.activate();
 
     return app.run();

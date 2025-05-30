@@ -15,7 +15,6 @@ namespace spk
 		bool _isVerticalScrollBarVisible = true;
 		spk::ScrollBar _verticalScrollBar;
 		spk::ScrollBar::Contract _verticalBarContract;
-		spk::ContainerWidget _contentContainer;
 		spk::SafePointer<spk::Widget> _content;
 
 		uint32_t _scrollBarWidth = 16;
@@ -26,8 +25,6 @@ namespace spk
 
 	public:
 		IScrollArea(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent);
-
-		spk::SafePointer<spk::Widget> container();
 
 		void setContent(spk::SafePointer<spk::Widget> p_content);
 		virtual spk::SafePointer<spk::Widget> content();
@@ -49,7 +46,7 @@ namespace spk
 	public:
 		ScrollArea(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
 			IScrollArea(p_name, p_parent),
-			_contentObject(p_name + L"/Container/Content", container())
+			_contentObject(p_name + L"/Container/Content", this)
 		{
 			setContent(&_contentObject);
 			_contentObject.activate();
