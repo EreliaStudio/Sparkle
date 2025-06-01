@@ -63,7 +63,7 @@ namespace spk
 	{
 		if (_state == State::Running)
 		{
-			_accumulatedTime = {_accumulatedTime.nanoseconds + currentRunDuration().nanoseconds, TimeUnit::Nanosecond};
+			_accumulatedTime = {static_cast<long double>(_accumulatedTime.nanoseconds + currentRunDuration().nanoseconds), TimeUnit::Nanosecond};
 			_state = State::Paused;
 		}
 	}

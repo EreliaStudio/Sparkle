@@ -26,7 +26,7 @@ namespace spk
 			friend class Message;
 
 		public:
-			int32_t type;
+			Type type;
 			size_t length;
 			ClientID emitterID;
 			uint8_t reserved[16];

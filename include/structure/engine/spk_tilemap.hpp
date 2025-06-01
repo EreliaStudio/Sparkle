@@ -41,6 +41,16 @@ namespace spk
 			_content[p_x][p_y][p_z] = p_value;
 		}
 
+		const TContentType (&contentArray() const)[X][Y][Z]
+		{
+			return _content;
+		}
+
+		TContentType (&contentArray())[X][Y][Z]
+		{
+			return _content;
+		}
+
 		const TContentType& content(const spk::Vector3UInt& p_pos) const
 		{
 			return content(p_pos.x, p_pos.y, p_pos.z);
@@ -97,11 +107,17 @@ namespace spk
 	public:
 		ITilemap() = default;
 
+		virtual void _onChunkGeneration(const ChunkCoordinate& p_coordinates, spk::SafePointer<TChunk> p_chunk)
+		{
+
+		}
+
 		spk::SafePointer<TChunk> requestChunk(const ChunkCoordinate& p_coordinates)
 		{
 			if (_chunks.contains(p_coordinates) == false)
 			{
 				_chunks[p_coordinates] = std::make_unique<TChunk>();
+				_onChunkGeneration(p_coordinates, _chunks.at(p_coordinates).get());
 			}
 
 			return _chunks.at(p_coordinates).get();

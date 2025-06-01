@@ -37,6 +37,7 @@ namespace spk
 		_parent(nullptr),
 		_layer(0)
 	{
+		
 	}
 
 	Widget::Widget(const std::wstring &p_name, spk::SafePointer<Widget> p_parent) :
