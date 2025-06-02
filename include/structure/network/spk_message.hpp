@@ -54,6 +54,12 @@ namespace spk
 		void edit(const size_t &p_offset, const void *p_data, const size_t &p_dataSize);
 		void append(const void *p_data, const size_t &p_dataSize);
 
+		template <typename TType>
+		void skip() const
+		{
+			skip(sizeof(TType));
+		}
+
 		template <typename InputType>
 		void edit(const size_t &p_offset, const InputType &p_input)
 		{

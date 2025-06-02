@@ -92,6 +92,7 @@
 #include "structure/system/spk_input_state.hpp"
 #include "structure/system/time/spk_chronometer.hpp"
 #include "structure/system/time/spk_timer.hpp"
+#include "structure/system/spk_exception.hpp"
 #include "structure/thread/spk_persistant_worker.hpp"
 #include "structure/thread/spk_thread.hpp"
 #include "utils/spk_file_utils.hpp"
