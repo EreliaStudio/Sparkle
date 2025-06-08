@@ -42,14 +42,14 @@ namespace spk
 			_content[p_x][p_y][p_z] = p_value;
 		}
 
-		const TContentType (&contentArray() const)[X][Y][Z]
-		{
-			return _content;
-		}
+		TContentType* content() noexcept                    { return &_content[0][0][0]; }
+		const TContentType* content() const noexcept        { return &_content[0][0][0]; }
 
-		TContentType (&contentArray())[X][Y][Z]
+		static constexpr std::size_t elementCount() noexcept { return X * Y * Z; }
+
+		static constexpr std::size_t contentByteSize() noexcept
 		{
-			return _content;
+			return elementCount() * sizeof(TContentType);
 		}
 
 		const TContentType& content(const spk::Vector3UInt& p_pos) const
@@ -154,16 +154,16 @@ namespace spk
 		static ChunkCoordinate worldToChunk(const WorldCoordinate& p_worldCoordinate)
 		{
 			return ChunkCoordinate(
-					p_worldCoordinate.x - (p_worldCoordinate.x >= 0 ? 0 : TChunk::Size.x + 1) / TChunk::Size.x,
-					p_worldCoordinate.y - (p_worldCoordinate.y >= 0 ? 0 : TChunk::Size.y + 1) / TChunk::Size.y
+					std::floor(static_cast<float>(p_worldCoordinate.x) / static_cast<float>(TChunk::Size.x)),
+					std::floor(static_cast<float>(p_worldCoordinate.y) / static_cast<float>(TChunk::Size.y))
 				);
 		}
 
 		static WorldCoordinate chunkToWorld(const ChunkCoordinate& p_chunkCoordinate)
 		{
 			return WorldCoordinate(
-					p_chunkCoordinate.x * TChunk::Size.x,
-					p_chunkCoordinate.y * TChunk::Size.y,
+					p_chunkCoordinate.x * static_cast<int>(TChunk::Size.x),
+					p_chunkCoordinate.y * static_cast<int>(TChunk::Size.y),
 					0
 				);
 		}

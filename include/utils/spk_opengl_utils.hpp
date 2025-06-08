@@ -29,4 +29,7 @@ namespace spk::OpenGLUtils
 											   const void *p_userParam);
 }
 
-#define SPK_PADDING(value) spk::OpenGLUtils::Padding<value> spk_padding_##__COUNTER__
+#define SPK_PP_CAT_IMPL(a, b) a##b
+#define SPK_PP_CAT(a, b) SPK_PP_CAT_IMPL(a, b)
+
+#define SPK_PADDING(value) spk::OpenGLUtils::Padding<value> SPK_PP_CAT(spk_padding_, __COUNTER__)
