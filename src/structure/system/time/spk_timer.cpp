@@ -1,5 +1,7 @@
 #include "structure/system/time/spk_timer.hpp"
 
+#include <algorithm>
+
 namespace spk
 {
 	Timer::Timer(const Duration &p_expectedDuration) :
@@ -15,17 +17,7 @@ namespace spk
 	{
 	}
 
-	Timer::Timer(long long p_value, TimeUnit p_unit = TimeUnit::Millisecond) :
-		Timer(Duration(p_value, p_unit))
-	{
-	}
-
-	Timer::Timer(double p_value, TimeUnit p_unit = TimeUnit::Millisecond) :
-		Timer(Duration(p_value, p_unit))
-	{
-	}
-
-	Timer::State Timer::state()
+	Timer::State Timer::state() const
 	{
 		updateTimedOutState();
 		return _state;
@@ -36,7 +28,22 @@ namespace spk
 		return _expectedDuration;
 	}
 
-	bool Timer::hasTimedOut()
+	float Timer::elapsedRatio() const
+	{
+		if (_expectedDuration.nanoseconds == 0LL)
+		{
+            return 0.0f;
+		}
+
+        const long double elapsedNs   = static_cast<long double>(elapsed().nanoseconds);
+        const long double expectedNs  = static_cast<long double>(_expectedDuration.nanoseconds);
+
+        const long double ratio = elapsedNs / expectedNs;
+
+        return static_cast<float>(std::clamp(ratio, 0.0L, 1.0L));
+	}
+
+	bool Timer::hasTimedOut() const
 	{
 		updateTimedOutState();
 		return (_state == State::TimedOut);
@@ -101,7 +108,7 @@ namespace spk
 		return Duration(ns, TimeUnit::Nanosecond);
 	}
 
-	void Timer::updateTimedOutState()
+	void Timer::updateTimedOutState() const
 	{
 		if (_state == State::Running)
 		{
