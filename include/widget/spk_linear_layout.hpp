@@ -4,6 +4,8 @@
 
 #include "spk_enums.hpp"
 
+#include <numeric>
+
 namespace spk
 {
 	template <spk::Orientation Orient>

@@ -1,96 +1,57 @@
 #include <sparkle.hpp>
 
-struct ScrollContent : public spk::Widget
+class TestWidget : public spk::Widget
 {
-    spk::VerticalLayout            layout;
-    std::vector<std::unique_ptr<spk::TextLabel>> labels;
+private:
+	spk::VerticalLayout _layout;
 
-    ScrollContent(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
-		spk::Widget(p_name, p_parent)
-    {
-        layout.setElementPadding({10, 10});
-
-        for (int i = 0; i < 15; ++i)
-        {
-            auto lbl = std::make_unique<spk::TextLabel>(p_name + L"/Label" + std::to_wstring(i + 1), this);
-            lbl->setText(L"Dummy text label #" + std::to_wstring(i + 1));
-            lbl->activate();
-            layout.addWidget(lbl.get(), spk::Layout::SizePolicy::HorizontalExtend);
-
-            labels.emplace_back(std::move(lbl));
-        }
-    }
-
-    void _onGeometryChange() override
-    {
-        layout.setGeometry({0, geometry().size});
-    }
-
-    spk::Vector2UInt minimalSize() const override
-    {
-        return layout.minimalSize();
-    }
-};
-
-enum class Event
-{
-	Exit
-};
-
-using EventDispatcher = spk::EventDispatcher<Event>;
-
-class MainWidget : public spk::Widget
-{
-    spk::ScrollArea<ScrollContent> _scrollArea;
-
-    void _onGeometryChange() override
-    {
-        _scrollArea.setGeometry({0, geometry().size});
-    }
-
-	void _onKeyboardEvent(spk::KeyboardEvent& p_event)
+	spk::SpacerWidget _spacerTop;
+	spk::TextLabel _label;
+	spk::PushButton _button;
+	spk::SpacerWidget _spacerBottom;
+	
+	void _onGeometryChange() override
 	{
-		if (p_event.type == spk::KeyboardEvent::Type::Press &&
-			p_event.key == spk::Keyboard::Escape)
-		{
-			EventDispatcher::emit(Event::Exit);
-		}
+		_layout.setGeometry({0, geometry().size});
 	}
 
 public:
-    MainWidget(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+	TestWidget(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
 		spk::Widget(p_name, p_parent),
-		_scrollArea(p_name + L"/ScrollArea", this)
-    {
-        _scrollArea.setScrollBarVisible(spk::ScrollBar::Orientation::Horizontal, false);
-        _scrollArea.activate();
-    }
+		_label(p_name + L"/Label", this),
+		_button(p_name + L"/Button", this),
+		_spacerTop(p_name + L"/SpacerTop", this),
+		_spacerBottom(p_name + L"/SpacerBottom", this)
+	{
+		_layout.setElementPadding({10, 10});
+		_layout.addWidget(&_spacerTop, spk::Layout::SizePolicy::Extend);
+		_layout.addWidget(&_label, spk::Layout::SizePolicy::HorizontalExtend);
+		_layout.addWidget(&_button, spk::Layout::SizePolicy::HorizontalExtend);
+		_layout.addWidget(&_spacerBottom, spk::Layout::SizePolicy::Extend);
+
+		_label.setText(L"Hello, Sparkle!");
+		_label.setFontSize({16, 1});
+		_label.setTextAlignment(spk::HorizontalAlignment::Centered, spk::VerticalAlignment::Centered);
+		_label.setCornerSize({5, 5});
+		_label.activate();	
+
+		_button.setText(L"Click Me");
+		_button.setFontSize({16, 1});
+		_button.setTextAlignment(spk::HorizontalAlignment::Centered, spk::VerticalAlignment::Centered);
+		_button.setCornerSize({5, 5});
+		_button.activate();
+	}
 };
 
 int main()
 {
-	int errorCode = 0;
-	{
-		spk::GraphicalApplication app;
+	spk::GraphicalApplication app;
 
-		{
-			auto win = app.createWindow(L"Scroll-area test", {{0, 0}, {800, 600}});
+	spk::SafePointer<spk::Window> win = app.createWindow(L"Erelia", {{0, 0}, {800, 600}});
 
-			{
-				MainWidget root(L"MainWidget", win->widget());
-				root.setGeometry(win->geometry().shrink(50));
-				root.activate();
+	TestWidget testWidget(L"Test Widget", win->widget());
+	testWidget.setGeometry(win->geometry());
+	testWidget.activate();
 
-				{
-					EventDispatcher::Contract exitContract = EventDispatcher::subscribe(Event::Exit, [&app]()
-					{
-						app.quit(0);
-					});
-
-					errorCode = app.run();
-				}
-			}
-		}
-	}
-    return errorCode;
+	return (app.run());
 }
