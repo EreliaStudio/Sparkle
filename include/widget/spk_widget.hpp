@@ -85,6 +85,8 @@ namespace spk
 		void _computeRatio();
 		void _applyResize();
 
+		void _sortChildByLayer();
+
 	public:
 		Widget(const std::wstring &p_name);
 		Widget(const std::wstring &p_name, spk::SafePointer<Widget> p_parent);

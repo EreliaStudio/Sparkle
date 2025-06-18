@@ -79,6 +79,7 @@ namespace spk
 		spk::InherenceObject<Widget>::addChild(p_child);
 		p_child->setLayer(layer() + 1);
 		p_child->_viewport.setWindowSize(_viewport.windowSize());
+		_sortChildByLayer();
 	}
 
 	bool Widget::isPointed(const spk::Vector2Int &p_pointerPosition) const
@@ -102,12 +103,29 @@ namespace spk
 
 	void Widget::setLayer(const float &p_layer)
 	{
-		float delta = (p_layer - _layer);
+		if (_layer == p_layer)
+		{
+			return ;
+		}
+		
+		std::vector<float> oldLayers;
+
 		for (auto &child : children())
 		{
-			static_cast<Widget *>(child)->setLayer(static_cast<Widget *>(child)->layer() + delta);
+			oldLayers.push_back(child->layer() - _layer);
 		}
-		_layer = (parent() == nullptr ? 0 : parent()->layer()) + p_layer;
+
+		_layer = p_layer;
+
+		for (size_t i = 0; i < oldLayers.size(); i++)
+		{
+			auto& child = children()[i];
+
+			child->setLayer(oldLayers[i] + _layer);
+		}
+
+		parent()->_sortChildByLayer();
+
 		requireGeometryUpdate();
 	}
 
@@ -201,13 +219,13 @@ namespace spk
 
 	void Widget::place(const spk::Vector2Int &p_delta)
 	{
-		_geometry.anchor = p_delta;
+		setGeometry({p_delta, _geometry.size});
 		requireGeometryUpdate();
 	}
 
 	void Widget::move(const spk::Vector2Int &p_delta)
 	{
-		_geometry.anchor += p_delta;
+		setGeometry({_geometry.anchor + p_delta, _geometry.size});
 		requireGeometryUpdate();
 	}
 
@@ -279,6 +297,15 @@ namespace spk
 				child->_applyResize();
 			}
 		}
+	}
+
+	void Widget::_sortChildByLayer()
+	{
+		std::sort(children().begin(), children().end(),
+			[](const Widget *p_firstWidget, const Widget *p_secondWidget) -> bool
+			{
+				return (p_firstWidget->layer() > p_secondWidget->layer());
+			});
 	}
 
 	void Widget::requireGeometryUpdate()
