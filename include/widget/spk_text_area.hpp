@@ -47,6 +47,8 @@ namespace spk
 		void _insertLine(const std::wstring& p_text);
 		void _populateLabels(const spk::Vector2UInt &p_availableSize);
 
+		using Widget::setMinimalSize;
+
     public:
         TextArea(const std::wstring& p_name, spk::SafePointer<Widget> p_parent);
 
@@ -80,5 +82,6 @@ namespace spk
 		const spk::Frame& backgroundFrame() const {return (_backgroundFrame);}
 
 		spk::Vector2UInt computeMinimalSize(const size_t& p_minimalWidth);
+		void setMinimalWidth(const size_t& p_minimalWidth);
     };
 }

@@ -79,6 +79,8 @@ namespace spk
 		setContent(&_content);
 		_content.activate();
 
+		_closeContract = subscribeTo(spk::IInterfaceWindow::Event::Close, [&]{ close(); });
+
 		_onResizeContract = subscribeOnResize([&](const spk::Vector2UInt& p_availableSize){
 		
 			spk::Vector2UInt commandPanelMinimalSize = _content.commandPanel().minimalSize();
@@ -179,8 +181,10 @@ namespace spk
 		setTitle(L"Information");
 		_button = addButton(p_name + L"/CloseButton", L"Close");
 		_contract = _button->subscribe([&]{ close(); });
-
-		_closeContract = subscribeTo(spk::IInterfaceWindow::Event::Close, [&]{ close(); });
+		
+		_closeContract = subscribeTo(spk::IInterfaceWindow::Event::Close, [&]{ 
+			close();
+		});
 	}
 
 	spk::SafePointer<spk::PushButton> InformationMessageBox::button() const

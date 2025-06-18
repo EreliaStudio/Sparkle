@@ -410,4 +410,9 @@ namespace spk
 
 		return result;
 	}
+
+	void TextArea::setMinimalWidth(const size_t& p_minimalWidth)
+	{
+		setMinimalSize(computeMinimalSize(p_minimalWidth));
+	}
 } 

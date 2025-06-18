@@ -49,6 +49,7 @@ namespace spk
 		Content _content;
 
 		spk::IInterfaceWindow::ResizeContractProvider::Contract _onResizeContract;
+		spk::PushButton::Contract _closeContract;
 
 	public:
 		MessageBox(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent);
