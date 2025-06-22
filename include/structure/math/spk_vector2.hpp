@@ -98,13 +98,13 @@ namespace spk
 		{
 			if constexpr (std::is_floating_point<TType>::value)
 			{
-				x = p_output[L"X"].as<double>();
-				y = p_output[L"Y"].as<double>();
+				x = p_input[L"X"].as<double>();
+				y = p_input[L"Y"].as<double>();
 			}
 			else
 			{
-				x = p_output[L"X"].as<long long>();
-				y = p_output[L"Y"].as<long long>();
+				x = p_input[L"X"].as<long long>();
+				y = p_input[L"Y"].as<long long>();
 			}
 		}
 		
