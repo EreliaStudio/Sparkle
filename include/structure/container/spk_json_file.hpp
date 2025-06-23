@@ -27,6 +27,10 @@ namespace spk
 
 			bool contains(const std::wstring &p_key) const;
 
+			spk::JSON::Object &operator[](const std::wstring &p_key);
+
+			spk::JSON::Object &operator[](size_t p_index);
+
 			const spk::JSON::Object &operator[](const std::wstring &p_key) const;
 
 			const spk::JSON::Object &operator[](size_t p_index) const;

@@ -255,6 +255,16 @@ namespace spk::JSON
 		return (_root.contains(p_key));
 	}
 
+	spk::JSON::Object &File::operator[](const std::wstring &p_key)
+	{
+		return (_root[p_key]);
+	}
+
+	spk::JSON::Object &File::operator[](size_t p_index)
+	{
+		return (_root[p_index]);
+	}
+
 	const spk::JSON::Object &File::operator[](const std::wstring &p_key) const
 	{
 		return (_root[p_key]);

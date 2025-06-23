@@ -99,42 +99,31 @@ namespace spk
 			fromJSON(p_input);
 		}
 
-		void toJSON(spk::JSON::Object& p_output)
+		spk::JSON::Object toJSON() const
 		{
-			if (p_output.contains(L"X") == false)
-			{
-				p_output.addAttribute(L"X");
-			}
+			spk::JSON::Object result;
 
-			if (p_output.contains(L"Y") == false)
-			{
-				p_output.addAttribute(L"Y");
-			}
-
-			if (p_output.contains(L"Z") == false)
-			{
-				p_output.addAttribute(L"Z");
-			}
-
-			if (p_output.contains(L"W") == false)
-			{
-				p_output.addAttribute(L"W");
-			}
+			result.addAttribute(L"X");
+			result.addAttribute(L"Y");
+			result.addAttribute(L"Z");
+			result.addAttribute(L"W");
 
 			if constexpr (std::is_floating_point<TType>::value)
 			{
-				p_output[L"X"] = static_cast<double>(x);
-				p_output[L"Y"] = static_cast<double>(y);
-				p_output[L"Z"] = static_cast<double>(z);
-				p_output[L"W"] = static_cast<double>(w);
+				result[L"X"] = static_cast<double>(x);
+				result[L"Y"] = static_cast<double>(y);
+				result[L"Z"] = static_cast<double>(z);
+				result[L"W"] = static_cast<double>(w);
 			}
 			else
 			{
-				p_output[L"X"] = static_cast<long long>(x);
-				p_output[L"Y"] = static_cast<long long>(y);
-				p_output[L"Z"] = static_cast<long long>(z);
-				p_output[L"W"] = static_cast<long long>(w);
+				result[L"X"] = static_cast<long>(x);
+				result[L"Y"] = static_cast<long>(y);
+				result[L"Z"] = static_cast<long>(z);
+				result[L"W"] = static_cast<long>(w);
 			}
+
+			return (result);
 		}
 
 		void fromJSON(const spk::JSON::Object& p_input)
@@ -148,10 +137,10 @@ namespace spk
 			}
 			else
 			{
-				x = p_input[L"X"].as<long long>();
-				y = p_input[L"Y"].as<long long>();
-				z = p_input[L"Z"].as<long long>();
-				w = p_input[L"W"].as<long long>();
+				x = p_input[L"X"].as<long>();
+				y = p_input[L"Y"].as<long>();
+				z = p_input[L"Z"].as<long>();
+				w = p_input[L"W"].as<long>();
 			}
 		}
 
