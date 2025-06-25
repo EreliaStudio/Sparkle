@@ -4,19 +4,26 @@ namespace spk
 {
 	void ImageLabel::_onGeometryChange()
 	{
+		_backgroundRenderer.clear();
+		_backgroundRenderer.prepare(geometry(), layer(), _cornerSize);
+		_backgroundRenderer.validate();
+
+		spk::Geometry2D inner = geometry().shrink(_cornerSize);
 		_textureRenderer.clear();
-		_textureRenderer.prepare(geometry(), _textureSection, layer());
+		_textureRenderer.prepare(inner, _textureSection, layer() + 0.01f);
 		_textureRenderer.validate();
 	}
 
 	void ImageLabel::_onPaintEvent(spk::PaintEvent& p_event)
 	{
+		_backgroundRenderer.render();
 		_textureRenderer.render();
 	}
 
-	ImageLabel::ImageLabel(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+	ImageLabel::ImageLabel(const std::wstring& p_name, spk::SafePointer<spk::Widget>  p_parent) :
 		spk::Widget(p_name, p_parent)
 	{
+		_backgroundRenderer.setSpriteSheet(Widget::defaultNineSlice());
 		_textureRenderer.setTexture(_texture);
 	}
 
@@ -46,5 +53,24 @@ namespace spk
 	const spk::Texture::Section& ImageLabel::section() const
 	{
 		return _textureSection;
+	}
+
+	void ImageLabel::setNineSlice(spk::SafePointer<const spk::SpriteSheet> p_spriteSheet)
+	{
+		_backgroundRenderer.setSpriteSheet(p_spriteSheet);
+	}
+
+	void ImageLabel::setCornerSize(const spk::Vector2UInt& p_cornerSize)
+	{
+		if (_cornerSize != p_cornerSize)
+		{
+			_cornerSize = p_cornerSize;
+			requireGeometryUpdate();
+		}
+	}
+
+	const spk::Vector2UInt& ImageLabel::cornerSize() const
+	{
+		return _cornerSize;
 	}
 }

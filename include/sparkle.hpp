@@ -47,6 +47,7 @@
 #include "structure/engine/spk_mesh_renderer_2D.hpp"
 #include "structure/engine/spk_transform.hpp"
 #include "structure/engine/spk_tilemap.hpp"
+#include "structure/engine/spk_action.hpp"
 #include "structure/graphics/opengl/spk_buffer_set.hpp"
 #include "structure/graphics/opengl/spk_frame_buffer_object.hpp"
 #include "structure/graphics/opengl/spk_index_buffer_object.hpp"

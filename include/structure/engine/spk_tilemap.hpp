@@ -113,6 +113,11 @@ namespace spk
 
 		}
 
+		void clear()
+		{
+			_chunks.clear();
+		}
+
 		bool contains(const ChunkCoordinate& p_coordinates) const
 		{
 			return (_chunks.contains(p_coordinates));
