@@ -373,6 +373,11 @@ namespace spk
 			return;
 		}
 
+		if (_geometry.size.x == 0 || _geometry.size.y == 0)
+		{
+			GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] onPaintEvent - Widget geometry isn't defined");
+		}
+
 		if (_needGeometryChange == true)
 		{
 			try
