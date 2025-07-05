@@ -180,5 +180,12 @@ namespace spk
 
 			return (p_absoluteCoordinate - worldOrigin);
 		}
+
+		static RelativeCoordinate absoluteToRelative(const AbsoluteCoordinate& p_absoluteCoordinate, ChunkCoordinate p_chunkCoord)
+		{
+			WorldCoordinate worldOrigin = chunkToWorld(p_chunkCoord);
+
+			return (p_absoluteCoordinate - worldOrigin);
+		}
 	};
 }

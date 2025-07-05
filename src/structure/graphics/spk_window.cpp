@@ -453,6 +453,10 @@ namespace spk
 				})
 			.relinquish();
 
+		_updateModule.bind(&(_keyboardModule.keyboard()));
+		_updateModule.bind(&(_mouseModule.mouse()));
+		_updateModule.bind(&(_controllerModule.controller()));
+
 		bindModule(&_mouseModule);
 		bindModule(&_keyboardModule);
 		bindModule(&_controllerModule);
