@@ -146,7 +146,14 @@ namespace spk
 		_filtering = p_filtering;
 		_wrap = p_wrap;
 		_mipmap = p_mipmap;
-		_pixels.assign(p_data, p_data + (p_size.x * p_size.y * _getBytesPerPixel(p_format)));
+		if (p_data != nullptr)
+		{
+			_pixels.assign(p_data, p_data + (p_size.x * p_size.y * _getBytesPerPixel(p_format)));	
+		}
+		else
+		{
+			_pixels.resize(p_size.x * p_size.y * _getBytesPerPixel(p_format));
+		}
 		_needUpdate = true;
 		_needSettings = true;
 	}
@@ -155,7 +162,14 @@ namespace spk
 	{
 		_size = p_size;
 		_format = p_format;
-		_pixels.assign(p_data, p_data + (p_size.x * p_size.y * _getBytesPerPixel(p_format)));
+		if (p_data != nullptr)
+		{
+			_pixels.assign(p_data, p_data + (p_size.x * p_size.y * _getBytesPerPixel(p_format)));	
+		}
+		else
+		{
+			_pixels.resize(p_size.x * p_size.y * _getBytesPerPixel(p_format));
+		}
 		_needUpdate = true;
 	}
 
