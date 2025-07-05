@@ -95,6 +95,8 @@ namespace spk
 		spk::SafePointer<MenuBar> menuBar();
 
 		spk::SafePointer<Frame> backgroundFrame();
+		spk::SafePointer<Frame> minimizedBackgroundFrame();
+
 		void setContent(spk::SafePointer<Widget> p_content);
 
 		void setMinimumContentSize(const spk::Vector2UInt &p_minimumContentSize);

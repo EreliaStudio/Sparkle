@@ -7,12 +7,16 @@
 
 #include "structure/design_pattern/spk_observable_value.hpp"
 
+#include "widget/spk_linear_layout.hpp"
+
 namespace spk
 {
 	template <typename TType>
 	class SpinBox : public spk::Widget
 	{
 	private:
+		spk::HorizontalLayout _layout;
+
 		spk::PushButton _upButton;
 		spk::PushButton::Contract _upButtonContract;
 		spk::TextEdit _valueEdit;
@@ -27,15 +31,7 @@ namespace spk
 
 		void _onGeometryChange() override
 		{
-			spk::Vector2UInt buttonSize = {std::max(16u, geometry().size.y), geometry().size.y};
-
-			spk::Vector2UInt editSize = {geometry().size.x - (buttonSize.x * 2) - 6, geometry().size.y};
-
-			_valueEdit.setFontSize({static_cast<size_t>((geometry().height - _valueEdit.cornerSize().y * 2)), 0});
-
-			_valueEdit.setGeometry({0, 0}, editSize);
-			_downButton.setGeometry({editSize.x + 3, 0}, buttonSize);
-			_upButton.setGeometry({editSize.x + 3 + buttonSize.x + 3, 0}, buttonSize);
+			_layout.setGeometry({0, geometry().size});
 		}
 
 	public:
@@ -84,6 +80,17 @@ namespace spk
 			_value.trigger();
 
 			setIconSet(spk::Widget::defaultIconset());
+
+			_layout.setElementPadding({0, 0});
+
+			_layout.addWidget(&_downButton, spk::Layout::SizePolicy::Minimum);
+			_layout.addWidget(&_valueEdit, spk::Layout::SizePolicy::Extend);
+			_layout.addWidget(&_upButton, spk::Layout::SizePolicy::Minimum);
+		}
+
+		void setElementPadding(const spk::Vector2UInt &p_padding)
+		{
+			_layout.setElementPadding(p_padding);
 		}
 
 		void setIconSet(spk::SafePointer<const spk::SpriteSheet> p_iconSet)
@@ -161,6 +168,11 @@ namespace spk
 		void disableEdit()
 		{
 			_valueEdit.disableEdit();
+		}
+
+		spk::Vector2UInt minimalSize() const override
+		{
+			return (_layout.minimalSize());
 		}
 	};
 }

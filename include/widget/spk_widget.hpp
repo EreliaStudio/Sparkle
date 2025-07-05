@@ -58,6 +58,12 @@ namespace spk
 		spk::Geometry2D _geometry;
 		spk::Viewport _viewport;
 
+		spk::Vector2UInt _minimalSize = {0, 0};
+		spk::Vector2UInt _maximalSize = {
+				std::numeric_limits<size_t>::max(),
+				std::numeric_limits<size_t>::max()
+			};
+
 		bool _requestedPaint = false;
 
 		float _layer;
@@ -79,6 +85,8 @@ namespace spk
 		void _computeRatio();
 		void _applyResize();
 
+		void _sortChildByLayer();
+
 	public:
 		Widget(const std::wstring &p_name);
 		Widget(const std::wstring &p_name, spk::SafePointer<Widget> p_parent);
@@ -86,6 +94,7 @@ namespace spk
 		~Widget();
 
 		const std::wstring &name() const;
+		void setName(const std::wstring &p_name);
 
 		void addChild(spk::SafePointer<Widget> p_child) override;
 
@@ -125,6 +134,8 @@ namespace spk
 		void applyGeometryChange();
 		void requireGeometryUpdate();
 
+		virtual void setMinimalSize(const spk::Vector2UInt &p_size);
+		virtual void setMaximalSize(const spk::Vector2UInt &p_size);
 		virtual spk::Vector2UInt minimalSize() const;
 		virtual spk::Vector2UInt maximalSize() const;
 

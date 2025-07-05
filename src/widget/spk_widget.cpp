@@ -25,7 +25,7 @@ namespace spk
 	}
 
 	spk::SpriteSheet Widget::_defaultNineSlice = spk::SpriteSheet::fromRawData(SPARKLE_GET_RESOURCE("resources/textures/defaultNineSlice.png"),
-																			   spk::Vector2UInt(3, 3), SpriteSheet::Filtering::Linear);
+																			 spk::Vector2UInt(3, 3), SpriteSheet::Filtering::Linear);
 
 	spk::SafePointer<const spk::SpriteSheet> Widget::defaultNineSlice()
 	{
@@ -37,6 +37,7 @@ namespace spk
 		_parent(nullptr),
 		_layer(0)
 	{
+		
 	}
 
 	Widget::Widget(const std::wstring &p_name, spk::SafePointer<Widget> p_parent) :
@@ -68,11 +69,17 @@ namespace spk
 		return (_name);
 	}
 
+	void Widget::setName(const std::wstring &p_name)
+	{
+		_name = p_name;
+	}
+
 	void Widget::addChild(spk::SafePointer<Widget> p_child)
 	{
 		spk::InherenceObject<Widget>::addChild(p_child);
 		p_child->setLayer(layer() + 1);
 		p_child->_viewport.setWindowSize(_viewport.windowSize());
+		_sortChildByLayer();
 	}
 
 	bool Widget::isPointed(const spk::Vector2Int &p_pointerPosition) const
@@ -96,12 +103,29 @@ namespace spk
 
 	void Widget::setLayer(const float &p_layer)
 	{
-		float delta = (p_layer - _layer);
+		if (_layer == p_layer)
+		{
+			return ;
+		}
+		
+		std::vector<float> oldLayers;
+
 		for (auto &child : children())
 		{
-			static_cast<Widget *>(child)->setLayer(static_cast<Widget *>(child)->layer() + delta);
+			oldLayers.push_back(child->layer() - _layer);
 		}
-		_layer = (parent() == nullptr ? 0 : parent()->layer()) + p_layer;
+
+		_layer = p_layer;
+
+		for (size_t i = 0; i < oldLayers.size(); i++)
+		{
+			auto& child = children()[i];
+
+			child->setLayer(oldLayers[i] + _layer);
+		}
+
+		parent()->_sortChildByLayer();
+
 		requireGeometryUpdate();
 	}
 
@@ -159,14 +183,28 @@ namespace spk
 		_anchorRatio = {static_cast<float>(_geometry.anchor.x) / static_cast<float>(parentSize.x),
 						static_cast<float>(_geometry.anchor.y) / static_cast<float>(parentSize.y)};
 		_sizeRatio = {static_cast<float>(_geometry.size.x) / static_cast<float>(parentSize.x),
-					  static_cast<float>(_geometry.size.y) / static_cast<float>(parentSize.y)};
+					 static_cast<float>(_geometry.size.y) / static_cast<float>(parentSize.y)};
 	}
 
 	void Widget::setGeometry(const Geometry2D &p_geometry)
 	{
 		_geometry = p_geometry;
-		_viewport.setGeometry(p_geometry);
-		_viewport.setWindowSize((parent() == nullptr ? p_geometry.size : parent()->viewport().windowSize()));
+		_viewport.setGeometry({ absoluteAnchor(), geometry().size });
+		_viewport.setWindowSize((parent() == nullptr ? geometry().size : parent()->viewport().windowSize()));
+		
+		try
+		{
+			_computeViewport();		
+		}
+		catch(const std::exception& e)
+		{
+			PROPAGATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] ComputeViewport", e);
+		}
+		catch(...)
+		{
+			GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] ComputeViewport - Unknow error type");
+		}
+		
 		_computeRatio();
 
 		requireGeometryUpdate();
@@ -181,13 +219,13 @@ namespace spk
 
 	void Widget::place(const spk::Vector2Int &p_delta)
 	{
-		_geometry.anchor = p_delta;
+		setGeometry({p_delta, _geometry.size});
 		requireGeometryUpdate();
 	}
 
 	void Widget::move(const spk::Vector2Int &p_delta)
 	{
-		_geometry.anchor += p_delta;
+		setGeometry({_geometry.anchor + p_delta, _geometry.size});
 		requireGeometryUpdate();
 	}
 
@@ -201,38 +239,99 @@ namespace spk
 		setGeometry({p_anchor, p_size});
 	}
 
+	void Widget::_computeViewport()
+	{
+		spk::Geometry2D parentClippedGeometry = (parent() == nullptr ? geometry() : parent()->_viewport.clippedGeometry());
+
+		spk::Geometry2D clippedGeometry = _viewport.geometry().intersect(parentClippedGeometry);
+
+		_viewport.setClippedGeometry(clippedGeometry);
+	}
+
 	void Widget::_applyGeometryChange()
 	{
-		_onGeometryChange();
-		_computeViewport();
+
+		try
+		{
+			_onGeometryChange();		
+		}
+		catch(const std::exception& e)
+		{
+			PROPAGATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] onGeometryChange", e);
+		}
+		catch(...)
+		{
+			GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] onGeometryChange - Unknow error type");
+		}
 	}
 
 	void Widget::_applyResize()
 	{
+		if (geometry().size == 0)
+		{
+			return ;
+		}
+
 		spk::Vector2Int parentSize = (parent() == nullptr ? _viewport.windowSize() : parent()->_geometry.size);
+
+		for (auto& child : children())
+		{
+			child->_needGeometryChange = false;
+		}
 
 		forceGeometryChange({parentSize * _anchorRatio, parentSize * _sizeRatio});
 
 		for (auto& child : children())
 		{
-			viewport().apply();
-			child->_applyResize();
+			if (child->_needGeometryChange == false)
+			{
+				try
+				{
+					viewport().apply();
+				}
+				catch(const std::runtime_error& e)
+				{
+					PROPAGATE_ERROR("Error while applying viewport of [" + spk::StringUtils::wstringToString(name()) +
+												"] with viewport of geometry [" + _viewport.geometry().to_string() + "]\nAnd a widget geometry [" + geometry().to_string() + "]", e);
+				}
+				child->_applyResize();
+			}
 		}
+	}
+
+	void Widget::_sortChildByLayer()
+	{
+		std::sort(children().begin(), children().end(),
+			[](const Widget *p_firstWidget, const Widget *p_secondWidget) -> bool
+			{
+				return (p_firstWidget->layer() > p_secondWidget->layer());
+			});
 	}
 
 	void Widget::requireGeometryUpdate()
 	{
 		_needGeometryChange = true;
+		requestPaint();
+	}
+
+	void Widget::setMinimalSize(const spk::Vector2UInt &p_size)
+	{
+		_minimalSize = p_size;
+	}
+	
+	void Widget::setMaximalSize(const spk::Vector2UInt &p_size)
+	{
+		_maximalSize = p_size;
 	}
 
 	spk::Vector2UInt Widget::minimalSize() const
 	{
-		return {0, 0};
+		return _minimalSize;
 	}
 
 	spk::Vector2UInt Widget::maximalSize() const
 	{
-		return {std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max()};
+		return _maximalSize;
 	}
 
 	const Geometry2D &Widget::geometry() const
@@ -258,7 +357,7 @@ namespace spk
 		spk::Geometry2D::Point result = {0, 0};
 		const Widget *tmp = this;
 
-		while (tmp->parent() != nullptr)
+		while (tmp != nullptr)
 		{
 			result += tmp->geometry().anchor;
 			tmp = static_cast<const Widget *>(tmp->parent());
@@ -267,33 +366,16 @@ namespace spk
 		return (result);
 	}
 
-	void Widget::_computeViewport()
-	{
-		spk::Geometry2D::Point topLeft = absoluteAnchor();
-		spk::Geometry2D::Size rightDown = geometry().size + spk::Geometry2D::Size(topLeft.x, topLeft.y);
-
-		if (parent() != nullptr)
-		{
-			topLeft = Geometry2D::Point::max(topLeft, static_cast<const Widget *>(parent())->viewport().geometry().anchor);
-
-			if (parent()->viewport().geometry().contains(topLeft) == false)
-			{
-				spk::Geometry2D::Size tmpSize = static_cast<const Widget *>(parent())->geometry().size;
-				spk::Geometry2D::Size tmpAnchor = {static_cast<const Widget *>(parent())->geometry().x,
-												   static_cast<const Widget *>(parent())->geometry().y};
-				rightDown = Geometry2D::Size::min(rightDown, tmpSize + tmpAnchor);
-			}
-		}
-		spk::Geometry2D::Size size = {rightDown.x - topLeft.x, rightDown.y - topLeft.y};
-
-		_viewport.setGeometry({absoluteAnchor(), geometry().size});
-	}
-
 	void Widget::onPaintEvent(spk::PaintEvent &p_event)
 	{
 		if (isActive() == false || p_event.consumed() == true)
 		{
 			return;
+		}
+
+		if (_geometry.size.x == 0 || _geometry.size.y == 0)
+		{
+			GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] onPaintEvent - Widget geometry isn't defined");
 		}
 
 		if (_needGeometryChange == true)
@@ -313,13 +395,18 @@ namespace spk
 			_needGeometryChange = false;
 		}
 
+		if (_viewport.clippedGeometry().size.x == 0 || _viewport.clippedGeometry().size.y == 0)
+		{
+			return;
+		}
+
 		try
 		{
 			_onPaintEvent(p_event);
 		}
 		catch (const std::exception &e)
 		{
-			GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] onPaintEvent -  " + e.what());
+			GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] onPaintEvent - " + e.what());
 		}
 		catch (...)
 		{
@@ -337,10 +424,10 @@ namespace spk
 				{
 					_viewport.apply();
 				}
-				catch (...)
+				catch (const std::runtime_error& e)
 				{
-					GENERATE_ERROR("Error while applying viewport of [" + spk::StringUtils::wstringToString(name()) +
-											 "] with viewport of geometry [" + _viewport.geometry().to_string() + "]");
+					PROPAGATE_ERROR("Error while applying viewport of [" + spk::StringUtils::wstringToString(name()) +
+											 "] with viewport of geometry [" + _viewport.geometry().to_string() + "]", e);
 				}
 				child->onPaintEvent(childEvent);
 			}
@@ -368,6 +455,7 @@ namespace spk
 		if (_requestedPaint == true)
 		{
 			p_event.requestPaint();
+			_requestedPaint = false;
 		}
 	}
 

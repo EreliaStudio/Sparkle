@@ -19,9 +19,9 @@ namespace spk
 
 	private:
 		Duration currentRunDuration() const;
-		void updateTimedOutState();
+		void updateTimedOutState() const;
 
-		State _state;
+		mutable State _state;
 		Duration _expectedDuration;
 		Timestamp _startTime;
 		Duration _accumulatedTime;
@@ -29,13 +29,12 @@ namespace spk
 	public:
 		explicit Timer(const Duration &p_expectedDuration);
 		Timer();
-		Timer(long long p_value, TimeUnit p_unit);
-		Timer(double p_value, TimeUnit p_unit);
 
-		State state();
+		State state() const;
 		Duration elapsed() const;
 		Duration expectedDuration() const;
-		bool hasTimedOut();
+		float elapsedRatio() const;
+		bool hasTimedOut() const;
 
 		void start();
 		void stop();

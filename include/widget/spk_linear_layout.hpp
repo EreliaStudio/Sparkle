@@ -4,6 +4,8 @@
 
 #include "spk_enums.hpp"
 
+#include <numeric>
+
 namespace spk
 {
 	template <spk::Orientation Orient>
@@ -107,7 +109,8 @@ namespace spk
 				{
 					if (isExt[i])
 					{
-						primarySize[i] += share + (remain-- > 0 ? 1 : 0);
+						primarySize[i] += share + (remain > 0 ? 1 : 0);
+						remain--;
 					}
 				}
 			}
@@ -141,6 +144,51 @@ namespace spk
 				
 				cursor += primarySize[i];
 			}
+		}
+
+		spk::Vector2UInt minimalSize() const
+		{
+			if (_elements.empty())
+			{
+				return {0u, 0u};
+			}
+
+			const bool  isHorizontal = (Orient == spk::Orientation::Horizontal);
+			uint32_t    primarySum   = 0;
+			uint32_t    secondaryMax = 0;
+			std::size_t count        = 0;
+
+			for (const auto& elt : _elements)
+			{
+				if (!elt || elt->widget() == nullptr)
+				{
+					continue;
+				}
+
+				++count;
+				const spk::Vector2UInt min = elt->widget()->minimalSize();
+
+				if (isHorizontal)
+				{
+					primarySum   += min.x;
+					secondaryMax  = std::max(secondaryMax, min.y);
+				}
+				else
+				{
+					primarySum   += min.y;
+					secondaryMax  = std::max(secondaryMax, min.x);
+				}
+			}
+
+			if (count > 1)
+			{
+				const uint32_t pad = (isHorizontal ? _elementPadding.x
+												: _elementPadding.y);
+				primarySum += static_cast<uint32_t>(pad) * static_cast<uint32_t>(count - 1);
+			}
+
+			return isHorizontal ? spk::Vector2UInt{primarySum, secondaryMax}
+								: spk::Vector2UInt{secondaryMax, primarySum};
 		}
 	};
 

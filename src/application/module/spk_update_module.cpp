@@ -27,6 +27,10 @@ namespace spk
 		_lastMilliseconds = p_event.time.milliseconds;
 		_lastNanoseconds = p_event.time.nanoseconds;
 
+		p_event.keyboard = _keyboard;
+		p_event.mouse = _mouse;
+		p_event.controller = _controller;
+
 		if (_widget != nullptr)
 		{
 			_widget->onUpdateEvent(p_event);
@@ -41,5 +45,20 @@ namespace spk
 	UpdateModule::UpdateModule(spk::SafePointer<spk::Widget> p_widget) :
 		_widget(p_widget)
 	{
+	}
+
+	void UpdateModule::bind(const spk::SafePointer<const Keyboard>& p_keyboard)
+	{
+		_keyboard = p_keyboard;
+	}
+	
+	void UpdateModule::bind(const spk::SafePointer<const Mouse>& p_mouse)
+	{
+		_mouse = p_mouse;
+	}
+	
+	void UpdateModule::bind(const spk::SafePointer<const Controller>& p_controller)
+	{
+		_controller = p_controller;
 	}
 }

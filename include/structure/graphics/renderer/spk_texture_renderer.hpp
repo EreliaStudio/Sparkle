@@ -11,7 +11,7 @@ namespace spk
 {
 	class TextureRenderer
 	{
-	public:
+	private:
 		struct Vertex
 		{
 			spk::Vector2 position;
@@ -19,7 +19,6 @@ namespace spk
 			spk::Vector2 uv;
 		};
 
-	private:
 		static inline spk::OpenGL::Program *_program = nullptr;
 		spk::OpenGL::BufferSet _bufferSet;
 		spk::OpenGL::SamplerObject _samplerObject;

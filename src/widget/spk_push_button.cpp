@@ -101,7 +101,10 @@ namespace spk
 			maxCornerSize = spk::Vector2UInt::max(maxCornerSize, tmpCornerSize);
 		}
 
-		return (computeTextSize() + maxCornerSize * 2);
+		spk::Vector2UInt registeredMinimalSize = Widget::minimalSize();
+		spk::Vector2UInt computedMinimalSize = computeTextSize() + maxCornerSize * 2;
+
+		return (spk::Vector2UInt::max(registeredMinimalSize, computedMinimalSize));
 	}
 
 	ContractProvider::Contract PushButton::subscribe(const ContractProvider::Job &p_job)

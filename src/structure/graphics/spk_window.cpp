@@ -332,7 +332,7 @@ namespace spk
 		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 		glStencilMask(0xFF);
 
-		glDisable(GL_SCISSOR_TEST);
+		glEnable(GL_SCISSOR_TEST);
 
 		wglSwapIntervalEXT(0);
 	}
@@ -467,6 +467,7 @@ namespace spk
 
 	Window::~Window()
 	{
+		close();
 		_removeAllTimers();
 		_rootWidget.release();
 	}
@@ -484,7 +485,7 @@ namespace spk
             return;
         }
 
-		_rootWidget->setGeometry({0, p_newSize});
+		_rootWidget->forceGeometryChange({0, p_newSize});
 		for (auto& child : _rootWidget->children())
 		{
 			_rootWidget->viewport().apply();
@@ -513,6 +514,20 @@ namespace spk
 
 	void Window::clear()
 	{
+		if (_rootWidget->_needGeometryChange == true)
+		{
+			try
+			{
+				_rootWidget->_applyGeometryChange();
+			}
+			catch (std::exception& e)
+			{
+				PROPAGATE_ERROR("Window::clear over _rootWidget->applyGeometryChange() failed", e);
+			}
+			
+			_rootWidget->_needGeometryChange = false;
+		}
+		
 		try
 		{
 			_rootWidget->viewport().apply();
@@ -590,9 +605,18 @@ namespace spk
 		return (_rootWidget->viewport().geometry());
 	}
 
+	void Window::allowPaintRequest()
+	{
+		_isPaintRequestAllowed = true;
+	}
+
 	void Window::requestPaint() const
 	{
-		PostMessage(_hwnd, WM_PAINT_REQUEST, 0, 0);
+		if (_isPaintRequestAllowed == true)
+		{
+			PostMessage(_hwnd, WM_PAINT_REQUEST, 0, 0);
+			_isPaintRequestAllowed = false;
+		}
 	}
 
 	void Window::requestResize(const spk::Vector2Int& p_size) const

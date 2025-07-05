@@ -94,12 +94,54 @@ namespace spk
 		}
 
 		template <typename UType = TType, std::enable_if_t<!std::is_floating_point<UType>::value, int> = 0>
-		IVector4(const spk::JSON::Object& p_input) :
-			x(static_cast<TType>(p_input[L"x"].as<long>())),
-			y(static_cast<TType>(p_input[L"y"].as<long>())),
-			z(static_cast<TType>(p_input[L"z"].as<long>())),
-			w(static_cast<TType>(p_input[L"w"].as<long>()))
+		IVector4(const spk::JSON::Object& p_input)
 		{
+			fromJSON(p_input);
+		}
+
+		spk::JSON::Object toJSON() const
+		{
+			spk::JSON::Object result;
+
+			result.addAttribute(L"X");
+			result.addAttribute(L"Y");
+			result.addAttribute(L"Z");
+			result.addAttribute(L"W");
+
+			if constexpr (std::is_floating_point<TType>::value)
+			{
+				result[L"X"] = static_cast<double>(x);
+				result[L"Y"] = static_cast<double>(y);
+				result[L"Z"] = static_cast<double>(z);
+				result[L"W"] = static_cast<double>(w);
+			}
+			else
+			{
+				result[L"X"] = static_cast<long>(x);
+				result[L"Y"] = static_cast<long>(y);
+				result[L"Z"] = static_cast<long>(z);
+				result[L"W"] = static_cast<long>(w);
+			}
+
+			return (result);
+		}
+
+		void fromJSON(const spk::JSON::Object& p_input)
+		{
+			if constexpr (std::is_floating_point<TType>::value)
+			{
+				x = p_input[L"X"].as<double>();
+				y = p_input[L"Y"].as<double>();
+				z = p_input[L"Z"].as<double>();
+				w = p_input[L"W"].as<double>();
+			}
+			else
+			{
+				x = p_input[L"X"].as<long>();
+				y = p_input[L"Y"].as<long>();
+				z = p_input[L"Z"].as<long>();
+				w = p_input[L"W"].as<long>();
+			}
 		}
 
 		template <typename UType>

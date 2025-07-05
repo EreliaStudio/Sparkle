@@ -6,27 +6,18 @@
 
 namespace spk
 {
-	class ScrollableWidget : public spk::Widget
-	{
-	private:
-	public:
-		ScrollableWidget(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
-			spk::Widget(p_name, p_parent)
-		{
-		}
-		virtual spk::Vector2UInt requiredSize() const = 0;
-	};
-
 	class IScrollArea : public spk::Widget
 	{
 	private:
+		bool _isHorizontalScrollBarVisible = true;
 		spk::ScrollBar _horizontalScrollBar;
 		spk::ScrollBar::Contract _horizontalBarContract;
+		bool _isVerticalScrollBarVisible = true;
 		spk::ScrollBar _verticalScrollBar;
 		spk::ScrollBar::Contract _verticalBarContract;
-		spk::ContainerWidget _containerWidget;
+		spk::SafePointer<spk::Widget> _content;
 
-		float _scrollBarWidth = 16;
+		uint32_t _scrollBarWidth = 16;
 
 		void _onGeometryChange() override;
 
@@ -35,35 +26,30 @@ namespace spk
 	public:
 		IScrollArea(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent);
 
-		spk::SafePointer<spk::Widget> container();
+		void setContent(spk::SafePointer<spk::Widget> p_content);
+		virtual spk::SafePointer<spk::Widget> content();
 
+		void setScrollBarVisible(spk::ScrollBar::Orientation p_orientation, bool p_state);
 		void setScrollBarWidth(const float &p_scrollBarWidth);
-
-		void setContent(spk::SafePointer<ScrollableWidget> p_content);
 
 		void setContentSize(const spk::Vector2UInt &p_contentSize);
 	};
 
-	template <typename TContentType, typename = std::enable_if_t<std::is_base_of<ScrollableWidget, TContentType>::value>>
+	template <typename TContentType, typename = std::enable_if_t<std::is_base_of<spk::Widget, TContentType>::value>>
 	class ScrollArea : public IScrollArea
 	{
 	private:
-		TContentType _content;
+		TContentType _contentObject;
 
 		using spk::IScrollArea::setContent;
 
 	public:
 		ScrollArea(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
 			IScrollArea(p_name, p_parent),
-			_content(p_name + L" - Content", container())
+			_contentObject(p_name + L"/Container/Content", this)
 		{
-			setContent(&_content);
-			_content.activate();
-		}
-
-		spk::SafePointer<TContentType> content()
-		{
-			return (&(_content));
+			setContent(&_contentObject);
+			_contentObject.activate();
 		}
 	};
 }

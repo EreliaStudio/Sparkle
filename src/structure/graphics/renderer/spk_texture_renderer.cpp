@@ -72,6 +72,11 @@ namespace spk
 		return (_samplerObject.texture());
 	}
 
+	spk::SafePointer<const spk::Texture> &TextureRenderer::texture()
+	{
+		return (_samplerObject.texture());
+	}
+
 	void TextureRenderer::clear()
 	{
 		_bufferSet.layout().clear();
