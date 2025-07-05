@@ -20,6 +20,17 @@ namespace spk
 		InputState buttons[3];
 		float wheel;
 
+		Mouse()
+		{
+			for (size_t i = 0; i < 3; i++)
+			{
+				buttons[i] = spk::InputState::Up;
+			}
+			position = {0, 0};
+			deltaPosition = {0, 0};
+			wheel = 0;
+		}
+
 		InputState operator[](Button p_button) const
 		{
 			return (buttons[static_cast<int>(p_button)]);

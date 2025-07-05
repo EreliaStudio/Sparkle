@@ -155,6 +155,7 @@ namespace spk
 			{
 				state[i] = spk::InputState::Up;
 			}
+			glyph = L'\0';
 		}
 
 		InputState operator[](Key p_key) const
