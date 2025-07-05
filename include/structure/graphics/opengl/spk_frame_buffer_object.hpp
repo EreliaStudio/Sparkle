@@ -27,6 +27,8 @@ namespace spk::OpenGL
 
 		class Attachment
 		{
+			friend class FrameBufferObject;
+			
 		public:
 			enum class Type
 			{
@@ -263,33 +265,26 @@ namespace spk::OpenGL
 
 		void _rebuildAttachments()
 		{
-			for (auto &pair : _attachments)
+			int maxBinding = -1;
+			for (auto &kv : _attachments)
 			{
-				auto &attachmentPtr = pair.second;
-				if (attachmentPtr)
+				auto &att = kv.second;
+				if (att)
 				{
-					attachmentPtr->initialize(_size, _filtering, _wrap, _mipmap);
-					attachmentPtr->attachToFBO();
+					att->initialize(_size, _filtering, _wrap, _mipmap);
+					att->attachToFBO();
+					maxBinding = std::max(maxBinding, att->_bindingPoint);
 				}
 			}
 
-			if (!_attachments.empty())
+			std::vector<GLenum> drawBuffers(maxBinding + 1, GL_NONE);
+			for (auto &kv : _attachments)
 			{
-				std::vector<GLenum> drawBuffers;
-				drawBuffers.reserve(_attachments.size());
+				auto &att = kv.second;
+				drawBuffers[att->_bindingPoint] = GL_COLOR_ATTACHMENT0 + att->_bindingPoint;
+			}
 
-				int offset = 0;
-				for (auto &pair : _attachments)
-				{
-					drawBuffers.push_back(GL_COLOR_ATTACHMENT0 + offset);
-					offset++;
-				}
-				glDrawBuffers((GLsizei)drawBuffers.size(), drawBuffers.data());
-			}
-			else
-			{
-				glDrawBuffer(GL_NONE);
-			}
+			glDrawBuffers((GLsizei)drawBuffers.size(), drawBuffers.data());
 		}
 
 		void _applyChanges()
