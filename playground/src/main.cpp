@@ -1,27 +1,57 @@
 #include <sparkle.hpp>
 
-int main() {
-    spk::GraphicalApplication app;
+class TestWidget : public spk::Widget
+{
+private:
+	spk::VerticalLayout _layout;
 
-    auto win = app.createWindow(L"Layout Playground", {{0, 0}, {1024, 768}});
+	spk::SpacerWidget _spacerTop;
+	spk::TextLabel _label;
+	spk::PushButton _button;
+	spk::SpacerWidget _spacerBottom;
+	
+	void _onGeometryChange() override
+	{
+		_layout.setGeometry({0, geometry().size});
+	}
 
-    spk::MessageBox box(L"DemoBox", win->widget());
+public:
+	TestWidget(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+		spk::Widget(p_name, p_parent),
+		_label(p_name + L"/Label", this),
+		_button(p_name + L"/Button", this),
+		_spacerTop(p_name + L"/SpacerTop", this),
+		_spacerBottom(p_name + L"/SpacerBottom", this)
+	{
+		_layout.setElementPadding({10, 10});
+		_layout.addWidget(&_spacerTop, spk::Layout::SizePolicy::Extend);
+		_layout.addWidget(&_label, spk::Layout::SizePolicy::HorizontalExtend);
+		_layout.addWidget(&_button, spk::Layout::SizePolicy::HorizontalExtend);
+		_layout.addWidget(&_spacerBottom, spk::Layout::SizePolicy::Extend);
 
-	box.textArea().setTextAlignment(spk::HorizontalAlignment::Right, spk::VerticalAlignment::Top);
+		_label.setText(L"Hello, Sparkle!");
+		_label.setFontSize({16, 1});
+		_label.setTextAlignment(spk::HorizontalAlignment::Centered, spk::VerticalAlignment::Centered);
+		_label.setCornerSize({5, 5});
+		_label.activate();	
 
-	box.setText(L"Save changes before closing this document?");
+		_button.setText(L"Click Me");
+		_button.setFontSize({16, 1});
+		_button.setTextAlignment(spk::HorizontalAlignment::Centered, spk::VerticalAlignment::Centered);
+		_button.setCornerSize({5, 5});
+		_button.activate();
+	}
+};
 
-	box.addButton(L"YesBtn",    L"Yes");
-	box.addButton(L"NoBtn",     L"No");
-	box.addButton(L"CancelBtn", L"Cancel");
+int main()
+{
+	spk::GraphicalApplication app;
 
-	box.setMinimalWidth(300);
+	spk::SafePointer<spk::Window> win = app.createWindow(L"Erelia", {{0, 0}, {800, 600}});
 
-	spk::Vector2UInt boxSize  = box.minimalSize();
-	spk::Vector2Int  boxPos   = (win->geometry().size - boxSize) / 2;
-	box.setGeometry({boxPos, boxSize});
+	TestWidget testWidget(L"Test Widget", win->widget());
+	testWidget.setGeometry(win->geometry());
+	testWidget.activate();
 
-	box.activate();
-
-    return app.run();
+	return (app.run());
 }

@@ -26,7 +26,7 @@ namespace spk
 			friend class Message;
 
 		public:
-			int32_t type;
+			Type type;
 			size_t length;
 			ClientID emitterID;
 			uint8_t reserved[16];
@@ -54,10 +54,27 @@ namespace spk
 		void edit(const size_t &p_offset, const void *p_data, const size_t &p_dataSize);
 		void append(const void *p_data, const size_t &p_dataSize);
 
+		template <typename TType>
+		void skip() const
+		{
+			skip(sizeof(TType));
+		}
+
 		template <typename InputType>
 		void edit(const size_t &p_offset, const InputType &p_input)
 		{
 			_buffer.edit(p_offset, p_input);
+		}
+
+		void push(const void *p_buffer, size_t p_nbBytes)
+		{
+			_buffer.push(p_buffer, p_nbBytes);
+			_header.length = _buffer.size();
+		}
+
+		void pull(void *p_buffer, size_t p_nbBytes) const
+		{
+			_buffer.pull(p_buffer, p_nbBytes);
 		}
 
 		template <typename InputType>

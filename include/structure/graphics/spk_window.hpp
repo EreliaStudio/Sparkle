@@ -45,6 +45,7 @@ namespace spk
 		friend class KeyboardModule;
 		friend class MouseModule;
 		friend class UpdateModule;
+		friend class PaintModule;
 
 	private:
 		std::unique_ptr<Widget> _rootWidget;
@@ -61,6 +62,8 @@ namespace spk
 		std::unordered_map<std::wstring, HCURSOR> _cursors;
 		HCURSOR _currentCursor;
 		HCURSOR _savedCursor;
+
+		mutable bool _isPaintRequestAllowed = true;
 
 		std::recursive_mutex _timerMutex;
 		std::set<UINT_PTR> _timers;
@@ -112,7 +115,9 @@ namespace spk
 		void pullEvents();
 		void bindModule(spk::IModule *p_module);
 
+		void allowPaintRequest();
 		void requestPaint() const;
+		void allowUpdateRequest();
 		void requestUpdate() const;
 		void requestResize(const spk::Vector2Int& p_size) const;
 

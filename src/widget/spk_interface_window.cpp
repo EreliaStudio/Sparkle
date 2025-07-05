@@ -162,13 +162,13 @@ namespace spk
 		_backgroundFrame(p_name + L" - Background frame", this),
 		_minimizedBackgroundFrame(p_name + L" - Background frame (Minimized)", this)
 	{
-		_menuBar.setLayer(3);
+		_menuBar.setLayer(layer() + 0.003);
 		_menuBar.activate();
 
-		_backgroundFrame.setLayer(1);
+		_backgroundFrame.setLayer(layer() + 0.001);
 		_backgroundFrame.activate();
 
-		_minimizedBackgroundFrame.setLayer(1);
+		_minimizedBackgroundFrame.setLayer(layer() + 0.001);
 		_minimizedBackgroundFrame.deactivate();
 
 		_minimizeContract = _menuBar._minimizeButton.subscribe(
@@ -199,13 +199,13 @@ namespace spk
 
 		_onResizeContractProvider.trigger(frameSize);
 
-		_backgroundFrame.setGeometry(0, geometry().size);
+		_backgroundFrame.setGeometry({0, geometry().size});
 		_minimizedBackgroundFrame.setGeometry(0, menuSize);
-		_menuBar.setGeometry({0, 0}, menuSize);
+		_menuBar.setGeometry(0, menuSize);
 
 		if (_content != nullptr)
 		{
-			_content->setGeometry({_backgroundFrame.cornerSize().x, menuSize.y + _backgroundFrame.cornerSize().y}, frameSize);
+			_content->setGeometry(spk::Vector2Int(_backgroundFrame.cornerSize().x, menuSize.y + _backgroundFrame.cornerSize().y), frameSize);
 		}
 	}
 
@@ -240,6 +240,7 @@ namespace spk
 					_positionDelta = p_event.mouse->position - geometry().anchor;
 					p_event.window->setCursor(L"Hand");
 					p_event.consume();
+					takeFocus(spk::Widget::FocusType::MouseFocus);
 				}
 			}
 			
@@ -251,6 +252,7 @@ namespace spk
 			{
 				_isMoving = false;
 				p_event.window->setCursor(L"Arrow");
+				releaseFocus(spk::Widget::FocusType::MouseFocus);
 			}
 			break;
 		}
@@ -270,6 +272,11 @@ namespace spk
 	spk::SafePointer<spk::Frame> IInterfaceWindow::backgroundFrame()
 	{
 		return (&_backgroundFrame);
+	}
+
+	spk::SafePointer<Frame> IInterfaceWindow::minimizedBackgroundFrame()
+	{
+		return (&_minimizedBackgroundFrame);
 	}
 
 	void IInterfaceWindow::setContent(spk::SafePointer<Widget> p_content)

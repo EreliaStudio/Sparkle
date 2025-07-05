@@ -51,6 +51,13 @@ namespace spk
 
 				return (Singleton<TType>::instance());
 			}
+
+			spk::SafePointer<const TType> operator->() const
+			{
+				std::lock_guard<std::recursive_mutex> lock(Singleton<TType>::mutex());
+
+				return (Singleton<TType>::instance());
+			}
 		};
 
 	protected:

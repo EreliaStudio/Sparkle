@@ -3,6 +3,14 @@
 
 namespace spk
 {
+	namespace JSON
+	{
+		class Object;
+	}
+}
+
+namespace spk
+{
 	template <typename T, typename = void>
 	struct IsContainer : std::false_type
 	{
@@ -23,4 +31,32 @@ namespace spk
 	struct IsSpecialization<Template<Args...>, Template> : std::true_type
 	{
 	};
+
+	template <typename, typename = void>
+	struct ContainsToJSON : std::false_type {};
+
+	template <typename T>
+	struct ContainsToJSON<
+		T,
+		std::void_t<decltype(std::declval<const T&>().toJSON())>> : std::true_type {};
+
+	template <typename T, typename = void>
+	struct ContainsFromJSON : std::false_type {};
+
+	template <typename T>
+	struct ContainsFromJSON<
+	T,
+	std::void_t<
+		decltype(std::declval<T>().fromJSON(std::declval<decltype(std::declval<T>().toJSON())>()))
+	>
+	> : std::true_type {};
+
+	template <typename T, typename = void>
+	struct IsJSONable : std::false_type {};
+
+	template <typename T>
+	struct IsJSONable<
+		T,
+		std::enable_if_t<ContainsToJSON<T>::value && ContainsFromJSON<T>::value>>
+		: std::true_type {};
 }

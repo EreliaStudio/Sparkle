@@ -16,31 +16,7 @@ namespace spk
 		nanoseconds = 0;
 	}
 
-	Duration::Duration(long long p_value, TimeUnit p_unit)
-	{
-		switch (p_unit)
-		{
-		case TimeUnit::Second:
-			seconds = static_cast<double>(p_value);
-			milliseconds = p_value * 1'000;
-			nanoseconds = p_value * 1'000'000'000;
-			break;
-		case TimeUnit::Millisecond:
-			seconds = p_value / 1'000.0;
-			milliseconds = p_value;
-			nanoseconds = p_value * 1'000'000;
-			break;
-		case TimeUnit::Nanosecond:
-			seconds = p_value / 1'000'000'000.0;
-			milliseconds = p_value / 1'000'000;
-			nanoseconds = p_value;
-			break;
-		default:
-			GENERATE_ERROR("Unexpected duration unit value");
-		}
-	}
-
-	Duration::Duration(double p_value, TimeUnit p_unit)
+	Duration::Duration(long double p_value, TimeUnit p_unit)
 	{
 		switch (p_unit)
 		{

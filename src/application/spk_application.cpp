@@ -47,7 +47,7 @@ namespace spk
 	int Application::run()
 	{
 		_isRunning = true;
-
+		
 		try
 		{
 			for (auto &[key, worker] : _workers)

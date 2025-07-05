@@ -8,12 +8,18 @@ namespace spk
 {
 	void IEvent::requestPaint()
 	{
-		window->requestPaint();
+		if (window != nullptr)
+		{
+			window->requestPaint();
+		}
 	}
 
 	void IEvent::requestUpdate()
 	{
-		window->requestUpdate();
+		if (window != nullptr)
+		{
+			window->requestUpdate();
+		}
 	}
 
 	Controller::Button ControllerEvent::apiValueToControllerButton(int p_value)

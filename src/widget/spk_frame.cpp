@@ -31,11 +31,13 @@ namespace spk
 	{
 		return _cornerSize;
 	}
-
+	
 	void Frame::_onGeometryChange()
 	{
 		_frameRenderer.clear();
+		
 		_frameRenderer.prepare(geometry(), layer(), _cornerSize);
+		
 		_frameRenderer.validate();
 	}
 

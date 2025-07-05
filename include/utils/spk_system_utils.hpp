@@ -20,8 +20,7 @@ namespace spk
 		long long nanoseconds = 0;
 
 		Duration();
-		Duration(long long p_value, TimeUnit p_unit = TimeUnit::Millisecond);
-		Duration(double p_value, TimeUnit p_unit = TimeUnit::Millisecond);
+		Duration(long double p_value, TimeUnit p_unit = TimeUnit::Millisecond);
 
 		Duration operator-() const;
 
@@ -70,15 +69,15 @@ namespace spk
 
 inline spk::Duration operator""_s(long double p_value)
 {
-	return spk::Duration(static_cast<double>(p_value), spk::TimeUnit::Second);
+	return spk::Duration(static_cast<long double>(p_value), spk::TimeUnit::Second);
 }
 inline spk::Duration operator""_ms(unsigned long long p_value)
 {
-	return spk::Duration(static_cast<long long>(p_value), spk::TimeUnit::Millisecond);
+	return spk::Duration(static_cast<long double>(p_value), spk::TimeUnit::Millisecond);
 }
 inline spk::Duration operator""_ns(unsigned long long p_value)
 {
-	return spk::Duration(static_cast<long long>(p_value), spk::TimeUnit::Nanosecond);
+	return spk::Duration(static_cast<long double>(p_value), spk::TimeUnit::Nanosecond);
 }
 
 namespace spk::SystemUtils

@@ -65,12 +65,46 @@ namespace spk
 		}
 
 		template <typename UType = TType, std::enable_if_t<!std::is_floating_point<UType>::value, int> = 0>
-		IVector2(const spk::JSON::Object& p_input) :
-			x(static_cast<TType>(p_input[L"x"].as<long>())),
-			y(static_cast<TType>(p_input[L"y"].as<long>()))
+		IVector2(const spk::JSON::Object& p_input)
 		{
+			fromJSON(p_input);
 		}
 
+		spk::JSON::Object toJSON() const
+		{
+			spk::JSON::Object result;
+
+			result.addAttribute(L"X");
+			result.addAttribute(L"Y");
+
+			if constexpr (std::is_floating_point<TType>::value)
+			{
+				result[L"X"] = static_cast<double>(x);
+				result[L"Y"] = static_cast<double>(y);
+			}
+			else
+			{
+				result[L"X"] = static_cast<long>(x);
+				result[L"Y"] = static_cast<long>(y);
+			}
+
+			return (result);
+		}
+
+		void fromJSON(const spk::JSON::Object& p_input)
+		{
+			if constexpr (std::is_floating_point<TType>::value)
+			{
+				x = p_input[L"X"].as<double>();
+				y = p_input[L"Y"].as<double>();
+			}
+			else
+			{
+				x = p_input[L"X"].as<long>();
+				y = p_input[L"Y"].as<long>();
+			}
+		}
+		
 		template <typename UType>
 		explicit operator IVector2<UType>() const
 		{
