@@ -30,13 +30,10 @@ namespace spk
 	template<typename Device, typename Event>
 	class InputAction : public Action
 	{
-<<<<<<< HEAD
-=======
 	public:
 		using Job = std::function<void(const Device*)>;
 
 	private:
->>>>>>> 0294f19 (Working on framebuffer error)
 		spk::SafePointer<const Device> _device;         
 
 		Event _event;           
@@ -44,20 +41,12 @@ namespace spk
 
 		long long _repeatInterval;
 		spk::Timer _timer;
-<<<<<<< HEAD
-		std::function<void()> _onTriggerCallback;
-=======
 		Job _onTriggerCallback;
->>>>>>> 0294f19 (Working on framebuffer error)
 
 		bool _lastState = false;
 
 	public:
-<<<<<<< HEAD
-		InputAction(Event p_event, spk::InputState p_state, long long p_repeatInterval, std::function<void()> p_callback) :
-=======
 		InputAction(Event p_event, spk::InputState p_state, long long p_repeatInterval, const Job& p_callback) :
->>>>>>> 0294f19 (Working on framebuffer error)
 			_event(p_event),
 			_targetState(p_state),
 			_repeatInterval(p_repeatInterval),
@@ -113,11 +102,7 @@ namespace spk
 
 			if (justPressed == true)
 			{
-<<<<<<< HEAD
-				_onTriggerCallback();
-=======
 				_onTriggerCallback(_device);
->>>>>>> 0294f19 (Working on framebuffer error)
 				if (_repeatInterval > 0)
 				{
 					_timer.start();
@@ -127,11 +112,7 @@ namespace spk
 			{
 				if (_timer.state() != spk::Timer::State::Running)
 				{
-<<<<<<< HEAD
-					_onTriggerCallback();
-=======
 					_onTriggerCallback(_device);
->>>>>>> 0294f19 (Working on framebuffer error)
 					if (_repeatInterval > 0)
 					{
 						_timer.start();
