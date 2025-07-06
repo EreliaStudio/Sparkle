@@ -82,7 +82,7 @@ namespace spk
 	GameEngineWidget::GameEngineWidget(const std::wstring &p_name, const spk::SafePointer<spk::Widget> &p_parent) :
 		spk::Widget(p_name, p_parent)
 	{
-		_fbo.addAttachment(L"outputColor", 0, spk::OpenGL::FrameBufferObject::Attachment::Type::Float4);
+		_fbo.addAttachment(L"outputColor", 0, spk::OpenGL::FrameBufferObject::Attachment::Type::Color);
 	}
 
 	void GameEngineWidget::setGameEngine(spk::SafePointer<spk::GameEngine> p_gameEngine)
