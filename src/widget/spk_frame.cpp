@@ -36,7 +36,7 @@ namespace spk
 	{
 		_frameRenderer.clear();
 		
-		_frameRenderer.prepare(geometry(), layer(), _cornerSize);
+		_frameRenderer.prepare(geometry().atOrigin(), layer(), _cornerSize);
 		
 		_frameRenderer.validate();
 	}

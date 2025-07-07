@@ -67,6 +67,7 @@ namespace spk::OpenGL
 		void resize(const spk::Vector2UInt &p_size);
 
 		void activate();
+		void clear();
 		void deactivate();
 
 		spk::SafePointer<const Attachment> attachment(const std::wstring &p_attachmentName) const;

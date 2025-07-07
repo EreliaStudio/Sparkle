@@ -11,23 +11,7 @@ namespace spk
 			return;
 		}
 
-		_fbo.activate();
-
 		_gameEngine->onPaintEvent(p_event);
-
-		_fbo.deactivate();
-
-		_textureRenderer.render();
-	}
-
-	void GameEngineWidget::_onGeometryChange()
-	{
-		_fbo.resize(geometry().size);
-		
-		_textureRenderer.clear();
-		_textureRenderer.setTexture(_fbo.attachment(L"outputColor")->bindedTexture());
-		_textureRenderer.prepare(geometry(), {{0.0f, 0.0f}, {1.0f, 1.0f}}, layer());
-		_textureRenderer.validate();
 	}
 
 	void GameEngineWidget::_onUpdateEvent(spk::UpdateEvent &p_event)
@@ -83,7 +67,7 @@ namespace spk
 	GameEngineWidget::GameEngineWidget(const std::wstring &p_name, const spk::SafePointer<spk::Widget> &p_parent) :
 		spk::Widget(p_name, p_parent)
 	{
-		_fbo.addAttachment(L"outputColor", 0, spk::OpenGL::FrameBufferObject::Attachment::Type::Color);
+		
 	}
 
 	void GameEngineWidget::setGameEngine(spk::SafePointer<spk::GameEngine> p_gameEngine)

@@ -5,10 +5,10 @@ namespace spk
 	void ImageLabel::_onGeometryChange()
 	{
 		_backgroundRenderer.clear();
-		_backgroundRenderer.prepare(geometry(), layer(), _cornerSize);
+		_backgroundRenderer.prepare(geometry().atOrigin(), layer(), _cornerSize);
 		_backgroundRenderer.validate();
 
-		spk::Geometry2D inner = geometry().shrink(_cornerSize);
+		spk::Geometry2D inner = geometry().atOrigin().shrink(_cornerSize);
 		_textureRenderer.clear();
 		_textureRenderer.prepare(inner, _textureSection, layer() + 0.01f);
 		_textureRenderer.validate();
