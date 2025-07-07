@@ -13,6 +13,9 @@
 #include "structure/graphics/texture/spk_font.hpp"
 #include "structure/graphics/texture/spk_sprite_sheet.hpp"
 
+#include "structure/graphics/opengl/spk_frame_buffer_object.hpp"
+#include "structure/graphics/renderer/spk_texture_renderer.hpp"
+
 namespace spk
 {
 	class Window;
@@ -58,6 +61,10 @@ namespace spk
 		spk::Geometry2D _geometry;
 		spk::Viewport _viewport;
 
+		spk::OpenGL::FrameBufferObject _fbo;
+
+		spk::TextureRenderer _textureRenderer;
+
 		spk::Vector2UInt _minimalSize = {0, 0};
 		spk::Vector2UInt _maximalSize = {
 				std::numeric_limits<size_t>::max(),
@@ -97,6 +104,11 @@ namespace spk
 		void setName(const std::wstring &p_name);
 
 		void addChild(spk::SafePointer<Widget> p_child) override;
+		
+		spk::SafePointer<const spk::OpenGL::FrameBufferObject> frameBufferObject() const
+		{
+			return (&_fbo);
+		}
 
 		template <typename TChildType, typename... TArgs>
 		spk::SafePointer<TChildType> makeChild(TArgs &&...p_args)
