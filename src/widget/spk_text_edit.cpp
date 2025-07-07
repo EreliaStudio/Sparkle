@@ -41,24 +41,24 @@ namespace spk
 			_computeCursorsValues();
 		}
 
+		spk::Geometry2D originGeometry = geometry().atOrigin();
+
 		_backgroundRenderer.clear();
-		_backgroundRenderer.prepare(geometry(), layer(), _cornerSize);
+		_backgroundRenderer.prepare(originGeometry, layer(), _cornerSize);
 		_backgroundRenderer.validate();
 
 		std::wstring tmpText = renderedText(); 
 
 		_fontRenderer.clear();
 		spk::Vector2Int textAnchor = _fontRenderer.computeTextAnchor(
-			geometry().shrink(_cornerSize), tmpText.substr(_lowerCursor, _higherCursor - _lowerCursor), _horizontalAlignment, _verticalAlignment);
+			originGeometry.shrink(_cornerSize), tmpText.substr(_lowerCursor, _higherCursor - _lowerCursor), _horizontalAlignment, _verticalAlignment);
 		_fontRenderer.prepare(tmpText.substr(_lowerCursor, _higherCursor - _lowerCursor), textAnchor, layer() + 0.01f);
 		_fontRenderer.validate();
 
 		_cursorRenderer.clear();
 		spk::Vector2UInt prevTextSize = _fontRenderer.computeTextSize(tmpText.substr(_lowerCursor, _cursor - _lowerCursor));
-		_cursorRenderer.prepareSquare(spk::Geometry2D(prevTextSize.x + geometry().anchor.x + _cornerSize.x - 2,
-													  _cornerSize.y + geometry().anchor.y,
-													  2,
-													  geometry().height - _cornerSize.y * 2),
+		_cursorRenderer.prepareSquare(spk::Geometry2D(prevTextSize.x + _cornerSize.x - 2, _cornerSize.y,
+														2, geometry().height - _cornerSize.y * 2),
 									  layer() + 0.02f);
 		_cursorRenderer.validate();
 	}

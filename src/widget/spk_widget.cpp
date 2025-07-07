@@ -269,7 +269,7 @@ namespace spk
 
 		_textureRenderer.clear();
 		_textureRenderer.setTexture(_fbo.attachment(L"outputColor")->bindedTexture());
-		_textureRenderer.prepare(geometry(), {{0.0f, 0.0f}, {1.0f, 1.0f}}, layer());
+		_textureRenderer.prepare(geometry(), {{0.0f, 1.0f}, {1.0f, -1.0f}}, layer());
 		_textureRenderer.validate();
 	}
 
@@ -411,6 +411,7 @@ namespace spk
 		try
 		{
 			_fbo.activate();
+			_fbo.clear();
 			_onPaintEvent(p_event);
 			_fbo.deactivate();
 
@@ -428,8 +429,11 @@ namespace spk
 		spk::PaintEvent childEvent = p_event;
 		childEvent.geometry = geometry();
 
-		for (auto &child : children())
+		auto &kids = children();                  // make sure we have an l-value
+		for (auto it = kids.rbegin(); it != kids.rend(); ++it)
 		{
+			auto &child = *it;
+			
 			if (child->isActive() == true)
 			{
 				try

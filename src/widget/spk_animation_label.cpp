@@ -7,7 +7,7 @@ namespace spk
 		_textureRenderer.clear();
 		if (_spriteSheet && _spriteSheet->sprites().size() > 0)
 		{
-			_textureRenderer.prepare(geometry(), _spriteSheet->sprite(_currentSprite), layer());
+			_textureRenderer.prepare(geometry().atOrigin(), _spriteSheet->sprite(_currentSprite), layer());
 			_textureRenderer.validate();
 		}
 	}

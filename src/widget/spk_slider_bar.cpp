@@ -10,7 +10,7 @@ namespace spk
 	void SliderBar::_onGeometryChange()
 	{
 		_backgroundRenderer.clear();
-		_backgroundRenderer.prepare(geometry(), layer(), _cornerSize);
+		_backgroundRenderer.prepare(geometry().atOrigin(), layer(), _cornerSize);
 		_backgroundRenderer.validate();
 
 		spk::Vector2UInt bodySize;
