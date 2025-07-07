@@ -37,7 +37,7 @@ namespace spk
 		_parent(nullptr),
 		_layer(0)
 	{
-		
+		_fbo.addAttachment(L"outputColor", 0, spk::OpenGL::FrameBufferObject::Attachment::Type::Color);
 	}
 
 	Widget::Widget(const std::wstring &p_name, spk::SafePointer<Widget> p_parent) :
@@ -250,7 +250,9 @@ namespace spk
 
 	void Widget::_applyGeometryChange()
 	{
-
+		_fbo.resize(geometry().size);
+	
+		_fbo.activate();
 		try
 		{
 			_onGeometryChange();		
@@ -263,6 +265,12 @@ namespace spk
 		{
 			GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] onGeometryChange - Unknow error type");
 		}
+		_fbo.deactivate();
+
+		_textureRenderer.clear();
+		_textureRenderer.setTexture(_fbo.attachment(L"outputColor")->bindedTexture());
+		_textureRenderer.prepare(geometry(), {{0.0f, 0.0f}, {1.0f, 1.0f}}, layer());
+		_textureRenderer.validate();
 	}
 
 	void Widget::_applyResize()
@@ -402,7 +410,11 @@ namespace spk
 
 		try
 		{
+			_fbo.activate();
 			_onPaintEvent(p_event);
+			_fbo.deactivate();
+
+			_textureRenderer.render();
 		}
 		catch (const std::exception &e)
 		{
