@@ -23,6 +23,7 @@ namespace spk
 	void GameEngineWidget::_onGeometryChange()
 	{
 		_fbo.resize(geometry().size);
+		
 		_textureRenderer.clear();
 		_textureRenderer.setTexture(_fbo.attachment(L"outputColor")->bindedTexture());
 		_textureRenderer.prepare(geometry(), {{0.0f, 0.0f}, {1.0f, 1.0f}}, layer());

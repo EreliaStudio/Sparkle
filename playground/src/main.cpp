@@ -4,39 +4,17 @@ class TestWidget : public spk::Widget
 {
 private:	
 	spk::ColorRenderer _colorRenderer;
-	spk::OpenGL::FrameBufferObject _fbo;
-
-	spk::TextureRenderer _textureRenderer;
 
 	void _onGeometryChange() override
 	{
 		_colorRenderer.clear();
-		_colorRenderer.prepareSquare({{0, 0}, geometry().size}, layer());
+		_colorRenderer.prepareSquare({{0, 0}, geometry().size}, 0);
 		_colorRenderer.validate();
-
-		_fbo.resize(geometry().size);
-
-		_textureRenderer.clear();
-		_textureRenderer.setTexture(_fbo.attachment(L"outputColor")->bindedTexture());
-		_textureRenderer.prepare(geometry(), {{0.0f, 0.0f}, {1.0f, 1.0f}}, layer());
-		_textureRenderer.validate();
 	}
 
 	void _onPaintEvent(spk::PaintEvent& p_event)
 	{
-		_fbo.activate();
-		
 		_colorRenderer.render();
-
-		spk::SafePointer<const spk::OpenGL::FrameBufferObject::Attachment> attachment = _fbo.attachment(L"outputColor");
-
-		spk::Texture savedTexture = attachment->save();
-
-		savedTexture.saveAsPng("result.png");
-
-		_fbo.deactivate();
-
-		_textureRenderer.render();
 	}
 
 public:
@@ -44,8 +22,11 @@ public:
 		spk::Widget(p_name, p_parent)
 	{
 		_colorRenderer.setColor(spk::Color::red);
+	}
 
-		_fbo.addAttachment(L"outputColor", 0, spk::OpenGL::FrameBufferObject::Attachment::Type::Color);
+	void setColor(const spk::Color& p_color)
+	{
+		_colorRenderer.setColor(p_color);
 	}
 };
 
@@ -57,7 +38,15 @@ int main()
 
 	TestWidget testWidget(L"Test Widget", win->widget());
 	testWidget.setGeometry(win->geometry());
+	testWidget.setColor(spk::Color::blue);
+	testWidget.setLayer(1.0f);
 	testWidget.activate();
+
+	TestWidget testWidget2(L"Test Widget 2", win->widget());
+	testWidget2.setGeometry({{100, 100}, {200, 200}});
+	testWidget2.setColor(spk::Color::green);
+	testWidget2.setLayer(0.0f);
+	testWidget2.activate();
 
 	return (app.run());
 }

@@ -257,6 +257,10 @@ namespace spk::OpenGL
 			att._size = p_size;
         }
 
+		_viewport.setWindowSize(p_size);
+		_viewport.setGeometry({{0, 0}, p_size});
+		_viewport.setClippedGeometry({{0, 0}, p_size});
+
         _validated = false;
     }
 
@@ -321,11 +325,19 @@ namespace spk::OpenGL
         {
             _prepareAttachments();
         }
+
+		_lastActiveViewport = spk::Viewport::activeViewport();
+		_viewport.apply();
     }
 
     void FrameBufferObject::deactivate()
     {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+		if (_lastActiveViewport != nullptr)
+		{
+			_lastActiveViewport->apply();
+		}
     }
 
     spk::SafePointer<const FrameBufferObject::Attachment>
