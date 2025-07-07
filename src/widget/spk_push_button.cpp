@@ -357,14 +357,14 @@ namespace spk
 	{
 		using namespace spk;
 
-		Geometry2D releasedGeom = geometry();
-		Geometry2D hoveredGeom = geometry();
-		Geometry2D pressedGeom = geometry().shrink(_pressedOffset);
+		Geometry2D releasedGeom = geometry().atOrigin();
+		Geometry2D hoveredGeom = geometry().atOrigin();
+		Geometry2D pressedGeom = geometry().atOrigin().shrink(_pressedOffset);
 
 		for (auto s : {State::Released, State::Hovered, State::Pressed})
 		{
 			_nineSliceRenderer[s].clear();
-			Geometry2D geomToUse = (s == State::Pressed) ? pressedGeom : geometry();
+			Geometry2D geomToUse = (s == State::Pressed) ? pressedGeom : geometry().atOrigin();
 			_nineSliceRenderer[s].prepare(geomToUse, layer(), _cornerSize[s]);
 			_nineSliceRenderer[s].validate();
 		}
@@ -373,7 +373,7 @@ namespace spk
 		{
 			_fontRenderer[s].clear();
 
-			Geometry2D geomToUse = (s == State::Pressed) ? pressedGeom : geometry();
+			Geometry2D geomToUse = (s == State::Pressed) ? pressedGeom : geometry().atOrigin();
 			geomToUse = geomToUse.shrink(_cornerSize[s]);
 
 			auto textAnchor = _fontRenderer[s].computeTextAnchor(geomToUse, _text[s], _horizontalAlignment[s], _verticalAlignment[s]);
@@ -385,7 +385,7 @@ namespace spk
 		{
 			_iconRenderer[s].clear();
 
-			Geometry2D geomToUse = (s == State::Pressed) ? pressedGeom : geometry();
+			Geometry2D geomToUse = (s == State::Pressed) ? pressedGeom : geometry().atOrigin();
 			geomToUse = geomToUse.shrink(_cornerSize[s]);
 
 			_iconRenderer[s].prepare(geomToUse, _icon[s], layer() + 0.0001f);

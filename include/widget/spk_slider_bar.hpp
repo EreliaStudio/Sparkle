@@ -30,7 +30,7 @@ namespace spk
 			void _onGeometryChange()
 			{
 				_renderer.clear();
-				_renderer.prepare(geometry(), layer(), _cornerSize);
+				_renderer.prepare(geometry().atOrigin(), layer(), _cornerSize);
 				_renderer.validate();
 			}
 

@@ -59,6 +59,11 @@ namespace spk
 		{
 		}
 
+		Geometry2D atOrigin() const
+		{
+			return (Geometry2D({0, 0}, size));
+		}
+
 		bool contains(const Vector2Int &p_point) const
 		{
 			return (p_point.x >= anchor.x) && (p_point.y >= anchor.y) && (p_point.x < anchor.x + static_cast<int32_t>(size.x)) &&

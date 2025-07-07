@@ -16,10 +16,6 @@ namespace spk
 	private:
 		spk::SafePointer<spk::GameEngine> _gameEngine = nullptr;
 
-		spk::OpenGL::FrameBufferObject _fbo;
-		spk::TextureRenderer _textureRenderer;
-
-		void _onGeometryChange();
 		void _onPaintEvent(spk::PaintEvent &p_event);
 		void _onUpdateEvent(spk::UpdateEvent &p_event);
 		void _onMouseEvent(spk::MouseEvent &p_event);
