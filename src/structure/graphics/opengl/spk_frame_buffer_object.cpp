@@ -157,9 +157,9 @@ namespace spk::OpenGL
     {
         spk::Texture output;
 
-		if (_gpuTexture == nullptr || _size.x == 0 || _size.y == 0)
+		if (_gpuTexture == nullptr)
 		{
-			return output;
+			GENERATE_ERROR("No GPU texture available for FBO attachment");
 		}
 
 		const size_t bytesPerPixel = (_type == Type::Color) ? 4 : 4;

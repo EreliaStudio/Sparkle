@@ -105,10 +105,9 @@ namespace spk
 
 		void addChild(spk::SafePointer<Widget> p_child) override;
 		
-		spk::SafePointer<const spk::OpenGL::FrameBufferObject> frameBufferObject() const
-		{
-			return (&_fbo);
-		}
+		spk::SafePointer<const spk::OpenGL::FrameBufferObject> frameBufferObject() const;
+
+		void renderAsPNJ(const std::filesystem::path& p_path);
 
 		template <typename TChildType, typename... TArgs>
 		spk::SafePointer<TChildType> makeChild(TArgs &&...p_args)
