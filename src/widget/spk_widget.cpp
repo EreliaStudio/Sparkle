@@ -82,6 +82,49 @@ namespace spk
 		_sortChildByLayer();
 	}
 
+	spk::SafePointer<const spk::OpenGL::FrameBufferObject> Widget::frameBufferObject() const
+	{
+		return (&_fbo);
+	}
+
+	void Widget::renderAsPNJ(const std::filesystem::path& p_path)
+	{
+		if (_fbo.attachment(L"color0") == nullptr)
+		{
+			GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] Frame buffer object doesn't have a color0 attachment");
+		}
+
+		if (geometry().size.x == 0 || geometry().size.y == 0)
+		{
+			GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] Widget geometry isn't defined");
+		}
+		
+		try
+		{
+			_fbo.activate();
+
+			spk::PaintEvent event = spk::PaintEvent();
+			_onPaintEvent(event);
+
+			_fbo.deactivate();
+		}
+		catch(const std::exception& e)
+		{
+			PROPAGATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] Impossible to dry-render the widget", e);
+		}
+		
+		try
+		{
+			spk::Texture texture = _fbo.attachment(L"color0")->save();
+
+			texture.saveAsPng(p_path);
+		}
+		catch(const std::exception& e)
+		{
+			PROPAGATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] Render as PNJ invalid", e);
+		}
+	}
+
 	bool Widget::isPointed(const spk::Vector2Int &p_pointerPosition) const
 	{
 		return (viewport().geometry().contains(p_pointerPosition));
