@@ -21,8 +21,6 @@ namespace spk
 
 			void load(const std::filesystem::path &p_filePath);
 
-			static File loadFromString(const std::wstring &p_content);
-
 			void save(const std::filesystem::path &p_filePath) const;
 
 			bool contains(const std::wstring &p_key) const;

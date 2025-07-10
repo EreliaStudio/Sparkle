@@ -335,4 +335,46 @@ namespace spk::OpenGL
 			return ("None");
 		}
 	}
+	std::wstring to_wstring(const LayoutBufferObject::Attribute::Type &p_type)
+	{
+		switch (p_type)
+		{
+			using Type = LayoutBufferObject::Attribute::Type;
+
+		case Type::Float:
+			return (L"Float");
+		case Type::Bool:
+			return (L"Bool");
+		case Type::Int:
+			return (L"Int");
+		case Type::UInt:
+			return (L"UInt");
+		case Type::Vector2:
+			return (L"Vector2");
+		case Type::Vector3:
+			return (L"Vector3");
+		case Type::Vector4:
+			return (L"Vector4");
+		case Type::Vector2Int:
+			return (L"Vector2Int");
+		case Type::Vector3Int:
+			return (L"Vector3Int");
+		case Type::Vector4Int:
+			return (L"Vector4Int");
+		case Type::Vector2UInt:
+			return (L"Vector2UInt");
+		case Type::Vector3UInt:
+			return (L"Vector3UInt");
+		case Type::Vector4UInt:
+			return (L"Vector4UInt");
+		case Type::Matrix2x2:
+			return (L"Matrix2x2");
+		case Type::Matrix3x3:
+			return (L"Matrix3x3");
+		case Type::Matrix4x4:
+			return (L"Matrix4x4");
+		default:
+			return (L"None");
+		}
+	}
 }
