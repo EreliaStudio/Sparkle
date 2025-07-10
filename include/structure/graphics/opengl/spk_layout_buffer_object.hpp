@@ -156,4 +156,5 @@ namespace spk::OpenGL
 	};
 
 	std::string to_string(const LayoutBufferObject::Attribute::Type &p_type);
+	std::wstring to_wstring(const LayoutBufferObject::Attribute::Type &p_type);
 }
