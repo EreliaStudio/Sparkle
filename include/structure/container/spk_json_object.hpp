@@ -38,6 +38,8 @@ namespace spk
 		public:
 			Object(const std::wstring &p_name = L"Unnamed");
 
+			static Object fromString(const std::wstring& p_content);
+
 			void reset();
 
 			bool isObject() const;
@@ -185,6 +187,7 @@ namespace spk
 			}
 
 			friend std::wostream &operator<<(std::wostream &p_os, const Object &p_object);
+			friend std::ostream &operator<<(std::ostream &p_os, const Object &p_object);
 		};
 	}
 }
