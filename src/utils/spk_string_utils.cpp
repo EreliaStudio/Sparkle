@@ -5,6 +5,44 @@
 
 #include <windows.h>
 
+namespace 
+{
+	template<typename StringT>
+    StringT collapseStringGeneric(const StringT& p_src,
+                                  typename StringT::value_type p_collapseValue,
+                                  const StringT& p_separators)
+    {
+        StringT result;
+        bool collapsed = false;
+
+        for (auto ch : p_src)
+        {
+            if (p_separators.find(ch) != StringT::npos)
+            {
+                if (!collapsed)
+                {
+                    result.push_back(p_collapseValue);
+                    collapsed = true;
+                }
+            }
+            else
+            {
+                result.push_back(ch);
+                collapsed = false;
+            }
+        }
+
+        auto first = result.find_first_not_of(p_collapseValue);
+        if (first == StringT::npos)
+		{
+            return {};
+		}
+
+        auto last = result.find_last_not_of(p_collapseValue);
+        return result.substr(first, last - first + 1);
+    }
+}
+
 namespace spk
 {
 	namespace StringUtils
@@ -66,71 +104,27 @@ namespace spk
 			result.push_back(p_wstr.substr(start, end));
 			return result;
 		}
-
-		std::wstring mergeWhitespace(const std::wstring &p_str)
+		
+		std::wstring collapseString(const std::wstring& p_text, const wchar_t& p_mergedChar, const std::wstring& p_separators)
 		{
-			std::wstring result;
-			bool spaceInserted = false;
-
-			for (wchar_t ch : p_str)
-			{
-				if (ch == L'\t' || ch == L'\n' || ch == L' ')
-				{
-					if (!spaceInserted)
-					{
-						result += L' ';
-						spaceInserted = true;
-					}
-				}
-				else
-				{
-					result += ch;
-					spaceInserted = false;
-				}
-			}
-
-			auto start = result.find_first_not_of(L' ');
-			auto end = result.find_last_not_of(L' ');
-
-			if (start == std::wstring::npos)
-			{
-				return L"";
-			}
-
-			return result.substr(start, end - start + 1);
+			return ::collapseStringGeneric(p_text, p_mergedChar, p_separators);
 		}
 
-		std::string mergeWhitespace(const std::string &p_str)
+		std::string  collapseString(const std::string& p_text, const char& p_mergedChar, const std::string& p_separators)
 		{
-			std::string result;
-			bool spaceInserted = false;
+			return ::collapseStringGeneric(p_text, p_mergedChar, p_separators);
+		}
 
-			for (char ch : p_str)
-			{
-				if (ch == '\t' || ch == '\n' || ch == ' ')
-				{
-					if (!spaceInserted)
-					{
-						result += ' ';
-						spaceInserted = true;
-					}
-				}
-				else
-				{
-					result += ch;
-					spaceInserted = false;
-				}
-			}
+		std::wstring collapseWhitespace(const std::wstring& p_text)
+		{
+			static const std::wstring defaultSep = L" \t\n";
+			return ::collapseStringGeneric(p_text, L' ', defaultSep);
+		}
 
-			auto start = result.find_first_not_of(' ');
-			auto end = result.find_last_not_of(' ');
-
-			if (start == std::string::npos)
-			{
-				return "";
-			}
-
-			return result.substr(start, end - start + 1);
+		std::string collapseWhitespace(const std::string& p_text)
+		{
+			static const std::string  defaultSep = " \t\n";
+			return ::collapseStringGeneric(p_text, ' ', defaultSep);
 		}
 
 		std::string trimWhitespace(const std::string &p_str)
