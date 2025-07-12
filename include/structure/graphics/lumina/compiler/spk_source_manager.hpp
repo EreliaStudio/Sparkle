@@ -11,19 +11,13 @@ namespace spk::Lumina
 	class SourceManager
 	{
 	public:
-		void addIncludePath(const std::filesystem::path &path)
-		{
-			_includeFolders.emplace_back(path);
-		}
+		void addIncludePath(const std::filesystem::path &p_path);
+		std::filesystem::path getFilePath(const std::filesystem::path &p_path);
 
-		std::filesystem::path getFilePath(const std::filesystem::path &path);
-
-		std::vector<Token> readToken(const std::filesystem::path &path);
-		std::vector<Token> readToken(const std::wstring &virtualFile, const std::wstring &source);
+		std::vector<Token> readToken(const std::filesystem::path &p_path);
+		std::vector<Token> readToken(const std::wstring &p_fileName, const std::wstring &p_source);
 
 	private:
-		static std::wstring cleanSource(const std::wstring &source);
-
 		std::vector<std::filesystem::path> _includeFolders;
 	};
 

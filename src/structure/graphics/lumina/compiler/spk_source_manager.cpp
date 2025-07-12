@@ -1,13 +1,4 @@
-// SourceManager_refactored.hpp
-// Lightweight re‑implementation of the shader SourceManager & lexer.
-// Keeps the public interface intact while isolating lexing state in a dedicated class
-// and drastically reducing nested conditionals.
-//
-// © 2025  — rewrite by ChatGPT
-
-#pragma once
-
-#include "structure/graphics/lumina/compiler/spk_source_manager.hpp" // token types / Location
+#include "structure/graphics/lumina/compiler/spk_source_manager.hpp"
 #include "structure/spk_iostream.hpp"
 #include "structure/system/spk_exception.hpp"
 #include "utils/spk_file_utils.hpp"
@@ -16,55 +7,51 @@
 #include <cwctype>
 #include <filesystem>
 #include <optional>
-#include <regex>
 #include <unordered_map>
 
-#include "structure/graphics/lumina/compiler/spk_lexer.hpp"
+#include "structure/graphics/lumina/compiler/spk_Tokenizer.hpp"
 
 namespace spk::Lumina
 {
-	std::filesystem::path SourceManager::getFilePath(const std::filesystem::path &path)
+	void SourceManager::addIncludePath(const std::filesystem::path &p_path)
 	{
-		if (std::filesystem::exists(path) && std::filesystem::is_regular_file(path))
+		_includeFolders.emplace_back(p_path);
+	}
+	
+	std::filesystem::path SourceManager::getFilePath(const std::filesystem::path &p_path)
+	{
+		if (std::filesystem::exists(p_path) && std::filesystem::is_regular_file(p_path))
 		{
-			return std::filesystem::canonical(path);
+			return std::filesystem::canonical(p_path);
 		}
 
 		for (const auto &dir : _includeFolders)
 		{
-			auto candidate = dir / path;
+			auto candidate = dir / p_path;
 			if (std::filesystem::exists(candidate) && std::filesystem::is_regular_file(candidate))
 			{
 				return std::filesystem::canonical(candidate);
 			}
 		}
-		throw std::runtime_error{"SourceManager::getFilePath – file not found: " + path.string()};
+		throw std::runtime_error{"SourceManager::getFilePath - file not found: " + p_path.string()};
 	}
 
-	std::wstring SourceManager::cleanSource(const std::wstring &source)
-	{
-		static const std::wregex comments{LR"((//[^\n]*|/\*[\s\S]*?\*/))", std::regex_constants::ECMAScript | std::regex_constants::optimize};
-		return spk::StringUtils::collapseString(std::regex_replace(source, comments, L""), L' ', L" \t");
-	}
-
-	std::vector<Token> SourceManager::readToken(const std::filesystem::path &path)
+	std::vector<Token> SourceManager::readToken(const std::filesystem::path &p_path)
 	{
 		std::filesystem::path full;
 		try
 		{
-			full = getFilePath(path);
+			full = getFilePath(p_path);
 		}
 		catch (const std::exception &e)
 		{
-			GENERATE_ERROR("File [" + path.string() + "] not found: " + e.what());
+			GENERATE_ERROR("File [" + p_path.string() + "] not found: " + e.what());
 		}
 		return readToken(full.filename().wstring(), spk::FileUtils::readFileAsWString(full));
 	}
 
-	std::vector<Token> SourceManager::readToken(const std::wstring &virtualFile, const std::wstring &source)
+	std::vector<Token> SourceManager::readToken(const std::wstring &p_fileName, const std::wstring &p_source)
 	{
-		const std::wstring cleaned = cleanSource(source);
-
-		return Lexer{cleaned, virtualFile}.run();
+		return Tokenizer{p_source, p_fileName}.run();
 	}
 }
