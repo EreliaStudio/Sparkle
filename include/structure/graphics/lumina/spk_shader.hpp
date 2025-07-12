@@ -10,7 +10,7 @@
 
 namespace spk::Lumina
 {
-class Shader
+	class Shader
 	{
 	public:
 		struct Layout

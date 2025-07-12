@@ -1,6 +1,6 @@
 #include <sparkle.hpp>
 
-#include "structure/graphics/lumina/spk_compiler.hpp"
+#include "structure/graphics/lumina/compiler/spk_compiler.hpp"
 
 int main()
 {

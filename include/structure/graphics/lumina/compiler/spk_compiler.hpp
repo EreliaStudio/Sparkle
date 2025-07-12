@@ -3,6 +3,7 @@
 #include <string>
 #include <filesystem>
 
+#include "structure/graphics/lumina/compiler/spk_source_manager.hpp"
 #include "structure/graphics/lumina/spk_shader.hpp"
 
 namespace spk::Lumina
@@ -10,9 +11,7 @@ namespace spk::Lumina
 	class Compiler
 	{
 	private:
-		std::vector<std::filesystem::path> _includeFolderPaths;
-
-		static std::wstring cleanUpSource(const std::wstring& p_source);
+		SourceManager _sourceManager;
 
 	public:
 		void addIncludePath(const std::filesystem::path& p_path);
