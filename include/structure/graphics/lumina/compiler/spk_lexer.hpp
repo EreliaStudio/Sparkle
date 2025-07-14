@@ -18,21 +18,33 @@ namespace spk::Lumina
 
 		std::vector<std::unique_ptr<ASTNode>> run();
 
-	private:
-		using ParseFn = std::unique_ptr<ASTNode> (Lexer::*)();
+        private:
+                using ParseFn = std::unique_ptr<ASTNode> (Lexer::*)();
 
-		void skipComment();
-		const Token &expect(Token::Type p_type);
-		const Token &expect(Token::Type p_type, const std::string &p_msg);
-		const Token &expect(const std::vector<Token::Type> &p_types);
-		const Token &expect(const std::vector<Token::Type> &p_types, const std::string &p_msg);
-		const Token &advance();
+                void skipComment();
+                std::unique_ptr<ASTNode> parseGeneric();
+                std::unique_ptr<ASTNode> parseCompound();
+                std::unique_ptr<ASTNode> parseNamespace();
+                std::unique_ptr<ASTNode> parseStruct();
+                std::unique_ptr<ASTNode> parseAttributeBlock();
+                std::unique_ptr<ASTNode> parseConstantBlock();
+               std::unique_ptr<ASTNode> parseTexture();
+               std::unique_ptr<ASTNode> parseInclude();
+               std::unique_ptr<ASTNode> parseShader();
+                std::unique_ptr<ASTNode> parseFunction(ASTNode::Kind p_kind);
+                bool isFunctionStart() const;
+                const Token &expect(Token::Type p_type);
+                const Token &expect(Token::Type p_type, const std::string &p_msg);
+                const Token &expect(const std::vector<Token::Type> &p_types);
+                const Token &expect(const std::vector<Token::Type> &p_types, const std::string &p_msg);
+                const Token &advance();
 		const Token &peek(std::ptrdiff_t p_offset = 0) const;
 		bool eof() const;
 
 		SourceManager &_sourceManager;
 		std::vector<Token> _tokens;
 		std::size_t _idx = 0;
-		std::unordered_map<Token::Type, ParseFn> _dispatch;
-	};
+                std::unordered_map<Token::Type, ParseFn> _dispatch;
+                bool _inStruct = false;
+        };
 }
