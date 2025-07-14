@@ -18,8 +18,6 @@ namespace spk::Lumina
 
 		std::vector<std::unique_ptr<ASTNode>> run();
 
-		std::unique_ptr<ASTNode> parseInclude();
-
 	private:
 		using ParseFn = std::unique_ptr<ASTNode> (Lexer::*)();
 
@@ -31,16 +29,6 @@ namespace spk::Lumina
 		const Token &advance();
 		const Token &peek(std::ptrdiff_t p_offset = 0) const;
 		bool eof() const;
-
-		std::unique_ptr<ASTNode> parsePreprocessor();
-		std::unique_ptr<ASTNode> parseNamespace();
-		std::unique_ptr<ASTNode> parseDataBlock();
-		std::unique_ptr<ASTNode> parseTextureDecl();
-		std::unique_ptr<ASTNode> parseFunctionOrVariable();
-		std::unique_ptr<ASTNode> parseShaderPass();
-		std::unique_ptr<ASTNode> parsePipelineFlow();
-		std::unique_ptr<ASTNode> parsePipelinePass();
-		std::unique_ptr<ASTNode> parseBody();
 
 		SourceManager &_sourceManager;
 		std::vector<Token> _tokens;
