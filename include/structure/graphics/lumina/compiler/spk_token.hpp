@@ -75,6 +75,7 @@ namespace spk::Lumina
 			RightBracket,
 
 			Preprocessor,
+			Include,
 
 			Comment,
 			Whitespace,
