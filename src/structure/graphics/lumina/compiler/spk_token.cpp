@@ -14,10 +14,7 @@ namespace spk::Lumina
             case Token::Type::AttributeBlock:   return L"AttributeBlock";
             case Token::Type::ConstantBlock:    return L"ConstantBlock";
             case Token::Type::Texture:          return L"Texture";
-            case Token::Type::Input:            return L"Input";
-            case Token::Type::VertexPass:       return L"VertexPass";
-            case Token::Type::FragmentPass:     return L"FragmentPass";
-            case Token::Type::Output:           return L"Output";
+            case Token::Type::ShaderPass:       return L"ShaderPass";
             case Token::Type::RaiseException:   return L"RaiseException";
             case Token::Type::If:               return L"If";
             case Token::Type::Else:             return L"Else";
@@ -63,12 +60,12 @@ namespace spk::Lumina
             case Token::Type::Colon:            return L"Colon";
             case Token::Type::Question:         return L"Question";
 
-            case Token::Type::LeftParen:        return L"LeftParen";
-            case Token::Type::RightParen:       return L"RightParen";
-            case Token::Type::LeftBrace:        return L"LeftBrace";
-            case Token::Type::RightBrace:       return L"RightBrace";
-            case Token::Type::LeftBracket:      return L"LeftBracket";
-            case Token::Type::RightBracket:     return L"RightBracket";
+            case Token::Type::OpenParenthesis:  return L"OpenParenthesis";
+            case Token::Type::CloseParenthesis: return L"CloseParenthesis";
+            case Token::Type::OpenCurlyBracket:        return L"OpenCurlyBracket";
+            case Token::Type::CloseCurlyBracket:       return L"CloseCurlyBracket";
+            case Token::Type::OpenBracket:      return L"OpenBracket";
+            case Token::Type::CloseBracket:     return L"CloseBracket";
 
             case Token::Type::Preprocessor:     return L"Preprocessor";
             case Token::Type::Include:     		return L"Include";

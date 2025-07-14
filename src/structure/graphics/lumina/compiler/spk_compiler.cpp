@@ -71,6 +71,11 @@ namespace spk::Lumina
 
 		std::vector<std::unique_ptr<ASTNode>> astNodes = Lexer(_sourceManager, tokens).run();
 
+		for (const auto& node : astNodes)
+		{
+    		node->print(std::wcout);
+		}
+
 		std::wstring compiledSource = L"";
 
 		return Shader::fromSource(compiledSource);
