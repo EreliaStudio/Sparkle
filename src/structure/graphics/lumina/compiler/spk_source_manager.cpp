@@ -52,6 +52,18 @@ namespace spk::Lumina
 
 	std::vector<Token> SourceManager::readToken(const std::wstring &p_fileName, const std::wstring &p_source)
 	{
+		_files[p_fileName] = spk::StringUtils::splitWString(p_source, L"\n");
 		return Tokenizer{p_source, p_fileName}.run();
+	}
+
+	const std::wstring& SourceManager::getSourceLine(const Location& p_location) const
+	{
+		static const std::wstring empty = L"";
+		auto it = _files.find(p_location.source);
+		if (it == _files.end() || p_location.line > it->second.size())
+		{
+			return empty;
+		}
+		return it->second[p_location.line];
 	}
 }

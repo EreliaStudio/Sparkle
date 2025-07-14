@@ -30,7 +30,7 @@ namespace spk::Lumina
 			return (_idx + p_off < _src.size()) ? _src[_idx + p_off] : 0;
 		}
 		wchar_t advance();
-		void skipTrivia();
+		void skipComment();
 
 		Token make(Token::Type p_type, std::size_t p_start, size_t p_line, size_t p_col) const;
 		Token scanIdentifierOrKeyword(std::size_t p_start, size_t p_line, size_t p_col);
