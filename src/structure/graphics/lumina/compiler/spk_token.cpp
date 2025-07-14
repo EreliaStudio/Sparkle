@@ -6,77 +6,77 @@ namespace spk::Lumina
 {
 	std::wstring to_wstring(Token::Type p_type)
     {
-        using T = Token::Type;
         switch (p_type)
         {
-            case T::Identifier:       return L"Identifier";
-            case T::Struct:           return L"Struct";
-            case T::Namespace:        return L"Namespace";
-            case T::AttributeBlock:   return L"AttributeBlock";
-            case T::ConstantBlock:    return L"ConstantBlock";
-            case T::Texture:          return L"Texture";
-            case T::Input:            return L"Input";
-            case T::VertexPass:       return L"VertexPass";
-            case T::FragmentPass:     return L"FragmentPass";
-            case T::Output:           return L"Output";
-            case T::RaiseException:   return L"RaiseException";
-            case T::If:               return L"If";
-            case T::Else:             return L"Else";
-            case T::For:              return L"For";
-            case T::While:            return L"While";
-            case T::Return:           return L"Return";
-            case T::Discard:          return L"Discard";
+            case Token::Type::Identifier:       return L"Identifier";
+            case Token::Type::Struct:           return L"Struct";
+            case Token::Type::Namespace:        return L"Namespace";
+            case Token::Type::AttributeBlock:   return L"AttributeBlock";
+            case Token::Type::ConstantBlock:    return L"ConstantBlock";
+            case Token::Type::Texture:          return L"Texture";
+            case Token::Type::Input:            return L"Input";
+            case Token::Type::VertexPass:       return L"VertexPass";
+            case Token::Type::FragmentPass:     return L"FragmentPass";
+            case Token::Type::Output:           return L"Output";
+            case Token::Type::RaiseException:   return L"RaiseException";
+            case Token::Type::If:               return L"If";
+            case Token::Type::Else:             return L"Else";
+            case Token::Type::For:              return L"For";
+            case Token::Type::While:            return L"While";
+            case Token::Type::Return:           return L"Return";
+            case Token::Type::Discard:          return L"Discard";
 
-            case T::NumberLiteral:    return L"NumberLiteral";
-            case T::BoolLiteral:      return L"BoolLiteral";
-            case T::StringLiteral:    return L"StringLiteral";
+            case Token::Type::NumberLiteral:    return L"NumberLiteral";
+            case Token::Type::BoolLiteral:      return L"BoolLiteral";
+            case Token::Type::StringLiteral:    return L"StringLiteral";
 
-            case T::Plus:             return L"Plus";
-            case T::Minus:            return L"Minus";
-            case T::Multiply:         return L"Multiply";
-            case T::Divide:           return L"Divide";
-            case T::Percent:          return L"Percent";
-            case T::PlusEqual:        return L"PlusEqual";
-            case T::MinusEqual:       return L"MinusEqual";
-            case T::MultiplyEqual:    return L"MultiplyEqual";
-            case T::DivideEqual:      return L"DivideEqual";
-            case T::PercentEqual:     return L"PercentEqual";
-            case T::PlusPlus:         return L"PlusPlus";
-            case T::MinusMinus:       return L"MinusMinus";
+            case Token::Type::Plus:             return L"Plus";
+            case Token::Type::Minus:            return L"Minus";
+            case Token::Type::Multiply:         return L"Multiply";
+            case Token::Type::Divide:           return L"Divide";
+            case Token::Type::Percent:          return L"Percent";
+            case Token::Type::PlusEqual:        return L"PlusEqual";
+            case Token::Type::MinusEqual:       return L"MinusEqual";
+            case Token::Type::MultiplyEqual:    return L"MultiplyEqual";
+            case Token::Type::DivideEqual:      return L"DivideEqual";
+            case Token::Type::PercentEqual:     return L"PercentEqual";
+            case Token::Type::PlusPlus:         return L"PlusPlus";
+            case Token::Type::MinusMinus:       return L"MinusMinus";
 
-            case T::EqualEqual:       return L"EqualEqual";
-            case T::Different:        return L"Different";
-            case T::Less:             return L"Less";
-            case T::Greater:          return L"Greater";
-            case T::LessEqual:        return L"LessEqual";
-            case T::GreaterEqual:     return L"GreaterEqual";
-            case T::AndAnd:           return L"AndAnd";
-            case T::OrOr:             return L"OrOr";
-            case T::Bang:             return L"Bang";
+            case Token::Type::EqualEqual:       return L"EqualEqual";
+            case Token::Type::Different:        return L"Different";
+            case Token::Type::Less:             return L"Less";
+            case Token::Type::Greater:          return L"Greater";
+            case Token::Type::LessEqual:        return L"LessEqual";
+            case Token::Type::GreaterEqual:     return L"GreaterEqual";
+            case Token::Type::AndAnd:           return L"AndAnd";
+            case Token::Type::OrOr:             return L"OrOr";
+            case Token::Type::Bang:             return L"Bang";
 
-            case T::Equal:            return L"Equal";
-            case T::Dot:              return L"Dot";
-            case T::Arrow:            return L"Arrow";
-            case T::DoubleColon:      return L"DoubleColon";
+            case Token::Type::Equal:            return L"Equal";
+            case Token::Type::Dot:              return L"Dot";
+            case Token::Type::Arrow:            return L"Arrow";
+            case Token::Type::DoubleColon:      return L"DoubleColon";
 
-            case T::Comma:            return L"Comma";
-            case T::Semicolon:        return L"Semicolon";
-            case T::Colon:            return L"Colon";
-            case T::Question:         return L"Question";
+            case Token::Type::Comma:            return L"Comma";
+            case Token::Type::Semicolon:        return L"Semicolon";
+            case Token::Type::Colon:            return L"Colon";
+            case Token::Type::Question:         return L"Question";
 
-            case T::LeftParen:        return L"LeftParen";
-            case T::RightParen:       return L"RightParen";
-            case T::LeftBrace:        return L"LeftBrace";
-            case T::RightBrace:       return L"RightBrace";
-            case T::LeftBracket:      return L"LeftBracket";
-            case T::RightBracket:     return L"RightBracket";
+            case Token::Type::LeftParen:        return L"LeftParen";
+            case Token::Type::RightParen:       return L"RightParen";
+            case Token::Type::LeftBrace:        return L"LeftBrace";
+            case Token::Type::RightBrace:       return L"RightBrace";
+            case Token::Type::LeftBracket:      return L"LeftBracket";
+            case Token::Type::RightBracket:     return L"RightBracket";
 
-            case T::Preprocessor:     return L"Preprocessor";
+            case Token::Type::Preprocessor:     return L"Preprocessor";
+            case Token::Type::Include:     		return L"Include";
 
-            case T::Comment:          return L"Comment";
-            case T::Whitespace:       return L"Whitespace";
-            case T::EndOfFile:        return L"EndOfFile";
-            case T::Unknown:          return L"Unknown";
+            case Token::Type::Comment:          return L"Comment";
+            case Token::Type::Whitespace:       return L"Whitespace";
+            case Token::Type::EndOfFile:        return L"EndOfFile";
+            case Token::Type::Unknown:          return L"Unknown";
             default:                  return L"(Invalid)";
         }
     }

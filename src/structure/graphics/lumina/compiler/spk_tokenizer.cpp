@@ -1,4 +1,6 @@
-#include "structure/graphics/lumina/compiler/spk_Tokenizer.hpp"
+#include "structure/graphics/lumina/compiler/spk_tokenizer.hpp"
+
+#include "spk_debug_macro.hpp"
 
 namespace spk::Lumina
 {
@@ -21,6 +23,7 @@ namespace spk::Lumina
 		{L"discard", Token::Type::Discard},
 		{L"true", Token::Type::BoolLiteral},
 		{L"false", Token::Type::BoolLiteral},
+		{L"include", Token::Type::Include}
 	};
 
 	static const std::vector<std::pair<std::wstring_view, Token::Type>> kOperator = {
@@ -44,7 +47,7 @@ namespace spk::Lumina
 			if (c == L'\n')
 			{
 				++_line;
-				_col = 1;
+				_col = 0;
 			}
 			else
 			{
@@ -54,7 +57,7 @@ namespace spk::Lumina
 		return c;
 	}
 
-	void Tokenizer::skipTrivia()
+	void Tokenizer::skipComment()
 	{
 		while (!eof())
 		{
@@ -124,23 +127,6 @@ namespace spk::Lumina
 
 	Token Tokenizer::scanPreprocessor(std::size_t p_start, size_t p_line, size_t p_col)
 	{
-		while (!eof())
-		{
-			if (peek() == L'\n')
-			{
-				std::size_t back = _idx ? _idx - 1 : 0;
-				bool cont = back && _src[back] == L'\n';
-				if (!cont)
-				{
-					break;
-				}
-				advance();
-			}
-			else
-			{
-				advance();
-			}
-		}
 		return make(Token::Type::Preprocessor, p_start, p_line, p_col);
 	}
 
@@ -184,7 +170,7 @@ namespace spk::Lumina
 			if (_src.substr(p_start, text.size()) == text)
 			{
 				_idx = p_start + text.size();
-				_col += static_cast<size_t>(text.size());
+				_col = p_col + text.size();
 				return make(type, p_start, p_line, p_col);
 			}
 		}
@@ -193,7 +179,7 @@ namespace spk::Lumina
 
 	Token Tokenizer::scan()
 	{
-		skipTrivia();
+		skipComment();
 		std::size_t start = _idx;
 		size_t startLine = _line;
 		size_t startCol = _col;
@@ -221,7 +207,7 @@ namespace spk::Lumina
 		{
 			return scanPreprocessor(start, startLine, startCol);
 		}
-		if (c == L'/')
+		if (c == L'/' && (peek() == L'/' || peek() == L'*'))
 		{
 			return scanComment(start, startLine, startCol);
 		}

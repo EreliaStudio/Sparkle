@@ -4,6 +4,8 @@
 #include "structure/spk_iostream.hpp"
 #include <regex>
 
+#include "structure/graphics/lumina/compiler/spk_lexer.hpp"
+
 namespace 
 {
 	void dumpTokens(const std::vector<spk::Lumina::Token>& p_tokens,
@@ -66,6 +68,8 @@ namespace spk::Lumina
 		std::vector<Token> tokens = _sourceManager.readToken(L"Unnamed shader", p_source);
 
 		dumpTokens(tokens);
+
+		std::vector<std::unique_ptr<ASTNode>> astNodes = Lexer(_sourceManager, tokens).run();
 
 		std::wstring compiledSource = L"";
 
