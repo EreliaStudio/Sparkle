@@ -1,14 +1,9 @@
 #include "structure/graphics/lumina/compiler/spk_lexer.hpp"
 
-#include "structure/spk_iostream.hpp"
-
+#include "spk_debug_macro.hpp"
 #include "structure/graphics/lumina/compiler/spk_token_exception.hpp"
 
-#include "utils/spk_string_utils.hpp"
-
-#include <regex>
-
-#include "spk_debug_macro.hpp"
+#include <utility>
 
 namespace spk::Lumina
 {
@@ -17,145 +12,31 @@ namespace spk::Lumina
 		_tokens(p_tokens)
 	{
 		_dispatch = {
-			{Token::Type::Preprocessor, &Lexer::parsePreprocessor}
+			{Token::Type::Preprocessor, &Lexer::parsePreprocessor},
+			{Token::Type::ShaderPass, &Lexer::parseShaderPass},
+			{Token::Type::Namespace, &Lexer::parseNamespace},
+			{Token::Type::Struct, &Lexer::parseDataBlock},
+			{Token::Type::AttributeBlock, &Lexer::parseDataBlock},
+			{Token::Type::ConstantBlock, &Lexer::parseDataBlock},
+			{Token::Type::Texture, &Lexer::parseTextureDecl},
+			{Token::Type::Identifier, &Lexer::parseFunctionOrVariable},
 		};
 	}
 
-	void Lexer::skipComment()
+	const Token &Lexer::peek(std::ptrdiff_t p_offset) const
 	{
-		while (true)
+		std::ptrdiff_t targetIndex = static_cast<std::ptrdiff_t>(_idx) + p_offset;
+		if (targetIndex < 0)
 		{
-			if (peek().type == Token::Type::Comment || peek().type == Token::Type::Whitespace)
-			{
-				advance();
-			}
-			else
-			{
-				break;
-			}
+			targetIndex = 0;
 		}
+		if (static_cast<std::size_t>(targetIndex) >= _tokens.size())
+		{
+			return _tokens.back();
+		}
+		return _tokens[static_cast<std::size_t>(targetIndex)];
 	}
 
-	const Token& Lexer::expect(Token::Type p_type, const char *p_msg)
-	{
-		if (peek().type != p_type)
-		{
-			throw TokenException{p_msg, peek(), _sourceManager};
-		}
-		return advance();
-	}
-
-	const Token& Lexer::expect(const std::vector<Token::Type>& p_types, const char* p_msg)
-	{
-		for (const auto& type : p_types)
-		{
-			if (type == peek().type)
-			{
-				return advance();
-			}
-		}
-		throw TokenException{p_msg, peek(), _sourceManager};
-	}
-
-	std::unique_ptr<ASTNode> Lexer::parseInclude()
-	{
-		const Token&   startTok  = peek(-2);
-		const Location startLoc  = startTok.location;
-		
-		std::wstring   path;
-		const std::size_t includeLine = peek().location.line;
-
-		if (peek().type == Token::Type::Less)
-		{
-			advance();
-			const Token& first = expect(Token::Type::Identifier, "Expected identifier after '<' in include path");
-			path = first.lexeme;
-
-			while (true)
-			{
-				if (peek().type != Token::Type::Divide)
-				{
-					break;
-				}
-
-				advance();                               // consume '/'
-				path += L'/';
-
-				const Token& seg = expect(Token::Type::Identifier, "Expected identifier after '/' in include path");
-				path += seg.lexeme;
-			}
-
-			skipComment();
-			expect(Token::Type::Greater, "Missing '>' that closes include path");
-		}
-		else if (peek().type == Token::Type::StringLiteral)
-		{
-			const Token& tok = advance();
-			path = tok.lexeme;
-			if (path.size() >= 2 && path.front() == L'"' && path.back() == L'"')
-			{
-				path = path.substr(1, path.size() - 2);
-			}
-		}
-		else
-		{
-			throw TokenException{ "Expected '<Path>' block or '\"Path\"' after 'include'", peek(), _sourceManager};
-		}
-
-		while (!eof() && peek().location.line == includeLine)
-		{
-			if (peek().type != Token::Type::Comment &&
-				peek().type != Token::Type::Whitespace)
-			{
-				throw TokenException{
-					"Unexpected token after include definition",
-					peek(), _sourceManager};
-			}
-			advance();
-		}
-
-		Location incLoc = startLoc;
-		return std::make_unique<IncludeASTNode>( std::filesystem::path{path}, startLoc);
-	}
-
-	std::unique_ptr<ASTNode> Lexer::parsePreprocessor()
-	{
-		advance();
-
-		if (peek().lexeme == L"include")
-		{
-			advance();
-			return (parseInclude());
-		}
-		else
-		{
-			throw TokenException{"Invalid preprocessor command", peek(), _sourceManager};
-		}
-	}
-
-	std::vector<std::unique_ptr<ASTNode>> Lexer::run()
-	{
-		std::vector<std::unique_ptr<ASTNode>> nodes;
-		while (!eof())
-		{
-			auto it = _dispatch.find(peek().type);
-
-			if (it == _dispatch.end())
-			{
-				std::string msg = "Unexpected token " + to_string(peek().type) + " at " + std::to_string(peek().location.line) + ":" + std::to_string(peek().location.column);
-				throw TokenException{msg, peek(), _sourceManager};
-			}
-
-			ParseFn fn = it->second;
-			nodes.emplace_back((this->*fn)()); 
-		}
-		return nodes;
-	}
-
-	const Token &Lexer::peek(std::size_t p_offset) const
-	{
-		return _tokens[_idx + p_offset];
-	}
 	bool Lexer::eof() const
 	{
 		return peek().type == Token::Type::EndOfFile;
@@ -168,5 +49,312 @@ namespace spk::Lumina
 			++_idx;
 		}
 		return peek(-1);
+	}
+
+	void Lexer::skipComment()
+	{
+		while (peek().type == Token::Type::Comment || peek().type == Token::Type::Whitespace)
+		{
+			advance();
+		}
+	}
+
+	static std::string makeUnexpected(const Token &p_tok)
+	{
+		return "Unexpected token [" + to_string(p_tok.type) + "]";
+	}
+
+	const Token &Lexer::expect(Token::Type p_type)
+	{
+		return expect(p_type, makeUnexpected(peek()));
+	}
+	const Token &Lexer::expect(const std::vector<Token::Type> &p_types)
+	{
+		return expect(p_types, makeUnexpected(peek()));
+	}
+
+	const Token &Lexer::expect(Token::Type p_type, const std::string &p_msg)
+	{
+		if (peek().type != p_type)
+		{
+			throw TokenException{p_msg, peek(), _sourceManager};
+		}
+		return advance();
+	}
+
+	const Token &Lexer::expect(const std::vector<Token::Type> &p_types, const std::string &p_msg)
+	{
+		for (auto type : p_types)
+		{
+			if (peek().type == type)
+			{
+				return advance();
+			}
+		}
+		throw TokenException{p_msg, peek(), _sourceManager};
+	}
+
+	std::unique_ptr<ASTNode> Lexer::parseInclude()
+	{
+		const Token &preprocessorToken = peek(-2);
+		std::wstring path;
+		const std::size_t line = peek().location.line;
+
+		if (peek().type == Token::Type::Less)
+		{
+			advance();
+			const Token &identifierToken = expect(Token::Type::Identifier, "Expected identifier after '<'");
+			path = identifierToken.lexeme;
+			while (peek().type == Token::Type::Divide)
+			{
+				advance();
+				path += L'/';
+				const Token &newIdentifierToken = expect(Token::Type::Identifier, "Expected identifier after '/'");
+				path += newIdentifierToken.lexeme;
+			}
+			skipComment();
+			expect(Token::Type::Greater, "Missing '>' in include path");
+		}
+		else if (peek().type == Token::Type::StringLiteral)
+		{
+			const Token &token = advance();
+			path = token.lexeme;
+			if (path.size() >= 2 && path.front() == L'"' && path.back() == L'"')
+			{
+				path = path.substr(1, path.size() - 2);
+			}
+		}
+		else
+		{
+			throw TokenException{"Expected <path> or \"path\" after include", peek(), _sourceManager};
+		}
+
+		while (!eof() && peek().location.line == line)
+		{
+			if (peek().type != Token::Type::Comment && peek().type != Token::Type::Whitespace)
+			{
+				throw TokenException{"Unexpected token after include", peek(), _sourceManager};
+			}
+			advance();
+		}
+
+		return std::make_unique<IncludeASTNode>(std::filesystem::path{path}, preprocessorToken.location);
+	}
+
+	std::unique_ptr<ASTNode> Lexer::parsePreprocessor()
+	{
+		advance();
+		if (peek().lexeme == L"include")
+		{
+			advance();
+			return parseInclude();
+		}
+		throw TokenException{"Invalid preprocessor directive", peek(), _sourceManager};
+	}
+
+	std::unique_ptr<ASTNode> Lexer::parseNamespace()
+	{
+		const Token &keywordToken = expect(Token::Type::Namespace);
+		const Token &nameToken = expect(Token::Type::Identifier, "Namespace needs a name");
+		expect(Token::Type::OpenCurlyBracket);
+
+		std::vector<std::unique_ptr<ASTNode>> declarations;
+		while (!eof() && peek().type != Token::Type::CloseCurlyBracket)
+		{
+			skipComment();
+			auto it = _dispatch.find(peek().type);
+			if (it == _dispatch.end())
+			{
+				throw TokenException{"Unexpected token in namespace", peek(), _sourceManager};
+			}
+			declarations.emplace_back((this->*it->second)());
+		}
+		expect(Token::Type::CloseCurlyBracket);
+		return std::make_unique<NamespaceASTNode>(nameToken.lexeme, std::move(declarations), keywordToken.location);
+	}
+
+	std::unique_ptr<ASTNode> Lexer::parseDataBlock()
+	{
+		const Token& keywordToken = advance();
+		const Token &nameToken = expect(Token::Type::Identifier, "Missing name");
+		expect(Token::Type::OpenCurlyBracket);
+
+		std::vector<std::unique_ptr<ASTNode>> members;
+		while (!eof() && peek().type != Token::Type::CloseCurlyBracket)
+		{
+			skipComment();
+			auto it = _dispatch.find(peek().type);
+			if (it == _dispatch.end())
+			{
+				throw TokenException{"Unexpected token in block", peek(), _sourceManager};
+			}
+			members.emplace_back((this->*it->second)());
+		}
+		expect(Token::Type::CloseCurlyBracket);
+		if (peek().type == Token::Type::Semicolon)
+		{
+			advance();
+		}
+
+		switch (keywordToken.type)
+		{
+		case Token::Type::Struct:
+			return std::make_unique<StructASTNode>(nameToken.lexeme, std::move(members), nameToken.location);
+		case Token::Type::AttributeBlock:
+			return std::make_unique<AttributeBlockASTNode>(nameToken.lexeme, std::move(members), nameToken.location);
+		case Token::Type::ConstantBlock:
+			return std::make_unique<ConstantBlockASTNode>(nameToken.lexeme, std::move(members), nameToken.location);
+		default:
+			throw TokenException{"Unexpected token in block definition", keywordToken, _sourceManager};
+		}
+	}
+
+	std::unique_ptr<ASTNode> Lexer::parseTextureDecl()
+	{
+		const Token &keywordToken = expect(Token::Type::Texture);
+		const Token &nameToken = expect(Token::Type::Identifier, "Texture needs a name");
+		expect(Token::Type::Semicolon, "Missing ';'");
+		return std::make_unique<TextureDeclASTNode>(nameToken.lexeme, keywordToken.location);
+	}
+
+	std::unique_ptr<ASTNode> Lexer::parseBody()
+	{
+		const Token &openToken = expect(Token::Type::OpenCurlyBracket, "Expected '{'");
+		std::size_t depth = 1;
+		while (!eof() && depth != 0)
+		{
+			if (peek().type == Token::Type::OpenCurlyBracket)
+			{
+				++depth;
+			}
+			else if (peek().type == Token::Type::CloseCurlyBracket)
+			{
+				--depth;
+			}
+			advance();
+		}
+		if (depth != 0)
+		{
+			throw TokenException{"Unterminated body - missing '}'", peek(), _sourceManager};
+		}
+		return std::make_unique<BodyASTNode>(openToken.location);
+	}
+
+	std::unique_ptr<ASTNode> Lexer::parsePipelineFlow()
+	{
+		const Token &inputToken = expect(Token::Type::ShaderPass);
+		expect(Token::Type::Arrow);
+		const Token &outputToken = expect(Token::Type::ShaderPass);
+		expect(Token::Type::Colon);
+		const Token &typeToken = expect(Token::Type::Identifier);
+		const Token &nameToken = expect(Token::Type::Identifier);
+		expect(Token::Type::Semicolon, "Expected ';'");
+
+		if (inputToken.lexeme == L"Output")
+		{
+			throw TokenException{"Invalid input pass", inputToken, _sourceManager};
+		}
+		if (outputToken.lexeme == L"Input")
+		{
+			throw TokenException{"Invalid output pass", outputToken, _sourceManager};
+		}
+
+		return std::make_unique<PipelineFlowASTNode>(inputToken.lexeme, outputToken.lexeme, typeToken.lexeme, nameToken.lexeme, inputToken.location);
+	}
+
+	std::unique_ptr<ASTNode> Lexer::parsePipelinePass()
+	{
+		const Token &nameToken = expect(Token::Type::ShaderPass);
+
+		if (nameToken.lexeme != L"VertexPass" && nameToken.lexeme != L"FragmentPass")
+		{
+			throw TokenException{"Only VertexPass or FragmentPass are allowed", nameToken, _sourceManager};
+		}
+
+		expect(Token::Type::OpenParenthesis);
+		expect(Token::Type::CloseParenthesis, "Pass cannot have parameters");
+
+		auto body = parseBody();
+
+		return std::make_unique<PipelinePassASTNode>(nameToken.lexeme, std::move(body), nameToken.location);
+	}
+
+	std::unique_ptr<ASTNode> Lexer::parseShaderPass()
+	{
+		if (peek(1).type == Token::Type::Arrow)
+		{
+			return parsePipelineFlow();
+		}
+		return parsePipelinePass();
+	}
+
+	std::unique_ptr<ASTNode> Lexer::parseFunctionOrVariable()
+	{
+		const Token &typeTok = expect(Token::Type::Identifier);
+		const Token &nameToken = expect(Token::Type::Identifier, "Missing identifier");
+
+		if (peek().type == Token::Type::OpenParenthesis)
+		{
+			advance();
+			std::vector<std::unique_ptr<VariableDeclASTNode>> parameters;
+
+			if (peek().type != Token::Type::CloseParenthesis)
+			{
+				while (true)
+				{
+					const Token &parameterTypeToken = expect(Token::Type::Identifier, "Parameter type");
+					const Token &parameterNameToken = expect(Token::Type::Identifier, "Parameter name");
+					parameters.emplace_back(std::make_unique<VariableDeclASTNode>(parameterTypeToken.lexeme, parameterNameToken.lexeme, nullptr, parameterTypeToken.location));
+					if (peek().type == Token::Type::Comma)
+					{
+						advance();
+						continue;
+					}
+					break;
+				}
+			}
+			expect(Token::Type::CloseParenthesis);
+
+			auto body = parseBody();
+			return std::make_unique<FunctionASTNode>(typeTok.lexeme,
+													 nameToken.lexeme,
+													 std::move(parameters),
+													 std::unique_ptr<BodyASTNode>(static_cast<BodyASTNode *>(body.release())),
+													 typeTok.location);
+		}
+
+		std::unique_ptr<ExpressionASTNode> inputTokenit;
+		if (peek().type == Token::Type::Equal)
+		{
+			advance();
+			const Token &literalToken = expect({Token::Type::NumberLiteral, Token::Type::StringLiteral, Token::Type::BoolLiteral}, "Expected literal");
+			inputTokenit = std::make_unique<LiteralExprASTNode>(literalToken.lexeme, literalToken.location);
+		}
+		expect(Token::Type::Semicolon, "Missing ';' after variable declaration");
+
+		return std::make_unique<VariableDeclASTNode>(typeTok.lexeme, nameToken.lexeme, std::move(inputTokenit), typeTok.location);
+	}
+
+	std::vector<std::unique_ptr<ASTNode>> Lexer::run()
+	{
+		std::vector<std::unique_ptr<ASTNode>> result;
+
+		while (!eof())
+		{
+			skipComment();
+			if (eof())
+			{
+				break;
+			}
+
+			auto it = _dispatch.find(peek().type);
+			if (it == _dispatch.end())
+			{
+				throw TokenException{makeUnexpected(peek()), peek(), _sourceManager};
+			}
+
+			result.emplace_back((this->*it->second)());
+		}
+		return result;
 	}
 }

@@ -10,10 +10,10 @@ namespace spk::Lumina
 		{L"attribute", Token::Type::AttributeBlock},
 		{L"constant", Token::Type::ConstantBlock},
 		{L"texture", Token::Type::Texture},
-		{L"Input", Token::Type::Input},
-		{L"VertexPass", Token::Type::VertexPass},
-		{L"FragmentPass", Token::Type::FragmentPass},
-		{L"Output", Token::Type::Output},
+		{L"Input", Token::Type::ShaderPass},
+		{L"VertexPass", Token::Type::ShaderPass},
+		{L"FragmentPass", Token::Type::ShaderPass},
+		{L"Output", Token::Type::ShaderPass},
 		{L"raiseException", Token::Type::RaiseException},
 		{L"if", Token::Type::If},
 		{L"else", Token::Type::Else},
@@ -34,8 +34,10 @@ namespace spk::Lumina
 		{L"!", Token::Type::Bang},		  {L"<=", Token::Type::LessEqual},	 {L"<", Token::Type::Less},			{L">=", Token::Type::GreaterEqual},
 		{L">", Token::Type::Greater},	  {L"&&", Token::Type::AndAnd},		 {L"||", Token::Type::OrOr},		{L"::", Token::Type::DoubleColon},
 		{L".", Token::Type::Dot},		  {L",", Token::Type::Comma},		 {L";", Token::Type::Semicolon},	{L":", Token::Type::Colon},
-		{L"?", Token::Type::Question},	  {L"(", Token::Type::LeftParen},	 {L")", Token::Type::RightParen},	{L"{", Token::Type::LeftBrace},
-		{L"}", Token::Type::RightBrace},  {L"[", Token::Type::LeftBracket},	 {L"]", Token::Type::RightBracket},
+		{L"?", Token::Type::Question},
+		{L"(", Token::Type::OpenParenthesis},  {L")", Token::Type::CloseParenthesis},
+		{L"{", Token::Type::OpenCurlyBracket}, {L"}", Token::Type::CloseCurlyBracket},
+		{L"[", Token::Type::OpenBracket},	   {L"]", Token::Type::CloseBracket},
 	};
 
 	wchar_t Tokenizer::advance()
