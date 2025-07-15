@@ -19,6 +19,22 @@ namespace spk::Lumina
                        case ASTNode::Kind::Method:               return L"Method";
                        case ASTNode::Kind::PipelineDefinition:   return L"PipelineDefinition";
                        case ASTNode::Kind::PipelineBody:         return L"PipelineBody";
+                       case ASTNode::Kind::VariableDeclaration:  return L"VariableDeclaration";
+                       case ASTNode::Kind::Assignment:           return L"Assignment";
+                       case ASTNode::Kind::IfStatement:          return L"IfStatement";
+                       case ASTNode::Kind::ForLoop:              return L"ForLoop";
+                       case ASTNode::Kind::WhileLoop:            return L"WhileLoop";
+                       case ASTNode::Kind::ReturnStatement:      return L"ReturnStatement";
+                       case ASTNode::Kind::DiscardStatement:     return L"DiscardStatement";
+                       case ASTNode::Kind::BinaryExpression:     return L"BinaryExpression";
+                       case ASTNode::Kind::UnaryExpression:      return L"UnaryExpression";
+                       case ASTNode::Kind::CallExpression:       return L"CallExpression";
+                       case ASTNode::Kind::MemberAccess:         return L"MemberAccess";
+                       case ASTNode::Kind::VariableReference:    return L"VariableReference";
+                       case ASTNode::Kind::Literal:              return L"Literal";
+                       case ASTNode::Kind::TernaryExpression:    return L"TernaryExpression";
+                       case ASTNode::Kind::LValue:               return L"LValue";
+                       case ASTNode::Kind::RValue:               return L"RValue";
                        default:                                  return L"(Invalid)";
                }
        }
@@ -146,5 +162,188 @@ namespace spk::Lumina
                        p_os << L">";
                }
                p_os << std::endl;
+       }
+
+       void VariableDeclarationNode::print(std::wostream &p_os, size_t p_indent) const
+       {
+               p_os << std::wstring(p_indent, L' ') << L"VariableDeclaration " << typeName.lexeme << L" " << name.lexeme;
+               if (initializer)
+               {
+                       p_os << L" =" << std::endl;
+                       initializer->print(p_os, p_indent + 2);
+               }
+               else
+               {
+                       p_os << L";" << std::endl;
+               }
+       }
+
+       void AssignmentNode::print(std::wostream &p_os, size_t p_indent) const
+       {
+               p_os << std::wstring(p_indent, L' ');
+               if (target)
+               {
+                       target->print(p_os, 0);
+               }
+               p_os << L" " << op.lexeme << L" ";
+               if (value)
+               {
+                       value->print(p_os, 0);
+               }
+               p_os << std::endl;
+       }
+
+       void IfStatementNode::print(std::wostream &p_os, size_t p_indent) const
+       {
+               p_os << std::wstring(p_indent, L' ') << L"If(";
+               if (condition)
+               {
+                       condition->print(p_os, 0);
+               }
+               p_os << L")" << std::endl;
+               if (thenBody)
+               {
+                       thenBody->print(p_os, p_indent + 2);
+               }
+               if (elseBody)
+               {
+                       p_os << std::wstring(p_indent, L' ') << L"else" << std::endl;
+                       elseBody->print(p_os, p_indent + 2);
+               }
+       }
+
+       void ForLoopNode::print(std::wostream &p_os, size_t p_indent) const
+       {
+               p_os << std::wstring(p_indent, L' ') << L"For" << std::endl;
+               if (body)
+               {
+                       body->print(p_os, p_indent + 2);
+               }
+       }
+
+       void WhileLoopNode::print(std::wostream &p_os, size_t p_indent) const
+       {
+               p_os << std::wstring(p_indent, L' ') << L"While" << std::endl;
+               if (body)
+               {
+                       body->print(p_os, p_indent + 2);
+               }
+       }
+
+       void ReturnStatementNode::print(std::wostream &p_os, size_t p_indent) const
+       {
+               p_os << std::wstring(p_indent, L' ') << L"Return";
+               if (value)
+               {
+                       p_os << L" ";
+                       value->print(p_os, 0);
+               }
+               p_os << std::endl;
+       }
+
+       void DiscardStatementNode::print(std::wostream &p_os, size_t p_indent) const
+       {
+               p_os << std::wstring(p_indent, L' ') << L"Discard" << std::endl;
+       }
+
+       void BinaryExpressionNode::print(std::wostream &p_os, size_t p_indent) const
+       {
+               p_os << std::wstring(p_indent, L' ');
+               if (left)
+               {
+                       left->print(p_os, 0);
+               }
+               p_os << L" " << op.lexeme << L" ";
+               if (right)
+               {
+                       right->print(p_os, 0);
+               }
+       }
+
+       void UnaryExpressionNode::print(std::wostream &p_os, size_t p_indent) const
+       {
+               p_os << std::wstring(p_indent, L' ') << op.lexeme;
+               if (operand)
+               {
+                       operand->print(p_os, 0);
+               }
+       }
+
+       void CallExpressionNode::print(std::wostream &p_os, size_t p_indent) const
+       {
+               p_os << std::wstring(p_indent, L' ');
+               if (callee)
+               {
+                       callee->print(p_os, 0);
+               }
+               p_os << L"(";
+               bool first = true;
+               for (const auto &arg : arguments)
+               {
+                       if (!first)
+                       {
+                               p_os << L", ";
+                       }
+                       first = false;
+                       if (arg)
+                       {
+                               arg->print(p_os, 0);
+                       }
+               }
+               p_os << L")";
+       }
+
+       void MemberAccessNode::print(std::wostream &p_os, size_t p_indent) const
+       {
+               p_os << std::wstring(p_indent, L' ');
+               if (object)
+               {
+                       object->print(p_os, 0);
+               }
+               p_os << L"." << member.lexeme;
+       }
+
+       void VariableReferenceNode::print(std::wostream &p_os, size_t p_indent) const
+       {
+               p_os << std::wstring(p_indent, L' ') << name.lexeme;
+       }
+
+       void LiteralNode::print(std::wostream &p_os, size_t p_indent) const
+       {
+               p_os << std::wstring(p_indent, L' ') << value.lexeme;
+       }
+
+       void TernaryExpressionNode::print(std::wostream &p_os, size_t p_indent) const
+       {
+               if (condition)
+               {
+                       condition->print(p_os, p_indent);
+               }
+               p_os << L" ? ";
+               if (thenExpr)
+               {
+                       thenExpr->print(p_os, 0);
+               }
+               p_os << L" : ";
+               if (elseExpr)
+               {
+                       elseExpr->print(p_os, 0);
+               }
+       }
+
+       void LValueNode::print(std::wostream &p_os, size_t p_indent) const
+       {
+               if (expression)
+               {
+                       expression->print(p_os, p_indent);
+               }
+       }
+
+       void RValueNode::print(std::wostream &p_os, size_t p_indent) const
+       {
+               if (expression)
+               {
+                       expression->print(p_os, p_indent);
+               }
        }
 }
