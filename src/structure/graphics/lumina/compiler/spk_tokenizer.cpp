@@ -2,14 +2,16 @@
 
 #include "spk_debug_macro.hpp"
 
+#include <cwctype>
+
 namespace spk::Lumina
 {
 	static const std::unordered_map<std::wstring_view, Token::Type> kKeyword = {
 		{L"struct", Token::Type::Struct},
 		{L"namespace", Token::Type::Namespace},
-		{L"attribute", Token::Type::AttributeBlock},
-		{L"constant", Token::Type::ConstantBlock},
-		{L"texture", Token::Type::Texture},
+		{L"AttributeBlock", Token::Type::AttributeBlock},
+		{L"ConstantBlock", Token::Type::ConstantBlock},
+		{L"Texture", Token::Type::Texture},
 		{L"Input", Token::Type::ShaderPass},
 		{L"VertexPass", Token::Type::ShaderPass},
 		{L"FragmentPass", Token::Type::ShaderPass},
