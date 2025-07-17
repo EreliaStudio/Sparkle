@@ -16,7 +16,7 @@ namespace spk::Lumina
                enum class Kind
                {
                        Token,
-                       Compound,
+                      Body,
                        Namespace,
                        Structure,
                        AttributeBlock,
@@ -24,8 +24,9 @@ namespace spk::Lumina
                        Texture,
                        Include,
                        Function,
-                      Method,
-                      Operator,
+                       Method,
+                       Constructor,
+                       Operator,
                       PipelineDefinition,
                        PipelineBody,
                        VariableDeclaration,
@@ -75,12 +76,12 @@ namespace spk::Lumina
                void print(std::wostream &p_os, size_t p_indent = 0) const override;
        };
 
-       struct CompoundNode : public ASTNode
+       struct BodyNode : public ASTNode
        {
                std::vector<std::unique_ptr<ASTNode>> children;
 
-               explicit CompoundNode(Location p_location) :
-                       ASTNode(Kind::Compound, std::move(p_location))
+               explicit BodyNode(Location p_location) :
+                       ASTNode(Kind::Body, std::move(p_location))
                {
                }
 
@@ -90,9 +91,9 @@ namespace spk::Lumina
        struct NamespaceNode : public ASTNode
        {
                Token name;
-               std::unique_ptr<CompoundNode> body;
+               std::unique_ptr<BodyNode> body;
 
-               NamespaceNode(const Token &p_name, std::unique_ptr<CompoundNode> p_body) :
+               NamespaceNode(const Token &p_name, std::unique_ptr<BodyNode> p_body) :
                        ASTNode(Kind::Namespace, p_name.location),
                        name(p_name),
                        body(std::move(p_body))
@@ -105,12 +106,22 @@ namespace spk::Lumina
        struct StructureNode : public ASTNode
        {
                Token name;
-               std::unique_ptr<CompoundNode> body;
+               std::vector<std::unique_ptr<ASTNode>> variables;
+               std::vector<std::unique_ptr<ASTNode>> constructors;
+               std::vector<std::unique_ptr<ASTNode>> methods;
+               std::vector<std::unique_ptr<ASTNode>> operators;
 
-               StructureNode(const Token &p_name, std::unique_ptr<CompoundNode> p_body) :
+               StructureNode(const Token &p_name,
+                              std::vector<std::unique_ptr<ASTNode>> p_variables,
+                              std::vector<std::unique_ptr<ASTNode>> p_constructors,
+                              std::vector<std::unique_ptr<ASTNode>> p_methods,
+                              std::vector<std::unique_ptr<ASTNode>> p_operators) :
                        ASTNode(Kind::Structure, p_name.location),
                        name(p_name),
-                       body(std::move(p_body))
+                       variables(std::move(p_variables)),
+                       constructors(std::move(p_constructors)),
+                       methods(std::move(p_methods)),
+                       operators(std::move(p_operators))
                {
                }
 
@@ -120,12 +131,19 @@ namespace spk::Lumina
        struct AttributeBlockNode : public ASTNode
        {
                Token name;
-               std::unique_ptr<CompoundNode> body;
+               std::vector<std::unique_ptr<ASTNode>> variables;
+               std::vector<std::unique_ptr<ASTNode>> methods;
+               std::vector<std::unique_ptr<ASTNode>> operators;
 
-               AttributeBlockNode(const Token &p_name, std::unique_ptr<CompoundNode> p_body) :
+               AttributeBlockNode(const Token &p_name,
+                                  std::vector<std::unique_ptr<ASTNode>> p_variables,
+                                  std::vector<std::unique_ptr<ASTNode>> p_methods,
+                                  std::vector<std::unique_ptr<ASTNode>> p_operators) :
                        ASTNode(Kind::AttributeBlock, p_name.location),
                        name(p_name),
-                       body(std::move(p_body))
+                       variables(std::move(p_variables)),
+                       methods(std::move(p_methods)),
+                       operators(std::move(p_operators))
                {
                }
 
@@ -135,12 +153,19 @@ namespace spk::Lumina
        struct ConstantBlockNode : public ASTNode
        {
                Token name;
-               std::unique_ptr<CompoundNode> body;
+               std::vector<std::unique_ptr<ASTNode>> variables;
+               std::vector<std::unique_ptr<ASTNode>> methods;
+               std::vector<std::unique_ptr<ASTNode>> operators;
 
-               ConstantBlockNode(const Token &p_name, std::unique_ptr<CompoundNode> p_body) :
+               ConstantBlockNode(const Token &p_name,
+                                 std::vector<std::unique_ptr<ASTNode>> p_variables,
+                                 std::vector<std::unique_ptr<ASTNode>> p_methods,
+                                 std::vector<std::unique_ptr<ASTNode>> p_operators) :
                        ASTNode(Kind::ConstantBlock, p_name.location),
                        name(p_name),
-                       body(std::move(p_body))
+                       variables(std::move(p_variables)),
+                       methods(std::move(p_methods)),
+                       operators(std::move(p_operators))
                {
                }
 
@@ -163,9 +188,9 @@ namespace spk::Lumina
 struct FunctionNode : public ASTNode
 {
         std::vector<Token> header;
-        std::unique_ptr<CompoundNode> body;
+        std::unique_ptr<BodyNode> body;
 
-               FunctionNode(Kind p_kind, std::vector<Token> p_header, std::unique_ptr<CompoundNode> p_body) :
+               FunctionNode(Kind p_kind, std::vector<Token> p_header, std::unique_ptr<BodyNode> p_body) :
                        ASTNode(p_kind, p_header.empty() ? Location{} : p_header.front().location),
                        header(std::move(p_header)),
                        body(std::move(p_body))
@@ -178,9 +203,9 @@ struct FunctionNode : public ASTNode
        struct OperatorNode : public ASTNode
        {
                std::vector<Token> header;
-               std::unique_ptr<CompoundNode> body;
+               std::unique_ptr<BodyNode> body;
 
-               OperatorNode(std::vector<Token> p_header, std::unique_ptr<CompoundNode> p_body) :
+               OperatorNode(std::vector<Token> p_header, std::unique_ptr<BodyNode> p_body) :
                        ASTNode(Kind::Operator, p_header.empty() ? Location{} : p_header.front().location),
                        header(std::move(p_header)),
                        body(std::move(p_body))
@@ -210,9 +235,9 @@ struct FunctionNode : public ASTNode
        struct PipelineBodyNode : public ASTNode
        {
                Token stage;
-               std::unique_ptr<CompoundNode> body;
+               std::unique_ptr<BodyNode> body;
 
-               PipelineBodyNode(const Token &p_stage, std::unique_ptr<CompoundNode> p_body) :
+               PipelineBodyNode(const Token &p_stage, std::unique_ptr<BodyNode> p_body) :
                        ASTNode(Kind::PipelineBody, p_stage.location),
                        stage(p_stage),
                        body(std::move(p_body))
@@ -274,10 +299,10 @@ struct FunctionNode : public ASTNode
        struct IfStatementNode : public ASTNode
        {
                std::unique_ptr<ASTNode> condition;
-               std::unique_ptr<CompoundNode> thenBody;
-               std::unique_ptr<CompoundNode> elseBody;
+               std::unique_ptr<BodyNode> thenBody;
+               std::unique_ptr<BodyNode> elseBody;
 
-               IfStatementNode(std::unique_ptr<ASTNode> p_cond, std::unique_ptr<CompoundNode> p_then, std::unique_ptr<CompoundNode> p_else, Location p_loc) :
+               IfStatementNode(std::unique_ptr<ASTNode> p_cond, std::unique_ptr<BodyNode> p_then, std::unique_ptr<BodyNode> p_else, Location p_loc) :
                        ASTNode(Kind::IfStatement, std::move(p_loc)),
                        condition(std::move(p_cond)),
                        thenBody(std::move(p_then)),
@@ -293,9 +318,9 @@ struct FunctionNode : public ASTNode
                std::unique_ptr<ASTNode> init;
                std::unique_ptr<ASTNode> condition;
                std::unique_ptr<ASTNode> increment;
-               std::unique_ptr<CompoundNode> body;
+               std::unique_ptr<BodyNode> body;
 
-               ForLoopNode(std::unique_ptr<ASTNode> p_init, std::unique_ptr<ASTNode> p_cond, std::unique_ptr<ASTNode> p_inc, std::unique_ptr<CompoundNode> p_body, Location p_loc) :
+               ForLoopNode(std::unique_ptr<ASTNode> p_init, std::unique_ptr<ASTNode> p_cond, std::unique_ptr<ASTNode> p_inc, std::unique_ptr<BodyNode> p_body, Location p_loc) :
                        ASTNode(Kind::ForLoop, std::move(p_loc)),
                        init(std::move(p_init)),
                        condition(std::move(p_cond)),
@@ -310,9 +335,9 @@ struct FunctionNode : public ASTNode
        struct WhileLoopNode : public ASTNode
        {
                std::unique_ptr<ASTNode> condition;
-               std::unique_ptr<CompoundNode> body;
+               std::unique_ptr<BodyNode> body;
 
-               WhileLoopNode(std::unique_ptr<ASTNode> p_cond, std::unique_ptr<CompoundNode> p_body, Location p_loc) :
+               WhileLoopNode(std::unique_ptr<ASTNode> p_cond, std::unique_ptr<BodyNode> p_body, Location p_loc) :
                        ASTNode(Kind::WhileLoop, std::move(p_loc)),
                        condition(std::move(p_cond)),
                        body(std::move(p_body))
