@@ -4,25 +4,25 @@
 
 namespace spk::Lumina
 {
-	TokenException::TokenException(const std::string& p_msg, const Token& p_token, const SourceManager& p_sourceManager)
-            : std::runtime_error(compose(p_msg, p_token, p_sourceManager))
+	TokenException::TokenException(const std::wstring& p_msg, const Token& p_token, const SourceManager& p_sourceManager)
+            : std::runtime_error(spk::StringUtils::wstringToString(compose(p_msg, p_token, p_sourceManager)))
     {}
 
-	std::string TokenException::compose(const std::string& p_msg, const Token& p_token, const SourceManager& p_sourceManager)
+	std::wstring TokenException::compose(const std::wstring& p_msg, const Token& p_token, const SourceManager& p_sourceManager)
 	{
-		const std::wstring& wsrcLine = p_sourceManager.getSourceLine(p_token.location);
-		std::string srcLine = spk::StringUtils::wstringToString(wsrcLine);
+		const std::wstring& srcLine = p_sourceManager.getSourceLine(p_token.location);
 
-		std::string underline(p_token.location.column, ' ');
+		std::wstring underline(p_token.location.column, L' ');
 		underline.append(p_token.lexeme.size(), '-');
 
-		std::ostringstream oss;
-		oss << p_token.location.source.string() << ':'
-			<< p_token.location.line << ':'
-			<< p_token.location.column << ": error: "
-			<< p_msg << '\n'
-			<< srcLine << '\n'
+		std::wostringstream oss;
+		oss << p_token.location.source.wstring() << L':'
+			<< p_token.location.line << L':'
+			<< p_token.location.column << L": error: "
+			<< p_msg << L'\n'
+			<< srcLine << L'\n'
 			<< underline;
+
 		return oss.str();
 	}
 }

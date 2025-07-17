@@ -17,6 +17,29 @@ VertexPass()
 	pixelPosition = vec4(modelPosition, 0.0, 1.0);
 }
 
+struct Test
+{
+	type name;
+	type2 name2;
+};
+
+AttributeBlock myAttribute
+{
+	type attribute1;
+	type attribute2;
+};
+
+ConstantBlock myConstants
+{
+	type constant1;
+	type constant2;
+
+	type methodName(type param1, type2 param2)
+	{
+		return returnValue;
+	}
+};
+
 /*
 
 Multiline commentary
@@ -28,6 +51,10 @@ FragmentPass()
 	{
 		discard;
 	}
+
+	int value = someFunction1();
+	int value = someFunction2(param1, param2, someFunction3(valueA, valueB));
+
 
 	pixelColor = fragmentColor;
 }

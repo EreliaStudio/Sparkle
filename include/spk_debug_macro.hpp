@@ -2,8 +2,11 @@
 
 #include "structure/spk_iostream.hpp"
 #include "utils/spk_opengl_utils.hpp"
+#include "utils/spk_string_utils.hpp"
 
-#define DEBUG_LINE() spk::cout << __FILE__ << L":" << __LINE__ << std::endl
+#define DEBUG_INFO() spk::StringUtils::stringToWString(__FILE__) + L":" + std::to_wstring(__LINE__)
+#define DEBUG_LINE() spk::cout << DEBUG_INFO() << std::endl
+
 #define GL_DEBUG_LINE()                                                                                                                              \
 	{                                                                                                                                                \
 		GLenum err = glGetError();                                                                                                                   \
