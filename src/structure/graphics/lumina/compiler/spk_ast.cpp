@@ -25,8 +25,10 @@ namespace spk::Lumina
 			return L"Include";
 		case ASTNode::Kind::Function:
 			return L"Function";
-		case ASTNode::Kind::Method:
-			return L"Method";
+                case ASTNode::Kind::Method:
+                        return L"Method";
+                case ASTNode::Kind::Operator:
+                        return L"Operator";
 		case ASTNode::Kind::PipelineDefinition:
 			return L"PipelineDefinition";
 		case ASTNode::Kind::PipelineBody:
@@ -135,8 +137,8 @@ namespace spk::Lumina
 		p_os << std::wstring(p_indent, L' ') << L"Texture " << name.lexeme << L";" << std::endl;
 	}
 
-	void FunctionNode::print(std::wostream &p_os, size_t p_indent) const
-	{
+        void FunctionNode::print(std::wostream &p_os, size_t p_indent) const
+        {
 		p_os << std::wstring(p_indent, L' ') << to_wstring(kind);
 		for (const auto &tok : header)
 		{
@@ -151,8 +153,27 @@ namespace spk::Lumina
 		else
 		{
 			p_os << L";" << std::endl;
-		}
-	}
+                }
+        }
+
+        void OperatorNode::print(std::wostream &p_os, size_t p_indent) const
+        {
+                p_os << std::wstring(p_indent, L' ') << to_wstring(kind);
+                for (const auto &tok : header)
+                {
+                        p_os << L" " << tok.lexeme;
+                }
+                if (body)
+                {
+                        p_os << L" {" << std::endl;
+                        body->print(p_os, p_indent + 2);
+                        p_os << std::wstring(p_indent, L' ') << L"}" << std::endl;
+                }
+                else
+                {
+                        p_os << L";" << std::endl;
+                }
+        }
 
 	void PipelineDefinitionNode::print(std::wostream &p_os, size_t p_indent) const
 	{
