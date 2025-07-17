@@ -2,9 +2,9 @@
 
 #include <cstddef>
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <vector>
-#include <string>
 
 #include "structure/graphics/lumina/compiler/spk_ast.hpp"
 #include "structure/graphics/lumina/compiler/spk_source_manager.hpp"
@@ -15,6 +15,14 @@ namespace spk::Lumina
 	class Lexer
 	{
 	public:
+		enum class Container
+		{
+			None,
+			Struct,
+			AttributeBlock,
+			ConstantBlock
+		};
+		
 		Lexer(SourceManager &p_sourceManager, const std::vector<Token> &p_tokens);
 
 		std::vector<std::unique_ptr<ASTNode>> run();
@@ -24,8 +32,9 @@ namespace spk::Lumina
 
 		void skipComment();
 		std::unique_ptr<ASTNode> parseGeneric();
-                std::unique_ptr<ASTNode> parseBody(bool p_isBody = false);
-                std::unique_ptr<ASTNode> parseNamespace();
+		std::unique_ptr<ASTNode> parseBody();
+		std::unique_ptr<ASTNode> parseStructureContent();
+		std::unique_ptr<ASTNode> parseNamespace();
 		std::unique_ptr<ASTNode> parseStruct();
 		std::unique_ptr<ASTNode> parseAttributeBlock();
 		std::unique_ptr<ASTNode> parseConstantBlock();
@@ -39,15 +48,15 @@ namespace spk::Lumina
 		std::unique_ptr<ASTNode> parseDiscard();
 		std::unique_ptr<ASTNode> parseVariableDeclaration();
 		std::unique_ptr<ASTNode> parseExpression();
-                std::unique_ptr<ASTNode> parseUnary();
-                std::unique_ptr<ASTNode> parsePrimary();
-                std::unique_ptr<ASTNode> parseBinaryRHS(int p_precedence, std::unique_ptr<ASTNode> p_left);
-                std::unique_ptr<ASTNode> parseFunction(ASTNode::Kind p_kind);
-                std::unique_ptr<ASTNode> parseOperator();
-                bool isFunctionStart() const;
-                bool isConstructorStart() const;
-                bool isOperatorStart() const;
-                bool isVariableDeclarationStart() const;
+		std::unique_ptr<ASTNode> parseUnary();
+		std::unique_ptr<ASTNode> parsePrimary();
+		std::unique_ptr<ASTNode> parseBinaryRHS(int p_precedence, std::unique_ptr<ASTNode> p_left);
+		std::unique_ptr<ASTNode> parseFunction(ASTNode::Kind p_kind);
+		std::unique_ptr<ASTNode> parseOperator();
+		bool isFunctionStart() const;
+		bool isConstructorStart() const;
+		bool isOperatorStart() const;
+		bool isVariableDeclarationStart() const;
 		const Token &expect(Token::Type p_type, const std::wstring &p_debugInfo);
 		const Token &expect(Token::Type p_type, const std::wstring &p_msg, const std::wstring &p_debugInfo);
 		const Token &expect(const std::vector<Token::Type> &p_types, const std::wstring &p_debugInfo);
@@ -59,16 +68,17 @@ namespace spk::Lumina
 		SourceManager &_sourceManager;
 		std::vector<Token> _tokens;
 		std::size_t _idx = 0;
-                std::unordered_map<Token::Type, ParseFn> _dispatchGlobal;
-                std::unordered_map<Token::Type, ParseFn> _dispatchBody;
-                std::unordered_map<Token::Type, ParseFn> _dispatchStructure;
-                std::unordered_map<Token::Type, ParseFn> _dispatchAttribute;
-                std::unordered_map<Token::Type, ParseFn> _dispatchConstant;
-                enum class Container { None, Struct, AttributeBlock, ConstantBlock };
-                Container _container = Container::None;
-                std::wstring _currentStruct;
-                int _bodyDepth = 0;
+		
+		std::unordered_map<Token::Type, ParseFn> _dispatchGlobal;
+		std::unordered_map<Token::Type, ParseFn> _dispatchBody;
+		std::unordered_map<Token::Type, ParseFn> _dispatchStructure;
+		std::unordered_map<Token::Type, ParseFn> _dispatchAttribute;
+		std::unordered_map<Token::Type, ParseFn> _dispatchConstant;
 
-                std::unordered_map<Token::Type, ParseFn>& _currentDispatch();
-        };
+		Container _container = Container::None;
+		std::wstring _currentStruct;
+		int _bodyDepth = 0;
+
+		std::unordered_map<Token::Type, ParseFn> &_currentDispatch();
+	};
 }
