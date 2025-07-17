@@ -25,7 +25,8 @@ namespace spk::Lumina
 			For,
 			While,
 			Return,
-			Discard,
+                        Discard,
+                        Operator,
 
 			NumberLiteral,
 			BoolLiteral,
