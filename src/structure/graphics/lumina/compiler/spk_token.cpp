@@ -22,6 +22,7 @@ namespace spk::Lumina
             case Token::Type::While:            return L"While";
             case Token::Type::Return:           return L"Return";
             case Token::Type::Discard:          return L"Discard";
+            case Token::Type::Operator:         return L"Operator";
 
             case Token::Type::NumberLiteral:    return L"NumberLiteral";
             case Token::Type::BoolLiteral:      return L"BoolLiteral";

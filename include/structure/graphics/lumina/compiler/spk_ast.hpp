@@ -24,8 +24,9 @@ namespace spk::Lumina
                        Texture,
                        Include,
                        Function,
-                       Method,
-                       PipelineDefinition,
+                      Method,
+                      Operator,
+                      PipelineDefinition,
                        PipelineBody,
                        VariableDeclaration,
                        Assignment,
@@ -159,13 +160,28 @@ namespace spk::Lumina
                void print(std::wostream &p_os, size_t p_indent = 0) const override;
        };
 
-       struct FunctionNode : public ASTNode
+struct FunctionNode : public ASTNode
+{
+        std::vector<Token> header;
+        std::unique_ptr<CompoundNode> body;
+
+               FunctionNode(Kind p_kind, std::vector<Token> p_header, std::unique_ptr<CompoundNode> p_body) :
+                       ASTNode(p_kind, p_header.empty() ? Location{} : p_header.front().location),
+                       header(std::move(p_header)),
+                       body(std::move(p_body))
+               {
+               }
+
+        void print(std::wostream &p_os, size_t p_indent = 0) const override;
+};
+
+       struct OperatorNode : public ASTNode
        {
                std::vector<Token> header;
                std::unique_ptr<CompoundNode> body;
 
-               FunctionNode(Kind p_kind, std::vector<Token> p_header, std::unique_ptr<CompoundNode> p_body) :
-                       ASTNode(p_kind, p_header.empty() ? Location{} : p_header.front().location),
+               OperatorNode(std::vector<Token> p_header, std::unique_ptr<CompoundNode> p_body) :
+                       ASTNode(Kind::Operator, p_header.empty() ? Location{} : p_header.front().location),
                        header(std::move(p_header)),
                        body(std::move(p_body))
                {

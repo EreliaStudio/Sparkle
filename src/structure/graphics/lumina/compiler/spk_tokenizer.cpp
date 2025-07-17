@@ -22,8 +22,9 @@ namespace spk::Lumina
 		{L"for", Token::Type::For},
 		{L"while", Token::Type::While},
 		{L"return", Token::Type::Return},
-		{L"discard", Token::Type::Discard},
-		{L"true", Token::Type::BoolLiteral},
+                {L"discard", Token::Type::Discard},
+                {L"operator", Token::Type::Operator},
+                {L"true", Token::Type::BoolLiteral},
 		{L"false", Token::Type::BoolLiteral},
 		{L"include", Token::Type::Include}
 	};
