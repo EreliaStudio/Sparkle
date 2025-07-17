@@ -9,8 +9,8 @@ namespace spk::Lumina
 		{
 		case ASTNode::Kind::Token:
 			return L"Token";
-		case ASTNode::Kind::Compound:
-			return L"Compound";
+                case ASTNode::Kind::Body:
+                        return L"Body";
 		case ASTNode::Kind::Namespace:
 			return L"Namespace";
 		case ASTNode::Kind::Structure:
@@ -27,6 +27,8 @@ namespace spk::Lumina
 			return L"Function";
                 case ASTNode::Kind::Method:
                         return L"Method";
+                case ASTNode::Kind::Constructor:
+                        return L"Constructor";
                 case ASTNode::Kind::Operator:
                         return L"Operator";
 		case ASTNode::Kind::PipelineDefinition:
@@ -79,9 +81,9 @@ namespace spk::Lumina
 		p_os << std::wstring(p_indent, L' ') << L"Token(" << to_wstring(token.type) << L", \"" << token.lexeme << L"\")\n";
 	}
 
-	void CompoundNode::print(std::wostream &p_os, size_t p_indent) const
-	{
-		p_os << std::wstring(p_indent, L' ') << L"Compound{" << std::endl;
+        void BodyNode::print(std::wostream &p_os, size_t p_indent) const
+       {
+                p_os << std::wstring(p_indent, L' ') << L"Body{" << std::endl;
 		for (const auto &child : children)
 		{
 			if (child)
@@ -102,35 +104,93 @@ namespace spk::Lumina
 		p_os << std::wstring(p_indent, L' ') << L"}" << std::endl;
 	}
 
-	void StructureNode::print(std::wostream &p_os, size_t p_indent) const
-	{
-		p_os << std::wstring(p_indent, L' ') << L"Structure " << name.lexeme << L"{" << std::endl;
-		if (body)
-		{
-			body->print(p_os, p_indent + 2);
-		}
-		p_os << std::wstring(p_indent, L' ') << L"}" << std::endl;
-	}
+        void StructureNode::print(std::wostream &p_os, size_t p_indent) const
+        {
+                p_os << std::wstring(p_indent, L' ') << L"Structure " << name.lexeme << L"{" << std::endl;
+                for (const auto& child : variables)
+                {
+                        if (child)
+                        {
+                                child->print(p_os, p_indent + 2);
+                        }
+                }
+                for (const auto& child : constructors)
+                {
+                        if (child)
+                        {
+                                child->print(p_os, p_indent + 2);
+                        }
+                }
+                for (const auto& child : methods)
+                {
+                        if (child)
+                        {
+                                child->print(p_os, p_indent + 2);
+                        }
+                }
+                for (const auto& child : operators)
+                {
+                        if (child)
+                        {
+                                child->print(p_os, p_indent + 2);
+                        }
+                }
+                p_os << std::wstring(p_indent, L' ') << L"}" << std::endl;
+        }
 
-	void AttributeBlockNode::print(std::wostream &p_os, size_t p_indent) const
-	{
-		p_os << std::wstring(p_indent, L' ') << L"AttributeBlock " << name.lexeme << L"{" << std::endl;
-		if (body)
-		{
-			body->print(p_os, p_indent + 2);
-		}
-		p_os << std::wstring(p_indent, L' ') << L"}" << std::endl;
-	}
+        void AttributeBlockNode::print(std::wostream &p_os, size_t p_indent) const
+        {
+                p_os << std::wstring(p_indent, L' ') << L"AttributeBlock " << name.lexeme << L"{" << std::endl;
+                for (const auto& child : variables)
+                {
+                        if (child)
+                        {
+                                child->print(p_os, p_indent + 2);
+                        }
+                }
+                for (const auto& child : methods)
+                {
+                        if (child)
+                        {
+                                child->print(p_os, p_indent + 2);
+                        }
+                }
+                for (const auto& child : operators)
+                {
+                        if (child)
+                        {
+                                child->print(p_os, p_indent + 2);
+                        }
+                }
+                p_os << std::wstring(p_indent, L' ') << L"}" << std::endl;
+        }
 
-	void ConstantBlockNode::print(std::wostream &p_os, size_t p_indent) const
-	{
-		p_os << std::wstring(p_indent, L' ') << L"ConstantBlock " << name.lexeme << L"{" << std::endl;
-		if (body)
-		{
-			body->print(p_os, p_indent + 2);
-		}
-		p_os << std::wstring(p_indent, L' ') << L"}" << std::endl;
-	}
+        void ConstantBlockNode::print(std::wostream &p_os, size_t p_indent) const
+        {
+                p_os << std::wstring(p_indent, L' ') << L"ConstantBlock " << name.lexeme << L"{" << std::endl;
+                for (const auto& child : variables)
+                {
+                        if (child)
+                        {
+                                child->print(p_os, p_indent + 2);
+                        }
+                }
+                for (const auto& child : methods)
+                {
+                        if (child)
+                        {
+                                child->print(p_os, p_indent + 2);
+                        }
+                }
+                for (const auto& child : operators)
+                {
+                        if (child)
+                        {
+                                child->print(p_os, p_indent + 2);
+                        }
+                }
+                p_os << std::wstring(p_indent, L' ') << L"}" << std::endl;
+        }
 
 	void TextureNode::print(std::wostream &p_os, size_t p_indent) const
 	{
