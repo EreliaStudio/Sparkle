@@ -7,24 +7,28 @@
 
 namespace spk::Lumina
 {
-	Lexer::Lexer(SourceManager &p_sourceManager, const std::vector<Token> &p_tokens) :
-		_sourceManager(p_sourceManager),
-		_tokens(p_tokens)
-	{
-		_dispatch = {{Token::Type::OpenCurlyBracket, &Lexer::parseCompound},
-					 {Token::Type::Namespace, &Lexer::parseNamespace},
-					 {Token::Type::Struct, &Lexer::parseStruct},
-					 {Token::Type::AttributeBlock, &Lexer::parseAttributeBlock},
-					 {Token::Type::ConstantBlock, &Lexer::parseConstantBlock},
-					 {Token::Type::Texture, &Lexer::parseTexture},
-					 {Token::Type::Preprocessor, &Lexer::parseInclude},
-					 {Token::Type::ShaderPass, &Lexer::parseShader},
-					 {Token::Type::If, &Lexer::parseIf},
-					 {Token::Type::For, &Lexer::parseFor},
-					 {Token::Type::While, &Lexer::parseWhile},
-					 {Token::Type::Return, &Lexer::parseReturn},
-					 {Token::Type::Discard, &Lexer::parseDiscard}};
-	}
+        Lexer::Lexer(SourceManager &p_sourceManager, const std::vector<Token> &p_tokens) :
+                _sourceManager(p_sourceManager),
+                _tokens(p_tokens)
+        {
+                _dispatchGlobal = {{Token::Type::Namespace, &Lexer::parseNamespace},
+                                    {Token::Type::Struct, &Lexer::parseStruct},
+                                    {Token::Type::AttributeBlock, &Lexer::parseAttributeBlock},
+                                    {Token::Type::ConstantBlock, &Lexer::parseConstantBlock},
+                                    {Token::Type::Texture, &Lexer::parseTexture},
+                                    {Token::Type::Preprocessor, &Lexer::parseInclude},
+                                    {Token::Type::ShaderPass, &Lexer::parseShader}};
+
+                _dispatchBody = {{Token::Type::OpenCurlyBracket, &Lexer::parseBody},
+                                   {Token::Type::If, &Lexer::parseIf},
+                                   {Token::Type::For, &Lexer::parseFor},
+                                   {Token::Type::While, &Lexer::parseWhile},
+                                   {Token::Type::Return, &Lexer::parseReturn},
+                                   {Token::Type::Discard, &Lexer::parseDiscard}};
+
+                // Structure/attribute/constant dispatches are intentionally left empty
+                // so that only generic parsing is allowed (methods, operators, variables)
+        }
 
 	const Token &Lexer::peek(std::ptrdiff_t p_offset) const
 	{
@@ -54,35 +58,72 @@ namespace spk::Lumina
 		return peek(-1);
 	}
 
-	void Lexer::skipComment()
-	{
-		while (peek().type == Token::Type::Comment || peek().type == Token::Type::Whitespace)
-		{
-			advance();
-		}
-	}
-
-        bool Lexer::isFunctionStart() const
+        void Lexer::skipComment()
         {
-                return peek().type == Token::Type::Identifier && peek(1).type == Token::Type::Identifier && peek(2).type == Token::Type::OpenParenthesis;
+                while (peek().type == Token::Type::Comment || peek().type == Token::Type::Whitespace)
+                {
+                        advance();
+                }
         }
+
+        std::unordered_map<Token::Type, Lexer::ParseFn>& Lexer::_currentDispatch()
+        {
+                if (_bodyDepth > 0)
+                {
+                        return _dispatchBody;
+                }
+
+                switch (_container)
+                {
+                case Container::Struct:
+                        return _dispatchStructure;
+                case Container::AttributeBlock:
+                        return _dispatchAttribute;
+                case Container::ConstantBlock:
+                        return _dispatchConstant;
+                default:
+                        return _dispatchGlobal;
+                }
+        }
+
+static bool isFunctionPattern(const Token& t0, const Token& t1, const Token& t2)
+{
+        return t0.type == Token::Type::Identifier && t1.type == Token::Type::Identifier && t2.type == Token::Type::OpenParenthesis;
+}
+
+static bool isConstructorPattern(Container c, const std::wstring& name, const Token& t0, const Token& t1)
+{
+        return c == Container::Struct && t0.type == Token::Type::Identifier && t0.lexeme == name && t1.type == Token::Type::OpenParenthesis;
+}
+
+bool Lexer::isFunctionStart() const
+{
+        return _bodyDepth == 0 && isFunctionPattern(peek(), peek(1), peek(2));
+}
+
+bool Lexer::isConstructorStart() const
+{
+        return _bodyDepth == 0 &&
+               _container == Container::Struct &&
+               peek().type == Token::Type::Identifier &&
+               peek().lexeme == _currentStruct &&
+               peek(1).type == Token::Type::OpenParenthesis;
+}
 
         static bool isOperatorToken(Token::Type p_type)
         {
                 return p_type >= Token::Type::Plus && p_type <= Token::Type::CloseBracket;
         }
 
+        static bool isOperatorPattern(const Token& t0, const Token& t1, const Token& t2, const Token& t3)
+        {
+                return t0.type == Token::Type::Identifier && t1.type == Token::Type::Operator &&
+                       isOperatorToken(t2.type) && t3.type == Token::Type::OpenParenthesis;
+        }
+
         bool Lexer::isOperatorStart() const
         {
-                if (peek().type != Token::Type::Identifier || peek(1).type != Token::Type::Operator)
-                {
-                        return false;
-                }
-                if (isOperatorToken(peek(2).type) && peek(3).type == Token::Type::OpenParenthesis)
-                {
-                        return true;
-                }
-                return false;
+                return _bodyDepth == 0 && isOperatorPattern(peek(), peek(1), peek(2), peek(3));
         }
 
         std::unique_ptr<ASTNode> Lexer::parseFunction(ASTNode::Kind p_kind)
@@ -97,12 +138,12 @@ namespace spk::Lumina
                         header.emplace_back(advance());
                 }
 
-		std::unique_ptr<CompoundNode> body;
-		if (peek().type == Token::Type::OpenCurlyBracket)
-		{
-			auto compound = parseCompound();
-			body.reset(static_cast<CompoundNode *>(compound.release()));
-		}
+                std::unique_ptr<BodyNode> body;
+                if (peek().type == Token::Type::OpenCurlyBracket)
+                {
+                        auto compound = parseBody(true);
+                        body.reset(static_cast<BodyNode *>(compound.release()));
+                }
 
 		if (peek().type == Token::Type::Semicolon)
 		{
@@ -124,11 +165,11 @@ namespace spk::Lumina
                         header.emplace_back(advance());
                 }
 
-                std::unique_ptr<CompoundNode> body;
+                std::unique_ptr<BodyNode> body;
                 if (peek().type == Token::Type::OpenCurlyBracket)
                 {
-                        auto compound = parseCompound();
-                        body.reset(static_cast<CompoundNode *>(compound.release()));
+                        auto compound = parseBody(true);
+                        body.reset(static_cast<BodyNode *>(compound.release()));
                 }
 
                 if (peek().type == Token::Type::Semicolon)
@@ -143,8 +184,8 @@ namespace spk::Lumina
 	{
 		Token nameTok = expect(Token::Type::Namespace, DEBUG_INFO());
 		Token ident = expect(Token::Type::Identifier, DEBUG_INFO());
-		auto bodyAst = parseCompound();
-		auto body = std::unique_ptr<CompoundNode>(static_cast<CompoundNode *>(bodyAst.release()));
+                auto bodyAst = parseBody();
+                auto body = std::unique_ptr<BodyNode>(static_cast<BodyNode *>(bodyAst.release()));
 		return std::make_unique<NamespaceNode>(ident, std::move(body));
 	}
 
@@ -152,40 +193,116 @@ namespace spk::Lumina
 	{
 		Token keywordToken = expect(Token::Type::Struct, DEBUG_INFO());
 		Token ident = expect(Token::Type::Identifier, DEBUG_INFO());
-		bool prev = _inStruct;
-		_inStruct = true;
-		auto bodyAst = parseCompound();
-		_inStruct = prev;
-		auto body = std::unique_ptr<CompoundNode>(static_cast<CompoundNode *>(bodyAst.release()));
-		expect(Token::Type::Semicolon, DEBUG_INFO());
-		return std::make_unique<StructureNode>(ident, std::move(body));
-	}
+                Container prev = _container;
+                std::wstring prevName = _currentStruct;
+                _container = Container::Struct;
+                _currentStruct = ident.lexeme;
+                auto bodyAst = parseBody();
+                _container = prev;
+                _currentStruct = prevName;
+                auto body = std::unique_ptr<BodyNode>(static_cast<BodyNode *>(bodyAst.release()));
+
+                std::vector<std::unique_ptr<ASTNode>> variables;
+                std::vector<std::unique_ptr<ASTNode>> constructors;
+                std::vector<std::unique_ptr<ASTNode>> methods;
+                std::vector<std::unique_ptr<ASTNode>> ops;
+                for (auto& child : body->children)
+                {
+                        switch (child->kind)
+                        {
+                        case ASTNode::Kind::VariableDeclaration:
+                                variables.push_back(std::move(child));
+                                break;
+                        case ASTNode::Kind::Constructor:
+                                constructors.push_back(std::move(child));
+                                break;
+                        case ASTNode::Kind::Method:
+                                methods.push_back(std::move(child));
+                                break;
+                        case ASTNode::Kind::Operator:
+                                ops.push_back(std::move(child));
+                                break;
+                        default:
+                                variables.push_back(std::move(child));
+                                break;
+                        }
+                }
+
+                expect(Token::Type::Semicolon, DEBUG_INFO());
+                return std::make_unique<StructureNode>(ident, std::move(variables), std::move(constructors), std::move(methods), std::move(ops));
+        }
 
 	std::unique_ptr<ASTNode> Lexer::parseAttributeBlock()
 	{
 		Token keywordToken = expect(Token::Type::AttributeBlock, DEBUG_INFO());
 		Token ident = expect(Token::Type::Identifier, DEBUG_INFO());
-		bool prev = _inStruct;
-		_inStruct = true;
-		auto bodyAst = parseCompound();
-		_inStruct = prev;
-		auto body = std::unique_ptr<CompoundNode>(static_cast<CompoundNode *>(bodyAst.release()));
-		expect(Token::Type::Semicolon, DEBUG_INFO());
-		return std::make_unique<AttributeBlockNode>(ident, std::move(body));
-	}
+                Container prev = _container;
+                _container = Container::AttributeBlock;
+                auto bodyAst = parseBody();
+                _container = prev;
+                auto body = std::unique_ptr<BodyNode>(static_cast<BodyNode *>(bodyAst.release()));
+
+                std::vector<std::unique_ptr<ASTNode>> variables;
+                std::vector<std::unique_ptr<ASTNode>> methods;
+                std::vector<std::unique_ptr<ASTNode>> ops;
+                for (auto& child : body->children)
+                {
+                        switch (child->kind)
+                        {
+                        case ASTNode::Kind::VariableDeclaration:
+                                variables.push_back(std::move(child));
+                                break;
+                        case ASTNode::Kind::Method:
+                                methods.push_back(std::move(child));
+                                break;
+                        case ASTNode::Kind::Operator:
+                                ops.push_back(std::move(child));
+                                break;
+                        default:
+                                variables.push_back(std::move(child));
+                                break;
+                        }
+                }
+
+                expect(Token::Type::Semicolon, DEBUG_INFO());
+                return std::make_unique<AttributeBlockNode>(ident, std::move(variables), std::move(methods), std::move(ops));
+        }
 
 	std::unique_ptr<ASTNode> Lexer::parseConstantBlock()
 	{
 		Token keywordToken = expect(Token::Type::ConstantBlock, DEBUG_INFO());
 		Token ident = expect(Token::Type::Identifier, DEBUG_INFO());
-		bool prev = _inStruct;
-		_inStruct = true;
-		auto bodyAst = parseCompound();
-		_inStruct = prev;
-		auto body = std::unique_ptr<CompoundNode>(static_cast<CompoundNode *>(bodyAst.release()));
-		expect(Token::Type::Semicolon, DEBUG_INFO());
-		return std::make_unique<ConstantBlockNode>(ident, std::move(body));
-	}
+                Container prev = _container;
+                _container = Container::ConstantBlock;
+                auto bodyAst = parseBody();
+                _container = prev;
+                auto body = std::unique_ptr<BodyNode>(static_cast<BodyNode *>(bodyAst.release()));
+
+                std::vector<std::unique_ptr<ASTNode>> variables;
+                std::vector<std::unique_ptr<ASTNode>> methods;
+                std::vector<std::unique_ptr<ASTNode>> ops;
+                for (auto& child : body->children)
+                {
+                        switch (child->kind)
+                        {
+                        case ASTNode::Kind::VariableDeclaration:
+                                variables.push_back(std::move(child));
+                                break;
+                        case ASTNode::Kind::Method:
+                                methods.push_back(std::move(child));
+                                break;
+                        case ASTNode::Kind::Operator:
+                                ops.push_back(std::move(child));
+                                break;
+                        default:
+                                variables.push_back(std::move(child));
+                                break;
+                        }
+                }
+
+                expect(Token::Type::Semicolon, DEBUG_INFO());
+                return std::make_unique<ConstantBlockNode>(ident, std::move(variables), std::move(methods), std::move(ops));
+        }
 
 	std::unique_ptr<ASTNode> Lexer::parseTexture()
 	{
@@ -242,9 +359,9 @@ namespace spk::Lumina
 
 		expect(Token::Type::OpenParenthesis, DEBUG_INFO());
 		expect(Token::Type::CloseParenthesis, DEBUG_INFO());
-		auto bodyAst = parseCompound();
-		auto body = std::unique_ptr<CompoundNode>(static_cast<CompoundNode *>(bodyAst.release()));
-		return std::make_unique<PipelineBodyNode>(first, std::move(body));
+                auto bodyAst = parseBody(true);
+                auto body = std::unique_ptr<BodyNode>(static_cast<BodyNode *>(bodyAst.release()));
+                return std::make_unique<PipelineBodyNode>(first, std::move(body));
 	}
 
 	bool Lexer::isVariableDeclarationStart() const
@@ -258,14 +375,14 @@ namespace spk::Lumina
 		expect(Token::Type::OpenParenthesis, DEBUG_INFO());
 		auto condition = parseExpression();
 		expect(Token::Type::CloseParenthesis, DEBUG_INFO());
-		auto thenCompoundAst = parseCompound();
-		auto thenBody = std::unique_ptr<CompoundNode>(static_cast<CompoundNode *>(thenCompoundAst.release()));
-		std::unique_ptr<CompoundNode> elseBody;
+                auto thenCompoundAst = parseBody(true);
+                auto thenBody = std::unique_ptr<BodyNode>(static_cast<BodyNode *>(thenCompoundAst.release()));
+                std::unique_ptr<BodyNode> elseBody;
 		if (peek().type == Token::Type::Else)
 		{
 			advance();
-			auto elseCompoundAst = parseCompound();
-			elseBody.reset(static_cast<CompoundNode *>(elseCompoundAst.release()));
+                        auto elseCompoundAst = parseBody(true);
+                        elseBody.reset(static_cast<BodyNode *>(elseCompoundAst.release()));
 		}
 		return std::make_unique<IfStatementNode>(std::move(condition), std::move(thenBody), std::move(elseBody), ifToken.location);
 	}
@@ -292,8 +409,8 @@ namespace spk::Lumina
 			increment = parseExpression();
 		}
 		expect(Token::Type::CloseParenthesis, DEBUG_INFO());
-		auto bodyCompoundAst = parseCompound();
-		auto body = std::unique_ptr<CompoundNode>(static_cast<CompoundNode *>(bodyCompoundAst.release()));
+                auto bodyCompoundAst = parseBody(true);
+                auto body = std::unique_ptr<BodyNode>(static_cast<BodyNode *>(bodyCompoundAst.release()));
 		return std::make_unique<ForLoopNode>(
 			std::move(initialization), std::move(condition), std::move(increment), std::move(body), forToken.location);
 	}
@@ -304,8 +421,8 @@ namespace spk::Lumina
 		expect(Token::Type::OpenParenthesis, DEBUG_INFO());
 		auto condition = parseExpression();
 		expect(Token::Type::CloseParenthesis, DEBUG_INFO());
-		auto bodyCompoundAst = parseCompound();
-		auto body = std::unique_ptr<CompoundNode>(static_cast<CompoundNode *>(bodyCompoundAst.release()));
+                auto bodyCompoundAst = parseBody(true);
+                auto body = std::unique_ptr<BodyNode>(static_cast<BodyNode *>(bodyCompoundAst.release()));
 		return std::make_unique<WhileLoopNode>(std::move(condition), std::move(body), whileToken.location);
 	}
 
@@ -502,13 +619,34 @@ namespace spk::Lumina
 
         std::unique_ptr<ASTNode> Lexer::parseGeneric()
         {
-                if (isFunctionStart() == true)
+                if (_bodyDepth > 0)
                 {
-                        ASTNode::Kind kind = _inStruct ? ASTNode::Kind::Method : ASTNode::Kind::Function;
+                        if (isConstructorPattern(_container, _currentStruct, peek(), peek(1)))
+                        {
+                                throw TokenException(L"Constructor not allowed inside a body", peek(), _sourceManager);
+                        }
+                        if (isFunctionPattern(peek(), peek(1), peek(2)))
+                        {
+                                throw TokenException(L"Function definition not allowed inside a body", peek(), _sourceManager);
+                        }
+                        if (isOperatorPattern(peek(), peek(1), peek(2), peek(3)))
+                        {
+                                throw TokenException(L"Operator definition not allowed inside a body", peek(), _sourceManager);
+                        }
+                }
+
+                if (isConstructorStart())
+                {
+                        return parseFunction(ASTNode::Kind::Constructor);
+                }
+
+                if (isFunctionStart())
+                {
+                        ASTNode::Kind kind = _container == Container::None ? ASTNode::Kind::Function : ASTNode::Kind::Method;
                         return parseFunction(kind);
                 }
 
-                if (isOperatorStart() == true)
+                if (isOperatorStart())
                 {
                         return parseOperator();
                 }
@@ -526,30 +664,64 @@ namespace spk::Lumina
 		return expr;
 	}
 
-	std::unique_ptr<ASTNode> Lexer::parseCompound()
-	{
-		Location loc = expect(Token::Type::OpenCurlyBracket, DEBUG_INFO()).location;
-		auto node = std::make_unique<CompoundNode>(loc);
-		while (eof() == false)
-		{
-			skipComment();
-			if (peek().type == Token::Type::CloseCurlyBracket)
-			{
-				break;
-			}
+        std::unique_ptr<ASTNode> Lexer::parseBody(bool p_isBody)
+        {
+                Location loc = expect(Token::Type::OpenCurlyBracket, DEBUG_INFO()).location;
+                auto node = std::make_unique<BodyNode>(loc);
 
-			auto it = _dispatch.find(peek().type);
-			if (it == _dispatch.end())
-			{
-				node->children.emplace_back(parseGeneric());
-				continue;
-			}
+                if (p_isBody)
+                {
+                        ++_bodyDepth;
+                }
 
-			node->children.emplace_back((this->*it->second)());
-		}
-		expect(Token::Type::CloseCurlyBracket, DEBUG_INFO());
-		return node;
-	}
+                while (eof() == false)
+                {
+                        skipComment();
+                        if (peek().type == Token::Type::CloseCurlyBracket)
+                        {
+                                break;
+                        }
+
+                        if (_bodyDepth > 0)
+                        {
+                                Token::Type t = peek().type;
+                                if (t == Token::Type::Namespace || t == Token::Type::Struct ||
+                                    t == Token::Type::AttributeBlock || t == Token::Type::ConstantBlock ||
+                                    t == Token::Type::Texture || t == Token::Type::Preprocessor ||
+                                    t == Token::Type::ShaderPass)
+                                {
+                                        throw TokenException(L"Invalid declaration inside a body", peek(), _sourceManager);
+                                }
+                        }
+                        else if (_container != Container::None)
+                        {
+                                if (peek().type != Token::Type::Identifier)
+                                {
+                                        throw TokenException(L"Unexpected token inside container", peek(), _sourceManager);
+                                }
+                        }
+
+                        auto& dispatch = _currentDispatch();
+                        auto it = dispatch.find(peek().type);
+                        if (it == dispatch.end())
+                        {
+                                node->children.emplace_back(parseGeneric());
+                        }
+                        else
+                        {
+                                node->children.emplace_back((this->*it->second)());
+                        }
+                }
+
+                expect(Token::Type::CloseCurlyBracket, DEBUG_INFO());
+
+                if (p_isBody && _bodyDepth > 0)
+                {
+                        --_bodyDepth;
+                }
+
+                return node;
+        }
 
 	static std::wstring makeUnexpected(Token::Type p_type, const Token &p_tok)
 	{
@@ -618,15 +790,16 @@ namespace spk::Lumina
 				break;
 			}
 
-			auto it = _dispatch.find(peek().type);
-			if (it == _dispatch.end())
-			{
-				result.emplace_back(parseGeneric());
-			}
-			else
-			{
-				result.emplace_back((this->*it->second)());
-			}
+                        auto& dispatch = _currentDispatch();
+                        auto it = dispatch.find(peek().type);
+                        if (it == dispatch.end())
+                        {
+                                result.emplace_back(parseGeneric());
+                        }
+                        else
+                        {
+                                result.emplace_back((this->*it->second)());
+                        }
 		}
 		return result;
 	}
