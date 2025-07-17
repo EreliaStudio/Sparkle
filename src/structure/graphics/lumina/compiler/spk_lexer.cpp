@@ -7,28 +7,28 @@
 
 namespace spk::Lumina
 {
-        Lexer::Lexer(SourceManager &p_sourceManager, const std::vector<Token> &p_tokens) :
-                _sourceManager(p_sourceManager),
-                _tokens(p_tokens)
-        {
-                _dispatchGlobal = {{Token::Type::Namespace, &Lexer::parseNamespace},
-                                    {Token::Type::Struct, &Lexer::parseStruct},
-                                    {Token::Type::AttributeBlock, &Lexer::parseAttributeBlock},
-                                    {Token::Type::ConstantBlock, &Lexer::parseConstantBlock},
-                                    {Token::Type::Texture, &Lexer::parseTexture},
-                                    {Token::Type::Preprocessor, &Lexer::parseInclude},
-                                    {Token::Type::ShaderPass, &Lexer::parseShader}};
+	Lexer::Lexer(SourceManager &p_sourceManager, const std::vector<Token> &p_tokens) :
+		_sourceManager(p_sourceManager),
+		_tokens(p_tokens)
+	{
+		_dispatchGlobal = {{Token::Type::Namespace, &Lexer::parseNamespace},
+						   {Token::Type::Struct, &Lexer::parseStruct},
+						   {Token::Type::AttributeBlock, &Lexer::parseAttributeBlock},
+						   {Token::Type::ConstantBlock, &Lexer::parseConstantBlock},
+						   {Token::Type::Texture, &Lexer::parseTexture},
+						   {Token::Type::Preprocessor, &Lexer::parseInclude},
+						   {Token::Type::ShaderPass, &Lexer::parseShader}};
 
-                _dispatchBody = {{Token::Type::OpenCurlyBracket, &Lexer::parseBody},
-                                   {Token::Type::If, &Lexer::parseIf},
-                                   {Token::Type::For, &Lexer::parseFor},
-                                   {Token::Type::While, &Lexer::parseWhile},
-                                   {Token::Type::Return, &Lexer::parseReturn},
-                                   {Token::Type::Discard, &Lexer::parseDiscard}};
+		_dispatchBody = {{Token::Type::OpenCurlyBracket, &Lexer::parseBody},
+						 {Token::Type::If, &Lexer::parseIf},
+						 {Token::Type::For, &Lexer::parseFor},
+						 {Token::Type::While, &Lexer::parseWhile},
+						 {Token::Type::Return, &Lexer::parseReturn},
+						 {Token::Type::Discard, &Lexer::parseDiscard}};
 
-                // Structure/attribute/constant dispatches are intentionally left empty
-                // so that only generic parsing is allowed (methods, operators, variables)
-        }
+		// Structure/attribute/constant dispatches are intentionally left empty
+		// so that only generic parsing is allowed (methods, operators, variables)
+	}
 
 	const Token &Lexer::peek(std::ptrdiff_t p_offset) const
 	{
@@ -58,134 +58,129 @@ namespace spk::Lumina
 		return peek(-1);
 	}
 
-        void Lexer::skipComment()
-        {
-                while (peek().type == Token::Type::Comment || peek().type == Token::Type::Whitespace)
-                {
-                        advance();
-                }
-        }
+	void Lexer::skipComment()
+	{
+		while (peek().type == Token::Type::Comment || peek().type == Token::Type::Whitespace)
+		{
+			advance();
+		}
+	}
 
-        std::unordered_map<Token::Type, Lexer::ParseFn>& Lexer::_currentDispatch()
-        {
-                if (_bodyDepth > 0)
-                {
-                        return _dispatchBody;
-                }
+	std::unordered_map<Token::Type, Lexer::ParseFn> &Lexer::_currentDispatch()
+	{
+		if (_bodyDepth > 0)
+		{
+			return _dispatchBody;
+		}
 
-                switch (_container)
-                {
-                case Container::Struct:
-                        return _dispatchStructure;
-                case Container::AttributeBlock:
-                        return _dispatchAttribute;
-                case Container::ConstantBlock:
-                        return _dispatchConstant;
-                default:
-                        return _dispatchGlobal;
-                }
-        }
+		switch (_container)
+		{
+		case Container::Struct:
+			return _dispatchStructure;
+		case Container::AttributeBlock:
+			return _dispatchAttribute;
+		case Container::ConstantBlock:
+			return _dispatchConstant;
+		default:
+			return _dispatchGlobal;
+		}
+	}
 
-static bool isFunctionPattern(const Token& t0, const Token& t1, const Token& t2)
-{
-        return t0.type == Token::Type::Identifier && t1.type == Token::Type::Identifier && t2.type == Token::Type::OpenParenthesis;
-}
+	static bool isFunctionPattern(const Token &p_tokenA, const Token &p_tokenB, const Token &p_tokenC)
+	{
+		return p_tokenA.type == Token::Type::Identifier && p_tokenB.type == Token::Type::Identifier && p_tokenC.type == Token::Type::OpenParenthesis;
+	}
 
-static bool isConstructorPattern(Container c, const std::wstring& name, const Token& t0, const Token& t1)
-{
-        return c == Container::Struct && t0.type == Token::Type::Identifier && t0.lexeme == name && t1.type == Token::Type::OpenParenthesis;
-}
+	static bool isConstructorPattern(Lexer::Container p_c, const std::wstring &p_name, const Token &p_tokenA, const Token &p_tokenB)
+	{
+		return p_c == Lexer::Container::Struct && p_tokenA.type == Token::Type::Identifier && p_tokenA.lexeme == p_name && p_tokenB.type == Token::Type::OpenParenthesis;
+	}
 
-bool Lexer::isFunctionStart() const
-{
-        return _bodyDepth == 0 && isFunctionPattern(peek(), peek(1), peek(2));
-}
+	bool Lexer::isFunctionStart() const
+	{
+		return _bodyDepth == 0 && isFunctionPattern(peek(), peek(1), peek(2));
+	}
 
-bool Lexer::isConstructorStart() const
-{
-        return _bodyDepth == 0 &&
-               _container == Container::Struct &&
-               peek().type == Token::Type::Identifier &&
-               peek().lexeme == _currentStruct &&
-               peek(1).type == Token::Type::OpenParenthesis;
-}
+	bool Lexer::isConstructorStart() const
+	{
+		return _bodyDepth == 0 && _container == Container::Struct && peek().type == Token::Type::Identifier && peek().lexeme == _currentStruct && peek(1).type == Token::Type::OpenParenthesis;
+	}
 
-        static bool isOperatorToken(Token::Type p_type)
-        {
-                return p_type >= Token::Type::Plus && p_type <= Token::Type::CloseBracket;
-        }
+	static bool isOperatorToken(Token::Type p_type)
+	{
+		return p_type >= Token::Type::Plus && p_type <= Token::Type::CloseBracket;
+	}
 
-        static bool isOperatorPattern(const Token& t0, const Token& t1, const Token& t2, const Token& t3)
-        {
-                return t0.type == Token::Type::Identifier && t1.type == Token::Type::Operator &&
-                       isOperatorToken(t2.type) && t3.type == Token::Type::OpenParenthesis;
-        }
+	static bool isOperatorPattern(const Token &p_tokenA, const Token &p_tokenB, const Token &p_tokenC, const Token &p_tokenD)
+	{
+		return p_tokenA.type == Token::Type::Identifier && p_tokenB.type == Token::Type::Operator && isOperatorToken(p_tokenC.type) && p_tokenD.type == Token::Type::OpenParenthesis;
+	}
 
-        bool Lexer::isOperatorStart() const
-        {
-                return _bodyDepth == 0 && isOperatorPattern(peek(), peek(1), peek(2), peek(3));
-        }
+	bool Lexer::isOperatorStart() const
+	{
+		return _bodyDepth == 0 && isOperatorPattern(peek(), peek(1), peek(2), peek(3));
+	}
 
-        std::unique_ptr<ASTNode> Lexer::parseFunction(ASTNode::Kind p_kind)
-        {
-                std::vector<Token> header;
-                while (eof() == false)
-                {
-                        if (peek().type == Token::Type::OpenCurlyBracket || peek().type == Token::Type::Semicolon)
-                        {
-                                break;
-                        }
-                        header.emplace_back(advance());
-                }
+	std::unique_ptr<ASTNode> Lexer::parseFunction(ASTNode::Kind p_kind)
+	{
+		std::vector<Token> header;
+		while (eof() == false)
+		{
+			if (peek().type == Token::Type::OpenCurlyBracket || peek().type == Token::Type::Semicolon)
+			{
+				break;
+			}
+			header.emplace_back(advance());
+		}
 
-                std::unique_ptr<BodyNode> body;
-                if (peek().type == Token::Type::OpenCurlyBracket)
-                {
-                        auto compound = parseBody(true);
-                        body.reset(static_cast<BodyNode *>(compound.release()));
-                }
+		std::unique_ptr<BodyNode> body;
+		if (peek().type == Token::Type::OpenCurlyBracket)
+		{
+			auto compound = parseBody(true);
+			body.reset(static_cast<BodyNode *>(compound.release()));
+		}
 
 		if (peek().type == Token::Type::Semicolon)
 		{
 			advance();
 		}
 
-                return std::make_unique<FunctionNode>(p_kind, std::move(header), std::move(body));
-        }
+		return std::make_unique<FunctionNode>(p_kind, std::move(header), std::move(body));
+	}
 
-        std::unique_ptr<ASTNode> Lexer::parseOperator()
-        {
-                std::vector<Token> header;
-                while (eof() == false)
-                {
-                        if (peek().type == Token::Type::OpenCurlyBracket || peek().type == Token::Type::Semicolon)
-                        {
-                                break;
-                        }
-                        header.emplace_back(advance());
-                }
+	std::unique_ptr<ASTNode> Lexer::parseOperator()
+	{
+		std::vector<Token> header;
+		while (eof() == false)
+		{
+			if (peek().type == Token::Type::OpenCurlyBracket || peek().type == Token::Type::Semicolon)
+			{
+				break;
+			}
+			header.emplace_back(advance());
+		}
 
-                std::unique_ptr<BodyNode> body;
-                if (peek().type == Token::Type::OpenCurlyBracket)
-                {
-                        auto compound = parseBody(true);
-                        body.reset(static_cast<BodyNode *>(compound.release()));
-                }
+		std::unique_ptr<BodyNode> body;
+		if (peek().type == Token::Type::OpenCurlyBracket)
+		{
+			auto compound = parseBody(true);
+			body.reset(static_cast<BodyNode *>(compound.release()));
+		}
 
-                if (peek().type == Token::Type::Semicolon)
-                {
-                        advance();
-                }
+		if (peek().type == Token::Type::Semicolon)
+		{
+			advance();
+		}
 
-                return std::make_unique<OperatorNode>(std::move(header), std::move(body));
-        }
+		return std::make_unique<OperatorNode>(std::move(header), std::move(body));
+	}
 
 	std::unique_ptr<ASTNode> Lexer::parseNamespace()
 	{
 		Token nameTok = expect(Token::Type::Namespace, DEBUG_INFO());
 		Token ident = expect(Token::Type::Identifier, DEBUG_INFO());
-                auto bodyAst = parseBody();
-                auto body = std::unique_ptr<BodyNode>(static_cast<BodyNode *>(bodyAst.release()));
+		auto bodyAst = parseBody();
+		auto body = std::unique_ptr<BodyNode>(static_cast<BodyNode *>(bodyAst.release()));
 		return std::make_unique<NamespaceNode>(ident, std::move(body));
 	}
 
@@ -193,116 +188,116 @@ bool Lexer::isConstructorStart() const
 	{
 		Token keywordToken = expect(Token::Type::Struct, DEBUG_INFO());
 		Token ident = expect(Token::Type::Identifier, DEBUG_INFO());
-                Container prev = _container;
-                std::wstring prevName = _currentStruct;
-                _container = Container::Struct;
-                _currentStruct = ident.lexeme;
-                auto bodyAst = parseBody();
-                _container = prev;
-                _currentStruct = prevName;
-                auto body = std::unique_ptr<BodyNode>(static_cast<BodyNode *>(bodyAst.release()));
+		Container prev = _container;
+		std::wstring prevName = _currentStruct;
+		_container = Container::Struct;
+		_currentStruct = ident.lexeme;
+		auto bodyAst = parseBody();
+		_container = prev;
+		_currentStruct = prevName;
+		auto body = std::unique_ptr<BodyNode>(static_cast<BodyNode *>(bodyAst.release()));
 
-                std::vector<std::unique_ptr<ASTNode>> variables;
-                std::vector<std::unique_ptr<ASTNode>> constructors;
-                std::vector<std::unique_ptr<ASTNode>> methods;
-                std::vector<std::unique_ptr<ASTNode>> ops;
-                for (auto& child : body->children)
-                {
-                        switch (child->kind)
-                        {
-                        case ASTNode::Kind::VariableDeclaration:
-                                variables.push_back(std::move(child));
-                                break;
-                        case ASTNode::Kind::Constructor:
-                                constructors.push_back(std::move(child));
-                                break;
-                        case ASTNode::Kind::Method:
-                                methods.push_back(std::move(child));
-                                break;
-                        case ASTNode::Kind::Operator:
-                                ops.push_back(std::move(child));
-                                break;
-                        default:
-                                variables.push_back(std::move(child));
-                                break;
-                        }
-                }
+		std::vector<std::unique_ptr<ASTNode>> variables;
+		std::vector<std::unique_ptr<ASTNode>> constructors;
+		std::vector<std::unique_ptr<ASTNode>> methods;
+		std::vector<std::unique_ptr<ASTNode>> ops;
+		for (auto &child : body->children)
+		{
+			switch (child->kind)
+			{
+			case ASTNode::Kind::VariableDeclaration:
+				variables.push_back(std::move(child));
+				break;
+			case ASTNode::Kind::Constructor:
+				constructors.push_back(std::move(child));
+				break;
+			case ASTNode::Kind::Method:
+				methods.push_back(std::move(child));
+				break;
+			case ASTNode::Kind::Operator:
+				ops.push_back(std::move(child));
+				break;
+			default:
+				variables.push_back(std::move(child));
+				break;
+			}
+		}
 
-                expect(Token::Type::Semicolon, DEBUG_INFO());
-                return std::make_unique<StructureNode>(ident, std::move(variables), std::move(constructors), std::move(methods), std::move(ops));
-        }
+		expect(Token::Type::Semicolon, DEBUG_INFO());
+		return std::make_unique<StructureNode>(ident, std::move(variables), std::move(constructors), std::move(methods), std::move(ops));
+	}
 
 	std::unique_ptr<ASTNode> Lexer::parseAttributeBlock()
 	{
 		Token keywordToken = expect(Token::Type::AttributeBlock, DEBUG_INFO());
 		Token ident = expect(Token::Type::Identifier, DEBUG_INFO());
-                Container prev = _container;
-                _container = Container::AttributeBlock;
-                auto bodyAst = parseBody();
-                _container = prev;
-                auto body = std::unique_ptr<BodyNode>(static_cast<BodyNode *>(bodyAst.release()));
+		Container prev = _container;
+		_container = Container::AttributeBlock;
+		auto bodyAst = parseBody();
+		_container = prev;
+		auto body = std::unique_ptr<BodyNode>(static_cast<BodyNode *>(bodyAst.release()));
 
-                std::vector<std::unique_ptr<ASTNode>> variables;
-                std::vector<std::unique_ptr<ASTNode>> methods;
-                std::vector<std::unique_ptr<ASTNode>> ops;
-                for (auto& child : body->children)
-                {
-                        switch (child->kind)
-                        {
-                        case ASTNode::Kind::VariableDeclaration:
-                                variables.push_back(std::move(child));
-                                break;
-                        case ASTNode::Kind::Method:
-                                methods.push_back(std::move(child));
-                                break;
-                        case ASTNode::Kind::Operator:
-                                ops.push_back(std::move(child));
-                                break;
-                        default:
-                                variables.push_back(std::move(child));
-                                break;
-                        }
-                }
+		std::vector<std::unique_ptr<ASTNode>> variables;
+		std::vector<std::unique_ptr<ASTNode>> methods;
+		std::vector<std::unique_ptr<ASTNode>> ops;
+		for (auto &child : body->children)
+		{
+			switch (child->kind)
+			{
+			case ASTNode::Kind::VariableDeclaration:
+				variables.push_back(std::move(child));
+				break;
+			case ASTNode::Kind::Method:
+				methods.push_back(std::move(child));
+				break;
+			case ASTNode::Kind::Operator:
+				ops.push_back(std::move(child));
+				break;
+			default:
+				variables.push_back(std::move(child));
+				break;
+			}
+		}
 
-                expect(Token::Type::Semicolon, DEBUG_INFO());
-                return std::make_unique<AttributeBlockNode>(ident, std::move(variables), std::move(methods), std::move(ops));
-        }
+		expect(Token::Type::Semicolon, DEBUG_INFO());
+		return std::make_unique<AttributeBlockNode>(ident, std::move(variables), std::move(methods), std::move(ops));
+	}
 
 	std::unique_ptr<ASTNode> Lexer::parseConstantBlock()
 	{
 		Token keywordToken = expect(Token::Type::ConstantBlock, DEBUG_INFO());
 		Token ident = expect(Token::Type::Identifier, DEBUG_INFO());
-                Container prev = _container;
-                _container = Container::ConstantBlock;
-                auto bodyAst = parseBody();
-                _container = prev;
-                auto body = std::unique_ptr<BodyNode>(static_cast<BodyNode *>(bodyAst.release()));
+		Container prev = _container;
+		_container = Container::ConstantBlock;
+		auto bodyAst = parseBody();
+		_container = prev;
+		auto body = std::unique_ptr<BodyNode>(static_cast<BodyNode *>(bodyAst.release()));
 
-                std::vector<std::unique_ptr<ASTNode>> variables;
-                std::vector<std::unique_ptr<ASTNode>> methods;
-                std::vector<std::unique_ptr<ASTNode>> ops;
-                for (auto& child : body->children)
-                {
-                        switch (child->kind)
-                        {
-                        case ASTNode::Kind::VariableDeclaration:
-                                variables.push_back(std::move(child));
-                                break;
-                        case ASTNode::Kind::Method:
-                                methods.push_back(std::move(child));
-                                break;
-                        case ASTNode::Kind::Operator:
-                                ops.push_back(std::move(child));
-                                break;
-                        default:
-                                variables.push_back(std::move(child));
-                                break;
-                        }
-                }
+		std::vector<std::unique_ptr<ASTNode>> variables;
+		std::vector<std::unique_ptr<ASTNode>> methods;
+		std::vector<std::unique_ptr<ASTNode>> ops;
+		for (auto &child : body->children)
+		{
+			switch (child->kind)
+			{
+			case ASTNode::Kind::VariableDeclaration:
+				variables.push_back(std::move(child));
+				break;
+			case ASTNode::Kind::Method:
+				methods.push_back(std::move(child));
+				break;
+			case ASTNode::Kind::Operator:
+				ops.push_back(std::move(child));
+				break;
+			default:
+				variables.push_back(std::move(child));
+				break;
+			}
+		}
 
-                expect(Token::Type::Semicolon, DEBUG_INFO());
-                return std::make_unique<ConstantBlockNode>(ident, std::move(variables), std::move(methods), std::move(ops));
-        }
+		expect(Token::Type::Semicolon, DEBUG_INFO());
+		return std::make_unique<ConstantBlockNode>(ident, std::move(variables), std::move(methods), std::move(ops));
+	}
 
 	std::unique_ptr<ASTNode> Lexer::parseTexture()
 	{
@@ -359,9 +354,9 @@ bool Lexer::isConstructorStart() const
 
 		expect(Token::Type::OpenParenthesis, DEBUG_INFO());
 		expect(Token::Type::CloseParenthesis, DEBUG_INFO());
-                auto bodyAst = parseBody(true);
-                auto body = std::unique_ptr<BodyNode>(static_cast<BodyNode *>(bodyAst.release()));
-                return std::make_unique<PipelineBodyNode>(first, std::move(body));
+		auto bodyAst = parseBody(true);
+		auto body = std::unique_ptr<BodyNode>(static_cast<BodyNode *>(bodyAst.release()));
+		return std::make_unique<PipelineBodyNode>(first, std::move(body));
 	}
 
 	bool Lexer::isVariableDeclarationStart() const
@@ -375,14 +370,14 @@ bool Lexer::isConstructorStart() const
 		expect(Token::Type::OpenParenthesis, DEBUG_INFO());
 		auto condition = parseExpression();
 		expect(Token::Type::CloseParenthesis, DEBUG_INFO());
-                auto thenCompoundAst = parseBody(true);
-                auto thenBody = std::unique_ptr<BodyNode>(static_cast<BodyNode *>(thenCompoundAst.release()));
-                std::unique_ptr<BodyNode> elseBody;
+		auto thenCompoundAst = parseBody(true);
+		auto thenBody = std::unique_ptr<BodyNode>(static_cast<BodyNode *>(thenCompoundAst.release()));
+		std::unique_ptr<BodyNode> elseBody;
 		if (peek().type == Token::Type::Else)
 		{
 			advance();
-                        auto elseCompoundAst = parseBody(true);
-                        elseBody.reset(static_cast<BodyNode *>(elseCompoundAst.release()));
+			auto elseCompoundAst = parseBody(true);
+			elseBody.reset(static_cast<BodyNode *>(elseCompoundAst.release()));
 		}
 		return std::make_unique<IfStatementNode>(std::move(condition), std::move(thenBody), std::move(elseBody), ifToken.location);
 	}
@@ -409,8 +404,8 @@ bool Lexer::isConstructorStart() const
 			increment = parseExpression();
 		}
 		expect(Token::Type::CloseParenthesis, DEBUG_INFO());
-                auto bodyCompoundAst = parseBody(true);
-                auto body = std::unique_ptr<BodyNode>(static_cast<BodyNode *>(bodyCompoundAst.release()));
+		auto bodyCompoundAst = parseBody(true);
+		auto body = std::unique_ptr<BodyNode>(static_cast<BodyNode *>(bodyCompoundAst.release()));
 		return std::make_unique<ForLoopNode>(
 			std::move(initialization), std::move(condition), std::move(increment), std::move(body), forToken.location);
 	}
@@ -421,8 +416,8 @@ bool Lexer::isConstructorStart() const
 		expect(Token::Type::OpenParenthesis, DEBUG_INFO());
 		auto condition = parseExpression();
 		expect(Token::Type::CloseParenthesis, DEBUG_INFO());
-                auto bodyCompoundAst = parseBody(true);
-                auto body = std::unique_ptr<BodyNode>(static_cast<BodyNode *>(bodyCompoundAst.release()));
+		auto bodyCompoundAst = parseBody(true);
+		auto body = std::unique_ptr<BodyNode>(static_cast<BodyNode *>(bodyCompoundAst.release()));
 		return std::make_unique<WhileLoopNode>(std::move(condition), std::move(body), whileToken.location);
 	}
 
@@ -617,39 +612,39 @@ bool Lexer::isConstructorStart() const
 		return left;
 	}
 
-        std::unique_ptr<ASTNode> Lexer::parseGeneric()
-        {
-                if (_bodyDepth > 0)
-                {
-                        if (isConstructorPattern(_container, _currentStruct, peek(), peek(1)))
-                        {
-                                throw TokenException(L"Constructor not allowed inside a body", peek(), _sourceManager);
-                        }
-                        if (isFunctionPattern(peek(), peek(1), peek(2)))
-                        {
-                                throw TokenException(L"Function definition not allowed inside a body", peek(), _sourceManager);
-                        }
-                        if (isOperatorPattern(peek(), peek(1), peek(2), peek(3)))
-                        {
-                                throw TokenException(L"Operator definition not allowed inside a body", peek(), _sourceManager);
-                        }
-                }
+	std::unique_ptr<ASTNode> Lexer::parseGeneric()
+	{
+		if (_bodyDepth > 0)
+		{
+			if (isConstructorPattern(_container, _currentStruct, peek(), peek(1)))
+			{
+				throw TokenException(L"Constructor not allowed inside a body", peek(), _sourceManager);
+			}
+			if (isFunctionPattern(peek(), peek(1), peek(2)))
+			{
+				throw TokenException(L"Function definition not allowed inside a body", peek(), _sourceManager);
+			}
+			if (isOperatorPattern(peek(), peek(1), peek(2), peek(3)))
+			{
+				throw TokenException(L"Operator definition not allowed inside a body", peek(), _sourceManager);
+			}
+		}
 
-                if (isConstructorStart())
-                {
-                        return parseFunction(ASTNode::Kind::Constructor);
-                }
+		if (isConstructorStart())
+		{
+			return parseFunction(ASTNode::Kind::Constructor);
+		}
 
-                if (isFunctionStart())
-                {
-                        ASTNode::Kind kind = _container == Container::None ? ASTNode::Kind::Function : ASTNode::Kind::Method;
-                        return parseFunction(kind);
-                }
+		if (isFunctionStart())
+		{
+			ASTNode::Kind kind = _container == Container::None ? ASTNode::Kind::Function : ASTNode::Kind::Method;
+			return parseFunction(kind);
+		}
 
-                if (isOperatorStart())
-                {
-                        return parseOperator();
-                }
+		if (isOperatorStart())
+		{
+			return parseOperator();
+		}
 
 		if (isVariableDeclarationStart() == true)
 		{
@@ -664,64 +659,103 @@ bool Lexer::isConstructorStart() const
 		return expr;
 	}
 
-        std::unique_ptr<ASTNode> Lexer::parseBody(bool p_isBody)
-        {
-                Location loc = expect(Token::Type::OpenCurlyBracket, DEBUG_INFO()).location;
-                auto node = std::make_unique<BodyNode>(loc);
+	std::unique_ptr<ASTNode> Lexer::parseBody(bool p_isBody)
+	{
+		Location loc = expect(Token::Type::OpenCurlyBracket, DEBUG_INFO()).location;
+		auto node = std::make_unique<BodyNode>(loc);
 
-                if (p_isBody)
-                {
-                        ++_bodyDepth;
-                }
+		while (eof() == false)
+		{
+			skipComment();
+			if (peek().type == Token::Type::CloseCurlyBracket)
+			{
+				break;
+			}
 
-                while (eof() == false)
-                {
-                        skipComment();
-                        if (peek().type == Token::Type::CloseCurlyBracket)
-                        {
-                                break;
-                        }
+			if (_bodyDepth > 0)
+			{
+				Token::Type t = peek().type;
+				if (t == Token::Type::Namespace || t == Token::Type::Struct || t == Token::Type::AttributeBlock || t == Token::Type::ConstantBlock ||
+					t == Token::Type::Texture || t == Token::Type::Preprocessor || t == Token::Type::ShaderPass)
+				{
+					throw TokenException(L"Invalid declaration inside a body", peek(), _sourceManager);
+				}
+			}
+			else if (_container != Container::None)
+			{
+				if (peek().type != Token::Type::Identifier)
+				{
+					throw TokenException(L"Unexpected token inside container", peek(), _sourceManager);
+				}
+			}
 
-                        if (_bodyDepth > 0)
-                        {
-                                Token::Type t = peek().type;
-                                if (t == Token::Type::Namespace || t == Token::Type::Struct ||
-                                    t == Token::Type::AttributeBlock || t == Token::Type::ConstantBlock ||
-                                    t == Token::Type::Texture || t == Token::Type::Preprocessor ||
-                                    t == Token::Type::ShaderPass)
-                                {
-                                        throw TokenException(L"Invalid declaration inside a body", peek(), _sourceManager);
-                                }
-                        }
-                        else if (_container != Container::None)
-                        {
-                                if (peek().type != Token::Type::Identifier)
-                                {
-                                        throw TokenException(L"Unexpected token inside container", peek(), _sourceManager);
-                                }
-                        }
+			auto &dispatch = _currentDispatch();
+			auto it = dispatch.find(peek().type);
+			if (it == dispatch.end())
+			{
+				node->children.emplace_back(parseGeneric());
+			}
+			else
+			{
+				node->children.emplace_back((this->*it->second)());
+			}
+		}
 
-                        auto& dispatch = _currentDispatch();
-                        auto it = dispatch.find(peek().type);
-                        if (it == dispatch.end())
-                        {
-                                node->children.emplace_back(parseGeneric());
-                        }
-                        else
-                        {
-                                node->children.emplace_back((this->*it->second)());
-                        }
-                }
+		expect(Token::Type::CloseCurlyBracket, DEBUG_INFO());
 
-                expect(Token::Type::CloseCurlyBracket, DEBUG_INFO());
+		return node;
+	}
 
-                if (p_isBody && _bodyDepth > 0)
-                {
-                        --_bodyDepth;
-                }
+	std::unique_ptr<ASTNode> Lexer::parseStructureContent()
+	{
+		Location loc = expect(Token::Type::OpenCurlyBracket, DEBUG_INFO()).location;
+		auto node = std::make_unique<BodyNode>(loc);
 
-                return node;
-        }
+		++_bodyDepth;
+
+		while (eof() == false)
+		{
+			skipComment();
+			if (peek().type == Token::Type::CloseCurlyBracket)
+			{
+				break;
+			}
+
+			if (_bodyDepth > 0)
+			{
+				Token::Type t = peek().type;
+				if (t == Token::Type::Namespace || t == Token::Type::Struct || t == Token::Type::AttributeBlock || t == Token::Type::ConstantBlock ||
+					t == Token::Type::Texture || t == Token::Type::Preprocessor || t == Token::Type::ShaderPass)
+				{
+					throw TokenException(L"Invalid declaration inside a body", peek(), _sourceManager);
+				}
+			}
+			else if (_container != Container::None)
+			{
+				if (peek().type != Token::Type::Identifier)
+				{
+					throw TokenException(L"Unexpected token inside container", peek(), _sourceManager);
+				}
+			}
+
+			auto &dispatch = _currentDispatch();
+			auto it = dispatch.find(peek().type);
+			if (it == dispatch.end())
+			{
+				node->children.emplace_back(parseGeneric());
+			}
+			else
+			{
+				node->children.emplace_back((this->*it->second)());
+			}
+		}
+
+		expect(Token::Type::CloseCurlyBracket, DEBUG_INFO());
+
+		--_bodyDepth;
+
+		return node;
+	}
 
 	static std::wstring makeUnexpected(Token::Type p_type, const Token &p_tok)
 	{
@@ -790,16 +824,16 @@ bool Lexer::isConstructorStart() const
 				break;
 			}
 
-                        auto& dispatch = _currentDispatch();
-                        auto it = dispatch.find(peek().type);
-                        if (it == dispatch.end())
-                        {
-                                result.emplace_back(parseGeneric());
-                        }
-                        else
-                        {
-                                result.emplace_back((this->*it->second)());
-                        }
+			auto &dispatch = _currentDispatch();
+			auto it = dispatch.find(peek().type);
+			if (it == dispatch.end())
+			{
+				result.emplace_back(parseGeneric());
+			}
+			else
+			{
+				result.emplace_back((this->*it->second)());
+			}
 		}
 		return result;
 	}
