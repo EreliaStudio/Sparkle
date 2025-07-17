@@ -4,6 +4,7 @@
 #include <memory>
 #include <unordered_map>
 #include <vector>
+#include <string>
 
 #include "structure/graphics/lumina/compiler/spk_ast.hpp"
 #include "structure/graphics/lumina/compiler/spk_source_manager.hpp"
@@ -23,8 +24,8 @@ namespace spk::Lumina
 
 		void skipComment();
 		std::unique_ptr<ASTNode> parseGeneric();
-		std::unique_ptr<ASTNode> parseCompound();
-		std::unique_ptr<ASTNode> parseNamespace();
+                std::unique_ptr<ASTNode> parseBody(bool p_isBody = false);
+                std::unique_ptr<ASTNode> parseNamespace();
 		std::unique_ptr<ASTNode> parseStruct();
 		std::unique_ptr<ASTNode> parseAttributeBlock();
 		std::unique_ptr<ASTNode> parseConstantBlock();
@@ -44,6 +45,7 @@ namespace spk::Lumina
                 std::unique_ptr<ASTNode> parseFunction(ASTNode::Kind p_kind);
                 std::unique_ptr<ASTNode> parseOperator();
                 bool isFunctionStart() const;
+                bool isConstructorStart() const;
                 bool isOperatorStart() const;
                 bool isVariableDeclarationStart() const;
 		const Token &expect(Token::Type p_type, const std::wstring &p_debugInfo);
@@ -57,7 +59,16 @@ namespace spk::Lumina
 		SourceManager &_sourceManager;
 		std::vector<Token> _tokens;
 		std::size_t _idx = 0;
-		std::unordered_map<Token::Type, ParseFn> _dispatch;
-		bool _inStruct = false;
-	};
+                std::unordered_map<Token::Type, ParseFn> _dispatchGlobal;
+                std::unordered_map<Token::Type, ParseFn> _dispatchBody;
+                std::unordered_map<Token::Type, ParseFn> _dispatchStructure;
+                std::unordered_map<Token::Type, ParseFn> _dispatchAttribute;
+                std::unordered_map<Token::Type, ParseFn> _dispatchConstant;
+                enum class Container { None, Struct, AttributeBlock, ConstantBlock };
+                Container _container = Container::None;
+                std::wstring _currentStruct;
+                int _bodyDepth = 0;
+
+                std::unordered_map<Token::Type, ParseFn>& _currentDispatch();
+        };
 }
