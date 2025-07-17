@@ -12,9 +12,9 @@ namespace spk::Lumina
 	class TokenException : public std::runtime_error
     {
     public:
-        TokenException(const std::string& p_msg, const Token& p_token, const SourceManager& p_sourceManager);
+        TokenException(const std::wstring& p_msg, const Token& p_token, const SourceManager& p_sourceManager);
 
     private:
-        static std::string compose(const std::string& p_msg, const Token& p_token, const SourceManager& p_sourceManager);
+        static std::wstring compose(const std::wstring& p_msg, const Token& p_token, const SourceManager& p_sourceManager);
     };
 }
