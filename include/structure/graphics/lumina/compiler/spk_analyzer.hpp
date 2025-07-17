@@ -36,6 +36,8 @@ namespace spk::Lumina
         std::unordered_set<std::wstring> _textures;
         std::unordered_map<std::wstring, std::unordered_set<std::wstring>> _functionSignatures;
         std::vector<std::wstring> _containerStack;
+        std::unordered_set<std::wstring> _includedFiles;
+        std::vector<std::wstring> _includeStack;
         struct Symbol { std::wstring type; };
         std::vector<std::unordered_map<std::wstring, Symbol>> _scopes;
         std::unordered_map<ASTNode::Kind, AnalyzeFn> _dispatch;

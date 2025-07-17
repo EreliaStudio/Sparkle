@@ -71,6 +71,8 @@ namespace spk::Lumina
         _functionSignatures.clear();
         _containerStack.clear();
         _scopes.clear();
+        _includedFiles.clear();
+        _includeStack.clear();
         _pushScope();
         for (const auto& node : p_nodes)
         {
@@ -128,14 +130,42 @@ namespace spk::Lumina
             path += tok.lexeme;
         }
 
+        std::filesystem::path full;
         try
         {
-            (void)_sourceManager.getFilePath(std::filesystem::path(path));
+            full = _sourceManager.getFilePath(std::filesystem::path(path));
         }
         catch (const std::exception&)
         {
             throw AnalyzerException(L"Unable to resolve include path: " + path, n->location, _sourceManager);
         }
+
+        std::wstring fullStr = full.wstring();
+        if (std::find(_includeStack.begin(), _includeStack.end(), fullStr) != _includeStack.end())
+        {
+            throw AnalyzerException(L"Circular include detected: " + fullStr, n->location, _sourceManager);
+        }
+
+        if (_includedFiles.count(fullStr) > 0)
+        {
+            return;
+        }
+
+        _includedFiles.insert(fullStr);
+        _includeStack.push_back(fullStr);
+
+        std::vector<Token> tokens = _sourceManager.readToken(full);
+        Lexer lexer(_sourceManager, tokens);
+        auto nodes = lexer.run();
+        for (const auto& node : nodes)
+        {
+            if (node)
+            {
+                _analyze(node.get());
+            }
+        }
+
+        _includeStack.pop_back();
     }
 
     static bool isValidStage(const std::wstring& name)
