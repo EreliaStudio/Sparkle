@@ -62,22 +62,40 @@ namespace spk::Lumina
 		}
 	}
 
-	bool Lexer::isFunctionStart() const
-	{
-		return peek().type == Token::Type::Identifier && peek(1).type == Token::Type::Identifier && peek(2).type == Token::Type::OpenParenthesis;
-	}
+        bool Lexer::isFunctionStart() const
+        {
+                return peek().type == Token::Type::Identifier && peek(1).type == Token::Type::Identifier && peek(2).type == Token::Type::OpenParenthesis;
+        }
 
-	std::unique_ptr<ASTNode> Lexer::parseFunction(ASTNode::Kind p_kind)
-	{
-		std::vector<Token> header;
-		while (eof() == false)
-		{
-			if (peek().type == Token::Type::OpenCurlyBracket || peek().type == Token::Type::Semicolon)
-			{
-				break;
-			}
-			header.emplace_back(advance());
-		}
+        static bool isOperatorToken(Token::Type p_type)
+        {
+                return p_type >= Token::Type::Plus && p_type <= Token::Type::CloseBracket;
+        }
+
+        bool Lexer::isOperatorStart() const
+        {
+                if (peek().type != Token::Type::Identifier || peek(1).type != Token::Type::Operator)
+                {
+                        return false;
+                }
+                if (isOperatorToken(peek(2).type) && peek(3).type == Token::Type::OpenParenthesis)
+                {
+                        return true;
+                }
+                return false;
+        }
+
+        std::unique_ptr<ASTNode> Lexer::parseFunction(ASTNode::Kind p_kind)
+        {
+                std::vector<Token> header;
+                while (eof() == false)
+                {
+                        if (peek().type == Token::Type::OpenCurlyBracket || peek().type == Token::Type::Semicolon)
+                        {
+                                break;
+                        }
+                        header.emplace_back(advance());
+                }
 
 		std::unique_ptr<CompoundNode> body;
 		if (peek().type == Token::Type::OpenCurlyBracket)
@@ -91,8 +109,35 @@ namespace spk::Lumina
 			advance();
 		}
 
-		return std::make_unique<FunctionNode>(p_kind, std::move(header), std::move(body));
-	}
+                return std::make_unique<FunctionNode>(p_kind, std::move(header), std::move(body));
+        }
+
+        std::unique_ptr<ASTNode> Lexer::parseOperator()
+        {
+                std::vector<Token> header;
+                while (eof() == false)
+                {
+                        if (peek().type == Token::Type::OpenCurlyBracket || peek().type == Token::Type::Semicolon)
+                        {
+                                break;
+                        }
+                        header.emplace_back(advance());
+                }
+
+                std::unique_ptr<CompoundNode> body;
+                if (peek().type == Token::Type::OpenCurlyBracket)
+                {
+                        auto compound = parseCompound();
+                        body.reset(static_cast<CompoundNode *>(compound.release()));
+                }
+
+                if (peek().type == Token::Type::Semicolon)
+                {
+                        advance();
+                }
+
+                return std::make_unique<OperatorNode>(std::move(header), std::move(body));
+        }
 
 	std::unique_ptr<ASTNode> Lexer::parseNamespace()
 	{
@@ -455,13 +500,18 @@ namespace spk::Lumina
 		return left;
 	}
 
-	std::unique_ptr<ASTNode> Lexer::parseGeneric()
-	{
-		if (isFunctionStart() == true)
-		{
-			ASTNode::Kind kind = _inStruct ? ASTNode::Kind::Method : ASTNode::Kind::Function;
-			return parseFunction(kind);
-		}
+        std::unique_ptr<ASTNode> Lexer::parseGeneric()
+        {
+                if (isFunctionStart() == true)
+                {
+                        ASTNode::Kind kind = _inStruct ? ASTNode::Kind::Method : ASTNode::Kind::Function;
+                        return parseFunction(kind);
+                }
+
+                if (isOperatorStart() == true)
+                {
+                        return parseOperator();
+                }
 
 		if (isVariableDeclarationStart() == true)
 		{
