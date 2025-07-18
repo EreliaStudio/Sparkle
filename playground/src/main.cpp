@@ -4,7 +4,7 @@
 
 int main()
 {
-	std::wstring luminaCode = LR"(#include <test/to/find> //Coucou
+	std::wstring luminaCode = LR"(#include <toInclude.lum> //Coucou
 
 Input -> VertexPass : Vector2 modelPosition;
 Input -> VertexPass : Color modelColor;

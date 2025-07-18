@@ -5,6 +5,7 @@
 #include <regex>
 
 #include "structure/graphics/lumina/compiler/spk_lexer.hpp"
+#include "structure/graphics/lumina/compiler/spk_analyzer.hpp"
 
 namespace 
 {
@@ -75,6 +76,8 @@ namespace spk::Lumina
 		{
     		node->print(std::wcout);
 		}
+
+		Analyzer(_sourceManager).run(astNodes);
 
 		std::wstring compiledSource = L"";
 
