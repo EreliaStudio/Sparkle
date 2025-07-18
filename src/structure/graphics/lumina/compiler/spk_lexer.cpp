@@ -136,7 +136,7 @@ namespace spk::Lumina
 		std::unique_ptr<BodyNode> body;
 		if (peek().type == Token::Type::OpenCurlyBracket)
 		{
-			auto compound = parseBody(true);
+			auto compound = parseStructureContent();
 			body.reset(static_cast<BodyNode *>(compound.release()));
 		}
 
@@ -163,7 +163,7 @@ namespace spk::Lumina
 		std::unique_ptr<BodyNode> body;
 		if (peek().type == Token::Type::OpenCurlyBracket)
 		{
-			auto compound = parseBody(true);
+			auto compound = parseStructureContent();
 			body.reset(static_cast<BodyNode *>(compound.release()));
 		}
 
@@ -354,7 +354,7 @@ namespace spk::Lumina
 
 		expect(Token::Type::OpenParenthesis, DEBUG_INFO());
 		expect(Token::Type::CloseParenthesis, DEBUG_INFO());
-		auto bodyAst = parseBody(true);
+		auto bodyAst = parseStructureContent();
 		auto body = std::unique_ptr<BodyNode>(static_cast<BodyNode *>(bodyAst.release()));
 		return std::make_unique<PipelineBodyNode>(first, std::move(body));
 	}
@@ -370,13 +370,13 @@ namespace spk::Lumina
 		expect(Token::Type::OpenParenthesis, DEBUG_INFO());
 		auto condition = parseExpression();
 		expect(Token::Type::CloseParenthesis, DEBUG_INFO());
-		auto thenCompoundAst = parseBody(true);
+		auto thenCompoundAst = parseStructureContent();
 		auto thenBody = std::unique_ptr<BodyNode>(static_cast<BodyNode *>(thenCompoundAst.release()));
 		std::unique_ptr<BodyNode> elseBody;
 		if (peek().type == Token::Type::Else)
 		{
 			advance();
-			auto elseCompoundAst = parseBody(true);
+			auto elseCompoundAst = parseStructureContent();
 			elseBody.reset(static_cast<BodyNode *>(elseCompoundAst.release()));
 		}
 		return std::make_unique<IfStatementNode>(std::move(condition), std::move(thenBody), std::move(elseBody), ifToken.location);
@@ -404,7 +404,7 @@ namespace spk::Lumina
 			increment = parseExpression();
 		}
 		expect(Token::Type::CloseParenthesis, DEBUG_INFO());
-		auto bodyCompoundAst = parseBody(true);
+		auto bodyCompoundAst = parseStructureContent();
 		auto body = std::unique_ptr<BodyNode>(static_cast<BodyNode *>(bodyCompoundAst.release()));
 		return std::make_unique<ForLoopNode>(
 			std::move(initialization), std::move(condition), std::move(increment), std::move(body), forToken.location);
@@ -416,7 +416,7 @@ namespace spk::Lumina
 		expect(Token::Type::OpenParenthesis, DEBUG_INFO());
 		auto condition = parseExpression();
 		expect(Token::Type::CloseParenthesis, DEBUG_INFO());
-		auto bodyCompoundAst = parseBody(true);
+		auto bodyCompoundAst = parseStructureContent();
 		auto body = std::unique_ptr<BodyNode>(static_cast<BodyNode *>(bodyCompoundAst.release()));
 		return std::make_unique<WhileLoopNode>(std::move(condition), std::move(body), whileToken.location);
 	}
@@ -659,7 +659,7 @@ namespace spk::Lumina
 		return expr;
 	}
 
-	std::unique_ptr<ASTNode> Lexer::parseBody(bool p_isBody)
+	std::unique_ptr<ASTNode> Lexer::parseBody()
 	{
 		Location loc = expect(Token::Type::OpenCurlyBracket, DEBUG_INFO()).location;
 		auto node = std::make_unique<BodyNode>(loc);
