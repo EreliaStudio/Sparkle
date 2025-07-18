@@ -62,12 +62,13 @@ namespace spk::Lumina
 					 {ASTNode::Kind::TernaryExpression, &Analyzer::_analyzeTernaryExpression},
 					 {ASTNode::Kind::LValue, &Analyzer::_analyzeLValue},
 					 {ASTNode::Kind::RValue, &Analyzer::_analyzeRValue}};
-		_loadBuiltinTypes();
-		_pushScope();
-	}
+                _loadBuiltinTypes();
+                _pushScope();
+                _loadBuiltinVariables();
+        }
 
-	void Analyzer::run(const std::vector<std::unique_ptr<ASTNode>> &p_nodes)
-	{
+        void Analyzer::run(const std::vector<std::unique_ptr<ASTNode>> &p_nodes)
+        {
 		_pipelineStages.clear();
 		_textures.clear();
 		_functionSignatures.clear();
@@ -75,7 +76,8 @@ namespace spk::Lumina
 		_scopes.clear();
 		_includedFiles.clear();
 		_includeStack.clear();
-		_pushScope();
+                _pushScope();
+                _loadBuiltinVariables();
 		for (const auto &node : p_nodes)
 		{
 			if (!node)
@@ -182,13 +184,30 @@ namespace spk::Lumina
 			throw AnalyzerException(L"Invalid pipeline stage in definition", n->location, _sourceManager);
 		}
 
-		const std::wstring pair = n->fromStage.lexeme + L"->" + n->toStage.lexeme;
-		static const std::unordered_set<std::wstring> allowed = {L"Input->VertexPass", L"VertexPass->FragmentPass", L"FragmentPass->Output"};
-		if (allowed.find(pair) == allowed.end())
-		{
-			throw AnalyzerException(L"Invalid pipeline flow: " + pair, n->location, _sourceManager);
-		}
-	}
+                const std::wstring pair = n->fromStage.lexeme + L"->" + n->toStage.lexeme;
+                static const std::unordered_set<std::wstring> allowed = {L"Input->VertexPass", L"VertexPass->FragmentPass", L"FragmentPass->Output"};
+                if (allowed.find(pair) == allowed.end())
+                {
+                        throw AnalyzerException(L"Invalid pipeline flow: " + pair, n->location, _sourceManager);
+                }
+
+                if (n->declaration.size() >= 2)
+                {
+                        const Token &typeTok = n->declaration[0];
+                        const Token &nameTok = n->declaration[1];
+
+                        if (_types.find(typeTok.lexeme) == _types.end())
+                        {
+                                throw AnalyzerException(L"Unknown type " + typeTok.lexeme, typeTok.location, _sourceManager);
+                        }
+
+                        auto &scope = _scopes.back();
+                        if (!scope.insert({nameTok.lexeme, Symbol{typeTok.lexeme}}).second)
+                        {
+                                throw AnalyzerException(L"Redefinition of variable " + nameTok.lexeme, nameTok.location, _sourceManager);
+                        }
+                }
+        }
 
 	void Analyzer::_analyzePipelineBody(const ASTNode *p_node)
 	{
@@ -625,8 +644,8 @@ namespace spk::Lumina
 		return sig;
 	}
 
-	void Analyzer::_loadBuiltinTypes()
-	{
+        void Analyzer::_loadBuiltinTypes()
+        {
 		std::filesystem::path path = std::filesystem::path("doc") / "lumina_build_in.md";
 		std::ifstream file(path);
 		if (!file.is_open())
@@ -635,15 +654,27 @@ namespace spk::Lumina
 		}
 		std::string line;
 		std::regex header("^###\\s+([A-Za-z0-9_]+)");
-		while (std::getline(file, line))
-		{
-			std::smatch m;
-			if (std::regex_search(line, m, header))
-			{
-				_types.insert(spk::StringUtils::stringToWString(m[1].str()));
-			}
-		}
-	}
+                while (std::getline(file, line))
+                {
+                        std::smatch m;
+                        if (std::regex_search(line, m, header))
+                        {
+                                _types.insert(spk::StringUtils::stringToWString(m[1].str()));
+                        }
+                }
+        }
+
+        void Analyzer::_loadBuiltinVariables()
+        {
+                if (_scopes.empty())
+                {
+                        _pushScope();
+                }
+
+                auto &global = _scopes.back();
+                global[L"pixelColor"] = Symbol{L"Color"};
+                global[L"pixelPosition"] = Symbol{L"Vector4"};
+        }
 
 	std::wstring Analyzer::_evaluate(const ASTNode *p_node)
 	{
