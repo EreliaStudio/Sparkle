@@ -45,6 +45,7 @@ namespace spk::Lumina
         void _pushScope();
         void _popScope();
         void _loadBuiltinTypes();
+        void _loadBuiltinVariables();
         std::wstring _evaluate(const ASTNode* p_node);
 
         void _pushContainer(const std::wstring& p_name);
