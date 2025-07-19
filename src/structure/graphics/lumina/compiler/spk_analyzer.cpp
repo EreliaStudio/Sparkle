@@ -1026,30 +1026,160 @@ namespace spk::Lumina
 		}
 	}
 
-	std::wstring Analyzer::_conversionInfo(const std::wstring &p_from) const
-	{
-		TypeSymbol *symbol = _findType(p_from);
-		if (!symbol || symbol->convertible.empty())
-		{
-			return L"";
-		}
-		std::wstring msg = L" (" + p_from + L" is convertible to: ";
-		bool first = true;
-		for (const auto *t : symbol->convertible)
-		{
-			if (!first)
-			{
-				msg += L", ";
-			}
-			if (t)
-			{
-				msg += t->name;
-			}
-			first = false;
-		}
-		msg += L")";
-		return msg;
-	}
+        std::wstring Analyzer::_conversionInfo(const std::wstring &p_from) const
+        {
+                TypeSymbol *symbol = _findType(p_from);
+                if (!symbol || symbol->convertible.empty())
+                {
+                        return L"";
+                }
+                std::wstring msg = L" (" + p_from + L" is convertible to: ";
+                bool first = true;
+                for (const auto *t : symbol->convertible)
+                {
+                        if (!first)
+                        {
+                                msg += L", ";
+                        }
+                        if (t)
+                        {
+                                msg += t->name;
+                        }
+                        first = false;
+                }
+                msg += L")";
+                return msg;
+        }
+
+        bool Analyzer::_canConvert(const std::wstring &from, const std::wstring &to) const
+        {
+                if (from == to)
+                {
+                        return true;
+                }
+                TypeSymbol *f = _findType(from);
+                TypeSymbol *t = _findType(to);
+                if (!f || !t)
+                {
+                        return false;
+                }
+                return f->convertible.find(t) != f->convertible.end();
+        }
+
+        std::wstring Analyzer::_resolveCall(const ASTNode *callee,
+                                            const std::wstring &name,
+                                            const std::vector<std::wstring> &argTypes,
+                                            const Location &loc)
+        {
+                std::wstring target = name;
+                std::vector<FunctionSymbol> funcs;
+                bool ctor = false;
+                TypeSymbol *typeCtx = nullptr;
+
+                const ASTNode *objectNode = nullptr;
+                if (callee && callee->kind == ASTNode::Kind::MemberAccess)
+                {
+                        const auto *m = static_cast<const MemberAccessNode *>(callee);
+                        objectNode = m->object.get();
+                }
+
+                size_t pos = name.rfind(L"::");
+                if (pos != std::wstring::npos)
+                {
+                        std::wstring prefix = name.substr(0, pos);
+                        target = name.substr(pos + 2);
+
+                        const NamespaceSymbol *ns = _findNamespace(prefix);
+                        if (ns)
+                        {
+                                auto it = ns->functionSignatures.find(target);
+                                if (it != ns->functionSignatures.end())
+                                {
+                                        funcs = it->second;
+                                }
+                        }
+
+                        if (funcs.empty())
+                        {
+                                typeCtx = _findType(prefix);
+                                if (typeCtx)
+                                {
+                                        if (target == prefix)
+                                        {
+                                                funcs = typeCtx->constructors;
+                                                ctor = true;
+                                        }
+                                        auto opIt = typeCtx->operators.find(target);
+                                        if (opIt != typeCtx->operators.end())
+                                        {
+                                                funcs.insert(funcs.end(), opIt->second.begin(), opIt->second.end());
+                                        }
+                                }
+                        }
+
+                        if (funcs.empty() && objectNode)
+                        {
+                                std::wstring objType = _evaluate(objectNode);
+                                typeCtx = _findType(objType);
+                                if (typeCtx)
+                                {
+                                        auto opIt = typeCtx->operators.find(target);
+                                        if (opIt != typeCtx->operators.end())
+                                        {
+                                                funcs = opIt->second;
+                                        }
+                                }
+                        }
+                }
+                else
+                {
+                        funcs = _findFunctions(target);
+                        if (funcs.empty())
+                        {
+                                typeCtx = _findType(target);
+                                if (typeCtx)
+                                {
+                                        funcs = typeCtx->constructors;
+                                        ctor = true;
+                                }
+                        }
+                }
+
+                if (funcs.empty())
+                {
+                        throw AnalyzerException(L"Unknown function " + name + L" - " + DEBUG_INFO(), loc, _sourceManager);
+                }
+
+                for (const auto &f : funcs)
+                {
+                        if (f.parameters.size() != argTypes.size())
+                        {
+                                continue;
+                        }
+                        bool match = true;
+                        for (size_t i = 0; i < argTypes.size(); ++i)
+                        {
+                                std::wstring paramType = f.parameters[i].type ? f.parameters[i].type->name : L"void";
+                                if (!_canConvert(argTypes[i], paramType))
+                                {
+                                        match = false;
+                                        break;
+                                }
+                        }
+                        if (match)
+                        {
+                                return ctor ? (typeCtx ? typeCtx->name : L"void")
+                                             : (f.returnType ? f.returnType->name : L"void");
+                        }
+                }
+
+                if (ctor)
+                {
+                        throw AnalyzerException(L"No matching constructor for " + name + L" - " + DEBUG_INFO(), loc, _sourceManager);
+                }
+
+                throw AnalyzerException(L"No matching overload for function " + name + L" - " + DEBUG_INFO(), loc, _sourceManager);
+        }
 
 	std::wstring Analyzer::_evaluate(const ASTNode *p_node)
 	{
@@ -1075,21 +1205,36 @@ namespace spk::Lumina
 				return L"void";
 			}
 		}
-		case ASTNode::Kind::VariableReference:
-		{
-			const VariableReferenceNode *ref = static_cast<const VariableReferenceNode *>(p_node);
-			for (auto it = _scopes.rbegin(); it != _scopes.rend(); ++it)
-			{
-				auto iter = it->find(ref->name.lexeme);
-				if (iter != it->end())
-				{
-					return iter->second.type ? iter->second.type->name : L"void";
-				}
-			}
-			throw AnalyzerException(L"Undefined variable " + ref->name.lexeme + L" - " + DEBUG_INFO(), ref->location, _sourceManager);
-		}
-		case ASTNode::Kind::BinaryExpression:
-		{
+                case ASTNode::Kind::VariableReference:
+                {
+                        const VariableReferenceNode *ref = static_cast<const VariableReferenceNode *>(p_node);
+                        for (auto it = _scopes.rbegin(); it != _scopes.rend(); ++it)
+                        {
+                                auto iter = it->find(ref->name.lexeme);
+                                if (iter != it->end())
+                                {
+                                        return iter->second.type ? iter->second.type->name : L"void";
+                                }
+                        }
+                        throw AnalyzerException(L"Undefined variable " + ref->name.lexeme + L" - " + DEBUG_INFO(), ref->location, _sourceManager);
+                }
+                case ASTNode::Kind::MemberAccess:
+                {
+                        const MemberAccessNode *mem = static_cast<const MemberAccessNode *>(p_node);
+                        std::wstring baseType = _evaluate(mem->object.get());
+                        TypeSymbol *ts = _findType(baseType);
+                        if (ts)
+                        {
+                                auto it = std::find_if(ts->members.begin(), ts->members.end(), [&](const Variable &v) { return v.name == mem->member.lexeme; });
+                                if (it != ts->members.end())
+                                {
+                                        return it->type ? it->type->name : L"void";
+                                }
+                        }
+                        return L"void";
+                }
+                case ASTNode::Kind::BinaryExpression:
+                {
 			const BinaryExpressionNode *bin = static_cast<const BinaryExpressionNode *>(p_node);
 			std::wstring l = _evaluate(bin->left.get());
 			std::wstring r = _evaluate(bin->right.get());
@@ -1100,27 +1245,22 @@ namespace spk::Lumina
 			}
 			return l;
 		}
-		case ASTNode::Kind::CallExpression:
-		{
-			const CallExpressionNode *call = static_cast<const CallExpressionNode *>(p_node);
-			std::wstring name = _extractCalleeName(call->callee.get());
-			if (name.empty())
-			{
-				throw AnalyzerException(L"Invalid function call - " + DEBUG_INFO(), p_node->location, _sourceManager);
-			}
-			for (const auto &arg : call->arguments)
-			{
-				(void)_evaluate(arg.get());
-			}
+                case ASTNode::Kind::CallExpression:
+                {
+                        const CallExpressionNode *call = static_cast<const CallExpressionNode *>(p_node);
+                        std::wstring name = _extractCalleeName(call->callee.get());
+                        if (name.empty())
+                        {
+                                throw AnalyzerException(L"Invalid function call - " + DEBUG_INFO(), p_node->location, _sourceManager);
+                        }
+                        std::vector<std::wstring> argTypes;
+                        for (const auto &arg : call->arguments)
+                        {
+                                argTypes.push_back(_evaluate(arg.get()));
+                        }
 
-			auto funcs = _findFunctions(name);
-			if (funcs.empty())
-			{
-				throw AnalyzerException(L"Unknown function " + name + L" - " + DEBUG_INFO(), p_node->location, _sourceManager);
-			}
-			// For now just select the first overload
-			return funcs.front().returnType ? funcs.front().returnType->name : L"void";
-		}
+                        return _resolveCall(call->callee.get(), name, argTypes, p_node->location);
+                }
 		case ASTNode::Kind::UnaryExpression:
 		{
 			const UnaryExpressionNode *un = static_cast<const UnaryExpressionNode *>(p_node);
