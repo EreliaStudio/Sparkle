@@ -51,6 +51,7 @@ struct TypeSymbol
     std::unordered_set<TypeSymbol*> convertible;
     std::vector<Variable> members;
     std::vector<FunctionSymbol> constructors;
+    std::vector<FunctionSymbol> methods;
     std::unordered_map<std::wstring, std::vector<FunctionSymbol>> operators;
     void print(std::wostream& os, size_t indent = 0) const;
     };
