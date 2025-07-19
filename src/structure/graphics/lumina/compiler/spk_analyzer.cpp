@@ -438,9 +438,9 @@ namespace spk::Lumina
 
 		std::wstring sig = _makeSignature(fn->header);
 		auto &vec = _namespaceStack.back()->functionSignatures[name];
-		for (const auto &f : vec)
+		for (const auto &function : vec)
 		{
-			if (f.signature == sig)
+			if (function.signature == sig)
 			{
 				throw AnalyzerException(L"Redefinition of function " + name + L" - " + DEBUG_INFO(), p_node->location, _sourceManager);
 			}
@@ -1046,13 +1046,13 @@ namespace spk::Lumina
 	{
 		std::wstring msg;
 		bool first = true;
-		for (const auto &f : p_funcs)
+		for (const auto &function : p_funcs)
 		{
 			if (!first)
 			{
 				msg += L", ";
 			}
-			msg += f.signature;
+			msg += function.signature;
 			first = false;
 		}
 		return msg;
@@ -1064,22 +1064,22 @@ namespace spk::Lumina
 		{
 			return true;
 		}
-		TypeSymbol *f = _findType(p_from);
+		TypeSymbol *function = _findType(p_from);
 		TypeSymbol *t = _findType(p_to);
-		if (!f || !t)
+		if (!function || !t)
 		{
 			return false;
 		}
-		return f->convertible.find(t) != f->convertible.end();
+		return function->convertible.find(t) != function->convertible.end();
 	}
 
 	std::wstring Analyzer::_resolveCall(const ASTNode *p_callee, const std::wstring &p_name, const std::vector<std::wstring> &p_argTypes,
 										const Location &p_loc)
 	{
 		std::wstring target = p_name;
-		std::vector<FunctionSymbol> funcs;
-		bool ctor = false;
-		TypeSymbol *typeCtx = nullptr;
+		std::vector<FunctionSymbol> functions;
+		bool constructor = false;
+		TypeSymbol *typePointer = nullptr;
 
 		const ASTNode *objectNode = nullptr;
 		if (p_callee && p_callee->kind == ASTNode::Kind::MemberAccess)
@@ -1100,71 +1100,71 @@ namespace spk::Lumina
 				auto it = ns->functionSignatures.find(target);
 				if (it != ns->functionSignatures.end())
 				{
-					funcs = it->second;
+					functions = it->second;
 				}
 			}
 
-			if (funcs.empty())
+			if (functions.empty())
 			{
-				typeCtx = _findType(prefix);
-				if (typeCtx)
+				typePointer = _findType(prefix);
+				if (typePointer)
 				{
 					if (target == prefix)
 					{
-						funcs = typeCtx->constructors;
-						ctor = true;
+						functions = typePointer->constructors;
+						constructor = true;
 					}
-					auto opIt = typeCtx->operators.find(target);
-					if (opIt != typeCtx->operators.end())
+					auto opIt = typePointer->operators.find(target);
+					if (opIt != typePointer->operators.end())
 					{
-						funcs.insert(funcs.end(), opIt->second.begin(), opIt->second.end());
+						functions.insert(functions.end(), opIt->second.begin(), opIt->second.end());
 					}
 				}
 			}
 
-			if (funcs.empty() && objectNode)
+			if (functions.empty() && objectNode)
 			{
 				std::wstring objType = _evaluate(objectNode);
-				typeCtx = _findType(objType);
-				if (typeCtx)
+				typePointer = _findType(objType);
+				if (typePointer)
 				{
-					auto opIt = typeCtx->operators.find(target);
-					if (opIt != typeCtx->operators.end())
+					auto opIt = typePointer->operators.find(target);
+					if (opIt != typePointer->operators.end())
 					{
-						funcs = opIt->second;
+						functions = opIt->second;
 					}
 				}
 			}
 		}
 		else
 		{
-			funcs = _findFunctions(target);
-			if (funcs.empty())
+			functions = _findFunctions(target);
+			if (functions.empty())
 			{
-				typeCtx = _findType(target);
-				if (typeCtx)
+				typePointer = _findType(target);
+				if (typePointer)
 				{
-					funcs = typeCtx->constructors;
-					ctor = true;
+					functions = typePointer->constructors;
+					constructor = true;
 				}
 			}
 		}
 
-		if (funcs.empty())
+		if (functions.empty())
 		{
 			throw AnalyzerException(L"Unknown function " + p_name + L" - " + DEBUG_INFO(), p_loc, _sourceManager);
 		}
 
-		for (const auto &f : funcs)
+		for (const auto &function : functions)
 		{
-			if (f.parameters.size() != p_argTypes.size())
+			if (function.parameters.size() != p_argTypes.size())
 			{
 				continue;
 			}
 			bool match = true;
 			for (size_t i = 0; i < p_argTypes.size(); ++i)
 			{
-				std::wstring paramType = f.parameters[i].type ? f.parameters[i].type->name : L"void";
+				std::wstring paramType = function.parameters[i].type ? function.parameters[i].type->name : L"void";
 				if (!_canConvert(p_argTypes[i], paramType))
 				{
 					match = false;
@@ -1173,15 +1173,15 @@ namespace spk::Lumina
 			}
 			if (match)
 			{
-				return ctor ? (typeCtx ? typeCtx->name : L"void") : (f.returnType ? f.returnType->name : L"void");
+				return constructor ? (typePointer ? typePointer->name : L"void") : (function.returnType ? function.returnType->name : L"void");
 			}
 		}
 
-		if (ctor)
+		if (constructor)
 		{
 			std::wstring callSig = _makeCallSignature(p_name, p_argTypes);
 			std::wstring msg = L"No matching constructor for " + callSig;
-			std::wstring avail = _availableSignatures(funcs);
+			std::wstring avail = _availableSignatures(functions);
 			if (!avail.empty())
 			{
 				msg += L". Available: " + avail;
@@ -1192,7 +1192,7 @@ namespace spk::Lumina
 
 		std::wstring callSig = _makeCallSignature(p_name, p_argTypes);
 		std::wstring msg = L"No matching overload for function " + callSig;
-		std::wstring avail = _availableSignatures(funcs);
+		std::wstring avail = _availableSignatures(functions);
 		if (!avail.empty())
 		{
 			msg += L". Available: " + avail;
