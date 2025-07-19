@@ -76,6 +76,8 @@ namespace spk::Lumina
         void _popContainer();
         std::wstring _currentContext() const;
         std::wstring _makeSignature(const std::vector<Token>& p_header) const;
+        std::wstring _makeCallSignature(const std::wstring& name,
+                                        const std::vector<std::wstring>& argTypes) const;
         Statement _convertAST(const ASTNode* p_node) const;
 
         void _analyze(const ASTNode* p_node);
