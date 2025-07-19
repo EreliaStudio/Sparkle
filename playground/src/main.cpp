@@ -50,9 +50,9 @@ int someFunction1()
 return 0;
 }
 
-int someFunction2(int a, int b, int c)
+Vector2 someFunction2(int a, int b, Vector2 c)
 {
-return (0);
+return (Vector2().xy);
 }
 
 Vector2 someFunction3(int a, int b)
