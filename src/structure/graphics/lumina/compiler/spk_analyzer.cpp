@@ -1027,13 +1027,13 @@ namespace spk::Lumina
 		}
 	}
 
-	std::wstring Analyzer::_conversionInfo(const std::wstring &p_from) const
-	{
-		TypeSymbol *symbol = _findType(p_from);
-		if (!symbol || symbol->convertible.empty())
-		{
-			return L"";
-		}
+        std::wstring Analyzer::_conversionInfo(const std::wstring &p_from) const
+        {
+                TypeSymbol *symbol = _findType(p_from);
+                if (!symbol || symbol->convertible.empty())
+                {
+                        return L"";
+                }
 		std::wstring msg = L" (" + p_from + L" is convertible to: ";
 		bool first = true;
 		for (const auto *t : symbol->convertible)
@@ -1048,7 +1048,23 @@ namespace spk::Lumina
 			}
 			first = false;
 		}
-		msg += L")";
+                msg += L")";
+                return msg;
+        }
+
+	std::wstring Analyzer::_availableSignatures(const std::vector<FunctionSymbol> &p_funcs) const
+	{
+		std::wstring msg;
+		bool first = true;
+		for (const auto &f : p_funcs)
+		{
+		if (!first)
+		{
+		msg += L", ";
+		}
+		msg += f.signature;
+		first = false;
+		}
 		return msg;
 	}
 
@@ -1170,12 +1186,26 @@ namespace spk::Lumina
 			}
 		}
 
-		if (ctor)
+	if (ctor)
+	{
+		std::wstring msg = L"No matching constructor for " + p_name;
+		std::wstring avail = _availableSignatures(funcs);
+		if (!avail.empty())
 		{
-			throw AnalyzerException(L"No matching constructor for " + p_name + L" - " + DEBUG_INFO(), p_loc, _sourceManager);
+		msg += L". Available: " + avail;
 		}
+		msg += L" - " + DEBUG_INFO();
+		throw AnalyzerException(msg, p_loc, _sourceManager);
+	}
 
-		throw AnalyzerException(L"No matching overload for function " + p_name + L" - " + DEBUG_INFO(), p_loc, _sourceManager);
+	std::wstring msg = L"No matching overload for function " + p_name;
+		std::wstring avail = _availableSignatures(funcs);
+		if (!avail.empty())
+		{
+		msg += L". Available: " + avail;
+		}
+		msg += L" - " + DEBUG_INFO();
+	throw AnalyzerException(msg, p_loc, _sourceManager);
 	}
 
 	std::wstring Analyzer::_evaluate(const ASTNode *p_node)

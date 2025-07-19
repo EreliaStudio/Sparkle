@@ -59,6 +59,7 @@ namespace spk::Lumina
         TypeSymbol* _findType(const std::wstring& p_name) const;
         const NamespaceSymbol* _findNamespace(const std::wstring& p_name) const;
         std::wstring _conversionInfo(const std::wstring& p_from) const;
+	std::wstring _availableSignatures(const std::vector<FunctionSymbol>& p_funcs) const;
         std::wstring _extractCalleeName(const ASTNode* p_node) const;
         std::vector<Variable> _parseParameters(const std::vector<Token>& p_header) const;
         std::vector<FunctionSymbol> _findFunctions(const std::wstring& p_name) const;
