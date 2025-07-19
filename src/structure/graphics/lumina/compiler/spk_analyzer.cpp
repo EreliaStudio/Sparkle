@@ -64,13 +64,13 @@ namespace spk::Lumina
 					 {ASTNode::Kind::TernaryExpression, &Analyzer::_analyzeTernaryExpression},
 					 {ASTNode::Kind::LValue, &Analyzer::_analyzeLValue},
 					 {ASTNode::Kind::RValue, &Analyzer::_analyzeRValue}};
-		_loadBuiltinTypes();
-		_pushScope();
-		_loadBuiltinVariables();
-		_namespaceNames.clear();
-		_shaderData.globalNamespace.name = L"";
-		_namespaceStack.push_back(&_shaderData.globalNamespace);
-		_loadBuiltinFunctions();
+                _loadBuiltinTypes();
+                _pushScope();
+                _loadBuiltinVariables();
+                _namespaceNames.clear();
+                _shaderData.globalNamespace.name = L"";
+                _namespaceStack.push_back(&_shaderData.globalNamespace);
+                _loadBuiltinFunctions();
 	}
 
 	void Analyzer::run(const std::vector<std::unique_ptr<ASTNode>> &p_nodes)
@@ -888,62 +888,11 @@ namespace spk::Lumina
 		return {};
 	}
 
-	void Analyzer::_loadBuiltinTypes()
-	{
-		std::vector<std::filesystem::path> docs = {std::filesystem::path("doc") / "lumina_build_in.md",
-												   std::filesystem::path("doc") / "lumina_cheat_sheet.md"};
 
-		std::regex header("^###\\s+([A-Za-z0-9_]+)");
-		std::regex conv("-\\s+Implicitly\\s+convertible\\s+p_from\\s+`([A-Za-z0-9_]+)`");
-
-		for (const auto &path : docs)
-		{
-			std::ifstream file(path);
-			if (!file.is_open())
-			{
-				continue;
-			}
-
-			std::string line;
-			std::string current;
-			bool readingConv = false;
-			while (std::getline(file, line))
-			{
-				std::smatch m;
-				if (std::regex_search(line, m, header))
-				{
-					current = m[1].str();
-					std::wstring wcur = spk::StringUtils::stringToWString(current);
-					_shaderData.globalNamespace.types.emplace(wcur, TypeSymbol{wcur, TypeSymbol::Role::Structure, {}, {}, {}, {}});
-					readingConv = false;
-					continue;
-				}
-
-				if (line.rfind("#### Implicit Conversions:", 0) == 0)
-				{
-					readingConv = true;
-					continue;
-				}
-
-				if (line.rfind("####", 0) == 0 && readingConv)
-				{
-					readingConv = false;
-					continue;
-				}
-
-				if (readingConv && std::regex_search(line, m, conv))
-				{
-					std::wstring from = spk::StringUtils::stringToWString(m[1].str());
-					std::wstring to = spk::StringUtils::stringToWString(current);
-					auto fIt = _shaderData.globalNamespace.types.emplace(from, TypeSymbol{from, TypeSymbol::Role::Structure, {}, {}, {}, {}}).first;
-					auto tIt = _shaderData.globalNamespace.types.emplace(to, TypeSymbol{to, TypeSymbol::Role::Structure, {}, {}, {}, {}}).first;
-					fIt->second.convertible.insert(&tIt->second);
-				}
-			}
-		}
-
-		_shaderData.globalNamespace.types.emplace(L"void", TypeSymbol{L"void", TypeSymbol::Role::Structure, {}, {}, {}, {}});
-	}
+        void Analyzer::_loadBuiltinTypes()
+        {
+                _defineBuiltinTypes();
+        }
 
 	void Analyzer::_loadBuiltinVariables()
 	{
@@ -957,22 +906,12 @@ namespace spk::Lumina
 		global[L"pixelPosition"] = Variable{L"pixelPosition", &_shaderData.globalNamespace.types[L"Vector4"]};
 	}
 
-	void Analyzer::_loadBuiltinFunctions()
-	{
-		FunctionSymbol vert;
-		vert.name = L"VertexPass";
-		vert.returnType = &_shaderData.globalNamespace.types[L"void"];
-		vert.signature = L"VertexPass()";
-		_shaderData.globalNamespace.functionSignatures[L"VertexPass"].push_back(vert);
-		_shaderData.globalNamespace.functions.push_back(vert);
+void Analyzer::_loadBuiltinFunctions()
+{
+    _defineBuiltinFunctions();
+}
 
-		FunctionSymbol frag;
-		frag.name = L"FragmentPass";
-		frag.returnType = &_shaderData.globalNamespace.types[L"void"];
-		frag.signature = L"FragmentPass()";
-		_shaderData.globalNamespace.functionSignatures[L"FragmentPass"].push_back(frag);
-		_shaderData.globalNamespace.functions.push_back(frag);
-	}
+
 
 	Analyzer::TypeSymbol *Analyzer::_findType(const std::wstring &p_name) const
 	{
