@@ -2,6 +2,7 @@
 
 #include "structure/graphics/lumina/compiler/spk_lexer.hpp"
 #include "utils/spk_string_utils.hpp"
+#include "spk_debug_macro.hpp"
 
 #include <algorithm>
 #include <filesystem>
@@ -150,13 +151,13 @@ namespace spk::Lumina
 			full = _sourceManager.getFilePath(std::filesystem::path(path));
 		} catch (const std::exception &)
 		{
-			throw AnalyzerException(L"Unable to resolve include path: " + path, n->location, _sourceManager);
+			throw AnalyzerException(L"Unable to resolve include path: " + path + L" - " + DEBUG_INFO(), n->location, _sourceManager);
 		}
 
 		std::wstring fullStr = full.wstring();
 		if (std::find(_includeStack.begin(), _includeStack.end(), fullStr) != _includeStack.end())
 		{
-			throw AnalyzerException(L"Circular include detected: " + fullStr, n->location, _sourceManager);
+			throw AnalyzerException(L"Circular include detected: " + fullStr + L" - " + DEBUG_INFO(), n->location, _sourceManager);
 		}
 
 		if (_includedFiles.count(fullStr) > 0)
@@ -191,14 +192,14 @@ namespace spk::Lumina
 		const PipelineDefinitionNode *n = static_cast<const PipelineDefinitionNode *>(p_node);
 		if (!isValidStage(n->fromStage.lexeme) || !isValidStage(n->toStage.lexeme))
 		{
-			throw AnalyzerException(L"Invalid pipeline stage in definition", n->location, _sourceManager);
+			throw AnalyzerException(L"Invalid pipeline stage in definition" + L" - " + DEBUG_INFO(), n->location, _sourceManager);
 		}
 
 		const std::wstring pair = n->fromStage.lexeme + L"->" + n->toStage.lexeme;
 		static const std::unordered_set<std::wstring> allowed = {L"Input->VertexPass", L"VertexPass->FragmentPass", L"FragmentPass->Output"};
 		if (allowed.find(pair) == allowed.end())
 		{
-			throw AnalyzerException(L"Invalid pipeline flow: " + pair, n->location, _sourceManager);
+			throw AnalyzerException(L"Invalid pipeline flow: " + pair + L" - " + DEBUG_INFO(), n->location, _sourceManager);
 		}
 
 		if (n->declaration.size() >= 2)
@@ -209,7 +210,7 @@ namespace spk::Lumina
 			TypeSymbol *t = _findType(typeTok.lexeme);
 			if (!t)
 			{
-				throw AnalyzerException(L"Unknown type " + typeTok.lexeme, typeTok.location, _sourceManager);
+				throw AnalyzerException(L"Unknown type " + typeTok.lexeme + L" - " + DEBUG_INFO(), typeTok.location, _sourceManager);
 			}
 
 			auto &scope = _scopes.back();
@@ -218,7 +219,7 @@ namespace spk::Lumina
 			var.type = t;
 			if (!scope.insert({nameTok.lexeme, var}).second)
 			{
-				throw AnalyzerException(L"Redefinition of variable " + nameTok.lexeme, nameTok.location, _sourceManager);
+				throw AnalyzerException(L"Redefinition of variable " + nameTok.lexeme + L" - " + DEBUG_INFO(), nameTok.location, _sourceManager);
 			}
 		}
 	}
@@ -228,12 +229,12 @@ namespace spk::Lumina
 		const PipelineBodyNode *n = static_cast<const PipelineBodyNode *>(p_node);
 		if (!isValidStage(n->stage.lexeme))
 		{
-			throw AnalyzerException(L"Invalid pipeline stage body", n->location, _sourceManager);
+			throw AnalyzerException(L"Invalid pipeline stage body" + L" - " + DEBUG_INFO(), n->location, _sourceManager);
 		}
 
 		if (!_pipelineStages.insert(n->stage.lexeme).second)
 		{
-			throw AnalyzerException(L"Duplicate pipeline body for stage " + n->stage.lexeme, n->location, _sourceManager);
+			throw AnalyzerException(L"Duplicate pipeline body for stage " + n->stage.lexeme + L" - " + DEBUG_INFO(), n->location, _sourceManager);
 		}
 
 		if (n->body)
@@ -384,7 +385,7 @@ namespace spk::Lumina
 		auto dup = std::find_if(texList.begin(), texList.end(), [&](const Variable &p_variable) { return p_variable.name == n->name.lexeme; });
 		if (dup != texList.end())
 		{
-			throw AnalyzerException(L"Redefinition of texture " + n->name.lexeme, n->location, _sourceManager);
+			throw AnalyzerException(L"Redefinition of texture " + n->name.lexeme + L" - " + DEBUG_INFO(), n->location, _sourceManager);
 		}
 		if (_scopes.empty())
 		{
@@ -437,7 +438,7 @@ namespace spk::Lumina
 		{
 			if (f.signature == sig)
 			{
-				throw AnalyzerException(L"Redefinition of function " + name, p_node->location, _sourceManager);
+				throw AnalyzerException(L"Redefinition of function " + name + L" - " + DEBUG_INFO(), p_node->location, _sourceManager);
 			}
 		}
 
@@ -493,12 +494,12 @@ namespace spk::Lumina
 		TypeSymbol *declType = _findType(n->typeName.lexeme);
 		if (!declType)
 		{
-			throw AnalyzerException(L"Unknown type " + n->typeName.lexeme, n->location, _sourceManager);
+			throw AnalyzerException(L"Unknown type " + n->typeName.lexeme + L" - " + DEBUG_INFO(), n->location, _sourceManager);
 		}
 		auto &cur = _scopes.back();
 		if (cur.find(n->name.lexeme) != cur.end())
 		{
-			throw AnalyzerException(L"Redefinition of variable " + n->name.lexeme, n->name.location, _sourceManager);
+			throw AnalyzerException(L"Redefinition of variable " + n->name.lexeme + L" - " + DEBUG_INFO(), n->name.location, _sourceManager);
 		}
 		std::wstring initType = L"void";
 		if (n->initializer)
@@ -509,7 +510,7 @@ namespace spk::Lumina
 		{
 			std::wstring msg = L"Type mismatch in initialization of " + n->name.lexeme + L"; expected " + n->typeName.lexeme + L" but got " +
 							   initType + _conversionInfo(initType);
-			throw AnalyzerException(msg, n->location, _sourceManager);
+			throw AnalyzerException(msg + L" - " + DEBUG_INFO(), n->location, _sourceManager);
 		}
 		Variable var;
 		var.name = n->name.lexeme;
@@ -548,7 +549,7 @@ namespace spk::Lumina
 		if (lhs != rhs)
 		{
 			std::wstring msg = L"Type mismatch in assignment: expected " + lhs + L" but got " + rhs + _conversionInfo(rhs);
-			throw AnalyzerException(msg, n->op.location, _sourceManager);
+			throw AnalyzerException(msg + L" - " + DEBUG_INFO(), n->op.location, _sourceManager);
 		}
 	}
 
@@ -560,7 +561,7 @@ namespace spk::Lumina
 			std::wstring t = _evaluate(n->condition.get());
 			if (t != L"bool")
 			{
-				throw AnalyzerException(L"If condition must be boolean", n->condition->location, _sourceManager);
+				throw AnalyzerException(L"If condition must be boolean" + L" - " + DEBUG_INFO(), n->condition->location, _sourceManager);
 			}
 		}
 		if (n->thenBody)
@@ -584,7 +585,7 @@ namespace spk::Lumina
 		{
 			if (_evaluate(n->condition.get()) != L"bool")
 			{
-				throw AnalyzerException(L"For condition must be boolean", n->condition->location, _sourceManager);
+				throw AnalyzerException(L"For condition must be boolean" + L" - " + DEBUG_INFO(), n->condition->location, _sourceManager);
 			}
 		}
 		if (n->increment)
@@ -604,7 +605,7 @@ namespace spk::Lumina
 		{
 			if (_evaluate(n->condition.get()) != L"bool")
 			{
-				throw AnalyzerException(L"While condition must be boolean", n->condition->location, _sourceManager);
+				throw AnalyzerException(L"While condition must be boolean" + L" - " + DEBUG_INFO(), n->condition->location, _sourceManager);
 			}
 		}
 		if (n->body)
@@ -634,7 +635,7 @@ namespace spk::Lumina
 		if (l != r)
 		{
 			std::wstring msg = L"Type mismatch in binary expression: left operand is " + l + L", right operand is " + r + _conversionInfo(r);
-			throw AnalyzerException(msg, n->op.location, _sourceManager);
+			throw AnalyzerException(msg + L" - " + DEBUG_INFO(), n->op.location, _sourceManager);
 		}
 	}
 
@@ -672,7 +673,7 @@ namespace spk::Lumina
 		std::wstring cond = _evaluate(n->condition.get());
 		if (cond != L"bool")
 		{
-			throw AnalyzerException(L"Ternary condition must be boolean", n->condition->location, _sourceManager);
+			throw AnalyzerException(L"Ternary condition must be boolean" + L" - " + DEBUG_INFO(), n->condition->location, _sourceManager);
 		}
 		std::wstring thenType = _evaluate(n->thenExpr.get());
 		std::wstring elseType = _evaluate(n->elseExpr.get());
@@ -680,7 +681,7 @@ namespace spk::Lumina
 		{
 			std::wstring msg =
 				L"Type mismatch in ternary expression: then branch is " + thenType + L", else branch is " + elseType + _conversionInfo(elseType);
-			throw AnalyzerException(msg, n->location, _sourceManager);
+			throw AnalyzerException(msg + L" - " + DEBUG_INFO(), n->location, _sourceManager);
 		}
 	}
 
@@ -1085,7 +1086,7 @@ namespace spk::Lumina
 					return iter->second.type ? iter->second.type->name : L"void";
 				}
 			}
-			throw AnalyzerException(L"Undefined variable " + ref->name.lexeme, ref->location, _sourceManager);
+			throw AnalyzerException(L"Undefined variable " + ref->name.lexeme + L" - " + DEBUG_INFO(), ref->location, _sourceManager);
 		}
 		case ASTNode::Kind::BinaryExpression:
 		{
@@ -1095,7 +1096,7 @@ namespace spk::Lumina
 			if (l != r)
 			{
 				std::wstring msg = L"Type mismatch in binary expression: left operand is " + l + L", right operand is " + r + _conversionInfo(r);
-				throw AnalyzerException(msg, bin->op.location, _sourceManager);
+				throw AnalyzerException(msg + L" - " + DEBUG_INFO(), bin->op.location, _sourceManager);
 			}
 			return l;
 		}
@@ -1105,7 +1106,7 @@ namespace spk::Lumina
 			std::wstring name = _extractCalleeName(call->callee.get());
 			if (name.empty())
 			{
-				throw AnalyzerException(L"Invalid function call", p_node->location, _sourceManager);
+				throw AnalyzerException(L"Invalid function call" + L" - " + DEBUG_INFO(), p_node->location, _sourceManager);
 			}
 			for (const auto &arg : call->arguments)
 			{
@@ -1115,7 +1116,7 @@ namespace spk::Lumina
 			auto funcs = _findFunctions(name);
 			if (funcs.empty())
 			{
-				throw AnalyzerException(L"Unknown function " + name, p_node->location, _sourceManager);
+				throw AnalyzerException(L"Unknown function " + name + L" - " + DEBUG_INFO(), p_node->location, _sourceManager);
 			}
 			// For now just select the first overload
 			return funcs.front().returnType ? funcs.front().returnType->name : L"void";
