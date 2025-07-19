@@ -67,8 +67,8 @@ namespace spk::Lumina
                 _pushScope();
                 _loadBuiltinVariables();
                 _namespaceNames.clear();
-                _anonymousNamespace.name = L"";
-                _namespaceStack.push_back(&_anonymousNamespace);
+               _shaderData.globalNamespace.name = L"";
+               _namespaceStack.push_back(&_shaderData.globalNamespace);
                 _loadBuiltinFunctions();
         }
 
@@ -81,10 +81,10 @@ namespace spk::Lumina
                 _includeStack.clear();
                 _namespaceNames.clear();
                 _namespaceStack.clear();
-                _anonymousNamespace = NamespaceSymbol{};
-                _anonymousNamespace.name = L"";
+               _shaderData = ShaderData{};
+               _shaderData.globalNamespace.name = L"";
                 _loadBuiltinTypes();
-                _namespaceStack.push_back(&_anonymousNamespace);
+               _namespaceStack.push_back(&_shaderData.globalNamespace);
                 _pushScope();
                 _loadBuiltinVariables();
                 _loadBuiltinFunctions();
@@ -236,11 +236,17 @@ namespace spk::Lumina
 			throw AnalyzerException(L"Duplicate pipeline body for stage " + n->stage.lexeme, n->location, _sourceManager);
 		}
 
-		if (n->body)
-		{
-			_analyze(n->body.get());
-		}
-	}
+                if (n->body)
+                {
+                        _analyze(n->body.get());
+                        PipelineStage stage;
+                        stage.stage = n->stage.lexeme;
+                        for (const auto& child : n->body->children)
+                                if (child)
+                                        stage.body.push_back(_convertAST(child.get()));
+                        _shaderData.pipelineStages.push_back(stage);
+                }
+        }
 
         void Analyzer::_analyzeNamespace(const ASTNode *p_node)
         {
@@ -267,7 +273,7 @@ namespace spk::Lumina
                 if (p_node->kind == ASTNode::Kind::Structure)
                 {
                         const auto *n = static_cast<const StructureNode *>(p_node);
-                        auto[it, inserted] = _namespaceStack.back()->types.emplace(n->name.lexeme, TypeSymbol{n->name.lexeme, {}, {}, {}, {}});
+                        auto[it, inserted] = _namespaceStack.back()->types.emplace(n->name.lexeme, TypeSymbol{n->name.lexeme, TypeSymbol::Role::Structure, {}, {}, {}, {}});
                         _namespaceStack.back()->structures.push_back(&it->second);
                         _pushContainer(n->name.lexeme);
                         _pushScope();
@@ -305,6 +311,7 @@ namespace spk::Lumina
                 else if (p_node->kind == ASTNode::Kind::AttributeBlock)
                 {
                         const auto *n = static_cast<const AttributeBlockNode *>(p_node);
+                        _namespaceStack.back()->types.emplace(n->name.lexeme, TypeSymbol{n->name.lexeme, TypeSymbol::Role::Attribute, {}, {}, {}, {}});
                         _namespaceStack.back()->attributeBlocks.push_back(n->name.lexeme);
                         _pushContainer(n->name.lexeme);
                         _pushScope();
@@ -335,6 +342,7 @@ namespace spk::Lumina
                 else if (p_node->kind == ASTNode::Kind::ConstantBlock)
                 {
                         const auto *n = static_cast<const ConstantBlockNode *>(p_node);
+                        _namespaceStack.back()->types.emplace(n->name.lexeme, TypeSymbol{n->name.lexeme, TypeSymbol::Role::Constant, {}, {}, {}, {}});
                         _namespaceStack.back()->constantBlocks.push_back(n->name.lexeme);
                         _pushContainer(n->name.lexeme);
                         _pushScope();
@@ -428,20 +436,29 @@ namespace spk::Lumina
                        }
                }
 
-               std::wstring returnType;
+               const TypeSymbol* returnType = nullptr;
                if (p_node->kind == ASTNode::Kind::Constructor)
                {
-                       returnType = name;
+                       returnType = _findType(name);
                }
                else if (!fn->header.empty())
                {
-                       returnType = fn->header.front().lexeme;
+                       returnType = _findType(fn->header.front().lexeme);
                }
                FunctionSymbol sym;
                sym.name = name;
                sym.returnType = returnType;
                sym.parameters = _parseParameters(fn->header);
                sym.signature = sig;
+               if (fn->body)
+               {
+                       _pushScope();
+                       _analyze(fn->body.get());
+                       _popScope();
+                       for (const auto &child : fn->body->children)
+                               if (child)
+                                       sym.body.push_back(_convertAST(child.get()));
+               }
                vec.push_back(sym);
                _namespaceStack.back()->functions.push_back(sym);
                if (!_containerStack.empty())
@@ -458,12 +475,6 @@ namespace spk::Lumina
                                        tSym->operators[name].push_back(sym);
                                }
                        }
-               }
-               if (fn->body)
-               {
-                       _pushScope();
-                       _analyze(fn->body.get());
-                       _popScope();
                }
 	}
 
@@ -719,8 +730,8 @@ namespace spk::Lumina
 		return ctx;
 	}
 
-       std::wstring Analyzer::_makeSignature(const std::vector<Token> &p_header) const
-       {
+std::wstring Analyzer::_makeSignature(const std::vector<Token> &p_header) const
+{
                std::wstring sig;
                for (const auto &t : p_header)
                {
@@ -733,9 +744,50 @@ namespace spk::Lumina
                return sig;
        }
 
-       std::vector<std::wstring> Analyzer::_parseParameters(const std::vector<Token> &p_header) const
+       Analyzer::Statement Analyzer::_convertAST(const ASTNode *p_node) const
        {
-               std::vector<std::wstring> params;
+               Statement stmt;
+               if (!p_node)
+                       return stmt;
+               stmt.kind = p_node->kind;
+               std::wostringstream oss;
+               p_node->print(oss);
+               stmt.text = oss.str();
+               if (!stmt.text.empty() && stmt.text.back() == L'\n')
+                       stmt.text.pop_back();
+               if (p_node->kind == ASTNode::Kind::Body)
+               {
+                       const BodyNode *b = static_cast<const BodyNode *>(p_node);
+                       for (const auto &c : b->children)
+                               if (c)
+                                       stmt.children.push_back(_convertAST(c.get()));
+               }
+               else if (p_node->kind == ASTNode::Kind::IfStatement)
+               {
+                       const auto *n = static_cast<const IfStatementNode *>(p_node);
+                       if (n->thenBody)
+                               stmt.children.push_back(_convertAST(n->thenBody.get()));
+                       if (n->elseBody)
+                               stmt.children.push_back(_convertAST(n->elseBody.get()));
+               }
+               else if (p_node->kind == ASTNode::Kind::ForLoop)
+               {
+                       const auto *n = static_cast<const ForLoopNode *>(p_node);
+                       if (n->body)
+                               stmt.children.push_back(_convertAST(n->body.get()));
+               }
+               else if (p_node->kind == ASTNode::Kind::WhileLoop)
+               {
+                       const auto *n = static_cast<const WhileLoopNode *>(p_node);
+                       if (n->body)
+                               stmt.children.push_back(_convertAST(n->body.get()));
+               }
+               return stmt;
+       }
+
+       std::vector<Analyzer::Variable> Analyzer::_parseParameters(const std::vector<Token> &p_header) const
+       {
+               std::vector<Variable> params;
                bool inParams = false;
                for (size_t i = 0; i < p_header.size(); ++i)
                {
@@ -752,11 +804,16 @@ namespace spk::Lumina
                        if (tok.type == Token::Type::Identifier)
                        {
                                std::wstring typeName = tok.lexeme;
+                               std::wstring varName;
                                if (i + 1 < p_header.size() && p_header[i + 1].type == Token::Type::Identifier)
                                {
-                                       ++i; // skip variable name
+                                       varName = p_header[i + 1].lexeme;
+                                       ++i;
                                }
-                               params.push_back(typeName);
+                               Variable var;
+                               var.name = varName;
+                               var.type = _findType(typeName);
+                               params.push_back(var);
                        }
                }
                return params;
@@ -784,8 +841,8 @@ namespace spk::Lumina
                }
 
                // anonymous/global namespace
-               auto globalIt = _anonymousNamespace.functionSignatures.find(p_name);
-               if (globalIt != _anonymousNamespace.functionSignatures.end())
+               auto globalIt = _shaderData.globalNamespace.functionSignatures.find(p_name);
+               if (globalIt != _shaderData.globalNamespace.functionSignatures.end())
                        return globalIt->second;
 
                return {};
@@ -818,7 +875,7 @@ namespace spk::Lumina
                                {
                                        current = m[1].str();
                                        std::wstring wcur = spk::StringUtils::stringToWString(current);
-                                       _anonymousNamespace.types.emplace(wcur, TypeSymbol{wcur, {}, {}, {}, {}});
+                                       _shaderData.globalNamespace.types.emplace(wcur, TypeSymbol{wcur, TypeSymbol::Role::Structure, {}, {}, {}, {}});
                                        readingConv = false;
                                        continue;
                                }
@@ -839,14 +896,14 @@ namespace spk::Lumina
                                {
                                        std::wstring from = spk::StringUtils::stringToWString(m[1].str());
                                        std::wstring to = spk::StringUtils::stringToWString(current);
-                                       auto fIt = _anonymousNamespace.types.emplace(from, TypeSymbol{from, {}, {}, {}, {}}).first;
-                                       auto tIt = _anonymousNamespace.types.emplace(to, TypeSymbol{to, {}, {}, {}, {}}).first;
+                                       auto fIt = _shaderData.globalNamespace.types.emplace(from, TypeSymbol{from, TypeSymbol::Role::Structure, {}, {}, {}, {}}).first;
+                                       auto tIt = _shaderData.globalNamespace.types.emplace(to, TypeSymbol{to, TypeSymbol::Role::Structure, {}, {}, {}, {}}).first;
                                        fIt->second.convertible.insert(&tIt->second);
                                }
                        }
                }
 
-               _anonymousNamespace.types.emplace(L"void", TypeSymbol{L"void", {}, {}, {}, {}});
+               _shaderData.globalNamespace.types.emplace(L"void", TypeSymbol{L"void", TypeSymbol::Role::Structure, {}, {}, {}, {}});
        }
 
        void Analyzer::_loadBuiltinVariables()
@@ -857,25 +914,25 @@ namespace spk::Lumina
                }
 
                auto &global = _scopes.back();
-               global[L"pixelColor"] = Variable{L"pixelColor", &_anonymousNamespace.types[L"Color"]};
-               global[L"pixelPosition"] = Variable{L"pixelPosition", &_anonymousNamespace.types[L"Vector4"]};
+               global[L"pixelColor"] = Variable{L"pixelColor", &_shaderData.globalNamespace.types[L"Color"]};
+               global[L"pixelPosition"] = Variable{L"pixelPosition", &_shaderData.globalNamespace.types[L"Vector4"]};
        }
 
        void Analyzer::_loadBuiltinFunctions()
        {
                FunctionSymbol vert;
                vert.name = L"VertexPass";
-               vert.returnType = L"void";
+               vert.returnType = &_shaderData.globalNamespace.types[L"void"];
                vert.signature = L"VertexPass()";
-               _anonymousNamespace.functionSignatures[L"VertexPass"].push_back(vert);
-               _anonymousNamespace.functions.push_back(vert);
+               _shaderData.globalNamespace.functionSignatures[L"VertexPass"].push_back(vert);
+               _shaderData.globalNamespace.functions.push_back(vert);
 
                FunctionSymbol frag;
                frag.name = L"FragmentPass";
-               frag.returnType = L"void";
+               frag.returnType = &_shaderData.globalNamespace.types[L"void"];
                frag.signature = L"FragmentPass()";
-               _anonymousNamespace.functionSignatures[L"FragmentPass"].push_back(frag);
-               _anonymousNamespace.functions.push_back(frag);
+               _shaderData.globalNamespace.functionSignatures[L"FragmentPass"].push_back(frag);
+               _shaderData.globalNamespace.functions.push_back(frag);
         }
 
 Analyzer::TypeSymbol* Analyzer::_findType(const std::wstring &p_name) const
@@ -891,7 +948,7 @@ Analyzer::TypeSymbol* Analyzer::_findType(const std::wstring &p_name) const
 
         const Analyzer::NamespaceSymbol* Analyzer::_findNamespace(const std::wstring &p_name) const
         {
-                for (const auto &ns : _anonymousNamespace.namespaces)
+                for (const auto &ns : _shaderData.globalNamespace.namespaces)
                 {
                         if (ns.name == p_name)
                                 return &ns;
@@ -1021,7 +1078,7 @@ Analyzer::TypeSymbol* Analyzer::_findType(const std::wstring &p_name) const
                                 throw AnalyzerException(L"Unknown function " + name, p_node->location, _sourceManager);
                         }
                         // For now just select the first overload
-                        return funcs.front().returnType;
+                        return funcs.front().returnType ? funcs.front().returnType->name : L"void";
                 }
                 case ASTNode::Kind::UnaryExpression:
                 {
@@ -1038,8 +1095,13 @@ Analyzer::TypeSymbol* Analyzer::_findType(const std::wstring &p_name) const
 			const RValueNode *rv = static_cast<const RValueNode *>(p_node);
 			return _evaluate(rv->expression.get());
 		}
-		default:
-			return L"void";
-		}
-	}
+                default:
+                        return L"void";
+                }
+        }
+
+        const ShaderData& Analyzer::getData() const
+        {
+                return _shaderData;
+        }
 }
