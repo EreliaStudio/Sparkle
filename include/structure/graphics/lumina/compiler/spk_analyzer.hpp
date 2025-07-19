@@ -48,6 +48,7 @@ namespace spk::Lumina
         std::vector<std::unordered_map<std::wstring, Variable>> _scopes;
         ShaderData _shaderData;
         std::vector<NamespaceSymbol*> _namespaceStack;
+        std::vector<const TypeSymbol*> _returnTypeStack;
         std::unordered_set<std::wstring> _namespaceNames;
         std::unordered_map<ASTNode::Kind, AnalyzeFn> _dispatch;
 
