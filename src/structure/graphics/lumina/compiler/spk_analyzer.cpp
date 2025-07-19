@@ -64,13 +64,13 @@ namespace spk::Lumina
 					 {ASTNode::Kind::TernaryExpression, &Analyzer::_analyzeTernaryExpression},
 					 {ASTNode::Kind::LValue, &Analyzer::_analyzeLValue},
 					 {ASTNode::Kind::RValue, &Analyzer::_analyzeRValue}};
-                _loadBuiltinTypes();
-                _pushScope();
-                _loadBuiltinVariables();
-                _namespaceNames.clear();
-                _shaderData.globalNamespace.name = L"";
-                _namespaceStack.push_back(&_shaderData.globalNamespace);
-                _loadBuiltinFunctions();
+		_loadBuiltinTypes();
+		_pushScope();
+		_loadBuiltinVariables();
+		_namespaceNames.clear();
+		_shaderData.globalNamespace.name = L"";
+		_namespaceStack.push_back(&_shaderData.globalNamespace);
+		_loadBuiltinFunctions();
 	}
 
 	void Analyzer::run(const std::vector<std::unique_ptr<ASTNode>> &p_nodes)
@@ -888,11 +888,10 @@ namespace spk::Lumina
 		return {};
 	}
 
-
-        void Analyzer::_loadBuiltinTypes()
-        {
-                _defineBuiltinTypes();
-        }
+	void Analyzer::_loadBuiltinTypes()
+	{
+		_defineBuiltinTypes();
+	}
 
 	void Analyzer::_loadBuiltinVariables()
 	{
@@ -906,12 +905,10 @@ namespace spk::Lumina
 		global[L"pixelPosition"] = Variable{L"pixelPosition", &_shaderData.globalNamespace.types[L"Vector4"]};
 	}
 
-void Analyzer::_loadBuiltinFunctions()
-{
-    _defineBuiltinFunctions();
-}
-
-
+	void Analyzer::_loadBuiltinFunctions()
+	{
+		_defineBuiltinFunctions();
+	}
 
 	Analyzer::TypeSymbol *Analyzer::_findType(const std::wstring &p_name) const
 	{
@@ -966,13 +963,13 @@ void Analyzer::_loadBuiltinFunctions()
 		}
 	}
 
-        std::wstring Analyzer::_conversionInfo(const std::wstring &p_from) const
-        {
-                TypeSymbol *symbol = _findType(p_from);
-                if (!symbol || symbol->convertible.empty())
-                {
-                        return L"";
-                }
+	std::wstring Analyzer::_conversionInfo(const std::wstring &p_from) const
+	{
+		TypeSymbol *symbol = _findType(p_from);
+		if (!symbol || symbol->convertible.empty())
+		{
+			return L"";
+		}
 		std::wstring msg = L" (" + p_from + L" is convertible to: ";
 		bool first = true;
 		for (const auto *t : symbol->convertible)
@@ -987,9 +984,9 @@ void Analyzer::_loadBuiltinFunctions()
 			}
 			first = false;
 		}
-                msg += L")";
-                return msg;
-        }
+		msg += L")";
+		return msg;
+	}
 
 	std::wstring Analyzer::_availableSignatures(const std::vector<FunctionSymbol> &p_funcs) const
 	{
@@ -997,12 +994,12 @@ void Analyzer::_loadBuiltinFunctions()
 		bool first = true;
 		for (const auto &f : p_funcs)
 		{
-		if (!first)
-		{
-		msg += L", ";
-		}
-		msg += f.signature;
-		first = false;
+			if (!first)
+			{
+				msg += L", ";
+			}
+			msg += f.signature;
+			first = false;
 		}
 		return msg;
 	}
@@ -1022,7 +1019,8 @@ void Analyzer::_loadBuiltinFunctions()
 		return f->convertible.find(t) != f->convertible.end();
 	}
 
-	std::wstring Analyzer::_resolveCall(const ASTNode *p_callee, const std::wstring &p_name, const std::vector<std::wstring> &p_argTypes, const Location &p_loc)
+	std::wstring Analyzer::_resolveCall(const ASTNode *p_callee, const std::wstring &p_name, const std::vector<std::wstring> &p_argTypes,
+										const Location &p_loc)
 	{
 		std::wstring target = p_name;
 		std::vector<FunctionSymbol> funcs;
@@ -1125,26 +1123,26 @@ void Analyzer::_loadBuiltinFunctions()
 			}
 		}
 
-	if (ctor)
-	{
-		std::wstring msg = L"No matching constructor for " + p_name;
+		if (ctor)
+		{
+			std::wstring msg = L"No matching constructor for " + p_name;
+			std::wstring avail = _availableSignatures(funcs);
+			if (!avail.empty())
+			{
+				msg += L". Available: " + avail;
+			}
+			msg += L" - " + DEBUG_INFO();
+			throw AnalyzerException(msg, p_loc, _sourceManager);
+		}
+
+		std::wstring msg = L"No matching overload for function " + p_name;
 		std::wstring avail = _availableSignatures(funcs);
 		if (!avail.empty())
 		{
-		msg += L". Available: " + avail;
+			msg += L". Available: " + avail;
 		}
 		msg += L" - " + DEBUG_INFO();
 		throw AnalyzerException(msg, p_loc, _sourceManager);
-	}
-
-	std::wstring msg = L"No matching overload for function " + p_name;
-		std::wstring avail = _availableSignatures(funcs);
-		if (!avail.empty())
-		{
-		msg += L". Available: " + avail;
-		}
-		msg += L" - " + DEBUG_INFO();
-	throw AnalyzerException(msg, p_loc, _sourceManager);
 	}
 
 	std::wstring Analyzer::_evaluate(const ASTNode *p_node)
@@ -1191,7 +1189,8 @@ void Analyzer::_loadBuiltinFunctions()
 			TypeSymbol *ts = _findType(baseType);
 			if (ts)
 			{
-				auto it = std::find_if(ts->members.begin(), ts->members.end(), [&](const Variable &p_variable) { return p_variable.name == mem->member.lexeme; });
+				auto it = std::find_if(
+					ts->members.begin(), ts->members.end(), [&](const Variable &p_variable) { return p_variable.name == mem->member.lexeme; });
 				if (it != ts->members.end())
 				{
 					return it->type ? it->type->name : L"void";
