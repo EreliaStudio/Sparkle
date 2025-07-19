@@ -9,7 +9,7 @@
 
 #include "structure/graphics/lumina/compiler/spk_ast.hpp"
 #include "structure/graphics/lumina/compiler/spk_source_manager.hpp"
-#include "structure/graphics/lumina/compiler/data/spk_shader_data.hpp"
+#include "structure/graphics/lumina/compiler/spk_shader_data.hpp"
 
 namespace spk::Lumina
 {
@@ -28,7 +28,7 @@ namespace spk::Lumina
 
         void run(const std::vector<std::unique_ptr<ASTNode>>& p_nodes);
 
-        const ShaderData& getData() const { return _shaderData; }
+        const ShaderData& getData() const;
 
     private:
         using AnalyzeFn = void (Analyzer::*)(const ASTNode*);
