@@ -760,12 +760,12 @@ std::wstring Analyzer::_makeSignature(const std::vector<Token> &p_header) const
         return sig;
 }
 
-std::wstring Analyzer::_makeCallSignature(const std::wstring &name,
-                                          const std::vector<std::wstring> &argTypes) const
+std::wstring Analyzer::_makeCallSignature(const std::wstring &p_name,
+                                          const std::vector<std::wstring> &p_argTypes) const
 {
-        std::wstring sig = name + L"(";
+        std::wstring sig = p_name + L"(";
         bool first = true;
-        for (const auto &t : argTypes)
+        for (const auto &t : p_argTypes)
         {
                 if (!first)
                 {

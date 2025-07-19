@@ -237,6 +237,9 @@ namespace spk::Lumina
 			types[L"Vector4"].addConstructor({{L"vec1", &types[L"Vector2"]}, {L"vec2", &types[L"Vector2"]}});
 			types[L"Vector4"].addConstructor({{L"vec", &types[L"Vector3"]}, {L"w", &types[L"float"]}});
 			types[L"Vector4"].addConstructor({{L"x", &types[L"float"]}, {L"vec", &types[L"Vector3"]}});
+			types[L"Vector4"].addConstructor({{L"vec", &types[L"Vector2"]}, {L"z", &types[L"float"]}, {L"w", &types[L"float"]}});
+			types[L"Vector4"].addConstructor({{L"x", &types[L"float"]}, {L"vec", &types[L"Vector2"]}, {L"w", &types[L"float"]}});
+			types[L"Vector4"].addConstructor({{L"x", &types[L"float"]}, {L"y", &types[L"float"]}, {L"vec", &types[L"Vector2"]}});
 
 			// Vector4 methods
 			types[L"Vector4"].addMethod(&types[L"float"], L"length", {});
