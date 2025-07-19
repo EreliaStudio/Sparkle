@@ -746,19 +746,37 @@ namespace spk::Lumina
 		return ctx;
 	}
 
-	std::wstring Analyzer::_makeSignature(const std::vector<Token> &p_header) const
-	{
-		std::wstring sig;
-		for (const auto &t : p_header)
-		{
-			if (t.type == Token::Type::Whitespace || t.type == Token::Type::Comment)
-			{
-				continue;
-			}
-			sig += t.lexeme;
-		}
-		return sig;
-	}
+std::wstring Analyzer::_makeSignature(const std::vector<Token> &p_header) const
+{
+        std::wstring sig;
+        for (const auto &t : p_header)
+        {
+                if (t.type == Token::Type::Whitespace || t.type == Token::Type::Comment)
+                {
+                        continue;
+                }
+                sig += t.lexeme;
+        }
+        return sig;
+}
+
+std::wstring Analyzer::_makeCallSignature(const std::wstring &name,
+                                          const std::vector<std::wstring> &argTypes) const
+{
+        std::wstring sig = name + L"(";
+        bool first = true;
+        for (const auto &t : argTypes)
+        {
+                if (!first)
+                {
+                        sig += L", ";
+                }
+                sig += t;
+                first = false;
+        }
+        sig += L")";
+        return sig;
+}
 
 	Analyzer::Statement Analyzer::_convertAST(const ASTNode *p_node) const
 	{
@@ -1123,26 +1141,28 @@ namespace spk::Lumina
 			}
 		}
 
-		if (ctor)
-		{
-			std::wstring msg = L"No matching constructor for " + p_name;
-			std::wstring avail = _availableSignatures(funcs);
-			if (!avail.empty())
-			{
-				msg += L". Available: " + avail;
-			}
-			msg += L" - " + DEBUG_INFO();
-			throw AnalyzerException(msg, p_loc, _sourceManager);
-		}
+                if (ctor)
+                {
+                        std::wstring callSig = _makeCallSignature(p_name, p_argTypes);
+                        std::wstring msg = L"No matching constructor for " + callSig;
+                        std::wstring avail = _availableSignatures(funcs);
+                        if (!avail.empty())
+                        {
+                                msg += L". Available: " + avail;
+                        }
+                        msg += L" - " + DEBUG_INFO();
+                        throw AnalyzerException(msg, p_loc, _sourceManager);
+                }
 
-		std::wstring msg = L"No matching overload for function " + p_name;
-		std::wstring avail = _availableSignatures(funcs);
-		if (!avail.empty())
-		{
-			msg += L". Available: " + avail;
-		}
-		msg += L" - " + DEBUG_INFO();
-		throw AnalyzerException(msg, p_loc, _sourceManager);
+                std::wstring callSig = _makeCallSignature(p_name, p_argTypes);
+                std::wstring msg = L"No matching overload for function " + callSig;
+                std::wstring avail = _availableSignatures(funcs);
+                if (!avail.empty())
+                {
+                        msg += L". Available: " + avail;
+                }
+                msg += L" - " + DEBUG_INFO();
+                throw AnalyzerException(msg, p_loc, _sourceManager);
 	}
 
 	std::wstring Analyzer::_evaluate(const ASTNode *p_node)
