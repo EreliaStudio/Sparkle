@@ -56,6 +56,8 @@ namespace spk::Lumina
         void _loadBuiltinTypes();
         void _loadBuiltinVariables();
         void _loadBuiltinFunctions();
+        void _defineBuiltinTypes();
+        void _defineBuiltinFunctions();
         TypeSymbol* _findType(const std::wstring& p_name) const;
         const NamespaceSymbol* _findNamespace(const std::wstring& p_name) const;
         std::wstring _conversionInfo(const std::wstring& p_from) const;
