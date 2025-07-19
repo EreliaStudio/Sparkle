@@ -9,6 +9,7 @@
 
 #include "structure/graphics/lumina/compiler/spk_ast.hpp"
 #include "structure/graphics/lumina/compiler/spk_source_manager.hpp"
+#include "structure/graphics/lumina/compiler/data/spk_shader_data.hpp"
 
 namespace spk::Lumina
 {
@@ -27,54 +28,25 @@ namespace spk::Lumina
 
         void run(const std::vector<std::unique_ptr<ASTNode>>& p_nodes);
 
+        const ShaderData& getData() const { return _shaderData; }
+
     private:
         using AnalyzeFn = void (Analyzer::*)(const ASTNode*);
 
         SourceManager& _sourceManager;
         std::unordered_set<std::wstring> _pipelineStages;
-        struct TypeSymbol;
-
-        struct Variable
-        {
-            std::wstring name;
-            TypeSymbol* type = nullptr;
-        };
-
-        struct TypeSymbol
-        {
-            std::wstring name;
-            std::unordered_set<TypeSymbol*> convertible;
-            std::vector<Variable> members;
-            std::vector<FunctionSymbol> constructors;
-            std::unordered_map<std::wstring, std::vector<FunctionSymbol>> operators;
-        };
-
-        struct NamespaceSymbol
-        {
-            std::wstring name;
-            std::vector<NamespaceSymbol> namespaces;
-            std::vector<TypeSymbol*> structures;
-            std::vector<std::wstring> attributeBlocks;
-            std::vector<std::wstring> constantBlocks;
-            std::vector<Variable> textures;
-            std::unordered_map<std::wstring, TypeSymbol> types;
-            std::unordered_map<std::wstring, std::vector<FunctionSymbol>> functionSignatures;
-            std::vector<FunctionSymbol> functions;
-        };
-
-        struct FunctionSymbol
-        {
-            std::wstring name;
-            std::wstring returnType;
-            std::vector<std::wstring> parameters;
-            std::wstring signature;
-        };
+        using Variable = spk::Lumina::Variable;
+        using FunctionSymbol = spk::Lumina::FunctionSymbol;
+        using TypeSymbol = spk::Lumina::TypeSymbol;
+        using NamespaceSymbol = spk::Lumina::NamespaceSymbol;
+        using Statement = spk::Lumina::Statement;
+        using PipelineStage = spk::Lumina::PipelineStage;
 
         std::vector<std::wstring> _containerStack;
         std::unordered_set<std::wstring> _includedFiles;
         std::vector<std::wstring> _includeStack;
         std::vector<std::unordered_map<std::wstring, Variable>> _scopes;
-        NamespaceSymbol _anonymousNamespace;
+        ShaderData _shaderData;
         std::vector<NamespaceSymbol*> _namespaceStack;
         std::unordered_set<std::wstring> _namespaceNames;
         std::unordered_map<ASTNode::Kind, AnalyzeFn> _dispatch;
@@ -88,7 +60,7 @@ namespace spk::Lumina
         const NamespaceSymbol* _findNamespace(const std::wstring& p_name) const;
         std::wstring _conversionInfo(const std::wstring& p_from) const;
         std::wstring _extractCalleeName(const ASTNode* p_node) const;
-        std::vector<std::wstring> _parseParameters(const std::vector<Token>& p_header) const;
+        std::vector<Variable> _parseParameters(const std::vector<Token>& p_header) const;
         std::vector<FunctionSymbol> _findFunctions(const std::wstring& p_name) const;
         std::wstring _evaluate(const ASTNode* p_node);
 
@@ -96,6 +68,7 @@ namespace spk::Lumina
         void _popContainer();
         std::wstring _currentContext() const;
         std::wstring _makeSignature(const std::vector<Token>& p_header) const;
+        Statement _convertAST(const ASTNode* p_node) const;
 
         void _analyze(const ASTNode* p_node);
 
