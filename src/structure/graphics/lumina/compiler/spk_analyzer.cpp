@@ -457,12 +457,13 @@ namespace spk::Lumina
 		}
 		FunctionSymbol sym;
 		sym.name = name;
-		sym.returnType = returnType;
-		sym.parameters = _parseParameters(fn->header);
-		sym.signature = sig;
-		if (fn->body)
-		{
-			_pushScope();
+                sym.returnType = returnType;
+                sym.parameters = _parseParameters(fn->header);
+                sym.signature = sig;
+                if (fn->body)
+                {
+                        _returnTypeStack.push_back(returnType);
+                        _pushScope();
 
 			auto &cur = _scopes.back();
 
@@ -471,9 +472,10 @@ namespace spk::Lumina
 				cur[param.name] = param;
 			}
 
-			_analyze(fn->body.get());
+                        _analyze(fn->body.get());
 
-			_popScope();
+                        _popScope();
+                        _returnTypeStack.pop_back();
 
 			for (const auto &child : fn->body->children)
 			{
@@ -629,14 +631,28 @@ namespace spk::Lumina
 		}
 	}
 
-	void Analyzer::_analyzeReturn(const ASTNode *p_node)
-	{
-		const auto *n = static_cast<const ReturnStatementNode *>(p_node);
-		if (n->value)
-		{
-			(void)_evaluate(n->value.get());
-		}
-	}
+        void Analyzer::_analyzeReturn(const ASTNode *p_node)
+        {
+                const auto *n = static_cast<const ReturnStatementNode *>(p_node);
+                std::wstring valueType = L"void";
+                if (n->value)
+                {
+                        valueType = _evaluate(n->value.get());
+                }
+
+                if (!_returnTypeStack.empty())
+                {
+                        const TypeSymbol *expected = _returnTypeStack.back();
+                        std::wstring expectedName = expected ? expected->name : L"void";
+                        if (!_canConvert(valueType, expectedName))
+                        {
+                                std::wstring msg = L"Type mismatch in return: expected " + expectedName +
+                                                        L" but got " + valueType + _conversionInfo(valueType);
+                                Location loc = n->value ? n->value->location : n->location;
+                                throw AnalyzerException(msg + L" - " + DEBUG_INFO(), loc, _sourceManager);
+                        }
+                }
+        }
 
 	void Analyzer::_analyzeDiscardStatement(const ASTNode *)
 	{
