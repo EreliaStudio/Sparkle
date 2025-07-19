@@ -33,7 +33,41 @@ namespace spk::Lumina
 			types[L"uint"].convertible.insert(&types[L"float"]);
 			types[L"float"].convertible.insert(&types[L"int"]);
 			types[L"float"].convertible.insert(&types[L"uint"]);
-			types[L"uint"].convertible.insert(&types[L"int"]);
+                        types[L"uint"].convertible.insert(&types[L"int"]);
+
+                        // Primitive operators
+                        types[L"float"].addOperator(&types[L"float"], L"+", {{L"other", &types[L"float"]}});
+                        types[L"float"].addOperator(&types[L"float"], L"-", {{L"other", &types[L"float"]}});
+                        types[L"float"].addOperator(&types[L"float"], L"*", {{L"other", &types[L"float"]}});
+                        types[L"float"].addOperator(&types[L"float"], L"/", {{L"other", &types[L"float"]}});
+                        types[L"float"].addOperator(&types[L"bool"], L"==", {{L"other", &types[L"float"]}});
+                        types[L"float"].addOperator(&types[L"bool"], L"!=", {{L"other", &types[L"float"]}});
+                        types[L"float"].addOperator(&types[L"bool"], L"<", {{L"other", &types[L"float"]}});
+                        types[L"float"].addOperator(&types[L"bool"], L">", {{L"other", &types[L"float"]}});
+                        types[L"float"].addOperator(&types[L"bool"], L"<=", {{L"other", &types[L"float"]}});
+                        types[L"float"].addOperator(&types[L"bool"], L">=", {{L"other", &types[L"float"]}});
+
+                        types[L"int"].addOperator(&types[L"int"], L"+", {{L"other", &types[L"int"]}});
+                        types[L"int"].addOperator(&types[L"int"], L"-", {{L"other", &types[L"int"]}});
+                        types[L"int"].addOperator(&types[L"int"], L"*", {{L"other", &types[L"int"]}});
+                        types[L"int"].addOperator(&types[L"int"], L"/", {{L"other", &types[L"int"]}});
+                        types[L"int"].addOperator(&types[L"bool"], L"==", {{L"other", &types[L"int"]}});
+                        types[L"int"].addOperator(&types[L"bool"], L"!=", {{L"other", &types[L"int"]}});
+                        types[L"int"].addOperator(&types[L"bool"], L"<", {{L"other", &types[L"int"]}});
+                        types[L"int"].addOperator(&types[L"bool"], L">", {{L"other", &types[L"int"]}});
+                        types[L"int"].addOperator(&types[L"bool"], L"<=", {{L"other", &types[L"int"]}});
+                        types[L"int"].addOperator(&types[L"bool"], L">=", {{L"other", &types[L"int"]}});
+
+                        types[L"uint"].addOperator(&types[L"uint"], L"+", {{L"other", &types[L"uint"]}});
+                        types[L"uint"].addOperator(&types[L"uint"], L"-", {{L"other", &types[L"uint"]}});
+                        types[L"uint"].addOperator(&types[L"uint"], L"*", {{L"other", &types[L"uint"]}});
+                        types[L"uint"].addOperator(&types[L"uint"], L"/", {{L"other", &types[L"uint"]}});
+                        types[L"uint"].addOperator(&types[L"bool"], L"==", {{L"other", &types[L"uint"]}});
+                        types[L"uint"].addOperator(&types[L"bool"], L"!=", {{L"other", &types[L"uint"]}});
+                        types[L"uint"].addOperator(&types[L"bool"], L"<", {{L"other", &types[L"uint"]}});
+                        types[L"uint"].addOperator(&types[L"bool"], L">", {{L"other", &types[L"uint"]}});
+                        types[L"uint"].addOperator(&types[L"bool"], L"<=", {{L"other", &types[L"uint"]}});
+                        types[L"uint"].addOperator(&types[L"bool"], L">=", {{L"other", &types[L"uint"]}});
 			types[L"Vector2Int"].convertible.insert(&types[L"Vector2"]);
 			types[L"Vector2UInt"].convertible.insert(&types[L"Vector2"]);
 			types[L"Vector2"].convertible.insert(&types[L"Vector2Int"]);
