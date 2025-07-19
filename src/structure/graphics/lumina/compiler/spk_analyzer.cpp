@@ -260,10 +260,10 @@ namespace spk::Lumina
 		{
 			_namespaceNames.insert(n->name.lexeme);
 			_pushContainer(n->name.lexeme);
-                        NamespaceSymbol child;
-                        child.name = n->name.lexeme;
-                        child.parent = _namespaceStack.back();
-                        _namespaceStack.back()->namespaces.push_back(child);
+			NamespaceSymbol child;
+			child.name = n->name.lexeme;
+			child.parent = _namespaceStack.back();
+			_namespaceStack.back()->namespaces.push_back(child);
 			NamespaceSymbol *ns = &_namespaceStack.back()->namespaces.back();
 			_namespaceStack.push_back(ns);
 			_pushScope();
@@ -279,8 +279,8 @@ namespace spk::Lumina
 		if (p_node->kind == ASTNode::Kind::Structure)
 		{
 			const auto *n = static_cast<const StructureNode *>(p_node);
-                        TypeSymbol* ts = _namespaceStack.back()->addType(n->name.lexeme, TypeSymbol::Role::Structure);
-                        _namespaceStack.back()->structures.push_back(ts);
+			TypeSymbol *ts = _namespaceStack.back()->addType(n->name.lexeme, TypeSymbol::Role::Structure);
+			_namespaceStack.back()->structures.push_back(ts);
 			_pushContainer(n->name.lexeme);
 			_pushScope();
 			for (const auto &c : n->variables)
@@ -317,10 +317,10 @@ namespace spk::Lumina
 		else if (p_node->kind == ASTNode::Kind::AttributeBlock)
 		{
 			const auto *n = static_cast<const AttributeBlockNode *>(p_node);
-                        {
-                                _namespaceStack.back()->addType(n->name.lexeme, TypeSymbol::Role::Attribute);
-                        }
-                        _namespaceStack.back()->attributeBlocks.push_back(n->name.lexeme);
+			{
+				_namespaceStack.back()->addType(n->name.lexeme, TypeSymbol::Role::Attribute);
+			}
+			_namespaceStack.back()->attributeBlocks.push_back(n->name.lexeme);
 			_pushContainer(n->name.lexeme);
 			_pushScope();
 			for (const auto &c : n->variables)
@@ -350,10 +350,10 @@ namespace spk::Lumina
 		else if (p_node->kind == ASTNode::Kind::ConstantBlock)
 		{
 			const auto *n = static_cast<const ConstantBlockNode *>(p_node);
-                        {
-                                _namespaceStack.back()->addType(n->name.lexeme, TypeSymbol::Role::Constant);
-                        }
-                        _namespaceStack.back()->constantBlocks.push_back(n->name.lexeme);
+			{
+				_namespaceStack.back()->addType(n->name.lexeme, TypeSymbol::Role::Constant);
+			}
+			_namespaceStack.back()->constantBlocks.push_back(n->name.lexeme);
 			_pushContainer(n->name.lexeme);
 			_pushScope();
 			for (const auto &c : n->variables)
@@ -455,26 +455,29 @@ namespace spk::Lumina
 		{
 			returnType = _findType(fn->header.front().lexeme);
 		}
-               FunctionSymbol sym;
-               sym.name = name;
-               sym.returnType = returnType;
-               sym.parameters = _parseParameters(fn->header);
-               sym.signature = sig;
-               if (fn->body)
-               {
-                       _pushScope();
-                       // Register function parameters in the current scope so
-                       // they can be referenced inside the function body
-                       auto &cur = _scopes.back();
-                       for (const auto &param : sym.parameters)
-                       {
-                               cur[param.name] = param;
-                       }
-                       _analyze(fn->body.get());
-                       _popScope();
-                       for (const auto &child : fn->body->children)
-                       {
-                               if (child)
+		FunctionSymbol sym;
+		sym.name = name;
+		sym.returnType = returnType;
+		sym.parameters = _parseParameters(fn->header);
+		sym.signature = sig;
+		if (fn->body)
+		{
+			_pushScope();
+
+			auto &cur = _scopes.back();
+
+			for (const auto &param : sym.parameters)
+			{
+				cur[param.name] = param;
+			}
+
+			_analyze(fn->body.get());
+
+			_popScope();
+
+			for (const auto &child : fn->body->children)
+			{
+				if (child)
 				{
 					sym.body.push_back(_convertAST(child.get()));
 				}
@@ -753,37 +756,47 @@ namespace spk::Lumina
 		return ctx;
 	}
 
-std::wstring Analyzer::_makeSignature(const std::vector<Token> &p_header) const
-{
-        std::wstring sig;
-        for (const auto &t : p_header)
-        {
-                if (t.type == Token::Type::Whitespace || t.type == Token::Type::Comment)
-                {
-                        continue;
-                }
-                sig += t.lexeme;
-        }
-        return sig;
-}
+	std::wstring Analyzer::_makeSignature(const std::vector<Token> &p_header) const
+	{
+		std::wstring sig;
+		Token::Type prev = Token::Type::Unknown;
 
-std::wstring Analyzer::_makeCallSignature(const std::wstring &p_name,
-                                          const std::vector<std::wstring> &p_argTypes) const
-{
-        std::wstring sig = p_name + L"(";
-        bool first = true;
-        for (const auto &t : p_argTypes)
-        {
-                if (!first)
-                {
-                        sig += L", ";
-                }
-                sig += t;
-                first = false;
-        }
-        sig += L")";
-        return sig;
-}
+		for (const auto &t : p_header)
+		{
+			if (t.type == Token::Type::Whitespace || t.type == Token::Type::Comment)
+			{
+				continue;
+			}
+
+			if (!sig.empty() && (prev == Token::Type::Comma ||
+				(t.type != Token::Type::Comma && t.type != Token::Type::OpenParenthesis &&
+				 t.type != Token::Type::CloseParenthesis && prev != Token::Type::OpenParenthesis)))
+			{
+				sig += L' ';
+			}
+
+			sig += t.lexeme;
+			prev = t.type;
+		}
+		return sig;
+	}
+
+	std::wstring Analyzer::_makeCallSignature(const std::wstring &p_name, const std::vector<std::wstring> &p_argTypes) const
+	{
+		std::wstring sig = p_name + L"(";
+		bool first = true;
+		for (const auto &t : p_argTypes)
+		{
+			if (!first)
+			{
+				sig += L", ";
+			}
+			sig += t;
+			first = false;
+		}
+		sig += L")";
+		return sig;
+	}
 
 	Analyzer::Statement Analyzer::_convertAST(const ASTNode *p_node) const
 	{
@@ -940,13 +953,13 @@ std::wstring Analyzer::_makeCallSignature(const std::wstring &p_name,
 	}
 
 	Analyzer::TypeSymbol *Analyzer::_findType(const std::wstring &p_name) const
-        {
-                if (_namespaceStack.empty())
-                {
-                        return nullptr;
-                }
-                return _namespaceStack.back()->typeSymbol(p_name);
-        }
+	{
+		if (_namespaceStack.empty())
+		{
+			return nullptr;
+		}
+		return _namespaceStack.back()->typeSymbol(p_name);
+	}
 
 	const Analyzer::NamespaceSymbol *Analyzer::_findNamespace(const std::wstring &p_name) const
 	{
@@ -1148,28 +1161,28 @@ std::wstring Analyzer::_makeCallSignature(const std::wstring &p_name,
 			}
 		}
 
-                if (ctor)
-                {
-                        std::wstring callSig = _makeCallSignature(p_name, p_argTypes);
-                        std::wstring msg = L"No matching constructor for " + callSig;
-                        std::wstring avail = _availableSignatures(funcs);
-                        if (!avail.empty())
-                        {
-                                msg += L". Available: " + avail;
-                        }
-                        msg += L" - " + DEBUG_INFO();
-                        throw AnalyzerException(msg, p_loc, _sourceManager);
-                }
+		if (ctor)
+		{
+			std::wstring callSig = _makeCallSignature(p_name, p_argTypes);
+			std::wstring msg = L"No matching constructor for " + callSig;
+			std::wstring avail = _availableSignatures(funcs);
+			if (!avail.empty())
+			{
+				msg += L". Available: " + avail;
+			}
+			msg += L" - " + DEBUG_INFO();
+			throw AnalyzerException(msg, p_loc, _sourceManager);
+		}
 
-                std::wstring callSig = _makeCallSignature(p_name, p_argTypes);
-                std::wstring msg = L"No matching overload for function " + callSig;
-                std::wstring avail = _availableSignatures(funcs);
-                if (!avail.empty())
-                {
-                        msg += L". Available: " + avail;
-                }
-                msg += L" - " + DEBUG_INFO();
-                throw AnalyzerException(msg, p_loc, _sourceManager);
+		std::wstring callSig = _makeCallSignature(p_name, p_argTypes);
+		std::wstring msg = L"No matching overload for function " + callSig;
+		std::wstring avail = _availableSignatures(funcs);
+		if (!avail.empty())
+		{
+			msg += L". Available: " + avail;
+		}
+		msg += L" - " + DEBUG_INFO();
+		throw AnalyzerException(msg, p_loc, _sourceManager);
 	}
 
 	std::wstring Analyzer::_evaluate(const ASTNode *p_node)
@@ -1225,37 +1238,37 @@ std::wstring Analyzer::_makeCallSignature(const std::wstring &p_name,
 			}
 			return L"void";
 		}
-                case ASTNode::Kind::BinaryExpression:
-                {
-                        const BinaryExpressionNode *bin = static_cast<const BinaryExpressionNode *>(p_node);
-                        std::wstring l = _evaluate(bin->left.get());
-                        std::wstring r = _evaluate(bin->right.get());
-                        if (l != r)
-                        {
-                                std::wstring msg = L"Type mismatch in binary expression: left operand is " + l + L", right operand is " + r + _conversionInfo(r);
-                                throw AnalyzerException(msg + L" - " + DEBUG_INFO(), bin->op.location, _sourceManager);
-                        }
+		case ASTNode::Kind::BinaryExpression:
+		{
+			const BinaryExpressionNode *bin = static_cast<const BinaryExpressionNode *>(p_node);
+			std::wstring l = _evaluate(bin->left.get());
+			std::wstring r = _evaluate(bin->right.get());
+			if (l != r)
+			{
+				std::wstring msg = L"Type mismatch in binary expression: left operand is " + l + L", right operand is " + r + _conversionInfo(r);
+				throw AnalyzerException(msg + L" - " + DEBUG_INFO(), bin->op.location, _sourceManager);
+			}
 
-                        switch (bin->op.type)
-                        {
-                        case Token::Type::EqualEqual:
-                        case Token::Type::Different:
-                        case Token::Type::Less:
-                        case Token::Type::Greater:
-                        case Token::Type::LessEqual:
-                        case Token::Type::GreaterEqual:
-                                return L"bool";
-                        case Token::Type::AndAnd:
-                        case Token::Type::OrOr:
-                                if (l != L"bool")
-                                {
-                                        throw AnalyzerException(L"Logical operator requires boolean operands - " + DEBUG_INFO(), bin->op.location, _sourceManager);
-                                }
-                                return L"bool";
-                        default:
-                                return l;
-                        }
-                }
+			switch (bin->op.type)
+			{
+			case Token::Type::EqualEqual:
+			case Token::Type::Different:
+			case Token::Type::Less:
+			case Token::Type::Greater:
+			case Token::Type::LessEqual:
+			case Token::Type::GreaterEqual:
+				return L"bool";
+			case Token::Type::AndAnd:
+			case Token::Type::OrOr:
+				if (l != L"bool")
+				{
+					throw AnalyzerException(L"Logical operator requires boolean operands - " + DEBUG_INFO(), bin->op.location, _sourceManager);
+				}
+				return L"bool";
+			default:
+				return l;
+			}
+		}
 		case ASTNode::Kind::CallExpression:
 		{
 			const CallExpressionNode *call = static_cast<const CallExpressionNode *>(p_node);
