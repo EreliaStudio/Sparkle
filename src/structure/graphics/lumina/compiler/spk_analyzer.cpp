@@ -192,7 +192,7 @@ namespace spk::Lumina
 		const PipelineDefinitionNode *n = static_cast<const PipelineDefinitionNode *>(p_node);
 		if (!isValidStage(n->fromStage.lexeme) || !isValidStage(n->toStage.lexeme))
 		{
-			throw AnalyzerException(L"Invalid pipeline stage in definition" + L" - " + DEBUG_INFO(), n->location, _sourceManager);
+			throw AnalyzerException(L"Invalid pipeline stage in definition - " + DEBUG_INFO(), n->location, _sourceManager);
 		}
 
 		const std::wstring pair = n->fromStage.lexeme + L"->" + n->toStage.lexeme;
@@ -229,7 +229,7 @@ namespace spk::Lumina
 		const PipelineBodyNode *n = static_cast<const PipelineBodyNode *>(p_node);
 		if (!isValidStage(n->stage.lexeme))
 		{
-			throw AnalyzerException(L"Invalid pipeline stage body" + L" - " + DEBUG_INFO(), n->location, _sourceManager);
+			throw AnalyzerException(L"Invalid pipeline stage body - " + DEBUG_INFO(), n->location, _sourceManager);
 		}
 
 		if (!_pipelineStages.insert(n->stage.lexeme).second)
@@ -561,7 +561,7 @@ namespace spk::Lumina
 			std::wstring t = _evaluate(n->condition.get());
 			if (t != L"bool")
 			{
-				throw AnalyzerException(L"If condition must be boolean" + L" - " + DEBUG_INFO(), n->condition->location, _sourceManager);
+				throw AnalyzerException(L"If condition must be boolean - " + DEBUG_INFO(), n->condition->location, _sourceManager);
 			}
 		}
 		if (n->thenBody)
@@ -585,7 +585,7 @@ namespace spk::Lumina
 		{
 			if (_evaluate(n->condition.get()) != L"bool")
 			{
-				throw AnalyzerException(L"For condition must be boolean" + L" - " + DEBUG_INFO(), n->condition->location, _sourceManager);
+				throw AnalyzerException(L"For condition must be boolean - " + DEBUG_INFO(), n->condition->location, _sourceManager);
 			}
 		}
 		if (n->increment)
@@ -605,7 +605,7 @@ namespace spk::Lumina
 		{
 			if (_evaluate(n->condition.get()) != L"bool")
 			{
-				throw AnalyzerException(L"While condition must be boolean" + L" - " + DEBUG_INFO(), n->condition->location, _sourceManager);
+				throw AnalyzerException(L"While condition must be boolean - " + DEBUG_INFO(), n->condition->location, _sourceManager);
 			}
 		}
 		if (n->body)
@@ -673,7 +673,7 @@ namespace spk::Lumina
 		std::wstring cond = _evaluate(n->condition.get());
 		if (cond != L"bool")
 		{
-			throw AnalyzerException(L"Ternary condition must be boolean" + L" - " + DEBUG_INFO(), n->condition->location, _sourceManager);
+			throw AnalyzerException(L"Ternary condition must be boolean - " + DEBUG_INFO(), n->condition->location, _sourceManager);
 		}
 		std::wstring thenType = _evaluate(n->thenExpr.get());
 		std::wstring elseType = _evaluate(n->elseExpr.get());
@@ -1106,7 +1106,7 @@ namespace spk::Lumina
 			std::wstring name = _extractCalleeName(call->callee.get());
 			if (name.empty())
 			{
-				throw AnalyzerException(L"Invalid function call" + L" - " + DEBUG_INFO(), p_node->location, _sourceManager);
+				throw AnalyzerException(L"Invalid function call - " + DEBUG_INFO(), p_node->location, _sourceManager);
 			}
 			for (const auto &arg : call->arguments)
 			{
