@@ -14,7 +14,7 @@ VertexPass -> FragmentPass : Color fragmentColor;
 VertexPass()
 {
 	fragmentColor = modelColor; // End line comment
-	pixelPosition = vec4(modelPosition, 0.0, 1.0);
+	pixelPosition = Vector4(modelPosition, 0.0, 1.0);
 }
 
 struct Test
