@@ -1218,18 +1218,37 @@ std::wstring Analyzer::_makeCallSignature(const std::wstring &name,
 			}
 			return L"void";
 		}
-		case ASTNode::Kind::BinaryExpression:
-		{
-			const BinaryExpressionNode *bin = static_cast<const BinaryExpressionNode *>(p_node);
-			std::wstring l = _evaluate(bin->left.get());
-			std::wstring r = _evaluate(bin->right.get());
-			if (l != r)
-			{
-				std::wstring msg = L"Type mismatch in binary expression: left operand is " + l + L", right operand is " + r + _conversionInfo(r);
-				throw AnalyzerException(msg + L" - " + DEBUG_INFO(), bin->op.location, _sourceManager);
-			}
-			return l;
-		}
+                case ASTNode::Kind::BinaryExpression:
+                {
+                        const BinaryExpressionNode *bin = static_cast<const BinaryExpressionNode *>(p_node);
+                        std::wstring l = _evaluate(bin->left.get());
+                        std::wstring r = _evaluate(bin->right.get());
+                        if (l != r)
+                        {
+                                std::wstring msg = L"Type mismatch in binary expression: left operand is " + l + L", right operand is " + r + _conversionInfo(r);
+                                throw AnalyzerException(msg + L" - " + DEBUG_INFO(), bin->op.location, _sourceManager);
+                        }
+
+                        switch (bin->op.type)
+                        {
+                        case Token::Type::EqualEqual:
+                        case Token::Type::Different:
+                        case Token::Type::Less:
+                        case Token::Type::Greater:
+                        case Token::Type::LessEqual:
+                        case Token::Type::GreaterEqual:
+                                return L"bool";
+                        case Token::Type::AndAnd:
+                        case Token::Type::OrOr:
+                                if (l != L"bool")
+                                {
+                                        throw AnalyzerException(L"Logical operator requires boolean operands - " + DEBUG_INFO(), bin->op.location, _sourceManager);
+                                }
+                                return L"bool";
+                        default:
+                                return l;
+                        }
+                }
 		case ASTNode::Kind::CallExpression:
 		{
 			const CallExpressionNode *call = static_cast<const CallExpressionNode *>(p_node);
