@@ -455,19 +455,26 @@ namespace spk::Lumina
 		{
 			returnType = _findType(fn->header.front().lexeme);
 		}
-		FunctionSymbol sym;
-		sym.name = name;
-		sym.returnType = returnType;
-		sym.parameters = _parseParameters(fn->header);
-		sym.signature = sig;
-		if (fn->body)
-		{
-			_pushScope();
-			_analyze(fn->body.get());
-			_popScope();
-			for (const auto &child : fn->body->children)
-			{
-				if (child)
+               FunctionSymbol sym;
+               sym.name = name;
+               sym.returnType = returnType;
+               sym.parameters = _parseParameters(fn->header);
+               sym.signature = sig;
+               if (fn->body)
+               {
+                       _pushScope();
+                       // Register function parameters in the current scope so
+                       // they can be referenced inside the function body
+                       auto &cur = _scopes.back();
+                       for (const auto &param : sym.parameters)
+                       {
+                               cur[param.name] = param;
+                       }
+                       _analyze(fn->body.get());
+                       _popScope();
+                       for (const auto &child : fn->body->children)
+                       {
+                               if (child)
 				{
 					sym.body.push_back(_convertAST(child.get()));
 				}
