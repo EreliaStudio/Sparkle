@@ -414,10 +414,28 @@ namespace spk::Lumina
 		{
 			initType = _evaluate(n->initializer.get());
 		}
-		if (n->initializer && initType != n->typeName.lexeme)
-		{
-			throw AnalyzerException(L"Type mismatch in initialization of " + n->name.lexeme, n->location, _sourceManager);
-		}
+               if (n->initializer && initType != n->typeName.lexeme)
+               {
+                       std::wstring msg = L"Type mismatch in initialization of " + n->name.lexeme +
+                                                  L"; expected " + n->typeName.lexeme + L" but got " + initType;
+                       auto it = _implicitConversions.find(initType);
+                       if (it != _implicitConversions.end() && !it->second.empty())
+                       {
+                               msg += L" (" + initType + L" is convertible to: ";
+                               bool first = true;
+                               for (const auto &t : it->second)
+                               {
+                                       if (!first)
+                                       {
+                                               msg += L", ";
+                                       }
+                                       msg += t;
+                                       first = false;
+                               }
+                               msg += L")";
+                       }
+                       throw AnalyzerException(msg, n->location, _sourceManager);
+               }
 		cur[n->name.lexeme] = Symbol{n->typeName.lexeme};
 	}
 
@@ -429,12 +447,29 @@ namespace spk::Lumina
 			return;
 		}
 
-		std::wstring lhs = _evaluate(n->target.get());
-		std::wstring rhs = _evaluate(n->value.get());
-		if (lhs != rhs)
-		{
-			throw AnalyzerException(L"Type mismatch in assignment", n->op.location, _sourceManager);
-		}
+               std::wstring lhs = _evaluate(n->target.get());
+               std::wstring rhs = _evaluate(n->value.get());
+               if (lhs != rhs)
+               {
+                       std::wstring msg = L"Type mismatch in assignment: expected " + lhs + L" but got " + rhs;
+                       auto it = _implicitConversions.find(rhs);
+                       if (it != _implicitConversions.end() && !it->second.empty())
+                       {
+                               msg += L" (" + rhs + L" is convertible to: ";
+                               bool first = true;
+                               for (const auto &t : it->second)
+                               {
+                                       if (!first)
+                                       {
+                                               msg += L", ";
+                                       }
+                                       msg += t;
+                                       first = false;
+                               }
+                               msg += L")";
+                       }
+                       throw AnalyzerException(msg, n->op.location, _sourceManager);
+               }
 	}
 
 	void Analyzer::_analyzeIfStatement(const ASTNode *p_node)
@@ -511,16 +546,33 @@ namespace spk::Lumina
 	{
 	}
 
-	void Analyzer::_analyzeBinaryExpression(const ASTNode *p_node)
-	{
-		const auto *n = static_cast<const BinaryExpressionNode *>(p_node);
-		std::wstring l = _evaluate(n->left.get());
-		std::wstring r = _evaluate(n->right.get());
-		if (l != r)
-		{
-			throw AnalyzerException(L"Type mismatch in binary expression", n->op.location, _sourceManager);
-		}
-	}
+       void Analyzer::_analyzeBinaryExpression(const ASTNode *p_node)
+       {
+               const auto *n = static_cast<const BinaryExpressionNode *>(p_node);
+               std::wstring l = _evaluate(n->left.get());
+               std::wstring r = _evaluate(n->right.get());
+               if (l != r)
+               {
+                       std::wstring msg = L"Type mismatch in binary expression: left operand is " + l + L", right operand is " + r;
+                       auto it = _implicitConversions.find(r);
+                       if (it != _implicitConversions.end() && !it->second.empty())
+                       {
+                               msg += L" (" + r + L" is convertible to: ";
+                               bool first = true;
+                               for (const auto &t : it->second)
+                               {
+                                       if (!first)
+                                       {
+                                               msg += L", ";
+                                       }
+                                       msg += t;
+                                       first = false;
+                               }
+                               msg += L")";
+                       }
+                       throw AnalyzerException(msg, n->op.location, _sourceManager);
+               }
+       }
 
 	void Analyzer::_analyzeUnaryExpression(const ASTNode *p_node)
 	{
@@ -566,12 +618,29 @@ namespace spk::Lumina
 		{
 			throw AnalyzerException(L"Ternary condition must be boolean", n->condition->location, _sourceManager);
 		}
-		std::wstring thenType = _evaluate(n->thenExpr.get());
-		std::wstring elseType = _evaluate(n->elseExpr.get());
-		if (thenType != elseType)
-		{
-			throw AnalyzerException(L"Type mismatch in ternary expression", n->location, _sourceManager);
-		}
+               std::wstring thenType = _evaluate(n->thenExpr.get());
+               std::wstring elseType = _evaluate(n->elseExpr.get());
+               if (thenType != elseType)
+               {
+                       std::wstring msg = L"Type mismatch in ternary expression: then branch is " + thenType + L", else branch is " + elseType;
+                       auto it = _implicitConversions.find(elseType);
+                       if (it != _implicitConversions.end() && !it->second.empty())
+                       {
+                               msg += L" (" + elseType + L" is convertible to: ";
+                               bool first = true;
+                               for (const auto &t : it->second)
+                               {
+                                       if (!first)
+                                       {
+                                               msg += L", ";
+                                       }
+                                       msg += t;
+                                       first = false;
+                               }
+                               msg += L")";
+                       }
+                       throw AnalyzerException(msg, n->location, _sourceManager);
+               }
 	}
 
 	void Analyzer::_analyzeLValue(const ASTNode *p_node)
@@ -644,25 +713,50 @@ namespace spk::Lumina
 		return sig;
 	}
 
-        void Analyzer::_loadBuiltinTypes()
-        {
-		std::filesystem::path path = std::filesystem::path("doc") / "lumina_build_in.md";
-		std::ifstream file(path);
-		if (!file.is_open())
-		{
-			return;
-		}
-		std::string line;
-		std::regex header("^###\\s+([A-Za-z0-9_]+)");
-                while (std::getline(file, line))
-                {
-                        std::smatch m;
-                        if (std::regex_search(line, m, header))
-                        {
-                                _types.insert(spk::StringUtils::stringToWString(m[1].str()));
-                        }
-                }
-        }
+       void Analyzer::_loadBuiltinTypes()
+       {
+               std::filesystem::path path = std::filesystem::path("doc") / "lumina_build_in.md";
+               std::ifstream file(path);
+               if (!file.is_open())
+               {
+                       return;
+               }
+               std::string line;
+               std::regex header("^###\\s+([A-Za-z0-9_]+)");
+               std::regex conv("-\\s+Implicitly\\s+convertible\\s+from\\s+`([A-Za-z0-9_]+)`");
+               std::string current;
+               bool readingConv = false;
+               while (std::getline(file, line))
+               {
+                       std::smatch m;
+                       if (std::regex_search(line, m, header))
+                       {
+                               current = m[1].str();
+                               _types.insert(spk::StringUtils::stringToWString(current));
+                               readingConv = false;
+                               continue;
+                       }
+
+                       if (line.rfind("#### Implicit Conversions:", 0) == 0)
+                       {
+                               readingConv = true;
+                               continue;
+                       }
+
+                       if (line.rfind("####", 0) == 0 && readingConv)
+                       {
+                               readingConv = false;
+                               continue;
+                       }
+
+                       if (readingConv && std::regex_search(line, m, conv))
+                       {
+                               std::wstring from = spk::StringUtils::stringToWString(m[1].str());
+                               std::wstring to = spk::StringUtils::stringToWString(current);
+                               _implicitConversions[from].insert(to);
+                       }
+               }
+       }
 
         void Analyzer::_loadBuiltinVariables()
         {
@@ -713,17 +807,34 @@ namespace spk::Lumina
 			}
 			throw AnalyzerException(L"Undefined variable " + ref->name.lexeme, ref->location, _sourceManager);
 		}
-		case ASTNode::Kind::BinaryExpression:
-		{
-			const BinaryExpressionNode *bin = static_cast<const BinaryExpressionNode *>(p_node);
-			std::wstring l = _evaluate(bin->left.get());
-			std::wstring r = _evaluate(bin->right.get());
-			if (l != r)
-			{
-				throw AnalyzerException(L"Type mismatch in binary expression", bin->op.location, _sourceManager);
-			}
-			return l;
-		}
+                case ASTNode::Kind::BinaryExpression:
+                {
+                        const BinaryExpressionNode *bin = static_cast<const BinaryExpressionNode *>(p_node);
+                        std::wstring l = _evaluate(bin->left.get());
+                        std::wstring r = _evaluate(bin->right.get());
+                        if (l != r)
+                        {
+                                std::wstring msg = L"Type mismatch in binary expression: left operand is " + l + L", right operand is " + r;
+                                auto it = _implicitConversions.find(r);
+                                if (it != _implicitConversions.end() && !it->second.empty())
+                                {
+                                        msg += L" (" + r + L" is convertible to: ";
+                                        bool first = true;
+                                        for (const auto &t : it->second)
+                                        {
+                                                if (!first)
+                                                {
+                                                        msg += L", ";
+                                                }
+                                                msg += t;
+                                                first = false;
+                                        }
+                                        msg += L")";
+                                }
+                                throw AnalyzerException(msg, bin->op.location, _sourceManager);
+                        }
+                        return l;
+                }
 		case ASTNode::Kind::UnaryExpression:
 		{
 			const UnaryExpressionNode *un = static_cast<const UnaryExpressionNode *>(p_node);

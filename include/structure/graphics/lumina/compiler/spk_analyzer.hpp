@@ -33,6 +33,7 @@ namespace spk::Lumina
         SourceManager& _sourceManager;
         std::unordered_set<std::wstring> _pipelineStages;
         std::unordered_set<std::wstring> _types;
+        std::unordered_map<std::wstring, std::unordered_set<std::wstring>> _implicitConversions;
         std::unordered_set<std::wstring> _textures;
         std::unordered_map<std::wstring, std::unordered_set<std::wstring>> _functionSignatures;
         std::vector<std::wstring> _containerStack;
