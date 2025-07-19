@@ -2,49 +2,31 @@
 
 namespace spk::Lumina
 {
-	namespace
-	{
-		std::wstring composeSignature(const std::wstring& p_name, const std::vector<Variable> &p_parameters)
-		{
-			std::wstring result = L"";
-
-			result = p_name + L"(";
-			std::wstring parameterString = L"";
-			for (const auto &variable : p_parameters)
-			{
-				if (parameterString.empty() == false)
-				{
-					parameterString += L", ";
-				}
-				parameterString += variable.type->name;
-			}
-			result += parameterString + L")";
-		
-			return (result);
-		}
+       namespace
+       {
 
 		void registerBuiltinTypes(NamespaceSymbol &p_namespace)
 		{
 			auto &types = p_namespace.types;
 
-			types.emplace(L"float", TypeSymbol{L"float", TypeSymbol::Role::Structure, {}, {}, {}, {}});
-			types.emplace(L"int", TypeSymbol{L"int", TypeSymbol::Role::Structure, {}, {}, {}, {}});
-			types.emplace(L"uint", TypeSymbol{L"uint", TypeSymbol::Role::Structure, {}, {}, {}, {}});
-			types.emplace(L"bool", TypeSymbol{L"bool", TypeSymbol::Role::Structure, {}, {}, {}, {}});
-			types.emplace(L"Vector2", TypeSymbol{L"Vector2", TypeSymbol::Role::Structure, {}, {}, {}, {}});
-			types.emplace(L"Vector2Int", TypeSymbol{L"Vector2Int", TypeSymbol::Role::Structure, {}, {}, {}, {}});
-			types.emplace(L"Vector2UInt", TypeSymbol{L"Vector2UInt", TypeSymbol::Role::Structure, {}, {}, {}, {}});
-			types.emplace(L"Vector3", TypeSymbol{L"Vector3", TypeSymbol::Role::Structure, {}, {}, {}, {}});
-			types.emplace(L"Vector3Int", TypeSymbol{L"Vector3Int", TypeSymbol::Role::Structure, {}, {}, {}, {}});
-			types.emplace(L"Vector3UInt", TypeSymbol{L"Vector3UInt", TypeSymbol::Role::Structure, {}, {}, {}, {}});
-			types.emplace(L"Vector4", TypeSymbol{L"Vector4", TypeSymbol::Role::Structure, {}, {}, {}, {}});
-			types.emplace(L"Vector4Int", TypeSymbol{L"Vector4Int", TypeSymbol::Role::Structure, {}, {}, {}, {}});
-			types.emplace(L"Vector4UInt", TypeSymbol{L"Vector4UInt", TypeSymbol::Role::Structure, {}, {}, {}, {}});
-			types.emplace(L"Matrix2x2", TypeSymbol{L"Matrix2x2", TypeSymbol::Role::Structure, {}, {}, {}, {}});
-			types.emplace(L"Matrix3x3", TypeSymbol{L"Matrix3x3", TypeSymbol::Role::Structure, {}, {}, {}, {}});
-			types.emplace(L"Matrix4x4", TypeSymbol{L"Matrix4x4", TypeSymbol::Role::Structure, {}, {}, {}, {}});
-			types.emplace(L"Color", TypeSymbol{L"Color", TypeSymbol::Role::Structure, {}, {}, {}, {}});
-			types.emplace(L"void", TypeSymbol{L"void", TypeSymbol::Role::Structure, {}, {}, {}, {}});
+                       p_namespace.addType(L"float");
+                       p_namespace.addType(L"int");
+                       p_namespace.addType(L"uint");
+                       p_namespace.addType(L"bool");
+                       p_namespace.addType(L"Vector2");
+                       p_namespace.addType(L"Vector2Int");
+                       p_namespace.addType(L"Vector2UInt");
+                       p_namespace.addType(L"Vector3");
+                       p_namespace.addType(L"Vector3Int");
+                       p_namespace.addType(L"Vector3UInt");
+                       p_namespace.addType(L"Vector4");
+                       p_namespace.addType(L"Vector4Int");
+                       p_namespace.addType(L"Vector4UInt");
+                       p_namespace.addType(L"Matrix2x2");
+                       p_namespace.addType(L"Matrix3x3");
+                       p_namespace.addType(L"Matrix4x4");
+                       p_namespace.addType(L"Color");
+                       p_namespace.addType(L"void");
 
 			types[L"int"].convertible.insert(&types[L"float"]);
 			types[L"uint"].convertible.insert(&types[L"float"]);
@@ -73,73 +55,14 @@ namespace spk::Lumina
 
 		void registerBuiltinFunctions(NamespaceSymbol &p_namespace)
 		{
-			FunctionSymbol vertexPass;
-			vertexPass.name = L"VertexPass";
-			vertexPass.returnType = &p_namespace.types[L"void"];
-			vertexPass.signature = L"VertexPass()";
-			p_namespace.functionSignatures[L"VertexPass"].push_back(vertexPass);
-			p_namespace.functions.push_back(vertexPass);
+                        FunctionSymbol vertexPass(L"VertexPass", &p_namespace.types[L"void"], {});
+                        p_namespace.functionSignatures[L"VertexPass"].push_back(vertexPass);
+                        p_namespace.functions.push_back(vertexPass);
 
-			FunctionSymbol fragmentPass;
-			fragmentPass.name = L"FragmentPass";
-			fragmentPass.returnType = &p_namespace.types[L"void"];
-			fragmentPass.signature = L"FragmentPass()";
-			p_namespace.functionSignatures[L"FragmentPass"].push_back(fragmentPass);
-			p_namespace.functions.push_back(fragmentPass);
+                        FunctionSymbol fragmentPass(L"FragmentPass", &p_namespace.types[L"void"], {});
+                        p_namespace.functionSignatures[L"FragmentPass"].push_back(fragmentPass);
+                        p_namespace.functions.push_back(fragmentPass);
 
-			auto addFunction = [&](TypeSymbol* p_returnType, const std::wstring& p_methodName, const std::vector<Variable> &p_parameters)
-			{
-				FunctionSymbol newMethod;
-
-				newMethod.name = p_methodName;
-				newMethod.returnType = p_returnType;
-				newMethod.parameters = p_parameters;
-				newMethod.signature = composeSignature(newMethod.name, p_parameters);
-				newMethod.body = {};
-
-				p_namespace.functions.push_back(newMethod);
-			};
-
-			auto addConstructorType = [&](TypeSymbol* p_methodType, const std::vector<Variable> &p_parameters)
-			{
-				FunctionSymbol constructor;
-				
-				constructor.name = p_methodType->name;
-				constructor.returnType = p_methodType;
-				constructor.parameters = p_parameters;
-				constructor.signature = composeSignature(constructor.name, p_parameters);
-				constructor.body = {};
-
-				p_methodType->constructors.push_back(constructor);
-				p_namespace.functions.push_back(constructor);
-			};
-
-			auto addMethodToType = [&](TypeSymbol* p_methodType, TypeSymbol* p_returnType, const std::wstring& p_methodName, const std::vector<Variable> &p_parameters)
-			{
-				FunctionSymbol newMethod;
-
-				newMethod.name = p_methodName;
-				newMethod.returnType = p_returnType;
-				newMethod.parameters = p_parameters;
-				newMethod.signature = composeSignature(newMethod.name, p_parameters);
-				newMethod.body = {};
-
-				p_methodType->methods.push_back(newMethod);
-				p_namespace.functions.push_back(newMethod);
-			};
-
-			auto addOperatorToType = [&](TypeSymbol* p_methodType, TypeSymbol* p_returnType, const std::wstring& p_operatorType, const std::vector<Variable> &p_parameters){
-				FunctionSymbol newMethod;
-
-				newMethod.name = L"Operator" + p_operatorType;
-				newMethod.returnType = p_returnType;
-				newMethod.parameters = p_parameters;
-				newMethod.signature = composeSignature(newMethod.name, p_parameters);
-				newMethod.body = {};
-
-				p_methodType->methods.push_back(newMethod);
-				p_namespace.functions.push_back(newMethod);
-			};
 		}
 	} // namespace
 

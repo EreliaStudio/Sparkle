@@ -260,9 +260,10 @@ namespace spk::Lumina
 		{
 			_namespaceNames.insert(n->name.lexeme);
 			_pushContainer(n->name.lexeme);
-			NamespaceSymbol child;
-			child.name = n->name.lexeme;
-			_namespaceStack.back()->namespaces.push_back(child);
+                        NamespaceSymbol child;
+                        child.name = n->name.lexeme;
+                        child.parent = _namespaceStack.back();
+                        _namespaceStack.back()->namespaces.push_back(child);
 			NamespaceSymbol *ns = &_namespaceStack.back()->namespaces.back();
 			_namespaceStack.push_back(ns);
 			_pushScope();
@@ -278,9 +279,8 @@ namespace spk::Lumina
 		if (p_node->kind == ASTNode::Kind::Structure)
 		{
 			const auto *n = static_cast<const StructureNode *>(p_node);
-			auto [it, inserted] =
-				_namespaceStack.back()->types.emplace(n->name.lexeme, TypeSymbol{n->name.lexeme, TypeSymbol::Role::Structure, {}, {}, {}, {}});
-			_namespaceStack.back()->structures.push_back(&it->second);
+                        TypeSymbol* ts = _namespaceStack.back()->addType(n->name.lexeme, TypeSymbol::Role::Structure);
+                        _namespaceStack.back()->structures.push_back(ts);
 			_pushContainer(n->name.lexeme);
 			_pushScope();
 			for (const auto &c : n->variables)
@@ -317,8 +317,10 @@ namespace spk::Lumina
 		else if (p_node->kind == ASTNode::Kind::AttributeBlock)
 		{
 			const auto *n = static_cast<const AttributeBlockNode *>(p_node);
-			_namespaceStack.back()->types.emplace(n->name.lexeme, TypeSymbol{n->name.lexeme, TypeSymbol::Role::Attribute, {}, {}, {}, {}});
-			_namespaceStack.back()->attributeBlocks.push_back(n->name.lexeme);
+                        {
+                                _namespaceStack.back()->addType(n->name.lexeme, TypeSymbol::Role::Attribute);
+                        }
+                        _namespaceStack.back()->attributeBlocks.push_back(n->name.lexeme);
 			_pushContainer(n->name.lexeme);
 			_pushScope();
 			for (const auto &c : n->variables)
@@ -348,8 +350,10 @@ namespace spk::Lumina
 		else if (p_node->kind == ASTNode::Kind::ConstantBlock)
 		{
 			const auto *n = static_cast<const ConstantBlockNode *>(p_node);
-			_namespaceStack.back()->types.emplace(n->name.lexeme, TypeSymbol{n->name.lexeme, TypeSymbol::Role::Constant, {}, {}, {}, {}});
-			_namespaceStack.back()->constantBlocks.push_back(n->name.lexeme);
+                        {
+                                _namespaceStack.back()->addType(n->name.lexeme, TypeSymbol::Role::Constant);
+                        }
+                        _namespaceStack.back()->constantBlocks.push_back(n->name.lexeme);
 			_pushContainer(n->name.lexeme);
 			_pushScope();
 			for (const auto &c : n->variables)
@@ -911,17 +915,13 @@ namespace spk::Lumina
 	}
 
 	Analyzer::TypeSymbol *Analyzer::_findType(const std::wstring &p_name) const
-	{
-		for (auto it = _namespaceStack.rbegin(); it != _namespaceStack.rend(); ++it)
-		{
-			auto tit = (*it)->types.find(p_name);
-			if (tit != (*it)->types.end())
-			{
-				return const_cast<TypeSymbol *>(&tit->second);
-			}
-		}
-		return nullptr;
-	}
+        {
+                if (_namespaceStack.empty())
+                {
+                        return nullptr;
+                }
+                return _namespaceStack.back()->typeSymbol(p_name);
+        }
 
 	const Analyzer::NamespaceSymbol *Analyzer::_findNamespace(const std::wstring &p_name) const
 	{
