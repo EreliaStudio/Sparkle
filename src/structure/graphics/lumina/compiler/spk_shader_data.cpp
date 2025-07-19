@@ -74,6 +74,11 @@ namespace spk::Lumina
 			member.print(p_os, nextIndent);
 			p_os << L"\n";
 		}
+		for (const auto &method : methods)
+		{
+			method.print(p_os, nextIndent);
+			p_os << L"\n";
+		}
 	}
 
 	void NamespaceSymbol::print(std::wostream &p_os, size_t p_indent) const
