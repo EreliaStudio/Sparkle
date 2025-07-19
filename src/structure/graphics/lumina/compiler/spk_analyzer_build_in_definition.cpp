@@ -4,6 +4,25 @@ namespace spk::Lumina
 {
 	namespace
 	{
+		std::wstring composeSignature(const std::wstring& p_name, const std::vector<Variable> &p_parameters)
+		{
+			std::wstring result = L"";
+
+			result = p_name + L"(";
+			std::wstring parameterString = L"";
+			for (const auto &variable : p_parameters)
+			{
+				if (parameterString.empty() == false)
+				{
+					parameterString += L", ";
+				}
+				parameterString += variable.type->name;
+			}
+			result += parameterString + L")";
+		
+			return (result);
+		}
+
 		void registerBuiltinTypes(NamespaceSymbol &p_namespace)
 		{
 			auto &types = p_namespace.types;
@@ -21,9 +40,9 @@ namespace spk::Lumina
 			types.emplace(L"Vector4", TypeSymbol{L"Vector4", TypeSymbol::Role::Structure, {}, {}, {}, {}});
 			types.emplace(L"Vector4Int", TypeSymbol{L"Vector4Int", TypeSymbol::Role::Structure, {}, {}, {}, {}});
 			types.emplace(L"Vector4UInt", TypeSymbol{L"Vector4UInt", TypeSymbol::Role::Structure, {}, {}, {}, {}});
-			types.emplace(L"Matrix2", TypeSymbol{L"Matrix2", TypeSymbol::Role::Structure, {}, {}, {}, {}});
-			types.emplace(L"Matrix3", TypeSymbol{L"Matrix3", TypeSymbol::Role::Structure, {}, {}, {}, {}});
-			types.emplace(L"Matrix4", TypeSymbol{L"Matrix4", TypeSymbol::Role::Structure, {}, {}, {}, {}});
+			types.emplace(L"Matrix2x2", TypeSymbol{L"Matrix2x2", TypeSymbol::Role::Structure, {}, {}, {}, {}});
+			types.emplace(L"Matrix3x3", TypeSymbol{L"Matrix3x3", TypeSymbol::Role::Structure, {}, {}, {}, {}});
+			types.emplace(L"Matrix4x4", TypeSymbol{L"Matrix4x4", TypeSymbol::Role::Structure, {}, {}, {}, {}});
 			types.emplace(L"Color", TypeSymbol{L"Color", TypeSymbol::Role::Structure, {}, {}, {}, {}});
 			types.emplace(L"void", TypeSymbol{L"void", TypeSymbol::Role::Structure, {}, {}, {}, {}});
 
@@ -68,98 +87,59 @@ namespace spk::Lumina
 			p_namespace.functionSignatures[L"FragmentPass"].push_back(fragmentPass);
 			p_namespace.functions.push_back(fragmentPass);
 
-			auto &type = p_namespace.types;
-			auto makeVar = [&](const std::wstring &p_name, const std::wstring &p_typeName)
+			auto addFunction = [&](TypeSymbol* p_returnType, const std::wstring& p_methodName, const std::vector<Variable> &p_parameters)
 			{
-				Variable variable;
-				variable.name = p_name;
-				variable.type = &type[p_typeName];
-				return variable;
+				FunctionSymbol newMethod;
+
+				newMethod.name = p_methodName;
+				newMethod.returnType = p_returnType;
+				newMethod.parameters = p_parameters;
+				newMethod.signature = composeSignature(newMethod.name, p_parameters);
+				newMethod.body = {};
+
+				p_namespace.functions.push_back(newMethod);
 			};
 
+			auto addConstructorType = [&](TypeSymbol* p_methodType, const std::vector<Variable> &p_parameters)
 			{
-				FunctionSymbol symbol;
+				FunctionSymbol constructor;
+				
+				constructor.name = p_methodType->name;
+				constructor.returnType = p_methodType;
+				constructor.parameters = p_parameters;
+				constructor.signature = composeSignature(constructor.name, p_parameters);
+				constructor.body = {};
 
-				symbol.name = L"float";
-				symbol.returnType = &type[L"float"];
-				symbol.signature = L"float()";
-				type[L"float"].constructors.push_back(symbol);
+				p_methodType->constructors.push_back(constructor);
+				p_namespace.functions.push_back(constructor);
+			};
 
-				symbol.signature = L"float(float value)";
-				symbol.parameters.push_back(makeVar(L"value", L"float"));
-				type[L"float"].constructors.push_back(symbol);
-
-				symbol.signature = L"float(int value)";
-				symbol.parameters.push_back(makeVar(L"value", L"int"));
-				type[L"float"].constructors.push_back(symbol);
-			}
-
+			auto addMethodToType = [&](TypeSymbol* p_methodType, TypeSymbol* p_returnType, const std::wstring& p_methodName, const std::vector<Variable> &p_parameters)
 			{
-				FunctionSymbol functionSymbol;
+				FunctionSymbol newMethod;
 
-				functionSymbol.name = L"abs";
-				functionSymbol.returnType = &type[L"float"];
-				functionSymbol.parameters.push_back(makeVar(L"value", L"float"));
-				functionSymbol.signature = L"float abs(float value)";
+				newMethod.name = p_methodName;
+				newMethod.returnType = p_returnType;
+				newMethod.parameters = p_parameters;
+				newMethod.signature = composeSignature(newMethod.name, p_parameters);
+				newMethod.body = {};
 
-				p_namespace.functionSignatures[functionSymbol.name].push_back(functionSymbol);
-				p_namespace.functions.push_back(functionSymbol);
+				p_methodType->methods.push_back(newMethod);
+				p_namespace.functions.push_back(newMethod);
+			};
 
-				type[L"float"].operators[functionSymbol.name].push_back(functionSymbol);
-			}
-			{
-				FunctionSymbol functionSymbol;
+			auto addOperatorToType = [&](TypeSymbol* p_methodType, TypeSymbol* p_returnType, const std::wstring& p_operatorType, const std::vector<Variable> &p_parameters){
+				FunctionSymbol newMethod;
 
-				functionSymbol.name = L"length";
-				functionSymbol.returnType = &type[L"float"];
-				functionSymbol.parameters.push_back(makeVar(L"v", L"Vector2"));
-				functionSymbol.signature = L"float length(Vector2 v)";
+				newMethod.name = L"Operator" + p_operatorType;
+				newMethod.returnType = p_returnType;
+				newMethod.parameters = p_parameters;
+				newMethod.signature = composeSignature(newMethod.name, p_parameters);
+				newMethod.body = {};
 
-				p_namespace.functionSignatures[functionSymbol.name].push_back(functionSymbol);
-				p_namespace.functions.push_back(functionSymbol);
-
-				type[L"Vector2"].operators[functionSymbol.name].push_back(functionSymbol);
-			}
-			{
-				FunctionSymbol functionSymbol;
-
-				functionSymbol.name = L"normalize";
-				functionSymbol.returnType = &type[L"Vector2"];
-				functionSymbol.parameters.push_back(makeVar(L"v", L"Vector2"));
-				functionSymbol.signature = L"Vector2 normalize(Vector2 v)";
-
-				p_namespace.functionSignatures[functionSymbol.name].push_back(functionSymbol);
-				p_namespace.functions.push_back(functionSymbol);
-
-				type[L"Vector2"].operators[functionSymbol.name].push_back(functionSymbol);
-			}
-			{
-				FunctionSymbol functionSymbol;
-
-				functionSymbol.name = L"length";
-				functionSymbol.returnType = &type[L"float"];
-				functionSymbol.parameters.push_back(makeVar(L"v", L"Vector3"));
-				functionSymbol.signature = L"float length(Vector3 v)";
-
-				p_namespace.functionSignatures[functionSymbol.name].push_back(functionSymbol);
-				p_namespace.functions.push_back(functionSymbol);
-
-				type[L"Vector3"].operators[functionSymbol.name].push_back(functionSymbol);
-			}
-			{
-				FunctionSymbol functionSymbol;
-
-				functionSymbol.name = L"cross";
-				functionSymbol.returnType = &type[L"Vector3"];
-				functionSymbol.parameters.push_back(makeVar(L"a", L"Vector3"));
-				functionSymbol.parameters.push_back(makeVar(L"b", L"Vector3"));
-				functionSymbol.signature = L"Vector3 cross(Vector3 a, Vector3 b)";
-
-				p_namespace.functionSignatures[functionSymbol.name].push_back(functionSymbol);
-				p_namespace.functions.push_back(functionSymbol);
-
-				type[L"Vector3"].operators[functionSymbol.name].push_back(functionSymbol);
-			}
+				p_methodType->methods.push_back(newMethod);
+				p_namespace.functions.push_back(newMethod);
+			};
 		}
 	} // namespace
 
