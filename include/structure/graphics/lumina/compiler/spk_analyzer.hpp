@@ -62,6 +62,11 @@ namespace spk::Lumina
         std::wstring _extractCalleeName(const ASTNode* p_node) const;
         std::vector<Variable> _parseParameters(const std::vector<Token>& p_header) const;
         std::vector<FunctionSymbol> _findFunctions(const std::wstring& p_name) const;
+        bool _canConvert(const std::wstring& from, const std::wstring& to) const;
+        std::wstring _resolveCall(const ASTNode* callee,
+                                  const std::wstring& name,
+                                  const std::vector<std::wstring>& argTypes,
+                                  const Location& loc);
         std::wstring _evaluate(const ASTNode* p_node);
 
         void _pushContainer(const std::wstring& p_name);
