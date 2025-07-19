@@ -19,24 +19,24 @@ VertexPass()
 
 struct Test
 {
-	type name;
-	type2 name2;
+	int name;
+	Vector2 name2;
 };
 
 AttributeBlock myAttribute
 {
-	type attribute1;
-	type attribute2;
+	Vector3 attribute1;
+	Vector4 attribute2;
 };
 
 ConstantBlock myConstants
 {
-	type constant1;
-	type constant2;
+	Matrix4x4 constant1;
+	Color constant2;
 
-	type methodName(type param1, type2 param2)
+	int methodName(Vector2Int param1, float param2)
 	{
-		return returnValue;
+		return 10;
 	}
 };
 
@@ -44,6 +44,21 @@ ConstantBlock myConstants
 
 Multiline commentary
 */
+
+int someFunction1()
+{
+return 0;
+}
+
+int someFunction2(int a, int b, int c)
+{
+return (0);
+}
+
+Vector2 someFunction3(int a, int b)
+{
+return Vector2(0, a - b);
+}
 
 FragmentPass()
 {
@@ -53,8 +68,7 @@ FragmentPass()
 	}
 
 	int value = someFunction1();
-	int value = someFunction2(param1, param2, someFunction3(valueA, valueB));
-
+	Vector2 value2 = someFunction2(1, value, someFunction3(1, 2));
 
 	pixelColor = fragmentColor;
 }
