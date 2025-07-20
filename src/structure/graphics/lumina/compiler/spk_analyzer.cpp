@@ -1255,34 +1255,55 @@ namespace spk::Lumina
                                 }
 
                                 int vectorSize = 0;
+                                bool isColor = false;
                                 if (baseType.rfind(L"Vector2", 0) == 0)
                                         vectorSize = 2;
                                 else if (baseType.rfind(L"Vector3", 0) == 0)
                                         vectorSize = 3;
-                                else if (baseType.rfind(L"Vector4", 0) == 0 || baseType == L"Color")
+                                else if (baseType.rfind(L"Vector4", 0) == 0)
                                         vectorSize = 4;
+                                else if (baseType == L"Color")
+                                {
+                                        vectorSize = 4;
+                                        isColor = true;
+                                }
 
                                 if (vectorSize > 0)
                                 {
                                         const std::wstring &member = mem->member.lexeme;
-                                        auto swizzleIndex = [](wchar_t c) -> int
+                                        auto swizzleIndex = [&](wchar_t c) -> int
                                         {
-                                                switch (c)
+                                                if (isColor)
                                                 {
-                                                case L'x':
-                                                case L'r':
-                                                        return 0;
-                                                case L'y':
-                                                case L'g':
-                                                        return 1;
-                                                case L'z':
-                                                case L'b':
-                                                        return 2;
-                                                case L'w':
-                                                case L'a':
-                                                        return 3;
-                                                default:
-                                                        return -1;
+                                                        switch (c)
+                                                        {
+                                                        case L'r':
+                                                                return 0;
+                                                        case L'g':
+                                                                return 1;
+                                                        case L'b':
+                                                                return 2;
+                                                        case L'a':
+                                                                return 3;
+                                                        default:
+                                                                return -1;
+                                                        }
+                                                }
+                                                else
+                                                {
+                                                        switch (c)
+                                                        {
+                                                        case L'x':
+                                                                return 0;
+                                                        case L'y':
+                                                                return 1;
+                                                        case L'z':
+                                                                return 2;
+                                                        case L'w':
+                                                                return 3;
+                                                        default:
+                                                                return -1;
+                                                        }
                                                 }
                                         };
 
