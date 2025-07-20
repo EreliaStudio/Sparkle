@@ -48,8 +48,9 @@ namespace spk::Lumina
 		std::unique_ptr<ASTNode> parseDiscard();
 		std::unique_ptr<ASTNode> parseVariableDeclaration();
 		std::unique_ptr<ASTNode> parseExpression();
-		std::unique_ptr<ASTNode> parseUnary();
-		std::unique_ptr<ASTNode> parsePrimary();
+                std::unique_ptr<ASTNode> parseUnary();
+                std::unique_ptr<ASTNode> parsePostfix(std::unique_ptr<ASTNode> p_node);
+                std::unique_ptr<ASTNode> parsePrimary();
 		std::unique_ptr<ASTNode> parseBinaryRHS(int p_precedence, std::unique_ptr<ASTNode> p_left);
 		std::unique_ptr<ASTNode> parseFunction(ASTNode::Kind p_kind);
 		std::unique_ptr<ASTNode> parseOperator();

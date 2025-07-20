@@ -482,7 +482,7 @@ namespace spk::Lumina
 		}
 	}
 
-	static bool isAssignmentOperator(Token::Type p_tokenType)
+static bool isAssignmentOperator(Token::Type p_tokenType)
 	{
 		switch (p_tokenType)
 		{
@@ -505,51 +505,20 @@ namespace spk::Lumina
 			return std::make_unique<LiteralNode>(advance());
 		}
 
-		if (peek().type == Token::Type::Identifier)
-		{
-			Token name = advance();
-			std::unique_ptr<ASTNode> node = std::make_unique<VariableReferenceNode>(name);
-			while (true)
-			{
-				if (peek().type == Token::Type::OpenParenthesis)
-				{
-					advance();
-					std::vector<std::unique_ptr<ASTNode>> args;
-					if (peek().type != Token::Type::CloseParenthesis)
-					{
-						while (true)
-						{
-							args.emplace_back(parseExpression());
-							if (peek().type != Token::Type::Comma)
-							{
-								break;
-							}
-							advance();
-						}
-					}
-					expect(Token::Type::CloseParenthesis, DEBUG_INFO());
-					node = std::make_unique<CallExpressionNode>(std::move(node), std::move(args), name.location);
-					continue;
-				}
-				if (peek().type == Token::Type::Dot)
-				{
-					Token dot = advance();
-					Token member = expect(Token::Type::Identifier, DEBUG_INFO());
-					node = std::make_unique<MemberAccessNode>(std::move(node), member, dot.location);
-					continue;
-				}
-				break;
-			}
-			return node;
-		}
+               if (peek().type == Token::Type::Identifier)
+               {
+                        Token name = advance();
+                        std::unique_ptr<ASTNode> node = std::make_unique<VariableReferenceNode>(name);
+                        return parsePostfix(std::move(node));
+               }
 
-		if (peek().type == Token::Type::OpenParenthesis)
-		{
-			advance();
-			auto expr = parseExpression();
-			expect(Token::Type::CloseParenthesis, DEBUG_INFO());
-			return expr;
-		}
+               if (peek().type == Token::Type::OpenParenthesis)
+               {
+                        advance();
+                        auto expr = parseExpression();
+                        expect(Token::Type::CloseParenthesis, DEBUG_INFO());
+                        return parsePostfix(std::move(expr));
+               }
 
 		return std::make_unique<TokenNode>(advance());
 	}
@@ -834,7 +803,43 @@ namespace spk::Lumina
 			{
 				result.emplace_back((this->*it->second)());
 			}
-		}
-		return result;
-	}
+                }
+                return result;
+        }
+
+       std::unique_ptr<ASTNode> Lexer::parsePostfix(std::unique_ptr<ASTNode> p_node)
+       {
+               while (true)
+               {
+                       if (peek().type == Token::Type::OpenParenthesis)
+                       {
+                               advance();
+                               std::vector<std::unique_ptr<ASTNode>> args;
+                               if (peek().type != Token::Type::CloseParenthesis)
+                               {
+                                       while (true)
+                                       {
+                                               args.emplace_back(parseExpression());
+                                               if (peek().type != Token::Type::Comma)
+                                               {
+                                                       break;
+                                               }
+                                               advance();
+                                       }
+                               }
+                               expect(Token::Type::CloseParenthesis, DEBUG_INFO());
+                               p_node = std::make_unique<CallExpressionNode>(std::move(p_node), std::move(args), p_node->location);
+                               continue;
+                       }
+                       if (peek().type == Token::Type::Dot)
+                       {
+                               Token dot = advance();
+                               Token member = expect(Token::Type::Identifier, DEBUG_INFO());
+                               p_node = std::make_unique<MemberAccessNode>(std::move(p_node), member, dot.location);
+                               continue;
+                       }
+                       break;
+               }
+               return p_node;
+       }
 }
