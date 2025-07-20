@@ -681,14 +681,15 @@ namespace spk::Lumina
 		(void)_evaluate(p_node);
 	}
 
-	void Analyzer::_analyzeMemberAccess(const ASTNode *p_node)
-	{
-		const auto *n = static_cast<const MemberAccessNode *>(p_node);
-		if (n->object)
-		{
-			(void)_evaluate(n->object.get());
-		}
-	}
+        void Analyzer::_analyzeMemberAccess(const ASTNode *p_node)
+        {
+                const auto *n = static_cast<const MemberAccessNode *>(p_node);
+                if (n->object)
+                {
+                        (void)_evaluate(n->object.get());
+                }
+                (void)_evaluate(p_node);
+        }
 
 	void Analyzer::_analyzeVariableReference(const ASTNode *)
 	{
@@ -1242,18 +1243,104 @@ namespace spk::Lumina
 		{
 			const MemberAccessNode *mem = static_cast<const MemberAccessNode *>(p_node);
 			std::wstring baseType = _evaluate(mem->object.get());
-			TypeSymbol *ts = _findType(baseType);
-			if (ts)
-			{
-				auto it = std::find_if(
-					ts->members.begin(), ts->members.end(), [&](const Variable &p_variable) { return p_variable.name == mem->member.lexeme; });
-				if (it != ts->members.end())
-				{
-					return it->type ? it->type->name : L"void";
-				}
-			}
-			return L"void";
-		}
+                        TypeSymbol *ts = _findType(baseType);
+                        if (ts)
+                        {
+                                auto it = std::find_if(
+                                        ts->members.begin(), ts->members.end(),
+                                        [&](const Variable &p_variable) { return p_variable.name == mem->member.lexeme; });
+                                if (it != ts->members.end())
+                                {
+                                        return it->type ? it->type->name : L"void";
+                                }
+
+                                int vectorSize = 0;
+                                bool isColor = false;
+                                if (baseType.rfind(L"Vector2", 0) == 0)
+                                        vectorSize = 2;
+                                else if (baseType.rfind(L"Vector3", 0) == 0)
+                                        vectorSize = 3;
+                                else if (baseType.rfind(L"Vector4", 0) == 0)
+                                        vectorSize = 4;
+                                else if (baseType == L"Color")
+                                {
+                                        vectorSize = 4;
+                                        isColor = true;
+                                }
+
+                                if (vectorSize > 0)
+                                {
+                                        const std::wstring &member = mem->member.lexeme;
+                                        auto swizzleIndex = [&](wchar_t c) -> int
+                                        {
+                                                if (isColor)
+                                                {
+                                                        switch (c)
+                                                        {
+                                                        case L'r':
+                                                                return 0;
+                                                        case L'g':
+                                                                return 1;
+                                                        case L'b':
+                                                                return 2;
+                                                        case L'a':
+                                                                return 3;
+                                                        default:
+                                                                return -1;
+                                                        }
+                                                }
+                                                else
+                                                {
+                                                        switch (c)
+                                                        {
+                                                        case L'x':
+                                                                return 0;
+                                                        case L'y':
+                                                                return 1;
+                                                        case L'z':
+                                                                return 2;
+                                                        case L'w':
+                                                                return 3;
+                                                        default:
+                                                                return -1;
+                                                        }
+                                                }
+                                        };
+
+                                        bool valid = !member.empty() && member.size() <= 4;
+                                        if (valid)
+                                        {
+                                                for (wchar_t ch : member)
+                                                {
+                                                        int idx = swizzleIndex(ch);
+                                                        if (idx < 0 || idx >= vectorSize)
+                                                        {
+                                                                valid = false;
+                                                                break;
+                                                        }
+                                                }
+                                        }
+
+                                        if (valid)
+                                        {
+                                                switch (member.size())
+                                                {
+                                                case 1:
+                                                        return L"float";
+                                                case 2:
+                                                        return L"Vector2";
+                                                case 3:
+                                                        return L"Vector3";
+                                                case 4:
+                                                        return L"Vector4";
+                                                default:
+                                                        break;
+                                                }
+                                        }
+                                }
+                        }
+                        return L"void";
+                }
 		case ASTNode::Kind::BinaryExpression:
 		{
 			const BinaryExpressionNode *bin = static_cast<const BinaryExpressionNode *>(p_node);
