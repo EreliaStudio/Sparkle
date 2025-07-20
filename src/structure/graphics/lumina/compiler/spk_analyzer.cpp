@@ -29,7 +29,24 @@ namespace spk::Lumina
     {
         const std::wstring &srcLine = p_sourceManager.getSourceLine(p_location);
 
-        std::wstring underline(p_location.column, L' ');
+        const size_t tabWidth = 4;
+        std::wstring underline;
+        underline.reserve(p_location.column + p_markerLength);
+        size_t visualPos = 0;
+        for (size_t i = 0; i < p_location.column && i < srcLine.size(); ++i)
+        {
+            if (srcLine[i] == L'\t')
+            {
+                size_t spaces = tabWidth - (visualPos % tabWidth);
+                underline.append(spaces, L' ');
+                visualPos += spaces;
+            }
+            else
+            {
+                underline.push_back(L' ');
+                ++visualPos;
+            }
+        }
         underline.append(p_markerLength, '^');
 
         std::wostringstream oss;
