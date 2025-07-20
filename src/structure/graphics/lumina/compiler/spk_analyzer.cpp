@@ -12,24 +12,34 @@
 
 namespace spk::Lumina
 {
-	AnalyzerException::AnalyzerException(const std::wstring &p_msg, const Location &p_location, const SourceManager &p_sourceManager) :
-		std::runtime_error(spk::StringUtils::wstringToString(compose(p_msg, p_location, p_sourceManager)))
-	{
-	}
+    AnalyzerException::AnalyzerException(const std::wstring &p_msg,
+                                         const Location &p_location,
+                                         const SourceManager &p_sourceManager,
+                                         const std::wstring &p_details) :
+            std::runtime_error(spk::StringUtils::wstringToString(compose(p_msg, p_location, p_sourceManager, p_details)))
+    {
+    }
 
-	std::wstring AnalyzerException::compose(const std::wstring &p_msg, const Location &p_location, const SourceManager &p_sourceManager)
-	{
-		const std::wstring &srcLine = p_sourceManager.getSourceLine(p_location);
+    std::wstring AnalyzerException::compose(const std::wstring &p_msg,
+                                            const Location &p_location,
+                                            const SourceManager &p_sourceManager,
+                                            const std::wstring &p_details)
+    {
+        const std::wstring &srcLine = p_sourceManager.getSourceLine(p_location);
 
-		std::wstring underline(p_location.column, L' ');
-		underline.append(1, '^');
+        std::wstring underline(p_location.column, L' ');
+        underline.append(1, '^');
 
-		std::wostringstream oss;
-		oss << p_location.source.wstring() << L":" << p_location.line << L":" << p_location.column << L": error: " << p_msg << L"\n"
-			<< srcLine << L"\n"
-			<< underline;
-		return oss.str();
-	}
+        std::wostringstream oss;
+        oss << p_location.source.wstring() << L":" << p_location.line << L":" << p_location.column << L": error: " << p_msg << L"\n"
+            << srcLine << L"\n"
+            << underline;
+        if (!p_details.empty())
+        {
+            oss << L"\n" << p_details;
+        }
+        return oss.str();
+    }
 
 	Analyzer::Analyzer(SourceManager &p_sourceManager) :
 		_sourceManager(p_sourceManager)
@@ -1043,21 +1053,21 @@ namespace spk::Lumina
 		return msg;
 	}
 
-	std::wstring Analyzer::_availableSignatures(const std::vector<FunctionSymbol> &p_funcs) const
-	{
-		std::wstring msg;
-		bool first = true;
-		for (const auto &function : p_funcs)
-		{
-			if (!first)
-			{
-				msg += L", ";
-			}
-			msg += function.signature;
-			first = false;
-		}
-		return msg;
-	}
+    std::wstring Analyzer::_availableSignatures(const std::vector<FunctionSymbol> &p_funcs) const
+    {
+            std::wstring msg;
+            bool first = true;
+            for (const auto &function : p_funcs)
+            {
+                    if (!first)
+                    {
+                            msg += L"\n";
+                    }
+                    msg += L" - " + function.signature;
+                    first = false;
+            }
+            return msg;
+    }
 
 	bool Analyzer::_canConvert(const std::wstring &p_from, const std::wstring &p_to) const
 	{
@@ -1178,29 +1188,31 @@ namespace spk::Lumina
 			}
 		}
 
-		if (constructor)
-		{
-			std::wstring callSig = _makeCallSignature(p_name, p_argTypes);
-			std::wstring msg = L"No matching constructor for " + callSig;
-			std::wstring avail = _availableSignatures(functions);
-			if (!avail.empty())
-			{
-				msg += L". Available: " + avail;
-			}
-			msg += L" - " + DEBUG_INFO();
-			throw AnalyzerException(msg, p_loc, _sourceManager);
-		}
+                if (constructor)
+                {
+                        std::wstring callSig = _makeCallSignature(p_name, p_argTypes);
+                        std::wstring msg = L"No matching constructor for " + callSig;
+                        std::wstring avail = _availableSignatures(functions);
+                        std::wstring details;
+                        if (!avail.empty())
+                        {
+                                details = L"Available :\n" + avail;
+                        }
+                        msg += L" - " + DEBUG_INFO();
+                        throw AnalyzerException(msg, p_loc, _sourceManager, details);
+                }
 
-		std::wstring callSig = _makeCallSignature(p_name, p_argTypes);
-		std::wstring msg = L"No matching overload for function " + callSig;
-		std::wstring avail = _availableSignatures(functions);
-		if (!avail.empty())
-		{
-			msg += L". Available: " + avail;
-		}
-		msg += L" - " + DEBUG_INFO();
-		throw AnalyzerException(msg, p_loc, _sourceManager);
-	}
+                std::wstring callSig = _makeCallSignature(p_name, p_argTypes);
+                std::wstring msg = L"No matching overload for function " + callSig;
+                std::wstring avail = _availableSignatures(functions);
+                std::wstring details;
+                if (!avail.empty())
+                {
+                        details = L"Available :\n" + avail;
+                }
+                msg += L" - " + DEBUG_INFO();
+                throw AnalyzerException(msg, p_loc, _sourceManager, details);
+        }
 
 	std::wstring Analyzer::_evaluate(const ASTNode *p_node)
 	{

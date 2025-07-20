@@ -16,9 +16,15 @@ namespace spk::Lumina
     class AnalyzerException : public std::runtime_error
     {
     public:
-        AnalyzerException(const std::wstring& p_msg, const Location& p_location, const SourceManager& p_sourceManager);
+        AnalyzerException(const std::wstring& p_msg,
+                           const Location& p_location,
+                           const SourceManager& p_sourceManager,
+                           const std::wstring& p_details = L"");
     private:
-        static std::wstring compose(const std::wstring& p_msg, const Location& p_location, const SourceManager& p_sourceManager);
+        static std::wstring compose(const std::wstring& p_msg,
+                                    const Location& p_location,
+                                    const SourceManager& p_sourceManager,
+                                    const std::wstring& p_details);
     };
 
     class Analyzer
