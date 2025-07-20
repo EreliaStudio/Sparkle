@@ -15,20 +15,22 @@ namespace spk::Lumina
     AnalyzerException::AnalyzerException(const std::wstring &p_msg,
                                          const Location &p_location,
                                          const SourceManager &p_sourceManager,
-                                         const std::wstring &p_details) :
-            std::runtime_error(spk::StringUtils::wstringToString(compose(p_msg, p_location, p_sourceManager, p_details)))
+                                         const std::wstring &p_details,
+                                         size_t p_markerLength) :
+            std::runtime_error(spk::StringUtils::wstringToString(compose(p_msg, p_location, p_sourceManager, p_details, p_markerLength)))
     {
     }
 
     std::wstring AnalyzerException::compose(const std::wstring &p_msg,
                                             const Location &p_location,
                                             const SourceManager &p_sourceManager,
-                                            const std::wstring &p_details)
+                                            const std::wstring &p_details,
+                                            size_t p_markerLength)
     {
         const std::wstring &srcLine = p_sourceManager.getSourceLine(p_location);
 
         std::wstring underline(p_location.column, L' ');
-        underline.append(1, '^');
+        underline.append(p_markerLength, '^');
 
         std::wostringstream oss;
         oss << p_location.source.wstring() << L":" << p_location.line << L":" << p_location.column << L": error: " << p_msg << L"\n"
@@ -1163,7 +1165,11 @@ namespace spk::Lumina
 
 		if (functions.empty())
 		{
-			throw AnalyzerException(L"Unknown function " + p_name + L" - " + DEBUG_INFO(), p_loc, _sourceManager);
+                        throw AnalyzerException(L"Unknown function " + p_name + L" - " + DEBUG_INFO(),
+                                              p_loc,
+                                              _sourceManager,
+                                              L"",
+                                              p_name.size());
 		}
 
 		for (const auto &function : functions)
@@ -1199,7 +1205,11 @@ namespace spk::Lumina
                                 details = L"Available :\n" + avail;
                         }
                         msg += L" - " + DEBUG_INFO();
-                        throw AnalyzerException(msg, p_loc, _sourceManager, details);
+                        throw AnalyzerException(msg,
+                                              p_loc,
+                                              _sourceManager,
+                                              details,
+                                              p_name.size());
                 }
 
                 std::wstring callSig = _makeCallSignature(p_name, p_argTypes);
@@ -1211,7 +1221,11 @@ namespace spk::Lumina
                         details = L"Available :\n" + avail;
                 }
                 msg += L" - " + DEBUG_INFO();
-                throw AnalyzerException(msg, p_loc, _sourceManager, details);
+                throw AnalyzerException(msg,
+                                      p_loc,
+                                      _sourceManager,
+                                      details,
+                                      p_name.size());
         }
 
 	std::wstring Analyzer::_evaluate(const ASTNode *p_node)

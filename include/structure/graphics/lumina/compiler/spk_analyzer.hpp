@@ -19,12 +19,14 @@ namespace spk::Lumina
         AnalyzerException(const std::wstring& p_msg,
                            const Location& p_location,
                            const SourceManager& p_sourceManager,
-                           const std::wstring& p_details = L"");
+                           const std::wstring& p_details = L"",
+                           size_t p_markerLength = 1);
     private:
         static std::wstring compose(const std::wstring& p_msg,
                                     const Location& p_location,
                                     const SourceManager& p_sourceManager,
-                                    const std::wstring& p_details);
+                                    const std::wstring& p_details,
+                                    size_t p_markerLength);
     };
 
     class Analyzer
