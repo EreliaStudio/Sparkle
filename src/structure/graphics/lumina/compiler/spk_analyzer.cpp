@@ -23,7 +23,6 @@ namespace spk::Lumina
 	{
 		const std::wstring &srcLine = p_sourceManager.getSourceLine(p_location);
 
-		const size_t tabWidth = 4;
 		std::wstring underline;
 
 		underline.reserve(p_location.column + p_markerLength);
@@ -360,23 +359,23 @@ namespace spk::Lumina
 					_analyze(c.get());
 				}
 			}
-                        _popScope();
-                        _popContainer();
-                        if (_scopes.empty())
-                        {
-                                _pushScope();
-                        }
-                        {
-                                Variable var;
-                                var.name = n->name.lexeme;
-                                var.type = _findType(n->name.lexeme);
-                                auto &global = _scopes.front();
-                                global[var.name] = var;
-                        }
-                }
-                else if (p_node->kind == ASTNode::Kind::ConstantBlock)
-                {
-                        const auto *n = static_cast<const ConstantBlockNode *>(p_node);
+			_popScope();
+			_popContainer();
+			if (_scopes.empty())
+			{
+				_pushScope();
+			}
+			{
+				Variable var;
+				var.name = n->name.lexeme;
+				var.type = _findType(n->name.lexeme);
+				auto &global = _scopes.front();
+				global[var.name] = var;
+			}
+		}
+		else if (p_node->kind == ASTNode::Kind::ConstantBlock)
+		{
+			const auto *n = static_cast<const ConstantBlockNode *>(p_node);
 			{
 				_namespaceStack.back()->addType(n->name.lexeme, TypeSymbol::Role::Constant);
 			}
@@ -404,20 +403,20 @@ namespace spk::Lumina
 					_analyze(c.get());
 				}
 			}
-                        _popScope();
-                        _popContainer();
-                        if (_scopes.empty())
-                        {
-                                _pushScope();
-                        }
-                        {
-                                Variable var;
-                                var.name = n->name.lexeme;
-                                var.type = _findType(n->name.lexeme);
-                                auto &global = _scopes.front();
-                                global[var.name] = var;
-                        }
-                }
+			_popScope();
+			_popContainer();
+			if (_scopes.empty())
+			{
+				_pushScope();
+			}
+			{
+				Variable var;
+				var.name = n->name.lexeme;
+				var.type = _findType(n->name.lexeme);
+				auto &global = _scopes.front();
+				global[var.name] = var;
+			}
+		}
 	}
 
 	void Analyzer::_analyzeTexture(const ASTNode *p_node)
@@ -537,6 +536,10 @@ namespace spk::Lumina
 				else if (p_node->kind == ASTNode::Kind::Operator)
 				{
 					tSym->operators[name].push_back(sym);
+				}
+				else
+				{
+					tSym->methods.push_back(sym);
 				}
 			}
 		}
@@ -1156,6 +1159,13 @@ namespace spk::Lumina
 					{
 						functions.insert(functions.end(), opIt->second.begin(), opIt->second.end());
 					}
+					for (const auto &m : typePointer->methods)
+					{
+						if (m.name == target)
+						{
+							functions.push_back(m);
+						}
+					}
 				}
 			}
 
@@ -1169,6 +1179,13 @@ namespace spk::Lumina
 					if (opIt != typePointer->operators.end())
 					{
 						functions = opIt->second;
+					}
+					for (const auto &m : typePointer->methods)
+					{
+						if (m.name == target)
+						{
+							functions.push_back(m);
+						}
 					}
 				}
 			}
@@ -1189,50 +1206,50 @@ namespace spk::Lumina
 
 		if (functions.empty())
 		{
-			throw AnalyzerException(L"Unknown function " + p_name + L" - " + DEBUG_INFO(), p_loc, _sourceManager, L"", p_name.size());
+			throw AnalyzerException(L"Unknown function " + p_name + L" - " + DEBUG_INFO(), objectNode->location, _sourceManager, L"", p_name.size());
 		}
 
-                std::vector<const FunctionSymbol *> matches;
-                for (const auto &function : functions)
-                {
-                        if (function.parameters.size() != p_argTypes.size())
-                        {
-                                continue;
-                        }
-                        bool match = true;
-                        for (size_t i = 0; i < p_argTypes.size(); ++i)
-                        {
-                                std::wstring paramType = function.parameters[i].type ? function.parameters[i].type->name : L"void";
-                                if (!_canConvert(p_argTypes[i], paramType))
-                                {
-                                        match = false;
-                                        break;
-                                }
-                        }
-                        if (match)
-                        {
-                                matches.push_back(&function);
-                        }
-                }
+		std::vector<const FunctionSymbol *> matches;
+		for (const auto &function : functions)
+		{
+			if (function.parameters.size() != p_argTypes.size())
+			{
+				continue;
+			}
+			bool match = true;
+			for (size_t i = 0; i < p_argTypes.size(); ++i)
+			{
+				std::wstring paramType = function.parameters[i].type ? function.parameters[i].type->name : L"void";
+				if (!_canConvert(p_argTypes[i], paramType))
+				{
+					match = false;
+					break;
+				}
+			}
+			if (match)
+			{
+				matches.push_back(&function);
+			}
+		}
 
-                if (matches.size() == 1)
-                {
-                        const FunctionSymbol *function = matches.front();
-                        return constructor ? (typePointer ? typePointer->name : L"void") : (function->returnType ? function->returnType->name : L"void");
-                }
+		if (matches.size() == 1)
+		{
+			const FunctionSymbol *function = matches.front();
+			return constructor ? (typePointer ? typePointer->name : L"void") : (function->returnType ? function->returnType->name : L"void");
+		}
 
-                if (matches.size() > 1)
-                {
-                        std::wstring msg = L"Can't decide which function " + p_name + L" to call";
-                        std::wstring avail = _availableSignatures(functions);
-                        std::wstring details;
-                        if (!avail.empty())
-                        {
-                                details = L"Available :\n" + avail;
-                        }
-                        msg += L" - " + DEBUG_INFO();
-                        throw AnalyzerException(msg, p_loc, _sourceManager, details, p_name.size());
-                }
+		if (matches.size() > 1)
+		{
+			std::wstring msg = L"Can't decide which function " + p_name + L" to call";
+			std::wstring avail = _availableSignatures(functions);
+			std::wstring details;
+			if (!avail.empty())
+			{
+				details = L"Available :\n" + avail;
+			}
+			msg += L" - " + DEBUG_INFO();
+			throw AnalyzerException(msg, p_loc, _sourceManager, details, p_name.size());
+		}
 
 		if (constructor)
 		{
@@ -1295,7 +1312,8 @@ namespace spk::Lumina
 					return iter->second.type ? iter->second.type->name : L"void";
 				}
 			}
-                        throw AnalyzerException(L"Undefined variable " + ref->name.lexeme + L" - " + DEBUG_INFO(), ref->location, _sourceManager, L"", ref->name.lexeme.size());
+			throw AnalyzerException(
+				L"Undefined variable " + ref->name.lexeme + L" - " + DEBUG_INFO(), ref->location, _sourceManager, L"", ref->name.lexeme.size());
 		}
 		case ASTNode::Kind::MemberAccess:
 		{
@@ -1449,7 +1467,7 @@ namespace spk::Lumina
 				argTypes.push_back(_evaluate(arg.get()));
 			}
 
-			return _resolveCall(call->callee.get(), name, argTypes, p_node->location);
+			return _resolveCall(call->callee.get(), name, argTypes, _extractCalleeLocation(call->callee.get()));
 		}
 		case ASTNode::Kind::UnaryExpression:
 		{
@@ -1474,5 +1492,28 @@ namespace spk::Lumina
 	const ShaderData &Analyzer::getData() const
 	{
 		return _shaderData;
+	}
+
+	Location Analyzer::_extractCalleeLocation(const ASTNode *p_node) const
+	{
+		if (!p_node)
+		{
+			return {};
+		}
+		switch (p_node->kind)
+		{
+		case ASTNode::Kind::VariableReference:
+		{
+			const auto *n = static_cast<const VariableReferenceNode *>(p_node);
+			return n->name.location;
+		}
+		case ASTNode::Kind::MemberAccess:
+		{
+			const auto *m = static_cast<const MemberAccessNode *>(p_node);
+			return m->member.location;
+		}
+		default:
+			return p_node->location;
+		}
 	}
 }

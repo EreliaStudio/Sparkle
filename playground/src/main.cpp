@@ -34,7 +34,7 @@ ConstantBlock myConstants
 	Matrix4x4 constant1;
 	Color constant2;
 
-	int methodName(Vector2Int param1, float param2)
+	int methodName2(Vector2Int param1, float param2)
 	{
 		return 10;
 	}
@@ -55,9 +55,14 @@ Vector2 someFunction2(int a, int b, int c)
 return (Vector2().xy);
 }
 
-Vector2 someFunction3(int a, int b)
+Vector2 someFunction4(int a, int b)
 {
-return Vector2(0, a - b);
+return (Vector2().xy);
+}
+
+int someFunction3(int a, int b)
+{
+return a - b;
 }
 
 FragmentPass()
@@ -68,7 +73,7 @@ FragmentPass()
 	}
 
 	int value = someFunction1();
-	Vector2 value2 = someFunction2(1, value, someFunction3(1, 2));
+	Vector2 value2 = someFunction2(1, myConstants.methodName2(someFunction4(0, 1), 1), someFunction3(1, 2));
 
 	pixelColor = fragmentColor;
 }
