@@ -12,53 +12,40 @@
 
 namespace spk::Lumina
 {
-    AnalyzerException::AnalyzerException(const std::wstring &p_msg,
-                                         const Location &p_location,
-                                         const SourceManager &p_sourceManager,
-                                         const std::wstring &p_details,
-                                         size_t p_markerLength) :
-            std::runtime_error(spk::StringUtils::wstringToString(compose(p_msg, p_location, p_sourceManager, p_details, p_markerLength)))
-    {
-    }
+	AnalyzerException::AnalyzerException(const std::wstring &p_msg, const Location &p_location, const SourceManager &p_sourceManager,
+										 const std::wstring &p_details, size_t p_markerLength) :
+		std::runtime_error(spk::StringUtils::wstringToString(compose(p_msg, p_location, p_sourceManager, p_details, p_markerLength)))
+	{
+	}
 
-    std::wstring AnalyzerException::compose(const std::wstring &p_msg,
-                                            const Location &p_location,
-                                            const SourceManager &p_sourceManager,
-                                            const std::wstring &p_details,
-                                            size_t p_markerLength)
-    {
-        const std::wstring &srcLine = p_sourceManager.getSourceLine(p_location);
+	std::wstring AnalyzerException::compose(const std::wstring &p_msg, const Location &p_location, const SourceManager &p_sourceManager,
+											const std::wstring &p_details, size_t p_markerLength)
+	{
+		const std::wstring &srcLine = p_sourceManager.getSourceLine(p_location);
 
-        const size_t tabWidth = 4;
-        std::wstring underline;
-        underline.reserve(p_location.column + p_markerLength);
-        size_t visualPos = 0;
-        for (size_t i = 0; i < p_location.column && i < srcLine.size(); ++i)
-        {
-            if (srcLine[i] == L'\t')
-            {
-                size_t spaces = tabWidth - (visualPos % tabWidth);
-                underline.append(spaces, L' ');
-                visualPos += spaces;
-            }
-            else
-            {
-                underline.push_back(L' ');
-                ++visualPos;
-            }
-        }
-        underline.append(p_markerLength, '^');
+		const size_t tabWidth = 4;
+		std::wstring underline;
 
-        std::wostringstream oss;
-        oss << p_location.source.wstring() << L":" << p_location.line << L":" << p_location.column << L": error: " << p_msg << L"\n"
-            << srcLine << L"\n"
-            << underline;
-        if (!p_details.empty())
-        {
-            oss << L"\n" << p_details;
-        }
-        return oss.str();
-    }
+		underline.reserve(p_location.column + p_markerLength);
+
+		for (size_t i = 0; i < p_location.column && i < srcLine.size(); ++i)
+		{
+			underline.push_back((srcLine[i] == L'\t' ? L'\t' : L' '));
+		}
+
+		underline.append(p_markerLength, '^');
+
+		std::wostringstream oss;
+		oss << p_location.source.wstring() << L":" << p_location.line << L":" << p_location.column << L": error: " << p_msg << L"\n"
+			<< srcLine << L"\n"
+			<< underline;
+		if (!p_details.empty())
+		{
+			oss << L"\n" << p_details;
+		}
+
+		return oss.str();
+	}
 
 	Analyzer::Analyzer(SourceManager &p_sourceManager) :
 		_sourceManager(p_sourceManager)
@@ -486,13 +473,13 @@ namespace spk::Lumina
 		}
 		FunctionSymbol sym;
 		sym.name = name;
-                sym.returnType = returnType;
-                sym.parameters = _parseParameters(fn->header);
-                sym.signature = sig;
-                if (fn->body)
-                {
-                        _returnTypeStack.push_back(returnType);
-                        _pushScope();
+		sym.returnType = returnType;
+		sym.parameters = _parseParameters(fn->header);
+		sym.signature = sig;
+		if (fn->body)
+		{
+			_returnTypeStack.push_back(returnType);
+			_pushScope();
 
 			auto &cur = _scopes.back();
 
@@ -501,10 +488,10 @@ namespace spk::Lumina
 				cur[param.name] = param;
 			}
 
-                        _analyze(fn->body.get());
+			_analyze(fn->body.get());
 
-                        _popScope();
-                        _returnTypeStack.pop_back();
+			_popScope();
+			_returnTypeStack.pop_back();
 
 			for (const auto &child : fn->body->children)
 			{
@@ -660,28 +647,27 @@ namespace spk::Lumina
 		}
 	}
 
-        void Analyzer::_analyzeReturn(const ASTNode *p_node)
-        {
-                const auto *n = static_cast<const ReturnStatementNode *>(p_node);
-                std::wstring valueType = L"void";
-                if (n->value)
-                {
-                        valueType = _evaluate(n->value.get());
-                }
+	void Analyzer::_analyzeReturn(const ASTNode *p_node)
+	{
+		const auto *n = static_cast<const ReturnStatementNode *>(p_node);
+		std::wstring valueType = L"void";
+		if (n->value)
+		{
+			valueType = _evaluate(n->value.get());
+		}
 
-                if (!_returnTypeStack.empty())
-                {
-                        const TypeSymbol *expected = _returnTypeStack.back();
-                        std::wstring expectedName = expected ? expected->name : L"void";
-                        if (!_canConvert(valueType, expectedName))
-                        {
-                                std::wstring msg = L"Type mismatch in return: expected " + expectedName +
-                                                        L" but got " + valueType + _conversionInfo(valueType);
-                                Location loc = n->value ? n->value->location : n->location;
-                                throw AnalyzerException(msg + L" - " + DEBUG_INFO(), loc, _sourceManager);
-                        }
-                }
-        }
+		if (!_returnTypeStack.empty())
+		{
+			const TypeSymbol *expected = _returnTypeStack.back();
+			std::wstring expectedName = expected ? expected->name : L"void";
+			if (!_canConvert(valueType, expectedName))
+			{
+				std::wstring msg = L"Type mismatch in return: expected " + expectedName + L" but got " + valueType + _conversionInfo(valueType);
+				Location loc = n->value ? n->value->location : n->location;
+				throw AnalyzerException(msg + L" - " + DEBUG_INFO(), loc, _sourceManager);
+			}
+		}
+	}
 
 	void Analyzer::_analyzeDiscardStatement(const ASTNode *)
 	{
@@ -710,15 +696,15 @@ namespace spk::Lumina
 		(void)_evaluate(p_node);
 	}
 
-        void Analyzer::_analyzeMemberAccess(const ASTNode *p_node)
-        {
-                const auto *n = static_cast<const MemberAccessNode *>(p_node);
-                if (n->object)
-                {
-                        (void)_evaluate(n->object.get());
-                }
-                (void)_evaluate(p_node);
-        }
+	void Analyzer::_analyzeMemberAccess(const ASTNode *p_node)
+	{
+		const auto *n = static_cast<const MemberAccessNode *>(p_node);
+		if (n->object)
+		{
+			(void)_evaluate(n->object.get());
+		}
+		(void)_evaluate(p_node);
+	}
 
 	void Analyzer::_analyzeVariableReference(const ASTNode *)
 	{
@@ -814,9 +800,8 @@ namespace spk::Lumina
 				continue;
 			}
 
-			if (!sig.empty() && (prev == Token::Type::Comma ||
-				(t.type != Token::Type::Comma && t.type != Token::Type::OpenParenthesis &&
-				 t.type != Token::Type::CloseParenthesis && prev != Token::Type::OpenParenthesis)))
+			if (!sig.empty() && (prev == Token::Type::Comma || (t.type != Token::Type::Comma && t.type != Token::Type::OpenParenthesis &&
+																t.type != Token::Type::CloseParenthesis && prev != Token::Type::OpenParenthesis)))
 			{
 				sig += L' ';
 			}
@@ -1072,21 +1057,21 @@ namespace spk::Lumina
 		return msg;
 	}
 
-    std::wstring Analyzer::_availableSignatures(const std::vector<FunctionSymbol> &p_funcs) const
-    {
-            std::wstring msg;
-            bool first = true;
-            for (const auto &function : p_funcs)
-            {
-                    if (!first)
-                    {
-                            msg += L"\n";
-                    }
-                    msg += L" - " + function.signature;
-                    first = false;
-            }
-            return msg;
-    }
+	std::wstring Analyzer::_availableSignatures(const std::vector<FunctionSymbol> &p_funcs) const
+	{
+		std::wstring msg;
+		bool first = true;
+		for (const auto &function : p_funcs)
+		{
+			if (!first)
+			{
+				msg += L"\n";
+			}
+			msg += L" - " + function.signature;
+			first = false;
+		}
+		return msg;
+	}
 
 	bool Analyzer::_canConvert(const std::wstring &p_from, const std::wstring &p_to) const
 	{
@@ -1182,11 +1167,7 @@ namespace spk::Lumina
 
 		if (functions.empty())
 		{
-                        throw AnalyzerException(L"Unknown function " + p_name + L" - " + DEBUG_INFO(),
-                                              p_loc,
-                                              _sourceManager,
-                                              L"",
-                                              p_name.size());
+			throw AnalyzerException(L"Unknown function " + p_name + L" - " + DEBUG_INFO(), p_loc, _sourceManager, L"", p_name.size());
 		}
 
 		for (const auto &function : functions)
@@ -1211,39 +1192,31 @@ namespace spk::Lumina
 			}
 		}
 
-                if (constructor)
-                {
-                        std::wstring callSig = _makeCallSignature(p_name, p_argTypes);
-                        std::wstring msg = L"No matching constructor for " + callSig;
-                        std::wstring avail = _availableSignatures(functions);
-                        std::wstring details;
-                        if (!avail.empty())
-                        {
-                                details = L"Available :\n" + avail;
-                        }
-                        msg += L" - " + DEBUG_INFO();
-                        throw AnalyzerException(msg,
-                                              p_loc,
-                                              _sourceManager,
-                                              details,
-                                              p_name.size());
-                }
+		if (constructor)
+		{
+			std::wstring callSig = _makeCallSignature(p_name, p_argTypes);
+			std::wstring msg = L"No matching constructor for " + callSig;
+			std::wstring avail = _availableSignatures(functions);
+			std::wstring details;
+			if (!avail.empty())
+			{
+				details = L"Available :\n" + avail;
+			}
+			msg += L" - " + DEBUG_INFO();
+			throw AnalyzerException(msg, p_loc, _sourceManager, details, p_name.size());
+		}
 
-                std::wstring callSig = _makeCallSignature(p_name, p_argTypes);
-                std::wstring msg = L"No matching overload for function " + callSig;
-                std::wstring avail = _availableSignatures(functions);
-                std::wstring details;
-                if (!avail.empty())
-                {
-                        details = L"Available :\n" + avail;
-                }
-                msg += L" - " + DEBUG_INFO();
-                throw AnalyzerException(msg,
-                                      p_loc,
-                                      _sourceManager,
-                                      details,
-                                      p_name.size());
-        }
+		std::wstring callSig = _makeCallSignature(p_name, p_argTypes);
+		std::wstring msg = L"No matching overload for function " + callSig;
+		std::wstring avail = _availableSignatures(functions);
+		std::wstring details;
+		if (!avail.empty())
+		{
+			details = L"Available :\n" + avail;
+		}
+		msg += L" - " + DEBUG_INFO();
+		throw AnalyzerException(msg, p_loc, _sourceManager, details, p_name.size());
+	}
 
 	std::wstring Analyzer::_evaluate(const ASTNode *p_node)
 	{
@@ -1286,104 +1259,109 @@ namespace spk::Lumina
 		{
 			const MemberAccessNode *mem = static_cast<const MemberAccessNode *>(p_node);
 			std::wstring baseType = _evaluate(mem->object.get());
-                        TypeSymbol *ts = _findType(baseType);
-                        if (ts)
-                        {
-                                auto it = std::find_if(
-                                        ts->members.begin(), ts->members.end(),
-                                        [&](const Variable &p_variable) { return p_variable.name == mem->member.lexeme; });
-                                if (it != ts->members.end())
-                                {
-                                        return it->type ? it->type->name : L"void";
-                                }
+			TypeSymbol *ts = _findType(baseType);
+			if (ts)
+			{
+				auto it = std::find_if(
+					ts->members.begin(), ts->members.end(), [&](const Variable &p_variable) { return p_variable.name == mem->member.lexeme; });
+				if (it != ts->members.end())
+				{
+					return it->type ? it->type->name : L"void";
+				}
 
-                                int vectorSize = 0;
-                                bool isColor = false;
-                                if (baseType.rfind(L"Vector2", 0) == 0)
-                                        vectorSize = 2;
-                                else if (baseType.rfind(L"Vector3", 0) == 0)
-                                        vectorSize = 3;
-                                else if (baseType.rfind(L"Vector4", 0) == 0)
-                                        vectorSize = 4;
-                                else if (baseType == L"Color")
-                                {
-                                        vectorSize = 4;
-                                        isColor = true;
-                                }
+				int vectorSize = 0;
+				bool isColor = false;
+				if (baseType.rfind(L"Vector2", 0) == 0)
+				{
+					vectorSize = 2;
+				}
+				else if (baseType.rfind(L"Vector3", 0) == 0)
+				{
+					vectorSize = 3;
+				}
+				else if (baseType.rfind(L"Vector4", 0) == 0)
+				{
+					vectorSize = 4;
+				}
+				else if (baseType == L"Color")
+				{
+					vectorSize = 4;
+					isColor = true;
+				}
 
-                                if (vectorSize > 0)
-                                {
-                                        const std::wstring &member = mem->member.lexeme;
-                                        auto swizzleIndex = [&](wchar_t c) -> int
-                                        {
-                                                if (isColor)
-                                                {
-                                                        switch (c)
-                                                        {
-                                                        case L'r':
-                                                                return 0;
-                                                        case L'g':
-                                                                return 1;
-                                                        case L'b':
-                                                                return 2;
-                                                        case L'a':
-                                                                return 3;
-                                                        default:
-                                                                return -1;
-                                                        }
-                                                }
-                                                else
-                                                {
-                                                        switch (c)
-                                                        {
-                                                        case L'x':
-                                                                return 0;
-                                                        case L'y':
-                                                                return 1;
-                                                        case L'z':
-                                                                return 2;
-                                                        case L'w':
-                                                                return 3;
-                                                        default:
-                                                                return -1;
-                                                        }
-                                                }
-                                        };
+				if (vectorSize > 0)
+				{
+					const std::wstring &member = mem->member.lexeme;
+					auto swizzleIndex = [&](wchar_t p_c) -> int
+					{
+						if (isColor)
+						{
+							switch (p_c)
+							{
+							case L'r':
+								return 0;
+							case L'g':
+								return 1;
+							case L'b':
+								return 2;
+							case L'a':
+								return 3;
+							default:
+								return -1;
+							}
+						}
+						else
+						{
+							switch (p_c)
+							{
+							case L'x':
+								return 0;
+							case L'y':
+								return 1;
+							case L'z':
+								return 2;
+							case L'w':
+								return 3;
+							default:
+								return -1;
+							}
+						}
+					};
 
-                                        bool valid = !member.empty() && member.size() <= 4;
-                                        if (valid)
-                                        {
-                                                for (wchar_t ch : member)
-                                                {
-                                                        int idx = swizzleIndex(ch);
-                                                        if (idx < 0 || idx >= vectorSize)
-                                                        {
-                                                                valid = false;
-                                                                break;
-                                                        }
-                                                }
-                                        }
+					bool valid = !member.empty() && member.size() <= 4;
+					if (valid)
+					{
+						for (wchar_t ch : member)
+						{
+							int idx = swizzleIndex(ch);
+							if (idx < 0 || idx >= vectorSize)
+							{
+								valid = false;
+								break;
+							}
+						}
+					}
 
-                                        if (valid)
-                                        {
-                                                switch (member.size())
-                                                {
-                                                case 1:
-                                                        return L"float";
-                                                case 2:
-                                                        return L"Vector2";
-                                                case 3:
-                                                        return L"Vector3";
-                                                case 4:
-                                                        return L"Vector4";
-                                                default:
-                                                        break;
-                                                }
-                                        }
-                                }
-                        }
-                        return L"void";
-                }
+					if (valid)
+					{
+						switch (member.size())
+						{
+						case 1:
+							return L"float";
+						case 2:
+							return L"Vector2";
+						case 3:
+							return L"Vector3";
+						case 4:
+							return L"Vector4";
+						default:
+							break;
+						}
+					}
+				}
+			}
+			return L"void";
+		}
 		case ASTNode::Kind::BinaryExpression:
 		{
 			const BinaryExpressionNode *bin = static_cast<const BinaryExpressionNode *>(p_node);
