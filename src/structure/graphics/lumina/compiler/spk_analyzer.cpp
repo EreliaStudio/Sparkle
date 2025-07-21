@@ -1170,27 +1170,47 @@ namespace spk::Lumina
 			throw AnalyzerException(L"Unknown function " + p_name + L" - " + DEBUG_INFO(), p_loc, _sourceManager, L"", p_name.size());
 		}
 
-		for (const auto &function : functions)
-		{
-			if (function.parameters.size() != p_argTypes.size())
-			{
-				continue;
-			}
-			bool match = true;
-			for (size_t i = 0; i < p_argTypes.size(); ++i)
-			{
-				std::wstring paramType = function.parameters[i].type ? function.parameters[i].type->name : L"void";
-				if (!_canConvert(p_argTypes[i], paramType))
-				{
-					match = false;
-					break;
-				}
-			}
-			if (match)
-			{
-				return constructor ? (typePointer ? typePointer->name : L"void") : (function.returnType ? function.returnType->name : L"void");
-			}
-		}
+                std::vector<const FunctionSymbol *> matches;
+                for (const auto &function : functions)
+                {
+                        if (function.parameters.size() != p_argTypes.size())
+                        {
+                                continue;
+                        }
+                        bool match = true;
+                        for (size_t i = 0; i < p_argTypes.size(); ++i)
+                        {
+                                std::wstring paramType = function.parameters[i].type ? function.parameters[i].type->name : L"void";
+                                if (!_canConvert(p_argTypes[i], paramType))
+                                {
+                                        match = false;
+                                        break;
+                                }
+                        }
+                        if (match)
+                        {
+                                matches.push_back(&function);
+                        }
+                }
+
+                if (matches.size() == 1)
+                {
+                        const FunctionSymbol *function = matches.front();
+                        return constructor ? (typePointer ? typePointer->name : L"void") : (function->returnType ? function->returnType->name : L"void");
+                }
+
+                if (matches.size() > 1)
+                {
+                        std::wstring msg = L"Can't decide which function " + p_name + L" to call";
+                        std::wstring avail = _availableSignatures(functions);
+                        std::wstring details;
+                        if (!avail.empty())
+                        {
+                                details = L"Available :\n" + avail;
+                        }
+                        msg += L" - " + DEBUG_INFO();
+                        throw AnalyzerException(msg, p_loc, _sourceManager, details, p_name.size());
+                }
 
 		if (constructor)
 		{
