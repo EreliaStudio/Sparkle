@@ -523,23 +523,27 @@ namespace spk::Lumina
 				}
 			}
 		}
-		vec.push_back(sym);
-		_namespaceStack.back()->functions.push_back(sym);
-		if (!_containerStack.empty())
-		{
-			TypeSymbol *tSym = _findType(_containerStack.back());
-			if (tSym)
-			{
-				if (p_node->kind == ASTNode::Kind::Constructor)
-				{
-					tSym->constructors.push_back(sym);
-				}
-				else if (p_node->kind == ASTNode::Kind::Operator)
-				{
-					tSym->operators[name].push_back(sym);
-				}
-			}
-		}
+               vec.push_back(sym);
+               _namespaceStack.back()->functions.push_back(sym);
+               if (!_containerStack.empty())
+               {
+                       TypeSymbol *tSym = _findType(_containerStack.back());
+                       if (tSym)
+                       {
+                               if (p_node->kind == ASTNode::Kind::Constructor)
+                               {
+                                       tSym->constructors.push_back(sym);
+                               }
+                               else if (p_node->kind == ASTNode::Kind::Operator)
+                               {
+                                       tSym->operators[name].push_back(sym);
+                               }
+                               else
+                               {
+                                       tSym->methods.push_back(sym);
+                               }
+                       }
+               }
 	}
 
 	void Analyzer::_analyzeVariableDeclaration(const ASTNode *p_node)
@@ -1141,37 +1145,51 @@ namespace spk::Lumina
 				}
 			}
 
-			if (functions.empty())
-			{
-				typePointer = _findType(prefix);
-				if (typePointer)
-				{
-					if (target == prefix)
-					{
-						functions = typePointer->constructors;
-						constructor = true;
-					}
-					auto opIt = typePointer->operators.find(target);
-					if (opIt != typePointer->operators.end())
-					{
-						functions.insert(functions.end(), opIt->second.begin(), opIt->second.end());
-					}
-				}
-			}
+                        if (functions.empty())
+                        {
+                                typePointer = _findType(prefix);
+                                if (typePointer)
+                                {
+                                        if (target == prefix)
+                                        {
+                                                functions = typePointer->constructors;
+                                                constructor = true;
+                                        }
+                                        auto opIt = typePointer->operators.find(target);
+                                        if (opIt != typePointer->operators.end())
+                                        {
+                                                functions.insert(functions.end(), opIt->second.begin(), opIt->second.end());
+                                        }
+                                        for (const auto &m : typePointer->methods)
+                                        {
+                                                if (m.name == target)
+                                                {
+                                                        functions.push_back(m);
+                                                }
+                                        }
+                                }
+                        }
 
-			if (functions.empty() && objectNode)
-			{
-				std::wstring objType = _evaluate(objectNode);
-				typePointer = _findType(objType);
-				if (typePointer)
-				{
-					auto opIt = typePointer->operators.find(target);
-					if (opIt != typePointer->operators.end())
-					{
-						functions = opIt->second;
-					}
-				}
-			}
+                        if (functions.empty() && objectNode)
+                        {
+                                std::wstring objType = _evaluate(objectNode);
+                                typePointer = _findType(objType);
+                                if (typePointer)
+                                {
+                                        auto opIt = typePointer->operators.find(target);
+                                        if (opIt != typePointer->operators.end())
+                                        {
+                                                functions = opIt->second;
+                                        }
+                                        for (const auto &m : typePointer->methods)
+                                        {
+                                                if (m.name == target)
+                                                {
+                                                        functions.push_back(m);
+                                                }
+                                        }
+                                }
+                        }
 		}
 		else
 		{
