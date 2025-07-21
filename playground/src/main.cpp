@@ -50,7 +50,7 @@ int someFunction1()
 return 0;
 }
 
-Vector2 someFunction2(int a, int b, Vector2 c)
+Vector2 someFunction2(int a, int b, int c)
 {
 return (Vector2().xy);
 }
