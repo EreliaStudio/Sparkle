@@ -1030,8 +1030,8 @@ namespace spk::Lumina
 		return nullptr;
 	}
 
-	std::wstring Analyzer::_extractCalleeName(const ASTNode *p_node) const
-	{
+std::wstring Analyzer::_extractCalleeName(const ASTNode *p_node) const
+{
 		if (!p_node)
 		{
 			return {};
@@ -1467,8 +1467,8 @@ namespace spk::Lumina
 				argTypes.push_back(_evaluate(arg.get()));
 			}
 
-			return _resolveCall(call->callee.get(), name, argTypes, p_node->location);
-		}
+                        return _resolveCall(call->callee.get(), name, argTypes, _extractCalleeLocation(call->callee.get()));
+                }
 		case ASTNode::Kind::UnaryExpression:
 		{
 			const UnaryExpressionNode *un = static_cast<const UnaryExpressionNode *>(p_node);
@@ -1489,8 +1489,32 @@ namespace spk::Lumina
 		}
 	}
 
-	const ShaderData &Analyzer::getData() const
-	{
-		return _shaderData;
-	}
+
+        const ShaderData &Analyzer::getData() const
+        {
+                return _shaderData;
+        }
+
+        Location Analyzer::_extractCalleeLocation(const ASTNode *p_node) const
+        {
+                if (!p_node)
+                {
+                        return {};
+                }
+                switch (p_node->kind)
+                {
+                case ASTNode::Kind::VariableReference:
+                {
+                        const auto *n = static_cast<const VariableReferenceNode *>(p_node);
+                        return n->name.location;
+                }
+                case ASTNode::Kind::MemberAccess:
+                {
+                        const auto *m = static_cast<const MemberAccessNode *>(p_node);
+                        return m->member.location;
+                }
+                default:
+                        return p_node->location;
+                }
+        }
 }
