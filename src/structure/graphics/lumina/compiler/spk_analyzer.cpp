@@ -360,12 +360,23 @@ namespace spk::Lumina
 					_analyze(c.get());
 				}
 			}
-			_popScope();
-			_popContainer();
-		}
-		else if (p_node->kind == ASTNode::Kind::ConstantBlock)
-		{
-			const auto *n = static_cast<const ConstantBlockNode *>(p_node);
+                        _popScope();
+                        _popContainer();
+                        if (_scopes.empty())
+                        {
+                                _pushScope();
+                        }
+                        {
+                                Variable var;
+                                var.name = n->name.lexeme;
+                                var.type = _findType(n->name.lexeme);
+                                auto &global = _scopes.front();
+                                global[var.name] = var;
+                        }
+                }
+                else if (p_node->kind == ASTNode::Kind::ConstantBlock)
+                {
+                        const auto *n = static_cast<const ConstantBlockNode *>(p_node);
 			{
 				_namespaceStack.back()->addType(n->name.lexeme, TypeSymbol::Role::Constant);
 			}
@@ -393,9 +404,20 @@ namespace spk::Lumina
 					_analyze(c.get());
 				}
 			}
-			_popScope();
-			_popContainer();
-		}
+                        _popScope();
+                        _popContainer();
+                        if (_scopes.empty())
+                        {
+                                _pushScope();
+                        }
+                        {
+                                Variable var;
+                                var.name = n->name.lexeme;
+                                var.type = _findType(n->name.lexeme);
+                                auto &global = _scopes.front();
+                                global[var.name] = var;
+                        }
+                }
 	}
 
 	void Analyzer::_analyzeTexture(const ASTNode *p_node)
@@ -1273,7 +1295,7 @@ namespace spk::Lumina
 					return iter->second.type ? iter->second.type->name : L"void";
 				}
 			}
-			throw AnalyzerException(L"Undefined variable " + ref->name.lexeme + L" - " + DEBUG_INFO(), ref->location, _sourceManager);
+                        throw AnalyzerException(L"Undefined variable " + ref->name.lexeme + L" - " + DEBUG_INFO(), ref->location, _sourceManager, L"", ref->name.lexeme.size());
 		}
 		case ASTNode::Kind::MemberAccess:
 		{
