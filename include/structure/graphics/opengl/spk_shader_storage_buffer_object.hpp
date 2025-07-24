@@ -61,6 +61,7 @@ namespace spk::OpenGL
 			const Element& operator[](size_t p_index) const;
 
 			size_t nbElement() const;
+			size_t elementSize() const;
 
 			template <typename T>
 			DynamicArray& operator=(std::initializer_list<T> p_list)

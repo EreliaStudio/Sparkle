@@ -119,6 +119,11 @@ namespace spk::OpenGL
 		return _elements.size();
 	}
 
+	size_t ShaderStorageBufferObject::DynamicArray::elementSize() const
+	{
+		return (_elementSize);
+	}
+
 	ShaderStorageBufferObject::ShaderStorageBufferObject() :
 		VertexBufferObject(VertexBufferObject::Type::ShaderStorage, VertexBufferObject::Usage::Dynamic),
 		_blockName(L"Unnamed SSBO"),
