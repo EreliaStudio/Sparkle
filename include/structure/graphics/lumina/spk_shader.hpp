@@ -110,7 +110,14 @@ namespace spk::Lumina
 			{
 				if (_attributes.contains(p_name) == false)
 				{
-					throw std::runtime_error("Sampler with name '" + spk::StringUtils::wstringToString(p_name) + "' not found.");
+					try
+					{
+						return (_originator->sampler(p_name));
+					}
+					catch(...)
+					{
+						throw std::runtime_error("Sampler with name '" + spk::StringUtils::wstringToString(p_name) + "' not found.");
+					}
 				}
 				if (std::holds_alternative<OpenGL::SamplerObject>(_attributes.at(p_name)) == false)
 				{
@@ -123,7 +130,14 @@ namespace spk::Lumina
 			{
 				if (_attributes.contains(p_name) == false)
 				{
-					throw std::runtime_error("UBO with name '" + spk::StringUtils::wstringToString(p_name) + "' not found.");
+					try
+					{
+						return (_originator->UBO(p_name));
+					}
+					catch(...)
+					{
+						throw std::runtime_error("UBO with name '" + spk::StringUtils::wstringToString(p_name) + "' not found.");
+					}
 				}
 				if (std::holds_alternative<OpenGL::UniformBufferObject>(_attributes.at(p_name)) == false)
 				{
@@ -136,7 +150,14 @@ namespace spk::Lumina
 			{
 				if (_attributes.contains(p_name) == false)
 				{
-					throw std::runtime_error("SSBO with name '" + spk::StringUtils::wstringToString(p_name) + "' not found.");
+					try
+					{
+						return (_originator->SSBO(p_name));
+					}
+					catch(...)
+					{
+						throw std::runtime_error("SSBO with name '" + spk::StringUtils::wstringToString(p_name) + "' not found.");
+					}
 				}
 				if (std::holds_alternative<OpenGL::ShaderStorageBufferObject>(_attributes.at(p_name)) == false)
 				{
