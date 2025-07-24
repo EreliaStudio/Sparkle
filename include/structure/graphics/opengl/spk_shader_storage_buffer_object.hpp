@@ -89,6 +89,19 @@ namespace spk::OpenGL
 			DynamicArray duplicate() const;
 		};
 
+	private:
+		std::wstring _blockName;
+		BindingPoint _bindingPoint;
+		GLint        _blockIndex;
+
+		spk::DataBufferLayout::Element               _fixedData;
+		spk::TContractProvider<size_t>::Contract     _onResizeContract;
+		DynamicArray                                  _dynamicArray;
+
+		void _loadElement(spk::DataBufferLayout::Element& p_parent, const spk::JSON::Object& p_elemDesc);
+		void _loadElement(DynamicArray& p_array, const spk::JSON::Object& p_elemDesc);
+
+	public:
 		ShaderStorageBufferObject();
 		ShaderStorageBufferObject(const std::wstring& p_blockName,
 								  BindingPoint        p_bindingPoint,
@@ -115,17 +128,5 @@ namespace spk::OpenGL
 		const DynamicArray& dynamicArray() const;
 
 		void activate() override;
-
-	private:
-		std::wstring _blockName;
-		BindingPoint _bindingPoint;
-		GLint        _blockIndex;
-
-		spk::DataBufferLayout::Element               _fixedData;
-		spk::TContractProvider<size_t>::Contract     _onResizeContract;
-		DynamicArray                                  _dynamicArray;
-
-		void _loadElement(spk::DataBufferLayout::Element& p_parent, const spk::JSON::Object& p_elemDesc);
-		void _loadElement(DynamicArray& p_array, const spk::JSON::Object& p_elemDesc);
 	};
 }
