@@ -239,22 +239,20 @@ namespace spk
 			}
 			else
 			{
-				throw std::runtime_error("DataBufferLayout::as<TExportedType>() - Size mismatch: expected " + std::to_string(_root.size()) +
-										 ", got " + std::to_string(sizeof(TExportedType)) + ".");
+				throw std::runtime_error("DataBufferLayout::as<TExportedType>() - Size mismatch: expected " + std::to_string(_root.size()) + ", got " + std::to_string(sizeof(TExportedType)) + ".");
 			}
 		}
 
 		template <typename TExportedType>
 		const TExportedType *as() const
 		{
-			if (sizeof(TExportedType) == size())
+			if (sizeof(TExportedType) == _root.size())
 			{
-				return reinterpret_cast<TExportedType *>(buffer()->data() + offset());
+				return reinterpret_cast<TExportedType *>(_root.buffer()->data() + _root.offset());
 			}
 			else
 			{
-				throw std::runtime_error("DataBufferLayout::as<TExportedType>() - Size mismatch: expected " + std::to_string(size()) +
-										", got " + std::to_string(sizeof(TExportedType)) + ".");
+				throw std::runtime_error("DataBufferLayout::as<TExportedType>() - Size mismatch: expected " + std::to_string(_root.size()) + ", got " + std::to_string(sizeof(TExportedType)) + ".");
 			}
 		}
 	};
