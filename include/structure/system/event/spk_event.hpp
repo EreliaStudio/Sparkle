@@ -1,9 +1,6 @@
 #pragma once
 
-#include <winsock2.h>
-#include <ws2tcpip.h>
-
-#include <Windows.h>
+#include "utils/spk_platform.hpp"
 
 #include "structure/spk_safe_pointer.hpp"
 #include "structure/system/device/spk_controller.hpp"
@@ -17,6 +14,7 @@
 
 #include "utils/spk_system_utils.hpp"
 
+#ifdef _WIN32
 static const UINT WM_UPDATE_REQUEST = RegisterWindowMessage("WM_UPDATE_REQUEST");
 static const UINT WM_PAINT_REQUEST = RegisterWindowMessage("WM_PAINT_REQUEST");
 static const UINT WM_RESIZE_REQUEST = RegisterWindowMessage("WM_RESIZE_REQUEST");
@@ -32,6 +30,48 @@ static const UINT WM_DIRECTIONAL_CROSS_MOTION = RegisterWindowMessage("WM_DIRECT
 static const UINT WM_DIRECTIONAL_CROSS_RESET = RegisterWindowMessage("WM_DIRECTIONAL_CROSS_RESET");
 static const UINT WM_CONTROLLER_BUTTON_PRESS = RegisterWindowMessage("WM_CONTROLLER_BUTTON_PRESS");
 static const UINT WM_CONTROLLER_BUTTON_RELEASE = RegisterWindowMessage("WM_CONTROLLER_BUTTON_RELEASE");
+#else
+static const UINT WM_UPDATE_REQUEST = 0x0401;
+static const UINT WM_PAINT_REQUEST = 0x0402;
+static const UINT WM_RESIZE_REQUEST = 0x0403;
+static const UINT WM_LEFT_JOYSTICK_MOTION = 0x0404;
+static const UINT WM_RIGHT_JOYSTICK_MOTION = 0x0405;
+static const UINT WM_LEFT_JOYSTICK_RESET = 0x0406;
+static const UINT WM_RIGHT_JOYSTICK_RESET = 0x0407;
+static const UINT WM_LEFT_TRIGGER_MOTION = 0x0408;
+static const UINT WM_RIGHT_TRIGGER_MOTION = 0x0409;
+static const UINT WM_LEFT_TRIGGER_RESET = 0x040A;
+static const UINT WM_RIGHT_TRIGGER_RESET = 0x040B;
+static const UINT WM_DIRECTIONAL_CROSS_MOTION = 0x040C;
+static const UINT WM_DIRECTIONAL_CROSS_RESET = 0x040D;
+static const UINT WM_CONTROLLER_BUTTON_PRESS = 0x040E;
+static const UINT WM_CONTROLLER_BUTTON_RELEASE = 0x040F;
+static const UINT WM_PAINT = 0x000F;
+static const UINT WM_KEYDOWN = 0x0100;
+static const UINT WM_KEYUP = 0x0101;
+static const UINT WM_CHAR = 0x0102;
+static const UINT WM_MOUSEMOVE = 0x0200;
+static const UINT WM_LBUTTONDOWN = 0x0201;
+static const UINT WM_LBUTTONUP = 0x0202;
+static const UINT WM_LBUTTONDBLCLK = 0x0203;
+static const UINT WM_RBUTTONDOWN = 0x0204;
+static const UINT WM_RBUTTONUP = 0x0205;
+static const UINT WM_RBUTTONDBLCLK = 0x0206;
+static const UINT WM_MBUTTONDOWN = 0x0207;
+static const UINT WM_MBUTTONUP = 0x0208;
+static const UINT WM_MBUTTONDBLCLK = 0x0209;
+static const UINT WM_MOUSEWHEEL = 0x020A;
+static const UINT WM_MOVE = 0x0003;
+static const UINT WM_SIZE = 0x0005;
+static const UINT WM_SETFOCUS = 0x0007;
+static const UINT WM_KILLFOCUS = 0x0008;
+static const UINT WM_CLOSE = 0x0010;
+static const UINT WM_QUIT = 0x0012;
+static const UINT WM_SETCURSOR = 0x0020;
+static const UINT WM_ENTERSIZEMOVE = 0x0231;
+static const UINT WM_EXITSIZEMOVE = 0x0232;
+static const UINT WM_TIMER = 0x0113;
+#endif
 
 namespace spk
 {

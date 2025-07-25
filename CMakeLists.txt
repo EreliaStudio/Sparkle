@@ -43,10 +43,15 @@ add_resources(
 	find_package(GLEW REQUIRED)
 	target_link_libraries(Sparkle PUBLIC GLEW::GLEW)
 	
-	find_package(OpenGL REQUIRED)
-	target_link_libraries(Sparkle PUBLIC OpenGL::GL)
-	
-	target_link_libraries(Sparkle PUBLIC dinput8 dxguid ws2_32)
+find_package(OpenGL REQUIRED)
+target_link_libraries(Sparkle PUBLIC OpenGL::GL)
+
+if (WIN32)
+    target_link_libraries(Sparkle PUBLIC dinput8 dxguid ws2_32)
+else()
+    find_package(X11 REQUIRED)
+    target_link_libraries(Sparkle PUBLIC X11::X11)
+endif()
 	
 	message("Include : ${SPARKLE_INCLUDE_DIR}")
 	

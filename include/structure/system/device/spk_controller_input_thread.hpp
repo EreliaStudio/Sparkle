@@ -1,10 +1,8 @@
 #pragma once
 
-#include <winsock2.h>
-#include <ws2tcpip.h>
+#include "utils/spk_platform.hpp"
 
-#include <windows.h>
-
+#ifdef _WIN32
 #define DIRECTINPUT_VERSION 0x0800
 
 #include "structure/math/spk_vector2.hpp"
@@ -17,8 +15,8 @@
 
 namespace spk
 {
-	class ControllerInputThread
-	{
+class ControllerInputThread
+{
 		friend class ControllerModule;
 
 	private:
@@ -263,9 +261,18 @@ namespace spk
 			_worker.start();
 		}
 
-		void stop()
-		{
-			_worker.stop();
-		}
-	};
+               void stop()
+               {
+                       _worker.stop();
+               }
+       };
+#else
+       class ControllerInputThread
+       {
+       public:
+               void bind(::Window) {}
+               void start() {}
+               void stop() {}
+       };
+#endif
 }

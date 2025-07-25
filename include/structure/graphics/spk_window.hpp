@@ -21,10 +21,7 @@
 #include <set>
 #include <unordered_set>
 
-#include <winsock2.h>
-#include <ws2tcpip.h>
-
-#include <Windows.h>
+#include "utils/spk_platform.hpp"
 
 #include "application/module/spk_controller_module.hpp"
 #include "application/module/spk_keyboard_module.hpp"
@@ -55,20 +52,31 @@ namespace spk
 		spk::PersistantWorker _windowUpdaterThread;
 		ControllerInputThread _controllerInputThread;
 
-		HWND _hwnd;
-		HDC _hdc;
-		HGLRC _hglrc;
+#ifdef _WIN32
+               HWND _hwnd;
+               HDC _hdc;
+               HGLRC _hglrc;
 
-		std::unordered_map<std::wstring, HCURSOR> _cursors;
-		HCURSOR _currentCursor;
-		HCURSOR _savedCursor;
+               std::unordered_map<std::wstring, HCURSOR> _cursors;
+               HCURSOR _currentCursor;
+               HCURSOR _savedCursor;
+#else
+               Display* _display;
+               ::Window _window;
+               GLXContext _glxContext;
+
+               std::unordered_map<std::wstring, Cursor> _cursors;
+               Cursor _currentCursor;
+               Cursor _savedCursor;
+#endif
 
 		mutable bool _isPaintRequestAllowed = true;
 
 		std::recursive_mutex _timerMutex;
 		std::set<UINT_PTR> _timers;
-		std::deque<std::pair<int, long long>> _pendingTimerCreations;
-		std::deque<int> _pendingTimerDeletions;
+               std::deque<std::pair<int, long long>> _pendingTimerCreations;
+               std::deque<int> _pendingTimerDeletions;
+               std::deque<std::tuple<UINT, WPARAM, LPARAM>> _postedEvents;
 
 		MouseModule _mouseModule;
 		KeyboardModule _keyboardModule;
@@ -81,8 +89,10 @@ namespace spk
 		std::map<UINT, spk::IModule *> _subscribedModules;
 		std::function<void(spk::SafePointer<spk::Window>)> _onClosureCallback = nullptr;
 
-		void _initialize(const std::function<void(spk::SafePointer<spk::Window>)> &p_onClosureCallback);
-		static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+               void _initialize(const std::function<void(spk::SafePointer<spk::Window>)> &p_onClosureCallback);
+#ifdef _WIN32
+               static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+#endif
 		void _createContext();
 		void _createOpenGLContext();
 		void _destroyOpenGLContext();
