@@ -355,6 +355,15 @@ namespace spk::Lumina
 			_attributes[p_name] = std::move(p_object);
 		}
 
+	public:
+		Shader() = default;
+
+		Shader(std::string p_vertexCode, std::string p_fragmentCode) :
+			_program(p_vertexCode, p_fragmentCode)
+		{
+			
+		}
+
 		void addAttribute(const OpenGL::LayoutBufferObject::Attribute &p_attribute)
 		{
 			_bufferSet.layout().addAttribute(p_attribute);
@@ -399,69 +408,6 @@ namespace spk::Lumina
 			{
 				addSSBOAttribute(p_name, std::move(p_object));
 			}
-		}
-
-		void parseBufferSet(const std::string &p_code)
-		{
-			/*
-				Objective of the function : search for all layout(location = X) in etc etc, than construct the LayoutBufferObject::Attribute
-				corresponding, saving it inside the shader
-			*/
-		}
-
-		void parseBufferObjectConstant(std::string& p_code)
-		{
-			/*
-				Objective of the function : search all the instance of "layout(... constant ...) [uniform or buffer] TypeName {} name;" and swap "constant" with
-				"binding = XXX", with X equal to either _objects.size() or equal to _objects[name].bindingPoint().
-
-				The idea is to remplace the "constant" custom keyword by a valid binding point, equal to a previously set UBO or SSBO with the same name,
-				or with a newly allocated binding point.
-				Once swapped, i need the function to parse it, and save the constant inside the Shader, parsing its values etc
-
-				This way, the user wont have to define its binding point itself, and therefore just describe the constant in layout UBO and SSBO
-			*/
-		}
-
-		void parseBufferObjectAttribute(std::string& p_code)
-		{
-			/*
-				Objective of the function : search all the instance of "layout(... attribute ...) [uniform or buffer] TypeName {} name;" and swap "attribute" with
-				"binding = XXX", with X equal to either _objects.size() or equal to _objects[name].bindingPoint().
-
-				The idea is to remplace the "attribute" custom keyword by a valid binding point, equal to a previously set UBO or SSBO with the same name,
-				or with a newly allocated binding point.
-				Once swapped, i need the function to parse it, and save the attribute inside the Shader, parsing its values etc
-
-				This way, the user wont have to define its binding point itself, and therefore just describe the attribute in layout UBO and SSBO.
-			*/
-		}
-
-		void parseSampler(std::string &p_code)
-		{
-			/*
-				Objective of the function : search all the instance of "sampler2D name as constant;" and save the texture as a SamplerObject in the shader as constant.
-				After parsing the constant, it need to search for instance of "sampler2D name as attribute;" and save them as SamplerObject attribute this time
-			*/
-		}
-
-	public:
-		Shader() = default;
-
-		Shader(std::string p_vertexCode, std::string p_fragmentCode)
-		{
-			parseBufferSet(p_vertexCode);
-
-			parseBufferObjectConstant(p_vertexCode);
-			parseBufferObjectConstant(p_fragmentCode);
-
-			parseBufferObjectAttribute(p_vertexCode);
-			parseBufferObjectAttribute(p_fragmentCode);
-
-			parseSampler(p_vertexCode);
-			parseSampler(p_fragmentCode);
-
-			_program = spk::OpenGL::Program(p_vertexCode, p_fragmentCode);
 		}
 
 		bool containSampler(const std::wstring &p_name) const
