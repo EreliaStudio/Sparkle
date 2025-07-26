@@ -25,16 +25,16 @@ namespace spk
 			std::vector<int> primarySize(count, 0);
 			std::vector<bool> isExt(count, false);
 
-			for (size_t i = 0; i < count; ++i)
-			{
-				Element *elt = _elements[i].get();
-				if (elt == nullptr || elt->widget() == nullptr)
-					continue;
+                       for (size_t i = 0; i < count; ++i)
+                       {
+                               Element *elt = _elements[i].get();
+                               if (elt == nullptr || (elt->widget() == nullptr && elt->layout() == nullptr))
+                                       continue;
 
-				int requested = (isHorizontal ? elt->size().x : elt->size().y);
+                               int requested = (isHorizontal ? elt->size().x : elt->size().y);
 
-				spk::Vector2Int minSize = elt->widget()->minimalSize();
-				spk::Vector2Int maxSize = elt->widget()->maximalSize();
+                               spk::Vector2Int minSize = elt->minimalSize();
+                               spk::Vector2Int maxSize = elt->maximalSize();
 
 				switch (elt->sizePolicy())
 				{
@@ -121,10 +121,10 @@ namespace spk
 			{
 				Element *elt = _elements[i].get();
 
-				if (elt != nullptr && elt->widget() != nullptr)
-				{
-					spk::Vector2Int pos = p_geometry.anchor;
-					spk::Vector2Int size = p_geometry.size;
+                               if (elt != nullptr && (elt->widget() != nullptr || elt->layout() != nullptr))
+                               {
+                                       spk::Vector2Int pos = p_geometry.anchor;
+                                       spk::Vector2Int size = p_geometry.size;
 
 					if (isHorizontal)
 					{
@@ -137,7 +137,7 @@ namespace spk
 						size.y = primarySize[i];
 					}
 
-					elt->widget()->setGeometry({pos, size});
+                                       elt->setGeometry({pos, size});
 
 					cursor += ((isHorizontal == true ? size.x : size.y) > 0 ? pad : 0);
 				}
@@ -158,15 +158,15 @@ namespace spk
 			uint32_t    secondaryMax = 0;
 			std::size_t count        = 0;
 
-			for (const auto& elt : _elements)
-			{
-				if (!elt || elt->widget() == nullptr)
-				{
-					continue;
-				}
+                       for (const auto& elt : _elements)
+                       {
+                               if (!elt || (elt->widget() == nullptr && elt->layout() == nullptr))
+                               {
+                                       continue;
+                               }
 
-				++count;
-				const spk::Vector2UInt min = elt->widget()->minimalSize();
+                               ++count;
+                               const spk::Vector2UInt min = elt->minimalSize();
 
 				if (isHorizontal)
 				{
