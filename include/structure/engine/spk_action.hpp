@@ -31,7 +31,7 @@ namespace spk
 	class InputAction : public Action
 	{
 	public:
-		using Job = std::function<void(const Device*)>;
+		using Job = std::function<void(const spk::SafePointer<const spk::Keyboard>&)>;
 
 	private:
 		spk::SafePointer<const Device> _device;         
