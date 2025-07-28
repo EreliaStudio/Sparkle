@@ -28,10 +28,10 @@ namespace spk::Lumina
 			Attribute
 		};
 
-		template <typename Var>
-		static void visitVariant(Var &variant, auto &&function)
+		template <typename Var, typename F>
+		static void visitVariant(Var& variant, F&& function)
 		{
-			std::visit([&](auto &object) { function(object); }, std::forward<Var>(variant));
+			std::visit([&](auto&& object) { function(object); }, variant);
 		}
 
 		class Object
@@ -56,7 +56,7 @@ namespace spk::Lumina
 			{
 				_bufferSet.activate();
 
-				for (const auto &[name, object] : _attributes)
+				for (auto &[name, object] : _attributes)
 				{
 					visitVariant(object, [&](auto &object) { object.activate(); });
 				}
@@ -66,7 +66,7 @@ namespace spk::Lumina
 			{
 				_bufferSet.deactivate();
 
-				for (const auto &[name, object] : _attributes)
+				for (auto &[name, object] : _attributes)
 				{
 					visitVariant(object, [&](auto &object) { object.deactivate(); });
 				}
