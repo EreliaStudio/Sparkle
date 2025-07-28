@@ -60,6 +60,7 @@
 #include "structure/graphics/opengl/spk_uniform_buffer_object.hpp"
 #include "structure/graphics/opengl/spk_vertex_array_object.hpp"
 #include "structure/graphics/opengl/spk_vertex_buffer_object.hpp"
+#include "structure/graphics/lumina/spk_shader.hpp"
 #include "structure/graphics/renderer/spk_color_renderer.hpp"
 #include "structure/graphics/renderer/spk_font_renderer.hpp"
 #include "structure/graphics/renderer/spk_nine_slice_renderer.hpp"
