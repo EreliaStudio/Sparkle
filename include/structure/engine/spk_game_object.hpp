@@ -34,7 +34,7 @@ namespace spk
 		bool _needChildSorting = false;
 		bool _needComponentSorting = false;
 		std::vector<std::unique_ptr<Component>> _components;
-		Transform &_transform;
+		spk::SafePointer<Transform> _transform;
 		Transform::Contract _ownerTransformEditionContract;
 
 		Contract _awakeContract;
@@ -107,7 +107,7 @@ namespace spk
 		void removeAllComponents();
 
 		template <typename TComponentType, typename... TArgs>
-		TComponentType &addComponent(TArgs &&...p_args)
+		spk::SafePointer<TComponentType> addComponent(TArgs &&...p_args)
 		{
 			static_assert(std::is_base_of_v<Component, TComponentType>, "TComponentType must inherit from Component");
 			TComponentType *newComponent = new TComponentType(std::forward<TArgs>(p_args)...);
@@ -126,13 +126,13 @@ namespace spk
 				newComponent->awake();
 			}
 
-			return (*newComponent);
+			return (newComponent);
 		}
 
 		void removeComponent(const std::wstring &p_name);
 
 		template <typename TComponentType>
-		TComponentType &getComponent(const std::wstring &p_name = L"")
+		spk::SafePointer<TComponentType> getComponent(const std::wstring &p_name = L"")
 		{
 			std::unique_lock<std::mutex> lock(_componentMutex);
 
@@ -143,7 +143,7 @@ namespace spk
 				{
 					if (p_name.empty() || castedComponent->name() == p_name)
 					{
-						return *castedComponent;
+						return castedComponent;
 					}
 				}
 			}
@@ -170,7 +170,7 @@ namespace spk
 		}
 
 		template <typename TComponentType>
-		const TComponentType &getComponent(const std::wstring &p_name = L"") const
+		const spk::SafePointer<TComponentType> getComponent(const std::wstring &p_name = L"") const
 		{
 			std::unique_lock<std::mutex> lock(_componentMutex);
 			for (const std::unique_ptr<Component> &component : _components)
@@ -180,7 +180,7 @@ namespace spk
 				{
 					if (p_name.empty() || castedComponent->name() == p_name)
 					{
-						return *castedComponent;
+						return castedComponent;
 					}
 				}
 			}
