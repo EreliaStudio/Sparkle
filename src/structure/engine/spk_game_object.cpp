@@ -39,7 +39,7 @@ namespace spk
 		_awakeContract(constructAwakeContract()),
 		_sleepContract(constructSleepContract())
 	{
-		_ownerTransformEditionContract = _transform.addOnEditionCallback(
+		_ownerTransformEditionContract = _transform->addOnEditionCallback(
 			[&]()
 			{
 				for (auto &child : children())
@@ -112,7 +112,7 @@ namespace spk
 
 	const spk::Vector3 &GameObject::position() const
 	{
-		return (_transform.position());
+		return (_transform->position());
 	}
 
 	int GameObject::priority() const
@@ -122,12 +122,12 @@ namespace spk
 
 	Transform &GameObject::transform()
 	{
-		return (_transform);
+		return (*_transform);
 	}
 
 	const Transform &GameObject::transform() const
 	{
-		return (_transform);
+		return (*_transform);
 	}
 
 	void GameObject::removeAllComponents()
