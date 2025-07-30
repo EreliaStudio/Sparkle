@@ -121,10 +121,7 @@ namespace spk
 			newComponent->_owner = this;
 
 			newComponent->start();
-			if (isActive() == true)
-			{
-				newComponent->awake();
-			}
+			newComponent->activate();
 
 			return (newComponent);
 		}
