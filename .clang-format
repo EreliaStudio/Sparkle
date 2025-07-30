@@ -1,8 +1,9 @@
 BasedOnStyle: LLVM
-NamespaceIndentation : All
+NamespaceIndentation: All
 IndentWidth: 4
 TabWidth: 4
 UseTab: Always
+
 BreakBeforeBraces: Custom
 BraceWrapping:
   AfterCaseLabel: true
@@ -16,13 +17,13 @@ BraceWrapping:
   AfterEnum: true
   AfterControlStatement: true
   BeforeElse: true
+
 BreakConstructorInitializers: AfterColon
-ConstructorInitializerIndentWidth: 4
 PackConstructorInitializers: Never
-BinPackParameters: true
+BinPackParameters: false
+BinPackArguments: false
 ColumnLimit: 150
 AllowShortFunctionsOnASingleLine: None
-BinPackArguments: false
 ContinuationIndentWidth: 4
 FixNamespaceComments: false
 AccessModifierOffset: -4
@@ -30,3 +31,4 @@ BreakTemplateDeclarations: Yes
 TemplateArgumentIndentWidth: 4
 InsertBraces: true
 AllowShortEnumsOnASingleLine: false
+IndentPPDirectives: AfterHash
