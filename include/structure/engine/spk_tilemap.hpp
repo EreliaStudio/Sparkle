@@ -105,13 +105,13 @@ namespace spk
 	private:
 		std::unordered_map<ChunkCoordinate, std::unique_ptr<TChunk>> _chunks;
 
-	public:
-		ITilemap() = default;
-
 		virtual void _onChunkGeneration(const ChunkCoordinate& p_coordinates, spk::SafePointer<TChunk> p_chunk)
 		{
 
 		}
+
+	public:
+		ITilemap() = default;
 
 		void clear()
 		{
