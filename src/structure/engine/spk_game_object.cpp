@@ -7,14 +7,14 @@ namespace spk
 		return (std::move(addActivationCallback(
 			[&]()
 			{
-			for (auto &component : _components)
-			{
-				if (component->isActive() == true)
+				for (auto &component : _components)
 				{
-						component->awake());
+					if (component->isActive() == true)
+					{
+						component->awake();
+					}
 				}
-			}
-			}));
+			})));
 	}
 
 	spk::ActivableObject::Contract GameObject::constructSleepContract()
@@ -22,14 +22,14 @@ namespace spk
 		return (std::move(addDeactivationCallback(
 			[&]()
 			{
-			for (auto &component : _components)
-			{
-				if (component->isActive() == true)
+				for (auto &component : _components)
 				{
-						component->sleep());
+					if (component->isActive() == true)
+					{
+						component->sleep();
+					}
 				}
-			}
-			}));
+			})));
 	}
 
 	GameObject::GameObject(const std::wstring &p_name, const spk::SafePointer<GameObject> &p_owner) :
