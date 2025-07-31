@@ -49,8 +49,8 @@ namespace spk
 			{1, spk::OpenGL::LayoutBufferObject::Attribute::Type::Float}	// layer
 		});
 
-		_colorUbo = spk::OpenGL::UniformBufferObject(L"ColorData", 0, 16);
-		_colorUbo.addElement(L"uColor", 0, 16);
+_colorUniformBufferObject = spk::OpenGL::UniformBufferObject(L"ColorData", 0, 16);
+_colorUniformBufferObject.addElement(L"uColor", 0, 16);
 	}
 
 	ColorRenderer::ColorRenderer(const spk::Color &p_color)
@@ -64,8 +64,8 @@ namespace spk
 	{
 		_color = p_color;
 
-		_colorUbo[L"uColor"] = _color;
-		_colorUbo.validate();
+_colorUniformBufferObject[L"uColor"] = _color;
+_colorUniformBufferObject.validate();
 	}
 
 	void ColorRenderer::clear()
@@ -74,13 +74,13 @@ namespace spk
 		_bufferSet.indexes().clear();
 	}
 
-	void ColorRenderer::prepareSquare(const spk::Geometry2D &p_geom, float p_layer)
-	{
-		size_t nbVertex = _bufferSet.layout().size() / sizeof(Vertex);
+       void ColorRenderer::prepareSquare(const spk::Geometry2D &p_geometry, float p_layer)
+       {
+               size_t numberOfVertices = _bufferSet.layout().size() / sizeof(Vertex);
 
-		spk::Vector3 topLeft = spk::Viewport::convertScreenToOpenGL({p_geom.anchor.x, p_geom.anchor.y}, p_layer);
-		spk::Vector3 bottomRight = spk::Viewport::convertScreenToOpenGL(
-			{p_geom.anchor.x + static_cast<int32_t>(p_geom.size.x), p_geom.anchor.y + static_cast<int32_t>(p_geom.size.y)}, p_layer);
+               spk::Vector3 topLeft = spk::Viewport::convertScreenToOpenGL({p_geometry.anchor.x, p_geometry.anchor.y}, p_layer);
+               spk::Vector3 bottomRight = spk::Viewport::convertScreenToOpenGL(
+                       {p_geometry.anchor.x + static_cast<int32_t>(p_geometry.size.x), p_geometry.anchor.y + static_cast<int32_t>(p_geometry.size.y)}, p_layer);
 
 		_bufferSet.layout() << Vertex{{topLeft.x, bottomRight.y}, topLeft.z} << Vertex{{bottomRight.x, bottomRight.y}, topLeft.z}
 							<< Vertex{{topLeft.x, topLeft.y}, topLeft.z} << Vertex{{bottomRight.x, topLeft.y}, topLeft.z};
@@ -88,7 +88,7 @@ namespace spk
 		std::array<unsigned int, 6> indices = {0, 1, 2, 2, 1, 3};
 		for (const auto &index : indices)
 		{
-			_bufferSet.indexes() << index + nbVertex;
+                       _bufferSet.indexes() << index + numberOfVertices;
 		}
 	}
 
@@ -102,11 +102,11 @@ namespace spk
 	{
 		_program->activate();
 		_bufferSet.activate();
-		_colorUbo.activate();
+_colorUniformBufferObject.activate();
 
 		_program->render(_bufferSet.indexes().nbIndexes(), 1);
 
-		_colorUbo.deactivate();
+_colorUniformBufferObject.deactivate();
 		_bufferSet.deactivate();
 		_program->deactivate();
 	}

@@ -77,24 +77,24 @@ namespace spk
 
 		_samplerObject = spk::OpenGL::SamplerObject("diffuseTexture", spk::OpenGL::SamplerObject::Type::Texture2D, 0);
 
-		_textInformationsUbo = std::move(spk::OpenGL::UniformBufferObject(L"TextInformations", 0, 36));
-		_textInformationsUbo.addElement(L"glyphColor", 0, sizeof(spk::Color));
-		_textInformationsUbo.addElement(L"outlineColor", 16, sizeof(spk::Color));
-		_textInformationsUbo.addElement(L"outlineThreshold", 32, sizeof(float));
+_textInformationsUniformBufferObject = std::move(spk::OpenGL::UniformBufferObject(L"TextInformations", 0, 36));
+_textInformationsUniformBufferObject.addElement(L"glyphColor", 0, sizeof(spk::Color));
+_textInformationsUniformBufferObject.addElement(L"outlineColor", 16, sizeof(spk::Color));
+_textInformationsUniformBufferObject.addElement(L"outlineThreshold", 32, sizeof(float));
 	}
 
-	void FontRenderer::_updateUbo()
-	{
-		_textInformationsUbo[L"glyphColor"] = _glyphColor;
-		_textInformationsUbo[L"outlineColor"] = _outlineColor;
-		_textInformationsUbo.validate();
-	}
+       void FontRenderer::_updateUniformBufferObject()
+       {
+               _textInformationsUniformBufferObject[L"glyphColor"] = _glyphColor;
+               _textInformationsUniformBufferObject[L"outlineColor"] = _outlineColor;
+               _textInformationsUniformBufferObject.validate();
+       }
 
 	FontRenderer::FontRenderer()
 	{
 		_initProgram();
 		_initBuffers();
-		_updateUbo();
+               _updateUniformBufferObject();
 	}
 
 	FontRenderer::Contract FontRenderer::subscribeToFontEdition(const FontRenderer::Job& p_job)
@@ -112,8 +112,8 @@ namespace spk
 	void FontRenderer::setFontSize(const Font::Size &p_fontSize)
 	{
 		_fontSize = p_fontSize;
-		_textInformationsUbo[L"outlineThreshold"] = 0.5f;
-		_textInformationsUbo.validate();
+               _textInformationsUniformBufferObject[L"outlineThreshold"] = 0.5f;
+               _textInformationsUniformBufferObject.validate();
 		_atlas = nullptr;
 		_samplerObject.bind(nullptr);
 	}
@@ -121,13 +121,13 @@ namespace spk
 	void FontRenderer::setGlyphColor(const spk::Color &p_color)
 	{
 		_glyphColor = p_color;
-		_updateUbo();
+               _updateUniformBufferObject();
 	}
 
 	void FontRenderer::setOutlineColor(const spk::Color &p_color)
 	{
 		_outlineColor = p_color;
-		_updateUbo();
+               _updateUniformBufferObject();
 	}
 
 	const spk::SafePointer<spk::Font> &FontRenderer::font() const
@@ -253,11 +253,11 @@ namespace spk
 		_program->activate();
 		_bufferSet.activate();
 		_samplerObject.activate();
-		_textInformationsUbo.activate();
+               _textInformationsUniformBufferObject.activate();
 
 		_program->render(_bufferSet.indexes().nbIndexes(), 1);
 
-		_textInformationsUbo.deactivate();
+               _textInformationsUniformBufferObject.deactivate();
 		_samplerObject.deactivate();
 		_bufferSet.deactivate();
 		_program->deactivate();

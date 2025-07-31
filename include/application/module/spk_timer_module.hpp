@@ -9,7 +9,7 @@ namespace spk
 	class TimerModule : public spk::Module<spk::TimerEvent>
 	{
 	private:
-		static const int UpdaterID = 1;
+static const int UpdaterIdentifier = 1;
 
 		void _treatEvent(spk::TimerEvent&& p_event) override;
 		spk::TimerEvent _convertEventToEventType(spk::Event&& p_event) override;

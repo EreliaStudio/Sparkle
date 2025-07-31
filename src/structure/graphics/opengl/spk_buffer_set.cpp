@@ -5,9 +5,9 @@
 namespace spk::OpenGL
 {
 	BufferSet::BufferSet(std::span<const LayoutBufferObject::Attribute> p_attributes) :
-		_layout(p_attributes)
-	{
-	}
+               _layout(p_attributes)
+       {
+       }
 
 	BufferSet::BufferSet(std::initializer_list<LayoutBufferObject::Attribute> p_attributes) :
 		BufferSet(std::span(p_attributes.begin(), p_attributes.end()))
@@ -16,47 +16,47 @@ namespace spk::OpenGL
 
 	LayoutBufferObject &BufferSet::layout()
 	{
-		return _layout;
+               return (_layout);
 	}
 
 	IndexBufferObject &BufferSet::indexes()
 	{
-		return _indexes;
+               return (_indexBufferObject);
 	}
 
 	const LayoutBufferObject &BufferSet::layout() const
 	{
-		return _layout;
+               return (_layout);
 	}
 
 	const IndexBufferObject &BufferSet::indexes() const
 	{
-		return _indexes;
+               return (_indexBufferObject);
 	}
 
 	void BufferSet::clear()
 	{
-		_layout.clear();
-		_indexes.clear();
+                _layout.clear();
+                _indexBufferObject.clear();
 	}
 
 	void BufferSet::validate()
 	{
-		_layout.validate();
-		_indexes.validate();
+                _layout.validate();
+                _indexBufferObject.validate();
 	}
 
 	void BufferSet::activate()
 	{
-		_vao.activate();
-		_layout.activate();
-		_indexes.activate();
+                _vertexArrayObject.activate();
+                _layout.activate();
+                _indexBufferObject.activate();
 	}
 
 	void BufferSet::deactivate()
 	{
-		_vao.deactivate();
-		_layout.deactivate();
-		_indexes.deactivate();
+                _vertexArrayObject.deactivate();
+                _layout.deactivate();
+                _indexBufferObject.deactivate();
 	}
 }

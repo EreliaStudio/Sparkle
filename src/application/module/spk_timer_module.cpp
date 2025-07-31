@@ -6,7 +6,7 @@ namespace spk
 {
 	void TimerModule::_treatEvent(spk::TimerEvent &&p_event)
 	{
-		if (p_event.timerID == UpdaterID)
+		if (p_event.timerID == UpdaterIdentifier)
 		{
 			p_event.window->requestUpdate();
 		}

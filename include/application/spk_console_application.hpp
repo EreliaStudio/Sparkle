@@ -12,7 +12,7 @@ namespace spk
 	private:
 		std::unique_ptr<Widget> _centralWidget;
 		spk::UpdateModule _updateModule;
-		HWND _hwnd;
+			   HWND _windowHandle;
 
 		HWND createBackgroundHandle(const std::wstring& p_title);
 

@@ -6,15 +6,15 @@ namespace spk
 	{
 		const wchar_t className[] = L"DummyWindowClass";
 
-		WNDCLASSW wc = {};
+		WNDCLASSW windowClass = {};
 
-		wc.lpfnWndProc = DefWindowProc;
-		wc.hInstance = GetModuleHandle(NULL);
-		wc.lpszClassName = className;
+		windowClass.lpfnWndProc = DefWindowProc;
+		windowClass.hInstance = GetModuleHandle(NULL);
+		windowClass.lpszClassName = className;
 
-		RegisterClassW(&wc);
+		RegisterClassW(&windowClass);
 
-		HWND hwnd = CreateWindowExW(0,					 // Optional window styles.
+		HWND windowHandle = CreateWindowExW(0,					 // Optional window styles.
 									className,			 // Window class
 									p_title.c_str(),	 // Window text
 									WS_OVERLAPPEDWINDOW, // Window style
@@ -31,14 +31,14 @@ namespace spk
 									NULL				   // Additional application data
 		);
 
-		return hwnd;
+		return (windowHandle);
 	}
 
 	ConsoleApplication::ConsoleApplication(const std::wstring &p_title) :
 		Application(),
 		_centralWidget(std::make_unique<Widget>(L"CentralWidget")),
 		_updateModule(_centralWidget.get()),
-		_hwnd(createBackgroundHandle(p_title))
+		_windowHandle(createBackgroundHandle(p_title))
 	{
 		_centralWidget->activate();
 		addExecutionStep(
@@ -46,7 +46,7 @@ namespace spk
 			{
 				spk::Event event(nullptr, WM_UPDATE_REQUEST, 0, 0);
 
-			 	event.updateEvent.time = SystemUtils::getTime();
+				event.updateEvent.time = SystemUtils::getTime();
 
 				_updateModule.receiveEvent(std::move(event));
 
@@ -62,6 +62,6 @@ namespace spk
 
 	ConsoleApplication::operator spk::SafePointer<Widget>() const
 	{
-		return centralWidget();
+		return (centralWidget());
 	}
 }
