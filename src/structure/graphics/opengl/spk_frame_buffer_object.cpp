@@ -74,9 +74,9 @@ namespace spk::OpenGL
         }
 		_size = p_size;
 
-        GLuint texID = _gpuTexture->id();
+        GLuint textureIdentifier = _gpuTexture->id();
 
-        glBindTexture(GL_TEXTURE_2D, texID);
+        glBindTexture(GL_TEXTURE_2D, textureIdentifier);
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -107,8 +107,8 @@ namespace spk::OpenGL
 
 		_size = p_size;
 
-        GLuint texID = _gpuTexture->id();
-        glBindTexture(GL_TEXTURE_2D, texID);
+        GLuint textureIdentifier = _gpuTexture->id();
+        glBindTexture(GL_TEXTURE_2D, textureIdentifier);
 
         GLenum internalFmt = internalFormatForAttachment(_type);
         GLenum format      = formatForAttachment(_type);
@@ -124,14 +124,14 @@ namespace spk::OpenGL
         _needsResize = false;
     }
 
-    void FrameBufferObject::Attachment::_attach(GLuint p_fboID) const
+    void FrameBufferObject::Attachment::_attach(GLuint p_frameBufferObjectIdentifier) const
     {
         if (_gpuTexture == nullptr)
 		{
             return;
 		}
 
-        GLuint texID = _gpuTexture->id();
+        GLuint textureIdentifier = _gpuTexture->id();
 
         GLenum attachmentPoint;
         switch (_type)
@@ -150,7 +150,7 @@ namespace spk::OpenGL
             break;
         }
 
-        glFramebufferTexture2D(GL_FRAMEBUFFER, attachmentPoint, GL_TEXTURE_2D, texID, 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, attachmentPoint, GL_TEXTURE_2D, textureIdentifier, 0);
     }
 
     spk::Texture FrameBufferObject::Attachment::save() const
@@ -181,7 +181,7 @@ namespace spk::OpenGL
     }
 
     FrameBufferObject::FrameBufferObject() :
-        _id(0),
+        _identifier(0),
         _validated(false),
         _size{0, 0}
     {
@@ -193,12 +193,12 @@ namespace spk::OpenGL
     }
 
     FrameBufferObject::FrameBufferObject(FrameBufferObject&& p_other) noexcept :
-        _id(p_other._id),
+        _identifier(p_other._identifier),
         _validated(p_other._validated),
         _size(p_other._size),
         _attachments(std::move(p_other._attachments))
     {
-        p_other._id = 0;
+        p_other._identifier = 0;
         p_other._validated = false;
         p_other._size = {0, 0};
     }
@@ -209,12 +209,12 @@ namespace spk::OpenGL
         {
             _release();
 
-            _id = p_other._id;
+            _identifier = p_other._identifier;
             _validated = p_other._validated;
             _size = p_other._size;
             _attachments = std::move(p_other._attachments);
 
-            p_other._id = 0;
+            p_other._identifier = 0;
             p_other._validated = false;
             p_other._size = {0, 0};
         }
@@ -223,19 +223,19 @@ namespace spk::OpenGL
 
     void FrameBufferObject::_allocate()
     {
-        if (_id == 0)
+        if (_identifier == 0)
         {
-            glGenFramebuffers(1, &_id);
+            glGenFramebuffers(1, &_identifier);
         }
     }
 
     void FrameBufferObject::_release()
     {
-        if (_id != 0 && wglGetCurrentContext() != nullptr)
+        if (_identifier != 0 && wglGetCurrentContext() != nullptr)
         {
-            glDeleteFramebuffers(1, &_id);
+            glDeleteFramebuffers(1, &_identifier);
         }
-        _id = 0;
+        _identifier = 0;
         _validated = false;
     }
 
@@ -282,7 +282,7 @@ namespace spk::OpenGL
                 att._resize(_size);
             }
 
-            att._attach(_id);
+            att._attach(_identifier);
         }
 
         std::vector<GLenum> drawBuffers;
@@ -314,12 +314,12 @@ namespace spk::OpenGL
 
     void FrameBufferObject::activate()
     {
-        if (_id == 0)
+        if (_identifier == 0)
         {
             _allocate();
         }
 
-        glBindFramebuffer(GL_FRAMEBUFFER, _id);
+        glBindFramebuffer(GL_FRAMEBUFFER, _identifier);
 
         if (!_validated)
         {

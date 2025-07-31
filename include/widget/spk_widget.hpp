@@ -61,7 +61,7 @@ namespace spk
 		spk::Geometry2D _geometry;
 		spk::Viewport _viewport;
 
-		spk::OpenGL::FrameBufferObject _fbo;
+               spk::OpenGL::FrameBufferObject _frameBufferObject;
 
 		spk::TextureRenderer _textureRenderer;
 

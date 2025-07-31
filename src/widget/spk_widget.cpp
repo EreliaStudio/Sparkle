@@ -37,7 +37,7 @@ namespace spk
 		_parent(nullptr),
 		_layer(0)
 	{
-		_fbo.addAttachment(L"outputColor", 0, spk::OpenGL::FrameBufferObject::Attachment::Type::Color);
+               _frameBufferObject.addAttachment(L"outputColor", 0, spk::OpenGL::FrameBufferObject::Attachment::Type::Color);
 	}
 
 	Widget::Widget(const std::wstring &p_name, spk::SafePointer<Widget> p_parent) :
@@ -84,12 +84,12 @@ namespace spk
 
 	spk::SafePointer<const spk::OpenGL::FrameBufferObject> Widget::frameBufferObject() const
 	{
-		return (&_fbo);
+               return (&_frameBufferObject);
 	}
 
 	void Widget::renderAsPNJ(const std::filesystem::path& p_path)
 	{
-		if (_fbo.attachment(L"color0") == nullptr)
+               if (_frameBufferObject.attachment(L"color0") == nullptr)
 		{
 			GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] Frame buffer object doesn't have a color0 attachment");
 		}
@@ -101,12 +101,12 @@ namespace spk
 		
 		try
 		{
-			_fbo.activate();
+                       _frameBufferObject.activate();
 
 			spk::PaintEvent event = spk::PaintEvent();
 			_onPaintEvent(event);
 
-			_fbo.deactivate();
+                       _frameBufferObject.deactivate();
 		}
 		catch(const std::exception& e)
 		{
@@ -115,7 +115,7 @@ namespace spk
 		
 		try
 		{
-			spk::Texture texture = _fbo.attachment(L"color0")->save();
+                       spk::Texture texture = _frameBufferObject.attachment(L"color0")->save();
 
 			texture.saveAsPng(p_path);
 		}
@@ -293,9 +293,9 @@ namespace spk
 
 	void Widget::_applyGeometryChange()
 	{
-		_fbo.resize(geometry().size);
+               _frameBufferObject.resize(geometry().size);
 	
-		_fbo.activate();
+               _frameBufferObject.activate();
 		try
 		{
 			_onGeometryChange();		
@@ -308,10 +308,10 @@ namespace spk
 		{
 			GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] onGeometryChange - Unknow error type");
 		}
-		_fbo.deactivate();
+               _frameBufferObject.deactivate();
 
 		_textureRenderer.clear();
-		_textureRenderer.setTexture(_fbo.attachment(L"outputColor")->bindedTexture());
+               _textureRenderer.setTexture(_frameBufferObject.attachment(L"outputColor")->bindedTexture());
 		_textureRenderer.prepare(geometry(), {{0.0f, 1.0f}, {1.0f, -1.0f}}, layer());
 		_textureRenderer.validate();
 	}
@@ -453,10 +453,10 @@ namespace spk
 
 		try
 		{
-			_fbo.activate();
-			_fbo.clear();
+                       _frameBufferObject.activate();
+                       _frameBufferObject.clear();
 			_onPaintEvent(p_event);
-			_fbo.deactivate();
+                       _frameBufferObject.deactivate();
 
 			_textureRenderer.render();
 		}
