@@ -10,182 +10,180 @@
 
 namespace spk
 {
-	
 	namespace JSON
 	{
-		
-	std::wstring applyGrammar(const std::wstring &p_fileContent);
-	std::wstring extractUnitSubstring(const std::wstring &p_content, size_t &p_index);
-	std::wstring getAttributeName(const std::wstring &p_content, size_t &p_index);
+		std::wstring applyGrammar(const std::wstring &p_fileContent);
+		std::wstring extractUnitSubstring(const std::wstring &p_content, size_t &p_index);
+		std::wstring getAttributeName(const std::wstring &p_content, size_t &p_index);
 
-	void loadUnitNumbers(spk::JSON::Object &p_objectToFill, const std::wstring &p_unitSubString);
+		void loadUnitNumbers(spk::JSON::Object &p_objectToFill, const std::wstring &p_unitSubString);
 
-	static void loadContent(spk::JSON::Object &p_objectToFill, const std::wstring &p_content, size_t &p_index);
+		static void loadContent(spk::JSON::Object &p_objectToFill, const std::wstring &p_content, size_t &p_index);
 
-	static void loadUnitString(spk::JSON::Object &p_objectToFill, const std::wstring &p_unitSubString)
-	{
-		p_objectToFill.set(p_unitSubString.substr(1, p_unitSubString.size() - 2));
-	}
-
-	static void loadUnitBoolean(spk::JSON::Object &p_objectToFill, const std::wstring &p_unitSubString)
-	{
-		if (p_unitSubString == L"true")
+		static void loadUnitString(spk::JSON::Object &p_objectToFill, const std::wstring &p_unitSubString)
 		{
-			p_objectToFill.set(true);
+			p_objectToFill.set(p_unitSubString.substr(1, p_unitSubString.size() - 2));
 		}
-		else if (p_unitSubString == L"false")
+
+		static void loadUnitBoolean(spk::JSON::Object &p_objectToFill, const std::wstring &p_unitSubString)
 		{
-			p_objectToFill.set(false);
-		}
-		else
-		{
-			GENERATE_ERROR("Invalid boolean JSON value: " + spk::StringUtils::wstringToString(p_unitSubString));
-		}
-	}
-
-	static void loadUnitNull(spk::JSON::Object &p_objectToFill, const std::wstring &p_unitSubString)
-	{
-		if (p_unitSubString == L"null")
-		{
-			p_objectToFill.set(nullptr);
-		}
-		else
-		{
-			GENERATE_ERROR("Invalid null JSON value: " + spk::StringUtils::wstringToString(p_unitSubString));
-		}
-	}
-
-	static void loadUnit(spk::JSON::Object &p_objectToFill, const std::wstring &p_content, size_t &p_index)
-	{
-		std::wstring substring = extractUnitSubstring(p_content, p_index);
-
-		switch (substring[0])
-		{
-		case '"':
-			loadUnitString(p_objectToFill, substring);
-			break;
-		case '0':
-		case '1':
-		case '2':
-		case '3':
-		case '4':
-		case '5':
-		case '6':
-		case '7':
-		case '8':
-		case '9':
-		case '-':
-			loadUnitNumbers(p_objectToFill, substring);
-			break;
-		case 't':
-		case 'f':
-			loadUnitBoolean(p_objectToFill, substring);
-			break;
-		case 'n':
-			loadUnitNull(p_objectToFill, substring);
-			break;
-		default:
-			GENERATE_ERROR("Invalid JSON value: " + spk::StringUtils::wstringToString(substring));
-			break;
-		}
-	}
-
-	static void loadObject(spk::JSON::Object &p_objectToFill, const std::wstring &p_content, size_t &p_index)
-	{
-		p_objectToFill.setAsObject();
-
-		if (p_content[p_index] != '{')
-		{
-			GENERATE_ERROR("Invalid JSON object (missing '{')");
-		}
-		p_index++;
-		for (; p_index < p_content.size() && p_content[p_index] != '}';)
-		{
-			std::wstring attributeName = getAttributeName(p_content, p_index);
-
-			spk::JSON::Object &newObject = p_objectToFill.addAttribute(attributeName);
-
-			loadContent(newObject, p_content, p_index);
-
-			if (p_content[p_index] == ',')
+			if (p_unitSubString == L"true")
 			{
-				p_index++;
+				p_objectToFill.set(true);
 			}
-			else if (p_content[p_index] != '}')
+			else if (p_unitSubString == L"false")
 			{
-				GENERATE_ERROR("Invalid JSON object (missing ',' or '}')");
+				p_objectToFill.set(false);
+			}
+			else
+			{
+				GENERATE_ERROR("Invalid boolean JSON value: " + spk::StringUtils::wstringToString(p_unitSubString));
 			}
 		}
-		if (p_content[p_index] != '}')
+
+		static void loadUnitNull(spk::JSON::Object &p_objectToFill, const std::wstring &p_unitSubString)
 		{
-			GENERATE_ERROR("Invalid JSON object (missing '}')");
-		}
-		p_index++;
-	}
-
-	static void loadArray(spk::JSON::Object &p_objectToFill, const std::wstring &p_content, size_t &p_index)
-	{
-		p_objectToFill.setAsArray();
-		if (p_content[p_index] != '[')
-		{
-			GENERATE_ERROR("Invalid JSON array (missing '[')");
-		}
-		p_index++;
-		for (; p_index < p_content.size() && p_content[p_index] != ']';)
-		{
-			spk::JSON::Object newObject(L"[" + std::to_wstring(p_objectToFill.size()) + L"]");
-
-			loadContent(newObject, p_content, p_index);
-
-			p_objectToFill.push_back(newObject);
-
-			if (p_content[p_index] == ',')
+			if (p_unitSubString == L"null")
 			{
-				p_index++;
+				p_objectToFill.set(nullptr);
 			}
-			else if (p_content[p_index] != ']')
+			else
 			{
-				GENERATE_ERROR("Invalid JSON array (missing ',' or ']')");
+				GENERATE_ERROR("Invalid null JSON value: " + spk::StringUtils::wstringToString(p_unitSubString));
 			}
 		}
-		if (p_content[p_index] != ']')
-		{
-			GENERATE_ERROR("Invalid JSON array (missing ']')");
-		}
-		p_index++;
-	}
 
-	static void loadContent(spk::JSON::Object &p_objectToFill, const std::wstring &p_content, size_t &p_index)
-	{
-		switch (p_content[p_index])
+		static void loadUnit(spk::JSON::Object &p_objectToFill, const std::wstring &p_content, size_t &p_index)
 		{
-		case '\"':
-		case 'f':
-		case 't':
-		case 'n':
-		case '0':
-		case '1':
-		case '2':
-		case '3':
-		case '4':
-		case '5':
-		case '6':
-		case '7':
-		case '8':
-		case '9':
-		case '-':
-			loadUnit(p_objectToFill, p_content, p_index);
-			break;
-		case '{':
-			loadObject(p_objectToFill, p_content, p_index);
-			break;
-		case '[':
-			loadArray(p_objectToFill, p_content, p_index);
-			break;
-		default:
-			GENERATE_ERROR("Unexpected data type in JSON: " + spk::StringUtils::wstringToString(p_content).substr(p_index, 10));
+			std::wstring substring = extractUnitSubstring(p_content, p_index);
+
+			switch (substring[0])
+			{
+			case '"':
+				loadUnitString(p_objectToFill, substring);
+				break;
+			case '0':
+			case '1':
+			case '2':
+			case '3':
+			case '4':
+			case '5':
+			case '6':
+			case '7':
+			case '8':
+			case '9':
+			case '-':
+				loadUnitNumbers(p_objectToFill, substring);
+				break;
+			case 't':
+			case 'f':
+				loadUnitBoolean(p_objectToFill, substring);
+				break;
+			case 'n':
+				loadUnitNull(p_objectToFill, substring);
+				break;
+			default:
+				GENERATE_ERROR("Invalid JSON value: " + spk::StringUtils::wstringToString(substring));
+				break;
+			}
 		}
-	}
+
+		static void loadObject(spk::JSON::Object &p_objectToFill, const std::wstring &p_content, size_t &p_index)
+		{
+			p_objectToFill.setAsObject();
+
+			if (p_content[p_index] != '{')
+			{
+				GENERATE_ERROR("Invalid JSON object (missing '{')");
+			}
+			p_index++;
+			for (; p_index < p_content.size() && p_content[p_index] != '}';)
+			{
+				std::wstring attributeName = getAttributeName(p_content, p_index);
+
+				spk::JSON::Object &newObject = p_objectToFill.addAttribute(attributeName);
+
+				loadContent(newObject, p_content, p_index);
+
+				if (p_content[p_index] == ',')
+				{
+					p_index++;
+				}
+				else if (p_content[p_index] != '}')
+				{
+					GENERATE_ERROR("Invalid JSON object (missing ',' or '}')");
+				}
+			}
+			if (p_content[p_index] != '}')
+			{
+				GENERATE_ERROR("Invalid JSON object (missing '}')");
+			}
+			p_index++;
+		}
+
+		static void loadArray(spk::JSON::Object &p_objectToFill, const std::wstring &p_content, size_t &p_index)
+		{
+			p_objectToFill.setAsArray();
+			if (p_content[p_index] != '[')
+			{
+				GENERATE_ERROR("Invalid JSON array (missing '[')");
+			}
+			p_index++;
+			for (; p_index < p_content.size() && p_content[p_index] != ']';)
+			{
+				spk::JSON::Object newObject(L"[" + std::to_wstring(p_objectToFill.size()) + L"]");
+
+				loadContent(newObject, p_content, p_index);
+
+				p_objectToFill.push_back(newObject);
+
+				if (p_content[p_index] == ',')
+				{
+					p_index++;
+				}
+				else if (p_content[p_index] != ']')
+				{
+					GENERATE_ERROR("Invalid JSON array (missing ',' or ']')");
+				}
+			}
+			if (p_content[p_index] != ']')
+			{
+				GENERATE_ERROR("Invalid JSON array (missing ']')");
+			}
+			p_index++;
+		}
+
+		static void loadContent(spk::JSON::Object &p_objectToFill, const std::wstring &p_content, size_t &p_index)
+		{
+			switch (p_content[p_index])
+			{
+			case '\"':
+			case 'f':
+			case 't':
+			case 'n':
+			case '0':
+			case '1':
+			case '2':
+			case '3':
+			case '4':
+			case '5':
+			case '6':
+			case '7':
+			case '8':
+			case '9':
+			case '-':
+				loadUnit(p_objectToFill, p_content, p_index);
+				break;
+			case '{':
+				loadObject(p_objectToFill, p_content, p_index);
+				break;
+			case '[':
+				loadArray(p_objectToFill, p_content, p_index);
+				break;
+			default:
+				GENERATE_ERROR("Unexpected data type in JSON: " + spk::StringUtils::wstringToString(p_content).substr(p_index, 10));
+			}
+		}
 
 		size_t Object::_indent = 0;
 
@@ -195,10 +193,10 @@ namespace spk
 			_initialized = false;
 		}
 
-		Object Object::fromString(const std::wstring& p_content)
+		Object Object::fromString(const std::wstring &p_content)
 		{
 			spk::JSON::Object result;
-			
+
 			size_t index = 0;
 			loadContent(result, p_content, index);
 

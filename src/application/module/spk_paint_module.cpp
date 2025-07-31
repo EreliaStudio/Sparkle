@@ -10,34 +10,32 @@ namespace spk
 	{
 		switch (p_event.type)
 		{
-			case spk::PaintEvent::Type::Resize:
+		case spk::PaintEvent::Type::Resize:
+		{
+			try
 			{
-				try
-				{
-					p_event.window->resize(p_event.geometry.size);
-					p_event.window->requestPaint();
-				}
-				catch (std::exception &e)
-				{
-					PROPAGATE_ERROR("PaintModule::_treatEvent over spk::PaintEvent::Type::Resize failed", e);
-				}
-				break;
-			}
-			case spk::PaintEvent::Type::Paint:
+				p_event.window->resize(p_event.geometry.size);
+				p_event.window->requestPaint();
+			} catch (std::exception &e)
 			{
-				try
-				{
-					p_event.window->clear();
-					p_event.window->widget()->onPaintEvent(p_event);
-					p_event.window->swap();
-					p_event.window->allowPaintRequest();
-				}
-				catch (std::exception &e)
-				{
-					PROPAGATE_ERROR("PaintModule::_treatEvent over spk::PaintEvent::Type::Paint failed", e);
-				}
-				break;
+				PROPAGATE_ERROR("PaintModule::_treatEvent over spk::PaintEvent::Type::Resize failed", e);
 			}
+			break;
+		}
+		case spk::PaintEvent::Type::Paint:
+		{
+			try
+			{
+				p_event.window->clear();
+				p_event.window->widget()->onPaintEvent(p_event);
+				p_event.window->swap();
+				p_event.window->allowPaintRequest();
+			} catch (std::exception &e)
+			{
+				PROPAGATE_ERROR("PaintModule::_treatEvent over spk::PaintEvent::Type::Paint failed", e);
+			}
+			break;
+		}
 		}
 	}
 

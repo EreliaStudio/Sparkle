@@ -25,7 +25,7 @@ namespace spk
 				}
 			}
 
-return (result);
+			return (result);
 		}
 
 		std::vector<std::filesystem::path> listFiles(const std::filesystem::path &p_folderPath)
@@ -45,7 +45,7 @@ return (result);
 				}
 			}
 
-return (result);
+			return (result);
 		}
 
 		std::wstring readFileAsWString(const std::filesystem::path &p_path)
@@ -106,7 +106,7 @@ return (result);
 				GENERATE_ERROR("Error reading file [" + p_path.string() + "]");
 			}
 
-return (buffer);
+			return (buffer);
 		}
 	}
 }

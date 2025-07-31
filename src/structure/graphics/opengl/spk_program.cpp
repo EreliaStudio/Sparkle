@@ -118,7 +118,7 @@ namespace spk::OpenGL
 
 	void Program::render(GLsizei p_nbIndexes, GLsizei p_nbInstance)
 	{
-		
+
 		if (_programID == 0)
 		{
 			_load();
@@ -126,9 +126,9 @@ namespace spk::OpenGL
 
 		if (p_nbInstance == 0)
 		{
-			return ;
+			return;
 		}
-		
+
 		glDrawElementsInstanced(GL_TRIANGLES, p_nbIndexes, GL_UNSIGNED_INT, nullptr, p_nbInstance);
 	}
 

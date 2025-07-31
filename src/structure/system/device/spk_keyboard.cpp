@@ -810,14 +810,14 @@ std::wostream &operator<<(std::wostream &p_os, const spk::Keyboard::Key &p_key)
 }
 spk::Keyboard::Keyboard()
 {
-for (size_t i = 0; i < spk::Keyboard::Key::MaxNbKey; i++)
-{
-state[i] = spk::InputState::Up;
-}
-glyph = L'\0';
+	for (size_t i = 0; i < spk::Keyboard::Key::MaxNbKey; i++)
+	{
+		state[i] = spk::InputState::Up;
+	}
+	glyph = L'\0';
 }
 
 spk::InputState spk::Keyboard::operator[](spk::Keyboard::Key p_key) const
 {
-return (state[static_cast<int>(p_key)]);
+	return (state[static_cast<int>(p_key)]);
 }

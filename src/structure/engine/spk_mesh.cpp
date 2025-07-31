@@ -107,20 +107,20 @@ namespace spk
 		if (p_vertexA.pointIndex.has_value() == false || _points.size() <= p_vertexA.pointIndex.value())
 		{
 			GENERATE_ERROR("Error loading a face with invalid index [" +
-									 (p_vertexA.pointIndex.has_value() == true ? std::to_string(p_vertexA.pointIndex.value()) : "No value") +
-									 "] over [" + std::to_string(_points.size()) + "] points");
+						   (p_vertexA.pointIndex.has_value() == true ? std::to_string(p_vertexA.pointIndex.value()) : "No value") + "] over [" +
+						   std::to_string(_points.size()) + "] points");
 		}
 		if (p_vertexB.pointIndex.has_value() == false || _points.size() <= p_vertexB.pointIndex.value())
 		{
 			GENERATE_ERROR("Error loading a face with invalid index [" +
-									 (p_vertexB.pointIndex.has_value() == true ? std::to_string(p_vertexB.pointIndex.value()) : "No value") +
-									 "] over [" + std::to_string(_points.size()) + "] points");
+						   (p_vertexB.pointIndex.has_value() == true ? std::to_string(p_vertexB.pointIndex.value()) : "No value") + "] over [" +
+						   std::to_string(_points.size()) + "] points");
 		}
 		if (p_vertexC.pointIndex.has_value() == false || _points.size() <= p_vertexC.pointIndex.value())
 		{
 			GENERATE_ERROR("Error loading a face with invalid index [" +
-									 (p_vertexC.pointIndex.has_value() == true ? std::to_string(p_vertexC.pointIndex.value()) : "No value") +
-									 "] over [" + std::to_string(_points.size()) + "] points");
+						   (p_vertexC.pointIndex.has_value() == true ? std::to_string(p_vertexC.pointIndex.value()) : "No value") + "] over [" +
+						   std::to_string(_points.size()) + "] points");
 		}
 
 		if (p_vertexA.normalIndex.has_value() == false || p_vertexB.normalIndex.has_value() == false || p_vertexC.normalIndex.has_value() == false)

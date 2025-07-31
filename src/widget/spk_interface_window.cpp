@@ -135,7 +135,7 @@ namespace spk
 		_maximizeButton.setCornerSize(4);
 		_maximizeButton.activate();
 	}
-	
+
 	spk::SafePointer<spk::TextLabel> IInterfaceWindow::MenuBar::titleLabel()
 	{
 		return (&_titleLabel);
@@ -150,7 +150,7 @@ namespace spk
 	{
 		return (&_maximizeButton);
 	}
-	
+
 	spk::SafePointer<spk::PushButton> IInterfaceWindow::MenuBar::closeButton()
 	{
 		return (&_closeButton);
@@ -185,7 +185,7 @@ namespace spk
 			});
 	}
 
-	IInterfaceWindow::ResizeContractProvider::Contract IInterfaceWindow::subscribeOnResize(const IInterfaceWindow::ResizeContractProvider::Job& p_job)
+	IInterfaceWindow::ResizeContractProvider::Contract IInterfaceWindow::subscribeOnResize(const IInterfaceWindow::ResizeContractProvider::Job &p_job)
 	{
 		return (_onResizeContractProvider.subscribe(p_job));
 	}
@@ -195,7 +195,7 @@ namespace spk
 		spk::Vector2UInt menuSize = {geometry().size.x, static_cast<int>(_menuHeight)};
 
 		spk::Vector2UInt frameSize = {geometry().size.x - _backgroundFrame.cornerSize().x * 2,
-									 geometry().size.y - menuSize.y - _backgroundFrame.cornerSize().y * 2};
+									  geometry().size.y - menuSize.y - _backgroundFrame.cornerSize().y * 2};
 
 		_onResizeContractProvider.trigger(frameSize);
 
@@ -243,7 +243,7 @@ namespace spk
 					takeFocus(spk::Widget::FocusType::MouseFocus);
 				}
 			}
-			
+
 			break;
 		}
 		case spk::MouseEvent::Type::Release:

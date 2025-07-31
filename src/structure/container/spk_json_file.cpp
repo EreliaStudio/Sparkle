@@ -3,8 +3,8 @@
 #include <algorithm>
 #include <fstream>
 
-#include "utils/spk_string_utils.hpp"
 #include "utils/spk_file_utils.hpp"
+#include "utils/spk_string_utils.hpp"
 
 #include "structure/system/spk_exception.hpp"
 

@@ -61,7 +61,9 @@ namespace spk
 
 		// Constructor with three values
 		template <
-			typename UType, typename VType, typename WType,
+			typename UType,
+			typename VType,
+			typename WType,
 			typename = std::enable_if_t<std::is_arithmetic<UType>::value && std::is_arithmetic<VType>::value && std::is_arithmetic<WType>::value>>
 		IVector3(UType p_xVal, VType p_yVal, WType p_zVal) :
 			x(static_cast<TType>(p_xVal)),
@@ -78,9 +80,9 @@ namespace spk
 			z(static_cast<TType>(p_other.z))
 		{
 		}
-		
+
 		template <typename UType = TType, std::enable_if_t<std::is_floating_point<UType>::value, int> = 0>
-		IVector3(const spk::JSON::Object& p_input) :
+		IVector3(const spk::JSON::Object &p_input) :
 			x(static_cast<TType>(p_input[L"x"].as<double>())),
 			y(static_cast<TType>(p_input[L"y"].as<double>())),
 			z(static_cast<TType>(p_input[L"z"].as<double>()))
@@ -88,7 +90,7 @@ namespace spk
 		}
 
 		template <typename UType = TType, std::enable_if_t<!std::is_floating_point<UType>::value, int> = 0>
-		IVector3(const spk::JSON::Object& p_input)
+		IVector3(const spk::JSON::Object &p_input)
 		{
 			fromJSON(p_input);
 		}
@@ -117,7 +119,7 @@ namespace spk
 			return (result);
 		}
 
-		void fromJSON(const spk::JSON::Object& p_input)
+		void fromJSON(const spk::JSON::Object &p_input)
 		{
 			if constexpr (std::is_floating_point<TType>::value)
 			{

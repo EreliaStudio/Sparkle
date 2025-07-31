@@ -22,17 +22,17 @@ namespace spk
 	public:
 		IChunk() = default;
 
-		void setContent(const spk::Vector3UInt& p_pos, const TContentType& p_value)
+		void setContent(const spk::Vector3UInt &p_pos, const TContentType &p_value)
 		{
 			setContent(p_pos.x, p_pos.y, p_pos.z, p_value);
 		}
 
-		void setContent(const spk::Vector2UInt& p_pos, size_t p_z, const TContentType& p_value)
+		void setContent(const spk::Vector2UInt &p_pos, size_t p_z, const TContentType &p_value)
 		{
 			setContent(p_pos.x, p_pos.y, p_z, p_value);
 		}
 
-		void setContent(size_t p_x, size_t p_y, size_t p_z, const TContentType& p_value)
+		void setContent(size_t p_x, size_t p_y, size_t p_z, const TContentType &p_value)
 		{
 			if (_isCoordinateValid(p_x, p_y, p_z) == false)
 			{
@@ -42,27 +42,36 @@ namespace spk
 			_content[p_x][p_y][p_z] = p_value;
 		}
 
-		TContentType* content() noexcept                    { return (&_content[0][0][0]); }
-		const TContentType* content() const noexcept        { return (&_content[0][0][0]); }
+		TContentType *content() noexcept
+		{
+			return (&_content[0][0][0]);
+		}
+		const TContentType *content() const noexcept
+		{
+			return (&_content[0][0][0]);
+		}
 
-		static constexpr std::size_t elementCount() noexcept { return (X * Y * Z); }
+		static constexpr std::size_t elementCount() noexcept
+		{
+			return (X * Y * Z);
+		}
 
 		static constexpr std::size_t contentByteSize() noexcept
 		{
 			return (elementCount() * sizeof(TContentType));
 		}
 
-		const TContentType& content(const spk::Vector3UInt& p_pos) const
+		const TContentType &content(const spk::Vector3UInt &p_pos) const
 		{
 			return (content(p_pos.x, p_pos.y, p_pos.z));
 		}
 
-		const TContentType& content(const spk::Vector2UInt& p_pos, size_t p_z) const
+		const TContentType &content(const spk::Vector2UInt &p_pos, size_t p_z) const
 		{
 			return (content(p_pos.x, p_pos.y, p_z));
 		}
 
-		const TContentType& content(size_t p_x, size_t p_y, size_t p_z) const
+		const TContentType &content(size_t p_x, size_t p_y, size_t p_z) const
 		{
 			if (_isCoordinateValid(p_x, p_y, p_z) == false)
 			{
@@ -72,17 +81,17 @@ namespace spk
 			return (_content[p_x][p_y][p_z]);
 		}
 
-		TContentType& content(const spk::Vector3UInt& p_pos)
+		TContentType &content(const spk::Vector3UInt &p_pos)
 		{
 			return (content(p_pos.x, p_pos.y, p_pos.z));
 		}
 
-		TContentType& content(const spk::Vector2UInt& p_pos, size_t p_z)
+		TContentType &content(const spk::Vector2UInt &p_pos, size_t p_z)
 		{
 			return (content(p_pos.x, p_pos.y, p_z));
 		}
 
-		TContentType& content(size_t p_x, size_t p_y, size_t p_z)
+		TContentType &content(size_t p_x, size_t p_y, size_t p_z)
 		{
 			if (_isCoordinateValid(p_x, p_y, p_z) == false)
 			{
@@ -105,9 +114,8 @@ namespace spk
 	private:
 		std::unordered_map<ChunkCoordinate, std::unique_ptr<TChunk>> _chunks;
 
-		virtual void _onChunkGeneration(const ChunkCoordinate& p_coordinates, spk::SafePointer<TChunk> p_chunk)
+		virtual void _onChunkGeneration(const ChunkCoordinate &p_coordinates, spk::SafePointer<TChunk> p_chunk)
 		{
-
 		}
 
 	public:
@@ -118,12 +126,12 @@ namespace spk
 			_chunks.clear();
 		}
 
-		bool contains(const ChunkCoordinate& p_coordinates) const
+		bool contains(const ChunkCoordinate &p_coordinates) const
 		{
 			return (_chunks.contains(p_coordinates));
 		}
 
-		spk::SafePointer<TChunk> requestChunk(const ChunkCoordinate& p_coordinates)
+		spk::SafePointer<TChunk> requestChunk(const ChunkCoordinate &p_coordinates)
 		{
 			if (contains(p_coordinates) == false)
 			{
@@ -134,7 +142,7 @@ namespace spk
 			return (_chunks.at(p_coordinates).get());
 		}
 
-		spk::SafePointer<TChunk> chunk(const ChunkCoordinate& p_coordinates) const
+		spk::SafePointer<TChunk> chunk(const ChunkCoordinate &p_coordinates) const
 		{
 			if (contains(p_coordinates) == false)
 			{
@@ -144,7 +152,7 @@ namespace spk
 			return (_chunks.at(p_coordinates).get());
 		}
 
-		void addChunk(const ChunkCoordinate& p_coordinates, TChunk&& p_newChunk)
+		void addChunk(const ChunkCoordinate &p_coordinates, TChunk &&p_newChunk)
 		{
 			if (contains(p_coordinates) == false)
 			{
@@ -156,24 +164,19 @@ namespace spk
 			}
 		}
 
-		static ChunkCoordinate worldToChunk(const WorldCoordinate& p_worldCoordinate)
+		static ChunkCoordinate worldToChunk(const WorldCoordinate &p_worldCoordinate)
 		{
-			return (ChunkCoordinate(
-					std::floor(static_cast<float>(p_worldCoordinate.x) / static_cast<float>(TChunk::Size.x)),
-					std::floor(static_cast<float>(p_worldCoordinate.y) / static_cast<float>(TChunk::Size.y))
-				));
+			return (ChunkCoordinate(std::floor(static_cast<float>(p_worldCoordinate.x) / static_cast<float>(TChunk::Size.x)),
+									std::floor(static_cast<float>(p_worldCoordinate.y) / static_cast<float>(TChunk::Size.y))));
 		}
 
-		static WorldCoordinate chunkToWorld(const ChunkCoordinate& p_chunkCoordinate)
+		static WorldCoordinate chunkToWorld(const ChunkCoordinate &p_chunkCoordinate)
 		{
-			return (WorldCoordinate(
-					p_chunkCoordinate.x * static_cast<int>(TChunk::Size.x),
-					p_chunkCoordinate.y * static_cast<int>(TChunk::Size.y),
-					0
-				));
+			return (
+				WorldCoordinate(p_chunkCoordinate.x * static_cast<int>(TChunk::Size.x), p_chunkCoordinate.y * static_cast<int>(TChunk::Size.y), 0));
 		}
 
-		static RelativeCoordinate absoluteToRelative(const AbsoluteCoordinate& p_absoluteCoordinate)
+		static RelativeCoordinate absoluteToRelative(const AbsoluteCoordinate &p_absoluteCoordinate)
 		{
 			ChunkCoordinate chunkCoord = worldToChunk(p_absoluteCoordinate);
 			WorldCoordinate worldOrigin = chunkToWorld(chunkCoord);
@@ -181,7 +184,7 @@ namespace spk
 			return (p_absoluteCoordinate - worldOrigin);
 		}
 
-		static RelativeCoordinate absoluteToRelative(const AbsoluteCoordinate& p_absoluteCoordinate, ChunkCoordinate p_chunkCoord)
+		static RelativeCoordinate absoluteToRelative(const AbsoluteCoordinate &p_absoluteCoordinate, ChunkCoordinate p_chunkCoord)
 		{
 			WorldCoordinate worldOrigin = chunkToWorld(p_chunkCoord);
 

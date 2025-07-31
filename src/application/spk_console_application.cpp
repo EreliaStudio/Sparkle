@@ -15,20 +15,20 @@ namespace spk
 		RegisterClassW(&windowClass);
 
 		HWND windowHandle = CreateWindowExW(0,					 // Optional window styles.
-									className,			 // Window class
-									p_title.c_str(),	 // Window text
-									WS_OVERLAPPEDWINDOW, // Window style
+											className,			 // Window class
+											p_title.c_str(),	 // Window text
+											WS_OVERLAPPEDWINDOW, // Window style
 
-									// Size and position
-									CW_USEDEFAULT,
-									CW_USEDEFAULT,
-									CW_USEDEFAULT,
-									CW_USEDEFAULT,
+											// Size and position
+											CW_USEDEFAULT,
+											CW_USEDEFAULT,
+											CW_USEDEFAULT,
+											CW_USEDEFAULT,
 
-									NULL,				   // Parent window
-									NULL,				   // Menu
-									GetModuleHandle(NULL), // Instance handle
-									NULL				   // Additional application data
+											NULL,				   // Parent window
+											NULL,				   // Menu
+											GetModuleHandle(NULL), // Instance handle
+											NULL				   // Additional application data
 		);
 
 		return (windowHandle);

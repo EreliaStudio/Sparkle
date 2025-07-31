@@ -11,6 +11,7 @@ namespace spk
 		if (_program == nullptr)
 		{
 			const char *vertexShaderSrc = R"(#version 450
+			
 				layout(location = 0) in vec2 inPosition;
 				layout(location = 1) in float inLayer;
 
@@ -49,8 +50,8 @@ namespace spk
 			{1, spk::OpenGL::LayoutBufferObject::Attribute::Type::Float}	// layer
 		});
 
-_colorUniformBufferObject = spk::OpenGL::UniformBufferObject(L"ColorData", 0, 16);
-_colorUniformBufferObject.addElement(L"uColor", 0, 16);
+		_colorUniformBufferObject = spk::OpenGL::UniformBufferObject(L"ColorData", 0, 16);
+		_colorUniformBufferObject.addElement(L"uColor", 0, 16);
 	}
 
 	ColorRenderer::ColorRenderer(const spk::Color &p_color)
@@ -64,8 +65,8 @@ _colorUniformBufferObject.addElement(L"uColor", 0, 16);
 	{
 		_color = p_color;
 
-_colorUniformBufferObject[L"uColor"] = _color;
-_colorUniformBufferObject.validate();
+		_colorUniformBufferObject[L"uColor"] = _color;
+		_colorUniformBufferObject.validate();
 	}
 
 	void ColorRenderer::clear()
@@ -74,13 +75,13 @@ _colorUniformBufferObject.validate();
 		_bufferSet.indexes().clear();
 	}
 
-       void ColorRenderer::prepareSquare(const spk::Geometry2D &p_geometry, float p_layer)
-       {
-               size_t numberOfVertices = _bufferSet.layout().size() / sizeof(Vertex);
+	void ColorRenderer::prepareSquare(const spk::Geometry2D &p_geometry, float p_layer)
+	{
+		size_t numberOfVertices = _bufferSet.layout().size() / sizeof(Vertex);
 
-               spk::Vector3 topLeft = spk::Viewport::convertScreenToOpenGL({p_geometry.anchor.x, p_geometry.anchor.y}, p_layer);
-               spk::Vector3 bottomRight = spk::Viewport::convertScreenToOpenGL(
-                       {p_geometry.anchor.x + static_cast<int32_t>(p_geometry.size.x), p_geometry.anchor.y + static_cast<int32_t>(p_geometry.size.y)}, p_layer);
+		spk::Vector3 topLeft = spk::Viewport::convertScreenToOpenGL({p_geometry.anchor.x, p_geometry.anchor.y}, p_layer);
+		spk::Vector3 bottomRight = spk::Viewport::convertScreenToOpenGL(
+			{p_geometry.anchor.x + static_cast<int32_t>(p_geometry.size.x), p_geometry.anchor.y + static_cast<int32_t>(p_geometry.size.y)}, p_layer);
 
 		_bufferSet.layout() << Vertex{{topLeft.x, bottomRight.y}, topLeft.z} << Vertex{{bottomRight.x, bottomRight.y}, topLeft.z}
 							<< Vertex{{topLeft.x, topLeft.y}, topLeft.z} << Vertex{{bottomRight.x, topLeft.y}, topLeft.z};
@@ -88,7 +89,7 @@ _colorUniformBufferObject.validate();
 		std::array<unsigned int, 6> indices = {0, 1, 2, 2, 1, 3};
 		for (const auto &index : indices)
 		{
-                       _bufferSet.indexes() << index + numberOfVertices;
+			_bufferSet.indexes() << index + numberOfVertices;
 		}
 	}
 
@@ -102,11 +103,11 @@ _colorUniformBufferObject.validate();
 	{
 		_program->activate();
 		_bufferSet.activate();
-_colorUniformBufferObject.activate();
+		_colorUniformBufferObject.activate();
 
 		_program->render(_bufferSet.indexes().nbIndexes(), 1);
 
-_colorUniformBufferObject.deactivate();
+		_colorUniformBufferObject.deactivate();
 		_bufferSet.deactivate();
 		_program->deactivate();
 	}

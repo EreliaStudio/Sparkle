@@ -1,8 +1,8 @@
 #pragma once
 
 #include "structure/design_pattern/spk_contract_provider.hpp"
-#include "structure/design_pattern/spk_singleton.hpp"
 #include "structure/design_pattern/spk_function_traits.hpp"
+#include "structure/design_pattern/spk_singleton.hpp"
 
 #include <memory>
 #include <stdexcept>

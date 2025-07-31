@@ -11,7 +11,7 @@ namespace spk
 		Down,
 		Up
 	};
-	
-std::ostream &operator<<(std::ostream &p_os, const spk::InputState &p_state);
-std::wostream &operator<<(std::wostream &p_os, const spk::InputState &p_state);
+
+	std::ostream &operator<<(std::ostream &p_os, const spk::InputState &p_state);
+	std::wostream &operator<<(std::wostream &p_os, const spk::InputState &p_state);
 }

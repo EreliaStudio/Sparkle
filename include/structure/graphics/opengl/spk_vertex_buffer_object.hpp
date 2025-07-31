@@ -11,7 +11,8 @@ namespace spk::OpenGL
 	class VertexBufferObject
 	{
 	public:
-		enum class Type : GLenum {
+		enum class Type : GLenum
+		{
 			Unknow = GL_INVALID_ENUM,
 			Storage = GL_ARRAY_BUFFER,
 			Layout = GL_ELEMENT_ARRAY_BUFFER,
@@ -25,7 +26,8 @@ namespace spk::OpenGL
 			AtomicCounter = GL_ATOMIC_COUNTER_BUFFER
 		};
 
-		enum class Usage : GLenum {
+		enum class Usage : GLenum
+		{
 			Unknow = GL_INVALID_ENUM,
 			Static = GL_STATIC_DRAW,
 			Dynamic = GL_DYNAMIC_DRAW,

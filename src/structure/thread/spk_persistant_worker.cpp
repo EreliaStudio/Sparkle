@@ -4,15 +4,15 @@ namespace spk
 {
 	PersistantWorker::PersistantWorker(const std::wstring &p_name) :
 		spk::Thread(p_name,
-			[&]()
-			{
-				this->_running = true;
-				_preparationJobs.trigger();
-				while (this->_running.load() == true)
-				{
-					_executionJobs.trigger();
-				}
-			})
+					[&]()
+					{
+						this->_running = true;
+						_preparationJobs.trigger();
+						while (this->_running.load() == true)
+						{
+							_executionJobs.trigger();
+						}
+					})
 	{
 	}
 

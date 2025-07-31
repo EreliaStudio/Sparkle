@@ -46,15 +46,15 @@ namespace spk
 		size(p_size)
 	{
 	}
-	bool Texture::Section::operator==(const Section& p_other) const noexcept
-    {
-        return anchor == p_other.anchor && size == p_other.size;
-    }
+	bool Texture::Section::operator==(const Section &p_other) const noexcept
+	{
+		return anchor == p_other.anchor && size == p_other.size;
+	}
 
-    bool Texture::Section::operator!=(const Section& p_other) const noexcept
-    {
-        return (*this == p_other) == false;
-    }
+	bool Texture::Section::operator!=(const Section &p_other) const noexcept
+	{
+		return (*this == p_other) == false;
+	}
 
 	size_t Texture::_getBytesPerPixel(const Format &p_format) const
 	{
@@ -117,8 +117,12 @@ namespace spk
 		return *this;
 	}
 
-	void Texture::setPixels(const std::vector<uint8_t> &p_data, const spk::Vector2UInt &p_size, const Format &p_format, const Filtering &p_filtering,
-							const Wrap &p_wrap, const Mipmap &p_mipmap)
+	void Texture::setPixels(const std::vector<uint8_t> &p_data,
+							const spk::Vector2UInt &p_size,
+							const Format &p_format,
+							const Filtering &p_filtering,
+							const Wrap &p_wrap,
+							const Mipmap &p_mipmap)
 	{
 		_pixels = p_data;
 		_size = p_size;
@@ -138,8 +142,12 @@ namespace spk
 		_needUpdate = true;
 	}
 
-	void Texture::setPixels(const uint8_t *p_data, const spk::Vector2UInt &p_size, const Format &p_format, const Filtering &p_filtering,
-							const Wrap &p_wrap, const Mipmap &p_mipmap)
+	void Texture::setPixels(const uint8_t *p_data,
+							const spk::Vector2UInt &p_size,
+							const Format &p_format,
+							const Filtering &p_filtering,
+							const Wrap &p_wrap,
+							const Mipmap &p_mipmap)
 	{
 		_size = p_size;
 		_format = p_format;
@@ -148,7 +156,7 @@ namespace spk
 		_mipmap = p_mipmap;
 		if (p_data != nullptr)
 		{
-			_pixels.assign(p_data, p_data + (p_size.x * p_size.y * _getBytesPerPixel(p_format)));	
+			_pixels.assign(p_data, p_data + (p_size.x * p_size.y * _getBytesPerPixel(p_format)));
 		}
 		else
 		{
@@ -164,7 +172,7 @@ namespace spk
 		_format = p_format;
 		if (p_data != nullptr)
 		{
-			_pixels.assign(p_data, p_data + (p_size.x * p_size.y * _getBytesPerPixel(p_format)));	
+			_pixels.assign(p_data, p_data + (p_size.x * p_size.y * _getBytesPerPixel(p_format)));
 		}
 		else
 		{
@@ -211,7 +219,7 @@ namespace spk
 		return _mipmap;
 	}
 
-	void Texture::saveAsPng(const std::filesystem::path& p_path) const
+	void Texture::saveAsPng(const std::filesystem::path &p_path) const
 	{
 		if (_pixels.empty() || _size.x == 0 || _size.y == 0)
 		{

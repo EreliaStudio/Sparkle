@@ -2,7 +2,7 @@
 
 namespace spk
 {
-	MouseMotionAction::MouseMotionAction(Mode p_mode, const std::function<void(const spk::Vector2Int&)>& p_callback) :
+	MouseMotionAction::MouseMotionAction(Mode p_mode, const std::function<void(const spk::Vector2Int &)> &p_callback) :
 		_onTriggerCallback(p_callback),
 		_mode(p_mode),
 		_mouse(nullptr)
@@ -14,7 +14,7 @@ namespace spk
 		return (_mouse != nullptr);
 	}
 
-	void MouseMotionAction::initialize(spk::UpdateEvent& p_event)
+	void MouseMotionAction::initialize(spk::UpdateEvent &p_event)
 	{
 		_mouse = p_event.mouse;
 	}

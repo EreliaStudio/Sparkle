@@ -3,8 +3,8 @@
 namespace spk
 {
 	Thread::Thread(const std::wstring &p_name, const std::function<void()> &p_callback) :
-			_name(p_name),
-			_innerCallback(p_callback)
+		_name(p_name),
+		_innerCallback(p_callback)
 	{
 	}
 
@@ -23,11 +23,11 @@ namespace spk
 			join();
 		}
 		_handle = std::make_unique<std::thread>(
-				[&]()
-				{
-					spk::cout.setPrefix(_name);
-					_innerCallback();
-				});
+			[&]()
+			{
+				spk::cout.setPrefix(_name);
+				_innerCallback();
+			});
 	}
 
 	void Thread::join()

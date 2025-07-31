@@ -5,12 +5,7 @@
 
 namespace spk::OpenGL
 {
-	ShaderStorageBufferObject::DynamicArray::DynamicArray(
-			const std::wstring &p_name,
-			spk::DataBuffer *p_buffer,
-			size_t p_fixedReservedSpace,
-			size_t p_elementSize,
-			size_t p_elementPadding) :
+	ShaderStorageBufferObject::DynamicArray::DynamicArray(const std::wstring &p_name, spk::DataBuffer *p_buffer, size_t p_fixedReservedSpace, size_t p_elementSize, size_t p_elementPadding) :
 		_buffer(p_buffer),
 		_defaultElement(p_name, p_buffer, 0, p_elementSize),
 		_fixedReservedSpace(p_fixedReservedSpace),
@@ -68,8 +63,8 @@ namespace spk::OpenGL
 		return _defaultElement.contains(p_name);
 	}
 
-	ShaderStorageBufferObject::DynamicArray::Element &ShaderStorageBufferObject::DynamicArray::addElement(
-		const std::wstring &p_name, size_t p_offset, size_t p_size)
+	ShaderStorageBufferObject::DynamicArray::Element &
+	ShaderStorageBufferObject::DynamicArray::addElement(const std::wstring &p_name, size_t p_offset, size_t p_size)
 	{
 		auto &result = _defaultElement.addElement(p_name, p_offset, p_size);
 		redoArray();
@@ -77,9 +72,7 @@ namespace spk::OpenGL
 	}
 
 	ShaderStorageBufferObject::DynamicArray::Element &ShaderStorageBufferObject::DynamicArray::addElement(
-			const std::wstring &p_name, size_t p_offset,
-			size_t p_nbElement, size_t p_elementSize,
-			size_t p_elementPadding)
+		const std::wstring &p_name, size_t p_offset, size_t p_nbElement, size_t p_elementSize, size_t p_elementPadding)
 	{
 		auto &result = _defaultElement.addElement(p_name, p_offset, p_nbElement, p_elementSize, p_elementPadding);
 		redoArray();
@@ -136,16 +129,19 @@ namespace spk::OpenGL
 		_dynamicArray._buffer = &dataBuffer();
 	}
 
-	ShaderStorageBufferObject::ShaderStorageBufferObject(const std::wstring &p_blockName, BindingPoint p_bindingPoint, size_t p_fixedSize,
-														 size_t p_paddingFixedToDynamic, size_t p_dynamicElementSize,
+	ShaderStorageBufferObject::ShaderStorageBufferObject(const std::wstring &p_blockName,
+														 BindingPoint p_bindingPoint,
+														 size_t p_fixedSize,
+														 size_t p_paddingFixedToDynamic,
+														 size_t p_dynamicElementSize,
 														 size_t p_dynamicElementPadding) :
 		VertexBufferObject(VertexBufferObject::Type::ShaderStorage, VertexBufferObject::Usage::Dynamic),
 		_blockName(p_blockName),
 		_bindingPoint(p_bindingPoint),
 		_blockIndex(-1),
 		_fixedData(p_blockName + L" - FixedData", &dataBuffer(), 0, p_fixedSize),
-		_dynamicArray(p_blockName + L" - DynamicArray", &dataBuffer(), p_fixedSize + p_paddingFixedToDynamic, p_dynamicElementSize,
-					  p_dynamicElementPadding)
+		_dynamicArray(
+			p_blockName + L" - DynamicArray", &dataBuffer(), p_fixedSize + p_paddingFixedToDynamic, p_dynamicElementSize, p_dynamicElementPadding)
 	{
 		resize(p_fixedSize + p_paddingFixedToDynamic + p_dynamicElementSize);
 		_onResizeContract = _dynamicArray._resizeContractProvider.subscribe([&](size_t p_size) { resize(p_size); });
@@ -154,10 +150,12 @@ namespace spk::OpenGL
 	}
 
 	ShaderStorageBufferObject::ShaderStorageBufferObject(const spk::JSON::Object &p_desc) :
-		ShaderStorageBufferObject(
-			p_desc[L"BlockName"].as<std::wstring>(), static_cast<BindingPoint>(p_desc[L"BindingPoint"].as<long>()),
-			static_cast<size_t>(p_desc[L"FixedSize"].as<long>()), static_cast<size_t>(p_desc[L"PaddingFixedToDynamic"].as<long>()),
-			static_cast<size_t>(p_desc[L"DynamicElementSize"].as<long>()), static_cast<size_t>(p_desc[L"DynamicElementPadding"].as<long>()))
+		ShaderStorageBufferObject(p_desc[L"BlockName"].as<std::wstring>(),
+								  static_cast<BindingPoint>(p_desc[L"BindingPoint"].as<long>()),
+								  static_cast<size_t>(p_desc[L"FixedSize"].as<long>()),
+								  static_cast<size_t>(p_desc[L"PaddingFixedToDynamic"].as<long>()),
+								  static_cast<size_t>(p_desc[L"DynamicElementSize"].as<long>()),
+								  static_cast<size_t>(p_desc[L"DynamicElementPadding"].as<long>()))
 	{
 		if (p_desc.contains(L"FixedElements"))
 		{

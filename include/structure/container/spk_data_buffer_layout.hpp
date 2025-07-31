@@ -183,8 +183,8 @@ namespace spk
 				}
 				else
 				{
-					throw std::runtime_error("DataBufferLayout::as<TExportedType>() - Size mismatch: expected " + std::to_string(size()) +
-											", got " + std::to_string(sizeof(TExportedType)) + ".");
+					throw std::runtime_error("DataBufferLayout::as<TExportedType>() - Size mismatch: expected " + std::to_string(size()) + ", got " +
+											 std::to_string(sizeof(TExportedType)) + ".");
 				}
 			}
 
@@ -197,8 +197,8 @@ namespace spk
 				}
 				else
 				{
-					throw std::runtime_error("DataBufferLayout::as<TExportedType>() - Size mismatch: expected " + std::to_string(size()) +
-											", got " + std::to_string(sizeof(TExportedType)) + ".");
+					throw std::runtime_error("DataBufferLayout::as<TExportedType>() - Size mismatch: expected " + std::to_string(size()) + ", got " +
+											 std::to_string(sizeof(TExportedType)) + ".");
 				}
 			}
 		};
@@ -239,7 +239,8 @@ namespace spk
 			}
 			else
 			{
-				throw std::runtime_error("DataBufferLayout::as<TExportedType>() - Size mismatch: expected " + std::to_string(_root.size()) + ", got " + std::to_string(sizeof(TExportedType)) + ".");
+				throw std::runtime_error("DataBufferLayout::as<TExportedType>() - Size mismatch: expected " + std::to_string(_root.size()) +
+										 ", got " + std::to_string(sizeof(TExportedType)) + ".");
 			}
 		}
 
@@ -252,7 +253,8 @@ namespace spk
 			}
 			else
 			{
-				throw std::runtime_error("DataBufferLayout::as<TExportedType>() - Size mismatch: expected " + std::to_string(_root.size()) + ", got " + std::to_string(sizeof(TExportedType)) + ".");
+				throw std::runtime_error("DataBufferLayout::as<TExportedType>() - Size mismatch: expected " + std::to_string(_root.size()) +
+										 ", got " + std::to_string(sizeof(TExportedType)) + ".");
 			}
 		}
 	};

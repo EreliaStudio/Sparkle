@@ -28,7 +28,7 @@ namespace spk
 
 		spk::Vector2UInt computeTextSize() const;
 		spk::Vector2UInt computeExpectedTextSize(const spk::Font::Size &p_textSize) const;
-		
+
 		spk::Vector2UInt minimalSize() const override;
 
 		const std::wstring &text() const;

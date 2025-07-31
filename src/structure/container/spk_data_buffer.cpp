@@ -29,7 +29,7 @@ namespace spk
 			_data = p_other._data;
 			_bookmark = p_other._bookmark;
 		}
-			   return (*this);
+		return (*this);
 	}
 
 	DataBuffer::DataBuffer(DataBuffer &&p_other) :
@@ -47,7 +47,7 @@ namespace spk
 			_bookmark = p_other._bookmark;
 			p_other._bookmark = 0;
 		}
-			   return (*this);
+		return (*this);
 	}
 
 	uint8_t *DataBuffer::data()
@@ -60,25 +60,25 @@ namespace spk
 		return (_data.data());
 	}
 
-	   size_t DataBuffer::size() const
-	   {
-			   return (_data.size());
-	   }
+	size_t DataBuffer::size() const
+	{
+		return (_data.size());
+	}
 
-	   size_t DataBuffer::bookmark() const
-	   {
-			   return (_bookmark);
-	   }
+	size_t DataBuffer::bookmark() const
+	{
+		return (_bookmark);
+	}
 
-	   size_t DataBuffer::leftover() const
-	   {
-			   return (size() - bookmark());
-	   }
+	size_t DataBuffer::leftover() const
+	{
+		return (size() - bookmark());
+	}
 
-	   bool DataBuffer::empty() const
-	   {
-			   return (leftover() == 0);
-	   }
+	bool DataBuffer::empty() const
+	{
+		return (leftover() == 0);
+	}
 
 	void DataBuffer::resize(const size_t &p_newSize)
 	{
@@ -100,53 +100,53 @@ namespace spk
 		_bookmark = 0;
 	}
 
-		void DataBuffer::reset()
+	void DataBuffer::reset()
+	{
+		_bookmark = 0;
+	}
+
+	void DataBuffer::push(const void *p_buffer, size_t p_nbBytes)
+	{
+		if (p_buffer == nullptr || p_nbBytes == 0)
 		{
-				_bookmark = 0;
+			return;
 		}
 
-	   void DataBuffer::push(const void *p_buffer, size_t p_nbBytes)
-	   {
-			   if (p_buffer == nullptr || p_nbBytes == 0)
-			   {
-					   return;
-			   }
+		const size_t oldSize = _data.size();
+		_data.resize(oldSize + p_nbBytes);
+		std::memcpy(_data.data() + oldSize, p_buffer, p_nbBytes);
+	}
 
-			   const size_t oldSize = _data.size();
-			   _data.resize(oldSize + p_nbBytes);
-			   std::memcpy(_data.data() + oldSize, p_buffer, p_nbBytes);
-	   }
+	void DataBuffer::pull(void *p_buffer, size_t p_nbBytes) const
+	{
+		if (p_buffer == nullptr || p_nbBytes == 0)
+		{
+			return;
+		}
 
-	   void DataBuffer::pull(void *p_buffer, size_t p_nbBytes) const
-	   {
-			   if (p_buffer == nullptr || p_nbBytes == 0)
-			   {
-					   return;
-			   }
+		if (leftover() < p_nbBytes)
+		{
+			GENERATE_ERROR("DataBuffer::pull - not enough data remaining.");
+		}
 
-			   if (leftover() < p_nbBytes)
-			   {
-					   GENERATE_ERROR("DataBuffer::pull - not enough data remaining.");
-			   }
+		std::memcpy(p_buffer, _data.data() + bookmark(), p_nbBytes);
 
-			   std::memcpy(p_buffer, _data.data() + bookmark(), p_nbBytes);
+		skip(p_nbBytes);
+	}
 
-			   skip(p_nbBytes);
-	   }
+	void DataBuffer::edit(const size_t &p_offset, const void *p_data, const size_t &p_dataSize)
+	{
+		if (p_offset + p_dataSize > size())
+		{
+			GENERATE_ERROR("Unable to edit, offset is out of bound.");
+		}
+		std::memcpy(_data.data() + p_offset, p_data, p_dataSize);
+	}
 
-	   void DataBuffer::edit(const size_t &p_offset, const void *p_data, const size_t &p_dataSize)
-	   {
-			   if (p_offset + p_dataSize > size())
-			   {
-					   GENERATE_ERROR("Unable to edit, offset is out of bound.");
-			   }
-			   std::memcpy(_data.data() + p_offset, p_data, p_dataSize);
-	   }
-
-	   void DataBuffer::append(const void *p_data, const size_t &p_dataSize)
-	   {
-			   size_t oldSize = size();
-			   resize(size() + p_dataSize);
-			   edit(oldSize, p_data, p_dataSize);
-	   }
+	void DataBuffer::append(const void *p_data, const size_t &p_dataSize)
+	{
+		size_t oldSize = size();
+		resize(size() + p_dataSize);
+		edit(oldSize, p_data, p_dataSize);
+	}
 }

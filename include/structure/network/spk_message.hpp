@@ -66,8 +66,8 @@ namespace spk
 			_buffer.edit(p_offset, p_input);
 		}
 
-void push(const void *p_buffer, size_t p_nbBytes);
-void pull(void *p_buffer, size_t p_nbBytes) const;
+		void push(const void *p_buffer, size_t p_nbBytes);
+		void pull(void *p_buffer, size_t p_nbBytes) const;
 
 		template <typename InputType>
 		Message &operator<<(const InputType &p_input)

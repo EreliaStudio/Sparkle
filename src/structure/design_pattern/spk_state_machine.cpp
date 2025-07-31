@@ -112,34 +112,33 @@ namespace spk
 	}
 }
 
+StateMachine::DefaultStep::DefaultStep(std::function<void()> p_onStart,
+									   std::function<void()> p_onPending,
+									   std::function<StateMachine::Step::ID()> p_onFinish) :
+	onStartCallback(std::move(p_onStart)),
+	onPendingCallback(std::move(p_onPending)),
+	onFinishCallback(std::move(p_onFinish))
+{
+}
 
-	StateMachine::DefaultStep::DefaultStep(std::function<void()> p_onStart,
-										   std::function<void()> p_onPending,
-										   std::function<StateMachine::Step::ID()> p_onFinish)
-		: onStartCallback(std::move(p_onStart)),
-		  onPendingCallback(std::move(p_onPending)),
-		  onFinishCallback(std::move(p_onFinish))
+void StateMachine::DefaultStep::onStart()
+{
+	if (onStartCallback)
 	{
+		onStartCallback();
 	}
+}
 
-	void StateMachine::DefaultStep::onStart()
+void StateMachine::DefaultStep::onPending()
+{
+	if (onPendingCallback)
 	{
-		if (onStartCallback)
-		{
-			onStartCallback();
-		}
+		onPendingCallback();
 	}
+}
 
-	void StateMachine::DefaultStep::onPending()
-	{
-		if (onPendingCallback)
-		{
-			onPendingCallback();
-		}
-	}
-
-	StateMachine::Step::ID StateMachine::DefaultStep::onFinish()
-	{
-		return (onFinishCallback ? onFinishCallback() : L"");
-	}
+StateMachine::Step::ID StateMachine::DefaultStep::onFinish()
+{
+	return (onFinishCallback ? onFinishCallback() : L"");
+}
 }

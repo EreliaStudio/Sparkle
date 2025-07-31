@@ -35,16 +35,16 @@ std::wostream &operator<<(std::wostream &p_os, const spk::Mouse::Button &p_butto
 }
 spk::Mouse::Mouse()
 {
-for (size_t i = 0; i < 3; i++)
-{
-buttons[i] = spk::InputState::Up;
-}
-position = {0, 0};
-deltaPosition = {0, 0};
-wheel = 0;
+	for (size_t i = 0; i < 3; i++)
+	{
+		buttons[i] = spk::InputState::Up;
+	}
+	position = {0, 0};
+	deltaPosition = {0, 0};
+	wheel = 0;
 }
 
 spk::InputState spk::Mouse::operator[](spk::Mouse::Button p_button) const
 {
-return (buttons[static_cast<int>(p_button)]);
+	return (buttons[static_cast<int>(p_button)]);
 }

@@ -26,29 +26,29 @@ namespace spk::OpenGL
 	private:
 		GLuint _id;
 
-static void _setupTextureParameters(const Filtering &p_filtering, const Wrap &p_wrap, const Mipmap &p_mipMap);
+		static void _setupTextureParameters(const Filtering &p_filtering, const Wrap &p_wrap, const Mipmap &p_mipMap);
 
 	public:
-TextureObject();
+		TextureObject();
 
-~TextureObject();
+		~TextureObject();
 
 		TextureObject(const TextureObject &) = delete;
 		TextureObject &operator=(const TextureObject &) = delete;
 
-TextureObject(TextureObject &&p_other) noexcept;
+		TextureObject(TextureObject &&p_other) noexcept;
 
-TextureObject &operator=(TextureObject &&p_other) noexcept;
+		TextureObject &operator=(TextureObject &&p_other) noexcept;
 
-void upload(const spk::SafePointer<const spk::Texture> &p_textureInput);
+		void upload(const spk::SafePointer<const spk::Texture> &p_textureInput);
 
-void updatePixels(const spk::SafePointer<const spk::Texture> &p_textureInput);
+		void updatePixels(const spk::SafePointer<const spk::Texture> &p_textureInput);
 
-void updateSettings(const spk::SafePointer<const spk::Texture> &p_textureInput);
+		void updateSettings(const spk::SafePointer<const spk::Texture> &p_textureInput);
 
-void allocateStorage(const spk::Vector2UInt &p_size, const Format &p_format, const Filtering &p_filtering, const Wrap &p_wrap,
- const Mipmap &p_mipmap);
+		void allocateStorage(
+			const spk::Vector2UInt &p_size, const Format &p_format, const Filtering &p_filtering, const Wrap &p_wrap, const Mipmap &p_mipmap);
 
-GLuint id() const;
+		GLuint id() const;
 	};
 }

@@ -10,8 +10,8 @@ namespace spk
 	class IModule
 	{
 	public:
-		virtual const std::vector<UINT>& eventIDs() = 0;
-		virtual void receiveEvent(spk::Event&& p_event) = 0;
+		virtual const std::vector<UINT> &eventIDs() = 0;
+		virtual void receiveEvent(spk::Event &&p_event) = 0;
 	};
 
 	template <typename TEventType>
@@ -20,10 +20,10 @@ namespace spk
 	private:
 		spk::ThreadSafeQueue<TEventType> _eventQueue;
 
-		virtual void _treatEvent(TEventType&& p_event) = 0;
-		virtual TEventType _convertEventToEventType(spk::Event&& p_event) = 0;
+		virtual void _treatEvent(TEventType &&p_event) = 0;
+		virtual TEventType _convertEventToEventType(spk::Event &&p_event) = 0;
 
-		void _insertEvent(TEventType&& p_event)
+		void _insertEvent(TEventType &&p_event)
 		{
 			_eventQueue.push(std::move(p_event));
 		}
@@ -31,15 +31,14 @@ namespace spk
 	public:
 		Module()
 		{
-
 		}
 
-		const std::vector<UINT>& eventIDs()
+		const std::vector<UINT> &eventIDs()
 		{
 			return (TEventType::EventIDs);
 		}
 
-		void receiveEvent(spk::Event&& p_event)
+		void receiveEvent(spk::Event &&p_event)
 		{
 			_insertEvent(_convertEventToEventType(std::move(p_event)));
 		}

@@ -11,12 +11,12 @@ namespace spk
 	private:
 		spk::Keyboard _keyboard;
 
-		void _treatEvent(spk::KeyboardEvent&& p_event) override;
-		spk::KeyboardEvent _convertEventToEventType(spk::Event&& p_event) override;
+		void _treatEvent(spk::KeyboardEvent &&p_event) override;
+		spk::KeyboardEvent _convertEventToEventType(spk::Event &&p_event) override;
 
 	public:
 		KeyboardModule();
 
-		const spk::Keyboard& keyboard() const;
+		const spk::Keyboard &keyboard() const;
 	};
 }

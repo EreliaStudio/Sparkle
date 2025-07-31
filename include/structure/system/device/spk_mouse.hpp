@@ -20,8 +20,8 @@ namespace spk
 		InputState buttons[3];
 		float wheel;
 
-Mouse();
-InputState operator[](Button p_button) const;
+		Mouse();
+		InputState operator[](Button p_button) const;
 	};
 }
 

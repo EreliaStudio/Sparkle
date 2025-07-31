@@ -87,7 +87,7 @@ namespace spk
 		if (!_nodes.contains(p_nodeName))
 		{
 			GENERATE_ERROR("Can't set a redirection for message type [" + std::to_string(p_messageType) + "] to node [" + p_nodeName +
-									 "] : this node does not exist.");
+						   "] : this node does not exist.");
 		}
 		_redirections[p_messageType] = _nodes[p_nodeName];
 	}

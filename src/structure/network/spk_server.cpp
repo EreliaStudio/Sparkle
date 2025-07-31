@@ -4,7 +4,10 @@
 
 namespace spk
 {
-	Server::Acceptator::Acceptator(std::unordered_map<ClientID, SOCKET> &p_clientsMap, std::mutex &p_mutex, ClientID &p_clientId, MessagePool &p_pool,
+	Server::Acceptator::Acceptator(std::unordered_map<ClientID, SOCKET> &p_clientsMap,
+								   std::mutex &p_mutex,
+								   ClientID &p_clientId,
+								   MessagePool &p_pool,
 								   spk::ThreadSafeQueue<MessageObject> &p_queue) :
 		clients(p_clientsMap),
 		clientsMutex(p_mutex),

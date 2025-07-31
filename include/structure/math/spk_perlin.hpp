@@ -1,15 +1,15 @@
 #pragma once
 
-#include <vector>
 #include <array>
-#include <random>
 #include <functional>
+#include <random>
+#include <vector>
 
 namespace spk
 {
 	class Perlin
 	{
-	public:		
+	public:
 		enum class Interpolation
 		{
 			Linear,
@@ -35,26 +35,51 @@ namespace spk
 		float noise2D(float p_x, float p_y) const;
 		float noise3D(float p_x, float p_y, float p_z) const;
 
-		static float fractal(
-			const Perlin& p_perlin,
-			std::function<float(const Perlin&, float, float, float)> p_noiseFunc,
-			float p_x, float p_y, float p_z,
-			int p_octaves,
-			float p_persistence,
-			float p_lacunarity);
+		static float fractal(const Perlin &p_perlin,
+							 std::function<float(const Perlin &, float, float, float)> p_noiseFunc,
+							 float p_x,
+							 float p_y,
+							 float p_z,
+							 int p_octaves,
+							 float p_persistence,
+							 float p_lacunarity);
 
 	public:
 		Perlin(unsigned int p_seed = 0, Perlin::Interpolation p_interp = Perlin::Interpolation::SmoothStep);
 
-		void setInterpolation(Interpolation interp) { _interpolation = interp; }
-		void setSeed(unsigned int p_seed) { reseed(p_seed); }
-		void setOctaves(int p_oct) { _octaves = p_oct; }
-		void setPersistence(float p_p) { _persistence = p_p; }
-		void setLacunarity(float p_l) { _lacunarity = p_l; }
-			
-		const int& octaves() const { return _octaves; }
-		const float& persistence() const { return _persistence; }
-		const float& lacunarity() const { return _lacunarity; }
+		void setInterpolation(Interpolation interp)
+		{
+			_interpolation = interp;
+		}
+		void setSeed(unsigned int p_seed)
+		{
+			reseed(p_seed);
+		}
+		void setOctaves(int p_oct)
+		{
+			_octaves = p_oct;
+		}
+		void setPersistence(float p_p)
+		{
+			_persistence = p_p;
+		}
+		void setLacunarity(float p_l)
+		{
+			_lacunarity = p_l;
+		}
+
+		const int &octaves() const
+		{
+			return _octaves;
+		}
+		const float &persistence() const
+		{
+			return _persistence;
+		}
+		const float &lacunarity() const
+		{
+			return _lacunarity;
+		}
 
 		float sample1D(float p_x, float p_min = 0, float p_max = 1) const;
 		float sample2D(float p_x, float p_y, float p_min = 0, float p_max = 1) const;

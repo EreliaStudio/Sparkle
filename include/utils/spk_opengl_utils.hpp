@@ -4,19 +4,19 @@
 
 #include <GL/gl.h>
 
+#include <array>
 #include <iostream>
 #include <string>
-#include <array>
 
 #include "structure/graphics/texture/spk_texture.hpp"
 
 namespace spk::OpenGLUtils
 {
-template <size_t numberOfBytes>
-struct Padding
-{
-std::array<float, numberOfBytes> reserved;
-};
+	template <size_t numberOfBytes>
+	struct Padding
+	{
+		std::array<float, numberOfBytes> reserved;
+	};
 
 	std::wstring to_wstring(const GLenum &p_type);
 
@@ -24,9 +24,8 @@ std::array<float, numberOfBytes> reserved;
 
 	void convertFormatToGLEnum(spk::Texture::Format p_format, GLint &p_internalFormat, GLenum &p_externalFormat);
 
-	
-	void GLAPIENTRY openGLDebugMessageCallback(GLenum p_source, GLenum p_type, GLuint p_id, GLenum p_severity, GLsizei p_length, const GLchar *p_message,
-											   const void *p_userParam);
+	void GLAPIENTRY openGLDebugMessageCallback(
+		GLenum p_source, GLenum p_type, GLuint p_id, GLenum p_severity, GLsizei p_length, const GLchar *p_message, const void *p_userParam);
 }
 
 #define SPK_PP_CAT_IMPL(a, b) a##b
