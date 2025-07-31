@@ -214,7 +214,7 @@ namespace spk::Lumina
 			}
 		}
 
-		void addSamplerConstant(const std::wstring &p_name, OpenGL::SamplerObject &&p_object)
+		void addSamplerConstant(const std::wstring &p_name, const OpenGL::SamplerObject &p_object)
 		{
 			if (_objects.contains(p_name) == false)
 			{
@@ -236,7 +236,7 @@ namespace spk::Lumina
 			_availableObjects[p_name] = &(std::get<OpenGL::SamplerObject>(_objects[p_name]));
 		}
 
-		void addSamplerAttribute(const std::wstring &p_name, OpenGL::SamplerObject &&p_object)
+		void addSamplerAttribute(const std::wstring &p_name, const OpenGL::SamplerObject &p_object)
 		{
 			if (_attributes.contains(p_name) == true)
 			{
@@ -252,7 +252,7 @@ namespace spk::Lumina
 			_attributes[p_name] = std::move(p_object);
 		}
 
-		void addUBOConstant(const std::wstring &p_name, OpenGL::UniformBufferObject &&p_object)
+		void addUBOConstant(const std::wstring &p_name, const OpenGL::UniformBufferObject &p_object)
 		{
 			if (_objects.contains(p_name) == false)
 			{
@@ -284,7 +284,7 @@ namespace spk::Lumina
 			_availableObjects[p_name] = &(std::get<OpenGL::UniformBufferObject>(_objects[p_name]));
 		}
 
-		void addUBOAttribute(const std::wstring &p_name, OpenGL::UniformBufferObject &&p_object)
+		void addUBOAttribute(const std::wstring &p_name, const OpenGL::UniformBufferObject &p_object)
 		{
 			if (_attributes.contains(p_name) == true)
 			{
@@ -300,7 +300,7 @@ namespace spk::Lumina
 			_attributes[p_name] = std::move(p_object);
 		}
 
-		void addSSBOConstant(const std::wstring &p_name, OpenGL::ShaderStorageBufferObject &&p_object)
+		void addSSBOConstant(const std::wstring &p_name, const OpenGL::ShaderStorageBufferObject &p_object)
 		{
 			if (_objects.contains(p_name) == false)
 			{
@@ -339,7 +339,7 @@ namespace spk::Lumina
 			_availableObjects[p_name] = &(std::get<OpenGL::ShaderStorageBufferObject>(_objects[p_name]));
 		}
 
-		void addSSBOAttribute(const std::wstring &p_name, OpenGL::ShaderStorageBufferObject &&p_object)
+		void addSSBOAttribute(const std::wstring &p_name, const OpenGL::ShaderStorageBufferObject &p_object)
 		{
 			if (_attributes.contains(p_name) == true)
 			{
@@ -374,7 +374,7 @@ namespace spk::Lumina
 			_bufferSet.layout().addAttribute(p_index, p_type);
 		}
 
-		void addSampler(const std::wstring &p_name, OpenGL::SamplerObject &&p_object, Mode p_mode)
+		void addSampler(const std::wstring &p_name, const OpenGL::SamplerObject &p_object, Mode p_mode)
 		{
 			if (p_mode == Mode::Constant)
 			{
@@ -386,7 +386,7 @@ namespace spk::Lumina
 			}
 		}
 
-		void addUBO(const std::wstring &p_name, OpenGL::UniformBufferObject &&p_object, Mode p_mode)
+		void addUBO(const std::wstring &p_name, const OpenGL::UniformBufferObject &p_object, Mode p_mode)
 		{
 			if (p_mode == Mode::Constant)
 			{
@@ -398,7 +398,7 @@ namespace spk::Lumina
 			}
 		}
 
-		void addSSBO(const std::wstring &p_name, OpenGL::ShaderStorageBufferObject &&p_object, Mode p_mode)
+		void addSSBO(const std::wstring &p_name, const OpenGL::ShaderStorageBufferObject &p_object, Mode p_mode)
 		{
 			if (p_mode == Mode::Constant)
 			{
@@ -474,7 +474,7 @@ namespace spk::Lumina
 
 		struct Constants
 		{
-			static void addSampler(const std::wstring &p_name, OpenGL::SamplerObject &&p_object)
+			static void addSampler(const std::wstring &p_name, const OpenGL::SamplerObject &p_object)
 			{
 				if (_objects.contains(p_name) == false)
 				{
@@ -482,7 +482,7 @@ namespace spk::Lumina
 				}
 			}
 
-			static void addUBO(const std::wstring &p_name, OpenGL::UniformBufferObject &&p_object)
+			static void addUBO(const std::wstring &p_name, const OpenGL::UniformBufferObject &p_object)
 			{
 				if (_objects.contains(p_name) == false)
 				{
@@ -490,7 +490,7 @@ namespace spk::Lumina
 				}
 			}
 
-			static void addSSBO(const std::wstring &p_name, OpenGL::ShaderStorageBufferObject &&p_object)
+			static void addSSBO(const std::wstring &p_name, const OpenGL::ShaderStorageBufferObject &p_object)
 			{
 				if (_objects.contains(p_name) == false)
 				{
