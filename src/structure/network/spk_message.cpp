@@ -106,3 +106,14 @@ namespace spk
 		return (_buffer.empty());
 	}
 }
+
+void Message::push(const void *p_buffer, size_t p_nbBytes)
+{
+_buffer.push(p_buffer, p_nbBytes);
+_header.length = _buffer.size();
+}
+
+void Message::pull(void *p_buffer, size_t p_nbBytes) const
+{
+_buffer.pull(p_buffer, p_nbBytes);
+}
