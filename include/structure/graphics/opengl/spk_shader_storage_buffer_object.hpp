@@ -1,7 +1,13 @@
 #pragma once
 
-#include <GL/gl.h>
+#ifdef _WIN32
+#   define WIN32_LEAN_AND_MEAN
+#   include <windows.h>
+#   undef WIN32_LEAN_AND_MEAN
+#endif
+
 #include <GL/glew.h>
+#include <GL/gl.h>
 
 #include "spk_debug_macro.hpp"
 #include "structure/container/spk_data_buffer_layout.hpp"
