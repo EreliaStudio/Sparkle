@@ -4,8 +4,8 @@
 
 namespace spk
 {
-	spk::SpriteSheet SliderBar::_defaultSliderBody = spk::SpriteSheet::fromRawData(SPARKLE_GET_RESOURCE("resources/textures/defaultSliderBody.png"),
-																				   spk::Vector2Int(3, 3), spk::SpriteSheet::Filtering::Linear);
+	spk::SpriteSheet SliderBar::_defaultSliderBody = spk::SpriteSheet::fromRawData(
+		SPARKLE_GET_RESOURCE("resources/textures/defaultSliderBody.png"), spk::Vector2Int(3, 3), spk::SpriteSheet::Filtering::Linear);
 
 	void SliderBar::_onGeometryChange()
 	{

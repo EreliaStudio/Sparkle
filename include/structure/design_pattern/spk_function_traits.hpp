@@ -8,7 +8,6 @@ namespace spk
 	template <typename T>
 	struct FunctionTraits : FunctionTraits<decltype(&T::operator())>
 	{
-
 	};
 
 	template <typename C, typename R, typename... Args>

@@ -22,7 +22,7 @@ namespace spk
 	private:
 		static inline spk::OpenGL::Program *_program;
 		spk::OpenGL::BufferSet _bufferSet;
-		spk::OpenGL::UniformBufferObject _colorUbo;
+		spk::OpenGL::UniformBufferObject _colorUniformBufferObject;
 
 		std::vector<Vertex> _vertices;
 		std::vector<unsigned int> _indexes;
@@ -39,7 +39,7 @@ namespace spk
 
 		void clear();
 
-		void prepareSquare(const spk::Geometry2D &geom, float layer);
+		void prepareSquare(const spk::Geometry2D &p_geometry, float p_layer);
 
 		void validate();
 

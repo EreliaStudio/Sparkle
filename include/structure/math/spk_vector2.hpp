@@ -1,7 +1,7 @@
 #pragma once
 
 #ifndef NOMINMAX
-#define NOMINMAX
+#	define NOMINMAX
 #endif
 
 #include <algorithm>
@@ -58,14 +58,14 @@ namespace spk
 		}
 
 		template <typename UType = TType, std::enable_if_t<std::is_floating_point<UType>::value, int> = 0>
-		IVector2(const spk::JSON::Object& p_input) :
+		IVector2(const spk::JSON::Object &p_input) :
 			x(static_cast<TType>(p_input[L"x"].as<double>())),
 			y(static_cast<TType>(p_input[L"y"].as<double>()))
 		{
 		}
 
 		template <typename UType = TType, std::enable_if_t<!std::is_floating_point<UType>::value, int> = 0>
-		IVector2(const spk::JSON::Object& p_input)
+		IVector2(const spk::JSON::Object &p_input)
 		{
 			fromJSON(p_input);
 		}
@@ -91,7 +91,7 @@ namespace spk
 			return (result);
 		}
 
-		void fromJSON(const spk::JSON::Object& p_input)
+		void fromJSON(const spk::JSON::Object &p_input)
 		{
 			if constexpr (std::is_floating_point<TType>::value)
 			{
@@ -104,7 +104,7 @@ namespace spk
 				y = p_input[L"Y"].as<long>();
 			}
 		}
-		
+
 		template <typename UType>
 		explicit operator IVector2<UType>() const
 		{

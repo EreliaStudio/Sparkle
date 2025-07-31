@@ -12,8 +12,7 @@ namespace spk
 {
 	namespace JSON
 	{
-		static bool isNumberMalformatted(bool p_isNegative, const size_t &p_decimalPos, const size_t &p_exponentPos,
-										  const std::wstring &p_unitSubString)
+		static bool isNumberMalformatted(bool p_isNegative, const size_t &p_decimalPos, const size_t &p_exponentPos, const std::wstring &p_unitSubString)
 		{
 			return (p_exponentPos == p_unitSubString.size() - 1 || (p_isNegative == true && p_unitSubString.size() == 1) ||
 					(p_isNegative == true && p_unitSubString.size() > 1 && ::isdigit(p_unitSubString[1]) == false) ||
@@ -40,7 +39,7 @@ namespace spk
 			} catch (const std::exception &)
 			{
 				GENERATE_ERROR("Invalid numbers JSON value: " + spk::StringUtils::wstringToString(p_exponentSubstring) +
-										 " too big (number overflow)");
+							   " too big (number overflow)");
 			}
 			return (result);
 		}
@@ -67,8 +66,7 @@ namespace spk
 			return (result);
 		}
 
-		static bool resultWillBeDouble(const size_t &p_decimalPos, bool p_hasExponent, const size_t &p_exponentPos, bool p_isNegative,
-										const long &p_exponent)
+		static bool resultWillBeDouble(const size_t &p_decimalPos, bool p_hasExponent, const size_t &p_exponentPos, bool p_isNegative, const long &p_exponent)
 		{
 			if (p_decimalPos == std::wstring::npos && p_exponentPos == false)
 			{
@@ -89,8 +87,7 @@ namespace spk
 
 			if (errno == EDOM || errno == ERANGE || std::fetestexcept(FE_ALL_EXCEPT ^ FE_INEXACT) != 0)
 			{
-				GENERATE_ERROR("Invalid numbers JSON value: " + spk::StringUtils::wstringToString(p_unitSubString) +
-										 " too big (power overflow)");
+				GENERATE_ERROR("Invalid numbers JSON value: " + spk::StringUtils::wstringToString(p_unitSubString) + " too big (power overflow)");
 			}
 
 			return (result);
@@ -131,8 +128,7 @@ namespace spk
 					: result = std::stol(p_unitSubString);
 			} catch (const std::exception &)
 			{
-				GENERATE_ERROR("Invalid numbers JSON value: " + spk::StringUtils::wstringToString(p_unitSubString) +
-										 " too big (number overflow)");
+				GENERATE_ERROR("Invalid numbers JSON value: " + spk::StringUtils::wstringToString(p_unitSubString) + " too big (number overflow)");
 			}
 
 			if (exponentPos != p_unitSubString.size() && std::holds_alternative<long>(result) == true)

@@ -43,29 +43,26 @@ namespace spk
 				glyph(0),
 				outline(0)
 			{
-
 			}
 
 			constexpr Size(size_t p_glyph) :
 				glyph(p_glyph),
 				outline(0)
 			{
-
 			}
-			
+
 			constexpr Size(size_t p_glyph, size_t p_outline) :
 				glyph(p_glyph),
 				outline(p_outline)
 			{
-
 			}
 
-			constexpr bool operator == (const Size &p_other) const
+			constexpr bool operator==(const Size &p_other) const
 			{
 				return (glyph == p_other.glyph && outline == p_other.outline);
 			}
 
-			constexpr bool operator != (const Size &p_other) const
+			constexpr bool operator!=(const Size &p_other) const
 			{
 				return (this->operator==(p_other) == false);
 			}
@@ -91,6 +88,7 @@ namespace spk
 		class Atlas : public Texture
 		{
 			friend class Font;
+
 		public:
 			using Contract = spk::ContractProvider::Contract;
 			using Job = spk::ContractProvider::Job;
@@ -133,13 +131,18 @@ namespace spk
 
 			void _uploadTexture();
 
-			Atlas(const stbtt_fontinfo &p_fontInfo, const Data &p_fontData, const size_t &p_textSize, const size_t &p_outlineSize,
-				  const Filtering &p_filtering = Filtering::Linear, const Wrap &p_wrap = Wrap::ClampToEdge, const Mipmap &p_mipmap = Mipmap::Enable);
+			Atlas(const stbtt_fontinfo &p_fontInfo,
+				  const Data &p_fontData,
+				  const size_t &p_textSize,
+				  const size_t &p_outlineSize,
+				  const Filtering &p_filtering = Filtering::Linear,
+				  const Wrap &p_wrap = Wrap::ClampToEdge,
+				  const Mipmap &p_mipmap = Mipmap::Enable);
 
 		public:
 			void loadGlyphs(const std::wstring &p_glyphsToLoad);
 
-			Contract subscribe(const Job& p_job);
+			Contract subscribe(const Job &p_job);
 
 			void loadAllRenderableGlyphs();
 
@@ -151,8 +154,10 @@ namespace spk
 
 			Vector2UInt computeStringSize(const std::wstring &p_string);
 			Vector2Int computeStringBaselineOffset(const std::wstring &p_string);
-			Vector2Int computeStringAnchor(const spk::Geometry2D &p_geometry, const std::wstring &p_string,
-										   spk::HorizontalAlignment p_horizontalAlignment, spk::VerticalAlignment p_verticalAlignment);
+			Vector2Int computeStringAnchor(const spk::Geometry2D &p_geometry,
+										   const std::wstring &p_string,
+										   spk::HorizontalAlignment p_horizontalAlignment,
+										   spk::VerticalAlignment p_verticalAlignment);
 		};
 
 	private:
@@ -168,8 +173,10 @@ namespace spk
 		Mipmap _mipmap = Mipmap::Enable;
 
 	public:
-		static Font fromRawData(const std::vector<uint8_t> &p_data, const Filtering &p_filtering = Filtering::Nearest,
-								const Wrap &p_wrap = Wrap::ClampToEdge, const Mipmap &p_mipmap = Mipmap::Enable);
+		static Font fromRawData(const std::vector<uint8_t> &p_data,
+								const Filtering &p_filtering = Filtering::Nearest,
+								const Wrap &p_wrap = Wrap::ClampToEdge,
+								const Mipmap &p_mipmap = Mipmap::Enable);
 
 		Font();
 		Font(const std::filesystem::path &p_path);
@@ -180,8 +187,11 @@ namespace spk
 
 		Vector2UInt computeStringSize(const std::wstring &p_string, const Font::Size &p_size);
 		Vector2Int computeStringBaselineOffset(const std::wstring &p_string, const Font::Size &p_size);
-		Vector2Int computeStringAnchor(const spk::Geometry2D &p_geometry, const std::wstring &p_string, const Font::Size &p_size,
-									   spk::HorizontalAlignment p_horizontalAlignment, spk::VerticalAlignment p_verticalAlignment);
+		Vector2Int computeStringAnchor(const spk::Geometry2D &p_geometry,
+									   const std::wstring &p_string,
+									   const Font::Size &p_size,
+									   spk::HorizontalAlignment p_horizontalAlignment,
+									   spk::VerticalAlignment p_verticalAlignment);
 
 		Size computeOptimalTextSize(const std::wstring &p_string, float p_outlineSizeRatio, const Vector2UInt &p_textArea);
 

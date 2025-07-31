@@ -299,25 +299,25 @@ namespace spk::OpenGLUtils
 		switch (p_status)
 		{
 		case GL_FRAMEBUFFER_COMPLETE:
-			return L"Framebuffer complete";
+			return (L"Framebuffer complete");
 		case GL_FRAMEBUFFER_UNDEFINED:
-			return L"Framebuffer undefined (GL_FRAMEBUFFER_UNDEFINED)";
+			return (L"Framebuffer undefined (GL_FRAMEBUFFER_UNDEFINED)");
 		case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
-			return L"Incomplete attachment (GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT)";
+			return (L"Incomplete attachment (GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT)");
 		case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
-			return L"Missing attachment (GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT)";
+			return (L"Missing attachment (GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT)");
 		case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
-			return L"Incomplete draw buffer (GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER)";
+			return (L"Incomplete draw buffer (GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER)");
 		case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
-			return L"Incomplete read buffer (GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER)";
+			return (L"Incomplete read buffer (GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER)");
 		case GL_FRAMEBUFFER_UNSUPPORTED:
-			return L"Framebuffer unsupported (GL_FRAMEBUFFER_UNSUPPORTED)";
+			return (L"Framebuffer unsupported (GL_FRAMEBUFFER_UNSUPPORTED)");
 		case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
-			return L"Incomplete multisample (GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE)";
+			return (L"Incomplete multisample (GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE)");
 		case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:
-			return L"Incomplete layer targets (GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS)";
+			return (L"Incomplete layer targets (GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS)");
 		default:
-			return L"Unknown framebuffer error";
+			return (L"Unknown framebuffer error");
 		}
 	}
 
@@ -352,8 +352,8 @@ namespace spk::OpenGLUtils
 		}
 	}
 
-	void GLAPIENTRY openGLDebugMessageCallback(GLenum p_source, GLenum p_type, GLuint p_id, GLenum p_severity, GLsizei p_length, const GLchar *p_message,
-											   const void *p_userParam)
+	void GLAPIENTRY openGLDebugMessageCallback(
+		GLenum p_source, GLenum p_type, GLuint p_id, GLenum p_severity, GLsizei p_length, const GLchar *p_message, const void *p_userParam)
 	{
 		if (p_id == 131169 || p_id == 131185 || p_id == 131218 || p_id == 131204)
 		{

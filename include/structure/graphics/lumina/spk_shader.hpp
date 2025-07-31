@@ -1,10 +1,10 @@
 #pragma once
 
+#include <regex>
 #include <string>
 #include <unordered_map>
 #include <variant>
 #include <vector>
-#include <regex>
 
 #include "structure/graphics/opengl/spk_buffer_set.hpp"
 #include "structure/graphics/opengl/spk_program.hpp"
@@ -18,7 +18,8 @@ namespace spk::Lumina
 	{
 	private:
 		using Unit = std::variant<OpenGL::SamplerObject, OpenGL::UniformBufferObject, OpenGL::ShaderStorageBufferObject>;
-		using SafeUnit = std::variant<spk::SafePointer<OpenGL::SamplerObject>, spk::SafePointer<OpenGL::UniformBufferObject>,
+		using SafeUnit = std::variant<spk::SafePointer<OpenGL::SamplerObject>,
+									  spk::SafePointer<OpenGL::UniformBufferObject>,
 									  spk::SafePointer<OpenGL::ShaderStorageBufferObject>>;
 
 	public:
@@ -29,9 +30,9 @@ namespace spk::Lumina
 		};
 
 		template <typename Var, typename F>
-		static void visitVariant(Var& variant, F&& function)
+		static void visitVariant(Var &variant, F &&function)
 		{
-			std::visit([&](auto&& object) { function(object); }, variant);
+			std::visit([&](auto &&object) { function(object); }, variant);
 		}
 
 		class Object
@@ -361,7 +362,6 @@ namespace spk::Lumina
 		Shader(std::string p_vertexCode, std::string p_fragmentCode) :
 			_program(p_vertexCode, p_fragmentCode)
 		{
-			
 		}
 
 		void addAttribute(const OpenGL::LayoutBufferObject::Attribute &p_attribute)
@@ -516,7 +516,7 @@ namespace spk::Lumina
 						std::holds_alternative<OpenGL::ShaderStorageBufferObject>(Shader::_objects.at(p_name)) == true);
 			}
 
-			static OpenGL::SamplerObject &sampler(const std::wstring& p_name)
+			static OpenGL::SamplerObject &sampler(const std::wstring &p_name)
 			{
 				if (Shader::_objects.contains(p_name) == false)
 				{
@@ -529,7 +529,7 @@ namespace spk::Lumina
 				return (std::get<OpenGL::SamplerObject>(Shader::_objects[p_name]));
 			}
 
-			static OpenGL::UniformBufferObject &ubo(const std::wstring& p_name)
+			static OpenGL::UniformBufferObject &ubo(const std::wstring &p_name)
 			{
 				if (Shader::_objects.contains(p_name) == false)
 				{
@@ -542,7 +542,7 @@ namespace spk::Lumina
 				return (std::get<OpenGL::UniformBufferObject>(Shader::_objects[p_name]));
 			}
 
-			static OpenGL::ShaderStorageBufferObject &ssbo(const std::wstring& p_name)
+			static OpenGL::ShaderStorageBufferObject &ssbo(const std::wstring &p_name)
 			{
 				if (Shader::_objects.contains(p_name) == false)
 				{

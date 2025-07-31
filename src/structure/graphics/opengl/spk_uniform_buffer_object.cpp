@@ -103,7 +103,8 @@ namespace spk::OpenGL
 	}
 
 	spk::OpenGL::UniformBufferObject::UniformBufferObject(const spk::JSON::Object &p_desc) :
-		UniformBufferObject(p_desc[L"BlockName"].as<std::wstring>(), static_cast<BindingPoint>(p_desc[L"BindingPoint"].as<long>()),
+		UniformBufferObject(p_desc[L"BlockName"].as<std::wstring>(),
+							static_cast<BindingPoint>(p_desc[L"BindingPoint"].as<long>()),
 							static_cast<size_t>(p_desc[L"Size"].as<long>()))
 	{
 		if (p_desc.contains(L"Elements"))
@@ -215,8 +216,8 @@ namespace spk::OpenGL
 		return (_dataBufferLayout.addElement(p_name, p_offset, p_size));
 	}
 
-	DataBufferLayout::Element &UniformBufferObject::addElement(const std::wstring &p_name, size_t p_offset, size_t p_nbElement, size_t p_elementSize,
-															   size_t p_elementPadding)
+	DataBufferLayout::Element &
+	UniformBufferObject::addElement(const std::wstring &p_name, size_t p_offset, size_t p_nbElement, size_t p_elementSize, size_t p_elementPadding)
 	{
 		if (size() <= (p_offset + p_nbElement * (p_elementSize + p_elementPadding)))
 		{

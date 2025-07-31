@@ -16,47 +16,47 @@ namespace spk::OpenGL
 
 	LayoutBufferObject &BufferSet::layout()
 	{
-		return _layout;
+		return (_layout);
 	}
 
 	IndexBufferObject &BufferSet::indexes()
 	{
-		return _indexes;
+		return (_indexBufferObject);
 	}
 
 	const LayoutBufferObject &BufferSet::layout() const
 	{
-		return _layout;
+		return (_layout);
 	}
 
 	const IndexBufferObject &BufferSet::indexes() const
 	{
-		return _indexes;
+		return (_indexBufferObject);
 	}
 
 	void BufferSet::clear()
 	{
 		_layout.clear();
-		_indexes.clear();
+		_indexBufferObject.clear();
 	}
 
 	void BufferSet::validate()
 	{
 		_layout.validate();
-		_indexes.validate();
+		_indexBufferObject.validate();
 	}
 
 	void BufferSet::activate()
 	{
-		_vao.activate();
+		_vertexArrayObject.activate();
 		_layout.activate();
-		_indexes.activate();
+		_indexBufferObject.activate();
 	}
 
 	void BufferSet::deactivate()
 	{
-		_vao.deactivate();
+		_vertexArrayObject.deactivate();
 		_layout.deactivate();
-		_indexes.deactivate();
+		_indexBufferObject.deactivate();
 	}
 }

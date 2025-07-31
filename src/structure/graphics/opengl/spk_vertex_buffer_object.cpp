@@ -62,7 +62,6 @@ namespace spk::OpenGL
 		_usage(p_usage),
 		_currentBufferMaxSize(0)
 	{
-
 	}
 
 	VertexBufferObject::~VertexBufferObject()

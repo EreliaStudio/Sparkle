@@ -29,12 +29,12 @@ namespace spk
 
 	spk::SafePointer<GameObject> GameEngine::getEntity(const std::wstring &p_name)
 	{
-		return _rootObject.getChild(p_name);
+		return (_rootObject.getChild(p_name));
 	}
 
 	spk::SafePointer<const GameObject> GameEngine::getEntity(const std::wstring &p_name) const
 	{
-		return _rootObject.getChild(p_name);
+		return (_rootObject.getChild(p_name));
 	}
 
 	std::vector<spk::SafePointer<GameObject>> GameEngine::getEntities(const std::wstring &p_name)

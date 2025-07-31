@@ -22,11 +22,11 @@ namespace spk
 
 	const spk::Matrix4x4 &Camera::projectionMatrix() const
 	{
-		return _projectionMatrix;
+		return (_projectionMatrix);
 	}
 
 	const spk::Matrix4x4 &Camera::inverseProjectionMatrix() const
 	{
-		return _inverseProjectionMatrix;
+		return (_inverseProjectionMatrix);
 	}
 }

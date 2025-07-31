@@ -70,11 +70,7 @@ namespace spk
 	}
 
 	const std::unordered_map<UINT, Event::ConstructorLambda> Event::_constructionMap = {
-		{WM_PAINT_REQUEST,
-		 [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam)
-		 {
-			 p_event->paintEvent.type = PaintEvent::Type::Paint;
-		 }},
+		{WM_PAINT_REQUEST, [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam) { p_event->paintEvent.type = PaintEvent::Type::Paint; }},
 		{WM_RESIZE_REQUEST,
 		 [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam)
 		 {
@@ -171,8 +167,10 @@ namespace spk
 			 p_event->systemEvent.type = SystemEvent::Type::Move;
 			 p_event->systemEvent.newPosition = spk::Geometry2D::Point(LOWORD(p_lParam), HIWORD(p_lParam));
 		 }},
-		{WM_SETFOCUS, [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam) { p_event->systemEvent.type = SystemEvent::Type::TakeFocus; }},
-		{WM_KILLFOCUS, [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam) { p_event->systemEvent.type = SystemEvent::Type::LoseFocus; }},
+		{WM_SETFOCUS,
+		 [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam) { p_event->systemEvent.type = SystemEvent::Type::TakeFocus; }},
+		{WM_KILLFOCUS,
+		 [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam) { p_event->systemEvent.type = SystemEvent::Type::LoseFocus; }},
 		{WM_CLOSE, [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam) { p_event->systemEvent.type = SystemEvent::Type::Quit; }},
 		{WM_QUIT, [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam) { p_event->systemEvent.type = SystemEvent::Type::Quit; }},
 		{WM_ENTERSIZEMOVE,
@@ -183,7 +181,8 @@ namespace spk
 			 p_event->systemEvent.type = SystemEvent::Type::Resize;
 			 p_event->systemEvent.newSize = spk::Geometry2D::Size(LOWORD(p_lParam), HIWORD(p_lParam));
 		 }},
-		{WM_EXITSIZEMOVE, [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam) { p_event->systemEvent.type = SystemEvent::Type::ExitResize; }},
+		{WM_EXITSIZEMOVE,
+		 [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam) { p_event->systemEvent.type = SystemEvent::Type::ExitResize; }},
 		{WM_LEFT_JOYSTICK_MOTION,
 		 [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam)
 		 {
@@ -256,9 +255,9 @@ namespace spk
 		{WM_UPDATE_REQUEST,
 		 [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam)
 		 {
-			p_event->updateEvent.type = UpdateEvent::Type::Requested;
+			 p_event->updateEvent.type = UpdateEvent::Type::Requested;
 
-			p_event->updateEvent.time = SystemUtils::getTime();
+			 p_event->updateEvent.time = SystemUtils::getTime();
 		 }},
 		{WM_TIMER,
 		 [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam)

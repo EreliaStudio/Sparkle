@@ -10,24 +10,24 @@ namespace spk
 {
 	GraphicalApplication::GraphicalApplication()
 	{
-		WNDCLASSEX wc = {0};
-		wc.cbSize = sizeof(WNDCLASSEX);
-		wc.style = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
-		wc.lpfnWndProc = Window::WindowProc;
-		wc.cbClsExtra = 0;
-		wc.cbWndExtra = 0;
-		wc.hInstance = GetModuleHandle(nullptr);
-		wc.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
-		wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
-		wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-		wc.lpszMenuName = nullptr;
-		wc.lpszClassName = "SPKWindowClass";
-		wc.hIconSm = LoadIcon(nullptr, IDI_APPLICATION);
+		WNDCLASSEX windowClass = {0};
+		windowClass.cbSize = sizeof(WNDCLASSEX);
+		windowClass.style = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
+		windowClass.lpfnWndProc = Window::WindowProc;
+		windowClass.cbClsExtra = 0;
+		windowClass.cbWndExtra = 0;
+		windowClass.hInstance = GetModuleHandle(nullptr);
+		windowClass.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
+		windowClass.hCursor = LoadCursor(nullptr, IDC_ARROW);
+		windowClass.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+		windowClass.lpszMenuName = nullptr;
+		windowClass.lpszClassName = "SPKWindowClass";
+		windowClass.hIconSm = LoadIcon(nullptr, IDI_APPLICATION);
 
 		WNDCLASSEX existingClass = {0};
 		if (!GetClassInfoEx(GetModuleHandle(nullptr), "SPKWindowClass", &existingClass))
 		{
-			if (!RegisterClassEx(&wc))
+			if (!RegisterClassEx(&windowClass))
 			{
 				DWORD error = GetLastError();
 				std::cerr << "RegisterClass failed with error: " << error << std::endl;
@@ -52,7 +52,6 @@ namespace spk
 
 	GraphicalApplication::~GraphicalApplication()
 	{
-		
 	}
 
 	spk::SafePointer<Window> GraphicalApplication::createWindow(const std::wstring &p_title, const spk::Geometry2D &p_geometry)

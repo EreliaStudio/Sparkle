@@ -32,15 +32,15 @@ namespace spk
 	{
 		if (_expectedDuration.nanoseconds == 0LL)
 		{
-            return 0.0f;
+			return 0.0f;
 		}
 
-        const long double elapsedNs   = static_cast<long double>(elapsed().nanoseconds);
-        const long double expectedNs  = static_cast<long double>(_expectedDuration.nanoseconds);
+		const long double elapsedNs = static_cast<long double>(elapsed().nanoseconds);
+		const long double expectedNs = static_cast<long double>(_expectedDuration.nanoseconds);
 
-        const long double ratio = elapsedNs / expectedNs;
+		const long double ratio = elapsedNs / expectedNs;
 
-        return static_cast<float>(std::clamp(ratio, 0.0L, 1.0L));
+		return static_cast<float>(std::clamp(ratio, 0.0L, 1.0L));
 	}
 
 	bool Timer::hasTimedOut() const

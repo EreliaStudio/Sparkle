@@ -51,8 +51,7 @@ namespace spk
 							result += std::stoi(p_fileContent.substr(i + 2, 4), nullptr, 16);
 						} catch (const std::exception &)
 						{
-							GENERATE_ERROR("Invalid Unicode escape : <" + spk::StringUtils::wstringToString(p_fileContent).substr(i, 6) +
-													 '>');
+							GENERATE_ERROR("Invalid Unicode escape : <" + spk::StringUtils::wstringToString(p_fileContent).substr(i, 6) + '>');
 						}
 						i += 4;
 						break;
@@ -85,8 +84,8 @@ namespace spk
 					if (std::wstring(L"\"\\/bfnrtu").find(nextChar) == std::wstring::npos)
 					{
 						GENERATE_ERROR("Invalid escape sequence at line " +
-												 std::to_string(1 + std::count(p_fileContent.begin(), p_fileContent.begin() + i, L'\n')) +
-												 " column " + std::to_string(1 + i - p_fileContent.rfind('\n', i)) + ".");
+									   std::to_string(1 + std::count(p_fileContent.begin(), p_fileContent.begin() + i, L'\n')) + " column " +
+									   std::to_string(1 + i - p_fileContent.rfind('\n', i)) + ".");
 					}
 					if (nextChar == L'\\')
 					{
@@ -114,8 +113,8 @@ namespace spk
 					else if (isLiteral == true && (c == L'\n' || c == L'\r'))
 					{
 						GENERATE_ERROR("Unexpected end of string " +
-												 std::to_string(1 + std::count(p_fileContent.begin(), p_fileContent.begin() + i, '\n')) + " column " +
-												 std::to_string(i - p_fileContent.rfind('\n', i - 1)) + ".");
+									   std::to_string(1 + std::count(p_fileContent.begin(), p_fileContent.begin() + i, '\n')) + " column " +
+									   std::to_string(i - p_fileContent.rfind('\n', i - 1)) + ".");
 					}
 					break;
 				default:
@@ -145,8 +144,7 @@ namespace spk
 			++p_index;
 			if (p_content[p_index] != L':')
 			{
-				GENERATE_ERROR("Invalid attribute name [" + spk::StringUtils::wstringToString(p_content).substr(start, p_index - start) +
-										 "]");
+				GENERATE_ERROR("Invalid attribute name [" + spk::StringUtils::wstringToString(p_content).substr(start, p_index - start) + "]");
 			}
 			++p_index;
 			return (handleEscapeSequence(p_content.substr(start, p_index - start - 2)));
@@ -187,8 +185,7 @@ namespace spk
 			{
 				if (p_content[p_index] != L'"')
 				{
-					GENERATE_ERROR("Invalid JSON unit [" +
-											 spk::StringUtils::wstringToString(p_content).substr(oldIndex, p_index - oldIndex) + "]");
+					GENERATE_ERROR("Invalid JSON unit [" + spk::StringUtils::wstringToString(p_content).substr(oldIndex, p_index - oldIndex) + "]");
 				}
 				else
 				{
