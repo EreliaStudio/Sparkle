@@ -15,9 +15,9 @@ namespace spk::OpenGL
 	class BufferSet
 	{
 	private:
-		VertexArrayObject _vao;
+		VertexArrayObject _vertexArrayObject;
 		LayoutBufferObject _layout;
-		IndexBufferObject _indexes;
+		IndexBufferObject _indexBufferObject;
 
 	public:
 		BufferSet() = default;

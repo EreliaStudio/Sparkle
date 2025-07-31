@@ -27,8 +27,7 @@ namespace spk
 	{
 		_renderer.clear();
 
-		_renderer.prepare(
-			{spk::Vector2Int(0, 0), {_height, _height}}, _renderer.texture().upCast<spk::SpriteSheet>()->sprite(0), layer());
+		_renderer.prepare({spk::Vector2Int(0, 0), {_height, _height}}, _renderer.texture().upCast<spk::SpriteSheet>()->sprite(0), layer());
 
 		_renderer.prepare({spk::Vector2Int(_height, 0), {geometry().size.x - _height * 2, _height}},
 						  _renderer.texture().upCast<spk::SpriteSheet>()->sprite(1),

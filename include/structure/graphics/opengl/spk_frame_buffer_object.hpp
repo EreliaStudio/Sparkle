@@ -41,7 +41,7 @@ namespace spk::OpenGL
 
 			void _allocate(const spk::Vector2UInt &p_size);
 			void _resize(const spk::Vector2UInt &p_size);
-			void _attach(GLuint p_fboID) const;
+			void _attach(GLuint p_frameBufferObjectIdentifier) const;
 
 		public:
 			Attachment() = default;
@@ -82,7 +82,7 @@ namespace spk::OpenGL
 		}
 
 	private:
-		GLuint _id = 0;
+		GLuint _identifier = 0;
 		bool _validated = false;
 		spk::Vector2UInt _size = {0, 0};
 		spk::Viewport _viewport;

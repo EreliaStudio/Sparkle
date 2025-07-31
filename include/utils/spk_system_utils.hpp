@@ -67,18 +67,9 @@ namespace spk
 	};
 }
 
-inline spk::Duration operator""_s(long double p_value)
-{
-	return spk::Duration(static_cast<long double>(p_value), spk::TimeUnit::Second);
-}
-inline spk::Duration operator""_ms(unsigned long long p_value)
-{
-	return spk::Duration(static_cast<long double>(p_value), spk::TimeUnit::Millisecond);
-}
-inline spk::Duration operator""_ns(unsigned long long p_value)
-{
-	return spk::Duration(static_cast<long double>(p_value), spk::TimeUnit::Nanosecond);
-}
+spk::Duration operator""_s(long double p_value);
+spk::Duration operator""_ms(unsigned long long p_value);
+spk::Duration operator""_ns(unsigned long long p_value);
 
 namespace spk::SystemUtils
 {

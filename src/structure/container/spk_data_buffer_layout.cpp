@@ -11,7 +11,6 @@ namespace spk
 		_size(0),
 		_content(Unit())
 	{
-
 	}
 
 	DataBufferLayout::Element::Element(const std::wstring &p_name, DataBuffer *p_buffer, size_t p_offset, size_t p_size) :
@@ -21,20 +20,19 @@ namespace spk
 		_size(p_size),
 		_content(Unit())
 	{
-
 	}
 
-	DataBuffer* DataBufferLayout::Element::buffer() const
+	DataBuffer *DataBufferLayout::Element::buffer() const
 	{
 		return (_buffer);
 	}
 
-	const std::wstring& DataBufferLayout::Element::name() const
+	const std::wstring &DataBufferLayout::Element::name() const
 	{
 		return (_name);
 	}
-	
-	void DataBufferLayout::Element::setName(const std::wstring& p_name)
+
+	void DataBufferLayout::Element::setName(const std::wstring &p_name)
 	{
 		_name = p_name;
 	}
@@ -127,7 +125,7 @@ namespace spk
 		if (_offset + newSize > _buffer->size())
 		{
 			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Resizing would exceed the buffer's capacity. Requested " +
-									 std::to_string(_offset + newSize) + " but buffer size is " + std::to_string(_buffer->size()) + ".");
+						   std::to_string(_offset + newSize) + " but buffer size is " + std::to_string(_buffer->size()) + ".");
 		}
 
 		Array newArray;
@@ -158,15 +156,15 @@ namespace spk
 		if (contains(p_name))
 		{
 			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Element [" + spk::StringUtils::wstringToString(p_name) +
-									 "] already contained in structure");
+						   "] already contained in structure");
 		}
 
 		if ((p_offset + p_size) > (_offset + _size))
 		{
-			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Can't assign a field named [" +
-									 spk::StringUtils::wstringToString(p_name) + "] larger than the current element - Requested [" +
-									 std::to_string(p_size) + "] bytes at offset [" + std::to_string(p_offset) + "] over [" + std::to_string(_size) +
-									 "] allocated bytes at offset [" + std::to_string(_offset) + "]");
+			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Can't assign a field named [" + spk::StringUtils::wstringToString(p_name) +
+						   "] larger than the current element - Requested [" + std::to_string(p_size) + "] bytes at offset [" +
+						   std::to_string(p_offset) + "] over [" + std::to_string(_size) + "] allocated bytes at offset [" + std::to_string(_offset) +
+						   "]");
 		}
 
 		if ((p_offset + p_size) > _buffer->size())
@@ -179,8 +177,8 @@ namespace spk
 		return structure[p_name];
 	}
 
-	DataBufferLayout::Element &DataBufferLayout::Element::addElement(const std::wstring &p_name, size_t p_offset, size_t p_nbElement,
-																	 size_t p_elementSize, size_t p_elementPadding)
+	DataBufferLayout::Element &DataBufferLayout::Element::addElement(
+		const std::wstring &p_name, size_t p_offset, size_t p_nbElement, size_t p_elementSize, size_t p_elementPadding)
 	{
 		if (isArray())
 		{
@@ -212,7 +210,7 @@ namespace spk
 		if (!contains(p_name))
 		{
 			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Element [" + spk::StringUtils::wstringToString(p_name) +
-									 "] not contained in structure");
+						   "] not contained in structure");
 		}
 
 		auto &structure = std::get<Structure>(_content);
@@ -262,8 +260,7 @@ namespace spk
 		auto it = map.find(p_key);
 		if (it == map.end())
 		{
-			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) +
-									 " - Key not found in map: " + spk::StringUtils::wstringToString(p_key));
+			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Key not found in map: " + spk::StringUtils::wstringToString(p_key));
 		}
 
 		return it->second;
@@ -280,8 +277,7 @@ namespace spk
 		auto it = map.find(p_key);
 		if (it == map.end())
 		{
-			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) +
-									 " - Key not found in structure: " + spk::StringUtils::wstringToString(p_key));
+			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Key not found in structure: " + spk::StringUtils::wstringToString(p_key));
 		}
 
 		return it->second;
@@ -376,8 +372,8 @@ namespace spk
 		return _root.addElement(p_name, p_offset, p_size);
 	}
 
-	DataBufferLayout::Element &DataBufferLayout::addElement(const std::wstring &p_name, size_t p_offset, size_t p_nbElement, size_t p_elementSize,
-															size_t p_elementPadding)
+	DataBufferLayout::Element &
+	DataBufferLayout::addElement(const std::wstring &p_name, size_t p_offset, size_t p_nbElement, size_t p_elementSize, size_t p_elementPadding)
 	{
 		return _root.addElement(p_name, p_offset, p_nbElement, p_elementSize, p_elementPadding);
 	}

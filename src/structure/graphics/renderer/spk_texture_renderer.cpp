@@ -13,6 +13,7 @@ namespace spk
 		if (_program == nullptr)
 		{
 			const char *vertexShaderSrc = R"(#version 450
+			
 				layout(location = 0) in vec2 inPosition;
 				layout(location = 1) in float inLayer;
 				layout(location = 2) in vec2 inUV;
@@ -85,7 +86,7 @@ namespace spk
 
 	void TextureRenderer::prepare(const spk::Geometry2D &p_geom, const spk::Image::Section &p_section, float p_layer)
 	{
-		size_t nbVertex = _bufferSet.layout().size() / sizeof(Vertex);
+		size_t numberOfVertices = _bufferSet.layout().size() / sizeof(Vertex);
 
 		spk::Vector3 topLeft = spk::Viewport::convertScreenToOpenGL({p_geom.anchor.x, p_geom.anchor.y}, p_layer);
 		spk::Vector3 bottomRight = spk::Viewport::convertScreenToOpenGL(
@@ -102,7 +103,7 @@ namespace spk
 		std::array<unsigned int, 6> indices = {0, 1, 2, 2, 1, 3};
 		for (const auto &index : indices)
 		{
-			_bufferSet.indexes() << index + nbVertex;
+			_bufferSet.indexes() << index + numberOfVertices;
 		}
 	}
 

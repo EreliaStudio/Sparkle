@@ -49,7 +49,10 @@ namespace spk
 		public:
 			std::thread receptionThread;
 
-			Acceptator(std::unordered_map<ClientID, SOCKET> &clientsMap, std::mutex &mutex, ClientID &p_clientId, MessagePool &pool,
+			Acceptator(std::unordered_map<ClientID, SOCKET> &clientsMap,
+					   std::mutex &mutex,
+					   ClientID &p_clientId,
+					   MessagePool &pool,
 					   spk::ThreadSafeQueue<MessageObject> &queue);
 			~Acceptator();
 

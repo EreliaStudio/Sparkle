@@ -1,12 +1,12 @@
 #pragma once
 
-#include "widget/spk_widget.hpp"
-#include "widget/spk_push_button.hpp"
 #include "widget/spk_linear_layout.hpp"
+#include "widget/spk_push_button.hpp"
 #include "widget/spk_spacer_widget.hpp"
+#include "widget/spk_widget.hpp"
 
-#include <unordered_map>
 #include <string>
+#include <unordered_map>
 
 namespace spk
 {
@@ -27,14 +27,14 @@ namespace spk
 		void _composeLayout();
 
 	public:
-		CommandPanel(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent);
+		CommandPanel(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent);
 
-		virtual spk::SafePointer<spk::PushButton> addButton(const std::wstring& p_name, const std::wstring& p_label);
-		spk::SafePointer<spk::PushButton> button(const std::wstring& p_name);
-		spk::SafePointer<const spk::PushButton> button(const std::wstring& p_name) const;
-		void removeButton(const std::wstring& p_name);
+		virtual spk::SafePointer<spk::PushButton> addButton(const std::wstring &p_name, const std::wstring &p_label);
+		spk::SafePointer<spk::PushButton> button(const std::wstring &p_name);
+		spk::SafePointer<const spk::PushButton> button(const std::wstring &p_name) const;
+		void removeButton(const std::wstring &p_name);
 
-		Contract subscribe(const std::wstring& p_name, const Job& p_job);
+		Contract subscribe(const std::wstring &p_name, const Job &p_job);
 
 		spk::Vector2UInt minimalSize() const override;
 

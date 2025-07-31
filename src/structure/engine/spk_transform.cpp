@@ -45,7 +45,7 @@ namespace spk
 
 	spk::Vector3 Transform::rotation() const
 	{
-		return _rotation.toEuler();
+		return (_rotation.toEuler());
 	}
 
 	const spk::Quaternion &Transform::rotationQuaternion() const

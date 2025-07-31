@@ -4,17 +4,24 @@
 
 namespace spk
 {
-	template<typename TType, typename TErrorData = std::wstring>
+	template <typename TType, typename TErrorData = std::wstring>
 	struct Expected
 	{
 		TType value;
 		bool hasError;
 		TErrorData errorData;
 
-		Expected() : hasError(false) {}
-		Expected(const TType& value) : value(value), hasError(false) {}
+		Expected() :
+			hasError(false)
+		{
+		}
+		Expected(const TType &value) :
+			value(value),
+			hasError(false)
+		{
+		}
 
-		static Expected<TType> Raise(const TErrorData& errorData)
+		static Expected<TType> Raise(const TErrorData &errorData)
 		{
 			Expected<TType> result;
 

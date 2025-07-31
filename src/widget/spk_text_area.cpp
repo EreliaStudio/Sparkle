@@ -21,7 +21,7 @@ namespace spk
 		_layout.setGeometry(layoutGeometry);
 	}
 
-	static std::vector<std::wstring> composeWordCollection(const std::wstring& p_text)
+	static std::vector<std::wstring> composeWordCollection(const std::wstring &p_text)
 	{
 		std::vector<std::wstring> result;
 		const std::size_t n = p_text.size();
@@ -45,15 +45,13 @@ namespace spk
 
 			std::wstring token;
 
-			while (i < n && p_text[i] != L'\n' &&
-				std::iswspace(static_cast<wint_t>(p_text[i])) == 0)
+			while (i < n && p_text[i] != L'\n' && std::iswspace(static_cast<wint_t>(p_text[i])) == 0)
 			{
 				token += p_text[i];
 				i++;
 			}
 
-			while (i < n && p_text[i] != L'\n' &&
-				std::iswspace(static_cast<wint_t>(p_text[i])) != 0)
+			while (i < n && p_text[i] != L'\n' && std::iswspace(static_cast<wint_t>(p_text[i])) != 0)
 			{
 				token += p_text[i];
 				i++;
@@ -84,7 +82,7 @@ namespace spk
 		_labels.push_back(std::move(newLabel));
 	}
 
-	void TextArea::_insertLine(const std::wstring& p_text)
+	void TextArea::_insertLine(const std::wstring &p_text)
 	{
 		if (_nbLine >= _labels.size())
 		{
@@ -96,17 +94,17 @@ namespace spk
 		_nbLine++;
 	}
 
-    std::wstring trimSpaces(const std::wstring& p_text)
-    {
+	std::wstring trimSpaces(const std::wstring &p_text)
+	{
 		std::wstring result = p_text;
 
-        while (std::iswspace(result.back()))
+		while (std::iswspace(result.back()))
 		{
 			result.pop_back();
 		}
 
 		return (result);
-    }
+	}
 
 	void TextArea::_populateLabels(const spk::Vector2UInt &p_availableSize)
 	{
@@ -115,7 +113,7 @@ namespace spk
 
 		const std::vector<std::wstring> tokens = composeWordCollection(_text);
 
-		for (const std::wstring& token : tokens)
+		for (const std::wstring &token : tokens)
 		{
 			if (token == L"\n")
 			{
@@ -192,7 +190,7 @@ namespace spk
 		}
 	}
 
-	TextArea::TextArea(const std::wstring& p_name, spk::SafePointer<Widget> p_parent) :
+	TextArea::TextArea(const std::wstring &p_name, spk::SafePointer<Widget> p_parent) :
 		spk::Widget(p_name, p_parent),
 		_backgroundFrame(p_name + L"/BackgroundFrame", this),
 		_topSpacer(p_name + L"/TopSpacer", this),
@@ -217,23 +215,23 @@ namespace spk
 		return _layout.elementPadding().y;
 	}
 
-	void TextArea::setText(const std::wstring& p_text)
+	void TextArea::setText(const std::wstring &p_text)
 	{
 		_text = p_text;
 		requireGeometryUpdate();
 	}
 
-	const std::wstring& TextArea::text() const
+	const std::wstring &TextArea::text() const
 	{
 		return _text;
 	}
 
-	void TextArea::setTextAlignment(const spk::HorizontalAlignment& p_horizontalAlignment, const spk::VerticalAlignment& p_verticalAlignment)
+	void TextArea::setTextAlignment(const spk::HorizontalAlignment &p_horizontalAlignment, const spk::VerticalAlignment &p_verticalAlignment)
 	{
 		_horizontalAlignment = p_horizontalAlignment;
 		_verticalAlignment = p_verticalAlignment;
 
-		for (auto& label : _labels)
+		for (auto &label : _labels)
 		{
 			label->setTextAlignment(p_horizontalAlignment, spk::VerticalAlignment::Centered);
 		}
@@ -255,7 +253,7 @@ namespace spk
 	{
 		_font = p_font;
 
-		for (auto& lbl : _labels)
+		for (auto &lbl : _labels)
 		{
 			lbl->setFont(_font);
 		}
@@ -268,11 +266,11 @@ namespace spk
 		return _font;
 	}
 
-	void TextArea::setFontSize(const spk::Font::Size& p_size)
+	void TextArea::setFontSize(const spk::Font::Size &p_size)
 	{
 		_fontSize = p_size;
 
-		for (auto& lbl : _labels)
+		for (auto &lbl : _labels)
 		{
 			lbl->setFontSize(_fontSize);
 		}
@@ -285,12 +283,12 @@ namespace spk
 		return _fontSize;
 	}
 
-	void TextArea::setFontColor(const spk::Color& p_glyphColor, const spk::Color& p_outlineColor)
+	void TextArea::setFontColor(const spk::Color &p_glyphColor, const spk::Color &p_outlineColor)
 	{
 		_glyphColor = p_glyphColor;
 		_outlineColor = p_outlineColor;
 
-		for (auto& lbl : _labels)
+		for (auto &lbl : _labels)
 		{
 			lbl->setFontColor(_glyphColor, _outlineColor);
 		}
@@ -306,7 +304,7 @@ namespace spk
 		return _outlineColor;
 	}
 
-	void TextArea::setCornerSize(const spk::Vector2UInt& p_cornerSize)
+	void TextArea::setCornerSize(const spk::Vector2UInt &p_cornerSize)
 	{
 		_cornerSize = p_cornerSize;
 		_backgroundFrame.setCornerSize(_cornerSize);
@@ -328,17 +326,15 @@ namespace spk
 		return _backgroundFrame.nineslice();
 	}
 
-	spk::Vector2UInt TextArea::computeMinimalSize(const size_t& p_minimalWidth)
+	spk::Vector2UInt TextArea::computeMinimalSize(const size_t &p_minimalWidth)
 	{
 		spk::Vector2UInt result{0, 0};
 
 		const uint32_t horizontalMargin = _backgroundFrame.cornerSize().x * 2;
-		const uint32_t verticalMargin   = _backgroundFrame.cornerSize().y * 2;
-		const uint32_t padding          = static_cast<uint32_t>(_layout.elementPadding().y);
+		const uint32_t verticalMargin = _backgroundFrame.cornerSize().y * 2;
+		const uint32_t padding = static_cast<uint32_t>(_layout.elementPadding().y);
 
-		const size_t availableWidth = (p_minimalWidth > horizontalMargin)
-										? (p_minimalWidth - horizontalMargin)
-										: 0;
+		const size_t availableWidth = (p_minimalWidth > horizontalMargin) ? (p_minimalWidth - horizontalMargin) : 0;
 
 		if (_font == nullptr)
 		{
@@ -348,7 +344,7 @@ namespace spk
 		const std::vector<std::wstring> tokens = composeWordCollection(_text);
 
 		std::wstring currentLine;
-		size_t       maxLineWidth = 0U;
+		size_t maxLineWidth = 0U;
 
 		const auto flushLine = [&](spk::Vector2UInt p_textSize)
 		{
@@ -366,7 +362,7 @@ namespace spk
 			currentLine.clear();
 		};
 
-		for (const std::wstring& token : tokens)
+		for (const std::wstring &token : tokens)
 		{
 			spk::Vector2UInt currentLineSize = _font->computeStringSize(currentLine, _fontSize);
 
@@ -386,7 +382,7 @@ namespace spk
 			}
 
 			std::wstring trimmedCandidate = trimSpaces(candidate);
-			spk::Vector2UInt trimmedSize   = _font->computeStringSize(trimmedCandidate, _fontSize);
+			spk::Vector2UInt trimmedSize = _font->computeStringSize(trimmedCandidate, _fontSize);
 
 			if (trimmedSize.x < availableWidth)
 			{
@@ -411,8 +407,8 @@ namespace spk
 		return result;
 	}
 
-	void TextArea::setMinimalWidth(const size_t& p_minimalWidth)
+	void TextArea::setMinimalWidth(const size_t &p_minimalWidth)
 	{
 		setMinimalSize(computeMinimalSize(p_minimalWidth));
 	}
-} 
+}

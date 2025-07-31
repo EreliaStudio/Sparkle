@@ -29,7 +29,7 @@ namespace spk
 		a(static_cast<float>(p_a) / 255.0f)
 	{
 	}
-	
+
 	Color::Color(float p_r, float p_g, float p_b, float p_a) :
 		r(p_r),
 		g(p_g),

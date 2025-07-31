@@ -61,15 +61,12 @@ namespace spk
 		spk::Geometry2D _geometry;
 		spk::Viewport _viewport;
 
-		spk::OpenGL::FrameBufferObject _fbo;
+		spk::OpenGL::FrameBufferObject _frameBufferObject;
 
 		spk::TextureRenderer _textureRenderer;
 
 		spk::Vector2UInt _minimalSize = {0, 0};
-		spk::Vector2UInt _maximalSize = {
-				std::numeric_limits<size_t>::max(),
-				std::numeric_limits<size_t>::max()
-			};
+		spk::Vector2UInt _maximalSize = {std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max()};
 
 		bool _requestedPaint = false;
 
@@ -104,10 +101,10 @@ namespace spk
 		void setName(const std::wstring &p_name);
 
 		void addChild(spk::SafePointer<Widget> p_child) override;
-		
+
 		spk::SafePointer<const spk::OpenGL::FrameBufferObject> frameBufferObject() const;
 
-		void renderAsPNJ(const std::filesystem::path& p_path);
+		void renderAsPNJ(const std::filesystem::path &p_path);
 
 		template <typename TChildType, typename... TArgs>
 		spk::SafePointer<TChildType> makeChild(TArgs &&...p_args)

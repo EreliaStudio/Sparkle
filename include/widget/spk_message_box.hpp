@@ -4,16 +4,16 @@
 #pragma once
 
 #include <cstdint>
-#include <unordered_map>
 #include <string>
+#include <unordered_map>
 
-#include "widget/spk_interface_window.hpp"   // IInterfaceWindow
-#include "widget/spk_text_area.hpp"          // TextArea
-#include "widget/spk_command_panel.hpp"      // CommandPanel
+#include "widget/spk_command_panel.hpp"	   // CommandPanel
+#include "widget/spk_interface_window.hpp" // IInterfaceWindow
 #include "widget/spk_linear_layout.hpp"
+#include "widget/spk_text_area.hpp" // TextArea
 
 #ifdef MessageBox
-#undef MessageBox
+#	undef MessageBox
 #endif
 
 namespace spk
@@ -25,22 +25,22 @@ namespace spk
 		{
 		private:
 			spk::VerticalLayout _layout;
-			spk::TextArea       _textArea;
-			spk::CommandPanel   _commandPanel;
+			spk::TextArea _textArea;
+			spk::CommandPanel _commandPanel;
 
 			void _onGeometryChange() override;
 			void _compose();
 
 		public:
-			Content(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent);
+			Content(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent);
 
-			const spk::VerticalLayout& layout() const;
-			const spk::TextArea& textArea() const;
-			const spk::CommandPanel& commandPanel() const;
+			const spk::VerticalLayout &layout() const;
+			const spk::TextArea &textArea() const;
+			const spk::CommandPanel &commandPanel() const;
 
-			spk::VerticalLayout& layout();
-			spk::TextArea& textArea();
-			spk::CommandPanel& commandPanel();
+			spk::VerticalLayout &layout();
+			spk::TextArea &textArea();
+			spk::CommandPanel &commandPanel();
 
 			spk::Vector2UInt minimalSize() const override;
 		};
@@ -52,28 +52,28 @@ namespace spk
 		spk::PushButton::Contract _closeContract;
 
 	public:
-		MessageBox(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent);
+		MessageBox(const std::wstring &p_name, const spk::SafePointer<spk::Widget> &p_parent);
 
-		const Content& content() const;
-		const spk::TextArea& textArea() const;
-		const spk::CommandPanel& commandPanel() const;
+		const Content &content() const;
+		const spk::TextArea &textArea() const;
+		const spk::CommandPanel &commandPanel() const;
 
-		Content& content();
-		spk::TextArea& textArea();
-		spk::CommandPanel& commandPanel();
+		Content &content();
+		spk::TextArea &textArea();
+		spk::CommandPanel &commandPanel();
 
-		void setTitle(const std::wstring& p_title);
+		void setTitle(const std::wstring &p_title);
 
-		virtual void setText(const std::wstring& p_text);
+		virtual void setText(const std::wstring &p_text);
 
-		const std::wstring& text() const;
+		const std::wstring &text() const;
 
-		spk::SafePointer<spk::PushButton> addButton(const std::wstring& p_name, const std::wstring& p_label);
-		spk::SafePointer<const spk::PushButton> button(const std::wstring& p_name) const;
-		spk::SafePointer<spk::PushButton> button(const std::wstring& p_name);
-		void removeButton(const std::wstring& p_name);
+		spk::SafePointer<spk::PushButton> addButton(const std::wstring &p_name, const std::wstring &p_label);
+		spk::SafePointer<const spk::PushButton> button(const std::wstring &p_name) const;
+		spk::SafePointer<spk::PushButton> button(const std::wstring &p_name);
+		void removeButton(const std::wstring &p_name);
 
-		CommandPanel::Contract subscribe(const std::wstring& p_name, const CommandPanel::Job& p_job);
+		CommandPanel::Contract subscribe(const std::wstring &p_name, const CommandPanel::Job &p_job);
 
 		void setMinimalWidth(uint32_t p_width);
 	};
@@ -83,10 +83,10 @@ namespace spk
 	private:
 		spk::PushButton::Contract _closeContract;
 		spk::SafePointer<spk::PushButton> _button;
-        spk::PushButton::Contract _contract;
+		spk::PushButton::Contract _contract;
 
 	public:
-		InformationMessageBox(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent);
+		InformationMessageBox(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent);
 		spk::SafePointer<spk::PushButton> button() const;
 	};
 
@@ -102,10 +102,12 @@ namespace spk
 		spk::PushButton::Contract _secondContract;
 
 	public:
-		RequestMessageBox(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent);
+		RequestMessageBox(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent);
 
-		void configure(const std::wstring& p_firstCaption, const std::function<void()>& p_firstAction,
-					const std::wstring& p_secondCaption, const std::function<void()>& p_secondAction);
+		void configure(const std::wstring &p_firstCaption,
+					   const std::function<void()> &p_firstAction,
+					   const std::wstring &p_secondCaption,
+					   const std::function<void()> &p_secondAction);
 
 		spk::SafePointer<spk::PushButton> firstButton() const;
 		spk::SafePointer<spk::PushButton> secondButton() const;

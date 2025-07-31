@@ -11,12 +11,12 @@ namespace spk
 	private:
 		spk::Mouse _mouse;
 
-		void _treatEvent(spk::MouseEvent&& p_event) override;
-		spk::MouseEvent _convertEventToEventType(spk::Event&& p_event) override;
+		void _treatEvent(spk::MouseEvent &&p_event) override;
+		spk::MouseEvent _convertEventToEventType(spk::Event &&p_event) override;
 
 	public:
 		MouseModule();
 
-		const spk::Mouse& mouse() const;
+		const spk::Mouse &mouse() const;
 	};
 }

@@ -47,17 +47,17 @@ namespace spk
 	{
 	}
 
-	void UpdateModule::bind(const spk::SafePointer<const Keyboard>& p_keyboard)
+	void UpdateModule::bind(const spk::SafePointer<const Keyboard> &p_keyboard)
 	{
 		_keyboard = p_keyboard;
 	}
-	
-	void UpdateModule::bind(const spk::SafePointer<const Mouse>& p_mouse)
+
+	void UpdateModule::bind(const spk::SafePointer<const Mouse> &p_mouse)
 	{
 		_mouse = p_mouse;
 	}
-	
-	void UpdateModule::bind(const spk::SafePointer<const Controller>& p_controller)
+
+	void UpdateModule::bind(const spk::SafePointer<const Controller> &p_controller)
 	{
 		_controller = p_controller;
 	}
