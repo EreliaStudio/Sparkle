@@ -33,8 +33,8 @@ namespace spk
 		spk::OpenGL::BufferSet _bufferSet;
 		spk::OpenGL::SamplerObject _samplerObject;
 
-		// Uniform buffer object for layer, glyphColor, and outlineColor
-		spk::OpenGL::UniformBufferObject _textInformationsUbo;
+// Uniform buffer object for layer, glyphColor, and outlineColor
+spk::OpenGL::UniformBufferObject _textInformationsUniformBufferObject;
 
 		spk::SafePointer<Font> _font = nullptr;
 		Font::Size _fontSize = {16, 1};
@@ -49,7 +49,7 @@ namespace spk
 		void _initProgram();
 		void _initBuffers();
 
-		void _updateUbo();
+void _updateUniformBufferObject();
 
 		void _prepareText(const std::wstring &p_text, const spk::Vector2Int &p_anchor, float p_layer);
 

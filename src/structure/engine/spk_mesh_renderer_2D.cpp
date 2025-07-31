@@ -28,7 +28,7 @@ namespace spk
 
 	spk::SafePointer<spk::Mesh2D> MeshRenderer2D::mesh() const
 	{
-		return _mesh2D;
+		return (_mesh2D);
 	}
 
 	void MeshRenderer2D::setMaterial(spk::SafePointer<spk::Material> p_material)
@@ -51,7 +51,7 @@ namespace spk
 
 	spk::SafePointer<spk::Material> MeshRenderer2D::material() const
 	{
-		return _material;
+		return (_material);
 	}
 
 	void MeshRenderer2D::onPaintEvent(spk::PaintEvent &p_event)

@@ -11,11 +11,11 @@ namespace spk
 	void MessageBox::Content::_compose()
 	{
 		_layout.clear();
-		_layout.addWidget(&_textArea,     spk::Layout::SizePolicy::Extend);
+		_layout.addWidget(&_textArea, spk::Layout::SizePolicy::Extend);
 		_layout.addWidget(&_commandPanel, spk::Layout::SizePolicy::Minimum);
 	}
 
-	MessageBox::Content::Content(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+	MessageBox::Content::Content(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
 		spk::Widget(p_name, p_parent),
 		_textArea(p_name + L"/TextArea", this),
 		_commandPanel(p_name + L"/CommandPanel", this)
@@ -64,37 +64,33 @@ namespace spk
 			return _commandPanel.minimalSize();
 		}
 
-		return (
-			spk::Vector2UInt(
-				std::max(_textArea.minimalSize().x, _commandPanel.minimalSize().x),
-				_textArea.minimalSize().y + _layout.elementPadding().y + _commandPanel.minimalSize().y
-			)
-		);
+		return (spk::Vector2UInt(std::max(_textArea.minimalSize().x, _commandPanel.minimalSize().x),
+								 _textArea.minimalSize().y + _layout.elementPadding().y + _commandPanel.minimalSize().y));
 	}
 
-	MessageBox::MessageBox(const std::wstring& p_name, const spk::SafePointer<spk::Widget>& p_parent) :
+	MessageBox::MessageBox(const std::wstring &p_name, const spk::SafePointer<spk::Widget> &p_parent) :
 		spk::IInterfaceWindow(p_name, p_parent),
 		_content(p_name + L"/Content", backgroundFrame())
 	{
 		setContent(&_content);
 		_content.activate();
 
-		_closeContract = subscribeTo(spk::IInterfaceWindow::Event::Close, [&]{ close(); });
+		_closeContract = subscribeTo(spk::IInterfaceWindow::Event::Close, [&] { close(); });
 
-		_onResizeContract = subscribeOnResize([&](const spk::Vector2UInt& p_availableSize){
-		
-			spk::Vector2UInt commandPanelMinimalSize = _content.commandPanel().minimalSize();
-			size_t textAreaWidth = (commandPanelMinimalSize.x > p_availableSize.x ? commandPanelMinimalSize.x : p_availableSize.x);
-			spk::Vector2UInt textAreaMinimalSize = _content.textArea().computeMinimalSize(textAreaWidth);
+		_onResizeContract = subscribeOnResize(
+			[&](const spk::Vector2UInt &p_availableSize)
+			{
+				spk::Vector2UInt commandPanelMinimalSize = _content.commandPanel().minimalSize();
+				size_t textAreaWidth = (commandPanelMinimalSize.x > p_availableSize.x ? commandPanelMinimalSize.x : p_availableSize.x);
+				spk::Vector2UInt textAreaMinimalSize = _content.textArea().computeMinimalSize(textAreaWidth);
 
-			spk::Vector2UInt minimalContentSize = spk::Vector2UInt(
-					std::max(textAreaMinimalSize.x, commandPanelMinimalSize.x),
-					textAreaMinimalSize.y + _content.layout().elementPadding().y + commandPanelMinimalSize.y
-				);
+				spk::Vector2UInt minimalContentSize =
+					spk::Vector2UInt(std::max(textAreaMinimalSize.x, commandPanelMinimalSize.x),
+									 textAreaMinimalSize.y + _content.layout().elementPadding().y + commandPanelMinimalSize.y);
 
-			setMinimumContentSize(minimalContentSize);
-			requireGeometryUpdate();
-		});
+				setMinimumContentSize(minimalContentSize);
+				requireGeometryUpdate();
+			});
 	}
 
 	const MessageBox::Content &MessageBox::content() const
@@ -123,43 +119,42 @@ namespace spk
 		return _content.commandPanel();
 	}
 
-	void MessageBox::setTitle(const std::wstring& p_title)
+	void MessageBox::setTitle(const std::wstring &p_title)
 	{
 		menuBar()->titleLabel()->setText(p_title);
 	}
 
-	void MessageBox::setText(const std::wstring& p_text)
+	void MessageBox::setText(const std::wstring &p_text)
 	{
 		_content.textArea().setText(p_text);
 	}
 
-	const std::wstring& MessageBox::text() const
+	const std::wstring &MessageBox::text() const
 	{
 		return _content.textArea().text();
 	}
 
-	spk::SafePointer<spk::PushButton> MessageBox::addButton(const std::wstring& p_name,
-												const std::wstring& p_label)
+	spk::SafePointer<spk::PushButton> MessageBox::addButton(const std::wstring &p_name, const std::wstring &p_label)
 	{
 		return _content.commandPanel().addButton(p_name, p_label);
 	}
 
-	spk::SafePointer<const spk::PushButton> MessageBox::button(const std::wstring& p_name) const
+	spk::SafePointer<const spk::PushButton> MessageBox::button(const std::wstring &p_name) const
 	{
 		return (_content.commandPanel().button(p_name));
 	}
 
-	spk::SafePointer<spk::PushButton> MessageBox::button(const std::wstring& p_name)
+	spk::SafePointer<spk::PushButton> MessageBox::button(const std::wstring &p_name)
 	{
 		return (_content.commandPanel().button(p_name));
 	}
 
-	void MessageBox::removeButton(const std::wstring& p_name)
+	void MessageBox::removeButton(const std::wstring &p_name)
 	{
 		_content.commandPanel().removeButton(p_name);
 	}
 
-	CommandPanel::Contract MessageBox::subscribe(const std::wstring& p_name, const CommandPanel::Job& p_job)
+	CommandPanel::Contract MessageBox::subscribe(const std::wstring &p_name, const CommandPanel::Job &p_job)
 	{
 		return (std::move(_content.commandPanel().subscribe(p_name, p_job)));
 	}
@@ -167,24 +162,21 @@ namespace spk
 	void MessageBox::setMinimalWidth(uint32_t p_width)
 	{
 		spk::Vector2UInt commandPanelMinimalSize = _content.commandPanel().minimalSize();
-		spk::Vector2UInt textAreaMinimalSize = _content.textArea().computeMinimalSize((commandPanelMinimalSize.x > p_width ? commandPanelMinimalSize.x : p_width));
+		spk::Vector2UInt textAreaMinimalSize =
+			_content.textArea().computeMinimalSize((commandPanelMinimalSize.x > p_width ? commandPanelMinimalSize.x : p_width));
 
-		setMinimumContentSize(spk::Vector2UInt(
-				std::max(textAreaMinimalSize.x, commandPanelMinimalSize.x),
-				textAreaMinimalSize.y + _content.layout().elementPadding().y + commandPanelMinimalSize.y
-			));
+		setMinimumContentSize(spk::Vector2UInt(std::max(textAreaMinimalSize.x, commandPanelMinimalSize.x),
+											   textAreaMinimalSize.y + _content.layout().elementPadding().y + commandPanelMinimalSize.y));
 	}
 
-	InformationMessageBox::InformationMessageBox(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+	InformationMessageBox::InformationMessageBox(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
 		MessageBox(p_name, p_parent)
 	{
 		setTitle(L"Information");
 		_button = addButton(p_name + L"/CloseButton", L"Close");
-		_contract = _button->subscribe([&]{ close(); });
-		
-		_closeContract = subscribeTo(spk::IInterfaceWindow::Event::Close, [&]{ 
-			close();
-		});
+		_contract = _button->subscribe([&] { close(); });
+
+		_closeContract = subscribeTo(spk::IInterfaceWindow::Event::Close, [&] { close(); });
 	}
 
 	spk::SafePointer<spk::PushButton> InformationMessageBox::button() const
@@ -192,19 +184,20 @@ namespace spk
 		return _button;
 	}
 
-	RequestMessageBox::RequestMessageBox(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+	RequestMessageBox::RequestMessageBox(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
 		MessageBox(p_name, p_parent)
 	{
 		setTitle(L"Request");
 
-		_firstButton = addButton(p_name + L"/FirstButton",  L"FirstButton");
+		_firstButton = addButton(p_name + L"/FirstButton", L"FirstButton");
 		_secondButton = addButton(p_name + L"/SecondButton", L"SecondButton");
-		configure(L"Yes", [&]{ },
-				L"No", [&]{ });
+		configure(L"Yes", [&] {}, L"No", [&] {});
 	}
 
-	void RequestMessageBox::configure(const std::wstring& p_firstCaption, const std::function<void()>& p_firstAction,
-				const std::wstring& p_secondCaption, const std::function<void()>& p_secondAction)
+	void RequestMessageBox::configure(const std::wstring &p_firstCaption,
+									  const std::function<void()> &p_firstAction,
+									  const std::wstring &p_secondCaption,
+									  const std::function<void()> &p_secondAction)
 	{
 		_firstButton->setName(name() + L"/" + p_firstCaption + L"Button");
 		_firstButton->setText(p_firstCaption);

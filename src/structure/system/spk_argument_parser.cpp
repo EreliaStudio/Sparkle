@@ -4,7 +4,11 @@
 
 namespace spk
 {
-	ArgumentParser::Option::Option(const std::wstring &p_longName, char p_shortName, const std::wstring &p_description, size_t p_arity, std::optional<std::wstring> p_defaultVal) :
+	ArgumentParser::Option::Option(const std::wstring &p_longName,
+								   char p_shortName,
+								   const std::wstring &p_description,
+								   size_t p_arity,
+								   std::optional<std::wstring> p_defaultVal) :
 		longName(p_longName),
 		shortName(p_shortName),
 		description(p_description),
@@ -66,7 +70,7 @@ namespace spk
 				{
 					throw std::runtime_error("Unknown option: --" + token.substr(2));
 				}
-				
+
 				Option &option = it->second;
 				option.present = true;
 

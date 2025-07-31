@@ -11,12 +11,12 @@ namespace spk
 	private:
 		spk::Controller _controller;
 
-		void _treatEvent(spk::ControllerEvent&& p_event) override;
-		spk::ControllerEvent _convertEventToEventType(spk::Event&& p_event) override;
+		void _treatEvent(spk::ControllerEvent &&p_event) override;
+		spk::ControllerEvent _convertEventToEventType(spk::Event &&p_event) override;
 
 	public:
 		ControllerModule();
 
-		const spk::Controller& controller() const;
+		const spk::Controller &controller() const;
 	};
 }

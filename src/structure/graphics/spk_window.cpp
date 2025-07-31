@@ -385,8 +385,7 @@ namespace spk
 						try
 						{
 							_handlePendingTimer();
-						}
-						catch (const std::exception& e)
+						} catch (const std::exception &e)
 						{
 							PROPAGATE_ERROR("Renderer::_handlePendingTimer failed", e);
 						}
@@ -394,8 +393,7 @@ namespace spk
 						try
 						{
 							pullEvents();
-						}
-						catch (const std::exception& e)
+						} catch (const std::exception &e)
 						{
 							PROPAGATE_ERROR("Renderer::pullEvents failed", e);
 						}
@@ -403,8 +401,7 @@ namespace spk
 						try
 						{
 							_timerModule.treatMessages();
-						}
-						catch (const std::exception& e)
+						} catch (const std::exception &e)
 						{
 							PROPAGATE_ERROR("Renderer::_timerModule.treatMessages failed", e);
 						}
@@ -412,8 +409,7 @@ namespace spk
 						try
 						{
 							_paintModule.treatMessages();
-						}
-						catch (const std::exception& e)
+						} catch (const std::exception &e)
 						{
 							PROPAGATE_ERROR("Renderer::_paintModule.treatMessages failed", e);
 						}
@@ -421,13 +417,11 @@ namespace spk
 						try
 						{
 							_systemModule.treatMessages();
-						}
-						catch (const std::exception& e)
+						} catch (const std::exception &e)
 						{
 							PROPAGATE_ERROR("Renderer::_systemModule.treatMessages failed", e);
 						}
-					}
-					catch (const std::exception& e)
+					} catch (const std::exception &e)
 					{
 						spk::cout << "Renderer - Error caught:\n" << e.what() << std::endl;
 						close();
@@ -485,12 +479,12 @@ namespace spk
 	void Window::resize(const spk::Geometry2D::Size &p_newSize)
 	{
 		if (p_newSize.x == 0 || p_newSize.y == 0)
-        {
-            return;
-        }
+		{
+			return;
+		}
 
 		_rootWidget->forceGeometryChange({0, p_newSize});
-		for (auto& child : _rootWidget->children())
+		for (auto &child : _rootWidget->children())
 		{
 			_rootWidget->viewport().apply();
 			child->_applyResize();
@@ -523,20 +517,18 @@ namespace spk
 			try
 			{
 				_rootWidget->_applyGeometryChange();
-			}
-			catch (std::exception& e)
+			} catch (std::exception &e)
 			{
 				PROPAGATE_ERROR("Window::clear over _rootWidget->applyGeometryChange() failed", e);
 			}
-			
+
 			_rootWidget->_needGeometryChange = false;
 		}
-		
+
 		try
 		{
 			_rootWidget->viewport().apply();
-		}
-		catch (std::exception& e)
+		} catch (std::exception &e)
 		{
 			PROPAGATE_ERROR("Window::clear over _rootWidget->viewport().apply failed", e);
 		}
@@ -623,7 +615,7 @@ namespace spk
 		}
 	}
 
-	void Window::requestResize(const spk::Vector2Int& p_size) const
+	void Window::requestResize(const spk::Vector2Int &p_size) const
 	{
 		PostMessage(_hwnd, WM_RESIZE_REQUEST, static_cast<WPARAM>(p_size.x), static_cast<LPARAM>(p_size.y));
 	}

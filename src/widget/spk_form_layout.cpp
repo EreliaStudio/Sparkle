@@ -5,22 +5,23 @@
 namespace spk
 {
 	FormLayout::FormElement FormLayout::addRow(spk::SafePointer<spk::Widget> p_labelWidget,
-					spk::SafePointer<spk::Widget> p_fieldWidget,
-					const SizePolicy &p_labelPolicy,
-					const SizePolicy &p_fieldPolicy)
+											   spk::SafePointer<spk::Widget> p_fieldWidget,
+											   const SizePolicy &p_labelPolicy,
+											   const SizePolicy &p_fieldPolicy)
 	{
-		return FormElement{
-			addWidget(p_labelWidget, p_labelPolicy),
-			addWidget(p_fieldWidget, p_fieldPolicy)};
+		return FormElement{addWidget(p_labelWidget, p_labelPolicy), addWidget(p_fieldWidget, p_fieldPolicy)};
 	}
 
-	void FormLayout::removeRow(const FormElement& p_row)
+	void FormLayout::removeRow(const FormElement &p_row)
 	{
 		removeWidget(p_row.labelElement);
 		removeWidget(p_row.fieldElement);
 	}
 
-	size_t FormLayout::nbRow() const { return _elements.size() / 2; }
+	size_t FormLayout::nbRow() const
+	{
+		return _elements.size() / 2;
+	}
 
 	void FormLayout::setGeometry(const spk::Geometry2D &p_geometry)
 	{
@@ -37,19 +38,17 @@ namespace spk
 		bool labelColumnIsExpandable = false;
 		bool fieldColumnIsExpandable = false;
 
-               auto updateColumn = [&](Element *p_element,
-                                                               uint32_t &p_columnWidth,
-                                                               bool     &p_columnIsExpandable)
-               {
-                       if (p_element == nullptr || (p_element->widget() == nullptr && p_element->layout() == nullptr))
-                       {
-                               return;
-                       }
+		auto updateColumn = [&](Element *p_element, uint32_t &p_columnWidth, bool &p_columnIsExpandable)
+		{
+			if (p_element == nullptr || (p_element->widget() == nullptr && p_element->layout() == nullptr))
+			{
+				return;
+			}
 
-                       const spk::Vector2UInt requestedSize = p_element->size();
+			const spk::Vector2UInt requestedSize = p_element->size();
 
-                       switch (p_element->sizePolicy())
-                       {
+			switch (p_element->sizePolicy())
+			{
 			case SizePolicy::Fixed:
 			{
 				p_columnWidth = std::max(p_columnWidth, requestedSize.x);
@@ -58,14 +57,14 @@ namespace spk
 			case SizePolicy::Minimum:
 			case SizePolicy::VerticalExtend:
 			{
-                               p_columnWidth = std::max(p_columnWidth, p_element->minimalSize().x);
-                               break;
-                       }
-                       case SizePolicy::Maximum:
-                       {
-                               p_columnWidth = std::min(p_columnWidth, p_element->maximalSize().x);
-                               break;
-                       }
+				p_columnWidth = std::max(p_columnWidth, p_element->minimalSize().x);
+				break;
+			}
+			case SizePolicy::Maximum:
+			{
+				p_columnWidth = std::min(p_columnWidth, p_element->maximalSize().x);
+				break;
+			}
 			case SizePolicy::Extend:
 			case SizePolicy::HorizontalExtend:
 			{
@@ -75,12 +74,12 @@ namespace spk
 			}
 		};
 
-               auto heightForElement = [](Element *p_element) -> int
-               {
-                       if (p_element == nullptr || (p_element->widget() == nullptr && p_element->layout() == nullptr))
-                       {
-                               return 0;
-                       }
+		auto heightForElement = [](Element *p_element) -> int
+		{
+			if (p_element == nullptr || (p_element->widget() == nullptr && p_element->layout() == nullptr))
+			{
+				return 0;
+			}
 
 			switch (p_element->sizePolicy())
 			{
@@ -91,17 +90,17 @@ namespace spk
 			case SizePolicy::Minimum:
 			case SizePolicy::HorizontalExtend:
 			{
-                               return p_element->minimalSize().y;
-                       }
-                       case SizePolicy::Maximum:
-                       {
-                               return p_element->maximalSize().y;
-                       }
-                       case SizePolicy::Extend:
-                       case SizePolicy::VerticalExtend:
-                       {
-                               return p_element->minimalSize().y;
-                       }
+				return p_element->minimalSize().y;
+			}
+			case SizePolicy::Maximum:
+			{
+				return p_element->maximalSize().y;
+			}
+			case SizePolicy::Extend:
+			case SizePolicy::VerticalExtend:
+			{
+				return p_element->minimalSize().y;
+			}
 			}
 			return 0;
 		};
@@ -116,20 +115,18 @@ namespace spk
 
 			rowHeights[row] = std::max(heightForElement(labelElement), heightForElement(fieldElement));
 
-			if ((labelElement && (labelElement->sizePolicy() == SizePolicy::Extend ||
-                                 labelElement->sizePolicy() == SizePolicy::VerticalExtend)) ||
-				(fieldElement && (fieldElement->sizePolicy() == SizePolicy::Extend ||
-                                 fieldElement->sizePolicy() == SizePolicy::VerticalExtend)))
+			if ((labelElement && (labelElement->sizePolicy() == SizePolicy::Extend || labelElement->sizePolicy() == SizePolicy::VerticalExtend)) ||
+				(fieldElement && (fieldElement->sizePolicy() == SizePolicy::Extend || fieldElement->sizePolicy() == SizePolicy::VerticalExtend)))
 			{
 				rowIsExpandable[row] = true;
 			}
 		}
 
-		const uint32_t minimumTotalWidth  = labelColumnWidth + fieldColumnWidth + _elementPadding.x;
+		const uint32_t minimumTotalWidth = labelColumnWidth + fieldColumnWidth + _elementPadding.x;
 		const uint32_t minimumTotalHeight = static_cast<uint32_t>(std::accumulate(rowHeights.begin(), rowHeights.end(), 0)) +
 											static_cast<uint32_t>((rowCountValue > 0U ? rowCountValue - 1U : 0U) * _elementPadding.y);
 
-		uint32_t extraWidth  = p_geometry.size.x > minimumTotalWidth ? p_geometry.size.x - minimumTotalWidth  : 0U;
+		uint32_t extraWidth = p_geometry.size.x > minimumTotalWidth ? p_geometry.size.x - minimumTotalWidth : 0U;
 		uint32_t extraHeight = p_geometry.size.y > minimumTotalHeight ? p_geometry.size.y - minimumTotalHeight : 0U;
 
 		uint32_t expandableColumnCount = (labelColumnIsExpandable ? 1 : 0) + (fieldColumnIsExpandable ? 1 : 0);
@@ -162,7 +159,7 @@ namespace spk
 			expandableRowCount = static_cast<uint32_t>(rowCountValue);
 		}
 
-		uint32_t heightShare     = extraHeight / expandableRowCount;
+		uint32_t heightShare = extraHeight / expandableRowCount;
 		uint32_t heightRemainder = extraHeight % expandableRowCount;
 
 		for (std::size_t row = 0; row < rowCountValue; ++row)
@@ -179,34 +176,28 @@ namespace spk
 		{
 			uint32_t currentX = p_geometry.anchor.x;
 
-			spk::Geometry2D labelCellGeometry(
-				{currentX, currentY},
-				{labelColumnWidth, rowHeights[row]}
-			);
+			spk::Geometry2D labelCellGeometry({currentX, currentY}, {labelColumnWidth, rowHeights[row]});
 
-			spk::Geometry2D fieldCellGeometry(
-				{currentX + labelColumnWidth + _elementPadding.x, currentY},
-				{fieldColumnWidth, rowHeights[row]}
-			);
+			spk::Geometry2D fieldCellGeometry({currentX + labelColumnWidth + _elementPadding.x, currentY}, {fieldColumnWidth, rowHeights[row]});
 
-                       Element *labelElement  = _elements[2 * row].get();
-                       if (labelElement != nullptr && (labelElement->widget() != nullptr || labelElement->layout() != nullptr))
-                       {
-                               labelElement->setGeometry(labelCellGeometry);
-                       }
+			Element *labelElement = _elements[2 * row].get();
+			if (labelElement != nullptr && (labelElement->widget() != nullptr || labelElement->layout() != nullptr))
+			{
+				labelElement->setGeometry(labelCellGeometry);
+			}
 
-                       Element *fieldElement  = _elements[2 * row + 1].get();
-                       if (fieldElement != nullptr && (fieldElement->widget() != nullptr || fieldElement->layout() != nullptr))
-                       {
-                               fieldElement->setGeometry(fieldCellGeometry);
-                       }
+			Element *fieldElement = _elements[2 * row + 1].get();
+			if (fieldElement != nullptr && (fieldElement->widget() != nullptr || fieldElement->layout() != nullptr))
+			{
+				fieldElement->setGeometry(fieldCellGeometry);
+			}
 
 			currentY += static_cast<uint32_t>(rowHeights[row]) + _elementPadding.y;
 		}
 	}
 
 	spk::Vector2UInt FormLayout::minimalSize() const
-{
+	{
 		const std::size_t rowCountValue = nbRow();
 		if (rowCountValue == 0)
 		{
@@ -217,27 +208,27 @@ namespace spk
 		uint32_t fieldColumnWidth = 0;
 		std::vector<uint32_t> rowHeights(rowCountValue, 0);
 
-               const auto elementMinW = [](Element* p_element) -> uint32_t
-               {
-                       if (p_element && (p_element->widget() != nullptr || p_element->layout() != nullptr))
-                       {
-                               return p_element->minimalSize().x;
-                       }
-                       return 0;
-               };
-               const auto elementMinH = [](Element* p_element) -> uint32_t
-               {
-                       if (p_element && (p_element->widget() != nullptr || p_element->layout() != nullptr))
-                       {
-                               return p_element->minimalSize().y;
-                       }
-                       return 0;
-               };
+		const auto elementMinW = [](Element *p_element) -> uint32_t
+		{
+			if (p_element && (p_element->widget() != nullptr || p_element->layout() != nullptr))
+			{
+				return p_element->minimalSize().x;
+			}
+			return 0;
+		};
+		const auto elementMinH = [](Element *p_element) -> uint32_t
+		{
+			if (p_element && (p_element->widget() != nullptr || p_element->layout() != nullptr))
+			{
+				return p_element->minimalSize().y;
+			}
+			return 0;
+		};
 
 		for (std::size_t row = 0; row < rowCountValue; ++row)
 		{
-			Element* labelElement  = _elements[2 * row].get();
-			Element* fieldElement  = _elements[2 * row + 1].get();
+			Element *labelElement = _elements[2 * row].get();
+			Element *fieldElement = _elements[2 * row + 1].get();
 
 			labelColumnWidth = std::max(labelColumnWidth, elementMinW(labelElement));
 			fieldColumnWidth = std::max(fieldColumnWidth, elementMinW(fieldElement));
@@ -245,10 +236,9 @@ namespace spk
 			rowHeights[row] = std::max(elementMinH(labelElement), elementMinH(fieldElement));
 		}
 
-		const uint32_t minimumTotalWidth  = labelColumnWidth + fieldColumnWidth + _elementPadding.x;
-		const uint32_t minimumTotalHeight =
-			static_cast<uint32_t>(std::accumulate(rowHeights.begin(), rowHeights.end(), 0U)) +
-			static_cast<uint32_t>((rowCountValue > 0 ? rowCountValue - 1 : 0) * _elementPadding.y);
+		const uint32_t minimumTotalWidth = labelColumnWidth + fieldColumnWidth + _elementPadding.x;
+		const uint32_t minimumTotalHeight = static_cast<uint32_t>(std::accumulate(rowHeights.begin(), rowHeights.end(), 0U)) +
+											static_cast<uint32_t>((rowCountValue > 0 ? rowCountValue - 1 : 0) * _elementPadding.y);
 
 		return {minimumTotalWidth, minimumTotalHeight};
 	}

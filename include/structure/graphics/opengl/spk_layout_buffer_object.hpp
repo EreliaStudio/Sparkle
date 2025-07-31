@@ -16,7 +16,7 @@
 #include <iostream>
 
 template <typename T>
-using element_type_t = std::remove_reference_t<decltype(*std::begin(std::declval<T &>()))>;
+using ElementTypeT = std::remove_reference_t<decltype(*std::begin(std::declval<T &>()))>;
 
 namespace spk::OpenGL
 {
@@ -27,7 +27,8 @@ namespace spk::OpenGL
 		{
 			using Index = GLuint;
 
-			enum class Type {
+			enum class Type
+			{
 				None,
 				Float,
 				Bool,
@@ -55,7 +56,7 @@ namespace spk::OpenGL
 
 			static size_t typeSize(Type p_type);
 
-			bool operator<(const Attribute& other) const;
+			bool operator<(const Attribute &other) const;
 		};
 
 	private:
@@ -101,7 +102,7 @@ namespace spk::OpenGL
 			if (sizeof(TType) != _vertexSize)
 			{
 				GENERATE_ERROR("Size mismatch in LayoutBufferObject: Expected vertex size is " + std::to_string(_vertexSize) +
-										 " bytes, but received " + std::to_string(sizeof(TType)) + " bytes.");
+							   " bytes, but received " + std::to_string(sizeof(TType)) + " bytes.");
 			}
 			VertexBufferObject::append(data.data(), data.size() * sizeof(TType));
 		}
@@ -120,7 +121,7 @@ namespace spk::OpenGL
 			}
 		LayoutBufferObject &operator<<(const Container &container)
 		{
-			append(std::span<const element_type_t<Container>>(std::data(container), std::size(container)));
+			append(std::span<const ElementTypeT<Container>>(std::data(container), std::size(container)));
 			return *this;
 		}
 
@@ -143,7 +144,7 @@ namespace spk::OpenGL
 			if (_vertexSize % sizeof(TType) != 0)
 			{
 				GENERATE_ERROR("LayoutBufferObject::get() - The buffer element size (" + std::to_string(_vertexSize) +
-										 " bytes) is incompatible with TType size (" + std::to_string(sizeof(TType)) + " bytes).");
+							   " bytes) is incompatible with TType size (" + std::to_string(sizeof(TType)) + " bytes).");
 			}
 
 			size_t elementCount = totalSize / sizeof(TType);

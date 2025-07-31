@@ -4,31 +4,31 @@ namespace spk
 {
 	spk::ActivableObject::Contract GameObject::constructAwakeContract()
 	{
-		return std::move(addActivationCallback(
+		return (std::move(addActivationCallback(
 			[&]()
 			{
-				for (auto &component : _components)
+			for (auto &component : _components)
+			{
+				if (component->isActive() == true)
 				{
-					if (component->isActive() == true)
-					{
-						component->awake();
-					}
+						component->awake());
 				}
+			}
 			}));
 	}
 
 	spk::ActivableObject::Contract GameObject::constructSleepContract()
 	{
-		return std::move(addDeactivationCallback(
+		return (std::move(addDeactivationCallback(
 			[&]()
 			{
-				for (auto &component : _components)
+			for (auto &component : _components)
+			{
+				if (component->isActive() == true)
 				{
-					if (component->isActive() == true)
-					{
-						component->sleep();
-					}
+						component->sleep());
 				}
+			}
 			}));
 	}
 
@@ -97,7 +97,7 @@ namespace spk
 
 	bool GameObject::containTag(const std::wstring &p_tag) const
 	{
-		return _tags.find(p_tag) != _tags.end();
+		return (_tags.find(p_tag) != _tags.end());
 	}
 
 	const std::wstring &GameObject::name() const
@@ -143,7 +143,8 @@ namespace spk
 	void GameObject::removeComponent(const std::wstring &p_name)
 	{
 		std::unique_lock<std::mutex> lock(_componentMutex);
-		auto it = std::remove_if(_components.begin(), _components.end(), [&](const std::unique_ptr<Component> &p_c) { return p_c->name() == p_name; });
+		auto it =
+			std::remove_if(_components.begin(), _components.end(), [&](const std::unique_ptr<Component> &p_c) { return (p_c->name() == p_name); });
 
 		it->get()->sleep();
 		it->get()->stop();
@@ -388,27 +389,27 @@ namespace spk
 	bool GameObject::contains(const std::wstring &p_name) const
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
-		return std::any_of(
-			children().begin(), children().end(), [&](const spk::SafePointer<GameObject> &p_entity) { return p_entity->name() == p_name; });
+		return (std::any_of(
+			children().begin(), children().end(), [&](const spk::SafePointer<GameObject> &p_entity) { return (p_entity->name() == p_name); }));
 	}
 
 	size_t GameObject::count(const std::wstring &p_name) const
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
-		return std::count_if(
-			children().begin(), children().end(), [&](const spk::SafePointer<GameObject> &p_entity) { return p_entity->name() == p_name; });
+		return (std::count_if(
+			children().begin(), children().end(), [&](const spk::SafePointer<GameObject> &p_entity) { return (p_entity->name() == p_name); }));
 	}
 
 	spk::SafePointer<GameObject> GameObject::getChildByTag(const std::wstring &p_tag)
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
-		return getChildByTags(std::span<const std::wstring>(&p_tag, 1));
+		return (getChildByTags(std::span<const std::wstring>(&p_tag, 1)));
 	}
 
 	spk::SafePointer<const GameObject> GameObject::getChildByTag(const std::wstring &p_tag) const
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
-		return getChildByTags(std::span<const std::wstring>(&p_tag, 1));
+		return (getChildByTags(std::span<const std::wstring>(&p_tag, 1)));
 	}
 
 	std::vector<spk::SafePointer<GameObject>> GameObject::getChildrenByTag(const std::wstring &p_tag)
@@ -437,11 +438,11 @@ namespace spk
 	{
 		if (p_op == spk::BinaryOperator::AND)
 		{
-			return std::all_of(p_tags.begin(), p_tags.end(), [&](const std::wstring &p_tag) { return p_entity.containTag(p_tag); });
+			return (std::all_of(p_tags.begin(), p_tags.end(), [&](const std::wstring &p_tag) { return (p_entity.containTag(p_tag)); }));
 		}
 		else
 		{
-			return std::any_of(p_tags.begin(), p_tags.end(), [&](const std::wstring &p_tag) { return p_entity.containTag(p_tag); });
+			return (std::any_of(p_tags.begin(), p_tags.end(), [&](const std::wstring &p_tag) { return (p_entity.containTag(p_tag)); }));
 		}
 	}
 
@@ -452,10 +453,10 @@ namespace spk
 		{
 			if (matchesTags(*child, p_tags, p_binaryOperator))
 			{
-				return child;
+				return (child);
 			}
 		}
-		return nullptr;
+		return (nullptr);
 	}
 
 	spk::SafePointer<const GameObject> GameObject::getChildByTags(const std::span<const std::wstring> &p_tags,
@@ -466,10 +467,10 @@ namespace spk
 		{
 			if (matchesTags(*child, p_tags, p_binaryOperator))
 			{
-				return child;
+				return (child);
 			}
 		}
-		return nullptr;
+		return (nullptr);
 	}
 
 	std::vector<spk::SafePointer<GameObject>> GameObject::getChildrenByTags(const std::span<const std::wstring> &p_tags,
@@ -485,7 +486,7 @@ namespace spk
 				result.push_back(child);
 			}
 		}
-		return result;
+		return (result);
 	}
 
 	std::vector<spk::SafePointer<const GameObject>> GameObject::getChildrenByTags(const std::span<const std::wstring> &p_tags,
@@ -501,22 +502,22 @@ namespace spk
 				result.push_back(child);
 			}
 		}
-		return result;
+		return (result);
 	}
 
 	bool GameObject::containsTags(const std::span<const std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator) const
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
-		return std::any_of(children().begin(),
-						   children().end(),
-						   [&](const spk::SafePointer<const GameObject> &p_child) { return matchesTags(*p_child, p_tags, p_binaryOperator); });
+		return (std::any_of(children().begin(),
+							children().end(),
+							[&](const spk::SafePointer<const GameObject> &p_child) { return (matchesTags(*p_child, p_tags, p_binaryOperator)); }));
 	}
 
 	size_t GameObject::countTags(const std::span<const std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator) const
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
-		return std::count_if(children().begin(),
-							 children().end(),
-							 [&](const spk::SafePointer<const GameObject> &p_child) { return matchesTags(*p_child, p_tags, p_binaryOperator); });
+		return (std::count_if(children().begin(),
+							  children().end(),
+							  [&](const spk::SafePointer<const GameObject> &p_child) { return (matchesTags(*p_child, p_tags, p_binaryOperator)); }));
 	}
 }

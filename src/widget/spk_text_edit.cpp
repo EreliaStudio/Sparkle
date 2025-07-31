@@ -47,7 +47,7 @@ namespace spk
 		_backgroundRenderer.prepare(originGeometry, layer(), _cornerSize);
 		_backgroundRenderer.validate();
 
-		std::wstring tmpText = renderedText(); 
+		std::wstring tmpText = renderedText();
 
 		_fontRenderer.clear();
 		spk::Vector2Int textAnchor = _fontRenderer.computeTextAnchor(
@@ -57,8 +57,7 @@ namespace spk
 
 		_cursorRenderer.clear();
 		spk::Vector2UInt prevTextSize = _fontRenderer.computeTextSize(tmpText.substr(_lowerCursor, _cursor - _lowerCursor));
-		_cursorRenderer.prepareSquare(spk::Geometry2D(prevTextSize.x + _cornerSize.x - 2, _cornerSize.y,
-														2, geometry().height - _cornerSize.y * 2),
+		_cursorRenderer.prepareSquare(spk::Geometry2D(prevTextSize.x + _cornerSize.x - 2, _cornerSize.y, 2, geometry().height - _cornerSize.y * 2),
 									  layer() + 0.02f);
 		_cursorRenderer.validate();
 	}
@@ -81,7 +80,7 @@ namespace spk
 			bool lastRenderCursor = _renderCursor;
 
 			_renderCursor = (p_event.time.milliseconds / 250) % 2 == 0;
-		
+
 			if (lastRenderCursor != _renderCursor)
 			{
 				requestPaint();
@@ -214,10 +213,8 @@ namespace spk
 		_placeholder(L"Enter text here")
 	{
 		_cursorRenderer.setColor(spk::Color(0, 0, 0, 150));
-		
-		_onFontResizeContract = _fontRenderer.subscribeToFontEdition([&]() {
-				requireGeometryUpdate();
-			});
+
+		_onFontResizeContract = _fontRenderer.subscribeToFontEdition([&]() { requireGeometryUpdate(); });
 
 		setFontColor(spk::Color::white, spk::Color::black);
 		setTextAlignment(spk::HorizontalAlignment::Left, spk::VerticalAlignment::Centered);
@@ -231,7 +228,7 @@ namespace spk
 	}
 
 	void TextEdit::setObscured(bool p_state)
-	{	
+	{
 		_isObscured = p_state;
 		requireGeometryUpdate();
 	}
@@ -291,7 +288,7 @@ namespace spk
 	{
 		return (_text.empty() == false);
 	}
-	
+
 	bool TextEdit::isObscured() const
 	{
 		return (_isObscured);

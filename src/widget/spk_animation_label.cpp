@@ -12,12 +12,12 @@ namespace spk
 		}
 	}
 
-	void AnimationLabel::_onPaintEvent(spk::PaintEvent&)
+	void AnimationLabel::_onPaintEvent(spk::PaintEvent &p_event)
 	{
 		_textureRenderer.render();
 	}
 
-	void AnimationLabel::_onUpdateEvent(spk::UpdateEvent&)
+	void AnimationLabel::_onUpdateEvent(spk::UpdateEvent &p_event)
 	{
 		if (_timer.state() != spk::Timer::State::Running && _spriteSheet && _spriteSheet->sprites().size() > 0)
 		{
@@ -40,13 +40,13 @@ namespace spk
 		}
 	}
 
-	AnimationLabel::AnimationLabel(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+	AnimationLabel::AnimationLabel(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
 		spk::Widget(p_name, p_parent)
 	{
 		setSpriteSheet(nullptr);
 	}
 
-	void AnimationLabel::setSpriteSheet(const spk::SafePointer<spk::SpriteSheet>& p_spriteSheet)
+	void AnimationLabel::setSpriteSheet(const spk::SafePointer<spk::SpriteSheet> &p_spriteSheet)
 	{
 		_spriteSheet = p_spriteSheet;
 		_textureRenderer.setTexture(p_spriteSheet);
@@ -61,7 +61,7 @@ namespace spk
 		return _spriteSheet;
 	}
 
-	void AnimationLabel::setLoopSpeed(const spk::Duration& p_duration)
+	void AnimationLabel::setLoopSpeed(const spk::Duration &p_duration)
 	{
 		_timer = spk::Timer(p_duration);
 		_currentSprite = _rangeStart;

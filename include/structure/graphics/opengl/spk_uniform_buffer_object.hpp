@@ -33,13 +33,13 @@ namespace spk::OpenGL
 		spk::DataBufferLayout _dataBufferLayout;
 		std::unordered_map<GLint, GLint> _programBlockIndex;
 
-		void _loadElement(const spk::JSON::Object& p_elemDesc);
-		void _loadElement(spk::DataBufferLayout::Element& p_parent, const spk::JSON::Object& p_elemDesc);
+		void _loadElement(const spk::JSON::Object &p_elemDesc);
+		void _loadElement(spk::DataBufferLayout::Element &p_parent, const spk::JSON::Object &p_elemDesc);
 
 	public:
 		UniformBufferObject() = default;
 		UniformBufferObject(const std::wstring &p_blockName, BindingPoint p_bindingPoint, size_t p_size);
-		UniformBufferObject(const spk::JSON::Object& p_desc);
+		UniformBufferObject(const spk::JSON::Object &p_desc);
 
 		UniformBufferObject(const UniformBufferObject &p_other);
 		UniformBufferObject(UniformBufferObject &&p_other);
@@ -61,7 +61,8 @@ namespace spk::OpenGL
 		bool contains(const std::wstring &p_name);
 		void resize(size_t p_size) override;
 		DataBufferLayout::Element &addElement(const std::wstring &p_name, size_t p_offset, size_t p_size);
-		DataBufferLayout::Element &addElement(const std::wstring &p_name, size_t p_offset, size_t p_nbElement, size_t p_elementSize, size_t p_elementPadding);
+		DataBufferLayout::Element &
+		addElement(const std::wstring &p_name, size_t p_offset, size_t p_nbElement, size_t p_elementSize, size_t p_elementPadding);
 
 		void removeElement(const std::wstring &p_name);
 

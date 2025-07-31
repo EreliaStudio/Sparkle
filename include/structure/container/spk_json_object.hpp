@@ -9,8 +9,8 @@
 #include <variant>
 #include <vector>
 
-#include "utils/spk_string_utils.hpp"
 #include "spk_sfinae.hpp"
+#include "utils/spk_string_utils.hpp"
 
 #include "structure/system/spk_exception.hpp"
 
@@ -38,7 +38,7 @@ namespace spk
 		public:
 			Object(const std::wstring &p_name = L"Unnamed");
 
-			static Object fromString(const std::wstring& p_content);
+			static Object fromString(const std::wstring &p_content);
 
 			void reset();
 
@@ -87,12 +87,10 @@ namespace spk
 				}
 				return (std::holds_alternative<TType>(std::get<Unit>(_content)));
 			}
-			
+
 			template <typename TType,
-					std::enable_if_t<
-						!std::is_same_v<std::decay_t<TType>, Object> &&
-						!spk::IsJSONable<std::decay_t<TType>>::value, int> = 0>
-			void set(const TType& p_value)
+					  std::enable_if_t<!std::is_same_v<std::decay_t<TType>, Object> && !spk::IsJSONable<std::decay_t<TType>>::value, int> = 0>
+			void set(const TType &p_value)
 			{
 				if (_initialized == false)
 				{
@@ -102,74 +100,66 @@ namespace spk
 				std::get<Unit>(_content) = p_value;
 			}
 
-			template <typename TType,
-					std::enable_if_t<std::is_same_v<std::decay_t<TType>, Object>, int> = 0>
-			void set(const TType& p_value)
+			template <typename TType, std::enable_if_t<std::is_same_v<std::decay_t<TType>, Object>, int> = 0>
+			void set(const TType &p_value)
 			{
-				Object* tmp = new Object(p_value);
-				set<Object*>(tmp);
+				Object *tmp = new Object(p_value);
+				set<Object *>(tmp);
 			}
 
-			template <typename TType,
-					std::enable_if_t<spk::IsJSONable<std::decay_t<TType>>::value, int> = 0>
-			void set(const TType& p_value)
+			template <typename TType, std::enable_if_t<spk::IsJSONable<std::decay_t<TType>>::value, int> = 0>
+			void set(const TType &p_value)
 			{
-				Object* nested = new Object(p_value.toJSON());
-				set<Object*>(nested);
+				Object *nested = new Object(p_value.toJSON());
+				set<Object *>(nested);
 			}
 
-			template <typename TType,
-					std::enable_if_t<
-						!spk::IsJSONable<std::decay_t<TType>>::value, int> = 0>
-			Object& operator=(const TType& rhs)
+			template <typename TType, std::enable_if_t<!spk::IsJSONable<std::decay_t<TType>>::value, int> = 0>
+			Object &operator=(const TType &rhs)
 			{
 				set(rhs);
 				return *this;
 			}
 
-			template <typename TType,
-					std::enable_if_t<spk::IsJSONable<std::decay_t<TType>>::value, int> = 0>
-			Object& operator=(const TType& rhs)                // JSON-able objects
+			template <typename TType, std::enable_if_t<spk::IsJSONable<std::decay_t<TType>>::value, int> = 0>
+			Object &operator=(const TType &rhs) // JSON-able objects
 			{
 				set(rhs);
 				return *this;
 			}
 
-			template <typename TType,
-					std::enable_if_t<
-						!spk::IsJSONable<std::decay_t<TType>>::value, int> = 0>
-			const TType& as() const
+			template <typename TType, std::enable_if_t<!spk::IsJSONable<std::decay_t<TType>>::value, int> = 0>
+			const TType &as() const
 			{
 				if (isUnit() == false)
+				{
 					GENERATE_ERROR("Can't request a Unit from a non-Unit node");
+				}
 
-				const Unit& unit = std::get<Unit>(_content);
-				const TType* value = std::get_if<TType>(&unit);
+				const Unit &unit = std::get<Unit>(_content);
+				const TType *value = std::get_if<TType>(&unit);
 				if (value == nullptr)
 				{
-					std::string types[] = {"bool", "long", "double",
-										"std::wstring", "Object*", "std::nullptr_t"};
-					GENERATE_ERROR("Wrong type request for object [" +
-								spk::StringUtils::wstringToString(_name) + "] : wanted [" +
-								types[Unit(TType()).index()] + "] but stored [" +
-								types[unit.index()] + "]");
+					std::string types[] = {"bool", "long", "double", "std::wstring", "Object*", "std::nullptr_t"};
+					GENERATE_ERROR("Wrong type request for object [" + spk::StringUtils::wstringToString(_name) + "] : wanted [" +
+								   types[Unit(TType()).index()] + "] but stored [" + types[unit.index()] + "]");
 				}
 				return *value;
 			}
 
-			template <typename TType,
-					std::enable_if_t<
-						spk::IsJSONable<std::decay_t<TType>>::value, int> = 0>
+			template <typename TType, std::enable_if_t<spk::IsJSONable<std::decay_t<TType>>::value, int> = 0>
 			TType as() const
 			{
-				const Object* src = nullptr;
+				const Object *src = nullptr;
 
 				if (isUnit())
 				{
-					const Unit& unit = std::get<Unit>(_content);
-					const Object* const* ptr = std::get_if<Object*>(&unit);
+					const Unit &unit = std::get<Unit>(_content);
+					const Object *const *ptr = std::get_if<Object *>(&unit);
 					if (ptr != nullptr)
+					{
 						src = *ptr;
+					}
 				}
 				else if (isObject())
 				{
@@ -177,9 +167,10 @@ namespace spk
 				}
 
 				if (src == nullptr)
-					GENERATE_ERROR("Cannot convert object [" +
-								spk::StringUtils::wstringToString(_name) +
-								"] to native type -> no JSON object found.");
+				{
+					GENERATE_ERROR("Cannot convert object [" + spk::StringUtils::wstringToString(_name) +
+								   "] to native type -> no JSON object found.");
+				}
 
 				TType result;
 				result.fromJSON(*src);
