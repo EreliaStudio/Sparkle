@@ -33,7 +33,7 @@ namespace
 		auto first = result.find_first_not_of(p_collapseValue);
 		if (first == StringT::npos)
 		{
-			return ({});
+			return (StringT());
 		}
 
 		auto last = result.find_last_not_of(p_collapseValue);

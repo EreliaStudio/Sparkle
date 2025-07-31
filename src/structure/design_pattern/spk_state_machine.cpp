@@ -110,35 +110,34 @@ namespace spk
 		std::lock_guard<std::recursive_mutex> lock(_mutex);
 		return (_current != nullptr);
 	}
-}
 
-StateMachine::DefaultStep::DefaultStep(std::function<void()> p_onStart,
-									   std::function<void()> p_onPending,
-									   std::function<StateMachine::Step::ID()> p_onFinish) :
-	onStartCallback(std::move(p_onStart)),
-	onPendingCallback(std::move(p_onPending)),
-	onFinishCallback(std::move(p_onFinish))
-{
-}
-
-void StateMachine::DefaultStep::onStart()
-{
-	if (onStartCallback)
+	DefaultStep::DefaultStep(std::function<void()> p_onStart,
+										   std::function<void()> p_onPending,
+										   std::function<StateMachine::Step::ID()> p_onFinish) :
+		onStartCallback(std::move(p_onStart)),
+		onPendingCallback(std::move(p_onPending)),
+		onFinishCallback(std::move(p_onFinish))
 	{
-		onStartCallback();
 	}
-}
 
-void StateMachine::DefaultStep::onPending()
-{
-	if (onPendingCallback)
+	void DefaultStep::onStart()
 	{
-		onPendingCallback();
+		if (onStartCallback)
+		{
+			onStartCallback();
+		}
 	}
-}
 
-StateMachine::Step::ID StateMachine::DefaultStep::onFinish()
-{
-	return (onFinishCallback ? onFinishCallback() : L"");
-}
+	void DefaultStep::onPending()
+	{
+		if (onPendingCallback)
+		{
+			onPendingCallback();
+		}
+	}
+
+	StateMachine::Step::ID DefaultStep::onFinish()
+	{
+		return (onFinishCallback ? onFinishCallback() : L"");
+	}
 }
