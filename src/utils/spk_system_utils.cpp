@@ -40,10 +40,10 @@ namespace spk
 		}
 	}
 
-	Duration Duration::operator-() const
-	{
-		return Duration(-nanoseconds, TimeUnit::Nanosecond);
-	}
+       Duration Duration::operator-() const
+       {
+               return (Duration(-nanoseconds, TimeUnit::Nanosecond));
+       }
 
 	Duration Duration::operator+(const Duration &p_other) const
 	{
@@ -111,13 +111,13 @@ namespace spk
 	Timestamp Timestamp::operator+(const Duration &p_other) const
 	{
 		long long sumNs = this->nanoseconds + p_other.nanoseconds;
-		return fromNanoseconds(sumNs);
+return (fromNanoseconds(sumNs));
 	}
 
 	Timestamp Timestamp::operator-(const Duration &p_other) const
 	{
 		long long diffNs = this->nanoseconds - p_other.nanoseconds;
-		return fromNanoseconds(diffNs);
+return (fromNanoseconds(diffNs));
 	}
 
 	Timestamp &Timestamp::operator+=(const Duration &p_other)
@@ -125,7 +125,7 @@ namespace spk
 		this->nanoseconds += p_other.nanoseconds;
 		this->milliseconds += p_other.milliseconds;
 		this->seconds += p_other.seconds;
-		return *this;
+return (*this);
 	}
 
 	Timestamp &Timestamp::operator-=(const Duration &p_other)
@@ -133,12 +133,12 @@ namespace spk
 		this->nanoseconds -= p_other.nanoseconds;
 		this->milliseconds -= p_other.milliseconds;
 		this->seconds -= p_other.seconds;
-		return *this;
+return (*this);
 	}
 
 	bool Timestamp::operator==(const Timestamp &p_other) const
 	{
-		return this->milliseconds == p_other.milliseconds;
+return (this->milliseconds == p_other.milliseconds);
 	}
 
 	bool Timestamp::operator!=(const Timestamp &p_other) const
@@ -148,37 +148,52 @@ namespace spk
 
 	bool Timestamp::operator<(const Timestamp &p_other) const
 	{
-		return this->milliseconds < p_other.milliseconds;
+return (this->milliseconds < p_other.milliseconds);
 	}
 
 	bool Timestamp::operator>(const Timestamp &p_other) const
 	{
-		return this->milliseconds > p_other.milliseconds;
+return (this->milliseconds > p_other.milliseconds);
 	}
 
 	bool Timestamp::operator<=(const Timestamp &p_other) const
 	{
-		return this->milliseconds <= p_other.milliseconds;
+return (this->milliseconds <= p_other.milliseconds);
 	}
 
 	bool Timestamp::operator>=(const Timestamp &p_other) const
 	{
-		return this->milliseconds >= p_other.milliseconds;
+return (this->milliseconds >= p_other.milliseconds);
 	}
 
-	Timestamp Timestamp::fromNanoseconds(long long p_nanoseconds)
-	{
-		Timestamp ts;
-		ts.nanoseconds = p_nanoseconds;
-		ts.milliseconds = p_nanoseconds / 1'000'000LL;
-		ts.seconds = static_cast<double>(p_nanoseconds) / 1'000'000'000.0;
-		return ts;
-	}
+       Timestamp Timestamp::fromNanoseconds(long long p_nanoseconds)
+       {
+               Timestamp timestampResult;
+               timestampResult.nanoseconds = p_nanoseconds;
+               timestampResult.milliseconds = p_nanoseconds / 1'000'000LL;
+               timestampResult.seconds = static_cast<double>(p_nanoseconds) / 1'000'000'000.0;
+               return (timestampResult);
+       }
+}
+
+spk::Duration operator""_s(long double p_value)
+{
+       return (spk::Duration(static_cast<long double>(p_value), spk::TimeUnit::Second));
+}
+
+spk::Duration operator""_ms(unsigned long long p_value)
+{
+       return (spk::Duration(static_cast<long double>(p_value), spk::TimeUnit::Millisecond));
+}
+
+spk::Duration operator""_ns(unsigned long long p_value)
+{
+       return (spk::Duration(static_cast<long double>(p_value), spk::TimeUnit::Nanosecond));
 }
 
 namespace spk::SystemUtils
 {
-	spk::Timestamp getTime()
+       spk::Timestamp getTime()
 	{
 		static bool initialized = false;
 		static LARGE_INTEGER frequency = {};
@@ -203,9 +218,9 @@ namespace spk::SystemUtils
 			LARGE_INTEGER counter;
 			::QueryPerformanceCounter(&counter);
 
-			double qpcTimeNowSec = static_cast<double>(counter.QuadPart) / static_cast<double>(frequency.QuadPart);
+double queryPerformanceCounterTimeNowSec = static_cast<double>(counter.QuadPart) / static_cast<double>(frequency.QuadPart);
 
-			baseUnixEpochSec = currentTimeFileTimeSec - qpcTimeNowSec;
+baseUnixEpochSec = currentTimeFileTimeSec - queryPerformanceCounterTimeNowSec;
 
 			initialized = true;
 		}
@@ -213,15 +228,15 @@ namespace spk::SystemUtils
 		LARGE_INTEGER counter;
 		::QueryPerformanceCounter(&counter);
 
-		double qpcTimeSec = static_cast<double>(counter.QuadPart) / static_cast<double>(frequency.QuadPart);
+double queryPerformanceCounterTimeSec = static_cast<double>(counter.QuadPart) / static_cast<double>(frequency.QuadPart);
 
-		double currentTimeSec = qpcTimeSec + baseUnixEpochSec;
+double currentTimeSec = queryPerformanceCounterTimeSec + baseUnixEpochSec;
 
 		Timestamp timestamp;
 		timestamp.seconds = currentTimeSec;
 		timestamp.milliseconds = static_cast<long long>(currentTimeSec * 1'000.0);
 		timestamp.nanoseconds = static_cast<long long>(currentTimeSec * 1'000'000'000.0);
 
-		return timestamp;
+return (timestamp);
 	}
 }

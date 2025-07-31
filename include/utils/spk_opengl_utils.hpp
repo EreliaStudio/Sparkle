@@ -12,11 +12,11 @@
 
 namespace spk::OpenGLUtils
 {
-	template <size_t nbBytes>
-	struct Padding
-	{
-		std::array<float, nbBytes> reserved;
-	};
+template <size_t numberOfBytes>
+struct Padding
+{
+std::array<float, numberOfBytes> reserved;
+};
 
 	std::wstring to_wstring(const GLenum &p_type);
 
