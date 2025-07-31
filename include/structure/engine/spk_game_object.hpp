@@ -65,15 +65,15 @@ namespace spk
 
 						  if (aNoPriority && bNoPriority)
 						  {
-							  return false;
+							  return (false);
 						  }
 
 						  if (aNoPriority != bNoPriority)
 						  {
-							  return !aNoPriority;
+							  return (!aNoPriority);
 						  }
 
-						  return priorityA > priorityB;
+						  return (priorityA > priorityB);
 					  });
 
 			p_needSorting = false;
@@ -140,7 +140,7 @@ namespace spk
 				{
 					if (p_name.empty() || castedComponent->name() == p_name)
 					{
-						return castedComponent;
+						return (castedComponent);
 					}
 				}
 			}
@@ -163,7 +163,7 @@ namespace spk
 				}
 			}
 
-			return result;
+			return (result);
 		}
 
 		template <typename TComponentType>
@@ -177,7 +177,7 @@ namespace spk
 				{
 					if (p_name.empty() || castedComponent->name() == p_name)
 					{
-						return castedComponent;
+						return (castedComponent);
 					}
 				}
 			}
@@ -200,7 +200,7 @@ namespace spk
 				}
 			}
 
-			return result;
+			return (result);
 		}
 
 		virtual void onPaintEvent(spk::PaintEvent &p_event) final;

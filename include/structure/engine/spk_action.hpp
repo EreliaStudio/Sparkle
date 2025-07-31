@@ -126,57 +126,33 @@ namespace spk
 	using MouseButtonAction = InputAction<spk::Mouse, spk::Mouse::Button>;
 	using ControllerButtonAction = InputAction<spk::Controller, spk::Controller::Button>;
 
-	class MouseMotionAction : public Action
-	{
-	public:
-		enum class Mode
-		{
-			Absolute,
-			Delta
-		};
+       class MouseMotionAction : public Action
+       {
+       public:
+               enum class Mode
+               {
+                       Absolute,
+                       Delta
+               };
 
-	private:
-		std::function<void(const spk::Vector2Int&)> _onTriggerCallback;
-		Mode _mode;
-		spk::SafePointer<const spk::Mouse> _mouse;
+       private:
+               std::function<void(const spk::Vector2Int&)> _onTriggerCallback;
+               Mode _mode;
+               spk::SafePointer<const spk::Mouse> _mouse;
 
-	public:
-		MouseMotionAction(Mode p_mode, const std::function<void(const spk::Vector2Int&)>& p_callback) :
-			_onTriggerCallback(p_callback)
-		{
+       public:
+               MouseMotionAction(Mode p_mode, const std::function<void(const spk::Vector2Int&)>& p_callback);
 
-		}
+               bool isInitialized() const override;
 
-		bool isInitialized() const override
-		{
-			return (_mouse != nullptr);
-		}
-		
-		void initialize(spk::UpdateEvent& p_event) override
-		{
-			_mouse = p_event.mouse;
-		}
+               void initialize(spk::UpdateEvent& p_event) override;
 
-		spk::SafePointer<const spk::Mouse> mouse() const
-		{
-			return (_mouse);
-		}
+               spk::SafePointer<const spk::Mouse> mouse() const;
 
-		void setMouse(spk::SafePointer<const spk::Mouse> p_mouse)
-		{
-			_mouse = p_mouse;
-		}
+               void setMouse(spk::SafePointer<const spk::Mouse> p_mouse);
 
-		void update() override
-		{
-			if (_mouse == nullptr)
-			{
-				GENERATE_ERROR("Can't update an InputAction without device");
-			}
-			
-			_onTriggerCallback(_mode == Mode::Absolute ? _mouse->position : _mouse->deltaPosition);
-		}
-	};
+               void update() override;
+       };
 
 	// Not working, it seem to have a problem with the spk::Controller
 	// class ControllerJoystickAction : public Action
@@ -217,7 +193,7 @@ namespace spk
 
 	// 	spk::SafePointer<const spk::Controller> controller() const
 	// 	{
-	// 		return _controller;
+	// 		return (_controller);
 	// 	}
 
 	// 	void setController(spk::SafePointer<const spk::Controller> p_controller)

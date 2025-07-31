@@ -29,7 +29,7 @@ namespace spk
 
 	bool Mesh::VertexIndex::operator<(const VertexIndex &p_other) const
 	{
-		return std::tie(pointIndex, uvIndex, normalIndex) < std::tie(p_other.pointIndex, p_other.uvIndex, p_other.normalIndex);
+		return (std::tie(pointIndex, uvIndex, normalIndex) < std::tie(p_other.pointIndex, p_other.uvIndex, p_other.normalIndex));
 	}
 
 	bool Mesh::VertexIndex::operator==(const VertexIndex &p_other) const
@@ -39,7 +39,7 @@ namespace spk
 
 	bool Mesh::VertexIndex::operator!=(const VertexIndex &p_other) const
 	{
-		return !(*this == p_other);
+		return (!(*this == p_other));
 	}
 
 	size_t Mesh::addVertex(VertexIndex p_vertex)
@@ -47,12 +47,12 @@ namespace spk
 		auto it = std::find(_vertexIndexes.begin(), _vertexIndexes.end(), p_vertex);
 		if (it != _vertexIndexes.end())
 		{
-			return std::distance(_vertexIndexes.begin(), it);
+			return (std::distance(_vertexIndexes.begin(), it));
 		}
 		else
 		{
 			_vertexIndexes.push_back(p_vertex);
-			return _vertexIndexes.size() - 1;
+			return (_vertexIndexes.size() - 1);
 		}
 	}
 
@@ -65,12 +65,12 @@ namespace spk
 		auto it = std::find(_points.begin(), _points.end(), p_point);
 		if (it != _points.end())
 		{
-			return std::distance(_points.begin(), it);
+			return (std::distance(_points.begin(), it));
 		}
 		else
 		{
 			_points.push_back(p_point);
-			return _points.size() - 1;
+			return (_points.size() - 1);
 		}
 	}
 
@@ -79,12 +79,12 @@ namespace spk
 		auto it = std::find(_UVs.begin(), _UVs.end(), p_uv);
 		if (it != _UVs.end())
 		{
-			return std::distance(_UVs.begin(), it);
+			return (std::distance(_UVs.begin(), it));
 		}
 		else
 		{
 			_UVs.push_back(p_uv);
-			return _UVs.size() - 1;
+			return (_UVs.size() - 1);
 		}
 	}
 
@@ -93,12 +93,12 @@ namespace spk
 		auto it = std::find(_normals.begin(), _normals.end(), p_normal);
 		if (it != _normals.end())
 		{
-			return std::distance(_normals.begin(), it);
+			return (std::distance(_normals.begin(), it));
 		}
 		else
 		{
 			_normals.push_back(p_normal);
-			return _normals.size() - 1;
+			return (_normals.size() - 1);
 		}
 	}
 
@@ -188,7 +188,7 @@ namespace spk
 
 	Mesh::Contract Mesh::subscribeToValidation(const Job &p_job)
 	{
-		return _onValidationContractProvider.subscribe(p_job);
+		return (_onValidationContractProvider.subscribe(p_job));
 	}
 
 	const std::vector<spk::Vector3> &Mesh::points() const
