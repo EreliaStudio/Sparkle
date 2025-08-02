@@ -1,5 +1,5 @@
 #include "structure/engine/spk_transform.hpp"
-#include "structure/engine/spk_game_object.hpp"
+#include "structure/engine/spk_entity.hpp"
 #include "structure/math/spk_quaternion.hpp"
 
 namespace spk
@@ -151,11 +151,11 @@ namespace spk
 		spk::Matrix4x4 rotationMatrix = spk::Matrix4x4::rotation(_rotation);
 
 		spk::Matrix4x4 parentModel = spk::Matrix4x4::identity();
-		spk::SafePointer<GameObject> entityOwner = owner();
+		spk::SafePointer<Entity> entityOwner = owner();
 
 		if (entityOwner != nullptr && entityOwner->parent() != nullptr)
 		{
-			const GameObject *parentEntity = static_cast<const GameObject *>(entityOwner->parent());
+			const Entity *parentEntity = static_cast<const Entity *>(entityOwner->parent());
 			const Transform &parentTransform = parentEntity->transform();
 			parentModel = parentTransform.model();
 		}

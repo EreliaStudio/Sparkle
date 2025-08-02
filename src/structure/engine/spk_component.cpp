@@ -1,6 +1,6 @@
 #include "structure/engine/spk_component.hpp"
 
-#include "structure/engine/spk_game_object.hpp"
+#include "structure/engine/spk_entity.hpp"
 
 namespace spk
 {
@@ -8,8 +8,12 @@ namespace spk
 		_name(p_name),
 		_owner(nullptr)
 	{
-		addActivationCallback([&]() { awake(); }).relinquish();
-		addDeactivationCallback([&]() { sleep(); }).relinquish();
+		addActivationCallback([&]() {
+			awake();
+		}).relinquish();
+		addDeactivationCallback([&]() {
+			sleep();
+		}).relinquish();
 	}
 
 	Component::~Component()
@@ -40,12 +44,12 @@ namespace spk
 		return (_priority);
 	}
 
-	spk::SafePointer<GameObject> Component::owner()
+	spk::SafePointer<Entity> Component::owner()
 	{
 		return (_owner);
 	}
 
-	const spk::SafePointer<const GameObject> Component::owner() const
+	const spk::SafePointer<const Entity> Component::owner() const
 	{
 		return (_owner);
 	}
