@@ -1,6 +1,6 @@
 #include "structure/engine/spk_mesh_renderer_2d.hpp"
 
-#include "structure/engine/spk_game_object.hpp"
+#include "structure/engine/spk_entity.hpp"
 
 namespace spk
 {

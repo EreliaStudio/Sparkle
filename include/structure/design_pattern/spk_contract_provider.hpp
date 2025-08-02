@@ -40,7 +40,7 @@ namespace spk
 			Contract &operator=(const Contract &) = delete;
 
 			Contract(Contract &&p_other) :
-				_job(p_other._job),
+				_job(std::move(p_other._job)),
 				_originator(p_other._originator)
 			{
 				p_other._job = nullptr;
@@ -48,9 +48,14 @@ namespace spk
 			}
 			Contract &operator=(Contract &&p_other)
 			{
+				if (isValid())
+				{
+					resign();
+				}
+				
 				if (this != &p_other)
 				{
-					_job = p_other._job;
+					_job = std::move(p_other._job);
 					_originator = p_other._originator;
 
 					p_other._job = nullptr;

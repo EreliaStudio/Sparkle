@@ -2,33 +2,33 @@
 
 #include <vector>
 
-#include "structure/engine/spk_game_object.hpp"
+#include "structure/engine/spk_entity.hpp"
 
 namespace spk
 {
 	class GameEngine
 	{
 	private:
-		GameObject _rootObject = spk::GameObject(L"/root");
+		Entity _rootObject = spk::Entity(L"/root");
 
 	public:
 		GameEngine();
 
 		void clear();
 
-		spk::SafePointer<spk::GameObject> rootObject();
-		void addEntity(const spk::SafePointer<GameObject> &p_entity);
-		void removeEntity(const spk::SafePointer<GameObject> &p_entity);
+		spk::SafePointer<spk::Entity> rootObject();
+		void addEntity(const spk::SafePointer<Entity> &p_entity);
+		void removeEntity(const spk::SafePointer<Entity> &p_entity);
 
-		spk::SafePointer<GameObject> getEntity(const std::wstring &p_name);
-		spk::SafePointer<const GameObject> getEntity(const std::wstring &p_name) const;
-		std::vector<spk::SafePointer<GameObject>> getEntities(const std::wstring &p_name);
-		std::vector<spk::SafePointer<const GameObject>> getEntities(const std::wstring &p_name) const;
+		spk::SafePointer<Entity> getEntity(const std::wstring &p_name);
+		spk::SafePointer<const Entity> getEntity(const std::wstring &p_name) const;
+		std::vector<spk::SafePointer<Entity>> getEntities(const std::wstring &p_name);
+		std::vector<spk::SafePointer<const Entity>> getEntities(const std::wstring &p_name) const;
 
-		spk::SafePointer<GameObject> getEntityByTag(const std::wstring &p_name);
-		spk::SafePointer<const GameObject> getEntityByTag(const std::wstring &p_name) const;
-		std::vector<spk::SafePointer<GameObject>> getEntitiesByTag(const std::wstring &p_name);
-		std::vector<spk::SafePointer<const GameObject>> getEntitiesByTag(const std::wstring &p_name) const;
+		spk::SafePointer<Entity> getEntityByTag(const std::wstring &p_name);
+		spk::SafePointer<const Entity> getEntityByTag(const std::wstring &p_name) const;
+		std::vector<spk::SafePointer<Entity>> getEntitiesByTag(const std::wstring &p_name);
+		std::vector<spk::SafePointer<const Entity>> getEntitiesByTag(const std::wstring &p_name) const;
 
 		bool contains(const std::wstring &p_name) const;
 
