@@ -1,43 +1,11 @@
-#include "structure/engine/spk_game_object.hpp"
+#include "structure/engine/spk_entity.hpp"
 
 namespace spk
 {
-	spk::ActivableObject::Contract GameObject::constructAwakeContract()
-	{
-		return (std::move(addActivationCallback(
-			[&]()
-			{
-				for (auto &component : _components)
-				{
-					if (component->isActive() == true)
-					{
-						component->awake();
-					}
-				}
-			})));
-	}
-
-	spk::ActivableObject::Contract GameObject::constructSleepContract()
-	{
-		return (std::move(addDeactivationCallback(
-			[&]()
-			{
-				for (auto &component : _components)
-				{
-					if (component->isActive() == true)
-					{
-						component->sleep();
-					}
-				}
-			})));
-	}
-
-	GameObject::GameObject(const std::wstring &p_name, const spk::SafePointer<GameObject> &p_owner) :
+	Entity::Entity(const std::wstring &p_name, const spk::SafePointer<Entity> &p_owner) :
 		_name(p_name),
 		_components(),
-		_transform(addComponent<Transform>()),
-		_awakeContract(constructAwakeContract()),
-		_sleepContract(constructSleepContract())
+		_transform(addComponent<Transform>())
 	{
 		_ownerTransformEditionContract = _transform->addOnEditionCallback(
 			[&]()
@@ -54,83 +22,83 @@ namespace spk
 		}
 	}
 
-	GameObject::GameObject() :
-		GameObject(L"Unnamed entity")
+	Entity::Entity() :
+		Entity(L"Unnamed entity")
 	{
 	}
 
-	GameObject::~GameObject()
+	Entity::~Entity()
 	{
 		for (auto &component : _components)
 		{
 			component->stop();
 		}
 	}
-	void GameObject::setName(const std::wstring &p_name)
+	void Entity::setName(const std::wstring &p_name)
 	{
 		_name = p_name;
 	}
 
-	void GameObject::setPriority(const int &p_priority)
+	void Entity::setPriority(const int &p_priority)
 	{
 		_priority = p_priority;
 		if (parent() != nullptr)
 		{
-			static_cast<GameObject *>(parent())->sortChildren();
+			static_cast<Entity *>(parent())->sortChildren();
 		}
 	}
 
-	void GameObject::addTag(const std::wstring &p_tag)
+	void Entity::addTag(const std::wstring &p_tag)
 	{
 		_tags.insert(p_tag);
 	}
 
-	void GameObject::removeTag(const std::wstring &p_tag)
+	void Entity::removeTag(const std::wstring &p_tag)
 	{
 		_tags.erase(p_tag);
 	}
 
-	void GameObject::clearTags()
+	void Entity::clearTags()
 	{
 		_tags.clear();
 	}
 
-	bool GameObject::containTag(const std::wstring &p_tag) const
+	bool Entity::containTag(const std::wstring &p_tag) const
 	{
 		return (_tags.find(p_tag) != _tags.end());
 	}
 
-	const std::wstring &GameObject::name() const
+	const std::wstring &Entity::name() const
 	{
 		return (_name);
 	}
 
-	const std::set<std::wstring> &GameObject::tags() const
+	const std::set<std::wstring> &Entity::tags() const
 	{
 		return (_tags);
 	}
 
-	const spk::Vector3 &GameObject::position() const
+	const spk::Vector3 &Entity::position() const
 	{
 		return (_transform->position());
 	}
 
-	int GameObject::priority() const
+	int Entity::priority() const
 	{
 		return (_priority);
 	}
 
-	Transform &GameObject::transform()
+	Transform &Entity::transform()
 	{
 		return (*_transform);
 	}
 
-	const Transform &GameObject::transform() const
+	const Transform &Entity::transform() const
 	{
 		return (*_transform);
 	}
 
-	void GameObject::removeAllComponents()
+	void Entity::removeAllComponents()
 	{
 		std::unique_lock<std::mutex> lock(_componentMutex);
 		for (auto &component : _components)
@@ -140,7 +108,7 @@ namespace spk
 		_components.clear();
 	}
 
-	void GameObject::removeComponent(const std::wstring &p_name)
+	void Entity::removeComponent(const std::wstring &p_name)
 	{
 		std::unique_lock<std::mutex> lock(_componentMutex);
 		auto it =
@@ -152,7 +120,7 @@ namespace spk
 		_components.erase(it, _components.end());
 	}
 
-	void GameObject::onPaintEvent(spk::PaintEvent &p_event)
+	void Entity::onPaintEvent(spk::PaintEvent &p_event)
 	{
 		if (isActive() == false || p_event.consumed() == true)
 		{
@@ -180,7 +148,7 @@ namespace spk
 		}
 	}
 
-	void GameObject::onUpdateEvent(spk::UpdateEvent &p_event)
+	void Entity::onUpdateEvent(spk::UpdateEvent &p_event)
 	{
 		if (isActive() == false || p_event.consumed() == true)
 		{
@@ -208,7 +176,7 @@ namespace spk
 		}
 	}
 
-	void GameObject::onKeyboardEvent(spk::KeyboardEvent &p_event)
+	void Entity::onKeyboardEvent(spk::KeyboardEvent &p_event)
 	{
 		if (isActive() == false || p_event.consumed() == true)
 		{
@@ -236,7 +204,7 @@ namespace spk
 		}
 	}
 
-	void GameObject::onMouseEvent(spk::MouseEvent &p_event)
+	void Entity::onMouseEvent(spk::MouseEvent &p_event)
 	{
 		if (isActive() == false || p_event.consumed() == true)
 		{
@@ -264,7 +232,7 @@ namespace spk
 		}
 	}
 
-	void GameObject::onControllerEvent(spk::ControllerEvent &p_event)
+	void Entity::onControllerEvent(spk::ControllerEvent &p_event)
 	{
 		if (isActive() == false || p_event.consumed() == true)
 		{
@@ -292,7 +260,7 @@ namespace spk
 		}
 	}
 
-	void GameObject::onTimerEvent(spk::TimerEvent &p_event)
+	void Entity::onTimerEvent(spk::TimerEvent &p_event)
 	{
 		if (isActive() == false || p_event.consumed() == true)
 		{
@@ -320,17 +288,17 @@ namespace spk
 		}
 	}
 
-	void GameObject::sortChildren()
+	void Entity::sortChildren()
 	{
 		_needChildSorting = true;
 	}
 
-	void GameObject::sortComponent()
+	void Entity::sortComponent()
 	{
 		_needComponentSorting = true;
 	}
 
-	spk::SafePointer<GameObject> GameObject::getChild(const std::wstring &p_name)
+	spk::SafePointer<Entity> Entity::getChild(const std::wstring &p_name)
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
 		for (auto &child : children())
@@ -343,7 +311,7 @@ namespace spk
 		return (nullptr);
 	}
 
-	spk::SafePointer<const GameObject> GameObject::getChild(const std::wstring &p_name) const
+	spk::SafePointer<const Entity> Entity::getChild(const std::wstring &p_name) const
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
 		for (const auto &child : children())
@@ -356,10 +324,10 @@ namespace spk
 		return (nullptr);
 	}
 
-	std::vector<spk::SafePointer<GameObject>> GameObject::getChildren(const std::wstring &p_name)
+	std::vector<spk::SafePointer<Entity>> Entity::getChildren(const std::wstring &p_name)
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
-		std::vector<spk::SafePointer<GameObject>> result;
+		std::vector<spk::SafePointer<Entity>> result;
 
 		for (auto &child : children())
 		{
@@ -371,10 +339,10 @@ namespace spk
 		return (result);
 	}
 
-	std::vector<spk::SafePointer<const GameObject>> GameObject::getChildren(const std::wstring &p_name) const
+	std::vector<spk::SafePointer<const Entity>> Entity::getChildren(const std::wstring &p_name) const
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
-		std::vector<spk::SafePointer<const GameObject>> result;
+		std::vector<spk::SafePointer<const Entity>> result;
 
 		for (const auto &child : children())
 		{
@@ -386,55 +354,55 @@ namespace spk
 		return (result);
 	}
 
-	bool GameObject::contains(const std::wstring &p_name) const
+	bool Entity::contains(const std::wstring &p_name) const
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
 		return (std::any_of(
-			children().begin(), children().end(), [&](const spk::SafePointer<GameObject> &p_entity) { return (p_entity->name() == p_name); }));
+			children().begin(), children().end(), [&](const spk::SafePointer<Entity> &p_entity) { return (p_entity->name() == p_name); }));
 	}
 
-	size_t GameObject::count(const std::wstring &p_name) const
+	size_t Entity::count(const std::wstring &p_name) const
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
 		return (std::count_if(
-			children().begin(), children().end(), [&](const spk::SafePointer<GameObject> &p_entity) { return (p_entity->name() == p_name); }));
+			children().begin(), children().end(), [&](const spk::SafePointer<Entity> &p_entity) { return (p_entity->name() == p_name); }));
 	}
 
-	spk::SafePointer<GameObject> GameObject::getChildByTag(const std::wstring &p_tag)
+	spk::SafePointer<Entity> Entity::getChildByTag(const std::wstring &p_tag)
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
 		return (getChildByTags(std::span<const std::wstring>(&p_tag, 1)));
 	}
 
-	spk::SafePointer<const GameObject> GameObject::getChildByTag(const std::wstring &p_tag) const
+	spk::SafePointer<const Entity> Entity::getChildByTag(const std::wstring &p_tag) const
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
 		return (getChildByTags(std::span<const std::wstring>(&p_tag, 1)));
 	}
 
-	std::vector<spk::SafePointer<GameObject>> GameObject::getChildrenByTag(const std::wstring &p_tag)
+	std::vector<spk::SafePointer<Entity>> Entity::getChildrenByTag(const std::wstring &p_tag)
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
 		return (getChildrenByTag({p_tag}));
 	}
 
-	std::vector<spk::SafePointer<const GameObject>> GameObject::getChildrenByTag(const std::wstring &p_tag) const
+	std::vector<spk::SafePointer<const Entity>> Entity::getChildrenByTag(const std::wstring &p_tag) const
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
 		return (getChildrenByTag({p_tag}));
 	}
 
-	bool GameObject::containsTag(const std::wstring &p_tag) const
+	bool Entity::containsTag(const std::wstring &p_tag) const
 	{
 		return (contains({p_tag}));
 	}
 
-	size_t GameObject::countTag(const std::wstring &p_tag) const
+	size_t Entity::countTag(const std::wstring &p_tag) const
 	{
 		return (count({p_tag}));
 	}
 
-	static bool matchesTags(const GameObject &p_entity, const std::span<const std::wstring> &p_tags, spk::BinaryOperator p_op)
+	static bool matchesTags(const Entity &p_entity, const std::span<const std::wstring> &p_tags, spk::BinaryOperator p_op)
 	{
 		if (p_op == spk::BinaryOperator::AND)
 		{
@@ -446,7 +414,7 @@ namespace spk
 		}
 	}
 
-	spk::SafePointer<GameObject> GameObject::getChildByTags(const std::span<const std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator)
+	spk::SafePointer<Entity> Entity::getChildByTags(const std::span<const std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator)
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
 		for (auto &child : children())
@@ -459,7 +427,7 @@ namespace spk
 		return (nullptr);
 	}
 
-	spk::SafePointer<const GameObject> GameObject::getChildByTags(const std::span<const std::wstring> &p_tags,
+	spk::SafePointer<const Entity> Entity::getChildByTags(const std::span<const std::wstring> &p_tags,
 																  spk::BinaryOperator p_binaryOperator) const
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
@@ -473,11 +441,11 @@ namespace spk
 		return (nullptr);
 	}
 
-	std::vector<spk::SafePointer<GameObject>> GameObject::getChildrenByTags(const std::span<const std::wstring> &p_tags,
+	std::vector<spk::SafePointer<Entity>> Entity::getChildrenByTags(const std::span<const std::wstring> &p_tags,
 																			spk::BinaryOperator p_binaryOperator)
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
-		std::vector<spk::SafePointer<GameObject>> result;
+		std::vector<spk::SafePointer<Entity>> result;
 
 		for (auto &child : children())
 		{
@@ -489,11 +457,11 @@ namespace spk
 		return (result);
 	}
 
-	std::vector<spk::SafePointer<const GameObject>> GameObject::getChildrenByTags(const std::span<const std::wstring> &p_tags,
+	std::vector<spk::SafePointer<const Entity>> Entity::getChildrenByTags(const std::span<const std::wstring> &p_tags,
 																				  spk::BinaryOperator p_binaryOperator) const
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
-		std::vector<spk::SafePointer<const GameObject>> result;
+		std::vector<spk::SafePointer<const Entity>> result;
 
 		for (const auto &child : children())
 		{
@@ -505,19 +473,19 @@ namespace spk
 		return (result);
 	}
 
-	bool GameObject::containsTags(const std::span<const std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator) const
+	bool Entity::containsTags(const std::span<const std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator) const
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
 		return (std::any_of(children().begin(),
 							children().end(),
-							[&](const spk::SafePointer<const GameObject> &p_child) { return (matchesTags(*p_child, p_tags, p_binaryOperator)); }));
+							[&](const spk::SafePointer<const Entity> &p_child) { return (matchesTags(*p_child, p_tags, p_binaryOperator)); }));
 	}
 
-	size_t GameObject::countTags(const std::span<const std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator) const
+	size_t Entity::countTags(const std::span<const std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator) const
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
 		return (std::count_if(children().begin(),
 							  children().end(),
-							  [&](const spk::SafePointer<const GameObject> &p_child) { return (matchesTags(*p_child, p_tags, p_binaryOperator)); }));
+							  [&](const spk::SafePointer<const Entity> &p_child) { return (matchesTags(*p_child, p_tags, p_binaryOperator)); }));
 	}
 }

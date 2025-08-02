@@ -3,7 +3,7 @@
 
 enum class Event
 {
-	TestEvent
+	MoveObject
 };
 
 using EventDispatcher = spk::EventDispatcher<Event>;
@@ -24,7 +24,7 @@ private:
 	spk::SafePointer<spk::KeyboardAction> _testAction;
 
 	spk::Camera _camera;
-	spk::GameObject _cameraHolder;
+	spk::Entity _cameraHolder;
 
 	spk::ContractProvider::Contract _onEditionCallback;
 
@@ -48,7 +48,7 @@ public:
 		_testAction = _setAction(ActionType::Action, std::make_unique<spk::KeyboardAction>(spk::Keyboard::Z, spk::InputState::Down, 1000,
 			[&](const spk::SafePointer<const spk::Keyboard>& p_keyboard) {
 				spk::cout << "Treating the input event" << std::endl;
-				EventDispatcher::instance()->emit(Event::TestEvent, spk::Vector2(0, 1));
+				EventDispatcher::instance()->emit(Event::MoveObject, spk::Vector2(0, 1));
 			})).upCast<spk::KeyboardAction>();
 	}
 
@@ -57,7 +57,7 @@ public:
 		owner()->addChild(&_cameraHolder);
 
 		_onEditionCallback = owner()->transform().addOnEditionCallback([&](){
-			spk::cout << "Executing the transform edition callback" << std::endl;
+			spk::cout << "Executing the transform edition callback of [" << owner()->name() << "] -> New position [" << owner()->transform().position() << "]" << std::endl;
 		});
 	}
 
@@ -75,20 +75,19 @@ public:
 	}
 };
 
-class TestObject : public spk::GameObject
+class TestObject : public spk::Entity
 {
 private:
-	Component& _controller;
+	spk::SafePointer<Component> _controller;
 	EventDispatcher::Instanciator _eventDispatcherInstanciator;
 
 public:
-	TestObject(const std::wstring &p_name, spk::SafePointer<spk::GameObject> p_parent) :
-		spk::GameObject(p_name, p_parent),
+	TestObject(const std::wstring &p_name, spk::SafePointer<spk::Entity> p_parent) :
+		spk::Entity(p_name, p_parent),
 		_controller(addComponent<Component>(L"Component"))
 	{
-		_controller.activate();
-
-		EventDispatcher::instance()->subscribe(Event::TestEvent, [&](spk::Vector2 p_delta){
+		EventDispatcher::instance()->subscribe(Event::MoveObject, [&](spk::Vector2 p_delta){
+			spk::cout << "Receiving event move object" << std::endl;
 			transform().move(spk::Vector3(p_delta, 0));
 		}).relinquish();
 	}

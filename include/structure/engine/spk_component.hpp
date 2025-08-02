@@ -7,16 +7,16 @@
 
 namespace spk
 {
-	class GameObject;
+	class Entity;
 
 	class Component : public spk::ActivableObject
 	{
-		friend class GameObject;
+		friend class Entity;
 
 	private:
 		int _priority;
 		std::wstring _name;
-		spk::SafePointer<GameObject> _owner;
+		spk::SafePointer<Entity> _owner;
 
 	public:
 		Component(const std::wstring &p_name);
@@ -28,8 +28,8 @@ namespace spk
 
 		const std::wstring &name() const;
 		int priority() const;
-		spk::SafePointer<GameObject> owner();
-		const spk::SafePointer<const GameObject> owner() const;
+		spk::SafePointer<Entity> owner();
+		const spk::SafePointer<const Entity> owner() const;
 
 		virtual void start();
 		virtual void awake();

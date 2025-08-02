@@ -41,7 +41,7 @@
 #include "structure/engine/spk_component.hpp"
 #include "structure/engine/spk_directional_light.hpp"
 #include "structure/engine/spk_game_engine.hpp"
-#include "structure/engine/spk_game_object.hpp"
+#include "structure/engine/spk_entity.hpp"
 #include "structure/engine/spk_material.hpp"
 #include "structure/engine/spk_mesh.hpp"
 #include "structure/engine/spk_mesh_2D.hpp"

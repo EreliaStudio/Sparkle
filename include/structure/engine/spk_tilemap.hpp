@@ -32,7 +32,7 @@ namespace spk
 			setContent(p_pos.x, p_pos.y, p_z, p_value);
 		}
 
-		void setContent(size_t p_x, size_t p_y, size_t p_z, const TContentType &p_value)
+		virtual void setContent(size_t p_x, size_t p_y, size_t p_z, const TContentType &p_value)
 		{
 			if (_isCoordinateValid(p_x, p_y, p_z) == false)
 			{
