@@ -1,96 +1,238 @@
 #include <sparkle.hpp>
-#include <spk_debug_macro.hpp>
 
-enum class Event
+struct Vertex
 {
-	MoveObject
+	spk::Vector3 position;
+	spk::Vector2 uv;
+	spk::Vector3 normal;
+
+	bool operator==(const Vertex& other) const
+	{
+		return position == other.position &&
+			   uv == other.uv &&
+			   normal == other.normal;
+	}
+
+	bool operator<(const Vertex& other) const
+	{
+		if (position != other.position)
+			return position < other.position;
+		if (uv != other.uv)
+			return uv < other.uv;
+		return normal < other.normal;
+	}
 };
 
-using EventDispatcher = spk::EventDispatcher<Event>;
+namespace std
+{
+	template<>
+	struct hash<Vertex>
+	{
+		std::size_t operator()(const Vertex& v) const
+		{
+			std::size_t h1 = std::hash<spk::Vector3>{}(v.position);
+			std::size_t h2 = std::hash<spk::Vector2>{}(v.uv);
+			std::size_t h3 = std::hash<spk::Vector3>{}(v.normal);
 
-class Component : public spk::Component
+			std::size_t seed = h1;
+			seed ^= h2 + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+			seed ^= h3 + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+			return seed;
+		}
+	};
+}
+
+template <typename TVertexType, typename = std::enable_if_t<spk::IsOBJable<TVertexType>::value>>
+class TMesh
 {
 public:
-	enum class ActionType
+	using Vertex = TVertexType;
+
+	struct Triangle
 	{
-		Action
+		Vertex a;
+		Vertex b;
+		Vertex c;
+	};
+
+	struct Quad
+	{
+		Vertex a;
+		Vertex b;
+		Vertex c;
+		Vertex d;
+	};
+
+	struct Buffer
+	{
+		std::vector<Vertex> vertices;
+		std::vector<unsigned int> indexes;
 	};
 
 private:
-	EventDispatcher::Instanciator _eventDispatcherInstanciator;
+	using Shape = std::variant<Triangle, Quad>;
 
-	std::unordered_map<ActionType, std::unique_ptr<spk::Action>> _actions;
+	std::vector<Shape> _shapes;
 
-	spk::SafePointer<spk::KeyboardAction> _testAction;
+	mutable bool _needBake = false;
+	mutable Buffer _buffer;
 
-	spk::Camera _camera;
-	spk::Entity _cameraHolder;
-
-	spk::ContractProvider::Contract _onEditionCallback;
-
-protected:
-	template <typename Enum>
-	spk::SafePointer<spk::Action> _setAction(Enum p_value, std::unique_ptr<spk::Action> &&p_action)
+	mutable std::mutex _mutex; 
+	
+	unsigned int _getOrInsertVertex(const Vertex& v, std::unordered_map<Vertex, unsigned int>& vertexMap) const
 	{
-		spk::SafePointer<spk::Action> result = p_action.get();
-		_actions.emplace(p_value, std::move(p_action));
-		return (result);
+		auto it = vertexMap.find(v);
+		if (it != vertexMap.end())
+		{
+			return it->second;
+		}
+		else
+		{
+			const unsigned int newIndex = static_cast<unsigned int>(_buffer.vertices.size());
+			_buffer.vertices.push_back(v);
+			vertexMap[v] = newIndex;
+			return newIndex;
+		}
+	}
+
+	void _bakeTriangle(const Triangle& t, std::unordered_map<Vertex, unsigned int>& vertexMap) const
+	{
+		_buffer.indexes.push_back(_getOrInsertVertex(t.a, vertexMap));
+		_buffer.indexes.push_back(_getOrInsertVertex(t.b, vertexMap));
+		_buffer.indexes.push_back(_getOrInsertVertex(t.c, vertexMap));
+	}
+
+	void _bakeQuad(const Quad& q, std::unordered_map<Vertex, unsigned int>& vertexMap) const
+	{
+		unsigned int ia = _getOrInsertVertex(q.a, vertexMap);
+		unsigned int ib = _getOrInsertVertex(q.b, vertexMap);
+		unsigned int ic = _getOrInsertVertex(q.c, vertexMap);
+		unsigned int id = _getOrInsertVertex(q.d, vertexMap);
+
+		_buffer.indexes.push_back(ia);
+		_buffer.indexes.push_back(ib);
+		_buffer.indexes.push_back(ic);
+
+		_buffer.indexes.push_back(ia);
+		_buffer.indexes.push_back(ic);
+		_buffer.indexes.push_back(id);
 	}
 
 public:
-	Component(const std::wstring &p_name) :
-		spk::Component(p_name),
-		_cameraHolder(L"CameraHolder", nullptr)
-	{
-		_cameraHolder.transform().place({0, 0, 10});
-		_cameraHolder.transform().lookAt({0, 0, 0});
+	TMesh() = default;
 
-		_testAction = _setAction(ActionType::Action, std::make_unique<spk::KeyboardAction>(spk::Keyboard::Z, spk::InputState::Down, 1000,
-			[&](const spk::SafePointer<const spk::Keyboard>& p_keyboard) {
-				spk::cout << "Treating the input event" << std::endl;
-				EventDispatcher::instance()->emit(Event::MoveObject, spk::Vector2(0, 1));
-			})).upCast<spk::KeyboardAction>();
+	void addShape(const Vertex& p_a, const Vertex& p_b, const Vertex& p_c)
+	{
+		std::lock_guard lock(_mutex);
+		_shapes.push_back(Triangle{ p_a, p_b, p_c });
+		_needBake = true;
 	}
 
-	void awake() override
+	void addShape(const Triangle& p_triangle)
 	{
-		owner()->addChild(&_cameraHolder);
-
-		_onEditionCallback = owner()->transform().addOnEditionCallback([&](){
-			spk::cout << "Executing the transform edition callback of [" << owner()->name() << "] -> New position [" << owner()->transform().position() << "]" << std::endl;
-		});
+		std::lock_guard lock(_mutex);
+		_shapes.push_back(p_triangle);
+		_needBake = true;
 	}
 
-	void onUpdateEvent(spk::UpdateEvent &p_event) override
+	void addShape(const Vertex& p_a, const Vertex& p_b, const Vertex& p_c, const Vertex& p_d)
 	{
-		for (auto &[key, action] : _actions)
+		std::lock_guard lock(_mutex);
+		_shapes.push_back(Quad{ p_a, p_b, p_c, p_d });
+		_needBake = true;
+	}
+
+	void addShape(const Quad& p_quad)
+	{
+		std::lock_guard lock(_mutex);
+		_shapes.push_back(p_quad);
+		_needBake = true;
+	}
+
+	void popShape()
+	{
+		std::lock_guard lock(_mutex);
+		if (!_shapes.empty())
 		{
-			if (action->isInitialized() == false)
-			{
-				action->initialize(p_event);
-			}
-
-			action->update();
+			_shapes.pop_back();
+			_needBake = true;
 		}
+	}
+
+	void clear()
+	{
+		std::lock_guard lock(_mutex);
+		_shapes.clear();
+		_buffer.vertices.clear();
+		_buffer.indexes.clear();
+		_needBake = false;
+	}
+
+	const std::vector<Shape>& shapes() const
+	{
+		return _shapes;
+	}
+
+	auto begin() const { return _shapes.begin(); }
+	auto end() const { return _shapes.end(); }
+
+	bool hasPendingChanges() const
+	{
+		std::lock_guard lock(_mutex);
+		return _needBake;
+	}
+
+	void bake() const
+	{
+		std::lock_guard lock(_mutex);
+
+		_buffer.vertices.clear();
+		_buffer.indexes.clear();
+
+		std::unordered_map<Vertex, unsigned int> vertexMap;
+
+		for (const auto& s : _shapes)
+		{
+			if (std::holds_alternative<Triangle>(s))
+			{
+				_bakeTriangle(std::get<Triangle>(s), vertexMap);
+			}
+			else
+			{
+				_bakeQuad(std::get<Quad>(s), vertexMap);
+			}
+		}
+
+		_needBake = false;
+	}
+
+	void exportToOBJ(const std::filesystem::path& p_path) const;
+	void importFromOBJ(const std::filesystem::path& p_path);
+
+	const Buffer& buffer() const
+	{
+		if (_needBake)
+		{
+			bake();
+		}
+		return _buffer;
 	}
 };
 
-class TestObject : public spk::Entity
+using Mesh = TMesh<Vertex>;
+
+class MeshRenderer : public spk::Component
 {
 private:
-	spk::SafePointer<Component> _controller;
-	EventDispatcher::Instanciator _eventDispatcherInstanciator;
-
-public:
-	TestObject(const std::wstring &p_name, spk::SafePointer<spk::Entity> p_parent) :
-		spk::Entity(p_name, p_parent),
-		_controller(addComponent<Component>(L"Component"))
+	class Painter
 	{
-		EventDispatcher::instance()->subscribe(Event::MoveObject, [&](spk::Vector2 p_delta){
-			spk::cout << "Receiving event move object" << std::endl;
-			transform().move(spk::Vector3(p_delta, 0));
-		}).relinquish();
-	}
+	};
+};
+
+class TmpEntity : public spk::Entity
+{
+private:
+public:
 };
 
 class TestWidget : public spk::Screen
@@ -98,8 +240,6 @@ class TestWidget : public spk::Screen
 private:
 	spk::GameEngineWidget _gameEngineWidget;
 	spk::GameEngine _engine;
-
-	TestObject _tmpObject;
 
 	void _onGeometryChange()
 	{
@@ -109,16 +249,10 @@ private:
 public:
 	TestWidget(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
 		spk::Screen(p_name, p_parent),
-		_gameEngineWidget(p_name + L"/GameEngineWidget", this),
-		_tmpObject(L"TestObject", nullptr)
+		_gameEngineWidget(p_name + L"/GameEngineWidget", this)
 	{
 		_gameEngineWidget.setGameEngine(&_engine);
 		_gameEngineWidget.activate();
-
-		_tmpObject.transform().place({0, 0, 0});
-		_tmpObject.activate();
-		
-		_engine.addEntity(&_tmpObject);
 	}
 };
 
