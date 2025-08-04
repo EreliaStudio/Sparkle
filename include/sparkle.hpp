@@ -43,6 +43,8 @@
 #include "structure/engine/spk_entity.hpp"
 #include "structure/engine/spk_tilemap.hpp"
 #include "structure/engine/spk_transform.hpp"
+#include "structure/engine/spk_vertex.hpp"
+#include "structure/engine/spk_mesh.hpp"
 #include "structure/graphics/lumina/spk_shader.hpp"
 #include "structure/graphics/opengl/spk_buffer_set.hpp"
 #include "structure/graphics/opengl/spk_frame_buffer_object.hpp"
