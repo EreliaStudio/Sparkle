@@ -1,4 +1,4 @@
-#include "structure/graphics/renderer/spk_color_renderer.hpp"
+#include "structure/graphics/painter/spk_color_painter.hpp"
 
 #include "structure/graphics/spk_viewport.hpp"
 
@@ -6,7 +6,7 @@
 
 namespace spk
 {
-	void ColorRenderer::_initProgram()
+	void ColorPainter::_initProgram()
 	{
 		if (_program == nullptr)
 		{
@@ -43,7 +43,7 @@ namespace spk
 		}
 	}
 
-	void ColorRenderer::_initBuffers()
+	void ColorPainter::_initBuffers()
 	{
 		_bufferSet = spk::OpenGL::BufferSet({
 			{0, spk::OpenGL::LayoutBufferObject::Attribute::Type::Vector2}, // position
@@ -54,14 +54,14 @@ namespace spk
 		_colorUniformBufferObject.addElement(L"uColor", 0, 16);
 	}
 
-	ColorRenderer::ColorRenderer(const spk::Color &p_color)
+	ColorPainter::ColorPainter(const spk::Color &p_color)
 	{
 		_initProgram();
 		_initBuffers();
 		setColor(p_color);
 	}
 
-	void ColorRenderer::setColor(const spk::Color &p_color)
+	void ColorPainter::setColor(const spk::Color &p_color)
 	{
 		_color = p_color;
 
@@ -69,13 +69,13 @@ namespace spk
 		_colorUniformBufferObject.validate();
 	}
 
-	void ColorRenderer::clear()
+	void ColorPainter::clear()
 	{
 		_bufferSet.layout().clear();
 		_bufferSet.indexes().clear();
 	}
 
-	void ColorRenderer::prepareSquare(const spk::Geometry2D &p_geometry, float p_layer)
+	void ColorPainter::prepareSquare(const spk::Geometry2D &p_geometry, float p_layer)
 	{
 		size_t numberOfVertices = _bufferSet.layout().size() / sizeof(Vertex);
 
@@ -93,13 +93,13 @@ namespace spk
 		}
 	}
 
-	void ColorRenderer::validate()
+	void ColorPainter::validate()
 	{
 		_bufferSet.layout().validate();
 		_bufferSet.indexes().validate();
 	}
 
-	void ColorRenderer::render()
+	void ColorPainter::render()
 	{
 		_program->activate();
 		_bufferSet.activate();

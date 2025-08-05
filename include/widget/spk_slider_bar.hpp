@@ -7,7 +7,7 @@
 
 #include "spk_enums.hpp"
 
-#include "structure/graphics/renderer/spk_nine_slice_renderer.hpp"
+#include "structure/graphics/painter/spk_nine_slice_painter.hpp"
 
 namespace spk
 {
@@ -24,7 +24,7 @@ namespace spk
 		class Body : public spk::Widget
 		{
 		private:
-			spk::NineSliceRenderer _renderer;
+			spk::NineSlicePainter _renderer;
 			spk::Vector2UInt _cornerSize;
 
 			void _onGeometryChange()
@@ -60,7 +60,7 @@ namespace spk
 		static spk::SpriteSheet _defaultSliderBody;
 
 		spk::Vector2UInt _cornerSize;
-		spk::NineSliceRenderer _backgroundRenderer;
+		spk::NineSlicePainter _backgroundRenderer;
 		Body _body;
 
 		spk::TContractProvider<float> _onEditionContractProvider;

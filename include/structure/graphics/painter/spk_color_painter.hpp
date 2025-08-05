@@ -10,7 +10,7 @@
 
 namespace spk
 {
-	class ColorRenderer
+	class ColorPainter
 	{
 	public:
 		struct Vertex
@@ -33,7 +33,7 @@ namespace spk
 		void _initBuffers();
 
 	public:
-		ColorRenderer(const spk::Color &p_color = spk::Color(255, 255, 255));
+		ColorPainter(const spk::Color &p_color = spk::Color(255, 255, 255));
 
 		void setColor(const spk::Color &p_color);
 

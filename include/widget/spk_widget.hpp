@@ -14,7 +14,7 @@
 #include "structure/graphics/texture/spk_sprite_sheet.hpp"
 
 #include "structure/graphics/opengl/spk_frame_buffer_object.hpp"
-#include "structure/graphics/renderer/spk_texture_renderer.hpp"
+#include "structure/graphics/painter/spk_texture_painter.hpp"
 
 namespace spk
 {
@@ -63,7 +63,7 @@ namespace spk
 
 		spk::OpenGL::FrameBufferObject _frameBufferObject;
 
-		spk::TextureRenderer _textureRenderer;
+		spk::TexturePainter _textureRenderer;
 
 		spk::Vector2UInt _minimalSize = {0, 0};
 		spk::Vector2UInt _maximalSize = {std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max()};

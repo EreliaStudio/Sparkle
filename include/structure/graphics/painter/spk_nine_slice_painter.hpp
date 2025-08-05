@@ -3,7 +3,7 @@
 #include "structure/graphics/opengl/spk_buffer_set.hpp"
 #include "structure/graphics/opengl/spk_program.hpp"
 #include "structure/graphics/opengl/spk_sampler_object.hpp"
-#include "structure/graphics/renderer/spk_texture_renderer.hpp"
+#include "structure/graphics/painter/spk_texture_painter.hpp"
 #include "structure/graphics/spk_geometry_2D.hpp"
 #include "structure/graphics/texture/spk_image.hpp"
 #include "structure/graphics/texture/spk_sprite_sheet.hpp"
@@ -14,16 +14,16 @@
 
 namespace spk
 {
-	class NineSliceRenderer
+	class NineSlicePainter
 	{
 	public:
 		static constexpr int GRID_SIZE = 3;
 
 	private:
-		TextureRenderer _textureRenderer;
+		TexturePainter _textureRenderer;
 
 	public:
-		NineSliceRenderer() = default;
+		NineSlicePainter() = default;
 
 		void clear();
 

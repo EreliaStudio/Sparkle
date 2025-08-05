@@ -1,4 +1,4 @@
-#include "structure/graphics/renderer/spk_nine_slice_renderer.hpp"
+#include "structure/graphics/painter/spk_nine_slice_painter.hpp"
 
 #include "structure/graphics/spk_viewport.hpp"
 
@@ -8,12 +8,12 @@
 
 namespace spk
 {
-	void NineSliceRenderer::clear()
+	void NineSlicePainter::clear()
 	{
 		_textureRenderer.clear();
 	}
 
-	void NineSliceRenderer::prepare(const Geometry2D &p_geometry, float p_layer, const Vector2Int &p_cornerSize)
+	void NineSlicePainter::prepare(const Geometry2D &p_geometry, float p_layer, const Vector2Int &p_cornerSize)
 	{
 		Vector2Int cornerSize = p_cornerSize;
 		if (cornerSize.x * 2 > p_geometry.width || cornerSize.y * 2 > p_geometry.height)
@@ -54,7 +54,7 @@ namespace spk
 		}
 	}
 
-	void NineSliceRenderer::setSpriteSheet(const SafePointer<const SpriteSheet> &p_spriteSheet)
+	void NineSlicePainter::setSpriteSheet(const SafePointer<const SpriteSheet> &p_spriteSheet)
 	{
 		if (p_spriteSheet != nullptr && (p_spriteSheet->nbSprite().x != GRID_SIZE || p_spriteSheet->nbSprite().y != GRID_SIZE))
 		{
@@ -64,17 +64,17 @@ namespace spk
 		_textureRenderer.setTexture(p_spriteSheet.downCast<spk::Texture>());
 	}
 
-	const spk::SafePointer<const SpriteSheet> &NineSliceRenderer::spriteSheet() const
+	const spk::SafePointer<const SpriteSheet> &NineSlicePainter::spriteSheet() const
 	{
 		return (_textureRenderer.texture().upCast<const SpriteSheet>());
 	}
 
-	void NineSliceRenderer::validate()
+	void NineSlicePainter::validate()
 	{
 		_textureRenderer.validate();
 	}
 
-	void NineSliceRenderer::render()
+	void NineSlicePainter::render()
 	{
 		_textureRenderer.render();
 	}

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "structure/graphics/renderer/spk_texture_renderer.hpp"
+#include "structure/graphics/painter/spk_texture_painter.hpp"
 #include "structure/graphics/texture/spk_sprite_sheet.hpp"
 #include "structure/system/time/spk_timer.hpp"
 #include "widget/spk_widget.hpp"
@@ -10,7 +10,7 @@ namespace spk
 	class AnimationLabel : public spk::Widget
 	{
 	private:
-		spk::TextureRenderer _textureRenderer;
+		spk::TexturePainter _textureRenderer;
 		spk::SafePointer<spk::SpriteSheet> _spriteSheet;
 		size_t _currentSprite = 0;
 		size_t _rangeStart = 0;

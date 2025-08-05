@@ -9,7 +9,7 @@
 
 namespace spk
 {
-	class TextureRenderer
+	class TexturePainter
 	{
 	private:
 		struct Vertex
@@ -27,7 +27,7 @@ namespace spk
 		void _initBuffers();
 
 	public:
-		TextureRenderer();
+		TexturePainter();
 
 		void setTexture(spk::SafePointer<const spk::Texture> p_image);
 		spk::SafePointer<const spk::Texture> &texture();

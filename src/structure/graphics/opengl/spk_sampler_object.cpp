@@ -123,6 +123,16 @@ namespace spk::OpenGL
 		_bindingPoint = p_bindingPoint;
 	}
 
+	SamplerObject::Type SamplerObject::type() const
+	{
+		return (_type);
+	}
+	
+	void SamplerObject::setType(SamplerObject::Type p_type)
+	{
+		_type = p_type;
+	}
+
 	void SamplerObject::activate()
 	{
 		if (_uniformDestination == -1)

@@ -1,4 +1,4 @@
-#include "structure/graphics/renderer/spk_font_renderer.hpp"
+#include "structure/graphics/painter/spk_font_painter.hpp"
 
 #include "structure/graphics/spk_viewport.hpp"
 
@@ -6,7 +6,7 @@
 
 namespace spk
 {
-	void FontRenderer::_initProgram()
+	void FontPainter::_initProgram()
 	{
 		if (_program == nullptr)
 		{
@@ -66,7 +66,7 @@ namespace spk
 		}
 	}
 
-	void FontRenderer::_initBuffers()
+	void FontPainter::_initBuffers()
 	{
 		_bufferSet = spk::OpenGL::BufferSet({
 			{0, spk::OpenGL::LayoutBufferObject::Attribute::Type::Vector2}, // inPosition
@@ -82,33 +82,33 @@ namespace spk
 		_textInformationsUniformBufferObject.addElement(L"outlineThreshold", 32, sizeof(float));
 	}
 
-	void FontRenderer::_updateUniformBufferObject()
+	void FontPainter::_updateUniformBufferObject()
 	{
 		_textInformationsUniformBufferObject[L"glyphColor"] = _glyphColor;
 		_textInformationsUniformBufferObject[L"outlineColor"] = _outlineColor;
 		_textInformationsUniformBufferObject.validate();
 	}
 
-	FontRenderer::FontRenderer()
+	FontPainter::FontPainter()
 	{
 		_initProgram();
 		_initBuffers();
 		_updateUniformBufferObject();
 	}
 
-	FontRenderer::Contract FontRenderer::subscribeToFontEdition(const FontRenderer::Job &p_job)
+	FontPainter::Contract FontPainter::subscribeToFontEdition(const FontPainter::Job &p_job)
 	{
 		return (_onFontEditionContractProvider.subscribe(p_job));
 	}
 
-	void FontRenderer::setFont(const spk::SafePointer<Font> &p_font)
+	void FontPainter::setFont(const spk::SafePointer<Font> &p_font)
 	{
 		_font = p_font;
 		_atlas = nullptr;
 		_samplerObject.bind(nullptr);
 	}
 
-	void FontRenderer::setFontSize(const Font::Size &p_fontSize)
+	void FontPainter::setFontSize(const Font::Size &p_fontSize)
 	{
 		_fontSize = p_fontSize;
 		_textInformationsUniformBufferObject[L"outlineThreshold"] = 0.5f;
@@ -117,45 +117,45 @@ namespace spk
 		_samplerObject.bind(nullptr);
 	}
 
-	void FontRenderer::setGlyphColor(const spk::Color &p_color)
+	void FontPainter::setGlyphColor(const spk::Color &p_color)
 	{
 		_glyphColor = p_color;
 		_updateUniformBufferObject();
 	}
 
-	void FontRenderer::setOutlineColor(const spk::Color &p_color)
+	void FontPainter::setOutlineColor(const spk::Color &p_color)
 	{
 		_outlineColor = p_color;
 		_updateUniformBufferObject();
 	}
 
-	const spk::SafePointer<spk::Font> &FontRenderer::font() const
+	const spk::SafePointer<spk::Font> &FontPainter::font() const
 	{
 		return (_font);
 	}
 
-	const spk::Font::Size &FontRenderer::fontSize() const
+	const spk::Font::Size &FontPainter::fontSize() const
 	{
 		return (_fontSize);
 	}
 
-	const spk::Color &FontRenderer::glyphColor() const
+	const spk::Color &FontPainter::glyphColor() const
 	{
 		return (_glyphColor);
 	}
 
-	const spk::Color &FontRenderer::outlineColor() const
+	const spk::Color &FontPainter::outlineColor() const
 	{
 		return (_outlineColor);
 	}
 
-	void FontRenderer::clear()
+	void FontPainter::clear()
 	{
 		_bufferSet.layout().clear();
 		_bufferSet.indexes().clear();
 	}
 
-	spk::Vector2Int FontRenderer::computeTextBaselineOffset(const std::wstring &p_text) const
+	spk::Vector2Int FontPainter::computeTextBaselineOffset(const std::wstring &p_text) const
 	{
 		if (_font == nullptr)
 		{
@@ -164,7 +164,7 @@ namespace spk
 		return (_font->computeStringBaselineOffset(p_text, _fontSize));
 	}
 
-	spk::Vector2UInt FontRenderer::computeTextSize(const std::wstring &p_text) const
+	spk::Vector2UInt FontPainter::computeTextSize(const std::wstring &p_text) const
 	{
 		if (_font == nullptr)
 		{
@@ -173,7 +173,7 @@ namespace spk
 		return (_font->computeStringSize(p_text, _fontSize));
 	}
 
-	spk::Vector2Int FontRenderer::computeTextAnchor(const spk::Geometry2D &p_geometry,
+	spk::Vector2Int FontPainter::computeTextAnchor(const spk::Geometry2D &p_geometry,
 													const std::wstring &p_string,
 													spk::HorizontalAlignment p_horizontalAlignment,
 													spk::VerticalAlignment p_verticalAlignment) const
@@ -185,7 +185,7 @@ namespace spk
 		return (_font->computeStringAnchor(p_geometry, p_string, _fontSize, p_horizontalAlignment, p_verticalAlignment));
 	}
 
-	void FontRenderer::_prepareText(const std::wstring &p_text, const spk::Vector2Int &p_anchor, float p_layer)
+	void FontPainter::_prepareText(const std::wstring &p_text, const spk::Vector2Int &p_anchor, float p_layer)
 	{
 		spk::Vector2Int glyphAnchor = p_anchor;
 		unsigned int baseIndexes = 0;
@@ -218,7 +218,7 @@ namespace spk
 		}
 	}
 
-	void FontRenderer::prepare(const std::wstring &p_text, const spk::Vector2Int &p_anchor, float p_layer)
+	void FontPainter::prepare(const std::wstring &p_text, const spk::Vector2Int &p_anchor, float p_layer)
 	{
 		if (_font == nullptr)
 		{
@@ -236,13 +236,13 @@ namespace spk
 		_prepareText(p_text, p_anchor, p_layer);
 	}
 
-	void FontRenderer::validate()
+	void FontPainter::validate()
 	{
 		_bufferSet.layout().validate();
 		_bufferSet.indexes().validate();
 	}
 
-	void FontRenderer::render()
+	void FontPainter::render()
 	{
 		if (_atlas == nullptr)
 		{

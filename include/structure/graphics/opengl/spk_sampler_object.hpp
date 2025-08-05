@@ -55,6 +55,9 @@ namespace spk::OpenGL
 		BindingPoint bindingPoint() const;
 		void setBindingPoint(BindingPoint p_bindingPoint);
 
+		Type type() const;
+		void setType(Type p_type);
+
 		void activate();
 		void deactivate();
 	};
