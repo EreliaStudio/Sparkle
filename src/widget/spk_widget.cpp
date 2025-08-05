@@ -3,7 +3,7 @@
 
 #include "utils/spk_string_utils.hpp"
 
-#include "structure/graphics/renderer/spk_color_renderer.hpp"
+#include "structure/graphics/painter/spk_color_painter.hpp"
 
 #include "structure/system/spk_exception.hpp"
 

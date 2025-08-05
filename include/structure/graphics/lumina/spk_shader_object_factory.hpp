@@ -26,9 +26,6 @@ namespace spk::Lumina
 		void _add(const spk::JSON::Object &p_desc);
 
 	public:
-		using spk::Singleton<ShaderObjectFactory>::Instanciator;
-		using spk::Singleton<ShaderObjectFactory>::instance;
-
 		void add(const spk::JSON::Object &p_desc);
 
 		OpenGL::UniformBufferObject &ubo(const std::wstring &p_name);

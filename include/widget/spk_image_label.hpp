@@ -2,8 +2,8 @@
 
 #include "widget/spk_widget.hpp"
 
-#include "structure/graphics/renderer/spk_nine_slice_renderer.hpp"
-#include "structure/graphics/renderer/spk_texture_renderer.hpp"
+#include "structure/graphics/painter/spk_nine_slice_painter.hpp"
+#include "structure/graphics/painter/spk_texture_painter.hpp"
 #include "structure/graphics/texture/spk_texture.hpp"
 
 namespace spk
@@ -11,8 +11,8 @@ namespace spk
 	class ImageLabel : public spk::Widget
 	{
 	private:
-		spk::NineSliceRenderer _backgroundRenderer;
-		spk::TextureRenderer _textureRenderer;
+		spk::NineSlicePainter _backgroundRenderer;
+		spk::TexturePainter _textureRenderer;
 
 		const spk::SafePointer<spk::Texture> _texture = nullptr;
 		spk::Texture::Section _textureSection = {{0.0f, 0.0f}, {1.0f, 1.0f}};

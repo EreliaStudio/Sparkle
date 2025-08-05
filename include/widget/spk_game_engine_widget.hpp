@@ -7,7 +7,7 @@
 
 #include "structure/graphics/opengl/spk_frame_buffer_object.hpp"
 
-#include "structure/graphics/renderer/spk_texture_renderer.hpp"
+#include "structure/graphics/painter/spk_texture_painter.hpp"
 
 namespace spk
 {

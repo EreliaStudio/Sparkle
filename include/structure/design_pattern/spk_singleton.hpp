@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <stdexcept>
+#include <mutex>
 
 #include "structure/spk_safe_pointer.hpp"
 

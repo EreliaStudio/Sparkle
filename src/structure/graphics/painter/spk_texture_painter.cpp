@@ -1,4 +1,4 @@
-#include "structure/graphics/renderer/spk_texture_renderer.hpp"
+#include "structure/graphics/painter/spk_texture_painter.hpp"
 
 #include "structure/graphics/spk_viewport.hpp"
 
@@ -8,7 +8,7 @@
 
 namespace spk
 {
-	void TextureRenderer::_initProgram()
+	void TexturePainter::_initProgram()
 	{
 		if (_program == nullptr)
 		{
@@ -46,7 +46,7 @@ namespace spk
 		}
 	}
 
-	void TextureRenderer::_initBuffers()
+	void TexturePainter::_initBuffers()
 	{
 		_bufferSet = spk::OpenGL::BufferSet({
 			{0, spk::OpenGL::LayoutBufferObject::Attribute::Type::Vector2}, // position
@@ -57,34 +57,34 @@ namespace spk
 		_samplerObject = spk::OpenGL::SamplerObject("diffuseTexture", spk::OpenGL::SamplerObject::Type::Texture2D, 0);
 	}
 
-	TextureRenderer::TextureRenderer()
+	TexturePainter::TexturePainter()
 	{
 		_initProgram();
 		_initBuffers();
 	}
 
-	void TextureRenderer::setTexture(spk::SafePointer<const spk::Texture> p_image)
+	void TexturePainter::setTexture(spk::SafePointer<const spk::Texture> p_image)
 	{
 		_samplerObject.bind(p_image);
 	}
 
-	const spk::SafePointer<const spk::Texture> &TextureRenderer::texture() const
+	const spk::SafePointer<const spk::Texture> &TexturePainter::texture() const
 	{
 		return (_samplerObject.texture());
 	}
 
-	spk::SafePointer<const spk::Texture> &TextureRenderer::texture()
+	spk::SafePointer<const spk::Texture> &TexturePainter::texture()
 	{
 		return (_samplerObject.texture());
 	}
 
-	void TextureRenderer::clear()
+	void TexturePainter::clear()
 	{
 		_bufferSet.layout().clear();
 		_bufferSet.indexes().clear();
 	}
 
-	void TextureRenderer::prepare(const spk::Geometry2D &p_geom, const spk::Image::Section &p_section, float p_layer)
+	void TexturePainter::prepare(const spk::Geometry2D &p_geom, const spk::Image::Section &p_section, float p_layer)
 	{
 		size_t numberOfVertices = _bufferSet.layout().size() / sizeof(Vertex);
 
@@ -107,13 +107,13 @@ namespace spk
 		}
 	}
 
-	void TextureRenderer::validate()
+	void TexturePainter::validate()
 	{
 		_bufferSet.layout().validate();
 		_bufferSet.indexes().validate();
 	}
 
-	void TextureRenderer::render()
+	void TexturePainter::render()
 	{
 		if (_samplerObject.texture() == nullptr)
 		{

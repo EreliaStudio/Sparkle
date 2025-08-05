@@ -1,85 +1,18 @@
-#include "structure/graphics/renderer/spk_mesh_renderer.hpp"
+#include "structure/engine/spk_mesh_renderer.hpp"
 #include "structure/container/spk_json_object.hpp"
 #include "structure/math/spk_matrix.hpp"
 
+#include "spk_generated_resources.hpp"
+
 namespace spk
 {
-	spk::Lumina::ShaderObjectFactory::Instanciator MeshRenderer::Painter::_initializeObjectFactory()
-	{
-		const wchar_t *uboString = LR"(
-{
-"UBO": [
-{
-"name": "CameraUBO",
-"data": {
-"BlockName": "CameraUBO",
-"BindingPoint": 0,
-"Size": 128,
-"Elements": [
-{"Name": "viewMatrix", "Offset": 0, "Size": 64},
-{"Name": "projectionMatrix", "Offset": 64, "Size": 64}
-]
-}
-},
-{
-"name": "TransformUBO",
-"data": {
-"BlockName": "TransformUBO",
-"BindingPoint": 1,
-"Size": 64,
-"Elements": [
-{"Name": "modelMatrix", "Offset": 0, "Size": 64}
-]
-}
-}
-]
-})";
-
-		const wchar_t *samplerString = LR"(
-{
-"Sampler": [
-{
-"name": "diffuseTexture",
-"data": {"Name": "diffuseTexture", "Type": "Texture2D", "BindingPoint": 0}
-}
-]
-})";
-
-		const wchar_t *ssboString = LR"(
-{
-"SSBO": [
-{
-"name": "DummySSBO",
-"data": {
-"BlockName": "DummySSBO",
-"BindingPoint": 0,
-"FixedSize": 16,
-"PaddingFixedToDynamic": 16,
-"DynamicElementSize": 32,
-"DynamicElementPadding": 0,
-"FixedElements": [
-{"Name": "header", "Offset": 0, "Size": 16}
-],
-"DynamicElementComposition": [
-{"Name": "position", "Offset": 0, "Size": 12},
-{"Name": "color", "Offset": 16, "Size": 16}
-],
-"InitialDynamicCount": 0
-}
-}
-]
-})";
-
-		spk::Lumina::ShaderObjectFactory::Instanciator instanciator;
-		instanciator->add(spk::JSON::Object::fromString(uboString));
-		instanciator->add(spk::JSON::Object::fromString(samplerString));
-		instanciator->add(spk::JSON::Object::fromString(ssboString));
-
-		return (instanciator);
-	}
 
 	spk::Lumina::Shader MeshRenderer::Painter::_createShader()
 	{
+		spk::Lumina::ShaderObjectFactory::instance()->add(spk::JSON::Object::fromString(
+				SPARKLE_GET_RESOURCE_AS_STRING("resources/json/mesh_renderer_shader_object.json")
+			));
+
 		const char *vertexShaderSrc = R"(#version 450
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec2 inUV;
@@ -124,21 +57,23 @@ outputColor = texColor;
 		shader.addAttribute({1, spk::OpenGL::LayoutBufferObject::Attribute::Type::Vector2});
 		shader.addAttribute({2, spk::OpenGL::LayoutBufferObject::Attribute::Type::Vector3});
 
-		spk::OpenGL::SamplerObject &sampler = spk::Lumina::ShaderObjectFactory::instance()->sampler(L"diffuseTexture");
-		shader.addSampler(L"diffuseTexture", sampler, spk::Lumina::Shader::Mode::Attribute);
+		shader.addSampler(
+				L"diffuseTexture",
+				spk::Lumina::ShaderObjectFactory::instance()->sampler(L"diffuseTexture"),
+				spk::Lumina::Shader::Mode::Attribute
+			);
 
-		spk::OpenGL::UniformBufferObject &cameraUBO = spk::Lumina::ShaderObjectFactory::instance()->ubo(L"CameraUBO");
-		shader.addUBO(L"CameraUBO", cameraUBO, spk::Lumina::Shader::Mode::Constant);
+		shader.addUBO(
+				L"CameraUBO", 
+				spk::Lumina::ShaderObjectFactory::instance()->ubo(L"CameraUBO"), 
+				spk::Lumina::Shader::Mode::Constant
+			);
 
-		spk::OpenGL::UniformBufferObject &transformUBO = spk::Lumina::ShaderObjectFactory::instance()->ubo(L"TransformUBO");
-		shader.addUBO(L"TransformUBO", transformUBO, spk::Lumina::Shader::Mode::Attribute);
-
-		shader.UBO(L"CameraUBO")[L"viewMatrix"] = spk::Matrix4x4();
-		shader.UBO(L"CameraUBO")[L"projectionMatrix"] = spk::Matrix4x4();
-		shader.UBO(L"CameraUBO").validate();
-
-		shader.UBO(L"TransformUBO")[L"modelMatrix"] = spk::Matrix4x4();
-		shader.UBO(L"TransformUBO").validate();
+		shader.addUBO(
+				L"TransformUBO", 
+				spk::Lumina::ShaderObjectFactory::instance()->ubo(L"TransformUBO"), 
+				spk::Lumina::Shader::Mode::Attribute
+			);
 
 		return (shader);
 	}
@@ -179,7 +114,7 @@ outputColor = texColor;
 		return (_shader);
 	}
 
-	spk::Lumina::Shader::Sampler &MeshRenderer::Painter::diffuseSampler()
+	spk::OpenGL::SamplerObject &MeshRenderer::Painter::diffuseSampler()
 	{
 		return (_diffuseSampler);
 	}

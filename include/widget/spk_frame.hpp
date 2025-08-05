@@ -6,7 +6,7 @@
 #include "structure/design_pattern/spk_activable_object.hpp"
 #include "structure/design_pattern/spk_contract_provider.hpp"
 #include "structure/design_pattern/spk_inherence_object.hpp"
-#include "structure/graphics/renderer/spk_nine_slice_renderer.hpp"
+#include "structure/graphics/painter/spk_nine_slice_painter.hpp"
 #include "structure/graphics/spk_geometry_2D.hpp"
 #include "structure/graphics/spk_viewport.hpp"
 #include "structure/graphics/texture/spk_sprite_sheet.hpp"
@@ -19,7 +19,7 @@ namespace spk
 	class Frame : public Widget
 	{
 	private:
-		NineSliceRenderer _frameRenderer;
+		NineSlicePainter _frameRenderer;
 		spk::Vector2Int _cornerSize;
 
 	private:

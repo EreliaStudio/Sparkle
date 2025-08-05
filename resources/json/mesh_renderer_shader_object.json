@@ -1,0 +1,58 @@
+{
+	"UBO": [
+		{
+			"name": "CameraUBO",
+			"data": {
+				"BlockName": "CameraUBO",
+				"BindingPoint": 0,
+				"Size": 128,
+				"Elements": [
+					{"Name": "viewMatrix", "Offset": 0, "Size": 64},
+					{"Name": "projectionMatrix", "Offset": 64, "Size": 64}
+				]
+			}
+		},
+		{
+			"name": "TransformUBO",
+			"data": {
+				"BlockName": "TransformUBO",
+				"BindingPoint": 1,
+				"Size": 64,
+				"Elements": [
+					{"Name": "modelMatrix", "Offset": 0, "Size": 64}
+				]
+			}
+		}
+	],
+	"Sampler": [
+		{
+			"name": "diffuseTexture",
+			"data": {
+				"Name": "diffuseTexture",
+				"Type": "Texture2D",
+				"BindingPoint": 0
+			}
+		}
+	],
+	"SSBO": [
+		{
+			"name": "DummySSBO",
+			"data": {
+				"BlockName": "DummySSBO",
+				"BindingPoint": 0,
+				"FixedSize": 16,
+				"PaddingFixedToDynamic": 16,
+				"DynamicElementSize": 32,
+				"DynamicElementPadding": 0,
+				"FixedElements": [
+					{"Name": "header", "Offset": 0, "Size": 16}
+				],
+				"DynamicElementComposition": [
+					{"Name": "position", "Offset": 0, "Size": 12},
+					{"Name": "color", "Offset": 16, "Size": 16}
+				],
+				"InitialDynamicCount": 0
+			}
+		}
+	]
+}

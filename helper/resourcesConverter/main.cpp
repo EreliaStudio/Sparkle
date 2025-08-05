@@ -90,6 +90,7 @@ int main(int argc, char** argv)
 
     out << "};\n\n";
     out << "#define SPARKLE_GET_RESOURCE(key) sparkle_resources.at(key)\n";
+	out << "#define SPARKLE_GET_RESOURCE_AS_STRING(key) std::wstring(sparkle_resources.at(key).begin(), sparkle_resources.at(key).end())\n";
 
     out.close();
     return 0;

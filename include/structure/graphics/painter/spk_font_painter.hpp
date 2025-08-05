@@ -16,7 +16,7 @@
 
 namespace spk
 {
-	class FontRenderer
+	class FontPainter
 	{
 	public:
 		using Contract = spk::ContractProvider::Contract;
@@ -54,9 +54,9 @@ void _updateUniformBufferObject();
 		void _prepareText(const std::wstring &p_text, const spk::Vector2Int &p_anchor, float p_layer);
 
 	public:
-		FontRenderer();
+		FontPainter();
 
-		FontRenderer::Contract subscribeToFontEdition(const Job& p_job);
+		FontPainter::Contract subscribeToFontEdition(const Job& p_job);
 
 		void setFont(const spk::SafePointer<Font> &p_font);
 		void setFontSize(const Font::Size &p_fontSize);

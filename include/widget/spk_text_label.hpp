@@ -2,17 +2,17 @@
 
 #include "widget/spk_widget.hpp"
 
-#include "structure/graphics/renderer/spk_font_renderer.hpp"
-#include "structure/graphics/renderer/spk_nine_slice_renderer.hpp"
+#include "structure/graphics/painter/spk_font_painter.hpp"
+#include "structure/graphics/painter/spk_nine_slice_painter.hpp"
 
 namespace spk
 {
 	class TextLabel : public spk::Widget
 	{
 	private:
-		spk::NineSliceRenderer _backgroundRenderer;
-		spk::FontRenderer _fontRenderer;
-		spk::FontRenderer::Contract _onFontResizeContract;
+		spk::NineSlicePainter _backgroundRenderer;
+		spk::FontPainter _fontRenderer;
+		spk::FontPainter::Contract _onFontResizeContract;
 
 		std::wstring _text = L"";
 		spk::VerticalAlignment _verticalAlignment;

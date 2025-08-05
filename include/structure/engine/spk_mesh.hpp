@@ -12,7 +12,7 @@
 
 namespace spk
 {
-	template <typename TVertexType, typename = std::enable_if_t<spk::IsOBJable<TVertexType>::value>>
+	template <typename TVertexType, typename = std::enable_if<spk::IsOBJable<TVertexType>::value>>
 	class TMesh
 	{
 	public:

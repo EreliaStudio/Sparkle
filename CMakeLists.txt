@@ -29,6 +29,7 @@ add_resources(
 	"resources/textures/defaultNineSlice_Dark.png"
 	"resources/textures/defaultNineSlice_Darker.png"
 	"resources/textures/defaultBreak.png"
+	"resources/json/mesh_renderer_shader_object.json"
 	)
 	
 	add_compile_definitions(NOMINMAX)
