@@ -1,4 +1,4 @@
-#include "structure/engine/spk_mesh_renderer.hpp"
+#include "structure/engine/spk_obj_mesh_renderer.hpp"
 #include "structure/container/spk_json_object.hpp"
 #include "structure/math/spk_matrix.hpp"
 
@@ -91,7 +91,7 @@ outputColor = texColor;
 		_bufferSet.indexes().clear();
 	}
 
-	void MeshRenderer::Painter::prepare(const spk::Mesh &p_mesh)
+	void MeshRenderer::Painter::prepare(const spk::ObjMesh &p_mesh)
 	{
 		const auto &buffer = p_mesh.buffer();
 		_bufferSet.layout() << buffer.vertices;

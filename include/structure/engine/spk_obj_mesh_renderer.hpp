@@ -1,6 +1,6 @@
 #pragma once
 
-#include "structure/engine/spk_mesh.hpp"
+#include "structure/engine/spk_obj_mesh.hpp"
 #include "structure/graphics/lumina/spk_shader.hpp"
 #include "structure/graphics/lumina/spk_shader_object_factory.hpp"
 #include "structure/graphics/texture/spk_image.hpp"
@@ -27,7 +27,7 @@ namespace spk
 			Painter();
 
 			void clear();
-			void prepare(const Mesh &p_mesh);
+			void prepare(const ObjMesh &p_mesh);
 			void validate();
 			void render();
 
