@@ -17,7 +17,7 @@ namespace spk
 			static inline spk::Lumina::ShaderObjectFactory::Instanciator _instanciator;
 
 			static spk::Lumina::Shader _createShader();
-			static inline spk::Lumina::Shader _shader = _createShader();
+			static spk::Lumina::Shader _shader;
 
 			spk::Lumina::Shader::Object _object;
 			spk::OpenGL::BufferSet &_bufferSet;

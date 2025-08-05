@@ -4,11 +4,7 @@ namespace spk::Lumina
 {
 	void ShaderObjectFactory::add(const spk::JSON::Object &p_desc)
 	{
-		_add(p_desc);
-	}
-
-	void ShaderObjectFactory::_add(const spk::JSON::Object &p_desc)
-	{
+		DEBUG_LINE();
 		if (p_desc.contains(L"UBO") == true)
 		{
 			const spk::JSON::Object &ubos = p_desc[L"UBO"];
@@ -33,6 +29,7 @@ namespace spk::Lumina
 				}
 			}
 		}
+		DEBUG_LINE();
 
 		if (p_desc.contains(L"SSBO") == true)
 		{
@@ -61,6 +58,7 @@ namespace spk::Lumina
 			}
 		}
 
+		DEBUG_LINE();
 		if (p_desc.contains(L"Sampler") == true)
 		{
 			const spk::JSON::Object &samplers = p_desc[L"Sampler"];
@@ -87,6 +85,7 @@ namespace spk::Lumina
 				}
 			}
 		}
+		DEBUG_LINE();
 	}
 
 	spk::OpenGL::UniformBufferObject &ShaderObjectFactory::ubo(const std::wstring &p_name)
