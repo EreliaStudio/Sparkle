@@ -62,34 +62,4 @@ namespace spk
 	struct IsJSONable<T, std::enable_if_t<ContainsToJSON<T>::value && ContainsFromJSON<T>::value>> : std::true_type
 	{
 	};
-
-	template <typename, typename = void>
-	struct ContainsToOBJ : std::false_type
-	{
-	};
-
-	template <typename T>
-	struct ContainsToOBJ<T, std::void_t<decltype(std::declval<const T &>().toOBJ())>> : std::true_type
-	{
-	};
-
-	template <typename, typename = void>
-	struct ContainsFromOBJ : std::false_type
-	{
-	};
-
-	template <typename T>
-	struct ContainsFromOBJ<T, std::void_t<decltype(std::declval<T>().fromOBJ(std::declval<decltype(std::declval<T>().toOBJ())>()))>> : std::true_type
-	{
-	};
-
-	template <typename T, typename = void>
-	struct IsOBJable : std::false_type
-	{
-	};
-
-	template <typename T>
-	struct IsOBJable<T, std::enable_if_t<ContainsToOBJ<T>::value && ContainsFromOBJ<T>::value>> : std::true_type
-	{
-	};
 }

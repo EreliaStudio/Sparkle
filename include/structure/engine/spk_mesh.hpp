@@ -12,7 +12,7 @@
 
 namespace spk
 {
-	template <typename TVertexType, typename = std::enable_if<spk::IsOBJable<TVertexType>::value>>
+	template <typename TVertexType>
 	class TMesh
 	{
 	public:
@@ -176,9 +176,6 @@ namespace spk
 			_needBake = false;
 		}
 
-		void exportToOBJ(const std::filesystem::path& p_path) const;
-		void importFromOBJ(const std::filesystem::path& p_path);
-
 		const Buffer& buffer() const
 		{
 			if (_needBake)
@@ -188,6 +185,4 @@ namespace spk
 			return _buffer;
 		}
 	};
-
-	using Mesh = TMesh<Vertex>;
 }
