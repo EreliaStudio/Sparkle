@@ -6,12 +6,11 @@
 
 namespace spk
 {
-
 	spk::Lumina::Shader ObjMeshRenderer::Painter::_createShader()
 	{
 		spk::Lumina::ShaderObjectFactory::instance()->add(spk::JSON::Object::fromString(
-				SPARKLE_GET_RESOURCE_AS_STRING("resources/json/mesh_renderer_shader_object.json")
-			));
+			SPARKLE_GET_RESOURCE_AS_STRING("resources/json/mesh_renderer_shader_object.json")
+		));
 
 		const char *vertexShaderSrc = R"(#version 450
 layout(location = 0) in vec3 inPosition;
@@ -57,26 +56,32 @@ outputColor = texColor;
 		shader.addAttribute({1, spk::OpenGL::LayoutBufferObject::Attribute::Type::Vector2});
 		shader.addAttribute({2, spk::OpenGL::LayoutBufferObject::Attribute::Type::Vector3});
 
+	DEBUG_LINE();
 		shader.addSampler(
 				L"diffuseTexture",
 				spk::Lumina::ShaderObjectFactory::instance()->sampler(L"diffuseTexture"),
 				spk::Lumina::Shader::Mode::Attribute
 			);
+	DEBUG_LINE();
 
 		shader.addUBO(
 				L"CameraUBO", 
 				spk::Lumina::ShaderObjectFactory::instance()->ubo(L"CameraUBO"), 
 				spk::Lumina::Shader::Mode::Constant
 			);
+	DEBUG_LINE();
 
 		shader.addUBO(
 				L"TransformUBO", 
 				spk::Lumina::ShaderObjectFactory::instance()->ubo(L"TransformUBO"), 
 				spk::Lumina::Shader::Mode::Attribute
 			);
+	DEBUG_LINE();
 
 		return (shader);
 	}
+
+	spk::Lumina::Shader ObjMeshRenderer::Painter::_shader = ObjMeshRenderer::Painter::_createShader();
 
 	ObjMeshRenderer::Painter::Painter() :
 		_object(_shader.createObject()),
