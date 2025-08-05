@@ -7,7 +7,7 @@
 namespace spk
 {
 
-	spk::Lumina::Shader MeshRenderer::Painter::_createShader()
+	spk::Lumina::Shader ObjMeshRenderer::Painter::_createShader()
 	{
 		spk::Lumina::ShaderObjectFactory::instance()->add(spk::JSON::Object::fromString(
 				SPARKLE_GET_RESOURCE_AS_STRING("resources/json/mesh_renderer_shader_object.json")
@@ -78,75 +78,75 @@ outputColor = texColor;
 		return (shader);
 	}
 
-	MeshRenderer::Painter::Painter() :
+	ObjMeshRenderer::Painter::Painter() :
 		_object(_shader.createObject()),
 		_bufferSet(_object.bufferSet()),
 		_diffuseSampler(_shader.sampler(L"diffuseTexture"))
 	{
 	}
 
-	void MeshRenderer::Painter::clear()
+	void ObjMeshRenderer::Painter::clear()
 	{
 		_bufferSet.layout().clear();
 		_bufferSet.indexes().clear();
 	}
 
-	void MeshRenderer::Painter::prepare(const spk::ObjMesh &p_mesh)
+	void ObjMeshRenderer::Painter::prepare(const spk::ObjMesh &p_mesh)
 	{
 		const auto &buffer = p_mesh.buffer();
 		_bufferSet.layout() << buffer.vertices;
 		_bufferSet.indexes() << buffer.indexes;
 	}
 
-	void MeshRenderer::Painter::validate()
+	void ObjMeshRenderer::Painter::validate()
 	{
 		_bufferSet.layout().validate();
 		_bufferSet.indexes().validate();
 	}
 
-	void MeshRenderer::Painter::render()
+	void ObjMeshRenderer::Painter::render()
 	{
 		_object.render();
 	}
 
-	spk::Lumina::Shader &MeshRenderer::Painter::shader()
+	spk::Lumina::Shader &ObjMeshRenderer::Painter::shader()
 	{
 		return (_shader);
 	}
 
-	spk::OpenGL::SamplerObject &MeshRenderer::Painter::diffuseSampler()
+	spk::OpenGL::SamplerObject &ObjMeshRenderer::Painter::diffuseSampler()
 	{
 		return (_diffuseSampler);
 	}
 
-	MeshRenderer::MeshRenderer() :
+	ObjMeshRenderer::ObjMeshRenderer() :
 		_painter()
 	{
 		_painter.diffuseSampler().bind(_texture);
 	}
 
-	void MeshRenderer::setTexture(spk::SafePointer<spk::Image> p_texture)
+	void ObjMeshRenderer::setTexture(spk::SafePointer<spk::Image> p_texture)
 	{
 		_texture = p_texture;
 		_painter.diffuseSampler().bind(_texture);
 	}
 
-	spk::SafePointer<spk::Image> &MeshRenderer::texture()
+	spk::SafePointer<spk::Image> &ObjMeshRenderer::texture()
 	{
 		return (_texture);
 	}
 
-	const spk::SafePointer<spk::Image> &MeshRenderer::texture() const
+	const spk::SafePointer<spk::Image> &ObjMeshRenderer::texture() const
 	{
 		return (_texture);
 	}
 
-	spk::Lumina::Shader &MeshRenderer::shader()
+	spk::Lumina::Shader &ObjMeshRenderer::shader()
 	{
 		return (_painter.shader());
 	}
 
-	MeshRenderer::Painter &MeshRenderer::painter()
+	ObjMeshRenderer::Painter &ObjMeshRenderer::painter()
 	{
 		return (_painter);
 	}

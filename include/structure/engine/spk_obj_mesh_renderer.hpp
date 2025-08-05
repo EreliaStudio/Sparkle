@@ -8,7 +8,7 @@
 
 namespace spk
 {
-	class MeshRenderer
+	class ObjMeshRenderer
 	{
 	public:
 		class Painter
@@ -40,7 +40,7 @@ namespace spk
 		Painter _painter;
 
 	public:
-		MeshRenderer();
+		ObjMeshRenderer();
 
 		void setTexture(spk::SafePointer<spk::Image> p_texture);
 		spk::SafePointer<spk::Image> &texture();
