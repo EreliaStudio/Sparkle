@@ -15,6 +15,7 @@
 #include "spk_sfinae.hpp"
 
 #include "structure/container/spk_data_buffer_layout.hpp"
+#include "structure/container/spk_json_object.hpp"
 #include "structure/graphics/opengl/spk_vertex_buffer_object.hpp"
 
 #include "spk_debug_macro.hpp"

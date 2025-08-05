@@ -1,6 +1,7 @@
 #include "structure/graphics/opengl/spk_sampler_object.hpp"
 
 #include "structure/graphics/opengl/spk_texture_collection.hpp"
+#include "utils/spk_string_utils.hpp"
 
 namespace spk::OpenGL
 {
@@ -19,6 +20,30 @@ namespace spk::OpenGL
 		_texture(nullptr),
 		_uniformDestination(-1),
 		_type(p_type)
+	{
+	}
+
+	SamplerObject::SamplerObject(const spk::JSON::Object &p_desc) :
+		SamplerObject(
+			spk::StringUtils::wstringToString(p_desc[L"Name"].as<std::wstring>()),
+			[&]()
+			{
+				std::wstring typeStr = p_desc[L"Type"].as<std::wstring>();
+				if (typeStr == L"Texture1D")
+				{
+					return Type::Texture1D;
+				}
+				else if (typeStr == L"Texture3D")
+				{
+					return Type::Texture3D;
+				}
+				else if (typeStr == L"TextureCubeMap")
+				{
+					return Type::TextureCubeMap;
+				}
+				return Type::Texture2D;
+			}(),
+			static_cast<BindingPoint>(p_desc[L"BindingPoint"].as<long>()))
 	{
 	}
 
@@ -80,17 +105,17 @@ namespace spk::OpenGL
 
 	spk::SafePointer<const Texture> &SamplerObject::texture()
 	{
-		return _texture;
+		return (_texture);
 	}
 
 	const spk::SafePointer<const Texture> &SamplerObject::texture() const
 	{
-		return _texture;
+		return (_texture);
 	}
 
 	SamplerObject::BindingPoint SamplerObject::bindingPoint() const
 	{
-		return _bindingPoint;
+		return (_bindingPoint);
 	}
 
 	void SamplerObject::setBindingPoint(BindingPoint p_bindingPoint)
@@ -127,16 +152,16 @@ namespace spk::OpenGL
 
 		spk::SafePointer<OpenGL::TextureObject> gpuTexture = TextureCollection::textureObject(_texture);
 
-		if (gpuTexture)
+		if (gpuTexture != nullptr)
 		{
-			if (_texture->_needUpdate)
+			if (_texture->_needUpdate == true)
 			{
 				gpuTexture->upload(_texture);
 
 				_texture->_needUpdate = false;
 			}
 
-			else if (_texture->_needSettings)
+			else if (_texture->_needSettings == true)
 			{
 				gpuTexture->updateSettings(_texture);
 				_texture->_needSettings = false;

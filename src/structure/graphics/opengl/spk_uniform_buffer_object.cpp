@@ -7,17 +7,17 @@
 
 namespace spk::OpenGL
 {
-	void spk::OpenGL::UniformBufferObject::_loadElement(const spk::JSON::Object &p_elemDesc)
+	void UniformBufferObject::_loadElement(const spk::JSON::Object &p_elemDesc)
 	{
 		std::wstring name = p_elemDesc[L"Name"].as<std::wstring>();
 		size_t offset = static_cast<size_t>(p_elemDesc[L"Offset"].as<long>());
 
-		if (p_elemDesc.contains(L"Size"))
+		if (p_elemDesc.contains(L"Size") == true)
 		{
 			size_t size = static_cast<size_t>(p_elemDesc[L"Size"].as<long>());
 			auto &elem = addElement(name, offset, size);
 
-			if (p_elemDesc.contains(L"NestedElements"))
+			if (p_elemDesc.contains(L"NestedElements") == true)
 			{
 				for (auto *child : p_elemDesc[L"NestedElements"].asArray())
 				{
@@ -25,7 +25,7 @@ namespace spk::OpenGL
 				}
 			}
 		}
-		else if (p_elemDesc.contains(L"NbElements"))
+		else if (p_elemDesc.contains(L"NbElements") == true)
 		{
 			size_t nbElem = static_cast<size_t>(p_elemDesc[L"NbElements"].as<long>());
 			size_t elemSize = static_cast<size_t>(p_elemDesc[L"ElementSize"].as<long>());
@@ -33,7 +33,7 @@ namespace spk::OpenGL
 
 			auto &elemArr = addElement(name, offset, nbElem, elemSize, padding);
 
-			if (p_elemDesc.contains(L"ElementComposition"))
+			if (p_elemDesc.contains(L"ElementComposition") == true)
 			{
 				for (size_t i = 0; i < elemArr.nbElement(); ++i)
 				{
@@ -50,17 +50,17 @@ namespace spk::OpenGL
 		}
 	}
 
-	void spk::OpenGL::UniformBufferObject::_loadElement(spk::DataBufferLayout::Element &p_parent, const spk::JSON::Object &p_elemDesc)
+	void UniformBufferObject::_loadElement(spk::DataBufferLayout::Element &p_parent, const spk::JSON::Object &p_elemDesc)
 	{
 		std::wstring name = p_elemDesc[L"Name"].as<std::wstring>();
 		size_t offset = p_parent.offset() + static_cast<size_t>(p_elemDesc[L"Offset"].as<long>());
 
-		if (p_elemDesc.contains(L"Size"))
+		if (p_elemDesc.contains(L"Size") == true)
 		{
 			size_t size = static_cast<size_t>(p_elemDesc[L"Size"].as<long>());
 			auto &elem = p_parent.addElement(name, offset, size);
 
-			if (p_elemDesc.contains(L"NestedElements"))
+			if (p_elemDesc.contains(L"NestedElements") == true)
 			{
 				for (auto *child : p_elemDesc[L"NestedElements"].asArray())
 				{
@@ -68,7 +68,7 @@ namespace spk::OpenGL
 				}
 			}
 		}
-		else if (p_elemDesc.contains(L"NbElements"))
+		else if (p_elemDesc.contains(L"NbElements") == true)
 		{
 			size_t nbElem = static_cast<size_t>(p_elemDesc[L"NbElements"].as<long>());
 			size_t elemSize = static_cast<size_t>(p_elemDesc[L"ElementSize"].as<long>());
@@ -76,7 +76,7 @@ namespace spk::OpenGL
 
 			auto &elemArr = p_parent.addElement(name, offset, nbElem, elemSize, padding);
 
-			if (p_elemDesc.contains(L"ElementComposition"))
+			if (p_elemDesc.contains(L"ElementComposition") == true)
 			{
 				for (size_t i = 0; i < elemArr.nbElement(); ++i)
 				{
@@ -102,12 +102,12 @@ namespace spk::OpenGL
 		resize(p_size);
 	}
 
-	spk::OpenGL::UniformBufferObject::UniformBufferObject(const spk::JSON::Object &p_desc) :
+	UniformBufferObject::UniformBufferObject(const spk::JSON::Object &p_desc) :
 		UniformBufferObject(p_desc[L"BlockName"].as<std::wstring>(),
 							static_cast<BindingPoint>(p_desc[L"BindingPoint"].as<long>()),
 							static_cast<size_t>(p_desc[L"Size"].as<long>()))
 	{
-		if (p_desc.contains(L"Elements"))
+		if (p_desc.contains(L"Elements") == true)
 		{
 			for (auto *elem : p_desc[L"Elements"].asArray())
 			{

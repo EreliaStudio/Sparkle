@@ -4,6 +4,7 @@
 
 #include <GL/gl.h>
 
+#include "structure/container/spk_json_object.hpp"
 #include "structure/graphics/opengl/spk_frame_buffer_object.hpp"
 #include "structure/graphics/opengl/spk_texture_object.hpp"
 #include "structure/graphics/texture/spk_texture.hpp"
@@ -39,6 +40,7 @@ namespace spk::OpenGL
 	public:
 		SamplerObject();
 		SamplerObject(const std::string &p_name, Type p_type, BindingPoint p_bindingPoint);
+		SamplerObject(const spk::JSON::Object &p_desc);
 
 		SamplerObject(const SamplerObject &p_other);
 		SamplerObject &operator=(const SamplerObject &p_other);
