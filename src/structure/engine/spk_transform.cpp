@@ -75,7 +75,8 @@ namespace spk
 
 	void Transform::lookAt(const spk::Vector3 &p_target)
 	{
-		_rotation = spk::Quaternion::lookAt(_position, p_target, spk::Vector3(0, 1, 0));
+		spk::Quaternion lookRotation = spk::Quaternion::lookAt(_position, p_target, spk::Vector3(0.0f, 1.0f, 0.0f));
+		_rotation = spk::Quaternion(-lookRotation.x, -lookRotation.y, -lookRotation.z, lookRotation.w);
 		_updateModel();
 	}
 
@@ -160,20 +161,19 @@ namespace spk
 			parentModel = parentTransform.model();
 		}
 
-		_model = parentModel * translationMatrix * rotationMatrix * scaleMatrix;
+		_model = scaleMatrix * rotationMatrix * translationMatrix * parentModel;
 		_inverseModel = _model.inverse();
 
-		_forward = _rotation * spk::Vector3(0.0f, 0.0f, -1.0f).normalize();
-		float forwardToUpDot = _forward.dot(spk::Vector3(0.0f, 1.0f, 0.0f));
-		_right = _forward.cross(spk::Vector3(0.0f, 1.0f, 0.0f));
-		_up = _right.cross(_forward);
+		spk::Vector3 right(_model[0][0], _model[0][1], _model[0][2]);
+		spk::Vector3 up(_model[1][0], _model[1][1], _model[1][2]);
+		spk::Vector3 forward(_model[2][0], _model[2][1], _model[2][2]);
 
-		_position = _localPosition;
-		if (owner() != nullptr && owner()->parent() != nullptr)
-		{
-			_position += owner()->parent()->transform().position();
-		}
+		_right = right.normalize();
+		_up = up.normalize();
+		_forward = (-forward).normalize();
 
-		_onEditContractProvider.trigger();
+		_position = spk::Vector3(_model[3][0], _model[3][1], _model[3][2]);
+
+		_onEditContractProvider.trigger();	
 	}
 }
