@@ -13,10 +13,6 @@ private:
 		cameraUBO.layout()[L"viewMatrix"] = transform.inverseModel();
 		cameraUBO.layout()[L"projectionMatrix"] = _camera.projectionMatrix();
 		cameraUBO.validate();
-
-		float determinant = (_camera.projectionMatrix() * transform.inverseModel()).determinant();
-
-		spk::cout << "Determinant = " << determinant << std::endl;
 	}
 
 public:
@@ -82,11 +78,21 @@ public:
 		{
 			movement += owner()->transform().right();
 		}
+		if (((*p_event.keyboard)[spk::Keyboard::Key::A] == spk::InputState::Down) == true)
+		{
+			movement -= owner()->transform().forward();
+		}
+		if (((*p_event.keyboard)[spk::Keyboard::Key::E] == spk::InputState::Down) == true)
+		{
+			movement += owner()->transform().forward();
+		}
 
 		if ((movement != spk::Vector3()) == true)
 		{
 			movement = movement.normalize();
-			owner()->transform().move(movement * (float)p_event.deltaTime.seconds * _moveSpeed);
+			spk::cout << "Movement : " << movement << std::endl;
+			auto delta = movement * (float)p_event.deltaTime.seconds * _moveSpeed;
+			owner()->transform().move(delta);
 			p_event.requestPaint();
 		}
 
@@ -116,8 +122,13 @@ int main()
 	auto cameraComponent = player->addComponent<CameraComponent>(L"Player/CameraComponent");
 	cameraComponent->setPerspective(60.0f, static_cast<float>(window->geometry().size.x) / static_cast<float>(window->geometry().size.y));
 	player->addComponent<PlayerControllerComponent>(L"Player/PlayerControllerComponent", 5.0f, 0.1f);
-	player->transform().place({3.0f, 3.0f, 3.0f});
+	player->transform().place({10.0f, 10.0f, 10.0f});
 	player->transform().lookAt({0.0f, 0.0f, 0.0f});
+
+	spk::cout << "Data from [" << player->transform().position() << "] to [" << spk::Vector3(0, 0, 0) << "]" << std::endl;
+	spk::cout << "Forward : " << player->transform().forward() << std::endl;
+	spk::cout << "Right : " << player->transform().right() << std::endl;
+	spk::cout << "Up : " << player->transform().up() << std::endl;
 
 	spk::SafePointer<spk::Entity> cube = new spk::Entity(L"Cube");
 	cube->activate();
