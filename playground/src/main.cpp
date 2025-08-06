@@ -116,7 +116,7 @@ int main()
 	auto cameraComponent = player->addComponent<CameraComponent>(L"Player/CameraComponent");
 	cameraComponent->setPerspective(60.0f, static_cast<float>(window->geometry().size.x) / static_cast<float>(window->geometry().size.y));
 	player->addComponent<PlayerControllerComponent>(L"Player/PlayerControllerComponent", 5.0f, 0.1f);
-	player->transform().place({0.0f, 0.0f, 3.0f});
+	player->transform().place({3.0f, 3.0f, 3.0f});
 	player->transform().lookAt({0.0f, 0.0f, 0.0f});
 
 	spk::SafePointer<spk::Entity> cube = new spk::Entity(L"Cube");

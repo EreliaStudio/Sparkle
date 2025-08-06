@@ -9,9 +9,9 @@ namespace spk
 {
 	struct Vertex
 	{
-		spk::Vector3 position;
-		spk::Vector2 uv;
-		spk::Vector3 normal;
+		spk::Vector3 position = {0, 0, 0};
+		spk::Vector2 uv = {-1, -1};
+		spk::Vector3 normal = {0, 0, 1};
 
 		bool operator==(const Vertex& other) const
 		{
