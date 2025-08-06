@@ -155,6 +155,11 @@ namespace spk
 
 		static void loadContent(spk::JSON::Object &p_objectToFill, const std::wstring &p_content, size_t &p_index)
 		{
+			if (p_index >= p_content.size())
+			{
+				GENERATE_ERROR("Unexpected end of JSON content");
+			}
+
 			switch (p_content[p_index])
 			{
 			case '\"':
@@ -181,7 +186,7 @@ namespace spk
 				loadArray(p_objectToFill, p_content, p_index);
 				break;
 			default:
-				GENERATE_ERROR("Unexpected data type in JSON: " + spk::StringUtils::wstringToString(p_content).substr(p_index, 10));
+				GENERATE_ERROR("Unexpected data type in JSON: [" + spk::StringUtils::wstringToString(p_content).substr(p_index, 1) + "] (Char value: " + std::to_string(static_cast<int>(p_content[p_index])) + ")");
 			}
 		}
 
@@ -197,8 +202,10 @@ namespace spk
 		{
 			spk::JSON::Object result;
 
+			std::wstring cleanedContent = applyGrammar(p_content);
+
 			size_t index = 0;
-			loadContent(result, p_content, index);
+			loadContent(result, cleanedContent, index);
 
 			return (result);
 		}

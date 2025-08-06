@@ -1,14 +1,16 @@
 #pragma once
 
 #include "structure/engine/spk_obj_mesh.hpp"
+#include "structure/engine/spk_component.hpp"
 #include "structure/graphics/lumina/spk_shader.hpp"
 #include "structure/graphics/lumina/spk_shader_object_factory.hpp"
 #include "structure/graphics/texture/spk_image.hpp"
 #include "structure/spk_safe_pointer.hpp"
+#include "structure/engine/spk_transform.hpp"
 
 namespace spk
 {
-	class ObjMeshRenderer
+	class ObjMeshRenderer : public spk::Component
 	{
 	public:
 		class Painter
@@ -22,6 +24,7 @@ namespace spk
 			spk::Lumina::Shader::Object _object;
 			spk::OpenGL::BufferSet &_bufferSet;
 			spk::OpenGL::SamplerObject &_diffuseSampler;
+			spk::OpenGL::UniformBufferObject &_transformUBO;
 
 		public:
 			Painter();
@@ -31,22 +34,26 @@ namespace spk
 			void validate();
 			void render();
 
-			spk::Lumina::Shader &shader();
-			spk::OpenGL::SamplerObject &diffuseSampler();
+			void setTransform(const spk::Transform &p_transform);
+			void setTexture(const spk::SafePointer<const spk::Texture> &p_texture);
+			const spk::SafePointer<const spk::Texture>& texture() const;
 		};
 
 	private:
-		spk::SafePointer<spk::Image> _texture;
+		spk::SafePointer<spk::ObjMesh> _mesh;
 		Painter _painter;
+		spk::ContractProvider::Contract _onOwnerTransformEditionContract;
 
 	public:
-		ObjMeshRenderer();
+		ObjMeshRenderer(const std::wstring& p_name);
 
-		void setTexture(spk::SafePointer<spk::Image> p_texture);
-		spk::SafePointer<spk::Image> &texture();
-		const spk::SafePointer<spk::Image> &texture() const;
+		void setTexture(spk::SafePointer<const spk::Texture> p_texture);
+		const spk::SafePointer<const spk::Texture> &texture() const;
 
-		spk::Lumina::Shader &shader();
-		Painter &painter();
+		void setMesh(const spk::SafePointer<spk::ObjMesh>& p_mesh);
+		const spk::SafePointer<spk::ObjMesh>& mesh() const;
+
+		void onPaintEvent(spk::PaintEvent &p_event) override;
+		void start() override;
 	};
 }

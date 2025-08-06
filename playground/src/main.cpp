@@ -8,16 +8,20 @@ private:
 
 	void _updateUBO()
 	{
-		auto &cameraUBO = spk::Lumina::ShaderObjectFactory::instance()->ubo(L"CameraUBO");
+		auto &cameraUBO = spk::Lumina::Shader::Constants::ubo(L"CameraUBO");
 		const spk::Transform &transform = owner()->transform();
 		cameraUBO.layout()[L"viewMatrix"] = transform.inverseModel();
 		cameraUBO.layout()[L"projectionMatrix"] = _camera.projectionMatrix();
 		cameraUBO.validate();
+
+		float determinant = (_camera.projectionMatrix() * transform.inverseModel()).determinant();
+
+		spk::cout << "Determinant = " << determinant << std::endl;
 	}
 
 public:
-	CameraComponent() :
-		spk::Component(L"CameraComponent")
+	CameraComponent(const std::wstring& p_name) :
+		spk::Component(p_name)
 	{
 	}
 
@@ -39,46 +43,6 @@ public:
 	}
 };
 
-class MeshRendererComponent : public spk::Component
-{
-private:
-	spk::ObjMeshRenderer _renderer;
-	spk::ObjMesh _mesh;
-	spk::ContractProvider::Contract _transformContract;
-
-	void _updateTransformUBO()
-	{
-		auto &transformUBO = spk::Lumina::ShaderObjectFactory::instance()->ubo(L"TransformUBO");
-		transformUBO.layout()[L"modelMatrix"] = owner()->transform().model();
-		transformUBO.validate();
-	}
-
-public:
-	MeshRendererComponent() :
-		spk::Component(L"MeshRendererComponent")
-	{
-	}
-
-	void setMesh(const std::string &p_path)
-	{
-		_mesh.loadFromFile(p_path);
-		_renderer.painter().clear();
-		_renderer.painter().prepare(_mesh);
-		_renderer.painter().validate();
-	}
-
-	void start() override
-	{
-		_transformContract = owner()->transform().addOnEditionCallback([this]() { _updateTransformUBO(); });
-		_updateTransformUBO();
-	}
-
-	void onPaintEvent(spk::PaintEvent &p_event) override
-	{
-		_renderer.painter().render();
-	}
-};
-
 class PlayerControllerComponent : public spk::Component
 {
 private:
@@ -86,8 +50,8 @@ private:
 	float _mouseSensitivity;
 
 public:
-	PlayerControllerComponent(float p_moveSpeed = 5.0f, float p_mouseSensitivity = 0.1f) :
-		spk::Component(L"PlayerControllerComponent"),
+	PlayerControllerComponent(const std::wstring& p_name, float p_moveSpeed = 5.0f, float p_mouseSensitivity = 0.1f) :
+		spk::Component(p_name),
 		_moveSpeed(p_moveSpeed),
 		_mouseSensitivity(p_mouseSensitivity)
 	{
@@ -104,11 +68,11 @@ public:
 
 		if (((*p_event.keyboard)[spk::Keyboard::Key::Z] == spk::InputState::Down) == true)
 		{
-			movement += owner()->transform().forward();
+			movement += owner()->transform().up();
 		}
 		if (((*p_event.keyboard)[spk::Keyboard::Key::S] == spk::InputState::Down) == true)
 		{
-			movement -= owner()->transform().forward();
+			movement -= owner()->transform().up();
 		}
 		if (((*p_event.keyboard)[spk::Keyboard::Key::Q] == spk::InputState::Down) == true)
 		{
@@ -123,23 +87,22 @@ public:
 		{
 			movement = movement.normalize();
 			owner()->transform().move(movement * (float)p_event.deltaTime.seconds * _moveSpeed);
+			p_event.requestPaint();
 		}
 
-		spk::Vector2Int delta = p_event.mouse->deltaPosition;
-		if ((delta.x != 0 || delta.y != 0) == true)
-		{
-			owner()->transform().rotate({0.0f, -delta.y * _mouseSensitivity, -delta.x * _mouseSensitivity});
-		}
+		// spk::Vector2Int delta = p_event.mouse->deltaPosition;
+		// if ((delta.x != 0 || delta.y != 0) == true)
+		// {
+		// 	owner()->transform().rotate({0.0f, -delta.y * _mouseSensitivity, -delta.x * _mouseSensitivity});
+		// 	p_event.requestPaint();
+		// }
 	}
 };
 
 int main()
 {
-	DEBUG_LINE();
 	spk::GraphicalApplication app;
 	auto window = app.createWindow(L"Playground", {{0, 0}, {800, 600}});
-
-	DEBUG_LINE();
 
 	spk::SafePointer<spk::GameEngine> engine = new spk::GameEngine();
 	spk::GameEngineWidget engineWidget(L"EngineWidget", window->widget());
@@ -147,21 +110,27 @@ int main()
 	engineWidget.setGameEngine(engine);
 	engineWidget.activate();
 
-	DEBUG_LINE();
 	spk::SafePointer<spk::Entity> player = new spk::Entity(L"Player");
+	player->activate();
 	engine->addEntity(player);
-	auto cameraComponent = player->addComponent<CameraComponent>();
+	auto cameraComponent = player->addComponent<CameraComponent>(L"Player/CameraComponent");
 	cameraComponent->setPerspective(60.0f, static_cast<float>(window->geometry().size.x) / static_cast<float>(window->geometry().size.y));
-	player->addComponent<PlayerControllerComponent>();
+	player->addComponent<PlayerControllerComponent>(L"Player/PlayerControllerComponent", 5.0f, 0.1f);
 	player->transform().place({0.0f, 0.0f, 3.0f});
+	player->transform().lookAt({0.0f, 0.0f, 0.0f});
 
-	DEBUG_LINE();
 	spk::SafePointer<spk::Entity> cube = new spk::Entity(L"Cube");
+	cube->activate();
 	engine->addEntity(cube);
-	auto renderer = cube->addComponent<MeshRendererComponent>();
-	renderer->setMesh("resources/obj/cube.obj");
+	auto renderer = cube->addComponent<spk::ObjMeshRenderer>(L"Cube/ObjMeshRenderer");
+	
+	spk::Image texture = spk::Image("playground/resources/texture/CubeTexture.png");
+
+	spk::ObjMesh cubeMesh;
+	cubeMesh.loadFromFile("playground/resources/obj/cube.obj");
+	renderer->setTexture(&texture);
+	renderer->setMesh(&cubeMesh);
 	cube->transform().place({0.0f, 0.0f, 0.0f});
 
-	DEBUG_LINE();
 	return app.run();
 }

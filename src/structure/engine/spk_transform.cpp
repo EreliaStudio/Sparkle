@@ -11,7 +11,7 @@ namespace spk
 		_rotation(spk::Quaternion::identity()),
 		_scale(1.0f, 1.0f, 1.0f),
 		_velocity(0.0f, 0.0f, 0.0f),
-		_forward(0.0f, 0.0f, 1.0f),
+		_forward(0.0f, 0.0f, -1.0f),
 		_right(1.0f, 0.0f, 0.0f),
 		_up(0.0f, 1.0f, 0.0f)
 	{
@@ -163,15 +163,9 @@ namespace spk
 		_model = parentModel * translationMatrix * rotationMatrix * scaleMatrix;
 		_inverseModel = _model.inverse();
 
-		_forward = _rotation * spk::Vector3(0.0f, 0.0f, 1.0f).normalize();
+		_forward = _rotation * spk::Vector3(0.0f, 0.0f, -1.0f).normalize();
 		float forwardToUpDot = _forward.dot(spk::Vector3(0.0f, 1.0f, 0.0f));
-		_right = Vector3(1, 0, 0);
-
-		if (forwardToUpDot > -1 && forwardToUpDot < 1)
-		{
-			_right = _forward.cross(spk::Vector3(0.0f, 1.0f, 0.0f)).normalize();
-		}
-
+		_right = _forward.cross(spk::Vector3(0.0f, 1.0f, 0.0f));
 		_up = _right.cross(_forward);
 
 		_position = _localPosition;

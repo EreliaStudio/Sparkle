@@ -26,6 +26,17 @@ namespace spk::OpenGLUtils
 
 	void GLAPIENTRY openGLDebugMessageCallback(
 		GLenum p_source, GLenum p_type, GLuint p_id, GLenum p_severity, GLsizei p_length, const GLchar *p_message, const void *p_userParam);
+
+	void LogGLErrors(const char* p_where);
+	void PrintShaderLog(GLuint p_shader, const char* p_label);
+	void PrintProgramLog(GLuint p_prog, const char* p_label);
+	void DumpActiveAttribs(GLuint p_prog);
+	void DumpActiveUniformsAndSamplers(GLuint p_prog);
+	void DumpUniformBlocks(GLuint p_prog);
+	void DumpPreDrawState();
+	void DumpUBOBindingsForUsedBlocks(GLuint p_prog);
+	void DumpTexture2DCompletenessForUnit(GLint p_unit);
+	void CheckIndexBufferCapacityVsCount(GLsizei p_count, GLenum p_indexType);
 }
 
 #define SPK_PP_CAT_IMPL(a, b) a##b

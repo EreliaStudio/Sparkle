@@ -11,6 +11,8 @@
 
 #include "structure/system/spk_exception.hpp"
 
+#include "utils/spk_opengl_utils.hpp"
+
 namespace spk::OpenGL
 {
 	Program::Program() :
@@ -20,10 +22,11 @@ namespace spk::OpenGL
 	{
 	}
 
-	Program::Program(const std::string &p_vertexShaderCode, const std::string &p_fragmentShaderCode) :
+	Program::Program(const std::string &p_vertexShaderCode, const std::string &p_fragmentShaderCode, bool p_verboseMode) :
 		_vertexShaderCode(p_vertexShaderCode),
 		_fragmentShaderCode(p_fragmentShaderCode),
-		_programID(0)
+		_programID(0),
+		_verboseMode(p_verboseMode)
 	{
 	}
 
@@ -34,6 +37,11 @@ namespace spk::OpenGL
 		_needCleanup = true;
 	}
 
+	void Program::setVerboseMode(bool p_verbose)
+	{
+		_verboseMode = p_verbose;
+	}
+
 	GLuint Program::_compileShader(const std::string &p_shaderCode, GLenum p_shaderType)
 	{
 		GLuint shader = glCreateShader(p_shaderType);
@@ -41,14 +49,31 @@ namespace spk::OpenGL
 		glShaderSource(shader, 1, &source, nullptr);
 		glCompileShader(shader);
 
-		GLint success;
+		// Always print the compile log
+
+		if (_verboseMode == true)
+		{
+			OpenGLUtils::PrintShaderLog(shader, (p_shaderType == GL_VERTEX_SHADER) ? "Vertex" : "Fragment");
+		}
+
+		GLint success = GL_FALSE;
 		glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
 		if (!success)
 		{
-			GLchar infoLog[512];
-			glGetShaderInfoLog(shader, 512, nullptr, infoLog);
+
+			if (_verboseMode == true)
+			{
+				OpenGLUtils::LogGLErrors("_compileShader");
+			}
 			std::string shaderTypeStr = (p_shaderType == GL_VERTEX_SHADER) ? "Vertex Shader" : "Fragment Shader";
-			GENERATE_ERROR(shaderTypeStr + " compilation failed: " + std::string(infoLog));
+			GLint len = 0;
+			glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
+			std::vector<char> infoLog((size_t)std::max(1, len));
+			if (len > 1)
+			{
+				glGetShaderInfoLog(shader, len, nullptr, infoLog.data());
+			}
+			GENERATE_ERROR(shaderTypeStr + std::string(" compilation failed: ") + (len > 1 ? infoLog.data() : "(no log)"));
 		}
 
 		return shader;
@@ -61,15 +86,50 @@ namespace spk::OpenGL
 		glAttachShader(program, p_fragmentShader);
 		glLinkProgram(program);
 
-		GLint success;
+		// Always print the link log
+
+		if (_verboseMode == true)
+		{
+			OpenGLUtils::PrintProgramLog(program, "Link");
+		}
+
+		GLint success = GL_FALSE;
 		glGetProgramiv(program, GL_LINK_STATUS, &success);
 		if (!success)
 		{
-			GLchar infoLog[512];
-			glGetProgramInfoLog(program, 512, nullptr, infoLog);
-			GENERATE_ERROR("Shader Program linking failed: " + std::string(infoLog));
+
+			if (_verboseMode == true)
+			{
+				OpenGLUtils::LogGLErrors("_linkProgram");
+			}
+			GLint len = 0;
+			glGetProgramiv(program, GL_INFO_LOG_LENGTH, &len);
+			std::vector<char> infoLog((size_t)std::max(1, len));
+			if (len > 1)
+			{
+				glGetProgramInfoLog(program, len, nullptr, infoLog.data());
+			}
+			GENERATE_ERROR(std::string("Shader Program linking failed: ") + (len > 1 ? infoLog.data() : "(no log)"));
 		}
 
+		// Reflect program to help debugging bindings/locations
+
+		if (_verboseMode == true)
+		{
+			OpenGLUtils::DumpActiveAttribs(program);
+		}
+
+		if (_verboseMode == true)
+		{
+			OpenGLUtils::DumpActiveUniformsAndSamplers(program);
+		}
+
+		if (_verboseMode == true)
+		{
+			OpenGLUtils::DumpUniformBlocks(program);
+		}
+
+		// Clean up shaders after link
 		glDeleteShader(p_vertexShader);
 		glDeleteShader(p_fragmentShader);
 
@@ -78,9 +138,25 @@ namespace spk::OpenGL
 
 	void Program::_load()
 	{
+		// Context sanity info
+		if (wglGetCurrentContext() == nullptr)
+		{
+			GENERATE_ERROR("No current OpenGL context before creating program");
+		}
+		if (_verboseMode == true)
+		{
+		std::cerr << "[GL] Version: " << (const char *)glGetString(GL_VERSION) << " | Renderer: " << (const char *)glGetString(GL_RENDERER)
+				  << " | GLSL: " << (const char *)glGetString(GL_SHADING_LANGUAGE_VERSION) << "\n";
+		}
+
 		GLuint vertexShader = _compileShader(_vertexShaderCode, GL_VERTEX_SHADER);
 		GLuint fragmentShader = _compileShader(_fragmentShaderCode, GL_FRAGMENT_SHADER);
 		_programID = _linkProgram(vertexShader, fragmentShader);
+
+		if (_verboseMode == true)
+		{
+			OpenGLUtils::LogGLErrors("Program::_load");
+		}
 	}
 
 	void Program::_cleanup()
@@ -88,6 +164,11 @@ namespace spk::OpenGL
 		if (wglGetCurrentContext() != nullptr && _programID != 0)
 		{
 			glDeleteProgram(_programID);
+
+			if (_verboseMode == true)
+			{
+				OpenGLUtils::LogGLErrors("Program::_cleanup glDeleteProgram");
+			}
 		}
 		_programID = 0;
 		_needCleanup = false;
@@ -95,6 +176,7 @@ namespace spk::OpenGL
 
 	void Program::activate()
 	{
+		// Lazy recompile if requested via load()
 		if (_needCleanup == true)
 		{
 			_cleanup();
@@ -106,6 +188,11 @@ namespace spk::OpenGL
 		}
 
 		glUseProgram(_programID);
+
+		if (_verboseMode == true)
+		{
+			OpenGLUtils::LogGLErrors("Program::activate glUseProgram");
+		}
 	}
 
 	void Program::deactivate()
@@ -113,12 +200,16 @@ namespace spk::OpenGL
 		if (_programID != 0)
 		{
 			glUseProgram(0);
+
+			if (_verboseMode == true)
+			{
+				OpenGLUtils::LogGLErrors("Program::deactivate glUseProgram(0)");
+			}
 		}
 	}
 
 	void Program::render(GLsizei p_nbIndexes, GLsizei p_nbInstance)
 	{
-
 		if (_programID == 0)
 		{
 			_load();
@@ -129,21 +220,97 @@ namespace spk::OpenGL
 			return;
 		}
 
+		// Dump state before drawing — helps catch VAO/EBO/attrib mistakes
+
+		if (_verboseMode == true)
+		{
+			OpenGLUtils::DumpPreDrawState();
+		}
+
+#ifndef NDEBUG
+		// Validate once per draw in debug builds
+		try
+		{
+			validate();
+		} catch (...)
+		{
+			throw;
+		}
+#endif
+
+		// Warn on obviously bad counts
+		if (p_nbIndexes <= 0)
+		{
+			std::cerr << "!! Program::render called with p_nbIndexes=" << p_nbIndexes << "\n";
+		}
+		if (p_nbInstance <= 0)
+		{
+			std::cerr << "!! Program::render called with p_nbInstance=" << p_nbInstance << "\n";
+		}
+
+		// Common INVALID_OPERATION cause: no EBO bound in the current VAO
+		GLint ebo = 0;
+		glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &ebo);
+		if (ebo == 0)
+		{
+			std::cerr << "!! No element array buffer bound in current VAO; glDrawElements* will fail in core profile.\n";
+		}
+
+		if (_verboseMode == true)
+		{
+			OpenGLUtils::DumpUBOBindingsForUsedBlocks(_programID);
+		}
+
+		if (_verboseMode == true)
+		{
+			OpenGLUtils::DumpTexture2DCompletenessForUnit(0);
+		}
+
+		if (_verboseMode == true)
+		{
+			OpenGLUtils::CheckIndexBufferCapacityVsCount(p_nbIndexes, GL_UNSIGNED_INT);
+		}
+
 		glDrawElementsInstanced(GL_TRIANGLES, p_nbIndexes, GL_UNSIGNED_INT, nullptr, p_nbInstance);
+
+		if (_verboseMode == true)
+		{
+			OpenGLUtils::LogGLErrors("Program::render glDrawElementsInstanced");
+		}
 	}
 
 	void Program::validate()
 	{
+		if (_programID == 0)
+		{
+			GENERATE_ERROR("Program::validate called with no program");
+		}
+
 		glValidateProgram(_programID);
-		GLint validationStatus;
+		GLint validationStatus = GL_FALSE;
 		glGetProgramiv(_programID, GL_VALIDATE_STATUS, &validationStatus);
+		GLint infoLogLength = 0;
+		glGetProgramiv(_programID, GL_INFO_LOG_LENGTH, &infoLogLength);
+		std::vector<char> infoLog((size_t)std::max(1, infoLogLength));
+		if (infoLogLength > 1)
+		{
+			glGetProgramInfoLog(_programID, infoLogLength, &infoLogLength, infoLog.data());
+		}
+
+		if (_verboseMode == true)
+		{
+		std::cerr << "[Program] Validate status=" << (validationStatus ? "OK" : "FAIL") << " log:\n"
+				  << (infoLogLength > 1 ? infoLog.data() : "(no log)") << "\n";
+		}
+
 		if (validationStatus == GL_FALSE)
 		{
-			GLint infoLogLength;
-			glGetProgramiv(_programID, GL_INFO_LOG_LENGTH, &infoLogLength);
-			std::vector<char> infoLog(infoLogLength);
-			glGetProgramInfoLog(_programID, infoLogLength, &infoLogLength, infoLog.data());
-			GENERATE_ERROR("Shader Program validation failed: " + std::string(infoLog.data()));
+			// If validation fails, also dump pre-draw state to help pinpoint
+			if (_verboseMode == true)
+			{
+				OpenGLUtils::DumpPreDrawState();
+			}
+			GENERATE_ERROR(std::string("Shader Program validation failed: ") + (infoLogLength > 1 ? infoLog.data() : "(no log)"));
 		}
 	}
 

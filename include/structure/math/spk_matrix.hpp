@@ -432,11 +432,67 @@ namespace spk
 		}
 
 		template <size_t X = SizeX, size_t Y = SizeY, typename std::enable_if_t<(X == Y), int> = 0>
+		float determinant() const
+		{
+			const size_t N = SizeX;
+			IMatrix<SizeX, SizeY> A(*this);
+			float det = 1.0f;
+			int sign = 1;
+
+			for (size_t i = 0; i < N; ++i)
+			{
+				size_t pivotRow = i;
+				float maxElem = std::fabs(A[i][i]);
+				for (size_t r = i + 1; r < N; ++r)
+				{
+					float v = std::fabs(A[i][r]);
+					if (v > maxElem)
+					{
+						maxElem = v;
+						pivotRow = r;
+					}
+				}
+
+				if (maxElem < 1e-9f)
+					return 0.0f;
+
+				if (pivotRow != i)
+				{
+					for (size_t c = 0; c < N; ++c)
+						std::swap(A[c][i], A[c][pivotRow]);
+					sign = -sign;
+				}
+
+				for (size_t r = i + 1; r < N; ++r)
+				{
+					float factor = A[i][r] / A[i][i];
+					for (size_t c = i; c < N; ++c)
+						A[c][r] -= factor * A[c][i];
+				}
+
+				det *= A[i][i];
+			}
+
+			return det * static_cast<float>(sign);
+		}
+
+		template <size_t X = SizeX, size_t Y = SizeY, typename std::enable_if_t<(X == Y), int> = 0>
+		bool isInvertible() const
+		{
+			return std::fabs(this->determinant()) > std::numeric_limits<float>::epsilon();
+		}
+
+		template <size_t X = SizeX, size_t Y = SizeY, typename std::enable_if_t<(X == Y), int> = 0>
 		IMatrix<SizeX, SizeY> inverse() const
 		{
 			if (SizeX != SizeY)
 			{
 				GENERATE_ERROR("Matrix inversion requires a square matrix.");
+			}
+
+			if (isInvertible() == false)
+			{
+			    GENERATE_ERROR("Matrix is not invertible (determinant is ~0).");
 			}
 
 			const size_t N = SizeX;
@@ -496,7 +552,7 @@ namespace spk
 		}
 	};
 
-	using Matrix2x2 = IMatrix<3, 3>;
+	using Matrix2x2 = IMatrix<2, 2>;
 	using Matrix3x3 = IMatrix<3, 3>;
 	using Matrix4x4 = IMatrix<4, 4>;
 }

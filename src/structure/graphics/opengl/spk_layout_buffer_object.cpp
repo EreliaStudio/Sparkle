@@ -163,7 +163,22 @@ namespace spk::OpenGL
 		addAttribute({p_index, p_type});
 	}
 
-	void LayoutBufferObject::_applyAttributes()
+	size_t LayoutBufferObject::nbVertex() const
+	{
+		if (!_attributesToApply.empty())
+		{
+			_applyAttributes();
+		}
+
+		if (_vertexSize == 0)
+		{
+			GENERATE_ERROR("Vertex size is zero, no attributes defined.");
+		}
+		
+		return size() / _vertexSize;
+	}
+
+	void LayoutBufferObject::_applyAttributes() const
 	{
 		size_t offset = 0;
 		for (const auto &attr : _attributesToApply)
