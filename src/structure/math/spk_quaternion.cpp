@@ -155,10 +155,13 @@ namespace spk
 
 		const float eps = 1e-6f;
 		Vector3 right;
-		if (std::abs(forward.dot(p_up)) > 1.0f - eps) {
-			Vector3 fallbackUp = std::abs(forward.y) < 0.999f ? Vector3(0,1,0) : Vector3(1,0,0);
+		if (std::abs(forward.dot(p_up)) > 1.0f - eps)
+		{
+			Vector3 fallbackUp = std::abs(forward.y) < 0.999f ? Vector3(0, 1, 0) : Vector3(1, 0, 0);
 			right = (forward.cross(fallbackUp)).normalize();
-		} else {
+		}
+		else
+		{
 			right = (forward.cross(p_up)).normalize();
 		}
 		Vector3 up = (right.cross(forward)).normalize();
@@ -166,13 +169,13 @@ namespace spk
 		float m[3][3];
 		m[0][0] = right.x;
 		m[0][1] = up.x;
-		m[0][2] = forward.x;
+		m[0][2] = -forward.x;
 		m[1][0] = right.y;
 		m[1][1] = up.y;
-		m[1][2] = forward.y;
+		m[1][2] = -forward.y;
 		m[2][0] = right.z;
 		m[2][1] = up.z;
-		m[2][2] = forward.z;
+		m[2][2] = -forward.z;
 
 		Quaternion q;
 		float trace = m[0][0] + m[1][1] + m[2][2];

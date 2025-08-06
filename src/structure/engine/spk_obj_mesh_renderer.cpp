@@ -45,10 +45,17 @@ uniform sampler2D diffuseTexture;
 const float epsilon = 0.0001;
 void main()
 {
-vec4 texColor = texture(diffuseTexture, fragUV);
-if (texColor.a <= epsilon)
-discard;
-outputColor = texColor;
+	if (fragUV.x < 0 || fragUV.x > 1 || fragUV.y < 0 || fragUV.y > 1)
+	{
+		outputColor = vec4(1, 0, 1, 1);
+	}
+	else
+	{
+		vec4 texColor = texture(diffuseTexture, fragUV);
+		if (texColor.a <= epsilon)
+		discard;
+		outputColor = texColor;
+	}
 }
 )";
 
