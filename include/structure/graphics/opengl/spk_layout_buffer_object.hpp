@@ -60,10 +60,10 @@ namespace spk::OpenGL
 		};
 
 	private:
-		std::vector<Attribute> _attributesToApply;
+		mutable std::vector<Attribute> _attributesToApply;
 		size_t _vertexSize;
 
-		void _applyAttributes();
+		void _applyAttributes() const;
 
 	public:
 		LayoutBufferObject();
@@ -129,6 +129,8 @@ namespace spk::OpenGL
 
 		void addAttribute(const Attribute &p_attribute);
 		void addAttribute(Attribute::Index p_index, Attribute::Type p_type);
+
+		size_t nbVertex() const;
 
 		template <typename TType>
 		std::vector<TType> get()

@@ -15,6 +15,7 @@ namespace spk::OpenGL
 		std::string _vertexShaderCode;
 		std::string _fragmentShaderCode;
 
+		bool _verboseMode = false;
 		bool _needCleanup = false;
 		GLuint _programID;
 
@@ -25,9 +26,11 @@ namespace spk::OpenGL
 
 	public:
 		Program();
-		Program(const std::string &p_vertexShaderCode, const std::string &p_fragmentShaderCode);
+		Program(const std::string &p_vertexShaderCode, const std::string &p_fragmentShaderCode, bool p_verboseMode = false);
 
 		void load(const std::string &p_vertexShaderCode, const std::string &p_fragmentShaderCode);
+
+		void setVerboseMode(bool p_verbose = true);
 
 		void activate();
 		void deactivate();

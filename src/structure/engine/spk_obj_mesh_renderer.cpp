@@ -2,6 +2,7 @@
 #include "structure/container/spk_json_object.hpp"
 #include "structure/math/spk_matrix.hpp"
 
+#include "structure/engine/spk_entity.hpp"
 #include "spk_generated_resources.hpp"
 
 namespace spk
@@ -56,27 +57,23 @@ outputColor = texColor;
 		shader.addAttribute({1, spk::OpenGL::LayoutBufferObject::Attribute::Type::Vector2});
 		shader.addAttribute({2, spk::OpenGL::LayoutBufferObject::Attribute::Type::Vector3});
 
-	DEBUG_LINE();
 		shader.addSampler(
 				L"diffuseTexture",
 				spk::Lumina::ShaderObjectFactory::instance()->sampler(L"diffuseTexture"),
-				spk::Lumina::Shader::Mode::Attribute
+				spk::Lumina::Shader::Mode::Constant
 			);
-	DEBUG_LINE();
 
 		shader.addUBO(
 				L"CameraUBO", 
 				spk::Lumina::ShaderObjectFactory::instance()->ubo(L"CameraUBO"), 
 				spk::Lumina::Shader::Mode::Constant
 			);
-	DEBUG_LINE();
 
 		shader.addUBO(
 				L"TransformUBO", 
 				spk::Lumina::ShaderObjectFactory::instance()->ubo(L"TransformUBO"), 
 				spk::Lumina::Shader::Mode::Attribute
 			);
-	DEBUG_LINE();
 
 		return (shader);
 	}
@@ -86,7 +83,8 @@ outputColor = texColor;
 	ObjMeshRenderer::Painter::Painter() :
 		_object(_shader.createObject()),
 		_bufferSet(_object.bufferSet()),
-		_diffuseSampler(_shader.sampler(L"diffuseTexture"))
+		_diffuseSampler(_shader.sampler(L"diffuseTexture")),
+		_transformUBO(_object.UBO(L"TransformUBO"))
 	{
 	}
 
@@ -114,45 +112,66 @@ outputColor = texColor;
 		_object.render();
 	}
 
-	spk::Lumina::Shader &ObjMeshRenderer::Painter::shader()
+	void ObjMeshRenderer::Painter::setTransform(const spk::Transform &p_transform)
 	{
-		return (_shader);
+		_transformUBO.layout()[L"modelMatrix"] = p_transform.model();
+		_transformUBO.validate();
 	}
 
-	spk::OpenGL::SamplerObject &ObjMeshRenderer::Painter::diffuseSampler()
+	void ObjMeshRenderer::Painter::setTexture(const spk::SafePointer<const spk::Texture> &p_texture)
 	{
-		return (_diffuseSampler);
+		_diffuseSampler.bind(p_texture);
 	}
 
-	ObjMeshRenderer::ObjMeshRenderer() :
+	const spk::SafePointer<const spk::Texture>& ObjMeshRenderer::Painter::texture() const
+	{
+		return (_diffuseSampler.texture());
+	}
+
+	ObjMeshRenderer::ObjMeshRenderer(const std::wstring& p_name) :
+		spk::Component(p_name),
 		_painter()
 	{
-		_painter.diffuseSampler().bind(_texture);
+
 	}
 
-	void ObjMeshRenderer::setTexture(spk::SafePointer<spk::Image> p_texture)
+	void ObjMeshRenderer::setTexture(spk::SafePointer<const spk::Texture> p_texture)
 	{
-		_texture = p_texture;
-		_painter.diffuseSampler().bind(_texture);
+		_painter.setTexture(p_texture);
 	}
 
-	spk::SafePointer<spk::Image> &ObjMeshRenderer::texture()
+	const spk::SafePointer<const spk::Texture> &ObjMeshRenderer::texture() const
 	{
-		return (_texture);
+		return (_painter.texture());
 	}
 
-	const spk::SafePointer<spk::Image> &ObjMeshRenderer::texture() const
+	void ObjMeshRenderer::setMesh(const spk::SafePointer<spk::ObjMesh>& p_mesh)
 	{
-		return (_texture);
+		_mesh = p_mesh;
+		
+		_painter.clear();
+		if (_mesh != nullptr)
+		{
+			_painter.prepare(*_mesh);
+		}
+		_painter.validate();
+	}
+	
+	const spk::SafePointer<spk::ObjMesh>& ObjMeshRenderer::mesh() const
+	{
+		return (_mesh);
+	}
+	
+	void ObjMeshRenderer::onPaintEvent(spk::PaintEvent &p_event)
+	{
+		_painter.render();
 	}
 
-	spk::Lumina::Shader &ObjMeshRenderer::shader()
+	void ObjMeshRenderer::start()
 	{
-		return (_painter.shader());
-	}
-
-	ObjMeshRenderer::Painter &ObjMeshRenderer::painter()
-	{
-		return (_painter);
+		_onOwnerTransformEditionContract = owner()->transform().addOnEditionCallback([this]()
+		{
+			_painter.setTransform(owner()->transform());
+		});
 	}
 }

@@ -152,6 +152,14 @@ namespace spk
 			return _needBake;
 		}
 
+		void unbake()
+		{
+			std::lock_guard lock(_mutex);
+			_needBake = true;
+			_buffer.vertices.clear();
+			_buffer.indexes.clear();
+		}
+
 		void bake() const
 		{
 			std::lock_guard lock(_mutex);

@@ -6,6 +6,9 @@
 #include <unordered_map>
 #include <vector>
 
+#include "structure/spk_iostream.hpp"
+#include "spk_debug_macro.hpp"
+
 namespace spk
 {
 	namespace
@@ -123,6 +126,8 @@ namespace spk
 				}
 			}
 		}
+
+		unbake();
 	}
 
 	void ObjMesh::loadFromFile(const std::filesystem::path &p_path)
@@ -130,7 +135,7 @@ namespace spk
 		std::ifstream file(p_path);
 		if (file.is_open() == false)
 		{
-			return;
+			GENERATE_ERROR("Failed to open OBJ file: " + p_path.string());
 		}
 
 		std::stringstream buffer;
