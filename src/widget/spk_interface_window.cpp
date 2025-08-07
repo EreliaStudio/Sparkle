@@ -224,7 +224,7 @@ namespace spk
 		{
 			if (_isMoving)
 			{
-				place(p_event.mouse->position - _positionDelta);
+                                place(p_event.mouse->position() - _positionDelta);
 				p_event.requestPaint();
 				p_event.consume();
 			}
@@ -234,10 +234,10 @@ namespace spk
 		{
 			if (p_event.button == spk::Mouse::Button::Left)
 			{
-				if (_menuBar._titleLabel.viewport().geometry().contains(p_event.mouse->position))
+                                if (_menuBar._titleLabel.viewport().geometry().contains(p_event.mouse->position()))
 				{
 					_isMoving = true;
-					_positionDelta = p_event.mouse->position - geometry().anchor;
+                                        _positionDelta = p_event.mouse->position() - geometry().anchor;
 					p_event.window->setCursor(L"Hand");
 					p_event.consume();
 					takeFocus(spk::Widget::FocusType::MouseFocus);
@@ -258,7 +258,7 @@ namespace spk
 		}
 		}
 
-		if (viewport().geometry().contains(p_event.mouse->position) == true)
+            if (viewport().geometry().contains(p_event.mouse->position()) == true)
 		{
 			p_event.consume();
 		}

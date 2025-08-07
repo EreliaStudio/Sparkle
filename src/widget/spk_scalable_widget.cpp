@@ -109,10 +109,10 @@ namespace spk
 		{
 			if (_isTopResizing == false && _isDownResizing == false && _isLeftResizing == false && _isRightResizing == false)
 			{
-				bool topAnchor = _topAnchorArea.contains(p_event.mouse->position);
-				bool downAnchor = _downAnchorArea.contains(p_event.mouse->position);
-				bool leftAnchor = _leftAnchorArea.contains(p_event.mouse->position);
-				bool rightAnchor = _rightAnchorArea.contains(p_event.mouse->position);
+                            bool topAnchor = _topAnchorArea.contains(p_event.mouse->position());
+                            bool downAnchor = _downAnchorArea.contains(p_event.mouse->position());
+                            bool leftAnchor = _leftAnchorArea.contains(p_event.mouse->position());
+                            bool rightAnchor = _rightAnchorArea.contains(p_event.mouse->position());
 
 				if ((topAnchor && leftAnchor) || (downAnchor && rightAnchor))
 				{
@@ -137,7 +137,7 @@ namespace spk
 			}
 			else
 			{
-				spk::Vector2Int delta = p_event.mouse->position - _positionDelta;
+                            spk::Vector2Int delta = p_event.mouse->position() - _positionDelta;
 				spk::Geometry2D newGeometry = _baseGeometry;
 
 				if (_isTopResizing)
@@ -229,27 +229,27 @@ namespace spk
 		{
 			if (p_event.button == spk::Mouse::Button::Left)
 			{
-				if (_topAnchorArea.contains(p_event.mouse->position))
+                            if (_topAnchorArea.contains(p_event.mouse->position()))
 				{
 					_isTopResizing = true;
 				}
-				else if (_downAnchorArea.contains(p_event.mouse->position))
+                            else if (_downAnchorArea.contains(p_event.mouse->position()))
 				{
 					_isDownResizing = true;
 				}
 
-				if (_leftAnchorArea.contains(p_event.mouse->position))
+                            if (_leftAnchorArea.contains(p_event.mouse->position()))
 				{
 					_isLeftResizing = true;
 				}
-				else if (_rightAnchorArea.contains(p_event.mouse->position))
+                            else if (_rightAnchorArea.contains(p_event.mouse->position()))
 				{
 					_isRightResizing = true;
 				}
 
 				if (_isTopResizing || _isDownResizing || _isLeftResizing || _isRightResizing)
 				{
-					_positionDelta = p_event.mouse->position;
+                                    _positionDelta = p_event.mouse->position();
 					_baseGeometry = geometry();
 
 					p_event.consume();
