@@ -31,7 +31,7 @@ namespace spk
 	class InputAction : public Action
 	{
 	public:
-		using Job = std::function<void(const spk::SafePointer<const spk::Keyboard> &)>;
+		using Job = std::function<void(const spk::SafePointer<const Device> &)>;
 
 	private:
 		spk::SafePointer<const Device> _device;
@@ -50,7 +50,7 @@ namespace spk
 			_event(p_event),
 			_targetState(p_state),
 			_repeatInterval(p_repeatInterval),
-			_timer(p_repeatInterval > 0 ? p_repeatInterval : 0),
+			_timer(p_repeatInterval),
 			_onTriggerCallback(p_callback)
 		{
 		}
@@ -111,7 +111,7 @@ namespace spk
 					_timer.start();
 				}
 			}
-			else if (justPressed == false && needTrigger == true)
+			else if (justPressed == false && needTrigger == true && _repeatInterval >= 0)
 			{
 				if (_timer.state() != spk::Timer::State::Running)
 				{

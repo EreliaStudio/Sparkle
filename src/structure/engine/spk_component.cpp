@@ -70,6 +70,11 @@ namespace spk
 	{
 	}
 
+	void Component::onGeometryChange(const spk::Geometry2D& p_geometry)
+	{
+
+	}
+
 	void Component::onPaintEvent(spk::PaintEvent &p_event)
 	{
 	}

@@ -365,103 +365,126 @@ public:
 		_updateUBO();
 	}
 
+	void onGeometryChange(const spk::Geometry2D& p_geometry) override
+	{
+		setPerspective(60.0f, static_cast<float>(p_geometry.size.x) / static_cast<float>(p_geometry.size.y));
+	}
+
 	spk::Camera &camera()
 	{
 		return _camera;
 	}
 };
 
-class PlayerControllerComponent : public spk::Component
+class FPSPlayerController : public spk::Component
 {
 private:
 	float _moveSpeed;
 	float _mouseSensitivity;
 
+	bool _isMovingCamera;
+	spk::Vector2Int _lastMousePosition;
+
+	std::vector<std::unique_ptr<spk::Action>> _actions;
+
+	spk::Vector3 _motionRequested = {0, 0, 0};
+	spk::Vector2Int _rotationRequested = {0, 0};
+
 public:
-	PlayerControllerComponent(const std::wstring &p_name, float p_moveSpeed = 5.0f, float p_mouseSensitivity = 0.1f) :
+	FPSPlayerController(const std::wstring &p_name, float p_moveSpeed = 5.0f, float p_mouseSensitivity = 0.1f) :
 		spk::Component(p_name),
 		_moveSpeed(p_moveSpeed),
 		_mouseSensitivity(p_mouseSensitivity)
 	{
+		_actions.push_back(std::make_unique<spk::KeyboardAction>(spk::Keyboard::Z, spk::InputState::Down, 10, [&](const spk::SafePointer<const spk::Keyboard>& p_keyboard){
+			_motionRequested += owner()->transform().forward();
+		}));
+
+		_actions.push_back(std::make_unique<spk::KeyboardAction>(spk::Keyboard::Q, spk::InputState::Down, 10, [&](const spk::SafePointer<const spk::Keyboard>& p_keyboard){
+			_motionRequested -= owner()->transform().right();
+		}));
+
+		_actions.push_back(std::make_unique<spk::KeyboardAction>(spk::Keyboard::S, spk::InputState::Down, 10, [&](const spk::SafePointer<const spk::Keyboard>& p_keyboard){
+			_motionRequested -= owner()->transform().forward();
+		}));
+
+		_actions.push_back(std::make_unique<spk::KeyboardAction>(spk::Keyboard::D, spk::InputState::Down, 10, [&](const spk::SafePointer<const spk::Keyboard>& p_keyboard){
+			_motionRequested += owner()->transform().right();
+		}));
+
+		_actions.push_back(std::make_unique<spk::KeyboardAction>(spk::Keyboard::Space, spk::InputState::Down, 10, [&](const spk::SafePointer<const spk::Keyboard>& p_keyboard){
+			_motionRequested += spk::Vector3{0, 1, 0};
+		}));
+
+		_actions.push_back(std::make_unique<spk::KeyboardAction>(spk::Keyboard::Control, spk::InputState::Down, 10, [&](const spk::SafePointer<const spk::Keyboard>& p_keyboard){
+			_motionRequested -= spk::Vector3{0, 1, 0};
+		}));
+
+		_actions.push_back(std::make_unique<spk::MouseButtonAction>(spk::Mouse::Button::Left, spk::InputState::Down, -1, [&](const spk::SafePointer<const spk::Mouse>& p_mouse){
+			_isMovingCamera = true;
+			_lastMousePosition = p_mouse->position();
+		}));
+		_actions.push_back(std::make_unique<spk::MouseButtonAction>(spk::Mouse::Button::Left, spk::InputState::Up, -1, [&](const spk::SafePointer<const spk::Mouse>& p_mouse){
+			_isMovingCamera = false;
+		}));
+
+		_actions.push_back(std::make_unique<spk::MouseMotionAction>(spk::MouseMotionAction::Mode::Absolute, [&](const spk::Vector2Int& p_mousePosition){
+			if (_isMovingCamera == false)
+			{
+				return;
+			}
+			
+			spk::Vector2Int deltaPosition = p_mousePosition - _lastMousePosition;
+
+			if (deltaPosition != spk::Vector2Int(0, 0))
+			{
+				_rotationRequested.x = static_cast<float>(deltaPosition.x) * _mouseSensitivity;
+				_rotationRequested.y = static_cast<float>(deltaPosition.y) * _mouseSensitivity;
+			}
+
+			_lastMousePosition = p_mousePosition;
+		}));
 	}
 
 	void onUpdateEvent(spk::UpdateEvent &p_event) override
 	{
-		if ((p_event.keyboard == nullptr || p_event.mouse == nullptr) == true)
+		if (p_event.keyboard == nullptr || p_event.mouse == nullptr)
 		{
 			return;
 		}
 
-		spk::Vector3 movement(0.0f, 0.0f, 0.0f);
+		_motionRequested = spk::Vector3(0, 0, 0);
+		_rotationRequested = spk::Vector2(0, 0);
 
-		if (((*p_event.keyboard)[spk::Keyboard::Key::Z] == spk::InputState::Down) == true)
+		for (auto& action : _actions)
 		{
-			movement += owner()->transform().forward();
-		}
-		if (((*p_event.keyboard)[spk::Keyboard::Key::S] == spk::InputState::Down) == true)
-		{
-			movement -= owner()->transform().forward();
-		}
-		if (((*p_event.keyboard)[spk::Keyboard::Key::Q] == spk::InputState::Down) == true)
-		{
-			movement -= owner()->transform().right();
-		}
-		if (((*p_event.keyboard)[spk::Keyboard::Key::D] == spk::InputState::Down) == true)
-		{
-			movement += owner()->transform().right();
-		}
-		if (((*p_event.keyboard)[spk::Keyboard::Key::Space] == spk::InputState::Down) == true)
-		{
-			movement += owner()->transform().up();
-		}
-		if (((*p_event.keyboard)[spk::Keyboard::Key::Shift] == spk::InputState::Down) == true)
-		{
-			movement -= owner()->transform().up();
-		}
+			if (action->isInitialized() == false)
+			{
+				action->initialize(p_event);
+			}
 
-		if ((movement != spk::Vector3()) == true)
+			action->update();
+		}		
+
+		bool isMotionRequested = _motionRequested != spk::Vector3();
+		bool isRotationRequested = _rotationRequested != spk::Vector2();
+
+		if (isMotionRequested == true || isRotationRequested == true)
 		{
-			auto delta = movement.normalize() * (float)p_event.deltaTime.seconds * _moveSpeed;
-			owner()->transform().move(delta);
+			if (_motionRequested != spk::Vector3())
+			{
+				auto delta = _motionRequested.normalize() * (float)p_event.deltaTime.seconds * _moveSpeed;
+				owner()->transform().move(delta);
+			}
+
+			if (_rotationRequested != spk::Vector2())
+			{
+				owner()->transform().rotateAroundAxis({0, 1, 0}, _rotationRequested.x);
+				owner()->transform().rotateAroundAxis(owner()->transform().right(), _rotationRequested.y);
+			}
+		
 			p_event.requestPaint();
 		}
-		
-	}
-};
-
-template <typename TBlockType>
-class BlockMapComponent : public spk::Component
-{
-private:
-	TBlockType _blockMap;
-	spk::Image _texture;
-	spk::SafePointer<spk::VoxelMeshRenderer> _renderer;
-
-public:
-	BlockMapComponent(const std::wstring &p_name) :
-		spk::Component(p_name)
-	{
-	}
-
-	void start() override
-	{
-		_renderer = owner()->addComponent<spk::VoxelMeshRenderer>(L"VoxelMeshRenderer");
-		_texture = spk::Image("playground/resources/texture/CubeTexture.png");
-		_renderer->setTexture(&_texture);
-
-		spk::SpriteSheet::Sprite sprite(spk::Vector2(0, 0), spk::Vector2(1, 1));
-		_blockMap.setBlockDefinition(0, std::make_unique<VoxelBlock>(sprite));
-		auto &chunk = _blockMap.requestChunk({0, 0, 0});
-		for (int x = 0; x < TBlockType::Chunk::size.x; x++)
-		{
-			for (int y = 0; y < TBlockType::Chunk::size.y; y++)
-			{
-				chunk.setBlock(x, 0, y, 0);
-			}
-		}
-		chunk.bake();
-		
-		_renderer->setMesh(&chunk.mesh());
 	}
 };
 
@@ -469,7 +492,7 @@ int main()
 {
 	spk::GraphicalApplication app;
 	auto window = app.createWindow(L"Playground", {{0, 0}, {800, 600}});
-	window->setUpdateTimer(16);
+	window->setUpdateTimer(1);
 	window->requestMousePlacement({400, 300});
 
 	spk::SafePointer<spk::GameEngine> engine = new spk::GameEngine();
@@ -481,16 +504,24 @@ int main()
 	spk::SafePointer<spk::Entity> player = new spk::Entity(L"Player");
 	player->activate();
 	engine->addEntity(player);
+
 	auto cameraComponent = player->addComponent<CameraComponent>(L"Player/CameraComponent");
 	cameraComponent->setPerspective(60.0f, static_cast<float>(window->geometry().size.x) / static_cast<float>(window->geometry().size.y));
-	player->addComponent<PlayerControllerComponent>(L"Player/PlayerControllerComponent", 5.0f, 0.1f);
+	auto playerController = player->addComponent<FPSPlayerController>(L"Player/FPSPlayerController", 5.0f, 0.1f);
 	player->transform().place({5.0f, 5.0f, 5.0f});
 	player->transform().lookAt({0.0f, 0.0f, 0.0f});
+	
+	spk::SafePointer<spk::Entity> cube = new spk::Entity(L"Cube");
+	cube->activate();
+	engine->addEntity(cube);
+	auto renderer = cube->addComponent<spk::ObjMeshRenderer>(L"Cube/ObjMeshRenderer");
 
-	spk::SafePointer<spk::Entity> world = new spk::Entity(L"World");
-	world->activate();
-	engine->addEntity(world);
-	world->addComponent<BlockMapComponent<BlockMap<16,16,16>>>(L"World/BlockMapComponent");
+	spk::Image texture = spk::Image("playground/resources/texture/CubeTexture.png");
 
+	spk::ObjMesh cubeMesh;
+	cubeMesh.loadFromFile("playground/resources/obj/cube.obj");
+	renderer->setTexture(&texture);
+	renderer->setMesh(&cubeMesh);
+	cube->transform().place({0.0f, 0.0f, 0.0f});
 	return app.run();
 }
