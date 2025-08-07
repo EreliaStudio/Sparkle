@@ -27,7 +27,7 @@ namespace spk
 		virtual void update() = 0;
 	};
 
-	template <typename Device, typename Event>
+	template <typename Device, typename DeviceValue>
 	class InputAction : public Action
 	{
 	public:
@@ -36,7 +36,7 @@ namespace spk
 	private:
 		spk::SafePointer<const Device> _device;
 
-		Event _event;
+		DeviceValue _deviceValue;
 		spk::InputState _targetState;
 
 		long long _repeatInterval;
@@ -46,13 +46,30 @@ namespace spk
 		bool _lastState = false;
 
 	public:
-		InputAction(Event p_event, spk::InputState p_state, long long p_repeatInterval, const Job &p_callback) :
-			_event(p_event),
+		InputAction(DeviceValue p_deviceValue, spk::InputState p_state, long long p_repeatInterval, const Job &p_callback) :
+			_deviceValue(p_deviceValue),
 			_targetState(p_state),
 			_repeatInterval(p_repeatInterval),
 			_timer(p_repeatInterval),
 			_onTriggerCallback(p_callback)
 		{
+		}
+
+		void setDeviceValue(const DeviceValue& p_deviceValue, const spk::InputState& p_state)
+		{
+			_deviceValue = p_deviceValue;
+			_targetState = p_state;
+		}
+
+		void setRepeatInterval(const long long& p_repeatInterval)
+		{
+			_repeatInterval = p_repeatInterval;
+			_timer = spk::Timer(_repeatInterval);
+		}
+
+		void setCallback(const Job &p_callback)
+		{
+			_onTriggerCallback = p_callback;
 		}
 
 		bool isInitialized() const override
@@ -97,7 +114,7 @@ namespace spk
 				GENERATE_ERROR("Can't update an InputAction without device");
 			}
 
-			spk::InputState currentState = (*_device)[_event];
+			spk::InputState currentState = (*_device)[_deviceValue];
 
 			bool needTrigger = (currentState == _targetState);
 			bool justPressed = needTrigger && _lastState == false;
