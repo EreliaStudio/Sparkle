@@ -40,7 +40,7 @@ namespace spk
 		};
 
 	private:
-		spk::SafePointer<spk::ObjMesh> _mesh;
+		spk::SafePointer<const spk::ObjMesh> _mesh;
 		Painter _painter;
 		spk::ContractProvider::Contract _onOwnerTransformEditionContract;
 
@@ -50,8 +50,8 @@ namespace spk
 		void setTexture(spk::SafePointer<const spk::Texture> p_texture);
 		const spk::SafePointer<const spk::Texture> &texture() const;
 
-		void setMesh(const spk::SafePointer<spk::ObjMesh>& p_mesh);
-		const spk::SafePointer<spk::ObjMesh>& mesh() const;
+		void setMesh(const spk::SafePointer<const spk::ObjMesh>& p_mesh);
+		const spk::SafePointer<const spk::ObjMesh>& mesh() const;
 
 		void onPaintEvent(spk::PaintEvent &p_event) override;
 		void start() override;

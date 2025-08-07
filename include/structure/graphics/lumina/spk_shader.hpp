@@ -364,6 +364,11 @@ namespace spk::Lumina
 		{
 		}
 
+		void setVerboseMode(bool p_verbose = true)
+		{
+			_program.setVerboseMode(p_verbose);
+		}
+
 		void addAttribute(const OpenGL::LayoutBufferObject::Attribute &p_attribute)
 		{
 			_bufferSet.layout().addAttribute(p_attribute);
