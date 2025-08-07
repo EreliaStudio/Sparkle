@@ -116,8 +116,6 @@ namespace spk
 		_cursors[L"Working"] = ::LoadCursor(nullptr, IDC_APPSTARTING);
 		_cursors[L"Help"] = ::LoadCursor(nullptr, IDC_HELP);
 
-		setUpdateTimer(1);
-
 		setCursor(L"Arrow");
 
 		_controllerInputThread.bind(_hwnd);
@@ -624,4 +622,11 @@ namespace spk
 	{
 		PostMessage(_hwnd, WM_UPDATE_REQUEST, 0, 0);
 	}
+
+	void Window::requestMousePlacement(const spk::Vector2Int& p_mousePosition) const
+	{
+		POINT mousePositionInWindowSpace{ p_mousePosition.x, p_mousePosition.y };
+		::ClientToScreen(_hwnd, &mousePositionInWindowSpace);
+		::SetCursorPos(mousePositionInWindowSpace.x, mousePositionInWindowSpace.y);
+	}	
 }
