@@ -89,19 +89,14 @@ public:
 
 		if ((movement != spk::Vector3()) == true)
 		{
-			movement = movement.normalize();
-			spk::cout << "Movement : " << movement << std::endl;
-			auto delta = movement * (float)p_event.deltaTime.seconds * _moveSpeed;
+			auto delta = movement.normalize() * (float)p_event.deltaTime.seconds * _moveSpeed;
 			owner()->transform().move(delta);
 			p_event.requestPaint();
 		}
 
-		// spk::Vector2Int delta = p_event.mouse->deltaPosition;
-		// if ((delta.x != 0 || delta.y != 0) == true)
-		// {
-		// 	owner()->transform().rotate({0.0f, -delta.y * _mouseSensitivity, -delta.x * _mouseSensitivity});
-		// 	p_event.requestPaint();
-		// }
+		spk::Vector2Int mouseOffset = p_event.mouse->position - static_cast<spk::Vector2Int>(p_event.window->geometry().size) / 2;
+
+		p_event.mouse->place(p_event.window, p_event.window->geometry().size / 2);
 	}
 };
 
@@ -109,6 +104,7 @@ int main()
 {
 	spk::GraphicalApplication app;
 	auto window = app.createWindow(L"Playground", {{0, 0}, {800, 600}});
+	window->setUpdateTimer(16); // 60 FPS
 
 	spk::SafePointer<spk::GameEngine> engine = new spk::GameEngine();
 	spk::GameEngineWidget engineWidget(L"EngineWidget", window->widget());
@@ -122,13 +118,8 @@ int main()
 	auto cameraComponent = player->addComponent<CameraComponent>(L"Player/CameraComponent");
 	cameraComponent->setPerspective(60.0f, static_cast<float>(window->geometry().size.x) / static_cast<float>(window->geometry().size.y));
 	player->addComponent<PlayerControllerComponent>(L"Player/PlayerControllerComponent", 5.0f, 0.1f);
-	player->transform().place({10.0f, 10.0f, 10.0f});
+	player->transform().place({5.0f, 5.0f, 5.0f});
 	player->transform().lookAt({0.0f, 0.0f, 0.0f});
-
-	spk::cout << "Data from [" << player->transform().position() << "] to [" << spk::Vector3(0, 0, 0) << "]" << std::endl;
-	spk::cout << "Forward : " << player->transform().forward() << std::endl;
-	spk::cout << "Right : " << player->transform().right() << std::endl;
-	spk::cout << "Up : " << player->transform().up() << std::endl;
 
 	spk::SafePointer<spk::Entity> cube = new spk::Entity(L"Cube");
 	cube->activate();

@@ -2,9 +2,12 @@
 
 #include "structure/math/spk_vector2.hpp"
 #include "structure/system/spk_input_state.hpp"
+#include "structure/spk_safe_pointer.hpp"
 
 namespace spk
 {
+	class Window;
+
 	struct Mouse
 	{
 		enum class Button
@@ -22,6 +25,8 @@ namespace spk
 
 		Mouse();
 		InputState operator[](Button p_button) const;
+
+		void place(const spk::SafePointer<Window>& p_window, const spk::Vector2Int& p_newPosition) const;
 	};
 }
 
