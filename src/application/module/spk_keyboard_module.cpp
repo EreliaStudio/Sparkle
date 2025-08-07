@@ -6,21 +6,21 @@ namespace spk
 {
 	void KeyboardModule::_treatEvent(spk::KeyboardEvent &&p_event)
 	{
-                _keyboard._window = p_event.window;
+		_keyboard._window = p_event.window;
 
-                switch (p_event.type)
+		switch (p_event.type)
 		{
 		case spk::KeyboardEvent::Type::Press:
 		{
 			if (p_event.key != spk::Keyboard::Key::Unknow)
 			{
-                                if (_keyboard._state[static_cast<int>(p_event.key)] == spk::InputState::Down)
+				if (_keyboard._state[static_cast<int>(p_event.key)] == spk::InputState::Down)
 				{
 					p_event.type = spk::KeyboardEvent::Type::Repeat;
 				}
 				else
 				{
-                                        _keyboard._state[static_cast<int>(p_event.key)] = spk::InputState::Down;
+					_keyboard._state[static_cast<int>(p_event.key)] = spk::InputState::Down;
 				}
 			}
 			break;
@@ -29,17 +29,17 @@ namespace spk
 		{
 			if (p_event.key != spk::Keyboard::Key::Unknow)
 			{
-                                if (_keyboard._state[static_cast<int>(p_event.key)] == spk::InputState::Up)
+				if (_keyboard._state[static_cast<int>(p_event.key)] == spk::InputState::Up)
 				{
 					return;
 				}
-                                _keyboard._state[static_cast<int>(p_event.key)] = spk::InputState::Up;
+				_keyboard._state[static_cast<int>(p_event.key)] = spk::InputState::Up;
 			}
 			break;
 		}
 		case spk::KeyboardEvent::Type::Glyph:
 		{
-                        _keyboard._glyph = p_event.glyph;
+			_keyboard._glyph = p_event.glyph;
 			break;
 		}
 		}

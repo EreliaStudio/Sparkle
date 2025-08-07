@@ -197,6 +197,7 @@ namespace spk
 			return (result);
 		}
 
+		virtual void onGeometryChange(const spk::Geometry2D& p_geometry) final;
 		virtual void onPaintEvent(spk::PaintEvent &p_event) final;
 		virtual void onUpdateEvent(spk::UpdateEvent &p_event) final;
 		virtual void onKeyboardEvent(spk::KeyboardEvent &p_event) final;

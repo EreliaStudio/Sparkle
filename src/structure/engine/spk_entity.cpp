@@ -120,6 +120,29 @@ namespace spk
 		_components.erase(it, _components.end());
 	}
 
+	void Entity::onGeometryChange(const spk::Geometry2D& p_geometry)
+	{
+		sortByPriority(_components, _needComponentSorting, _componentMutex);
+
+		{
+			std::unique_lock<std::mutex> lock(_componentMutex);
+			for (auto &component : _components)
+			{
+				component->onGeometryChange(p_geometry);
+			}
+		}
+
+		sortByPriority(children(), _needChildSorting, _childMutex);
+
+		{
+			std::unique_lock<std::mutex> lock(_childMutex);
+			for (auto &child : children())
+			{
+				child->onGeometryChange(p_geometry);
+			}
+		}
+	}
+
 	void Entity::onPaintEvent(spk::PaintEvent &p_event)
 	{
 		if (isActive() == false || p_event.consumed() == true)

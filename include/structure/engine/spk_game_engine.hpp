@@ -34,6 +34,7 @@ namespace spk
 
 		size_t count(const std::wstring &p_name) const;
 
+		void onGeometryChange(const spk::Geometry2D& p_geometry);
 		void onPaintEvent(spk::PaintEvent &p_event);
 		void onUpdateEvent(spk::UpdateEvent &p_event);
 		void onKeyboardEvent(spk::KeyboardEvent &p_event);

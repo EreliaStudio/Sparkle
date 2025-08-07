@@ -4,6 +4,11 @@
 
 namespace spk
 {
+	void GameEngineWidget::_onGeometryChange()
+	{
+		_gameEngine->onGeometryChange({{0, 0}, geometry().size});
+	}
+
 	void GameEngineWidget::_onPaintEvent(spk::PaintEvent &p_event)
 	{
 		if (_gameEngine == nullptr)
