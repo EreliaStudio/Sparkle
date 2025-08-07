@@ -152,7 +152,7 @@ void main()
 		return (_painter.texture());
 	}
 
-	void ObjMeshRenderer::setMesh(const spk::SafePointer<spk::ObjMesh>& p_mesh)
+	void ObjMeshRenderer::setMesh(const spk::SafePointer<const spk::ObjMesh>& p_mesh)
 	{
 		_mesh = p_mesh;
 		
@@ -164,7 +164,7 @@ void main()
 		_painter.validate();
 	}
 	
-	const spk::SafePointer<spk::ObjMesh>& ObjMeshRenderer::mesh() const
+	const spk::SafePointer<const spk::ObjMesh>& ObjMeshRenderer::mesh() const
 	{
 		return (_mesh);
 	}
@@ -176,9 +176,9 @@ void main()
 
 	void ObjMeshRenderer::start()
 	{
-		_onOwnerTransformEditionContract = owner()->transform().addOnEditionCallback([this]()
-		{
+		_onOwnerTransformEditionContract = owner()->transform().addOnEditionCallback([this]() {
 			_painter.setTransform(owner()->transform());
 		});
+		_onOwnerTransformEditionContract.trigger();
 	}
 }

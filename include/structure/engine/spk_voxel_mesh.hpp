@@ -5,9 +5,9 @@
 
 namespace spk
 {
-        class VoxelMesh : public TMesh<VoxelVertex>
-        {
-        public:
-                VoxelMesh() = default;
-        };
+	class VoxelMesh : public TMesh<VoxelVertex>
+	{
+	public:
+		VoxelMesh() = default;
+	};
 }
