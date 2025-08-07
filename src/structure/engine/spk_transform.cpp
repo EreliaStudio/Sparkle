@@ -120,15 +120,18 @@ namespace spk
 
 	void Transform::rotateAroundPoint(const spk::Vector3 &p_center, const spk::Vector3 &p_axis, float p_angle)
 	{
-		spk::Vector3 relativePosition = _position - p_center;
+		spk::Vector3 axis = p_axis.normalize();
 
-		spk::Quaternion rotationQuat = spk::Quaternion::fromAxisAngle(p_axis, p_angle);
+		spk::Quaternion deltaQ = spk::Quaternion::fromAxisAngle(axis, p_angle);
 
-		spk::Vector3 rotatedPosition = rotationQuat.rotate(relativePosition);
-
-		_localPosition = rotatedPosition + p_center;
+		_rotation = (_rotation * deltaQ).normalize();
 
 		_updateModel();
+	}
+
+	void Transform::rotateAroundAxis(const spk::Vector3 &p_axis, float p_angle)
+	{
+		rotateAroundPoint(_position, p_axis, p_angle);
 	}
 
 	void Transform::setScale(const spk::Vector3 &p_scale)

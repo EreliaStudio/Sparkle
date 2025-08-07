@@ -1,5 +1,26 @@
 #include <sparkle.hpp>
 
+class RotationComponent : public spk::Component
+{
+private:
+
+public:
+	RotationComponent(const std::wstring &p_name) :
+		spk::Component(p_name)
+	{
+	}
+
+	void onUpdateEvent(spk::UpdateEvent &p_event) override
+	{
+		if (p_event.deltaTime.milliseconds > 0.0f)
+		{
+			float angle = 20.0f * (float)p_event.deltaTime.milliseconds / 1000.0f;
+			owner()->transform().rotateAroundPoint(spk::Vector3(0, 0, 0), spk::Vector3(0.0f, 1.0f, 0.0f), angle);
+			p_event.requestPaint();
+		}
+	}
+};
+
 class CameraComponent : public spk::Component
 {
 private:
@@ -16,7 +37,7 @@ private:
 	}
 
 public:
-	CameraComponent(const std::wstring& p_name) :
+	CameraComponent(const std::wstring &p_name) :
 		spk::Component(p_name)
 	{
 	}
@@ -46,7 +67,7 @@ private:
 	float _mouseSensitivity;
 
 public:
-	PlayerControllerComponent(const std::wstring& p_name, float p_moveSpeed = 5.0f, float p_mouseSensitivity = 0.1f) :
+	PlayerControllerComponent(const std::wstring &p_name, float p_moveSpeed = 5.0f, float p_mouseSensitivity = 0.1f) :
 		spk::Component(p_name),
 		_moveSpeed(p_moveSpeed),
 		_mouseSensitivity(p_mouseSensitivity)
@@ -64,11 +85,11 @@ public:
 
 		if (((*p_event.keyboard)[spk::Keyboard::Key::Z] == spk::InputState::Down) == true)
 		{
-			movement += owner()->transform().up();
+			movement += owner()->transform().forward();
 		}
 		if (((*p_event.keyboard)[spk::Keyboard::Key::S] == spk::InputState::Down) == true)
 		{
-			movement -= owner()->transform().up();
+			movement -= owner()->transform().forward();
 		}
 		if (((*p_event.keyboard)[spk::Keyboard::Key::Q] == spk::InputState::Down) == true)
 		{
@@ -78,13 +99,13 @@ public:
 		{
 			movement += owner()->transform().right();
 		}
-		if (((*p_event.keyboard)[spk::Keyboard::Key::A] == spk::InputState::Down) == true)
+		if (((*p_event.keyboard)[spk::Keyboard::Key::Space] == spk::InputState::Down) == true)
 		{
-			movement -= owner()->transform().forward();
+			movement += owner()->transform().up();
 		}
-		if (((*p_event.keyboard)[spk::Keyboard::Key::E] == spk::InputState::Down) == true)
+		if (((*p_event.keyboard)[spk::Keyboard::Key::Shift] == spk::InputState::Down) == true)
 		{
-			movement += owner()->transform().forward();
+			movement -= owner()->transform().up();
 		}
 
 		if ((movement != spk::Vector3()) == true)
@@ -94,9 +115,20 @@ public:
 			p_event.requestPaint();
 		}
 
-                spk::Vector2Int mouseOffset = p_event.mouse->position() - static_cast<spk::Vector2Int>(p_event.window->geometry().size) / 2;
+		spk::Vector2Int center = p_event.window->geometry().size / 2;
+		spk::Vector2Int mouseOffset = p_event.mouse->position() - center;
 
-                p_event.mouse->place(p_event.window->geometry().size / 2);
+		if ((mouseOffset != spk::Vector2Int(0, 0)) == true)
+		{
+			float yaw = static_cast<float>(mouseOffset.x) * _mouseSensitivity;
+			float pitch = static_cast<float>(mouseOffset.y) * _mouseSensitivity;
+
+			owner()->transform().rotateAroundAxis({0, 1, 0}, yaw);
+			owner()->transform().rotateAroundAxis(owner()->transform().right(), pitch);
+			p_event.requestPaint();
+		}
+
+		p_event.mouse->place(center);
 	}
 };
 
@@ -105,6 +137,7 @@ int main()
 	spk::GraphicalApplication app;
 	auto window = app.createWindow(L"Playground", {{0, 0}, {800, 600}});
 	window->setUpdateTimer(16); // 60 FPS
+	window->requestMousePlacement({400, 300});
 
 	spk::SafePointer<spk::GameEngine> engine = new spk::GameEngine();
 	spk::GameEngineWidget engineWidget(L"EngineWidget", window->widget());
@@ -125,7 +158,8 @@ int main()
 	cube->activate();
 	engine->addEntity(cube);
 	auto renderer = cube->addComponent<spk::ObjMeshRenderer>(L"Cube/ObjMeshRenderer");
-	
+	auto rotationComp = cube->addComponent<RotationComponent>(L"Cube/RotationComponent");
+
 	spk::Image texture = spk::Image("playground/resources/texture/CubeTexture.png");
 
 	spk::ObjMesh cubeMesh;
