@@ -94,9 +94,9 @@ public:
 			p_event.requestPaint();
 		}
 
-		spk::Vector2Int mouseOffset = p_event.mouse->position - static_cast<spk::Vector2Int>(p_event.window->geometry().size) / 2;
+                spk::Vector2Int mouseOffset = p_event.mouse->position() - static_cast<spk::Vector2Int>(p_event.window->geometry().size) / 2;
 
-		p_event.mouse->place(p_event.window, p_event.window->geometry().size / 2);
+                p_event.mouse->place(p_event.window->geometry().size / 2);
 	}
 };
 

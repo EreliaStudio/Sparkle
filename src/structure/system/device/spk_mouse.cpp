@@ -38,24 +38,49 @@ std::wostream &operator<<(std::wostream &p_os, const spk::Mouse::Button &p_butto
 
 namespace spk
 {
-	Mouse::Mouse()
-	{
-		for (size_t i = 0; i < 3; i++)
-		{
-			buttons[i] = InputState::Up;
-		}
-		position = {0, 0};
-		deltaPosition = {0, 0};
-		wheel = 0;
-	}
+Mouse::Mouse() : _position({0, 0}), _deltaPosition({0, 0}), _wheel(0), _window(nullptr)
+{
+for (size_t i = 0; i < 3; i++)
+{
+_buttons[i] = InputState::Up;
+}
+}
 
-	InputState Mouse::operator[](Mouse::Button p_button) const
-	{
-		return (buttons[static_cast<int>(p_button)]);
-	}
+InputState Mouse::operator[](Mouse::Button p_button) const
+{
+return (_buttons[static_cast<int>(p_button)]);
+}
 
-	void Mouse::place(const SafePointer<Window>& p_window, const Vector2Int& p_newPosition) const
-	{
-		p_window->requestMousePlacement(p_newPosition);
-	}
+const Vector2Int &Mouse::position() const
+{
+return (_position);
+}
+
+const Vector2Int &Mouse::deltaPosition() const
+{
+return (_deltaPosition);
+}
+
+const InputState *Mouse::buttons() const
+{
+return (_buttons);
+}
+
+float Mouse::wheel() const
+{
+return (_wheel);
+}
+
+spk::SafePointer<Window> Mouse::window() const
+{
+return (_window);
+}
+
+void Mouse::place(const Vector2Int &p_newPosition) const
+{
+if (_window != nullptr)
+{
+_window->requestMousePlacement(p_newPosition);
+}
+}
 }

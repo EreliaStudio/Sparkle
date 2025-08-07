@@ -2,64 +2,83 @@
 
 #include "structure/math/spk_vector2.hpp"
 #include "structure/system/spk_input_state.hpp"
+#include "structure/spk_safe_pointer.hpp"
+
+#include <limits>
 
 namespace spk
 {
-	struct Controller
-	{
-		enum class Button
-		{
-			A,
-			B,
-			X,
-			Y,
-			LeftArrow,
-			DownArrow,
-			RightArrow,
-			UpArrow,
-			Start,
-			Select,
-			R1,
-			L1,
-			R3,
-			L3,
-			Unknow
-		};
+class Window;
+class ControllerModule;
 
-		struct Joystick
-		{
-			enum ID
-			{
-				Left,
-				Right
-			};
-			Vector2Int delta = 0;
-			Vector2Int position = 0;
-		};
+class Controller
+{
+friend class ControllerModule;
 
-		struct Trigger
-		{
-			static const inline float MaxValue = static_cast<float>(std::numeric_limits<unsigned short>::max());
-			enum ID
-			{
-				Left,
-				Right
-			};
-			float ratio = 0;
-		};
+public:
+enum class Button
+{
+A,
+B,
+X,
+Y,
+LeftArrow,
+DownArrow,
+RightArrow,
+UpArrow,
+Start,
+Select,
+R1,
+L1,
+R3,
+L3,
+Unknow
+};
 
-		Joystick leftJoystick;
-		Joystick rightJoystick;
-		Trigger leftTrigger;
-		Trigger rightTrigger;
-		Vector2Int directionalCross = 0;
-		InputState buttons[17];
+struct Joystick
+{
+enum ID
+{
+Left,
+Right
+};
+Vector2Int delta = 0;
+Vector2Int position = 0;
+};
 
-		InputState operator[](Button p_button) const
-		{
-			return (buttons[static_cast<int>(p_button)]);
-		}
-	};
+struct Trigger
+{
+static const inline float MaxValue = static_cast<float>(std::numeric_limits<unsigned short>::max());
+enum ID
+{
+Left,
+Right
+};
+float ratio = 0;
+};
+
+private:
+Joystick _leftJoystick;
+Joystick _rightJoystick;
+Trigger _leftTrigger;
+Trigger _rightTrigger;
+Vector2Int _directionalCross = 0;
+InputState _buttons[17];
+spk::SafePointer<Window> _window;
+
+public:
+Controller();
+
+InputState operator[](Button p_button) const;
+
+const Joystick &leftJoystick() const;
+const Joystick &rightJoystick() const;
+const Trigger &leftTrigger() const;
+const Trigger &rightTrigger() const;
+const Vector2Int &directionalCross() const;
+const InputState *buttons() const;
+spk::SafePointer<Window> window() const;
+};
 }
 
 std::ostream &operator<<(std::ostream &p_os, const spk::Controller::Button &p_button);
@@ -69,3 +88,4 @@ std::ostream &operator<<(std::ostream &p_os, const spk::Controller::Trigger::ID 
 std::wostream &operator<<(std::wostream &p_os, const spk::Controller::Button &p_button);
 std::wostream &operator<<(std::wostream &p_os, const spk::Controller::Joystick::ID &p_joystickID);
 std::wostream &operator<<(std::wostream &p_os, const spk::Controller::Trigger::ID &p_triggerID);
+

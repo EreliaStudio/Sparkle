@@ -808,16 +808,33 @@ std::wostream &operator<<(std::wostream &p_os, const spk::Keyboard::Key &p_key)
 	}
 	return (p_os);
 }
-spk::Keyboard::Keyboard()
+namespace spk
 {
-	for (size_t i = 0; i < spk::Keyboard::Key::MaxNbKey; i++)
-	{
-		state[i] = spk::InputState::Up;
-	}
-	glyph = L'\0';
+Keyboard::Keyboard() : _glyph(0), _window(nullptr)
+{
+for (size_t i = 0; i < Key::MaxNbKey; ++i)
+{
+_state[i] = InputState::Up;
+}
 }
 
-spk::InputState spk::Keyboard::operator[](spk::Keyboard::Key p_key) const
+InputState Keyboard::operator[](Key p_key) const
 {
-	return (state[static_cast<int>(p_key)]);
+return (_state[static_cast<int>(p_key)]);
+}
+
+const InputState *Keyboard::state() const
+{
+return (_state);
+}
+
+wchar_t Keyboard::glyph() const
+{
+return (_glyph);
+}
+
+spk::SafePointer<Window> Keyboard::window() const
+{
+return (_window);
+}
 }
