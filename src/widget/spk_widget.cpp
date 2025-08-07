@@ -128,10 +128,10 @@ namespace spk
 		return (viewport().geometry().contains(p_pointerPosition));
 	}
 
-	bool Widget::isPointed(const spk::Mouse &p_mouse) const
-	{
-		return (isPointed(p_mouse.position));
-	}
+bool Widget::isPointed(const spk::Mouse &p_mouse) const
+{
+return (isPointed(p_mouse.position()));
+}
 
 	bool Widget::isPointed(const spk::SafePointer<const spk::Mouse> &p_mouse) const
 	{

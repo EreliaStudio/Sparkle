@@ -101,7 +101,7 @@ namespace spk
 
 		if (p_event.type == spk::MouseEvent::Type::Press)
 		{
-			if (viewport().geometry().contains(p_event.mouse->position) == true)
+                        if (viewport().geometry().contains(p_event.mouse->position()) == true)
 			{
 				takeFocus(Widget::FocusType::KeyboardFocus);
 			}
