@@ -48,6 +48,8 @@
 #include "structure/engine/spk_obj_mesh_renderer.hpp"
 #include "structure/engine/spk_free_view_controller.hpp"
 #include "structure/engine/spk_camera_component.hpp"
+#include "structure/engine/spk_voxel_mesh.hpp"
+#include "structure/engine/spk_voxel_mesh_renderer.hpp"
 #include "structure/graphics/lumina/spk_shader.hpp"
 #include "structure/graphics/opengl/spk_buffer_set.hpp"
 #include "structure/graphics/opengl/spk_frame_buffer_object.hpp"
