@@ -38,6 +38,7 @@ namespace spk
 		_layer(0)
 	{
 		_frameBufferObject.addAttachment(L"outputColor", 0, spk::OpenGL::FrameBufferObject::Attachment::Type::Color);
+		_frameBufferObject.addAttachment(L"depth", 0, spk::OpenGL::FrameBufferObject::Attachment::Type::Depth);
 	}
 
 	Widget::Widget(const std::wstring &p_name, spk::SafePointer<Widget> p_parent) :
