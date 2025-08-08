@@ -59,7 +59,7 @@ void main()
 
 		spk::Lumina::Shader shader(vertexShaderSrc, fragmentShaderSrc);
 
-		shader.setVerboseMode(true);
+		// shader.setVerboseMode(true);
 
 		shader.addAttribute({0, spk::OpenGL::LayoutBufferObject::Attribute::Type::Vector3});
 		shader.addAttribute({1, spk::OpenGL::LayoutBufferObject::Attribute::Type::Vector2});
