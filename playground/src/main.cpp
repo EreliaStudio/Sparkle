@@ -3,29 +3,59 @@
 class Block
 {
 public:
+	using ID = short;
+
 	using NeightbourVisibility = std::array<bool, 6>;
+
+	enum class Side : size_t
+	{
+		Front = 0,
+		Back = 1,
+		Left = 2,
+		Right = 3,
+		Top = 4,
+		Down = 5
+	};
+
+	static inline Side opposite(Side p_side)
+	{
+		switch (p_side)
+		{
+		case Side::Front:
+			return Side::Back;
+		case Side::Back:
+			return Side::Front;
+		case Side::Left:
+			return Side::Right;
+		case Side::Right:
+			return Side::Left;
+		case Side::Top:
+			return Side::Down;
+		case Side::Down:
+			return Side::Top;
+		}
+		return Side::Front;
+	}
 
 	struct FaceData
 	{
-		std::vector<spk::Vector3> points;	 // >= 3 vertices
-		std::vector<spk::Vector2> uvOffsets; // same length as points
-		spk::Vector2 uvBase;				 // added during bake
+		std::vector<spk::Vector3> points;
+		std::vector<spk::Vector2> uvOffsets;
+		spk::Vector2 uvBase;
 
-		// Hard-coded, immutable description of a face (positions + normalized UVs).
 		struct Template
 		{
-			uint8_t vertexCount;				  // 3 or 4
-			spk::Vector3 positions[4];			  // last entries ignored if triangle
-			spk::Vector2 textureCoordinates01[4]; // normalized in [0..1]
-			bool present;						  // false => skip this face
+			uint8_t vertexCount;
+			spk::Vector3 positions[4];
+			spk::Vector2 textureCoordinates01[4];
+			bool present;
 
-			// Build a FaceData from this template + a sprite.
 			FaceData materialize(const spk::SpriteSheet::Sprite &p_sprite) const
 			{
 				FaceData faceData;
 				if (!present)
 				{
-					return faceData; // empty => skipped by _emitFace
+					return faceData;
 				}
 
 				faceData.uvBase = p_sprite.anchor;
@@ -43,7 +73,6 @@ public:
 	};
 
 protected:
-	// Full-rect _makeQuad from p_a sprite
 	static FaceData _makeQuad(const spk::SpriteSheet::Sprite &p_sprite,
 							  const spk::Vector3 &p_a,
 							  const spk::Vector2 &p_uvA01,
@@ -70,26 +99,24 @@ protected:
 		return FaceData{{p_a, p_b, p_c}, {p_uvA01 * p_sprite.size, p_uvB01 * p_sprite.size, p_uvC01 * p_sprite.size}, p_sprite.anchor};
 	}
 
-	// Overload if you want p_a custom base and offsets (no sprite)
 	static FaceData _makeFace(spk::Vector2 p_uvBase, std::vector<spk::Vector3> p_points, std::vector<spk::Vector2> p_uvOffsets)
 	{
-		FaceData f{std::move(p_points), std::move(p_uvOffsets), p_uvBase};
-		return f;
+		FaceData face{std::move(p_points), std::move(p_uvOffsets), p_uvBase};
+		return face;
 	}
 
 	static FaceData _emptyFace()
 	{
 		return FaceData{};
-	} // skipped by _emitFace
+	}
 
-	// Triangulate (fan) and emit: finalUV = p_uvBase + p_uvOffsets[i]
 	static void _emitFace(const FaceData &p_face, const spk::Vector3 &p_position, spk::VoxelMesh &p_mesh)
 	{
 		const auto &points = p_face.points;
 		const auto &uvOffset = p_face.uvOffsets;
 		if (points.size() < 3 || points.size() != uvOffset.size())
 		{
-			return; // or assert/throw
+			return;
 		}
 
 		for (size_t i = 1; i + 1 < points.size(); ++i)
@@ -102,7 +129,15 @@ protected:
 
 public:
 	virtual ~Block() = default;
-	virtual void bake(const spk::Vector3 &p_position, spk::VoxelMesh &p_meshToFeed, const NeightbourVisibility &p_neightbourVisibility) = 0;
+	virtual void bake(const spk::Vector3 &p_position, spk::VoxelMesh &p_meshToFeed, const NeightbourVisibility &p_neightbourVisibility) const = 0;
+
+	virtual bool facePresent(Side p_side) const = 0;
+	virtual bool blocksViewFrom(Side p_fromSide, const Block *p_sourceBlock) const
+	{
+		// Default: fully opaque if the face exists.
+		(void)p_sourceBlock;
+		return facePresent(p_fromSide);
+	}
 };
 
 class FullBlock : public Block
@@ -172,7 +207,7 @@ public:
 		}
 	}
 
-	void bake(const spk::Vector3 &p_position, spk::VoxelMesh &p_mesh, const NeightbourVisibility &p_visibility) override
+	void bake(const spk::Vector3 &p_position, spk::VoxelMesh &p_mesh, const NeightbourVisibility &p_visibility) const override
 	{
 		for (size_t i = 0; i < _faces.size(); ++i)
 		{
@@ -183,6 +218,15 @@ public:
 			_emitFace(_faces[i], p_position, p_mesh);
 		}
 	}
+
+	bool facePresent(Side) const override
+	{
+		return true;
+	}
+	bool blocksViewFrom(Side, const Block *) const override
+	{
+		return true;
+	}
 };
 
 class SlopeBlock : public Block
@@ -190,76 +234,189 @@ class SlopeBlock : public Block
 public:
 	enum class Orientation
 	{
-		NorthToSouth,
-		SouthToNorth,
-		EastToWest,
-		WestToEast
+		NorthToSouth = 0,
+		EastToWest = 1,
+		SouthToNorth = 2,
+		WestToEast = 3
 	};
 
 	struct Sprites
 	{
-		spk::SpriteSheet::Sprite triangles; // triangular sides
-		spk::SpriteSheet::Sprite back;		// tall rectangular end
-		spk::SpriteSheet::Sprite ramp;		// sloped top
-		spk::SpriteSheet::Sprite bottom;	// underside
-	};
-
-	enum Face : size_t
-	{
-		Front = 0,
-		Back = 1,
-		Left = 2,
-		Right = 3,
-		Top = 4,
-		Down = 5
+		spk::SpriteSheet::Sprite triangles;
+		spk::SpriteSheet::Sprite back;
+		spk::SpriteSheet::Sprite ramp;
+		spk::SpriteSheet::Sprite bottom;
 	};
 
 private:
-	struct EnumHash
+	static inline std::array<Block::FaceData::Template, 6> canonicalNorthToSouth = {
+		// Front (quad, high) y = z
+		Block::FaceData::Template{4,
+								  {spk::Vector3(0, 0, 1), spk::Vector3(1, 0, 1), spk::Vector3(1, 1, 1), spk::Vector3(0, 1, 1)},
+								  {spk::Vector2(0, 1), spk::Vector2(1, 1), spk::Vector2(1, 0), spk::Vector2(0, 0)},
+								  true},
+		// Back (empty)
+		Block::FaceData::Template{3,
+								  {spk::Vector3(0, 0, 0), spk::Vector3(), spk::Vector3(), spk::Vector3()},
+								  {spk::Vector2(0, 0), spk::Vector2(), spk::Vector2(), spk::Vector2()},
+								  false},
+		// Left (triangle)
+		Block::FaceData::Template{3,
+								  {spk::Vector3(0, 0, 0), spk::Vector3(0, 0, 1), spk::Vector3(0, 1, 1), spk::Vector3()},
+								  {spk::Vector2(1, 1), spk::Vector2(0, 1), spk::Vector2(0, 0), spk::Vector2()},
+								  true},
+		// Right (triangle)
+		Block::FaceData::Template{3,
+								  {spk::Vector3(1, 0, 1), spk::Vector3(1, 0, 0), spk::Vector3(1, 1, 1), spk::Vector3()},
+								  {spk::Vector2(0, 1), spk::Vector2(1, 1), spk::Vector2(0, 0), spk::Vector2()},
+								  true},
+		// Top (quad ramp)
+		Block::FaceData::Template{4,
+								  {spk::Vector3(0, 1, 1), spk::Vector3(1, 1, 1), spk::Vector3(1, 0, 0), spk::Vector3(0, 0, 0)},
+								  {spk::Vector2(0, 0), spk::Vector2(1, 0), spk::Vector2(1, 1), spk::Vector2(0, 1)},
+								  true},
+		// Down (quad bottom)
+		Block::FaceData::Template{4,
+								  {spk::Vector3(0, 0, 0), spk::Vector3(1, 0, 0), spk::Vector3(1, 0, 1), spk::Vector3(0, 0, 1)},
+								  {spk::Vector2(0, 1), spk::Vector2(1, 1), spk::Vector2(1, 0), spk::Vector2(0, 0)},
+								  true}};
+
+	static spk::Vector3 _rotateQuarterTurnsY(const spk::Vector3 &p_value, Orientation p_orientation)
 	{
-		size_t operator()(Orientation p_value) const noexcept
+		spk::Vector3 centered = p_value - spk::Vector3(0.5f, 0.0f, 0.5f);
+		spk::Vector3 rotated;
+		switch (p_orientation)
 		{
-			return static_cast<size_t>(p_value);
+		case Orientation::NorthToSouth:
+			rotated = centered;
+			break; // 0°
+		case Orientation::EastToWest:
+			rotated = {centered.z, centered.y, -centered.x};
+			break; // 90°
+		case Orientation::SouthToNorth:
+			rotated = {-centered.x, centered.y, -centered.z};
+			break; // 180°
+		case Orientation::WestToEast:
+			rotated = {-centered.z, centered.y, centered.x};
+			break; // 270°
 		}
-	};
+		return rotated + spk::Vector3(0.5f, 0.0f, 0.5f);
+	}
 
-	static const std::unordered_map<Orientation, std::array<FaceData::Template, 6>, EnumHash> slopeBlockTemplates;
-
-	static const spk::SpriteSheet::Sprite &_selectSpriteForFace(const Sprites &p_sprites, size_t p_faceIndex, const FaceData::Template &p_template)
+	static Side _remapSideAfterQuarterTurnsY(Side p_face, Orientation p_orientation)
 	{
-		if (!p_template.present)
+		if (p_face == Side::Top || p_face == Side::Down)
+		{
+			return p_face;
+		}
+
+		auto ringIndexOf = [](Side p_face) -> int
+		{
+			switch (p_face)
+			{
+			case Side::Front:
+				return 0;
+			case Side::Right:
+				return 1;
+			case Side::Back:
+				return 2;
+			case Side::Left:
+				return 3;
+			default:
+				return -1;
+			}
+		};
+		auto faceOfRingIndex = [](int p_faceIndex) -> Side
+		{
+			switch (p_faceIndex & 3)
+			{
+			case 0:
+				return Side::Front;
+			case 1:
+				return Side::Right;
+			case 2:
+				return Side::Back;
+			default:
+				return Side::Left;
+			}
+		};
+
+		const int index = ringIndexOf(p_face);
+		if (index < 0)
+		{
+			return p_face;
+		}
+
+		int turns = 0;
+		switch (p_orientation)
+		{
+		case Orientation::NorthToSouth:
+			turns = 0;
+			break;
+		case Orientation::EastToWest:
+			turns = 1;
+			break;
+		case Orientation::SouthToNorth:
+			turns = 2;
+			break;
+		case Orientation::WestToEast:
+			turns = 3;
+			break;
+		}
+		return faceOfRingIndex(index + turns);
+	}
+
+	static const spk::SpriteSheet::Sprite &
+	_selectSpriteForFace(const Sprites &p_sprites, size_t p_faceIndex, const Block::FaceData::Template &p_template)
+	{
+		if (p_template.present == false)
 		{
 			return p_sprites.bottom;
 		}
-		if (p_faceIndex == Top)
+		if (p_faceIndex == static_cast<size_t>(Side::Top))
 		{
 			return p_sprites.ramp;
 		}
-		if (p_faceIndex == Down)
+		if (p_faceIndex == static_cast<size_t>(Side::Down))
 		{
 			return p_sprites.bottom;
 		}
-
 		return (p_template.vertexCount == 3) ? p_sprites.triangles : p_sprites.back;
 	}
 
 	Sprites _sprites;
 	Orientation _orientation;
 	std::array<FaceData, 6> _faces;
+	std::array<bool, 6> _faceMask{};
 
 	void _rebuildFaces()
 	{
-		const auto &templates = slopeBlockTemplates.at(_orientation);
-		for (size_t i = 0; i < _faces.size(); ++i)
+		_faces.fill(_emptyFace());
+		_faceMask.fill(false); // reset mask
+
+		for (size_t srcFace = 0; srcFace < canonicalNorthToSouth.size(); ++srcFace)
 		{
-			const auto &faceTemplate = templates[i];
-			if (!faceTemplate.present)
+			const auto &src = canonicalNorthToSouth[srcFace];
+			if (!src.present)
 			{
-				_faces[i] = _emptyFace();
 				continue;
 			}
-			const auto &sprite = _selectSpriteForFace(_sprites, i, faceTemplate);
-			_faces[i] = faceTemplate.materialize(sprite);
+
+			Block::FaceData::Template rotated{};
+			rotated.vertexCount = src.vertexCount;
+			rotated.present = true;
+			for (int i = 0; i < 4; ++i)
+			{
+				rotated.positions[i] = _rotateQuarterTurnsY(src.positions[i], _orientation);
+				rotated.textureCoordinates01[i] = src.textureCoordinates01[i];
+			}
+
+			const Side dst = _remapSideAfterQuarterTurnsY(static_cast<Side>(srcFace), _orientation);
+
+			const auto &sprite = _selectSpriteForFace(_sprites, static_cast<size_t>(dst), rotated);
+			_faces[static_cast<size_t>(dst)] = rotated.materialize(sprite);
+
+			_faceMask[static_cast<size_t>(dst)] = true;
 		}
 	}
 
@@ -277,7 +434,7 @@ public:
 		_rebuildFaces();
 	}
 
-	void bake(const spk::Vector3 &p_position, spk::VoxelMesh &p_mesh, const NeightbourVisibility &p_neightbourVisibility) override
+	void bake(const spk::Vector3 &p_position, spk::VoxelMesh &p_mesh, const NeightbourVisibility &p_neightbourVisibility) const override
 	{
 		for (size_t i = 0; i < _faces.size(); ++i)
 		{
@@ -288,138 +445,366 @@ public:
 			_emitFace(_faces[i], p_position, p_mesh);
 		}
 	}
+
+	bool facePresent(Side p_side) const override
+	{
+		return _faceMask[static_cast<size_t>(p_side)];
+	}
+
+	bool blocksViewFrom(Side p_fromSide, const Block *) const override
+	{
+		return facePresent(p_fromSide);
+	}
 };
 
-// ---------- Map initialization (one entry per orientation) ----------
-const std::unordered_map<SlopeBlock::Orientation, std::array<Block::FaceData::Template, 6>, SlopeBlock::EnumHash> SlopeBlock::slopeBlockTemplates = {
-	{SlopeBlock::Orientation::NorthToSouth,
-	 std::array<Block::FaceData::Template, 6>{
-		 // Front (quad, high) y = z
-		 Block::FaceData::Template{4,
-								   {spk::Vector3(0, 0, 1), spk::Vector3(1, 0, 1), spk::Vector3(1, 1, 1), spk::Vector3(0, 1, 1)},
-								   {spk::Vector2(0, 1), spk::Vector2(1, 1), spk::Vector2(1, 0), spk::Vector2(0, 0)},
-								   true},
-		 // Back (empty)
-		 Block::FaceData::Template{3,
-								   {spk::Vector3(0, 0, 0), spk::Vector3(), spk::Vector3(), spk::Vector3()},
-								   {spk::Vector2(0, 0), spk::Vector2(), spk::Vector2(), spk::Vector2()},
-								   false},
-		 // Left (triangle)
-		 Block::FaceData::Template{3,
-								   {spk::Vector3(0, 0, 0), spk::Vector3(0, 0, 1), spk::Vector3(0, 1, 1), spk::Vector3()},
-								   {spk::Vector2(1, 1), spk::Vector2(0, 1), spk::Vector2(0, 0), spk::Vector2()},
-								   true},
-		 // Right (triangle)
-		 Block::FaceData::Template{3,
-								   {spk::Vector3(1, 0, 1), spk::Vector3(1, 0, 0), spk::Vector3(1, 1, 1), spk::Vector3()},
-								   {spk::Vector2(0, 1), spk::Vector2(1, 1), spk::Vector2(0, 0), spk::Vector2()},
-								   true},
-		 // Top (quad ramp)
-		 Block::FaceData::Template{4,
-								   {spk::Vector3(0, 1, 1), spk::Vector3(1, 1, 1), spk::Vector3(1, 0, 0), spk::Vector3(0, 0, 0)},
-								   {spk::Vector2(0, 0), spk::Vector2(1, 0), spk::Vector2(1, 1), spk::Vector2(0, 1)},
-								   true},
-		 // Down (quad bottom)
-		 Block::FaceData::Template{4,
-								   {spk::Vector3(0, 0, 0), spk::Vector3(1, 0, 0), spk::Vector3(1, 0, 1), spk::Vector3(0, 0, 1)},
-								   {spk::Vector2(0, 1), spk::Vector2(1, 1), spk::Vector2(1, 0), spk::Vector2(0, 0)},
-								   true}}},
-	{SlopeBlock::Orientation::SouthToNorth,
-	 std::array<Block::FaceData::Template, 6>{
-		 // Front (empty)
-		 Block::FaceData::Template{3,
-								   {spk::Vector3(0, 0, 0), spk::Vector3(), spk::Vector3(), spk::Vector3()},
-								   {spk::Vector2(0, 0), spk::Vector2(), spk::Vector2(), spk::Vector2()},
-								   false},
-		 // Back (quad, high) y = 1 - z
-		 Block::FaceData::Template{4,
-								   {spk::Vector3(1, 0, 0), spk::Vector3(0, 0, 0), spk::Vector3(0, 1, 0), spk::Vector3(1, 1, 0)},
-								   {spk::Vector2(0, 1), spk::Vector2(1, 1), spk::Vector2(1, 0), spk::Vector2(0, 0)},
-								   true},
-		 // Left (triangle)
-		 Block::FaceData::Template{3,
-								   {spk::Vector3(0, 0, 0), spk::Vector3(0, 0, 1), spk::Vector3(0, 1, 0), spk::Vector3()},
-								   {spk::Vector2(0, 1), spk::Vector2(1, 1), spk::Vector2(0, 0), spk::Vector2()},
-								   true},
-		 // Right (triangle)
-		 Block::FaceData::Template{3,
-								   {spk::Vector3(1, 0, 1), spk::Vector3(1, 0, 0), spk::Vector3(1, 1, 0), spk::Vector3()},
-								   {spk::Vector2(1, 1), spk::Vector2(0, 1), spk::Vector2(0, 0), spk::Vector2()},
-								   true},
-		 // Top (quad ramp)
-		 Block::FaceData::Template{4,
-								   {spk::Vector3(1, 1, 0), spk::Vector3(0, 1, 0), spk::Vector3(0, 0, 1), spk::Vector3(1, 0, 1)},
-								   {spk::Vector2(0, 0), spk::Vector2(1, 0), spk::Vector2(1, 1), spk::Vector2(0, 1)},
-								   true},
-		 // Down (quad bottom)
-		 Block::FaceData::Template{4,
-								   {spk::Vector3(0, 0, 0), spk::Vector3(1, 0, 0), spk::Vector3(1, 0, 1), spk::Vector3(0, 0, 1)},
-								   {spk::Vector2(0, 1), spk::Vector2(1, 1), spk::Vector2(1, 0), spk::Vector2(0, 0)},
-								   true}}},
-	{SlopeBlock::Orientation::EastToWest,
-	 std::array<Block::FaceData::Template, 6>{
-		 // Front (triangle) y = x
-		 Block::FaceData::Template{3,
-								   {spk::Vector3(0, 0, 1), spk::Vector3(1, 0, 1), spk::Vector3(1, 1, 1), spk::Vector3()},
-								   {spk::Vector2(1, 1), spk::Vector2(0, 1), spk::Vector2(0, 0), spk::Vector2()},
-								   true},
-		 // Back (triangle)
-		 Block::FaceData::Template{3,
-								   {spk::Vector3(1, 0, 0), spk::Vector3(0, 0, 0), spk::Vector3(1, 1, 0), spk::Vector3()},
-								   {spk::Vector2(0, 1), spk::Vector2(1, 1), spk::Vector2(0, 0), spk::Vector2()},
-								   true},
-		 // Left (empty)
-		 Block::FaceData::Template{3,
-								   {spk::Vector3(0, 0, 0), spk::Vector3(), spk::Vector3(), spk::Vector3()},
-								   {spk::Vector2(0, 0), spk::Vector2(), spk::Vector2(), spk::Vector2()},
-								   false},
-		 // Right (quad, high)
-		 Block::FaceData::Template{4,
-								   {spk::Vector3(1, 0, 1), spk::Vector3(1, 0, 0), spk::Vector3(1, 1, 0), spk::Vector3(1, 1, 1)},
-								   {spk::Vector2(0, 1), spk::Vector2(1, 1), spk::Vector2(1, 0), spk::Vector2(0, 0)},
-								   true},
-		 // Top (quad ramp)
-		 Block::FaceData::Template{4,
-								   {spk::Vector3(0, 0, 1), spk::Vector3(1, 1, 1), spk::Vector3(1, 1, 0), spk::Vector3(0, 0, 0)},
-								   {spk::Vector2(1, 1), spk::Vector2(1, 0), spk::Vector2(0, 0), spk::Vector2(0, 1)},
-								   true},
-		 // Down (quad bottom)
-		 Block::FaceData::Template{4,
-								   {spk::Vector3(0, 0, 0), spk::Vector3(1, 0, 0), spk::Vector3(1, 0, 1), spk::Vector3(0, 0, 1)},
-								   {spk::Vector2(0, 1), spk::Vector2(1, 1), spk::Vector2(1, 0), spk::Vector2(0, 0)},
-								   true}}},
-	{SlopeBlock::Orientation::WestToEast,
-	 std::array<Block::FaceData::Template, 6>{
-		 // Front (triangle)
-		 Block::FaceData::Template{3,
-								   {spk::Vector3(0, 0, 1), spk::Vector3(1, 0, 1), spk::Vector3(0, 1, 1), spk::Vector3()},
-								   {spk::Vector2(0, 1), spk::Vector2(1, 1), spk::Vector2(0, 0), spk::Vector2()},
-								   true},
-		 // Back (triangle)
-		 Block::FaceData::Template{3,
-								   {spk::Vector3(1, 0, 0), spk::Vector3(0, 0, 0), spk::Vector3(0, 1, 0), spk::Vector3()},
-								   {spk::Vector2(1, 1), spk::Vector2(0, 1), spk::Vector2(0, 0), spk::Vector2()},
-								   true},
-		 // Left (quad, high)
-		 Block::FaceData::Template{4,
-								   {spk::Vector3(0, 0, 0), spk::Vector3(0, 0, 1), spk::Vector3(0, 1, 1), spk::Vector3(0, 1, 0)},
-								   {spk::Vector2(0, 1), spk::Vector2(1, 1), spk::Vector2(1, 0), spk::Vector2(0, 0)},
-								   true},
-		 // Right (empty)
-		 Block::FaceData::Template{3,
-								   {spk::Vector3(0, 0, 0), spk::Vector3(), spk::Vector3(), spk::Vector3()},
-								   {spk::Vector2(0, 0), spk::Vector2(), spk::Vector2(), spk::Vector2()},
-								   false},
-		 // Top (quad ramp)
-		 Block::FaceData::Template{4,
-								   {spk::Vector3(0, 1, 1), spk::Vector3(1, 0, 1), spk::Vector3(1, 0, 0), spk::Vector3(0, 1, 0)},
-								   {spk::Vector2(0, 0), spk::Vector2(0, 1), spk::Vector2(1, 1), spk::Vector2(1, 0)},
-								   true},
-		 // Down (quad bottom)
-		 Block::FaceData::Template{4,
-								   {spk::Vector3(0, 0, 0), spk::Vector3(1, 0, 0), spk::Vector3(1, 0, 1), spk::Vector3(0, 0, 1)},
-								   {spk::Vector2(0, 1), spk::Vector2(1, 1), spk::Vector2(1, 0), spk::Vector2(0, 0)},
-								   true}}}};
+template <size_t ChunkSizeX, size_t ChunkSizeY, size_t ChunkSizeZ>
+class BlockMap : public spk::Entity
+{
+public:
+	class Chunk : public spk::Entity
+	{
+	public:
+		static inline const spk::Vector3Int size = spk::Vector3Int(ChunkSizeX, ChunkSizeY, ChunkSizeZ);
+
+	private:
+		class Data : public spk::Component
+		{
+		private:
+			spk::SafePointer<spk::VoxelMeshRenderer> _renderer;
+
+			spk::SafePointer<BlockMap> _blockMap;
+			Block::ID _content[ChunkSizeX][ChunkSizeY][ChunkSizeZ];
+
+			bool _isBaked = false;
+			spk::VoxelMesh _mesh;
+
+			void _bake()
+			{
+				_mesh.clear();
+
+				auto isInside = [](int p_x, int p_y, int p_z) -> bool
+				{ return (p_x >= 0 && p_x < size.x && p_y >= 0 && p_y < size.y && p_z >= 0 && p_z < size.z); };
+
+				auto isFilled = [&](int p_x, int p_y, int p_z) -> bool
+				{
+					return (p_x >= 0 && p_x < size.x && p_y >= 0 && p_y < size.y && p_z >= 0 && p_z < size.z &&
+							_content[p_x][p_y][p_z] != static_cast<Block::ID>(-1));
+				};
+
+				auto blockAt = [&](int p_x, int p_y, int p_z) -> const Block *
+				{
+					if (!isFilled(p_x, p_y, p_z))
+					{
+						return nullptr;
+					}
+					Block::ID id = _content[p_x][p_y][p_z];
+					return (_blockMap ? _blockMap->blockById(id) : nullptr);
+				};
+
+				// NEW: neighbor-side aware occlusion test
+				auto isBlocking = [&](int p_nx, int p_ny, int p_nz, Block::Side p_mySide, const Block *p_self) -> bool
+				{
+					const Block *neighbor = blockAt(p_nx, p_ny, p_nz);
+					if (!neighbor)
+					{
+						return false;
+					}
+					const Block::Side fromSide = Block::opposite(p_mySide);
+					return neighbor->blocksViewFrom(fromSide, p_self);
+				};
+
+				for (int z = 0; z < size.z; ++z)
+				{
+					for (int y = 0; y < size.y; ++y)
+					{
+						for (int x = 0; x < size.x; ++x)
+						{
+							Block::ID id = _content[x][y][z];
+							if (id == static_cast<Block::ID>(-1))
+							{
+								continue;
+							}
+
+							const Block *block = (_blockMap ? _blockMap->blockById(id) : nullptr);
+							if (!block)
+							{
+								continue;
+							}
+
+							Block::NeightbourVisibility visibility;
+							visibility[(size_t)Block::Side::Front] =
+								block->facePresent(Block::Side::Front) && !isBlocking(x, y, z + 1, Block::Side::Front, block);
+
+							visibility[(size_t)Block::Side::Back] =
+								block->facePresent(Block::Side::Back) && !isBlocking(x, y, z - 1, Block::Side::Back, block);
+
+							visibility[(size_t)Block::Side::Left] =
+								block->facePresent(Block::Side::Left) && !isBlocking(x - 1, y, z, Block::Side::Left, block);
+
+							visibility[(size_t)Block::Side::Right] =
+								block->facePresent(Block::Side::Right) && !isBlocking(x + 1, y, z, Block::Side::Right, block);
+
+							visibility[(size_t)Block::Side::Top] =
+								block->facePresent(Block::Side::Top) && !isBlocking(x, y + 1, z, Block::Side::Top, block);
+
+							visibility[(size_t)Block::Side::Down] =
+								block->facePresent(Block::Side::Down) && !isBlocking(x, y - 1, z, Block::Side::Down, block);
+
+							spk::Vector3 blockPosition(static_cast<float>(x), static_cast<float>(y), static_cast<float>(z));
+
+							block->bake(blockPosition, _mesh, visibility);
+						}
+					}
+				}
+
+				_isBaked = true;
+			}
+
+		public:
+			Data(const std::wstring &p_name) :
+				spk::Component(p_name)
+			{
+			}
+
+			void setBlockMap(spk::SafePointer<BlockMap> p_blockMap)
+			{
+				_blockMap = p_blockMap;
+			}
+
+			void fill(Block::ID p_id)
+			{
+				for (int z = 0; z < size.z; ++z)
+				{
+					for (int y = 0; y < size.y; ++y)
+					{
+						for (int x = 0; x < size.x; ++x)
+						{
+							_content[x][y][z] = p_id;
+						}
+					}
+				}
+				_isBaked = false;
+			}
+
+			void setContent(int p_x, int p_y, int p_z, Block::ID p_id)
+			{
+				_content[p_x][p_y][p_z] = p_id;
+				_isBaked = false;
+			}
+
+			void start()
+			{
+				_renderer = owner()->template getComponent<spk::VoxelMeshRenderer>();
+			}
+
+			void onPaintEvent(spk::PaintEvent &p_event) override
+			{
+				if (_isBaked == false)
+				{
+					_bake();
+
+					if (_renderer != nullptr)
+					{
+						_renderer->setMesh(mesh());
+						p_event.requestPaint();
+					}
+				}
+			}
+
+			spk::SafePointer<spk::VoxelMesh> mesh()
+			{
+				return (&_mesh);
+			}
+			const spk::SafePointer<const spk::VoxelMesh> mesh() const
+			{
+				return (&_mesh);
+			}
+		};
+
+		spk::SafePointer<spk::VoxelMeshRenderer> _renderer;
+		spk::SafePointer<Data> _data;
+
+	public:
+		Chunk(const std::wstring &p_name, spk::SafePointer<BlockMap> p_parent) :
+			spk::Entity(p_name, p_parent)
+		{
+			_renderer = addComponent<spk::VoxelMeshRenderer>(p_name + L"/VoxelMeshRenderer");
+			_data = addComponent<Data>(p_name + L"/Data");
+			_data->setBlockMap(p_parent);
+
+			_renderer->setPriority(100);
+			_data->setPriority(0);
+		}
+
+		void setTexture(spk::SafePointer<const spk::Texture> p_texture)
+		{
+			_renderer->setTexture(p_texture);
+		}
+
+		void fill(Block::ID p_id)
+		{
+			_data->fill(p_id);
+		}
+
+		void setContent(spk::Vector3Int p_position, Block::ID p_id)
+		{
+			setContent(p_position.x, p_position.y, p_position.z, p_id);
+		}
+		void setContent(spk::Vector2Int p_position, int p_z, Block::ID p_id)
+		{
+			setContent(p_position.x, p_position.y, p_z, p_id);
+		}
+
+		void setContent(int p_x, int p_y, int p_z, Block::ID p_id)
+		{
+			_data->setContent(p_x, p_y, p_z, p_id);
+		}
+
+		bool isBaked() const
+		{
+			return _data.isBaked();
+		}
+
+		spk::SafePointer<spk::VoxelMesh> mesh()
+		{
+			return (_data.mesh());
+		}
+		const spk::SafePointer<const spk::VoxelMesh> mesh() const
+		{
+			return (_data.mesh());
+		}
+	};
+
+private:
+	spk::SafePointer<const spk::Texture> _texture;
+
+	std::unordered_map<Block::ID, std::unique_ptr<Block>> _availableBlocks;
+	std::unordered_map<spk::Vector3Int, std::unique_ptr<Chunk>> _chunks;
+
+	std::vector<spk::SafePointer<Chunk>> _activeChunks;
+
+	std::unique_ptr<Chunk> _generateChunk(const spk::Vector3Int &p_chunkCoordinate)
+	{
+		const std::wstring chunkName = name() + L"/Chunk[" + p_chunkCoordinate.to_wstring() + L"]";
+
+		std::unique_ptr<Chunk> newChunk = std::make_unique<Chunk>(chunkName, this);
+
+		newChunk->transform().place(p_chunkCoordinate * Chunk::size);
+		newChunk->setTexture(_texture);
+		newChunk->fill(-1);
+
+		_onChunkGeneration(p_chunkCoordinate, *newChunk);
+
+		newChunk->activate();
+
+		return newChunk;
+	}
+
+	virtual void _onChunkGeneration(const spk::Vector3Int &p_chunkCoordinate, Chunk &p_chunkToFill)
+	{
+		for (size_t i = 0; i < Chunk::size.x; i++)
+		{
+			for (size_t j = 0; j < Chunk::size.z; j++)
+			{
+				p_chunkToFill.setContent(i, 0, j, 0);
+				if (i == 0 || j == 0)
+				{
+					p_chunkToFill.setContent(i, 1, j, 1);
+				}
+			}
+		}
+	}
+
+public:
+	BlockMap(const std::wstring &p_name, spk::SafePointer<spk::Entity> p_parent) :
+		spk::Entity(p_name, p_parent)
+	{
+	}
+
+	void setTexture(spk::SafePointer<const spk::Texture> p_texture)
+	{
+		_texture = p_texture;
+
+		for (auto &[key, value] : _chunks)
+		{
+			value->setTexture(_texture);
+		}
+	}
+
+	void addBlockByID(const Block::ID &p_id, std::unique_ptr<Block> &&p_block)
+	{
+		if (_availableBlocks.contains(p_id) == true)
+		{
+			GENERATE_ERROR("Block ID [" + std::to_string(p_id) + "] already exist in BlockMap [" + spk::StringUtils::wstringToString(name()) + "]");
+		}
+		_availableBlocks[p_id] = std::move(p_block);
+	}
+
+	spk::SafePointer<const Block> blockById(Block::ID p_id) const
+	{
+		if (_availableBlocks.contains(p_id) == false)
+		{
+			return (nullptr);
+		}
+		return (_availableBlocks.at(p_id).get());
+	}
+
+	void setChunkRange(const spk::Vector3Int &p_start, const spk::Vector3Int &p_end)
+	{
+		for (auto &chunk : _activeChunks)
+		{
+			chunk->deactivate();
+		}
+		_activeChunks.clear();
+
+		for (int i = p_start.x; i <= p_end.x; i++)
+		{
+			for (int j = p_start.y; j <= p_end.y; j++)
+			{
+				for (int k = p_start.z; k <= p_end.z; k++)
+				{
+					spk::Vector3Int chunkPosition = {i, j, k};
+					if (_chunks.contains(chunkPosition) == false)
+					{
+						_chunks[chunkPosition] = _generateChunk(chunkPosition);
+					}
+
+					_activeChunks.push_back((_chunks[chunkPosition].get()));
+				}
+			}
+		}
+
+		for (auto &chunk : _activeChunks)
+		{
+			chunk->activate();
+		}
+	}
+};
+
+class Player : public spk::Entity
+{
+private:
+	spk::SafePointer<spk::CameraComponent> _cameraComponent;
+	spk::SafePointer<spk::FreeViewController> _freeViewController;
+
+public:
+	Player(const std::wstring &p_name, spk::SafePointer<spk::Entity> p_parent) :
+		spk::Entity(p_name, p_parent),
+		_cameraComponent(addComponent<spk::CameraComponent>(L"Player/CameraComponent")),
+		_freeViewController(addComponent<spk::FreeViewController>(L"Player/FreeViewController"))
+	{
+	}
+
+	spk::SafePointer<spk::CameraComponent> cameraComponent()
+	{
+		return (_cameraComponent);
+	}
+
+	spk::SafePointer<spk::FreeViewController> freeViewController()
+	{
+		return (_freeViewController);
+	}
+};
 
 int main()
 {
@@ -428,79 +813,38 @@ int main()
 	window->setUpdateTimer(1);
 	window->requestMousePlacement({400, 300});
 
-	spk::SafePointer<spk::GameEngine> engine = new spk::GameEngine();
+	spk::GameEngine engine;
 	spk::GameEngineWidget engineWidget(L"EngineWidget", window->widget());
 	engineWidget.setGeometry({0, 0}, window->geometry().size);
-	engineWidget.setGameEngine(engine);
+	engineWidget.setGameEngine(&engine);
 	engineWidget.activate();
 
-	// --- Player + camera ---
-	spk::SafePointer<spk::Entity> player = new spk::Entity(L"Player");
-	player->activate();
-	engine->addEntity(player);
+	Player player = Player(L"Player", nullptr);
+	player.activate();
+	engine.addEntity(&player);
 
-	auto cameraComponent = player->addComponent<spk::CameraComponent>(L"Player/CameraComponent");
-	cameraComponent->setPerspective(60.0f, static_cast<float>(window->geometry().size.x) / static_cast<float>(window->geometry().size.y));
-	auto playerController = player->addComponent<spk::FreeViewController>(L"Player/FreeViewController");
-	player->transform().place({5.0f, 5.0f, 5.0f});
-	player->transform().lookAt({0.0f, 0.0f, 0.0f});
+	player.cameraComponent()->setPerspective(60.0f, static_cast<float>(window->geometry().size.x) / static_cast<float>(window->geometry().size.y));
+	player.transform().place({5.0f, 5.0f, 5.0f});
+	player.transform().lookAt({0.0f, 0.0f, 0.0f});
 
-	// --- One voxel block entity ---
-	spk::SafePointer<spk::Entity> blockEntity = new spk::Entity(L"BlockMap");
-	blockEntity->activate();
-	engine->addEntity(blockEntity);
+	spk::SpriteSheet blockMapTilemap = spk::SpriteSheet("playground/resources/texture/CubeTexture.png", {4, 1});
 
-	// Renderer
-	auto renderer = blockEntity->addComponent<spk::VoxelMeshRenderer>(L"Block/VoxelMeshRenderer");
+	BlockMap<16, 16, 16> blockMap = BlockMap<16, 16, 16>(L"BlockMap", nullptr);
+	blockMap.setTexture(&blockMapTilemap);
+	blockMap.activate();
+	engine.addEntity(&blockMap);
 
-	// Texture (use whatever atlas you want; full-UV sprite below)
-	spk::SpriteSheet atlas("playground/resources/texture/CubeTexture.png", {4, 1});
-	renderer->setTexture(&atlas);
-
-	// Build the mesh from p_a FullBlock with the BOTTOM p_face hidden
-	spk::SafePointer<spk::VoxelMesh> mesh = new spk::VoxelMesh();
-
-	// Full-_makeQuad sprite 0/0
-	FullBlock block(atlas.sprite({0, 0}));
-
-	Block::NeightbourVisibility visibleFaces = {
-		true, // FRONT
-		true, // BACK
-		true, // LEFT
-		true, // RIGHT
-		true, // TOP
-		false // DOWN (hidden)
-	};
-
-	blockEntity->transform().place({0.0f, 0.0f, 0.0f});
+	auto fullBlockSprite = blockMapTilemap.sprite({0, 0});
+	blockMap.addBlockByID(0, std::make_unique<FullBlock>(fullBlockSprite));
 
 	SlopeBlock::Sprites slopeSprites;
-	slopeSprites.triangles = atlas.sprite({1, 0}); // both p_side triangles
-	slopeSprites.back = atlas.sprite({2, 0});	   // tall end
-	slopeSprites.ramp = atlas.sprite({2, 0});	   // sloped p_top
-	slopeSprites.bottom = atlas.sprite({3, 0});
+	slopeSprites.triangles = blockMapTilemap.sprite({1, 0});
+	slopeSprites.back = blockMapTilemap.sprite({2, 0});
+	slopeSprites.ramp = blockMapTilemap.sprite({2, 0});
+	slopeSprites.bottom = blockMapTilemap.sprite({3, 0});
+	blockMap.addBlockByID(1, std::make_unique<SlopeBlock>(slopeSprites, SlopeBlock::Orientation::NorthToSouth));
 
-	SlopeBlock slopeNS(slopeSprites, SlopeBlock::Orientation::NorthToSouth);
-	SlopeBlock slopeSN(slopeSprites, SlopeBlock::Orientation::SouthToNorth);
-	SlopeBlock slopeEW(slopeSprites, SlopeBlock::Orientation::EastToWest);
-	SlopeBlock slopeWE(slopeSprites, SlopeBlock::Orientation::WestToEast);
-
-	visibleFaces = {
-		true,
-		true,
-		true,
-		true, // sides
-		true,
-		true // p_top, bottom
-	};
-
-	slopeNS.bake({3, 0, 3}, *mesh, visibleFaces);
-	slopeSN.bake({5, 0, 3}, *mesh, visibleFaces);
-	slopeEW.bake({7, 0, 3}, *mesh, visibleFaces);
-	slopeWE.bake({9, 0, 3}, *mesh, visibleFaces);
-	block.bake({0, 0, 0}, *mesh, visibleFaces);
-
-	renderer->setMesh(mesh);
+	blockMap.setChunkRange({-3, 0, -3}, {3, 0, 3});
 
 	return app.run();
 }

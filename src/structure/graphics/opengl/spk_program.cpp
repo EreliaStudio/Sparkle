@@ -215,12 +215,10 @@ namespace spk::OpenGL
 			_load();
 		}
 
-		if (p_nbInstance == 0)
+		if (p_nbInstance == 0 || p_nbIndexes == 0)
 		{
 			return;
 		}
-
-		// Dump state before drawing — helps catch VAO/EBO/attrib mistakes
 
 		if (_verboseMode == true)
 		{
@@ -228,7 +226,6 @@ namespace spk::OpenGL
 		}
 
 #ifndef NDEBUG
-		// Validate once per draw in debug builds
 		try
 		{
 			validate();
@@ -238,17 +235,6 @@ namespace spk::OpenGL
 		}
 #endif
 
-		// Warn on obviously bad counts
-		if (p_nbIndexes <= 0)
-		{
-			std::cerr << "!! Program::render called with p_nbIndexes=" << p_nbIndexes << "\n";
-		}
-		if (p_nbInstance <= 0)
-		{
-			std::cerr << "!! Program::render called with p_nbInstance=" << p_nbInstance << "\n";
-		}
-
-		// Common INVALID_OPERATION cause: no EBO bound in the current VAO
 		GLint ebo = 0;
 		glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &ebo);
 		if (ebo == 0)
