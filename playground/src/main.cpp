@@ -453,6 +453,16 @@ public:
 
 	bool blocksViewFrom(Side p_fromSide, const Block *) const override
 	{
+		if ((_orientation == Orientation::NorthToSouth || _orientation == Orientation::SouthToNorth) &&
+			(p_fromSide == Side::Left || p_fromSide == Side::Right))
+		{	
+			return (false);
+		}
+		if ((_orientation == Orientation::EastToWest || _orientation == Orientation::WestToEast) &&
+			(p_fromSide == Side::Front || p_fromSide == Side::Back))
+		{	
+			return (false);
+		}
 		return facePresent(p_fromSide);
 	}
 };
@@ -707,9 +717,20 @@ private:
 			for (size_t j = 0; j < Chunk::size.z; j++)
 			{
 				p_chunkToFill.setContent(i, 0, j, 0);
-				if (i == 0 || j == 0)
+				if (i == 0 && j != 0)
 				{
 					p_chunkToFill.setContent(i, 1, j, 1);
+				}
+				if (j == 0 && i != 0)
+				{
+					p_chunkToFill.setContent(i, 1, j, 2);
+				}
+				if (i == 0 && j == 0)
+				{
+					p_chunkToFill.setContent(i, 1, j, 0);
+					p_chunkToFill.setContent(i, 2, j, 0);
+					p_chunkToFill.setContent(i, 3, j, 0);
+					p_chunkToFill.setContent(i, 4, j, 0);
 				}
 			}
 		}
@@ -806,6 +827,30 @@ public:
 	}
 };
 
+class DebugOverlayManager : public spk::Widget
+{
+private:
+	spk::DebugOverlay<3, 20> _debugOverlay;
+
+	void _onGeometryChange() override
+	{
+		_debugOverlay.setGeometry({{0, 0}, geometry().size});
+	}
+
+	void _onUpdateEvent(spk::UpdateEvent& p_event) override
+	{
+		//_debugOverlay.setText(0, 0, "FPS : " + std::to_wstring(Profiler::instance()->));
+	}
+
+public:
+	DebugOverlayManager(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+		spk::Widget(p_name, p_parent),
+		_debugOverlay(p_name + L"/Overlay", this)
+	{
+		_debugOverlay.activate();
+	}
+};
+
 int main()
 {
 	spk::GraphicalApplication app;
@@ -818,6 +863,10 @@ int main()
 	engineWidget.setGeometry({0, 0}, window->geometry().size);
 	engineWidget.setGameEngine(&engine);
 	engineWidget.activate();
+
+	spk::DebugOverlay<3, 20> debugOverlay(L"DebugOverlay", window->widget());
+	debugOverlay.setGeometry({0, 0}, window->geometry().size);
+	debugOverlay.activate();
 
 	Player player = Player(L"Player", nullptr);
 	player.activate();
@@ -842,9 +891,22 @@ int main()
 	slopeSprites.back = blockMapTilemap.sprite({2, 0});
 	slopeSprites.ramp = blockMapTilemap.sprite({2, 0});
 	slopeSprites.bottom = blockMapTilemap.sprite({3, 0});
-	blockMap.addBlockByID(1, std::make_unique<SlopeBlock>(slopeSprites, SlopeBlock::Orientation::NorthToSouth));
+
+	blockMap.addBlockByID(1, std::make_unique<SlopeBlock>(slopeSprites, SlopeBlock::Orientation::EastToWest));
+	blockMap.addBlockByID(2, std::make_unique<SlopeBlock>(slopeSprites, SlopeBlock::Orientation::NorthToSouth));
 
 	blockMap.setChunkRange({-3, 0, -3}, {3, 0, 3});
+
+	spk::Entity supportEntity = spk::Entity(L"SupportA", nullptr);
+	supportEntity.activate();
+	engine.addEntity(&supportEntity);
+	supportEntity.transform().place({2, 2, 2});
+
+	spk::ObjMesh supportMesh = spk::ObjMesh();
+	supportMesh.loadFromFile("playground/resources/obj/support.obj");
+
+	auto objRenderer = supportEntity.addComponent<spk::ObjMeshRenderer>(L"ObjMeshRenderer");
+	objRenderer->setMesh(&supportMesh);
 
 	return app.run();
 }
