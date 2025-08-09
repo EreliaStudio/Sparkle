@@ -351,17 +351,24 @@ namespace spk
 		}
 	}
 
-	Window::Window(const std::wstring &p_title, const spk::Geometry2D &p_geometry) :
-		_rootWidget(std::make_unique<Widget>(p_title + L" - CentralWidget", nullptr)),
-		_title(p_title),
-		_windowRendererThread(p_title + L" - Renderer"),
-		_windowUpdaterThread(p_title + L" - Updater"),
-		_updateModule(_rootWidget.get())
-	{
-		_windowRendererThread
-			.addPreparationStep(
-				[&]()
-				{
+       Window::Window(const std::wstring &p_title, const spk::Geometry2D &p_geometry) :
+               _rootWidget(std::make_unique<Widget>(p_title + L" - CentralWidget", nullptr)),
+               _title(p_title),
+               _windowRendererThread(p_title + L" - Renderer"),
+               _windowUpdaterThread(p_title + L" - Updater"),
+               _controllerInputThread(),
+               _profilerInstanciator(),
+               _fpsCounter(nullptr),
+               _upsCounter(nullptr),
+               _updateModule(_rootWidget.get())
+       {
+               _fpsCounter = Profiler::instance()->counter(L"FPS");
+               _upsCounter = Profiler::instance()->counter(L"UPS");
+
+               _windowRendererThread
+                       .addPreparationStep(
+                               [&]()
+                               {
 					try
 					{
 						_createContext();
@@ -412,19 +419,24 @@ namespace spk
 							PROPAGATE_ERROR("Renderer::_paintModule.treatMessages failed", e);
 						}
 
-						try
-						{
-							_systemModule.treatMessages();
-						} catch (const std::exception &e)
-						{
-							PROPAGATE_ERROR("Renderer::_systemModule.treatMessages failed", e);
-						}
-					} catch (const std::exception &e)
-					{
-						spk::cout << "Renderer - Error caught:\n" << e.what() << std::endl;
-						close();
-					}
-				})
+                                               try
+                                               {
+                                                       _systemModule.treatMessages();
+                                               } catch (const std::exception &e)
+                                               {
+                                                       PROPAGATE_ERROR("Renderer::_systemModule.treatMessages failed", e);
+                                               }
+
+                                               if (_fpsCounter)
+                                               {
+                                                       _fpsCounter->increment();
+                                               }
+                                       } catch (const std::exception &e)
+                                       {
+                                               spk::cout << "Renderer - Error caught:\n" << e.what() << std::endl;
+                                               close();
+                                       }
+                               })
 			.relinquish();
 
 		_windowUpdaterThread
@@ -434,15 +446,19 @@ namespace spk
 					try
 					{
 						_mouseModule.treatMessages();
-						_keyboardModule.treatMessages();
-						_controllerModule.treatMessages();
-						_updateModule.treatMessages();
-					} catch (std::exception &e)
-					{
-						spk::cout << "Updater - Error catched : " << e.what() << std::endl;
-						close();
-					}
-				})
+                                               _keyboardModule.treatMessages();
+                                               _controllerModule.treatMessages();
+                                               _updateModule.treatMessages();
+                                               if (_upsCounter)
+                                               {
+                                                       _upsCounter->increment();
+                                               }
+                                       } catch (std::exception &e)
+                                       {
+                                               spk::cout << "Updater - Error catched : " << e.what() << std::endl;
+                                               close();
+                                       }
+                               })
 			.relinquish();
 
 		_updateModule.bind(&(_keyboardModule.keyboard()));
