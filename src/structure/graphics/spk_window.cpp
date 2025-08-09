@@ -383,21 +383,19 @@ namespace spk
 				})
 			.relinquish();
 
-		spk::Timer fpsTimer(1000_ms);
-		fpsTimer.start();
-
 		_windowRendererThread
 			.addExecutionStep(
 				[&]()
 				{
-					if (fpsTimer.state() == spk::Timer::State::TimedOut)
+					if (_fpsTimer.state() != spk::Timer::State::Running)
 					{
 						if (_fpsCounter)
 						{
+							_currentFPS = _fpsCounter->value();
 							_fpsCounter->reset();
 						}
-						
-						fpsTimer.start();
+
+						_fpsTimer.start();
 					}
 
 					try
@@ -454,20 +452,18 @@ namespace spk
 				})
 			.relinquish();
 
-
-		spk::Timer upsTimer(1000_ms);
-		upsTimer.start();
 		_windowUpdaterThread
 			.addExecutionStep(
 				[&]()
 				{
-					if (upsTimer.state() == spk::Timer::State::TimedOut)
+					if (_upsTimer.state() != spk::Timer::State::Running)
 					{
 						if (_upsCounter)
 						{
+							_currentUPS = _upsCounter->value();
 							_upsCounter->reset();
 						}
-						upsTimer.start();
+						_upsTimer.start();
 					}
 					try
 					{
