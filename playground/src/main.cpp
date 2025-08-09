@@ -830,16 +830,23 @@ public:
 class DebugOverlayManager : public spk::Widget
 {
 private:
+	spk::Profiler::Instanciator _profilerInstanciator;
 	spk::DebugOverlay<3, 20> _debugOverlay;
 
 	void _onGeometryChange() override
 	{
+	DEBUG_LINE();
 		_debugOverlay.setGeometry({{0, 0}, geometry().size});
+	DEBUG_LINE();
 	}
 
 	void _onUpdateEvent(spk::UpdateEvent& p_event) override
 	{
-		//_debugOverlay.setText(0, 0, "FPS : " + std::to_wstring(Profiler::instance()->));
+	DEBUG_LINE();
+		_debugOverlay.setText(0, 0, L"FPS : " + std::to_wstring(spk::Profiler::instance()->counter(L"FPS")->value()));
+		_debugOverlay.setText(0, 1, L"UPS : " + std::to_wstring(spk::Profiler::instance()->counter(L"UPS")->value()));
+		p_event.requestPaint();
+	DEBUG_LINE();
 	}
 
 public:
@@ -847,66 +854,87 @@ public:
 		spk::Widget(p_name, p_parent),
 		_debugOverlay(p_name + L"/Overlay", this)
 	{
+	DEBUG_LINE();
 		_debugOverlay.activate();
+	DEBUG_LINE();
 	}
 };
 
 int main()
 {
+	DEBUG_LINE();
 	spk::GraphicalApplication app;
 	auto window = app.createWindow(L"Playground", {{0, 0}, {800, 600}});
 	window->setUpdateTimer(1);
 	window->requestMousePlacement({400, 300});
 
+	DEBUG_LINE();
 	spk::GameEngine engine;
 	spk::GameEngineWidget engineWidget(L"EngineWidget", window->widget());
 	engineWidget.setGeometry({0, 0}, window->geometry().size);
 	engineWidget.setGameEngine(&engine);
+	engineWidget.setLayer(0);
 	engineWidget.activate();
 
-	spk::DebugOverlay<3, 20> debugOverlay(L"DebugOverlay", window->widget());
+	DEBUG_LINE();
+	DebugOverlayManager debugOverlay(L"DebugOverlay", window->widget());
+	DEBUG_LINE();
 	debugOverlay.setGeometry({0, 0}, window->geometry().size);
+	DEBUG_LINE();
+	debugOverlay.setLayer(100);
+	DEBUG_LINE();
 	debugOverlay.activate();
 
+	DEBUG_LINE();
 	Player player = Player(L"Player", nullptr);
 	player.activate();
 	engine.addEntity(&player);
 
+	DEBUG_LINE();
 	player.cameraComponent()->setPerspective(60.0f, static_cast<float>(window->geometry().size.x) / static_cast<float>(window->geometry().size.y));
 	player.transform().place({5.0f, 5.0f, 5.0f});
 	player.transform().lookAt({0.0f, 0.0f, 0.0f});
 
+	DEBUG_LINE();
 	spk::SpriteSheet blockMapTilemap = spk::SpriteSheet("playground/resources/texture/CubeTexture.png", {4, 1});
 
+	DEBUG_LINE();
 	BlockMap<16, 16, 16> blockMap = BlockMap<16, 16, 16>(L"BlockMap", nullptr);
 	blockMap.setTexture(&blockMapTilemap);
 	blockMap.activate();
 	engine.addEntity(&blockMap);
 
+	DEBUG_LINE();
 	auto fullBlockSprite = blockMapTilemap.sprite({0, 0});
 	blockMap.addBlockByID(0, std::make_unique<FullBlock>(fullBlockSprite));
 
+	DEBUG_LINE();
 	SlopeBlock::Sprites slopeSprites;
 	slopeSprites.triangles = blockMapTilemap.sprite({1, 0});
 	slopeSprites.back = blockMapTilemap.sprite({2, 0});
 	slopeSprites.ramp = blockMapTilemap.sprite({2, 0});
 	slopeSprites.bottom = blockMapTilemap.sprite({3, 0});
 
+	DEBUG_LINE();
 	blockMap.addBlockByID(1, std::make_unique<SlopeBlock>(slopeSprites, SlopeBlock::Orientation::EastToWest));
 	blockMap.addBlockByID(2, std::make_unique<SlopeBlock>(slopeSprites, SlopeBlock::Orientation::NorthToSouth));
 
 	blockMap.setChunkRange({-3, 0, -3}, {3, 0, 3});
 
+	DEBUG_LINE();
 	spk::Entity supportEntity = spk::Entity(L"SupportA", nullptr);
 	supportEntity.activate();
 	engine.addEntity(&supportEntity);
 	supportEntity.transform().place({2, 2, 2});
 
+	DEBUG_LINE();
 	spk::ObjMesh supportMesh = spk::ObjMesh();
 	supportMesh.loadFromFile("playground/resources/obj/support.obj");
 
+	DEBUG_LINE();
 	auto objRenderer = supportEntity.addComponent<spk::ObjMeshRenderer>(L"ObjMeshRenderer");
 	objRenderer->setMesh(&supportMesh);
 
+	DEBUG_LINE();
 	return app.run();
 }

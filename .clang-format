@@ -9,7 +9,6 @@ BraceWrapping:
   AfterCaseLabel: true
   BeforeFunctionBody: true
   BeforeLambdaBody: true
-  BeforeBlock: true
   AfterFunction: true
   AfterNamespace: true
   AfterClass: true

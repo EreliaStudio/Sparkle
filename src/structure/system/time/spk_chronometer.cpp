@@ -25,7 +25,7 @@ namespace spk
 		_startTime = {};
 	}
 
-	inline void Chronometer::pause()
+	void Chronometer::pause()
 	{
 		if (_state == State::Running)
 		{
@@ -34,7 +34,7 @@ namespace spk
 		}
 	}
 
-	inline void Chronometer::resume()
+	void Chronometer::resume()
 	{
 		if (_state == State::Paused)
 		{
@@ -43,14 +43,14 @@ namespace spk
 		}
 	}
 
-	inline void Chronometer::restart()
+	void Chronometer::restart()
 	{
 		_accumulatedTime = Duration(0LL, TimeUnit::Nanosecond);
 		_startTime = SystemUtils::getTime();
 		_state = State::Running;
 	}
 
-	inline Duration Chronometer::elapsedTime() const
+	Duration Chronometer::elapsedTime() const
 	{
 		if (_state == State::Running)
 		{
@@ -63,7 +63,7 @@ namespace spk
 		}
 	}
 
-	inline Duration Chronometer::currentRunDuration() const
+	Duration Chronometer::currentRunDuration() const
 	{
 		if (_state != State::Running)
 		{
