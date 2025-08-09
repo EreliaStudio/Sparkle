@@ -15,6 +15,7 @@
 #include "application/module/spk_module.hpp"
 
 #include "structure/graphics/spk_viewport.hpp"
+#include "structure/system/spk_profiler.hpp"
 
 #include <deque>
 #include <map>
@@ -53,7 +54,11 @@ namespace spk
 		std::wstring _title;
 		spk::PersistantWorker _windowRendererThread;
 		spk::PersistantWorker _windowUpdaterThread;
-		ControllerInputThread _controllerInputThread;
+                ControllerInputThread _controllerInputThread;
+
+                Profiler::Instanciator _profilerInstanciator;
+                spk::SafePointer<Profiler::CounterMeasurement> _fpsCounter;
+                spk::SafePointer<Profiler::CounterMeasurement> _upsCounter;
 
 		HWND _hwnd;
 		HDC _hdc;
