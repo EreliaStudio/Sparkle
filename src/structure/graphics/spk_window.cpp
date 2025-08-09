@@ -13,6 +13,8 @@
 
 #include "structure/system/spk_exception.hpp"
 
+#include "structure/system/time/spk_timer.hpp"
+
 namespace spk
 {
 	void Window::_initialize(const std::function<void(spk::SafePointer<spk::Window>)> &p_onClosureCallback)
@@ -351,24 +353,24 @@ namespace spk
 		}
 	}
 
-       Window::Window(const std::wstring &p_title, const spk::Geometry2D &p_geometry) :
-               _rootWidget(std::make_unique<Widget>(p_title + L" - CentralWidget", nullptr)),
-               _title(p_title),
-               _windowRendererThread(p_title + L" - Renderer"),
-               _windowUpdaterThread(p_title + L" - Updater"),
-               _controllerInputThread(),
-               _profilerInstanciator(),
-               _fpsCounter(nullptr),
-               _upsCounter(nullptr),
-               _updateModule(_rootWidget.get())
-       {
-               _fpsCounter = Profiler::instance()->counter(L"FPS");
-               _upsCounter = Profiler::instance()->counter(L"UPS");
+	Window::Window(const std::wstring &p_title, const spk::Geometry2D &p_geometry) :
+		_rootWidget(std::make_unique<Widget>(p_title + L" - CentralWidget", nullptr)),
+		_title(p_title),
+		_windowRendererThread(p_title + L" - Renderer"),
+		_windowUpdaterThread(p_title + L" - Updater"),
+		_controllerInputThread(),
+		_profilerInstanciator(),
+		_fpsCounter(nullptr),
+		_upsCounter(nullptr),
+		_updateModule(_rootWidget.get())
+	{
+		_fpsCounter = Profiler::instance()->counter(L"FPS");
+		_upsCounter = Profiler::instance()->counter(L"UPS");
 
-               _windowRendererThread
-                       .addPreparationStep(
-                               [&]()
-                               {
+		_windowRendererThread
+			.addPreparationStep(
+				[&]()
+				{
 					try
 					{
 						_createContext();
@@ -381,10 +383,23 @@ namespace spk
 				})
 			.relinquish();
 
+		spk::Timer fpsTimer(1000_ms);
+		fpsTimer.start();
+
 		_windowRendererThread
 			.addExecutionStep(
 				[&]()
 				{
+					if (fpsTimer.state() == spk::Timer::State::TimedOut)
+					{
+						if (_fpsCounter)
+						{
+							_fpsCounter->reset();
+						}
+						
+						fpsTimer.start();
+					}
+
 					try
 					{
 						try
@@ -419,46 +434,57 @@ namespace spk
 							PROPAGATE_ERROR("Renderer::_paintModule.treatMessages failed", e);
 						}
 
-                                               try
-                                               {
-                                                       _systemModule.treatMessages();
-                                               } catch (const std::exception &e)
-                                               {
-                                                       PROPAGATE_ERROR("Renderer::_systemModule.treatMessages failed", e);
-                                               }
+						try
+						{
+							_systemModule.treatMessages();
+						} catch (const std::exception &e)
+						{
+							PROPAGATE_ERROR("Renderer::_systemModule.treatMessages failed", e);
+						}
 
-                                               if (_fpsCounter)
-                                               {
-                                                       _fpsCounter->increment();
-                                               }
-                                       } catch (const std::exception &e)
-                                       {
-                                               spk::cout << "Renderer - Error caught:\n" << e.what() << std::endl;
-                                               close();
-                                       }
-                               })
+						if (_fpsCounter)
+						{
+							_fpsCounter->increment();
+						}
+					} catch (const std::exception &e)
+					{
+						spk::cout << "Renderer - Error caught:\n" << e.what() << std::endl;
+						close();
+					}
+				})
 			.relinquish();
 
+
+		spk::Timer upsTimer(1000_ms);
+		upsTimer.start();
 		_windowUpdaterThread
 			.addExecutionStep(
 				[&]()
 				{
+					if (upsTimer.state() == spk::Timer::State::TimedOut)
+					{
+						if (_upsCounter)
+						{
+							_upsCounter->reset();
+						}
+						upsTimer.start();
+					}
 					try
 					{
 						_mouseModule.treatMessages();
-                                               _keyboardModule.treatMessages();
-                                               _controllerModule.treatMessages();
-                                               _updateModule.treatMessages();
-                                               if (_upsCounter)
-                                               {
-                                                       _upsCounter->increment();
-                                               }
-                                       } catch (std::exception &e)
-                                       {
-                                               spk::cout << "Updater - Error catched : " << e.what() << std::endl;
-                                               close();
-                                       }
-                               })
+						_keyboardModule.treatMessages();
+						_controllerModule.treatMessages();
+						_updateModule.treatMessages();
+						if (_upsCounter)
+						{
+							_upsCounter->increment();
+						}
+					} catch (std::exception &e)
+					{
+						spk::cout << "Updater - Error catched : " << e.what() << std::endl;
+						close();
+					}
+				})
 			.relinquish();
 
 		_updateModule.bind(&(_keyboardModule.keyboard()));
@@ -639,10 +665,10 @@ namespace spk
 		PostMessage(_hwnd, WM_UPDATE_REQUEST, 0, 0);
 	}
 
-	void Window::requestMousePlacement(const spk::Vector2Int& p_mousePosition) const
+	void Window::requestMousePlacement(const spk::Vector2Int &p_mousePosition) const
 	{
-		POINT mousePositionInWindowSpace{ p_mousePosition.x, p_mousePosition.y };
+		POINT mousePositionInWindowSpace{p_mousePosition.x, p_mousePosition.y};
 		::ClientToScreen(_hwnd, &mousePositionInWindowSpace);
 		::SetCursorPos(mousePositionInWindowSpace.x, mousePositionInWindowSpace.y);
-	}	
+	}
 }
