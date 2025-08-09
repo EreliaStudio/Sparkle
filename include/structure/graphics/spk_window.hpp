@@ -35,6 +35,8 @@
 #include "application/module/spk_timer_module.hpp"
 #include "application/module/spk_update_module.hpp"
 
+#include "structure/system/time/spk_timer.hpp"
+
 namespace spk
 {
 	class Window
@@ -54,11 +56,15 @@ namespace spk
 		std::wstring _title;
 		spk::PersistantWorker _windowRendererThread;
 		spk::PersistantWorker _windowUpdaterThread;
-                ControllerInputThread _controllerInputThread;
+		ControllerInputThread _controllerInputThread;
 
-                Profiler::Instanciator _profilerInstanciator;
-                spk::SafePointer<Profiler::CounterMeasurement> _fpsCounter;
-                spk::SafePointer<Profiler::CounterMeasurement> _upsCounter;
+		Profiler::Instanciator _profilerInstanciator;
+		spk::Timer _fpsTimer = spk::Timer(100_ms);
+		spk::SafePointer<Profiler::CounterMeasurement> _fpsCounter;
+		size_t _currentFPS = 0;
+		spk::Timer _upsTimer = spk::Timer(100_ms);
+		spk::SafePointer<Profiler::CounterMeasurement> _upsCounter;
+		size_t _currentUPS = 0;
 
 		HWND _hwnd;
 		HDC _hdc;
@@ -125,7 +131,10 @@ namespace spk
 		void allowUpdateRequest();
 		void requestUpdate() const;
 		void requestResize(const spk::Vector2Int &p_size) const;
-		void requestMousePlacement(const spk::Vector2Int& p_mousePosition) const;
+		void requestMousePlacement(const spk::Vector2Int &p_mousePosition) const;
+
+		size_t nbFPS() const { return _currentFPS * 10;}
+		size_t nbUPS() const { return _currentUPS * 10;}
 
 		spk::SafePointer<Widget> widget() const;
 		operator spk::SafePointer<Widget>() const;
