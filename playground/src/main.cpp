@@ -53,11 +53,13 @@ public:
 	using Footprint = spk::Polygon;
 
 protected:
-	using Type = std::wstring; // Each block type can be identified by its type : FullBlock, Slope, HalfBlock, Fence, for exemple
-	// Multiple block can shared the same type, as long as they are the same shape in 3D, with just different sprite and interaction
+        using Type = std::wstring; // Each block type can be identified by its type : FullBlock, Slope, HalfBlock, Fence, for exemple
+        // Multiple block can shared the same type, as long as they are the same shape in 3D, with just different sprite and interaction
 
-	virtual Block::Type _type() const = 0;
-	virtual const spk::ObjMesh &_mesh() const = 0;
+        virtual Block::Type _type() const = 0;
+        virtual const spk::ObjMesh &_mesh() const = 0;
+
+       static void _applySprite(spk::ObjMesh::Shape &p_shape, const spk::SpriteSheet::Sprite &p_sprite);
 
 private:
 	struct Face
@@ -382,6 +384,26 @@ public:
 	}
 };
 
+void Block::_applySprite(spk::ObjMesh::Shape &p_shape, const spk::SpriteSheet::Sprite &p_sprite)
+{
+    auto transform = [&](spk::Vertex &p_v)
+    {
+        p_v.uv = (p_v.uv * p_sprite.size) + p_sprite.anchor;
+    };
+    std::visit(
+        [&](auto &p_face)
+        {
+            transform(p_face.a);
+            transform(p_face.b);
+            transform(p_face.c);
+            if constexpr (std::is_same_v<std::decay_t<decltype(p_face)>, spk::ObjMesh::Quad>)
+            {
+                transform(p_face.d);
+            }
+        },
+        p_shape);
+}
+
 struct FullBlock : public Block
 {
 public:
@@ -443,34 +465,14 @@ f 3/3/6 1/2/6 2/1/6)";
 public:
        explicit FullBlock(const Configuration &p_configuration) : _configuration(p_configuration)
        {
-               _objMesh = spk::ObjMesh::loadFromString(objMeshCode);
+       _objMesh = spk::ObjMesh::loadFromString(objMeshCode);
 
-               auto applySprite = [](spk::ObjMesh::Shape &p_shape, const spk::SpriteSheet::Sprite &p_sprite)
-               {
-                       auto transform = [&](spk::Vertex &p_v)
-                       {
-                               p_v.uv = (p_v.uv * p_sprite.size) + p_sprite.anchor;
-                       };
-                       std::visit(
-                               [&](auto &p_face)
-                               {
-                                       transform(p_face.a);
-                                       transform(p_face.b);
-                                       transform(p_face.c);
-                                       if constexpr (std::is_same_v<std::decay_t<decltype(p_face)>, spk::ObjMesh::Quad>)
-                                       {
-                                               transform(p_face.d);
-                                       }
-                               },
-                               p_shape);
-               };
-
-               applySprite(_objMesh.shapes()[0], _configuration.front);
-               applySprite(_objMesh.shapes()[1], _configuration.back);
-               applySprite(_objMesh.shapes()[2], _configuration.left);
-               applySprite(_objMesh.shapes()[3], _configuration.right);
-               applySprite(_objMesh.shapes()[4], _configuration.top);
-               applySprite(_objMesh.shapes()[5], _configuration.bottom);
+       _applySprite(_objMesh.shapes()[0], _configuration.front);
+       _applySprite(_objMesh.shapes()[1], _configuration.back);
+       _applySprite(_objMesh.shapes()[2], _configuration.left);
+       _applySprite(_objMesh.shapes()[3], _configuration.right);
+       _applySprite(_objMesh.shapes()[4], _configuration.top);
+       _applySprite(_objMesh.shapes()[5], _configuration.bottom);
        }
 };
 
@@ -524,33 +526,13 @@ f 1/1/5 5/3/5 6/4/5 2/2/5)";
 public:
        explicit SlopeBlock(const Configuration &p_configuration) : _configuration(p_configuration)
        {
-               _objMesh = spk::ObjMesh::loadFromString(objMeshCode);
+       _objMesh = spk::ObjMesh::loadFromString(objMeshCode);
 
-               auto applySprite = [](spk::ObjMesh::Shape &p_shape, const spk::SpriteSheet::Sprite &p_sprite)
-               {
-                       auto transform = [&](spk::Vertex &p_v)
-                       {
-                               p_v.uv = (p_v.uv * p_sprite.size) + p_sprite.anchor;
-                       };
-                       std::visit(
-                               [&](auto &p_face)
-                               {
-                                       transform(p_face.a);
-                                       transform(p_face.b);
-                                       transform(p_face.c);
-                                       if constexpr (std::is_same_v<std::decay_t<decltype(p_face)>, spk::ObjMesh::Quad>)
-                                       {
-                                               transform(p_face.d);
-                                       }
-                               },
-                               p_shape);
-               };
-
-               applySprite(_objMesh.shapes()[0], _configuration.bottom);
-               applySprite(_objMesh.shapes()[1], _configuration.back);
-               applySprite(_objMesh.shapes()[2], _configuration.triangles);
-               applySprite(_objMesh.shapes()[3], _configuration.triangles);
-               applySprite(_objMesh.shapes()[4], _configuration.ramp);
+       _applySprite(_objMesh.shapes()[0], _configuration.bottom);
+       _applySprite(_objMesh.shapes()[1], _configuration.back);
+       _applySprite(_objMesh.shapes()[2], _configuration.triangles);
+       _applySprite(_objMesh.shapes()[3], _configuration.triangles);
+       _applySprite(_objMesh.shapes()[4], _configuration.ramp);
        }
 };
 
