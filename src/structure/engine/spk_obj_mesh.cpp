@@ -53,9 +53,9 @@ namespace spk
 		}
 	} // namespace
 
-	void ObjMesh::loadFromString(const std::string &p_input)
+	ObjMesh ObjMesh::loadFromString(const std::string &p_input)
 	{
-		clear();
+		ObjMesh result;
 
 		std::vector<spk::Vector3> positions;
 		std::vector<spk::Vector2> uvs;
@@ -118,19 +118,19 @@ namespace spk
 
 				if (verts.size() == 3)
 				{
-					addShape(verts[0], verts[1], verts[2]);
+					result.addShape(verts[0], verts[1], verts[2]);
 				}
 				else if (verts.size() == 4)
 				{
-					addShape(verts[0], verts[1], verts[2], verts[3]);
+					result.addShape(verts[0], verts[1], verts[2], verts[3]);
 				}
 			}
 		}
-
-		unbake();
+		
+		return (result);
 	}
 
-	void ObjMesh::loadFromFile(const std::filesystem::path &p_path)
+	ObjMesh ObjMesh::loadFromFile(const std::filesystem::path &p_path)
 	{
 		std::ifstream file(p_path);
 		if (file.is_open() == false)
@@ -140,7 +140,8 @@ namespace spk
 
 		std::stringstream buffer;
 		buffer << file.rdbuf();
-		loadFromString(buffer.str());
+		
+		return (loadFromString(buffer.str()));
 	}
 
 	void ObjMesh::exportToFile(const std::filesystem::path &p_path) const
