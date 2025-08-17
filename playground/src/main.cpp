@@ -390,18 +390,30 @@ public:
 
 struct FullBlock : public Block
 {
-private:
-	Block::Type _type() const override
-	{
-		return L"FullBlock";
-	}
-	const spk::ObjMesh &_mesh() const override
-	{
-		return (_objMesh);
-	}
+public:
+        struct Configuration
+        {
+                spk::SpriteSheet::Sprite front;
+                spk::SpriteSheet::Sprite back;
+                spk::SpriteSheet::Sprite left;
+                spk::SpriteSheet::Sprite right;
+                spk::SpriteSheet::Sprite top;
+                spk::SpriteSheet::Sprite bottom;
+        };
 
-	spk::ObjMesh _objMesh;
-	static inline std::string objMeshCode = R"(v 0.0 0.0 0.0
+private:
+        Block::Type _type() const override
+        {
+                return L"FullBlock";
+        }
+        const spk::ObjMesh &_mesh() const override
+        {
+                return (_objMesh);
+        }
+
+        spk::ObjMesh _objMesh;
+        Configuration _configuration;
+        static inline std::string objMeshCode = R"(v 0.0 0.0 0.0
 v 1.0 0.0 0.0
 v 1.0 0.0 1.0
 v 0.0 0.0 1.0
@@ -435,26 +447,36 @@ f 3/1/6 4/3/6 1/4/6
 f 3/3/6 1/2/6 2/1/6)";
 
 public:
-	FullBlock()
-	{
-		_objMesh = spk::ObjMesh::loadFromString(objMeshCode);
-	}
+        explicit FullBlock(const Configuration &p_configuration) : _configuration(p_configuration)
+        {
+                _objMesh = spk::ObjMesh::loadFromString(objMeshCode);
+        }
 };
 
 struct SlopeBlock : public Block
 {
-private:
-	Block::Type _type() const override
-	{
-		return L"SlopeBlock";
-	}
-	const spk::ObjMesh &_mesh() const override
-	{
-		return (_objMesh);
-	}
+public:
+        struct Configuration
+        {
+                spk::SpriteSheet::Sprite triangles;
+                spk::SpriteSheet::Sprite back;
+                spk::SpriteSheet::Sprite ramp;
+                spk::SpriteSheet::Sprite bottom;
+        };
 
-	spk::ObjMesh _objMesh;
-	static inline std::string objMeshCode = R"(v 0.0 0.0 0.0
+private:
+        Block::Type _type() const override
+        {
+                return L"SlopeBlock";
+        }
+        const spk::ObjMesh &_mesh() const override
+        {
+                return (_objMesh);
+        }
+
+        spk::ObjMesh _objMesh;
+        Configuration _configuration;
+        static inline std::string objMeshCode = R"(v 0.0 0.0 0.0
 v 1.0 0.0 0.0
 v 1.0 0.0 1.0
 v 0.0 0.0 1.0
@@ -479,10 +501,10 @@ f 2/1/4 6/3/4 3/2/4
 f 1/1/5 5/3/5 6/4/5 2/2/5)";
 
 public:
-	SlopeBlock()
-	{
-		_objMesh = spk::ObjMesh::loadFromString(objMeshCode);
-	}
+        explicit SlopeBlock(const Configuration &p_configuration) : _configuration(p_configuration)
+        {
+                _objMesh = spk::ObjMesh::loadFromString(objMeshCode);
+        }
 };
 
 template <size_t ChunkSizeX, size_t ChunkSizeY, size_t ChunkSizeZ>
@@ -644,12 +666,12 @@ public:
 		spk::SafePointer<Data> _data;
 
 	public:
-		Chunk(const std::wstring &p_name, spk::SafePointer<BlockMap> p_parent) :
-			spk::Entity(p_name, p_parent)
-		{
-			_renderer = addComponent<spk::ObjMeshRenderer>(p_name + L"/ObjMeshRenderer");
-			_data = addComponent<Data>(p_name + L"/Data");
-			_data->setBlockMap(p_parent);
+                Chunk(const std::wstring &p_name, spk::SafePointer<BlockMap> p_parent) :
+                        spk::Entity(p_name, p_parent)
+                {
+                        _renderer = this->template addComponent<spk::ObjMeshRenderer>(p_name + L"/ObjMeshRenderer");
+                        _data = this->template addComponent<Data>(p_name + L"/Data");
+                        _data->setBlockMap(p_parent);
 
 			_renderer->setPriority(100);
 			_data->setPriority(0);
@@ -665,42 +687,42 @@ public:
 			_data->fill(p_id);
 		}
 
-		void setContent(spk::Vector3Int p_position,
-						const Block::Data &p_data,
-						const Block::Orientation &p_orientation = {Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive})
-		{
-			setContent(p_position.x, p_position.y, p_position.z, p_data, p_orientation);
-		}
-		void setContent(spk::Vector2Int p_position,
-						int p_z,
-						const Block::Data &p_data,
-						const Block::Orientation &p_orientation = {Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive})
-		{
-			setContent(p_position.x, p_position.y, p_z, p_data, p_orientation);
-		}
+                void setContent(spk::Vector3Int p_position,
+                                Block::ID p_id,
+                                const Block::Orientation &p_orientation = {Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive})
+                {
+                        setContent(p_position.x, p_position.y, p_position.z, p_id, p_orientation);
+                }
+                void setContent(spk::Vector2Int p_position,
+                                int p_z,
+                                Block::ID p_id,
+                                const Block::Orientation &p_orientation = {Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive})
+                {
+                        setContent(p_position.x, p_position.y, p_z, p_id, p_orientation);
+                }
 
-		void setContent(int p_x,
-						int p_y,
-						int p_z,
-						const Block::Data &p_data,
-						const Block::Orientation &p_orientation = {Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive})
-		{
-			_data->setContent(p_x, p_y, p_z, p_data, p_orientation);
-		}
+                void setContent(int p_x,
+                                int p_y,
+                                int p_z,
+                                Block::ID p_id,
+                                const Block::Orientation &p_orientation = {Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive})
+                {
+                        _data->setContent(p_x, p_y, p_z, p_id, p_orientation);
+                }
 
-		bool isBaked() const
-		{
-			return _data.isBaked();
-		}
+                bool isBaked() const
+                {
+                        return _data->isBaked();
+                }
 
-		spk::SafePointer<spk::ObjMesh> mesh()
-		{
-			return (_data.mesh());
-		}
-		const spk::SafePointer<const spk::ObjMesh> mesh() const
-		{
-			return (_data.mesh());
-		}
+                spk::SafePointer<spk::ObjMesh> mesh()
+                {
+                        return (_data->mesh());
+                }
+                const spk::SafePointer<const spk::ObjMesh> mesh() const
+                {
+                        return (_data->mesh());
+                }
 	};
 
 private:
@@ -776,10 +798,8 @@ public:
 		{
 			GENERATE_ERROR("Block ID [" + std::to_string(p_id) + "] already exist in BlockMap [" + spk::StringUtils::wstringToString(name()) + "]");
 		}
-		const Block *rawPtr = p_block.get();
-		_availableBlocks[p_id] = std::move(p_block);
-		Block::registerBlock(p_id, rawPtr);
-	}
+                _availableBlocks[p_id] = std::move(p_block);
+        }
 
 	spk::SafePointer<const Block> blockById(Block::ID p_id) const
 	{
