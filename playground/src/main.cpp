@@ -788,28 +788,39 @@ private:
 
 	virtual void _onChunkGeneration(const spk::Vector3Int &p_chunkCoordinate, Chunk &p_chunkToFill)
 	{
-		for (size_t i = 0; i < Chunk::size.x; i++)
-		{
-			for (size_t j = 0; j < Chunk::size.z; j++)
-			{
-				p_chunkToFill.setContent(i, 0, j, 0);
-				if (i == 1 && j != 1)
-				{
-					p_chunkToFill.setContent(i, 1, j, 1, Block::Orientation{Block::HorizontalOrientation::ZPositive, Block::VerticalOrientation::YPositive});
-				}
-				if (j == 1 && i != 1)
-				{
-					p_chunkToFill.setContent(i, 1, j, 1, Block::Orientation{Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive});
-				}
-				if (i == 0 && j == 0)
-				{
-					p_chunkToFill.setContent(i, 1, j, 0);
-					p_chunkToFill.setContent(i, 2, j, 0);
-					p_chunkToFill.setContent(i, 3, j, 0);
-					p_chunkToFill.setContent(i, 4, j, 0);
-				}
-			}
-		}
+		p_chunkToFill.setContent(1, 1, 1, 0);
+
+		p_chunkToFill.setContent(0, 1, 1, 0);
+		p_chunkToFill.setContent(2, 1, 1, 0);
+
+		p_chunkToFill.setContent(1, 1, 0, 0);
+		p_chunkToFill.setContent(1, 1, 2, 0);
+		
+		p_chunkToFill.setContent(1, 0, 1, 0);
+		p_chunkToFill.setContent(1, 2, 1, 0);
+
+		// for (size_t i = 0; i < Chunk::size.x; i++)
+		// {
+		// 	for (size_t j = 0; j < Chunk::size.z; j++)
+		// 	{
+		// 		p_chunkToFill.setContent(i, 0, j, 0);
+		// 		if (i == 1 && j != 1)
+		// 		{
+		// 			p_chunkToFill.setContent(i, 1, j, 1, Block::Orientation{Block::HorizontalOrientation::ZPositive, Block::VerticalOrientation::YPositive});
+		// 		}
+		// 		if (j == 1 && i != 1)
+		// 		{
+		// 			p_chunkToFill.setContent(i, 1, j, 1, Block::Orientation{Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive});
+		// 		}
+		// 		if (i == 0 && j == 0)
+		// 		{
+		// 			p_chunkToFill.setContent(i, 1, j, 0);
+		// 			p_chunkToFill.setContent(i, 2, j, 0);
+		// 			p_chunkToFill.setContent(i, 3, j, 0);
+		// 			p_chunkToFill.setContent(i, 4, j, 0);
+		// 		}
+		// 	}
+		// }
 	}
 
 public:
@@ -982,7 +993,7 @@ int main()
 	slopeConfiguration.bottom = blockMapTilemap.sprite({3, 0});
 	blockMap.addBlockByID(1, std::make_unique<SlopeBlock>(slopeConfiguration));
 
-	blockMap.setChunkRange({-3, 0, -3}, {3, 0, 3});
+	blockMap.setChunkRange({-0, 0, -0}, {0, 0, 0});
 
 	spk::Entity supportEntity = spk::Entity(L"SupportA", nullptr);
 	supportEntity.activate();
