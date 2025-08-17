@@ -53,18 +53,15 @@ public:
 	using Footprint = spk::Polygon;
 
 protected:
-        using Type = std::wstring; // Each block type can be identified by its type : FullBlock, Slope, HalfBlock, Fence, for exemple
-        // Multiple block can shared the same type, as long as they are the same shape in 3D, with just different sprite and interaction
+	using Type = std::wstring; // Each block type can be identified by its type : FullBlock, Slope, HalfBlock, Fence, for exemple
+	// Multiple block can shared the same type, as long as they are the same shape in 3D, with just different sprite and interaction
 
-        virtual Block::Type _type() const = 0;
-        virtual const spk::ObjMesh &_mesh() const = 0;
+	virtual Block::Type _type() const = 0;
+	virtual const spk::ObjMesh &_mesh() const = 0;
 
 	static void _applySprite(spk::ObjMesh::Shape &p_shape, const spk::SpriteSheet::Sprite &p_sprite)
 	{
-		auto transform = [&](spk::Vertex &p_v)
-		{
-			p_v.uv = (p_v.uv * p_sprite.size) + p_sprite.anchor;
-		};
+		auto transform = [&](spk::Vertex &p_v) { p_v.uv = (p_v.uv * p_sprite.size) + p_sprite.anchor; };
 		std::visit(
 			[&](auto &p_face)
 			{
@@ -75,8 +72,8 @@ protected:
 				{
 					transform(p_face.d);
 				}
-		},
-		p_shape);
+			},
+			p_shape);
 	}
 
 private:
@@ -87,47 +84,47 @@ private:
 		bool full = false;
 	};
 
-       class Cache
-       {
-       public:
-               struct Entry;
+	class Cache
+	{
+	public:
+		struct Entry;
 
-               bool hasCase(const Orientation &p_orientation) const
-               {
-                       return _cache.contains(p_orientation);
-               }
+		bool hasCase(const Orientation &p_orientation) const
+		{
+			return _cache.contains(p_orientation);
+		}
 
-               void addCase(const Orientation &p_orientation, const spk::ObjMesh &p_mesh)
-               {
-                       if (_cache.contains(p_orientation) == false)
-                       {
-                               _cache.emplace(p_orientation, _compute(p_mesh, p_orientation));
-                       }
-               }
+		void addCase(const Orientation &p_orientation, const spk::ObjMesh &p_mesh)
+		{
+			if (_cache.contains(p_orientation) == false)
+			{
+				_cache.emplace(p_orientation, _compute(p_mesh, p_orientation));
+			}
+		}
 
-               const Entry &getCase(const Orientation &p_orientation) const
-               {
-                       return _cache.at(p_orientation);
-               }
+		const Entry &getCase(const Orientation &p_orientation) const
+		{
+			return _cache.at(p_orientation);
+		}
 
 		struct Entry
 		{
 			spk::ObjMesh innerMesh;
-                       std::unordered_map<spk::Vector3, Face> faces;
+			std::unordered_map<spk::Vector3, Face> faces;
 
 			void applyInnerMesh(spk::ObjMesh &p_target, const spk::Vector3 &p_offset) const
 			{
 				_appendMesh(p_target, innerMesh, p_offset);
 			}
 
-                       void applyFace(spk::ObjMesh &p_target, const spk::Vector3 &p_offset, const spk::Vector3 &p_normal) const
-                       {
-                               auto it = faces.find(p_normal);
-                               if (it != faces.end())
-                               {
-                                       _appendMesh(p_target, it->second.mesh, p_offset);
-                               }
-                       }
+			void applyFace(spk::ObjMesh &p_target, const spk::Vector3 &p_offset, const spk::Vector3 &p_normal) const
+			{
+				auto it = faces.find(p_normal);
+				if (it != faces.end())
+				{
+					_appendMesh(p_target, it->second.mesh, p_offset);
+				}
+			}
 
 		private:
 			static void _appendMesh(spk::ObjMesh &p_target, const spk::ObjMesh &p_source, const spk::Vector3 &p_offset)
@@ -155,8 +152,8 @@ private:
 			}
 		};
 
-       private:
-               static spk::Vector3 _applyOrientation(const spk::Vector3 &p_position, const Orientation &p_orientation)
+	private:
+		static spk::Vector3 _applyOrientation(const spk::Vector3 &p_position, const Orientation &p_orientation)
 		{
 			spk::Vector3 result = p_position - spk::Vector3(0.5f, 0.5f, 0.5f);
 			spk::Vector3 rotation(0, 0, 0);
@@ -186,7 +183,7 @@ private:
 			return (result + spk::Vector3(0.5f, 0.5f, 0.5f));
 		}
 
-               static Entry _compute(const spk::ObjMesh &p_mesh, const Orientation &p_orientation)
+		static Entry _compute(const spk::ObjMesh &p_mesh, const Orientation &p_orientation)
 		{
 			Entry result;
 			for (const auto &shape : p_mesh.shapes())
@@ -213,108 +210,108 @@ private:
 					std::reverse(vertices.begin(), vertices.end());
 				}
 
-                               spk::Polygon polygon;
-                               for (const auto &v : vertices)
-                               {
-                                       polygon.points.push_back(v.position);
-                               }
+				spk::Polygon polygon;
+				for (const auto &v : vertices)
+				{
+					polygon.points.push_back(v.position);
+				}
 
-                               spk::Vector3 normal = polygon.normal();
-                               spk::Vector3 axisNormal = normal.round();
-                               bool isFace = false;
-                               if (axisNormal == normal)
-                               {
-                                       float axisSum = std::abs(axisNormal.x) + std::abs(axisNormal.y) + std::abs(axisNormal.z);
-                                       if (std::abs(axisSum - 1.0f) < 0.0001f)
-                                       {
-                                               normal = axisNormal;
-                                               int axis = (axisNormal.x != 0.0f) ? 0 : (axisNormal.y != 0.0f) ? 1 : 2;
-                                               float planeValue = (axisNormal.x + axisNormal.y + axisNormal.z > 0.0f) ? 1.0f : 0.0f;
-                                               isFace = true;
-                                               for (const auto &v : vertices)
-                                               {
-                                                       float coord = (axis == 0) ? v.position.x : (axis == 1) ? v.position.y : v.position.z;
-                                                       if (std::abs(coord - planeValue) > 0.0001f)
-                                                       {
-                                                               isFace = false;
-                                                               break;
-                                                       }
-                                               }
-                                       }
-                               }
+				spk::Vector3 normal = polygon.normal();
+				spk::Vector3 axisNormal = normal.round();
+				bool isFace = false;
+				if (axisNormal == normal)
+				{
+					float axisSum = std::abs(axisNormal.x) + std::abs(axisNormal.y) + std::abs(axisNormal.z);
+					if (std::abs(axisSum - 1.0f) < 0.0001f)
+					{
+						normal = axisNormal;
+						int axis = (axisNormal.x != 0.0f) ? 0 : (axisNormal.y != 0.0f) ? 1 : 2;
+						float planeValue = (axisNormal.x + axisNormal.y + axisNormal.z > 0.0f) ? 1.0f : 0.0f;
+						isFace = true;
+						for (const auto &v : vertices)
+						{
+							float coord = (axis == 0) ? v.position.x : (axis == 1) ? v.position.y : v.position.z;
+							if (std::abs(coord - planeValue) > 0.0001f)
+							{
+								isFace = false;
+								break;
+							}
+						}
+					}
+				}
 
-                               if (isFace == false)
-                               {
-                                       if (vertices.size() == 3)
-                                       {
-                                               result.innerMesh.addShape(vertices[0], vertices[1], vertices[2]);
-                                       }
-                                       else
-                                       {
-                                               result.innerMesh.addShape(vertices[0], vertices[1], vertices[2], vertices[3]);
-                                       }
-                               }
-                               else
-                               {
-                                       Face &face = result.faces[normal];
-                                       for (const auto &v : vertices)
-                                       {
-                                               face.footprint.points.push_back(v.position);
-                                       }
-                                       if (vertices.size() == 3)
-                                       {
-                                               face.mesh.addShape(vertices[0], vertices[1], vertices[2]);
-                                       }
-                                       else
-                                       {
-                                               face.mesh.addShape(vertices[0], vertices[1], vertices[2], vertices[3]);
-                                       }
+				if (isFace == false)
+				{
+					if (vertices.size() == 3)
+					{
+						result.innerMesh.addShape(vertices[0], vertices[1], vertices[2]);
+					}
+					else
+					{
+						result.innerMesh.addShape(vertices[0], vertices[1], vertices[2], vertices[3]);
+					}
+				}
+				else
+				{
+					Face &face = result.faces[normal];
+					for (const auto &v : vertices)
+					{
+						face.footprint.points.push_back(v.position);
+					}
+					if (vertices.size() == 3)
+					{
+						face.mesh.addShape(vertices[0], vertices[1], vertices[2]);
+					}
+					else
+					{
+						face.mesh.addShape(vertices[0], vertices[1], vertices[2], vertices[3]);
+					}
 
-                                       if (vertices.size() == 4)
-                                       {
-                                               float minA = std::numeric_limits<float>::max();
-                                               float maxA = std::numeric_limits<float>::lowest();
-                                               float minB = std::numeric_limits<float>::max();
-                                               float maxB = std::numeric_limits<float>::lowest();
-                                               for (const auto &v : vertices)
-                                               {
-                                                       float a;
-                                                       float b;
-                                                       if (normal.y != 0.0f)
-                                                       {
-                                                               a = v.position.x;
-                                                               b = v.position.z;
-                                                       }
-                                                       else if (normal.x != 0.0f)
-                                                       {
-                                                               a = v.position.y;
-                                                               b = v.position.z;
-                                                       }
-                                                       else
-                                                       {
-                                                               a = v.position.x;
-                                                               b = v.position.y;
-                                                       }
-                                                       minA = std::min(minA, a);
-                                                       maxA = std::max(maxA, a);
-                                                       minB = std::min(minB, b);
-                                                       maxB = std::max(maxB, b);
-                                               }
-                                               if (std::abs(minA - 0.0f) < 0.0001f && std::abs(maxA - 1.0f) < 0.0001f && std::abs(minB - 0.0f) < 0.0001f &&
-                                                       std::abs(maxB - 1.0f) < 0.0001f)
-                                               {
-                                                       face.full = true;
-                                               }
-                                       }
-                               }
+					if (vertices.size() == 4)
+					{
+						float minA = std::numeric_limits<float>::max();
+						float maxA = std::numeric_limits<float>::lowest();
+						float minB = std::numeric_limits<float>::max();
+						float maxB = std::numeric_limits<float>::lowest();
+						for (const auto &v : vertices)
+						{
+							float a;
+							float b;
+							if (normal.y != 0.0f)
+							{
+								a = v.position.x;
+								b = v.position.z;
+							}
+							else if (normal.x != 0.0f)
+							{
+								a = v.position.y;
+								b = v.position.z;
+							}
+							else
+							{
+								a = v.position.x;
+								b = v.position.y;
+							}
+							minA = std::min(minA, a);
+							maxA = std::max(maxA, a);
+							minB = std::min(minB, b);
+							maxB = std::max(maxB, b);
+						}
+						if (std::abs(minA - 0.0f) < 0.0001f && std::abs(maxA - 1.0f) < 0.0001f && std::abs(minB - 0.0f) < 0.0001f &&
+							std::abs(maxB - 1.0f) < 0.0001f)
+						{
+							face.full = true;
+						}
+					}
+				}
 			}
 			return result;
 		}
 
-               std::map<Orientation, Entry> _cache;
-       };
+		std::map<Orientation, Entry> _cache;
+	};
 
-       mutable Cache _cache;
+	mutable Cache _cache;
 
 public:
 	virtual ~Block() = default;
@@ -324,179 +321,195 @@ public:
 			  const spk::Vector3 &p_position,
 			  const Orientation &p_orientation) const
 	{
-               if (_cache.hasCase(p_orientation) == false)
-               {
-                       _cache.addCase(p_orientation, _mesh());
-               }
-               const Cache::Entry &data = _cache.getCase(p_orientation);
+		if (_cache.hasCase(p_orientation) == false)
+		{
+			_cache.addCase(p_orientation, _mesh());
+		}
+		const Cache::Entry &data = _cache.getCase(p_orientation);
 
-               std::array<const Face *, 6> neighFaces{};
-               for (size_t i = 0; i < 6; ++i)
-               {
-                       neighFaces[i] = nullptr;
-                       if (p_neightbourDescriber[i].first != nullptr)
-                       {
-                               const Block *neigh = p_neightbourDescriber[i].first;
-                               const Orientation &neighOrientation = p_neightbourDescriber[i].second;
-                               if (neigh->_cache.hasCase(neighOrientation) == false)
-                               {
-                                       neigh->_cache.addCase(neighOrientation, neigh->_mesh());
-                               }
-                               const Cache::Entry &neighData = neigh->_cache.getCase(neighOrientation);
-                               spk::Vector3 oppositeNormal = -neightbourCoordinates[i];
-                               auto it = neighData.faces.find(oppositeNormal);
-                               if (it != neighData.faces.end())
-                               {
-                                       neighFaces[i] = &it->second;
-                               }
-                       }
-               }
+		std::array<const Face *, 6> neighFaces{};
+		for (size_t i = 0; i < 6; ++i)
+		{
+			neighFaces[i] = nullptr;
+			if (p_neightbourDescriber[i].first != nullptr)
+			{
+				const Block *neigh = p_neightbourDescriber[i].first;
+				const Orientation &neighOrientation = p_neightbourDescriber[i].second;
+				if (neigh->_cache.hasCase(neighOrientation) == false)
+				{
+					neigh->_cache.addCase(neighOrientation, neigh->_mesh());
+				}
+				const Cache::Entry &neighData = neigh->_cache.getCase(neighOrientation);
+				spk::Vector3 oppositeNormal = -neightbourCoordinates[i];
+				auto it = neighData.faces.find(oppositeNormal);
+				if (it != neighData.faces.end())
+				{
+					neighFaces[i] = &it->second;
+				}
+			}
+		}
 
-               bool fullyOccluded = true;
-               for (size_t i = 0; i < 6; ++i)
-               {
-                       const Face *nf = neighFaces[i];
-                       if (nf == nullptr || nf->full == false)
-                       {
-                               fullyOccluded = false;
-                               break;
-                       }
-               }
+		bool fullyOccluded = true;
+		for (size_t i = 0; i < 6; ++i)
+		{
+			const Face *nf = neighFaces[i];
+			if (nf == nullptr || nf->full == false)
+			{
+				fullyOccluded = false;
+				break;
+			}
+		}
 
-               if (fullyOccluded == false)
-               {
-                       data.applyInnerMesh(p_toFill, p_position);
-               }
+		if (fullyOccluded == false)
+		{
+			data.applyInnerMesh(p_toFill, p_position);
+		}
 
-               for (size_t i = 0; i < 6; ++i)
-               {
-                       spk::Vector3 normal = neightbourCoordinates[i];
-                       auto faceIt = data.faces.find(normal);
-                       if (faceIt == data.faces.end())
-                       {
-                               continue;
-                       }
+		for (size_t i = 0; i < 6; ++i)
+		{
+			spk::Vector3 normal = neightbourCoordinates[i];
+			auto faceIt = data.faces.find(normal);
+			if (faceIt == data.faces.end())
+			{
+				continue;
+			}
 
-                       const Face &ourFace = faceIt->second;
-                       if (ourFace.mesh.shapes().empty() == true)
-                       {
-                               continue;
-                       }
+			const Face &ourFace = faceIt->second;
+			if (ourFace.mesh.shapes().empty() == true)
+			{
+				continue;
+			}
 
-                       const Face *currentNeighFace = neighFaces[i];
-                       bool visible = true;
-                       if (currentNeighFace != nullptr && currentNeighFace->mesh.shapes().empty() == false)
-                       {
-                               if (currentNeighFace->footprint.contains(ourFace.footprint) == true)
-                               {
-                                       visible = false;
-                               }
-                       }
-                       if (visible == true)
-                       {
-                               data.applyFace(p_toFill, p_position, normal);
-                       }
-               }
-       }
+			const Face *currentNeighFace = neighFaces[i];
+			bool visible = true;
+			if (currentNeighFace != nullptr && currentNeighFace->mesh.shapes().empty() == false)
+			{
+				if (currentNeighFace->footprint.contains(ourFace.footprint) == true)
+				{
+					visible = false;
+				}
+			}
+			if (visible == true)
+			{
+				data.applyFace(p_toFill, p_position, normal);
+			}
+		}
+	}
 };
-
 
 struct FullBlock : public Block
 {
 public:
-        struct Configuration
-        {
-                spk::SpriteSheet::Sprite front;
-                spk::SpriteSheet::Sprite back;
-                spk::SpriteSheet::Sprite left;
-                spk::SpriteSheet::Sprite right;
-                spk::SpriteSheet::Sprite top;
-                spk::SpriteSheet::Sprite bottom;
-        };
+	struct Configuration
+	{
+		spk::SpriteSheet::Sprite front;
+		spk::SpriteSheet::Sprite back;
+		spk::SpriteSheet::Sprite left;
+		spk::SpriteSheet::Sprite right;
+		spk::SpriteSheet::Sprite top;
+		spk::SpriteSheet::Sprite bottom;
+	};
 
 private:
-        Block::Type _type() const override
-        {
-                return L"FullBlock";
-        }
-        const spk::ObjMesh &_mesh() const override
-        {
-                return (_objMesh);
-        }
+	Block::Type _type() const override
+	{
+		return L"FullBlock";
+	}
+	const spk::ObjMesh &_mesh() const override
+	{
+		return (_objMesh);
+	}
 
-        spk::ObjMesh _objMesh;
-        Configuration _configuration;
-        static inline std::string objMeshCode = R"(v 0.0 0.0 0.0
-v 1.0 0.0 0.0
-v 1.0 0.0 1.0
-v 0.0 0.0 1.0
-v 0.0 1.0 1.0
-v 1.0 1.0 1.0
+	spk::ObjMesh _objMesh;
+	Configuration _configuration;
+	static inline std::string objMeshCode = R"(v 0.0 0.0 0.0  # 1 bottom-left-back
+v 1.0 0.0 0.0  # 2 bottom-right-back
+v 1.0 0.0 1.0  # 3 bottom-right-front
+v 0.0 0.0 1.0  # 4 bottom-left-front
+v 0.0 1.0 0.0  # 5 top-left-back
+v 1.0 1.0 0.0  # 6 top-right-back
+v 1.0 1.0 1.0  # 7 top-right-front
+v 0.0 1.0 1.0  # 8 top-left-front
 
-vt 0 0
-vt 1 0
-vt 0 1 
-vt 1 1
+# Texture coordinates (quad)
+vt 0.0 0.0  # 1
+vt 1.0 0.0  # 2
+vt 1.0 1.0  # 3
+vt 0.0 1.0  # 4
 
-vn  1.0  0.0  0.0
-vn -1.0  0.0  0.0
-vn  0.0  1.0  0.0
-vn  0.0 -1.0  0.0
-vn  0.0  0.0  1.0
-vn  0.0  0.0 -1.0
+# Normals
+vn  0.0  0.0  1.0  # Front
+vn  0.0  0.0 -1.0  # Back
+vn  1.0  0.0  0.0  # Right
+vn -1.0  0.0  0.0  # Left
+vn  0.0  1.0  0.0  # Top
+vn  0.0 -1.0  0.0  # Bottom
 
-f 3/1/1 7/3/1 8/4/1
-f 3/3/1 8/2/1 4/4/1
-f 1/1/2 5/3/2 6/4/2
-f 1/3/2 6/2/2 2/1/2
-f 7/1/3 3/3/3 2/4/3
-f 7/3/3 2/2/3 6/1/3
-f 4/1/4 8/3/4 5/4/4
-f 4/3/4 5/2/4 1/1/4
-f 8/1/5 7/3/5 6/4/5
-f 8/3/5 6/2/5 5/1/5
+# Faces (two triangles per face, CCW winding)
 
-f 3/1/6 4/3/6 1/4/6
-f 3/3/6 1/2/6 2/1/6)";
+# Front (z = 1) -> uses normal 1
+f 4/1/1 3/2/1 7/3/1
+f 4/1/1 7/3/1 8/4/1
+
+# Back (z = 0) -> normal 2
+f 2/2/2 1/1/2 5/4/2
+f 2/2/2 5/4/2 6/3/2
+
+# Right (x = 1) -> normal 3
+f 3/1/3 2/2/3 6/3/3
+f 3/1/3 6/3/3 7/4/3
+
+# Left (x = 0) -> normal 4
+f 1/2/4 4/1/4 8/4/4
+f 1/2/4 8/4/4 5/3/4
+
+# Top (y = 1) -> normal 5
+f 5/1/5 8/2/5 7/3/5
+f 5/1/5 7/3/5 6/4/5
+
+# Bottom (y = 0) -> normal 6
+f 1/1/6 2/2/6 3/3/6
+f 1/1/6 3/3/6 4/4/6)";
 
 public:
-       explicit FullBlock(const Configuration &p_configuration) : _configuration(p_configuration)
-       {
-       _objMesh = spk::ObjMesh::loadFromString(objMeshCode);
+	explicit FullBlock(const Configuration &p_configuration) :
+		_configuration(p_configuration)
+	{
+		_objMesh = spk::ObjMesh::loadFromString(objMeshCode);
 
-       _applySprite(_objMesh.shapes()[0], _configuration.front);
-       _applySprite(_objMesh.shapes()[1], _configuration.back);
-       _applySprite(_objMesh.shapes()[2], _configuration.left);
-       _applySprite(_objMesh.shapes()[3], _configuration.right);
-       _applySprite(_objMesh.shapes()[4], _configuration.top);
-       _applySprite(_objMesh.shapes()[5], _configuration.bottom);
-       }
+		_applySprite(_objMesh.shapes()[0], _configuration.front);
+		_applySprite(_objMesh.shapes()[1], _configuration.back);
+		_applySprite(_objMesh.shapes()[2], _configuration.left);
+		_applySprite(_objMesh.shapes()[3], _configuration.right);
+		_applySprite(_objMesh.shapes()[4], _configuration.top);
+		_applySprite(_objMesh.shapes()[5], _configuration.bottom);
+	}
 };
 
 struct SlopeBlock : public Block
 {
 public:
-        struct Configuration
-        {
-                spk::SpriteSheet::Sprite triangles;
-                spk::SpriteSheet::Sprite back;
-                spk::SpriteSheet::Sprite ramp;
-                spk::SpriteSheet::Sprite bottom;
-        };
+	struct Configuration
+	{
+		spk::SpriteSheet::Sprite triangles;
+		spk::SpriteSheet::Sprite back;
+		spk::SpriteSheet::Sprite ramp;
+		spk::SpriteSheet::Sprite bottom;
+	};
 
 private:
-        Block::Type _type() const override
-        {
-                return L"SlopeBlock";
-        }
-        const spk::ObjMesh &_mesh() const override
-        {
-                return (_objMesh);
-        }
+	Block::Type _type() const override
+	{
+		return L"SlopeBlock";
+	}
+	const spk::ObjMesh &_mesh() const override
+	{
+		return (_objMesh);
+	}
 
-        spk::ObjMesh _objMesh;
-        Configuration _configuration;
-        static inline std::string objMeshCode = R"(v 0.0 0.0 0.0
+	spk::ObjMesh _objMesh;
+	Configuration _configuration;
+	static inline std::string objMeshCode = R"(v 0.0 0.0 0.0
 v 1.0 0.0 0.0
 v 1.0 0.0 1.0
 v 0.0 0.0 1.0
@@ -521,16 +534,17 @@ f 2/1/4 6/3/4 3/2/4
 f 1/1/5 5/3/5 6/4/5 2/2/5)";
 
 public:
-       explicit SlopeBlock(const Configuration &p_configuration) : _configuration(p_configuration)
-       {
-       _objMesh = spk::ObjMesh::loadFromString(objMeshCode);
+	explicit SlopeBlock(const Configuration &p_configuration) :
+		_configuration(p_configuration)
+	{
+		_objMesh = spk::ObjMesh::loadFromString(objMeshCode);
 
-       _applySprite(_objMesh.shapes()[0], _configuration.bottom);
-       _applySprite(_objMesh.shapes()[1], _configuration.back);
-       _applySprite(_objMesh.shapes()[2], _configuration.triangles);
-       _applySprite(_objMesh.shapes()[3], _configuration.triangles);
-       _applySprite(_objMesh.shapes()[4], _configuration.ramp);
-       }
+		_applySprite(_objMesh.shapes()[0], _configuration.bottom);
+		_applySprite(_objMesh.shapes()[1], _configuration.back);
+		_applySprite(_objMesh.shapes()[2], _configuration.triangles);
+		_applySprite(_objMesh.shapes()[3], _configuration.triangles);
+		_applySprite(_objMesh.shapes()[4], _configuration.ramp);
+	}
 };
 
 template <size_t ChunkSizeX, size_t ChunkSizeY, size_t ChunkSizeZ>
@@ -622,7 +636,8 @@ public:
 					{
 						for (int x = 0; x < size.x; ++x)
 						{
-							_content[x][y][z] = std::make_pair(p_id, Block::Orientation{Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive});
+							_content[x][y][z] = std::make_pair(
+								p_id, Block::Orientation{Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive});
 						}
 					}
 				}
@@ -692,12 +707,12 @@ public:
 		spk::SafePointer<Data> _data;
 
 	public:
-                Chunk(const std::wstring &p_name, spk::SafePointer<BlockMap> p_parent) :
-                        spk::Entity(p_name, p_parent)
-                {
-                        _renderer = this->template addComponent<spk::ObjMeshRenderer>(p_name + L"/ObjMeshRenderer");
-                        _data = this->template addComponent<Data>(p_name + L"/Data");
-                        _data->setBlockMap(p_parent);
+		Chunk(const std::wstring &p_name, spk::SafePointer<BlockMap> p_parent) :
+			spk::Entity(p_name, p_parent)
+		{
+			_renderer = this->template addComponent<spk::ObjMeshRenderer>(p_name + L"/ObjMeshRenderer");
+			_data = this->template addComponent<Data>(p_name + L"/Data");
+			_data->setBlockMap(p_parent);
 
 			_renderer->setPriority(100);
 			_data->setPriority(0);
@@ -713,42 +728,42 @@ public:
 			_data->fill(p_id);
 		}
 
-                void setContent(spk::Vector3Int p_position,
-                                Block::ID p_id,
-                                const Block::Orientation &p_orientation = {Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive})
-                {
-                        setContent(p_position.x, p_position.y, p_position.z, p_id, p_orientation);
-                }
-                void setContent(spk::Vector2Int p_position,
-                                int p_z,
-                                Block::ID p_id,
-                                const Block::Orientation &p_orientation = {Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive})
-                {
-                        setContent(p_position.x, p_position.y, p_z, p_id, p_orientation);
-                }
+		void setContent(spk::Vector3Int p_position,
+						Block::ID p_id,
+						const Block::Orientation &p_orientation = {Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive})
+		{
+			setContent(p_position.x, p_position.y, p_position.z, p_id, p_orientation);
+		}
+		void setContent(spk::Vector2Int p_position,
+						int p_z,
+						Block::ID p_id,
+						const Block::Orientation &p_orientation = {Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive})
+		{
+			setContent(p_position.x, p_position.y, p_z, p_id, p_orientation);
+		}
 
-                void setContent(int p_x,
-                                int p_y,
-                                int p_z,
-                                Block::ID p_id,
-                                const Block::Orientation &p_orientation = {Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive})
-                {
-                        _data->setContent(p_x, p_y, p_z, p_id, p_orientation);
-                }
+		void setContent(int p_x,
+						int p_y,
+						int p_z,
+						Block::ID p_id,
+						const Block::Orientation &p_orientation = {Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive})
+		{
+			_data->setContent(p_x, p_y, p_z, p_id, p_orientation);
+		}
 
-                bool isBaked() const
-                {
-                        return _data->isBaked();
-                }
+		bool isBaked() const
+		{
+			return _data->isBaked();
+		}
 
-                spk::SafePointer<spk::ObjMesh> mesh()
-                {
-                        return (_data->mesh());
-                }
-                const spk::SafePointer<const spk::ObjMesh> mesh() const
-                {
-                        return (_data->mesh());
-                }
+		spk::SafePointer<spk::ObjMesh> mesh()
+		{
+			return (_data->mesh());
+		}
+		const spk::SafePointer<const spk::ObjMesh> mesh() const
+		{
+			return (_data->mesh());
+		}
 	};
 
 private:
@@ -783,14 +798,14 @@ private:
 			for (size_t j = 0; j < Chunk::size.z; j++)
 			{
 				p_chunkToFill.setContent(i, 0, j, 0);
-				if (i == 0 && j != 0)
-				{
-					p_chunkToFill.setContent(i, 1, j, 1);
-				}
-				if (j == 0 && i != 0)
-				{
-					p_chunkToFill.setContent(i, 1, j, 2);
-				}
+				// if (i == 0 && j != 0)
+				// {
+				// 	p_chunkToFill.setContent(i, 1, j, 1);
+				// }
+				// if (j == 0 && i != 0)
+				// {
+				// 	p_chunkToFill.setContent(i, 1, j, 2);
+				// }
 				if (i == 0 && j == 0)
 				{
 					p_chunkToFill.setContent(i, 1, j, 0);
@@ -824,8 +839,8 @@ public:
 		{
 			GENERATE_ERROR("Block ID [" + std::to_string(p_id) + "] already exist in BlockMap [" + spk::StringUtils::wstringToString(name()) + "]");
 		}
-                _availableBlocks[p_id] = std::move(p_block);
-        }
+		_availableBlocks[p_id] = std::move(p_block);
+	}
 
 	spk::SafePointer<const Block> blockById(Block::ID p_id) const
 	{
@@ -964,14 +979,13 @@ int main()
 	fullConfiguration.bottom = fullBlockSprite;
 	blockMap.addBlockByID(0, std::make_unique<FullBlock>(fullConfiguration));
 
-	SlopeBlock::Configuration slopeConfiguration;
-	slopeConfiguration.triangles = blockMapTilemap.sprite({1, 0});
-	slopeConfiguration.back = blockMapTilemap.sprite({2, 0});
-	slopeConfiguration.ramp = blockMapTilemap.sprite({2, 0});
-	slopeConfiguration.bottom = blockMapTilemap.sprite({3, 0});
-
-	blockMap.addBlockByID(1, std::make_unique<SlopeBlock>(slopeConfiguration));
-	blockMap.addBlockByID(2, std::make_unique<SlopeBlock>(slopeConfiguration));
+	// SlopeBlock::Configuration slopeConfiguration;
+	// slopeConfiguration.triangles = blockMapTilemap.sprite({1, 0});
+	// slopeConfiguration.back = blockMapTilemap.sprite({2, 0});
+	// slopeConfiguration.ramp = blockMapTilemap.sprite({2, 0});
+	// slopeConfiguration.bottom = blockMapTilemap.sprite({3, 0});
+	// blockMap.addBlockByID(1, std::make_unique<SlopeBlock>(slopeConfiguration));
+	// blockMap.addBlockByID(2, std::make_unique<SlopeBlock>(slopeConfiguration));
 
 	blockMap.setChunkRange({-3, 0, -3}, {3, 0, 3});
 

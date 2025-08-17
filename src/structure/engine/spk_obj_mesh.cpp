@@ -40,13 +40,25 @@ namespace spk
 			{
 				result.position = p_positions[static_cast<std::size_t>(posIndex - 1)];
 			}
+			else
+			{
+				GENERATE_ERROR("OBJ: position index out of range: " + parts[0]);
+			}
 			if (uvIndex > 0 && uvIndex <= static_cast<int>(p_uvs.size()))
 			{
 				result.uv = p_uvs[static_cast<std::size_t>(uvIndex - 1)];
 			}
+			else
+			{
+				GENERATE_ERROR("OBJ: uv index out of range: " + parts[1]);
+			}
 			if (normIndex > 0 && normIndex <= static_cast<int>(p_normals.size()))
 			{
 				result.normal = p_normals[static_cast<std::size_t>(normIndex - 1)];
+			}
+			else
+			{
+				GENERATE_ERROR("OBJ: normal index out of range: " + parts[2]);
 			}
 
 			return result;

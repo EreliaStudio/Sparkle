@@ -33,6 +33,8 @@ namespace spk
 			Vertex d;
 		};
 
+		using Shape = std::variant<Triangle, Quad>;
+
 		struct Buffer
 		{
 			std::vector<Vertex> vertices;
@@ -40,8 +42,6 @@ namespace spk
 		};
 
 	private:
-		using Shape = std::variant<Triangle, Quad>;
-
 		std::vector<Shape> _shapes;
 
 		mutable bool _needBake = false;
@@ -201,15 +201,15 @@ namespace spk
 			_needBake = false;
 		}
 
-               const std::vector<Shape> &shapes() const
-               {
-                       return _shapes;
-               }
+		const std::vector<Shape> &shapes() const
+		{
+			return _shapes;
+		}
 
-               std::vector<Shape> &shapes()
-               {
-                       return _shapes;
-               }
+		std::vector<Shape> &shapes()
+		{
+			return _shapes;
+		}
 
 		auto begin() const
 		{

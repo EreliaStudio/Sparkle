@@ -5,6 +5,8 @@
 #include <cmath>
 #include <vector>
 
+#include "spk_debug_macro.hpp"
+
 namespace spk
 {
 	struct Polygon
