@@ -15,7 +15,6 @@ class Block
 {
 public:
 	using ID = short;
-	using Data = ID;
 
 	enum class HorizontalOrientation
 	{
@@ -49,7 +48,7 @@ public:
 	static inline const std::vector<spk::Vector3> neightbourCoordinates = {{0, 1, 0}, {0, -1, 0}, {1, 0, 0}, {0, 0, 1}, {-1, 0, 0}, {0, 0, -1}};
 
 	using Specifier = std::pair<Block::ID, Block::Orientation>;
-	using Describer = std::pair<spk::SafePointer<Block>, Block::Orientation>;
+	using Describer = std::pair<spk::SafePointer<const Block>, Block::Orientation>;
 	using NeightbourDescriber = std::array<Block::Describer, 6>;
 	using Footprint = spk::Polygon;
 
@@ -68,334 +67,325 @@ private:
 		bool full = false;
 	};
 
-       class Cache
-       {
-       public:
-               struct Entry;
+	class Cache
+	{
+	public:
+		struct Entry;
 
-               static bool hasCase(const Type &p_type, const Orientation &p_orientation)
-               {
-                       auto itType = _cache.find(p_type);
-                       if (itType == _cache.end())
-                       {
-                               return false;
-                        }
-                        return itType->second.contains(p_orientation);
-                }
+		static bool hasCase(const Type &p_type, const Orientation &p_orientation)
+		{
+			auto itType = cache.find(p_type);
+			if (itType == cache.end())
+			{
+				return false;
+			}
+			return itType->second.contains(p_orientation);
+		}
 
-                static void addCase(const Type &p_type,
-                                                    const Orientation &p_orientation,
-                                                    const spk::ObjMesh &p_mesh)
-                {
-                        auto &typeCache = _cache[p_type];
-                        if (typeCache.contains(p_orientation) == false)
-                        {
-                                typeCache.emplace(p_orientation, _compute(p_mesh, p_orientation));
-                        }
-                }
+		static void addCase(const Type &p_type, const Orientation &p_orientation, const spk::ObjMesh &p_mesh)
+		{
+			auto &typeCache = cache[p_type];
+			if (typeCache.contains(p_orientation) == false)
+			{
+				typeCache.emplace(p_orientation, _compute(p_mesh, p_orientation));
+			}
+		}
 
-               static const Entry &getCase(const Type &p_type, const Orientation &p_orientation)
-               {
-                       return _cache[p_type].at(p_orientation);
-               }
+		static const Entry &getCase(const Type &p_type, const Orientation &p_orientation)
+		{
+			return cache[p_type].at(p_orientation);
+		}
 
-               struct Entry
-               {
-                       spk::ObjMesh innerMesh;
-                       std::array<Face, 6> faces;
+		struct Entry
+		{
+			spk::ObjMesh innerMesh;
+			std::array<Face, 6> faces;
 
-                       void applyInnerMesh(spk::ObjMesh &p_target, const spk::Vector3 &p_offset) const
-                       {
-                               _appendMesh(p_target, innerMesh, p_offset);
-                       }
+			void applyInnerMesh(spk::ObjMesh &p_target, const spk::Vector3 &p_offset) const
+			{
+				_appendMesh(p_target, innerMesh, p_offset);
+			}
 
-                       void applyFace(spk::ObjMesh &p_target,
-                                                   const spk::Vector3 &p_offset,
-                                                   int p_faceIndex) const
-                       {
-                               _appendMesh(p_target, faces[p_faceIndex].mesh, p_offset);
-                       }
+			void applyFace(spk::ObjMesh &p_target, const spk::Vector3 &p_offset, int p_faceIndex) const
+			{
+				_appendMesh(p_target, faces[p_faceIndex].mesh, p_offset);
+			}
 
-               private:
-                       static void _appendMesh(spk::ObjMesh &p_target,
-                                                                     const spk::ObjMesh &p_source,
-                                                                     const spk::Vector3 &p_offset)
-                       {
-                               for (const auto &shape : p_source.shapes())
-                               {
-                                       if (std::holds_alternative<spk::ObjMesh::Triangle>(shape))
-                                       {
-                                               spk::ObjMesh::Triangle tri = std::get<spk::ObjMesh::Triangle>(shape);
-                                               tri.a.position += p_offset;
-                                               tri.b.position += p_offset;
-                                               tri.c.position += p_offset;
-                                               p_target.addShape(tri);
-                                       }
-                                       else
-                                       {
-                                               spk::ObjMesh::Quad quad = std::get<spk::ObjMesh::Quad>(shape);
-                                               quad.a.position += p_offset;
-                                               quad.b.position += p_offset;
-                                               quad.c.position += p_offset;
-                                               quad.d.position += p_offset;
-                                               p_target.addShape(quad);
-                                       }
-                               }
-                       }
-               };
+		private:
+			static void _appendMesh(spk::ObjMesh &p_target, const spk::ObjMesh &p_source, const spk::Vector3 &p_offset)
+			{
+				for (const auto &shape : p_source.shapes())
+				{
+					if (std::holds_alternative<spk::ObjMesh::Triangle>(shape))
+					{
+						spk::ObjMesh::Triangle tri = std::get<spk::ObjMesh::Triangle>(shape);
+						tri.a.position += p_offset;
+						tri.b.position += p_offset;
+						tri.c.position += p_offset;
+						p_target.addShape(tri);
+					}
+					else
+					{
+						spk::ObjMesh::Quad quad = std::get<spk::ObjMesh::Quad>(shape);
+						quad.a.position += p_offset;
+						quad.b.position += p_offset;
+						quad.c.position += p_offset;
+						quad.d.position += p_offset;
+						p_target.addShape(quad);
+					}
+				}
+			}
+		};
 
-        private:
-                static spk::Vector3 _applyOrientation(const spk::Vector3 &p_position,
-                                                                                        const Orientation &p_orientation)
-                {
-                        spk::Vector3 result = p_position - spk::Vector3(0.5f, 0.5f, 0.5f);
-                        spk::Vector3 rotation(0, 0, 0);
+	private:
+		static spk::Vector3 _applyOrientation(const spk::Vector3 &p_position, const Orientation &p_orientation)
+		{
+			spk::Vector3 result = p_position - spk::Vector3(0.5f, 0.5f, 0.5f);
+			spk::Vector3 rotation(0, 0, 0);
 
-                        switch (p_orientation.horizontalOrientation)
-                        {
-                        case HorizontalOrientation::XPositive:
-                                break;
-                        case HorizontalOrientation::ZPositive:
-                                rotation.y = 90.0f;
-                                break;
-                        case HorizontalOrientation::XNegative:
-                                rotation.y = 180.0f;
-                                break;
-                        case HorizontalOrientation::ZNegative:
-                                rotation.y = 270.0f;
-                                break;
-                        }
+			switch (p_orientation.horizontalOrientation)
+			{
+			case HorizontalOrientation::XPositive:
+				break;
+			case HorizontalOrientation::ZPositive:
+				rotation.y = 90.0f;
+				break;
+			case HorizontalOrientation::XNegative:
+				rotation.y = 180.0f;
+				break;
+			case HorizontalOrientation::ZNegative:
+				rotation.y = 270.0f;
+				break;
+			}
 
-                       result = result.rotate(rotation);
+			result = result.rotate(rotation);
 
-                       if (p_orientation.verticalOrientation == VerticalOrientation::YNegative)
-                       {
-                               result.y = -result.y;
-                       }
+			if (p_orientation.verticalOrientation == VerticalOrientation::YNegative)
+			{
+				result.y = -result.y;
+			}
 
-                       return (result + spk::Vector3(0.5f, 0.5f, 0.5f));
-               }
+			return (result + spk::Vector3(0.5f, 0.5f, 0.5f));
+		}
 
-                static Entry _compute(const spk::ObjMesh &p_mesh, const Orientation &p_orientation)
-                {
-                        Entry result;
-                        for (const auto &shape : p_mesh.shapes())
-                        {
-                                std::vector<spk::Vertex> vertices;
-                                if (std::holds_alternative<spk::ObjMesh::Triangle>(shape))
-                                {
-                                        const spk::ObjMesh::Triangle &tri = std::get<spk::ObjMesh::Triangle>(shape);
-                                        vertices = {tri.a, tri.b, tri.c};
-                                }
-                                else
-                                {
-                                        const spk::ObjMesh::Quad &quad = std::get<spk::ObjMesh::Quad>(shape);
-                                        vertices = {quad.a, quad.b, quad.c, quad.d};
-                                }
+		static Entry _compute(const spk::ObjMesh &p_mesh, const Orientation &p_orientation)
+		{
+			Entry result;
+			for (const auto &shape : p_mesh.shapes())
+			{
+				std::vector<spk::Vertex> vertices;
+				if (std::holds_alternative<spk::ObjMesh::Triangle>(shape))
+				{
+					const spk::ObjMesh::Triangle &tri = std::get<spk::ObjMesh::Triangle>(shape);
+					vertices = {tri.a, tri.b, tri.c};
+				}
+				else
+				{
+					const spk::ObjMesh::Quad &quad = std::get<spk::ObjMesh::Quad>(shape);
+					vertices = {quad.a, quad.b, quad.c, quad.d};
+				}
 
-                               for (auto &v : vertices)
-                               {
-                                       v.position = _applyOrientation(v.position, p_orientation);
-                               }
+				for (auto &v : vertices)
+				{
+					v.position = _applyOrientation(v.position, p_orientation);
+				}
 
-                               if (p_orientation.verticalOrientation == VerticalOrientation::YNegative)
-                               {
-                                       std::reverse(vertices.begin(), vertices.end());
-                               }
+				if (p_orientation.verticalOrientation == VerticalOrientation::YNegative)
+				{
+					std::reverse(vertices.begin(), vertices.end());
+				}
 
-                                auto isPlane = [&](int p_axis, float p_value)
-                                {
-                                        for (const auto &v : vertices)
-                                        {
-                                                float coord = (p_axis == 0) ? v.position.x
-                                                                                          : (p_axis == 1) ? v.position.y
-                                                                                                          : v.position.z;
-                                                if (std::abs(coord - p_value) > 0.0001f)
-                                                {
-                                                        return false;
-                                                }
-                                        }
-                                        return true;
-                                };
+				auto isPlane = [&](int p_axis, float p_value)
+				{
+					for (const auto &v : vertices)
+					{
+						float coord = (p_axis == 0) ? v.position.x : (p_axis == 1) ? v.position.y : v.position.z;
+						if (std::abs(coord - p_value) > 0.0001f)
+						{
+							return false;
+						}
+					}
+					return true;
+				};
 
-                                int dir = -1;
-                                if (isPlane(1, 1.0f))
-                                {
-                                        dir = 0;
-                                }
-                                else if (isPlane(1, 0.0f))
-                                {
-                                        dir = 1;
-                                }
-                                else if (isPlane(0, 1.0f))
-                                {
-                                        dir = 2;
-                                }
-                                else if (isPlane(2, 1.0f))
-                                {
-                                        dir = 3;
-                                }
-                                else if (isPlane(0, 0.0f))
-                                {
-                                        dir = 4;
-                                }
-                                else if (isPlane(2, 0.0f))
-                                {
-                                        dir = 5;
-                                }
+				int dir = -1;
+				if (isPlane(1, 1.0f))
+				{
+					dir = 0;
+				}
+				else if (isPlane(1, 0.0f))
+				{
+					dir = 1;
+				}
+				else if (isPlane(0, 1.0f))
+				{
+					dir = 2;
+				}
+				else if (isPlane(2, 1.0f))
+				{
+					dir = 3;
+				}
+				else if (isPlane(0, 0.0f))
+				{
+					dir = 4;
+				}
+				else if (isPlane(2, 0.0f))
+				{
+					dir = 5;
+				}
 
-                                if (dir == -1)
-                                {
-                                        if (vertices.size() == 3)
-                                        {
-                                                result.innerMesh.addShape(vertices[0], vertices[1], vertices[2]);
-                                        }
-                                        else
-                                        {
-                                                result.innerMesh.addShape(vertices[0], vertices[1], vertices[2], vertices[3]);
-                                        }
-                                }
-                                else
-                                {
-                                        Face &face = result.faces[dir];
-                                        for (const auto &v : vertices)
-                                        {
-                                                face.footprint.points.push_back(v.position);
-                                        }
-                                        if (vertices.size() == 3)
-                                        {
-                                                face.mesh.addShape(vertices[0], vertices[1], vertices[2]);
-                                        }
-                                        else
-                                        {
-                                                face.mesh.addShape(vertices[0], vertices[1], vertices[2], vertices[3]);
-                                        }
+				if (dir == -1)
+				{
+					if (vertices.size() == 3)
+					{
+						result.innerMesh.addShape(vertices[0], vertices[1], vertices[2]);
+					}
+					else
+					{
+						result.innerMesh.addShape(vertices[0], vertices[1], vertices[2], vertices[3]);
+					}
+				}
+				else
+				{
+					Face &face = result.faces[dir];
+					for (const auto &v : vertices)
+					{
+						face.footprint.points.push_back(v.position);
+					}
+					if (vertices.size() == 3)
+					{
+						face.mesh.addShape(vertices[0], vertices[1], vertices[2]);
+					}
+					else
+					{
+						face.mesh.addShape(vertices[0], vertices[1], vertices[2], vertices[3]);
+					}
 
-                                        if (vertices.size() == 4)
-                                        {
-                                                float minA = std::numeric_limits<float>::max();
-                                                float maxA = std::numeric_limits<float>::lowest();
-                                                float minB = std::numeric_limits<float>::max();
-                                                float maxB = std::numeric_limits<float>::lowest();
-                                                for (const auto &v : vertices)
-                                                {
-                                                        float a;
-                                                        float b;
-                                                        switch (dir)
-                                                        {
-                                                        case 0:
-                                                        case 1:
-                                                                a = v.position.x;
-                                                                b = v.position.z;
-                                                                break;
-                                                        case 2:
-                                                        case 4:
-                                                                a = v.position.y;
-                                                                b = v.position.z;
-                                                                break;
-                                                        case 3:
-                                                        case 5:
-                                                                a = v.position.x;
-                                                                b = v.position.y;
-                                                                break;
-                                                        default:
-                                                                a = 0.0f;
-                                                                b = 0.0f;
-                                                                break;
-                                                        }
-                                                        minA = std::min(minA, a);
-                                                        maxA = std::max(maxA, a);
-                                                        minB = std::min(minB, b);
-                                                        maxB = std::max(maxB, b);
-                                                }
-                                                if (std::abs(minA - 0.0f) < 0.0001f && std::abs(maxA - 1.0f) < 0.0001f &&
-                                                        std::abs(minB - 0.0f) < 0.0001f && std::abs(maxB - 1.0f) < 0.0001f)
-                                                {
-                                                        face.full = true;
-                                                }
-                                        }
-                                }
-                        }
-                        return result;
-                }
+					if (vertices.size() == 4)
+					{
+						float minA = std::numeric_limits<float>::max();
+						float maxA = std::numeric_limits<float>::lowest();
+						float minB = std::numeric_limits<float>::max();
+						float maxB = std::numeric_limits<float>::lowest();
+						for (const auto &v : vertices)
+						{
+							float a;
+							float b;
+							switch (dir)
+							{
+							case 0:
+							case 1:
+								a = v.position.x;
+								b = v.position.z;
+								break;
+							case 2:
+							case 4:
+								a = v.position.y;
+								b = v.position.z;
+								break;
+							case 3:
+							case 5:
+								a = v.position.x;
+								b = v.position.y;
+								break;
+							default:
+								a = 0.0f;
+								b = 0.0f;
+								break;
+							}
+							minA = std::min(minA, a);
+							maxA = std::max(maxA, a);
+							minB = std::min(minB, b);
+							maxB = std::max(maxB, b);
+						}
+						if (std::abs(minA - 0.0f) < 0.0001f && std::abs(maxA - 1.0f) < 0.0001f && std::abs(minB - 0.0f) < 0.0001f &&
+							std::abs(maxB - 1.0f) < 0.0001f)
+						{
+							face.full = true;
+						}
+					}
+				}
+			}
+			return result;
+		}
 
-                static inline std::map<Type, std::map<Orientation, Entry>> _cache;
-        };
+		static inline std::map<Type, std::map<Orientation, Entry>> cache;
+	};
 
-        friend class Cache;
+	friend class Cache;
 
 public:
 	virtual ~Block() = default;
 
 	void bake(spk::ObjMesh &p_toFill,
-			  const NeightbourDescriber& p_neightbourDescriber,
+			  const NeightbourDescriber &p_neightbourDescriber,
 			  const spk::Vector3 &p_position,
 			  const Orientation &p_orientation) const
 	{
-                if (Cache::hasCase(_type(), p_orientation) == false)
-                {
-                        Cache::addCase(_type(), p_orientation, _mesh());
-                }
-                const Cache::Entry &data = Cache::getCase(_type(), p_orientation);
+		if (Cache::hasCase(_type(), p_orientation) == false)
+		{
+			Cache::addCase(_type(), p_orientation, _mesh());
+		}
+		const Cache::Entry &data = Cache::getCase(_type(), p_orientation);
 
-                static const std::array<int, 6> opposite = {1, 0, 4, 5, 2, 3};
+		static const std::array<int, 6> opposite = {1, 0, 4, 5, 2, 3};
 
-               std::array<const Face *, 6> neighFaces{};
-               for (size_t i = 0; i < 6; ++i)
-               {
-                       neighFaces[i] = nullptr;
-                       if (p_neightbourDescriber[i].first != nullptr)
-                       {
-                               const Block *neigh = p_neightbourDescriber[i].first;
-                               const Orientation &neighOrientation = p_neightbourDescriber[i].second;
-                               if (Cache::hasCase(neigh->_type(), neighOrientation) == false)
-                               {
-                                       Cache::addCase(neigh->_type(), neighOrientation, neigh->_mesh());
-                               }
-                               const Cache::Entry &neighData = Cache::getCase(neigh->_type(), neighOrientation);
-                               neighFaces[i] = &neighData.faces[opposite[i]];
-                       }
-               }
+		std::array<const Face *, 6> neighFaces{};
+		for (size_t i = 0; i < 6; ++i)
+		{
+			neighFaces[i] = nullptr;
+			if (p_neightbourDescriber[i].first != nullptr)
+			{
+				const Block *neigh = p_neightbourDescriber[i].first;
+				const Orientation &neighOrientation = p_neightbourDescriber[i].second;
+				if (Cache::hasCase(neigh->_type(), neighOrientation) == false)
+				{
+					Cache::addCase(neigh->_type(), neighOrientation, neigh->_mesh());
+				}
+				const Cache::Entry &neighData = Cache::getCase(neigh->_type(), neighOrientation);
+				neighFaces[i] = &neighData.faces[opposite[i]];
+			}
+		}
 
-               bool fullyOccluded = true;
-               for (size_t i = 0; i < 6; ++i)
-               {
-                       const Face *nf = neighFaces[i];
-                       if (nf == nullptr || nf->full == false)
-                       {
-                               fullyOccluded = false;
-                               break;
-                       }
-               }
+		bool fullyOccluded = true;
+		for (size_t i = 0; i < 6; ++i)
+		{
+			const Face *nf = neighFaces[i];
+			if (nf == nullptr || nf->full == false)
+			{
+				fullyOccluded = false;
+				break;
+			}
+		}
 
-               if (fullyOccluded == false)
-               {
-                       data.applyInnerMesh(p_toFill, p_position);
-               }
+		if (fullyOccluded == false)
+		{
+			data.applyInnerMesh(p_toFill, p_position);
+		}
 
-               for (size_t i = 0; i < data.faces.size(); ++i)
-               {
-                       const Face &ourFace = data.faces[i];
-                       if (ourFace.mesh.shapes().empty() == true)
-                       {
-                               continue;
-                       }
+		for (size_t i = 0; i < data.faces.size(); ++i)
+		{
+			const Face &ourFace = data.faces[i];
+			if (ourFace.mesh.shapes().empty() == true)
+			{
+				continue;
+			}
 
-                       const Face *currentNeighFace = neighFaces[i];
-                       bool visible = true;
-                       if (currentNeighFace != nullptr && currentNeighFace->mesh.shapes().empty() == false)
-                       {
-                               if (currentNeighFace->footprint.contains(ourFace.footprint) == true)
-                               {
-                                       visible = false;
-                               }
-                       }
-                       if (visible == true)
-                       {
-                               data.applyFace(p_toFill, p_position, static_cast<int>(i));
-                       }
-               }
-       }
+			const Face *currentNeighFace = neighFaces[i];
+			bool visible = true;
+			if (currentNeighFace != nullptr && currentNeighFace->mesh.shapes().empty() == false)
+			{
+				if (currentNeighFace->footprint.contains(ourFace.footprint) == true)
+				{
+					visible = false;
+				}
+			}
+			if (visible == true)
+			{
+				data.applyFace(p_toFill, p_position, static_cast<int>(i));
+			}
+		}
+	}
 };
 
 struct FullBlock : public Block
@@ -411,7 +401,7 @@ private:
 	}
 
 	spk::ObjMesh _objMesh;
-	static inline std::string _objMeshCode = R"(v 0.0 0.0 0.0
+	static inline std::string objMeshCode = R"(v 0.0 0.0 0.0
 v 1.0 0.0 0.0
 v 1.0 0.0 1.0
 v 0.0 0.0 1.0
@@ -447,7 +437,7 @@ f 3/3/6 1/2/6 2/1/6)";
 public:
 	FullBlock()
 	{
-		_objMesh = spk::ObjMesh::loadFromString(_objMeshCode);
+		_objMesh = spk::ObjMesh::loadFromString(objMeshCode);
 	}
 };
 
@@ -464,7 +454,7 @@ private:
 	}
 
 	spk::ObjMesh _objMesh;
-	static inline std::string _objMeshCode = R"(v 0.0 0.0 0.0
+	static inline std::string objMeshCode = R"(v 0.0 0.0 0.0
 v 1.0 0.0 0.0
 v 1.0 0.0 1.0
 v 0.0 0.0 1.0
@@ -491,7 +481,7 @@ f 1/1/5 5/3/5 6/4/5 2/2/5)";
 public:
 	SlopeBlock()
 	{
-		_objMesh = spk::ObjMesh::loadFromString(_objMeshCode);
+		_objMesh = spk::ObjMesh::loadFromString(objMeshCode);
 	}
 };
 
@@ -511,20 +501,28 @@ public:
 			spk::SafePointer<spk::ObjMeshRenderer> _renderer;
 
 			spk::SafePointer<BlockMap> _blockMap;
-			Specifier _content[ChunkSizeX][ChunkSizeY][ChunkSizeZ];
+			Block::Specifier _content[ChunkSizeX][ChunkSizeY][ChunkSizeZ];
 
 			bool _isBaked = false;
 			spk::ObjMesh _mesh;
 
-			std::vector<Block::Specifier> _computeNeightbourSpecifiers(int p_x, int p_y, int p_z)
+			Block::NeightbourDescriber _computeNeightbourSpecifiers(int p_x, int p_y, int p_z)
 			{
-				std::vector<Block::Specifier> result;
+				Block::NeightbourDescriber result;
 
-				for (const auto &coord : Block::neightbourCoordinates)
+				for (size_t i = 0; i < Block::neightbourCoordinates.size(); i++)
 				{
-					spk::Vector3 tmpCoord = coord + {p_x, p_y, p_z};
+					spk::Vector3 tmpCoord = Block::neightbourCoordinates[i] + spk::Vector3{p_x, p_y, p_z};
 
-					result.push_back(content(tmpCoord));
+					Block::Specifier specifier = content(tmpCoord);
+
+					spk::SafePointer<const Block> block = nullptr;
+					if (specifier.first != -1)
+					{
+						block = _blockMap->blockById(specifier.first);
+					}
+
+					result[i] = std::make_pair(block, specifier.second);
 				}
 
 				return (result);
@@ -544,7 +542,7 @@ public:
 
 							if (currentSpecifier.first != -1)
 							{
-								std::vector<Block::Specifier> neightbourSpecifiers = _computeNeightbourSpecifiers(x, y, z);
+								Block::NeightbourDescriber neightbourSpecifiers = _computeNeightbourSpecifiers(x, y, z);
 
 								spk::SafePointer<const Block> currentBlock = _blockMap->blockById(currentSpecifier.first);
 
@@ -576,8 +574,7 @@ public:
 					{
 						for (int x = 0; x < size.x; ++x)
 						{
-							_content[x][y][z] =
-								std::make_tuple(p_id, {Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive});
+							_content[x][y][z] = std::make_pair(p_id, Block::Orientation{Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive});
 						}
 					}
 				}
@@ -587,25 +584,25 @@ public:
 			void setContent(int p_x,
 							int p_y,
 							int p_z,
-							const Block::Data &p_data,
+							const Block::ID &p_data,
 							const Block::Orientation &p_orientation = {Block::HorizontalOrientation::XPositive,
 																	   Block::VerticalOrientation::YPositive})
 			{
-				_content[p_x][p_y][p_z] = std::make_tuple(p_data, p_orientation);
+				_content[p_x][p_y][p_z] = std::make_pair(p_data, p_orientation);
 				_isBaked = false;
 			}
 
-			Specifier content(const spk::Vector3Int &p_coord) const
+			Block::Specifier content(const spk::Vector3Int &p_coord) const
 			{
 				return (content(p_coord.x, p_coord.y, p_coord.z));
 			}
 
-			Specifier content(const spk::Vector2Int &p_coord, int p_z) const
+			Block::Specifier content(const spk::Vector2Int &p_coord, int p_z) const
 			{
 				return (content(p_coord.x, p_coord.y, p_z));
 			}
 
-			Specifier content(int p_x, int p_y, int p_z) const
+			Block::Specifier content(int p_x, int p_y, int p_z) const
 			{
 				if (p_x < 0 || p_x >= size.x || p_y < 0 || p_y >= size.y || p_z < 0 || p_z >= size.z)
 				{
@@ -810,7 +807,7 @@ public:
 					spk::Vector3Int chunkPosition = {i, j, k};
 					if (_chunks.contains(chunkPosition) == false)
 					{
-						_chunks[chunkPosition] = _generateChunk(chunkPosition);
+						_chunks.emplace(chunkPosition, std::move(_generateChunk(chunkPosition)));
 					}
 
 					_activeChunks.push_back((_chunks[chunkPosition].get()));
