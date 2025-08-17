@@ -53,11 +53,31 @@ public:
 	using Footprint = spk::Polygon;
 
 protected:
-	using Type = std::wstring; // Each block type can be identified by its type : FullBlock, Slope, HalfBlock, Fence, for exemple
-	// Multiple block can shared the same type, as long as they are the same shape in 3D, with just different sprite and interaction
+        using Type = std::wstring; // Each block type can be identified by its type : FullBlock, Slope, HalfBlock, Fence, for exemple
+        // Multiple block can shared the same type, as long as they are the same shape in 3D, with just different sprite and interaction
 
-	virtual Block::Type _type() const = 0;
-	virtual const spk::ObjMesh &_mesh() const = 0;
+        virtual Block::Type _type() const = 0;
+        virtual const spk::ObjMesh &_mesh() const = 0;
+
+	static void _applySprite(spk::ObjMesh::Shape &p_shape, const spk::SpriteSheet::Sprite &p_sprite)
+	{
+		auto transform = [&](spk::Vertex &p_v)
+		{
+			p_v.uv = (p_v.uv * p_sprite.size) + p_sprite.anchor;
+		};
+		std::visit(
+			[&](auto &p_face)
+			{
+				transform(p_face.a);
+				transform(p_face.b);
+				transform(p_face.c);
+				if constexpr (std::is_same_v<std::decay_t<decltype(p_face)>, spk::ObjMesh::Quad>)
+				{
+					transform(p_face.d);
+				}
+		},
+		p_shape);
+	}
 
 private:
 	struct Face
@@ -67,34 +87,28 @@ private:
 		bool full = false;
 	};
 
-	class Cache
-	{
-	public:
-		struct Entry;
+       class Cache
+       {
+       public:
+               struct Entry;
 
-		static bool hasCase(const Type &p_type, const Orientation &p_orientation)
-		{
-			auto itType = cache.find(p_type);
-			if (itType == cache.end())
-			{
-				return false;
-			}
-			return itType->second.contains(p_orientation);
-		}
+               bool hasCase(const Orientation &p_orientation) const
+               {
+                       return _cache.contains(p_orientation);
+               }
 
-		static void addCase(const Type &p_type, const Orientation &p_orientation, const spk::ObjMesh &p_mesh)
-		{
-			auto &typeCache = cache[p_type];
-			if (typeCache.contains(p_orientation) == false)
-			{
-				typeCache.emplace(p_orientation, _compute(p_mesh, p_orientation));
-			}
-		}
+               void addCase(const Orientation &p_orientation, const spk::ObjMesh &p_mesh)
+               {
+                       if (_cache.contains(p_orientation) == false)
+                       {
+                               _cache.emplace(p_orientation, _compute(p_mesh, p_orientation));
+                       }
+               }
 
-		static const Entry &getCase(const Type &p_type, const Orientation &p_orientation)
-		{
-			return cache[p_type].at(p_orientation);
-		}
+               const Entry &getCase(const Orientation &p_orientation) const
+               {
+                       return _cache.at(p_orientation);
+               }
 
 		struct Entry
 		{
@@ -137,8 +151,8 @@ private:
 			}
 		};
 
-	private:
-		static spk::Vector3 _applyOrientation(const spk::Vector3 &p_position, const Orientation &p_orientation)
+       private:
+               static spk::Vector3 _applyOrientation(const spk::Vector3 &p_position, const Orientation &p_orientation)
 		{
 			spk::Vector3 result = p_position - spk::Vector3(0.5f, 0.5f, 0.5f);
 			spk::Vector3 rotation(0, 0, 0);
@@ -168,7 +182,7 @@ private:
 			return (result + spk::Vector3(0.5f, 0.5f, 0.5f));
 		}
 
-		static Entry _compute(const spk::ObjMesh &p_mesh, const Orientation &p_orientation)
+               static Entry _compute(const spk::ObjMesh &p_mesh, const Orientation &p_orientation)
 		{
 			Entry result;
 			for (const auto &shape : p_mesh.shapes())
@@ -309,10 +323,10 @@ private:
 			return result;
 		}
 
-		static inline std::map<Type, std::map<Orientation, Entry>> cache;
-	};
+               std::map<Orientation, Entry> _cache;
+       };
 
-	friend class Cache;
+       mutable Cache _cache;
 
 public:
 	virtual ~Block() = default;
@@ -322,11 +336,11 @@ public:
 			  const spk::Vector3 &p_position,
 			  const Orientation &p_orientation) const
 	{
-		if (Cache::hasCase(_type(), p_orientation) == false)
-		{
-			Cache::addCase(_type(), p_orientation, _mesh());
-		}
-		const Cache::Entry &data = Cache::getCase(_type(), p_orientation);
+               if (_cache.hasCase(p_orientation) == false)
+               {
+                       _cache.addCase(p_orientation, _mesh());
+               }
+               const Cache::Entry &data = _cache.getCase(p_orientation);
 
 		static const std::array<int, 6> opposite = {1, 0, 4, 5, 2, 3};
 
@@ -336,16 +350,16 @@ public:
 			neighFaces[i] = nullptr;
 			if (p_neightbourDescriber[i].first != nullptr)
 			{
-				const Block *neigh = p_neightbourDescriber[i].first;
-				const Orientation &neighOrientation = p_neightbourDescriber[i].second;
-				if (Cache::hasCase(neigh->_type(), neighOrientation) == false)
-				{
-					Cache::addCase(neigh->_type(), neighOrientation, neigh->_mesh());
-				}
-				const Cache::Entry &neighData = Cache::getCase(neigh->_type(), neighOrientation);
-				neighFaces[i] = &neighData.faces[opposite[i]];
-			}
-		}
+                               const Block *neigh = p_neightbourDescriber[i].first;
+                               const Orientation &neighOrientation = p_neightbourDescriber[i].second;
+                               if (neigh->_cache.hasCase(neighOrientation) == false)
+                               {
+                                       neigh->_cache.addCase(neighOrientation, neigh->_mesh());
+                               }
+                               const Cache::Entry &neighData = neigh->_cache.getCase(neighOrientation);
+                               neighFaces[i] = &neighData.faces[opposite[i]];
+                       }
+               }
 
 		bool fullyOccluded = true;
 		for (size_t i = 0; i < 6; ++i)
@@ -388,20 +402,33 @@ public:
 	}
 };
 
+
 struct FullBlock : public Block
 {
-private:
-	Block::Type _type() const override
-	{
-		return L"FullBlock";
-	}
-	const spk::ObjMesh &_mesh() const override
-	{
-		return (_objMesh);
-	}
+public:
+        struct Configuration
+        {
+                spk::SpriteSheet::Sprite front;
+                spk::SpriteSheet::Sprite back;
+                spk::SpriteSheet::Sprite left;
+                spk::SpriteSheet::Sprite right;
+                spk::SpriteSheet::Sprite top;
+                spk::SpriteSheet::Sprite bottom;
+        };
 
-	spk::ObjMesh _objMesh;
-	static inline std::string objMeshCode = R"(v 0.0 0.0 0.0
+private:
+        Block::Type _type() const override
+        {
+                return L"FullBlock";
+        }
+        const spk::ObjMesh &_mesh() const override
+        {
+                return (_objMesh);
+        }
+
+        spk::ObjMesh _objMesh;
+        Configuration _configuration;
+        static inline std::string objMeshCode = R"(v 0.0 0.0 0.0
 v 1.0 0.0 0.0
 v 1.0 0.0 1.0
 v 0.0 0.0 1.0
@@ -435,26 +462,43 @@ f 3/1/6 4/3/6 1/4/6
 f 3/3/6 1/2/6 2/1/6)";
 
 public:
-	FullBlock()
-	{
-		_objMesh = spk::ObjMesh::loadFromString(objMeshCode);
-	}
+       explicit FullBlock(const Configuration &p_configuration) : _configuration(p_configuration)
+       {
+       _objMesh = spk::ObjMesh::loadFromString(objMeshCode);
+
+       _applySprite(_objMesh.shapes()[0], _configuration.front);
+       _applySprite(_objMesh.shapes()[1], _configuration.back);
+       _applySprite(_objMesh.shapes()[2], _configuration.left);
+       _applySprite(_objMesh.shapes()[3], _configuration.right);
+       _applySprite(_objMesh.shapes()[4], _configuration.top);
+       _applySprite(_objMesh.shapes()[5], _configuration.bottom);
+       }
 };
 
 struct SlopeBlock : public Block
 {
-private:
-	Block::Type _type() const override
-	{
-		return L"SlopeBlock";
-	}
-	const spk::ObjMesh &_mesh() const override
-	{
-		return (_objMesh);
-	}
+public:
+        struct Configuration
+        {
+                spk::SpriteSheet::Sprite triangles;
+                spk::SpriteSheet::Sprite back;
+                spk::SpriteSheet::Sprite ramp;
+                spk::SpriteSheet::Sprite bottom;
+        };
 
-	spk::ObjMesh _objMesh;
-	static inline std::string objMeshCode = R"(v 0.0 0.0 0.0
+private:
+        Block::Type _type() const override
+        {
+                return L"SlopeBlock";
+        }
+        const spk::ObjMesh &_mesh() const override
+        {
+                return (_objMesh);
+        }
+
+        spk::ObjMesh _objMesh;
+        Configuration _configuration;
+        static inline std::string objMeshCode = R"(v 0.0 0.0 0.0
 v 1.0 0.0 0.0
 v 1.0 0.0 1.0
 v 0.0 0.0 1.0
@@ -479,10 +523,16 @@ f 2/1/4 6/3/4 3/2/4
 f 1/1/5 5/3/5 6/4/5 2/2/5)";
 
 public:
-	SlopeBlock()
-	{
-		_objMesh = spk::ObjMesh::loadFromString(objMeshCode);
-	}
+       explicit SlopeBlock(const Configuration &p_configuration) : _configuration(p_configuration)
+       {
+       _objMesh = spk::ObjMesh::loadFromString(objMeshCode);
+
+       _applySprite(_objMesh.shapes()[0], _configuration.bottom);
+       _applySprite(_objMesh.shapes()[1], _configuration.back);
+       _applySprite(_objMesh.shapes()[2], _configuration.triangles);
+       _applySprite(_objMesh.shapes()[3], _configuration.triangles);
+       _applySprite(_objMesh.shapes()[4], _configuration.ramp);
+       }
 };
 
 template <size_t ChunkSizeX, size_t ChunkSizeY, size_t ChunkSizeZ>
@@ -644,12 +694,12 @@ public:
 		spk::SafePointer<Data> _data;
 
 	public:
-		Chunk(const std::wstring &p_name, spk::SafePointer<BlockMap> p_parent) :
-			spk::Entity(p_name, p_parent)
-		{
-			_renderer = addComponent<spk::ObjMeshRenderer>(p_name + L"/ObjMeshRenderer");
-			_data = addComponent<Data>(p_name + L"/Data");
-			_data->setBlockMap(p_parent);
+                Chunk(const std::wstring &p_name, spk::SafePointer<BlockMap> p_parent) :
+                        spk::Entity(p_name, p_parent)
+                {
+                        _renderer = this->template addComponent<spk::ObjMeshRenderer>(p_name + L"/ObjMeshRenderer");
+                        _data = this->template addComponent<Data>(p_name + L"/Data");
+                        _data->setBlockMap(p_parent);
 
 			_renderer->setPriority(100);
 			_data->setPriority(0);
@@ -665,42 +715,42 @@ public:
 			_data->fill(p_id);
 		}
 
-		void setContent(spk::Vector3Int p_position,
-						const Block::Data &p_data,
-						const Block::Orientation &p_orientation = {Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive})
-		{
-			setContent(p_position.x, p_position.y, p_position.z, p_data, p_orientation);
-		}
-		void setContent(spk::Vector2Int p_position,
-						int p_z,
-						const Block::Data &p_data,
-						const Block::Orientation &p_orientation = {Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive})
-		{
-			setContent(p_position.x, p_position.y, p_z, p_data, p_orientation);
-		}
+                void setContent(spk::Vector3Int p_position,
+                                Block::ID p_id,
+                                const Block::Orientation &p_orientation = {Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive})
+                {
+                        setContent(p_position.x, p_position.y, p_position.z, p_id, p_orientation);
+                }
+                void setContent(spk::Vector2Int p_position,
+                                int p_z,
+                                Block::ID p_id,
+                                const Block::Orientation &p_orientation = {Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive})
+                {
+                        setContent(p_position.x, p_position.y, p_z, p_id, p_orientation);
+                }
 
-		void setContent(int p_x,
-						int p_y,
-						int p_z,
-						const Block::Data &p_data,
-						const Block::Orientation &p_orientation = {Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive})
-		{
-			_data->setContent(p_x, p_y, p_z, p_data, p_orientation);
-		}
+                void setContent(int p_x,
+                                int p_y,
+                                int p_z,
+                                Block::ID p_id,
+                                const Block::Orientation &p_orientation = {Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive})
+                {
+                        _data->setContent(p_x, p_y, p_z, p_id, p_orientation);
+                }
 
-		bool isBaked() const
-		{
-			return _data.isBaked();
-		}
+                bool isBaked() const
+                {
+                        return _data->isBaked();
+                }
 
-		spk::SafePointer<spk::ObjMesh> mesh()
-		{
-			return (_data.mesh());
-		}
-		const spk::SafePointer<const spk::ObjMesh> mesh() const
-		{
-			return (_data.mesh());
-		}
+                spk::SafePointer<spk::ObjMesh> mesh()
+                {
+                        return (_data->mesh());
+                }
+                const spk::SafePointer<const spk::ObjMesh> mesh() const
+                {
+                        return (_data->mesh());
+                }
 	};
 
 private:
@@ -776,10 +826,8 @@ public:
 		{
 			GENERATE_ERROR("Block ID [" + std::to_string(p_id) + "] already exist in BlockMap [" + spk::StringUtils::wstringToString(name()) + "]");
 		}
-		const Block *rawPtr = p_block.get();
-		_availableBlocks[p_id] = std::move(p_block);
-		Block::registerBlock(p_id, rawPtr);
-	}
+                _availableBlocks[p_id] = std::move(p_block);
+        }
 
 	spk::SafePointer<const Block> blockById(Block::ID p_id) const
 	{
