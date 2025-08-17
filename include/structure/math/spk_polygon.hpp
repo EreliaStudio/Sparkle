@@ -43,13 +43,28 @@ namespace spk
 			return true;
 		}
 
-		bool isCoplanar(const Polygon &p_polygon) const
-		{
-			return (
-				isPlanar() == true && p_polygon.isPlanar() == true && 
-				normal() == p_polygon.normal()
-			);
-		}
+                bool isCoplanar(const Polygon &p_polygon) const
+                {
+                        if (isPlanar() == false || p_polygon.isPlanar() == false)
+                        {
+                                return false;
+                        }
+
+                        spk::Vector3 n = normal();
+                        spk::Vector3 otherNormal = p_polygon.normal();
+
+                        bool sameNormal = n == otherNormal;
+                        bool oppositeNormal = n == -otherNormal;
+
+                        if (sameNormal == false && oppositeNormal == false)
+                        {
+                                return false;
+                        }
+
+                        const spk::Vector3 &origin = points[0];
+                        float distance = n.dot(p_polygon.points[0] - origin);
+                        return std::abs(distance) <= std::numeric_limits<float>::epsilon();
+                }
 
 		bool contains(const Polygon &p_polygon) const
 		{
