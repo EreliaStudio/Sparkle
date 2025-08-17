@@ -23,12 +23,13 @@ namespace spk
 																 10,
 																 [&](const spk::SafePointer<const spk::Keyboard> &p_keyboard)
 																 {
-																	 spk::Vector3 forward = owner()->transform().forward();
-																	 forward.y = 0;
-																	 if (forward != spk::Vector3())
+																	 spk::Vector3 forward = owner()->transform().forward() * spk::Vector3(1, 0, 1);
+																	 
+																	 if (forward == spk::Vector3())
 																	 {
-																		 forward = forward.normalize();
+																		forward = owner()->transform().up() * spk::Vector3(1, 0, 1);
 																	 }
+
 																	 _motionRequested += forward;
 																 }));
 
@@ -51,12 +52,13 @@ namespace spk
 																 10,
 																 [&](const spk::SafePointer<const spk::Keyboard> &p_keyboard)
 																 {
-																	 spk::Vector3 forward = owner()->transform().forward();
-																	 forward.y = 0;
-																	 if (forward != spk::Vector3())
+																	 spk::Vector3 forward = owner()->transform().forward() * spk::Vector3(1, 0, 1);
+																	 
+																	 if (forward == spk::Vector3())
 																	 {
-																		 forward = forward.normalize();
+																		forward = owner()->transform().up() * spk::Vector3(1, 0, 1);
 																	 }
+
 																	 _motionRequested -= forward;
 																 }));
 

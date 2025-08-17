@@ -3,12 +3,12 @@
 #include "spk_sfinae.hpp"
 #include "structure/engine/spk_vertex.hpp"
 
-#include <vector>
-#include <variant>
-#include <unordered_map>
-#include <mutex>
 #include <filesystem>
+#include <mutex>
 #include <type_traits>
+#include <unordered_map>
+#include <variant>
+#include <vector>
 
 namespace spk
 {
@@ -47,9 +47,9 @@ namespace spk
 		mutable bool _needBake = false;
 		mutable Buffer _buffer;
 
-		mutable std::mutex _mutex; 
-		
-		unsigned int _getOrInsertVertex(const Vertex& v, std::unordered_map<Vertex, unsigned int>& vertexMap) const
+		mutable std::mutex _mutex;
+
+		unsigned int _getOrInsertVertex(const Vertex &v, std::unordered_map<Vertex, unsigned int> &vertexMap) const
 		{
 			auto it = vertexMap.find(v);
 			if (it != vertexMap.end())
@@ -65,14 +65,14 @@ namespace spk
 			}
 		}
 
-		void _bakeTriangle(const Triangle& t, std::unordered_map<Vertex, unsigned int>& vertexMap) const
+		void _bakeTriangle(const Triangle &t, std::unordered_map<Vertex, unsigned int> &vertexMap) const
 		{
 			_buffer.indexes.push_back(_getOrInsertVertex(t.a, vertexMap));
 			_buffer.indexes.push_back(_getOrInsertVertex(t.b, vertexMap));
 			_buffer.indexes.push_back(_getOrInsertVertex(t.c, vertexMap));
 		}
 
-		void _bakeQuad(const Quad& q, std::unordered_map<Vertex, unsigned int>& vertexMap) const
+		void _bakeQuad(const Quad &q, std::unordered_map<Vertex, unsigned int> &vertexMap) const
 		{
 			unsigned int ia = _getOrInsertVertex(q.a, vertexMap);
 			unsigned int ib = _getOrInsertVertex(q.b, vertexMap);
@@ -91,28 +91,91 @@ namespace spk
 	public:
 		TMesh() = default;
 
-		void addShape(const Vertex& p_a, const Vertex& p_b, const Vertex& p_c)
+		TMesh(const TMesh &p_other) :
+			_shapes(),
+			_needBake(false),
+			_buffer(),
+			_mutex()
+		{
+			std::scoped_lock lock(p_other._mutex);
+			_shapes = p_other._shapes;
+			_needBake = p_other._needBake;
+			_buffer = p_other._buffer;
+		}
+
+		TMesh &operator=(const TMesh &p_other)
+		{
+			if (this == &p_other)
+			{
+				return *this;
+			}
+
+			std::scoped_lock lock(_mutex, p_other._mutex);
+			_shapes = p_other._shapes;
+			_needBake = p_other._needBake;
+			_buffer = p_other._buffer;
+			return *this;
+		}
+
+		TMesh(TMesh &&p_other) noexcept(std::is_nothrow_move_constructible_v<std::vector<Shape>> && std::is_nothrow_move_constructible_v<Buffer>) :
+			_shapes(),
+			_needBake(false),
+			_buffer(),
+			_mutex()
+		{
+			std::scoped_lock lock(p_other._mutex);
+			_shapes = std::move(p_other._shapes);
+			_needBake = p_other._needBake;
+			_buffer = std::move(p_other._buffer);
+
+			p_other._needBake = false;
+			p_other._buffer.vertices.clear();
+			p_other._buffer.indexes.clear();
+			p_other._shapes.clear();
+		}
+
+		TMesh &operator=(TMesh &&p_other) noexcept(std::is_nothrow_move_assignable_v<std::vector<Shape>> && std::is_nothrow_move_assignable_v<Buffer>)
+		{
+			if (this == &p_other)
+			{
+				return *this;
+			}
+			std::scoped_lock lock(_mutex, p_other._mutex);
+
+			_shapes = std::move(p_other._shapes);
+			_needBake = p_other._needBake;
+			_buffer = std::move(p_other._buffer);
+
+			p_other._needBake = false;
+			p_other._buffer.vertices.clear();
+			p_other._buffer.indexes.clear();
+			p_other._shapes.clear();
+
+			return *this;
+		}
+
+		void addShape(const Vertex &p_a, const Vertex &p_b, const Vertex &p_c)
 		{
 			std::lock_guard lock(_mutex);
-			_shapes.push_back(Triangle{ p_a, p_b, p_c });
+			_shapes.push_back(Triangle{p_a, p_b, p_c});
 			_needBake = true;
 		}
 
-		void addShape(const Triangle& p_triangle)
+		void addShape(const Triangle &p_triangle)
 		{
 			std::lock_guard lock(_mutex);
 			_shapes.push_back(p_triangle);
 			_needBake = true;
 		}
 
-		void addShape(const Vertex& p_a, const Vertex& p_b, const Vertex& p_c, const Vertex& p_d)
+		void addShape(const Vertex &p_a, const Vertex &p_b, const Vertex &p_c, const Vertex &p_d)
 		{
 			std::lock_guard lock(_mutex);
-			_shapes.push_back(Quad{ p_a, p_b, p_c, p_d });
+			_shapes.push_back(Quad{p_a, p_b, p_c, p_d});
 			_needBake = true;
 		}
 
-		void addShape(const Quad& p_quad)
+		void addShape(const Quad &p_quad)
 		{
 			std::lock_guard lock(_mutex);
 			_shapes.push_back(p_quad);
@@ -138,13 +201,19 @@ namespace spk
 			_needBake = false;
 		}
 
-		const std::vector<Shape>& shapes() const
+		const std::vector<Shape> &shapes() const
 		{
 			return _shapes;
 		}
 
-		auto begin() const { return _shapes.begin(); }
-		auto end() const { return _shapes.end(); }
+		auto begin() const
+		{
+			return _shapes.begin();
+		}
+		auto end() const
+		{
+			return _shapes.end();
+		}
 
 		bool hasPendingChanges() const
 		{
@@ -169,7 +238,7 @@ namespace spk
 
 			std::unordered_map<Vertex, unsigned int> vertexMap;
 
-			for (const auto& s : _shapes)
+			for (const auto &s : _shapes)
 			{
 				if (std::holds_alternative<Triangle>(s))
 				{
@@ -184,7 +253,7 @@ namespace spk
 			_needBake = false;
 		}
 
-		const Buffer& buffer() const
+		const Buffer &buffer() const
 		{
 			if (_needBake)
 			{
