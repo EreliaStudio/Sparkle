@@ -59,7 +59,25 @@ protected:
         virtual Block::Type _type() const = 0;
         virtual const spk::ObjMesh &_mesh() const = 0;
 
-       static void _applySprite(spk::ObjMesh::Shape &p_shape, const spk::SpriteSheet::Sprite &p_sprite);
+	static void _applySprite(spk::ObjMesh::Shape &p_shape, const spk::SpriteSheet::Sprite &p_sprite)
+	{
+		auto transform = [&](spk::Vertex &p_v)
+		{
+			p_v.uv = (p_v.uv * p_sprite.size) + p_sprite.anchor;
+		};
+		std::visit(
+			[&](auto &p_face)
+			{
+				transform(p_face.a);
+				transform(p_face.b);
+				transform(p_face.c);
+				if constexpr (std::is_same_v<std::decay_t<decltype(p_face)>, spk::ObjMesh::Quad>)
+				{
+					transform(p_face.d);
+				}
+		},
+		p_shape);
+	}
 
 private:
 	struct Face
@@ -384,25 +402,6 @@ public:
 	}
 };
 
-void Block::_applySprite(spk::ObjMesh::Shape &p_shape, const spk::SpriteSheet::Sprite &p_sprite)
-{
-    auto transform = [&](spk::Vertex &p_v)
-    {
-        p_v.uv = (p_v.uv * p_sprite.size) + p_sprite.anchor;
-    };
-    std::visit(
-        [&](auto &p_face)
-        {
-            transform(p_face.a);
-            transform(p_face.b);
-            transform(p_face.c);
-            if constexpr (std::is_same_v<std::decay_t<decltype(p_face)>, spk::ObjMesh::Quad>)
-            {
-                transform(p_face.d);
-            }
-        },
-        p_shape);
-}
 
 struct FullBlock : public Block
 {
