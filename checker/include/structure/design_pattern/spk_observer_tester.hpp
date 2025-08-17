@@ -2,7 +2,7 @@
 
 #include <gtest/gtest.h>
 
-#include "structure/design_pattern/spk_event_notifier.hpp"
+#include "structure/design_pattern/spk_observer.hpp"
 
 class ObserverTest : public ::testing::Test
 {

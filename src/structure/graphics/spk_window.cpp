@@ -552,7 +552,7 @@ namespace spk
 		{
 			try
 			{
-				_rootWidget->_applyGeometryChange();
+				_rootWidget->applyGeometryChange();
 			} catch (std::exception &e)
 			{
 				PROPAGATE_ERROR("Window::clear over _rootWidget->applyGeometryChange() failed", e);

@@ -1,4 +1,4 @@
-#include "structure/design_pattern/spk_event_notifier_tester.hpp"
+#include "structure/design_pattern/spk_observer_tester.hpp"
 
 TEST_F(ObserverTest, SubscribeJob)
 {
