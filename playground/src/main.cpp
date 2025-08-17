@@ -451,60 +451,26 @@ public:
                        {
                                p_v.uv = (p_v.uv * p_sprite.size) + p_sprite.anchor;
                        };
-                       if (std::holds_alternative<spk::ObjMesh::Triangle>(p_shape))
-                       {
-                               auto &tri = std::get<spk::ObjMesh::Triangle>(p_shape);
-                               transform(tri.a);
-                               transform(tri.b);
-                               transform(tri.c);
-                       }
-                       else
-                       {
-                               auto &quad = std::get<spk::ObjMesh::Quad>(p_shape);
-                               transform(quad.a);
-                               transform(quad.b);
-                               transform(quad.c);
-                               transform(quad.d);
-                       }
+                       std::visit(
+                               [&](auto &p_face)
+                               {
+                                       transform(p_face.a);
+                                       transform(p_face.b);
+                                       transform(p_face.c);
+                                       if constexpr (std::is_same_v<std::decay_t<decltype(p_face)>, spk::ObjMesh::Quad>)
+                                       {
+                                               transform(p_face.d);
+                                       }
+                               },
+                               p_shape);
                };
 
-               for (auto &shape : _objMesh.shapes())
-               {
-                       spk::Vector3 normal;
-                       if (std::holds_alternative<spk::ObjMesh::Triangle>(shape))
-                       {
-                               normal = std::get<spk::ObjMesh::Triangle>(shape).a.normal;
-                       }
-                       else
-                       {
-                               normal = std::get<spk::ObjMesh::Quad>(shape).a.normal;
-                       }
-
-                       if (normal == spk::Vector3(0, 0, 1))
-                       {
-                               applySprite(shape, _configuration.front);
-                       }
-                       else if (normal == spk::Vector3(0, 0, -1))
-                       {
-                               applySprite(shape, _configuration.back);
-                       }
-                       else if (normal == spk::Vector3(-1, 0, 0))
-                       {
-                               applySprite(shape, _configuration.left);
-                       }
-                       else if (normal == spk::Vector3(1, 0, 0))
-                       {
-                               applySprite(shape, _configuration.right);
-                       }
-                       else if (normal == spk::Vector3(0, 1, 0))
-                       {
-                               applySprite(shape, _configuration.top);
-                       }
-                       else if (normal == spk::Vector3(0, -1, 0))
-                       {
-                               applySprite(shape, _configuration.bottom);
-                       }
-               }
+               applySprite(_objMesh.shapes()[0], _configuration.front);
+               applySprite(_objMesh.shapes()[1], _configuration.back);
+               applySprite(_objMesh.shapes()[2], _configuration.left);
+               applySprite(_objMesh.shapes()[3], _configuration.right);
+               applySprite(_objMesh.shapes()[4], _configuration.top);
+               applySprite(_objMesh.shapes()[5], _configuration.bottom);
        }
 };
 
@@ -566,52 +532,25 @@ public:
                        {
                                p_v.uv = (p_v.uv * p_sprite.size) + p_sprite.anchor;
                        };
-                       if (std::holds_alternative<spk::ObjMesh::Triangle>(p_shape))
-                       {
-                               auto &tri = std::get<spk::ObjMesh::Triangle>(p_shape);
-                               transform(tri.a);
-                               transform(tri.b);
-                               transform(tri.c);
-                       }
-                       else
-                       {
-                               auto &quad = std::get<spk::ObjMesh::Quad>(p_shape);
-                               transform(quad.a);
-                               transform(quad.b);
-                               transform(quad.c);
-                               transform(quad.d);
-                       }
+                       std::visit(
+                               [&](auto &p_face)
+                               {
+                                       transform(p_face.a);
+                                       transform(p_face.b);
+                                       transform(p_face.c);
+                                       if constexpr (std::is_same_v<std::decay_t<decltype(p_face)>, spk::ObjMesh::Quad>)
+                                       {
+                                               transform(p_face.d);
+                                       }
+                               },
+                               p_shape);
                };
 
-               for (auto &shape : _objMesh.shapes())
-               {
-                       spk::Vector3 normal;
-                       if (std::holds_alternative<spk::ObjMesh::Triangle>(shape))
-                       {
-                               normal = std::get<spk::ObjMesh::Triangle>(shape).a.normal;
-                       }
-                       else
-                       {
-                               normal = std::get<spk::ObjMesh::Quad>(shape).a.normal;
-                       }
-
-                       if (normal == spk::Vector3(0, -1, 0))
-                       {
-                               applySprite(shape, _configuration.bottom);
-                       }
-                       else if (normal == spk::Vector3(0, 0, 1))
-                       {
-                               applySprite(shape, _configuration.back);
-                       }
-                       else if (normal == spk::Vector3(-1, 0, 0) || normal == spk::Vector3(1, 0, 0))
-                       {
-                               applySprite(shape, _configuration.triangles);
-                       }
-                       else if (normal == spk::Vector3(0, 0.70710678f, -0.70710678f))
-                       {
-                               applySprite(shape, _configuration.ramp);
-                       }
-               }
+               applySprite(_objMesh.shapes()[0], _configuration.bottom);
+               applySprite(_objMesh.shapes()[1], _configuration.back);
+               applySprite(_objMesh.shapes()[2], _configuration.triangles);
+               applySprite(_objMesh.shapes()[3], _configuration.triangles);
+               applySprite(_objMesh.shapes()[4], _configuration.ramp);
        }
 };
 
