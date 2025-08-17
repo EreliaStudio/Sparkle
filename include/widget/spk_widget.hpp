@@ -84,8 +84,6 @@ namespace spk
 	private:
 		void _computeViewport();
 
-		void _applyGeometryChange();
-
 		void _computeRatio();
 		void _applyResize();
 

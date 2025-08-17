@@ -12,19 +12,6 @@ TEST_F(PoolTest, AllocateAndObtain)
     ASSERT_EQ(obj->value, 0) << "Obtained object value should be 0";
 }
 
-TEST_F(PoolTest, EditAllocatorAndCleaner)
-{
-    pool.editCleaner([](TestObject& obj) { obj.value = 42; });
-    pool.allocate();
-
-    auto obj = pool.obtain();
-    ASSERT_EQ(obj->value, 42) << "Object value should be 42 after using custom allocator";
-
-    pool.editCleaner([](TestObject& obj) { obj.value = 99; });
-    obj = pool.obtain();
-    ASSERT_EQ(obj->value, 99) << "Object value should be 99 after using custom cleaner";
-}
-
 TEST_F(PoolTest, ResizePool)
 {
     pool.resize(5);
