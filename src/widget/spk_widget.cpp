@@ -253,7 +253,7 @@ return (isPointed(p_mouse.position()));
 	void Widget::forceGeometryChange(const Geometry2D &p_geometry)
 	{
 		setGeometry(p_geometry);
-		_applyGeometryChange();
+		applyGeometryChange();
 		_needGeometryChange = false;
 	}
 
@@ -288,7 +288,7 @@ return (isPointed(p_mouse.position()));
 		_viewport.setClippedGeometry(clippedGeometry);
 	}
 
-	void Widget::_applyGeometryChange()
+	void Widget::applyGeometryChange()
 	{
 		_frameBufferObject.resize(geometry().size);
 
@@ -428,7 +428,7 @@ return (isPointed(p_mouse.position()));
 		{
 			try
 			{
-				_applyGeometryChange();
+				applyGeometryChange();
 			} catch (const std::exception &e)
 			{
 				PROPAGATE_ERROR("Applying geometry change of [" + spk::StringUtils::wstringToString(name()) + "]", e);
