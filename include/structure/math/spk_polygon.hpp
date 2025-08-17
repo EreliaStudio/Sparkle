@@ -67,7 +67,7 @@ namespace spk
                        return std::abs(distance) <= std::numeric_limits<float>::epsilon();
                }
 
-               bool containPoint(const spk::Vector3 &p_point) const
+               bool contains(const spk::Vector3 &p_point) const
                {
                        if (points.size() < 3)
                        {
@@ -151,7 +151,7 @@ namespace spk
                        }
                        for (const spk::Vector3 &pt : p_polygon.points)
                        {
-                               if (containPoint(pt) == false)
+                               if (contains(pt) == false)
                                {
                                        return false;
                                }

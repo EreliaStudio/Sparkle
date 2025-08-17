@@ -40,7 +40,7 @@ TEST_F(PolygonTest, ContainPointInside)
 
         spk::Vector3 point(0.5f, 0.5f, 0.0f);
 
-        EXPECT_TRUE(poly.containPoint(point));
+        EXPECT_TRUE(poly.contains(point));
 }
 
 TEST_F(PolygonTest, ContainPointEdge)
@@ -50,7 +50,7 @@ TEST_F(PolygonTest, ContainPointEdge)
 
         spk::Vector3 edgePoint(0.0f, 0.5f, 0.0f);
 
-        EXPECT_TRUE(poly.containPoint(edgePoint));
+        EXPECT_TRUE(poly.contains(edgePoint));
 }
 
 TEST_F(PolygonTest, ContainPointOutside)
@@ -60,7 +60,7 @@ TEST_F(PolygonTest, ContainPointOutside)
 
         spk::Vector3 outsidePoint(-0.1f, 0.5f, 0.0f);
 
-        EXPECT_FALSE(poly.containPoint(outsidePoint));
+        EXPECT_FALSE(poly.contains(outsidePoint));
 }
 
 TEST_F(PolygonTest, ContainPointOffPlane)
@@ -70,6 +70,6 @@ TEST_F(PolygonTest, ContainPointOffPlane)
 
         spk::Vector3 above(0.5f, 0.5f, 0.1f);
 
-        EXPECT_FALSE(poly.containPoint(above));
+        EXPECT_FALSE(poly.contains(above));
 }
 
