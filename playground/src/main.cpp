@@ -432,10 +432,10 @@ v 1.0 1.0 1.0  # 7 top-right-front
 v 0.0 1.0 1.0  # 8 top-left-front
 
 # Texture coordinates (quad)
-vt 0.0 0.0  # 1
-vt 1.0 0.0  # 2
-vt 1.0 1.0  # 3
-vt 0.0 1.0  # 4
+vt 0.0 1.0  # 1
+vt 1.0 1.0  # 2
+vt 1.0 0.0  # 3
+vt 0.0 0.0  # 4
 
 # Normals
 vn  0.0  0.0  1.0  # Front
@@ -448,28 +448,22 @@ vn  0.0 -1.0  0.0  # Bottom
 # Faces (two triangles per face, CCW winding)
 
 # Front (z = 1) -> uses normal 1
-f 4/1/1 3/2/1 7/3/1
-f 4/1/1 7/3/1 8/4/1
+f 4/1/1 3/2/1 7/3/1 8/4/1
 
 # Back (z = 0) -> normal 2
-f 2/2/2 1/1/2 5/4/2
-f 2/2/2 5/4/2 6/3/2
+f 2/2/2 1/1/2 5/4/2 6/3/2
 
 # Right (x = 1) -> normal 3
-f 3/1/3 2/2/3 6/3/3
-f 3/1/3 6/3/3 7/4/3
+f 3/1/3 2/2/3 6/3/3 7/4/3
 
 # Left (x = 0) -> normal 4
-f 1/2/4 4/1/4 8/4/4
-f 1/2/4 8/4/4 5/3/4
+f 1/2/4 4/1/4 8/4/4 5/3/4
 
 # Top (y = 1) -> normal 5
-f 5/1/5 8/2/5 7/3/5
-f 5/1/5 7/3/5 6/4/5
+f 5/1/5 8/2/5 7/3/5 6/4/5
 
 # Bottom (y = 0) -> normal 6
-f 1/1/6 2/2/6 3/3/6
-f 1/1/6 3/3/6 4/4/6)";
+f 1/1/6 2/2/6 3/3/6 4/4/6)";
 
 public:
 	explicit FullBlock(const Configuration &p_configuration) :
@@ -491,7 +485,8 @@ struct SlopeBlock : public Block
 public:
 	struct Configuration
 	{
-		spk::SpriteSheet::Sprite triangles;
+		spk::SpriteSheet::Sprite triangleLeft;
+		spk::SpriteSheet::Sprite triangleRight;
 		spk::SpriteSheet::Sprite back;
 		spk::SpriteSheet::Sprite ramp;
 		spk::SpriteSheet::Sprite bottom;
@@ -516,10 +511,10 @@ v 0.0 0.0 1.0
 v 0.0 1.0 1.0
 v 1.0 1.0 1.0
 
-vt 0.0 0.0   # 1
-vt 1.0 0.0   # 2
-vt 0.0 1.0   # 3
-vt 1.0 1.0   # 4
+vt 1.0 1.0   # 1
+vt 0.0 1.0   # 2
+vt 0.0 0.0   # 3
+vt 1.0 0.0   # 4
 
 vn  0.0 -1.0  0.0
 vn  0.0  0.0  1.0
@@ -527,11 +522,11 @@ vn -1.0  0.0  0.0
 vn  1.0  0.0  0.0
 vn  0.0  0.70710678 -0.70710678
 
-f 1/1/1 2/2/1 3/4/1 4/3/1
-f 4/1/2 3/2/2 6/4/2 5/3/2
+f 1/2/1 2/1/1 3/4/1 4/3/1
+f 4/2/2 3/1/2 6/4/2 5/3/2
 f 1/1/3 4/2/3 5/3/3
 f 2/1/4 6/3/4 3/2/4
-f 1/1/5 5/3/5 6/4/5 2/2/5)";
+f 1/2/5 5/3/5 6/4/5 2/1/5)";
 
 public:
 	explicit SlopeBlock(const Configuration &p_configuration) :
@@ -541,8 +536,8 @@ public:
 
 		_applySprite(_objMesh.shapes()[0], _configuration.bottom);
 		_applySprite(_objMesh.shapes()[1], _configuration.back);
-		_applySprite(_objMesh.shapes()[2], _configuration.triangles);
-		_applySprite(_objMesh.shapes()[3], _configuration.triangles);
+		_applySprite(_objMesh.shapes()[2], _configuration.triangleLeft);
+		_applySprite(_objMesh.shapes()[3], _configuration.triangleRight);
 		_applySprite(_objMesh.shapes()[4], _configuration.ramp);
 	}
 };
@@ -798,14 +793,14 @@ private:
 			for (size_t j = 0; j < Chunk::size.z; j++)
 			{
 				p_chunkToFill.setContent(i, 0, j, 0);
-				// if (i == 0 && j != 0)
-				// {
-				// 	p_chunkToFill.setContent(i, 1, j, 1);
-				// }
-				// if (j == 0 && i != 0)
-				// {
-				// 	p_chunkToFill.setContent(i, 1, j, 2);
-				// }
+				if (i == 1 && j != 1)
+				{
+					p_chunkToFill.setContent(i, 1, j, 1, Block::Orientation{Block::HorizontalOrientation::ZPositive, Block::VerticalOrientation::YPositive});
+				}
+				if (j == 1 && i != 1)
+				{
+					p_chunkToFill.setContent(i, 1, j, 1, Block::Orientation{Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive});
+				}
 				if (i == 0 && j == 0)
 				{
 					p_chunkToFill.setContent(i, 1, j, 0);
@@ -979,13 +974,13 @@ int main()
 	fullConfiguration.bottom = fullBlockSprite;
 	blockMap.addBlockByID(0, std::make_unique<FullBlock>(fullConfiguration));
 
-	// SlopeBlock::Configuration slopeConfiguration;
-	// slopeConfiguration.triangles = blockMapTilemap.sprite({1, 0});
-	// slopeConfiguration.back = blockMapTilemap.sprite({2, 0});
-	// slopeConfiguration.ramp = blockMapTilemap.sprite({2, 0});
-	// slopeConfiguration.bottom = blockMapTilemap.sprite({3, 0});
-	// blockMap.addBlockByID(1, std::make_unique<SlopeBlock>(slopeConfiguration));
-	// blockMap.addBlockByID(2, std::make_unique<SlopeBlock>(slopeConfiguration));
+	SlopeBlock::Configuration slopeConfiguration;
+	slopeConfiguration.triangleLeft = blockMapTilemap.sprite({1, 0});
+	slopeConfiguration.triangleRight = blockMapTilemap.sprite({1, 0});
+	slopeConfiguration.back = blockMapTilemap.sprite({2, 0});
+	slopeConfiguration.ramp = blockMapTilemap.sprite({2, 0});
+	slopeConfiguration.bottom = blockMapTilemap.sprite({3, 0});
+	blockMap.addBlockByID(1, std::make_unique<SlopeBlock>(slopeConfiguration));
 
 	blockMap.setChunkRange({-3, 0, -3}, {3, 0, 3});
 
