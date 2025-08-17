@@ -201,10 +201,15 @@ namespace spk
 			_needBake = false;
 		}
 
-		const std::vector<Shape> &shapes() const
-		{
-			return _shapes;
-		}
+               const std::vector<Shape> &shapes() const
+               {
+                       return _shapes;
+               }
+
+               std::vector<Shape> &shapes()
+               {
+                       return _shapes;
+               }
 
 		auto begin() const
 		{
