@@ -67,34 +67,28 @@ private:
 		bool full = false;
 	};
 
-	class Cache
-	{
-	public:
-		struct Entry;
+       class Cache
+       {
+       public:
+               struct Entry;
 
-		static bool hasCase(const Type &p_type, const Orientation &p_orientation)
-		{
-			auto itType = cache.find(p_type);
-			if (itType == cache.end())
-			{
-				return false;
-			}
-			return itType->second.contains(p_orientation);
-		}
+               bool hasCase(const Orientation &p_orientation) const
+               {
+                       return _cache.contains(p_orientation);
+               }
 
-		static void addCase(const Type &p_type, const Orientation &p_orientation, const spk::ObjMesh &p_mesh)
-		{
-			auto &typeCache = cache[p_type];
-			if (typeCache.contains(p_orientation) == false)
-			{
-				typeCache.emplace(p_orientation, _compute(p_mesh, p_orientation));
-			}
-		}
+               void addCase(const Orientation &p_orientation, const spk::ObjMesh &p_mesh)
+               {
+                       if (_cache.contains(p_orientation) == false)
+                       {
+                               _cache.emplace(p_orientation, _compute(p_mesh, p_orientation));
+                       }
+               }
 
-		static const Entry &getCase(const Type &p_type, const Orientation &p_orientation)
-		{
-			return cache[p_type].at(p_orientation);
-		}
+               const Entry &getCase(const Orientation &p_orientation) const
+               {
+                       return _cache.at(p_orientation);
+               }
 
 		struct Entry
 		{
@@ -137,8 +131,8 @@ private:
 			}
 		};
 
-	private:
-		static spk::Vector3 _applyOrientation(const spk::Vector3 &p_position, const Orientation &p_orientation)
+       private:
+               static spk::Vector3 _applyOrientation(const spk::Vector3 &p_position, const Orientation &p_orientation)
 		{
 			spk::Vector3 result = p_position - spk::Vector3(0.5f, 0.5f, 0.5f);
 			spk::Vector3 rotation(0, 0, 0);
@@ -168,7 +162,7 @@ private:
 			return (result + spk::Vector3(0.5f, 0.5f, 0.5f));
 		}
 
-		static Entry _compute(const spk::ObjMesh &p_mesh, const Orientation &p_orientation)
+               static Entry _compute(const spk::ObjMesh &p_mesh, const Orientation &p_orientation)
 		{
 			Entry result;
 			for (const auto &shape : p_mesh.shapes())
@@ -309,10 +303,10 @@ private:
 			return result;
 		}
 
-		static inline std::map<Type, std::map<Orientation, Entry>> cache;
-	};
+               std::map<Orientation, Entry> _cache;
+       };
 
-	friend class Cache;
+       mutable Cache _cache;
 
 public:
 	virtual ~Block() = default;
@@ -322,11 +316,11 @@ public:
 			  const spk::Vector3 &p_position,
 			  const Orientation &p_orientation) const
 	{
-		if (Cache::hasCase(_type(), p_orientation) == false)
-		{
-			Cache::addCase(_type(), p_orientation, _mesh());
-		}
-		const Cache::Entry &data = Cache::getCase(_type(), p_orientation);
+               if (_cache.hasCase(p_orientation) == false)
+               {
+                       _cache.addCase(p_orientation, _mesh());
+               }
+               const Cache::Entry &data = _cache.getCase(p_orientation);
 
 		static const std::array<int, 6> opposite = {1, 0, 4, 5, 2, 3};
 
@@ -336,16 +330,16 @@ public:
 			neighFaces[i] = nullptr;
 			if (p_neightbourDescriber[i].first != nullptr)
 			{
-				const Block *neigh = p_neightbourDescriber[i].first;
-				const Orientation &neighOrientation = p_neightbourDescriber[i].second;
-				if (Cache::hasCase(neigh->_type(), neighOrientation) == false)
-				{
-					Cache::addCase(neigh->_type(), neighOrientation, neigh->_mesh());
-				}
-				const Cache::Entry &neighData = Cache::getCase(neigh->_type(), neighOrientation);
-				neighFaces[i] = &neighData.faces[opposite[i]];
-			}
-		}
+                               const Block *neigh = p_neightbourDescriber[i].first;
+                               const Orientation &neighOrientation = p_neightbourDescriber[i].second;
+                               if (neigh->_cache.hasCase(neighOrientation) == false)
+                               {
+                                       neigh->_cache.addCase(neighOrientation, neigh->_mesh());
+                               }
+                               const Cache::Entry &neighData = neigh->_cache.getCase(neighOrientation);
+                               neighFaces[i] = &neighData.faces[opposite[i]];
+                       }
+               }
 
 		bool fullyOccluded = true;
 		for (size_t i = 0; i < 6; ++i)
@@ -447,10 +441,71 @@ f 3/1/6 4/3/6 1/4/6
 f 3/3/6 1/2/6 2/1/6)";
 
 public:
-        explicit FullBlock(const Configuration &p_configuration) : _configuration(p_configuration)
-        {
-                _objMesh = spk::ObjMesh::loadFromString(objMeshCode);
-        }
+       explicit FullBlock(const Configuration &p_configuration) : _configuration(p_configuration)
+       {
+               _objMesh = spk::ObjMesh::loadFromString(objMeshCode);
+
+               auto applySprite = [](spk::ObjMesh::Shape &p_shape, const spk::SpriteSheet::Sprite &p_sprite)
+               {
+                       auto transform = [&](spk::Vertex &p_v)
+                       {
+                               p_v.uv = (p_v.uv * p_sprite.size) + p_sprite.anchor;
+                       };
+                       if (std::holds_alternative<spk::ObjMesh::Triangle>(p_shape))
+                       {
+                               auto &tri = std::get<spk::ObjMesh::Triangle>(p_shape);
+                               transform(tri.a);
+                               transform(tri.b);
+                               transform(tri.c);
+                       }
+                       else
+                       {
+                               auto &quad = std::get<spk::ObjMesh::Quad>(p_shape);
+                               transform(quad.a);
+                               transform(quad.b);
+                               transform(quad.c);
+                               transform(quad.d);
+                       }
+               };
+
+               for (auto &shape : _objMesh.shapes())
+               {
+                       spk::Vector3 normal;
+                       if (std::holds_alternative<spk::ObjMesh::Triangle>(shape))
+                       {
+                               normal = std::get<spk::ObjMesh::Triangle>(shape).a.normal;
+                       }
+                       else
+                       {
+                               normal = std::get<spk::ObjMesh::Quad>(shape).a.normal;
+                       }
+
+                       if (normal == spk::Vector3(0, 0, 1))
+                       {
+                               applySprite(shape, _configuration.front);
+                       }
+                       else if (normal == spk::Vector3(0, 0, -1))
+                       {
+                               applySprite(shape, _configuration.back);
+                       }
+                       else if (normal == spk::Vector3(-1, 0, 0))
+                       {
+                               applySprite(shape, _configuration.left);
+                       }
+                       else if (normal == spk::Vector3(1, 0, 0))
+                       {
+                               applySprite(shape, _configuration.right);
+                       }
+                       else if (normal == spk::Vector3(0, 1, 0))
+                       {
+                               applySprite(shape, _configuration.top);
+                       }
+                       else if (normal == spk::Vector3(0, -1, 0))
+                       {
+                               applySprite(shape, _configuration.bottom);
+                       }
+               }
+       }
 };
 
 struct SlopeBlock : public Block
@@ -501,10 +556,63 @@ f 2/1/4 6/3/4 3/2/4
 f 1/1/5 5/3/5 6/4/5 2/2/5)";
 
 public:
-        explicit SlopeBlock(const Configuration &p_configuration) : _configuration(p_configuration)
-        {
-                _objMesh = spk::ObjMesh::loadFromString(objMeshCode);
-        }
+       explicit SlopeBlock(const Configuration &p_configuration) : _configuration(p_configuration)
+       {
+               _objMesh = spk::ObjMesh::loadFromString(objMeshCode);
+
+               auto applySprite = [](spk::ObjMesh::Shape &p_shape, const spk::SpriteSheet::Sprite &p_sprite)
+               {
+                       auto transform = [&](spk::Vertex &p_v)
+                       {
+                               p_v.uv = (p_v.uv * p_sprite.size) + p_sprite.anchor;
+                       };
+                       if (std::holds_alternative<spk::ObjMesh::Triangle>(p_shape))
+                       {
+                               auto &tri = std::get<spk::ObjMesh::Triangle>(p_shape);
+                               transform(tri.a);
+                               transform(tri.b);
+                               transform(tri.c);
+                       }
+                       else
+                       {
+                               auto &quad = std::get<spk::ObjMesh::Quad>(p_shape);
+                               transform(quad.a);
+                               transform(quad.b);
+                               transform(quad.c);
+                               transform(quad.d);
+                       }
+               };
+
+               for (auto &shape : _objMesh.shapes())
+               {
+                       spk::Vector3 normal;
+                       if (std::holds_alternative<spk::ObjMesh::Triangle>(shape))
+                       {
+                               normal = std::get<spk::ObjMesh::Triangle>(shape).a.normal;
+                       }
+                       else
+                       {
+                               normal = std::get<spk::ObjMesh::Quad>(shape).a.normal;
+                       }
+
+                       if (normal == spk::Vector3(0, -1, 0))
+                       {
+                               applySprite(shape, _configuration.bottom);
+                       }
+                       else if (normal == spk::Vector3(0, 0, 1))
+                       {
+                               applySprite(shape, _configuration.back);
+                       }
+                       else if (normal == spk::Vector3(-1, 0, 0) || normal == spk::Vector3(1, 0, 0))
+                       {
+                               applySprite(shape, _configuration.triangles);
+                       }
+                       else if (normal == spk::Vector3(0, 0.70710678f, -0.70710678f))
+                       {
+                               applySprite(shape, _configuration.ramp);
+                       }
+               }
+       }
 };
 
 template <size_t ChunkSizeX, size_t ChunkSizeY, size_t ChunkSizeZ>
