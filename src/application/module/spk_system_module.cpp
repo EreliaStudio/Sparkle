@@ -6,7 +6,7 @@
 
 namespace spk
 {
-	void SystemModule::_treatEvent(spk::SystemEvent &&p_event)
+	void SystemModule::_treatEvent(spk::SystemEvent p_event)
 	{
 		switch (p_event.type)
 		{
@@ -33,12 +33,12 @@ namespace spk
 		}
 		case spk::SystemEvent::Type::TakeFocus:
 		{
-
+			//TODO(Hyarius): Manage focus taken
 			break;
 		}
 		case spk::SystemEvent::Type::LoseFocus:
 		{
-
+			//TODO(Hyarius): Manage focus out
 			break;
 		}
 		case spk::SystemEvent::Type::Move:
@@ -46,15 +46,15 @@ namespace spk
 			p_event.window->move(p_event.newPosition);
 			break;
 		}
+		default:
+		{
+			GENERATE_ERROR("Unknow SystemEvent type received");
+		}
 		}
 	}
 
-	spk::SystemEvent SystemModule::_convertEventToEventType(spk::Event &&p_event)
+	spk::SystemEvent SystemModule::_convertEventToEventType(spk::Event p_event)
 	{
 		return (p_event.systemEvent);
-	}
-
-	SystemModule::SystemModule()
-	{
 	}
 }

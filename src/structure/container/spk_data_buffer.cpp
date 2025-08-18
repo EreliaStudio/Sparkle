@@ -4,50 +4,9 @@
 
 namespace spk
 {
-	DataBuffer::DataBuffer() :
-		_data(),
-		_bookmark(0)
-	{
-	}
-
 	DataBuffer::DataBuffer(size_t p_dataSize) :
-		_data(p_dataSize),
-		_bookmark(0)
+		_data(p_dataSize)
 	{
-	}
-
-	DataBuffer::DataBuffer(const DataBuffer &p_other) :
-		_data(p_other._data),
-		_bookmark(p_other._bookmark)
-	{
-	}
-
-	DataBuffer &DataBuffer::operator=(const DataBuffer &p_other)
-	{
-		if (this != &p_other)
-		{
-			_data = p_other._data;
-			_bookmark = p_other._bookmark;
-		}
-		return (*this);
-	}
-
-	DataBuffer::DataBuffer(DataBuffer &&p_other) :
-		_data(std::move(p_other._data)),
-		_bookmark(p_other._bookmark)
-	{
-		p_other._bookmark = 0;
-	}
-
-	DataBuffer &DataBuffer::operator=(DataBuffer &&p_other)
-	{
-		if (this != &p_other)
-		{
-			_data = std::move(p_other._data);
-			_bookmark = p_other._bookmark;
-			p_other._bookmark = 0;
-		}
-		return (*this);
 	}
 
 	uint8_t *DataBuffer::data()

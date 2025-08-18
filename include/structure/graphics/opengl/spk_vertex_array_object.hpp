@@ -19,10 +19,10 @@ namespace spk::OpenGL
 		~VertexArrayObject();
 
 		VertexArrayObject(const VertexArrayObject &p_other);
-		VertexArrayObject(VertexArrayObject &&p_other);
+		VertexArrayObject(VertexArrayObject &&p_other) noexcept;
 
 		VertexArrayObject &operator=(const VertexArrayObject &p_other);
-		VertexArrayObject &operator=(VertexArrayObject &&p_other);
+		VertexArrayObject &operator=(VertexArrayObject &&p_other) noexcept;
 
 		void activate();
 		void deactivate();

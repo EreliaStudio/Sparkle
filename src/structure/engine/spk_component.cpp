@@ -5,6 +5,7 @@
 namespace spk
 {
 	Component::Component(const std::wstring &p_name) :
+		_priority(0),
 		_name(p_name),
 		_owner(nullptr)
 	{
@@ -14,10 +15,6 @@ namespace spk
 		addDeactivationCallback([&]() {
 			sleep();
 		}).relinquish();
-	}
-
-	Component::~Component()
-	{
 	}
 
 	void Component::setName(const std::wstring &p_name)
@@ -49,7 +46,7 @@ namespace spk
 		return (_owner);
 	}
 
-	const spk::SafePointer<const Entity> Component::owner() const
+	const spk::SafePointer<Entity> Component::owner() const
 	{
 		return (_owner);
 	}

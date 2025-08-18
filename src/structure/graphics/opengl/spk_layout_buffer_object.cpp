@@ -65,7 +65,7 @@ namespace spk::OpenGL
 		{
 			return true;
 		}
-		else if (index > p_other.index)
+		if (index > p_other.index)
 		{
 			return false;
 		}
@@ -90,46 +90,6 @@ namespace spk::OpenGL
 	LayoutBufferObject::LayoutBufferObject(std::initializer_list<LayoutBufferObject::Attribute> p_attributes) :
 		LayoutBufferObject(std::span(p_attributes.begin(), p_attributes.end()))
 	{
-	}
-
-	LayoutBufferObject::LayoutBufferObject(const LayoutBufferObject &p_other) :
-		VertexBufferObject(p_other),
-		_attributesToApply(p_other._attributesToApply),
-		_vertexSize(p_other._vertexSize)
-	{
-	}
-
-	LayoutBufferObject &LayoutBufferObject::operator=(const LayoutBufferObject &p_other)
-	{
-		if (this != &p_other)
-		{
-			VertexBufferObject::operator=(p_other);
-			_attributesToApply = p_other._attributesToApply;
-			_vertexSize = p_other._vertexSize;
-		}
-		return *this;
-	}
-
-	LayoutBufferObject::LayoutBufferObject(LayoutBufferObject &&p_other) noexcept :
-		VertexBufferObject(std::move(p_other)),
-		_attributesToApply(std::move(p_other._attributesToApply)),
-		_vertexSize(p_other._vertexSize)
-	{
-		p_other._vertexSize = 0;
-	}
-
-	LayoutBufferObject &LayoutBufferObject::operator=(LayoutBufferObject &&p_other) noexcept
-	{
-		if (this != &p_other)
-		{
-			VertexBufferObject::operator=(std::move(p_other));
-
-			_attributesToApply = std::move(p_other._attributesToApply);
-			_vertexSize = p_other._vertexSize;
-
-			p_other._vertexSize = 0;
-		}
-		return *this;
 	}
 
 	bool LayoutBufferObject::hasAttribute(Attribute::Index p_index) const

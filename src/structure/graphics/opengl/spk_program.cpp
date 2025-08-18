@@ -145,8 +145,8 @@ namespace spk::OpenGL
 		}
 		if (_verboseMode == true)
 		{
-		std::cerr << "[GL] Version: " << (const char *)glGetString(GL_VERSION) << " | Renderer: " << (const char *)glGetString(GL_RENDERER)
-				  << " | GLSL: " << (const char *)glGetString(GL_SHADING_LANGUAGE_VERSION) << "\n";
+		std::cerr << "[GL] Version: " << reinterpret_cast<const char *>(glGetString(GL_VERSION)) << " | Renderer: " << reinterpret_cast<const char *>(glGetString(GL_RENDERER))
+				  << " | GLSL: " << reinterpret_cast<const char *>(glGetString(GL_SHADING_LANGUAGE_VERSION)) << "\n";
 		}
 
 		GLuint vertexShader = _compileShader(_vertexShaderCode, GL_VERTEX_SHADER);
@@ -277,7 +277,7 @@ namespace spk::OpenGL
 		glGetProgramiv(_programID, GL_VALIDATE_STATUS, &validationStatus);
 		GLint infoLogLength = 0;
 		glGetProgramiv(_programID, GL_INFO_LOG_LENGTH, &infoLogLength);
-		std::vector<char> infoLog((size_t)std::max(1, infoLogLength));
+		std::vector<char> infoLog(static_cast<size_t>(std::max(1, infoLogLength)));
 		if (infoLogLength > 1)
 		{
 			glGetProgramInfoLog(_programID, infoLogLength, &infoLogLength, infoLog.data());
@@ -285,7 +285,7 @@ namespace spk::OpenGL
 
 		if (_verboseMode == true)
 		{
-		std::cerr << "[Program] Validate status=" << (validationStatus ? "OK" : "FAIL") << " log:\n"
+		std::cerr << "[Program] Validate status=" << (validationStatus != 0 ? "OK" : "FAIL") << " log:\n"
 				  << (infoLogLength > 1 ? infoLog.data() : "(no log)") << "\n";
 		}
 

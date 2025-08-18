@@ -1,69 +1,70 @@
 #include "structure/engine/spk_obj_mesh.hpp"
 
+#include "spk_debug_macro.hpp"
+#include "structure/spk_iostream.hpp"
+
 #include <array>
 #include <fstream>
 #include <sstream>
 #include <unordered_map>
 #include <vector>
 
-#include "structure/spk_iostream.hpp"
-#include "spk_debug_macro.hpp"
+namespace
+{
+	spk::Vertex parseVertex(const std::string &p_token,
+							  const std::vector<spk::Vector3> &p_positions,
+							  const std::vector<spk::Vector2> &p_uvs,
+							  const std::vector<spk::Vector3> &p_normals)
+	{
+		spk::Vertex result;
+		std::array<std::string, 3> parts = {"", "", ""};
+		size_t start = 0;
+		size_t index = 0;
+		for (size_t i = 0; i <= p_token.size() && index < parts.size(); ++i)
+		{
+			if (i == p_token.size() || p_token[i] == '/')
+			{
+				parts[index] = p_token.substr(start, i - start);
+				++index;
+				start = i + 1;
+			}
+		}
+
+		int posIndex = parts[0].empty() == true ? 0 : std::stoi(parts[0]);
+		int uvIndex = parts[1].empty() == true ? 0 : std::stoi(parts[1]);
+		int normIndex = parts[2].empty() == true ? 0 : std::stoi(parts[2]);
+
+		if (posIndex > 0 && (posIndex <= static_cast<int>(p_positions.size())))
+		{
+			result.position = p_positions[posIndex - 1];
+		}
+		else
+		{
+			GENERATE_ERROR("OBJ: position index out of range: " + parts[0]);
+		}
+		if (uvIndex > 0 && uvIndex <= static_cast<int>(p_uvs.size()))
+		{
+			result.uv = p_uvs[uvIndex - 1];
+		}
+		else
+		{
+			GENERATE_ERROR("OBJ: uv index out of range: " + parts[1]);
+		}
+		if (normIndex > 0 && normIndex <= static_cast<int>(p_normals.size()))
+		{
+			result.normal = p_normals[normIndex - 1];
+		}
+		else
+		{
+			GENERATE_ERROR("OBJ: normal index out of range: " + parts[2]);
+		}
+
+		return result;
+	}
+} // namespace
 
 namespace spk
 {
-	namespace
-	{
-		static Vertex parseVertex(const std::string &p_token,
-								  const std::vector<spk::Vector3> &p_positions,
-								  const std::vector<spk::Vector2> &p_uvs,
-								  const std::vector<spk::Vector3> &p_normals)
-		{
-			Vertex result;
-			std::array<std::string, 3> parts = {"", "", ""};
-			size_t start = 0;
-			size_t index = 0;
-			for (size_t i = 0; i <= p_token.size() && index < parts.size(); ++i)
-			{
-				if (i == p_token.size() || p_token[i] == '/')
-				{
-					parts[index] = p_token.substr(start, i - start);
-					++index;
-					start = i + 1;
-				}
-			}
-
-			int posIndex = parts[0].empty() == true ? 0 : std::stoi(parts[0]);
-			int uvIndex = parts[1].empty() == true ? 0 : std::stoi(parts[1]);
-			int normIndex = parts[2].empty() == true ? 0 : std::stoi(parts[2]);
-
-			if (posIndex > 0 && posIndex <= static_cast<int>(p_positions.size()))
-			{
-				result.position = p_positions[static_cast<std::size_t>(posIndex - 1)];
-			}
-			else
-			{
-				GENERATE_ERROR("OBJ: position index out of range: " + parts[0]);
-			}
-			if (uvIndex > 0 && uvIndex <= static_cast<int>(p_uvs.size()))
-			{
-				result.uv = p_uvs[static_cast<std::size_t>(uvIndex - 1)];
-			}
-			else
-			{
-				GENERATE_ERROR("OBJ: uv index out of range: " + parts[1]);
-			}
-			if (normIndex > 0 && normIndex <= static_cast<int>(p_normals.size()))
-			{
-				result.normal = p_normals[static_cast<std::size_t>(normIndex - 1)];
-			}
-			else
-			{
-				GENERATE_ERROR("OBJ: normal index out of range: " + parts[2]);
-			}
-
-			return result;
-		}
-	} // namespace
 
 	ObjMesh ObjMesh::loadFromString(const std::string &p_input)
 	{
@@ -138,7 +139,7 @@ namespace spk
 				}
 			}
 		}
-		
+
 		return (result);
 	}
 
@@ -152,7 +153,7 @@ namespace spk
 
 		std::stringstream buffer;
 		buffer << file.rdbuf();
-		
+
 		return (loadFromString(buffer.str()));
 	}
 
@@ -267,4 +268,4 @@ namespace spk
 			file << "\n";
 		}
 	}
-}
+} // namespace spk

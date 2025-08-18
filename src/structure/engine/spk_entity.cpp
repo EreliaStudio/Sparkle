@@ -1,5 +1,18 @@
 #include "structure/engine/spk_entity.hpp"
 
+namespace
+{
+	bool matchesTags(const spk::Entity &p_entity, const std::set<std::wstring> &p_tags, spk::BinaryOperator p_op)
+	{
+		if (p_op == spk::BinaryOperator::AND)
+		{
+			return (std::all_of(p_tags.begin(), p_tags.end(), [&](const std::wstring &p_tag) { return (p_entity.containTag(p_tag)); }));
+		}
+		
+		return (std::any_of(p_tags.begin(), p_tags.end(), [&](const std::wstring &p_tag) { return (p_entity.containTag(p_tag)); }));
+	}
+}
+
 namespace spk
 {
 	Entity::Entity(const std::wstring &p_name, const spk::SafePointer<Entity> &p_owner) :
@@ -394,13 +407,13 @@ namespace spk
 	spk::SafePointer<Entity> Entity::getChildByTag(const std::wstring &p_tag)
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
-		return (getChildByTags(std::span<const std::wstring>(&p_tag, 1)));
+		return (getChildByTags(std::span<std::wstring>(&p_tag, 1)));
 	}
 
 	spk::SafePointer<const Entity> Entity::getChildByTag(const std::wstring &p_tag) const
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
-		return (getChildByTags(std::span<const std::wstring>(&p_tag, 1)));
+		return (getChildByTags(std::span<std::wstring>(&p_tag, 1)));
 	}
 
 	std::vector<spk::SafePointer<Entity>> Entity::getChildrenByTag(const std::wstring &p_tag)
@@ -425,19 +438,7 @@ namespace spk
 		return (count({p_tag}));
 	}
 
-	static bool matchesTags(const Entity &p_entity, const std::span<const std::wstring> &p_tags, spk::BinaryOperator p_op)
-	{
-		if (p_op == spk::BinaryOperator::AND)
-		{
-			return (std::all_of(p_tags.begin(), p_tags.end(), [&](const std::wstring &p_tag) { return (p_entity.containTag(p_tag)); }));
-		}
-		else
-		{
-			return (std::any_of(p_tags.begin(), p_tags.end(), [&](const std::wstring &p_tag) { return (p_entity.containTag(p_tag)); }));
-		}
-	}
-
-	spk::SafePointer<Entity> Entity::getChildByTags(const std::span<const std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator)
+	spk::SafePointer<Entity> Entity::getChildByTags(const std::span<std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator)
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
 		for (auto &child : children())
@@ -450,7 +451,7 @@ namespace spk
 		return (nullptr);
 	}
 
-	spk::SafePointer<const Entity> Entity::getChildByTags(const std::span<const std::wstring> &p_tags,
+	spk::SafePointer<const Entity> Entity::getChildByTags(const std::span<std::wstring> &p_tags,
 																  spk::BinaryOperator p_binaryOperator) const
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
@@ -464,7 +465,7 @@ namespace spk
 		return (nullptr);
 	}
 
-	std::vector<spk::SafePointer<Entity>> Entity::getChildrenByTags(const std::span<const std::wstring> &p_tags,
+	std::vector<spk::SafePointer<Entity>> Entity::getChildrenByTags(const std::span<std::wstring> &p_tags,
 																			spk::BinaryOperator p_binaryOperator)
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
@@ -480,7 +481,7 @@ namespace spk
 		return (result);
 	}
 
-	std::vector<spk::SafePointer<const Entity>> Entity::getChildrenByTags(const std::span<const std::wstring> &p_tags,
+	std::vector<spk::SafePointer<const Entity>> Entity::getChildrenByTags(const std::span<std::wstring> &p_tags,
 																				  spk::BinaryOperator p_binaryOperator) const
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
@@ -496,7 +497,7 @@ namespace spk
 		return (result);
 	}
 
-	bool Entity::containsTags(const std::span<const std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator) const
+	bool Entity::containsTags(const std::span<std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator) const
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
 		return (std::any_of(children().begin(),
@@ -504,7 +505,7 @@ namespace spk
 							[&](const spk::SafePointer<const Entity> &p_child) { return (matchesTags(*p_child, p_tags, p_binaryOperator)); }));
 	}
 
-	size_t Entity::countTags(const std::span<const std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator) const
+	size_t Entity::countTags(const std::span<std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator) const
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
 		return (std::count_if(children().begin(),

@@ -4,7 +4,7 @@
 
 namespace spk
 {
-	void UpdateModule::_treatEvent(spk::UpdateEvent &&p_event)
+	void UpdateModule::_treatEvent(spk::UpdateEvent p_event)
 	{
 		if (_lastSeconds == 0)
 		{
@@ -37,7 +37,7 @@ namespace spk
 		}
 	}
 
-	spk::UpdateEvent UpdateModule::_convertEventToEventType(spk::Event &&p_event)
+	spk::UpdateEvent UpdateModule::_convertEventToEventType(spk::Event p_event)
 	{
 		return (p_event.updateEvent);
 	}

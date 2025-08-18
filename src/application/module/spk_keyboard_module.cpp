@@ -4,7 +4,7 @@
 
 namespace spk
 {
-	void KeyboardModule::_treatEvent(spk::KeyboardEvent &&p_event)
+	void KeyboardModule::_treatEvent(spk::KeyboardEvent p_event)
 	{
 		_keyboard._window = p_event.window;
 
@@ -42,6 +42,10 @@ namespace spk
 			_keyboard._glyph = p_event.glyph;
 			break;
 		}
+		default:
+		{
+			GENERATE_ERROR("Unknow KeyboardEvent type received");
+		}
 		}
 		p_event.keyboard = &_keyboard;
 
@@ -55,13 +59,9 @@ namespace spk
 		}
 	}
 
-	spk::KeyboardEvent KeyboardModule::_convertEventToEventType(spk::Event &&p_event)
+	spk::KeyboardEvent KeyboardModule::_convertEventToEventType(spk::Event p_event)
 	{
 		return (p_event.keyboardEvent);
-	}
-
-	KeyboardModule::KeyboardModule()
-	{
 	}
 
 	const spk::Keyboard &KeyboardModule::keyboard() const

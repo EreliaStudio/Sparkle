@@ -10,11 +10,11 @@ namespace spk::OpenGL
 	void UniformBufferObject::_loadElement(const spk::JSON::Object &p_elemDesc)
 	{
 		std::wstring name = p_elemDesc[L"Name"].as<std::wstring>();
-		size_t offset = static_cast<size_t>(p_elemDesc[L"Offset"].as<long>());
+		size_t offset = static_cast<size_t>(p_elemDesc[L"Offset"].as<int32_t>());
 
 		if (p_elemDesc.contains(L"Size") == true)
 		{
-			size_t size = static_cast<size_t>(p_elemDesc[L"Size"].as<long>());
+			size_t size = static_cast<size_t>(p_elemDesc[L"Size"].as<int32_t>());
 			auto &elem = addElement(name, offset, size);
 
 			if (p_elemDesc.contains(L"NestedElements") == true)
@@ -27,9 +27,9 @@ namespace spk::OpenGL
 		}
 		else if (p_elemDesc.contains(L"NbElements") == true)
 		{
-			size_t nbElem = static_cast<size_t>(p_elemDesc[L"NbElements"].as<long>());
-			size_t elemSize = static_cast<size_t>(p_elemDesc[L"ElementSize"].as<long>());
-			size_t padding = static_cast<size_t>(p_elemDesc[L"ElementPadding"].as<long>());
+			size_t nbElem = static_cast<size_t>(p_elemDesc[L"NbElements"].as<int32_t>());
+			size_t elemSize = static_cast<size_t>(p_elemDesc[L"ElementSize"].as<int32_t>());
+			size_t padding = static_cast<size_t>(p_elemDesc[L"ElementPadding"].as<int32_t>());
 
 			auto &elemArr = addElement(name, offset, nbElem, elemSize, padding);
 
@@ -53,26 +53,26 @@ namespace spk::OpenGL
 	void UniformBufferObject::_loadElement(spk::DataBufferLayout::Element &p_parent, const spk::JSON::Object &p_elemDesc)
 	{
 		std::wstring name = p_elemDesc[L"Name"].as<std::wstring>();
-		size_t offset = p_parent.offset() + static_cast<size_t>(p_elemDesc[L"Offset"].as<long>());
+		size_t offset = p_parent.offset() + static_cast<size_t>(p_elemDesc[L"Offset"].as<int32_t>());
 
 		if (p_elemDesc.contains(L"Size") == true)
 		{
-			size_t size = static_cast<size_t>(p_elemDesc[L"Size"].as<long>());
+			size_t size = static_cast<size_t>(p_elemDesc[L"Size"].as<int32_t>());
 			auto &elem = p_parent.addElement(name, offset, size);
 
 			if (p_elemDesc.contains(L"NestedElements") == true)
 			{
-				for (auto *child : p_elemDesc[L"NestedElements"].asArray())
+				for (auto& child : p_elemDesc[L"NestedElements"].asArray())
 				{
-					_loadElement(elem, *child);
+					_loadElement(elem, child.get());
 				}
 			}
 		}
 		else if (p_elemDesc.contains(L"NbElements") == true)
 		{
-			size_t nbElem = static_cast<size_t>(p_elemDesc[L"NbElements"].as<long>());
-			size_t elemSize = static_cast<size_t>(p_elemDesc[L"ElementSize"].as<long>());
-			size_t padding = static_cast<size_t>(p_elemDesc[L"ElementPadding"].as<long>());
+			size_t nbElem = static_cast<size_t>(p_elemDesc[L"NbElements"].as<int32_t>());
+			size_t elemSize = static_cast<size_t>(p_elemDesc[L"ElementSize"].as<int32_t>());
+			size_t padding = static_cast<size_t>(p_elemDesc[L"ElementPadding"].as<int32_t>());
 
 			auto &elemArr = p_parent.addElement(name, offset, nbElem, elemSize, padding);
 
@@ -104,8 +104,8 @@ namespace spk::OpenGL
 
 	UniformBufferObject::UniformBufferObject(const spk::JSON::Object &p_desc) :
 		UniformBufferObject(p_desc[L"BlockName"].as<std::wstring>(),
-							static_cast<BindingPoint>(p_desc[L"BindingPoint"].as<long>()),
-							static_cast<size_t>(p_desc[L"Size"].as<long>()))
+							static_cast<BindingPoint>(p_desc[L"BindingPoint"].as<int32_t>()),
+							static_cast<size_t>(p_desc[L"Size"].as<int32_t>()))
 	{
 		if (p_desc.contains(L"Elements") == true)
 		{
@@ -126,10 +126,10 @@ namespace spk::OpenGL
 		_dataBufferLayout.updateRootSize();
 	}
 
-	UniformBufferObject::UniformBufferObject(UniformBufferObject &&p_other) :
+	UniformBufferObject::UniformBufferObject(UniformBufferObject &&p_other) noexcept :
 		VertexBufferObject(p_other),
-		_blockName(std::move(p_other._blockName)),
-		_bindingPoint(std::move(p_other._bindingPoint)),
+		_blockName(p_other._blockName),
+		_bindingPoint(p_other._bindingPoint),
 		_dataBufferLayout(std::move(p_other._dataBufferLayout))
 	{
 		_dataBufferLayout.setBuffer(&(dataBuffer()));
@@ -151,7 +151,7 @@ namespace spk::OpenGL
 		return (*this);
 	}
 
-	UniformBufferObject &UniformBufferObject::operator=(UniformBufferObject &&p_other)
+	UniformBufferObject &UniformBufferObject::operator=(UniformBufferObject &&p_other) noexcept
 	{
 		if (this != &p_other)
 		{
@@ -219,9 +219,9 @@ namespace spk::OpenGL
 	DataBufferLayout::Element &
 	UniformBufferObject::addElement(const std::wstring &p_name, size_t p_offset, size_t p_nbElement, size_t p_elementSize, size_t p_elementPadding)
 	{
-		if (size() <= (p_offset + p_nbElement * (p_elementSize + p_elementPadding)))
+		if (size() <= (p_offset + (p_nbElement * (p_elementSize + p_elementPadding))))
 		{
-			resize(p_offset + p_nbElement * (p_elementSize + p_elementPadding));
+			resize(p_offset + (p_nbElement * (p_elementSize + p_elementPadding)));
 		}
 		return (_dataBufferLayout.addElement(p_name, p_offset, p_nbElement, p_elementSize, p_elementPadding));
 	}

@@ -6,7 +6,7 @@
 
 namespace spk
 {
-	void PaintModule::_treatEvent(spk::PaintEvent &&p_event)
+	void PaintModule::_treatEvent(spk::PaintEvent p_event)
 	{
 		switch (p_event.type)
 		{
@@ -36,15 +36,15 @@ namespace spk
 			}
 			break;
 		}
+		default:
+		{
+			GENERATE_ERROR("Unknow PaintEvent type received");
+		}
 		}
 	}
 
-	spk::PaintEvent PaintModule::_convertEventToEventType(spk::Event &&p_event)
+	spk::PaintEvent PaintModule::_convertEventToEventType(spk::Event p_event)
 	{
 		return (p_event.paintEvent);
-	}
-
-	PaintModule::PaintModule()
-	{
 	}
 }

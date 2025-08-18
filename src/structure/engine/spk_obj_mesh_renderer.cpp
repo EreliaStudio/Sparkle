@@ -7,7 +7,7 @@
 
 namespace spk
 {
-	spk::Lumina::Shader ObjMeshRenderer::Painter::_createShader()
+	std::unique_ptr<spk::Lumina::Shader> ObjMeshRenderer::Painter::_createShader()
 	{
 		spk::Lumina::ShaderObjectFactory::instance()->add(spk::JSON::Object::fromString(
 			SPARKLE_GET_RESOURCE_AS_STRING("resources/json/mesh_renderer_shader_object.json")
@@ -59,24 +59,24 @@ void main()
 }
 )";
 
-		spk::Lumina::Shader shader(vertexShaderSrc, fragmentShaderSrc);
-		shader.addAttribute({0, spk::OpenGL::LayoutBufferObject::Attribute::Type::Vector3});
-		shader.addAttribute({1, spk::OpenGL::LayoutBufferObject::Attribute::Type::Vector2});
-		shader.addAttribute({2, spk::OpenGL::LayoutBufferObject::Attribute::Type::Vector3});
+		std::unique_ptr<spk::Lumina::Shader> shader = std::make_unique<spk::Lumina::Shader>(vertexShaderSrc, fragmentShaderSrc);
+		shader->addAttribute({0, spk::OpenGL::LayoutBufferObject::Attribute::Type::Vector3});
+		shader->addAttribute({1, spk::OpenGL::LayoutBufferObject::Attribute::Type::Vector2});
+		shader->addAttribute({2, spk::OpenGL::LayoutBufferObject::Attribute::Type::Vector3});
 
-		shader.addSampler(
+		shader->addSampler(
 				L"diffuseTexture",
 				spk::Lumina::ShaderObjectFactory::instance()->sampler(L"diffuseTexture"),
 				spk::Lumina::Shader::Mode::Constant
 			);
 
-		shader.addUBO(
+		shader->addUBO(
 				L"CameraUBO", 
 				spk::Lumina::ShaderObjectFactory::instance()->ubo(L"CameraUBO"), 
 				spk::Lumina::Shader::Mode::Constant
 			);
 
-		shader.addUBO(
+		shader->addUBO(
 				L"TransformUBO", 
 				spk::Lumina::ShaderObjectFactory::instance()->ubo(L"TransformUBO"), 
 				spk::Lumina::Shader::Mode::Attribute
@@ -85,12 +85,21 @@ void main()
 		return (shader);
 	}
 
-	spk::Lumina::Shader ObjMeshRenderer::Painter::_shader = ObjMeshRenderer::Painter::_createShader();
+	std::unique_ptr<spk::Lumina::Shader> ObjMeshRenderer::Painter::_shader = nullptr;
+
+	spk::Lumina::Shader& ObjMeshRenderer::Painter::_getShader()
+	{
+		if (_shader == nullptr)
+		{
+			_shader = _createShader();
+		}
+		return (*_shader);
+	}
 
 	ObjMeshRenderer::Painter::Painter() :
-		_object(_shader.createObject()),
+		_object(_getShader().createObject()),
 		_bufferSet(_object.bufferSet()),
-		_diffuseSampler(_shader.sampler(L"diffuseTexture")),
+		_diffuseSampler(_getShader().sampler(L"diffuseTexture")),
 		_transformUBO(_object.UBO(L"TransformUBO"))
 	{
 	}
@@ -136,8 +145,7 @@ void main()
 	}
 
 	ObjMeshRenderer::ObjMeshRenderer(const std::wstring& p_name) :
-		spk::Component(p_name),
-		_painter()
+		spk::Component(p_name)
 	{
 
 	}
@@ -169,7 +177,7 @@ void main()
 		return (_mesh);
 	}
 	
-	void ObjMeshRenderer::onPaintEvent(spk::PaintEvent &p_event)
+	void ObjMeshRenderer::onPaintEvent(spk::PaintEvent &/*p_event*/)
 	{
 		_painter.render();
 	}

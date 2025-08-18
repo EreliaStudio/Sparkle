@@ -39,7 +39,7 @@ namespace spk
 				}
 				)";
 
-			_program = new spk::OpenGL::Program(vertexShaderSrc, fragmentShaderSrc);
+			_program = std::make_unique<spk::OpenGL::Program>(vertexShaderSrc, fragmentShaderSrc);
 		}
 	}
 
@@ -83,8 +83,10 @@ namespace spk
 		spk::Vector3 bottomRight = spk::Viewport::convertScreenToOpenGL(
 			{p_geometry.anchor.x + static_cast<int32_t>(p_geometry.size.x), p_geometry.anchor.y + static_cast<int32_t>(p_geometry.size.y)}, p_layer);
 
-		_bufferSet.layout() << Vertex{{topLeft.x, bottomRight.y}, topLeft.z} << Vertex{{bottomRight.x, bottomRight.y}, topLeft.z}
-							<< Vertex{{topLeft.x, topLeft.y}, topLeft.z} << Vertex{{bottomRight.x, topLeft.y}, topLeft.z};
+		_bufferSet.layout() << ColorPainter::Vertex{.position = {topLeft.x, bottomRight.y}, .layer = topLeft.z};
+		_bufferSet.layout() << ColorPainter::Vertex{.position = {bottomRight.x, bottomRight.y}, .layer = topLeft.z};
+		_bufferSet.layout() << ColorPainter::Vertex{.position = {topLeft.x, topLeft.y}, .layer = topLeft.z};
+		_bufferSet.layout() << ColorPainter::Vertex{.position = {bottomRight.x, topLeft.y}, .layer = topLeft.z};
 
 		std::array<unsigned int, 6> indices = {0, 1, 2, 2, 1, 3};
 		for (const auto &index : indices)

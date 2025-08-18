@@ -222,15 +222,15 @@ namespace spk
 		bool containsTag(const std::wstring &p_tag) const;
 		size_t countTag(const std::wstring &p_tag) const;
 
-		spk::SafePointer<Entity> getChildByTags(const std::span<const std::wstring> &p_tags,
+		spk::SafePointer<Entity> getChildByTags(const std::span<std::wstring> &p_tags,
 													spk::BinaryOperator p_binaryOperator = spk::BinaryOperator::AND);
-		spk::SafePointer<const Entity> getChildByTags(const std::span<const std::wstring> &p_tags,
+		spk::SafePointer<const Entity> getChildByTags(const std::span<std::wstring> &p_tags,
 														  spk::BinaryOperator p_binaryOperator = spk::BinaryOperator::AND) const;
-		std::vector<spk::SafePointer<Entity>> getChildrenByTags(const std::span<const std::wstring> &p_tags,
+		std::vector<spk::SafePointer<Entity>> getChildrenByTags(const std::span<std::wstring> &p_tags,
 																	spk::BinaryOperator p_binaryOperator = spk::BinaryOperator::AND);
-		std::vector<spk::SafePointer<const Entity>> getChildrenByTags(const std::span<const std::wstring> &p_tags,
+		std::vector<spk::SafePointer<const Entity>> getChildrenByTags(const std::span<std::wstring> &p_tags,
 																		  spk::BinaryOperator p_binaryOperator = spk::BinaryOperator::AND) const;
-		bool containsTags(const std::span<const std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator = spk::BinaryOperator::AND) const;
-		size_t countTags(const std::span<const std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator = spk::BinaryOperator::AND) const;
+		bool containsTags(const std::span<std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator = spk::BinaryOperator::AND) const;
+		size_t countTags(const std::span<std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator = spk::BinaryOperator::AND) const;
 	};
 }

@@ -12,7 +12,7 @@ namespace spk
 
 	public:
 		ActivableObject();
-		virtual ~ActivableObject();
+		virtual ~ActivableObject() = default;
 
 		void activate();
 		void deactivate();

@@ -12,10 +12,10 @@ namespace spk
 		bool _isResizing;
 		spk::Geometry2D::Size newWindowSize;
 
-		void _treatEvent(spk::SystemEvent &&p_event) override;
-		spk::SystemEvent _convertEventToEventType(spk::Event &&p_event) override;
+		void _treatEvent(spk::SystemEvent p_event) override;
+		spk::SystemEvent _convertEventToEventType(spk::Event p_event) override;
 
 	public:
-		SystemModule();
+		SystemModule() = default;
 	};
 }

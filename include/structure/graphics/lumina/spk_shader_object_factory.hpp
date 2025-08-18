@@ -17,11 +17,28 @@ namespace spk::Lumina
 	private:
 		friend class spk::Singleton<ShaderObjectFactory>;
 
-		using Object = std::variant<OpenGL::UniformBufferObject, OpenGL::ShaderStorageBufferObject, OpenGL::SamplerObject>;
+		using Object = std::variant<OpenGL::UniformBufferObject,
+									OpenGL::ShaderStorageBufferObject,
+									OpenGL::SamplerObject>;
 
 		std::unordered_map<std::wstring, Object> _objects;
 
 		ShaderObjectFactory() = default;
+
+		void _addUbos(const spk::JSON::Object& ubos);
+		void _addSsbos(const spk::JSON::Object& ssbos);
+		void _addSamplers(const spk::JSON::Object& samplers);
+
+		template <typename TType>
+		bool _holds(const std::wstring& name) const
+		{
+			auto it = _objects.find(name);
+			if (it == _objects.end())
+			{
+				return false;
+			}
+			return std::holds_alternative<TType>(it->second);
+		}
 
 	public:
 		void add(const spk::JSON::Object &p_desc);

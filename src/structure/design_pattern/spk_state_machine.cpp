@@ -12,7 +12,7 @@ namespace spk
 	bool StateMachine::contains(const Step::ID &p_id) const noexcept
 	{
 		std::lock_guard<std::recursive_mutex> lock(_mutex);
-		return (_steps.find(p_id) != _steps.end());
+		return (_steps.contains(p_id));
 	}
 
 	void StateMachine::addStep(const Step::ID &p_id, std::unique_ptr<Step> &&p_step)

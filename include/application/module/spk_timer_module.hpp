@@ -11,10 +11,10 @@ namespace spk
 	private:
 		static const int UpdaterIdentifier = 1;
 
-		void _treatEvent(spk::TimerEvent &&p_event) override;
-		spk::TimerEvent _convertEventToEventType(spk::Event &&p_event) override;
+		void _treatEvent(spk::TimerEvent p_event) override;
+		spk::TimerEvent _convertEventToEventType(spk::Event p_event) override;
 
 	public:
-		TimerModule();
+		TimerModule() = default;
 	};
 }

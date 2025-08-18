@@ -20,12 +20,12 @@ namespace spk::OpenGL
 		}
 	}
 
-	VertexArrayObject::VertexArrayObject(const VertexArrayObject &p_other) :
+	VertexArrayObject::VertexArrayObject(const VertexArrayObject &/*p_other*/) :
 		_id(0)
 	{
 	}
 
-	VertexArrayObject::VertexArrayObject(VertexArrayObject &&p_other) :
+	VertexArrayObject::VertexArrayObject(VertexArrayObject &&p_other) noexcept :
 		_id(p_other._id)
 	{
 		p_other._id = 0;
@@ -40,7 +40,7 @@ namespace spk::OpenGL
 		return (*this);
 	}
 
-	VertexArrayObject &VertexArrayObject::operator=(VertexArrayObject &&p_other)
+	VertexArrayObject &VertexArrayObject::operator=(VertexArrayObject &&p_other) noexcept
 	{
 		if (this != &p_other)
 		{

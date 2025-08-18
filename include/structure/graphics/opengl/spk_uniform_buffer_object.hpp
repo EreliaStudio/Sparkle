@@ -43,10 +43,10 @@ namespace spk::OpenGL
 		UniformBufferObject(const spk::JSON::Object &p_desc);
 
 		UniformBufferObject(const UniformBufferObject &p_other);
-		UniformBufferObject(UniformBufferObject &&p_other);
+		UniformBufferObject(UniformBufferObject &&p_other) noexcept;
 
 		UniformBufferObject &operator=(const UniformBufferObject &p_other);
-		UniformBufferObject &operator=(UniformBufferObject &&p_other);
+		UniformBufferObject &operator=(UniformBufferObject &&p_other) noexcept;
 
 		void activate();
 

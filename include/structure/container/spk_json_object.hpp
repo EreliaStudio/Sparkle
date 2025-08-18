@@ -1,18 +1,18 @@
 #pragma once
 
+#include "spk_sfinae.hpp"
+#include "structure/system/spk_exception.hpp"
+#include "utils/spk_string_utils.hpp"
+
 #include <algorithm>
 #include <any>
 #include <cstdint>
 #include <iomanip>
 #include <iostream>
 #include <map>
+#include <memory>
 #include <variant>
 #include <vector>
-
-#include "spk_sfinae.hpp"
-#include "utils/spk_string_utils.hpp"
-
-#include "structure/system/spk_exception.hpp"
 
 namespace spk
 {
@@ -20,11 +20,11 @@ namespace spk
 	{
 		class Object
 		{
-		public:
-			using Unit = std::variant<bool, long, double, std::wstring, Object *, std::nullptr_t>;
-			using ContentType = std::variant<Unit, std::map<std::wstring, Object *>, std::vector<Object *>>;
+		  public:
+			using Unit = std::variant<bool, int32_t, double, std::wstring, std::unique_ptr<Object>, std::nullptr_t>;
+			using ContentType = std::variant<Unit, std::map<std::wstring, std::unique_ptr<Object>>, std::vector<std::unique_ptr<Object>>>;
 
-		private:
+		  private:
 			bool _initialized;
 			std::wstring _name;
 			ContentType _content;
@@ -35,7 +35,7 @@ namespace spk
 			void printObject(std::wostream &p_os) const;
 			void printArray(std::wostream &p_os) const;
 
-		public:
+		  public:
 			Object(const std::wstring &p_name = L"Unnamed");
 
 			static Object fromString(const std::wstring &p_content);
@@ -50,7 +50,7 @@ namespace spk
 
 			Object &addAttribute(const std::wstring &p_key);
 
-			const std::map<std::wstring, Object *> &members() const;
+			const std::map<std::wstring, std::unique_ptr<Object>> &members() const;
 
 			bool contains(const std::wstring &p_key) const;
 
@@ -60,7 +60,7 @@ namespace spk
 
 			void setAsObject();
 
-			const std::vector<Object *> &asArray() const;
+			const std::vector<std::unique_ptr<Object>> &asArray() const;
 
 			void resize(size_t p_size);
 
@@ -89,7 +89,7 @@ namespace spk
 			}
 
 			template <typename TType,
-					  std::enable_if_t<!std::is_same_v<std::decay_t<TType>, Object> && !spk::IsJSONable<std::decay_t<TType>>::value, int> = 0>
+				std::enable_if_t<!std::is_same_v<std::decay_t<TType>, Object> && !spk::IsJSONable<std::decay_t<TType>>::value, int> = 0>
 			void set(const TType &p_value)
 			{
 				if (_initialized == false)
@@ -103,15 +103,15 @@ namespace spk
 			template <typename TType, std::enable_if_t<std::is_same_v<std::decay_t<TType>, Object>, int> = 0>
 			void set(const TType &p_value)
 			{
-				Object *tmp = new Object(p_value);
-				set<Object *>(tmp);
+				std::unique_ptr<Object> tmp = std::make_unique<Object>(p_value);
+				set<std::unique_ptr<Object>>(tmp);
 			}
 
 			template <typename TType, std::enable_if_t<spk::IsJSONable<std::decay_t<TType>>::value, int> = 0>
 			void set(const TType &p_value)
 			{
-				Object *nested = new Object(p_value.toJSON());
-				set<Object *>(nested);
+				std::unique_ptr<Object> nested = std::make_unique<Object>(p_value.toJSON());
+				set<std::unique_ptr<Object>>(nested);
 			}
 
 			template <typename TType, std::enable_if_t<!spk::IsJSONable<std::decay_t<TType>>::value, int> = 0>
@@ -140,7 +140,7 @@ namespace spk
 				const TType *value = std::get_if<TType>(&unit);
 				if (value == nullptr)
 				{
-					std::string types[] = {"bool", "long", "double", "std::wstring", "Object*", "std::nullptr_t"};
+					std::string types[] = {"bool", "int32_t", "double", "std::wstring", "Object*", "std::nullptr_t"};
 					GENERATE_ERROR("Wrong type request for object [" + spk::StringUtils::wstringToString(_name) + "] : wanted [" +
 								   types[Unit(TType()).index()] + "] but stored [" + types[unit.index()] + "]");
 				}
@@ -155,10 +155,9 @@ namespace spk
 				if (isUnit())
 				{
 					const Unit &unit = std::get<Unit>(_content);
-					const Object *const *ptr = std::get_if<Object *>(&unit);
-					if (ptr != nullptr)
+					if (const auto *ptr = std::get_if<std::unique_ptr<Object>>(&unit)) // note the &
 					{
-						src = *ptr;
+						src = ptr->get(); // ptr is a pointer to the unique_ptr<Object>
 					}
 				}
 				else if (isObject())
@@ -172,7 +171,7 @@ namespace spk
 								   "] to native type -> no JSON object found.");
 				}
 
-				TType result;
+				TType result{};
 				result.fromJSON(*src);
 				return result;
 			}
@@ -180,5 +179,5 @@ namespace spk
 			friend std::wostream &operator<<(std::wostream &p_os, const Object &p_object);
 			friend std::ostream &operator<<(std::ostream &p_os, const Object &p_object);
 		};
-	}
-}
+	} // namespace JSON
+} // namespace spk

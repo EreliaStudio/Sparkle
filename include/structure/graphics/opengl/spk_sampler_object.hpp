@@ -42,8 +42,8 @@ namespace spk::OpenGL
 		SamplerObject(const std::string &p_name, Type p_type, BindingPoint p_bindingPoint);
 		SamplerObject(const spk::JSON::Object &p_desc);
 
-		SamplerObject(const SamplerObject &p_other);
-		SamplerObject &operator=(const SamplerObject &p_other);
+		SamplerObject(const SamplerObject &p_other) = default;
+		SamplerObject &operator=(const SamplerObject &p_other) = default;
 		SamplerObject(SamplerObject &&p_other) noexcept;
 		SamplerObject &operator=(SamplerObject &&p_other) noexcept;
 

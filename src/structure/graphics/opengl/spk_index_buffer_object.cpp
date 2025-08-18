@@ -49,7 +49,7 @@ namespace spk::OpenGL
 		size_t elementCount = totalSize / sizeof(unsigned int);
 		std::vector<unsigned int> result(elementCount);
 
-		glGetBufferSubData(GL_ARRAY_BUFFER, 0, totalSize, result.data());
+		glGetBufferSubData(GL_ARRAY_BUFFER, 0, static_cast<GLsizeiptr>(totalSize), result.data());
 
 		return result;
 	}

@@ -14,7 +14,7 @@ namespace spk
 		spk::UpdateModule _updateModule;
 		HWND _windowHandle;
 
-		HWND createBackgroundHandle(const std::wstring &p_title);
+		static HWND createBackgroundHandle(const std::wstring &p_title);
 
 	public:
 		ConsoleApplication(const std::wstring &p_title);

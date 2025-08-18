@@ -6,11 +6,7 @@ namespace spk
 		StatefulObject<bool>(false)
 	{
 	}
-
-	ActivableObject::~ActivableObject()
-	{
-	}
-
+	
 	void ActivableObject::activate()
 	{
 		StatefulObject<bool>::setState(true);

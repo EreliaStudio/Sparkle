@@ -35,7 +35,7 @@ namespace spk
 			size_t _size = 0;
 
 		public:
-			Element();
+			Element() = default;
 			Element(const std::wstring &p_name, DataBuffer *p_buffer, size_t p_offset, size_t p_size);
 
 			DataBuffer *buffer() const;
@@ -209,11 +209,12 @@ namespace spk
 	public:
 		DataBufferLayout(DataBuffer *p_buffer = nullptr);
 		DataBufferLayout(const std::wstring &p_name, DataBuffer *p_buffer = nullptr);
-		DataBufferLayout(const DataBufferLayout &p_other);
-		DataBufferLayout(DataBufferLayout &&p_other);
+		
+		DataBufferLayout(const DataBufferLayout &p_other) = default;
+		DataBufferLayout(DataBufferLayout &&p_other) = default;
 
-		DataBufferLayout &operator=(const DataBufferLayout &p_other);
-		DataBufferLayout &operator=(DataBufferLayout &&p_other);
+		DataBufferLayout &operator=(const DataBufferLayout &p_other) = default;
+		DataBufferLayout &operator=(DataBufferLayout &&p_other) = default;
 
 		void setBuffer(DataBuffer *p_buffer);
 		void updateRootSize();

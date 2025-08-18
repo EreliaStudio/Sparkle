@@ -6,10 +6,7 @@
 namespace spk::OpenGL
 {
 	SamplerObject::SamplerObject() :
-		_designator(""),
-		_bindingPoint(-1),
 		_texture(nullptr),
-		_uniformDestination(-1),
 		_type(Type::Texture2D)
 	{
 	}
@@ -18,7 +15,6 @@ namespace spk::OpenGL
 		_designator(p_name),
 		_bindingPoint(static_cast<GLint>(p_bindingPoint)),
 		_texture(nullptr),
-		_uniformDestination(-1),
 		_type(p_type)
 	{
 	}
@@ -33,40 +29,18 @@ namespace spk::OpenGL
 				{
 					return Type::Texture1D;
 				}
-				else if (typeStr == L"Texture3D")
+				if (typeStr == L"Texture3D")
 				{
 					return Type::Texture3D;
 				}
-				else if (typeStr == L"TextureCubeMap")
+				if (typeStr == L"TextureCubeMap")
 				{
 					return Type::TextureCubeMap;
 				}
 				return Type::Texture2D;
 			}(),
-			static_cast<BindingPoint>(p_desc[L"BindingPoint"].as<long>()))
+			static_cast<BindingPoint>(p_desc[L"BindingPoint"].as<int32_t>()))
 	{
-	}
-
-	SamplerObject::SamplerObject(const SamplerObject &p_other) :
-		_designator(p_other._designator),
-		_bindingPoint(p_other._bindingPoint),
-		_texture(p_other._texture),
-		_type(p_other._type),
-		_uniformDestination(p_other._uniformDestination)
-	{
-	}
-
-	SamplerObject &SamplerObject::operator=(const SamplerObject &p_other)
-	{
-		if (this != &p_other)
-		{
-			_designator = p_other._designator;
-			_bindingPoint = p_other._bindingPoint;
-			_texture = p_other._texture;
-			_type = p_other._type;
-			_uniformDestination = p_other._uniformDestination;
-		}
-		return *this;
 	}
 
 	SamplerObject::SamplerObject(SamplerObject &&p_other) noexcept :

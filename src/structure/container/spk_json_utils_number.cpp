@@ -1,0 +1,146 @@
+#include "structure/container/spk_json_file.hpp"
+#include "structure/system/spk_exception.hpp"
+#include "utils/spk_string_utils.hpp"
+
+#include <algorithm>
+#include <cwctype>
+#include <fstream>
+
+namespace spk::JSON::utils
+{
+	bool isNumberMalformatted(bool p_isNegative, const size_t &p_decimalPos, const size_t &p_exponentPos, const std::wstring &p_unitSubString)
+	{
+		return (p_exponentPos == p_unitSubString.size() - 1 || (p_isNegative == true && p_unitSubString.size() == 1) ||
+				(p_isNegative == true && p_unitSubString.size() > 1 && ::isdigit(p_unitSubString[1]) == 0) ||
+				p_decimalPos == p_unitSubString.size() - 1 ||
+				(p_decimalPos != std::wstring::npos && ::isdigit(p_unitSubString[p_decimalPos + 1]) == 0) ||
+				(p_decimalPos != std::wstring::npos && p_exponentPos != std::wstring::npos && p_decimalPos > p_exponentPos) ||
+				(p_unitSubString[static_cast<size_t>(p_isNegative)] == L'0' && p_unitSubString.size() > static_cast<size_t>(p_isNegative) + 1u &&
+					std::wstring(L".eE").find(p_unitSubString[static_cast<size_t>(p_isNegative) + 1]) == std::wstring::npos) ||
+				std::count(p_unitSubString.begin(), p_unitSubString.end(), L'.') > 1);
+	}
+
+	int32_t extractExponent(const std::wstring &p_exponentSubstring)
+	{
+		bool isExponentSigned(p_exponentSubstring[0] == L'-' || p_exponentSubstring[0] == L'+');
+		int32_t result(0);
+
+		if (p_exponentSubstring.find_first_not_of(L"0123456789", isExponentSigned) != std::wstring::npos)
+		{
+			GENERATE_ERROR("Invalid numbers JSON exponent value: " + spk::StringUtils::wstringToString(p_exponentSubstring));
+		}
+		try
+		{
+			result = std::stol(p_exponentSubstring);
+		}
+		catch (const std::exception &)
+		{
+			GENERATE_ERROR("Invalid numbers JSON value: " + spk::StringUtils::wstringToString(p_exponentSubstring) +
+							" too big (number overflow)");
+		}
+		return (result);
+	}
+
+	template <typename NumericType>
+	unsigned short numberLength(NumericType p_number, unsigned short p_base = 10)
+	{
+		unsigned short result(1);
+
+		if (p_base == 0)
+		{
+			GENERATE_ERROR("numberLength: Base cannot be 0");
+		}
+		if (p_number < 0)
+		{
+			++result;
+			p_number = -p_number;
+		}
+		while (p_number >= p_base)
+		{
+			p_number /= p_base;
+			++result;
+		}
+		return (result);
+	}
+
+	bool resultWillBeDouble(const size_t &p_decimalPos, bool p_hasExponent, const size_t &p_exponentPos, bool p_isNegative, const int32_t &p_exponent)
+	{
+		if (p_decimalPos == std::wstring::npos && p_exponentPos == false)
+		{
+			return false;
+		}
+		return (p_decimalPos != std::wstring::npos || (p_hasExponent == true && p_exponent > numberLength(std::numeric_limits<int32_t>::max()) ||
+															p_exponentPos - p_isNegative > numberLength(std::numeric_limits<int32_t>::max()) ||
+															p_exponentPos - p_isNegative + p_exponent <= 0));
+	}
+
+	int32_t safePowerOfTen(const int32_t &p_number, const int32_t &p_exponent, const std::wstring &p_unitSubString)
+	{
+		int32_t result(0);
+		errno = 0;
+		std::feclearexcept(FE_ALL_EXCEPT);
+
+		result = static_cast<int32_t>(p_number * std::pow(10, p_exponent));
+
+		if (errno == EDOM || errno == ERANGE || std::fetestexcept(FE_ALL_EXCEPT ^ FE_INEXACT) != 0)
+		{
+			GENERATE_ERROR("Invalid numbers JSON value: " + spk::StringUtils::wstringToString(p_unitSubString) + " too big (power overflow)");
+		}
+
+		return (result);
+	}
+
+	void loadUnitNumbers(spk::JSON::Object &p_objectToFill, const std::wstring &p_unitSubString)
+	{
+		std::variant<int32_t, double> result;
+
+		bool isNegative(p_unitSubString[0] == L'-');
+
+		size_t exponentPos(p_unitSubString.find_first_of(L"eE"));
+		int32_t exponent(0);
+
+		size_t decimalPos(p_unitSubString.find_last_of(L'.'));
+
+		if (isNumberMalformatted(isNegative, decimalPos, exponentPos, p_unitSubString) == true)
+		{
+			GENERATE_ERROR("Malformatted JSON number: " + spk::StringUtils::wstringToString(p_unitSubString));
+		}
+
+		exponentPos = (exponentPos == std::wstring::npos) ? p_unitSubString.size() : exponentPos;
+
+		if (p_unitSubString.substr(isNegative, exponentPos - static_cast<int>(isNegative)).find_first_not_of(L".0123456789") != std::wstring::npos)
+		{
+			GENERATE_ERROR("JSON number value is not Numerical: " + spk::StringUtils::wstringToString(p_unitSubString));
+		}
+
+		if (exponentPos != p_unitSubString.size())
+		{
+			exponent = extractExponent(p_unitSubString.substr(exponentPos + 1));
+		}
+
+		try
+		{
+			(resultWillBeDouble(decimalPos, p_unitSubString.size() != exponentPos, exponentPos, isNegative, exponent) == true)
+				? result = std::stod(p_unitSubString)
+				: result = std::stol(p_unitSubString);
+		}
+		catch (const std::exception &)
+		{
+			GENERATE_ERROR("Invalid numbers JSON value: " + spk::StringUtils::wstringToString(p_unitSubString) + " too big (number overflow)");
+		}
+
+		if (exponentPos != p_unitSubString.size() && std::holds_alternative<int32_t>(result) == true)
+		{
+			result = safePowerOfTen(std::get<int32_t>(result), exponent, p_unitSubString);
+		}
+
+		if (std::holds_alternative<double>(result) == true)
+		{
+			p_objectToFill.set(std::get<double>(result));
+		}
+		else
+		{
+			p_objectToFill.set(std::get<int32_t>(result));
+		}
+	}
+}

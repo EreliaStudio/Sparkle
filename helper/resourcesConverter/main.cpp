@@ -2,16 +2,10 @@
 #include <fstream>
 #include <vector>
 #include <string>
-#include <unordered_map>
 #include <iomanip>
-#include <filesystem>  // Requires C++17 or later
 
 int main(int argc, char** argv)
 {
-    // We expect at least 4 arguments:
-    //   1) outputHeader.hpp
-    //   2) baseDirectory
-    //   3+) resource files...
     if (argc < 4) {
         std::cerr << "Usage: " << argv[0] 
                   << " <outputHeader.hpp> <baseDirectory> <file1> [file2] ...\n";
@@ -21,20 +15,17 @@ int main(int argc, char** argv)
     const std::string outputHeader = argv[1];
     const std::string baseDirectory = argv[2];
 
-    // Gather resource files
     std::vector<std::string> inputFiles;
     for (int i = 3; i < argc; ++i) {
-        inputFiles.push_back(argv[i]);
+        inputFiles.emplace_back(argv[i]);
     }
 
-    // Open the output .hpp
     std::ofstream out(outputHeader);
     if (!out.is_open()) {
         std::cerr << "Error: could not open output file: " << outputHeader << "\n";
         return 1;
     }
 
-    // Write the header prologue
     out << "#pragma once\n";
     out << "#include <string>\n";
     out << "#include <vector>\n";
@@ -48,12 +39,10 @@ int main(int argc, char** argv)
 
     out << "static const std::unordered_map<std::string, std::vector<unsigned char>> sparkle_resources = {\n";
 
-    // For each file, read in binary and embed it
     for (size_t idx = 0; idx < inputFiles.size(); ++idx) {
 		const auto& keyName = inputFiles[idx];
         const auto& filePath = baseDirectory + "/" + keyName;
 
-        // Open the file in binary mode
         std::ifstream in(filePath, std::ios::binary | std::ios::ate);
         if (!in) {
             std::cerr << "Error: cannot open " << filePath << "\n";
@@ -70,10 +59,8 @@ int main(int argc, char** argv)
         }
         in.close();
 
-        // This relPath.string() is what we'll store as the key.
         out << "    { \"" << keyName << "\", {\n        ";
 
-        // Dump the file data as hex, 16 bytes per line
         for (size_t i = 0; i < buffer.size(); ++i) {
             out << "0x" << std::hex << std::setw(2) << std::setfill('0')
                 << static_cast<int>(buffer[i]) << ", ";

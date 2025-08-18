@@ -4,15 +4,6 @@
 
 namespace spk
 {
-	DataBufferLayout::Element::Element() :
-		_name(),
-		_buffer(nullptr),
-		_offset(0),
-		_size(0),
-		_content(Unit())
-	{
-	}
-
 	DataBufferLayout::Element::Element(const std::wstring &p_name, DataBuffer *p_buffer, size_t p_offset, size_t p_size) :
 		_name(p_name),
 		_buffer(p_buffer),
@@ -48,7 +39,7 @@ namespace spk
 	{
 		_buffer = p_buffer;
 
-		if (isArray())
+		if (isArray() == true)
 		{
 			auto &tmpArray = std::get<Array>(_content);
 
@@ -57,7 +48,7 @@ namespace spk
 				element.setBuffer(p_buffer);
 			}
 		}
-		else if (isStructure())
+		else if (isStructure() == true)
 		{
 			auto &tmpStructure = std::get<Structure>(_content);
 			for (auto &[key, element] : tmpStructure)
@@ -84,12 +75,12 @@ namespace spk
 
 	bool DataBufferLayout::Element::contains(const std::wstring &p_name)
 	{
-		if (isArray())
+		if (isArray() == true)
 		{
 			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Can't check for presence of element by name in array");
 		}
 
-		if (isUnit())
+		if (isUnit() == true)
 		{
 			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Can't check for presence of element by name in unit");
 		}
@@ -100,7 +91,7 @@ namespace spk
 
 	size_t DataBufferLayout::Element::nbElement()
 	{
-		if (!isArray())
+		if (isArray() == false)
 		{
 			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Can't check for element array size on non-array element");
 		}
@@ -110,7 +101,7 @@ namespace spk
 
 	void DataBufferLayout::Element::resize(size_t p_nbElement, size_t p_elementSize, size_t p_elementPadding)
 	{
-		if (!isArray())
+		if (isArray() == false)
 		{
 			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Can't resize a non-array element");
 		}
@@ -133,7 +124,7 @@ namespace spk
 
 		for (size_t i = 0; i < p_nbElement; ++i)
 		{
-			size_t childOffset = _offset + i * (p_elementSize + p_elementPadding);
+			size_t childOffset = _offset + (i * (p_elementSize + p_elementPadding));
 			newArray[i] = Element(_name + L"[" + std::to_wstring(i) + L"]", _buffer, childOffset, p_elementSize);
 		}
 
@@ -143,17 +134,17 @@ namespace spk
 
 	DataBufferLayout::Element &DataBufferLayout::Element::addElement(const std::wstring &p_name, size_t p_offset, size_t p_size)
 	{
-		if (isArray())
+		if (isArray() == true)
 		{
 			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Can't assign a field to an array");
 		}
 
-		if (isUnit())
+		if (isUnit() == true)
 		{
 			_content = Structure();
 		}
 
-		if (contains(p_name))
+		if (contains(p_name) == true)
 		{
 			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Element [" + spk::StringUtils::wstringToString(p_name) +
 						   "] already contained in structure");
@@ -180,7 +171,7 @@ namespace spk
 	DataBufferLayout::Element &DataBufferLayout::Element::addElement(
 		const std::wstring &p_name, size_t p_offset, size_t p_nbElement, size_t p_elementSize, size_t p_elementPadding)
 	{
-		if (isArray())
+		if (isArray() == true)
 		{
 			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Can't assign a field to an array");
 		}
@@ -192,7 +183,7 @@ namespace spk
 
 		for (size_t i = 0; i < p_nbElement; ++i)
 		{
-			size_t childOffset = p_offset + i * (p_elementSize + p_elementPadding);
+			size_t childOffset = p_offset + (i * (p_elementSize + p_elementPadding));
 			newArray[i] = Element(_name + L"[" + std::to_wstring(i) + L"]", _buffer, childOffset, p_elementSize);
 		}
 
@@ -202,12 +193,12 @@ namespace spk
 
 	void DataBufferLayout::Element::removeElement(const std::wstring &p_name)
 	{
-		if (isArray())
+		if (isArray() == true)
 		{
 			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Can't remove a field from an array");
 		}
 
-		if (!contains(p_name))
+		if (contains(p_name) == false)
 		{
 			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Element [" + spk::StringUtils::wstringToString(p_name) +
 						   "] not contained in structure");
@@ -219,7 +210,7 @@ namespace spk
 
 	DataBufferLayout::Element &DataBufferLayout::Element::operator[](size_t p_index)
 	{
-		if (!isArray())
+		if (isArray() == false)
 		{
 			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - This element is not an array.");
 		}
@@ -235,7 +226,7 @@ namespace spk
 
 	const DataBufferLayout::Element &DataBufferLayout::Element::operator[](size_t p_index) const
 	{
-		if (!isArray())
+		if (isArray() == false)
 		{
 			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - This element is not an array.");
 		}
@@ -251,7 +242,7 @@ namespace spk
 
 	DataBufferLayout::Element &DataBufferLayout::Element::operator[](const std::wstring &p_key)
 	{
-		if (!isStructure())
+		if (isStructure() == false)
 		{
 			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - This element is not a map/struct.");
 		}
@@ -268,7 +259,7 @@ namespace spk
 
 	const DataBufferLayout::Element &DataBufferLayout::Element::operator[](const std::wstring &p_key) const
 	{
-		if (!isStructure())
+		if (isStructure() == false)
 		{
 			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - This element is not a structure.");
 		}
@@ -294,49 +285,21 @@ namespace spk
 	}
 
 	DataBufferLayout::DataBufferLayout(DataBuffer *p_buffer) :
-		_root(L"Root", nullptr, 0, (p_buffer ? p_buffer->size() : 0))
+		_root(L"Root", nullptr, 0, (p_buffer != nullptr ? p_buffer->size() : 0))
 	{
-		if (p_buffer)
+		if (p_buffer != nullptr)
 		{
 			_root.setBuffer(p_buffer);
 		}
 	}
 
 	DataBufferLayout::DataBufferLayout(const std::wstring &p_name, DataBuffer *p_buffer) :
-		_root(p_name, nullptr, 0, (p_buffer ? p_buffer->size() : 0))
+		_root(p_name, nullptr, 0, (p_buffer != nullptr ? p_buffer->size() : 0))
 	{
-		if (p_buffer)
+		if (p_buffer != nullptr)
 		{
 			_root.setBuffer(p_buffer);
 		}
-	}
-
-	DataBufferLayout::DataBufferLayout(const DataBufferLayout &p_other) :
-		_root(p_other._root)
-	{
-	}
-
-	DataBufferLayout::DataBufferLayout(DataBufferLayout &&p_other) :
-		_root(std::move(p_other._root))
-	{
-	}
-
-	DataBufferLayout &DataBufferLayout::operator=(const DataBufferLayout &p_other)
-	{
-		if (this != &p_other)
-		{
-			_root = p_other._root;
-		}
-		return *this;
-	}
-
-	DataBufferLayout &DataBufferLayout::operator=(DataBufferLayout &&p_other)
-	{
-		if (this != &p_other)
-		{
-			_root = std::move(p_other._root);
-		}
-		return *this;
 	}
 
 	void DataBufferLayout::setBuffer(DataBuffer *p_buffer)

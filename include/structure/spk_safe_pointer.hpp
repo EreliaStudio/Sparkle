@@ -33,7 +33,12 @@ namespace spk
 
 		~SafePointer() = default;
 
-		operator TType *() const
+		operator TType *()
+		{
+			return _ptr;
+		}
+
+		operator const TType *() const
 		{
 			return _ptr;
 		}
@@ -43,17 +48,32 @@ namespace spk
 			return SafePointer<const TType>(_ptr);
 		}
 
-		TType &operator*() const
+		TType &operator*()
 		{
 			return *_ptr;
 		}
 
-		TType *operator->() const
+		TType *operator->()
 		{
 			return _ptr;
 		}
 
-		TType *get() const
+		TType *get()
+		{
+			return _ptr;
+		}
+
+		const TType &operator*() const
+		{
+			return *_ptr;
+		}
+
+		const TType *operator->() const
+		{
+			return _ptr;
+		}
+
+		const TType *get() const
 		{
 			return _ptr;
 		}

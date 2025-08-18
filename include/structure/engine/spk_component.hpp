@@ -21,7 +21,7 @@ namespace spk
 	public:
 		Component(const std::wstring &p_name);
 
-		~Component();
+		virtual ~Component() = default;
 
 		void setName(const std::wstring &p_name);
 		void setPriority(const int &p_priority);
@@ -29,7 +29,7 @@ namespace spk
 		const std::wstring &name() const;
 		int priority() const;
 		spk::SafePointer<Entity> owner();
-		const spk::SafePointer<const Entity> owner() const;
+		const spk::SafePointer<Entity> owner() const;
 
 		virtual void start();
 		virtual void awake();

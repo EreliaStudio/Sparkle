@@ -17,18 +17,18 @@ namespace spk
 	{
 	private:
 		std::vector<uint8_t> _data;
-		mutable size_t _bookmark;
+		mutable size_t _bookmark = 0;
 
 	public:
-		DataBuffer();
+		DataBuffer() = default;
 
 		DataBuffer(size_t p_dataSize);
 
-		DataBuffer(const DataBuffer &p_other);
-		DataBuffer &operator=(const DataBuffer &p_other);
+		DataBuffer(const DataBuffer &p_other) = default;
+		DataBuffer &operator=(const DataBuffer &p_other) = default;
 
-		DataBuffer(DataBuffer &&p_other);
-		DataBuffer &operator=(DataBuffer &&p_other);
+		DataBuffer(DataBuffer &&p_other) = default;
+		DataBuffer &operator=(DataBuffer &&p_other) = default;
 
 		uint8_t *data();
 		const uint8_t *data() const;

@@ -6,7 +6,6 @@ namespace spk
 {
 	Transform::Transform() :
 		Component(L"Transform"),
-		_model(),
 		_position(0.0f, 0.0f, 0.0f),
 		_rotation(spk::Quaternion::identity()),
 		_scale(1.0f, 1.0f, 1.0f),
@@ -120,11 +119,24 @@ namespace spk
 
 	void Transform::rotateAroundPoint(const spk::Vector3 &p_center, const spk::Vector3 &p_axis, float p_angle)
 	{
-		spk::Vector3 axis = p_axis.normalize();
+		const spk::Quaternion deltaQ = spk::Quaternion::fromAxisAngle(p_axis.normalize(), p_angle);
 
-		spk::Quaternion deltaQ = spk::Quaternion::fromAxisAngle(axis, p_angle);
+		_rotation = (deltaQ * _rotation).normalize();
 
-		_rotation = (_rotation * deltaQ).normalize();
+		const spk::Vector3 rel = _position - p_center;
+		const spk::Vector3 relRot = deltaQ.rotate(rel);
+		const spk::Vector3 newWorldPos = p_center + relRot;
+
+		spk::Matrix4x4 parentModel = spk::Matrix4x4::identity();
+		if (const auto ent = owner(); ent != nullptr && ent->parent() != nullptr)
+		{
+			const auto *parentEntity = static_cast<const Entity *>(ent->parent());
+			const Transform &parentTr = parentEntity->transform();
+			parentModel = parentTr.model();
+		}
+		const spk::Matrix4x4 parentInv = parentModel.inverse();
+
+		_localPosition = parentInv * newWorldPos;
 
 		_updateModel();
 	}
@@ -144,7 +156,7 @@ namespace spk
 	{
 		if (_velocity != spk::Vector3())
 		{
-			move(_velocity * (float)p_event.deltaTime.milliseconds);
+			move(_velocity * static_cast<float>(p_event.deltaTime.milliseconds));
 		}
 	}
 

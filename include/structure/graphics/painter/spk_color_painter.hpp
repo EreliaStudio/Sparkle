@@ -20,7 +20,7 @@ namespace spk
 		};
 
 	private:
-		static inline spk::OpenGL::Program *_program;
+		static inline std::unique_ptr<spk::OpenGL::Program> _program;
 		spk::OpenGL::BufferSet _bufferSet;
 		spk::OpenGL::UniformBufferObject _colorUniformBufferObject;
 
@@ -29,7 +29,7 @@ namespace spk
 
 		spk::Color _color;
 
-		void _initProgram();
+		static void _initProgram();
 		void _initBuffers();
 
 	public:
