@@ -163,13 +163,13 @@ private:
 			case HorizontalOrientation::XPositive:
 				break;
 			case HorizontalOrientation::ZPositive:
-				rotation.y = 90.0f;
+				rotation.y = -90.0f;
 				break;
 			case HorizontalOrientation::XNegative:
 				rotation.y = 180.0f;
 				break;
 			case HorizontalOrientation::ZNegative:
-				rotation.y = 270.0f;
+				rotation.y = 90.0f;
 				break;
 			}
 
@@ -183,128 +183,165 @@ private:
 			return (result + spk::Vector3(0.5f, 0.5f, 0.5f));
 		}
 
+		static bool _isFullQuad(const std::vector<spk::Vertex> &p_vertices, const spk::Vector3 &p_normal)
+		{
+			if (p_vertices.size() != 4)
+			{
+				return false;
+			}
+
+			auto getAB = [&](const spk::Vector3 &p_point) -> std::pair<float, float>
+			{
+				if (std::abs(p_normal.y) > 0.0f)
+				{
+					return {p_point.x, p_point.z};
+				}
+				else if (std::abs(p_normal.x) > 0.0f)
+				{
+					return {p_point.y, p_point.z};
+				}
+				else
+				{
+					return {p_point.x, p_point.y};
+				}
+			};
+
+			float minA = std::numeric_limits<float>::max();
+			float maxA = std::numeric_limits<float>::lowest();
+			float minB = std::numeric_limits<float>::max();
+			float maxB = std::numeric_limits<float>::lowest();
+
+			for (const auto &v : p_vertices)
+			{
+				auto [a, b] = getAB(v.position);
+				minA = std::min(minA, a);
+				maxA = std::max(maxA, a);
+				minB = std::min(minB, b);
+				maxB = std::max(maxB, b);
+			}
+
+			return (
+				(std::abs(minA - 0.0f) < std::numeric_limits<float>::epsilon()) && (std::abs(maxA - 1.0f) < std::numeric_limits<float>::epsilon()) &&
+				(std::abs(minB - 0.0f) < std::numeric_limits<float>::epsilon()) && (std::abs(maxB - 1.0f) < std::numeric_limits<float>::epsilon()));
+		}
+
+		static std::vector<spk::Vertex> _extractVertices(const spk::ObjMesh::Shape &p_shape)
+		{
+			if (std::holds_alternative<spk::ObjMesh::Triangle>(p_shape))
+			{
+				const auto &tri = std::get<spk::ObjMesh::Triangle>(p_shape);
+				return {tri.a, tri.b, tri.c};
+			}
+			else
+			{
+				const auto &quad = std::get<spk::ObjMesh::Quad>(p_shape);
+				return {quad.a, quad.b, quad.c, quad.d};
+			}
+		}
+
+		static void _applyOrientationToVertices(std::vector<spk::Vertex> &p_vertices, const Orientation &p_orientation)
+		{
+			for (auto &v : p_vertices)
+			{
+				v.position = _applyOrientation(v.position, p_orientation);
+			}
+			if (p_orientation.verticalOrientation == VerticalOrientation::YNegative)
+			{
+				std::reverse(p_vertices.begin(), p_vertices.end());
+			}
+		}
+
+		static bool _isAxisAlignedFace(const std::vector<spk::Vertex> &p_vertices, spk::Vector3 &p_outNormal)
+		{
+			auto eq = [&](float p_a, float p_b) { return std::abs(p_a - p_b) <= std::numeric_limits<float>::epsilon(); };
+
+			bool allX0 = true, allX1 = true, allY0 = true, allY1 = true, allZ0 = true, allZ1 = true;
+			for (const auto &v : p_vertices)
+			{
+				allX0 = allX0 && eq(v.position.x, 0.0f);
+				allX1 = allX1 && eq(v.position.x, 1.0f);
+				allY0 = allY0 && eq(v.position.y, 0.0f);
+				allY1 = allY1 && eq(v.position.y, 1.0f);
+				allZ0 = allZ0 && eq(v.position.z, 0.0f);
+				allZ1 = allZ1 && eq(v.position.z, 1.0f);
+			}
+
+			if (allX0)
+			{
+				p_outNormal = spk::Vector3(-1, 0, 0);
+				return true;
+			}
+			if (allX1)
+			{
+				p_outNormal = spk::Vector3(1, 0, 0);
+				return true;
+			}
+			if (allY0)
+			{
+				p_outNormal = spk::Vector3(0, -1, 0);
+				return true;
+			}
+			if (allY1)
+			{
+				p_outNormal = spk::Vector3(0, 1, 0);
+				return true;
+			}
+			if (allZ0)
+			{
+				p_outNormal = spk::Vector3(0, 0, -1);
+				return true;
+			}
+			if (allZ1)
+			{
+				p_outNormal = spk::Vector3(0, 0, 1);
+				return true;
+			}
+
+			return false;
+		}
+
+		static void _addVerticesToMesh(spk::ObjMesh &p_mesh, const std::vector<spk::Vertex> &p_vertices)
+		{
+			if (p_vertices.size() == 3)
+			{
+				p_mesh.addShape(p_vertices[0], p_vertices[1], p_vertices[2]);
+			}
+			else
+			{
+				p_mesh.addShape(p_vertices[0], p_vertices[1], p_vertices[2], p_vertices[3]);
+			}
+		}
+
 		static Entry _compute(const spk::ObjMesh &p_mesh, const Orientation &p_orientation)
 		{
 			Entry result;
+
 			for (const auto &shape : p_mesh.shapes())
 			{
-				std::vector<spk::Vertex> vertices;
-				if (std::holds_alternative<spk::ObjMesh::Triangle>(shape))
-				{
-					const spk::ObjMesh::Triangle &tri = std::get<spk::ObjMesh::Triangle>(shape);
-					vertices = {tri.a, tri.b, tri.c};
-				}
-				else
-				{
-					const spk::ObjMesh::Quad &quad = std::get<spk::ObjMesh::Quad>(shape);
-					vertices = {quad.a, quad.b, quad.c, quad.d};
-				}
+				auto vertices = _extractVertices(shape);
+				_applyOrientationToVertices(vertices, p_orientation);
 
-				for (auto &v : vertices)
-				{
-					v.position = _applyOrientation(v.position, p_orientation);
-				}
-
-				if (p_orientation.verticalOrientation == VerticalOrientation::YNegative)
-				{
-					std::reverse(vertices.begin(), vertices.end());
-				}
-
-				spk::Polygon polygon;
-				for (const auto &v : vertices)
-				{
-					polygon.points.push_back(v.position);
-				}
-
-				spk::Vector3 normal = polygon.normal();
-				spk::Vector3 axisNormal = normal.round();
-				bool isFace = false;
-				if (axisNormal == normal)
-				{
-					float axisSum = std::abs(axisNormal.x) + std::abs(axisNormal.y) + std::abs(axisNormal.z);
-					if (std::abs(axisSum - 1.0f) < 0.0001f)
-					{
-						normal = axisNormal;
-						int axis = (axisNormal.x != 0.0f) ? 0 : (axisNormal.y != 0.0f) ? 1 : 2;
-						float planeValue = (axisNormal.x + axisNormal.y + axisNormal.z > 0.0f) ? 1.0f : 0.0f;
-						isFace = true;
-						for (const auto &v : vertices)
-						{
-							float coord = (axis == 0) ? v.position.x : (axis == 1) ? v.position.y : v.position.z;
-							if (std::abs(coord - planeValue) > 0.0001f)
-							{
-								isFace = false;
-								break;
-							}
-						}
-					}
-				}
-
-				if (isFace == false)
-				{
-					if (vertices.size() == 3)
-					{
-						result.innerMesh.addShape(vertices[0], vertices[1], vertices[2]);
-					}
-					else
-					{
-						result.innerMesh.addShape(vertices[0], vertices[1], vertices[2], vertices[3]);
-					}
-				}
-				else
+				spk::Vector3 normal;
+				if (_isAxisAlignedFace(vertices, normal))
 				{
 					Face &face = result.faces[normal];
-					for (const auto &v : vertices)
+					for (auto &v : vertices)
 					{
 						face.footprint.points.push_back(v.position);
 					}
-					if (vertices.size() == 3)
-					{
-						face.mesh.addShape(vertices[0], vertices[1], vertices[2]);
-					}
-					else
-					{
-						face.mesh.addShape(vertices[0], vertices[1], vertices[2], vertices[3]);
-					}
+					_addVerticesToMesh(face.mesh, vertices);
 
-					if (vertices.size() == 4)
+					if (vertices.size() == 4 && _isFullQuad(vertices, normal))
 					{
-						float minA = std::numeric_limits<float>::max();
-						float maxA = std::numeric_limits<float>::lowest();
-						float minB = std::numeric_limits<float>::max();
-						float maxB = std::numeric_limits<float>::lowest();
-						for (const auto &v : vertices)
-						{
-							float a;
-							float b;
-							if (normal.y != 0.0f)
-							{
-								a = v.position.x;
-								b = v.position.z;
-							}
-							else if (normal.x != 0.0f)
-							{
-								a = v.position.y;
-								b = v.position.z;
-							}
-							else
-							{
-								a = v.position.x;
-								b = v.position.y;
-							}
-							minA = std::min(minA, a);
-							maxA = std::max(maxA, a);
-							minB = std::min(minB, b);
-							maxB = std::max(maxB, b);
-						}
-						if (std::abs(minA - 0.0f) < 0.0001f && std::abs(maxA - 1.0f) < 0.0001f && std::abs(minB - 0.0f) < 0.0001f &&
-							std::abs(maxB - 1.0f) < 0.0001f)
-						{
-							face.full = true;
-						}
+						face.full = true;
 					}
 				}
+				else
+				{
+					_addVerticesToMesh(result.innerMesh, vertices);
+				}
 			}
+
 			return result;
 		}
 
@@ -313,63 +350,85 @@ private:
 
 	mutable Cache _cache;
 
-public:
-	virtual ~Block() = default;
-
-	void bake(spk::ObjMesh &p_toFill,
-			  const NeightbourDescriber &p_neightbourDescriber,
-			  const spk::Vector3 &p_position,
-			  const Orientation &p_orientation) const
+	const Cache::Entry &_ensureCacheCase(const Orientation &p_orientation) const
 	{
 		if (_cache.hasCase(p_orientation) == false)
 		{
 			_cache.addCase(p_orientation, _mesh());
 		}
-		const Cache::Entry &data = _cache.getCase(p_orientation);
+		return _cache.getCase(p_orientation);
+	}
 
+	std::array<const Face *, 6> _gatherNeighbourFaces(const NeightbourDescriber &p_neightbourDescriber) const
+	{
 		std::array<const Face *, 6> neighFaces{};
 		for (size_t i = 0; i < 6; ++i)
 		{
 			neighFaces[i] = nullptr;
-			if (p_neightbourDescriber[i].first != nullptr)
+			const auto &desc = p_neightbourDescriber[i];
+			if (desc.first == nullptr)
 			{
-				const Block *neigh = p_neightbourDescriber[i].first;
-				const Orientation &neighOrientation = p_neightbourDescriber[i].second;
-				if (neigh->_cache.hasCase(neighOrientation) == false)
-				{
-					neigh->_cache.addCase(neighOrientation, neigh->_mesh());
-				}
-				const Cache::Entry &neighData = neigh->_cache.getCase(neighOrientation);
-				spk::Vector3 oppositeNormal = -neightbourCoordinates[i];
-				auto it = neighData.faces.find(oppositeNormal);
-				if (it != neighData.faces.end())
-				{
-					neighFaces[i] = &it->second;
-				}
+				continue;
+			}
+
+			const Block *neigh = desc.first;
+			const Orientation &neighOrientation = desc.second;
+			if (neigh->_cache.hasCase(neighOrientation) == false)
+			{
+				neigh->_cache.addCase(neighOrientation, neigh->_mesh());
+			}
+
+			const Cache::Entry &neighData = neigh->_cache.getCase(neighOrientation);
+			const spk::Vector3 oppositeNormal = -neightbourCoordinates[i];
+			if (auto it = neighData.faces.find(oppositeNormal); it != neighData.faces.end())
+			{
+				neighFaces[i] = &it->second;
 			}
 		}
+		return neighFaces;
+	}
 
-		bool fullyOccluded = true;
-		for (size_t i = 0; i < 6; ++i)
+	static bool _allSixFull(const std::array<const Face *, 6> &p_neighFaces)
+	{
+		for (const Face *nf : p_neighFaces)
 		{
-			const Face *nf = neighFaces[i];
 			if (nf == nullptr || nf->full == false)
 			{
-				fullyOccluded = false;
-				break;
+				return false;
 			}
 		}
+		return true;
+	}
 
-		if (fullyOccluded == false)
+	static void _emitInnerIfNeeded(
+		spk::ObjMesh &p_toFill, const Cache::Entry &p_data, const spk::Vector3 &p_position, const std::array<const Face *, 6> &p_neighFaces)
+	{
+		if (_allSixFull(p_neighFaces) == false)
 		{
-			data.applyInnerMesh(p_toFill, p_position);
+			p_data.applyInnerMesh(p_toFill, p_position);
 		}
+	}
 
+	static spk::Polygon _translated(const spk::Polygon &p_poly, const spk::Vector3 &p_delta)
+	{
+		spk::Polygon out;
+		out.points.reserve(p_poly.points.size());
+		for (const auto &p : p_poly.points)
+		{
+			out.points.push_back(p + p_delta);
+		}
+		return out;
+	}
+
+	static void _emitVisibleFaces(
+		spk::ObjMesh &p_toFill, const Cache::Entry &p_data, const spk::Vector3 &p_position, const std::array<const Face *, 6> &p_neighFaces)
+	{
 		for (size_t i = 0; i < 6; ++i)
 		{
-			spk::Vector3 normal = neightbourCoordinates[i];
-			auto faceIt = data.faces.find(normal);
-			if (faceIt == data.faces.end())
+			const spk::Vector3 normal = neightbourCoordinates[i];
+
+			auto faceIt = p_data.faces.find(normal);
+			if (faceIt == p_data.faces.end())
 			{
 				continue;
 			}
@@ -380,20 +439,43 @@ public:
 				continue;
 			}
 
-			const Face *currentNeighFace = neighFaces[i];
+			const Face *neigh = p_neighFaces[i];
 			bool visible = true;
-			if (currentNeighFace != nullptr && currentNeighFace->mesh.shapes().empty() == false)
+
+			if (neigh != nullptr && neigh->mesh.shapes().empty() == false)
 			{
-				if (currentNeighFace->footprint.contains(ourFace.footprint) == true)
+				const spk::Vector3 toOurLocal = normal;
+				spk::Polygon neighInOurSpace = _translated(neigh->footprint, toOurLocal);
+
+				if (neighInOurSpace.contains(ourFace.footprint) == true)
 				{
 					visible = false;
 				}
 			}
+
 			if (visible == true)
 			{
-				data.applyFace(p_toFill, p_position, normal);
+				p_data.applyFace(p_toFill, p_position, normal);
 			}
 		}
+	}
+
+public:
+	virtual ~Block() = default;
+
+	void bake(
+		spk::ObjMesh &p_toFill,
+		const NeightbourDescriber &p_neightbourDescriber,
+		const spk::Vector3 &p_position,
+		const Orientation &p_orientation) const
+	{
+		const Cache::Entry &data = _ensureCacheCase(p_orientation);
+
+		const auto neighFaces = _gatherNeighbourFaces(p_neightbourDescriber);
+
+		_emitInnerIfNeeded(p_toFill, data, p_position, neighFaces);
+
+		_emitVisibleFaces(p_toFill, data, p_position, neighFaces);
 	}
 };
 
@@ -558,7 +640,7 @@ public:
 			spk::SafePointer<spk::ObjMeshRenderer> _renderer;
 
 			spk::SafePointer<BlockMap> _blockMap;
-			Block::Specifier _content[ChunkSizeX][ChunkSizeY][ChunkSizeZ];
+			std::array<std::array<std::array<Block::Specifier, ChunkSizeX>, ChunkSizeY>, ChunkSizeZ> _content;
 
 			bool _isBaked = false;
 			spk::ObjMesh _mesh;
@@ -639,12 +721,12 @@ public:
 				_isBaked = false;
 			}
 
-			void setContent(int p_x,
-							int p_y,
-							int p_z,
-							const Block::ID &p_data,
-							const Block::Orientation &p_orientation = {Block::HorizontalOrientation::XPositive,
-																	   Block::VerticalOrientation::YPositive})
+			void setContent(
+				int p_x,
+				int p_y,
+				int p_z,
+				const Block::ID &p_data,
+				const Block::Orientation &p_orientation = {Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive})
 			{
 				_content[p_x][p_y][p_z] = std::make_pair(p_data, p_orientation);
 				_isBaked = false;
@@ -669,7 +751,7 @@ public:
 				return (_content[p_x][p_y][p_z]);
 			}
 
-			void start()
+			void start() override
 			{
 				_renderer = owner()->template getComponent<spk::ObjMeshRenderer>();
 			}
@@ -723,25 +805,28 @@ public:
 			_data->fill(p_id);
 		}
 
-		void setContent(spk::Vector3Int p_position,
-						Block::ID p_id,
-						const Block::Orientation &p_orientation = {Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive})
+		void setContent(
+			spk::Vector3Int p_position,
+			Block::ID p_id,
+			const Block::Orientation &p_orientation = {Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive})
 		{
 			setContent(p_position.x, p_position.y, p_position.z, p_id, p_orientation);
 		}
-		void setContent(spk::Vector2Int p_position,
-						int p_z,
-						Block::ID p_id,
-						const Block::Orientation &p_orientation = {Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive})
+		void setContent(
+			spk::Vector2Int p_position,
+			int p_z,
+			Block::ID p_id,
+			const Block::Orientation &p_orientation = {Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive})
 		{
 			setContent(p_position.x, p_position.y, p_z, p_id, p_orientation);
 		}
 
-		void setContent(int p_x,
-						int p_y,
-						int p_z,
-						Block::ID p_id,
-						const Block::Orientation &p_orientation = {Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive})
+		void setContent(
+			int p_x,
+			int p_y,
+			int p_z,
+			Block::ID p_id,
+			const Block::Orientation &p_orientation = {Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive})
 		{
 			_data->setContent(p_x, p_y, p_z, p_id, p_orientation);
 		}
@@ -788,39 +873,40 @@ private:
 
 	virtual void _onChunkGeneration(const spk::Vector3Int &p_chunkCoordinate, Chunk &p_chunkToFill)
 	{
-		p_chunkToFill.setContent(1, 1, 1, 0);
-
-		p_chunkToFill.setContent(0, 1, 1, 0);
-		p_chunkToFill.setContent(2, 1, 1, 0);
-
-		p_chunkToFill.setContent(1, 1, 0, 0);
-		p_chunkToFill.setContent(1, 1, 2, 0);
-		
-		p_chunkToFill.setContent(1, 0, 1, 0);
-		p_chunkToFill.setContent(1, 2, 1, 0);
-
-		// for (size_t i = 0; i < Chunk::size.x; i++)
-		// {
-		// 	for (size_t j = 0; j < Chunk::size.z; j++)
-		// 	{
-		// 		p_chunkToFill.setContent(i, 0, j, 0);
-		// 		if (i == 1 && j != 1)
-		// 		{
-		// 			p_chunkToFill.setContent(i, 1, j, 1, Block::Orientation{Block::HorizontalOrientation::ZPositive, Block::VerticalOrientation::YPositive});
-		// 		}
-		// 		if (j == 1 && i != 1)
-		// 		{
-		// 			p_chunkToFill.setContent(i, 1, j, 1, Block::Orientation{Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive});
-		// 		}
-		// 		if (i == 0 && j == 0)
-		// 		{
-		// 			p_chunkToFill.setContent(i, 1, j, 0);
-		// 			p_chunkToFill.setContent(i, 2, j, 0);
-		// 			p_chunkToFill.setContent(i, 3, j, 0);
-		// 			p_chunkToFill.setContent(i, 4, j, 0);
-		// 		}
-		// 	}
-		// }
+		for (size_t i = 0; i < Chunk::size.x; i++)
+		{
+			for (size_t j = 0; j < Chunk::size.z; j++)
+			{
+				p_chunkToFill.setContent(i, 0, j, 0);
+				if (i == 0 && j != 0)
+				{
+					p_chunkToFill.setContent(
+						i, 1, j, 0, Block::Orientation{Block::HorizontalOrientation::ZPositive, Block::VerticalOrientation::YPositive});
+				}
+				if (j == 0 && i != 0)
+				{
+					p_chunkToFill.setContent(
+						i, 1, j, 0, Block::Orientation{Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive});
+				}
+				if (i == 1 && j != 1)
+				{
+					p_chunkToFill.setContent(
+						i, 1, j, 1, Block::Orientation{Block::HorizontalOrientation::ZPositive, Block::VerticalOrientation::YPositive});
+				}
+				if (j == 1 && i != 1)
+				{
+					p_chunkToFill.setContent(
+						i, 1, j, 1, Block::Orientation{Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive});
+				}
+				if (i == 0 && j == 0)
+				{
+					p_chunkToFill.setContent(i, 1, j, 0);
+					p_chunkToFill.setContent(i, 2, j, 0);
+					p_chunkToFill.setContent(i, 3, j, 0);
+					p_chunkToFill.setContent(i, 4, j, 0);
+				}
+			}
+		}
 	}
 
 public:
@@ -993,18 +1079,7 @@ int main()
 	slopeConfiguration.bottom = blockMapTilemap.sprite({3, 0});
 	blockMap.addBlockByID(1, std::make_unique<SlopeBlock>(slopeConfiguration));
 
-	blockMap.setChunkRange({-0, 0, -0}, {0, 0, 0});
-
-	spk::Entity supportEntity = spk::Entity(L"SupportA", nullptr);
-	supportEntity.activate();
-	engine.addEntity(&supportEntity);
-	supportEntity.transform().place({2, 2, 2});
-
-	spk::ObjMesh supportMesh = spk::ObjMesh();
-	supportMesh.loadFromFile("playground/resources/obj/support.obj");
-
-	auto objRenderer = supportEntity.addComponent<spk::ObjMeshRenderer>(L"ObjMeshRenderer");
-	objRenderer->setMesh(&supportMesh);
+	blockMap.setChunkRange({-3, 0, -3}, {3, 0, 3});
 
 	return app.run();
 }

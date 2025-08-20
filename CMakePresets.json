@@ -17,8 +17,7 @@
 				"CMAKE_CXX_STANDARD_REQUIRED": "ON",
 				"CMAKE_C_COMPILER": "gcc",
 				"CMAKE_CXX_COMPILER": "g++",
-				"VCPKG_TARGET_TRIPLET": "x64-mingw-static",
-				"CMAKE_CXX_CLANG_TIDY": "clang-tidy"
+				"VCPKG_TARGET_TRIPLET": "x64-mingw-static"
 			}
 		},
 		{
@@ -86,6 +85,14 @@
 			}
 		},
 		{
+			"name": "tidy",
+			"inherits": "debug",
+			"description": "Configure with clang-tidy analysis",
+			"cacheVariables": {
+				"CMAKE_CXX_CLANG_TIDY": "clang-tidy"
+			}
+		},
+		{
 			"name": "tidy-fix",
 			"inherits": "debug",
 			"cacheVariables": {
@@ -130,6 +137,14 @@
 		{
 			"name": "playground-release",
 			"configurePreset": "playground-release"
+		},
+		{
+			"name": "tidy",
+			"configurePreset": "tidy"
+		},
+		{
+			"name": "tidy-fix",
+			"configurePreset": "tidy-fix"
 		}
 	],
 	"testPresets": [
