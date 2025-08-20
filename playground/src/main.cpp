@@ -56,7 +56,6 @@ protected:
 	using Type = std::wstring; // Each block type can be identified by its type : FullBlock, Slope, HalfBlock, Fence, for exemple
 	// Multiple block can shared the same type, as long as they are the same shape in 3D, with just different sprite and interaction
 
-	virtual Block::Type _type() const = 0;
 	virtual const spk::ObjMesh &_mesh() const = 0;
 
 	static void _applySprite(spk::ObjMesh::Shape &p_shape, const spk::SpriteSheet::Sprite &p_sprite)
@@ -152,7 +151,7 @@ private:
 		static spk::Vector3 _applyOrientation(const spk::Vector3 &p_position, const Orientation &p_orientation)
 		{
 			spk::Vector3 result = p_position - spk::Vector3(0.5f, 0.5f, 0.5f);
-			constexpr std::array<float, 4> rotations = {0.0f, -90.0f, 180.0f, 90.0f};
+			constexpr std::array<float, 4> rotations = {-90.0f, 0.0f, 90.0f, 180.0f};
 			result = result.rotate({0, rotations[static_cast<size_t>(p_orientation.horizontalOrientation)], 0});
 
 			if (p_orientation.verticalOrientation == VerticalOrientation::YNegative)
@@ -474,10 +473,6 @@ public:
 	};
 
 private:
-	Block::Type _type() const override
-	{
-		return L"FullBlock";
-	}
 	const spk::ObjMesh &_mesh() const override
 	{
 		return (_objMesh);
@@ -556,10 +551,6 @@ public:
 	};
 
 private:
-	Block::Type _type() const override
-	{
-		return L"SlopeBlock";
-	}
 	const spk::ObjMesh &_mesh() const override
 	{
 		return (_objMesh);
@@ -602,6 +593,148 @@ public:
 		_applySprite(_objMesh.shapes()[2], _configuration.triangleLeft);
 		_applySprite(_objMesh.shapes()[3], _configuration.triangleRight);
 		_applySprite(_objMesh.shapes()[4], _configuration.ramp);
+	}
+};
+
+struct HalfBlock : public Block
+{
+public:
+	struct Configuration
+	{
+		spk::SpriteSheet::Sprite front;
+		spk::SpriteSheet::Sprite back;
+		spk::SpriteSheet::Sprite left;
+		spk::SpriteSheet::Sprite right;
+		spk::SpriteSheet::Sprite top;
+		spk::SpriteSheet::Sprite bottom;
+	};
+
+private:
+	const spk::ObjMesh &_mesh() const override
+	{
+		return (_objMesh);
+	}
+
+	spk::ObjMesh _objMesh;
+	Configuration _configuration;
+	static inline std::string objMeshCode = R"(v 0.0 0.0 0.0
+v 1.0 0.0 0.0
+v 1.0 0.0 1.0
+v 0.0 0.0 1.0
+v 0.0 0.5 0.0
+v 1.0 0.5 0.0
+v 1.0 0.5 1.0
+v 0.0 0.5 1.0
+
+vt 0.0 1.0
+vt 1.0 1.0
+vt 1.0 0.0
+vt 0.0 0.0
+
+vn  0.0  0.0  1.0
+vn  0.0  0.0 -1.0
+vn  1.0  0.0  0.0
+vn -1.0  0.0  0.0
+vn  0.0  1.0  0.0
+vn  0.0 -1.0  0.0
+
+f 4/1/1 3/2/1 7/3/1 8/4/1
+f 2/2/2 1/1/2 5/4/2 6/3/2
+f 3/1/3 2/2/3 6/3/3 7/4/3
+f 1/2/4 4/1/4 8/4/4 5/3/4
+f 5/1/5 8/2/5 7/3/5 6/4/5
+f 1/1/6 2/2/6 3/3/6 4/4/6)";
+
+public:
+	explicit HalfBlock(const Configuration &p_configuration) :
+		_configuration(p_configuration)
+	{
+		_objMesh = spk::ObjMesh::loadFromString(objMeshCode);
+
+		_applySprite(_objMesh.shapes()[0], _configuration.front);
+		_applySprite(_objMesh.shapes()[1], _configuration.back);
+		_applySprite(_objMesh.shapes()[2], _configuration.left);
+		_applySprite(_objMesh.shapes()[3], _configuration.right);
+		_applySprite(_objMesh.shapes()[4], _configuration.top);
+		_applySprite(_objMesh.shapes()[5], _configuration.bottom);
+	}
+};
+
+struct StairBlock : public Block
+{
+public:
+	struct Configuration
+	{
+		spk::SpriteSheet::Sprite front;
+		spk::SpriteSheet::Sprite back;
+		spk::SpriteSheet::Sprite left;
+		spk::SpriteSheet::Sprite right;
+		spk::SpriteSheet::Sprite top;
+		spk::SpriteSheet::Sprite bottom;
+	};
+
+private:
+	const spk::ObjMesh &_mesh() const override
+	{
+		return (_objMesh);
+	}
+
+	spk::ObjMesh _objMesh;
+	Configuration _configuration;
+	static inline std::string objMeshCode = R"(v 0.0 0.0 0.0
+v 1.0 0.0 0.0
+v 1.0 0.0 1.0
+v 0.0 0.0 1.0
+v 0.0 0.5 0.0
+v 1.0 0.5 0.0
+v 1.0 0.5 0.5
+v 0.0 0.5 0.5
+v 0.0 1.0 0.5
+v 1.0 1.0 0.5
+v 1.0 1.0 1.0
+v 0.0 1.0 1.0
+v 0.0 0.0 0.5
+v 1.0 0.0 0.5
+
+vt 0.0 1.0
+vt 1.0 1.0
+vt 1.0 0.0
+vt 0.0 0.0
+
+vn  0.0 -1.0  0.0
+vn  0.0  1.0  0.0
+vn  0.0  0.0 -1.0
+vn  0.0  0.0  1.0
+vn -1.0  0.0  0.0
+vn  1.0  0.0  0.0
+
+ f 1/1/1 2/2/1 3/3/1 4/4/1
+ f 1/1/3 5/2/3 6/3/3 2/4/3
+ f 4/1/4 3/2/4 11/3/4 12/4/4
+ f 1/2/5 13/1/5 8/4/5 5/3/5
+ f 13/1/5 4/2/5 12/3/5 9/4/5
+ f 14/1/6 2/2/6 6/3/6 7/4/6
+ f 14/1/6 10/2/6 11/3/6 3/4/6
+ f 5/1/2 8/2/2 7/3/2 6/4/2
+ f 9/1/2 12/2/2 11/3/2 10/4/2
+ f 13/1/3 9/4/3 10/3/3 14/2/3)";
+
+public:
+	explicit StairBlock(const Configuration &p_configuration) :
+		_configuration(p_configuration)
+	{
+		_objMesh = spk::ObjMesh::loadFromString(objMeshCode);
+
+		_applySprite(_objMesh.shapes()[0], _configuration.bottom);
+		_applySprite(_objMesh.shapes()[1], _configuration.front);
+		_applySprite(_objMesh.shapes()[2], _configuration.back);
+		_applySprite(_objMesh.shapes()[3], _configuration.left);
+		_applySprite(_objMesh.shapes()[4], _configuration.left);
+		_applySprite(_objMesh.shapes()[5], _configuration.right);
+		_applySprite(_objMesh.shapes()[6], _configuration.right);
+		_applySprite(_objMesh.shapes()[7], _configuration.top);
+		_applySprite(_objMesh.shapes()[8], _configuration.top);
+		_applySprite(_objMesh.shapes()[9], _configuration.front);
 	}
 };
 
@@ -862,22 +995,22 @@ private:
 				if (i == 0 && j != 0)
 				{
 					p_chunkToFill.setContent(
-						i, 1, j, 0, Block::Orientation{Block::HorizontalOrientation::ZPositive, Block::VerticalOrientation::YPositive});
+						i, 1, j, 2, Block::Orientation{Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive});
 				}
 				if (j == 0 && i != 0)
 				{
 					p_chunkToFill.setContent(
-						i, 1, j, 0, Block::Orientation{Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive});
+						i, 1, j, 3, Block::Orientation{Block::HorizontalOrientation::ZPositive, Block::VerticalOrientation::YPositive});
 				}
 				if (i == 1 && j != 1)
 				{
 					p_chunkToFill.setContent(
-						i, 1, j, 1, Block::Orientation{Block::HorizontalOrientation::ZPositive, Block::VerticalOrientation::YPositive});
+						i, 1, j, 1, Block::Orientation{Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive});
 				}
 				if (j == 1 && i != 1)
 				{
 					p_chunkToFill.setContent(
-						i, 1, j, 1, Block::Orientation{Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive});
+						i, 1, j, 1, Block::Orientation{Block::HorizontalOrientation::ZPositive, Block::VerticalOrientation::YPositive});
 				}
 				if (i == 0 && j == 0)
 				{
@@ -1035,7 +1168,7 @@ int main()
 	player.transform().place({5.0f, 5.0f, 5.0f});
 	player.transform().lookAt({0.0f, 0.0f, 0.0f});
 
-	spk::SpriteSheet blockMapTilemap = spk::SpriteSheet("playground/resources/texture/CubeTexture.png", {4, 1});
+	spk::SpriteSheet blockMapTilemap = spk::SpriteSheet("playground/resources/texture/CubeTexture.png", {7, 1});
 
 	BlockMap<16, 16, 16> blockMap = BlockMap<16, 16, 16>(L"BlockMap", nullptr);
 	blockMap.setTexture(&blockMapTilemap);
@@ -1059,6 +1192,25 @@ int main()
 	slopeConfiguration.ramp = blockMapTilemap.sprite({2, 0});
 	slopeConfiguration.bottom = blockMapTilemap.sprite({3, 0});
 	blockMap.addBlockByID(1, std::make_unique<SlopeBlock>(slopeConfiguration));
+
+	
+	StairBlock::Configuration stairConfiguration;
+	stairConfiguration.front = blockMapTilemap.sprite({0, 0});
+	stairConfiguration.back = blockMapTilemap.sprite({0, 0});
+	stairConfiguration.left = blockMapTilemap.sprite({0, 0});
+	stairConfiguration.right = blockMapTilemap.sprite({0, 0});
+	stairConfiguration.top = blockMapTilemap.sprite({0, 0});
+	stairConfiguration.bottom = blockMapTilemap.sprite({3, 0});
+	blockMap.addBlockByID(2, std::make_unique<StairBlock>(stairConfiguration));
+
+	HalfBlock::Configuration halfConfiguration;
+	halfConfiguration.front = blockMapTilemap.sprite({0, 0});
+	halfConfiguration.back = blockMapTilemap.sprite({0, 0});
+	halfConfiguration.left = blockMapTilemap.sprite({0, 0});
+	halfConfiguration.right = blockMapTilemap.sprite({0, 0});
+	halfConfiguration.top = blockMapTilemap.sprite({0, 0});
+	halfConfiguration.bottom = blockMapTilemap.sprite({3, 0});
+	blockMap.addBlockByID(3, std::make_unique<HalfBlock>(halfConfiguration));
 
 	blockMap.setChunkRange({-3, 0, -3}, {3, 0, 3});
 
