@@ -85,6 +85,14 @@
 			}
 		},
 		{
+			"name": "tidy",
+			"inherits": "debug",
+			"description": "Configure with clang-tidy analysis",
+			"cacheVariables": {
+				"CMAKE_CXX_CLANG_TIDY": "clang-tidy"
+			}
+		},
+		{
 			"name": "tidy-fix",
 			"inherits": "debug",
 			"cacheVariables": {
@@ -129,6 +137,14 @@
 		{
 			"name": "playground-release",
 			"configurePreset": "playground-release"
+		},
+		{
+			"name": "tidy",
+			"configurePreset": "tidy"
+		},
+		{
+			"name": "tidy-fix",
+			"configurePreset": "tidy-fix"
 		}
 	],
 	"testPresets": [
