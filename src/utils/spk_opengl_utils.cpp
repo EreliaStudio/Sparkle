@@ -463,7 +463,7 @@ namespace spk::OpenGLUtils
 		{
 			glGetShaderInfoLog(p_shader, len, nullptr, log.data());
 		}
-		std::cerr << "[Shader] " << p_label << " compile status=" << (status ? "OK" : "FAIL") << " log:\n" << log.data() << "\n";
+		std::cerr << "[Shader] " << p_label << " compile status=" << ((status != 0) ? "OK" : "FAIL") << " log:\n" << log.data() << "\n";
 	}
 
 	void PrintProgramLog(GLuint p_prog, const char *p_label)
@@ -476,7 +476,7 @@ namespace spk::OpenGLUtils
 		{
 			glGetProgramInfoLog(p_prog, len, nullptr, log.data());
 		}
-		std::cerr << "[Program] " << p_label << " link status=" << (link ? "OK" : "FAIL") << " log:\n" << log.data() << "\n";
+		std::cerr << "[Program] " << p_label << " link status=" << ((link != 0) ? "OK" : "FAIL") << " log:\n" << log.data() << "\n";
 	}
 
 	void DumpActiveAttribs(GLuint p_prog)
@@ -571,8 +571,8 @@ namespace spk::OpenGLUtils
 			glGetVertexAttribiv(i, GL_VERTEX_ATTRIB_ARRAY_NORMALIZED, (GLint *)&norm);
 			glGetVertexAttribiv(i, GL_VERTEX_ATTRIB_ARRAY_STRIDE, (GLint *)&stride);
 			glGetVertexAttribPointerv(i, GL_VERTEX_ATTRIB_ARRAY_POINTER, &ptr);
-			std::cerr << "  [Attrib " << i << "] enabled=" << (enabled ? "Y" : "N") << " size=" << size << " type=0x" << std::hex << type << std::dec
-					  << " stride=" << stride << " ptr=" << ptr << "\n";
+			std::cerr << "  [Attrib " << i << "] enabled=" << ((enabled != 0u) ? "Y" : "N") << " size=" << size << " type=0x" << std::hex << type
+					  << std::dec << " stride=" << stride << " ptr=" << ptr << "\n";
 		}
 	}
 
@@ -642,8 +642,9 @@ namespace spk::OpenGLUtils
 		std::cerr << "  level0: " << width0 << "x" << height0 << " IF=0x" << std::hex << internal0 << std::dec << "\n";
 
 		// If minFilter is a mipmap mode, ensure level 1 exists (quick heuristic)
-		bool needsMips = (minFilter == GL_NEAREST_MIPMAP_NEAREST || minFilter == GL_LINEAR_MIPMAP_NEAREST || minFilter == GL_NEAREST_MIPMAP_LINEAR ||
-						  minFilter == GL_LINEAR_MIPMAP_LINEAR);
+		bool needsMips =
+			(minFilter == GL_NEAREST_MIPMAP_NEAREST || minFilter == GL_LINEAR_MIPMAP_NEAREST || minFilter == GL_NEAREST_MIPMAP_LINEAR ||
+			 minFilter == GL_LINEAR_MIPMAP_LINEAR);
 
 		if (needsMips)
 		{

@@ -105,6 +105,16 @@ namespace spk
 		void _deleteTimer(UINT_PTR p_id);
 		void _removeAllTimers();
 
+		void _rendererPreparation();
+		void _rendererLoopIteration();
+		void _updaterLoopIteration();
+
+		void _updateCounter(spk::Timer& timer,
+							spk::SafePointer<Profiler::CounterMeasurement>& counter,
+							size_t& currentValue);
+
+		void _guard(const char* label, const std::function<void()>& fn);
+
 	public:
 		Window(const std::wstring &p_title, const spk::Geometry2D &p_geometry);
 		~Window();

@@ -59,10 +59,7 @@ namespace spk
 			_parent->removeChild(this);
 		}
 
-		for (auto &child : _managedChildren)
-		{
-			delete child;
-		}
+		_managedChildren.clear();
 	}
 
 	const std::wstring &Widget::name() const
@@ -129,10 +126,10 @@ namespace spk
 		return (viewport().geometry().contains(p_pointerPosition));
 	}
 
-bool Widget::isPointed(const spk::Mouse &p_mouse) const
-{
-return (isPointed(p_mouse.position()));
-}
+	bool Widget::isPointed(const spk::Mouse &p_mouse) const
+	{
+		return (isPointed(p_mouse.position()));
+	}
 
 	bool Widget::isPointed(const spk::SafePointer<const spk::Mouse> &p_mouse) const
 	{
@@ -222,10 +219,12 @@ return (isPointed(p_mouse.position()));
 	{
 		spk::Vector2Int parentSize = (parent() == nullptr ? _viewport.windowSize() : parent()->_geometry.size);
 
-		_anchorRatio = {static_cast<float>(_geometry.anchor.x) / static_cast<float>(parentSize.x),
-						static_cast<float>(_geometry.anchor.y) / static_cast<float>(parentSize.y)};
-		_sizeRatio = {static_cast<float>(_geometry.size.x) / static_cast<float>(parentSize.x),
-					  static_cast<float>(_geometry.size.y) / static_cast<float>(parentSize.y)};
+		_anchorRatio = {
+			static_cast<float>(_geometry.anchor.x) / static_cast<float>(parentSize.x),
+			static_cast<float>(_geometry.anchor.y) / static_cast<float>(parentSize.y)};
+		_sizeRatio = {
+			static_cast<float>(_geometry.size.x) / static_cast<float>(parentSize.x),
+			static_cast<float>(_geometry.size.y) / static_cast<float>(parentSize.y)};
 	}
 
 	void Widget::setGeometry(const Geometry2D &p_geometry)
@@ -336,10 +335,10 @@ return (isPointed(p_mouse.position()));
 					viewport().apply();
 				} catch (const std::runtime_error &e)
 				{
-					PROPAGATE_ERROR("Error while applying viewport of [" + spk::StringUtils::wstringToString(name()) +
-										"] with viewport of geometry [" + _viewport.geometry().to_string() + "]\nAnd a widget geometry [" +
-										geometry().to_string() + "]",
-									e);
+					PROPAGATE_ERROR(
+						"Error while applying viewport of [" + spk::StringUtils::wstringToString(name()) + "] with viewport of geometry [" +
+							_viewport.geometry().to_string() + "]\nAnd a widget geometry [" + geometry().to_string() + "]",
+						e);
 				}
 				child->_applyResize();
 			}
@@ -348,10 +347,10 @@ return (isPointed(p_mouse.position()));
 
 	void Widget::_sortChildByLayer()
 	{
-		std::sort(children().begin(),
-				  children().end(),
-				  [](const Widget *p_firstWidget, const Widget *p_secondWidget) -> bool
-				  { return (p_firstWidget->layer() > p_secondWidget->layer()); });
+		std::sort(
+			children().begin(),
+			children().end(),
+			[](const Widget *p_firstWidget, const Widget *p_secondWidget) -> bool { return (p_firstWidget->layer() > p_secondWidget->layer()); });
 	}
 
 	void Widget::requireGeometryUpdate()
@@ -475,9 +474,10 @@ return (isPointed(p_mouse.position()));
 					_viewport.apply();
 				} catch (const std::runtime_error &e)
 				{
-					PROPAGATE_ERROR("Error while applying viewport of [" + spk::StringUtils::wstringToString(name()) +
-										"] with viewport of geometry [" + _viewport.geometry().to_string() + "]",
-									e);
+					PROPAGATE_ERROR(
+						"Error while applying viewport of [" + spk::StringUtils::wstringToString(name()) + "] with viewport of geometry [" +
+							_viewport.geometry().to_string() + "]",
+						e);
 				}
 				child->onPaintEvent(childEvent);
 			}

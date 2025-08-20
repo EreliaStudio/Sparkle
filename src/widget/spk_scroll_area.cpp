@@ -3,11 +3,11 @@
 namespace spk
 {
 	void IScrollArea::_onGeometryChange()
-    {
-		const spk::Vector2UInt minSize   = _content->minimalSize();
-		const spk::Vector2UInt viewSize  = geometry().size;
+	{
+		const spk::Vector2UInt minSize = _content->minimalSize();
+		const spk::Vector2UInt viewSize = geometry().size;
 
-		bool needV = _isVerticalScrollBarVisible   && (minSize.y > viewSize.y);
+		bool needV = _isVerticalScrollBarVisible && (minSize.y > viewSize.y);
 		bool needH = _isHorizontalScrollBarVisible && (minSize.x > viewSize.x);
 
 		spk::Vector2UInt reserved = viewSize;
@@ -34,7 +34,7 @@ namespace spk
 		const spk::Vector2UInt contentSize = spk::Vector2UInt::max(minSize, reserved);
 
 		needH ? _horizontalScrollBar.activate() : _horizontalScrollBar.deactivate();
-		needV ? _verticalScrollBar.activate()   : _verticalScrollBar.deactivate();
+		needV ? _verticalScrollBar.activate() : _verticalScrollBar.deactivate();
 
 		const float hScale = float(reserved.x) / float(contentSize.x);
 		const float vScale = float(reserved.y) / float(contentSize.y);
@@ -50,7 +50,7 @@ namespace spk
 			_verticalScrollBar.setScale(vScale);
 		}
 
-		spk::Vector2Int contentAnchor { 0, 0 };
+		spk::Vector2Int contentAnchor{0, 0};
 
 		if (contentSize.x > reserved.x)
 		{
@@ -62,7 +62,7 @@ namespace spk
 		}
 
 		_content->setGeometry({contentAnchor, contentSize});
-    }
+	}
 
 	void IScrollArea::_onMouseEvent(spk::MouseEvent &p_event)
 	{
@@ -104,16 +104,16 @@ namespace spk
 	{
 		switch (p_orientation)
 		{
-			case spk::ScrollBar::Orientation::Horizontal:
-			{
-				_isHorizontalScrollBarVisible = p_state;
-				break;
-			}
-			case spk::ScrollBar::Orientation::Vertical:
-			{
-				_isVerticalScrollBarVisible = p_state;
-				break;
-			}
+		case spk::ScrollBar::Orientation::Horizontal:
+		{
+			_isHorizontalScrollBarVisible = p_state;
+			break;
+		}
+		case spk::ScrollBar::Orientation::Vertical:
+		{
+			_isVerticalScrollBarVisible = p_state;
+			break;
+		}
 		}
 
 		requireGeometryUpdate();

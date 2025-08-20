@@ -42,6 +42,11 @@ namespace spk
 			_keyboard._glyph = p_event.glyph;
 			break;
 		}
+		default:
+		{
+			GENERATE_ERROR("Invalid KeyboardEvent type");
+			break;
+		}
 		}
 		p_event.keyboard = &_keyboard;
 

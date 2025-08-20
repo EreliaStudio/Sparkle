@@ -20,81 +20,95 @@ namespace spk
 	FreeViewController::FreeViewController(const std::wstring &p_name) :
 		spk::Component(p_name)
 	{
-		_actions.push_back(std::make_unique<spk::KeyboardAction>(_config.keymap[L"Forward"],
-																 spk::InputState::Down,
-																 10,
-																 [&](const spk::SafePointer<const spk::Keyboard> &p_keyboard)
-																 { _motionRequested += owner()->transform().forward(); }));
+		_actions.push_back(
+			std::make_unique<spk::KeyboardAction>(
+				_config.keymap[L"Forward"],
+				spk::InputState::Down,
+				10,
+				[&](const spk::SafePointer<const spk::Keyboard> &p_keyboard) { _motionRequested += owner()->transform().forward(); }));
 
-		_actions.push_back(std::make_unique<spk::KeyboardAction>(_config.keymap[L"Left"],
-																 spk::InputState::Down,
-																 10,
-																 [&](const spk::SafePointer<const spk::Keyboard> &p_keyboard)
-																 { _motionRequested -= owner()->transform().right(); }));
+		_actions.push_back(
+			std::make_unique<spk::KeyboardAction>(
+				_config.keymap[L"Left"],
+				spk::InputState::Down,
+				10,
+				[&](const spk::SafePointer<const spk::Keyboard> &p_keyboard) { _motionRequested -= owner()->transform().right(); }));
 
-		_actions.push_back(std::make_unique<spk::KeyboardAction>(_config.keymap[L"Backward"],
-																 spk::InputState::Down,
-																 10,
-																 [&](const spk::SafePointer<const spk::Keyboard> &p_keyboard)
-																 { _motionRequested -= owner()->transform().forward(); }));
+		_actions.push_back(
+			std::make_unique<spk::KeyboardAction>(
+				_config.keymap[L"Backward"],
+				spk::InputState::Down,
+				10,
+				[&](const spk::SafePointer<const spk::Keyboard> &p_keyboard) { _motionRequested -= owner()->transform().forward(); }));
 
-		_actions.push_back(std::make_unique<spk::KeyboardAction>(_config.keymap[L"Right"],
-																 spk::InputState::Down,
-																 10,
-																 [&](const spk::SafePointer<const spk::Keyboard> &p_keyboard)
-																 { _motionRequested += owner()->transform().right(); }));
+		_actions.push_back(
+			std::make_unique<spk::KeyboardAction>(
+				_config.keymap[L"Right"],
+				spk::InputState::Down,
+				10,
+				[&](const spk::SafePointer<const spk::Keyboard> &p_keyboard) { _motionRequested += owner()->transform().right(); }));
 
-		_actions.push_back(std::make_unique<spk::KeyboardAction>(_config.keymap[L"Up"],
-																 spk::InputState::Down,
-																 10,
-																 [&](const spk::SafePointer<const spk::Keyboard> &p_keyboard)
-																 {
-																	 if (_config.allowFly == true)
-																	 {
-																		 _motionRequested += spk::Vector3{0, 1, 0};
-																	 }
-																 }));
+		_actions.push_back(
+			std::make_unique<spk::KeyboardAction>(
+				_config.keymap[L"Up"],
+				spk::InputState::Down,
+				10,
+				[&](const spk::SafePointer<const spk::Keyboard> &p_keyboard)
+				{
+					if (_config.allowFly == true)
+					{
+						_motionRequested += spk::Vector3{0, 1, 0};
+					}
+				}));
 
-		_actions.push_back(std::make_unique<spk::KeyboardAction>(_config.keymap[L"Down"],
-																 spk::InputState::Down,
-																 10,
-																 [&](const spk::SafePointer<const spk::Keyboard> &p_keyboard)
-																 {
-																	 if (_config.allowFly == true)
-																	 {
-																		 _motionRequested -= spk::Vector3{0, 1, 0};
-																	 }
-																 }));
+		_actions.push_back(
+			std::make_unique<spk::KeyboardAction>(
+				_config.keymap[L"Down"],
+				spk::InputState::Down,
+				10,
+				[&](const spk::SafePointer<const spk::Keyboard> &p_keyboard)
+				{
+					if (_config.allowFly == true)
+					{
+						_motionRequested -= spk::Vector3{0, 1, 0};
+					}
+				}));
 
-		_actions.push_back(std::make_unique<spk::MouseButtonAction>(spk::Mouse::Button::Left,
-																	spk::InputState::Down,
-																	-1,
-																	[&](const spk::SafePointer<const spk::Mouse> &p_mouse)
-																	{
-																		_isMovingCamera = true;
-																		_lastMousePosition = p_mouse->position();
-																	}));
-		_actions.push_back(std::make_unique<spk::MouseButtonAction>(
-			spk::Mouse::Button::Left, spk::InputState::Up, -1, [&](const spk::SafePointer<const spk::Mouse> &p_mouse) { _isMovingCamera = false; }));
+		_actions.push_back(
+			std::make_unique<spk::MouseButtonAction>(
+				spk::Mouse::Button::Left,
+				spk::InputState::Down,
+				-1,
+				[&](const spk::SafePointer<const spk::Mouse> &p_mouse)
+				{
+					_isMovingCamera = true;
+					_lastMousePosition = p_mouse->position();
+				}));
+		_actions.push_back(
+			std::make_unique<spk::MouseButtonAction>(
+				spk::Mouse::Button::Left,
+				spk::InputState::Up,
+				-1,
+				[&](const spk::SafePointer<const spk::Mouse> &p_mouse) { _isMovingCamera = false; }));
 
-		_actions.push_back(std::make_unique<spk::MouseMotionAction>(spk::MouseMotionAction::Mode::Absolute,
-																	[&](const spk::Vector2Int &p_mousePosition)
-																	{
-																		if (_isMovingCamera == false)
-																		{
-																			return;
-																		}
+		_actions.push_back(
+			std::make_unique<spk::MouseMotionAction>(
+				spk::MouseMotionAction::Mode::Absolute,
+				[&](const spk::Vector2Int &p_mousePosition)
+				{
+					if (_isMovingCamera == false)
+					{
+						return;
+					}
 
-																		spk::Vector2Int deltaPosition = p_mousePosition - _lastMousePosition;
+					spk::Vector2Int deltaPosition = p_mousePosition - _lastMousePosition;
 
-																		if (deltaPosition != spk::Vector2Int(0, 0))
-																		{
-																			_rotationRequested.x =
-																				static_cast<float>(deltaPosition.x) * _config.mouseSensitivity;
-																			_rotationRequested.y =
-																				static_cast<float>(deltaPosition.y) * _config.mouseSensitivity;
-																		}
-																	}));
+					if (deltaPosition != spk::Vector2Int(0, 0))
+					{
+						_rotationRequested.x = static_cast<float>(deltaPosition.x) * _config.mouseSensitivity;
+						_rotationRequested.y = static_cast<float>(deltaPosition.y) * _config.mouseSensitivity;
+					}
+				}));
 	}
 
 	void FreeViewController::setConfiguration(const Configuration &p_configuration)

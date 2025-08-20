@@ -41,7 +41,7 @@ namespace spk
 					while (_windowToRemove.empty() == false)
 					{
 						closeWindow(_windowToRemove.pop());
-						if (_windows.size() == 0)
+						if (_windows.empty())
 						{
 							quit(0);
 						}

@@ -569,15 +569,11 @@ spk::IVector2<TType> operator/(UType p_scalar, const spk::IVector2<TType> &p_vec
 	return spk::IVector2<TType>(p_scalar / p_vec.x, p_scalar / p_vec.y);
 }
 
-// Hash function for IVector2 to use in unordered_map
-namespace std
+template <typename TType>
+struct std::hash<spk::IVector2<TType>>
 {
-	template <typename TType>
-	struct hash<spk::IVector2<TType>>
+	size_t operator()(const spk::IVector2<TType> &p_vec) const
 	{
-		size_t operator()(const spk::IVector2<TType> &p_vec) const
-		{
-			return hash<TType>()(p_vec.x) ^ (hash<TType>()(p_vec.y) << 1);
-		}
-	};
-}
+		return hash<TType>()(p_vec.x) ^ (hash<TType>()(p_vec.y) << 1);
+	}
+};

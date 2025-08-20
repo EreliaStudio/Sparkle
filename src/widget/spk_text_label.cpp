@@ -46,7 +46,7 @@ namespace spk
 
 	spk::Vector2UInt TextLabel::minimalSize() const
 	{
-		if (_text == L"")
+		if (_text.empty())
 		{
 			return (0);
 		}

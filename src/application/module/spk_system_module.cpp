@@ -46,6 +46,11 @@ namespace spk
 			p_event.window->move(p_event.newPosition);
 			break;
 		}
+		default:
+		{
+			GENERATE_ERROR("Invalid SystemEvent type");
+			break;
+		}
 		}
 	}
 

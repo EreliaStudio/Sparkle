@@ -48,10 +48,10 @@ namespace spk
 		{
 			if (p_event.button == spk::Mouse::Button::Left)
 			{
-                                if (_body.viewport().geometry().contains(p_event.mouse->position()) == true)
+				if (_body.viewport().geometry().contains(p_event.mouse->position()) == true)
 				{
 					_isClicked = true;
-                                        _clickedMousePosition = p_event.mouse->position();
+					_clickedMousePosition = p_event.mouse->position();
 					_clickedRatio = _ratio;
 				}
 			}
@@ -68,12 +68,13 @@ namespace spk
 		}
 		case spk::MouseEvent::Type::Motion:
 		{
-                    if (_isClicked == true && p_event.mouse->deltaPosition() != 0)
+			if (_isClicked == true && p_event.mouse->deltaPosition() != 0)
 			{
 				float range = (_orientation == Orientation::Horizontal ? geometry().size.x * (1 - _scale) : geometry().size.y * (1 - _scale));
-				float mouseDeltaPosition = (_orientation == Orientation::Horizontal
-                                                                                                ? static_cast<int>(p_event.mouse->position().x) - static_cast<int>(_clickedMousePosition.x)
-                                                                                                : static_cast<int>(p_event.mouse->position().y) - static_cast<int>(_clickedMousePosition.y));
+				float mouseDeltaPosition =
+					(_orientation == Orientation::Horizontal
+						 ? static_cast<int>(p_event.mouse->position().x) - static_cast<int>(_clickedMousePosition.x)
+						 : static_cast<int>(p_event.mouse->position().y) - static_cast<int>(_clickedMousePosition.y));
 
 				float delta = mouseDeltaPosition / range;
 
@@ -82,6 +83,11 @@ namespace spk
 				_onEditionContractProvider.trigger(_ratio);
 				requireGeometryUpdate();
 			}
+		}
+
+		default:
+		{
+			break;
 		}
 		}
 	}

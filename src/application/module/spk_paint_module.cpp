@@ -36,6 +36,11 @@ namespace spk
 			}
 			break;
 		}
+		default:
+		{
+			GENERATE_ERROR("Invalid PaintEvent type");
+			break;
+		}
 		}
 	}
 

@@ -28,6 +28,19 @@ namespace spk
 				   std::optional<std::wstring> p_defaultVal = std::nullopt);
 		};
 
+	private:		
+		std::unordered_map<std::wstring, Option> _options;
+		std::unordered_map<char, std::wstring> _shortLookup;
+		std::vector<std::wstring> _parameters;
+		std::wstring _synopsis = L"";
+
+		static bool _isLongOpt(const std::string& tok) noexcept;
+		static bool _isShortOpt(const std::string& tok) noexcept;
+		Option& _requireByLong(const std::wstring& name);
+		Option& _requireByShort(char shortName);
+   		void _consumeValues(Option& opt, int& i, int argc, char** argv);
+
+	public:
 		explicit ArgumentParser();
 
 		void setSynopsis(const std::wstring &p_synopsis);
@@ -40,10 +53,5 @@ namespace spk
 		bool has(const std::wstring &p_name) const;
 		const Option &get(const std::wstring &p_longName) const;
 		const Option &get(char p_shortName) const;
-
-	private:
-		std::unordered_map<std::wstring, Option> _options;
-		std::vector<std::wstring> _parameters;
-		std::wstring _synopsis = L"";
 	};
 }

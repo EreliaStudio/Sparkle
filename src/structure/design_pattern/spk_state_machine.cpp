@@ -111,9 +111,7 @@ namespace spk
 		return (_current != nullptr);
 	}
 
-	DefaultStep::DefaultStep(std::function<void()> p_onStart,
-										   std::function<void()> p_onPending,
-										   std::function<StateMachine::Step::ID()> p_onFinish) :
+	DefaultStep::DefaultStep(std::function<void()> p_onStart, std::function<void()> p_onPending, std::function<StateMachine::Step::ID()> p_onFinish) :
 		onStartCallback(std::move(p_onStart)),
 		onPendingCallback(std::move(p_onPending)),
 		onFinishCallback(std::move(p_onFinish))

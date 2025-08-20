@@ -127,7 +127,7 @@ namespace spk::OpenGL
 	{
 		return (_type);
 	}
-	
+
 	void SamplerObject::setType(SamplerObject::Type p_type)
 	{
 		_type = p_type;

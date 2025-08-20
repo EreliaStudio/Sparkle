@@ -53,7 +53,7 @@ namespace spk
 
 		std::wstring _name;
 		spk::SafePointer<Widget> _parent;
-		std::vector<Widget *> _managedChildren;
+		std::vector<std::unique_ptr<Widget>> _managedChildren;
 
 		bool _needGeometryChange = true;
 		spk::Vector2 _anchorRatio;
@@ -107,13 +107,15 @@ namespace spk
 		template <typename TChildType, typename... TArgs>
 		spk::SafePointer<TChildType> makeChild(TArgs &&...p_args)
 		{
-			TChildType *newChild = new TChildType(std::forward<TArgs>(p_args)...);
+			std::unique_ptr<TChildType> newChild = std::make_unique<TChildType>(std::forward<TArgs>(p_args)...);
 
-			addChild(newChild);
+			TChildType * result = newChild.get();
 
-			_managedChildren.push_back(newChild);
+			addChild(result);
 
-			return (spk::SafePointer<TChildType>(newChild));
+			_managedChildren.push_back(std::move(newChild));
+
+			return (result);
 		}
 
 		bool isPointed(const spk::Vector2Int &p_pointerPosition) const;

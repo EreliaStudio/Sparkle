@@ -8,12 +8,8 @@ namespace spk
 		_name(p_name),
 		_owner(nullptr)
 	{
-		addActivationCallback([&]() {
-			awake();
-		}).relinquish();
-		addDeactivationCallback([&]() {
-			sleep();
-		}).relinquish();
+		addActivationCallback([&]() { awake(); }).relinquish();
+		addDeactivationCallback([&]() { sleep(); }).relinquish();
 	}
 
 	Component::~Component()
@@ -70,9 +66,8 @@ namespace spk
 	{
 	}
 
-	void Component::onGeometryChange(const spk::Geometry2D& p_geometry)
+	void Component::onGeometryChange(const spk::Geometry2D &p_geometry)
 	{
-
 	}
 
 	void Component::onPaintEvent(spk::PaintEvent &p_event)

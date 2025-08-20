@@ -133,9 +133,8 @@ namespace spk
 		requireGeometryUpdate();
 	}
 
-	void PushButton::setTextAlignment(const spk::HorizontalAlignment &p_horizontalAlignment,
-									  const spk::VerticalAlignment &p_verticalAlignment,
-									  const State &p_state)
+	void PushButton::setTextAlignment(
+		const spk::HorizontalAlignment &p_horizontalAlignment, const spk::VerticalAlignment &p_verticalAlignment, const State &p_state)
 	{
 		_horizontalAlignment[p_state] = p_horizontalAlignment;
 		_verticalAlignment[p_state] = p_verticalAlignment;

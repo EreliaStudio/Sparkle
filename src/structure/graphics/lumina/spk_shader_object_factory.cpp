@@ -4,82 +4,92 @@ namespace spk::Lumina
 {
 	void ShaderObjectFactory::add(const spk::JSON::Object &p_desc)
 	{
-		if (p_desc.contains(L"UBO") == true)
+		if (p_desc.contains(L"UBO"))
 		{
-			const spk::JSON::Object &ubos = p_desc[L"UBO"];
-			for (size_t index = 0; index < ubos.size(); ++index)
-			{
-				const spk::JSON::Object &desc = ubos[index];
-				std::wstring name = desc[L"name"].as<std::wstring>();
-				const spk::JSON::Object &data = desc[L"data"];
-				spk::OpenGL::UniformBufferObject newUBO = spk::OpenGL::UniformBufferObject(data);
-
-				if (_objects.contains(name) == true)
-				{
-					spk::OpenGL::UniformBufferObject& existingUBO = std::get<spk::OpenGL::UniformBufferObject>(_objects[name]);
-					if (existingUBO.size() != newUBO.size())
-					{
-						GENERATE_ERROR("Uniform Buffer Object '" + spk::StringUtils::wstringToString(name) + "' already exists with a different size.");
-					}
-				}
-				else
-				{
-					_objects[name] = std::move(newUBO);
-				}
-			}
+			_addUBOs(p_desc[L"UBO"]);
 		}
 
-		if (p_desc.contains(L"SSBO") == true)
+		if (p_desc.contains(L"SSBO"))
 		{
-			const spk::JSON::Object &ssbos = p_desc[L"SSBO"];
-			for (size_t index = 0; index < ssbos.size(); ++index)
-			{
-				const spk::JSON::Object &desc = ssbos[index];
-				std::wstring name = desc[L"name"].as<std::wstring>();
-				const spk::JSON::Object &data = desc[L"data"];
-
-				spk::OpenGL::ShaderStorageBufferObject newSSBO = spk::OpenGL::ShaderStorageBufferObject(data);
-
-				if (_objects.contains(name) == true)
-				{
-					spk::OpenGL::ShaderStorageBufferObject& existingSSBO = std::get<spk::OpenGL::ShaderStorageBufferObject>(_objects[name]);
-					if (existingSSBO.fixedData().size() != newSSBO.fixedData().size() ||
-						existingSSBO.dynamicArray().elementSize() != newSSBO.dynamicArray().elementSize())
-					{
-						GENERATE_ERROR("Shader Storage Buffer Object '" + spk::StringUtils::wstringToString(name) + "' already exists with a different size.");
-					}
-				}
-				else
-				{
-					_objects[name] = std::move(newSSBO);
-				}
-			}
+			_addSSBOs(p_desc[L"SSBO"]);
 		}
 
-		if (p_desc.contains(L"Sampler") == true)
+		if (p_desc.contains(L"Sampler"))
 		{
-			const spk::JSON::Object &samplers = p_desc[L"Sampler"];
-			for (size_t index = 0; index < samplers.size(); ++index)
+			_addSamplers(p_desc[L"Sampler"]);
+		}
+	}
+
+	void ShaderObjectFactory::_addUBOs(const spk::JSON::Object &p_ubos)
+	{
+		for (size_t index = 0; index < p_ubos.size(); ++index)
+		{
+			const JSON::Object &desc = p_ubos[index];
+			std::wstring name = desc[L"name"].as<std::wstring>();
+			const JSON::Object &data = desc[L"data"];
+			OpenGL::UniformBufferObject newUBO(data);
+
+			if (_objects.contains(name))
 			{
-				const spk::JSON::Object &desc = samplers[index];
-				std::wstring alias = desc[L"name"].as<std::wstring>();
-				const spk::JSON::Object &data = desc[L"data"];
-
-				spk::OpenGL::SamplerObject newSampler = spk::OpenGL::SamplerObject(data);
-
-				if (_objects.contains(alias) == true)
+				auto &existing = std::get<OpenGL::UniformBufferObject>(_objects[name]);
+				if (existing.size() != newUBO.size())
 				{
-					spk::OpenGL::SamplerObject& existingSampler = std::get<spk::OpenGL::SamplerObject>(_objects[alias]);
-					if (existingSampler.bindingPoint() != newSampler.bindingPoint() ||
-						existingSampler.type() != newSampler.type())
-					{
-						GENERATE_ERROR("Shader Storage Buffer Object '" + spk::StringUtils::wstringToString(alias) + "' already exists with a different binding point or type.");
-					}
+					GENERATE_ERROR("UBO '" + StringUtils::wstringToString(name) + "' already exists with a different size.");
 				}
-				else
+			}
+			else
+			{
+				_objects[name] = std::move(newUBO);
+			}
+		}
+	}
+
+	void ShaderObjectFactory::_addSSBOs(const spk::JSON::Object &p_ssbos)
+	{
+		for (size_t index = 0; index < p_ssbos.size(); ++index)
+		{
+			const spk::JSON::Object &desc = p_ssbos[index];
+			std::wstring name = desc[L"name"].as<std::wstring>();
+			const spk::JSON::Object &data = desc[L"data"];
+			spk::OpenGL::ShaderStorageBufferObject newSSBO(data);
+
+			if (_objects.contains(name))
+			{
+				auto &existing = std::get<spk::OpenGL::ShaderStorageBufferObject>(_objects[name]);
+				if (existing.fixedData().size() != newSSBO.fixedData().size() ||
+					existing.dynamicArray().elementSize() != newSSBO.dynamicArray().elementSize())
 				{
-					_objects[alias] = std::move(newSampler);
+					GENERATE_ERROR("SSBO '" + spk::StringUtils::wstringToString(name) + "' already exists with a different size.");
 				}
+			}
+			else
+			{
+				_objects[name] = std::move(newSSBO);
+			}
+		}
+	}
+
+	void ShaderObjectFactory::_addSamplers(const spk::JSON::Object &p_samplers)
+	{
+		for (size_t index = 0; index < p_samplers.size(); ++index)
+		{
+			const spk::JSON::Object &desc = p_samplers[index];
+			std::wstring alias = desc[L"name"].as<std::wstring>();
+			const spk::JSON::Object &data = desc[L"data"];
+			spk::OpenGL::SamplerObject newSampler(data);
+
+			if (_objects.contains(alias))
+			{
+				auto &existing = std::get<spk::OpenGL::SamplerObject>(_objects[alias]);
+				if (existing.bindingPoint() != newSampler.bindingPoint() || existing.type() != newSampler.type())
+				{
+					GENERATE_ERROR(
+						"Sampler '" + spk::StringUtils::wstringToString(alias) + "' already exists with a different binding point or type.");
+				}
+			}
+			else
+			{
+				_objects[alias] = std::move(newSampler);
 			}
 		}
 	}

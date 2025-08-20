@@ -1,5 +1,6 @@
 #include "widget/spk_layout.hpp"
 #include <limits>
+#include <memory>
 
 namespace spk
 {
@@ -115,14 +116,14 @@ namespace spk
 
 	spk::SafePointer<Layout::Element> Layout::addWidget(spk::SafePointer<spk::Widget> p_widget, const SizePolicy &p_sizePolicy)
 	{
-		_elements.push_back(std::unique_ptr<Element>(new Element(p_widget, p_sizePolicy, {0, 0})));
+		_elements.push_back(std::make_unique<Element>(p_widget, p_sizePolicy, spk::Vector2UInt{0, 0}));
 
 		return (_elements.back().get());
 	}
 
 	spk::SafePointer<Layout::Element> Layout::addLayout(spk::SafePointer<spk::Layout> p_layout, const SizePolicy &p_sizePolicy)
 	{
-		_elements.push_back(std::unique_ptr<Element>(new Element(p_layout, p_sizePolicy, {0, 0})));
+		_elements.push_back(std::make_unique<Element>(p_layout, p_sizePolicy, spk::Vector2UInt{0, 0}));
 
 		return (_elements.back().get());
 	}

@@ -164,9 +164,7 @@ void main()
 
 	void VoxelMeshRenderer::start()
 	{
-		_onOwnerTransformEditionContract = owner()->transform().addOnEditionCallback([this]() {
-			_painter.setTransform(owner()->transform());
-		});
+		_onOwnerTransformEditionContract = owner()->transform().addOnEditionCallback([this]() { _painter.setTransform(owner()->transform()); });
 		_onOwnerTransformEditionContract.trigger();
 	}
 }

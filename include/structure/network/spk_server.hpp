@@ -45,6 +45,9 @@ namespace spk
 			void run();
 			void acceptNewClient();
 			bool receiveFromClient(ClientID p_clientId, SOCKET p_socket);
+			int prepareReadFds(fd_set &readfds);
+			int waitForActivity(fd_set &readfds, int maxFD);
+			void handleClients(fd_set &readfds);
 
 		public:
 			std::thread receptionThread;

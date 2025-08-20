@@ -64,8 +64,9 @@ namespace spk
 			return _commandPanel.minimalSize();
 		}
 
-		return (spk::Vector2UInt(std::max(_textArea.minimalSize().x, _commandPanel.minimalSize().x),
-								 _textArea.minimalSize().y + _layout.elementPadding().y + _commandPanel.minimalSize().y));
+		return (spk::Vector2UInt(
+			std::max(_textArea.minimalSize().x, _commandPanel.minimalSize().x),
+			_textArea.minimalSize().y + _layout.elementPadding().y + _commandPanel.minimalSize().y));
 	}
 
 	MessageBox::MessageBox(const std::wstring &p_name, const spk::SafePointer<spk::Widget> &p_parent) :
@@ -84,9 +85,9 @@ namespace spk
 				size_t textAreaWidth = (commandPanelMinimalSize.x > p_availableSize.x ? commandPanelMinimalSize.x : p_availableSize.x);
 				spk::Vector2UInt textAreaMinimalSize = _content.textArea().computeMinimalSize(textAreaWidth);
 
-				spk::Vector2UInt minimalContentSize =
-					spk::Vector2UInt(std::max(textAreaMinimalSize.x, commandPanelMinimalSize.x),
-									 textAreaMinimalSize.y + _content.layout().elementPadding().y + commandPanelMinimalSize.y);
+				spk::Vector2UInt minimalContentSize = spk::Vector2UInt(
+					std::max(textAreaMinimalSize.x, commandPanelMinimalSize.x),
+					textAreaMinimalSize.y + _content.layout().elementPadding().y + commandPanelMinimalSize.y);
 
 				setMinimumContentSize(minimalContentSize);
 				requireGeometryUpdate();
@@ -165,8 +166,10 @@ namespace spk
 		spk::Vector2UInt textAreaMinimalSize =
 			_content.textArea().computeMinimalSize((commandPanelMinimalSize.x > p_width ? commandPanelMinimalSize.x : p_width));
 
-		setMinimumContentSize(spk::Vector2UInt(std::max(textAreaMinimalSize.x, commandPanelMinimalSize.x),
-											   textAreaMinimalSize.y + _content.layout().elementPadding().y + commandPanelMinimalSize.y));
+		setMinimumContentSize(
+			spk::Vector2UInt(
+				std::max(textAreaMinimalSize.x, commandPanelMinimalSize.x),
+				textAreaMinimalSize.y + _content.layout().elementPadding().y + commandPanelMinimalSize.y));
 	}
 
 	InformationMessageBox::InformationMessageBox(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
@@ -194,10 +197,11 @@ namespace spk
 		configure(L"Yes", [&] {}, L"No", [&] {});
 	}
 
-	void RequestMessageBox::configure(const std::wstring &p_firstCaption,
-									  const std::function<void()> &p_firstAction,
-									  const std::wstring &p_secondCaption,
-									  const std::function<void()> &p_secondAction)
+	void RequestMessageBox::configure(
+		const std::wstring &p_firstCaption,
+		const std::function<void()> &p_firstAction,
+		const std::wstring &p_secondCaption,
+		const std::function<void()> &p_secondAction)
 	{
 		_firstButton->setName(name() + L"/" + p_firstCaption + L"Button");
 		_firstButton->setText(p_firstCaption);

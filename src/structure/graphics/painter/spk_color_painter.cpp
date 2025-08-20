@@ -39,7 +39,7 @@ namespace spk
 				}
 				)";
 
-			_program = new spk::OpenGL::Program(vertexShaderSrc, fragmentShaderSrc);
+			_program = std::make_unique<spk::OpenGL::Program>(vertexShaderSrc, fragmentShaderSrc);
 		}
 	}
 

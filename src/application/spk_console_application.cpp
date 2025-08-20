@@ -4,31 +4,32 @@ namespace spk
 {
 	HWND ConsoleApplication::createBackgroundHandle(const std::wstring &p_title)
 	{
-		const wchar_t className[] = L"DummyWindowClass";
+		const std::wstring className = L"DummyWindowClass";
 
 		WNDCLASSW windowClass = {};
 
 		windowClass.lpfnWndProc = DefWindowProc;
-		windowClass.hInstance = GetModuleHandle(NULL);
-		windowClass.lpszClassName = className;
+		windowClass.hInstance = GetModuleHandle(nullptr);
+		windowClass.lpszClassName = className.c_str();
 
 		RegisterClassW(&windowClass);
 
-		HWND windowHandle = CreateWindowExW(0,					 // Optional window styles.
-											className,			 // Window class
-											p_title.c_str(),	 // Window text
-											WS_OVERLAPPEDWINDOW, // Window style
+		HWND windowHandle = CreateWindowExW(
+			0,					 // Optional window styles.
+			className.c_str(),	 // Window class
+			p_title.c_str(),	 // Window text
+			WS_OVERLAPPEDWINDOW, // Window style
 
-											// Size and position
-											CW_USEDEFAULT,
-											CW_USEDEFAULT,
-											CW_USEDEFAULT,
-											CW_USEDEFAULT,
+			// Size and position
+			CW_USEDEFAULT,
+			CW_USEDEFAULT,
+			CW_USEDEFAULT,
+			CW_USEDEFAULT,
 
-											NULL,				   // Parent window
-											NULL,				   // Menu
-											GetModuleHandle(NULL), // Instance handle
-											NULL				   // Additional application data
+			nullptr,				  // Parent window
+			nullptr,				  // Menu
+			GetModuleHandle(nullptr), // Instance handle
+			nullptr					  // Additional application data
 		);
 
 		return (windowHandle);

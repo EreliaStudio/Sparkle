@@ -32,7 +32,7 @@ namespace spk
 		_updateUBO();
 	}
 
-	void CameraComponent::onGeometryChange(const spk::Geometry2D& p_geometry)
+	void CameraComponent::onGeometryChange(const spk::Geometry2D &p_geometry)
 	{
 		setPerspective(60.0f, static_cast<float>(p_geometry.size.x) / static_cast<float>(p_geometry.size.y));
 	}

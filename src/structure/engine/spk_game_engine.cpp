@@ -57,7 +57,7 @@ namespace spk
 		return (_rootObject.count(p_name));
 	}
 
-	void GameEngine::onGeometryChange(const spk::Geometry2D& p_geometry)
+	void GameEngine::onGeometryChange(const spk::Geometry2D &p_geometry)
 	{
 		_rootObject.onGeometryChange(p_geometry);
 	}

@@ -1,4 +1,4 @@
-#include "structure/container/spk_JSON_object.hpp"
+#include "structure/container/spk_json_object.hpp"
 
 #include <string>
 
@@ -6,7 +6,7 @@
 
 #include "structure/system/spk_exception.hpp"
 
-#include "structure/container/spk_JSON_file.hpp"
+#include "structure/container/spk_json_file.hpp"
 
 namespace spk
 {
@@ -135,7 +135,7 @@ namespace spk
 
 				loadContent(newObject, p_content, p_index);
 
-				p_objectToFill.push_back(newObject);
+				p_objectToFill.push_back(std::move(newObject));
 
 				if (p_content[p_index] == ',')
 				{
@@ -186,7 +186,9 @@ namespace spk
 				loadArray(p_objectToFill, p_content, p_index);
 				break;
 			default:
-				GENERATE_ERROR("Unexpected data type in JSON: [" + spk::StringUtils::wstringToString(p_content).substr(p_index, 1) + "] (Char value: " + std::to_string(static_cast<int>(p_content[p_index])) + ")");
+				GENERATE_ERROR(
+					"Unexpected data type in JSON: [" + spk::StringUtils::wstringToString(p_content).substr(p_index, 1) +
+					"] (Char value: " + std::to_string(static_cast<int>(p_content[p_index])) + ")");
 			}
 		}
 
@@ -218,12 +220,12 @@ namespace spk
 
 		bool Object::isObject() const
 		{
-			return (_initialized && std::holds_alternative<std::map<std::wstring, Object *>>(_content));
+			return (_initialized && std::holds_alternative<std::map<std::wstring, std::shared_ptr<Object>>>(_content));
 		}
 
 		bool Object::isArray() const
 		{
-			return (_initialized && std::holds_alternative<std::vector<Object *>>(_content));
+			return (_initialized && std::holds_alternative<std::vector<std::shared_ptr<Object>>>(_content));
 		}
 
 		bool Object::isUnit() const
@@ -235,23 +237,24 @@ namespace spk
 		{
 			if (_initialized == false)
 			{
-				_content = std::map<std::wstring, Object *>();
+				_content = std::map<std::wstring, std::shared_ptr<Object>>();
 				_initialized = true;
 			}
 
-			Object *result = new Object(p_key);
+			std::shared_ptr<Object> result = std::make_shared<Object>(p_key);
+			Object *tmp = result.get();
 
-			if (std::get<std::map<std::wstring, Object *>>(_content).count(p_key) != 0)
+			if (std::get<std::map<std::wstring, std::shared_ptr<Object>>>(_content).count(p_key) != 0)
 			{
 				GENERATE_ERROR("Can't add attribute named [" + spk::StringUtils::wstringToString(p_key) + "] : it already exists");
 			}
-			std::get<std::map<std::wstring, Object *>>(_content)[p_key] = result;
-			return (*result);
+			std::get<std::map<std::wstring, std::shared_ptr<Object>>>(_content)[p_key] = std::move(result);
+			return (*tmp);
 		}
 
 		bool Object::contains(const std::wstring &p_key) const
 		{
-			auto &map = std::get<std::map<std::wstring, Object *>>(_content);
+			auto &map = std::get<std::map<std::wstring, std::shared_ptr<Object>>>(_content);
 
 			return (map.contains(p_key));
 		}
@@ -263,19 +266,19 @@ namespace spk
 				setAsObject();
 			}
 
-			if (!std::holds_alternative<std::map<std::wstring, Object *>>(_content))
+			if (!std::holds_alternative<std::map<std::wstring, std::shared_ptr<Object>>>(_content))
 			{
 				GENERATE_ERROR("Object does not hold a map, cannot access by key");
 			}
 
-			auto &map = std::get<std::map<std::wstring, Object *>>(_content);
+			auto &map = std::get<std::map<std::wstring, std::shared_ptr<Object>>>(_content);
 
 			if (map.count(p_key) == 0)
 			{
 				addAttribute(p_key);
 			}
 
-			Object *result = map.at(p_key);
+			std::shared_ptr<Object> &result = map.at(p_key);
 
 			if (std::holds_alternative<Unit>(result->_content) == false)
 			{
@@ -283,32 +286,32 @@ namespace spk
 			}
 			else
 			{
-				if (std::holds_alternative<Object *>(std::get<Unit>(result->_content)) == false)
+				if (std::holds_alternative<std::shared_ptr<Object>>(std::get<Unit>(result->_content)) == false)
 				{
 					return (*(result));
 				}
 				else
 				{
-					return (*(result->as<Object *>()));
+					return (*(result->as<std::shared_ptr<Object>>()));
 				}
 			}
 		}
 
 		const Object &Object::operator[](const std::wstring &p_key) const
 		{
-			if (!std::holds_alternative<std::map<std::wstring, Object *>>(_content))
+			if (!std::holds_alternative<std::map<std::wstring, std::shared_ptr<Object>>>(_content))
 			{
 				GENERATE_ERROR("Object does not hold a map, cannot access by key");
 			}
 
-			auto &map = std::get<std::map<std::wstring, Object *>>(_content);
+			auto &map = std::get<std::map<std::wstring, std::shared_ptr<Object>>>(_content);
 
 			if (map.count(p_key) == 0)
 			{
 				GENERATE_ERROR("Can't acces JSON object named [" + spk::StringUtils::wstringToString(p_key) + "] : it does not exist");
 			}
 
-			Object *result = map.at(p_key);
+			const std::shared_ptr<Object> &result = map.at(p_key);
 
 			if (std::holds_alternative<Unit>(result->_content) == false)
 			{
@@ -316,24 +319,24 @@ namespace spk
 			}
 			else
 			{
-				if (std::holds_alternative<Object *>(std::get<Unit>(result->_content)) == false)
+				if (std::holds_alternative<std::shared_ptr<Object>>(std::get<Unit>(result->_content)) == false)
 				{
 					return (*(result));
 				}
 				else
 				{
-					return (*(result->as<Object *>()));
+					return (*(result->as<std::shared_ptr<Object>>()));
 				}
 			}
 		}
 
-		const std::map<std::wstring, Object *> &Object::members() const
+		const std::map<std::wstring, std::shared_ptr<Object>> &Object::members() const
 		{
-			if (_initialized == false || std::holds_alternative<std::map<std::wstring, Object *>>(_content) == false)
+			if (_initialized == false || std::holds_alternative<std::map<std::wstring, std::shared_ptr<Object>>>(_content) == false)
 			{
 				GENERATE_ERROR("Can't get object members : object is not initialized or is not of type object");
 			}
-			return (std::get<std::map<std::wstring, Object *>>(_content));
+			return (std::get<std::map<std::wstring, std::shared_ptr<Object>>>(_content));
 		}
 
 		void Object::setAsObject()
@@ -342,36 +345,35 @@ namespace spk
 			{
 				GENERATE_ERROR("Can't set object as object : it is already initialized");
 			}
-			_content = std::map<std::wstring, Object *>();
+			_content = std::map<std::wstring, std::shared_ptr<Object>>();
 			_initialized = true;
 		}
 
-		const std::vector<Object *> &Object::asArray() const
+		const std::vector<std::shared_ptr<Object>> &Object::asArray() const
 		{
-			if (_initialized == false || std::holds_alternative<std::vector<Object *>>(_content) == false)
+			if (_initialized == false || std::holds_alternative<std::vector<std::shared_ptr<Object>>>(_content) == false)
 			{
 				GENERATE_ERROR("Can't get object as array : object is not initialized or is not of type array");
 			}
-			return (std::get<std::vector<Object *>>(_content));
+			return (std::get<std::vector<std::shared_ptr<Object>>>(_content));
 		}
 
 		void Object::resize(size_t p_size)
 		{
 			if (_initialized == false)
 			{
-				_content = std::vector<Object *>();
+				_content = std::vector<std::shared_ptr<Object>>();
 				_initialized = true;
 			}
-			std::vector<Object *> &array = std::get<std::vector<Object *>>(_content);
 
-			for (size_t i = p_size; i < array.size(); i++)
-			{
-				delete array[i];
-			}
+			auto &array = std::get<std::vector<std::shared_ptr<Object>>>(_content);
 
-			for (size_t i = array.size(); i < p_size; i++)
+			const size_t oldSize = array.size();
+			array.resize(p_size);
+
+			for (size_t i = oldSize; i < p_size; ++i)
 			{
-				array.push_back(new Object(L"[" + std::to_wstring(i) + L"]"));
+				array[i] = std::make_shared<Object>(L"[" + std::to_wstring(i) + L"]");
 			}
 		}
 
@@ -379,34 +381,36 @@ namespace spk
 		{
 			if (_initialized == false)
 			{
-				_content = std::vector<Object *>();
+				_content = std::vector<std::shared_ptr<Object>>();
 				_initialized = true;
 			}
 
-			Object *result = new Object(L"[" + std::to_wstring(std::get<std::vector<Object *>>(_content).size()) + L"]");
-			std::get<std::vector<Object *>>(_content).push_back(result);
+			std::shared_ptr<Object> newObject =
+				std::make_shared<Object>(L"[" + std::to_wstring(std::get<std::vector<std::shared_ptr<Object>>>(_content).size()) + L"]");
+			Object *result = newObject.get();
+			std::get<std::vector<std::shared_ptr<Object>>>(_content).push_back(std::move(newObject));
 			return (*result);
 		}
 
-		void Object::push_back(Object &p_object)
+		void Object::push_back(const Object &p_object)
 		{
 			if (_initialized == false)
 			{
-				_content = std::vector<Object *>();
+				_content = std::vector<std::shared_ptr<Object>>();
 				_initialized = true;
 			}
-			Object *result = new Object(p_object);
-			std::get<std::vector<Object *>>(_content).push_back(result);
+
+			std::get<std::vector<std::shared_ptr<Object>>>(_content).push_back(std::make_shared<Object>(p_object));
 		}
 
 		Object &Object::operator[](size_t p_index)
 		{
-			if (!std::holds_alternative<std::vector<Object *>>(_content))
+			if (!std::holds_alternative<std::vector<std::shared_ptr<Object>>>(_content))
 			{
 				GENERATE_ERROR("Object does not hold an array, cannot access by index");
 			}
 
-			auto &vec = std::get<std::vector<Object *>>(_content);
+			auto &vec = std::get<std::vector<std::shared_ptr<Object>>>(_content);
 
 			// Check if the index is within bounds
 			if (p_index >= vec.size())
@@ -419,12 +423,12 @@ namespace spk
 
 		const Object &Object::operator[](size_t p_index) const
 		{
-			if (!std::holds_alternative<std::vector<Object *>>(_content))
+			if (!std::holds_alternative<std::vector<std::shared_ptr<Object>>>(_content))
 			{
 				GENERATE_ERROR("Object does not hold an array, cannot access by index");
 			}
 
-			const std::vector<Object *> &vec = std::get<std::vector<Object *>>(_content);
+			const std::vector<std::shared_ptr<Object>> &vec = std::get<std::vector<std::shared_ptr<Object>>>(_content);
 
 			if (p_index >= vec.size())
 			{
@@ -440,7 +444,7 @@ namespace spk
 			{
 				GENERATE_ERROR("Can't set object as Array : it is already initialized");
 			}
-			_content = std::vector<Object *>();
+			_content = std::vector<std::shared_ptr<Object>>();
 			_initialized = true;
 		}
 
@@ -450,20 +454,20 @@ namespace spk
 			{
 				GENERATE_ERROR("Can't get object size : it is uninitialized");
 			}
-			if (!std::holds_alternative<std::vector<Object *>>(_content))
+			if (!std::holds_alternative<std::vector<std::shared_ptr<Object>>>(_content))
 			{
 				GENERATE_ERROR("Object does not hold a vector, cannot perform size operation");
 			}
-			return (std::get<std::vector<Object *>>(_content).size());
+			return (std::get<std::vector<std::shared_ptr<Object>>>(_content).size());
 		}
 
 		size_t Object::count(const std::wstring &p_key) const
 		{
-			if (!std::holds_alternative<std::map<std::wstring, Object *>>(_content))
+			if (!std::holds_alternative<std::map<std::wstring, std::shared_ptr<Object>>>(_content))
 			{
 				GENERATE_ERROR("Object does not hold a map, cannot perform count operation");
 			}
-			return (std::get<std::map<std::wstring, Object *>>(_content).count(p_key));
+			return (std::get<std::map<std::wstring, std::shared_ptr<Object>>>(_content).count(p_key));
 		}
 
 		void Object::printUnit(std::wostream &p_os) const
@@ -485,7 +489,7 @@ namespace spk
 				p_os << '"' << as<std::wstring>() << '"';
 				break;
 			case 4:
-				p_os << *(as<Object *>());
+				p_os << *(as<std::shared_ptr<Object>>());
 				break;
 			case 5:
 				p_os << "null";
@@ -495,7 +499,7 @@ namespace spk
 
 		void Object::printObject(std::wostream &p_os) const
 		{
-			const std::map<std::wstring, Object *> &map = std::get<std::map<std::wstring, Object *>>(_content);
+			const std::map<std::wstring, std::shared_ptr<Object>> &map = std::get<std::map<std::wstring, std::shared_ptr<Object>>>(_content);
 			std::wstring cleanedKey;
 
 			p_os << std::setw(_indent * _indentSize) << "{" << std::endl;
@@ -524,7 +528,7 @@ namespace spk
 
 		void Object::printArray(std::wostream &p_os) const
 		{
-			const std::vector<Object *> &vector = std::get<std::vector<Object *>>(_content);
+			const std::vector<std::shared_ptr<Object>> &vector = std::get<std::vector<std::shared_ptr<Object>>>(_content);
 
 			p_os << std::setw(_indent * _indentSize) << '[' << std::endl;
 			++_indent;

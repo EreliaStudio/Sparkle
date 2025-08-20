@@ -84,6 +84,13 @@
 			"cacheVariables": {
 				"CMAKE_BUILD_TYPE": "Release"
 			}
+		},
+		{
+			"name": "tidy-fix",
+			"inherits": "debug",
+			"cacheVariables": {
+				"CMAKE_CXX_CLANG_TIDY": "clang-tidy;-fix;-fix-errors"
+			}
 		}
 	],
 	"buildPresets": [

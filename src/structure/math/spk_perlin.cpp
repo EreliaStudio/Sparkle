@@ -24,17 +24,17 @@ namespace spk
 
 	float Perlin::grad(int p_hash, float p_x)
 	{
-		return (p_hash & 1) ? p_x : -p_x;
+		return ((p_hash & 1) != 0) ? p_x : -p_x;
 	}
 
 	float Perlin::grad(int p_hash, float p_x, float p_y)
 	{
-		return ((p_hash & 1) ? p_x : -p_x) + ((p_hash & 2) ? p_y : -p_y);
+		return (((p_hash & 1) != 0) ? p_x : -p_x) + (((p_hash & 2) != 0) ? p_y : -p_y);
 	}
 
 	float Perlin::grad(int p_hash, float p_x, float p_y, float p_z)
 	{
-		return ((p_hash & 1) ? p_x : -p_x) + ((p_hash & 2) ? p_y : -p_y) + ((p_hash & 4) ? p_z : -p_z);
+		return (((p_hash & 1) != 0) ? p_x : -p_x) + (((p_hash & 2) != 0) ? p_y : -p_y) + (((p_hash & 4) != 0) ? p_z : -p_z);
 	}
 
 	void Perlin::reseed(unsigned int p_seed)
@@ -99,24 +99,28 @@ namespace spk
 		int bab = _values[_values[_values[clampedX + 1] + clampedY] + clampedZ + 1];
 		int bbb = _values[_values[_values[clampedX + 1] + clampedY + 1] + clampedZ + 1];
 
-		float res = lerp(lerp(lerp(grad(aaa, p_x, p_y, p_z), grad(baa, p_x - 1, p_y, p_z), u),
-							  lerp(grad(aba, p_x, p_y - 1, p_z), grad(bba, p_x - 1, p_y - 1, p_z), u),
-							  v),
-						 lerp(lerp(grad(aab, p_x, p_y, p_z - 1), grad(bab, p_x - 1, p_y, p_z - 1), u),
-							  lerp(grad(abb, p_x, p_y - 1, p_z - 1), grad(bbb, p_x - 1, p_y - 1, p_z - 1), u),
-							  v),
-						 w);
+		float res = lerp(
+			lerp(
+				lerp(grad(aaa, p_x, p_y, p_z), grad(baa, p_x - 1, p_y, p_z), u),
+				lerp(grad(aba, p_x, p_y - 1, p_z), grad(bba, p_x - 1, p_y - 1, p_z), u),
+				v),
+			lerp(
+				lerp(grad(aab, p_x, p_y, p_z - 1), grad(bab, p_x - 1, p_y, p_z - 1), u),
+				lerp(grad(abb, p_x, p_y - 1, p_z - 1), grad(bbb, p_x - 1, p_y - 1, p_z - 1), u),
+				v),
+			w);
 		return res;
 	}
 
-	float Perlin::fractal(const Perlin &p_perlin,
-						  std::function<float(const Perlin &, float, float, float)> p_noiseFunc,
-						  float p_x,
-						  float p_y,
-						  float p_z,
-						  int p_octaves,
-						  float p_persistence,
-						  float p_lacunarity)
+	float Perlin::fractal(
+		const Perlin &p_perlin,
+		std::function<float(const Perlin &, float, float, float)> p_noiseFunc,
+		float p_x,
+		float p_y,
+		float p_z,
+		int p_octaves,
+		float p_persistence,
+		float p_lacunarity)
 	{
 		float sum = 0.f;
 		float amplitude = 1.f;
@@ -136,7 +140,7 @@ namespace spk
 	Perlin::Perlin(unsigned int p_seed, Perlin::Interpolation p_interpolation) :
 		_interpolation(p_interpolation)
 	{
-		reseed(p_seed ? p_seed : std::random_device{}());
+		reseed((p_seed != 0u) ? p_seed : std::random_device{}());
 	}
 
 	float Perlin::sample1D(float p_x, float p_min, float p_max) const

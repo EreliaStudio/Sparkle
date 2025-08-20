@@ -100,7 +100,7 @@ namespace spk
 	{
 		nanoseconds = p_duration.nanoseconds;
 		milliseconds = p_duration.milliseconds;
-		seconds = seconds;
+		seconds = p_duration.seconds;
 	}
 
 	Duration Timestamp::operator-(const Timestamp &p_other) const

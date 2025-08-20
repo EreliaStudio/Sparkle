@@ -124,8 +124,9 @@ namespace spk
 
 		if (_offset + newSize > _buffer->size())
 		{
-			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Resizing would exceed the buffer's capacity. Requested " +
-						   std::to_string(_offset + newSize) + " but buffer size is " + std::to_string(_buffer->size()) + ".");
+			GENERATE_ERROR(
+				spk::StringUtils::wstringToString(_name) + " - Resizing would exceed the buffer's capacity. Requested " +
+				std::to_string(_offset + newSize) + " but buffer size is " + std::to_string(_buffer->size()) + ".");
 		}
 
 		Array newArray;
@@ -155,16 +156,17 @@ namespace spk
 
 		if (contains(p_name))
 		{
-			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Element [" + spk::StringUtils::wstringToString(p_name) +
-						   "] already contained in structure");
+			GENERATE_ERROR(
+				spk::StringUtils::wstringToString(_name) + " - Element [" + spk::StringUtils::wstringToString(p_name) +
+				"] already contained in structure");
 		}
 
 		if ((p_offset + p_size) > (_offset + _size))
 		{
-			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Can't assign a field named [" + spk::StringUtils::wstringToString(p_name) +
-						   "] larger than the current element - Requested [" + std::to_string(p_size) + "] bytes at offset [" +
-						   std::to_string(p_offset) + "] over [" + std::to_string(_size) + "] allocated bytes at offset [" + std::to_string(_offset) +
-						   "]");
+			GENERATE_ERROR(
+				spk::StringUtils::wstringToString(_name) + " - Can't assign a field named [" + spk::StringUtils::wstringToString(p_name) +
+				"] larger than the current element - Requested [" + std::to_string(p_size) + "] bytes at offset [" + std::to_string(p_offset) +
+				"] over [" + std::to_string(_size) + "] allocated bytes at offset [" + std::to_string(_offset) + "]");
 		}
 
 		if ((p_offset + p_size) > _buffer->size())
@@ -209,8 +211,9 @@ namespace spk
 
 		if (!contains(p_name))
 		{
-			GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Element [" + spk::StringUtils::wstringToString(p_name) +
-						   "] not contained in structure");
+			GENERATE_ERROR(
+				spk::StringUtils::wstringToString(_name) + " - Element [" + spk::StringUtils::wstringToString(p_name) +
+				"] not contained in structure");
 		}
 
 		auto &structure = std::get<Structure>(_content);
@@ -294,18 +297,18 @@ namespace spk
 	}
 
 	DataBufferLayout::DataBufferLayout(DataBuffer *p_buffer) :
-		_root(L"Root", nullptr, 0, (p_buffer ? p_buffer->size() : 0))
+		_root(L"Root", nullptr, 0, ((p_buffer != nullptr) ? p_buffer->size() : 0))
 	{
-		if (p_buffer)
+		if (p_buffer != nullptr)
 		{
 			_root.setBuffer(p_buffer);
 		}
 	}
 
 	DataBufferLayout::DataBufferLayout(const std::wstring &p_name, DataBuffer *p_buffer) :
-		_root(p_name, nullptr, 0, (p_buffer ? p_buffer->size() : 0))
+		_root(p_name, nullptr, 0, ((p_buffer != nullptr) ? p_buffer->size() : 0))
 	{
-		if (p_buffer)
+		if (p_buffer != nullptr)
 		{
 			_root.setBuffer(p_buffer);
 		}
@@ -372,8 +375,8 @@ namespace spk
 		return _root.addElement(p_name, p_offset, p_size);
 	}
 
-	DataBufferLayout::Element &
-	DataBufferLayout::addElement(const std::wstring &p_name, size_t p_offset, size_t p_nbElement, size_t p_elementSize, size_t p_elementPadding)
+	DataBufferLayout::Element &DataBufferLayout::addElement(
+		const std::wstring &p_name, size_t p_offset, size_t p_nbElement, size_t p_elementSize, size_t p_elementPadding)
 	{
 		return _root.addElement(p_name, p_offset, p_nbElement, p_elementSize, p_elementPadding);
 	}

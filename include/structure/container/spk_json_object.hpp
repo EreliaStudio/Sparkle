@@ -8,6 +8,7 @@
 #include <map>
 #include <variant>
 #include <vector>
+#include <memory>
 
 #include "spk_sfinae.hpp"
 #include "utils/spk_string_utils.hpp"
@@ -21,8 +22,8 @@ namespace spk
 		class Object
 		{
 		public:
-			using Unit = std::variant<bool, long, double, std::wstring, Object *, std::nullptr_t>;
-			using ContentType = std::variant<Unit, std::map<std::wstring, Object *>, std::vector<Object *>>;
+			using Unit = std::variant<bool, long, double, std::wstring, std::shared_ptr<Object>, std::nullptr_t>;
+			using ContentType = std::variant<Unit, std::map<std::wstring, std::shared_ptr<Object>>, std::vector<std::shared_ptr<Object>>>;
 
 		private:
 			bool _initialized;
@@ -50,7 +51,7 @@ namespace spk
 
 			Object &addAttribute(const std::wstring &p_key);
 
-			const std::map<std::wstring, Object *> &members() const;
+			const std::map<std::wstring, std::shared_ptr<Object>> &members() const;
 
 			bool contains(const std::wstring &p_key) const;
 
@@ -60,13 +61,13 @@ namespace spk
 
 			void setAsObject();
 
-			const std::vector<Object *> &asArray() const;
+			const std::vector<std::shared_ptr<Object>> &asArray() const;
 
 			void resize(size_t p_size);
 
 			Object &append();
 
-			void push_back(Object &p_object);
+			void push_back(const Object &p_object);
 
 			Object &operator[](size_t p_index);
 
@@ -103,15 +104,13 @@ namespace spk
 			template <typename TType, std::enable_if_t<std::is_same_v<std::decay_t<TType>, Object>, int> = 0>
 			void set(const TType &p_value)
 			{
-				Object *tmp = new Object(p_value);
-				set<Object *>(tmp);
+				set<std::shared_ptr<Object>>(std::make_unique<Object>(p_value));
 			}
 
 			template <typename TType, std::enable_if_t<spk::IsJSONable<std::decay_t<TType>>::value, int> = 0>
 			void set(const TType &p_value)
 			{
-				Object *nested = new Object(p_value.toJSON());
-				set<Object *>(nested);
+				set<std::shared_ptr<Object>>(std::make_unique<Object>(p_value.toJSON()));
 			}
 
 			template <typename TType, std::enable_if_t<!spk::IsJSONable<std::decay_t<TType>>::value, int> = 0>
@@ -136,13 +135,13 @@ namespace spk
 					GENERATE_ERROR("Can't request a Unit from a non-Unit node");
 				}
 
-				const Unit &unit = std::get<Unit>(_content);
-				const TType *value = std::get_if<TType>(&unit);
+				const Unit &tmpUnit = std::get<Unit>(_content);
+				const TType *value = std::get_if<TType>(&tmpUnit);
 				if (value == nullptr)
 				{
 					std::string types[] = {"bool", "long", "double", "std::wstring", "Object*", "std::nullptr_t"};
 					GENERATE_ERROR("Wrong type request for object [" + spk::StringUtils::wstringToString(_name) + "] : wanted [" +
-								   types[Unit(TType()).index()] + "] but stored [" + types[unit.index()] + "]");
+								   types[Unit(TType()).index()] + "] but stored [" + types[tmpUnit.index()] + "]");
 				}
 				return *value;
 			}
@@ -154,11 +153,11 @@ namespace spk
 
 				if (isUnit())
 				{
-					const Unit &unit = std::get<Unit>(_content);
-					const Object *const *ptr = std::get_if<Object *>(&unit);
-					if (ptr != nullptr)
+					const Unit &tmpUnit = std::get<Unit>(_content);
+
+					if (const auto *uptr = std::get_if<std::shared_ptr<Object>>(&tmpUnit))
 					{
-						src = *ptr;
+						src = uptr->get();
 					}
 				}
 				else if (isObject())
@@ -172,7 +171,7 @@ namespace spk
 								   "] to native type -> no JSON object found.");
 				}
 
-				TType result;
+				TType result{};
 				result.fromJSON(*src);
 				return result;
 			}

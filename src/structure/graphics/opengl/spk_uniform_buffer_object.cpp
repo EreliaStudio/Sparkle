@@ -19,7 +19,7 @@ namespace spk::OpenGL
 
 			if (p_elemDesc.contains(L"NestedElements") == true)
 			{
-				for (auto *child : p_elemDesc[L"NestedElements"].asArray())
+				for (auto &child : p_elemDesc[L"NestedElements"].asArray())
 				{
 					_loadElement(elem, *child);
 				}
@@ -37,7 +37,7 @@ namespace spk::OpenGL
 			{
 				for (size_t i = 0; i < elemArr.nbElement(); ++i)
 				{
-					for (auto *comp : p_elemDesc[L"ElementComposition"].asArray())
+					for (auto &comp : p_elemDesc[L"ElementComposition"].asArray())
 					{
 						_loadElement(elemArr[i], *comp);
 					}
@@ -62,7 +62,7 @@ namespace spk::OpenGL
 
 			if (p_elemDesc.contains(L"NestedElements") == true)
 			{
-				for (auto *child : p_elemDesc[L"NestedElements"].asArray())
+				for (auto &child : p_elemDesc[L"NestedElements"].asArray())
 				{
 					_loadElement(elem, *child);
 				}
@@ -80,7 +80,7 @@ namespace spk::OpenGL
 			{
 				for (size_t i = 0; i < elemArr.nbElement(); ++i)
 				{
-					for (auto *comp : p_elemDesc[L"ElementComposition"].asArray())
+					for (auto &comp : p_elemDesc[L"ElementComposition"].asArray())
 					{
 						_loadElement(elemArr[i], *comp);
 					}
@@ -99,17 +99,19 @@ namespace spk::OpenGL
 		_bindingPoint(p_bindingPoint),
 		_dataBufferLayout(p_blockName, &(dataBuffer()))
 	{
-		resize(p_size);
+		VertexBufferObject::resize(p_size);
+		_dataBufferLayout.updateRootSize();
 	}
 
 	UniformBufferObject::UniformBufferObject(const spk::JSON::Object &p_desc) :
-		UniformBufferObject(p_desc[L"BlockName"].as<std::wstring>(),
-							static_cast<BindingPoint>(p_desc[L"BindingPoint"].as<long>()),
-							static_cast<size_t>(p_desc[L"Size"].as<long>()))
+		UniformBufferObject(
+			p_desc[L"BlockName"].as<std::wstring>(),
+			static_cast<BindingPoint>(p_desc[L"BindingPoint"].as<long>()),
+			static_cast<size_t>(p_desc[L"Size"].as<long>()))
 	{
 		if (p_desc.contains(L"Elements") == true)
 		{
-			for (auto *elem : p_desc[L"Elements"].asArray())
+			for (auto &elem : p_desc[L"Elements"].asArray())
 			{
 				_loadElement(*elem);
 			}
@@ -216,8 +218,8 @@ namespace spk::OpenGL
 		return (_dataBufferLayout.addElement(p_name, p_offset, p_size));
 	}
 
-	DataBufferLayout::Element &
-	UniformBufferObject::addElement(const std::wstring &p_name, size_t p_offset, size_t p_nbElement, size_t p_elementSize, size_t p_elementPadding)
+	DataBufferLayout::Element &UniformBufferObject::addElement(
+		const std::wstring &p_name, size_t p_offset, size_t p_nbElement, size_t p_elementSize, size_t p_elementPadding)
 	{
 		if (size() <= (p_offset + p_nbElement * (p_elementSize + p_elementPadding)))
 		{

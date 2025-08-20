@@ -159,56 +159,58 @@ std::wostream &operator<<(std::wostream &p_os, const spk::Controller::Trigger::I
 		p_os << L"Right";
 		break;
 	}
-        return (p_os);
+	return (p_os);
 }
 
 namespace spk
 {
-Controller::Controller() : _directionalCross(0), _window(nullptr)
-{
-for (size_t i = 0; i < 17; ++i)
-{
-_buttons[i] = InputState::Up;
-}
-}
+	Controller::Controller() :
+		_directionalCross(0),
+		_window(nullptr)
+	{
+		for (size_t i = 0; i < 17; ++i)
+		{
+			_buttons[i] = InputState::Up;
+		}
+	}
 
-InputState Controller::operator[](Button p_button) const
-{
-return (_buttons[static_cast<int>(p_button)]);
-}
+	InputState Controller::operator[](Button p_button) const
+	{
+		return (_buttons[static_cast<int>(p_button)]);
+	}
 
-const Controller::Joystick &Controller::leftJoystick() const
-{
-return (_leftJoystick);
-}
+	const Controller::Joystick &Controller::leftJoystick() const
+	{
+		return (_leftJoystick);
+	}
 
-const Controller::Joystick &Controller::rightJoystick() const
-{
-return (_rightJoystick);
-}
+	const Controller::Joystick &Controller::rightJoystick() const
+	{
+		return (_rightJoystick);
+	}
 
-const Controller::Trigger &Controller::leftTrigger() const
-{
-return (_leftTrigger);
-}
+	const Controller::Trigger &Controller::leftTrigger() const
+	{
+		return (_leftTrigger);
+	}
 
-const Controller::Trigger &Controller::rightTrigger() const
-{
-return (_rightTrigger);
-}
+	const Controller::Trigger &Controller::rightTrigger() const
+	{
+		return (_rightTrigger);
+	}
 
-const Vector2Int &Controller::directionalCross() const
-{
-return (_directionalCross);
-}
+	const Vector2Int &Controller::directionalCross() const
+	{
+		return (_directionalCross);
+	}
 
-const InputState *Controller::buttons() const
-{
-return (_buttons);
-}
+	const InputState *Controller::buttons() const
+	{
+		return (_buttons);
+	}
 
-spk::SafePointer<Window> Controller::window() const
-{
-return (_window);
-}
+	spk::SafePointer<Window> Controller::window() const
+	{
+		return (_window);
+	}
 }
