@@ -5,7 +5,8 @@
 
 namespace spk::OpenGL
 {
-	ShaderStorageBufferObject::DynamicArray::DynamicArray(const std::wstring &p_name, spk::DataBuffer *p_buffer, size_t p_fixedReservedSpace, size_t p_elementSize, size_t p_elementPadding) :
+	ShaderStorageBufferObject::DynamicArray::DynamicArray(
+		const std::wstring &p_name, spk::DataBuffer *p_buffer, size_t p_fixedReservedSpace, size_t p_elementSize, size_t p_elementPadding) :
 		_buffer(p_buffer),
 		_defaultElement(p_name, p_buffer, 0, p_elementSize),
 		_fixedReservedSpace(p_fixedReservedSpace),
@@ -63,8 +64,8 @@ namespace spk::OpenGL
 		return _defaultElement.contains(p_name);
 	}
 
-	ShaderStorageBufferObject::DynamicArray::Element &
-	ShaderStorageBufferObject::DynamicArray::addElement(const std::wstring &p_name, size_t p_offset, size_t p_size)
+	ShaderStorageBufferObject::DynamicArray::Element &ShaderStorageBufferObject::DynamicArray::addElement(
+		const std::wstring &p_name, size_t p_offset, size_t p_size)
 	{
 		auto &result = _defaultElement.addElement(p_name, p_offset, p_size);
 		redoArray();
@@ -129,12 +130,13 @@ namespace spk::OpenGL
 		_dynamicArray._buffer = &dataBuffer();
 	}
 
-	ShaderStorageBufferObject::ShaderStorageBufferObject(const std::wstring &p_blockName,
-														 BindingPoint p_bindingPoint,
-														 size_t p_fixedSize,
-														 size_t p_paddingFixedToDynamic,
-														 size_t p_dynamicElementSize,
-														 size_t p_dynamicElementPadding) :
+	ShaderStorageBufferObject::ShaderStorageBufferObject(
+		const std::wstring &p_blockName,
+		BindingPoint p_bindingPoint,
+		size_t p_fixedSize,
+		size_t p_paddingFixedToDynamic,
+		size_t p_dynamicElementSize,
+		size_t p_dynamicElementPadding) :
 		VertexBufferObject(VertexBufferObject::Type::ShaderStorage, VertexBufferObject::Usage::Dynamic),
 		_blockName(p_blockName),
 		_bindingPoint(p_bindingPoint),
@@ -150,16 +152,17 @@ namespace spk::OpenGL
 	}
 
 	ShaderStorageBufferObject::ShaderStorageBufferObject(const spk::JSON::Object &p_desc) :
-		ShaderStorageBufferObject(p_desc[L"BlockName"].as<std::wstring>(),
-								  static_cast<BindingPoint>(p_desc[L"BindingPoint"].as<long>()),
-								  static_cast<size_t>(p_desc[L"FixedSize"].as<long>()),
-								  static_cast<size_t>(p_desc[L"PaddingFixedToDynamic"].as<long>()),
-								  static_cast<size_t>(p_desc[L"DynamicElementSize"].as<long>()),
-								  static_cast<size_t>(p_desc[L"DynamicElementPadding"].as<long>()))
+		ShaderStorageBufferObject(
+			p_desc[L"BlockName"].as<std::wstring>(),
+			static_cast<BindingPoint>(p_desc[L"BindingPoint"].as<long>()),
+			static_cast<size_t>(p_desc[L"FixedSize"].as<long>()),
+			static_cast<size_t>(p_desc[L"PaddingFixedToDynamic"].as<long>()),
+			static_cast<size_t>(p_desc[L"DynamicElementSize"].as<long>()),
+			static_cast<size_t>(p_desc[L"DynamicElementPadding"].as<long>()))
 	{
 		if (p_desc.contains(L"FixedElements"))
 		{
-			for (auto *elem : p_desc[L"FixedElements"].asArray())
+			for (auto &elem : p_desc[L"FixedElements"].asArray())
 			{
 				_loadElement(fixedData(), *elem);
 			}
@@ -167,7 +170,7 @@ namespace spk::OpenGL
 
 		if (p_desc.contains(L"DynamicElementComposition"))
 		{
-			for (auto *elem : p_desc[L"DynamicElementComposition"].asArray())
+			for (auto &elem : p_desc[L"DynamicElementComposition"].asArray())
 			{
 				_loadElement(dynamicArray(), *elem);
 			}
@@ -319,7 +322,7 @@ namespace spk::OpenGL
 
 			if (p_elemDesc.contains(L"NestedElements"))
 			{
-				for (auto *child : p_elemDesc[L"NestedElements"].asArray())
+				for (auto &child : p_elemDesc[L"NestedElements"].asArray())
 				{
 					_loadElement(elem, *child);
 				}
@@ -337,7 +340,7 @@ namespace spk::OpenGL
 			{
 				for (size_t i = 0; i < elemArr.nbElement(); ++i)
 				{
-					for (auto *comp : p_elemDesc[L"ElementComposition"].asArray())
+					for (auto &comp : p_elemDesc[L"ElementComposition"].asArray())
 					{
 						_loadElement(elemArr[i], *comp);
 					}
@@ -362,7 +365,7 @@ namespace spk::OpenGL
 
 			if (p_elemDesc.contains(L"NestedElements"))
 			{
-				for (auto *child : p_elemDesc[L"NestedElements"].asArray())
+				for (auto &child : p_elemDesc[L"NestedElements"].asArray())
 				{
 					_loadElement(elem, *child);
 				}
@@ -380,7 +383,7 @@ namespace spk::OpenGL
 			{
 				for (size_t i = 0; i < elemArr.nbElement(); ++i)
 				{
-					for (auto *comp : p_elemDesc[L"ElementComposition"].asArray())
+					for (auto &comp : p_elemDesc[L"ElementComposition"].asArray())
 					{
 						_loadElement(elemArr[i], *comp);
 					}

@@ -18,75 +18,85 @@ namespace spk
 	TopDownViewController::TopDownViewController(const std::wstring &p_name) :
 		spk::Component(p_name)
 	{
-		_actions.push_back(std::make_unique<spk::KeyboardAction>(_config.keymap[L"Forward"],
-																 spk::InputState::Down,
-																 10,
-																 [&](const spk::SafePointer<const spk::Keyboard> &p_keyboard)
-																 {
-																	 spk::Vector3 forward = owner()->transform().forward() * spk::Vector3(1, 0, 1);
-																	 
-																	 if (forward == spk::Vector3())
-																	 {
-																		forward = owner()->transform().up() * spk::Vector3(1, 0, 1);
-																	 }
+		_actions.push_back(
+			std::make_unique<spk::KeyboardAction>(
+				_config.keymap[L"Forward"],
+				spk::InputState::Down,
+				10,
+				[&](const spk::SafePointer<const spk::Keyboard> &p_keyboard)
+				{
+					spk::Vector3 forward = owner()->transform().forward() * spk::Vector3(1, 0, 1);
 
-																	 _motionRequested += forward;
-																 }));
+					if (forward == spk::Vector3())
+					{
+						forward = owner()->transform().up() * spk::Vector3(1, 0, 1);
+					}
 
-		_actions.push_back(std::make_unique<spk::KeyboardAction>(_config.keymap[L"Left"],
-																 spk::InputState::Down,
-																 10,
-																 [&](const spk::SafePointer<const spk::Keyboard> &p_keyboard)
-																 {
-																	 spk::Vector3 right = owner()->transform().right();
-																	 right.y = 0;
-																	 if (right != spk::Vector3())
-																	 {
-																		 right = right.normalize();
-																	 }
-																	 _motionRequested -= right;
-																 }));
+					_motionRequested += forward;
+				}));
 
-		_actions.push_back(std::make_unique<spk::KeyboardAction>(_config.keymap[L"Backward"],
-																 spk::InputState::Down,
-																 10,
-																 [&](const spk::SafePointer<const spk::Keyboard> &p_keyboard)
-																 {
-																	 spk::Vector3 forward = owner()->transform().forward() * spk::Vector3(1, 0, 1);
-																	 
-																	 if (forward == spk::Vector3())
-																	 {
-																		forward = owner()->transform().up() * spk::Vector3(1, 0, 1);
-																	 }
+		_actions.push_back(
+			std::make_unique<spk::KeyboardAction>(
+				_config.keymap[L"Left"],
+				spk::InputState::Down,
+				10,
+				[&](const spk::SafePointer<const spk::Keyboard> &p_keyboard)
+				{
+					spk::Vector3 right = owner()->transform().right();
+					right.y = 0;
+					if (right != spk::Vector3())
+					{
+						right = right.normalize();
+					}
+					_motionRequested -= right;
+				}));
 
-																	 _motionRequested -= forward;
-																 }));
+		_actions.push_back(
+			std::make_unique<spk::KeyboardAction>(
+				_config.keymap[L"Backward"],
+				spk::InputState::Down,
+				10,
+				[&](const spk::SafePointer<const spk::Keyboard> &p_keyboard)
+				{
+					spk::Vector3 forward = owner()->transform().forward() * spk::Vector3(1, 0, 1);
 
-		_actions.push_back(std::make_unique<spk::KeyboardAction>(_config.keymap[L"Right"],
-																 spk::InputState::Down,
-																 10,
-																 [&](const spk::SafePointer<const spk::Keyboard> &p_keyboard)
-																 {
-																	 spk::Vector3 right = owner()->transform().right();
-																	 right.y = 0;
-																	 if (right != spk::Vector3())
-																	 {
-																		 right = right.normalize();
-																	 }
-																	 _motionRequested += right;
-																 }));
+					if (forward == spk::Vector3())
+					{
+						forward = owner()->transform().up() * spk::Vector3(1, 0, 1);
+					}
 
-		_actions.push_back(std::make_unique<spk::KeyboardAction>(_config.keymap[L"RotateLeft"],
-																 spk::InputState::Down,
-																 10,
-																 [&](const spk::SafePointer<const spk::Keyboard> &p_keyboard)
-																 { _rotationRequested += 1.0f; }));
+					_motionRequested -= forward;
+				}));
 
-		_actions.push_back(std::make_unique<spk::KeyboardAction>(_config.keymap[L"RotateRight"],
-																 spk::InputState::Down,
-																 10,
-																 [&](const spk::SafePointer<const spk::Keyboard> &p_keyboard)
-																 { _rotationRequested -= 1.0f; }));
+		_actions.push_back(
+			std::make_unique<spk::KeyboardAction>(
+				_config.keymap[L"Right"],
+				spk::InputState::Down,
+				10,
+				[&](const spk::SafePointer<const spk::Keyboard> &p_keyboard)
+				{
+					spk::Vector3 right = owner()->transform().right();
+					right.y = 0;
+					if (right != spk::Vector3())
+					{
+						right = right.normalize();
+					}
+					_motionRequested += right;
+				}));
+
+		_actions.push_back(
+			std::make_unique<spk::KeyboardAction>(
+				_config.keymap[L"RotateLeft"],
+				spk::InputState::Down,
+				10,
+				[&](const spk::SafePointer<const spk::Keyboard> &p_keyboard) { _rotationRequested += 1.0f; }));
+
+		_actions.push_back(
+			std::make_unique<spk::KeyboardAction>(
+				_config.keymap[L"RotateRight"],
+				spk::InputState::Down,
+				10,
+				[&](const spk::SafePointer<const spk::Keyboard> &p_keyboard) { _rotationRequested -= 1.0f; }));
 
 		_focusPoint = owner()->transform().position() + owner()->transform().forward();
 	}

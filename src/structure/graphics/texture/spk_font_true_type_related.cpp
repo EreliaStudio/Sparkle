@@ -3,7 +3,7 @@
 #include <unordered_set>
 
 #define STB_TRUETYPE_IMPLEMENTATION
-#include "external_libraries/stb_truetype.h"
+#include "stb_truetype.h"
 
 #include "utils/spk_file_utils.hpp"
 
@@ -134,16 +134,17 @@ namespace spk
 		float scale = stbtt_ScaleForMappingEmToPixels(&_fontInfo, static_cast<float>(_textSize));
 
 		int width, height, xOffset, yOffset;
-		uint8_t *glyphBitmap = stbtt_GetCodepointSDF(&_fontInfo,
-													 scale,
-													 p_char,
-													 static_cast<int>(_outlineSize),
-													 128,
-													 256.0f / static_cast<float>(_outlineSize),
-													 &width,
-													 &height,
-													 &xOffset,
-													 &yOffset);
+		uint8_t *glyphBitmap = stbtt_GetCodepointSDF(
+			&_fontInfo,
+			scale,
+			p_char,
+			static_cast<int>(_outlineSize),
+			128,
+			256.0f / static_cast<float>(_outlineSize),
+			&width,
+			&height,
+			&xOffset,
+			&yOffset);
 
 		if (glyphBitmap == nullptr)
 		{
@@ -152,7 +153,7 @@ namespace spk
 		}
 
 		int advance;
-		stbtt_GetCodepointHMetrics(&_fontInfo, p_char, &advance, NULL);
+		stbtt_GetCodepointHMetrics(&_fontInfo, p_char, &advance, nullptr);
 
 		glyph.size = Vector2UInt(width, height);
 
@@ -171,12 +172,15 @@ namespace spk
 
 		glyph.UVs[0] =
 			Vector2(static_cast<float>(glyphPosition.x) / _size.x + halfPixelSize.x, static_cast<float>(glyphPosition.y) / _size.y + halfPixelSize.y);
-		glyph.UVs[1] = Vector2(static_cast<float>(glyphPosition.x) / _size.x + halfPixelSize.x,
-							   static_cast<float>(glyphPosition.y + glyph.size.y) / _size.y - halfPixelSize.y);
-		glyph.UVs[2] = Vector2(static_cast<float>(glyphPosition.x + glyph.size.x) / _size.x - halfPixelSize.x,
-							   static_cast<float>(glyphPosition.y) / _size.y + halfPixelSize.y);
-		glyph.UVs[3] = Vector2(static_cast<float>(glyphPosition.x + glyph.size.x) / _size.x - halfPixelSize.x,
-							   static_cast<float>(glyphPosition.y + glyph.size.y) / _size.y - halfPixelSize.y);
+		glyph.UVs[1] = Vector2(
+			static_cast<float>(glyphPosition.x) / _size.x + halfPixelSize.x,
+			static_cast<float>(glyphPosition.y + glyph.size.y) / _size.y - halfPixelSize.y);
+		glyph.UVs[2] = Vector2(
+			static_cast<float>(glyphPosition.x + glyph.size.x) / _size.x - halfPixelSize.x,
+			static_cast<float>(glyphPosition.y) / _size.y + halfPixelSize.y);
+		glyph.UVs[3] = Vector2(
+			static_cast<float>(glyphPosition.x + glyph.size.x) / _size.x - halfPixelSize.x,
+			static_cast<float>(glyphPosition.y + glyph.size.y) / _size.y - halfPixelSize.y);
 
 		glyph.step = Vector2(std::ceil(advance * scale) + _outlineSize, 0);
 

@@ -55,8 +55,9 @@ namespace spk
 	{
 		if (_buttons.contains(p_name) == false)
 		{
-			throw std::runtime_error("Button [" + spk::StringUtils::wstringToString(p_name) + "] doesn't exist in the command panel [" +
-									 spk::StringUtils::wstringToString(name()) + "]");
+			throw std::runtime_error(
+				"Button [" + spk::StringUtils::wstringToString(p_name) + "] doesn't exist in the command panel [" +
+				spk::StringUtils::wstringToString(name()) + "]");
 		}
 		return (_buttons.at(p_name).get());
 	}
@@ -65,8 +66,9 @@ namespace spk
 	{
 		if (_buttons.contains(p_name) == false)
 		{
-			throw std::runtime_error("Button [" + spk::StringUtils::wstringToString(p_name) + "] doesn't exist in the command panel [" +
-									 spk::StringUtils::wstringToString(name()) + "]");
+			throw std::runtime_error(
+				"Button [" + spk::StringUtils::wstringToString(p_name) + "] doesn't exist in the command panel [" +
+				spk::StringUtils::wstringToString(name()) + "]");
 		}
 		return (_buttons.at(p_name).get());
 	}
@@ -95,7 +97,7 @@ namespace spk
 	{
 		spk::Vector2UInt result = {0, 0};
 
-		if (_buttons.size() != 0)
+		if (!_buttons.empty())
 		{
 			spk::Vector2UInt padding = _layout.elementPadding();
 

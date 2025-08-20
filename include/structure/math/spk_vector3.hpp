@@ -630,14 +630,11 @@ spk::IVector3<TType> operator/(UType p_scalar, const spk::IVector3<TType> &p_vec
 	return spk::IVector3<TType>(p_scalar / p_vec.x, p_scalar / p_vec.y, p_scalar / p_vec.z);
 }
 
-namespace std
+template <typename TType>
+struct std::hash<spk::IVector3<TType>>
 {
-	template <typename TType>
-	struct hash<spk::IVector3<TType>>
+	size_t operator()(const spk::IVector3<TType> &p_vec) const
 	{
-		size_t operator()(const spk::IVector3<TType> &p_vec) const
-		{
-			return hash<TType>()(p_vec.x) ^ (hash<TType>()(p_vec.y) << 1) ^ (hash<TType>()(p_vec.z) << 2);
-		}
-	};
-}
+		return hash<TType>()(p_vec.x) ^ (hash<TType>()(p_vec.y) << 1) ^ (hash<TType>()(p_vec.z) << 2);
+	}
+};

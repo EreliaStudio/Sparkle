@@ -36,6 +36,6 @@ namespace spk
 			GENERATE_ERROR("Can't update an InputAction without device");
 		}
 
-                _onTriggerCallback(_mode == Mode::Absolute ? _mouse->position() : _mouse->deltaPosition());
+		_onTriggerCallback(_mode == Mode::Absolute ? _mouse->position() : _mouse->deltaPosition());
 	}
 }

@@ -1,5 +1,7 @@
 #include "structure/math/spk_quaternion.hpp"
 
+#include <array>
+
 #include "structure/spk_iostream.hpp"
 
 namespace spk
@@ -166,53 +168,53 @@ namespace spk
 		}
 		Vector3 up = (right.cross(forward)).normalize();
 
-		float m[3][3];
-		m[0][0] = right.x;
-		m[0][1] = up.x;
-		m[0][2] = -forward.x;
-		m[1][0] = right.y;
-		m[1][1] = up.y;
-		m[1][2] = -forward.y;
-		m[2][0] = right.z;
-		m[2][1] = up.z;
-		m[2][2] = -forward.z;
+		std::array<std::array<float, 3>, 3> matrixValue;
+		matrixValue[0][0] = right.x;
+		matrixValue[0][1] = up.x;
+		matrixValue[0][2] = -forward.x;
+		matrixValue[1][0] = right.y;
+		matrixValue[1][1] = up.y;
+		matrixValue[1][2] = -forward.y;
+		matrixValue[2][0] = right.z;
+		matrixValue[2][1] = up.z;
+		matrixValue[2][2] = -forward.z;
 
 		Quaternion q;
-		float trace = m[0][0] + m[1][1] + m[2][2];
+		float trace = matrixValue[0][0] + matrixValue[1][1] + matrixValue[2][2];
 
 		if (trace > 0.0f)
 		{
 			float s = std::sqrt(trace + 1.0f) * 2.0f;
 			q.w = s * 0.25f;
-			q.x = (m[2][1] - m[1][2]) / s;
-			q.y = (m[0][2] - m[2][0]) / s;
-			q.z = (m[1][0] - m[0][1]) / s;
+			q.x = (matrixValue[2][1] - matrixValue[1][2]) / s;
+			q.y = (matrixValue[0][2] - matrixValue[2][0]) / s;
+			q.z = (matrixValue[1][0] - matrixValue[0][1]) / s;
 		}
 		else
 		{
-			if (m[0][0] > m[1][1] && m[0][0] > m[2][2])
+			if (matrixValue[0][0] > matrixValue[1][1] && matrixValue[0][0] > matrixValue[2][2])
 			{
-				float s = std::sqrt(1.0f + m[0][0] - m[1][1] - m[2][2]) * 2.0f;
+				float s = std::sqrt(1.0f + matrixValue[0][0] - matrixValue[1][1] - matrixValue[2][2]) * 2.0f;
 				q.x = 0.25f * s;
-				q.y = (m[0][1] + m[1][0]) / s;
-				q.z = (m[0][2] + m[2][0]) / s;
-				q.w = (m[2][1] - m[1][2]) / s;
+				q.y = (matrixValue[0][1] + matrixValue[1][0]) / s;
+				q.z = (matrixValue[0][2] + matrixValue[2][0]) / s;
+				q.w = (matrixValue[2][1] - matrixValue[1][2]) / s;
 			}
-			else if (m[1][1] > m[2][2])
+			else if (matrixValue[1][1] > matrixValue[2][2])
 			{
-				float s = std::sqrt(1.0f + m[1][1] - m[0][0] - m[2][2]) * 2.0f;
-				q.x = (m[0][1] + m[1][0]) / s;
+				float s = std::sqrt(1.0f + matrixValue[1][1] - matrixValue[0][0] - matrixValue[2][2]) * 2.0f;
+				q.x = (matrixValue[0][1] + matrixValue[1][0]) / s;
 				q.y = 0.25f * s;
-				q.z = (m[1][2] + m[2][1]) / s;
-				q.w = (m[0][2] - m[2][0]) / s;
+				q.z = (matrixValue[1][2] + matrixValue[2][1]) / s;
+				q.w = (matrixValue[0][2] - matrixValue[2][0]) / s;
 			}
 			else
 			{
-				float s = std::sqrt(1.0f + m[2][2] - m[0][0] - m[1][1]) * 2.0f;
-				q.x = (m[0][2] + m[2][0]) / s;
-				q.y = (m[1][2] + m[2][1]) / s;
+				float s = std::sqrt(1.0f + matrixValue[2][2] - matrixValue[0][0] - matrixValue[1][1]) * 2.0f;
+				q.x = (matrixValue[0][2] + matrixValue[2][0]) / s;
+				q.y = (matrixValue[1][2] + matrixValue[2][1]) / s;
 				q.z = 0.25f * s;
-				q.w = (m[1][0] - m[0][1]) / s;
+				q.w = (matrixValue[1][0] - matrixValue[0][1]) / s;
 			}
 		}
 

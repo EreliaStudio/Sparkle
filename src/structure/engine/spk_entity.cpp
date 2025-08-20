@@ -120,7 +120,7 @@ namespace spk
 		_components.erase(it, _components.end());
 	}
 
-	void Entity::onGeometryChange(const spk::Geometry2D& p_geometry)
+	void Entity::onGeometryChange(const spk::Geometry2D &p_geometry)
 	{
 		sortByPriority(_components, _needComponentSorting, _componentMutex);
 
@@ -450,8 +450,7 @@ namespace spk
 		return (nullptr);
 	}
 
-	spk::SafePointer<const Entity> Entity::getChildByTags(const std::span<const std::wstring> &p_tags,
-																  spk::BinaryOperator p_binaryOperator) const
+	spk::SafePointer<const Entity> Entity::getChildByTags(const std::span<const std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator) const
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
 		for (const auto &child : children())
@@ -464,8 +463,7 @@ namespace spk
 		return (nullptr);
 	}
 
-	std::vector<spk::SafePointer<Entity>> Entity::getChildrenByTags(const std::span<const std::wstring> &p_tags,
-																			spk::BinaryOperator p_binaryOperator)
+	std::vector<spk::SafePointer<Entity>> Entity::getChildrenByTags(const std::span<const std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator)
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
 		std::vector<spk::SafePointer<Entity>> result;
@@ -480,8 +478,8 @@ namespace spk
 		return (result);
 	}
 
-	std::vector<spk::SafePointer<const Entity>> Entity::getChildrenByTags(const std::span<const std::wstring> &p_tags,
-																				  spk::BinaryOperator p_binaryOperator) const
+	std::vector<spk::SafePointer<const Entity>> Entity::getChildrenByTags(
+		const std::span<const std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator) const
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
 		std::vector<spk::SafePointer<const Entity>> result;
@@ -499,16 +497,18 @@ namespace spk
 	bool Entity::containsTags(const std::span<const std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator) const
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
-		return (std::any_of(children().begin(),
-							children().end(),
-							[&](const spk::SafePointer<const Entity> &p_child) { return (matchesTags(*p_child, p_tags, p_binaryOperator)); }));
+		return (std::any_of(
+			children().begin(),
+			children().end(),
+			[&](const spk::SafePointer<const Entity> &p_child) { return (matchesTags(*p_child, p_tags, p_binaryOperator)); }));
 	}
 
 	size_t Entity::countTags(const std::span<const std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator) const
 	{
 		std::unique_lock<std::mutex> lock(_childMutex);
-		return (std::count_if(children().begin(),
-							  children().end(),
-							  [&](const spk::SafePointer<const Entity> &p_child) { return (matchesTags(*p_child, p_tags, p_binaryOperator)); }));
+		return (std::count_if(
+			children().begin(),
+			children().end(),
+			[&](const spk::SafePointer<const Entity> &p_child) { return (matchesTags(*p_child, p_tags, p_binaryOperator)); }));
 	}
 }

@@ -13,14 +13,14 @@ namespace spk
 		}
 		auto bufferContent = _buffer.str();
 
-		if (bufferContent.size() == 0)
+		if (bufferContent.empty())
 		{
 			return;
 		}
 
 		{
 			std::lock_guard<std::recursive_mutex> lock(_mutex);
-			if (_prefix != L"")
+			if (!_prefix.empty())
 			{
 				*_outputStream << "[" << _prefix << "] - ";
 			}

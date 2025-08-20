@@ -57,16 +57,16 @@ namespace spk
 				return (std::string());
 			}
 
-			int sizeNeeded = WideCharToMultiByte(CP_UTF8, 0, &p_wstring[0], (int)p_wstring.size(), NULL, 0, NULL, NULL);
+			int sizeNeeded = WideCharToMultiByte(CP_UTF8, 0, &p_wstring[0], (int)p_wstring.size(), nullptr, 0, nullptr, nullptr);
 			std::string strTo(sizeNeeded, 0);
-			WideCharToMultiByte(CP_UTF8, 0, &p_wstring[0], (int)p_wstring.size(), &strTo[0], sizeNeeded, NULL, NULL);
+			WideCharToMultiByte(CP_UTF8, 0, &p_wstring[0], (int)p_wstring.size(), &strTo[0], sizeNeeded, nullptr, nullptr);
 
 			return (strTo);
 		}
 
 		std::vector<std::string> splitString(const std::string &p_string, const std::string &p_delimiter)
 		{
-			if (p_string == "")
+			if (p_string.empty())
 			{
 				return (std::vector<std::string>());
 			}

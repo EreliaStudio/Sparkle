@@ -86,7 +86,7 @@ namespace spk
 		};
 
 	private:
-		std::map<std::wstring, Measurement *> _measurements;
+		std::map<std::wstring, std::unique_ptr<Measurement>> _measurements;
 		mutable std::recursive_mutex _mutex;
 
 		template <typename TMeasurement, typename Creator>
@@ -96,11 +96,10 @@ namespace spk
 			auto it = _measurements.find(p_name);
 			if (it == _measurements.end())
 			{
-				Measurement *m = p_creator();
-				_measurements[p_name] = m;
-				return spk::SafePointer<TMeasurement>(static_cast<TMeasurement *>(m));
+				_measurements[p_name] = std::move(p_creator());
+				return spk::SafePointer<TMeasurement>(static_cast<TMeasurement *>(_measurements[p_name].get()));
 			}
-			TMeasurement *result = dynamic_cast<TMeasurement *>(it->second);
+			TMeasurement *result = dynamic_cast<TMeasurement *>(it->second.get());
 			if (result == nullptr)
 			{
 				GENERATE_ERROR("Measurement [" + spk::StringUtils::wstringToString(p_name) + "] is not the correct type");

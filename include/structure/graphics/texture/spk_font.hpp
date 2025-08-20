@@ -7,7 +7,7 @@
 
 #include "structure/design_pattern/spk_contract_provider.hpp"
 
-#include "external_libraries/stb_truetype.h"
+#include "stb_truetype.h"
 #include "structure/graphics/texture/spk_texture.hpp"
 
 #include "structure/graphics/spk_text_alignment.hpp"

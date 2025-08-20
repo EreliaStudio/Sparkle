@@ -61,13 +61,14 @@ namespace spk
 		setPixels(_pixels.data(), _size, Texture::Format::GreyLevel);
 	}
 
-	Font::Atlas::Atlas(const stbtt_fontinfo &p_fontInfo,
-					   const Data &p_fontData,
-					   const size_t &p_textSize,
-					   const size_t &p_outlineSize,
-					   const Filtering &p_filtering,
-					   const Wrap &p_wrap,
-					   const Mipmap &p_mipmap) :
+	Font::Atlas::Atlas(
+		const stbtt_fontinfo &p_fontInfo,
+		const Data &p_fontData,
+		const size_t &p_textSize,
+		const size_t &p_outlineSize,
+		const Filtering &p_filtering,
+		const Wrap &p_wrap,
+		const Mipmap &p_mipmap) :
 		_textSize(p_textSize),
 		_outlineSize(p_outlineSize),
 		_fontInfo(p_fontInfo)
@@ -193,10 +194,11 @@ namespace spk
 		return (baselineResult);
 	}
 
-	Vector2Int Font::Atlas::computeStringAnchor(const spk::Geometry2D &p_geometry,
-												const std::wstring &p_string,
-												spk::HorizontalAlignment p_horizontalAlignment,
-												spk::VerticalAlignment p_verticalAlignment)
+	Vector2Int Font::Atlas::computeStringAnchor(
+		const spk::Geometry2D &p_geometry,
+		const std::wstring &p_string,
+		spk::HorizontalAlignment p_horizontalAlignment,
+		spk::VerticalAlignment p_verticalAlignment)
 	{
 		spk::Vector2Int result = p_geometry.anchor;
 
@@ -272,11 +274,12 @@ namespace spk
 		return (atlas(p_size).computeStringBaselineOffset(p_string));
 	}
 
-	Vector2Int Font::computeStringAnchor(const spk::Geometry2D &p_geometry,
-										 const std::wstring &p_string,
-										 const Font::Size &p_size,
-										 spk::HorizontalAlignment p_horizontalAlignment,
-										 spk::VerticalAlignment p_verticalAlignment)
+	Vector2Int Font::computeStringAnchor(
+		const spk::Geometry2D &p_geometry,
+		const std::wstring &p_string,
+		const Font::Size &p_size,
+		spk::HorizontalAlignment p_horizontalAlignment,
+		spk::VerticalAlignment p_verticalAlignment)
 	{
 		return (atlas(p_size).computeStringAnchor(p_geometry, p_string, p_horizontalAlignment, p_verticalAlignment));
 	}
@@ -286,7 +289,7 @@ namespace spk
 		std::vector<size_t> deltas = {100u, 50u, 20u, 10u, 1u};
 		Font::Size result = 2;
 
-		if (p_string == L"")
+		if (p_string.empty())
 		{
 			size_t resultTextSize = p_textArea.y;
 			size_t resultOutlineSize = static_cast<size_t>(resultTextSize * p_outlineSizeRatio);

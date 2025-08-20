@@ -174,7 +174,7 @@ namespace spk::OpenGL
 		{
 			GENERATE_ERROR("Vertex size is zero, no attributes defined.");
 		}
-		
+
 		return size() / _vertexSize;
 	}
 
@@ -250,12 +250,13 @@ namespace spk::OpenGL
 				glVertexAttribPointer(
 					attr.index + 2, 4, GL_FLOAT, GL_FALSE, static_cast<GLsizei>(_vertexSize), reinterpret_cast<void *>(offset + sizeof(GLfloat) * 8));
 				glEnableVertexAttribArray(attr.index + 3);
-				glVertexAttribPointer(attr.index + 3,
-									  4,
-									  GL_FLOAT,
-									  GL_FALSE,
-									  static_cast<GLsizei>(_vertexSize),
-									  reinterpret_cast<void *>(offset + sizeof(GLfloat) * 12));
+				glVertexAttribPointer(
+					attr.index + 3,
+					4,
+					GL_FLOAT,
+					GL_FALSE,
+					static_cast<GLsizei>(_vertexSize),
+					reinterpret_cast<void *>(offset + sizeof(GLfloat) * 12));
 				break;
 			default:
 				GENERATE_ERROR("Unexpected layout type.");

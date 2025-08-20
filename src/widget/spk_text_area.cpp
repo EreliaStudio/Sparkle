@@ -98,7 +98,7 @@ namespace spk
 	{
 		std::wstring result = p_text;
 
-		while (std::iswspace(result.back()))
+		while (std::iswspace(result.back()) != 0)
 		{
 			result.pop_back();
 		}

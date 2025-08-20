@@ -118,7 +118,7 @@ namespace spk
 
 				for (wchar_t c : hexPart)
 				{
-					if (!iswxdigit(c))
+					if (iswxdigit(c) == 0)
 					{
 						GENERATE_ERROR("Invalid color string format: Non-hexadecimal character found");
 					}

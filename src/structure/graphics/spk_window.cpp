@@ -74,31 +74,33 @@ namespace spk
 
 	void Window::_createContext()
 	{
-		RECT adjustedRect = {static_cast<LONG>(0),
-							 static_cast<LONG>(0),
-							 static_cast<LONG>(_rootWidget->viewport().geometry().width),
-							 static_cast<LONG>(_rootWidget->viewport().geometry().height)};
-		if (!AdjustWindowRectEx(&adjustedRect, WS_OVERLAPPEDWINDOW, FALSE, 0))
+		RECT adjustedRect = {
+			static_cast<LONG>(0),
+			static_cast<LONG>(0),
+			static_cast<LONG>(_rootWidget->viewport().geometry().width),
+			static_cast<LONG>(_rootWidget->viewport().geometry().height)};
+		if (AdjustWindowRectEx(&adjustedRect, WS_OVERLAPPEDWINDOW, FALSE, 0) == 0)
 		{
 			GENERATE_ERROR("Failed to adjust window rect.");
 		}
 
 		std::string convertedTitle = spk::StringUtils::wstringToString(_title);
 
-		_hwnd = CreateWindowEx(0,
-							   "SPKWindowClass",
-							   convertedTitle.c_str(),
-							   WS_OVERLAPPEDWINDOW,
-							   _rootWidget->viewport().geometry().x,
-							   _rootWidget->viewport().geometry().y,
-							   adjustedRect.right - adjustedRect.left,
-							   adjustedRect.bottom - adjustedRect.top,
-							   nullptr,
-							   nullptr,
-							   GetModuleHandle(nullptr),
-							   this);
+		_hwnd = CreateWindowEx(
+			0,
+			"SPKWindowClass",
+			convertedTitle.c_str(),
+			WS_OVERLAPPEDWINDOW,
+			_rootWidget->viewport().geometry().x,
+			_rootWidget->viewport().geometry().y,
+			adjustedRect.right - adjustedRect.left,
+			adjustedRect.bottom - adjustedRect.top,
+			nullptr,
+			nullptr,
+			GetModuleHandle(nullptr),
+			this);
 
-		if (!_hwnd)
+		if (_hwnd == nullptr)
 		{
 			GENERATE_ERROR("Failed to create window.");
 		}
@@ -132,7 +134,7 @@ namespace spk
 		{
 			std::lock_guard<std::recursive_mutex> lock(_timerMutex);
 
-			if (_pendingTimerCreations.size() != 0)
+			if (!_pendingTimerCreations.empty())
 			{
 				for (const auto &pair : _pendingTimerCreations)
 				{
@@ -145,7 +147,7 @@ namespace spk
 				_pendingTimerCreations.clear();
 			}
 
-			if (_pendingTimerDeletions.size() != 0)
+			if (!_pendingTimerDeletions.empty())
 			{
 				for (const auto &id : _pendingTimerDeletions)
 				{
@@ -170,7 +172,7 @@ namespace spk
 
 	void Window::_deleteTimer(UINT_PTR p_id)
 	{
-		if (!KillTimer(_hwnd, p_id))
+		if (KillTimer(_hwnd, p_id) == 0)
 		{
 			GENERATE_ERROR("Failed to clear update timer.");
 		}
@@ -215,32 +217,33 @@ namespace spk
 	void Window::_createOpenGLContext()
 	{
 		_hdc = GetDC(_hwnd);
-		PIXELFORMATDESCRIPTOR pfd = {sizeof(PIXELFORMATDESCRIPTOR),
-									 1,
-									 PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
-									 PFD_TYPE_RGBA,
-									 32,
-									 0,
-									 0,
-									 0,
-									 0,
-									 0,
-									 0,
-									 0,
-									 0,
-									 0,
-									 0,
-									 0,
-									 0,
-									 0,
-									 24,
-									 8,
-									 0,
-									 PFD_MAIN_PLANE,
-									 0,
-									 0,
-									 0,
-									 0};
+		PIXELFORMATDESCRIPTOR pfd = {
+			sizeof(PIXELFORMATDESCRIPTOR),
+			1,
+			PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
+			PFD_TYPE_RGBA,
+			32,
+			0,
+			0,
+			0,
+			0,
+			0,
+			0,
+			0,
+			0,
+			0,
+			0,
+			0,
+			0,
+			0,
+			24,
+			8,
+			0,
+			PFD_MAIN_PLANE,
+			0,
+			0,
+			0,
+			0};
 
 		int pixelFormat = ChoosePixelFormat(_hdc, &pfd);
 		if (pixelFormat == 0)
@@ -255,12 +258,12 @@ namespace spk
 
 		// Create a temporary context to initialize modern OpenGL
 		HGLRC tempContext = wglCreateContext(_hdc);
-		if (!tempContext)
+		if (tempContext == nullptr)
 		{
 			GENERATE_ERROR("Failed to create temporary OpenGL context.");
 		}
 
-		if (!wglMakeCurrent(_hdc, tempContext))
+		if (wglMakeCurrent(_hdc, tempContext) == 0)
 		{
 			GENERATE_ERROR("Failed to activate temporary OpenGL context.");
 		}
@@ -282,18 +285,19 @@ namespace spk
 		}
 
 		// Now create a modern OpenGL context
-		int attributes[] = {WGL_CONTEXT_MAJOR_VERSION_ARB,
-							4,
-							WGL_CONTEXT_MINOR_VERSION_ARB,
-							5,
-							WGL_CONTEXT_FLAGS_ARB,
-							WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
-							WGL_CONTEXT_PROFILE_MASK_ARB,
-							WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
-							0};
+		std::array<int, 9> attributes = {
+			WGL_CONTEXT_MAJOR_VERSION_ARB,
+			4,
+			WGL_CONTEXT_MINOR_VERSION_ARB,
+			5,
+			WGL_CONTEXT_FLAGS_ARB,
+			WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
+			WGL_CONTEXT_PROFILE_MASK_ARB,
+			WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
+			0};
 
-		_hglrc = wglCreateContextAttribsARB(_hdc, nullptr, attributes);
-		if (!_hglrc)
+		_hglrc = wglCreateContextAttribsARB(_hdc, nullptr, attributes.data());
+		if (_hglrc == nullptr)
 		{
 			GENERATE_ERROR("Failed to create modern OpenGL context.");
 		}
@@ -302,7 +306,7 @@ namespace spk
 		wglMakeCurrent(nullptr, nullptr);
 		wglDeleteContext(tempContext);
 
-		if (!wglMakeCurrent(_hdc, _hglrc))
+		if (wglMakeCurrent(_hdc, _hglrc) == 0)
 		{
 			GENERATE_ERROR("Failed to activate modern OpenGL context.");
 		}
@@ -314,7 +318,7 @@ namespace spk
 		}
 
 		glEnable(GL_DEBUG_OUTPUT);
-		glDebugMessageCallback(spk::OpenGLUtils::openGLDebugMessageCallback, 0);
+		glDebugMessageCallback(spk::OpenGLUtils::openGLDebugMessageCallback, nullptr);
 
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -339,20 +343,85 @@ namespace spk
 
 	void Window::_destroyOpenGLContext()
 	{
-		if (_hglrc)
+		if (_hglrc != nullptr)
 		{
 			wglMakeCurrent(nullptr, nullptr);
 			wglDeleteContext(_hglrc);
 			_hglrc = nullptr;
 		}
 
-		if (_hwnd && _hdc)
+		if ((_hwnd != nullptr) && (_hdc != nullptr))
 		{
 			ReleaseDC(_hwnd, _hdc);
 			_hdc = nullptr;
 		}
 	}
 
+	void Window::_guard(const char *p_label, const std::function<void()> &p_fn)
+	{
+		try
+		{
+			p_fn();
+		} catch (const std::exception &e)
+		{
+			spk::cout << p_label << " - Error caught:\n" << e.what() << std::endl;
+			close();
+		}
+	}
+
+	void Window::_updateCounter(spk::Timer &p_timer, spk::SafePointer<Profiler::CounterMeasurement> &p_counter, size_t &p_currentValue)
+	{
+		if (p_timer.state() != spk::Timer::State::Running)
+		{
+			if (p_counter)
+			{
+				p_currentValue = p_counter->value();
+				p_counter->reset();
+			}
+			p_timer.start();
+		}
+
+		if (p_counter)
+		{
+			p_counter->increment();
+		}
+	}
+
+	void Window::_rendererPreparation()
+	{
+		_guard(
+			"Renderer::preparation",
+			[&]()
+			{
+				_createContext();
+				requestPaint();
+			});
+	}
+
+	void Window::_rendererLoopIteration()
+	{
+		// 1) FPS tick (light, early)
+		_updateCounter(_fpsTimer, _fpsCounter, _currentFPS);
+
+		// 2) Steps with fine-grained error context
+		_guard("Renderer::_handlePendingTimer", [&]() { _handlePendingTimer(); });
+		_guard("Renderer::pullEvents", [&]() { pullEvents(); });
+		_guard("Renderer::_timerModule", [&]() { _timerModule.treatMessages(); });
+		_guard("Renderer::_paintModule", [&]() { _paintModule.treatMessages(); });
+		_guard("Renderer::_systemModule", [&]() { _systemModule.treatMessages(); });
+	}
+
+	void Window::_updaterLoopIteration()
+	{
+		_updateCounter(_upsTimer, _upsCounter, _currentUPS);
+
+		_guard("Updater::_mouseModule", [&]() { _mouseModule.treatMessages(); });
+		_guard("Updater::_keyboardModule", [&]() { _keyboardModule.treatMessages(); });
+		_guard("Updater::_controllerModule", [&]() { _controllerModule.treatMessages(); });
+		_guard("Updater::_updateModule", [&]() { _updateModule.treatMessages(); });
+	}
+
+	// spk_window.cpp (inside Window::Window(...))
 	Window::Window(const std::wstring &p_title, const spk::Geometry2D &p_geometry) :
 		_rootWidget(std::make_unique<Widget>(p_title + L" - CentralWidget", nullptr)),
 		_title(p_title),
@@ -367,121 +436,11 @@ namespace spk
 		_fpsCounter = Profiler::instance()->counter(L"FPS");
 		_upsCounter = Profiler::instance()->counter(L"UPS");
 
-		_windowRendererThread
-			.addPreparationStep(
-				[&]()
-				{
-					try
-					{
-						_createContext();
-						requestPaint();
-					} catch (std::exception &e)
-					{
-						spk::cout << "Error catched : " << e.what() << std::endl;
-						close();
-					}
-				})
-			.relinquish();
+		_windowRendererThread.addPreparationStep([&]() { _rendererPreparation(); }).relinquish();
 
-		_windowRendererThread
-			.addExecutionStep(
-				[&]()
-				{
-					if (_fpsTimer.state() != spk::Timer::State::Running)
-					{
-						if (_fpsCounter)
-						{
-							_currentFPS = _fpsCounter->value();
-							_fpsCounter->reset();
-						}
+		_windowRendererThread.addExecutionStep([&]() { _rendererLoopIteration(); }).relinquish();
 
-						_fpsTimer.start();
-					}
-
-					try
-					{
-						try
-						{
-							_handlePendingTimer();
-						} catch (const std::exception &e)
-						{
-							PROPAGATE_ERROR("Renderer::_handlePendingTimer failed", e);
-						}
-
-						try
-						{
-							pullEvents();
-						} catch (const std::exception &e)
-						{
-							PROPAGATE_ERROR("Renderer::pullEvents failed", e);
-						}
-
-						try
-						{
-							_timerModule.treatMessages();
-						} catch (const std::exception &e)
-						{
-							PROPAGATE_ERROR("Renderer::_timerModule.treatMessages failed", e);
-						}
-
-						try
-						{
-							_paintModule.treatMessages();
-						} catch (const std::exception &e)
-						{
-							PROPAGATE_ERROR("Renderer::_paintModule.treatMessages failed", e);
-						}
-
-						try
-						{
-							_systemModule.treatMessages();
-						} catch (const std::exception &e)
-						{
-							PROPAGATE_ERROR("Renderer::_systemModule.treatMessages failed", e);
-						}
-
-						if (_fpsCounter)
-						{
-							_fpsCounter->increment();
-						}
-					} catch (const std::exception &e)
-					{
-						spk::cout << "Renderer - Error caught:\n" << e.what() << std::endl;
-						close();
-					}
-				})
-			.relinquish();
-
-		_windowUpdaterThread
-			.addExecutionStep(
-				[&]()
-				{
-					if (_upsTimer.state() != spk::Timer::State::Running)
-					{
-						if (_upsCounter)
-						{
-							_currentUPS = _upsCounter->value();
-							_upsCounter->reset();
-						}
-						_upsTimer.start();
-					}
-					try
-					{
-						_mouseModule.treatMessages();
-						_keyboardModule.treatMessages();
-						_controllerModule.treatMessages();
-						_updateModule.treatMessages();
-						if (_upsCounter)
-						{
-							_upsCounter->increment();
-						}
-					} catch (std::exception &e)
-					{
-						spk::cout << "Updater - Error catched : " << e.what() << std::endl;
-						close();
-					}
-				})
-			.relinquish();
+		_windowUpdaterThread.addExecutionStep([&]() { _updaterLoopIteration(); }).relinquish();
 
 		_updateModule.bind(&(_keyboardModule.keyboard()));
 		_updateModule.bind(&(_mouseModule.mouse()));
@@ -533,7 +492,7 @@ namespace spk
 		_windowUpdaterThread.stop();
 		_controllerInputThread.stop();
 
-		if (_hwnd)
+		if (_hwnd != nullptr)
 		{
 			DestroyWindow(_hwnd);
 			_hwnd = nullptr;

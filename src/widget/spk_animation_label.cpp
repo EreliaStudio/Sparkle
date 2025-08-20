@@ -5,7 +5,7 @@ namespace spk
 	void AnimationLabel::_onGeometryChange()
 	{
 		_textureRenderer.clear();
-		if (_spriteSheet && _spriteSheet->sprites().size() > 0)
+		if (_spriteSheet && !_spriteSheet->sprites().empty())
 		{
 			_textureRenderer.prepare(geometry().atOrigin(), _spriteSheet->sprite(_currentSprite), layer());
 			_textureRenderer.validate();
@@ -19,7 +19,7 @@ namespace spk
 
 	void AnimationLabel::_onUpdateEvent(spk::UpdateEvent &p_event)
 	{
-		if (_timer.state() != spk::Timer::State::Running && _spriteSheet && _spriteSheet->sprites().size() > 0)
+		if (_timer.state() != spk::Timer::State::Running && _spriteSheet && !_spriteSheet->sprites().empty())
 		{
 			if (_rangeEnd >= _rangeStart && _rangeEnd < _spriteSheet->sprites().size())
 			{
@@ -52,7 +52,7 @@ namespace spk
 		_textureRenderer.setTexture(p_spriteSheet);
 		_currentSprite = 0;
 		_rangeStart = 0;
-		_rangeEnd = p_spriteSheet && p_spriteSheet->sprites().size() > 0 ? p_spriteSheet->sprites().size() - 1 : 0;
+		_rangeEnd = p_spriteSheet && !p_spriteSheet->sprites().empty() ? p_spriteSheet->sprites().size() - 1 : 0;
 		_timer.stop();
 	}
 

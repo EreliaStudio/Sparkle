@@ -1,9 +1,9 @@
 #include "structure/graphics/opengl/spk_frame_buffer_object.hpp"
 
 #ifdef _WIN32
-#   define WIN32_LEAN_AND_MEAN
-#   include <windows.h>
-#   undef WIN32_LEAN_AND_MEAN
+#	define WIN32_LEAN_AND_MEAN
+#	include <windows.h>
+#	undef WIN32_LEAN_AND_MEAN
 #endif
 
 #include <cassert>
@@ -101,15 +101,16 @@ namespace spk::OpenGL
 		GLenum format = formatForAttachment(_type);
 		GLenum type = typeForAttachment(_type);
 
-		glTexImage2D(GL_TEXTURE_2D,
-					 0,
-					 static_cast<GLint>(internalFmt),
-					 static_cast<GLsizei>(p_size.x),
-					 static_cast<GLsizei>(p_size.y),
-					 0,
-					 format,
-					 type,
-					 nullptr);
+		glTexImage2D(
+			GL_TEXTURE_2D,
+			0,
+			static_cast<GLint>(internalFmt),
+			static_cast<GLsizei>(p_size.x),
+			static_cast<GLsizei>(p_size.y),
+			0,
+			format,
+			type,
+			nullptr);
 
 		glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -133,15 +134,16 @@ namespace spk::OpenGL
 		GLenum format = formatForAttachment(_type);
 		GLenum type = typeForAttachment(_type);
 
-		glTexImage2D(GL_TEXTURE_2D,
-					 0,
-					 static_cast<GLint>(internalFmt),
-					 static_cast<GLsizei>(p_size.x),
-					 static_cast<GLsizei>(p_size.y),
-					 0,
-					 format,
-					 type,
-					 nullptr);
+		glTexImage2D(
+			GL_TEXTURE_2D,
+			0,
+			static_cast<GLint>(internalFmt),
+			static_cast<GLsizei>(p_size.x),
+			static_cast<GLsizei>(p_size.y),
+			0,
+			format,
+			type,
+			nullptr);
 
 		glBindTexture(GL_TEXTURE_2D, 0);
 

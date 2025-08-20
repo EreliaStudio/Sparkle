@@ -23,6 +23,10 @@ namespace spk::Lumina
 
 		ShaderObjectFactory() = default;
 
+		void _addUBOs(const spk::JSON::Object &ubos);
+		void _addSSBOs(const spk::JSON::Object &ssbos);
+		void _addSamplers(const spk::JSON::Object &samplers);
+
 	public:
 		void add(const spk::JSON::Object &p_desc);
 

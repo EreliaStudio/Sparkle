@@ -62,7 +62,7 @@ namespace spk
 				}
 				)";
 
-			_program = new spk::OpenGL::Program(vertexShaderSrc, fragmentShaderSrc);
+			_program = std::make_unique<spk::OpenGL::Program>(vertexShaderSrc, fragmentShaderSrc);
 		}
 	}
 
@@ -173,10 +173,11 @@ namespace spk
 		return (_font->computeStringSize(p_text, _fontSize));
 	}
 
-	spk::Vector2Int FontPainter::computeTextAnchor(const spk::Geometry2D &p_geometry,
-													const std::wstring &p_string,
-													spk::HorizontalAlignment p_horizontalAlignment,
-													spk::VerticalAlignment p_verticalAlignment) const
+	spk::Vector2Int FontPainter::computeTextAnchor(
+		const spk::Geometry2D &p_geometry,
+		const std::wstring &p_string,
+		spk::HorizontalAlignment p_horizontalAlignment,
+		spk::VerticalAlignment p_verticalAlignment) const
 	{
 		if (_font == nullptr)
 		{

@@ -1,4 +1,4 @@
-#include "structure/container/spk_JSON_file.hpp"
+#include "structure/container/spk_json_file.hpp"
 
 #include <algorithm>
 #include <fstream>
@@ -83,9 +83,10 @@ namespace spk
 				case L'\\':
 					if (std::wstring(L"\"\\/bfnrtu").find(nextChar) == std::wstring::npos)
 					{
-						GENERATE_ERROR("Invalid escape sequence at line " +
-									   std::to_string(1 + std::count(p_fileContent.begin(), p_fileContent.begin() + i, L'\n')) + " column " +
-									   std::to_string(1 + i - p_fileContent.rfind('\n', i)) + ".");
+						GENERATE_ERROR(
+							"Invalid escape sequence at line " +
+							std::to_string(1 + std::count(p_fileContent.begin(), p_fileContent.begin() + i, L'\n')) + " column " +
+							std::to_string(1 + i - p_fileContent.rfind('\n', i)) + ".");
 					}
 					if (nextChar == L'\\')
 					{
@@ -112,9 +113,9 @@ namespace spk
 					}
 					else if (isLiteral == true && (c == L'\n' || c == L'\r'))
 					{
-						GENERATE_ERROR("Unexpected end of string " +
-									   std::to_string(1 + std::count(p_fileContent.begin(), p_fileContent.begin() + i, '\n')) + " column " +
-									   std::to_string(i - p_fileContent.rfind('\n', i - 1)) + ".");
+						GENERATE_ERROR(
+							"Unexpected end of string " + std::to_string(1 + std::count(p_fileContent.begin(), p_fileContent.begin() + i, '\n')) +
+							" column " + std::to_string(i - p_fileContent.rfind('\n', i - 1)) + ".");
 					}
 					break;
 				default:

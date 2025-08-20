@@ -12,7 +12,12 @@ namespace spk
 	{
 		if (isJoinable() == true)
 		{
-			join();
+			if (_handle != nullptr && _handle->joinable())
+			{
+				_handle->join();
+				_handle.reset();
+				_handle = nullptr;
+			}
 		}
 	}
 

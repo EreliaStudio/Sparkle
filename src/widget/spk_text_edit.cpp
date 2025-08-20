@@ -57,8 +57,8 @@ namespace spk
 
 		_cursorRenderer.clear();
 		spk::Vector2UInt prevTextSize = _fontRenderer.computeTextSize(tmpText.substr(_lowerCursor, _cursor - _lowerCursor));
-		_cursorRenderer.prepareSquare(spk::Geometry2D(prevTextSize.x + _cornerSize.x - 2, _cornerSize.y, 2, geometry().height - _cornerSize.y * 2),
-									  layer() + 0.02f);
+		_cursorRenderer.prepareSquare(
+			spk::Geometry2D(prevTextSize.x + _cornerSize.x - 2, _cornerSize.y, 2, geometry().height - _cornerSize.y * 2), layer() + 0.02f);
 		_cursorRenderer.validate();
 	}
 
@@ -101,7 +101,7 @@ namespace spk
 
 		if (p_event.type == spk::MouseEvent::Type::Press)
 		{
-                        if (viewport().geometry().contains(p_event.mouse->position()) == true)
+			if (viewport().geometry().contains(p_event.mouse->position()) == true)
 			{
 				takeFocus(Widget::FocusType::KeyboardFocus);
 			}
@@ -124,87 +124,134 @@ namespace spk
 			return;
 		}
 
-		if (hasFocus(Widget::FocusType::KeyboardFocus) == true)
+		if (hasFocus(Widget::FocusType::KeyboardFocus) == false)
 		{
-			if (p_event.type == spk::KeyboardEvent::Type::Press || p_event.type == spk::KeyboardEvent::Type::Repeat)
-			{
-				if (p_event.key == spk::Keyboard::LeftArrow)
-				{
-					if (_cursor > 0)
-					{
-						_cursor--;
-						if (_cursor < _lowerCursor)
-						{
-							_lowerCursor = _cursor;
-							_needHigherCursorUpdate = true;
-						}
-						requireGeometryUpdate();
-					}
-				}
-				else if (p_event.key == spk::Keyboard::RightArrow)
-				{
-					if (_cursor < _text.size())
-					{
-						_cursor++;
-						if (_cursor >= _higherCursor)
-						{
-							_higherCursor = _cursor;
-							_needLowerCursorUpdate = true;
-						}
-						requireGeometryUpdate();
-					}
-				}
-				else if (p_event.key == spk::Keyboard::Escape)
-				{
-					releaseFocus(Widget::FocusType::KeyboardFocus);
-				}
-				else if (p_event.key == spk::Keyboard::Delete)
-				{
-					if (_cursor < _text.size())
-					{
-						_text.erase(_cursor, 1);
-						_needHigherCursorUpdate = true;
-						requireGeometryUpdate();
-					}
-				}
-			}
-			else if (p_event.type == spk::KeyboardEvent::Type::Glyph)
-			{
-				if (p_event.glyph == spk::Keyboard::Backspace)
-				{
-					if (_text.empty() == false && _cursor != 0)
-					{
-						_text.erase(_cursor - 1, 1);
-						_cursor--;
-						if (_cursor <= _lowerCursor)
-						{
-							_lowerCursor = _cursor;
-							if (_lowerCursor != 0)
-							{
-								_lowerCursor--;
-							}
-							_needHigherCursorUpdate = true;
-						}
-						requireGeometryUpdate();
-					}
-				}
-				else
-				{
-					if (p_event.glyph >= 32)
-					{
-						_text.insert(_cursor, 1, p_event.glyph);
-						_cursor++;
-						if (_cursor > _higherCursor)
-						{
-							_higherCursor = _cursor;
-							_needHigherCursorUpdate = true;
-							_needLowerCursorUpdate = true;
-						}
-						requireGeometryUpdate();
-					}
-				}
-			}
+			return;
 		}
+
+		switch (p_event.type)
+		{
+		case spk::KeyboardEvent::Type::Press:
+		case spk::KeyboardEvent::Type::Repeat:
+			_handleKeyPress(p_event.key);
+			break;
+
+		case spk::KeyboardEvent::Type::Glyph:
+			_handleGlyph(p_event.glyph);
+			break;
+
+		default:
+			break;
+		}
+	}
+
+	void TextEdit::_handleKeyPress(spk::Keyboard::Key p_key)
+	{
+		switch (p_key)
+		{
+		case spk::Keyboard::LeftArrow:
+			_moveCursorLeft();
+			break;
+		case spk::Keyboard::RightArrow:
+			_moveCursorRight();
+			break;
+		case spk::Keyboard::Escape:
+			releaseFocus(Widget::FocusType::KeyboardFocus);
+			break;
+		case spk::Keyboard::Delete:
+			_deleteAtCursor();
+			break;
+		default:
+			break;
+		}
+	}
+
+	void TextEdit::_handleGlyph(wchar_t p_glyph)
+	{
+		if (p_glyph == spk::Keyboard::Backspace)
+		{
+			_backspace();
+		}
+		else if (p_glyph >= 32)
+		{
+			_insertGlyph(p_glyph);
+		}
+	}
+
+	void TextEdit::_moveCursorLeft()
+	{
+		if (_cursor == 0)
+		{
+			return;
+		}
+
+		_cursor--;
+		if (_cursor < _lowerCursor)
+		{
+			_lowerCursor = _cursor;
+			_needHigherCursorUpdate = true;
+		}
+		requireGeometryUpdate();
+	}
+
+	void TextEdit::_moveCursorRight()
+	{
+		if (_cursor >= _text.size())
+		{
+			return;
+		}
+
+		_cursor++;
+		if (_cursor >= _higherCursor)
+		{
+			_higherCursor = _cursor;
+			_needLowerCursorUpdate = true;
+		}
+		requireGeometryUpdate();
+	}
+
+	void TextEdit::_deleteAtCursor()
+	{
+		if (_cursor >= _text.size())
+		{
+			return;
+		}
+
+		_text.erase(_cursor, 1);
+		_needHigherCursorUpdate = true;
+		requireGeometryUpdate();
+	}
+
+	void TextEdit::_backspace()
+	{
+		if (_text.empty() || _cursor == 0)
+		{
+			return;
+		}
+
+		_text.erase(_cursor - 1, 1);
+		_cursor--;
+
+		if (_cursor <= _lowerCursor)
+		{
+			_lowerCursor = (_lowerCursor > 0) ? _cursor - 1 : 0;
+			_needHigherCursorUpdate = true;
+		}
+		requireGeometryUpdate();
+	}
+
+	void TextEdit::_insertGlyph(wchar_t p_glyph)
+	{
+		_text.insert(_cursor, 1, p_glyph);
+		_cursor++;
+
+		if (_cursor > _higherCursor)
+		{
+			_higherCursor = _cursor;
+			_needHigherCursorUpdate = true;
+			_needLowerCursorUpdate = true;
+		}
+		requireGeometryUpdate();
 	}
 
 	TextEdit::TextEdit(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :

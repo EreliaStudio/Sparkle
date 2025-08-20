@@ -2,16 +2,15 @@
 #include "structure/container/spk_json_object.hpp"
 #include "structure/math/spk_matrix.hpp"
 
-#include "structure/engine/spk_entity.hpp"
 #include "spk_generated_resources.hpp"
+#include "structure/engine/spk_entity.hpp"
 
 namespace spk
 {
 	spk::Lumina::Shader ObjMeshRenderer::Painter::_createShader()
 	{
-		spk::Lumina::ShaderObjectFactory::instance()->add(spk::JSON::Object::fromString(
-			SPARKLE_GET_RESOURCE_AS_STRING("resources/json/mesh_renderer_shader_object.json")
-		));
+		spk::Lumina::ShaderObjectFactory::instance()->add(
+			spk::JSON::Object::fromString(SPARKLE_GET_RESOURCE_AS_STRING("resources/json/mesh_renderer_shader_object.json")));
 
 		const char *vertexShaderSrc = R"(#version 450
 layout(location = 0) in vec3 inPosition;
@@ -65,22 +64,11 @@ void main()
 		shader.addAttribute({2, spk::OpenGL::LayoutBufferObject::Attribute::Type::Vector3});
 
 		shader.addSampler(
-				L"diffuseTexture",
-				spk::Lumina::ShaderObjectFactory::instance()->sampler(L"diffuseTexture"),
-				spk::Lumina::Shader::Mode::Constant
-			);
+			L"diffuseTexture", spk::Lumina::ShaderObjectFactory::instance()->sampler(L"diffuseTexture"), spk::Lumina::Shader::Mode::Constant);
 
-		shader.addUBO(
-				L"CameraUBO", 
-				spk::Lumina::ShaderObjectFactory::instance()->ubo(L"CameraUBO"), 
-				spk::Lumina::Shader::Mode::Constant
-			);
+		shader.addUBO(L"CameraUBO", spk::Lumina::ShaderObjectFactory::instance()->ubo(L"CameraUBO"), spk::Lumina::Shader::Mode::Constant);
 
-		shader.addUBO(
-				L"TransformUBO", 
-				spk::Lumina::ShaderObjectFactory::instance()->ubo(L"TransformUBO"), 
-				spk::Lumina::Shader::Mode::Attribute
-			);
+		shader.addUBO(L"TransformUBO", spk::Lumina::ShaderObjectFactory::instance()->ubo(L"TransformUBO"), spk::Lumina::Shader::Mode::Attribute);
 
 		return (shader);
 	}
@@ -130,16 +118,15 @@ void main()
 		_diffuseSampler.bind(p_texture);
 	}
 
-	const spk::SafePointer<const spk::Texture>& ObjMeshRenderer::Painter::texture() const
+	const spk::SafePointer<const spk::Texture> &ObjMeshRenderer::Painter::texture() const
 	{
 		return (_diffuseSampler.texture());
 	}
 
-	ObjMeshRenderer::ObjMeshRenderer(const std::wstring& p_name) :
+	ObjMeshRenderer::ObjMeshRenderer(const std::wstring &p_name) :
 		spk::Component(p_name),
 		_painter()
 	{
-
 	}
 
 	void ObjMeshRenderer::setTexture(spk::SafePointer<const spk::Texture> p_texture)
@@ -152,10 +139,10 @@ void main()
 		return (_painter.texture());
 	}
 
-	void ObjMeshRenderer::setMesh(const spk::SafePointer<const spk::ObjMesh>& p_mesh)
+	void ObjMeshRenderer::setMesh(const spk::SafePointer<const spk::ObjMesh> &p_mesh)
 	{
 		_mesh = p_mesh;
-		
+
 		_painter.clear();
 		if (_mesh != nullptr)
 		{
@@ -163,12 +150,12 @@ void main()
 		}
 		_painter.validate();
 	}
-	
-	const spk::SafePointer<const spk::ObjMesh>& ObjMeshRenderer::mesh() const
+
+	const spk::SafePointer<const spk::ObjMesh> &ObjMeshRenderer::mesh() const
 	{
 		return (_mesh);
 	}
-	
+
 	void ObjMeshRenderer::onPaintEvent(spk::PaintEvent &p_event)
 	{
 		_painter.render();
@@ -176,9 +163,7 @@ void main()
 
 	void ObjMeshRenderer::start()
 	{
-		_onOwnerTransformEditionContract = owner()->transform().addOnEditionCallback([this]() {
-			_painter.setTransform(owner()->transform());
-		});
+		_onOwnerTransformEditionContract = owner()->transform().addOnEditionCallback([this]() { _painter.setTransform(owner()->transform()); });
 		_onOwnerTransformEditionContract.trigger();
 	}
 }

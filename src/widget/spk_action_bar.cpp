@@ -29,13 +29,15 @@ namespace spk
 
 		_renderer.prepare({spk::Vector2Int(0, 0), {_height, _height}}, _renderer.texture().upCast<spk::SpriteSheet>()->sprite(0), layer());
 
-		_renderer.prepare({spk::Vector2Int(_height, 0), {geometry().size.x - _height * 2, _height}},
-						  _renderer.texture().upCast<spk::SpriteSheet>()->sprite(1),
-						  layer());
+		_renderer.prepare(
+			{spk::Vector2Int(_height, 0), {geometry().size.x - _height * 2, _height}},
+			_renderer.texture().upCast<spk::SpriteSheet>()->sprite(1),
+			layer());
 
-		_renderer.prepare({spk::Vector2Int(geometry().size.x - _height, 0), {_height, _height}},
-						  _renderer.texture().upCast<spk::SpriteSheet>()->sprite(2),
-						  layer());
+		_renderer.prepare(
+			{spk::Vector2Int(geometry().size.x - _height, 0), {_height, _height}},
+			_renderer.texture().upCast<spk::SpriteSheet>()->sprite(2),
+			layer());
 
 		_renderer.validate();
 	}
@@ -193,8 +195,9 @@ namespace spk
 
 			spk::Vector2Int buttonTextSize = entry->menuButton->computeTextSize();
 
-			spk::Vector2UInt buttonSize = {buttonTextSize.x + entry->menuButton->cornerSize().x * 2 + (_height - buttonTextSize.y),
-										   _height - _backgroundFrame.cornerSize().y * 2};
+			spk::Vector2UInt buttonSize = {
+				buttonTextSize.x + entry->menuButton->cornerSize().x * 2 + (_height - buttonTextSize.y),
+				_height - _backgroundFrame.cornerSize().y * 2};
 
 			entry->menuButton->setGeometry({anchor, buttonSize});
 

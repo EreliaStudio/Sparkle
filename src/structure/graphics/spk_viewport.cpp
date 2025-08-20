@@ -81,23 +81,26 @@ namespace spk
 	{
 		if (_windowSize.x <= 0 || _windowSize.y <= 0)
 		{
-			GENERATE_ERROR("Viewport::apply() - window size must be positive "
-						   "(got " +
-						   std::to_string(_windowSize.x) + " x " + std::to_string(_windowSize.y) + ')');
+			GENERATE_ERROR(
+				"Viewport::apply() - window size must be positive "
+				"(got " +
+				std::to_string(_windowSize.x) + " x " + std::to_string(_windowSize.y) + ')');
 		}
 
 		if (_geometry.width <= 0 || _geometry.height <= 0)
 		{
-			GENERATE_ERROR("Viewport::apply() - viewport width/height must be positive "
-						   "(got " +
-						   std::to_string(_geometry.width) + " x " + std::to_string(_geometry.height) + ')');
+			GENERATE_ERROR(
+				"Viewport::apply() - viewport width/height must be positive "
+				"(got " +
+				std::to_string(_geometry.width) + " x " + std::to_string(_geometry.height) + ')');
 		}
 
 		if (_clippedGeometry.width <= 0 || _clippedGeometry.height <= 0)
 		{
-			GENERATE_ERROR("Viewport::apply() - viewport clipped width/height must be positive "
-						   "(got " +
-						   std::to_string(_clippedGeometry.width) + " x " + std::to_string(_clippedGeometry.height) + ')');
+			GENERATE_ERROR(
+				"Viewport::apply() - viewport clipped width/height must be positive "
+				"(got " +
+				std::to_string(_clippedGeometry.width) + " x " + std::to_string(_clippedGeometry.height) + ')');
 		}
 
 		_convertionOffset = static_cast<spk::Vector2>(_geometry.size) / 2.0f;
@@ -125,9 +128,10 @@ namespace spk
 
 		if (viewportW <= 0 || viewportH <= 0)
 		{
-			GENERATE_ERROR("Viewport::apply() - viewport width/height must be positive "
-						   "(got " +
-						   std::to_string(viewportW) + " x " + std::to_string(viewportH) + ')');
+			GENERATE_ERROR(
+				"Viewport::apply() - viewport width/height must be positive "
+				"(got " +
+				std::to_string(viewportW) + " x " + std::to_string(viewportH) + ')');
 		}
 
 		try
@@ -154,11 +158,12 @@ namespace spk
 
 	spk::Vector2 Viewport::convertScreenToOpenGL(int p_screenPositionX, int p_screenPositionY)
 	{
-		return ((_matrix *
-				 spk::Vector4(
-					 static_cast<float>(p_screenPositionX) - _convertionOffset.x, static_cast<float>(p_screenPositionY) - _convertionOffset.y, 0, 0))
-					.xy() +
-				_clippingOffset);
+		return (
+			(_matrix *
+			 spk::Vector4(
+				 static_cast<float>(p_screenPositionX) - _convertionOffset.x, static_cast<float>(p_screenPositionY) - _convertionOffset.y, 0, 0))
+				.xy() +
+			_clippingOffset);
 	}
 
 	float Viewport::convertLayerToOpenGL(const float &p_layer)
@@ -168,17 +173,20 @@ namespace spk
 
 	spk::Vector3 Viewport::convertScreenToOpenGL(const spk::Vector2Int p_screenPosition, const float &p_layer)
 	{
-		return ((_matrix * spk::Vector4(static_cast<spk::Vector2>(p_screenPosition) - _convertionOffset, p_layer, 0)).xyz() +
-				spk::Vector3(_clippingOffset, 0));
+		return (
+			(_matrix * spk::Vector4(static_cast<spk::Vector2>(p_screenPosition) - _convertionOffset, p_layer, 0)).xyz() +
+			spk::Vector3(_clippingOffset, 0));
 	}
 
 	spk::Vector3 Viewport::convertScreenToOpenGL(int p_screenPositionX, int p_screenPositionY, const float &p_layer)
 	{
-		return ((_matrix * spk::Vector4(static_cast<float>(p_screenPositionX) - _convertionOffset.x,
-										static_cast<float>(p_screenPositionY) - _convertionOffset.y,
-										p_layer,
-										0))
-					.xyz() +
-				spk::Vector3(_clippingOffset, 0));
+		return (
+			(_matrix * spk::Vector4(
+						   static_cast<float>(p_screenPositionX) - _convertionOffset.x,
+						   static_cast<float>(p_screenPositionY) - _convertionOffset.y,
+						   p_layer,
+						   0))
+				.xyz() +
+			spk::Vector3(_clippingOffset, 0));
 	}
 }

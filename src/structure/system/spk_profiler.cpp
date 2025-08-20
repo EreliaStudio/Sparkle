@@ -143,21 +143,17 @@ namespace spk
 	Profiler::~Profiler()
 	{
 		std::lock_guard<std::recursive_mutex> lock(_mutex);
-		for (auto &[key, value] : _measurements)
-		{
-			delete value;
-		}
 		_measurements.clear();
 	}
 
 	spk::SafePointer<Profiler::DurationMeasurement> Profiler::duration(const std::wstring &p_name)
 	{
-		return _get<DurationMeasurement>(p_name, [&]() { return new DurationMeasurement(p_name); });
+		return _get<DurationMeasurement>(p_name, [&]() { return std::make_unique<DurationMeasurement>(p_name); });
 	}
 
 	spk::SafePointer<Profiler::CounterMeasurement> Profiler::counter(const std::wstring &p_name)
 	{
-		return _get<CounterMeasurement>(p_name, [&]() { return new CounterMeasurement(p_name); });
+		return _get<CounterMeasurement>(p_name, [&]() { return std::make_unique<CounterMeasurement>(p_name); });
 	}
 
 	spk::SafePointer<Profiler::Measurement> Profiler::measurement(const std::wstring &p_name)
@@ -168,7 +164,7 @@ namespace spk
 		{
 			GENERATE_ERROR("Measurement [" + spk::StringUtils::wstringToString(p_name) + "] does not exist");
 		}
-		return spk::SafePointer<Measurement>(it->second);
+		return spk::SafePointer<Measurement>(it->second.get());
 	}
 
 	spk::JSON::Object Profiler::exportData() const

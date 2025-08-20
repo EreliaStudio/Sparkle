@@ -1,7 +1,7 @@
 #include "structure/graphics/texture/spk_texture.hpp"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include <external_libraries/stb_image_write.h>
+#include <stb_image_write.h>
 
 namespace spk
 {
@@ -117,12 +117,13 @@ namespace spk
 		return *this;
 	}
 
-	void Texture::setPixels(const std::vector<uint8_t> &p_data,
-							const spk::Vector2UInt &p_size,
-							const Format &p_format,
-							const Filtering &p_filtering,
-							const Wrap &p_wrap,
-							const Mipmap &p_mipmap)
+	void Texture::setPixels(
+		const std::vector<uint8_t> &p_data,
+		const spk::Vector2UInt &p_size,
+		const Format &p_format,
+		const Filtering &p_filtering,
+		const Wrap &p_wrap,
+		const Mipmap &p_mipmap)
 	{
 		_pixels = p_data;
 		_size = p_size;
@@ -142,12 +143,13 @@ namespace spk
 		_needUpdate = true;
 	}
 
-	void Texture::setPixels(const uint8_t *p_data,
-							const spk::Vector2UInt &p_size,
-							const Format &p_format,
-							const Filtering &p_filtering,
-							const Wrap &p_wrap,
-							const Mipmap &p_mipmap)
+	void Texture::setPixels(
+		const uint8_t *p_data,
+		const spk::Vector2UInt &p_size,
+		const Format &p_format,
+		const Filtering &p_filtering,
+		const Wrap &p_wrap,
+		const Mipmap &p_mipmap)
 	{
 		_size = p_size;
 		_format = p_format;
@@ -234,7 +236,7 @@ namespace spk
 
 		int stride = _size.x * channels;
 
-		if (!stbi_write_png(p_path.string().c_str(), _size.x, _size.y, channels, _pixels.data(), stride))
+		if (stbi_write_png(p_path.string().c_str(), _size.x, _size.y, channels, _pixels.data(), stride) == 0)
 		{
 			throw std::runtime_error("Failed to write PNG file at: " + p_path.string());
 		}

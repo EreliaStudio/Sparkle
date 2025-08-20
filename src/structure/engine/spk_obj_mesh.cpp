@@ -6,17 +6,18 @@
 #include <unordered_map>
 #include <vector>
 
-#include "structure/spk_iostream.hpp"
 #include "spk_debug_macro.hpp"
+#include "structure/spk_iostream.hpp"
 
 namespace spk
 {
 	namespace
 	{
-		static Vertex parseVertex(const std::string &p_token,
-								  const std::vector<spk::Vector3> &p_positions,
-								  const std::vector<spk::Vector2> &p_uvs,
-								  const std::vector<spk::Vector3> &p_normals)
+		static Vertex parseVertex(
+			const std::string &p_token,
+			const std::vector<spk::Vector3> &p_positions,
+			const std::vector<spk::Vector2> &p_uvs,
+			const std::vector<spk::Vector3> &p_normals)
 		{
 			Vertex result;
 			std::array<std::string, 3> parts = {"", "", ""};
@@ -138,7 +139,7 @@ namespace spk
 				}
 			}
 		}
-		
+
 		return (result);
 	}
 
@@ -152,7 +153,7 @@ namespace spk
 
 		std::stringstream buffer;
 		buffer << file.rdbuf();
-		
+
 		return (loadFromString(buffer.str()));
 	}
 

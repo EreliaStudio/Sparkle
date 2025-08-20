@@ -3,16 +3,17 @@
 namespace spk
 {
 	PersistantWorker::PersistantWorker(const std::wstring &p_name) :
-		spk::Thread(p_name,
-					[&]()
-					{
-						this->_running = true;
-						_preparationJobs.trigger();
-						while (this->_running.load() == true)
-						{
-							_executionJobs.trigger();
-						}
-					})
+		spk::Thread(
+			p_name,
+			[&]()
+			{
+				this->_running = true;
+				_preparationJobs.trigger();
+				while (this->_running.load() == true)
+				{
+					_executionJobs.trigger();
+				}
+			})
 	{
 	}
 
@@ -24,7 +25,10 @@ namespace spk
 		}
 		if (isJoinable() == true)
 		{
-			join();
+			if (this->_running.load() == true)
+			{
+				stop();
+			}
 		}
 	}
 
