@@ -129,25 +129,21 @@ private:
 		private:
 			static void _appendMesh(spk::ObjMesh &p_target, const spk::ObjMesh &p_source, const spk::Vector3 &p_offset)
 			{
+				auto add = [&](auto p_shape)
+				{
+					p_shape.a.position += p_offset;
+					p_shape.b.position += p_offset;
+					p_shape.c.position += p_offset;
+					if constexpr (std::is_same_v<std::decay_t<decltype(p_shape)>, spk::ObjMesh::Quad>)
+					{
+						p_shape.d.position += p_offset;
+					}
+					p_target.addShape(p_shape);
+				};
+
 				for (const auto &shape : p_source.shapes())
 				{
-					if (std::holds_alternative<spk::ObjMesh::Triangle>(shape))
-					{
-						spk::ObjMesh::Triangle tri = std::get<spk::ObjMesh::Triangle>(shape);
-						tri.a.position += p_offset;
-						tri.b.position += p_offset;
-						tri.c.position += p_offset;
-						p_target.addShape(tri);
-					}
-					else
-					{
-						spk::ObjMesh::Quad quad = std::get<spk::ObjMesh::Quad>(shape);
-						quad.a.position += p_offset;
-						quad.b.position += p_offset;
-						quad.c.position += p_offset;
-						quad.d.position += p_offset;
-						p_target.addShape(quad);
-					}
+					std::visit(add, shape);
 				}
 			}
 		};
@@ -156,31 +152,15 @@ private:
 		static spk::Vector3 _applyOrientation(const spk::Vector3 &p_position, const Orientation &p_orientation)
 		{
 			spk::Vector3 result = p_position - spk::Vector3(0.5f, 0.5f, 0.5f);
-			spk::Vector3 rotation(0, 0, 0);
-
-			switch (p_orientation.horizontalOrientation)
-			{
-			case HorizontalOrientation::XPositive:
-				break;
-			case HorizontalOrientation::ZPositive:
-				rotation.y = -90.0f;
-				break;
-			case HorizontalOrientation::XNegative:
-				rotation.y = 180.0f;
-				break;
-			case HorizontalOrientation::ZNegative:
-				rotation.y = 90.0f;
-				break;
-			}
-
-			result = result.rotate(rotation);
+			constexpr std::array<float, 4> rotations = {0.0f, -90.0f, 180.0f, 90.0f};
+			result = result.rotate({0, rotations[static_cast<size_t>(p_orientation.horizontalOrientation)], 0});
 
 			if (p_orientation.verticalOrientation == VerticalOrientation::YNegative)
 			{
 				result.y = -result.y;
 			}
 
-			return (result + spk::Vector3(0.5f, 0.5f, 0.5f));
+			return result + spk::Vector3(0.5f, 0.5f, 0.5f);
 		}
 
 		static bool _isFullQuad(const std::vector<spk::Vertex> &p_vertices, const spk::Vector3 &p_normal)
@@ -413,10 +393,11 @@ private:
 	{
 		spk::Polygon out;
 		out.points.reserve(p_poly.points.size());
-		for (const auto &p : p_poly.points)
-		{
-			out.points.push_back(p + p_delta);
-		}
+		std::transform(
+			p_poly.points.begin(),
+			p_poly.points.end(),
+			std::back_inserter(out.points),
+			[&](const spk::Vector3 &p_point) { return p_point + p_delta; });
 		return out;
 	}
 
