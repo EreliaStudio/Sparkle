@@ -67,15 +67,28 @@ namespace spk
 		}
 	} // namespace
 
-	void ObjMesh::setMaterial(std::unique_ptr<spk::Texture> p_material)
+	void ObjMesh::setMaterial(const std::filesystem::path &p_materialPath)
 	{
-		_material = std::move(p_material);
-		_onMaterialChangeProvider.trigger(spk::SafePointer<spk::Texture>(_material.get()));
+		_materialPath = p_materialPath;
+		auto it = _materials.find(p_materialPath);
+		if (it == _materials.end())
+		{
+			spk::Image image;
+			image.loadFromFile(p_materialPath);
+			_materials.emplace(p_materialPath, std::move(image));
+			it = _materials.find(p_materialPath);
+		}
+		_onMaterialChangeProvider.trigger(spk::SafePointer<spk::Texture>(&it->second));
 	}
 
 	spk::SafePointer<const spk::Texture> ObjMesh::material() const
 	{
-		return (spk::SafePointer<const spk::Texture>(_material.get()));
+		auto it = _materials.find(_materialPath);
+		if (it == _materials.end())
+		{
+			return (spk::SafePointer<const spk::Texture>(nullptr));
+		}
+		return (spk::SafePointer<const spk::Texture>(&it->second));
 	}
 
 	ObjMesh::MaterialChangeContract ObjMesh::onMaterialChange(const MaterialChangeJob &p_job) const
@@ -231,6 +244,7 @@ namespace spk
 						mtlStream >> textureFile;
 						auto texturePath = mtlPath.parent_path() / textureFile;
 						spk::cout << L"[ObjMesh] Found texture " << spk::StringUtils::stringToWString(texturePath.string()) << std::endl;
+						result.setMaterial(texturePath);
 						break;
 					}
 				}
