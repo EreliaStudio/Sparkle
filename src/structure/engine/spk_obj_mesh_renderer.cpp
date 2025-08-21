@@ -147,6 +147,7 @@ void main()
 		if (_mesh != nullptr)
 		{
 			_painter.prepare(*_mesh);
+			_painter.setTexture(_mesh->material());
 		}
 		_painter.validate();
 	}
