@@ -5,6 +5,7 @@
 #include <cmath>
 #include <limits>
 #include <map>
+#include <memory>
 #include <sparkle.hpp>
 #include <type_traits>
 #include <unordered_map>
@@ -488,54 +489,12 @@ private:
 
 	spk::ObjMesh _objMesh;
 	Configuration _configuration;
-	static inline std::string objMeshCode = R"(v 0.0 0.0 0.0  # 1 bottom-left-back
-v 1.0 0.0 0.0  # 2 bottom-right-back
-v 1.0 0.0 1.0  # 3 bottom-right-front
-v 0.0 0.0 1.0  # 4 bottom-left-front
-v 0.0 1.0 0.0  # 5 top-left-back
-v 1.0 1.0 0.0  # 6 top-right-back
-v 1.0 1.0 1.0  # 7 top-right-front
-v 0.0 1.0 1.0  # 8 top-left-front
-
-# Texture coordinates (quad)
-vt 0.0 1.0  # 1
-vt 1.0 1.0  # 2
-vt 1.0 0.0  # 3
-vt 0.0 0.0  # 4
-
-# Normals
-vn  0.0  0.0  1.0  # Front
-vn  0.0  0.0 -1.0  # Back
-vn  1.0  0.0  0.0  # Right
-vn -1.0  0.0  0.0  # Left
-vn  0.0  1.0  0.0  # Top
-vn  0.0 -1.0  0.0  # Bottom
-
-# Faces (two triangles per face, CCW winding)
-
-# Front (z = 1) -> uses normal 1
-f 4/1/1 3/2/1 7/3/1 8/4/1
-
-# Back (z = 0) -> normal 2
-f 2/2/2 1/1/2 5/4/2 6/3/2
-
-# Right (x = 1) -> normal 3
-f 3/1/3 2/2/3 6/3/3 7/4/3
-
-# Left (x = 0) -> normal 4
-f 1/2/4 4/1/4 8/4/4 5/3/4
-
-# Top (y = 1) -> normal 5
-f 5/1/5 8/2/5 7/3/5 6/4/5
-
-# Bottom (y = 0) -> normal 6
-f 1/1/6 2/2/6 3/3/6 4/4/6)";
 
 public:
 	explicit FullBlock(const Configuration &p_configuration) :
 		_configuration(p_configuration)
 	{
-		_objMesh = spk::ObjMesh::loadFromString(objMeshCode);
+		_objMesh = spk::ObjMesh::loadFromFile("playground/resources/obj/full_block.obj");
 
 		_applySprite(_objMesh.shapes()[0], _configuration.front);
 		_applySprite(_objMesh.shapes()[1], _configuration.back);
@@ -566,35 +525,12 @@ private:
 
 	spk::ObjMesh _objMesh;
 	Configuration _configuration;
-	static inline std::string objMeshCode = R"(v 0.0 0.0 0.0
-v 1.0 0.0 0.0
-v 1.0 0.0 1.0
-v 0.0 0.0 1.0
-v 0.0 1.0 1.0
-v 1.0 1.0 1.0
-
-vt 1.0 1.0   # 1
-vt 0.0 1.0   # 2
-vt 0.0 0.0   # 3
-vt 1.0 0.0   # 4
-
-vn  0.0 -1.0  0.0
-vn  0.0  0.0  1.0
-vn -1.0  0.0  0.0
-vn  1.0  0.0  0.0
-vn  0.0  0.70710678 -0.70710678
-
-f 1/2/1 2/1/1 3/4/1 4/3/1
-f 4/2/2 3/1/2 6/4/2 5/3/2
-f 1/1/3 4/2/3 5/3/3
-f 2/1/4 6/3/4 3/2/4
-f 1/2/5 5/3/5 6/4/5 2/1/5)";
 
 public:
 	explicit SlopeBlock(const Configuration &p_configuration) :
 		_configuration(p_configuration)
 	{
-		_objMesh = spk::ObjMesh::loadFromString(objMeshCode);
+		_objMesh = spk::ObjMesh::loadFromFile("playground/resources/obj/slope_block.obj");
 
 		_applySprite(_objMesh.shapes()[0], _configuration.bottom);
 		_applySprite(_objMesh.shapes()[1], _configuration.back);
@@ -625,45 +561,12 @@ private:
 
 	spk::ObjMesh _objMesh;
 	Configuration _configuration;
-	static inline std::string objMeshCode = R"(v 0.0 0.0 0.0
-v 0.0 0.0 1.0
-v 1.0 0.0 1.0
-v 1.0 0.0 0.0
-v 0.0 0.5 0.0
-v 0.0 0.5 1.0
-v 1.0 0.5 1.0
-v 1.0 0.5 0.0
-
-vt 0.0 0.0 // 1
-vt 0.5 0.0 // 2
-vt 1.0 0.0 // 3
-vt 0.0 0.5 // 4
-vt 0.5 0.5 // 5
-vt 1.0 0.5 // 6
-vt 0.0 1.0 // 7
-vt 0.5 1.0 // 8
-vt 1.0 1.0 // 9
-vt -1.0 -1.0 // 10
-
-vn  0.0  0.0  1.0
-vn  0.0  0.0 -1.0
-vn  1.0  0.0  0.0
-vn -1.0  0.0  0.0
-vn  0.0  1.0  0.0
-vn  0.0 -1.0  0.0
-
-f 2/9/1 1/7/1 4/1/1 3/3/1
-f 5/9/1 6/7/1 7/1/1 8/3/1
-f 7/4/1 6/6/1 2/9/1 3/7/1
-f 6/4/1 5/6/1 1/9/1 2/7/1
-f 5/4/1 8/6/1 4/9/1 1/7/1
-f 8/4/1 7/6/1 3/9/1 4/7/1)";
 
 public:
 	explicit HalfBlock(const Configuration &p_configuration) :
 		_configuration(p_configuration)
 	{
-		_objMesh = spk::ObjMesh::loadFromString(objMeshCode);
+		_objMesh = spk::ObjMesh::loadFromFile("playground/resources/obj/half_block.obj");
 
 		_applySprite(_objMesh.shapes()[0], _configuration.bottom);
 		_applySprite(_objMesh.shapes()[1], _configuration.top);
@@ -695,56 +598,12 @@ private:
 
 	spk::ObjMesh _objMesh;
 	Configuration _configuration;
-	static inline std::string objMeshCode = R"(v 0.0 0.0 0.0 // 1
-v 0.0 0.0 1.0 // 2
-v 1.0 0.0 1.0 // 3
-v 1.0 0.0 0.0 // 4
-v 0.5 0.5 0.0 // 5
-v 0.5 0.5 1.0 // 6
-v 1.0 0.5 1.0 // 7
-v 1.0 0.5 0.0 // 8
-v 0.0 1.0 0.0 // 9
-v 0.0 1.0 1.0 // 10
-v 0.5 1.0 1.0 // 11
-v 0.5 1.0 0.0 // 12
-v 0.5 0.0 1.0 // 13
-v 0.5 0.0 0.0 // 14
-
-vt 0.0 0.0 // 1
-vt 0.5 0.0 // 2
-vt 1.0 0.0 // 3
-vt 0.0 0.5 // 4
-vt 0.5 0.5 // 5
-vt 1.0 0.5 // 6
-vt 0.0 1.0 // 7
-vt 0.5 1.0 // 8
-vt 1.0 1.0 // 9
-vt -1.0 -1.0 // 10
-
-vn  0.0 -1.0  0.0
-vn  0.0  1.0  0.0
-vn  0.0  0.0 -1.0
-vn  0.0  0.0  1.0
-vn -1.0  0.0  0.0
-vn  1.0  0.0  0.0
-
-f 4/3/1 3/1/1 2/7/1 1/9/1
-f 5/7/2 6/9/2 7/6/2 8/4/2
-f 9/7/2 10/9/2 11/6/2 12/4/2
-f 12/4/6 11/6/6 6/9/6 5/7/6
-f 8/4/6 7/6/6 3/9/6 4/7/6
-f 10/1/5 9/3/5 1/9/5 2/7/5
-f 7/4/4 6/5/4 13/8/4 3/7/4
-f 11/2/4 10/3/4 2/9/4 13/8/4
-f 9/3/3 12/2/3 14/8/3 1/9/3
-f 5/5/3 8/4/3 4/7/3 14/8/3
-)";
 
 public:
 	explicit StairBlock(const Configuration &p_configuration) :
 		_configuration(p_configuration)
 	{
-		_objMesh = spk::ObjMesh::loadFromString(objMeshCode);
+		_objMesh = spk::ObjMesh::loadFromFile("playground/resources/obj/stair_block.obj");
 
 		_applySprite(_objMesh.shapes()[0], _configuration.bottom);
 		_applySprite(_objMesh.shapes()[1], _configuration.staircaseTop);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <memory>
 #include <string>
 
 #include "structure/engine/spk_mesh.hpp"
@@ -13,13 +14,13 @@ namespace spk
 	class ObjMesh : public TMesh<Vertex>
 	{
 	private:
-		spk::SafePointer<const spk::Texture> _material;
+		std::unique_ptr<spk::Texture> _material;
 
 	public:
 		ObjMesh() = default;
 
-		void setMaterial(spk::SafePointer<const spk::Texture> p_material);
-		const spk::SafePointer<const spk::Texture> &material() const;
+		void setMaterial(std::unique_ptr<spk::Texture> p_material);
+		spk::SafePointer<const spk::Texture> material() const;
 
 		void applyOffset(const spk::Vector3 &p_offset);
 
