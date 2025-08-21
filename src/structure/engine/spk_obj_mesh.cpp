@@ -180,6 +180,8 @@ namespace spk
 
 	ObjMesh ObjMesh::loadFromFile(const std::filesystem::path &p_path)
 	{
+		spk::cout << L"[ObjMesh] Loading OBJ from " << spk::StringUtils::stringToWString(p_path.string()) << std::endl;
+
 		std::ifstream file(p_path);
 		if (file.is_open() == false)
 		{
@@ -199,6 +201,7 @@ namespace spk
 			if (prefix == "mtllib")
 			{
 				lineStream >> mtllib;
+				spk::cout << L"[ObjMesh] Found mtllib " << spk::StringUtils::stringToWString(mtllib) << std::endl;
 			}
 		}
 
@@ -221,10 +224,15 @@ namespace spk
 						std::string textureFile;
 						mtlStream >> textureFile;
 						auto texturePath = mtlPath.parent_path() / textureFile;
+						spk::cout << L"[ObjMesh] Loading texture " << spk::StringUtils::stringToWString(texturePath.string()) << std::endl;
 						result.setMaterial(std::make_unique<spk::Image>(texturePath));
 						break;
 					}
 				}
+			}
+			else
+			{
+				spk::cout << L"[ObjMesh] Failed to open MTL file " << spk::StringUtils::stringToWString(mtlPath.string()) << std::endl;
 			}
 		}
 
