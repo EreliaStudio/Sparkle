@@ -1008,19 +1008,6 @@ private:
 	{
 		p_chunkToFill.setContent(2, 2, 2, 2);
 		p_chunkToFill.setContent(3, 2, 2, 2);
-		p_chunkToFill.setContent(4, 2, 2, 2);
-		p_chunkToFill.setContent(5, 2, 2, 2);
-		p_chunkToFill.setContent(2, 2, 3, 2);
-		p_chunkToFill.setContent(2, 2, 4, 2);
-		p_chunkToFill.setContent(2, 2, 5, 2);
-
-		p_chunkToFill.setContent(4, 2, 4, 3);
-		p_chunkToFill.setContent(5, 2, 4, 3);
-		p_chunkToFill.setContent(6, 2, 4, 3);
-		p_chunkToFill.setContent(7, 2, 4, 3);
-		p_chunkToFill.setContent(4, 2, 5, 3);
-		p_chunkToFill.setContent(4, 2, 6, 3);
-		p_chunkToFill.setContent(4, 2, 7, 3);
 	}
 
 public:
