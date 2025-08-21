@@ -230,8 +230,7 @@ namespace spk
 						std::string textureFile;
 						mtlStream >> textureFile;
 						auto texturePath = mtlPath.parent_path() / textureFile;
-						spk::cout << L"[ObjMesh] Loading texture " << spk::StringUtils::stringToWString(texturePath.string()) << std::endl;
-						result.setMaterial(std::make_unique<spk::Image>(texturePath));
+						spk::cout << L"[ObjMesh] Found texture " << spk::StringUtils::stringToWString(texturePath.string()) << std::endl;
 						break;
 					}
 				}

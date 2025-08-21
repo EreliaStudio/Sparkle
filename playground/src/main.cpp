@@ -53,11 +53,23 @@ public:
 	using NeightbourDescriber = std::array<Block::Describer, 6>;
 	using Footprint = spk::Polygon;
 
+	static const spk::SpriteSheet &spriteSheet()
+	{
+		return (_spriteSheet);
+	}
+
+	static spk::SafePointer<const spk::Texture> texture()
+	{
+		return (_spriteSheet.texture());
+	}
+
 protected:
 	using Type = std::wstring; // Each block type can be identified by its type : FullBlock, Slope, HalfBlock, Fence, for exemple
 	// Multiple block can shared the same type, as long as they are the same shape in 3D, with just different sprite and interaction
 
 	virtual const spk::ObjMesh &_mesh() const = 0;
+
+	static inline spk::SpriteSheet _spriteSheet = spk::SpriteSheet("playground/resources/texture/CubeTexture.png", {9, 1});
 
 	static void _applySprite(spk::ObjMesh::Shape &p_shape, const spk::SpriteSheet::Sprite &p_sprite)
 	{
@@ -1048,14 +1060,12 @@ int main()
 	player.transform().place({5.0f, 5.0f, 5.0f});
 	player.transform().lookAt({0.0f, 0.0f, 0.0f});
 
-	spk::SpriteSheet blockMapTilemap = spk::SpriteSheet("playground/resources/texture/CubeTexture.png", {9, 1});
-
 	BlockMap<16, 16, 16> blockMap = BlockMap<16, 16, 16>(L"BlockMap", nullptr);
-	blockMap.setTexture(&blockMapTilemap);
+	blockMap.setTexture(Block::texture());
 	blockMap.activate();
 	engine.addEntity(&blockMap);
 
-	auto fullBlockSprite = blockMapTilemap.sprite({0, 0});
+	auto fullBlockSprite = Block::spriteSheet().sprite({0, 0});
 	FullBlock::Configuration fullConfiguration;
 	fullConfiguration.front = fullBlockSprite;
 	fullConfiguration.back = fullBlockSprite;
@@ -1066,29 +1076,29 @@ int main()
 	blockMap.addBlockByID(0, std::make_unique<FullBlock>(fullConfiguration));
 
 	SlopeBlock::Configuration slopeConfiguration;
-	slopeConfiguration.triangleLeft = blockMapTilemap.sprite({1, 0});
-	slopeConfiguration.triangleRight = blockMapTilemap.sprite({1, 0});
-	slopeConfiguration.back = blockMapTilemap.sprite({2, 0});
-	slopeConfiguration.ramp = blockMapTilemap.sprite({2, 0});
-	slopeConfiguration.bottom = blockMapTilemap.sprite({3, 0});
+	slopeConfiguration.triangleLeft = Block::spriteSheet().sprite({1, 0});
+	slopeConfiguration.triangleRight = Block::spriteSheet().sprite({1, 0});
+	slopeConfiguration.back = Block::spriteSheet().sprite({2, 0});
+	slopeConfiguration.ramp = Block::spriteSheet().sprite({2, 0});
+	slopeConfiguration.bottom = Block::spriteSheet().sprite({3, 0});
 	blockMap.addBlockByID(1, std::make_unique<SlopeBlock>(slopeConfiguration));
 
 	StairBlock::Configuration stairConfiguration;
-	stairConfiguration.staircaseTop = blockMapTilemap.sprite({7, 0});
-	stairConfiguration.staircaseFront = blockMapTilemap.sprite({7, 0});
-	stairConfiguration.left = blockMapTilemap.sprite({6, 0});
-	stairConfiguration.right = blockMapTilemap.sprite({6, 0});
-	stairConfiguration.back = blockMapTilemap.sprite({8, 0});
-	stairConfiguration.bottom = blockMapTilemap.sprite({8, 0});
+	stairConfiguration.staircaseTop = Block::spriteSheet().sprite({7, 0});
+	stairConfiguration.staircaseFront = Block::spriteSheet().sprite({7, 0});
+	stairConfiguration.left = Block::spriteSheet().sprite({6, 0});
+	stairConfiguration.right = Block::spriteSheet().sprite({6, 0});
+	stairConfiguration.back = Block::spriteSheet().sprite({8, 0});
+	stairConfiguration.bottom = Block::spriteSheet().sprite({8, 0});
 	blockMap.addBlockByID(2, std::make_unique<StairBlock>(stairConfiguration));
 
 	HalfBlock::Configuration halfConfiguration;
-	halfConfiguration.front = blockMapTilemap.sprite({4, 0});
-	halfConfiguration.back = blockMapTilemap.sprite({4, 0});
-	halfConfiguration.left = blockMapTilemap.sprite({4, 0});
-	halfConfiguration.right = blockMapTilemap.sprite({4, 0});
-	halfConfiguration.top = blockMapTilemap.sprite({5, 0});
-	halfConfiguration.bottom = blockMapTilemap.sprite({5, 0});
+	halfConfiguration.front = Block::spriteSheet().sprite({4, 0});
+	halfConfiguration.back = Block::spriteSheet().sprite({4, 0});
+	halfConfiguration.left = Block::spriteSheet().sprite({4, 0});
+	halfConfiguration.right = Block::spriteSheet().sprite({4, 0});
+	halfConfiguration.top = Block::spriteSheet().sprite({5, 0});
+	halfConfiguration.bottom = Block::spriteSheet().sprite({5, 0});
 	blockMap.addBlockByID(3, std::make_unique<HalfBlock>(halfConfiguration));
 
 	blockMap.setChunkRange({-3, 0, -3}, {3, 0, 3});
