@@ -243,6 +243,10 @@ private:
 			for (auto &v : p_vertices)
 			{
 				v.position = _applyOrientation(v.position, p_orientation);
+				if ((p_orientation.verticalOrientation == VerticalOrientation::YNegative) && (v.uv != -1))
+				{
+					v.uv.y = 1.0f - v.uv.y;
+				}
 			}
 			if (p_orientation.verticalOrientation == VerticalOrientation::YNegative)
 			{
