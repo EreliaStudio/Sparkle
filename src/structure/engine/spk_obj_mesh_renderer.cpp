@@ -52,7 +52,7 @@ void main()
 	{
 		vec4 texColor = texture(diffuseTexture, fragUV);
 		if (texColor.a <= epsilon)
-		discard;
+			discard;
 		outputColor = texColor;
 	}
 }
