@@ -149,9 +149,7 @@ void main()
 		_painter.clear();
 		if (_mesh != nullptr)
 		{
-			_onMeshMaterialChangeContract = _mesh->onMaterialChange([this](spk::SafePointer<spk::Texture> p_texture) { setTexture(p_texture); });
 			_painter.prepare(*_mesh);
-			setTexture(_mesh->material());
 		}
 		_painter.validate();
 	}
