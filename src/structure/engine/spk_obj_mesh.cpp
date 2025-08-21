@@ -66,13 +66,87 @@ namespace spk
 		}
 	} // namespace
 
-	void ObjMesh::applyOffset(const spk::Vector3& p_offset)
+	spk::SafePointer<const ObjMesh::Material> ObjMesh::_loadMaterial(const std::filesystem::path &p_path, const std::string &p_name)
 	{
-		for (auto& shape : shapes())
+		const std::string key = p_path.string() + "#" + p_name;
+		auto it = _materialCache.find(key);
+		if (it != _materialCache.end())
+		{
+			return it->second;
+		}
+
+		std::ifstream file(p_path);
+		if (file.is_open() == false)
+		{
+			GENERATE_ERROR("Failed to open MTL file: " + p_path.string());
+		}
+
+		Material *material = new Material();
+		std::string line;
+		bool materialFound = false;
+		while (std::getline(file, line))
+		{
+			std::istringstream lineStream(line);
+			std::string prefix;
+			lineStream >> prefix;
+			if (lineStream.fail() == true)
+			{
+				continue;
+			}
+
+			if (prefix == "newmtl")
+			{
+				std::string name;
+				lineStream >> name;
+				if (name == p_name)
+				{
+					materialFound = true;
+				}
+				else if (materialFound == true)
+				{
+					break;
+				}
+			}
+			else if (materialFound == true)
+			{
+				if (prefix == "Ka")
+				{
+					lineStream >> material->ambientColor.x >> material->ambientColor.y >> material->ambientColor.z;
+				}
+				else if (prefix == "Kd")
+				{
+					lineStream >> material->diffuseColor.x >> material->diffuseColor.y >> material->diffuseColor.z;
+				}
+				else if (prefix == "Ks")
+				{
+					lineStream >> material->specularColor.x >> material->specularColor.y >> material->specularColor.z;
+				}
+				else if (prefix == "map_Kd")
+				{
+					std::string texture;
+					lineStream >> texture;
+					material->diffuseTexture = p_path.parent_path() / texture;
+				}
+			}
+		}
+
+		if (materialFound == false)
+		{
+			delete material;
+			GENERATE_ERROR("Material " + p_name + " not found in MTL file: " + p_path.string());
+		}
+
+		_materialCache[key] = spk::SafePointer<const Material>(material);
+		return _materialCache[key];
+	}
+
+	void ObjMesh::applyOffset(const spk::Vector3 &p_offset)
+	{
+		for (auto &shape : shapes())
 		{
 			if (std::holds_alternative<Triangle>(shape) == true)
 			{
-				auto& tmp = std::get<Triangle>(shape);
+				auto &tmp = std::get<Triangle>(shape);
 
 				tmp.a.position += p_offset;
 				tmp.b.position += p_offset;
@@ -80,7 +154,7 @@ namespace spk
 			}
 			else
 			{
-				auto& tmp = std::get<Quad>(shape);
+				auto &tmp = std::get<Quad>(shape);
 
 				tmp.a.position += p_offset;
 				tmp.b.position += p_offset;
@@ -90,13 +164,14 @@ namespace spk
 		}
 	}
 
-	ObjMesh ObjMesh::loadFromString(const std::string &p_input)
+	ObjMesh ObjMesh::loadFromString(const std::string &p_input, const std::filesystem::path &p_directory)
 	{
 		ObjMesh result;
 
 		std::vector<spk::Vector3> positions;
 		std::vector<spk::Vector2> uvs;
 		std::vector<spk::Vector3> normals;
+		std::filesystem::path mtlPath;
 
 		std::istringstream stream(p_input);
 		std::string line;
@@ -139,6 +214,21 @@ namespace spk
 				lineStream >> x >> y >> z;
 				normals.emplace_back(x, y, z);
 			}
+			else if (prefix == "mtllib")
+			{
+				std::string mtlFile;
+				lineStream >> mtlFile;
+				mtlPath = p_directory / mtlFile;
+			}
+			else if (prefix == "usemtl")
+			{
+				std::string materialName;
+				lineStream >> materialName;
+				if (mtlPath.empty() == false)
+				{
+					result._material = _loadMaterial(mtlPath, materialName);
+				}
+			}
 			else if (prefix == "f")
 			{
 				std::vector<Vertex> verts;
@@ -164,7 +254,7 @@ namespace spk
 			}
 		}
 
-		return (result);
+		return result;
 	}
 
 	ObjMesh ObjMesh::loadFromFile(const std::filesystem::path &p_path)
@@ -178,7 +268,12 @@ namespace spk
 		std::stringstream buffer;
 		buffer << file.rdbuf();
 
-		return (loadFromString(buffer.str()));
+		return loadFromString(buffer.str(), p_path.parent_path());
+	}
+
+	const spk::SafePointer<const ObjMesh::Material> &ObjMesh::material() const
+	{
+		return _material;
 	}
 
 	void ObjMesh::exportToFile(const std::filesystem::path &p_path) const
