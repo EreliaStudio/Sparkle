@@ -67,14 +67,14 @@ namespace spk
 		}
 	} // namespace
 
-	void ObjMesh::setMaterial(spk::SafePointer<const spk::Texture> p_material)
+	void ObjMesh::setMaterial(std::unique_ptr<spk::Texture> p_material)
 	{
-		_material = p_material;
+		_material = std::move(p_material);
 	}
 
-	const spk::SafePointer<const spk::Texture> &ObjMesh::material() const
+	spk::SafePointer<const spk::Texture> ObjMesh::material() const
 	{
-		return (_material);
+		return (spk::SafePointer<const spk::Texture>(_material.get()));
 	}
 
 	void ObjMesh::applyOffset(const spk::Vector3 &p_offset)
@@ -221,8 +221,7 @@ namespace spk
 						std::string textureFile;
 						mtlStream >> textureFile;
 						auto texturePath = mtlPath.parent_path() / textureFile;
-						auto *image = new spk::Image(texturePath);
-						result.setMaterial(image);
+						result.setMaterial(std::make_unique<spk::Image>(texturePath));
 						break;
 					}
 				}
