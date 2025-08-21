@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 
+#include "structure/design_pattern/spk_contract_provider.hpp"
 #include "structure/engine/spk_mesh.hpp"
 #include "structure/engine/spk_vertex.hpp"
 #include "structure/graphics/texture/spk_texture.hpp"
@@ -15,10 +16,15 @@ namespace spk
 	{
 	private:
 		std::unique_ptr<spk::Texture> _material;
+		mutable spk::TContractProvider<spk::SafePointer<spk::Texture>> _onMaterialChangeProvider;
 
 	public:
+		using MaterialChangeContract = spk::TContractProvider<spk::SafePointer<spk::Texture>>::Contract;
+		using MaterialChangeJob = spk::TContractProvider<spk::SafePointer<spk::Texture>>::Job;
+
 		ObjMesh() = default;
 
+		MaterialChangeContract onMaterialChange(const MaterialChangeJob &p_job) const;
 		void setMaterial(std::unique_ptr<spk::Texture> p_material);
 		spk::SafePointer<const spk::Texture> material() const;
 
