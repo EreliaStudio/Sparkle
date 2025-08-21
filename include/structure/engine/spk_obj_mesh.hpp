@@ -1,8 +1,8 @@
 #pragma once
 
 #include <filesystem>
-#include <memory>
 #include <string>
+#include <unordered_map>
 
 #include "structure/design_pattern/spk_contract_provider.hpp"
 #include "structure/engine/spk_mesh.hpp"
@@ -15,7 +15,8 @@ namespace spk
 	class ObjMesh : public TMesh<Vertex>
 	{
 	private:
-		std::unique_ptr<spk::Texture> _material;
+		static inline std::unordered_map<std::filesystem::path, spk::Texture> _materials;
+		std::filesystem::path _materialPath;
 		mutable spk::TContractProvider<spk::SafePointer<spk::Texture>> _onMaterialChangeProvider;
 
 	public:
@@ -25,7 +26,7 @@ namespace spk
 		ObjMesh() = default;
 
 		MaterialChangeContract onMaterialChange(const MaterialChangeJob &p_job) const;
-		void setMaterial(std::unique_ptr<spk::Texture> p_material);
+		void setMaterial(const std::filesystem::path &p_materialPath);
 		spk::SafePointer<const spk::Texture> material() const;
 
 		void applyOffset(const spk::Vector3 &p_offset);
