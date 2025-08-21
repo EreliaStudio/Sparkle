@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "spk_debug_macro.hpp"
+#include "structure/graphics/texture/spk_image.hpp"
 #include "structure/spk_iostream.hpp"
 
 namespace spk
@@ -66,13 +67,23 @@ namespace spk
 		}
 	} // namespace
 
-	void ObjMesh::applyOffset(const spk::Vector3& p_offset)
+	void ObjMesh::setMaterial(spk::SafePointer<const spk::Texture> p_material)
 	{
-		for (auto& shape : shapes())
+		_material = p_material;
+	}
+
+	const spk::SafePointer<const spk::Texture> &ObjMesh::material() const
+	{
+		return (_material);
+	}
+
+	void ObjMesh::applyOffset(const spk::Vector3 &p_offset)
+	{
+		for (auto &shape : shapes())
 		{
 			if (std::holds_alternative<Triangle>(shape) == true)
 			{
-				auto& tmp = std::get<Triangle>(shape);
+				auto &tmp = std::get<Triangle>(shape);
 
 				tmp.a.position += p_offset;
 				tmp.b.position += p_offset;
@@ -80,7 +91,7 @@ namespace spk
 			}
 			else
 			{
-				auto& tmp = std::get<Quad>(shape);
+				auto &tmp = std::get<Quad>(shape);
 
 				tmp.a.position += p_offset;
 				tmp.b.position += p_offset;
@@ -176,9 +187,49 @@ namespace spk
 		}
 
 		std::stringstream buffer;
-		buffer << file.rdbuf();
+		std::string mtllib;
 
-		return (loadFromString(buffer.str()));
+		std::string line;
+		while (std::getline(file, line))
+		{
+			buffer << line << "\n";
+			std::istringstream lineStream(line);
+			std::string prefix;
+			lineStream >> prefix;
+			if (prefix == "mtllib")
+			{
+				lineStream >> mtllib;
+			}
+		}
+
+		ObjMesh result = loadFromString(buffer.str());
+
+		if (mtllib.empty() == false)
+		{
+			std::filesystem::path mtlPath = p_path.parent_path() / mtllib;
+			std::ifstream mtlFile(mtlPath);
+			if (mtlFile.is_open() == true)
+			{
+				std::string mtlLine;
+				while (std::getline(mtlFile, mtlLine))
+				{
+					std::istringstream mtlStream(mtlLine);
+					std::string mtlPrefix;
+					mtlStream >> mtlPrefix;
+					if (mtlPrefix == "map_Kd")
+					{
+						std::string textureFile;
+						mtlStream >> textureFile;
+						auto texturePath = mtlPath.parent_path() / textureFile;
+						auto *image = new spk::Image(texturePath);
+						result.setMaterial(image);
+						break;
+					}
+				}
+			}
+		}
+
+		return (result);
 	}
 
 	void ObjMesh::exportToFile(const std::filesystem::path &p_path) const
