@@ -41,6 +41,7 @@ namespace spk
 	private:
 		spk::SafePointer<const spk::ObjMesh> _mesh;
 		Painter _painter;
+		spk::ObjMesh::MaterialChangeContract _onMeshMaterialChangeContract;
 		spk::ContractProvider::Contract _onOwnerTransformEditionContract;
 
 	public:

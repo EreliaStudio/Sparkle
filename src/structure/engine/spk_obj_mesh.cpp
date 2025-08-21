@@ -70,11 +70,17 @@ namespace spk
 	void ObjMesh::setMaterial(std::unique_ptr<spk::Texture> p_material)
 	{
 		_material = std::move(p_material);
+		_onMaterialChangeProvider.trigger(spk::SafePointer<spk::Texture>(_material.get()));
 	}
 
 	spk::SafePointer<const spk::Texture> ObjMesh::material() const
 	{
 		return (spk::SafePointer<const spk::Texture>(_material.get()));
+	}
+
+	ObjMesh::MaterialChangeContract ObjMesh::onMaterialChange(const MaterialChangeJob &p_job) const
+	{
+		return (_onMaterialChangeProvider.subscribe(p_job));
 	}
 
 	void ObjMesh::applyOffset(const spk::Vector3 &p_offset)
