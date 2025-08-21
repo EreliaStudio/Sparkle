@@ -144,20 +144,14 @@ void main()
 	void ObjMeshRenderer::setMesh(const spk::SafePointer<const spk::ObjMesh> &p_mesh)
 	{
 		_mesh = p_mesh;
+		_onMeshMaterialChangeContract = spk::ObjMesh::MaterialChangeContract();
 
 		_painter.clear();
 		if (_mesh != nullptr)
 		{
+			_onMeshMaterialChangeContract = _mesh->onMaterialChange([this](spk::SafePointer<spk::Texture> p_texture) { setTexture(p_texture); });
 			_painter.prepare(*_mesh);
-			if (_painter.texture() == nullptr)
-			{
-				spk::cout << L"[ObjMeshRenderer] using mesh material texture" << std::endl;
-				_painter.setTexture(_mesh->material());
-			}
-			else
-			{
-				spk::cout << L"[ObjMeshRenderer] keeping existing texture" << std::endl;
-			}
+			setTexture(_mesh->material());
 		}
 		_painter.validate();
 	}
