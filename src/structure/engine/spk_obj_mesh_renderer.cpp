@@ -2,6 +2,7 @@
 #include "structure/container/spk_json_object.hpp"
 #include "structure/math/spk_matrix.hpp"
 
+#include "spk_debug_macro.hpp"
 #include "spk_generated_resources.hpp"
 #include "structure/engine/spk_entity.hpp"
 
@@ -131,6 +132,7 @@ void main()
 
 	void ObjMeshRenderer::setTexture(spk::SafePointer<const spk::Texture> p_texture)
 	{
+		spk::cout << L"[ObjMeshRenderer] setTexture(" << p_texture << L")" << std::endl;
 		_painter.setTexture(p_texture);
 	}
 
@@ -147,7 +149,15 @@ void main()
 		if (_mesh != nullptr)
 		{
 			_painter.prepare(*_mesh);
-			_painter.setTexture(_mesh->material());
+			if (_painter.texture() == nullptr)
+			{
+				spk::cout << L"[ObjMeshRenderer] using mesh material texture" << std::endl;
+				_painter.setTexture(_mesh->material());
+			}
+			else
+			{
+				spk::cout << L"[ObjMeshRenderer] keeping existing texture" << std::endl;
+			}
 		}
 		_painter.validate();
 	}
