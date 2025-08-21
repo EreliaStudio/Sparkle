@@ -66,6 +66,30 @@ namespace spk
 		}
 	} // namespace
 
+	void ObjMesh::applyOffset(const spk::Vector3& p_offset)
+	{
+		for (auto& shape : shapes())
+		{
+			if (std::holds_alternative<Triangle>(shape) == true)
+			{
+				auto& tmp = std::get<Triangle>(shape);
+
+				tmp.a.position += p_offset;
+				tmp.b.position += p_offset;
+				tmp.c.position += p_offset;
+			}
+			else
+			{
+				auto& tmp = std::get<Quad>(shape);
+
+				tmp.a.position += p_offset;
+				tmp.b.position += p_offset;
+				tmp.c.position += p_offset;
+				tmp.d.position += p_offset;
+			}
+		}
+	}
+
 	ObjMesh ObjMesh::loadFromString(const std::string &p_input)
 	{
 		ObjMesh result;

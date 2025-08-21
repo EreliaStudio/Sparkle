@@ -15,6 +15,8 @@ namespace spk
 	public:
 		ObjMesh() = default;
 
+		void applyOffset(const spk::Vector3& p_offset);
+
 		static ObjMesh loadFromString(const std::string &p_input);
 		static ObjMesh loadFromFile(const std::filesystem::path &p_path);
 

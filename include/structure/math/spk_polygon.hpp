@@ -13,6 +13,56 @@ namespace spk
 {
 	struct Polygon
 	{
+	private:
+		static float _polyScale(const std::vector<spk::Vector3> &ps)
+		{
+			float m = 0.f;
+			for (size_t i = 1; i < ps.size(); ++i)
+			{
+				m = std::max(m, (ps[i] - ps[i - 1]).norm());
+			}
+			return (m > 0.f ? m : 1.f);
+		}
+
+		static bool _approxEq(float a, float b, float tol)
+		{
+			return std::fabs(a - b) <= tol;
+		}
+
+		static bool _inRange(float x, float a, float b, float tol)
+		{
+			const float lo = std::min(a, b) - tol;
+			const float hi = std::max(a, b) + tol;
+			return (x >= lo && x <= hi);
+		}
+
+		static bool _pointOnSegment2D(const spk::Vector2 &P, const spk::Vector2 &A, const spk::Vector2 &B, float tol)
+		{
+			// Collinearity via cross, then projection within segment via dot
+			const spk::Vector2 AB = B - A;
+			const spk::Vector2 AP = P - A;
+			const float cross = AB.x * AP.y - AB.y * AP.x;
+			if (std::fabs(cross) > tol)
+			{
+				return false;
+			}
+
+			const float dot = AP.x * AB.x + AP.y * AB.y;
+			if (dot < -tol)
+			{
+				return false;
+			}
+
+			const float len2 = AB.x * AB.x + AB.y * AB.y;
+			if (dot > len2 + tol)
+			{
+				return false;
+			}
+
+			return true;
+		}
+
+	public:
 		std::vector<spk::Vector3> points;
 
 		spk::Vector3 normal() const
@@ -32,11 +82,13 @@ namespace spk
 			{
 				return true;
 			}
+			const float tol = 1e-6f * _polyScale(points);
+
 			const spk::Vector3 &origin = points[0];
-			spk::Vector3 tmpNormal = normal();
-			for (size_t i = 3; i < points.size(); ++i)
+			spk::Vector3 n = normal();
+			for (size_t i = 1; i < points.size(); ++i)
 			{
-				if (std::abs(tmpNormal.dot(points[i] - origin)) > std::numeric_limits<float>::epsilon())
+				if (std::fabs(n.dot(points[i] - origin)) > tol)
 				{
 					return false;
 				}
@@ -46,79 +98,53 @@ namespace spk
 
 		bool isCoplanar(const Polygon &p_polygon) const
 		{
-			spk::cout << L"[Polygon] Coplanarity check" << std::endl;
-			spk::cout << L"  First polygon points:" << std::endl;
-			for (const spk::Vector3 &pt : points)
-			{
-				spk::cout << L"    " << pt << std::endl;
-			}
-			spk::cout << L"  Second polygon points:" << std::endl;
-			for (const spk::Vector3 &pt : p_polygon.points)
-			{
-				spk::cout << L"    " << pt << std::endl;
-			}
-
 			if (isPlanar() == false || p_polygon.isPlanar() == false)
 			{
-				spk::cout << L"  At least one polygon is not planar" << std::endl;
 				return false;
 			}
 
 			spk::Vector3 n = normal();
 			spk::Vector3 otherNormal = p_polygon.normal();
-			spk::cout << L"  Normal A: " << n << L" Normal B: " << otherNormal << std::endl;
 
 			bool sameNormal = n == otherNormal;
 			bool oppositeNormal = n == -otherNormal;
-			spk::cout << L"  Same normal: " << sameNormal << L" Opposite normal: " << oppositeNormal << std::endl;
 
 			if (sameNormal == false && oppositeNormal == false)
 			{
-				spk::cout << L"  Normals are neither identical nor opposite" << std::endl;
 				return false;
 			}
 
 			const spk::Vector3 &origin = points[0];
 			float distance = n.dot(p_polygon.points[0] - origin);
-			spk::cout << L"  Distance between planes: " << distance << std::endl;
 			bool result = std::abs(distance) <= std::numeric_limits<float>::epsilon();
-			spk::cout << L"  Coplanar result: " << result << std::endl;
 			return result;
 		}
 
 		bool contains(const spk::Vector3 &p_point) const
 		{
-			spk::cout << L"[Polygon] Point containment check" << std::endl;
-			spk::cout << L"  Polygon points:" << std::endl;
-			for (const spk::Vector3 &pt : points)
-			{
-				spk::cout << L"    " << pt << std::endl;
-			}
-			spk::cout << L"  Point: " << p_point << std::endl;
-
 			if (points.size() < 3)
 			{
-				spk::cout << L"  Polygon has fewer than 3 points" << std::endl;
 				return false;
 			}
+
+			const float scale = _polyScale(points);
+			const float tol3D = 1e-6f * scale;
+			const float tol2D = 1e-6f * std::max(1.0f, scale);
+
 			const spk::Vector3 &origin = points[0];
 			spk::Vector3 u = (points[1] - origin).normalize();
 			spk::Vector3 normal = (points[1] - origin).cross(points[2] - origin).normalize();
 			spk::Vector3 v = normal.cross(u);
 
-			spk::cout << L"  Origin: " << origin << L" u: " << u << L" v: " << v << L" normal: " << normal << std::endl;
-
 			float distance = normal.dot(p_point - origin);
-			spk::cout << L"  Distance from plane: " << distance << std::endl;
-			if (std::abs(distance) > std::numeric_limits<float>::epsilon())
+			if (std::fabs(distance) > tol3D)
 			{
-				spk::cout << L"  Point is not in the polygon plane" << std::endl;
 				return false;
 			}
 
-			auto project = [&](const spk::Vector3 &p_point3D)
+			auto project = [&](const spk::Vector3 &P)
 			{
-				spk::Vector3 rel = p_point3D - origin;
+				spk::Vector3 rel = P - origin;
 				return spk::Vector2(rel.dot(u), rel.dot(v));
 			};
 
@@ -129,85 +155,63 @@ namespace spk
 				poly2d.push_back(project(pt));
 			}
 
-			spk::Vector2 p = project(p_point);
-			spk::cout << L"  Projected point: " << p << std::endl;
+			const spk::Vector2 p = project(p_point);
 
 			for (size_t i = 0, j = poly2d.size() - 1; i < poly2d.size(); j = i++)
 			{
-				const spk::Vector2 &pi = poly2d[i];
-				const spk::Vector2 &pj = poly2d[j];
-				float cross = (pj.x - pi.x) * (p.y - pi.y) - (pj.y - pi.y) * (p.x - pi.x);
-				if (std::abs(cross) <= std::numeric_limits<float>::epsilon() && p.x >= std::min(pi.x, pj.x) && p.x <= std::max(pi.x, pj.x) &&
-					p.y >= std::min(pi.y, pj.y) && p.y <= std::max(pi.y, pj.y))
+				if (_pointOnSegment2D(p, poly2d[j], poly2d[i], tol2D))
 				{
-					spk::cout << L"  Point lies on an edge" << std::endl;
 					return true;
 				}
 			}
 
-			bool result = false;
+			// Tolerant ray casting (avoid vertex double-count with slight y-nudge)
+			bool inside = false;
+			const float py = p.y - tol2D;
+
 			for (size_t i = 0, j = poly2d.size() - 1; i < poly2d.size(); j = i++)
 			{
-				const spk::Vector2 &pi = poly2d[i];
-				const spk::Vector2 &pj = poly2d[j];
-				if (((pi.y > p.y) != (pj.y > p.y)) == true)
+				const spk::Vector2 &A = poly2d[j];
+				const spk::Vector2 &B = poly2d[i];
+
+				const bool aboveA = (A.y > py);
+				const bool aboveB = (B.y > py);
+
+				if (aboveA != aboveB)
 				{
-					float intersectX = (pj.x - pi.x) * (p.y - pi.y) / (pj.y - pi.y) + pi.x;
-					if (std::abs(intersectX - p.x) <= std::numeric_limits<float>::epsilon())
+					float xIntersect = (B.x - A.x) * (py - A.y) / (B.y - A.y) + A.x;
+
+					if (std::fabs(xIntersect - p.x) <= tol2D)
 					{
-						spk::cout << L"  Point lies on horizontal edge" << std::endl;
 						return true;
 					}
-					if (p.x < intersectX)
+					if (p.x < xIntersect)
 					{
-						result = (result == false);
-					}
-				}
-				else
-				{
-					float cross = (p.x - pi.x) * (pj.y - pi.y) - (p.y - pi.y) * (pj.x - pi.x);
-					if (std::abs(cross) <= std::numeric_limits<float>::epsilon() && p.x >= std::min(pi.x, pj.x) && p.x <= std::max(pi.x, pj.x) &&
-						p.y >= std::min(pi.y, pj.y) && p.y <= std::max(pi.y, pj.y))
-					{
-						spk::cout << L"  Point lies on segment" << std::endl;
-						return true;
+						inside = !inside;
 					}
 				}
 			}
-			spk::cout << L"  Containment result: " << result << std::endl;
-			return result;
+
+			return inside;
 		}
 
 		bool contains(const Polygon &p_polygon) const
 		{
-			spk::cout << L"[Polygon] Polygon containment check" << std::endl;
-			spk::cout << L"  Outer polygon points:" << std::endl;
-			for (const spk::Vector3 &pt : points)
-			{
-				spk::cout << L"    " << pt << std::endl;
-			}
-			spk::cout << L"  Inner polygon points:" << std::endl;
-			for (const spk::Vector3 &pt : p_polygon.points)
-			{
-				spk::cout << L"    " << pt << std::endl;
-			}
-
 			if (isCoplanar(p_polygon) == false)
 			{
-				spk::cout << L"  Polygons are not coplanar" << std::endl;
 				return false;
 			}
+
+			// For full containment, every vertex of the inner polygon must be inside or on the boundary.
 			for (const spk::Vector3 &pt : p_polygon.points)
 			{
 				bool inside = contains(pt);
-				spk::cout << L"  Point " << pt << L" inside: " << inside << std::endl;
 				if (inside == false)
 				{
-					spk::cout << L"  Polygon is not contained" << std::endl;
 					return false;
 				}
 			}
-			spk::cout << L"  Polygon is fully contained" << std::endl;
+
 			return true;
 		}
 	};

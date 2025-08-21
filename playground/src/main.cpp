@@ -359,10 +359,7 @@ private:
 
 			const Block *neigh = desc.first;
 			const Orientation &neighOrientation = desc.second;
-			static const std::array<std::wstring, 4> hOri = {L"XPositive", L"ZPositive", L"XNegative", L"ZNegative"};
-			static const std::array<std::wstring, 2> vOri = {L"YPositive", L"YNegative"};
-			spk::cout << L"[Block] Neighbour " << i << L" orientation: " << hOri[static_cast<size_t>(neighOrientation.horizontalOrientation)] << L", "
-					  << vOri[static_cast<size_t>(neighOrientation.verticalOrientation)] << std::endl;
+
 			if (neigh->_cache.hasCase(neighOrientation) == false)
 			{
 				neigh->_cache.addCase(neighOrientation, neigh->_mesh());
@@ -373,11 +370,6 @@ private:
 			if (auto it = neighData.faces.find(oppositeNormal); it != neighData.faces.end())
 			{
 				neighFaces[i] = &it->second;
-				spk::cout << L"  Found neighbour face with normal " << oppositeNormal << std::endl;
-			}
-			else
-			{
-				spk::cout << L"  No neighbour face with normal " << oppositeNormal << std::endl;
 			}
 		}
 		return neighFaces;
@@ -422,19 +414,16 @@ private:
 		for (size_t i = 0; i < 6; ++i)
 		{
 			const spk::Vector3 normal = neightbourCoordinates[i];
-			spk::cout << L"[Block] Checking face " << i << L" with normal " << normal << std::endl;
 
 			auto faceIt = p_data.faces.find(normal);
 			if (faceIt == p_data.faces.end())
 			{
-				spk::cout << L"  No face for this normal in current block" << std::endl;
 				continue;
 			}
 
 			const Face &ourFace = faceIt->second;
 			if (ourFace.mesh.shapes().empty() == true)
 			{
-				spk::cout << L"  Face mesh is empty" << std::endl;
 				continue;
 			}
 
@@ -446,40 +435,15 @@ private:
 				const spk::Vector3 toOurLocal = normal;
 				spk::Polygon neighInOurSpace = _translated(neigh->footprint, toOurLocal);
 
-				spk::cout << L"  Our footprint:" << std::endl;
-				for (const spk::Vector3 &pt : ourFace.footprint.points)
-				{
-					spk::cout << L"    " << pt << std::endl;
-				}
-				spk::cout << L"  Neighbour footprint (translated):" << std::endl;
-				for (const spk::Vector3 &pt : neighInOurSpace.points)
-				{
-					spk::cout << L"    " << pt << std::endl;
-				}
-
 				if (neighInOurSpace.contains(ourFace.footprint) == true)
 				{
 					visible = false;
-					spk::cout << L"  Neighbour covers our face" << std::endl;
 				}
-				else
-				{
-					spk::cout << L"  Neighbour does not cover our face" << std::endl;
-				}
-			}
-			else
-			{
-				spk::cout << L"  No neighbour face present" << std::endl;
 			}
 
 			if (visible == true)
 			{
 				p_data.applyFace(p_toFill, p_position, normal);
-				spk::cout << L"  Face emitted" << std::endl;
-			}
-			else
-			{
-				spk::cout << L"  Face hidden" << std::endl;
 			}
 		}
 	}
@@ -493,11 +457,6 @@ public:
 		const spk::Vector3 &p_position,
 		const Orientation &p_orientation) const
 	{
-		static const std::array<std::wstring, 4> hOri = {L"XPositive", L"ZPositive", L"XNegative", L"ZNegative"};
-		static const std::array<std::wstring, 2> vOri = {L"YPositive", L"YNegative"};
-		spk::cout << L"[Block] Baking block at position " << p_position << L" with orientation "
-				  << hOri[static_cast<size_t>(p_orientation.horizontalOrientation)] << L", "
-				  << vOri[static_cast<size_t>(p_orientation.verticalOrientation)] << std::endl;
 		const Cache::Entry &data = _ensureCacheCase(p_orientation);
 
 		const auto neighFaces = _gatherNeighbourFaces(p_neightbourDescriber);
@@ -1049,8 +1008,40 @@ private:
 
 	virtual void _onChunkGeneration(const spk::Vector3Int &p_chunkCoordinate, Chunk &p_chunkToFill)
 	{
-		p_chunkToFill.setContent(2, 2, 2, 2);
-		p_chunkToFill.setContent(3, 2, 2, 2);
+		for (size_t i = 0; i < Chunk::size.x; i++)
+		{
+			for (size_t j = 0; j < Chunk::size.z; j++)
+			{
+				p_chunkToFill.setContent(i, 0, j, 0);
+				if (i == 0 && j != 0)
+				{
+					p_chunkToFill.setContent(
+						i, 1, j, 2, Block::Orientation{Block::HorizontalOrientation::ZNegative, Block::VerticalOrientation::YPositive});
+				}
+				if (j == 0 && i != 0)
+				{
+					p_chunkToFill.setContent(
+						i, 1, j, 3, Block::Orientation{Block::HorizontalOrientation::ZPositive, Block::VerticalOrientation::YNegative});
+				}
+				if (i == 1 && j != 1)
+				{
+					p_chunkToFill.setContent(
+						i, 1, j, 1, Block::Orientation{Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive});
+				}
+				if (j == 1 && i != 1)
+				{
+					p_chunkToFill.setContent(
+						i, 1, j, 1, Block::Orientation{Block::HorizontalOrientation::ZPositive, Block::VerticalOrientation::YPositive});
+				}
+				if (i == 0 && j == 0)
+				{
+					p_chunkToFill.setContent(i, 1, j, 0);
+					p_chunkToFill.setContent(i, 2, j, 0);
+					p_chunkToFill.setContent(i, 3, j, 0);
+					p_chunkToFill.setContent(i, 4, j, 0);
+				}
+			}
+		}
 	}
 
 public:
@@ -1241,8 +1232,18 @@ int main()
 	halfConfiguration.bottom = blockMapTilemap.sprite({5, 0});
 	blockMap.addBlockByID(3, std::make_unique<HalfBlock>(halfConfiguration));
 
-	blockMap.setChunkRange({-0, 0, -0}, {0, 0, 0});
-	// blockMap.setChunkRange({-3, 0, -3}, {3, 0, 3});
+	blockMap.setChunkRange({-3, 0, -3}, {3, 0, 3});
+
+	spk::Entity supportEntity = spk::Entity(L"SupportA", nullptr);
+	supportEntity.activate();
+	engine.addEntity(&supportEntity);
+	supportEntity.transform().place({5, 1, 5});
+
+	spk::ObjMesh supportMesh = spk::ObjMesh::loadFromFile("playground/resources/obj/resized_support.obj");
+	supportMesh.applyOffset({0.5, 0, 0.5});
+
+	auto objRenderer = supportEntity.addComponent<spk::ObjMeshRenderer>(L"ObjMeshRenderer");
+	objRenderer->setMesh(&supportMesh);
 
 	return app.run();
 }
