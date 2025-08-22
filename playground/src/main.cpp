@@ -240,17 +240,35 @@ private:
 
 		static void _applyOrientationToVertices(std::vector<spk::Vertex> &p_vertices, const Orientation &p_orientation)
 		{
-			for (auto &v : p_vertices)
-			{
-				v.position = _applyOrientation(v.position, p_orientation);
-				if ((p_orientation.verticalOrientation == VerticalOrientation::YNegative) && (v.uv != -1))
-				{
-					v.uv.y = 1.0f - v.uv.y;
-				}
-			}
 			if (p_orientation.verticalOrientation == VerticalOrientation::YNegative)
 			{
+				float minY = std::numeric_limits<float>::max();
+				float maxY = std::numeric_limits<float>::lowest();
+
+				for (const auto &v : p_vertices)
+				{
+					if (v.uv != -1)
+					{
+						minY = std::min(minY, v.uv.y);
+						maxY = std::max(maxY, v.uv.y);
+					}
+				}
+				for (auto &v : p_vertices)
+				{
+					v.position = _applyOrientation(v.position, p_orientation);
+					if (v.uv != -1)
+					{
+						v.uv.y = minY + maxY - v.uv.y;
+					}
+				}
 				std::reverse(p_vertices.begin(), p_vertices.end());
+			}
+			else
+			{
+				for (auto &v : p_vertices)
+				{
+					v.position = _applyOrientation(v.position, p_orientation);
+				}
 			}
 		}
 
