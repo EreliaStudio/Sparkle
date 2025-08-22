@@ -60,7 +60,7 @@ public:
 
 	static spk::SafePointer<const spk::Texture> texture()
 	{
-		return (_spriteSheet.texture());
+		return (&_spriteSheet);
 	}
 
 protected:
