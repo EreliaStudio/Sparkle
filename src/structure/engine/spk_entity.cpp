@@ -142,10 +142,10 @@ namespace spk
 		p_child->setEngine(nullptr);
 	}
 
-	void Entity::removeChild(Entity *p_child)
+	void Entity::removeChild(InherenceObject<Entity>::Child p_child)
 	{
 		spk::InherenceObject<Entity>::removeChild(p_child);
-		p_child->setEngine(nullptr);
+		static_cast<Entity *>(p_child)->setEngine(nullptr);
 	}
 
 	void Entity::clearChildren()
