@@ -1102,12 +1102,14 @@ public:
 		CV v7{{s, s, s}, color};
 		CV v8{{-s, s, s}, color};
 
-		_cubeMesh.addShape(v1, v2, v3, v4);
-		_cubeMesh.addShape(v5, v6, v7, v8);
-		_cubeMesh.addShape(v1, v5, v8, v4);
-		_cubeMesh.addShape(v2, v6, v7, v3);
-		_cubeMesh.addShape(v4, v3, v7, v8);
-		_cubeMesh.addShape(v1, v2, v6, v5);
+		// Ensure all faces use a consistent counter-clockwise winding so that
+		// back-face culling does not hide the cube.
+		_cubeMesh.addShape(v1, v4, v3, v2); // Back
+		_cubeMesh.addShape(v5, v6, v7, v8); // Front
+		_cubeMesh.addShape(v1, v5, v8, v4); // Left
+		_cubeMesh.addShape(v2, v3, v7, v6); // Right
+		_cubeMesh.addShape(v4, v8, v7, v3); // Top
+		_cubeMesh.addShape(v1, v2, v6, v5); // Bottom
 
 		renderer->setMesh(&_cubeMesh);
 
