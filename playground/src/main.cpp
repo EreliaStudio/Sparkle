@@ -1064,6 +1064,7 @@ private:
 		auto hit = spk::RayCast::launch(owner(), worldDirection, 1000.0f);
 		if (hit.entity != nullptr)
 		{
+			spk::cout << "Cube placed at position : " << hit.position << std::endl;
 			_cubeEntity.transform().place(hit.position);
 		}
 	}
@@ -1074,14 +1075,21 @@ public:
 	{
 	}
 
+	spk::SafePointer<spk::Entity> cubeEntity()
+	{
+		return (&_cubeEntity);
+	}
+
 	void start() override
 	{
 		_cameraComponent = owner()->getComponent<spk::CameraComponent>();
 
 		_cubeEntity.setName(L"RayCastCube");
+		_cubeEntity.activate();
 		auto renderer = _cubeEntity.addComponent<spk::ColorMeshRenderer>(L"RayCastCube/ColorMeshRenderer");
+		renderer->activate();
 
-		float s = 0.05f;
+		float s = 0.5f;
 		spk::Color color = spk::Color::red;
 
 		using CV = spk::ColorVertex;
@@ -1191,6 +1199,7 @@ int main()
 	engine.addEntity(&player);
 
 	auto rayCastPrinter = player.addComponent<RayCastPrinter>(L"Player/RayCastPrinter");
+	engine.addEntity(rayCastPrinter->cubeEntity());
 	rayCastPrinter->activate();
 
 	player.cameraComponent()->setPerspective(60.0f, static_cast<float>(window->geometry().size.x) / static_cast<float>(window->geometry().size.y));
