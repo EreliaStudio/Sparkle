@@ -1050,6 +1050,23 @@ class RayCastPrinter : public spk::Component
 {
 private:
 	spk::SafePointer<spk::CameraComponent> _cameraComponent;
+	spk::Entity _cubeEntity;
+	spk::ColorMesh _cubeMesh;
+	bool _isCasting = false;
+
+	void _updateCubePosition(const spk::Vector2Int &p_mousePosition)
+	{
+		spk::Vector3 cameraDirection = _cameraComponent->camera().convertScreenToCamera(spk::Viewport::convertScreenToOpenGL(p_mousePosition));
+
+		const auto &camMtx = _cameraComponent->owner()->transform().model();
+		spk::Vector3 worldDirection = (camMtx * spk::Vector4(cameraDirection, 0.0f)).xyz().normalize();
+
+		auto hit = spk::RayCast::launch(owner(), worldDirection, 1000.0f);
+		if (hit.entity != nullptr)
+		{
+			_cubeEntity.transform().place(hit.position);
+		}
+	}
 
 public:
 	RayCastPrinter(const std::wstring &p_name) :
@@ -1060,32 +1077,66 @@ public:
 	void start() override
 	{
 		_cameraComponent = owner()->getComponent<spk::CameraComponent>();
+
+		_cubeEntity.setName(L"RayCastCube");
+		auto renderer = _cubeEntity.addComponent<spk::ColorMeshRenderer>(L"RayCastCube/ColorMeshRenderer");
+
+		float s = 0.05f;
+		spk::Color color = spk::Color::red;
+
+		using CV = spk::ColorVertex;
+		CV v1{{-s, -s, -s}, color};
+		CV v2{{s, -s, -s}, color};
+		CV v3{{s, s, -s}, color};
+		CV v4{{-s, s, -s}, color};
+		CV v5{{-s, -s, s}, color};
+		CV v6{{s, -s, s}, color};
+		CV v7{{s, s, s}, color};
+		CV v8{{-s, s, s}, color};
+
+		_cubeMesh.addShape(v1, v2, v3, v4);
+		_cubeMesh.addShape(v5, v6, v7, v8);
+		_cubeMesh.addShape(v1, v5, v8, v4);
+		_cubeMesh.addShape(v2, v6, v7, v3);
+		_cubeMesh.addShape(v4, v3, v7, v8);
+		_cubeMesh.addShape(v1, v2, v6, v5);
+
+		renderer->setMesh(&_cubeMesh);
+
+		owner()->engine()->addEntity(&_cubeEntity);
 	}
 
 	void onMouseEvent(spk::MouseEvent &p_event) override
 	{
-		if (_cameraComponent == nullptr || p_event.type != spk::MouseEvent::Type::Press)
+		if (_cameraComponent == nullptr)
 		{
 			return;
 		}
 
-		spk::cout << " ------ BEGIN ------" << std::endl;
-		spk::Vector3 cameraDirection = _cameraComponent->camera().convertScreenToCamera(spk::Viewport::convertScreenToOpenGL(p_event.mouse->position()));
-
-		const auto& camMtx = _cameraComponent->owner()->transform().model();
-		spk::Vector3 worldDirection = (camMtx * spk::Vector4(cameraDirection, 0.0f)).xyz().normalize();
-
-		spk::cout << " ------ SOLO  ------" << std::endl;
-		auto soloHit = spk::RayCast::launch(owner(), worldDirection, 1000.0f);
-		spk::cout << "Hit on [" << (soloHit.entity == nullptr ? L"None" : soloHit.entity->name() ) << "] at position : " << soloHit.position << " (" << soloHit.position.floor() << ")" <<  std::endl;
-
-		spk::cout << " ------ MULTI ------" << std::endl;
-		auto hits = spk::RayCast::launchAll(owner(), worldDirection, 1000.0f);
-		for (auto hit : hits)
+		switch (p_event.type)
 		{
-			spk::cout << "Hit on [" << (hit.entity == nullptr ? L"None" : hit.entity->name() ) << "] at position : " << hit.position << " (" << hit.position.floor() << ")" <<  std::endl;
+		case spk::MouseEvent::Type::Press:
+			if (p_event.button == spk::Mouse::Button::Right)
+			{
+				_isCasting = true;
+				_updateCubePosition(p_event.mouse->position());
+			}
+			break;
+		case spk::MouseEvent::Type::Motion:
+			if (_isCasting == true)
+			{
+				_updateCubePosition(p_event.position);
+			}
+			break;
+		case spk::MouseEvent::Type::Release:
+			if (p_event.button == spk::Mouse::Button::Right)
+			{
+				_isCasting = false;
+			}
+			break;
+		default:
+			break;
 		}
-		spk::cout << " ------  END  ------" << std::endl;
 	}
 };
 
