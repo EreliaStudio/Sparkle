@@ -20,7 +20,7 @@ namespace spk
 		};
 
 	private:
-		std::vector<spk::SafePointer<const spk::CollisionMesh>> _colliders;
+		spk::SafePointer<const spk::CollisionMesh> _collider;
 		static inline std::vector<spk::SafePointer<RigidBody>> _rigidBodies;
 		static inline std::mutex _rigidBodiesMutex;
 
@@ -33,8 +33,8 @@ namespace spk
 		void start() override;
 		void stop() override;
 
-		void setColliders(const std::vector<spk::SafePointer<const spk::CollisionMesh>> &p_colliders);
-		const std::vector<spk::SafePointer<const spk::CollisionMesh>> &colliders() const;
+		void setCollider(const spk::SafePointer<const spk::CollisionMesh> &p_collider);
+		const spk::SafePointer<const spk::CollisionMesh> &collider() const;
 
 		BoundingBox boundingBox() const;
 

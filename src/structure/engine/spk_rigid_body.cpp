@@ -31,14 +31,14 @@ namespace spk
 		_rigidBodies.erase(it, _rigidBodies.end());
 	}
 
-	void RigidBody::setColliders(const std::vector<spk::SafePointer<const spk::CollisionMesh>> &p_colliders)
+	void RigidBody::setCollider(const spk::SafePointer<const spk::CollisionMesh> &p_collider)
 	{
-		_colliders = p_colliders;
+		_collider = p_collider;
 	}
 
-	const std::vector<spk::SafePointer<const spk::CollisionMesh>> &RigidBody::colliders() const
+	const spk::SafePointer<const spk::CollisionMesh> &RigidBody::collider() const
 	{
-		return (_colliders);
+		return (_collider);
 	}
 
 	RigidBody::BoundingBox RigidBody::_computeLocalBoundingBox() const
@@ -46,13 +46,9 @@ namespace spk
 		BoundingBox result{};
 		bool initialized = false;
 
-		for (const auto &collider : _colliders)
+		const auto &collider = _collider;
+		if (collider != nullptr)
 		{
-			if (collider == nullptr)
-			{
-				continue;
-			}
-
 			for (const auto &unit : collider->units())
 			{
 				const auto &vertices = unit.buffer().vertices;
@@ -100,12 +96,9 @@ namespace spk
 		{
 			RigidBody::BoundingBox result{};
 			bool initialized = false;
-			for (const auto &collider : p_body->colliders())
+			const auto &collider = p_body->collider();
+			if (collider != nullptr)
 			{
-				if (collider == nullptr)
-				{
-					continue;
-				}
 				for (const auto &unit : collider->units())
 				{
 					for (const auto &vertex : unit.buffer().vertices)
@@ -237,12 +230,9 @@ namespace spk
 		std::vector<spk::TMesh<spk::Vector3>::Triangle> collectTriangles(const RigidBody *p_body, const spk::Matrix4x4 &p_transform)
 		{
 			std::vector<spk::TMesh<spk::Vector3>::Triangle> result;
-			for (const auto &collider : p_body->colliders())
+			const auto &collider = p_body->collider();
+			if ((collider == nullptr) == false)
 			{
-				if ((collider == nullptr) == true)
-				{
-					continue;
-				}
 				for (const auto &unit : collider->units())
 				{
 					for (const auto &shape : unit.shapes())

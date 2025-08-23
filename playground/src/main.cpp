@@ -1166,7 +1166,7 @@ int main()
 
 	spk::CollisionMesh supportCollider = supportMesh.createCollider();
 	auto supportBody = supportEntity.addComponent<spk::RigidBody>(L"Support/RigidBody");
-	supportBody->setColliders({&supportCollider});
+	supportBody->setCollider(&supportCollider);
 	supportBody->activate();
 
 	return app.run();
