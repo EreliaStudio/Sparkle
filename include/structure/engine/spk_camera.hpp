@@ -19,5 +19,8 @@ namespace spk
 
 		const spk::Matrix4x4 &projectionMatrix() const;
 		const spk::Matrix4x4 &inverseProjectionMatrix() const;
+
+		spk::Vector3 convertScreenToCamera(const spk::Vector3 &p_screenPosition) const;
+		spk::Vector3 convertScreenToCamera(const spk::Vector2 &p_screenPosition) const;
 	};
 }
