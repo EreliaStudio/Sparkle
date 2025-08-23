@@ -38,12 +38,28 @@ void main()
 layout(location = 0) out vec4 outputColor;
 void main()
 {
-        uint id = uint(gl_PrimitiveID);
-        vec3 color = vec3(
-                float(id & 0xFFu) / 255.0,
-                float((id >> 8) & 0xFFu) / 255.0,
-                float((id >> 16) & 0xFFu) / 255.0);
-        outputColor = vec4(color, 1.0);
+    const vec3 colors[16] = vec3[16](
+        vec3(0.0, 0.0, 1.0),   // Blue
+        vec3(0.0, 1.0, 0.0),   // Green
+        vec3(1.0, 0.0, 0.0),   // Red
+        vec3(1.0, 1.0, 0.0),   // Yellow
+        vec3(1.0, 0.0, 1.0),   // Magenta
+        vec3(0.0, 1.0, 1.0),   // Cyan
+        vec3(1.0, 1.0, 1.0),   // White
+        vec3(0.5, 0.5, 0.5),   // Gray
+        vec3(0.3, 0.0, 0.5),   // Purple
+        vec3(0.8, 0.3, 0.0),   // Orange
+        vec3(0.0, 0.4, 0.8),   // Light Blue
+        vec3(0.5, 0.8, 0.1),   // Lime
+        vec3(0.8, 0.8, 0.3),   // Sand
+        vec3(0.8, 0.5, 0.8),   // Pinkish Purple
+        vec3(0.2, 0.8, 0.7),   // Aqua
+        vec3(0.9, 0.9, 0.9)    // Almost White
+    );
+
+    uint id = uint(gl_PrimitiveID);
+    vec3 color = colors[id % 16];
+    outputColor = vec4(color, 1.0);
 }
 )";
 
@@ -96,11 +112,7 @@ void main()
 	{
 		if (p_wireframe == true)
 		{
-			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-			glDisable(GL_CULL_FACE);
 			_object.render();
-			glEnable(GL_CULL_FACE);
-			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		}
 		else
 		{
