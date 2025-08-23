@@ -1048,28 +1048,36 @@ public:
 
 class RayCastPrinter : public spk::Component
 {
+private:
+	spk::SafePointer<spk::CameraComponent> _cameraComponent;
+
 public:
 	RayCastPrinter(const std::wstring &p_name) :
 		spk::Component(p_name)
 	{
 	}
 
-	void onUpdateEvent(spk::UpdateEvent &p_event) override
+	void start() override
 	{
 		spk::SafePointer<spk::Entity> currentOwner = owner();
-		if ((currentOwner == nullptr) == true || (p_event.mouse == nullptr) == true)
+		if ((currentOwner == nullptr) == true)
 		{
 			return;
 		}
 
-		auto cameraComponent = currentOwner->getComponent<spk::CameraComponent>();
-		if ((cameraComponent == nullptr) == true)
+		_cameraComponent = currentOwner->getComponent<spk::CameraComponent>();
+	}
+
+	void onUpdateEvent(spk::UpdateEvent &p_event) override
+	{
+		spk::SafePointer<spk::Entity> currentOwner = owner();
+		if ((currentOwner == nullptr) == true || (p_event.mouse == nullptr) == true || (_cameraComponent == nullptr) == true)
 		{
 			return;
 		}
 
 		spk::Vector2 mousePosition = spk::Viewport::convertScreenToOpenGL(p_event.mouse->position());
-		spk::Vector3 cameraDirection = cameraComponent->camera().convertScreenToCamera(mousePosition);
+		spk::Vector3 cameraDirection = _cameraComponent->camera().convertScreenToCamera(mousePosition);
 		spk::Vector3 worldDirection = (currentOwner->transform().model() * spk::Vector4(cameraDirection, 0)).xyz();
 
 		auto hit = spk::RayCast::launch(currentOwner, worldDirection, 1000.0f);
