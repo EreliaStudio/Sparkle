@@ -667,6 +667,7 @@ public:
 		{
 		private:
 			spk::SafePointer<spk::ObjMeshRenderer> _renderer;
+			spk::SafePointer<spk::CollisionMeshRenderer> _collisionRenderer;
 			spk::SafePointer<spk::RigidBody> _rigidBody;
 
 			spk::SafePointer<BlockMap> _blockMap;
@@ -787,6 +788,7 @@ public:
 			void start() override
 			{
 				_renderer = owner()->template getComponent<spk::ObjMeshRenderer>();
+				_collisionRenderer = owner()->template getComponent<spk::CollisionMeshRenderer>();
 				_rigidBody = owner()->template getComponent<spk::RigidBody>();
 			}
 
@@ -799,6 +801,7 @@ public:
 					if (_renderer != nullptr)
 					{
 						_renderer->setMesh(mesh());
+						_collisionRenderer->setMesh(collisionMesh());
 						_rigidBody->setCollider(collisionMesh());
 						p_event.requestPaint();
 					}
@@ -825,6 +828,7 @@ public:
 		};
 
 		spk::SafePointer<spk::ObjMeshRenderer> _renderer;
+		spk::SafePointer<spk::CollisionMeshRenderer> _collisionRenderer;
 		spk::SafePointer<spk::RigidBody> _rigidBody;
 		spk::SafePointer<Data> _data;
 
@@ -833,11 +837,15 @@ public:
 			spk::Entity(p_name, p_parent)
 		{
 			_renderer = this->template addComponent<spk::ObjMeshRenderer>(p_name + L"/ObjMeshRenderer");
+			_collisionRenderer = this->template addComponent<spk::CollisionMeshRenderer>(p_name + L"/CollisionMeshRenderer");
 			_rigidBody = this->template addComponent<spk::RigidBody>(p_name + L"/RigidBody");
 			_data = this->template addComponent<Data>(p_name + L"/Data");
 			_data->setBlockMap(p_parent);
 
 			_renderer->setPriority(100);
+			_collisionRenderer->setPriority(100);
+			_collisionRenderer->setWireframe(true);
+			_collisionRenderer->deactivate();
 			_data->setPriority(0);
 		}
 
@@ -890,6 +898,20 @@ public:
 		{
 			return (_data->mesh());
 		}
+
+		void useCollisionRenderer(bool p_use)
+		{
+			if (p_use == true)
+			{
+				_renderer->deactivate();
+				_collisionRenderer->activate();
+			}
+			else
+			{
+				_collisionRenderer->deactivate();
+				_renderer->activate();
+			}
+		}
 	};
 
 private:
@@ -899,6 +921,8 @@ private:
 	std::unordered_map<spk::Vector3Int, std::unique_ptr<Chunk>> _chunks;
 
 	std::vector<spk::SafePointer<Chunk>> _activeChunks;
+
+	bool _useCollisionRenderer = false;
 
 	std::unique_ptr<Chunk> _generateChunk(const spk::Vector3Int &p_chunkCoordinate)
 	{
@@ -913,6 +937,8 @@ private:
 		_onChunkGeneration(p_chunkCoordinate, *newChunk);
 
 		newChunk->activate();
+
+		newChunk->useCollisionRenderer(_useCollisionRenderer);
 
 		return newChunk;
 	}
@@ -1017,6 +1043,15 @@ public:
 		for (auto &chunk : _activeChunks)
 		{
 			chunk->activate();
+			chunk->useCollisionRenderer(_useCollisionRenderer);
+		}
+	}
+	void useCollisionRenderer(bool p_use)
+	{
+		_useCollisionRenderer = p_use;
+		for (auto &chunk : _activeChunks)
+		{
+			chunk->useCollisionRenderer(_useCollisionRenderer);
 		}
 	}
 };
@@ -1043,6 +1078,37 @@ public:
 	spk::SafePointer<spk::FreeViewController> freeViewController()
 	{
 		return (_freeViewController);
+	}
+};
+
+template <size_t ChunkSizeX, size_t ChunkSizeY, size_t ChunkSizeZ>
+class CollisionRenderToggler : public spk::Component
+{
+private:
+	spk::SafePointer<BlockMap<ChunkSizeX, ChunkSizeY, ChunkSizeZ>> _blockMap;
+	bool _useCollisionRenderer = false;
+
+public:
+	CollisionRenderToggler(const std::wstring &p_name) :
+		spk::Component(p_name)
+	{
+	}
+
+	void setBlockMap(spk::SafePointer<BlockMap<ChunkSizeX, ChunkSizeY, ChunkSizeZ>> p_blockMap)
+	{
+		_blockMap = p_blockMap;
+	}
+
+	void onKeyboardEvent(spk::KeyboardEvent &p_event) override
+	{
+		if (p_event.type == spk::KeyboardEvent::Type::Press && p_event.key == spk::Keyboard::F1)
+		{
+			_useCollisionRenderer = (_useCollisionRenderer == false);
+			if (_blockMap != nullptr)
+			{
+				_blockMap->useCollisionRenderer(_useCollisionRenderer);
+			}
+		}
 	}
 };
 
@@ -1083,9 +1149,9 @@ public:
 	void start() override
 	{
 		_cameraComponent = owner()->getComponent<spk::CameraComponent>();
-		
+
 		owner()->engine()->addEntity(&_cubeEntity);
-		
+
 		_cubeEntity.transform().place({3, 3, 3});
 		_cubeEntity.setName(L"RayCastCube");
 		_cubeEntity.activate();
@@ -1251,6 +1317,9 @@ int main()
 	blockMap.addBlockByID(3, std::make_unique<HalfBlock>(halfConfiguration));
 
 	blockMap.setChunkRange({-3, 0, -3}, {3, 0, 3});
+
+	auto collisionRenderToggler = player.addComponent<CollisionRenderToggler<16, 16, 16>>(L"Player/CollisionRenderToggler");
+	collisionRenderToggler->setBlockMap(&blockMap);
 
 	spk::Entity supportEntity = spk::Entity(L"SupportA", nullptr);
 	supportEntity.activate();
