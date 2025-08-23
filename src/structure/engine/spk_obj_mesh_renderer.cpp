@@ -132,7 +132,6 @@ void main()
 
 	void ObjMeshRenderer::setTexture(spk::SafePointer<const spk::Texture> p_texture)
 	{
-		spk::cout << L"[ObjMeshRenderer] setTexture(" << p_texture << L")" << std::endl;
 		_painter.setTexture(p_texture);
 	}
 

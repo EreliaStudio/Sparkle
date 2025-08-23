@@ -152,7 +152,7 @@ namespace spk
 				}
 			}
 
-			GENERATE_ERROR("Component of specified type and name not found.");
+			return (nullptr);
 		}
 
 		template <typename TComponentType>
@@ -188,8 +188,8 @@ namespace spk
 					}
 				}
 			}
-
-			GENERATE_ERROR("Component of specified type and name not found.");
+			
+			return (nullptr);
 		}
 
 		template <typename TComponentType>
