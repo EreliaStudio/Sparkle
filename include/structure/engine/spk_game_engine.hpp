@@ -1,5 +1,7 @@
 #pragma once
 
+#include <mutex>
+#include <set>
 #include <vector>
 
 #include "structure/engine/spk_entity.hpp"
@@ -10,6 +12,8 @@ namespace spk
 	{
 	private:
 		Entity _rootObject = spk::Entity(L"/root");
+		std::set<Entity *> _collisionRequests;
+		std::mutex _collisionMutex;
 
 	public:
 		GameEngine();
@@ -34,12 +38,17 @@ namespace spk
 
 		size_t count(const std::wstring &p_name) const;
 
-		void onGeometryChange(const spk::Geometry2D& p_geometry);
+		void onGeometryChange(const spk::Geometry2D &p_geometry);
 		void onPaintEvent(spk::PaintEvent &p_event);
 		void onUpdateEvent(spk::UpdateEvent &p_event);
 		void onKeyboardEvent(spk::KeyboardEvent &p_event);
 		void onMouseEvent(spk::MouseEvent &p_event);
 		void onControllerEvent(spk::ControllerEvent &p_event);
 		void onTimerEvent(spk::TimerEvent &p_event);
+
+	private:
+		void _markForCollision(Entity *p_entity);
+		void _processCollisionRequests();
+		friend class Entity;
 	};
 }

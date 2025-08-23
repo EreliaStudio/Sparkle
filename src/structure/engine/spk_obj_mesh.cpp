@@ -1,9 +1,10 @@
 #include "structure/engine/spk_obj_mesh.hpp"
 
+#include <algorithm>
 #include <array>
+#include <cmath>
 #include <fstream>
 #include <sstream>
-#include <unordered_map>
 #include <vector>
 
 #include "spk_debug_macro.hpp"
@@ -368,5 +369,163 @@ namespace spk
 			}
 			file << "\n";
 		}
+	}
+
+	namespace
+	{
+		bool tryMergeQuad(
+			const spk::ObjMesh::Quad &p_q1,
+			std::size_t p_index,
+			const std::vector<spk::ObjMesh::Shape> &p_shapes,
+			std::vector<bool> &p_used,
+			spk::CollisionMesh &p_result)
+		{
+			for (std::size_t j = p_index + 1; j < p_shapes.size(); ++j)
+			{
+				if (p_used[j] == true || std::holds_alternative<spk::ObjMesh::Quad>(p_shapes[j]) == false)
+				{
+					continue;
+				}
+				const auto &q2 = std::get<spk::ObjMesh::Quad>(p_shapes[j]);
+				std::array<spk::Vector3, 8> verts = {
+					p_q1.a.position, p_q1.b.position, p_q1.c.position, p_q1.d.position, q2.a.position, q2.b.position, q2.c.position, q2.d.position};
+
+				std::vector<spk::Vector3> corners;
+				for (const auto &v : verts)
+				{
+					int count = 0;
+					for (const auto &u : verts)
+					{
+						if ((v == u) == true)
+						{
+							++count;
+						}
+					}
+					if (count == 1)
+					{
+						corners.push_back(v);
+					}
+				}
+				if (corners.size() == 4)
+				{
+					spk::Vector3 normal = (corners[1] - corners[0]).cross(corners[2] - corners[0]);
+					if ((normal.norm() > 0.0f) == true)
+					{
+						spk::Vector3 center = (corners[0] + corners[1] + corners[2] + corners[3]) * 0.25f;
+						spk::Vector3 axis1 = (corners[0] - center).normalize();
+						spk::Vector3 axis2 = normal.normalize().cross(axis1);
+						std::sort(
+							corners.begin(),
+							corners.end(),
+							[&](const spk::Vector3 &p_lhs, const spk::Vector3 &p_rhs)
+							{
+								spk::Vector3 lv = p_lhs - center;
+								spk::Vector3 rv = p_rhs - center;
+								float angleL = std::atan2(lv.dot(axis2), lv.dot(axis1));
+								float angleR = std::atan2(rv.dot(axis2), rv.dot(axis1));
+								return (angleL < angleR) == true;
+							});
+						spk::CollisionMesh::Unit unit;
+						unit.addShape(corners[0], corners[1], corners[2], corners[3]);
+						p_result.addUnit(unit);
+						p_used[j] = true;
+						return true;
+					}
+				}
+			}
+			return false;
+		}
+
+		bool tryMergeTriangle(
+			const spk::ObjMesh::Triangle &p_t1,
+			std::size_t p_index,
+			const std::vector<spk::ObjMesh::Shape> &p_shapes,
+			std::vector<bool> &p_used,
+			spk::CollisionMesh &p_result)
+		{
+			for (std::size_t j = p_index + 1; j < p_shapes.size(); ++j)
+			{
+				if (p_used[j] == true || std::holds_alternative<spk::ObjMesh::Triangle>(p_shapes[j]) == false)
+				{
+					continue;
+				}
+				const auto &t2 = std::get<spk::ObjMesh::Triangle>(p_shapes[j]);
+				std::array<spk::Vector3, 3> v1 = {p_t1.a.position, p_t1.b.position, p_t1.c.position};
+				std::array<spk::Vector3, 3> v2 = {t2.a.position, t2.b.position, t2.c.position};
+
+				std::vector<spk::Vector3> shared;
+				for (const auto &v : v1)
+				{
+					for (const auto &u : v2)
+					{
+						if ((v == u) == true)
+						{
+							shared.push_back(v);
+						}
+					}
+				}
+				if (shared.size() == 2)
+				{
+					std::vector<spk::Vector3> unique = {v1.begin(), v1.end()};
+					for (const auto &v : v2)
+					{
+						if (std::find(unique.begin(), unique.end(), v) == unique.end())
+						{
+							unique.push_back(v);
+						}
+					}
+					if (unique.size() == 4)
+					{
+						spk::CollisionMesh::Unit unit;
+						unit.addShape(unique[0], unique[1], unique[2], unique[3]);
+						p_result.addUnit(unit);
+						p_used[j] = true;
+						return true;
+					}
+				}
+			}
+			return false;
+		}
+	}
+
+	spk::CollisionMesh ObjMesh::createCollider() const
+	{
+		spk::CollisionMesh result;
+		const auto &shapeList = shapes();
+		std::vector<bool> used(shapeList.size(), false);
+
+		for (std::size_t i = 0; i < shapeList.size(); ++i)
+		{
+			if (used[i] == true)
+			{
+				continue;
+			}
+
+			if (std::holds_alternative<Quad>(shapeList[i]) == true)
+			{
+				const auto &q1 = std::get<Quad>(shapeList[i]);
+				bool merged = tryMergeQuad(q1, i, shapeList, used, result);
+				if (merged == false)
+				{
+					spk::CollisionMesh::Unit unit;
+					unit.addShape(q1.a.position, q1.b.position, q1.c.position, q1.d.position);
+					result.addUnit(unit);
+				}
+			}
+			else
+			{
+				const auto &t1 = std::get<Triangle>(shapeList[i]);
+				bool merged = tryMergeTriangle(t1, i, shapeList, used, result);
+				if (merged == false)
+				{
+					spk::CollisionMesh::Unit unit;
+					unit.addShape(t1.a.position, t1.b.position, t1.c.position);
+					result.addUnit(unit);
+				}
+			}
+			used[i] = true;
+		}
+
+		return result;
 	}
 }

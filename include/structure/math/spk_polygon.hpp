@@ -4,9 +4,9 @@
 #include "structure/math/spk_vector3.hpp"
 #include <algorithm>
 #include <cmath>
-#include <limits>
 #include <vector>
 
+#include "spk_constants.hpp"
 #include "spk_debug_macro.hpp"
 
 namespace spk
@@ -116,7 +116,7 @@ namespace spk
 
 			const spk::Vector3 &origin = points[0];
 			float distance = n.dot(p_polygon.points[0] - origin);
-			bool result = std::abs(distance) <= std::numeric_limits<float>::epsilon();
+			bool result = std::abs(distance) <= spk::Constants::pointPrecision;
 			return result;
 		}
 
