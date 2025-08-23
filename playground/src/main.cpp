@@ -1316,26 +1316,10 @@ int main()
 	halfConfiguration.bottom = Block::spriteSheet().sprite({5, 0});
 	blockMap.addBlockByID(3, std::make_unique<HalfBlock>(halfConfiguration));
 
-	blockMap.setChunkRange({-3, 0, -3}, {3, 0, 3});
+	blockMap.setChunkRange({-0, 0, -0}, {0, 0, 0});
 
 	auto collisionRenderToggler = player.addComponent<CollisionRenderToggler<16, 16, 16>>(L"Player/CollisionRenderToggler");
 	collisionRenderToggler->setBlockMap(&blockMap);
-
-	spk::Entity supportEntity = spk::Entity(L"SupportA", nullptr);
-	supportEntity.activate();
-	engine.addEntity(&supportEntity);
-	supportEntity.transform().place({5, 1, 5});
-
-	spk::ObjMesh supportMesh = spk::ObjMesh::loadFromFile("playground/resources/obj/resized_support.obj");
-	supportMesh.applyOffset({0.5, 0, 0.5});
-
-	auto objRenderer = supportEntity.addComponent<spk::ObjMeshRenderer>(L"ObjMeshRenderer");
-	objRenderer->setMesh(&supportMesh);
-
-	spk::CollisionMesh supportCollider = supportMesh.createCollider();
-	auto supportBody = supportEntity.addComponent<spk::RigidBody>(L"Support/RigidBody");
-	supportBody->setCollider(&supportCollider);
-	supportBody->activate();
 
 	return app.run();
 }

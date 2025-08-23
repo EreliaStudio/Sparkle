@@ -205,7 +205,10 @@ namespace spk
 			std::unique_lock<std::mutex> lock(_componentMutex);
 			for (auto &component : _components)
 			{
-				component->onPaintEvent(p_event);
+				if (component->isActive() == true)
+				{
+					component->onPaintEvent(p_event);
+				}
 			}
 		}
 
@@ -243,7 +246,10 @@ namespace spk
 			std::unique_lock<std::mutex> lock(_componentMutex);
 			for (auto &component : _components)
 			{
-				component->onUpdateEvent(p_event);
+				if (component->isActive() == true)
+				{
+					component->onUpdateEvent(p_event);
+				}
 			}
 		}
 	}
@@ -271,7 +277,10 @@ namespace spk
 			std::unique_lock<std::mutex> lock(_componentMutex);
 			for (auto &component : _components)
 			{
-				component->onKeyboardEvent(p_event);
+				if (component->isActive() == true)
+				{
+					component->onKeyboardEvent(p_event);
+				}
 			}
 		}
 	}
@@ -299,7 +308,10 @@ namespace spk
 			std::unique_lock<std::mutex> lock(_componentMutex);
 			for (auto &component : _components)
 			{
-				component->onMouseEvent(p_event);
+				if (component->isActive() == true)
+				{
+					component->onMouseEvent(p_event);
+				}
 			}
 		}
 	}
@@ -327,7 +339,10 @@ namespace spk
 			std::unique_lock<std::mutex> lock(_componentMutex);
 			for (auto &component : _components)
 			{
-				component->onControllerEvent(p_event);
+				if (component->isActive() == true)
+				{
+					component->onControllerEvent(p_event);
+				}
 			}
 		}
 	}
@@ -355,7 +370,10 @@ namespace spk
 			std::unique_lock<std::mutex> lock(_componentMutex);
 			for (auto &component : _components)
 			{
-				component->onTimerEvent(p_event);
+				if (component->isActive() == true)
+				{
+					component->onTimerEvent(p_event);
+				}
 			}
 		}
 	}
