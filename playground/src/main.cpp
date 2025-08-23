@@ -1083,13 +1083,17 @@ public:
 	void start() override
 	{
 		_cameraComponent = owner()->getComponent<spk::CameraComponent>();
-
+		
+		owner()->engine()->addEntity(&_cubeEntity);
+		
+		_cubeEntity.transform().place({3, 3, 3});
 		_cubeEntity.setName(L"RayCastCube");
 		_cubeEntity.activate();
+
 		auto renderer = _cubeEntity.addComponent<spk::ColorMeshRenderer>(L"RayCastCube/ColorMeshRenderer");
 		renderer->activate();
 
-		float s = 0.5f;
+		float s = 0.1f;
 		spk::Color color = spk::Color::red;
 
 		using CV = spk::ColorVertex;
@@ -1102,16 +1106,16 @@ public:
 		CV v7{{s, s, s}, color};
 		CV v8{{-s, s, s}, color};
 
-		_cubeMesh.addShape(v1, v2, v3, v4);
-		_cubeMesh.addShape(v5, v6, v7, v8);
-		_cubeMesh.addShape(v1, v5, v8, v4);
-		_cubeMesh.addShape(v2, v6, v7, v3);
-		_cubeMesh.addShape(v4, v3, v7, v8);
-		_cubeMesh.addShape(v1, v2, v6, v5);
+		_cubeMesh.clear();
+
+		_cubeMesh.addShape(v1, v4, v3, v2); // Back
+		_cubeMesh.addShape(v5, v6, v7, v8); // Front
+		_cubeMesh.addShape(v1, v5, v8, v4); // Left
+		_cubeMesh.addShape(v2, v3, v7, v6); // Right
+		_cubeMesh.addShape(v4, v8, v7, v3); // Top
+		_cubeMesh.addShape(v1, v2, v6, v5); // Bottom
 
 		renderer->setMesh(&_cubeMesh);
-
-		owner()->engine()->addEntity(&_cubeEntity);
 	}
 
 	void onMouseEvent(spk::MouseEvent &p_event) override
@@ -1199,12 +1203,11 @@ int main()
 	engine.addEntity(&player);
 
 	auto rayCastPrinter = player.addComponent<RayCastPrinter>(L"Player/RayCastPrinter");
-	engine.addEntity(rayCastPrinter->cubeEntity());
 	rayCastPrinter->activate();
 
 	player.cameraComponent()->setPerspective(60.0f, static_cast<float>(window->geometry().size.x) / static_cast<float>(window->geometry().size.y));
-	player.transform().place({5.0f, 4.0f, 0.0f});
-	player.transform().lookAt({0.0f, 4.0f, 0.0f});
+	player.transform().place({5.0f, 5.0f, 5.0f});
+	player.transform().lookAt({3.0f, 3.0f, 3.0f});
 
 	BlockMap<16, 16, 16> blockMap = BlockMap<16, 16, 16>(L"BlockMap", nullptr);
 	blockMap.setTexture(Block::texture());

@@ -20,8 +20,8 @@ namespace spk
 			static spk::Lumina::Shader _shader;
 
 			spk::Lumina::Shader::Object _object;
-			spk::OpenGL::BufferSet _bufferSet;
-			spk::OpenGL::UniformBufferObject _transformUBO;
+			spk::OpenGL::BufferSet &_bufferSet;
+			spk::OpenGL::UniformBufferObject &_transformUBO;
 
 		public:
 			Painter();
