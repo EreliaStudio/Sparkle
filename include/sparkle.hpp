@@ -40,6 +40,8 @@
 #include "structure/engine/spk_camera_component.hpp"
 #include "structure/engine/spk_collision_mesh.hpp"
 #include "structure/engine/spk_collision_trigger.hpp"
+#include "structure/engine/spk_color_mesh.hpp"
+#include "structure/engine/spk_color_mesh_renderer.hpp"
 #include "structure/engine/spk_component.hpp"
 #include "structure/engine/spk_entity.hpp"
 #include "structure/engine/spk_free_view_controller.hpp"
