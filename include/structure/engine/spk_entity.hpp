@@ -16,6 +16,8 @@
 
 namespace spk
 {
+	class GameEngine;
+
 	class Entity : public spk::InherenceObject<Entity>, public spk::ActivableObject
 	{
 	public:
@@ -36,6 +38,7 @@ namespace spk
 		std::vector<std::unique_ptr<Component>> _components;
 		spk::SafePointer<Transform> _transform;
 		Transform::Contract _ownerTransformEditionContract;
+		GameEngine *_engine = nullptr;
 
 		template <typename T>
 		void sortByPriority(std::vector<T> &p_container, bool &p_needSorting, std::mutex &p_mutex)
@@ -47,28 +50,29 @@ namespace spk
 				return;
 			}
 
-			std::sort(p_container.begin(),
-					  p_container.end(),
-					  [](const T &a, const T &b)
-					  {
-						  int priorityA = a->priority();
-						  int priorityB = b->priority();
+			std::sort(
+				p_container.begin(),
+				p_container.end(),
+				[](const T &a, const T &b)
+				{
+					int priorityA = a->priority();
+					int priorityB = b->priority();
 
-						  bool aNoPriority = (priorityA < 0);
-						  bool bNoPriority = (priorityB < 0);
+					bool aNoPriority = (priorityA < 0);
+					bool bNoPriority = (priorityB < 0);
 
-						  if (aNoPriority && bNoPriority)
-						  {
-							  return (false);
-						  }
+					if (aNoPriority && bNoPriority)
+					{
+						return (false);
+					}
 
-						  if (aNoPriority != bNoPriority)
-						  {
-							  return (!aNoPriority);
-						  }
+					if (aNoPriority != bNoPriority)
+					{
+						return (!aNoPriority);
+					}
 
-						  return (priorityA > priorityB);
-					  });
+					return (priorityA > priorityB);
+				});
 
 			p_needSorting = false;
 		}
@@ -91,6 +95,10 @@ namespace spk
 		void clearTags();
 		bool containTag(const std::wstring &p_tag) const;
 
+		void setEngine(GameEngine *p_engine);
+		spk::SafePointer<GameEngine> engine();
+		spk::SafePointer<const GameEngine> engine() const;
+
 		const std::wstring &name() const;
 		const std::set<std::wstring> &tags() const;
 		const spk::Vector3 &position() const;
@@ -99,6 +107,11 @@ namespace spk
 		const Transform &transform() const;
 
 		void removeAllComponents();
+
+		void addChild(spk::SafePointer<Entity> p_child) override;
+		void removeChild(spk::SafePointer<Entity> p_child) override;
+		void removeChild(Entity *p_child) override;
+		void clearChildren();
 
 		template <typename TComponentType, typename... TArgs>
 		spk::SafePointer<TComponentType> addComponent(TArgs &&...p_args)
@@ -197,7 +210,7 @@ namespace spk
 			return (result);
 		}
 
-		virtual void onGeometryChange(const spk::Geometry2D& p_geometry) final;
+		virtual void onGeometryChange(const spk::Geometry2D &p_geometry) final;
 		virtual void onPaintEvent(spk::PaintEvent &p_event) final;
 		virtual void onUpdateEvent(spk::UpdateEvent &p_event) final;
 		virtual void onKeyboardEvent(spk::KeyboardEvent &p_event) final;
@@ -222,15 +235,24 @@ namespace spk
 		bool containsTag(const std::wstring &p_tag) const;
 		size_t countTag(const std::wstring &p_tag) const;
 
-		spk::SafePointer<Entity> getChildByTags(const std::span<const std::wstring> &p_tags,
-													spk::BinaryOperator p_binaryOperator = spk::BinaryOperator::AND);
-		spk::SafePointer<const Entity> getChildByTags(const std::span<const std::wstring> &p_tags,
-														  spk::BinaryOperator p_binaryOperator = spk::BinaryOperator::AND) const;
-		std::vector<spk::SafePointer<Entity>> getChildrenByTags(const std::span<const std::wstring> &p_tags,
-																	spk::BinaryOperator p_binaryOperator = spk::BinaryOperator::AND);
-		std::vector<spk::SafePointer<const Entity>> getChildrenByTags(const std::span<const std::wstring> &p_tags,
-																		  spk::BinaryOperator p_binaryOperator = spk::BinaryOperator::AND) const;
+		bool checkCollision(
+			const spk::Vector3 &p_positionOffset = spk::Vector3(),
+			const spk::Vector3 &p_scaleOffset = spk::Vector3(),
+			const spk::Vector3 &p_rotationOffset = spk::Vector3());
+
+		spk::SafePointer<Entity> getChildByTags(
+			const std::span<const std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator = spk::BinaryOperator::AND);
+		spk::SafePointer<const Entity> getChildByTags(
+			const std::span<const std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator = spk::BinaryOperator::AND) const;
+		std::vector<spk::SafePointer<Entity>> getChildrenByTags(
+			const std::span<const std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator = spk::BinaryOperator::AND);
+		std::vector<spk::SafePointer<const Entity>> getChildrenByTags(
+			const std::span<const std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator = spk::BinaryOperator::AND) const;
 		bool containsTags(const std::span<const std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator = spk::BinaryOperator::AND) const;
 		size_t countTags(const std::span<const std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator = spk::BinaryOperator::AND) const;
+
+	private:
+		friend class Transform;
+		void _markForCollision();
 	};
 }

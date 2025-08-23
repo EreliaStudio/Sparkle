@@ -2,9 +2,9 @@
 
 #include <algorithm>
 #include <iomanip>
-#include <limits>
 #include <sstream>
 
+#include "spk_constants.hpp"
 #include "structure/system/spk_exception.hpp"
 
 namespace spk
@@ -67,9 +67,8 @@ namespace spk
 
 	bool Color::operator==(const Color &p_color) const
 	{
-		return (std::abs(r - p_color.r) < std::numeric_limits<float>::epsilon()) &&
-			   (std::abs(g - p_color.g) < std::numeric_limits<float>::epsilon()) &&
-			   (std::abs(b - p_color.b) < std::numeric_limits<float>::epsilon()) && (std::abs(a - p_color.a) < std::numeric_limits<float>::epsilon());
+		return (std::abs(r - p_color.r) < spk::Constants::colorPrecision) && (std::abs(g - p_color.g) < spk::Constants::colorPrecision) &&
+			   (std::abs(b - p_color.b) < spk::Constants::colorPrecision) && (std::abs(a - p_color.a) < spk::Constants::colorPrecision);
 	}
 
 	std::ostream &operator<<(std::ostream &p_os, const spk::Color &p_color)

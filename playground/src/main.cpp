@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <iostream>
 #include <limits>
 #include <map>
 #include <memory>
@@ -220,8 +221,8 @@ private:
 			}
 
 			return (
-				(std::abs(minA - 0.0f) < std::numeric_limits<float>::epsilon()) && (std::abs(maxA - 1.0f) < std::numeric_limits<float>::epsilon()) &&
-				(std::abs(minB - 0.0f) < std::numeric_limits<float>::epsilon()) && (std::abs(maxB - 1.0f) < std::numeric_limits<float>::epsilon()));
+				(std::abs(minA - 0.0f) < spk::Constants::pointPrecision) && (std::abs(maxA - 1.0f) < spk::Constants::pointPrecision) &&
+				(std::abs(minB - 0.0f) < spk::Constants::pointPrecision) && (std::abs(maxB - 1.0f) < spk::Constants::pointPrecision));
 		}
 
 		static std::vector<spk::Vertex> _extractVertices(const spk::ObjMesh::Shape &p_shape)
@@ -274,7 +275,7 @@ private:
 
 		static bool _isAxisAlignedFace(const std::vector<spk::Vertex> &p_vertices, spk::Vector3 &p_outNormal)
 		{
-			auto eq = [&](float p_a, float p_b) { return std::abs(p_a - p_b) <= std::numeric_limits<float>::epsilon(); };
+			auto eq = [&](float p_a, float p_b) { return std::abs(p_a - p_b) <= spk::Constants::pointPrecision; };
 
 			bool allX0 = true, allX1 = true, allY0 = true, allY1 = true, allZ0 = true, allZ1 = true;
 			for (const auto &v : p_vertices)
@@ -1028,6 +1029,30 @@ public:
 	}
 };
 
+class RayCastPrinter : public spk::Component
+{
+public:
+	RayCastPrinter(const std::wstring &p_name) :
+		spk::Component(p_name)
+	{
+	}
+
+	void onUpdateEvent(spk::UpdateEvent &p_event) override
+	{
+		spk::SafePointer<spk::Entity> currentOwner = owner();
+		if (currentOwner == nullptr)
+		{
+			return;
+		}
+		spk::Vector3 direction = currentOwner->transform().forward();
+		auto hit = spk::RayCast::launch(currentOwner, direction, 1000.0f);
+		if (hit.entity != nullptr)
+		{
+			std::cout << "Hit position: " << hit.position.x << ", " << hit.position.y << ", " << hit.position.z << std::endl;
+		}
+	}
+};
+
 class DebugOverlayManager : public spk::Widget
 {
 private:
@@ -1077,6 +1102,9 @@ int main()
 	Player player = Player(L"Player", nullptr);
 	player.activate();
 	engine.addEntity(&player);
+
+	auto rayCastPrinter = player.addComponent<RayCastPrinter>(L"Player/RayCastPrinter");
+	rayCastPrinter->activate();
 
 	player.cameraComponent()->setPerspective(60.0f, static_cast<float>(window->geometry().size.x) / static_cast<float>(window->geometry().size.y));
 	player.transform().place({5.0f, 5.0f, 5.0f});
@@ -1135,6 +1163,11 @@ int main()
 
 	auto objRenderer = supportEntity.addComponent<spk::ObjMeshRenderer>(L"ObjMeshRenderer");
 	objRenderer->setMesh(&supportMesh);
+
+	spk::CollisionMesh supportCollider = supportMesh.createCollider();
+	auto supportBody = supportEntity.addComponent<spk::RigidBody>(L"Support/RigidBody");
+	supportBody->setColliders({&supportCollider});
+	supportBody->activate();
 
 	return app.run();
 }
