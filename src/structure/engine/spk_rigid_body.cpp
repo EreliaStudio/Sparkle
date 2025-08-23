@@ -233,6 +233,39 @@ namespace spk
 			}
 			return false;
 		}
+
+		std::vector<spk::TMesh<spk::Vector3>::Triangle> collectTriangles(const RigidBody *p_body, const spk::Matrix4x4 &p_transform)
+		{
+			std::vector<spk::TMesh<spk::Vector3>::Triangle> result;
+			for (const auto &collider : p_body->colliders())
+			{
+				if ((collider == nullptr) == true)
+				{
+					continue;
+				}
+				for (const auto &unit : collider->units())
+				{
+					for (const auto &shape : unit.shapes())
+					{
+						if (std::holds_alternative<spk::TMesh<spk::Vector3>::Triangle>(shape) == true)
+						{
+							auto tri = std::get<spk::TMesh<spk::Vector3>::Triangle>(shape);
+							tri.a = p_transform * tri.a;
+							tri.b = p_transform * tri.b;
+							tri.c = p_transform * tri.c;
+							result.push_back(tri);
+						}
+						else
+						{
+							auto quad = std::get<spk::TMesh<spk::Vector3>::Quad>(shape);
+							result.push_back({p_transform * quad.a, p_transform * quad.b, p_transform * quad.c});
+							result.push_back({p_transform * quad.a, p_transform * quad.c, p_transform * quad.d});
+						}
+					}
+				}
+			}
+			return result;
+		}
 	}
 
 	bool RigidBody::intersect(const RigidBody *p_a, const spk::Matrix4x4 &p_transformA, const RigidBody *p_b, const spk::Matrix4x4 &p_transformB)
@@ -244,71 +277,16 @@ namespace spk
 			return false;
 		}
 
-		for (const auto &colliderA : p_a->colliders())
+		std::vector<spk::TMesh<spk::Vector3>::Triangle> triAs = collectTriangles(p_a, p_transformA);
+		std::vector<spk::TMesh<spk::Vector3>::Triangle> triBs = collectTriangles(p_b, p_transformB);
+
+		for (const auto &ta : triAs)
 		{
-			if (colliderA == nullptr)
+			for (const auto &tb : triBs)
 			{
-				continue;
-			}
-			for (const auto &unitA : colliderA->units())
-			{
-				for (const auto &shapeA : unitA.shapes())
+				if (trianglesIntersect(ta.a, ta.b, ta.c, tb.a, tb.b, tb.c) == true)
 				{
-					std::vector<spk::TMesh<spk::Vector3>::Triangle> triAs;
-					if (std::holds_alternative<spk::TMesh<spk::Vector3>::Triangle>(shapeA) == true)
-					{
-						auto tri = std::get<spk::TMesh<spk::Vector3>::Triangle>(shapeA);
-						tri.a = p_transformA * tri.a;
-						tri.b = p_transformA * tri.b;
-						tri.c = p_transformA * tri.c;
-						triAs.push_back(tri);
-					}
-					else
-					{
-						auto quad = std::get<spk::TMesh<spk::Vector3>::Quad>(shapeA);
-						triAs.push_back({p_transformA * quad.a, p_transformA * quad.b, p_transformA * quad.c});
-						triAs.push_back({p_transformA * quad.a, p_transformA * quad.c, p_transformA * quad.d});
-					}
-
-					for (const auto &colliderB : p_b->colliders())
-					{
-						if (colliderB == nullptr)
-						{
-							continue;
-						}
-						for (const auto &unitB : colliderB->units())
-						{
-							for (const auto &shapeB : unitB.shapes())
-							{
-								std::vector<spk::TMesh<spk::Vector3>::Triangle> triBs;
-								if (std::holds_alternative<spk::TMesh<spk::Vector3>::Triangle>(shapeB) == true)
-								{
-									auto tri = std::get<spk::TMesh<spk::Vector3>::Triangle>(shapeB);
-									tri.a = p_transformB * tri.a;
-									tri.b = p_transformB * tri.b;
-									tri.c = p_transformB * tri.c;
-									triBs.push_back(tri);
-								}
-								else
-								{
-									auto quad = std::get<spk::TMesh<spk::Vector3>::Quad>(shapeB);
-									triBs.push_back({p_transformB * quad.a, p_transformB * quad.b, p_transformB * quad.c});
-									triBs.push_back({p_transformB * quad.a, p_transformB * quad.c, p_transformB * quad.d});
-								}
-
-								for (const auto &ta : triAs)
-								{
-									for (const auto &tb : triBs)
-									{
-										if (trianglesIntersect(ta.a, ta.b, ta.c, tb.a, tb.b, tb.c) == true)
-										{
-											return true;
-										}
-									}
-								}
-							}
-						}
-					}
+					return true;
 				}
 			}
 		}

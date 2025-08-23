@@ -42,6 +42,125 @@ namespace
 		}
 		return false;
 	}
+
+	void addHit(
+		const spk::Vector3 &p_eye,
+		const spk::Vector3 &p_dir,
+		float p_t,
+		const spk::SafePointer<spk::Entity> &p_owner,
+		std::vector<spk::RayCast::Hit> &p_hits)
+	{
+		spk::RayCast::Hit hit{};
+		hit.position = p_eye + p_dir * p_t;
+		hit.entity = p_owner;
+		p_hits.push_back(hit);
+	}
+
+	void processTriangle(
+		const spk::Vector3 &p_eye,
+		const spk::Vector3 &p_dir,
+		float p_maxDistance,
+		const spk::Vector3 &p_offset,
+		const spk::TMesh<spk::Vector3>::Triangle &p_tri,
+		const spk::SafePointer<spk::Entity> &p_owner,
+		std::vector<spk::RayCast::Hit> &p_hits)
+	{
+		float t = 0.0f;
+		if (rayIntersectsTriangle(p_eye, p_dir, p_tri.a + p_offset, p_tri.b + p_offset, p_tri.c + p_offset, p_maxDistance, t) == true)
+		{
+			addHit(p_eye, p_dir, t, p_owner, p_hits);
+		}
+	}
+
+	void processQuad(
+		const spk::Vector3 &p_eye,
+		const spk::Vector3 &p_dir,
+		float p_maxDistance,
+		const spk::Vector3 &p_offset,
+		const spk::TMesh<spk::Vector3>::Quad &p_quad,
+		const spk::SafePointer<spk::Entity> &p_owner,
+		std::vector<spk::RayCast::Hit> &p_hits)
+	{
+		processTriangle(p_eye, p_dir, p_maxDistance, p_offset, {p_quad.a, p_quad.b, p_quad.c}, p_owner, p_hits);
+		processTriangle(p_eye, p_dir, p_maxDistance, p_offset, {p_quad.a, p_quad.c, p_quad.d}, p_owner, p_hits);
+	}
+
+	void processShape(
+		const std::variant<spk::TMesh<spk::Vector3>::Triangle, spk::TMesh<spk::Vector3>::Quad> &p_shape,
+		const spk::Vector3 &p_eye,
+		const spk::Vector3 &p_dir,
+		float p_maxDistance,
+		const spk::Vector3 &p_offset,
+		const spk::SafePointer<spk::Entity> &p_owner,
+		std::vector<spk::RayCast::Hit> &p_hits)
+	{
+		if (std::holds_alternative<spk::TMesh<spk::Vector3>::Triangle>(p_shape) == true)
+		{
+			processTriangle(p_eye, p_dir, p_maxDistance, p_offset, std::get<spk::TMesh<spk::Vector3>::Triangle>(p_shape), p_owner, p_hits);
+		}
+		else
+		{
+			processQuad(p_eye, p_dir, p_maxDistance, p_offset, std::get<spk::TMesh<spk::Vector3>::Quad>(p_shape), p_owner, p_hits);
+		}
+	}
+
+	void processUnit(
+		const spk::CollisionMesh::Unit &p_unit,
+		const spk::Vector3 &p_eye,
+		const spk::Vector3 &p_dir,
+		float p_maxDistance,
+		const spk::Vector3 &p_offset,
+		const spk::SafePointer<spk::Entity> &p_owner,
+		std::vector<spk::RayCast::Hit> &p_hits)
+	{
+		for (const auto &shape : p_unit.shapes())
+		{
+			processShape(shape, p_eye, p_dir, p_maxDistance, p_offset, p_owner, p_hits);
+		}
+	}
+
+	void processCollider(
+		const spk::SafePointer<const spk::CollisionMesh> &p_collider,
+		const spk::Vector3 &p_eye,
+		const spk::Vector3 &p_dir,
+		float p_maxDistance,
+		const spk::Vector3 &p_offset,
+		const spk::SafePointer<spk::Entity> &p_owner,
+		std::vector<spk::RayCast::Hit> &p_hits)
+	{
+		if ((p_collider == nullptr) == true)
+		{
+			return;
+		}
+		for (const auto &unit : p_collider->units())
+		{
+			processUnit(unit, p_eye, p_dir, p_maxDistance, p_offset, p_owner, p_hits);
+		}
+	}
+
+	void processBody(
+		const spk::SafePointer<spk::RigidBody> &p_body,
+		const spk::SafePointer<spk::GameEngine> &p_engine,
+		const spk::Vector3 &p_eye,
+		const spk::Vector3 &p_dir,
+		float p_maxDistance,
+		std::vector<spk::RayCast::Hit> &p_hits)
+	{
+		if ((p_body == nullptr) == true)
+		{
+			return;
+		}
+		spk::SafePointer<spk::Entity> owner = p_body->owner();
+		if ((owner == nullptr || owner->engine() != p_engine) == true)
+		{
+			return;
+		}
+		spk::Vector3 offset = owner->transform().position();
+		for (const auto &collider : p_body->colliders())
+		{
+			processCollider(collider, p_eye, p_dir, p_maxDistance, offset, owner, p_hits);
+		}
+	}
 }
 
 namespace spk
@@ -68,79 +187,22 @@ namespace spk
 		const spk::SafePointer<spk::GameEngine> &p_engine, const spk::Vector3 &p_eye, const spk::Vector3 &p_direction, float p_maxDistance)
 	{
 		std::vector<Hit> hits;
-		if (p_engine == nullptr)
+		if ((p_engine == nullptr) == true)
 		{
 			return hits;
 		}
 		spk::Vector3 dir = p_direction.normalize();
-
 		std::vector<spk::SafePointer<spk::RigidBody>> bodies = spk::RigidBody::getRigidBodies();
 		for (const auto &body : bodies)
 		{
-			if (body == nullptr)
-			{
-				continue;
-			}
-
-			spk::SafePointer<spk::Entity> owner = body->owner();
-			if (owner == nullptr || owner->engine() != p_engine)
-			{
-				continue;
-			}
-			spk::Vector3 offset = owner->transform().position();
-
-			for (const auto &collider : body->colliders())
-			{
-				if (collider == nullptr)
-				{
-					continue;
-				}
-
-				for (const auto &unit : collider->units())
-				{
-					for (const auto &shape : unit.shapes())
-					{
-						if (std::holds_alternative<spk::TMesh<spk::Vector3>::Triangle>(shape) == true)
-						{
-							const auto &tri = std::get<spk::TMesh<spk::Vector3>::Triangle>(shape);
-							float t = 0.0f;
-							if (rayIntersectsTriangle(p_eye, dir, tri.a + offset, tri.b + offset, tri.c + offset, p_maxDistance, t) == true)
-							{
-								Hit hit;
-								hit.position = p_eye + dir * t;
-								hit.entity = owner;
-								hits.push_back(hit);
-							}
-						}
-						else
-						{
-							const auto &quad = std::get<spk::TMesh<spk::Vector3>::Quad>(shape);
-							float t = 0.0f;
-							if (rayIntersectsTriangle(p_eye, dir, quad.a + offset, quad.b + offset, quad.c + offset, p_maxDistance, t) == true)
-							{
-								Hit hit;
-								hit.position = p_eye + dir * t;
-								hit.entity = owner;
-								hits.push_back(hit);
-							}
-							if (rayIntersectsTriangle(p_eye, dir, quad.a + offset, quad.c + offset, quad.d + offset, p_maxDistance, t) == true)
-							{
-								Hit hit;
-								hit.position = p_eye + dir * t;
-								hit.entity = owner;
-								hits.push_back(hit);
-							}
-						}
-					}
-				}
-			}
+			processBody(body, p_engine, p_eye, dir, p_maxDistance, hits);
 		}
 		return hits;
 	}
 
 	RayCast::Hit RayCast::launch(const spk::SafePointer<spk::Entity> &p_entity, const spk::Vector3 &p_direction, float p_maxDistance)
 	{
-		if (p_entity == nullptr)
+		if ((p_entity == nullptr) == true)
 		{
 			return {};
 		}
@@ -149,7 +211,7 @@ namespace spk
 
 	std::vector<RayCast::Hit> RayCast::launchAll(const spk::SafePointer<spk::Entity> &p_entity, const spk::Vector3 &p_direction, float p_maxDistance)
 	{
-		if (p_entity == nullptr)
+		if ((p_entity == nullptr) == true)
 		{
 			return {};
 		}
