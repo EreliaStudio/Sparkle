@@ -1059,32 +1059,33 @@ public:
 
 	void start() override
 	{
-		spk::SafePointer<spk::Entity> currentOwner = owner();
-		if ((currentOwner == nullptr) == true)
-		{
-			return;
-		}
-
-		_cameraComponent = currentOwner->getComponent<spk::CameraComponent>();
+		_cameraComponent = owner()->getComponent<spk::CameraComponent>();
 	}
 
-	void onUpdateEvent(spk::UpdateEvent &p_event) override
+	void onMouseEvent(spk::MouseEvent &p_event) override
 	{
-		spk::SafePointer<spk::Entity> currentOwner = owner();
-		if ((currentOwner == nullptr) == true || (p_event.mouse == nullptr) == true || (_cameraComponent == nullptr) == true)
+		if (_cameraComponent == nullptr || p_event.type != spk::MouseEvent::Type::Press)
 		{
 			return;
 		}
 
-		spk::Vector2 mousePosition = spk::Viewport::convertScreenToOpenGL(p_event.mouse->position());
-		spk::Vector3 cameraDirection = _cameraComponent->camera().convertScreenToCamera(mousePosition);
-		spk::Vector3 worldDirection = (currentOwner->transform().model() * spk::Vector4(cameraDirection, 0)).xyz();
+		spk::cout << " ------ BEGIN ------" << std::endl;
+		spk::Vector3 cameraDirection = _cameraComponent->camera().convertScreenToCamera(spk::Viewport::convertScreenToOpenGL(p_event.mouse->position()));
 
-		auto hit = spk::RayCast::launch(currentOwner, worldDirection, 1000.0f);
-		if ((hit.entity != nullptr) == true)
+		const auto& camMtx = _cameraComponent->owner()->transform().model();
+		spk::Vector3 worldDirection = (camMtx * spk::Vector4(cameraDirection, 0.0f)).xyz().normalize();
+
+		spk::cout << " ------ SOLO  ------" << std::endl;
+		auto soloHit = spk::RayCast::launch(owner(), worldDirection, 1000.0f);
+		spk::cout << "Hit on [" << (soloHit.entity == nullptr ? L"None" : soloHit.entity->name() ) << "] at position : " << soloHit.position << " (" << soloHit.position.floor() << ")" <<  std::endl;
+
+		spk::cout << " ------ MULTI ------" << std::endl;
+		auto hits = spk::RayCast::launchAll(owner(), worldDirection, 1000.0f);
+		for (auto hit : hits)
 		{
-			std::cout << "Hit position: " << hit.position.x << ", " << hit.position.y << ", " << hit.position.z << std::endl;
+			spk::cout << "Hit on [" << (hit.entity == nullptr ? L"None" : hit.entity->name() ) << "] at position : " << hit.position << " (" << hit.position.floor() << ")" <<  std::endl;
 		}
+		spk::cout << " ------  END  ------" << std::endl;
 	}
 };
 
@@ -1142,8 +1143,8 @@ int main()
 	rayCastPrinter->activate();
 
 	player.cameraComponent()->setPerspective(60.0f, static_cast<float>(window->geometry().size.x) / static_cast<float>(window->geometry().size.y));
-	player.transform().place({5.0f, 5.0f, 5.0f});
-	player.transform().lookAt({0.0f, 0.0f, 0.0f});
+	player.transform().place({5.0f, 4.0f, 0.0f});
+	player.transform().lookAt({0.0f, 4.0f, 0.0f});
 
 	BlockMap<16, 16, 16> blockMap = BlockMap<16, 16, 16>(L"BlockMap", nullptr);
 	blockMap.setTexture(Block::texture());
