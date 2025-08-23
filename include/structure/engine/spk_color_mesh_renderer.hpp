@@ -4,6 +4,7 @@
 #include "structure/engine/spk_component.hpp"
 #include "structure/engine/spk_transform.hpp"
 #include "structure/graphics/lumina/spk_shader.hpp"
+#include "structure/graphics/lumina/spk_shader_object_factory.hpp"
 
 namespace spk
 {
@@ -13,12 +14,14 @@ namespace spk
 		class Painter
 		{
 		private:
+			static inline spk::Lumina::ShaderObjectFactory::Instanciator _instanciator;
+			
 			static spk::Lumina::Shader _createShader();
 			static spk::Lumina::Shader _shader;
 
 			spk::Lumina::Shader::Object _object;
 			spk::OpenGL::BufferSet _bufferSet;
-			spk::Lumina::Shader::UBO _transformUBO;
+			spk::OpenGL::UniformBufferObject _transformUBO;
 
 		public:
 			Painter();
