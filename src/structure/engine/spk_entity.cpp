@@ -1,4 +1,7 @@
 #include "structure/engine/spk_entity.hpp"
+#include "structure/engine/spk_collision_trigger.hpp"
+#include "structure/engine/spk_game_engine.hpp"
+#include "structure/engine/spk_rigid_body.hpp"
 
 namespace spk
 {
@@ -68,6 +71,25 @@ namespace spk
 		return (_tags.find(p_tag) != _tags.end());
 	}
 
+	void Entity::setEngine(GameEngine *p_engine)
+	{
+		_engine = p_engine;
+		for (auto &child : children())
+		{
+			child->setEngine(p_engine);
+		}
+	}
+
+	spk::SafePointer<GameEngine> Entity::engine()
+	{
+		return (_engine);
+	}
+
+	spk::SafePointer<const GameEngine> Entity::engine() const
+	{
+		return (_engine);
+	}
+
 	const std::wstring &Entity::name() const
 	{
 		return (_name);
@@ -106,6 +128,33 @@ namespace spk
 			component->stop();
 		}
 		_components.clear();
+	}
+
+	void Entity::addChild(spk::SafePointer<Entity> p_child)
+	{
+		spk::InherenceObject<Entity>::addChild(p_child);
+		p_child->setEngine(_engine);
+	}
+
+	void Entity::removeChild(spk::SafePointer<Entity> p_child)
+	{
+		spk::InherenceObject<Entity>::removeChild(p_child);
+		p_child->setEngine(nullptr);
+	}
+
+	void Entity::removeChild(Entity *p_child)
+	{
+		spk::InherenceObject<Entity>::removeChild(p_child);
+		p_child->setEngine(nullptr);
+	}
+
+	void Entity::clearChildren()
+	{
+		for (auto &child : children())
+		{
+			child->setEngine(nullptr);
+		}
+		spk::InherenceObject<Entity>::clearChildren();
 	}
 
 	void Entity::removeComponent(const std::wstring &p_name)
@@ -510,5 +559,65 @@ namespace spk
 			children().begin(),
 			children().end(),
 			[&](const spk::SafePointer<const Entity> &p_child) { return (matchesTags(*p_child, p_tags, p_binaryOperator)); }));
+	}
+
+	void Entity::_markForCollision()
+	{
+		if (_engine != nullptr)
+		{
+			_engine->_markForCollision(this);
+		}
+	}
+
+	bool Entity::checkCollision(const spk::Vector3 &p_positionOffset, const spk::Vector3 &p_scaleOffset, const spk::Vector3 &p_rotationOffset)
+	{
+		spk::SafePointer<RigidBody> bodyPtr = getComponent<RigidBody>();
+		if (bodyPtr == nullptr)
+		{
+			return false;
+		}
+		RigidBody *selfBody = bodyPtr.get();
+
+		Transform &t = transform();
+		spk::Matrix4x4 translationMatrix = spk::Matrix4x4::translation(t.localPosition() + p_positionOffset);
+		spk::Matrix4x4 scaleMatrix = spk::Matrix4x4::scale(t.scale() + p_scaleOffset);
+		spk::Quaternion rotQuat = t.rotationQuaternion() * spk::Quaternion::fromEuler(p_rotationOffset);
+		spk::Matrix4x4 rotationMatrix = spk::Matrix4x4::rotation(rotQuat);
+		spk::Matrix4x4 parentModel = spk::Matrix4x4::identity();
+		if (parent() != nullptr)
+		{
+			parentModel = static_cast<Entity *>(parent())->transform().model();
+		}
+		spk::Matrix4x4 selfModel = scaleMatrix * rotationMatrix * translationMatrix * parentModel;
+
+		bool hasOffset = (p_positionOffset != spk::Vector3() || p_scaleOffset != spk::Vector3() || p_rotationOffset != spk::Vector3());
+
+		bool colliding = false;
+		auto bodies = RigidBody::getRigidBodies();
+		for (auto &bodyCandidate : bodies)
+		{
+			RigidBody *other = bodyCandidate.get();
+			if (other == nullptr || other == selfBody)
+			{
+				continue;
+			}
+			spk::Matrix4x4 otherModel = other->owner()->transform().model();
+			if (RigidBody::intersect(selfBody, selfModel, other, otherModel) == true)
+			{
+				colliding = true;
+				if (hasOffset == false)
+				{
+					if (auto selfTrigger = getComponent<CollisionTrigger>().get(); selfTrigger != nullptr)
+					{
+						selfTrigger->registerCollision(other);
+					}
+					if (auto otherTrigger = other->owner()->getComponent<CollisionTrigger>().get(); otherTrigger != nullptr)
+					{
+						otherTrigger->registerCollision(selfBody);
+					}
+				}
+			}
+		}
+		return colliding;
 	}
 }

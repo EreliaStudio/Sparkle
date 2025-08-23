@@ -10,6 +10,7 @@
 
 #include "structure/spk_iostream.hpp"
 
+#include "spk_constants.hpp"
 #include "structure/system/spk_exception.hpp"
 
 namespace spk
@@ -28,8 +29,8 @@ namespace spk
 			{
 				if (p_index >= SizeY)
 				{
-					throw std::invalid_argument("Can't access the row " + std::to_string(p_index) + " on a matrix " + std::to_string(SizeX) + "x" +
-												std::to_string(SizeY));
+					throw std::invalid_argument(
+						"Can't access the row " + std::to_string(p_index) + " on a matrix " + std::to_string(SizeX) + "x" + std::to_string(SizeY));
 				}
 				return (rows[p_index]);
 			}
@@ -37,8 +38,8 @@ namespace spk
 			{
 				if (p_index >= SizeY)
 				{
-					throw std::invalid_argument("Can't access the row " + std::to_string(p_index) + " on a matrix " + std::to_string(SizeX) + "x" +
-												std::to_string(SizeY));
+					throw std::invalid_argument(
+						"Can't access the row " + std::to_string(p_index) + " on a matrix " + std::to_string(SizeX) + "x" + std::to_string(SizeY));
 				}
 				return (rows[p_index]);
 			}
@@ -96,8 +97,8 @@ namespace spk
 		{
 			if (p_index >= SizeX)
 			{
-				throw std::invalid_argument("Can't access the column " + std::to_string(p_index) + " on a matrix " + std::to_string(SizeX) + "x" +
-											std::to_string(SizeY));
+				throw std::invalid_argument(
+					"Can't access the column " + std::to_string(p_index) + " on a matrix " + std::to_string(SizeX) + "x" + std::to_string(SizeY));
 			}
 			return (cols[p_index]);
 		}
@@ -106,8 +107,8 @@ namespace spk
 		{
 			if (p_index >= SizeX)
 			{
-				throw std::invalid_argument("Can't access the column " + std::to_string(p_index) + " on a matrix " + std::to_string(SizeX) + "x" +
-											std::to_string(SizeY));
+				throw std::invalid_argument(
+					"Can't access the column " + std::to_string(p_index) + " on a matrix " + std::to_string(SizeX) + "x" + std::to_string(SizeY));
 			}
 			return (cols[p_index]);
 		}
@@ -454,12 +455,16 @@ namespace spk
 				}
 
 				if (maxElem < 1e-9f)
+				{
 					return 0.0f;
+				}
 
 				if (pivotRow != i)
 				{
 					for (size_t c = 0; c < N; ++c)
+					{
 						std::swap(A[c][i], A[c][pivotRow]);
+					}
 					sign = -sign;
 				}
 
@@ -467,7 +472,9 @@ namespace spk
 				{
 					float factor = A[i][r] / A[i][i];
 					for (size_t c = i; c < N; ++c)
+					{
 						A[c][r] -= factor * A[c][i];
+					}
 				}
 
 				det *= A[i][i];
@@ -479,7 +486,7 @@ namespace spk
 		template <size_t X = SizeX, size_t Y = SizeY, typename std::enable_if_t<(X == Y), int> = 0>
 		bool isInvertible() const
 		{
-			return std::fabs(this->determinant()) > std::numeric_limits<float>::epsilon();
+			return std::fabs(this->determinant()) > spk::Constants::pointPrecision;
 		}
 
 		template <size_t X = SizeX, size_t Y = SizeY, typename std::enable_if_t<(X == Y), int> = 0>
@@ -492,7 +499,7 @@ namespace spk
 
 			if (isInvertible() == false)
 			{
-			    GENERATE_ERROR("Matrix is not invertible (determinant is ~0).");
+				GENERATE_ERROR("Matrix is not invertible (determinant is ~0).");
 			}
 
 			const size_t N = SizeX;
