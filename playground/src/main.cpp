@@ -667,12 +667,14 @@ public:
 		{
 		private:
 			spk::SafePointer<spk::ObjMeshRenderer> _renderer;
+			spk::SafePointer<spk::RigidBody> _rigidBody;
 
 			spk::SafePointer<BlockMap> _blockMap;
 			std::array<std::array<std::array<Block::Specifier, ChunkSizeX>, ChunkSizeY>, ChunkSizeZ> _content;
 
 			bool _isBaked = false;
 			spk::ObjMesh _mesh;
+			spk::CollisionMesh _collisionMesh;
 
 			Block::NeightbourDescriber _computeNeightbourSpecifiers(int p_x, int p_y, int p_z)
 			{
@@ -719,6 +721,8 @@ public:
 						}
 					}
 				}
+
+				_collisionMesh = _mesh.createCollider();
 
 				_isBaked = true;
 			}
@@ -783,6 +787,7 @@ public:
 			void start() override
 			{
 				_renderer = owner()->template getComponent<spk::ObjMeshRenderer>();
+				_rigidBody = owner()->template getComponent<spk::RigidBody>();
 			}
 
 			void onPaintEvent(spk::PaintEvent &p_event) override
@@ -794,6 +799,7 @@ public:
 					if (_renderer != nullptr)
 					{
 						_renderer->setMesh(mesh());
+						_rigidBody->setCollider(collisionMesh());
 						p_event.requestPaint();
 					}
 				}
@@ -807,9 +813,19 @@ public:
 			{
 				return (&_mesh);
 			}
+
+			spk::SafePointer<spk::CollisionMesh> collisionMesh()
+			{
+				return (&_collisionMesh);
+			}
+			const spk::SafePointer<const spk::CollisionMesh> collisionMesh() const
+			{
+				return (&_collisionMesh);
+			}
 		};
 
 		spk::SafePointer<spk::ObjMeshRenderer> _renderer;
+		spk::SafePointer<spk::RigidBody> _rigidBody;
 		spk::SafePointer<Data> _data;
 
 	public:
@@ -817,6 +833,7 @@ public:
 			spk::Entity(p_name, p_parent)
 		{
 			_renderer = this->template addComponent<spk::ObjMeshRenderer>(p_name + L"/ObjMeshRenderer");
+			_rigidBody = this->template addComponent<spk::RigidBody>(p_name + L"/RigidBody");
 			_data = this->template addComponent<Data>(p_name + L"/Data");
 			_data->setBlockMap(p_parent);
 
