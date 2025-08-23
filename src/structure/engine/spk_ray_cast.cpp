@@ -156,10 +156,7 @@ namespace
 			return;
 		}
 		spk::Vector3 offset = owner->transform().position();
-		for (const auto &collider : p_body->colliders())
-		{
-			processCollider(collider, p_eye, p_dir, p_maxDistance, offset, owner, p_hits);
-		}
+		processCollider(p_body->collider(), p_eye, p_dir, p_maxDistance, offset, owner, p_hits);
 	}
 }
 
