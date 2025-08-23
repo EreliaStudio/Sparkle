@@ -110,7 +110,7 @@ namespace spk
 
 		void addChild(spk::SafePointer<Entity> p_child) override;
 		void removeChild(spk::SafePointer<Entity> p_child) override;
-		void removeChild(Entity *p_child) override;
+		void removeChild(InherenceObject<Entity>::Child p_child) override;
 		void clearChildren();
 
 		template <typename TComponentType, typename... TArgs>
