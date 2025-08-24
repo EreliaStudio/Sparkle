@@ -24,14 +24,13 @@ namespace spk
 			if (std::holds_alternative<spk::ObjMesh::Quad>(shapeVariant) == true)
 			{
 				const auto &q = std::get<spk::ObjMesh::Quad>(shapeVariant);
-				poly.points = {q.a.position, q.b.position, q.c.position, q.d.position};
+				poly.addQuad(q.a.position, q.b.position, q.c.position, q.d.position);
 			}
 			else
 			{
 				const auto &t = std::get<spk::ObjMesh::Triangle>(shapeVariant);
-				poly.points = {t.a.position, t.b.position, t.c.position};
+				poly.addTriangle(t.a.position, t.b.position, t.c.position);
 			}
-			poly.rewind(spk::Polygon::Winding::CounterClockwise);
 			polys.push_back(poly);
 		}
 
@@ -43,9 +42,9 @@ namespace spk
 			{
 				for (size_t j = i + 1; j < polys.size(); ++j)
 				{
-					if (polys[i].isMergable(polys[j]) == true)
+					if (polys[i].canInsert(polys[j]) == true)
 					{
-						polys[i].merge(polys[j]);
+						polys[i].addPolygon(polys[j]);
 						polys.erase(polys.begin() + j);
 						merged = true;
 						break;
@@ -59,7 +58,6 @@ namespace spk
 		{
 			if (poly.isConvex() == true)
 			{
-				poly.rewind(spk::Polygon::Winding::CounterClockwise);
 				result.addPolygon(poly);
 			}
 			else
@@ -67,7 +65,6 @@ namespace spk
 				auto parts = poly.split();
 				for (auto &part : parts)
 				{
-					part.rewind(spk::Polygon::Winding::CounterClockwise);
 					result.addPolygon(part);
 				}
 			}

@@ -19,12 +19,13 @@ TEST_F(CollisionMeshTest, MergeTrianglesIntoQuad) // NOLINT
 	spk::CollisionMesh mesh = spk::CollisionMesh::fromObjMesh(ptr);
 
 	ASSERT_EQ(mesh.polygons().size(), 1);
-	EXPECT_EQ(mesh.polygons()[0].points.size(), 4);
+	const auto &wire = mesh.polygons()[0].pointsRef();
+	EXPECT_EQ(wire.size(), 4u);
 
 	auto copy = mesh.polygons()[0];
-	auto before = copy;
-	copy.rewind(spk::Polygon::Winding::CounterClockwise);
-	EXPECT_EQ(copy.points, before.points);
+	auto before = copy.pointsRef();
+	auto after = copy.rewind();
+	EXPECT_EQ(after, before);
 }
 
 TEST_F(CollisionMeshTest, SplitConcave) // NOLINT
@@ -47,13 +48,13 @@ TEST_F(CollisionMeshTest, SplitConcave) // NOLINT
 	spk::SafePointer<spk::ObjMesh> ptr(&obj);
 	spk::CollisionMesh mesh = spk::CollisionMesh::fromObjMesh(ptr);
 
-	EXPECT_GT(mesh.polygons().size(), 1);
+	EXPECT_GT(mesh.polygons().size(), 1u);
 	for (const auto &poly : mesh.polygons())
 	{
 		EXPECT_TRUE(poly.isConvex());
 		auto copy = poly;
-		auto before = copy;
-		copy.rewind(spk::Polygon::Winding::CounterClockwise);
-		EXPECT_EQ(copy.points, before.points);
+		auto before = copy.pointsRef();
+		auto after = copy.rewind();
+		EXPECT_EQ(after, before);
 	}
 }

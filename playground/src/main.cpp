@@ -435,12 +435,15 @@ private:
 	static spk::Polygon _translated(const spk::Polygon &p_poly, const spk::Vector3 &p_delta)
 	{
 		spk::Polygon out;
-		out.points.reserve(p_poly.points.size());
-		std::transform(
-			p_poly.points.begin(),
-			p_poly.points.end(),
-			std::back_inserter(out.points),
-			[&](const spk::Vector3 &p_point) { return p_point + p_delta; });
+		const auto &wire = p_poly.pointsRef();
+		if (wire.size() == 3)
+		{
+			out.addTriangle(wire[0] + p_delta, wire[1] + p_delta, wire[2] + p_delta);
+		}
+		else if (wire.size() == 4)
+		{
+			out.addQuad(wire[0] + p_delta, wire[1] + p_delta, wire[2] + p_delta, wire[3] + p_delta);
+		}
 		return out;
 	}
 

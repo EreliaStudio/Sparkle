@@ -51,7 +51,8 @@ namespace spk
 		{
 			for (const auto &poly : collider->polygons())
 			{
-				for (const auto &vertex : poly.points)
+				const auto &wire = poly.pointsRef();
+				for (const auto &vertex : wire)
 				{
 					if (initialized == false)
 					{
@@ -100,7 +101,8 @@ namespace spk
 			{
 				for (const auto &poly : collider->polygons())
 				{
-					for (const auto &vertex : poly.points)
+					const auto &wire = poly.pointsRef();
+					for (const auto &vertex : wire)
 					{
 						spk::Vector3 transformed = p_model * vertex;
 						if (initialized == false)
