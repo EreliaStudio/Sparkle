@@ -317,13 +317,13 @@ namespace spk
 		std::sort(
 			proj.begin(),
 			proj.end(),
-			[](const auto &a, const auto &b)
+			[](const auto &p_a, const auto &p_b)
 			{
-				if (a.first.x != b.first.x)
+				if (p_a.first.x != p_b.first.x)
 				{
-					return a.first.x < b.first.x;
+					return p_a.first.x < p_b.first.x;
 				}
-				return a.first.y < b.first.y;
+				return p_a.first.y < p_b.first.y;
 			});
 
 		std::vector<size_t> hull;
@@ -472,7 +472,7 @@ namespace spk
 				break;
 			}
 		}
-		rewind(Winding::CounterClockwise);
+
 		return result;
 	}
 }
