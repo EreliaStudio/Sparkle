@@ -56,12 +56,27 @@ namespace
 		p_hits.push_back(hit);
 	}
 
+	struct Triangle
+	{
+		spk::Vector3 a;
+		spk::Vector3 b;
+		spk::Vector3 c;
+	};
+
+	struct Quad
+	{
+		spk::Vector3 a;
+		spk::Vector3 b;
+		spk::Vector3 c;
+		spk::Vector3 d;
+	};
+
 	void processTriangle(
 		const spk::Vector3 &p_eye,
 		const spk::Vector3 &p_dir,
 		float p_maxDistance,
 		const spk::Vector3 &p_offset,
-		const spk::TMesh<spk::Vector3>::Triangle &p_tri,
+		const Triangle &p_tri,
 		const spk::SafePointer<spk::Entity> &p_owner,
 		std::vector<spk::RayCast::Hit> &p_hits)
 	{
@@ -77,31 +92,12 @@ namespace
 		const spk::Vector3 &p_dir,
 		float p_maxDistance,
 		const spk::Vector3 &p_offset,
-		const spk::TMesh<spk::Vector3>::Quad &p_quad,
+		const Quad &p_quad,
 		const spk::SafePointer<spk::Entity> &p_owner,
 		std::vector<spk::RayCast::Hit> &p_hits)
 	{
 		processTriangle(p_eye, p_dir, p_maxDistance, p_offset, {p_quad.a, p_quad.b, p_quad.c}, p_owner, p_hits);
 		processTriangle(p_eye, p_dir, p_maxDistance, p_offset, {p_quad.a, p_quad.c, p_quad.d}, p_owner, p_hits);
-	}
-
-	void processShape(
-		const std::variant<spk::TMesh<spk::Vector3>::Triangle, spk::TMesh<spk::Vector3>::Quad> &p_shape,
-		const spk::Vector3 &p_eye,
-		const spk::Vector3 &p_dir,
-		float p_maxDistance,
-		const spk::Vector3 &p_offset,
-		const spk::SafePointer<spk::Entity> &p_owner,
-		std::vector<spk::RayCast::Hit> &p_hits)
-	{
-		if (std::holds_alternative<spk::TMesh<spk::Vector3>::Triangle>(p_shape) == true)
-		{
-			processTriangle(p_eye, p_dir, p_maxDistance, p_offset, std::get<spk::TMesh<spk::Vector3>::Triangle>(p_shape), p_owner, p_hits);
-		}
-		else
-		{
-			processQuad(p_eye, p_dir, p_maxDistance, p_offset, std::get<spk::TMesh<spk::Vector3>::Quad>(p_shape), p_owner, p_hits);
-		}
 	}
 
 	void processUnit(
@@ -113,9 +109,15 @@ namespace
 		const spk::SafePointer<spk::Entity> &p_owner,
 		std::vector<spk::RayCast::Hit> &p_hits)
 	{
-		for (const auto &shape : p_unit.shapes())
+		if ((p_unit.points.size() == 3) == true)
 		{
-			processShape(shape, p_eye, p_dir, p_maxDistance, p_offset, p_owner, p_hits);
+			Triangle tri{p_unit.points[0], p_unit.points[1], p_unit.points[2]};
+			processTriangle(p_eye, p_dir, p_maxDistance, p_offset, tri, p_owner, p_hits);
+		}
+		else if ((p_unit.points.size() == 4) == true)
+		{
+			Quad quad{p_unit.points[0], p_unit.points[1], p_unit.points[2], p_unit.points[3]};
+			processQuad(p_eye, p_dir, p_maxDistance, p_offset, quad, p_owner, p_hits);
 		}
 	}
 
