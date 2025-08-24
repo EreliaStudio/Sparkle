@@ -12,7 +12,7 @@ namespace spk
 		return (_units);
 	}
 
-	CollisionMesh CollisionMesh::fromObjMesh(const spk::SafePointer<spk::ObjMesh>& p_mesh)
+	CollisionMesh CollisionMesh::fromObjMesh(const spk::SafePointer<spk::ObjMesh> &p_mesh)
 	{
 		spk::CollisionMesh result;
 		for (const auto &shapeVariant : p_mesh->shapes())
@@ -21,15 +21,15 @@ namespace spk
 			if (std::holds_alternative<spk::ObjMesh::Quad>(shapeVariant) == true)
 			{
 				const auto &q = std::get<spk::ObjMesh::Quad>(shapeVariant);
-				unit.addShape(q.a.position, q.b.position, q.c.position, q.d.position);
+				unit.points = {q.a.position, q.b.position, q.c.position, q.d.position};
 			}
 			else
 			{
 				const auto &t = std::get<spk::ObjMesh::Triangle>(shapeVariant);
-				unit.addShape(t.a.position, t.b.position, t.c.position);
+				unit.points = {t.a.position, t.b.position, t.c.position};
 			}
 			result.addUnit(unit);
 		}
-		return result;
+		return (result);
 	}
 }

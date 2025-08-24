@@ -92,13 +92,20 @@ void main()
 		unsigned int offset = 0;
 		for (const auto &unit : p_mesh.units())
 		{
-			const auto &buffer = unit.buffer();
-			_bufferSet.layout() << buffer.vertices;
-			for (unsigned int index : buffer.indexes)
+			for (const auto &point : unit.points)
 			{
-				_bufferSet.indexes() << (index + offset);
+				_bufferSet.layout() << point;
 			}
-			offset += static_cast<unsigned int>(buffer.vertices.size());
+			if ((unit.points.size() == 3) == true)
+			{
+				_bufferSet.indexes() << (offset + 0) << (offset + 1) << (offset + 2);
+			}
+			else if ((unit.points.size() == 4) == true)
+			{
+				_bufferSet.indexes() << (offset + 0) << (offset + 1) << (offset + 2);
+				_bufferSet.indexes() << (offset + 0) << (offset + 2) << (offset + 3);
+			}
+			offset += static_cast<unsigned int>(unit.points.size());
 		}
 	}
 

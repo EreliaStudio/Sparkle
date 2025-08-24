@@ -1,8 +1,8 @@
 #include "structure/engine/spk_rigid_body.hpp"
 #include "spk_constants.hpp"
 #include "structure/engine/spk_entity.hpp"
+#include "structure/engine/spk_mesh.hpp"
 #include <algorithm>
-#include <variant>
 #include <vector>
 
 namespace spk
@@ -51,8 +51,7 @@ namespace spk
 		{
 			for (const auto &unit : collider->units())
 			{
-				const auto &vertices = unit.buffer().vertices;
-				for (const auto &vertex : vertices)
+				for (const auto &vertex : unit.points)
 				{
 					if (initialized == false)
 					{
@@ -101,7 +100,7 @@ namespace spk
 			{
 				for (const auto &unit : collider->units())
 				{
-					for (const auto &vertex : unit.buffer().vertices)
+					for (const auto &vertex : unit.points)
 					{
 						spk::Vector3 transformed = p_model * vertex;
 						if (initialized == false)
@@ -235,26 +234,26 @@ namespace spk
 			{
 				for (const auto &unit : collider->units())
 				{
-					for (const auto &shape : unit.shapes())
+					if ((unit.points.size() == 3) == true)
 					{
-						if (std::holds_alternative<spk::TMesh<spk::Vector3>::Triangle>(shape) == true)
-						{
-							auto tri = std::get<spk::TMesh<spk::Vector3>::Triangle>(shape);
-							tri.a = p_transform * tri.a;
-							tri.b = p_transform * tri.b;
-							tri.c = p_transform * tri.c;
-							result.push_back(tri);
-						}
-						else
-						{
-							auto quad = std::get<spk::TMesh<spk::Vector3>::Quad>(shape);
-							result.push_back({p_transform * quad.a, p_transform * quad.b, p_transform * quad.c});
-							result.push_back({p_transform * quad.a, p_transform * quad.c, p_transform * quad.d});
-						}
+						spk::TMesh<spk::Vector3>::Triangle tri{unit.points[0], unit.points[1], unit.points[2]};
+						tri.a = p_transform * tri.a;
+						tri.b = p_transform * tri.b;
+						tri.c = p_transform * tri.c;
+						result.push_back(tri);
+					}
+					else if ((unit.points.size() == 4) == true)
+					{
+						spk::Vector3 a = p_transform * unit.points[0];
+						spk::Vector3 b = p_transform * unit.points[1];
+						spk::Vector3 c = p_transform * unit.points[2];
+						spk::Vector3 d = p_transform * unit.points[3];
+						result.push_back({a, b, c});
+						result.push_back({a, c, d});
 					}
 				}
 			}
-			return result;
+			return (result);
 		}
 	}
 
