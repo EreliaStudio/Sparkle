@@ -237,12 +237,13 @@ namespace spk
 				for (const auto &poly : collider->polygons())
 				{
 					auto tris = poly.triangulize();
-					for (auto &tri : tris)
+					for (const auto &tri : tris)
 					{
-						tri.points[0] = p_transform * tri.points[0];
-						tri.points[1] = p_transform * tri.points[1];
-						tri.points[2] = p_transform * tri.points[2];
-						result.push_back({tri.points[0], tri.points[1], tri.points[2]});
+						const auto &pts = tri.pointsRef();
+						spk::Vector3 p0 = p_transform * pts[0];
+						spk::Vector3 p1 = p_transform * pts[1];
+						spk::Vector3 p2 = p_transform * pts[2];
+						result.push_back({p0, p1, p2});
 					}
 				}
 			}
