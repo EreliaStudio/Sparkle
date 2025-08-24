@@ -56,37 +56,8 @@ namespace
 		p_hits.push_back(hit);
 	}
 
-	void processTriangle(
-		const spk::Vector3 &p_eye,
-		const spk::Vector3 &p_dir,
-		float p_maxDistance,
-		const spk::Vector3 &p_offset,
-		const spk::TMesh<spk::Vector3>::Triangle &p_tri,
-		const spk::SafePointer<spk::Entity> &p_owner,
-		std::vector<spk::RayCast::Hit> &p_hits)
-	{
-		float t = 0.0f;
-		if (rayIntersectsTriangle(p_eye, p_dir, p_tri.a + p_offset, p_tri.b + p_offset, p_tri.c + p_offset, p_maxDistance, t) == true)
-		{
-			addHit(p_eye, p_dir, t, p_owner, p_hits);
-		}
-	}
-
-	void processQuad(
-		const spk::Vector3 &p_eye,
-		const spk::Vector3 &p_dir,
-		float p_maxDistance,
-		const spk::Vector3 &p_offset,
-		const spk::TMesh<spk::Vector3>::Quad &p_quad,
-		const spk::SafePointer<spk::Entity> &p_owner,
-		std::vector<spk::RayCast::Hit> &p_hits)
-	{
-		processTriangle(p_eye, p_dir, p_maxDistance, p_offset, {p_quad.a, p_quad.b, p_quad.c}, p_owner, p_hits);
-		processTriangle(p_eye, p_dir, p_maxDistance, p_offset, {p_quad.a, p_quad.c, p_quad.d}, p_owner, p_hits);
-	}
-
-	void processShape(
-		const std::variant<spk::TMesh<spk::Vector3>::Triangle, spk::TMesh<spk::Vector3>::Quad> &p_shape,
+	void processPolygon(
+		const spk::Polygon &p_poly,
 		const spk::Vector3 &p_eye,
 		const spk::Vector3 &p_dir,
 		float p_maxDistance,
@@ -94,28 +65,15 @@ namespace
 		const spk::SafePointer<spk::Entity> &p_owner,
 		std::vector<spk::RayCast::Hit> &p_hits)
 	{
-		if (std::holds_alternative<spk::TMesh<spk::Vector3>::Triangle>(p_shape) == true)
+		auto tris = p_poly.triangulize();
+		for (const auto &tri : tris)
 		{
-			processTriangle(p_eye, p_dir, p_maxDistance, p_offset, std::get<spk::TMesh<spk::Vector3>::Triangle>(p_shape), p_owner, p_hits);
-		}
-		else
-		{
-			processQuad(p_eye, p_dir, p_maxDistance, p_offset, std::get<spk::TMesh<spk::Vector3>::Quad>(p_shape), p_owner, p_hits);
-		}
-	}
-
-	void processUnit(
-		const spk::CollisionMesh::Unit &p_unit,
-		const spk::Vector3 &p_eye,
-		const spk::Vector3 &p_dir,
-		float p_maxDistance,
-		const spk::Vector3 &p_offset,
-		const spk::SafePointer<spk::Entity> &p_owner,
-		std::vector<spk::RayCast::Hit> &p_hits)
-	{
-		for (const auto &shape : p_unit.shapes())
-		{
-			processShape(shape, p_eye, p_dir, p_maxDistance, p_offset, p_owner, p_hits);
+			float t = 0.0f;
+			if (rayIntersectsTriangle(p_eye, p_dir, tri.points[0] + p_offset, tri.points[1] + p_offset, tri.points[2] + p_offset, p_maxDistance, t) ==
+				true)
+			{
+				addHit(p_eye, p_dir, t, p_owner, p_hits);
+			}
 		}
 	}
 
@@ -132,9 +90,9 @@ namespace
 		{
 			return;
 		}
-		for (const auto &unit : p_collider->units())
+		for (const auto &poly : p_collider->polygons())
 		{
-			processUnit(unit, p_eye, p_dir, p_maxDistance, p_offset, p_owner, p_hits);
+			processPolygon(poly, p_eye, p_dir, p_maxDistance, p_offset, p_owner, p_hits);
 		}
 	}
 
