@@ -14,6 +14,7 @@ namespace spk
 		static bool _approxEq(float p_a, float p_b, float p_tol);
 		static bool _inRange(float p_x, float p_a, float p_b, float p_tol);
 		static bool _pointOnSegment2D(const spk::Vector2 &p_p, const spk::Vector2 &p_a, const spk::Vector2 &p_b, float p_tol);
+		static bool _pointInPolygon2D(const spk::Vector2 &p_point, const std::vector<spk::Vector2> &p_polygon, float p_tol);
 
 		std::unordered_map<spk::Vector3, std::vector<spk::Vector3>> _edges;
 		std::vector<spk::Vector3> _points;
@@ -27,6 +28,7 @@ namespace spk
 		std::vector<spk::Vector3> rewind() const;
 
 		bool canInsert(const Polygon &p_polygon) const;
+		bool contains(const Polygon &p_polygon) const;
 		void addTriangle(const spk::Vector3 &p_a, const spk::Vector3 &p_b, const spk::Vector3 &p_c);
 		void addQuad(const spk::Vector3 &p_a, const spk::Vector3 &p_b, const spk::Vector3 &p_c, const spk::Vector3 &p_d);
 		void addPolygon(const Polygon &p_polygon);

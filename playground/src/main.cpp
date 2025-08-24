@@ -347,9 +347,13 @@ private:
 				if (_isAxisAlignedFace(vertices, normal))
 				{
 					Face &face = result.faces[normal];
-					for (auto &v : vertices)
+					if (vertices.size() == 3)
 					{
-						face.footprint.points().push_back(v.position);
+						face.footprint.addTriangle(vertices[0].position, vertices[1].position, vertices[2].position);
+					}
+					else
+					{
+						face.footprint.addQuad(vertices[0].position, vertices[1].position, vertices[2].position, vertices[3].position);
 					}
 					_addVerticesToMesh(face.mesh, vertices);
 

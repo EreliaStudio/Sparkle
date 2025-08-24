@@ -57,6 +57,30 @@ namespace spk
 		return true;
 	}
 
+	bool Polygon::_pointInPolygon2D(const spk::Vector2 &p_point, const std::vector<spk::Vector2> &p_polygon, float p_tol)
+	{
+		bool inside = false;
+		size_t count = p_polygon.size();
+		for (size_t i = 0, j = count - 1; i < count; j = i++)
+		{
+			const spk::Vector2 &pi = p_polygon[i];
+			const spk::Vector2 &pj = p_polygon[j];
+
+			if (_pointOnSegment2D(p_point, pi, pj, p_tol) == true)
+			{
+				return true;
+			}
+
+			const bool cond = ((pi.y > p_point.y) != (pj.y > p_point.y));
+			const float x = (pj.x - pi.x) * (p_point.y - pi.y) / (pj.y - pi.y) + pi.x;
+			if (cond == true && p_point.x < x)
+			{
+				inside = !inside;
+			}
+		}
+		return inside;
+	}
+
 	void Polygon::_insertEdge(const spk::Vector3 &p_a, const spk::Vector3 &p_b)
 	{
 		if (_hasEdge(p_a, p_b) == true)
@@ -211,6 +235,69 @@ namespace spk
 			}
 		}
 		return false;
+	}
+
+	bool Polygon::contains(const Polygon &p_polygon) const
+	{
+		const float eps = 1e-5f;
+		if (_points.size() < 3)
+		{
+			return false;
+		}
+
+		spk::Vector3 normal = (_points[1] - _points[0]).cross(_points[2] - _points[0]).normalize();
+		spk::Vector3 absNormal(std::fabs(normal.x), std::fabs(normal.y), std::fabs(normal.z));
+
+		int dropAxis = 2;
+		if (absNormal.x > absNormal.y && absNormal.x > absNormal.z)
+		{
+			dropAxis = 0;
+		}
+		else if (absNormal.y > absNormal.z)
+		{
+			dropAxis = 1;
+		}
+
+		std::vector<spk::Vector2> this2D;
+		this2D.reserve(_points.size());
+		for (const spk::Vector3 &pt : _points)
+		{
+			if (dropAxis == 0)
+			{
+				this2D.emplace_back(pt.y, pt.z);
+			}
+			else if (dropAxis == 1)
+			{
+				this2D.emplace_back(pt.x, pt.z);
+			}
+			else
+			{
+				this2D.emplace_back(pt.x, pt.y);
+			}
+		}
+
+		for (const spk::Vector3 &pt3 : p_polygon.points())
+		{
+			spk::Vector2 pt2;
+			if (dropAxis == 0)
+			{
+				pt2 = spk::Vector2(pt3.y, pt3.z);
+			}
+			else if (dropAxis == 1)
+			{
+				pt2 = spk::Vector2(pt3.x, pt3.z);
+			}
+			else
+			{
+				pt2 = spk::Vector2(pt3.x, pt3.y);
+			}
+
+			if (_pointInPolygon2D(pt2, this2D, eps) == false)
+			{
+				return false;
+			}
+		}
+		return true;
 	}
 
 	void Polygon::addTriangle(const spk::Vector3 &p_a, const spk::Vector3 &p_b, const spk::Vector3 &p_c)
