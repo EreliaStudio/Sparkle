@@ -723,7 +723,7 @@ public:
 					}
 				}
 
-				_collisionMesh = _mesh.createCollider();
+				_collisionMesh = spk::CollisionMesh::fromObjMesh(&_mesh);
 
 				_isBaked = true;
 			}
@@ -1130,7 +1130,6 @@ private:
 		auto hit = spk::RayCast::launch(owner(), worldDirection, 1000.0f);
 		if (hit.entity != nullptr)
 		{
-			spk::cout << "Cube placed at position : " << hit.position << std::endl;
 			_cubeEntity.transform().place(hit.position);
 		}
 	}

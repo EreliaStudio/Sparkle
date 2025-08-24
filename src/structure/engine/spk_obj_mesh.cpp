@@ -362,25 +362,4 @@ namespace spk
 			file << "\n";
 		}
 	}
-
-	spk::CollisionMesh ObjMesh::createCollider() const
-	{
-		spk::CollisionMesh result;
-		for (const auto &shapeVariant : shapes())
-		{
-			spk::CollisionMesh::Unit unit;
-			if (std::holds_alternative<Quad>(shapeVariant) == true)
-			{
-				const auto &q = std::get<Quad>(shapeVariant);
-				unit.addShape(q.a.position, q.b.position, q.c.position, q.d.position);
-			}
-			else
-			{
-				const auto &t = std::get<Triangle>(shapeVariant);
-				unit.addShape(t.a.position, t.b.position, t.c.position);
-			}
-			result.addUnit(unit);
-		}
-		return result;
-	}
 }

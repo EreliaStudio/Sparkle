@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "structure/design_pattern/spk_contract_provider.hpp"
-#include "structure/engine/spk_collision_mesh.hpp"
 #include "structure/engine/spk_mesh.hpp"
 #include "structure/engine/spk_vertex.hpp"
 #include "structure/graphics/texture/spk_texture.hpp"
@@ -37,7 +36,5 @@ namespace spk
 		static ObjMesh loadFromFile(const std::filesystem::path &p_path);
 
 		void exportToFile(const std::filesystem::path &p_path) const;
-
-		spk::CollisionMesh createCollider() const;
 	};
 }
