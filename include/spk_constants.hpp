@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cmath>
+
 namespace spk
 {
 	namespace Constants
@@ -7,5 +9,6 @@ namespace spk
 		inline constexpr float pointPrecision = 1e-6f;
 		inline constexpr float angularPrecision = 1e-6f;
 		inline constexpr float colorPrecision = 1e-6f;
+		inline constexpr float pi = M_PI;
 	}
 }

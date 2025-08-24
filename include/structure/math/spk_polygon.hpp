@@ -23,7 +23,7 @@ namespace spk
 		void _computeWire();
 
 	public:
-		const std::vector<spk::Vector3> &pointsRef() const;
+		const std::vector<spk::Vector3> &points() const;
 		std::vector<spk::Vector3> rewind() const;
 
 		bool canInsert(const Polygon &p_polygon) const;

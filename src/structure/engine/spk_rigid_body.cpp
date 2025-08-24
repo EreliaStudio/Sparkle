@@ -51,7 +51,7 @@ namespace spk
 		{
 			for (const auto &poly : collider->polygons())
 			{
-				const auto &wire = poly.pointsRef();
+				const auto &wire = poly.points();
 				for (const auto &vertex : wire)
 				{
 					if (initialized == false)
@@ -101,7 +101,7 @@ namespace spk
 			{
 				for (const auto &poly : collider->polygons())
 				{
-					const auto &wire = poly.pointsRef();
+					const auto &wire = poly.points();
 					for (const auto &vertex : wire)
 					{
 						spk::Vector3 transformed = p_model * vertex;
@@ -239,7 +239,7 @@ namespace spk
 					auto tris = poly.triangulize();
 					for (const auto &tri : tris)
 					{
-						const auto &pts = tri.pointsRef();
+						const auto &pts = tri.points();
 						spk::Vector3 p0 = p_transform * pts[0];
 						spk::Vector3 p1 = p_transform * pts[1];
 						spk::Vector3 p2 = p_transform * pts[2];

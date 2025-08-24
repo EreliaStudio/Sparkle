@@ -349,7 +349,7 @@ private:
 					Face &face = result.faces[normal];
 					for (auto &v : vertices)
 					{
-						face.footprint.points.push_back(v.position);
+						face.footprint.points().push_back(v.position);
 					}
 					_addVerticesToMesh(face.mesh, vertices);
 
@@ -435,7 +435,7 @@ private:
 	static spk::Polygon _translated(const spk::Polygon &p_poly, const spk::Vector3 &p_delta)
 	{
 		spk::Polygon out;
-		const auto &wire = p_poly.pointsRef();
+		const auto &wire = p_poly.points();
 		if (wire.size() == 3)
 		{
 			out.addTriangle(wire[0] + p_delta, wire[1] + p_delta, wire[2] + p_delta);

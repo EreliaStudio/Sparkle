@@ -69,7 +69,7 @@ namespace
 		for (const auto &tri : tris)
 		{
 			float t = 0.0f;
-			const auto &wire = tri.pointsRef();
+			const auto &wire = tri.points();
 			if (rayIntersectsTriangle(p_eye, p_dir, wire[0] + p_offset, wire[1] + p_offset, wire[2] + p_offset, p_maxDistance, t) == true)
 			{
 				addHit(p_eye, p_dir, t, p_owner, p_hits);

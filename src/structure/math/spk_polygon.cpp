@@ -188,7 +188,7 @@ namespace spk
 		}
 	}
 
-	const std::vector<spk::Vector3> &Polygon::pointsRef() const
+	const std::vector<spk::Vector3> &Polygon::points() const
 	{
 		return _points;
 	}
