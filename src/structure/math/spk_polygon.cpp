@@ -2,8 +2,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <numeric>
-#include <unordered_map>
 
 #include "spk_constants.hpp"
 #include "spk_debug_macro.hpp"
@@ -12,12 +12,12 @@ namespace spk
 {
 	float Polygon::_polyScale(const std::vector<spk::Vector3> &p_points)
 	{
-		float m = 0.f;
+		float m = 0.0f;
 		for (size_t i = 1; i < p_points.size(); ++i)
 		{
 			m = std::max(m, (p_points[i] - p_points[i - 1]).norm());
 		}
-		return (m > 0.f ? m : 1.f);
+		return (m > 0.0f ? m : 1.0f);
 	}
 
 	bool Polygon::_approxEq(float p_a, float p_b, float p_tol)
@@ -57,141 +57,154 @@ namespace spk
 		return true;
 	}
 
-	spk::Vector3 Polygon::normal() const
+	void Polygon::_insertEdge(const spk::Vector3 &p_a, const spk::Vector3 &p_b)
 	{
-		if (points.size() < 3)
+		if (_hasEdge(p_a, p_b) == true)
 		{
-			GENERATE_ERROR("Can't generate normal on a polygon with less than 3 points");
+			_removeEdge(p_a, p_b);
+			return;
 		}
-		const spk::Vector3 &origin = points[0];
-		spk::Vector3 normal = (points[1] - origin).cross(points[2] - origin);
-		return (normal.normalize());
+		if (_hasEdge(p_b, p_a) == true)
+		{
+			_removeEdge(p_b, p_a);
+			return;
+		}
+		_edges[p_a].push_back(p_b);
+		_edges[p_b].push_back(p_a);
 	}
 
-	bool Polygon::contains(const spk::Vector3 &p_point) const
+	bool Polygon::_hasEdge(const spk::Vector3 &p_a, const spk::Vector3 &p_b) const
 	{
-		if (points.size() < 3)
+		auto it = _edges.find(p_a);
+		if (it == _edges.end())
 		{
 			return false;
 		}
-		const spk::Vector3 &origin = points[0];
-		spk::Vector3 n = normal();
-		spk::Vector3 u = (points[1] - origin).normalize();
-		spk::Vector3 v = n.cross(u);
-
-		float tol = spk::Constants::pointPrecision * _polyScale(points);
-
-		spk::Vector3 rel = p_point - origin;
-		spk::Vector2 P(rel.dot(u), rel.dot(v));
-
-		std::vector<spk::Vector2> proj;
-		proj.reserve(points.size());
-		for (const spk::Vector3 &pt : points)
-		{
-			spk::Vector3 r = pt - origin;
-			proj.emplace_back(r.dot(u), r.dot(v));
-		}
-
-		bool inside = false;
-		for (size_t i = 0, j = proj.size() - 1; i < proj.size(); j = i++)
-		{
-			const spk::Vector2 &A = proj[i];
-			const spk::Vector2 &B = proj[j];
-			if (_pointOnSegment2D(P, A, B, tol) == true)
-			{
-				return true;
-			}
-			bool intersect =
-				((A.y > P.y) != (B.y > P.y)) && (P.x < (B.x - A.x) * (P.y - A.y) / (B.y - A.y + std::numeric_limits<float>::epsilon()) + A.x);
-			if (intersect == true)
-			{
-				inside = (inside == false);
-			}
-		}
-		return inside;
+		return std::find(it->second.begin(), it->second.end(), p_b) != it->second.end();
 	}
 
-	bool Polygon::contains(const Polygon &p_polygon) const
+	void Polygon::_removeEdge(const spk::Vector3 &p_a, const spk::Vector3 &p_b)
 	{
-		for (const spk::Vector3 &pt : p_polygon.points)
+		auto eraseFrom =
+			[](std::unordered_map<spk::Vector3, std::vector<spk::Vector3>> &p_map, const spk::Vector3 &p_start, const spk::Vector3 &p_end)
 		{
-			bool inside = contains(pt);
-			if (inside == false)
+			if (auto it = p_map.find(p_start); it != p_map.end())
 			{
-				return false;
-			}
-		}
-		return true;
-	}
-
-	bool Polygon::isCoplanar(const Polygon &p_polygon) const
-	{
-		if (points.size() < 3 || p_polygon.points.size() < 3)
-		{
-			return false;
-		}
-		const float tol = spk::Constants::pointPrecision * std::max(_polyScale(points), _polyScale(p_polygon.points));
-
-		spk::Vector3 n = normal();
-		spk::Vector3 otherNormal = p_polygon.normal();
-
-		bool sameNormal = n == otherNormal;
-		bool oppositeNormal = n == -otherNormal;
-
-		if (sameNormal == false && oppositeNormal == false)
-		{
-			return false;
-		}
-
-		const spk::Vector3 &origin = points[0];
-		for (const spk::Vector3 &pt : p_polygon.points)
-		{
-			float d = n.dot(pt - origin);
-			if (std::fabs(d) > tol)
-			{
-				return false;
-			}
-		}
-		return true;
-	}
-
-	bool Polygon::isAdjacent(const Polygon &p_polygon) const
-	{
-		if (isCoplanar(p_polygon) == false)
-		{
-			return false;
-		}
-
-		std::unordered_map<spk::Vector3, size_t> pointMap;
-		pointMap.reserve(p_polygon.points.size());
-		for (size_t j = 0; j < p_polygon.points.size(); ++j)
-		{
-			pointMap[p_polygon.points[j]] = j;
-		}
-
-		for (size_t i = 0; i < points.size(); ++i)
-		{
-			size_t nextI = (i + 1) % points.size();
-
-			auto it = pointMap.find(points[i]);
-			if (it != pointMap.end())
-			{
-				size_t j = it->second;
-				size_t nextJ = (j + 1) % p_polygon.points.size();
-				size_t prevJ = (j + p_polygon.points.size() - 1) % p_polygon.points.size();
-				if (points[nextI] == p_polygon.points[nextJ] || points[nextI] == p_polygon.points[prevJ])
+				auto &vec = it->second;
+				vec.erase(std::remove(vec.begin(), vec.end(), p_end), vec.end());
+				if (vec.empty() == true)
 				{
-					return true;
+					p_map.erase(it);
 				}
 			}
+		};
 
-			it = pointMap.find(points[nextI]);
-			if (it != pointMap.end())
+		eraseFrom(_edges, p_a, p_b);
+		eraseFrom(_edges, p_b, p_a);
+	}
+
+	void Polygon::_computeWire()
+	{
+		std::vector<spk::Vector3> allPts;
+		for (const auto &kv : _edges)
+		{
+			allPts.push_back(kv.first);
+			for (const auto &dst : kv.second)
 			{
-				size_t j = it->second;
-				size_t nextJ = (j + 1) % p_polygon.points.size();
-				size_t prevJ = (j + p_polygon.points.size() - 1) % p_polygon.points.size();
-				if (points[i] == p_polygon.points[nextJ] || points[i] == p_polygon.points[prevJ])
+				allPts.push_back(dst);
+			}
+		}
+		if (allPts.empty() == true)
+		{
+			_points.clear();
+			return;
+		}
+
+		auto cmp = [](const spk::Vector3 &p_a, const spk::Vector3 &p_b)
+		{
+			if (p_a.x == p_b.x)
+			{
+				return p_a.y < p_b.y;
+			}
+			return p_a.x < p_b.x;
+		};
+
+		spk::Vector3 start = *std::min_element(allPts.begin(), allPts.end(), cmp);
+		spk::Vector3 current = start;
+		spk::Vector3 prevDir{1.0f, 0.0f, 0.0f};
+		std::unordered_map<spk::Vector3, std::vector<spk::Vector3>> edgesCopy = _edges;
+		_points.clear();
+
+		auto removeEdgeFrom = [](auto &p_map, const spk::Vector3 &p_a, const spk::Vector3 &p_b)
+		{
+			if (auto it = p_map.find(p_a); it != p_map.end())
+			{
+				auto &vec = it->second;
+				vec.erase(std::remove(vec.begin(), vec.end(), p_b), vec.end());
+				if (vec.empty() == true)
+				{
+					p_map.erase(it);
+				}
+			}
+		};
+
+		do
+		{
+			_points.push_back(current);
+			auto &neighbors = edgesCopy[current];
+			if (neighbors.empty() == true)
+			{
+				break;
+			}
+			spk::Vector3 next = neighbors.front();
+			float bestAngle = std::numeric_limits<float>::max();
+			for (const auto &cand : neighbors)
+			{
+				spk::Vector3 dir = (cand - current).normalize();
+				float angle = std::atan2(prevDir.cross(dir).z, prevDir.dot(dir));
+				if (angle < 0.0f)
+				{
+					angle += 2.0f * spk::Constants::pi;
+				}
+				if (angle < bestAngle)
+				{
+					bestAngle = angle;
+					next = cand;
+				}
+			}
+			removeEdgeFrom(edgesCopy, current, next);
+			removeEdgeFrom(edgesCopy, next, current);
+			prevDir = (next - current).normalize();
+			current = next;
+		} while ((current == start) == false);
+
+		_edges.clear();
+		for (size_t i = 0; i < _points.size(); ++i)
+		{
+			const spk::Vector3 &a = _points[i];
+			const spk::Vector3 &b = _points[(i + 1) % _points.size()];
+			_edges[a].push_back(b);
+			_edges[b].push_back(a);
+		}
+	}
+
+	const std::vector<spk::Vector3> &Polygon::pointsRef() const
+	{
+		return _points;
+	}
+
+	std::vector<spk::Vector3> Polygon::rewind() const
+	{
+		return _points;
+	}
+
+	bool Polygon::canInsert(const Polygon &p_polygon) const
+	{
+		for (const auto &kv : p_polygon._edges)
+		{
+			for (const auto &dst : kv.second)
+			{
+				if ((_hasEdge(kv.first, dst) == true) || (_hasEdge(dst, kv.first) == true))
 				{
 					return true;
 				}
@@ -200,72 +213,58 @@ namespace spk
 		return false;
 	}
 
-	bool Polygon::isMergable(const Polygon &p_polygon) const
+	void Polygon::addTriangle(const spk::Vector3 &p_a, const spk::Vector3 &p_b, const spk::Vector3 &p_c)
 	{
-		bool coplanar = isCoplanar(p_polygon);
-		bool adjacent = isAdjacent(p_polygon);
-		return (coplanar == true && adjacent == true);
+		_insertEdge(p_a, p_b);
+		_insertEdge(p_b, p_c);
+		_insertEdge(p_c, p_a);
+		_computeWire();
 	}
 
-	void Polygon::rewind(Winding p_winding)
+	void Polygon::addQuad(const spk::Vector3 &p_a, const spk::Vector3 &p_b, const spk::Vector3 &p_c, const spk::Vector3 &p_d)
 	{
-		if (points.size() < 3)
+		_insertEdge(p_a, p_b);
+		_insertEdge(p_b, p_c);
+		_insertEdge(p_c, p_d);
+		_insertEdge(p_d, p_a);
+		_computeWire();
+	}
+
+	void Polygon::addPolygon(const Polygon &p_polygon)
+	{
+		if (_edges.empty() == true)
 		{
+			_edges = p_polygon._edges;
+			_computeWire();
 			return;
 		}
-		spk::Vector3 centroid(0.f, 0.f, 0.f);
-		for (const spk::Vector3 &pt : points)
+		if (canInsert(p_polygon) == false)
 		{
-			centroid += pt;
+			GENERATE_ERROR("Polygon cannot be inserted");
 		}
-		centroid /= static_cast<float>(points.size());
-
-		spk::Vector3 u = (points[0] - centroid).normalize();
-		spk::Vector3 normal = (points[1] - centroid).cross(points[2] - centroid).normalize();
-		spk::Vector3 v = normal.cross(u);
-
-		std::sort(
-			points.begin(),
-			points.end(),
-			[&](const spk::Vector3 &p_a, const spk::Vector3 &p_b)
+		for (const auto &kv : p_polygon._edges)
+		{
+			for (const auto &dst : kv.second)
 			{
-				spk::Vector3 ra = p_a - centroid;
-				spk::Vector3 rb = p_b - centroid;
-				float angleA = std::atan2(ra.dot(v), ra.dot(u));
-				float angleB = std::atan2(rb.dot(v), rb.dot(u));
-				return angleA < angleB;
-			});
-
-		if (p_winding == Winding::Clockwise)
-		{
-			std::reverse(points.begin(), points.end());
+				_insertEdge(kv.first, dst);
+			}
 		}
+		_computeWire();
 	}
 
 	bool Polygon::isConvex() const
 	{
-		if (points.size() < 3)
+		if (_points.size() < 3)
 		{
 			return false;
 		}
-		spk::Vector3 n = normal();
-		bool hasPos = false;
-		bool hasNeg = false;
-		for (size_t i = 0; i < points.size(); ++i)
+		spk::Vector3 normal = (_points[1] - _points[0]).cross(_points[2] - _points[0]);
+		for (size_t i = 0; i < _points.size(); ++i)
 		{
-			const spk::Vector3 &A = points[i];
-			const spk::Vector3 &B = points[(i + 1) % points.size()];
-			const spk::Vector3 &C = points[(i + 2) % points.size()];
-			float val = (B - A).cross(C - B).dot(n);
-			if (val > spk::Constants::pointPrecision)
-			{
-				hasPos = true;
-			}
-			else if (val < -spk::Constants::pointPrecision)
-			{
-				hasNeg = true;
-			}
-			if (hasPos == true && hasNeg == true)
+			const spk::Vector3 &a = _points[i];
+			const spk::Vector3 &b = _points[(i + 1) % _points.size()];
+			const spk::Vector3 &c = _points[(i + 2) % _points.size()];
+			if (((b - a).cross(c - b)).dot(normal) < -spk::Constants::pointPrecision)
 			{
 				return false;
 			}
@@ -275,128 +274,41 @@ namespace spk
 
 	std::vector<Polygon> Polygon::triangulize() const
 	{
-		std::vector<Polygon> result;
-		if (points.size() < 3)
+		if (isConvex() == false)
 		{
-			return result;
+			GENERATE_ERROR("Polygon not convex");
 		}
-		for (size_t i = 1; i + 1 < points.size(); ++i)
+		std::vector<Polygon> result;
+		for (size_t i = 1; i + 1 < _points.size(); ++i)
 		{
 			Polygon tri;
-			tri.points = {points[0], points[i], points[i + 1]};
+			tri.addTriangle(_points[0], _points[i], _points[i + 1]);
 			result.push_back(tri);
 		}
 		return result;
 	}
 
-	void Polygon::merge(const Polygon &p_polygon)
-	{
-		if (isMergable(p_polygon) == false)
-		{
-			return;
-		}
-		std::vector<spk::Vector3> allPts = points;
-		for (const spk::Vector3 &pt : p_polygon.points)
-		{
-			allPts.push_back(pt);
-		}
-
-		const spk::Vector3 &origin = allPts[0];
-		spk::Vector3 u = (allPts[1] - origin).normalize();
-		spk::Vector3 normal = (allPts[1] - origin).cross(allPts[2] - origin).normalize();
-		spk::Vector3 v = normal.cross(u);
-
-		std::vector<std::pair<spk::Vector2, size_t>> proj;
-		proj.reserve(allPts.size());
-		for (size_t i = 0; i < allPts.size(); ++i)
-		{
-			spk::Vector3 rel = allPts[i] - origin;
-			proj.emplace_back(spk::Vector2(rel.dot(u), rel.dot(v)), i);
-		}
-
-		std::sort(
-			proj.begin(),
-			proj.end(),
-			[](const auto &p_a, const auto &p_b)
-			{
-				if (p_a.first.x != p_b.first.x)
-				{
-					return p_a.first.x < p_b.first.x;
-				}
-				return p_a.first.y < p_b.first.y;
-			});
-
-		std::vector<size_t> hull;
-		hull.reserve(proj.size() * 2);
-		for (const auto &p : proj)
-		{
-			while (hull.size() >= 2)
-			{
-				const spk::Vector2 &A = proj[hull[hull.size() - 2]].first;
-				const spk::Vector2 &B = proj[hull.back()].first;
-				const spk::Vector2 &C = p.first;
-				spk::Vector2 ab = B - A;
-				spk::Vector2 ac = C - A;
-				if (ab.x * ac.y - ab.y * ac.x <= spk::Constants::pointPrecision)
-				{
-					hull.pop_back();
-				}
-				else
-				{
-					break;
-				}
-			}
-			hull.push_back(&p - &proj[0]);
-		}
-		for (int i = static_cast<int>(proj.size()) - 2; i >= 0; --i)
-		{
-			const auto &p = proj[i];
-			while (hull.size() >= 2)
-			{
-				const spk::Vector2 &A = proj[hull[hull.size() - 2]].first;
-				const spk::Vector2 &B = proj[hull.back()].first;
-				const spk::Vector2 &C = p.first;
-				spk::Vector2 ab = B - A;
-				spk::Vector2 ac = C - A;
-				if (ab.x * ac.y - ab.y * ac.x <= spk::Constants::pointPrecision)
-				{
-					hull.pop_back();
-				}
-				else
-				{
-					break;
-				}
-			}
-			hull.push_back(&p - &proj[0]);
-		}
-		hull.pop_back();
-
-		std::vector<spk::Vector3> merged;
-		merged.reserve(hull.size());
-		for (size_t idx : hull)
-		{
-			merged.push_back(allPts[proj[idx].second]);
-		}
-		points = std::move(merged);
-		rewind(Winding::CounterClockwise);
-	}
-
 	std::vector<Polygon> Polygon::split() const
 	{
+		if (isConvex() == true)
+		{
+			return {*this};
+		}
+
 		std::vector<Polygon> result;
-		if (points.size() < 3)
+		if (_points.size() < 3)
 		{
 			return result;
 		}
 
-		const spk::Vector3 &origin = points[0];
-		spk::Vector3 u = (points[1] - origin).normalize();
-		spk::Vector3 normal = (points[1] - origin).cross(points[2] - origin).normalize();
+		const spk::Vector3 &origin = _points[0];
+		spk::Vector3 u = (_points[1] - origin).normalize();
+		spk::Vector3 normal = (_points[1] - origin).cross(_points[2] - origin).normalize();
 		spk::Vector3 v = normal.cross(u);
 
 		std::vector<spk::Vector2> pts2d;
-		pts2d.reserve(points.size());
-		for (const spk::Vector3 &pt : points)
+		pts2d.reserve(_points.size());
+		for (const spk::Vector3 &pt : _points)
 		{
 			spk::Vector3 rel = pt - origin;
 			pts2d.push_back(spk::Vector2(rel.dot(u), rel.dot(v)));
@@ -419,7 +331,7 @@ namespace spk
 			return !(hasNeg && hasPos);
 		};
 
-		std::vector<size_t> idx(points.size());
+		std::vector<size_t> idx(_points.size());
 		std::iota(idx.begin(), idx.end(), 0);
 
 		while (idx.size() >= 3)
@@ -461,7 +373,7 @@ namespace spk
 				}
 
 				Polygon tri;
-				tri.points = {points[prev], points[curr], points[next]};
+				tri.addTriangle(_points[prev], _points[curr], _points[next]);
 				result.push_back(tri);
 				idx.erase(idx.begin() + i);
 				earFound = true;

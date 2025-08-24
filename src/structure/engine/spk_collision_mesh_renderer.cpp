@@ -95,7 +95,8 @@ void main()
 			auto tris = poly.triangulize();
 			for (const auto &tri : tris)
 			{
-				_bufferSet.layout() << tri.points[0] << tri.points[1] << tri.points[2];
+				const auto &wire = tri.pointsRef();
+				_bufferSet.layout() << wire[0] << wire[1] << wire[2];
 				_bufferSet.indexes() << offset << (offset + 1) << (offset + 2);
 				offset += 3;
 			}
