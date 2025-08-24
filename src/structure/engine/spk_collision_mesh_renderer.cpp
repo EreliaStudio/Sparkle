@@ -90,15 +90,15 @@ void main()
 	void CollisionMeshRenderer::Painter::prepare(const spk::CollisionMesh &p_mesh)
 	{
 		unsigned int offset = 0;
-		for (const auto &unit : p_mesh.units())
+		for (const auto &poly : p_mesh.polygons())
 		{
-			const auto &buffer = unit.buffer();
-			_bufferSet.layout() << buffer.vertices;
-			for (unsigned int index : buffer.indexes)
+			auto tris = poly.triangulize();
+			for (const auto &tri : tris)
 			{
-				_bufferSet.indexes() << (index + offset);
+				_bufferSet.layout() << tri.points[0] << tri.points[1] << tri.points[2];
+				_bufferSet.indexes() << offset << (offset + 1) << (offset + 2);
+				offset += 3;
 			}
-			offset += static_cast<unsigned int>(buffer.vertices.size());
 		}
 	}
 

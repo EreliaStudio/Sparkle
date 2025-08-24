@@ -49,10 +49,9 @@ namespace spk
 		const auto &collider = _collider;
 		if (collider != nullptr)
 		{
-			for (const auto &unit : collider->units())
+			for (const auto &poly : collider->polygons())
 			{
-				const auto &vertices = unit.buffer().vertices;
-				for (const auto &vertex : vertices)
+				for (const auto &vertex : poly.points)
 				{
 					if (initialized == false)
 					{
@@ -99,9 +98,9 @@ namespace spk
 			const auto &collider = p_body->collider();
 			if (collider != nullptr)
 			{
-				for (const auto &unit : collider->units())
+				for (const auto &poly : collider->polygons())
 				{
-					for (const auto &vertex : unit.buffer().vertices)
+					for (const auto &vertex : poly.points)
 					{
 						spk::Vector3 transformed = p_model * vertex;
 						if (initialized == false)
@@ -233,24 +232,15 @@ namespace spk
 			const auto &collider = p_body->collider();
 			if ((collider == nullptr) == false)
 			{
-				for (const auto &unit : collider->units())
+				for (const auto &poly : collider->polygons())
 				{
-					for (const auto &shape : unit.shapes())
+					auto tris = poly.triangulize();
+					for (auto &tri : tris)
 					{
-						if (std::holds_alternative<spk::TMesh<spk::Vector3>::Triangle>(shape) == true)
-						{
-							auto tri = std::get<spk::TMesh<spk::Vector3>::Triangle>(shape);
-							tri.a = p_transform * tri.a;
-							tri.b = p_transform * tri.b;
-							tri.c = p_transform * tri.c;
-							result.push_back(tri);
-						}
-						else
-						{
-							auto quad = std::get<spk::TMesh<spk::Vector3>::Quad>(shape);
-							result.push_back({p_transform * quad.a, p_transform * quad.b, p_transform * quad.c});
-							result.push_back({p_transform * quad.a, p_transform * quad.c, p_transform * quad.d});
-						}
+						tri.points[0] = p_transform * tri.points[0];
+						tri.points[1] = p_transform * tri.points[1];
+						tri.points[2] = p_transform * tri.points[2];
+						result.push_back({tri.points[0], tri.points[1], tri.points[2]});
 					}
 				}
 			}
