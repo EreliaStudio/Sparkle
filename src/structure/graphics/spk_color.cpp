@@ -4,7 +4,7 @@
 #include <iomanip>
 #include <sstream>
 
-#include "spk_constants.hpp"
+#include "structure/math/spk_constants.hpp"
 #include "structure/system/spk_exception.hpp"
 
 namespace spk

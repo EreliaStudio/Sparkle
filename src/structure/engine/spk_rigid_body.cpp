@@ -1,7 +1,7 @@
 #include "structure/engine/spk_rigid_body.hpp"
-#include "spk_constants.hpp"
 #include "structure/engine/spk_entity.hpp"
 #include "structure/engine/spk_mesh.hpp"
+#include "structure/math/spk_constants.hpp"
 #include <algorithm>
 #include <vector>
 

@@ -1,6 +1,6 @@
 #include "structure/engine/spk_ray_cast.hpp"
-#include "spk_constants.hpp"
 #include "structure/engine/spk_rigid_body.hpp"
+#include "structure/math/spk_constants.hpp"
 
 namespace
 {

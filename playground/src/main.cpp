@@ -38,6 +38,11 @@ namespace tmp
 			return (_direction);
 		}
 
+		float orientation(const spk::Vector3 &p_point, const spk::Vector3 &p_normal) const
+		{
+			return ((_second - _first).cross(p_point - _first)).dot(p_normal);
+		}
+
 		bool contains(const spk::Vector3 &p_point, bool p_checkAlignment = true) const
 		{
 			if (p_point == _first)
@@ -127,6 +132,49 @@ namespace tmp
 			_edges.push_back(tmp::Edge(p_a, p_b));
 		}
 
+		static bool _edgesIntersect(const tmp::Edge &p_a, const tmp::Edge &p_b, const spk::Vector3 &p_normal, float p_eps)
+		{
+			float o1 = p_a.orientation(p_b.first(), p_normal);
+			float o2 = p_a.orientation(p_b.second(), p_normal);
+			float o3 = p_b.orientation(p_a.first(), p_normal);
+			float o4 = p_b.orientation(p_a.second(), p_normal);
+
+			bool cond1 = ((o1 > p_eps && o2 < -p_eps) || (o1 < -p_eps && o2 > p_eps));
+			bool cond2 = ((o3 > p_eps && o4 < -p_eps) || (o3 < -p_eps && o4 > p_eps));
+
+			return (cond1 == true && cond2 == true);
+		}
+
+		static bool _isPointInside(const Polygon &p_poly, const spk::Vector3 &p_point, float p_eps)
+		{
+			const auto &edges = p_poly.edges();
+			spk::Vector3 n = p_poly.normal();
+			float orient = edges[0].direction().cross(edges[1].direction()).dot(n);
+
+			for (size_t i = 0; i < edges.size(); i++)
+			{
+				const tmp::Edge &edge = edges[i];
+				float val = edge.direction().cross(p_point - edge.first()).dot(n);
+
+				if (orient > 0)
+				{
+					if (val <= p_eps)
+					{
+						return (false);
+					}
+				}
+				else
+				{
+					if (val >= -p_eps)
+					{
+						return (false);
+					}
+				}
+			}
+
+			return (true);
+		}
+
 	public:
 		const std::vector<tmp::Edge> edges() const
 		{
@@ -206,14 +254,77 @@ namespace tmp
 			return (false);
 		}
 
-		bool isConvex(float eps = 1e-6f, bool strictly = false) const
+		bool isConvex(float p_eps = 1e-6f, bool p_strictly = false) const
 		{
-			
+			if (_edges.size() < 3)
+			{
+				return (false);
+			}
+
+			spk::Vector3 polyNormal = normal();
+			float orientation = 0;
+
+			for (size_t i = 0; i < _edges.size(); i++)
+			{
+				const tmp::Edge &current = _edges[i];
+				const tmp::Edge &next = _edges[(i + 1) % _edges.size()];
+
+				float dot = current.direction().cross(next.direction()).dot(polyNormal);
+
+				if (std::fabs(dot) <= p_eps)
+				{
+					if (p_strictly == true)
+					{
+						return (false);
+					}
+					continue;
+				}
+
+				if (orientation == 0)
+				{
+					orientation = (dot > 0) ? 1.0f : -1.0f;
+				}
+				else if (((dot > 0) ? 1.0f : -1.0f) != orientation)
+				{
+					return (false);
+				}
+			}
+
+			return (orientation != 0);
 		}
 
 		bool isOverlapping(const Polygon &p_other) const
 		{
-			
+			if (isCoplanar(p_other) == false)
+			{
+				return (false);
+			}
+
+			const float eps = 1e-6f;
+			spk::Vector3 polyNormal = normal();
+
+			for (const auto &edgeA : _edges)
+			{
+				for (const auto &edgeB : p_other.edges())
+				{
+					if (_edgesIntersect(edgeA, edgeB, polyNormal, eps) == true)
+					{
+						return (true);
+					}
+				}
+			}
+
+			if (_isPointInside(*this, p_other.edges()[0].first(), eps) == true)
+			{
+				return (true);
+			}
+
+			if (_isPointInside(p_other, _edges[0].first(), eps) == true)
+			{
+				return (true);
+			}
+
+			return (false);
 		}
 
 		static Polygon makeTriangle(const spk::Vector3 &p_a, const spk::Vector3 &p_b, const spk::Vector3 &p_c)

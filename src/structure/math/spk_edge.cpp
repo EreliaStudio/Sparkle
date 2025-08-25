@@ -1,4 +1,5 @@
 #include "structure/math/spk_edge.hpp"
+#include "structure/math/spk_constants.hpp"
 
 #include <utility>
 
@@ -24,7 +25,7 @@ namespace spk
 	{
 		spk::Vector3 u = second - first;
 		spk::Vector3 v = p_other.second - p_other.first;
-		return u.cross(v).norm() <= std::numeric_limits<float>::epsilon();
+		return u.cross(v).norm() <= spk::Constants::pointPrecision;
 	}
 
 	bool Edge::operator==(const Edge &p_other) const
