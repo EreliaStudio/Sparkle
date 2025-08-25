@@ -327,6 +327,18 @@ namespace tmp
 			return (false);
 		}
 
+		Polygon fuze(const Polygon &p_other) const
+		{
+			if (isCoplanar(p_other) == false || (isAdjacent(p_other) == false && isOverlapping(p_other) == false))
+			{
+				GENERATE_ERROR("Polygons must be coplanar and adjacent or overlapping");
+			}
+
+			Polygon result;
+
+			return (result);
+		}
+
 		static Polygon makeTriangle(const spk::Vector3 &p_a, const spk::Vector3 &p_b, const spk::Vector3 &p_c)
 		{
 			Polygon result;
@@ -382,45 +394,50 @@ namespace tmp
 	};
 }
 
+void checkPolygons(std::string_view p_nameA, const tmp::Polygon& p_polyA,
+                   std::string_view p_nameB, const tmp::Polygon& p_polyB)
+{
+	std::cout << " ----- " << p_nameA << " -> " << p_nameB << " -----" << std::endl;
+	std::cout << p_nameA << " : " << p_polyA << std::endl;
+	std::cout << p_nameB << " : " << p_polyB << std::endl;
+	std::cout << " ----- ------ -----" << std::endl << std::endl;
+
+	std::cout << "Is planar " << p_nameA << " : " << std::boolalpha << p_polyA.isPlanar() << std::endl;
+	std::cout << "Is planar " << p_nameB << " : " << std::boolalpha << p_polyB.isPlanar() << std::endl;
+	std::cout << "Is Coplanar : " << std::boolalpha << p_polyA.isCoplanar(p_polyB) << std::endl;
+	std::cout << "Is adjacent : " << std::boolalpha << p_polyA.isAdjacent(p_polyB) << std::endl;
+	std::cout << "Is overlapping : " << std::boolalpha << p_polyA.isOverlapping(p_polyB) << std::endl;
+
+	std::cout << " ----- Fused  -----" << std::endl << std::endl;
+	try
+	{
+		std::cout << p_polyA.fuze(p_polyB) << std::endl;
+	}
+	catch (const std::exception& e)
+	{
+		std::cout << "Can't be fused (" << e.what() << ")" << std::endl;
+	}
+	catch (...)
+	{
+		std::cout << "Can't be fused" << std::endl;
+	}
+	std::cout << " ----- ------ -----" << std::endl << std::endl;
+}
+
 int main()
 {
-	spk::Vector3 points[4] = {{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0}};
-	spk::Vector3 deltaB = {1, 0, 0};
-	spk::Vector3 deltaC = {0.5, 1, 0};
-	spk::Vector3 deltaD = {0.5, 0.5, 0};
+	std::array<spk::Vector3, 4> points = {spk::Vector3{0, 0, 0}, spk::Vector3{10, 0, 0}, spk::Vector3{10, 10, 0}, spk::Vector3{0, 10, 0}};
+	spk::Vector3 deltaB = {10, 0, 0};
+	spk::Vector3 deltaC = {5, 10, 0};
+	spk::Vector3 deltaD = {5, 5, 0};
 	tmp::Polygon polyA = tmp::Polygon::makeSquare(points[0], points[1], points[2], points[3]);
 	tmp::Polygon polyB = tmp::Polygon::makeSquare(points[0] + deltaB, points[1] + deltaB, points[2] + deltaB, points[3] + deltaB);
 	tmp::Polygon polyC = tmp::Polygon::makeSquare(points[0] + deltaC, points[1] + deltaC, points[2] + deltaC, points[3] + deltaC);
 	tmp::Polygon polyD = tmp::Polygon::makeSquare(points[0] + deltaD, points[1] + deltaD, points[2] + deltaD, points[3] + deltaD);
 
-	std::cout << polyA << std::endl;
-	std::cout << polyB << std::endl;
-	std::cout << polyC << std::endl;
-	std::cout << polyD << std::endl;
-
-	std::cout << " ----- A -> B -----" << std::endl;
-	std::cout << "Is planar A : " << std::boolalpha << polyA.isPlanar() << std::endl;
-	std::cout << "Is planar B : " << std::boolalpha << polyB.isPlanar() << std::endl;
-	std::cout << "Is Coplanar : " << std::boolalpha << polyA.isCoplanar(polyB) << std::endl;
-	std::cout << "Is adjacent : " << std::boolalpha << polyA.isAdjacent(polyB) << std::endl;
-	std::cout << "Is overlapping : " << std::boolalpha << polyA.isOverlapping(polyB) << std::endl;
-	std::cout << " ----- ------ -----" << std::endl << std::endl;
-
-	std::cout << " ----- A -> C -----" << std::endl;
-	std::cout << "Is planar A : " << std::boolalpha << polyA.isPlanar() << std::endl;
-	std::cout << "Is planar C : " << std::boolalpha << polyC.isPlanar() << std::endl;
-	std::cout << "Is Coplanar : " << std::boolalpha << polyA.isCoplanar(polyC) << std::endl;
-	std::cout << "Is adjacent : " << std::boolalpha << polyA.isAdjacent(polyC) << std::endl;
-	std::cout << "Is overlapping : " << std::boolalpha << polyA.isOverlapping(polyC) << std::endl;
-	std::cout << " ----- ------ -----" << std::endl << std::endl;
-
-	std::cout << " ----- A -> D -----" << std::endl;
-	std::cout << "Is planar A : " << std::boolalpha << polyA.isPlanar() << std::endl;
-	std::cout << "Is planar D : " << std::boolalpha << polyD.isPlanar() << std::endl;
-	std::cout << "Is Coplanar : " << std::boolalpha << polyA.isCoplanar(polyD) << std::endl;
-	std::cout << "Is adjacent : " << std::boolalpha << polyA.isAdjacent(polyD) << std::endl;
-	std::cout << "Is overlapping : " << std::boolalpha << polyA.isOverlapping(polyD) << std::endl;
-	std::cout << " ----- ------ -----" << std::endl << std::endl;
+	checkPolygons("A", polyA, "B", polyB);
+	checkPolygons("A", polyA, "C", polyC);
+	checkPolygons("A", polyA, "D", polyD);
 
 	return (0);
 }
