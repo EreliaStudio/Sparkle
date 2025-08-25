@@ -11,6 +11,7 @@
 #include <type_traits>
 #include <unordered_map>
 
+#include "spk_constants.hpp"
 #include "structure/math/spk_math.hpp"
 
 #include "structure/system/spk_exception.hpp"
@@ -153,8 +154,7 @@ namespace spk
 		{
 			if constexpr (std::is_floating_point<TType>::value)
 			{
-				constexpr TType epsilon = static_cast<TType>(1e-5);
-				return std::fabs(x - static_cast<TType>(p_other.x)) < epsilon && std::fabs(y - static_cast<TType>(p_other.y)) < epsilon;
+				return FLOAT_EQ(x, static_cast<TType>(p_other.x)) && FLOAT_EQ(y, static_cast<TType>(p_other.y));
 			}
 			else
 			{
@@ -167,8 +167,7 @@ namespace spk
 		{
 			if constexpr (std::is_floating_point<TType>::value)
 			{
-				constexpr TType epsilon = static_cast<TType>(1e-5);
-				return std::fabs(x - static_cast<TType>(p_scalar)) < epsilon && std::fabs(y - static_cast<TType>(p_scalar)) < epsilon;
+				return FLOAT_EQ(x, static_cast<TType>(p_scalar)) && FLOAT_EQ(y, static_cast<TType>(p_scalar));
 			}
 			else
 			{
@@ -516,8 +515,8 @@ namespace spk
 
 		static IVector2 lerp(const IVector2 &p_startingPoint, const IVector2 &p_endingPoint, float t)
 		{
-			return IVector2(p_startingPoint.x + (p_endingPoint.x - p_startingPoint.x) * t,
-							p_startingPoint.y + (p_endingPoint.y - p_startingPoint.y) * t);
+			return IVector2(
+				p_startingPoint.x + (p_endingPoint.x - p_startingPoint.x) * t, p_startingPoint.y + (p_endingPoint.y - p_startingPoint.y) * t);
 		}
 
 		IVector2 positiveModulo(const IVector2 &p_modulo) const

@@ -8,6 +8,7 @@
 #include <type_traits>
 #include <unordered_map>
 
+#include "spk_constants.hpp"
 #include "structure/math/spk_math.hpp"
 #include "structure/math/spk_vector2.hpp"
 
@@ -184,9 +185,8 @@ namespace spk
 		{
 			if constexpr (std::is_floating_point<TType>::value)
 			{
-				constexpr TType epsilon = static_cast<TType>(1e-5);
-				return std::fabs(x - static_cast<TType>(p_other.x)) < epsilon && std::fabs(y - static_cast<TType>(p_other.y)) < epsilon &&
-					   std::fabs(z - static_cast<TType>(p_other.z)) < epsilon;
+				return FLOAT_EQ(x, static_cast<TType>(p_other.x)) && FLOAT_EQ(y, static_cast<TType>(p_other.y)) &&
+					   FLOAT_EQ(z, static_cast<TType>(p_other.z));
 			}
 			else
 			{
@@ -199,9 +199,8 @@ namespace spk
 		{
 			if constexpr (std::is_floating_point<TType>::value)
 			{
-				constexpr TType epsilon = static_cast<TType>(1e-5);
-				return std::fabs(x - static_cast<TType>(p_scalar)) < epsilon && std::fabs(y - static_cast<TType>(p_scalar)) < epsilon &&
-					   std::fabs(z - static_cast<TType>(p_scalar)) < epsilon;
+				return FLOAT_EQ(x, static_cast<TType>(p_scalar)) && FLOAT_EQ(y, static_cast<TType>(p_scalar)) &&
+					   FLOAT_EQ(z, static_cast<TType>(p_scalar));
 			}
 			else
 			{
@@ -494,9 +493,10 @@ namespace spk
 
 		IVector3 clamp(const IVector3 &p_lowerValue, const IVector3 &p_higherValue)
 		{
-			return IVector3(std::clamp(x, p_lowerValue.x, p_higherValue.x),
-							std::clamp(y, p_lowerValue.y, p_higherValue.y),
-							std::clamp(z, p_lowerValue.z, p_higherValue.z));
+			return IVector3(
+				std::clamp(x, p_lowerValue.x, p_higherValue.x),
+				std::clamp(y, p_lowerValue.y, p_higherValue.y),
+				std::clamp(z, p_lowerValue.z, p_higherValue.z));
 		}
 
 		IVector3 floor() const
@@ -586,9 +586,10 @@ namespace spk
 
 		static IVector3 lerp(const IVector3 &p_startingPoint, const IVector3 &p_endingPoint, float t)
 		{
-			return IVector3(p_startingPoint.x + (p_endingPoint.x - p_startingPoint.x) * t,
-							p_startingPoint.y + (p_endingPoint.y - p_startingPoint.y) * t,
-							p_startingPoint.z + (p_endingPoint.z - p_startingPoint.z) * t);
+			return IVector3(
+				p_startingPoint.x + (p_endingPoint.x - p_startingPoint.x) * t,
+				p_startingPoint.y + (p_endingPoint.y - p_startingPoint.y) * t,
+				p_startingPoint.z + (p_endingPoint.z - p_startingPoint.z) * t);
 		}
 
 		IVector3 positiveModulo(const IVector3 &p_modulo) const
