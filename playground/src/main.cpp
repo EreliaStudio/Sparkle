@@ -454,6 +454,33 @@ namespace
 		}
 	}
 
+	void collectSplitTsForIntersection(const tmp::Edge &p_base, const tmp::Edge &p_other, const spk::Vector3 &p_normal, std::vector<float> &p_ts)
+	{
+		if (p_base.isColinear(p_other) == true)
+		{
+			return;
+		}
+
+		spk::Vector3 r = p_base.delta();
+		spk::Vector3 s = p_other.delta();
+		spk::Vector3 qp = p_other.first() - p_base.first();
+
+		float denom = r.cross(s).dot(p_normal);
+		if (FLOAT_EQ(denom, 0.0f) == true)
+		{
+			return;
+		}
+
+		float t = qp.cross(s).dot(p_normal) / denom;
+		float u = qp.cross(r).dot(p_normal) / denom;
+
+		if (t > 0.0f && t < 1.0f && u > 0.0f && u < 1.0f)
+		{
+			spk::Vector3 inter = p_base.first() + r * t;
+			p_ts.push_back(p_base.project(inter));
+		}
+	}
+
 	// Split one edge by collected ts
 	void splitEdgeByTs(const tmp::Edge &p_e, const std::vector<float> &p_ts, std::vector<tmp::Edge> &p_out)
 	{
@@ -492,8 +519,7 @@ namespace
 		}
 	}
 
-	// Split all edges of base by colinear overlaps with other
-	void splitAllEdges(std::vector<tmp::Edge> &p_base, const std::vector<tmp::Edge> &p_other)
+	void splitAllEdges(std::vector<tmp::Edge> &p_base, const std::vector<tmp::Edge> &p_other, const spk::Vector3 &p_normal)
 	{
 		std::vector<tmp::Edge> result;
 		result.reserve(p_base.size() * 2);
@@ -503,6 +529,7 @@ namespace
 			for (const auto &o : p_other)
 			{
 				collectSplitTsForColinearOverlap(e, o, ts);
+				collectSplitTsForIntersection(e, o, p_normal, ts);
 			}
 			splitEdgeByTs(e, ts, result);
 		}
@@ -665,24 +692,13 @@ tmp::Polygon tmp::Polygon::fuze(const Polygon &p_other) const
 		GENERATE_ERROR("Polygons must be coplanar");
 	}
 
-	// Refuse real overlaps (crossing edges not colinear)
 	spk::Vector3 n = normal();
-	for (const auto &ea : _edges)
-	{
-		for (const auto &eb : p_other.edges())
-		{
-			if (_edgesIntersect(ea, eb, n, spk::Constants::pointPrecision))
-			{
-				GENERATE_ERROR("Union for overlapping (non-colinear) polygons not implemented yet");
-			}
-		}
-	}
 
 	std::vector<tmp::Edge> A = _edges;
 	std::vector<tmp::Edge> B = p_other.edges();
 
-	splitAllEdges(A, B);
-	splitAllEdges(B, A);
+	splitAllEdges(A, B, n);
+	splitAllEdges(B, A, n);
 
 	std::vector<tmp::Edge> boundary = subtractInternalShared(A, B);
 	if (boundary.empty())
