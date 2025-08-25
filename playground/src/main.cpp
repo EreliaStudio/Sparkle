@@ -536,7 +536,8 @@ namespace
 		p_base.swap(result);
 	}
 
-	// Remove sub-edges that appear once in each set (use Edge::isSame directly)
+	// Remove sub-edges that appear twice with opposite orientation.
+	// If edges overlap with the same orientation, keep a single copy.
 	std::vector<tmp::Edge> subtractInternalShared(const std::vector<tmp::Edge> &p_a, const std::vector<tmp::Edge> &p_b)
 	{
 		std::vector<bool> usedB(p_b.size(), false);
@@ -545,21 +546,28 @@ namespace
 
 		for (size_t i = 0; i < p_a.size(); ++i)
 		{
-			bool matched = false;
+			bool consumed = false;
 			for (size_t j = 0; j < p_b.size(); ++j)
 			{
 				if (usedB[j] == true)
 				{
 					continue;
 				}
-				if (p_a[i].isSame(p_b[j]) == true)
+				if (p_a[i].isInverse(p_b[j]) == true)
 				{
 					usedB[j] = true;
-					matched = true;
+					consumed = true;
+					break;
+				}
+				if (p_a[i] == p_b[j])
+				{
+					usedB[j] = true;
+					out.push_back(p_a[i]);
+					consumed = true;
 					break;
 				}
 			}
-			if (matched == false)
+			if (consumed == false)
 			{
 				out.push_back(p_a[i]);
 			}
