@@ -418,27 +418,27 @@ namespace tmp
 namespace
 {
 	// Clamp a float in [min,max]
-	float clampf(float v, float lo, float hi)
+	float clampf(float p_v, float p_lo, float p_hi)
 	{
-		return std::max(lo, std::min(v, hi));
+		return std::max(p_lo, std::min(p_v, p_hi));
 	}
 
 	// Gather split params along 'base' when 'other' is colinear and overlapping
-	void collectSplitTsForColinearOverlap(const tmp::Edge &base, const tmp::Edge &other, std::vector<float> &ts)
+	void collectSplitTsForColinearOverlap(const tmp::Edge &p_base, const tmp::Edge &p_other, std::vector<float> &p_ts)
 	{
-		if (base.isColinear(other) == false)
+		if (p_base.isColinear(p_other) == false)
 		{
 			return;
 		}
 
-		const float len2 = base.delta().dot(base.delta());
-		if (FLOAT_EQ(len2, 0.0f))
+		const float len2 = p_base.delta().dot(p_base.delta());
+		if (FLOAT_EQ(len2, 0.0f) == true)
 		{
 			return;
 		}
 
-		float t0 = base.project(other.first());
-		float t1 = base.project(other.second());
+		float t0 = p_base.project(p_other.first());
+		float t1 = p_base.project(p_other.second());
 		if (t1 < t0)
 		{
 			std::swap(t0, t1);
@@ -447,27 +447,27 @@ namespace
 		float lo = clampf(t0, 0.0f, len2);
 		float hi = clampf(t1, 0.0f, len2);
 
-		if (FLOAT_NEQ(hi - lo, 0.0f))
+		if (FLOAT_NEQ(hi - lo, 0.0f) == true)
 		{
-			ts.push_back(lo);
-			ts.push_back(hi);
+			p_ts.push_back(lo);
+			p_ts.push_back(hi);
 		}
 	}
 
 	// Split one edge by collected ts
-	void splitEdgeByTs(const tmp::Edge &e, const std::vector<float> &ts, std::vector<tmp::Edge> &out)
+	void splitEdgeByTs(const tmp::Edge &p_e, const std::vector<float> &p_ts, std::vector<tmp::Edge> &p_out)
 	{
-		const float len = e.delta().norm();
+		const float len = p_e.delta().norm();
 		const float len2 = len * len;
-		if (FLOAT_EQ(len, 0.0f))
+		if (FLOAT_EQ(len, 0.0f) == true)
 		{
 			return;
 		}
 
 		std::vector<float> cuts;
-		cuts.reserve(ts.size() + 2);
+		cuts.reserve(p_ts.size() + 2);
 		cuts.push_back(0.0f);
-		for (float t : ts)
+		for (float t : p_ts)
 		{
 			if (t > 0.0f && t < len2)
 			{
@@ -476,94 +476,93 @@ namespace
 		}
 		cuts.push_back(len2);
 		std::sort(cuts.begin(), cuts.end());
-		cuts.erase(std::unique(cuts.begin(), cuts.end(), [](float a, float b) { return FLOAT_EQ(a, b); }), cuts.end());
+		cuts.erase(std::unique(cuts.begin(), cuts.end(), [](float p_a, float p_b) { return FLOAT_EQ(p_a, p_b) == true; }), cuts.end());
 
 		for (size_t i = 1; i < cuts.size(); ++i)
 		{
 			float t0 = cuts[i - 1], t1 = cuts[i];
-			if (FLOAT_EQ(t1 - t0, 0.0f))
+			if (FLOAT_EQ(t1 - t0, 0.0f) == true)
 			{
 				continue;
 			}
 
-			const spk::Vector3 a = e.first() + e.direction() * (t0 / len);
-			const spk::Vector3 b = e.first() + e.direction() * (t1 / len);
-			out.emplace_back(a, b);
+			const spk::Vector3 a = p_e.first() + p_e.direction() * (t0 / len);
+			const spk::Vector3 b = p_e.first() + p_e.direction() * (t1 / len);
+			p_out.emplace_back(a, b);
 		}
 	}
 
 	// Split all edges of base by colinear overlaps with other
-	void splitAllEdges(std::vector<tmp::Edge> &base, const std::vector<tmp::Edge> &other)
+	void splitAllEdges(std::vector<tmp::Edge> &p_base, const std::vector<tmp::Edge> &p_other)
 	{
 		std::vector<tmp::Edge> result;
-		result.reserve(base.size() * 2);
-		for (const auto &e : base)
+		result.reserve(p_base.size() * 2);
+		for (const auto &e : p_base)
 		{
 			std::vector<float> ts;
-			for (const auto &o : other)
+			for (const auto &o : p_other)
 			{
 				collectSplitTsForColinearOverlap(e, o, ts);
 			}
 			splitEdgeByTs(e, ts, result);
 		}
-		base.swap(result);
+		p_base.swap(result);
 	}
 
 	// Remove sub-edges that appear once in each set (use Edge::isSame directly)
-	std::vector<tmp::Edge> subtractInternalShared(const std::vector<tmp::Edge> &A, const std::vector<tmp::Edge> &B)
+	std::vector<tmp::Edge> subtractInternalShared(const std::vector<tmp::Edge> &p_a, const std::vector<tmp::Edge> &p_b)
 	{
-		std::vector<bool> usedB(B.size(), false);
+		std::vector<bool> usedB(p_b.size(), false);
 		std::vector<tmp::Edge> out;
-		out.reserve(A.size() + B.size());
+		out.reserve(p_a.size() + p_b.size());
 
-		for (size_t i = 0; i < A.size(); ++i)
+		for (size_t i = 0; i < p_a.size(); ++i)
 		{
 			bool matched = false;
-			for (size_t j = 0; j < B.size(); ++j)
+			for (size_t j = 0; j < p_b.size(); ++j)
 			{
-				if (usedB[j])
+				if (usedB[j] == true)
 				{
 					continue;
 				}
-				if (A[i].isSame(B[j]))
+				if (p_a[i].isSame(p_b[j]) == true)
 				{
 					usedB[j] = true;
 					matched = true;
 					break;
 				}
 			}
-			if (!matched)
+			if (matched == false)
 			{
-				out.push_back(A[i]);
+				out.push_back(p_a[i]);
 			}
 		}
-		for (size_t j = 0; j < B.size(); ++j)
+		for (size_t j = 0; j < p_b.size(); ++j)
 		{
-			if (!usedB[j])
+			if (usedB[j] == false)
 			{
-				out.push_back(B[j]);
+				out.push_back(p_b[j]);
 			}
 		}
 		return out;
 	}
 
-	// Build a polygon loop from boundary edges (same as before)
-	std::vector<spk::Vector3> stitchLoop(const std::vector<tmp::Edge> &edges)
+	void buildAdjacency(
+		const std::vector<tmp::Edge> &p_edges,
+		std::map<spk::Vector3, std::vector<size_t>> &p_outAdj,
+		std::map<spk::Vector3, std::vector<size_t>> &p_inAdj)
 	{
-		if (edges.empty())
+		for (size_t i = 0; i < p_edges.size(); ++i)
 		{
-			return {};
+			p_outAdj[p_edges[i].first()].push_back(i);
+			p_inAdj[p_edges[i].second()].push_back(i);
 		}
+	}
 
-		std::map<spk::Vector3, std::vector<size_t>> outAdj, inAdj;
-		for (size_t i = 0; i < edges.size(); ++i)
-		{
-			outAdj[edges[i].first()].push_back(i);
-			inAdj[edges[i].second()].push_back(i);
-		}
-
-		spk::Vector3 start = edges[0].first();
-		for (const auto &e : edges)
+	spk::Vector3 findStartVertex(const std::vector<tmp::Edge> &p_edges)
+	{
+		spk::Vector3 start = p_edges[0].first();
+		for (const auto &e : p_edges)
 		{
 			if (e.first() < start)
 			{
@@ -574,10 +573,60 @@ namespace
 				start = e.second();
 			}
 		}
+		return start;
+	}
 
-		std::vector<bool> used(edges.size(), false);
+	bool pickNextEdge(
+		const spk::Vector3 &p_cur,
+		const std::map<spk::Vector3, std::vector<size_t>> &p_outAdj,
+		const std::map<spk::Vector3, std::vector<size_t>> &p_inAdj,
+		const std::vector<bool> &p_used,
+		size_t &p_pick,
+		bool &p_forward)
+	{
+		if (auto it = p_outAdj.find(p_cur); it != p_outAdj.end())
+		{
+			for (size_t idx : it->second)
+			{
+				if (p_used[idx] == false)
+				{
+					p_pick = idx;
+					p_forward = true;
+					return true;
+				}
+			}
+		}
+		if (auto it = p_inAdj.find(p_cur); it != p_inAdj.end())
+		{
+			for (size_t idx : it->second)
+			{
+				if (p_used[idx] == false)
+				{
+					p_pick = idx;
+					p_forward = false;
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	// Build a polygon loop from boundary edges (same as before)
+	std::vector<spk::Vector3> stitchLoop(const std::vector<tmp::Edge> &p_edges)
+	{
+		if (p_edges.empty() == true)
+		{
+			return {};
+		}
+
+		std::map<spk::Vector3, std::vector<size_t>> outAdj, inAdj;
+		buildAdjacency(p_edges, outAdj, inAdj);
+
+		spk::Vector3 start = findStartVertex(p_edges);
+
+		std::vector<bool> used(p_edges.size(), false);
 		std::vector<spk::Vector3> loop;
-		loop.reserve(edges.size() + 1);
+		loop.reserve(p_edges.size() + 1);
 		spk::Vector3 cur = start;
 		loop.push_back(cur);
 
@@ -586,41 +635,13 @@ namespace
 			size_t pick = SIZE_MAX;
 			bool forward = true;
 
-			if (auto it = outAdj.find(cur); it != outAdj.end())
-			{
-				for (size_t idx : it->second)
-				{
-					if (!used[idx])
-					{
-						pick = idx;
-						forward = true;
-						break;
-					}
-				}
-			}
-			if (pick == SIZE_MAX)
-			{
-				if (auto it = inAdj.find(cur); it != inAdj.end())
-				{
-					for (size_t idx : it->second)
-					{
-						if (!used[idx])
-						{
-							pick = idx;
-							forward = false;
-							break;
-						}
-					}
-				}
-			}
-
-			if (pick == SIZE_MAX)
+			if (pickNextEdge(cur, outAdj, inAdj, used, pick, forward) == false)
 			{
 				break;
 			}
 
 			used[pick] = true;
-			cur = forward ? edges[pick].second() : edges[pick].first();
+			cur = forward == true ? p_edges[pick].second() : p_edges[pick].first();
 
 			if (loop.size() > 1 && (cur == loop.front()))
 			{
@@ -629,7 +650,7 @@ namespace
 			loop.push_back(cur);
 		}
 
-		if (loop.size() >= 3 && !(loop.front() == loop.back()))
+		if (loop.size() >= 3 && ((loop.front() == loop.back()) == false))
 		{
 			loop.push_back(loop.front());
 		}
@@ -686,6 +707,47 @@ private:
 
 	std::vector<tmp::Polygon> _polygons;
 
+	void _drawEdgeOnCanvas(
+		const tmp::Edge &p_edge, char p_polyChar, const spk::Vector3Int &p_min, std::vector<std::string> &p_canvas, int p_width, int p_height) const
+	{
+		spk::Vector3Int a = spk::Vector3Int(p_edge.first());
+		spk::Vector3Int b = spk::Vector3Int(p_edge.second());
+
+		int x0 = a.x - p_min.x;
+		int y0 = a.y - p_min.y;
+		int x1 = b.x - p_min.x;
+		int y1 = b.y - p_min.y;
+
+		int dx = std::abs(x1 - x0);
+		int dy = -std::abs(y1 - y0);
+		int sx = (x0 < x1) ? 1 : -1;
+		int sy = (y0 < y1) ? 1 : -1;
+		int err = dx + dy;
+
+		while (true)
+		{
+			if (y0 >= 0 && y0 < p_height && x0 >= 0 && x0 < p_width)
+			{
+				p_canvas[p_height - 1 - y0][x0] = p_polyChar;
+			}
+			if (x0 == x1 && y0 == y1)
+			{
+				break;
+			}
+			int e2 = 2 * err;
+			if (e2 >= dy)
+			{
+				err += dy;
+				x0 += sx;
+			}
+			if (e2 <= dx)
+			{
+				err += dx;
+				y0 += sy;
+			}
+		}
+	}
+
 public:
 	void addPolygon(const tmp::Polygon &p_polygon)
 	{
@@ -699,7 +761,7 @@ public:
 
 	void print() const
 	{
-		if (_polygons.empty() || _max == 0)
+		if (_polygons.empty() == true || _max == 0)
 		{
 			std::cout << "(no polygons)" << std::endl;
 			return;
@@ -708,56 +770,17 @@ public:
 		int width = _max.x - _min.x + 1;
 		int height = _max.y - _min.y + 1;
 
-		// Start with a blank canvas
 		std::vector<std::string> canvas(height, std::string(width, ' '));
 
-		// Draw polygons
 		char polyChar = 'a';
 		for (size_t p = 0; p < _polygons.size(); ++p, ++polyChar)
 		{
 			for (const auto &edge : _polygons[p].edges())
 			{
-				spk::Vector3Int a = spk::Vector3Int(edge.first());
-				spk::Vector3Int b = spk::Vector3Int(edge.second());
-
-				// Bresenham line drawing in integer grid
-				int x0 = a.x - _min.x;
-				int y0 = a.y - _min.y;
-				int x1 = b.x - _min.x;
-				int y1 = b.y - _min.y;
-
-				int dx = std::abs(x1 - x0);
-				int dy = -std::abs(y1 - y0);
-				int sx = (x0 < x1) ? 1 : -1;
-				int sy = (y0 < y1) ? 1 : -1;
-				int err = dx + dy;
-
-				while (true)
-				{
-					if (y0 >= 0 && y0 < height && x0 >= 0 && x0 < width)
-					{
-						canvas[height - 1 - y0][x0] = polyChar;
-					}
-					if (x0 == x1 && y0 == y1)
-					{
-						break;
-					}
-					int e2 = 2 * err;
-					if (e2 >= dy)
-					{
-						err += dy;
-						x0 += sx;
-					}
-					if (e2 <= dx)
-					{
-						err += dx;
-						y0 += sy;
-					}
-				}
+				_drawEdgeOnCanvas(edge, polyChar, _min, canvas, width, height);
 			}
 		}
 
-		// Print canvas
 		for (const auto &row : canvas)
 		{
 			std::cout << row << "\n";
