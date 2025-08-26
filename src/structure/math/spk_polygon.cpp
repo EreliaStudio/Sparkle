@@ -407,10 +407,18 @@ namespace spk
 			return false;
 		}
 
-		spk::Vector3 currentNormal = normal();
-		spk::Vector3 otherNormal = p_other.normal();
+		spk::Vector3 n1 = normal().normalize();
+		spk::Vector3 n2 = p_other.normal().normalize();
 
-		return ((currentNormal == otherNormal || currentNormal.inverse() == otherNormal) && currentNormal.dot(p_other.edges()[0].first()) == 0);
+		if (((n1 == n2) == false) && ((n1 == n2.inverse()) == false))
+		{
+			return false;
+		}
+
+		float d1 = n1.dot(edges()[0].first());
+		float d2 = n1.dot(p_other.edges()[0].first());
+
+		return (FLOAT_EQ(d1, d2) == true);
 	}
 
 	bool Polygon::isAdjacent(const Polygon &p_other) const
