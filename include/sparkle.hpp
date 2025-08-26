@@ -81,7 +81,6 @@
 #include "structure/graphics/texture/spk_image.hpp"
 #include "structure/graphics/texture/spk_sprite_sheet.hpp"
 #include "structure/math/spk_constants.hpp"
-#include "structure/math/spk_edge.hpp"
 #include "structure/math/spk_math.hpp"
 #include "structure/math/spk_matrix.hpp"
 #include "structure/math/spk_perlin.hpp"
