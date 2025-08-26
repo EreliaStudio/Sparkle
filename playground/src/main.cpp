@@ -256,7 +256,15 @@ namespace tmp
 			spk::Vector3 currentNormal = normal();
 			spk::Vector3 otherNormal = p_other.normal();
 
-			return ((currentNormal == otherNormal || currentNormal.inverse() == otherNormal) && currentNormal.dot(p_other.edges()[0].first()) == 0);
+			if ((currentNormal == otherNormal || currentNormal.inverse() == otherNormal) == false)
+			{
+				return (false);
+			}
+
+			float currentOffset = currentNormal.dot(_edges[0].first());
+			float otherOffset = currentNormal.dot(p_other.edges()[0].first());
+
+			return (FLOAT_EQ(currentOffset, otherOffset) == true);
 		}
 
 		bool isAdjacent(const Polygon &p_other) const
