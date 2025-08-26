@@ -6,7 +6,6 @@
 #include <array>
 #include <cmath>
 #include <limits>
-#include <map>
 #include <utility>
 
 namespace
@@ -204,96 +203,53 @@ namespace
 				return {};
 			}
 
-			spk::Vector3 up = p_normal.normalize();
-			spk::Vector3 yAxis = spk::Vector3(0, 1, 0);
-			if (up == yAxis || up == yAxis.inverse())
-			{
-				yAxis = spk::Vector3(0, 0, 1);
-			}
-			spk::Vector3 xAxis = yAxis.cross(up).normalize();
-			yAxis = up.cross(xAxis);
-
-			std::map<spk::Vector3, spk::Vector2> coords;
-			std::map<spk::Vector3, std::vector<std::pair<size_t, bool>>> adj;
-			for (size_t i = 0; i < p_edges.size(); ++i)
-			{
-				const spk::Edge &e = p_edges[i];
-				auto insert = [&](const spk::Vector3 &p_v)
-				{
-					if (coords.find(p_v) == coords.end())
-					{
-						coords[p_v] = spk::Vector2(p_v.dot(xAxis), p_v.dot(yAxis));
-					}
-				};
-				insert(e.first());
-				insert(e.second());
-				adj[e.first()].push_back({i, true});
-				adj[e.second()].push_back({i, false});
-			}
-
-			spk::Vector3 start = adj.begin()->first;
-			spk::Vector2 startCoord = coords[start];
-			for (const auto &kv : coords)
-			{
-				const spk::Vector2 &c = kv.second;
-				if (c.y < startCoord.y || (FLOAT_EQ(c.y, startCoord.y) == true && c.x < startCoord.x))
-				{
-					start = kv.first;
-					startCoord = c;
-				}
-			}
-
-			std::vector<bool> used(p_edges.size(), false);
+			std::vector<spk::Edge> remaining = p_edges;
 			std::vector<spk::Vector3> loop;
-			loop.push_back(start);
-			spk::Vector3 cur3 = start;
-			spk::Vector2 curDir(1.0f, 0.0f);
 
-			while (true)
+			loop.push_back(remaining[0].first());
+			spk::Vector3 current = remaining[0].second();
+			loop.push_back(current);
+			remaining.erase(remaining.begin());
+
+			while (remaining.empty() == false)
 			{
-				float bestAng = -std::numeric_limits<float>::infinity();
-				size_t bestIdx = SIZE_MAX;
-				bool bestForward = true;
-				for (auto &opt : adj[cur3])
+				bool found = false;
+				for (size_t i = 0; i < remaining.size(); ++i)
 				{
-					size_t idx = opt.first;
-					bool forward = opt.second;
-					if (used[idx] == true)
+					if (remaining[i].first() == current)
 					{
-						continue;
+						current = remaining[i].second();
+						loop.push_back(current);
+						remaining.erase(remaining.begin() + i);
+						found = true;
+						break;
 					}
-					spk::Vector3 next3 = forward == true ? p_edges[idx].second() : p_edges[idx].first();
-					spk::Vector2 dir = (coords[next3] - coords[cur3]).normalize();
-					float cross = curDir.x * dir.y - curDir.y * dir.x;
-					float dot = curDir.x * dir.x + curDir.y * dir.y;
-					float ang = std::atan2(cross, dot);
-					if (ang > bestAng)
+					if (remaining[i].second() == current)
 					{
-						bestAng = ang;
-						bestIdx = idx;
-						bestForward = forward;
+						current = remaining[i].first();
+						loop.push_back(current);
+						remaining.erase(remaining.begin() + i);
+						found = true;
+						break;
 					}
 				}
-				if (bestIdx == SIZE_MAX)
-				{
-					break;
-				}
-				used[bestIdx] = true;
-				spk::Vector3 next3 = bestForward == true ? p_edges[bestIdx].second() : p_edges[bestIdx].first();
-				loop.push_back(next3);
-				curDir = (coords[next3] - coords[cur3]).normalize();
-				cur3 = next3;
-				if (cur3 == start)
+				if (found == false || current == loop.front())
 				{
 					break;
 				}
 			}
 
-			if (loop.size() >= 3 && ((loop.front() == loop.back()) == false))
+			if (loop.size() >= 3 && loop.front() == loop.back())
 			{
-				loop.push_back(loop.front());
+				spk::Vector3 n = (loop[1] - loop[0]).cross(loop[2] - loop[1]);
+				if (n.dot(p_normal) < 0.0f)
+				{
+					std::reverse(loop.begin(), loop.end());
+				}
+				return loop;
 			}
-			return loop;
+
+			return {};
 		} catch (const std::exception &e)
 		{
 			GENERATE_ERROR(std::string("stitchLoop - ") + e.what());
