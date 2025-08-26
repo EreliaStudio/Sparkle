@@ -1,3 +1,4 @@
+#include "structure/engine/spk_obj_mesh.hpp"
 #include "structure/math/spk_constants.hpp"
 #include "structure/math/spk_vector2.hpp"
 #include "structure/math/spk_vector3.hpp"
@@ -731,153 +732,87 @@ tmp::Polygon tmp::Polygon::fuze(const Polygon &p_other) const
 	return tmp::Polygon::fromLoop(loop);
 }
 
-class PolygonOutputer
+class CollisionMesh
 {
+public:
+	using Unit = tmp::Polygon;
+
 private:
-	spk::Vector3 _min;
-	spk::Vector3 _max;
-
-	std::vector<tmp::Polygon> _polygons;
-
-	void _drawEdgeOnCanvas(
-		const tmp::Edge &p_edge, char p_polyChar, const spk::Vector3 &p_min, std::vector<std::string> &p_canvas, int p_width, int p_height) const
-	{
-		spk::Vector3 a = p_edge.first();
-		spk::Vector3 b = p_edge.second();
-
-		int x0 = static_cast<int>(std::round(a.x - p_min.x));
-		int y0 = static_cast<int>(std::round(a.y - p_min.y));
-		int x1 = static_cast<int>(std::round(b.x - p_min.x));
-		int y1 = static_cast<int>(std::round(b.y - p_min.y));
-
-		int dx = std::abs(x1 - x0);
-		int dy = -std::abs(y1 - y0);
-		int sx = (x0 < x1) ? 1 : -1;
-		int sy = (y0 < y1) ? 1 : -1;
-		int err = dx + dy;
-
-		while (true)
-		{
-			if (y0 >= 0 && y0 < p_height && x0 >= 0 && x0 < p_width)
-			{
-				p_canvas[p_height - 1 - y0][x0] = p_polyChar;
-			}
-			if (x0 == x1 && y0 == y1)
-			{
-				break;
-			}
-			int e2 = 2 * err;
-			if (e2 >= dy)
-			{
-				err += dy;
-				x0 += sx;
-			}
-			if (e2 <= dx)
-			{
-				err += dx;
-				y0 += sy;
-			}
-		}
-	}
+	std::vector<Unit> _units;
 
 public:
-	PolygonOutputer() :
-		_min(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max()),
-		_max(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest())
+	CollisionMesh() = default;
+
+	void addUnit(const Unit &p_unit)
 	{
+		_units.push_back(p_unit);
 	}
 
-	void addPolygon(const tmp::Polygon &p_polygon)
+	const std::vector<Unit> &units() const
 	{
-		_polygons.push_back(p_polygon);
-		for (const auto &edge : p_polygon.edges())
-		{
-			_min.x = std::min(_min.x, std::min(edge.first().x, edge.second().x));
-			_min.y = std::min(_min.y, std::min(edge.first().y, edge.second().y));
-			_min.z = std::min(_min.z, std::min(edge.first().z, edge.second().z));
-			_max.x = std::max(_max.x, std::max(edge.first().x, edge.second().x));
-			_max.y = std::max(_max.y, std::max(edge.first().y, edge.second().y));
-			_max.z = std::max(_max.z, std::max(edge.first().z, edge.second().z));
-		}
+		return (_units);
 	}
 
-	void print() const
+	static CollisionMesh fromObjMesh(const spk::SafePointer<spk::ObjMesh> &p_mesh)
 	{
-		if (_polygons.empty() == true || _max == (std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest()))
+		CollisionMesh result;
+		for (const auto &shapeVariant : p_mesh->shapes())
 		{
-			std::cout << "(no polygons)" << std::endl;
-			return;
-		}
-
-		int width = static_cast<int>(std::round(_max.x - _min.x)) + 1;
-		int height = static_cast<int>(std::round(_max.y - _min.y)) + 1;
-
-		std::vector<std::string> canvas(height, std::string(width, ' '));
-
-		char polyChar = 'a';
-		for (size_t p = 0; p < _polygons.size(); ++p, ++polyChar)
-		{
-			for (const auto &edge : _polygons[p].edges())
+			Unit poly;
+			if (std::holds_alternative<spk::ObjMesh::Quad>(shapeVariant) == true)
 			{
-				_drawEdgeOnCanvas(edge, polyChar, _min, canvas, width, height);
+				const auto &q = std::get<spk::ObjMesh::Quad>(shapeVariant);
+				poly = tmp::Polygon::makeSquare(q.a.position, q.b.position, q.c.position, q.d.position);
+			}
+			else
+			{
+				const auto &t = std::get<spk::ObjMesh::Triangle>(shapeVariant);
+				poly = tmp::Polygon::makeTriangle(t.a.position, t.b.position, t.c.position);
+			}
+
+			bool removed = false;
+			for (auto it = result._units.begin(); it != result._units.end(); ++it)
+			{
+				if (it->isCoplanar(poly) == true && it->normal() == poly.normal().inverse() && it->isOverlapping(poly) == true)
+				{
+					result._units.erase(it);
+					removed = true;
+					break;
+				}
+			}
+			if (removed == true)
+			{
+				continue;
+			}
+
+			bool fused = false;
+			for (auto &existing : result._units)
+			{
+				if (existing.isCoplanar(poly) == true && existing.normal() == poly.normal() &&
+					(existing.isAdjacent(poly) == true || existing.isOverlapping(poly) == true))
+				{
+					existing = existing.fuze(poly);
+					fused = true;
+					break;
+				}
+			}
+			if (fused == false)
+			{
+				result.addUnit(poly);
 			}
 		}
-
-		for (const auto &row : canvas)
-		{
-			std::cout << row << "\n";
-		}
+		return (result);
 	}
 };
-
-void checkPolygons(std::string_view p_nameA, const tmp::Polygon &p_polyA, std::string_view p_nameB, const tmp::Polygon &p_polyB)
-{
-	std::cout << " ----- " << p_nameA << " -> " << p_nameB << " -----" << std::endl;
-	PolygonOutputer tmp;
-	tmp.addPolygon(p_polyA);
-	tmp.addPolygon(p_polyB);
-	tmp.print();
-	std::cout << " ----- ------ -----" << std::endl << std::endl;
-
-	std::cout << "Is planar " << p_nameA << " : " << std::boolalpha << p_polyA.isPlanar() << std::endl;
-	std::cout << "Is planar " << p_nameB << " : " << std::boolalpha << p_polyB.isPlanar() << std::endl;
-	std::cout << "Is Coplanar : " << std::boolalpha << p_polyA.isCoplanar(p_polyB) << std::endl;
-	std::cout << "Is adjacent : " << std::boolalpha << p_polyA.isAdjacent(p_polyB) << std::endl;
-	std::cout << "Is overlapping : " << std::boolalpha << p_polyA.isOverlapping(p_polyB) << std::endl;
-
-	std::cout << " ----- Fused  -----" << std::endl << std::endl;
-	try
-	{
-		PolygonOutputer tmp;
-		tmp.addPolygon(p_polyA.fuze(p_polyB));
-		tmp.print();
-	} catch (const std::exception &e)
-	{
-		std::cout << e.what() << std::endl;
-	} catch (...)
-	{
-		std::cout << "Can't be fused : unknow error" << std::endl;
-	}
-	std::cout << " ----- ------ -----" << std::endl << std::endl;
-}
-
 int main()
 {
-	std::array<spk::Vector3, 4> points = {spk::Vector3{0, 0, 0}, spk::Vector3{10, 0, 0}, spk::Vector3{10, 10, 0}, spk::Vector3{0, 10, 0}};
-	spk::Vector3 deltaB = {10, 0, 0};
-	spk::Vector3 deltaC = {5, 10, 0};
-	spk::Vector3 deltaD = {5, 5, 0};
-	spk::Vector3 deltaE = {15, 5, 0};
-	tmp::Polygon polyA = tmp::Polygon::makeSquare(points[0], points[1], points[2], points[3]);
-	tmp::Polygon polyB = tmp::Polygon::makeSquare(points[0] + deltaB, points[1] + deltaB, points[2] + deltaB, points[3] + deltaB);
-	tmp::Polygon polyC = tmp::Polygon::makeSquare(points[0] + deltaC, points[1] + deltaC, points[2] + deltaC, points[3] + deltaC);
-	tmp::Polygon polyD = tmp::Polygon::makeSquare(points[0] + deltaD, points[1] + deltaD, points[2] + deltaD, points[3] + deltaD);
-	tmp::Polygon polyE = tmp::Polygon::makeSquare(points[0] + deltaE, points[1] + deltaE, points[2] + deltaE, points[3] + deltaE);
+	spk::ObjMesh mesh = spk::ObjMesh::loadFromFile("playground/resources/obj/two_cubes.obj");
+	tmp::CollisionMesh collision = tmp::CollisionMesh::fromObjMesh(&mesh);
 
-	checkPolygons("A", polyA, "B", polyB);
-	checkPolygons("A", polyA, "C", polyC);
-	checkPolygons("A", polyA, "D", polyD);
-	checkPolygons("A", polyA, "E", polyE);
+	for (const auto &poly : collision.units())
+	{
+		std::cout << poly << std::endl;
+	}
 
 	return (0);
 }
