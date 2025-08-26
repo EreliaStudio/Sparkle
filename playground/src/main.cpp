@@ -1,4 +1,15 @@
-#include <sparkle.hpp>
+#include "structure/math/spk_constants.hpp"
+#include "structure/math/spk_vector2.hpp"
+#include "structure/math/spk_vector3.hpp"
+#include "structure/math/spk_vector4.hpp"
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <iostream>
+#include <limits>
+#include <map>
+#include <utility>
+#include <vector>
 
 namespace tmp
 {
@@ -582,107 +593,98 @@ namespace
 		return out;
 	}
 
-	void buildAdjacency(
-		const std::vector<tmp::Edge> &p_edges,
-		std::map<spk::Vector3, std::vector<size_t>> &p_outAdj,
-		std::map<spk::Vector3, std::vector<size_t>> &p_inAdj)
-	{
-		for (size_t i = 0; i < p_edges.size(); ++i)
-		{
-			p_outAdj[p_edges[i].first()].push_back(i);
-			p_inAdj[p_edges[i].second()].push_back(i);
-		}
-	}
-
-	spk::Vector3 findStartVertex(const std::vector<tmp::Edge> &p_edges)
-	{
-		spk::Vector3 start = p_edges[0].first();
-		for (const auto &e : p_edges)
-		{
-			if (e.first() < start)
-			{
-				start = e.first();
-			}
-			if (e.second() < start)
-			{
-				start = e.second();
-			}
-		}
-		return start;
-	}
-
-	bool pickNextEdge(
-		const spk::Vector3 &p_cur,
-		const std::map<spk::Vector3, std::vector<size_t>> &p_outAdj,
-		const std::map<spk::Vector3, std::vector<size_t>> &p_inAdj,
-		const std::vector<bool> &p_used,
-		size_t &p_pick,
-		bool &p_forward)
-	{
-		if (auto it = p_outAdj.find(p_cur); it != p_outAdj.end())
-		{
-			for (size_t idx : it->second)
-			{
-				if (p_used[idx] == false)
-				{
-					p_pick = idx;
-					p_forward = true;
-					return true;
-				}
-			}
-		}
-		if (auto it = p_inAdj.find(p_cur); it != p_inAdj.end())
-		{
-			for (size_t idx : it->second)
-			{
-				if (p_used[idx] == false)
-				{
-					p_pick = idx;
-					p_forward = false;
-					return true;
-				}
-			}
-		}
-		return false;
-	}
-
-	// Build a polygon loop from boundary edges (same as before)
-	std::vector<spk::Vector3> stitchLoop(const std::vector<tmp::Edge> &p_edges)
+	std::vector<spk::Vector3> stitchLoop( // NOLINT(readability-function-cognitive-complexity)
+                const std::vector<tmp::Edge> &p_edges,
+                const spk::Vector3 &p_normal)
 	{
 		if (p_edges.empty() == true)
 		{
 			return {};
 		}
 
-		std::map<spk::Vector3, std::vector<size_t>> outAdj, inAdj;
-		buildAdjacency(p_edges, outAdj, inAdj);
+		spk::Vector3 up = p_normal.normalize();
+		spk::Vector3 yAxis = spk::Vector3(0, 1, 0);
+		if (up == yAxis || up == yAxis.inverse())
+		{
+			yAxis = spk::Vector3(0, 0, 1);
+		}
+		spk::Vector3 xAxis = yAxis.cross(up).normalize();
+		yAxis = up.cross(xAxis);
 
-		spk::Vector3 start = findStartVertex(p_edges);
+		std::map<spk::Vector3, spk::Vector2> coords;
+		std::map<spk::Vector3, std::vector<std::pair<size_t, bool>>> adj;
+		for (size_t i = 0; i < p_edges.size(); ++i)
+		{
+			const tmp::Edge &e = p_edges[i];
+			auto insert = [&](const spk::Vector3 &p_v)
+			{
+				if (coords.find(p_v) == coords.end())
+				{
+					coords[p_v] = spk::Vector2(p_v.dot(xAxis), p_v.dot(yAxis));
+				}
+			};
+			insert(e.first());
+			insert(e.second());
+			adj[e.first()].push_back({i, true});
+			adj[e.second()].push_back({i, false});
+		}
+
+		spk::Vector3 start = adj.begin()->first;
+		spk::Vector2 startCoord = coords[start];
+		for (const auto &kv : coords)
+		{
+			const spk::Vector2 &c = kv.second;
+			if (c.y < startCoord.y || (FLOAT_EQ(c.y, startCoord.y) == true && c.x < startCoord.x))
+			{
+				start = kv.first;
+				startCoord = c;
+			}
+		}
 
 		std::vector<bool> used(p_edges.size(), false);
 		std::vector<spk::Vector3> loop;
-		loop.reserve(p_edges.size() + 1);
-		spk::Vector3 cur = start;
-		loop.push_back(cur);
+		loop.push_back(start);
+		spk::Vector3 cur3 = start;
+		spk::Vector2 curDir(1.0f, 0.0f);
 
-		for (;;)
+		while (true)
 		{
-			size_t pick = SIZE_MAX;
-			bool forward = true;
-
-			if (pickNextEdge(cur, outAdj, inAdj, used, pick, forward) == false)
+			float bestAng = -std::numeric_limits<float>::infinity();
+			size_t bestIdx = SIZE_MAX;
+			bool bestForward = true;
+			for (auto &opt : adj[cur3])
+			{
+				size_t idx = opt.first;
+				bool forward = opt.second;
+				if (used[idx] == true)
+				{
+					continue;
+				}
+				spk::Vector3 next3 = forward == true ? p_edges[idx].second() : p_edges[idx].first();
+				spk::Vector2 dir = (coords[next3] - coords[cur3]).normalize();
+				float cross = curDir.x * dir.y - curDir.y * dir.x;
+				float dot = curDir.x * dir.x + curDir.y * dir.y;
+				float ang = std::atan2(cross, dot);
+				if (ang > bestAng)
+				{
+					bestAng = ang;
+					bestIdx = idx;
+					bestForward = forward;
+				}
+			}
+			if (bestIdx == SIZE_MAX)
 			{
 				break;
 			}
-
-			used[pick] = true;
-			cur = forward == true ? p_edges[pick].second() : p_edges[pick].first();
-
-			if (loop.size() > 1 && (cur == loop.front()))
+			used[bestIdx] = true;
+			spk::Vector3 next3 = bestForward == true ? p_edges[bestIdx].second() : p_edges[bestIdx].first();
+			loop.push_back(next3);
+			curDir = (coords[next3] - coords[cur3]).normalize();
+			cur3 = next3;
+			if (cur3 == start)
 			{
 				break;
 			}
-			loop.push_back(cur);
 		}
 
 		if (loop.size() >= 3 && ((loop.front() == loop.back()) == false))
@@ -714,7 +716,7 @@ tmp::Polygon tmp::Polygon::fuze(const Polygon &p_other) const
 		GENERATE_ERROR("Fused polygon is empty or degenerate");
 	}
 
-	std::vector<spk::Vector3> loop = stitchLoop(boundary);
+	std::vector<spk::Vector3> loop = stitchLoop(boundary, n);
 	if (loop.size() < 4)
 	{
 		GENERATE_ERROR("Fused polygon could not be stitched");
@@ -726,21 +728,21 @@ tmp::Polygon tmp::Polygon::fuze(const Polygon &p_other) const
 class PolygonOutputer
 {
 private:
-	spk::Vector3Int _min;
-	spk::Vector3Int _max = 0;
+	spk::Vector3 _min;
+	spk::Vector3 _max;
 
 	std::vector<tmp::Polygon> _polygons;
 
 	void _drawEdgeOnCanvas(
-		const tmp::Edge &p_edge, char p_polyChar, const spk::Vector3Int &p_min, std::vector<std::string> &p_canvas, int p_width, int p_height) const
+		const tmp::Edge &p_edge, char p_polyChar, const spk::Vector3 &p_min, std::vector<std::string> &p_canvas, int p_width, int p_height) const
 	{
-		spk::Vector3Int a = spk::Vector3Int(p_edge.first());
-		spk::Vector3Int b = spk::Vector3Int(p_edge.second());
+		spk::Vector3 a = p_edge.first();
+		spk::Vector3 b = p_edge.second();
 
-		int x0 = a.x - p_min.x;
-		int y0 = a.y - p_min.y;
-		int x1 = b.x - p_min.x;
-		int y1 = b.y - p_min.y;
+		int x0 = static_cast<int>(std::round(a.x - p_min.x));
+		int y0 = static_cast<int>(std::round(a.y - p_min.y));
+		int x1 = static_cast<int>(std::round(b.x - p_min.x));
+		int y1 = static_cast<int>(std::round(b.y - p_min.y));
 
 		int dx = std::abs(x1 - x0);
 		int dy = -std::abs(y1 - y0);
@@ -773,26 +775,36 @@ private:
 	}
 
 public:
+	PolygonOutputer() :
+		_min(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max()),
+		_max(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest())
+	{
+	}
+
 	void addPolygon(const tmp::Polygon &p_polygon)
 	{
 		_polygons.push_back(p_polygon);
 		for (const auto &edge : p_polygon.edges())
 		{
-			_min = spk::Vector3Int::min(_min, spk::Vector3Int::min(edge.first(), edge.second()));
-			_max = spk::Vector3Int::max(_max, spk::Vector3Int::max(edge.first(), edge.second()));
+			_min.x = std::min(_min.x, std::min(edge.first().x, edge.second().x));
+			_min.y = std::min(_min.y, std::min(edge.first().y, edge.second().y));
+			_min.z = std::min(_min.z, std::min(edge.first().z, edge.second().z));
+			_max.x = std::max(_max.x, std::max(edge.first().x, edge.second().x));
+			_max.y = std::max(_max.y, std::max(edge.first().y, edge.second().y));
+			_max.z = std::max(_max.z, std::max(edge.first().z, edge.second().z));
 		}
 	}
 
 	void print() const
 	{
-		if (_polygons.empty() == true || _max == 0)
+		if (_polygons.empty() == true)
 		{
 			std::cout << "(no polygons)" << std::endl;
 			return;
 		}
 
-		int width = _max.x - _min.x + 1;
-		int height = _max.y - _min.y + 1;
+		int width = static_cast<int>(std::round(_max.x - _min.x)) + 1;
+		int height = static_cast<int>(std::round(_max.y - _min.y)) + 1;
 
 		std::vector<std::string> canvas(height, std::string(width, ' '));
 
