@@ -465,6 +465,101 @@ namespace tmp
 			return p_wos;
 		}
 	};
+
+	class CollisionMesh
+	{
+	public:
+		using Unit = tmp::Polygon;
+
+	private:
+		std::vector<Unit> _units;
+
+	public:
+		CollisionMesh() = default;
+
+		void addUnit(const Unit &p_unit)
+		{
+			_units.push_back(p_unit);
+		}
+
+		const std::vector<Unit> &units() const
+		{
+			return (_units);
+		}
+
+		static CollisionMesh fromObjMesh(const spk::SafePointer<spk::ObjMesh> &p_mesh)
+		{
+			CollisionMesh result;
+			for (const auto &shapeVariant : p_mesh->shapes())
+			{
+				Unit poly;
+				if (std::holds_alternative<spk::ObjMesh::Quad>(shapeVariant) == true)
+				{
+					const auto &q = std::get<spk::ObjMesh::Quad>(shapeVariant);
+					poly = tmp::Polygon::makeSquare(q.a.position, q.b.position, q.c.position, q.d.position);
+				}
+				else
+				{
+					const auto &t = std::get<spk::ObjMesh::Triangle>(shapeVariant);
+					poly = tmp::Polygon::makeTriangle(t.a.position, t.b.position, t.c.position);
+				}
+
+				bool removed = false;
+				for (auto it = result._units.begin(); it != result._units.end(); ++it)
+				{
+					if (it->isCoplanar(poly) == true && it->normal() == poly.normal().inverse())
+					{
+						bool shared = it->isOverlapping(poly);
+						if (shared == false)
+						{
+							for (const auto &edgeA : it->edges())
+							{
+								for (const auto &edgeB : poly.edges())
+								{
+									if (edgeA.isInverse(edgeB) == true)
+									{
+										shared = true;
+										break;
+									}
+								}
+								if (shared == true)
+								{
+									break;
+								}
+							}
+						}
+						if (shared == true)
+						{
+							result._units.erase(it);
+							removed = true;
+							break;
+						}
+					}
+				}
+				if (removed == true)
+				{
+					continue;
+				}
+
+				bool fused = false;
+				for (auto &existing : result._units)
+				{
+					if (existing.isCoplanar(poly) == true && existing.normal() == poly.normal() &&
+						(existing.isAdjacent(poly) == true || existing.isOverlapping(poly) == true))
+					{
+						existing = existing.fuze(poly);
+						fused = true;
+						break;
+					}
+				}
+				if (fused == false)
+				{
+					result.addUnit(poly);
+				}
+			}
+			return (result);
+		}
+	};
 }
 
 namespace
@@ -772,100 +867,7 @@ tmp::Polygon tmp::Polygon::fuze(const Polygon &p_other) const
 	return tmp::Polygon::fromLoop(loop);
 }
 
-class CollisionMesh
-{
-public:
-	using Unit = tmp::Polygon;
 
-private:
-	std::vector<Unit> _units;
-
-public:
-	CollisionMesh() = default;
-
-	void addUnit(const Unit &p_unit)
-	{
-		_units.push_back(p_unit);
-	}
-
-	const std::vector<Unit> &units() const
-	{
-		return (_units);
-	}
-
-	static CollisionMesh fromObjMesh(const spk::SafePointer<spk::ObjMesh> &p_mesh)
-	{
-		CollisionMesh result;
-		for (const auto &shapeVariant : p_mesh->shapes())
-		{
-			Unit poly;
-			if (std::holds_alternative<spk::ObjMesh::Quad>(shapeVariant) == true)
-			{
-				const auto &q = std::get<spk::ObjMesh::Quad>(shapeVariant);
-				poly = tmp::Polygon::makeSquare(q.a.position, q.b.position, q.c.position, q.d.position);
-			}
-			else
-			{
-				const auto &t = std::get<spk::ObjMesh::Triangle>(shapeVariant);
-				poly = tmp::Polygon::makeTriangle(t.a.position, t.b.position, t.c.position);
-			}
-
-			bool removed = false;
-			for (auto it = result._units.begin(); it != result._units.end(); ++it)
-			{
-				if (it->isCoplanar(poly) == true && it->normal() == poly.normal().inverse())
-				{
-					bool shared = it->isOverlapping(poly);
-					if (shared == false)
-					{
-						for (const auto &edgeA : it->edges())
-						{
-							for (const auto &edgeB : poly.edges())
-							{
-								if (edgeA.isInverse(edgeB) == true)
-								{
-									shared = true;
-									break;
-								}
-							}
-							if (shared == true)
-							{
-								break;
-							}
-						}
-					}
-					if (shared == true)
-					{
-						result._units.erase(it);
-						removed = true;
-						break;
-					}
-				}
-			}
-			if (removed == true)
-			{
-				continue;
-			}
-
-			bool fused = false;
-			for (auto &existing : result._units)
-			{
-				if (existing.isCoplanar(poly) == true && existing.normal() == poly.normal() &&
-					(existing.isAdjacent(poly) == true || existing.isOverlapping(poly) == true))
-				{
-					existing = existing.fuze(poly);
-					fused = true;
-					break;
-				}
-			}
-			if (fused == false)
-			{
-				result.addUnit(poly);
-			}
-		}
-		return (result);
-	}
-};
 int main()
 {
 	spk::ObjMesh mesh = spk::ObjMesh::loadFromFile("playground/resources/obj/two_cubes.obj");
