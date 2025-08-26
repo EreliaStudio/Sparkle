@@ -485,7 +485,8 @@ namespace
 		float t = qp.cross(s).dot(p_normal) / denom;
 		float u = qp.cross(r).dot(p_normal) / denom;
 
-		if (t > 0.0f && t < 1.0f && u > 0.0f && u < 1.0f)
+		const float eps = 1e-6f;
+		if (t > eps && t < 1.0f - eps && u >= -eps && u <= 1.0f + eps)
 		{
 			spk::Vector3 inter = p_base.first() + r * t;
 			p_ts.push_back(p_base.project(inter));
@@ -702,6 +703,11 @@ tmp::Polygon tmp::Polygon::fuze(const Polygon &p_other) const
 		GENERATE_ERROR("Polygons must be coplanar");
 	}
 
+	if (isAdjacent(p_other) == false && isOverlapping(p_other) == false)
+	{
+		return tmp::Polygon();
+	}
+
 	spk::Vector3 n = normal();
 
 	std::vector<tmp::Edge> A = _edges;
@@ -797,7 +803,7 @@ public:
 
 	void print() const
 	{
-		if (_polygons.empty() == true)
+		if (_polygons.empty() == true || _max == (std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest()))
 		{
 			std::cout << "(no polygons)" << std::endl;
 			return;
