@@ -475,7 +475,7 @@ namespace tmp
 	private:
 		std::vector<Unit> _units;
 
-		static Unit _unitFromVariant(const std::variant<spk::ObjMesh::Quad, spk::ObjMesh::Triangle> &p_shape)
+		static Unit _unitFromVariant(const std::variant<spk::TMesh<spk::Vertex>::Triangle, spk::TMesh<spk::Vertex>::Quad> &p_shape)
 		{
 			if (std::holds_alternative<spk::ObjMesh::Quad>(p_shape) == true)
 			{
