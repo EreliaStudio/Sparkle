@@ -446,7 +446,7 @@ namespace tmp
 					p_os << ", ";
 				}
 			}
-			p_os << "}";
+			p_os << "} concave: " << (p_poly.isConvex() == false ? "true" : "false");
 			return p_os;
 		}
 
@@ -461,7 +461,7 @@ namespace tmp
 					p_wos << L", ";
 				}
 			}
-			p_wos << L"}";
+			p_wos << L"} concave: " << (p_poly.isConvex() == false ? L"true" : L"false");
 			return p_wos;
 		}
 	};
@@ -866,7 +866,6 @@ tmp::Polygon tmp::Polygon::fuze(const Polygon &p_other) const
 
 	return tmp::Polygon::fromLoop(loop);
 }
-
 
 int main()
 {
