@@ -365,10 +365,42 @@ namespace tmp
 			{
 				return r;
 			}
-			for (size_t i = 1; i < p_vs.size(); ++i)
+
+			std::vector<spk::Vector3> pts = p_vs;
+			if (pts.front() == pts.back())
 			{
-				r._addEdge(p_vs[i - 1], p_vs[i]);
+				pts.pop_back();
 			}
+
+			const float tol = spk::Constants::pointPrecision;
+			bool changed = true;
+			while (pts.size() >= 3 && changed == true)
+			{
+				changed = false;
+				for (size_t i = 0; i < pts.size(); ++i)
+				{
+					const spk::Vector3 &prev = pts[(i + pts.size() - 1) % pts.size()];
+					const spk::Vector3 &curr = pts[i];
+					const spk::Vector3 &next = pts[(i + 1) % pts.size()];
+
+					spk::Vector3 v1 = curr - prev;
+					spk::Vector3 v2 = next - curr;
+
+					if (v1.cross(v2).norm() <= tol)
+					{
+						pts.erase(pts.begin() + i);
+						changed = true;
+						break;
+					}
+				}
+			}
+
+			pts.push_back(pts.front());
+			for (size_t i = 1; i < pts.size(); ++i)
+			{
+				r._addEdge(pts[i - 1], pts[i]);
+			}
+
 			return r;
 		}
 
@@ -773,11 +805,33 @@ public:
 			bool removed = false;
 			for (auto it = result._units.begin(); it != result._units.end(); ++it)
 			{
-				if (it->isCoplanar(poly) == true && it->normal() == poly.normal().inverse() && it->isOverlapping(poly) == true)
+				if (it->isCoplanar(poly) == true && it->normal() == poly.normal().inverse())
 				{
-					result._units.erase(it);
-					removed = true;
-					break;
+					bool shared = it->isOverlapping(poly);
+					if (shared == false)
+					{
+						for (const auto &edgeA : it->edges())
+						{
+							for (const auto &edgeB : poly.edges())
+							{
+								if (edgeA.isInverse(edgeB) == true)
+								{
+									shared = true;
+									break;
+								}
+							}
+							if (shared == true)
+							{
+								break;
+							}
+						}
+					}
+					if (shared == true)
+					{
+						result._units.erase(it);
+						removed = true;
+						break;
+					}
 				}
 			}
 			if (removed == true)
