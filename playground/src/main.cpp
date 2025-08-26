@@ -10,6 +10,7 @@
 #include <limits>
 #include <map>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace tmp
@@ -474,6 +475,67 @@ namespace tmp
 	private:
 		std::vector<Unit> _units;
 
+		static Unit _unitFromVariant(const std::variant<spk::ObjMesh::Quad, spk::ObjMesh::Triangle> &p_shape)
+		{
+			if (std::holds_alternative<spk::ObjMesh::Quad>(p_shape) == true)
+			{
+				const auto &q = std::get<spk::ObjMesh::Quad>(p_shape);
+				return (tmp::Polygon::makeSquare(q.a.position, q.b.position, q.c.position, q.d.position));
+			}
+			const auto &t = std::get<spk::ObjMesh::Triangle>(p_shape);
+			return (tmp::Polygon::makeTriangle(t.a.position, t.b.position, t.c.position));
+		}
+
+		static bool _haveSharedEdge(const Unit &p_a, const Unit &p_b)
+		{
+			for (const auto &edgeA : p_a.edges())
+			{
+				for (const auto &edgeB : p_b.edges())
+				{
+					if (edgeA.isInverse(edgeB) == true)
+					{
+						return (true);
+					}
+				}
+			}
+			return (false);
+		}
+
+		static bool _removeSharedOpposite(std::vector<Unit> &p_units, const Unit &p_poly)
+		{
+			for (auto it = p_units.begin(); it != p_units.end(); ++it)
+			{
+				if (it->isCoplanar(p_poly) == true && it->normal() == p_poly.normal().inverse())
+				{
+					bool shared = it->isOverlapping(p_poly);
+					if (shared == false)
+					{
+						shared = _haveSharedEdge(*it, p_poly);
+					}
+					if (shared == true)
+					{
+						p_units.erase(it);
+						return (true);
+					}
+				}
+			}
+			return (false);
+		}
+
+		static bool _fuseWithExisting(std::vector<Unit> &p_units, const Unit &p_poly)
+		{
+			for (auto &existing : p_units)
+			{
+				if (existing.isCoplanar(p_poly) == true && existing.normal() == p_poly.normal() &&
+					(existing.isAdjacent(p_poly) == true || existing.isOverlapping(p_poly) == true))
+				{
+					existing = existing.fuze(p_poly);
+					return (true);
+				}
+			}
+			return (false);
+		}
+
 	public:
 		CollisionMesh() = default;
 
@@ -492,67 +554,12 @@ namespace tmp
 			CollisionMesh result;
 			for (const auto &shapeVariant : p_mesh->shapes())
 			{
-				Unit poly;
-				if (std::holds_alternative<spk::ObjMesh::Quad>(shapeVariant) == true)
-				{
-					const auto &q = std::get<spk::ObjMesh::Quad>(shapeVariant);
-					poly = tmp::Polygon::makeSquare(q.a.position, q.b.position, q.c.position, q.d.position);
-				}
-				else
-				{
-					const auto &t = std::get<spk::ObjMesh::Triangle>(shapeVariant);
-					poly = tmp::Polygon::makeTriangle(t.a.position, t.b.position, t.c.position);
-				}
-
-				bool removed = false;
-				for (auto it = result._units.begin(); it != result._units.end(); ++it)
-				{
-					if (it->isCoplanar(poly) == true && it->normal() == poly.normal().inverse())
-					{
-						bool shared = it->isOverlapping(poly);
-						if (shared == false)
-						{
-							for (const auto &edgeA : it->edges())
-							{
-								for (const auto &edgeB : poly.edges())
-								{
-									if (edgeA.isInverse(edgeB) == true)
-									{
-										shared = true;
-										break;
-									}
-								}
-								if (shared == true)
-								{
-									break;
-								}
-							}
-						}
-						if (shared == true)
-						{
-							result._units.erase(it);
-							removed = true;
-							break;
-						}
-					}
-				}
-				if (removed == true)
+				Unit poly = _unitFromVariant(shapeVariant);
+				if (_removeSharedOpposite(result._units, poly) == true)
 				{
 					continue;
 				}
-
-				bool fused = false;
-				for (auto &existing : result._units)
-				{
-					if (existing.isCoplanar(poly) == true && existing.normal() == poly.normal() &&
-						(existing.isAdjacent(poly) == true || existing.isOverlapping(poly) == true))
-					{
-						existing = existing.fuze(poly);
-						fused = true;
-						break;
-					}
-				}
-				if (fused == false)
+				if (_fuseWithExisting(result._units, poly) == false)
 				{
 					result.addUnit(poly);
 				}
