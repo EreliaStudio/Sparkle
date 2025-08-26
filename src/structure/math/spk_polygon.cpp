@@ -14,6 +14,24 @@ namespace spk
 	void Polygon::_addEdge(const spk::Vector3 &p_a, const spk::Vector3 &p_b)
 	{
 		_edges.push_back(spk::Edge(p_a, p_b));
+		_points.push_back(p_a);
+	}
+
+	void Polygon::_updateEdges() const
+	{
+		if (_edgesDirty == true)
+		{
+			_edges.clear();
+			if (_points.size() >= 2)
+			{
+				for (size_t i = 1; i < _points.size(); ++i)
+				{
+					_edges.emplace_back(_points[i - 1], _points[i]);
+				}
+				_edges.emplace_back(_points.back(), _points.front());
+			}
+			_edgesDirty = false;
+		}
 	}
 
 	bool Polygon::_edgesIntersect(const spk::Edge &p_a, const spk::Edge &p_b, const spk::Vector3 &p_normal, float p_eps)
@@ -61,32 +79,34 @@ namespace spk
 
 	const std::vector<spk::Edge> &Polygon::edges() const
 	{
+		_updateEdges();
 		return _edges;
 	}
 
-	std::vector<spk::Vector3> Polygon::points() const
+	const std::vector<spk::Vector3> &Polygon::points() const
 	{
-		std::vector<spk::Vector3> pts;
-		pts.reserve(_edges.size());
-		for (const auto &e : _edges)
-		{
-			pts.push_back(e.first());
-		}
-		return pts;
+		return _points;
+	}
+
+	std::vector<spk::Vector3> &Polygon::points()
+	{
+		_edgesDirty = true;
+		return _points;
 	}
 
 	bool Polygon::isPlanar() const
 	{
-		if (_edges.size() < 2)
+		const auto &edgesRef = edges();
+		if (edgesRef.size() < 2)
 		{
 			return false;
 		}
 
 		spk::Vector3 expectedNormal = normal();
 
-		for (size_t i = 2; i < _edges.size(); i++)
+		for (size_t i = 2; i < edgesRef.size(); i++)
 		{
-			float dot = expectedNormal.dot(_edges[i].direction());
+			float dot = expectedNormal.dot(edgesRef[i].direction());
 
 			if (dot != 0)
 			{
@@ -98,12 +118,13 @@ namespace spk
 
 	spk::Vector3 Polygon::normal() const
 	{
-		if (_edges.size() < 2)
+		const auto &edgesRef = edges();
+		if (edgesRef.size() < 2)
 		{
 			GENERATE_ERROR("Can't generate a normal for a polygon with less than 2 edges");
 		}
 
-		return (_edges[0].direction().cross(_edges[1].direction()));
+		return (edgesRef[0].direction().cross(edgesRef[1].direction()));
 	}
 
 	bool Polygon::isCoplanar(const Polygon &p_other) const
@@ -131,14 +152,15 @@ namespace spk
 			return false;
 		}
 
-		for (const auto &edgeA : _edges)
+		const auto &edgesRef = edges();
+		for (const auto &edgeA : edgesRef)
 		{
 			for (const auto &edgeB : p_other.edges())
 			{
 				if (edgeA.isColinear(edgeB) == true)
 				{
-					if (edgeA.contains(edgeB.first(), false) || edgeA.contains(edgeB.second(), false) || edgeB.contains(edgeA.first(), false) ||
-						edgeB.contains(edgeA.second(), false))
+					if (edgeA.contains(edgeB.first(), false) == true || edgeA.contains(edgeB.second(), false) == true ||
+						edgeB.contains(edgeA.first(), false) == true || edgeB.contains(edgeA.second(), false) == true)
 					{
 						return true;
 					}
@@ -150,7 +172,8 @@ namespace spk
 
 	bool Polygon::isConvex(float p_eps, bool p_strictly) const
 	{
-		if (_edges.size() < 3)
+		const auto &edgesRef = edges();
+		if (edgesRef.size() < 3)
 		{
 			return false;
 		}
@@ -158,10 +181,10 @@ namespace spk
 		spk::Vector3 polyNormal = normal();
 		float orientation = 0;
 
-		for (size_t i = 0; i < _edges.size(); i++)
+		for (size_t i = 0; i < edgesRef.size(); i++)
 		{
-			const spk::Edge &current = _edges[i];
-			const spk::Edge &next = _edges[(i + 1) % _edges.size()];
+			const spk::Edge &current = edgesRef[i];
+			const spk::Edge &next = edgesRef[(i + 1) % edgesRef.size()];
 
 			float dot = current.direction().cross(next.direction()).dot(polyNormal);
 
@@ -197,7 +220,8 @@ namespace spk
 		const float eps = 1e-6f;
 		spk::Vector3 polyNormal = normal();
 
-		for (const auto &edgeA : _edges)
+		const auto &edgesRef = edges();
+		for (const auto &edgeA : edgesRef)
 		{
 			for (const auto &edgeB : p_other.edges())
 			{
@@ -213,7 +237,7 @@ namespace spk
 			return true;
 		}
 
-		if (_isPointInside(p_other, _edges[0].first(), eps) == true)
+		if (_isPointInside(p_other, edgesRef[0].first(), eps) == true)
 		{
 			return true;
 		}
@@ -225,9 +249,10 @@ namespace spk
 	{
 		const float eps = 1e-6f;
 		spk::Vector3 n = normal();
-		float orient = _edges[0].direction().cross(_edges[1].direction()).dot(n);
+		const auto &edgesRef = edges();
+		float orient = edgesRef[0].direction().cross(edgesRef[1].direction()).dot(n);
 
-		for (const auto &edge : _edges)
+		for (const auto &edge : edgesRef)
 		{
 			float val = edge.direction().cross(p_point - edge.first()).dot(n);
 
@@ -285,7 +310,7 @@ namespace spk
 
 		spk::Vector3 n = normal();
 
-		std::vector<spk::Edge> A = _edges;
+		std::vector<spk::Edge> A = edges();
 		std::vector<spk::Edge> B = p_other.edges();
 
 		splitAllEdges(A, B, n);
@@ -346,11 +371,12 @@ namespace spk
 
 	std::ostream &operator<<(std::ostream &p_os, const Polygon &p_poly)
 	{
+		const auto &edgesRef = p_poly.edges();
 		p_os << "{";
-		for (size_t i = 0; i < p_poly._edges.size(); i++)
+		for (size_t i = 0; i < edgesRef.size(); i++)
 		{
-			p_os << p_poly._edges[i];
-			if (i + 1 < p_poly._edges.size())
+			p_os << edgesRef[i];
+			if (i + 1 < edgesRef.size())
 			{
 				p_os << ", ";
 			}
@@ -361,11 +387,12 @@ namespace spk
 
 	std::wostream &operator<<(std::wostream &p_wos, const Polygon &p_poly)
 	{
+		const auto &edgesRef = p_poly.edges();
 		p_wos << L"{";
-		for (size_t i = 0; i < p_poly._edges.size(); i++)
+		for (size_t i = 0; i < edgesRef.size(); i++)
 		{
-			p_wos << p_poly._edges[i];
-			if (i + 1 < p_poly._edges.size())
+			p_wos << edgesRef[i];
+			if (i + 1 < edgesRef.size())
 			{
 				p_wos << L", ";
 			}
