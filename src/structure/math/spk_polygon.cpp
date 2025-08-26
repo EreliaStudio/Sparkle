@@ -589,15 +589,15 @@ namespace spk
 			splitAllEdges(B, A, n);
 
 			std::vector<spk::Edge> boundary = subtractInternalShared(A, B);
-			if (boundary.empty())
+			if (boundary.empty() == true)
 			{
-				GENERATE_ERROR("Fused polygon is empty or degenerate");
+				return Polygon();
 			}
 
 			std::vector<spk::Vector3> loop = stitchLoop(boundary, n);
 			if (loop.size() < 4)
 			{
-				GENERATE_ERROR("Fused polygon could not be stitched");
+				return Polygon();
 			}
 
 			return Polygon::fromLoop(loop);
