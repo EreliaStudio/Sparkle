@@ -51,7 +51,7 @@ namespace spk
 		{
 			for (const auto &unit : collider->units())
 			{
-				for (const auto &vertex : unit.points)
+				for (const auto &vertex : unit.points())
 				{
 					if (initialized == false)
 					{
@@ -100,7 +100,7 @@ namespace spk
 			{
 				for (const auto &unit : collider->units())
 				{
-					for (const auto &vertex : unit.points)
+					for (const auto &vertex : unit.points())
 					{
 						spk::Vector3 transformed = p_model * vertex;
 						if (initialized == false)
@@ -234,20 +234,21 @@ namespace spk
 			{
 				for (const auto &unit : collider->units())
 				{
-					if ((unit.points.size() == 3) == true)
+					auto pts = unit.points();
+					if ((pts.size() == 3) == true)
 					{
-						spk::TMesh<spk::Vector3>::Triangle tri{unit.points[0], unit.points[1], unit.points[2]};
+						spk::TMesh<spk::Vector3>::Triangle tri{pts[0], pts[1], pts[2]};
 						tri.a = p_transform * tri.a;
 						tri.b = p_transform * tri.b;
 						tri.c = p_transform * tri.c;
 						result.push_back(tri);
 					}
-					else if ((unit.points.size() == 4) == true)
+					else if ((pts.size() == 4) == true)
 					{
-						spk::Vector3 a = p_transform * unit.points[0];
-						spk::Vector3 b = p_transform * unit.points[1];
-						spk::Vector3 c = p_transform * unit.points[2];
-						spk::Vector3 d = p_transform * unit.points[3];
+						spk::Vector3 a = p_transform * pts[0];
+						spk::Vector3 b = p_transform * pts[1];
+						spk::Vector3 c = p_transform * pts[2];
+						spk::Vector3 d = p_transform * pts[3];
 						result.push_back({a, b, c});
 						result.push_back({a, c, d});
 					}
