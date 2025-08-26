@@ -16,7 +16,18 @@ namespace spk
 			return;
 		}
 
-		_gameEngine->onPaintEvent(p_event);
+		try
+		{
+			_gameEngine->onPaintEvent(p_event);
+		}
+		catch (const std::exception& e)
+		{
+			PROPAGATE_ERROR("Error while painting the game engine", e);
+		}
+		catch (...)
+		{
+			GENERATE_ERROR("Unknow error while painting the game engine");
+		}
 	}
 
 	void GameEngineWidget::_onUpdateEvent(spk::UpdateEvent &p_event)

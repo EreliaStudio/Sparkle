@@ -716,29 +716,62 @@ public:
 
 			void _bake()
 			{
-				_mesh.clear();
-
-				for (int z = 0; z < size.z; ++z)
+				try
 				{
-					for (int y = 0; y < size.y; ++y)
+					_mesh.clear();
+
+					for (int z = 0; z < size.z; ++z)
 					{
-						for (int x = 0; x < size.x; ++x)
+						for (int y = 0; y < size.y; ++y)
 						{
-							Block::Specifier &currentSpecifier = _content[x][y][z];
-
-							if (currentSpecifier.first != -1)
+							for (int x = 0; x < size.x; ++x)
 							{
-								Block::NeightbourDescriber neightbourSpecifiers = _computeNeightbourSpecifiers(x, y, z);
+								Block::Specifier &currentSpecifier = _content[x][y][z];
 
-								spk::SafePointer<const Block> currentBlock = _blockMap->blockById(currentSpecifier.first);
+								if (currentSpecifier.first != -1)
+								{
+									Block::NeightbourDescriber neightbourSpecifiers = _computeNeightbourSpecifiers(x, y, z);
 
-								currentBlock->bake(_mesh, neightbourSpecifiers, {x, y, z}, currentSpecifier.second);
+									spk::SafePointer<const Block> currentBlock = _blockMap->blockById(currentSpecifier.first);
+
+									try
+									{
+										currentBlock->bake(_mesh, neightbourSpecifiers, {x, y, z}, currentSpecifier.second);
+									}
+									catch(const std::exception& e)
+									{
+										PROPAGATE_ERROR("Error while baking block ID [" + std::to_string(x) + "][" + std::to_string(y) + "][" + std::to_string(z) + "] of type [" + std::to_string(currentSpecifier.first) + "]", e);
+									}
+									catch (...)
+									{
+										GENERATE_ERROR("Unknow error while baking block ID [" + std::to_string(x) + "][" + std::to_string(y) + "][" + std::to_string(z) + "] of type [" + std::to_string(currentSpecifier.first) + "]");
+									}
+								}
 							}
 						}
 					}
 				}
+				catch(const std::exception& e)
+				{
+					PROPAGATE_ERROR("Error while constructing the mesh", e);
+				}
+				catch (...)
+				{
+					GENERATE_ERROR("Unknow error while constructing the mesh");
+				}
 
-				_collisionMesh = spk::CollisionMesh::fromObjMesh(&_mesh);
+				try
+				{
+					_collisionMesh = spk::CollisionMesh::fromObjMesh(&_mesh);
+				}
+				catch(const std::exception& e)
+				{
+					PROPAGATE_ERROR("Error while constructing the collision mesh", e);
+				}
+				catch (...)
+				{
+					GENERATE_ERROR("Unknow error while constructing the collision mesh");
+				}
 
 				_isBaked = true;
 			}
@@ -809,9 +842,22 @@ public:
 
 			void onPaintEvent(spk::PaintEvent &p_event) override
 			{
+				
+				
 				if (_isBaked == false)
 				{
-					_bake();
+					try
+					{
+						_bake();
+					}
+					catch(const std::exception& e)
+					{
+						PROPAGATE_ERROR("Error while baking the mesh and collider", e);
+					}
+					catch (...)
+					{
+						GENERATE_ERROR("Unknow error while baking the mesh and collider");
+					}
 
 					if (_renderer != nullptr)
 					{

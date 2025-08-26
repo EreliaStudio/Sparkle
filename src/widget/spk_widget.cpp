@@ -451,9 +451,10 @@ namespace spk
 			_frameBufferObject.deactivate();
 
 			_textureRenderer.render();
-		} catch (const std::exception &e)
+		}
+		catch (const std::exception &e)
 		{
-			GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] onPaintEvent - " + e.what());
+			PROPAGATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] onPaintEvent", e);
 		} catch (...)
 		{
 			GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] onPaintEvent - Unknow error type");
@@ -472,14 +473,23 @@ namespace spk
 				try
 				{
 					_viewport.apply();
-				} catch (const std::runtime_error &e)
+				}
+				catch (const std::runtime_error &e)
 				{
 					PROPAGATE_ERROR(
 						"Error while applying viewport of [" + spk::StringUtils::wstringToString(name()) + "] with viewport of geometry [" +
 							_viewport.geometry().to_string() + "]",
 						e);
 				}
-				child->onPaintEvent(childEvent);
+
+				try
+				{
+					child->onPaintEvent(childEvent);
+				} 
+				catch (const std::runtime_error &e)
+				{
+					PROPAGATE_ERROR("Error while painting widget [" + spk::StringUtils::wstringToString(name()) + "]", e);
+				}
 			}
 		}
 	}

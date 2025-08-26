@@ -207,7 +207,18 @@ namespace spk
 			{
 				if (component->isActive() == true)
 				{
+					try
+					{
 					component->onPaintEvent(p_event);
+					}
+					catch (const std::exception& e)
+					{
+						PROPAGATE_ERROR("Error occured while painting component [" + spk::StringUtils::wstringToString(component->name()) + "] of [" + spk::StringUtils::wstringToString(name()) + "]", e);
+					}
+					catch (...)
+					{
+						GENERATE_ERROR("Unknow error occured while painting component [" + spk::StringUtils::wstringToString(component->name()) + "] of [" + spk::StringUtils::wstringToString(name()) + "]");
+					}
 				}
 			}
 		}
@@ -218,7 +229,18 @@ namespace spk
 			std::unique_lock<std::mutex> lock(_childMutex);
 			for (auto &child : children())
 			{
+				try
+				{
 				child->onPaintEvent(p_event);
+				}
+				catch (const std::exception& e)
+				{
+					PROPAGATE_ERROR("Error occured while painting child object [" + spk::StringUtils::wstringToString(child->name()) + "]", e);
+				}
+				catch (...)
+				{
+					GENERATE_ERROR("Unknow error occured while painting child object [" + spk::StringUtils::wstringToString(child->name()) + "]");
+				}
 			}
 		}
 	}
