@@ -9,15 +9,19 @@ namespace spk
 	class Polygon
 	{
 	private:
-		std::vector<spk::Edge> _edges;
+		mutable std::vector<spk::Edge> _edges;
+		std::vector<spk::Vector3> _points;
+		mutable bool _edgesDirty = false;
 
 		void _addEdge(const spk::Vector3 &p_a, const spk::Vector3 &p_b);
+		void _updateEdges() const;
 		static bool _edgesIntersect(const spk::Edge &p_a, const spk::Edge &p_b, const spk::Vector3 &p_normal, float p_eps);
 		static bool _isPointInside(const Polygon &p_poly, const spk::Vector3 &p_point, float p_eps);
 
 	public:
 		const std::vector<spk::Edge> &edges() const;
-		std::vector<spk::Vector3> points() const;
+		const std::vector<spk::Vector3> &points() const;
+		std::vector<spk::Vector3> &points();
 
 		bool isPlanar() const;
 		spk::Vector3 normal() const;
