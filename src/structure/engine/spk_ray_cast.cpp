@@ -109,14 +109,15 @@ namespace
 		const spk::SafePointer<spk::Entity> &p_owner,
 		std::vector<spk::RayCast::Hit> &p_hits)
 	{
-		if ((p_unit.points.size() == 3) == true)
+		std::vector<spk::Vector3> unitPoints = p_unit.points();
+		if ((unitPoints.size() == 3) == true)
 		{
-			Triangle tri{p_unit.points[0], p_unit.points[1], p_unit.points[2]};
+			Triangle tri{unitPoints[0], unitPoints[1], unitPoints[2]};
 			processTriangle(p_eye, p_dir, p_maxDistance, p_offset, tri, p_owner, p_hits);
 		}
-		else if ((p_unit.points.size() == 4) == true)
+		else if ((unitPoints.size() == 4) == true)
 		{
-			Quad quad{p_unit.points[0], p_unit.points[1], p_unit.points[2], p_unit.points[3]};
+			Quad quad{unitPoints[0], unitPoints[1], unitPoints[2], unitPoints[3]};
 			processQuad(p_eye, p_dir, p_maxDistance, p_offset, quad, p_owner, p_hits);
 		}
 	}

@@ -347,10 +347,12 @@ private:
 				if (_isAxisAlignedFace(vertices, normal))
 				{
 					Face &face = result.faces[normal];
+					std::vector<spk::Vector3> footprintPoints = face.footprint.points();
 					for (auto &v : vertices)
 					{
-						face.footprint.points.push_back(v.position);
+						footprintPoints.push_back(v.position);
 					}
+					face.footprint = spk::Polygon::fromLoop(footprintPoints);
 					_addVerticesToMesh(face.mesh, vertices);
 
 					if (vertices.size() == 4 && _isFullQuad(vertices, normal))
@@ -434,14 +436,11 @@ private:
 
 	static spk::Polygon _translated(const spk::Polygon &p_poly, const spk::Vector3 &p_delta)
 	{
-		spk::Polygon out;
-		out.points.reserve(p_poly.points.size());
-		std::transform(
-			p_poly.points.begin(),
-			p_poly.points.end(),
-			std::back_inserter(out.points),
-			[&](const spk::Vector3 &p_point) { return p_point + p_delta; });
-		return out;
+		std::vector<spk::Vector3> points = p_poly.points();
+		std::vector<spk::Vector3> translated;
+		translated.reserve(points.size());
+		std::transform(points.begin(), points.end(), std::back_inserter(translated), [&](const spk::Vector3 &p_point) { return p_point + p_delta; });
+		return spk::Polygon::fromLoop(translated);
 	}
 
 	static void _emitVisibleFaces(
