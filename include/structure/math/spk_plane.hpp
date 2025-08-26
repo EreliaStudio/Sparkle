@@ -21,7 +21,7 @@ namespace spk
 		bool contains(const spk::Polygon &p_polygon) const
 		{
 			const float eps = 1e-5f;
-			for (const spk::Vector3 &point : p_polygon.points)
+			for (const spk::Vector3 &point : p_polygon.points())
 			{
 				if (std::abs(normal.dot(point - origin)) > eps)
 				{
