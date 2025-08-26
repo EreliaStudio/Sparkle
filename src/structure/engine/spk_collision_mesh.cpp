@@ -1,4 +1,5 @@
 #include "structure/engine/spk_collision_mesh.hpp"
+#include <algorithm>
 
 namespace spk
 {
@@ -16,6 +17,27 @@ namespace spk
 	{
 		try
 		{
+			auto isDegenerate = [](const spk::Polygon &p_poly) -> bool
+			{
+				try
+				{
+					const auto &edgesRef = p_poly.edges();
+					if (edgesRef.size() < 3)
+					{
+						return true;
+					}
+					spk::Vector3 n = edgesRef[0].direction().cross(edgesRef[1].direction());
+					for (size_t i = 2; (n == spk::Vector3(0, 0, 0)) == true && i < edgesRef.size(); ++i)
+					{
+						n = edgesRef[0].direction().cross(edgesRef[i].direction());
+					}
+					return ((n == spk::Vector3(0, 0, 0)) == true);
+				} catch (...)
+				{
+					return true;
+				}
+			};
+
 			std::vector<spk::Polygon> polys;
 			for (const auto &shapeVariant : p_mesh->shapes())
 			{
@@ -30,16 +52,20 @@ namespace spk
 					const auto &t = std::get<spk::ObjMesh::Triangle>(shapeVariant);
 					poly = spk::Polygon::makeTri(t.a.position, t.b.position, t.c.position);
 				}
-				polys.push_back(poly);
+				if (isDegenerate(poly) == false)
+				{
+					polys.push_back(poly);
+				}
 			}
 
 			bool merged = true;
 			while (merged == true)
 			{
+				polys.erase(std::remove_if(polys.begin(), polys.end(), isDegenerate), polys.end());
 				merged = false;
 				for (size_t i = 0; i < polys.size(); ++i)
 				{
-					for (size_t j = i + 1; j < polys.size();)
+					for (size_t j = i + 1; j < polys.size(); ++j)
 					{
 						if (polys[i].isCoplanar(polys[j]) == true &&
 							(polys[i].isAdjacent(polys[j]) == true || polys[i].isOverlapping(polys[j]) == true))
@@ -47,11 +73,12 @@ namespace spk
 							polys[i] = polys[i].fuze(polys[j]);
 							polys.erase(polys.begin() + j);
 							merged = true;
+							break;
 						}
-						else
-						{
-							++j;
-						}
+					}
+					if (merged == true)
+					{
+						break;
 					}
 				}
 			}

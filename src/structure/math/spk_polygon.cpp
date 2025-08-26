@@ -375,7 +375,18 @@ namespace spk
 			GENERATE_ERROR("Can't generate a normal for a polygon with less than 2 edges");
 		}
 
-		return (edgesRef[0].direction().cross(edgesRef[1].direction()));
+		spk::Vector3 n = edgesRef[0].direction().cross(edgesRef[1].direction());
+		for (size_t i = 2; (n == spk::Vector3(0, 0, 0)) == true && i < edgesRef.size(); ++i)
+		{
+			n = edgesRef[0].direction().cross(edgesRef[i].direction());
+		}
+
+		if ((n == spk::Vector3(0, 0, 0)) == true)
+		{
+			GENERATE_ERROR("Can't generate a normal for a polygon with colinear edges");
+		}
+
+		return n;
 	}
 
 	bool Polygon::isCoplanar(const Polygon &p_other) const
