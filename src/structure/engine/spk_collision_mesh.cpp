@@ -15,18 +15,12 @@ namespace spk
 	CollisionMesh CollisionMesh::fromObjMesh(const spk::SafePointer<spk::ObjMesh> &p_mesh)
 	{
 		spk::CollisionMesh result;
-		for (const auto &shapeVariant : p_mesh->shapes())
+		for (const auto &shape : p_mesh->shapes())
 		{
 			spk::CollisionMesh::Unit unit;
-			if (std::holds_alternative<spk::ObjMesh::Quad>(shapeVariant) == true)
+			for (const auto &vertex : shape.points)
 			{
-				const auto &q = std::get<spk::ObjMesh::Quad>(shapeVariant);
-				unit.points = {q.a.position, q.b.position, q.c.position, q.d.position};
-			}
-			else
-			{
-				const auto &t = std::get<spk::ObjMesh::Triangle>(shapeVariant);
-				unit.points = {t.a.position, t.b.position, t.c.position};
+				unit.points.push_back(vertex.position);
 			}
 			result.addUnit(unit);
 		}

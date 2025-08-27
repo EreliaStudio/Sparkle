@@ -4,10 +4,10 @@
 #include "structure/engine/spk_vertex.hpp"
 
 #include <filesystem>
+#include <initializer_list>
 #include <mutex>
 #include <type_traits>
 #include <unordered_map>
-#include <variant>
 #include <vector>
 
 namespace spk
@@ -18,22 +18,10 @@ namespace spk
 	public:
 		using Vertex = TVertexType;
 
-		struct Triangle
+		struct Shape
 		{
-			Vertex a;
-			Vertex b;
-			Vertex c;
+			std::vector<Vertex> points;
 		};
-
-		struct Quad
-		{
-			Vertex a;
-			Vertex b;
-			Vertex c;
-			Vertex d;
-		};
-
-		using Shape = std::variant<Triangle, Quad>;
 
 		struct Buffer
 		{
@@ -65,27 +53,21 @@ namespace spk
 			}
 		}
 
-		void _bakeTriangle(const Triangle &t, std::unordered_map<Vertex, unsigned int> &vertexMap) const
+		void _bakeShape(const Shape &p_shape, std::unordered_map<Vertex, unsigned int> &p_vertexMap) const
 		{
-			_buffer.indexes.push_back(_getOrInsertVertex(t.a, vertexMap));
-			_buffer.indexes.push_back(_getOrInsertVertex(t.b, vertexMap));
-			_buffer.indexes.push_back(_getOrInsertVertex(t.c, vertexMap));
-		}
-
-		void _bakeQuad(const Quad &q, std::unordered_map<Vertex, unsigned int> &vertexMap) const
-		{
-			unsigned int ia = _getOrInsertVertex(q.a, vertexMap);
-			unsigned int ib = _getOrInsertVertex(q.b, vertexMap);
-			unsigned int ic = _getOrInsertVertex(q.c, vertexMap);
-			unsigned int id = _getOrInsertVertex(q.d, vertexMap);
-
-			_buffer.indexes.push_back(ia);
-			_buffer.indexes.push_back(ib);
-			_buffer.indexes.push_back(ic);
-
-			_buffer.indexes.push_back(ia);
-			_buffer.indexes.push_back(ic);
-			_buffer.indexes.push_back(id);
+			if (p_shape.points.size() < 3)
+			{
+				return;
+			}
+			unsigned int i0 = _getOrInsertVertex(p_shape.points[0], p_vertexMap);
+			for (size_t i = 1; i + 1 < p_shape.points.size(); ++i)
+			{
+				unsigned int i1 = _getOrInsertVertex(p_shape.points[i], p_vertexMap);
+				unsigned int i2 = _getOrInsertVertex(p_shape.points[i + 1], p_vertexMap);
+				_buffer.indexes.push_back(i0);
+				_buffer.indexes.push_back(i1);
+				_buffer.indexes.push_back(i2);
+			}
 		}
 
 	public:
@@ -154,32 +136,26 @@ namespace spk
 			return *this;
 		}
 
-		void addShape(const Vertex &p_a, const Vertex &p_b, const Vertex &p_c)
+		void addShape(const std::vector<Vertex> &p_vertices)
 		{
 			std::lock_guard lock(_mutex);
-			_shapes.push_back(Triangle{p_a, p_b, p_c});
+			_shapes.push_back(Shape{p_vertices});
 			_needBake = true;
 		}
 
-		void addShape(const Triangle &p_triangle)
+		void addShape(std::initializer_list<Vertex> p_vertices)
 		{
-			std::lock_guard lock(_mutex);
-			_shapes.push_back(p_triangle);
-			_needBake = true;
+			addShape(std::vector<Vertex>(p_vertices));
+		}
+
+		void addShape(const Vertex &p_a, const Vertex &p_b, const Vertex &p_c)
+		{
+			addShape(std::vector<Vertex>{p_a, p_b, p_c});
 		}
 
 		void addShape(const Vertex &p_a, const Vertex &p_b, const Vertex &p_c, const Vertex &p_d)
 		{
-			std::lock_guard lock(_mutex);
-			_shapes.push_back(Quad{p_a, p_b, p_c, p_d});
-			_needBake = true;
-		}
-
-		void addShape(const Quad &p_quad)
-		{
-			std::lock_guard lock(_mutex);
-			_shapes.push_back(p_quad);
-			_needBake = true;
+			addShape(std::vector<Vertex>{p_a, p_b, p_c, p_d});
 		}
 
 		void popShape()
@@ -245,14 +221,7 @@ namespace spk
 
 			for (const auto &s : _shapes)
 			{
-				if (std::holds_alternative<Triangle>(s))
-				{
-					_bakeTriangle(std::get<Triangle>(s), vertexMap);
-				}
-				else
-				{
-					_bakeQuad(std::get<Quad>(s), vertexMap);
-				}
+				_bakeShape(s, vertexMap);
 			}
 
 			_needBake = false;
