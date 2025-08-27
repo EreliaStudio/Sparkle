@@ -101,22 +101,9 @@ namespace spk
 	{
 		for (auto &shape : shapes())
 		{
-			if (std::holds_alternative<Triangle>(shape) == true)
+			for (auto &vertex : shape.points)
 			{
-				auto &tmp = std::get<Triangle>(shape);
-
-				tmp.a.position += p_offset;
-				tmp.b.position += p_offset;
-				tmp.c.position += p_offset;
-			}
-			else
-			{
-				auto &tmp = std::get<Quad>(shape);
-
-				tmp.a.position += p_offset;
-				tmp.b.position += p_offset;
-				tmp.c.position += p_offset;
-				tmp.d.position += p_offset;
+				vertex.position += p_offset;
 			}
 		}
 	}
@@ -184,13 +171,9 @@ namespace spk
 					verts.push_back(parseVertex(token, positions, uvs, normals));
 				}
 
-				if (verts.size() == 3)
+				if ((verts.empty()) == false)
 				{
-					result.addShape(verts[0], verts[1], verts[2]);
-				}
-				else if (verts.size() == 4)
-				{
-					result.addShape(verts[0], verts[1], verts[2], verts[3]);
+					result.addShape(verts);
 				}
 			}
 		}
@@ -321,20 +304,9 @@ namespace spk
 				return idx;
 			};
 
-			if (std::holds_alternative<Triangle>(shape) == true)
+			for (const auto &v : shape.points)
 			{
-				const auto &t = std::get<Triangle>(shape);
-				face.push_back(processVertex(t.a));
-				face.push_back(processVertex(t.b));
-				face.push_back(processVertex(t.c));
-			}
-			else
-			{
-				const auto &q = std::get<Quad>(shape);
-				face.push_back(processVertex(q.a));
-				face.push_back(processVertex(q.b));
-				face.push_back(processVertex(q.c));
-				face.push_back(processVertex(q.d));
+				face.push_back(processVertex(v));
 			}
 
 			faces.push_back(face);

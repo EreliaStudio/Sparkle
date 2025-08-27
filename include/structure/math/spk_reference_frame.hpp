@@ -94,7 +94,7 @@ namespace spk
 			return s;
 		}
 
-		ReferenceFrame(const spk::Plane &p_plane, const spk::Vector2 &u2, const spk::Vector2 &v2) :
+		ReferenceFrame(const spk::Plane &p_plane, const spk::Vector2 &u2 = {1, 0}, const spk::Vector2 &v2 = {0, 1}) :
 			_plane(p_plane)
 		{
 			_origin = p_plane.origin;
