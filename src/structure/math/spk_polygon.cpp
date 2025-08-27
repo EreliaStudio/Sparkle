@@ -245,16 +245,29 @@ namespace spk
 		void splitEdgeByTs(const spk::Edge &p_e, const std::vector<float> &p_ts, std::vector<spk::Edge> &p_out)
 		{
 			std::vector<float> sorted = p_ts;
-			sorted.erase(std::remove_if(sorted.begin(), sorted.end(), [](float v) { return v <= 0.0f || v >= 1.0f; }), sorted.end());
+			sorted.erase(
+				std::remove_if(
+					sorted.begin(),
+					sorted.end(),
+					[](float v) { return v <= spk::Constants::pointPrecision || v >= 1.0f - spk::Constants::pointPrecision; }),
+				sorted.end());
 			std::sort(sorted.begin(), sorted.end());
+			sorted.erase(std::unique(sorted.begin(), sorted.end(), [](float a, float b) { return FLOAT_EQ(a, b); }), sorted.end());
 			spk::Vector3 A = p_e.first();
 			for (float t : sorted)
 			{
 				spk::Vector3 B = p_e.first() + p_e.delta() * t;
+				if ((A == B) == true)
+				{
+					continue;
+				}
 				p_out.emplace_back(A, B);
 				A = B;
 			}
-			p_out.emplace_back(A, p_e.second());
+			if ((A == p_e.second()) == false)
+			{
+				p_out.emplace_back(A, p_e.second());
+			}
 		}
 
 		void splitAllEdges(std::vector<spk::Edge> &p_base, const std::vector<spk::Edge> &p_other, const spk::Vector3 &p_normal)
