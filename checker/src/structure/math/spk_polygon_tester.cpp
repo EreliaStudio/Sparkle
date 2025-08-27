@@ -62,3 +62,12 @@ TEST_F(PolygonTest, ContainPointOffPlane)
 
 	EXPECT_FALSE(poly.contains(above));
 }
+
+TEST_F(PolygonTest, FuzeDoesNotCreateZeroLengthEdges)
+{
+	spk::Polygon A = spk::Polygon::makeSquare({1.0f, 1.0f, 2.98e-8f}, {0.0f, 1.0f, 0.0f}, {0.0f, 2.0f, 0.0f}, {1.0f, 2.0f, 2.98e-8f});
+
+	spk::Polygon B = spk::Polygon::makeTriangle({2.0f, 1.0f, 2.98e-8f}, {1.0f, 1.0f, 0.0f}, {1.0f, 2.0f, 0.0f});
+
+	EXPECT_NO_THROW(A.fuze(B, true));
+}
