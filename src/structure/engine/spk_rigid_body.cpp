@@ -1,6 +1,5 @@
 #include "structure/engine/spk_rigid_body.hpp"
 #include "structure/engine/spk_entity.hpp"
-#include "structure/engine/spk_mesh.hpp"
 #include "structure/math/spk_constants.hpp"
 #include <algorithm>
 #include <vector>
@@ -228,31 +227,31 @@ namespace spk
 			return false;
 		}
 
-		std::vector<spk::TMesh<spk::Vector3>::Triangle> collectTriangles(const RigidBody *p_body, const spk::Matrix4x4 &p_transform)
+		struct Triangle
 		{
-			std::vector<spk::TMesh<spk::Vector3>::Triangle> result;
+			spk::Vector3 a;
+			spk::Vector3 b;
+			spk::Vector3 c;
+		};
+
+		std::vector<Triangle> collectTriangles(const RigidBody *p_body, const spk::Matrix4x4 &p_transform)
+		{
+			std::vector<Triangle> result;
 			const auto &collider = p_body->collider();
 			if ((collider == nullptr) == false)
 			{
 				for (const auto &unit : collider->units())
 				{
 					std::vector<spk::Vector3> unitPoints = unit.points();
-					if ((unitPoints.size() == 3) == true)
-					{
-						spk::TMesh<spk::Vector3>::Triangle tri{unitPoints[0], unitPoints[1], unitPoints[2]};
-						tri.a = p_transform * tri.a;
-						tri.b = p_transform * tri.b;
-						tri.c = p_transform * tri.c;
-						result.push_back(tri);
-					}
-					else if ((unitPoints.size() == 4) == true)
+					if ((unitPoints.size() >= 3) == true)
 					{
 						spk::Vector3 a = p_transform * unitPoints[0];
-						spk::Vector3 b = p_transform * unitPoints[1];
-						spk::Vector3 c = p_transform * unitPoints[2];
-						spk::Vector3 d = p_transform * unitPoints[3];
-						result.push_back({a, b, c});
-						result.push_back({a, c, d});
+						for (std::size_t i = 1; i + 1 < unitPoints.size(); ++i)
+						{
+							spk::Vector3 b = p_transform * unitPoints[i];
+							spk::Vector3 c = p_transform * unitPoints[i + 1];
+							result.push_back({a, b, c});
+						}
 					}
 				}
 			}
@@ -269,8 +268,8 @@ namespace spk
 			return false;
 		}
 
-		std::vector<spk::TMesh<spk::Vector3>::Triangle> triAs = collectTriangles(p_a, p_transformA);
-		std::vector<spk::TMesh<spk::Vector3>::Triangle> triBs = collectTriangles(p_b, p_transformB);
+		std::vector<Triangle> triAs = collectTriangles(p_a, p_transformA);
+		std::vector<Triangle> triBs = collectTriangles(p_b, p_transformB);
 
 		for (const auto &ta : triAs)
 		{

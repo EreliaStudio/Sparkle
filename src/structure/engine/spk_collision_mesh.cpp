@@ -1,7 +1,5 @@
 #include "structure/engine/spk_collision_mesh.hpp"
 
-#include <variant>
-
 namespace spk
 {
 	void CollisionMesh::addUnit(const Unit &p_unit)
@@ -16,15 +14,15 @@ namespace spk
 
 	namespace
 	{
-		CollisionMesh::Unit unitFromVariant(const std::variant<spk::TMesh<spk::Vertex>::Triangle, spk::TMesh<spk::Vertex>::Quad> &p_shape)
+		CollisionMesh::Unit unitFromShape(const spk::TMesh<spk::Vertex>::Shape &p_shape)
 		{
-			if (std::holds_alternative<spk::ObjMesh::Quad>(p_shape) == true)
+			std::vector<spk::Vector3> points;
+			points.reserve(p_shape.vertices.size());
+			for (const auto &v : p_shape.vertices)
 			{
-				const auto &q = std::get<spk::ObjMesh::Quad>(p_shape);
-				return (spk::Polygon::makeSquare(q.a.position, q.b.position, q.c.position, q.d.position));
+				points.push_back(v.position);
 			}
-			const auto &t = std::get<spk::ObjMesh::Triangle>(p_shape);
-			return (spk::Polygon::makeTriangle(t.a.position, t.b.position, t.c.position));
+			return (spk::Polygon::fromLoop(points));
 		}
 
 		bool haveSharedEdge(const CollisionMesh::Unit &p_a, const CollisionMesh::Unit &p_b)
@@ -81,9 +79,9 @@ namespace spk
 	CollisionMesh CollisionMesh::fromObjMesh(const spk::SafePointer<spk::ObjMesh> &p_mesh)
 	{
 		CollisionMesh result;
-		for (const auto &shapeVariant : p_mesh->shapes())
+		for (const auto &shape : p_mesh->shapes())
 		{
-			Unit poly = unitFromVariant(shapeVariant);
+			Unit poly = unitFromShape(shape);
 			if (removeSharedOpposite(result._units, poly) == true)
 			{
 				continue;
