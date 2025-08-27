@@ -121,7 +121,7 @@ private:
 		struct Entry
 		{
 			spk::ObjMesh innerMesh;
-			std::unordered_map<spk::Vector3, Face> faces;
+			std::unordered_map<spk::Vector3Int, Face> faces;
 
 			void applyInnerMesh(spk::ObjMesh &p_target, const spk::Vector3 &p_offset) const
 			{
@@ -130,7 +130,8 @@ private:
 
 			void applyFace(spk::ObjMesh &p_target, const spk::Vector3 &p_offset, const spk::Vector3 &p_normal) const
 			{
-				auto it = faces.find(p_normal);
+				spk::Vector3Int key = spk::Vector3Int(p_normal.round());
+				auto it = faces.find(key);
 				if (it != faces.end())
 				{
 					_appendMesh(p_target, it->second.mesh, p_offset);
@@ -321,7 +322,8 @@ private:
 				spk::Vector3 normal;
 				if (_isAxisAlignedFace(vertices, normal))
 				{
-					Face &face = result.faces[normal];
+					spk::Vector3Int key = spk::Vector3Int(normal.round());
+					Face &face = result.faces[key];
 					std::vector<spk::Vector3> footprintPoints = face.footprint.points();
 					for (auto &v : vertices)
 					{
@@ -380,7 +382,8 @@ private:
 
 			const Cache::Entry &neighData = neigh->_cache.getCase(neighOrientation);
 			const spk::Vector3 oppositeNormal = -neightbourCoordinates[i];
-			if (auto it = neighData.faces.find(oppositeNormal); it != neighData.faces.end())
+			spk::Vector3Int key = spk::Vector3Int(oppositeNormal.round());
+			if (auto it = neighData.faces.find(key); it != neighData.faces.end())
 			{
 				neighFaces[i] = &it->second;
 			}
@@ -425,7 +428,8 @@ private:
 		{
 			const spk::Vector3 normal = neightbourCoordinates[i];
 
-			auto faceIt = p_data.faces.find(normal);
+			spk::Vector3Int key = spk::Vector3Int(normal.round());
+			auto faceIt = p_data.faces.find(key);
 			if (faceIt == p_data.faces.end())
 			{
 				continue;
