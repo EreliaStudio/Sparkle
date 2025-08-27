@@ -144,7 +144,7 @@ namespace spk
 		}
 
 		bool isMotionRequested = _motionRequested != spk::Vector3();
-		bool isRotationRequested = _rotationRequested != 0.0f;
+		bool isRotationRequested = FLOAT_NEQ(_rotationRequested, 0.0f);
 
 		if (isMotionRequested == true || isRotationRequested == true)
 		{
@@ -155,7 +155,7 @@ namespace spk
 				_focusPoint += delta;
 			}
 
-			if (_rotationRequested != 0.0f)
+			if (FLOAT_NEQ(_rotationRequested, 0.0f) == true)
 			{
 				float angle = _rotationRequested * (float)p_event.deltaTime.seconds * _config.rotateSpeed;
 				spk::Vector3 offset = owner()->transform().position() - _focusPoint;

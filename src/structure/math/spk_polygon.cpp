@@ -81,7 +81,7 @@ namespace spk
 		for (size_t i = 2; i < _edges.size(); i++)
 		{
 			float dot = expectedNormal.dot(_edges[i].direction());
-			if (dot != 0)
+			if (FLOAT_NEQ(dot, 0.0f) == true)
 			{
 				return (false);
 			}
@@ -398,8 +398,7 @@ namespace spk
 		{
 			GENERATE_ERROR("Polygons must be coplanar");
 		}
-		if (p_needVerification == true && 
-			isAdjacent(p_other) == false && isOverlapping(p_other) == false)
+		if (p_needVerification == true && isAdjacent(p_other) == false && isOverlapping(p_other) == false)
 		{
 			return spk::Polygon();
 		}

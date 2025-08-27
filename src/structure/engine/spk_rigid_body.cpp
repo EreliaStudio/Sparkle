@@ -172,7 +172,7 @@ namespace spk
 		{
 			spk::Vector3 dir = p_end - p_start;
 			float length = dir.norm();
-			if ((length == 0.0f) == true)
+			if ((FLOAT_EQ(length, 0.0f) == true))
 			{
 				return false;
 			}
@@ -192,7 +192,7 @@ namespace spk
 			float d20 = v2.dot(v0);
 			float d21 = v2.dot(v1);
 			float denom = d00 * d11 - d01 * d01;
-			if ((denom == 0.0f) == true)
+			if ((FLOAT_EQ(denom, 0.0f) == true))
 			{
 				return false;
 			}
