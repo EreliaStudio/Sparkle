@@ -9,11 +9,24 @@ namespace spk
 
 	struct Plane
 	{
+		struct Identifier
+		{
+			spk::Vector3 normal;
+			float dotValue;
+
+			static Identifier from(const spk::Plane &p);
+
+			bool operator==(const Plane::Identifier &other) const;
+		};
+
 		spk::Vector3 origin;
 		spk::Vector3 normal;
 
 		Plane() = default;
 		Plane(const spk::Vector3 &p_normal, const spk::Vector3 &p_origin);
+
+		bool isSame(const spk::Plane &p_plane) const;
+
 		bool contains(const spk::Polygon &p_polygon) const;
 		bool contains(const spk::Vector3 &p_point) const;
 		bool operator==(const spk::Plane &p_plane) const;
@@ -22,24 +35,33 @@ namespace spk
 	};
 }
 
-namespace std
+template <>
+struct std::hash<spk::Plane::Identifier>
 {
-	template <>
-	struct hash<spk::Plane>
+	size_t operator()(const spk::Plane::Identifier &k) const noexcept
 	{
-		size_t operator()(const spk::Plane &p_plane) const
-		{
-			spk::Vector3 n = p_plane.normal.normalize();
+		auto to_i = [](float v) -> long long { return static_cast<long long>(std::llround(v / spk::Constants::pointPrecision)); };
 
-			if ((-n < n) == true)
-			{
-				n = n * -1.0f;
-			}
+		const long long ix = to_i(k.normal.x);
+		const long long iy = to_i(k.normal.y);
+		const long long iz = to_i(k.normal.z);
+		const long long id = to_i(k.dotValue);
 
-			size_t h = 0;
-			h ^= std::hash<spk::Vector3>()(n) + 0x9e3779b9 + (h << 6) + (h >> 2);
-			h ^= std::hash<spk::Vector3>()(p_plane.origin) + 0x9e3779b9 + (h << 6) + (h >> 2);
-			return (h);
-		}
-	};
-}
+		size_t h = 0;
+		auto mix = [&](size_t x) { h ^= x + 0x9e3779b97f4a7c15ull + (h << 6) + (h >> 2); };
+		mix(std::hash<long long>()(ix));
+		mix(std::hash<long long>()(iy));
+		mix(std::hash<long long>()(iz));
+		mix(std::hash<long long>()(id));
+		return h;
+	}
+};
+
+template <>
+struct std::hash<spk::Plane>
+{
+	size_t operator()(const spk::Plane &p_plane) const
+	{
+		return std::hash<spk::Plane::Identifier>()(spk::Plane::Identifier::from(p_plane));
+	}
+};
