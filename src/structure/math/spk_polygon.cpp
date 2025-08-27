@@ -59,9 +59,20 @@ namespace spk
 		{
 			GENERATE_ERROR("Can't generate normal on a polygon with less than 3 points");
 		}
+
 		const spk::Vector3 &origin = points[0];
-		spk::Vector3 normal = (points[1] - origin).cross(points[2] - origin);
-		return (normal.normalize());
+
+		for (size_t i = 1; i < points.size(); ++i)
+		{
+			spk::Vector3 normal = (points[i] - origin).cross(points[i + 1] - origin);
+
+			if (normal.norm() > 0.0f)
+			{
+				return normal.normalize();
+			}
+		}
+
+		GENERATE_ERROR("Can't generate normal on a polygon with collinear points");
 	}
 
 	bool Polygon::isPlanar() const
@@ -90,26 +101,74 @@ namespace spk
 
 	Plane Polygon::plane() const
 	{
-		if (points.size() < 3)
+		try
 		{
-			GENERATE_ERROR("Can't generate plane on a polygon with less than 3 points");
+			if (points.size() < 3)
+			{
+				GENERATE_ERROR("Can't generate plane on a polygon with less than 3 points");
+			}
+			if (isPlanar() == false)
+			{
+				GENERATE_ERROR("Can't generate plane on a non-planar polygon");
+			}
 		}
-		if (isPlanar() == false)
+		catch (const std::exception &e)
 		{
-			GENERATE_ERROR("Can't generate plane on a non-planar polygon");
+			PROPAGATE_ERROR("Failed to check planarity", e);
 		}
 
-		return (Plane(normal(), points[0]));
+		spk::Vector3 tmpNormal;
+		
+		try
+		{
+			tmpNormal = normal();
+		}
+		catch (const std::exception &e)
+		{
+			PROPAGATE_ERROR("Error while computing the polygon normal", e);
+		}
+
+		return (Plane(tmpNormal, points[0]));
 	}
 
 	bool Polygon::isCoplanar(const Polygon &p_polygon) const
 	{
-		if (isPlanar() == false || p_polygon.isPlanar() == false)
+		try
 		{
-			return false;
+			if (isPlanar() == false || p_polygon.isPlanar() == false)
+			{
+				return false;
+			}
+		}
+		catch (const std::exception &e)
+		{
+			PROPAGATE_ERROR("Failed to check planarity on one of the two polygons", e);
+		}
+		
+		
+		spk::Plane ourPlane;
+		spk::Plane theirPlane;
+		try
+		{
+			ourPlane = plane();
+			theirPlane = p_polygon.plane();
+		}
+		catch (const std::exception& e)
+		{
+			PROPAGATE_ERROR("Failed to compute plane on one of the two polygons", e);
 		}
 
-		return (plane() == p_polygon.plane());
+		bool isSamePlane = false;
+		try
+		{
+			isSamePlane = (ourPlane == theirPlane);
+		}
+		catch (const std::exception &e)
+		{
+			PROPAGATE_ERROR("Failed to check plane equality", e);
+		}
+
+		return (isSamePlane);
 	}
 
 	bool Polygon::contains(const spk::Vector3 &p_point) const
@@ -189,20 +248,38 @@ namespace spk
 
 	bool Polygon::contains(const Polygon &p_polygon) const
 	{
-		if (isCoplanar(p_polygon) == false)
+		try
 		{
-			return false;
-		}
-
-		// For full containment, every vertex of the inner polygon must be inside or on the boundary.
-		for (const spk::Vector3 &pt : p_polygon.points)
-		{
-			bool inside = contains(pt);
-			if (inside == false)
+			if (isCoplanar(p_polygon) == false)
 			{
 				return false;
 			}
 		}
+		catch(const std::exception& e)
+		{
+			PROPAGATE_ERROR("Failed to check coplanarity", e);
+		}
+		catch (...)
+		{
+			GENERATE_ERROR("Failed to check coplanarity");
+		}
+		
+		try
+		{
+			for (const spk::Vector3 &pt : p_polygon.points)
+			{
+				bool inside = contains(pt);
+				if (inside == false)
+				{
+					return false;
+				}
+			}
+		}
+		catch(const std::exception& e)
+		{
+			PROPAGATE_ERROR("Failed to check point containment", e);
+		}
+		
 
 		return true;
 	}

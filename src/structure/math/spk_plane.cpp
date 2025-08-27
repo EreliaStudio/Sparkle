@@ -6,10 +6,11 @@
 
 namespace spk
 {
-	Plane::Plane(const spk::Vector3 &p_origin, const spk::Vector3 &p_normal)
-		: origin(p_origin),
-		  normal(p_normal.normalize())
+	Plane::Plane(const spk::Vector3 &p_origin, const spk::Vector3 &p_normal) :
+		origin(p_origin),
+		normal(p_normal.normalize())
 	{
+		
 	}
 
 	bool Plane::contains(const spk::Polygon &p_polygon) const
@@ -32,6 +33,8 @@ namespace spk
 
 	bool Plane::operator==(const spk::Plane &p_plane) const
 	{
+		spk::cout << "Comparing planes : " << normal << " / " << origin << "  VS  " << p_plane.normal << " / " << p_plane.origin << std::endl;
+
 		spk::Vector3 n = normal.normalize();
 		spk::Vector3 otherN = p_plane.normal.normalize();
 
