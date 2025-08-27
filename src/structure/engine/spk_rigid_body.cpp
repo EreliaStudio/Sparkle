@@ -226,9 +226,16 @@ namespace spk
 			return false;
 		}
 
-		std::vector<spk::TMesh<spk::Vector3>::Triangle> collectTriangles(const RigidBody *p_body, const spk::Matrix4x4 &p_transform)
+		struct Triangle
 		{
-			std::vector<spk::TMesh<spk::Vector3>::Triangle> result;
+			spk::Vector3 a;
+			spk::Vector3 b;
+			spk::Vector3 c;
+		};
+
+		std::vector<Triangle> collectTriangles(const RigidBody *p_body, const spk::Matrix4x4 &p_transform)
+		{
+			std::vector<Triangle> result;
 			const auto &collider = p_body->collider();
 			if ((collider == nullptr) == false)
 			{
@@ -236,7 +243,7 @@ namespace spk
 				{
 					if ((unit.points.size() == 3) == true)
 					{
-						spk::TMesh<spk::Vector3>::Triangle tri{unit.points[0], unit.points[1], unit.points[2]};
+						Triangle tri{unit.points[0], unit.points[1], unit.points[2]};
 						tri.a = p_transform * tri.a;
 						tri.b = p_transform * tri.b;
 						tri.c = p_transform * tri.c;
@@ -266,8 +273,8 @@ namespace spk
 			return false;
 		}
 
-		std::vector<spk::TMesh<spk::Vector3>::Triangle> triAs = collectTriangles(p_a, p_transformA);
-		std::vector<spk::TMesh<spk::Vector3>::Triangle> triBs = collectTriangles(p_b, p_transformB);
+		std::vector<Triangle> triAs = collectTriangles(p_a, p_transformA);
+		std::vector<Triangle> triBs = collectTriangles(p_b, p_transformB);
 
 		for (const auto &ta : triAs)
 		{
