@@ -109,6 +109,8 @@ private:
 		{
 			if (_cache.contains(p_orientation) == false)
 			{
+				spk::cout << "Cache::addCase constructing case for orientation " << static_cast<int>(p_orientation.horizontalOrientation) << ", "
+						  << static_cast<int>(p_orientation.verticalOrientation) << std::endl;
 				_cache.emplace(p_orientation, _compute(p_mesh, p_orientation));
 			}
 		}
@@ -311,16 +313,30 @@ private:
 
 		static Entry _compute(const spk::ObjMesh &p_mesh, const Orientation &p_orientation)
 		{
+			spk::cout << "Cache::_compute start for orientation " << static_cast<int>(p_orientation.horizontalOrientation) << ", "
+					  << static_cast<int>(p_orientation.verticalOrientation) << std::endl;
 			Entry result;
 
+			size_t shapeIndex = 0;
 			for (const auto &shape : p_mesh.shapes())
 			{
+				spk::cout << "  Processing shape " << shapeIndex++ << " with " << shape.points.size() << " vertices" << std::endl;
 				auto vertices = _extractVertices(shape);
+				for (const auto &v : vertices)
+				{
+					spk::cout << "    orig vertex " << v.position << std::endl;
+				}
+
 				_applyOrientationToVertices(vertices, p_orientation);
+				for (const auto &v : vertices)
+				{
+					spk::cout << "    oriented vertex " << v.position << std::endl;
+				}
 
 				spk::Vector3 normal;
-				if (_isAxisAlignedFace(vertices, normal))
+				if (_isAxisAlignedFace(vertices, normal) == true)
 				{
+					spk::cout << "    Shape is face with normal " << normal << std::endl;
 					Face &face = result.faces[normal];
 					for (auto &v : vertices)
 					{
@@ -328,17 +344,21 @@ private:
 					}
 					_addVerticesToMesh(face.mesh, vertices);
 
-					if (vertices.size() == 4 && _isFullQuad(vertices, normal))
+					if (vertices.size() == 4 && _isFullQuad(vertices, normal) == true)
 					{
+						spk::cout << "    Face is full quad" << std::endl;
 						face.full = true;
 					}
 				}
 				else
 				{
+					spk::cout << "    Shape classified as inner" << std::endl;
 					_addVerticesToMesh(result.innerMesh, vertices);
 				}
 			}
 
+			spk::cout << "Cache::_compute end: " << result.innerMesh.shapes().size() << " inner shapes, " << result.faces.size() << " faces"
+					  << std::endl;
 			return result;
 		}
 
@@ -351,7 +371,14 @@ private:
 	{
 		if (_cache.hasCase(p_orientation) == false)
 		{
+			spk::cout << "Ensuring cache case for orientation " << static_cast<int>(p_orientation.horizontalOrientation) << ", "
+					  << static_cast<int>(p_orientation.verticalOrientation) << std::endl;
 			_cache.addCase(p_orientation, _mesh());
+		}
+		else
+		{
+			spk::cout << "Cache already has case for orientation " << static_cast<int>(p_orientation.horizontalOrientation) << ", "
+					  << static_cast<int>(p_orientation.verticalOrientation) << std::endl;
 		}
 		return _cache.getCase(p_orientation);
 	}
@@ -373,14 +400,27 @@ private:
 
 			if (neigh->_cache.hasCase(neighOrientation) == false)
 			{
+				spk::cout << "Neighbour cache miss at index " << i << ": constructing for orientation "
+						  << static_cast<int>(neighOrientation.horizontalOrientation) << ", "
+						  << static_cast<int>(neighOrientation.verticalOrientation) << std::endl;
 				neigh->_cache.addCase(neighOrientation, neigh->_mesh());
+			}
+			else
+			{
+				spk::cout << "Neighbour cache hit at index " << i << " for orientation " << static_cast<int>(neighOrientation.horizontalOrientation)
+						  << ", " << static_cast<int>(neighOrientation.verticalOrientation) << std::endl;
 			}
 
 			const Cache::Entry &neighData = neigh->_cache.getCase(neighOrientation);
 			const spk::Vector3 oppositeNormal = -neightbourCoordinates[i];
 			if (auto it = neighData.faces.find(oppositeNormal); it != neighData.faces.end())
 			{
+				spk::cout << "Neighbour face found for normal " << oppositeNormal << std::endl;
 				neighFaces[i] = &it->second;
+			}
+			else
+			{
+				spk::cout << "No neighbour face for normal " << oppositeNormal << std::endl;
 			}
 		}
 		return neighFaces;
@@ -420,83 +460,114 @@ private:
 	}
 
 	static void _emitVisibleFaces(
-    spk::ObjMesh &p_toFill,
-    const Cache::Entry &p_data,
-    const spk::Vector3 &p_position,
-    const std::array<const Face *, 6> &p_neighFaces)
-{
-    try
-    {
-        for (size_t i = 0; i < 6; ++i)
-        {
-            const spk::Vector3 normal = neightbourCoordinates[i];
+		spk::ObjMesh &p_toFill, const Cache::Entry &p_data, const spk::Vector3 &p_position, const std::array<const Face *, 6> &p_neighFaces)
+	{
+		try
+		{
+			spk::cout << "_emitVisibleFaces called at position " << p_position << std::endl;
 
-            const Face *ourFace = nullptr;
-            const Face *neigh = nullptr;
+			auto printPolygon = [](const spk::Polygon &p_poly)
+			{
+				spk::cout << "[" << p_poly.points.size() << " pts]";
+				for (const auto &point : p_poly.points)
+				{
+					spk::cout << " " << point;
+				}
+				spk::cout << std::endl;
+			};
 
-            // --- Prepare current / neighbour faces ---
-            try
-            {
-                auto faceIt = p_data.faces.find(normal);
-                if (faceIt == p_data.faces.end())
-                {
-                    continue;
-                }
+			for (size_t i = 0; i < 6; ++i)
+			{
+				const spk::Vector3 normal = neightbourCoordinates[i];
+				spk::cout << "Processing normal " << normal << std::endl;
 
-                ourFace = &faceIt->second;
-                if (ourFace->mesh.shapes().empty() == true)
-                {
-                    continue;
-                }
+				const Face *ourFace = nullptr;
+				const Face *neigh = nullptr;
 
-                neigh = p_neighFaces[i];
-            }
-            catch (const std::exception &e)
-            {
-                PROPAGATE_ERROR("Error while preparing face data for visibility evaluation", e);
-            }
+				// --- Prepare current / neighbour faces ---
+				try
+				{
+					auto faceIt = p_data.faces.find(normal);
+					if (faceIt == p_data.faces.end())
+					{
+						spk::cout << "No face found" << std::endl;
+						continue;
+					}
 
-            bool visible = true;
+					ourFace = &faceIt->second;
+					spk::cout << "Our face has " << ourFace->mesh.shapes().size() << " shapes and footprint ";
+					printPolygon(ourFace->footprint);
+					if (ourFace->mesh.shapes().empty() == true)
+					{
+						spk::cout << "Our face mesh is empty" << std::endl;
+						continue;
+					}
 
-            // --- Evaluate occlusion vs neighbour, if any ---
-            try
-            {
-                if (neigh != nullptr && neigh->footprint.points.empty() == false)
-                {
-                    const spk::Vector3 toOurLocal = normal;
-                    spk::Polygon neighInOurSpace = _translated(neigh->footprint, toOurLocal);
+					neigh = p_neighFaces[i];
+					if (neigh == nullptr)
+					{
+						spk::cout << "No neighbour face" << std::endl;
+					}
+					else
+					{
+						spk::cout << "Neighbour footprint ";
+						printPolygon(neigh->footprint);
+					}
+				} catch (const std::exception &e)
+				{
+					spk::cout << "Exception while preparing face: " << e.what() << std::endl;
+					PROPAGATE_ERROR("Error while preparing face data for visibility evaluation", e);
+				}
 
-                    if (neighInOurSpace.contains(ourFace->footprint) == true)
-                    {
-                        visible = false;
-                    }
-                }
-            }
-            catch (const std::exception &e)
-            {
-                PROPAGATE_ERROR("Error while evaluating visibility against neighbour face", e);
-            }
+				bool visible = true;
 
-            // --- Emit if visible ---
-            try
-            {
-                if (visible == true)
-                {
-                    p_data.applyFace(p_toFill, p_position, normal);
-                }
-            }
-            catch (const std::exception &e)
-            {
-                PROPAGATE_ERROR("Error while applying a visible face to the mesh", e);
-            }
-        }
-    }
-    catch (const std::exception &e)
-    {
-        PROPAGATE_ERROR("Error while emitting visible faces", e);
-    }
-}
+				// --- Evaluate occlusion vs neighbour, if any ---
+				try
+				{
+					if (neigh != nullptr && neigh->footprint.points.empty() == false)
+					{
+						const spk::Vector3 toOurLocal = normal;
+						spk::cout << "Translating neighbour by " << toOurLocal << std::endl;
+						spk::Polygon neighInOurSpace = _translated(neigh->footprint, toOurLocal);
+						spk::cout << "Neighbour in our space ";
+						printPolygon(neighInOurSpace);
 
+						if (neighInOurSpace.contains(ourFace->footprint) == true)
+						{
+							spk::cout << "Neighbour occludes our face" << std::endl;
+							visible = false;
+						}
+					}
+				} catch (const std::exception &e)
+				{
+					spk::cout << "Exception while evaluating visibility: " << e.what() << std::endl;
+					PROPAGATE_ERROR("Error while evaluating visibility against neighbour face", e);
+				}
+
+				// --- Emit if visible ---
+				try
+				{
+					if (visible == true)
+					{
+						spk::cout << "Emitting visible face" << std::endl;
+						p_data.applyFace(p_toFill, p_position, normal);
+					}
+					else
+					{
+						spk::cout << "Face not visible" << std::endl;
+					}
+				} catch (const std::exception &e)
+				{
+					spk::cout << "Exception while applying face: " << e.what() << std::endl;
+					PROPAGATE_ERROR("Error while applying a visible face to the mesh", e);
+				}
+			}
+		} catch (const std::exception &e)
+		{
+			spk::cout << "Exception in _emitVisibleFaces: " << e.what() << std::endl;
+			PROPAGATE_ERROR("Error while emitting visible faces", e);
+		}
+	}
 
 public:
 	virtual ~Block() = default;
@@ -510,12 +581,11 @@ public:
 		const Cache::Entry &data = _ensureCacheCase(p_orientation);
 
 		std::array<const Face *, 6> neighFaces;
-		
+
 		try
 		{
 			neighFaces = _gatherNeighbourFaces(p_neightbourDescriber);
-		}
-		catch(const std::exception& e)
+		} catch (const std::exception &e)
 		{
 			PROPAGATE_ERROR("Error while gathering neighbour faces", e);
 		}
@@ -523,8 +593,7 @@ public:
 		try
 		{
 			_emitInnerIfNeeded(p_toFill, data, p_position, neighFaces);
-		}
-		catch(const std::exception& e)
+		} catch (const std::exception &e)
 		{
 			PROPAGATE_ERROR("Error while emitting inner mesh", e);
 		}
@@ -532,8 +601,7 @@ public:
 		try
 		{
 			_emitVisibleFaces(p_toFill, data, p_position, neighFaces);
-		}
-		catch(const std::exception& e)
+		} catch (const std::exception &e)
 		{
 			PROPAGATE_ERROR("Error while emitting visible faces", e);
 		}
@@ -757,10 +825,12 @@ public:
 								try
 								{
 									currentBlock->bake(_mesh, neightbourSpecifiers, {x, y, z}, currentSpecifier.second);
-								}
-								catch (const std::exception &e)
+								} catch (const std::exception &e)
 								{
-									PROPAGATE_ERROR("Failed to bake chunk block ID [" + std::to_string(currentSpecifier.first) + "] at pos [" + std::to_string(x) + "][" + std::to_string(y) + "][" + std::to_string(z) + "]", e);
+									PROPAGATE_ERROR(
+										"Failed to bake chunk block ID [" + std::to_string(currentSpecifier.first) + "] at pos [" +
+											std::to_string(x) + "][" + std::to_string(y) + "][" + std::to_string(z) + "]",
+										e);
 								}
 							}
 						}
@@ -770,8 +840,7 @@ public:
 				try
 				{
 					_collisionMesh = spk::CollisionMesh::fromObjMesh(&_mesh);
-				}
-				catch (const std::exception &e)
+				} catch (const std::exception &e)
 				{
 					PROPAGATE_ERROR("Failed to bake chunk while constructing collision mesh", e);
 				}
