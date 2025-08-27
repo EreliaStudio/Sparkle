@@ -133,19 +133,25 @@ namespace spk
 
 	bool Polygon::isCoplanar(const Polygon &p_polygon) const
 	{
-		try
+		if (isPlanar() == false || p_polygon.isPlanar() == false)
 		{
-			if (isPlanar() == false || p_polygon.isPlanar() == false)
-			{
-				return false;
-			}
+			return false;
 		}
-		catch (const std::exception &e)
+
+		Plane ourPlane = plane();
+		Plane theirPlane = p_polygon.plane();
+
+		if (ourPlane.normal != theirPlane.normal && ourPlane.normal != -theirPlane.normal)
 		{
-			PROPAGATE_ERROR("Failed to check planarity on one of the two polygons", e);
+			return false;
 		}
-		
-		return (plane() == p_polygon.plane());
+
+		if (ourPlane.contains(theirPlane.origin) == false)
+		{
+			return false;
+		}
+	
+		return (true);
 	}
 
 	bool Polygon::contains(const spk::Vector3 &p_point) const
