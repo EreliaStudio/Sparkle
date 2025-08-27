@@ -443,6 +443,7 @@ namespace spk
 		if (loop.size() < 4)
 		{
 			GENERATE_ERROR("Fused polygon could not be stitched (Loop size : " + std::to_string(loop.size()) + ")");
+			return spk::Polygon();
 		}
 		return spk::Polygon::fromLoop(loop);
 	}
