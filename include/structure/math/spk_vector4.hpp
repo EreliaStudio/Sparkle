@@ -321,7 +321,8 @@ namespace spk
 		template <typename UType>
 		IVector4<TType> operator/(const IVector4<UType> &p_other) const
 		{
-			if (p_other.x == 0 || p_other.y == 0 || p_other.z == 0 || p_other.w == 0)
+			if ((FLOAT_EQ(p_other.x, 0.0f) == true) || (FLOAT_EQ(p_other.y, 0.0f) == true) || (FLOAT_EQ(p_other.z, 0.0f) == true) ||
+				(FLOAT_EQ(p_other.w, 0.0f) == true))
 			{
 				GENERATE_ERROR("Division by zero");
 			}
@@ -349,7 +350,7 @@ namespace spk
 		template <typename UType>
 		IVector4<TType> operator/(UType p_scalar) const
 		{
-			if (p_scalar == 0)
+			if (FLOAT_EQ(p_scalar, 0.0f) == true)
 			{
 				GENERATE_ERROR("Division by zero");
 			}
@@ -389,7 +390,8 @@ namespace spk
 		template <typename UType>
 		IVector4<TType> &operator/=(const IVector4<UType> &p_other)
 		{
-			if (p_other.x == 0 || p_other.y == 0 || p_other.z == 0 || p_other.w == 0)
+			if ((FLOAT_EQ(p_other.x, 0.0f) == true) || (FLOAT_EQ(p_other.y, 0.0f) == true) || (FLOAT_EQ(p_other.z, 0.0f) == true) ||
+				(FLOAT_EQ(p_other.w, 0.0f) == true))
 			{
 				GENERATE_ERROR("Division by zero");
 			}
@@ -433,7 +435,7 @@ namespace spk
 		template <typename UType>
 		IVector4<TType> &operator/=(UType p_scalar)
 		{
-			if (p_scalar == 0)
+			if (FLOAT_EQ(p_scalar, 0.0f) == true)
 			{
 				GENERATE_ERROR("Division by zero");
 			}
@@ -458,7 +460,7 @@ namespace spk
 		IVector4<float> normalize() const
 		{
 			float len = norm();
-			if (len == 0)
+			if (FLOAT_EQ(len, 0.0f) == true)
 			{
 				GENERATE_ERROR("Can't calculate a norm for a vector of length 0");
 			}
@@ -638,7 +640,8 @@ spk::IVector4<TType> operator*(UType p_scalar, const spk::IVector4<TType> &p_vec
 template <typename TType, typename UType, typename = std::enable_if_t<std::is_arithmetic<UType>::value>>
 spk::IVector4<TType> operator/(UType p_scalar, const spk::IVector4<TType> &p_vec)
 {
-	if (p_vec.x == 0 || p_vec.y == 0 || p_vec.z == 0 || p_vec.w == 0)
+	if ((FLOAT_EQ(p_vec.x, 0.0f) == true) || (FLOAT_EQ(p_vec.y, 0.0f) == true) || (FLOAT_EQ(p_vec.z, 0.0f) == true) ||
+		(FLOAT_EQ(p_vec.w, 0.0f) == true))
 	{
 		GENERATE_ERROR("Division by zero");
 	}

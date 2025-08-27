@@ -263,7 +263,7 @@ namespace spk
 		template <typename UType>
 		IVector2<TType> operator/(const IVector2<UType> &p_other) const
 		{
-			if (p_other.x == 0 || p_other.y == 0)
+			if ((FLOAT_EQ(p_other.x, 0.0f) == true) || (FLOAT_EQ(p_other.y, 0.0f) == true))
 			{
 				GENERATE_ERROR("Division by zero");
 			}
@@ -292,7 +292,7 @@ namespace spk
 		template <typename UType>
 		IVector2<TType> operator/(UType p_scalar) const
 		{
-			if (p_scalar == 0)
+			if (FLOAT_EQ(p_scalar, 0.0f) == true)
 			{
 				GENERATE_ERROR("Division by zero");
 			}
@@ -327,7 +327,7 @@ namespace spk
 		template <typename UType>
 		IVector2<TType> &operator/=(const IVector2<UType> &p_other)
 		{
-			if (p_other.x == 0 || p_other.y == 0)
+			if ((FLOAT_EQ(p_other.x, 0.0f) == true) || (FLOAT_EQ(p_other.y, 0.0f) == true))
 			{
 				GENERATE_ERROR("Division by zero");
 			}
@@ -364,7 +364,7 @@ namespace spk
 		template <typename UType>
 		IVector2<TType> &operator/=(UType p_scalar)
 		{
-			if (p_scalar == 0)
+			if (FLOAT_EQ(p_scalar, 0.0f) == true)
 			{
 				GENERATE_ERROR("Division by zero");
 			}
@@ -388,7 +388,7 @@ namespace spk
 		IVector2<float> normalize() const
 		{
 			float len = norm();
-			if (len == 0)
+			if (FLOAT_EQ(len, 0.0f) == true)
 			{
 				GENERATE_ERROR("Can't calculated a norm for a vector of len 0");
 			}
@@ -561,7 +561,7 @@ spk::IVector2<TType> operator*(UType p_scalar, const spk::IVector2<TType> &p_vec
 template <typename TType, typename UType, typename = std::enable_if_t<std::is_arithmetic<UType>::value>>
 spk::IVector2<TType> operator/(UType p_scalar, const spk::IVector2<TType> &p_vec)
 {
-	if (p_vec.x == 0 || p_vec.y == 0)
+	if ((FLOAT_EQ(p_vec.x, 0.0f) == true) || (FLOAT_EQ(p_vec.y, 0.0f) == true))
 	{
 		GENERATE_ERROR("Division by zero");
 	}
