@@ -8,9 +8,7 @@
 #include <map>
 #include <memory>
 #include <sparkle.hpp>
-#include <type_traits>
 #include <unordered_map>
-#include <variant>
 #include <vector>
 
 class Block
@@ -82,18 +80,11 @@ protected:
 			}
 			p_v.uv = (p_v.uv * p_sprite.size) + p_sprite.anchor;
 		};
-		std::visit(
-			[&](auto &p_face)
-			{
-				transform(p_face.a);
-				transform(p_face.b);
-				transform(p_face.c);
-				if constexpr (std::is_same_v<std::decay_t<decltype(p_face)>, spk::ObjMesh::Quad>)
-				{
-					transform(p_face.d);
-				}
-			},
-			p_shape);
+
+		for (auto &vertex : p_shape.points)
+		{
+			transform(vertex);
+		}
 	}
 
 private:
@@ -149,21 +140,14 @@ private:
 		private:
 			static void _appendMesh(spk::ObjMesh &p_target, const spk::ObjMesh &p_source, const spk::Vector3 &p_offset)
 			{
-				auto add = [&](auto p_shape)
-				{
-					p_shape.a.position += p_offset;
-					p_shape.b.position += p_offset;
-					p_shape.c.position += p_offset;
-					if constexpr (std::is_same_v<std::decay_t<decltype(p_shape)>, spk::ObjMesh::Quad>)
-					{
-						p_shape.d.position += p_offset;
-					}
-					p_target.addShape(p_shape);
-				};
-
 				for (const auto &shape : p_source.shapes())
 				{
-					std::visit(add, shape);
+					std::vector<spk::Vertex> transformed = shape.points;
+					for (auto &vertex : transformed)
+					{
+						vertex.position += p_offset;
+					}
+					p_target.addShape(transformed);
 				}
 			}
 		};
@@ -227,16 +211,7 @@ private:
 
 		static std::vector<spk::Vertex> _extractVertices(const spk::ObjMesh::Shape &p_shape)
 		{
-			if (std::holds_alternative<spk::ObjMesh::Triangle>(p_shape))
-			{
-				const auto &tri = std::get<spk::ObjMesh::Triangle>(p_shape);
-				return {tri.a, tri.b, tri.c};
-			}
-			else
-			{
-				const auto &quad = std::get<spk::ObjMesh::Quad>(p_shape);
-				return {quad.a, quad.b, quad.c, quad.d};
-			}
+			return p_shape.points;
 		}
 
 		static void _applyOrientationToVertices(std::vector<spk::Vertex> &p_vertices, const Orientation &p_orientation)
