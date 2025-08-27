@@ -1,0 +1,132 @@
+#include "structure/math/spk_polygon.hpp"
+
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <iostream>
+#include <limits>
+#include <map>
+#include <utility>
+#include <variant>
+#include <vector>
+
+namespace spk
+{
+	Edge::Edge(const spk::Vector3 &p_first, const spk::Vector3 &p_second) :
+		_first(p_first),
+		_second(p_second)
+	{
+		if (_second == _first)
+		{
+			GENERATE_ERROR("Can't create an edge of lenght == 0");
+		}
+		_delta = (_second - _first);
+		_direction = _delta.normalize();
+	}
+
+	const spk::Vector3 &Edge::first() const
+	{
+		return (_first);
+	}
+
+	const spk::Vector3 &Edge::second() const
+	{
+		return (_second);
+	}
+
+	const spk::Vector3 &Edge::delta() const
+	{
+		return (_delta);
+	}
+
+	const spk::Vector3 &Edge::direction() const
+	{
+		return (_direction);
+	}
+
+	float Edge::orientation(const spk::Vector3 &p_point, const spk::Vector3 &p_normal) const
+	{
+		return ((_second - _first).cross(p_point - _first)).dot(p_normal);
+	}
+
+	bool Edge::contains(const spk::Vector3 &p_point, bool p_checkAlignment) const
+	{
+		if (p_point == _first)
+		{
+			return (true);
+		}
+		const spk::Vector3 v = p_point - _first;
+		if (p_checkAlignment == true && v.normalize() != _direction)
+		{
+			return (false);
+		}
+		const float t = v.dot(_direction);
+		const float len = (_second - _first).dot(_direction);
+		return (t >= 0) && (t <= len);
+	}
+
+	float Edge::project(const spk::Vector3 &p_point) const
+	{
+		return (_delta.dot(p_point - _first));
+	}
+
+	bool Edge::isInverse(const Edge &p_other) const
+	{
+		return (_first == p_other.second() && _second == p_other.first());
+	}
+
+	Edge Edge::inverse() const
+	{
+		return (Edge(_second, _first));
+	}
+
+	bool Edge::isParallel(const Edge &p_other) const
+	{
+		return (direction() == p_other.direction() || direction() == p_other.direction().inverse());
+	}
+
+	bool Edge::isColinear(const Edge &p_other) const
+	{
+		if (isParallel(p_other) == false)
+		{
+			return (false);
+		}
+		spk::Vector3 delta = (p_other._first - _first);
+		if (delta == spk::Vector3(0, 0, 0))
+		{
+			return (true);
+		}
+		return (std::fabs(delta.normalize().dot(_direction)) == 1);
+	}
+
+	bool Edge::operator==(const Edge &p_other) const
+	{
+		return (first() == p_other.first()) && (second() == p_other.second());
+	}
+
+	bool Edge::isSame(const Edge &p_other) const
+	{
+		return ((first() == p_other.first()) && (second() == p_other.second()) || (first() == p_other.second()) && (second() == p_other.first()));
+	}
+
+	bool Edge::operator<(const Edge &p_other) const
+	{
+		if (first() != p_other.first())
+		{
+			return (first() < p_other.first());
+		}
+		return (second() < p_other.second());
+	}
+
+	std::ostream &operator<<(std::ostream &p_os, const Edge &p_edge)
+	{
+		p_os << "(" << p_edge.first() << " -> " << p_edge.second() << ")";
+		return p_os;
+	}
+
+	std::wostream &operator<<(std::wostream &p_wos, const Edge &p_edge)
+	{
+		p_wos << L"(" << p_edge.first() << L" -> " << p_edge.second() << L")";
+		return p_wos;
+	}
+}

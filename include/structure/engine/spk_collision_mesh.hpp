@@ -19,6 +19,7 @@ namespace spk
 		CollisionMesh() = default;
 
 		void addUnit(const Unit &p_unit);
+		std::vector<Unit> &units();
 		const std::vector<Unit> &units() const;
 
 		static CollisionMesh fromObjMesh(const spk::SafePointer<spk::ObjMesh> &p_mesh);

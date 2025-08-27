@@ -12,124 +12,6 @@
 
 namespace spk
 {
-	Edge::Edge(const spk::Vector3 &p_first, const spk::Vector3 &p_second) :
-		_first(p_first),
-		_second(p_second)
-	{
-		if (_second == _first)
-		{
-			GENERATE_ERROR("Can't create an edge of lenght == 0");
-		}
-		_delta = (_second - _first);
-		_direction = _delta.normalize();
-	}
-
-	const spk::Vector3 &Edge::first() const
-	{
-		return (_first);
-	}
-
-	const spk::Vector3 &Edge::second() const
-	{
-		return (_second);
-	}
-
-	const spk::Vector3 &Edge::delta() const
-	{
-		return (_delta);
-	}
-
-	const spk::Vector3 &Edge::direction() const
-	{
-		return (_direction);
-	}
-
-	float Edge::orientation(const spk::Vector3 &p_point, const spk::Vector3 &p_normal) const
-	{
-		return ((_second - _first).cross(p_point - _first)).dot(p_normal);
-	}
-
-	bool Edge::contains(const spk::Vector3 &p_point, bool p_checkAlignment) const
-	{
-		if (p_point == _first)
-		{
-			return (true);
-		}
-		const spk::Vector3 v = p_point - _first;
-		if (p_checkAlignment == true && v.normalize() != _direction)
-		{
-			return (false);
-		}
-		const float t = v.dot(_direction);
-		const float len = (_second - _first).dot(_direction);
-		return (t >= 0) && (t <= len);
-	}
-
-	float Edge::project(const spk::Vector3 &p_point) const
-	{
-		return (_delta.dot(p_point - _first));
-	}
-
-	bool Edge::isInverse(const Edge &p_other) const
-	{
-		return (_first == p_other.second() && _second == p_other.first());
-	}
-
-	Edge Edge::inverse() const
-	{
-		return (Edge(_second, _first));
-	}
-
-	bool Edge::isParallel(const Edge &p_other) const
-	{
-		return (direction() == p_other.direction() || direction() == p_other.direction().inverse());
-	}
-
-	bool Edge::isColinear(const Edge &p_other) const
-	{
-		if (isParallel(p_other) == false)
-		{
-			return (false);
-		}
-		spk::Vector3 delta = (p_other._first - _first);
-		if (delta == spk::Vector3(0, 0, 0))
-		{
-			return (true);
-		}
-		return (std::fabs(delta.normalize().dot(_direction)) == 1);
-	}
-
-	bool Edge::operator==(const Edge &p_other) const
-	{
-		return (first() == p_other.first()) && (second() == p_other.second());
-	}
-
-	bool Edge::isSame(const Edge &p_other) const
-	{
-		return ((first() == p_other.first()) && (second() == p_other.second()) || (first() == p_other.second()) && (second() == p_other.first()));
-	}
-
-	bool Edge::operator<(const Edge &p_other) const
-	{
-		if (first() != p_other.first())
-		{
-			return (first() < p_other.first());
-		}
-		return (second() < p_other.second());
-	}
-
-	std::ostream &operator<<(std::ostream &p_os, const Edge &p_edge)
-	{
-		p_os << "(" << p_edge.first() << " -> " << p_edge.second() << ")";
-		return p_os;
-	}
-
-	std::wostream &operator<<(std::wostream &p_wos, const Edge &p_edge)
-	{
-		p_wos << L"(" << p_edge.first() << L" -> " << p_edge.second() << L")";
-		return p_wos;
-	}
-
 	const std::vector<spk::Edge> &Polygon::edges() const
 	{
 		return (_edges);
@@ -510,16 +392,22 @@ namespace spk
 		}
 	}
 
-	Polygon Polygon::fuze(const Polygon &p_other) const
+	Polygon Polygon::fuze(const Polygon &p_other, bool p_needVerification) const
 	{
 		if (isCoplanar(p_other) == false)
 		{
 			GENERATE_ERROR("Polygons must be coplanar");
 		}
-		if (isAdjacent(p_other) == false && isOverlapping(p_other) == false)
+		if (p_needVerification == true && 
+			isAdjacent(p_other) == false && isOverlapping(p_other) == false)
 		{
 			return spk::Polygon();
 		}
+
+		spk::cout << " ---- Fuzing polygons ----" << std::endl;
+		spk::cout << "A: " << *this << std::endl;
+		spk::cout << "B: " << p_other << std::endl;
+
 		spk::Vector3 n = normal();
 		std::vector<spk::Edge> A = _edges;
 		std::vector<spk::Edge> B = p_other.edges();
@@ -531,9 +419,16 @@ namespace spk
 			GENERATE_ERROR("Fused polygon is empty or degenerate");
 		}
 		std::vector<spk::Vector3> loop = stitchLoop(boundary, n);
+		spk::cout << "Fused loop has " << loop.size() << " points" << std::endl;
+		spk::cout << "Fused loop: " << std::endl;
+		for (size_t i = 0; i < loop.size(); i++)
+		{
+			const spk::Vector3 &pt = loop[i];
+			spk::cout << "    [" << i << "] : " << pt << std::endl;
+		}
 		if (loop.size() < 4)
 		{
-			GENERATE_ERROR("Fused polygon could not be stitched");
+			GENERATE_ERROR("Fused polygon could not be stitched (Loop size : " + std::to_string(loop.size()) + ")");
 		}
 		return spk::Polygon::fromLoop(loop);
 	}
