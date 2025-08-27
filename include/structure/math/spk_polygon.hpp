@@ -2,6 +2,7 @@
 
 #include "structure/math/spk_vector2.hpp"
 #include "structure/math/spk_vector3.hpp"
+#include "structure/math/spk_plane.hpp"
 #include <algorithm>
 #include <cmath>
 #include <vector>
@@ -78,7 +79,11 @@ namespace spk
 
 		bool isPlanar() const
 		{
-			if (points.size() < 4)
+			if (points.size() < 3)
+			{
+				return false;
+			}
+			if (points.size() == 3)
 			{
 				return true;
 			}
@@ -96,6 +101,20 @@ namespace spk
 			return true;
 		}
 
+		Plane plane() const
+		{
+			if (points.size() < 3)
+			{
+				GENERATE_ERROR("Can't generate plane on a polygon with less than 3 points");
+			}
+			if (isPlanar() == false)
+			{
+				GENERATE_ERROR("Can't generate plane on a non-planar polygon");
+			}
+
+			return (Plane(normal(), points[0]));
+		}
+
 		bool isCoplanar(const Polygon &p_polygon) const
 		{
 			if (isPlanar() == false || p_polygon.isPlanar() == false)
@@ -103,21 +122,7 @@ namespace spk
 				return false;
 			}
 
-			spk::Vector3 n = normal();
-			spk::Vector3 otherNormal = p_polygon.normal();
-
-			bool sameNormal = n == otherNormal;
-			bool oppositeNormal = n == -otherNormal;
-
-			if (sameNormal == false && oppositeNormal == false)
-			{
-				return false;
-			}
-
-			const spk::Vector3 &origin = points[0];
-			float distance = n.dot(p_polygon.points[0] - origin);
-			bool result = std::abs(distance) <= spk::Constants::pointPrecision;
-			return result;
+			return (plane() == p_polygon.plane());
 		}
 
 		bool contains(const spk::Vector3 &p_point) const
