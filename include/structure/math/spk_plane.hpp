@@ -13,7 +13,7 @@ namespace spk
 		spk::Vector3 normal;
 
 		Plane() = default;
-		Plane(const spk::Vector3 &p_origin, const spk::Vector3 &p_normal);
+		Plane(const spk::Vector3 &p_normal, const spk::Vector3 &p_origin);
 		bool contains(const spk::Polygon &p_polygon) const;
 		bool contains(const spk::Vector3 &p_point) const;
 		bool operator==(const spk::Plane &p_plane) const;

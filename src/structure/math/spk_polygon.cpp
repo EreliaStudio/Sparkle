@@ -145,30 +145,7 @@ namespace spk
 			PROPAGATE_ERROR("Failed to check planarity on one of the two polygons", e);
 		}
 		
-		
-		spk::Plane ourPlane;
-		spk::Plane theirPlane;
-		try
-		{
-			ourPlane = plane();
-			theirPlane = p_polygon.plane();
-		}
-		catch (const std::exception& e)
-		{
-			PROPAGATE_ERROR("Failed to compute plane on one of the two polygons", e);
-		}
-
-		bool isSamePlane = false;
-		try
-		{
-			isSamePlane = (ourPlane == theirPlane);
-		}
-		catch (const std::exception &e)
-		{
-			PROPAGATE_ERROR("Failed to check plane equality", e);
-		}
-
-		return (isSamePlane);
+		return (plane() == p_polygon.plane());
 	}
 
 	bool Polygon::contains(const spk::Vector3 &p_point) const
