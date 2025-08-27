@@ -413,6 +413,8 @@ namespace spk
 		splitAllEdges(A, B, n);
 		splitAllEdges(B, A, n);
 		std::vector<spk::Edge> boundary = subtractInternalShared(A, B);
+		std::vector<spk::Edge> uniqueB = subtractInternalShared(B, A);
+		boundary.insert(boundary.end(), uniqueB.begin(), uniqueB.end());
 		if (boundary.empty())
 		{
 			GENERATE_ERROR("Fused polygon is empty or degenerate");
