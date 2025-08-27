@@ -59,7 +59,7 @@ namespace spk
 		CollisionMesh result;
 		for (const auto &shapeVariant : p_mesh->shapes())
 		{
-			Unit poly = unitFromVariant(shapeVariant);
+			Unit poly = unitFromShape(shapeVariant);
 
 			if (tryToInsertUnitInMesh(poly, result) == false)
 			{
