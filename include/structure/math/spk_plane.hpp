@@ -33,24 +33,27 @@ namespace spk
 
 		bool contains(const spk::Vector3 &p_point) const
 		{
-			return (std::abs(normal.dot(p_point - origin)) <= spk::Constants::angularPrecision);
+			return (std::abs(normal.dot(p_point - origin)) <= spk::Constants::pointPrecision);
 		}
 
-		bool operator == (const spk::Plane &p_plane) const
+		bool operator==(const spk::Plane &p_plane) const
 		{
-			if (normal != p_plane.normal && normal != -p_plane.normal)
+			spk::Vector3 n = normal.normalize();
+			spk::Vector3 otherN = p_plane.normal.normalize();
+
+			if ((n != otherN) == true && (n != -otherN) == true)
 			{
 				return (false);
 			}
-			return (contains(p_plane.origin));
+			return ((origin == p_plane.origin) == true);
 		}
 
-		bool operator != (const spk::Plane &p_plane) const
+		bool operator!=(const spk::Plane &p_plane) const
 		{
 			return (!(*this == p_plane));
 		}
 
-		bool operator < (const spk::Plane &p_plane) const
+		bool operator<(const spk::Plane &p_plane) const
 		{
 			if (normal != p_plane.normal)
 			{
@@ -61,12 +64,24 @@ namespace spk
 	};
 }
 
-template<> template<> template<> struct std::hash<spk::Plane>
+namespace std
 {
-	size_t operator()(const spk::Plane &p_vec) const
+	template <>
+	struct hash<spk::Plane>
 	{
-		size_t h1 = std::hash<spk::Vector3>()(p_vec.origin);
-		size_t h2 = std::hash<spk::Vector3>()(p_vec.normal);
-		return h1 ^ (h2 << 1);
-	}
-};
+		size_t operator()(const spk::Plane &p_plane) const
+		{
+			spk::Vector3 n = p_plane.normal.normalize();
+
+			if ((-n < n) == true)
+			{
+				n = n * -1.0f;
+			}
+
+			size_t h = 0;
+			h ^= std::hash<spk::Vector3>()(n) + 0x9e3779b9 + (h << 6) + (h >> 2);
+			h ^= std::hash<spk::Vector3>()(p_plane.origin) + 0x9e3779b9 + (h << 6) + (h >> 2);
+			return (h);
+		}
+	};
+}
