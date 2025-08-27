@@ -479,7 +479,7 @@ private:
 			for (size_t i = 0; i < 6; ++i)
 			{
 				const spk::Vector3 normal = neightbourCoordinates[i];
-				spk::cout << "Processing normal " << normal << std::endl;
+				spk::cout << " --- Processing normal " << normal << std::endl;
 
 				const Face *ourFace = nullptr;
 				const Face *neigh = nullptr;
@@ -537,6 +537,10 @@ private:
 							spk::cout << "Neighbour occludes our face" << std::endl;
 							visible = false;
 						}
+						else
+						{
+							spk::cout << "Neighbour does not occlude our face" << std::endl;
+						}
 					}
 				} catch (const std::exception &e)
 				{
@@ -561,6 +565,7 @@ private:
 					spk::cout << "Exception while applying face: " << e.what() << std::endl;
 					PROPAGATE_ERROR("Error while applying a visible face to the mesh", e);
 				}
+				spk::cout << std::endl;
 			}
 		} catch (const std::exception &e)
 		{
@@ -578,6 +583,9 @@ public:
 		const spk::Vector3 &p_position,
 		const Orientation &p_orientation) const
 	{
+		spk::cout << " ---------- New build " << std::endl;
+		spk::cout << "Building the mesh for block at " << p_position << " with orientation "
+				  << static_cast<int>(p_orientation.horizontalOrientation) << ", " << static_cast<int>(p_orientation.verticalOrientation) << std::endl;
 		const Cache::Entry &data = _ensureCacheCase(p_orientation);
 
 		std::array<const Face *, 6> neighFaces;
@@ -605,6 +613,8 @@ public:
 		{
 			PROPAGATE_ERROR("Error while emitting visible faces", e);
 		}
+		spk::cout << " ---------- Build complete " << std::endl;
+		spk::cout << std::endl;
 	}
 };
 
