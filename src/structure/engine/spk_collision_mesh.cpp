@@ -9,6 +9,11 @@ namespace spk
 		_units.push_back(p_unit);
 	}
 
+	std::vector<CollisionMesh::Unit> &CollisionMesh::units()
+	{
+		return (_units);
+	}
+
 	const std::vector<CollisionMesh::Unit> &CollisionMesh::units() const
 	{
 		return (_units);
@@ -27,53 +32,26 @@ namespace spk
 			return (spk::Polygon::makeTriangle(t.a.position, t.b.position, t.c.position));
 		}
 
-		bool haveSharedEdge(const CollisionMesh::Unit &p_a, const CollisionMesh::Unit &p_b)
+		bool tryToInsertUnitInMesh(const CollisionMesh::Unit& p_newPolygon, CollisionMesh& p_currentResult)
 		{
-			for (const auto &edgeA : p_a.edges())
+			for (auto& existingPoly : p_currentResult.units())
 			{
-				for (const auto &edgeB : p_b.edges())
+				if (existingPoly.isCoplanar(p_newPolygon) == true &&
+					(existingPoly.isAdjacent(p_newPolygon) == true || existingPoly.isOverlapping(p_newPolygon) == true))
 				{
-					if (edgeA.isInverse(edgeB) == true)
+					// We can fuse them
+					Polygon fused = existingPoly.fuze(p_newPolygon);
+					if (fused.isConvex() == false)
 					{
-						return (true);
+						return (false);
 					}
-				}
-			}
-			return (false);
-		}
-
-		bool removeSharedOpposite(std::vector<CollisionMesh::Unit> &p_units, const CollisionMesh::Unit &p_poly)
-		{
-			for (auto it = p_units.begin(); it != p_units.end(); ++it)
-			{
-				if (it->isCoplanar(p_poly) == true && it->normal() == p_poly.normal().inverse())
-				{
-					bool shared = it->isOverlapping(p_poly);
-					if (shared == false)
-					{
-						shared = haveSharedEdge(*it, p_poly);
-					}
-					if (shared == true)
-					{
-						p_units.erase(it);
-						return (true);
-					}
-				}
-			}
-			return (false);
-		}
-
-		bool fuseWithExisting(std::vector<CollisionMesh::Unit> &p_units, const CollisionMesh::Unit &p_poly)
-		{
-			for (auto &existing : p_units)
-			{
-				if (existing.isCoplanar(p_poly) == true && existing.normal() == p_poly.normal() &&
-					(existing.isAdjacent(p_poly) == true || existing.isOverlapping(p_poly) == true))
-				{
-					existing = existing.fuze(p_poly);
+					
+					existingPoly = fused;
+					
 					return (true);
 				}
 			}
+
 			return (false);
 		}
 	} // namespace
@@ -81,16 +59,26 @@ namespace spk
 	CollisionMesh CollisionMesh::fromObjMesh(const spk::SafePointer<spk::ObjMesh> &p_mesh)
 	{
 		CollisionMesh result;
+
+		// for (const auto &shapeVariant : p_mesh->shapes())
+		// {
+		// 	Unit poly = unitFromVariant(shapeVariant);
+		// 	if (removeSharedOpposite(result._units, poly) == true)
+		// 	{
+		// 		continue;
+		// 	}
+		// 	if (fuseWithExisting(result._units, poly) == false)
+		// 	{
+		// 		result.addUnit(poly);
+		// 	}
+		// }
 		for (const auto &shapeVariant : p_mesh->shapes())
 		{
 			Unit poly = unitFromVariant(shapeVariant);
-			if (removeSharedOpposite(result._units, poly) == true)
+
+			if (tryToInsertUnitInMesh(poly, result) == false)
 			{
-				continue;
-			}
-			if (fuseWithExisting(result._units, poly) == false)
-			{
-				result.addUnit(poly);
+				result.addUnit(poly);			
 			}
 		}
 		return (result);
