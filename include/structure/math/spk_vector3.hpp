@@ -185,8 +185,9 @@ namespace spk
 		{
 			if constexpr (std::is_floating_point<TType>::value)
 			{
-				return FLOAT_EQ(x, static_cast<TType>(p_other.x)) && FLOAT_EQ(y, static_cast<TType>(p_other.y)) &&
-					   FLOAT_EQ(z, static_cast<TType>(p_other.z));
+				return (FLOAT_EQ(x, static_cast<TType>(p_other.x)) &&
+						FLOAT_EQ(y, static_cast<TType>(p_other.y)) &&
+					   	FLOAT_EQ(z, static_cast<TType>(p_other.z)));
 			}
 			else
 			{
@@ -199,8 +200,9 @@ namespace spk
 		{
 			if constexpr (std::is_floating_point<TType>::value)
 			{
-				return FLOAT_EQ(x, static_cast<TType>(p_scalar)) && FLOAT_EQ(y, static_cast<TType>(p_scalar)) &&
-					   FLOAT_EQ(z, static_cast<TType>(p_scalar));
+				return (FLOAT_EQ(x, static_cast<TType>(p_scalar)) &&
+						FLOAT_EQ(y, static_cast<TType>(p_scalar)) &&
+					   	FLOAT_EQ(z, static_cast<TType>(p_scalar)));
 			}
 			else
 			{

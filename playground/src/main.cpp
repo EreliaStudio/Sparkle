@@ -1,5 +1,4 @@
-#include "structure/math/spk_plane.hpp"
-#include "structure/math/spk_polygon.hpp"
+#include <sparkle.hpp>
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -7,7 +6,6 @@
 #include <limits>
 #include <map>
 #include <memory>
-#include <sparkle.hpp>
 #include <unordered_map>
 #include <vector>
 
@@ -330,13 +328,26 @@ private:
 					{
 						footprintPoints.push_back(v.position);
 					}
-					face.footprint = spk::Polygon::fromLoop(footprintPoints);
+					spk::Polygon footprint = spk::Polygon::fromLoop(footprintPoints);
+					if (face.footprint.points().empty() == true)
+					{
+						face.footprint = footprint;
+					}
+					else
+					{
+						try
+						{
+							face.footprint = face.footprint.fuze(footprint);
+						}
+						catch (const std::exception& e)
+						{
+							PROPAGATE_ERROR("Error while merging footprint for face " + std::to_string(shapeIndex), e);
+						}
+					}
+
 					_addVerticesToMesh(face.mesh, vertices);
 
-					if (vertices.size() == 4 && _isFullQuad(vertices, normal) == true)
-					{
-						face.full = true;
-					}
+					face.full = face.full == true || (vertices.size() == 4 && _isFullQuad(vertices, normal) == true);
 				}
 				else
 				{
@@ -463,6 +474,7 @@ private:
 				bool visible = true;
 
 				// --- Evaluate occlusion vs neighbour, if any ---
+				bool checkedNeighbour = false;
 				try
 				{
 					const spk::Vector3 toOurLocal = normal;
@@ -472,6 +484,7 @@ private:
 						{
 							continue;
 						}
+						checkedNeighbour = true;
 						spk::Polygon neighInOurSpace = _translated(neigh->footprint, toOurLocal);
 
 						if (neighInOurSpace.contains(ourFace->footprint) == true)
@@ -490,6 +503,22 @@ private:
 				{
 					if (visible == true)
 					{
+						if (checkedNeighbour == true)
+						{
+							spk::cout << "Face " << normal << L" visible against neighbours:" << L"\n";
+							spk::cout << "  Our: " << ourFace->footprint << L"\n";
+							const spk::Vector3 toOurLocal = normal;	
+							spk::Polygon neighInOurSpace = _translated(p_neighFaces[i][0]->footprint, toOurLocal);
+
+							if (neighInOurSpace.points().empty() == false)
+							{
+								spk::cout << L"  Neigh: " << neighInOurSpace << L"\n";
+							}
+							spk::cout << "Is coplanar? " << (ourFace->footprint.isCoplanar(neighInOurSpace) ? "Yes" : "No") << std::endl;
+							spk::cout << "Is adjacent? " << (ourFace->footprint.isAdjacent(neighInOurSpace) ? "Yes" : "No") << std::endl;
+							spk::cout << "Is overlapping? " << (ourFace->footprint.isOverlapping(neighInOurSpace) ? "Yes" : "No") << std::endl;
+							spk::cout << "Is contained? " << (ourFace->footprint.contains(neighInOurSpace) ? "Yes" : "No") << std::endl;
+						}
 						p_data.applyFace(p_toFill, p_position, normal);
 					}
 				} catch (const std::exception &e)

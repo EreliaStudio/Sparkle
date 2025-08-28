@@ -78,7 +78,7 @@ namespace spk
 		{
 			float dot = expectedNormal.dot(_edges[i].direction());
 
-			if (dot != 0)
+			if (std::fabs(dot) > spk::Constants::pointPrecision)
 			{
 				return false;
 			}
@@ -118,10 +118,10 @@ namespace spk
 			return false;
 		}
 
-		spk::Vector3 currentNormal = normal();
-		spk::Vector3 otherNormal = p_other.normal();
+		spk::Vector3 currentNormal = normal().normalize();
+		spk::Vector3 otherNormal = p_other.normal().normalize();
 
-		if ((currentNormal == otherNormal || currentNormal.inverse() == otherNormal) == false)
+		if (FLOAT_NEQ(std::fabs(currentNormal.dot(otherNormal)), 1.0f))
 		{
 			return false;
 		}
@@ -231,8 +231,7 @@ namespace spk
 
 	bool Polygon::contains(const spk::Vector3 &p_point) const
 	{
-		const float eps = 1e-6f;
-		return _isPointInside(*this, p_point, eps);
+		return _isPointInside(*this, p_point, spk::Constants::pointPrecision);
 	}
 
 	bool Polygon::contains(const Polygon &p_polygon) const
@@ -244,7 +243,8 @@ namespace spk
 
 		for (const auto &edge : p_polygon.edges())
 		{
-			if (_isPointInside(*this, edge.first(), 1e-6f) == false || _isPointInside(*this, edge.second(), 1e-6f) == false)
+			if (_isPointInside(*this, edge.first(), spk::Constants::pointPrecision) == false ||
+				_isPointInside(*this, edge.second(), spk::Constants::pointPrecision) == false)
 			{
 				return false;
 			}
