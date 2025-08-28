@@ -118,7 +118,9 @@ void main()
 	{
 		if (p_wireframe == true)
 		{
+			glDisable(GL_CULL_FACE);
 			_object.render();
+			glEnable(GL_CULL_FACE);
 		}
 		else
 		{

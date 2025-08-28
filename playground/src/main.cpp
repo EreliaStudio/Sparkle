@@ -474,7 +474,6 @@ private:
 				bool visible = true;
 
 				// --- Evaluate occlusion vs neighbour, if any ---
-				bool checkedNeighbour = false;
 				try
 				{
 					const spk::Vector3 toOurLocal = normal;
@@ -484,7 +483,7 @@ private:
 						{
 							continue;
 						}
-						checkedNeighbour = true;
+
 						spk::Polygon neighInOurSpace = _translated(neigh->footprint, toOurLocal);
 
 						if (neighInOurSpace.contains(ourFace->footprint) == true)
@@ -503,22 +502,7 @@ private:
 				{
 					if (visible == true)
 					{
-						if (checkedNeighbour == true)
-						{
-							spk::cout << "Face " << normal << L" visible against neighbours:" << L"\n";
-							spk::cout << "  Our: " << ourFace->footprint << L"\n";
-							const spk::Vector3 toOurLocal = normal;	
-							spk::Polygon neighInOurSpace = _translated(p_neighFaces[i][0]->footprint, toOurLocal);
-
-							if (neighInOurSpace.points().empty() == false)
-							{
-								spk::cout << L"  Neigh: " << neighInOurSpace << L"\n";
-							}
-							spk::cout << "Is coplanar? " << (ourFace->footprint.isCoplanar(neighInOurSpace) ? "Yes" : "No") << std::endl;
-							spk::cout << "Is adjacent? " << (ourFace->footprint.isAdjacent(neighInOurSpace) ? "Yes" : "No") << std::endl;
-							spk::cout << "Is overlapping? " << (ourFace->footprint.isOverlapping(neighInOurSpace) ? "Yes" : "No") << std::endl;
-							spk::cout << "Is contained? " << (ourFace->footprint.contains(neighInOurSpace) ? "Yes" : "No") << std::endl;
-						}
+						
 						p_data.applyFace(p_toFill, p_position, normal);
 					}
 				} catch (const std::exception &e)
@@ -886,8 +870,10 @@ public:
 						_renderer->setMesh(mesh());
 						_collisionRenderer->setMesh(collisionMesh());
 						_rigidBody->setCollider(collisionMesh());
-						p_event.requestPaint();
+						p_event.requestPaint();	
 					}
+				
+					spk::cout << "Paint event of chunk " << owner()->name() << " processed." << std::endl;
 				}
 			}
 

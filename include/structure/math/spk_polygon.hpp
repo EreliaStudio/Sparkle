@@ -33,7 +33,7 @@ namespace spk
 		bool contains(const spk::Vector3 &p_point) const;
 		bool contains(const Polygon &p_polygon) const;
 
-		Polygon fuze(const Polygon &p_other) const;
+		Polygon fuze(const Polygon &p_other, bool p_checkCompatibility = false) const;
 
 		static Polygon fromLoop(const std::vector<spk::Vector3> &p_vs);
 		static Polygon makeTriangle(const spk::Vector3 &p_a, const spk::Vector3 &p_b, const spk::Vector3 &p_c);
