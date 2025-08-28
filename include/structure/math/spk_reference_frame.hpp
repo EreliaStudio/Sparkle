@@ -117,7 +117,7 @@ namespace spk
 			_buildMatrices();
 		}
 
-		ReferenceFrame(const spk::Plane& p_plane, const spk::Vector3& xDir, const spk::Vector3& zDir) :
+		ReferenceFrame(const spk::Plane &p_plane, const spk::Vector3 &xDir, const spk::Vector3 &zDir) :
 			_plane(p_plane)
 		{
 			_origin = p_plane.origin;
@@ -159,43 +159,36 @@ namespace spk
 			return dest._fromWorld(_toWorld(vThis));
 		}
 
-		inline spk::Polygon convertTo(const spk::Polygon &poly, const ReferenceFrame &currentValueReference = ReferenceFrame::standard()) const
+		inline spk::Polygon convertTo(const spk::Polygon &p_poly, const ReferenceFrame &p_currentValueReference = ReferenceFrame::standard()) const
 		{
-			spk::Polygon out;
-			out.points.resize(poly.points.size());
-			for (size_t i = 0; i < poly.points.size(); ++i)
+			std::vector<spk::Vector3> pts;
+			for (const auto &pt : p_poly.points())
 			{
-				out.points[i] = convertTo(poly.points[i], currentValueReference);
+				pts.push_back(convertTo(pt, p_currentValueReference));
 			}
-			return out;
+			return spk::Polygon::fromLoop(pts);
 		}
 
 		inline spk::Polygon convertFrom(
-			const spk::Polygon &polyInThis, const ReferenceFrame &destinationReferenceFrame = ReferenceFrame::standard()) const
+			const spk::Polygon &p_polyInThis, const ReferenceFrame &p_destinationReferenceFrame = ReferenceFrame::standard()) const
 		{
-			spk::Polygon out;
-			out.points.resize(polyInThis.points.size());
-			for (size_t i = 0; i < polyInThis.points.size(); ++i)
+			std::vector<spk::Vector3> pts;
+			for (const auto &pt : p_polyInThis.points())
 			{
-				out.points[i] = convertFrom(polyInThis.points[i], destinationReferenceFrame);
+				pts.push_back(convertFrom(pt, p_destinationReferenceFrame));
 			}
-			return out;
+			return spk::Polygon::fromLoop(pts);
 		}
 
-		inline void convertToInPlace(spk::Polygon &poly, const ReferenceFrame &currentValueReference = ReferenceFrame::standard()) const
+		inline void convertToInPlace(spk::Polygon &p_poly, const ReferenceFrame &p_currentValueReference = ReferenceFrame::standard()) const
 		{
-			for (auto &P : poly.points)
-			{
-				P = convertTo(P, currentValueReference);
-			}
+			p_poly = convertTo(p_poly, p_currentValueReference);
 		}
 
-		inline void convertFromInPlace(spk::Polygon &polyInThis, const ReferenceFrame &destinationReferenceFrame = ReferenceFrame::standard()) const
+		inline void convertFromInPlace(
+			spk::Polygon &p_polyInThis, const ReferenceFrame &p_destinationReferenceFrame = ReferenceFrame::standard()) const
 		{
-			for (auto &P : polyInThis.points)
-			{
-				P = convertFrom(P, destinationReferenceFrame);
-			}
+			p_polyInThis = convertFrom(p_polyInThis, p_destinationReferenceFrame);
 		}
 	};
 }

@@ -1,4 +1,5 @@
 #include "structure/engine/spk_collision_mesh.hpp"
+#include "structure/math/spk_plane.hpp"
 #include "structure/math/spk_reference_frame.hpp"
 #include <unordered_map>
 
@@ -22,25 +23,31 @@ namespace spk
 
 		for (const auto &shape : p_mesh->shapes())
 		{
-			spk::CollisionMesh::Unit polygon;
-			
-			for (const auto &vertex : shape.points)
+			std::vector<spk::Vector3> points;
+			points.reserve(shape.points.size());
+			for (const auto &point : shape.points)
 			{
-				polygon.points.push_back(vertex.position);
+				points.push_back(point.position);
 			}
+
+			if (points.size() < 3)
+			{
+				continue;
+			}
+
+			spk::CollisionMesh::Unit polygon = spk::Polygon::fromLoop(points);
 
 			if (polygon.isPlanar() == true)
 			{
 				spk::Plane tmpPlane = polygon.plane();
 
 				polygonCollection[spk::Plane::Identifier::from(tmpPlane)].push_back(polygon);
-				//result.addUnit(polygon);
 			}
 		}
 
-		for (const auto& [key, polygons] : polygonCollection)
+		for (const auto &[key, polygons] : polygonCollection)
 		{
-			for (const auto& polygon : polygons)
+			for (const auto &polygon : polygons)
 			{
 				result.addUnit(polygon);
 			}
