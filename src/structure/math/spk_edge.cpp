@@ -1,6 +1,5 @@
 #include "structure/math/spk_edge.hpp"
 #include "structure/math/spk_constants.hpp"
-#include "structure/math/spk_debug_macro.hpp"
 #include "structure/math/spk_vector3.hpp"
 
 #include <cmath>

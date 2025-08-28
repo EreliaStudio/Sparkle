@@ -6,10 +6,10 @@
 
 namespace spk
 {
-	Plane::Identifier Plane::Identifier::from(const spk::Plane &p)
+	Plane::Identifier Plane::Identifier::from(const spk::Plane &p_plane)
 	{
-		spk::Vector3 normal = p.normal.normalize();
-		float dotValue = normal.dot(p.origin);
+		spk::Vector3 normal = p_plane.normal.normalize();
+		float dotValue = normal.dot(p_plane.origin);
 
 		if ((-normal < normal) == true)
 		{
@@ -19,9 +19,9 @@ namespace spk
 		return {normal, dotValue};
 	}
 
-	bool Plane::Identifier::operator==(const Plane::Identifier &other) const
+	bool Plane::Identifier::operator==(const Plane::Identifier &p_other) const
 	{
-		return (normal == other.normal && FLOAT_EQ(dotValue, other.dotValue));
+		return (normal == p_other.normal && FLOAT_EQ(dotValue, p_other.dotValue));
 	}
 
 	Plane::Plane(const spk::Vector3 &p_normal, const spk::Vector3 &p_origin) :
