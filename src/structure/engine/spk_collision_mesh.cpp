@@ -45,11 +45,43 @@ namespace spk
 			}
 		}
 
-		for (const auto &[key, polygons] : polygonCollection)
+		for (auto &[key, polygons] : polygonCollection)
 		{
+			bool merged = true;
+			while (merged == true)
+			{
+				merged = false;
+				for (size_t i = 0; i < polygons.size(); ++i)
+				{
+					bool localMerged = false;
+					for (size_t j = i + 1; j < polygons.size(); ++j)
+					{
+						if ((polygons[i].isAdjacent(polygons[j]) == true || polygons[i].isOverlapping(polygons[j]) == true))
+						{
+							spk::Polygon candidate = polygons[i].fuze(polygons[j], false);
+							if (candidate.isConvex(1e-6f, true) == true)
+							{
+								polygons[i] = candidate;
+								polygons.erase(polygons.begin() + j);
+								localMerged = true;
+								break;
+							}
+						}
+					}
+					if (localMerged == true)
+					{
+						merged = true;
+						break;
+					}
+				}
+			}
+
 			for (const auto &polygon : polygons)
 			{
-				result.addUnit(polygon);
+				if (polygon.isConvex(1e-6f, true) == true)
+				{
+					result.addUnit(polygon);
+				}
 			}
 		}
 

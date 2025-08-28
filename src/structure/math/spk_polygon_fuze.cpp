@@ -281,14 +281,14 @@ namespace
 
 namespace spk
 {
-	Polygon Polygon::fuze(const Polygon &p_other) const
+	Polygon Polygon::fuze(const Polygon &p_other, bool p_checkCompatibility) const
 	{
-		if (isCoplanar(p_other) == false)
+		if (p_checkCompatibility == true && isCoplanar(p_other) == false)
 		{
 			GENERATE_ERROR("Polygons must be coplanar");
 		}
 
-		if (isAdjacent(p_other) == false && isOverlapping(p_other) == false)
+		if (p_checkCompatibility == true && isAdjacent(p_other) == false && isOverlapping(p_other) == false)
 		{
 			return Polygon();
 		}
