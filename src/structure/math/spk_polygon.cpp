@@ -1,6 +1,5 @@
 #include "structure/math/spk_polygon.hpp"
 #include "structure/math/spk_constants.hpp"
-#include "structure/math/spk_debug_macro.hpp"
 
 #include <algorithm>
 #include <cmath>
