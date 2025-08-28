@@ -3,6 +3,7 @@
 #include "structure/engine/spk_mesh.hpp"
 #include "structure/math/spk_constants.hpp"
 #include <algorithm>
+#include <array>
 #include <vector>
 
 namespace spk
@@ -51,7 +52,8 @@ namespace spk
 		{
 			for (const auto &unit : collider->units())
 			{
-				for (const auto &vertex : unit.points)
+				const auto &pts = unit.points();
+				for (const auto &vertex : pts)
 				{
 					if (initialized == false)
 					{
@@ -100,7 +102,8 @@ namespace spk
 			{
 				for (const auto &unit : collider->units())
 				{
-					for (const auto &vertex : unit.points)
+					const auto &pts = unit.points();
+					for (const auto &vertex : pts)
 					{
 						spk::Vector3 transformed = p_model * vertex;
 						if (initialized == false)
@@ -226,41 +229,29 @@ namespace spk
 			return false;
 		}
 
-		struct Triangle
+		std::vector<std::array<spk::Vector3, 3>> collectTriangles(const RigidBody *p_body, const spk::Matrix4x4 &p_transform)
 		{
-			spk::Vector3 a;
-			spk::Vector3 b;
-			spk::Vector3 c;
-		};
-
-		std::vector<Triangle> collectTriangles(const RigidBody *p_body, const spk::Matrix4x4 &p_transform)
-		{
-			std::vector<Triangle> result;
+			std::vector<std::array<spk::Vector3, 3>> result;
 			const auto &collider = p_body->collider();
 			if ((collider == nullptr) == false)
 			{
 				for (const auto &unit : collider->units())
 				{
-					if ((unit.points.size() == 3) == true)
+					const auto &pts = unit.points();
+					if ((pts.size() >= 3) == false)
 					{
-						Triangle tri{unit.points[0], unit.points[1], unit.points[2]};
-						tri.a = p_transform * tri.a;
-						tri.b = p_transform * tri.b;
-						tri.c = p_transform * tri.c;
-						result.push_back(tri);
+						continue;
 					}
-					else if ((unit.points.size() == 4) == true)
+					spk::Vector3 a = p_transform * pts[0];
+					for (size_t i = 1; i + 1 < pts.size(); ++i)
 					{
-						spk::Vector3 a = p_transform * unit.points[0];
-						spk::Vector3 b = p_transform * unit.points[1];
-						spk::Vector3 c = p_transform * unit.points[2];
-						spk::Vector3 d = p_transform * unit.points[3];
+						spk::Vector3 b = p_transform * pts[i];
+						spk::Vector3 c = p_transform * pts[i + 1];
 						result.push_back({a, b, c});
-						result.push_back({a, c, d});
 					}
 				}
 			}
-			return (result);
+			return result;
 		}
 	}
 
@@ -273,14 +264,14 @@ namespace spk
 			return false;
 		}
 
-		std::vector<Triangle> triAs = collectTriangles(p_a, p_transformA);
-		std::vector<Triangle> triBs = collectTriangles(p_b, p_transformB);
+		std::vector<std::array<spk::Vector3, 3>> triAs = collectTriangles(p_a, p_transformA);
+		std::vector<std::array<spk::Vector3, 3>> triBs = collectTriangles(p_b, p_transformB);
 
 		for (const auto &ta : triAs)
 		{
 			for (const auto &tb : triBs)
 			{
-				if (trianglesIntersect(ta.a, ta.b, ta.c, tb.a, tb.b, tb.c) == true)
+				if (trianglesIntersect(ta[0], ta[1], ta[2], tb[0], tb[1], tb[2]) == true)
 				{
 					return true;
 				}
