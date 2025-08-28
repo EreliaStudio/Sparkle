@@ -38,14 +38,14 @@ namespace spk
 
 			if (orient > 0)
 			{
-				if (val <= p_eps)
+				if (val < -p_eps)
 				{
 					return false;
 				}
 			}
 			else
 			{
-				if (val >= -p_eps)
+				if (val > p_eps)
 				{
 					return false;
 				}
