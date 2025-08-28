@@ -20,7 +20,7 @@ namespace
 
 		const float len = p_e.delta().norm();
 		const float dirDot = p_e.direction().dot(p_o.direction());
-		if (std::fabs(dirDot) != 1)
+		if (std::fabs(std::fabs(dirDot) - 1.0f) > spk::Constants::pointPrecision)
 		{
 			return;
 		}
@@ -32,7 +32,7 @@ namespace
 		const float lo = std::min(t1, t2);
 		const float hi = std::max(t1, t2);
 
-		if (hi <= 0 || lo >= len)
+		if (hi <= spk::Constants::pointPrecision || lo >= (len - spk::Constants::pointPrecision))
 		{
 			return;
 		}
@@ -55,14 +55,15 @@ namespace
 	{
 		const float o1 = p_o.orientation(p_e.first(), p_normal);
 		const float o2 = p_o.orientation(p_e.second(), p_normal);
-		if ((o1 > 0 && o2 > 0) || (o1 < 0 && o2 < 0))
+		const float eps = spk::Constants::pointPrecision;
+		if ((o1 > eps && o2 > eps) || (o1 < -eps && o2 < -eps))
 		{
 			return;
 		}
 
 		const float o3 = p_e.orientation(p_o.first(), p_normal);
 		const float o4 = p_e.orientation(p_o.second(), p_normal);
-		if ((o3 > 0 && o4 > 0) || (o3 < 0 && o4 < 0))
+		if ((o3 > eps && o4 > eps) || (o3 < -eps && o4 < -eps))
 		{
 			return;
 		}
@@ -186,20 +187,30 @@ namespace
 
 		std::map<spk::Vector3, spk::Vector2> coords;
 		std::map<spk::Vector3, std::vector<std::pair<size_t, bool>>> adj;
+		std::vector<spk::Edge> edges;
+		edges.reserve(p_edges.size());
+
+		auto getKey = [&](const spk::Vector3 &p_v) -> spk::Vector3
+		{
+			for (const auto &kv : coords)
+			{
+				if (kv.first == p_v)
+				{
+					return kv.first;
+				}
+			}
+			coords[p_v] = spk::Vector2(p_v.dot(xAxis), p_v.dot(yAxis));
+			return p_v;
+		};
+
 		for (size_t i = 0; i < p_edges.size(); ++i)
 		{
 			const spk::Edge &e = p_edges[i];
-			auto insert = [&](const spk::Vector3 &p_v)
-			{
-				if (coords.find(p_v) == coords.end())
-				{
-					coords[p_v] = spk::Vector2(p_v.dot(xAxis), p_v.dot(yAxis));
-				}
-			};
-			insert(e.first());
-			insert(e.second());
-			adj[e.first()].push_back({i, true});
-			adj[e.second()].push_back({i, false});
+			spk::Vector3 a = getKey(e.first());
+			spk::Vector3 b = getKey(e.second());
+			edges.emplace_back(a, b);
+			adj[a].push_back({i, true});
+			adj[b].push_back({i, false});
 		}
 
 		spk::Vector3 start = adj.begin()->first;
@@ -214,7 +225,7 @@ namespace
 			}
 		}
 
-		std::vector<bool> used(p_edges.size(), false);
+		std::vector<bool> used(edges.size(), false);
 		std::vector<spk::Vector3> loop;
 		loop.push_back(start);
 		spk::Vector3 cur3 = start;
@@ -233,7 +244,7 @@ namespace
 				{
 					continue;
 				}
-				spk::Vector3 next3 = forward == true ? p_edges[idx].second() : p_edges[idx].first();
+				spk::Vector3 next3 = forward == true ? edges[idx].second() : edges[idx].first();
 				spk::Vector2 dir = (coords[next3] - coords[cur3]).normalize();
 				float cross = curDir.x * dir.y - curDir.y * dir.x;
 				float dot = curDir.x * dir.x + curDir.y * dir.y;
@@ -250,7 +261,7 @@ namespace
 				break;
 			}
 			used[bestIdx] = true;
-			spk::Vector3 next3 = bestForward == true ? p_edges[bestIdx].second() : p_edges[bestIdx].first();
+			spk::Vector3 next3 = bestForward == true ? edges[bestIdx].second() : edges[bestIdx].first();
 			loop.push_back(next3);
 			curDir = (coords[next3] - coords[cur3]).normalize();
 			cur3 = next3;
@@ -259,7 +270,7 @@ namespace
 				break;
 			}
 		}
-
+		loop.erase(std::unique(loop.begin(), loop.end(), [](const spk::Vector3 &p_a, const spk::Vector3 &p_b) { return p_a == p_b; }), loop.end());
 		if (loop.size() >= 3 && ((loop.front() == loop.back()) == false))
 		{
 			loop.push_back(loop.front());
@@ -299,7 +310,7 @@ namespace spk
 		std::vector<spk::Vector3> loop = stitchLoop(boundary, n);
 		if (loop.size() < 4)
 		{
-			GENERATE_ERROR("Fused polygon could not be stitched");
+			GENERATE_ERROR("Fused polygon could not be stitched (Loop of " + std::to_string(loop.size()) + " element(s))");
 		}
 
 		return spk::Polygon::fromLoop(loop);

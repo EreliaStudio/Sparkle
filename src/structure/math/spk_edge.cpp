@@ -99,7 +99,8 @@ namespace spk
 			return true;
 		}
 
-		return (std::fabs(delta.normalize().dot(_direction)) == 1);
+		float dot = std::fabs(delta.normalize().dot(_direction));
+		return FLOAT_EQ(dot, 1.0f);
 	}
 
 	bool Edge::isSame(const Edge &p_other) const
