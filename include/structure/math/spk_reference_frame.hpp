@@ -83,7 +83,7 @@ namespace spk
 
 	public:
 		ReferenceFrame() :
-			_plane(spk::Plane{spk::Vector3{0.0f, 0.0f, 0.0f}, spk::Vector3{0.0f, 1.0f, 0.0f}})
+			_plane(spk::Plane{spk::Vector3{0.0f, 1.0f, 0.0f}, spk::Vector3{0.0f, 0.0f, 0.0f} })
 		{
 			_buildMatrices();
 		}
