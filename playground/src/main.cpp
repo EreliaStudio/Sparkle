@@ -361,12 +361,13 @@ private:
 		return _cache.getCase(p_orientation);
 	}
 
-	std::array<const Face *, 6> _gatherNeighbourFaces(const NeightbourDescriber &p_neightbourDescriber) const
+	using NeighFaces = std::array<std::vector<const Face *>, 6>;
+
+	NeighFaces _gatherNeighbourFaces(const NeightbourDescriber &p_neightbourDescriber) const
 	{
-		std::array<const Face *, 6> neighFaces{};
+		NeighFaces neighFaces{};
 		for (size_t i = 0; i < 6; ++i)
 		{
-			neighFaces[i] = nullptr;
 			const auto &desc = p_neightbourDescriber[i];
 			if (desc.first == nullptr)
 			{
@@ -383,19 +384,31 @@ private:
 
 			const Cache::Entry &neighData = neigh->_cache.getCase(neighOrientation);
 			const spk::Vector3 oppositeNormal = -neightbourCoordinates[i];
-			if (auto it = neighData.faces.find(oppositeNormal); it != neighData.faces.end())
+			for (const auto &[normal, face] : neighData.faces)
 			{
-				neighFaces[i] = &it->second;
+				if (normal.dot(oppositeNormal) > 0)
+				{
+					neighFaces[i].push_back(&face);
+				}
 			}
 		}
 		return neighFaces;
 	}
 
-	static bool _allSixFull(const std::array<const Face *, 6> &p_neighFaces)
+	static bool _allSixFull(const NeighFaces &p_neighFaces)
 	{
-		for (const Face *nf : p_neighFaces)
+		for (const auto &faces : p_neighFaces)
 		{
-			if (nf == nullptr || nf->full == false)
+			bool sideFull = false;
+			for (const Face *nf : faces)
+			{
+				if (nf->full == true)
+				{
+					sideFull = true;
+					break;
+				}
+			}
+			if (sideFull == false)
 			{
 				return false;
 			}
@@ -403,8 +416,7 @@ private:
 		return true;
 	}
 
-	static void _emitInnerIfNeeded(
-		spk::ObjMesh &p_toFill, const Cache::Entry &p_data, const spk::Vector3 &p_position, const std::array<const Face *, 6> &p_neighFaces)
+	static void _emitInnerIfNeeded(spk::ObjMesh &p_toFill, const Cache::Entry &p_data, const spk::Vector3 &p_position, const NeighFaces &p_neighFaces)
 	{
 		if (_allSixFull(p_neighFaces) == false)
 		{
@@ -421,17 +433,14 @@ private:
 		return spk::Polygon::fromLoop(translated);
 	}
 
-	static void _emitVisibleFaces(
-		spk::ObjMesh &p_toFill, const Cache::Entry &p_data, const spk::Vector3 &p_position, const std::array<const Face *, 6> &p_neighFaces)
+	static void _emitVisibleFaces(spk::ObjMesh &p_toFill, const Cache::Entry &p_data, const spk::Vector3 &p_position, const NeighFaces &p_neighFaces)
 	{
 		try
 		{
 			for (size_t i = 0; i < 6; ++i)
 			{
 				const spk::Vector3 normal = neightbourCoordinates[i];
-
 				const Face *ourFace = nullptr;
-				const Face *neigh = nullptr;
 
 				try
 				{
@@ -446,8 +455,6 @@ private:
 					{
 						continue;
 					}
-
-					neigh = p_neighFaces[i];
 				} catch (const std::exception &e)
 				{
 					PROPAGATE_ERROR("Error while preparing face data for visibility evaluation", e);
@@ -458,14 +465,19 @@ private:
 				// --- Evaluate occlusion vs neighbour, if any ---
 				try
 				{
-					if (neigh != nullptr && neigh->footprint.points().empty() == false)
+					const spk::Vector3 toOurLocal = normal;
+					for (const Face *neigh : p_neighFaces[i])
 					{
-						const spk::Vector3 toOurLocal = normal;
+						if (neigh->footprint.points().empty() == true)
+						{
+							continue;
+						}
 						spk::Polygon neighInOurSpace = _translated(neigh->footprint, toOurLocal);
 
 						if (neighInOurSpace.contains(ourFace->footprint) == true)
 						{
 							visible = false;
+							break;
 						}
 					}
 				} catch (const std::exception &e)
@@ -502,7 +514,7 @@ public:
 	{
 		const Cache::Entry &data = _ensureCacheCase(p_orientation);
 
-		std::array<const Face *, 6> neighFaces;
+		NeighFaces neighFaces;
 
 		try
 		{
