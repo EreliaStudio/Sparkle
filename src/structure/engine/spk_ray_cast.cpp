@@ -56,50 +56,6 @@ namespace
 		p_hits.push_back(hit);
 	}
 
-	struct Triangle
-	{
-		spk::Vector3 a;
-		spk::Vector3 b;
-		spk::Vector3 c;
-	};
-
-	struct Quad
-	{
-		spk::Vector3 a;
-		spk::Vector3 b;
-		spk::Vector3 c;
-		spk::Vector3 d;
-	};
-
-	void processTriangle(
-		const spk::Vector3 &p_eye,
-		const spk::Vector3 &p_dir,
-		float p_maxDistance,
-		const spk::Vector3 &p_offset,
-		const Triangle &p_tri,
-		const spk::SafePointer<spk::Entity> &p_owner,
-		std::vector<spk::RayCast::Hit> &p_hits)
-	{
-		float t = 0.0f;
-		if (rayIntersectsTriangle(p_eye, p_dir, p_tri.a + p_offset, p_tri.b + p_offset, p_tri.c + p_offset, p_maxDistance, t) == true)
-		{
-			addHit(p_eye, p_dir, t, p_owner, p_hits);
-		}
-	}
-
-	void processQuad(
-		const spk::Vector3 &p_eye,
-		const spk::Vector3 &p_dir,
-		float p_maxDistance,
-		const spk::Vector3 &p_offset,
-		const Quad &p_quad,
-		const spk::SafePointer<spk::Entity> &p_owner,
-		std::vector<spk::RayCast::Hit> &p_hits)
-	{
-		processTriangle(p_eye, p_dir, p_maxDistance, p_offset, {p_quad.a, p_quad.b, p_quad.c}, p_owner, p_hits);
-		processTriangle(p_eye, p_dir, p_maxDistance, p_offset, {p_quad.a, p_quad.c, p_quad.d}, p_owner, p_hits);
-	}
-
 	void processUnit(
 		const spk::CollisionMesh::Unit &p_unit,
 		const spk::Vector3 &p_eye,
@@ -109,15 +65,20 @@ namespace
 		const spk::SafePointer<spk::Entity> &p_owner,
 		std::vector<spk::RayCast::Hit> &p_hits)
 	{
-		if ((p_unit.points.size() == 3) == true)
+		const auto &pts = p_unit.points();
+		if ((pts.size() >= 3) == true)
 		{
-			Triangle tri{p_unit.points[0], p_unit.points[1], p_unit.points[2]};
-			processTriangle(p_eye, p_dir, p_maxDistance, p_offset, tri, p_owner, p_hits);
-		}
-		else if ((p_unit.points.size() == 4) == true)
-		{
-			Quad quad{p_unit.points[0], p_unit.points[1], p_unit.points[2], p_unit.points[3]};
-			processQuad(p_eye, p_dir, p_maxDistance, p_offset, quad, p_owner, p_hits);
+			spk::Vector3 base = pts[0] + p_offset;
+			for (size_t i = 1; i + 1 < pts.size(); ++i)
+			{
+				float t = 0.0f;
+				spk::Vector3 b = pts[i] + p_offset;
+				spk::Vector3 c = pts[i + 1] + p_offset;
+				if (rayIntersectsTriangle(p_eye, p_dir, base, b, c, p_maxDistance, t) == true)
+				{
+					addHit(p_eye, p_dir, t, p_owner, p_hits);
+				}
+			}
 		}
 	}
 

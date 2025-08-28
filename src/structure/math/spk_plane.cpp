@@ -1,12 +1,12 @@
 #include "structure/math/spk_plane.hpp"
-#include "structure/math/spk_polygon.hpp"
 #include "structure/math/spk_constants.hpp"
+#include "structure/math/spk_polygon.hpp"
 
 #include <cmath>
 
 namespace spk
 {
-	Plane::Identifier Plane::Identifier::from(const spk::Plane& p)
+	Plane::Identifier Plane::Identifier::from(const spk::Plane &p)
 	{
 		spk::Vector3 normal = p.normal.normalize();
 		float dotValue = normal.dot(p.origin);
@@ -16,10 +16,10 @@ namespace spk
 			normal = -normal;
 		}
 
-		return { normal, dotValue };
+		return {normal, dotValue};
 	}
 
-	bool Plane::Identifier::operator==(const Plane::Identifier& other) const
+	bool Plane::Identifier::operator==(const Plane::Identifier &other) const
 	{
 		return (normal == other.normal && FLOAT_EQ(dotValue, other.dotValue));
 	}
@@ -28,15 +28,14 @@ namespace spk
 		origin(p_origin),
 		normal(p_normal.normalize())
 	{
-
 	}
 
 	bool Plane::contains(const spk::Polygon &p_polygon) const
 	{
 		const float eps = 1e-5f;
-		for (const spk::Vector3 &point : p_polygon.points)
+		for (const auto &edge : p_polygon.edges())
 		{
-			if (std::abs(normal.dot(point - origin)) > eps)
+			if (std::abs(normal.dot(edge.first() - origin)) > eps || std::abs(normal.dot(edge.second() - origin)) > eps)
 			{
 				return false;
 			}
