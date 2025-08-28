@@ -324,10 +324,13 @@ private:
 				if (_isAxisAlignedFace(vertices, normal) == true)
 				{
 					Face &face = result.faces[normal];
-					for (auto &v : vertices)
+					std::vector<spk::Vector3> footprintPoints;
+					footprintPoints.reserve(vertices.size());
+					for (const auto &v : vertices)
 					{
-						face.footprint.points.push_back(v.position);
+						footprintPoints.push_back(v.position);
 					}
+					face.footprint = spk::Polygon::fromLoop(footprintPoints);
 					_addVerticesToMesh(face.mesh, vertices);
 
 					if (vertices.size() == 4 && _isFullQuad(vertices, normal) == true)
@@ -411,14 +414,11 @@ private:
 
 	static spk::Polygon _translated(const spk::Polygon &p_poly, const spk::Vector3 &p_delta)
 	{
-		spk::Polygon out;
-		out.points.reserve(p_poly.points.size());
-		std::transform(
-			p_poly.points.begin(),
-			p_poly.points.end(),
-			std::back_inserter(out.points),
-			[&](const spk::Vector3 &p_point) { return p_point + p_delta; });
-		return out;
+		const std::vector<spk::Vector3> &pts = p_poly.points();
+		std::vector<spk::Vector3> translated;
+		translated.reserve(pts.size());
+		std::transform(pts.begin(), pts.end(), std::back_inserter(translated), [&](const spk::Vector3 &p_point) { return p_point + p_delta; });
+		return spk::Polygon::fromLoop(translated);
 	}
 
 	static void _emitVisibleFaces(
@@ -458,7 +458,7 @@ private:
 				// --- Evaluate occlusion vs neighbour, if any ---
 				try
 				{
-					if (neigh != nullptr && neigh->footprint.points.empty() == false)
+					if (neigh != nullptr && neigh->footprint.points().empty() == false)
 					{
 						const spk::Vector3 toOurLocal = normal;
 						spk::Polygon neighInOurSpace = _translated(neigh->footprint, toOurLocal);
