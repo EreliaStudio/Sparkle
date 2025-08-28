@@ -12,6 +12,49 @@ namespace spk
 		_edges.push_back(spk::Edge(p_a, p_b));
 	}
 
+	bool Polygon::_edgesIntersect(const spk::Edge &p_a, const spk::Edge &p_b, const spk::Vector3 &p_normal, float p_eps)
+	{
+		float o1 = p_a.orientation(p_b.first(), p_normal);
+		float o2 = p_a.orientation(p_b.second(), p_normal);
+		float o3 = p_b.orientation(p_a.first(), p_normal);
+		float o4 = p_b.orientation(p_a.second(), p_normal);
+
+		bool cond1 = ((o1 > p_eps && o2 < -p_eps) || (o1 < -p_eps && o2 > p_eps));
+		bool cond2 = ((o3 > p_eps && o4 < -p_eps) || (o3 < -p_eps && o4 > p_eps));
+
+		return (cond1 == true && cond2 == true);
+	}
+
+	bool Polygon::_isPointInside(const Polygon &p_poly, const spk::Vector3 &p_point, float p_eps)
+	{
+		const auto &edges = p_poly.edges();
+		spk::Vector3 n = p_poly.normal();
+		float orient = edges[0].direction().cross(edges[1].direction()).dot(n);
+
+		for (size_t i = 0; i < edges.size(); i++)
+		{
+			const spk::Edge &edge = edges[i];
+			float val = edge.direction().cross(p_point - edge.first()).dot(n);
+
+			if (orient > 0)
+			{
+				if (val <= p_eps)
+				{
+					return false;
+				}
+			}
+			else
+			{
+				if (val >= -p_eps)
+				{
+					return false;
+				}
+			}
+		}
+
+		return true;
+	}
+
 	const std::vector<spk::Vector3> &Polygon::points() const
 	{
 		return _points;
