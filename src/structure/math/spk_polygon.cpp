@@ -27,32 +27,83 @@ namespace spk
 
 	bool Polygon::_isPointInside(const Polygon &p_poly, const spk::Vector3 &p_point, float p_eps)
 	{
-		const auto &edges = p_poly.edges();
-		spk::Vector3 n = p_poly.normal();
-		float orient = edges[0].direction().cross(edges[1].direction()).dot(n);
-
-		for (size_t i = 0; i < edges.size(); i++)
+		for (const auto &edge : p_poly.edges())
 		{
-			const spk::Edge &edge = edges[i];
-			float val = edge.direction().cross(p_point - edge.first()).dot(n);
-
-			if (orient > 0)
+			if (edge.contains(p_point) == true)
 			{
-				if (val < -p_eps)
-				{
-					return false;
-				}
-			}
-			else
-			{
-				if (val > p_eps)
-				{
-					return false;
-				}
+				return true;
 			}
 		}
 
-		return true;
+		spk::Vector3 n = p_poly.normal();
+		int axis = 0;
+		float ax = std::fabs(n.x);
+		float ay = std::fabs(n.y);
+		float az = std::fabs(n.z);
+
+		if (ay > ax && ay >= az)
+		{
+			axis = 1;
+		}
+		else if (az > ax && az > ay)
+		{
+			axis = 2;
+		}
+
+		bool inside = false;
+		const auto &pts = p_poly.points();
+
+		for (size_t i = 0, j = pts.size() - 1; i < pts.size(); j = i++)
+		{
+			float xi;
+			float yi;
+			float xj;
+			float yj;
+			float px;
+			float py;
+
+			switch (axis)
+			{
+			case 0:
+				xi = pts[i].y;
+				yi = pts[i].z;
+				xj = pts[j].y;
+				yj = pts[j].z;
+				px = p_point.y;
+				py = p_point.z;
+				break;
+			case 1:
+				xi = pts[i].x;
+				yi = pts[i].z;
+				xj = pts[j].x;
+				yj = pts[j].z;
+				px = p_point.x;
+				py = p_point.z;
+				break;
+			default:
+				xi = pts[i].x;
+				yi = pts[i].y;
+				xj = pts[j].x;
+				yj = pts[j].y;
+				px = p_point.x;
+				py = p_point.y;
+				break;
+			}
+
+			if (std::fabs(yj - yi) <= p_eps)
+			{
+				continue;
+			}
+
+			bool intersects = ((yi > py) != (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi);
+
+			if (intersects == true)
+			{
+				inside = !inside;
+			}
+		}
+
+		return inside;
 	}
 
 	const std::vector<spk::Vector3> &Polygon::points() const
