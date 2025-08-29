@@ -205,6 +205,11 @@ namespace spk::Lumina
 			_program.render(nbIndexes, nbInstances);
 		}
 
+		void renderIndirect(const size_t &p_commandOffset, const size_t &p_drawCount, const size_t &p_stride)
+		{
+			_program.renderIndirect(p_commandOffset, p_drawCount, p_stride);
+		}
+
 		void deactivate()
 		{
 			_program.deactivate();

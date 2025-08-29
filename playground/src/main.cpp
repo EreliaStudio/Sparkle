@@ -1382,7 +1382,8 @@ int main()
 	halfConfiguration.bottom = Block::spriteSheet().sprite({5, 0});
 	blockMap.addBlockByID(3, std::make_unique<HalfBlock>(halfConfiguration));
 
-	blockMap.setChunkRange({-3, 0, -3}, {3, 0, 3});
+	blockMap.setChunkRange({-0, 0, -0}, {0, 0, 0});
+	//blockMap.setChunkRange({-3, 0, -3}, {3, 0, 3});
 
 	auto collisionRenderToggler = player.addComponent<CollisionRenderToggler<16, 16, 16>>(L"Player/CollisionRenderToggler");
 	collisionRenderToggler->setBlockMap(&blockMap);

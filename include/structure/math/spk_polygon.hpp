@@ -3,9 +3,11 @@
 #include "structure/math/spk_edge.hpp"
 #include "structure/math/spk_plane.hpp"
 #include "structure/math/spk_vector3.hpp"
+#include "structure/math/spk_bounding_box.hpp"
 
 #include <ostream>
 #include <vector>
+#include <set>
 
 namespace spk
 {
@@ -14,18 +16,25 @@ namespace spk
 	private:
 		std::vector<spk::Vector3> _points;
 		std::vector<spk::Edge> _edges;
+		std::set<spk::Edge::Identifier> _edgesSet;
+		BoundingBox _boundingBox;
+		mutable spk::Plane _plane;
+		
+		mutable bool _dirty = true;
 
 		void _addEdge(const spk::Vector3 &p_a, const spk::Vector3 &p_b);
 		static bool _edgesIntersect(const spk::Edge &p_a, const spk::Edge &p_b, const spk::Vector3 &p_normal, float p_eps);
 		static bool _isPointInside(const Polygon &p_poly, const spk::Vector3 &p_point, float p_eps);
+		void _invalidate();
+		void _updateCache() const;
 
 	public:
 		const std::vector<spk::Vector3> &points() const;
 		const std::vector<spk::Edge> &edges() const;
+		const spk::Plane& plane() const;
+		const BoundingBox& boundingBox() const;
 
 		bool isPlanar() const;
-		spk::Vector3 normal() const;
-		spk::Plane plane() const;
 		bool isCoplanar(const Polygon &p_other) const;
 		bool isAdjacent(const Polygon &p_other) const;
 		bool isConvex(float p_eps = 1e-6f, bool p_strictly = false) const;
@@ -34,6 +43,7 @@ namespace spk
 		bool contains(const Polygon &p_polygon) const;
 
 		Polygon fuze(const Polygon &p_other, bool p_checkCompatibility = false) const;
+		static Polygon fuzeGroup(const std::vector<Polygon> &p_polygons);
 
 		static Polygon fromLoop(const std::vector<spk::Vector3> &p_vs);
 		static Polygon makeTriangle(const spk::Vector3 &p_a, const spk::Vector3 &p_b, const spk::Vector3 &p_c);

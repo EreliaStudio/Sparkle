@@ -265,6 +265,58 @@ namespace spk::OpenGL
 		}
 	}
 
+	void Program::renderIndirect(GLintptr p_commandOffset, GLsizei p_drawCount, GLsizei p_stride)
+	{
+		if (_programID == 0)
+		{
+			_load();
+		}
+
+		if (p_drawCount == 0)
+		{
+			return;
+		}
+
+		if (_verboseMode == true)
+		{
+			OpenGLUtils::DumpPreDrawState();
+		}
+
+#ifndef NDEBUG
+		try
+		{
+			validate();
+		} catch (...)
+		{
+			throw;
+		}
+#endif
+
+		GLint ebo = 0;
+		glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &ebo);
+		if (ebo == 0)
+		{
+			std::cerr << "!! No element array buffer bound in current VAO; glMultiDrawElementsIndirect will fail in core profile.\n";
+		}
+
+		if (_verboseMode == true)
+		{
+			OpenGLUtils::DumpUBOBindingsForUsedBlocks(_programID);
+		}
+
+		if (_verboseMode == true)
+		{
+			OpenGLUtils::DumpTexture2DCompletenessForUnit(0);
+		}
+
+		glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, reinterpret_cast<const void *>(p_commandOffset), p_drawCount, p_stride);
+
+		if (_verboseMode == true)
+		{
+			OpenGLUtils::LogGLErrors("Program::renderIndirect glMultiDrawElementsIndirect");
+		}
+	}
+
 	void Program::validate()
 	{
 		if (_programID == 0)

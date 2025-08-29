@@ -7,6 +7,35 @@
 
 namespace spk
 {
+	bool Edge::Identifier::operator==(const Identifier &p_other) const
+	{
+		return (a == p_other.a) && (b == p_other.b);
+	}
+
+	bool Edge::Identifier::operator<(const Edge::Identifier& other) const
+	{
+		if (a != other.a) { return a < other.a; }
+		return b < other.b;
+	}
+
+	Edge::Identifier Edge::Identifier::from(const Edge &p_edge)
+	{
+		if (p_edge.first() < p_edge.second())
+		{
+			return Identifier{p_edge.first(), p_edge.second()};
+		}
+		return Identifier{p_edge.second(), p_edge.first()};
+	}
+
+	size_t Edge::IdentifierHash::operator()(const Identifier &p_edge) const noexcept
+	{
+		size_t h1 = std::hash<spk::Vector3>()(p_edge.a);
+		size_t h2 = std::hash<spk::Vector3>()(p_edge.b);
+		size_t seed = h1;
+		seed ^= h2 + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+		return seed;
+	}
+
 	Edge::Edge(const spk::Vector3 &p_first, const spk::Vector3 &p_second) :
 		_first(p_first),
 		_second(p_second)
@@ -67,7 +96,7 @@ namespace spk
 
 	float Edge::project(const spk::Vector3 &p_point) const
 	{
-		return _delta.dot(p_point - _first);
+		return (p_point - _first).dot(_direction);
 	}
 
 	bool Edge::isInverse(const Edge &p_other) const
@@ -115,11 +144,14 @@ namespace spk
 
 	bool Edge::operator<(const Edge &p_other) const
 	{
-		if (first() != p_other.first())
+		Identifier lhs = Identifier::from(*this);
+		Identifier rhs = Identifier::from(p_other);
+
+		if (lhs.a != rhs.a)
 		{
-			return (first() < p_other.first());
+			return lhs.a < rhs.a;
 		}
-		return (second() < p_other.second());
+		return lhs.b < rhs.b;
 	}
 
 	std::ostream &operator<<(std::ostream &p_os, const Edge &p_edge)

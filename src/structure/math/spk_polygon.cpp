@@ -9,7 +9,43 @@ namespace spk
 {
 	void Polygon::_addEdge(const spk::Vector3 &p_a, const spk::Vector3 &p_b)
 	{
-		_edges.push_back(spk::Edge(p_a, p_b));
+		spk::Edge tmpEdge = spk::Edge(p_a, p_b);
+		spk::Edge::Identifier id = spk::Edge::Identifier::from(tmpEdge);
+		if (_edgesSet.find(id) != _edgesSet.end())
+		{
+			return ;	
+		}
+
+		_edges.push_back(std::move(tmpEdge));
+		_edgesSet.insert(std::move(id));
+		_boundingBox.addPoint(p_a);
+		_boundingBox.addPoint(p_b);
+		_invalidate();
+	}
+
+	void Polygon::_invalidate()
+	{
+		_dirty = true;
+	}
+
+	void Polygon::_updateCache() const
+	{
+		if (_dirty == false)
+		{
+			return;
+		}
+
+		if (_edges.size() < 2)
+		{
+			GENERATE_ERROR("Can't generate a normal for a polygon with less than 2 edges");
+		}
+
+		if (_points.empty() == false)
+		{
+			_plane = spk::Plane(_edges[0].direction().cross(_edges[1].direction()), _points[0]);
+		}
+
+		_dirty = false;
 	}
 
 	bool Polygon::_edgesIntersect(const spk::Edge &p_a, const spk::Edge &p_b, const spk::Vector3 &p_normal, float p_eps)
@@ -25,7 +61,7 @@ namespace spk
 		return (cond1 == true && cond2 == true);
 	}
 
-bool Polygon::_isPointInside(const Polygon &p_poly, const spk::Vector3 &p_point, float p_eps)
+	bool Polygon::_isPointInside(const Polygon &p_poly, const spk::Vector3 &p_point, float p_eps)
 	{
 		for (const auto &edge : p_poly.edges())
 		{
@@ -43,7 +79,7 @@ bool Polygon::_isPointInside(const Polygon &p_poly, const spk::Vector3 &p_point,
 
 		spk::Vector3 origin = pts[0];
 		spk::Vector3 u = (pts[1] - origin).normalize();
-		spk::Vector3 v = p_poly.normal().cross(u);
+		spk::Vector3 v = p_poly.plane().normal.cross(u);
 
 		spk::Vector3 relP = p_point - origin;
 		float px = relP.dot(u);
@@ -94,7 +130,7 @@ bool Polygon::_isPointInside(const Polygon &p_poly, const spk::Vector3 &p_point,
 			return false;
 		}
 
-		spk::Vector3 expectedNormal = normal();
+		spk::Vector3 expectedNormal = _edges[0].direction().cross(_edges[1].direction()).normalize();
 
 		for (size_t i = 2; i < _edges.size(); i++)
 		{
@@ -108,24 +144,20 @@ bool Polygon::_isPointInside(const Polygon &p_poly, const spk::Vector3 &p_point,
 		return true;
 	}
 
-	spk::Vector3 Polygon::normal() const
-	{
-		if (_edges.size() < 2)
-		{
-			GENERATE_ERROR("Can't generate a normal for a polygon with less than 2 edges");
-		}
-
-		return (_edges[0].direction().cross(_edges[1].direction()));
-	}
-
-	spk::Plane Polygon::plane() const
+	const spk::Plane& Polygon::plane() const
 	{
 		if (_points.empty() == true)
 		{
 			GENERATE_ERROR("Can't generate a plane for a polygon without points");
 		}
 
-		return (spk::Plane(normal(), _points[0]));
+		if (_edges.size() < 2)
+		{
+			GENERATE_ERROR("Can't generate a normal for a polygon with less than 2 edges");
+		}
+
+		_updateCache();
+		return _plane;
 	}
 
 	bool Polygon::isCoplanar(const Polygon &p_other) const
@@ -140,16 +172,19 @@ bool Polygon::_isPointInside(const Polygon &p_poly, const spk::Vector3 &p_point,
 			return false;
 		}
 
-		spk::Vector3 currentNormal = normal().normalize();
-		spk::Vector3 otherNormal = p_other.normal().normalize();
+		const spk::Plane& currentPlane = plane();
+		const spk::Plane& otherPlane = p_other.plane();
+
+		const spk::Vector3& currentNormal = currentPlane.normal.normalize();
+		const spk::Vector3& otherNormal = otherPlane.normal.normalize();
 
 		if (FLOAT_NEQ(std::fabs(currentNormal.dot(otherNormal)), 1.0f))
 		{
 			return false;
 		}
 
-		float currentOffset = currentNormal.dot(_edges[0].first());
-		float otherOffset = currentNormal.dot(p_other.edges()[0].first());
+		float currentOffset = currentNormal.dot(currentPlane.origin);
+		float otherOffset = currentNormal.dot(otherPlane.origin);
 
 		return (FLOAT_EQ(currentOffset, otherOffset) == true);
 	}
@@ -159,6 +194,19 @@ bool Polygon::_isPointInside(const Polygon &p_poly, const spk::Vector3 &p_point,
 		if (isCoplanar(p_other) == false)
 		{
 			return false;
+		}
+
+		if (_boundingBox.intersect(p_other._boundingBox) == false)
+		{
+			return false;
+		}
+
+		for (const auto &edgeIdentifier : _edgesSet)
+		{
+			if (p_other._edgesSet.find(edgeIdentifier) != p_other._edgesSet.end())
+			{
+				return true;
+			}
 		}
 
 		for (const auto &edgeA : _edges)
@@ -185,7 +233,6 @@ bool Polygon::_isPointInside(const Polygon &p_poly, const spk::Vector3 &p_point,
 			return false;
 		}
 
-		spk::Vector3 polyNormal = normal();
 		float orientation = 0;
 
 		for (size_t i = 0; i < _edges.size(); i++)
@@ -193,7 +240,7 @@ bool Polygon::_isPointInside(const Polygon &p_poly, const spk::Vector3 &p_point,
 			const spk::Edge &current = _edges[i];
 			const spk::Edge &next = _edges[(i + 1) % _edges.size()];
 
-			float dot = current.direction().cross(next.direction()).dot(polyNormal);
+			float dot = current.direction().cross(next.direction()).dot(plane().normal);
 
 			if (std::fabs(dot) <= p_eps)
 			{
@@ -224,26 +271,23 @@ bool Polygon::_isPointInside(const Polygon &p_poly, const spk::Vector3 &p_point,
 			return false;
 		}
 
-		const float eps = 1e-6f;
-		spk::Vector3 polyNormal = normal();
-
 		for (const auto &edgeA : _edges)
 		{
 			for (const auto &edgeB : p_other.edges())
 			{
-				if (_edgesIntersect(edgeA, edgeB, polyNormal, eps) == true)
+				if (_edgesIntersect(edgeA, edgeB, plane().normal, spk::Constants::pointPrecision) == true)
 				{
 					return true;
 				}
 			}
 		}
 
-		if (_isPointInside(*this, p_other.edges()[0].first(), eps) == true)
+		if (_isPointInside(*this, p_other.edges()[0].first(), spk::Constants::pointPrecision) == true)
 		{
 			return true;
 		}
 
-		if (_isPointInside(p_other, _edges[0].first(), eps) == true)
+		if (_isPointInside(p_other, _edges[0].first(), spk::Constants::pointPrecision) == true)
 		{
 			return true;
 		}
