@@ -23,8 +23,8 @@ namespace spk
 		mutable bool _dirty = true;
 
 		void _addEdge(const spk::Vector3 &p_a, const spk::Vector3 &p_b);
-		static bool _edgesIntersect(const spk::Edge &p_a, const spk::Edge &p_b, const spk::Vector3 &p_normal, float p_eps);
-		static bool _isPointInside(const Polygon &p_poly, const spk::Vector3 &p_point, float p_eps);
+		static bool _edgesIntersect(const spk::Edge &p_a, const spk::Edge &p_b, const spk::Vector3 &p_normal);
+		static bool _isPointInside(const Polygon &p_poly, const spk::Vector3 &p_point);
 		void _invalidate();
 		void _updateCache() const;
 
@@ -37,13 +37,16 @@ namespace spk
 		bool isPlanar() const;
 		bool isCoplanar(const Polygon &p_other) const;
 		bool isAdjacent(const Polygon &p_other) const;
-		bool isConvex(float p_eps = 1e-6f, bool p_strictly = false) const;
+		bool isConvex() const;
 		bool isOverlapping(const Polygon &p_other) const;
 		bool contains(const spk::Vector3 &p_point) const;
 		bool contains(const Polygon &p_polygon) const;
 
 		Polygon fuze(const Polygon &p_other, bool p_checkCompatibility = false) const;
 		static Polygon fuzeGroup(const std::vector<Polygon> &p_polygons);
+
+		std::vector<Polygon> splitIntoConvex() const;
+		std::vector<Polygon> triangulate() const;
 
 		static Polygon fromLoop(const std::vector<spk::Vector3> &p_vs);
 		static Polygon makeTriangle(const spk::Vector3 &p_a, const spk::Vector3 &p_b, const spk::Vector3 &p_c);

@@ -48,20 +48,20 @@ namespace spk
 		_dirty = false;
 	}
 
-	bool Polygon::_edgesIntersect(const spk::Edge &p_a, const spk::Edge &p_b, const spk::Vector3 &p_normal, float p_eps)
+	bool Polygon::_edgesIntersect(const spk::Edge &p_a, const spk::Edge &p_b, const spk::Vector3 &p_normal)
 	{
 		float o1 = p_a.orientation(p_b.first(), p_normal);
 		float o2 = p_a.orientation(p_b.second(), p_normal);
 		float o3 = p_b.orientation(p_a.first(), p_normal);
 		float o4 = p_b.orientation(p_a.second(), p_normal);
 
-		bool cond1 = ((o1 > p_eps && o2 < -p_eps) || (o1 < -p_eps && o2 > p_eps));
-		bool cond2 = ((o3 > p_eps && o4 < -p_eps) || (o3 < -p_eps && o4 > p_eps));
+		bool cond1 = ((o1 > spk::Constants::angularPrecision && o2 < -spk::Constants::angularPrecision) || (o1 < -spk::Constants::angularPrecision && o2 > spk::Constants::angularPrecision));
+		bool cond2 = ((o3 > spk::Constants::angularPrecision && o4 < -spk::Constants::angularPrecision) || (o3 < -spk::Constants::angularPrecision && o4 > spk::Constants::angularPrecision));
 
 		return (cond1 == true && cond2 == true);
 	}
 
-	bool Polygon::_isPointInside(const Polygon &p_poly, const spk::Vector3 &p_point, float p_eps)
+	bool Polygon::_isPointInside(const Polygon &p_poly, const spk::Vector3 &p_point)
 	{
 		for (const auto &edge : p_poly.edges())
 		{
@@ -97,7 +97,7 @@ namespace spk
 			float xj = rj.dot(u);
 			float yj = rj.dot(v);
 
-			if (std::fabs(yj - yi) <= p_eps)
+			if (std::fabs(yj - yi) <= spk::Constants::angularPrecision)
 			{
 				continue;
 			}
@@ -226,7 +226,7 @@ namespace spk
 		return false;
 	}
 
-	bool Polygon::isConvex(float p_eps, bool p_strictly) const
+	bool Polygon::isConvex() const
 	{
 		if (_edges.size() < 3)
 		{
@@ -242,13 +242,9 @@ namespace spk
 
 			float dot = current.direction().cross(next.direction()).dot(plane().normal);
 
-			if (std::fabs(dot) <= p_eps)
+			if (std::fabs(dot) <= spk::Constants::angularPrecision)
 			{
-				if (p_strictly == true)
-				{
-					return false;
-				}
-				continue;
+				return false;
 			}
 
 			if (orientation == 0)
@@ -271,23 +267,28 @@ namespace spk
 			return false;
 		}
 
+		if (_boundingBox.intersect(p_other._boundingBox) == false)
+		{
+			return false;
+		}
+
 		for (const auto &edgeA : _edges)
 		{
 			for (const auto &edgeB : p_other.edges())
 			{
-				if (_edgesIntersect(edgeA, edgeB, plane().normal, spk::Constants::pointPrecision) == true)
+				if (_edgesIntersect(edgeA, edgeB, plane().normal) == true)
 				{
 					return true;
 				}
 			}
 		}
 
-		if (_isPointInside(*this, p_other.edges()[0].first(), spk::Constants::pointPrecision) == true)
+		if (_isPointInside(*this, p_other.edges()[0].first()) == true)
 		{
 			return true;
 		}
 
-		if (_isPointInside(p_other, _edges[0].first(), spk::Constants::pointPrecision) == true)
+		if (_isPointInside(p_other, _edges[0].first()) == true)
 		{
 			return true;
 		}
@@ -297,7 +298,7 @@ namespace spk
 
 	bool Polygon::contains(const spk::Vector3 &p_point) const
 	{
-		return _isPointInside(*this, p_point, spk::Constants::pointPrecision);
+		return _isPointInside(*this, p_point);
 	}
 
 	bool Polygon::contains(const Polygon &p_polygon) const
@@ -309,8 +310,8 @@ namespace spk
 
 		for (const auto &edge : p_polygon.edges())
 		{
-			if (_isPointInside(*this, edge.first(), spk::Constants::pointPrecision) == false ||
-				_isPointInside(*this, edge.second(), spk::Constants::pointPrecision) == false)
+			if (_isPointInside(*this, edge.first()) == false ||
+				_isPointInside(*this, edge.second()) == false)
 			{
 				return false;
 			}
@@ -362,6 +363,224 @@ namespace spk
 		}
 
 		return r;
+	}
+
+	std::vector<spk::Polygon> Polygon::splitIntoConvex() const
+	{
+		std::vector<spk::Polygon> result;
+
+		if (isConvex() == true)
+		{
+			result.push_back(*this);
+			return result;
+		}
+
+		if (_points.size() < 3)
+		{
+			return result;
+		}
+
+		std::vector<size_t> indices(_points.size());
+		for (size_t i = 0; i < _points.size(); ++i)
+		{
+			indices[i] = i;
+		}
+
+		const spk::Vector3 &n = plane().normal;
+
+		float orientation = 0.0f;
+		for (size_t i = 0; i < indices.size(); ++i)
+		{
+			const spk::Vector3 &a = _points[indices[i]];
+			const spk::Vector3 &b = _points[indices[(i + 1) % indices.size()]];
+			const spk::Vector3 &c = _points[indices[(i + 2) % indices.size()]];
+
+			float cross = (b - a).cross(c - b).dot(n);
+			if (std::fabs(cross) > spk::Constants::pointPrecision)
+			{
+				orientation = (cross > 0.0f) ? 1.0f : -1.0f;
+				break;
+			}
+		}
+
+		if (orientation == 0.0f)
+		{
+			return result;
+		}
+
+		while (indices.size() > 3)
+		{
+			bool earFound = false;
+			for (size_t i = 0; i < indices.size(); ++i)
+			{
+				size_t prev = indices[(i + indices.size() - 1) % indices.size()];
+				size_t curr = indices[i];
+				size_t next = indices[(i + 1) % indices.size()];
+
+				const spk::Vector3 &a = _points[prev];
+				const spk::Vector3 &b = _points[curr];
+				const spk::Vector3 &c = _points[next];
+
+				float cross = (b - a).cross(c - b).dot(n);
+				if (cross * orientation <= spk::Constants::pointPrecision)
+				{
+					continue;
+				}
+
+				bool hasPointInside = false;
+				for (size_t j = 0; j < indices.size(); ++j)
+				{
+					size_t idx = indices[j];
+					if (idx == prev || idx == curr || idx == next)
+					{
+						continue;
+					}
+
+					const spk::Vector3 &p = _points[idx];
+
+					float c1 = (b - a).cross(p - a).dot(n) * orientation;
+					float c2 = (c - b).cross(p - b).dot(n) * orientation;
+					float c3 = (a - c).cross(p - c).dot(n) * orientation;
+
+					if (c1 >= -spk::Constants::pointPrecision && c2 >= -spk::Constants::pointPrecision && c3 >= -spk::Constants::pointPrecision)
+					{
+						hasPointInside = true;
+						break;
+					}
+				}
+
+				if (hasPointInside == true)
+				{
+					continue;
+				}
+
+				result.push_back(Polygon::makeTriangle(a, b, c));
+				indices.erase(indices.begin() + i);
+				earFound = true;
+				break;
+			}
+
+			if (earFound == false)
+			{
+				break;
+			}
+		}
+
+		if (indices.size() == 3)
+		{
+			const spk::Vector3 &a = _points[indices[0]];
+			const spk::Vector3 &b = _points[indices[1]];
+			const spk::Vector3 &c = _points[indices[2]];
+			result.push_back(Polygon::makeTriangle(a, b, c));
+		}
+
+		return result;
+	}
+
+	std::vector<Polygon> Polygon::triangulate() const
+	{
+		std::vector<Polygon> triangles;
+		if (_points.size() < 3)
+		{
+			return triangles;
+		}
+
+		std::vector<spk::Vector3> pts = _points;
+
+		spk::Vector3 origin = pts[0];
+		spk::Vector3 u = (pts[1] - origin).normalize();
+		spk::Vector3 v = plane().normal.cross(u);
+
+		std::vector<spk::Vector2> coords;
+		coords.reserve(pts.size());
+		for (const auto &p : pts)
+		{
+			spk::Vector3 rel = p - origin;
+			coords.emplace_back(rel.dot(u), rel.dot(v));
+		}
+
+		std::vector<size_t> indices(pts.size());
+		for (size_t i = 0; i < indices.size(); ++i)
+		{
+			indices[i] = i;
+		}
+
+		float area = 0.0f;
+		for (size_t i = 0; i < coords.size(); ++i)
+		{
+			const spk::Vector2 &a = coords[i];
+			const spk::Vector2 &b = coords[(i + 1) % coords.size()];
+			area += a.x * b.y - a.y * b.x;
+		}
+		if (area < 0.0f)
+		{
+			std::reverse(indices.begin(), indices.end());
+		}
+
+		auto cross2D = [](const spk::Vector2 &p_a, const spk::Vector2 &p_b, const spk::Vector2 &p_c)
+		{
+			spk::Vector2 ab = p_b - p_a;
+			spk::Vector2 ac = p_c - p_a;
+			return ab.x * ac.y - ab.y * ac.x;
+		};
+
+		auto pointInTriangle = [&](const spk::Vector2 &p_p, const spk::Vector2 &p_a, const spk::Vector2 &p_b, const spk::Vector2 &p_c)
+		{
+			auto sign = [](const spk::Vector2 &p_p1, const spk::Vector2 &p_p2, const spk::Vector2 &p_p3)
+			{ return (p_p1.x - p_p3.x) * (p_p2.y - p_p3.y) - (p_p2.x - p_p3.x) * (p_p1.y - p_p3.y); };
+			float d1 = sign(p_p, p_a, p_b);
+			float d2 = sign(p_p, p_b, p_c);
+			float d3 = sign(p_p, p_c, p_a);
+			bool hasNeg = (d1 < -spk::Constants::angularPrecision) || (d2 < -spk::Constants::angularPrecision) || (d3 < -spk::Constants::angularPrecision);
+			bool hasPos = (d1 > spk::Constants::angularPrecision) || (d2 > spk::Constants::angularPrecision) || (d3 > spk::Constants::angularPrecision);
+			return (hasNeg && hasPos) == false;
+		};
+
+		while (indices.size() > 2)
+		{
+			bool earFound = false;
+			for (size_t i = 0; i < indices.size(); ++i)
+			{
+				size_t prev = indices[(i + indices.size() - 1) % indices.size()];
+				size_t curr = indices[i];
+				size_t next = indices[(i + 1) % indices.size()];
+
+				if (cross2D(coords[prev], coords[curr], coords[next]) <= spk::Constants::angularPrecision)
+				{
+					continue;
+				}
+
+				bool hasPoint = false;
+				for (size_t j = 0; j < indices.size(); ++j)
+				{
+					size_t idx = indices[j];
+					if (idx == prev || idx == curr || idx == next)
+					{
+						continue;
+					}
+					if (pointInTriangle(coords[idx], coords[prev], coords[curr], coords[next]) == true)
+					{
+						hasPoint = true;
+						break;
+					}
+				}
+				if (hasPoint == true)
+				{
+					continue;
+				}
+
+				triangles.push_back(Polygon::fromLoop({pts[prev], pts[curr], pts[next]}));
+				indices.erase(indices.begin() + i);
+				earFound = true;
+				break;
+			}
+			if (earFound == false)
+			{
+				break;
+			}
+		}
+
+		return triangles;
 	}
 
 	Polygon Polygon::makeTriangle(const spk::Vector3 &p_a, const spk::Vector3 &p_b, const spk::Vector3 &p_c)

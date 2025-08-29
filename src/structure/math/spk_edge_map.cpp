@@ -19,8 +19,10 @@ namespace spk
 		}
 	}
 
-	spk::Polygon EdgeMap::construct() const
+	std::vector<spk::Polygon> EdgeMap::construct() const
 	{
+		std::vector<spk::Polygon> polygons;
+
 		std::vector<spk::Edge> boundary;
 		boundary.reserve(_edges.size());
 		for (const auto &[id, entry] : _edges)
@@ -30,49 +32,54 @@ namespace spk
 				boundary.push_back(entry.edge);
 			}
 		}
-		if (boundary.empty() == true)
-		{
-			return spk::Polygon();
-		}
-
-		std::vector<spk::Vector3> loop;
-		loop.reserve(boundary.size() + 1);
-
-		spk::Edge current = boundary.back();
-		boundary.pop_back();
-		loop.push_back(current.first());
-		loop.push_back(current.second());
-		spk::Vector3 cursor = current.second();
 
 		while (boundary.empty() == false)
 		{
-			bool found = false;
-			for (size_t i = 0; i < boundary.size(); ++i)
+			std::vector<spk::Vector3> loop;
+			loop.reserve(boundary.size() + 1);
+
+			spk::Edge current = boundary.back();
+			boundary.pop_back();
+			loop.push_back(current.first());
+			loop.push_back(current.second());
+			spk::Vector3 cursor = current.second();
+
+			while (boundary.empty() == false)
 			{
-				const spk::Edge &e = boundary[i];
-				if (e.first() == cursor)
+				bool found = false;
+				for (size_t i = 0; i < boundary.size(); ++i)
 				{
-					cursor = e.second();
-					loop.push_back(cursor);
-					boundary.erase(boundary.begin() + i);
-					found = true;
+					const spk::Edge &e = boundary[i];
+					if (e.first() == cursor)
+					{
+						cursor = e.second();
+						loop.push_back(cursor);
+						boundary.erase(boundary.begin() + i);
+						found = true;
+						break;
+					}
+					if (e.second() == cursor)
+					{
+						cursor = e.first();
+						loop.push_back(cursor);
+						boundary.erase(boundary.begin() + i);
+						found = true;
+						break;
+					}
+				}
+				if (found == false)
+				{
 					break;
 				}
-				if (e.second() == cursor)
+				if (cursor == loop.front())
 				{
-					cursor = e.first();
-					loop.push_back(cursor);
-					boundary.erase(boundary.begin() + i);
-					found = true;
 					break;
 				}
 			}
-			if (found == false)
-			{
-				break;
-			}
+
+			polygons.push_back(spk::Polygon::fromLoop(loop));
 		}
 
-		return spk::Polygon::fromLoop(loop);
+		return polygons;
 	}
 }

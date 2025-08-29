@@ -1,5 +1,6 @@
 #include "structure/engine/spk_collision_mesh.hpp"
 #include "structure/math/spk_plane.hpp"
+#include "structure/math/spk_edge_map.hpp"
 #include "structure/math/spk_reference_frame.hpp"
 #include <unordered_map>
 
@@ -19,7 +20,7 @@ namespace spk
 	{
 		spk::CollisionMesh result;
 
-		std::unordered_map<spk::Plane::Identifier, std::vector<spk::Polygon>> polygonCollection;
+		std::unordered_map<spk::Plane::Identifier, spk::EdgeMap> polygonCollection;
 
 		for (const auto &shape : p_mesh->shapes())
 		{
@@ -41,44 +42,15 @@ namespace spk
 			{
 				spk::Plane tmpPlane = polygon.plane();
 
-				polygonCollection[spk::Plane::Identifier::from(tmpPlane)].push_back(polygon);
+				polygonCollection[spk::Plane::Identifier::from(tmpPlane)].addPolygon(polygon);
 			}
 		}
 
-		for (auto &[key, polygons] : polygonCollection)
+		for (auto &[key, edgeMap] : polygonCollection)
 		{
-			bool merged = true;
-			while (merged == true)
+			for (const auto &polygon : edgeMap.construct())
 			{
-				merged = false;
-				for (size_t i = 0; i < polygons.size(); ++i)
-				{
-					bool localMerged = false;
-					for (size_t j = i + 1; j < polygons.size(); ++j)
-					{
-						if ((polygons[i].isAdjacent(polygons[j]) == true || polygons[i].isOverlapping(polygons[j]) == true))
-						{
-							spk::Polygon candidate = polygons[i].fuze(polygons[j], false);
-							if (candidate.isConvex(1e-6f, true) == true)
-							{
-								polygons[i] = candidate;
-								polygons.erase(polygons.begin() + j);
-								localMerged = true;
-								break;
-							}
-						}
-					}
-					if (localMerged == true)
-					{
-						merged = true;
-						break;
-					}
-				}
-			}
-
-			for (const auto &polygon : polygons)
-			{
-				if (polygon.isConvex(1e-6f, true) == true)
+				if (polygon.isConvex() == true)
 				{
 					result.addUnit(polygon);
 				}

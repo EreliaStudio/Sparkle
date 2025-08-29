@@ -12,10 +12,10 @@ namespace spk
 		return (a == p_other.a) && (b == p_other.b);
 	}
 
-	bool Edge::Identifier::operator<(const Edge::Identifier& other) const
+	bool Edge::Identifier::operator<(const Edge::Identifier& p_other) const
 	{
-		if (a != other.a) { return a < other.a; }
-		return b < other.b;
+		if (a != p_other.a) { return a < p_other.a; }
+		return b < p_other.b;
 	}
 
 	Edge::Identifier Edge::Identifier::from(const Edge &p_edge)
