@@ -14,6 +14,7 @@ namespace spk
 		struct Entry
 		{
 			spk::Edge edge;
+			spk::Plane plane;
 			size_t count = 0;
 		};
 

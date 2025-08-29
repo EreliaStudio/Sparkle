@@ -7,20 +7,20 @@
 
 namespace spk
 {
-	struct Vertex
+	struct ObjVertex
 	{
 		spk::Vector3 position = {0, 0, 0};
 		spk::Vector2 uv = {-1, -1};
 		spk::Vector3 normal = {0, 0, 1};
 
-		bool operator==(const Vertex& other) const
+		bool operator==(const ObjVertex& other) const
 		{
 			return position == other.position &&
 				uv == other.uv &&
 				normal == other.normal;
 		}
 
-		bool operator<(const Vertex& other) const
+		bool operator<(const ObjVertex& other) const
 		{
 			if (position != other.position)
 				return position < other.position;
@@ -34,9 +34,9 @@ namespace spk
 namespace std
 {
 	template<>
-	struct hash<spk::Vertex>
+	struct hash<spk::ObjVertex>
 	{
-		std::size_t operator()(const spk::Vertex& v) const
+		std::size_t operator()(const spk::ObjVertex& v) const
 		{
 			std::size_t h1 = std::hash<spk::Vector3>{}(v.position);
 			std::size_t h2 = std::hash<spk::Vector2>{}(v.uv);
