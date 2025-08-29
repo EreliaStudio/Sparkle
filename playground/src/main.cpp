@@ -1012,40 +1012,7 @@ private:
 
 	virtual void _onChunkGeneration(const spk::Vector3Int &p_chunkCoordinate, Chunk &p_chunkToFill)
 	{
-		for (size_t i = 0; i < Chunk::size.x; i++)
-		{
-			for (size_t j = 0; j < Chunk::size.z; j++)
-			{
-				p_chunkToFill.setContent(i, 0, j, 0);
-				if (i == 0 && j != 0)
-				{
-					p_chunkToFill.setContent(
-						i, 1, j, 2, Block::Orientation{Block::HorizontalOrientation::ZNegative, Block::VerticalOrientation::YPositive});
-				}
-				if (j == 0 && i != 0)
-				{
-					p_chunkToFill.setContent(
-						i, 1, j, 3, Block::Orientation{Block::HorizontalOrientation::ZPositive, Block::VerticalOrientation::YNegative});
-				}
-				if (i == 1 && j != 1)
-				{
-					p_chunkToFill.setContent(
-						i, 1, j, 1, Block::Orientation{Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive});
-				}
-				if (j == 1 && i != 1)
-				{
-					p_chunkToFill.setContent(
-						i, 1, j, 1, Block::Orientation{Block::HorizontalOrientation::ZPositive, Block::VerticalOrientation::YPositive});
-				}
-				if (i == 0 && j == 0)
-				{
-					p_chunkToFill.setContent(i, 1, j, 0);
-					p_chunkToFill.setContent(i, 2, j, 0);
-					p_chunkToFill.setContent(i, 3, j, 0);
-					p_chunkToFill.setContent(i, 4, j, 0);
-				}
-			}
-		}
+		
 	}
 
 public:
@@ -1120,6 +1087,55 @@ public:
 		{
 			chunk->useCollisionRenderer(_useCollisionRenderer);
 		}
+	}
+};
+
+class TmpBlockMap : public BlockMap<16, 16, 16>
+{
+private:
+	void _onChunkGeneration(const spk::Vector3Int &p_chunkCoordinate, Chunk &p_chunkToFill)
+	{
+		for (size_t i = 0; i < Chunk::size.x; i++)
+		{
+			for (size_t j = 0; j < Chunk::size.z; j++)
+			{
+				p_chunkToFill.setContent(i, 0, j, 0);
+				if (i == 0 && j != 0)
+				{
+					p_chunkToFill.setContent(
+						i, 1, j, 2, Block::Orientation{Block::HorizontalOrientation::ZNegative, Block::VerticalOrientation::YPositive});
+				}
+				if (j == 0 && i != 0)
+				{
+					p_chunkToFill.setContent(
+						i, 1, j, 3, Block::Orientation{Block::HorizontalOrientation::ZPositive, Block::VerticalOrientation::YNegative});
+				}
+				if (i == 1 && j != 1)
+				{
+					p_chunkToFill.setContent(
+						i, 1, j, 1, Block::Orientation{Block::HorizontalOrientation::XPositive, Block::VerticalOrientation::YPositive});
+				}
+				if (j == 1 && i != 1)
+				{
+					p_chunkToFill.setContent(
+						i, 1, j, 1, Block::Orientation{Block::HorizontalOrientation::ZPositive, Block::VerticalOrientation::YPositive});
+				}
+				if (i == 0 && j == 0)
+				{
+					p_chunkToFill.setContent(i, 1, j, 0);
+					p_chunkToFill.setContent(i, 2, j, 0);
+					p_chunkToFill.setContent(i, 3, j, 0);
+					p_chunkToFill.setContent(i, 4, j, 0);
+				}
+			}
+		}
+	}
+
+public:
+	TmpBlockMap(const std::wstring& p_name, spk::SafePointer<spk::Entity> p_parent) :
+		BlockMap<16, 16, 16>(p_name, p_parent)
+	{
+		
 	}
 };
 
@@ -1341,7 +1357,7 @@ int main()
 	player.transform().place({5.0f, 5.0f, 5.0f});
 	player.transform().lookAt({3.0f, 3.0f, 3.0f});
 
-	BlockMap<16, 16, 16> blockMap = BlockMap<16, 16, 16>(L"BlockMap", nullptr);
+	TmpBlockMap blockMap = TmpBlockMap(L"BlockMap", nullptr);
 	blockMap.setTexture(Block::texture());
 	blockMap.activate();
 	engine.addEntity(&blockMap);

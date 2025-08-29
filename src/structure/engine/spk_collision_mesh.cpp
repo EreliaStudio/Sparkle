@@ -38,9 +38,12 @@ namespace spk
 
 			spk::CollisionMesh::Unit polygon = spk::Polygon::fromLoop(points);
 
-			spk::Plane tmpPlane = polygon.plane();
+			if (polygon.isPlanar() == true)
+			{
+				spk::Plane tmpPlane = polygon.plane();
 
-			polygonCollection[spk::Plane::Identifier::from(tmpPlane)].addPolygon(polygon);
+				polygonCollection[spk::Plane::Identifier::from(tmpPlane)].addPolygon(polygon);
+			}
 		}
 
 		for (auto &[key, edgeMap] : polygonCollection)
