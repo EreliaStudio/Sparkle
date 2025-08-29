@@ -20,7 +20,7 @@ namespace spk
 		std::unordered_map<spk::Edge::Identifier, Entry, spk::Edge::IdentifierHash> _edges;
 
 	public:
-		void addPolygon(const spk::Polygon &p_polygon, bool p_debug = false);
-		std::vector<spk::Polygon> construct(bool p_debug = false) const;
+		void addPolygon(const spk::Polygon &p_polygon);
+		std::vector<spk::Polygon> construct() const;
 	};
 }
