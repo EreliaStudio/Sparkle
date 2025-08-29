@@ -327,41 +327,41 @@ namespace spk
 			return p_polygons.front();
 		}
 
-		// const spk::Vector3& n = p_polygons.front().plane().normal;
+		const spk::Vector3 &n = p_polygons.front().plane().normal;
 
-		// std::vector<std::vector<spk::Edge>> edgeSets;
-		// edgeSets.reserve(p_polygons.size());
-		// for (const auto &poly : p_polygons)
-		// {
-		// 	edgeSets.push_back(poly.edges());
-		// }
+		std::vector<std::vector<spk::Edge>> edgeSets;
+		edgeSets.reserve(p_polygons.size());
+		for (const auto &poly : p_polygons)
+		{
+			edgeSets.push_back(poly.edges());
+		}
 
-		// for (size_t i = 0; i < edgeSets.size(); ++i)
-		// {
-		// 	for (size_t j = i + 1; j < edgeSets.size(); ++j)
-		// 	{
-		// 		splitAllEdges(edgeSets[i], edgeSets[j], n);
-		// 		splitAllEdges(edgeSets[j], edgeSets[i], n);
-		// 	}
-		// }
+		for (size_t i = 0; i < edgeSets.size(); ++i)
+		{
+			for (size_t j = i + 1; j < edgeSets.size(); ++j)
+			{
+				splitAllEdges(edgeSets[i], edgeSets[j], n);
+				splitAllEdges(edgeSets[j], edgeSets[i], n);
+			}
+		}
 
-		// std::vector<spk::Edge> boundary = edgeSets[0];
-		// for (size_t i = 1; i < edgeSets.size(); ++i)
-		// {
-		// 	boundary = subtractInternalShared(boundary, edgeSets[i]);
-		// }
+		std::vector<spk::Edge> boundary = edgeSets[0];
+		for (size_t i = 1; i < edgeSets.size(); ++i)
+		{
+			boundary = subtractInternalShared(boundary, edgeSets[i]);
+		}
 
-		// if (boundary.empty() == true)
-		// {
-		// 	GENERATE_ERROR("Fused polygon is empty or degenerate");
-		// }
+		if (boundary.empty() == true)
+		{
+			GENERATE_ERROR("Fused polygon is empty or degenerate");
+		}
 
-		// std::vector<spk::Vector3> loop = stitchLoop(boundary, n);
-		// if (loop.size() < 4)
-		// {
-		// 	GENERATE_ERROR("Fused polygon could not be stitched (Loop of " + std::to_string(loop.size()) + " element(s))");
-		// }
+		std::vector<spk::Vector3> loop = stitchLoop(boundary, n);
+		if (loop.size() < 4)
+		{
+			GENERATE_ERROR("Fused polygon could not be stitched (Loop of " + std::to_string(loop.size()) + " element(s))");
+		}
 
-		// return spk::Polygon::fromLoop(loop);
+		return spk::Polygon::fromLoop(loop);
 	}
 }

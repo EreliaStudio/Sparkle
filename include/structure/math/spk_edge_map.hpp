@@ -21,6 +21,6 @@ namespace spk
 
 	public:
 		void addPolygon(const spk::Polygon &p_polygon);
-		spk::Polygon construct() const;
+		std::vector<spk::Polygon> construct() const;
 	};
 }
