@@ -1,21 +1,44 @@
+#include "spk_debug_macro.hpp"
 #include "structure/math/spk_constants.hpp"
+#include "structure/math/spk_edge_map.hpp"
 #include "structure/math/spk_polygon.hpp"
 #include "structure/math/spk_vector2.hpp"
-#include "structure/math/spk_edge_map.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <limits>
 #include <map>
+#include <string>
 #include <utility>
 #include <vector>
 
 namespace
 {
+	void debugEdges(const std::wstring &p_label, const std::vector<spk::Edge> &p_edges)
+	{
+		spk::cout << p_label << L" (" << p_edges.size() << L" edges)" << std::endl;
+		for (const auto &edge : p_edges)
+		{
+			spk::cout << L"    " << edge.first() << L" -> " << edge.second() << std::endl;
+		}
+	}
+
+	void debugTs(const std::wstring &p_label, const std::vector<float> &p_ts)
+	{
+		spk::cout << p_label << L" (" << p_ts.size() << L" values)" << std::endl;
+		for (float t : p_ts)
+		{
+			spk::cout << L"    t=" << t << std::endl;
+		}
+	}
+
 	void collectSplitTsForColinearOverlap(const spk::Edge &p_e, const spk::Edge &p_o, std::vector<float> &p_ts)
 	{
+		spk::cout << L"Checking colinear overlap: " << p_e.first() << L" -> " << p_e.second() << L" with " << p_o.first() << L" -> " << p_o.second()
+				  << std::endl;
 		if (p_e.isColinear(p_o) == false)
 		{
+			spk::cout << L"    Not colinear" << std::endl;
 			return;
 		}
 
@@ -23,6 +46,7 @@ namespace
 		const float dirDot = p_e.direction().dot(p_o.direction());
 		if (std::fabs(std::fabs(dirDot) - 1.0f) > spk::Constants::pointPrecision)
 		{
+			spk::cout << L"    Directions differ" << std::endl;
 			return;
 		}
 
@@ -35,6 +59,7 @@ namespace
 
 		if (hi <= spk::Constants::pointPrecision || lo >= (len - spk::Constants::pointPrecision))
 		{
+			spk::cout << L"    No overlap" << std::endl;
 			return;
 		}
 
@@ -44,21 +69,28 @@ namespace
 		const float tol = spk::Constants::pointPrecision;
 		if (start > tol && start < len - tol)
 		{
-			p_ts.push_back(start / len);
+			float t = start / len;
+			spk::cout << L"    Adding t " << t << std::endl;
+			p_ts.push_back(t);
 		}
 		if (end > tol && end < len - tol)
 		{
-			p_ts.push_back(end / len);
+			float t = end / len;
+			spk::cout << L"    Adding t " << t << std::endl;
+			p_ts.push_back(t);
 		}
 	}
 
 	void collectSplitTsForIntersection(const spk::Edge &p_e, const spk::Edge &p_o, const spk::Vector3 &p_normal, std::vector<float> &p_ts)
 	{
+		spk::cout << L"Checking intersection: " << p_e.first() << L" -> " << p_e.second() << L" with " << p_o.first() << L" -> " << p_o.second()
+				  << std::endl;
 		const float o1 = p_o.orientation(p_e.first(), p_normal);
 		const float o2 = p_o.orientation(p_e.second(), p_normal);
 		const float eps = spk::Constants::pointPrecision;
 		if ((o1 > eps && o2 > eps) || (o1 < -eps && o2 < -eps))
 		{
+			spk::cout << L"    Edge entirely on one side" << std::endl;
 			return;
 		}
 
@@ -66,6 +98,7 @@ namespace
 		const float o4 = p_e.orientation(p_o.second(), p_normal);
 		if ((o3 > eps && o4 > eps) || (o3 < -eps && o4 < -eps))
 		{
+			spk::cout << L"    Other edge entirely on one side" << std::endl;
 			return;
 		}
 
@@ -76,6 +109,7 @@ namespace
 		const float rxs = r.cross(s).dot(p_normal.normalize());
 		if (std::fabs(rxs) <= spk::Constants::pointPrecision)
 		{
+			spk::cout << L"    Edges are parallel" << std::endl;
 			return;
 		}
 
@@ -85,7 +119,9 @@ namespace
 		const float pos = t * len;
 		if (pos > spk::Constants::pointPrecision && pos < len - spk::Constants::pointPrecision)
 		{
-			p_ts.push_back(pos / len);
+			float value = pos / len;
+			spk::cout << L"    Adding t " << value << std::endl;
+			p_ts.push_back(value);
 		}
 	}
 
@@ -95,6 +131,7 @@ namespace
 		ts.push_back(0.0f);
 		ts.push_back(1.0f);
 		std::sort(ts.begin(), ts.end());
+		debugTs(L"Split ts", ts);
 		for (size_t i = 1; i < ts.size(); ++i)
 		{
 			float a = ts[i - 1];
@@ -105,6 +142,7 @@ namespace
 			}
 			spk::Vector3 start = p_e.first() + p_e.delta() * a;
 			spk::Vector3 end = p_e.first() + p_e.delta() * b;
+			spk::cout << L"    New edge " << start << L" -> " << end << std::endl;
 			p_out.emplace_back(start, end);
 		}
 	}
@@ -115,14 +153,17 @@ namespace
 		result.reserve(p_base.size() * 2);
 		for (const auto &e : p_base)
 		{
+			spk::cout << L"Splitting base edge: " << e.first() << L" -> " << e.second() << std::endl;
 			std::vector<float> ts;
 			for (const auto &o : p_other)
 			{
+				spk::cout << L"  Against other edge: " << o.first() << L" -> " << o.second() << std::endl;
 				collectSplitTsForColinearOverlap(e, o, ts);
 				collectSplitTsForIntersection(e, o, p_normal, ts);
 			}
 			splitEdgeByTs(e, ts, result);
 		}
+		debugEdges(L"Result after split", result);
 		p_base.swap(result);
 	}
 
@@ -134,6 +175,7 @@ namespace
 
 		for (size_t i = 0; i < p_a.size(); ++i)
 		{
+			spk::cout << L"Evaluating edge: " << p_a[i].first() << L" -> " << p_a[i].second() << std::endl;
 			bool consumed = false;
 			for (size_t j = 0; j < p_b.size(); ++j)
 			{
@@ -143,12 +185,14 @@ namespace
 				}
 				if (p_a[i].isInverse(p_b[j]) == true)
 				{
+					spk::cout << L"    Cancels with inverse edge " << p_b[j].first() << L" -> " << p_b[j].second() << std::endl;
 					usedB[j] = true;
 					consumed = true;
 					break;
 				}
 				if (p_a[i] == p_b[j])
 				{
+					spk::cout << L"    Shared boundary with edge " << p_b[j].first() << L" -> " << p_b[j].second() << std::endl;
 					usedB[j] = true;
 					out.push_back(p_a[i]);
 					consumed = true;
@@ -157,6 +201,7 @@ namespace
 			}
 			if (consumed == false)
 			{
+				spk::cout << L"    Unique edge" << std::endl;
 				out.push_back(p_a[i]);
 			}
 		}
@@ -164,6 +209,7 @@ namespace
 		{
 			if (usedB[j] == false)
 			{
+				spk::cout << L"Remaining edge from B: " << p_b[j].first() << L" -> " << p_b[j].second() << std::endl;
 				out.push_back(p_b[j]);
 			}
 		}
@@ -209,6 +255,7 @@ namespace
 			const spk::Edge &e = p_edges[i];
 			spk::Vector3 a = getKey(e.first());
 			spk::Vector3 b = getKey(e.second());
+			spk::cout << L"Stitch edge " << a << L" -> " << b << std::endl;
 			edges.emplace_back(a, b);
 			adj[a].push_back({i, true});
 			adj[b].push_back({i, false});
@@ -225,6 +272,7 @@ namespace
 				startCoord = c;
 			}
 		}
+		spk::cout << L"Loop start: " << start << std::endl;
 
 		std::vector<bool> used(edges.size(), false);
 		std::vector<spk::Vector3> loop;
@@ -237,6 +285,7 @@ namespace
 			float bestAng = -std::numeric_limits<float>::infinity();
 			size_t bestIdx = SIZE_MAX;
 			bool bestForward = true;
+			spk::cout << L"At vertex " << cur3 << std::endl;
 			for (auto &opt : adj[cur3])
 			{
 				size_t idx = opt.first;
@@ -250,6 +299,7 @@ namespace
 				float cross = curDir.x * dir.y - curDir.y * dir.x;
 				float dot = curDir.x * dir.x + curDir.y * dir.y;
 				float ang = std::atan2(cross, dot);
+				spk::cout << L"  Candidate " << next3 << L" angle " << ang << std::endl;
 				if (ang > bestAng)
 				{
 					bestAng = ang;
@@ -259,15 +309,18 @@ namespace
 			}
 			if (bestIdx == SIZE_MAX)
 			{
+				spk::cout << L"No next edge" << std::endl;
 				break;
 			}
 			used[bestIdx] = true;
 			spk::Vector3 next3 = bestForward == true ? edges[bestIdx].second() : edges[bestIdx].first();
+			spk::cout << L"  Taking " << next3 << std::endl;
 			loop.push_back(next3);
 			curDir = (coords[next3] - coords[cur3]).normalize();
 			cur3 = next3;
 			if (cur3 == start)
 			{
+				spk::cout << L"Loop closed" << std::endl;
 				break;
 			}
 		}
@@ -291,22 +344,31 @@ namespace spk
 
 		if (p_checkCompatibility == true && isAdjacent(p_other) == false && isOverlapping(p_other) == false)
 		{
+			spk::cout << L"Polygons not adjacent or overlapping" << std::endl;
 			return Polygon();
 		}
 
 		std::vector<spk::Edge> A = _edges;
 		std::vector<spk::Edge> B = p_other.edges();
 
+		debugEdges(L"Initial A", A);
+		debugEdges(L"Initial B", B);
+
 		splitAllEdges(A, B, plane().normal);
 		splitAllEdges(B, A, plane().normal);
 
+		debugEdges(L"Split A", A);
+		debugEdges(L"Split B", B);
+
 		std::vector<spk::Edge> boundary = subtractInternalShared(A, B);
-		if (boundary.empty())
+		debugEdges(L"Boundary", boundary);
+		if (boundary.empty() == true)
 		{
 			GENERATE_ERROR("Fused polygon is empty or degenerate");
 		}
 
 		std::vector<spk::Vector3> loop = stitchLoop(boundary, plane().normal);
+		spk::cout << L"Loop size: " << loop.size() << std::endl;
 		if (loop.size() < 4)
 		{
 			GENERATE_ERROR("Fused polygon could not be stitched (Loop of " + std::to_string(loop.size()) + " element(s))");
@@ -334,6 +396,7 @@ namespace spk
 		for (const auto &poly : p_polygons)
 		{
 			edgeSets.push_back(poly.edges());
+			debugEdges(L"Initial set", edgeSets.back());
 		}
 
 		for (size_t i = 0; i < edgeSets.size(); ++i)
@@ -342,13 +405,17 @@ namespace spk
 			{
 				splitAllEdges(edgeSets[i], edgeSets[j], n);
 				splitAllEdges(edgeSets[j], edgeSets[i], n);
+				debugEdges(L"Set after split i", edgeSets[i]);
+				debugEdges(L"Set after split j", edgeSets[j]);
 			}
 		}
 
 		std::vector<spk::Edge> boundary = edgeSets[0];
 		for (size_t i = 1; i < edgeSets.size(); ++i)
 		{
+			spk::cout << L"Merging boundary with set " << i << std::endl;
 			boundary = subtractInternalShared(boundary, edgeSets[i]);
+			debugEdges(L"Intermediate boundary", boundary);
 		}
 
 		if (boundary.empty() == true)
