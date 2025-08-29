@@ -7,13 +7,13 @@
 
 #include "structure/design_pattern/spk_contract_provider.hpp"
 #include "structure/engine/spk_mesh.hpp"
-#include "structure/engine/spk_vertex.hpp"
+#include "structure/engine/spk_obj_vertex.hpp"
 #include "structure/graphics/texture/spk_texture.hpp"
 #include "structure/spk_safe_pointer.hpp"
 
 namespace spk
 {
-	class ObjMesh : public TMesh<Vertex>
+	class ObjMesh : public TMesh<ObjVertex>
 	{
 	private:
 		static inline std::unordered_map<std::filesystem::path, spk::Texture> _materials;

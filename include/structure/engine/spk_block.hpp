@@ -100,15 +100,15 @@ namespace spk
 		private:
 			static spk::Vector3 _applyOrientation(const spk::Vector3 &p_position, const Orientation &p_orientation);
 
-			static bool _isFullQuad(const std::vector<spk::Vertex> &p_vertices, const spk::Vector3 &p_normal);
+			static bool _isFullQuad(const std::vector<spk::ObjVertex> &p_vertices, const spk::Vector3 &p_normal);
 
-			static std::vector<spk::Vertex> _extractVertices(const spk::ObjMesh::Shape &p_shape);
+			static std::vector<spk::ObjVertex> _extractVertices(const spk::ObjMesh::Shape &p_shape);
 
-			static void _applyOrientationToVertices(std::vector<spk::Vertex> &p_vertices, const Orientation &p_orientation);
+			static void _applyOrientationToVertices(std::vector<spk::ObjVertex> &p_vertices, const Orientation &p_orientation);
 
-			static bool _isAxisAlignedFace(const std::vector<spk::Vertex> &p_vertices, spk::Vector3 &p_outNormal);
+			static bool _isAxisAlignedFace(const std::vector<spk::ObjVertex> &p_vertices, spk::Vector3 &p_outNormal);
 
-			static void _addVerticesToMesh(spk::ObjMesh &p_mesh, const std::vector<spk::Vertex> &p_vertices);
+			static void _addVerticesToMesh(spk::ObjMesh &p_mesh, const std::vector<spk::ObjVertex> &p_vertices);
 
 			static Entry _compute(const spk::ObjMesh &p_mesh, const Orientation &p_orientation);
 

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "spk_sfinae.hpp"
-#include "structure/engine/spk_vertex.hpp"
 
 #include <filesystem>
 #include <initializer_list>

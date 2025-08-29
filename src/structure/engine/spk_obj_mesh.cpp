@@ -15,13 +15,13 @@ namespace spk
 {
 	namespace
 	{
-		static Vertex parseVertex(
+		static ObjVertex parseVertex(
 			const std::string &p_token,
 			const std::vector<spk::Vector3> &p_positions,
 			const std::vector<spk::Vector2> &p_uvs,
 			const std::vector<spk::Vector3> &p_normals)
 		{
-			Vertex result;
+			ObjVertex result;
 			std::array<std::string, 3> parts = {"", "", ""};
 			size_t start = 0;
 			size_t index = 0;
