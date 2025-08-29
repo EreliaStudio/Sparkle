@@ -35,6 +35,8 @@
 #include "structure/design_pattern/spk_state_machine.hpp"
 #include "structure/design_pattern/spk_stateful_object.hpp"
 #include "structure/engine/spk_action.hpp"
+#include "structure/engine/spk_block.hpp"
+#include "structure/engine/spk_block_map.hpp"
 #include "structure/engine/spk_camera.hpp"
 #include "structure/engine/spk_camera_component.hpp"
 #include "structure/engine/spk_collision_mesh.hpp"
