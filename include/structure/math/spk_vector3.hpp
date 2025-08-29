@@ -638,6 +638,25 @@ struct std::hash<spk::IVector3<TType>>
 {
 	size_t operator()(const spk::IVector3<TType> &p_vec) const
 	{
-		return hash<TType>()(p_vec.x) ^ (hash<TType>()(p_vec.y) << 1) ^ (hash<TType>()(p_vec.z) << 2);
+		auto quantize = [](TType p_value) -> long long
+		{
+			if constexpr (std::is_floating_point<TType>::value)
+			{
+				return static_cast<long long>(std::llround(p_value / spk::Constants::pointPrecision));
+			}
+			else
+			{
+				return static_cast<long long>(p_value);
+			}
+		};
+
+		size_t h1 = std::hash<long long>()(quantize(p_vec.x));
+		size_t h2 = std::hash<long long>()(quantize(p_vec.y));
+		size_t h3 = std::hash<long long>()(quantize(p_vec.z));
+
+		size_t seed = h1;
+		seed ^= h2 + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+		seed ^= h3 + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+		return seed;
 	}
 };

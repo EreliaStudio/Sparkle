@@ -54,6 +54,13 @@ namespace spk
 				{
 					result.addUnit(polygon);
 				}
+				else
+				{
+					for (const auto &convexPolygon : polygon.splitIntoConvex())
+					{
+						result.addUnit(convexPolygon);
+					}
+				}
 			}
 		}
 
