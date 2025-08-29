@@ -8,6 +8,21 @@ namespace spk
 {
 	class Edge
 	{
+	public:
+		struct Identifier
+		{
+			spk::Vector3 a;
+			spk::Vector3 b;
+
+			bool operator==(const Identifier &p_other) const;
+			bool operator<(const Identifier& other) const;
+			static Identifier from(const Edge &p_edge);
+		};
+
+		struct IdentifierHash
+		{
+			size_t operator()(const Identifier &p_edge) const noexcept;
+		};
 	private:
 		spk::Vector3 _first;
 		spk::Vector3 _second;

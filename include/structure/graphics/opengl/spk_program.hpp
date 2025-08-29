@@ -35,6 +35,7 @@ namespace spk::OpenGL
 		void activate();
 		void deactivate();
 		void render(GLsizei nbIndexes, GLsizei p_nbInstance);
+		void renderIndirect(GLintptr p_commandOffset, GLsizei p_drawCount, GLsizei p_stride);
 		void validate();
 
 		~Program();
