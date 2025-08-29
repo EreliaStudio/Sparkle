@@ -38,19 +38,14 @@ namespace spk
 
 			spk::CollisionMesh::Unit polygon = spk::Polygon::fromLoop(points);
 
-			if (polygon.isPlanar() == true)
-			{
-				spk::Plane tmpPlane = polygon.plane();
+			spk::Plane tmpPlane = polygon.plane();
 
-				bool isPlaneXYAtOrigin = (spk::Plane::Identifier::from(tmpPlane).normal == spk::Vector3(0, 0, 1) && spk::Plane::Identifier::from(tmpPlane).dotValue == 0.0f);
-				polygonCollection[spk::Plane::Identifier::from(tmpPlane)].addPolygon(polygon);
-			}
+			polygonCollection[spk::Plane::Identifier::from(tmpPlane)].addPolygon(polygon);
 		}
 
 		for (auto &[key, edgeMap] : polygonCollection)
 		{
-			bool isPlaneXYAtOrigin = (key.normal == spk::Vector3(0, 0, 1) && key.dotValue == 0.0f);
-			for (const auto &polygon : edgeMap.construct(isPlaneXYAtOrigin))
+			for (const auto &polygon : edgeMap.construct())
 			{
 				if (polygon.isConvex() == true)
 				{
