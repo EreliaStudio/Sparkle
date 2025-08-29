@@ -187,7 +187,7 @@ private:
 						3,
 						spk::Block::Orientation{spk::Block::HorizontalOrientation::ZPositive, spk::Block::VerticalOrientation::YNegative});
 				}
-				if (i == 1 && j != 1)
+				if (i == 2 && j != 2)
 				{
 					p_chunkToFill.setContent(
 						i,
@@ -196,7 +196,7 @@ private:
 						1,
 						spk::Block::Orientation{spk::Block::HorizontalOrientation::XPositive, spk::Block::VerticalOrientation::YPositive});
 				}
-				if (j == 1 && i != 1)
+				if (j == 2 && i != 2)
 				{
 					p_chunkToFill.setContent(
 						i,

@@ -315,6 +315,14 @@ namespace spk
 			{
 				return false;
 			}
+
+			for (const auto &myEdge : _edges)
+			{
+				if (_edgesIntersect(edge, myEdge, plane().normal) == true)
+				{
+					return false;
+				}
+			}
 		}
 		return true;
 	}

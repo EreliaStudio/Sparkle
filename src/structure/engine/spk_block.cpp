@@ -27,7 +27,7 @@ namespace spk
 
 	void Block::_applySprite(spk::ObjMesh::Shape &p_shape, const spk::SpriteSheet::Sprite &p_sprite)
 	{
-		auto transform = [&](spk::Vertex &p_v)
+		auto transform = [&](spk::ObjVertex &p_v)
 		{
 			if (p_v.uv == -1)
 			{
@@ -78,7 +78,7 @@ namespace spk
 	{
 		for (const auto &shape : p_source.shapes())
 		{
-			std::vector<spk::Vertex> transformed = shape.points;
+			std::vector<spk::ObjVertex> transformed = shape.points;
 			for (auto &vertex : transformed)
 			{
 				vertex.position += p_offset;
@@ -101,7 +101,7 @@ namespace spk
 		return result + spk::Vector3(0.5f, 0.5f, 0.5f);
 	}
 
-	bool Block::Cache::_isFullQuad(const std::vector<spk::Vertex> &p_vertices, const spk::Vector3 &p_normal)
+	bool Block::Cache::_isFullQuad(const std::vector<spk::ObjVertex> &p_vertices, const spk::Vector3 &p_normal)
 	{
 		if (p_vertices.size() != 4)
 		{
@@ -143,12 +143,12 @@ namespace spk
 			(std::abs(minB - 0.0f) < spk::Constants::pointPrecision) && (std::abs(maxB - 1.0f) < spk::Constants::pointPrecision));
 	}
 
-	std::vector<spk::Vertex> Block::Cache::_extractVertices(const spk::ObjMesh::Shape &p_shape)
+	std::vector<spk::ObjVertex> Block::Cache::_extractVertices(const spk::ObjMesh::Shape &p_shape)
 	{
 		return p_shape.points;
 	}
 
-	void Block::Cache::_applyOrientationToVertices(std::vector<spk::Vertex> &p_vertices, const Orientation &p_orientation)
+	void Block::Cache::_applyOrientationToVertices(std::vector<spk::ObjVertex> &p_vertices, const Orientation &p_orientation)
 	{
 		if (p_orientation.verticalOrientation == VerticalOrientation::YNegative)
 		{
@@ -184,7 +184,7 @@ namespace spk
 		}
 	}
 
-	bool Block::Cache::_isAxisAlignedFace(const std::vector<spk::Vertex> &p_vertices, spk::Vector3 &p_outNormal)
+	bool Block::Cache::_isAxisAlignedFace(const std::vector<spk::ObjVertex> &p_vertices, spk::Vector3 &p_outNormal)
 	{
 		auto eq = [&](float p_a, float p_b) { return std::abs(p_a - p_b) <= spk::Constants::pointPrecision; };
 
@@ -233,7 +233,7 @@ namespace spk
 		return false;
 	}
 
-	void Block::Cache::_addVerticesToMesh(spk::ObjMesh &p_mesh, const std::vector<spk::Vertex> &p_vertices)
+	void Block::Cache::_addVerticesToMesh(spk::ObjMesh &p_mesh, const std::vector<spk::ObjVertex> &p_vertices)
 	{
 		if (p_vertices.size() == 3)
 		{

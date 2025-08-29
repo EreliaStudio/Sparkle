@@ -13,6 +13,7 @@
 #include "structure/engine/spk_obj_mesh.hpp"
 #include "structure/engine/spk_obj_mesh_renderer.hpp"
 #include "structure/engine/spk_rigid_body.hpp"
+#include "structure/engine/spk_block.hpp"
 #include "structure/math/spk_vector3.hpp"
 #include "structure/spk_safe_pointer.hpp"
 #include "structure/system/spk_exception.hpp"

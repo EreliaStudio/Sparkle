@@ -54,6 +54,7 @@
 #include "structure/engine/spk_mesh.hpp"
 #include "structure/engine/spk_mesh_2d.hpp"
 #include "structure/engine/spk_mesh_2d_renderer.hpp"
+#include "structure/engine/spk_obj_vertex.hpp"
 #include "structure/engine/spk_obj_mesh.hpp"
 #include "structure/engine/spk_obj_mesh_renderer.hpp"
 #include "structure/engine/spk_ray_cast.hpp"
