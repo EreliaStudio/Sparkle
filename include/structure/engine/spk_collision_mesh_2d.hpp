@@ -2,6 +2,7 @@
 
 #include "structure/engine/spk_mesh_2d.hpp"
 #include "structure/math/spk_polygon_2d.hpp"
+#include "structure/spk_safe_pointer.hpp"
 #include <vector>
 
 namespace spk

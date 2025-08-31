@@ -23,14 +23,21 @@ namespace spk
 		void addPolygon(const spk::Polygon2D &p_polygon)
 		{
 			const auto &pts = p_polygon.points();
-			for (size_t i = 0; i < pts.size(); ++i)
-			{
-				spk::Edge2D e(pts[i], pts[(i + 1) % pts.size()]);
-				auto id = spk::Edge2D::Identifier::from(e);
-				auto &entry = _edges[id];
-				entry.edge = e;
-				entry.count++;
-			}
+            for (size_t i = 0; i < pts.size(); ++i)
+            {
+                spk::Edge2D e(pts[i], pts[(i + 1) % pts.size()]);
+                auto id = spk::Edge2D::Identifier::from(e);
+
+                auto it = _edges.find(id);
+                if (it == _edges.end())
+                {
+                    _edges.emplace(id, Entry{e, 1});
+                }
+                else
+                {
+                    it->second.count++;
+                }
+            }
 		}
 
 		std::vector<spk::Polygon2D> construct() const

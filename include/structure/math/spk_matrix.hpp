@@ -497,11 +497,6 @@ namespace spk
 				GENERATE_ERROR("Matrix inversion requires a square matrix.");
 			}
 
-			if (isInvertible() == false)
-			{
-				GENERATE_ERROR("Matrix is not invertible (determinant is ~0).");
-			}
-
 			const size_t N = SizeX;
 			IMatrix<SizeX, SizeY> A(*this);
 			IMatrix<SizeX, SizeY> B = IMatrix<SizeX, SizeY>::identity();

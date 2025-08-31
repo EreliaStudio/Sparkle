@@ -93,18 +93,18 @@ outputColor = vec4(color, 1.0);
 		unsigned int offset = 0;
 		for (const auto &unit : p_mesh.units())
 		{
-			for (const auto &point : unit)
+			for (const auto &point : unit.points())
 			{
 				_bufferSet.layout() << point;
 			}
-			if ((unit.size() >= 3) == true)
+			if (unit.points().size() >= 3)
 			{
-				for (size_t i = 1; i + 1 < unit.size(); ++i)
+				for (size_t i = 1; i + 1 < unit.points().size(); ++i)
 				{
 					_bufferSet.indexes() << (offset + 0) << (offset + static_cast<unsigned int>(i)) << (offset + static_cast<unsigned int>(i + 1));
 				}
 			}
-			offset += static_cast<unsigned int>(unit.size());
+			offset += static_cast<unsigned int>(unit.points().size());
 		}
 	}
 
