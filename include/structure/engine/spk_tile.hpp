@@ -17,20 +17,20 @@ namespace spk
 		};
 
 	private:
-		spk::Vector2Int _spriteAnchor = 0;
+		spk::Vector2UInt _spriteAnchor = 0;
 		spk::Flags<TFlagEnum> _flags = {};
 		Type _type = Type::Monotile;
 
 	public:
 		Tile() = default;
-		Tile(const spk::Vector2Int &p_spriteAnchor, Type p_type, spk::Flags<TFlagEnum> p_flags = {}) :
+		Tile(const spk::Vector2UInt &p_spriteAnchor, Type p_type, spk::Flags<TFlagEnum> p_flags = {}) :
 			_spriteAnchor(p_spriteAnchor),
 			_flags(p_flags),
 			_type(p_type)
 		{
 		}
 
-		const spk::Vector2Int &spriteAnchor() const
+		const spk::Vector2UInt &spriteAnchor() const
 		{
 			return _spriteAnchor;
 		}

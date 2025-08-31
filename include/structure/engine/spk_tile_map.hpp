@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <cmath>
 #include <map>
 #include <memory>
 #include <unordered_map>
@@ -19,11 +20,12 @@
 
 namespace spk
 {
-	template <size_t ChunkSizeX, size_t ChunkSizeY, size_t LayerCount, typename TFlagEnum>
+	template <size_t ChunkSizeX, size_t ChunkSizeY, size_t TLayerCount, typename TFlagEnum>
 	class TileMap : public spk::Entity
 	{
 	public:
 		using TileType = spk::Tile<TFlagEnum>;
+		static constexpr size_t LayerCount = TLayerCount;
 
 		class Chunk : public spk::Entity
 		{
@@ -42,27 +44,161 @@ namespace spk
 				bool _isBaked = false;
 				spk::Mesh2D _mesh;
 
-				static spk::Vector2Int _autoTileOffset(unsigned char p_mask)
-				{
-					static const std::array<spk::Vector2Int, 16> offsets = {
-						spk::Vector2Int(1, 4),
-						spk::Vector2Int(1, 3),
-						spk::Vector2Int(2, 4),
-						spk::Vector2Int(2, 3),
-						spk::Vector2Int(1, 5),
-						spk::Vector2Int(1, 4),
-						spk::Vector2Int(2, 5),
-						spk::Vector2Int(2, 4),
-						spk::Vector2Int(0, 4),
-						spk::Vector2Int(0, 3),
-						spk::Vector2Int(3, 4),
-						spk::Vector2Int(3, 3),
-						spk::Vector2Int(0, 5),
-						spk::Vector2Int(0, 4),
-						spk::Vector2Int(3, 5),
-						spk::Vector2Int(3, 4)};
-					return offsets[p_mask];
-				}
+                enum class Corner
+                {
+                    TopLeft = 0,
+                    TopRight = 1,
+                    BottomRight = 2,
+                    BottomLeft = 3
+                };
+
+                // For each corner, define the relative offsets to query neighbours:
+                // order is [sideA, sideB, diagonal].
+                static const std::map<Corner, std::array<spk::Vector2Int, 3>> &_cornerNeighbourOffsets()
+                {
+                    static const std::map<Corner, std::array<spk::Vector2Int, 3>> kOffsets = {
+                        {Corner::TopLeft, {spk::Vector2Int(0, 1), spk::Vector2Int(-1, 0), spk::Vector2Int(-1, 1)}},
+                        {Corner::TopRight, {spk::Vector2Int(0, 1), spk::Vector2Int(1, 0), spk::Vector2Int(1, 1)}},
+                        {Corner::BottomRight, {spk::Vector2Int(0, -1), spk::Vector2Int(1, 0), spk::Vector2Int(1, -1)}},
+                        {Corner::BottomLeft, {spk::Vector2Int(0, -1), spk::Vector2Int(-1, 0), spk::Vector2Int(-1, -1)}}};
+                    return (kOffsets);
+                }
+
+                static unsigned int _cornerRow(const Corner &p_corner)
+                {
+                    switch (p_corner)
+                    {
+                    case Corner::TopLeft:
+                        return (0);
+                    case Corner::TopRight:
+                        return (1);
+                    case Corner::BottomRight:
+                        return (2);
+                    case Corner::BottomLeft:
+                        return (3);
+                    }
+                    return (0);
+                }
+
+                // Mapping from (corner, [sideA, sideB, diag]) to sprite offset relative to the tile's spriteAnchor.
+                static const std::map<Corner, std::map<std::array<bool, 3>, spk::Vector2UInt>> &_cornerOffsetMap()
+                {
+                    static const std::map<Corner, std::map<std::array<bool, 3>, spk::Vector2UInt>> kMap = []() {
+                        std::map<Corner, std::map<std::array<bool, 3>, spk::Vector2UInt>> m;
+                        auto fillForRow = [&](Corner p_corner) {
+                            unsigned int row = _cornerRow(p_corner);
+                            auto &inner = m[p_corner];
+                            auto add = [&](bool a, bool b, bool d, unsigned int col) {
+                                inner[{a, b, d}] = spk::Vector2UInt(col, row);
+                            };
+                            // Enumerate all 8 combinations for (a,b,d)
+                            // Policy: column selection by a/b; diag only refines 'both' if desired.
+                            // none
+                            add(false, false, false, 0);
+                            add(false, false, true, 0);
+                            // sideA only
+                            add(true, false, false, 1);
+                            add(true, false, true, 1);
+                            // sideB only
+                            add(false, true, false, 2);
+                            add(false, true, true, 2);
+                            // both sides
+                            add(true, true, false, 3);
+                            add(true, true, true, 3);
+                        };
+                        fillForRow(Corner::TopLeft);
+                        fillForRow(Corner::TopRight);
+                        fillForRow(Corner::BottomRight);
+                        fillForRow(Corner::BottomLeft);
+                        return m;
+                    }();
+                    return (kMap);
+                }
+
+                // Returns [sideA, sideB, diagonal] state for the given corner
+                std::array<bool, 3> _getNeightbourState(const spk::Vector2Int &p_globalTileCoord,
+                                                        int p_layer,
+                                                        typename TileType::ID p_currentId,
+                                                        const Corner &p_corner) const
+                {
+                    const auto &cornerOffsets = _cornerNeighbourOffsets().at(p_corner);
+                    std::array<bool, 3> state = {false, false, false};
+                    // sideA
+                    state[0] = (_tileMap->content(p_globalTileCoord + cornerOffsets[0], p_layer) == p_currentId);
+                    // sideB
+                    state[1] = (_tileMap->content(p_globalTileCoord + cornerOffsets[1], p_layer) == p_currentId);
+                    // diagonal
+                    state[2] = (_tileMap->content(p_globalTileCoord + cornerOffsets[2], p_layer) == p_currentId);
+                    return (state);
+                }
+
+                void _bakeMonoTile(int p_x, int p_y, int p_layer, const TileType &p_tile)
+                {
+                    const auto &sprite = _tileMap->spriteSheet()->sprite(p_tile.spriteAnchor());
+                    _mesh.addShape({{spk::Vector2(p_x, p_y), sprite.anchor},
+                                    {spk::Vector2(p_x + 1.0f, p_y), {sprite.anchor.x + sprite.size.x, sprite.anchor.y}},
+                                    {spk::Vector2(p_x + 1.0f, p_y + 1.0f), sprite.anchor + sprite.size},
+                                    {spk::Vector2(p_x, p_y + 1.0f), {sprite.anchor.x, sprite.anchor.y + sprite.size.y}}});
+                }
+
+                void _bakeAutotile(int p_x, int p_y, int p_layer, typename TileType::ID p_currentId, const TileType &p_tile)
+                {
+                    const auto &sheet = *(_tileMap->spriteSheet());
+                    const spk::Vector2UInt &anchor = p_tile.spriteAnchor();
+                    const spk::Vector2Int globalBase = _chunkCoordinate * size + spk::Vector2Int(p_x, p_y);
+
+                    // For each corner: TopLeft, TopRight, BottomRight, BottomLeft
+                    const std::array<Corner, 4> corners = {Corner::TopLeft, Corner::TopRight, Corner::BottomRight, Corner::BottomLeft};
+
+                    for (const Corner &corner : corners)
+                    {
+                        std::array<bool, 3> state = _getNeightbourState(globalBase, p_layer, p_currentId, corner);
+
+                        const auto &cornerMap = _cornerOffsetMap().at(corner);
+                        spk::Vector2UInt offset = anchor;
+                        auto it = cornerMap.find(state);
+                        if ((it != cornerMap.end()) == true)
+                        {
+                            offset += it->second;
+                        }
+                        else
+                        {
+                            // Fallback (should not happen): use outer corner column 0 for this row
+                            offset += spk::Vector2UInt(0, _cornerRow(corner));
+                        }
+
+                        const auto &spr = sheet.sprite(offset);
+
+                        if (corner == Corner::TopLeft)
+                        {
+                            _mesh.addShape({{spk::Vector2(p_x, p_y + 0.5f), spr.anchor},
+                                            {spk::Vector2(p_x + 0.5f, p_y + 0.5f), {spr.anchor.x + spr.size.x, spr.anchor.y}},
+                                            {spk::Vector2(p_x + 0.5f, p_y + 1.0f), spr.anchor + spr.size},
+                                            {spk::Vector2(p_x, p_y + 1.0f), {spr.anchor.x, spr.anchor.y + spr.size.y}}});
+                        }
+                        else if (corner == Corner::TopRight)
+                        {
+                            _mesh.addShape({{spk::Vector2(p_x + 0.5f, p_y + 0.5f), spr.anchor},
+                                            {spk::Vector2(p_x + 1.0f, p_y + 0.5f), {spr.anchor.x + spr.size.x, spr.anchor.y}},
+                                            {spk::Vector2(p_x + 1.0f, p_y + 1.0f), spr.anchor + spr.size},
+                                            {spk::Vector2(p_x + 0.5f, p_y + 1.0f), {spr.anchor.x, spr.anchor.y + spr.size.y}}});
+                        }
+                        else if (corner == Corner::BottomRight)
+                        {
+                            _mesh.addShape({{spk::Vector2(p_x + 0.5f, p_y), spr.anchor},
+                                            {spk::Vector2(p_x + 1.0f, p_y), {spr.anchor.x + spr.size.x, spr.anchor.y}},
+                                            {spk::Vector2(p_x + 1.0f, p_y + 0.5f), spr.anchor + spr.size},
+                                            {spk::Vector2(p_x + 0.5f, p_y + 0.5f), {spr.anchor.x, spr.anchor.y + spr.size.y}}});
+                        }
+                        else
+                        {
+                            _mesh.addShape({{spk::Vector2(p_x, p_y), spr.anchor},
+                                            {spk::Vector2(p_x + 0.5f, p_y), {spr.anchor.x + spr.size.x, spr.anchor.y}},
+                                            {spk::Vector2(p_x + 0.5f, p_y + 0.5f), spr.anchor + spr.size},
+                                            {spk::Vector2(p_x, p_y + 0.5f), {spr.anchor.x, spr.anchor.y + spr.size.y}}});
+                        }
+                    }
+                }
 
 				void _bake()
 				{
@@ -81,7 +217,7 @@ namespace spk
 									{
 										continue;
 									}
-									spk::Vector2Int spriteCoord = tile->spriteAnchor();
+									spk::Vector2UInt spriteCoord = tile->spriteAnchor();
 									if (tile->type() == TileType::Type::Autotile)
 									{
 										spk::Vector2Int base = _chunkCoordinate * size + spk::Vector2Int(x, y);
@@ -89,10 +225,61 @@ namespace spk
 										bool right = (_tileMap->content(base + spk::Vector2Int(1, 0), layer) == current);
 										bool down = (_tileMap->content(base + spk::Vector2Int(0, -1), layer) == current);
 										bool left = (_tileMap->content(base + spk::Vector2Int(-1, 0), layer) == current);
-										unsigned char mask = (up ? 1 : 0) | (right ? 2 : 0) | (down ? 4 : 0) | (left ? 8 : 0);
-										spriteCoord += _autoTileOffset(mask);
+
+										// Diagonals
+										bool upLeft = (_tileMap->content(base + spk::Vector2Int(-1, 1), layer) == current);
+										bool upRight = (_tileMap->content(base + spk::Vector2Int(1, 1), layer) == current);
+										bool downRight = (_tileMap->content(base + spk::Vector2Int(1, -1), layer) == current);
+										bool downLeft = (_tileMap->content(base + spk::Vector2Int(-1, -1), layer) == current);
+
+										const auto &sheet = *(_tileMap->spriteSheet());
+										// TL quadrant (row 0): sides A=up, B=left, diag=upLeft
+										{
+											spk::Vector2UInt off = _quarterOffset(up, left, upLeft, 0);
+											const auto &spr = sheet.sprite(spriteCoord + off);
+											_mesh.addShape(
+												{{spk::Vector2(x, y + 0.5f), spr.anchor},
+												 {spk::Vector2(x + 0.5f, y + 0.5f), {spr.anchor.x + spr.size.x, spr.anchor.y}},
+												 {spk::Vector2(x + 0.5f, y + 1.0f), spr.anchor + spr.size},
+												 {spk::Vector2(x, y + 1.0f), {spr.anchor.x, spr.anchor.y + spr.size.y}}});
+										}
+										// TR quadrant (row 1): sides A=up, B=right, diag=upRight
+										{
+											spk::Vector2UInt off = _quarterOffset(up, right, upRight, 1);
+											const auto &spr = sheet.sprite(spriteCoord + off);
+											_mesh.addShape(
+												{{spk::Vector2(x + 0.5f, y + 0.5f), spr.anchor},
+												 {spk::Vector2(x + 1.0f, y + 0.5f), {spr.anchor.x + spr.size.x, spr.anchor.y}},
+												 {spk::Vector2(x + 1.0f, y + 1.0f), spr.anchor + spr.size},
+												 {spk::Vector2(x + 0.5f, y + 1.0f), {spr.anchor.x, spr.anchor.y + spr.size.y}}});
+										}
+										// BR quadrant (row 2): sides A=down, B=right, diag=downRight
+										{
+											spk::Vector2UInt off = _quarterOffset(down, right, downRight, 2);
+											const auto &spr = sheet.sprite(spriteCoord + off);
+											_mesh.addShape(
+												{{spk::Vector2(x + 0.5f, y), spr.anchor},
+												 {spk::Vector2(x + 1.0f, y), {spr.anchor.x + spr.size.x, spr.anchor.y}},
+												 {spk::Vector2(x + 1.0f, y + 0.5f), spr.anchor + spr.size},
+												 {spk::Vector2(x + 0.5f, y + 0.5f), {spr.anchor.x, spr.anchor.y + spr.size.y}}});
+										}
+										// BL quadrant (row 3): sides A=down, B=left, diag=downLeft
+										{
+											spk::Vector2UInt off = _quarterOffset(down, left, downLeft, 3);
+											const auto &spr = sheet.sprite(spriteCoord + off);
+											_mesh.addShape(
+												{{spk::Vector2(x, y), spr.anchor},
+												 {spk::Vector2(x + 0.5f, y), {spr.anchor.x + spr.size.x, spr.anchor.y}},
+												 {spk::Vector2(x + 0.5f, y + 0.5f), spr.anchor + spr.size},
+												 {spk::Vector2(x, y + 0.5f), {spr.anchor.x, spr.anchor.y + spr.size.y}}});
+										}
+
+										// Autotile fully handled by quadrants; skip full-tile draw
+										continue;
 									}
-									const auto &sprite = _tileMap->spriteSheet()->sprite(spk::Vector2UInt(spriteCoord));
+
+									// Monotile: draw single full-size quad
+									const auto &sprite = _tileMap->spriteSheet()->sprite(spriteCoord);
 									_mesh.addShape(
 										{{spk::Vector2(x, y), sprite.anchor},
 										 {spk::Vector2(x + 1.0f, y), {sprite.anchor.x + sprite.size.x, sprite.anchor.y}},
@@ -311,12 +498,19 @@ namespace spk
 
 		typename TileType::ID content(spk::Vector2Int p_global, int p_layer) const
 		{
-			spk::Vector2Int chunkCoord = {p_global.x / Chunk::size.x, p_global.y / Chunk::size.y};
+			// Compute the chunk coordinate using floor division to properly handle negatives
+			const int cx = static_cast<int>(std::floor(static_cast<float>(p_global.x) / static_cast<float>(Chunk::size.x)));
+			const int cy = static_cast<int>(std::floor(static_cast<float>(p_global.y) / static_cast<float>(Chunk::size.y)));
+			spk::Vector2Int chunkCoord = {cx, cy};
+
 			if (_chunks.contains(chunkCoord) == false)
 			{
 				return -1;
 			}
-			spk::Vector2Int local = {p_global.x - chunkCoord.x * Chunk::size.x, p_global.y - chunkCoord.y * Chunk::size.y};
+
+			// Compute local coordinates with positive modulo so they are in [0, size)
+			spk::Vector2Int local = {
+				static_cast<int>(spk::positiveModulo(p_global.x, Chunk::size.x)), static_cast<int>(spk::positiveModulo(p_global.y, Chunk::size.y))};
 			return _chunks.at(chunkCoord)->content(local, p_layer);
 		}
 
