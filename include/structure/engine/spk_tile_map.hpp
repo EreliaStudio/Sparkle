@@ -83,9 +83,9 @@ namespace spk
 
 					std::array<bool, 3> state = {false, false, false};
 
-					state[0] = (_tileMap->content(p_globalTileCoord + cornerOffsets[0], p_layer) == p_currentId);
-					state[1] = (_tileMap->content(p_globalTileCoord + cornerOffsets[1], p_layer) == p_currentId);
-					state[2] = (_tileMap->content(p_globalTileCoord + cornerOffsets[2], p_layer) == p_currentId);
+					state[0] = (_tileMap->content(p_globalTileCoord + cornerOffsets[0], p_layer) != p_currentId);
+					state[1] = (_tileMap->content(p_globalTileCoord + cornerOffsets[1], p_layer) != p_currentId);
+					state[2] = (_tileMap->content(p_globalTileCoord + cornerOffsets[2], p_layer) != p_currentId);
 
 					return (state);
 				}
@@ -96,66 +96,192 @@ namespace spk
 					using OffsetMat = std::array<OffsetRow, 2>;
 					using OffsetCube = std::array<OffsetMat, 2>;
 
+					// Autotile corner offsets indexed by neighbour state as [a][b][c]:
+					//  - a: orthogonal neighbour along the corner's primary axis
+					//       Top corners -> a = Up,  Bottom corners -> a = Down
+					//  - b: orthogonal neighbour perpendicular to the corner's primary axis
+					//       Left corners -> b = Left, Right corners -> b = Right
+					//  - c: diagonal neighbour at the corner
+					//
+					// For each corner, comments on each case show a 2x2 diagram of neighbours:
+					// X = tile identical to the target, . = different tile, C = current cell
+					//
+					// Corner::TopLeft diagram layout:
+					//  [c][a]
+					//  [b][C]
+					// Corner::TopRight diagram layout:
+					//  [a][c]
+					//  [C][b]
+					// Corner::BottomRight diagram layout:
+					//  [C][b]
+					//  [a][c]
+					// Corner::BottomLeft diagram layout:
+					//  [b][C]
+					//  [c][a]
 					static const std::unordered_map<Corner, OffsetCube> offsetsByCornerAndNeightbour = {
 						{Corner::TopLeft,
 						 OffsetCube{
 							 {OffsetMat{
 								  {OffsetRow{
+									// a=1, b=1, c=1
 									// XX
 									// XC
-									spk::Vector2UInt(0, 2), 
-									// ..
+									spk::Vector2UInt(1, 4), 
+									// a=1, b=1, c=0
+									// .X
 									// XC
-									spk::Vector2UInt(0, 2)},
+									spk::Vector2UInt(2, 0)},
 								   OffsetRow{
-									// X.
-									// .C
-									spk::Vector2UInt(2, 0), 
+									// a=1, b=0, c=1
 									// XX
 									// .C
-									spk::Vector2UInt(1, 2)}}},
+									spk::Vector2UInt(0, 4), 
+									// a=1, b=0, c=0
+									// .X
+									// .C
+									spk::Vector2UInt(0, 3)}}},
 							  OffsetMat{
 								  {OffsetRow{
-									spk::Vector2UInt(0, 5), 
-									spk::Vector2UInt(0, 3)},
+									// a=0, b=1, c=1
+									// X.
+									// XC
+									spk::Vector2UInt(1, 2), 
+									// a=0, b=1, c=0
+									// ..
+									// XC
+									spk::Vector2UInt(1, 2)},
 								   OffsetRow{
-									spk::Vector2UInt(2, 0), 
-									spk::Vector2UInt(1, 3)}}}}}},
+									// a=0, b=0, c=1
+									// X.
+									// .C
+									spk::Vector2UInt(0, 2), 
+									// a=0, b=0, c=0
+									// ..
+									// .C
+									spk::Vector2UInt(0, 0)}}}}}},
 
 						{Corner::TopRight,
 						 OffsetCube{
 							 {OffsetMat{
 								  {OffsetRow{
-									spk::Vector2UInt(3, 2), 
-									spk::Vector2UInt(3, 2)},
+									// a=1, b=1, c=1
+									// XX
+									// CX
+									spk::Vector2UInt(2, 4), 
+									// a=1, b=1, c=0
+									// X.
+									// CX
+									spk::Vector2UInt(3, 0)},
 								   OffsetRow{
-									spk::Vector2UInt(3, 2), 
-									spk::Vector2UInt(2, 2)}}},
+									// a=1, b=0, c=1
+									// XX
+									// C.
+									spk::Vector2UInt(3, 3), 
+									// a=1, b=0, c=0
+									// X.
+									// C.
+									spk::Vector2UInt(3, 3)}}},
 							  OffsetMat{
 								  {OffsetRow{
-									spk::Vector2UInt(3, 2), 
-									spk::Vector2UInt(3, 3)},
+									// a=0, b=1, c=1
+									// .X
+									// CX
+									spk::Vector2UInt(2, 2), 
+									// a=0, b=1, c=0
+									// ..
+									// CX
+									spk::Vector2UInt(2, 2)},
 								   OffsetRow{
-									spk::Vector2UInt(3, 0), 
-									spk::Vector2UInt(2, 3)}}}}}},
+									// a=0, b=0, c=1
+									// .X
+									// C.
+									spk::Vector2UInt(3, 2), 
+									// a=0, b=0, c=0
+									// ..
+									// C.
+									spk::Vector2UInt(1, 0)}}}}}},
 
 						{Corner::BottomRight,
 						 OffsetCube{
 							 {OffsetMat{
-								  {OffsetRow{spk::Vector2UInt(3, 5), spk::Vector2UInt(3, 5)},
-								   OffsetRow{spk::Vector2UInt(3, 5), spk::Vector2UInt(2, 5)}}},
+								  {OffsetRow{
+										// a=1, b=1, c=1
+										// CX
+										// XX
+										spk::Vector2UInt(2, 4), 
+										// a=1, b=1, c=0
+										// CX
+										// X.
+										spk::Vector2UInt(3, 1)},
+								   OffsetRow{
+										// a=1, b=0, c=1
+										// C.
+										// XX
+										spk::Vector2UInt(3, 4), 
+										// a=1, b=0, c=0
+										// C.
+										// X.
+										spk::Vector2UInt(3, 4)}}},
 							  OffsetMat{
-								  {OffsetRow{spk::Vector2UInt(0, 5), spk::Vector2UInt(3, 4)},
-								   OffsetRow{spk::Vector2UInt(3, 1), spk::Vector2UInt(2, 4)}}}}}},
+								  {OffsetRow{
+										// a=0, b=1, c=1
+										// CX
+										// .X
+										spk::Vector2UInt(2, 5), 
+										// a=0, b=1, c=0
+										// CX
+										// ..
+										spk::Vector2UInt(2, 5)},
+								   OffsetRow{
+										// a=0, b=0, c=1
+										// C.
+										// .X
+										spk::Vector2UInt(3, 5), 
+										// a=0, b=0, c=0
+										// C.
+										// ..
+										spk::Vector2UInt(1, 1)}}}}}},
 
 						{Corner::BottomLeft,
 						 OffsetCube{
 							 {OffsetMat{
-								  {OffsetRow{spk::Vector2UInt(0, 5), spk::Vector2UInt(0, 5)},
-								   OffsetRow{spk::Vector2UInt(0, 5), spk::Vector2UInt(1, 5)}}},
+								  {OffsetRow{
+										// a=1, b=1, c=1
+										// XC
+										// XX
+										spk::Vector2UInt(1, 4), 
+										// a=1, b=1, c=0
+										// XC
+										// .X
+										spk::Vector2UInt(2, 1)},
+								   OffsetRow{
+										// a=1, b=0, c=1
+										// .C
+										// XX
+										spk::Vector2UInt(0, 4), 
+										// a=1, b=0, c=0
+										// .C
+										// .X
+										spk::Vector2UInt(0, 4)}}},
 							  OffsetMat{
-								  {OffsetRow{spk::Vector2UInt(0, 0), spk::Vector2UInt(0, 4)},
-								   OffsetRow{spk::Vector2UInt(2, 1), spk::Vector2UInt(1, 4)}}}}}}};
+								  {OffsetRow{
+										// a=0, b=1, c=1
+										// XC
+										// X.
+										spk::Vector2UInt(1, 5), 
+										// a=0, b=1, c=0
+										// XC
+										// ..
+										spk::Vector2UInt(1, 5)},
+								   OffsetRow{
+										// a=0, b=0, c=1
+										// .C
+										// X.
+										spk::Vector2UInt(0, 5), 
+										// a=0, b=0, c=0
+										// .C
+										// ..
+										spk::Vector2UInt(0, 1)}}}}}}};
 
 					int aState = static_cast<int>(p_neightbourState[0]);
 					int bState = static_cast<int>(p_neightbourState[1]);
