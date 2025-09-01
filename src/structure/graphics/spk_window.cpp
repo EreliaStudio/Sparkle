@@ -14,8 +14,9 @@
 #include "structure/system/spk_exception.hpp"
 
 #include "structure/system/time/spk_timer.hpp"
-#include <numeric>
 #include <cmath>
+#include <limits>
+#include <numeric>
 
 namespace spk
 {
@@ -389,6 +390,29 @@ namespace spk
 		}
 	}
 
+	bool Window::_tickCounter(spk::Timer &p_timer, spk::SafePointer<Profiler::CounterMeasurement> &p_counter, size_t &p_currentValue)
+	{
+		bool hasClosedWindow = false;
+		if (p_timer.state() != spk::Timer::State::Running)
+		{
+			if (p_counter)
+			{
+				// Finalize previous 100ms window value, then reset for the next window
+				p_currentValue = p_counter->value();
+				p_counter->reset();
+				hasClosedWindow = true;
+			}
+			p_timer.start();
+		}
+
+		if (p_counter)
+		{
+			p_counter->increment();
+		}
+
+		return hasClosedWindow;
+	}
+
 	void Window::_rendererPreparation()
 	{
 		_guard(
@@ -406,7 +430,25 @@ namespace spk
 		spk::Timestamp startTS = spk::SystemUtils::getTime();
 
 		// 1) FPS tick (light, early)
-		_updateCounter(_fpsTimer, _fpsCounter, _currentFPS);
+		bool closedFPSWindow = _tickCounter(_fpsTimer, _fpsCounter, _currentFPS);
+		if (closedFPSWindow == true)
+		{
+			std::lock_guard<std::mutex> lock(_fpsCountMutex);
+			_fpsCountHistory.push_back(_currentFPS);
+			if (_fpsCountHistory.size() > _fpsCountHistoryCapacity)
+			{
+				_fpsCountHistory.pop_front();
+			}
+			const size_t perSecond = _currentFPS * 10;
+			if (perSecond < _minFPSCounter)
+			{
+				_minFPSCounter = perSecond;
+			}
+			if (perSecond > _maxFPSCounter)
+			{
+				_maxFPSCounter = perSecond;
+			}
+		}
 
 		// 2) Steps with fine-grained error context
 		_guard("Renderer::_handlePendingTimer", [&]() { _handlePendingTimer(); });
@@ -426,6 +468,14 @@ namespace spk
 			{
 				_renderDurationsNS.pop_front();
 			}
+			if (ns < _minRenderDurationNS)
+			{
+				_minRenderDurationNS = ns;
+			}
+			if (ns > _maxRenderDurationNS)
+			{
+				_maxRenderDurationNS = ns;
+			}
 		}
 	}
 
@@ -433,7 +483,25 @@ namespace spk
 	{
 		spk::Timestamp startTS = spk::SystemUtils::getTime();
 
-		_updateCounter(_upsTimer, _upsCounter, _currentUPS);
+		bool closedUPSWindow = _tickCounter(_upsTimer, _upsCounter, _currentUPS);
+		if (closedUPSWindow == true)
+		{
+			std::lock_guard<std::mutex> lock(_upsCountMutex);
+			_upsCountHistory.push_back(_currentUPS);
+			if (_upsCountHistory.size() > _upsCountHistoryCapacity)
+			{
+				_upsCountHistory.pop_front();
+			}
+			const size_t perSecond = _currentUPS * 10;
+			if (perSecond < _minUPSCount)
+			{
+				_minUPSCount = perSecond;
+			}
+			if (perSecond > _maxUPSCount)
+			{
+				_maxUPSCount = perSecond;
+			}
+		}
 
 		_guard("Updater::_mouseModule", [&]() { _mouseModule.treatMessages(); });
 		_guard("Updater::_keyboardModule", [&]() { _keyboardModule.treatMessages(); });
@@ -449,6 +517,14 @@ namespace spk
 			if (_updateDurationsNS.size() > _timingHistoryCapacity)
 			{
 				_updateDurationsNS.pop_front();
+			}
+			if (ns < _minUpdateDurationNS)
+			{
+				_minUpdateDurationNS = ns;
+			}
+			if (ns > _maxUpdateDurationNS)
+			{
+				_maxUpdateDurationNS = ns;
 			}
 		}
 	}
@@ -630,44 +706,46 @@ namespace spk
 
 	size_t Window::FPS() const
 	{
-		std::lock_guard<std::mutex> lock(_renderTimingMutex);
-		if (_renderDurationsNS.empty())
+		// Average the last 10 counts collected over 100ms windows
+		std::lock_guard<std::mutex> lock(_fpsCountMutex);
+		if (_fpsCountHistory.empty())
 		{
 			return 0;
 		}
-		long long sumNs = std::accumulate(_renderDurationsNS.begin(), _renderDurationsNS.end(), 0LL);
-		double avgNs = static_cast<double>(sumNs) / static_cast<double>(_renderDurationsNS.size());
-		if (avgNs <= 0.0)
+		size_t sum = 0;
+		for (const auto &v : _fpsCountHistory)
 		{
-			return 0;
+			sum += v;
 		}
-		double fps = 1'000'000'000.0 / avgNs; // Hz from average nanoseconds per frame
-		if (fps < 0.0)
+		double avgPerWindow = static_cast<double>(sum) / static_cast<double>(_fpsCountHistory.size());
+		double perSecond = avgPerWindow * 10.0; // 100ms windows -> scale to 1s
+		if (perSecond < 0.0)
 		{
-			fps = 0.0;
+			perSecond = 0.0;
 		}
-		return static_cast<size_t>(std::llround(fps));
+		return static_cast<size_t>(std::llround(perSecond));
 	}
 
 	size_t Window::UPS() const
 	{
-		std::lock_guard<std::mutex> lock(_updateTimingMutex);
-		if (_updateDurationsNS.empty())
+		// Average the last 10 counts collected over 100ms windows
+		std::lock_guard<std::mutex> lock(_upsCountMutex);
+		if (_upsCountHistory.empty())
 		{
 			return 0;
 		}
-		long long sumNs = std::accumulate(_updateDurationsNS.begin(), _updateDurationsNS.end(), 0LL);
-		double avgNs = static_cast<double>(sumNs) / static_cast<double>(_updateDurationsNS.size());
-		if (avgNs <= 0.0)
+		size_t sum = 0;
+		for (const auto &v : _upsCountHistory)
 		{
-			return 0;
+			sum += v;
 		}
-		double ups = 1'000'000'000.0 / avgNs;
-		if (ups < 0.0)
+		double avgPerWindow = static_cast<double>(sum) / static_cast<double>(_upsCountHistory.size());
+		double perSecond = avgPerWindow * 10.0; // 100ms windows -> scale to 1s
+		if (perSecond < 0.0)
 		{
-			ups = 0.0;
+			perSecond = 0.0;
 		}
-		return static_cast<size_t>(std::llround(ups));
+		return static_cast<size_t>(std::llround(perSecond));
 	}
 
 	double Window::realFPSDuration() const
@@ -680,6 +758,70 @@ namespace spk
 	{
 		std::lock_guard<std::mutex> lock(_updateTimingMutex);
 		return static_cast<double>(_lastUpdateDurationNS) / 1'000'000.0;
+	}
+
+	size_t Window::minFPS() const
+	{
+		std::lock_guard<std::mutex> lock(_fpsCountMutex);
+		if (_minFPSCounter == std::numeric_limits<size_t>::max())
+		{
+			return 0;
+		}
+		return _minFPSCounter;
+	}
+
+	size_t Window::maxFPS() const
+	{
+		std::lock_guard<std::mutex> lock(_fpsCountMutex);
+		return _maxFPSCounter;
+	}
+
+	size_t Window::minUPS() const
+	{
+		std::lock_guard<std::mutex> lock(_upsCountMutex);
+		if (_minUPSCount == std::numeric_limits<size_t>::max())
+		{
+			return 0;
+		}
+		return _minUPSCount;
+	}
+
+	size_t Window::maxUPS() const
+	{
+		std::lock_guard<std::mutex> lock(_upsCountMutex);
+		return _maxUPSCount;
+	}
+
+	double Window::minFPSDuration() const
+	{
+		std::lock_guard<std::mutex> lock(_renderTimingMutex);
+		if (_minRenderDurationNS == std::numeric_limits<long long>::max())
+		{
+			return 0.0;
+		}
+		return static_cast<double>(_minRenderDurationNS) / 1'000'000.0;
+	}
+
+	double Window::maxFPSDuration() const
+	{
+		std::lock_guard<std::mutex> lock(_renderTimingMutex);
+		return static_cast<double>(_maxRenderDurationNS) / 1'000'000.0;
+	}
+
+	double Window::minUPSDuration() const
+	{
+		std::lock_guard<std::mutex> lock(_updateTimingMutex);
+		if (_minUpdateDurationNS == std::numeric_limits<long long>::max())
+		{
+			return 0.0;
+		}
+		return static_cast<double>(_minUpdateDurationNS) / 1'000'000.0;
+	}
+
+	double Window::maxUPSDuration() const
+	{
+		std::lock_guard<std::mutex> lock(_updateTimingMutex);
+		return static_cast<double>(_maxUpdateDurationNS) / 1'000'000.0;
 	}
 
 	void Window::allowPaintRequest()
