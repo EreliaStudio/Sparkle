@@ -11,7 +11,7 @@ This repository follows a strict C++ style enforced by clang-format and clang-ti
   - Parameters must be camelBack prefixed with `p_`.
   - Private/Protected members and methods must be camelBack prefixed with `_`.
 - The same naming and prefix conventions apply to GLSL functions and parameters.
-- Always compare boolean values explicitly. Use `== true` or `== false` in every `if`, `for`, or `while` condition.
+- Always compare boolean values explicitly. Use `== true` or `== false` in every `if`, `for`, or `while` condition if the equality is not writen already ("tile != nullptr" can stay like this, no need to write stuff like this "(tile != nullptr) == true" nor "(vec2() == vec2()) == true". The idea is that i don't want to see any "implicit" boolean check)
 - Each header (`*.hpp`) must only contain function and class declarations. Their corresponding source (`*.cpp`) files must hold the implementations.
 - Avoid forward declarations when a header with the full type definition can be included instead.
 - Address any warnings that relate to the modified code.
