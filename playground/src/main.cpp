@@ -10,22 +10,55 @@ class PlaygroundTileMap : public spk::TileMap<16, 16, 4, TileFlag>
 private:
 	void _onChunkGeneration(const spk::Vector2Int &p_chunkCoordinate, Chunk &p_chunkToFill) override
 	{
-		for (int y = 0; y < Chunk::size.y; ++y)
-		{
-			for (int x = 0; x < Chunk::size.x; ++x)
-			{
-				TileType::ID id = 0;
-				if (x == 0 || y == 0 || x == Chunk::size.x - 1 || y == Chunk::size.y - 1)
-				{
-					id = 1;
-				}
-				p_chunkToFill.setContent(x, y, 0, id);
-				for (int layer = 1; layer < static_cast<int>(LayerCount); ++layer)
-				{
-					p_chunkToFill.setContent(x, y, layer, -1);
-				}
-			}
-		}
+		// Hardcoded pattern: "crosses on cross" using tile ID 0 (autotile)
+		// This intentionally uses a simple list of setContent calls for easy editing.
+		// Coordinates are within a 9x9 block starting at (0,0).
+		// Row 0
+		p_chunkToFill.setContent(2, 0, 0, 0);
+		p_chunkToFill.setContent(4, 0, 0, 0);
+		p_chunkToFill.setContent(6, 0, 0, 0);
+		// Row 1
+		p_chunkToFill.setContent(3, 1, 0, 0);
+		p_chunkToFill.setContent(4, 1, 0, 0);
+		p_chunkToFill.setContent(5, 1, 0, 0);
+		// Row 2
+		p_chunkToFill.setContent(0, 2, 0, 0);
+		p_chunkToFill.setContent(4, 2, 0, 0);
+		p_chunkToFill.setContent(8, 2, 0, 0);
+		// Row 3
+		p_chunkToFill.setContent(1, 3, 0, 0);
+		p_chunkToFill.setContent(3, 3, 0, 0);
+		p_chunkToFill.setContent(4, 3, 0, 0);
+		p_chunkToFill.setContent(5, 3, 0, 0);
+		p_chunkToFill.setContent(7, 3, 0, 0);
+		// Row 4
+		p_chunkToFill.setContent(0, 4, 0, 0);
+		p_chunkToFill.setContent(1, 4, 0, 0);
+		p_chunkToFill.setContent(2, 4, 0, 0);
+		p_chunkToFill.setContent(3, 4, 0, 0);
+		p_chunkToFill.setContent(4, 4, 0, 0);
+		p_chunkToFill.setContent(5, 4, 0, 0);
+		p_chunkToFill.setContent(6, 4, 0, 0);
+		p_chunkToFill.setContent(7, 4, 0, 0);
+		p_chunkToFill.setContent(8, 4, 0, 0);
+		// Row 5
+		p_chunkToFill.setContent(1, 5, 0, 0);
+		p_chunkToFill.setContent(3, 5, 0, 0);
+		p_chunkToFill.setContent(4, 5, 0, 0);
+		p_chunkToFill.setContent(5, 5, 0, 0);
+		p_chunkToFill.setContent(7, 5, 0, 0);
+		// Row 6
+		p_chunkToFill.setContent(0, 6, 0, 0);
+		p_chunkToFill.setContent(4, 6, 0, 0);
+		p_chunkToFill.setContent(8, 6, 0, 0);
+		// Row 7
+		p_chunkToFill.setContent(3, 7, 0, 0);
+		p_chunkToFill.setContent(4, 7, 0, 0);
+		p_chunkToFill.setContent(5, 7, 0, 0);
+		// Row 8
+		p_chunkToFill.setContent(2, 8, 0, 0);
+		p_chunkToFill.setContent(4, 8, 0, 0);
+		p_chunkToFill.setContent(6, 8, 0, 0);
 	}
 
 public:
@@ -151,6 +184,7 @@ int main()
 
 	// Player entity with 2D top-down controller
 	spk::Entity player(L"Player", nullptr);
+	player.transform().place({4, 4, 2.5f});
 	player.addComponent<TopDown2DController>(L"Player/TopDown2DController");
 
 	// Camera holder as a child of the player so it follows automatically
@@ -161,7 +195,7 @@ int main()
 
 	try
 	{
-		cameraComponent->camera().setOrthographic(-80.0f, 80.0f, -80.0f, 80.0f);
+		cameraComponent->setOrthographic(64.0f, 64.0f);
 	} catch (const std::exception &e)
 	{
 		PROPAGATE_ERROR("Error while computing the camera as orthographic", e);
@@ -177,7 +211,7 @@ int main()
 	tileMap.addTileByID(1, PlaygroundTileMap::TileType({0, 0}, PlaygroundTileMap::TileType::Type::Monotile));
 	tileMap.addTileByID(0, PlaygroundTileMap::TileType({1, 0}, PlaygroundTileMap::TileType::Type::Autotile));
 
-	tileMap.setChunkRange({-5, -5}, {5, 5});
+	tileMap.setChunkRange({-0, -0}, {0, 0});
 
 	player.activate();
 	cameraHolder.activate();
