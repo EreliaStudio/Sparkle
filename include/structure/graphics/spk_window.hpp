@@ -21,6 +21,7 @@
 #include <map>
 #include <set>
 #include <unordered_set>
+#include <mutex>
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -115,6 +116,15 @@ namespace spk
 
 		void _guard(const char* label, const std::function<void()>& fn);
 
+		// --- Timing (durations-based FPS/UPS) ---
+		static constexpr size_t _timingHistoryCapacity = 120;
+		mutable std::mutex _renderTimingMutex;
+		mutable std::mutex _updateTimingMutex;
+		std::deque<long long> _renderDurationsNS;
+		std::deque<long long> _updateDurationsNS;
+		long long _lastRenderDurationNS = 0; // nanoseconds
+		long long _lastUpdateDurationNS = 0; // nanoseconds
+
 	public:
 		Window(const std::wstring &p_title, const spk::Geometry2D &p_geometry);
 		~Window();
@@ -145,6 +155,12 @@ namespace spk
 
 		size_t nbFPS() const { return _currentFPS * 10;}
 		size_t nbUPS() const { return _currentUPS * 10;}
+
+		// Durations-based metrics (averaged over recent frames)
+		size_t FPS() const;
+		size_t UPS() const;
+		double realFPSDuration() const; // milliseconds of the last rendered frame
+		double realUPSDuration() const; // milliseconds of the last update iteration
 
 		spk::SafePointer<Widget> widget() const;
 		operator spk::SafePointer<Widget>() const;
