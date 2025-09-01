@@ -10,7 +10,8 @@ class PlaygroundTileMap : public spk::TileMap<16, 16, 4, TileFlag>
 {
 private:
 	spk::Perlin _perlin;
-	float _noiseScale = 0.12f;
+	float _noiseScale = 0.04f;	 // larger features (lower base frequency)
+	float _noiseContrast = 2.0f; // >1.0 pushes values toward extremes
 
 	short _tileIdFromNoise(float p_value) const
 	{
@@ -51,6 +52,16 @@ private:
 				const spk::Vector2Int world = chunkOrigin + spk::Vector2Int(x, y);
 
 				float n = _perlin.sample2D(static_cast<float>(world.x) * _noiseScale, static_cast<float>(world.y) * _noiseScale, 0.0f, 1.0f);
+				// Increase dynamic range around 0.5 to see more extremes
+				n = 0.5f + (n - 0.5f) * _noiseContrast;
+				if (n < 0.0f)
+				{
+					n = 0.0f;
+				}
+				if (n > 1.0f)
+				{
+					n = 1.0f;
+				}
 				short id = _tileIdFromNoise(n);
 				p_chunkToFill.setContent(x, y, 0, id);
 			}
@@ -65,7 +76,7 @@ public:
 	{
 		_perlin.setOctaves(6);
 		_perlin.setPersistence(0.5f);
-		_perlin.setLacunarity(2.3f);
+		_perlin.setLacunarity(1.9f); // slower frequency growth per octave for larger structures
 		_perlin.setInterpolation(spk::Perlin::Interpolation::SmoothStep);
 
 		_perlin.setSeed(1337u);
@@ -86,7 +97,7 @@ public:
 	{
 		if ((_tileMap != nullptr) == true)
 		{
-			_tileMap->setCollisionFlags(spk::Flags<TileFlag>(TileFlag::None));
+			_tileMap->setCollisionFlags(TileFlag::Obstacle);
 		}
 
 		_toggleAction = std::make_unique<spk::KeyboardAction>(
@@ -156,7 +167,8 @@ private:
 			const spk::Camera &cam = _cameraComponent->camera();
 			const spk::Matrix4x4 &camModel = _cameraComponent->owner()->transform().model();
 
-			auto toWorld = [&](const spk::Vector2 &p_ndc) -> spk::Vector3 {
+			auto toWorld = [&](const spk::Vector2 &p_ndc) -> spk::Vector3
+			{
 				spk::Vector3 inCam = cam.convertScreenToCamera(p_ndc);
 				return (camModel * spk::Vector4(inCam, 1.0f)).xyz();
 			};
@@ -190,7 +202,8 @@ private:
 	}
 
 public:
-	TileMapChunkStreamer(const std::wstring &p_name, spk::SafePointer<PlaygroundTileMap> p_tileMap, spk::SafePointer<spk::CameraComponent> p_cameraComponent) :
+	TileMapChunkStreamer(
+		const std::wstring &p_name, spk::SafePointer<PlaygroundTileMap> p_tileMap, spk::SafePointer<spk::CameraComponent> p_cameraComponent) :
 		spk::Component(p_name),
 		_tileMap(p_tileMap),
 		_cameraComponent(p_cameraComponent)
@@ -356,13 +369,13 @@ int main()
 	spk::SpriteSheet spriteSheet("playground/resources/texture/tile_map.png", {28, 6});
 	tileMap.setSpriteSheet(&spriteSheet);
 
-	tileMap.addTileByID(0, PlaygroundTileMap::TileType({0, 0}, PlaygroundTileMap::TileType::Type::Autotile));  // Deep water
-	tileMap.addTileByID(1, PlaygroundTileMap::TileType({4, 0}, PlaygroundTileMap::TileType::Type::Autotile));  // Water
-	tileMap.addTileByID(2, PlaygroundTileMap::TileType({8, 0}, PlaygroundTileMap::TileType::Type::Autotile));  // Beach
-	tileMap.addTileByID(3, PlaygroundTileMap::TileType({12, 0}, PlaygroundTileMap::TileType::Type::Autotile)); // Plain
-	tileMap.addTileByID(4, PlaygroundTileMap::TileType({16, 0}, PlaygroundTileMap::TileType::Type::Autotile)); // Forest
-	tileMap.addTileByID(5, PlaygroundTileMap::TileType({20, 0}, PlaygroundTileMap::TileType::Type::Autotile)); // Montain
-	tileMap.addTileByID(6, PlaygroundTileMap::TileType({24, 0}, PlaygroundTileMap::TileType::Type::Autotile)); // Peak
+	tileMap.addTileByID(0, PlaygroundTileMap::TileType({0, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::Obstacle));  // Deep water
+	tileMap.addTileByID(1, PlaygroundTileMap::TileType({4, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::Obstacle));  // Water
+	tileMap.addTileByID(2, PlaygroundTileMap::TileType({8, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::None));	   // Beach
+	tileMap.addTileByID(3, PlaygroundTileMap::TileType({12, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::None));	   // Plain
+	tileMap.addTileByID(4, PlaygroundTileMap::TileType({16, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::None));	   // Forest
+	tileMap.addTileByID(5, PlaygroundTileMap::TileType({20, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::Obstacle)); // Montain
+	tileMap.addTileByID(6, PlaygroundTileMap::TileType({24, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::Obstacle)); // Peak
 
 	player.addComponent<TileMapChunkStreamer>(L"Player/TileMapChunkStreamer", &tileMap, cameraComponent);
 

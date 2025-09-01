@@ -122,166 +122,150 @@ namespace spk
 						{Corner::TopLeft,
 						 OffsetCube{
 							 {OffsetMat{
-								  {OffsetRow{
-									// a=1, b=1, c=1
-									// XX
-									// XC
-									spk::Vector2UInt(1, 4), 
-									// a=1, b=1, c=0
-									// .X
-									// XC
-									spk::Vector2UInt(2, 0)},
-								   OffsetRow{
-									// a=1, b=0, c=1
-									// XX
-									// .C
-									spk::Vector2UInt(0, 4), 
-									// a=1, b=0, c=0
-									// .X
-									// .C
-									spk::Vector2UInt(0, 3)}}},
+								  {OffsetRow{// a=1, b=1, c=1
+											 // XX
+											 // XC
+											 spk::Vector2UInt(1, 4),
+											 // a=1, b=1, c=0
+											 // .X
+											 // XC
+											 spk::Vector2UInt(2, 0)},
+								   OffsetRow{// a=1, b=0, c=1
+											 // XX
+											 // .C
+											 spk::Vector2UInt(0, 4),
+											 // a=1, b=0, c=0
+											 // .X
+											 // .C
+											 spk::Vector2UInt(0, 3)}}},
 							  OffsetMat{
-								  {OffsetRow{
-									// a=0, b=1, c=1
-									// X.
-									// XC
-									spk::Vector2UInt(1, 2), 
-									// a=0, b=1, c=0
-									// ..
-									// XC
-									spk::Vector2UInt(1, 2)},
-								   OffsetRow{
-									// a=0, b=0, c=1
-									// X.
-									// .C
-									spk::Vector2UInt(0, 2), 
-									// a=0, b=0, c=0
-									// ..
-									// .C
-									spk::Vector2UInt(0, 0)}}}}}},
+								  {OffsetRow{// a=0, b=1, c=1
+											 // X.
+											 // XC
+											 spk::Vector2UInt(1, 2),
+											 // a=0, b=1, c=0
+											 // ..
+											 // XC
+											 spk::Vector2UInt(1, 2)},
+								   OffsetRow{// a=0, b=0, c=1
+											 // X.
+											 // .C
+											 spk::Vector2UInt(0, 2),
+											 // a=0, b=0, c=0
+											 // ..
+											 // .C
+											 spk::Vector2UInt(0, 0)}}}}}},
 
 						{Corner::TopRight,
 						 OffsetCube{
 							 {OffsetMat{
-								  {OffsetRow{
-									// a=1, b=1, c=1
-									// XX
-									// CX
-									spk::Vector2UInt(2, 4), 
-									// a=1, b=1, c=0
-									// X.
-									// CX
-									spk::Vector2UInt(3, 0)},
-								   OffsetRow{
-									// a=1, b=0, c=1
-									// XX
-									// C.
-									spk::Vector2UInt(3, 3), 
-									// a=1, b=0, c=0
-									// X.
-									// C.
-									spk::Vector2UInt(3, 3)}}},
+								  {OffsetRow{// a=1, b=1, c=1
+											 // XX
+											 // CX
+											 spk::Vector2UInt(2, 4),
+											 // a=1, b=1, c=0
+											 // X.
+											 // CX
+											 spk::Vector2UInt(3, 0)},
+								   OffsetRow{// a=1, b=0, c=1
+											 // XX
+											 // C.
+											 spk::Vector2UInt(3, 3),
+											 // a=1, b=0, c=0
+											 // X.
+											 // C.
+											 spk::Vector2UInt(3, 3)}}},
 							  OffsetMat{
-								  {OffsetRow{
-									// a=0, b=1, c=1
-									// .X
-									// CX
-									spk::Vector2UInt(2, 2), 
-									// a=0, b=1, c=0
-									// ..
-									// CX
-									spk::Vector2UInt(2, 2)},
-								   OffsetRow{
-									// a=0, b=0, c=1
-									// .X
-									// C.
-									spk::Vector2UInt(3, 2), 
-									// a=0, b=0, c=0
-									// ..
-									// C.
-									spk::Vector2UInt(1, 0)}}}}}},
+								  {OffsetRow{// a=0, b=1, c=1
+											 // .X
+											 // CX
+											 spk::Vector2UInt(2, 2),
+											 // a=0, b=1, c=0
+											 // ..
+											 // CX
+											 spk::Vector2UInt(2, 2)},
+								   OffsetRow{// a=0, b=0, c=1
+											 // .X
+											 // C.
+											 spk::Vector2UInt(3, 2),
+											 // a=0, b=0, c=0
+											 // ..
+											 // C.
+											 spk::Vector2UInt(1, 0)}}}}}},
 
 						{Corner::BottomRight,
 						 OffsetCube{
 							 {OffsetMat{
-								  {OffsetRow{
-										// a=1, b=1, c=1
-										// CX
-										// XX
-										spk::Vector2UInt(2, 4), 
-										// a=1, b=1, c=0
-										// CX
-										// X.
-										spk::Vector2UInt(3, 1)},
-								   OffsetRow{
-										// a=1, b=0, c=1
-										// C.
-										// XX
-										spk::Vector2UInt(3, 4), 
-										// a=1, b=0, c=0
-										// C.
-										// X.
-										spk::Vector2UInt(3, 4)}}},
+								  {OffsetRow{// a=1, b=1, c=1
+											 // CX
+											 // XX
+											 spk::Vector2UInt(2, 4),
+											 // a=1, b=1, c=0
+											 // CX
+											 // X.
+											 spk::Vector2UInt(3, 1)},
+								   OffsetRow{// a=1, b=0, c=1
+											 // C.
+											 // XX
+											 spk::Vector2UInt(3, 4),
+											 // a=1, b=0, c=0
+											 // C.
+											 // X.
+											 spk::Vector2UInt(3, 4)}}},
 							  OffsetMat{
-								  {OffsetRow{
-										// a=0, b=1, c=1
-										// CX
-										// .X
-										spk::Vector2UInt(2, 5), 
-										// a=0, b=1, c=0
-										// CX
-										// ..
-										spk::Vector2UInt(2, 5)},
-								   OffsetRow{
-										// a=0, b=0, c=1
-										// C.
-										// .X
-										spk::Vector2UInt(3, 5), 
-										// a=0, b=0, c=0
-										// C.
-										// ..
-										spk::Vector2UInt(1, 1)}}}}}},
+								  {OffsetRow{// a=0, b=1, c=1
+											 // CX
+											 // .X
+											 spk::Vector2UInt(2, 5),
+											 // a=0, b=1, c=0
+											 // CX
+											 // ..
+											 spk::Vector2UInt(2, 5)},
+								   OffsetRow{// a=0, b=0, c=1
+											 // C.
+											 // .X
+											 spk::Vector2UInt(3, 5),
+											 // a=0, b=0, c=0
+											 // C.
+											 // ..
+											 spk::Vector2UInt(1, 1)}}}}}},
 
 						{Corner::BottomLeft,
 						 OffsetCube{
 							 {OffsetMat{
-								  {OffsetRow{
-										// a=1, b=1, c=1
-										// XC
-										// XX
-										spk::Vector2UInt(1, 4), 
-										// a=1, b=1, c=0
-										// XC
-										// .X
-										spk::Vector2UInt(2, 1)},
-								   OffsetRow{
-										// a=1, b=0, c=1
-										// .C
-										// XX
-										spk::Vector2UInt(0, 4), 
-										// a=1, b=0, c=0
-										// .C
-										// .X
-										spk::Vector2UInt(0, 4)}}},
+								  {OffsetRow{// a=1, b=1, c=1
+											 // XC
+											 // XX
+											 spk::Vector2UInt(1, 4),
+											 // a=1, b=1, c=0
+											 // XC
+											 // .X
+											 spk::Vector2UInt(2, 1)},
+								   OffsetRow{// a=1, b=0, c=1
+											 // .C
+											 // XX
+											 spk::Vector2UInt(0, 4),
+											 // a=1, b=0, c=0
+											 // .C
+											 // .X
+											 spk::Vector2UInt(0, 4)}}},
 							  OffsetMat{
-								  {OffsetRow{
-										// a=0, b=1, c=1
-										// XC
-										// X.
-										spk::Vector2UInt(1, 5), 
-										// a=0, b=1, c=0
-										// XC
-										// ..
-										spk::Vector2UInt(1, 5)},
-								   OffsetRow{
-										// a=0, b=0, c=1
-										// .C
-										// X.
-										spk::Vector2UInt(0, 5), 
-										// a=0, b=0, c=0
-										// .C
-										// ..
-										spk::Vector2UInt(0, 1)}}}}}}};
+								  {OffsetRow{// a=0, b=1, c=1
+											 // XC
+											 // X.
+											 spk::Vector2UInt(1, 5),
+											 // a=0, b=1, c=0
+											 // XC
+											 // ..
+											 spk::Vector2UInt(1, 5)},
+								   OffsetRow{// a=0, b=0, c=1
+											 // .C
+											 // X.
+											 spk::Vector2UInt(0, 5),
+											 // a=0, b=0, c=0
+											 // .C
+											 // ..
+											 spk::Vector2UInt(0, 1)}}}}}}};
 
 					int aState = static_cast<int>(p_neightbourState[0]);
 					int bState = static_cast<int>(p_neightbourState[1]);
@@ -454,6 +438,7 @@ namespace spk
 			spk::SafePointer<spk::CollisionMesh2DRenderer> _collisionRenderer;
 			spk::CollisionMesh2D _collisionMesh;
 			spk::Flags<TFlagEnum> _collisionFlags = {};
+			bool _collisionMeshDirty = true;
 			spk::SafePointer<Data> _data;
 
 		public:
@@ -669,16 +654,10 @@ namespace spk
 
 			void setCollisionFlags(spk::Flags<TFlagEnum> p_flags)
 			{
-				// Regenerate the collision mesh when flags change or when no mesh has been generated yet.
-				if ((_collisionFlags != p_flags) || (_collisionMesh.units().empty() == true))
+				if (_collisionFlags != p_flags)
 				{
-					_collisionMesh = collisionMesh2D(p_flags);
 					_collisionFlags = p_flags;
-				}
-
-				if (_collisionRenderer != nullptr)
-				{
-					_collisionRenderer->setMesh(&_collisionMesh);
+					_collisionMeshDirty = true;
 				}
 			}
 
@@ -686,6 +665,16 @@ namespace spk
 			{
 				if (p_collisionMode == true)
 				{
+					// Ensure collision mesh exists when entering collision render mode.
+					if ((_collisionMesh.units().empty() == true) || (_collisionMeshDirty == true))
+					{
+						_collisionMesh = collisionMesh2D(_collisionFlags);
+						_collisionMeshDirty = false;
+						if (_collisionRenderer != nullptr)
+						{
+							_collisionRenderer->setMesh(&_collisionMesh);
+						}
+					}
 					if (_collisionRenderer != nullptr)
 					{
 						_collisionRenderer->activate();
@@ -717,6 +706,10 @@ namespace spk
 
 		std::vector<spk::SafePointer<Chunk>> _activeChunks;
 
+		// Store the current collision mask to apply to newly created/visible chunks.
+		spk::Flags<TFlagEnum> _collisionMask = {};
+		bool _collisionRenderMode = false;
+
 		// Mark 4-neighbour chunks dirty so they can re-bake autotiles touching the new chunk.
 		void _unbakeNeightbours(const spk::Vector2Int &p_chunkCoordinate)
 		{
@@ -742,6 +735,8 @@ namespace spk
 			newChunk->transform().place(spk::Vector3(p_chunkCoordinate.x * Chunk::size.x, p_chunkCoordinate.y * Chunk::size.y, 0));
 			newChunk->setSpriteSheet(_spriteSheet);
 			newChunk->fill(-1);
+			// Ensure the chunk uses the current collision mask; mesh is built lazily on demand.
+			newChunk->setCollisionFlags(_collisionMask);
 
 			_onChunkGeneration(p_chunkCoordinate, *newChunk);
 
@@ -832,6 +827,8 @@ namespace spk
 					}
 
 					_activeChunks.push_back((_chunks[chunkPos].get()));
+					// Ensure render mode consistency for newly active chunks.
+					_chunks[chunkPos]->setRenderMode(_collisionRenderMode);
 				}
 			}
 
@@ -854,6 +851,7 @@ namespace spk
 
 		void setCollisionFlags(spk::Flags<TFlagEnum> p_flags)
 		{
+			_collisionMask = p_flags;
 			for (auto &chunk : _activeChunks)
 			{
 				if (chunk != nullptr)
@@ -865,6 +863,7 @@ namespace spk
 
 		void setRenderMode(bool p_collisionMode)
 		{
+			_collisionRenderMode = p_collisionMode;
 			for (auto &chunk : _activeChunks)
 			{
 				if (chunk != nullptr)
