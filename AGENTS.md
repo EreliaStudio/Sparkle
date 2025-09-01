@@ -11,7 +11,21 @@ This repository follows a strict C++ style enforced by clang-format and clang-ti
   - Parameters must be camelBack prefixed with `p_`.
   - Private/Protected members and methods must be camelBack prefixed with `_`.
 - The same naming and prefix conventions apply to GLSL functions and parameters.
-- Always compare boolean values explicitly. Use `== true` or `== false` in every `if`, `for`, or `while` condition if the equality is not writen already ("tile != nullptr" can stay like this, no need to write stuff like this "(tile != nullptr) == true" nor "(vec2() == vec2()) == true". The idea is that i don't want to see any "implicit" boolean check)
+- **Boolean checks**:
+  - Boolean variables must always be compared explicitly with `== true` or `== false`.
+    ```cpp
+    if (isVisible == true) { ... }
+    if (hasUpdated == false) { ... }
+    ```
+  - Do **not** add `== true` or `== false` to:
+    - Pointer/nullptr checks (`ptr != nullptr`, `ptr == nullptr`).
+    - Value/object comparisons (`a == b`, `vec2A == vec2B`).
+    - Integer/enum comparisons (`count > 0`, `mode == Mode::X`).
+    ```cpp
+    if (tile != nullptr) { ... }        // correct
+    if (vecA == vecB) { ... }           // correct
+    if ((_collisionRenderer != nullptr) == true) { ... } // not allowed
+    ```
 - Each header (`*.hpp`) must only contain function and class declarations. Their corresponding source (`*.cpp`) files must hold the implementations.
 - Avoid forward declarations when a header with the full type definition can be included instead.
 - Address any warnings that relate to the modified code.
@@ -20,4 +34,3 @@ This repository follows a strict C++ style enforced by clang-format and clang-ti
 - Configure the build with `cmake --preset test-debug` and build with `cmake --build --preset test-debug`.
 - Run the test suite with `ctest --preset test-debug`.
 - If these commands fail due to missing dependencies, note this in your PR message.
-
