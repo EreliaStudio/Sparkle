@@ -333,11 +333,55 @@ public:
 	}
 };
 
+
+class DebugOverlayManager : public spk::Widget
+{
+private:
+	spk::Profiler::Instanciator _profilerInstanciator;
+	spk::DebugOverlay<3, 20> _debugOverlay;
+
+	void _onGeometryChange() override
+	{
+		_debugOverlay.setGeometry({{0, 0}, geometry().size});
+	}
+
+	void _onUpdateEvent(spk::UpdateEvent &p_event) override
+	{
+			size_t fps = 0;
+			double frameMs = 0.0;
+			if (p_event.keyboard != nullptr)
+			{
+				spk::SafePointer<spk::Window> wnd = p_event.keyboard->window();
+				if (wnd != nullptr)
+				{
+					fps = wnd->FPS();
+					frameMs = wnd->FPSDuration();
+				}
+			}
+			_debugOverlay.setText(0, 0, L"FPS : " + std::to_wstring(fps) + L" (" + std::to_wstring(frameMs) + L" ms / frame)");
+			_debugOverlay.setText(0, 1, L"");
+		p_event.requestPaint();
+	}
+
+public:
+	DebugOverlayManager(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
+		spk::Widget(p_name, p_parent),
+		_debugOverlay(p_name + L"/Overlay", this)
+	{
+		_debugOverlay.activate();
+	}
+};
+
 int main()
 {
 	spk::GraphicalApplication app;
 	auto window = app.createWindow(L"Playground", {{0, 0}, {800, 600}});
 	window->setUpdateTimer(0);
+
+	DebugOverlayManager debugOverlay(L"DebugOverlay", window->widget());
+	debugOverlay.setGeometry({0, 0}, window->geometry().size);
+	debugOverlay.setLayer(100);
+	debugOverlay.activate();
 
 	spk::GameEngine engine;
 	spk::GameEngineWidget engineWidget(L"EngineWidget", window->widget());

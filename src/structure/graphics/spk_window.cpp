@@ -14,6 +14,8 @@
 #include "structure/system/spk_exception.hpp"
 
 #include "structure/system/time/spk_timer.hpp"
+#include <numeric>
+#include <cmath>
 
 namespace spk
 {
@@ -400,6 +402,9 @@ namespace spk
 
 	void Window::_rendererLoopIteration()
 	{
+		// Measure entire renderer iteration duration
+		spk::Timestamp startTS = spk::SystemUtils::getTime();
+
 		// 1) FPS tick (light, early)
 		_updateCounter(_fpsTimer, _fpsCounter, _currentFPS);
 
@@ -409,16 +414,43 @@ namespace spk
 		_guard("Renderer::_timerModule", [&]() { _timerModule.treatMessages(); });
 		_guard("Renderer::_paintModule", [&]() { _paintModule.treatMessages(); });
 		_guard("Renderer::_systemModule", [&]() { _systemModule.treatMessages(); });
+
+		// Record duration for FPSDuration / averaged FPS
+		spk::Timestamp endTS = spk::SystemUtils::getTime();
+		long long ns = (endTS - startTS).nanoseconds;
+		{
+			std::lock_guard<std::mutex> lock(_renderTimingMutex);
+			_lastRenderDurationNS = ns;
+			_renderDurationsNS.push_back(ns);
+			if (_renderDurationsNS.size() > _timingHistoryCapacity)
+			{
+				_renderDurationsNS.pop_front();
+			}
+		}
 	}
 
 	void Window::_updaterLoopIteration()
 	{
+		spk::Timestamp startTS = spk::SystemUtils::getTime();
+
 		_updateCounter(_upsTimer, _upsCounter, _currentUPS);
 
 		_guard("Updater::_mouseModule", [&]() { _mouseModule.treatMessages(); });
 		_guard("Updater::_keyboardModule", [&]() { _keyboardModule.treatMessages(); });
 		_guard("Updater::_controllerModule", [&]() { _controllerModule.treatMessages(); });
 		_guard("Updater::_updateModule", [&]() { _updateModule.treatMessages(); });
+
+		spk::Timestamp endTS = spk::SystemUtils::getTime();
+		long long ns = (endTS - startTS).nanoseconds;
+		{
+			std::lock_guard<std::mutex> lock(_updateTimingMutex);
+			_lastUpdateDurationNS = ns;
+			_updateDurationsNS.push_back(ns);
+			if (_updateDurationsNS.size() > _timingHistoryCapacity)
+			{
+				_updateDurationsNS.pop_front();
+			}
+		}
 	}
 
 	// spk_window.cpp (inside Window::Window(...))
@@ -594,6 +626,60 @@ namespace spk
 	const spk::Geometry2D &Window::geometry() const
 	{
 		return (_rootWidget->viewport().geometry());
+	}
+
+	size_t Window::FPS() const
+	{
+		std::lock_guard<std::mutex> lock(_renderTimingMutex);
+		if (_renderDurationsNS.empty())
+		{
+			return 0;
+		}
+		long long sumNs = std::accumulate(_renderDurationsNS.begin(), _renderDurationsNS.end(), 0LL);
+		double avgNs = static_cast<double>(sumNs) / static_cast<double>(_renderDurationsNS.size());
+		if (avgNs <= 0.0)
+		{
+			return 0;
+		}
+		double fps = 1'000'000'000.0 / avgNs; // Hz from average nanoseconds per frame
+		if (fps < 0.0)
+		{
+			fps = 0.0;
+		}
+		return static_cast<size_t>(std::llround(fps));
+	}
+
+	size_t Window::UPS() const
+	{
+		std::lock_guard<std::mutex> lock(_updateTimingMutex);
+		if (_updateDurationsNS.empty())
+		{
+			return 0;
+		}
+		long long sumNs = std::accumulate(_updateDurationsNS.begin(), _updateDurationsNS.end(), 0LL);
+		double avgNs = static_cast<double>(sumNs) / static_cast<double>(_updateDurationsNS.size());
+		if (avgNs <= 0.0)
+		{
+			return 0;
+		}
+		double ups = 1'000'000'000.0 / avgNs;
+		if (ups < 0.0)
+		{
+			ups = 0.0;
+		}
+		return static_cast<size_t>(std::llround(ups));
+	}
+
+	double Window::realFPSDuration() const
+	{
+		std::lock_guard<std::mutex> lock(_renderTimingMutex);
+		return static_cast<double>(_lastRenderDurationNS) / 1'000'000.0;
+	}
+
+	double Window::realUPSDuration() const
+	{
+		std::lock_guard<std::mutex> lock(_updateTimingMutex);
+		return static_cast<double>(_lastUpdateDurationNS) / 1'000'000.0;
 	}
 
 	void Window::allowPaintRequest()
