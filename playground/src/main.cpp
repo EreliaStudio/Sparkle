@@ -337,7 +337,7 @@ class DebugOverlayManager : public spk::Widget
 {
 private:
 	spk::Profiler::Instanciator _profilerInstanciator;
-	spk::DebugOverlay<3, 20> _debugOverlay;
+	spk::DebugOverlay _debugOverlay;
 
 	void _onGeometryChange() override
 	{
@@ -382,18 +382,18 @@ private:
 		}
 
 		_debugOverlay.setText(0, 0, L"FPS Counter : " + std::to_wstring(fps));
-		_debugOverlay.setText(0, 1, L"FPS Duration : " + std::to_wstring(fpsMs) + L" ms");
-		_debugOverlay.setText(0, 2, L"Min duration : " + std::to_wstring(fpsMinMs) + L" ms");
-		_debugOverlay.setText(0, 3, L"Max duration : " + std::to_wstring(fpsMaxMs) + L" ms");
-		_debugOverlay.setText(0, 4, L"Min FPS : " + std::to_wstring(fpsMin));
-		_debugOverlay.setText(0, 5, L"Max FPS : " + std::to_wstring(fpsMax));
-		_debugOverlay.setText(0, 6, L"");
-		_debugOverlay.setText(0, 7, L"UPS Counter : " + std::to_wstring(ups));
-		_debugOverlay.setText(0, 8, L"UPS Duration : " + std::to_wstring(upsMs) + L" ms");
-		_debugOverlay.setText(0, 9, L"Min duration : " + std::to_wstring(upsMinMs) + L" ms");
-		_debugOverlay.setText(0, 10, L"Max duration : " + std::to_wstring(upsMaxMs) + L" ms");
-		_debugOverlay.setText(0, 11, L"Min UPS : " + std::to_wstring(upsMin));
-		_debugOverlay.setText(0, 12, L"Max UPS : " + std::to_wstring(upsMax));
+		_debugOverlay.setText(1, 0, L"FPS Duration : " + std::to_wstring(fpsMs) + L" ms");
+		_debugOverlay.setText(2, 0, L"Min duration : " + std::to_wstring(fpsMinMs) + L" ms");
+		_debugOverlay.setText(3, 0, L"Max duration : " + std::to_wstring(fpsMaxMs) + L" ms");
+		_debugOverlay.setText(4, 0, L"Min FPS : " + std::to_wstring(fpsMin));
+		_debugOverlay.setText(5, 0, L"Max FPS : " + std::to_wstring(fpsMax));
+		_debugOverlay.setText(6, 0, L"");
+		_debugOverlay.setText(7, 0, L"UPS Counter : " + std::to_wstring(ups));
+		_debugOverlay.setText(8, 0, L"UPS Duration : " + std::to_wstring(upsMs) + L" ms");
+		_debugOverlay.setText(9, 0, L"Min duration : " + std::to_wstring(upsMinMs) + L" ms");
+		_debugOverlay.setText(10, 0, L"Max duration : " + std::to_wstring(upsMaxMs) + L" ms");
+		_debugOverlay.setText(11, 0, L"Min UPS : " + std::to_wstring(upsMin));
+		_debugOverlay.setText(12, 0, L"Max UPS : " + std::to_wstring(upsMax));
 
 		p_event.requestPaint();
 	}
@@ -403,9 +403,10 @@ public:
 		spk::Widget(p_name, p_parent),
 		_debugOverlay(p_name + L"/Overlay", this)
 	{
-		// Improve readability: outline; keep default white glyph color
 		_debugOverlay.setFontOutlineSize(3);
 		_debugOverlay.setFontColor(spk::Color::white, spk::Color::black);
+
+		_debugOverlay.configureRows(20, 1);
 		_debugOverlay.activate();
 	}
 };
