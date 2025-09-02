@@ -25,42 +25,36 @@ namespace spk
 				)";
 
 			const char *fragmentShaderSrc = R"(
-				#version 450
+                                #version 450
 
-				layout (location = 0) in vec2 fragmentUVs;
-				layout (location = 0) out vec4 outputColor;
+                                layout (location = 0) in vec2 fragmentUVs;
+                                layout (location = 0) out vec4 outputColor;
 
-				layout(std140, binding = 0) uniform TextInformations
-				{
-					vec4 glyphColor;
-					vec4 outlineColor;
-					float outlineThreshold;
-				};
+                                layout(std140, binding = 0) uniform TextInformations
+                                {
+                                        vec4 glyphColor;
+                                        vec4 outlineColor;
+                                        float outlineThreshold;
+                                        float sdfSmoothing;
+                                };
 
-				uniform sampler2D diffuseTexture;
+                                uniform sampler2D diffuseTexture;
 
-				float computeFormula(float x, float k)
-				{
-					return (1.0 - (exp(-k * x))) / (1.0 - exp(-k));
-				}
+                                void main()
+                                {
+                                        float sdf = texture(diffuseTexture, fragmentUVs).r;
 
-				void main()
-				{
-					float sdf = texture(diffuseTexture, fragmentUVs).r;
-    
-					if (sdf == 0)
-						discard;
+                                        if (sdf == 0.0f)
+                                                discard;
 
-					if (sdf < 0.5f)
-					{
-						outputColor = vec4(outlineColor.rgb, smoothstep(0, 0.5f, sdf));
-					}
-					else
-					{
-						outputColor = glyphColor;
-					}
-				}
-				)";
+                                        float smoothing = fwidth(sdf) * sdfSmoothing;
+                                        float glyphAlpha = smoothstep(0.5f - smoothing, 0.5f + smoothing, sdf);
+                                        float outlineAlpha = smoothstep(outlineThreshold - smoothing, outlineThreshold + smoothing, sdf);
+
+                                        vec4 color = mix(outlineColor, glyphColor, glyphAlpha);
+                                        outputColor = vec4(color.rgb, max(glyphAlpha, outlineAlpha));
+                                }
+                                )";
 
 			_program = std::make_unique<spk::OpenGL::Program>(vertexShaderSrc, fragmentShaderSrc);
 		}
@@ -76,16 +70,19 @@ namespace spk
 
 		_samplerObject = spk::OpenGL::SamplerObject("diffuseTexture", spk::OpenGL::SamplerObject::Type::Texture2D, 0);
 
-		_textInformationsUniformBufferObject = std::move(spk::OpenGL::UniformBufferObject(L"TextInformations", 0, 36));
+		_textInformationsUniformBufferObject = std::move(spk::OpenGL::UniformBufferObject(L"TextInformations", 0, 48));
 		_textInformationsUniformBufferObject.addElement(L"glyphColor", 0, sizeof(spk::Color));
 		_textInformationsUniformBufferObject.addElement(L"outlineColor", 16, sizeof(spk::Color));
 		_textInformationsUniformBufferObject.addElement(L"outlineThreshold", 32, sizeof(float));
+		_textInformationsUniformBufferObject.addElement(L"sdfSmoothing", 36, sizeof(float));
 	}
 
 	void FontPainter::_updateUniformBufferObject()
 	{
 		_textInformationsUniformBufferObject[L"glyphColor"] = _glyphColor;
 		_textInformationsUniformBufferObject[L"outlineColor"] = _outlineColor;
+		_textInformationsUniformBufferObject[L"outlineThreshold"] = _outlineThreshold;
+		_textInformationsUniformBufferObject[L"sdfSmoothing"] = _sdfSmoothing;
 		_textInformationsUniformBufferObject.validate();
 	}
 
@@ -111,8 +108,18 @@ namespace spk
 	void FontPainter::setFontSize(const Font::Size &p_fontSize)
 	{
 		_fontSize = p_fontSize;
-		_textInformationsUniformBufferObject[L"outlineThreshold"] = 0.5f;
-		_textInformationsUniformBufferObject.validate();
+
+		if (_fontSize.glyph > 0)
+		{
+			float outlineRatio = static_cast<float>(_fontSize.outline) / static_cast<float>(_fontSize.glyph);
+			_outlineThreshold = 0.5f - outlineRatio;
+		}
+		else
+		{
+			_outlineThreshold = 0.5f;
+		}
+
+		_updateUniformBufferObject();
 		_atlas = nullptr;
 		_samplerObject.bind(nullptr);
 	}
@@ -147,6 +154,17 @@ namespace spk
 	const spk::Color &FontPainter::outlineColor() const
 	{
 		return (_outlineColor);
+	}
+
+	void FontPainter::setSdfSmoothing(float p_sdfSmoothing)
+	{
+		_sdfSmoothing = p_sdfSmoothing;
+		_updateUniformBufferObject();
+	}
+
+	float FontPainter::sdfSmoothing() const
+	{
+		return (_sdfSmoothing);
 	}
 
 	void FontPainter::clear()

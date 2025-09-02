@@ -29,12 +29,13 @@ namespace spk
 			spk::Vector2 uv;
 		};
 
+	private:
 		static inline std::unique_ptr<spk::OpenGL::Program> _program;
 		spk::OpenGL::BufferSet _bufferSet;
 		spk::OpenGL::SamplerObject _samplerObject;
 
-// Uniform buffer object for layer, glyphColor, and outlineColor
-spk::OpenGL::UniformBufferObject _textInformationsUniformBufferObject;
+		// Uniform buffer object for layer, glyphColor, outlineColor and SDF parameters
+		spk::OpenGL::UniformBufferObject _textInformationsUniformBufferObject;
 
 		spk::SafePointer<Font> _font = nullptr;
 		Font::Size _fontSize = {16, 1};
@@ -45,35 +46,42 @@ spk::OpenGL::UniformBufferObject _textInformationsUniformBufferObject;
 		float _layer = 0.0f;
 		spk::Color _glyphColor = spk::Color(255, 255, 255, 255); // white by default
 		spk::Color _outlineColor = spk::Color(0, 0, 0, 255);	 // black by default
+		float _outlineThreshold = 0.5f;
+		float _sdfSmoothing = 1.0f;
 
 		void _initProgram();
 		void _initBuffers();
 
-void _updateUniformBufferObject();
+		void _updateUniformBufferObject();
 
 		void _prepareText(const std::wstring &p_text, const spk::Vector2Int &p_anchor, float p_layer);
 
 	public:
 		FontPainter();
 
-		FontPainter::Contract subscribeToFontEdition(const Job& p_job);
+		FontPainter::Contract subscribeToFontEdition(const Job &p_job);
 
 		void setFont(const spk::SafePointer<Font> &p_font);
 		void setFontSize(const Font::Size &p_fontSize);
 		void setGlyphColor(const spk::Color &p_color);
 		void setOutlineColor(const spk::Color &p_color);
+		void setSdfSmoothing(float p_sdfSmoothing);
 
 		const spk::SafePointer<spk::Font> &font() const;
 		const spk::Font::Size &fontSize() const;
 		const spk::Color &glyphColor() const;
 		const spk::Color &outlineColor() const;
+		float sdfSmoothing() const;
 
 		void clear();
 
 		spk::Vector2Int computeTextBaselineOffset(const std::wstring &p_text) const;
 		spk::Vector2UInt computeTextSize(const std::wstring &p_text) const;
-		spk::Vector2Int computeTextAnchor(const spk::Geometry2D &p_geometry, const std::wstring &p_string,
-										  spk::HorizontalAlignment p_horizontalAlignment, spk::VerticalAlignment p_verticalAlignment) const;
+		spk::Vector2Int computeTextAnchor(
+			const spk::Geometry2D &p_geometry,
+			const std::wstring &p_string,
+			spk::HorizontalAlignment p_horizontalAlignment,
+			spk::VerticalAlignment p_verticalAlignment) const;
 
 		void prepare(const std::wstring &p_text, const spk::Vector2Int &p_anchor, float p_layer);
 
