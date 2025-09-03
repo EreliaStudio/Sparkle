@@ -341,7 +341,9 @@ private:
 
 	void _onGeometryChange() override
 	{
-		_debugOverlay.setGeometry({{0, 0}, geometry().size});
+		spk::Vector2UInt s = geometry().size;
+		s.y = std::min(s.y, _debugOverlay.computeMaxHeightPixels());
+		_debugOverlay.setGeometry({{0, 0}, s});
 	}
 
 	void _onUpdateEvent(spk::UpdateEvent &p_event) override
@@ -403,7 +405,7 @@ public:
 		spk::Widget(p_name, p_parent),
 		_debugOverlay(p_name + L"/Overlay", this)
 	{
-		_debugOverlay.setFontOutlineSize(3);
+		_debugOverlay.setFontOutlineSize(10);
 		_debugOverlay.setFontColor(spk::Color::white, spk::Color::black);
 
 		_debugOverlay.configureRows(20, 1);
