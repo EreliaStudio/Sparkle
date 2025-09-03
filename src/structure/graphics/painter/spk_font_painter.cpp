@@ -25,45 +25,53 @@ namespace spk
 				)";
 
 			const char *fragmentShaderSrc = R"(
-				#version 450
+#version 450
 
-				layout (location = 0) in vec2 fragmentUVs;
-				layout (location = 0) out vec4 outputColor;
+layout (location = 0) in vec2 fragmentUVs;
+layout (location = 0) out vec4 outputColor;
 
-				layout(std140, binding = 0) uniform TextInformations
-				{
-					vec4 glyphColor;
-					vec4 outlineColor;
-					float outlineThreshold;
-					float glyphAAPixels;
-					float outlineAAPixels;
-				};
+layout(std140, binding = 0) uniform TextInformations
+{
+    vec4 glyphColor;        // RGB = fill color
+    vec4 outlineColor;      // RGB = outline color
+    float outlineThreshold; // usually 0.5 for glyph edge, 0.0 if outline active
+    float glyphAAPixels;    // AA width in px for fill
+    float outlineAAPixels;  // AA width in px for outline
+};
 
-				uniform sampler2D diffuseTexture;
+uniform sampler2D diffuseTexture;
 
-				void main()
-				{
-					float sdf = texture(diffuseTexture, fragmentUVs).r;
+void main()
+{
+    float sdf = texture(diffuseTexture, fragmentUVs).r;
 
-					float fw = max(1e-4, fwidth(sdf));
-					float aaFill = fw * (glyphAAPixels * 0.5f);
-					float outlineDelta = fw * outlineAAPixels;
+	if (sdf <= 1e-5)
+	{
+		discard;
+	}
 
-					float fill = smoothstep(0.5f - aaFill, 0.5f + aaFill, sdf);
+    float fw = max(1e-4, fwidth(sdf));
 
-					float outer = smoothstep(outlineThreshold, outlineThreshold + outlineDelta, sdf);
-					float outlineBand = clamp(outer - fill, 0.0f, 1.0f);
+    float aaFill    = fw * (glyphAAPixels * 0.5);
+    float aaOutline = fw * (outlineAAPixels);
 
-					float coverage = fill + outlineBand;
+    float fill = smoothstep(0.5 - aaFill, 0.5 + aaFill, sdf);
 
-					vec3 premul = glyphColor.rgb * fill + outlineColor.rgb * outlineBand;
+    float outline = smoothstep(outlineThreshold - aaOutline,
+                               outlineThreshold + aaOutline,
+                               sdf);
 
-					if (coverage <= 1e-4)
-						discard;
+    float outlineOnly = max(outline - fill, 0.0);
 
-					vec3 outRGB = premul / coverage;
-					outputColor = vec4(outRGB, coverage);
-				})";
+    float alpha = max(fill, outline);
+
+    if (alpha <= 1e-4)
+        discard;
+
+    vec3 color = glyphColor.rgb * fill + outlineColor.rgb * outlineOnly;
+
+    outputColor = vec4(color, alpha);
+})";
 
 			_program = std::make_unique<spk::OpenGL::Program>(vertexShaderSrc, fragmentShaderSrc);
 		}
