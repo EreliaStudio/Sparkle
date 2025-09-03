@@ -15,6 +15,16 @@ namespace spk
 			max = spk::Vector3::max(max, p_point);
 		}
 
+		BoundingBox place(const spk::Vector3& p_delta) const
+		{
+			BoundingBox result;
+
+			result.min = min + p_delta;
+			result.max = max + p_delta;
+
+			return (result);
+		}
+
 		bool intersect(const BoundingBox& p_other) const
 		{
 			return (min.x <= p_other.max.x && max.x >= p_other.min.x) &&

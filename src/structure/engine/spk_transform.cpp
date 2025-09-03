@@ -178,10 +178,5 @@ namespace spk
 		_position = spk::Vector3(_model[3][0], _model[3][1], _model[3][2]);
 
 		_onEditContractProvider.trigger();
-
-		if (entityOwner != nullptr)
-		{
-			entityOwner->_markForCollision();
-		}
 	}
 }

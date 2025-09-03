@@ -10,7 +10,7 @@ namespace spk
 {
 	class EdgeMap
 	{
-	private:
+	public:
 		struct Entry
 		{
 			spk::Edge edge;
@@ -18,6 +18,7 @@ namespace spk
 			size_t count = 0;
 		};
 
+	private:
 		std::unordered_map<spk::Edge::Identifier, Entry, spk::Edge::IdentifierHash> _edges;
 
 	public:

@@ -9,11 +9,20 @@ namespace spk
 	void CollisionMesh::addUnit(const Unit &p_unit)
 	{
 		_units.push_back(p_unit);
+
+		const spk::BoundingBox& unitBoundingBox = p_unit.boundingBox();
+		_boundingBox.addPoint(unitBoundingBox.min);
+		_boundingBox.addPoint(unitBoundingBox.max);
 	}
 
 	const std::vector<CollisionMesh::Unit> &CollisionMesh::units() const
 	{
 		return (_units);
+	}
+
+	const spk::BoundingBox& CollisionMesh::boundingBox() const
+	{
+		return (_boundingBox);
 	}
 
 	CollisionMesh CollisionMesh::fromObjMesh(const spk::SafePointer<spk::ObjMesh> &p_mesh)
