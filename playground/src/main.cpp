@@ -406,6 +406,7 @@ public:
 		_debugOverlay(p_name + L"/Overlay", this)
 	{
 		_debugOverlay.setFontOutlineSize(10);
+		_debugOverlay.setFontOutlineSharpness(2);
 		_debugOverlay.setFontColor(spk::Color::white, spk::Color::black);
 
 		_debugOverlay.configureRows(20, 1);

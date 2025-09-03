@@ -46,7 +46,7 @@ namespace spk
 				}
 
 				spk::Font::Size opt = f->computeOptimalTextSize(lbl->text(), 0, area);
-				// Account for outline on both sides when fitting text
+
 				size_t glyphNoOutline = 0;
 				if (opt.glyph > _outlineSize * 2)
 				{
@@ -57,6 +57,8 @@ namespace spk
 					glyphNoOutline = _maxGlyphSize;
 				}
 				lbl->setFontSize(spk::Font::Size(glyphNoOutline, _outlineSize));
+				lbl->setFontGlyphSharpness(_fontGlyphSharpness);
+				lbl->setFontOutlineSharpness(_outlineGlyphSharpness);
 			}
 		}
 	}
@@ -70,10 +72,6 @@ namespace spk
 
 		const size_t oldSize = _rows.size();
 		_rows.resize(p_row + 1);
-		for (size_t r = oldSize; r <= p_row; ++r)
-		{
-			// Newly created rows start empty
-		}
 	}
 
 	void DebugOverlay::_ensureCol(const size_t &p_row, const size_t &p_col)
@@ -109,7 +107,7 @@ namespace spk
 	DebugOverlay::DebugOverlay(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
 		spk::Widget(p_name, p_parent)
 	{
-		// Defaults already set in members
+		
 	}
 
 	void DebugOverlay::configureRows(const size_t &p_rows, const size_t &p_defaultColumns)
@@ -201,6 +199,16 @@ namespace spk
 		requireGeometryUpdate();
 	}
 
+	void DebugOverlay::setFontGlyphSharpness(size_t p_pixels)
+	{
+		_fontGlyphSharpness = p_pixels;
+	}
+
+	void DebugOverlay::setFontOutlineSharpness(size_t p_pixels)
+	{
+		_outlineGlyphSharpness = p_pixels;
+	}
+
 	void DebugOverlay::setMaxGlyphSize(size_t p_maxGlyphSize)
 	{
 		_maxGlyphSize = p_maxGlyphSize;
@@ -233,11 +241,8 @@ namespace spk
 		}
 
 		spk::Vector2UInt textSize = f->computeStringSize(L"A", spk::Font::Size(glyph, _outlineSize));
-		spk::cout << "textSize : " << textSize << std::endl;
 		uint32_t perRow = textSize.y + cornerY * 2u;
-		spk::cout << "perRow : " << perRow << std::endl;
 		uint32_t total = static_cast<uint32_t>(_rows.size()) * perRow;
-		spk::cout << "Total : " << total << std::endl;
 		if (_rows.size() > 1)
 		{
 			uint32_t pad = _layout.elementPadding().y;

@@ -34,7 +34,6 @@ namespace spk
 		spk::OpenGL::BufferSet _bufferSet;
 		spk::OpenGL::SamplerObject _samplerObject;
 
-		// Uniform buffer object for layer, glyphColor, outlineColor and SDF parameters
 		spk::OpenGL::UniformBufferObject _textInformationsUniformBufferObject;
 
 		spk::SafePointer<Font> _font = nullptr;
@@ -44,10 +43,12 @@ namespace spk
 		spk::ContractProvider _onFontEditionContractProvider;
 
 		float _layer = 0.0f;
-		spk::Color _glyphColor = spk::Color(255, 255, 255, 255); // white by default
-		spk::Color _outlineColor = spk::Color(0, 0, 0, 255);	 // black by default
+		spk::Color _glyphColor = spk::Color(255, 255, 255, 255);
+		spk::Color _outlineColor = spk::Color(0, 0, 0, 255);
 		float _outlineThreshold = 0.5f;
-		float _sdfSmoothing = 1.0f;
+
+		size_t _glyphAAPixels = 1;
+		size_t _outlineAAPixels = 1;
 
 		void _initProgram();
 		void _initBuffers();
@@ -65,13 +66,15 @@ namespace spk
 		void setFontSize(const Font::Size &p_fontSize);
 		void setGlyphColor(const spk::Color &p_color);
 		void setOutlineColor(const spk::Color &p_color);
-		void setSdfSmoothing(float p_sdfSmoothing);
+		void setOutlineSharpness(size_t p_pixels);
+		void setGlyphSharpness(size_t p_pixels);
 
 		const spk::SafePointer<spk::Font> &font() const;
 		const spk::Font::Size &fontSize() const;
 		const spk::Color &glyphColor() const;
 		const spk::Color &outlineColor() const;
-		float sdfSmoothing() const;
+		size_t outlineSharpness() const;
+		size_t glyphSharpness() const;
 
 		void clear();
 

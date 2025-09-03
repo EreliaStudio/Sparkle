@@ -25,36 +25,45 @@ namespace spk
 				)";
 
 			const char *fragmentShaderSrc = R"(
-                                #version 450
+				#version 450
 
-                                layout (location = 0) in vec2 fragmentUVs;
-                                layout (location = 0) out vec4 outputColor;
+				layout (location = 0) in vec2 fragmentUVs;
+				layout (location = 0) out vec4 outputColor;
 
-                                layout(std140, binding = 0) uniform TextInformations
-                                {
-                                        vec4 glyphColor;
-                                        vec4 outlineColor;
-                                        float outlineThreshold;
-                                        float sdfSmoothing;
-                                };
+				layout(std140, binding = 0) uniform TextInformations
+				{
+					vec4 glyphColor;
+					vec4 outlineColor;
+					float outlineThreshold;
+					float glyphAAPixels;
+					float outlineAAPixels;
+				};
 
-                                uniform sampler2D diffuseTexture;
+				uniform sampler2D diffuseTexture;
 
-                                void main()
-                                {
-                                        float sdf = texture(diffuseTexture, fragmentUVs).r;
+				void main()
+				{
+					float sdf = texture(diffuseTexture, fragmentUVs).r;
 
-                                        if (sdf == 0.0f)
-                                                discard;
+					float fw = max(1e-4, fwidth(sdf));
+					float aaFill = fw * (glyphAAPixels * 0.5f);
+					float outlineDelta = fw * outlineAAPixels;
 
-                                        float smoothing = fwidth(sdf) * sdfSmoothing;
-                                        float glyphAlpha = smoothstep(0.5f - smoothing, 0.5f + smoothing, sdf);
-                                        float outlineAlpha = smoothstep(outlineThreshold - smoothing, outlineThreshold + smoothing, sdf);
+					float fill = smoothstep(0.5f - aaFill, 0.5f + aaFill, sdf);
 
-                                        vec4 color = mix(outlineColor, glyphColor, glyphAlpha);
-                                        outputColor = vec4(color.rgb, max(glyphAlpha, outlineAlpha));
-                                }
-                                )";
+					float outer = smoothstep(outlineThreshold, outlineThreshold + outlineDelta, sdf);
+					float outlineBand = clamp(outer - fill, 0.0f, 1.0f);
+
+					float coverage = fill + outlineBand;
+
+					vec3 premul = glyphColor.rgb * fill + outlineColor.rgb * outlineBand;
+
+					if (coverage <= 1e-4)
+						discard;
+
+					vec3 outRGB = premul / coverage;
+					outputColor = vec4(outRGB, coverage);
+				})";
 
 			_program = std::make_unique<spk::OpenGL::Program>(vertexShaderSrc, fragmentShaderSrc);
 		}
@@ -70,11 +79,12 @@ namespace spk
 
 		_samplerObject = spk::OpenGL::SamplerObject("diffuseTexture", spk::OpenGL::SamplerObject::Type::Texture2D, 0);
 
-		_textInformationsUniformBufferObject = std::move(spk::OpenGL::UniformBufferObject(L"TextInformations", 0, 48));
+		_textInformationsUniformBufferObject = std::move(spk::OpenGL::UniformBufferObject(L"TextInformations", 0, 64));
 		_textInformationsUniformBufferObject.addElement(L"glyphColor", 0, sizeof(spk::Color));
 		_textInformationsUniformBufferObject.addElement(L"outlineColor", 16, sizeof(spk::Color));
 		_textInformationsUniformBufferObject.addElement(L"outlineThreshold", 32, sizeof(float));
-		_textInformationsUniformBufferObject.addElement(L"sdfSmoothing", 36, sizeof(float));
+		_textInformationsUniformBufferObject.addElement(L"glyphAAPixels", 36, sizeof(float));
+		_textInformationsUniformBufferObject.addElement(L"outlineAAPixels", 40, sizeof(float));
 	}
 
 	void FontPainter::_updateUniformBufferObject()
@@ -82,7 +92,8 @@ namespace spk
 		_textInformationsUniformBufferObject[L"glyphColor"] = _glyphColor;
 		_textInformationsUniformBufferObject[L"outlineColor"] = _outlineColor;
 		_textInformationsUniformBufferObject[L"outlineThreshold"] = _outlineThreshold;
-		_textInformationsUniformBufferObject[L"sdfSmoothing"] = _sdfSmoothing;
+		_textInformationsUniformBufferObject[L"glyphAAPixels"] = static_cast<float>(_glyphAAPixels);
+		_textInformationsUniformBufferObject[L"outlineAAPixels"] = static_cast<float>(_outlineAAPixels);
 		_textInformationsUniformBufferObject.validate();
 	}
 
@@ -109,10 +120,6 @@ namespace spk
 	{
 		_fontSize = p_fontSize;
 
-		// Keep outline thickness constant in pixels, independent of glyph size.
-		// The SDF is generated with pixelDistScale proportional to outline size, so
-		// using a fixed threshold of 0.0f renders the full outside half-range
-		// (i.e., ~outlineSize/2 pixels). With outline == 0, revert to the default.
 		if (_fontSize.outline > 0)
 		{
 			_outlineThreshold = 0.0f;
@@ -159,15 +166,26 @@ namespace spk
 		return (_outlineColor);
 	}
 
-	void FontPainter::setSdfSmoothing(float p_sdfSmoothing)
+	void FontPainter::setOutlineSharpness(size_t p_pixels)
 	{
-		_sdfSmoothing = p_sdfSmoothing;
+		_outlineAAPixels = p_pixels; // allow 0 for hard edge
 		_updateUniformBufferObject();
 	}
 
-	float FontPainter::sdfSmoothing() const
+	size_t FontPainter::outlineSharpness() const
 	{
-		return (_sdfSmoothing);
+		return (_outlineAAPixels);
+	}
+
+	void FontPainter::setGlyphSharpness(size_t p_pixels)
+	{
+		_glyphAAPixels = p_pixels; // allow 0 for hard edge
+		_updateUniformBufferObject();
+	}
+
+	size_t FontPainter::glyphSharpness() const
+	{
+		return (_glyphAAPixels);
 	}
 
 	void FontPainter::clear()

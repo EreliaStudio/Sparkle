@@ -97,6 +97,16 @@ namespace spk
 		_fontRenderer.setOutlineColor(p_outlineColor);
 	}
 
+	void TextLabel::setFontGlyphSharpness(size_t p_pixels)
+	{
+		_fontRenderer.setGlyphSharpness(p_pixels);
+	}
+
+	void TextLabel::setFontOutlineSharpness(size_t p_pixels)
+	{
+		_fontRenderer.setOutlineSharpness(p_pixels);
+	}
+
 	void TextLabel::setTextAlignment(const spk::HorizontalAlignment &p_horizontalAlignment, const spk::VerticalAlignment &p_verticalAlignment)
 	{
 		_horizontalAlignment = p_horizontalAlignment;

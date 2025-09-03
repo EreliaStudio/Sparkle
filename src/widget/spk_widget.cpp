@@ -17,7 +17,8 @@ namespace spk
 		return (&_defaultIconset);
 	}
 
-	spk::Font Widget::_defaultFont = spk::Font::fromRawData(SPARKLE_GET_RESOURCE("resources/font/arial.ttf"), Font::Filtering::Nearest);
+	spk::Font Widget::_defaultFont = spk::Font::fromRawData(
+		SPARKLE_GET_RESOURCE("resources/font/arial.ttf"), Font::Filtering::Nearest, Font::Wrap::ClampToEdge, Font::Mipmap::Disable);
 
 	spk::SafePointer<spk::Font> Widget::defaultFont()
 	{
