@@ -71,42 +71,7 @@ namespace spk
 
 	void GameEngine::onUpdateEvent(spk::UpdateEvent &p_event)
 	{
-		_processCollisionRequests();
 		_rootObject.onUpdateEvent(p_event);
-	}
-
-	void GameEngine::_processCollisionRequests()
-	{
-		std::set<Entity *> entities;
-		{
-			std::lock_guard<std::mutex> lock(_collisionMutex);
-			entities.swap(_collisionRequests);
-		}
-		if (entities.empty() == false)
-		{
-			auto triggers = CollisionTrigger::getTriggers();
-			for (auto &trig : triggers)
-			{
-				if (trig != nullptr)
-				{
-					trig->startFrame();
-				}
-			}
-			for (Entity *e : entities)
-			{
-				if (e != nullptr)
-				{
-					e->checkCollision();
-				}
-			}
-			for (auto &trig : triggers)
-			{
-				if (trig != nullptr)
-				{
-					trig->endFrame();
-				}
-			}
-		}
 	}
 
 	void GameEngine::onKeyboardEvent(spk::KeyboardEvent &p_event)
@@ -127,15 +92,5 @@ namespace spk
 	void GameEngine::onTimerEvent(spk::TimerEvent &p_event)
 	{
 		_rootObject.onTimerEvent(p_event);
-	}
-
-	void GameEngine::_markForCollision(Entity *p_entity)
-	{
-		if (p_entity == nullptr)
-		{
-			return;
-		}
-		std::lock_guard<std::mutex> lock(_collisionMutex);
-		_collisionRequests.insert(p_entity);
 	}
 }

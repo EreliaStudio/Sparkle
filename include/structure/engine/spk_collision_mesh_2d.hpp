@@ -14,12 +14,15 @@ namespace spk
 
 	private:
 		std::vector<Unit> _units;
+		spk::BoundingBox2D _boundingBox;
 
 	public:
 		CollisionMesh2D() = default;
 
 		void addUnit(const Unit &p_unit);
 		const std::vector<Unit> &units() const;
+
+		const spk::BoundingBox2D& boundingBox() const;
 
 		static CollisionMesh2D fromMesh(const spk::SafePointer<const spk::Mesh2D> &p_mesh);
 	};

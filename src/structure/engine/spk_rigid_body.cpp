@@ -42,49 +42,6 @@ namespace spk
 		return (_collider);
 	}
 
-	RigidBody::BoundingBox RigidBody::_computeLocalBoundingBox() const
-	{
-		BoundingBox result{};
-		bool initialized = false;
-
-		const auto &collider = _collider;
-		if (collider != nullptr)
-		{
-			for (const auto &unit : collider->units())
-			{
-				const auto &pts = unit.points();
-				for (const auto &vertex : pts)
-				{
-					if (initialized == false)
-					{
-						result.min = vertex;
-						result.max = vertex;
-						initialized = true;
-					}
-					else
-					{
-						result.min = spk::Vector3::min(result.min, vertex);
-						result.max = spk::Vector3::max(result.max, vertex);
-					}
-				}
-			}
-		}
-
-		return (result);
-	}
-
-	RigidBody::BoundingBox RigidBody::boundingBox() const
-	{
-		BoundingBox box = _computeLocalBoundingBox();
-		if (owner() != nullptr)
-		{
-			const spk::Vector3 &pos = owner()->transform().position();
-			box.min += pos;
-			box.max += pos;
-		}
-		return (box);
-	}
-
 	std::vector<spk::SafePointer<RigidBody>> RigidBody::getRigidBodies()
 	{
 		std::lock_guard<std::mutex> lock(_rigidBodiesMutex);
@@ -93,43 +50,6 @@ namespace spk
 
 	namespace
 	{
-		RigidBody::BoundingBox computeBoundingBox(const RigidBody *p_body, const spk::Matrix4x4 &p_model)
-		{
-			RigidBody::BoundingBox result{};
-			bool initialized = false;
-			const auto &collider = p_body->collider();
-			if (collider != nullptr)
-			{
-				for (const auto &unit : collider->units())
-				{
-					const auto &pts = unit.points();
-					for (const auto &vertex : pts)
-					{
-						spk::Vector3 transformed = p_model * vertex;
-						if (initialized == false)
-						{
-							result.min = transformed;
-							result.max = transformed;
-							initialized = true;
-						}
-						else
-						{
-							result.min = spk::Vector3::min(result.min, transformed);
-							result.max = spk::Vector3::max(result.max, transformed);
-						}
-					}
-				}
-			}
-			return result;
-		}
-
-		bool boxesIntersect(const RigidBody::BoundingBox &p_a, const RigidBody::BoundingBox &p_b)
-		{
-			return (
-				(p_a.min.x <= p_b.max.x && p_a.max.x >= p_b.min.x) == true && (p_a.min.y <= p_b.max.y && p_a.max.y >= p_b.min.y) == true &&
-				(p_a.min.z <= p_b.max.z && p_a.max.z >= p_b.min.z) == true);
-		}
-
 		bool rayIntersectsTriangle(
 			const spk::Vector3 &p_origin,
 			const spk::Vector3 &p_direction,
@@ -229,24 +149,24 @@ namespace spk
 			return false;
 		}
 
-		std::vector<std::array<spk::Vector3, 3>> collectTriangles(const RigidBody *p_body, const spk::Matrix4x4 &p_transform)
+		std::vector<std::array<spk::Vector3, 3>> collectTriangles(const spk::SafePointer<const CollisionMesh>& p_collider, const spk::Transform &p_transform)
 		{
 			std::vector<std::array<spk::Vector3, 3>> result;
-			const auto &collider = p_body->collider();
-			if ((collider == nullptr) == false)
+
+			if (p_collider != nullptr)
 			{
-				for (const auto &unit : collider->units())
+				for (const auto &unit : p_collider->units())
 				{
 					const auto &pts = unit.points();
-					if ((pts.size() >= 3) == false)
+					if (pts.size() >= 3)
 					{
 						continue;
 					}
-					spk::Vector3 a = p_transform * pts[0];
+					spk::Vector3 a = p_transform.model() * pts[0];
 					for (size_t i = 1; i + 1 < pts.size(); ++i)
 					{
-						spk::Vector3 b = p_transform * pts[i];
-						spk::Vector3 c = p_transform * pts[i + 1];
+						spk::Vector3 b = p_transform.model() * pts[i];
+						spk::Vector3 c = p_transform.model() * pts[i + 1];
 						result.push_back({a, b, c});
 					}
 				}
@@ -255,17 +175,17 @@ namespace spk
 		}
 	}
 
-	bool RigidBody::intersect(const RigidBody *p_a, const spk::Matrix4x4 &p_transformA, const RigidBody *p_b, const spk::Matrix4x4 &p_transformB)
+	bool RigidBody::intersect(const spk::SafePointer<RigidBody> p_other) const
 	{
-		BoundingBox boxA = computeBoundingBox(p_a, p_transformA);
-		BoundingBox boxB = computeBoundingBox(p_b, p_transformB);
-		if (boxesIntersect(boxA, boxB) == false)
+		BoundingBox boxA = collider()->boundingBox().place(owner()->transform().position());
+		BoundingBox boxB = p_other->collider()->boundingBox().place(p_other->owner()->transform().position());
+		if (boxA.intersect(boxB) == false)
 		{
 			return false;
 		}
 
-		std::vector<std::array<spk::Vector3, 3>> triAs = collectTriangles(p_a, p_transformA);
-		std::vector<std::array<spk::Vector3, 3>> triBs = collectTriangles(p_b, p_transformB);
+		std::vector<std::array<spk::Vector3, 3>> triAs = collectTriangles(collider(), owner()->transform());
+		std::vector<std::array<spk::Vector3, 3>> triBs = collectTriangles(p_other->collider(), p_other->owner()->transform());
 
 		for (const auto &ta : triAs)
 		{

@@ -8,6 +8,7 @@
 #include <cmath>
 #include <limits>
 #include <map>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -177,13 +178,16 @@ namespace
 		return out;
 	}
 
-	std::vector<spk::Vector3> stitchLoop(const std::vector<spk::Edge> &p_edges, const spk::Vector3 &p_normal)
+	// === Refactored stitchLoop helpers ===
+	struct Frame
 	{
-		if (p_edges.empty() == true)
-		{
-			return {};
-		}
+		spk::Vector3 x;
+		spk::Vector3 y;
+		spk::Vector3 z;
+	};
 
+	static Frame makeFrame(const spk::Vector3 &p_normal)
+	{
 		spk::Vector3 up = p_normal.normalize();
 		spk::Vector3 yAxis = spk::Vector3(0, 1, 0);
 		if (up == yAxis || up == yAxis.inverse())
@@ -191,39 +195,56 @@ namespace
 			yAxis = spk::Vector3(0, 0, 1);
 		}
 		spk::Vector3 xAxis = yAxis.cross(up).normalize();
-		yAxis = up.cross(xAxis);
+		spk::Vector3 y = up.cross(xAxis);
+		return {xAxis, y, up};
+	}
 
-		std::map<spk::Vector3, spk::Vector2> coords;
-		std::map<spk::Vector3, std::vector<std::pair<size_t, bool>>> adj;
-		std::vector<spk::Edge> edges;
-		edges.reserve(p_edges.size());
-
-		auto getKey = [&](const spk::Vector3 &p_v) -> spk::Vector3
+	static spk::Vector3 ensureKey(const spk::Vector3 &p_v,
+	                              std::map<spk::Vector3, spk::Vector2> &p_coords,
+	                              const Frame &p_f)
+	{
+		for (const auto &kv : p_coords)
 		{
-			for (const auto &kv : coords)
+			if (kv.first == p_v)
 			{
-				if (kv.first == p_v)
-				{
-					return kv.first;
-				}
+				return kv.first;
 			}
-			coords[p_v] = spk::Vector2(p_v.dot(xAxis), p_v.dot(yAxis));
-			return p_v;
-		};
+		}
+		p_coords[p_v] = spk::Vector2(p_v.dot(p_f.x), p_v.dot(p_f.y));
+		return p_v;
+	}
 
+	using Adj = std::map<spk::Vector3, std::vector<std::pair<size_t, bool>>>;
+
+	struct Graph
+	{
+		std::vector<spk::Edge> edges;
+		Adj adj;
+		std::map<spk::Vector3, spk::Vector2> coords;
+	};
+
+	static Graph buildGraph(const std::vector<spk::Edge> &p_edges, const Frame &p_f)
+	{
+		Graph g;
+		g.edges.reserve(p_edges.size());
 		for (size_t i = 0; i < p_edges.size(); ++i)
 		{
 			const spk::Edge &e = p_edges[i];
-			spk::Vector3 a = getKey(e.first());
-			spk::Vector3 b = getKey(e.second());
-			edges.emplace_back(a, b);
-			adj[a].push_back({i, true});
-			adj[b].push_back({i, false});
+			spk::Vector3 a = ensureKey(e.first(), g.coords, p_f);
+			spk::Vector3 b = ensureKey(e.second(), g.coords, p_f);
+			g.edges.emplace_back(a, b);
+			g.adj[a].push_back({i, true});
+			g.adj[b].push_back({i, false});
 		}
+		return g;
+	}
 
-		spk::Vector3 start = adj.begin()->first;
-		spk::Vector2 startCoord = coords[start];
-		for (const auto &kv : coords)
+	static spk::Vector3 pickBottomLeftStart(const std::map<spk::Vector3, spk::Vector2> &p_coords)
+	{
+		spk::Vector3 start = p_coords.begin()->first;
+		spk::Vector2 startCoord = p_coords.begin()->second;
+
+		for (const auto &kv : p_coords)
 		{
 			const spk::Vector2 &c = kv.second;
 			if (c.y < startCoord.y || (FLOAT_EQ(c.y, startCoord.y) == true && c.x < startCoord.x))
@@ -232,61 +253,121 @@ namespace
 				startCoord = c;
 			}
 		}
+		return start;
+	}
 
-		std::vector<bool> used(edges.size(), false);
+	static float turnAngle(const spk::Vector2 &p_from, const spk::Vector2 &p_to)
+	{
+		const float cross = p_from.x * p_to.y - p_from.y * p_to.x;
+		const float dot = p_from.x * p_to.x + p_from.y * p_to.y;
+		return std::atan2(cross, dot);
+	}
+
+	struct NextChoice
+	{
+		size_t idx = SIZE_MAX;
+		bool forward = true;
+		spk::Vector3 next{};
+		spk::Vector2 dir{};
+	};
+
+	static std::optional<NextChoice> chooseNext(const spk::Vector3 &p_cur,
+	                                            const spk::Vector2 &p_curDir,
+	                                            const Adj &p_adj,
+	                                            const std::vector<spk::Edge> &p_edges,
+	                                            const std::map<spk::Vector3, spk::Vector2> &p_coords,
+	                                            const std::vector<bool> &p_used)
+	{
+		const auto it = p_adj.find(p_cur);
+		if (it == p_adj.end())
+		{
+			return std::nullopt;
+		}
+
+		float bestAng = -std::numeric_limits<float>::infinity();
+		NextChoice best;
+
+		for (const auto &opt : it->second)
+		{
+			const size_t idx = opt.first;
+			const bool forward = opt.second;
+			if (p_used[idx] == true)
+			{
+				continue;
+			}
+
+			const spk::Vector3 next3 = (forward == true) ? p_edges[idx].second() : p_edges[idx].first();
+			const spk::Vector2 dir = (p_coords.at(next3) - p_coords.at(p_cur)).normalize();
+			const float ang = turnAngle(p_curDir, dir);
+
+			if (ang > bestAng)
+			{
+				bestAng = ang;
+				best.idx = idx;
+				best.forward = forward;
+				best.next = next3;
+				best.dir = dir;
+			}
+		}
+
+		if (best.idx == SIZE_MAX)
+		{
+			return std::nullopt;
+		}
+		return best;
+	}
+
+	std::vector<spk::Vector3> stitchLoop(const std::vector<spk::Edge> &p_edges, const spk::Vector3 &p_normal)
+	{
+		if (p_edges.empty() == true)
+		{
+			return {};
+		}
+
+		const Frame f = makeFrame(p_normal);
+		Graph g = buildGraph(p_edges, f);
+
+		const spk::Vector3 start = pickBottomLeftStart(g.coords);
+
+		std::vector<bool> used(g.edges.size(), false);
 		std::vector<spk::Vector3> loop;
 		loop.push_back(start);
+
 		spk::Vector3 cur3 = start;
 		spk::Vector2 curDir(1.0f, 0.0f);
 
 		while (true)
 		{
-			float bestAng = -std::numeric_limits<float>::infinity();
-			size_t bestIdx = SIZE_MAX;
-			bool bestForward = true;
-			for (auto &opt : adj[cur3])
-			{
-				size_t idx = opt.first;
-				bool forward = opt.second;
-				if (used[idx] == true)
-				{
-					continue;
-				}
-				spk::Vector3 next3 = forward == true ? edges[idx].second() : edges[idx].first();
-				spk::Vector2 dir = (coords[next3] - coords[cur3]).normalize();
-				float cross = curDir.x * dir.y - curDir.y * dir.x;
-				float dot = curDir.x * dir.x + curDir.y * dir.y;
-				float ang = std::atan2(cross, dot);
-
-				if (ang > bestAng)
-				{
-					bestAng = ang;
-					bestIdx = idx;
-					bestForward = forward;
-				}
-			}
-			if (bestIdx == SIZE_MAX)
+			const auto choice = chooseNext(cur3, curDir, g.adj, g.edges, g.coords, used);
+			if (choice.has_value() == false)
 			{
 				break;
 			}
-			used[bestIdx] = true;
-			spk::Vector3 next3 = bestForward == true ? edges[bestIdx].second() : edges[bestIdx].first();
-			loop.push_back(next3);
-			curDir = (coords[next3] - coords[cur3]).normalize();
-			cur3 = next3;
+
+			used[choice->idx] = true;
+			loop.push_back(choice->next);
+			curDir = choice->dir;
+			cur3 = choice->next;
+
 			if (cur3 == start)
 			{
 				break;
 			}
 		}
-		loop.erase(std::unique(loop.begin(), loop.end(), [](const spk::Vector3 &p_a, const spk::Vector3 &p_b) { return p_a == p_b; }), loop.end());
+
+		loop.erase(std::unique(loop.begin(), loop.end(),
+		                       [](const spk::Vector3 &p_a, const spk::Vector3 &p_b)
+		                       { return p_a == p_b; }),
+		           loop.end());
+
 		if (loop.size() >= 3 && ((loop.front() == loop.back()) == false))
 		{
 			loop.push_back(loop.front());
 		}
+
 		return loop;
 	}
-}
+} // namespace
 
 namespace spk
 {

@@ -31,9 +31,6 @@ namespace spk
 		void setCollider(const spk::SafePointer<const spk::CollisionMesh2D> &p_collider);
 		const spk::SafePointer<const spk::CollisionMesh2D> &collider() const;
 
-		spk::BoundingBox2D boundingBox() const;
-
 		static std::vector<spk::SafePointer<RigidBody2D>> getRigidBodies();
-		static bool intersect(const RigidBody2D *p_a, const spk::Matrix4x4 &p_transformA, const RigidBody2D *p_b, const spk::Matrix4x4 &p_transformB);
 	};
 }

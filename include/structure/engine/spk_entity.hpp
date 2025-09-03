@@ -235,11 +235,6 @@ namespace spk
 		bool containsTag(const std::wstring &p_tag) const;
 		size_t countTag(const std::wstring &p_tag) const;
 
-		bool checkCollision(
-			const spk::Vector3 &p_positionOffset = spk::Vector3(),
-			const spk::Vector3 &p_scaleOffset = spk::Vector3(),
-			const spk::Vector3 &p_rotationOffset = spk::Vector3());
-
 		spk::SafePointer<Entity> getChildByTags(
 			const std::span<const std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator = spk::BinaryOperator::AND);
 		spk::SafePointer<const Entity> getChildByTags(
@@ -250,9 +245,5 @@ namespace spk
 			const std::span<const std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator = spk::BinaryOperator::AND) const;
 		bool containsTags(const std::span<const std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator = spk::BinaryOperator::AND) const;
 		size_t countTags(const std::span<const std::wstring> &p_tags, spk::BinaryOperator p_binaryOperator = spk::BinaryOperator::AND) const;
-
-	private:
-		friend class Transform;
-		void _markForCollision();
 	};
 }
