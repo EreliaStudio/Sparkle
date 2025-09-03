@@ -21,6 +21,7 @@ namespace spk
 		std::vector<Row> _rows;
 
 		size_t _outlineSize = 0;
+		size_t _maxGlyphSize = 0; // 0 = unlimited
 		spk::SafePointer<spk::Font> _font = nullptr;
 		spk::Color _glyphColor = spk::Color::white;
 		spk::Color _outlineColor = spk::Color::black;
@@ -42,5 +43,8 @@ namespace spk
 		void setFont(spk::SafePointer<spk::Font> p_font);
 		void setFontColor(const spk::Color &p_glyphColor, const spk::Color &p_outlineColor);
 		void setFontOutlineSize(size_t p_outlineSize);
+
+		void setMaxGlyphSize(size_t p_maxGlyphSize);
+		uint32_t computeMaxHeightPixels() const;
 	};
 }

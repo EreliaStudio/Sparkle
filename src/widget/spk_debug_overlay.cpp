@@ -47,6 +47,10 @@ namespace spk
 
 				spk::Font::Size opt = f->computeOptimalTextSize(lbl->text(), 0, area);
 				size_t glyphNoOutline = (opt.glyph > _outlineSize ? opt.glyph - _outlineSize : 0);
+				if (_maxGlyphSize > 0 && glyphNoOutline > _maxGlyphSize)
+				{
+					glyphNoOutline = _maxGlyphSize;
+				}
 				lbl->setFontSize(spk::Font::Size(glyphNoOutline, _outlineSize));
 			}
 		}
@@ -190,5 +194,50 @@ namespace spk
 	{
 		_outlineSize = p_outlineSize;
 		requireGeometryUpdate();
+	}
+
+	void DebugOverlay::setMaxGlyphSize(size_t p_maxGlyphSize)
+	{
+		_maxGlyphSize = p_maxGlyphSize;
+		requireGeometryUpdate();
+	}
+
+	uint32_t DebugOverlay::computeMaxHeightPixels() const
+	{
+		if (_rows.empty())
+		{
+			return std::numeric_limits<uint32_t>::max();
+		}
+
+		const spk::SafePointer<spk::Font> f = (_font != nullptr ? _font : Widget::defaultFont());
+		const size_t glyph = (_maxGlyphSize > 0 ? _maxGlyphSize : 0);
+
+		if (glyph == 0 || f == nullptr)
+		{
+			return std::numeric_limits<uint32_t>::max();
+		}
+
+		uint32_t cornerY = 0u;
+		for (const auto &row : _rows)
+		{
+			if (!row.labels.empty() && row.labels[0] != nullptr)
+			{
+				cornerY = row.labels[0]->cornerSize().y;
+				break;
+			}
+		}
+
+		spk::Vector2UInt textSize = f->computeStringSize(L"A", spk::Font::Size(glyph, _outlineSize));
+		spk::cout << "textSize : " << textSize << std::endl;
+		uint32_t perRow = textSize.y + cornerY * 2u;
+		spk::cout << "perRow : " << perRow << std::endl;
+		uint32_t total = static_cast<uint32_t>(_rows.size()) * perRow;
+		spk::cout << "Total : " << total << std::endl;
+		if (_rows.size() > 1)
+		{
+			uint32_t pad = _layout.elementPadding().y;
+			total += pad * static_cast<uint32_t>(_rows.size() - 1);
+		}
+		return total;
 	}
 }
