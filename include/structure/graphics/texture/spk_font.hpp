@@ -131,13 +131,14 @@ namespace spk
 
 			void _uploadTexture();
 
-			Atlas(const stbtt_fontinfo &p_fontInfo,
-				  const Data &p_fontData,
-				  const size_t &p_textSize,
-				  const size_t &p_outlineSize,
-				  const Filtering &p_filtering = Filtering::Linear,
-				  const Wrap &p_wrap = Wrap::ClampToEdge,
-				  const Mipmap &p_mipmap = Mipmap::Enable);
+			Atlas(
+				const stbtt_fontinfo &p_fontInfo,
+				const Data &p_fontData,
+				const size_t &p_textSize,
+				const size_t &p_outlineSize,
+				const Filtering &p_filtering = Filtering::Linear,
+				const Wrap &p_wrap = Wrap::ClampToEdge,
+				const Mipmap &p_mipmap = Mipmap::Enable);
 
 		public:
 			void loadGlyphs(const std::wstring &p_glyphsToLoad);
@@ -154,10 +155,11 @@ namespace spk
 
 			Vector2UInt computeStringSize(const std::wstring &p_string);
 			Vector2Int computeStringBaselineOffset(const std::wstring &p_string);
-			Vector2Int computeStringAnchor(const spk::Geometry2D &p_geometry,
-										   const std::wstring &p_string,
-										   spk::HorizontalAlignment p_horizontalAlignment,
-										   spk::VerticalAlignment p_verticalAlignment);
+			Vector2Int computeStringAnchor(
+				const spk::Geometry2D &p_geometry,
+				const std::wstring &p_string,
+				spk::HorizontalAlignment p_horizontalAlignment,
+				spk::VerticalAlignment p_verticalAlignment);
 		};
 
 	private:
@@ -170,13 +172,14 @@ namespace spk
 
 		Filtering _filtering = Filtering::Nearest;
 		Wrap _wrap = Wrap::ClampToEdge;
-		Mipmap _mipmap = Mipmap::Enable;
+		Mipmap _mipmap = Mipmap::Disable;
 
 	public:
-		static Font fromRawData(const std::vector<uint8_t> &p_data,
-								const Filtering &p_filtering = Filtering::Nearest,
-								const Wrap &p_wrap = Wrap::ClampToEdge,
-								const Mipmap &p_mipmap = Mipmap::Enable);
+		static Font fromRawData(
+			const std::vector<uint8_t> &p_data,
+			const Filtering &p_filtering = Filtering::Nearest,
+			const Wrap &p_wrap = Wrap::ClampToEdge,
+			const Mipmap &p_mipmap = Mipmap::Disable);
 
 		Font();
 		Font(const std::filesystem::path &p_path);
@@ -187,11 +190,12 @@ namespace spk
 
 		Vector2UInt computeStringSize(const std::wstring &p_string, const Font::Size &p_size);
 		Vector2Int computeStringBaselineOffset(const std::wstring &p_string, const Font::Size &p_size);
-		Vector2Int computeStringAnchor(const spk::Geometry2D &p_geometry,
-									   const std::wstring &p_string,
-									   const Font::Size &p_size,
-									   spk::HorizontalAlignment p_horizontalAlignment,
-									   spk::VerticalAlignment p_verticalAlignment);
+		Vector2Int computeStringAnchor(
+			const spk::Geometry2D &p_geometry,
+			const std::wstring &p_string,
+			const Font::Size &p_size,
+			spk::HorizontalAlignment p_horizontalAlignment,
+			spk::VerticalAlignment p_verticalAlignment);
 
 		Size computeOptimalTextSize(const std::wstring &p_string, float p_outlineSizeRatio, const Vector2UInt &p_textArea);
 
