@@ -109,10 +109,13 @@ namespace spk
 	{
 		_fontSize = p_fontSize;
 
-		if (_fontSize.glyph > 0)
+		// Keep outline thickness constant in pixels, independent of glyph size.
+		// The SDF is generated with pixelDistScale proportional to outline size, so
+		// using a fixed threshold of 0.0f renders the full outside half-range
+		// (i.e., ~outlineSize/2 pixels). With outline == 0, revert to the default.
+		if (_fontSize.outline > 0)
 		{
-			float outlineRatio = static_cast<float>(_fontSize.outline) / static_cast<float>(_fontSize.glyph);
-			_outlineThreshold = 0.5f - outlineRatio;
+			_outlineThreshold = 0.0f;
 		}
 		else
 		{
