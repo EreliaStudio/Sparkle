@@ -46,7 +46,12 @@ namespace spk
 				}
 
 				spk::Font::Size opt = f->computeOptimalTextSize(lbl->text(), 0, area);
-				size_t glyphNoOutline = (opt.glyph > _outlineSize ? opt.glyph - _outlineSize : 0);
+				// Account for outline on both sides when fitting text
+				size_t glyphNoOutline = 0;
+				if (opt.glyph > _outlineSize * 2)
+				{
+					glyphNoOutline = opt.glyph - (_outlineSize * 2);
+				}
 				if (_maxGlyphSize > 0 && glyphNoOutline > _maxGlyphSize)
 				{
 					glyphNoOutline = _maxGlyphSize;
