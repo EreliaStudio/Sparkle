@@ -215,6 +215,20 @@ namespace spk
 		requireGeometryUpdate();
 	}
 
+	size_t DebugOverlay::maxHeightPixels() const
+	{
+		return (_maxGlyphSize);
+	}
+
+	uint32_t DebugOverlay::labelHeight() const
+	{
+		if (_rows.empty() || _rows[0].labels.empty() || _rows[0].labels[0] == nullptr)
+		{
+			return 0u;
+		}
+		return _rows[0].labels[0]->geometry().size.y;
+	}
+	
 	uint32_t DebugOverlay::computeMaxHeightPixels() const
 	{
 		if (_rows.empty())
