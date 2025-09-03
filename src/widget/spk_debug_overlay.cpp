@@ -255,7 +255,7 @@ namespace spk
 		}
 
 		spk::Vector2UInt textSize = f->computeStringSize(L"A", spk::Font::Size(glyph, _outlineSize));
-		uint32_t perRow = textSize.y + cornerY * 2u;
+		uint32_t perRow = textSize.y;
 		uint32_t total = static_cast<uint32_t>(_rows.size()) * perRow;
 		if (_rows.size() > 1)
 		{

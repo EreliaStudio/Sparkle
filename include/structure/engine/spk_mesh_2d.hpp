@@ -1,7 +1,7 @@
 #pragma once
 
 #include "structure/engine/spk_mesh.hpp"
-#include "structure/engine/spk_vertex2d.hpp"
+#include "structure/engine/spk_vertex_2D.hpp"
 
 namespace spk
 {

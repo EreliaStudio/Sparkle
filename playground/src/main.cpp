@@ -413,6 +413,7 @@ public:
 		spk::Widget(p_name, p_parent),
 		_debugOverlay(p_name + L"/Overlay", this)
 	{
+		_debugOverlay.setMaxGlyphSize(30);
 		_debugOverlay.setFontOutlineSize(4);
 		_debugOverlay.setFontOutlineSharpness(1);
 		_debugOverlay.setFontColor(spk::Color::white, spk::Color::black);
