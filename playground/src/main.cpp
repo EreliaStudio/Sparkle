@@ -339,11 +339,19 @@ private:
 	spk::Profiler::Instanciator _profilerInstanciator;
 	spk::DebugOverlay _debugOverlay;
 
+	void _updateOutlineFromLayout()
+	{
+		const uint32_t labelHeight = _debugOverlay.labelHeight();
+		const uint32_t outlineSize = std::max<uint32_t>(1u, labelHeight / 8u);
+		_debugOverlay.setFontOutlineSize(outlineSize);
+	}
+
 	void _onGeometryChange() override
 	{
 		spk::Vector2UInt s = geometry().size;
 		s.y = std::min(s.y, _debugOverlay.computeMaxHeightPixels());
 		_debugOverlay.setGeometry({{0, 0}, s});
+		_updateOutlineFromLayout();
 	}
 
 	void _onUpdateEvent(spk::UpdateEvent &p_event) override
@@ -405,8 +413,8 @@ public:
 		spk::Widget(p_name, p_parent),
 		_debugOverlay(p_name + L"/Overlay", this)
 	{
-		_debugOverlay.setFontOutlineSize(10);
-		_debugOverlay.setFontOutlineSharpness(2);
+		_debugOverlay.setFontOutlineSize(4);
+		_debugOverlay.setFontOutlineSharpness(1);
 		_debugOverlay.setFontColor(spk::Color::white, spk::Color::black);
 
 		_debugOverlay.configureRows(20, 1);

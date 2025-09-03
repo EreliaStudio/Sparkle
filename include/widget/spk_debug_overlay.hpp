@@ -49,6 +49,8 @@ namespace spk
 		void setFontOutlineSharpness(size_t p_pixels);
 
 		void setMaxGlyphSize(size_t p_maxGlyphSize);
+		uint32_t labelHeight() const;
+		size_t maxHeightPixels() const;
 		uint32_t computeMaxHeightPixels() const;
 	};
 }
