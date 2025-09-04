@@ -144,7 +144,7 @@ namespace spk
 				return hits;
 			}
 			spk::Vector2 dir = p_direction.normalize();
-			std::vector<spk::SafePointer<spk::RigidBody2D>> bodies = spk::RigidBody2D::getRigidBodies();
+			const std::vector<spk::SafePointer<spk::RigidBody2D>>& bodies = spk::RigidBody2D::getRigidBodies();
 			for (const auto &body : bodies)
 			{
 				processBody(body, p_engine, p_eye, dir, p_maxDistance, hits);

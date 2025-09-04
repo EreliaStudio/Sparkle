@@ -27,7 +27,7 @@ namespace spk
 		void setCollider(const spk::SafePointer<const spk::CollisionMesh> &p_collider);
 		const spk::SafePointer<const spk::CollisionMesh> &collider() const;
 
-		static std::vector<spk::SafePointer<RigidBody>> getRigidBodies();
+		static const std::vector<spk::SafePointer<RigidBody>>& getRigidBodies();
 
 		bool intersect(const spk::SafePointer<RigidBody> p_other) const;
 	};

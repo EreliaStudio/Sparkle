@@ -38,7 +38,7 @@ namespace spk
 		return (_collider);
 	}
 
-	std::vector<spk::SafePointer<RigidBody2D>> RigidBody2D::getRigidBodies()
+	const std::vector<spk::SafePointer<RigidBody2D>>& RigidBody2D::getRigidBodies()
 	{
 		std::lock_guard<std::mutex> lock(_rigidBodiesMutex);
 		return (_rigidBodies);
