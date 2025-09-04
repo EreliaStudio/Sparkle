@@ -2,9 +2,9 @@
 
 #include "structure/math/spk_vector2.hpp"
 
-#include <ostream>
 #include <algorithm>
 #include <cmath>
+#include <ostream>
 
 namespace spk
 {
