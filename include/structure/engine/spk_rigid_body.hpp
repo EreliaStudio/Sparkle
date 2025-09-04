@@ -14,11 +14,19 @@ namespace spk
 {
 	class RigidBody : public spk::Component
 	{
+	public:
+		enum class Mode
+		{
+			Collider,
+			Trigger
+		};
+
 	private:
 		ContractProvider::Contract _onOwnerOnTransformEditionContract;
 		spk::SafePointer<const spk::CollisionMesh> _collisionMesh;
 		spk::BoundingBox _boundingBox;
 		std::vector<spk::Polygon> _polygons;
+		Mode _mode = Mode::Collider;
 		static inline std::vector<spk::SafePointer<RigidBody>> _rigidBodies;
 		static inline std::mutex _rigidBodiesMutex;
 
@@ -39,5 +47,8 @@ namespace spk
 		static const std::vector<spk::SafePointer<RigidBody>> &getRigidBodies();
 
 		bool intersect(const spk::SafePointer<RigidBody> p_other) const;
+	
+		void setMode(const Mode& p_mode);
+		const Mode& mode() const;
 	};
 }
