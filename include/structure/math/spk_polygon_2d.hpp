@@ -46,6 +46,7 @@ namespace spk
 		bool contains(const Polygon2D &p_polygon) const;
 		bool isAdjacent(const Polygon2D &p_other) const;
 		bool isOverlapping(const Polygon2D &p_other) const;
+		bool isSequant(const Polygon2D &p_other) const;
 
 		Polygon2D fuze(const Polygon2D &p_other, bool p_checkCompatibility = false) const;
 		static Polygon2D fuzeGroup(const std::vector<Polygon2D> &p_polygons);
