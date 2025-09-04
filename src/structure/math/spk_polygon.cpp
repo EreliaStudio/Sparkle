@@ -13,7 +13,7 @@ namespace spk
 		spk::Edge::Identifier id = spk::Edge::Identifier::from(tmpEdge);
 		if (_edgesSet.find(id) != _edgesSet.end())
 		{
-			return ;	
+			return;
 		}
 
 		_edges.push_back(std::move(tmpEdge));
@@ -55,8 +55,12 @@ namespace spk
 		float o3 = p_b.orientation(p_a.first(), p_normal);
 		float o4 = p_b.orientation(p_a.second(), p_normal);
 
-		bool cond1 = ((o1 > spk::Constants::angularPrecision && o2 < -spk::Constants::angularPrecision) || (o1 < -spk::Constants::angularPrecision && o2 > spk::Constants::angularPrecision));
-		bool cond2 = ((o3 > spk::Constants::angularPrecision && o4 < -spk::Constants::angularPrecision) || (o3 < -spk::Constants::angularPrecision && o4 > spk::Constants::angularPrecision));
+		bool cond1 =
+			((o1 > spk::Constants::angularPrecision && o2 < -spk::Constants::angularPrecision) ||
+			 (o1 < -spk::Constants::angularPrecision && o2 > spk::Constants::angularPrecision));
+		bool cond2 =
+			((o3 > spk::Constants::angularPrecision && o4 < -spk::Constants::angularPrecision) ||
+			 (o3 < -spk::Constants::angularPrecision && o4 > spk::Constants::angularPrecision));
 
 		return (cond1 == true && cond2 == true);
 	}
@@ -144,7 +148,7 @@ namespace spk
 		return true;
 	}
 
-	const spk::Plane& Polygon::plane() const
+	const spk::Plane &Polygon::plane() const
 	{
 		if (_points.empty() == true)
 		{
@@ -172,11 +176,11 @@ namespace spk
 			return false;
 		}
 
-		const spk::Plane& currentPlane = plane();
-		const spk::Plane& otherPlane = p_other.plane();
+		const spk::Plane &currentPlane = plane();
+		const spk::Plane &otherPlane = p_other.plane();
 
-		const spk::Vector3& currentNormal = currentPlane.normal.normalize();
-		const spk::Vector3& otherNormal = otherPlane.normal.normalize();
+		const spk::Vector3 &currentNormal = currentPlane.normal.normalize();
+		const spk::Vector3 &otherNormal = otherPlane.normal.normalize();
 
 		if (FLOAT_NEQ(std::fabs(currentNormal.dot(otherNormal)), 1.0f))
 		{
@@ -310,8 +314,7 @@ namespace spk
 
 		for (const auto &edge : p_polygon.edges())
 		{
-			if (_isPointInside(*this, edge.first()) == false ||
-				_isPointInside(*this, edge.second()) == false)
+			if (_isPointInside(*this, edge.first()) == false || _isPointInside(*this, edge.second()) == false)
 			{
 				return false;
 			}
@@ -385,6 +388,65 @@ namespace spk
 		return triangulate();
 	}
 
+	static float cross2D(const spk::Vector2 &p_a, const spk::Vector2 &p_b, const spk::Vector2 &p_c)
+	{
+		spk::Vector2 ab = p_b - p_a;
+		spk::Vector2 ac = p_c - p_a;
+		return ab.x * ac.y - ab.y * ac.x;
+	}
+
+	static bool pointInTriangle(const spk::Vector2 &p_p, const spk::Vector2 &p_a, const spk::Vector2 &p_b, const spk::Vector2 &p_c)
+	{
+		auto sign = [](const spk::Vector2 &p_p1, const spk::Vector2 &p_p2, const spk::Vector2 &p_p3)
+		{ return (p_p1.x - p_p3.x) * (p_p2.y - p_p3.y) - (p_p2.x - p_p3.x) * (p_p1.y - p_p3.y); };
+		float d1 = sign(p_p, p_a, p_b);
+		float d2 = sign(p_p, p_b, p_c);
+		float d3 = sign(p_p, p_c, p_a);
+		bool hasNeg =
+			(d1 < -spk::Constants::angularPrecision) || (d2 < -spk::Constants::angularPrecision) || (d3 < -spk::Constants::angularPrecision);
+		bool hasPos = (d1 > spk::Constants::angularPrecision) || (d2 > spk::Constants::angularPrecision) || (d3 > spk::Constants::angularPrecision);
+		return (hasNeg && hasPos) == false;
+	}
+
+	static bool triangleContainsPoint(
+		const std::vector<size_t> &p_indices, size_t p_prev, size_t p_curr, size_t p_next, const std::vector<spk::Vector2> &p_coords)
+	{
+		for (size_t j = 0; j < p_indices.size(); ++j)
+		{
+			size_t idx = p_indices[j];
+			if (idx == p_prev || idx == p_curr || idx == p_next)
+			{
+				continue;
+			}
+			if (pointInTriangle(p_coords[idx], p_coords[p_prev], p_coords[p_curr], p_coords[p_next]) == true)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	static size_t findEarIndex(const std::vector<size_t> &p_indices, const std::vector<spk::Vector2> &p_coords)
+	{
+		for (size_t i = 0; i < p_indices.size(); ++i)
+		{
+			size_t prev = p_indices[(i + p_indices.size() - 1) % p_indices.size()];
+			size_t curr = p_indices[i];
+			size_t next = p_indices[(i + 1) % p_indices.size()];
+
+			if (cross2D(p_coords[prev], p_coords[curr], p_coords[next]) <= spk::Constants::angularPrecision)
+			{
+				continue;
+			}
+			if (triangleContainsPoint(p_indices, prev, curr, next, p_coords) == true)
+			{
+				continue;
+			}
+			return i;
+		}
+		return p_indices.size();
+	}
+
 	std::vector<Polygon> Polygon::triangulate() const
 	{
 		std::vector<Polygon> triangles;
@@ -425,67 +487,20 @@ namespace spk
 			std::reverse(indices.begin(), indices.end());
 		}
 
-		auto cross2D = [](const spk::Vector2 &p_a, const spk::Vector2 &p_b, const spk::Vector2 &p_c)
-		{
-			spk::Vector2 ab = p_b - p_a;
-			spk::Vector2 ac = p_c - p_a;
-			return ab.x * ac.y - ab.y * ac.x;
-		};
-
-		auto pointInTriangle = [&](const spk::Vector2 &p_p, const spk::Vector2 &p_a, const spk::Vector2 &p_b, const spk::Vector2 &p_c)
-		{
-			auto sign = [](const spk::Vector2 &p_p1, const spk::Vector2 &p_p2, const spk::Vector2 &p_p3)
-			{ return (p_p1.x - p_p3.x) * (p_p2.y - p_p3.y) - (p_p2.x - p_p3.x) * (p_p1.y - p_p3.y); };
-			float d1 = sign(p_p, p_a, p_b);
-			float d2 = sign(p_p, p_b, p_c);
-			float d3 = sign(p_p, p_c, p_a);
-			bool hasNeg = (d1 < -spk::Constants::angularPrecision) || (d2 < -spk::Constants::angularPrecision) || (d3 < -spk::Constants::angularPrecision);
-			bool hasPos = (d1 > spk::Constants::angularPrecision) || (d2 > spk::Constants::angularPrecision) || (d3 > spk::Constants::angularPrecision);
-			return (hasNeg && hasPos) == false;
-		};
-
 		while (indices.size() > 2)
 		{
-			bool earFound = false;
-			for (size_t i = 0; i < indices.size(); ++i)
-			{
-				size_t prev = indices[(i + indices.size() - 1) % indices.size()];
-				size_t curr = indices[i];
-				size_t next = indices[(i + 1) % indices.size()];
-
-				if (cross2D(coords[prev], coords[curr], coords[next]) <= spk::Constants::angularPrecision)
-				{
-					continue;
-				}
-
-				bool hasPoint = false;
-				for (size_t j = 0; j < indices.size(); ++j)
-				{
-					size_t idx = indices[j];
-					if (idx == prev || idx == curr || idx == next)
-					{
-						continue;
-					}
-					if (pointInTriangle(coords[idx], coords[prev], coords[curr], coords[next]) == true)
-					{
-						hasPoint = true;
-						break;
-					}
-				}
-				if (hasPoint == true)
-				{
-					continue;
-				}
-
-				triangles.push_back(Polygon::fromLoop({pts[prev], pts[curr], pts[next]}));
-				indices.erase(indices.begin() + i);
-				earFound = true;
-				break;
-			}
-			if (earFound == false)
+			size_t earIndex = findEarIndex(indices, coords);
+			if (earIndex == indices.size())
 			{
 				break;
 			}
+
+			size_t prev = indices[(earIndex + indices.size() - 1) % indices.size()];
+			size_t curr = indices[earIndex];
+			size_t next = indices[(earIndex + 1) % indices.size()];
+
+			triangles.push_back(Polygon::fromLoop({pts[prev], pts[curr], pts[next]}));
+			indices.erase(indices.begin() + earIndex);
 		}
 
 		return triangles;
