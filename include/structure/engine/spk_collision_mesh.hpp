@@ -22,7 +22,9 @@ namespace spk
 		void addUnit(const Unit &p_unit);
 		const std::vector<Unit> &units() const;
 
-		const spk::BoundingBox& boundingBox() const;
+		const spk::BoundingBox &boundingBox() const;
+
+		bool intersect(const CollisionMesh &p_other) const;
 
 		static CollisionMesh fromObjMesh(const spk::SafePointer<spk::ObjMesh> &p_mesh);
 	};

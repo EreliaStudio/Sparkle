@@ -1,6 +1,6 @@
 #include "structure/engine/spk_collision_mesh.hpp"
-#include "structure/math/spk_plane.hpp"
 #include "structure/math/spk_edge_map.hpp"
+#include "structure/math/spk_plane.hpp"
 #include "structure/math/spk_reference_frame.hpp"
 #include <unordered_map>
 
@@ -10,7 +10,7 @@ namespace spk
 	{
 		_units.push_back(p_unit);
 
-		const spk::BoundingBox& unitBoundingBox = p_unit.boundingBox();
+		const spk::BoundingBox &unitBoundingBox = p_unit.boundingBox();
 		_boundingBox.addPoint(unitBoundingBox.min);
 		_boundingBox.addPoint(unitBoundingBox.max);
 	}
@@ -20,9 +20,29 @@ namespace spk
 		return (_units);
 	}
 
-	const spk::BoundingBox& CollisionMesh::boundingBox() const
+	const spk::BoundingBox &CollisionMesh::boundingBox() const
 	{
 		return (_boundingBox);
+	}
+
+	bool CollisionMesh::intersect(const CollisionMesh &p_other) const
+	{
+		if (boundingBox().intersect(p_other.boundingBox()) == false)
+		{
+			return false;
+		}
+
+		for (const auto &unitA : units())
+		{
+			for (const auto &unitB : p_other.units())
+			{
+				if (unitA.isOverlapping(unitB) == true)
+				{
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	CollisionMesh CollisionMesh::fromObjMesh(const spk::SafePointer<spk::ObjMesh> &p_mesh)
