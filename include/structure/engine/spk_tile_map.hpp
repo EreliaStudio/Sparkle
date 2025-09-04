@@ -438,6 +438,7 @@ namespace spk
 			spk::SafePointer<Mesh2DRenderer> _renderer;
 			spk::SafePointer<spk::CollisionMesh2DRenderer> _collisionRenderer;
 			spk::SafePointer<spk::Collider2D> _collider;
+			spk::Collider2D::CollisionEnterContract _colliderContract;
 			spk::CollisionMesh2D _collisionMesh;
 			spk::Flags<TFlagEnum> _collisionFlags = {};
 			bool _collisionMeshDirty = true;
@@ -450,6 +451,9 @@ namespace spk
 				_renderer = this->template addComponent<Mesh2DRenderer>(p_name + L"/Mesh2DRenderer");
 				_collisionRenderer = this->template addComponent<spk::CollisionMesh2DRenderer>(p_name + L"/CollisionMesh2DRenderer");
 				_collider = this->template addComponent<spk::Collider2D>(p_name + L"/Collider2D");
+				_colliderContract = _collider->onCollisionEnter([&](const spk::SafePointer<spk::Entity>& p_target){
+					spk::cout << "Entity [" << p_target->name() << "] collide with chunk [" << name() << "]" << std::endl;
+				});
 				_data = this->template addComponent<Data>(p_name + L"/Data");
 				_data->setTileMap(p_parent);
 				_data->setChunkCoordinate(p_coord);
