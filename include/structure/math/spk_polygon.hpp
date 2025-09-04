@@ -1,13 +1,13 @@
 #pragma once
 
+#include "structure/math/spk_bounding_box.hpp"
 #include "structure/math/spk_edge.hpp"
 #include "structure/math/spk_plane.hpp"
 #include "structure/math/spk_vector3.hpp"
-#include "structure/math/spk_bounding_box.hpp"
 
 #include <ostream>
-#include <vector>
 #include <set>
+#include <vector>
 
 namespace spk
 {
@@ -19,11 +19,13 @@ namespace spk
 		std::set<spk::Edge::Identifier> _edgesSet;
 		BoundingBox _boundingBox;
 		mutable spk::Plane _plane;
-		
+
 		mutable bool _dirty = true;
 
 		void _addEdge(const spk::Vector3 &p_a, const spk::Vector3 &p_b);
 		static bool _edgesIntersect(const spk::Edge &p_a, const spk::Edge &p_b, const spk::Vector3 &p_normal);
+		static bool _segmentPlaneIntersection(
+			const spk::Vector3 &p_a, const spk::Vector3 &p_b, const spk::Plane &p_plane, spk::Vector3 &p_intersection);
 		static bool _isPointInside(const Polygon &p_poly, const spk::Vector3 &p_point);
 		void _invalidate();
 		void _updateCache() const;
@@ -31,14 +33,15 @@ namespace spk
 	public:
 		const std::vector<spk::Vector3> &points() const;
 		const std::vector<spk::Edge> &edges() const;
-		const spk::Plane& plane() const;
-		const BoundingBox& boundingBox() const;
+		const spk::Plane &plane() const;
+		const BoundingBox &boundingBox() const;
 
 		bool isPlanar() const;
 		bool isCoplanar(const Polygon &p_other) const;
 		bool isAdjacent(const Polygon &p_other) const;
 		bool isConvex() const;
 		bool isOverlapping(const Polygon &p_other) const;
+		bool isSequant(const Polygon &p_other) const;
 		bool contains(const spk::Vector3 &p_point) const;
 		bool contains(const Polygon &p_polygon) const;
 
