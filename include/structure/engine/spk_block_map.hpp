@@ -6,14 +6,14 @@
 #include <unordered_map>
 #include <vector>
 
+#include "structure/engine/spk_block.hpp"
+#include "structure/engine/spk_collider.hpp"
 #include "structure/engine/spk_collision_mesh.hpp"
 #include "structure/engine/spk_collision_mesh_renderer.hpp"
 #include "structure/engine/spk_component.hpp"
 #include "structure/engine/spk_entity.hpp"
 #include "structure/engine/spk_obj_mesh.hpp"
 #include "structure/engine/spk_obj_mesh_renderer.hpp"
-#include "structure/engine/spk_rigid_body.hpp"
-#include "structure/engine/spk_block.hpp"
 #include "structure/math/spk_vector3.hpp"
 #include "structure/spk_safe_pointer.hpp"
 #include "structure/system/spk_exception.hpp"
@@ -35,7 +35,7 @@ namespace spk
 			private:
 				spk::SafePointer<spk::ObjMeshRenderer> _renderer;
 				spk::SafePointer<spk::CollisionMeshRenderer> _collisionRenderer;
-				spk::SafePointer<spk::RigidBody> _rigidBody;
+				spk::SafePointer<spk::Collider> _collider;
 
 				spk::SafePointer<BlockMap> _blockMap;
 				std::array<std::array<std::array<Block::Specifier, ChunkSizeX>, ChunkSizeY>, ChunkSizeZ> _content;
@@ -171,7 +171,7 @@ namespace spk
 				{
 					_renderer = owner()->template getComponent<spk::ObjMeshRenderer>();
 					_collisionRenderer = owner()->template getComponent<spk::CollisionMeshRenderer>();
-					_rigidBody = owner()->template getComponent<spk::RigidBody>();
+					_collider = owner()->template getComponent<spk::Collider>();
 				}
 
 				void onPaintEvent(spk::PaintEvent &p_event) override
@@ -184,7 +184,7 @@ namespace spk
 						{
 							_renderer->setMesh(mesh());
 							_collisionRenderer->setMesh(collisionMesh());
-							_rigidBody->setCollisionMesh(collisionMesh());
+							_collider->setCollisionMesh(collisionMesh());
 							p_event.requestPaint();
 						}
 					}
@@ -211,7 +211,7 @@ namespace spk
 
 			spk::SafePointer<spk::ObjMeshRenderer> _renderer;
 			spk::SafePointer<spk::CollisionMeshRenderer> _collisionRenderer;
-			spk::SafePointer<spk::RigidBody> _rigidBody;
+			spk::SafePointer<spk::Collider> _collider;
 			spk::SafePointer<Data> _data;
 
 		public:
@@ -220,7 +220,7 @@ namespace spk
 			{
 				_renderer = this->template addComponent<spk::ObjMeshRenderer>(p_name + L"/ObjMeshRenderer");
 				_collisionRenderer = this->template addComponent<spk::CollisionMeshRenderer>(p_name + L"/CollisionMeshRenderer");
-				_rigidBody = this->template addComponent<spk::RigidBody>(p_name + L"/RigidBody");
+				_collider = this->template addComponent<spk::Collider>(p_name + L"/Collider");
 				_data = this->template addComponent<Data>(p_name + L"/Data");
 				_data->setBlockMap(p_parent);
 

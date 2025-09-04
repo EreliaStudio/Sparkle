@@ -43,7 +43,7 @@ namespace spk
 		_frameCollisions.clear();
 	}
 
-	void CollisionTrigger2D::registerCollision(RigidBody2D *p_body)
+	void CollisionTrigger2D::registerCollision(Collider2D *p_body)
 	{
 		if (_isTrigger == false)
 		{
