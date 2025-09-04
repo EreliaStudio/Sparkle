@@ -43,7 +43,7 @@ namespace spk
 		_frameCollisions.clear();
 	}
 
-	void CollisionTrigger::registerCollision(RigidBody *p_body)
+	void CollisionTrigger::registerCollision(Collider *p_body)
 	{
 		if (_isTrigger == false)
 		{
