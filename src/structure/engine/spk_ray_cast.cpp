@@ -107,6 +107,8 @@ namespace
 		const spk::Vector3 &p_eye,
 		const spk::Vector3 &p_dir,
 		float p_maxDistance,
+		std::span<const std::wstring> p_tags,
+		spk::BinaryOperator p_binaryOperator,
 		std::vector<spk::RayCast::Hit> &p_hits)
 	{
 		if ((p_body == nullptr) == true)
@@ -118,6 +120,13 @@ namespace
 		{
 			return;
 		}
+		if ((p_tags.empty() == false))
+		{
+			if ((owner->containsTags(p_tags, p_binaryOperator) == false))
+			{
+				return;
+			}
+		}
 		spk::Vector3 offset = owner->transform().position();
 		processCollider(p_body->collider(), p_eye, p_dir, p_maxDistance, offset, owner, p_hits);
 	}
@@ -126,9 +135,14 @@ namespace
 namespace spk
 {
 	RayCast::Hit RayCast::launch(
-		const spk::SafePointer<spk::GameEngine> &p_engine, const spk::Vector3 &p_eye, const spk::Vector3 &p_direction, float p_maxDistance)
+		const spk::SafePointer<spk::GameEngine> &p_engine,
+		const spk::Vector3 &p_eye,
+		const spk::Vector3 &p_direction,
+		float p_maxDistance,
+		std::span<const std::wstring> p_tags,
+		spk::BinaryOperator p_binaryOperator)
 	{
-		std::vector<Hit> hits = launchAll(p_engine, p_eye, p_direction, p_maxDistance);
+		std::vector<Hit> hits = launchAll(p_engine, p_eye, p_direction, p_maxDistance, p_tags, p_binaryOperator);
 		Hit result{};
 		float closest = p_maxDistance;
 		for (const auto &hit : hits)
@@ -144,7 +158,12 @@ namespace spk
 	}
 
 	std::vector<RayCast::Hit> RayCast::launchAll(
-		const spk::SafePointer<spk::GameEngine> &p_engine, const spk::Vector3 &p_eye, const spk::Vector3 &p_direction, float p_maxDistance)
+		const spk::SafePointer<spk::GameEngine> &p_engine,
+		const spk::Vector3 &p_eye,
+		const spk::Vector3 &p_direction,
+		float p_maxDistance,
+		std::span<const std::wstring> p_tags,
+		spk::BinaryOperator p_binaryOperator)
 	{
 		std::vector<Hit> hits;
 		if ((p_engine == nullptr) == true)
@@ -155,26 +174,36 @@ namespace spk
 		std::vector<spk::SafePointer<spk::RigidBody>> bodies = spk::RigidBody::getRigidBodies();
 		for (const auto &body : bodies)
 		{
-			processBody(body, p_engine, p_eye, dir, p_maxDistance, hits);
+			processBody(body, p_engine, p_eye, dir, p_maxDistance, p_tags, p_binaryOperator, hits);
 		}
 		return hits;
 	}
 
-	RayCast::Hit RayCast::launch(const spk::SafePointer<spk::Entity> &p_entity, const spk::Vector3 &p_direction, float p_maxDistance)
+	RayCast::Hit RayCast::launch(
+		const spk::SafePointer<spk::Entity> &p_entity,
+		const spk::Vector3 &p_direction,
+		float p_maxDistance,
+		std::span<const std::wstring> p_tags,
+		spk::BinaryOperator p_binaryOperator)
 	{
 		if ((p_entity == nullptr) == true)
 		{
 			return {};
 		}
-		return launch(p_entity->engine(), p_entity->transform().position(), p_direction, p_maxDistance);
+		return launch(p_entity->engine(), p_entity->transform().position(), p_direction, p_maxDistance, p_tags, p_binaryOperator);
 	}
 
-	std::vector<RayCast::Hit> RayCast::launchAll(const spk::SafePointer<spk::Entity> &p_entity, const spk::Vector3 &p_direction, float p_maxDistance)
+	std::vector<RayCast::Hit> RayCast::launchAll(
+		const spk::SafePointer<spk::Entity> &p_entity,
+		const spk::Vector3 &p_direction,
+		float p_maxDistance,
+		std::span<const std::wstring> p_tags,
+		spk::BinaryOperator p_binaryOperator)
 	{
 		if ((p_entity == nullptr) == true)
 		{
 			return {};
 		}
-		return launchAll(p_entity->engine(), p_entity->transform().position(), p_direction, p_maxDistance);
+		return launchAll(p_entity->engine(), p_entity->transform().position(), p_direction, p_maxDistance, p_tags, p_binaryOperator);
 	}
 }
