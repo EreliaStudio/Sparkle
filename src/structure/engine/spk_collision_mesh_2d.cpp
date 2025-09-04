@@ -6,7 +6,7 @@ namespace spk
 	{
 		_units.push_back(p_unit);
 
-		const spk::BoundingBox2D& unitBoundingBox = p_unit.boundingBox();
+		const spk::BoundingBox2D &unitBoundingBox = p_unit.boundingBox();
 		_boundingBox.addPoint(unitBoundingBox.min);
 		_boundingBox.addPoint(unitBoundingBox.max);
 	}
@@ -16,9 +16,30 @@ namespace spk
 		return (_units);
 	}
 
-	const spk::BoundingBox2D& CollisionMesh2D::boundingBox() const
+	const spk::BoundingBox2D &CollisionMesh2D::boundingBox() const
 	{
 		return (_boundingBox);
+	}
+
+	bool CollisionMesh2D::intersect(const CollisionMesh2D &p_other) const
+	{
+		if (boundingBox().intersect(p_other.boundingBox()) == false)
+		{
+			return false;
+		}
+
+		for (const auto &unitA : units())
+		{
+			for (const auto &unitB : p_other.units())
+			{
+				if (unitA.isOverlapping(unitB) == true)
+				{
+					return true;
+				}
+			}
+		}
+
+		return false;
 	}
 
 	CollisionMesh2D CollisionMesh2D::fromMesh(const spk::SafePointer<const spk::Mesh2D> &p_mesh)
