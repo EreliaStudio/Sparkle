@@ -11,8 +11,8 @@ class PlaygroundTileMap : public spk::TileMap<16, 16, 4, TileFlag>
 {
 private:
 	spk::Perlin _perlin;
-	float _noiseScale = 0.04f;	 // larger features (lower base frequency)
-	float _noiseContrast = 2.0f; // >1.0 pushes values toward extremes
+	float _noiseScale = 0.04f;
+	float _noiseContrast = 2.0f;
 
 	short _tileIdFromNoise(float p_value) const
 	{

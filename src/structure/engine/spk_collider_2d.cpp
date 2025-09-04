@@ -20,12 +20,14 @@ namespace spk
 		std::vector<spk::SafePointer<const Collider2D>> result;
 
 		std::lock_guard<std::mutex> lock(_collidersMutex);
+		
 		for (const auto &body : _colliders)
 		{
 			if (body.get() == this)
 			{
 				continue;
 			}
+
 			if (intersect(body) == true)
 			{
 				result.push_back(body);
@@ -48,6 +50,7 @@ namespace spk
 
 	void Collider2D::awake()
 	{
+		spk::cout << "Awake [" << owner()->name() << "]'s collider 2D" << std::endl;
 		{
 			std::lock_guard<std::mutex> lock(_collidersMutex);
 			_colliders.push_back(this);
