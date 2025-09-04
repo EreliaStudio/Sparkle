@@ -91,7 +91,7 @@ namespace
 	}
 
 	void processCollider(
-		const spk::SafePointer<const spk::CollisionMesh2D> &p_collider,
+		const spk::SafePointer<const spk::CollisionMesh2D> &p_collisionMesh,
 		const spk::Vector2 &p_eye,
 		const spk::Vector2 &p_dir,
 		float p_maxDistance,
@@ -99,11 +99,11 @@ namespace
 		const spk::SafePointer<spk::Entity> &p_owner,
 		std::vector<spk::RayCast2D::Hit> &p_hits)
 	{
-		if ((p_collider == nullptr) == true)
+		if ((p_collisionMesh == nullptr) == true)
 		{
 			return;
 		}
-		for (const auto &unit : p_collider->units())
+		for (const auto &unit : p_collisionMesh->units())
 		{
 			processUnit(unit, p_eye, p_dir, p_maxDistance, p_offset, p_owner, p_hits);
 		}
@@ -136,7 +136,7 @@ namespace
 			}
 		}
 		spk::Vector2 offset = owner->transform().position().xy();
-		processCollider(p_body->collider(), p_eye, p_dir, p_maxDistance, offset, owner, p_hits);
+		processCollider(p_body->collisionMesh(), p_eye, p_dir, p_maxDistance, offset, owner, p_hits);
 	}
 }
 

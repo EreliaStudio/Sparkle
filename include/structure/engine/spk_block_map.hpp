@@ -184,7 +184,7 @@ namespace spk
 						{
 							_renderer->setMesh(mesh());
 							_collisionRenderer->setMesh(collisionMesh());
-							_rigidBody->setCollider(collisionMesh());
+							_rigidBody->setCollisionMesh(collisionMesh());
 							p_event.requestPaint();
 						}
 					}

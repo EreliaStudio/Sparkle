@@ -342,7 +342,7 @@ private:
 	void _updateOutlineFromLayout()
 	{
 		const uint32_t labelHeight = _debugOverlay.labelHeight();
-		const uint32_t outlineSize = std::max<uint32_t>(1u, labelHeight / 8u);
+		const uint32_t outlineSize = std::max<uint32_t>(1u, labelHeight / 6u);
 		_debugOverlay.setFontOutlineSize(outlineSize);
 	}
 

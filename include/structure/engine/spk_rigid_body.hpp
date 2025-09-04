@@ -13,19 +13,23 @@ namespace spk
 	class RigidBody : public spk::Component
 	{
 	private:
-		spk::SafePointer<const spk::CollisionMesh> _collider;
+		ContractProvider::Contract _onOwnerOnTransformEditionContract;
+		spk::SafePointer<const spk::CollisionMesh> _collisionMesh;
 		static inline std::vector<spk::SafePointer<RigidBody>> _rigidBodies;
 		static inline std::mutex _rigidBodiesMutex;
+
+		std::vector<spk::SafePointer<const RigidBody>> _executeCollisionTest();
 
 	public:
 		RigidBody(const std::wstring &p_name);
 		~RigidBody() override;
 
+		void start() override;
 		void awake() override;
 		void sleep() override;
 
-		void setCollider(const spk::SafePointer<const spk::CollisionMesh> &p_collider);
-		const spk::SafePointer<const spk::CollisionMesh> &collider() const;
+		void setCollisionMesh(const spk::SafePointer<const spk::CollisionMesh> &p_collisionMesh);
+		const spk::SafePointer<const spk::CollisionMesh> &collisionMesh() const;
 
 		static const std::vector<spk::SafePointer<RigidBody>>& getRigidBodies();
 
