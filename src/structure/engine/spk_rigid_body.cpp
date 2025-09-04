@@ -18,6 +18,20 @@ namespace spk
 		stop();
 	}
 
+	std::vector<spk::SafePointer<const RigidBody>> RigidBody::_executeCollisionTest()
+	{
+		std::vector<spk::SafePointer<const RigidBody>> result;
+
+		return (result);
+	}
+
+	void RigidBody::start()
+	{
+		_onOwnerOnTransformEditionContract = owner()->transform().addOnEditionCallback([&](){
+			std::vector<spk::SafePointer<const RigidBody>> collidedRigidBody = _executeCollisionTest();
+		});
+	}
+
 	void RigidBody::awake()
 	{
 		std::lock_guard<std::mutex> lock(_rigidBodiesMutex);
@@ -32,14 +46,14 @@ namespace spk
 		_rigidBodies.erase(it, _rigidBodies.end());
 	}
 
-	void RigidBody::setCollider(const spk::SafePointer<const spk::CollisionMesh> &p_collider)
+	void RigidBody::setCollisionMesh(const spk::SafePointer<const spk::CollisionMesh> &p_collisionMesh)
 	{
-		_collider = p_collider;
+		_collisionMesh = p_collisionMesh;
 	}
 
-	const spk::SafePointer<const spk::CollisionMesh> &RigidBody::collider() const
+	const spk::SafePointer<const spk::CollisionMesh> &RigidBody::collisionMesh() const
 	{
-		return (_collider);
+		return (_collisionMesh);
 	}
 
 	const std::vector<spk::SafePointer<RigidBody>>& RigidBody::getRigidBodies()
@@ -149,13 +163,13 @@ namespace spk
 			return false;
 		}
 
-		std::vector<std::array<spk::Vector3, 3>> collectTriangles(const spk::SafePointer<const CollisionMesh>& p_collider, const spk::Transform &p_transform)
+		std::vector<std::array<spk::Vector3, 3>> collectTriangles(const spk::SafePointer<const CollisionMesh>& p_collisionMesh, const spk::Transform &p_transform)
 		{
 			std::vector<std::array<spk::Vector3, 3>> result;
 
-			if (p_collider != nullptr)
+			if (p_collisionMesh != nullptr)
 			{
-				for (const auto &unit : p_collider->units())
+				for (const auto &unit : p_collisionMesh->units())
 				{
 					const auto &pts = unit.points();
 					if (pts.size() >= 3)
@@ -177,15 +191,15 @@ namespace spk
 
 	bool RigidBody::intersect(const spk::SafePointer<RigidBody> p_other) const
 	{
-		BoundingBox boxA = collider()->boundingBox().place(owner()->transform().position());
-		BoundingBox boxB = p_other->collider()->boundingBox().place(p_other->owner()->transform().position());
+		BoundingBox boxA = collisionMesh()->boundingBox().place(owner()->transform().position());
+		BoundingBox boxB = p_other->collisionMesh()->boundingBox().place(p_other->owner()->transform().position());
 		if (boxA.intersect(boxB) == false)
 		{
 			return false;
 		}
 
-		std::vector<std::array<spk::Vector3, 3>> triAs = collectTriangles(collider(), owner()->transform());
-		std::vector<std::array<spk::Vector3, 3>> triBs = collectTriangles(p_other->collider(), p_other->owner()->transform());
+		std::vector<std::array<spk::Vector3, 3>> triAs = collectTriangles(collisionMesh(), owner()->transform());
+		std::vector<std::array<spk::Vector3, 3>> triBs = collectTriangles(p_other->collisionMesh(), p_other->owner()->transform());
 
 		for (const auto &ta : triAs)
 		{

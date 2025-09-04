@@ -14,6 +14,20 @@ namespace spk
 		stop();
 	}
 
+	std::vector<spk::SafePointer<const RigidBody2D>> RigidBody2D::_executeCollisionTest()
+	{
+		std::vector<spk::SafePointer<const RigidBody2D>> result;
+
+		return (result);
+	}
+
+	void RigidBody2D::start()
+	{
+		_onOwnerOnTransformEditionContract = owner()->transform().addOnEditionCallback([&](){
+			std::vector<spk::SafePointer<const RigidBody2D>> collidedRigidBody = _executeCollisionTest();
+		});
+	}
+
 	void RigidBody2D::awake()
 	{
 		std::lock_guard<std::mutex> lock(_rigidBodiesMutex);
@@ -28,14 +42,14 @@ namespace spk
 		_rigidBodies.erase(it, _rigidBodies.end());
 	}
 
-	void RigidBody2D::setCollider(const spk::SafePointer<const spk::CollisionMesh2D> &p_collider)
+	void RigidBody2D::setCollisionMesh(const spk::SafePointer<const spk::CollisionMesh2D> &p_collisionMesh)
 	{
-		_collider = p_collider;
+		_collisionMesh = p_collisionMesh;
 	}
 
-	const spk::SafePointer<const spk::CollisionMesh2D> &RigidBody2D::collider() const
+	const spk::SafePointer<const spk::CollisionMesh2D> &RigidBody2D::collisionMesh() const
 	{
-		return (_collider);
+		return (_collisionMesh);
 	}
 
 	const std::vector<spk::SafePointer<RigidBody2D>>& RigidBody2D::getRigidBodies()
@@ -121,17 +135,17 @@ namespace spk
 		}
 
 		std::vector<std::vector<spk::Vector2>> collectPolygons2D(
-			const spk::SafePointer<const spk::CollisionMesh2D> &p_collider, const spk::Transform &p_transform)
+			const spk::SafePointer<const spk::CollisionMesh2D> &p_collisionMesh, const spk::Transform &p_transform)
 		{
 			std::vector<std::vector<spk::Vector2>> result;
-			if (p_collider == nullptr)
+			if (p_collisionMesh == nullptr)
 			{
 				return result;
 			}
 
 			const spk::Vector2 offset = p_transform.position().xy();
 
-			for (const auto &unit : p_collider->units())
+			for (const auto &unit : p_collisionMesh->units())
 			{
 				const auto &pts = unit.points();
 				if (pts.empty())
@@ -185,15 +199,15 @@ namespace spk
 
 	bool RigidBody2D::intersect(const spk::SafePointer<RigidBody2D> p_other) const
 	{
-		const BoundingBox2D boxA = collider()->boundingBox().place(owner()->transform().position().xy());
-		const BoundingBox2D boxB = p_other->collider()->boundingBox().place(p_other->owner()->transform().position().xy());
+		const BoundingBox2D boxA = collisionMesh()->boundingBox().place(owner()->transform().position().xy());
+		const BoundingBox2D boxB = p_other->collisionMesh()->boundingBox().place(p_other->owner()->transform().position().xy());
 		if (boxA.intersect(boxB) == false)
 		{
 			return false;
 		}
 
-		const auto polysA = collectPolygons2D(collider(), owner()->transform());
-		const auto polysB = collectPolygons2D(p_other->collider(), p_other->owner()->transform());
+		const auto polysA = collectPolygons2D(collisionMesh(), owner()->transform());
+		const auto polysB = collectPolygons2D(p_other->collisionMesh(), p_other->owner()->transform());
 
 		for (const auto &pa : polysA)
 		{
