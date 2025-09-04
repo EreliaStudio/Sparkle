@@ -21,8 +21,8 @@ namespace spk
 		RigidBody(const std::wstring &p_name);
 		~RigidBody() override;
 
-		void start() override;
-		void stop() override;
+		void awake() override;
+		void sleep() override;
 
 		void setCollider(const spk::SafePointer<const spk::CollisionMesh> &p_collider);
 		const spk::SafePointer<const spk::CollisionMesh> &collider() const;

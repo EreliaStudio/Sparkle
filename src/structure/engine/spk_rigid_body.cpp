@@ -18,13 +18,13 @@ namespace spk
 		stop();
 	}
 
-	void RigidBody::start()
+	void RigidBody::awake()
 	{
 		std::lock_guard<std::mutex> lock(_rigidBodiesMutex);
 		_rigidBodies.push_back(this);
 	}
 
-	void RigidBody::stop()
+	void RigidBody::sleep()
 	{
 		std::lock_guard<std::mutex> lock(_rigidBodiesMutex);
 		auto it = std::remove_if(

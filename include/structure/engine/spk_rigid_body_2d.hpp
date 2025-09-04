@@ -16,21 +16,21 @@ namespace spk
 	public:
 	private:
 		spk::SafePointer<const spk::CollisionMesh2D> _collider;
-		static inline std::vector<spk::SafePointer<RigidBody2D>> _rigidBodies;
+		static inline std::vector<spk::SafePointer<const RigidBody2D>> _rigidBodies;
 		static inline std::mutex _rigidBodiesMutex;
-
-		spk::BoundingBox2D _computeLocalBoundingBox() const;
 
 	public:
 		RigidBody2D(const std::wstring &p_name);
 		~RigidBody2D() override;
 
-		void start() override;
-		void stop() override;
+		void awake() override;
+		void sleep() override;
 
 		void setCollider(const spk::SafePointer<const spk::CollisionMesh2D> &p_collider);
 		const spk::SafePointer<const spk::CollisionMesh2D> &collider() const;
 
 		static std::vector<spk::SafePointer<RigidBody2D>> getRigidBodies();
+
+		bool intersect(const spk::SafePointer<RigidBody2D> p_other) const;
 	};
 }

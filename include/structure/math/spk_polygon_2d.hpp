@@ -16,28 +16,14 @@ namespace spk
 
 	public:
 		Polygon2D() = default;
-		Polygon2D(const std::vector<spk::Vector2> &p_points) :
-			_points(p_points)
-		{
-			for (const auto &p : _points)
-			{
-				_boundingBox.addPoint(p);
-			}
-		}
+		Polygon2D(const std::vector<spk::Vector2> &p_points);
 
-		const std::vector<spk::Vector2> &points() const
-		{
-			return _points;
-		}
+		const std::vector<spk::Vector2> &points() const;
 
-		const BoundingBox2D &boundingBox() const
-		{
-			return _boundingBox;
-		}
+		const BoundingBox2D &boundingBox() const;
 
-		static Polygon2D fromLoop(const std::vector<spk::Vector2> &p_points)
-		{
-			return Polygon2D(p_points);
-		}
+		static Polygon2D fromLoop(const std::vector<spk::Vector2> &p_points);
+
+		bool intersect(const spk::Polygon2D& p_other) const;
 	};
 }
