@@ -409,6 +409,11 @@ namespace spk
 			return IVector2<TType>(-y, x);
 		}
 
+		TType crossProduct(const IVector2<TType> &p_other) const
+		{
+			return x * p_other.y - y * p_other.x;
+		}
+
 		TType dot(const IVector2<TType> &p_other) const
 		{
 			return x * p_other.x + y * p_other.y;

@@ -15,7 +15,7 @@ namespace spk
 			max = spk::Vector2::max(max, p_point);
 		}
 
-		BoundingBox2D place(const spk::Vector2& p_delta) const
+		BoundingBox2D place(const spk::Vector2 &p_delta) const
 		{
 			BoundingBox2D result;
 
@@ -28,6 +28,11 @@ namespace spk
 		bool intersect(const BoundingBox2D &p_other) const
 		{
 			return ((min.x <= p_other.max.x && max.x >= p_other.min.x && min.y <= p_other.max.y && max.y >= p_other.min.y) == true);
+		}
+
+		bool contains(const spk::Vector2 &p_point) const
+		{
+			return ((p_point.x >= min.x && p_point.x <= max.x && p_point.y >= min.y && p_point.y <= max.y) == true);
 		}
 	};
 }

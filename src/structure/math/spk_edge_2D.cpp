@@ -33,7 +33,11 @@ namespace spk
 
 	Edge2D::Identifier Edge2D::Identifier::from(const Edge2D &p_edge)
 	{
-		return {p_edge.first(), p_edge.second()};
+		if (p_edge.first() < p_edge.second())
+		{
+			return {p_edge.first(), p_edge.second()};
+		}
+		return {p_edge.second(), p_edge.first()};
 	}
 
 	Edge2D::Edge2D(const spk::Vector2 &p_first, const spk::Vector2 &p_second) :
@@ -75,7 +79,7 @@ namespace spk
 		return _cross2(_delta, p_point - _first);
 	}
 
-	bool Edge2D::contains(const spk::Vector2 &p_point, bool p_checkAlignment = true) const
+	bool Edge2D::contains(const spk::Vector2 &p_point, bool p_checkAlignment) const
 	{
 		if (p_checkAlignment == true)
 		{
@@ -151,6 +155,11 @@ namespace spk
 		return (_first == p_other._first && _second == p_other._second);
 	}
 
+	bool Edge2D::operator!=(const Edge2D &p_other) const
+	{
+		return (_first != p_other._first || _second != p_other._second);
+	}
+
 	bool Edge2D::operator<(const Edge2D &p_other) const
 	{
 		if ((_first != p_other._first) == true)
@@ -160,13 +169,13 @@ namespace spk
 		return (_second < p_other._second);
 	}
 
-	std::ostream &Edge2D::operator<<(std::ostream &p_os, const Edge2D &p_edge)
+	std::ostream &operator<<(std::ostream &p_os, const Edge2D &p_edge)
 	{
 		p_os << "(" << p_edge._first << ", " << p_edge._second << ")";
 		return p_os;
 	}
 
-	std::wostream &Edge2D::operator<<(std::wostream &p_wos, const Edge2D &p_edge)
+	std::wostream &operator<<(std::wostream &p_wos, const Edge2D &p_edge)
 	{
 		p_wos << L"(" << p_edge._first << L", " << p_edge._second << L")";
 		return p_wos;
