@@ -3,15 +3,15 @@
 
 namespace
 {
-	float _cross2(const spk::Vector2 &a, const spk::Vector2 &b)
+	float cross2(const spk::Vector2 &p_a, const spk::Vector2 &p_b)
 	{
-		return (a.x * b.y - a.y * b.x);
+		return (p_a.x * p_b.y - p_a.y * p_b.x);
 	}
 
-	bool _between(float v, float a, float b)
+	bool between(float p_v, float p_a, float p_b)
 	{
 		const float eps = spk::Constants::pointPrecision;
-		return ((v >= std::min(a, b) - eps) == true && (v <= std::max(a, b) + eps) == true);
+		return ((p_v >= std::min(p_a, p_b) - eps) == true && (p_v <= std::max(p_a, p_b) + eps) == true);
 	}
 }
 
@@ -76,7 +76,7 @@ namespace spk
 
 	float Edge2D::orientation(const spk::Vector2 &p_point) const
 	{
-		return _cross2(_delta, p_point - _first);
+		return cross2(_delta, p_point - _first);
 	}
 
 	bool Edge2D::contains(const spk::Vector2 &p_point, bool p_checkAlignment) const
@@ -89,7 +89,7 @@ namespace spk
 			}
 		}
 
-		return (_between(p_point.x, _first.x, _second.x) == true && _between(p_point.y, _first.y, _second.y) == true);
+		return (between(p_point.x, _first.x, _second.x) == true && between(p_point.y, _first.y, _second.y) == true);
 	}
 
 	float Edge2D::project(const spk::Vector2 &p_point) const
@@ -121,7 +121,7 @@ namespace spk
 			return (thisDegenerate == true && otherDegenerate == true);
 		}
 
-		const float c = _cross2(_direction, p_other._direction);
+		const float c = cross2(_direction, p_other._direction);
 		return (std::fabs(c) <= spk::Constants::pointPrecision);
 	}
 
@@ -140,7 +140,7 @@ namespace spk
 			return (_first == p_other._first);
 		}
 
-		const float c = _cross2(_delta, p_other._first - _first);
+		const float c = cross2(_delta, p_other._first - _first);
 		return (std::fabs(c) <= spk::Constants::pointPrecision);
 	}
 

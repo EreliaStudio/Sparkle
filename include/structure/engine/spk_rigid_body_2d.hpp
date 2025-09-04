@@ -16,7 +16,7 @@ namespace spk
 	public:
 	private:
 		spk::SafePointer<const spk::CollisionMesh2D> _collider;
-		static inline std::vector<spk::SafePointer<const RigidBody2D>> _rigidBodies;
+		static inline std::vector<spk::SafePointer<RigidBody2D>> _rigidBodies;
 		static inline std::mutex _rigidBodiesMutex;
 
 	public:
@@ -29,7 +29,7 @@ namespace spk
 		void setCollider(const spk::SafePointer<const spk::CollisionMesh2D> &p_collider);
 		const spk::SafePointer<const spk::CollisionMesh2D> &collider() const;
 
-		static std::vector<spk::SafePointer<RigidBody2D>> getRigidBodies();
+		static const std::vector<spk::SafePointer<RigidBody2D>>& getRigidBodies();
 
 		bool intersect(const spk::SafePointer<RigidBody2D> p_other) const;
 	};
