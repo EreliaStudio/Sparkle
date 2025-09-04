@@ -123,4 +123,14 @@ namespace spk
 		}
 		return false;
 	}
+
+	void RigidBody::setMode(const RigidBody::Mode& p_mode)
+	{
+		_mode = p_mode;
+	}
+	
+	const RigidBody::Mode& RigidBody::mode() const
+	{
+		return (_mode);
+	}
 }
