@@ -115,6 +115,8 @@ namespace
 		const spk::Vector2 &p_eye,
 		const spk::Vector2 &p_dir,
 		float p_maxDistance,
+		std::span<const std::wstring> p_tags,
+		spk::BinaryOperator p_binaryOperator,
 		std::vector<spk::RayCast2D::Hit> &p_hits)
 	{
 		if ((p_body == nullptr) == true)
@@ -126,6 +128,13 @@ namespace
 		{
 			return;
 		}
+		if ((p_tags.empty() == false))
+		{
+			if ((owner->containsTags(p_tags, p_binaryOperator) == false))
+			{
+				return;
+			}
+		}
 		spk::Vector2 offset = owner->transform().position().xy();
 		processCollider(p_body->collider(), p_eye, p_dir, p_maxDistance, offset, owner, p_hits);
 	}
@@ -136,7 +145,12 @@ namespace spk
 	namespace
 	{
 		std::vector<spk::RayCast2D::Hit> launchAllInternal(
-			const spk::SafePointer<spk::GameEngine> &p_engine, const spk::Vector2 &p_eye, const spk::Vector2 &p_direction, float p_maxDistance)
+			const spk::SafePointer<spk::GameEngine> &p_engine,
+			const spk::Vector2 &p_eye,
+			const spk::Vector2 &p_direction,
+			float p_maxDistance,
+			std::span<const std::wstring> p_tags,
+			spk::BinaryOperator p_binaryOperator)
 		{
 			std::vector<spk::RayCast2D::Hit> hits;
 			if ((p_engine == nullptr) == true)
@@ -144,18 +158,23 @@ namespace spk
 				return hits;
 			}
 			spk::Vector2 dir = p_direction.normalize();
-			const std::vector<spk::SafePointer<spk::RigidBody2D>>& bodies = spk::RigidBody2D::getRigidBodies();
+			const std::vector<spk::SafePointer<spk::RigidBody2D>> &bodies = spk::RigidBody2D::getRigidBodies();
 			for (const auto &body : bodies)
 			{
-				processBody(body, p_engine, p_eye, dir, p_maxDistance, hits);
+				processBody(body, p_engine, p_eye, dir, p_maxDistance, p_tags, p_binaryOperator, hits);
 			}
 			return hits;
 		}
 
 		spk::RayCast2D::Hit launchInternal(
-			const spk::SafePointer<spk::GameEngine> &p_engine, const spk::Vector2 &p_eye, const spk::Vector2 &p_direction, float p_maxDistance)
+			const spk::SafePointer<spk::GameEngine> &p_engine,
+			const spk::Vector2 &p_eye,
+			const spk::Vector2 &p_direction,
+			float p_maxDistance,
+			std::span<const std::wstring> p_tags,
+			spk::BinaryOperator p_binaryOperator)
 		{
-			std::vector<spk::RayCast2D::Hit> hits = launchAllInternal(p_engine, p_eye, p_direction, p_maxDistance);
+			std::vector<spk::RayCast2D::Hit> hits = launchAllInternal(p_engine, p_eye, p_direction, p_maxDistance, p_tags, p_binaryOperator);
 			spk::RayCast2D::Hit result{};
 			float closest = p_maxDistance;
 			for (const auto &hit : hits)
@@ -171,7 +190,12 @@ namespace spk
 		}
 	}
 
-	RayCast2D::Hit RayCast2D::launch(const spk::SafePointer<spk::Entity> &p_cameraEntity, const spk::Vector2 &p_screenPosition, float p_maxDistance)
+	RayCast2D::Hit RayCast2D::launch(
+		const spk::SafePointer<spk::Entity> &p_cameraEntity,
+		const spk::Vector2 &p_screenPosition,
+		float p_maxDistance,
+		std::span<const std::wstring> p_tags,
+		spk::BinaryOperator p_binaryOperator)
 	{
 		if ((p_cameraEntity == nullptr) == true)
 		{
@@ -181,11 +205,15 @@ namespace spk
 		spk::Vector2 eye = p_cameraEntity->transform().position().xy();
 		spk::Vector2 world = screenPointToWorld(p_cameraEntity, p_screenPosition, 0.0f);
 		spk::Vector2 dir = (world - eye).normalize();
-		return launchInternal(engine, eye, dir, p_maxDistance);
+		return launchInternal(engine, eye, dir, p_maxDistance, p_tags, p_binaryOperator);
 	}
 
 	std::vector<RayCast2D::Hit> RayCast2D::launchAll(
-		const spk::SafePointer<spk::Entity> &p_cameraEntity, const spk::Vector2 &p_screenPosition, float p_maxDistance)
+		const spk::SafePointer<spk::Entity> &p_cameraEntity,
+		const spk::Vector2 &p_screenPosition,
+		float p_maxDistance,
+		std::span<const std::wstring> p_tags,
+		spk::BinaryOperator p_binaryOperator)
 	{
 		if ((p_cameraEntity == nullptr) == true)
 		{
@@ -195,7 +223,7 @@ namespace spk
 		spk::Vector2 eye = p_cameraEntity->transform().position().xy();
 		spk::Vector2 world = screenPointToWorld(p_cameraEntity, p_screenPosition, 0.0f);
 		spk::Vector2 dir = (world - eye).normalize();
-		return launchAllInternal(engine, eye, dir, p_maxDistance);
+		return launchAllInternal(engine, eye, dir, p_maxDistance, p_tags, p_binaryOperator);
 	}
 
 	spk::Vector2 RayCast2D::screenPointToWorld(
