@@ -1,3 +1,4 @@
+#include <iostream>
 #include <sparkle.hpp>
 
 enum class TileFlag
@@ -464,6 +465,14 @@ int main()
 	spk::SpriteSheet spriteSheet("playground/resources/texture/tile_map.png", {28, 6});
 	tileMap.setSpriteSheet(&spriteSheet);
 
+	spk::Mesh2D playerMesh = spk::Primitive2D::makeSquare({1.0f, 1.0f}, spriteSheet.sprite({12, 0}));
+	spk::CollisionMesh2D playerCollisionMesh = spk::CollisionMesh2D::fromMesh(&playerMesh);
+	auto playerRenderer = player.addComponent<spk::Mesh2DRenderer>(L"Player/Mesh2DRenderer");
+	playerRenderer->setTexture(&spriteSheet);
+	playerRenderer->setMesh(&playerMesh);
+	auto playerCollider = player.addComponent<spk::Collider2D>(L"Player/Collider2D");
+	playerCollider->setCollisionMesh(&playerCollisionMesh);
+
 	tileMap.addTileByID(0, PlaygroundTileMap::TileType({0, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::Obstacle));  // Deep water
 	tileMap.addTileByID(1, PlaygroundTileMap::TileType({4, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::Obstacle));  // Water
 	tileMap.addTileByID(2, PlaygroundTileMap::TileType({8, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::None));	   // Beach
@@ -475,6 +484,23 @@ int main()
 	player.addComponent<TileMapChunkStreamer>(L"Player/TileMapChunkStreamer", &tileMap, cameraComponent);
 
 	player.addComponent<CollisionViewToggle>(L"Player/CollisionViewToggle", &tileMap);
+
+	spk::SafePointer<spk::Entity> playerPtr(&player);
+	for (const auto &collider : spk::Collider2D::getColliders())
+	{
+		if (collider.get() == playerCollider.get())
+		{
+			continue;
+		}
+		collider->onCollisionEnter(
+			[playerPtr](spk::SafePointer<spk::Entity> p_entity)
+			{
+				if (p_entity.get() == playerPtr.get())
+				{
+					std::wcout << L"Player entered chunk collision mesh" << std::endl;
+				}
+			});
+	}
 
 	player.activate();
 	cameraHolder.activate();

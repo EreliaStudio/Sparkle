@@ -1,5 +1,5 @@
 #include "structure/engine/spk_ray_cast.hpp"
-#include "structure/engine/spk_rigid_body.hpp"
+#include "structure/engine/spk_collider.hpp"
 #include "structure/math/spk_constants.hpp"
 
 namespace
@@ -101,8 +101,8 @@ namespace
 		}
 	}
 
-	void processBody(
-		const spk::SafePointer<spk::RigidBody> &p_body,
+	void processColliderBody(
+		const spk::SafePointer<spk::Collider> &p_collider,
 		const spk::SafePointer<spk::GameEngine> &p_engine,
 		const spk::Vector3 &p_eye,
 		const spk::Vector3 &p_dir,
@@ -111,11 +111,11 @@ namespace
 		spk::BinaryOperator p_binaryOperator,
 		std::vector<spk::RayCast::Hit> &p_hits)
 	{
-		if ((p_body == nullptr) == true)
+		if ((p_collider == nullptr) == true)
 		{
 			return;
 		}
-		spk::SafePointer<spk::Entity> owner = p_body->owner();
+		spk::SafePointer<spk::Entity> owner = p_collider->owner();
 		if ((owner == nullptr || owner->engine() != p_engine) == true)
 		{
 			return;
@@ -128,7 +128,7 @@ namespace
 			}
 		}
 		spk::Vector3 offset = owner->transform().position();
-		processCollider(p_body->collisionMesh(), p_eye, p_dir, p_maxDistance, offset, owner, p_hits);
+		processCollider(p_collider->collisionMesh(), p_eye, p_dir, p_maxDistance, offset, owner, p_hits);
 	}
 }
 
@@ -171,10 +171,10 @@ namespace spk
 			return hits;
 		}
 		spk::Vector3 dir = p_direction.normalize();
-		std::vector<spk::SafePointer<spk::RigidBody>> bodies = spk::RigidBody::getRigidBodies();
-		for (const auto &body : bodies)
+		std::vector<spk::SafePointer<spk::Collider>> colliders = spk::Collider::getColliders();
+		for (const auto &collider : colliders)
 		{
-			processBody(body, p_engine, p_eye, dir, p_maxDistance, p_tags, p_binaryOperator, hits);
+			processColliderBody(collider, p_engine, p_eye, dir, p_maxDistance, p_tags, p_binaryOperator, hits);
 		}
 		return hits;
 	}
