@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "structure/engine/spk_collider_2d.hpp"
 #include "structure/engine/spk_collision_mesh_2d.hpp"
 #include "structure/engine/spk_collision_mesh_2d_renderer.hpp"
 #include "structure/engine/spk_component.hpp"
@@ -436,6 +437,7 @@ namespace spk
 
 			spk::SafePointer<Mesh2DRenderer> _renderer;
 			spk::SafePointer<spk::CollisionMesh2DRenderer> _collisionRenderer;
+			spk::SafePointer<spk::Collider2D> _collider;
 			spk::CollisionMesh2D _collisionMesh;
 			spk::Flags<TFlagEnum> _collisionFlags = {};
 			bool _collisionMeshDirty = true;
@@ -447,6 +449,7 @@ namespace spk
 			{
 				_renderer = this->template addComponent<Mesh2DRenderer>(p_name + L"/Mesh2DRenderer");
 				_collisionRenderer = this->template addComponent<spk::CollisionMesh2DRenderer>(p_name + L"/CollisionMesh2DRenderer");
+				_collider = this->template addComponent<spk::Collider2D>(p_name + L"/Collider2D");
 				_data = this->template addComponent<Data>(p_name + L"/Data");
 				_data->setTileMap(p_parent);
 				_data->setChunkCoordinate(p_coord);
@@ -652,6 +655,25 @@ namespace spk
 				return result;
 			}
 
+		private:
+			void _updateCollisionMesh()
+			{
+				if ((_collisionMesh.units().empty() == true) || (_collisionMeshDirty == true))
+				{
+					_collisionMesh = collisionMesh2D(_collisionFlags);
+					_collisionMeshDirty = false;
+					if (_collisionRenderer != nullptr)
+					{
+						_collisionRenderer->setMesh(&_collisionMesh);
+					}
+					if (_collider != nullptr)
+					{
+						_collider->setCollisionMesh(&_collisionMesh);
+					}
+				}
+			}
+
+		public:
 			void setCollisionFlags(spk::Flags<TFlagEnum> p_flags)
 			{
 				if (_collisionFlags != p_flags)
@@ -659,22 +681,14 @@ namespace spk
 					_collisionFlags = p_flags;
 					_collisionMeshDirty = true;
 				}
+				_updateCollisionMesh();
 			}
 
 			void setRenderMode(bool p_collisionMode)
 			{
 				if (p_collisionMode == true)
 				{
-					// Ensure collision mesh exists when entering collision render mode.
-					if ((_collisionMesh.units().empty() == true) || (_collisionMeshDirty == true))
-					{
-						_collisionMesh = collisionMesh2D(_collisionFlags);
-						_collisionMeshDirty = false;
-						if (_collisionRenderer != nullptr)
-						{
-							_collisionRenderer->setMesh(&_collisionMesh);
-						}
-					}
+					_updateCollisionMesh();
 					if (_collisionRenderer != nullptr)
 					{
 						_collisionRenderer->activate();
