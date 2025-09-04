@@ -445,6 +445,15 @@ int main()
 	player.transform().place({4, 4, 2.5f});
 	player.addComponent<TopDown2DController>(L"Player/TopDown2DController");
 
+	spk::SpriteSheet playerSpriteSheet("playground/resources/texture/sprite_sheet.png", {4, 4});
+	spk::Mesh2D playerMesh = spk::Primitive2D::makeSquare({1.0f, 1.0f}, playerSpriteSheet.sprite({0, 0}));
+	spk::CollisionMesh2D playerCollisionMesh = spk::CollisionMesh2D::fromMesh(&playerMesh);
+	auto playerRenderer = player.addComponent<spk::Mesh2DRenderer>(L"Player/Mesh2DRenderer");
+	playerRenderer->setTexture(&playerSpriteSheet);
+	playerRenderer->setMesh(&playerMesh);
+	auto playerCollider = player.addComponent<spk::Collider2D>(L"Player/Collider2D");
+	playerCollider->setCollisionMesh(&playerCollisionMesh);
+
 	spk::Entity cameraHolder(L"Camera", &player);
 	auto cameraComponent = cameraHolder.addComponent<spk::CameraComponent>(L"Camera/CameraComponent");
 	cameraHolder.transform().place({0.0f, 0.0f, 20.0f});
@@ -459,19 +468,10 @@ int main()
 	}
 
 	PlaygroundTileMap tileMap(L"TileMap", nullptr);
+	spk::SpriteSheet tilemapSpriteSheet("playground/resources/texture/tile_map.png", {28, 6});
 	tileMap.activate();
 	engine.addEntity(&tileMap);
-
-	spk::SpriteSheet spriteSheet("playground/resources/texture/tile_map.png", {28, 6});
-	tileMap.setSpriteSheet(&spriteSheet);
-
-	spk::Mesh2D playerMesh = spk::Primitive2D::makeSquare({1.0f, 1.0f}, spriteSheet.sprite({12, 0}));
-	spk::CollisionMesh2D playerCollisionMesh = spk::CollisionMesh2D::fromMesh(&playerMesh);
-	auto playerRenderer = player.addComponent<spk::Mesh2DRenderer>(L"Player/Mesh2DRenderer");
-	playerRenderer->setTexture(&spriteSheet);
-	playerRenderer->setMesh(&playerMesh);
-	auto playerCollider = player.addComponent<spk::Collider2D>(L"Player/Collider2D");
-	playerCollider->setCollisionMesh(&playerCollisionMesh);
+	tileMap.setSpriteSheet(&tilemapSpriteSheet);
 
 	tileMap.addTileByID(0, PlaygroundTileMap::TileType({0, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::Obstacle));  // Deep water
 	tileMap.addTileByID(1, PlaygroundTileMap::TileType({4, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::Obstacle));  // Water

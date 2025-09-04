@@ -1,5 +1,4 @@
 #include "structure/engine/spk_game_engine.hpp"
-#include "structure/engine/spk_collision_trigger.hpp"
 
 namespace spk
 {
