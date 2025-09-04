@@ -64,7 +64,7 @@ outputColor = texColor;
 		shader.addAttribute({1, spk::OpenGL::LayoutBufferObject::Attribute::Type::Vector2});
 
 		shader.addSampler(
-			L"diffuseTexture", spk::Lumina::ShaderObjectFactory::instance()->sampler(L"diffuseTexture"), spk::Lumina::Shader::Mode::Constant);
+			L"diffuseTexture", spk::Lumina::ShaderObjectFactory::instance()->sampler(L"diffuseTexture"), spk::Lumina::Shader::Mode::Attribute);
 
 		shader.addUBO(L"CameraUBO", spk::Lumina::ShaderObjectFactory::instance()->ubo(L"CameraUBO"), spk::Lumina::Shader::Mode::Constant);
 
@@ -78,7 +78,7 @@ outputColor = texColor;
 	Mesh2DRenderer::Painter::Painter() :
 		_object(_shader.createObject()),
 		_bufferSet(_object.bufferSet()),
-		_diffuseSampler(_shader.sampler(L"diffuseTexture")),
+		_diffuseSampler(_object.sampler(L"diffuseTexture")),
 		_transformUBO(_object.UBO(L"TransformUBO"))
 	{
 	}

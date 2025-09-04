@@ -445,7 +445,7 @@ int main()
 	player.transform().place({4, 4, 2.5f});
 	player.addComponent<TopDown2DController>(L"Player/TopDown2DController");
 
-	spk::SpriteSheet playerSpriteSheet("playground/resources/texture/sprite_sheet.png", {4, 4});
+	spk::SpriteSheet playerSpriteSheet("playground/resources/texture/player_sprite_sheet.png", {4, 4});
 	spk::Mesh2D playerMesh = spk::Primitive2D::makeSquare({1.0f, 1.0f}, playerSpriteSheet.sprite({0, 0}));
 	spk::CollisionMesh2D playerCollisionMesh = spk::CollisionMesh2D::fromMesh(&playerMesh);
 	auto playerRenderer = player.addComponent<spk::Mesh2DRenderer>(L"Player/Mesh2DRenderer");
