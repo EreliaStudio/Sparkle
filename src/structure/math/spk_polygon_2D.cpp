@@ -294,6 +294,16 @@ namespace spk
 		return false;
 	}
 
+	bool Polygon2D::isSequant(const Polygon2D &p_other) const
+	{
+		if (isOverlapping(p_other) == true)
+		{
+			return true;
+		}
+
+		return false;
+	}
+
 	Polygon2D Polygon2D::fuze(const Polygon2D &p_other, bool p_checkCompatibility) const
 	{
 		if (p_checkCompatibility == true && isAdjacent(p_other) == false && isOverlapping(p_other) == false)

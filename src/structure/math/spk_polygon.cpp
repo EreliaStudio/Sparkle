@@ -65,6 +65,27 @@ namespace spk
 		return (cond1 == true && cond2 == true);
 	}
 
+	bool Polygon::_segmentPlaneIntersection(const spk::Vector3 &p_a, const spk::Vector3 &p_b, const spk::Plane &p_plane, spk::Vector3 &p_intersection)
+	{
+		spk::Vector3 ab = p_b - p_a;
+		float denominator = p_plane.normal.dot(ab);
+
+		if (std::fabs(denominator) < spk::Constants::pointPrecision)
+		{
+			return false;
+		}
+
+		float t = p_plane.normal.dot(p_plane.origin - p_a) / denominator;
+
+		if (t < 0.0f || t > 1.0f)
+		{
+			return false;
+		}
+
+		p_intersection = p_a + ab * t;
+		return true;
+	}
+
 	bool Polygon::_isPointInside(const Polygon &p_poly, const spk::Vector3 &p_point)
 	{
 		for (const auto &edge : p_poly.edges())
@@ -295,6 +316,51 @@ namespace spk
 		if (_isPointInside(p_other, _edges[0].first()) == true)
 		{
 			return true;
+		}
+
+		return false;
+	}
+
+	bool Polygon::isSequant(const Polygon &p_other) const
+	{
+		if (_boundingBox.intersect(p_other._boundingBox) == false)
+		{
+			return false;
+		}
+
+		if (isCoplanar(p_other) == true)
+		{
+			if (isOverlapping(p_other) == true)
+			{
+				return true;
+			}
+			return false;
+		}
+
+		const spk::Plane &otherPlane = p_other.plane();
+		for (const auto &edge : _edges)
+		{
+			spk::Vector3 intersection;
+			if (_segmentPlaneIntersection(edge.first(), edge.second(), otherPlane, intersection) == true)
+			{
+				if (p_other.contains(intersection) == true)
+				{
+					return true;
+				}
+			}
+		}
+
+		const spk::Plane &myPlane = plane();
+		for (const auto &edge : p_other.edges())
+		{
+			spk::Vector3 intersection;
+			if (_segmentPlaneIntersection(edge.first(), edge.second(), myPlane, intersection) == true)
+			{
+				if (contains(intersection) == true)
+				{
+					return true;
+				}
+			}
 		}
 
 		return false;

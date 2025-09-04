@@ -119,7 +119,7 @@ namespace spk
 		{
 			for (const auto &pb : p_other->_polygons)
 			{
-				if (pa.isOverlapping(pb) == true)
+				if (pa.isSequant(pb) == true)
 				{
 					return true;
 				}
