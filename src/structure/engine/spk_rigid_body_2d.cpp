@@ -1,6 +1,7 @@
 #include "structure/engine/spk_rigid_body_2d.hpp"
 #include "structure/engine/spk_entity.hpp"
 #include <algorithm>
+#include <vector>
 
 namespace spk
 {
@@ -23,15 +24,21 @@ namespace spk
 
 	void RigidBody2D::start()
 	{
-		_onOwnerOnTransformEditionContract = owner()->transform().addOnEditionCallback([&](){
-			std::vector<spk::SafePointer<const RigidBody2D>> collidedRigidBody = _executeCollisionTest();
-		});
+		_onOwnerOnTransformEditionContract = owner()->transform().addOnEditionCallback(
+			[&]()
+			{
+				_updateCollisionCache();
+				std::vector<spk::SafePointer<const RigidBody2D>> collidedRigidBody = _executeCollisionTest();
+			});
 	}
 
 	void RigidBody2D::awake()
 	{
-		std::lock_guard<std::mutex> lock(_rigidBodiesMutex);
-		_rigidBodies.push_back(this);
+		{
+			std::lock_guard<std::mutex> lock(_rigidBodiesMutex);
+			_rigidBodies.push_back(this);
+		}
+		_updateCollisionCache();
 	}
 
 	void RigidBody2D::sleep()
@@ -45,6 +52,7 @@ namespace spk
 	void RigidBody2D::setCollisionMesh(const spk::SafePointer<const spk::CollisionMesh2D> &p_collisionMesh)
 	{
 		_collisionMesh = p_collisionMesh;
+		_updateCollisionCache();
 	}
 
 	const spk::SafePointer<const spk::CollisionMesh2D> &RigidBody2D::collisionMesh() const
@@ -52,7 +60,7 @@ namespace spk
 		return (_collisionMesh);
 	}
 
-	const std::vector<spk::SafePointer<RigidBody2D>>& RigidBody2D::getRigidBodies()
+	const std::vector<spk::SafePointer<RigidBody2D>> &RigidBody2D::getRigidBodies()
 	{
 		std::lock_guard<std::mutex> lock(_rigidBodiesMutex);
 		return (_rigidBodies);
@@ -60,84 +68,10 @@ namespace spk
 
 	namespace
 	{
-		inline bool segmentsIntersect(const spk::Edge2D &p_ab, const spk::Edge2D &p_cd)
-		{
-			const float eps = spk::Constants::pointPrecision;
-
-			const float o1 = p_ab.orientation(p_cd.first());
-			const float o2 = p_ab.orientation(p_cd.second());
-			const float o3 = p_cd.orientation(p_ab.first());
-			const float o4 = p_cd.orientation(p_ab.second());
-
-			// Proper intersection (straddling)
-			const bool straddleAB = ((o1 > eps && o2 < -eps) || (o1 < -eps && o2 > eps));
-			const bool straddleCD = ((o3 > eps && o4 < -eps) || (o3 < -eps && o4 > eps));
-			if (straddleAB && straddleCD)
-			{
-				return true;
-			}
-
-			if (std::fabs(o1) <= eps && p_ab.contains(p_cd.first(), true))
-			{
-				return true;
-			}
-			if (std::fabs(o2) <= eps && p_ab.contains(p_cd.second(), true))
-			{
-				return true;
-			}
-			if (std::fabs(o3) <= eps && p_cd.contains(p_ab.first(), true))
-			{
-				return true;
-			}
-			if (std::fabs(o4) <= eps && p_cd.contains(p_ab.second(), true))
-			{
-				return true;
-			}
-
-			return false;
-		}
-
-		bool pointInPolygon(const spk::Vector2 &p_p, const std::vector<spk::Vector2> &p_poly)
-		{
-			const size_t n = p_poly.size();
-			if (n < 3)
-			{
-				return false;
-			}
-
-			for (size_t i = 0; i < n; ++i)
-			{
-				spk::Edge2D e(p_poly[i], p_poly[(i + 1) % n]);
-				if (e.contains(p_p, true))
-				{
-					return true;
-				}
-			}
-
-			bool inside = false;
-			for (size_t i = 0, j = n - 1; i < n; j = i++)
-			{
-				const spk::Vector2 &A = p_poly[i];
-				const spk::Vector2 &B = p_poly[j];
-
-				const bool crosses = ((A.y > p_p.y) != (B.y > p_p.y));
-				if (crosses)
-				{
-					const float t = (p_p.y - A.y) / (B.y - A.y);
-					const float xInt = A.x + t * (B.x - A.x);
-					if (xInt >= p_p.x - spk::Constants::pointPrecision)
-					{
-						inside = !inside;
-					}
-				}
-			}
-			return inside;
-		}
-
-		std::vector<std::vector<spk::Vector2>> collectPolygons2D(
+		std::vector<spk::Polygon2D> collectPolygons2D(
 			const spk::SafePointer<const spk::CollisionMesh2D> &p_collisionMesh, const spk::Transform &p_transform)
 		{
-			std::vector<std::vector<spk::Vector2>> result;
+			std::vector<spk::Polygon2D> result;
 			if (p_collisionMesh == nullptr)
 			{
 				return result;
@@ -147,73 +81,45 @@ namespace spk
 
 			for (const auto &unit : p_collisionMesh->units())
 			{
-				const auto &pts = unit.points();
-				if (pts.empty())
+				std::vector<spk::Vector2> pts;
+				pts.reserve(unit.points().size());
+				for (const auto &p : unit.points())
 				{
-					continue;
+					pts.push_back(p + offset);
 				}
-
-				std::vector<spk::Vector2> poly;
-				poly.reserve(pts.size());
-				for (const auto &p : pts)
-				{
-					poly.emplace_back(p + offset);
-				}
-				result.emplace_back(std::move(poly));
+				result.push_back(spk::Polygon2D::fromLoop(pts));
 			}
+
 			return result;
 		}
+	}
 
-		bool polygonsIntersect2D(const std::vector<spk::Vector2> &p_a, const std::vector<spk::Vector2> &p_b)
+	void RigidBody2D::_updateCollisionCache()
+	{
+		if (_collisionMesh != nullptr)
 		{
-			if (p_a.size() < 2 || p_b.size() < 2)
-			{
-				return false;
-			}
-
-			for (size_t i = 0; i < p_a.size(); ++i)
-			{
-				spk::Edge2D eA(p_a[i], p_a[(i + 1) % p_a.size()]);
-				for (size_t j = 0; j < p_b.size(); ++j)
-				{
-					spk::Edge2D eB(p_b[j], p_b[(j + 1) % p_b.size()]);
-					if (segmentsIntersect(eA, eB))
-					{
-						return true;
-					}
-				}
-			}
-
-			if (p_a.empty() == false && pointInPolygon(p_a[0], p_b) == true)
-			{
-				return true;
-			}
-			if (p_b.empty() == false && pointInPolygon(p_b[0], p_a) == true)
-			{
-				return true;
-			}
-
-			return false;
+			_boundingBox = _collisionMesh->boundingBox().place(owner()->transform().position().xy());
+			_polygons = collectPolygons2D(_collisionMesh, owner()->transform());
+		}
+		else
+		{
+			_boundingBox = spk::BoundingBox2D();
+			_polygons.clear();
 		}
 	}
 
 	bool RigidBody2D::intersect(const spk::SafePointer<RigidBody2D> p_other) const
 	{
-		const BoundingBox2D boxA = collisionMesh()->boundingBox().place(owner()->transform().position().xy());
-		const BoundingBox2D boxB = p_other->collisionMesh()->boundingBox().place(p_other->owner()->transform().position().xy());
-		if (boxA.intersect(boxB) == false)
+		if (_boundingBox.intersect(p_other->_boundingBox) == false)
 		{
 			return false;
 		}
 
-		const auto polysA = collectPolygons2D(collisionMesh(), owner()->transform());
-		const auto polysB = collectPolygons2D(p_other->collisionMesh(), p_other->owner()->transform());
-
-		for (const auto &pa : polysA)
+		for (const auto &pa : _polygons)
 		{
-			for (const auto &pb : polysB)
+			for (const auto &pb : p_other->_polygons)
 			{
-				if (polygonsIntersect2D(pa, pb) == true)
+				if (pa.isOverlapping(pb) == true)
 				{
 					return true;
 				}
