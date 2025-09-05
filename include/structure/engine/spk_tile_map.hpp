@@ -17,7 +17,6 @@
 #include "structure/engine/spk_tile.hpp"
 #include "structure/graphics/texture/spk_sprite_sheet.hpp"
 #include "structure/math/spk_vector2.hpp"
-#include "structure/design_pattern/spk_cached_data.hpp"
 #include "structure/spk_safe_pointer.hpp"
 #include "structure/system/spk_exception.hpp"
 #include "utils/spk_string_utils.hpp"
@@ -46,7 +45,9 @@ namespace spk
 				std::array<std::array<std::array<typename TileType::ID, LayerCount>, ChunkSizeX>, ChunkSizeY> _content;
 
 				bool _isBaked = false;
+				bool _isCollisionBaked = false;
 				spk::Mesh2D _mesh;
+				spk::CollisionMesh2D _collisionMesh;
 
 				void _insertData(float p_x, float p_y, float p_width, float p_height, int p_layer, const spk::SpriteSheet::Section &p_sprite)
 				{
@@ -379,18 +380,26 @@ namespace spk
 						}
 					}
 					_isBaked = false;
+					_isCollisionBaked = false;
 				}
 
 				void setContent(int p_x, int p_y, int p_layer, typename TileType::ID p_id)
 				{
 					_content[p_x][p_y][p_layer] = p_id;
 					_isBaked = false;
+					_isCollisionBaked = false;
 				}
 
 				// Mark this chunk's mesh as dirty to trigger a re-bake on next paint.
 				void unbake()
 				{
 					_isBaked = false;
+					_isCollisionBaked = false;
+				}
+
+				void unbakeCollision()
+				{
+					_isCollisionBaked = false;
 				}
 
 				typename TileType::ID content(int p_x, int p_y, int p_layer) const
@@ -425,6 +434,11 @@ namespace spk
 					return _isBaked;
 				}
 
+				bool isCollisionBaked() const
+				{
+					return _isCollisionBaked;
+				}
+
 				spk::SafePointer<spk::Mesh2D> mesh()
 				{
 					return (&_mesh);
@@ -434,28 +448,33 @@ namespace spk
 				{
 					return (&_mesh);
 				}
+
+				spk::SafePointer<spk::CollisionMesh2D> collisionMesh()
+				{
+					return (&_collisionMesh);
+				}
+
+				const spk::SafePointer<const spk::CollisionMesh2D> collisionMesh() const
+				{
+					return (&_collisionMesh);
+				}
+
+				void setCollisionBaked(bool p_state)
+				{
+					_isCollisionBaked = p_state;
+				}
 			};
 
 			spk::SafePointer<Mesh2DRenderer> _renderer;
 			spk::SafePointer<spk::CollisionMesh2DRenderer> _collisionRenderer;
 			spk::SafePointer<spk::Collider2D> _collider;
 			spk::Collider2D::CollisionEnterContract _colliderContract;
-			spk::CachedData<spk::CollisionMesh2D> _collisionMesh;
 			const spk::Flags<TFlagEnum> *_collisionFlags = nullptr;
 			spk::SafePointer<Data> _data;
 
 		public:
 			Chunk(const std::wstring &p_name, spk::SafePointer<TileMap> p_parent, const spk::Vector2Int &p_coord) :
-				spk::Entity(p_name, p_parent),
-				_collisionMesh(
-					[this]()
-					{
-						if (_collisionFlags != nullptr)
-						{
-							return _generateCollisionMesh(*_collisionFlags);
-						}
-						return _generateCollisionMesh(spk::Flags<TFlagEnum>());
-					})
+				spk::Entity(p_name, p_parent)
 			{
 				_renderer = this->template addComponent<Mesh2DRenderer>(p_name + L"/Mesh2DRenderer");
 				_collisionRenderer = this->template addComponent<spk::CollisionMesh2DRenderer>(p_name + L"/CollisionMesh2DRenderer");
@@ -507,6 +526,11 @@ namespace spk
 				_data->unbake();
 			}
 
+			void unbakeCollisionMesh()
+			{
+				_data->unbakeCollision();
+			}
+
 			spk::SafePointer<spk::Mesh2D> mesh()
 			{
 				return _data->mesh();
@@ -517,18 +541,29 @@ namespace spk
 				return _data->mesh();
 			}
 
-			const spk::CollisionMesh2D &collisionMesh()
+			const spk::CollisionMesh2D &collisionMesh() const
 			{
-				const spk::CollisionMesh2D &mesh = _collisionMesh.get();
-				if (_collisionRenderer != nullptr)
+				return *(_data->collisionMesh());
+			}
+
+			void onUpdateEvent(spk::UpdateEvent &p_event) override
+			{
+				(void)p_event;
+				if (_data->isCollisionBaked() == false)
 				{
-					_collisionRenderer->setMesh(&mesh);
+					spk::Flags<TFlagEnum> flags = (_collisionFlags != nullptr) ? *_collisionFlags : spk::Flags<TFlagEnum>();
+					spk::CollisionMesh2D newMesh = _generateCollisionMesh(flags);
+					*(_data->collisionMesh()) = newMesh;
+					_data->setCollisionBaked(true);
+					if (_collisionRenderer != nullptr)
+					{
+						_collisionRenderer->setMesh(_data->collisionMesh());
+					}
+					if (_collider != nullptr)
+					{
+						_collider->setCollisionMesh(_data->collisionMesh());
+					}
 				}
-				if (_collider != nullptr)
-				{
-					_collider->setCollisionMesh(&mesh);
-				}
-				return mesh;
 			}
 
 		private:
@@ -687,17 +722,21 @@ namespace spk
 			void setCollisionFlags(const spk::Flags<TFlagEnum> &p_flags)
 			{
 				_collisionFlags = &p_flags;
-				_collisionMesh.release();
+				_data->unbakeCollision();
 			}
 
 			void setRenderMode(bool p_collisionMode)
 			{
 				if (p_collisionMode == true)
 				{
-					collisionMesh();
 					if (_collisionRenderer != nullptr)
 					{
+						_collisionRenderer->setMesh(_data->collisionMesh());
 						_collisionRenderer->activate();
+					}
+					if (_collider != nullptr)
+					{
+						_collider->setCollisionMesh(_data->collisionMesh());
 					}
 					if (_renderer != nullptr)
 					{
