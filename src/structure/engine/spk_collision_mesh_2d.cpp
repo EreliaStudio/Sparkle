@@ -2,6 +2,12 @@
 
 namespace spk
 {
+	void CollisionMesh2D::clear()
+	{
+		_units.clear();
+		_boundingBox = spk::BoundingBox2D();
+	}
+
 	void CollisionMesh2D::addUnit(const Unit &p_unit)
 	{
 		_units.push_back(p_unit);

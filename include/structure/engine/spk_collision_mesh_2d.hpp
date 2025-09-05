@@ -19,6 +19,8 @@ namespace spk
 	public:
 		CollisionMesh2D() = default;
 
+		void clear();
+
 		void addUnit(const Unit &p_unit);
 		const std::vector<Unit> &units() const;
 

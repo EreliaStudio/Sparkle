@@ -40,6 +40,8 @@ namespace spk
 			{
 			private:
 				spk::SafePointer<Mesh2DRenderer> _renderer;
+				spk::SafePointer<CollisionMesh2DRenderer> _collisionRenderer;
+				spk::SafePointer<Collider2D> _collider;
 				spk::SafePointer<TileMap> _tileMap;
 				spk::Vector2Int _chunkCoordinate = 0;
 				std::array<std::array<std::array<typename TileType::ID, LayerCount>, ChunkSizeX>, ChunkSizeY> _content;
@@ -48,6 +50,7 @@ namespace spk
 				bool _isCollisionBaked = false;
 				spk::Mesh2D _mesh;
 				spk::CollisionMesh2D _collisionMesh;
+				spk::Flags<TFlagEnum> _collisionFlags;
 
 				void _insertData(float p_x, float p_y, float p_width, float p_height, int p_layer, const spk::SpriteSheet::Section &p_sprite)
 				{
@@ -351,6 +354,149 @@ namespace spk
 					}
 				}
 
+			private:
+				void _bakeCollisionMesh()
+				{
+					_collisionMesh.clear();
+
+					std::array<std::array<bool, ChunkSizeY>, ChunkSizeX> candidate;
+
+					for (size_t x = 0; x < ChunkSizeX; ++x)
+					{
+						for (size_t y = 0; y < ChunkSizeY; ++y)
+						{
+							bool hasFlag = false;
+							for (size_t layer = 0; layer < LayerCount; ++layer)
+							{
+								typename TileType::ID &current = _content[x][y][layer];
+
+								if (current != -1)
+								{
+									spk::SafePointer<const TileType> tile = _tileMap->tileById(current);
+
+									if (tile != nullptr && tile->flags().has(static_cast<TFlagEnum>(_collisionFlags.bits)) == true)
+									{
+										hasFlag = true;
+										break;
+									}
+								}
+							}
+							candidate[x][y] = hasFlag;
+						}
+					}
+
+					while (true)
+					{
+						// Greedily find the maximal-area rectangle of candidates and carve it out.
+						int bestArea = 0;
+						int bestLeft = -1;
+						int bestRight = -1;
+						int bestBottom = -1;
+						int bestTop = -1;
+						int bestWidth = 0;
+						int bestHeight = 0;
+
+						std::array<int, ChunkSizeX> heights;
+						heights.fill(0);
+
+						for (size_t y = 0; y < ChunkSizeY; ++y)
+						{
+							// Update histogram heights for this row.
+							for (size_t x = 0; x < ChunkSizeX; ++x)
+							{
+								if (candidate[x][y] == true)
+								{
+									heights[x] = heights[x] + 1;
+								}
+								else
+								{
+									heights[x] = 0;
+								}
+							}
+
+							// Largest-rectangle-in-histogram via monotonic stack.
+							std::vector<size_t> stack;
+							stack.reserve(ChunkSizeX + 1);
+
+							for (size_t i = 0; i <= ChunkSizeX; ++i)
+							{
+								int curHeight = (i < ChunkSizeX ? heights[i] : 0);
+								while ((stack.empty() == false) && (heights[stack.back()] > curHeight))
+								{
+									int h = heights[stack.back()];
+									stack.pop_back();
+									size_t leftIndex = (stack.empty() == true ? 0 : (stack.back() + 1));
+									size_t rightIndex = (i == 0 ? 0 : (i - 1));
+									int width = static_cast<int>(rightIndex - leftIndex + 1);
+									int area = h * width;
+									if (area > bestArea)
+									{
+										bestArea = area;
+										bestLeft = static_cast<int>(leftIndex);
+										bestRight = static_cast<int>(rightIndex);
+										bestTop = static_cast<int>(y);
+										bestBottom = static_cast<int>(y) - h + 1;
+										bestWidth = width;
+										bestHeight = h;
+									}
+									else if ((area == bestArea) == true)
+									{
+										bool currIsSquare = (width == h);
+										bool bestIsSquare = (bestWidth == bestHeight);
+										if ((bestIsSquare == false) && (currIsSquare == true))
+										{
+											bestLeft = static_cast<int>(leftIndex);
+											bestRight = static_cast<int>(rightIndex);
+											bestTop = static_cast<int>(y);
+											bestBottom = static_cast<int>(y) - h + 1;
+											bestWidth = width;
+											bestHeight = h;
+										}
+										else if (
+											((currIsSquare == true) && (bestIsSquare == true)) || ((currIsSquare == false) && (bestIsSquare == false)))
+										{
+											int currDiff = std::abs(width - h);
+											int bestDiff = std::abs(bestWidth - bestHeight);
+											if (currDiff < bestDiff)
+											{
+												bestLeft = static_cast<int>(leftIndex);
+												bestRight = static_cast<int>(rightIndex);
+												bestTop = static_cast<int>(y);
+												bestBottom = static_cast<int>(y) - h + 1;
+												bestWidth = width;
+												bestHeight = h;
+											}
+										}
+									}
+								}
+								stack.push_back(i);
+							}
+						}
+
+						if (bestArea <= 0)
+						{
+							break;
+						}
+
+						// Carve out the best rectangle and emit a polygon.
+						for (int x = bestLeft; x <= bestRight; ++x)
+						{
+							for (int y = bestBottom; y <= bestTop; ++y)
+							{
+								candidate[static_cast<size_t>(x)][static_cast<size_t>(y)] = false;
+							}
+						}
+
+						float fx0 = static_cast<float>(bestLeft);
+						float fy0 = static_cast<float>(bestBottom);
+						float fx1 = static_cast<float>(bestRight + 1);
+						float fy1 = static_cast<float>(bestTop + 1);
+
+						_collisionMesh.addUnit(
+							spk::Polygon2D::fromLoop({spk::Vector2(fx0, fy0), spk::Vector2(fx1, fy0), spk::Vector2(fx1, fy1), spk::Vector2(fx0, fy1)}));
+					}
+				}
+
 			public:
 				Data(const std::wstring &p_name) :
 					spk::Component(p_name)
@@ -414,6 +560,8 @@ namespace spk
 				void start() override
 				{
 					_renderer = owner()->template getComponent<Mesh2DRenderer>();
+					_collisionRenderer = owner()->template getComponent<CollisionMesh2DRenderer>();
+					_collider = owner()->template getComponent<Collider2D>();
 				}
 
 				void onPaintEvent(spk::PaintEvent &p_event) override
@@ -426,6 +574,20 @@ namespace spk
 							_renderer->setMesh(mesh());
 							p_event.requestPaint();
 						}
+					}
+				}
+
+				void onUpdateEvent(spk::UpdateEvent &p_event) override
+				{
+					if (_isCollisionBaked == false)
+					{
+						_bakeCollisionMesh();
+
+						_collider->setCollisionMesh(&_collisionMesh);
+						_collisionRenderer->setMesh(&_collisionMesh);
+
+						_isCollisionBaked = true;
+
 					}
 				}
 
@@ -448,6 +610,12 @@ namespace spk
 				{
 					return (&_mesh);
 				}
+					
+				void setCollisionFlags(const spk::Flags<TFlagEnum> &p_flags)
+				{
+					_collisionFlags = p_flags;
+					unbakeCollision();
+				}
 
 				spk::SafePointer<spk::CollisionMesh2D> collisionMesh()
 				{
@@ -457,11 +625,6 @@ namespace spk
 				const spk::SafePointer<const spk::CollisionMesh2D> collisionMesh() const
 				{
 					return (&_collisionMesh);
-				}
-
-				void setCollisionBaked(bool p_state)
-				{
-					_isCollisionBaked = p_state;
 				}
 			};
 
@@ -546,213 +709,22 @@ namespace spk
 				return *(_data->collisionMesh());
 			}
 
-			void onUpdateEvent(spk::UpdateEvent &p_event) override
-			{
-				(void)p_event;
-				if (_data->isCollisionBaked() == false)
-				{
-					spk::Flags<TFlagEnum> flags = (_collisionFlags != nullptr) ? *_collisionFlags : spk::Flags<TFlagEnum>();
-					spk::CollisionMesh2D newMesh = _generateCollisionMesh(flags);
-					*(_data->collisionMesh()) = newMesh;
-					_data->setCollisionBaked(true);
-					if (_collisionRenderer != nullptr)
-					{
-						_collisionRenderer->setMesh(_data->collisionMesh());
-					}
-					if (_collider != nullptr)
-					{
-						_collider->setCollisionMesh(_data->collisionMesh());
-					}
-				}
-			}
-
-		private:
-			spk::CollisionMesh2D _generateCollisionMesh(spk::Flags<TFlagEnum> p_flags) const
-			{
-				spk::CollisionMesh2D result;
-
-				std::array<std::array<bool, ChunkSizeY>, ChunkSizeX> candidate;
-
-				for (size_t x = 0; x < ChunkSizeX; ++x)
-				{
-					for (size_t y = 0; y < ChunkSizeY; ++y)
-					{
-						bool hasFlag = false;
-						for (size_t layer = 0; layer < LayerCount; ++layer)
-						{
-							typename TileType::ID id = _data->content(static_cast<int>(x), static_cast<int>(y), static_cast<int>(layer));
-
-							if (id != -1)
-							{
-								spk::SafePointer<TileMap> tileMapOwner = dynamic_cast<TileMap *>(this->parent().get());
-
-								if ((tileMapOwner != nullptr) == true)
-								{
-									spk::SafePointer<const TileType> tile = tileMapOwner->tileById(id);
-									if ((tile != nullptr) == true)
-									{
-										if (tile->flags().has(static_cast<TFlagEnum>(p_flags.bits)) == true)
-										{
-											hasFlag = true;
-											break;
-										}
-									}
-								}
-							}
-						}
-						candidate[x][y] = hasFlag;
-					}
-				}
-
-				while (true)
-				{
-					// Greedily find the maximal-area rectangle of candidates and carve it out.
-					int bestArea = 0;
-					int bestLeft = -1;
-					int bestRight = -1;
-					int bestBottom = -1;
-					int bestTop = -1;
-					int bestWidth = 0;
-					int bestHeight = 0;
-
-					std::array<int, ChunkSizeX> heights;
-					heights.fill(0);
-
-					for (size_t y = 0; y < ChunkSizeY; ++y)
-					{
-						// Update histogram heights for this row.
-						for (size_t x = 0; x < ChunkSizeX; ++x)
-						{
-							if (candidate[x][y] == true)
-							{
-								heights[x] = heights[x] + 1;
-							}
-							else
-							{
-								heights[x] = 0;
-							}
-						}
-
-						// Largest-rectangle-in-histogram via monotonic stack.
-						std::vector<size_t> stack;
-						stack.reserve(ChunkSizeX + 1);
-
-						for (size_t i = 0; i <= ChunkSizeX; ++i)
-						{
-							int curHeight = (i < ChunkSizeX ? heights[i] : 0);
-							while ((stack.empty() == false) && (heights[stack.back()] > curHeight))
-							{
-								int h = heights[stack.back()];
-								stack.pop_back();
-								size_t leftIndex = (stack.empty() == true ? 0 : (stack.back() + 1));
-								size_t rightIndex = (i == 0 ? 0 : (i - 1));
-								int width = static_cast<int>(rightIndex - leftIndex + 1);
-								int area = h * width;
-								if (area > bestArea)
-								{
-									bestArea = area;
-									bestLeft = static_cast<int>(leftIndex);
-									bestRight = static_cast<int>(rightIndex);
-									bestTop = static_cast<int>(y);
-									bestBottom = static_cast<int>(y) - h + 1;
-									bestWidth = width;
-									bestHeight = h;
-								}
-								else if ((area == bestArea) == true)
-								{
-									bool currIsSquare = (width == h);
-									bool bestIsSquare = (bestWidth == bestHeight);
-									if ((bestIsSquare == false) && (currIsSquare == true))
-									{
-										bestLeft = static_cast<int>(leftIndex);
-										bestRight = static_cast<int>(rightIndex);
-										bestTop = static_cast<int>(y);
-										bestBottom = static_cast<int>(y) - h + 1;
-										bestWidth = width;
-										bestHeight = h;
-									}
-									else if (
-										((currIsSquare == true) && (bestIsSquare == true)) || ((currIsSquare == false) && (bestIsSquare == false)))
-									{
-										int currDiff = std::abs(width - h);
-										int bestDiff = std::abs(bestWidth - bestHeight);
-										if (currDiff < bestDiff)
-										{
-											bestLeft = static_cast<int>(leftIndex);
-											bestRight = static_cast<int>(rightIndex);
-											bestTop = static_cast<int>(y);
-											bestBottom = static_cast<int>(y) - h + 1;
-											bestWidth = width;
-											bestHeight = h;
-										}
-									}
-								}
-							}
-							stack.push_back(i);
-						}
-					}
-
-					if (bestArea <= 0)
-					{
-						break;
-					}
-
-					// Carve out the best rectangle and emit a polygon.
-					for (int x = bestLeft; x <= bestRight; ++x)
-					{
-						for (int y = bestBottom; y <= bestTop; ++y)
-						{
-							candidate[static_cast<size_t>(x)][static_cast<size_t>(y)] = false;
-						}
-					}
-
-					float fx0 = static_cast<float>(bestLeft);
-					float fy0 = static_cast<float>(bestBottom);
-					float fx1 = static_cast<float>(bestRight + 1);
-					float fy1 = static_cast<float>(bestTop + 1);
-
-					result.addUnit(
-						spk::Polygon2D::fromLoop({spk::Vector2(fx0, fy0), spk::Vector2(fx1, fy0), spk::Vector2(fx1, fy1), spk::Vector2(fx0, fy1)}));
-				}
-
-				return result;
-			}
-
-		public:
 			void setCollisionFlags(const spk::Flags<TFlagEnum> &p_flags)
 			{
-				_collisionFlags = &p_flags;
-				_data->unbakeCollision();
+				_data->setCollisionFlags(p_flags);
 			}
 
 			void setRenderMode(bool p_collisionMode)
 			{
 				if (p_collisionMode == true)
 				{
-					if (_collisionRenderer != nullptr)
-					{
-						_collisionRenderer->setMesh(_data->collisionMesh());
-						_collisionRenderer->activate();
-					}
-					if (_collider != nullptr)
-					{
-						_collider->setCollisionMesh(_data->collisionMesh());
-					}
-					if (_renderer != nullptr)
-					{
-						_renderer->deactivate();
-					}
+					_collisionRenderer->activate();
+					_renderer->deactivate();
 				}
 				else
 				{
-					if (_collisionRenderer != nullptr)
-					{
-						_collisionRenderer->deactivate();
-					}
-					if (_renderer != nullptr)
-					{
-						_renderer->activate();
-					}
+					_collisionRenderer->deactivate();
+					_renderer->activate();
 				}
 			}
 		};
