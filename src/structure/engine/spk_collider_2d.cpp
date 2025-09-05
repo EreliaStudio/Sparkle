@@ -50,7 +50,6 @@ namespace spk
 
 	void Collider2D::awake()
 	{
-		spk::cout << "Awake [" << owner()->name() << "]'s collider 2D" << std::endl;
 		{
 			std::lock_guard<std::mutex> lock(_collidersMutex);
 			_colliders.push_back(this);
