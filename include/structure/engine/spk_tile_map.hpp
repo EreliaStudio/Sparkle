@@ -17,7 +17,7 @@
 #include "structure/engine/spk_tile.hpp"
 #include "structure/graphics/texture/spk_sprite_sheet.hpp"
 #include "structure/math/spk_vector2.hpp"
-#include "structure/spk_cached_data.hpp"
+#include "structure/design_pattern/spk_cached_data.hpp"
 #include "structure/spk_safe_pointer.hpp"
 #include "structure/system/spk_exception.hpp"
 #include "utils/spk_string_utils.hpp"
