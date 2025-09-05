@@ -40,6 +40,8 @@ namespace spk
 		_fontRenderer.released.setFont(Widget::defaultFont());
 		_fontRenderer.hovered.setFont(Widget::defaultFont());
 		_fontRenderer.pressed.setFont(Widget::defaultFont());
+		spk::Font::Size releasedSize = _fontRenderer.released.fontSize();
+		_fontRenderer.pressed.setFontSize({releasedSize.glyph - 2, releasedSize.outline});
 
 		_fontRenderer.released.setGlyphColor(spk::Color::white);
 		_fontRenderer.released.setOutlineColor(spk::Color::black);
@@ -50,15 +52,9 @@ namespace spk
 		_fontRenderer.pressed.setGlyphColor(spk::Color::white);
 		_fontRenderer.pressed.setOutlineColor(spk::Color::black);
 
-		_fontRendererContract.hovered = _fontRenderer.hovered.subscribeToFontEdition([&]() {
-				requireGeometryUpdate();
-			});
-		_fontRendererContract.released = _fontRenderer.released.subscribeToFontEdition([&]() {
-				requireGeometryUpdate();
-			});
-		_fontRendererContract.pressed = _fontRenderer.pressed.subscribeToFontEdition([&]() {
-				requireGeometryUpdate();
-			});
+		_fontRendererContract.hovered = _fontRenderer.hovered.subscribeToFontEdition([&]() { requireGeometryUpdate(); });
+		_fontRendererContract.released = _fontRenderer.released.subscribeToFontEdition([&]() { requireGeometryUpdate(); });
+		_fontRendererContract.pressed = _fontRenderer.pressed.subscribeToFontEdition([&]() { requireGeometryUpdate(); });
 
 		_nineSliceRenderer.released.setSpriteSheet(Widget::defaultNineSlice());
 		_nineSliceRenderer.hovered.setSpriteSheet(PushButton::defaultHoverNineSlice());
@@ -137,8 +133,8 @@ namespace spk
 		requireGeometryUpdate();
 	}
 
-	void PushButton::setTextAlignment(const spk::HorizontalAlignment &p_horizontalAlignment, const spk::VerticalAlignment &p_verticalAlignment,
-									  const State &p_state)
+	void PushButton::setTextAlignment(
+		const spk::HorizontalAlignment &p_horizontalAlignment, const spk::VerticalAlignment &p_verticalAlignment, const State &p_state)
 	{
 		_horizontalAlignment[p_state] = p_horizontalAlignment;
 		_verticalAlignment[p_state] = p_verticalAlignment;
@@ -357,14 +353,13 @@ namespace spk
 	{
 		using namespace spk;
 
-		Geometry2D releasedGeom = geometry();
-		Geometry2D hoveredGeom = geometry();
-		Geometry2D pressedGeom = geometry().shrink(_pressedOffset);
+		Geometry2D releasedGeom = geometry().atOrigin();
+		Geometry2D pressedGeom = geometry().atOrigin().shrink(_pressedOffset);
 
 		for (auto s : {State::Released, State::Hovered, State::Pressed})
 		{
 			_nineSliceRenderer[s].clear();
-			Geometry2D geomToUse = (s == State::Pressed) ? pressedGeom : geometry();
+			Geometry2D geomToUse = (s == State::Pressed) ? pressedGeom : releasedGeom;
 			_nineSliceRenderer[s].prepare(geomToUse, layer(), _cornerSize[s]);
 			_nineSliceRenderer[s].validate();
 		}
@@ -373,7 +368,7 @@ namespace spk
 		{
 			_fontRenderer[s].clear();
 
-			Geometry2D geomToUse = (s == State::Pressed) ? pressedGeom : geometry();
+			Geometry2D geomToUse = (s == State::Pressed) ? pressedGeom : releasedGeom;
 			geomToUse = geomToUse.shrink(_cornerSize[s]);
 
 			auto textAnchor = _fontRenderer[s].computeTextAnchor(geomToUse, _text[s], _horizontalAlignment[s], _verticalAlignment[s]);
@@ -385,7 +380,7 @@ namespace spk
 		{
 			_iconRenderer[s].clear();
 
-			Geometry2D geomToUse = (s == State::Pressed) ? pressedGeom : geometry();
+			Geometry2D geomToUse = (s == State::Pressed) ? pressedGeom : releasedGeom;
 			geomToUse = geomToUse.shrink(_cornerSize[s]);
 
 			_iconRenderer[s].prepare(geomToUse, _icon[s], layer() + 0.0001f);

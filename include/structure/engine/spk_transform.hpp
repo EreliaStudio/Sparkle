@@ -9,11 +9,11 @@
 
 namespace spk
 {
-	class GameObject;
+	class Entity;
 
 	class Transform : public Component
 	{
-		friend class GameObject;
+		friend class Entity;
 
 	private:
 		spk::Matrix4x4 _model;
@@ -62,7 +62,8 @@ namespace spk
 
 		void rotate(const spk::Vector3 &p_deltaEuler);
 		void setRotation(const spk::Vector3 &p_euler);
-		void rotateAroundPoint(const spk::Vector3 &center, const spk::Vector3 &axis, float angle);
+		void rotateAroundPoint(const spk::Vector3 &p_center, const spk::Vector3 &p_axis, float p_angle);
+		void rotateAroundAxis(const spk::Vector3 &p_axis, float p_angle);
 
 		void setScale(const spk::Vector3 &p_scale);
 

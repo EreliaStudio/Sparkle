@@ -2,9 +2,9 @@
 
 #include <algorithm>
 #include <iomanip>
-#include <limits>
 #include <sstream>
 
+#include "structure/math/spk_constants.hpp"
 #include "structure/system/spk_exception.hpp"
 
 namespace spk
@@ -29,7 +29,7 @@ namespace spk
 		a(static_cast<float>(p_a) / 255.0f)
 	{
 	}
-	
+
 	Color::Color(float p_r, float p_g, float p_b, float p_a) :
 		r(p_r),
 		g(p_g),
@@ -67,9 +67,8 @@ namespace spk
 
 	bool Color::operator==(const Color &p_color) const
 	{
-		return (std::abs(r - p_color.r) < std::numeric_limits<float>::epsilon()) &&
-			   (std::abs(g - p_color.g) < std::numeric_limits<float>::epsilon()) &&
-			   (std::abs(b - p_color.b) < std::numeric_limits<float>::epsilon()) && (std::abs(a - p_color.a) < std::numeric_limits<float>::epsilon());
+		return (std::abs(r - p_color.r) < spk::Constants::colorPrecision) && (std::abs(g - p_color.g) < spk::Constants::colorPrecision) &&
+			   (std::abs(b - p_color.b) < spk::Constants::colorPrecision) && (std::abs(a - p_color.a) < spk::Constants::colorPrecision);
 	}
 
 	std::ostream &operator<<(std::ostream &p_os, const spk::Color &p_color)
@@ -118,7 +117,7 @@ namespace spk
 
 				for (wchar_t c : hexPart)
 				{
-					if (!iswxdigit(c))
+					if (iswxdigit(c) == 0)
 					{
 						GENERATE_ERROR("Invalid color string format: Non-hexadecimal character found");
 					}

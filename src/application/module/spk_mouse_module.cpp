@@ -6,13 +6,15 @@ namespace spk
 {
 	void MouseModule::_treatEvent(spk::MouseEvent &&p_event)
 	{
+		_mouse._window = p_event.window;
+
 		switch (p_event.type)
 		{
 		case spk::MouseEvent::Type::Press:
 		{
 			if (p_event.button != spk::Mouse::Button::Unknow)
 			{
-				_mouse.buttons[static_cast<int>(p_event.button)] = spk::InputState::Down;
+				_mouse._buttons[static_cast<int>(p_event.button)] = spk::InputState::Down;
 			}
 			break;
 		}
@@ -20,7 +22,7 @@ namespace spk
 		{
 			if (p_event.button != spk::Mouse::Button::Unknow)
 			{
-				_mouse.buttons[static_cast<int>(p_event.button)] = spk::InputState::Up;
+				_mouse._buttons[static_cast<int>(p_event.button)] = spk::InputState::Up;
 			}
 			break;
 		}
@@ -31,13 +33,18 @@ namespace spk
 		}
 		case spk::MouseEvent::Type::Motion:
 		{
-			_mouse.deltaPosition = p_event.position - _mouse.position;
-			_mouse.position = p_event.position;
+			_mouse._deltaPosition = p_event.position - _mouse._position;
+			_mouse._position = p_event.position;
 			break;
 		}
 		case spk::MouseEvent::Type::Wheel:
 		{
-			_mouse.wheel += p_event.scrollValue;
+			_mouse._wheel += p_event.scrollValue;
+			break;
+		}
+		default:
+		{
+			GENERATE_ERROR("Invalid MouseEvent type");
 			break;
 		}
 		}

@@ -8,38 +8,60 @@ namespace spk
 {
 	void Client::_receive()
 	{
+		auto recv_exact = [](SOCKET p_s, char *p_buf, int p_total) -> int
+		{
+			int received = 0;
+			while (received < p_total)
+			{
+				int r = ::recv(p_s, p_buf + received, p_total - received, 0);
+				if (r == 0) // peer closed
+				{
+					return 0;
+				}
+				if (r < 0) // error
+				{
+					return r;
+				}
+				received += r;
+			}
+			return received;
+		};
+
 		while (_isConnected)
 		{
-			MessageObject message = _messagePool.obtain();
-			int headerSize = sizeof(spk::Message::Header);
-			int bytesRead = recv(_connectSocket, reinterpret_cast<char *>(&message->_header), headerSize, 0);
-			if (bytesRead == headerSize)
+			spk::Message::Header localHeader{};
 			{
-				if (message->_header.length > 0)
+				const int headerSize = static_cast<int>(sizeof(localHeader));
+				int r = recv_exact(_connectSocket, reinterpret_cast<char *>(&localHeader), headerSize);
+				if (r <= 0)
 				{
-					message->resize(message->_header.length);
-					char *dataBuffer = reinterpret_cast<char *>(message->_buffer.data());
-					size_t totalBytesReceived = 0;
-					while (totalBytesReceived < message->_header.length)
-					{
-						bytesRead = recv(_connectSocket,
-										 dataBuffer + totalBytesReceived,
-										 static_cast<int>(message->_header.length) - static_cast<int>(totalBytesReceived),
-										 0);
-						if (bytesRead <= 0)
-						{
-							break;
-						}
-						totalBytesReceived += bytesRead;
-					}
+					disconnect();
+					break;
 				}
-				_messageQueue.push(std::move(message));
 			}
-			else if (bytesRead <= 0)
+
+			std::vector<std::byte> tmpPayload;
+			if (localHeader.length > 0)
 			{
-				disconnect();
-				break;
+				tmpPayload.resize(localHeader.length);
+				int r = recv_exact(_connectSocket, reinterpret_cast<char *>(tmpPayload.data()), static_cast<int>(tmpPayload.size()));
+				if (r <= 0)
+				{
+					disconnect();
+					break;
+				}
 			}
+
+			MessageObject message = _messagePool.obtain();
+			message->_header = localHeader;
+
+			if (localHeader.length > 0)
+			{
+				message->resize(localHeader.length);
+				std::memcpy(message->_buffer.data(), tmpPayload.data(), tmpPayload.size());
+			}
+
+			_messageQueue.push(std::move(message));
 		}
 	}
 

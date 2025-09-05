@@ -25,7 +25,7 @@ namespace spk
 				static spk::SpriteSheet _defaultBreakSpriteSheet;
 
 				uint32_t _height;
-				spk::TextureRenderer _renderer;
+				spk::TexturePainter _renderer;
 
 				void _onGeometryChange();
 				void _onPaintEvent(spk::PaintEvent &p_event);

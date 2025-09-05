@@ -135,7 +135,7 @@ namespace spk
 		_maximizeButton.setCornerSize(4);
 		_maximizeButton.activate();
 	}
-	
+
 	spk::SafePointer<spk::TextLabel> IInterfaceWindow::MenuBar::titleLabel()
 	{
 		return (&_titleLabel);
@@ -150,7 +150,7 @@ namespace spk
 	{
 		return (&_maximizeButton);
 	}
-	
+
 	spk::SafePointer<spk::PushButton> IInterfaceWindow::MenuBar::closeButton()
 	{
 		return (&_closeButton);
@@ -185,7 +185,7 @@ namespace spk
 			});
 	}
 
-	IInterfaceWindow::ResizeContractProvider::Contract IInterfaceWindow::subscribeOnResize(const IInterfaceWindow::ResizeContractProvider::Job& p_job)
+	IInterfaceWindow::ResizeContractProvider::Contract IInterfaceWindow::subscribeOnResize(const IInterfaceWindow::ResizeContractProvider::Job &p_job)
 	{
 		return (_onResizeContractProvider.subscribe(p_job));
 	}
@@ -194,8 +194,8 @@ namespace spk
 	{
 		spk::Vector2UInt menuSize = {geometry().size.x, static_cast<int>(_menuHeight)};
 
-		spk::Vector2UInt frameSize = {geometry().size.x - _backgroundFrame.cornerSize().x * 2,
-									 geometry().size.y - menuSize.y - _backgroundFrame.cornerSize().y * 2};
+		spk::Vector2UInt frameSize = {
+			geometry().size.x - _backgroundFrame.cornerSize().x * 2, geometry().size.y - menuSize.y - _backgroundFrame.cornerSize().y * 2};
 
 		_onResizeContractProvider.trigger(frameSize);
 
@@ -224,7 +224,7 @@ namespace spk
 		{
 			if (_isMoving)
 			{
-				place(p_event.mouse->position - _positionDelta);
+				place(p_event.mouse->position() - _positionDelta);
 				p_event.requestPaint();
 				p_event.consume();
 			}
@@ -234,16 +234,16 @@ namespace spk
 		{
 			if (p_event.button == spk::Mouse::Button::Left)
 			{
-				if (_menuBar._titleLabel.viewport().geometry().contains(p_event.mouse->position))
+				if (_menuBar._titleLabel.viewport().geometry().contains(p_event.mouse->position()))
 				{
 					_isMoving = true;
-					_positionDelta = p_event.mouse->position - geometry().anchor;
+					_positionDelta = p_event.mouse->position() - geometry().anchor;
 					p_event.window->setCursor(L"Hand");
 					p_event.consume();
 					takeFocus(spk::Widget::FocusType::MouseFocus);
 				}
 			}
-			
+
 			break;
 		}
 		case spk::MouseEvent::Type::Release:
@@ -256,9 +256,13 @@ namespace spk
 			}
 			break;
 		}
+		default:
+		{
+			break;
+		}
 		}
 
-		if (viewport().geometry().contains(p_event.mouse->position) == true)
+		if (viewport().geometry().contains(p_event.mouse->position()) == true)
 		{
 			p_event.consume();
 		}

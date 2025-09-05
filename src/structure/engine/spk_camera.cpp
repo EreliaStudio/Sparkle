@@ -22,11 +22,21 @@ namespace spk
 
 	const spk::Matrix4x4 &Camera::projectionMatrix() const
 	{
-		return _projectionMatrix;
+		return (_projectionMatrix);
 	}
 
 	const spk::Matrix4x4 &Camera::inverseProjectionMatrix() const
 	{
-		return _inverseProjectionMatrix;
+		return (_inverseProjectionMatrix);
+	}
+
+	spk::Vector3 Camera::convertScreenToCamera(const spk::Vector3 &p_screenPosition) const
+	{
+		return ((_inverseProjectionMatrix * spk::Vector4(p_screenPosition, 1.0f)).xyz());
+	}
+
+	spk::Vector3 Camera::convertScreenToCamera(const spk::Vector2 &p_screenPosition) const
+	{
+		return (convertScreenToCamera(spk::Vector3(p_screenPosition, -1.0f)));
 	}
 }

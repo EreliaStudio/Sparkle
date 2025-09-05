@@ -1,6 +1,6 @@
 #pragma once
 
-#include "structure/container/spk_JSON_object.hpp"
+#include "structure/container/spk_json_object.hpp"
 #include <cfenv>
 #include <cmath>
 #include <filesystem>
@@ -20,8 +20,6 @@ namespace spk
 			File(const std::filesystem::path &p_filePath);
 
 			void load(const std::filesystem::path &p_filePath);
-
-			static File loadFromString(const std::wstring &p_content);
 
 			void save(const std::filesystem::path &p_filePath) const;
 

@@ -1,7 +1,7 @@
 #include "structure/graphics/texture/spk_texture.hpp"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include <external_libraries/stb_image_write.h>
+#include <stb_image_write.h>
 
 namespace spk
 {
@@ -46,15 +46,15 @@ namespace spk
 		size(p_size)
 	{
 	}
-	bool Texture::Section::operator==(const Section& p_other) const noexcept
-    {
-        return anchor == p_other.anchor && size == p_other.size;
-    }
+	bool Texture::Section::operator==(const Section &p_other) const noexcept
+	{
+		return anchor == p_other.anchor && size == p_other.size;
+	}
 
-    bool Texture::Section::operator!=(const Section& p_other) const noexcept
-    {
-        return (*this == p_other) == false;
-    }
+	bool Texture::Section::operator!=(const Section &p_other) const noexcept
+	{
+		return (*this == p_other) == false;
+	}
 
 	size_t Texture::_getBytesPerPixel(const Format &p_format) const
 	{
@@ -117,8 +117,13 @@ namespace spk
 		return *this;
 	}
 
-	void Texture::setPixels(const std::vector<uint8_t> &p_data, const spk::Vector2UInt &p_size, const Format &p_format, const Filtering &p_filtering,
-							const Wrap &p_wrap, const Mipmap &p_mipmap)
+	void Texture::setPixels(
+		const std::vector<uint8_t> &p_data,
+		const spk::Vector2UInt &p_size,
+		const Format &p_format,
+		const Filtering &p_filtering,
+		const Wrap &p_wrap,
+		const Mipmap &p_mipmap)
 	{
 		_pixels = p_data;
 		_size = p_size;
@@ -138,15 +143,27 @@ namespace spk
 		_needUpdate = true;
 	}
 
-	void Texture::setPixels(const uint8_t *p_data, const spk::Vector2UInt &p_size, const Format &p_format, const Filtering &p_filtering,
-							const Wrap &p_wrap, const Mipmap &p_mipmap)
+	void Texture::setPixels(
+		const uint8_t *p_data,
+		const spk::Vector2UInt &p_size,
+		const Format &p_format,
+		const Filtering &p_filtering,
+		const Wrap &p_wrap,
+		const Mipmap &p_mipmap)
 	{
 		_size = p_size;
 		_format = p_format;
 		_filtering = p_filtering;
 		_wrap = p_wrap;
 		_mipmap = p_mipmap;
-		_pixels.assign(p_data, p_data + (p_size.x * p_size.y * _getBytesPerPixel(p_format)));
+		if (p_data != nullptr)
+		{
+			_pixels.assign(p_data, p_data + (p_size.x * p_size.y * _getBytesPerPixel(p_format)));
+		}
+		else
+		{
+			_pixels.resize(p_size.x * p_size.y * _getBytesPerPixel(p_format));
+		}
 		_needUpdate = true;
 		_needSettings = true;
 	}
@@ -155,7 +172,14 @@ namespace spk
 	{
 		_size = p_size;
 		_format = p_format;
-		_pixels.assign(p_data, p_data + (p_size.x * p_size.y * _getBytesPerPixel(p_format)));
+		if (p_data != nullptr)
+		{
+			_pixels.assign(p_data, p_data + (p_size.x * p_size.y * _getBytesPerPixel(p_format)));
+		}
+		else
+		{
+			_pixels.resize(p_size.x * p_size.y * _getBytesPerPixel(p_format));
+		}
 		_needUpdate = true;
 	}
 
@@ -197,7 +221,7 @@ namespace spk
 		return _mipmap;
 	}
 
-	void Texture::saveAsPng(const std::filesystem::path& p_path) const
+	void Texture::saveAsPng(const std::filesystem::path &p_path) const
 	{
 		if (_pixels.empty() || _size.x == 0 || _size.y == 0)
 		{
@@ -212,7 +236,7 @@ namespace spk
 
 		int stride = _size.x * channels;
 
-		if (!stbi_write_png(p_path.string().c_str(), _size.x, _size.y, channels, _pixels.data(), stride))
+		if (stbi_write_png(p_path.string().c_str(), _size.x, _size.y, channels, _pixels.data(), stride) == 0)
 		{
 			throw std::runtime_error("Failed to write PNG file at: " + p_path.string());
 		}

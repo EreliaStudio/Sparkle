@@ -17,7 +17,9 @@ namespace spk
 		void setGeometry(const spk::Geometry2D &p_geometry) override
 		{
 			if (_elements.empty())
+			{
 				return;
+			}
 
 			const bool isHorizontal = (Orient == spk::Orientation::Horizontal);
 			const size_t count = _elements.size();
@@ -28,63 +30,65 @@ namespace spk
 			for (size_t i = 0; i < count; ++i)
 			{
 				Element *elt = _elements[i].get();
-				if (elt == nullptr || elt->widget() == nullptr)
+				if (elt == nullptr || (elt->widget() == nullptr && elt->layout() == nullptr))
+				{
 					continue;
+				}
 
 				int requested = (isHorizontal ? elt->size().x : elt->size().y);
 
-				spk::Vector2Int minSize = elt->widget()->minimalSize();
-				spk::Vector2Int maxSize = elt->widget()->maximalSize();
+				spk::Vector2Int minSize = elt->minimalSize();
+				spk::Vector2Int maxSize = elt->maximalSize();
 
 				switch (elt->sizePolicy())
 				{
-					case SizePolicy::Fixed:
-					{
-						primarySize[i] = requested;
-						break;
-					}
-					case SizePolicy::Minimum:
-					{
-						primarySize[i] = (isHorizontal ? minSize.x : minSize.y);
-						break;
-					}
-					case SizePolicy::Maximum:
-					{
-						primarySize[i] = (isHorizontal ? maxSize.x : maxSize.y);
-						break;
-					}
-					case SizePolicy::Extend:
+				case SizePolicy::Fixed:
+				{
+					primarySize[i] = requested;
+					break;
+				}
+				case SizePolicy::Minimum:
+				{
+					primarySize[i] = (isHorizontal ? minSize.x : minSize.y);
+					break;
+				}
+				case SizePolicy::Maximum:
+				{
+					primarySize[i] = (isHorizontal ? maxSize.x : maxSize.y);
+					break;
+				}
+				case SizePolicy::Extend:
+				{
+					isExt[i] = true;
+					primarySize[i] = requested;
+					break;
+				}
+				case SizePolicy::HorizontalExtend:
+				{
+					if (isHorizontal == true)
 					{
 						isExt[i] = true;
 						primarySize[i] = requested;
-						break;
 					}
-					case SizePolicy::HorizontalExtend:
+					else
 					{
-						if (isHorizontal == true)
-						{
-							isExt[i]       = true;
-							primarySize[i] = requested;
-						}
-						else
-						{
-							primarySize[i] = minSize.y;
-						}
-						break;
+						primarySize[i] = minSize.y;
 					}
-					case SizePolicy::VerticalExtend:
+					break;
+				}
+				case SizePolicy::VerticalExtend:
+				{
+					if (isHorizontal == false)
 					{
-						if (isHorizontal == false)
-						{
-							isExt[i]       = true;
-							primarySize[i] = requested;
-						}
-						else
-						{
-							primarySize[i] = minSize.x;
-						}
-						break;
+						isExt[i] = true;
+						primarySize[i] = requested;
 					}
+					else
+					{
+						primarySize[i] = minSize.x;
+					}
+					break;
+				}
 				}
 			}
 
@@ -121,7 +125,7 @@ namespace spk
 			{
 				Element *elt = _elements[i].get();
 
-				if (elt != nullptr && elt->widget() != nullptr)
+				if (elt != nullptr && (elt->widget() != nullptr || elt->layout() != nullptr))
 				{
 					spk::Vector2Int pos = p_geometry.anchor;
 					spk::Vector2Int size = p_geometry.size;
@@ -137,11 +141,11 @@ namespace spk
 						size.y = primarySize[i];
 					}
 
-					elt->widget()->setGeometry({pos, size});
+					elt->setGeometry({pos, size});
 
 					cursor += ((isHorizontal == true ? size.x : size.y) > 0 ? pad : 0);
 				}
-				
+
 				cursor += primarySize[i];
 			}
 		}
@@ -153,42 +157,40 @@ namespace spk
 				return {0u, 0u};
 			}
 
-			const bool  isHorizontal = (Orient == spk::Orientation::Horizontal);
-			uint32_t    primarySum   = 0;
-			uint32_t    secondaryMax = 0;
-			std::size_t count        = 0;
+			const bool isHorizontal = (Orient == spk::Orientation::Horizontal);
+			uint32_t primarySum = 0;
+			uint32_t secondaryMax = 0;
+			std::size_t count = 0;
 
-			for (const auto& elt : _elements)
+			for (const auto &elt : _elements)
 			{
-				if (!elt || elt->widget() == nullptr)
+				if (!elt || (elt->widget() == nullptr && elt->layout() == nullptr))
 				{
 					continue;
 				}
 
 				++count;
-				const spk::Vector2UInt min = elt->widget()->minimalSize();
+				const spk::Vector2UInt min = elt->minimalSize();
 
 				if (isHorizontal)
 				{
-					primarySum   += min.x;
-					secondaryMax  = std::max(secondaryMax, min.y);
+					primarySum += min.x;
+					secondaryMax = std::max(secondaryMax, min.y);
 				}
 				else
 				{
-					primarySum   += min.y;
-					secondaryMax  = std::max(secondaryMax, min.x);
+					primarySum += min.y;
+					secondaryMax = std::max(secondaryMax, min.x);
 				}
 			}
 
 			if (count > 1)
 			{
-				const uint32_t pad = (isHorizontal ? _elementPadding.x
-												: _elementPadding.y);
+				const uint32_t pad = (isHorizontal ? _elementPadding.x : _elementPadding.y);
 				primarySum += static_cast<uint32_t>(pad) * static_cast<uint32_t>(count - 1);
 			}
 
-			return isHorizontal ? spk::Vector2UInt{primarySum, secondaryMax}
-								: spk::Vector2UInt{secondaryMax, primarySum};
+			return isHorizontal ? spk::Vector2UInt{primarySum, secondaryMax} : spk::Vector2UInt{secondaryMax, primarySum};
 		}
 	};
 

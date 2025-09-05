@@ -1,6 +1,6 @@
 #include "structure/engine/spk_component.hpp"
 
-#include "structure/engine/spk_game_object.hpp"
+#include "structure/engine/spk_entity.hpp"
 
 namespace spk
 {
@@ -40,12 +40,12 @@ namespace spk
 		return (_priority);
 	}
 
-	spk::SafePointer<GameObject> Component::owner()
+	spk::SafePointer<Entity> Component::owner()
 	{
 		return (_owner);
 	}
 
-	const spk::SafePointer<const GameObject> Component::owner() const
+	const spk::SafePointer<const Entity> Component::owner() const
 	{
 		return (_owner);
 	}
@@ -63,6 +63,10 @@ namespace spk
 	}
 
 	void Component::stop()
+	{
+	}
+
+	void Component::onGeometryChange(const spk::Geometry2D &p_geometry)
 	{
 	}
 

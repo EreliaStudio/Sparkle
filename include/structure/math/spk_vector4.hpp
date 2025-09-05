@@ -8,6 +8,7 @@
 #include <type_traits>
 #include <unordered_map>
 
+#include "spk_constants.hpp"
 #include "structure/math/spk_math.hpp"
 #include "structure/math/spk_vector2.hpp"
 #include "structure/math/spk_vector3.hpp"
@@ -42,9 +43,14 @@ namespace spk
 		{
 		}
 
-		template <typename UxType, typename UyType, typename UzType, typename UwType,
-				  typename = std::enable_if_t<std::is_arithmetic<UxType>::value && std::is_arithmetic<UyType>::value &&
-											  std::is_arithmetic<UzType>::value && std::is_arithmetic<UwType>::value>>
+		template <
+			typename UxType,
+			typename UyType,
+			typename UzType,
+			typename UwType,
+			typename = std::enable_if_t<
+				std::is_arithmetic<UxType>::value && std::is_arithmetic<UyType>::value && std::is_arithmetic<UzType>::value &&
+				std::is_arithmetic<UwType>::value>>
 		IVector4(UxType px, UyType py, UzType pz, UwType pw) :
 			x(static_cast<TType>(px)),
 			y(static_cast<TType>(py)),
@@ -55,7 +61,9 @@ namespace spk
 
 		// Constructor with one vector2 and two p_scalar
 		template <
-			typename UType, typename VType, typename WType,
+			typename UType,
+			typename VType,
+			typename WType,
 			typename = std::enable_if_t<std::is_arithmetic<UType>::value && std::is_arithmetic<VType>::value && std::is_arithmetic<WType>::value>>
 		IVector4(const spk::IVector2<UType> &p_vec2, const VType &p_scalarZ, const WType &p_scalarW) :
 			x(static_cast<TType>(p_vec2.x)),
@@ -85,7 +93,7 @@ namespace spk
 		}
 
 		template <typename UType = TType, std::enable_if_t<std::is_floating_point<UType>::value, int> = 0>
-		IVector4(const spk::JSON::Object& p_input) :
+		IVector4(const spk::JSON::Object &p_input) :
 			x(static_cast<TType>(p_input[L"x"].as<double>())),
 			y(static_cast<TType>(p_input[L"y"].as<double>())),
 			z(static_cast<TType>(p_input[L"z"].as<double>())),
@@ -94,7 +102,7 @@ namespace spk
 		}
 
 		template <typename UType = TType, std::enable_if_t<!std::is_floating_point<UType>::value, int> = 0>
-		IVector4(const spk::JSON::Object& p_input)
+		IVector4(const spk::JSON::Object &p_input)
 		{
 			fromJSON(p_input);
 		}
@@ -126,7 +134,7 @@ namespace spk
 			return (result);
 		}
 
-		void fromJSON(const spk::JSON::Object& p_input)
+		void fromJSON(const spk::JSON::Object &p_input)
 		{
 			if constexpr (std::is_floating_point<TType>::value)
 			{
@@ -200,9 +208,8 @@ namespace spk
 		{
 			if constexpr (std::is_floating_point<TType>::value)
 			{
-				constexpr TType epsilon = static_cast<TType>(1e-5);
-				return std::fabs(x - static_cast<TType>(p_other.x)) < epsilon && std::fabs(y - static_cast<TType>(p_other.y)) < epsilon &&
-					   std::fabs(z - static_cast<TType>(p_other.z)) < epsilon && std::fabs(w - static_cast<TType>(p_other.w)) < epsilon;
+				return FLOAT_EQ(x, static_cast<TType>(p_other.x)) && FLOAT_EQ(y, static_cast<TType>(p_other.y)) &&
+					   FLOAT_EQ(z, static_cast<TType>(p_other.z)) && FLOAT_EQ(w, static_cast<TType>(p_other.w));
 			}
 			else
 			{
@@ -216,9 +223,8 @@ namespace spk
 		{
 			if constexpr (std::is_floating_point<TType>::value)
 			{
-				constexpr TType epsilon = static_cast<TType>(1e-5);
-				return std::fabs(x - static_cast<TType>(p_scalar)) < epsilon && std::fabs(y - static_cast<TType>(p_scalar)) < epsilon &&
-					   std::fabs(z - static_cast<TType>(p_scalar)) < epsilon && std::fabs(w - static_cast<TType>(p_scalar)) < epsilon;
+				return FLOAT_EQ(x, static_cast<TType>(p_scalar)) && FLOAT_EQ(y, static_cast<TType>(p_scalar)) &&
+					   FLOAT_EQ(z, static_cast<TType>(p_scalar)) && FLOAT_EQ(w, static_cast<TType>(p_scalar));
 			}
 			else
 			{
@@ -471,26 +477,29 @@ namespace spk
 
 		static IVector4 radianToDegree(const IVector4 &p_radians)
 		{
-			return IVector4(spk::radianToDegree(p_radians.x),
-							spk::radianToDegree(p_radians.y),
-							spk::radianToDegree(p_radians.z),
-							spk::radianToDegree(p_radians.w));
+			return IVector4(
+				spk::radianToDegree(p_radians.x),
+				spk::radianToDegree(p_radians.y),
+				spk::radianToDegree(p_radians.z),
+				spk::radianToDegree(p_radians.w));
 		}
 
 		static IVector4 degreeToRadian(const IVector4 &p_degrees)
 		{
-			return IVector4(spk::degreeToRadian(p_degrees.x),
-							spk::degreeToRadian(p_degrees.y),
-							spk::degreeToRadian(p_degrees.z),
-							spk::degreeToRadian(p_degrees.w));
+			return IVector4(
+				spk::degreeToRadian(p_degrees.x),
+				spk::degreeToRadian(p_degrees.y),
+				spk::degreeToRadian(p_degrees.z),
+				spk::degreeToRadian(p_degrees.w));
 		}
 
 		IVector4 clamp(const IVector4 &p_lowerValue, const IVector4 &p_higherValue)
 		{
-			return IVector4(std::clamp(x, p_lowerValue.x, p_higherValue.x),
-							std::clamp(y, p_lowerValue.y, p_higherValue.y),
-							std::clamp(z, p_lowerValue.z, p_higherValue.z),
-							std::clamp(w, p_lowerValue.w, p_higherValue.w));
+			return IVector4(
+				std::clamp(x, p_lowerValue.x, p_higherValue.x),
+				std::clamp(y, p_lowerValue.y, p_higherValue.y),
+				std::clamp(z, p_lowerValue.z, p_higherValue.z),
+				std::clamp(w, p_lowerValue.w, p_higherValue.w));
 		}
 
 		IVector4 floor() const
@@ -586,18 +595,20 @@ namespace spk
 
 		static IVector4 lerp(const IVector4 &p_startingPoint, const IVector4 &p_endingPoint, float t)
 		{
-			return IVector4(p_startingPoint.x + (p_endingPoint.x - p_startingPoint.x) * t,
-							p_startingPoint.y + (p_endingPoint.y - p_startingPoint.y) * t,
-							p_startingPoint.z + (p_endingPoint.z - p_startingPoint.z) * t,
-							p_startingPoint.w + (p_endingPoint.w - p_startingPoint.w) * t);
+			return IVector4(
+				p_startingPoint.x + (p_endingPoint.x - p_startingPoint.x) * t,
+				p_startingPoint.y + (p_endingPoint.y - p_startingPoint.y) * t,
+				p_startingPoint.z + (p_endingPoint.z - p_startingPoint.z) * t,
+				p_startingPoint.w + (p_endingPoint.w - p_startingPoint.w) * t);
 		}
 
 		IVector4 positiveModulo(const IVector4 &p_modulo) const
 		{
-			return (IVector4(spk::positiveModulo(x, p_modulo.x),
-							 spk::positiveModulo(y, p_modulo.y),
-							 spk::positiveModulo(z, p_modulo.z),
-							 spk::positiveModulo(w, p_modulo.w)));
+			return (IVector4(
+				spk::positiveModulo(x, p_modulo.x),
+				spk::positiveModulo(y, p_modulo.y),
+				spk::positiveModulo(z, p_modulo.z),
+				spk::positiveModulo(w, p_modulo.w)));
 		}
 	};
 
@@ -634,14 +645,11 @@ spk::IVector4<TType> operator/(UType p_scalar, const spk::IVector4<TType> &p_vec
 	return spk::IVector4<TType>(p_scalar / p_vec.x, p_scalar / p_vec.y, p_scalar / p_vec.z, p_scalar / p_vec.w);
 }
 
-namespace std
+template <typename TType>
+struct std::hash<spk::IVector4<TType>>
 {
-	template <typename TType>
-	struct hash<spk::IVector4<TType>>
+	size_t operator()(const spk::IVector4<TType> &p_vec) const
 	{
-		size_t operator()(const spk::IVector4<TType> &p_vec) const
-		{
-			return hash<TType>()(p_vec.x) ^ (hash<TType>()(p_vec.y) << 1) ^ (hash<TType>()(p_vec.z) << 2) ^ (hash<TType>()(p_vec.w) << 3);
-		}
-	};
-}
+		return hash<TType>()(p_vec.x) ^ (hash<TType>()(p_vec.y) << 1) ^ (hash<TType>()(p_vec.z) << 2) ^ (hash<TType>()(p_vec.w) << 3);
+	}
+};

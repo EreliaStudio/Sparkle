@@ -1,8 +1,8 @@
 #include "structure/math/spk_perlin.hpp"
 
-#include <numeric>
-#include <cmath>
 #include <algorithm>
+#include <cmath>
+#include <numeric>
 
 namespace spk
 {
@@ -10,10 +10,10 @@ namespace spk
 	{
 		switch (p_interpolation)
 		{
-			case Interpolation::SmoothStep:
-				return p_value * p_value * (3.f - 2.f * p_value);
-			default:
-				return p_value;
+		case Interpolation::SmoothStep:
+			return p_value * p_value * (3.f - 2.f * p_value);
+		default:
+			return p_value;
 		}
 	}
 
@@ -24,17 +24,17 @@ namespace spk
 
 	float Perlin::grad(int p_hash, float p_x)
 	{
-		return (p_hash & 1) ? p_x : -p_x;
+		return ((p_hash & 1) != 0) ? p_x : -p_x;
 	}
 
 	float Perlin::grad(int p_hash, float p_x, float p_y)
 	{
-		return ((p_hash & 1) ? p_x : -p_x) + ((p_hash & 2) ? p_y : -p_y);
+		return (((p_hash & 1) != 0) ? p_x : -p_x) + (((p_hash & 2) != 0) ? p_y : -p_y);
 	}
 
 	float Perlin::grad(int p_hash, float p_x, float p_y, float p_z)
 	{
-		return ((p_hash & 1) ? p_x : -p_x) + ((p_hash & 2) ? p_y : -p_y) + ((p_hash & 4) ? p_z : -p_z);
+		return (((p_hash & 1) != 0) ? p_x : -p_x) + (((p_hash & 2) != 0) ? p_y : -p_y) + (((p_hash & 4) != 0) ? p_z : -p_z);
 	}
 
 	void Perlin::reseed(unsigned int p_seed)
@@ -74,10 +74,7 @@ namespace spk
 		int ba = _values[_values[clampedX + 1] + clampedY];
 		int bb = _values[_values[clampedX + 1] + clampedY + 1];
 
-		float res = lerp(
-			lerp(grad(aa, p_x, p_y), grad(ba, p_x - 1, p_y), u),
-			lerp(grad(ab, p_x, p_y - 1), grad(bb, p_x - 1, p_y - 1), u),
-			v);
+		float res = lerp(lerp(grad(aa, p_x, p_y), grad(ba, p_x - 1, p_y), u), lerp(grad(ab, p_x, p_y - 1), grad(bb, p_x - 1, p_y - 1), u), v);
 		return res;
 	}
 
@@ -116,9 +113,11 @@ namespace spk
 	}
 
 	float Perlin::fractal(
-		const Perlin& p_perlin,
-		std::function<float(const Perlin&, float, float, float)> p_noiseFunc,
-		float p_x, float p_y, float p_z,
+		const Perlin &p_perlin,
+		std::function<float(const Perlin &, float, float, float)> p_noiseFunc,
+		float p_x,
+		float p_y,
+		float p_z,
 		int p_octaves,
 		float p_persistence,
 		float p_lacunarity)
@@ -141,31 +140,48 @@ namespace spk
 	Perlin::Perlin(unsigned int p_seed, Perlin::Interpolation p_interpolation) :
 		_interpolation(p_interpolation)
 	{
-		reseed(p_seed ? p_seed : std::random_device{}());
+		reseed((p_seed != 0u) ? p_seed : std::random_device{}());
 	}
-
 
 	float Perlin::sample1D(float p_x, float p_min, float p_max) const
 	{
-		float n = fractal(*this,
-			[](const Perlin& p_values, float p_x, float, float) { return p_values.noise1D(p_x); },
-			p_x, 0, 0, _octaves, _persistence, _lacunarity);
+		float n = fractal(
+			*this,
+			[](const Perlin &p_values, float p_x, float, float) { return p_values.noise1D(p_x); },
+			p_x,
+			0,
+			0,
+			_octaves,
+			_persistence,
+			_lacunarity);
 		return p_min + (p_max - p_min) * (n * 0.5f + 0.5f);
 	}
 
 	float Perlin::sample2D(float p_x, float p_y, float p_min, float p_max) const
 	{
-		float n = fractal(*this,
-			[](const Perlin& p_values, float p_x, float p_y, float) { return p_values.noise2D(p_x, p_y); },
-			p_x, p_y, 0, _octaves, _persistence, _lacunarity);
+		float n = fractal(
+			*this,
+			[](const Perlin &p_values, float p_x, float p_y, float) { return p_values.noise2D(p_x, p_y); },
+			p_x,
+			p_y,
+			0,
+			_octaves,
+			_persistence,
+			_lacunarity);
 		return p_min + (p_max - p_min) * (n * 0.5f + 0.5f);
 	}
 
 	float Perlin::sample3D(float p_x, float p_y, float p_z, float p_min, float p_max) const
 	{
-		float n = fractal(*this,
-			[](const Perlin& p_values, float p_x, float p_y, float p_z) { return p_values.noise3D(p_x, p_y, p_z); },
-			p_x, p_y, p_z, _octaves, _persistence, _lacunarity);
+		float n = fractal(
+			*this,
+			[](const Perlin &p_values, float p_x, float p_y, float p_z) { return p_values.noise3D(p_x, p_y, p_z); },
+			p_x,
+			p_y,
+			p_z,
+			_octaves,
+			_persistence,
+			_lacunarity);
 		return p_min + (p_max - p_min) * (n * 0.5f + 0.5f);
 	}
 }

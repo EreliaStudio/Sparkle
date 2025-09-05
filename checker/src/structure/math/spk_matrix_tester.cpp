@@ -11,9 +11,13 @@ TEST_F(MatrixTest, MatrixConstructor)
 		for (size_t j = 0; j < 4; j++)
 		{
 			if (i == j)
+			{
 				ASSERT_EQ(defaultMatrix[i][j], 1) << "Default matrix on [" << i << "][" << j << "] should be 1";
+			}
 			else
+			{
 				ASSERT_EQ(defaultMatrix[i][j], 0) << "Default matrix on [" << i << "][" << j << "] should be 0";
+			}
 		}
 	}
 }
@@ -166,22 +170,22 @@ TEST_F(MatrixTest, RotationMatrix)
 {
 	spk::Vector3 position = spk::Vector3(1, 0, 0);
 
-	ASSERT_EQ(spk::Matrix4x4::rotationMatrix(90, 0, 0) * position, spk::Vector3(1, 0, 0)) << "Wrong matrix multiplication";
+	ASSERT_EQ(spk::Matrix4x4::rotation(90, 0, 0) * position, spk::Vector3(1, 0, 0)) << "Wrong matrix multiplication";
 
-	ASSERT_EQ(spk::Matrix4x4::rotationMatrix(0, 90, 0) * position, spk::Vector3(0, 0, -1)) << "Wrong matrix multiplication";
+	ASSERT_EQ(spk::Matrix4x4::rotation(0, 90, 0) * position, spk::Vector3(0, 0, -1)) << "Wrong matrix multiplication";
 
-	ASSERT_EQ(spk::Matrix4x4::rotationMatrix(0, 0, 90) * position, spk::Vector3(0, 1, 0)) << "Wrong matrix multiplication";
+	ASSERT_EQ(spk::Matrix4x4::rotation(0, 0, 90) * position, spk::Vector3(0, 1, 0)) << "Wrong matrix multiplication";
 }
 
 TEST_F(MatrixTest, TranslationMatrix)
 {
 	spk::Vector3 position = spk::Vector3(1, 0, 0);
 
-	spk::Vector3 translatedPosition = spk::Matrix4x4::translationMatrix(1, 2, 3) * position;
+	spk::Vector3 translatedPosition = spk::Matrix4x4::translation(1, 2, 3) * position;
 
 	ASSERT_EQ(translatedPosition, spk::Vector3(2, 2, 3)) << "Wrong matrix multiplication for translation";
 
-	translatedPosition = spk::Matrix4x4::translationMatrix(0, 0, 0) * position;
+	translatedPosition = spk::Matrix4x4::translation(0, 0, 0) * position;
 
 	ASSERT_EQ(translatedPosition, position) << "Wrong matrix multiplication for identity translation";
 }
@@ -190,11 +194,11 @@ TEST_F(MatrixTest, ScaleMatrix)
 {
 	spk::Vector3 position = spk::Vector3(1, 1, 1);
 
-	spk::Vector3 scaledPosition = spk::Matrix4x4::scaleMatrix(2, 3, 4) * position;
+	spk::Vector3 scaledPosition = spk::Matrix4x4::scale(2, 3, 4) * position;
 
 	ASSERT_EQ(scaledPosition, spk::Vector3(2, 3, 4)) << "Wrong matrix multiplication for scaling";
 
-	scaledPosition = spk::Matrix4x4::scaleMatrix(1, 1, 1) * position;
+	scaledPosition = spk::Matrix4x4::scale(1, 1, 1) * position;
 
 	ASSERT_EQ(scaledPosition, position) << "Wrong matrix multiplication for identity scaling";
 }
@@ -234,21 +238,24 @@ TEST_F(MatrixTest, PerspectiveMatrix)
     spk::Matrix4x4 perspectiveMatrix = spk::Matrix4x4::perspective(fov, aspectRatio, nearPlane, farPlane);
 
     std::vector<std::pair<spk::Vector3, spk::Vector3>> values = {
-        {spk::Vector3(0.0f, 0.0f, 0.11f), 			spk::Vector3(0.0f, 0.0f, 0.0f)},
-        {spk::Vector3(0.0f, 0.0f, -1.0f), 			spk::Vector3(0.0f, 0.0f, 0.0f)},
-        {spk::Vector3(1.0f, 1.0f, -10.0f), 			spk::Vector3(0.0f, 0.0f, 0.0f)},
-        {spk::Vector3(-1.0f, -1.0f, -10.0f), 		spk::Vector3(0.0f, 0.0f, 0.0f)},
-        {spk::Vector3(10.0f, 10.0f, -10.0f), 		spk::Vector3(0.0f, 0.0f, 0.0f)},
-        {spk::Vector3(-10.0f, -10.0f, -10.0f), 		spk::Vector3(0.0f, 0.0f, 0.0f)},
-        {spk::Vector3(100.0f, 100.0f, -10.0f), 		spk::Vector3(0.0f, 0.0f, 0.0f)},
-        {spk::Vector3(-100.0f, -100.0f, -10.0f), 	spk::Vector3(0.0f, 0.0f, 0.0f)}
+        {spk::Vector3(0.0f, 0.0f, 0.11f), 			spk::Vector3(0.0f, 0.0f, 2.822f)},
+        {spk::Vector3(0.0f, 0.0f, -1.0f), 			spk::Vector3(0.0f, 0.0f, 0.801802f)},
+        {spk::Vector3(1.0f, 1.0f, -10.0f), 			spk::Vector3(0.1f, 0.1f, 0.981982f)},
+        {spk::Vector3(-1.0f, -1.0f, -10.0f), 		spk::Vector3(-0.1f, -0.1f, 0.981982f)},
+        {spk::Vector3(10.0f, 10.0f, -10.0f), 		spk::Vector3(1, 1, 0.981982)},
+        {spk::Vector3(-10.0f, -10.0f, -10.0f), 		spk::Vector3(-1, -1, 0.981982)},
+        {spk::Vector3(100.0f, 100.0f, -10.0f), 		spk::Vector3(10.0f, 10.0f, 0.981982f)},
+        {spk::Vector3(-100.0f, -100.0f, -10.0f), 	spk::Vector3(-10.0f, -10.0f, 0.981982f)}
     };
 
-    for (size_t i = 0; i < values.size(); i++)
-    {
-		std::cout << values[i].first << " -> " << perspectiveMatrix * values[i].first << std::endl;
-        // ASSERT_EQ(perspectiveMatrix * values[i].first, values[i].second) << "Error in computed perspective position [" << i << "]";
-    }
+    ASSERT_EQ(perspectiveMatrix * values[0].first, values[0].second) << "Error in computed perspective position [" << 0 << "]";
+    ASSERT_EQ(perspectiveMatrix * values[1].first, values[1].second) << "Error in computed perspective position [" << 1 << "]";
+    ASSERT_EQ(perspectiveMatrix * values[2].first, values[2].second) << "Error in computed perspective position [" << 2 << "]";
+    ASSERT_EQ(perspectiveMatrix * values[3].first, values[3].second) << "Error in computed perspective position [" << 3 << "]";
+    ASSERT_EQ(perspectiveMatrix * values[4].first, values[4].second) << "Error in computed perspective position [" << 4 << "]";
+    ASSERT_EQ(perspectiveMatrix * values[5].first, values[5].second) << "Error in computed perspective position [" << 5 << "]";
+    ASSERT_EQ(perspectiveMatrix * values[6].first, values[6].second) << "Error in computed perspective position [" << 6 << "]";
+    ASSERT_EQ(perspectiveMatrix * values[7].first, values[7].second) << "Error in computed perspective position [" << 7 << "]";
 }
 
 TEST_F(MatrixTest, OrthoMatrix)

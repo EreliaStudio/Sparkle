@@ -45,11 +45,17 @@ namespace spk
 			void run();
 			void acceptNewClient();
 			bool receiveFromClient(ClientID p_clientId, SOCKET p_socket);
+			int prepareReadFds(fd_set &readfds);
+			int waitForActivity(fd_set &readfds, int maxFD);
+			void handleClients(fd_set &readfds);
 
 		public:
 			std::thread receptionThread;
 
-			Acceptator(std::unordered_map<ClientID, SOCKET> &clientsMap, std::mutex &mutex, ClientID &p_clientId, MessagePool &pool,
+			Acceptator(std::unordered_map<ClientID, SOCKET> &clientsMap,
+					   std::mutex &mutex,
+					   ClientID &p_clientId,
+					   MessagePool &pool,
 					   spk::ThreadSafeQueue<MessageObject> &queue);
 			~Acceptator();
 

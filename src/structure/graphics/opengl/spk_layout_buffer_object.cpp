@@ -59,16 +59,18 @@ namespace spk::OpenGL
 		}
 	}
 
-	bool LayoutBufferObject::Attribute::operator<(const LayoutBufferObject::Attribute& p_other) const
-    {
-        if (index < p_other.index) {
-            return true;
-        }
-        else if (index > p_other.index) {
-            return false;
-        }
-        return static_cast<int>(type) < static_cast<int>(p_other.type);
-    }
+	bool LayoutBufferObject::Attribute::operator<(const LayoutBufferObject::Attribute &p_other) const
+	{
+		if (index < p_other.index)
+		{
+			return true;
+		}
+		else if (index > p_other.index)
+		{
+			return false;
+		}
+		return static_cast<int>(type) < static_cast<int>(p_other.type);
+	}
 
 	LayoutBufferObject::LayoutBufferObject() :
 		VertexBufferObject(Type::Storage, Usage::Static),
@@ -132,7 +134,7 @@ namespace spk::OpenGL
 
 	bool LayoutBufferObject::hasAttribute(Attribute::Index p_index) const
 	{
-		for (const auto& attr : _attributesToApply)
+		for (const auto &attr : _attributesToApply)
 		{
 			if (attr.index == p_index)
 			{
@@ -144,7 +146,7 @@ namespace spk::OpenGL
 
 	void LayoutBufferObject::addAttribute(const Attribute &p_attribute)
 	{
-		for (const auto& attr : _attributesToApply)
+		for (const auto &attr : _attributesToApply)
 		{
 			if (attr.index == p_attribute.index)
 			{
@@ -161,7 +163,22 @@ namespace spk::OpenGL
 		addAttribute({p_index, p_type});
 	}
 
-	void LayoutBufferObject::_applyAttributes()
+	size_t LayoutBufferObject::nbVertex() const
+	{
+		if (!_attributesToApply.empty())
+		{
+			_applyAttributes();
+		}
+
+		if (_vertexSize == 0)
+		{
+			GENERATE_ERROR("Vertex size is zero, no attributes defined.");
+		}
+
+		return size() / _vertexSize;
+	}
+
+	void LayoutBufferObject::_applyAttributes() const
 	{
 		size_t offset = 0;
 		for (const auto &attr : _attributesToApply)
@@ -233,12 +250,13 @@ namespace spk::OpenGL
 				glVertexAttribPointer(
 					attr.index + 2, 4, GL_FLOAT, GL_FALSE, static_cast<GLsizei>(_vertexSize), reinterpret_cast<void *>(offset + sizeof(GLfloat) * 8));
 				glEnableVertexAttribArray(attr.index + 3);
-				glVertexAttribPointer(attr.index + 3,
-									  4,
-									  GL_FLOAT,
-									  GL_FALSE,
-									  static_cast<GLsizei>(_vertexSize),
-									  reinterpret_cast<void *>(offset + sizeof(GLfloat) * 12));
+				glVertexAttribPointer(
+					attr.index + 3,
+					4,
+					GL_FLOAT,
+					GL_FALSE,
+					static_cast<GLsizei>(_vertexSize),
+					reinterpret_cast<void *>(offset + sizeof(GLfloat) * 12));
 				break;
 			default:
 				GENERATE_ERROR("Unexpected layout type.");
@@ -333,6 +351,48 @@ namespace spk::OpenGL
 			return ("Matrix4x4");
 		default:
 			return ("None");
+		}
+	}
+	std::wstring to_wstring(const LayoutBufferObject::Attribute::Type &p_type)
+	{
+		switch (p_type)
+		{
+			using Type = LayoutBufferObject::Attribute::Type;
+
+		case Type::Float:
+			return (L"Float");
+		case Type::Bool:
+			return (L"Bool");
+		case Type::Int:
+			return (L"Int");
+		case Type::UInt:
+			return (L"UInt");
+		case Type::Vector2:
+			return (L"Vector2");
+		case Type::Vector3:
+			return (L"Vector3");
+		case Type::Vector4:
+			return (L"Vector4");
+		case Type::Vector2Int:
+			return (L"Vector2Int");
+		case Type::Vector3Int:
+			return (L"Vector3Int");
+		case Type::Vector4Int:
+			return (L"Vector4Int");
+		case Type::Vector2UInt:
+			return (L"Vector2UInt");
+		case Type::Vector3UInt:
+			return (L"Vector3UInt");
+		case Type::Vector4UInt:
+			return (L"Vector4UInt");
+		case Type::Matrix2x2:
+			return (L"Matrix2x2");
+		case Type::Matrix3x3:
+			return (L"Matrix3x3");
+		case Type::Matrix4x4:
+			return (L"Matrix4x4");
+		default:
+			return (L"None");
 		}
 	}
 }

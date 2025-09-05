@@ -23,7 +23,7 @@ namespace spk
 
 	private:
 		PersistantWorker _worker;
-		HWND _hWnd = NULL;
+		HWND _hWnd = nullptr;
 		bool _initialization = false;
 		IDirectInput8 *_directInput = nullptr;
 		IDirectInputDevice8 *_controller = nullptr;
@@ -32,13 +32,13 @@ namespace spk
 
 		bool InitializeDirectInput()
 		{
-			HRESULT hr = DirectInput8Create(GetModuleHandle(NULL), DIRECTINPUT_VERSION, IID_IDirectInput8, (void **)&_directInput, NULL);
+			HRESULT hr = DirectInput8Create(GetModuleHandle(nullptr), DIRECTINPUT_VERSION, IID_IDirectInput8, (void **)&_directInput, nullptr);
 			if (FAILED(hr))
 			{
 				return false;
 			}
 
-			hr = _directInput->CreateDevice(GUID_Joystick, &_controller, NULL);
+			hr = _directInput->CreateDevice(GUID_Joystick, &_controller, nullptr);
 			if (FAILED(hr))
 			{
 				return false;

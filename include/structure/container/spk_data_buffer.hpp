@@ -1,7 +1,5 @@
 #pragma once
 
-#pragma once
-
 #include <cstdint>
 #include <cstring>
 #include <mutex>
@@ -51,37 +49,11 @@ namespace spk
 
 		void reset();
 
-		void push(const void *p_buffer, size_t p_nbBytes)
-		{
-			if (p_buffer == nullptr || p_nbBytes == 0)
-			{
-				return;
-			}
+		void push(const void *p_buffer, size_t p_nbBytes);
 
-			const size_t oldSize = _data.size();
-			_data.resize(oldSize + p_nbBytes);
-			std::memcpy(_data.data() + oldSize, p_buffer, p_nbBytes);
-		}
+		void pull(void *p_buffer, size_t p_nbBytes) const;
 
-		void pull(void *p_buffer, size_t p_nbBytes) const
-		{
-			if (p_buffer == nullptr || p_nbBytes == 0)
-			{
-				return;
-			}
-
-			if (leftover() < p_nbBytes)
-			{
-				GENERATE_ERROR("DataBuffer::pull - not enough data remaining.");
-			}
-
-			std::memcpy(p_buffer, _data.data() + bookmark(), p_nbBytes);
-
-			skip(p_nbBytes);
-		}
-
-		template <typename OutputType,
-				typename std::enable_if_t<!spk::IsContainer<OutputType>::value>* = nullptr>
+		template <typename OutputType, typename std::enable_if_t<!spk::IsContainer<OutputType>::value> * = nullptr>
 		OutputType get() const
 		{
 			const OutputType &result = *(reinterpret_cast<const OutputType *>(_data.data() + bookmark()));
@@ -89,16 +61,14 @@ namespace spk
 			return (result);
 		}
 
-		template <typename OutputType,
-				typename std::enable_if_t<!spk::IsContainer<OutputType>::value>* = nullptr>
+		template <typename OutputType, typename std::enable_if_t<!spk::IsContainer<OutputType>::value> * = nullptr>
 		OutputType peek() const
 		{
 			const OutputType &result = *(reinterpret_cast<const OutputType *>(_data.data() + bookmark()));
 			return (result);
 		}
 
-		template <typename OutputType,
-				typename std::enable_if_t<spk::IsContainer<OutputType>::value>* = nullptr>
+		template <typename OutputType, typename std::enable_if_t<spk::IsContainer<OutputType>::value> * = nullptr>
 		OutputType get() const
 		{
 			OutputType result;
@@ -106,8 +76,7 @@ namespace spk
 			return result;
 		}
 
-		template <typename OutputType,
-				typename std::enable_if_t<spk::IsContainer<OutputType>::value>* = nullptr>
+		template <typename OutputType, typename std::enable_if_t<spk::IsContainer<OutputType>::value> * = nullptr>
 		OutputType peek() const
 		{
 			const size_t savedBookmark = bookmark();
@@ -128,14 +97,7 @@ namespace spk
 			memcpy(_data.data() + p_offset, &p_input, sizeof(InputType));
 		}
 
-		void edit(const size_t &p_offset, const void *p_data, const size_t &p_dataSize)
-		{
-			if (p_offset + p_dataSize > size())
-			{
-				GENERATE_ERROR("Unable to edit, offset is out of bound.");
-			}
-			memcpy(_data.data() + p_offset, p_data, p_dataSize);
-		}
+		void edit(const size_t &p_offset, const void *p_data, const size_t &p_dataSize);
 
 		template <typename InputType, typename std::enable_if_t<!spk::IsContainer<InputType>::value> * = nullptr>
 		DataBuffer &operator<<(const InputType &p_input)
@@ -185,11 +147,6 @@ namespace spk
 			return *this;
 		}
 
-		void append(const void *p_data, const size_t &p_dataSize)
-		{
-			size_t oldSize = size();
-			resize(size() + p_dataSize);
-			edit(oldSize, p_data, p_dataSize);
-		}
+		void append(const void *p_data, const size_t &p_dataSize);
 	};
 }

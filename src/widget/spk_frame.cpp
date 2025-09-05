@@ -20,7 +20,7 @@ namespace spk
 	{
 		return (_frameRenderer.spriteSheet());
 	}
-		
+
 	void Frame::setCornerSize(const spk::Vector2Int &p_cornerSize)
 	{
 		_cornerSize = p_cornerSize;
@@ -31,13 +31,13 @@ namespace spk
 	{
 		return _cornerSize;
 	}
-	
+
 	void Frame::_onGeometryChange()
 	{
 		_frameRenderer.clear();
-		
-		_frameRenderer.prepare(geometry(), layer(), _cornerSize);
-		
+
+		_frameRenderer.prepare(geometry().atOrigin(), layer(), _cornerSize);
+
 		_frameRenderer.validate();
 	}
 

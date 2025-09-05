@@ -13,6 +13,11 @@
 
 #include "structure/system/spk_exception.hpp"
 
+#include "structure/system/time/spk_timer.hpp"
+#include <cmath>
+#include <limits>
+#include <numeric>
+
 namespace spk
 {
 	void Window::_initialize(const std::function<void(spk::SafePointer<spk::Window>)> &p_onClosureCallback)
@@ -72,31 +77,33 @@ namespace spk
 
 	void Window::_createContext()
 	{
-		RECT adjustedRect = {static_cast<LONG>(0),
-							 static_cast<LONG>(0),
-							 static_cast<LONG>(_rootWidget->viewport().geometry().width),
-							 static_cast<LONG>(_rootWidget->viewport().geometry().height)};
-		if (!AdjustWindowRectEx(&adjustedRect, WS_OVERLAPPEDWINDOW, FALSE, 0))
+		RECT adjustedRect = {
+			static_cast<LONG>(0),
+			static_cast<LONG>(0),
+			static_cast<LONG>(_rootWidget->viewport().geometry().width),
+			static_cast<LONG>(_rootWidget->viewport().geometry().height)};
+		if (AdjustWindowRectEx(&adjustedRect, WS_OVERLAPPEDWINDOW, FALSE, 0) == 0)
 		{
 			GENERATE_ERROR("Failed to adjust window rect.");
 		}
 
 		std::string convertedTitle = spk::StringUtils::wstringToString(_title);
 
-		_hwnd = CreateWindowEx(0,
-							   "SPKWindowClass",
-							   convertedTitle.c_str(),
-							   WS_OVERLAPPEDWINDOW,
-							   _rootWidget->viewport().geometry().x,
-							   _rootWidget->viewport().geometry().y,
-							   adjustedRect.right - adjustedRect.left,
-							   adjustedRect.bottom - adjustedRect.top,
-							   nullptr,
-							   nullptr,
-							   GetModuleHandle(nullptr),
-							   this);
+		_hwnd = CreateWindowEx(
+			0,
+			"SPKWindowClass",
+			convertedTitle.c_str(),
+			WS_OVERLAPPEDWINDOW,
+			_rootWidget->viewport().geometry().x,
+			_rootWidget->viewport().geometry().y,
+			adjustedRect.right - adjustedRect.left,
+			adjustedRect.bottom - adjustedRect.top,
+			nullptr,
+			nullptr,
+			GetModuleHandle(nullptr),
+			this);
 
-		if (!_hwnd)
+		if (_hwnd == nullptr)
 		{
 			GENERATE_ERROR("Failed to create window.");
 		}
@@ -116,8 +123,6 @@ namespace spk
 		_cursors[L"Working"] = ::LoadCursor(nullptr, IDC_APPSTARTING);
 		_cursors[L"Help"] = ::LoadCursor(nullptr, IDC_HELP);
 
-		setUpdateTimer(1);
-
 		setCursor(L"Arrow");
 
 		_controllerInputThread.bind(_hwnd);
@@ -132,7 +137,7 @@ namespace spk
 		{
 			std::lock_guard<std::recursive_mutex> lock(_timerMutex);
 
-			if (_pendingTimerCreations.size() != 0)
+			if (!_pendingTimerCreations.empty())
 			{
 				for (const auto &pair : _pendingTimerCreations)
 				{
@@ -145,7 +150,7 @@ namespace spk
 				_pendingTimerCreations.clear();
 			}
 
-			if (_pendingTimerDeletions.size() != 0)
+			if (!_pendingTimerDeletions.empty())
 			{
 				for (const auto &id : _pendingTimerDeletions)
 				{
@@ -170,7 +175,7 @@ namespace spk
 
 	void Window::_deleteTimer(UINT_PTR p_id)
 	{
-		if (!KillTimer(_hwnd, p_id))
+		if (KillTimer(_hwnd, p_id) == 0)
 		{
 			GENERATE_ERROR("Failed to clear update timer.");
 		}
@@ -215,32 +220,33 @@ namespace spk
 	void Window::_createOpenGLContext()
 	{
 		_hdc = GetDC(_hwnd);
-		PIXELFORMATDESCRIPTOR pfd = {sizeof(PIXELFORMATDESCRIPTOR),
-									 1,
-									 PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
-									 PFD_TYPE_RGBA,
-									 32,
-									 0,
-									 0,
-									 0,
-									 0,
-									 0,
-									 0,
-									 0,
-									 0,
-									 0,
-									 0,
-									 0,
-									 0,
-									 0,
-									 24,
-									 8,
-									 0,
-									 PFD_MAIN_PLANE,
-									 0,
-									 0,
-									 0,
-									 0};
+		PIXELFORMATDESCRIPTOR pfd = {
+			sizeof(PIXELFORMATDESCRIPTOR),
+			1,
+			PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
+			PFD_TYPE_RGBA,
+			32,
+			0,
+			0,
+			0,
+			0,
+			0,
+			0,
+			0,
+			0,
+			0,
+			0,
+			0,
+			0,
+			0,
+			24,
+			8,
+			0,
+			PFD_MAIN_PLANE,
+			0,
+			0,
+			0,
+			0};
 
 		int pixelFormat = ChoosePixelFormat(_hdc, &pfd);
 		if (pixelFormat == 0)
@@ -255,12 +261,12 @@ namespace spk
 
 		// Create a temporary context to initialize modern OpenGL
 		HGLRC tempContext = wglCreateContext(_hdc);
-		if (!tempContext)
+		if (tempContext == nullptr)
 		{
 			GENERATE_ERROR("Failed to create temporary OpenGL context.");
 		}
 
-		if (!wglMakeCurrent(_hdc, tempContext))
+		if (wglMakeCurrent(_hdc, tempContext) == 0)
 		{
 			GENERATE_ERROR("Failed to activate temporary OpenGL context.");
 		}
@@ -282,18 +288,19 @@ namespace spk
 		}
 
 		// Now create a modern OpenGL context
-		int attributes[] = {WGL_CONTEXT_MAJOR_VERSION_ARB,
-							4,
-							WGL_CONTEXT_MINOR_VERSION_ARB,
-							5,
-							WGL_CONTEXT_FLAGS_ARB,
-							WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
-							WGL_CONTEXT_PROFILE_MASK_ARB,
-							WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
-							0};
+		std::array<int, 9> attributes = {
+			WGL_CONTEXT_MAJOR_VERSION_ARB,
+			4,
+			WGL_CONTEXT_MINOR_VERSION_ARB,
+			5,
+			WGL_CONTEXT_FLAGS_ARB,
+			WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
+			WGL_CONTEXT_PROFILE_MASK_ARB,
+			WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
+			0};
 
-		_hglrc = wglCreateContextAttribsARB(_hdc, nullptr, attributes);
-		if (!_hglrc)
+		_hglrc = wglCreateContextAttribsARB(_hdc, nullptr, attributes.data());
+		if (_hglrc == nullptr)
 		{
 			GENERATE_ERROR("Failed to create modern OpenGL context.");
 		}
@@ -302,7 +309,7 @@ namespace spk
 		wglMakeCurrent(nullptr, nullptr);
 		wglDeleteContext(tempContext);
 
-		if (!wglMakeCurrent(_hdc, _hglrc))
+		if (wglMakeCurrent(_hdc, _hglrc) == 0)
 		{
 			GENERATE_ERROR("Failed to activate modern OpenGL context.");
 		}
@@ -314,7 +321,7 @@ namespace spk
 		}
 
 		glEnable(GL_DEBUG_OUTPUT);
-		glDebugMessageCallback(spk::OpenGLUtils::openGLDebugMessageCallback, 0);
+		glDebugMessageCallback(spk::OpenGLUtils::openGLDebugMessageCallback, nullptr);
 
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -339,119 +346,213 @@ namespace spk
 
 	void Window::_destroyOpenGLContext()
 	{
-		if (_hglrc)
+		if (_hglrc != nullptr)
 		{
 			wglMakeCurrent(nullptr, nullptr);
 			wglDeleteContext(_hglrc);
 			_hglrc = nullptr;
 		}
 
-		if (_hwnd && _hdc)
+		if ((_hwnd != nullptr) && (_hdc != nullptr))
 		{
 			ReleaseDC(_hwnd, _hdc);
 			_hdc = nullptr;
 		}
 	}
 
+	void Window::_guard(const char *p_label, const std::function<void()> &p_fn)
+	{
+		try
+		{
+			p_fn();
+		} catch (const std::exception &e)
+		{
+			spk::cout << p_label << " - Error caught:\n" << e.what() << std::endl;
+			close();
+		}
+	}
+
+	void Window::_updateCounter(spk::Timer &p_timer, spk::SafePointer<Profiler::CounterMeasurement> &p_counter, size_t &p_currentValue)
+	{
+		if (p_timer.state() != spk::Timer::State::Running)
+		{
+			if (p_counter)
+			{
+				p_currentValue = p_counter->value();
+				p_counter->reset();
+			}
+			p_timer.start();
+		}
+
+		if (p_counter)
+		{
+			p_counter->increment();
+		}
+	}
+
+	bool Window::_tickCounter(spk::Timer &p_timer, spk::SafePointer<Profiler::CounterMeasurement> &p_counter, size_t &p_currentValue)
+	{
+		bool hasClosedWindow = false;
+		if (p_timer.state() != spk::Timer::State::Running)
+		{
+			if (p_counter)
+			{
+				// Finalize previous 100ms window value, then reset for the next window
+				p_currentValue = p_counter->value();
+				p_counter->reset();
+				hasClosedWindow = true;
+			}
+			p_timer.start();
+		}
+
+		if (p_counter)
+		{
+			p_counter->increment();
+		}
+
+		return hasClosedWindow;
+	}
+
+	void Window::_rendererPreparation()
+	{
+		_guard(
+			"Renderer::preparation",
+			[&]()
+			{
+				_createContext();
+				requestPaint();
+			});
+	}
+
+	void Window::_rendererLoopIteration()
+	{
+		// Measure entire renderer iteration duration
+		spk::Timestamp startTS = spk::SystemUtils::getTime();
+
+		// 1) FPS tick (light, early)
+		bool closedFPSWindow = _tickCounter(_fpsTimer, _fpsCounter, _currentFPS);
+		if (closedFPSWindow == true)
+		{
+			std::lock_guard<std::mutex> lock(_fpsCountMutex);
+			_fpsCountHistory.push_back(_currentFPS);
+			if (_fpsCountHistory.size() > _fpsCountHistoryCapacity)
+			{
+				_fpsCountHistory.pop_front();
+			}
+			const size_t perSecond = _currentFPS * 10;
+			if (perSecond < _minFPSCounter)
+			{
+				_minFPSCounter = perSecond;
+			}
+			if (perSecond > _maxFPSCounter)
+			{
+				_maxFPSCounter = perSecond;
+			}
+		}
+
+		// 2) Steps with fine-grained error context
+		_guard("Renderer::_handlePendingTimer", [&]() { _handlePendingTimer(); });
+		_guard("Renderer::pullEvents", [&]() { pullEvents(); });
+		_guard("Renderer::_timerModule", [&]() { _timerModule.treatMessages(); });
+		_guard("Renderer::_paintModule", [&]() { _paintModule.treatMessages(); });
+		_guard("Renderer::_systemModule", [&]() { _systemModule.treatMessages(); });
+
+		// Record duration for FPSDuration / averaged FPS
+		spk::Timestamp endTS = spk::SystemUtils::getTime();
+		long long ns = (endTS - startTS).nanoseconds;
+		{
+			std::lock_guard<std::mutex> lock(_renderTimingMutex);
+			_lastRenderDurationNS = ns;
+			_renderDurationsNS.push_back(ns);
+			if (_renderDurationsNS.size() > _timingHistoryCapacity)
+			{
+				_renderDurationsNS.pop_front();
+			}
+			if (ns < _minRenderDurationNS)
+			{
+				_minRenderDurationNS = ns;
+			}
+			if (ns > _maxRenderDurationNS)
+			{
+				_maxRenderDurationNS = ns;
+			}
+		}
+	}
+
+	void Window::_updaterLoopIteration()
+	{
+		spk::Timestamp startTS = spk::SystemUtils::getTime();
+
+		bool closedUPSWindow = _tickCounter(_upsTimer, _upsCounter, _currentUPS);
+		if (closedUPSWindow == true)
+		{
+			std::lock_guard<std::mutex> lock(_upsCountMutex);
+			_upsCountHistory.push_back(_currentUPS);
+			if (_upsCountHistory.size() > _upsCountHistoryCapacity)
+			{
+				_upsCountHistory.pop_front();
+			}
+			const size_t perSecond = _currentUPS * 10;
+			if (perSecond < _minUPSCount)
+			{
+				_minUPSCount = perSecond;
+			}
+			if (perSecond > _maxUPSCount)
+			{
+				_maxUPSCount = perSecond;
+			}
+		}
+
+		_guard("Updater::_mouseModule", [&]() { _mouseModule.treatMessages(); });
+		_guard("Updater::_keyboardModule", [&]() { _keyboardModule.treatMessages(); });
+		_guard("Updater::_controllerModule", [&]() { _controllerModule.treatMessages(); });
+		_guard("Updater::_updateModule", [&]() { _updateModule.treatMessages(); });
+
+		spk::Timestamp endTS = spk::SystemUtils::getTime();
+		long long ns = (endTS - startTS).nanoseconds;
+		{
+			std::lock_guard<std::mutex> lock(_updateTimingMutex);
+			_lastUpdateDurationNS = ns;
+			_updateDurationsNS.push_back(ns);
+			if (_updateDurationsNS.size() > _timingHistoryCapacity)
+			{
+				_updateDurationsNS.pop_front();
+			}
+			if (ns < _minUpdateDurationNS)
+			{
+				_minUpdateDurationNS = ns;
+			}
+			if (ns > _maxUpdateDurationNS)
+			{
+				_maxUpdateDurationNS = ns;
+			}
+		}
+	}
+
+	// spk_window.cpp (inside Window::Window(...))
 	Window::Window(const std::wstring &p_title, const spk::Geometry2D &p_geometry) :
 		_rootWidget(std::make_unique<Widget>(p_title + L" - CentralWidget", nullptr)),
 		_title(p_title),
 		_windowRendererThread(p_title + L" - Renderer"),
 		_windowUpdaterThread(p_title + L" - Updater"),
+		_controllerInputThread(),
+		_profilerInstanciator(),
+		_fpsCounter(nullptr),
+		_upsCounter(nullptr),
 		_updateModule(_rootWidget.get())
 	{
-		_windowRendererThread
-			.addPreparationStep(
-				[&]()
-				{
-					try
-					{
-						_createContext();
-						requestPaint();
-					} catch (std::exception &e)
-					{
-						spk::cout << "Error catched : " << e.what() << std::endl;
-						close();
-					}
-				})
-			.relinquish();
+		_fpsCounter = Profiler::instance()->counter(L"FPS");
+		_upsCounter = Profiler::instance()->counter(L"UPS");
 
-		_windowRendererThread
-			.addExecutionStep(
-				[&]()
-				{
-					try
-					{
-						try
-						{
-							_handlePendingTimer();
-						}
-						catch (const std::exception& e)
-						{
-							PROPAGATE_ERROR("Renderer::_handlePendingTimer failed", e);
-						}
+		_windowRendererThread.addPreparationStep([&]() { _rendererPreparation(); }).relinquish();
 
-						try
-						{
-							pullEvents();
-						}
-						catch (const std::exception& e)
-						{
-							PROPAGATE_ERROR("Renderer::pullEvents failed", e);
-						}
+		_windowRendererThread.addExecutionStep([&]() { _rendererLoopIteration(); }).relinquish();
 
-						try
-						{
-							_timerModule.treatMessages();
-						}
-						catch (const std::exception& e)
-						{
-							PROPAGATE_ERROR("Renderer::_timerModule.treatMessages failed", e);
-						}
+		_windowUpdaterThread.addExecutionStep([&]() { _updaterLoopIteration(); }).relinquish();
 
-						try
-						{
-							_paintModule.treatMessages();
-						}
-						catch (const std::exception& e)
-						{
-							PROPAGATE_ERROR("Renderer::_paintModule.treatMessages failed", e);
-						}
-
-						try
-						{
-							_systemModule.treatMessages();
-						}
-						catch (const std::exception& e)
-						{
-							PROPAGATE_ERROR("Renderer::_systemModule.treatMessages failed", e);
-						}
-					}
-					catch (const std::exception& e)
-					{
-						spk::cout << "Renderer - Error caught:\n" << e.what() << std::endl;
-						close();
-					}
-				})
-			.relinquish();
-
-		_windowUpdaterThread
-			.addExecutionStep(
-				[&]()
-				{
-					try
-					{
-						_mouseModule.treatMessages();
-						_keyboardModule.treatMessages();
-						_controllerModule.treatMessages();
-						_updateModule.treatMessages();
-					} catch (std::exception &e)
-					{
-						spk::cout << "Updater - Error catched : " << e.what() << std::endl;
-						close();
-					}
-				})
-			.relinquish();
+		_updateModule.bind(&(_keyboardModule.keyboard()));
+		_updateModule.bind(&(_mouseModule.mouse()));
+		_updateModule.bind(&(_controllerModule.controller()));
 
 		bindModule(&_mouseModule);
 		bindModule(&_keyboardModule);
@@ -481,12 +582,12 @@ namespace spk
 	void Window::resize(const spk::Geometry2D::Size &p_newSize)
 	{
 		if (p_newSize.x == 0 || p_newSize.y == 0)
-        {
-            return;
-        }
+		{
+			return;
+		}
 
 		_rootWidget->forceGeometryChange({0, p_newSize});
-		for (auto& child : _rootWidget->children())
+		for (auto &child : _rootWidget->children())
 		{
 			_rootWidget->viewport().apply();
 			child->_applyResize();
@@ -499,7 +600,7 @@ namespace spk
 		_windowUpdaterThread.stop();
 		_controllerInputThread.stop();
 
-		if (_hwnd)
+		if (_hwnd != nullptr)
 		{
 			DestroyWindow(_hwnd);
 			_hwnd = nullptr;
@@ -518,21 +619,19 @@ namespace spk
 		{
 			try
 			{
-				_rootWidget->_applyGeometryChange();
-			}
-			catch (std::exception& e)
+				_rootWidget->applyGeometryChange();
+			} catch (std::exception &e)
 			{
 				PROPAGATE_ERROR("Window::clear over _rootWidget->applyGeometryChange() failed", e);
 			}
-			
+
 			_rootWidget->_needGeometryChange = false;
 		}
-		
+
 		try
 		{
 			_rootWidget->viewport().apply();
-		}
-		catch (std::exception& e)
+		} catch (std::exception &e)
 		{
 			PROPAGATE_ERROR("Window::clear over _rootWidget->viewport().apply failed", e);
 		}
@@ -605,6 +704,126 @@ namespace spk
 		return (_rootWidget->viewport().geometry());
 	}
 
+	size_t Window::FPS() const
+	{
+		// Average the last 10 counts collected over 100ms windows
+		std::lock_guard<std::mutex> lock(_fpsCountMutex);
+		if (_fpsCountHistory.empty())
+		{
+			return 0;
+		}
+		size_t sum = 0;
+		for (const auto &v : _fpsCountHistory)
+		{
+			sum += v;
+		}
+		double avgPerWindow = static_cast<double>(sum) / static_cast<double>(_fpsCountHistory.size());
+		double perSecond = avgPerWindow * 10.0; // 100ms windows -> scale to 1s
+		if (perSecond < 0.0)
+		{
+			perSecond = 0.0;
+		}
+		return static_cast<size_t>(std::llround(perSecond));
+	}
+
+	size_t Window::UPS() const
+	{
+		// Average the last 10 counts collected over 100ms windows
+		std::lock_guard<std::mutex> lock(_upsCountMutex);
+		if (_upsCountHistory.empty())
+		{
+			return 0;
+		}
+		size_t sum = 0;
+		for (const auto &v : _upsCountHistory)
+		{
+			sum += v;
+		}
+		double avgPerWindow = static_cast<double>(sum) / static_cast<double>(_upsCountHistory.size());
+		double perSecond = avgPerWindow * 10.0; // 100ms windows -> scale to 1s
+		if (perSecond < 0.0)
+		{
+			perSecond = 0.0;
+		}
+		return static_cast<size_t>(std::llround(perSecond));
+	}
+
+	double Window::realFPSDuration() const
+	{
+		std::lock_guard<std::mutex> lock(_renderTimingMutex);
+		return static_cast<double>(_lastRenderDurationNS) / 1'000'000.0;
+	}
+
+	double Window::realUPSDuration() const
+	{
+		std::lock_guard<std::mutex> lock(_updateTimingMutex);
+		return static_cast<double>(_lastUpdateDurationNS) / 1'000'000.0;
+	}
+
+	size_t Window::minFPS() const
+	{
+		std::lock_guard<std::mutex> lock(_fpsCountMutex);
+		if (_minFPSCounter == std::numeric_limits<size_t>::max())
+		{
+			return 0;
+		}
+		return _minFPSCounter;
+	}
+
+	size_t Window::maxFPS() const
+	{
+		std::lock_guard<std::mutex> lock(_fpsCountMutex);
+		return _maxFPSCounter;
+	}
+
+	size_t Window::minUPS() const
+	{
+		std::lock_guard<std::mutex> lock(_upsCountMutex);
+		if (_minUPSCount == std::numeric_limits<size_t>::max())
+		{
+			return 0;
+		}
+		return _minUPSCount;
+	}
+
+	size_t Window::maxUPS() const
+	{
+		std::lock_guard<std::mutex> lock(_upsCountMutex);
+		return _maxUPSCount;
+	}
+
+	double Window::minFPSDuration() const
+	{
+		std::lock_guard<std::mutex> lock(_renderTimingMutex);
+		if (_minRenderDurationNS == std::numeric_limits<long long>::max())
+		{
+			return 0.0;
+		}
+		return static_cast<double>(_minRenderDurationNS) / 1'000'000.0;
+	}
+
+	double Window::maxFPSDuration() const
+	{
+		std::lock_guard<std::mutex> lock(_renderTimingMutex);
+		return static_cast<double>(_maxRenderDurationNS) / 1'000'000.0;
+	}
+
+	double Window::minUPSDuration() const
+	{
+		std::lock_guard<std::mutex> lock(_updateTimingMutex);
+		if (_minUpdateDurationNS == std::numeric_limits<long long>::max())
+		{
+			return 0.0;
+		}
+		return static_cast<double>(_minUpdateDurationNS) / 1'000'000.0;
+	}
+
+	double Window::maxUPSDuration() const
+	{
+		std::lock_guard<std::mutex> lock(_updateTimingMutex);
+		return static_cast<double>(_maxUpdateDurationNS) / 1'000'000.0;
+	}
+
 	void Window::allowPaintRequest()
 	{
 		_isPaintRequestAllowed = true;
@@ -619,7 +838,7 @@ namespace spk
 		}
 	}
 
-	void Window::requestResize(const spk::Vector2Int& p_size) const
+	void Window::requestResize(const spk::Vector2Int &p_size) const
 	{
 		PostMessage(_hwnd, WM_RESIZE_REQUEST, static_cast<WPARAM>(p_size.x), static_cast<LPARAM>(p_size.y));
 	}
@@ -627,5 +846,12 @@ namespace spk
 	void Window::requestUpdate() const
 	{
 		PostMessage(_hwnd, WM_UPDATE_REQUEST, 0, 0);
+	}
+
+	void Window::requestMousePlacement(const spk::Vector2Int &p_mousePosition) const
+	{
+		POINT mousePositionInWindowSpace{p_mousePosition.x, p_mousePosition.y};
+		::ClientToScreen(_hwnd, &mousePositionInWindowSpace);
+		::SetCursorPos(mousePositionInWindowSpace.x, mousePositionInWindowSpace.y);
 	}
 }

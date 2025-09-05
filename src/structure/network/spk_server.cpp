@@ -4,8 +4,12 @@
 
 namespace spk
 {
-	Server::Acceptator::Acceptator(std::unordered_map<ClientID, SOCKET> &p_clientsMap, std::mutex &p_mutex, ClientID &p_clientId, MessagePool &p_pool,
-								   spk::ThreadSafeQueue<MessageObject> &p_queue) :
+	Server::Acceptator::Acceptator(
+		std::unordered_map<ClientID, SOCKET> &p_clientsMap,
+		std::mutex &p_mutex,
+		ClientID &p_clientId,
+		MessagePool &p_pool,
+		spk::ThreadSafeQueue<MessageObject> &p_queue) :
 		clients(p_clientsMap),
 		clientsMutex(p_mutex),
 		nextClientId(p_clientId),
@@ -69,30 +73,77 @@ namespace spk
 		std::thread(&Acceptator::run, this).detach();
 	}
 
+	int Server::Acceptator::prepareReadFds(fd_set &p_readfds)
+	{
+		FD_ZERO(&p_readfds);
+		FD_SET(serverSocket, &p_readfds);
+		int maxFD = static_cast<int>(serverSocket);
+
+		std::lock_guard<std::mutex> lock(clientsMutex);
+		for (auto &client : clients)
+		{
+			FD_SET(client.second, &p_readfds);
+			if (static_cast<int>(client.second) > maxFD)
+			{
+				maxFD = static_cast<int>(client.second);
+			}
+		}
+
+		return maxFD;
+	}
+
+	int Server::Acceptator::waitForActivity(fd_set &p_readfds, int p_maxFd)
+	{
+		timeval timeout = {0, 50000}; // 50 ms
+		return select(p_maxFd + 1, &p_readfds, nullptr, nullptr, &timeout);
+	}
+
+	void Server::Acceptator::handleClients(fd_set &p_readfds)
+	{
+		std::vector<std::pair<ClientID, SOCKET>> readyClients;
+		std::vector<ClientID> disconnectedClients;
+
+		{
+			std::lock_guard<std::mutex> lock(clientsMutex);
+			for (auto &client : clients)
+			{
+				if (FD_ISSET(client.second, &p_readfds))
+				{
+					readyClients.push_back(client);
+				}
+			}
+		}
+
+		for (auto &entry : readyClients)
+		{
+			ClientID id = entry.first;
+			SOCKET sock = entry.second;
+
+			if (!receiveFromClient(id, sock))
+			{
+				closesocket(sock);
+				disconnectedClients.push_back(id);
+			}
+		}
+
+		{
+			std::lock_guard<std::mutex> lock(clientsMutex);
+			for (auto id : disconnectedClients)
+			{
+				clients.erase(id);
+				onDisconnectProvider.trigger(id);
+			}
+		}
+	}
+
 	void Server::Acceptator::run()
 	{
 		while (isRunning)
 		{
 			fd_set readfds;
-			FD_ZERO(&readfds);
-			FD_SET(serverSocket, &readfds);
-			int maxFD = static_cast<int>(serverSocket);
+			int maxFD = prepareReadFds(readfds);
 
-			{
-				std::lock_guard<std::mutex> lock(clientsMutex);
-				for (auto &client : clients)
-				{
-					FD_SET(client.second, &readfds);
-					if (static_cast<int>(client.second) > maxFD)
-					{
-						maxFD = static_cast<int>(client.second);
-					}
-				}
-			}
-
-			timeval timeout = {0, 50000}; // 50 ms
-			int activity = select(maxFD + 1, &readfds, nullptr, nullptr, &timeout);
-
+			int activity = waitForActivity(readfds, maxFD);
 			if (activity == SOCKET_ERROR)
 			{
 				continue;
@@ -103,27 +154,7 @@ namespace spk
 				acceptNewClient();
 			}
 
-			std::vector<ClientID> disconnectedClients;
-			{
-				std::lock_guard<std::mutex> lock(clientsMutex);
-				for (auto &client : clients)
-				{
-					if (FD_ISSET(client.second, &readfds))
-					{
-						if (!receiveFromClient(client.first, client.second))
-						{
-							closesocket(client.second);
-							disconnectedClients.push_back(client.first);
-						}
-					}
-				}
-			}
-
-			for (auto id : disconnectedClients)
-			{
-				clients.erase(id);
-				onDisconnectProvider.trigger(id);
-			}
+			handleClients(readfds);
 		}
 	}
 
@@ -157,10 +188,11 @@ namespace spk
 				size_t totalBytesReceived = 0;
 				while (totalBytesReceived < message->_header.length)
 				{
-					bytesRead = ::recv(p_socket,
-									   dataBuffer + totalBytesReceived,
-									   static_cast<int>(message->_header.length) - static_cast<int>(totalBytesReceived),
-									   0);
+					bytesRead = ::recv(
+						p_socket,
+						dataBuffer + totalBytesReceived,
+						static_cast<int>(message->_header.length) - static_cast<int>(totalBytesReceived),
+						0);
 					if (bytesRead <= 0)
 					{
 						return false;

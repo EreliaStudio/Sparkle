@@ -5,29 +5,29 @@ namespace spk
 	void ImageLabel::_onGeometryChange()
 	{
 		_backgroundRenderer.clear();
-		_backgroundRenderer.prepare(geometry(), layer(), _cornerSize);
+		_backgroundRenderer.prepare(geometry().atOrigin(), layer(), _cornerSize);
 		_backgroundRenderer.validate();
 
-		spk::Geometry2D inner = geometry().shrink(_cornerSize);
+		spk::Geometry2D inner = geometry().atOrigin().shrink(_cornerSize);
 		_textureRenderer.clear();
 		_textureRenderer.prepare(inner, _textureSection, layer() + 0.01f);
 		_textureRenderer.validate();
 	}
 
-	void ImageLabel::_onPaintEvent(spk::PaintEvent& p_event)
+	void ImageLabel::_onPaintEvent(spk::PaintEvent &p_event)
 	{
 		_backgroundRenderer.render();
 		_textureRenderer.render();
 	}
 
-	ImageLabel::ImageLabel(const std::wstring& p_name, spk::SafePointer<spk::Widget>  p_parent) :
+	ImageLabel::ImageLabel(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
 		spk::Widget(p_name, p_parent)
 	{
 		_backgroundRenderer.setSpriteSheet(Widget::defaultNineSlice());
 		_textureRenderer.setTexture(_texture);
 	}
 
-	void ImageLabel::setTexture(const spk::SafePointer<spk::Texture>& p_texture)
+	void ImageLabel::setTexture(const spk::SafePointer<spk::Texture> &p_texture)
 	{
 		if (_texture != p_texture)
 		{
@@ -36,12 +36,12 @@ namespace spk
 		}
 	}
 
-	const spk::SafePointer<spk::Texture>& ImageLabel::texture() const
+	const spk::SafePointer<spk::Texture> &ImageLabel::texture() const
 	{
 		return _texture;
 	}
 
-	void ImageLabel::setSection(const spk::Texture::Section& p_section)
+	void ImageLabel::setSection(const spk::Texture::Section &p_section)
 	{
 		if (_textureSection != p_section)
 		{
@@ -50,7 +50,7 @@ namespace spk
 		}
 	}
 
-	const spk::Texture::Section& ImageLabel::section() const
+	const spk::Texture::Section &ImageLabel::section() const
 	{
 		return _textureSection;
 	}
@@ -60,7 +60,7 @@ namespace spk
 		_backgroundRenderer.setSpriteSheet(p_spriteSheet);
 	}
 
-	void ImageLabel::setCornerSize(const spk::Vector2UInt& p_cornerSize)
+	void ImageLabel::setCornerSize(const spk::Vector2UInt &p_cornerSize)
 	{
 		if (_cornerSize != p_cornerSize)
 		{
@@ -69,7 +69,7 @@ namespace spk
 		}
 	}
 
-	const spk::Vector2UInt& ImageLabel::cornerSize() const
+	const spk::Vector2UInt &ImageLabel::cornerSize() const
 	{
 		return _cornerSize;
 	}

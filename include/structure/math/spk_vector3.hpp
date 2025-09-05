@@ -8,6 +8,7 @@
 #include <type_traits>
 #include <unordered_map>
 
+#include "spk_constants.hpp"
 #include "structure/math/spk_math.hpp"
 #include "structure/math/spk_vector2.hpp"
 
@@ -61,7 +62,9 @@ namespace spk
 
 		// Constructor with three values
 		template <
-			typename UType, typename VType, typename WType,
+			typename UType,
+			typename VType,
+			typename WType,
 			typename = std::enable_if_t<std::is_arithmetic<UType>::value && std::is_arithmetic<VType>::value && std::is_arithmetic<WType>::value>>
 		IVector3(UType p_xVal, VType p_yVal, WType p_zVal) :
 			x(static_cast<TType>(p_xVal)),
@@ -78,9 +81,9 @@ namespace spk
 			z(static_cast<TType>(p_other.z))
 		{
 		}
-		
+
 		template <typename UType = TType, std::enable_if_t<std::is_floating_point<UType>::value, int> = 0>
-		IVector3(const spk::JSON::Object& p_input) :
+		IVector3(const spk::JSON::Object &p_input) :
 			x(static_cast<TType>(p_input[L"x"].as<double>())),
 			y(static_cast<TType>(p_input[L"y"].as<double>())),
 			z(static_cast<TType>(p_input[L"z"].as<double>()))
@@ -88,7 +91,7 @@ namespace spk
 		}
 
 		template <typename UType = TType, std::enable_if_t<!std::is_floating_point<UType>::value, int> = 0>
-		IVector3(const spk::JSON::Object& p_input)
+		IVector3(const spk::JSON::Object &p_input)
 		{
 			fromJSON(p_input);
 		}
@@ -117,7 +120,7 @@ namespace spk
 			return (result);
 		}
 
-		void fromJSON(const spk::JSON::Object& p_input)
+		void fromJSON(const spk::JSON::Object &p_input)
 		{
 			if constexpr (std::is_floating_point<TType>::value)
 			{
@@ -182,9 +185,9 @@ namespace spk
 		{
 			if constexpr (std::is_floating_point<TType>::value)
 			{
-				constexpr TType epsilon = static_cast<TType>(1e-5);
-				return std::fabs(x - static_cast<TType>(p_other.x)) < epsilon && std::fabs(y - static_cast<TType>(p_other.y)) < epsilon &&
-					   std::fabs(z - static_cast<TType>(p_other.z)) < epsilon;
+				return (FLOAT_EQ(x, static_cast<TType>(p_other.x)) &&
+						FLOAT_EQ(y, static_cast<TType>(p_other.y)) &&
+					   	FLOAT_EQ(z, static_cast<TType>(p_other.z)));
 			}
 			else
 			{
@@ -197,9 +200,9 @@ namespace spk
 		{
 			if constexpr (std::is_floating_point<TType>::value)
 			{
-				constexpr TType epsilon = static_cast<TType>(1e-5);
-				return std::fabs(x - static_cast<TType>(p_scalar)) < epsilon && std::fabs(y - static_cast<TType>(p_scalar)) < epsilon &&
-					   std::fabs(z - static_cast<TType>(p_scalar)) < epsilon;
+				return (FLOAT_EQ(x, static_cast<TType>(p_scalar)) &&
+						FLOAT_EQ(y, static_cast<TType>(p_scalar)) &&
+					   	FLOAT_EQ(z, static_cast<TType>(p_scalar)));
 			}
 			else
 			{
@@ -492,9 +495,10 @@ namespace spk
 
 		IVector3 clamp(const IVector3 &p_lowerValue, const IVector3 &p_higherValue)
 		{
-			return IVector3(std::clamp(x, p_lowerValue.x, p_higherValue.x),
-							std::clamp(y, p_lowerValue.y, p_higherValue.y),
-							std::clamp(z, p_lowerValue.z, p_higherValue.z));
+			return IVector3(
+				std::clamp(x, p_lowerValue.x, p_higherValue.x),
+				std::clamp(y, p_lowerValue.y, p_higherValue.y),
+				std::clamp(z, p_lowerValue.z, p_higherValue.z));
 		}
 
 		IVector3 floor() const
@@ -584,9 +588,10 @@ namespace spk
 
 		static IVector3 lerp(const IVector3 &p_startingPoint, const IVector3 &p_endingPoint, float t)
 		{
-			return IVector3(p_startingPoint.x + (p_endingPoint.x - p_startingPoint.x) * t,
-							p_startingPoint.y + (p_endingPoint.y - p_startingPoint.y) * t,
-							p_startingPoint.z + (p_endingPoint.z - p_startingPoint.z) * t);
+			return IVector3(
+				p_startingPoint.x + (p_endingPoint.x - p_startingPoint.x) * t,
+				p_startingPoint.y + (p_endingPoint.y - p_startingPoint.y) * t,
+				p_startingPoint.z + (p_endingPoint.z - p_startingPoint.z) * t);
 		}
 
 		IVector3 positiveModulo(const IVector3 &p_modulo) const
@@ -628,14 +633,30 @@ spk::IVector3<TType> operator/(UType p_scalar, const spk::IVector3<TType> &p_vec
 	return spk::IVector3<TType>(p_scalar / p_vec.x, p_scalar / p_vec.y, p_scalar / p_vec.z);
 }
 
-namespace std
+template <typename TType>
+struct std::hash<spk::IVector3<TType>>
 {
-	template <typename TType>
-	struct hash<spk::IVector3<TType>>
+	size_t operator()(const spk::IVector3<TType> &p_vec) const
 	{
-		size_t operator()(const spk::IVector3<TType> &p_vec) const
+		auto quantize = [](TType p_value) -> long long
 		{
-			return hash<TType>()(p_vec.x) ^ (hash<TType>()(p_vec.y) << 1) ^ (hash<TType>()(p_vec.z) << 2);
-		}
-	};
-}
+			if constexpr (std::is_floating_point<TType>::value)
+			{
+				return static_cast<long long>(std::llround(p_value / spk::Constants::pointPrecision));
+			}
+			else
+			{
+				return static_cast<long long>(p_value);
+			}
+		};
+
+		size_t h1 = std::hash<long long>()(quantize(p_vec.x));
+		size_t h2 = std::hash<long long>()(quantize(p_vec.y));
+		size_t h3 = std::hash<long long>()(quantize(p_vec.z));
+
+		size_t seed = h1;
+		seed ^= h2 + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+		seed ^= h3 + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+		return seed;
+	}
+};

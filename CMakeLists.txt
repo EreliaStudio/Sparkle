@@ -29,6 +29,7 @@ add_resources(
 	"resources/textures/defaultNineSlice_Dark.png"
 	"resources/textures/defaultNineSlice_Darker.png"
 	"resources/textures/defaultBreak.png"
+	"resources/json/mesh_renderer_shader_object.json"
 	)
 	
 	add_compile_definitions(NOMINMAX)
@@ -56,7 +57,7 @@ add_resources(
 	$<BUILD_INTERFACE:${SPARKLE_INCLUDE_DIR}>
 	$<INSTALL_INTERFACE:include>
 	)
-	
+
 	# Set output directories
 	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/bin/$<IF:$<CONFIG:Debug>,Debug,Release>)
 	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/lib/$<IF:$<CONFIG:Debug>,Debug,Release>)

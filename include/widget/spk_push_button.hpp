@@ -6,9 +6,9 @@
 #include "structure/design_pattern/spk_activable_object.hpp"
 #include "structure/design_pattern/spk_contract_provider.hpp"
 #include "structure/design_pattern/spk_inherence_object.hpp"
-#include "structure/graphics/renderer/spk_color_renderer.hpp"
-#include "structure/graphics/renderer/spk_font_renderer.hpp"
-#include "structure/graphics/renderer/spk_nine_slice_renderer.hpp"
+#include "structure/graphics/painter/spk_color_painter.hpp"
+#include "structure/graphics/painter/spk_font_painter.hpp"
+#include "structure/graphics/painter/spk_nine_slice_painter.hpp"
 #include "structure/graphics/spk_geometry_2D.hpp"
 #include "structure/graphics/spk_viewport.hpp"
 #include "structure/graphics/texture/spk_sprite_sheet.hpp"
@@ -86,10 +86,10 @@ namespace spk
 
 		ContractProvider _onClickProvider;
 
-		Data<FontRenderer> _fontRenderer;
-		Data<FontRenderer::Contract> _fontRendererContract;
-		Data<TextureRenderer> _iconRenderer;
-		Data<NineSliceRenderer> _nineSliceRenderer;
+		Data<FontPainter> _fontRenderer;
+		Data<FontPainter::Contract> _fontRendererContract;
+		Data<TexturePainter> _iconRenderer;
+		Data<NineSlicePainter> _nineSliceRenderer;
 
 		Data<spk::Vector2UInt> _cornerSize;
 
@@ -130,7 +130,8 @@ namespace spk
 		void setFontColor(const spk::Color &p_glyphColor, const spk::Color &p_outlineColor, const State &p_state);
 
 		void setTextAlignment(const spk::HorizontalAlignment &p_horizontalAlignment, const spk::VerticalAlignment &p_verticalAlignment);
-		void setTextAlignment(const spk::HorizontalAlignment &p_horizontalAlignment, const spk::VerticalAlignment &p_verticalAlignment,
+		void setTextAlignment(const spk::HorizontalAlignment &p_horizontalAlignment,
+							  const spk::VerticalAlignment &p_verticalAlignment,
 							  const State &p_state);
 
 		void setIconset(spk::SafePointer<const SpriteSheet> p_iconset);

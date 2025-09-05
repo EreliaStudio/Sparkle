@@ -33,30 +33,33 @@ namespace spk
 	};
 
 	template <typename, typename = void>
-	struct ContainsToJSON : std::false_type {};
+	struct ContainsToJSON : std::false_type
+	{
+	};
 
 	template <typename T>
-	struct ContainsToJSON<
-		T,
-		std::void_t<decltype(std::declval<const T&>().toJSON())>> : std::true_type {};
+	struct ContainsToJSON<T, std::void_t<decltype(std::declval<const T &>().toJSON())>> : std::true_type
+	{
+	};
 
 	template <typename T, typename = void>
-	struct ContainsFromJSON : std::false_type {};
+	struct ContainsFromJSON : std::false_type
+	{
+	};
 
 	template <typename T>
-	struct ContainsFromJSON<
-	T,
-	std::void_t<
-		decltype(std::declval<T>().fromJSON(std::declval<decltype(std::declval<T>().toJSON())>()))
-	>
-	> : std::true_type {};
+	struct ContainsFromJSON<T, std::void_t<decltype(std::declval<T>().fromJSON(std::declval<decltype(std::declval<T>().toJSON())>()))>>
+		: std::true_type
+	{
+	};
 
 	template <typename T, typename = void>
-	struct IsJSONable : std::false_type {};
+	struct IsJSONable : std::false_type
+	{
+	};
 
 	template <typename T>
-	struct IsJSONable<
-		T,
-		std::enable_if_t<ContainsToJSON<T>::value && ContainsFromJSON<T>::value>>
-		: std::true_type {};
+	struct IsJSONable<T, std::enable_if_t<ContainsToJSON<T>::value && ContainsFromJSON<T>::value>> : std::true_type
+	{
+	};
 }

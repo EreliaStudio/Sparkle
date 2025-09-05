@@ -15,7 +15,5 @@ protected:
 
     using TestPool = spk::Pool<TestObject>;
 
-    TestPool::Allocator allocator = []() { return new TestObject(); };
-    TestPool::Cleaner cleaner = [](TestObject& obj) { obj.value = 0; };
-    TestPool pool{ allocator, cleaner };
+    TestPool pool;
 };

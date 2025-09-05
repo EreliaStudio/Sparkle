@@ -34,16 +34,15 @@ namespace spk
 			size_t _offset = 0;
 			size_t _size = 0;
 
-
 		public:
 			Element();
 			Element(const std::wstring &p_name, DataBuffer *p_buffer, size_t p_offset, size_t p_size);
 
-			DataBuffer* buffer() const;
+			DataBuffer *buffer() const;
 			void setBuffer(DataBuffer *p_buffer);
 
-			const std::wstring& name() const;
-			void setName(const std::wstring& p_name);
+			const std::wstring &name() const;
+			void setName(const std::wstring &p_name);
 
 			Element duplicate(size_t p_offset);
 			bool isUnit() const;
@@ -78,7 +77,7 @@ namespace spk
 				if (sizeof(TType) != _size)
 				{
 					GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Invalid TType : expected [" + std::to_string(_size) +
-											 "] bytes, but received [" + std::to_string(sizeof(TType)) + "].");
+								   "] bytes, but received [" + std::to_string(sizeof(TType)) + "].");
 				}
 
 				std::memcpy(_buffer->data() + _offset, &p_value, sizeof(TType));
@@ -109,7 +108,7 @@ namespace spk
 				if (sizeof(TType) != _size)
 				{
 					GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Invalid TType : expected [" + std::to_string(_size) +
-											 "] bytes, but received [" + std::to_string(sizeof(TType)) + "].");
+								   "] bytes, but received [" + std::to_string(sizeof(TType)) + "].");
 				}
 
 				return *reinterpret_cast<TType *>(_buffer->data() + _offset);
@@ -133,7 +132,7 @@ namespace spk
 				if (sizeof(TType) != _size)
 				{
 					GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Invalid TType : expected [" + std::to_string(_size) +
-											 "] bytes, but received [" + std::to_string(sizeof(TType)) + "].");
+								   "] bytes, but received [" + std::to_string(sizeof(TType)) + "].");
 				}
 
 				return *reinterpret_cast<const TType *>(_buffer->data() + _offset);
@@ -164,7 +163,7 @@ namespace spk
 					if (child.size() != sizeof(TType))
 					{
 						GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Child element size [" + std::to_string(child.size()) +
-												 "] does not match TType size [" + std::to_string(sizeof(TType)) + "]");
+									   "] does not match TType size [" + std::to_string(sizeof(TType)) + "]");
 					}
 					result.push_back(child.get<TType>());
 				}
@@ -174,6 +173,34 @@ namespace spk
 
 			size_t offset() const;
 			size_t size() const;
+
+			template <typename TExportedType>
+			TExportedType *as()
+			{
+				if (sizeof(TExportedType) == size())
+				{
+					return reinterpret_cast<TExportedType *>(buffer()->data() + offset());
+				}
+				else
+				{
+					throw std::runtime_error("DataBufferLayout::as<TExportedType>() - Size mismatch: expected " + std::to_string(size()) + ", got " +
+											 std::to_string(sizeof(TExportedType)) + ".");
+				}
+			}
+
+			template <typename TExportedType>
+			const TExportedType *as() const
+			{
+				if (sizeof(TExportedType) == size())
+				{
+					return reinterpret_cast<TExportedType *>(buffer()->data() + offset());
+				}
+				else
+				{
+					throw std::runtime_error("DataBufferLayout::as<TExportedType>() - Size mismatch: expected " + std::to_string(size()) + ", got " +
+											 std::to_string(sizeof(TExportedType)) + ".");
+				}
+			}
 		};
 
 	private:
@@ -202,5 +229,33 @@ namespace spk
 
 		const Element &operator[](size_t p_index) const;
 		const Element &operator[](const std::wstring &p_key) const;
+
+		template <typename TExportedType>
+		TExportedType *as()
+		{
+			if (sizeof(TExportedType) == _root.size())
+			{
+				return reinterpret_cast<TExportedType *>(_root.buffer()->data() + _root.offset());
+			}
+			else
+			{
+				throw std::runtime_error("DataBufferLayout::as<TExportedType>() - Size mismatch: expected " + std::to_string(_root.size()) +
+										 ", got " + std::to_string(sizeof(TExportedType)) + ".");
+			}
+		}
+
+		template <typename TExportedType>
+		const TExportedType *as() const
+		{
+			if (sizeof(TExportedType) == _root.size())
+			{
+				return reinterpret_cast<TExportedType *>(_root.buffer()->data() + _root.offset());
+			}
+			else
+			{
+				throw std::runtime_error("DataBufferLayout::as<TExportedType>() - Size mismatch: expected " + std::to_string(_root.size()) +
+										 ", got " + std::to_string(sizeof(TExportedType)) + ".");
+			}
+		}
 	};
 }

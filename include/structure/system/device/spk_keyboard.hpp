@@ -1,14 +1,21 @@
 #pragma once
 
 #include "structure/math/spk_vector2.hpp"
+#include "structure/spk_safe_pointer.hpp"
 #include "structure/system/spk_input_state.hpp"
 
 #include <cstring>
 
 namespace spk
 {
-	struct Keyboard
+	class Window;
+	class KeyboardModule;
+
+	class Keyboard
 	{
+		friend class KeyboardModule;
+
+	public:
 		enum Key
 		{
 			Backspace = 8,
@@ -146,21 +153,19 @@ namespace spk
 			MaxNbKey = 255
 		};
 
-		InputState state[Key::MaxNbKey];
-		wchar_t glyph;
+	private:
+		InputState _state[Key::MaxNbKey];
+		wchar_t _glyph;
+		spk::SafePointer<Window> _window;
 
-		Keyboard()
-		{
-			for (size_t i = 0; i < Key::MaxNbKey; i++)
-			{
-				state[i] = spk::InputState::Up;
-			}
-		}
+	public:
+		Keyboard();
+		virtual ~Keyboard() = default;
+		InputState operator[](Key p_key) const;
 
-		InputState operator[](Key p_key) const
-		{
-			return (state[static_cast<int>(p_key)]);
-		}
+		const InputState *state() const;
+		wchar_t glyph() const;
+		spk::SafePointer<Window> window() const;
 	};
 }
 

@@ -1,30 +1,55 @@
 #include "structure/graphics/opengl/spk_sampler_object.hpp"
 
 #include "structure/graphics/opengl/spk_texture_collection.hpp"
+#include "utils/spk_string_utils.hpp"
 
 namespace spk::OpenGL
 {
 	SamplerObject::SamplerObject() :
 		_designator(""),
-		_index(-1),
+		_bindingPoint(-1),
 		_texture(nullptr),
 		_uniformDestination(-1),
 		_type(Type::Texture2D)
 	{
 	}
 
-	SamplerObject::SamplerObject(const std::string &p_name, Type p_type, size_t p_textureIndex) :
+	SamplerObject::SamplerObject(const std::string &p_name, Type p_type, BindingPoint p_bindingPoint) :
 		_designator(p_name),
-		_index(static_cast<GLint>(p_textureIndex)),
+		_bindingPoint(static_cast<GLint>(p_bindingPoint)),
 		_texture(nullptr),
 		_uniformDestination(-1),
 		_type(p_type)
 	{
 	}
 
+	SamplerObject::SamplerObject(const spk::JSON::Object &p_desc) :
+		SamplerObject(
+			spk::StringUtils::wstringToString(p_desc[L"Name"].as<std::wstring>()),
+			[&]()
+			{
+				std::wstring typeStr = p_desc[L"Type"].as<std::wstring>();
+				if (typeStr == L"Texture1D")
+				{
+					return Type::Texture1D;
+				}
+				else if (typeStr == L"Texture3D")
+				{
+					return Type::Texture3D;
+				}
+				else if (typeStr == L"TextureCubeMap")
+				{
+					return Type::TextureCubeMap;
+				}
+				return Type::Texture2D;
+			}(),
+			static_cast<BindingPoint>(p_desc[L"BindingPoint"].as<long>()))
+	{
+	}
+
 	SamplerObject::SamplerObject(const SamplerObject &p_other) :
 		_designator(p_other._designator),
-		_index(p_other._index),
+		_bindingPoint(p_other._bindingPoint),
 		_texture(p_other._texture),
 		_type(p_other._type),
 		_uniformDestination(p_other._uniformDestination)
@@ -36,7 +61,7 @@ namespace spk::OpenGL
 		if (this != &p_other)
 		{
 			_designator = p_other._designator;
-			_index = p_other._index;
+			_bindingPoint = p_other._bindingPoint;
 			_texture = p_other._texture;
 			_type = p_other._type;
 			_uniformDestination = p_other._uniformDestination;
@@ -46,13 +71,13 @@ namespace spk::OpenGL
 
 	SamplerObject::SamplerObject(SamplerObject &&p_other) noexcept :
 		_designator(std::move(p_other._designator)),
-		_index(p_other._index),
+		_bindingPoint(p_other._bindingPoint),
 		_texture(p_other._texture),
 		_type(p_other._type),
 		_uniformDestination(p_other._uniformDestination)
 	{
 		p_other._texture = nullptr;
-		p_other._index = -1;
+		p_other._bindingPoint = -1;
 		p_other._uniformDestination = -1;
 	}
 
@@ -61,13 +86,13 @@ namespace spk::OpenGL
 		if (this != &p_other)
 		{
 			_designator = std::move(p_other._designator);
-			_index = p_other._index;
+			_bindingPoint = p_other._bindingPoint;
 			_texture = p_other._texture;
 			_type = p_other._type;
 			_uniformDestination = p_other._uniformDestination;
 
 			p_other._texture = nullptr;
-			p_other._index = -1;
+			p_other._bindingPoint = -1;
 			p_other._uniformDestination = -1;
 		}
 		return *this;
@@ -80,12 +105,32 @@ namespace spk::OpenGL
 
 	spk::SafePointer<const Texture> &SamplerObject::texture()
 	{
-		return _texture;
+		return (_texture);
 	}
 
 	const spk::SafePointer<const Texture> &SamplerObject::texture() const
 	{
-		return _texture;
+		return (_texture);
+	}
+
+	SamplerObject::BindingPoint SamplerObject::bindingPoint() const
+	{
+		return (_bindingPoint);
+	}
+
+	void SamplerObject::setBindingPoint(BindingPoint p_bindingPoint)
+	{
+		_bindingPoint = p_bindingPoint;
+	}
+
+	SamplerObject::Type SamplerObject::type() const
+	{
+		return (_type);
+	}
+
+	void SamplerObject::setType(SamplerObject::Type p_type)
+	{
+		_type = p_type;
 	}
 
 	void SamplerObject::activate()
@@ -97,10 +142,10 @@ namespace spk::OpenGL
 			glUseProgram(prog);
 
 			_uniformDestination = glGetUniformLocation(prog, _designator.c_str());
-			glUniform1i(_uniformDestination, _index);
+			glUniform1i(_uniformDestination, _bindingPoint);
 		}
 
-		glActiveTexture(GL_TEXTURE0 + _index);
+		glActiveTexture(GL_TEXTURE0 + _bindingPoint);
 
 		if (_texture == nullptr)
 		{
@@ -117,16 +162,16 @@ namespace spk::OpenGL
 
 		spk::SafePointer<OpenGL::TextureObject> gpuTexture = TextureCollection::textureObject(_texture);
 
-		if (gpuTexture)
+		if (gpuTexture != nullptr)
 		{
-			if (_texture->_needUpdate)
+			if (_texture->_needUpdate == true)
 			{
 				gpuTexture->upload(_texture);
 
 				_texture->_needUpdate = false;
 			}
 
-			else if (_texture->_needSettings)
+			else if (_texture->_needSettings == true)
 			{
 				gpuTexture->updateSettings(_texture);
 				_texture->_needSettings = false;

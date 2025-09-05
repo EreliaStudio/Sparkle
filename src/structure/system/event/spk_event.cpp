@@ -70,11 +70,7 @@ namespace spk
 	}
 
 	const std::unordered_map<UINT, Event::ConstructorLambda> Event::_constructionMap = {
-		{WM_PAINT_REQUEST,
-		 [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam)
-		 {
-			 p_event->paintEvent.type = PaintEvent::Type::Paint;
-		 }},
+		{WM_PAINT_REQUEST, [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam) { p_event->paintEvent.type = PaintEvent::Type::Paint; }},
 		{WM_RESIZE_REQUEST,
 		 [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam)
 		 {
@@ -171,8 +167,10 @@ namespace spk
 			 p_event->systemEvent.type = SystemEvent::Type::Move;
 			 p_event->systemEvent.newPosition = spk::Geometry2D::Point(LOWORD(p_lParam), HIWORD(p_lParam));
 		 }},
-		{WM_SETFOCUS, [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam) { p_event->systemEvent.type = SystemEvent::Type::TakeFocus; }},
-		{WM_KILLFOCUS, [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam) { p_event->systemEvent.type = SystemEvent::Type::LoseFocus; }},
+		{WM_SETFOCUS,
+		 [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam) { p_event->systemEvent.type = SystemEvent::Type::TakeFocus; }},
+		{WM_KILLFOCUS,
+		 [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam) { p_event->systemEvent.type = SystemEvent::Type::LoseFocus; }},
 		{WM_CLOSE, [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam) { p_event->systemEvent.type = SystemEvent::Type::Quit; }},
 		{WM_QUIT, [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam) { p_event->systemEvent.type = SystemEvent::Type::Quit; }},
 		{WM_ENTERSIZEMOVE,
@@ -183,16 +181,17 @@ namespace spk
 			 p_event->systemEvent.type = SystemEvent::Type::Resize;
 			 p_event->systemEvent.newSize = spk::Geometry2D::Size(LOWORD(p_lParam), HIWORD(p_lParam));
 		 }},
-		{WM_EXITSIZEMOVE, [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam) { p_event->systemEvent.type = SystemEvent::Type::ExitResize; }},
+		{WM_EXITSIZEMOVE,
+		 [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam) { p_event->systemEvent.type = SystemEvent::Type::ExitResize; }},
 		{WM_LEFT_JOYSTICK_MOTION,
 		 [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam)
 		 {
 			 static const short halfValue = std::numeric_limits<unsigned short>::max() / 2;
 			 p_event->controllerEvent.type = ControllerEvent::Type::JoystickMotion;
 			 p_event->controllerEvent.joystick.id = Controller::Joystick::ID::Left;
-			 p_event->controllerEvent.joystick.values =
-				 spk::Vector2Int(static_cast<unsigned short>(p_wParam) - halfValue,
-								 std::numeric_limits<unsigned short>::max() - static_cast<unsigned short>(p_lParam) - halfValue);
+			 p_event->controllerEvent.joystick.values = spk::Vector2Int(
+				 static_cast<unsigned short>(p_wParam) - halfValue,
+				 std::numeric_limits<unsigned short>::max() - static_cast<unsigned short>(p_lParam) - halfValue);
 		 }},
 		{WM_RIGHT_JOYSTICK_MOTION,
 		 [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam)
@@ -200,9 +199,9 @@ namespace spk
 			 static const short halfValue = std::numeric_limits<unsigned short>::max() / 2;
 			 p_event->controllerEvent.type = ControllerEvent::Type::JoystickMotion;
 			 p_event->controllerEvent.joystick.id = Controller::Joystick::ID::Right;
-			 p_event->controllerEvent.joystick.values =
-				 spk::Vector2Int(static_cast<unsigned short>(p_wParam) - halfValue,
-								 std::numeric_limits<unsigned short>::max() - static_cast<unsigned short>(p_lParam) - halfValue);
+			 p_event->controllerEvent.joystick.values = spk::Vector2Int(
+				 static_cast<unsigned short>(p_wParam) - halfValue,
+				 std::numeric_limits<unsigned short>::max() - static_cast<unsigned short>(p_lParam) - halfValue);
 		 }},
 		{WM_LEFT_JOYSTICK_RESET,
 		 [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam)
@@ -256,9 +255,9 @@ namespace spk
 		{WM_UPDATE_REQUEST,
 		 [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam)
 		 {
-			p_event->updateEvent.type = UpdateEvent::Type::Requested;
+			 p_event->updateEvent.type = UpdateEvent::Type::Requested;
 
-			p_event->updateEvent.time = SystemUtils::getTime();
+			 p_event->updateEvent.time = SystemUtils::getTime();
 		 }},
 		{WM_TIMER,
 		 [](Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam)
@@ -276,7 +275,7 @@ namespace spk
 		}
 		if (p_uMsg == WM_PAINT)
 		{
-			ValidateRect(p_window->_hwnd, NULL);
+			ValidateRect(p_window->_hwnd, nullptr);
 		}
 
 		setModifiers(p_uMsg);
@@ -330,7 +329,7 @@ namespace spk
 			return;
 		}
 
-		if (currentEvent)
+		if (currentEvent != nullptr)
 		{
 			currentEvent->_modifiers.control = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
 			currentEvent->_modifiers.alt = (GetKeyState(VK_MENU) & 0x8000) != 0;

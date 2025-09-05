@@ -1,12 +1,21 @@
 #pragma once
 
 #include "structure/math/spk_vector2.hpp"
+#include "structure/spk_safe_pointer.hpp"
 #include "structure/system/spk_input_state.hpp"
+
+#include <limits>
 
 namespace spk
 {
-	struct Controller
+	class Window;
+	class ControllerModule;
+
+	class Controller
 	{
+		friend class ControllerModule;
+
+	public:
 		enum class Button
 		{
 			A,
@@ -48,17 +57,28 @@ namespace spk
 			float ratio = 0;
 		};
 
-		Joystick leftJoystick;
-		Joystick rightJoystick;
-		Trigger leftTrigger;
-		Trigger rightTrigger;
-		Vector2Int directionalCross = 0;
-		InputState buttons[17];
+	private:
+		Joystick _leftJoystick;
+		Joystick _rightJoystick;
+		Trigger _leftTrigger;
+		Trigger _rightTrigger;
+		Vector2Int _directionalCross = 0;
+		InputState _buttons[17];
+		spk::SafePointer<Window> _window;
 
-		InputState operator[](Button p_button) const
-		{
-			return (buttons[static_cast<int>(p_button)]);
-		}
+	public:
+		Controller();
+		virtual ~Controller() = default;
+
+		InputState operator[](Button p_button) const;
+
+		const Joystick &leftJoystick() const;
+		const Joystick &rightJoystick() const;
+		const Trigger &leftTrigger() const;
+		const Trigger &rightTrigger() const;
+		const Vector2Int &directionalCross() const;
+		const InputState *buttons() const;
+		spk::SafePointer<Window> window() const;
 	};
 }
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #ifndef NOMINMAX
-#define NOMINMAX
+#	define NOMINMAX
 #endif
 
 #include <algorithm>
@@ -11,6 +11,7 @@
 #include <type_traits>
 #include <unordered_map>
 
+#include "spk_constants.hpp"
 #include "structure/math/spk_math.hpp"
 
 #include "structure/system/spk_exception.hpp"
@@ -58,14 +59,14 @@ namespace spk
 		}
 
 		template <typename UType = TType, std::enable_if_t<std::is_floating_point<UType>::value, int> = 0>
-		IVector2(const spk::JSON::Object& p_input) :
+		IVector2(const spk::JSON::Object &p_input) :
 			x(static_cast<TType>(p_input[L"x"].as<double>())),
 			y(static_cast<TType>(p_input[L"y"].as<double>()))
 		{
 		}
 
 		template <typename UType = TType, std::enable_if_t<!std::is_floating_point<UType>::value, int> = 0>
-		IVector2(const spk::JSON::Object& p_input)
+		IVector2(const spk::JSON::Object &p_input)
 		{
 			fromJSON(p_input);
 		}
@@ -91,7 +92,7 @@ namespace spk
 			return (result);
 		}
 
-		void fromJSON(const spk::JSON::Object& p_input)
+		void fromJSON(const spk::JSON::Object &p_input)
 		{
 			if constexpr (std::is_floating_point<TType>::value)
 			{
@@ -104,7 +105,7 @@ namespace spk
 				y = p_input[L"Y"].as<long>();
 			}
 		}
-		
+
 		template <typename UType>
 		explicit operator IVector2<UType>() const
 		{
@@ -153,8 +154,7 @@ namespace spk
 		{
 			if constexpr (std::is_floating_point<TType>::value)
 			{
-				constexpr TType epsilon = static_cast<TType>(1e-5);
-				return std::fabs(x - static_cast<TType>(p_other.x)) < epsilon && std::fabs(y - static_cast<TType>(p_other.y)) < epsilon;
+				return FLOAT_EQ(x, static_cast<TType>(p_other.x)) && FLOAT_EQ(y, static_cast<TType>(p_other.y));
 			}
 			else
 			{
@@ -167,8 +167,7 @@ namespace spk
 		{
 			if constexpr (std::is_floating_point<TType>::value)
 			{
-				constexpr TType epsilon = static_cast<TType>(1e-5);
-				return std::fabs(x - static_cast<TType>(p_scalar)) < epsilon && std::fabs(y - static_cast<TType>(p_scalar)) < epsilon;
+				return FLOAT_EQ(x, static_cast<TType>(p_scalar)) && FLOAT_EQ(y, static_cast<TType>(p_scalar));
 			}
 			else
 			{
@@ -410,6 +409,11 @@ namespace spk
 			return IVector2<TType>(-y, x);
 		}
 
+		TType crossProduct(const IVector2<TType> &p_other) const
+		{
+			return x * p_other.y - y * p_other.x;
+		}
+
 		TType dot(const IVector2<TType> &p_other) const
 		{
 			return x * p_other.x + y * p_other.y;
@@ -516,8 +520,8 @@ namespace spk
 
 		static IVector2 lerp(const IVector2 &p_startingPoint, const IVector2 &p_endingPoint, float t)
 		{
-			return IVector2(p_startingPoint.x + (p_endingPoint.x - p_startingPoint.x) * t,
-							p_startingPoint.y + (p_endingPoint.y - p_startingPoint.y) * t);
+			return IVector2(
+				p_startingPoint.x + (p_endingPoint.x - p_startingPoint.x) * t, p_startingPoint.y + (p_endingPoint.y - p_startingPoint.y) * t);
 		}
 
 		IVector2 positiveModulo(const IVector2 &p_modulo) const
@@ -569,15 +573,11 @@ spk::IVector2<TType> operator/(UType p_scalar, const spk::IVector2<TType> &p_vec
 	return spk::IVector2<TType>(p_scalar / p_vec.x, p_scalar / p_vec.y);
 }
 
-// Hash function for IVector2 to use in unordered_map
-namespace std
+template <typename TType>
+struct std::hash<spk::IVector2<TType>>
 {
-	template <typename TType>
-	struct hash<spk::IVector2<TType>>
+	size_t operator()(const spk::IVector2<TType> &p_vec) const
 	{
-		size_t operator()(const spk::IVector2<TType> &p_vec) const
-		{
-			return hash<TType>()(p_vec.x) ^ (hash<TType>()(p_vec.y) << 1);
-		}
-	};
-}
+		return hash<TType>()(p_vec.x) ^ (hash<TType>()(p_vec.y) << 1);
+	}
+};

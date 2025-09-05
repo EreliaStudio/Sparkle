@@ -5,21 +5,21 @@ namespace spk
 	void AnimationLabel::_onGeometryChange()
 	{
 		_textureRenderer.clear();
-		if (_spriteSheet && _spriteSheet->sprites().size() > 0)
+		if (_spriteSheet && !_spriteSheet->sprites().empty())
 		{
-			_textureRenderer.prepare(geometry(), _spriteSheet->sprite(_currentSprite), layer());
+			_textureRenderer.prepare(geometry().atOrigin(), _spriteSheet->sprite(_currentSprite), layer());
 			_textureRenderer.validate();
 		}
 	}
 
-	void AnimationLabel::_onPaintEvent(spk::PaintEvent&)
+	void AnimationLabel::_onPaintEvent(spk::PaintEvent &p_event)
 	{
 		_textureRenderer.render();
 	}
 
-	void AnimationLabel::_onUpdateEvent(spk::UpdateEvent&)
+	void AnimationLabel::_onUpdateEvent(spk::UpdateEvent &p_event)
 	{
-		if (_timer.state() != spk::Timer::State::Running && _spriteSheet && _spriteSheet->sprites().size() > 0)
+		if (_timer.state() != spk::Timer::State::Running && _spriteSheet && !_spriteSheet->sprites().empty())
 		{
 			if (_rangeEnd >= _rangeStart && _rangeEnd < _spriteSheet->sprites().size())
 			{
@@ -40,19 +40,19 @@ namespace spk
 		}
 	}
 
-	AnimationLabel::AnimationLabel(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+	AnimationLabel::AnimationLabel(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
 		spk::Widget(p_name, p_parent)
 	{
 		setSpriteSheet(nullptr);
 	}
 
-	void AnimationLabel::setSpriteSheet(const spk::SafePointer<spk::SpriteSheet>& p_spriteSheet)
+	void AnimationLabel::setSpriteSheet(const spk::SafePointer<spk::SpriteSheet> &p_spriteSheet)
 	{
 		_spriteSheet = p_spriteSheet;
 		_textureRenderer.setTexture(p_spriteSheet);
 		_currentSprite = 0;
 		_rangeStart = 0;
-		_rangeEnd = p_spriteSheet && p_spriteSheet->sprites().size() > 0 ? p_spriteSheet->sprites().size() - 1 : 0;
+		_rangeEnd = p_spriteSheet && !p_spriteSheet->sprites().empty() ? p_spriteSheet->sprites().size() - 1 : 0;
 		_timer.stop();
 	}
 
@@ -61,7 +61,7 @@ namespace spk
 		return _spriteSheet;
 	}
 
-	void AnimationLabel::setLoopSpeed(const spk::Duration& p_duration)
+	void AnimationLabel::setLoopSpeed(const spk::Duration &p_duration)
 	{
 		_timer = spk::Timer(p_duration);
 		_currentSprite = _rangeStart;

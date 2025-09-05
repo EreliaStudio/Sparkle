@@ -1,80 +1,238 @@
 #pragma once
 
-#include <algorithm>
-#include <optional>
-#include <set>
+#include "spk_sfinae.hpp"
+
+#include <filesystem>
+#include <initializer_list>
+#include <mutex>
+#include <type_traits>
+#include <unordered_map>
 #include <vector>
-
-#include "structure/math/spk_vector2.hpp"
-#include "structure/math/spk_vector3.hpp"
-
-#include "structure/design_pattern/spk_contract_provider.hpp"
 
 namespace spk
 {
-	class Mesh
+	template <typename TVertexType>
+	class TMesh
 	{
 	public:
-		using Contract = ContractProvider::Contract;
-		using Job = ContractProvider::Job;
+		using Vertex = TVertexType;
 
-		struct VertexIndex
+		struct Shape
 		{
-			std::optional<size_t> pointIndex;
-			std::optional<size_t> uvIndex;
-			std::optional<size_t> normalIndex;
+			std::vector<Vertex> points;
+		};
 
-			VertexIndex();
-			VertexIndex(size_t p_pointIndex, size_t p_uvIndex);
-			VertexIndex(size_t p_pointIndex, size_t p_uvIndex, size_t p_normalIndex);
-
-			bool operator<(const VertexIndex &p_other) const;
-			bool operator==(const VertexIndex &p_other) const;
-			bool operator!=(const VertexIndex &p_other) const;
+		struct Buffer
+		{
+			std::vector<Vertex> vertices;
+			std::vector<unsigned int> indexes;
 		};
 
 	private:
-		struct Vertex
+		std::vector<Shape> _shapes;
+
+		mutable bool _needBake = false;
+		mutable Buffer _buffer;
+
+		mutable std::mutex _mutex;
+
+		unsigned int _getOrInsertVertex(const Vertex &v, std::unordered_map<Vertex, unsigned int> &vertexMap) const
 		{
-			spk::Vector3 point;
-			spk::Vector2 uv;
-			spk::Vector3 normal;
-		};
+			auto it = vertexMap.find(v);
+			if (it != vertexMap.end())
+			{
+				return it->second;
+			}
+			else
+			{
+				const unsigned int newIndex = static_cast<unsigned int>(_buffer.vertices.size());
+				_buffer.vertices.push_back(v);
+				vertexMap[v] = newIndex;
+				return newIndex;
+			}
+		}
 
-		std::vector<spk::Vector3> _points;
-		std::vector<spk::Vector2> _UVs;
-		std::vector<spk::Vector3> _normals;
-
-		std::vector<VertexIndex> _vertexIndexes;
-
-		std::vector<Vertex> _vertices;
-		std::vector<unsigned int> _indexes;
-
-		spk::ContractProvider _onValidationContractProvider;
-
-		size_t addVertex(VertexIndex p_vertex);
+		void _bakeShape(const Shape &p_shape, std::unordered_map<Vertex, unsigned int> &p_vertexMap) const
+		{
+			if (p_shape.points.size() < 3)
+			{
+				return;
+			}
+			unsigned int i0 = _getOrInsertVertex(p_shape.points[0], p_vertexMap);
+			for (size_t i = 1; i + 1 < p_shape.points.size(); ++i)
+			{
+				unsigned int i1 = _getOrInsertVertex(p_shape.points[i], p_vertexMap);
+				unsigned int i2 = _getOrInsertVertex(p_shape.points[i + 1], p_vertexMap);
+				_buffer.indexes.push_back(i0);
+				_buffer.indexes.push_back(i1);
+				_buffer.indexes.push_back(i2);
+			}
+		}
 
 	public:
-		Mesh();
+		TMesh() = default;
 
-		size_t addPoint(const spk::Vector3 &p_point);
-		size_t addUV(const spk::Vector2 &p_uv);
-		size_t addNormal(const spk::Vector3 &p_normal);
+		TMesh(const TMesh &p_other) :
+			_shapes(),
+			_needBake(false),
+			_buffer(),
+			_mutex()
+		{
+			std::scoped_lock lock(p_other._mutex);
+			_shapes = p_other._shapes;
+			_needBake = p_other._needBake;
+			_buffer = p_other._buffer;
+		}
 
-		void addFace(VertexIndex p_vertexA, VertexIndex p_vertexB, VertexIndex p_vertexC);
-		void addFace(VertexIndex p_vertexA, VertexIndex p_vertexB, VertexIndex p_vertexC, VertexIndex p_vertexD);
+		TMesh &operator=(const TMesh &p_other)
+		{
+			if (this == &p_other)
+			{
+				return *this;
+			}
 
-		void validate();
-		Contract subscribeToValidation(const Job &p_job);
+			std::scoped_lock lock(_mutex, p_other._mutex);
+			_shapes = p_other._shapes;
+			_needBake = p_other._needBake;
+			_buffer = p_other._buffer;
+			return *this;
+		}
 
-		const std::vector<spk::Vector3> &points() const;
-		const std::vector<spk::Vector2> &UVs() const;
-		const std::vector<spk::Vector3> &normals() const;
+		TMesh(TMesh &&p_other) noexcept(std::is_nothrow_move_constructible_v<std::vector<Shape>> && std::is_nothrow_move_constructible_v<Buffer>) :
+			_shapes(),
+			_needBake(false),
+			_buffer(),
+			_mutex()
+		{
+			std::scoped_lock lock(p_other._mutex);
+			_shapes = std::move(p_other._shapes);
+			_needBake = p_other._needBake;
+			_buffer = std::move(p_other._buffer);
 
-		std::vector<Vertex> &vertices();
-		const std::vector<Vertex> &vertices() const;
+			p_other._needBake = false;
+			p_other._buffer.vertices.clear();
+			p_other._buffer.indexes.clear();
+			p_other._shapes.clear();
+		}
 
-		std::vector<unsigned int> &indexes();
-		const std::vector<unsigned int> &indexes() const;
+		TMesh &operator=(TMesh &&p_other) noexcept(std::is_nothrow_move_assignable_v<std::vector<Shape>> && std::is_nothrow_move_assignable_v<Buffer>)
+		{
+			if (this == &p_other)
+			{
+				return *this;
+			}
+			std::scoped_lock lock(_mutex, p_other._mutex);
+
+			_shapes = std::move(p_other._shapes);
+			_needBake = p_other._needBake;
+			_buffer = std::move(p_other._buffer);
+
+			p_other._needBake = false;
+			p_other._buffer.vertices.clear();
+			p_other._buffer.indexes.clear();
+			p_other._shapes.clear();
+
+			return *this;
+		}
+
+		void addShape(const std::vector<Vertex> &p_vertices)
+		{
+			std::lock_guard lock(_mutex);
+			_shapes.push_back(Shape{p_vertices});
+			_needBake = true;
+		}
+
+		void addShape(std::initializer_list<Vertex> p_vertices)
+		{
+			addShape(std::vector<Vertex>(p_vertices));
+		}
+
+		void addShape(const Vertex &p_a, const Vertex &p_b, const Vertex &p_c)
+		{
+			addShape(std::vector<Vertex>{p_a, p_b, p_c});
+		}
+
+		void addShape(const Vertex &p_a, const Vertex &p_b, const Vertex &p_c, const Vertex &p_d)
+		{
+			addShape(std::vector<Vertex>{p_a, p_b, p_c, p_d});
+		}
+
+		void popShape()
+		{
+			std::lock_guard lock(_mutex);
+			if (!_shapes.empty())
+			{
+				_shapes.pop_back();
+				_needBake = true;
+			}
+		}
+
+		void clear()
+		{
+			std::lock_guard lock(_mutex);
+			_shapes.clear();
+			_buffer.vertices.clear();
+			_buffer.indexes.clear();
+			_needBake = false;
+		}
+
+		const std::vector<Shape> &shapes() const
+		{
+			return _shapes;
+		}
+
+		std::vector<Shape> &shapes()
+		{
+			return _shapes;
+		}
+
+		auto begin() const
+		{
+			return _shapes.begin();
+		}
+		auto end() const
+		{
+			return _shapes.end();
+		}
+
+		bool hasPendingChanges() const
+		{
+			std::lock_guard lock(_mutex);
+			return _needBake;
+		}
+
+		void unbake()
+		{
+			std::lock_guard lock(_mutex);
+			_needBake = true;
+			_buffer.vertices.clear();
+			_buffer.indexes.clear();
+		}
+
+		void bake() const
+		{
+			std::lock_guard lock(_mutex);
+
+			_buffer.vertices.clear();
+			_buffer.indexes.clear();
+
+			std::unordered_map<Vertex, unsigned int> vertexMap;
+
+			for (const auto &s : _shapes)
+			{
+				_bakeShape(s, vertexMap);
+			}
+
+			_needBake = false;
+		}
+
+		const Buffer &buffer() const
+		{
+			if (_needBake)
+			{
+				bake();
+			}
+			return _buffer;
+		}
 	};
 }

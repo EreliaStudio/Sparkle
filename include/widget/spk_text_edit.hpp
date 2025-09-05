@@ -3,9 +3,9 @@
 #include "widget/spk_widget.hpp"
 #include <string>
 
-#include "structure/graphics/renderer/spk_color_renderer.hpp"
-#include "structure/graphics/renderer/spk_font_renderer.hpp"
-#include "structure/graphics/renderer/spk_nine_slice_renderer.hpp"
+#include "structure/graphics/painter/spk_color_painter.hpp"
+#include "structure/graphics/painter/spk_font_painter.hpp"
+#include "structure/graphics/painter/spk_nine_slice_painter.hpp"
 
 namespace spk
 {
@@ -27,10 +27,19 @@ namespace spk
 		spk::HorizontalAlignment _horizontalAlignment = spk::HorizontalAlignment::Left;
 		spk::VerticalAlignment _verticalAlignment = spk::VerticalAlignment::Centered;
 
-		spk::NineSliceRenderer _backgroundRenderer;
-		spk::ColorRenderer _cursorRenderer;
-		spk::FontRenderer _fontRenderer;
-		spk::FontRenderer::Contract _onFontResizeContract;
+		spk::NineSlicePainter _backgroundRenderer;
+		spk::ColorPainter _cursorRenderer;
+		spk::FontPainter _fontRenderer;
+		spk::FontPainter::Contract _onFontResizeContract;
+
+		void _handleKeyPress(spk::Keyboard::Key key);
+		void _handleGlyph(wchar_t glyph);
+
+		void _moveCursorLeft();
+		void _moveCursorRight();
+		void _deleteAtCursor();
+		void _backspace();
+		void _insertGlyph(wchar_t glyph);
 
 		void _computeCursorsValues();
 		void _onGeometryChange() override;

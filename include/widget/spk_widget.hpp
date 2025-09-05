@@ -13,6 +13,9 @@
 #include "structure/graphics/texture/spk_font.hpp"
 #include "structure/graphics/texture/spk_sprite_sheet.hpp"
 
+#include "structure/graphics/opengl/spk_frame_buffer_object.hpp"
+#include "structure/graphics/painter/spk_texture_painter.hpp"
+
 namespace spk
 {
 	class Window;
@@ -50,7 +53,7 @@ namespace spk
 
 		std::wstring _name;
 		spk::SafePointer<Widget> _parent;
-		std::vector<Widget *> _managedChildren;
+		std::vector<std::unique_ptr<Widget>> _managedChildren;
 
 		bool _needGeometryChange = true;
 		spk::Vector2 _anchorRatio;
@@ -58,11 +61,12 @@ namespace spk
 		spk::Geometry2D _geometry;
 		spk::Viewport _viewport;
 
+		spk::OpenGL::FrameBufferObject _frameBufferObject;
+
+		spk::TexturePainter _textureRenderer;
+
 		spk::Vector2UInt _minimalSize = {0, 0};
-		spk::Vector2UInt _maximalSize = {
-				std::numeric_limits<size_t>::max(),
-				std::numeric_limits<size_t>::max()
-			};
+		spk::Vector2UInt _maximalSize = {std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max()};
 
 		bool _requestedPaint = false;
 
@@ -80,8 +84,6 @@ namespace spk
 	private:
 		void _computeViewport();
 
-		void _applyGeometryChange();
-
 		void _computeRatio();
 		void _applyResize();
 
@@ -98,16 +100,22 @@ namespace spk
 
 		void addChild(spk::SafePointer<Widget> p_child) override;
 
+		spk::SafePointer<const spk::OpenGL::FrameBufferObject> frameBufferObject() const;
+
+		void renderAsPNJ(const std::filesystem::path &p_path);
+
 		template <typename TChildType, typename... TArgs>
 		spk::SafePointer<TChildType> makeChild(TArgs &&...p_args)
 		{
-			TChildType *newChild = new TChildType(std::forward<TArgs>(p_args)...);
+			std::unique_ptr<TChildType> newChild = std::make_unique<TChildType>(std::forward<TArgs>(p_args)...);
 
-			addChild(newChild);
+			TChildType * result = newChild.get();
 
-			_managedChildren.push_back(newChild);
+			addChild(result);
 
-			return (spk::SafePointer<TChildType>(newChild));
+			_managedChildren.push_back(std::move(newChild));
+
+			return (result);
 		}
 
 		bool isPointed(const spk::Vector2Int &p_pointerPosition) const;

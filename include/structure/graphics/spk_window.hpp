@@ -15,9 +15,12 @@
 #include "application/module/spk_module.hpp"
 
 #include "structure/graphics/spk_viewport.hpp"
+#include "structure/system/spk_profiler.hpp"
 
 #include <deque>
+#include <limits>
 #include <map>
+#include <mutex>
 #include <set>
 #include <unordered_set>
 
@@ -33,6 +36,8 @@
 #include "application/module/spk_system_module.hpp"
 #include "application/module/spk_timer_module.hpp"
 #include "application/module/spk_update_module.hpp"
+
+#include "structure/system/time/spk_timer.hpp"
 
 namespace spk
 {
@@ -54,6 +59,14 @@ namespace spk
 		spk::PersistantWorker _windowRendererThread;
 		spk::PersistantWorker _windowUpdaterThread;
 		ControllerInputThread _controllerInputThread;
+
+		Profiler::Instanciator _profilerInstanciator;
+		spk::Timer _fpsTimer = spk::Timer(100_ms);
+		spk::SafePointer<Profiler::CounterMeasurement> _fpsCounter;
+		size_t _currentFPS = 0;
+		spk::Timer _upsTimer = spk::Timer(100_ms);
+		spk::SafePointer<Profiler::CounterMeasurement> _upsCounter;
+		size_t _currentUPS = 0;
 
 		HWND _hwnd;
 		HDC _hdc;
@@ -94,6 +107,45 @@ namespace spk
 		void _deleteTimer(UINT_PTR p_id);
 		void _removeAllTimers();
 
+		void _rendererPreparation();
+		void _rendererLoopIteration();
+		void _updaterLoopIteration();
+
+		void _updateCounter(spk::Timer &timer, spk::SafePointer<Profiler::CounterMeasurement> &counter, size_t &currentValue);
+
+		// Returns true when a new 100ms window just closed and
+		// currentValue was updated from the previous window's count.
+		bool _tickCounter(spk::Timer &p_timer, spk::SafePointer<Profiler::CounterMeasurement> &p_counter, size_t &p_currentValue);
+
+		void _guard(const char *label, const std::function<void()> &fn);
+
+		// --- Timing (durations-based FPS/UPS) ---
+		static constexpr size_t _timingHistoryCapacity = 120;
+		mutable std::mutex _renderTimingMutex;
+		mutable std::mutex _updateTimingMutex;
+		std::deque<long long> _renderDurationsNS;
+		std::deque<long long> _updateDurationsNS;
+		long long _lastRenderDurationNS = 0; // nanoseconds
+		long long _lastUpdateDurationNS = 0; // nanoseconds
+		long long _minRenderDurationNS = std::numeric_limits<long long>::max();
+		long long _maxRenderDurationNS = 0; // nanoseconds
+		long long _minUpdateDurationNS = std::numeric_limits<long long>::max();
+		long long _maxUpdateDurationNS = 0; // nanoseconds
+
+		// --- Count-based FPS smoothing (100ms windows) ---
+		static constexpr size_t _fpsCountHistoryCapacity = 10; // last 10 x 100ms => ~1s
+		mutable std::mutex _fpsCountMutex;
+		std::deque<size_t> _fpsCountHistory;
+		size_t _minFPSCounter = std::numeric_limits<size_t>::max();
+		size_t _maxFPSCounter = 0;
+
+		// --- Count-based UPS smoothing (100ms windows) ---
+		static constexpr size_t _upsCountHistoryCapacity = 10;
+		mutable std::mutex _upsCountMutex;
+		std::deque<size_t> _upsCountHistory;
+		size_t _minUPSCount = std::numeric_limits<size_t>::max();
+		size_t _maxUPSCount = 0;
+
 	public:
 		Window(const std::wstring &p_title, const spk::Geometry2D &p_geometry);
 		~Window();
@@ -119,7 +171,33 @@ namespace spk
 		void requestPaint() const;
 		void allowUpdateRequest();
 		void requestUpdate() const;
-		void requestResize(const spk::Vector2Int& p_size) const;
+		void requestResize(const spk::Vector2Int &p_size) const;
+		void requestMousePlacement(const spk::Vector2Int &p_mousePosition) const;
+
+		size_t nbFPS() const
+		{
+			return _currentFPS * 10;
+		}
+		size_t nbUPS() const
+		{
+			return _currentUPS * 10;
+		}
+
+		// Durations-based metrics (averaged over recent frames)
+		size_t FPS() const;
+		size_t UPS() const;
+		double realFPSDuration() const; // milliseconds of the last rendered frame
+		double realUPSDuration() const; // milliseconds of the last update iteration
+
+		// Extremes (counters and durations)
+		size_t minFPS() const;
+		size_t maxFPS() const;
+		size_t minUPS() const;
+		size_t maxUPS() const;
+		double minFPSDuration() const;
+		double maxFPSDuration() const;
+		double minUPSDuration() const;
+		double maxUPSDuration() const;
 
 		spk::SafePointer<Widget> widget() const;
 		operator spk::SafePointer<Widget>() const;

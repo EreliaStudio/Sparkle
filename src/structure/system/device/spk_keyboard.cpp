@@ -400,6 +400,9 @@ std::ostream &operator<<(std::ostream &p_os, const spk::Keyboard::Key &p_key)
 	case spk::Keyboard::Key::Process:
 		p_os << "Process";
 		break;
+	default:
+		GENERATE_ERROR("Invalid keyboard key enum value");
+		break;
 	}
 	return (p_os);
 }
@@ -805,6 +808,41 @@ std::wostream &operator<<(std::wostream &p_os, const spk::Keyboard::Key &p_key)
 	case spk::Keyboard::Key::Process:
 		p_os << "Process";
 		break;
+	default:
+		GENERATE_ERROR("Invalid keyboard key enum value");
+		break;
 	}
 	return (p_os);
+}
+namespace spk
+{
+	Keyboard::Keyboard() :
+		_glyph(0),
+		_window(nullptr)
+	{
+		for (size_t i = 0; i < Key::MaxNbKey; ++i)
+		{
+			_state[i] = InputState::Up;
+		}
+	}
+
+	InputState Keyboard::operator[](Key p_key) const
+	{
+		return (_state[static_cast<int>(p_key)]);
+	}
+
+	const InputState *Keyboard::state() const
+	{
+		return (_state);
+	}
+
+	wchar_t Keyboard::glyph() const
+	{
+		return (_glyph);
+	}
+
+	spk::SafePointer<Window> Keyboard::window() const
+	{
+		return (_window);
+	}
 }

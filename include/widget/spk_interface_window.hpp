@@ -10,7 +10,7 @@ namespace spk
 	class IInterfaceWindow : public spk::ScalableWidget
 	{
 	public:
-		using ResizeContractProvider = spk::TContractProvider<const spk::Vector2UInt&>;
+		using ResizeContractProvider = spk::TContractProvider<const spk::Vector2UInt &>;
 
 		enum Event
 		{
@@ -90,7 +90,7 @@ namespace spk
 	public:
 		IInterfaceWindow(const std::wstring &p_name, const spk::SafePointer<spk::Widget> &p_parent);
 
-		ResizeContractProvider::Contract subscribeOnResize(const ResizeContractProvider::Job& p_job);
+		ResizeContractProvider::Contract subscribeOnResize(const ResizeContractProvider::Job &p_job);
 
 		spk::SafePointer<MenuBar> menuBar();
 

@@ -20,7 +20,10 @@ namespace spk
 			resizeElements(NbColumns * NbRows);
 		}
 
-		spk::SafePointer<Element> setWidget(const size_t &p_col, const size_t &p_row, spk::SafePointer<spk::Widget> p_widget, const SizePolicy &p_sizePolicy = SizePolicy::Extend)
+		spk::SafePointer<Element> setWidget(const size_t &p_col,
+											const size_t &p_row,
+											spk::SafePointer<spk::Widget> p_widget,
+											const SizePolicy &p_sizePolicy = SizePolicy::Extend)
 		{
 			if (p_col >= NbColumns || p_row >= NbRows)
 			{
@@ -51,7 +54,7 @@ namespace spk
 				for (size_t c = 0; c < NbColumns; ++c)
 				{
 					Element *elt = _elements[r * NbColumns + c].get();
-					if (elt == nullptr || elt->widget() == nullptr)
+					if (elt == nullptr || (elt->widget() == nullptr && elt->layout() == nullptr))
 					{
 						continue;
 					}
@@ -69,14 +72,14 @@ namespace spk
 					case SizePolicy::Minimum:
 					case SizePolicy::VerticalExtend:
 					{
-						spk::Vector2Int minSize = elt->widget()->minimalSize();
+						spk::Vector2Int minSize = elt->minimalSize();
 						colWidth[c] = std::max(colWidth[c], minSize.x);
 						rowHeight[r] = std::max(rowHeight[r], minSize.y);
 						break;
 					}
 					case SizePolicy::Maximum:
 					{
-						spk::Vector2Int maxSize = elt->widget()->maximalSize();
+						spk::Vector2Int maxSize = elt->maximalSize();
 						colWidth[c] = std::min(colWidth[c], maxSize.x);
 						rowHeight[r] = std::min(rowHeight[r], maxSize.y);
 						break;
@@ -176,15 +179,46 @@ namespace spk
 				for (size_t c = 0; c < NbColumns; ++c)
 				{
 					Element *elt = _elements[r * NbColumns + c].get();
-					if (elt && elt->widget() != nullptr)
+					if (elt && (elt->widget() != nullptr || elt->layout() != nullptr))
 					{
 						spk::Geometry2D cellGeom({x, y}, {colWidth[c], rowHeight[r]});
-						elt->widget()->setGeometry(cellGeom);
+						elt->setGeometry(cellGeom);
 					}
 					x += colWidth[c] + static_cast<int>(_elementPadding.x);
 				}
 				y += rowHeight[r] + static_cast<int>(_elementPadding.y);
 			}
+		}
+
+		spk::Vector2UInt minimalSize() const
+		{
+			std::array<uint32_t, NbColumns> colWidth{};
+			std::array<uint32_t, NbRows> rowHeight{};
+
+			for (size_t r = 0; r < NbRows; ++r)
+			{
+				for (size_t c = 0; c < NbColumns; ++c)
+				{
+					Element *elt = _elements[r * NbColumns + c].get();
+					if (!elt || (elt->widget() == nullptr && elt->layout() == nullptr))
+					{
+						continue;
+					}
+
+					spk::Vector2UInt minSize = elt->minimalSize();
+
+					colWidth[c] = std::max(colWidth[c], minSize.x);
+					rowHeight[r] = std::max(rowHeight[r], minSize.y);
+				}
+			}
+
+			uint32_t totalW = std::accumulate(colWidth.begin(), colWidth.end(), 0u);
+			uint32_t totalH = std::accumulate(rowHeight.begin(), rowHeight.end(), 0u);
+
+			totalW += static_cast<uint32_t>((NbColumns > 0 ? NbColumns - 1 : 0) * _elementPadding.x);
+			totalH += static_cast<uint32_t>((NbRows > 0 ? NbRows - 1 : 0) * _elementPadding.y);
+
+			return {totalW, totalH};
 		}
 	};
 }

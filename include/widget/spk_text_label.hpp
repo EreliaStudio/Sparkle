@@ -2,17 +2,17 @@
 
 #include "widget/spk_widget.hpp"
 
-#include "structure/graphics/renderer/spk_font_renderer.hpp"
-#include "structure/graphics/renderer/spk_nine_slice_renderer.hpp"
+#include "structure/graphics/painter/spk_font_painter.hpp"
+#include "structure/graphics/painter/spk_nine_slice_painter.hpp"
 
 namespace spk
 {
 	class TextLabel : public spk::Widget
 	{
 	private:
-		spk::NineSliceRenderer _backgroundRenderer;
-		spk::FontRenderer _fontRenderer;
-		spk::FontRenderer::Contract _onFontResizeContract;
+		spk::NineSlicePainter _backgroundRenderer;
+		spk::FontPainter _fontRenderer;
+		spk::FontPainter::Contract _onFontResizeContract;
 
 		std::wstring _text = L"";
 		spk::VerticalAlignment _verticalAlignment;
@@ -28,7 +28,7 @@ namespace spk
 
 		spk::Vector2UInt computeTextSize() const;
 		spk::Vector2UInt computeExpectedTextSize(const spk::Font::Size &p_textSize) const;
-		
+
 		spk::Vector2UInt minimalSize() const override;
 
 		const std::wstring &text() const;
@@ -40,6 +40,8 @@ namespace spk
 		void setText(const std::wstring &p_text);
 		void setFontSize(const spk::Font::Size &p_textSize);
 		void setFontColor(const spk::Color &p_glyphColor, const spk::Color &p_outlineColor);
+		void setFontGlyphSharpness(size_t p_pixels);
+		void setFontOutlineSharpness(size_t p_pixels);
 		void setTextAlignment(const spk::HorizontalAlignment &p_horizontalAlignment, const spk::VerticalAlignment &p_verticalAlignment);
 
 		void setNineSlice(spk::SafePointer<const spk::SpriteSheet> p_spriteSheet);

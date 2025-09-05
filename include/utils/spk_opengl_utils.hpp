@@ -4,18 +4,18 @@
 
 #include <GL/gl.h>
 
+#include <array>
 #include <iostream>
 #include <string>
-#include <array>
 
 #include "structure/graphics/texture/spk_texture.hpp"
 
 namespace spk::OpenGLUtils
 {
-	template <size_t nbBytes>
+	template <size_t numberOfBytes>
 	struct Padding
 	{
-		std::array<float, nbBytes> reserved;
+		std::array<float, numberOfBytes> reserved;
 	};
 
 	std::wstring to_wstring(const GLenum &p_type);
@@ -24,9 +24,19 @@ namespace spk::OpenGLUtils
 
 	void convertFormatToGLEnum(spk::Texture::Format p_format, GLint &p_internalFormat, GLenum &p_externalFormat);
 
-	
-	void GLAPIENTRY openGLDebugMessageCallback(GLenum p_source, GLenum p_type, GLuint p_id, GLenum p_severity, GLsizei p_length, const GLchar *p_message,
-											   const void *p_userParam);
+	void GLAPIENTRY openGLDebugMessageCallback(
+		GLenum p_source, GLenum p_type, GLuint p_id, GLenum p_severity, GLsizei p_length, const GLchar *p_message, const void *p_userParam);
+
+	void LogGLErrors(const char* p_where);
+	void PrintShaderLog(GLuint p_shader, const char* p_label);
+	void PrintProgramLog(GLuint p_prog, const char* p_label);
+	void DumpActiveAttribs(GLuint p_prog);
+	void DumpActiveUniformsAndSamplers(GLuint p_prog);
+	void DumpUniformBlocks(GLuint p_prog);
+	void DumpPreDrawState();
+	void DumpUBOBindingsForUsedBlocks(GLuint p_prog);
+	void DumpTexture2DCompletenessForUnit(GLint p_unit);
+	void CheckIndexBufferCapacityVsCount(GLsizei p_count, GLenum p_indexType);
 }
 
 #define SPK_PP_CAT_IMPL(a, b) a##b
