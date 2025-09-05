@@ -39,5 +39,10 @@ namespace spk
 		{
 			_data.reset();
 		}
+		
+		bool isCached() const
+		{
+			return (_data == nullptr);
+		}
 	};
 }
