@@ -7,20 +7,19 @@
 	},
 	"configurePresets": [
 		{
-			"name": "default",
-			"hidden": true,
-			"generator": "Ninja",
-			"toolchainFile": "C:/vcpkg/scripts/buildsystems/vcpkg.cmake",
-			"binaryDir": "${sourceDir}/build/${presetName}",
-			"cacheVariables": {
-				"CMAKE_CXX_STANDARD": "20",
-				"CMAKE_CXX_STANDARD_REQUIRED": "ON",
-				"CMAKE_C_COMPILER": "gcc",
-				"CMAKE_CXX_COMPILER": "g++",
-				"VCPKG_TARGET_TRIPLET": "x64-mingw-static",
-				"CMAKE_CXX_CLANG_TIDY": "clang-tidy"
-			}
-		},
+            "name": "default",
+            "hidden": true,
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_CXX_STANDARD": "20",
+                "CMAKE_CXX_STANDARD_REQUIRED": "ON",
+                "CMAKE_C_COMPILER": "gcc",
+                "CMAKE_CXX_COMPILER": "g++",
+                "VCPKG_TARGET_TRIPLET": "x64-mingw-static",
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+            }
+        },
 		{
 			"name": "debug",
 			"inherits": "default",
