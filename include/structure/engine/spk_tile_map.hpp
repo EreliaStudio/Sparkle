@@ -17,6 +17,7 @@
 #include "structure/engine/spk_tile.hpp"
 #include "structure/graphics/texture/spk_sprite_sheet.hpp"
 #include "structure/math/spk_vector2.hpp"
+#include "structure/spk_cached_data.hpp"
 #include "structure/spk_safe_pointer.hpp"
 #include "structure/system/spk_exception.hpp"
 #include "utils/spk_string_utils.hpp"
@@ -439,21 +440,29 @@ namespace spk
 			spk::SafePointer<spk::CollisionMesh2DRenderer> _collisionRenderer;
 			spk::SafePointer<spk::Collider2D> _collider;
 			spk::Collider2D::CollisionEnterContract _colliderContract;
-			spk::CollisionMesh2D _collisionMesh;
-			spk::Flags<TFlagEnum> _collisionFlags = {};
-			bool _collisionMeshDirty = true;
+			spk::CachedData<spk::CollisionMesh2D> _collisionMesh;
+			const spk::Flags<TFlagEnum> *_collisionFlags = nullptr;
 			spk::SafePointer<Data> _data;
 
 		public:
 			Chunk(const std::wstring &p_name, spk::SafePointer<TileMap> p_parent, const spk::Vector2Int &p_coord) :
-				spk::Entity(p_name, p_parent)
+				spk::Entity(p_name, p_parent),
+				_collisionMesh(
+					[this]()
+					{
+						if (_collisionFlags != nullptr)
+						{
+							return _generateCollisionMesh(*_collisionFlags);
+						}
+						return _generateCollisionMesh(spk::Flags<TFlagEnum>());
+					})
 			{
 				_renderer = this->template addComponent<Mesh2DRenderer>(p_name + L"/Mesh2DRenderer");
 				_collisionRenderer = this->template addComponent<spk::CollisionMesh2DRenderer>(p_name + L"/CollisionMesh2DRenderer");
 				_collider = this->template addComponent<spk::Collider2D>(p_name + L"/Collider2D");
-				_colliderContract = _collider->onCollisionEnter([&](const spk::SafePointer<spk::Entity>& p_target){
-					spk::cout << "Entity [" << p_target->name() << "] collide with chunk [" << name() << "]" << std::endl;
-				});
+				_colliderContract = _collider->onCollisionEnter(
+					[&](const spk::SafePointer<spk::Entity> &p_target)
+					{ spk::cout << "Entity [" << p_target->name() << "] collide with chunk [" << name() << "]" << std::endl; });
 				_data = this->template addComponent<Data>(p_name + L"/Data");
 				_data->setTileMap(p_parent);
 				_data->setChunkCoordinate(p_coord);
@@ -508,7 +517,22 @@ namespace spk
 				return _data->mesh();
 			}
 
-			spk::CollisionMesh2D collisionMesh2D(spk::Flags<TFlagEnum> p_flags) const
+			const spk::CollisionMesh2D &collisionMesh()
+			{
+				const spk::CollisionMesh2D &mesh = _collisionMesh.get();
+				if (_collisionRenderer != nullptr)
+				{
+					_collisionRenderer->setMesh(&mesh);
+				}
+				if (_collider != nullptr)
+				{
+					_collider->setCollisionMesh(&mesh);
+				}
+				return mesh;
+			}
+
+		private:
+			spk::CollisionMesh2D _generateCollisionMesh(spk::Flags<TFlagEnum> p_flags) const
 			{
 				spk::CollisionMesh2D result;
 
@@ -659,40 +683,18 @@ namespace spk
 				return result;
 			}
 
-		private:
-			void _updateCollisionMesh()
-			{
-				if ((_collisionMesh.units().empty() == true) || (_collisionMeshDirty == true))
-				{
-					_collisionMesh = collisionMesh2D(_collisionFlags);
-					_collisionMeshDirty = false;
-					if (_collisionRenderer != nullptr)
-					{
-						_collisionRenderer->setMesh(&_collisionMesh);
-					}
-					if (_collider != nullptr)
-					{
-						_collider->setCollisionMesh(&_collisionMesh);
-					}
-				}
-			}
-
 		public:
-			void setCollisionFlags(spk::Flags<TFlagEnum> p_flags)
+			void setCollisionFlags(const spk::Flags<TFlagEnum> &p_flags)
 			{
-				if (_collisionFlags != p_flags)
-				{
-					_collisionFlags = p_flags;
-					_collisionMeshDirty = true;
-				}
-				_updateCollisionMesh();
+				_collisionFlags = &p_flags;
+				_collisionMesh.release();
 			}
 
 			void setRenderMode(bool p_collisionMode)
 			{
 				if (p_collisionMode == true)
 				{
-					_updateCollisionMesh();
+					collisionMesh();
 					if (_collisionRenderer != nullptr)
 					{
 						_collisionRenderer->activate();
@@ -856,7 +858,7 @@ namespace spk
 			}
 		}
 
-		spk::CollisionMesh2D collisionMesh2D(const spk::Vector2Int &p_chunkCoordinate, spk::Flags<TFlagEnum> p_flags)
+		spk::CollisionMesh2D collisionMesh2D(const spk::Vector2Int &p_chunkCoordinate)
 		{
 			if (_chunks.contains(p_chunkCoordinate) == false)
 			{
@@ -864,17 +866,18 @@ namespace spk
 				// Ensure neighbouring chunks update their autotiles along shared borders.
 				_unbakeNeightbours(p_chunkCoordinate);
 			}
-			return _chunks[p_chunkCoordinate]->collisionMesh2D(p_flags);
+			auto &chunk = _chunks[p_chunkCoordinate];
+			return chunk->collisionMesh();
 		}
 
 		void setCollisionFlags(spk::Flags<TFlagEnum> p_flags)
 		{
 			_collisionMask = p_flags;
-			for (auto &chunk : _activeChunks)
+			for (auto &[coord, chunk] : _chunks)
 			{
 				if (chunk != nullptr)
 				{
-					chunk->setCollisionFlags(p_flags);
+					chunk->setCollisionFlags(_collisionMask);
 				}
 			}
 		}
