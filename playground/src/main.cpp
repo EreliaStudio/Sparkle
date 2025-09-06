@@ -14,6 +14,9 @@ private:
 	float _noiseScale = 0.04f;
 	float _noiseContrast = 2.0f;
 
+	bool _collisionRenderActive = false;
+	spk::TContractProvider<bool> _collisionRenderingContractProvider;
+
 	class CollisionManager : public spk::Component
 	{
 	private:
@@ -23,6 +26,8 @@ private:
 		spk::SafePointer<spk::Collider2D> _collider;
 		spk::CollisionMesh2D _mesh;
 		spk::ContractProvider::Contract _editionContract;
+		spk::SafePointer<PlaygroundTileMap> _tileMap;
+		spk::TContractProvider<bool>::Contract _renderModeContract;
 
 		void _bake()
 		{
@@ -41,9 +46,10 @@ private:
 		}
 
 	public:
-		CollisionManager(const std::wstring &p_name, spk::Flags<TileFlag> p_flags) :
+		CollisionManager(const std::wstring &p_name, spk::Flags<TileFlag> p_flags, spk::SafePointer<PlaygroundTileMap> p_tileMap) :
 			spk::Component(p_name),
-			_flags(p_flags)
+			_flags(p_flags),
+			_tileMap(p_tileMap)
 		{
 		}
 
@@ -62,34 +68,35 @@ private:
 			{
 				_editionContract = _chunk->onEdition([this]() { _bake(); });
 			}
+			if (_tileMap != nullptr)
+			{
+				_renderModeContract = _tileMap->subscribeOnCollisionRendering([&](bool p_state) { setCollisionRendering(p_state); });
+			}
 		}
 
-		void onKeyboardEvent(spk::KeyboardEvent &p_event) override
+		void setCollisionRendering(bool p_collisionRendering)
 		{
-			if (p_event.type == spk::KeyboardEvent::Type::Press && p_event.key == spk::Keyboard::F1)
+			spk::SafePointer<spk::Mesh2DRenderer> chunkRenderer;
+			if (_chunk != nullptr)
 			{
-				if (_renderer != nullptr)
+				chunkRenderer = _chunk->renderer();
+			}
+			if (_renderer != nullptr)
+			{
+				if (p_collisionRendering == true)
 				{
-					spk::SafePointer<spk::Mesh2DRenderer> chunkRenderer;
-					if (_chunk != nullptr)
+					_renderer->activate();
+					if (chunkRenderer != nullptr)
 					{
-						chunkRenderer = _chunk->renderer();
+						chunkRenderer->deactivate();
 					}
-					if (_renderer->isActive() == true)
+				}
+				else
+				{
+					_renderer->deactivate();
+					if (chunkRenderer != nullptr)
 					{
-						_renderer->deactivate();
-						if (chunkRenderer != nullptr)
-						{
-							chunkRenderer->activate();
-						}
-					}
-					else
-					{
-						_renderer->activate();
-						if (chunkRenderer != nullptr)
-						{
-							chunkRenderer->deactivate();
-						}
+						chunkRenderer->activate();
 					}
 				}
 			}
@@ -149,11 +156,23 @@ private:
 				p_chunkToFill.setContent(x, y, 0, id);
 			}
 		}
-		p_chunkToFill.addComponent<CollisionManager>(p_chunkToFill.name() + L"/CollisionManager", spk::Flags<TileFlag>(TileFlag::Obstacle));
+		auto collisionManager =
+			p_chunkToFill.addComponent<CollisionManager>(p_chunkToFill.name() + L"/CollisionManager", spk::Flags<TileFlag>(TileFlag::Obstacle), this);
+		if (collisionManager != nullptr)
+		{
+			collisionManager->setCollisionRendering(_collisionRenderActive);
+		}
 	}
 
 public:
 	using spk::TileMap<16, 16, 4, TileFlag>::TileMap;
+
+	using CollisionRenderingContract = spk::TContractProvider<bool>::Contract;
+	using CollisionRenderingJob = spk::TContractProvider<bool>::Job;
+	CollisionRenderingContract subscribeOnCollisionRendering(const CollisionRenderingJob &p_job)
+	{
+		return _collisionRenderingContractProvider.subscribe(p_job);
+	}
 
 	PlaygroundTileMap(const std::wstring &p_name, spk::SafePointer<spk::Entity> p_parent) :
 		spk::TileMap<16, 16, 4, TileFlag>(p_name, p_parent)
@@ -164,6 +183,28 @@ public:
 		_perlin.setInterpolation(spk::Perlin::Interpolation::SmoothStep);
 
 		_perlin.setSeed(1337u);
+	}
+
+	void onKeyboardEvent(spk::KeyboardEvent &p_event) override
+	{
+		if (p_event.type == spk::KeyboardEvent::Type::Press && p_event.key == spk::Keyboard::F1)
+		{
+			if (_collisionRenderActive == true)
+			{
+				_setCollisionRendering(false);
+			}
+			else
+			{
+				_setCollisionRendering(true);
+			}
+		}
+	}
+
+private:
+	void _setCollisionRendering(bool p_state)
+	{
+		_collisionRenderActive = p_state;
+		_collisionRenderingContractProvider.trigger(_collisionRenderActive);
 	}
 };
 

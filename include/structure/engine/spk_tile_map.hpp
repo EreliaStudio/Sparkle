@@ -816,7 +816,6 @@ namespace spk
 					}
 
 					_activeChunks.push_back((_chunks[chunkPos].get()));
-					// Ensure render mode consistency for newly active chunks.
 				}
 			}
 
