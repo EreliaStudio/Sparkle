@@ -6,6 +6,7 @@
 #include <memory>
 #include <unordered_map>
 #include <vector>
+#include <optional>
 
 #include "structure/engine/spk_collider_2d.hpp"
 #include "structure/engine/spk_collision_mesh_2d.hpp"
@@ -50,7 +51,7 @@ namespace spk
 				bool _isCollisionBaked = false;
 				spk::Mesh2D _mesh;
 				spk::CollisionMesh2D _collisionMesh;
-				spk::Flags<TFlagEnum> _collisionFlags;
+				std::optional<spk::Flags<TFlagEnum>> _collisionFlags;
 
 				void _insertData(float p_x, float p_y, float p_width, float p_height, int p_layer, const spk::SpriteSheet::Section &p_sprite)
 				{
@@ -354,9 +355,23 @@ namespace spk
 					}
 				}
 
-			private:
 				void _bakeCollisionMesh()
 				{
+					if (_collisionFlags.has_value() == false)
+					{
+						_collisionMesh.clear();
+						if (_collider != nullptr)
+						{
+							_collider->setCollisionMesh(&_collisionMesh);
+						}
+						if (_collisionRenderer != nullptr)
+						{
+							_collisionRenderer->setMesh(&_collisionMesh);
+						}
+						_isCollisionBaked = true;
+						return;
+					}
+
 					_collisionMesh.clear();
 
 					std::array<std::array<bool, ChunkSizeY>, ChunkSizeX> candidate;
@@ -374,7 +389,7 @@ namespace spk
 								{
 									spk::SafePointer<const TileType> tile = _tileMap->tileById(current);
 
-									if (tile != nullptr && tile->flags().has(static_cast<TFlagEnum>(_collisionFlags.bits)) == true)
+									if (tile != nullptr && tile->flags().has(static_cast<TFlagEnum>((*_collisionFlags).bits)) == true)
 									{
 										hasFlag = true;
 										break;
@@ -617,6 +632,17 @@ namespace spk
 					unbakeCollision();
 				}
 
+				void disableCollision()
+				{
+					_collisionFlags.reset();
+					_isCollisionBaked = false;
+				}
+
+				bool collisionEnabled() const
+				{
+					return _collisionFlags.has_value();
+				}
+
 				spk::SafePointer<spk::CollisionMesh2D> collisionMesh()
 				{
 					return (&_collisionMesh);
@@ -632,7 +658,6 @@ namespace spk
 			spk::SafePointer<spk::CollisionMesh2DRenderer> _collisionRenderer;
 			spk::SafePointer<spk::Collider2D> _collider;
 			spk::Collider2D::CollisionEnterContract _colliderContract;
-			const spk::Flags<TFlagEnum> *_collisionFlags = nullptr;
 			spk::SafePointer<Data> _data;
 
 		public:
@@ -714,6 +739,16 @@ namespace spk
 				_data->setCollisionFlags(p_flags);
 			}
 
+			void disableCollision()
+			{
+				_data->disableCollision();
+			}
+
+			bool collisionEnabled() const
+			{
+				return _data->collisionEnabled();
+			}
+
 			void setRenderMode(bool p_collisionMode)
 			{
 				if (p_collisionMode == true)
@@ -738,7 +773,7 @@ namespace spk
 		std::vector<spk::SafePointer<Chunk>> _activeChunks;
 
 		// Store the current collision mask to apply to newly created/visible chunks.
-		spk::Flags<TFlagEnum> _collisionMask = {};
+		std::optional<spk::Flags<TFlagEnum>> _collisionMask;
 		bool _collisionRenderMode = false;
 
 		// Mark 4-neighbour chunks dirty so they can re-bake autotiles touching the new chunk.
@@ -766,8 +801,15 @@ namespace spk
 			newChunk->transform().place(spk::Vector3(p_chunkCoordinate.x * Chunk::size.x, p_chunkCoordinate.y * Chunk::size.y, 0));
 			newChunk->setSpriteSheet(_spriteSheet);
 			newChunk->fill(-1);
-			// Ensure the chunk uses the current collision mask; mesh is built lazily on demand.
-			newChunk->setCollisionFlags(_collisionMask);
+
+			if (_collisionMask.has_value())
+			{
+				newChunk->setCollisionFlags(*_collisionMask);
+			}
+			else
+			{
+				newChunk->disableCollision();
+			}
 
 			_onChunkGeneration(p_chunkCoordinate, *newChunk);
 
@@ -888,8 +930,17 @@ namespace spk
 			{
 				if (chunk != nullptr)
 				{
-					chunk->setCollisionFlags(_collisionMask);
+					chunk->setCollisionFlags(*_collisionMask);
 				}
+			}
+		}
+
+		void disableCollision()
+		{
+			_collisionMask.reset();
+			for (auto& [coord, chunk] : _chunks)
+			{
+				if (chunk != nullptr) { chunk->disableCollision(); }
 			}
 		}
 
