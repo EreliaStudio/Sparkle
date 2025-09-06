@@ -63,6 +63,37 @@ private:
 				_editionContract = _chunk->onEdition([this]() { _bake(); });
 			}
 		}
+
+		void onKeyboardEvent(spk::KeyboardEvent &p_event) override
+		{
+			if (p_event.type == spk::KeyboardEvent::Type::Press && p_event.key == spk::Keyboard::F1)
+			{
+				if (_renderer != nullptr)
+				{
+					spk::SafePointer<spk::Mesh2DRenderer> chunkRenderer;
+					if (_chunk != nullptr)
+					{
+						chunkRenderer = _chunk->renderer();
+					}
+					if (_renderer->isActive() == true)
+					{
+						_renderer->deactivate();
+						if (chunkRenderer != nullptr)
+						{
+							chunkRenderer->activate();
+						}
+					}
+					else
+					{
+						_renderer->activate();
+						if (chunkRenderer != nullptr)
+						{
+							chunkRenderer->deactivate();
+						}
+					}
+				}
+			}
+		}
 	};
 
 	short _tileIdFromNoise(float p_value) const

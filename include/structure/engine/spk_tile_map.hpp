@@ -676,6 +676,16 @@ namespace spk
 				return _data->bakeCollisionMesh(p_flags);
 			}
 
+			spk::SafePointer<Mesh2DRenderer> renderer()
+			{
+				return _renderer;
+			}
+
+			spk::SafePointer<const Mesh2DRenderer> renderer() const
+			{
+				return _renderer;
+			}
+
 			using EditionContract = spk::ContractProvider::Contract;
 			EditionContract onEdition(const spk::ContractProvider::Job &p_job)
 			{
