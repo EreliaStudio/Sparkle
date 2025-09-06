@@ -183,29 +183,51 @@ public:
 		_perlin.setInterpolation(spk::Perlin::Interpolation::SmoothStep);
 
 		_perlin.setSeed(1337u);
+		addComponent<CollisionRenderingToggle>(name() + L"/CollisionRenderingToggle", this);
 	}
 
-	void onKeyboardEvent(spk::KeyboardEvent &p_event) override
+	bool collisionRendering() const
 	{
-		if (p_event.type == spk::KeyboardEvent::Type::Press && p_event.key == spk::Keyboard::F1)
-		{
-			if (_collisionRenderActive == true)
-			{
-				_setCollisionRendering(false);
-			}
-			else
-			{
-				_setCollisionRendering(true);
-			}
-		}
+		return _collisionRenderActive;
 	}
 
-private:
-	void _setCollisionRendering(bool p_state)
+	void setCollisionRendering(bool p_state)
 	{
 		_collisionRenderActive = p_state;
 		_collisionRenderingContractProvider.trigger(_collisionRenderActive);
 	}
+
+private:
+	class CollisionRenderingToggle : public spk::Component
+	{
+	private:
+		spk::SafePointer<PlaygroundTileMap> _tileMap;
+
+	public:
+		CollisionRenderingToggle(const std::wstring &p_name, spk::SafePointer<PlaygroundTileMap> p_tileMap) :
+			spk::Component(p_name),
+			_tileMap(p_tileMap)
+		{
+		}
+
+		void onKeyboardEvent(spk::KeyboardEvent &p_event) override
+		{
+			if (p_event.type == spk::KeyboardEvent::Type::Press && p_event.key == spk::Keyboard::F1)
+			{
+				if (_tileMap != nullptr)
+				{
+					if (_tileMap->collisionRendering() == true)
+					{
+						_tileMap->setCollisionRendering(false);
+					}
+					else
+					{
+						_tileMap->setCollisionRendering(true);
+					}
+				}
+			}
+		}
+	};
 };
 
 class TileMapChunkStreamer : public spk::Component
