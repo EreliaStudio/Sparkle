@@ -14,6 +14,57 @@ private:
 	float _noiseScale = 0.04f;
 	float _noiseContrast = 2.0f;
 
+	class CollisionManager : public spk::Component
+	{
+	private:
+		spk::Flags<TileFlag> _flags;
+		spk::SafePointer<PlaygroundTileMap::Chunk> _chunk;
+		spk::SafePointer<spk::CollisionMesh2DRenderer> _renderer;
+		spk::SafePointer<spk::Collider2D> _collider;
+		spk::CollisionMesh2D _mesh;
+		spk::ContractProvider::Contract _editionContract;
+
+		void _bake()
+		{
+			if (_chunk != nullptr)
+			{
+				_mesh = _chunk->bakeCollisionMesh(_flags);
+				if (_collider != nullptr)
+				{
+					_collider->setCollisionMesh(&_mesh);
+				}
+				if (_renderer != nullptr)
+				{
+					_renderer->setMesh(&_mesh);
+				}
+			}
+		}
+
+	public:
+		CollisionManager(const std::wstring &p_name, spk::Flags<TileFlag> p_flags) :
+			spk::Component(p_name),
+			_flags(p_flags)
+		{
+		}
+
+		void start() override
+		{
+			_chunk = owner();
+			_collider = owner()->template addComponent<spk::Collider2D>(name() + L"/Collider2D");
+			_renderer = owner()->template addComponent<spk::CollisionMesh2DRenderer>(name() + L"/CollisionMesh2DRenderer");
+			if (_renderer != nullptr)
+			{
+				_renderer->setPriority(100);
+				_renderer->deactivate();
+			}
+			_bake();
+			if (_chunk != nullptr)
+			{
+				_editionContract = _chunk->onEdition([this]() { _bake(); });
+			}
+		}
+	};
+
 	short _tileIdFromNoise(float p_value) const
 	{
 		if (p_value < 0.15f)
@@ -67,6 +118,7 @@ private:
 				p_chunkToFill.setContent(x, y, 0, id);
 			}
 		}
+		p_chunkToFill.addComponent<CollisionManager>(p_chunkToFill.name() + L"/CollisionManager", spk::Flags<TileFlag>(TileFlag::Obstacle));
 	}
 
 public:
@@ -81,52 +133,6 @@ public:
 		_perlin.setInterpolation(spk::Perlin::Interpolation::SmoothStep);
 
 		_perlin.setSeed(1337u);
-	}
-};
-
-class CollisionViewToggle : public spk::Component
-{
-private:
-	spk::SafePointer<PlaygroundTileMap> _tileMap;
-	bool _collisionMode = false;
-	std::unique_ptr<spk::KeyboardAction> _toggleAction;
-
-public:
-	CollisionViewToggle(const std::wstring &p_name, spk::SafePointer<PlaygroundTileMap> p_tileMap) :
-		spk::Component(p_name),
-		_tileMap(p_tileMap)
-	{
-		if ((_tileMap != nullptr) == true)
-		{
-			_tileMap->setCollisionFlags(TileFlag::Obstacle);
-		}
-
-		_toggleAction = std::make_unique<spk::KeyboardAction>(
-			spk::Keyboard::F1,
-			spk::InputState::Down,
-			-1,
-			[&](const spk::SafePointer<const spk::Keyboard> &p_keyboard)
-			{
-				_collisionMode = (_collisionMode == false);
-				if (_tileMap != nullptr)
-				{
-					_tileMap->setRenderMode(_collisionMode);
-					p_keyboard->window()->requestPaint();
-				}
-			});
-	}
-
-	void onUpdateEvent(spk::UpdateEvent &p_event) override
-	{
-		if ((p_event.keyboard == nullptr) == true)
-		{
-			return;
-		}
-		if ((_toggleAction->isInitialized() == false) == true)
-		{
-			_toggleAction->initialize(p_event);
-		}
-		_toggleAction->update();
 	}
 };
 
@@ -482,8 +488,6 @@ int main()
 	tileMap.addTileByID(6, PlaygroundTileMap::TileType({24, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::Obstacle)); // Peak
 
 	player.addComponent<TileMapChunkStreamer>(L"Player/TileMapChunkStreamer", &tileMap, cameraComponent);
-
-	player.addComponent<CollisionViewToggle>(L"Player/CollisionViewToggle", &tileMap);
 
 	spk::SafePointer<spk::Entity> playerPtr(&player);
 	for (const auto &collider : spk::Collider2D::getColliders())
