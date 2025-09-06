@@ -473,7 +473,7 @@ namespace spk
 							bool hasFlag = false;
 							for (size_t layer = 0; layer < LayerCount; ++layer)
 							{
-								typename TileType::ID &current = _content[x][y][layer];
+								const typename TileType::ID &current = _content[x][y][layer];
 
 								if (current != -1)
 								{
