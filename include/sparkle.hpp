@@ -46,6 +46,7 @@
 #include "structure/engine/spk_collision_mesh_2d_renderer.hpp"
 #include "structure/engine/spk_collision_mesh_renderer.hpp"
 #include "structure/engine/spk_color_mesh.hpp"
+#include "structure/engine/spk_color_mesh_2d.hpp"
 #include "structure/engine/spk_color_mesh_renderer.hpp"
 #include "structure/engine/spk_component.hpp"
 #include "structure/engine/spk_entity.hpp"

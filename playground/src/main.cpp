@@ -1,5 +1,311 @@
+#include <algorithm>
+#include <array>
+#include <cmath>
 #include <iostream>
+#include <list>
+#include <memory>
+#include <numbers>
 #include <sparkle.hpp>
+#include <unordered_map>
+#include <vector>
+
+namespace playground
+{
+	class Shape : public spk::Entity
+	{
+	public:
+		enum class Type
+		{
+			Triangle,
+			Square,
+			Pentagon,
+			Hexagon,
+			Octagon,
+			Circle
+		};
+
+		class Renderer : public spk::Component
+		{
+		private:
+			struct Instance
+			{
+				spk::Matrix4x4 model;
+				spk::Color color;
+			};
+
+			struct Data
+			{
+				using InstanceList = std::list<Instance>;
+				using InstanceIterator = InstanceList::iterator;
+
+				spk::ColorMesh colorMesh;
+				spk::CollisionMesh2D collisionMesh;
+				InstanceList instances;
+				spk::SafePointer<spk::ColorMeshRenderer> renderer;
+
+				Data() = default;
+
+				Data(size_t p_pointCount, spk::Entity *p_owner, const std::wstring &p_rendererName)
+				{
+					std::vector<spk::Vector2> vertices = Renderer::_generateVertices(p_pointCount);
+
+					std::vector<spk::ColorVertex> colorVertices;
+					std::vector<spk::ColorVertex2D> colorVertices2D;
+					for (const auto &pos : vertices)
+					{
+						colorVertices.push_back({{pos.x, pos.y, 0.0f}, spk::Color::white});
+						colorVertices2D.push_back({pos, spk::Color::white});
+					}
+					colorMesh.addShape(colorVertices);
+
+					spk::ColorMesh2D tmpMesh;
+					tmpMesh.addShape(colorVertices2D);
+					collisionMesh = spk::CollisionMesh2D::fromMesh(&tmpMesh);
+
+					renderer = p_owner->addComponent<spk::ColorMeshRenderer>(p_rendererName);
+					if (renderer != nullptr)
+					{
+						renderer->setMesh(&colorMesh);
+					}
+				}
+
+				InstanceIterator addInstance(spk::SafePointer<spk::Transform> p_transform, const spk::Color &p_color)
+				{
+					return instances.emplace(instances.end(), Instance{p_transform->model(), p_color});
+				}
+
+				void updateInstance(InstanceIterator p_iterator, const spk::Matrix4x4 &p_model)
+				{
+					if (p_iterator != instances.end())
+					{
+						p_iterator->model = p_model;
+					}
+				}
+
+				void removeInstance(InstanceIterator p_iterator)
+				{
+					if (p_iterator != instances.end())
+					{
+						instances.erase(p_iterator);
+					}
+				}
+
+				void clearInstances()
+				{
+					instances.clear();
+				}
+			};
+
+			inline static Renderer *_instance = nullptr;
+
+			std::unordered_map<Type, Data> _data;
+
+			inline static const std::unordered_map<Type, size_t> _pointCounts = {
+				{Type::Triangle, 3}, {Type::Square, 4}, {Type::Pentagon, 5}, {Type::Hexagon, 6}, {Type::Octagon, 8}, {Type::Circle, 32}};
+
+			static std::vector<spk::Vector2> _generateVertices(size_t p_pointCount)
+			{
+				std::vector<spk::Vector2> vertices;
+				vertices.reserve(p_pointCount);
+				if (p_pointCount == 4)
+				{
+					float h = 0.5f;
+					vertices.push_back({-h, -h});
+					vertices.push_back({h, -h});
+					vertices.push_back({h, h});
+					vertices.push_back({-h, h});
+					return vertices;
+				}
+
+				float step = 2.0f * std::numbers::pi_v<float> / static_cast<float>(p_pointCount);
+				for (size_t i = 0; i < p_pointCount; ++i)
+				{
+					float angle = step * static_cast<float>(i);
+					float x = std::cos(angle) * 0.5f;
+					float y = std::sin(angle) * 0.5f;
+					vertices.push_back({x, y});
+				}
+				return vertices;
+			}
+
+		public:
+			Renderer(const std::wstring &p_name) :
+				spk::Component(p_name)
+			{
+			}
+
+			void start() override
+			{
+				_instance = this;
+				_data.emplace(Type::Triangle, Data(_pointCounts.at(Type::Triangle), owner(), name() + L"/RendererTriangle"));
+				_data.emplace(Type::Square, Data(_pointCounts.at(Type::Square), owner(), name() + L"/RendererSquare"));
+				_data.emplace(Type::Pentagon, Data(_pointCounts.at(Type::Pentagon), owner(), name() + L"/RendererPentagon"));
+				_data.emplace(Type::Hexagon, Data(_pointCounts.at(Type::Hexagon), owner(), name() + L"/RendererHexagon"));
+				_data.emplace(Type::Octagon, Data(_pointCounts.at(Type::Octagon), owner(), name() + L"/RendererOctagon"));
+				_data.emplace(Type::Circle, Data(_pointCounts.at(Type::Circle), owner(), name() + L"/RendererCircle"));
+			}
+
+			void stop() override
+			{
+				for (auto &pair : _data)
+				{
+					auto &renderer = pair.second.renderer;
+					if (renderer != nullptr)
+					{
+						owner()->removeComponent(renderer->name());
+					}
+					pair.second.clearInstances();
+					renderer = nullptr;
+				}
+				_instance = nullptr;
+			}
+
+			void update() override
+			{
+				// Rendering of instances would occur here
+			}
+
+			using InstanceIterator = Data::InstanceIterator;
+
+			InstanceIterator addInstance(Type p_type, spk::SafePointer<spk::Transform> p_transform, const spk::Color &p_color)
+			{
+				return _data[p_type].addInstance(p_transform, p_color);
+			}
+
+			void updateInstance(Type p_type, InstanceIterator p_iterator, const spk::Matrix4x4 &p_model)
+			{
+				auto it = _data.find(p_type);
+				if (it != _data.end())
+				{
+					it->second.updateInstance(p_iterator, p_model);
+				}
+			}
+
+			void removeInstance(Type p_type, InstanceIterator p_iterator)
+			{
+				auto it = _data.find(p_type);
+				if (it != _data.end())
+				{
+					it->second.removeInstance(p_iterator);
+				}
+			}
+
+			bool isIteratorValid(Type p_type, InstanceIterator p_iterator) const
+			{
+				auto it = _data.find(p_type);
+				if (it == _data.end())
+				{
+					return false;
+				}
+				return p_iterator != it->second.instances.end();
+			}
+
+			static spk::SafePointer<Renderer> instance()
+			{
+				return spk::SafePointer<Renderer>(_instance);
+			}
+
+			static const spk::ColorMesh &getColorMesh(Type p_type)
+			{
+				return _instance->_data.at(p_type).colorMesh;
+			}
+
+			static const spk::CollisionMesh2D &getCollisionMesh(Type p_type)
+			{
+				return _instance->_data.at(p_type).collisionMesh;
+			}
+		};
+
+		class Subscriber : public spk::Component
+		{
+		private:
+			Type _type;
+			spk::Color _color;
+			Renderer::InstanceIterator _iterator;
+			spk::ContractProvider::Contract _transformContract;
+
+		public:
+			Subscriber(const std::wstring &p_name, Type p_type, const spk::Color &p_color) :
+				spk::Component(p_name),
+				_type(p_type),
+				_color(p_color)
+			{
+			}
+
+			void start() override
+			{
+				_transformContract = owner()->transform().addOnEditionCallback(
+					[this]()
+					{
+						auto renderer = Renderer::instance();
+						if (renderer != nullptr && renderer->isIteratorValid(_type, _iterator) == true)
+						{
+							renderer->updateInstance(_type, _iterator, owner()->transform().model());
+						}
+					});
+			}
+
+			void awake() override
+			{
+				auto renderer = Renderer::instance();
+				if (renderer != nullptr)
+				{
+					spk::SafePointer<spk::Transform> transform(&owner()->transform());
+					_iterator = renderer->addInstance(_type, transform, _color);
+				}
+			}
+
+			void sleep() override
+			{
+				auto renderer = Renderer::instance();
+				if (renderer != nullptr && renderer->isIteratorValid(_type, _iterator) == true)
+				{
+					renderer->removeInstance(_type, _iterator);
+					_iterator = Renderer::InstanceIterator();
+				}
+			}
+		};
+
+		class Collision : public spk::Component
+		{
+		private:
+			Type _type;
+			spk::SafePointer<spk::Collider2D> _internalCollider;
+
+		public:
+			Collision(const std::wstring &p_name, Type p_type) :
+				spk::Component(p_name),
+				_type(p_type)
+			{
+			}
+
+			void start() override
+			{
+				_internalCollider = owner()->addComponent<spk::Collider2D>(name() + L"/Collider2D");
+				if (_internalCollider != nullptr)
+				{
+					_internalCollider->setCollisionMesh(&Renderer::getCollisionMesh(_type));
+				}
+			}
+
+			void stop() override
+			{
+				if (_internalCollider != nullptr)
+				{
+					owner()->removeComponent(_internalCollider->name());
+				}
+				_internalCollider = nullptr;
+			}
+		};
+
+		Shape(const std::wstring &p_name, Type p_type, const spk::Color &p_color, spk::SafePointer<spk::Entity> p_parent = nullptr) :
+			spk::Entity(p_name, p_parent)
+		{
+			addComponent<Subscriber>(p_name + L"/ShapeSubscriber", p_type, p_color);
+			addComponent<Collision>(p_name + L"/ShapeCollision", p_type);
+		}
+	};
+}
 
 enum class TileFlag
 {
@@ -40,7 +346,6 @@ public:
 	PlaygroundTileMap(const std::wstring &p_name, spk::SafePointer<spk::Entity> p_parent) :
 		spk::TileMap<16, 16, 4, TileFlag>(p_name, p_parent)
 	{
-
 	}
 };
 
@@ -388,9 +693,12 @@ int main()
 	tileMap.setSpriteSheet(&tilemapSpriteSheet);
 
 	tileMap.addTileByID(0, PlaygroundTileMap::TileType({0, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::Obstacle)); // Wall
-	tileMap.addTileByID(1, PlaygroundTileMap::TileType({4, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::TerritoryBlue)); // Blue territory
-	tileMap.addTileByID(2, PlaygroundTileMap::TileType({8, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::TerritoryGreen)); // Green territory
-	tileMap.addTileByID(3, PlaygroundTileMap::TileType({12, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::TerritoryRed)); // Red territory
+	tileMap.addTileByID(
+		1, PlaygroundTileMap::TileType({4, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::TerritoryBlue)); // Blue territory
+	tileMap.addTileByID(
+		2, PlaygroundTileMap::TileType({8, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::TerritoryGreen)); // Green territory
+	tileMap.addTileByID(
+		3, PlaygroundTileMap::TileType({12, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::TerritoryRed)); // Red territory
 
 	player.addComponent<TileMapChunkStreamer>(L"Player/TileMapChunkStreamer", &tileMap, cameraComponent);
 
@@ -414,6 +722,58 @@ int main()
 	player.activate();
 	cameraHolder.activate();
 	engine.addEntity(&player);
+
+	spk::Entity shapesRoot(L"Shapes", nullptr);
+	shapesRoot.addComponent<playground::Shape::Renderer>(L"Shapes/ShapeRenderer");
+	engine.addEntity(&shapesRoot);
+	shapesRoot.activate();
+
+	std::vector<std::unique_ptr<playground::Shape>> shapes;
+	auto createShapes = [&](playground::Shape::Type p_type,
+							const std::array<spk::Color, 3> &p_colors,
+							const std::array<spk::Vector3, 3> &p_positions,
+							const std::wstring &p_base)
+	{
+		for (size_t i = 0; i < 3; ++i)
+		{
+			auto shape = std::make_unique<playground::Shape>(p_base + std::to_wstring(i), p_type, p_colors[i], &shapesRoot);
+			shape->transform().place(p_positions[i]);
+			shape->activate();
+			shapes.push_back(std::move(shape));
+		}
+	};
+
+	std::array<spk::Color, 3> colors = {spk::Color::red, spk::Color::green, spk::Color::blue};
+	createShapes(
+		playground::Shape::Type::Triangle,
+		colors,
+		{spk::Vector3(-9.0f, -9.0f, 0.0f), spk::Vector3(0.0f, -9.0f, 0.0f), spk::Vector3(9.0f, -9.0f, 0.0f)},
+		L"Triangle");
+	createShapes(
+		playground::Shape::Type::Square,
+		colors,
+		{spk::Vector3(-9.0f, -5.0f, 0.0f), spk::Vector3(0.0f, -5.0f, 0.0f), spk::Vector3(9.0f, -5.0f, 0.0f)},
+		L"Square");
+	createShapes(
+		playground::Shape::Type::Pentagon,
+		colors,
+		{spk::Vector3(-9.0f, -1.0f, 0.0f), spk::Vector3(0.0f, -1.0f, 0.0f), spk::Vector3(9.0f, -1.0f, 0.0f)},
+		L"Pentagon");
+	createShapes(
+		playground::Shape::Type::Hexagon,
+		colors,
+		{spk::Vector3(-9.0f, 3.0f, 0.0f), spk::Vector3(0.0f, 3.0f, 0.0f), spk::Vector3(9.0f, 3.0f, 0.0f)},
+		L"Hexagon");
+	createShapes(
+		playground::Shape::Type::Octagon,
+		colors,
+		{spk::Vector3(-9.0f, 7.0f, 0.0f), spk::Vector3(0.0f, 7.0f, 0.0f), spk::Vector3(9.0f, 7.0f, 0.0f)},
+		L"Octagon");
+	createShapes(
+		playground::Shape::Type::Circle,
+		colors,
+		{spk::Vector3(-9.0f, 9.0f, 0.0f), spk::Vector3(0.0f, 9.0f, 0.0f), spk::Vector3(9.0f, 9.0f, 0.0f)},
+		L"Circle");
 
 	return app.run();
 }
