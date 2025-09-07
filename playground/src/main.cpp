@@ -201,7 +201,6 @@ void main()
 				}
 
 				auto &array = _infoSSBO.dynamicArray();
-
 				array.resize(_infoContainer->size());
 
 				size_t index = 0;
