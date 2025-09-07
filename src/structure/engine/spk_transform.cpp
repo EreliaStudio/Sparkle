@@ -80,6 +80,13 @@ namespace spk
 		_updateModel();
 	}
 
+	void Transform::lookAtLocal(const spk::Vector3 &p_target)
+	{
+		spk::Quaternion lookRotation = spk::Quaternion::lookAt(_localPosition, p_target, spk::Vector3(0.0f, 1.0f, 0.0f));
+		_rotation = spk::Quaternion(-lookRotation.x, -lookRotation.y, -lookRotation.z, lookRotation.w);
+		_updateModel();
+	}
+
 	void Transform::setVelocity(const spk::Vector3 &p_velocity) // unit/second
 	{
 		_velocity = p_velocity / 1000.0f;
