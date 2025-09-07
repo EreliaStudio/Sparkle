@@ -1,5 +1,6 @@
 #pragma once
 
+#include "structure/engine/spk_color_mesh_2d.hpp"
 #include "structure/engine/spk_mesh_2d.hpp"
 #include "structure/math/spk_polygon_2d.hpp"
 #include "structure/spk_safe_pointer.hpp"
@@ -29,5 +30,6 @@ namespace spk
 		bool intersect(const CollisionMesh2D &p_other) const;
 
 		static CollisionMesh2D fromMesh(const spk::SafePointer<const spk::Mesh2D> &p_mesh);
+		static CollisionMesh2D fromMesh(const spk::SafePointer<const spk::ColorMesh2D> &p_mesh);
 	};
 }
