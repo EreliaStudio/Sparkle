@@ -35,12 +35,76 @@ namespace spk
 		public:
 			static inline const spk::Vector2Int size = spk::Vector2Int(ChunkSizeX, ChunkSizeY);
 
+			class Collider : public spk::Component
+			{
+			private:
+				bool _needBaking = true;
+				spk::SafePointer<Chunk> _chunk;
+				spk::SafePointer<spk::Collider2D> _collider;
+				spk::CollisionMesh2D _mesh;
+				spk::ContractProvider::Contract _editionContract;
+				spk::SafePointer<spk::TileMap<ChunkSizeX, ChunkSizeY, TLayerCount, TFlagEnum>> _tileMap;
+				spk::Flags<TFlagEnum> _flags;
+
+				void _bake()
+				{
+					if (_chunk != nullptr)
+					{
+						_mesh = _chunk->bakeCollisionMesh(_flags);
+
+						if (_collider != nullptr)
+						{
+							_collider->setCollisionMesh(&_mesh);
+						}
+					}
+				}
+
+			public:
+				Collider(const std::wstring &p_name) :
+					spk::Component(p_name)
+				{
+				}
+
+				void setFlag(spk::Flags<TFlagEnum> p_flags)
+				{
+					_flags = p_flags;
+					_needBaking = true;
+				}
+
+				void onUpdateEvent(spk::UpdateEvent &p_event) override
+				{
+					if (_needBaking == true)
+					{
+						_bake();
+					
+						_needBaking = false;
+					}
+				}
+
+				void start() override
+				{
+					_chunk = dynamic_cast<Chunk*>(owner().get());
+
+					if (_chunk == nullptr)
+					{
+						GENERATE_ERROR("Can't create a Collider on another object type than Chunk");
+					}
+
+					_tileMap = _chunk->_tilemap;
+
+					_collider = owner()->template addComponent<spk::Collider2D>(name() + L"/Collider2D");
+					
+					_editionContract = _chunk->onEdition([this]() { _needBaking = true; });
+					_needBaking = true;
+				}
+			};
+
 		private:
 			class Data : public spk::Component
 			{
 			private:
 				spk::SafePointer<Mesh2DRenderer> _renderer;
-				spk::SafePointer<TileMap> _tileMap;
+				spk::SafePointer<TileMap<ChunkSizeX, ChunkSizeY, TLayerCount, TFlagEnum>> _tileMap;
 				spk::Vector2Int _chunkCoordinate = 0;
 				std::array<std::array<std::array<typename TileType::ID, LayerCount>, ChunkSizeX>, ChunkSizeY> _content;
 
@@ -603,6 +667,7 @@ namespace spk
 				}
 			};
 
+			spk::SafePointer<TileMap<ChunkSizeX, ChunkSizeY, TLayerCount, TFlagEnum>> _tilemap;
 			spk::SafePointer<Mesh2DRenderer> _renderer;
 			spk::SafePointer<Data> _data;
 			spk::ContractProvider _editionContractProvider;
@@ -618,9 +683,10 @@ namespace spk
 			Chunk(const std::wstring &p_name, spk::SafePointer<TileMap> p_parent, const spk::Vector2Int &p_coord) :
 				spk::Entity(p_name, p_parent)
 			{
+				_tilemap = p_parent;
 				_renderer = this->template addComponent<Mesh2DRenderer>(p_name + L"/Mesh2DRenderer");
 				_data = this->template addComponent<Data>(p_name + L"/Data");
-				_data->setTileMap(p_parent);
+				_data->setTileMap(_tilemap);
 				_data->setChunkCoordinate(p_coord);
 				_renderer->setPriority(100);
 				_data->setPriority(0);
