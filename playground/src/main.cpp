@@ -4,69 +4,34 @@
 enum class TileFlag
 {
 	None,
-	Obstacle
+	Obstacle,
+	TerritoryBlue,
+	TerritoryGreen,
+	TerritoryRed
 };
 
 class PlaygroundTileMap : public spk::TileMap<16, 16, 4, TileFlag>
 {
 private:
-	spk::Perlin _perlin;
-	float _noiseScale = 0.04f;
-	float _noiseContrast = 2.0f;
-
-	short _tileIdFromNoise(float p_value) const
-	{
-		if (p_value < 0.15f)
-		{
-			return 0; // Deep water
-		}
-		if (p_value < 0.30f)
-		{
-			return 1; // Water
-		}
-		if (p_value < 0.35f)
-		{
-			return 2; // Beach
-		}
-		if (p_value < 0.60f)
-		{
-			return 3; // Plain
-		}
-		if (p_value < 0.75f)
-		{
-			return 4; // Forest
-		}
-		if (p_value < 0.90f)
-		{
-			return 5; // Montain
-		}
-		return 6; // Peak
-	}
-
 	void _onChunkGeneration(const spk::Vector2Int &p_chunkCoordinate, Chunk &p_chunkToFill) override
 	{
-		const spk::Vector2Int chunkOrigin = p_chunkCoordinate * Chunk::size;
-		for (int y = 0; y < Chunk::size.y; ++y)
+		for (int i = 0; i < Chunk::size.x; i++)
 		{
-			for (int x = 0; x < Chunk::size.x; ++x)
+			for (int j = 0; j < Chunk::size.y; j++)
 			{
-				const spk::Vector2Int world = chunkOrigin + spk::Vector2Int(x, y);
-
-				float n = _perlin.sample2D(static_cast<float>(world.x) * _noiseScale, static_cast<float>(world.y) * _noiseScale, 0.0f, 1.0f);
-				// Increase dynamic range around 0.5 to see more extremes
-				n = 0.5f + (n - 0.5f) * _noiseContrast;
-				if (n < 0.0f)
+				if (i == 0 || j == 0)
 				{
-					n = 0.0f;
+					p_chunkToFill.setContent(i, j, 0, 0);
 				}
-				if (n > 1.0f)
+				else
 				{
-					n = 1.0f;
+					p_chunkToFill.setContent(i, j, 0, (rand() % 3) + 1);
 				}
-				short id = _tileIdFromNoise(n);
-				p_chunkToFill.setContent(x, y, 0, id);
 			}
 		}
+
+		auto collisionManager = p_chunkToFill.addComponent<Chunk::Collider>(p_chunkToFill.name() + L"/Collider");
+		collisionManager->setFlag(TileFlag::Obstacle);
 	}
 
 public:
@@ -75,58 +40,7 @@ public:
 	PlaygroundTileMap(const std::wstring &p_name, spk::SafePointer<spk::Entity> p_parent) :
 		spk::TileMap<16, 16, 4, TileFlag>(p_name, p_parent)
 	{
-		_perlin.setOctaves(6);
-		_perlin.setPersistence(0.5f);
-		_perlin.setLacunarity(1.9f); // slower frequency growth per octave for larger structures
-		_perlin.setInterpolation(spk::Perlin::Interpolation::SmoothStep);
 
-		_perlin.setSeed(1337u);
-	}
-};
-
-class CollisionViewToggle : public spk::Component
-{
-private:
-	spk::SafePointer<PlaygroundTileMap> _tileMap;
-	bool _collisionMode = false;
-	std::unique_ptr<spk::KeyboardAction> _toggleAction;
-
-public:
-	CollisionViewToggle(const std::wstring &p_name, spk::SafePointer<PlaygroundTileMap> p_tileMap) :
-		spk::Component(p_name),
-		_tileMap(p_tileMap)
-	{
-		if ((_tileMap != nullptr) == true)
-		{
-			_tileMap->setCollisionFlags(TileFlag::Obstacle);
-		}
-
-		_toggleAction = std::make_unique<spk::KeyboardAction>(
-			spk::Keyboard::F1,
-			spk::InputState::Down,
-			-1,
-			[&](const spk::SafePointer<const spk::Keyboard> &p_keyboard)
-			{
-				_collisionMode = (_collisionMode == false);
-				if (_tileMap != nullptr)
-				{
-					_tileMap->setRenderMode(_collisionMode);
-					p_keyboard->window()->requestPaint();
-				}
-			});
-	}
-
-	void onUpdateEvent(spk::UpdateEvent &p_event) override
-	{
-		if ((p_event.keyboard == nullptr) == true)
-		{
-			return;
-		}
-		if ((_toggleAction->isInitialized() == false) == true)
-		{
-			_toggleAction->initialize(p_event);
-		}
-		_toggleAction->update();
 	}
 };
 
@@ -468,22 +382,17 @@ int main()
 	}
 
 	PlaygroundTileMap tileMap(L"TileMap", nullptr);
-	spk::SpriteSheet tilemapSpriteSheet("playground/resources/texture/tile_map.png", {28, 6});
+	spk::SpriteSheet tilemapSpriteSheet("playground/resources/texture/tile_map.png", {16, 6});
 	tileMap.activate();
 	engine.addEntity(&tileMap);
 	tileMap.setSpriteSheet(&tilemapSpriteSheet);
 
-	tileMap.addTileByID(0, PlaygroundTileMap::TileType({0, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::Obstacle));  // Deep water
-	tileMap.addTileByID(1, PlaygroundTileMap::TileType({4, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::Obstacle));  // Water
-	tileMap.addTileByID(2, PlaygroundTileMap::TileType({8, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::None));	   // Beach
-	tileMap.addTileByID(3, PlaygroundTileMap::TileType({12, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::None));	   // Plain
-	tileMap.addTileByID(4, PlaygroundTileMap::TileType({16, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::None));	   // Forest
-	tileMap.addTileByID(5, PlaygroundTileMap::TileType({20, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::Obstacle)); // Montain
-	tileMap.addTileByID(6, PlaygroundTileMap::TileType({24, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::Obstacle)); // Peak
+	tileMap.addTileByID(0, PlaygroundTileMap::TileType({0, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::Obstacle)); // Wall
+	tileMap.addTileByID(1, PlaygroundTileMap::TileType({4, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::TerritoryBlue)); // Blue territory
+	tileMap.addTileByID(2, PlaygroundTileMap::TileType({8, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::TerritoryGreen)); // Green territory
+	tileMap.addTileByID(3, PlaygroundTileMap::TileType({12, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::TerritoryRed)); // Red territory
 
 	player.addComponent<TileMapChunkStreamer>(L"Player/TileMapChunkStreamer", &tileMap, cameraComponent);
-
-	player.addComponent<CollisionViewToggle>(L"Player/CollisionViewToggle", &tileMap);
 
 	spk::SafePointer<spk::Entity> playerPtr(&player);
 	for (const auto &collider : spk::Collider2D::getColliders())

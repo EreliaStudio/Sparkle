@@ -4,12 +4,12 @@
 #include <cmath>
 #include <map>
 #include <memory>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
-#include "structure/engine/spk_collider_2d.hpp"
+#include "structure/design_pattern/spk_contract_provider.hpp"
 #include "structure/engine/spk_collision_mesh_2d.hpp"
-#include "structure/engine/spk_collision_mesh_2d_renderer.hpp"
 #include "structure/engine/spk_component.hpp"
 #include "structure/engine/spk_entity.hpp"
 #include "structure/engine/spk_mesh_2d.hpp"
@@ -35,22 +35,81 @@ namespace spk
 		public:
 			static inline const spk::Vector2Int size = spk::Vector2Int(ChunkSizeX, ChunkSizeY);
 
+			class Collider : public spk::Component
+			{
+			private:
+				bool _needBaking = true;
+				spk::SafePointer<Chunk> _chunk;
+				spk::SafePointer<spk::Collider2D> _collider;
+				spk::CollisionMesh2D _mesh;
+				spk::ContractProvider::Contract _editionContract;
+				spk::SafePointer<spk::TileMap<ChunkSizeX, ChunkSizeY, TLayerCount, TFlagEnum>> _tileMap;
+				spk::Flags<TFlagEnum> _flags;
+
+				void _bake()
+				{
+					if (_chunk != nullptr)
+					{
+						_mesh = _chunk->bakeCollisionMesh(_flags);
+
+						if (_collider != nullptr)
+						{
+							_collider->setCollisionMesh(&_mesh);
+						}
+					}
+				}
+
+			public:
+				Collider(const std::wstring &p_name) :
+					spk::Component(p_name)
+				{
+				}
+
+				void setFlag(spk::Flags<TFlagEnum> p_flags)
+				{
+					_flags = p_flags;
+					_needBaking = true;
+				}
+
+				void onUpdateEvent(spk::UpdateEvent &p_event) override
+				{
+					if (_needBaking == true)
+					{
+						_bake();
+					
+						_needBaking = false;
+					}
+				}
+
+				void start() override
+				{
+					_chunk = dynamic_cast<Chunk*>(owner().get());
+
+					if (_chunk == nullptr)
+					{
+						GENERATE_ERROR("Can't create a Collider on another object type than Chunk");
+					}
+
+					_tileMap = _chunk->_tilemap;
+
+					_collider = owner()->template addComponent<spk::Collider2D>(name() + L"/Collider2D");
+					
+					_editionContract = _chunk->onEdition([this]() { _needBaking = true; });
+					_needBaking = true;
+				}
+			};
+
 		private:
 			class Data : public spk::Component
 			{
 			private:
 				spk::SafePointer<Mesh2DRenderer> _renderer;
-				spk::SafePointer<CollisionMesh2DRenderer> _collisionRenderer;
-				spk::SafePointer<Collider2D> _collider;
-				spk::SafePointer<TileMap> _tileMap;
+				spk::SafePointer<TileMap<ChunkSizeX, ChunkSizeY, TLayerCount, TFlagEnum>> _tileMap;
 				spk::Vector2Int _chunkCoordinate = 0;
 				std::array<std::array<std::array<typename TileType::ID, LayerCount>, ChunkSizeX>, ChunkSizeY> _content;
 
 				bool _isBaked = false;
-				bool _isCollisionBaked = false;
 				spk::Mesh2D _mesh;
-				spk::CollisionMesh2D _collisionMesh;
-				spk::Flags<TFlagEnum> _collisionFlags;
 
 				void _insertData(float p_x, float p_y, float p_width, float p_height, int p_layer, const spk::SpriteSheet::Section &p_sprite)
 				{
@@ -354,149 +413,6 @@ namespace spk
 					}
 				}
 
-			private:
-				void _bakeCollisionMesh()
-				{
-					_collisionMesh.clear();
-
-					std::array<std::array<bool, ChunkSizeY>, ChunkSizeX> candidate;
-
-					for (size_t x = 0; x < ChunkSizeX; ++x)
-					{
-						for (size_t y = 0; y < ChunkSizeY; ++y)
-						{
-							bool hasFlag = false;
-							for (size_t layer = 0; layer < LayerCount; ++layer)
-							{
-								typename TileType::ID &current = _content[x][y][layer];
-
-								if (current != -1)
-								{
-									spk::SafePointer<const TileType> tile = _tileMap->tileById(current);
-
-									if (tile != nullptr && tile->flags().has(static_cast<TFlagEnum>(_collisionFlags.bits)) == true)
-									{
-										hasFlag = true;
-										break;
-									}
-								}
-							}
-							candidate[x][y] = hasFlag;
-						}
-					}
-
-					while (true)
-					{
-						// Greedily find the maximal-area rectangle of candidates and carve it out.
-						int bestArea = 0;
-						int bestLeft = -1;
-						int bestRight = -1;
-						int bestBottom = -1;
-						int bestTop = -1;
-						int bestWidth = 0;
-						int bestHeight = 0;
-
-						std::array<int, ChunkSizeX> heights;
-						heights.fill(0);
-
-						for (size_t y = 0; y < ChunkSizeY; ++y)
-						{
-							// Update histogram heights for this row.
-							for (size_t x = 0; x < ChunkSizeX; ++x)
-							{
-								if (candidate[x][y] == true)
-								{
-									heights[x] = heights[x] + 1;
-								}
-								else
-								{
-									heights[x] = 0;
-								}
-							}
-
-							// Largest-rectangle-in-histogram via monotonic stack.
-							std::vector<size_t> stack;
-							stack.reserve(ChunkSizeX + 1);
-
-							for (size_t i = 0; i <= ChunkSizeX; ++i)
-							{
-								int curHeight = (i < ChunkSizeX ? heights[i] : 0);
-								while ((stack.empty() == false) && (heights[stack.back()] > curHeight))
-								{
-									int h = heights[stack.back()];
-									stack.pop_back();
-									size_t leftIndex = (stack.empty() == true ? 0 : (stack.back() + 1));
-									size_t rightIndex = (i == 0 ? 0 : (i - 1));
-									int width = static_cast<int>(rightIndex - leftIndex + 1);
-									int area = h * width;
-									if (area > bestArea)
-									{
-										bestArea = area;
-										bestLeft = static_cast<int>(leftIndex);
-										bestRight = static_cast<int>(rightIndex);
-										bestTop = static_cast<int>(y);
-										bestBottom = static_cast<int>(y) - h + 1;
-										bestWidth = width;
-										bestHeight = h;
-									}
-									else if ((area == bestArea) == true)
-									{
-										bool currIsSquare = (width == h);
-										bool bestIsSquare = (bestWidth == bestHeight);
-										if ((bestIsSquare == false) && (currIsSquare == true))
-										{
-											bestLeft = static_cast<int>(leftIndex);
-											bestRight = static_cast<int>(rightIndex);
-											bestTop = static_cast<int>(y);
-											bestBottom = static_cast<int>(y) - h + 1;
-											bestWidth = width;
-											bestHeight = h;
-										}
-										else if (
-											((currIsSquare == true) && (bestIsSquare == true)) || ((currIsSquare == false) && (bestIsSquare == false)))
-										{
-											int currDiff = std::abs(width - h);
-											int bestDiff = std::abs(bestWidth - bestHeight);
-											if (currDiff < bestDiff)
-											{
-												bestLeft = static_cast<int>(leftIndex);
-												bestRight = static_cast<int>(rightIndex);
-												bestTop = static_cast<int>(y);
-												bestBottom = static_cast<int>(y) - h + 1;
-												bestWidth = width;
-												bestHeight = h;
-											}
-										}
-									}
-								}
-								stack.push_back(i);
-							}
-						}
-
-						if (bestArea <= 0)
-						{
-							break;
-						}
-
-						// Carve out the best rectangle and emit a polygon.
-						for (int x = bestLeft; x <= bestRight; ++x)
-						{
-							for (int y = bestBottom; y <= bestTop; ++y)
-							{
-								candidate[static_cast<size_t>(x)][static_cast<size_t>(y)] = false;
-							}
-						}
-
-						float fx0 = static_cast<float>(bestLeft);
-						float fy0 = static_cast<float>(bestBottom);
-						float fx1 = static_cast<float>(bestRight + 1);
-						float fy1 = static_cast<float>(bestTop + 1);
-
-						_collisionMesh.addUnit(
-							spk::Polygon2D::fromLoop({spk::Vector2(fx0, fy0), spk::Vector2(fx1, fy0), spk::Vector2(fx1, fy1), spk::Vector2(fx0, fy1)}));
-					}
-				}
-
 			public:
 				Data(const std::wstring &p_name) :
 					spk::Component(p_name)
@@ -526,26 +442,33 @@ namespace spk
 						}
 					}
 					_isBaked = false;
-					_isCollisionBaked = false;
+					spk::SafePointer<Chunk> chunk = owner();
+					if (chunk != nullptr)
+					{
+						chunk->_notifyEdition();
+					}
 				}
 
 				void setContent(int p_x, int p_y, int p_layer, typename TileType::ID p_id)
 				{
 					_content[p_x][p_y][p_layer] = p_id;
 					_isBaked = false;
-					_isCollisionBaked = false;
+					spk::SafePointer<Chunk> chunk = owner();
+					if (chunk != nullptr)
+					{
+						chunk->_notifyEdition();
+					}
 				}
 
 				// Mark this chunk's mesh as dirty to trigger a re-bake on next paint.
 				void unbake()
 				{
 					_isBaked = false;
-					_isCollisionBaked = false;
-				}
-
-				void unbakeCollision()
-				{
-					_isCollisionBaked = false;
+					spk::SafePointer<Chunk> chunk = owner();
+					if (chunk != nullptr)
+					{
+						chunk->_notifyEdition();
+					}
 				}
 
 				typename TileType::ID content(int p_x, int p_y, int p_layer) const
@@ -560,8 +483,6 @@ namespace spk
 				void start() override
 				{
 					_renderer = owner()->template getComponent<Mesh2DRenderer>();
-					_collisionRenderer = owner()->template getComponent<CollisionMesh2DRenderer>();
-					_collider = owner()->template getComponent<Collider2D>();
 				}
 
 				void onPaintEvent(spk::PaintEvent &p_event) override
@@ -579,26 +500,13 @@ namespace spk
 
 				void onUpdateEvent(spk::UpdateEvent &p_event) override
 				{
-					if (_isCollisionBaked == false)
-					{
-						_bakeCollisionMesh();
-
-						_collider->setCollisionMesh(&_collisionMesh);
-						_collisionRenderer->setMesh(&_collisionMesh);
-
-						_isCollisionBaked = true;
-
-					}
+					// No collision processing
+					(void)p_event;
 				}
 
 				bool isBaked() const
 				{
 					return _isBaked;
-				}
-
-				bool isCollisionBaked() const
-				{
-					return _isCollisionBaked;
 				}
 
 				spk::SafePointer<spk::Mesh2D> mesh()
@@ -610,47 +518,177 @@ namespace spk
 				{
 					return (&_mesh);
 				}
-					
-				void setCollisionFlags(const spk::Flags<TFlagEnum> &p_flags)
-				{
-					_collisionFlags = p_flags;
-					unbakeCollision();
-				}
 
-				spk::SafePointer<spk::CollisionMesh2D> collisionMesh()
+				spk::CollisionMesh2D bakeCollisionMesh(const spk::Flags<TFlagEnum> &p_flags) const
 				{
-					return (&_collisionMesh);
-				}
+					spk::CollisionMesh2D result;
 
-				const spk::SafePointer<const spk::CollisionMesh2D> collisionMesh() const
-				{
-					return (&_collisionMesh);
+					if (_tileMap == nullptr)
+					{
+						return result;
+					}
+
+					std::array<std::array<bool, ChunkSizeY>, ChunkSizeX> candidate;
+
+					for (size_t x = 0; x < ChunkSizeX; ++x)
+					{
+						for (size_t y = 0; y < ChunkSizeY; ++y)
+						{
+							bool hasFlag = false;
+							for (size_t layer = 0; layer < LayerCount; ++layer)
+							{
+								const typename TileType::ID &current = _content[x][y][layer];
+
+								if (current != -1)
+								{
+									spk::SafePointer<const TileType> tile = _tileMap->tileById(current);
+
+									if ((tile != nullptr) && (tile->flags().has(static_cast<TFlagEnum>(p_flags.bits)) == true))
+									{
+										hasFlag = true;
+										break;
+									}
+								}
+							}
+							candidate[x][y] = hasFlag;
+						}
+					}
+
+					while (true)
+					{
+						int bestArea = 0;
+						int bestLeft = -1;
+						int bestRight = -1;
+						int bestBottom = -1;
+						int bestTop = -1;
+						int bestWidth = 0;
+						int bestHeight = 0;
+
+						std::array<int, ChunkSizeX> heights;
+						heights.fill(0);
+
+						for (size_t y = 0; y < ChunkSizeY; ++y)
+						{
+							for (size_t x = 0; x < ChunkSizeX; ++x)
+							{
+								if (candidate[x][y] == true)
+								{
+									heights[x] = heights[x] + 1;
+								}
+								else
+								{
+									heights[x] = 0;
+								}
+							}
+
+							std::vector<size_t> stack;
+							stack.reserve(ChunkSizeX + 1);
+
+							for (size_t i = 0; i <= ChunkSizeX; ++i)
+							{
+								int currentHeight = (i < ChunkSizeX ? heights[i] : 0);
+								while ((stack.empty() == false) && (heights[stack.back()] > currentHeight))
+								{
+									int h = heights[stack.back()];
+									stack.pop_back();
+									size_t leftIndex = (stack.empty() == true ? 0 : (stack.back() + 1));
+									size_t rightIndex = (i == 0 ? 0 : (i - 1));
+									int width = static_cast<int>(rightIndex - leftIndex + 1);
+									int area = h * width;
+									if (area > bestArea)
+									{
+										bestArea = area;
+										bestLeft = static_cast<int>(leftIndex);
+										bestRight = static_cast<int>(rightIndex);
+										bestTop = static_cast<int>(y);
+										bestBottom = static_cast<int>(y) - h + 1;
+										bestWidth = width;
+										bestHeight = h;
+									}
+									else if ((area == bestArea) == true)
+									{
+										bool currentIsSquare = (width == h);
+										bool bestIsSquare = (bestWidth == bestHeight);
+										if ((bestIsSquare == false) && (currentIsSquare == true))
+										{
+											bestLeft = static_cast<int>(leftIndex);
+											bestRight = static_cast<int>(rightIndex);
+											bestTop = static_cast<int>(y);
+											bestBottom = static_cast<int>(y) - h + 1;
+											bestWidth = width;
+											bestHeight = h;
+										}
+										else if (
+											((currentIsSquare == true) && (bestIsSquare == true)) ||
+											((currentIsSquare == false) && (bestIsSquare == false)))
+										{
+											int currentDiff = std::abs(width - h);
+											int bestDiff = std::abs(bestWidth - bestHeight);
+											if (currentDiff < bestDiff)
+											{
+												bestLeft = static_cast<int>(leftIndex);
+												bestRight = static_cast<int>(rightIndex);
+												bestTop = static_cast<int>(y);
+												bestBottom = static_cast<int>(y) - h + 1;
+												bestWidth = width;
+												bestHeight = h;
+											}
+										}
+									}
+								}
+								stack.push_back(i);
+							}
+						}
+
+						if (bestArea <= 0)
+						{
+							break;
+						}
+
+						for (int x = bestLeft; x <= bestRight; ++x)
+						{
+							for (int y = bestBottom; y <= bestTop; ++y)
+							{
+								candidate[static_cast<size_t>(x)][static_cast<size_t>(y)] = false;
+							}
+						}
+
+						float fx0 = static_cast<float>(bestLeft);
+						float fy0 = static_cast<float>(bestBottom);
+						float fx1 = static_cast<float>(bestRight + 1);
+						float fy1 = static_cast<float>(bestTop + 1);
+
+						result.addUnit(
+							spk::Polygon2D::fromLoop(
+								{spk::Vector2(fx0, fy0), spk::Vector2(fx1, fy0), spk::Vector2(fx1, fy1), spk::Vector2(fx0, fy1)}));
+					}
+
+					return result;
 				}
 			};
 
+			spk::SafePointer<TileMap<ChunkSizeX, ChunkSizeY, TLayerCount, TFlagEnum>> _tilemap;
 			spk::SafePointer<Mesh2DRenderer> _renderer;
-			spk::SafePointer<spk::CollisionMesh2DRenderer> _collisionRenderer;
-			spk::SafePointer<spk::Collider2D> _collider;
-			spk::Collider2D::CollisionEnterContract _colliderContract;
-			const spk::Flags<TFlagEnum> *_collisionFlags = nullptr;
 			spk::SafePointer<Data> _data;
+			spk::ContractProvider _editionContractProvider;
+
+			void _notifyEdition()
+			{
+				_editionContractProvider.trigger();
+			}
+
+			friend class Data;
 
 		public:
 			Chunk(const std::wstring &p_name, spk::SafePointer<TileMap> p_parent, const spk::Vector2Int &p_coord) :
 				spk::Entity(p_name, p_parent)
 			{
+				_tilemap = p_parent;
 				_renderer = this->template addComponent<Mesh2DRenderer>(p_name + L"/Mesh2DRenderer");
-				_collisionRenderer = this->template addComponent<spk::CollisionMesh2DRenderer>(p_name + L"/CollisionMesh2DRenderer");
-				_collider = this->template addComponent<spk::Collider2D>(p_name + L"/Collider2D");
-				_colliderContract = _collider->onCollisionEnter(
-					[&](const spk::SafePointer<spk::Entity> &p_target)
-					{ spk::cout << "Entity [" << p_target->name() << "] collide with chunk [" << name() << "]" << std::endl; });
 				_data = this->template addComponent<Data>(p_name + L"/Data");
-				_data->setTileMap(p_parent);
+				_data->setTileMap(_tilemap);
 				_data->setChunkCoordinate(p_coord);
 				_renderer->setPriority(100);
-				_collisionRenderer->setPriority(100);
-				_collisionRenderer->deactivate();
 				_data->setPriority(0);
 			}
 
@@ -689,11 +727,6 @@ namespace spk
 				_data->unbake();
 			}
 
-			void unbakeCollisionMesh()
-			{
-				_data->unbakeCollision();
-			}
-
 			spk::SafePointer<spk::Mesh2D> mesh()
 			{
 				return _data->mesh();
@@ -704,28 +737,25 @@ namespace spk
 				return _data->mesh();
 			}
 
-			const spk::CollisionMesh2D &collisionMesh() const
+			spk::CollisionMesh2D bakeCollisionMesh(const spk::Flags<TFlagEnum> &p_flags) const
 			{
-				return *(_data->collisionMesh());
+				return _data->bakeCollisionMesh(p_flags);
 			}
 
-			void setCollisionFlags(const spk::Flags<TFlagEnum> &p_flags)
+			spk::SafePointer<Mesh2DRenderer> renderer()
 			{
-				_data->setCollisionFlags(p_flags);
+				return _renderer;
 			}
 
-			void setRenderMode(bool p_collisionMode)
+			spk::SafePointer<const Mesh2DRenderer> renderer() const
 			{
-				if (p_collisionMode == true)
-				{
-					_collisionRenderer->activate();
-					_renderer->deactivate();
-				}
-				else
-				{
-					_collisionRenderer->deactivate();
-					_renderer->activate();
-				}
+				return _renderer;
+			}
+
+			using EditionContract = spk::ContractProvider::Contract;
+			EditionContract onEdition(const spk::ContractProvider::Job &p_job)
+			{
+				return _editionContractProvider.subscribe(p_job);
 			}
 		};
 
@@ -736,10 +766,6 @@ namespace spk
 		std::unordered_map<spk::Vector2Int, std::unique_ptr<Chunk>> _chunks;
 
 		std::vector<spk::SafePointer<Chunk>> _activeChunks;
-
-		// Store the current collision mask to apply to newly created/visible chunks.
-		spk::Flags<TFlagEnum> _collisionMask = {};
-		bool _collisionRenderMode = false;
 
 		// Mark 4-neighbour chunks dirty so they can re-bake autotiles touching the new chunk.
 		void _unbakeNeightbours(const spk::Vector2Int &p_chunkCoordinate)
@@ -766,8 +792,6 @@ namespace spk
 			newChunk->transform().place(spk::Vector3(p_chunkCoordinate.x * Chunk::size.x, p_chunkCoordinate.y * Chunk::size.y, 0));
 			newChunk->setSpriteSheet(_spriteSheet);
 			newChunk->fill(-1);
-			// Ensure the chunk uses the current collision mask; mesh is built lazily on demand.
-			newChunk->setCollisionFlags(_collisionMask);
 
 			_onChunkGeneration(p_chunkCoordinate, *newChunk);
 
@@ -858,50 +882,12 @@ namespace spk
 					}
 
 					_activeChunks.push_back((_chunks[chunkPos].get()));
-					// Ensure render mode consistency for newly active chunks.
-					_chunks[chunkPos]->setRenderMode(_collisionRenderMode);
 				}
 			}
 
 			for (auto &chunk : _activeChunks)
 			{
 				chunk->activate();
-			}
-		}
-
-		spk::CollisionMesh2D collisionMesh2D(const spk::Vector2Int &p_chunkCoordinate)
-		{
-			if (_chunks.contains(p_chunkCoordinate) == false)
-			{
-				_chunks.emplace(p_chunkCoordinate, std::move(_generateChunk(p_chunkCoordinate)));
-				// Ensure neighbouring chunks update their autotiles along shared borders.
-				_unbakeNeightbours(p_chunkCoordinate);
-			}
-			auto &chunk = _chunks[p_chunkCoordinate];
-			return chunk->collisionMesh();
-		}
-
-		void setCollisionFlags(spk::Flags<TFlagEnum> p_flags)
-		{
-			_collisionMask = p_flags;
-			for (auto &[coord, chunk] : _chunks)
-			{
-				if (chunk != nullptr)
-				{
-					chunk->setCollisionFlags(_collisionMask);
-				}
-			}
-		}
-
-		void setRenderMode(bool p_collisionMode)
-		{
-			_collisionRenderMode = p_collisionMode;
-			for (auto &chunk : _activeChunks)
-			{
-				if (chunk != nullptr)
-				{
-					chunk->setRenderMode(p_collisionMode);
-				}
 			}
 		}
 	};
