@@ -52,7 +52,8 @@ namespace spk
 		const spk::Vector3 &right() const;
 		const spk::Vector3 &up() const;
 
-		void lookAt(const spk::Vector3 &p_target);
+		void lookAt(const spk::Vector3 &target);
+		void lookAtLocal(const spk::Vector3 &target);
 
 		void setVelocity(const spk::Vector3 &p_velocity);
 		void addVelocity(const spk::Vector3 &p_delta);
