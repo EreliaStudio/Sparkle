@@ -34,11 +34,32 @@ private:
 	using InfoContainer = std::list<Info>;
 	using InfoIterator = InfoContainer::iterator;
 
-	static ShapeMesh makeMesh(const Shape::Type& p_type)
+	static ShapeMesh _makeMesh(const Shape::Type& p_type)
 	{
-		//Create a mesh based on the number of point corresponding to the shape passed as parameter
+		static const std::unordered_map<Shape::Type, size_t> nbPointCount = {
+			{Shape::Type::Triangle, 3},
+			{Shape::Type::Square, 4},
+			{Shape::Type::Pentagon, 5},
+			{Shape::Type::Hexagon, 6},
+			{Shape::Type::Octogon, 8},
+			{Shape::Type::Circle, 30}
+		};
+		ShapeMesh result;
+		
+		std::vector<spk::Vector2> vertices;
+		size_t nbPoint = nbPointCount.at(p_type);
+		const float step = (2.0f * M_PI) / static_cast<float>(nbPoint);
+		for (int i = 0; i < nbPoint; ++i)
+		{
+			float angle = step * static_cast<float>(i);
+			vertices.emplace_back(std::cos(angle), std::sin(angle));
+		}
+		result.addShape(vertices);
+
+		return (result);
 	}
 
+public:
 	struct Renderer : public spk::Component
 	{
 	private:
@@ -49,6 +70,57 @@ private:
 
 			static spk::Lumina::Shader _createShader()
 			{
+				spk::Lumina::ShaderObjectFactory::instance()->add(spk::JSON::Object::fromString(LR"({
+	"UBO": [
+		{
+			"name": "CameraUBO",
+			"data": {
+				"BlockName": "CameraUBO",
+				"BindingPoint": 0,
+				"Size": 128,
+				"Elements": [
+					{
+						"Name": "viewMatrix",
+						"Offset": 0,
+						"Size": 64
+					},
+					{
+						"Name": "projectionMatrix",
+						"Offset": 64,
+						"Size": 64
+					}
+				]
+			}
+		}
+	],
+	"SSBO": [
+		{
+			"name": "InfoSSBO",
+			"data": {
+				"BlockName": "InfoSSBO",
+				"BindingPoint": 1,
+				"FixedSize": 0,
+				"PaddingFixedToDynamic": 0,
+				"DynamicElementSize": 80,
+				"DynamicElementPadding": 0,
+				"FixedElements": [],
+				"DynamicElementComposition": [
+					{
+						"Name": "model",
+						"Offset": 0,
+						"Size": 64
+					},
+					{
+						"Name": "color",
+						"Offset": 64,
+						"Size": 16
+					}
+				],
+				"InitialDynamicCount": 0
+			}
+		}
+	]
+})"));
 				const char *vertexShaderSrc = R"(#version 450
 
 layout(location = 0) in vec2 inPosition;
@@ -57,37 +129,29 @@ layout(location = 0) out vec4 fragColor;
 
 layout(std140, binding = 0) uniform CameraUBO
 {
-	mat4 viewMatrix;
-	mat4 projectionMatrix;
+    mat4 viewMatrix;
+    mat4 projectionMatrix;
 } cameraUBO;
-
-layout(std140, binding = 1) uniform TransformUBO
-{
-	mat4 modelMatrix; // base model matrix (e.g., for the whole batch)
-} transformUBO;
 
 struct Info
 {
-	mat4 model;
-	vec4 color;
+    mat4 model;
+    vec4 color;
 };
 
-layout(std430, binding = 2) buffer InfoSSBO
+layout(std430, binding = 1) buffer InfoSSBO
 {
-	Info object[];
+    Info object[];
 };
 
 void main()
 {
-	mat4 model = transformUBO.modelMatrix * object[gl_InstanceIndex].model;
+    gl_Position = cameraUBO.projectionMatrix * cameraUBO.viewMatrix * object[gl_InstanceID].model * vec4(inPosition, 0.0, 1.0);
 
-	vec4 worldPos = model * vec4(inPosition, 0.0, 1.0);
-	gl_Position = cameraUBO.projectionMatrix * cameraUBO.viewMatrix * worldPos;
-
-	fragColor = object[gl_InstanceIndex].color;
+    fragColor = object[gl_InstanceID].color;
 })";
 
-				const char *fragmentShaderSrc = R"(const char *fragmentShaderSrc = R"(#version 450
+				const char *fragmentShaderSrc = R"(#version 450
 
 layout(location = 0) in vec4 fragColor;
 layout(location = 0) out vec4 outColor;
@@ -99,31 +163,51 @@ void main()
 
 				spk::Lumina::Shader shader(vertexShaderSrc, fragmentShaderSrc);
 
+				shader.addAttribute({0, spk::OpenGL::LayoutBufferObject::Attribute::Type::Vector2});
+				
+				shader.addUBO(L"CameraUBO", spk::Lumina::ShaderObjectFactory::instance()->ubo(L"CameraUBO"), spk::Lumina::Shader::Mode::Constant);
+
+				shader.addSSBO(L"InfoSSBO", spk::Lumina::ShaderObjectFactory::instance()->ssbo(L"InfoSSBO"), spk::Lumina::Shader::Mode::Attribute);
+
 				return (shader);
 			}
 			static inline spk::Lumina::Shader _shader = _createShader();
 
 			spk::Lumina::Shader::Object _object;
-			spk::OpenGL::ShaderStorageBufferObject& _infoSSBO;
+			spk::OpenGL::BufferSet _bufferSet;
+			spk::OpenGL::ShaderStorageBufferObject &_infoSSBO;
 
 			spk::SafePointer<const InfoContainer> _infoContainer;
 
-			void prepare(const ShapeMesh& p_mesh)
+			void _prepare(const ShapeMesh& p_mesh)
 			{
+				const auto &buffer = p_mesh.buffer();
 
+				_bufferSet.layout().clear();
+				_bufferSet.indexes().clear();
+
+				_bufferSet.layout() << buffer.vertices;
+				_bufferSet.indexes() << buffer.indexes;
+
+				_bufferSet.layout().validate();
+				_bufferSet.indexes().validate();
 			}
 
 		public:
-			Painter(const ShapeMesh& p_mesh) :
+			Painter(const ShapeMesh &p_mesh) :
 				_object(_shader.createObject()),
+				_bufferSet(_object.bufferSet()),
 				_infoSSBO(_object.SSBO(L"InfoSSBO"))
 			{
-				//Push the mesh as data buffer
+				_prepare(p_mesh);
 			}
 			
 			void render()
 			{
-				// Render the object using the info SSBO size as number of instances for the object render call
+				size_t nbInstance = _infoSSBO.dynamicArray().nbElement();
+
+				_object.setNbInstance(nbInstance);
+				_object.render();
 			}
 
 			void setShapeList(const spk::SafePointer<const InfoContainer> p_infoContainer)
@@ -133,23 +217,44 @@ void main()
 			
 			void validate()
 			{
-				//Validate the SSBO, updating the SSBO content with the new content of the linked list
+				if (_infoContainer == nullptr)
+				{
+					return;
+				}
+
+				auto &array = _infoSSBO.dynamicArray();
+				array.resize(_infoContainer->size());
+
+				size_t index = 0;
+				for (const auto &info : *_infoContainer)
+				{
+					array[index] = info;
+					++index;
+				}
+
+				_infoSSBO.validate();
 			}
 		};
 
 		static inline std::unordered_map<Shape::Type, Painter> painters = {
-			{Shape::Type::Triangle, Painter(makeMesh(Shape::Type::Triangle))},
-			{Shape::Type::Square, Painter(makeMesh(Shape::Type::Square))},
-			{Shape::Type::Pentagon, Painter(makeMesh(Shape::Type::Pentagon))},
-			{Shape::Type::Hexagon, Painter(makeMesh(Shape::Type::Hexagon))},
-			{Shape::Type::Octogon, Painter(makeMesh(Shape::Type::Octogon))},
-			{Shape::Type::Circle, Painter(makeMesh(Shape::Type::Circle))}
+			{Shape::Type::Triangle, Painter(_makeMesh(Shape::Type::Triangle))},
+			{Shape::Type::Square, Painter(_makeMesh(Shape::Type::Square))},
+			{Shape::Type::Pentagon, Painter(_makeMesh(Shape::Type::Pentagon))},
+			{Shape::Type::Hexagon, Painter(_makeMesh(Shape::Type::Hexagon))},
+			{Shape::Type::Octogon, Painter(_makeMesh(Shape::Type::Octogon))},
+			{Shape::Type::Circle, Painter(_makeMesh(Shape::Type::Circle))}
 		};
 
 		struct ContainerData
 		{
-			bool needUpdate = false;
+			bool needUpdate;
 			InfoContainer container;
+
+			ContainerData() :
+				needUpdate(false),
+				container()
+			{
+			}
 		};
 
 		static inline std::unordered_map<Shape::Type, ContainerData> containers = {
@@ -172,18 +277,30 @@ void main()
 		{
 			for (auto& painter : painters)
 			{
+				if (containers[painter.first].needUpdate == true)
+				{
+					painter.second.validate();
+				}
 				painter.second.render();
 			}
 		}
 
 		static InfoIterator subscribe(const Shape::Type& p_type)
 		{
-			//Add the iterator to the adequat list
+			auto& data = containers[p_type];
+
+			data.needUpdate = true;
+
+			return data.container.emplace(data.container.end(), Info{});
 		}
 
 		static void remove(const Shape::Type& p_type, const InfoIterator& p_iterator)
 		{
-			//Remove the iterator from the adequat list
+			auto& data = containers[p_type];
+
+			data.container.erase(p_iterator);
+
+		    data.needUpdate = true;
 		}
 
 		static void validate(const Shape::Type& p_type)
@@ -192,19 +309,29 @@ void main()
 		}
 	};
 
+private:
 	class Subscriber : public spk::Component
 	{
 	private:
 		std::optional<Shape::Type> _type;
 		InfoIterator _iterator;
+		spk::Transform::Contract _onEditionContract;
 
-		void bind()
+		void _bind()
 		{
+			if (_type.has_value() == false)
+			{
+				return ;
+			}
 			_iterator = Renderer::subscribe(_type.value());
 		}
 
-		void unbind()
+		void _unbind()
 		{
+			if (_type.has_value() == false)
+			{
+				GENERATE_ERROR("Can't use an Shape without type");
+			}
 			Renderer::remove(_type.value(), _iterator);
 		}
 
@@ -215,32 +342,44 @@ void main()
 			_type.reset();
 		}
 
-		void setShapeType(const Shape::Type& p_type)
+		void setType(const Shape::Type& p_type)
 		{
 			if (_type.has_value() == true)
 			{
-				unbind();
+				_unbind();
 			}
 
 			_type = p_type;
 
-			bind();
+			_bind();
+		}
+
+		void start() override
+		{
+			_onEditionContract = owner()->transform().addOnEditionCallback([&](){
+				if (_type.has_value() == false)
+				{
+					GENERATE_ERROR("Can't use an Shape without type");
+				}
+
+				_iterator->model = owner()->transform().model();
+				Renderer::validate(_type.value());
+			});
 		}
 
 		void awake() override
 		{
-			bind();
+			_bind();
 		}
 
 		void sleep() override
 		{
-			unbind();
+			_unbind();
 		}
 	};
 
 private:
 	spk::SafePointer<Subscriber> _subscriber;
-	Type _type;
 
 public:
 	Shape(const std::wstring& p_name, spk::SafePointer<spk::Entity> p_parent) : 
@@ -252,7 +391,7 @@ public:
 
 	void setType(const Type& p_type)
 	{
-		_type = p_type;
+		_subscriber->setType(p_type);
 	}
 };
 
@@ -502,6 +641,38 @@ public:
 	}
 };
 
+class CameraHolder : public spk::Entity
+{
+private:
+	spk::SafePointer<spk::CameraComponent> _cameraComponent;
+
+public:
+	CameraHolder(const std::wstring& p_name, spk::SafePointer<spk::Entity> p_parent) :
+		spk::Entity(p_name, p_parent),
+		_cameraComponent(addComponent<spk::CameraComponent>(L"Camera/CameraComponent"))
+	{
+		transform().place({0.0f, 0.0f, 20.0f});
+		transform().lookAt({0, 0, 0});
+		_cameraComponent->setOrthographic(64.0f, 64.0f);
+	}
+};
+
+class Player : public Shape
+{
+private:
+	CameraHolder _cameraHolder;
+	spk::SafePointer<TopDown2DController> _controller;
+
+public:
+	Player(const std::wstring& p_name, spk::SafePointer<spk::Entity> p_parent) :
+		Shape(p_name, p_parent),
+		_cameraHolder(CameraHolder(p_name + L"/CameraHolder", this)),
+		_controller(addComponent<TopDown2DController>(p_name + L"/Controller"))
+	{
+
+	}
+};
+
 class DebugOverlayManager : public spk::Widget
 {
 private:
@@ -609,120 +780,34 @@ int main()
 	engineWidget.setGameEngine(&engine);
 	engineWidget.activate();
 
-	spk::Entity player(L"Player", nullptr);
-	player.transform().place({4, 4, 2.5f});
-	player.addComponent<TopDown2DController>(L"Player/TopDown2DController");
+	// ------------- Shape renderer entity -----------
+	engine.rootObject()->addComponent<Shape::Renderer>(L"Shape renderer");
 
-	spk::SpriteSheet playerSpriteSheet("playground/resources/texture/player_sprite_sheet.png", {4, 4});
-	spk::Mesh2D playerMesh = spk::Primitive2D::makeSquare({1.0f, 1.0f}, playerSpriteSheet.sprite({0, 0}));
-	spk::CollisionMesh2D playerCollisionMesh = spk::CollisionMesh2D::fromMesh(&playerMesh);
-	auto playerRenderer = player.addComponent<spk::Mesh2DRenderer>(L"Player/Mesh2DRenderer");
-	playerRenderer->setTexture(&playerSpriteSheet);
-	playerRenderer->setMesh(&playerMesh);
-	auto playerCollider = player.addComponent<spk::Collider2D>(L"Player/Collider2D");
-	playerCollider->setCollisionMesh(&playerCollisionMesh);
+	// ------------- Tilemap entity --------------
+	PlaygroundTileMap tileMap(L"TileMap", nullptr);
+	engine.addEntity(&tileMap);
+
+	spk::SpriteSheet tilemapSpriteSheet("playground/resources/texture/tile_map.png", {16, 6});
+	tileMap.activate();
+	tileMap.setSpriteSheet(&tilemapSpriteSheet);
+	tileMap.addTileByID(0, PlaygroundTileMap::TileType({0, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::Obstacle)); // Wall
+	tileMap.addTileByID(1, PlaygroundTileMap::TileType({4, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::TerritoryBlue)); // Blue territory
+	tileMap.addTileByID(2, PlaygroundTileMap::TileType({8, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::TerritoryGreen)); // Green territory
+	tileMap.addTileByID(3, PlaygroundTileMap::TileType({12, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::TerritoryRed)); // Red territory
+	// ------------------------------------------
+
+	// ------------- Player entity --------------
+	Player player(L"Player", nullptr);
+	player.setType(Shape::Type::Triangle);
+	engine.addEntity(&player);
+	player.transform().place({4, 4, 2.5f});
 
 	spk::Entity cameraHolder(L"Camera", &player);
 	auto cameraComponent = cameraHolder.addComponent<spk::CameraComponent>(L"Camera/CameraComponent");
-	cameraHolder.transform().place({0.0f, 0.0f, 20.0f});
-	cameraHolder.transform().lookAt(player.transform().position());
-
-	try
-	{
-		cameraComponent->setOrthographic(64.0f, 64.0f);
-	} catch (const std::exception &e)
-	{
-		PROPAGATE_ERROR("Error while computing the camera as orthographic", e);
-	}
-
-	PlaygroundTileMap tileMap(L"TileMap", nullptr);
-	spk::SpriteSheet tilemapSpriteSheet("playground/resources/texture/tile_map.png", {16, 6});
-	tileMap.activate();
-	engine.addEntity(&tileMap);
-	tileMap.setSpriteSheet(&tilemapSpriteSheet);
-
-	tileMap.addTileByID(0, PlaygroundTileMap::TileType({0, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::Obstacle)); // Wall
-	tileMap.addTileByID(
-		1, PlaygroundTileMap::TileType({4, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::TerritoryBlue)); // Blue territory
-	tileMap.addTileByID(
-		2, PlaygroundTileMap::TileType({8, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::TerritoryGreen)); // Green territory
-	tileMap.addTileByID(
-		3, PlaygroundTileMap::TileType({12, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::TerritoryRed)); // Red territory
 
 	player.addComponent<TileMapChunkStreamer>(L"Player/TileMapChunkStreamer", &tileMap, cameraComponent);
-
-	spk::SafePointer<spk::Entity> playerPtr(&player);
-	for (const auto &collider : spk::Collider2D::getColliders())
-	{
-		if (collider.get() == playerCollider.get())
-		{
-			continue;
-		}
-		collider->onCollisionEnter(
-			[playerPtr](spk::SafePointer<spk::Entity> p_entity)
-			{
-				if (p_entity.get() == playerPtr.get())
-				{
-					std::wcout << L"Player entered chunk collision mesh" << std::endl;
-				}
-			});
-	}
-
 	player.activate();
-	cameraHolder.activate();
-	engine.addEntity(&player);
-
-	spk::Entity shapesRoot(L"Shapes", nullptr);
-	shapesRoot.addComponent<playground::Shape::Renderer>(L"Shapes/ShapeRenderer");
-	engine.addEntity(&shapesRoot);
-	shapesRoot.activate();
-
-	std::vector<std::unique_ptr<playground::Shape>> shapes;
-	auto createShapes = [&](playground::Shape::Type p_type,
-							const std::array<spk::Color, 3> &p_colors,
-							const std::array<spk::Vector3, 3> &p_positions,
-							const std::wstring &p_base)
-	{
-		for (size_t i = 0; i < 3; ++i)
-		{
-			auto shape = std::make_unique<playground::Shape>(p_base + std::to_wstring(i), p_type, p_colors[i], &shapesRoot);
-			shape->transform().place(p_positions[i]);
-			shape->activate();
-			shapes.push_back(std::move(shape));
-		}
-	};
-
-	std::array<spk::Color, 3> colors = {spk::Color::red, spk::Color::green, spk::Color::blue};
-	createShapes(
-		playground::Shape::Type::Triangle,
-		colors,
-		{spk::Vector3(-9.0f, -9.0f, 0.0f), spk::Vector3(0.0f, -9.0f, 0.0f), spk::Vector3(9.0f, -9.0f, 0.0f)},
-		L"Triangle");
-	createShapes(
-		playground::Shape::Type::Square,
-		colors,
-		{spk::Vector3(-9.0f, -5.0f, 0.0f), spk::Vector3(0.0f, -5.0f, 0.0f), spk::Vector3(9.0f, -5.0f, 0.0f)},
-		L"Square");
-	createShapes(
-		playground::Shape::Type::Pentagon,
-		colors,
-		{spk::Vector3(-9.0f, -1.0f, 0.0f), spk::Vector3(0.0f, -1.0f, 0.0f), spk::Vector3(9.0f, -1.0f, 0.0f)},
-		L"Pentagon");
-	createShapes(
-		playground::Shape::Type::Hexagon,
-		colors,
-		{spk::Vector3(-9.0f, 3.0f, 0.0f), spk::Vector3(0.0f, 3.0f, 0.0f), spk::Vector3(9.0f, 3.0f, 0.0f)},
-		L"Hexagon");
-	createShapes(
-		playground::Shape::Type::Octagon,
-		colors,
-		{spk::Vector3(-9.0f, 7.0f, 0.0f), spk::Vector3(0.0f, 7.0f, 0.0f), spk::Vector3(9.0f, 7.0f, 0.0f)},
-		L"Octagon");
-	createShapes(
-		playground::Shape::Type::Circle,
-		colors,
-		{spk::Vector3(-9.0f, 9.0f, 0.0f), spk::Vector3(0.0f, 9.0f, 0.0f), spk::Vector3(9.0f, 9.0f, 0.0f)},
-		L"Circle");
+	// ------------------------------------------
 
 	return app.run();
 }
