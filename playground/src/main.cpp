@@ -36,7 +36,6 @@ private:
 
 	static ShapeMesh _makeMesh(const Shape::Type& p_type)
 	{
-		DEBUG_LINE();
 		static const std::unordered_map<Shape::Type, size_t> nbPointCount = {
 			{Shape::Type::Triangle, 3},
 			{Shape::Type::Square, 4},
@@ -45,25 +44,17 @@ private:
 			{Shape::Type::Octogon, 8},
 			{Shape::Type::Circle, 30}
 		};
-		DEBUG_LINE();
 		ShapeMesh result;
 		
-		DEBUG_LINE();
 		std::vector<spk::Vector2> vertices;
 		size_t nbPoint = nbPointCount.at(p_type);
 		const float step = (2.0f * M_PI) / static_cast<float>(nbPoint);
-		DEBUG_LINE();
 		for (int i = 0; i < nbPoint; ++i)
 		{
-		DEBUG_LINE();
 			float angle = step * static_cast<float>(i);
-		DEBUG_LINE();
 			vertices.emplace_back(std::cos(angle), std::sin(angle));
-		DEBUG_LINE();
 		}
-		DEBUG_LINE();
 		result.addShape(vertices);
-		DEBUG_LINE();
 
 		return (result);
 	}
@@ -79,7 +70,6 @@ public:
 
 			static spk::Lumina::Shader _createShader()
 			{
-		DEBUG_LINE();
 				spk::Lumina::ShaderObjectFactory::instance()->add(spk::JSON::Object::fromString(LR"({
 	"UBO": [
 		{
@@ -104,34 +94,8 @@ public:
 		}
 	],
 	"SSBO": [
-		{
-			"name": "InfoSSBO",
-			"data": {
-				"BlockName": "InfoSSBO",
-				"BindingPoint": 1,
-				"FixedSize": 0,
-				"PaddingFixedToDynamic": 0,
-				"DynamicElementSize": 80,
-				"DynamicElementPadding": 0,
-				"FixedElements": [],
-				"DynamicElementComposition": [
-					{
-						"Name": "model",
-						"Offset": 0,
-						"Size": 64
-					},
-					{
-						"Name": "color",
-						"Offset": 64,
-						"Size": 16
-					}
-				],
-				"InitialDynamicCount": 0
-			}
-		}
 	]
 })"));
-		DEBUG_LINE();
 				const char *vertexShaderSrc = R"(#version 450
 
 layout(location = 0) in vec2 inPosition;
@@ -162,7 +126,6 @@ void main()
     fragColor = object[gl_InstanceID].color;
 })";
 
-		DEBUG_LINE();
 				const char *fragmentShaderSrc = R"(#version 450
 
 layout(location = 0) in vec4 fragColor;
@@ -173,46 +136,40 @@ void main()
 	outColor = vec4(1, 0, 0, 1);//fragColor;
 })";
 
-		DEBUG_LINE();
 				spk::Lumina::Shader shader(vertexShaderSrc, fragmentShaderSrc);
 
-		DEBUG_LINE();
 				shader.addAttribute({0, spk::OpenGL::LayoutBufferObject::Attribute::Type::Vector2});
 				
-		DEBUG_LINE();
 				shader.addUBO(L"CameraUBO", spk::Lumina::ShaderObjectFactory::instance()->ubo(L"CameraUBO"), spk::Lumina::Shader::Mode::Constant);
 
-		DEBUG_LINE();
-				shader.addSSBO(L"InfoSSBO", spk::Lumina::ShaderObjectFactory::instance()->ssbo(L"InfoSSBO"), spk::Lumina::Shader::Mode::Attribute);
+				spk::OpenGL::ShaderStorageBufferObject infoSSBO = spk::OpenGL::ShaderStorageBufferObject(L"InfoSSBO", 1, 0, 0, 80, 0);
+				infoSSBO.dynamicArray().addElement(L"model", 0, 64);
+				infoSSBO.dynamicArray().addElement(L"color", 64, 16);
 
-		DEBUG_LINE();
+				shader.addSSBO(L"InfoSSBO", infoSSBO, spk::Lumina::Shader::Mode::Attribute);
+
 				return (shader);
 			}
 			static inline spk::Lumina::Shader _shader = _createShader();
 
 			spk::Lumina::Shader::Object _object;
-			spk::OpenGL::BufferSet _bufferSet;
+			spk::OpenGL::BufferSet& _bufferSet;
 			spk::OpenGL::ShaderStorageBufferObject &_infoSSBO;
 
 			spk::SafePointer<const InfoContainer> _infoContainer;
 
 			void _prepare(const ShapeMesh& p_mesh)
 			{
-		DEBUG_LINE();
 				const auto &buffer = p_mesh.buffer();
 
-		DEBUG_LINE();
 				_bufferSet.layout().clear();
 				_bufferSet.indexes().clear();
 
-		DEBUG_LINE();
 				_bufferSet.layout() << buffer.vertices;
 				_bufferSet.indexes() << buffer.indexes;
 
-		DEBUG_LINE();
 				_bufferSet.layout().validate();
 				_bufferSet.indexes().validate();
-		DEBUG_LINE();
 			}
 
 		public:
@@ -221,63 +178,41 @@ void main()
 				_bufferSet(_object.bufferSet()),
 				_infoSSBO(_object.SSBO(L"InfoSSBO"))
 			{
-		DEBUG_LINE();
 				_prepare(p_mesh);
-		DEBUG_LINE();
 			}
 
 			void render()
 			{
-		DEBUG_LINE();
 				size_t nbInstance = _infoSSBO.dynamicArray().nbElement();
 
-		DEBUG_LINE();
 				_object.setNbInstance(nbInstance);
 				_object.render();
-		DEBUG_LINE();
 			}
 
 			void setShapeList(const spk::SafePointer<const InfoContainer> p_infoContainer)
 			{
-		DEBUG_LINE();
 				_infoContainer = p_infoContainer;
-		DEBUG_LINE();
 			}
 
 			void validate()
 			{
-		DEBUG_LINE();
 				if (_infoContainer == nullptr)
 				{
-		DEBUG_LINE();
 					return;
 				}
-		DEBUG_LINE();
 
 				auto &array = _infoSSBO.dynamicArray();
-		DEBUG_LINE();
-				array.resize(_infoContainer->size());
 				
-				spk::cout << "Array size : " << array.nbElement() << std::endl;
+				array.resize(_infoContainer->size());
 
-		DEBUG_LINE();
 				size_t index = 0;
-		DEBUG_LINE();
 				for (const auto &info : *_infoContainer)
 				{
-		DEBUG_LINE();
-		spk::cout << "Setting element [" << index << "]" << std::endl;
-		spk::cout << "Array size : " << array.nbElement() << std::endl;
-		DEBUG_LINE();
 					array[index] = info;
-		DEBUG_LINE();
-					++index;
-		DEBUG_LINE();
+					index++;
 				}
 
-		DEBUG_LINE();
 				_infoSSBO.validate();
-		DEBUG_LINE();
 			}
 		};
 
@@ -299,7 +234,6 @@ void main()
 				needUpdate(false),
 				container()
 			{
-		DEBUG_LINE();
 			}
 		};
 
@@ -324,36 +258,25 @@ void main()
 					painter.second.validate();
 		DEBUG_LINE();
 				}
-		DEBUG_LINE();
-				painter.second.render();
-		DEBUG_LINE();
 			}
-		DEBUG_LINE();
 		}
 
 		void onPaintEvent(spk::PaintEvent &p_event) override
 		{
-		DEBUG_LINE();
 			auto& data = containers[p_type];
 
-		DEBUG_LINE();
 			data.needUpdate = true;
 
-		DEBUG_LINE();
 			return data.container.emplace(data.container.end(), Info{});
 		}
 
 		static InfoIterator subscribe(const Shape::Type &p_type)
 		{
-		DEBUG_LINE();
 			auto& data = containers[p_type];
 
-		DEBUG_LINE();
 			data.container.erase(p_iterator);
 
-		DEBUG_LINE();
 		    data.needUpdate = true;
-		DEBUG_LINE();
 		}
 
 		static void remove(const Shape::Type &p_type, const InfoIterator &p_iterator)
@@ -367,9 +290,7 @@ void main()
 
 		static void validate(const Shape::Type &p_type)
 		{
-		DEBUG_LINE();
 			containers[p_type].needUpdate = true;
-		DEBUG_LINE();
 		}
 	};
 
@@ -383,84 +304,62 @@ private:
 
 		void _bind()
 		{
-		DEBUG_LINE();
 			if (_type.has_value() == false)
 			{
 				return ;
 			}
-		DEBUG_LINE();
 			_iterator = Renderer::subscribe(_type.value());
-		DEBUG_LINE();
 		}
 
 		void _unbind()
 		{
-		DEBUG_LINE();
 			if (_type.has_value() == false)
 			{
 				GENERATE_ERROR("Can't use an Shape without type");
 			}
-		DEBUG_LINE();
 			Renderer::remove(_type.value(), _iterator);
-		DEBUG_LINE();
 		}
 
 	public:
 		Subscriber(const std::wstring &p_name) :
 			spk::Component(p_name)
 		{
-		DEBUG_LINE();
 			_type.reset();
-		DEBUG_LINE();
 		}
 
 		void setType(const Shape::Type& p_type)
 		{
-		DEBUG_LINE();
 			if (_type.has_value() == true)
 			{
-		DEBUG_LINE();
 				_unbind();
-		DEBUG_LINE();
 			}
 
-		DEBUG_LINE();
 			_type = p_type;
 
-		DEBUG_LINE();
 			_bind();
-		DEBUG_LINE();
 		}
 
 		void start() override
 		{
 			_onEditionContract = owner()->transform().addOnEditionCallback([&](){
-		DEBUG_LINE();
 				if (_type.has_value() == false)
 				{
 					GENERATE_ERROR("Can't use an Shape without type");
 				}
 
-		DEBUG_LINE();
 				_iterator->model = owner()->transform().model();
-		DEBUG_LINE();
 				Renderer::validate(_type.value());
-		DEBUG_LINE();
 			});
 		}
 
 		void awake() override
 		{
-		DEBUG_LINE();
 			_bind();
-		DEBUG_LINE();
 		}
 
 		void sleep() override
 		{
-		DEBUG_LINE();
 			_unbind();
-		DEBUG_LINE();
 		}
 	};
 
@@ -476,9 +375,7 @@ public:
 
 	void setType(const Type &p_type)
 	{
-		DEBUG_LINE();
 		_subscriber->setType(p_type);
-		DEBUG_LINE();
 	}
 };
 
@@ -737,7 +634,16 @@ public:
 	{
 		transform().place({0.0f, 0.0f, 20.0f});
 		transform().lookAtLocal({0, 0, 0});
-		_cameraComponent->setOrthographic(64.0f, 64.0f);
+	}
+
+	spk::SafePointer<spk::CameraComponent> cameraComponent() const
+	{
+		return (_cameraComponent);
+	}
+
+	void setOrthographic(spk::Vector2 p_viewSize)
+	{
+		_cameraComponent->setOrthographic(p_viewSize.x, p_viewSize.y);
 	}
 };
 
@@ -753,6 +659,16 @@ public:
 		_cameraHolder(CameraHolder(p_name + L"/CameraHolder", this)),
 		_controller(addComponent<TopDown2DController>(p_name + L"/Controller"))
 	{
+	}
+
+	spk::SafePointer<const CameraHolder> camera() const
+	{
+		return (&_cameraHolder);
+	}
+
+	spk::SafePointer<spk::CameraComponent> cameraComponent() const
+	{
+		return (_cameraHolder.cameraComponent());
 	}
 };
 
@@ -885,10 +801,7 @@ int main()
 	engine.addEntity(&player);
 	player.transform().place({4, 4, 2.5f});
 
-	spk::Entity cameraHolder(L"Camera", &player);
-	auto cameraComponent = cameraHolder.addComponent<spk::CameraComponent>(L"Camera/CameraComponent");
-
-	player.addComponent<TileMapChunkStreamer>(L"Player/TileMapChunkStreamer", &tileMap, cameraComponent);
+	player.addComponent<TileMapChunkStreamer>(L"Player/TileMapChunkStreamer", &tileMap, player.cameraComponent());
 	player.activate();
 	// ------------------------------------------
 

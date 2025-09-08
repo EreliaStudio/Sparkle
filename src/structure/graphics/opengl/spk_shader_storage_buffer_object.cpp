@@ -43,7 +43,6 @@ namespace spk::OpenGL
 
 	void ShaderStorageBufferObject::DynamicArray::_redoArray()
 	{
-		spk::cout << "Element size : " << _elements.size() << std::endl;
 		for (size_t i = 0; i < _elements.size(); ++i)
 		{
 			auto &element = _elements[i];
@@ -94,22 +93,18 @@ namespace spk::OpenGL
 
 	void ShaderStorageBufferObject::DynamicArray::resize(size_t p_nbElement)
 	{
-		DEBUG_LINE();
 		_resizeContractProvider.trigger(_fixedReservedSpace + (_elementSize + _elementPadding) * p_nbElement);
-		DEBUG_LINE();
 		_elements.resize(p_nbElement);
 		_redoArray();
 	}
 
 	ShaderStorageBufferObject::DynamicArray::Element &ShaderStorageBufferObject::DynamicArray::operator[](size_t p_index)
 	{
-		DEBUG_LINE();
 		return _elements[p_index];
 	}
 
 	const ShaderStorageBufferObject::DynamicArray::Element &ShaderStorageBufferObject::DynamicArray::operator[](size_t p_index) const
 	{
-		DEBUG_LINE();
 		return _elements[p_index];
 	}
 
