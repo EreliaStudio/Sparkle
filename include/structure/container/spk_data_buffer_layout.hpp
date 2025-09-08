@@ -83,9 +83,7 @@ namespace spk
 						"] bytes, but received [" + std::to_string(sizeof(TType)) + "].");
 				}
 
-				DEBUG_LINE();
 				std::memcpy(_buffer->data() + _offset, &p_value, sizeof(TType));
-				DEBUG_LINE();
 				return *this;
 			}
 
