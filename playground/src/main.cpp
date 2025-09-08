@@ -14,7 +14,7 @@ class Shape : public spk::Entity
 public:
 	enum class Type
 	{
-		Triangle, 
+		Triangle,
 		Square,
 		Pentagon,
 		Hexagon,
@@ -34,7 +34,7 @@ private:
 	using InfoContainer = std::list<Info>;
 	using InfoIterator = InfoContainer::iterator;
 
-	static ShapeMesh _makeMesh(const Shape::Type& p_type)
+	static ShapeMesh _makeMesh(const Shape::Type &p_type)
 	{
 		static const std::unordered_map<Shape::Type, size_t> nbPointCount = {
 			{Shape::Type::Triangle, 3},
@@ -42,10 +42,9 @@ private:
 			{Shape::Type::Pentagon, 5},
 			{Shape::Type::Hexagon, 6},
 			{Shape::Type::Octogon, 8},
-			{Shape::Type::Circle, 30}
-		};
+			{Shape::Type::Circle, 30}};
 		ShapeMesh result;
-		
+
 		std::vector<spk::Vector2> vertices;
 		size_t nbPoint = nbPointCount.at(p_type);
 		const float step = (2.0f * M_PI) / static_cast<float>(nbPoint);
@@ -139,12 +138,12 @@ void main()
 				spk::Lumina::Shader shader(vertexShaderSrc, fragmentShaderSrc);
 
 				shader.addAttribute({0, spk::OpenGL::LayoutBufferObject::Attribute::Type::Vector2});
-				
+
 				shader.addUBO(L"CameraUBO", spk::Lumina::ShaderObjectFactory::instance()->ubo(L"CameraUBO"), spk::Lumina::Shader::Mode::Constant);
 
-				spk::OpenGL::ShaderStorageBufferObject infoSSBO = spk::OpenGL::ShaderStorageBufferObject(L"InfoSSBO", 1, 0, 0, 80, 0);
-				infoSSBO.dynamicArray().addElement(L"model", 0, 64);
-				infoSSBO.dynamicArray().addElement(L"color", 64, 16);
+				auto infoSSBO = std::make_shared<spk::OpenGL::ShaderStorageBufferObject>(L"InfoSSBO", 1, 0, 0, 80, 0);
+				infoSSBO->dynamicArray().addElement(L"model", 0, 64);
+				infoSSBO->dynamicArray().addElement(L"color", 64, 16);
 
 				shader.addSSBO(L"InfoSSBO", infoSSBO, spk::Lumina::Shader::Mode::Attribute);
 
@@ -153,12 +152,12 @@ void main()
 			static inline spk::Lumina::Shader _shader = _createShader();
 
 			spk::Lumina::Shader::Object _object;
-			spk::OpenGL::BufferSet& _bufferSet;
+			spk::OpenGL::BufferSet &_bufferSet;
 			spk::OpenGL::ShaderStorageBufferObject &_infoSSBO;
 
 			spk::SafePointer<const InfoContainer> _infoContainer;
 
-			void _prepare(const ShapeMesh& p_mesh)
+			void _prepare(const ShapeMesh &p_mesh)
 			{
 				const auto &buffer = p_mesh.buffer();
 
@@ -180,7 +179,7 @@ void main()
 			{
 				_prepare(p_mesh);
 			}
-			
+
 			void render()
 			{
 				size_t nbInstance = _infoSSBO.dynamicArray().nbElement();
@@ -193,7 +192,7 @@ void main()
 			{
 				_infoContainer = p_infoContainer;
 			}
-			
+
 			void validate()
 			{
 				if (_infoContainer == nullptr)
@@ -202,7 +201,7 @@ void main()
 				}
 
 				auto &array = _infoSSBO.dynamicArray();
-				
+
 				array.resize(_infoContainer->size());
 
 				size_t index = 0;
@@ -222,8 +221,7 @@ void main()
 			{Shape::Type::Pentagon, Painter(_makeMesh(Shape::Type::Pentagon))},
 			{Shape::Type::Hexagon, Painter(_makeMesh(Shape::Type::Hexagon))},
 			{Shape::Type::Octogon, Painter(_makeMesh(Shape::Type::Octogon))},
-			{Shape::Type::Circle, Painter(_makeMesh(Shape::Type::Circle))}
-		};
+			{Shape::Type::Circle, Painter(_makeMesh(Shape::Type::Circle))}};
 
 		struct ContainerData
 		{
@@ -243,11 +241,10 @@ void main()
 			{Shape::Type::Pentagon, ContainerData()},
 			{Shape::Type::Hexagon, ContainerData()},
 			{Shape::Type::Octogon, ContainerData()},
-			{Shape::Type::Circle, ContainerData()}
-		};
+			{Shape::Type::Circle, ContainerData()}};
 
 	public:
-		Renderer(const std::wstring& p_name) :
+		Renderer(const std::wstring &p_name) :
 			spk::Component(p_name)
 		{
 			for (auto &painter : painters)
@@ -256,12 +253,12 @@ void main()
 			}
 		}
 
-		void onPaintEvent(spk::PaintEvent& p_event) override
+		void onPaintEvent(spk::PaintEvent &p_event) override
 		{
-			for (auto& painter : painters)
+			for (auto &painter : painters)
 			{
 				if (containers[painter.first].container.empty() == false)
-				{	
+				{
 					if (containers[painter.first].needUpdate == true)
 					{
 						painter.second.validate();
@@ -272,25 +269,25 @@ void main()
 			}
 		}
 
-		static InfoIterator subscribe(const Shape::Type& p_type)
+		static InfoIterator subscribe(const Shape::Type &p_type)
 		{
-			auto& data = containers[p_type];
+			auto &data = containers[p_type];
 
 			data.needUpdate = true;
 
 			return data.container.emplace(data.container.end(), Info{});
 		}
 
-		static void remove(const Shape::Type& p_type, const InfoIterator& p_iterator)
+		static void remove(const Shape::Type &p_type, const InfoIterator &p_iterator)
 		{
-			auto& data = containers[p_type];
+			auto &data = containers[p_type];
 
 			data.container.erase(p_iterator);
 
-		    data.needUpdate = true;
+			data.needUpdate = true;
 		}
 
-		static void validate(const Shape::Type& p_type)
+		static void validate(const Shape::Type &p_type)
 		{
 			containers[p_type].needUpdate = true;
 		}
@@ -308,7 +305,7 @@ private:
 		{
 			if (_type.has_value() == false)
 			{
-				return ;
+				return;
 			}
 			_iterator = Renderer::subscribe(_type.value());
 		}
@@ -323,13 +320,13 @@ private:
 		}
 
 	public:
-		Subscriber(const std::wstring& p_name) : 
+		Subscriber(const std::wstring &p_name) :
 			spk::Component(p_name)
 		{
 			_type.reset();
 		}
 
-		void setType(const Shape::Type& p_type)
+		void setType(const Shape::Type &p_type)
 		{
 			if (_type.has_value() == true)
 			{
@@ -343,15 +340,17 @@ private:
 
 		void start() override
 		{
-			_onEditionContract = owner()->transform().addOnEditionCallback([&](){
-				if (_type.has_value() == false)
+			_onEditionContract = owner()->transform().addOnEditionCallback(
+				[&]()
 				{
-					GENERATE_ERROR("Can't use an Shape without type");
-				}
+					if (_type.has_value() == false)
+					{
+						GENERATE_ERROR("Can't use an Shape without type");
+					}
 
-				_iterator->model = owner()->transform().model();
-				Renderer::validate(_type.value());
-			});
+					_iterator->model = owner()->transform().model();
+					Renderer::validate(_type.value());
+				});
 		}
 
 		void awake() override
@@ -369,13 +368,13 @@ private:
 	spk::SafePointer<Subscriber> _subscriber;
 
 public:
-	Shape(const std::wstring& p_name, spk::SafePointer<spk::Entity> p_parent) : 
+	Shape(const std::wstring &p_name, spk::SafePointer<spk::Entity> p_parent) :
 		spk::Entity(p_name, p_parent),
 		_subscriber(addComponent<Subscriber>(p_name + L"/Subscriber"))
 	{
 	}
 
-	void setType(const Type& p_type)
+	void setType(const Type &p_type)
 	{
 		_subscriber->setType(p_type);
 	}
@@ -630,7 +629,7 @@ private:
 	spk::SafePointer<spk::CameraComponent> _cameraComponent;
 
 public:
-	CameraHolder(const std::wstring& p_name, spk::SafePointer<spk::Entity> p_parent) :
+	CameraHolder(const std::wstring &p_name, spk::SafePointer<spk::Entity> p_parent) :
 		spk::Entity(p_name, p_parent),
 		_cameraComponent(addComponent<spk::CameraComponent>(L"Camera/CameraComponent"))
 	{
@@ -656,12 +655,11 @@ private:
 	spk::SafePointer<TopDown2DController> _controller;
 
 public:
-	Player(const std::wstring& p_name, spk::SafePointer<spk::Entity> p_parent) :
+	Player(const std::wstring &p_name, spk::SafePointer<spk::Entity> p_parent) :
 		Shape(p_name, p_parent),
 		_cameraHolder(CameraHolder(p_name + L"/CameraHolder", this)),
 		_controller(addComponent<TopDown2DController>(p_name + L"/Controller"))
 	{
-
 	}
 
 	spk::SafePointer<const CameraHolder> camera() const
@@ -793,9 +791,12 @@ int main()
 	tileMap.activate();
 	tileMap.setSpriteSheet(&tilemapSpriteSheet);
 	tileMap.addTileByID(0, PlaygroundTileMap::TileType({0, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::Obstacle)); // Wall
-	tileMap.addTileByID(1, PlaygroundTileMap::TileType({4, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::TerritoryBlue)); // Blue territory
-	tileMap.addTileByID(2, PlaygroundTileMap::TileType({8, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::TerritoryGreen)); // Green territory
-	tileMap.addTileByID(3, PlaygroundTileMap::TileType({12, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::TerritoryRed)); // Red territory
+	tileMap.addTileByID(
+		1, PlaygroundTileMap::TileType({4, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::TerritoryBlue)); // Blue territory
+	tileMap.addTileByID(
+		2, PlaygroundTileMap::TileType({8, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::TerritoryGreen)); // Green territory
+	tileMap.addTileByID(
+		3, PlaygroundTileMap::TileType({12, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::TerritoryRed)); // Red territory
 	// ------------------------------------------
 
 	// ------------- Player entity --------------

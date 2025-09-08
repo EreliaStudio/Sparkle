@@ -6,6 +6,7 @@
 #include "structure/graphics/opengl/spk_shader_storage_buffer_object.hpp"
 #include "structure/graphics/opengl/spk_uniform_buffer_object.hpp"
 
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <variant>
