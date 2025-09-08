@@ -201,7 +201,7 @@ void main()
 				}
 
 				auto &array = _infoSSBO.dynamicArray();
-				
+
 				array.resize(_infoContainer->size());
 
 				size_t index = 0;
@@ -660,26 +660,7 @@ public:
 		_cameraHolder(CameraHolder(p_name + L"/CameraHolder", this)),
 		_controller(addComponent<TopDown2DController>(p_name + L"/Controller"))
 	{
-	}
-
-	spk::SafePointer<const CameraHolder> camera() const
-	{
-		return (&_cameraHolder);
-	}
-
-	spk::SafePointer<spk::CameraComponent> cameraComponent() const
-	{
-		return (_cameraHolder.cameraComponent());
-	}
-
-	spk::SafePointer<const CameraHolder> camera() const
-	{
-		return (&_cameraHolder);
-	}
-
-	spk::SafePointer<spk::CameraComponent> cameraComponent() const
-	{
-		return (_cameraHolder.cameraComponent());
+		
 	}
 
 	spk::SafePointer<const CameraHolder> camera() const

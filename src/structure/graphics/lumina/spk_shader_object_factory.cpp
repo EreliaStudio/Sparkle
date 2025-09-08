@@ -27,12 +27,12 @@ namespace spk::Lumina
 			const JSON::Object &desc = p_ubos[index];
 			std::wstring name = desc[L"name"].as<std::wstring>();
 			const JSON::Object &data = desc[L"data"];
-			OpenGL::UniformBufferObject newUBO(data);
+			auto newUBO = std::make_shared<OpenGL::UniformBufferObject>(data);
 
 			if (_objects.contains(name))
 			{
-				auto &existing = std::get<OpenGL::UniformBufferObject>(_objects[name]);
-				if (existing.size() != newUBO.size())
+				auto existing = std::get<std::shared_ptr<OpenGL::UniformBufferObject>>(_objects[name]);
+				if (existing->size() != newUBO->size())
 				{
 					GENERATE_ERROR("UBO '" + StringUtils::wstringToString(name) + "' already exists with a different size.");
 				}
@@ -55,9 +55,9 @@ namespace spk::Lumina
 
 			if (_objects.contains(name))
 			{
-				auto &existing = std::get<spk::OpenGL::ShaderStorageBufferObject>(_objects[name]);
-				if (existing.fixedData().size() != newSSBO.fixedData().size() ||
-					existing.dynamicArray().elementSize() != newSSBO.dynamicArray().elementSize())
+				auto existing = std::get<std::shared_ptr<spk::OpenGL::ShaderStorageBufferObject>>(_objects[name]);
+				if (existing->fixedData().size() != newSSBO->fixedData().size() ||
+					existing->dynamicArray().elementSize() != newSSBO->dynamicArray().elementSize())
 				{
 					GENERATE_ERROR("SSBO '" + spk::StringUtils::wstringToString(name) + "' already exists with a different size.");
 				}
@@ -80,8 +80,8 @@ namespace spk::Lumina
 
 			if (_objects.contains(alias))
 			{
-				auto &existing = std::get<spk::OpenGL::SamplerObject>(_objects[alias]);
-				if (existing.bindingPoint() != newSampler.bindingPoint() || existing.type() != newSampler.type())
+				auto existing = std::get<std::shared_ptr<spk::OpenGL::SamplerObject>>(_objects[alias]);
+				if (existing->bindingPoint() != newSampler->bindingPoint() || existing->type() != newSampler->type())
 				{
 					GENERATE_ERROR(
 						"Sampler '" + spk::StringUtils::wstringToString(alias) + "' already exists with a different binding point or type.");
