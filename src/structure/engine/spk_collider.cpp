@@ -19,8 +19,8 @@ namespace spk
 	{
 		std::vector<spk::SafePointer<const Collider>> result;
 
-		std::lock_guard<std::mutex> lock(_collidersMutex);
-		for (const auto &body : _colliders)
+		std::lock_guard<std::mutex> lock(_collidersMutex());
+		for (const auto &body : _colliders())
 		{
 			if (body.get() == this)
 			{
@@ -48,18 +48,18 @@ namespace spk
 	void Collider::awake()
 	{
 		{
-			std::lock_guard<std::mutex> lock(_collidersMutex);
-			_colliders.push_back(this);
+			std::lock_guard<std::mutex> lock(_collidersMutex());
+			_colliders().push_back(this);
 		}
 		_updateCollisionCache();
 	}
 
 	void Collider::sleep()
 	{
-		std::lock_guard<std::mutex> lock(_collidersMutex);
-		auto it =
-			std::remove_if(_colliders.begin(), _colliders.end(), [this](const spk::SafePointer<Collider> &p_ptr) { return (p_ptr.get() == this); });
-		_colliders.erase(it, _colliders.end());
+		std::lock_guard<std::mutex> lock(_collidersMutex());
+		auto it = std::remove_if(
+			_colliders().begin(), _colliders().end(), [this](const spk::SafePointer<Collider> &p_ptr) { return (p_ptr.get() == this); });
+		_colliders().erase(it, _colliders().end());
 	}
 
 	void Collider::setCollisionMesh(const spk::SafePointer<const spk::CollisionMesh> &p_collisionMesh)
@@ -75,8 +75,8 @@ namespace spk
 
 	const std::vector<spk::SafePointer<Collider>> &Collider::getColliders()
 	{
-		std::lock_guard<std::mutex> lock(_collidersMutex);
-		return (_colliders);
+		std::lock_guard<std::mutex> lock(_collidersMutex());
+		return (_colliders());
 	}
 
 	namespace

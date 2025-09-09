@@ -35,7 +35,7 @@ namespace spk
 
 		const std::vector<UINT> &eventIDs() override
 		{
-			return (TEventType::EventIDs);
+			return (TEventType::eventIDs());
 		}
 
 		void receiveEvent(spk::Event &&p_event) override

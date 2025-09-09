@@ -19,7 +19,11 @@ namespace spk
 		class Instanciator
 		{
 		private:
-			static inline size_t reference = 0;
+			static size_t &reference()
+			{
+				static size_t value = 0;
+				return value;
+			}
 
 		public:
 			template <typename... Args>
@@ -37,7 +41,7 @@ namespace spk
 				}
 				DEBUG_LINE();
 
-				reference++;
+				reference()++;
 				DEBUG_LINE();
 			}
 
@@ -45,8 +49,8 @@ namespace spk
 			{
 				std::lock_guard<std::recursive_mutex> lock(Singleton<TType>::mutex());
 
-				reference--;
-				if (reference == 0)
+				reference()--;
+				if (reference() == 0)
 				{
 					Singleton<TType>::release();
 				}
@@ -72,8 +76,16 @@ namespace spk
 		{
 		}
 
-		static inline std::unique_ptr<TType> _instance = nullptr;
-		static inline std::recursive_mutex _mutex;
+		static std::unique_ptr<TType> &_instance()
+		{
+			static std::unique_ptr<TType> instance = nullptr;
+			return instance;
+		}
+		static std::recursive_mutex &_mutex()
+		{
+			static std::recursive_mutex mutex;
+			return mutex;
+		}
 
 	public:
 		template <typename... Args>
@@ -83,37 +95,37 @@ namespace spk
 			std::lock_guard<std::recursive_mutex> lock(Singleton<TType>::mutex());
 
 			DEBUG_LINE();
-			if (_instance != nullptr)
+			if (_instance() != nullptr)
 			{
 				GENERATE_ERROR("Can't instanciate an already instancied singleton");
 			}
 
 			DEBUG_LINE();
-			_instance.reset(new TType(std::forward<Args>(p_args)...));
+			_instance().reset(new TType(std::forward<Args>(p_args)...));
 			DEBUG_LINE();
-			return (_instance.get());
+			return (_instance().get());
 		}
 
 		static spk::SafePointer<TType> instance()
 		{
-			return (_instance.get());
+			return (_instance().get());
 		}
 
 		static const spk::SafePointer<const TType> cInstance()
 		{
-			return (_instance.get());
+			return (_instance().get());
 		}
 
 		static std::recursive_mutex &mutex()
 		{
-			return _mutex;
+			return _mutex();
 		}
 
 		static void release()
 		{
 			std::lock_guard<std::recursive_mutex> lock(Singleton<TType>::mutex());
 
-			_instance = nullptr;
+			_instance() = nullptr;
 		}
 	};
 }

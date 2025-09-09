@@ -29,7 +29,11 @@ namespace spk
 			Vector2Int step;
 			Vector2Int baselineOffset;
 			Vector2UInt size;
-			static inline std::vector<unsigned int> indexesOrder = {0, 1, 2, 2, 1, 3};
+			static const std::vector<unsigned int> &indexesOrder()
+			{
+				static const std::vector<unsigned int> order = {0, 1, 2, 2, 1, 3};
+				return order;
+			}
 
 			void rescale(const Vector2 &p_scaleRatio);
 		};

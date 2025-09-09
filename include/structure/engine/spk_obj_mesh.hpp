@@ -16,7 +16,11 @@ namespace spk
 	class ObjMesh : public TMesh<ObjVertex>
 	{
 	private:
-		static inline std::unordered_map<std::filesystem::path, spk::Texture> _materials;
+		static std::unordered_map<std::filesystem::path, spk::Texture> &_materials()
+		{
+			static std::unordered_map<std::filesystem::path, spk::Texture> materials;
+			return materials;
+		}
 		std::filesystem::path _materialPath;
 		mutable spk::TContractProvider<spk::SafePointer<spk::Texture>> _onMaterialChangeProvider;
 

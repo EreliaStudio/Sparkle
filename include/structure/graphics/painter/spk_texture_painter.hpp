@@ -19,7 +19,11 @@ namespace spk
 			spk::Vector2 uv;
 		};
 
-		static inline std::unique_ptr<spk::OpenGL::Program> _program = nullptr;
+		static std::unique_ptr<spk::OpenGL::Program> &_program()
+		{
+			static std::unique_ptr<spk::OpenGL::Program> program = nullptr;
+			return program;
+		}
 		spk::OpenGL::BufferSet _bufferSet;
 		spk::OpenGL::SamplerObject _samplerObject;
 

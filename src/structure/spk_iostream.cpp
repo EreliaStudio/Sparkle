@@ -19,7 +19,7 @@ namespace spk
 		}
 
 		{
-			std::lock_guard<std::recursive_mutex> lock(_mutex);
+			std::lock_guard<std::recursive_mutex> lock(_mutex());
 			if (!_prefix.empty())
 			{
 				*_outputStream << "[" << _prefix << "] - ";
@@ -46,13 +46,13 @@ namespace spk
 
 	void IOStream::setPrefix(const std::wstring &p_prefix)
 	{
-		std::lock_guard<std::recursive_mutex> lock(_mutex);
+		std::lock_guard<std::recursive_mutex> lock(_mutex());
 		_prefix = p_prefix;
 	}
 
 	void IOStream::redirect(std::wostream &p_outputStream)
 	{
-		std::lock_guard<std::recursive_mutex> lock(_mutex);
+		std::lock_guard<std::recursive_mutex> lock(_mutex());
 		_outputStream = &p_outputStream;
 	}
 

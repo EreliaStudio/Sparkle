@@ -12,7 +12,11 @@ namespace spk
 		std::wstring _prefix;
 		std::wstringstream _buffer;
 		std::wostream *_outputStream = nullptr;
-		static inline std::recursive_mutex _mutex;
+		static std::recursive_mutex &_mutex()
+		{
+			static std::recursive_mutex mutex;
+			return mutex;
+		}
 
 		void _flushBuffer();
 

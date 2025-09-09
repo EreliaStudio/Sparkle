@@ -10,11 +10,11 @@ namespace spk
 	{
 		Texture::ID result;
 
-		if (_availableIDs.empty() == false)
+		if (_availableIDs().empty() == false)
 		{
-			result = _availableIDs.back();
+			result = _availableIDs().back();
 
-			_availableIDs.pop_back();
+			_availableIDs().pop_back();
 		}
 		else
 		{
@@ -32,7 +32,7 @@ namespace spk
 			return;
 		}
 
-		_availableIDs.push_back(p_id);
+		_availableIDs().push_back(p_id);
 	}
 
 	Texture::Section::Section() :

@@ -29,8 +29,16 @@ namespace spk
 		spk::BoundingBox2D _boundingBox;
 		std::vector<spk::Polygon2D> _polygons;
 		Mode _mode = Mode::Blocking;
-		static inline std::vector<spk::SafePointer<Collider2D>> _colliders;
-		static inline std::mutex _collidersMutex;
+		static std::vector<spk::SafePointer<Collider2D>> &_colliders()
+		{
+			static std::vector<spk::SafePointer<Collider2D>> colliders;
+			return colliders;
+		}
+		static std::mutex &_collidersMutex()
+		{
+			static std::mutex collidersMutex;
+			return collidersMutex;
+		}
 		spk::TContractProvider<spk::SafePointer<spk::Entity>> _onCollisionEnterProvider;
 
 		std::vector<spk::SafePointer<const Collider2D>> _executeCollisionTest();

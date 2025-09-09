@@ -176,7 +176,7 @@ namespace spk
 
 	spk::SafePointer<Widget> Widget::focusedWidget(FocusType p_focusType)
 	{
-		return (_focusedWidgets[static_cast<int>(p_focusType)]);
+		return (_focusedWidgets()[static_cast<int>(p_focusType)]);
 	}
 
 	void Widget::_requestPaint()
@@ -186,14 +186,14 @@ namespace spk
 
 	void Widget::takeFocus(FocusType p_focusType)
 	{
-		_focusedWidgets[static_cast<int>(p_focusType)] = this;
+		_focusedWidgets()[static_cast<int>(p_focusType)] = this;
 	}
 
 	void Widget::releaseFocus(FocusType p_focusType)
 	{
-		if (_focusedWidgets[static_cast<int>(p_focusType)] == this)
+		if (_focusedWidgets()[static_cast<int>(p_focusType)] == this)
 		{
-			_focusedWidgets[static_cast<int>(p_focusType)] = nullptr;
+			_focusedWidgets()[static_cast<int>(p_focusType)] = nullptr;
 		}
 	}
 

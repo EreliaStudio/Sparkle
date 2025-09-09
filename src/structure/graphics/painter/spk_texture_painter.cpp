@@ -10,7 +10,7 @@ namespace spk
 {
 	void TexturePainter::_initProgram()
 	{
-		if (_program == nullptr)
+		if (_program() == nullptr)
 		{
 			const char *vertexShaderSrc = R"(#version 450
 			
@@ -42,7 +42,7 @@ namespace spk
 				}
 				)";
 
-			_program = std::make_unique<spk::OpenGL::Program>(vertexShaderSrc, fragmentShaderSrc);
+			_program() = std::make_unique<spk::OpenGL::Program>(vertexShaderSrc, fragmentShaderSrc);
 		}
 	}
 
@@ -120,14 +120,14 @@ namespace spk
 			return;
 		}
 
-		_program->activate();
+		_program()->activate();
 		_bufferSet.activate();
 		_samplerObject.activate();
 
-		_program->render(_bufferSet.indexes().nbIndexes(), 1);
+		_program()->render(_bufferSet.indexes().nbIndexes(), 1);
 
 		_samplerObject.deactivate();
 		_bufferSet.deactivate();
-		_program->deactivate();
+		_program()->deactivate();
 	}
 }

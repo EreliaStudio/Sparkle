@@ -8,7 +8,7 @@ namespace spk
 {
 	void FontPainter::_initProgram()
 	{
-		if (_program == nullptr)
+		if (_program() == nullptr)
 		{
 			const char *vertexShaderSrc = R"(#version 450
 
@@ -73,7 +73,7 @@ void main()
     outputColor = vec4(color, alpha);
 })";
 
-			_program = std::make_unique<spk::OpenGL::Program>(vertexShaderSrc, fragmentShaderSrc);
+			_program() = std::make_unique<spk::OpenGL::Program>(vertexShaderSrc, fragmentShaderSrc);
 		}
 	}
 
@@ -259,7 +259,7 @@ void main()
 
 			for (size_t i = 0; i < 6; i++)
 			{
-				_bufferSet.indexes() << (baseIndexes + spk::Font::Glyph::indexesOrder[i]);
+				_bufferSet.indexes() << (baseIndexes + spk::Font::Glyph::indexesOrder()[i]);
 			}
 
 			baseIndexes += 4;
@@ -297,16 +297,16 @@ void main()
 			return;
 		}
 
-		_program->activate();
+		_program()->activate();
 		_bufferSet.activate();
 		_samplerObject.activate();
 		_textInformationsUniformBufferObject.activate();
 
-		_program->render(_bufferSet.indexes().nbIndexes(), 1);
+		_program()->render(_bufferSet.indexes().nbIndexes(), 1);
 
 		_textInformationsUniformBufferObject.deactivate();
 		_samplerObject.deactivate();
 		_bufferSet.deactivate();
-		_program->deactivate();
+		_program()->deactivate();
 	}
 }

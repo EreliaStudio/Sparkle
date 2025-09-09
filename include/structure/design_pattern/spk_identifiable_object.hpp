@@ -20,28 +20,40 @@ namespace spk
 		ID _id;
 
 		static inline ID _nextId = 0;
-		static inline std::set<ID> _releasedIds;
-		static inline std::unordered_map<ID, spk::SafePointer<IdentifiedObject<TType>>> _registry;
-		static inline std::mutex _mutex;
+		static std::set<ID> &_releasedIds()
+		{
+			static std::set<ID> releasedIds;
+			return releasedIds;
+		}
+		static std::unordered_map<ID, spk::SafePointer<IdentifiedObject<TType>>> &_registry()
+		{
+			static std::unordered_map<ID, spk::SafePointer<IdentifiedObject<TType>>> registry;
+			return registry;
+		}
+		static std::mutex &_mutex()
+		{
+			static std::mutex mutex;
+			return mutex;
+		}
 
 		void _assignNewId()
 		{
-			std::lock_guard<std::mutex> lock(_mutex);
-			if (!_releasedIds.empty())
+			std::lock_guard<std::mutex> lock(_mutex());
+			if (_releasedIds().empty() == false)
 			{
-				auto it = _releasedIds.begin();
+				auto it = _releasedIds().begin();
 				_id = *it;
-				_releasedIds.erase(it);
+				_releasedIds().erase(it);
 			}
 			else
 			{
 				_id = _nextId;
-				while (_registry.contains(_id) == true)
+				while (_registry().contains(_id) == true)
 				{
 					_id++;
 				}
 			}
-			_registry[_id] = this;
+			_registry()[_id] = this;
 			_nextId = _id + 1;
 		}
 
@@ -54,9 +66,9 @@ namespace spk
 
 		IdentifiedObject(const ID &p_id)
 		{
-			std::lock_guard<std::mutex> lock(_mutex);
+			std::lock_guard<std::mutex> lock(_mutex());
 			_id = p_id;
-			_registry[_id] = this;
+			_registry()[_id] = this;
 		}
 
 		IdentifiedObject(const IdentifiedObject &p_other)
@@ -73,8 +85,8 @@ namespace spk
 		IdentifiedObject(IdentifiedObject &&p_other) noexcept :
 			_id(p_other._id)
 		{
-			std::lock_guard<std::mutex> lock(_mutex);
-			_registry[_id] = this;
+			std::lock_guard<std::mutex> lock(_mutex());
+			_registry()[_id] = this;
 			p_other._id = InvalidID;
 		}
 
@@ -82,15 +94,15 @@ namespace spk
 		{
 			if (this != &p_other)
 			{
-				std::lock_guard<std::mutex> lock(_mutex);
+				std::lock_guard<std::mutex> lock(_mutex());
 				if (_id != InvalidID)
 				{
-					_registry.erase(_id);
-					_releasedIds.insert(_id);
+					_registry().erase(_id);
+					_releasedIds().insert(_id);
 				}
 
 				_id = p_other._id;
-				_registry[_id] = this;
+				_registry()[_id] = this;
 				p_other._id = InvalidID;
 			}
 			return *this;
@@ -98,9 +110,9 @@ namespace spk
 
 		~IdentifiedObject()
 		{
-			std::lock_guard<std::mutex> lock(_mutex);
-			_registry.erase(_id);
-			_releasedIds.insert(_id);
+			std::lock_guard<std::mutex> lock(_mutex());
+			_registry().erase(_id);
+			_releasedIds().insert(_id);
 		}
 
 		ID id() const
@@ -110,24 +122,24 @@ namespace spk
 
 		void changeID(const ID &p_newId)
 		{
-			std::lock_guard<std::mutex> lock(_mutex);
+			std::lock_guard<std::mutex> lock(_mutex());
 
 			if (p_newId == _id)
 			{
 				return;
 			}
 
-			auto it = _registry.find(p_newId);
-			if (it == _registry.end())
+			auto it = _registry().find(p_newId);
+			if (it == _registry().end())
 			{
-				_registry.erase(_id);
+				_registry().erase(_id);
 
-				_releasedIds.erase(_id);
-				_releasedIds.erase(p_newId);
+				_releasedIds().erase(_id);
+				_releasedIds().erase(p_newId);
 
 				_id = p_newId;
 
-				_registry[_id] = this;
+				_registry()[_id] = this;
 			}
 			else
 			{
@@ -141,25 +153,25 @@ namespace spk
 
 				ID oldId = _id;
 
-				_registry.erase(oldId);
-				_registry.erase(p_newId);
+				_registry().erase(oldId);
+				_registry().erase(p_newId);
 
 				otherObj->_id = oldId;
 				this->_id = p_newId;
 
-				_registry[oldId] = otherPtr;
-				_registry[p_newId] = this;
+				_registry()[oldId] = otherPtr;
+				_registry()[p_newId] = this;
 
-				_releasedIds.erase(oldId);
-				_releasedIds.erase(p_newId);
+				_releasedIds().erase(oldId);
+				_releasedIds().erase(p_newId);
 			}
 		}
 
 		static spk::SafePointer<TType> containObjectId(const ID &p_id)
 		{
-			std::lock_guard<std::mutex> lock(_mutex);
-			auto it = _registry.find(p_id);
-			return (it != _registry.end()) ? true : false;
+			std::lock_guard<std::mutex> lock(_mutex());
+			auto it = _registry().find(p_id);
+			return (it != _registry().end()) ? true : false;
 		}
 
 		static spk::SafePointer<TType> getObjectById(const ID &p_id)
@@ -169,8 +181,8 @@ namespace spk
 				return (nullptr);
 			}
 
-			std::lock_guard<std::mutex> lock(_mutex);
-			return (static_cast<TType *>(_registry[p_id]));
+			std::lock_guard<std::mutex> lock(_mutex());
+			return (static_cast<TType *>(_registry()[p_id]));
 		}
 	};
 }

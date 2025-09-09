@@ -30,7 +30,11 @@ namespace spk
 		};
 
 	private:
-		static inline std::unique_ptr<spk::OpenGL::Program> _program;
+		static std::unique_ptr<spk::OpenGL::Program> &_program()
+		{
+			static std::unique_ptr<spk::OpenGL::Program> program;
+			return program;
+		}
 		spk::OpenGL::BufferSet _bufferSet;
 		spk::OpenGL::SamplerObject _samplerObject;
 

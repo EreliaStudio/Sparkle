@@ -85,7 +85,11 @@ namespace spk
 		};
 
 	private:
-		static inline std::deque<ID> _availableIDs;
+		static std::deque<ID> &_availableIDs()
+		{
+			static std::deque<ID> ids;
+			return ids;
+		}
 		static inline ID _nextID = 0;
 		static inline ID InvalidID = -1;
 

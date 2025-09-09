@@ -22,8 +22,16 @@ namespace spk::OpenGL
 			std::unique_ptr<spk::OpenGL::TextureObject> gpuPtr;
 		};
 
-		static inline std::unordered_map<spk::Texture::ID, TexturePair> _cpuToGpuMap;
-		static inline std::unordered_map<GLuint, spk::Texture::ID> _gpuToCpuMap;
+		static std::unordered_map<spk::Texture::ID, TexturePair> &_cpuToGpuMap()
+		{
+			static std::unordered_map<spk::Texture::ID, TexturePair> cpuToGpuMap;
+			return cpuToGpuMap;
+		}
+		static std::unordered_map<GLuint, spk::Texture::ID> &_gpuToCpuMap()
+		{
+			static std::unordered_map<GLuint, spk::Texture::ID> gpuToCpuMap;
+			return gpuToCpuMap;
+		}
 
 	public:
 		static spk::SafePointer<spk::OpenGL::TextureObject> textureObject(
@@ -35,9 +43,9 @@ namespace spk::OpenGL
 			}
 
 			spk::Texture::ID cpuID = p_cpuTexture->_id;
-			auto it = _cpuToGpuMap.find(cpuID);
+			auto it = _cpuToGpuMap().find(cpuID);
 
-			if (it != _cpuToGpuMap.end())
+			if (it != _cpuToGpuMap().end())
 			{
 				return it->second.gpuPtr.get();
 			}
@@ -50,10 +58,10 @@ namespace spk::OpenGL
 			pair.cpuPtr = p_cpuTexture;
 			pair.gpuPtr = std::move(newGPU);
 
-			_cpuToGpuMap.insert({cpuID, std::move(pair)});
-			_gpuToCpuMap.insert({gpuID, cpuID});
+			_cpuToGpuMap().insert({cpuID, std::move(pair)});
+			_gpuToCpuMap().insert({gpuID, cpuID});
 
-			return _cpuToGpuMap[cpuID].gpuPtr.get();
+			return _cpuToGpuMap()[cpuID].gpuPtr.get();
 		}
 
 		static spk::SafePointer<const spk::Texture> texture(const spk::OpenGL::TextureObject *p_gpuTexture)
@@ -64,15 +72,15 @@ namespace spk::OpenGL
 			}
 
 			GLuint gpuID = p_gpuTexture->id();
-			auto it = _gpuToCpuMap.find(gpuID);
-			if (it == _gpuToCpuMap.end())
+			auto it = _gpuToCpuMap().find(gpuID);
+			if (it == _gpuToCpuMap().end())
 			{
 				return nullptr;
 			}
 
 			spk::Texture::ID cpuID = it->second;
-			auto jt = _cpuToGpuMap.find(cpuID);
-			if (jt == _cpuToGpuMap.end())
+			auto jt = _cpuToGpuMap().find(cpuID);
+			if (jt == _cpuToGpuMap().end())
 			{
 				return nullptr;
 			}

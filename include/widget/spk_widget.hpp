@@ -49,7 +49,11 @@ namespace spk
 		void _requestPaint();
 
 	private:
-		static inline std::array<spk::SafePointer<Widget>, 3> _focusedWidgets = {nullptr, nullptr, nullptr};
+		static std::array<spk::SafePointer<Widget>, 3> &_focusedWidgets()
+		{
+			static std::array<spk::SafePointer<Widget>, 3> focusedWidgets = {nullptr, nullptr, nullptr};
+			return focusedWidgets;
+		}
 
 		std::wstring _name;
 		spk::SafePointer<Widget> _parent;

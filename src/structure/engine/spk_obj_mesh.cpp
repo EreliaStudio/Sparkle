@@ -71,21 +71,21 @@ namespace spk
 	void ObjMesh::setMaterial(const std::filesystem::path &p_materialPath)
 	{
 		_materialPath = p_materialPath;
-		auto it = _materials.find(p_materialPath);
-		if (it == _materials.end())
+		auto it = _materials().find(p_materialPath);
+		if (it == _materials().end())
 		{
 			spk::Image image;
 			image.loadFromFile(p_materialPath);
-			_materials.emplace(p_materialPath, std::move(image));
-			it = _materials.find(p_materialPath);
+			_materials().emplace(p_materialPath, std::move(image));
+			it = _materials().find(p_materialPath);
 		}
 		_onMaterialChangeProvider.trigger(spk::SafePointer<spk::Texture>(&it->second));
 	}
 
 	spk::SafePointer<const spk::Texture> ObjMesh::material() const
 	{
-		auto it = _materials.find(_materialPath);
-		if (it == _materials.end())
+		auto it = _materials().find(_materialPath);
+		if (it == _materials().end())
 		{
 			return (spk::SafePointer<const spk::Texture>(nullptr));
 		}
