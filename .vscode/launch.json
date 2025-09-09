@@ -1,39 +1,12 @@
 {
-	"version": "0.2.0",
-	"configurations": [
-	  {
-		"name": "Launch Debug",
-		"type": "cppdbg",
-		"request": "launch",
-		"program": "${workspaceFolder}/build/playground-debug/out/bin/Debug/x64/Playground.exe",
-		"args": [],
-		"stopAtEntry": false,
-		"cwd": "${workspaceFolder}",
-		"environment": [],
-		"externalConsole": false,
-		"MIMode": "lldb",
-		// "setupCommands": [
-		//   {
-		// 	"description": "Enable pretty-printing for gdb",
-		// 	"text": "-enable-pretty-printing",
-		// 	"ignoreFailures": true
-		//   }
-		// ],
-		"preLaunchTask": "Build Debug",
-		"miDebuggerPath": "C:/Program Files/LLVM/bin/lldb.EXE", // Update this path to your gdb executable
-		//"miDebuggerArgs": "",
-		"logging": {
-		  "engineLogging": true
-		}
-	  },
-	  {
-		"name": "Debug playgound",
+  "version": "0.2.0",
+  "configurations": [
+    {
+		"name": "Debug Playgound",
 		"type": "lldb",
 		"request": "launch",
+		"preLaunchTask": "Build Debug",
 		"program": "${workspaceFolder}/build/playground-debug/out/bin/Debug/x64/Playground.exe"
-
 	  }
-
-	]
-
-  }
+  ]
+}

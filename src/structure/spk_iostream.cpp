@@ -2,8 +2,19 @@
 
 namespace spk
 {
-	spk::IOStream cout(std::wcout);
-	spk::IOStream cerr(std::wcerr);
+	spk::IOStream& cout()
+	{
+		static spk::IOStream result(std::wcout);
+	
+		return (result);
+	}
+	
+	spk::IOStream& cerr()
+	{
+		static spk::IOStream result(std::wcerr);
+	
+		return (result);
+	}
 
 	void IOStream::_flushBuffer()
 	{

@@ -6,8 +6,8 @@
 #	undef WIN32_LEAN_AND_MEAN
 #endif
 
-#include <GL/gl.h>
 #include <GL/glew.h>
+#include <GL/gl.h>
 
 #include "spk_debug_macro.hpp"
 #include "structure/container/spk_data_buffer_layout.hpp"

@@ -251,7 +251,7 @@ namespace spk
 			int sentBytes = ::send(clientSocket, reinterpret_cast<const char *>(&(p_message.header())), headerSize, 0);
 			if (sentBytes != headerSize)
 			{
-				spk::cerr << "Failed to send message header." << std::endl;
+				spk::cerr() << "Failed to send message header." << std::endl;
 				return;
 			}
 
@@ -261,7 +261,7 @@ namespace spk
 					::send(clientSocket, reinterpret_cast<const char *>(p_message._buffer.data()), static_cast<int>(p_message.header().length), 0);
 				if (sentBytes != static_cast<int>(p_message.header().length))
 				{
-					spk::cerr << "Failed to send message data." << std::endl;
+					spk::cerr() << "Failed to send message data." << std::endl;
 					return;
 				}
 			}

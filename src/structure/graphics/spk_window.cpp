@@ -367,7 +367,7 @@ namespace spk
 			p_fn();
 		} catch (const std::exception &e)
 		{
-			spk::cout << p_label << " - Error caught:\n" << e.what() << std::endl;
+			spk::cout() <<  p_label << " - Error caught:\n" << e.what() << std::endl;
 			close();
 		}
 	}

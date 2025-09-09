@@ -49,7 +49,7 @@ namespace spk
 
 		void parse(char **p_argv, int p_argc);
 
-		void printHelp(IOStream &p_op = spk::cout) const;
+		void printHelp(IOStream &p_op = spk::cout()) const;
 
 		bool has(const std::wstring &p_name) const;
 		const Option &get(const std::wstring &p_longName) const;

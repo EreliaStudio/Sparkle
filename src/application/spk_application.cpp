@@ -58,7 +58,7 @@ namespace spk
 				}
 			}
 
-			spk::cout.setPrefix(L"MainThread");
+			spk::cout().setPrefix(L"MainThread");
 			_mainThreadWorker->preparationJobs().trigger();
 
 			while (_isRunning == true)
