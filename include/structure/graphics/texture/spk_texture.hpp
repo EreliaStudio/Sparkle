@@ -7,8 +7,8 @@
 #include "structure/graphics/spk_geometry_2d.hpp"
 #include <cstring>
 #include <deque>
-#include <unordered_map>
 #include <filesystem>
+#include <unordered_map>
 #include <vector>
 
 namespace spk
@@ -49,9 +49,9 @@ namespace spk
 
 			Section();
 			Section(spk::Vector2 p_anchor, spk::Vector2 p_size);
-			
-			bool operator==(const Section& p_other) const noexcept;
-    		bool operator!=(const Section& p_other) const noexcept;
+
+			bool operator==(const Section &p_other) const noexcept;
+			bool operator!=(const Section &p_other) const noexcept;
 		};
 
 		enum class Format
@@ -115,13 +115,23 @@ namespace spk
 		Texture(Texture &&p_other) noexcept;
 		Texture &operator=(Texture &&p_other) noexcept;
 
-		void setPixels(const std::vector<uint8_t> &p_data, const spk::Vector2UInt &p_size, const Format &p_format, const Filtering &p_filtering,
-					   const Wrap &p_wrap, const Mipmap &p_mipmap);
+		void setPixels(
+			const std::vector<uint8_t> &p_data,
+			const spk::Vector2UInt &p_size,
+			const Format &p_format,
+			const Filtering &p_filtering,
+			const Wrap &p_wrap,
+			const Mipmap &p_mipmap);
 
 		void setPixels(const std::vector<uint8_t> &p_data, const spk::Vector2UInt &p_size, const Format &p_format);
 
-		void setPixels(const uint8_t *p_data, const spk::Vector2UInt &p_size, const Format &p_format, const Filtering &p_filtering,
-					   const Wrap &p_wrap, const Mipmap &p_mipmap);
+		void setPixels(
+			const uint8_t *p_data,
+			const spk::Vector2UInt &p_size,
+			const Format &p_format,
+			const Filtering &p_filtering,
+			const Wrap &p_wrap,
+			const Mipmap &p_mipmap);
 
 		void setPixels(const uint8_t *p_data, const spk::Vector2UInt &p_size, const Format &p_format);
 		void setProperties(const Filtering &p_filtering, const Wrap &p_wrap, const Mipmap &p_mipmap);
@@ -133,6 +143,6 @@ namespace spk
 		Wrap wrap() const;
 		Mipmap mipmap() const;
 
-		void saveAsPng(const std::filesystem::path& p_path) const;
+		void saveAsPng(const std::filesystem::path &p_path) const;
 	};
 }

@@ -20,10 +20,8 @@ namespace spk
 			resizeElements(NbColumns * NbRows);
 		}
 
-		spk::SafePointer<Element> setWidget(const size_t &p_col,
-											const size_t &p_row,
-											spk::SafePointer<spk::Widget> p_widget,
-											const SizePolicy &p_sizePolicy = SizePolicy::Extend)
+		spk::SafePointer<Element> setWidget(
+			const size_t &p_col, const size_t &p_row, spk::SafePointer<spk::Widget> p_widget, const SizePolicy &p_sizePolicy = SizePolicy::Extend)
 		{
 			if (p_col >= NbColumns || p_row >= NbRows)
 			{

@@ -36,7 +36,7 @@ namespace spk
 		virtual void sleep();
 		virtual void stop();
 
-		virtual void onGeometryChange(const spk::Geometry2D& p_geometry);
+		virtual void onGeometryChange(const spk::Geometry2D &p_geometry);
 		virtual void onPaintEvent(spk::PaintEvent &p_event);
 		virtual void onUpdateEvent(spk::UpdateEvent &p_event);
 		virtual void onKeyboardEvent(spk::KeyboardEvent &p_event);

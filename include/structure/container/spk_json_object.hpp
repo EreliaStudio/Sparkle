@@ -2,14 +2,14 @@
 
 #include <algorithm>
 #include <any>
+#include <array>
 #include <cstdint>
 #include <iomanip>
 #include <iostream>
 #include <map>
+#include <memory>
 #include <variant>
 #include <vector>
-#include <memory>
-#include <array>
 
 #include "spk_sfinae.hpp"
 #include "utils/spk_string_utils.hpp"
@@ -90,8 +90,9 @@ namespace spk
 				return (std::holds_alternative<TType>(std::get<Unit>(_content)));
 			}
 
-			template <typename TType,
-					  std::enable_if_t<!std::is_same_v<std::decay_t<TType>, Object> && !spk::IsJSONable<std::decay_t<TType>>::value, int> = 0>
+			template <
+				typename TType,
+				std::enable_if_t<!std::is_same_v<std::decay_t<TType>, Object> && !spk::IsJSONable<std::decay_t<TType>>::value, int> = 0>
 			void set(const TType &p_value)
 			{
 				if (_initialized == false)
@@ -141,8 +142,9 @@ namespace spk
 				if (value == nullptr)
 				{
 					std::array<std::string, 6> types = {"bool", "long", "double", "std::wstring", "Object*", "std::nullptr_t"};
-					GENERATE_ERROR("Wrong type request for object [" + spk::StringUtils::wstringToString(_name) + "] : wanted [" +
-								   types[Unit(TType()).index()] + "] but stored [" + types[tmpUnit.index()] + "]");
+					GENERATE_ERROR(
+						"Wrong type request for object [" + spk::StringUtils::wstringToString(_name) + "] : wanted [" + types[Unit(TType()).index()] +
+						"] but stored [" + types[tmpUnit.index()] + "]");
 				}
 				return *value;
 			}
@@ -168,8 +170,8 @@ namespace spk
 
 				if (src == nullptr)
 				{
-					GENERATE_ERROR("Cannot convert object [" + spk::StringUtils::wstringToString(_name) +
-								   "] to native type -> no JSON object found.");
+					GENERATE_ERROR(
+						"Cannot convert object [" + spk::StringUtils::wstringToString(_name) + "] to native type -> no JSON object found.");
 				}
 
 				TType result{};

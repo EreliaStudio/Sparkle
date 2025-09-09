@@ -1,7 +1,7 @@
 #pragma once
 
-#include "structure/engine/spk_component.hpp"
 #include "structure/engine/spk_camera.hpp"
+#include "structure/engine/spk_component.hpp"
 #include "structure/graphics/spk_geometry_2d.hpp"
 
 namespace spk
@@ -22,14 +22,15 @@ namespace spk
 
 			Mode mode = Mode::Perspective;
 
-			union Data
-			{
-				struct {
+			union Data {
+				struct
+				{
 					float fovDegrees;
 					float fallbackAspect; // used before first geometry callback
 				} perspective;
-	
-				struct {
+
+				struct
+				{
 					float pixelsPerUnitX;
 					float pixelsPerUnitY;
 					float nearPlane;

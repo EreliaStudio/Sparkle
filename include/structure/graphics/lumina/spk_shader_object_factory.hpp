@@ -20,8 +20,7 @@ namespace spk::Lumina
 		using Object = std::variant<
 			std::shared_ptr<OpenGL::UniformBufferObject>,
 			std::shared_ptr<OpenGL::ShaderStorageBufferObject>,
-			std::shared_ptr<OpenGL::SamplerObject>
-		>;
+			std::shared_ptr<OpenGL::SamplerObject>>;
 
 		std::unordered_map<std::wstring, Object> _objects;
 

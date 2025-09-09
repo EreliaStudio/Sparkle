@@ -92,17 +92,18 @@ namespace spk
 
 	struct MouseEvent : public IEvent
 	{
-		static inline std::vector<UINT> EventIDs = {WM_LBUTTONDOWN,
-													WM_RBUTTONDOWN,
-													WM_MBUTTONDOWN,
-													WM_LBUTTONUP,
-													WM_RBUTTONUP,
-													WM_MBUTTONUP,
-													WM_LBUTTONDBLCLK,
-													WM_RBUTTONDBLCLK,
-													WM_MBUTTONDBLCLK,
-													WM_MOUSEMOVE,
-													WM_MOUSEWHEEL};
+		static inline std::vector<UINT> EventIDs = {
+			WM_LBUTTONDOWN,
+			WM_RBUTTONDOWN,
+			WM_MBUTTONDOWN,
+			WM_LBUTTONUP,
+			WM_RBUTTONUP,
+			WM_MBUTTONUP,
+			WM_LBUTTONDBLCLK,
+			WM_RBUTTONDBLCLK,
+			WM_MBUTTONDBLCLK,
+			WM_MOUSEMOVE,
+			WM_MOUSEWHEEL};
 		enum class Type
 		{
 			Unknow,
@@ -142,18 +143,19 @@ namespace spk
 
 	struct ControllerEvent : public IEvent
 	{
-		static inline std::vector<UINT> EventIDs = {WM_LEFT_JOYSTICK_MOTION,
-													WM_RIGHT_JOYSTICK_MOTION,
-													WM_LEFT_JOYSTICK_RESET,
-													WM_RIGHT_JOYSTICK_RESET,
-													WM_LEFT_TRIGGER_MOTION,
-													WM_RIGHT_TRIGGER_MOTION,
-													WM_LEFT_TRIGGER_RESET,
-													WM_RIGHT_TRIGGER_RESET,
-													WM_DIRECTIONAL_CROSS_MOTION,
-													WM_DIRECTIONAL_CROSS_RESET,
-													WM_CONTROLLER_BUTTON_PRESS,
-													WM_CONTROLLER_BUTTON_RELEASE};
+		static inline std::vector<UINT> EventIDs = {
+			WM_LEFT_JOYSTICK_MOTION,
+			WM_RIGHT_JOYSTICK_MOTION,
+			WM_LEFT_JOYSTICK_RESET,
+			WM_RIGHT_JOYSTICK_RESET,
+			WM_LEFT_TRIGGER_MOTION,
+			WM_RIGHT_TRIGGER_MOTION,
+			WM_LEFT_TRIGGER_RESET,
+			WM_RIGHT_TRIGGER_RESET,
+			WM_DIRECTIONAL_CROSS_MOTION,
+			WM_DIRECTIONAL_CROSS_RESET,
+			WM_CONTROLLER_BUTTON_PRESS,
+			WM_CONTROLLER_BUTTON_RELEASE};
 		enum class Type
 		{
 			Unknow,

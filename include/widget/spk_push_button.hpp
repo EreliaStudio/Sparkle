@@ -130,9 +130,8 @@ namespace spk
 		void setFontColor(const spk::Color &p_glyphColor, const spk::Color &p_outlineColor, const State &p_state);
 
 		void setTextAlignment(const spk::HorizontalAlignment &p_horizontalAlignment, const spk::VerticalAlignment &p_verticalAlignment);
-		void setTextAlignment(const spk::HorizontalAlignment &p_horizontalAlignment,
-							  const spk::VerticalAlignment &p_verticalAlignment,
-							  const State &p_state);
+		void setTextAlignment(
+			const spk::HorizontalAlignment &p_horizontalAlignment, const spk::VerticalAlignment &p_verticalAlignment, const State &p_state);
 
 		void setIconset(spk::SafePointer<const SpriteSheet> p_iconset);
 		void setIconset(spk::SafePointer<const SpriteSheet> p_iconset, const State &p_state);

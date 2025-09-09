@@ -13,6 +13,8 @@
 
 #include "utils/spk_opengl_utils.hpp"
 
+#include "spk_debug_macro.hpp"
+
 namespace spk::OpenGL
 {
 	Program::Program() :
@@ -20,6 +22,7 @@ namespace spk::OpenGL
 		_fragmentShaderCode(""),
 		_programID(0)
 	{
+		DEBUG_LINE();
 	}
 
 	Program::Program(const std::string &p_vertexShaderCode, const std::string &p_fragmentShaderCode, bool p_verboseMode) :
@@ -28,6 +31,7 @@ namespace spk::OpenGL
 		_programID(0),
 		_verboseMode(p_verboseMode)
 	{
+		DEBUG_LINE();
 	}
 
 	void Program::load(const std::string &p_vertexShaderCode, const std::string &p_fragmentShaderCode)

@@ -199,9 +199,7 @@ namespace
 		return {xAxis, y, up};
 	}
 
-	static spk::Vector3 ensureKey(const spk::Vector3 &p_v,
-	                              std::map<spk::Vector3, spk::Vector2> &p_coords,
-	                              const Frame &p_f)
+	static spk::Vector3 ensureKey(const spk::Vector3 &p_v, std::map<spk::Vector3, spk::Vector2> &p_coords, const Frame &p_f)
 	{
 		for (const auto &kv : p_coords)
 		{
@@ -271,12 +269,13 @@ namespace
 		spk::Vector2 dir{};
 	};
 
-	static std::optional<NextChoice> chooseNext(const spk::Vector3 &p_cur,
-	                                            const spk::Vector2 &p_curDir,
-	                                            const Adj &p_adj,
-	                                            const std::vector<spk::Edge> &p_edges,
-	                                            const std::map<spk::Vector3, spk::Vector2> &p_coords,
-	                                            const std::vector<bool> &p_used)
+	static std::optional<NextChoice> chooseNext(
+		const spk::Vector3 &p_cur,
+		const spk::Vector2 &p_curDir,
+		const Adj &p_adj,
+		const std::vector<spk::Edge> &p_edges,
+		const std::map<spk::Vector3, spk::Vector2> &p_coords,
+		const std::vector<bool> &p_used)
 	{
 		const auto it = p_adj.find(p_cur);
 		if (it == p_adj.end())
@@ -355,10 +354,7 @@ namespace
 			}
 		}
 
-		loop.erase(std::unique(loop.begin(), loop.end(),
-		                       [](const spk::Vector3 &p_a, const spk::Vector3 &p_b)
-		                       { return p_a == p_b; }),
-		           loop.end());
+		loop.erase(std::unique(loop.begin(), loop.end(), [](const spk::Vector3 &p_a, const spk::Vector3 &p_b) { return p_a == p_b; }), loop.end());
 
 		if (loop.size() >= 3 && ((loop.front() == loop.back()) == false))
 		{

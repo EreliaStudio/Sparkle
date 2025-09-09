@@ -106,7 +106,7 @@ namespace spk
 			break;
 		}
 		}
-		
+
 		_updateUBO();
 	}
 }

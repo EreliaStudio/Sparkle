@@ -21,7 +21,8 @@ namespace spk
 			cornerSize = {0, 0};
 		}
 
-		std::array<int, GRID_SIZE + 1> xValues = {0, cornerSize.x, static_cast<int>(p_geometry.width) - cornerSize.x, static_cast<int>(p_geometry.width)};
+		std::array<int, GRID_SIZE + 1> xValues = {
+			0, cornerSize.x, static_cast<int>(p_geometry.width) - cornerSize.x, static_cast<int>(p_geometry.width)};
 
 		std::array<int, GRID_SIZE + 1> yValues = {
 			0,

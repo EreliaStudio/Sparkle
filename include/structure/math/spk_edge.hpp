@@ -15,7 +15,7 @@ namespace spk
 			spk::Vector3 b;
 
 			bool operator==(const Identifier &p_other) const;
-			bool operator<(const Identifier& p_other) const;
+			bool operator<(const Identifier &p_other) const;
 			static Identifier from(const Edge &p_edge);
 		};
 
@@ -23,6 +23,7 @@ namespace spk
 		{
 			size_t operator()(const Identifier &p_edge) const noexcept;
 		};
+
 	private:
 		spk::Vector3 _first;
 		spk::Vector3 _second;

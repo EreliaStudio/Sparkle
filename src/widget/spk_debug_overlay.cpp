@@ -107,7 +107,6 @@ namespace spk
 	DebugOverlay::DebugOverlay(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
 		spk::Widget(p_name, p_parent)
 	{
-		
 	}
 
 	void DebugOverlay::configureRows(const size_t &p_rows, const size_t &p_defaultColumns)
@@ -228,7 +227,7 @@ namespace spk
 		}
 		return _rows[0].labels[0]->geometry().size.y;
 	}
-	
+
 	uint32_t DebugOverlay::computeMaxHeightPixels() const
 	{
 		if (_rows.empty())

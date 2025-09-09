@@ -137,7 +137,7 @@ namespace spk
 
 				if (_data->availableElements.empty())
 				{
-					//NOLINTNEXTLINE(cppcoreguidelines-owning-memory) << Will be passed to a unique_ptr with custom destructor later on
+					// NOLINTNEXTLINE(cppcoreguidelines-owning-memory) << Will be passed to a unique_ptr with custom destructor later on
 					rawPtr = new TType(std::forward<TArgs>(p_args)...);
 				}
 				else
@@ -146,7 +146,7 @@ namespace spk
 					_data->availableElements.pop_back();
 
 					rawPtr->~TType();
-					//NOLINTNEXTLINE(cppcoreguidelines-owning-memory) << Will be passed to a unique_ptr with custom destructor later on
+					// NOLINTNEXTLINE(cppcoreguidelines-owning-memory) << Will be passed to a unique_ptr with custom destructor later on
 					new (rawPtr) TType(std::forward<TArgs>(p_args)...);
 				}
 			}
@@ -165,8 +165,8 @@ namespace spk
 						return;
 					}
 				}
-				
-				//NOLINTNEXTLINE(cppcoreguidelines-owning-memory) << Release of the pointer data uppon "real" destruction
+
+				// NOLINTNEXTLINE(cppcoreguidelines-owning-memory) << Release of the pointer data uppon "real" destruction
 				delete p_ptr;
 			};
 

@@ -76,14 +76,14 @@ namespace spk
 					if (_needBaking == true)
 					{
 						_bake();
-					
+
 						_needBaking = false;
 					}
 				}
 
 				void start() override
 				{
-					_chunk = dynamic_cast<Chunk*>(owner().get());
+					_chunk = dynamic_cast<Chunk *>(owner().get());
 
 					if (_chunk == nullptr)
 					{
@@ -93,7 +93,7 @@ namespace spk
 					_tileMap = _chunk->_tilemap;
 
 					_collider = owner()->template addComponent<spk::Collider2D>(name() + L"/Collider2D");
-					
+
 					_editionContract = _chunk->onEdition([this]() { _needBaking = true; });
 					_needBaking = true;
 				}

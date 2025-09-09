@@ -189,7 +189,7 @@ namespace spk
 					}
 				}
 			}
-			
+
 			return (nullptr);
 		}
 

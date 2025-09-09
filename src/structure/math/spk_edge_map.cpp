@@ -35,7 +35,8 @@ namespace
 		return false;
 	}
 
-	static std::vector<BoundaryEdge> buildBoundary(const std::unordered_map<spk::Edge::Identifier, spk::EdgeMap::Entry, spk::Edge::IdentifierHash> &p_edges)
+	static std::vector<BoundaryEdge> buildBoundary(
+		const std::unordered_map<spk::Edge::Identifier, spk::EdgeMap::Entry, spk::Edge::IdentifierHash> &p_edges)
 	{
 		std::vector<BoundaryEdge> boundary;
 		boundary.reserve(p_edges.size());

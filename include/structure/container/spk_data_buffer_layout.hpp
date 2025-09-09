@@ -76,8 +76,9 @@ namespace spk
 
 				if (sizeof(TType) != _size)
 				{
-					GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Invalid TType : expected [" + std::to_string(_size) +
-								   "] bytes, but received [" + std::to_string(sizeof(TType)) + "].");
+					GENERATE_ERROR(
+						spk::StringUtils::wstringToString(_name) + " - Invalid TType : expected [" + std::to_string(_size) +
+						"] bytes, but received [" + std::to_string(sizeof(TType)) + "].");
 				}
 
 				std::memcpy(_buffer->data() + _offset, &p_value, sizeof(TType));
@@ -107,8 +108,9 @@ namespace spk
 
 				if (sizeof(TType) != _size)
 				{
-					GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Invalid TType : expected [" + std::to_string(_size) +
-								   "] bytes, but received [" + std::to_string(sizeof(TType)) + "].");
+					GENERATE_ERROR(
+						spk::StringUtils::wstringToString(_name) + " - Invalid TType : expected [" + std::to_string(_size) +
+						"] bytes, but received [" + std::to_string(sizeof(TType)) + "].");
 				}
 
 				return *reinterpret_cast<TType *>(_buffer->data() + _offset);
@@ -131,8 +133,9 @@ namespace spk
 
 				if (sizeof(TType) != _size)
 				{
-					GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Invalid TType : expected [" + std::to_string(_size) +
-								   "] bytes, but received [" + std::to_string(sizeof(TType)) + "].");
+					GENERATE_ERROR(
+						spk::StringUtils::wstringToString(_name) + " - Invalid TType : expected [" + std::to_string(_size) +
+						"] bytes, but received [" + std::to_string(sizeof(TType)) + "].");
 				}
 
 				return *reinterpret_cast<const TType *>(_buffer->data() + _offset);
@@ -141,8 +144,8 @@ namespace spk
 			template <typename TType>
 			std::vector<TType> getArray() const
 			{
-				static_assert(std::is_standard_layout<TType>::value,
-							  "DataBufferLayout::Element::getArray<TType>() - TType must be a standard layout type.");
+				static_assert(
+					std::is_standard_layout<TType>::value, "DataBufferLayout::Element::getArray<TType>() - TType must be a standard layout type.");
 
 				if (!isArray())
 				{
@@ -162,8 +165,9 @@ namespace spk
 				{
 					if (child.size() != sizeof(TType))
 					{
-						GENERATE_ERROR(spk::StringUtils::wstringToString(_name) + " - Child element size [" + std::to_string(child.size()) +
-									   "] does not match TType size [" + std::to_string(sizeof(TType)) + "]");
+						GENERATE_ERROR(
+							spk::StringUtils::wstringToString(_name) + " - Child element size [" + std::to_string(child.size()) +
+							"] does not match TType size [" + std::to_string(sizeof(TType)) + "]");
 					}
 					result.push_back(child.get<TType>());
 				}
@@ -183,8 +187,9 @@ namespace spk
 				}
 				else
 				{
-					throw std::runtime_error("DataBufferLayout::as<TExportedType>() - Size mismatch: expected " + std::to_string(size()) + ", got " +
-											 std::to_string(sizeof(TExportedType)) + ".");
+					throw std::runtime_error(
+						"DataBufferLayout::as<TExportedType>() - Size mismatch: expected " + std::to_string(size()) + ", got " +
+						std::to_string(sizeof(TExportedType)) + ".");
 				}
 			}
 
@@ -197,8 +202,9 @@ namespace spk
 				}
 				else
 				{
-					throw std::runtime_error("DataBufferLayout::as<TExportedType>() - Size mismatch: expected " + std::to_string(size()) + ", got " +
-											 std::to_string(sizeof(TExportedType)) + ".");
+					throw std::runtime_error(
+						"DataBufferLayout::as<TExportedType>() - Size mismatch: expected " + std::to_string(size()) + ", got " +
+						std::to_string(sizeof(TExportedType)) + ".");
 				}
 			}
 		};
@@ -239,8 +245,9 @@ namespace spk
 			}
 			else
 			{
-				throw std::runtime_error("DataBufferLayout::as<TExportedType>() - Size mismatch: expected " + std::to_string(_root.size()) +
-										 ", got " + std::to_string(sizeof(TExportedType)) + ".");
+				throw std::runtime_error(
+					"DataBufferLayout::as<TExportedType>() - Size mismatch: expected " + std::to_string(_root.size()) + ", got " +
+					std::to_string(sizeof(TExportedType)) + ".");
 			}
 		}
 
@@ -253,8 +260,9 @@ namespace spk
 			}
 			else
 			{
-				throw std::runtime_error("DataBufferLayout::as<TExportedType>() - Size mismatch: expected " + std::to_string(_root.size()) +
-										 ", got " + std::to_string(sizeof(TExportedType)) + ".");
+				throw std::runtime_error(
+					"DataBufferLayout::as<TExportedType>() - Size mismatch: expected " + std::to_string(_root.size()) + ", got " +
+					std::to_string(sizeof(TExportedType)) + ".");
 			}
 		}
 	};

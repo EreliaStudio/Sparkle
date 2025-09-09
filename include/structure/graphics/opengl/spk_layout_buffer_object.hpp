@@ -73,12 +73,14 @@ namespace spk::OpenGL
 		LayoutBufferObject(std::initializer_list<LayoutBufferObject::Attribute> p_attributes);
 
 		template <typename Container>
-			requires(std::is_same_v<std::remove_cv_t<std::remove_reference_t<decltype(*std::declval<Container>().data())>>,
-									LayoutBufferObject::Attribute> &&
-					 requires(const Container &p_c) {
-						 { p_c.data() } -> std::convertible_to<const LayoutBufferObject::Attribute *>;
-						 { p_c.size() } -> std::convertible_to<std::size_t>;
-					 })
+			requires(
+				std::is_same_v<
+					std::remove_cv_t<std::remove_reference_t<decltype(*std::declval<Container>().data())>>,
+					LayoutBufferObject::Attribute> &&
+				requires(const Container &p_c) {
+					{ p_c.data() } -> std::convertible_to<const LayoutBufferObject::Attribute *>;
+					{ p_c.size() } -> std::convertible_to<std::size_t>;
+				})
 		explicit LayoutBufferObject(const Container &p_attributes) :
 			LayoutBufferObject(std::span(p_attributes.data(), p_attributes.size()))
 		{
@@ -101,8 +103,9 @@ namespace spk::OpenGL
 
 			if (sizeof(TType) != _vertexSize)
 			{
-				GENERATE_ERROR("Size mismatch in LayoutBufferObject: Expected vertex size is " + std::to_string(_vertexSize) +
-							   " bytes, but received " + std::to_string(sizeof(TType)) + " bytes.");
+				GENERATE_ERROR(
+					"Size mismatch in LayoutBufferObject: Expected vertex size is " + std::to_string(_vertexSize) + " bytes, but received " +
+					std::to_string(sizeof(TType)) + " bytes.");
 			}
 			VertexBufferObject::append(p_data.data(), p_data.size() * sizeof(TType));
 		}
@@ -145,8 +148,9 @@ namespace spk::OpenGL
 
 			if (_vertexSize % sizeof(TType) != 0)
 			{
-				GENERATE_ERROR("LayoutBufferObject::get() - The buffer element size (" + std::to_string(_vertexSize) +
-							   " bytes) is incompatible with TType size (" + std::to_string(sizeof(TType)) + " bytes).");
+				GENERATE_ERROR(
+					"LayoutBufferObject::get() - The buffer element size (" + std::to_string(_vertexSize) +
+					" bytes) is incompatible with TType size (" + std::to_string(sizeof(TType)) + " bytes).");
 			}
 
 			size_t elementCount = totalSize / sizeof(TType);

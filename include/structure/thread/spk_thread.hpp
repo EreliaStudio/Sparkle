@@ -10,20 +10,20 @@
 
 namespace spk
 {
-class Thread
-{
-private:
-std::wstring _name;
-std::function<void()> _innerCallback;
-std::unique_ptr<std::thread> _handle = nullptr;
+	class Thread
+	{
+	private:
+		std::wstring _name;
+		std::function<void()> _innerCallback;
+		std::unique_ptr<std::thread> _handle = nullptr;
 
-public:
-Thread(const std::wstring &p_name, const std::function<void()> &p_callback);
-virtual ~Thread();
+	public:
+		Thread(const std::wstring &p_name, const std::function<void()> &p_callback);
+		virtual ~Thread();
 
-virtual void start();
-virtual void join();
+		virtual void start();
+		virtual void join();
 
-bool isJoinable() const;
-};
+		bool isJoinable() const;
+	};
 }

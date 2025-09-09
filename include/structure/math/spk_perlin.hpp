@@ -35,14 +35,15 @@ namespace spk
 		float _noise2D(float p_x, float p_y) const;
 		float _noise3D(float p_x, float p_y, float p_z) const;
 
-		static float _fractal(const Perlin &p_perlin,
-							 std::function<float(const Perlin &, float, float, float)> p_noiseFunc,
-							 float p_x,
-							 float p_y,
-							 float p_z,
-							 int p_octaves,
-							 float p_persistence,
-							 float p_lacunarity);
+		static float _fractal(
+			const Perlin &p_perlin,
+			std::function<float(const Perlin &, float, float, float)> p_noiseFunc,
+			float p_x,
+			float p_y,
+			float p_z,
+			int p_octaves,
+			float p_persistence,
+			float p_lacunarity);
 
 	public:
 		Perlin(unsigned int p_seed = 0, Perlin::Interpolation p_interp = Perlin::Interpolation::SmoothStep);

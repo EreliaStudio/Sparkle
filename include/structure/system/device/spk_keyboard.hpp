@@ -163,7 +163,7 @@ namespace spk
 		virtual ~Keyboard() = default;
 		InputState operator[](Key p_key) const;
 
-		const std::array<InputState, Key::MaxNbKey>&state() const;
+		const std::array<InputState, Key::MaxNbKey> &state() const;
 		wchar_t glyph() const;
 		spk::SafePointer<Window> window() const;
 	};

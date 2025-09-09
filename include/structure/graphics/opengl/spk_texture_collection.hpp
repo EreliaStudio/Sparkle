@@ -26,8 +26,8 @@ namespace spk::OpenGL
 		static inline std::unordered_map<GLuint, spk::Texture::ID> _gpuToCpuMap;
 
 	public:
-		static spk::SafePointer<spk::OpenGL::TextureObject> textureObject(const spk::SafePointer<const spk::Texture> &p_cpuTexture,
-																		  std::unique_ptr<spk::OpenGL::TextureObject> p_gpuTexture = nullptr)
+		static spk::SafePointer<spk::OpenGL::TextureObject> textureObject(
+			const spk::SafePointer<const spk::Texture> &p_cpuTexture, std::unique_ptr<spk::OpenGL::TextureObject> p_gpuTexture = nullptr)
 		{
 			if (p_cpuTexture == nullptr || p_cpuTexture->_id < 0)
 			{

@@ -71,7 +71,7 @@ namespace spk
 		return (_deltaPosition);
 	}
 
-	const std::array<InputState, 3>& Mouse::buttons() const
+	const std::array<InputState, 3> &Mouse::buttons() const
 	{
 		return (_buttons);
 	}

@@ -27,9 +27,9 @@ namespace spk::OpenGLUtils
 	void GLAPIENTRY openGLDebugMessageCallback(
 		GLenum p_source, GLenum p_type, GLuint p_id, GLenum p_severity, GLsizei p_length, const GLchar *p_message, const void *p_userParam);
 
-	void logGlErrors(const char* p_where);
-	void printShaderLog(GLuint p_shader, const char* p_label);
-	void printProgramLog(GLuint p_prog, const char* p_label);
+	void logGlErrors(const char *p_where);
+	void printShaderLog(GLuint p_shader, const char *p_label);
+	void printProgramLog(GLuint p_prog, const char *p_label);
 	void dumpActiveAttribs(GLuint p_prog);
 	void dumpActiveUniformsAndSamplers(GLuint p_prog);
 	void dumpUniformBlocks(GLuint p_prog);

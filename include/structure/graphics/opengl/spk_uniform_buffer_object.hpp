@@ -62,8 +62,8 @@ namespace spk::OpenGL
 		bool contains(const std::wstring &p_name);
 		void resize(size_t p_size) override;
 		DataBufferLayout::Element &addElement(const std::wstring &p_name, size_t p_offset, size_t p_size);
-		DataBufferLayout::Element &
-		addElement(const std::wstring &p_name, size_t p_offset, size_t p_nbElement, size_t p_elementSize, size_t p_elementPadding);
+		DataBufferLayout::Element &addElement(
+			const std::wstring &p_name, size_t p_offset, size_t p_nbElement, size_t p_elementSize, size_t p_elementPadding);
 
 		void removeElement(const std::wstring &p_name);
 

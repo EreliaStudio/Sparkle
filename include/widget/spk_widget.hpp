@@ -109,7 +109,7 @@ namespace spk
 		{
 			std::unique_ptr<TChildType> newChild = std::make_unique<TChildType>(std::forward<TArgs>(p_args)...);
 
-			TChildType * result = newChild.get();
+			TChildType *result = newChild.get();
 
 			addChild(result);
 

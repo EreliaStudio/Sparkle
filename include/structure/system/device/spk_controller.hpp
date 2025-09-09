@@ -77,7 +77,7 @@ namespace spk
 		const Trigger &leftTrigger() const;
 		const Trigger &rightTrigger() const;
 		const Vector2Int &directionalCross() const;
-		const std::array<InputState, 17>& buttons() const;
+		const std::array<InputState, 17> &buttons() const;
 		spk::SafePointer<Window> window() const;
 	};
 }

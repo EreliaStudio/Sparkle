@@ -52,7 +52,7 @@ namespace spk
 				{
 					resign();
 				}
-				
+
 				if (this != &p_other)
 				{
 					_job = std::move(p_other._job);

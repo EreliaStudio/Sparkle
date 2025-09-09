@@ -1,13 +1,13 @@
 #pragma once
 
 #ifdef _WIN32
-#   define WIN32_LEAN_AND_MEAN
-#   include <windows.h>
-#   undef WIN32_LEAN_AND_MEAN
+#	define WIN32_LEAN_AND_MEAN
+#	include <windows.h>
+#	undef WIN32_LEAN_AND_MEAN
 #endif
 
-#include <GL/glew.h>
 #include <GL/gl.h>
+#include <GL/glew.h>
 
 #include "spk_debug_macro.hpp"
 #include "structure/container/spk_data_buffer_layout.hpp"
@@ -106,12 +106,13 @@ namespace spk::OpenGL
 
 	public:
 		ShaderStorageBufferObject();
-		ShaderStorageBufferObject(const std::wstring &p_blockName,
-								  BindingPoint p_bindingPoint,
-								  size_t p_fixedSize,
-								  size_t p_paddingFixedToDynamic,
-								  size_t p_dynamicElementSize,
-								  size_t p_dynamicElementPadding);
+		ShaderStorageBufferObject(
+			const std::wstring &p_blockName,
+			BindingPoint p_bindingPoint,
+			size_t p_fixedSize,
+			size_t p_paddingFixedToDynamic,
+			size_t p_dynamicElementSize,
+			size_t p_dynamicElementPadding);
 		ShaderStorageBufferObject(const spk::JSON::Object &p_desc);
 		ShaderStorageBufferObject(const ShaderStorageBufferObject &p_other);
 		ShaderStorageBufferObject &operator=(const ShaderStorageBufferObject &p_other);

@@ -24,8 +24,9 @@ namespace spk
 		SafePointer(const SafePointer<ToType> &p_other) :
 			_ptr(dynamic_cast<TType *>(p_other.get()))
 		{
-			static_assert(std::is_base_of<ToType, TType>::value || std::is_base_of<TType, ToType>::value,
-						  "SafePointer conversion error: TType and ToType must have an inheritance relationship.");
+			static_assert(
+				std::is_base_of<ToType, TType>::value || std::is_base_of<TType, ToType>::value,
+				"SafePointer conversion error: TType and ToType must have an inheritance relationship.");
 		}
 
 		SafePointer(const SafePointer &) = default;

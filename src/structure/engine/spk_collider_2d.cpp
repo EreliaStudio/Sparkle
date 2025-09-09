@@ -20,7 +20,7 @@ namespace spk
 		std::vector<spk::SafePointer<const Collider2D>> result;
 
 		std::lock_guard<std::mutex> lock(_collidersMutex);
-		
+
 		for (const auto &body : _colliders)
 		{
 			if (body.get() == this)

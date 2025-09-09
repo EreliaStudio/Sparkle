@@ -1,9 +1,9 @@
 #pragma once
 
 #include "structure/container/spk_data_buffer.hpp"
+#include <array>
 #include <cstdint>
 #include <cstring>
-#include <array>
 
 namespace spk
 {

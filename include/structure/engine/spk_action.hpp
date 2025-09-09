@@ -55,13 +55,13 @@ namespace spk
 		{
 		}
 
-		void setDeviceValue(const DeviceValue& p_deviceValue, const spk::InputState& p_state)
+		void setDeviceValue(const DeviceValue &p_deviceValue, const spk::InputState &p_state)
 		{
 			_deviceValue = p_deviceValue;
 			_targetState = p_state;
 		}
 
-		void setRepeatInterval(const long long& p_repeatInterval)
+		void setRepeatInterval(const long long &p_repeatInterval)
 		{
 			_repeatInterval = p_repeatInterval;
 			_timer = spk::Timer(_repeatInterval);

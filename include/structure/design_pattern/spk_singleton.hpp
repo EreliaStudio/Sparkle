@@ -1,8 +1,8 @@
 #pragma once
 
 #include <memory>
-#include <stdexcept>
 #include <mutex>
+#include <stdexcept>
 
 #include "structure/spk_safe_pointer.hpp"
 
@@ -25,14 +25,20 @@ namespace spk
 			template <typename... Args>
 			Instanciator(Args &&...p_args)
 			{
+				DEBUG_LINE();
 				std::lock_guard<std::recursive_mutex> lock(Singleton<TType>::mutex());
 
+				DEBUG_LINE();
 				if (Singleton<TType>::instance() == nullptr)
 				{
+					DEBUG_LINE();
 					Singleton<TType>::instanciate(std::forward<Args>(p_args)...);
+					DEBUG_LINE();
 				}
+				DEBUG_LINE();
 
 				reference++;
+				DEBUG_LINE();
 			}
 
 			~Instanciator()
@@ -73,14 +79,18 @@ namespace spk
 		template <typename... Args>
 		static spk::SafePointer<TType> instanciate(Args &&...p_args)
 		{
+			DEBUG_LINE();
 			std::lock_guard<std::recursive_mutex> lock(Singleton<TType>::mutex());
 
+			DEBUG_LINE();
 			if (_instance != nullptr)
 			{
 				GENERATE_ERROR("Can't instanciate an already instancied singleton");
 			}
 
+			DEBUG_LINE();
 			_instance.reset(new TType(std::forward<Args>(p_args)...));
+			DEBUG_LINE();
 			return (_instance.get());
 		}
 

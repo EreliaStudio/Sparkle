@@ -22,17 +22,21 @@ namespace spk
 		using Image::loadFromFile;
 
 	public:
-		static SpriteSheet fromRawData(const std::vector<uint8_t> &p_rawData,
-									   const spk::Vector2UInt &p_spriteSize,
-									   const Filtering &p_filtering = Filtering::Nearest,
-									   const Wrap &p_wrap = Wrap::ClampToEdge,
-									   const Mipmap &p_mipmap = Mipmap::Enable)
+		static SpriteSheet fromRawData(
+			const std::vector<uint8_t> &p_rawData,
+			const spk::Vector2UInt &p_spriteSize,
+			const Filtering &p_filtering = Filtering::Nearest,
+			const Wrap &p_wrap = Wrap::ClampToEdge,
+			const Mipmap &p_mipmap = Mipmap::Enable)
 		{
+			DEBUG_LINE();
 			SpriteSheet result;
 
+			DEBUG_LINE();
 			result.loadFromData(p_rawData, p_spriteSize);
 			result.setProperties(p_filtering, p_wrap, p_mipmap);
 
+			DEBUG_LINE();
 			return (result);
 		}
 

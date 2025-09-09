@@ -52,11 +52,12 @@ namespace spk
 		public:
 			std::thread receptionThread;
 
-			Acceptator(std::unordered_map<ClientId, SOCKET> &p_clientsMap,
-					   std::mutex &p_mutex,
-					   ClientId &p_clientId,
-					   MessagePool &p_pool,
-					   spk::ThreadSafeQueue<MessageObject> &p_queue);
+			Acceptator(
+				std::unordered_map<ClientId, SOCKET> &p_clientsMap,
+				std::mutex &p_mutex,
+				ClientId &p_clientId,
+				MessagePool &p_pool,
+				spk::ThreadSafeQueue<MessageObject> &p_queue);
 			~Acceptator();
 
 			Server::Contract addOnConnectionCallback(const ConnectionCallback &p_connectionCallback);
