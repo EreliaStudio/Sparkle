@@ -338,7 +338,7 @@ namespace spk
 				{
 					PROPAGATE_ERROR(
 						"Error while applying viewport of [" + spk::StringUtils::wstringToString(name()) + "] with viewport of geometry [" +
-							_viewport.geometry().to_string() + "]\nAnd a widget geometry [" + geometry().to_string() + "]",
+							_viewport.geometry().toString() + "]\nAnd a widget geometry [" + geometry().toString() + "]",
 						e);
 				}
 				child->_applyResize();
@@ -477,7 +477,7 @@ namespace spk
 				{
 					PROPAGATE_ERROR(
 						"Error while applying viewport of [" + spk::StringUtils::wstringToString(name()) + "] with viewport of geometry [" +
-							_viewport.geometry().to_string() + "]",
+							_viewport.geometry().toString() + "]",
 						e);
 				}
 				child->onPaintEvent(childEvent);

@@ -10,9 +10,9 @@ namespace spk
 	{
 		auto &cameraUBO = spk::Lumina::Shader::Constants::ubo(L"CameraUBO");
 		const spk::Transform &transform = owner()->transform();
-		cameraUBO.layout()[L"viewMatrix"] = transform.inverseModel();
-		cameraUBO.layout()[L"projectionMatrix"] = _camera.projectionMatrix();
-		cameraUBO.validate();
+		cameraUBO->layout()[L"viewMatrix"] = transform.inverseModel();
+		cameraUBO->layout()[L"projectionMatrix"] = _camera.projectionMatrix();
+		cameraUBO->validate();
 	}
 
 	CameraComponent::CameraComponent(const std::wstring &p_name) :

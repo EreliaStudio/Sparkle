@@ -103,11 +103,11 @@ namespace spk
 				_originator = nullptr;
 			}
 
-			void trigger(TParameterTypes... args) const
+			void trigger(TParameterTypes... p_args) const
 			{
 				if (isValid())
 				{
-					(*_job)(std::forward<TParameterTypes>(args)...);
+					(*_job)(std::forward<TParameterTypes>(p_args)...);
 				}
 			}
 		};
@@ -194,14 +194,14 @@ namespace spk
 			}
 		}
 
-		void trigger(TParameterTypes... args) const
+		void trigger(TParameterTypes... p_args) const
 		{
 			std::lock_guard<std::recursive_mutex> lock(_mutex);
 			for (auto &job : _subscribedJobs)
 			{
 				if (job && *job)
 				{
-					(*job)(std::forward<TParameterTypes>(args)...);
+					(*job)(std::forward<TParameterTypes>(p_args)...);
 				}
 			}
 		}

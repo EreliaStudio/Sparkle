@@ -2,7 +2,7 @@
 
 #include "structure/engine/spk_component.hpp"
 #include "structure/engine/spk_camera.hpp"
-#include "structure/graphics/spk_geometry_2D.hpp"
+#include "structure/graphics/spk_geometry_2d.hpp"
 
 namespace spk
 {

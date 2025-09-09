@@ -4,7 +4,7 @@
 
 #include <GL/gl.h>
 
-#include "structure/graphics/spk_geometry_2D.hpp"
+#include "structure/graphics/spk_geometry_2d.hpp"
 #include <cstring>
 #include <deque>
 #include <unordered_map>
@@ -50,8 +50,8 @@ namespace spk
 			Section();
 			Section(spk::Vector2 p_anchor, spk::Vector2 p_size);
 			
-			bool operator==(const Section& other) const noexcept;
-    		bool operator!=(const Section& other) const noexcept;
+			bool operator==(const Section& p_other) const noexcept;
+    		bool operator!=(const Section& p_other) const noexcept;
 		};
 
 		enum class Format
@@ -89,8 +89,8 @@ namespace spk
 		static inline ID _nextID = 0;
 		static inline ID InvalidID = -1;
 
-		static ID takeID();
-		static void releaseID(const Texture::ID &p_id);
+		static ID _takeId();
+		static void _releaseId(const Texture::ID &p_id);
 
 		ID _id;
 
@@ -103,7 +103,7 @@ namespace spk
 		Wrap _wrap;
 		Mipmap _mipmap;
 
-		size_t _getBytesPerPixel(const Format &format) const;
+		size_t _getBytesPerPixel(const Format &p_format) const;
 
 	public:
 		Texture();

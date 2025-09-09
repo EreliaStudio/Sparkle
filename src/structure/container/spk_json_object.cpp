@@ -135,7 +135,7 @@ namespace spk
 
 				loadContent(newObject, p_content, p_index);
 
-				p_objectToFill.push_back(std::move(newObject));
+				p_objectToFill.pushBack(std::move(newObject));
 
 				if (p_content[p_index] == ',')
 				{
@@ -392,7 +392,7 @@ namespace spk
 			return (*result);
 		}
 
-		void Object::push_back(const Object &p_object)
+		void Object::pushBack(const Object &p_object)
 		{
 			if (_initialized == false)
 			{
@@ -470,7 +470,7 @@ namespace spk
 			return (std::get<std::map<std::wstring, std::shared_ptr<Object>>>(_content).count(p_key));
 		}
 
-		void Object::printUnit(std::wostream &p_os) const
+		void Object::_printUnit(std::wostream &p_os) const
 		{
 			const Unit &tmp = std::get<Unit>(_content);
 
@@ -497,7 +497,7 @@ namespace spk
 			}
 		}
 
-		void Object::printObject(std::wostream &p_os) const
+		void Object::_printObject(std::wostream &p_os) const
 		{
 			const std::map<std::wstring, std::shared_ptr<Object>> &map = std::get<std::map<std::wstring, std::shared_ptr<Object>>>(_content);
 			std::wstring cleanedKey;
@@ -526,7 +526,7 @@ namespace spk
 			p_os << std::setw(_indent * _indentSize) << "}";
 		}
 
-		void Object::printArray(std::wostream &p_os) const
+		void Object::_printArray(std::wostream &p_os) const
 		{
 			const std::vector<std::shared_ptr<Object>> &vector = std::get<std::vector<std::shared_ptr<Object>>>(_content);
 
@@ -550,13 +550,13 @@ namespace spk
 			switch (p_object._content.index())
 			{
 			case 0:
-				p_object.printUnit(p_os);
+				p_object._printUnit(p_os);
 				break;
 			case 1:
-				p_object.printObject(p_os);
+				p_object._printObject(p_os);
 				break;
 			case 2:
-				p_object.printArray(p_os);
+				p_object._printArray(p_os);
 				break;
 			}
 			return (p_os);

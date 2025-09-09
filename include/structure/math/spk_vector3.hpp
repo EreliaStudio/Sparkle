@@ -166,14 +166,14 @@ namespace spk
 			return p_os;
 		}
 
-		std::wstring to_wstring() const
+		std::wstring toWstring() const
 		{
 			std::wstringstream wss;
 			wss << *this;
 			return wss.str();
 		}
 
-		std::string to_string() const
+		std::string toString() const
 		{
 			std::stringstream ss;
 			ss << *this;
@@ -586,12 +586,12 @@ namespace spk
 			return max(max(p_valueA, p_valueB), p_args...);
 		}
 
-		static IVector3 lerp(const IVector3 &p_startingPoint, const IVector3 &p_endingPoint, float t)
+		static IVector3 lerp(const IVector3 &p_startingPoint, const IVector3 &p_endingPoint, float p_t)
 		{
 			return IVector3(
-				p_startingPoint.x + (p_endingPoint.x - p_startingPoint.x) * t,
-				p_startingPoint.y + (p_endingPoint.y - p_startingPoint.y) * t,
-				p_startingPoint.z + (p_endingPoint.z - p_startingPoint.z) * t);
+				p_startingPoint.x + (p_endingPoint.x - p_startingPoint.x) * p_t,
+				p_startingPoint.y + (p_endingPoint.y - p_startingPoint.y) * p_t,
+				p_startingPoint.z + (p_endingPoint.z - p_startingPoint.z) * p_t);
 		}
 
 		IVector3 positiveModulo(const IVector3 &p_modulo) const

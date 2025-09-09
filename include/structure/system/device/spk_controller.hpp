@@ -63,7 +63,7 @@ namespace spk
 		Trigger _leftTrigger;
 		Trigger _rightTrigger;
 		Vector2Int _directionalCross = 0;
-		InputState _buttons[17];
+		std::array<InputState, 17> _buttons;
 		spk::SafePointer<Window> _window;
 
 	public:

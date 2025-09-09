@@ -10,7 +10,7 @@
 #include "structure/system/device/spk_keyboard.hpp"
 #include "structure/system/device/spk_mouse.hpp"
 
-#include "structure/graphics/spk_geometry_2D.hpp"
+#include "structure/graphics/spk_geometry_2d.hpp"
 
 #include <functional>
 #include <unordered_map>
@@ -48,24 +48,19 @@ namespace spk
 	{
 	private:
 	public:
-		bool _consumed;
-		Modifiers _modifiers;
+		bool consumed;
+		Modifiers modifiers;
 		spk::SafePointer<spk::Window> window = nullptr;
 
 		IEvent() :
-			_consumed(false),
-			_modifiers()
+			consumed(false),
+			modifiers()
 		{
 		}
 
 		void consume()
 		{
-			_consumed = true;
-		}
-
-		bool consumed() const
-		{
-			return (_consumed);
+			consumed = true;
 		}
 
 		void requestPaint();
@@ -178,7 +173,7 @@ namespace spk
 			JoystickReset,
 			DirectionalCrossReset
 		};
-		static Controller::Button apiValueToControllerButton(int value);
+		static Controller::Button apiValueToControllerButton(int p_value);
 
 		Type type = Type::Unknow;
 		const spk::Controller *controller;
@@ -236,7 +231,7 @@ namespace spk
 
 	struct Event
 	{
-		using ConstructorLambda = std::function<void(Event *p_event, UINT uMsg, WPARAM wParam, LPARAM lParam)>;
+		using ConstructorLambda = std::function<void(Event *p_event, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam)>;
 		static const std::unordered_map<UINT, ConstructorLambda> _constructionMap;
 
 		union {
@@ -251,10 +246,10 @@ namespace spk
 		};
 
 		Event();
-		Event(spk::SafePointer<Window> p_window, UINT uMsg, WPARAM wParam, LPARAM lParam);
+		Event(spk::SafePointer<Window> p_window, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam);
 
-		bool construct(spk::SafePointer<Window> p_window, UINT uMsg, WPARAM wParam, LPARAM lParam);
-		void setModifiers(UINT uMsg);
+		bool construct(spk::SafePointer<Window> p_window, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam);
+		void setModifiers(UINT p_uMsg);
 	};
 
 	inline std::ostream &operator<<(std::ostream &p_os, const spk::MouseEvent::Type &p_type)

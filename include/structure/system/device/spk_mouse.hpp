@@ -25,7 +25,7 @@ namespace spk
 	private:
 		Vector2Int _position;
 		Vector2Int _deltaPosition;
-		InputState _buttons[3];
+		std::array<InputState, 3> _buttons;
 		float _wheel;
 		spk::SafePointer<Window> _window;
 

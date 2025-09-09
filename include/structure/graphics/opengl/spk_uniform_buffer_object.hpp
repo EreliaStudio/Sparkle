@@ -48,7 +48,7 @@ namespace spk::OpenGL
 		UniformBufferObject &operator=(const UniformBufferObject &p_other);
 		UniformBufferObject &operator=(UniformBufferObject &&p_other);
 
-		void activate();
+		void activate() override;
 
 		const std::wstring &blockName() const;
 		void setBlockName(const std::wstring &p_blockName);
@@ -67,10 +67,10 @@ namespace spk::OpenGL
 
 		void removeElement(const std::wstring &p_name);
 
-		DataBufferLayout::Element &operator[](size_t index);
-		const DataBufferLayout::Element &operator[](size_t index) const;
+		DataBufferLayout::Element &operator[](size_t p_index);
+		const DataBufferLayout::Element &operator[](size_t p_index) const;
 
-		DataBufferLayout::Element &operator[](const std::wstring &key);
-		const DataBufferLayout::Element &operator[](const std::wstring &key) const;
+		DataBufferLayout::Element &operator[](const std::wstring &p_key);
+		const DataBufferLayout::Element &operator[](const std::wstring &p_key) const;
 	};
 }

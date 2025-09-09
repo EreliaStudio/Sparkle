@@ -2,7 +2,7 @@
 
 #include "structure/spk_safe_pointer.hpp"
 
-#include "structure/graphics/spk_geometry_2D.hpp"
+#include "structure/graphics/spk_geometry_2d.hpp"
 #include "structure/math/spk_vector2.hpp"
 
 #include "widget/spk_widget.hpp"

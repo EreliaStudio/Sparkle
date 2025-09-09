@@ -4,7 +4,7 @@
 #include "structure/graphics/opengl/spk_program.hpp"
 #include "structure/graphics/opengl/spk_sampler_object.hpp"
 #include "structure/graphics/painter/spk_texture_painter.hpp"
-#include "structure/graphics/spk_geometry_2D.hpp"
+#include "structure/graphics/spk_geometry_2d.hpp"
 #include "structure/graphics/texture/spk_image.hpp"
 #include "structure/graphics/texture/spk_sprite_sheet.hpp"
 #include "structure/math/spk_vector2.hpp"

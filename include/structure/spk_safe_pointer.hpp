@@ -93,16 +93,16 @@ namespace spk
 			return *reinterpret_cast<const SafePointer<ToType> *>(this);
 		}
 
-		friend std::ostream &operator<<(std::ostream &os, const SafePointer<TType> &p_ptr)
+		friend std::ostream &operator<<(std::ostream &p_os, const SafePointer<TType> &p_ptr)
 		{
-			os << p_ptr.get();
-			return os;
+			p_os << p_ptr.get();
+			return p_os;
 		}
 
-		friend std::wostream &operator<<(std::wostream &wos, const SafePointer<TType> &p_ptr)
+		friend std::wostream &operator<<(std::wostream &p_wos, const SafePointer<TType> &p_ptr)
 		{
-			wos << p_ptr.get();
-			return wos;
+			p_wos << p_ptr.get();
+			return p_wos;
 		}
 	};
 }

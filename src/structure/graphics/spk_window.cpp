@@ -28,7 +28,7 @@ namespace spk
 		_onClosureCallback = p_onClosureCallback;
 	}
 
-	LRESULT CALLBACK Window::WindowProc(HWND p_hwnd, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam)
+	LRESULT CALLBACK Window::_windowProc(HWND p_hwnd, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam)
 	{
 		Window *window = nullptr;
 

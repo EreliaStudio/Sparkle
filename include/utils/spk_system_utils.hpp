@@ -63,7 +63,7 @@ namespace spk
 		bool operator>=(const Timestamp &p_other) const;
 
 	private:
-		static Timestamp fromNanoseconds(long long p_nanoseconds);
+		static Timestamp _fromNanoseconds(long long p_nanoseconds);
 	};
 }
 

@@ -27,19 +27,19 @@ namespace spk::Lumina
 			const JSON::Object &desc = p_ubos[index];
 			std::wstring name = desc[L"name"].as<std::wstring>();
 			const JSON::Object &data = desc[L"data"];
-			OpenGL::UniformBufferObject newUBO(data);
+			std::shared_ptr<OpenGL::UniformBufferObject> newUBO = std::make_shared<OpenGL::UniformBufferObject>(data);
 
 			if (_objects.contains(name))
 			{
-				auto &existing = std::get<OpenGL::UniformBufferObject>(_objects[name]);
-				if (existing.size() != newUBO.size())
+				auto &existing = std::get<std::shared_ptr<OpenGL::UniformBufferObject>>(_objects[name]);
+				if (existing->size() != newUBO->size())
 				{
 					GENERATE_ERROR("UBO '" + StringUtils::wstringToString(name) + "' already exists with a different size.");
 				}
 			}
 			else
 			{
-				_objects[name] = std::move(newUBO);
+				_objects[name] = newUBO;
 			}
 		}
 	}
@@ -51,20 +51,20 @@ namespace spk::Lumina
 			const spk::JSON::Object &desc = p_ssbos[index];
 			std::wstring name = desc[L"name"].as<std::wstring>();
 			const spk::JSON::Object &data = desc[L"data"];
-			spk::OpenGL::ShaderStorageBufferObject newSSBO(data);
+			std::shared_ptr<OpenGL::ShaderStorageBufferObject> newSSBO = std::make_shared<OpenGL::ShaderStorageBufferObject>(data);
 
 			if (_objects.contains(name))
 			{
-				auto &existing = std::get<spk::OpenGL::ShaderStorageBufferObject>(_objects[name]);
-				if (existing.fixedData().size() != newSSBO.fixedData().size() ||
-					existing.dynamicArray().elementSize() != newSSBO.dynamicArray().elementSize())
+				auto &existing = std::get<std::shared_ptr<spk::OpenGL::ShaderStorageBufferObject>>(_objects[name]);
+				if (existing->fixedData().size() != newSSBO->fixedData().size() ||
+					existing->dynamicArray().elementSize() != newSSBO->dynamicArray().elementSize())
 				{
 					GENERATE_ERROR("SSBO '" + spk::StringUtils::wstringToString(name) + "' already exists with a different size.");
 				}
 			}
 			else
 			{
-				_objects[name] = std::move(newSSBO);
+				_objects[name] = newSSBO;
 			}
 		}
 	}
@@ -76,12 +76,12 @@ namespace spk::Lumina
 			const spk::JSON::Object &desc = p_samplers[index];
 			std::wstring alias = desc[L"name"].as<std::wstring>();
 			const spk::JSON::Object &data = desc[L"data"];
-			spk::OpenGL::SamplerObject newSampler(data);
+			std::shared_ptr<OpenGL::SamplerObject> newSampler = std::make_shared<OpenGL::SamplerObject>(data);
 
 			if (_objects.contains(alias))
 			{
-				auto &existing = std::get<spk::OpenGL::SamplerObject>(_objects[alias]);
-				if (existing.bindingPoint() != newSampler.bindingPoint() || existing.type() != newSampler.type())
+				auto &existing = std::get<std::shared_ptr<spk::OpenGL::SamplerObject>>(_objects[alias]);
+				if (existing->bindingPoint() != newSampler->bindingPoint() || existing->type() != newSampler->type())
 				{
 					GENERATE_ERROR(
 						"Sampler '" + spk::StringUtils::wstringToString(alias) + "' already exists with a different binding point or type.");
@@ -89,23 +89,23 @@ namespace spk::Lumina
 			}
 			else
 			{
-				_objects[alias] = std::move(newSampler);
+				_objects[alias] = newSampler;
 			}
 		}
 	}
 
-	spk::OpenGL::UniformBufferObject &ShaderObjectFactory::ubo(const std::wstring &p_name)
+	std::shared_ptr<spk::OpenGL::UniformBufferObject> ShaderObjectFactory::ubo(const std::wstring &p_name)
 	{
-		return (std::get<spk::OpenGL::UniformBufferObject>(_objects.at(p_name)));
+		return (std::get<std::shared_ptr<spk::OpenGL::UniformBufferObject>>(_objects.at(p_name)));
 	}
 
-	spk::OpenGL::ShaderStorageBufferObject &ShaderObjectFactory::ssbo(const std::wstring &p_name)
+	std::shared_ptr<spk::OpenGL::ShaderStorageBufferObject> ShaderObjectFactory::ssbo(const std::wstring &p_name)
 	{
-		return (std::get<spk::OpenGL::ShaderStorageBufferObject>(_objects.at(p_name)));
+		return (std::get<std::shared_ptr<spk::OpenGL::ShaderStorageBufferObject>>(_objects.at(p_name)));
 	}
 
-	spk::OpenGL::SamplerObject &ShaderObjectFactory::sampler(const std::wstring &p_name)
+	std::shared_ptr<spk::OpenGL::SamplerObject> ShaderObjectFactory::sampler(const std::wstring &p_name)
 	{
-		return (std::get<spk::OpenGL::SamplerObject>(_objects.at(p_name)));
+		return (std::get<std::shared_ptr<spk::OpenGL::SamplerObject>>(_objects.at(p_name)));
 	}
 }

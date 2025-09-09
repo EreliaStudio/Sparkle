@@ -7,7 +7,7 @@
 #include "structure/design_pattern/spk_contract_provider.hpp"
 #include "structure/design_pattern/spk_inherence_object.hpp"
 #include "structure/graphics/painter/spk_nine_slice_painter.hpp"
-#include "structure/graphics/spk_geometry_2D.hpp"
+#include "structure/graphics/spk_geometry_2d.hpp"
 #include "structure/graphics/spk_viewport.hpp"
 #include "structure/graphics/texture/spk_sprite_sheet.hpp"
 #include "structure/spk_safe_pointer.hpp"

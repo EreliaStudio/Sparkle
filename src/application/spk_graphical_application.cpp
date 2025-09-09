@@ -13,7 +13,7 @@ namespace spk
 		WNDCLASSEX windowClass = {0};
 		windowClass.cbSize = sizeof(WNDCLASSEX);
 		windowClass.style = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
-		windowClass.lpfnWndProc = Window::WindowProc;
+		windowClass.lpfnWndProc = Window::_windowProc;
 		windowClass.cbClsExtra = 0;
 		windowClass.cbWndExtra = 0;
 		windowClass.hInstance = GetModuleHandle(nullptr);

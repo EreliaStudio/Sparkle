@@ -18,25 +18,25 @@ namespace spk::OpenGLUtils
 		std::array<float, numberOfBytes> reserved;
 	};
 
-	std::wstring to_wstring(const GLenum &p_type);
+	std::wstring toWstring(const GLenum &p_type);
 
-	std::wstring getFramebufferErrorString(GLenum status);
+	std::wstring getFramebufferErrorString(GLenum p_status);
 
 	void convertFormatToGLEnum(spk::Texture::Format p_format, GLint &p_internalFormat, GLenum &p_externalFormat);
 
 	void GLAPIENTRY openGLDebugMessageCallback(
 		GLenum p_source, GLenum p_type, GLuint p_id, GLenum p_severity, GLsizei p_length, const GLchar *p_message, const void *p_userParam);
 
-	void LogGLErrors(const char* p_where);
-	void PrintShaderLog(GLuint p_shader, const char* p_label);
-	void PrintProgramLog(GLuint p_prog, const char* p_label);
-	void DumpActiveAttribs(GLuint p_prog);
-	void DumpActiveUniformsAndSamplers(GLuint p_prog);
-	void DumpUniformBlocks(GLuint p_prog);
-	void DumpPreDrawState();
-	void DumpUBOBindingsForUsedBlocks(GLuint p_prog);
-	void DumpTexture2DCompletenessForUnit(GLint p_unit);
-	void CheckIndexBufferCapacityVsCount(GLsizei p_count, GLenum p_indexType);
+	void logGlErrors(const char* p_where);
+	void printShaderLog(GLuint p_shader, const char* p_label);
+	void printProgramLog(GLuint p_prog, const char* p_label);
+	void dumpActiveAttribs(GLuint p_prog);
+	void dumpActiveUniformsAndSamplers(GLuint p_prog);
+	void dumpUniformBlocks(GLuint p_prog);
+	void dumpPreDrawState();
+	void dumpUboBindingsForUsedBlocks(GLuint p_prog);
+	void dumpTexture2DCompletenessForUnit(GLint p_unit);
+	void checkIndexBufferCapacityVsCount(GLsizei p_count, GLenum p_indexType);
 }
 
 #define SPK_PP_CAT_IMPL(a, b) a##b

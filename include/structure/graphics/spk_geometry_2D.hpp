@@ -121,20 +121,20 @@ namespace spk
 			return *this;
 		}
 
-		friend std::wostream &operator<<(std::wostream &os, const Geometry2D &p_geometry)
+		friend std::wostream &operator<<(std::wostream &p_os, const Geometry2D &p_geometry)
 		{
-			os << L"Anchor : " << p_geometry.anchor << L" - Size : " << p_geometry.size;
-			return os;
+			p_os << L"Anchor : " << p_geometry.anchor << L" - Size : " << p_geometry.size;
+			return p_os;
 		}
 
-		std::string to_string() const
+		std::string toString() const
 		{
-			return "Anchor : " + anchor.to_string() + " - Size : " + size.to_string();
+			return "Anchor : " + anchor.toString() + " - Size : " + size.toString();
 		}
 
-		std::wstring to_wstring() const
+		std::wstring toWstring() const
 		{
-			return L"Anchor : " + anchor.to_wstring() + L" - Size : " + size.to_wstring();
+			return L"Anchor : " + anchor.toWstring() + L" - Size : " + size.toWstring();
 		}
 
 		bool operator==(const Geometry2D &p_other) const

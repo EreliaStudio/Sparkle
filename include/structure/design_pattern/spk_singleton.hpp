@@ -66,7 +66,7 @@ namespace spk
 		{
 		}
 
-		static inline TType *_instance = nullptr;
+		static inline std::unique_ptr<TType> _instance = nullptr;
 		static inline std::recursive_mutex _mutex;
 
 	public:
@@ -80,18 +80,18 @@ namespace spk
 				GENERATE_ERROR("Can't instanciate an already instancied singleton");
 			}
 
-			_instance = new TType(std::forward<Args>(p_args)...);
-			return (_instance);
+			_instance.reset(new TType(std::forward<Args>(p_args)...));
+			return (_instance.get());
 		}
 
 		static spk::SafePointer<TType> instance()
 		{
-			return (_instance);
+			return (_instance.get());
 		}
 
-		static const spk::SafePointer<const TType> c_instance()
+		static const spk::SafePointer<const TType> cInstance()
 		{
-			return _instance;
+			return (_instance.get());
 		}
 
 		static std::recursive_mutex &mutex()
@@ -103,7 +103,6 @@ namespace spk
 		{
 			std::lock_guard<std::recursive_mutex> lock(Singleton<TType>::mutex());
 
-			delete _instance;
 			_instance = nullptr;
 		}
 	};

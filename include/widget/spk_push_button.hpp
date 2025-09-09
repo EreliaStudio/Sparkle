@@ -9,7 +9,7 @@
 #include "structure/graphics/painter/spk_color_painter.hpp"
 #include "structure/graphics/painter/spk_font_painter.hpp"
 #include "structure/graphics/painter/spk_nine_slice_painter.hpp"
-#include "structure/graphics/spk_geometry_2D.hpp"
+#include "structure/graphics/spk_geometry_2d.hpp"
 #include "structure/graphics/spk_viewport.hpp"
 #include "structure/graphics/texture/spk_sprite_sheet.hpp"
 #include "structure/math/spk_vector2.hpp"

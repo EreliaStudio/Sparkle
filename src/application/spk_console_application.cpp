@@ -2,7 +2,7 @@
 
 namespace spk
 {
-	HWND ConsoleApplication::createBackgroundHandle(const std::wstring &p_title)
+	HWND ConsoleApplication::_createBackgroundHandle(const std::wstring &p_title)
 	{
 		const std::wstring className = L"DummyWindowClass";
 
@@ -39,7 +39,7 @@ namespace spk
 		Application(),
 		_centralWidget(std::make_unique<Widget>(L"CentralWidget")),
 		_updateModule(_centralWidget.get()),
-		_windowHandle(createBackgroundHandle(p_title))
+		_windowHandle(_createBackgroundHandle(p_title))
 	{
 		_centralWidget->activate();
 		addExecutionStep(

@@ -154,7 +154,7 @@ namespace spk
 		};
 
 	private:
-		InputState _state[Key::MaxNbKey];
+		std::array<InputState, Key::MaxNbKey> _state;
 		wchar_t _glyph;
 		spk::SafePointer<Window> _window;
 

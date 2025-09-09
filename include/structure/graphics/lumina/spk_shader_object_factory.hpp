@@ -14,24 +14,28 @@ namespace spk::Lumina
 {
 	class ShaderObjectFactory : public spk::Singleton<ShaderObjectFactory>
 	{
-	private:
 		friend class spk::Singleton<ShaderObjectFactory>;
 
-		using Object = std::variant<OpenGL::UniformBufferObject, OpenGL::ShaderStorageBufferObject, OpenGL::SamplerObject>;
+	private:
+		using Object = std::variant<
+			std::shared_ptr<OpenGL::UniformBufferObject>,
+			std::shared_ptr<OpenGL::ShaderStorageBufferObject>,
+			std::shared_ptr<OpenGL::SamplerObject>
+		>;
 
 		std::unordered_map<std::wstring, Object> _objects;
 
 		ShaderObjectFactory() = default;
 
-		void _addUBOs(const spk::JSON::Object &ubos);
-		void _addSSBOs(const spk::JSON::Object &ssbos);
-		void _addSamplers(const spk::JSON::Object &samplers);
+		void _addUBOs(const spk::JSON::Object &p_ubos);
+		void _addSSBOs(const spk::JSON::Object &p_ssbos);
+		void _addSamplers(const spk::JSON::Object &p_samplers);
 
 	public:
 		void add(const spk::JSON::Object &p_desc);
 
-		OpenGL::UniformBufferObject &ubo(const std::wstring &p_name);
-		OpenGL::ShaderStorageBufferObject &ssbo(const std::wstring &p_name);
-		OpenGL::SamplerObject &sampler(const std::wstring &p_name);
+		std::shared_ptr<OpenGL::UniformBufferObject> ubo(const std::wstring &p_name);
+		std::shared_ptr<OpenGL::ShaderStorageBufferObject> ssbo(const std::wstring &p_name);
+		std::shared_ptr<OpenGL::SamplerObject> sampler(const std::wstring &p_name);
 	};
 }

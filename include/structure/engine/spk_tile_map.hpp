@@ -785,7 +785,7 @@ namespace spk
 
 		std::unique_ptr<Chunk> _generateChunk(const spk::Vector2Int &p_chunkCoordinate)
 		{
-			const std::wstring chunkName = name() + L"/Chunk[" + p_chunkCoordinate.to_wstring() + L"]";
+			const std::wstring chunkName = name() + L"/Chunk[" + p_chunkCoordinate.toWstring() + L"]";
 
 			std::unique_ptr<Chunk> newChunk = std::make_unique<Chunk>(chunkName, this, p_chunkCoordinate);
 

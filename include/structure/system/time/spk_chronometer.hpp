@@ -38,11 +38,11 @@ namespace spk
 		}
 
 	private:
-		Duration currentRunDuration() const;
+		Duration _currentRunDuration() const;
 	};
 
-	inline const char *to_string(Chronometer::State p_state);
-	inline const wchar_t *to_wstring(Chronometer::State p_state);
+	inline const char *toString(Chronometer::State p_state);
+	inline const wchar_t *toWstring(Chronometer::State p_state);
 }
 
 std::ostream &operator<<(std::ostream &p_os, spk::Chronometer::State p_state);

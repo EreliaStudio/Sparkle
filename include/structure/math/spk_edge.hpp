@@ -15,7 +15,7 @@ namespace spk
 			spk::Vector3 b;
 
 			bool operator==(const Identifier &p_other) const;
-			bool operator<(const Identifier& other) const;
+			bool operator<(const Identifier& p_other) const;
 			static Identifier from(const Edge &p_edge);
 		};
 

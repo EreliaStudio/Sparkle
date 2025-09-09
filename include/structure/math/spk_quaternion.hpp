@@ -25,8 +25,8 @@ namespace spk
 			return p_os;
 		}
 
-		std::wstring to_wstring() const;
-		std::string to_string() const;
+		std::wstring toWstring() const;
+		std::string toString() const;
 
 		static Quaternion identity();
 
@@ -42,6 +42,6 @@ namespace spk
 
 		Vector3 rotate(const Vector3 &p_v) const;
 
-		static Quaternion lookAt(const Vector3 &eye, const Vector3 &target, const Vector3 &p_up);
+		static Quaternion lookAt(const Vector3 &p_eye, const Vector3 &p_target, const Vector3 &p_up);
 	};
 }

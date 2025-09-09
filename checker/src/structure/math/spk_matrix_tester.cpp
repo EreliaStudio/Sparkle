@@ -115,7 +115,7 @@ TEST_F(MatrixTest, MatrixToString)
 		L"[0 - 0 - 2 - 5] - "
 		L"[0 - 0 - 0 - 1]";
 
-	ASSERT_EQ(matrix.to_wstring(), expectedWideString);
+	ASSERT_EQ(matrix.toWstring(), expectedWideString);
 
 	std::string expectedString =
 		"[2 - 0 - 0 - 3] - "
@@ -123,7 +123,7 @@ TEST_F(MatrixTest, MatrixToString)
 		"[0 - 0 - 2 - 5] - "
 		"[0 - 0 - 0 - 1]";
 
-	ASSERT_EQ(matrix.to_string(), expectedString);
+	ASSERT_EQ(matrix.toString(), expectedString);
 }
 
 TEST_F(MatrixTest, MatrixOutputStream_wostream)

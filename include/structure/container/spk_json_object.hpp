@@ -9,6 +9,7 @@
 #include <variant>
 #include <vector>
 #include <memory>
+#include <array>
 
 #include "spk_sfinae.hpp"
 #include "utils/spk_string_utils.hpp"
@@ -32,9 +33,9 @@ namespace spk
 			static size_t _indent;
 			const static uint8_t _indentSize = 4;
 
-			void printUnit(std::wostream &p_os) const;
-			void printObject(std::wostream &p_os) const;
-			void printArray(std::wostream &p_os) const;
+			void _printUnit(std::wostream &p_os) const;
+			void _printObject(std::wostream &p_os) const;
+			void _printArray(std::wostream &p_os) const;
 
 		public:
 			Object(const std::wstring &p_name = L"Unnamed");
@@ -67,7 +68,7 @@ namespace spk
 
 			Object &append();
 
-			void push_back(const Object &p_object);
+			void pushBack(const Object &p_object);
 
 			Object &operator[](size_t p_index);
 
@@ -114,16 +115,16 @@ namespace spk
 			}
 
 			template <typename TType, std::enable_if_t<!spk::IsJSONable<std::decay_t<TType>>::value, int> = 0>
-			Object &operator=(const TType &rhs)
+			Object &operator=(const TType &p_rhs)
 			{
-				set(rhs);
+				set(p_rhs);
 				return *this;
 			}
 
 			template <typename TType, std::enable_if_t<spk::IsJSONable<std::decay_t<TType>>::value, int> = 0>
-			Object &operator=(const TType &rhs) // JSON-able objects
+			Object &operator=(const TType &p_rhs) // JSON-able objects
 			{
-				set(rhs);
+				set(p_rhs);
 				return *this;
 			}
 
@@ -139,7 +140,7 @@ namespace spk
 				const TType *value = std::get_if<TType>(&tmpUnit);
 				if (value == nullptr)
 				{
-					std::string types[] = {"bool", "long", "double", "std::wstring", "Object*", "std::nullptr_t"};
+					std::array<std::string, 6> types = {"bool", "long", "double", "std::wstring", "Object*", "std::nullptr_t"};
 					GENERATE_ERROR("Wrong type request for object [" + spk::StringUtils::wstringToString(_name) + "] : wanted [" +
 								   types[Unit(TType()).index()] + "] but stored [" + types[tmpUnit.index()] + "]");
 				}

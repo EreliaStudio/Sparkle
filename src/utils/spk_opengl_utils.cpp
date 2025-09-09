@@ -114,7 +114,7 @@ namespace spk::OpenGLUtils
 			return (L"dmat4x3");
 		case GL_SAMPLER_1D:
 			return (L"sampler1D");
-		case GL_SAMPLER_2D:
+		case GL_SAMPLER_2d:
 			return (L"sampler2D");
 		case GL_SAMPLER_3D:
 			return (L"sampler3D");
@@ -122,31 +122,31 @@ namespace spk::OpenGLUtils
 			return (L"samplerCube");
 		case GL_SAMPLER_1D_SHADOW:
 			return (L"sampler1DShadow");
-		case GL_SAMPLER_2D_SHADOW:
+		case GL_SAMPLER_2d_SHADOW:
 			return (L"sampler2DShadow");
 		case GL_SAMPLER_1D_ARRAY:
 			return (L"sampler1DArray");
-		case GL_SAMPLER_2D_ARRAY:
+		case GL_SAMPLER_2d_ARRAY:
 			return (L"sampler2DArray");
 		case GL_SAMPLER_1D_ARRAY_SHADOW:
 			return (L"sampler1DArrayShadow");
-		case GL_SAMPLER_2D_ARRAY_SHADOW:
+		case GL_SAMPLER_2d_ARRAY_SHADOW:
 			return (L"sampler2DArrayShadow");
-		case GL_SAMPLER_2D_MULTISAMPLE:
+		case GL_SAMPLER_2d_MULTISAMPLE:
 			return (L"sampler2DMS");
-		case GL_SAMPLER_2D_MULTISAMPLE_ARRAY:
+		case GL_SAMPLER_2d_MULTISAMPLE_ARRAY:
 			return (L"sampler2DMSArray");
 		case GL_SAMPLER_CUBE_SHADOW:
 			return (L"samplerCubeShadow");
 		case GL_SAMPLER_BUFFER:
 			return (L"samplerBuffer");
-		case GL_SAMPLER_2D_RECT:
+		case GL_SAMPLER_2d_RECT:
 			return (L"sampler2DRect");
-		case GL_SAMPLER_2D_RECT_SHADOW:
+		case GL_SAMPLER_2d_RECT_SHADOW:
 			return (L"sampler2DRectShadow");
 		case GL_INT_SAMPLER_1D:
 			return (L"isampler1D");
-		case GL_INT_SAMPLER_2D:
+		case GL_INT_SAMPLER_2d:
 			return (L"isampler2D");
 		case GL_INT_SAMPLER_3D:
 			return (L"isampler3D");
@@ -154,19 +154,19 @@ namespace spk::OpenGLUtils
 			return (L"isamplerCube");
 		case GL_INT_SAMPLER_1D_ARRAY:
 			return (L"isampler1DArray");
-		case GL_INT_SAMPLER_2D_ARRAY:
+		case GL_INT_SAMPLER_2d_ARRAY:
 			return (L"isampler2DArray");
-		case GL_INT_SAMPLER_2D_MULTISAMPLE:
+		case GL_INT_SAMPLER_2d_MULTISAMPLE:
 			return (L"isampler2DMS");
-		case GL_INT_SAMPLER_2D_MULTISAMPLE_ARRAY:
+		case GL_INT_SAMPLER_2d_MULTISAMPLE_ARRAY:
 			return (L"isampler2DMSArray");
 		case GL_INT_SAMPLER_BUFFER:
 			return (L"isamplerBuffer");
-		case GL_INT_SAMPLER_2D_RECT:
+		case GL_INT_SAMPLER_2d_RECT:
 			return (L"isampler2DRect");
 		case GL_UNSIGNED_INT_SAMPLER_1D:
 			return (L"usampler1D");
-		case GL_UNSIGNED_INT_SAMPLER_2D:
+		case GL_UNSIGNED_INT_SAMPLER_2d:
 			return (L"usampler2D");
 		case GL_UNSIGNED_INT_SAMPLER_3D:
 			return (L"usampler3D");
@@ -174,23 +174,23 @@ namespace spk::OpenGLUtils
 			return (L"usamplerCube");
 		case GL_UNSIGNED_INT_SAMPLER_1D_ARRAY:
 			return (L"usampler2DArray");
-		case GL_UNSIGNED_INT_SAMPLER_2D_ARRAY:
+		case GL_UNSIGNED_INT_SAMPLER_2d_ARRAY:
 			return (L"usampler2DArray");
-		case GL_UNSIGNED_INT_SAMPLER_2D_MULTISAMPLE:
+		case GL_UNSIGNED_INT_SAMPLER_2d_MULTISAMPLE:
 			return (L"usampler2DMS");
-		case GL_UNSIGNED_INT_SAMPLER_2D_MULTISAMPLE_ARRAY:
+		case GL_UNSIGNED_INT_SAMPLER_2d_MULTISAMPLE_ARRAY:
 			return (L"usampler2DMSArray");
 		case GL_UNSIGNED_INT_SAMPLER_BUFFER:
 			return (L"usamplerBuffer");
-		case GL_UNSIGNED_INT_SAMPLER_2D_RECT:
+		case GL_UNSIGNED_INT_SAMPLER_2d_RECT:
 			return (L"usampler2DRect");
 		case GL_IMAGE_1D:
 			return (L"image1D");
-		case GL_IMAGE_2D:
+		case GL_IMAGE_2d:
 			return (L"image2D");
 		case GL_IMAGE_3D:
 			return (L"image3D");
-		case GL_IMAGE_2D_RECT:
+		case GL_IMAGE_2d_RECT:
 			return (L"image2DRect");
 		case GL_IMAGE_CUBE:
 			return (L"imageCube");
@@ -198,19 +198,19 @@ namespace spk::OpenGLUtils
 			return (L"imageBuffer");
 		case GL_IMAGE_1D_ARRAY:
 			return (L"image1DArray");
-		case GL_IMAGE_2D_ARRAY:
+		case GL_IMAGE_2d_ARRAY:
 			return (L"image2DArray");
-		case GL_IMAGE_2D_MULTISAMPLE:
+		case GL_IMAGE_2d_MULTISAMPLE:
 			return (L"image2DMS");
-		case GL_IMAGE_2D_MULTISAMPLE_ARRAY:
+		case GL_IMAGE_2d_MULTISAMPLE_ARRAY:
 			return (L"image2DMSArray");
 		case GL_INT_IMAGE_1D:
 			return (L"iimage1D");
-		case GL_INT_IMAGE_2D:
+		case GL_INT_IMAGE_2d:
 			return (L"iimage2D");
 		case GL_INT_IMAGE_3D:
 			return (L"iimage3D");
-		case GL_INT_IMAGE_2D_RECT:
+		case GL_INT_IMAGE_2d_RECT:
 			return (L"iimage2DRect");
 		case GL_INT_IMAGE_CUBE:
 			return (L"iimageCube");
@@ -218,19 +218,19 @@ namespace spk::OpenGLUtils
 			return (L"iimageBuffer");
 		case GL_INT_IMAGE_1D_ARRAY:
 			return (L"iimage1DArray");
-		case GL_INT_IMAGE_2D_ARRAY:
+		case GL_INT_IMAGE_2d_ARRAY:
 			return (L"iimage2DArray");
-		case GL_INT_IMAGE_2D_MULTISAMPLE:
+		case GL_INT_IMAGE_2d_MULTISAMPLE:
 			return (L"iimage2DMS");
-		case GL_INT_IMAGE_2D_MULTISAMPLE_ARRAY:
+		case GL_INT_IMAGE_2d_MULTISAMPLE_ARRAY:
 			return (L"iimage2DMSArray");
 		case GL_UNSIGNED_INT_IMAGE_1D:
 			return (L"uimage1D");
-		case GL_UNSIGNED_INT_IMAGE_2D:
+		case GL_UNSIGNED_INT_IMAGE_2d:
 			return (L"uimage2D");
 		case GL_UNSIGNED_INT_IMAGE_3D:
 			return (L"uimage3D");
-		case GL_UNSIGNED_INT_IMAGE_2D_RECT:
+		case GL_UNSIGNED_INT_IMAGE_2d_RECT:
 			return (L"uimage2DRect");
 		case GL_UNSIGNED_INT_IMAGE_CUBE:
 			return (L"uimageCube");
@@ -238,11 +238,11 @@ namespace spk::OpenGLUtils
 			return (L"uimageBuffer");
 		case GL_UNSIGNED_INT_IMAGE_1D_ARRAY:
 			return (L"uimage1DArray");
-		case GL_UNSIGNED_INT_IMAGE_2D_ARRAY:
+		case GL_UNSIGNED_INT_IMAGE_2d_ARRAY:
 			return (L"uimage2DArray");
-		case GL_UNSIGNED_INT_IMAGE_2D_MULTISAMPLE:
+		case GL_UNSIGNED_INT_IMAGE_2d_MULTISAMPLE:
 			return (L"uimage2DMS");
-		case GL_UNSIGNED_INT_IMAGE_2D_MULTISAMPLE_ARRAY:
+		case GL_UNSIGNED_INT_IMAGE_2d_MULTISAMPLE_ARRAY:
 			return (L"uimage2DMSArray");
 		case GL_UNSIGNED_INT_ATOMIC_COUNTER:
 			return (L"atomic_uint");
@@ -512,7 +512,7 @@ namespace spk::OpenGLUtils
 			glGetActiveUniform(p_prog, (GLuint)i, maxLen, &length, &size, &type, name.data());
 			GLint loc = glGetUniformLocation(p_prog, name.data());
 			std::cerr << "  - " << name.data() << " (type=0x" << std::hex << type << std::dec << ") loc=" << loc;
-			if (type == GL_SAMPLER_2D || type == GL_SAMPLER_2D_ARRAY || type == GL_SAMPLER_CUBE)
+			if (type == GL_SAMPLER_2d || type == GL_SAMPLER_2d_ARRAY || type == GL_SAMPLER_CUBE)
 			{
 				GLint unit = -1;
 				if (loc >= 0)
@@ -616,7 +616,7 @@ namespace spk::OpenGLUtils
 
 		glActiveTexture(GL_TEXTURE0 + p_unit);
 		GLint tex = 0;
-		glGetIntegerv(GL_TEXTURE_BINDING_2D, &tex);
+		glGetIntegerv(GL_TEXTURE_BINDING_2d, &tex);
 		std::cerr << "[State] Texture unit " << p_unit << " -> 2D tex id=" << tex << "\n";
 		if (tex == 0)
 		{

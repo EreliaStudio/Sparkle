@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "structure/container/spk_JSON_object.hpp"
+#include "structure/container/spk_json_object.hpp"
 
 class JSONObjectTest : public ::testing::Test
 {

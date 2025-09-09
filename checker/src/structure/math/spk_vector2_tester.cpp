@@ -180,15 +180,15 @@ TEST_F(Vector2Test, ComparatorOperators)
 
 TEST_F(Vector2Test, ToStringMethod)
 {
-	EXPECT_EQ(spk::IVector2<int>(3, -4).to_string(), "(3, -4)") << "to_string method should return correct string representation for int";
-	EXPECT_EQ(spk::IVector2<float>(3.5f, 4.5f).to_string(), "(3.5, 4.5)") << "to_string method should return correct string representation for float";
-	EXPECT_EQ(spk::IVector2<double>(3.5, 4.5).to_string(), "(3.5, 4.5)") << "to_string method should return correct string representation for double";
-	EXPECT_EQ(spk::IVector2<size_t>(3, 4).to_string(), "(3, 4)") << "to_string method should return correct string representation for size_t";
+	EXPECT_EQ(spk::IVector2<int>(3, -4).toString(), "(3, -4)") << "to_string method should return correct string representation for int";
+	EXPECT_EQ(spk::IVector2<float>(3.5f, 4.5f).toString(), "(3.5, 4.5)") << "to_string method should return correct string representation for float";
+	EXPECT_EQ(spk::IVector2<double>(3.5, 4.5).toString(), "(3.5, 4.5)") << "to_string method should return correct string representation for double";
+	EXPECT_EQ(spk::IVector2<size_t>(3, 4).toString(), "(3, 4)") << "to_string method should return correct string representation for size_t";
 
-	EXPECT_EQ(spk::IVector2<int>(3, -4).to_wstring(), L"(3, -4)") << "to_string method should return correct string representation for int";
-	EXPECT_EQ(spk::IVector2<float>(3.5f, 4.5f).to_wstring(), L"(3.5, 4.5)") << "to_string method should return correct string representation for float";
-	EXPECT_EQ(spk::IVector2<double>(3.5, 4.5).to_wstring(), L"(3.5, 4.5)") << "to_string method should return correct string representation for double";
-	EXPECT_EQ(spk::IVector2<size_t>(3, 4).to_wstring(), L"(3, 4)") << "to_string method should return correct string representation for size_t";
+	EXPECT_EQ(spk::IVector2<int>(3, -4).toWstring(), L"(3, -4)") << "to_string method should return correct string representation for int";
+	EXPECT_EQ(spk::IVector2<float>(3.5f, 4.5f).toWstring(), L"(3.5, 4.5)") << "to_string method should return correct string representation for float";
+	EXPECT_EQ(spk::IVector2<double>(3.5, 4.5).toWstring(), L"(3.5, 4.5)") << "to_string method should return correct string representation for double";
+	EXPECT_EQ(spk::IVector2<size_t>(3, 4).toWstring(), L"(3, 4)") << "to_string method should return correct string representation for size_t";
 }
 
 TEST_F(Vector2Test, ArithmeticOperators)

@@ -130,8 +130,8 @@ outputColor = vec4(color, 1.0);
 
 	void CollisionMesh2DRenderer::Painter::setTransform(const spk::Transform &p_transform)
 	{
-		_transformUBO.layout()[L"modelMatrix"] = p_transform.model();
-		_transformUBO.validate();
+		_transformUBO->layout()[L"modelMatrix"] = p_transform.model();
+		_transformUBO->validate();
 	}
 
 	CollisionMesh2DRenderer::CollisionMesh2DRenderer(const std::wstring &p_name) :
