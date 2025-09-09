@@ -340,80 +340,81 @@ public:
 
 int main()
 {
-	spk::GraphicalApplication app;
-	auto window = app.createWindow(L"Playground", {{0, 0}, {800, 600}});
-	window->setUpdateTimer(0);
+	std::cout << "Hello" << std::endl;
+	//spk::GraphicalApplication app;
+	//auto window = app.createWindow(L"Playground", {{0, 0}, {800, 600}});
+	//window->setUpdateTimer(0);
 
-	DebugOverlayManager debugOverlay(L"DebugOverlay", window->widget());
-	debugOverlay.setGeometry({0, 0}, window->geometry().size);
-	debugOverlay.setLayer(100);
-	debugOverlay.activate();
+	// DebugOverlayManager debugOverlay(L"DebugOverlay", window->widget());
+	// debugOverlay.setGeometry({0, 0}, window->geometry().size);
+	// debugOverlay.setLayer(100);
+	// debugOverlay.activate();
 
-	spk::GameEngine engine;
-	spk::GameEngineWidget engineWidget(L"EngineWidget", window->widget());
-	engineWidget.setGeometry({{0, 0}, window->geometry().size});
-	engineWidget.setGameEngine(&engine);
-	engineWidget.activate();
+	// spk::GameEngine engine;
+	// spk::GameEngineWidget engineWidget(L"EngineWidget", window->widget());
+	// engineWidget.setGeometry({{0, 0}, window->geometry().size});
+	// engineWidget.setGameEngine(&engine);
+	// engineWidget.activate();
 
-	spk::Entity player(L"Player", nullptr);
-	player.transform().place({4, 4, 2.5f});
-	player.addComponent<TopDown2DController>(L"Player/TopDown2DController");
+	// spk::Entity player(L"Player", nullptr);
+	// player.transform().place({4, 4, 2.5f});
+	// player.addComponent<TopDown2DController>(L"Player/TopDown2DController");
 
-	spk::SpriteSheet playerSpriteSheet("playground/resources/texture/player_sprite_sheet.png", {4, 4});
-	spk::Mesh2D playerMesh = spk::Primitive2D::makeSquare({1.0f, 1.0f}, playerSpriteSheet.sprite({0, 0}));
-	spk::CollisionMesh2D playerCollisionMesh = spk::CollisionMesh2D::fromMesh(&playerMesh);
-	auto playerRenderer = player.addComponent<spk::Mesh2DRenderer>(L"Player/Mesh2DRenderer");
-	playerRenderer->setTexture(&playerSpriteSheet);
-	playerRenderer->setMesh(&playerMesh);
-	auto playerCollider = player.addComponent<spk::Collider2D>(L"Player/Collider2D");
-	playerCollider->setCollisionMesh(&playerCollisionMesh);
+	// spk::SpriteSheet playerSpriteSheet("playground/resources/texture/player_sprite_sheet.png", {4, 4});
+	// spk::Mesh2D playerMesh = spk::Primitive2D::makeSquare({1.0f, 1.0f}, playerSpriteSheet.sprite({0, 0}));
+	// spk::CollisionMesh2D playerCollisionMesh = spk::CollisionMesh2D::fromMesh(&playerMesh);
+	// auto playerRenderer = player.addComponent<spk::Mesh2DRenderer>(L"Player/Mesh2DRenderer");
+	// playerRenderer->setTexture(&playerSpriteSheet);
+	// playerRenderer->setMesh(&playerMesh);
+	// auto playerCollider = player.addComponent<spk::Collider2D>(L"Player/Collider2D");
+	// playerCollider->setCollisionMesh(&playerCollisionMesh);
 
-	spk::Entity cameraHolder(L"Camera", &player);
-	auto cameraComponent = cameraHolder.addComponent<spk::CameraComponent>(L"Camera/CameraComponent");
-	cameraHolder.transform().place({0.0f, 0.0f, 20.0f});
-	cameraHolder.transform().lookAt(player.transform().position());
+	// spk::Entity cameraHolder(L"Camera", &player);
+	// auto cameraComponent = cameraHolder.addComponent<spk::CameraComponent>(L"Camera/CameraComponent");
+	// cameraHolder.transform().place({0.0f, 0.0f, 20.0f});
+	// cameraHolder.transform().lookAt(player.transform().position());
 
-	try
-	{
-		cameraComponent->setOrthographic(64.0f, 64.0f);
-	} catch (const std::exception &e)
-	{
-		PROPAGATE_ERROR("Error while computing the camera as orthographic", e);
-	}
+	// try
+	// {
+	// 	cameraComponent->setOrthographic(64.0f, 64.0f);
+	// } catch (const std::exception &e)
+	// {
+	// 	PROPAGATE_ERROR("Error while computing the camera as orthographic", e);
+	// }
 
-	PlaygroundTileMap tileMap(L"TileMap", nullptr);
-	spk::SpriteSheet tilemapSpriteSheet("playground/resources/texture/tile_map.png", {16, 6});
-	tileMap.activate();
-	engine.addEntity(&tileMap);
-	tileMap.setSpriteSheet(&tilemapSpriteSheet);
+	// PlaygroundTileMap tileMap(L"TileMap", nullptr);
+	// spk::SpriteSheet tilemapSpriteSheet("playground/resources/texture/tile_map.png", {16, 6});
+	// tileMap.activate();
+	// engine.addEntity(&tileMap);
+	// tileMap.setSpriteSheet(&tilemapSpriteSheet);
 
-	tileMap.addTileByID(0, PlaygroundTileMap::TileType({0, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::Obstacle)); // Wall
-	tileMap.addTileByID(1, PlaygroundTileMap::TileType({4, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::TerritoryBlue)); // Blue territory
-	tileMap.addTileByID(2, PlaygroundTileMap::TileType({8, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::TerritoryGreen)); // Green territory
-	tileMap.addTileByID(3, PlaygroundTileMap::TileType({12, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::TerritoryRed)); // Red territory
+	// tileMap.addTileByID(0, PlaygroundTileMap::TileType({0, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::Obstacle)); // Wall
+	// tileMap.addTileByID(1, PlaygroundTileMap::TileType({4, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::TerritoryBlue)); // Blue territory
+	// tileMap.addTileByID(2, PlaygroundTileMap::TileType({8, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::TerritoryGreen)); // Green territory
+	// tileMap.addTileByID(3, PlaygroundTileMap::TileType({12, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::TerritoryRed)); // Red territory
 
-	player.addComponent<TileMapChunkStreamer>(L"Player/TileMapChunkStreamer", &tileMap, cameraComponent);
+	// player.addComponent<TileMapChunkStreamer>(L"Player/TileMapChunkStreamer", &tileMap, cameraComponent);
 
-	spk::SafePointer<spk::Entity> playerPtr(&player);
-	for (const auto &collider : spk::Collider2D::getColliders())
-	{
-		if (collider.get() == playerCollider.get())
-		{
-			continue;
-		}
-		collider->onCollisionEnter(
-			[playerPtr](spk::SafePointer<spk::Entity> p_entity)
-			{
-				if (p_entity.get() == playerPtr.get())
-				{
-					std::wcout << L"Player entered chunk collision mesh" << std::endl;
-				}
-			});
-	}
+	// spk::SafePointer<spk::Entity> playerPtr(&player);
+	// for (const auto &collider : spk::Collider2D::getColliders())
+	// {
+	// 	if (collider.get() == playerCollider.get())
+	// 	{
+	// 		continue;
+	// 	}
+	// 	collider->onCollisionEnter(
+	// 		[playerPtr](spk::SafePointer<spk::Entity> p_entity)
+	// 		{
+	// 			if (p_entity.get() == playerPtr.get())
+	// 			{
+	// 				std::wcout << L"Player entered chunk collision mesh" << std::endl;
+	// 			}
+	// 		});
+	// }
 
-	player.activate();
-	cameraHolder.activate();
-	engine.addEntity(&player);
+	// player.activate();
+	// cameraHolder.activate();
+	// engine.addEntity(&player);
 
-	return app.run();
+	//return app.run();
 }
