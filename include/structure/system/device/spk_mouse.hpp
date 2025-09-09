@@ -36,7 +36,7 @@ namespace spk
 
 		const Vector2Int &position() const;
 		const Vector2Int &deltaPosition() const;
-		const InputState *buttons() const;
+		const std::array<InputState, 3>& buttons() const;
 		float wheel() const;
 		spk::SafePointer<Window> window() const;
 

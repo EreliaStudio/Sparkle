@@ -142,7 +142,7 @@ namespace
 
 		for (size_t i = 0; i < p_a.size(); ++i)
 		{
-			bool consumed = false;
+			bool consume = false;
 			for (size_t j = 0; j < p_b.size(); ++j)
 			{
 				if (usedB[j] == true)
@@ -152,18 +152,18 @@ namespace
 				if (p_a[i].isInverse(p_b[j]) == true)
 				{
 					usedB[j] = true;
-					consumed = true;
+					consume = true;
 					break;
 				}
 				if (p_a[i] == p_b[j])
 				{
 					usedB[j] = true;
 					out.push_back(p_a[i]);
-					consumed = true;
+					consume = true;
 					break;
 				}
 			}
-			if (consumed == false)
+			if (consume == false)
 			{
 				out.push_back(p_a[i]);
 			}

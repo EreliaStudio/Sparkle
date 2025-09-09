@@ -23,19 +23,19 @@ namespace spk
 		float _persistence = 0.5f;
 		float _lacunarity = 2.0f;
 
-		static float fade(float p_value, Interpolation p_interpolation);
-		static float lerp(float p_minValue, float p_maxValue, float p_value);
-		static float grad(int p_hash, float p_x);
-		static float grad(int p_hash, float p_x, float p_y);
-		static float grad(int p_hash, float p_x, float p_y, float p_z);
+		static float _fade(float p_value, Interpolation p_interpolation);
+		static float _lerp(float p_minValue, float p_maxValue, float p_value);
+		static float _grad(int p_hash, float p_x);
+		static float _grad(int p_hash, float p_x, float p_y);
+		static float _grad(int p_hash, float p_x, float p_y, float p_z);
 
-		void reseed(unsigned int p_seed);
+		void _reseed(unsigned int p_seed);
 
-		float noise1D(float p_x) const;
-		float noise2D(float p_x, float p_y) const;
-		float noise3D(float p_x, float p_y, float p_z) const;
+		float _noise1D(float p_x) const;
+		float _noise2D(float p_x, float p_y) const;
+		float _noise3D(float p_x, float p_y, float p_z) const;
 
-		static float fractal(const Perlin &p_perlin,
+		static float _fractal(const Perlin &p_perlin,
 							 std::function<float(const Perlin &, float, float, float)> p_noiseFunc,
 							 float p_x,
 							 float p_y,
@@ -47,13 +47,13 @@ namespace spk
 	public:
 		Perlin(unsigned int p_seed = 0, Perlin::Interpolation p_interp = Perlin::Interpolation::SmoothStep);
 
-		void setInterpolation(Interpolation interp)
+		void setInterpolation(Interpolation p_interp)
 		{
-			_interpolation = interp;
+			_interpolation = p_interp;
 		}
 		void setSeed(unsigned int p_seed)
 		{
-			reseed(p_seed);
+			_reseed(p_seed);
 		}
 		void setOctaves(int p_oct)
 		{

@@ -111,13 +111,13 @@ namespace spk
 	Timestamp Timestamp::operator+(const Duration &p_other) const
 	{
 		long long sumNs = this->nanoseconds + p_other.nanoseconds;
-		return (fromNanoseconds(sumNs));
+		return (_fromNanoseconds(sumNs));
 	}
 
 	Timestamp Timestamp::operator-(const Duration &p_other) const
 	{
 		long long diffNs = this->nanoseconds - p_other.nanoseconds;
-		return (fromNanoseconds(diffNs));
+		return (_fromNanoseconds(diffNs));
 	}
 
 	Timestamp &Timestamp::operator+=(const Duration &p_other)
@@ -166,7 +166,7 @@ namespace spk
 		return (this->milliseconds >= p_other.milliseconds);
 	}
 
-	Timestamp Timestamp::fromNanoseconds(long long p_nanoseconds)
+	Timestamp Timestamp::_fromNanoseconds(long long p_nanoseconds)
 	{
 		Timestamp timestampResult;
 		timestampResult.nanoseconds = p_nanoseconds;

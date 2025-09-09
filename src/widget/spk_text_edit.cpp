@@ -83,7 +83,7 @@ namespace spk
 
 			if (lastRenderCursor != _renderCursor)
 			{
-				requestPaint();
+				_requestPaint();
 			}
 		}
 	}
@@ -109,7 +109,7 @@ namespace spk
 			{
 				releaseFocus(Widget::FocusType::KeyboardFocus);
 			}
-			requestPaint();
+			_requestPaint();
 		}
 	}
 

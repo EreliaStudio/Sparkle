@@ -3,6 +3,7 @@
 #include "structure/container/spk_data_buffer.hpp"
 #include <cstdint>
 #include <cstring>
+#include <array>
 
 namespace spk
 {
@@ -18,8 +19,8 @@ namespace spk
 		class Header
 		{
 		public:
-			using ClientID = long;
-			static inline const ClientID InvalidID = -1;
+			using ClientId = long;
+			static inline const ClientId InvalidID = -1;
 			using Type = int32_t;
 
 		private:
@@ -28,12 +29,12 @@ namespace spk
 		public:
 			Type type;
 			size_t length;
-			ClientID emitterID;
-			uint8_t reserved[16];
+			ClientId emitterID;
+			std::array<uint8_t, 16> reserved;
 
 			Header();
 			Header(Type p_type);
-			Header(const ClientID &p_emitterID, const Type &p_type);
+			Header(const ClientId &p_emitterID, const Type &p_type);
 		};
 
 	private:
@@ -43,10 +44,10 @@ namespace spk
 	public:
 		Message();
 		Message(const Header::Type &p_messageType);
-		Message(const Header::ClientID &p_clientToRedirectMessage, const Header::Type &p_messageType);
+		Message(const Header::ClientId &p_clientToRedirectMessage, const Header::Type &p_messageType);
 
 		void setType(const Header::Type &p_type);
-		void setEmitterID(const Header::ClientID &p_emitterID);
+		void setEmitterID(const Header::ClientId &p_emitterID);
 		void resize(const size_t &p_newSize);
 		void clear();
 		void reset();

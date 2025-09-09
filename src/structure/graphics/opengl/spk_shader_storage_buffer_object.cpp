@@ -41,7 +41,7 @@ namespace spk::OpenGL
 		return *this;
 	}
 
-	void ShaderStorageBufferObject::DynamicArray::redoArray()
+	void ShaderStorageBufferObject::DynamicArray::_redoArray()
 	{
 		for (size_t i = 0; i < _elements.size(); ++i)
 		{
@@ -52,7 +52,7 @@ namespace spk::OpenGL
 		}
 	}
 
-	ShaderStorageBufferObject::DynamicArray ShaderStorageBufferObject::DynamicArray::duplicate() const
+	ShaderStorageBufferObject::DynamicArray ShaderStorageBufferObject::DynamicArray::_duplicate() const
 	{
 		DynamicArray result(_defaultElement.name(), _buffer, _fixedReservedSpace, _elementSize, _elementPadding);
 		result._elements.resize(_elements.size());
@@ -68,7 +68,7 @@ namespace spk::OpenGL
 		const std::wstring &p_name, size_t p_offset, size_t p_size)
 	{
 		auto &result = _defaultElement.addElement(p_name, p_offset, p_size);
-		redoArray();
+		_redoArray();
 		return result;
 	}
 
@@ -76,14 +76,14 @@ namespace spk::OpenGL
 		const std::wstring &p_name, size_t p_offset, size_t p_nbElement, size_t p_elementSize, size_t p_elementPadding)
 	{
 		auto &result = _defaultElement.addElement(p_name, p_offset, p_nbElement, p_elementSize, p_elementPadding);
-		redoArray();
+		_redoArray();
 		return result;
 	}
 
 	void ShaderStorageBufferObject::DynamicArray::removeElement(const std::wstring &p_name)
 	{
 		_defaultElement.removeElement(p_name);
-		redoArray();
+		_redoArray();
 	}
 
 	void ShaderStorageBufferObject::DynamicArray::clear()
@@ -95,7 +95,7 @@ namespace spk::OpenGL
 	{
 		_resizeContractProvider.trigger(_fixedReservedSpace + (_elementSize + _elementPadding) * p_nbElement);
 		_elements.resize(p_nbElement);
-		redoArray();
+		_redoArray();
 	}
 
 	ShaderStorageBufferObject::DynamicArray::Element &ShaderStorageBufferObject::DynamicArray::operator[](size_t p_index)
@@ -148,7 +148,7 @@ namespace spk::OpenGL
 		resize(p_fixedSize + p_paddingFixedToDynamic + p_dynamicElementSize);
 		_onResizeContract = _dynamicArray._resizeContractProvider.subscribe([&](size_t p_size) { resize(p_size); });
 		_dynamicArray._buffer = &dataBuffer();
-		_dynamicArray.redoArray();
+		_dynamicArray._redoArray();
 	}
 
 	ShaderStorageBufferObject::ShaderStorageBufferObject(const spk::JSON::Object &p_desc) :
@@ -188,12 +188,12 @@ namespace spk::OpenGL
 		_bindingPoint(p_other._bindingPoint),
 		_blockIndex(-1),
 		_fixedData(p_other._fixedData),
-		_dynamicArray(p_other._dynamicArray.duplicate())
+		_dynamicArray(p_other._dynamicArray._duplicate())
 	{
 		resize(p_other.size());
 		_onResizeContract = _dynamicArray._resizeContractProvider.subscribe([&](size_t p_size) { resize(p_size); });
 		_dynamicArray._buffer = &dataBuffer();
-		_dynamicArray.redoArray();
+		_dynamicArray._redoArray();
 	}
 
 	ShaderStorageBufferObject &ShaderStorageBufferObject::operator=(const ShaderStorageBufferObject &p_other)
@@ -205,11 +205,11 @@ namespace spk::OpenGL
 			_bindingPoint = p_other._bindingPoint;
 			_blockIndex = -1;
 			_fixedData = p_other._fixedData;
-			_dynamicArray = p_other._dynamicArray.duplicate();
+			_dynamicArray = p_other._dynamicArray._duplicate();
 			resize(p_other.size());
 			_onResizeContract = _dynamicArray._resizeContractProvider.subscribe([&](size_t p_size) { resize(p_size); });
 			_dynamicArray._buffer = &dataBuffer();
-			_dynamicArray.redoArray();
+			_dynamicArray._redoArray();
 		}
 		return *this;
 	}
@@ -225,7 +225,7 @@ namespace spk::OpenGL
 		resize(p_other.size());
 		_onResizeContract = _dynamicArray._resizeContractProvider.subscribe([&](size_t p_size) { resize(p_size); });
 		_dynamicArray._buffer = &dataBuffer();
-		_dynamicArray.redoArray();
+		_dynamicArray._redoArray();
 	}
 
 	ShaderStorageBufferObject &ShaderStorageBufferObject::operator=(ShaderStorageBufferObject &&p_other)
@@ -240,7 +240,7 @@ namespace spk::OpenGL
 			resize(p_other.size());
 			_onResizeContract = _dynamicArray._resizeContractProvider.subscribe([&](size_t p_size) { resize(p_size); });
 			_dynamicArray._buffer = &dataBuffer();
-			_dynamicArray.redoArray();
+			_dynamicArray._redoArray();
 		}
 		return *this;
 	}

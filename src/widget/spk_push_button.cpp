@@ -302,7 +302,7 @@ namespace spk
 
 			if (_isHovered != wasHovered || _isPressed != wasPressed)
 			{
-				requestPaint();
+				_requestPaint();
 			}
 			break;
 		}
@@ -315,8 +315,8 @@ namespace spk
 				if (inside && !_isPressed)
 				{
 					_isPressed = true;
-					requestPaint();
-					p_event.consume();
+					_requestPaint();
+					p_event.consume = true;
 				}
 			}
 			break;
@@ -328,10 +328,10 @@ namespace spk
 				if (inside)
 				{
 					_onClickProvider.trigger();
-					p_event.consume();
+					p_event.consume = true;
 				}
 				_isPressed = false;
-				requestPaint();
+				_requestPaint();
 			}
 			break;
 		}

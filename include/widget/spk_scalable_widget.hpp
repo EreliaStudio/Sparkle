@@ -24,13 +24,13 @@ namespace spk
         void _updateAnchorAreas();
 
         // --- helpers to reduce complexity ---
-        uint8_t _hoverEdges(const spk::Vector2Int& mousePos) const;
-        void _setCursorForEdges(uint8_t edges, spk::SafePointer<Window> p_window);
-        void _beginResize(uint8_t edges, const spk::Vector2Int& startPos);
+        uint8_t _hoverEdges(const spk::Vector2Int& p_mousePos) const;
+        void _setCursorForEdges(uint8_t p_edges, spk::SafePointer<Window> p_window);
+        void _beginResize(uint8_t p_edges, const spk::Vector2Int& p_startPos);
         void _endResize(spk::SafePointer<Window> p_window);
-        spk::Geometry2D _computeResizedGeometry(const spk::Vector2Int& currentPos) const;
+        spk::Geometry2D _computeResizedGeometry(const spk::Vector2Int& p_currentPos) const;
 
-        virtual void _onMouseEvent(spk::MouseEvent &p_event) override;
+        void _onMouseEvent(spk::MouseEvent &p_event) override;
 
     public:
         ScalableWidget(const std::wstring &p_name, const spk::SafePointer<spk::Widget> &p_parent);

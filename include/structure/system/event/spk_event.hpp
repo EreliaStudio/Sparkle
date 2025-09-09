@@ -46,21 +46,14 @@ namespace spk
 
 	struct IEvent
 	{
-	private:
-	public:
-		bool consumed;
+		bool consume;
 		Modifiers modifiers;
 		spk::SafePointer<spk::Window> window = nullptr;
 
 		IEvent() :
-			consumed(false),
+			consume(false),
 			modifiers()
 		{
-		}
-
-		void consume()
-		{
-			consumed = true;
 		}
 
 		void requestPaint();

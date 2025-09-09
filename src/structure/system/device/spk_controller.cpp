@@ -204,7 +204,7 @@ namespace spk
 		return (_directionalCross);
 	}
 
-	const InputState *Controller::buttons() const
+	const std::array<InputState, 17>& Controller::buttons() const
 	{
 		return (_buttons);
 	}

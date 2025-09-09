@@ -101,14 +101,14 @@ namespace spk
 		spk::Vector2Int _pressedOffset;
 
 	private:
-		virtual void _onGeometryChange() override;
+		void _onGeometryChange() override;
 
-		void _onPaintEvent(spk::PaintEvent &p_event);
-		void _onMouseEvent(spk::MouseEvent &p_event);
+		void _onPaintEvent(spk::PaintEvent &p_event) override;
+		void _onMouseEvent(spk::MouseEvent &p_event) override;
 
 	public:
 		PushButton(const std::wstring &p_name, const spk::SafePointer<spk::Widget> &p_parent);
-		~PushButton() = default;
+		~PushButton() override = default;
 
 		spk::Vector2UInt computeTextSize() const;
 		spk::Vector2UInt computeExpectedTextSize(const spk::Font::Size &p_textSize) const;

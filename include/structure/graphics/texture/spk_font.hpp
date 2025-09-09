@@ -25,7 +25,7 @@ namespace spk
 		struct Glyph
 		{
 			std::array<Vector2Int, 4> positions;
-			std::array<Vector2, 4> uVs;
+			std::array<Vector2, 4> uvs;
 			Vector2Int step;
 			Vector2Int baselineOffset;
 			Vector2UInt size;

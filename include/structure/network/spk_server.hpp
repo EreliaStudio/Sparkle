@@ -20,8 +20,8 @@ namespace spk
 	class Server
 	{
 	public:
-		using ClientID = Message::Header::ClientID;
-		using ContractProvider = TContractProvider<ClientID>;
+		using ClientId = Message::Header::ClientId;
+		using ContractProvider = TContractProvider<ClientId>;
 		using Contract = Server::ContractProvider::Contract;
 		using ConnectionCallback = Server::ContractProvider::Job;
 		using DisconnectionCallback = Server::ContractProvider::Job;
@@ -32,31 +32,31 @@ namespace spk
 		class Acceptator
 		{
 		private:
-			SOCKET serverSocket;
-			std::unordered_map<ClientID, SOCKET> &clients;
-			std::mutex &clientsMutex;
-			ClientID &nextClientId;
-			bool isRunning;
-			Server::ContractProvider onConnectProvider;
-			Server::ContractProvider onDisconnectProvider;
-			MessagePool &messagePool;
-			spk::ThreadSafeQueue<MessageObject> &messageQueue;
+			SOCKET _serverSocket;
+			std::unordered_map<ClientId, SOCKET> &_clients;
+			std::mutex &_clientsMutex;
+			ClientId &_nextClientId;
+			bool _isRunning;
+			Server::ContractProvider _onConnectProvider;
+			Server::ContractProvider _onDisconnectProvider;
+			MessagePool &_messagePool;
+			spk::ThreadSafeQueue<MessageObject> &_messageQueue;
 
-			void run();
-			void acceptNewClient();
-			bool receiveFromClient(ClientID p_clientId, SOCKET p_socket);
-			int prepareReadFds(fd_set &readfds);
-			int waitForActivity(fd_set &readfds, int maxFD);
-			void handleClients(fd_set &readfds);
+			void _run();
+			void _acceptNewClient();
+			bool _receiveFromClient(ClientId p_clientId, SOCKET p_socket);
+			int _prepareReadFds(fd_set &p_readfds);
+			int _waitForActivity(fd_set &p_readfds, int p_maxFd);
+			void _handleClients(fd_set &p_readfds);
 
 		public:
 			std::thread receptionThread;
 
-			Acceptator(std::unordered_map<ClientID, SOCKET> &clientsMap,
-					   std::mutex &mutex,
-					   ClientID &p_clientId,
-					   MessagePool &pool,
-					   spk::ThreadSafeQueue<MessageObject> &queue);
+			Acceptator(std::unordered_map<ClientId, SOCKET> &p_clientsMap,
+					   std::mutex &p_mutex,
+					   ClientId &p_clientId,
+					   MessagePool &p_pool,
+					   spk::ThreadSafeQueue<MessageObject> &p_queue);
 			~Acceptator();
 
 			Server::Contract addOnConnectionCallback(const ConnectionCallback &p_connectionCallback);
@@ -66,14 +66,14 @@ namespace spk
 			void stop();
 		};
 
-		std::unordered_map<ClientID, SOCKET> clients;
-		std::mutex clientsMutex;
-		ClientID nextClientId = 10000;
-		std::unique_ptr<Acceptator> acceptor;
-		MessagePool messagePool;
-		spk::ThreadSafeQueue<MessageObject> messageQueue;
+		std::unordered_map<ClientId, SOCKET> _clients;
+		std::mutex _clientsMutex;
+		ClientId _nextClientId = 10000;
+		std::unique_ptr<Acceptator> _acceptor;
+		MessagePool _messagePool;
+		spk::ThreadSafeQueue<MessageObject> _messageQueue;
 
-		void _internalSendTo(const ClientID &p_clientID, const Message &p_message);
+		void _internalSendTo(const ClientId &p_clientID, const Message &p_message);
 
 	public:
 		Server();
@@ -83,8 +83,8 @@ namespace spk
 
 		void start(size_t p_serverPort);
 		void stop();
-		void sendTo(const ClientID &p_clientID, const spk::Message &p_message);
-		void sendTo(const std::vector<ClientID> &p_clients, const spk::Message &p_message);
+		void sendTo(const ClientId &p_clientID, const spk::Message &p_message);
+		void sendTo(const std::vector<ClientId> &p_clients, const spk::Message &p_message);
 		void sendToAll(const spk::Message &p_message);
 		spk::ThreadSafeQueue<MessageObject> &messages();
 	};

@@ -79,7 +79,7 @@ outputColor = texColor;
 		_object(_shader.createObject()),
 		_bufferSet(_object.bufferSet()),
 		_diffuseSampler(_object.sampler(L"diffuseTexture")),
-		_transformUBO(_object.UBO(L"TransformUBO"))
+		_transformUBO(_object.ubo(L"TransformUBO"))
 	{
 	}
 
@@ -109,18 +109,18 @@ outputColor = texColor;
 
 	void Mesh2DRenderer::Painter::setTransform(const spk::Transform &p_transform)
 	{
-		_transformUBO.layout()[L"modelMatrix"] = p_transform.model();
-		_transformUBO.validate();
+		_transformUBO->layout()[L"modelMatrix"] = p_transform.model();
+		_transformUBO->validate();
 	}
 
 	void Mesh2DRenderer::Painter::setTexture(const spk::SafePointer<const spk::Texture> &p_texture)
 	{
-		_diffuseSampler.bind(p_texture);
+		_diffuseSampler->bind(p_texture);
 	}
 
 	const spk::SafePointer<const spk::Texture> &Mesh2DRenderer::Painter::texture() const
 	{
-		return (_diffuseSampler.texture());
+		return (_diffuseSampler->texture());
 	}
 
 	Mesh2DRenderer::Mesh2DRenderer(const std::wstring &p_name) :

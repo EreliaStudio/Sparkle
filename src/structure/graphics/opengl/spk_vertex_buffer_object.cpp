@@ -26,7 +26,7 @@ namespace spk::OpenGL
 		if (wglGetCurrentContext() != nullptr)
 		{
 			glDeleteBuffers(1, &_id);
-			spk::cout << "Release buffer [" << _id << "] with type [" << spk::OpenGLUtils::to_wstring(static_cast<GLenum>(_type)) << "]" << std::endl;
+			spk::cout << "Release buffer [" << _id << "] with type [" << spk::OpenGLUtils::toWstring(static_cast<GLenum>(_type)) << "]" << std::endl;
 		}
 		_id = 0;
 	}

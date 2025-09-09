@@ -136,14 +136,14 @@ namespace spk
 		static constexpr size_t _fpsCountHistoryCapacity = 10; // last 10 x 100ms => ~1s
 		mutable std::mutex _fpsCountMutex;
 		std::deque<size_t> _fpsCountHistory;
-		size_t _minFPSCounter = std::numeric_limits<size_t>::max();
-		size_t _maxFPSCounter = 0;
+		size_t _minFpsCounter = std::numeric_limits<size_t>::max();
+		size_t _maxFpsCounter = 0;
 
 		// --- Count-based UPS smoothing (100ms windows) ---
 		static constexpr size_t _upsCountHistoryCapacity = 10;
 		mutable std::mutex _upsCountMutex;
 		std::deque<size_t> _upsCountHistory;
-		size_t _minUPSCount = std::numeric_limits<size_t>::max();
+		size_t _minUpsCount = std::numeric_limits<size_t>::max();
 		size_t _maxUPSCount = 0;
 
 	public:
@@ -186,18 +186,18 @@ namespace spk
 		// Durations-based metrics (averaged over recent frames)
 		size_t fps() const;
 		size_t ups() const;
-		double realFPSDuration() const; // milliseconds of the last rendered frame
-		double realUPSDuration() const; // milliseconds of the last update iteration
+		double realFpsDuration() const; // milliseconds of the last rendered frame
+		double realUpsDuration() const; // milliseconds of the last update iteration
 
 		// Extremes (counters and durations)
-		size_t minFPS() const;
-		size_t maxFPS() const;
-		size_t minUPS() const;
-		size_t maxUPS() const;
-		double minFPSDuration() const;
-		double maxFPSDuration() const;
-		double minUPSDuration() const;
-		double maxUPSDuration() const;
+		size_t minFps() const;
+		size_t maxFps() const;
+		size_t minUps() const;
+		size_t maxUps() const;
+		double minFpsDuration() const;
+		double maxFpsDuration() const;
+		double minUpsDuration() const;
+		double maxUpsDuration() const;
 
 		spk::SafePointer<Widget> widget() const;
 		operator spk::SafePointer<Widget>() const;

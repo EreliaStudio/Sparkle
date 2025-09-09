@@ -23,9 +23,9 @@ namespace spk
 		spk::Vector2Int _cornerSize;
 
 	private:
-		virtual void _onGeometryChange() override;
+		void _onGeometryChange() override;
 
-		virtual void _onPaintEvent(PaintEvent &p_event) override;
+		void _onPaintEvent(PaintEvent &p_event) override;
 
 	public:
 		Frame(const std::wstring &p_name, const spk::SafePointer<spk::Widget> &p_parent);

@@ -170,7 +170,7 @@ namespace spk
 
 	void Entity::onGeometryChange(const spk::Geometry2D &p_geometry)
 	{
-		sortByPriority(_components, _needComponentSorting, _componentMutex);
+		_sortByPriority(_components, _needComponentSorting, _componentMutex);
 
 		{
 			std::unique_lock<std::mutex> lock(_componentMutex);
@@ -180,7 +180,7 @@ namespace spk
 			}
 		}
 
-		sortByPriority(children(), _needChildSorting, _childMutex);
+		_sortByPriority(children(), _needChildSorting, _childMutex);
 
 		{
 			std::unique_lock<std::mutex> lock(_childMutex);
@@ -193,12 +193,12 @@ namespace spk
 
 	void Entity::onPaintEvent(spk::PaintEvent &p_event)
 	{
-		if (isActive() == false || p_event.consumed() == true)
+		if (isActive() == false || p_event.consume == true)
 		{
 			return;
 		}
 
-		sortByPriority(_components, _needComponentSorting, _componentMutex);
+		_sortByPriority(_components, _needComponentSorting, _componentMutex);
 
 		{
 			std::unique_lock<std::mutex> lock(_componentMutex);
@@ -211,7 +211,7 @@ namespace spk
 			}
 		}
 
-		sortByPriority(children(), _needChildSorting, _childMutex);
+		_sortByPriority(children(), _needChildSorting, _childMutex);
 
 		{
 			std::unique_lock<std::mutex> lock(_childMutex);
@@ -224,12 +224,12 @@ namespace spk
 
 	void Entity::onUpdateEvent(spk::UpdateEvent &p_event)
 	{
-		if (isActive() == false || p_event.consumed() == true)
+		if (isActive() == false || p_event.consume == true)
 		{
 			return;
 		}
 
-		sortByPriority(children(), _needChildSorting, _childMutex);
+		_sortByPriority(children(), _needChildSorting, _childMutex);
 
 		{
 			std::unique_lock<std::mutex> lock(_childMutex);
@@ -239,7 +239,7 @@ namespace spk
 			}
 		}
 
-		sortByPriority(_components, _needComponentSorting, _componentMutex);
+		_sortByPriority(_components, _needComponentSorting, _componentMutex);
 
 		{
 			std::unique_lock<std::mutex> lock(_componentMutex);
@@ -255,12 +255,12 @@ namespace spk
 
 	void Entity::onKeyboardEvent(spk::KeyboardEvent &p_event)
 	{
-		if (isActive() == false || p_event.consumed() == true)
+		if (isActive() == false || p_event.consume == true)
 		{
 			return;
 		}
 
-		sortByPriority(children(), _needChildSorting, _childMutex);
+		_sortByPriority(children(), _needChildSorting, _childMutex);
 
 		{
 			std::unique_lock<std::mutex> lock(_childMutex);
@@ -270,7 +270,7 @@ namespace spk
 			}
 		}
 
-		sortByPriority(_components, _needComponentSorting, _componentMutex);
+		_sortByPriority(_components, _needComponentSorting, _componentMutex);
 
 		{
 			std::unique_lock<std::mutex> lock(_componentMutex);
@@ -286,12 +286,12 @@ namespace spk
 
 	void Entity::onMouseEvent(spk::MouseEvent &p_event)
 	{
-		if (isActive() == false || p_event.consumed() == true)
+		if (isActive() == false || p_event.consume == true)
 		{
 			return;
 		}
 
-		sortByPriority(children(), _needChildSorting, _childMutex);
+		_sortByPriority(children(), _needChildSorting, _childMutex);
 
 		{
 			std::unique_lock<std::mutex> lock(_childMutex);
@@ -301,7 +301,7 @@ namespace spk
 			}
 		}
 
-		sortByPriority(_components, _needComponentSorting, _componentMutex);
+		_sortByPriority(_components, _needComponentSorting, _componentMutex);
 
 		{
 			std::unique_lock<std::mutex> lock(_componentMutex);
@@ -317,12 +317,12 @@ namespace spk
 
 	void Entity::onControllerEvent(spk::ControllerEvent &p_event)
 	{
-		if (isActive() == false || p_event.consumed() == true)
+		if (isActive() == false || p_event.consume == true)
 		{
 			return;
 		}
 
-		sortByPriority(children(), _needChildSorting, _childMutex);
+		_sortByPriority(children(), _needChildSorting, _childMutex);
 
 		{
 			std::unique_lock<std::mutex> lock(_childMutex);
@@ -332,7 +332,7 @@ namespace spk
 			}
 		}
 
-		sortByPriority(_components, _needComponentSorting, _componentMutex);
+		_sortByPriority(_components, _needComponentSorting, _componentMutex);
 
 		{
 			std::unique_lock<std::mutex> lock(_componentMutex);
@@ -348,12 +348,12 @@ namespace spk
 
 	void Entity::onTimerEvent(spk::TimerEvent &p_event)
 	{
-		if (isActive() == false || p_event.consumed() == true)
+		if (isActive() == false || p_event.consume == true)
 		{
 			return;
 		}
 
-		sortByPriority(children(), _needChildSorting, _childMutex);
+		_sortByPriority(children(), _needChildSorting, _childMutex);
 
 		{
 			std::unique_lock<std::mutex> lock(_childMutex);
@@ -363,7 +363,7 @@ namespace spk
 			}
 		}
 
-		sortByPriority(_components, _needComponentSorting, _componentMutex);
+		_sortByPriority(_components, _needComponentSorting, _componentMutex);
 
 		{
 			std::unique_lock<std::mutex> lock(_componentMutex);

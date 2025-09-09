@@ -65,7 +65,7 @@ namespace spk
 
 	Event::Event(spk::SafePointer<Window> p_window, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam)
 	{
-		rootEvent._consumed = false;
+		rootEvent.consume = false;
 		construct(p_window, p_uMsg, p_wParam, p_lParam);
 	}
 
@@ -331,9 +331,9 @@ namespace spk
 
 		if (currentEvent != nullptr)
 		{
-			currentEvent->_modifiers.control = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
-			currentEvent->_modifiers.alt = (GetKeyState(VK_MENU) & 0x8000) != 0;
-			currentEvent->_modifiers.shift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+			currentEvent->modifiers.control = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
+			currentEvent->modifiers.alt = (GetKeyState(VK_MENU) & 0x8000) != 0;
+			currentEvent->modifiers.shift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
 		}
 	}
 }

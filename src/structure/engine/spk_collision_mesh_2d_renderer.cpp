@@ -78,7 +78,7 @@ outputColor = vec4(color, 1.0);
 	CollisionMesh2DRenderer::Painter::Painter() :
 		_object(_shader.createObject()),
 		_bufferSet(_object.bufferSet()),
-		_transformUBO(_object.UBO(L"TransformUBO"))
+		_transformUBO(_object.ubo(L"TransformUBO"))
 	{
 	}
 

@@ -38,7 +38,7 @@ namespace spk
 		return _messagesReceived;
 	}
 
-	spk::Server::MessageObject LocalNode::obtainAwnerMessage(const spk::Message::Header::ClientID &p_emitterID, spk::Message::Header::Type p_type)
+	spk::Server::MessageObject LocalNode::obtainAwnerMessage(const spk::Message::Header::ClientId &p_emitterID, spk::Message::Header::Type p_type)
 	{
 		spk::Server::MessageObject result = _messagePool.obtain();
 		result->setEmitterID(p_emitterID);

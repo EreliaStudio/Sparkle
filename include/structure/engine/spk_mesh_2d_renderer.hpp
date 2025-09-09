@@ -22,8 +22,8 @@ namespace spk
 
 			spk::Lumina::Shader::Object _object;
 			spk::OpenGL::BufferSet &_bufferSet;
-			spk::OpenGL::SamplerObject &_diffuseSampler;
-			spk::OpenGL::UniformBufferObject &_transformUBO;
+			std::shared_ptr<spk::OpenGL::SamplerObject> _diffuseSampler;;
+			std::shared_ptr<spk::OpenGL::UniformBufferObject> _transformUBO;
 
 		public:
 			Painter();

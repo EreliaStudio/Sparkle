@@ -27,8 +27,8 @@ namespace spk
 				uint32_t _height;
 				spk::TexturePainter _renderer;
 
-				void _onGeometryChange();
-				void _onPaintEvent(spk::PaintEvent &p_event);
+				void _onGeometryChange() override;
+				void _onPaintEvent(spk::PaintEvent &p_event) override;
 
 			public:
 				static spk::SafePointer<const spk::SpriteSheet> defaultBreakSpriteSheet();
@@ -52,7 +52,7 @@ namespace spk
 
 			spk::Font::Size _computeElementSize() const;
 			void _onGeometryChange() override;
-			void _onMouseEvent(spk::MouseEvent &p_event);
+			void _onMouseEvent(spk::MouseEvent &p_event) override;
 
 		public:
 			Menu(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent);
@@ -62,7 +62,7 @@ namespace spk
 			spk::SafePointer<Item> addItem(const std::wstring &p_itemName, std::function<void()> p_callback);
 			spk::SafePointer<Break> addBreak();
 
-			spk::Vector2UInt minimalSize() const;
+			spk::Vector2UInt minimalSize() const override;
 		};
 
 	private:
@@ -73,7 +73,7 @@ namespace spk
 		{
 			std::unique_ptr<spk::PushButton> menuButton;
 			spk::PushButton::Contract menuButtonContract;
-			std::unique_ptr<Menu> Menu;
+			std::unique_ptr<Menu> menu;
 		};
 
 		std::vector<std::unique_ptr<MenuEntry>> _menus;

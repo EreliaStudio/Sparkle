@@ -150,7 +150,7 @@ namespace spk
 			}
 		}
 
-		spk::Vector2UInt minimalSize() const
+		spk::Vector2UInt minimalSize() const override
 		{
 			if (_elements.empty())
 			{

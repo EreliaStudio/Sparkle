@@ -29,7 +29,7 @@ namespace spk
 	{
 		if (_state == State::Running)
 		{
-			_accumulatedTime = Duration(_accumulatedTime.nanoseconds + currentRunDuration().nanoseconds, TimeUnit::Nanosecond);
+			_accumulatedTime = Duration(_accumulatedTime.nanoseconds + _currentRunDuration().nanoseconds, TimeUnit::Nanosecond);
 			_state = State::Paused;
 		}
 	}
@@ -54,7 +54,7 @@ namespace spk
 	{
 		if (_state == State::Running)
 		{
-			auto currentDiff = currentRunDuration();
+			auto currentDiff = _currentRunDuration();
 			return (Duration(_accumulatedTime.nanoseconds + currentDiff.nanoseconds, TimeUnit::Nanosecond));
 		}
 		else
@@ -63,7 +63,7 @@ namespace spk
 		}
 	}
 
-	Duration Chronometer::currentRunDuration() const
+	Duration Chronometer::_currentRunDuration() const
 	{
 		if (_state != State::Running)
 		{
@@ -76,7 +76,7 @@ namespace spk
 		return (Duration(diffNs, TimeUnit::Nanosecond));
 	}
 
-	const char *to_string(Chronometer::State p_state)
+	const char *toString(Chronometer::State p_state)
 	{
 		switch (p_state)
 		{
@@ -90,7 +90,7 @@ namespace spk
 			return "UnknownState";
 		}
 	}
-	const wchar_t *to_wstring(Chronometer::State p_state)
+	const wchar_t *toWstring(Chronometer::State p_state)
 	{
 		switch (p_state)
 		{
@@ -108,9 +108,9 @@ namespace spk
 
 std::ostream &operator<<(std::ostream &p_os, spk::Chronometer::State p_state)
 {
-	return p_os << to_string(p_state);
+	return p_os << toString(p_state);
 }
 std::wostream &operator<<(std::wostream &p_wos, spk::Chronometer::State p_state)
 {
-	return p_wos << to_wstring(p_state);
+	return p_wos << toWstring(p_state);
 }

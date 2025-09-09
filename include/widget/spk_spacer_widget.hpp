@@ -13,7 +13,7 @@ namespace spk
 		{
 		}
 
-		~SpacerWidget()
+		~SpacerWidget() override
 		{
 		}
 	};

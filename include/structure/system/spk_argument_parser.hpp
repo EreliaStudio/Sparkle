@@ -34,11 +34,11 @@ namespace spk
 		std::vector<std::wstring> _parameters;
 		std::wstring _synopsis = L"";
 
-		static bool _isLongOpt(const std::string& tok) noexcept;
-		static bool _isShortOpt(const std::string& tok) noexcept;
-		Option& _requireByLong(const std::wstring& name);
-		Option& _requireByShort(char shortName);
-   		void _consumeValues(Option& opt, int& i, int argc, char** argv);
+		static bool _isLongOpt(const std::string& p_tok) noexcept;
+		static bool _isShortOpt(const std::string& p_tok) noexcept;
+		Option& _requireByLong(const std::wstring& p_name);
+		Option& _requireByShort(char p_shortName);
+   		void _consumeValues(Option& p_opt, int& p_i, int p_argc, char** p_argv);
 
 	public:
 		explicit ArgumentParser();

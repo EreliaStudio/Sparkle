@@ -80,7 +80,7 @@ void main()
 		_object(_shader.createObject()),
 		_bufferSet(_object.bufferSet()),
 		_diffuseSampler(_shader.sampler(L"diffuseTexture")),
-		_transformUBO(_object.UBO(L"TransformUBO"))
+		_transformUBO(_object.ubo(L"TransformUBO"))
 	{
 	}
 
@@ -110,18 +110,18 @@ void main()
 
 	void ObjMeshRenderer::Painter::setTransform(const spk::Transform &p_transform)
 	{
-		_transformUBO.layout()[L"modelMatrix"] = p_transform.model();
-		_transformUBO.validate();
+		_transformUBO->layout()[L"modelMatrix"] = p_transform.model();
+		_transformUBO->validate();
 	}
 
 	void ObjMeshRenderer::Painter::setTexture(const spk::SafePointer<const spk::Texture> &p_texture)
 	{
-		_diffuseSampler.bind(p_texture);
+		_diffuseSampler->bind(p_texture);
 	}
 
 	const spk::SafePointer<const spk::Texture> &ObjMeshRenderer::Painter::texture() const
 	{
-		return (_diffuseSampler.texture());
+		return (_diffuseSampler->texture());
 	}
 
 	ObjMeshRenderer::ObjMeshRenderer(const std::wstring &p_name) :

@@ -29,7 +29,7 @@ namespace spk
 
 		void setLoopSpeed(const spk::Duration &p_duration);
 
-		void setAnimationRange(size_t start, size_t end);
+		void setAnimationRange(size_t p_start, size_t p_end);
 
 		size_t currentFrame() const;
 	};

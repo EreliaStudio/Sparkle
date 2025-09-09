@@ -102,6 +102,6 @@ namespace spk
 
 		void setGeometry(const spk::Geometry2D &p_geometry) override;
 
-		spk::Vector2UInt minimalSize() const;
+		spk::Vector2UInt minimalSize() const override;
 	};
 }

@@ -201,7 +201,7 @@ namespace spk
 
 			entry->menuButton->setGeometry({anchor, buttonSize});
 
-			entry->Menu->setGeometry({anchor.x, _backgroundFrame.geometry().size.y}, entry->Menu->minimalSize());
+			entry->menu->setGeometry({anchor.x, _backgroundFrame.geometry().size.y}, entry->menu->minimalSize());
 
 			anchor.x += buttonSize.x + 5;
 		}
@@ -238,8 +238,8 @@ namespace spk
 		newMenuEntry->menuButton->setLayer(10);
 		newMenuEntry->menuButton->activate();
 
-		newMenuEntry->Menu = std::make_unique<Menu>(name() + L" - " + p_menuName + L" DropDown", this);
-		newMenuEntry->Menu->setLayer(20);
+		newMenuEntry->menu = std::make_unique<Menu>(name() + L" - " + p_menuName + L" DropDown", this);
+		newMenuEntry->menu->setLayer(20);
 
 		MenuEntry *rawMenuEntryPtr = newMenuEntry.get();
 
@@ -248,11 +248,11 @@ namespace spk
 			{
 				for (auto &entry : _menus)
 				{
-					entry->Menu->deactivate();
+					entry->menu->deactivate();
 				}
-				if (rawMenuEntryPtr->Menu->nbItem() != 0)
+				if (rawMenuEntryPtr->menu->nbItem() != 0)
 				{
-					rawMenuEntryPtr->Menu->activate();
+					rawMenuEntryPtr->menu->activate();
 				}
 				requireGeometryUpdate();
 			});
@@ -260,8 +260,8 @@ namespace spk
 		_menus.push_back(std::move(newMenuEntry));
 
 		requireGeometryUpdate();
-		requestPaint();
+		_requestPaint();
 
-		return _menus.back()->Menu.get();
+		return _menus.back()->menu.get();
 	}
 }

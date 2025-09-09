@@ -32,7 +32,7 @@ namespace spk
 		if (_texture != p_texture)
 		{
 			_textureRenderer.setTexture(p_texture);
-			requestPaint();
+			_requestPaint();
 		}
 	}
 

@@ -23,7 +23,7 @@ namespace spk
 		std::unordered_map<std::wstring, std::unique_ptr<spk::PushButton>> _buttons;
 		std::vector<spk::SafePointer<spk::PushButton>> _orderedButtons;
 
-		void _onGeometryChange();
+		void _onGeometryChange() override;
 		void _composeLayout();
 
 	public:

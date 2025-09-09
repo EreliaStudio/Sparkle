@@ -53,7 +53,7 @@ namespace spk::OpenGL
 
 		if (_verboseMode == true)
 		{
-			OpenGLUtils::PrintShaderLog(shader, (p_shaderType == GL_VERTEX_SHADER) ? "Vertex" : "Fragment");
+			OpenGLUtils::printShaderLog(shader, (p_shaderType == GL_VERTEX_SHADER) ? "Vertex" : "Fragment");
 		}
 
 		GLint success = GL_FALSE;
@@ -63,7 +63,7 @@ namespace spk::OpenGL
 
 			if (_verboseMode == true)
 			{
-				OpenGLUtils::LogGLErrors("_compileShader");
+				OpenGLUtils::logGlErrors("_compileShader");
 			}
 			std::string shaderTypeStr = (p_shaderType == GL_VERTEX_SHADER) ? "Vertex Shader" : "Fragment Shader";
 			GLint len = 0;
@@ -90,7 +90,7 @@ namespace spk::OpenGL
 
 		if (_verboseMode == true)
 		{
-			OpenGLUtils::PrintProgramLog(program, "Link");
+			OpenGLUtils::printProgramLog(program, "Link");
 		}
 
 		GLint success = GL_FALSE;
@@ -100,7 +100,7 @@ namespace spk::OpenGL
 
 			if (_verboseMode == true)
 			{
-				OpenGLUtils::LogGLErrors("_linkProgram");
+				OpenGLUtils::logGlErrors("_linkProgram");
 			}
 			GLint len = 0;
 			glGetProgramiv(program, GL_INFO_LOG_LENGTH, &len);
@@ -116,17 +116,17 @@ namespace spk::OpenGL
 
 		if (_verboseMode == true)
 		{
-			OpenGLUtils::DumpActiveAttribs(program);
+			OpenGLUtils::dumpActiveAttribs(program);
 		}
 
 		if (_verboseMode == true)
 		{
-			OpenGLUtils::DumpActiveUniformsAndSamplers(program);
+			OpenGLUtils::dumpActiveUniformsAndSamplers(program);
 		}
 
 		if (_verboseMode == true)
 		{
-			OpenGLUtils::DumpUniformBlocks(program);
+			OpenGLUtils::dumpUniformBlocks(program);
 		}
 
 		// Clean up shaders after link
@@ -155,7 +155,7 @@ namespace spk::OpenGL
 
 		if (_verboseMode == true)
 		{
-			OpenGLUtils::LogGLErrors("Program::_load");
+			OpenGLUtils::logGlErrors("Program::_load");
 		}
 	}
 
@@ -167,7 +167,7 @@ namespace spk::OpenGL
 
 			if (_verboseMode == true)
 			{
-				OpenGLUtils::LogGLErrors("Program::_cleanup glDeleteProgram");
+				OpenGLUtils::logGlErrors("Program::_cleanup glDeleteProgram");
 			}
 		}
 		_programID = 0;
@@ -191,7 +191,7 @@ namespace spk::OpenGL
 
 		if (_verboseMode == true)
 		{
-			OpenGLUtils::LogGLErrors("Program::activate glUseProgram");
+			OpenGLUtils::logGlErrors("Program::activate glUseProgram");
 		}
 	}
 
@@ -203,7 +203,7 @@ namespace spk::OpenGL
 
 			if (_verboseMode == true)
 			{
-				OpenGLUtils::LogGLErrors("Program::deactivate glUseProgram(0)");
+				OpenGLUtils::logGlErrors("Program::deactivate glUseProgram(0)");
 			}
 		}
 	}
@@ -222,7 +222,7 @@ namespace spk::OpenGL
 
 		if (_verboseMode == true)
 		{
-			OpenGLUtils::DumpPreDrawState();
+			OpenGLUtils::dumpPreDrawState();
 		}
 
 #ifndef NDEBUG
@@ -244,24 +244,24 @@ namespace spk::OpenGL
 
 		if (_verboseMode == true)
 		{
-			OpenGLUtils::DumpUBOBindingsForUsedBlocks(_programID);
+			OpenGLUtils::dumpUboBindingsForUsedBlocks(_programID);
 		}
 
 		if (_verboseMode == true)
 		{
-			OpenGLUtils::DumpTexture2DCompletenessForUnit(0);
+			OpenGLUtils::dumpTexture2DCompletenessForUnit(0);
 		}
 
 		if (_verboseMode == true)
 		{
-			OpenGLUtils::CheckIndexBufferCapacityVsCount(p_nbIndexes, GL_UNSIGNED_INT);
+			OpenGLUtils::checkIndexBufferCapacityVsCount(p_nbIndexes, GL_UNSIGNED_INT);
 		}
 
 		glDrawElementsInstanced(GL_TRIANGLES, p_nbIndexes, GL_UNSIGNED_INT, nullptr, p_nbInstance);
 
 		if (_verboseMode == true)
 		{
-			OpenGLUtils::LogGLErrors("Program::render glDrawElementsInstanced");
+			OpenGLUtils::logGlErrors("Program::render glDrawElementsInstanced");
 		}
 	}
 
@@ -279,7 +279,7 @@ namespace spk::OpenGL
 
 		if (_verboseMode == true)
 		{
-			OpenGLUtils::DumpPreDrawState();
+			OpenGLUtils::dumpPreDrawState();
 		}
 
 #ifndef NDEBUG
@@ -301,19 +301,19 @@ namespace spk::OpenGL
 
 		if (_verboseMode == true)
 		{
-			OpenGLUtils::DumpUBOBindingsForUsedBlocks(_programID);
+			OpenGLUtils::dumpUboBindingsForUsedBlocks(_programID);
 		}
 
 		if (_verboseMode == true)
 		{
-			OpenGLUtils::DumpTexture2DCompletenessForUnit(0);
+			OpenGLUtils::dumpTexture2DCompletenessForUnit(0);
 		}
 
 		glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, reinterpret_cast<const void *>(p_commandOffset), p_drawCount, p_stride);
 
 		if (_verboseMode == true)
 		{
-			OpenGLUtils::LogGLErrors("Program::renderIndirect glMultiDrawElementsIndirect");
+			OpenGLUtils::logGlErrors("Program::renderIndirect glMultiDrawElementsIndirect");
 		}
 	}
 
@@ -346,7 +346,7 @@ namespace spk::OpenGL
 			// If validation fails, also dump pre-draw state to help pinpoint
 			if (_verboseMode == true)
 			{
-				OpenGLUtils::DumpPreDrawState();
+				OpenGLUtils::dumpPreDrawState();
 			}
 			GENERATE_ERROR(std::string("Shader Program validation failed: ") + (infoLogLength > 1 ? infoLog.data() : "(no log)"));
 		}
