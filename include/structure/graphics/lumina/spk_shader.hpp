@@ -552,7 +552,7 @@ namespace spk::Lumina
 				{
 					throw std::runtime_error("Object with name '" + spk::StringUtils::wstringToString(p_name) + "' is not an Sampler.");
 				}
-				return *(std::get<std::shared_ptr<OpenGL::SamplerObject>>(Shader::_objects[p_name]));
+				return (std::get<std::shared_ptr<OpenGL::SamplerObject>>(Shader::_objects[p_name]));
 			}
 
 			static OpenGL::UniformBufferObject &ubo(const std::wstring &p_name)
@@ -565,7 +565,7 @@ namespace spk::Lumina
 				{
 					throw std::runtime_error("Object with name '" + spk::StringUtils::wstringToString(p_name) + "' is not an UBO.");
 				}
-				return *(std::get<std::shared_ptr<OpenGL::UniformBufferObject>>(Shader::_objects[p_name]));
+				return (std::get<std::shared_ptr<OpenGL::UniformBufferObject>>(Shader::_objects[p_name]));
 			}
 
 			static OpenGL::ShaderStorageBufferObject &ssbo(const std::wstring &p_name)
@@ -578,7 +578,7 @@ namespace spk::Lumina
 				{
 					throw std::runtime_error("Object with name '" + spk::StringUtils::wstringToString(p_name) + "' is not an SSBO.");
 				}
-				return *(std::get<std::shared_ptr<OpenGL::ShaderStorageBufferObject>>(Shader::_objects[p_name]));
+				return (std::get<std::shared_ptr<OpenGL::ShaderStorageBufferObject>>(Shader::_objects[p_name]));
 			}
 		};
 	};

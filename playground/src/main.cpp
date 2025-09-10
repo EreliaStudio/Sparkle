@@ -51,7 +51,7 @@ private:
 		for (int i = 0; i < nbPoint; ++i)
 		{
 			float angle = step * static_cast<float>(i);
-			vertices.emplace_back(std::cos(angle), std::sin(angle));
+			vertices.emplace_back(std::cos(angle) / 2.0f, std::sin(angle) / 2.0f);
 		}
 		result.addShape(vertices);
 
@@ -153,7 +153,7 @@ void main()
 
 			spk::Lumina::Shader::Object _object;
 			spk::OpenGL::BufferSet &_bufferSet;
-			spk::OpenGL::ShaderStorageBufferObject &_infoSSBO;
+			std::shared_ptr<spk::OpenGL::ShaderStorageBufferObject> _infoSSBO;
 
 			spk::SafePointer<const InfoContainer> _infoContainer;
 
@@ -175,14 +175,14 @@ void main()
 			Painter(const ShapeMesh &p_mesh) :
 				_object(_shader.createObject()),
 				_bufferSet(_object.bufferSet()),
-				_infoSSBO(_object.SSBO(L"InfoSSBO"))
+				_infoSSBO(_object.ssbo(L"InfoSSBO"))
 			{
 				_prepare(p_mesh);
 			}
 
 			void render()
 			{
-				size_t nbInstance = _infoSSBO.dynamicArray().nbElement();
+				size_t nbInstance = _infoSSBO->dynamicArray().nbElement();
 
 				_object.setNbInstance(nbInstance);
 				_object.render();
@@ -200,7 +200,7 @@ void main()
 					return;
 				}
 
-				auto &array = _infoSSBO.dynamicArray();
+				auto &array = _infoSSBO->dynamicArray();
 
 				array.resize(_infoContainer->size());
 
@@ -211,7 +211,7 @@ void main()
 					index++;
 				}
 
-				_infoSSBO.validate();
+				_infoSSBO->validate();
 			}
 		};
 
