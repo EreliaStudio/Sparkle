@@ -93,9 +93,13 @@ namespace spk::OpenGL
 
 	void ShaderStorageBufferObject::DynamicArray::resize(size_t p_nbElement)
 	{
+				DEBUG_LINE();
 		_resizeContractProvider.trigger(_fixedReservedSpace + (_elementSize + _elementPadding) * p_nbElement);
+				DEBUG_LINE();
 		_elements.resize(p_nbElement);
+				DEBUG_LINE();
 		_redoArray();
+				DEBUG_LINE();
 	}
 
 	ShaderStorageBufferObject::DynamicArray::Element &ShaderStorageBufferObject::DynamicArray::operator[](size_t p_index)

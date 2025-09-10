@@ -132,7 +132,7 @@ layout(location = 0) out vec4 outColor;
 
 void main()
 {
-	outColor = vec4(1, 0, 0, 1);//fragColor;
+	outColor = fragColor;
 })";
 
 				spk::Lumina::Shader shader(vertexShaderSrc, fragmentShaderSrc);
@@ -141,11 +141,14 @@ void main()
 
 				shader.addUBO(L"CameraUBO", spk::Lumina::ShaderObjectFactory::instance()->ubo(L"CameraUBO"), spk::Lumina::Shader::Mode::Constant);
 
-				auto infoSSBO = std::make_shared<spk::OpenGL::ShaderStorageBufferObject>(L"InfoSSBO", 1, 0, 0, 80, 0);
-				infoSSBO->dynamicArray().addElement(L"model", 0, 64);
-				infoSSBO->dynamicArray().addElement(L"color", 64, 16);
+				DEBUG_LINE();
+				spk::OpenGL::ShaderStorageBufferObject infoSSBO = spk::OpenGL::ShaderStorageBufferObject(L"InfoSSBO", 1, 0, 0, 80, 0);
+				infoSSBO.dynamicArray().addElement(L"model", 0, 64);
+				infoSSBO.dynamicArray().addElement(L"color", 64, 16);
+				DEBUG_LINE();
 
 				shader.addSSBO(L"InfoSSBO", infoSSBO, spk::Lumina::Shader::Mode::Attribute);
+				DEBUG_LINE();
 
 				return (shader);
 			}
@@ -153,7 +156,7 @@ void main()
 
 			spk::Lumina::Shader::Object _object;
 			spk::OpenGL::BufferSet &_bufferSet;
-			std::shared_ptr<spk::OpenGL::ShaderStorageBufferObject> _infoSSBO;
+			spk::OpenGL::ShaderStorageBufferObject& _infoSSBO;
 
 			spk::SafePointer<const InfoContainer> _infoContainer;
 
@@ -182,7 +185,7 @@ void main()
 
 			void render()
 			{
-				size_t nbInstance = _infoSSBO->dynamicArray().nbElement();
+				size_t nbInstance = _infoSSBO.dynamicArray().nbElement();
 
 				_object.setNbInstance(nbInstance);
 				_object.render();
@@ -200,18 +203,28 @@ void main()
 					return;
 				}
 
-				auto &array = _infoSSBO->dynamicArray();
+				DEBUG_LINE();
+				auto &array = _infoSSBO.dynamicArray();
 
+				spk::cout() << "Array element size : " << array.elementSize() << std::endl;
+
+				DEBUG_LINE();
 				array.resize(_infoContainer->size());
 
+				DEBUG_LINE();
 				size_t index = 0;
 				for (const auto &info : *_infoContainer)
 				{
+				DEBUG_LINE();
 					array[index] = info;
+				DEBUG_LINE();
 					index++;
+				DEBUG_LINE();
 				}
+				DEBUG_LINE();
 
-				_infoSSBO->validate();
+				_infoSSBO.validate();
+				DEBUG_LINE();
 			}
 		};
 
