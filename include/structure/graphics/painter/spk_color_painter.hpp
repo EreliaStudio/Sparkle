@@ -4,7 +4,7 @@
 #include "structure/graphics/opengl/spk_program.hpp"
 #include "structure/graphics/opengl/spk_uniform_buffer_object.hpp"
 #include "structure/graphics/spk_color.hpp"
-#include "structure/graphics/spk_geometry_2D.hpp"
+#include "structure/graphics/spk_geometry_2d.hpp"
 #include "structure/math/spk_vector2.hpp"
 #include "structure/math/spk_vector3.hpp"
 

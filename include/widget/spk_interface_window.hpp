@@ -40,7 +40,7 @@ namespace spk
 			spk::Font::Size _computeFontSize(const float &p_menuHeight);
 			spk::Vector2Int _computeControlButtonSize(const float &p_menuHeight);
 
-			void _onGeometryChange();
+			void _onGeometryChange() override;
 
 			spk::Vector2UInt _computeMinimalSize(const float &p_menuHeight);
 

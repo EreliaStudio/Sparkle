@@ -22,7 +22,7 @@ namespace spk
 		class Column
 		{
 		private:
-			float rows[SizeY];
+			std::array<float, SizeY> _rows;
 
 		public:
 			float &operator[](size_t p_index)
@@ -32,7 +32,7 @@ namespace spk
 					throw std::invalid_argument(
 						"Can't access the row " + std::to_string(p_index) + " on a matrix " + std::to_string(SizeX) + "x" + std::to_string(SizeY));
 				}
-				return (rows[p_index]);
+				return (_rows[p_index]);
 			}
 			const float &operator[](size_t p_index) const
 			{
@@ -41,12 +41,12 @@ namespace spk
 					throw std::invalid_argument(
 						"Can't access the row " + std::to_string(p_index) + " on a matrix " + std::to_string(SizeX) + "x" + std::to_string(SizeY));
 				}
-				return (rows[p_index]);
+				return (_rows[p_index]);
 			}
 		};
 
 	private:
-		Column cols[SizeX];
+		std::array<Column, SizeX> _cols;
 
 	public:
 		IMatrix()
@@ -71,14 +71,14 @@ namespace spk
 			}
 		}
 
-		IMatrix(std::initializer_list<float> values)
+		IMatrix(std::initializer_list<float> p_values)
 		{
-			if (values.size() != SizeX * SizeY)
+			if (p_values.size() != SizeX * SizeY)
 			{
 				throw std::invalid_argument("Initializer list size does not match the matrix dimensions.");
 			}
 
-			auto it = values.begin();
+			auto it = p_values.begin();
 			for (size_t j = 0; j < SizeY; j++)
 			{
 				for (size_t i = 0; i < SizeX; i++)
@@ -100,7 +100,7 @@ namespace spk
 				throw std::invalid_argument(
 					"Can't access the column " + std::to_string(p_index) + " on a matrix " + std::to_string(SizeX) + "x" + std::to_string(SizeY));
 			}
-			return (cols[p_index]);
+			return (_cols[p_index]);
 		}
 
 		const Column &operator[](size_t p_index) const
@@ -110,7 +110,7 @@ namespace spk
 				throw std::invalid_argument(
 					"Can't access the column " + std::to_string(p_index) + " on a matrix " + std::to_string(SizeX) + "x" + std::to_string(SizeY));
 			}
-			return (cols[p_index]);
+			return (_cols[p_index]);
 		}
 
 		template <size_t X = SizeX, size_t Y = SizeY, typename std::enable_if_t<(X == 3 && Y == 3), int> = 0>
@@ -221,17 +221,17 @@ namespace spk
 		}
 
 		template <size_t X = SizeX, size_t Y = SizeY, typename std::enable_if_t<(X == 4 && Y == 4), int> = 0>
-		static IMatrix<4, 4> rotation(const spk::Quaternion &q)
+		static IMatrix<4, 4> rotation(const spk::Quaternion &p_q)
 		{
-			float xx = q.x * q.x;
-			float yy = q.y * q.y;
-			float zz = q.z * q.z;
-			float xy = q.x * q.y;
-			float xz = q.x * q.z;
-			float yz = q.y * q.z;
-			float wx = q.w * q.x;
-			float wy = q.w * q.y;
-			float wz = q.w * q.z;
+			float xx = p_q.x * p_q.x;
+			float yy = p_q.y * p_q.y;
+			float zz = p_q.z * p_q.z;
+			float xy = p_q.x * p_q.y;
+			float xz = p_q.x * p_q.z;
+			float yz = p_q.y * p_q.z;
+			float wx = p_q.w * p_q.x;
+			float wy = p_q.w * p_q.y;
+			float wz = p_q.w * p_q.z;
 
 			IMatrix<4, 4> rotationMatrix;
 			rotationMatrix[0][0] = 1.0f - 2.0f * (yy + zz);
@@ -328,14 +328,14 @@ namespace spk
 			return p_os;
 		}
 
-		std::wstring to_wstring() const
+		std::wstring toWstring() const
 		{
 			std::wstringstream wss;
 			wss << *this;
 			return wss.str();
 		}
 
-		std::string to_string() const
+		std::string toString() const
 		{
 			std::stringstream ss;
 			ss << *this;

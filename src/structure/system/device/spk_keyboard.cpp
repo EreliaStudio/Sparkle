@@ -831,7 +831,7 @@ namespace spk
 		return (_state[static_cast<int>(p_key)]);
 	}
 
-	const InputState *Keyboard::state() const
+	const std::array<InputState, Keyboard::Key::MaxNbKey> &Keyboard::state() const
 	{
 		return (_state);
 	}

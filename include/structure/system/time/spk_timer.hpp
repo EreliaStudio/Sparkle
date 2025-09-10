@@ -18,8 +18,8 @@ namespace spk
 		};
 
 	private:
-		Duration currentRunDuration() const;
-		void updateTimedOutState() const;
+		Duration _currentRunDuration() const;
+		void _updateTimedOutState() const;
 
 		mutable State _state;
 		Duration _expectedDuration;
@@ -42,8 +42,8 @@ namespace spk
 		void resume();
 	};
 
-	inline const char *to_string(Timer::State p_state);
-	inline const wchar_t *to_wstring(Timer::State p_state);
+	inline const char *toString(Timer::State p_state);
+	inline const wchar_t *toWstring(Timer::State p_state);
 }
 
 std::ostream &operator<<(std::ostream &p_os, spk::Timer::State p_state);

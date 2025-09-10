@@ -10,7 +10,7 @@ namespace spk
 	{
 		for (size_t i = 0; i < 4; i++)
 		{
-			UVs[i] *= p_scaleRatio;
+			uvs[i] *= p_scaleRatio;
 		}
 	}
 
@@ -124,7 +124,7 @@ namespace spk
 	{
 		Font result;
 
-		result.loadFromData(p_data);
+		result._loadFromData(p_data);
 		result.setProperties(p_filtering, p_wrap, p_mipmap);
 
 		return (result);
@@ -136,7 +136,7 @@ namespace spk
 
 	Font::Font(const std::filesystem::path &p_path)
 	{
-		loadFromFile(p_path);
+		_loadFromFile(p_path);
 	}
 
 	void Font::setProperties(const Filtering &p_filtering, const Wrap &p_wrap, const Mipmap &p_mipmap)

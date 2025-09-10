@@ -77,7 +77,7 @@ void main()
 	CollisionMeshRenderer::Painter::Painter() :
 		_object(_shader.createObject()),
 		_bufferSet(_object.bufferSet()),
-		_transformUBO(_object.UBO(L"TransformUBO"))
+		_transformUBO(_object.ubo(L"TransformUBO"))
 	{
 	}
 
@@ -130,8 +130,8 @@ void main()
 
 	void CollisionMeshRenderer::Painter::setTransform(const spk::Transform &p_transform)
 	{
-		_transformUBO.layout()[L"modelMatrix"] = p_transform.model();
-		_transformUBO.validate();
+		_transformUBO->layout()[L"modelMatrix"] = p_transform.model();
+		_transformUBO->validate();
 	}
 
 	CollisionMeshRenderer::CollisionMeshRenderer(const std::wstring &p_name) :

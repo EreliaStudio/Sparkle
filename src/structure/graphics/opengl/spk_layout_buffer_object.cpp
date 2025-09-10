@@ -311,7 +311,7 @@ namespace spk::OpenGL
 		}
 	}
 
-	std::string to_string(const LayoutBufferObject::Attribute::Type &p_type)
+	std::string toString(const LayoutBufferObject::Attribute::Type &p_type)
 	{
 		switch (p_type)
 		{
@@ -353,7 +353,7 @@ namespace spk::OpenGL
 			return ("None");
 		}
 	}
-	std::wstring to_wstring(const LayoutBufferObject::Attribute::Type &p_type)
+	std::wstring toWstring(const LayoutBufferObject::Attribute::Type &p_type)
 	{
 		switch (p_type)
 		{

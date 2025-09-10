@@ -1,9 +1,9 @@
 #pragma once
 
 #ifdef _WIN32
-#   define WIN32_LEAN_AND_MEAN
-#   include <windows.h>
-#   undef WIN32_LEAN_AND_MEAN
+#	define WIN32_LEAN_AND_MEAN
+#	include <windows.h>
+#	undef WIN32_LEAN_AND_MEAN
 #endif
 
 #include <GL/glew.h>
@@ -54,7 +54,7 @@ namespace spk::OpenGL
 			void resize(size_t p_nbElement);
 
 			template <typename TType>
-			void push_back(const TType &p_value)
+			void pushBack(const TType &p_value)
 			{
 				resize(_elements.size() + 1);
 				_elements.back() = p_value;
@@ -88,8 +88,8 @@ namespace spk::OpenGL
 			size_t _elementSize;
 			size_t _elementPadding;
 
-			void redoArray();
-			DynamicArray duplicate() const;
+			void _redoArray();
+			DynamicArray _duplicate() const;
 		};
 
 	private:
@@ -106,12 +106,13 @@ namespace spk::OpenGL
 
 	public:
 		ShaderStorageBufferObject();
-		ShaderStorageBufferObject(const std::wstring &p_blockName,
-								  BindingPoint p_bindingPoint,
-								  size_t p_fixedSize,
-								  size_t p_paddingFixedToDynamic,
-								  size_t p_dynamicElementSize,
-								  size_t p_dynamicElementPadding);
+		ShaderStorageBufferObject(
+			const std::wstring &p_blockName,
+			BindingPoint p_bindingPoint,
+			size_t p_fixedSize,
+			size_t p_paddingFixedToDynamic,
+			size_t p_dynamicElementSize,
+			size_t p_dynamicElementPadding);
 		ShaderStorageBufferObject(const spk::JSON::Object &p_desc);
 		ShaderStorageBufferObject(const ShaderStorageBufferObject &p_other);
 		ShaderStorageBufferObject &operator=(const ShaderStorageBufferObject &p_other);

@@ -16,13 +16,13 @@ namespace spk
 	private:
 		spk::SafePointer<spk::GameEngine> _gameEngine = nullptr;
 
-		void _onGeometryChange();
-		void _onPaintEvent(spk::PaintEvent &p_event);
-		void _onUpdateEvent(spk::UpdateEvent &p_event);
-		void _onMouseEvent(spk::MouseEvent &p_event);
-		void _onControllerEvent(spk::ControllerEvent &p_event);
-		void _onKeyboardEvent(spk::KeyboardEvent &p_event);
-		void _onTimerEvent(spk::TimerEvent &p_event);
+		void _onGeometryChange() override;
+		void _onPaintEvent(spk::PaintEvent &p_event) override;
+		void _onUpdateEvent(spk::UpdateEvent &p_event) override;
+		void _onMouseEvent(spk::MouseEvent &p_event) override;
+		void _onControllerEvent(spk::ControllerEvent &p_event) override;
+		void _onKeyboardEvent(spk::KeyboardEvent &p_event) override;
+		void _onTimerEvent(spk::TimerEvent &p_event) override;
 
 	public:
 		GameEngineWidget(const std::wstring &p_name, const spk::SafePointer<spk::Widget> &p_parent);

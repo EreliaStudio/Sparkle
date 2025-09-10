@@ -34,8 +34,7 @@ namespace spk
 				{BackwardActionName, spk::Keyboard::S},
 				{RightActionName, spk::Keyboard::D},
 				{UpActionName, spk::Keyboard::Space},
-				{DownActionName, spk::Keyboard::Control}
-			};
+				{DownActionName, spk::Keyboard::Control}};
 		};
 
 	private:

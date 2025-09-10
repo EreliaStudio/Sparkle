@@ -20,7 +20,8 @@ namespace spk::OpenGL
 	class UniformObject
 	{
 	public:
-		enum class Type {
+		enum class Type
+		{
 			None,
 			Float,
 			Bool,

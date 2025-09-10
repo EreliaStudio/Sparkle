@@ -36,7 +36,7 @@ namespace spk
 	public:
 		void treatMessage(spk::Server::MessageObject &&p_message) override;
 		spk::ThreadSafeQueue<spk::Server::MessageObject> &messageReceived();
-		spk::Server::MessageObject obtainAwnerMessage(const spk::Message::Header::ClientID &p_emitterID, spk::Message::Header::Type p_type = -1);
+		spk::Server::MessageObject obtainAwnerMessage(const spk::Message::Header::ClientId &p_emitterID, spk::Message::Header::Type p_type = -1);
 		spk::Server::MessageObject obtainAwnerMessage(spk::Server::MessageObject &&p_questionMessage, spk::Message::Header::Type p_type = -1);
 		void insertMessageAwnser(spk::Server::MessageObject &&p_messageAwnser);
 		spk::ThreadSafeQueue<spk::Server::MessageObject> &messages() override;

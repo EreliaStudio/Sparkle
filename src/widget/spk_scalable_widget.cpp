@@ -274,7 +274,7 @@ namespace spk
 				{
 					setGeometry(newGeom);
 					p_event.requestPaint();
-					p_event.consume();
+					p_event.consume = true;
 				}
 			}
 			break;
@@ -288,7 +288,7 @@ namespace spk
 				if (edges != Edge::None)
 				{
 					_beginResize(edges, p_event.mouse->position());
-					p_event.consume();
+					p_event.consume = true;
 				}
 			}
 			break;

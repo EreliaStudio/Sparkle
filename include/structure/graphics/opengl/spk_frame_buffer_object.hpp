@@ -6,7 +6,7 @@
 #include <unordered_map>
 
 #include "structure/graphics/opengl/spk_texture_collection.hpp"
-#include "structure/graphics/spk_geometry_2D.hpp"
+#include "structure/graphics/spk_geometry_2d.hpp"
 #include "structure/graphics/texture/spk_texture.hpp"
 #include "structure/spk_safe_pointer.hpp"
 

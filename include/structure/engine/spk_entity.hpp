@@ -41,7 +41,7 @@ namespace spk
 		GameEngine *_engine = nullptr;
 
 		template <typename T>
-		void sortByPriority(std::vector<T> &p_container, bool &p_needSorting, std::mutex &p_mutex)
+		void _sortByPriority(std::vector<T> &p_container, bool &p_needSorting, std::mutex &p_mutex)
 		{
 			std::unique_lock<std::mutex> mutexLock(p_mutex);
 
@@ -53,10 +53,10 @@ namespace spk
 			std::sort(
 				p_container.begin(),
 				p_container.end(),
-				[](const T &a, const T &b)
+				[](const T &p_a, const T &p_b)
 				{
-					int priorityA = a->priority();
-					int priorityB = b->priority();
+					int priorityA = p_a->priority();
+					int priorityB = p_b->priority();
 
 					bool aNoPriority = (priorityA < 0);
 					bool bNoPriority = (priorityB < 0);
@@ -85,7 +85,7 @@ namespace spk
 		Entity(const Entity &) = delete;
 		Entity &operator=(const Entity &) = delete;
 
-		~Entity();
+		~Entity() override;
 
 		virtual void setName(const std::wstring &p_name);
 		void setPriority(const int &p_priority);
@@ -117,12 +117,13 @@ namespace spk
 		spk::SafePointer<TComponentType> addComponent(TArgs &&...p_args)
 		{
 			static_assert(std::is_base_of_v<Component, TComponentType>, "TComponentType must inherit from Component");
-			TComponentType *newComponent = new TComponentType(std::forward<TArgs>(p_args)...);
+			std::unique_ptr<TComponentType> newUniquePtr = std::make_unique<TComponentType>(std::forward<TArgs>(p_args)...);
+			TComponentType *newComponent = newUniquePtr.get();
 
 			{
 				std::unique_lock<std::mutex> lock(_componentMutex);
 
-				_components.emplace_back(std::unique_ptr<Component>(newComponent));
+				_components.emplace_back(std::move(newUniquePtr));
 			}
 
 			newComponent->_owner = this;
@@ -188,7 +189,7 @@ namespace spk
 					}
 				}
 			}
-			
+
 			return (nullptr);
 		}
 

@@ -9,13 +9,13 @@ namespace spk
 		spk::Vector3 min;
 		spk::Vector3 max;
 
-		void addPoint(const spk::Vector3& p_point)
+		void addPoint(const spk::Vector3 &p_point)
 		{
 			min = spk::Vector3::min(min, p_point);
 			max = spk::Vector3::max(max, p_point);
 		}
 
-		BoundingBox place(const spk::Vector3& p_delta) const
+		BoundingBox place(const spk::Vector3 &p_delta) const
 		{
 			BoundingBox result;
 
@@ -25,10 +25,9 @@ namespace spk
 			return (result);
 		}
 
-		bool intersect(const BoundingBox& p_other) const
+		bool intersect(const BoundingBox &p_other) const
 		{
-			return (min.x <= p_other.max.x && max.x >= p_other.min.x) &&
-				   (min.y <= p_other.max.y && max.y >= p_other.min.y) &&
+			return (min.x <= p_other.max.x && max.x >= p_other.min.x) && (min.y <= p_other.max.y && max.y >= p_other.min.y) &&
 				   (min.z <= p_other.max.z && max.z >= p_other.min.z);
 		}
 	};

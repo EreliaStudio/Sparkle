@@ -3,10 +3,10 @@
 #include <stdexcept>
 #include <string>
 
-inline std::runtime_error composeErrorMessage(const std::string &msg, const std::exception &ex, const std::string &file, int line)
+inline std::runtime_error composeErrorMessage(const std::string &p_msg, const std::exception &p_ex, const std::string &p_file, int p_line)
 {
-	std::string informationString = file + ':' + std::to_string(line) + '\n';
-	std::string combined = "--> " + msg + "\n\n" + ex.what();
+	std::string informationString = p_file + ':' + std::to_string(p_line) + '\n';
+	std::string combined = "--> " + p_msg + "\n\n" + p_ex.what();
 
 	std::string formatted;
 	formatted.reserve(combined.size() + 8);

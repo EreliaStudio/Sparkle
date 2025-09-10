@@ -3,7 +3,7 @@
 #include <iostream>
 #include <vector>
 
-#include "structure/container/spk_JSON_object.hpp"
+#include "structure/container/spk_json_object.hpp"
 
 namespace spk
 {

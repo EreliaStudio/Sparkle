@@ -51,11 +51,11 @@ namespace spk
 			typename = std::enable_if_t<
 				std::is_arithmetic<UxType>::value && std::is_arithmetic<UyType>::value && std::is_arithmetic<UzType>::value &&
 				std::is_arithmetic<UwType>::value>>
-		IVector4(UxType px, UyType py, UzType pz, UwType pw) :
-			x(static_cast<TType>(px)),
-			y(static_cast<TType>(py)),
-			z(static_cast<TType>(pz)),
-			w(static_cast<TType>(pw))
+		IVector4(UxType p_px, UyType p_py, UzType p_pz, UwType p_pw) :
+			x(static_cast<TType>(p_px)),
+			y(static_cast<TType>(p_py)),
+			z(static_cast<TType>(p_pz)),
+			w(static_cast<TType>(p_pw))
 		{
 		}
 
@@ -189,14 +189,14 @@ namespace spk
 			return p_os;
 		}
 
-		std::wstring to_wstring() const
+		std::wstring toWstring() const
 		{
 			std::wstringstream wss;
 			wss << *this;
 			return wss.str();
 		}
 
-		std::string to_string() const
+		std::string toString() const
 		{
 			std::stringstream ss;
 			ss << *this;
@@ -593,13 +593,13 @@ namespace spk
 			return max(max(p_valueA, p_valueB), p_args...);
 		}
 
-		static IVector4 lerp(const IVector4 &p_startingPoint, const IVector4 &p_endingPoint, float t)
+		static IVector4 lerp(const IVector4 &p_startingPoint, const IVector4 &p_endingPoint, float p_t)
 		{
 			return IVector4(
-				p_startingPoint.x + (p_endingPoint.x - p_startingPoint.x) * t,
-				p_startingPoint.y + (p_endingPoint.y - p_startingPoint.y) * t,
-				p_startingPoint.z + (p_endingPoint.z - p_startingPoint.z) * t,
-				p_startingPoint.w + (p_endingPoint.w - p_startingPoint.w) * t);
+				p_startingPoint.x + (p_endingPoint.x - p_startingPoint.x) * p_t,
+				p_startingPoint.y + (p_endingPoint.y - p_startingPoint.y) * p_t,
+				p_startingPoint.z + (p_endingPoint.z - p_startingPoint.z) * p_t,
+				p_startingPoint.w + (p_endingPoint.w - p_startingPoint.w) * p_t);
 		}
 
 		IVector4 positiveModulo(const IVector4 &p_modulo) const

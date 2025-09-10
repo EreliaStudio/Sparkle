@@ -170,15 +170,15 @@ namespace spk
 		glyph.positions[2] = Vector2Int(xOffset + width, yOffset);
 		glyph.positions[3] = Vector2Int(xOffset + width, yOffset + height);
 
-		glyph.UVs[0] =
+		glyph.uvs[0] =
 			Vector2(static_cast<float>(glyphPosition.x) / _size.x + halfPixelSize.x, static_cast<float>(glyphPosition.y) / _size.y + halfPixelSize.y);
-		glyph.UVs[1] = Vector2(
+		glyph.uvs[1] = Vector2(
 			static_cast<float>(glyphPosition.x) / _size.x + halfPixelSize.x,
 			static_cast<float>(glyphPosition.y + glyph.size.y) / _size.y - halfPixelSize.y);
-		glyph.UVs[2] = Vector2(
+		glyph.uvs[2] = Vector2(
 			static_cast<float>(glyphPosition.x + glyph.size.x) / _size.x - halfPixelSize.x,
 			static_cast<float>(glyphPosition.y) / _size.y + halfPixelSize.y);
-		glyph.UVs[3] = Vector2(
+		glyph.uvs[3] = Vector2(
 			static_cast<float>(glyphPosition.x + glyph.size.x) / _size.x - halfPixelSize.x,
 			static_cast<float>(glyphPosition.y + glyph.size.y) / _size.y - halfPixelSize.y);
 
@@ -189,15 +189,15 @@ namespace spk
 		stbtt_FreeBitmap(glyphBitmap, nullptr);
 	}
 
-	void Font::loadFromData(const std::vector<uint8_t> &p_data)
+	void Font::_loadFromData(const std::vector<uint8_t> &p_data)
 	{
 		_fontData = p_data;
 
 		stbtt_InitFont(&_fontInfo, reinterpret_cast<const unsigned char *>(_fontData.data()), 0);
 	}
 
-	void Font::loadFromFile(const std::filesystem::path &p_path)
+	void Font::_loadFromFile(const std::filesystem::path &p_path)
 	{
-		loadFromData(FileUtils::readFileAsBytes(p_path));
+		_loadFromData(FileUtils::readFileAsBytes(p_path));
 	}
 }

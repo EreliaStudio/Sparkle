@@ -30,61 +30,53 @@ add_resources(
 	"resources/textures/defaultNineSlice_Darker.png"
 	"resources/textures/defaultBreak.png"
 	"resources/json/mesh_renderer_shader_object.json"
-	)
-	
-	add_compile_definitions(NOMINMAX)
-	
-	# Define the library
-	add_library(Sparkle STATIC ${SPARKLE_SOURCES} ${SPARKLE_HEADERS})
-	
-	target_include_directories(Sparkle PRIVATE "${CMAKE_BINARY_DIR}")
-	
-	add_dependencies(Sparkle SparkleResourcesHeaderTarget)
-	
-	find_package(GLEW REQUIRED)
-	target_link_libraries(Sparkle PUBLIC GLEW::GLEW)
-	
-	find_package(OpenGL REQUIRED)
-	target_link_libraries(Sparkle PUBLIC OpenGL::GL)
-	
-	target_link_libraries(Sparkle PUBLIC dinput8 dxguid ws2_32)
-	
-	message("Include : ${SPARKLE_INCLUDE_DIR}")
-	
-	# Include directories
-	target_include_directories(Sparkle
-    PUBLIC
-	$<BUILD_INTERFACE:${SPARKLE_INCLUDE_DIR}>
-	$<INSTALL_INTERFACE:include>
-	)
+)
 
-	# Set output directories
-	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/bin/$<IF:$<CONFIG:Debug>,Debug,Release>)
-	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/lib/$<IF:$<CONFIG:Debug>,Debug,Release>)
-	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/lib/$<IF:$<CONFIG:Debug>,Debug,Release>)
-	set(CMAKE_OBJECT_PATH_MAX 4096) # Handle deep paths
+add_compile_definitions(NOMINMAX)
+
+# Define the library
+add_library(Sparkle STATIC ${SPARKLE_SOURCES} ${SPARKLE_HEADERS})
+
+target_include_directories(Sparkle PRIVATE "${CMAKE_BINARY_DIR}")
+
+add_dependencies(Sparkle SparkleResourcesHeaderTarget)
+
+find_package(GLEW REQUIRED)
+target_link_libraries(Sparkle PUBLIC GLEW::GLEW)
+
+find_package(OpenGL REQUIRED)
+target_link_libraries(Sparkle PUBLIC OpenGL::GL)
+
+target_link_libraries(Sparkle PUBLIC dinput8 dxguid ws2_32)
+
+# Include directories
+target_include_directories(Sparkle
+	PUBLIC
+		$<BUILD_INTERFACE:${SPARKLE_INCLUDE_DIR}>
+		$<INSTALL_INTERFACE:include>
+)
+
+# Set output directories
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/bin/$<IF:$<CONFIG:Debug>,Debug,Release>)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/lib/$<IF:$<CONFIG:Debug>,Debug,Release>)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/lib/$<IF:$<CONFIG:Debug>,Debug,Release>)
+set(CMAKE_OBJECT_PATH_MAX 4096) # Handle deep paths
+
+# Ensure intermediate object files go to 'obj' folder
+set(CMAKE_OBJECT_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/obj/$<IF:$<CONFIG:Debug>,Debug,Release>)
 	
-	# Ensure intermediate object files go to 'obj' folder
-	set(CMAKE_OBJECT_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/obj/$<IF:$<CONFIG:Debug>,Debug,Release>)
-	
-	# Architecture-based structure
-	if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+# Architecture-based structure
+if (CMAKE_SIZEOF_VOID_P EQUAL 8)
     set(ARCH_FOLDER x64)
-	else()
+else()
     set(ARCH_FOLDER x86)
-	endif()
+endif()
 	
 	# Update all output paths to include architecture
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${ARCH_FOLDER})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${ARCH_FOLDER})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/${ARCH_FOLDER})
 set(CMAKE_OBJECT_OUTPUT_DIRECTORY ${CMAKE_OBJECT_OUTPUT_DIRECTORY}/${ARCH_FOLDER})
-
-# Print output directories for debugging
-message(STATUS "CMAKE_RUNTIME_OUTPUT_DIRECTORY: ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
-message(STATUS "CMAKE_LIBRARY_OUTPUT_DIRECTORY: ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
-message(STATUS "CMAKE_ARCHIVE_OUTPUT_DIRECTORY: ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}")
-message(STATUS "CMAKE_OBJECT_OUTPUT_DIRECTORY: ${CMAKE_OBJECT_OUTPUT_DIRECTORY}")
 
 # Install the Sparkle library
 install(TARGETS Sparkle

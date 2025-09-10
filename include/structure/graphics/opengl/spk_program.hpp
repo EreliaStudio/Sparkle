@@ -19,8 +19,8 @@ namespace spk::OpenGL
 		bool _needCleanup = false;
 		GLuint _programID;
 
-		GLuint _compileShader(const std::string &shaderCode, GLenum shaderType);
-		GLuint _linkProgram(GLuint vertexShader, GLuint fragmentShader);
+		GLuint _compileShader(const std::string &p_shaderCode, GLenum p_shaderType);
+		GLuint _linkProgram(GLuint p_vertexShader, GLuint p_fragmentShader);
 		void _load();
 		void _cleanup();
 
@@ -34,7 +34,7 @@ namespace spk::OpenGL
 
 		void activate();
 		void deactivate();
-		void render(GLsizei nbIndexes, GLsizei p_nbInstance);
+		void render(GLsizei p_nbIndexes, GLsizei p_nbInstance);
 		void renderIndirect(GLintptr p_commandOffset, GLsizei p_drawCount, GLsizei p_stride);
 		void validate();
 

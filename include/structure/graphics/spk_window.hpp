@@ -95,12 +95,12 @@ namespace spk
 		std::function<void(spk::SafePointer<spk::Window>)> _onClosureCallback = nullptr;
 
 		void _initialize(const std::function<void(spk::SafePointer<spk::Window>)> &p_onClosureCallback);
-		static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+		static LRESULT CALLBACK _windowProc(HWND p_hwnd, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam);
 		void _createContext();
 		void _createOpenGLContext();
 		void _destroyOpenGLContext();
 
-		bool _receiveEvent(UINT uMsg, WPARAM wParam, LPARAM lParam);
+		bool _receiveEvent(UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam);
 
 		void _handlePendingTimer();
 		UINT_PTR _createTimer(int p_id, const long long &p_durationInMillisecond);
@@ -111,13 +111,13 @@ namespace spk
 		void _rendererLoopIteration();
 		void _updaterLoopIteration();
 
-		void _updateCounter(spk::Timer &timer, spk::SafePointer<Profiler::CounterMeasurement> &counter, size_t &currentValue);
+		void _updateCounter(spk::Timer &p_timer, spk::SafePointer<Profiler::CounterMeasurement> &p_counter, size_t &p_currentValue);
 
 		// Returns true when a new 100ms window just closed and
 		// currentValue was updated from the previous window's count.
 		bool _tickCounter(spk::Timer &p_timer, spk::SafePointer<Profiler::CounterMeasurement> &p_counter, size_t &p_currentValue);
 
-		void _guard(const char *label, const std::function<void()> &fn);
+		void _guard(const char *p_label, const std::function<void()> &p_fn);
 
 		// --- Timing (durations-based FPS/UPS) ---
 		static constexpr size_t _timingHistoryCapacity = 120;
@@ -136,14 +136,14 @@ namespace spk
 		static constexpr size_t _fpsCountHistoryCapacity = 10; // last 10 x 100ms => ~1s
 		mutable std::mutex _fpsCountMutex;
 		std::deque<size_t> _fpsCountHistory;
-		size_t _minFPSCounter = std::numeric_limits<size_t>::max();
-		size_t _maxFPSCounter = 0;
+		size_t _minFpsCounter = std::numeric_limits<size_t>::max();
+		size_t _maxFpsCounter = 0;
 
 		// --- Count-based UPS smoothing (100ms windows) ---
 		static constexpr size_t _upsCountHistoryCapacity = 10;
 		mutable std::mutex _upsCountMutex;
 		std::deque<size_t> _upsCountHistory;
-		size_t _minUPSCount = std::numeric_limits<size_t>::max();
+		size_t _minUpsCount = std::numeric_limits<size_t>::max();
 		size_t _maxUPSCount = 0;
 
 	public:
@@ -184,20 +184,20 @@ namespace spk
 		}
 
 		// Durations-based metrics (averaged over recent frames)
-		size_t FPS() const;
-		size_t UPS() const;
-		double realFPSDuration() const; // milliseconds of the last rendered frame
-		double realUPSDuration() const; // milliseconds of the last update iteration
+		size_t fps() const;
+		size_t ups() const;
+		double realFpsDuration() const; // milliseconds of the last rendered frame
+		double realUpsDuration() const; // milliseconds of the last update iteration
 
 		// Extremes (counters and durations)
-		size_t minFPS() const;
-		size_t maxFPS() const;
-		size_t minUPS() const;
-		size_t maxUPS() const;
-		double minFPSDuration() const;
-		double maxFPSDuration() const;
-		double minUPSDuration() const;
-		double maxUPSDuration() const;
+		size_t minFps() const;
+		size_t maxFps() const;
+		size_t minUps() const;
+		size_t maxUps() const;
+		double minFpsDuration() const;
+		double maxFpsDuration() const;
+		double minUpsDuration() const;
+		double maxUpsDuration() const;
 
 		spk::SafePointer<Widget> widget() const;
 		operator spk::SafePointer<Widget>() const;

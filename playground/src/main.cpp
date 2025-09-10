@@ -290,19 +290,19 @@ private:
 			spk::SafePointer<spk::Window> wnd = p_event.window;
 			if (wnd != nullptr)
 			{
-				fps = wnd->FPS();
-				fpsMs = wnd->realFPSDuration();
-				fpsMinMs = wnd->minFPSDuration();
-				fpsMaxMs = wnd->maxFPSDuration();
-				fpsMin = wnd->minFPS();
-				fpsMax = wnd->maxFPS();
+				fps = wnd->fps();
+				fpsMs = wnd->realFpsDuration();
+				fpsMinMs = wnd->minFpsDuration();
+				fpsMaxMs = wnd->maxFpsDuration();
+				fpsMin = wnd->minFps();
+				fpsMax = wnd->maxFps();
 
-				ups = wnd->UPS();
-				upsMs = wnd->realUPSDuration();
-				upsMinMs = wnd->minUPSDuration();
-				upsMaxMs = wnd->maxUPSDuration();
-				upsMin = wnd->minUPS();
-				upsMax = wnd->maxUPS();
+				ups = wnd->ups();
+				upsMs = wnd->realUpsDuration();
+				upsMinMs = wnd->minUpsDuration();
+				upsMaxMs = wnd->maxUpsDuration();
+				upsMin = wnd->minUps();
+				upsMax = wnd->maxUps();
 			}
 		}
 

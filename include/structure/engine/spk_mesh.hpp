@@ -36,18 +36,18 @@ namespace spk
 
 		mutable std::mutex _mutex;
 
-		unsigned int _getOrInsertVertex(const Vertex &v, std::unordered_map<Vertex, unsigned int> &vertexMap) const
+		unsigned int _getOrInsertVertex(const Vertex &p_v, std::unordered_map<Vertex, unsigned int> &p_vertexMap) const
 		{
-			auto it = vertexMap.find(v);
-			if (it != vertexMap.end())
+			auto it = p_vertexMap.find(p_v);
+			if (it != p_vertexMap.end())
 			{
 				return it->second;
 			}
 			else
 			{
 				const unsigned int newIndex = static_cast<unsigned int>(_buffer.vertices.size());
-				_buffer.vertices.push_back(v);
-				vertexMap[v] = newIndex;
+				_buffer.vertices.push_back(p_v);
+				p_vertexMap[p_v] = newIndex;
 				return newIndex;
 			}
 		}

@@ -73,7 +73,7 @@ namespace spk
 		}
 
 		template <typename... TArgs>
-		void allocate(TArgs &&...args)
+		void allocate(TArgs &&...p_args)
 		{
 			std::scoped_lock<std::mutex> lock(_data->mutex);
 
@@ -82,11 +82,11 @@ namespace spk
 				GENERATE_ERROR("Can't allocate a new object in closed pool");
 			}
 
-			_data->availableElements.emplace_back(std::make_unique<TType>(std::forward<TArgs>(args)...));
+			_data->availableElements.emplace_back(std::make_unique<TType>(std::forward<TArgs>(p_args)...));
 		}
 
 		template <typename... TArgs>
-		void resize(size_t p_newSize, TArgs &&...args)
+		void resize(size_t p_newSize, TArgs &&...p_args)
 		{
 			std::scoped_lock<std::mutex> lock(_data->mutex);
 
@@ -102,7 +102,7 @@ namespace spk
 
 			while (_data->availableElements.size() < p_newSize)
 			{
-				_data->availableElements.emplace_back(std::make_unique<TType>(std::forward<TArgs>(args)...));
+				_data->availableElements.emplace_back(std::make_unique<TType>(std::forward<TArgs>(p_args)...));
 			}
 		}
 
@@ -119,7 +119,7 @@ namespace spk
 		}
 
 		template <typename... TArgs>
-		Object obtain(TArgs &&...args)
+		Object obtain(TArgs &&...p_args)
 		{
 			{
 				std::scoped_lock<std::mutex> lock(_data->mutex);
@@ -137,7 +137,8 @@ namespace spk
 
 				if (_data->availableElements.empty())
 				{
-					rawPtr = new TType(std::forward<TArgs>(args)...);
+					// NOLINTNEXTLINE(cppcoreguidelines-owning-memory) << Will be passed to a unique_ptr with custom destructor later on
+					rawPtr = new TType(std::forward<TArgs>(p_args)...);
 				}
 				else
 				{
@@ -145,13 +146,14 @@ namespace spk
 					_data->availableElements.pop_back();
 
 					rawPtr->~TType();
-					new (rawPtr) TType(std::forward<TArgs>(args)...);
+					// NOLINTNEXTLINE(cppcoreguidelines-owning-memory) << Will be passed to a unique_ptr with custom destructor later on
+					new (rawPtr) TType(std::forward<TArgs>(p_args)...);
 				}
 			}
 
 			std::weak_ptr<Data> weakData = _data;
 
-			auto deleter = [weakData](TType *ptr)
+			auto deleter = [weakData](TType *p_ptr)
 			{
 				if (auto weakDataContent = weakData.lock())
 				{
@@ -159,12 +161,13 @@ namespace spk
 
 					if (weakDataContent->closed == false && weakDataContent->availableElements.size() < weakDataContent->maximumSize)
 					{
-						weakDataContent->availableElements.emplace_back(ptr);
+						weakDataContent->availableElements.emplace_back(p_ptr);
 						return;
 					}
 				}
 
-				delete ptr;
+				// NOLINTNEXTLINE(cppcoreguidelines-owning-memory) << Release of the pointer data uppon "real" destruction
+				delete p_ptr;
 			};
 
 			return Object(rawPtr, deleter);

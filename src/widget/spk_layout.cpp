@@ -104,7 +104,7 @@ namespace spk
 		return (_size);
 	}
 
-	void Layout::resizeElements(const size_t &p_size)
+	void Layout::_resizeElements(const size_t &p_size)
 	{
 		_elements.resize(p_size);
 	}
@@ -140,7 +140,7 @@ namespace spk
 			if ((*it)->widget() == p_widget)
 			{
 				_elements.erase(it);
-				resizeElements(_elements.size());
+				_resizeElements(_elements.size());
 				return;
 			}
 		}
@@ -160,7 +160,7 @@ namespace spk
 			if ((*it)->layout() == p_layout)
 			{
 				_elements.erase(it);
-				resizeElements(_elements.size());
+				_resizeElements(_elements.size());
 				return;
 			}
 		}

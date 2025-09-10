@@ -35,7 +35,7 @@ namespace spk
 
 		void clear();
 
-		void prepare(const spk::Geometry2D &geom, const spk::Image::Section &section, float layer);
+		void prepare(const spk::Geometry2D &p_geom, const spk::Image::Section &p_section, float p_layer);
 
 		void validate();
 

@@ -8,7 +8,7 @@ namespace spk
 		emitterID(InvalidID),
 		length(0)
 	{
-		std::memset(reserved, 0, sizeof(reserved));
+		std::memset(reserved.data(), 0, sizeof(reserved));
 	}
 
 	Message::Header::Header(Type p_type) :
@@ -16,15 +16,15 @@ namespace spk
 		emitterID(InvalidID),
 		length(0)
 	{
-		std::memset(reserved, 0, sizeof(reserved));
+		std::memset(reserved.data(), 0, sizeof(reserved));
 	}
 
-	Message::Header::Header(const ClientID &p_emitterID, const Type &p_type) :
+	Message::Header::Header(const ClientId &p_emitterID, const Type &p_type) :
 		type(p_type),
 		emitterID(p_emitterID),
 		length(0)
 	{
-		std::memset(reserved, 0, sizeof(reserved));
+		std::memset(reserved.data(), 0, sizeof(reserved));
 	}
 
 	Message::Message() :
@@ -37,7 +37,7 @@ namespace spk
 	{
 	}
 
-	Message::Message(const Header::ClientID &p_clientToRedirectMessage, const Header::Type &p_messageType) :
+	Message::Message(const Header::ClientId &p_clientToRedirectMessage, const Header::Type &p_messageType) :
 		_header(p_clientToRedirectMessage, p_messageType)
 	{
 	}
@@ -47,7 +47,7 @@ namespace spk
 		_header.type = p_type;
 	}
 
-	void Message::setEmitterID(const Header::ClientID &p_emitterID)
+	void Message::setEmitterID(const Header::ClientId &p_emitterID)
 	{
 		_header.emitterID = p_emitterID;
 	}

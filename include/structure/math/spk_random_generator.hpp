@@ -8,9 +8,10 @@ namespace spk
 	class RandomGenerator
 	{
 	private:
-		using GeneratorType = typename std::conditional<std::is_same<TGeneratedType, double>::value || std::is_same<TGeneratedType, float>::value,
-														std::uniform_real_distribution<TGeneratedType>,
-														std::uniform_int_distribution<TGeneratedType>>::type;
+		using GeneratorType = typename std::conditional<
+			std::is_same<TGeneratedType, double>::value || std::is_same<TGeneratedType, float>::value,
+			std::uniform_real_distribution<TGeneratedType>,
+			std::uniform_int_distribution<TGeneratedType>>::type;
 
 		std::mt19937 _generator;
 		GeneratorType _distribution;

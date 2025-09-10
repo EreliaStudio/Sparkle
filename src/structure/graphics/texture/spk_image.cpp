@@ -26,10 +26,8 @@ namespace spk
 	void Image::loadFromData(const std::vector<uint8_t> &p_data)
 	{
 		int width, height, channels;
-		stbi_uc *rawData = stbi_load_from_memory(
-			reinterpret_cast<const stbi_uc *>(p_data.data()),
-			static_cast<int>(p_data.size()),
-			&width, &height, &channels, 0);
+		stbi_uc *rawData =
+			stbi_load_from_memory(reinterpret_cast<const stbi_uc *>(p_data.data()), static_cast<int>(p_data.size()), &width, &height, &channels, 0);
 
 		if (rawData == nullptr)
 		{

@@ -154,7 +154,7 @@ namespace spk
 		};
 
 	private:
-		InputState _state[Key::MaxNbKey];
+		std::array<InputState, Key::MaxNbKey> _state;
 		wchar_t _glyph;
 		spk::SafePointer<Window> _window;
 
@@ -163,7 +163,7 @@ namespace spk
 		virtual ~Keyboard() = default;
 		InputState operator[](Key p_key) const;
 
-		const InputState *state() const;
+		const std::array<InputState, Key::MaxNbKey> &state() const;
 		wchar_t glyph() const;
 		spk::SafePointer<Window> window() const;
 	};

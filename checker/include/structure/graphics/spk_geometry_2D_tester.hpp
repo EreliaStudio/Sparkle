@@ -1,7 +1,7 @@
 #pragma once
 
 #include <gtest/gtest.h>
-#include "structure/graphics/spk_geometry_2D.hpp"
+#include "structure/graphics/spk_geometry_2d.hpp"
 
 class Geometry2DTest : public ::testing::Test
 {

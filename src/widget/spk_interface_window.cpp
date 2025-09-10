@@ -175,13 +175,13 @@ namespace spk
 			[&]()
 			{
 				minimize();
-				requestPaint();
+				_requestPaint();
 			});
 		_maximizeContract = _menuBar._maximizeButton.subscribe(
 			[&]()
 			{
 				maximize();
-				requestPaint();
+				_requestPaint();
 			});
 	}
 
@@ -213,7 +213,7 @@ namespace spk
 	{
 		ScalableWidget::_onMouseEvent(p_event);
 
-		if (p_event.consumed() == true)
+		if (p_event.consume == true)
 		{
 			return;
 		}
@@ -226,7 +226,7 @@ namespace spk
 			{
 				place(p_event.mouse->position() - _positionDelta);
 				p_event.requestPaint();
-				p_event.consume();
+				p_event.consume = true;
 			}
 			break;
 		}
@@ -239,7 +239,7 @@ namespace spk
 					_isMoving = true;
 					_positionDelta = p_event.mouse->position() - geometry().anchor;
 					p_event.window->setCursor(L"Hand");
-					p_event.consume();
+					p_event.consume = true;
 					takeFocus(spk::Widget::FocusType::MouseFocus);
 				}
 			}
@@ -264,7 +264,7 @@ namespace spk
 
 		if (viewport().geometry().contains(p_event.mouse->position()) == true)
 		{
-			p_event.consume();
+			p_event.consume = true;
 		}
 	}
 

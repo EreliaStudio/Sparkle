@@ -12,7 +12,7 @@ namespace spk
 		spk::Vector2Int _contentAnchor;
 		spk::Vector2UInt _contentSize;
 
-		void _onGeometryChange();
+		void _onGeometryChange() override;
 
 	public:
 		ContainerWidget(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent);

@@ -20,10 +20,10 @@ namespace spk
 
 	public:
 		PersistantWorker(const std::wstring &p_name);
-		virtual ~PersistantWorker();
+		~PersistantWorker() override;
 
 		void stop();
-		void join();
+		void join() override;
 
 		Contract addPreparationStep(const Job &p_job);
 		Contract addExecutionStep(const Job &p_job);

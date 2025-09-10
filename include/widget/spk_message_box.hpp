@@ -104,10 +104,11 @@ namespace spk
 	public:
 		RequestMessageBox(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent);
 
-		void configure(const std::wstring &p_firstCaption,
-					   const std::function<void()> &p_firstAction,
-					   const std::wstring &p_secondCaption,
-					   const std::function<void()> &p_secondAction);
+		void configure(
+			const std::wstring &p_firstCaption,
+			const std::function<void()> &p_firstAction,
+			const std::wstring &p_secondCaption,
+			const std::function<void()> &p_secondAction);
 
 		spk::SafePointer<spk::PushButton> firstButton() const;
 		spk::SafePointer<spk::PushButton> secondButton() const;

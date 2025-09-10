@@ -21,14 +21,14 @@ namespace spk
 	{
 	}
 
-	std::wstring Quaternion::to_wstring() const
+	std::wstring Quaternion::toWstring() const
 	{
 		std::wstringstream wss;
 		wss << *this;
 		return wss.str();
 	}
 
-	std::string Quaternion::to_string() const
+	std::string Quaternion::toString() const
 	{
 		std::stringstream ss;
 		ss << *this;

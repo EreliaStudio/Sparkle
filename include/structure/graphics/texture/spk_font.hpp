@@ -24,8 +24,8 @@ namespace spk
 
 		struct Glyph
 		{
-			Vector2Int positions[4];
-			Vector2 UVs[4];
+			std::array<Vector2Int, 4> positions;
+			std::array<Vector2, 4> uvs;
 			Vector2Int step;
 			Vector2Int baselineOffset;
 			Vector2UInt size;
@@ -72,15 +72,15 @@ namespace spk
 				return (glyph < p_other.glyph) || (glyph == p_other.glyph && outline < p_other.outline);
 			}
 
-			friend std::wostream &operator<<(std::wostream &p_os, const Size &size)
+			friend std::wostream &operator<<(std::wostream &p_os, const Size &p_size)
 			{
-				p_os << L"(" << size.glyph << L" / " << size.outline << L")";
+				p_os << L"(" << p_size.glyph << L" / " << p_size.outline << L")";
 				return p_os;
 			}
 
-			friend std::ostream &operator<<(std::ostream &p_os, const Size &size)
+			friend std::ostream &operator<<(std::ostream &p_os, const Size &p_size)
 			{
-				p_os << "(" << size.glyph << " / " << size.outline << ")";
+				p_os << "(" << p_size.glyph << " / " << p_size.outline << ")";
 				return p_os;
 			}
 		};
@@ -163,8 +163,8 @@ namespace spk
 		};
 
 	private:
-		void loadFromFile(const std::filesystem::path &p_path);
-		void loadFromData(const std::vector<uint8_t> &p_data);
+		void _loadFromFile(const std::filesystem::path &p_path);
+		void _loadFromData(const std::vector<uint8_t> &p_data);
 
 		std::map<Size, Atlas> _atlases;
 		Data _fontData;

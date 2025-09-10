@@ -24,8 +24,9 @@ namespace spk
 		SafePointer(const SafePointer<ToType> &p_other) :
 			_ptr(dynamic_cast<TType *>(p_other.get()))
 		{
-			static_assert(std::is_base_of<ToType, TType>::value || std::is_base_of<TType, ToType>::value,
-						  "SafePointer conversion error: TType and ToType must have an inheritance relationship.");
+			static_assert(
+				std::is_base_of<ToType, TType>::value || std::is_base_of<TType, ToType>::value,
+				"SafePointer conversion error: TType and ToType must have an inheritance relationship.");
 		}
 
 		SafePointer(const SafePointer &) = default;
@@ -93,16 +94,16 @@ namespace spk
 			return *reinterpret_cast<const SafePointer<ToType> *>(this);
 		}
 
-		friend std::ostream &operator<<(std::ostream &os, const SafePointer<TType> &p_ptr)
+		friend std::ostream &operator<<(std::ostream &p_os, const SafePointer<TType> &p_ptr)
 		{
-			os << p_ptr.get();
-			return os;
+			p_os << p_ptr.get();
+			return p_os;
 		}
 
-		friend std::wostream &operator<<(std::wostream &wos, const SafePointer<TType> &p_ptr)
+		friend std::wostream &operator<<(std::wostream &p_wos, const SafePointer<TType> &p_ptr)
 		{
-			wos << p_ptr.get();
-			return wos;
+			p_wos << p_ptr.get();
+			return p_wos;
 		}
 	};
 }

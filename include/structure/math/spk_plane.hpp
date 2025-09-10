@@ -14,9 +14,9 @@ namespace spk
 			spk::Vector3 normal;
 			float dotValue;
 
-			static Identifier from(const spk::Plane &p);
+			static Identifier from(const spk::Plane &p_p);
 
-			bool operator==(const Plane::Identifier &other) const;
+			bool operator==(const Plane::Identifier &p_other) const;
 		};
 
 		spk::Vector3 origin;
@@ -38,17 +38,17 @@ namespace spk
 template <>
 struct std::hash<spk::Plane::Identifier>
 {
-	size_t operator()(const spk::Plane::Identifier &k) const noexcept
+	size_t operator()(const spk::Plane::Identifier &p_k) const noexcept
 	{
-		auto to_i = [](float v) -> long long { return static_cast<long long>(std::llround(v / spk::Constants::pointPrecision)); };
+		auto to_i = [](float p_v) -> long long { return static_cast<long long>(std::llround(p_v / spk::Constants::pointPrecision)); };
 
-		const long long ix = to_i(k.normal.x);
-		const long long iy = to_i(k.normal.y);
-		const long long iz = to_i(k.normal.z);
-		const long long id = to_i(k.dotValue);
+		const long long ix = to_i(p_k.normal.x);
+		const long long iy = to_i(p_k.normal.y);
+		const long long iz = to_i(p_k.normal.z);
+		const long long id = to_i(p_k.dotValue);
 
 		size_t h = 0;
-		auto mix = [&](size_t x) { h ^= x + 0x9e3779b97f4a7c15ull + (h << 6) + (h >> 2); };
+		auto mix = [&](size_t p_x) { h ^= p_x + 0x9e3779b97f4a7c15ull + (h << 6) + (h >> 2); };
 		mix(std::hash<long long>()(ix));
 		mix(std::hash<long long>()(iy));
 		mix(std::hash<long long>()(iz));

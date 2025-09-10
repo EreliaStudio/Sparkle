@@ -1,6 +1,6 @@
 #pragma once
 
-#include "structure/graphics/spk_geometry_2D.hpp"
+#include "structure/graphics/spk_geometry_2d.hpp"
 #include "structure/math/spk_matrix.hpp"
 #include "structure/spk_safe_pointer.hpp"
 

@@ -19,7 +19,7 @@ namespace spk
 
 	Timer::State Timer::state() const
 	{
-		updateTimedOutState();
+		_updateTimedOutState();
 		return _state;
 	}
 
@@ -45,7 +45,7 @@ namespace spk
 
 	bool Timer::hasTimedOut() const
 	{
-		updateTimedOutState();
+		_updateTimedOutState();
 		return (_state == State::TimedOut);
 	}
 
@@ -70,7 +70,7 @@ namespace spk
 	{
 		if (_state == State::Running)
 		{
-			_accumulatedTime = {static_cast<long double>(_accumulatedTime.nanoseconds + currentRunDuration().nanoseconds), TimeUnit::Nanosecond};
+			_accumulatedTime = {static_cast<long double>(_accumulatedTime.nanoseconds + _currentRunDuration().nanoseconds), TimeUnit::Nanosecond};
 			_state = State::Paused;
 		}
 	}
@@ -88,7 +88,7 @@ namespace spk
 	{
 		if (_state == State::Running)
 		{
-			auto diff = currentRunDuration();
+			auto diff = _currentRunDuration();
 			return Duration(_accumulatedTime.nanoseconds + diff.nanoseconds, TimeUnit::Nanosecond);
 		}
 		else
@@ -97,7 +97,7 @@ namespace spk
 		}
 	}
 
-	Duration Timer::currentRunDuration() const
+	Duration Timer::_currentRunDuration() const
 	{
 		if (_state != State::Running)
 		{
@@ -108,7 +108,7 @@ namespace spk
 		return Duration(ns, TimeUnit::Nanosecond);
 	}
 
-	void Timer::updateTimedOutState() const
+	void Timer::_updateTimedOutState() const
 	{
 		if (_state == State::Running)
 		{
@@ -120,7 +120,7 @@ namespace spk
 		}
 	}
 
-	inline const char *to_string(Timer::State p_state)
+	inline const char *toString(Timer::State p_state)
 	{
 		switch (p_state)
 		{
@@ -137,7 +137,7 @@ namespace spk
 		}
 	}
 
-	inline const wchar_t *to_wstring(Timer::State p_state)
+	inline const wchar_t *toWstring(Timer::State p_state)
 	{
 		switch (p_state)
 		{
@@ -157,10 +157,10 @@ namespace spk
 
 std::ostream &operator<<(std::ostream &p_os, spk::Timer::State p_state)
 {
-	return p_os << to_string(p_state);
+	return p_os << toString(p_state);
 }
 
 std::wostream &operator<<(std::wostream &p_wos, spk::Timer::State p_state)
 {
-	return p_wos << to_wstring(p_state);
+	return p_wos << toWstring(p_state);
 }

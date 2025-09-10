@@ -24,7 +24,7 @@ namespace spk
 		static inline std::unordered_map<ID, spk::SafePointer<IdentifiedObject<TType>>> _registry;
 		static inline std::mutex _mutex;
 
-		void assignNewId()
+		void _assignNewId()
 		{
 			std::lock_guard<std::mutex> lock(_mutex);
 			if (!_releasedIds.empty())
@@ -49,7 +49,7 @@ namespace spk
 		IdentifiedObject()
 		{
 			static_assert(std::is_base_of<IdentifiedObject<TType>, TType>::value, "TType must inherit from IdentifiedObject<TType>");
-			assignNewId();
+			_assignNewId();
 		}
 
 		IdentifiedObject(const ID &p_id)
@@ -59,28 +59,28 @@ namespace spk
 			_registry[_id] = this;
 		}
 
-		IdentifiedObject(const IdentifiedObject &other)
+		IdentifiedObject(const IdentifiedObject &p_other)
 		{
-			assignNewId();
+			_assignNewId();
 		}
 
-		IdentifiedObject &operator=(const IdentifiedObject &other)
+		IdentifiedObject &operator=(const IdentifiedObject &p_other)
 		{
 			// No need to recreate anything as the ID is an intrinsic property of the object
 			return *this;
 		}
 
-		IdentifiedObject(IdentifiedObject &&other) noexcept :
-			_id(other._id)
+		IdentifiedObject(IdentifiedObject &&p_other) noexcept :
+			_id(p_other._id)
 		{
 			std::lock_guard<std::mutex> lock(_mutex);
 			_registry[_id] = this;
-			other._id = InvalidID;
+			p_other._id = InvalidID;
 		}
 
-		IdentifiedObject &operator=(IdentifiedObject &&other) noexcept
+		IdentifiedObject &operator=(IdentifiedObject &&p_other) noexcept
 		{
-			if (this != &other)
+			if (this != &p_other)
 			{
 				std::lock_guard<std::mutex> lock(_mutex);
 				if (_id != InvalidID)
@@ -89,9 +89,9 @@ namespace spk
 					_releasedIds.insert(_id);
 				}
 
-				_id = other._id;
+				_id = p_other._id;
 				_registry[_id] = this;
-				other._id = InvalidID;
+				p_other._id = InvalidID;
 			}
 			return *this;
 		}
@@ -108,24 +108,24 @@ namespace spk
 			return _id;
 		}
 
-		void changeID(const ID &newId)
+		void changeID(const ID &p_newId)
 		{
 			std::lock_guard<std::mutex> lock(_mutex);
 
-			if (newId == _id)
+			if (p_newId == _id)
 			{
 				return;
 			}
 
-			auto it = _registry.find(newId);
+			auto it = _registry.find(p_newId);
 			if (it == _registry.end())
 			{
 				_registry.erase(_id);
 
 				_releasedIds.erase(_id);
-				_releasedIds.erase(newId);
+				_releasedIds.erase(p_newId);
 
-				_id = newId;
+				_id = p_newId;
 
 				_registry[_id] = this;
 			}
@@ -142,35 +142,35 @@ namespace spk
 				ID oldId = _id;
 
 				_registry.erase(oldId);
-				_registry.erase(newId);
+				_registry.erase(p_newId);
 
 				otherObj->_id = oldId;
-				this->_id = newId;
+				this->_id = p_newId;
 
 				_registry[oldId] = otherPtr;
-				_registry[newId] = this;
+				_registry[p_newId] = this;
 
 				_releasedIds.erase(oldId);
-				_releasedIds.erase(newId);
+				_releasedIds.erase(p_newId);
 			}
 		}
 
-		static spk::SafePointer<TType> ContainObjectID(const ID &id)
+		static spk::SafePointer<TType> containObjectId(const ID &p_id)
 		{
 			std::lock_guard<std::mutex> lock(_mutex);
-			auto it = _registry.find(id);
+			auto it = _registry.find(p_id);
 			return (it != _registry.end()) ? true : false;
 		}
 
-		static spk::SafePointer<TType> GetObjectByID(const ID &id)
+		static spk::SafePointer<TType> getObjectById(const ID &p_id)
 		{
-			if (ContainObjectID(id) == false)
+			if (containObjectId(p_id) == false)
 			{
 				return (nullptr);
 			}
 
 			std::lock_guard<std::mutex> lock(_mutex);
-			return (static_cast<TType *>(_registry[id]));
+			return (static_cast<TType *>(_registry[p_id]));
 		}
 	};
 }

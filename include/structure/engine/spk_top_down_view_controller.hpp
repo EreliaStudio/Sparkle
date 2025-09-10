@@ -24,12 +24,13 @@ namespace spk
 			float moveSpeed = 5.0f;
 			float rotateSpeed = 90.0f;
 
-			std::unordered_map<std::wstring, spk::Keyboard::Key> keymap = {{ForwardActionName, spk::Keyboard::Z},
-																		   {LeftActionName, spk::Keyboard::Q},
-																		   {BackwardActionName, spk::Keyboard::S},
-																		   {RightActionName, spk::Keyboard::D},
-																		   {RotateLeftActionName, spk::Keyboard::A},
-																		   {RotateRightActionName, spk::Keyboard::E}};
+			std::unordered_map<std::wstring, spk::Keyboard::Key> keymap = {
+				{ForwardActionName, spk::Keyboard::Z},
+				{LeftActionName, spk::Keyboard::Q},
+				{BackwardActionName, spk::Keyboard::S},
+				{RightActionName, spk::Keyboard::D},
+				{RotateLeftActionName, spk::Keyboard::A},
+				{RotateRightActionName, spk::Keyboard::E}};
 		};
 
 	private:

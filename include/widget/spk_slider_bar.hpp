@@ -27,14 +27,14 @@ namespace spk
 			spk::NineSlicePainter _renderer;
 			spk::Vector2UInt _cornerSize;
 
-			void _onGeometryChange()
+			void _onGeometryChange() override
 			{
 				_renderer.clear();
 				_renderer.prepare(geometry().atOrigin(), layer(), _cornerSize);
 				_renderer.validate();
 			}
 
-			void _onPaintEvent(spk::PaintEvent &p_event)
+			void _onPaintEvent(spk::PaintEvent &p_event) override
 			{
 				_renderer.render();
 			}

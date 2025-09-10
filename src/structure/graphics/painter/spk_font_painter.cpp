@@ -249,7 +249,7 @@ void main()
 				Vector3 convertedPoint = spk::Viewport::convertScreenToOpenGL(glyphAnchor + glyph.positions[i], p_layer);
 
 				newVertex.position = convertedPoint.xy();
-				newVertex.uv = glyph.UVs[i];
+				newVertex.uv = glyph.uvs[i];
 				newVertex.layer = convertedPoint.z;
 
 				_bufferSet.layout() << newVertex;

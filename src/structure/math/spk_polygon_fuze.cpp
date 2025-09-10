@@ -142,7 +142,7 @@ namespace
 
 		for (size_t i = 0; i < p_a.size(); ++i)
 		{
-			bool consumed = false;
+			bool consume = false;
 			for (size_t j = 0; j < p_b.size(); ++j)
 			{
 				if (usedB[j] == true)
@@ -152,18 +152,18 @@ namespace
 				if (p_a[i].isInverse(p_b[j]) == true)
 				{
 					usedB[j] = true;
-					consumed = true;
+					consume = true;
 					break;
 				}
 				if (p_a[i] == p_b[j])
 				{
 					usedB[j] = true;
 					out.push_back(p_a[i]);
-					consumed = true;
+					consume = true;
 					break;
 				}
 			}
-			if (consumed == false)
+			if (consume == false)
 			{
 				out.push_back(p_a[i]);
 			}
@@ -199,9 +199,7 @@ namespace
 		return {xAxis, y, up};
 	}
 
-	static spk::Vector3 ensureKey(const spk::Vector3 &p_v,
-	                              std::map<spk::Vector3, spk::Vector2> &p_coords,
-	                              const Frame &p_f)
+	static spk::Vector3 ensureKey(const spk::Vector3 &p_v, std::map<spk::Vector3, spk::Vector2> &p_coords, const Frame &p_f)
 	{
 		for (const auto &kv : p_coords)
 		{
@@ -271,12 +269,13 @@ namespace
 		spk::Vector2 dir{};
 	};
 
-	static std::optional<NextChoice> chooseNext(const spk::Vector3 &p_cur,
-	                                            const spk::Vector2 &p_curDir,
-	                                            const Adj &p_adj,
-	                                            const std::vector<spk::Edge> &p_edges,
-	                                            const std::map<spk::Vector3, spk::Vector2> &p_coords,
-	                                            const std::vector<bool> &p_used)
+	static std::optional<NextChoice> chooseNext(
+		const spk::Vector3 &p_cur,
+		const spk::Vector2 &p_curDir,
+		const Adj &p_adj,
+		const std::vector<spk::Edge> &p_edges,
+		const std::map<spk::Vector3, spk::Vector2> &p_coords,
+		const std::vector<bool> &p_used)
 	{
 		const auto it = p_adj.find(p_cur);
 		if (it == p_adj.end())
@@ -355,10 +354,7 @@ namespace
 			}
 		}
 
-		loop.erase(std::unique(loop.begin(), loop.end(),
-		                       [](const spk::Vector3 &p_a, const spk::Vector3 &p_b)
-		                       { return p_a == p_b; }),
-		           loop.end());
+		loop.erase(std::unique(loop.begin(), loop.end(), [](const spk::Vector3 &p_a, const spk::Vector3 &p_b) { return p_a == p_b; }), loop.end());
 
 		if (loop.size() >= 3 && ((loop.front() == loop.back()) == false))
 		{

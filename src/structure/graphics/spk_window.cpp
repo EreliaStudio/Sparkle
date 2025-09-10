@@ -28,7 +28,7 @@ namespace spk
 		_onClosureCallback = p_onClosureCallback;
 	}
 
-	LRESULT CALLBACK Window::WindowProc(HWND p_hwnd, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam)
+	LRESULT CALLBACK Window::_windowProc(HWND p_hwnd, UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam)
 	{
 		Window *window = nullptr;
 
@@ -367,7 +367,7 @@ namespace spk
 			p_fn();
 		} catch (const std::exception &e)
 		{
-			spk::cout << p_label << " - Error caught:\n" << e.what() << std::endl;
+			spk::cout() <<  p_label << " - Error caught:\n" << e.what() << std::endl;
 			close();
 		}
 	}
@@ -440,13 +440,13 @@ namespace spk
 				_fpsCountHistory.pop_front();
 			}
 			const size_t perSecond = _currentFPS * 10;
-			if (perSecond < _minFPSCounter)
+			if (perSecond < _minFpsCounter)
 			{
-				_minFPSCounter = perSecond;
+				_minFpsCounter = perSecond;
 			}
-			if (perSecond > _maxFPSCounter)
+			if (perSecond > _maxFpsCounter)
 			{
-				_maxFPSCounter = perSecond;
+				_maxFpsCounter = perSecond;
 			}
 		}
 
@@ -493,9 +493,9 @@ namespace spk
 				_upsCountHistory.pop_front();
 			}
 			const size_t perSecond = _currentUPS * 10;
-			if (perSecond < _minUPSCount)
+			if (perSecond < _minUpsCount)
 			{
-				_minUPSCount = perSecond;
+				_minUpsCount = perSecond;
 			}
 			if (perSecond > _maxUPSCount)
 			{
@@ -704,7 +704,7 @@ namespace spk
 		return (_rootWidget->viewport().geometry());
 	}
 
-	size_t Window::FPS() const
+	size_t Window::fps() const
 	{
 		// Average the last 10 counts collected over 100ms windows
 		std::lock_guard<std::mutex> lock(_fpsCountMutex);
@@ -726,7 +726,7 @@ namespace spk
 		return static_cast<size_t>(std::llround(perSecond));
 	}
 
-	size_t Window::UPS() const
+	size_t Window::ups() const
 	{
 		// Average the last 10 counts collected over 100ms windows
 		std::lock_guard<std::mutex> lock(_upsCountMutex);
@@ -748,51 +748,51 @@ namespace spk
 		return static_cast<size_t>(std::llround(perSecond));
 	}
 
-	double Window::realFPSDuration() const
+	double Window::realFpsDuration() const
 	{
 		std::lock_guard<std::mutex> lock(_renderTimingMutex);
 		return static_cast<double>(_lastRenderDurationNS) / 1'000'000.0;
 	}
 
-	double Window::realUPSDuration() const
+	double Window::realUpsDuration() const
 	{
 		std::lock_guard<std::mutex> lock(_updateTimingMutex);
 		return static_cast<double>(_lastUpdateDurationNS) / 1'000'000.0;
 	}
 
-	size_t Window::minFPS() const
+	size_t Window::minFps() const
 	{
 		std::lock_guard<std::mutex> lock(_fpsCountMutex);
-		if (_minFPSCounter == std::numeric_limits<size_t>::max())
+		if (_minFpsCounter == std::numeric_limits<size_t>::max())
 		{
 			return 0;
 		}
-		return _minFPSCounter;
+		return _minFpsCounter;
 	}
 
-	size_t Window::maxFPS() const
+	size_t Window::maxFps() const
 	{
 		std::lock_guard<std::mutex> lock(_fpsCountMutex);
-		return _maxFPSCounter;
+		return _maxFpsCounter;
 	}
 
-	size_t Window::minUPS() const
+	size_t Window::minUps() const
 	{
 		std::lock_guard<std::mutex> lock(_upsCountMutex);
-		if (_minUPSCount == std::numeric_limits<size_t>::max())
+		if (_minUpsCount == std::numeric_limits<size_t>::max())
 		{
 			return 0;
 		}
-		return _minUPSCount;
+		return _minUpsCount;
 	}
 
-	size_t Window::maxUPS() const
+	size_t Window::maxUps() const
 	{
 		std::lock_guard<std::mutex> lock(_upsCountMutex);
 		return _maxUPSCount;
 	}
 
-	double Window::minFPSDuration() const
+	double Window::minFpsDuration() const
 	{
 		std::lock_guard<std::mutex> lock(_renderTimingMutex);
 		if (_minRenderDurationNS == std::numeric_limits<long long>::max())
@@ -802,13 +802,13 @@ namespace spk
 		return static_cast<double>(_minRenderDurationNS) / 1'000'000.0;
 	}
 
-	double Window::maxFPSDuration() const
+	double Window::maxFpsDuration() const
 	{
 		std::lock_guard<std::mutex> lock(_renderTimingMutex);
 		return static_cast<double>(_maxRenderDurationNS) / 1'000'000.0;
 	}
 
-	double Window::minUPSDuration() const
+	double Window::minUpsDuration() const
 	{
 		std::lock_guard<std::mutex> lock(_updateTimingMutex);
 		if (_minUpdateDurationNS == std::numeric_limits<long long>::max())
@@ -818,7 +818,7 @@ namespace spk
 		return static_cast<double>(_minUpdateDurationNS) / 1'000'000.0;
 	}
 
-	double Window::maxUPSDuration() const
+	double Window::maxUpsDuration() const
 	{
 		std::lock_guard<std::mutex> lock(_updateTimingMutex);
 		return static_cast<double>(_maxUpdateDurationNS) / 1'000'000.0;

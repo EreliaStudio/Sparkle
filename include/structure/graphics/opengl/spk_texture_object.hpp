@@ -4,7 +4,7 @@
 
 #include <GL/gl.h>
 
-#include "structure/graphics/spk_geometry_2D.hpp"
+#include "structure/graphics/spk_geometry_2d.hpp"
 #include "structure/graphics/texture/spk_texture.hpp"
 #include "structure/spk_safe_pointer.hpp"
 #include "utils/spk_opengl_utils.hpp"

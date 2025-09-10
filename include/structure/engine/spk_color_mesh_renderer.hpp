@@ -15,13 +15,13 @@ namespace spk
 		{
 		private:
 			static inline spk::Lumina::ShaderObjectFactory::Instanciator _instanciator;
-			
+
 			static spk::Lumina::Shader _createShader();
 			static spk::Lumina::Shader _shader;
 
 			spk::Lumina::Shader::Object _object;
 			spk::OpenGL::BufferSet &_bufferSet;
-			spk::OpenGL::UniformBufferObject &_transformUBO;
+			std::shared_ptr<spk::OpenGL::UniformBufferObject> _transformUBO;
 
 		public:
 			Painter();

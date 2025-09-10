@@ -30,7 +30,7 @@ namespace spk
 		_handle = std::make_unique<std::thread>(
 			[&]()
 			{
-				spk::cout.setPrefix(_name);
+				spk::cout().setPrefix(_name);
 				_innerCallback();
 			});
 	}

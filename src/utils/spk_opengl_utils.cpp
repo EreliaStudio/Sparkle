@@ -2,7 +2,7 @@
 
 namespace spk::OpenGLUtils
 {
-	std::wstring to_wstring(const GLenum &p_type)
+	std::wstring toWstring(const GLenum &p_type)
 	{
 		switch (p_type)
 		{
@@ -360,85 +360,85 @@ namespace spk::OpenGLUtils
 			return;
 		}
 
-		spk::cout << "---------------" << std::endl;
+		spk::cout() <<  "---------------" << std::endl;
 
 		switch (p_source)
 		{
 		case GL_DEBUG_SOURCE_API:
-			spk::cout << "Source: API" << std::endl;
+			spk::cout() <<  "Source: API" << std::endl;
 			break;
 		case GL_DEBUG_SOURCE_WINDOW_SYSTEM:
-			spk::cout << "Source: Window System" << std::endl;
+			spk::cout() <<  "Source: Window System" << std::endl;
 			break;
 		case GL_DEBUG_SOURCE_SHADER_COMPILER:
-			spk::cout << "Source: Shader Compiler" << std::endl;
+			spk::cout() <<  "Source: Shader Compiler" << std::endl;
 			break;
 		case GL_DEBUG_SOURCE_THIRD_PARTY:
-			spk::cout << "Source: Third Party" << std::endl;
+			spk::cout() <<  "Source: Third Party" << std::endl;
 			break;
 		case GL_DEBUG_SOURCE_APPLICATION:
-			spk::cout << "Source: Application" << std::endl;
+			spk::cout() <<  "Source: Application" << std::endl;
 			break;
 		case GL_DEBUG_SOURCE_OTHER:
-			spk::cout << "Source: Other" << std::endl;
+			spk::cout() <<  "Source: Other" << std::endl;
 			break;
 		}
 
 		switch (p_type)
 		{
 		case GL_DEBUG_TYPE_ERROR:
-			spk::cout << "Type: Error" << std::endl;
+			spk::cout() <<  "Type: Error" << std::endl;
 			break;
 		case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
-			spk::cout << "Type: Deprecated Behaviour" << std::endl;
+			spk::cout() <<  "Type: Deprecated Behaviour" << std::endl;
 			break;
 		case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
-			spk::cout << "Type: Undefined Behaviour" << std::endl;
+			spk::cout() <<  "Type: Undefined Behaviour" << std::endl;
 			break;
 		case GL_DEBUG_TYPE_PORTABILITY:
-			spk::cout << "Type: Portability" << std::endl;
+			spk::cout() <<  "Type: Portability" << std::endl;
 			break;
 		case GL_DEBUG_TYPE_PERFORMANCE:
-			spk::cout << "Type: Performance" << std::endl;
+			spk::cout() <<  "Type: Performance" << std::endl;
 			break;
 		case GL_DEBUG_TYPE_MARKER:
-			spk::cout << "Type: Marker" << std::endl;
+			spk::cout() <<  "Type: Marker" << std::endl;
 			break;
 		case GL_DEBUG_TYPE_PUSH_GROUP:
-			spk::cout << "Type: Push Group" << std::endl;
+			spk::cout() <<  "Type: Push Group" << std::endl;
 			break;
 		case GL_DEBUG_TYPE_POP_GROUP:
-			spk::cout << "Type: Pop Group" << std::endl;
+			spk::cout() <<  "Type: Pop Group" << std::endl;
 			break;
 		case GL_DEBUG_TYPE_OTHER:
-			spk::cout << "Type: Other" << std::endl;
+			spk::cout() <<  "Type: Other" << std::endl;
 			break;
 		}
 
 		switch (p_severity)
 		{
 		case GL_DEBUG_SEVERITY_HIGH:
-			spk::cout << "Severity: high" << std::endl;
+			spk::cout() <<  "Severity: high" << std::endl;
 			break;
 		case GL_DEBUG_SEVERITY_MEDIUM:
-			spk::cout << "Severity: medium" << std::endl;
+			spk::cout() <<  "Severity: medium" << std::endl;
 			break;
 		case GL_DEBUG_SEVERITY_LOW:
-			spk::cout << "Severity: low" << std::endl;
+			spk::cout() <<  "Severity: low" << std::endl;
 			break;
 		case GL_DEBUG_SEVERITY_NOTIFICATION:
-			spk::cout << "Severity: notification" << std::endl;
+			spk::cout() <<  "Severity: notification" << std::endl;
 			break;
 		}
 
-		spk::cout << "Debug message (" << p_id << "): " << p_message << std::endl;
+		spk::cout() <<  "Debug message (" << p_id << "): " << p_message << std::endl;
 		if (p_severity != GL_DEBUG_SEVERITY_NOTIFICATION)
 		{
 			GENERATE_ERROR("Unexpected opengl error detected");
 		}
 	}
 
-	void LogGLErrors(const char *p_where)
+	void logGlErrors(const char *p_where)
 	{
 		GLenum err;
 		bool any = false;
@@ -453,7 +453,7 @@ namespace spk::OpenGLUtils
 		}
 	}
 
-	void PrintShaderLog(GLuint p_shader, const char *p_label)
+	void printShaderLog(GLuint p_shader, const char *p_label)
 	{
 		GLint status = 0, len = 0;
 		glGetShaderiv(p_shader, GL_COMPILE_STATUS, &status);
@@ -466,7 +466,7 @@ namespace spk::OpenGLUtils
 		std::cerr << "[Shader] " << p_label << " compile status=" << ((status != 0) ? "OK" : "FAIL") << " log:\n" << log.data() << "\n";
 	}
 
-	void PrintProgramLog(GLuint p_prog, const char *p_label)
+	void printProgramLog(GLuint p_prog, const char *p_label)
 	{
 		GLint link = 0, len = 0;
 		glGetProgramiv(p_prog, GL_LINK_STATUS, &link);
@@ -479,7 +479,7 @@ namespace spk::OpenGLUtils
 		std::cerr << "[Program] " << p_label << " link status=" << ((link != 0) ? "OK" : "FAIL") << " log:\n" << log.data() << "\n";
 	}
 
-	void DumpActiveAttribs(GLuint p_prog)
+	void dumpActiveAttribs(GLuint p_prog)
 	{
 		GLint nAttribs = 0, maxLen = 0;
 		glGetProgramiv(p_prog, GL_ACTIVE_ATTRIBUTES, &nAttribs);
@@ -497,7 +497,7 @@ namespace spk::OpenGLUtils
 		}
 	}
 
-	void DumpActiveUniformsAndSamplers(GLuint p_prog)
+	void dumpActiveUniformsAndSamplers(GLuint p_prog)
 	{
 		GLint nUniforms = 0, maxLen = 0;
 		glGetProgramiv(p_prog, GL_ACTIVE_UNIFORMS, &nUniforms);
@@ -525,7 +525,7 @@ namespace spk::OpenGLUtils
 		}
 	}
 
-	void DumpUniformBlocks(GLuint p_prog)
+	void dumpUniformBlocks(GLuint p_prog)
 	{
 		GLint nBlocks = 0, maxLen = 0;
 		glGetProgramiv(p_prog, GL_ACTIVE_UNIFORM_BLOCKS, &nBlocks);
@@ -548,7 +548,7 @@ namespace spk::OpenGLUtils
 		}
 	}
 
-	void DumpPreDrawState()
+	void dumpPreDrawState()
 	{
 		GLint prog = 0, vao = 0, ebo = 0;
 		glGetIntegerv(GL_CURRENT_PROGRAM, &prog);
@@ -576,7 +576,7 @@ namespace spk::OpenGLUtils
 		}
 	}
 
-	void DumpUBOBindingsForUsedBlocks(GLuint p_prog)
+	void dumpUboBindingsForUsedBlocks(GLuint p_prog)
 	{
 		GLint nBlocks = 0;
 		glGetProgramiv(p_prog, GL_ACTIVE_UNIFORM_BLOCKS, &nBlocks);
@@ -608,7 +608,7 @@ namespace spk::OpenGLUtils
 		}
 	}
 
-	void DumpTexture2DCompletenessForUnit(GLint p_unit)
+	void dumpTexture2DCompletenessForUnit(GLint p_unit)
 	{
 		// Save active unit
 		GLint curActive = 0;
@@ -662,7 +662,7 @@ namespace spk::OpenGLUtils
 		glActiveTexture(curActive);
 	}
 
-	void CheckIndexBufferCapacityVsCount(GLsizei p_count, GLenum p_indexType)
+	void checkIndexBufferCapacityVsCount(GLsizei p_count, GLenum p_indexType)
 	{
 		GLint ebo = 0;
 		glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &ebo);

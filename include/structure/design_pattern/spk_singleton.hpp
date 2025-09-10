@@ -1,8 +1,8 @@
 #pragma once
 
 #include <memory>
-#include <stdexcept>
 #include <mutex>
+#include <stdexcept>
 
 #include "structure/spk_safe_pointer.hpp"
 
@@ -66,8 +66,13 @@ namespace spk
 		{
 		}
 
-		static inline TType *_instance = nullptr;
-		static inline std::recursive_mutex _mutex;
+		static inline std::unique_ptr<TType> _instance = nullptr;
+		static std::recursive_mutex& _mutex()
+		{
+			static std::recursive_mutex result;
+
+			return (result);
+		}
 
 	public:
 		template <typename... Args>
@@ -80,30 +85,29 @@ namespace spk
 				GENERATE_ERROR("Can't instanciate an already instancied singleton");
 			}
 
-			_instance = new TType(std::forward<Args>(p_args)...);
-			return (_instance);
+			_instance.reset(new TType(std::forward<Args>(p_args)...));
+			return (_instance.get());
 		}
 
 		static spk::SafePointer<TType> instance()
 		{
-			return (_instance);
+			return (_instance.get());
 		}
 
-		static const spk::SafePointer<const TType> c_instance()
+		static const spk::SafePointer<const TType> cInstance()
 		{
-			return _instance;
+			return (_instance.get());
 		}
 
 		static std::recursive_mutex &mutex()
 		{
-			return _mutex;
+			return _mutex();
 		}
 
 		static void release()
 		{
 			std::lock_guard<std::recursive_mutex> lock(Singleton<TType>::mutex());
 
-			delete _instance;
 			_instance = nullptr;
 		}
 	};

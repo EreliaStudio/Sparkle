@@ -6,7 +6,7 @@
 namespace spk
 {
 
-	Texture::ID Texture::takeID()
+	Texture::ID Texture::_takeId()
 	{
 		Texture::ID result;
 
@@ -25,7 +25,7 @@ namespace spk
 		return (result);
 	}
 
-	void Texture::releaseID(const Texture::ID &p_id)
+	void Texture::_releaseId(const Texture::ID &p_id)
 	{
 		if (p_id == InvalidID)
 		{
@@ -74,7 +74,7 @@ namespace spk
 	}
 
 	Texture::Texture() :
-		_id(takeID()),
+		_id(_takeId()),
 		_size{0, 0},
 		_format(Format::Error),
 		_filtering(Filtering::Nearest),
@@ -85,7 +85,7 @@ namespace spk
 
 	Texture::~Texture()
 	{
-		releaseID(_id);
+		_releaseId(_id);
 	}
 
 	Texture::Texture(Texture &&p_other) noexcept :

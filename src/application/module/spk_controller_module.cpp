@@ -32,7 +32,7 @@ namespace spk
 
 			if (_inDeadzone2D(p_e.joystick.values, kJoystickDeadzone))
 			{
-				ControllerInputThread::PostLeftJoystickReset(p_e.window->_hwnd);
+				ControllerInputThread::_postLeftJoystickReset(p_e.window->_hwnd);
 			}
 			return;
 		}
@@ -43,7 +43,7 @@ namespace spk
 
 			if (_inDeadzone2D(p_e.joystick.values, kJoystickDeadzone))
 			{
-				ControllerInputThread::PostRightJoystickReset(p_e.window->_hwnd);
+				ControllerInputThread::_postRightJoystickReset(p_e.window->_hwnd);
 			}
 			return;
 		}
@@ -64,7 +64,7 @@ namespace spk
 			_controller._leftTrigger.ratio = ratio;
 			if (_nearZero(p_e.trigger.value, kTriggerDeadzone))
 			{
-				ControllerInputThread::PostLeftTriggerReset(p_e.window->_hwnd);
+				ControllerInputThread::_postLeftTriggerReset(p_e.window->_hwnd);
 			}
 			return;
 
@@ -72,7 +72,7 @@ namespace spk
 			_controller._rightTrigger.ratio = ratio;
 			if (_nearZero(p_e.trigger.value, kTriggerDeadzone))
 			{
-				ControllerInputThread::PostRightTriggerReset(p_e.window->_hwnd);
+				ControllerInputThread::_postRightTriggerReset(p_e.window->_hwnd);
 			}
 			return;
 
@@ -88,7 +88,7 @@ namespace spk
 
 		if (_inDeadzone2D(p_e.directionalCross.values, kJoystickDeadzone))
 		{
-			ControllerInputThread::PostDirectionalCrossReset(p_e.window->_hwnd);
+			ControllerInputThread::_postDirectionalCrossReset(p_e.window->_hwnd);
 		}
 	}
 

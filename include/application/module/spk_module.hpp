@@ -33,12 +33,12 @@ namespace spk
 		{
 		}
 
-		const std::vector<UINT> &eventIDs()
+		const std::vector<UINT> &eventIDs() override
 		{
 			return (TEventType::EventIDs);
 		}
 
-		void receiveEvent(spk::Event &&p_event)
+		void receiveEvent(spk::Event &&p_event) override
 		{
 			_insertEvent(_convertEventToEventType(std::move(p_event)));
 		}

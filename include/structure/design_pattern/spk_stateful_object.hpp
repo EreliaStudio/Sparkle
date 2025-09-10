@@ -31,11 +31,11 @@ namespace spk
 		{
 		}
 
-		void setState(const TType &newState)
+		void setState(const TType &p_newState)
 		{
-			if (_state != newState)
+			if (_state != p_newState)
 			{
-				_state = newState;
+				_state = p_newState;
 				_callbacks[_state].trigger();
 			}
 		}
@@ -45,9 +45,9 @@ namespace spk
 			return _state;
 		}
 
-		Contract addCallback(const TType &state, const Job &callback)
+		Contract addCallback(const TType &p_state, const Job &p_callback)
 		{
-			return (std::move(_callbacks[state].subscribe(callback)));
+			return (std::move(_callbacks[p_state].subscribe(p_callback)));
 		}
 	};
 }

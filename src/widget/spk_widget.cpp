@@ -179,7 +179,7 @@ namespace spk
 		return (_focusedWidgets[static_cast<int>(p_focusType)]);
 	}
 
-	void Widget::requestPaint()
+	void Widget::_requestPaint()
 	{
 		_requestedPaint = true;
 	}
@@ -338,7 +338,7 @@ namespace spk
 				{
 					PROPAGATE_ERROR(
 						"Error while applying viewport of [" + spk::StringUtils::wstringToString(name()) + "] with viewport of geometry [" +
-							_viewport.geometry().to_string() + "]\nAnd a widget geometry [" + geometry().to_string() + "]",
+							_viewport.geometry().toString() + "]\nAnd a widget geometry [" + geometry().toString() + "]",
 						e);
 				}
 				child->_applyResize();
@@ -357,7 +357,7 @@ namespace spk
 	void Widget::requireGeometryUpdate()
 	{
 		_needGeometryChange = true;
-		requestPaint();
+		_requestPaint();
 	}
 
 	void Widget::setMinimalSize(const spk::Vector2UInt &p_size)
@@ -414,7 +414,7 @@ namespace spk
 
 	void Widget::onPaintEvent(spk::PaintEvent &p_event)
 	{
-		if (isActive() == false || p_event.consumed() == true)
+		if (isActive() == false || p_event.consume == true)
 		{
 			return;
 		}
@@ -477,7 +477,7 @@ namespace spk
 				{
 					PROPAGATE_ERROR(
 						"Error while applying viewport of [" + spk::StringUtils::wstringToString(name()) + "] with viewport of geometry [" +
-							_viewport.geometry().to_string() + "]",
+							_viewport.geometry().toString() + "]",
 						e);
 				}
 				child->onPaintEvent(childEvent);
@@ -491,7 +491,7 @@ namespace spk
 
 	void Widget::onUpdateEvent(spk::UpdateEvent &p_event)
 	{
-		if (isActive() == false || p_event.consumed() == true)
+		if (isActive() == false || p_event.consume == true)
 		{
 			return;
 		}
@@ -516,7 +516,7 @@ namespace spk
 
 	void Widget::onKeyboardEvent(spk::KeyboardEvent &p_event)
 	{
-		if (isActive() == false || p_event.consumed() == true)
+		if (isActive() == false || p_event.consume == true)
 		{
 			return;
 		}
@@ -535,7 +535,7 @@ namespace spk
 
 	void Widget::onMouseEvent(spk::MouseEvent &p_event)
 	{
-		if (isActive() == false || p_event.consumed() == true)
+		if (isActive() == false || p_event.consume == true)
 		{
 			return;
 		}
@@ -554,7 +554,7 @@ namespace spk
 
 	void Widget::onControllerEvent(spk::ControllerEvent &p_event)
 	{
-		if (isActive() == false || p_event.consumed() == true)
+		if (isActive() == false || p_event.consume == true)
 		{
 			return;
 		}
@@ -573,7 +573,7 @@ namespace spk
 
 	void Widget::onTimerEvent(spk::TimerEvent &p_event)
 	{
-		if (isActive() == false || p_event.consumed() == true)
+		if (isActive() == false || p_event.consume == true)
 		{
 			return;
 		}

@@ -2,7 +2,7 @@
 
 #include "structure/spk_safe_pointer.hpp"
 
-#include "structure/graphics/spk_geometry_2D.hpp"
+#include "structure/graphics/spk_geometry_2d.hpp"
 #include "structure/math/spk_vector2.hpp"
 
 #include "widget/spk_widget.hpp"
@@ -59,7 +59,7 @@ namespace spk
 
 		spk::Vector2UInt _elementPadding{0, 0};
 
-		void resizeElements(const size_t &p_size);
+		void _resizeElements(const size_t &p_size);
 
 	public:
 		virtual void setGeometry(const spk::Geometry2D &p_geometry) = 0;

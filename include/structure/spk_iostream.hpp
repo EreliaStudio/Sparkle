@@ -39,6 +39,6 @@ namespace spk
 		std::wstring str() const;
 	};
 
-	extern IOStream cout;
-	extern IOStream cerr;
+	IOStream& cout();
+	IOStream& cerr();
 }

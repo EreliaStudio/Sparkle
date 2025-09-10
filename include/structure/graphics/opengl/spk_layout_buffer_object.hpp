@@ -56,7 +56,7 @@ namespace spk::OpenGL
 
 			static size_t typeSize(Type p_type);
 
-			bool operator<(const Attribute &other) const;
+			bool operator<(const Attribute &p_other) const;
 		};
 
 	private:
@@ -68,19 +68,21 @@ namespace spk::OpenGL
 	public:
 		LayoutBufferObject();
 
-		explicit LayoutBufferObject(std::span<const LayoutBufferObject::Attribute> attributes);
+		explicit LayoutBufferObject(std::span<const LayoutBufferObject::Attribute> p_attributes);
 
-		LayoutBufferObject(std::initializer_list<LayoutBufferObject::Attribute> attributes);
+		LayoutBufferObject(std::initializer_list<LayoutBufferObject::Attribute> p_attributes);
 
 		template <typename Container>
-			requires(std::is_same_v<std::remove_cv_t<std::remove_reference_t<decltype(*std::declval<Container>().data())>>,
-									LayoutBufferObject::Attribute> &&
-					 requires(const Container &c) {
-						 { c.data() } -> std::convertible_to<const LayoutBufferObject::Attribute *>;
-						 { c.size() } -> std::convertible_to<std::size_t>;
-					 })
-		explicit LayoutBufferObject(const Container &attributes) :
-			LayoutBufferObject(std::span(attributes.data(), attributes.size()))
+			requires(
+				std::is_same_v<
+					std::remove_cv_t<std::remove_reference_t<decltype(*std::declval<Container>().data())>>,
+					LayoutBufferObject::Attribute> &&
+				requires(const Container &p_c) {
+					{ p_c.data() } -> std::convertible_to<const LayoutBufferObject::Attribute *>;
+					{ p_c.size() } -> std::convertible_to<std::size_t>;
+				})
+		explicit LayoutBufferObject(const Container &p_attributes) :
+			LayoutBufferObject(std::span(p_attributes.data(), p_attributes.size()))
 		{
 		}
 
@@ -89,43 +91,44 @@ namespace spk::OpenGL
 		LayoutBufferObject(LayoutBufferObject &&p_other) noexcept;
 		LayoutBufferObject &operator=(LayoutBufferObject &&p_other) noexcept;
 
-		virtual void activate() override;
+		void activate() override;
 
 		template <typename TType>
-		void append(std::span<const TType> data)
+		void append(std::span<const TType> p_data)
 		{
-			if (data.empty())
+			if (p_data.empty())
 			{
 				return;
 			}
 
 			if (sizeof(TType) != _vertexSize)
 			{
-				GENERATE_ERROR("Size mismatch in LayoutBufferObject: Expected vertex size is " + std::to_string(_vertexSize) +
-							   " bytes, but received " + std::to_string(sizeof(TType)) + " bytes.");
+				GENERATE_ERROR(
+					"Size mismatch in LayoutBufferObject: Expected vertex size is " + std::to_string(_vertexSize) + " bytes, but received " +
+					std::to_string(sizeof(TType)) + " bytes.");
 			}
-			VertexBufferObject::append(data.data(), data.size() * sizeof(TType));
+			VertexBufferObject::append(p_data.data(), p_data.size() * sizeof(TType));
 		}
 
 		template <typename TType>
-		LayoutBufferObject &operator<<(const TType &element)
+		LayoutBufferObject &operator<<(const TType &p_element)
 		{
-			append(std::span<const TType>(&element, 1));
+			append(std::span<const TType>(&p_element, 1));
 			return *this;
 		}
 
 		template <typename Container>
-			requires requires(const Container &c) {
-				{ std::data(c) };
-				{ std::size(c) };
+			requires requires(const Container &p_c) {
+				{ std::data(p_c) };
+				{ std::size(p_c) };
 			}
-		LayoutBufferObject &operator<<(const Container &container)
+		LayoutBufferObject &operator<<(const Container &p_container)
 		{
-			append(std::span<const ElementTypeT<Container>>(std::data(container), std::size(container)));
+			append(std::span<const ElementTypeT<Container>>(std::data(p_container), std::size(p_container)));
 			return *this;
 		}
 
-		bool hasAttribute(Attribute::Index index) const;
+		bool hasAttribute(Attribute::Index p_index) const;
 
 		void addAttribute(const Attribute &p_attribute);
 		void addAttribute(Attribute::Index p_index, Attribute::Type p_type);
@@ -145,8 +148,9 @@ namespace spk::OpenGL
 
 			if (_vertexSize % sizeof(TType) != 0)
 			{
-				GENERATE_ERROR("LayoutBufferObject::get() - The buffer element size (" + std::to_string(_vertexSize) +
-							   " bytes) is incompatible with TType size (" + std::to_string(sizeof(TType)) + " bytes).");
+				GENERATE_ERROR(
+					"LayoutBufferObject::get() - The buffer element size (" + std::to_string(_vertexSize) +
+					" bytes) is incompatible with TType size (" + std::to_string(sizeof(TType)) + " bytes).");
 			}
 
 			size_t elementCount = totalSize / sizeof(TType);
@@ -158,6 +162,6 @@ namespace spk::OpenGL
 		}
 	};
 
-	std::string to_string(const LayoutBufferObject::Attribute::Type &p_type);
-	std::wstring to_wstring(const LayoutBufferObject::Attribute::Type &p_type);
+	std::string toString(const LayoutBufferObject::Attribute::Type &p_type);
+	std::wstring toWstring(const LayoutBufferObject::Attribute::Type &p_type);
 }

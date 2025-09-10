@@ -32,14 +32,14 @@ namespace spk
 		spk::FontPainter _fontRenderer;
 		spk::FontPainter::Contract _onFontResizeContract;
 
-		void _handleKeyPress(spk::Keyboard::Key key);
-		void _handleGlyph(wchar_t glyph);
+		void _handleKeyPress(spk::Keyboard::Key p_key);
+		void _handleGlyph(wchar_t p_glyph);
 
 		void _moveCursorLeft();
 		void _moveCursorRight();
 		void _deleteAtCursor();
 		void _backspace();
-		void _insertGlyph(wchar_t glyph);
+		void _insertGlyph(wchar_t p_glyph);
 
 		void _computeCursorsValues();
 		void _onGeometryChange() override;

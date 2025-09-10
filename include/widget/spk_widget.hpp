@@ -5,7 +5,7 @@
 #include "structure/design_pattern/spk_activable_object.hpp"
 #include "structure/design_pattern/spk_inherence_object.hpp"
 
-#include "structure/graphics/spk_geometry_2D.hpp"
+#include "structure/graphics/spk_geometry_2d.hpp"
 #include "structure/graphics/spk_viewport.hpp"
 
 #include "structure/system/event/spk_event.hpp"
@@ -46,10 +46,10 @@ namespace spk
 		static spk::SafePointer<Widget> focusedWidget(FocusType p_focusType = FocusType::KeyboardFocus);
 
 	protected:
-		void requestPaint();
+		void _requestPaint();
 
 	private:
-		static inline spk::SafePointer<Widget> _focusedWidgets[3] = {nullptr, nullptr, nullptr};
+		static inline std::array<spk::SafePointer<Widget>, 3> _focusedWidgets = {nullptr, nullptr, nullptr};
 
 		std::wstring _name;
 		spk::SafePointer<Widget> _parent;
@@ -93,7 +93,7 @@ namespace spk
 		Widget(const std::wstring &p_name);
 		Widget(const std::wstring &p_name, spk::SafePointer<Widget> p_parent);
 
-		~Widget();
+		~Widget() override;
 
 		const std::wstring &name() const;
 		void setName(const std::wstring &p_name);
@@ -109,7 +109,7 @@ namespace spk
 		{
 			std::unique_ptr<TChildType> newChild = std::make_unique<TChildType>(std::forward<TArgs>(p_args)...);
 
-			TChildType * result = newChild.get();
+			TChildType *result = newChild.get();
 
 			addChild(result);
 
