@@ -198,7 +198,7 @@ namespace spk::Lumina
 		{
 			_program.activate();
 
-			for (const auto &[name, object] : _availableObjects)
+			for (auto &[name, object] : _availableObjects)
 			{
 				visitVariant(object, [&](auto &p_object) { p_object.activate(); });
 			}
@@ -218,7 +218,7 @@ namespace spk::Lumina
 		{
 			_program.deactivate();
 
-			for (const auto &[name, object] : _availableObjects)
+			for (auto &[name, object] : _availableObjects)
 			{
 				visitVariant(object, [&](auto &p_object) { p_object.deactivate(); });
 			}
