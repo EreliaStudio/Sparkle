@@ -42,8 +42,7 @@ private:
 			{Shape::Type::Pentagon, 5},
 			{Shape::Type::Hexagon, 6},
 			{Shape::Type::Octogon, 8},
-			{Shape::Type::Circle, 30}
-		};
+			{Shape::Type::Circle, 30}};
 		ShapeMesh result;
 
 		std::vector<spk::Vector2> vertices;
@@ -150,7 +149,7 @@ void main()
 				spk::cout() << "Fixed data size : " << infoSSBO.fixedData().size() << std::endl;
 				spk::cout() << "Dynamic array element size : " << infoSSBO.dynamicArray().elementSize() << std::endl;
 				spk::cout() << "Dynamic array nb element : " << infoSSBO.dynamicArray().nbElement() << std::endl;
-				spk::cout() << " --------------------------" << std::endl << std::endl; 
+				spk::cout() << " --------------------------" << std::endl << std::endl;
 
 				shader.addSSBO(L"InfoSSBO", infoSSBO, spk::Lumina::Shader::Mode::Attribute);
 
@@ -160,7 +159,7 @@ void main()
 
 			spk::Lumina::Shader::Object _object;
 			spk::OpenGL::BufferSet &_bufferSet;
-			spk::OpenGL::ShaderStorageBufferObject& _infoSSBO;
+			spk::OpenGL::ShaderStorageBufferObject &_infoSSBO;
 
 			spk::SafePointer<const InfoContainer> _infoContainer;
 
@@ -188,11 +187,23 @@ void main()
 				spk::cout() << "Fixed data size : " << _infoSSBO.fixedData().size() << std::endl;
 				spk::cout() << "Dynamic array element size : " << _infoSSBO.dynamicArray().elementSize() << std::endl;
 				spk::cout() << "Dynamic array nb element : " << _infoSSBO.dynamicArray().nbElement() << std::endl;
-				spk::cout() << " --------------------------" << std::endl << std::endl; 
+				spk::cout() << " --------------------------" << std::endl << std::endl;
 				_prepare(p_mesh);
 			}
 
-			const spk::OpenGL::ShaderStorageBufferObject& infoSSBO() const
+			Painter(Painter &&p_other) :
+				_object(std::move(p_other._object)),
+				_bufferSet(_object.bufferSet()),
+				_infoSSBO(_object.ssbo(L"InfoSSBO")),
+				_infoContainer(std::move(p_other._infoContainer))
+			{
+			}
+
+			Painter(const Painter &) = delete;
+			Painter &operator=(const Painter &) = delete;
+			Painter &operator=(Painter &&) = delete;
+
+			const spk::OpenGL::ShaderStorageBufferObject &infoSSBO() const
 			{
 				return (_infoSSBO);
 			}
@@ -221,7 +232,7 @@ void main()
 				spk::cout() << "Fixed data size : " << _infoSSBO.fixedData().size() << std::endl;
 				spk::cout() << "Dynamic array element size : " << _infoSSBO.dynamicArray().elementSize() << std::endl;
 				spk::cout() << "Dynamic array nb element : " << _infoSSBO.dynamicArray().nbElement() << std::endl;
-				spk::cout() << " --------------------------" << std::endl << std::endl; 
+				spk::cout() << " --------------------------" << std::endl << std::endl;
 
 				auto &array = _infoSSBO.dynamicArray();
 
@@ -354,7 +365,7 @@ private:
 
 			_iterator->model = owner()->transform().model();
 			_iterator->color = _color;
-			
+
 			Renderer::validate(_type.value());
 		}
 
@@ -377,7 +388,7 @@ private:
 			_bind();
 		}
 
-		void setColor(const spk::Color& p_color)
+		void setColor(const spk::Color &p_color)
 		{
 			_color = p_color;
 			if (_type.has_value() == true)
@@ -426,7 +437,7 @@ public:
 		_subscriber->setType(p_type);
 	}
 
-	void setColor(const spk::Color& p_color)
+	void setColor(const spk::Color &p_color)
 	{
 		_subscriber->setColor(p_color);
 	}

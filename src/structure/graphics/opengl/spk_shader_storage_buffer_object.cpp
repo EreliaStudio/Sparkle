@@ -126,10 +126,9 @@ namespace spk::OpenGL
 		_fixedData(L"FixedData", &dataBuffer(), 0, 0),
 		_dynamicArray(L"DynamicArray", &dataBuffer(), 0, 0, 0)
 	{
-		_onResizeContract = _dynamicArray._resizeContractProvider.subscribe([&](size_t p_size) {
-			resize(p_size);
-		});
+		_onResizeContract = _dynamicArray._resizeContractProvider.subscribe([&](size_t p_size) { resize(p_size); });
 		_dynamicArray._buffer = &dataBuffer();
+		_dynamicArray._defaultElement.setBuffer(&dataBuffer());
 	}
 
 	ShaderStorageBufferObject::ShaderStorageBufferObject(
@@ -150,6 +149,7 @@ namespace spk::OpenGL
 		resize(p_fixedSize + p_paddingFixedToDynamic + p_dynamicElementSize);
 		_onResizeContract = _dynamicArray._resizeContractProvider.subscribe([&](size_t p_size) { resize(p_size); });
 		_dynamicArray._buffer = &dataBuffer();
+		_dynamicArray._defaultElement.setBuffer(&dataBuffer());
 		_dynamicArray._redoArray();
 	}
 
@@ -201,6 +201,8 @@ namespace spk::OpenGL
 		// DynamicArray _dynamicArray;
 
 		_dynamicArray._buffer = &dataBuffer();
+		_dynamicArray._defaultElement.setBuffer(&dataBuffer());
+		_fixedData.setBuffer(&dataBuffer());
 		resize(p_other.size());
 		_onResizeContract = _dynamicArray._resizeContractProvider.subscribe([&](size_t p_size) { resize(p_size); });
 		_dynamicArray._redoArray();
@@ -219,6 +221,8 @@ namespace spk::OpenGL
 			resize(p_other.size());
 			_onResizeContract = _dynamicArray._resizeContractProvider.subscribe([&](size_t p_size) { resize(p_size); });
 			_dynamicArray._buffer = &dataBuffer();
+			_dynamicArray._defaultElement.setBuffer(&dataBuffer());
+			_fixedData.setBuffer(&dataBuffer());
 			_dynamicArray._redoArray();
 		}
 		return *this;
@@ -232,9 +236,10 @@ namespace spk::OpenGL
 		_fixedData(std::move(p_other._fixedData)),
 		_dynamicArray(std::move(p_other._dynamicArray))
 	{
-		resize(p_other.size());
 		_onResizeContract = _dynamicArray._resizeContractProvider.subscribe([&](size_t p_size) { resize(p_size); });
 		_dynamicArray._buffer = &dataBuffer();
+		_dynamicArray._defaultElement.setBuffer(&dataBuffer());
+		_fixedData.setBuffer(&dataBuffer());
 		_dynamicArray._redoArray();
 	}
 
@@ -242,14 +247,16 @@ namespace spk::OpenGL
 	{
 		if (this != &p_other)
 		{
+			VertexBufferObject::operator=(std::move(p_other));
 			_blockName = std::move(p_other._blockName);
 			_bindingPoint = p_other._bindingPoint;
 			_blockIndex = p_other._blockIndex;
 			_fixedData = std::move(p_other._fixedData);
 			_dynamicArray = std::move(p_other._dynamicArray);
-			resize(p_other.size());
 			_onResizeContract = _dynamicArray._resizeContractProvider.subscribe([&](size_t p_size) { resize(p_size); });
 			_dynamicArray._buffer = &dataBuffer();
+			_dynamicArray._defaultElement.setBuffer(&dataBuffer());
+			_fixedData.setBuffer(&dataBuffer());
 			_dynamicArray._redoArray();
 		}
 		return *this;
