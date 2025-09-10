@@ -266,7 +266,7 @@ namespace spk::Lumina
 			_availableObjects[p_name] = std::get<std::shared_ptr<OpenGL::SamplerObject>>(_objects[p_name]);
 		}
 
-		void addSamplerAttribute(const std::wstring &p_name, const std::shared_ptr<OpenGL::SamplerObject> &p_object)
+		void _addSamplerAttribute(const std::wstring &p_name, const std::shared_ptr<OpenGL::SamplerObject> &p_object)
 		{
 			if (_attributes.contains(p_name) == true)
 			{
@@ -282,7 +282,7 @@ namespace spk::Lumina
 			_attributes[p_name] = p_object;
 		}
 
-		void addUBOConstant(const std::wstring &p_name, const std::shared_ptr<OpenGL::UniformBufferObject> &p_object)
+		void _addUBOConstant(const std::wstring &p_name, const std::shared_ptr<OpenGL::UniformBufferObject> &p_object)
 		{
 			if (_objects.contains(p_name) == false)
 			{
@@ -316,7 +316,7 @@ namespace spk::Lumina
 			_availableObjects[p_name] = std::get<std::shared_ptr<OpenGL::UniformBufferObject>>(_objects[p_name]);
 		}
 
-		void addUBOAttribute(const std::wstring &p_name, const std::shared_ptr<OpenGL::UniformBufferObject> &p_object)
+		void _addUBOAttribute(const std::wstring &p_name, const std::shared_ptr<OpenGL::UniformBufferObject> &p_object)
 		{
 			if (_attributes.contains(p_name) == true)
 			{
@@ -332,7 +332,7 @@ namespace spk::Lumina
 			_attributes[p_name] = p_object;
 		}
 
-		void addSSBOConstant(const std::wstring &p_name, const std::shared_ptr<OpenGL::ShaderStorageBufferObject> &p_object)
+		void _addSSBOConstant(const std::wstring &p_name, const std::shared_ptr<OpenGL::ShaderStorageBufferObject> &p_object)
 		{
 			if (_objects.contains(p_name) == false)
 			{
@@ -374,7 +374,7 @@ namespace spk::Lumina
 			_availableObjects[p_name] = std::get<std::shared_ptr<OpenGL::ShaderStorageBufferObject>>(_objects[p_name]);
 		}
 
-		void addSSBOAttribute(const std::wstring &p_name, const std::shared_ptr<OpenGL::ShaderStorageBufferObject> &p_object)
+		void _addSSBOAttribute(const std::wstring &p_name, const std::shared_ptr<OpenGL::ShaderStorageBufferObject> &p_object)
 		{
 			if (_attributes.contains(p_name) == true)
 			{
@@ -417,11 +417,11 @@ namespace spk::Lumina
 		{
 			if (p_mode == Mode::Constant)
 			{
-				addSamplerConstant(p_name, p_object);
+				_addSamplerConstant(p_name, p_object);
 			}
 			else
 			{
-				addSamplerAttribute(p_name, p_object);
+				_addSamplerAttribute(p_name, p_object);
 			}
 		}
 
@@ -429,11 +429,11 @@ namespace spk::Lumina
 		{
 			if (p_mode == Mode::Constant)
 			{
-				addUBOConstant(p_name, p_object);
+				_addUBOConstant(p_name, p_object);
 			}
 			else
 			{
-				addUBOAttribute(p_name, p_object);
+				_addUBOAttribute(p_name, p_object);
 			}
 		}
 
@@ -441,11 +441,11 @@ namespace spk::Lumina
 		{
 			if (p_mode == Mode::Constant)
 			{
-				addSSBOConstant(p_name, p_object);
+				_addSSBOConstant(p_name, p_object);
 			}
 			else
 			{
-				addSSBOAttribute(p_name, p_object);
+				_addSSBOAttribute(p_name, p_object);
 			}
 		}
 
@@ -467,7 +467,7 @@ namespace spk::Lumina
 			{
 				throw std::runtime_error("Object with name '" + spk::StringUtils::wstringToString(p_name) + "' is not a sampler object.");
 			}
-			return *(std::get<std::shared_ptr<OpenGL::SamplerObject>>(_availableObjects.at(p_name)));
+			return (std::get<std::shared_ptr<OpenGL::SamplerObject>>(_availableObjects.at(p_name)));
 		}
 
 		bool containUBO(const std::wstring &p_name) const
@@ -488,7 +488,7 @@ namespace spk::Lumina
 			{
 				throw std::runtime_error("Object with name '" + spk::StringUtils::wstringToString(p_name) + "' is not a UBO.");
 			}
-			return *(std::get<std::shared_ptr<OpenGL::UniformBufferObject>>(_availableObjects.at(p_name)));
+			return (std::get<std::shared_ptr<OpenGL::UniformBufferObject>>(_availableObjects.at(p_name)));
 		}
 
 		bool containSSBO(const std::wstring &p_name) const
@@ -509,7 +509,7 @@ namespace spk::Lumina
 			{
 				throw std::runtime_error("Object with name '" + spk::StringUtils::wstringToString(p_name) + "' is not an SSBO.");
 			}
-			return *(std::get<std::shared_ptr<OpenGL::ShaderStorageBufferObject>>(_availableObjects.at(p_name)));
+			return (std::get<std::shared_ptr<OpenGL::ShaderStorageBufferObject>>(_availableObjects.at(p_name)));
 		}
 
 		Object createObject()
@@ -574,7 +574,7 @@ namespace spk::Lumina
 				{
 					throw std::runtime_error("Object with name '" + spk::StringUtils::wstringToString(p_name) + "' is not an Sampler.");
 				}
-				return *(std::get<std::shared_ptr<OpenGL::SamplerObject>>(Shader::_objects[p_name]));
+				return (std::get<std::shared_ptr<OpenGL::SamplerObject>>(Shader::_objects[p_name]));
 			}
 
 			static std::shared_ptr<OpenGL::UniformBufferObject> &ubo(const std::wstring &p_name)
@@ -587,7 +587,7 @@ namespace spk::Lumina
 				{
 					throw std::runtime_error("Object with name '" + spk::StringUtils::wstringToString(p_name) + "' is not an UBO.");
 				}
-				return *(std::get<std::shared_ptr<OpenGL::UniformBufferObject>>(Shader::_objects[p_name]));
+				return (std::get<std::shared_ptr<OpenGL::UniformBufferObject>>(Shader::_objects[p_name]));
 			}
 
 			static std::shared_ptr<OpenGL::ShaderStorageBufferObject> &ssbo(const std::wstring &p_name)
@@ -600,7 +600,7 @@ namespace spk::Lumina
 				{
 					throw std::runtime_error("Object with name '" + spk::StringUtils::wstringToString(p_name) + "' is not an SSBO.");
 				}
-				return *(std::get<std::shared_ptr<OpenGL::ShaderStorageBufferObject>>(Shader::_objects[p_name]));
+				return (std::get<std::shared_ptr<OpenGL::ShaderStorageBufferObject>>(Shader::_objects[p_name]));
 			}
 		};
 	};

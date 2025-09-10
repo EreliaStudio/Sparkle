@@ -51,7 +51,7 @@ private:
 		for (int i = 0; i < nbPoint; ++i)
 		{
 			float angle = step * static_cast<float>(i);
-			vertices.emplace_back(std::cos(angle), std::sin(angle));
+			vertices.emplace_back(std::cos(angle) / 2.0f, std::sin(angle) / 2.0f);
 		}
 		result.addShape(vertices);
 
@@ -153,7 +153,7 @@ void main()
 
 			spk::Lumina::Shader::Object _object;
 			spk::OpenGL::BufferSet &_bufferSet;
-			spk::OpenGL::ShaderStorageBufferObject &_infoSSBO;
+			std::shared_ptr<spk::OpenGL::ShaderStorageBufferObject> _infoSSBO;
 
 			spk::SafePointer<const InfoContainer> _infoContainer;
 
@@ -175,14 +175,14 @@ void main()
 			Painter(const ShapeMesh &p_mesh) :
 				_object(_shader.createObject()),
 				_bufferSet(_object.bufferSet()),
-				_infoSSBO(_object.SSBO(L"InfoSSBO"))
+				_infoSSBO(_object.ssbo(L"InfoSSBO"))
 			{
 				_prepare(p_mesh);
 			}
 
 			void render()
 			{
-				size_t nbInstance = _infoSSBO.dynamicArray().nbElement();
+				size_t nbInstance = _infoSSBO->dynamicArray().nbElement();
 
 				_object.setNbInstance(nbInstance);
 				_object.render();
@@ -200,7 +200,7 @@ void main()
 					return;
 				}
 
-				auto &array = _infoSSBO.dynamicArray();
+				auto &array = _infoSSBO->dynamicArray();
 
 				array.resize(_infoContainer->size());
 
@@ -211,7 +211,7 @@ void main()
 					index++;
 				}
 
-				_infoSSBO.validate();
+				_infoSSBO->validate();
 			}
 		};
 
@@ -671,16 +671,6 @@ public:
 	{
 		return (_cameraHolder.cameraComponent());
 	}
-
-	spk::SafePointer<const CameraHolder> camera() const
-	{
-		return (&_cameraHolder);
-	}
-
-	spk::SafePointer<spk::CameraComponent> cameraComponent() const
-	{
-		return (_cameraHolder.cameraComponent());
-	}
 };
 
 class DebugOverlayManager : public spk::Widget
@@ -818,58 +808,6 @@ int main()
 	player.addComponent<TileMapChunkStreamer>(L"Player/TileMapChunkStreamer", &tileMap, player.cameraComponent());
 	player.activate();
 	// ------------------------------------------
-
-	spk::Entity shapesRoot(L"Shapes", nullptr);
-	shapesRoot.addComponent<playground::Shape::Renderer>(L"Shapes/ShapeRenderer");
-	engine.addEntity(&shapesRoot);
-	shapesRoot.activate();
-
-	std::vector<std::unique_ptr<playground::Shape>> shapes;
-	auto createShapes = [&](playground::Shape::Type p_type,
-							const std::array<spk::Color, 3> &p_colors,
-							const std::array<spk::Vector3, 3> &p_positions,
-							const std::wstring &p_base)
-	{
-		for (size_t i = 0; i < 3; ++i)
-		{
-			auto shape = std::make_unique<playground::Shape>(p_base + std::to_wstring(i), p_type, p_colors[i], &shapesRoot);
-			shape->transform().place(p_positions[i]);
-			shape->activate();
-			shapes.push_back(std::move(shape));
-		}
-	};
-
-	std::array<spk::Color, 3> colors = {spk::Color::red, spk::Color::green, spk::Color::blue};
-	createShapes(
-		playground::Shape::Type::Triangle,
-		colors,
-		{spk::Vector3(-9.0f, -9.0f, 0.0f), spk::Vector3(0.0f, -9.0f, 0.0f), spk::Vector3(9.0f, -9.0f, 0.0f)},
-		L"Triangle");
-	createShapes(
-		playground::Shape::Type::Square,
-		colors,
-		{spk::Vector3(-9.0f, -5.0f, 0.0f), spk::Vector3(0.0f, -5.0f, 0.0f), spk::Vector3(9.0f, -5.0f, 0.0f)},
-		L"Square");
-	createShapes(
-		playground::Shape::Type::Pentagon,
-		colors,
-		{spk::Vector3(-9.0f, -1.0f, 0.0f), spk::Vector3(0.0f, -1.0f, 0.0f), spk::Vector3(9.0f, -1.0f, 0.0f)},
-		L"Pentagon");
-	createShapes(
-		playground::Shape::Type::Hexagon,
-		colors,
-		{spk::Vector3(-9.0f, 3.0f, 0.0f), spk::Vector3(0.0f, 3.0f, 0.0f), spk::Vector3(9.0f, 3.0f, 0.0f)},
-		L"Hexagon");
-	createShapes(
-		playground::Shape::Type::Octagon,
-		colors,
-		{spk::Vector3(-9.0f, 7.0f, 0.0f), spk::Vector3(0.0f, 7.0f, 0.0f), spk::Vector3(9.0f, 7.0f, 0.0f)},
-		L"Octagon");
-	createShapes(
-		playground::Shape::Type::Circle,
-		colors,
-		{spk::Vector3(-9.0f, 9.0f, 0.0f), spk::Vector3(0.0f, 9.0f, 0.0f), spk::Vector3(9.0f, 9.0f, 0.0f)},
-		L"Circle");
 
 	return app.run();
 }
