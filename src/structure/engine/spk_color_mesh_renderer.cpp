@@ -92,8 +92,8 @@ void main()
 
 	void ColorMeshRenderer::Painter::setTransform(const spk::Transform &p_transform)
 	{
-		_transformUBO->layout()[L"modelMatrix"] = p_transform.model();
-		_transformUBO->validate();
+		_transformUBO.layout()[L"modelMatrix"] = p_transform.model();
+		_transformUBO.validate();
 	}
 
 	ColorMeshRenderer::ColorMeshRenderer(const std::wstring &p_name) :
