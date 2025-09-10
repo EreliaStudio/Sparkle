@@ -48,9 +48,23 @@ namespace spk::Lumina
 
 			Object(Shader *p_originator) :
 				_originator(p_originator),
-				_bufferSet(p_originator->_bufferSet),
-				_attributes(p_originator->_attributes)
+				_bufferSet(p_originator->_bufferSet)
 			{
+				for (const auto& [name, attribute] : p_originator->_attributes)
+				{
+					if (std::holds_alternative<std::shared_ptr<OpenGL::SamplerObject>>(attribute) == true)
+					{
+						_attributes[name] = std::make_shared<OpenGL::SamplerObject>(*(std::get<std::shared_ptr<OpenGL::SamplerObject>>(attribute)));
+					}
+					if (std::holds_alternative<std::shared_ptr<OpenGL::UniformBufferObject>>(attribute) == true)
+					{
+						_attributes[name] = std::make_shared<OpenGL::UniformBufferObject>(*(std::get<std::shared_ptr<OpenGL::UniformBufferObject>>(attribute)));
+					}
+					if (std::holds_alternative<std::shared_ptr<OpenGL::ShaderStorageBufferObject>>(attribute) == true)
+					{
+						_attributes[name] = std::make_shared<OpenGL::ShaderStorageBufferObject>(*(std::get<std::shared_ptr<OpenGL::ShaderStorageBufferObject>>(attribute)));
+					}
+				}
 			}
 
 			void _activate()
@@ -231,7 +245,7 @@ namespace spk::Lumina
 		{
 			if (_objects.contains(p_name) == false)
 			{
-				_objects[p_name] = std::move(p_object);
+				_objects[p_name] = p_object;
 			}
 			else
 			{
@@ -270,7 +284,7 @@ namespace spk::Lumina
 		{
 			if (_objects.contains(p_name) == false)
 			{
-				_objects[p_name] = std::move(p_object);
+				_objects[p_name] = p_object;
 			}
 			else
 			{
@@ -313,14 +327,14 @@ namespace spk::Lumina
 				throw std::runtime_error("UBO attribute with name '" + spk::StringUtils::wstringToString(p_name) + "' is already set.");
 			}
 
-			_attributes[p_name] = std::move(p_object);
+			_attributes[p_name] = p_object;
 		}
 
 		void _addSsboConstant(const std::wstring &p_name, const std::shared_ptr<OpenGL::ShaderStorageBufferObject> &p_object)
 		{
 			if (_objects.contains(p_name) == false)
 			{
-				_objects[p_name] = std::move(p_object);
+				_objects[p_name] = p_object;
 			}
 			else
 			{
@@ -371,7 +385,7 @@ namespace spk::Lumina
 				throw std::runtime_error("SSBO attribute with name '" + spk::StringUtils::wstringToString(p_name) + "' is already set.");
 			}
 
-			_attributes[p_name] = std::move(p_object);
+			_attributes[p_name] = p_object;
 		}
 
 	public:
