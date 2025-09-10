@@ -37,7 +37,7 @@ namespace spk
 		_name = p_name;
 	}
 
-	DataBufferLayout::Element DataBufferLayout::Element::duplicate(size_t p_offset)
+	DataBufferLayout::Element DataBufferLayout::Element::duplicate(size_t p_offset) const
 	{
 		Element result = *this;
 		result._offset = p_offset;

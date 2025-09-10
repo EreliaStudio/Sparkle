@@ -46,7 +46,7 @@ namespace spk
 			const std::wstring &name() const;
 			void setName(const std::wstring &p_name);
 
-			Element duplicate(size_t p_offset);
+			Element duplicate(size_t p_offset) const;
 			bool isUnit() const;
 			bool isArray() const;
 			bool isStructure() const;

@@ -93,13 +93,9 @@ namespace spk::OpenGL
 
 	void ShaderStorageBufferObject::DynamicArray::resize(size_t p_nbElement)
 	{
-				DEBUG_LINE();
 		_resizeContractProvider.trigger(_fixedReservedSpace + (_elementSize + _elementPadding) * p_nbElement);
-				DEBUG_LINE();
 		_elements.resize(p_nbElement);
-				DEBUG_LINE();
 		_redoArray();
-				DEBUG_LINE();
 	}
 
 	ShaderStorageBufferObject::DynamicArray::Element &ShaderStorageBufferObject::DynamicArray::operator[](size_t p_index)
@@ -196,9 +192,17 @@ namespace spk::OpenGL
 		_fixedData(p_other._fixedData),
 		_dynamicArray(p_other._dynamicArray._duplicate())
 	{
+		// std::wstring _blockName;
+		// BindingPoint _bindingPoint;
+		// GLint _blockIndex;
+
+		// spk::DataBufferLayout::Element _fixedData;
+		// spk::TContractProvider<size_t>::Contract _onResizeContract;
+		// DynamicArray _dynamicArray;
+
+		_dynamicArray._buffer = &dataBuffer();
 		resize(p_other.size());
 		_onResizeContract = _dynamicArray._resizeContractProvider.subscribe([&](size_t p_size) { resize(p_size); });
-		_dynamicArray._buffer = &dataBuffer();
 		_dynamicArray._redoArray();
 	}
 

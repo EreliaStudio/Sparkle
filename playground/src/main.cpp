@@ -42,7 +42,8 @@ private:
 			{Shape::Type::Pentagon, 5},
 			{Shape::Type::Hexagon, 6},
 			{Shape::Type::Octogon, 8},
-			{Shape::Type::Circle, 30}};
+			{Shape::Type::Circle, 30}
+		};
 		ShapeMesh result;
 
 		std::vector<spk::Vector2> vertices;
@@ -113,7 +114,7 @@ struct Info
     vec4 color;
 };
 
-layout(std430, binding = 1) buffer InfoSSBO
+layout(std430, binding = 3) buffer InfoSSBO
 {
     Info object[];
 };
@@ -141,14 +142,17 @@ void main()
 
 				shader.addUBO(L"CameraUBO", spk::Lumina::ShaderObjectFactory::instance()->ubo(L"CameraUBO"), spk::Lumina::Shader::Mode::Constant);
 
-				DEBUG_LINE();
-				spk::OpenGL::ShaderStorageBufferObject infoSSBO = spk::OpenGL::ShaderStorageBufferObject(L"InfoSSBO", 1, 0, 0, 80, 0);
+				spk::OpenGL::ShaderStorageBufferObject infoSSBO = spk::OpenGL::ShaderStorageBufferObject(L"InfoSSBO", 3, 0, 0, 80, 0);
 				infoSSBO.dynamicArray().addElement(L"model", 0, 64);
 				infoSSBO.dynamicArray().addElement(L"color", 64, 16);
-				DEBUG_LINE();
+
+				spk::cout() << "	infoSSBO informations : " << std::endl;
+				spk::cout() << "Fixed data size : " << infoSSBO.fixedData().size() << std::endl;
+				spk::cout() << "Dynamic array element size : " << infoSSBO.dynamicArray().elementSize() << std::endl;
+				spk::cout() << "Dynamic array nb element : " << infoSSBO.dynamicArray().nbElement() << std::endl;
+				spk::cout() << " --------------------------" << std::endl << std::endl; 
 
 				shader.addSSBO(L"InfoSSBO", infoSSBO, spk::Lumina::Shader::Mode::Attribute);
-				DEBUG_LINE();
 
 				return (shader);
 			}
@@ -180,7 +184,17 @@ void main()
 				_bufferSet(_object.bufferSet()),
 				_infoSSBO(_object.ssbo(L"InfoSSBO"))
 			{
+				spk::cout() << "	retrieved infoSSBO informations : " << std::endl;
+				spk::cout() << "Fixed data size : " << _infoSSBO.fixedData().size() << std::endl;
+				spk::cout() << "Dynamic array element size : " << _infoSSBO.dynamicArray().elementSize() << std::endl;
+				spk::cout() << "Dynamic array nb element : " << _infoSSBO.dynamicArray().nbElement() << std::endl;
+				spk::cout() << " --------------------------" << std::endl << std::endl; 
 				_prepare(p_mesh);
+			}
+
+			const spk::OpenGL::ShaderStorageBufferObject& infoSSBO() const
+			{
+				return (_infoSSBO);
 			}
 
 			void render()
@@ -203,38 +217,35 @@ void main()
 					return;
 				}
 
-				DEBUG_LINE();
+				spk::cout() << "	" << __FUNCTION__ << "::" << __LINE__ << " infoSSBO informations : " << std::endl;
+				spk::cout() << "Fixed data size : " << _infoSSBO.fixedData().size() << std::endl;
+				spk::cout() << "Dynamic array element size : " << _infoSSBO.dynamicArray().elementSize() << std::endl;
+				spk::cout() << "Dynamic array nb element : " << _infoSSBO.dynamicArray().nbElement() << std::endl;
+				spk::cout() << " --------------------------" << std::endl << std::endl; 
+
 				auto &array = _infoSSBO.dynamicArray();
 
-				spk::cout() << "Array element size : " << array.elementSize() << std::endl;
-
-				DEBUG_LINE();
 				array.resize(_infoContainer->size());
 
-				DEBUG_LINE();
 				size_t index = 0;
 				for (const auto &info : *_infoContainer)
 				{
-				DEBUG_LINE();
 					array[index] = info;
-				DEBUG_LINE();
 					index++;
-				DEBUG_LINE();
 				}
-				DEBUG_LINE();
 
 				_infoSSBO.validate();
-				DEBUG_LINE();
 			}
 		};
 
 		static inline std::unordered_map<Shape::Type, Painter> painters = {
 			{Shape::Type::Triangle, Painter(_makeMesh(Shape::Type::Triangle))},
-			{Shape::Type::Square, Painter(_makeMesh(Shape::Type::Square))},
-			{Shape::Type::Pentagon, Painter(_makeMesh(Shape::Type::Pentagon))},
-			{Shape::Type::Hexagon, Painter(_makeMesh(Shape::Type::Hexagon))},
-			{Shape::Type::Octogon, Painter(_makeMesh(Shape::Type::Octogon))},
-			{Shape::Type::Circle, Painter(_makeMesh(Shape::Type::Circle))}};
+			// {Shape::Type::Square, Painter(_makeMesh(Shape::Type::Square))},
+			// {Shape::Type::Pentagon, Painter(_makeMesh(Shape::Type::Pentagon))},
+			// {Shape::Type::Hexagon, Painter(_makeMesh(Shape::Type::Hexagon))},
+			// {Shape::Type::Octogon, Painter(_makeMesh(Shape::Type::Octogon))},
+			// {Shape::Type::Circle, Painter(_makeMesh(Shape::Type::Circle))}
+		};
 
 		struct ContainerData
 		{
@@ -250,34 +261,35 @@ void main()
 
 		static inline std::unordered_map<Shape::Type, ContainerData> containers = {
 			{Shape::Type::Triangle, ContainerData()},
-			{Shape::Type::Square, ContainerData()},
-			{Shape::Type::Pentagon, ContainerData()},
-			{Shape::Type::Hexagon, ContainerData()},
-			{Shape::Type::Octogon, ContainerData()},
-			{Shape::Type::Circle, ContainerData()}};
+			// {Shape::Type::Square, ContainerData()},
+			// {Shape::Type::Pentagon, ContainerData()},
+			// {Shape::Type::Hexagon, ContainerData()},
+			// {Shape::Type::Octogon, ContainerData()},
+			// {Shape::Type::Circle, ContainerData()}
+		};
 
 	public:
 		Renderer(const std::wstring &p_name) :
 			spk::Component(p_name)
 		{
-			for (auto &painter : painters)
+			for (auto &[type, painter] : painters)
 			{
-				painter.second.setShapeList(&(containers[painter.first].container));
+				painter.setShapeList(&(containers[type].container));
 			}
 		}
 
 		void onPaintEvent(spk::PaintEvent &p_event) override
 		{
-			for (auto &painter : painters)
+			for (auto &[type, painter] : painters)
 			{
-				if (containers[painter.first].container.empty() == false)
+				if (containers[type].container.empty() == false)
 				{
-					if (containers[painter.first].needUpdate == true)
+					if (containers[type].needUpdate == true)
 					{
-						painter.second.validate();
-						containers[painter.first].needUpdate = false;
+						painter.validate();
+						containers[type].needUpdate = false;
 					}
-					painter.second.render();
+					painter.render();
 				}
 			}
 		}
@@ -311,6 +323,7 @@ private:
 	{
 	private:
 		std::optional<Shape::Type> _type;
+		spk::Color _color = spk::Color::white;
 		InfoIterator _iterator;
 		spk::Transform::Contract _onEditionContract;
 
@@ -332,6 +345,19 @@ private:
 			Renderer::remove(_type.value(), _iterator);
 		}
 
+		void _pushInfo()
+		{
+			if (_type.has_value() == false)
+			{
+				GENERATE_ERROR("Can't use a Shape without type");
+			}
+
+			_iterator->model = owner()->transform().model();
+			_iterator->color = _color;
+			
+			Renderer::validate(_type.value());
+		}
+
 	public:
 		Subscriber(const std::wstring &p_name) :
 			spk::Component(p_name)
@@ -351,6 +377,15 @@ private:
 			_bind();
 		}
 
+		void setColor(const spk::Color& p_color)
+		{
+			_color = p_color;
+			if (_type.has_value() == true)
+			{
+				_pushInfo();
+			}
+		}
+
 		void start() override
 		{
 			_onEditionContract = owner()->transform().addOnEditionCallback(
@@ -361,8 +396,7 @@ private:
 						GENERATE_ERROR("Can't use an Shape without type");
 					}
 
-					_iterator->model = owner()->transform().model();
-					Renderer::validate(_type.value());
+					_pushInfo();
 				});
 		}
 
@@ -390,6 +424,11 @@ public:
 	void setType(const Type &p_type)
 	{
 		_subscriber->setType(p_type);
+	}
+
+	void setColor(const spk::Color& p_color)
+	{
+		_subscriber->setColor(p_color);
 	}
 };
 
@@ -821,6 +860,45 @@ int main()
 	player.addComponent<TileMapChunkStreamer>(L"Player/TileMapChunkStreamer", &tileMap, player.cameraComponent());
 	player.activate();
 	// ------------------------------------------
+
+	// // --- Extra shapes to verify rendering & colors ---
+	// Shape s1(L"SquareGreen", nullptr);
+	// s1.setType(Shape::Type::Square);
+	// s1.setColor(spk::Color(0.20f, 0.80f, 0.25f, 1.0f));
+
+	// Shape s2(L"PentagonBlue", nullptr);
+	// s2.setType(Shape::Type::Pentagon);
+	// s2.setColor(spk::Color(0.20f, 0.50f, 0.95f, 1.0f));
+
+	// Shape s3(L"HexagonYellow", nullptr);
+	// s3.setType(Shape::Type::Hexagon);
+	// s3.setColor(spk::Color(0.95f, 0.85f, 0.20f, 1.0f));
+
+	// Shape s4(L"OctogonMagenta", nullptr);
+	// s4.setType(Shape::Type::Octogon);
+	// s4.setColor(spk::Color(0.90f, 0.20f, 0.80f, 1.0f));
+
+	// Shape s5(L"CircleCyan", nullptr);
+	// s5.setType(Shape::Type::Circle);
+	// s5.setColor(spk::Color(0.20f, 0.90f, 0.95f, 1.0f));
+
+	// engine.addEntity(&s1);
+	// engine.addEntity(&s2);
+	// engine.addEntity(&s3);
+	// engine.addEntity(&s4);
+	// engine.addEntity(&s5);
+
+	// // lay them out in view (z slightly in front of tilemap)
+	// s1.transform().place({-10.0f, -6.0f, 2.5f});
+	// s1.activate();
+	// s2.transform().place({-5.0f, -2.0f, 2.5f});
+	// s2.activate();
+	// s3.transform().place({0.0f, -6.0f, 2.5f});
+	// s3.activate();
+	// s4.transform().place({5.0f, -2.0f, 2.5f});
+	// s4.activate();
+	// s5.transform().place({10.0f, -6.0f, 2.5f});
+	// s5.activate();
 
 	return app.run();
 }
