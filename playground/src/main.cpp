@@ -90,45 +90,6 @@ public:
 	}
 };
 
-class ShaderDebugWidget : public spk::Widget
-{
-public:
-	ShaderDebugWidget(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
-		spk::Widget(p_name, p_parent)
-	{
-		spk::OpenGL::SamplerObject sampler;
-		spk::OpenGL::UniformBufferObject ubo;
-		spk::OpenGL::ShaderStorageBufferObject ssbo;
-
-		_shader.addSampler(L"sampler", sampler, spk::Lumina::Shader::Mode::Constant);
-		_shader.addUBO(L"ubo", ubo, spk::Lumina::Shader::Mode::Constant);
-		_shader.addSSBO(L"ssbo", ssbo, spk::Lumina::Shader::Mode::Constant);
-
-		auto &samplerRef = _shader.sampler(L"sampler");
-		auto &uboRef = _shader.ubo(L"ubo");
-		auto &ssboRef = _shader.ssbo(L"ssbo");
-
-		(void)samplerRef;
-		(void)uboRef;
-		(void)ssboRef;
-
-		spk::JSON::Object desc;
-		desc.setAsObject();
-		auto &array = desc[L"Sampler"];
-		array.setAsArray();
-		auto &samplerObj = array.append();
-		samplerObj[L"name"].set(std::wstring(L"factorySampler"));
-		samplerObj[L"data"].setAsObject();
-
-		spk::Lumina::ShaderObjectFactory::instance().add(desc);
-		auto &factorySampler = spk::Lumina::ShaderObjectFactory::instance().sampler(L"factorySampler");
-		(void)factorySampler;
-	}
-
-private:
-	spk::Lumina::Shader _shader;
-};
-
 int main()
 {
 	spk::GraphicalApplication app;
@@ -139,9 +100,6 @@ int main()
 	debugOverlay.setGeometry({0, 0}, window->geometry().size);
 	debugOverlay.setLayer(100);
 	debugOverlay.activate();
-
-	ShaderDebugWidget shaderWidget(L"ShaderWidget", window->widget());
-	shaderWidget.activate();
 
 	return app.run();
 }
