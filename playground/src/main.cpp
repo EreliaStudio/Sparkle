@@ -183,25 +183,14 @@ void main()
 				_bufferSet(_object.bufferSet()),
 				_infoSSBO(_object.ssbo(L"InfoSSBO"))
 			{
-				spk::cout() << "	retrieved infoSSBO informations : " << std::endl;
+				_prepare(p_mesh);
+
+				spk::cout() << "	" << __FUNCTION__ << "::" << __LINE__ << " - infoSSBO informations : " << std::endl;
 				spk::cout() << "Fixed data size : " << _infoSSBO.fixedData().size() << std::endl;
 				spk::cout() << "Dynamic array element size : " << _infoSSBO.dynamicArray().elementSize() << std::endl;
 				spk::cout() << "Dynamic array nb element : " << _infoSSBO.dynamicArray().nbElement() << std::endl;
 				spk::cout() << " --------------------------" << std::endl << std::endl;
-				_prepare(p_mesh);
 			}
-
-			Painter(Painter &&p_other) :
-				_object(std::move(p_other._object)),
-				_bufferSet(_object.bufferSet()),
-				_infoSSBO(_object.ssbo(L"InfoSSBO")),
-				_infoContainer(std::move(p_other._infoContainer))
-			{
-			}
-
-			Painter(const Painter &) = delete;
-			Painter &operator=(const Painter &) = delete;
-			Painter &operator=(Painter &&) = delete;
 
 			const spk::OpenGL::ShaderStorageBufferObject &infoSSBO() const
 			{
@@ -228,12 +217,6 @@ void main()
 					return;
 				}
 
-				spk::cout() << "	" << __FUNCTION__ << "::" << __LINE__ << " infoSSBO informations : " << std::endl;
-				spk::cout() << "Fixed data size : " << _infoSSBO.fixedData().size() << std::endl;
-				spk::cout() << "Dynamic array element size : " << _infoSSBO.dynamicArray().elementSize() << std::endl;
-				spk::cout() << "Dynamic array nb element : " << _infoSSBO.dynamicArray().nbElement() << std::endl;
-				spk::cout() << " --------------------------" << std::endl << std::endl;
-
 				auto &array = _infoSSBO.dynamicArray();
 
 				array.resize(_infoContainer->size());
@@ -249,6 +232,7 @@ void main()
 			}
 		};
 
+	public:
 		static inline std::unordered_map<Shape::Type, Painter> painters = {
 			{Shape::Type::Triangle, Painter(_makeMesh(Shape::Type::Triangle))},
 			// {Shape::Type::Square, Painter(_makeMesh(Shape::Type::Square))},
@@ -430,6 +414,11 @@ public:
 		spk::Entity(p_name, p_parent),
 		_subscriber(addComponent<Subscriber>(p_name + L"/Subscriber"))
 	{
+		spk::cout() << "	" << __FUNCTION__ << "::" << __LINE__ << " - infoSSBO informations : " << std::endl;
+		spk::cout() << "Fixed data size : " << Renderer::painters.at(Type::Triangle).infoSSBO().fixedData().size() << std::endl;
+		spk::cout() << "Dynamic array element size : " << Renderer::painters.at(Type::Triangle).infoSSBO().dynamicArray().elementSize() << std::endl;
+		spk::cout() << "Dynamic array nb element : " << Renderer::painters.at(Type::Triangle).infoSSBO().dynamicArray().nbElement() << std::endl;
+		spk::cout() << " --------------------------" << std::endl << std::endl;
 	}
 
 	void setType(const Type &p_type)

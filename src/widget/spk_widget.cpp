@@ -454,7 +454,7 @@ namespace spk
 			_textureRenderer.render();
 		} catch (const std::exception &e)
 		{
-			GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] onPaintEvent - " + e.what());
+			PROPAGATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] onPaintEvent", e);
 		} catch (...)
 		{
 			GENERATE_ERROR("[" + spk::StringUtils::wstringToString(name()) + "] onPaintEvent - Unknow error type");
