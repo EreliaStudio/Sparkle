@@ -43,3 +43,23 @@ namespace spk
 		static const Color grey;
 	};
 }
+
+namespace std
+{
+	template <>
+	struct hash<spk::Color>
+	{
+		size_t operator()(const spk::Color &p_color) const
+		{
+			size_t h1 = std::hash<float>{}(p_color.r);
+			size_t h2 = std::hash<float>{}(p_color.g);
+			size_t h3 = std::hash<float>{}(p_color.b);
+			size_t h4 = std::hash<float>{}(p_color.a);
+			size_t seed = h1;
+			seed ^= h2 + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+			seed ^= h3 + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+			seed ^= h4 + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+			return (seed);
+		}
+	};
+}
