@@ -3,6 +3,7 @@
 #include <regex>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -75,6 +76,52 @@ namespace spk::Lumina
 
 		public:
 			Object() = default;
+
+			Object(const Object &p_other) :
+				_originator(p_other._originator),
+				_bufferSet(p_other._bufferSet),
+				_nbInstance(p_other._nbInstance),
+				_attributes(p_other._attributes)
+			{
+			}
+
+			Object &operator=(const Object &p_other)
+			{
+				if (this != &p_other)
+				{
+					_originator = p_other._originator;
+					_bufferSet = p_other._bufferSet;
+					_nbInstance = p_other._nbInstance;
+					_attributes = p_other._attributes;
+				}
+				return *this;
+			}
+
+			Object(Object &&p_other) :
+				_originator(p_other._originator),
+				_bufferSet(std::move(p_other._bufferSet)),
+				_nbInstance(p_other._nbInstance),
+				_attributes(std::move(p_other._attributes))
+			{
+				p_other._originator = nullptr;
+				p_other._nbInstance = 1;
+				p_other._attributes.clear();
+			}
+			Object &operator=(Object &&p_other)
+			{
+				if (this != &p_other)
+				{
+					_originator = p_other._originator;
+					_bufferSet = std::move(p_other._bufferSet);
+					_nbInstance = p_other._nbInstance;
+					_attributes = std::move(p_other._attributes);
+
+					p_other._originator = nullptr;
+					p_other._nbInstance = 1;
+					p_other._attributes.clear();
+				}
+				return *this;
+			}
 
 			void setNbInstance(const size_t &p_nbInstance)
 			{

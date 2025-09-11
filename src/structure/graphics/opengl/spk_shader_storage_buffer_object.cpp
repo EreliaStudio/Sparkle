@@ -212,7 +212,6 @@ namespace spk::OpenGL
 	{
 		if (this != &p_other)
 		{
-			VertexBufferObject::operator=(p_other);
 			_blockName = p_other._blockName;
 			_bindingPoint = p_other._bindingPoint;
 			_blockIndex = -1;
@@ -232,7 +231,7 @@ namespace spk::OpenGL
 		VertexBufferObject(std::move(p_other)),
 		_blockName(std::move(p_other._blockName)),
 		_bindingPoint(p_other._bindingPoint),
-		_blockIndex(p_other._blockIndex),
+		_blockIndex(-1),
 		_fixedData(std::move(p_other._fixedData)),
 		_dynamicArray(std::move(p_other._dynamicArray))
 	{
@@ -247,10 +246,9 @@ namespace spk::OpenGL
 	{
 		if (this != &p_other)
 		{
-			VertexBufferObject::operator=(std::move(p_other));
 			_blockName = std::move(p_other._blockName);
 			_bindingPoint = p_other._bindingPoint;
-			_blockIndex = p_other._blockIndex;
+			_blockIndex = -1;
 			_fixedData = std::move(p_other._fixedData);
 			_dynamicArray = std::move(p_other._dynamicArray);
 			_onResizeContract = _dynamicArray._resizeContractProvider.subscribe([&](size_t p_size) { resize(p_size); });
