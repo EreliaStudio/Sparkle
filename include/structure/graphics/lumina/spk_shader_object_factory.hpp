@@ -6,6 +6,7 @@
 #include "structure/graphics/opengl/spk_shader_storage_buffer_object.hpp"
 #include "structure/graphics/opengl/spk_uniform_buffer_object.hpp"
 
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <variant>
@@ -17,7 +18,10 @@ namespace spk::Lumina
 		friend class spk::Singleton<ShaderObjectFactory>;
 
 	private:
-		using Object = std::variant<OpenGL::UniformBufferObject, OpenGL::ShaderStorageBufferObject, OpenGL::SamplerObject>;
+		using Object = std::variant<
+			std::shared_ptr<OpenGL::UniformBufferObject>,
+			std::shared_ptr<OpenGL::ShaderStorageBufferObject>,
+			std::shared_ptr<OpenGL::SamplerObject>>;
 
 		std::unordered_map<std::wstring, Object> _objects;
 
