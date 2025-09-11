@@ -697,12 +697,22 @@ public:
 	{
 	}
 
+	spk::SafePointer<CameraHolder> camera()
+	{
+		return (&_cameraHolder);
+	}
+
+	spk::SafePointer<spk::CameraComponent> cameraComponent()
+	{
+		return (_cameraHolder.cameraComponent());
+	}
+
 	spk::SafePointer<const CameraHolder> camera() const
 	{
 		return (&_cameraHolder);
 	}
 
-	spk::SafePointer<spk::CameraComponent> cameraComponent() const
+	spk::SafePointer<const spk::CameraComponent> cameraComponent() const
 	{
 		return (_cameraHolder.cameraComponent());
 	}
@@ -836,6 +846,7 @@ int main()
 
 	// ------------- Player entity --------------
 	Player player(L"Player", nullptr);
+	player.camera()->setOrthographic({20, 20});
 	player.setType(Shape::Type::Triangle);
 	engine.addEntity(&player);
 	player.transform().place({4, 4, 2.5f});
@@ -843,45 +854,6 @@ int main()
 	player.addComponent<TileMapChunkStreamer>(L"Player/TileMapChunkStreamer", &tileMap, player.cameraComponent());
 	player.activate();
 	// ------------------------------------------
-
-	// --- Extra shapes to verify rendering & colors ---
-	Shape s1(L"SquareGreen", nullptr);
-	s1.setType(Shape::Type::Square);
-	s1.setColor(spk::Color(0.20f, 0.80f, 0.25f, 1.0f));
-
-	Shape s2(L"PentagonBlue", nullptr);
-	s2.setType(Shape::Type::Pentagon);
-	s2.setColor(spk::Color(0.20f, 0.50f, 0.95f, 1.0f));
-
-	Shape s3(L"HexagonYellow", nullptr);
-	s3.setType(Shape::Type::Hexagon);
-	s3.setColor(spk::Color(0.95f, 0.85f, 0.20f, 1.0f));
-
-	Shape s4(L"OctogonMagenta", nullptr);
-	s4.setType(Shape::Type::Octogon);
-	s4.setColor(spk::Color(0.90f, 0.20f, 0.80f, 1.0f));
-
-	Shape s5(L"CircleCyan", nullptr);
-	s5.setType(Shape::Type::Circle);
-	s5.setColor(spk::Color(0.20f, 0.90f, 0.95f, 1.0f));
-
-	engine.addEntity(&s1);
-	engine.addEntity(&s2);
-	engine.addEntity(&s3);
-	engine.addEntity(&s4);
-	engine.addEntity(&s5);
-
-	// lay them out in view (z slightly in front of tilemap)
-	s1.transform().place({-10.0f, -6.0f, 2.5f});
-	s1.activate();
-	s2.transform().place({-5.0f, -2.0f, 2.5f});
-	s2.activate();
-	s3.transform().place({0.0f, -6.0f, 2.5f});
-	s3.activate();
-	s4.transform().place({5.0f, -2.0f, 2.5f});
-	s4.activate();
-	s5.transform().place({10.0f, -6.0f, 2.5f});
-	s5.activate();
 
 	return app.run();
 }
