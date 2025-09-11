@@ -656,6 +656,26 @@ public:
 			p_event.requestPaint();
 		}
 	}
+
+	void onMouseEvent(spk::MouseEvent& p_event) override
+	{
+		spk::SafePointer<spk::Window> window = p_event.window;
+
+		const spk::Geometry2D &windowGeometry = window->geometry();
+		spk::Vector2Int windowCenter(static_cast<int>(windowGeometry.width) / 2, static_cast<int>(windowGeometry.height) / 2);
+		
+		if (p_event.type == spk::MouseEvent::Type::Motion && 
+			p_event.mouse->deltaPosition() != spk::Vector2Int(0, 0) && 
+			p_event.mouse->position() != windowCenter)
+		{
+			spk::Vector2Int delta = p_event.mouse->position() - windowCenter;
+			float mouseAngle = std::atan2(static_cast<float>(delta.y), static_cast<float>(delta.x));
+
+			owner()->transform().setRotation({0, 0, spk::radianToDegree(mouseAngle)});
+			
+			p_event.requestPaint();
+		}
+	}
 };
 
 class CameraHolder : public spk::Entity
