@@ -577,6 +577,9 @@ private:
 	std::vector<std::unique_ptr<spk::Action>> _actions;
 	spk::Vector3 _motionRequested = {0, 0, 0};
 
+	spk::SafePointer<spk::Entity> _player;
+	spk::SafePointer<spk::Entity> _camera;
+
 	void _applyConfiguration()
 	{
 		dynamic_cast<spk::KeyboardAction *>(_actions[0].get())->setDeviceValue(_config.keymap[L"Forward"], spk::InputState::Down);
@@ -629,6 +632,12 @@ public:
 		return (_config);
 	}
 
+	void awake() override
+	{
+		_player = owner();
+		_camera = owner()->getChild(owner()->name() + L"/CameraHolder");
+	}
+
 	void onUpdateEvent(spk::UpdateEvent &p_event) override
 	{
 		if ((p_event.keyboard == nullptr) == true)
@@ -652,7 +661,7 @@ public:
 		if (isMotionRequested == true)
 		{
 			spk::Vector3 delta = _motionRequested.normalize() * (float)p_event.deltaTime.seconds * _config.moveSpeed;
-			owner()->transform().move(delta);
+			_player->transform().move(delta);
 			p_event.requestPaint();
 		}
 	}
@@ -669,9 +678,12 @@ public:
 			p_event.mouse->position() != windowCenter)
 		{
 			spk::Vector2Int delta = p_event.mouse->position() - windowCenter;
-			float mouseAngle = std::atan2(static_cast<float>(delta.y), static_cast<float>(delta.x));
+			float mouseAngleRad = std::atan2(static_cast<float>(delta.y), static_cast<float>(delta.x));
 
-			owner()->transform().setRotation({0, 0, spk::radianToDegree(mouseAngle)});
+			float mouseAngleDeg = spk::radianToDegree(mouseAngleRad);
+
+			_player->transform().rotateAroundAxis(spk::Vector3(0, 0, 1), mouseAngleDeg);
+			_camera->transform().rotateAroundAxis(spk::Vector3(0, 0, 1), -mouseAngleDeg);
 			
 			p_event.requestPaint();
 		}
