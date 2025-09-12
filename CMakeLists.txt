@@ -1,16 +1,13 @@
 cmake_minimum_required(VERSION 3.16)
 project(Sparkle VERSION 0.1.0)
 
-if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-    set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/EreliaStudio/Sparkle" CACHE PATH "Install path for Sparkle" FORCE)
-endif()
-
 # Set the C++ standard
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(cmake/add_resources.cmake)
 include(CMakePackageConfigHelpers)
+include(GNUInstallDirs)
 
 # Base directories
 set(SPARKLE_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include)
@@ -86,24 +83,25 @@ set(CMAKE_OBJECT_OUTPUT_DIRECTORY ${CMAKE_OBJECT_OUTPUT_DIRECTORY}/${ARCH_FOLDER
 # Install rules
 install(TARGETS Sparkle
         EXPORT SparkleTargets
-        ARCHIVE DESTINATION lib/$<IF:$<CONFIG:Debug>,Debug,Release>/${ARCH_FOLDER}
-        LIBRARY DESTINATION lib/$<IF:$<CONFIG:Debug>,Debug,Release>/${ARCH_FOLDER}
-        RUNTIME DESTINATION bin/$<IF:$<CONFIG:Debug>,Debug,Release>/${ARCH_FOLDER}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/$<IF:$<CONFIG:Debug>,Debug,Release>/${ARCH_FOLDER}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/$<IF:$<CONFIG:Debug>,Debug,Release>/${ARCH_FOLDER}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}/$<IF:$<CONFIG:Debug>,Debug,Release>/${ARCH_FOLDER}
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-install(DIRECTORY ${SPARKLE_INCLUDE_DIR}/ DESTINATION include)
+install(DIRECTORY ${SPARKLE_INCLUDE_DIR}/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 install(EXPORT SparkleTargets
         FILE SparkleTargets.cmake
         NAMESPACE Sparkle::
-        DESTINATION cmake
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Sparkle
 )
 
-set(INCLUDE_INSTALL_DIR include)
+set(INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_INCLUDEDIR})
 
 configure_package_config_file(cmake/SparkleConfig.cmake.in
         ${CMAKE_CURRENT_BINARY_DIR}/SparkleConfig.cmake
-        INSTALL_DESTINATION cmake
+        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Sparkle
         PATH_VARS INCLUDE_INSTALL_DIR
 )
 
@@ -116,7 +114,7 @@ write_basic_package_version_file(
 install(FILES
         ${CMAKE_CURRENT_BINARY_DIR}/SparkleConfig.cmake
         ${CMAKE_CURRENT_BINARY_DIR}/SparkleConfigVersion.cmake
-        DESTINATION cmake
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Sparkle
 )
 
 
