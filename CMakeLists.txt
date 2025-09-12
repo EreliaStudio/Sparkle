@@ -13,8 +13,8 @@ set(SPARKLE_SRC_DIR ${CMAKE_SOURCE_DIR}/src)
 
 # Collect all header and source files recursively
 file(GLOB_RECURSE SPARKLE_HEADERS
-${SPARKLE_INCLUDE_DIR}/*.hpp
-${SPARKLE_INCLUDE_DIR}/*.h
+	${SPARKLE_INCLUDE_DIR}/*.hpp
+	${SPARKLE_INCLUDE_DIR}/*.h
 )
 
 file(GLOB_RECURSE SPARKLE_SOURCES ${SPARKLE_SRC_DIR}/*.cpp)
@@ -50,11 +50,7 @@ target_link_libraries(Sparkle PUBLIC OpenGL::GL)
 target_link_libraries(Sparkle PUBLIC dinput8 dxguid ws2_32)
 
 # Include directories
-target_include_directories(Sparkle
-	PUBLIC
-		$<BUILD_INTERFACE:${SPARKLE_INCLUDE_DIR}>
-		$<INSTALL_INTERFACE:include>
-)
+target_include_directories(Sparkle PUBLIC ${SPARKLE_INCLUDE_DIR})
 
 # Set output directories
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/bin/$<IF:$<CONFIG:Debug>,Debug,Release>)
@@ -78,49 +74,6 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${ARCH_FOLD
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/${ARCH_FOLDER})
 set(CMAKE_OBJECT_OUTPUT_DIRECTORY ${CMAKE_OBJECT_OUTPUT_DIRECTORY}/${ARCH_FOLDER})
 
-# Install the Sparkle library
-install(TARGETS Sparkle
-    EXPORT SparkleTargets
-    ARCHIVE DESTINATION lib
-    LIBRARY DESTINATION lib
-    RUNTIME DESTINATION bin
-)
-
-# Install header files
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/
-    DESTINATION include
-    FILES_MATCHING
-        PATTERN "*.hpp"
-        PATTERN "*.h"
-)
-
-
-# Create a CMake configuration file for find_package support
-include(CMakePackageConfigHelpers)
-
-# Generate the SparkleConfig.cmake file
-configure_package_config_file(
-    ${CMAKE_SOURCE_DIR}/cmake/SparkleConfig.cmake.in
-    ${CMAKE_BINARY_DIR}/SparkleConfig.cmake
-    INSTALL_DESTINATION share/sparkle/cmake
-)
-
-# Install the Sparkle CMake targets to share/sparkle/cmake
-install(EXPORT SparkleTargets
-    FILE SparkleTargets.cmake
-    NAMESPACE Sparkle::
-    DESTINATION share/sparkle/cmake
-)
-
-# Install the SparkleConfig.cmake file to share/sparkle/cmake
-install(FILES ${CMAKE_BINARY_DIR}/SparkleConfig.cmake
-    DESTINATION share/sparkle/cmake
-)
-
-# Install the Sparkle license file to share/sparkle/copyright
-install(FILES ${CMAKE_SOURCE_DIR}/LICENSE.txt
-    DESTINATION share/sparkle
-)
 
 # Option to enable tests
 option(ENABLE_TESTS "Enable building of test units" OFF)
