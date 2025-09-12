@@ -554,7 +554,7 @@ public:
 	}
 };
 
-class TopDown2DController : public spk::Component
+class ActionShooterController : public spk::Component
 {
 public:
 	struct Configuration
@@ -586,7 +586,7 @@ private:
 	}
 
 public:
-	TopDown2DController(const std::wstring &p_name) :
+	ActionShooterController(const std::wstring &p_name) :
 		spk::Component(p_name)
 	{
 		_actions.push_back(
@@ -686,7 +686,7 @@ private:
 public:
 	CameraHolder(const std::wstring &p_name, spk::SafePointer<spk::Entity> p_parent) :
 		spk::Entity(p_name, p_parent),
-		_cameraComponent(addComponent<spk::CameraComponent>(L"Camera/CameraComponent"))
+		_cameraComponent(addComponent<spk::CameraComponent>(p_name + L"/CameraComponent"))
 	{
 		transform().place({0.0f, 0.0f, 20.0f});
 		transform().lookAtLocal({0, 0, 0});
@@ -707,13 +707,13 @@ class Player : public Shape
 {
 private:
 	CameraHolder _cameraHolder;
-	spk::SafePointer<TopDown2DController> _controller;
+	spk::SafePointer<ActionShooterController> _controller;
 
 public:
 	Player(const std::wstring &p_name, spk::SafePointer<spk::Entity> p_parent) :
 		Shape(p_name, p_parent),
 		_cameraHolder(CameraHolder(p_name + L"/CameraHolder", this)),
-		_controller(addComponent<TopDown2DController>(p_name + L"/Controller"))
+		_controller(addComponent<ActionShooterController>(p_name + L"/ActionShooterController"))
 	{
 	}
 
