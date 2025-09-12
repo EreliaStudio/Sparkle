@@ -110,13 +110,27 @@ cmake --build --preset [release/debug/test]
 cmake --install build/[release/debug]
 ```
 
+By default, this command installs Sparkle to `EreliaStudio/Sparkle` alongside the repository root. The resulting directory contains a `lib` folder with separate `Debug` and `Release` subdirectories.
+
 Note: If you wish to specify a custom installation directory, you can set the CMAKE_INSTALL_PREFIX variable when configuring (back at instruction 3) like this :
 ```bash
 cmake --preset [release/debug] -DCMAKE_INSTALL_PREFIX=<install_directory>
 ```
-This will install Sparkle into the specified <install_directory>.
+This will install Sparkle into the specified `<install_directory>`.
 
 You are now ready to use Sparkle in your projects!
+
+When configuring an external project, CMake needs to know where Sparkle was installed. Pass either the installation prefix or the directory containing `SparkleConfig.cmake`:
+
+```bash
+# using the install prefix
+cmake -S <project> -B <build> -DCMAKE_PREFIX_PATH="C:/path/to/EreliaStudio/Sparkle"
+
+# or pointing directly to the config directory
+cmake -S <project> -B <build> -DSparkle_DIR="C:/path/to/EreliaStudio/Sparkle/cmake"
+```
+
+`find_package(Sparkle REQUIRED)` can then locate the imported target and expose the headers and libraries.
 
 ### Using Sparkle in Your Project
 
@@ -124,12 +138,37 @@ To use Sparkle in your project, you need to link against the Sparkle library and
 
 #### Example CMake Setup
 
-Add the following lines to your `CMakeLists.txt`:
+Here is a sample `CMakeLists.txt` that builds an executable and links it against Sparkle:
 
 ```cmake
-# Find Sparkle package
+cmake_minimum_required(VERSION 3.16)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+project(TAAG)
+
 find_package(Sparkle REQUIRED)
 
-# Link Sparkle to your executable
-target_link_libraries(YourProjectName PRIVATE Sparkle::Sparkle)
+set(INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/includes)
+set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/srcs)
+
+file(GLOB_RECURSE HEADERS
+    ${INCLUDE_DIR}/*.hpp
+    ${INCLUDE_DIR}/*.h
+)
+file(GLOB_RECURSE SOURCES ${SRC_DIR}/*.cpp)
+
+add_executable(TAAG ${SOURCES} ${HEADERS})
+
+target_link_libraries(TAAG PRIVATE Sparkle::Sparkle)
+
+target_include_directories(TAAG
+    PRIVATE
+        ${INCLUDE_DIR}
+)
+
+set_target_properties(TAAG PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/bin/$<IF:$<CONFIG:Debug>,Debug,Release>/${ARCH_FOLDER}
+)
 ```
