@@ -1,11 +1,13 @@
 cmake_minimum_required(VERSION 3.16)
-project(Sparkle)
+project(Sparkle VERSION 0.1.0)
 
 # Set the C++ standard
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(cmake/add_resources.cmake)
+include(CMakePackageConfigHelpers)
+include(GNUInstallDirs)
 
 # Base directories
 set(SPARKLE_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include)
@@ -13,8 +15,8 @@ set(SPARKLE_SRC_DIR ${CMAKE_SOURCE_DIR}/src)
 
 # Collect all header and source files recursively
 file(GLOB_RECURSE SPARKLE_HEADERS
-${SPARKLE_INCLUDE_DIR}/*.hpp
-${SPARKLE_INCLUDE_DIR}/*.h
+	${SPARKLE_INCLUDE_DIR}/*.hpp
+	${SPARKLE_INCLUDE_DIR}/*.h
 )
 
 file(GLOB_RECURSE SPARKLE_SOURCES ${SPARKLE_SRC_DIR}/*.cpp)
@@ -37,8 +39,6 @@ add_compile_definitions(NOMINMAX)
 # Define the library
 add_library(Sparkle STATIC ${SPARKLE_SOURCES} ${SPARKLE_HEADERS})
 
-target_include_directories(Sparkle PRIVATE "${CMAKE_BINARY_DIR}")
-
 add_dependencies(Sparkle SparkleResourcesHeaderTarget)
 
 find_package(GLEW REQUIRED)
@@ -51,9 +51,11 @@ target_link_libraries(Sparkle PUBLIC dinput8 dxguid ws2_32)
 
 # Include directories
 target_include_directories(Sparkle
-	PUBLIC
-		$<BUILD_INTERFACE:${SPARKLE_INCLUDE_DIR}>
-		$<INSTALL_INTERFACE:include>
+        PUBLIC
+            $<BUILD_INTERFACE:${SPARKLE_INCLUDE_DIR}>
+            $<INSTALL_INTERFACE:include>
+        PRIVATE
+            "${CMAKE_BINARY_DIR}"
 )
 
 # Set output directories
@@ -78,49 +80,43 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${ARCH_FOLD
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/${ARCH_FOLDER})
 set(CMAKE_OBJECT_OUTPUT_DIRECTORY ${CMAKE_OBJECT_OUTPUT_DIRECTORY}/${ARCH_FOLDER})
 
-# Install the Sparkle library
+# Install rules
 install(TARGETS Sparkle
-    EXPORT SparkleTargets
-    ARCHIVE DESTINATION lib
-    LIBRARY DESTINATION lib
-    RUNTIME DESTINATION bin
+        EXPORT SparkleTargets
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/$<IF:$<CONFIG:Debug>,Debug,Release>/${ARCH_FOLDER}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/$<IF:$<CONFIG:Debug>,Debug,Release>/${ARCH_FOLDER}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}/$<IF:$<CONFIG:Debug>,Debug,Release>/${ARCH_FOLDER}
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-# Install header files
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/
-    DESTINATION include
-    FILES_MATCHING
-        PATTERN "*.hpp"
-        PATTERN "*.h"
-)
+install(DIRECTORY ${SPARKLE_INCLUDE_DIR}/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
-
-# Create a CMake configuration file for find_package support
-include(CMakePackageConfigHelpers)
-
-# Generate the SparkleConfig.cmake file
-configure_package_config_file(
-    ${CMAKE_SOURCE_DIR}/cmake/SparkleConfig.cmake.in
-    ${CMAKE_BINARY_DIR}/SparkleConfig.cmake
-    INSTALL_DESTINATION share/sparkle/cmake
-)
-
-# Install the Sparkle CMake targets to share/sparkle/cmake
 install(EXPORT SparkleTargets
-    FILE SparkleTargets.cmake
-    NAMESPACE Sparkle::
-    DESTINATION share/sparkle/cmake
+        FILE SparkleTargets.cmake
+        NAMESPACE Sparkle::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Sparkle
 )
 
-# Install the SparkleConfig.cmake file to share/sparkle/cmake
-install(FILES ${CMAKE_BINARY_DIR}/SparkleConfig.cmake
-    DESTINATION share/sparkle/cmake
+set(INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_INCLUDEDIR})
+
+configure_package_config_file(cmake/SparkleConfig.cmake.in
+        ${CMAKE_CURRENT_BINARY_DIR}/SparkleConfig.cmake
+        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Sparkle
+        PATH_VARS INCLUDE_INSTALL_DIR
 )
 
-# Install the Sparkle license file to share/sparkle/copyright
-install(FILES ${CMAKE_SOURCE_DIR}/LICENSE.txt
-    DESTINATION share/sparkle
+write_basic_package_version_file(
+        ${CMAKE_CURRENT_BINARY_DIR}/SparkleConfigVersion.cmake
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY SameMajorVersion
 )
+
+install(FILES
+        ${CMAKE_CURRENT_BINARY_DIR}/SparkleConfig.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/SparkleConfigVersion.cmake
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Sparkle
+)
+
 
 # Option to enable tests
 option(ENABLE_TESTS "Enable building of test units" OFF)
