@@ -58,13 +58,6 @@ namespace spk
 		{
 		}
 
-		template <typename UType = TType, std::enable_if_t<std::is_floating_point<UType>::value, int> = 0>
-		IVector2(const spk::JSON::Object &p_input) :
-			x(static_cast<TType>(p_input[L"x"].as<double>())),
-			y(static_cast<TType>(p_input[L"y"].as<double>()))
-		{
-		}
-
 		template <typename UType = TType, std::enable_if_t<!std::is_floating_point<UType>::value, int> = 0>
 		IVector2(const spk::JSON::Object &p_input)
 		{
@@ -96,13 +89,29 @@ namespace spk
 		{
 			if constexpr (std::is_floating_point<TType>::value)
 			{
-				x = p_input[L"X"].as<double>();
-				y = p_input[L"Y"].as<double>();
+				if (p_input.isArray() == true)
+				{
+					x = p_input[0].as<double>();
+					x = p_input[1].as<double>();
+				}
+				else
+				{
+					x = p_input[L"X"].as<double>();
+					y = p_input[L"Y"].as<double>();
+				}
 			}
 			else
 			{
-				x = p_input[L"X"].as<long>();
-				y = p_input[L"Y"].as<long>();
+				if (p_input.isArray() == true)
+				{
+					x = p_input[0].as<long>();
+					x = p_input[1].as<long>();
+				}
+				else
+				{
+					x = p_input[L"X"].as<long>();
+					y = p_input[L"Y"].as<long>();
+				}
 			}
 		}
 
