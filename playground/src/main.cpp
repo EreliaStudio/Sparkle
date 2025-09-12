@@ -579,6 +579,7 @@ private:
 
 	spk::SafePointer<spk::Entity> _player;
 	spk::SafePointer<spk::Entity> _camera;
+	float _lastMouseAngleRad = 0.0f;
 
 	void _applyConfiguration()
 	{
@@ -680,10 +681,13 @@ public:
 			spk::Vector2Int delta = p_event.mouse->position() - windowCenter;
 			float mouseAngleRad = std::atan2(static_cast<float>(delta.y), static_cast<float>(delta.x));
 
-			float mouseAngleDeg = spk::radianToDegree(mouseAngleRad);
+			float deltaAngleRad = std::atan2(std::sin(mouseAngleRad - _lastMouseAngleRad), std::cos(mouseAngleRad - _lastMouseAngleRad));
+			float deltaAngleDeg = spk::radianToDegree(deltaAngleRad);
 
-			_player->transform().rotateAroundAxis(spk::Vector3(0, 0, 1), mouseAngleDeg);
-			_camera->transform().rotateAroundAxis(spk::Vector3(0, 0, 1), -mouseAngleDeg);
+			_player->transform().rotateAroundAxis(spk::Vector3(0, 0, 1), deltaAngleDeg);
+			_camera->transform().rotateAroundAxis(spk::Vector3(0, 0, 1), -deltaAngleDeg);
+
+			_lastMouseAngleRad = mouseAngleRad;
 			
 			p_event.requestPaint();
 		}
