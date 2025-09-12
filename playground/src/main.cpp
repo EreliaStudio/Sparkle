@@ -512,8 +512,8 @@ private:
 			float maxY = std::max(std::max(wBL.y, wBR.y), std::max(wTL.y, wTR.y));
 
 			const spk::Vector2Int &cs = PlaygroundTileMap::Chunk::size;
-			start.x = static_cast<int>(std::floor(minX / static_cast<float>(cs.x))) - 1;
-			start.y = static_cast<int>(std::floor(minY / static_cast<float>(cs.y))) - 1;
+			start.x = static_cast<int>(std::floor(minX / static_cast<float>(cs.x))) - 2;
+			start.y = static_cast<int>(std::floor(minY / static_cast<float>(cs.y))) - 2;
 			end.x = static_cast<int>(std::floor(maxX / static_cast<float>(cs.x))) + 1;
 			end.y = static_cast<int>(std::floor(maxY / static_cast<float>(cs.y))) + 1;
 		}
