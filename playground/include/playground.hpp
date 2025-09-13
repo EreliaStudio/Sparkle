@@ -11,3 +11,5 @@
 #include "player.hpp"
 
 #include "debug_overlay.hpp"
+
+#include "asset_atlas.hpp"

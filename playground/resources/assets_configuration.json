@@ -1,0 +1,15 @@
+{
+	"SpriteSheets":[
+		{
+			"Name":"DefaultTileMapTexture",
+			"Path":"playground/resources/texture/tile_map.png",
+			"Size":[16, 6]
+		}],
+	"Images":[],
+	"Fonts":[
+		{
+			"Name":"DefaultFont",
+			"Path":"playground/resources/font/capitolcitystraight.ttf"
+		}
+	]
+}
