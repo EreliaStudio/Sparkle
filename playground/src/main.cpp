@@ -669,27 +669,28 @@ public:
 
 	void onMouseEvent(spk::MouseEvent& p_event) override
 	{
-		spk::SafePointer<spk::Window> window = p_event.window;
-
-		const spk::Geometry2D &windowGeometry = window->geometry();
-		spk::Vector2Int windowCenter(static_cast<int>(windowGeometry.width) / 2, static_cast<int>(windowGeometry.height) / 2);
-		
-		if (p_event.type == spk::MouseEvent::Type::Motion && 
-			p_event.mouse->deltaPosition() != spk::Vector2Int(0, 0) && 
-			p_event.mouse->position() != windowCenter)
+		if (p_event.type == spk::MouseEvent::Type::Motion)
 		{
-			spk::Vector2Int delta = p_event.mouse->position() - windowCenter;
-			float mouseAngleRad = std::atan2(static_cast<float>(delta.y), static_cast<float>(delta.x));
-
-			float deltaAngleRad = std::atan2(std::sin(mouseAngleRad - _lastMouseAngleRad), std::cos(mouseAngleRad - _lastMouseAngleRad));
-			float deltaAngleDeg = spk::radianToDegree(deltaAngleRad);
-
-			_player->transform().rotateAroundAxis(spk::Vector3(0, 0, 1), deltaAngleDeg);
-			_camera->transform().rotateAroundAxis(spk::Vector3(0, 0, 1), -deltaAngleDeg);
-
-			_lastMouseAngleRad = mouseAngleRad;
+			spk::SafePointer<spk::Window> window = p_event.window;
 			
-			p_event.requestPaint();
+			const spk::Geometry2D &windowGeometry = window->geometry();
+			spk::Vector2Int windowCenter(static_cast<int>(windowGeometry.width) / 2, static_cast<int>(windowGeometry.height) / 2);
+			
+			if (p_event.mouse->position() != windowCenter)
+			{
+				spk::Vector2Int delta = p_event.mouse->position() - windowCenter;
+				float mouseAngleRad = std::atan2(static_cast<float>(delta.y), static_cast<float>(delta.x));
+				
+				float deltaAngleRad = std::atan2(std::sin(mouseAngleRad - _lastMouseAngleRad), std::cos(mouseAngleRad - _lastMouseAngleRad));
+				float deltaAngleDeg = spk::radianToDegree(deltaAngleRad);
+				
+				_player->transform().rotateAroundAxis(spk::Vector3(0, 0, 1), deltaAngleDeg);
+				_camera->transform().rotateAroundAxis(spk::Vector3(0, 0, 1), -deltaAngleDeg);
+				
+				_lastMouseAngleRad = mouseAngleRad;
+				
+				p_event.requestPaint();
+			}
 		}
 	}
 };
