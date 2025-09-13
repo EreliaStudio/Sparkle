@@ -2,6 +2,8 @@
 
 #include <sparkle.hpp>
 
+#include "event.hpp"
+
 namespace taag
 {
 	class CameraHolder : public spk::Entity
@@ -9,36 +11,17 @@ namespace taag
 	private:
 		static inline spk::SafePointer<const CameraHolder> _mainCamera = nullptr;
 
+		EventDispatcher::Instanciator _instanciator;
 		spk::SafePointer<spk::CameraComponent> _cameraComponent;
 
 	public:
-		CameraHolder(const std::wstring &p_name, spk::SafePointer<spk::Entity> p_parent) :
-			spk::Entity(p_name, p_parent),
-			_cameraComponent(addComponent<spk::CameraComponent>(p_name + L"/CameraComponent"))
-		{
-			transform().place({0.0f, 0.0f, 20.0f});
-			transform().lookAtLocal({0, 0, 0});
-		}
+		CameraHolder(const std::wstring &p_name, spk::SafePointer<spk::Entity> p_parent);
 
-		const spk::Camera &camera() const
-		{
-			return (_cameraComponent->camera());
-		}
+		const spk::Camera &camera() const;
 
-		void setOrthographic(spk::Vector2 p_viewSize)
-		{
-			_cameraComponent->setOrthographic(p_viewSize.x, p_viewSize.y);
-			EventDispatcher::emit(Event::RefreshView);
-		}
+		void setOrthographic(spk::Vector2 p_viewSize);
 
-		void setAsMainCamera() const
-		{
-			_mainCamera = this;
-		}
-
-		static spk::SafePointer<const CameraHolder> mainCamera()
-		{
-			return (_mainCamera);
-		}
+		void setAsMainCamera() const;
+		static spk::SafePointer<const CameraHolder> mainCamera();
 	};
 }
