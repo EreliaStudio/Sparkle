@@ -1,5 +1,6 @@
 #include "action_shooter_controller.hpp"
 #include <sparkle.hpp>
+#include "event.hpp"
 
 namespace taag
 {
@@ -80,6 +81,7 @@ namespace taag
 			spk::Vector3 delta = _motionRequested.normalize() * (float)p_event.deltaTime.seconds * _config.moveSpeed;
 			_player->transform().move(delta);
 			p_event.requestPaint();
+			EventDispatcher::emit(Event::PlayerMotion);
 		}
 	}
 

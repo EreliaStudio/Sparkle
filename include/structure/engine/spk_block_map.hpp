@@ -364,7 +364,7 @@ namespace spk
 			return (_availableBlocks.at(p_id).get());
 		}
 
-		void setChunkRange(const spk::Vector3Int &p_start, const spk::Vector3Int &p_end)
+		void activateChunks(const spk::Vector3Int &p_start, const spk::Vector3Int &p_end)
 		{
 			for (auto &chunk : _activeChunks)
 			{

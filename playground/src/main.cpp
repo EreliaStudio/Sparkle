@@ -6,6 +6,8 @@ int main()
 	auto window = app.createWindow(L"Playground", {{0, 0}, {800, 600}});
 	window->setUpdateTimer(0);
 
+	taag::AssetAtlas::instanciate();
+
 	spk::GameEngine engine;
 	spk::GameEngineWidget engineWidget(L"EngineWidget", window->widget());
 	engineWidget.setGeometry({{0, 0}, window->geometry().size});
@@ -29,6 +31,7 @@ int main()
 	tileMap.addTileByID(1, taag::TileMap::TileType({4, 0}, taag::TileMap::TileType::Type::Autotile, taag::TileFlag::TerritoryBlue));
 	tileMap.addTileByID(2, taag::TileMap::TileType({8, 0}, taag::TileMap::TileType::Type::Autotile, taag::TileFlag::TerritoryGreen));
 	tileMap.addTileByID(3, taag::TileMap::TileType({12, 0}, taag::TileMap::TileType::Type::Autotile, taag::TileFlag::TerritoryRed));
+	tileMap.generate({15, 15});
 
 	return app.run();
 }

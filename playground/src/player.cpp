@@ -8,7 +8,6 @@ namespace taag
 		_controller(addComponent<ActionShooterController>(p_name + L"/ActionShooterController"))
 	{
 		_cameraHolder.setAsMainCamera();
-		transform().addOnEditionCallback([&](){EventDispatcher::emit(Event::PlayerMotion);}).relinquish();
 	}
 
 	spk::SafePointer<CameraHolder> Player::camera()

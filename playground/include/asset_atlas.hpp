@@ -6,7 +6,7 @@ namespace taag
 {
 	class AssetAtlas : public spk::Singleton<AssetAtlas>, public spk::AssetAtlas
 	{
-		friend class AssetAtlas;
+		friend class spk::Singleton<AssetAtlas>;
 
 	private:
 		AssetAtlas()

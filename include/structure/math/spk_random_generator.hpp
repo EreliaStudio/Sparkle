@@ -31,6 +31,11 @@ namespace spk
 
 		RandomGenerator(const RandomGenerator &p_other) = delete;
 
+		std::mt19937& generator()
+		{
+			return (_generator);
+		}
+
 		void configureSeed(const uint64_t &p_seed)
 		{
 			_generator = std::mt19937(p_seed);

@@ -2,15 +2,6 @@
 
 namespace taag
 {
-	spk::Vector2Int TileMap::ChunkSelector::_computeChunk(const spk::Vector3 &p_worldPos) const
-	{
-		const spk::Vector2Int &size = TileMap::Chunk::size;
-
-		int cx = static_cast<int>(std::floor(p_worldPos.x / static_cast<float>(size.x)));
-		int cy = static_cast<int>(std::floor(p_worldPos.y / static_cast<float>(size.y)));
-		return spk::Vector2Int(cx, cy);
-	}
-
 	void TileMap::ChunkSelector::_refreshRange()
 	{
 		if (CameraHolder::mainCamera() == nullptr)
@@ -18,7 +9,7 @@ namespace taag
 			return;
 		}
 
-		spk::Vector2Int currentChunk = _computeChunk(CameraHolder::mainCamera()->transform().position());
+		spk::Vector2Int currentChunk = TileMap::worldToChunkCoordinates(CameraHolder::mainCamera()->transform().position().xy());
 
 		if (_lastChunk.has_value() == true && _lastChunk.value() == currentChunk)
 		{
@@ -57,7 +48,7 @@ namespace taag
 			end.y = static_cast<int>(std::floor(maxY / static_cast<float>(cs.y))) + 1;
 		}
 
-		_tileMap->setChunkRange(start, end);
+		_tileMap->activateChunks(start, end);
 	}
 
 	TileMap::ChunkSelector::ChunkSelector(const std::wstring &p_name) :
@@ -68,6 +59,7 @@ namespace taag
 	void TileMap::ChunkSelector::start()
 	{
 		_tileMap = owner().upCast<TileMap>();
+		_lastPlayerPosition = -1;
 
 		_onRefreshViewContract = EventDispatcher::subscribe(
 			Event::RefreshView,
@@ -76,7 +68,10 @@ namespace taag
 				_lastChunk.reset();
 				_refreshRange();
 			});
-		_onPlayerMotionContract = EventDispatcher::subscribe(Event::PlayerMotion, [&]() { _refreshRange(); });
+		_onPlayerMotionContract = EventDispatcher::subscribe(Event::PlayerMotion, [&]()
+		{
+			_refreshRange();
+		});
 	}
 
 	void TileMap::ChunkSelector::awake()
@@ -86,18 +81,11 @@ namespace taag
 
 	void TileMap::_onChunkGeneration(const spk::Vector2Int &p_chunkCoordinate, Chunk &p_chunkToFill)
 	{
-		for (int i = 0; i < Chunk::size.x; i++)
+		for (size_t i = 0; i < Chunk::size.x; i++)
 		{
-			for (int j = 0; j < Chunk::size.y; j++)
+			for (size_t j = 0; j < Chunk::size.y; j++)
 			{
-				if (i == 0 || j == 0)
-				{
-					p_chunkToFill.setContent(i, j, 0, 0);
-				}
-				// else
-				// {
-				// 	p_chunkToFill.setContent(i, j, 0, (rand() % 3) + 1);
-				// }
+				p_chunkToFill.setContent(i, j, 0, (p_chunkCoordinate.x + p_chunkCoordinate.y) % 2 == 0 ? 2 : 1);
 			}
 		}
 
@@ -109,5 +97,125 @@ namespace taag
 		spk::TileMap<16, 16, 4, TileFlag>(p_name, p_parent),
 		_chunkSelector(addComponent<ChunkSelector>(p_name + L"/ChunkSelector"))
 	{
+
+	}
+
+	struct AvailablePool
+	{
+		static inline const bool Empty = false;
+		static inline const bool Full = true;
+
+		spk::Vector2UInt mapSize{};
+		std::unordered_map<spk::Vector2UInt, bool> spaceLeft;
+		std::vector<spk::Vector2UInt> nodeToTest;
+		spk::RandomGenerator<int> randomGenerator;
+
+		AvailablePool(const unsigned int &p_seed, const spk::Vector2UInt& p_mapSize) :
+			randomGenerator(p_seed),
+			mapSize(p_mapSize)
+		{
+			const size_t total = static_cast<size_t>(p_mapSize.x) * static_cast<size_t>(p_mapSize.y);
+			spaceLeft.reserve(total);
+			nodeToTest.reserve(total);
+			for (size_t i = 0; i < p_mapSize.x; i++)
+			{
+				for (size_t j = 0; j < p_mapSize.y; j++)
+				{
+					spaceLeft[{i, j}] = Empty;
+					nodeToTest.push_back({i, j});
+				}
+			}
+			std::shuffle(nodeToTest.begin(), nodeToTest.end(), randomGenerator.generator());
+		}
+
+		bool check(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size)
+		{
+			for (size_t i = 0; i < p_size.x; i++)
+			{
+				for (size_t j = 0; j < p_size.y; j++)
+				{
+					spk::Vector2Int tmp = {i, j};
+					if (spaceLeft.contains(tmp) == false ||
+						spaceLeft.at(tmp) == Full)
+					{
+						return (false);
+					}
+				}
+			}
+			return (true);
+		}
+
+		std::optional<spk::Vector2Int> find(const spk::Vector2UInt& p_size)
+		{
+			for (auto pos : nodeToTest)
+			{
+				if (check(pos, p_size) == true)
+				{
+					return (pos);
+				}
+			}
+			return (std::nullopt);
+		}
+
+		void insertArea(const spk::Vector2Int& p_anchor, const spk::Vector2UInt& p_size)
+		{
+			for (int i = 0; i < p_size.x; i++)
+			{
+				for (int j = 0; j < p_size.y; j++)
+				{
+					spk::Vector2Int tmp = {i, j};
+					spaceLeft[tmp] = Full;
+					//Remove the nodeTotest i/j
+					nodeToTest.erase(
+						std::remove_if(nodeToTest.begin(), nodeToTest.end(),
+							[&](const spk::Vector2UInt& c){return c == tmp;}),
+						nodeToTest.end());
+				}
+			}
+		}
+	};
+
+	void TileMap::_placeArea(const spk::Vector2Int &p_anchor, const spk::Vector2UInt &p_size)
+	{
+		for (int chunkX = 0; chunkX < p_size.x; chunkX++)
+		{
+			for (int chunkY = 0; chunkY < p_size.y; chunkY++)
+			{
+				spk::Vector2Int chunkCoord = spk::Vector2Int(chunkX, chunkY) + p_anchor;
+				spk::SafePointer<Chunk> tmpChunk = chunk(chunkCoord);
+
+				for (int i = 0; i < Chunk::size.x; i++)
+				{
+					for (int j = 0; j < Chunk::size.y; j++)
+					{
+						if ((chunkX == 0 && i < 2) ||
+							(chunkX == (p_size.x - 1) && i > (Chunk::size.x - 3)) ||
+							(chunkY == 0 && j < 2) ||
+							(chunkY == (p_size.y - 1) && j > (Chunk::size.y - 3)))
+						{
+							tmpChunk->setContent(i, j, 0, 0);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	void TileMap::generate(const spk::Vector2UInt& p_mapSize)
+	{
+		// size_t defaultSeed = 123456789;
+
+		// AvailablePool availablePool = AvailablePool(defaultSeed, p_mapSize);
+
+		// spk::Vector2Int colAndRowSize = p_mapSize / 3;
+		// spk::Vector2Int offset = (colAndRowSize - spk::Vector2Int(3, 3)) / 2;
+
+		// for (size_t i = 0; i < 3; i++)
+		// {
+		// 	for (size_t j = 0; j < 3; j++)
+		// 	{
+		// 		_placeArea(offset + (colAndRowSize * spk::Vector2Int(i, j)), {3, 3});
+		// 	}
+		// }
 	}
 }

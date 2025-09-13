@@ -27,6 +27,7 @@ namespace taag
 
 			spk::SafePointer<TileMap> _tileMap;
 			std::optional<spk::Vector2Int> _lastChunk;
+			spk::Vector2Int _lastPlayerPosition;
 
 			EventDispatcher::Contract<> _onRefreshViewContract;
 			EventDispatcher::Contract<> _onPlayerMotionContract;
@@ -46,9 +47,13 @@ namespace taag
 
 		void _onChunkGeneration(const spk::Vector2Int &p_chunkCoordinate, Chunk &p_chunkToFill) override;
 
+		void _placeArea(const spk::Vector2Int &p_anchor, const spk::Vector2UInt &p_size);
+
 	public:
 		using spk::TileMap<16, 16, 4, TileFlag>::TileMap;
 
 		TileMap(const std::wstring &p_name, spk::SafePointer<spk::Entity> p_parent);
+
+		void generate(const spk::Vector2UInt& p_mapSize);
 	};
 }

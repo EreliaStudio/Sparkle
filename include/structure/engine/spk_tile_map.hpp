@@ -48,6 +48,7 @@ namespace spk
 
 				void _bake()
 				{
+					DEBUG_LINE();
 					if (_chunk != nullptr)
 					{
 						_mesh = _chunk->bakeCollisionMesh(_flags);
@@ -57,6 +58,7 @@ namespace spk
 							_collider->setCollisionMesh(&_mesh);
 						}
 					}
+					DEBUG_LINE();
 				}
 
 			public:
@@ -105,7 +107,7 @@ namespace spk
 			private:
 				spk::SafePointer<Mesh2DRenderer> _renderer;
 				spk::SafePointer<TileMap<ChunkSizeX, ChunkSizeY, TLayerCount, TFlagEnum>> _tileMap;
-				spk::Vector2Int _chunkCoordinate = 0;
+				spk::Vector2Int _chunkCoordinates = 0;
 				std::array<std::array<std::array<typename TileType::ID, LayerCount>, ChunkSizeX>, ChunkSizeY> _content;
 
 				bool _isBaked = false;
@@ -353,7 +355,7 @@ namespace spk
 
 					const auto &sheet = *(_tileMap->spriteSheet());
 					const spk::Vector2UInt &baseAnchor = p_tile.spriteAnchor();
-					const spk::Vector2Int basePosition = _chunkCoordinate * size + spk::Vector2Int(p_x, p_y);
+					const spk::Vector2Int basePosition = _chunkCoordinates * size + spk::Vector2Int(p_x, p_y);
 
 					for (const Corner &corner : corners)
 					{
@@ -426,7 +428,7 @@ namespace spk
 
 				void setChunkCoordinate(const spk::Vector2Int &p_coord)
 				{
-					_chunkCoordinate = p_coord;
+					_chunkCoordinates = p_coord;
 				}
 
 				void fill(typename TileType::ID p_id)
@@ -452,6 +454,10 @@ namespace spk
 				void setContent(int p_x, int p_y, int p_layer, typename TileType::ID p_id)
 				{
 					_content[p_x][p_y][p_layer] = p_id;
+				}
+
+				void validate()
+				{
 					_isBaked = false;
 					spk::SafePointer<Chunk> chunk = owner();
 					if (chunk != nullptr)
@@ -845,10 +851,7 @@ namespace spk
 
 		typename TileType::ID content(spk::Vector2Int p_global, int p_layer) const
 		{
-			// Compute the chunk coordinate using floor division to properly handle negatives
-			const int cx = static_cast<int>(std::floor(static_cast<float>(p_global.x) / static_cast<float>(Chunk::size.x)));
-			const int cy = static_cast<int>(std::floor(static_cast<float>(p_global.y) / static_cast<float>(Chunk::size.y)));
-			spk::Vector2Int chunkCoord = {cx, cy};
+			spk::Vector2Int chunkCoord = worldToChunkCoordinates(p_global);
 
 			if (_chunks.contains(chunkCoord) == false)
 			{
@@ -861,7 +864,72 @@ namespace spk
 			return _chunks.at(chunkCoord)->content(local, p_layer);
 		}
 
-		void setChunkRange(const spk::Vector2Int &p_start, const spk::Vector2Int &p_end)
+		void setContent(const spk::Vector2Int &p_global, int p_layer, typename TileType::ID p_id)
+		{
+			const spk::Vector2Int chunkCoord = worldToChunkCoordinate(p_global);
+
+			if (_chunks.contains(chunkCoord) == false)
+			{
+				_chunks.emplace(chunkCoord, std::move(_generateChunk(chunkCoord)));
+				_unbakeNeightbours(chunkCoord);
+			}
+
+			spk::Vector2Int local = absoluteToRelativeCoordinate(p_global);
+
+			_chunks[chunkCoord]->setContent(local, p_layer, p_id);
+		}
+
+		void setContent(int p_x, int p_y, int p_layer, typename TileType::ID p_id)
+		{
+			setContent(spk::Vector2Int(p_x, p_y), p_layer, p_id);
+		}
+
+		static spk::Vector2Int worldToChunkCoordinates(const spk::Vector2Int &p_global)
+		{
+			const int cx = static_cast<int>(std::floor(static_cast<float>(p_global.x) / static_cast<float>(Chunk::size.x)));
+			const int cy = static_cast<int>(std::floor(static_cast<float>(p_global.y) / static_cast<float>(Chunk::size.y)));
+			return {cx, cy};
+		}
+
+		static spk::Vector2Int chunkToWorldCoordinates(const spk::Vector2Int &p_chunkCoord)
+		{
+			return {p_chunkCoord.x * Chunk::size.x, p_chunkCoord.y * Chunk::size.y};
+		}
+
+		static spk::Vector2Int absoluteToRelativeCoordinates(const spk::Vector2Int &p_global)
+		{
+			return {
+				static_cast<int>(spk::positiveModulo(p_global.x, Chunk::size.x)), static_cast<int>(spk::positiveModulo(p_global.y, Chunk::size.y))};
+		}
+
+		static spk::Vector2Int relativeToAbsoluteCoordinates(const spk::Vector2Int &p_relative, const spk::Vector2Int &p_chunkCoord)
+		{
+			return {p_chunkCoord.x * Chunk::size.x + p_relative.x, p_chunkCoord.y * Chunk::size.y + p_relative.y};
+		}
+
+		spk::SafePointer<Chunk> chunk(const spk::Vector2Int &p_chunkCoordinates)
+		{
+			if (_chunks.contains(p_chunkCoordinates) == false)
+			{
+				_chunks.emplace(p_chunkCoordinates, std::move(_generateChunk(p_chunkCoordinates)));
+
+				_unbakeNeightbours(p_chunkCoordinates);
+			}
+
+			return (_chunks[p_chunkCoordinates].get());
+		}
+
+		spk::SafePointer<const Chunk> chunk(const spk::Vector2Int &p_chunkCoordinates) const
+		{
+			if (_chunks.contains(p_chunkCoordinates) == false)
+			{
+				return (nullptr);
+			}
+
+			return (_chunks.at(p_chunkCoordinates).get());
+		}
+
+		void activateChunks(const spk::Vector2Int &p_start, const spk::Vector2Int &p_end)
 		{
 			for (auto &chunk : _activeChunks)
 			{
@@ -873,15 +941,7 @@ namespace spk
 			{
 				for (int j = p_start.y; j <= p_end.y; j++)
 				{
-					spk::Vector2Int chunkPos = {i, j};
-					if (_chunks.contains(chunkPos) == false)
-					{
-						_chunks.emplace(chunkPos, std::move(_generateChunk(chunkPos)));
-						// Newly created chunk may alter neighbour autotiles; mark neighbours for re-bake.
-						_unbakeNeightbours(chunkPos);
-					}
-
-					_activeChunks.push_back((_chunks[chunkPos].get()));
+					_activeChunks.push_back(chunk({i, j}));
 				}
 			}
 

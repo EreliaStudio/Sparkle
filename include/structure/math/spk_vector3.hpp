@@ -119,8 +119,8 @@ namespace spk
 				if (p_input.isArray() == true)
 				{
 					x = p_input[0].as<double>();
-					x = p_input[1].as<double>();
-					x = p_input[2].as<double>();
+					y = p_input[1].as<double>();
+					z = p_input[2].as<double>();
 				}
 				else
 				{
@@ -134,8 +134,8 @@ namespace spk
 				if (p_input.isArray() == true)
 				{
 					x = p_input[0].as<long>();
-					x = p_input[1].as<long>();
-					x = p_input[2].as<long>();
+					y = p_input[1].as<long>();
+					z = p_input[2].as<long>();
 				}
 				else
 				{
