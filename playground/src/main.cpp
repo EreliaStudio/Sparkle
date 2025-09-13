@@ -9,6 +9,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "action_shooter_controller.hpp"
+
 class Shape : public spk::Entity
 {
 public:
@@ -554,147 +556,6 @@ public:
 	}
 };
 
-class ActionShooterController : public spk::Component
-{
-public:
-	struct Configuration
-	{
-		static inline const std::wstring ForwardActionName = L"Forward";
-		static inline const std::wstring LeftActionName = L"Left";
-		static inline const std::wstring BackwardActionName = L"Backward";
-		static inline const std::wstring RightActionName = L"Right";
-
-		float moveSpeed = 5.0f;
-		std::unordered_map<std::wstring, spk::Keyboard::Key> keymap = {
-			{ForwardActionName, spk::Keyboard::Z},
-			{LeftActionName, spk::Keyboard::Q},
-			{BackwardActionName, spk::Keyboard::S},
-			{RightActionName, spk::Keyboard::D}};
-	};
-
-private:
-	Configuration _config;
-	std::vector<std::unique_ptr<spk::Action>> _actions;
-	spk::Vector3 _motionRequested = {0, 0, 0};
-
-	spk::SafePointer<spk::Entity> _player;
-	spk::SafePointer<spk::Entity> _camera;
-	float _lastMouseAngleRad = 0.0f;
-
-	void _applyConfiguration()
-	{
-		dynamic_cast<spk::KeyboardAction *>(_actions[0].get())->setDeviceValue(_config.keymap[L"Forward"], spk::InputState::Down);
-		dynamic_cast<spk::KeyboardAction *>(_actions[1].get())->setDeviceValue(_config.keymap[L"Left"], spk::InputState::Down);
-		dynamic_cast<spk::KeyboardAction *>(_actions[2].get())->setDeviceValue(_config.keymap[L"Backward"], spk::InputState::Down);
-		dynamic_cast<spk::KeyboardAction *>(_actions[3].get())->setDeviceValue(_config.keymap[L"Right"], spk::InputState::Down);
-	}
-
-public:
-	ActionShooterController(const std::wstring &p_name) :
-		spk::Component(p_name)
-	{
-		_actions.push_back(
-			std::make_unique<spk::KeyboardAction>(
-				_config.keymap[L"Forward"],
-				spk::InputState::Down,
-				10,
-				[&](const spk::SafePointer<const spk::Keyboard> &p_keyboard) { _motionRequested += spk::Vector3(0, 1, 0); }));
-
-		_actions.push_back(
-			std::make_unique<spk::KeyboardAction>(
-				_config.keymap[L"Left"],
-				spk::InputState::Down,
-				10,
-				[&](const spk::SafePointer<const spk::Keyboard> &p_keyboard) { _motionRequested -= spk::Vector3(1, 0, 0); }));
-
-		_actions.push_back(
-			std::make_unique<spk::KeyboardAction>(
-				_config.keymap[L"Backward"],
-				spk::InputState::Down,
-				10,
-				[&](const spk::SafePointer<const spk::Keyboard> &p_keyboard) { _motionRequested -= spk::Vector3(0, 1, 0); }));
-
-		_actions.push_back(
-			std::make_unique<spk::KeyboardAction>(
-				_config.keymap[L"Right"],
-				spk::InputState::Down,
-				10,
-				[&](const spk::SafePointer<const spk::Keyboard> &p_keyboard) { _motionRequested += spk::Vector3(1, 0, 0); }));
-	}
-
-	void setConfiguration(const Configuration &p_configuration)
-	{
-		_config = p_configuration;
-		_applyConfiguration();
-	}
-
-	const Configuration &configuration() const
-	{
-		return (_config);
-	}
-
-	void awake() override
-	{
-		_player = owner();
-		_camera = owner()->getChild(owner()->name() + L"/CameraHolder");
-	}
-
-	void onUpdateEvent(spk::UpdateEvent &p_event) override
-	{
-		if ((p_event.keyboard == nullptr) == true)
-		{
-			return;
-		}
-
-		_motionRequested = spk::Vector3(0, 0, 0);
-
-		for (auto &action : _actions)
-		{
-			if ((action->isInitialized() == false) == true)
-			{
-				action->initialize(p_event);
-			}
-
-			action->update();
-		}
-
-		bool isMotionRequested = (_motionRequested != spk::Vector3());
-		if (isMotionRequested == true)
-		{
-			spk::Vector3 delta = _motionRequested.normalize() * (float)p_event.deltaTime.seconds * _config.moveSpeed;
-			_player->transform().move(delta);
-			p_event.requestPaint();
-		}
-	}
-
-	void onMouseEvent(spk::MouseEvent& p_event) override
-	{
-		if (p_event.type == spk::MouseEvent::Type::Motion)
-		{
-			spk::SafePointer<spk::Window> window = p_event.window;
-			
-			const spk::Geometry2D &windowGeometry = window->geometry();
-			spk::Vector2Int windowCenter(static_cast<int>(windowGeometry.width) / 2, static_cast<int>(windowGeometry.height) / 2);
-			
-			if (p_event.mouse->position() != windowCenter)
-			{
-				spk::Vector2Int delta = p_event.mouse->position() - windowCenter;
-				float mouseAngleRad = std::atan2(static_cast<float>(delta.y), static_cast<float>(delta.x));
-				
-				float deltaAngleRad = std::atan2(std::sin(mouseAngleRad - _lastMouseAngleRad), std::cos(mouseAngleRad - _lastMouseAngleRad));
-				float deltaAngleDeg = spk::radianToDegree(deltaAngleRad);
-				
-				_player->transform().rotateAroundAxis(spk::Vector3(0, 0, 1), deltaAngleDeg);
-				_camera->transform().rotateAroundAxis(spk::Vector3(0, 0, 1), -deltaAngleDeg);
-				
-				_lastMouseAngleRad = mouseAngleRad;
-				
-				p_event.requestPaint();
-			}
-		}
-	}
-};
-
 class CameraHolder : public spk::Entity
 {
 private:
@@ -724,13 +585,13 @@ class Player : public Shape
 {
 private:
 	CameraHolder _cameraHolder;
-	spk::SafePointer<ActionShooterController> _controller;
+	spk::SafePointer<taag::ActionShooterController> _controller;
 
 public:
 	Player(const std::wstring &p_name, spk::SafePointer<spk::Entity> p_parent) :
 		Shape(p_name, p_parent),
 		_cameraHolder(CameraHolder(p_name + L"/CameraHolder", this)),
-		_controller(addComponent<ActionShooterController>(p_name + L"/ActionShooterController"))
+		_controller(addComponent<taag::ActionShooterController>(p_name + L"/ActionShooterController"))
 	{
 	}
 
