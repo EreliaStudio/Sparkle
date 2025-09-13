@@ -32,6 +32,12 @@ namespace spk
 		bool operator==(const spk::Plane &p_plane) const;
 		bool operator!=(const spk::Plane &p_plane) const;
 		bool operator<(const spk::Plane &p_plane) const;
+
+		friend std::ostream &operator<<(std::ostream &os, const spk::Plane &p)
+		{
+			os << "Plane: normal " << p.normal << " - origin " << p.origin;
+			return os;
+		}
 	};
 }
 

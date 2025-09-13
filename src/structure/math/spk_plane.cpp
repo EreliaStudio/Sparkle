@@ -59,14 +59,7 @@ namespace spk
 
 	bool Plane::operator==(const spk::Plane &p_plane) const
 	{
-		spk::Vector3 n = normal.normalize();
-		spk::Vector3 otherN = p_plane.normal.normalize();
-
-		if (n != otherN && n != -otherN)
-		{
-			return false;
-		}
-		return (origin == p_plane.origin);
+		return isSame(p_plane);
 	}
 
 	bool Plane::operator!=(const spk::Plane &p_plane) const

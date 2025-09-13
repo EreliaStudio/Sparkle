@@ -1,5 +1,7 @@
 enable_testing()
 
+find_package(rapidcheck REQUIRED)
+
 find_package(GTest REQUIRED)
 
 include(GoogleTest)
@@ -18,6 +20,7 @@ add_executable(SparkleChecker ${SPARKLE_CHECKER_SOURCES})
 target_link_libraries(SparkleChecker PRIVATE 
     Sparkle 
 	GTest::GTest GTest::Main GTest::gmock GTest::gmock_main
+    rapidcheck
 )
 
 gtest_discover_tests(SparkleChecker)
