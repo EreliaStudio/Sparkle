@@ -23,6 +23,11 @@ namespace spk::JSON
 
 	void File::load(const std::filesystem::path &p_filePath)
 	{
+		if (std::filesystem::exists(p_filePath) == false)
+		{
+			GENERATE_ERROR("File not found: " + p_filePath.string());
+		}
+
 		std::wstring fileContent = spk::FileUtils::readFileAsWString(p_filePath);
 
 		if (fileContent.empty())

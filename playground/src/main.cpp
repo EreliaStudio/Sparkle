@@ -861,26 +861,19 @@ int main()
 	engineWidget.setGameEngine(&engine);
 	engineWidget.activate();
 
-	// ------------- Shape renderer entity -----------
 	engine.rootObject()->addComponent<Shape::Renderer>(L"Shape renderer");
 
-	// ------------- Tilemap entity --------------
 	PlaygroundTileMap tileMap(L"TileMap", nullptr);
 	engine.addEntity(&tileMap);
 
 	spk::SpriteSheet tilemapSpriteSheet("playground/resources/texture/tile_map.png", {16, 6});
 	tileMap.activate();
 	tileMap.setSpriteSheet(&tilemapSpriteSheet);
-	tileMap.addTileByID(0, PlaygroundTileMap::TileType({0, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::Obstacle)); // Wall
-	tileMap.addTileByID(
-		1, PlaygroundTileMap::TileType({4, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::TerritoryBlue)); // Blue territory
-	tileMap.addTileByID(
-		2, PlaygroundTileMap::TileType({8, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::TerritoryGreen)); // Green territory
-	tileMap.addTileByID(
-		3, PlaygroundTileMap::TileType({12, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::TerritoryRed)); // Red territory
-	// ------------------------------------------
+	tileMap.addTileByID(0, PlaygroundTileMap::TileType({0, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::Obstacle));
+	tileMap.addTileByID(1, PlaygroundTileMap::TileType({4, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::TerritoryBlue));
+	tileMap.addTileByID(2, PlaygroundTileMap::TileType({8, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::TerritoryGreen));
+	tileMap.addTileByID(3, PlaygroundTileMap::TileType({12, 0}, PlaygroundTileMap::TileType::Type::Autotile, TileFlag::TerritoryRed));
 
-	// ------------- Player entity --------------
 	Player player(L"Player", nullptr);
 	player.camera()->setOrthographic({20, 20});
 	player.setType(Shape::Type::Triangle);
@@ -889,7 +882,6 @@ int main()
 
 	player.addComponent<TileMapChunkStreamer>(L"Player/TileMapChunkStreamer", &tileMap, player.cameraComponent());
 	player.activate();
-	// ------------------------------------------
 
 	return app.run();
 }
