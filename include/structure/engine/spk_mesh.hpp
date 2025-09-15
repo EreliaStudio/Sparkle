@@ -38,18 +38,12 @@ namespace spk
 
 		unsigned int _getOrInsertVertex(const Vertex &p_v, std::unordered_map<Vertex, unsigned int> &p_vertexMap) const
 		{
-			auto it = p_vertexMap.find(p_v);
-			if (it != p_vertexMap.end())
+			auto insertResult = p_vertexMap.try_emplace(p_v, static_cast<unsigned int>(_buffer.vertices.size()));
+			if (insertResult.second == true)
 			{
-				return it->second;
-			}
-			else
-			{
-				const unsigned int newIndex = static_cast<unsigned int>(_buffer.vertices.size());
 				_buffer.vertices.push_back(p_v);
-				p_vertexMap[p_v] = newIndex;
-				return newIndex;
 			}
+			return insertResult.first->second;
 		}
 
 		void _bakeShape(const Shape &p_shape, std::unordered_map<Vertex, unsigned int> &p_vertexMap) const
@@ -142,6 +136,13 @@ namespace spk
 			_needBake = true;
 		}
 
+		void addShape(std::vector<Vertex> &&p_vertices)
+		{
+			std::lock_guard lock(_mutex);
+			_shapes.push_back(Shape{std::move(p_vertices)});
+			_needBake = true;
+		}
+
 		void addShape(std::initializer_list<Vertex> p_vertices)
 		{
 			addShape(std::vector<Vertex>(p_vertices));
@@ -160,7 +161,7 @@ namespace spk
 		void popShape()
 		{
 			std::lock_guard lock(_mutex);
-			if (!_shapes.empty())
+			if (_shapes.empty() == false)
 			{
 				_shapes.pop_back();
 				_needBake = true;
@@ -213,10 +214,31 @@ namespace spk
 		{
 			std::lock_guard lock(_mutex);
 
+			if (_needBake == false)
+			{
+				return;
+			}
+
+			// Clear and reserve to minimize reallocations during baking.
 			_buffer.vertices.clear();
 			_buffer.indexes.clear();
 
+			std::size_t totalVertexCandidates = 0;
+			std::size_t totalIndexCount = 0;
+			for (const auto &s : _shapes)
+			{
+				totalVertexCandidates += s.points.size();
+				if (s.points.size() >= 3)
+				{
+					totalIndexCount += (s.points.size() - 2) * 3;
+				}
+			}
+
+			_buffer.vertices.reserve(totalVertexCandidates);
+			_buffer.indexes.reserve(totalIndexCount);
+
 			std::unordered_map<Vertex, unsigned int> vertexMap;
+			vertexMap.reserve(totalVertexCandidates);
 
 			for (const auto &s : _shapes)
 			{
@@ -228,11 +250,17 @@ namespace spk
 
 		const Buffer &buffer() const
 		{
-			if (_needBake)
+			if (_needBake == true)
 			{
 				bake();
 			}
 			return _buffer;
+		}
+
+		void reserveShapes(size_t p_count)
+		{
+			std::lock_guard lock(_mutex);
+			_shapes.reserve(p_count);
 		}
 	};
 }

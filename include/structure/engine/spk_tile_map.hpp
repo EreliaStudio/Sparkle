@@ -48,7 +48,6 @@ namespace spk
 
 				void _bake()
 				{
-					DEBUG_LINE();
 					if (_chunk != nullptr)
 					{
 						_mesh = _chunk->bakeCollisionMesh(_flags);
@@ -58,7 +57,6 @@ namespace spk
 							_collider->setCollisionMesh(&_mesh);
 						}
 					}
-					DEBUG_LINE();
 				}
 
 			public:
@@ -110,6 +108,10 @@ namespace spk
 				spk::Vector2Int _chunkCoordinates = 0;
 				std::array<std::array<std::array<typename TileType::ID, LayerCount>, ChunkSizeX>, ChunkSizeY> _content;
 
+				// Cache of the 3x3 neighbour chunks' Data components centered on this chunk.
+				// Indexed as [_dy + 1][_dx + 1] where dx,dy in {-1,0,1} relative to _chunkCoordinates.
+				std::array<std::array<spk::SafePointer<const Data>, 3>, 3> _neightbourDataCache;
+
 				bool _isBaked = false;
 				spk::Mesh2D _mesh;
 
@@ -137,22 +139,91 @@ namespace spk
 					BottomLeft = 3
 				};
 
+				// Refresh the 3x3 neighbour cache for fast tile lookups across chunk borders.
+				void _updateNeightbourDataCache()
+				{
+					// Obtain const access to tile map to avoid generating missing chunks during caching.
+					spk::SafePointer<const TileMap<ChunkSizeX, ChunkSizeY, TLayerCount, TFlagEnum>> constTileMap = _tileMap;
+
+					for (int dy = -1; dy <= 1; ++dy)
+					{
+						for (int dx = -1; dx <= 1; ++dx)
+						{
+							const spk::Vector2Int neighbourCoord = _chunkCoordinates + spk::Vector2Int(dx, dy);
+							spk::SafePointer<const Chunk> neighbourChunk = constTileMap->chunk(neighbourCoord);
+							if (neighbourChunk != nullptr)
+							{
+								_neightbourDataCache[static_cast<size_t>(dy + 1)][static_cast<size_t>(dx + 1)] = neighbourChunk->_data;
+							}
+							else
+							{
+								_neightbourDataCache[static_cast<size_t>(dy + 1)][static_cast<size_t>(dx + 1)] = nullptr;
+							}
+						}
+					}
+				}
+
+				// Fast content fetch using the neighbour cache.
+				typename TileType::ID _cachedContent(const spk::Vector2Int &p_globalCoord, int p_layer) const
+				{
+					const spk::Vector2Int rel = p_globalCoord - (_chunkCoordinates * size);
+					int dx = 0;
+					if (rel.x < 0)
+					{
+						dx = -1;
+					}
+					else if (rel.x >= size.x)
+					{
+						dx = 1;
+					}
+					int dy = 0;
+					if (rel.y < 0)
+					{
+						dy = -1;
+					}
+					else if (rel.y >= size.y)
+					{
+						dy = 1;
+					}
+
+					if (dx < -1 || dx > 1 || dy < -1 || dy > 1)
+					{
+						return _tileMap->content(p_globalCoord, p_layer);
+					}
+
+					const int localX = rel.x - (dx * size.x);
+					const int localY = rel.y - (dy * size.y);
+					if (dx == 0 && dy == 0)
+					{
+						return _content[localX][localY][p_layer];
+					}
+
+					const spk::SafePointer<const Data> &neighbourData =
+						_neightbourDataCache[static_cast<size_t>(dy + 1)][static_cast<size_t>(dx + 1)];
+					if (neighbourData == nullptr)
+					{
+						return -1;
+					}
+
+					return neighbourData->content(localX, localY, p_layer);
+				}
+
 				std::array<bool, 3> _getNeighbourState(
 					const spk::Vector2Int &p_globalTileCoord, int p_layer, typename TileType::ID p_currentId, const Corner &p_corner) const
 				{
-					static const std::map<Corner, std::array<spk::Vector2Int, 3>> cornerNeighbourOffsets = {
-						{Corner::TopLeft, {spk::Vector2Int(0, 1), spk::Vector2Int(-1, 0), spk::Vector2Int(-1, 1)}},
-						{Corner::TopRight, {spk::Vector2Int(0, 1), spk::Vector2Int(1, 0), spk::Vector2Int(1, 1)}},
-						{Corner::BottomRight, {spk::Vector2Int(0, -1), spk::Vector2Int(1, 0), spk::Vector2Int(1, -1)}},
-						{Corner::BottomLeft, {spk::Vector2Int(0, -1), spk::Vector2Int(-1, 0), spk::Vector2Int(-1, -1)}}};
+					static const std::array<std::array<spk::Vector2Int, 3>, 4> kCornerNeighbourOffsets = {
+						std::array<spk::Vector2Int, 3>{spk::Vector2Int(0, 1), spk::Vector2Int(-1, 0), spk::Vector2Int(-1, 1)},
+						std::array<spk::Vector2Int, 3>{spk::Vector2Int(0, 1), spk::Vector2Int(1, 0), spk::Vector2Int(1, 1)},
+						std::array<spk::Vector2Int, 3>{spk::Vector2Int(0, -1), spk::Vector2Int(1, 0), spk::Vector2Int(1, -1)},
+						std::array<spk::Vector2Int, 3>{spk::Vector2Int(0, -1), spk::Vector2Int(-1, 0), spk::Vector2Int(-1, -1)}};
 
-					const auto &cornerOffsets = cornerNeighbourOffsets.at(p_corner);
+					const auto &cornerOffsets = kCornerNeighbourOffsets[static_cast<size_t>(p_corner)];
 
 					std::array<bool, 3> state = {false, false, false};
 
-					state[0] = (_tileMap->content(p_globalTileCoord + cornerOffsets[0], p_layer) != p_currentId);
-					state[1] = (_tileMap->content(p_globalTileCoord + cornerOffsets[1], p_layer) != p_currentId);
-					state[2] = (_tileMap->content(p_globalTileCoord + cornerOffsets[2], p_layer) != p_currentId);
+					state[0] = (_cachedContent(p_globalTileCoord + cornerOffsets[0], p_layer) != p_currentId);
+					state[1] = (_cachedContent(p_globalTileCoord + cornerOffsets[1], p_layer) != p_currentId);
+					state[2] = (_cachedContent(p_globalTileCoord + cornerOffsets[2], p_layer) != p_currentId);
 
 					return (state);
 				}
@@ -185,182 +256,90 @@ namespace spk
 					// Corner::BottomLeft diagram layout:
 					//  [b][C]
 					//  [c][a]
-					static const std::unordered_map<Corner, OffsetCube> offsetsByCornerAndNeightbour = {
-						{Corner::TopLeft,
+					static const std::array<OffsetCube, 4> offsetsByCornerAndNeightbour = {
+						{// Corner::TopLeft
 						 OffsetCube{
-							 {OffsetMat{
-								  {OffsetRow{// a=1, b=1, c=1
-											 // XX
-											 // XC
-											 spk::Vector2UInt(1, 4),
-											 // a=1, b=1, c=0
-											 // .X
-											 // XC
-											 spk::Vector2UInt(2, 0)},
-								   OffsetRow{// a=1, b=0, c=1
-											 // XX
-											 // .C
-											 spk::Vector2UInt(0, 4),
-											 // a=1, b=0, c=0
-											 // .X
-											 // .C
-											 spk::Vector2UInt(0, 3)}}},
+							 {// a = 1
 							  OffsetMat{
-								  {OffsetRow{// a=0, b=1, c=1
-											 // X.
-											 // XC
-											 spk::Vector2UInt(1, 2),
-											 // a=0, b=1, c=0
-											 // ..
-											 // XC
-											 spk::Vector2UInt(1, 2)},
-								   OffsetRow{// a=0, b=0, c=1
-											 // X.
-											 // .C
-											 spk::Vector2UInt(0, 2),
-											 // a=0, b=0, c=0
-											 // ..
-											 // .C
-											 spk::Vector2UInt(0, 0)}}}}}},
+								  {// b = 1
+								   OffsetRow{{spk::Vector2UInt(1, 4), spk::Vector2UInt(2, 0)}},
+								   // b = 0
+								   OffsetRow{{spk::Vector2UInt(0, 4), spk::Vector2UInt(0, 3)}}}},
+							  // a = 0
+							  OffsetMat{
+								  {// b = 1
+								   OffsetRow{{spk::Vector2UInt(1, 2), spk::Vector2UInt(1, 2)}},
+								   // b = 0
+								   OffsetRow{{spk::Vector2UInt(0, 2), spk::Vector2UInt(0, 0)}}}}}},
 
-						{Corner::TopRight,
+						 // Corner::TopRight
 						 OffsetCube{
-							 {OffsetMat{
-								  {OffsetRow{// a=1, b=1, c=1
-											 // XX
-											 // CX
-											 spk::Vector2UInt(2, 4),
-											 // a=1, b=1, c=0
-											 // X.
-											 // CX
-											 spk::Vector2UInt(3, 0)},
-								   OffsetRow{// a=1, b=0, c=1
-											 // XX
-											 // C.
-											 spk::Vector2UInt(3, 3),
-											 // a=1, b=0, c=0
-											 // X.
-											 // C.
-											 spk::Vector2UInt(3, 3)}}},
+							 {// a = 1
 							  OffsetMat{
-								  {OffsetRow{// a=0, b=1, c=1
-											 // .X
-											 // CX
-											 spk::Vector2UInt(2, 2),
-											 // a=0, b=1, c=0
-											 // ..
-											 // CX
-											 spk::Vector2UInt(2, 2)},
-								   OffsetRow{// a=0, b=0, c=1
-											 // .X
-											 // C.
-											 spk::Vector2UInt(3, 2),
-											 // a=0, b=0, c=0
-											 // ..
-											 // C.
-											 spk::Vector2UInt(1, 0)}}}}}},
+								  {// b = 1
+								   OffsetRow{{spk::Vector2UInt(2, 4), spk::Vector2UInt(3, 0)}},
+								   // b = 0
+								   OffsetRow{{spk::Vector2UInt(3, 3), spk::Vector2UInt(3, 3)}}}},
+							  // a = 0
+							  OffsetMat{
+								  {// b = 1
+								   OffsetRow{{spk::Vector2UInt(2, 2), spk::Vector2UInt(2, 2)}},
+								   // b = 0
+								   OffsetRow{{spk::Vector2UInt(3, 2), spk::Vector2UInt(1, 0)}}}}}},
 
-						{Corner::BottomRight,
+						 // Corner::BottomRight
 						 OffsetCube{
-							 {OffsetMat{
-								  {OffsetRow{// a=1, b=1, c=1
-											 // CX
-											 // XX
-											 spk::Vector2UInt(2, 4),
-											 // a=1, b=1, c=0
-											 // CX
-											 // X.
-											 spk::Vector2UInt(3, 1)},
-								   OffsetRow{// a=1, b=0, c=1
-											 // C.
-											 // XX
-											 spk::Vector2UInt(3, 4),
-											 // a=1, b=0, c=0
-											 // C.
-											 // X.
-											 spk::Vector2UInt(3, 4)}}},
+							 {// a = 1
 							  OffsetMat{
-								  {OffsetRow{// a=0, b=1, c=1
-											 // CX
-											 // .X
-											 spk::Vector2UInt(2, 5),
-											 // a=0, b=1, c=0
-											 // CX
-											 // ..
-											 spk::Vector2UInt(2, 5)},
-								   OffsetRow{// a=0, b=0, c=1
-											 // C.
-											 // .X
-											 spk::Vector2UInt(3, 5),
-											 // a=0, b=0, c=0
-											 // C.
-											 // ..
-											 spk::Vector2UInt(1, 1)}}}}}},
+								  {// b = 1
+								   OffsetRow{{spk::Vector2UInt(2, 4), spk::Vector2UInt(3, 1)}},
+								   // b = 0
+								   OffsetRow{{spk::Vector2UInt(3, 4), spk::Vector2UInt(3, 4)}}}},
+							  // a = 0
+							  OffsetMat{
+								  {// b = 1
+								   OffsetRow{{spk::Vector2UInt(2, 5), spk::Vector2UInt(2, 5)}},
+								   // b = 0
+								   OffsetRow{{spk::Vector2UInt(3, 5), spk::Vector2UInt(1, 1)}}}}}},
 
-						{Corner::BottomLeft,
+						 // Corner::BottomLeft
 						 OffsetCube{
-							 {OffsetMat{
-								  {OffsetRow{// a=1, b=1, c=1
-											 // XC
-											 // XX
-											 spk::Vector2UInt(1, 4),
-											 // a=1, b=1, c=0
-											 // XC
-											 // .X
-											 spk::Vector2UInt(2, 1)},
-								   OffsetRow{// a=1, b=0, c=1
-											 // .C
-											 // XX
-											 spk::Vector2UInt(0, 4),
-											 // a=1, b=0, c=0
-											 // .C
-											 // .X
-											 spk::Vector2UInt(0, 4)}}},
+							 {// a = 1
 							  OffsetMat{
-								  {OffsetRow{// a=0, b=1, c=1
-											 // XC
-											 // X.
-											 spk::Vector2UInt(1, 5),
-											 // a=0, b=1, c=0
-											 // XC
-											 // ..
-											 spk::Vector2UInt(1, 5)},
-								   OffsetRow{// a=0, b=0, c=1
-											 // .C
-											 // X.
-											 spk::Vector2UInt(0, 5),
-											 // a=0, b=0, c=0
-											 // .C
-											 // ..
-											 spk::Vector2UInt(0, 1)}}}}}}};
+								  {// b = 1
+								   OffsetRow{{spk::Vector2UInt(1, 4), spk::Vector2UInt(2, 1)}},
+								   // b = 0
+								   OffsetRow{{spk::Vector2UInt(0, 4), spk::Vector2UInt(0, 4)}}}},
+							  // a = 0
+							  OffsetMat{
+								  {// b = 1
+								   OffsetRow{{spk::Vector2UInt(1, 5), spk::Vector2UInt(1, 5)}},
+								   // b = 0
+								   OffsetRow{{spk::Vector2UInt(0, 5), spk::Vector2UInt(0, 1)}}}}}}}};
 
 					int aState = static_cast<int>(p_neightbourState[0]);
 					int bState = static_cast<int>(p_neightbourState[1]);
 					int cState = static_cast<int>(p_neightbourState[2]);
 
-					return (offsetsByCornerAndNeightbour.at(p_corner)[aState][bState][cState]);
+					return (offsetsByCornerAndNeightbour[static_cast<size_t>(p_corner)][aState][bState][cState]);
 				}
 
 				void _bakeAutotile(int p_x, int p_y, int p_layer, typename TileType::ID p_currentId, const TileType &p_tile)
 				{
 					// With world Y up, the cell origin (p_x,p_y) is the bottom-left of the tile.
 					// Place sub-quads so that Top corners have y offset +0.5, Bottom corners at y offset 0.
-					static const std::unordered_map<Corner, spk::Vector2> cornerBaseOffset = {
-						{Corner::TopLeft, spk::Vector2(0.0f, 0.5f)},
-						{Corner::TopRight, spk::Vector2(0.5f, 0.5f)},
-						{Corner::BottomRight, spk::Vector2(0.5f, 0.0f)},
-						{Corner::BottomLeft, spk::Vector2(0.0f, 0.0f)}};
+					static const std::array<spk::Vector2, 4> kCornerBaseOffset = {
+						spk::Vector2(0.0f, 0.5f), spk::Vector2(0.5f, 0.5f), spk::Vector2(0.5f, 0.0f), spk::Vector2(0.0f, 0.0f)};
 
 					const std::array<Corner, 4> corners = {Corner::TopLeft, Corner::TopRight, Corner::BottomRight, Corner::BottomLeft};
 
-					const auto &sheet = *(_tileMap->spriteSheet());
 					const spk::Vector2UInt &baseAnchor = p_tile.spriteAnchor();
 					const spk::Vector2Int basePosition = _chunkCoordinates * size + spk::Vector2Int(p_x, p_y);
 
 					for (const Corner &corner : corners)
 					{
 						const spk::Vector2 cornerPosition =
-							spk::Vector2(static_cast<float>(p_x), static_cast<float>(p_y)) + cornerBaseOffset.at(corner);
+							spk::Vector2(static_cast<float>(p_x), static_cast<float>(p_y)) + kCornerBaseOffset[static_cast<size_t>(corner)];
 
 						std::array<bool, 3> state = _getNeighbourState(basePosition, p_layer, p_currentId, corner);
 
@@ -377,6 +356,12 @@ namespace spk
 				void _bake()
 				{
 					_mesh.clear();
+
+					const size_t maxShapeCount = static_cast<size_t>(size.x) * static_cast<size_t>(size.y) * LayerCount * 4;
+					_mesh.shapes().reserve(maxShapeCount / 2);
+
+					_updateNeightbourDataCache();
+
 					for (int layer = 0; layer < static_cast<int>(LayerCount); ++layer)
 					{
 						for (int y = 0; y < size.y; ++y)
@@ -392,8 +377,6 @@ namespace spk
 									{
 										continue;
 									}
-
-									spk::Vector2UInt spriteCoord = tile->spriteAnchor();
 
 									switch (tile->type())
 									{

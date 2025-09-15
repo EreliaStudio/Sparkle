@@ -179,11 +179,11 @@ namespace spk
 			size_t size() const;
 
 			template <typename TExportedType>
-			TExportedType *as()
+			TExportedType& as()
 			{
 				if (sizeof(TExportedType) == size())
 				{
-					return reinterpret_cast<TExportedType *>(buffer()->data() + offset());
+					return *(reinterpret_cast<TExportedType *>(buffer()->data() + offset()));
 				}
 				else
 				{
@@ -194,11 +194,11 @@ namespace spk
 			}
 
 			template <typename TExportedType>
-			const TExportedType *as() const
+			const TExportedType& as() const
 			{
 				if (sizeof(TExportedType) == size())
 				{
-					return reinterpret_cast<TExportedType *>(buffer()->data() + offset());
+					return &(reinterpret_cast<TExportedType *>(buffer()->data() + offset()));
 				}
 				else
 				{

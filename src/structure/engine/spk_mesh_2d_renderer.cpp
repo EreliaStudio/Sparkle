@@ -10,6 +10,10 @@ namespace spk
 {
 	spk::Lumina::Shader Mesh2DRenderer::Painter::_createShader()
 	{
+		if (spk::Lumina::ShaderObjectFactory::instance() == nullptr)
+		{
+			spk::Lumina::ShaderObjectFactory::instanciate();
+		}
 		spk::Lumina::ShaderObjectFactory::instance()->add(
 			spk::JSON::Object::fromString(SPARKLE_GET_RESOURCE_AS_STRING("resources/json/mesh_renderer_shader_object.json")));
 

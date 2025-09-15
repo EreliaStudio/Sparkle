@@ -79,6 +79,19 @@ namespace spk::OpenGL
 				return *this;
 			}
 
+			template <typename TType, typename std::enable_if_t<spk::IsContainer<TType>::value> * = nullptr>
+			DynamicArray &operator=(const TType &p_input)
+			{
+				resize(p_input.size());
+				size_t index = 0;
+				for (auto &value : p_input)
+				{
+					_elements[index] = value;
+					++index;
+				}
+				return *this;
+			}
+
 		private:
 			spk::TContractProvider<size_t> _resizeContractProvider;
 			spk::DataBuffer *_buffer;

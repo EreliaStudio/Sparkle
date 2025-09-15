@@ -14,8 +14,6 @@ namespace spk
 		class Painter
 		{
 		private:
-			static inline spk::Lumina::ShaderObjectFactory::Instanciator _instanciator;
-
 			static spk::Lumina::Shader _createShader();
 			static spk::Lumina::Shader _shader;
 
