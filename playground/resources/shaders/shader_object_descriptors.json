@@ -1,0 +1,59 @@
+{
+	"UBO":[
+		{
+			"name": "CameraUBO",
+			"data": {
+				"BlockName": "CameraUBO",
+				"BindingPoint": 0,
+				"Size": 128,
+				"Elements": [
+					{"Name": "viewMatrix", "Offset": 0, "Size": 64},
+					{"Name": "projectionMatrix", "Offset": 64, "Size": 64}
+				]
+			}
+		},
+		{
+			"name": "ChunkDataUBO",
+			"data": {
+				"BlockName": "ChunkDataUBO",
+				"BindingPoint": 1,
+				"Size": 268,
+				"Elements": [
+					{
+						"Name": "position",
+						"Offset": 0,
+						"Size": 8
+					},
+					{
+						"Name": "data",
+						"Offset": 8,
+						"Size": 256
+					}
+				]
+			}
+		}
+	],
+	"SSBO":[
+		{
+			"name": "ColorPaletteSSBO",
+			"data": {
+				"BlockName": "ColorPaletteSSBO",
+				"BindingPoint": 2,
+				"FixedSize": 0,
+				"PaddingFixedToDynamic": 0,
+				"DynamicElementSize": 4,
+				"DynamicElementPadding": 0,
+				"FixedElements": [
+
+				],
+				"DynamicElementComposition": [
+					{"Name": "hexCode", "Offset": 0, "Size": 4}
+				],
+				"InitialDynamicCount": 0
+			}
+		}
+	],
+	"Sampler":[
+
+	]
+}
