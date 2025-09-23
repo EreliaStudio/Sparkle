@@ -373,13 +373,11 @@ private:
 
 	void _refreshChunkVisibility()
 	{
-		DEBUG_LINE();
 		spk::Vector2Int minCoord = Map::worldToChunkCoordinates(Camera::mainCamera()->ndcToWorldPosition({-1, -1}));
 		spk::Vector2Int maxCoord = Map::worldToChunkCoordinates(Camera::mainCamera()->ndcToWorldPosition({1, 1}));
 
 		std::set<spk::Vector2Int> neededCoordinates;
 
-		DEBUG_LINE();
 		for (int x = minCoord.x; x < maxCoord.x; x++)
 		{
 			for (int y = minCoord.y; y < maxCoord.y; y++)
@@ -387,7 +385,6 @@ private:
 				neededCoordinates.insert(spk::Vector2Int(x, y));
 			}
 		}
-		DEBUG_LINE();
 
 		for (auto it = _usedPainters.begin(); it != _usedPainters.end(); )
 		{
@@ -400,27 +397,18 @@ private:
 				++it;
 			}
 		}
-		DEBUG_LINE();
 
-		DEBUG_LINE();
 		_usedPainters.reserve(_usedPainters.size() + neededCoordinates.size());
-		DEBUG_LINE();
 		for (const auto& coordinates : neededCoordinates)
 		{
-		DEBUG_LINE();
 			if (_usedPainters.find(coordinates) == _usedPainters.end())
 			{
-		DEBUG_LINE();
 				auto obj = _painterPool.obtain();
-		DEBUG_LINE();
 				obj->updateData(coordinates, Context::instance()->map.chunk(coordinates));
-		DEBUG_LINE();
 				_usedPainters.emplace(coordinates, std::move(obj));
-		DEBUG_LINE();
 			}
 		}
 
-		DEBUG_LINE();
 		_requestPaint();
 	}
 
@@ -450,7 +438,6 @@ private:
 
 	void _onGeometryChange()
 	{
-		DEBUG_LINE();
 		try
 		{
 			Context::instance()->camera.setScreenSize(geometry().size);
@@ -459,7 +446,6 @@ private:
 		{
 			PROPAGATE_ERROR("Error while setting screen size", e);
 		}
-		DEBUG_LINE();
 		try
 		{
 			EventDispatcher::emit(Event::RefreshChunkVisibility);
@@ -468,7 +454,6 @@ private:
 		{
 			PROPAGATE_ERROR("Error uppon RefreshChunkVisibility emition ", e);
 		}
-		DEBUG_LINE();
 	}
 
 public:

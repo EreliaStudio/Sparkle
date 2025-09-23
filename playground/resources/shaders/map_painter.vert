@@ -1,66 +1,80 @@
 #version 450
 
-layout (location = 0) in vec2 modelPosition;
+layout(location = 0) in vec2 modelPosition; // Expressed from 0 to 1, describing a square or 1 world unit of size
 
-layout(std140, binding = 0) uniform CameraUBO
-{
+layout(std140, binding = 0) uniform CameraUBO {
     mat4 viewMatrix;
     mat4 projectionMatrix;
 } cameraUBO;
 
+layout(std140, binding = 1) uniform TimeUBO {
+    uint epoch;
+} timeUBO;
+
 const int GRID_W = 16;
 const int GRID_H = 16;
-const int CELL_PER_VALUE = 4;
+const int GRID_LAYER = 5;
 
-layout(std140, binding = 1) uniform ChunkDataUBO
-{
-	ivec2 position;
-    uint data[GRID_W * GRID_H / CELL_PER_VALUE];
+layout(std430, binding = 2) buffer ChunkDataUBO {
+    ivec2 position;
+    int data[GRID_W * GRID_H * GRID_LAYER];
+    int activeCells[];
 } chunkDataUBO;
 
-layout(std430, binding = 2) buffer ColorPaletteSSBO
+struct Tile {
+    ivec2 coordinates;
+    int nbFrames;
+    ivec2 offsetBetweenFrames;
+    uint animationDuration;
+};
+
+layout(std430, binding = 3) buffer TilesetSSBO {
+    vec2 spriteUnit;
+    Tile elements[];
+} tilesetSSBO;
+
+layout(location = 0) out vec2 fragUVs;
+
+ivec3 getTilePositionFromIndex(int index)
 {
-    uint hexCodes[];
-} colorPaletteSSBO;
-
-layout (location = 0) out flat vec4 vColor;
-
-uint getColorIdentifier(int x, int y)
-{
-    int i = y * GRID_W + x;
-
-    int word = i >> 2;
-
-    int byteInWord = i & 3;
-
-    uint packed = chunkDataUBO.data[word];
-
-    uint shift = uint(byteInWord * 8);
-
-    return (packed >> shift) & 0xFFu;
-}
-
-vec4 decodeRGBA8(uint hexCode)
-{
-    float r = float((hexCode >>  0) & 255u) / 255.0;
-    float g = float((hexCode >>  8) & 255u) / 255.0;
-    float b = float((hexCode >> 16) & 255u) / 255.0;
-    float a = float((hexCode >> 24) & 255u) / 255.0;
-    return vec4(r, g, b, a);
+    index = clamp(index, 0, GRID_W * GRID_H * GRID_LAYER - 1);
+    int perLayer = GRID_W * GRID_H;
+    int layer    = index / perLayer;
+    int inLayer  = index - layer * perLayer;
+    int y = inLayer / GRID_W;
+    int x = inLayer - y * GRID_W;
+    return ivec3(x, y, layer);
 }
 
 void main()
 {
-    int x =  gl_InstanceID & 15; // translate to "% 16"
-	int y =  gl_InstanceID >> 4; // translate to "/ 16"
+    int cellIndex = chunkDataUBO.activeCells[gl_InstanceID];
 
-    uint colorId = getColorIdentifier(x, y);
-    uint hexCode = colorPaletteSSBO.hexCodes[colorId];
-    vColor = decodeRGBA8(hexCode);
+    int  tileID   = chunkDataUBO.data[cellIndex];
+    Tile tile     = tilesetSSBO.elements[tileID];
+    ivec3 tilePos = getTilePositionFromIndex(cellIndex);
 
-	vec2 chunkWorldPos = vec2(chunkDataUBO.position) * vec2(GRID_W, GRID_H);
-    vec2 worldXY = modelPosition + vec2(x, y) + chunkWorldPos;
-    vec4 worldPos = vec4(worldXY, 0.0, 1.0);
+    ivec2 chunkBaseCells = chunkDataUBO.position * ivec2(GRID_W, GRID_H);
+    ivec2 cellXY = chunkBaseCells + tilePos.xy;
+    vec2  local = modelPosition;
+    vec2  worldXY = vec2(cellXY) + local;
+    float z = float(tilePos.z);
 
+    vec4 worldPos = vec4(worldXY, z, 1.0);
     gl_Position = cameraUBO.projectionMatrix * cameraUBO.viewMatrix * worldPos;
+
+    vec2 baseUV = vec2(tile.coordinates) * tilesetSSBO.spriteUnit;
+    vec2 frameOffsetUV = vec2(0.0);
+    
+	if (tile.nbFrames > 0 && tile.animationDuration > 0u)
+	{
+        uint t     = timeUBO.epoch % tile.animationDuration;
+        uint step  = max(1u, tile.animationDuration / uint(tile.nbFrames));
+        uint frame = min(t / step, uint(max(0, tile.nbFrames - 1)));
+        ivec2 delta = tile.offsetBetweenFrames * int(frame);
+        frameOffsetUV = vec2(delta) * tilesetSSBO.spriteUnit;
+    }
+    
+	vec2 perVertexUV = local * tilesetSSBO.spriteUnit;
+    fragUVs = baseUV + frameOffsetUV + perVertexUV;
 }
