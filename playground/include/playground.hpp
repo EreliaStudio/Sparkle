@@ -2,14 +2,5 @@
 
 #include "sparkle.hpp"
 
-#include "event.hpp"
-
-#include "tilemap.hpp"
-
-#include "shape.hpp"
-
-#include "player.hpp"
-
-#include "debug_overlay.hpp"
-
-#include "asset_atlas.hpp"
+#include "shader_atlas.hpp"
+#include "camera.hpp"
