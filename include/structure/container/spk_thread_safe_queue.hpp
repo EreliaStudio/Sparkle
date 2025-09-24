@@ -20,6 +20,14 @@ namespace spk
 			return (_mQueue.empty());
 		}
 
+		void push(const TType &p_item)
+		{
+			std::unique_lock<std::mutex> lock(_mMutex);
+
+			_mQueue.push(p_item);
+			_mCond.notify_one();
+		}
+
 		void push(TType &&p_item)
 		{
 			std::unique_lock<std::mutex> lock(_mMutex);

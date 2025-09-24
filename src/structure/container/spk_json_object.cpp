@@ -8,6 +8,8 @@
 
 #include "structure/container/spk_json_file.hpp"
 
+#include "spk_debug_macro.hpp"
+
 namespace spk
 {
 	namespace JSON
@@ -254,6 +256,12 @@ namespace spk
 
 		bool Object::contains(const std::wstring &p_key) const
 		{
+			if (_initialized == false ||
+				std::holds_alternative<std::map<std::wstring, std::shared_ptr<Object>>>(_content) == false)
+			{
+				GENERATE_ERROR("Object does not hold a map, cannot access by key");
+			}
+
 			auto &map = std::get<std::map<std::wstring, std::shared_ptr<Object>>>(_content);
 
 			return (map.contains(p_key));
@@ -266,7 +274,7 @@ namespace spk
 				setAsObject();
 			}
 
-			if (!std::holds_alternative<std::map<std::wstring, std::shared_ptr<Object>>>(_content))
+			if (std::holds_alternative<std::map<std::wstring, std::shared_ptr<Object>>>(_content) == false)
 			{
 				GENERATE_ERROR("Object does not hold a map, cannot access by key");
 			}
@@ -299,14 +307,14 @@ namespace spk
 
 		const Object &Object::operator[](const std::wstring &p_key) const
 		{
-			if (!std::holds_alternative<std::map<std::wstring, std::shared_ptr<Object>>>(_content))
+			if (std::holds_alternative<std::map<std::wstring, std::shared_ptr<Object>>>(_content) == false)
 			{
 				GENERATE_ERROR("Object does not hold a map, cannot access by key");
 			}
 
 			auto &map = std::get<std::map<std::wstring, std::shared_ptr<Object>>>(_content);
 
-			if (map.count(p_key) == 0)
+			if (map.contains(p_key) == false)
 			{
 				GENERATE_ERROR("Can't acces JSON object named [" + spk::StringUtils::wstringToString(p_key) + "] : it does not exist");
 			}

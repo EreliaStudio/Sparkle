@@ -13,10 +13,11 @@ namespace spk::JSON
 	File::File() :
 		_root(L"Root")
 	{
+		
 	}
 
 	File::File(const std::filesystem::path &p_filePath) :
-		_root(L"Root")
+		File()
 	{
 		load(p_filePath);
 	}
