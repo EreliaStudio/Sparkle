@@ -1,6 +1,6 @@
 #include "structure/engine/spk_component.hpp"
 
-#include "structure/engine/spk_entity.hpp"
+#include "structure/engine/spk_generic_entity.hpp"
 
 namespace spk
 {
@@ -40,12 +40,12 @@ namespace spk
 		return (_priority);
 	}
 
-	spk::SafePointer<Entity> Component::owner()
+	spk::SafePointer<GenericEntity> Component::owner()
 	{
 		return (_owner);
 	}
 
-	const spk::SafePointer<const Entity> Component::owner() const
+	const spk::SafePointer<const GenericEntity> Component::owner() const
 	{
 		return (_owner);
 	}

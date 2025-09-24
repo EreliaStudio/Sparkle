@@ -4,15 +4,14 @@
 #include <set>
 #include <vector>
 
-#include "structure/engine/spk_entity.hpp"
+#include "structure/engine/spk_generic_entity.hpp"
 
 namespace spk
 {
 	class GameEngine
 	{
 	private:
-		Entity _rootObject = spk::Entity(L"/root");
-		std::set<Entity *> _collisionRequests;
+		GenericEntity _rootObject = spk::GenericEntity(L"/root");
 		std::mutex _collisionMutex;
 
 	public:
@@ -20,19 +19,19 @@ namespace spk
 
 		void clear();
 
-		spk::SafePointer<spk::Entity> rootObject();
-		void addEntity(const spk::SafePointer<Entity> &p_entity);
-		void removeEntity(const spk::SafePointer<Entity> &p_entity);
+		spk::SafePointer<spk::GenericEntity> rootObject();
+		void addEntity(const spk::SafePointer<GenericEntity> &p_entity);
+		void removeEntity(const spk::SafePointer<GenericEntity> &p_entity);
 
-		spk::SafePointer<Entity> getEntity(const std::wstring &p_name);
-		spk::SafePointer<const Entity> getEntity(const std::wstring &p_name) const;
-		std::vector<spk::SafePointer<Entity>> getEntities(const std::wstring &p_name);
-		std::vector<spk::SafePointer<const Entity>> getEntities(const std::wstring &p_name) const;
+		spk::SafePointer<GenericEntity> getEntity(const std::wstring &p_name);
+		spk::SafePointer<const GenericEntity> getEntity(const std::wstring &p_name) const;
+		std::vector<spk::SafePointer<GenericEntity>> getEntities(const std::wstring &p_name);
+		std::vector<spk::SafePointer<const GenericEntity>> getEntities(const std::wstring &p_name) const;
 
-		spk::SafePointer<Entity> getEntityByTag(const std::wstring &p_name);
-		spk::SafePointer<const Entity> getEntityByTag(const std::wstring &p_name) const;
-		std::vector<spk::SafePointer<Entity>> getEntitiesByTag(const std::wstring &p_name);
-		std::vector<spk::SafePointer<const Entity>> getEntitiesByTag(const std::wstring &p_name) const;
+		spk::SafePointer<GenericEntity> getEntityByTag(const std::wstring &p_name);
+		spk::SafePointer<const GenericEntity> getEntityByTag(const std::wstring &p_name) const;
+		std::vector<spk::SafePointer<GenericEntity>> getEntitiesByTag(const std::wstring &p_name);
+		std::vector<spk::SafePointer<const GenericEntity>> getEntitiesByTag(const std::wstring &p_name) const;
 
 		bool contains(const std::wstring &p_name) const;
 
@@ -47,8 +46,6 @@ namespace spk
 		void onTimerEvent(spk::TimerEvent &p_event);
 
 	private:
-		void _markForCollision(Entity *p_entity);
-		void _processCollisionRequests();
-		friend class Entity;
+		friend class GenericEntity;
 	};
 }
