@@ -481,23 +481,23 @@ TEST_F(Vector2Test, ClampMethod)
 	spk::IVector2<int> vec(5, 10);
 	spk::IVector2<int> lower(0, 5);
 	spk::IVector2<int> upper(10, 15);
-	auto clampedVec = spk::IVector2<int>::clamp(lower, vec, upper);
+	auto clampedVec = spk::IVector2<int>::clamp(vec, lower, upper);
 	EXPECT_EQ(clampedVec, spk::IVector2<int>(5, 10)) << "Clamp method should return the correct clamped vector";
 
 	vec = spk::IVector2<int>(-5, 10);
-	clampedVec = spk::IVector2<int>::clamp(lower, vec, upper);
+	clampedVec = spk::IVector2<int>::clamp(vec, lower, upper);
 	EXPECT_EQ(clampedVec, spk::IVector2<int>(0, 10)) << "Clamp method should return the correct clamped vector";
 
 	vec = spk::IVector2<int>(15, 10);
-	clampedVec = spk::IVector2<int>::clamp(lower, vec, upper);
+	clampedVec = spk::IVector2<int>::clamp(vec, lower, upper);
 	EXPECT_EQ(clampedVec, spk::IVector2<int>(10, 10)) << "Clamp method should return the correct clamped vector";
 
 	vec = spk::IVector2<int>(5, 0);
-	clampedVec = spk::IVector2<int>::clamp(lower, vec, upper);
+	clampedVec = spk::IVector2<int>::clamp(vec, lower, upper);
 	EXPECT_EQ(clampedVec, spk::IVector2<int>(5, 5)) << "Clamp method should return the correct clamped vector";
 
 	vec = spk::IVector2<int>(5, 20);
-	clampedVec = spk::IVector2<int>::clamp(lower, vec, upper);
+	clampedVec = spk::IVector2<int>::clamp(vec, lower, upper);
 	EXPECT_EQ(clampedVec, spk::IVector2<int>(5, 15)) << "Clamp method should return the correct clamped vector";
 }
 

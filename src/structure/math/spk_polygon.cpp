@@ -102,36 +102,50 @@ namespace spk
 			return false;
 		}
 
-		spk::Vector3 origin = pts[0];
-		spk::Vector3 u = (pts[1] - origin).normalize();
-		spk::Vector3 v = p_poly.plane().normal.cross(u);
+		const spk::Vector3 origin = pts[0];
+		const spk::Vector3 n = p_poly.plane().normal.normalize();
 
-		spk::Vector3 relP = p_point - origin;
-		float px = relP.dot(u);
-		float py = relP.dot(v);
+		const float signedDist = (p_point - origin).dot(n);
+		if (std::fabs(signedDist) > spk::Constants::pointPrecision)
+		{
+			return false;
+		}
+
+		spk::Vector3 u = (pts[1] - origin).normalize();
+		if (u.norm() <= spk::Constants::pointPrecision)
+		{
+			return false;
+		}
+		spk::Vector3 v = n.cross(u).normalize();
+
+		const spk::Vector3 relP = p_point - origin;
+		const float px = relP.dot(u);
+		const float py = relP.dot(v);
 
 		bool inside = false;
 
 		for (size_t i = 0, j = pts.size() - 1; i < pts.size(); j = i++)
 		{
-			spk::Vector3 ri = pts[i] - origin;
-			spk::Vector3 rj = pts[j] - origin;
+			const spk::Vector3 ri = pts[i] - origin;
+			const spk::Vector3 rj = pts[j] - origin;
 
-			float xi = ri.dot(u);
-			float yi = ri.dot(v);
-			float xj = rj.dot(u);
-			float yj = rj.dot(v);
+			const float xi = ri.dot(u);
+			const float yi = ri.dot(v);
+			const float xj = rj.dot(u);
+			const float yj = rj.dot(v);
 
-			if (std::fabs(yj - yi) <= spk::Constants::angularPrecision)
+			if (std::fabs(yj - yi) <= spk::Constants::pointPrecision)
 			{
 				continue;
 			}
 
-			bool intersects = ((yi > py) != (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi);
+			const bool intersects =
+				((yi > py) != (yj > py)) &&
+				(px < (xj - xi) * (py - yi) / (yj - yi) + xi);
 
 			if (intersects == true)
 			{
-				inside = !inside;
+				inside = (inside == false);
 			}
 		}
 

@@ -49,7 +49,7 @@ TEST_F(SingletonTest, SingletonConstAccess)
 		TestSingleton::Instanciator inst(42);
 		EXPECT_EQ(inst->getValue(), 42);
 
-		const auto& constInstance = TestSingleton::c_instance();
+		const auto& constInstance = TestSingleton::cInstance();
 		EXPECT_EQ(constInstance->getValue(), 42);
 	}
 
