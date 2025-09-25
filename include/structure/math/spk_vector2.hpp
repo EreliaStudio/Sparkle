@@ -394,9 +394,24 @@ namespace spk
 			return static_cast<float>(std::sqrt(x * x + y * y));
 		}
 
+		float squareNorm() const
+		{
+			return static_cast<float>(x * x + y * y);
+		}
+
 		IVector2<float> normalize() const
 		{
 			float len = norm();
+			if (len == 0)
+			{
+				GENERATE_ERROR("Can't calculated a norm for a vector of len 0");
+			}
+			return IVector2<float>(x / len, y / len);
+		}
+
+		IVector2<float> squareNormalize() const
+		{
+			float len = squareNorm();
 			if (len == 0)
 			{
 				GENERATE_ERROR("Can't calculated a norm for a vector of len 0");

@@ -10,8 +10,9 @@ namespace
 
 	bool between(float p_v, float p_a, float p_b)
 	{
-		const float eps = spk::Constants::pointPrecision;
-		return ((p_v >= std::min(p_a, p_b) - eps) == true && (p_v <= std::max(p_a, p_b) + eps) == true);
+		const float& eps = spk::Constants::pointPrecision;
+		return ((p_v >= std::min(p_a, p_b) - eps) == true &&
+				(p_v <= std::max(p_a, p_b) + eps) == true);
 	}
 }
 
@@ -81,15 +82,23 @@ namespace spk
 
 	bool Edge2D::contains(const spk::Vector2 &p_point, bool p_checkAlignment) const
 	{
-		if (p_checkAlignment == true)
+		if ((between(p_point.x, _first.x, _second.x) == false) ||
+			(between(p_point.y, _first.y, _second.y) == false))
 		{
-			if (std::fabs(orientation(p_point)) > spk::Constants::pointPrecision)
-			{
-				return false;
-			}
+			return false;
 		}
 
-		return (between(p_point.x, _first.x, _second.x) == true && between(p_point.y, _first.y, _second.y) == true);
+		if (p_checkAlignment == false)
+		{
+			return true;
+		}
+
+		if (_direction == 0)
+		{
+			return (false);
+		}
+
+		return (_direction.dot((p_point - _first).normalize()) == 1);
 	}
 
 	float Edge2D::project(const spk::Vector2 &p_point) const

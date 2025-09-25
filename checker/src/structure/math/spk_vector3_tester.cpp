@@ -145,7 +145,8 @@ TEST_F(Vector3Test, EqualityOperator)
 	spk::IVector3<float> vecFloat4(3.5f, 4.0f, 5.0f);
 
 	EXPECT_TRUE(vecInt4 == vecFloat4) << "Upon casting float to int, vecFloat should be equal as 3.5 should be concidered as 3";
-	EXPECT_FALSE(vecFloat4 == vecInt4) << "Upon casting int to float, vecInt should be equal as 3 should be concidered as 3.0 and therefor must be different";
+	EXPECT_FALSE(vecFloat4 == vecInt4)
+		<< "Upon casting int to float, vecInt should be equal as 3 should be concidered as 3.0 and therefor must be different";
 }
 
 TEST_F(Vector3Test, MixedTypeEqualityOperator)
@@ -226,13 +227,17 @@ TEST_F(Vector3Test, ComparatorOperators)
 TEST_F(Vector3Test, ToStringMethod)
 {
 	EXPECT_EQ(spk::IVector3<int>(3, -4, 5).toString(), "(3, -4, 5)") << "to_string method should return correct string representation for int";
-	EXPECT_EQ(spk::IVector3<float>(3.5f, 4.5f, 5.5f).toString(), "(3.5, 4.5, 5.5)") << "to_string method should return correct string representation for float";
-	EXPECT_EQ(spk::IVector3<double>(3.5, 4.5, 5.5).toString(), "(3.5, 4.5, 5.5)") << "to_string method should return correct string representation for double";
+	EXPECT_EQ(spk::IVector3<float>(3.5f, 4.5f, 5.5f).toString(), "(3.5, 4.5, 5.5)")
+		<< "to_string method should return correct string representation for float";
+	EXPECT_EQ(spk::IVector3<double>(3.5, 4.5, 5.5).toString(), "(3.5, 4.5, 5.5)")
+		<< "to_string method should return correct string representation for double";
 	EXPECT_EQ(spk::IVector3<size_t>(3, 4, 5).toString(), "(3, 4, 5)") << "to_string method should return correct string representation for size_t";
 
 	EXPECT_EQ(spk::IVector3<int>(3, -4, 5).toWstring(), L"(3, -4, 5)") << "to_string method should return correct string representation for int";
-	EXPECT_EQ(spk::IVector3<float>(3.5f, 4.5f, 5.5f).toWstring(), L"(3.5, 4.5, 5.5)") << "to_string method should return correct string representation for float";
-	EXPECT_EQ(spk::IVector3<double>(3.5, 4.5, 5.5).toWstring(), L"(3.5, 4.5, 5.5)") << "to_string method should return correct string representation for double";
+	EXPECT_EQ(spk::IVector3<float>(3.5f, 4.5f, 5.5f).toWstring(), L"(3.5, 4.5, 5.5)")
+		<< "to_string method should return correct string representation for float";
+	EXPECT_EQ(spk::IVector3<double>(3.5, 4.5, 5.5).toWstring(), L"(3.5, 4.5, 5.5)")
+		<< "to_string method should return correct string representation for double";
 	EXPECT_EQ(spk::IVector3<size_t>(3, 4, 5).toWstring(), L"(3, 4, 5)") << "to_string method should return correct string representation for size_t";
 }
 
@@ -362,7 +367,8 @@ TEST_F(Vector3Test, CompoundAssignmentOperatorsWithScalar)
 	EXPECT_EQ(vecFloat, spk::IVector3<float>(3.0f, 4.0f, 5.0f)) << "Compound subtraction operator with scalar should subtract correctly for float";
 
 	vecFloat *= scalarFloat;
-	EXPECT_EQ(vecFloat, spk::IVector3<float>(6.0f, 8.0f, 10.0f)) << "Compound multiplication operator with scalar should multiply correctly for float";
+	EXPECT_EQ(vecFloat, spk::IVector3<float>(6.0f, 8.0f, 10.0f))
+		<< "Compound multiplication operator with scalar should multiply correctly for float";
 
 	vecFloat /= scalarFloat;
 	EXPECT_EQ(vecFloat, spk::IVector3<float>(3.0f, 4.0f, 5.0f)) << "Compound division operator with scalar should divide correctly for float";
@@ -373,56 +379,45 @@ TEST_F(Vector3Test, DivisionByZero)
 	spk::IVector3<int> vecInt(3, 4, 5);
 	int zeroInt = 0;
 
-	EXPECT_THROW(
-		{
-			spk::IVector3<int> result = vecInt / zeroInt;
-		}, std::runtime_error) << "Division by zero for int should throw runtime_error";
+	EXPECT_THROW({ spk::IVector3<int> result = vecInt / zeroInt; }, std::runtime_error) << "Division by zero for int should throw runtime_error";
 
-	EXPECT_THROW(
-		{
-			vecInt /= zeroInt;
-		}, std::runtime_error) << "Division assignment by zero for int should throw runtime_error";
+	EXPECT_THROW({ vecInt /= zeroInt; }, std::runtime_error) << "Division assignment by zero for int should throw runtime_error";
 
 	spk::IVector3<float> vecFloat(3.0f, 4.0f, 5.0f);
 	float zeroFloat = 0.0f;
 
 	EXPECT_THROW(
-		{
-			spk::IVector3<float> result = vecFloat / zeroFloat;
-		}, std::runtime_error) << "Division by zero for float should throw runtime_error";
+		{ spk::IVector3<float> result = vecFloat / zeroFloat; }, std::runtime_error)
+		<< "Division by zero for float should throw runtime_error";
 
-	EXPECT_THROW(
-		{
-			vecFloat /= zeroFloat;
-		}, std::runtime_error) << "Division assignment by zero for float should throw runtime_error";
+	EXPECT_THROW({ vecFloat /= zeroFloat; }, std::runtime_error) << "Division assignment by zero for float should throw runtime_error";
 
 	spk::IVector3<double> vecDouble(3.0, 4.0, 5.0);
 	double zeroDouble = 0.0;
 
 	EXPECT_THROW(
-		{
-			spk::IVector3<double> result = vecDouble / zeroDouble;
-		}, std::runtime_error) << "Division by zero for double should throw runtime_error";
+		{ spk::IVector3<double> result = vecDouble / zeroDouble; }, std::runtime_error)
+		<< "Division by zero for double should throw runtime_error";
 
-	EXPECT_THROW(
-		{
-			vecDouble /= zeroDouble;
-		}, std::runtime_error) << "Division assignment by zero for double should throw runtime_error";
+	EXPECT_THROW({ vecDouble /= zeroDouble; }, std::runtime_error) << "Division assignment by zero for double should throw runtime_error";
 }
 
 TEST_F(Vector3Test, DistanceMethod)
 {
 	spk::IVector3<int> vec1(1, 2, 3);
 	spk::IVector3<int> vec2(4, 5, 6);
-	EXPECT_FLOAT_EQ(vec1.distance(vec2), static_cast<float>(std::sqrt(27))) << "Distance method should return the correct distance between two vectors";
+	EXPECT_FLOAT_EQ(vec1.distance(vec2), static_cast<float>(std::sqrt(27)))
+		<< "Distance method should return the correct distance between two vectors";
 
 	spk::IVector3<float> vecFloat1(1.0f, 2.0f, 3.0f);
 	spk::IVector3<float> vecFloat2(4.0f, 5.0f, 6.0f);
-	EXPECT_FLOAT_EQ(vecFloat1.distance(vecFloat2), static_cast<float>(std::sqrt(27.0f))) << "Distance method should return the correct distance between two float vectors";
+	EXPECT_FLOAT_EQ(vecFloat1.distance(vecFloat2), static_cast<float>(std::sqrt(27.0f)))
+		<< "Distance method should return the correct distance between two float vectors";
 
 	spk::IVector3<double> vecDouble1(1.0, 2.0, 3.0);
 	spk::IVector3<double> vecDouble2(4.0, 5.0, 6.0);
-	EXPECT_FLOAT_EQ(vecDouble1.distance(vecDouble2), static_cast<float>(std::sqrt(27.0))) << "Distance method should return the correct distance between two double vectors";
+	EXPECT_FLOAT_EQ(vecDouble1.distance(vecDouble2), static_cast<float>(std::sqrt(27.0)))
+		<< "Distance method should return the correct distance between two double vectors";
 }
 
 TEST_F(Vector3Test, NormMethod)
@@ -624,4 +619,58 @@ TEST_F(Vector3Test, LerpMethod)
 	spk::IVector3<int> end(10, 10, 10);
 	auto lerpVec = spk::IVector3<int>::lerp(start, end, 0.5f);
 	EXPECT_EQ(lerpVec, spk::IVector3<int>(5, 5, 5)) << "Lerp method should return the correct linearly interpolated vector";
+}
+
+TEST_F(Vector3Test, PositiveModuloMethod)
+{
+	spk::IVector3<int> value(-3, 14, -22);
+	spk::IVector3<int> modulo(10, 5, 6);
+
+	auto wrapped = value.positiveModulo(modulo);
+
+	EXPECT_EQ(wrapped, spk::IVector3<int>(7, 4, 2)) << "Positive modulo should wrap each component independently";
+
+	value = spk::IVector3<int>(-17, -5, 0);
+	modulo = spk::IVector3<int>(16, 3, 4);
+
+	wrapped = value.positiveModulo(modulo);
+
+	EXPECT_EQ(wrapped, spk::IVector3<int>(15, 1, 0)) << "Positive modulo should always return non-negative components";
+}
+
+TEST_F(Vector3Test, JsonRoundTrip)
+{
+	spk::IVector3<int> intVec(3, -4, 7);
+	spk::JSON::Object json = intVec.toJSON();
+
+	EXPECT_TRUE(json.contains(L"X"));
+	EXPECT_TRUE(json.contains(L"Y"));
+	EXPECT_TRUE(json.contains(L"Z"));
+	EXPECT_EQ(json[L"X"].as<long>(), 3);
+	EXPECT_EQ(json[L"Y"].as<long>(), -4);
+	EXPECT_EQ(json[L"Z"].as<long>(), 7);
+
+	spk::IVector3<int> fromObject(json);
+	EXPECT_EQ(fromObject, intVec) << "Vector constructed from JSON object should match original";
+
+	spk::JSON::Object jsonArray(L"ArrayVec");
+	jsonArray.setAsArray();
+	jsonArray.append() = -2;
+	jsonArray.append() = 5;
+	jsonArray.append() = 9;
+
+	spk::IVector3<int> fromArray(jsonArray);
+	EXPECT_EQ(fromArray, spk::IVector3<int>(-2, 5, 9)) << "Vector constructed from JSON array should read values in order";
+
+	spk::JSON::Object floatObject(L"FloatVec");
+	floatObject.addAttribute(L"X") = 1.25;
+	floatObject.addAttribute(L"Y") = -2.5;
+	floatObject.addAttribute(L"Z") = 3.75;
+
+	spk::IVector3<float> floatVec;
+	floatVec.fromJSON(floatObject);
+
+	EXPECT_FLOAT_EQ(floatVec.x, 1.25f);
+	EXPECT_FLOAT_EQ(floatVec.y, -2.5f);
+	EXPECT_FLOAT_EQ(floatVec.z, 3.75f);
 }
