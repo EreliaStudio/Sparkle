@@ -23,11 +23,13 @@ namespace spk
 			throw std::invalid_argument("Modulo by zero is not allowed.");
 		}
 
-		intmax_t result = p_value % p_modulo;
-		if (result < 0)
+		intmax_t tmpValue = p_value;
+		while (tmpValue < 0)
 		{
-			result += p_modulo;
+			tmpValue += p_modulo;
 		}
+		intmax_t result = tmpValue % p_modulo;
+		
 		return result;
 	}
 }

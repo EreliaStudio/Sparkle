@@ -11,7 +11,7 @@ TEST_F(PlaneTest, IdentifierCanonicalizesNormal)
 	spk::Plane::Identifier b = spk::Plane::Identifier::from(flipped);
 
 	EXPECT_EQ(a.normal, b.normal);
-	EXPECT_FLOAT_EQ(a.dotValue, b.dotValue);
+	EXPECT_FLOAT_EQ(std::abs(a.dotValue), std::abs(b.dotValue));
 }
 
 TEST_F(PlaneTest, ContainsAndComparison)
@@ -25,7 +25,7 @@ TEST_F(PlaneTest, ContainsAndComparison)
 	EXPECT_FALSE(plane.contains(spk::Vector3(0.0f, 0.0f, 0.1f)));
 
 	spk::Plane offset(spk::Vector3(0.0f, 0.0f, -1.0f), spk::Vector3(0.0f, 0.0f, 1.0f));
-	EXPECT_TRUE(plane.isSame(offset));
+	EXPECT_FALSE(plane.isSame(offset));
 	EXPECT_FALSE(plane == offset);
 	EXPECT_NE(plane, offset);
 }

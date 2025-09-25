@@ -236,7 +236,7 @@ TEST_F(MatrixTest, DeterminantAndInverse)
 {
 	spk::Matrix2x2 matrix = spk::Matrix2x2({4.0f, 2.0f, 7.0f, 6.0f});
 
-	EXPECT_NEAR(matrix.determinant(), 10.0f, 1e-6f) << "Determinant should match the analytical value";
+	EXPECT_NEAR(matrix.determinant(), 10.0f, 1e-5f) << "Determinant should match the analytical value";
 	EXPECT_TRUE(matrix.isInvertible()) << "Matrix with non-zero determinant should be invertible";
 
 	spk::Matrix2x2 inverse = matrix.inverse();

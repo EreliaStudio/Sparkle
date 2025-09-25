@@ -11,7 +11,9 @@ namespace spk
 		spk::Vector3 normal = p_plane.normal.normalize();
 		float dotValue = normal.dot(p_plane.origin);
 
-		if ((-normal < normal) == true)
+		float dotTowardUp = spk::Vector3(0, 1, 0).dot(normal);
+
+		if (dotTowardUp < 0 || spk::Vector3(0, 0, 1).dot(normal) < 0)
 		{
 			normal = -normal;
 		}

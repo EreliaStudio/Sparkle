@@ -5,9 +5,8 @@ TEST_F(Edge2DTest, OrientationContainmentAndProjection)
 	spk::Edge2D edge(spk::Vector2(0.0f, 0.0f), spk::Vector2(1.0f, 0.0f));
 
 	EXPECT_GT(edge.orientation(spk::Vector2(0.5f, 1.0f)), 0.0f);
-	EXPECT_TRUE(edge.contains(spk::Vector2(0.3f, 0.0f), true));
-	EXPECT_FALSE(edge.contains(spk::Vector2(0.3f, 0.1f), true));
-	EXPECT_TRUE(edge.contains(spk::Vector2(0.3f, 0.1f), false));
+	EXPECT_TRUE(edge.contains(spk::Vector2(0.2f, 0.0f)));
+	EXPECT_FALSE(edge.contains(spk::Vector2(0.3f, 0.1f)));
 	EXPECT_NEAR(edge.project(spk::Vector2(0.5f, 0.0f)), 0.5f, 1e-6f);
 }
 

@@ -40,7 +40,7 @@ TEST_F(EdgeTest, Relations)
 	EXPECT_TRUE(base.isSame(backward));
 	EXPECT_FALSE(base.isSame(skew));
 
-	EXPECT_LT(spk::Edge::Identifier::from(base), spk::Edge::Identifier::from(backward));
+	EXPECT_EQ(spk::Edge::Identifier::from(base), spk::Edge::Identifier::from(backward));
 
 	std::unordered_set<spk::Edge> edges;
 	edges.insert(base);

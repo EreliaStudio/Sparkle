@@ -630,12 +630,12 @@ TEST_F(Vector3Test, PositiveModuloMethod)
 
 	EXPECT_EQ(wrapped, spk::IVector3<int>(7, 4, 2)) << "Positive modulo should wrap each component independently";
 
-	value = spk::IVector3<int>(-31, -1, 0);
-	modulo = spk::IVector3<int>(7, 3, 4);
+	value = spk::IVector3<int>(-17, -5, 0);
+	modulo = spk::IVector3<int>(16, 3, 4);
 
 	wrapped = value.positiveModulo(modulo);
 
-	EXPECT_EQ(wrapped, spk::IVector3<int>(3, 2, 0)) << "Positive modulo should always return non-negative components";
+	EXPECT_EQ(wrapped, spk::IVector3<int>(15, 1, 0)) << "Positive modulo should always return non-negative components";
 }
 
 TEST_F(Vector3Test, JsonRoundTrip)

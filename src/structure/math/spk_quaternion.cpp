@@ -64,31 +64,36 @@ namespace spk
 
 	Vector3 Quaternion::toEuler() const
 	{
-		Vector3 euler;
+		Quaternion q = *this;
+		float norm = std::sqrt(q.w * q.w + q.x * q.x + q.y * q.y + q.z * q.z);
+		if (norm > 0.0f)
+		{
+			q.w /= norm;
+			q.x /= norm;
+			q.y /= norm;
+			q.z /= norm;
+		}
 
-		float sinrCosp = 2.f * (w * x + y * z);
-		float cosrCosp = 1.f - 2.f * (x * x + y * y);
-		euler.z = std::atan2(sinrCosp, cosrCosp);
+		float sinrCosp = 2.f * (q.w * q.x + q.y * q.z);
+		float cosrCosp = 1.f - 2.f * (q.x * q.x + q.y * q.y);
+		float roll = std::atan2(sinrCosp, cosrCosp);
 
-		float sinp = 2.f * (w * y - z * x);
+		float sinp = 2.f * (q.w * q.y - q.z * q.x);
+		float pitch;
 		if (std::abs(sinp) >= 1.f)
 		{
-			euler.x = std::copysign((float)M_PI / 2.f, sinp);
+			pitch = std::copysign(static_cast<float>(M_PI) / 2.f, sinp);
 		}
 		else
 		{
-			euler.x = std::asin(sinp);
+			pitch = std::asin(sinp);
 		}
 
-		float sinyCosp = 2.f * (w * z + x * y);
-		float cosyCosp = 1.f - 2.f * (y * y + z * z);
-		euler.y = std::atan2(sinyCosp, cosyCosp);
+		float sinyCosp = 2.f * (q.w * q.z + q.x * q.y);
+		float cosyCosp = 1.f - 2.f * (q.y * q.y + q.z * q.z);
+		float yaw = std::atan2(sinyCosp, cosyCosp);
 
-		euler.x = spk::radianToDegree(euler.x);
-		euler.y = spk::radianToDegree(euler.y);
-		euler.z = spk::radianToDegree(euler.z);
-
-		return euler;
+		return {spk::radianToDegree(roll), spk::radianToDegree(pitch), spk::radianToDegree(yaw)};
 	}
 
 	Quaternion Quaternion::fromAxisAngle(const Vector3 &p_axis, float p_angle)
