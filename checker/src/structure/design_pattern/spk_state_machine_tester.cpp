@@ -62,6 +62,10 @@ TEST_F(StateMachineTest, TransitionOnFinish)
 
 	ASSERT_EQ(machine.currentStepID(), L"second");
 	ASSERT_EQ(firstPtr->finishCount, 1);
+	ASSERT_EQ(secondPtr->startCount, 0);
+
+	machine.update();
+
 	ASSERT_EQ(secondPtr->startCount, 1);
 }
 

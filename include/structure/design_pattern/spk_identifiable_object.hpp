@@ -155,14 +155,13 @@ namespace spk
 			}
 		}
 
-		static spk::SafePointer<TType> containObjectId(const ID &p_id)
+		static bool containObjectId(const ID &p_id)
 		{
 			std::lock_guard<std::mutex> lock(_mutex);
-			auto it = _registry.find(p_id);
-			return (it != _registry.end()) ? true : false;
+			return (_registry.contains(p_id));
 		}
 
-		static spk::SafePointer<TType> getObjectById(const ID &p_id)
+		static spk::SafePointer<TType> objectById(const ID &p_id)
 		{
 			if (containObjectId(p_id) == false)
 			{
@@ -170,7 +169,7 @@ namespace spk
 			}
 
 			std::lock_guard<std::mutex> lock(_mutex);
-			return (static_cast<TType *>(_registry[p_id]));
+			return (_registry[p_id].template upCast<TType>());
 		}
 	};
 }

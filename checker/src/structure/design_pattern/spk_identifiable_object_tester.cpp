@@ -78,13 +78,13 @@ TEST_F(IdentifiedObjectTest, RegistryTracksLiveObjects)
 	TestIdentifiedObject tracked;
 	auto trackedId = tracked.id();
 
-	auto ptr = spk::IdentifiedObject<TestIdentifiedObject>::getObjectById(trackedId);
+	auto ptr = spk::IdentifiedObject<TestIdentifiedObject>::objectById(trackedId);
 	ASSERT_EQ(ptr.get(), &tracked);
 }
 
 TEST_F(IdentifiedObjectTest, RegistryReturnsNullForUnknownId)
 {
-	auto ptr = spk::IdentifiedObject<TestIdentifiedObject>::getObjectById(987654321);
+	auto ptr = spk::IdentifiedObject<TestIdentifiedObject>::objectById(987654321);
 	ASSERT_EQ(ptr.get(), nullptr);
 }
 
