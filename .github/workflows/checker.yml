@@ -1,0 +1,44 @@
+name: Checker Tests
+
+on:
+  push:
+    paths:
+      - '.github/workflows/checker.yml'
+      - 'CMakeLists.txt'
+      - 'CMakePresets.json'
+      - 'checker/**'
+      - 'include/**'
+      - 'src/**'
+      - 'cmake/**'
+      - 'vcpkg.json'
+  pull_request:
+    paths:
+      - 'CMakeLists.txt'
+      - 'CMakePresets.json'
+      - 'checker/**'
+      - 'include/**'
+      - 'src/**'
+      - 'cmake/**'
+      - 'vcpkg.json'
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup vcpkg
+        uses: microsoft/setup-vcpkg@v1
+        with:
+          vcpkgGitCommitId: ded9717095600a356b624cab03326e44764afed4
+
+      - name: Configure CMake (test-debug)
+        run: cmake --preset test-debug
+
+      - name: Build Checker tests
+        run: cmake --build --preset test-debug
+
+      - name: Run Checker tests
+        run: ctest --preset test-debug --output-on-failure
