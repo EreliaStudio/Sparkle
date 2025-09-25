@@ -33,3 +33,17 @@ TEST(PositiveModuloTest, ZeroModulo)
 {
 	EXPECT_THROW(spk::positiveModulo(5, 0), std::invalid_argument);
 }
+
+TEST(DegreeRadianConversionTest, DegreeToRadian)
+{
+	EXPECT_FLOAT_EQ(spk::degreeToRadian(0.0f), 0.0f);
+	EXPECT_NEAR(spk::degreeToRadian(180.0f), static_cast<float>(M_PI), 1e-6f);
+	EXPECT_NEAR(spk::degreeToRadian(-90.0f), static_cast<float>(-M_PI / 2.0), 1e-6f);
+}
+
+TEST(DegreeRadianConversionTest, RadianToDegree)
+{
+	EXPECT_FLOAT_EQ(spk::radianToDegree(0.0f), 0.0f);
+	EXPECT_NEAR(spk::radianToDegree(static_cast<float>(M_PI)), 180.0f, 1e-5f);
+	EXPECT_NEAR(spk::radianToDegree(static_cast<float>(-M_PI / 2.0)), -90.0f, 1e-5f);
+}
