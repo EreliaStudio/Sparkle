@@ -2,6 +2,9 @@
 
 #include "structure/engine/2d/spk_entity_2d.hpp"
 
+#include "structure/engine/3d/spk_transform.hpp"
+#include "structure/engine/3d/spk_entity.hpp"
+
 namespace spk
 {
 	Transform2D::Transform2D() :
@@ -127,9 +130,16 @@ namespace spk
 		spk::Matrix4x4 parentModel = spk::Matrix4x4::identity();
 		if (owner() != nullptr && owner()->parent() != nullptr)
 		{
-			spk::SafePointer<Entity2D> parentEntity = owner()->parent().upCast<spk::Entity2D>();
-			const Transform2D &parentTransform = parentEntity->transform();
-			parentModel = parentTransform.model();
+			if (owner()->parent().isCastable<spk::Entity2D>())
+			{
+				spk::SafePointer<Transform2D> transform2D = owner()->parent()->getComponent<Transform2D>();
+				parentModel = transform2D->model();
+			}
+			else if (owner()->parent().isCastable<spk::Entity>())
+			{			
+				spk::SafePointer<Transform> transform = owner()->parent()->getComponent<Transform>();	
+				parentModel = transform->model();
+			}
 		}
 
 		_model = S * Rz * T * parentModel;

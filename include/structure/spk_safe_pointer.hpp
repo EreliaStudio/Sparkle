@@ -65,6 +65,12 @@ namespace spk
 		}
 
 		template <typename ToType>
+		bool isCastable() const
+		{
+			return (dynamic_cast<const ToType*>(_ptr) != nullptr);
+		}
+
+		template <typename ToType>
 		SafePointer<ToType> &upCast()
 		{
 			static_assert(std::is_base_of<TType, ToType>::value, "upCast error: ToType must be derived from TType.");

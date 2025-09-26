@@ -2,6 +2,9 @@
 #include "structure/engine/3d/spk_entity.hpp"
 #include "structure/math/spk_quaternion.hpp"
 
+#include "structure/engine/2d/spk_transform_2d.hpp"
+#include "structure/engine/2d/spk_entity_2d.hpp"
+
 namespace spk
 {
 	Transform::Transform() :
@@ -166,8 +169,16 @@ namespace spk
 
 		if (entityOwner != nullptr && entityOwner->parent() != nullptr)
 		{
-			const Transform &parentTransform = entityOwner->parent().upCast<spk::Entity>()->transform();
-			parentModel = parentTransform.model();
+			if (owner()->parent().isCastable<spk::Entity2D>())
+			{
+				spk::SafePointer<Transform2D> transform2D = owner()->parent()->getComponent<Transform2D>();
+				parentModel = transform2D->model();
+			}
+			else if (owner()->parent().isCastable<spk::Entity>())
+			{			
+				spk::SafePointer<Transform> transform = owner()->parent()->getComponent<Transform>();	
+				parentModel = transform->model();
+			}
 		}
 
 		_model = scaleMatrix * rotationMatrix * translationMatrix * parentModel;
