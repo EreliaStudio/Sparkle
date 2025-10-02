@@ -78,7 +78,7 @@ namespace spk
 	{
 		for (const auto &shape : p_source.shapes())
 		{
-			std::vector<spk::ObjVertex> transformed = shape;
+			std::vector<spk::ObjVertex> transformed(shape.begin(), shape.end());
 			for (auto &vertex : transformed)
 			{
 				vertex.position += p_offset;
@@ -247,7 +247,7 @@ namespace spk
 		size_t shapeIndex = 0;
 		for (const auto &baseShape: p_mesh.shapes())
 		{
-			auto shape = baseShape;
+			auto shape = std::vector<spk::ObjMesh::Vertex>(baseShape.begin(), baseShape.end());
 			_applyOrientationToVertices(shape, p_orientation);
 
 			spk::Vector3 normal;

@@ -9,12 +9,12 @@
 #include <vector>
 
 #include "structure/design_pattern/spk_contract_provider.hpp"
-#include "structure/engine/spk_component.hpp"
 #include "structure/engine/2d/spk_collision_mesh_2d.hpp"
 #include "structure/engine/2d/spk_entity_2d.hpp"
 #include "structure/engine/2d/spk_mesh_2d.hpp"
 #include "structure/engine/2d/spk_mesh_2d_renderer.hpp"
 #include "structure/engine/2d/spk_tile.hpp"
+#include "structure/engine/spk_component.hpp"
 #include "structure/graphics/texture/spk_sprite_sheet.hpp"
 #include "structure/math/spk_vector2.hpp"
 #include "structure/spk_safe_pointer.hpp"
@@ -115,12 +115,12 @@ namespace spk
 
 				void _insertData(float p_x, float p_y, float p_width, float p_height, int p_layer, const spk::SpriteSheet::Section &p_sprite)
 				{
-					spk::Mesh2D::Shape shapeToAdd = {{spk::Vector2(p_x, p_y), {p_sprite.anchor.x, p_sprite.anchor.y + p_sprite.size.y}},
-						 {spk::Vector2(p_x + p_width, p_y), p_sprite.anchor + p_sprite.size},
-						 {spk::Vector2(p_x + p_width, p_y + p_height), {p_sprite.anchor.x + p_sprite.size.x, p_sprite.anchor.y}},
-						 {spk::Vector2(p_x, p_y + p_height), p_sprite.anchor}};
-
-					_mesh.addShape(std::move(shapeToAdd));
+					_mesh.addShape(
+						{spk::Vector2(p_x, p_y), {p_sprite.anchor.x, p_sprite.anchor.y + p_sprite.size.y}},
+						{spk::Vector2(p_x + p_width, p_y), p_sprite.anchor + p_sprite.size},
+						{spk::Vector2(p_x + p_width, p_y + p_height), {p_sprite.anchor.x + p_sprite.size.x, p_sprite.anchor.y}},
+						{spk::Vector2(p_x, p_y + p_height), p_sprite.anchor}
+					);
 				}
 
 				void _bakeMonoTile(int p_x, int p_y, int p_layer, const TileType &p_tile)
@@ -352,9 +352,6 @@ namespace spk
 				void _bake()
 				{
 					_mesh.clear();
-
-					const size_t maxShapeCount = static_cast<size_t>(size.x) * static_cast<size_t>(size.y) * LayerCount * 4;
-					_mesh.shapes().reserve(maxShapeCount / 2);
 
 					_updateNeightbourDataCache();
 

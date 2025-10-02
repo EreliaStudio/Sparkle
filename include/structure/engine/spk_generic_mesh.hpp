@@ -1,10 +1,10 @@
 #pragma once
 
 #include "spk_sfinae.hpp"
+#include "structure/design_pattern/spk_cached_data.hpp"
 
-#include <cstring> // memcpy
 #include <initializer_list>
-#include <mutex>
+#include <span>
 #include <type_traits>
 #include <vector>
 
@@ -15,314 +15,215 @@ namespace spk
 	{
 	public:
 		using Vertex = TVertexType;
-
-		using Shape = std::vector<Vertex>;
+		using Shape = std::span<Vertex>;
+		using ConstShape = std::span<const Vertex>;
 
 		struct Buffer
 		{
 			std::vector<Vertex> vertices;
 			std::vector<unsigned int> indexes;
+
+			void clear()
+			{
+				vertices.clear();
+				indexes.clear();
+			}
 		};
 
 	private:
-		std::vector<Shape> _shapes;
+		Buffer _buffer;
 
-		mutable bool _needBake = false;
-		mutable std::size_t _bakedShapeCount = 0;
-
-		mutable Buffer _buffer;
-		mutable std::mutex _mutex;
-
-		void _appendShapeFast(const Shape &s) const
+		struct ShapeIdentifier
 		{
-			const std::size_t n = s.size();
-			if (n < 3)
-			{
-				return;
-			}
+			std::size_t startIndex;
+			std::size_t endIndex;
+		};
+		std::vector<ShapeIdentifier> _shapeIdentifiers;
 
-			const unsigned int base = static_cast<unsigned int>(_buffer.vertices.size());
+		std::vector<Shape> _generateMutableShapes()
+		{
+			std::vector<Shape> out;
+			out.reserve(_shapeIdentifiers.size());
 
-			const std::size_t oldV = _buffer.vertices.size();
-			_buffer.vertices.resize(oldV + n);
-			if constexpr (std::is_trivially_copyable_v<Vertex>)
+			Vertex *base = _buffer.vertices.data();
+			for (const auto &id : _shapeIdentifiers)
 			{
-				std::memcpy(&_buffer.vertices[oldV], s.data(), n * sizeof(Vertex));
+				const std::size_t count = id.endIndex - id.startIndex;
+				out.emplace_back(base + id.startIndex, count);
 			}
-			else
-			{
-				std::copy(s.begin(), s.end(), _buffer.vertices.begin() + static_cast<std::ptrdiff_t>(oldV));
-			}
-
-			const std::size_t triCount = n - 2;
-			const std::size_t oldI = _buffer.indexes.size();
-			_buffer.indexes.resize(oldI + triCount * 3);
-
-			unsigned int *dst = _buffer.indexes.data() + oldI;
-			for (unsigned int i = 1; i + 1 < n; ++i)
-			{
-				*dst++ = base;
-				*dst++ = base + i;
-				*dst++ = base + i + 1;
-			}
+			return out;
 		}
 
-		void _shrinkOneBakedShape() const
+		std::vector<ConstShape> _generateConstShapes() const
 		{
-			if (_bakedShapeCount == 0)
-			{
-				return;
-			}
-			const auto &s = _shapes[_bakedShapeCount - 1];
-			const std::size_t n = s.size();
+			std::vector<ConstShape> out;
+			out.reserve(_shapeIdentifiers.size());
 
-			if (n > 0 && _buffer.vertices.size() >= n)
+			const Vertex *base = _buffer.vertices.data();
+			for (const auto &id : _shapeIdentifiers)
 			{
-				_buffer.vertices.resize(_buffer.vertices.size() - n);
+				const std::size_t count = id.endIndex - id.startIndex;
+				out.emplace_back(base + id.startIndex, count);
 			}
-			if (n >= 3)
-			{
-				const std::size_t k = (n - 2) * 3;
-				if (_buffer.indexes.size() >= k)
-				{
-					_buffer.indexes.resize(_buffer.indexes.size() - k);
-				}
-			}
-			--_bakedShapeCount;
+			return out;
+		}
+
+		CachedData<std::vector<Shape>> _shapesCache;
+		CachedData<std::vector<ConstShape>> _constShapesCache;
+
+		void _invalidateCaches()
+		{
+			_shapesCache.release();
+			_constShapesCache.release();
 		}
 
 	public:
-		GenericMesh() = default;
-
-		GenericMesh(const GenericMesh &p_other) :
-			_shapes(),
-			_needBake(false),
-			_bakedShapeCount(0),
-			_buffer(),
-			_mutex()
+		GenericMesh() :
+			_shapesCache([this] { return _generateMutableShapes(); }),
+			_constShapesCache([this] { return _generateConstShapes(); })
 		{
-			std::scoped_lock lock(p_other._mutex);
-			_shapes = p_other._shapes;
-			_needBake = p_other._needBake;
-			_bakedShapeCount = p_other._bakedShapeCount;
-			_buffer = p_other._buffer;
 		}
 
-		GenericMesh &operator=(const GenericMesh &p_other)
+		GenericMesh(const GenericMesh &other) :
+			_buffer(other._buffer),
+			_shapeIdentifiers(other._shapeIdentifiers),
+			_shapesCache([this] { return _generateMutableShapes(); }),
+			_constShapesCache([this] { return _generateConstShapes(); })
 		{
-			if (this == &p_other)
+		}
+
+		GenericMesh &operator=(const GenericMesh &other)
+		{
+			if (this == &other)
 			{
 				return *this;
 			}
-			std::scoped_lock lock(_mutex, p_other._mutex);
-			_shapes = p_other._shapes;
-			_needBake = p_other._needBake;
-			_bakedShapeCount = p_other._bakedShapeCount;
-			_buffer = p_other._buffer;
+			_buffer = other._buffer;
+			_shapeIdentifiers = other._shapeIdentifiers;
+			_invalidateCaches();
 			return *this;
 		}
 
-		GenericMesh(GenericMesh &&p_other) :
-			_shapes(),
-			_needBake(false),
-			_bakedShapeCount(0),
-			_buffer(),
-			_mutex()
+		GenericMesh(GenericMesh &&other) noexcept :
+			_buffer(std::move(other._buffer)),
+			_shapeIdentifiers(std::move(other._shapeIdentifiers)),
+			_shapesCache([this] { return _generateMutableShapes(); }),
+			_constShapesCache([this] { return _generateConstShapes(); })
 		{
-			std::scoped_lock lock(p_other._mutex);
-			_shapes = std::move(p_other._shapes);
-			_needBake = p_other._needBake;
-			_bakedShapeCount = p_other._bakedShapeCount;
-			_buffer = std::move(p_other._buffer);
-
-			p_other._needBake = false;
-			p_other._bakedShapeCount = 0;
-			p_other._buffer.vertices.clear();
-			p_other._buffer.indexes.clear();
-			p_other._shapes.clear();
+			other._buffer.clear();
+			other._shapeIdentifiers.clear();
 		}
 
-		GenericMesh &operator=(GenericMesh &&p_other)
+		GenericMesh &operator=(GenericMesh &&other) noexcept
 		{
-			if (this == &p_other)
+			if (this == &other)
 			{
 				return *this;
 			}
-			std::scoped_lock lock(_mutex, p_other._mutex);
-
-			_shapes = std::move(p_other._shapes);
-			_needBake = p_other._needBake;
-			_bakedShapeCount = p_other._bakedShapeCount;
-			_buffer = std::move(p_other._buffer);
-
-			p_other._needBake = false;
-			p_other._bakedShapeCount = 0;
-			p_other._buffer.vertices.clear();
-			p_other._buffer.indexes.clear();
-			p_other._shapes.clear();
-
+			_buffer = std::move(other._buffer);
+			_shapeIdentifiers = std::move(other._shapeIdentifiers);
+			_invalidateCaches();
+			other._buffer.clear();
+			other._shapeIdentifiers.clear();
 			return *this;
-		}
-
-		void resize(const size_t& p_size)
-		{
-			_shapes.resize(p_size);
-		}
-
-		void addShape(const Shape &p_shapes)
-		{
-			std::lock_guard lock(_mutex);
-			_shapes.push_back(p_shapes);
-			_needBake = true;
-		}
-
-		void addShape(Shape &&p_shapes)
-		{
-			std::lock_guard lock(_mutex);
-			_shapes.push_back(std::move(p_shapes));
-			_needBake = true;
-		}
-
-		void addShape(std::initializer_list<Vertex> p_vertices)
-		{
-			addShape(std::vector<Vertex>(p_vertices));
-		}
-
-		void addShape(const Vertex &p_a, const Vertex &p_b, const Vertex &p_c)
-		{
-			addShape(std::vector<Vertex>{p_a, p_b, p_c});
-		}
-
-		void addShape(const Vertex &p_a, const Vertex &p_b, const Vertex &p_c, const Vertex &p_d)
-		{
-			addShape(std::vector<Vertex>{p_a, p_b, p_c, p_d});
-		}
-
-		void popShape()
-		{
-			std::lock_guard lock(_mutex);
-			if (_shapes.empty() == false)
-			{
-				_shapes.pop_back();
-				_needBake = true;
-			}
 		}
 
 		void clear()
 		{
-			std::lock_guard lock(_mutex);
-			_shapes.clear();
-			_buffer.vertices.clear();
-			_buffer.indexes.clear();
-			_bakedShapeCount = 0;
-			_needBake = false;
+			_shapeIdentifiers.clear();
+			_buffer.clear();
+			_invalidateCaches();
 		}
 
-		const std::vector<Shape> &shapes() const
+		void addShape(const Vertex &a, const Vertex &b, const Vertex &c)
 		{
-			return _shapes;
+			const std::size_t base = _buffer.vertices.size();
+			_buffer.vertices.reserve(base + 3);
+			_buffer.indexes.reserve(_buffer.indexes.size() + 3);
+
+			_buffer.vertices.push_back(a);
+			_buffer.vertices.push_back(b);
+			_buffer.vertices.push_back(c);
+
+			_buffer.indexes.push_back(static_cast<unsigned int>(base + 0));
+			_buffer.indexes.push_back(static_cast<unsigned int>(base + 1));
+			_buffer.indexes.push_back(static_cast<unsigned int>(base + 2));
+
+			_shapeIdentifiers.push_back({base, base + 3});
+			_invalidateCaches();
 		}
 
-		std::vector<Shape> &shapes()
+		void addShape(const Vertex &a, const Vertex &b, const Vertex &c, const Vertex &d)
 		{
-			std::lock_guard lock(_mutex);
-			_needBake = true;
-			_bakedShapeCount = 0;
-			return _shapes;
+			const std::size_t base = _buffer.vertices.size();
+			_buffer.vertices.reserve(base + 4);
+			_buffer.indexes.reserve(_buffer.indexes.size() + 6);
+
+			_buffer.vertices.push_back(a);
+			_buffer.vertices.push_back(b);
+			_buffer.vertices.push_back(c);
+			_buffer.vertices.push_back(d);
+
+			const auto baseU = static_cast<unsigned int>(base);
+			_buffer.indexes.push_back(baseU + 0);
+			_buffer.indexes.push_back(baseU + 1);
+			_buffer.indexes.push_back(baseU + 2);
+			_buffer.indexes.push_back(baseU + 0);
+			_buffer.indexes.push_back(baseU + 2);
+			_buffer.indexes.push_back(baseU + 3);
+
+			_shapeIdentifiers.push_back({base, base + 4});
+			_invalidateCaches();
 		}
 
-		auto begin() const
+		void addShape(std::span<const Vertex> points)
 		{
-			return _shapes.begin();
-		}
-		auto end() const
-		{
-			return _shapes.end();
-		}
-
-		bool hasPendingChanges() const
-		{
-			std::lock_guard lock(_mutex);
-			return _needBake;
-		}
-
-		void unbake()
-		{
-			std::lock_guard lock(_mutex);
-			_needBake = true;
-			_bakedShapeCount = 0;
-
-			_buffer.vertices.clear();
-			_buffer.indexes.clear();
-		}
-
-		void bake() const
-		{
-			std::lock_guard lock(_mutex);
-			if (_needBake == false)
+			if (points.size() < 3)
 			{
 				return;
 			}
 
-			while (_bakedShapeCount > _shapes.size())
+			const std::size_t base = _buffer.vertices.size();
+			_buffer.vertices.reserve(base + points.size());
+			_buffer.vertices.insert(_buffer.vertices.end(), points.begin(), points.end());
+
+			const auto triCount = points.size() - 2;
+			_buffer.indexes.reserve(_buffer.indexes.size() + triCount * 3);
+
+			const auto baseU = static_cast<unsigned int>(base);
+			for (std::size_t i = 1; i + 1 < points.size(); ++i)
 			{
-				_shrinkOneBakedShape();
+				_buffer.indexes.push_back(baseU + 0);
+				_buffer.indexes.push_back(baseU + static_cast<unsigned int>(i));
+				_buffer.indexes.push_back(baseU + static_cast<unsigned int>(i + 1));
 			}
 
-			if (_bakedShapeCount == 0)
-			{
-				std::size_t totalV = 0, totalI = 0;
-				for (const auto &s : _shapes)
-				{
-					const std::size_t n = s.size();
-					totalV += n;
-					if (n >= 3)
-					{
-						totalI += (n - 2) * 3;
-					}
-				}
-				_buffer.vertices.clear();
-				_buffer.indexes.clear();
-				_buffer.vertices.reserve(totalV);
-				_buffer.indexes.reserve(totalI);
-			}
-			else
-			{
-				std::size_t addV = 0, addI = 0;
-				for (std::size_t i = _bakedShapeCount; i < _shapes.size(); ++i)
-				{
-					const std::size_t n = _shapes[i].size();
-					addV += n;
-					if (n >= 3)
-					{
-						addI += (n - 2) * 3;
-					}
-				}
-				_buffer.vertices.reserve(_buffer.vertices.size() + addV);
-				_buffer.indexes.reserve(_buffer.indexes.size() + addI);
-			}
-
-			for (std::size_t i = _bakedShapeCount; i < _shapes.size(); ++i)
-			{
-				_appendShapeFast(_shapes[i]);
-			}
-			_bakedShapeCount = _shapes.size();
-			_needBake = false;
+			_shapeIdentifiers.push_back({base, base + points.size()});
+			_invalidateCaches();
 		}
 
-		const Buffer &buffer() const
+		void addShape(const std::vector<Vertex> &container)
 		{
-			if (_needBake == true)
-			{
-				bake();
-			}
+			addShape(std::span<const Vertex>(container.data(), container.size()));
+		}
+
+		std::vector<Shape> &shapes()
+		{
+			return _shapesCache.get();
+		}
+
+		const std::vector<ConstShape> &shapes() const
+		{
+			return _constShapesCache.get();
+		}
+
+		Buffer &buffer()
+		{
 			return _buffer;
 		}
-
-		void reserveShapes(size_t p_count)
+		const Buffer &buffer() const
 		{
-			std::lock_guard lock(_mutex);
-			_shapes.reserve(p_count);
+			return _buffer;
 		}
 	};
 }

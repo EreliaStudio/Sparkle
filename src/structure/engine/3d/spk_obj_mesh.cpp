@@ -99,12 +99,9 @@ namespace spk
 
 	void ObjMesh::applyOffset(const spk::Vector3 &p_offset)
 	{
-		for (auto &shape : shapes())
+		for (auto &vertex : buffer().vertices)
 		{
-			for (auto &vertex : shape)
-			{
-				vertex.position += p_offset;
-			}
+			vertex.position += p_offset;
 		}
 	}
 
