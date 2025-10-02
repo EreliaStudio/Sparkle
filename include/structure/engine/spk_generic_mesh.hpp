@@ -2,11 +2,10 @@
 
 #include "spk_sfinae.hpp"
 
-#include <filesystem>
+#include <cstring> // memcpy
 #include <initializer_list>
 #include <mutex>
 #include <type_traits>
-#include <unordered_map>
 #include <vector>
 
 namespace spk
@@ -17,10 +16,7 @@ namespace spk
 	public:
 		using Vertex = TVertexType;
 
-		struct Shape
-		{
-			std::vector<Vertex> points;
-		};
+		using Shape = std::vector<Vertex>;
 
 		struct Buffer
 		{
@@ -32,35 +28,67 @@ namespace spk
 		std::vector<Shape> _shapes;
 
 		mutable bool _needBake = false;
-		mutable Buffer _buffer;
+		mutable std::size_t _bakedShapeCount = 0;
 
+		mutable Buffer _buffer;
 		mutable std::mutex _mutex;
 
-		unsigned int _getOrInsertVertex(const Vertex &p_v, std::unordered_map<Vertex, unsigned int> &p_vertexMap) const
+		void _appendShapeFast(const Shape &s) const
 		{
-			auto insertResult = p_vertexMap.try_emplace(p_v, static_cast<unsigned int>(_buffer.vertices.size()));
-			if (insertResult.second == true)
-			{
-				_buffer.vertices.push_back(p_v);
-			}
-			return insertResult.first->second;
-		}
-
-		void _bakeShape(const Shape &p_shape, std::unordered_map<Vertex, unsigned int> &p_vertexMap) const
-		{
-			if (p_shape.points.size() < 3)
+			const std::size_t n = s.size();
+			if (n < 3)
 			{
 				return;
 			}
-			unsigned int i0 = _getOrInsertVertex(p_shape.points[0], p_vertexMap);
-			for (size_t i = 1; i + 1 < p_shape.points.size(); ++i)
+
+			const unsigned int base = static_cast<unsigned int>(_buffer.vertices.size());
+
+			const std::size_t oldV = _buffer.vertices.size();
+			_buffer.vertices.resize(oldV + n);
+			if constexpr (std::is_trivially_copyable_v<Vertex>)
 			{
-				unsigned int i1 = _getOrInsertVertex(p_shape.points[i], p_vertexMap);
-				unsigned int i2 = _getOrInsertVertex(p_shape.points[i + 1], p_vertexMap);
-				_buffer.indexes.push_back(i0);
-				_buffer.indexes.push_back(i1);
-				_buffer.indexes.push_back(i2);
+				std::memcpy(&_buffer.vertices[oldV], s.data(), n * sizeof(Vertex));
 			}
+			else
+			{
+				std::copy(s.begin(), s.end(), _buffer.vertices.begin() + static_cast<std::ptrdiff_t>(oldV));
+			}
+
+			const std::size_t triCount = n - 2;
+			const std::size_t oldI = _buffer.indexes.size();
+			_buffer.indexes.resize(oldI + triCount * 3);
+
+			unsigned int *dst = _buffer.indexes.data() + oldI;
+			for (unsigned int i = 1; i + 1 < n; ++i)
+			{
+				*dst++ = base;
+				*dst++ = base + i;
+				*dst++ = base + i + 1;
+			}
+		}
+
+		void _shrinkOneBakedShape() const
+		{
+			if (_bakedShapeCount == 0)
+			{
+				return;
+			}
+			const auto &s = _shapes[_bakedShapeCount - 1];
+			const std::size_t n = s.size();
+
+			if (n > 0 && _buffer.vertices.size() >= n)
+			{
+				_buffer.vertices.resize(_buffer.vertices.size() - n);
+			}
+			if (n >= 3)
+			{
+				const std::size_t k = (n - 2) * 3;
+				if (_buffer.indexes.size() >= k)
+				{
+					_buffer.indexes.resize(_buffer.indexes.size() - k);
+				}
+			}
+			--_bakedShapeCount;
 		}
 
 	public:
@@ -69,12 +97,14 @@ namespace spk
 		GenericMesh(const GenericMesh &p_other) :
 			_shapes(),
 			_needBake(false),
+			_bakedShapeCount(0),
 			_buffer(),
 			_mutex()
 		{
 			std::scoped_lock lock(p_other._mutex);
 			_shapes = p_other._shapes;
 			_needBake = p_other._needBake;
+			_bakedShapeCount = p_other._bakedShapeCount;
 			_buffer = p_other._buffer;
 		}
 
@@ -84,32 +114,35 @@ namespace spk
 			{
 				return *this;
 			}
-
 			std::scoped_lock lock(_mutex, p_other._mutex);
 			_shapes = p_other._shapes;
 			_needBake = p_other._needBake;
+			_bakedShapeCount = p_other._bakedShapeCount;
 			_buffer = p_other._buffer;
 			return *this;
 		}
 
-		GenericMesh(GenericMesh &&p_other) noexcept(std::is_nothrow_move_constructible_v<std::vector<Shape>> && std::is_nothrow_move_constructible_v<Buffer>) :
+		GenericMesh(GenericMesh &&p_other) :
 			_shapes(),
 			_needBake(false),
+			_bakedShapeCount(0),
 			_buffer(),
 			_mutex()
 		{
 			std::scoped_lock lock(p_other._mutex);
 			_shapes = std::move(p_other._shapes);
 			_needBake = p_other._needBake;
+			_bakedShapeCount = p_other._bakedShapeCount;
 			_buffer = std::move(p_other._buffer);
 
 			p_other._needBake = false;
+			p_other._bakedShapeCount = 0;
 			p_other._buffer.vertices.clear();
 			p_other._buffer.indexes.clear();
 			p_other._shapes.clear();
 		}
 
-		GenericMesh &operator=(GenericMesh &&p_other) noexcept(std::is_nothrow_move_assignable_v<std::vector<Shape>> && std::is_nothrow_move_assignable_v<Buffer>)
+		GenericMesh &operator=(GenericMesh &&p_other)
 		{
 			if (this == &p_other)
 			{
@@ -119,9 +152,11 @@ namespace spk
 
 			_shapes = std::move(p_other._shapes);
 			_needBake = p_other._needBake;
+			_bakedShapeCount = p_other._bakedShapeCount;
 			_buffer = std::move(p_other._buffer);
 
 			p_other._needBake = false;
+			p_other._bakedShapeCount = 0;
 			p_other._buffer.vertices.clear();
 			p_other._buffer.indexes.clear();
 			p_other._shapes.clear();
@@ -129,17 +164,22 @@ namespace spk
 			return *this;
 		}
 
-		void addShape(const std::vector<Vertex> &p_vertices)
+		void resize(const size_t& p_size)
+		{
+			_shapes.resize(p_size);
+		}
+
+		void addShape(const Shape &p_shapes)
 		{
 			std::lock_guard lock(_mutex);
-			_shapes.push_back(Shape{p_vertices});
+			_shapes.push_back(p_shapes);
 			_needBake = true;
 		}
 
-		void addShape(std::vector<Vertex> &&p_vertices)
+		void addShape(Shape &&p_shapes)
 		{
 			std::lock_guard lock(_mutex);
-			_shapes.push_back(Shape{std::move(p_vertices)});
+			_shapes.push_back(std::move(p_shapes));
 			_needBake = true;
 		}
 
@@ -174,6 +214,7 @@ namespace spk
 			_shapes.clear();
 			_buffer.vertices.clear();
 			_buffer.indexes.clear();
+			_bakedShapeCount = 0;
 			_needBake = false;
 		}
 
@@ -184,6 +225,9 @@ namespace spk
 
 		std::vector<Shape> &shapes()
 		{
+			std::lock_guard lock(_mutex);
+			_needBake = true;
+			_bakedShapeCount = 0;
 			return _shapes;
 		}
 
@@ -206,6 +250,8 @@ namespace spk
 		{
 			std::lock_guard lock(_mutex);
 			_needBake = true;
+			_bakedShapeCount = 0;
+
 			_buffer.vertices.clear();
 			_buffer.indexes.clear();
 		}
@@ -213,38 +259,54 @@ namespace spk
 		void bake() const
 		{
 			std::lock_guard lock(_mutex);
-
 			if (_needBake == false)
 			{
 				return;
 			}
 
-			// Clear and reserve to minimize reallocations during baking.
-			_buffer.vertices.clear();
-			_buffer.indexes.clear();
-
-			std::size_t totalVertexCandidates = 0;
-			std::size_t totalIndexCount = 0;
-			for (const auto &s : _shapes)
+			while (_bakedShapeCount > _shapes.size())
 			{
-				totalVertexCandidates += s.points.size();
-				if (s.points.size() >= 3)
+				_shrinkOneBakedShape();
+			}
+
+			if (_bakedShapeCount == 0)
+			{
+				std::size_t totalV = 0, totalI = 0;
+				for (const auto &s : _shapes)
 				{
-					totalIndexCount += (s.points.size() - 2) * 3;
+					const std::size_t n = s.size();
+					totalV += n;
+					if (n >= 3)
+					{
+						totalI += (n - 2) * 3;
+					}
 				}
+				_buffer.vertices.clear();
+				_buffer.indexes.clear();
+				_buffer.vertices.reserve(totalV);
+				_buffer.indexes.reserve(totalI);
 			}
-
-			_buffer.vertices.reserve(totalVertexCandidates);
-			_buffer.indexes.reserve(totalIndexCount);
-
-			std::unordered_map<Vertex, unsigned int> vertexMap;
-			vertexMap.reserve(totalVertexCandidates);
-
-			for (const auto &s : _shapes)
+			else
 			{
-				_bakeShape(s, vertexMap);
+				std::size_t addV = 0, addI = 0;
+				for (std::size_t i = _bakedShapeCount; i < _shapes.size(); ++i)
+				{
+					const std::size_t n = _shapes[i].size();
+					addV += n;
+					if (n >= 3)
+					{
+						addI += (n - 2) * 3;
+					}
+				}
+				_buffer.vertices.reserve(_buffer.vertices.size() + addV);
+				_buffer.indexes.reserve(_buffer.indexes.size() + addI);
 			}
 
+			for (std::size_t i = _bakedShapeCount; i < _shapes.size(); ++i)
+			{
+				_appendShapeFast(_shapes[i]);
+			}
+			_bakedShapeCount = _shapes.size();
 			_needBake = false;
 		}
 

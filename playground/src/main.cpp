@@ -20,7 +20,7 @@ public:
 	CameraComponent(const std::wstring& p_name) :
 		spk::CameraComponent2D(p_name)
 	{
-		setPixelsPerUnit({9, 9});
+		setPixelsPerUnit({3, 3});
 
 		if (activeCameraComponent() == nullptr)
 		{

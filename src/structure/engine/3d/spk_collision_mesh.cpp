@@ -54,8 +54,8 @@ namespace spk
 		for (const auto &shape : p_mesh->shapes())
 		{
 			std::vector<spk::Vector3> points;
-			points.reserve(shape.points.size());
-			for (const auto &point : shape.points)
+			points.reserve(shape.size());
+			for (const auto &point : shape)
 			{
 				points.push_back(point.position);
 			}

@@ -102,8 +102,6 @@ namespace spk
 
 			static bool _isFullQuad(const std::vector<spk::ObjVertex> &p_vertices, const spk::Vector3 &p_normal);
 
-			static std::vector<spk::ObjVertex> _extractVertices(const spk::ObjMesh::Shape &p_shape);
-
 			static void _applyOrientationToVertices(std::vector<spk::ObjVertex> &p_vertices, const Orientation &p_orientation);
 
 			static bool _isAxisAlignedFace(const std::vector<spk::ObjVertex> &p_vertices, spk::Vector3 &p_outNormal);

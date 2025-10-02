@@ -36,7 +36,7 @@ namespace spk
 			p_v.uv = (p_v.uv * p_sprite.size) + p_sprite.anchor;
 		};
 
-		for (auto &vertex : p_shape.points)
+		for (auto &vertex : p_shape)
 		{
 			transform(vertex);
 		}
@@ -78,7 +78,7 @@ namespace spk
 	{
 		for (const auto &shape : p_source.shapes())
 		{
-			std::vector<spk::ObjVertex> transformed = shape.points;
+			std::vector<spk::ObjVertex> transformed = shape;
 			for (auto &vertex : transformed)
 			{
 				vertex.position += p_offset;
@@ -141,11 +141,6 @@ namespace spk
 		return (
 			(std::abs(minA - 0.0f) < spk::Constants::pointPrecision) && (std::abs(maxA - 1.0f) < spk::Constants::pointPrecision) &&
 			(std::abs(minB - 0.0f) < spk::Constants::pointPrecision) && (std::abs(maxB - 1.0f) < spk::Constants::pointPrecision));
-	}
-
-	std::vector<spk::ObjVertex> Block::Cache::_extractVertices(const spk::ObjMesh::Shape &p_shape)
-	{
-		return p_shape.points;
 	}
 
 	void Block::Cache::_applyOrientationToVertices(std::vector<spk::ObjVertex> &p_vertices, const Orientation &p_orientation)
@@ -250,19 +245,18 @@ namespace spk
 		Entry result;
 
 		size_t shapeIndex = 0;
-		for (const auto &shape : p_mesh.shapes())
+		for (const auto &baseShape: p_mesh.shapes())
 		{
-			auto vertices = _extractVertices(shape);
-
-			_applyOrientationToVertices(vertices, p_orientation);
+			auto shape = baseShape;
+			_applyOrientationToVertices(shape, p_orientation);
 
 			spk::Vector3 normal;
-			if (_isAxisAlignedFace(vertices, normal) == true)
+			if (_isAxisAlignedFace(shape, normal) == true)
 			{
 				Face &face = result.faces[normal];
 				std::vector<spk::Vector3> footprintPoints;
-				footprintPoints.reserve(vertices.size());
-				for (const auto &v : vertices)
+				footprintPoints.reserve(shape.size());
+				for (const auto &v : shape)
 				{
 					footprintPoints.push_back(v.position);
 				}
@@ -282,13 +276,13 @@ namespace spk
 					}
 				}
 
-				_addVerticesToMesh(face.mesh, vertices);
+				_addVerticesToMesh(face.mesh, shape);
 
-				face.full = face.full == true || (vertices.size() == 4 && _isFullQuad(vertices, normal) == true);
+				face.full = face.full == true || (shape.size() == 4 && _isFullQuad(shape, normal) == true);
 			}
 			else
 			{
-				_addVerticesToMesh(result.innerMesh, vertices);
+				_addVerticesToMesh(result.innerMesh, shape);
 			}
 		}
 

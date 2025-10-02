@@ -115,11 +115,12 @@ namespace spk
 
 				void _insertData(float p_x, float p_y, float p_width, float p_height, int p_layer, const spk::SpriteSheet::Section &p_sprite)
 				{
-					_mesh.addShape(
-						{{spk::Vector2(p_x, p_y), {p_sprite.anchor.x, p_sprite.anchor.y + p_sprite.size.y}},
+					spk::Mesh2D::Shape shapeToAdd = {{spk::Vector2(p_x, p_y), {p_sprite.anchor.x, p_sprite.anchor.y + p_sprite.size.y}},
 						 {spk::Vector2(p_x + p_width, p_y), p_sprite.anchor + p_sprite.size},
 						 {spk::Vector2(p_x + p_width, p_y + p_height), {p_sprite.anchor.x + p_sprite.size.x, p_sprite.anchor.y}},
-						 {spk::Vector2(p_x, p_y + p_height), p_sprite.anchor}});
+						 {spk::Vector2(p_x, p_y + p_height), p_sprite.anchor}};
+
+					_mesh.addShape(std::move(shapeToAdd));
 				}
 
 				void _bakeMonoTile(int p_x, int p_y, int p_layer, const TileType &p_tile)
@@ -136,7 +137,6 @@ namespace spk
 					BottomLeft = 3
 				};
 
-				// Refresh the 3x3 neighbour cache for fast tile lookups across chunk borders.
 				void _updateNeightbourDataCache()
 				{
 					// Obtain const access to tile map to avoid generating missing chunks during caching.
@@ -160,7 +160,6 @@ namespace spk
 					}
 				}
 
-				// Fast content fetch using the neighbour cache.
 				typename TileType::ID _cachedContent(const spk::Vector2Int &p_globalCoord, int p_layer) const
 				{
 					const spk::Vector2Int rel = p_globalCoord - (_chunkCoordinates * size);

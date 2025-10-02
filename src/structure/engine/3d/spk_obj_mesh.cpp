@@ -101,7 +101,7 @@ namespace spk
 	{
 		for (auto &shape : shapes())
 		{
-			for (auto &vertex : shape.points)
+			for (auto &vertex : shape)
 			{
 				vertex.position += p_offset;
 			}
@@ -304,7 +304,7 @@ namespace spk
 				return idx;
 			};
 
-			for (const auto &v : shape.points)
+			for (const auto &v : shape)
 			{
 				face.push_back(processVertex(v));
 			}
