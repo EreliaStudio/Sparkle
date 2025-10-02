@@ -108,8 +108,6 @@ namespace spk
 				spk::Vector2Int _chunkCoordinates = 0;
 				std::array<std::array<std::array<typename TileType::ID, LayerCount>, ChunkSizeX>, ChunkSizeY> _content;
 
-				// Cache of the 3x3 neighbour chunks' Data components centered on this chunk.
-				// Indexed as [_dy + 1][_dx + 1] where dx,dy in {-1,0,1} relative to _chunkCoordinates.
 				std::array<std::array<spk::SafePointer<const Data>, 3>, 3> _neightbourDataCache;
 
 				bool _isBaked = false;
@@ -117,7 +115,6 @@ namespace spk
 
 				void _insertData(float p_x, float p_y, float p_width, float p_height, int p_layer, const spk::SpriteSheet::Section &p_sprite)
 				{
-					// Define quad vertices in counter-clockwise order (BL, BR, TR, TL)
 					_mesh.addShape(
 						{{spk::Vector2(p_x, p_y), {p_sprite.anchor.x, p_sprite.anchor.y + p_sprite.size.y}},
 						 {spk::Vector2(p_x + p_width, p_y), p_sprite.anchor + p_sprite.size},
@@ -778,7 +775,7 @@ namespace spk
 
 			std::unique_ptr<Chunk> newChunk = std::make_unique<Chunk>(chunkName, this, p_chunkCoordinate);
 
-			newChunk->transform().place(spk::Vector3(p_chunkCoordinate.x * Chunk::size.x, p_chunkCoordinate.y * Chunk::size.y, 0));
+			newChunk->transform().place(spk::Vector2(p_chunkCoordinate.x * Chunk::size.x, p_chunkCoordinate.y * Chunk::size.y));
 			newChunk->setSpriteSheet(_spriteSheet);
 			newChunk->fill(-1);
 

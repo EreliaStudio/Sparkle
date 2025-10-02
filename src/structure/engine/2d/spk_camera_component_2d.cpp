@@ -47,6 +47,7 @@ namespace spk
 		const float halfH = worldHeight * 0.5f;
 
 		_camera.setOrthographic(-halfW, halfW, -halfH, halfH, _policy.nearPlane, _policy.farPlane);
+		
 		_updateUBO();
 	}
 
@@ -98,18 +99,6 @@ namespace spk
 
 	spk::Vector2 CameraComponent2D::ndcToWorld(const spk::Vector2 &p_ndc) const
 	{
-		const spk::Vector4 ndcPos(p_ndc.x, p_ndc.y, -1.0f, 1.0f);
-
-		spk::Vector4 camPos4 = _camera.inverseProjectionMatrix() * ndcPos;
-
-		const spk::Transform2D &tr = owner().upCast<spk::Entity2D>()->transform();
-		const spk::Matrix4x4 invView = tr.model();
-		spk::Vector4 worldPos4 = invView * camPos4;
-
-		if (std::abs(worldPos4.w) > 1e-6f)
-		{
-			worldPos4 /= worldPos4.w;
-		}
-		return {worldPos4.x, worldPos4.y};
+		return (_camera.convertScreenToCamera(p_ndc).xy());
 	}
 }

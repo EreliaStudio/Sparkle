@@ -3,7 +3,7 @@
 namespace spk
 {
 	Entity2D::Entity2D(const std::wstring &p_name, const spk::SafePointer<GenericEntity> &p_owner):
-		spk::GenericEntity(p_name),
+		spk::GenericEntity(p_name, p_owner),
 		_transform(addComponent<Transform2D>())
 	{
 		_ownerTransformEditionContract = _transform->addOnEditionCallback(

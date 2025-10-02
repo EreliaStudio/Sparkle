@@ -42,6 +42,7 @@
 #include "structure/engine/3d/spk_block.hpp"
 #include "structure/engine/3d/spk_block_map.hpp"
 #include "structure/engine/3d/spk_camera_component.hpp"
+#include "structure/engine/2d/spk_camera_component_2d.hpp"
 #include "structure/engine/3d/spk_collider.hpp"
 #include "structure/engine/2d/spk_collider_2d.hpp"
 #include "structure/engine/3d/spk_collision_mesh.hpp"
