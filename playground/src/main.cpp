@@ -138,6 +138,20 @@ private:
 
 	void _setupMap(const spk::Vector2Int &p_size)
 	{
+		// --- Section A --- Generation of the landspace
+		//1) using a perlin noise generation, generate landscape.
+		//2) add a sort of "area" of deep water around the border of the map, to force the landscape generated to be a large continent or a series of island
+		//3) place the node for shallow and deep water where the sea is supose to be
+
+		// --- Section B --- Generation of biomes
+		//1) Place randomely but evenly one gym inside the map, using a poisson-disk algorythm with a large radius.
+		//   A gym must be placed on a landspace, not in sea
+		// 1.2) place a tile in a circle around the gym position of like 10 tiles, to represent the gym
+		//2) Once all Gym have been placed evenly, place 1 to 3 cities around each gym city, with a smaller radius to like "populate the proximity of the gym with smaller town".
+		//   Each town must not be too close to other cities and/or gym, even from another biome
+		//   A city must be placed on a landspace, not in sea
+		// 2.2) place a tile in a circle around the city position of like 5 tiles, to represent the city
+		//3) using a voronoi cell algorythm, fill the space with the adequat biome territory
 		
 	}
 
@@ -193,6 +207,9 @@ public:
 		addTileByID(33, TileType(spk::Vector2UInt(3, 5), TileType::Type::Monotile)); // Ice biome - Gym
 		addTileByID(34, TileType(spk::Vector2UInt(4, 5), TileType::Type::Monotile)); // Ice biome - City
 		addTileByID(35, TileType(spk::Vector2UInt(5, 5), TileType::Type::Monotile)); // Ice biome - Territory
+		
+		addTileByID(36, TileType(spk::Vector2UInt(6, 0), TileType::Type::Monotile)); // Deep sea
+		addTileByID(37, TileType(spk::Vector2UInt(7, 0), TileType::Type::Monotile)); // Shallow sea
 
 		_activator->activate();
 	}
