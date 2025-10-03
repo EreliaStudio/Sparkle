@@ -876,7 +876,7 @@ namespace spk
 
 		void setContent(const spk::Vector2Int &p_global, int p_layer, typename TileType::ID p_id)
 		{
-			const spk::Vector2Int chunkCoord = worldToChunkCoordinate(p_global);
+			const spk::Vector2Int chunkCoord = TileMap::worldToChunkCoordinates(p_global);
 
 			if (_chunks.contains(chunkCoord) == false)
 			{
@@ -884,7 +884,7 @@ namespace spk
 				_unbakeNeightbours(chunkCoord);
 			}
 
-			spk::Vector2Int local = absoluteToRelativeCoordinate(p_global);
+			spk::Vector2Int local = absoluteToRelativeCoordinates(p_global);
 
 			_chunks[chunkCoord]->setContent(local, p_layer, p_id);
 		}
