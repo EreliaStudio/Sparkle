@@ -134,66 +134,44 @@ private:
 	AssetAtlas::Instanciator _assetAtlasInstanciator;
 	spk::SafePointer<Activator> _activator;
 
-	struct ChunkData
+	std::vector<spk::Vector2Int> citiesPositions;
+
+	struct City
 	{
-		enum class State
+		enum class Type
 		{
-			City = 0,
-			Territory = 1,
-			InfluenceZone = 2
+			Gym, // Main city
+			City, // Normal town
+			Town, // Small town
+			POI // Point of interest
 		};
-		int type;
-		State state;
-	};
-	spk::RandomGenerator<int> valueGenerator = spk::RandomGenerator<int>(123456);
-	std::unordered_map<spk::Vector2Int, ChunkData> _chunkDatas;
-
-	void _insertCity(const spk::Vector2Int& p_position, int p_type, int p_territoryAreaRadius, int p_influenaceAreaRadius)
-	{
-		_chunkDatas[p_position].type = p_type;
-
-		for (int x = -p_influenaceAreaRadius; x <= p_influenaceAreaRadius; x++)
+		
+		struct GenerationData
 		{
-			for (int y = -p_influenaceAreaRadius; y <= p_influenaceAreaRadius; y++)
-			{
-				spk::Vector2Int offset = {x, y};
+			float areaRadius; // The distance to the "center" of the town on which i should place "type" as tile value
+			float territoryRadius; // The distance to the "center" of the town on which i should place "type + 1" as tile value
+			float influenceRadius; // The distance to the "center" of the town on which i should place "type + 2" as tile value
+		};
 
-				float distance = offset.distance(spk::Vector2Int(0, 0));
+		spk::Vector2Int position;
+		City* parent;
+		std::vector<City*> children;
+	};
 
-				if (distance <= p_influenaceAreaRadius)
-				{
-					_chunkDatas[p_position + offset].type = p_type;
+	const std::unordered_map<City::Type, City::GenerationData> _cityGenerationDatas = {
+		{City::Type::Gym, {50, 100, 200}},
+		{City::Type::City, {30, 50, 100}},
+		{City::Type::Town, {15, 30, 50}},
+		{City::Type::POI, {5, 10, 20}}
+	};
 
-					if (offset == 0)
-					{
-						_chunkDatas[p_position + offset].state = ChunkData::State::City;
-					}
-					else if (distance <= p_territoryAreaRadius)
-					{
-						_chunkDatas[p_position + offset].state = ChunkData::State::Territory;
-					}
-					else
-					{
-						_chunkDatas[p_position + offset].state = ChunkData::State::InfluenceZone;
-					}
-				}
-			}
-		}
-	}
-
-	bool _canBePlaced(const spk::Vector2Int& p_position)
+	void _setupMap(const spk::Vector2Int& p_size)
 	{
-		return (_chunkDatas.contains(p_position) == false || _chunkDatas[p_position].state == ChunkData::State::InfluenceZone);
-	}
-
-	void _generateCity(int type, size_t p_nbCity, size_t p_territoryAreaRadius, size_t p_influenaceAreaRadius)
-	{
-		_insertCity({20, 20}, type, p_territoryAreaRadius, p_influenaceAreaRadius);
-	}
-
-	void _setupChunkDatas(const spk::Vector2Int& p_size)
-	{
-		_generateCity(0, 8, 2, 5);
+		//Generate 8 gym city, than generate 2 City for each gym, than 2 town for each city, and than 4 POI for each gym.
+		// The idea is that i want to poisson-disk the cities on the whole map, and set the tiles to visualy see the town, its "territory", where no other stuff could be placed, its "influence", where i can place another object.
+		// When you create a City linked to a Gym, i need you to add the influence of the city to the "influance" of the Gym, allow you to place the next town, city or POI using this city too.
+	
+		// Note that i need to have the stuff distributed in a poisson-disk algorythmn, to have them evenly distributed
 	}
 
 public:
@@ -202,20 +180,23 @@ public:
 		_assetAtlasInstanciator(),
 		_activator(addComponent<Activator>(p_name + L"/Activator"))
 	{
-		_setupChunkDatas(p_size);
+		_setupMap(p_size);
 
 		setSpriteSheet(AssetAtlas::instance()->spriteSheet(L"ChunkTileset"));
 		
 		using TileType = Tilemap::TileType;
 		addTileByID(0, TileType(spk::Vector2UInt(0, 0), TileType::Type::Monotile)); // Big city
-		addTileByID(1, TileType(spk::Vector2UInt(1, 0), TileType::Type::Monotile)); // Big city area
+		addTileByID(1, TileType(spk::Vector2UInt(1, 0), TileType::Type::Monotile)); // Big city territoty
 		addTileByID(2, TileType(spk::Vector2UInt(2, 0), TileType::Type::Monotile)); // Big city influence
 		addTileByID(3, TileType(spk::Vector2UInt(0, 1), TileType::Type::Monotile)); // Town
-		addTileByID(4, TileType(spk::Vector2UInt(1, 1), TileType::Type::Monotile)); // Town area
+		addTileByID(4, TileType(spk::Vector2UInt(1, 1), TileType::Type::Monotile)); // Town territoty
 		addTileByID(5, TileType(spk::Vector2UInt(2, 1), TileType::Type::Monotile)); // Town influence
 		addTileByID(6, TileType(spk::Vector2UInt(0, 2), TileType::Type::Monotile)); // Small town
-		addTileByID(7, TileType(spk::Vector2UInt(1, 2), TileType::Type::Monotile)); // Small town area
+		addTileByID(7, TileType(spk::Vector2UInt(1, 2), TileType::Type::Monotile)); // Small town territoty
 		addTileByID(8, TileType(spk::Vector2UInt(2, 2), TileType::Type::Monotile)); // Small town influence
+		addTileByID(9, TileType(spk::Vector2UInt(0, 3), TileType::Type::Monotile)); // Point Of Interest
+		addTileByID(10, TileType(spk::Vector2UInt(1, 3), TileType::Type::Monotile)); // Point Of Interest territoty
+		addTileByID(11, TileType(spk::Vector2UInt(2, 3), TileType::Type::Monotile)); // Point Of Interest influence
 
 		_activator->activate();
 	}
@@ -223,19 +204,7 @@ public:
 protected:
 	void _onChunkGeneration(const spk::Vector2Int &p_chunkCoordinate, Chunk &p_chunkToFill) override
 	{
-		if (_chunkDatas.contains(p_chunkCoordinate) == false)
-		{
-			return ;
-		}
-
-		for (int y = 0; y < Chunk::size.y; ++y)
-		{
-			for (int x = 0; x < Chunk::size.x; ++x)
-			{
-				auto& tmp = _chunkDatas[p_chunkCoordinate];
-				p_chunkToFill.setContent(x, y, 0, tmp.type + static_cast<int>(tmp.state));
-			}
-		}
+		
 	}
 };
 
@@ -252,9 +221,9 @@ int main()
 	engineWidget.setGeometry(window->geometry());
 	engineWidget.activate();
 
-	spk::Vector2Int mapSize = {50, 30};
+	spk::Vector2Int mapSize = {2000, 600}; // In tile
 	Player player = Player(L"Player");
-	player.transform().place(mapSize * Tilemap::Chunk::size / 2);
+	player.transform().place(mapSize / 2);
 	player.transform().setLayer(5);
 	Tilemap tilemap = Tilemap(L"Tilemap", mapSize);
 	tilemap.transform().setLayer(0);
