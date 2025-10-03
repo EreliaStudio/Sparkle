@@ -349,9 +349,43 @@ namespace spk
 					}
 				}
 
+				std::pair<size_t, size_t> _countChunkBufferSize()
+				{
+					size_t nbVertices = 0;
+					size_t nbIndexes = 0;
+					for (int layer = 0; layer < static_cast<int>(LayerCount); ++layer)
+					{
+						for (int y = 0; y < size.y; ++y)
+						{
+							for (int x = 0; x < size.x; ++x)
+							{
+								typename TileType::ID &current = _content[x][y][layer];
+								if (current != -1)
+								{
+									spk::SafePointer<const TileType> tile = _tileMap->tileById(current);
+
+									if (tile == nullptr)
+									{
+										continue;
+									}
+
+									nbVertices += 4 * (tile->type() == TileType::Type::Autotile ? 4 : 1);
+									nbIndexes += 6 * (tile->type() == TileType::Type::Autotile ? 4 : 1);
+								}
+							}
+						}
+					}
+					return {nbVertices, nbIndexes};
+				}
+
 				void _bake()
 				{
 					_mesh.clear();
+
+					auto expectedBufferSize = _countChunkBufferSize();
+
+					_mesh.buffer().vertices.reserve(expectedBufferSize.first);
+					_mesh.buffer().indexes.reserve(expectedBufferSize.second);
 
 					_updateNeightbourDataCache();
 

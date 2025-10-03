@@ -99,6 +99,6 @@ namespace spk
 
 	spk::Vector2 CameraComponent2D::ndcToWorld(const spk::Vector2 &p_ndc) const
 	{
-		return (_camera.convertScreenToCamera(p_ndc).xy());
+		return (_camera.convertScreenToCamera(p_ndc).xy()) + owner().upCast<spk::Entity2D>()->transform().position();
 	}
 }

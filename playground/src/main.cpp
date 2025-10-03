@@ -134,18 +134,88 @@ private:
 	AssetAtlas::Instanciator _assetAtlasInstanciator;
 	spk::SafePointer<Activator> _activator;
 
+	struct ChunkData
+	{
+		enum class State
+		{
+			City = 0,
+			Territory = 1,
+			InfluenceZone = 2
+		};
+		int type;
+		State state;
+	};
+	spk::RandomGenerator<int> valueGenerator = spk::RandomGenerator<int>(123456);
+	std::unordered_map<spk::Vector2Int, ChunkData> _chunkDatas;
+
+	void _insertCity(const spk::Vector2Int& p_position, int p_type, int p_territoryAreaRadius, int p_influenaceAreaRadius)
+	{
+		_chunkDatas[p_position].type = p_type;
+
+		for (int x = -p_influenaceAreaRadius; x <= p_influenaceAreaRadius; x++)
+		{
+			for (int y = -p_influenaceAreaRadius; y <= p_influenaceAreaRadius; y++)
+			{
+				spk::Vector2Int offset = {x, y};
+
+				float distance = offset.distance(spk::Vector2Int(0, 0));
+
+				if (distance <= p_influenaceAreaRadius)
+				{
+					_chunkDatas[p_position + offset].type = p_type;
+
+					if (offset == 0)
+					{
+						_chunkDatas[p_position + offset].state = ChunkData::State::City;
+					}
+					else if (distance <= p_territoryAreaRadius)
+					{
+						_chunkDatas[p_position + offset].state = ChunkData::State::Territory;
+					}
+					else
+					{
+						_chunkDatas[p_position + offset].state = ChunkData::State::InfluenceZone;
+					}
+				}
+			}
+		}
+	}
+
+	bool _canBePlaced(const spk::Vector2Int& p_position)
+	{
+		return (_chunkDatas.contains(p_position) == false || _chunkDatas[p_position].state == ChunkData::State::InfluenceZone);
+	}
+
+	void _generateCity(int type, size_t p_nbCity, size_t p_territoryAreaRadius, size_t p_influenaceAreaRadius)
+	{
+		_insertCity({20, 20}, type, p_territoryAreaRadius, p_influenaceAreaRadius);
+	}
+
+	void _setupChunkDatas(const spk::Vector2Int& p_size)
+	{
+		_generateCity(0, 8, 2, 5);
+	}
+
 public:
-	explicit Tilemap(const std::wstring &p_name) :
+	explicit Tilemap(const std::wstring &p_name, const spk::Vector2Int& p_size) :
 		spk::TileMap<16, 16, 3, PlaygroundTileFlag>(p_name, nullptr),
 		_assetAtlasInstanciator(),
 		_activator(addComponent<Activator>(p_name + L"/Activator"))
 	{
+		_setupChunkDatas(p_size);
+
 		setSpriteSheet(AssetAtlas::instance()->spriteSheet(L"ChunkTileset"));
 		
 		using TileType = Tilemap::TileType;
 		addTileByID(0, TileType(spk::Vector2UInt(0, 0), TileType::Type::Monotile)); // Big city
-		addTileByID(1, TileType(spk::Vector2UInt(1, 0), TileType::Type::Monotile)); // Town
-		addTileByID(2, TileType(spk::Vector2UInt(2, 0), TileType::Type::Monotile)); // Small town
+		addTileByID(1, TileType(spk::Vector2UInt(1, 0), TileType::Type::Monotile)); // Big city area
+		addTileByID(2, TileType(spk::Vector2UInt(2, 0), TileType::Type::Monotile)); // Big city influence
+		addTileByID(3, TileType(spk::Vector2UInt(0, 1), TileType::Type::Monotile)); // Town
+		addTileByID(4, TileType(spk::Vector2UInt(1, 1), TileType::Type::Monotile)); // Town area
+		addTileByID(5, TileType(spk::Vector2UInt(2, 1), TileType::Type::Monotile)); // Town influence
+		addTileByID(6, TileType(spk::Vector2UInt(0, 2), TileType::Type::Monotile)); // Small town
+		addTileByID(7, TileType(spk::Vector2UInt(1, 2), TileType::Type::Monotile)); // Small town area
+		addTileByID(8, TileType(spk::Vector2UInt(2, 2), TileType::Type::Monotile)); // Small town influence
 
 		_activator->activate();
 	}
@@ -153,25 +223,19 @@ public:
 protected:
 	void _onChunkGeneration(const spk::Vector2Int &p_chunkCoordinate, Chunk &p_chunkToFill) override
 	{
-		(void)p_chunkCoordinate;
+		if (_chunkDatas.contains(p_chunkCoordinate) == false)
+		{
+			return ;
+		}
 
 		for (int y = 0; y < Chunk::size.y; ++y)
 		{
 			for (int x = 0; x < Chunk::size.x; ++x)
 			{
-				const bool isEdge = (x == 0) || (y == 0) || (x == Chunk::size.x - 1) || (y == Chunk::size.y - 1);
-				if (isEdge == true)
-				{
-					p_chunkToFill.setContent(x, y, 0, 0);
-				}
-				else
-				{
-					p_chunkToFill.setContent(x, y, 0, 1);
-				}
+				auto& tmp = _chunkDatas[p_chunkCoordinate];
+				p_chunkToFill.setContent(x, y, 0, tmp.type + static_cast<int>(tmp.state));
 			}
 		}
-
-		p_chunkToFill.unbake();
 	}
 };
 
@@ -188,10 +252,11 @@ int main()
 	engineWidget.setGeometry(window->geometry());
 	engineWidget.activate();
 
+	spk::Vector2Int mapSize = {50, 30};
 	Player player = Player(L"Player");
-	player.transform().place(spk::Vector2(0, 0));
+	player.transform().place(mapSize * Tilemap::Chunk::size / 2);
 	player.transform().setLayer(5);
-	Tilemap tilemap = Tilemap(L"Tilemap");
+	Tilemap tilemap = Tilemap(L"Tilemap", mapSize);
 	tilemap.transform().setLayer(0);
 
 	gameEngine.addEntity(&player);
