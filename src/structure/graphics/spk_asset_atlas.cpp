@@ -8,8 +8,6 @@ namespace spk
 	{
 		spk::JSON::File atlasFileConfiguration = spk::JSON::File(p_path);
 
-		spk::cout() << "Loading data contained in [" << p_path << "]" << std::endl;
-
 		if (atlasFileConfiguration.contains(L"Images"))
 		{
 			const auto &imagesNode = atlasFileConfiguration[L"Images"];
@@ -44,8 +42,6 @@ namespace spk
 				const std::wstring name = sheet[L"Name"].as<std::wstring>();
 				const std::wstring path = sheet[L"Path"].as<std::wstring>();
 				const spk::Vector2Int size = spk::Vector2Int(sheet[L"Size"]);
-
-				spk::cout() << "Loading sprite sheet [" << name << "] at path [" << path << "] and size [" << size << "]" << std::endl;
 
 				_allocatedResources[name] = std::make_shared<spk::SpriteSheet>(path, size);
 			}

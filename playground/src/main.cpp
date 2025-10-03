@@ -10,6 +10,17 @@ enum class Event
 
 using EventDispatcher = spk::Singleton<spk::EventDispatcher<Event>>;
 
+class AssetAtlas : public spk::AssetAtlas, public spk::Singleton<AssetAtlas>
+{
+	friend class spk::Singleton<AssetAtlas>;
+	
+private:
+	AssetAtlas()
+	{
+		load(L"playground/resources/assets.json");
+	}
+};
+
 class CameraComponent : public spk::CameraComponent2D
 {
 private:
@@ -78,9 +89,6 @@ public:
 class Tilemap final : public spk::TileMap<16, 16, 3, PlaygroundTileFlag>
 {
 private:
-	static constexpr int kPrimaryLayer = 0;
-	spk::RandomGenerator<int> _interiorTileIdGenerator;
-
 	class Activator : public spk::Component
 	{
 	private:
@@ -123,15 +131,22 @@ private:
 		}
 	};
 
+	AssetAtlas::Instanciator _assetAtlasInstanciator;
 	spk::SafePointer<Activator> _activator;
 
 public:
 	explicit Tilemap(const std::wstring &p_name) :
 		spk::TileMap<16, 16, 3, PlaygroundTileFlag>(p_name, nullptr),
-		_activator(addComponent<Activator>(p_name + L"/Activator")),
-		_interiorTileIdGenerator()
+		_assetAtlasInstanciator(),
+		_activator(addComponent<Activator>(p_name + L"/Activator"))
 	{
-		_interiorTileIdGenerator.configureRange(1, 3);
+		setSpriteSheet(AssetAtlas::instance()->spriteSheet(L"ChunkTileset"));
+		
+		using TileType = Tilemap::TileType;
+		addTileByID(0, TileType(spk::Vector2UInt(0, 0), TileType::Type::Monotile)); // Big city
+		addTileByID(1, TileType(spk::Vector2UInt(1, 0), TileType::Type::Monotile)); // Town
+		addTileByID(2, TileType(spk::Vector2UInt(2, 0), TileType::Type::Monotile)); // Small town
+
 		_activator->activate();
 	}
 
@@ -147,12 +162,11 @@ protected:
 				const bool isEdge = (x == 0) || (y == 0) || (x == Chunk::size.x - 1) || (y == Chunk::size.y - 1);
 				if (isEdge == true)
 				{
-					p_chunkToFill.setContent(x, y, kPrimaryLayer, 0);
+					p_chunkToFill.setContent(x, y, 0, 0);
 				}
 				else
 				{
-					const short randomTileId = static_cast<short>(_interiorTileIdGenerator.sample());
-					p_chunkToFill.setContent(x, y, kPrimaryLayer, randomTileId);
+					p_chunkToFill.setContent(x, y, 0, 1);
 				}
 			}
 		}
@@ -185,15 +199,6 @@ int main()
 
 	player.activate();
 	tilemap.activate();
-
-	spk::SpriteSheet spriteSheet(L"playground/resources/texture/tile_map.png", spk::Vector2UInt(16, 6));
-	tilemap.setSpriteSheet(&spriteSheet);
-
-	using TileType = Tilemap::TileType;
-	tilemap.addTileByID(0, TileType(spk::Vector2UInt(0, 0), TileType::Type::Autotile));
-	tilemap.addTileByID(1, TileType(spk::Vector2UInt(4, 0), TileType::Type::Autotile));
-	tilemap.addTileByID(2, TileType(spk::Vector2UInt(8, 0), TileType::Type::Autotile));
-	tilemap.addTileByID(3, TileType(spk::Vector2UInt(12, 0), TileType::Type::Autotile));
 
 	EventDispatcher::instance()->emit(Event::OnWorldUnitResize);
 
