@@ -34,6 +34,8 @@ namespace spk
 		mutable std::mutex _componentMutex;
 		mutable std::mutex _childMutex;
 
+		bool _requestPaint = false;
+
 		bool _needChildSorting = false;
 		bool _needComponentSorting = false;
 		std::vector<std::unique_ptr<Component>> _components;
@@ -97,6 +99,8 @@ namespace spk
 		void setEngine(GameEngine *p_engine);
 		spk::SafePointer<GameEngine> engine();
 		spk::SafePointer<const GameEngine> engine() const;
+
+		void requestPaint();
 
 		const std::wstring &name() const;
 		const std::set<std::wstring> &tags() const;

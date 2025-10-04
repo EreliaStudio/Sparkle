@@ -553,9 +553,12 @@ namespace spk
 			return (IVector2(spk::positiveModulo(x, p_modulo.x), spk::positiveModulo(y, p_modulo.y)));
 		}
 
-		bool isBetween(const IVector2 &p_min, const IVector2 &p_max)
+		bool isBetween(const IVector2 &p_min, const IVector2 &p_max) const
 		{
-			if (x >= p_min.x && y >= p_min.y && x <= p_max.x && y <= p_max.y)
+			if (x >= p_min.x &&
+				y >= p_min.y &&
+				x <= p_max.x &&
+				y <= p_max.y)
 			{
 				return (true);
 			}

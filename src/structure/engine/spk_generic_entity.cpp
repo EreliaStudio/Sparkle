@@ -79,6 +79,11 @@ namespace spk
 		return (_engine);
 	}
 
+	void GenericEntity::requestPaint()
+	{
+		_requestPaint = true;
+	}
+
 	const std::wstring &GenericEntity::name() const
 	{
 		return (_name);
@@ -225,6 +230,12 @@ namespace spk
 					component->onUpdateEvent(p_event);
 				}
 			}
+		}
+
+		if (_requestPaint == true)
+		{
+			p_event.requestPaint();
+			_requestPaint = false;
 		}
 	}
 
