@@ -130,6 +130,9 @@ namespace spk
 
 		ShowWindow(_hwnd, SW_SHOW);
 		UpdateWindow(_hwnd);
+
+		_applyFullscreenState();
+		_applyMaximizedState();
 	}
 
 	void Window::_handlePendingTimer()
@@ -360,6 +363,136 @@ namespace spk
 		}
 	}
 
+	void Window::_applyFullscreenState()
+	{
+		if (_hwnd == nullptr)
+		{
+			return;
+		}
+
+		if (_isFullScreen == true)
+		{
+			if (_isFullscreenApplied == true)
+			{
+				return;
+			}
+
+			_storedWindowStyle = GetWindowLong(_hwnd, GWL_STYLE);
+			_storedWindowPlacement.length = sizeof(WINDOWPLACEMENT);
+			if (GetWindowPlacement(_hwnd, &_storedWindowPlacement) == 0)
+			{
+				GENERATE_ERROR("Failed to get window placement before entering fullscreen mode.");
+			}
+
+			MONITORINFO monitorInfo = {0};
+			monitorInfo.cbSize = sizeof(MONITORINFO);
+			if (GetMonitorInfo(MonitorFromWindow(_hwnd, MONITOR_DEFAULTTOPRIMARY), &monitorInfo) == 0)
+			{
+				GENERATE_ERROR("Failed to retrieve monitor information for fullscreen mode.");
+			}
+
+			if (SetWindowLong(_hwnd, GWL_STYLE, _storedWindowStyle & ~WS_OVERLAPPEDWINDOW) == 0)
+			{
+				GENERATE_ERROR("Failed to update window style for fullscreen mode.");
+			}
+
+			if (SetWindowPos(
+					_hwnd,
+					HWND_TOP,
+					monitorInfo.rcMonitor.left,
+					monitorInfo.rcMonitor.top,
+					monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left,
+					monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top,
+					SWP_NOOWNERZORDER | SWP_FRAMECHANGED) == 0)
+			{
+				GENERATE_ERROR("Failed to resize window for fullscreen mode.");
+			}
+
+			_isFullscreenApplied = true;
+			_isMaximizedApplied = false;
+			_postResizeRequest();
+		}
+		else
+		{
+			if (_isFullscreenApplied == false)
+			{
+				return;
+			}
+
+			if (SetWindowLong(_hwnd, GWL_STYLE, _storedWindowStyle) == 0)
+			{
+				GENERATE_ERROR("Failed to restore window style after exiting fullscreen mode.");
+			}
+
+			if (SetWindowPlacement(_hwnd, &_storedWindowPlacement) == 0)
+			{
+				GENERATE_ERROR("Failed to restore window placement after exiting fullscreen mode.");
+			}
+
+			if (SetWindowPos(_hwnd, nullptr, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED) == 0)
+			{
+				GENERATE_ERROR("Failed to finalize window restoration after exiting fullscreen mode.");
+			}
+
+			_isFullscreenApplied = false;
+			_applyMaximizedState();
+			_postResizeRequest();
+		}
+	}
+
+	void Window::_applyMaximizedState()
+	{
+		if (_hwnd == nullptr)
+		{
+			return;
+		}
+
+		if (_isFullScreen == true)
+		{
+			return;
+		}
+
+		if (_isMaximized == true)
+		{
+			if (_isMaximizedApplied == true)
+			{
+				return;
+			}
+
+			ShowWindow(_hwnd, SW_MAXIMIZE);
+			_isMaximizedApplied = true;
+			_postResizeRequest();
+		}
+		else
+		{
+			if (_isMaximizedApplied == false)
+			{
+				return;
+			}
+
+			ShowWindow(_hwnd, SW_RESTORE);
+			_isMaximizedApplied = false;
+			_postResizeRequest();
+		}
+	}
+
+	void Window::_postResizeRequest() const
+	{
+		if (_hwnd == nullptr)
+		{
+			return;
+		}
+
+		RECT clientRect = {0};
+		if (GetClientRect(_hwnd, &clientRect) == 0)
+		{
+			GENERATE_ERROR("Failed to retrieve client rect while posting resize request.");
+		}
+
+		spk::Vector2Int newSize(clientRect.right - clientRect.left, clientRect.bottom - clientRect.top);
+		requestResize(newSize);
+	}
+
 	void Window::_guard(const char *p_label, const std::function<void()> &p_fn)
 	{
 		try
@@ -367,7 +500,7 @@ namespace spk
 			p_fn();
 		} catch (const std::exception &e)
 		{
-			spk::cout() <<  p_label << " - Error caught:\n" << e.what() << std::endl;
+			spk::cout() << p_label << " - Error caught:\n" << e.what() << std::endl;
 			close();
 		}
 	}
@@ -663,6 +796,28 @@ namespace spk
 		}
 
 		_currentCursor = nextCursor;
+	}
+
+	void Window::setFullscreen(bool p_activate)
+	{
+		if (((p_activate == true) && (_isFullScreen == true)) || ((p_activate == false) && (_isFullScreen == false)))
+		{
+			return;
+		}
+
+		_isFullScreen = p_activate;
+		_applyFullscreenState();
+	}
+
+	void Window::setMaximized(bool p_activate)
+	{
+		if (((p_activate == true) && (_isMaximized == true)) || ((p_activate == false) && (_isMaximized == false)))
+		{
+			return;
+		}
+
+		_isMaximized = p_activate;
+		_applyMaximizedState();
 	}
 
 	void Window::pullEvents()
