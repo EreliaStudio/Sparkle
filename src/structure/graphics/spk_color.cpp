@@ -84,10 +84,10 @@ namespace spk
 
 	uint32_t spk::Color::toInt() const
 	{
-		return ((static_cast<uint32_t>(_channelToByte(r)) << 24) |
-				(static_cast<uint32_t>(_channelToByte(g)) << 16) |
-				(static_cast<uint32_t>(_channelToByte(b)) <<  8) |
-				(static_cast<uint32_t>(_channelToByte(a)) <<  0));
+		return ((static_cast<uint32_t>(_channelToByte(r)) << 0) |
+				(static_cast<uint32_t>(_channelToByte(g)) << 8) |
+				(static_cast<uint32_t>(_channelToByte(b)) << 16) |
+				(static_cast<uint32_t>(_channelToByte(a)) << 24));
 	}
 
 	std::ostream &operator<<(std::ostream &p_os, const spk::Color &p_color)

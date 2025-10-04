@@ -120,11 +120,12 @@ namespace spk
 		float p_z,
 		int p_octaves,
 		float p_persistence,
-		float p_lacunarity)
+		float p_lacunarity,
+		float p_frequency)
 	{
 		float sum = 0.f;
 		float amplitude = 1.f;
-		float freq = 1.f;
+		float freq = p_frequency;
 		float max = 0.f;
 
 		for (int i = 0; i < p_octaves; ++i)
@@ -153,7 +154,8 @@ namespace spk
 			0,
 			_octaves,
 			_persistence,
-			_lacunarity);
+			_lacunarity,
+			_frequency);
 		return p_min + (p_max - p_min) * (n * 0.5f + 0.5f);
 	}
 
@@ -167,7 +169,8 @@ namespace spk
 			0,
 			_octaves,
 			_persistence,
-			_lacunarity);
+			_lacunarity,
+			_frequency);
 		return p_min + (p_max - p_min) * (n * 0.5f + 0.5f);
 	}
 
@@ -181,7 +184,8 @@ namespace spk
 			p_z,
 			_octaves,
 			_persistence,
-			_lacunarity);
+			_lacunarity,
+			_frequency);
 		return p_min + (p_max - p_min) * (n * 0.5f + 0.5f);
 	}
 }

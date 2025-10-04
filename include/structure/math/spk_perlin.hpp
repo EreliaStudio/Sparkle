@@ -22,6 +22,7 @@ namespace spk
 		int _octaves = 3;
 		float _persistence = 0.5f;
 		float _lacunarity = 2.0f;
+		float _frequency = 1.0f;
 
 		static float _fade(float p_value, Interpolation p_interpolation);
 		static float _lerp(float p_minValue, float p_maxValue, float p_value);
@@ -43,7 +44,8 @@ namespace spk
 			float p_z,
 			int p_octaves,
 			float p_persistence,
-			float p_lacunarity);
+			float p_lacunarity,
+			float p_frequency);
 
 	public:
 		Perlin(unsigned int p_seed = 0, Perlin::Interpolation p_interp = Perlin::Interpolation::SmoothStep);
@@ -68,6 +70,10 @@ namespace spk
 		{
 			_lacunarity = p_l;
 		}
+		void setFrequency(float p_f)
+		{
+			_frequency = p_f;
+		}
 
 		const int &octaves() const
 		{
@@ -80,6 +86,10 @@ namespace spk
 		const float &lacunarity() const
 		{
 			return _lacunarity;
+		}
+		const float& frequency() const
+		{
+			return _frequency;
 		}
 
 		float sample1D(float p_x, float p_min = 0, float p_max = 1) const;

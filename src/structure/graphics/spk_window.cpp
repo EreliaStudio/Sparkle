@@ -365,47 +365,69 @@ namespace spk
 
 	void Window::_applyFullscreenState()
 	{
-		if (_hwnd == nullptr)
+		if (_hwnd == nullptr || !IsWindow(_hwnd))
 		{
 			return;
 		}
 
-		if (_isFullScreen == true)
+		if (_isFullScreen)
 		{
-			if (_isFullscreenApplied == true)
+			if (_isFullscreenApplied)
 			{
 				return;
 			}
 
-			_storedWindowStyle = GetWindowLong(_hwnd, GWL_STYLE);
-			_storedWindowPlacement.length = sizeof(WINDOWPLACEMENT);
-			if (GetWindowPlacement(_hwnd, &_storedWindowPlacement) == 0)
-			{
-				GENERATE_ERROR("Failed to get window placement before entering fullscreen mode.");
-			}
+			// Use pointer-sized getter on 64-bit
+			LONG_PTR style = GetWindowLongPtr(_hwnd, GWL_STYLE);
+			_storedWindowStyle = static_cast<LONG>(style); // store as LONG if your member is LONG
 
-			MONITORINFO monitorInfo = {0};
+			// Safely get current placement (zero-init + length)
+			WINDOWPLACEMENT wp{};
+			wp.length = sizeof(wp);
+			if (!GetWindowPlacement(_hwnd, &wp))
+			{
+				// Fallback: seed with current window rect so we can restore later
+				RECT r{};
+				if (!GetWindowRect(_hwnd, &r))
+				{
+					DWORD ec = GetLastError();
+					GENERATE_ERROR("Failed to get window rect (fallback) before entering fullscreen. Win32 error: " + std::to_string(ec));
+				}
+				wp.length = sizeof(wp);
+				wp.flags = 0;
+				wp.showCmd = SW_SHOWNORMAL;
+				wp.ptMinPosition = { -1, -1 };
+				wp.ptMaxPosition = { -1, -1 };
+				wp.rcNormalPosition = r;
+			}
+			_storedWindowPlacement = wp;
+
+			MONITORINFO monitorInfo{};
 			monitorInfo.cbSize = sizeof(MONITORINFO);
-			if (GetMonitorInfo(MonitorFromWindow(_hwnd, MONITOR_DEFAULTTOPRIMARY), &monitorInfo) == 0)
+			if (!GetMonitorInfo(MonitorFromWindow(_hwnd, MONITOR_DEFAULTTOPRIMARY), &monitorInfo))
 			{
-				GENERATE_ERROR("Failed to retrieve monitor information for fullscreen mode.");
+				DWORD ec = GetLastError();
+				GENERATE_ERROR("Failed to retrieve monitor information for fullscreen mode. Win32 error: " + std::to_string(ec));
 			}
 
-			if (SetWindowLong(_hwnd, GWL_STYLE, _storedWindowStyle & ~WS_OVERLAPPEDWINDOW) == 0)
+			// Remove windowed borders
+			if (!SetWindowLongPtr(_hwnd, GWL_STYLE, style & ~WS_OVERLAPPEDWINDOW))
 			{
-				GENERATE_ERROR("Failed to update window style for fullscreen mode.");
+				DWORD ec = GetLastError();
+				GENERATE_ERROR("Failed to update window style for fullscreen mode. Win32 error: " + std::to_string(ec));
 			}
 
-			if (SetWindowPos(
+			if (!SetWindowPos(
 					_hwnd,
 					HWND_TOP,
 					monitorInfo.rcMonitor.left,
 					monitorInfo.rcMonitor.top,
 					monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left,
 					monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top,
-					SWP_NOOWNERZORDER | SWP_FRAMECHANGED) == 0)
+					SWP_NOOWNERZORDER | SWP_FRAMECHANGED))
 			{
-				GENERATE_ERROR("Failed to resize window for fullscreen mode.");
+				DWORD ec = GetLastError();
+				GENERATE_ERROR("Failed to resize window for fullscreen mode. Win32 error: " + std::to_string(ec));
 			}
 
 			_isFullscreenApplied = true;
@@ -414,24 +436,31 @@ namespace spk
 		}
 		else
 		{
-			if (_isFullscreenApplied == false)
+			if (!_isFullscreenApplied)
 			{
 				return;
 			}
 
-			if (SetWindowLong(_hwnd, GWL_STYLE, _storedWindowStyle) == 0)
+			// Restore windowed style
+			if (!SetWindowLongPtr(_hwnd, GWL_STYLE, _storedWindowStyle))
 			{
-				GENERATE_ERROR("Failed to restore window style after exiting fullscreen mode.");
+				DWORD ec = GetLastError();
+				GENERATE_ERROR("Failed to restore window style after exiting fullscreen. Win32 error: " + std::to_string(ec));
 			}
 
-			if (SetWindowPlacement(_hwnd, &_storedWindowPlacement) == 0)
+			// Restore placement we saved
+			if (!SetWindowPlacement(_hwnd, &_storedWindowPlacement))
 			{
-				GENERATE_ERROR("Failed to restore window placement after exiting fullscreen mode.");
+				DWORD ec = GetLastError();
+				GENERATE_ERROR("Failed to restore window placement after exiting fullscreen. Win32 error: " + std::to_string(ec));
 			}
 
-			if (SetWindowPos(_hwnd, nullptr, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED) == 0)
+			if (!SetWindowPos(
+					_hwnd, nullptr, 0, 0, 0, 0,
+					SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED))
 			{
-				GENERATE_ERROR("Failed to finalize window restoration after exiting fullscreen mode.");
+				DWORD ec = GetLastError();
+				GENERATE_ERROR("Failed to finalize window restoration after exiting fullscreen. Win32 error: " + std::to_string(ec));
 			}
 
 			_isFullscreenApplied = false;
@@ -439,6 +468,7 @@ namespace spk
 			_postResizeRequest();
 		}
 	}
+
 
 	void Window::_applyMaximizedState()
 	{
@@ -674,6 +704,9 @@ namespace spk
 		_upsCounter(nullptr),
 		_updateModule(_rootWidget.get())
 	{
+		_storedWindowPlacement = {};
+		_storedWindowPlacement.length = sizeof(_storedWindowPlacement);
+
 		_fpsCounter = Profiler::instance()->counter(L"FPS");
 		_upsCounter = Profiler::instance()->counter(L"UPS");
 

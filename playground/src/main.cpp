@@ -5,137 +5,115 @@ enum class PlaygroundTileFlag
 	None = 0
 };
 
-class MapData
+class HeightMap : public spk::Grid2D<int>
+{
+private:
+	struct FalloffFunction
+    {
+        static float linear(const float& p_value)
+        {
+            return std::clamp(p_value, 0.0f, 1.0f);
+        }
+        static float smoothstep(const float& p_value)
+        {
+			float clampedValue = std::clamp(p_value, 0.0f, 1.0f);
+			return clampedValue * clampedValue * (3.0f - 2.0f * clampedValue);
+        }
+        static float power(const float& p_value, const float& p_power)
+        {
+			float clampedValue = std::clamp(p_value, 0.0f, 1.0f);
+			return std::pow(clampedValue, p_power);
+        }
+        static float cosine(const float& p_value)
+        {
+			float clampedValue = std::clamp(p_value, 0.0f, 1.0f);
+			return 0.5f * (1.0f - std::cos(clampedValue * 3.1415926535f));
+        }
+        static float exponential(const float& p_value, const float& p_exponent)
+        {
+			float clampedValue = std::clamp(p_value, 0.0f, 1.0f);
+			return (std::exp(p_exponent * clampedValue) - 1.0f) / (std::exp(p_exponent) - 1.0f);
+        }
+    };
+
+	float distanceToEdge(int p_x, int p_y)
+	{	
+		const std::size_t distLeft   = p_x;
+		const std::size_t distRight  = (size().x - 1u) - p_x;
+		const std::size_t distTop    = p_y;
+		const std::size_t distBottom = (size().y - 1u) - p_y;
+		
+		return (std::min(std::min(distLeft, distRight), std::min(distTop,  distBottom)));
+	}
+
+	static constexpr float heightMin = 0.0f;
+	static constexpr float heightMax = 100.0f;
+	static constexpr float heightRange = heightMax - heightMin;
+
+public:
+	HeightMap(const spk::Vector2Int& p_size) :
+		spk::Grid2D<int>(p_size, static_cast<int>(heightRange / 2))
+	{
+		spk::Perlin heightPerlin(123456);
+		heightPerlin.setFrequency(0.005f);
+		heightPerlin.setOctaves(5);
+
+		const std::size_t maxThick = std::min<std::size_t>(size().x, size().y) / 2;
+        const float thickness = std::min(100.0f, static_cast<float>(maxThick));
+
+		for (size_t x = 0; x < size().x; x++)
+		{
+			auto row = this->operator[](x);
+			for (size_t y = 0; y < size().y; y++)
+			{
+				float h = heightPerlin.sample2D(x, y, heightMin, heightMax);
+
+				float edgeOffset = FalloffFunction::exponential(1.0f - std::min(1.0f, distanceToEdge(x, y) / thickness), 2) * heightRange;
+
+				h = std::clamp(h - edgeOffset, heightMin, heightMax);
+                row[y] = static_cast<int>(std::lround(h));
+			}
+		}
+	}
+};
+ 
+class MapGenerator : public spk::Grid2D<spk::Tile<PlaygroundTileFlag>::ID>
 {
 public:
 	using TileID = spk::Tile<PlaygroundTileFlag>::ID;
 
 private:
-	template <typename TUnit>
-	class Data
+	spk::Grid2D<int> _generateLandShape()
 	{
-	public:
-		using Unit = TUnit;
-		struct Row
-		{
-			Unit *ptr;
-			size_t len;
-			Unit &operator[](size_t y)
-			{
-				return ptr[y];
-			}
-			const Unit &operator[](size_t y) const
-			{
-				return ptr[y];
-			}
-		};
-
-	private:
-		spk::Vector2UInt _size;
-		std::vector<Unit> _data;
-
-	public:
-		Data(const spk::Vector2UInt &p_size, Unit fill = 36) :
-			_size(p_size),
-			_data(p_size.x * p_size.y, fill)
-		{
-		}
-
-		const spk::Vector2UInt &size() const
-		{
-			return _size;
-		}
-
-		Unit &operator()(int x, int y)
-		{
-			return _data[static_cast<size_t>(x) * _size.y + y];
-		}
-		const Unit &operator()(int x, int y) const
-		{
-			return _data[static_cast<size_t>(x) * _size.y + y];
-		}
-
-		Row operator[](int x)
-		{
-			return Row{_data.data() + static_cast<size_t>(x) * _size.y, _size.y};
-		}
-
-		Row operator[](int x) const
-		{
-			return Row{const_cast<Unit *>(_data.data()) + static_cast<size_t>(x) * _size.y, _size.y};
-		}
-
-		Unit *data()
-		{
-			return _data.data();
-		}
-		const Unit *data() const
-		{
-			return _data.data();
-		}
-	};
-
-	Data<TileID> _tileMap;
-
-	Data<int> _generateHeightData()
-	{
-		spk::Perlin heightPerlin(123456);
-		Data<int> result(_tileMap.size());
+		spk::Grid2D<int> result(size());
 
 		for (size_t x = 0; x < result.size().x; x++)
 		{
 			auto row = result[x];
-
+			
 			for (size_t y = 0; y < result.size().y; y++)
 			{
-				row[y] = heightPerlin.sample2D(x, y, 0, 100);
+				
 			}
 		}
 
 		return (result);
 	}
 
-	void _generateLandScape(const Data<int> &p_heightMap)
-	{
-		for (size_t x = 0; x < p_heightMap.size().x; x++)
-		{
-			auto row = p_heightMap[x];
-			auto targetRow = _tileMap[x];
-
-			for (size_t y = 0; y < p_heightMap.size().y; y++)
-			{
-				if (row[y] > 50)
-				{
-					targetRow[y] = 0;
-				}
-			}
-		}
-	}
-
 public:
-	MapData(const spk::Vector2Int &p_size) :
-		_tileMap(p_size)
+	explicit MapGenerator(const spk::Vector2UInt &p_size) :
+		spk::Grid2D<spk::Tile<PlaygroundTileFlag>::ID>(p_size, 36)
 	{
-		Data<int> heightMap = _generateHeightData();
+		auto heightMap = HeightMap(p_size);
 
-		_generateLandScape(heightMap);
-	}
-
-	Data<TileID>::Row operator[](int x)
-	{
-		return _tileMap[x];
-	}
-
-	Data<TileID>::Row operator[](int x) const
-	{
-		return _tileMap[x];
+		auto landShape = _generateLandShape();
 	}
 };
 
-class MapDataVisualizer : public spk::Widget
+class MapGeneratorVisualizer : public spk::Widget
 {
 private:
-	std::unordered_map<MapData::TileID, spk::Color> _tileIdToColor = {
+	std::unordered_map<MapGenerator::TileID, spk::Color> _tileIdToColor = {
 		{0, spk::Color(190, 38, 51)},	 // Fire biome - Gym
 		{1, spk::Color(227, 114, 122)},	 // Fire biome - City
 		{2, spk::Color(238, 170, 174)},	 // Fire biome - Territory
@@ -180,20 +158,18 @@ private:
 
 	spk::TexturePainter _textureRenderer;
 
-	void _onGeometryChange() override
+	void _generateTexture(const MapGenerator& p_mapGenerator)
 	{
-		MapData mapData(geometry().size);
-
 		std::vector<std::uint32_t> pixels(geometry().size.x * geometry().size.y);
 
 		const spk::Color fallback(255, 0, 255);
 
 		std::vector<std::optional<uint32_t>> colors;
 
-		for (std::size_t x = 0; x < geometry().size.y; ++x)
+		for (std::size_t x = 0; x < geometry().size.x; ++x)
 		{
-			auto row = mapData[x];
-			for (std::size_t y = 0; y < geometry().size.x; ++y)
+			auto row = p_mapGenerator[x];
+			for (std::size_t y = 0; y < geometry().size.y; ++y)
 			{
 				const auto id = row[y];
 
@@ -207,17 +183,18 @@ private:
 					colors[id] = (_tileIdToColor.contains(id) == true ? _tileIdToColor[id].toInt() : fallback.toInt());
 				}
 
-				pixels[y * geometry().size.y + x] = colors[id].value();
+				pixels[y * geometry().size.x + x] = colors[id].value();
 			}
 		}
 
-		_mapAsImage.setPixels(
-			reinterpret_cast<const std::uint8_t *>(pixels.data()),
-			geometry().size,
-			spk::Texture::Format::RGBA,
-			spk::Texture::Filtering::Nearest,
-			spk::Texture::Wrap::ClampToBorder,
-			spk::Texture::Mipmap::Disable);
+		_mapAsImage.setPixels(reinterpret_cast<const std::uint8_t *>(pixels.data()), geometry().size, spk::Texture::Format::RGBA);
+	}
+
+	void _onGeometryChange() override
+	{
+		MapGenerator mapData(geometry().size);
+
+		_generateTexture(mapData);
 
 		_textureRenderer.clear();
 		_textureRenderer.prepare(geometry(), spk::Texture::Section::whole, layer() + 0.01f);
@@ -230,9 +207,10 @@ private:
 	}
 
 public:
-	MapDataVisualizer(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
+	MapGeneratorVisualizer(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
 		spk::Widget(p_name, p_parent)
 	{
+		_mapAsImage.setProperties(spk::Texture::Filtering::Nearest, spk::Texture::Wrap::ClampToBorder, spk::Texture::Mipmap::Disable);
 		_textureRenderer.setTexture(&_mapAsImage);
 	}
 };
@@ -244,7 +222,7 @@ int main()
 	window->setFullscreen(true);
 	window->setUpdateTimer(0);
 
-	MapDataVisualizer visualizer = MapDataVisualizer(L"MapDataVisualizer", window->widget());
+	MapGeneratorVisualizer visualizer = MapGeneratorVisualizer(L"MapGeneratorVisualizer", window->widget());
 	visualizer.setGeometry(window->geometry());
 	visualizer.activate();
 
