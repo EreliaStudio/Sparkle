@@ -41,7 +41,7 @@ private:
 		{
 		}
 
-		const spk::Vector2UInt& size() const
+		const spk::Vector2UInt &size() const
 		{
 			return _size;
 		}
@@ -95,7 +95,7 @@ private:
 		return (result);
 	}
 
-	void _generateLandScape(const Data<int>& p_heightMap)
+	void _generateLandScape(const Data<int> &p_heightMap)
 	{
 		for (size_t x = 0; x < p_heightMap.size().x; x++)
 		{
@@ -113,7 +113,7 @@ private:
 	}
 
 public:
-	MapData(const spk::Vector2Int& p_size) :
+	MapData(const spk::Vector2Int &p_size) :
 		_tileMap(p_size)
 	{
 		Data<int> heightMap = _generateHeightData();
@@ -136,47 +136,47 @@ class MapDataVisualizer : public spk::Widget
 {
 private:
 	std::unordered_map<MapData::TileID, spk::Color> _tileIdToColor = {
-		{0, spk::Color(190, 38, 51)}, // Fire biome - Gym
-		{1, spk::Color(227, 114, 122)}, // Fire biome - City
-		{2, spk::Color(238, 170, 174)}, // Fire biome - Territory
-		{3, spk::Color(207, 207, 207)}, // Air biome - Gym
-		{4, spk::Color(230, 230, 230)}, // Air biome - City
-		{5, spk::Color(255, 255, 255)}, // Air biome - Territory
-		{6, spk::Color(49, 162, 242)}, // Water biome - Gym
-		{7, spk::Color(90, 179, 245)}, // Water biome - City
-		{8, spk::Color(156, 209, 249)}, // Water biome - Territory
-		{9, spk::Color(73, 60, 43)}, // Stone biome - Gym
-		{10, spk::Color(123, 101, 72)}, // Stone biome - City
+		{0, spk::Color(190, 38, 51)},	 // Fire biome - Gym
+		{1, spk::Color(227, 114, 122)},	 // Fire biome - City
+		{2, spk::Color(238, 170, 174)},	 // Fire biome - Territory
+		{3, spk::Color(207, 207, 207)},	 // Air biome - Gym
+		{4, spk::Color(230, 230, 230)},	 // Air biome - City
+		{5, spk::Color(255, 255, 255)},	 // Air biome - Territory
+		{6, spk::Color(49, 162, 242)},	 // Water biome - Gym
+		{7, spk::Color(90, 179, 245)},	 // Water biome - City
+		{8, spk::Color(156, 209, 249)},	 // Water biome - Territory
+		{9, spk::Color(73, 60, 43)},	 // Stone biome - Gym
+		{10, spk::Color(123, 101, 72)},	 // Stone biome - City
 		{11, spk::Color(185, 164, 136)}, // Stone biome - Territory
-		{12, spk::Color(68, 137, 26)}, // Plant biome - Gym
-		{13, spk::Color(96, 195, 37)}, // Plant biome - City
+		{12, spk::Color(68, 137, 26)},	 // Plant biome - Gym
+		{13, spk::Color(96, 195, 37)},	 // Plant biome - City
 		{14, spk::Color(157, 228, 115)}, // Plant biome - Territory
-		{15, spk::Color(27, 38, 50)}, // Ghost biome - Gym
-		{16, spk::Color(57, 80, 106)}, // Ghost biome - City
+		{15, spk::Color(27, 38, 50)},	 // Ghost biome - Gym
+		{16, spk::Color(57, 80, 106)},	 // Ghost biome - City
 		{17, spk::Color(120, 148, 182)}, // Ghost biome - Territory
-		{18, spk::Color(235, 137, 49)}, // Fight biome - Gym
-		{19, spk::Color(239, 161, 90)}, // Fight biome - City
+		{18, spk::Color(235, 137, 49)},	 // Fight biome - Gym
+		{19, spk::Color(239, 161, 90)},	 // Fight biome - City
 		{20, spk::Color(245, 199, 156)}, // Fight biome - Territory
-		{21, spk::Color(254, 240, 71)}, // Electricity biome - Gym
+		{21, spk::Color(254, 240, 71)},	 // Electricity biome - Gym
 		{22, spk::Color(254, 246, 145)}, // Electricity biome - City
 		{23, spk::Color(254, 250, 189)}, // Electricity biome - Territory
-		{24, spk::Color(98, 98, 98)}, // Steel biome - Gym
+		{24, spk::Color(98, 98, 98)},	 // Steel biome - Gym
 		{25, spk::Color(120, 120, 120)}, // Steel biome - City
 		{26, spk::Color(153, 153, 153)}, // Steel biome - Territory
-		{27, spk::Color(80, 13, 139)}, // Psy biome - Gym
-		{28, spk::Color(120, 19, 204)}, // Psy biome - City
-		{29, spk::Color(177, 97, 240)}, // Psy biome - Territory
-		{30, spk::Color(165, 28, 195)}, // Fairy biome - Gym
-		{31, spk::Color(198, 54, 226)}, // Fairy biome - City
+		{27, spk::Color(80, 13, 139)},	 // Psy biome - Gym
+		{28, spk::Color(120, 19, 204)},	 // Psy biome - City
+		{29, spk::Color(177, 97, 240)},	 // Psy biome - Territory
+		{30, spk::Color(165, 28, 195)},	 // Fairy biome - Gym
+		{31, spk::Color(198, 54, 226)},	 // Fairy biome - City
 		{32, spk::Color(222, 134, 238)}, // Fairy biome - Territory
-		{33, spk::Color(91, 246, 214)}, // Ice biome - Gym
+		{33, spk::Color(91, 246, 214)},	 // Ice biome - Gym
 		{34, spk::Color(157, 250, 231)}, // Ice biome - City
 		{35, spk::Color(196, 252, 241)}, // Ice biome - Territory
-		{36, spk::Color(0, 87, 132)}, // Deep sea
-		{37, spk::Color(0, 135, 208)}  // Shallow sea
+		{36, spk::Color(0, 87, 132)},	 // Deep sea
+		{37, spk::Color(0, 135, 208)}	 // Shallow sea
 	};
 
-	spk::Texture _mapAsImage; 
+	spk::Texture _mapAsImage;
 
 	spk::TexturePainter _textureRenderer;
 
@@ -212,26 +212,25 @@ private:
 		}
 
 		_mapAsImage.setPixels(
-			reinterpret_cast<const std::uint8_t*>(pixels.data()),
+			reinterpret_cast<const std::uint8_t *>(pixels.data()),
 			geometry().size,
 			spk::Texture::Format::RGBA,
 			spk::Texture::Filtering::Nearest,
 			spk::Texture::Wrap::ClampToBorder,
-			spk::Texture::Mipmap::Disable
-		);
-				
+			spk::Texture::Mipmap::Disable);
+
 		_textureRenderer.clear();
 		_textureRenderer.prepare(geometry(), spk::Texture::Section::whole, layer() + 0.01f);
 		_textureRenderer.validate();
 	}
 
-	void _onPaintEvent(spk::PaintEvent& p_event) override
+	void _onPaintEvent(spk::PaintEvent &p_event) override
 	{
 		_textureRenderer.render();
 	}
 
 public:
-	MapDataVisualizer(const std::wstring& p_name, spk::SafePointer<spk::Widget> p_parent) :
+	MapDataVisualizer(const std::wstring &p_name, spk::SafePointer<spk::Widget> p_parent) :
 		spk::Widget(p_name, p_parent)
 	{
 		_textureRenderer.setTexture(&_mapAsImage);
@@ -242,11 +241,12 @@ int main()
 {
 	spk::GraphicalApplication app;
 	auto window = app.createWindow(L"TacticalActionArenaGame", {{0, 0}, {1000, 800}});
+	window->setFullscreen(true);
 	window->setUpdateTimer(0);
 
 	MapDataVisualizer visualizer = MapDataVisualizer(L"MapDataVisualizer", window->widget());
 	visualizer.setGeometry(window->geometry());
 	visualizer.activate();
-		
+
 	return (app.run());
 }

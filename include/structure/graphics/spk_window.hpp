@@ -78,6 +78,13 @@ namespace spk
 
 		mutable bool _isPaintRequestAllowed = true;
 
+		bool _isFullScreen = false;
+		bool _isFullscreenApplied = false;
+		bool _isMaximized = false;
+		bool _isMaximizedApplied = false;
+		DWORD _storedWindowStyle = 0;
+		WINDOWPLACEMENT _storedWindowPlacement = {0};
+
 		std::recursive_mutex _timerMutex;
 		std::set<UINT_PTR> _timers;
 		std::deque<std::pair<int, long long>> _pendingTimerCreations;
@@ -99,6 +106,9 @@ namespace spk
 		void _createContext();
 		void _createOpenGLContext();
 		void _destroyOpenGLContext();
+		void _applyFullscreenState();
+		void _applyMaximizedState();
+		void _postResizeRequest() const;
 
 		bool _receiveEvent(UINT p_uMsg, WPARAM p_wParam, LPARAM p_lParam);
 
@@ -158,6 +168,9 @@ namespace spk
 
 		void addCursor(const std::wstring &p_cursorName, const std::filesystem::path &p_cursorPath);
 		void setCursor(const std::wstring &p_cursorName);
+
+		void setFullscreen(bool p_activate);
+		void setMaximized(bool p_activate);
 
 		void setUpdateTimer(const long long &p_durationInMillisecond);
 		void removeUpdateTimer();
