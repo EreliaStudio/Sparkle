@@ -52,6 +52,8 @@ namespace spk
 
 			bool operator==(const Section &p_other) const noexcept;
 			bool operator!=(const Section &p_other) const noexcept;
+
+			static const Section whole;
 		};
 
 		enum class Format

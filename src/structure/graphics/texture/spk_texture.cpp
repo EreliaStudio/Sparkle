@@ -56,6 +56,8 @@ namespace spk
 		return (*this == p_other) == false;
 	}
 
+	const Texture::Section Texture::Section::whole = Texture::Section({0, 0}, {1, 1});
+
 	size_t Texture::_getBytesPerPixel(const Format &p_format) const
 	{
 		switch (p_format)

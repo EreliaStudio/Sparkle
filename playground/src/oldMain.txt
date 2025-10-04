@@ -296,9 +296,9 @@ public:
 		addTileByID(12, TileType(spk::Vector2UInt(0, 2), TileType::Type::Monotile)); // Plant biome - Gym
 		addTileByID(13, TileType(spk::Vector2UInt(1, 2), TileType::Type::Monotile)); // Plant biome - City
 		addTileByID(14, TileType(spk::Vector2UInt(2, 2), TileType::Type::Monotile)); // Plant biome - Territory
-		addTileByID(15, TileType(spk::Vector2UInt(3, 2), TileType::Type::Monotile)); // Evil biome - Gym
-		addTileByID(16, TileType(spk::Vector2UInt(4, 2), TileType::Type::Monotile)); // Evil biome - City
-		addTileByID(17, TileType(spk::Vector2UInt(5, 2), TileType::Type::Monotile)); // Evil biome - Territory
+		addTileByID(15, TileType(spk::Vector2UInt(3, 2), TileType::Type::Monotile)); // Ghost biome - Gym
+		addTileByID(16, TileType(spk::Vector2UInt(4, 2), TileType::Type::Monotile)); // Ghost biome - City
+		addTileByID(17, TileType(spk::Vector2UInt(5, 2), TileType::Type::Monotile)); // Ghost biome - Territory
 
 		addTileByID(18, TileType(spk::Vector2UInt(0, 3), TileType::Type::Monotile)); // Fight biome - Gym
 		addTileByID(19, TileType(spk::Vector2UInt(1, 3), TileType::Type::Monotile)); // Fight biome - City
@@ -310,9 +310,9 @@ public:
 		addTileByID(24, TileType(spk::Vector2UInt(0, 4), TileType::Type::Monotile)); // Steel biome - Gym
 		addTileByID(25, TileType(spk::Vector2UInt(1, 4), TileType::Type::Monotile)); // Steel biome - City
 		addTileByID(26, TileType(spk::Vector2UInt(2, 4), TileType::Type::Monotile)); // Steel biome - Territory
-		addTileByID(27, TileType(spk::Vector2UInt(3, 4), TileType::Type::Monotile)); // Ghost biome - Gym
-		addTileByID(28, TileType(spk::Vector2UInt(4, 4), TileType::Type::Monotile)); // Ghost biome - City
-		addTileByID(29, TileType(spk::Vector2UInt(5, 4), TileType::Type::Monotile)); // Ghost biome - Territory
+		addTileByID(27, TileType(spk::Vector2UInt(3, 4), TileType::Type::Monotile)); // Psy biome - Gym
+		addTileByID(28, TileType(spk::Vector2UInt(4, 4), TileType::Type::Monotile)); // Psy biome - City
+		addTileByID(29, TileType(spk::Vector2UInt(5, 4), TileType::Type::Monotile)); // Psy biome - Territory
 
 		addTileByID(30, TileType(spk::Vector2UInt(0, 5), TileType::Type::Monotile)); // Fairy biome - Gym
 		addTileByID(31, TileType(spk::Vector2UInt(1, 5), TileType::Type::Monotile)); // Fairy biome - City

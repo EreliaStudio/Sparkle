@@ -9,6 +9,17 @@
 
 namespace spk
 {
+	namespace
+	{
+		// Helper: clamp to [0,1] then convert to byte with rounding.
+		inline uint8_t _channelToByte(float c)
+		{
+			c = std::clamp(c, 0.0f, 1.0f);
+			// round to nearest; matches intent better than truncation
+			return static_cast<uint8_t>(std::round(c * 255.0f));
+		}
+}
+
 	Color::Color() :
 		r(0),
 		g(0),
@@ -69,6 +80,14 @@ namespace spk
 	{
 		return (std::abs(r - p_color.r) < spk::Constants::colorPrecision) && (std::abs(g - p_color.g) < spk::Constants::colorPrecision) &&
 			   (std::abs(b - p_color.b) < spk::Constants::colorPrecision) && (std::abs(a - p_color.a) < spk::Constants::colorPrecision);
+	}
+
+	uint32_t spk::Color::toInt() const
+	{
+		return ((static_cast<uint32_t>(_channelToByte(r)) << 24) |
+				(static_cast<uint32_t>(_channelToByte(g)) << 16) |
+				(static_cast<uint32_t>(_channelToByte(b)) <<  8) |
+				(static_cast<uint32_t>(_channelToByte(a)) <<  0));
 	}
 
 	std::ostream &operator<<(std::ostream &p_os, const spk::Color &p_color)
