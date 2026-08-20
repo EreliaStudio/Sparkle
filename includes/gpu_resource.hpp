@@ -23,10 +23,11 @@ namespace spk
 			VertexArray,
 			Texture,
 			Framebuffer,
-			Program
+			Program,
+			Sampler
 		};
 
-		static inline constexpr size_t NbKind = 5;
+		static inline constexpr size_t NbKind = 6;
 
 	protected:
 		class Instance

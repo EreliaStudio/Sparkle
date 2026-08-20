@@ -147,6 +147,7 @@ namespace spk
 		{
 			_applyUniformBlockBindings(identifier);
 			_applyShaderStorageBlockBindings(identifier);
+			_applySamplerBindings(identifier);
 		}
 		catch (...)
 		{
@@ -169,6 +170,7 @@ namespace spk
 		_vertexShaderSource(std::move(vertexShaderSource)),
 		_fragmentShaderSource(std::move(fragmentShaderSource))
 	{
+		validate();
 	}
 
 	void Program::setSources(std::string vertexShaderSource, std::string fragmentShaderSource)
@@ -273,6 +275,25 @@ namespace spk
 			return;
 
 		_shaderStorageBlockBindings[std::move(name)] = bindingPoint;
+		validate();
+	}
+
+	void Program::_applySamplerBindings(GLuint identifier) const
+	{
+		for (const auto &[name, bindingPoint] : _samplerBindings)
+		{
+			const GLint location = glGetUniformLocation(identifier, name.c_str());
+
+			if (location == -1)
+				continue;
+
+			glProgramUniform1i(identifier, location, static_cast<GLint>(bindingPoint));
+		}
+	}
+
+	void Program::bindSampler(std::string name, std::size_t bindingPoint)
+	{
+		_samplerBindings[std::move(name)] = bindingPoint;
 		validate();
 	}
 }
