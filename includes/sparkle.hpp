@@ -34,6 +34,7 @@
 #include "render_snapshot.hpp"
 #include "resizeable_trait.hpp"
 #include "scissor_render_command.hpp"
+#include "shader_storage_buffer.hpp"
 #include "statefull_trait.hpp"
 #include "thread_safe_collection.hpp"
 #include "thread_safe_fifo.hpp"

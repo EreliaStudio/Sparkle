@@ -34,6 +34,7 @@ namespace spk
 		std::string _vertexShaderSource;
 		std::string _fragmentShaderSource;
 		std::unordered_map<std::string, std::size_t> _uniformBlockBindings;
+		std::unordered_map<std::string, std::size_t> _shaderStorageBlockBindings;
 
 		[[nodiscard]] static GLenum _openGLPrimitive(Primitive primitive);
 		[[nodiscard]] static GLenum _openGLIndexType(IndexBuffer::Type type) noexcept;
@@ -45,6 +46,7 @@ namespace spk
 		static void _validateGLCount(std::size_t count);
 
 		void _applyUniformBlockBindings(GLuint identifier) const;
+		void _applyShaderStorageBlockBindings(GLuint identifier) const;
 
 	protected:
 		[[nodiscard]] Kind _kind() const noexcept override;
@@ -60,6 +62,7 @@ namespace spk
 		[[nodiscard]] bool isValid() const noexcept;
 
 		void bindUniformBlock(std::string name, std::size_t bindingPoint);
+		void bindShaderStorageBlock(std::string name, std::size_t bindingPoint);
 
 		void renderRaw(Primitive primitive, std::size_t firstVertex, std::size_t vertexCount) const;
 		void render(Primitive primitive, IndexBuffer::Type indexType, std::size_t firstIndex, std::size_t indexCount) const;

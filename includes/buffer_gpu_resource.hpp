@@ -72,5 +72,6 @@ namespace spk
 		void setUsage(Usage usage);
 		[[nodiscard]] Usage usage() const noexcept;
 		[[nodiscard]] std::size_t size() const noexcept;
+		std::vector<std::byte> retrieve(RenderContext &context) const;
 	};
 }

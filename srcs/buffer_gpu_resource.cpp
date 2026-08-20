@@ -187,4 +187,22 @@ namespace spk
 	{
 		return _storage.size();
 	}
+
+	std::vector<std::byte> BufferGPUResource::retrieve(RenderContext &context) const
+	{
+		activate(context);
+
+		std::vector<std::byte> result(_storage.size());
+
+		if (result.empty())
+			return result;
+
+		glGetBufferSubData(
+			_target(),
+			0,
+			static_cast<GLsizeiptr>(result.size()),
+			result.data());
+
+		return result;
+	}
 }

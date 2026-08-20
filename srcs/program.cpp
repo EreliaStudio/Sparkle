@@ -146,6 +146,7 @@ namespace spk
 		try
 		{
 			_applyUniformBlockBindings(identifier);
+			_applyShaderStorageBlockBindings(identifier);
 		}
 		catch (...)
 		{
@@ -241,6 +242,37 @@ namespace spk
 			return;
 
 		_uniformBlockBindings[std::move(name)] = bindingPoint;
+		validate();
+	}
+
+	void Program::_applyShaderStorageBlockBindings(GLuint identifier) const
+	{
+		GLint maximumBindings = 0;
+		glGetIntegerv(GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS, &maximumBindings);
+
+		for (const auto &[name, bindingPoint] : _shaderStorageBlockBindings)
+		{
+			if (bindingPoint >= static_cast<std::size_t>(maximumBindings))
+				throw std::out_of_range("Shader storage block binding point exceeds OpenGL limit");
+
+			const GLuint blockIndex = glGetProgramResourceIndex(identifier, GL_SHADER_STORAGE_BLOCK, name.c_str());
+			if (blockIndex == GL_INVALID_INDEX)
+				throw std::runtime_error("Shader storage block not found in program: " + name);
+
+			glShaderStorageBlockBinding(identifier, blockIndex, static_cast<GLuint>(bindingPoint));
+		}
+	}
+
+	void Program::bindShaderStorageBlock(std::string name, std::size_t bindingPoint)
+	{
+		if (name.empty())
+			throw std::invalid_argument("Shader storage block name cannot be empty");
+
+		auto iterator = _shaderStorageBlockBindings.find(name);
+		if (iterator != _shaderStorageBlockBindings.end() && iterator->second == bindingPoint)
+			return;
+
+		_shaderStorageBlockBindings[std::move(name)] = bindingPoint;
 		validate();
 	}
 }

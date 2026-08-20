@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <type_traits>
 #include <vector>
+#include <cstring>
 
 #include "buffer_gpu_resource.hpp"
 
@@ -37,6 +38,11 @@ namespace spk
 		template <typename TType>
 		void setData(const TType &data)
 		{
+			static_assert(std::is_trivially_copyable_v<TType>, "UniformBuffer requires a trivially copyable type.");
+
+			if (sizeof(TType) != size())
+				throw std::logic_error("UniformBuffer size is different than the provided type");
+
 			setData(std::addressof(data), sizeof(TType));
 		}
 
@@ -58,6 +64,22 @@ namespace spk
 				throw std::logic_error("UniformBuffer size is different than the requested type");
 
 			return *reinterpret_cast<const TType *>(_data());
+		}
+
+		template <typename TType>
+		[[nodiscard]] TType retrieve(RenderContext &context) const
+		{
+			static_assert(std::is_trivially_copyable_v<TType>, "UniformBuffer requires a trivially copyable type.");
+
+			const auto data = BufferGPUResource::retrieve(context);
+
+			if (data.size() != sizeof(TType))
+				throw std::logic_error("UniformBuffer size is different than the requested type");
+
+			TType result{};
+			std::memcpy(std::addressof(result), data.data(), sizeof(TType));
+
+			return result;
 		}
 	};
 }
