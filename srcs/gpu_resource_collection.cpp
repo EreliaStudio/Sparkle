@@ -56,6 +56,7 @@ namespace spk
 
 		case GPUResource::Kind::VertexArray:
 		case GPUResource::Kind::Program:
+		case GPUResource::Kind::Sampler:
 			return false;
 		}
 

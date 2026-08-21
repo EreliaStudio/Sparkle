@@ -35,6 +35,13 @@ namespace spk
 		y(p_y)
 		{
 		}
+
+		template<typename TOther>
+		constexpr TVector2(const TVector2<TOther>& other) noexcept :
+			x(static_cast<TType>(other.x)),
+			y(static_cast<TType>(other.y))
+		{
+		}
 		
 		constexpr bool operator==(const TVector2& other) const
 		{
@@ -62,6 +69,30 @@ namespace spk
 		{
 			x -= other.x;
 			y -= other.y;
+			return *this;
+		}
+		
+		TVector2 operator * (const TVector2& other) const
+		{
+			return {x * other.x, y * other.y};
+		}
+		
+		TVector2& operator *= (const TVector2& other)
+		{
+			x *= other.x;
+			y *= other.y;
+			return *this;
+		}
+		
+		TVector2 operator / (const TVector2& other) const
+		{
+			return {x / other.x, y / other.y};
+		}
+		
+		TVector2& operator /= (const TVector2& other)
+		{
+			x /= other.x;
+			y /= other.y;
 			return *this;
 		}
 		
