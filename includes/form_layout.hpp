@@ -16,8 +16,8 @@ namespace spk
 	public:
 		struct FormElement
 		{
-			Element *labelElement = nullptr;
-			Element *fieldElement = nullptr;
+			Element *label = nullptr;
+			Element *field = nullptr;
 		};
 
 		FormElement addRow(

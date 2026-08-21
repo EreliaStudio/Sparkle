@@ -15,67 +15,82 @@ namespace
 	{
 		float result = 0.0f;
 		for (float value : values)
+		{
 			result += value;
+		}
 		return result;
 	}
 
-	template <typename THints>
-	void _shrink(std::vector<float> &sizes, const THints &hints, float amount)
+	template <typename THints, typename TComponent>
+	void _shrink(std::vector<float> &sizes, const THints &hints, float amount, TComponent component)
 	{
 		while (amount > Epsilon)
 		{
 			std::size_t count = 0;
 			for (std::size_t i = 0; i < sizes.size(); ++i)
-				count += (sizes[i] > hints[i].minimal + Epsilon);
+			{
+				count += (sizes[i] > component(hints[i].minimal) + Epsilon);
+			}
 			if (count == 0)
+			{
 				return;
+			}
 
 			const float share = amount / static_cast<float>(count);
 			float consumed = 0.0f;
 			for (std::size_t i = 0; i < sizes.size(); ++i)
 			{
-				const float capacity = sizes[i] - hints[i].minimal;
+				const float capacity = sizes[i] - component(hints[i].minimal);
 				const float delta = std::min(share, std::max(0.0f, capacity));
 				sizes[i] -= delta;
 				consumed += delta;
 			}
 			if (consumed <= Epsilon)
+			{
 				return;
+			}
 			amount -= consumed;
 		}
 	}
 
-	template <typename THints>
-	void _grow(std::vector<float> &sizes, const THints &hints, float amount)
+	template <typename THints, typename TComponent>
+	void _grow(std::vector<float> &sizes, const THints &hints, float amount, TComponent component)
 	{
 		while (amount > Epsilon)
 		{
 			std::size_t count = 0;
 			for (std::size_t i = 0; i < sizes.size(); ++i)
-				count += (sizes[i] + Epsilon < hints[i].maximal);
+			{
+				count += (sizes[i] + Epsilon < component(hints[i].maximal));
+			}
 			if (count == 0)
+			{
 				return;
+			}
 
 			const float share = amount / static_cast<float>(count);
 			float consumed = 0.0f;
 			for (std::size_t i = 0; i < sizes.size(); ++i)
 			{
-				const float capacity = hints[i].maximal - sizes[i];
+				const float capacity = component(hints[i].maximal) - sizes[i];
 				const float delta = std::min(share, std::max(0.0f, capacity));
 				sizes[i] += delta;
 				consumed += delta;
 			}
 			if (consumed <= Epsilon)
+			{
 				return;
+			}
 			amount -= consumed;
 		}
 	}
 
-
 	uint32_t _toDimension(float value) noexcept
 	{
 		if (value <= 0.0f)
+		{
 			return 0;
+		}
 		const float maximum = static_cast<float>(std::numeric_limits<uint32_t>::max());
 		return static_cast<uint32_t>(std::lround(std::min(value, maximum)));
 	}
@@ -89,24 +104,36 @@ namespace
 	int32_t _horizontalOffset(spk::HorizontalAlignment alignment, uint32_t available, uint32_t used)
 	{
 		if (used >= available)
+		{
 			return 0;
+		}
 		const uint32_t freeSpace = available - used;
 		if (alignment == spk::HorizontalAlignment::Center)
+		{
 			return static_cast<int32_t>(freeSpace / 2);
+		}
 		if (alignment == spk::HorizontalAlignment::Right)
+		{
 			return static_cast<int32_t>(freeSpace);
+		}
 		return 0;
 	}
 
 	int32_t _verticalOffset(spk::VerticalAlignment alignment, uint32_t available, uint32_t used)
 	{
 		if (used >= available)
+		{
 			return 0;
+		}
 		const uint32_t freeSpace = available - used;
 		if (alignment == spk::VerticalAlignment::Center)
+		{
 			return static_cast<int32_t>(freeSpace / 2);
+		}
 		if (alignment == spk::VerticalAlignment::Bottom)
+		{
 			return static_cast<int32_t>(freeSpace);
+		}
 		return 0;
 	}
 }
@@ -118,7 +145,9 @@ namespace spk
 		_widget(widget),
 		_resizeable(widget),
 		_sizePolicy(sizePolicy),
-		_sizeHintEditionContract(widget->subscribeToSizeHintEdition([this](ResizeableTrait *) { _owner->updateSizeHint(); }))
+		_sizeHintEditionContract(widget->subscribeToSizeHintEdition([this](ResizeableTrait *) {
+			_owner->updateSizeHint();
+		}))
 	{
 	}
 
@@ -127,7 +156,9 @@ namespace spk
 		_layout(layout),
 		_resizeable(layout),
 		_sizePolicy(sizePolicy),
-		_sizeHintEditionContract(layout->subscribeToSizeHintEdition([this](ResizeableTrait *) { _owner->updateSizeHint(); }))
+		_sizeHintEditionContract(layout->subscribeToSizeHintEdition([this](ResizeableTrait *) {
+			_owner->updateSizeHint();
+		}))
 	{
 	}
 
@@ -151,22 +182,17 @@ namespace spk
 		return _layout != nullptr;
 	}
 
-	ResizeableTrait::SizeHint Layout::_normalizeSizeHint(const SizeHint &hint)
-	{
-		SizeHint result;
-		result.minimal = {std::max(0.0f, hint.minimal.x), std::max(0.0f, hint.minimal.y)};
-		result.preferred = {std::max(result.minimal.x, hint.preferred.x), std::max(result.minimal.y, hint.preferred.y)};
-		result.maximal = {std::max(result.preferred.x, hint.maximal.x), std::max(result.preferred.y, hint.maximal.y)};
-		return result;
-	}
-
 	ResizeableTrait::SizeHint Layout::Element::sizeHint() const
 	{
-		SizeHint result = Layout::_normalizeSizeHint(_resizeable->sizeHint());
+		SizeHint result = _resizeable->sizeHint();
 		if (_sizePolicy == SizePolicy::Fixed || _sizePolicy == SizePolicy::VerticalExtend)
+		{
 			result.minimal.x = result.maximal.x = result.preferred.x;
+		}
 		if (_sizePolicy == SizePolicy::Fixed || _sizePolicy == SizePolicy::HorizontalExtend)
+		{
 			result.minimal.y = result.maximal.y = result.preferred.y;
+		}
 		return result;
 	}
 
@@ -188,7 +214,9 @@ namespace spk
 	void Layout::Element::setSizePolicy(SizePolicy sizePolicy)
 	{
 		if (_sizePolicy == sizePolicy)
+		{
 			return;
+		}
 		_sizePolicy = sizePolicy;
 		_owner->updateSizeHint();
 	}
@@ -227,57 +255,70 @@ namespace spk
 		const int32_t y = cell.y + _verticalOffset(_verticalAlignment, cell.height, height);
 		const Rect2D geometry = Layout::_rect(x, y, width, height);
 		if (_widget != nullptr)
+		{
 			_widget->setGeometry(geometry);
+		}
 		else
+		{
 			_layout->setGeometry(geometry);
+		}
 	}
 
 	std::unique_ptr<Layout::Element> Layout::_createElement(Widget *widget, SizePolicy sizePolicy)
 	{
 		if (widget == nullptr)
+		{
 			throw std::invalid_argument("Layout cannot hold a null widget");
+		}
 		return std::unique_ptr<Element>(new Element(*this, widget, sizePolicy));
 	}
 
 	std::unique_ptr<Layout::Element> Layout::_createElement(Layout *layout, SizePolicy sizePolicy)
 	{
 		if (layout == nullptr)
+		{
 			throw std::invalid_argument("Layout cannot hold a null layout");
+		}
 		if (layout == this)
+		{
 			throw std::invalid_argument("Layout cannot contain itself");
+		}
 		return std::unique_ptr<Element>(new Element(*this, layout, sizePolicy));
 	}
 
 	void Layout::_eraseElement(Element *element)
 	{
-		const auto it = std::find_if(_elements.begin(), _elements.end(), [element](const auto &candidate) { return candidate.get() == element; });
+		const auto it = std::find_if(_elements.begin(), _elements.end(), [element](const auto &candidate) {
+			return candidate.get() == element;
+		});
 		if (it == _elements.end())
+		{
 			return;
+		}
 		_elements.erase(it);
 		updateSizeHint();
 	}
 
-	Layout::AxisSizeHint Layout::_horizontalHint(const SizeHint &hint) noexcept
+	std::vector<float> Layout::_resolveAxis(const std::vector<SizeHint> &hints, float availableSize, bool horizontal)
 	{
-		return {hint.minimal.x, hint.preferred.x, hint.maximal.x};
-	}
-
-	Layout::AxisSizeHint Layout::_verticalHint(const SizeHint &hint) noexcept
-	{
-		return {hint.minimal.y, hint.preferred.y, hint.maximal.y};
-	}
-
-	std::vector<float> Layout::_resolveAxis(const std::vector<AxisSizeHint> &hints, float availableSize)
-	{
+		const auto component = [horizontal](const Vector2 &value) {
+			return horizontal ? value.x : value.y;
+		};
 		std::vector<float> result;
 		result.reserve(hints.size());
-		for (const AxisSizeHint &hint : hints)
-			result.push_back(std::clamp(hint.preferred, hint.minimal, hint.maximal));
+		for (const SizeHint &hint : hints)
+		{
+			result.push_back(component(hint.preferred));
+		}
 		const float difference = std::max(0.0f, availableSize) - _sum(result);
 		if (difference < 0.0f)
-			_shrink(result, hints, -difference);
+		{
+			_shrink(result, hints, -difference, component);
+		}
 		else
-			_grow(result, hints, difference);
+		{
+			_grow(result, hints, difference, component);
+		}
 		return result;
 	}
 
@@ -296,7 +337,7 @@ namespace spk
 
 	void Layout::_setComputedSizeHint(const SizeHint &hint)
 	{
-		setSizeHint(_normalizeSizeHint(hint));
+		setSizeHint(hint);
 	}
 
 	void Layout::updateSizeHint()
@@ -318,7 +359,9 @@ namespace spk
 	void Layout::setElementPadding(const Vector2UInt &padding)
 	{
 		if (_elementPadding == padding)
+		{
 			return;
+		}
 		_elementPadding = padding;
 		updateSizeHint();
 	}

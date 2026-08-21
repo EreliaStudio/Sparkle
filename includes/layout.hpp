@@ -71,13 +71,6 @@ namespace spk
 		};
 
 	protected:
-		struct AxisSizeHint
-		{
-			float minimal = 0.0f;
-			float preferred = 0.0f;
-			float maximal = 0.0f;
-		};
-
 		using ResizeableTrait::setMaximalSize;
 		using ResizeableTrait::setMinimalSize;
 		using ResizeableTrait::setPreferredSize;
@@ -90,10 +83,7 @@ namespace spk
 		[[nodiscard]] std::unique_ptr<Element> _createElement(Layout *layout, SizePolicy sizePolicy);
 		void _eraseElement(Element *element);
 
-		[[nodiscard]] static SizeHint _normalizeSizeHint(const SizeHint &hint);
-		[[nodiscard]] static AxisSizeHint _horizontalHint(const SizeHint &hint) noexcept;
-		[[nodiscard]] static AxisSizeHint _verticalHint(const SizeHint &hint) noexcept;
-		[[nodiscard]] static std::vector<float> _resolveAxis(const std::vector<AxisSizeHint> &hints, float availableSize);
+		[[nodiscard]] static std::vector<float> _resolveAxis(const std::vector<SizeHint> &hints, float availableSize, bool horizontal);
 		[[nodiscard]] static uint32_t _dimension(float value) noexcept;
 		[[nodiscard]] static Rect2D _rect(int32_t x, int32_t y, uint32_t width, uint32_t height) noexcept;
 

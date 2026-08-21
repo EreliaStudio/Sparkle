@@ -14,8 +14,8 @@ namespace spk
 		std::size_t _rowCount = 0;
 		std::size_t _columnCount = 0;
 
-		[[nodiscard]] std::vector<AxisSizeHint> _columnHints() const;
-		[[nodiscard]] std::vector<AxisSizeHint> _rowHints() const;
+		[[nodiscard]] std::vector<SizeHint> _columnHints() const;
+		[[nodiscard]] std::vector<SizeHint> _rowHints() const;
 		[[nodiscard]] SizeHint _computedSizeHint() const;
 		[[nodiscard]] float _horizontalPadding() const noexcept;
 		[[nodiscard]] float _verticalPadding() const noexcept;
@@ -89,7 +89,9 @@ namespace spk
 		static void _validateColumn(std::size_t column)
 		{
 			if (column >= NbColumns)
+			{
 				throw std::out_of_range("GridLayoutFixedColumns: invalid column index");
+			}
 		}
 	};
 
@@ -135,7 +137,9 @@ namespace spk
 		static void _validateRow(std::size_t row)
 		{
 			if (row >= NbRows)
+			{
 				throw std::out_of_range("GridLayoutFixedRows: invalid row index");
+			}
 		}
 	};
 
@@ -162,7 +166,9 @@ namespace spk
 		void clear() override
 		{
 			for (auto &element : _elements)
+			{
 				element.reset();
+			}
 			updateSizeHint();
 		}
 
@@ -187,7 +193,9 @@ namespace spk
 		static void _validateCell(std::size_t column, std::size_t row)
 		{
 			if (column >= NbColumns || row >= NbRows)
+			{
 				throw std::out_of_range("GridLayoutFixedGrid: invalid cell index");
+			}
 		}
 	};
 }

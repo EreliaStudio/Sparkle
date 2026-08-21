@@ -17,51 +17,56 @@ namespace spk
 		[[nodiscard]] static float _primary(const Vector2 &value) noexcept
 		{
 			if constexpr (Horizontal)
+			{
 				return value.x;
+			}
 			return value.y;
 		}
 
 		[[nodiscard]] static float _secondary(const Vector2 &value) noexcept
 		{
 			if constexpr (Horizontal)
+			{
 				return value.y;
+			}
 			return value.x;
 		}
 
 		[[nodiscard]] static uint32_t _primary(const Vector2UInt &value) noexcept
 		{
 			if constexpr (Horizontal)
+			{
 				return value.x;
+			}
 			return value.y;
 		}
 
 		[[nodiscard]] static uint32_t _secondary(const Vector2UInt &value) noexcept
 		{
 			if constexpr (Horizontal)
+			{
 				return value.y;
+			}
 			return value.x;
 		}
 
-		[[nodiscard]] static AxisSizeHint _axisHint(const SizeHint &hint) noexcept
+		[[nodiscard]] std::vector<SizeHint> _primaryHints() const
 		{
-			if constexpr (Horizontal)
-				return _horizontalHint(hint);
-			return _verticalHint(hint);
-		}
-
-		[[nodiscard]] std::vector<AxisSizeHint> _primaryHints() const
-		{
-			std::vector<AxisSizeHint> result;
+			std::vector<SizeHint> result;
 			result.reserve(_elements.size());
 			for (const auto &element : _elements)
-				result.push_back(_axisHint(element->sizeHint()));
+			{
+				result.push_back(element->sizeHint());
+			}
 			return result;
 		}
 
 		[[nodiscard]] float _paddingTotal() const noexcept
 		{
 			if (_elements.size() < 2)
+			{
 				return 0.0f;
+			}
 			return static_cast<float>(_elements.size() - 1) * static_cast<float>(_primary(_elementPadding));
 		}
 
@@ -71,7 +76,9 @@ namespace spk
 			Vector2 preferred{};
 			Vector2 maximal{};
 			for (const auto &element : _elements)
+			{
 				_accumulateHint(element->sizeHint(), minimal, preferred, maximal);
+			}
 			const float padding = _paddingTotal();
 			_addPrimary(minimal, padding);
 			_addPrimary(preferred, padding);
@@ -98,15 +105,21 @@ namespace spk
 		static void _addPrimary(Vector2 &value, float amount) noexcept
 		{
 			if constexpr (Horizontal)
+			{
 				value.x += amount;
+			}
 			else
+			{
 				value.y += amount;
+			}
 		}
 
 		[[nodiscard]] Rect2D _cell(const Rect2D &geometry, int32_t cursor, uint32_t primarySize) const noexcept
 		{
 			if constexpr (Horizontal)
+			{
 				return _rect(cursor, geometry.y, primarySize, geometry.height);
+			}
 			return _rect(geometry.x, cursor, geometry.width, primarySize);
 		}
 
@@ -119,9 +132,11 @@ namespace spk
 		void _applyGeometry(const Rect2D &geometry) override
 		{
 			if (_elements.empty())
+			{
 				return;
+			}
 			const float available = std::max(0.0f, static_cast<float>(_primary(geometry.size)) - _paddingTotal());
-			const std::vector<float> sizes = _resolveAxis(_primaryHints(), available);
+			const std::vector<float> sizes = _resolveAxis(_primaryHints(), available, Horizontal);
 			int32_t cursor = Horizontal ? geometry.x : geometry.y;
 			for (std::size_t i = 0; i < _elements.size(); ++i)
 			{
@@ -162,16 +177,24 @@ namespace spk
 
 		void removeWidget(Widget *widget)
 		{
-			const auto it = std::find_if(_elements.begin(), _elements.end(), [widget](const auto &element) { return element->widget() == widget; });
+			const auto it = std::find_if(_elements.begin(), _elements.end(), [widget](const auto &element) {
+				return element->widget() == widget;
+			});
 			if (it != _elements.end())
+			{
 				_eraseElement(it->get());
+			}
 		}
 
 		void removeLayout(Layout *layout)
 		{
-			const auto it = std::find_if(_elements.begin(), _elements.end(), [layout](const auto &element) { return element->layout() == layout; });
+			const auto it = std::find_if(_elements.begin(), _elements.end(), [layout](const auto &element) {
+				return element->layout() == layout;
+			});
 			if (it != _elements.end())
+			{
 				_eraseElement(it->get());
+			}
 		}
 	};
 
