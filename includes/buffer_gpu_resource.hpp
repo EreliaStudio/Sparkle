@@ -37,6 +37,7 @@ namespace spk
 
 		public:
 			void resize(std::size_t size);
+			void reserve(std::size_t size);
 			void append(const void *source, std::size_t size);
 			void clear();
 			[[nodiscard]] std::byte *data() noexcept;
@@ -60,6 +61,7 @@ namespace spk
 		void _append(const void *data, std::size_t size);
 		void _write(const void *data, std::size_t size, std::size_t offset = 0);
 		void _resize(std::size_t size);
+		void _reserve(std::size_t size);
 		[[nodiscard]] std::byte *_data() noexcept;
 		[[nodiscard]] const std::byte *_data() const noexcept;
 		[[nodiscard]] virtual GLenum _target() const noexcept = 0;

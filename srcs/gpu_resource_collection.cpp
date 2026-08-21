@@ -67,11 +67,15 @@ namespace spk
 	{
 		const auto kind = resource._kind();
 		if (!_isRecyclable(kind))
+		{
 			return nullptr;
+		}
 
 		auto &pool = _pools[_kindIndex(kind)];
 		if (pool.empty())
+		{
 			return nullptr;
+		}
 
 		std::size_t bestIndex = pool.size();
 		GPUResource::RecyclingScore bestScore = 0;
@@ -87,11 +91,15 @@ namespace spk
 		}
 
 		if (bestScore == 0)
+		{
 			return nullptr;
+		}
 
 		auto result = std::move(pool[bestIndex]);
 		if (bestIndex != pool.size() - 1)
+		{
 			pool[bestIndex] = std::move(pool.back());
+		}
 		pool.pop_back();
 		return result;
 	}
@@ -102,7 +110,9 @@ namespace spk
 
 		resource._subscribeToRelease([queue](GPUResource::Identifier identifier) {
 			if (auto lockedQueue = queue.lock())
+			{
 				lockedQueue->push(identifier);
+			}
 		});
 	}
 
@@ -127,9 +137,13 @@ namespace spk
 		{
 			entry.instance = _acquire(resource);
 			if (entry.instance == nullptr)
+			{
 				entry.instance = resource._create(context);
+			}
 			if (entry.instance == nullptr)
+			{
 				throw std::logic_error("GPU resource creation returned a null instance");
+			}
 			entry.generation = 0;
 		}
 
@@ -140,12 +154,16 @@ namespace spk
 	{
 		auto it = _entries.find(identifier);
 		if (it == _entries.end())
+		{
 			return;
+		}
 
 		auto &entry = it->second;
 
 		if (entry.instance != nullptr && _isRecyclable(entry.kind))
+		{
 			_pools[_kindIndex(entry.kind)].push_back(std::move(entry.instance));
+		}
 
 		_entries.erase(it);
 	}
@@ -155,7 +173,9 @@ namespace spk
 		_reclamationQueue->drain(_releasedIdentifiers);
 
 		for (const auto identifier : _releasedIdentifiers)
+		{
 			_recycle(identifier);
+		}
 
 		_releasedIdentifiers.clear();
 	}
@@ -165,7 +185,9 @@ namespace spk
 		_entries.clear();
 
 		for (auto &pool : _pools)
+		{
 			pool.clear();
+		}
 
 		_reclamationQueue->clear();
 		_releasedIdentifiers.clear();

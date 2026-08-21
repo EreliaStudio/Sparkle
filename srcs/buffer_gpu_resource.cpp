@@ -18,13 +18,17 @@ namespace spk
 		{
 			glGenBuffers(1, &identifier);
 			if (identifier == 0)
+			{
 				throw std::runtime_error("Failed to create OpenGL buffer");
+			}
 		}
 
 		~Instance() override
 		{
 			if (identifier != 0)
+			{
 				glDeleteBuffers(1, &identifier);
+			}
 		}
 	};
 
@@ -39,13 +43,22 @@ namespace spk
 		_storage.resize(_unitCount(size));
 		_size = size;
 		if (size > previousSize)
+		{
 			std::memset(data() + previousSize, 0, size - previousSize);
+		}
+	}
+
+	void BufferGPUResource::Storage::reserve(std::size_t size)
+	{
+		_storage.reserve(_unitCount(size));
 	}
 
 	void BufferGPUResource::Storage::append(const void *source, std::size_t size)
 	{
 		if (size == 0)
+		{
 			return;
+		}
 		const std::size_t offset = _size;
 		resize(_size + size);
 		std::memcpy(data() + offset, source, size);
@@ -81,9 +94,12 @@ namespace spk
 	{
 		switch (usage)
 		{
-		case Usage::StaticDraw: return GL_STATIC_DRAW;
-		case Usage::DynamicDraw: return GL_DYNAMIC_DRAW;
-		case Usage::StreamDraw: return GL_STREAM_DRAW;
+		case Usage::StaticDraw:
+			return GL_STATIC_DRAW;
+		case Usage::DynamicDraw:
+			return GL_DYNAMIC_DRAW;
+		case Usage::StreamDraw:
+			return GL_STREAM_DRAW;
 		}
 		return GL_STATIC_DRAW;
 	}
@@ -92,7 +108,9 @@ namespace spk
 	{
 		std::size_t capacity = 64;
 		while (capacity < required && capacity <= std::numeric_limits<std::size_t>::max() / 2)
+		{
 			capacity *= 2;
+		}
 		return std::max(capacity, required);
 	}
 
@@ -111,17 +129,23 @@ namespace spk
 	void BufferGPUResource::_append(const void *data, std::size_t size)
 	{
 		if (size > std::numeric_limits<std::size_t>::max() - _storage.size())
+		{
 			throw std::overflow_error("GPU buffer size overflow");
+		}
 		_storage.append(data, size);
 	}
 
 	void BufferGPUResource::_write(const void *data, std::size_t size, std::size_t offset)
 	{
 		if (offset > _storage.size() || size > _storage.size() - offset)
+		{
 			throw std::out_of_range("GPU buffer write exceeds buffer size");
+		}
 
 		if (size == 0)
+		{
 			return;
+		}
 
 		std::memcpy(_storage.data() + offset, data, size);
 	}
@@ -129,8 +153,15 @@ namespace spk
 	void BufferGPUResource::_resize(std::size_t size)
 	{
 		if (_storage.size() == size)
+		{
 			return;
+		}
 		_storage.resize(size);
+	}
+
+	void BufferGPUResource::_reserve(std::size_t size)
+	{
+		_storage.reserve(size);
 	}
 
 	std::byte *BufferGPUResource::_data() noexcept
@@ -154,9 +185,13 @@ namespace spk
 		glBindBuffer(_target(), instance.identifier);
 		const bool usageChanged = !instance.allocationUsage.has_value() || *instance.allocationUsage != _usage;
 		if (size() != 0 && (size() > instance.allocatedSize || usageChanged))
+		{
 			_allocate(instance);
+		}
 		if (size() != 0)
+		{
 			glBufferSubData(_target(), 0, static_cast<GLsizeiptr>(size()), _data());
+		}
 	}
 
 	void BufferGPUResource::_bind(GPUResource::Instance &base, RenderContext &) const
@@ -167,14 +202,18 @@ namespace spk
 	void BufferGPUResource::clear()
 	{
 		if (size() == 0)
+		{
 			return;
+		}
 		_storage.clear();
 	}
 
 	void BufferGPUResource::setUsage(Usage usage)
 	{
 		if (_usage == usage)
+		{
 			return;
+		}
 		_usage = usage;
 	}
 
@@ -195,7 +234,9 @@ namespace spk
 		std::vector<std::byte> result(_storage.size());
 
 		if (result.empty())
+		{
 			return result;
+		}
 
 		glGetBufferSubData(
 			_target(),
