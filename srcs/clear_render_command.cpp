@@ -16,18 +16,28 @@ namespace spk
 		GLbitfield mask = 0;
 
 		if ((_mask & Mask::Color) != Mask::None)
+		{
 			mask |= GL_COLOR_BUFFER_BIT;
+		}
 
 		if ((_mask & Mask::Depth) != Mask::None)
+		{
 			mask |= GL_DEPTH_BUFFER_BIT;
+		}
 
 		if ((_mask & Mask::Stencil) != Mask::None)
+		{
 			mask |= GL_STENCIL_BUFFER_BIT;
+		}
 
 		if ((_mask & Mask::Color) != Mask::None)
+		{
 			::glClearColor(_color.r, _color.g, _color.b, _color.a);
+		}
 
 		if (mask != 0)
+		{
 			::glClear(mask);
+		}
 	}
 }

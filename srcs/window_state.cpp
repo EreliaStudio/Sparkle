@@ -21,8 +21,7 @@ namespace spk
 			.r = 0,
 			.g = 0,
 			.b = 0,
-			.a = 1
-		};
+			.a = 1};
 
 		void _buildRenderSnapshot(spk::RenderSnapshot::Builder &builder)
 		{
@@ -34,13 +33,12 @@ namespace spk
 		}
 
 	public:
-		RootWidget(const std::string& name, Widget* parent) :	
+		RootWidget(const std::string &name, Widget *parent) :
 			Widget(name, parent)
 		{
-
 		}
 
-		void setBackgroundColor(const spk::Color& backgroundColor)
+		void setBackgroundColor(const spk::Color &backgroundColor)
 		{
 			_backgroundColor = backgroundColor;
 		}
@@ -55,13 +53,17 @@ namespace spk
 		spk::Mouse mouse;
 
 		explicit Impl(Window::Identifier windowID) :
-			windowID(std::move(windowID)), root(std::make_unique<RootWidget>("/Root widget", nullptr))
+			windowID(std::move(windowID)),
+			root(std::make_unique<RootWidget>("/Root widget", nullptr))
 		{
 			root->activate();
 		}
 	};
 
-	Window::State::State(const Window::Identifier &windowID) : _impl(std::make_unique<Impl>(windowID)) {}
+	Window::State::State(const Window::Identifier &windowID) :
+		_impl(std::make_unique<Impl>(windowID))
+	{
+	}
 	Window::State::~State() = default;
 
 	Window::LifeCycle Window::State::lifeCycle() const noexcept
@@ -79,7 +81,7 @@ namespace spk
 		return _impl->focusedWidgets[static_cast<std::size_t>(channel)];
 	}
 
-	void Window::State::setBackgroundColor(const spk::Color& backgroundColor)
+	void Window::State::setBackgroundColor(const spk::Color &backgroundColor)
 	{
 		_impl->root->setBackgroundColor(backgroundColor);
 	}
@@ -87,14 +89,18 @@ namespace spk
 	void Window::State::takeFocus(FocusMode::Channel channel, Widget *widget) noexcept
 	{
 		if (widget != nullptr)
+		{
 			_impl->focusedWidgets[static_cast<std::size_t>(channel)] = widget;
+		}
 	}
 
 	void Window::State::releaseFocus(FocusMode::Channel channel, Widget *widget) noexcept
 	{
 		Widget *&owner = _impl->focusedWidgets[static_cast<std::size_t>(channel)];
 		if (owner == widget)
+		{
 			owner = nullptr;
+		}
 	}
 
 	void Window::State::clearFocus(FocusMode::Channel channel) noexcept
@@ -108,13 +114,40 @@ namespace spk
 		return focused != nullptr ? *focused : *_impl->root;
 	}
 
-	void Window::State::markReady() noexcept { _impl->lifeCycle = LifeCycle::Ready; }
-	void Window::State::beginRelease() noexcept { _impl->lifeCycle = LifeCycle::Releasing; }
-	void Window::State::markReleased() noexcept { _impl->lifeCycle = LifeCycle::Released; }
-	Widget &Window::State::root() noexcept { return *_impl->root; }
-	const Widget &Window::State::root() const noexcept { return *_impl->root; }
-	spk::Keyboard &Window::State::keyboard() noexcept { return _impl->keyboard; }
-	const spk::Keyboard &Window::State::keyboard() const noexcept { return _impl->keyboard; }
-	spk::Mouse &Window::State::mouse() noexcept { return _impl->mouse; }
-	const spk::Mouse &Window::State::mouse() const noexcept { return _impl->mouse; }
+	void Window::State::markReady() noexcept
+	{
+		_impl->lifeCycle = LifeCycle::Ready;
+	}
+	void Window::State::beginRelease() noexcept
+	{
+		_impl->lifeCycle = LifeCycle::Releasing;
+	}
+	void Window::State::markReleased() noexcept
+	{
+		_impl->lifeCycle = LifeCycle::Released;
+	}
+	Widget &Window::State::root() noexcept
+	{
+		return *_impl->root;
+	}
+	const Widget &Window::State::root() const noexcept
+	{
+		return *_impl->root;
+	}
+	spk::Keyboard &Window::State::keyboard() noexcept
+	{
+		return _impl->keyboard;
+	}
+	const spk::Keyboard &Window::State::keyboard() const noexcept
+	{
+		return _impl->keyboard;
+	}
+	spk::Mouse &Window::State::mouse() noexcept
+	{
+		return _impl->mouse;
+	}
+	const spk::Mouse &Window::State::mouse() const noexcept
+	{
+		return _impl->mouse;
+	}
 }

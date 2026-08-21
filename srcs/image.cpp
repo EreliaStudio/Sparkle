@@ -13,11 +13,16 @@ namespace spk
 	{
 		switch (channels)
 		{
-		case 1: return Format::GreyLevel;
-		case 2: return Format::DualChannel;
-		case 3: return Format::RGB;
-		case 4: return Format::RGBA;
-		default: return Format::Error;
+		case 1:
+			return Format::GreyLevel;
+		case 2:
+			return Format::DualChannel;
+		case 3:
+			return Format::RGB;
+		case 4:
+			return Format::RGBA;
+		default:
+			return Format::Error;
 		}
 	}
 
@@ -40,12 +45,16 @@ namespace spk
 
 		stbi_uc *rawData = stbi_load(path.string().c_str(), &width, &height, &channels, 0);
 		if (rawData == nullptr)
+		{
 			throw std::runtime_error("Image: failed to load file: " + path.string());
+		}
 
 		std::unique_ptr<stbi_uc, decltype(&stbi_image_free)> imageData(rawData, stbi_image_free);
 		const Format format = _determineFormat(channels);
 		if (format == Format::Error)
+		{
 			throw std::runtime_error("Image: unsupported channel count");
+		}
 
 		setPixels(
 			imageData.get(),
@@ -58,9 +67,13 @@ namespace spk
 	void Image::_loadFromData(std::span<const std::uint8_t> data)
 	{
 		if (data.empty())
+		{
 			throw std::invalid_argument("Image: encoded data cannot be empty");
+		}
 		if (data.size() > static_cast<std::size_t>(std::numeric_limits<int>::max()))
+		{
 			throw std::overflow_error("Image: encoded data is too large for stb_image");
+		}
 
 		int width = 0;
 		int height = 0;
@@ -75,12 +88,16 @@ namespace spk
 			0);
 
 		if (rawData == nullptr)
+		{
 			throw std::runtime_error("Image: failed to decode image data");
+		}
 
 		std::unique_ptr<stbi_uc, decltype(&stbi_image_free)> imageData(rawData, stbi_image_free);
 		const Format format = _determineFormat(channels);
 		if (format == Format::Error)
+		{
 			throw std::runtime_error("Image: unsupported channel count");
+		}
 
 		setPixels(
 			imageData.get(),

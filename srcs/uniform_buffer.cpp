@@ -28,7 +28,9 @@ namespace spk
 	void UniformBuffer::setData(const void *data, std::size_t size)
 	{
 		if (size != BufferGPUResource::size())
+		{
 			throw std::invalid_argument("Data size invalid");
+		}
 
 		_write(data, size);
 	}

@@ -26,7 +26,10 @@ namespace spk
 	{
 		const TRecordType &record;
 
-		explicit Event(const TRecordType &record) : record(record) {}
+		explicit Event(const TRecordType &record) :
+			record(record)
+		{
+		}
 	};
 
 	template <typename TRecordType, typename TDevice>
@@ -34,6 +37,10 @@ namespace spk
 	{
 		const TDevice &device;
 
-		DeviceEvent(const TRecordType &record, const TDevice &device) : Event<TRecordType>(record), device(device) {}
+		DeviceEvent(const TRecordType &record, const TDevice &device) :
+			Event<TRecordType>(record),
+			device(device)
+		{
+		}
 	};
 }

@@ -16,13 +16,17 @@ namespace spk
 		{
 			glGenSamplers(1, &identifier);
 			if (identifier == 0)
+			{
 				throw std::runtime_error("Failed to create OpenGL sampler");
+			}
 		}
 
 		~Instance() override
 		{
 			if (identifier != 0)
+			{
 				glDeleteSamplers(1, &identifier);
+			}
 		}
 	};
 
@@ -39,9 +43,13 @@ namespace spk
 	GLint Sampler::_openGLMinFilter(Filtering filtering, MipmapFiltering mipmapFiltering) noexcept
 	{
 		if (mipmapFiltering == MipmapFiltering::Disabled)
+		{
 			return _openGLMagFilter(filtering);
+		}
 		if (mipmapFiltering == MipmapFiltering::Nearest)
+		{
 			return filtering == Filtering::Nearest ? GL_NEAREST_MIPMAP_NEAREST : GL_LINEAR_MIPMAP_NEAREST;
+		}
 		return filtering == Filtering::Nearest ? GL_NEAREST_MIPMAP_LINEAR : GL_LINEAR_MIPMAP_LINEAR;
 	}
 
@@ -49,10 +57,14 @@ namespace spk
 	{
 		switch (wrap)
 		{
-		case Wrap::Repeat: return GL_REPEAT;
-		case Wrap::MirroredRepeat: return GL_MIRRORED_REPEAT;
-		case Wrap::ClampToEdge: return GL_CLAMP_TO_EDGE;
-		case Wrap::ClampToBorder: return GL_CLAMP_TO_BORDER;
+		case Wrap::Repeat:
+			return GL_REPEAT;
+		case Wrap::MirroredRepeat:
+			return GL_MIRRORED_REPEAT;
+		case Wrap::ClampToEdge:
+			return GL_CLAMP_TO_EDGE;
+		case Wrap::ClampToBorder:
+			return GL_CLAMP_TO_BORDER;
 		}
 		return GL_CLAMP_TO_EDGE;
 	}
@@ -84,7 +96,9 @@ namespace spk
 	void Sampler::_bind(GPUResource::Instance &base, RenderContext &context) const
 	{
 		if (_texture == nullptr)
+		{
 			throw std::logic_error("Cannot activate a Sampler without a Texture");
+		}
 
 		_texture->_bindToUnit(_bindingPoint, context);
 		glBindSampler(static_cast<GLuint>(_bindingPoint), static_cast<Instance &>(base).identifier);

@@ -13,10 +13,16 @@ namespace spk
 		std::atomic<LifeCycle> lifeCycle = LifeCycle::Pending;
 		WinAPI::Frame frame;
 
-		explicit Impl(Window::Identifier windowID) : windowID(std::move(windowID)) {}
+		explicit Impl(Window::Identifier windowID) :
+			windowID(std::move(windowID))
+		{
+		}
 	};
 
-	Window::Native::Native(const Window::Identifier &windowID) : _impl(std::make_unique<Impl>(windowID)) {}
+	Window::Native::Native(const Window::Identifier &windowID) :
+		_impl(std::make_unique<Impl>(windowID))
+	{
+	}
 	Window::Native::~Native() = default;
 
 	Window::LifeCycle Window::Native::lifeCycle() const noexcept

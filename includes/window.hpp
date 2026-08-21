@@ -3,9 +3,9 @@
 #include <memory>
 #include <string>
 
+#include "color.hpp"
 #include "focus_mode.hpp"
 #include "rect2d.hpp"
-#include "color.hpp"
 
 #include "gpu_resource.hpp"
 #include "gpu_resource_collection.hpp"
@@ -40,11 +40,10 @@ namespace spk
 			std::string title;
 			spk::Rect2D area;
 			spk::Color backgroundColor{
-				.r = 0.05f, 
-				.g = 0.05f, 
+				.r = 0.05f,
+				.g = 0.05f,
 				.b = 0.08f,
-				.a = 1.0f
-			};
+				.a = 1.0f};
 		};
 
 		class Native
@@ -90,7 +89,7 @@ namespace spk
 			[[nodiscard]] Widget *focusedWidget(FocusMode::Channel channel) noexcept;
 			[[nodiscard]] const Widget *focusedWidget(FocusMode::Channel channel) const noexcept;
 
-			void setBackgroundColor(const spk::Color& backgroundColor);
+			void setBackgroundColor(const spk::Color &backgroundColor);
 
 			void takeFocus(FocusMode::Channel channel, Widget *widget) noexcept;
 			void releaseFocus(FocusMode::Channel channel, Widget *widget) noexcept;
@@ -133,7 +132,7 @@ namespace spk
 			void present();
 
 			void setGeometry(const spk::Rect2D &geometry) noexcept;
-			[[nodiscard]] const spk::Rect2D& geometry() const noexcept;
+			[[nodiscard]] const spk::Rect2D &geometry() const noexcept;
 
 			[[nodiscard]] GPUResourceCollection &_gpuResources();
 		};

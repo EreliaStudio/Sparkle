@@ -25,6 +25,7 @@ namespace spk
 		LayoutBuffer &operator=(LayoutBuffer &&) = delete;
 
 		void activate(RenderContext &context) const;
+		void validate() noexcept;
 		[[nodiscard]] VertexBuffer &vertexBuffer() noexcept;
 		[[nodiscard]] const VertexBuffer &vertexBuffer() const noexcept;
 		[[nodiscard]] IndexBuffer &indexBuffer() noexcept;

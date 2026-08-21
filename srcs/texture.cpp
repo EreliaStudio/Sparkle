@@ -25,13 +25,17 @@ namespace spk
 		{
 			glGenTextures(1, &identifier);
 			if (identifier == 0)
+			{
 				throw std::runtime_error("Failed to create OpenGL texture");
+			}
 		}
 
 		~Instance() override
 		{
 			if (identifier != 0)
+			{
 				glDeleteTextures(1, &identifier);
+			}
 		}
 	};
 
@@ -70,11 +74,15 @@ namespace spk
 		const GLenum target = _openGLTarget(_textureTarget);
 
 		if (instance.target != target)
+		{
 			return 0;
+		}
 
 		const TextureFormat descriptor = formatDescriptor(_format);
 		if (instance.size == _size && instance.internalFormat == descriptor.internalFormat)
+		{
 			return 2;
+		}
 
 		return 1;
 	}
@@ -83,10 +91,14 @@ namespace spk
 	{
 		switch (target)
 		{
-		case Target::Texture1D: return GL_TEXTURE_1D;
-		case Target::Texture2D: return GL_TEXTURE_2D;
-		case Target::Texture3D: return GL_TEXTURE_3D;
-		case Target::TextureCubeMap: return GL_TEXTURE_CUBE_MAP;
+		case Target::Texture1D:
+			return GL_TEXTURE_1D;
+		case Target::Texture2D:
+			return GL_TEXTURE_2D;
+		case Target::Texture3D:
+			return GL_TEXTURE_3D;
+		case Target::TextureCubeMap:
+			return GL_TEXTURE_CUBE_MAP;
 		}
 		return GL_TEXTURE_2D;
 	}
@@ -95,16 +107,21 @@ namespace spk
 	{
 		switch (format)
 		{
-		case Format::GreyLevel: return 1;
-		case Format::DualChannel: return 2;
+		case Format::GreyLevel:
+			return 1;
+		case Format::DualChannel:
+			return 2;
 		case Format::RGB:
-		case Format::BGR: return 3;
+		case Format::BGR:
+			return 3;
 		case Format::RGBA:
-		case Format::BGRA: return 4;
+		case Format::BGRA:
+			return 4;
 		case Format::Depth24:
 		case Format::Depth32F:
 		case Format::Depth24Stencil8:
-		case Format::Error: break;
+		case Format::Error:
+			break;
 		}
 
 		throw std::invalid_argument("Texture format cannot contain CPU pixel data");
@@ -117,11 +134,15 @@ namespace spk
 		const std::size_t bytesPerPixel = _bytesPerPixel(format);
 
 		if (width != 0 && height > std::numeric_limits<std::size_t>::max() / width)
+		{
 			throw std::overflow_error("Texture size overflow");
+		}
 
 		const std::size_t pixelCount = width * height;
 		if (pixelCount != 0 && bytesPerPixel > std::numeric_limits<std::size_t>::max() / pixelCount)
+		{
 			throw std::overflow_error("Texture size overflow");
+		}
 
 		return pixelCount * bytesPerPixel;
 	}
@@ -135,11 +156,17 @@ namespace spk
 	void Texture::_allocateRenderTarget(const Vector2UInt &size, Format format)
 	{
 		if (_textureTarget != Target::Texture2D)
+		{
 			throw std::logic_error("Render targets currently support Texture2D only");
+		}
 		if (size.x == 0 || size.y == 0)
+		{
 			throw std::invalid_argument("Render target size cannot be zero");
+		}
 		if (format == Format::Error)
+		{
 			throw std::invalid_argument("Render target format cannot be invalid");
+		}
 
 		_pixels.clear();
 		_size = size;
@@ -156,17 +183,25 @@ namespace spk
 	void Texture::setPixels(const std::uint8_t *data, const Vector2UInt &size, Format format)
 	{
 		if (_textureTarget != Target::Texture2D)
+		{
 			throw std::logic_error("CPU pixel storage currently supports Texture2D only");
+		}
 		if (isColorFormat(format) == false)
+		{
 			throw std::invalid_argument("Depth formats cannot contain CPU pixel data");
+		}
 
 		const std::size_t byteCount = _checkedByteCount(size, format);
 		_pixels.resize(byteCount);
 
 		if (data == nullptr)
+		{
 			std::fill(_pixels.begin(), _pixels.end(), 0);
+		}
 		else
+		{
 			std::memcpy(_pixels.data(), data, byteCount);
+		}
 
 		_size = size;
 		_format = format;
@@ -177,7 +212,9 @@ namespace spk
 	{
 		const std::size_t expectedSize = _checkedByteCount(size, format);
 		if (data.size() != expectedSize)
+		{
 			throw std::invalid_argument("Texture pixel data size does not match dimensions and format");
+		}
 
 		setPixels(data.data(), size, format);
 	}
@@ -185,9 +222,13 @@ namespace spk
 	void Texture::resizePixels(const Vector2UInt &size)
 	{
 		if (_contentSource != ContentSource::PixelData)
+		{
 			throw std::logic_error("Cannot resize CPU pixels of a render-target Texture");
+		}
 		if (_format == Format::Error)
+		{
 			throw std::logic_error("Cannot resize a Texture without a configured format");
+		}
 
 		const std::size_t bytesPerPixel = _bytesPerPixel(_format);
 		std::vector<std::uint8_t> result(_checkedByteCount(size, _format), 0);
@@ -208,12 +249,18 @@ namespace spk
 	void Texture::writePixels(const std::uint8_t *data, const Vector2UInt &position, const Vector2UInt &size)
 	{
 		if (_contentSource != ContentSource::PixelData)
+		{
 			throw std::logic_error("Cannot write CPU pixels into a render-target Texture");
+		}
 		if (data == nullptr && size.x != 0 && size.y != 0)
+		{
 			throw std::invalid_argument("Texture pixel source cannot be null");
+		}
 		if (position.x > _size.x || size.x > _size.x - position.x ||
 			position.y > _size.y || size.y > _size.y - position.y)
+		{
 			throw std::out_of_range("Texture pixel write exceeds texture bounds");
+		}
 
 		const std::size_t bytesPerPixel = _bytesPerPixel(_format);
 		for (std::size_t y = 0; y < static_cast<std::size_t>(size.y); ++y)
@@ -233,7 +280,9 @@ namespace spk
 	void Texture::setMipmap(Mipmap mipmap) noexcept
 	{
 		if (_mipmap == mipmap)
+		{
 			return;
+		}
 
 		_mipmap = mipmap;
 	}
@@ -246,19 +295,27 @@ namespace spk
 	void Texture::_synchronize(GPUResource::Instance &base, RenderContext &) const
 	{
 		if (_textureTarget != Target::Texture2D)
+		{
 			throw std::logic_error("Texture synchronization currently supports Texture2D only");
+		}
 		if (_size.x == 0 || _size.y == 0 || _format == Format::Error)
+		{
 			throw std::logic_error("Cannot synchronize an empty Texture");
+		}
 
 		const TextureFormat descriptor = formatDescriptor(_format);
 		if (descriptor.internalFormat == GL_NONE || descriptor.externalFormat == GL_NONE || descriptor.elementType == GL_NONE)
+		{
 			throw std::logic_error("Texture format cannot be synchronized");
+		}
 
 		auto &instance = static_cast<Instance &>(base);
 		const GLenum target = _openGLTarget(_textureTarget);
 
 		if (instance.target != 0 && instance.target != target)
+		{
 			throw std::logic_error("Texture received an incompatible GPU instance");
+		}
 
 		glBindTexture(target, instance.identifier);
 
@@ -272,8 +329,8 @@ namespace spk
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
 		const void *pixels = _contentSource == ContentSource::PixelData && _pixels.empty() == false
-			? _pixels.data()
-			: nullptr;
+								 ? _pixels.data()
+								 : nullptr;
 
 		if (storageMatches)
 		{
@@ -334,16 +391,26 @@ namespace spk
 	{
 		switch (format)
 		{
-		case Format::RGB: return {GL_RGB8, GL_RGB, GL_UNSIGNED_BYTE, false, false};
-		case Format::RGBA: return {GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE, false, false};
-		case Format::BGR: return {GL_RGB8, GL_BGR, GL_UNSIGNED_BYTE, false, false};
-		case Format::BGRA: return {GL_RGBA8, GL_BGRA, GL_UNSIGNED_BYTE, false, false};
-		case Format::GreyLevel: return {GL_R8, GL_RED, GL_UNSIGNED_BYTE, false, false};
-		case Format::DualChannel: return {GL_RG8, GL_RG, GL_UNSIGNED_BYTE, false, false};
-		case Format::Depth24: return {GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, true, false};
-		case Format::Depth32F: return {GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT, GL_FLOAT, true, false};
-		case Format::Depth24Stencil8: return {GL_DEPTH24_STENCIL8, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, true, true};
-		case Format::Error: return {};
+		case Format::RGB:
+			return {GL_RGB8, GL_RGB, GL_UNSIGNED_BYTE, false, false};
+		case Format::RGBA:
+			return {GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE, false, false};
+		case Format::BGR:
+			return {GL_RGB8, GL_BGR, GL_UNSIGNED_BYTE, false, false};
+		case Format::BGRA:
+			return {GL_RGBA8, GL_BGRA, GL_UNSIGNED_BYTE, false, false};
+		case Format::GreyLevel:
+			return {GL_R8, GL_RED, GL_UNSIGNED_BYTE, false, false};
+		case Format::DualChannel:
+			return {GL_RG8, GL_RG, GL_UNSIGNED_BYTE, false, false};
+		case Format::Depth24:
+			return {GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, true, false};
+		case Format::Depth32F:
+			return {GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT, GL_FLOAT, true, false};
+		case Format::Depth24Stencil8:
+			return {GL_DEPTH24_STENCIL8, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, true, true};
+		case Format::Error:
+			return {};
 		}
 		return {};
 	}
@@ -407,7 +474,9 @@ namespace spk
 	const std::vector<std::uint8_t> &Texture::pixels() const
 	{
 		if (_contentSource == ContentSource::RenderTarget)
+		{
 			throw std::logic_error("Render-target textures do not expose CPU pixel data");
+		}
 
 		return _pixels;
 	}
@@ -415,9 +484,13 @@ namespace spk
 	void Texture::saveAsPng(const std::filesystem::path &path) const
 	{
 		if (_contentSource == ContentSource::RenderTarget || isColorFormat(_format) == false)
+		{
 			throw std::logic_error("Only CPU color textures can be exported as PNG files");
+		}
 		if (_pixels.empty() || _size.x == 0 || _size.y == 0)
+		{
 			throw std::logic_error("Cannot save an empty Texture");
+		}
 
 		const int channels = static_cast<int>(_bytesPerPixel(_format));
 		const std::uint8_t *data = _pixels.data();
@@ -427,12 +500,16 @@ namespace spk
 		{
 			converted = _pixels;
 			for (std::size_t index = 0; index < converted.size(); index += static_cast<std::size_t>(channels))
+			{
 				std::swap(converted[index], converted[index + 2]);
+			}
 			data = converted.data();
 		}
 
 		if (path.has_parent_path())
+		{
 			std::filesystem::create_directories(path.parent_path());
+		}
 
 		const int stride = static_cast<int>(_size.x) * channels;
 		if (stbi_write_png(
@@ -442,6 +519,8 @@ namespace spk
 				channels,
 				data,
 				stride) == 0)
+		{
 			throw std::runtime_error("Failed to write PNG file: " + path.string());
+		}
 	}
 }

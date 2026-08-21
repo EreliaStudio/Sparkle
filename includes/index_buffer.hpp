@@ -39,9 +39,13 @@ namespace spk
 			static_assert(std::is_integral_v<TIndex>, "IndexBuffer requires an integral type.");
 			static_assert(std::is_unsigned_v<TIndex>, "IndexBuffer requires an unsigned type.");
 			if (!_type.has_value())
+			{
 				throw std::logic_error("IndexBuffer has no configured type");
+			}
 			if (sizeof(TIndex) != _stride)
+			{
 				throw std::logic_error("Index type size does not match the configured IndexBuffer stride");
+			}
 		}
 
 		[[nodiscard]] static std::size_t _checkedSize(std::size_t count, std::size_t stride);
@@ -60,6 +64,13 @@ namespace spk
 		{
 			_validateType<TIndex>();
 			_resize(_checkedSize(count, _stride));
+		}
+
+		template <typename TIndex>
+		void reserve(std::size_t count)
+		{
+			_validateType<TIndex>();
+			_reserve(_checkedSize(count, _stride));
 		}
 
 		template <typename TIndex>

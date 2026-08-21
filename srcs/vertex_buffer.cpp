@@ -64,29 +64,43 @@ namespace spk
 	void VertexBuffer::_validateAttribute(const Attribute &attribute)
 	{
 		if (attribute.componentCount == 0 || attribute.componentCount > 4)
+		{
 			throw std::invalid_argument("VertexBuffer attribute component count must be between 1 and 4");
+		}
 
 		switch (attribute.interpretation)
 		{
 		case Interpretation::Floating:
 			if (attribute.type == Attribute::Type::Double)
+			{
 				throw std::invalid_argument("Double attributes require double interpretation");
+			}
 			if (attribute.normalized && !_isIntegerType(attribute.type))
+			{
 				throw std::invalid_argument("Only integer attribute types can be normalized");
+			}
 			break;
 
 		case Interpretation::Integer:
 			if (!_isIntegerType(attribute.type))
+			{
 				throw std::invalid_argument("Integer interpretation requires an integer attribute type");
+			}
 			if (attribute.normalized)
+			{
 				throw std::invalid_argument("Integer interpretation cannot use normalization");
+			}
 			break;
 
 		case Interpretation::Double:
 			if (attribute.type != Attribute::Type::Double)
+			{
 				throw std::invalid_argument("Double interpretation requires a double attribute type");
+			}
 			if (attribute.normalized)
+			{
 				throw std::invalid_argument("Double interpretation cannot use normalization");
+			}
 			break;
 		}
 	}
@@ -94,20 +108,26 @@ namespace spk
 	void VertexBuffer::_validateConfigurationEdition() const
 	{
 		if (size() != 0)
+		{
 			throw std::logic_error("Cannot modify VertexBuffer configuration while it contains vertices");
+		}
 	}
 
 	void VertexBuffer::_touchConfiguration() noexcept
 	{
 		++_configurationGeneration;
 		if (_configurationGeneration == 0)
+		{
 			_configurationGeneration = 1;
+		}
 	}
 
 	std::size_t VertexBuffer::_checkedSize(std::size_t count, std::size_t stride)
 	{
 		if (stride != 0 && count > std::numeric_limits<std::size_t>::max() / stride)
+		{
 			throw std::overflow_error("VertexBuffer size overflow");
+		}
 
 		return count * stride;
 	}
@@ -125,21 +145,24 @@ namespace spk
 		for (const auto &element : _attributes)
 		{
 			if (element.attribute.location == attribute.location)
+			{
 				throw std::invalid_argument("VertexBuffer attribute location is already configured");
+			}
 		}
 
 		const std::size_t typeSize = _typeSize(attribute.type);
 		if (attribute.componentCount > std::numeric_limits<std::size_t>::max() / typeSize)
+		{
 			throw std::overflow_error("VertexBuffer attribute size overflow");
+		}
 
 		const std::size_t attributeSize = typeSize * attribute.componentCount;
 		if (_stride > std::numeric_limits<std::size_t>::max() - attributeSize)
+		{
 			throw std::overflow_error("VertexBuffer stride overflow");
+		}
 
-		_attributes.push_back({
-			.attribute = attribute,
-			.offset = _stride
-		});
+		_attributes.push_back({.attribute = attribute, .offset = _stride});
 
 		_stride += attributeSize;
 		_touchConfiguration();
@@ -152,13 +175,7 @@ namespace spk
 		Interpretation interpretation,
 		bool normalized)
 	{
-		addAttribute({
-			.location = location,
-			.type = type,
-			.componentCount = componentCount,
-			.interpretation = interpretation,
-			.normalized = normalized
-		});
+		addAttribute({.location = location, .type = type, .componentCount = componentCount, .interpretation = interpretation, .normalized = normalized});
 	}
 
 	void VertexBuffer::addPadding(std::size_t byteCount)
@@ -166,10 +183,14 @@ namespace spk
 		_validateConfigurationEdition();
 
 		if (_stride > std::numeric_limits<std::size_t>::max() - byteCount)
+		{
 			throw std::overflow_error("VertexBuffer stride overflow");
+		}
 
 		if (byteCount == 0)
+		{
 			return;
+		}
 
 		_stride += byteCount;
 		_touchConfiguration();
@@ -180,7 +201,9 @@ namespace spk
 		_validateConfigurationEdition();
 
 		if (_attributes.empty() && _stride == 0)
+		{
 			return;
+		}
 
 		_attributes.clear();
 		_stride = 0;
@@ -195,7 +218,9 @@ namespace spk
 	std::size_t VertexBuffer::count() const noexcept
 	{
 		if (_stride == 0)
+		{
 			return 0;
+		}
 
 		return size() / _stride;
 	}

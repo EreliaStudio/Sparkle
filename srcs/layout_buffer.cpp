@@ -13,6 +13,13 @@ namespace spk
 		_vertexArray.activate(context);
 	}
 
+	void LayoutBuffer::validate() noexcept
+	{
+		_vertexBuffer.validate();
+		_indexBuffer.validate();
+		_vertexArray.validate();
+	}
+
 	VertexBuffer &LayoutBuffer::vertexBuffer() noexcept
 	{
 		return _vertexBuffer;

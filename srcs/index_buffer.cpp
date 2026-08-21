@@ -9,9 +9,12 @@ namespace spk
 	{
 		switch (type)
 		{
-		case Type::UnsignedByte: return sizeof(std::uint8_t);
-		case Type::UnsignedShort: return sizeof(std::uint16_t);
-		case Type::UnsignedInt: return sizeof(std::uint32_t);
+		case Type::UnsignedByte:
+			return sizeof(std::uint8_t);
+		case Type::UnsignedShort:
+			return sizeof(std::uint16_t);
+		case Type::UnsignedInt:
+			return sizeof(std::uint32_t);
 		}
 		return 0;
 	}
@@ -19,7 +22,9 @@ namespace spk
 	std::size_t IndexBuffer::_checkedSize(std::size_t count, std::size_t stride)
 	{
 		if (stride != 0 && count > std::numeric_limits<std::size_t>::max() / stride)
+		{
 			throw std::overflow_error("IndexBuffer size overflow");
+		}
 		return count * stride;
 	}
 
@@ -31,9 +36,13 @@ namespace spk
 	void IndexBuffer::setType(Type type)
 	{
 		if (_type == type)
+		{
 			return;
+		}
 		if (size() != 0)
+		{
 			throw std::logic_error("IndexBuffer type cannot change while it contains data");
+		}
 		_type = type;
 		_stride = _typeSize(type);
 	}
@@ -41,7 +50,9 @@ namespace spk
 	void IndexBuffer::clearConfiguration()
 	{
 		if (size() != 0)
+		{
 			throw std::logic_error("IndexBuffer configuration cannot change while it contains data");
+		}
 		_type.reset();
 		_stride = 0;
 	}

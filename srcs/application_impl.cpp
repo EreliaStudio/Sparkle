@@ -15,7 +15,10 @@ namespace spk
 	{
 	}
 
-	Application::Impl::Impl() : Impl(Channels{}) {}
+	Application::Impl::Impl() :
+		Impl(Channels{})
+	{
+	}
 
 	Application::Impl::Impl(Channels channels) :
 		_platformRequestProducer(channels.platformRequests.producer, _platformWakeEvent),
@@ -38,8 +41,7 @@ namespace spk
 		try
 		{
 			runtime.shutdown();
-		}
-		catch (...)
+		} catch (...)
 		{
 			_reportWorkerFailure(std::current_exception());
 		}
@@ -51,9 +53,10 @@ namespace spk
 		try
 		{
 			while (!stopToken.stop_requested() && !_stopSource.stop_requested())
+			{
 				runtime.executeOnce();
-		}
-		catch (...)
+			}
+		} catch (...)
 		{
 			_reportWorkerFailure(std::current_exception());
 		}
@@ -63,7 +66,9 @@ namespace spk
 	template <typename TRuntime>
 	std::jthread Application::Impl::_startWorker(TRuntime &runtime)
 	{
-		return std::jthread([this, &runtime](std::stop_token stopToken) { _runWorker(runtime, stopToken); });
+		return std::jthread([this, &runtime](std::stop_token stopToken) {
+			_runWorker(runtime, stopToken);
+		});
 	}
 
 	void Application::Impl::_reportWorkerFailure(std::exception_ptr exception)
@@ -71,7 +76,9 @@ namespace spk
 		{
 			const std::scoped_lock lock(_workerExceptionMutex);
 			if (_workerException == nullptr)
+			{
 				_workerException = std::move(exception);
+			}
 		}
 		_exitCode.store(EXIT_FAILURE);
 		_stopSource.request_stop();
@@ -85,7 +92,9 @@ namespace spk
 			exception = _workerException;
 		}
 		if (exception != nullptr)
+		{
 			std::rethrow_exception(exception);
+		}
 	}
 
 	void Application::Impl::_stopAndJoinWorkers(std::jthread &updaterThread, std::jthread &rendererThread)
@@ -94,23 +103,21 @@ namespace spk
 		updaterThread.request_stop();
 		rendererThread.request_stop();
 		if (updaterThread.joinable())
+		{
 			updaterThread.join();
+		}
 		if (rendererThread.joinable())
+		{
 			rendererThread.join();
+		}
 	}
 
 	void Application::Impl::_registerWindowObjects(
-		const Window::Identifier &identifier, const Window::Configuration &configuration,
-		std::shared_ptr<Window::Native> native, std::shared_ptr<Window::State> state,
-		std::shared_ptr<Window::Surface> surface, spk::ThreadSafeSlot<spk::RenderSnapshot>::Endpoints channel,
-		std::shared_ptr<std::atomic_bool> isRenderSnapshotRequested)
+		const Window::Identifier &identifier, const Window::Configuration &configuration, std::shared_ptr<Window::Native> native, std::shared_ptr<Window::State> state, std::shared_ptr<Window::Surface> surface, spk::ThreadSafeSlot<spk::RenderSnapshot>::Endpoints channel, std::shared_ptr<std::atomic_bool> isRenderSnapshotRequested)
 	{
-		_updateRequestProducer.publish(StateRegistrationRequest{
-			.windowIdentifier = identifier, .backgroundColor = configuration.backgroundColor, .state = std::move(state), .renderSnapshotProducer = std::move(channel.producer), .isRequested = isRenderSnapshotRequested});
-		_renderRequestProducer.publish(SurfaceRegistrationRequest{
-			.windowIdentifier = identifier, .surface = std::move(surface), .renderSnapshotConsumer = std::move(channel.consumer), .isRequested = isRenderSnapshotRequested});
-		_platformRequestProducer.publish(NativeRegistrationRequest{
-			.windowIdentifier = identifier, .configuration = configuration, .native = std::move(native)});
+		_updateRequestProducer.publish(StateRegistrationRequest{.windowIdentifier = identifier, .backgroundColor = configuration.backgroundColor, .state = std::move(state), .renderSnapshotProducer = std::move(channel.producer), .isRequested = isRenderSnapshotRequested});
+		_renderRequestProducer.publish(SurfaceRegistrationRequest{.windowIdentifier = identifier, .surface = std::move(surface), .renderSnapshotConsumer = std::move(channel.consumer), .isRequested = isRenderSnapshotRequested});
+		_platformRequestProducer.publish(NativeRegistrationRequest{.windowIdentifier = identifier, .configuration = configuration, .native = std::move(native)});
 	}
 
 	void Application::Impl::_requestWindowClosure(const Window::Identifier &identifier)
@@ -122,18 +129,24 @@ namespace spk
 	void Application::Impl::_requestAllWindowClosures()
 	{
 		for (const auto &[identifier, window] : _windows)
+		{
 			_requestWindowClosure(identifier);
+		}
 	}
 
 	void Application::Impl::_removeClosedWindows()
 	{
-		std::erase_if(_windows, [](const auto &entry) { return entry.second->isClosed(); });
+		std::erase_if(_windows, [](const auto &entry) {
+			return entry.second->isClosed();
+		});
 	}
 
 	void Application::Impl::_finishExecution()
 	{
 		if (!_exitCode.load().has_value())
+		{
 			_exitCode.store(EXIT_SUCCESS);
+		}
 		_stopSource.request_stop();
 	}
 
@@ -164,7 +177,9 @@ namespace spk
 			_removeClosedWindows();
 			_processApplicationState(closureRequested);
 			if (!_stopSource.stop_requested())
+			{
 				_platform.waitForActivity();
+			}
 		}
 	}
 
@@ -173,8 +188,7 @@ namespace spk
 		try
 		{
 			_platform.shutdown();
-		}
-		catch (...)
+		} catch (...)
 		{
 		}
 		_windows.clear();
@@ -193,7 +207,9 @@ namespace spk
 	Window &Application::Impl::createWindow(const Window::Identifier &identifier, const Window::Configuration &configuration)
 	{
 		if (_windows.contains(identifier))
+		{
 			throw std::logic_error("A window already exists with identifier [" + identifier + "]");
+		}
 
 		auto native = std::make_shared<Window::Native>(identifier);
 		auto state = std::make_shared<Window::State>(identifier);
@@ -202,8 +218,7 @@ namespace spk
 
 		Window &result = *window;
 		_windows.emplace(identifier, std::move(window));
-		_registerWindowObjects(identifier, configuration, std::move(native), std::move(state), std::move(surface),
-			spk::ThreadSafeSlot<spk::RenderSnapshot>::create(), std::make_shared<std::atomic_bool>(true));
+		_registerWindowObjects(identifier, configuration, std::move(native), std::move(state), std::move(surface), spk::ThreadSafeSlot<spk::RenderSnapshot>::create(), std::make_shared<std::atomic_bool>(true));
 		return result;
 	}
 
@@ -230,8 +245,7 @@ namespace spk
 			_stopAndJoinWorkers(updaterThread, rendererThread);
 			_rethrowWorkerFailure();
 			return _exitCode.load().value_or(EXIT_SUCCESS);
-		}
-		catch (...)
+		} catch (...)
 		{
 			auto exception = std::current_exception();
 			_stopAndJoinWorkers(updaterThread, rendererThread);

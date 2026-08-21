@@ -6,6 +6,6 @@ namespace spk
 {
 	struct RenderContext
 	{
-		Window::Surface* targetSurface;
+		Window::Surface *targetSurface;
 	};
 }

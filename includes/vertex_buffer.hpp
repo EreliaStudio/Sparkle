@@ -72,9 +72,13 @@ namespace spk
 			static_assert(std::is_trivially_copyable_v<TVertex>, "VertexBuffer requires a trivially copyable type.");
 			static_assert(alignof(TVertex) <= alignof(std::max_align_t), "VertexBuffer cannot store an over-aligned type.");
 			if (_stride == 0)
+			{
 				throw std::logic_error("VertexBuffer has no configured layout");
+			}
 			if (sizeof(TVertex) != _stride)
+			{
 				throw std::logic_error("Vertex type size does not match the configured VertexBuffer stride");
+			}
 		}
 
 		[[nodiscard]] static std::size_t _checkedSize(std::size_t count, std::size_t stride);
@@ -98,7 +102,9 @@ namespace spk
 		void addPadding(std::size_t count)
 		{
 			if (count > std::numeric_limits<std::size_t>::max() / sizeof(T))
+			{
 				throw std::overflow_error("VertexBuffer padding overflow");
+			}
 			addPadding(sizeof(T) * count);
 		}
 
@@ -109,6 +115,13 @@ namespace spk
 		{
 			_validateType<TVertex>();
 			_resize(_checkedSize(count, _stride));
+		}
+
+		template <typename TVertex>
+		void reserve(std::size_t count)
+		{
+			_validateType<TVertex>();
+			_reserve(_checkedSize(count, _stride));
 		}
 
 		template <typename TVertex>

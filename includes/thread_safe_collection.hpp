@@ -24,8 +24,8 @@ namespace spk
 	public:
 		template <typename... TArgs>
 		pointer emplace(
-			const key_type& key,
-			TArgs&&... args)
+			const key_type &key,
+			TArgs &&...args)
 		{
 			auto value =
 				std::make_shared<value_type>(
@@ -45,32 +45,34 @@ namespace spk
 			return value;
 		}
 
-		void erase(const key_type& key)
+		void erase(const key_type &key)
 		{
 			std::unique_lock lock(_mutex);
 			_values.erase(key);
 		}
 
-		bool contains(const key_type& key) const
+		bool contains(const key_type &key) const
 		{
 			std::shared_lock lock(_mutex);
 			return _values.contains(key);
 		}
 
-		pointer get(const key_type& key) const
+		pointer get(const key_type &key) const
 		{
 			std::shared_lock lock(_mutex);
 			return _values.at(key);
 		}
 
-		pointer tryGet(const key_type& key) const
+		pointer tryGet(const key_type &key) const
 		{
 			std::shared_lock lock(_mutex);
 
 			auto it = _values.find(key);
 
 			if (it == _values.end())
+			{
 				return nullptr;
+			}
 
 			return it->second;
 		}

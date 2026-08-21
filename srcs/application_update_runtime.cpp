@@ -18,7 +18,8 @@ namespace spk
 		spk::ThreadSafeFIFO<UpdateRequest>::Consumer updateRequestConsumer) :
 		_eventRecordConsumer(std::move(eventRecordConsumer)),
 		_updateRequestConsumer(std::move(updateRequestConsumer)),
-		_startTime(std::chrono::steady_clock::now()), _currentTime(_startTime)
+		_startTime(std::chrono::steady_clock::now()),
+		_currentTime(_startTime)
 	{
 	}
 
@@ -29,7 +30,9 @@ namespace spk
 	{
 		auto [it, inserted] = _renderSnapshotEntries.emplace(identifier, RenderSnapshotEntry{std::move(producer), std::move(isRequested)});
 		if (!inserted)
+		{
 			throw std::logic_error("A render snapshot producer already exists for [" + identifier + "]");
+		}
 	}
 
 	template <typename TEvent>
@@ -40,11 +43,17 @@ namespace spk
 			const auto channel = static_cast<FocusMode::Channel>(index);
 			const auto &change = event.focusChange(channel);
 			if (!change.has_value())
+			{
 				continue;
+			}
 			if (change->type == FocusMode::ChangeType::Take)
+			{
 				state.takeFocus(channel, change->widget);
+			}
 			else
+			{
 				state.releaseFocus(channel, change->widget);
+			}
 		}
 	}
 
@@ -82,24 +91,27 @@ namespace spk
 	{
 		Window::State *state = _state(record);
 		if (state == nullptr)
+		{
 			return;
-		state->root().resize(spk::Rect2D{
-			.anchor = spk::Vector2Int(0, 0),
-			.size = spk::Vector2UInt(static_cast<std::uint32_t>(record.size.x), static_cast<std::uint32_t>(record.size.y))
-		});
+		}
+		state->root().resize(spk::Rect2D{.anchor = spk::Vector2Int(0, 0), .size = spk::Vector2UInt(static_cast<std::uint32_t>(record.size.x), static_cast<std::uint32_t>(record.size.y))});
 		_dispatch(record, *state);
 	}
 
 	void Application::UpdateRuntime::_consume(const WindowMovedRecord &record)
 	{
 		if (Window::State *state = _state(record))
+		{
 			_dispatch(record, *state);
+		}
 	}
 
 	void Application::UpdateRuntime::_consume(const WindowFocusGainedRecord &record)
 	{
 		if (Window::State *state = _state(record))
+		{
 			_dispatch(record, *state);
+		}
 	}
 
 	void Application::UpdateRuntime::_resetInput(Window::State &state)
@@ -120,20 +132,26 @@ namespace spk
 	void Application::UpdateRuntime::_consume(const MouseEnteredRecord &record)
 	{
 		if (Window::State *state = _state(record))
+		{
 			_dispatch(record, *state);
+		}
 	}
 
 	void Application::UpdateRuntime::_consume(const MouseLeftRecord &record)
 	{
 		if (Window::State *state = _state(record))
+		{
 			_dispatch(record, *state);
+		}
 	}
 
 	void Application::UpdateRuntime::_consume(const MouseMovedRecord &record)
 	{
 		Window::State *state = _state(record);
 		if (state == nullptr)
+		{
 			return;
+		}
 		spk::Mouse &mouse = state->mouse();
 		const spk::Vector2Int delta = record.position - mouse.position;
 		if (delta == spk::Vector2Int(0, 0))
@@ -150,7 +168,9 @@ namespace spk
 	{
 		Window::State *state = _state(record);
 		if (state == nullptr)
+		{
 			return;
+		}
 		state->mouse().wheel += record.value.y;
 		_dispatchMouse(record, *state);
 	}
@@ -159,7 +179,9 @@ namespace spk
 	{
 		Window::State *state = _state(record);
 		if (state == nullptr)
+		{
 			return;
+		}
 		state->mouse()[record.button] = spk::InputState::Down;
 		_dispatchMouse(record, *state);
 	}
@@ -168,7 +190,9 @@ namespace spk
 	{
 		Window::State *state = _state(record);
 		if (state == nullptr)
+		{
 			return;
+		}
 		state->mouse()[record.button] = spk::InputState::Up;
 		_dispatchMouse(record, *state);
 	}
@@ -177,7 +201,9 @@ namespace spk
 	{
 		Window::State *state = _state(record);
 		if (state == nullptr)
+		{
 			return;
+		}
 		state->mouse()[record.button] = spk::InputState::Down;
 		_dispatchMouse(record, *state);
 	}
@@ -186,7 +212,9 @@ namespace spk
 	{
 		Window::State *state = _state(record);
 		if (state == nullptr)
+		{
 			return;
+		}
 		state->keyboard()[record.key] = spk::InputState::Down;
 		_dispatchKeyboard(record, *state);
 	}
@@ -195,7 +223,9 @@ namespace spk
 	{
 		Window::State *state = _state(record);
 		if (state == nullptr)
+		{
 			return;
+		}
 		state->keyboard()[record.key] = spk::InputState::Up;
 		_dispatchKeyboard(record, *state);
 	}
@@ -204,14 +234,19 @@ namespace spk
 	{
 		Window::State *state = _state(record);
 		if (state == nullptr)
+		{
 			return;
+		}
 		state->keyboard().glyph = static_cast<char32_t>(record.glyph);
 		_dispatchKeyboard(record, *state);
 	}
 
 	void Application::UpdateRuntime::_consume(const EventRecord &event)
 	{
-		std::visit([this](const auto &value) { _consume(value); }, event);
+		std::visit([this](const auto &value) {
+			_consume(value);
+		},
+				   event);
 	}
 
 	void Application::UpdateRuntime::_consume(const StateRegistrationRequest &request)
@@ -225,7 +260,9 @@ namespace spk
 	void Application::UpdateRuntime::_consume(const StateDeletionRequest &request)
 	{
 		if (!contains(request.windowIdentifier))
+		{
 			return;
+		}
 		auto &state = object(request.windowIdentifier);
 		release(state);
 		_renderSnapshotEntries.erase(request.windowIdentifier);
@@ -235,13 +272,20 @@ namespace spk
 	void Application::UpdateRuntime::_consumeEvents()
 	{
 		for (auto &event : _eventRecordConsumer.drain())
+		{
 			_consume(event);
+		}
 	}
 
 	void Application::UpdateRuntime::_consumeRequests()
 	{
 		for (auto &request : _updateRequestConsumer.drain())
-			std::visit([this](const auto &value) { _consume(value); }, request);
+		{
+			std::visit([this](const auto &value) {
+				_consume(value);
+			},
+					   request);
+		}
 	}
 
 	void Application::UpdateRuntime::_updateState(Window::State &state, UpdateContext &context)
@@ -286,9 +330,9 @@ namespace spk
 			.keyboard = state.keyboard(),
 			.mouse = state.mouse()};
 		_updateState(state, context);
-		
+
 		if (_consumeSnapshotRequest(identifier))
-		{			
+		{
 			_publishSnapshot(identifier, _buildRenderSnapshot(state));
 		}
 	}
@@ -301,7 +345,9 @@ namespace spk
 	void Application::UpdateRuntime::release(Window::State &state)
 	{
 		if (state.lifeCycle() == Window::LifeCycle::Released)
+		{
 			return;
+		}
 		state.beginRelease();
 		state.markReleased();
 	}

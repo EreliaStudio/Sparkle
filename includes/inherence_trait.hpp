@@ -43,7 +43,10 @@ namespace spk
 		}
 
 	public:
-		InherenceTrait() : InherenceTrait(TChildComparator{}) {}
+		InherenceTrait() :
+			InherenceTrait(TChildComparator{})
+		{
+		}
 
 		explicit InherenceTrait(TChildComparator comparator) :
 			_childComparator(std::move(comparator))

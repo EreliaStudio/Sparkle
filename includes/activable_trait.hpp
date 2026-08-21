@@ -1,7 +1,7 @@
 #pragma once
 
-#include "statefull_trait.hpp"
 #include "activation_status.hpp"
+#include "statefull_trait.hpp"
 
 namespace spk
 {

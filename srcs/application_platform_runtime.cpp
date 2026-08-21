@@ -27,22 +27,18 @@ namespace spk
 	void Application::PlatformRuntime::_createNative(const NativeRegistrationRequest &request)
 	{
 		const Identifier identifier = request.windowIdentifier;
-		request.native->frame().create(_windowClass, WinAPI::Frame::CreationInfo{
-			.title = request.configuration.title,
-			.x = request.configuration.area.anchor.x,
-			.y = request.configuration.area.anchor.y,
-			.width = request.configuration.area.size.x,
-			.height = request.configuration.area.size.y,
-			.messageHandler = [this, identifier](HWND handle, UINT message, WPARAM wParam, LPARAM lParam) {
-				return _processMessage(identifier, handle, message, wParam, lParam);
-			}});
+		request.native->frame().create(_windowClass, WinAPI::Frame::CreationInfo{.title = request.configuration.title, .x = request.configuration.area.anchor.x, .y = request.configuration.area.anchor.y, .width = request.configuration.area.size.x, .height = request.configuration.area.size.y, .messageHandler = [this, identifier](HWND handle, UINT message, WPARAM wParam, LPARAM lParam) {
+																					 return _processMessage(identifier, handle, message, wParam, lParam);
+																				 }});
 		request.native->markReady();
 	}
 
 	void Application::PlatformRuntime::_destroyNative(Window::Native &native)
 	{
 		if (native.lifeCycle() == Window::LifeCycle::Released)
+		{
 			return;
+		}
 		native.beginRelease();
 		native.frame().destroy();
 		native.markReleased();
@@ -66,11 +62,14 @@ namespace spk
 		{
 		case WM_RBUTTONDOWN:
 		case WM_RBUTTONUP:
-		case WM_RBUTTONDBLCLK: return spk::Mouse::Right;
+		case WM_RBUTTONDBLCLK:
+			return spk::Mouse::Right;
 		case WM_MBUTTONDOWN:
 		case WM_MBUTTONUP:
-		case WM_MBUTTONDBLCLK: return spk::Mouse::Middle;
-		default: return spk::Mouse::Left;
+		case WM_MBUTTONDBLCLK:
+			return spk::Mouse::Middle;
+		default:
+			return spk::Mouse::Left;
 		}
 	}
 
@@ -78,11 +77,17 @@ namespace spk
 	{
 		UINT key = static_cast<UINT>(wParam);
 		if (key == VK_SHIFT)
+		{
 			key = ::MapVirtualKeyW((lParam >> 16) & 0xFF, MAPVK_VSC_TO_VK_EX);
+		}
 		else if (key == VK_CONTROL)
+		{
 			key = (lParam & (1 << 24)) ? VK_RCONTROL : VK_LCONTROL;
+		}
 		else if (key == VK_MENU)
+		{
 			key = (lParam & (1 << 24)) ? VK_RMENU : VK_LMENU;
+		}
 		return key < spk::Keyboard::NbKey ? static_cast<spk::Keyboard::Key>(key) : spk::Keyboard::Unknown;
 	}
 
@@ -90,15 +95,15 @@ namespace spk
 	{
 		append(request.windowIdentifier, request.native);
 		_createNative(request);
-		_renderRequestProducer.publish(SurfaceCreationRequest{
-			.windowIdentifier = request.windowIdentifier,
-			.native = request.native});
+		_renderRequestProducer.publish(SurfaceCreationRequest{.windowIdentifier = request.windowIdentifier, .native = request.native});
 	}
 
 	void Application::PlatformRuntime::_consume(const NativeDeletionRequest &request)
 	{
 		if (!contains(request.windowIdentifier))
+		{
 			return;
+		}
 		_mouseInsideWindows.erase(request.windowIdentifier);
 		_destroyNative(object(request.windowIdentifier));
 		remove(request.windowIdentifier);
@@ -107,7 +112,12 @@ namespace spk
 	void Application::PlatformRuntime::_consumeRequests()
 	{
 		for (auto &request : _platformRequestConsumer.drain())
-			std::visit([this](const auto &value) { _consume(value); }, request);
+		{
+			std::visit([this](const auto &value) {
+				_consume(value);
+			},
+					   request);
+		}
 	}
 
 	Application::PlatformRuntime::MessageResult Application::PlatformRuntime::_processWindowMessage(
@@ -115,27 +125,30 @@ namespace spk
 	{
 		switch (message)
 		{
-		case WM_MOVE: _publish(identifier, WindowMovedRecord{}); return 0;
+		case WM_MOVE:
+			_publish(identifier, WindowMovedRecord{});
+			return 0;
 		case WM_SIZE:
 		{
 			const spk::Vector2UInt newSize{
 				static_cast<spk::Vector2UInt::value_type>(LOWORD(lParam)),
-				static_cast<spk::Vector2UInt::value_type>(HIWORD(lParam))
-			};
+				static_cast<spk::Vector2UInt::value_type>(HIWORD(lParam))};
 
-			_renderRequestProducer.publish(SurfaceResizeRequest{
-				.windowIdentifier = identifier,
-				.newSize = newSize
-			});
+			_renderRequestProducer.publish(SurfaceResizeRequest{.windowIdentifier = identifier, .newSize = newSize});
 
 			WindowResizedRecord record;
 			record.size = newSize;
 			_publish(identifier, std::move(record));
 			return 0;
 		}
-		case WM_SETFOCUS: _publish(identifier, WindowFocusGainedRecord{}); return 0;
-		case WM_KILLFOCUS: _publish(identifier, WindowFocusLostRecord{}); return 0;
-		default: return std::nullopt;
+		case WM_SETFOCUS:
+			_publish(identifier, WindowFocusGainedRecord{});
+			return 0;
+		case WM_KILLFOCUS:
+			_publish(identifier, WindowFocusLostRecord{});
+			return 0;
+		default:
+			return std::nullopt;
 		}
 	}
 
@@ -143,7 +156,9 @@ namespace spk
 	{
 		TRACKMOUSEEVENT event{.cbSize = sizeof(TRACKMOUSEEVENT), .dwFlags = TME_LEAVE, .hwndTrack = handle};
 		if (::TrackMouseEvent(&event) == FALSE)
+		{
 			throw std::system_error(static_cast<int>(::GetLastError()), std::system_category(), "TrackMouseEvent");
+		}
 	}
 
 	void Application::PlatformRuntime::_processMouseMove(const Identifier &identifier, HWND handle, LPARAM lParam)
@@ -185,16 +200,29 @@ namespace spk
 	{
 		switch (message)
 		{
-		case WM_LBUTTONDOWN: case WM_RBUTTONDOWN: case WM_MBUTTONDOWN:
-			::SetCapture(handle); _publishMouseButton<MouseButtonPressedRecord>(identifier, message); return 0;
-		case WM_LBUTTONUP: case WM_RBUTTONUP: case WM_MBUTTONUP:
+		case WM_LBUTTONDOWN:
+		case WM_RBUTTONDOWN:
+		case WM_MBUTTONDOWN:
+			::SetCapture(handle);
+			_publishMouseButton<MouseButtonPressedRecord>(identifier, message);
+			return 0;
+		case WM_LBUTTONUP:
+		case WM_RBUTTONUP:
+		case WM_MBUTTONUP:
 			_publishMouseButton<MouseButtonReleasedRecord>(identifier, message);
 			if ((wParam & (MK_LBUTTON | MK_RBUTTON | MK_MBUTTON)) == 0)
+			{
 				::ReleaseCapture();
+			}
 			return 0;
-		case WM_LBUTTONDBLCLK: case WM_RBUTTONDBLCLK: case WM_MBUTTONDBLCLK:
-			::SetCapture(handle); _publishMouseButton<MouseButtonDoubleClickedRecord>(identifier, message); return 0;
-		default: return std::nullopt;
+		case WM_LBUTTONDBLCLK:
+		case WM_RBUTTONDBLCLK:
+		case WM_MBUTTONDBLCLK:
+			::SetCapture(handle);
+			_publishMouseButton<MouseButtonDoubleClickedRecord>(identifier, message);
+			return 0;
+		default:
+			return std::nullopt;
 		}
 	}
 
@@ -232,12 +260,18 @@ namespace spk
 	{
 		switch (message)
 		{
-		case WM_KEYDOWN: _publishKey<KeyPressedRecord>(identifier, wParam, lParam); return 0;
-		case WM_KEYUP: _publishKey<KeyReleasedRecord>(identifier, wParam, lParam); return 0;
+		case WM_KEYDOWN:
+			_publishKey<KeyPressedRecord>(identifier, wParam, lParam);
+			return 0;
+		case WM_KEYUP:
+			_publishKey<KeyReleasedRecord>(identifier, wParam, lParam);
+			return 0;
 		case WM_SYSKEYDOWN:
-			_publishKey<KeyPressedRecord>(identifier, wParam, lParam); return ::DefWindowProcW(handle, message, wParam, lParam);
+			_publishKey<KeyPressedRecord>(identifier, wParam, lParam);
+			return ::DefWindowProcW(handle, message, wParam, lParam);
 		case WM_SYSKEYUP:
-			_publishKey<KeyReleasedRecord>(identifier, wParam, lParam); return ::DefWindowProcW(handle, message, wParam, lParam);
+			_publishKey<KeyReleasedRecord>(identifier, wParam, lParam);
+			return ::DefWindowProcW(handle, message, wParam, lParam);
 		case WM_CHAR:
 		{
 			TextInputRecord record;
@@ -245,7 +279,8 @@ namespace spk
 			_publish(identifier, std::move(record));
 			return 0;
 		}
-		default: return std::nullopt;
+		default:
+			return std::nullopt;
 		}
 	}
 
@@ -253,27 +288,47 @@ namespace spk
 		const Identifier &identifier, HWND handle, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 		if (auto result = _processWindowMessage(identifier, message, lParam))
+		{
 			return *result;
+		}
 		if (auto result = _processMouseMessage(identifier, handle, message, wParam, lParam))
+		{
 			return *result;
+		}
 		if (auto result = _processKeyboardMessage(identifier, handle, message, wParam, lParam))
+		{
 			return *result;
+		}
 		return ::DefWindowProcW(handle, message, wParam, lParam);
 	}
 
-	void Application::PlatformRuntime::_pullEvents() { WinAPI::MessageQueue::dispatchPending(); }
-	void Application::PlatformRuntime::consumeIncoming() { _consumeRequests(); }
-	void Application::PlatformRuntime::prepareCycle() { _pullEvents(); }
+	void Application::PlatformRuntime::_pullEvents()
+	{
+		WinAPI::MessageQueue::dispatchPending();
+	}
+	void Application::PlatformRuntime::consumeIncoming()
+	{
+		_consumeRequests();
+	}
+	void Application::PlatformRuntime::prepareCycle()
+	{
+		_pullEvents();
+	}
 
 	void Application::PlatformRuntime::tickOnce(const Window::Identifier &identifier, Window::Native &native)
 	{
 		native.frame().rethrowPendingException();
 		if (!native.frame().consumeClosureRequest())
+		{
 			return;
+		}
 		native.beginRelease();
 		_updateRequestProducer.publish(StateDeletionRequest{.windowIdentifier = identifier});
 		_renderRequestProducer.publish(SurfaceDeletionRequest{.windowIdentifier = identifier});
 	}
 
-	void Application::PlatformRuntime::release(Window::Native &native) { _destroyNative(native); }
+	void Application::PlatformRuntime::release(Window::Native &native)
+	{
+		_destroyNative(native);
+	}
 }

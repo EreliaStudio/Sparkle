@@ -7,6 +7,7 @@
 
 #include "scissor_render_command.hpp"
 #include "viewport_render_command.hpp"
+#include "viewport_uniform_render_command.hpp"
 
 namespace spk
 {
@@ -254,6 +255,7 @@ namespace spk
 		auto &pass = builder.renderPass(Widget::OverlayKey);
 
 		pass.emplace<spk::ViewportRenderCommand>(_viewRegion->viewport);
+		pass.emplace<spk::ViewportUniformRenderCommand>(_viewRegion->viewport);
 		pass.emplace<spk::ScissorRenderCommand>(_viewRegion->scissor);
 	}
 

@@ -8,8 +8,7 @@ namespace spk
 	{
 		return Rect2D{
 			.anchor = {0, 0},
-			.size = size
-		};
+			.size = size};
 	}
 
 	bool Rect2D::contains(const Vector2Int &point) const
@@ -23,8 +22,7 @@ namespace spk
 	{
 		Rect2D result{
 			.anchor = anchor + offset,
-			.size = {0, 0}
-		};
+			.size = {0, 0}};
 
 		if (size.x >= offset.x * 2 && size.y >= offset.y * 2)
 		{
@@ -47,14 +45,12 @@ namespace spk
 		{
 			return Rect2D{
 				.anchor = {left, top},
-				.size = {0u, 0u}
-			};
+				.size = {0u, 0u}};
 		}
 
 		return Rect2D{
-				.anchor = {left, top}, 
-				.size = {static_cast<std::uint32_t>(right - left), static_cast<std::uint32_t>(bottom - top)}
-			};
+			.anchor = {left, top},
+			.size = {static_cast<std::uint32_t>(right - left), static_cast<std::uint32_t>(bottom - top)}};
 	}
 
 	bool Rect2D::operator==(const Rect2D &other) const noexcept

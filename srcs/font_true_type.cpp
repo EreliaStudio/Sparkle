@@ -16,18 +16,21 @@ namespace spk
 	{
 		const std::vector<std::pair<int, int>> UnicodeBlocks = {
 			{0x0000, 0x007F},
-			{0x0080, 0x00FF}
-		};
+			{0x0080, 0x00FF}};
 	}
 
 	Font::Resource::Resource(Data inputData) :
 		data(std::move(inputData))
 	{
 		if (data.empty())
+		{
 			throw std::runtime_error("Font can't be initialized from empty data");
+		}
 
 		if (stbtt_InitFont(&fontInfo, reinterpret_cast<const unsigned char *>(data.data()), 0) == 0)
+		{
 			throw std::runtime_error("Font data is not a valid TrueType font");
+		}
 	}
 
 	void Font::Atlas::loadAllRenderableGlyphs()
@@ -39,7 +42,9 @@ namespace spk
 			for (int codepoint = block.first; codepoint <= block.second; ++codepoint)
 			{
 				if (rendered.contains(codepoint))
+				{
 					continue;
+				}
 
 				const int glyphIndex = stbtt_FindGlyphIndex(&_fontResource->fontInfo, codepoint);
 				if (glyphIndex != 0 && _glyphs.contains(static_cast<Codepoint>(codepoint)) == false)
@@ -61,7 +66,9 @@ namespace spk
 	{
 		if (_nextGlyphAnchor.x + static_cast<int>(glyphSize.x) >=
 			_quadrantAnchor.x + static_cast<int>(_quadrantSize.x))
+		{
 			_nextGlyphAnchor = _nextLineAnchor;
+		}
 
 		Vector2Int result = _nextGlyphAnchor;
 		_nextGlyphAnchor.x += static_cast<int>(glyphSize.x);
@@ -194,7 +201,9 @@ namespace spk
 	{
 		std::ifstream file(path, std::ios::binary);
 		if (file.is_open() == false)
+		{
 			throw std::runtime_error("Font: failed to open file: " + path.string());
+		}
 
 		_loadFromData(Data(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()));
 	}

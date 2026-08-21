@@ -14,7 +14,7 @@ namespace spk
 			Mouse = 1
 		};
 		static inline constexpr std::size_t ChannelCount = 2;
-		
+
 		enum class ChangeType
 		{
 			Take,
@@ -24,7 +24,7 @@ namespace spk
 		struct Record
 		{
 			ChangeType type;
-			Widget* widget;
+			Widget *widget;
 		};
 
 		std::array<Widget *, ChannelCount> targetWidgets{};

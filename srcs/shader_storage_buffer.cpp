@@ -10,7 +10,9 @@ namespace spk
 	std::size_t ShaderStorageBuffer::_checkedSize(std::size_t nbElement) const
 	{
 		if (nbElement > (std::numeric_limits<std::size_t>::max() - _fixedPartSize) / _dynamicElementSize)
+		{
 			throw std::overflow_error("ShaderStorageBuffer size overflow");
+		}
 
 		return _fixedPartSize + nbElement * _dynamicElementSize;
 	}
@@ -28,7 +30,9 @@ namespace spk
 	ShaderStorageBuffer::ShaderStorageBuffer(std::size_t bindingPoint, std::size_t fixedPartSize, std::size_t dynamicElementSize)
 	{
 		if (dynamicElementSize == 0)
+		{
 			throw std::invalid_argument("ShaderStorageBuffer dynamic element size cannot be zero");
+		}
 
 		_bindingPoint = bindingPoint;
 		_fixedPartSize = fixedPartSize;
@@ -40,7 +44,9 @@ namespace spk
 	void ShaderStorageBuffer::resize(std::size_t nbElement)
 	{
 		if (_dynamicElementCount == nbElement)
+		{
 			return;
+		}
 
 		_resize(_checkedSize(nbElement));
 		_dynamicElementCount = nbElement;
@@ -49,7 +55,9 @@ namespace spk
 	void ShaderStorageBuffer::setFixedData(const void *data, std::size_t size)
 	{
 		if (size != _fixedPartSize)
+		{
 			throw std::invalid_argument("ShaderStorageBuffer fixed data size is invalid");
+		}
 
 		_write(data, size);
 	}
@@ -57,7 +65,9 @@ namespace spk
 	void ShaderStorageBuffer::setDynamicData(const void *data, std::size_t nbElement)
 	{
 		if (nbElement != _dynamicElementCount)
+		{
 			throw std::invalid_argument("ShaderStorageBuffer dynamic element count is invalid");
+		}
 
 		_write(data, nbElement * _dynamicElementSize, _fixedPartSize);
 	}

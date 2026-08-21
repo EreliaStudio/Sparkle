@@ -10,15 +10,14 @@
 #include <memory>
 #include <mutex>
 #include <optional>
-#include <stop_token>
 #include <stdexcept>
+#include <stop_token>
 #include <string_view>
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
 
 #include "frame.hpp"
-#include "wake_event.hpp"
 #include "message_queue.hpp"
 #include "platform_request.hpp"
 #include "record.hpp"
@@ -28,6 +27,7 @@
 #include "thread_safe_slot.hpp"
 #include "update_context.hpp"
 #include "update_request.hpp"
+#include "wake_event.hpp"
 
 namespace spk
 {
@@ -79,11 +79,19 @@ namespace spk
 		{
 			auto [it, inserted] = _registeredObjects.emplace(identifier, std::move(object));
 			if (!inserted)
+			{
 				throw std::logic_error("An object is already registered for window [" + identifier + "]");
+			}
 		}
 
-		void remove(const Identifier &identifier) { _registeredObjects.erase(identifier); }
-		[[nodiscard]] bool contains(const Identifier &identifier) const { return _registeredObjects.contains(identifier); }
+		void remove(const Identifier &identifier)
+		{
+			_registeredObjects.erase(identifier);
+		}
+		[[nodiscard]] bool contains(const Identifier &identifier) const
+		{
+			return _registeredObjects.contains(identifier);
+		}
 
 		[[nodiscard]] TType *tryGet(const Identifier &identifier)
 		{
@@ -91,12 +99,21 @@ namespace spk
 			return it != _registeredObjects.end() ? it->second.get() : nullptr;
 		}
 
-		[[nodiscard]] TType &object(const Identifier &identifier) { return *_registeredObjects.at(identifier); }
+		[[nodiscard]] TType &object(const Identifier &identifier)
+		{
+			return *_registeredObjects.at(identifier);
+		}
 		virtual void consumeIncoming() = 0;
-		virtual void prepareCycle() {}
+		virtual void prepareCycle()
+		{
+		}
 		virtual void tickOnce(const Identifier &identifier, TType &object) = 0;
-		virtual void finishCycle() {}
-		virtual void release(TType &) {}
+		virtual void finishCycle()
+		{
+		}
+		virtual void release(TType &)
+		{
+		}
 
 	public:
 		virtual ~Runtime() = default;
@@ -106,14 +123,18 @@ namespace spk
 			consumeIncoming();
 			prepareCycle();
 			for (auto &[identifier, object] : _registeredObjects)
+			{
 				tickOnce(identifier, *object);
+			}
 			finishCycle();
 		}
 
 		void shutdown()
 		{
 			for (auto &[identifier, object] : _registeredObjects)
+			{
 				release(*object);
+			}
 			_registeredObjects.clear();
 		}
 	};
@@ -293,7 +314,7 @@ namespace spk
 
 	public:
 		RenderRuntime(
-			WinAPI::WakeEvent& wakeEvent,
+			WinAPI::WakeEvent &wakeEvent,
 			spk::ThreadSafeFIFO<RenderRequest>::Consumer renderRequestConsumer,
 			spk::ThreadSafeFIFO<PlatformRequest>::Producer platformRequestProducer);
 	};
@@ -328,9 +349,7 @@ namespace spk
 		void _reportWorkerFailure(std::exception_ptr exception);
 		void _rethrowWorkerFailure();
 		void _stopAndJoinWorkers(std::jthread &updaterThread, std::jthread &rendererThread);
-		void _registerWindowObjects(const Window::Identifier &identifier, const Window::Configuration &configuration,
-			std::shared_ptr<Window::Native> native, std::shared_ptr<Window::State> state, std::shared_ptr<Window::Surface> surface,
-			spk::ThreadSafeSlot<spk::RenderSnapshot>::Endpoints channel, std::shared_ptr<std::atomic_bool> isRenderSnapshotRequested);
+		void _registerWindowObjects(const Window::Identifier &identifier, const Window::Configuration &configuration, std::shared_ptr<Window::Native> native, std::shared_ptr<Window::State> state, std::shared_ptr<Window::Surface> surface, spk::ThreadSafeSlot<spk::RenderSnapshot>::Endpoints channel, std::shared_ptr<std::atomic_bool> isRenderSnapshotRequested);
 		void _requestWindowClosure(const Window::Identifier &identifier);
 		void _requestAllWindowClosures();
 		void _removeClosedWindows();

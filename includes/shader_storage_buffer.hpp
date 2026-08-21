@@ -73,7 +73,9 @@ namespace spk
 			if constexpr (std::is_void_v<TFixedPart>)
 			{
 				if (_fixedPartSize != 0)
+				{
 					throw std::logic_error("ShaderStorageBuffer contains a fixed part");
+				}
 			}
 			else
 			{
@@ -82,11 +84,15 @@ namespace spk
 					"ShaderStorageBuffer fixed part requires a trivially copyable type.");
 
 				if (sizeof(TFixedPart) != _fixedPartSize)
+				{
 					throw std::logic_error("ShaderStorageBuffer fixed part size does not match the requested type");
+				}
 			}
 
 			if (sizeof(TDynamicElement) != _dynamicElementSize)
+			{
 				throw std::logic_error("ShaderStorageBuffer dynamic element size does not match the requested type");
+			}
 		}
 
 		template <typename TFixedPart, typename TDynamicElement>
@@ -98,7 +104,9 @@ namespace spk
 				reinterpret_cast<std::uintptr_t>(_data() + _fixedPartSize);
 
 			if (dynamicAddress % alignof(TDynamicElement) != 0)
+			{
 				throw std::logic_error("ShaderStorageBuffer dynamic array is not correctly aligned for the requested type");
+			}
 
 			if constexpr (!std::is_void_v<TFixedPart>)
 			{
@@ -106,7 +114,9 @@ namespace spk
 					reinterpret_cast<std::uintptr_t>(_data());
 
 				if (fixedAddress % alignof(TFixedPart) != 0)
+				{
 					throw std::logic_error("ShaderStorageBuffer fixed part is not correctly aligned for the requested type");
+				}
 			}
 		}
 
@@ -135,7 +145,9 @@ namespace spk
 				"ShaderStorageBuffer fixed part requires a trivially copyable type.");
 
 			if (sizeof(TFixedPart) != _fixedPartSize)
+			{
 				throw std::invalid_argument("ShaderStorageBuffer fixed part size does not match the provided type");
+			}
 
 			setFixedData(std::addressof(data), sizeof(TFixedPart));
 		}
@@ -148,7 +160,9 @@ namespace spk
 				"ShaderStorageBuffer dynamic element requires a trivially copyable type.");
 
 			if (sizeof(TDynamicElement) != _dynamicElementSize)
+			{
 				throw std::invalid_argument("ShaderStorageBuffer dynamic element size does not match the provided type");
+			}
 
 			setDynamicData(data.data(), data.size());
 		}
@@ -162,16 +176,14 @@ namespace spk
 			{
 				return {
 					.nbElement = _dynamicElementCount,
-					.dynamicArray = reinterpret_cast<TDynamicElement *>(_data() + _fixedPartSize)
-				};
+					.dynamicArray = reinterpret_cast<TDynamicElement *>(_data() + _fixedPartSize)};
 			}
 			else
 			{
 				return {
 					.fixedPart = *reinterpret_cast<TFixedPart *>(_data()),
 					.nbElement = _dynamicElementCount,
-					.dynamicArray = reinterpret_cast<TDynamicElement *>(_data() + _fixedPartSize)
-				};
+					.dynamicArray = reinterpret_cast<TDynamicElement *>(_data() + _fixedPartSize)};
 			}
 		}
 
@@ -184,16 +196,14 @@ namespace spk
 			{
 				return {
 					.nbElement = _dynamicElementCount,
-					.dynamicArray = reinterpret_cast<const TDynamicElement *>(_data() + _fixedPartSize)
-				};
+					.dynamicArray = reinterpret_cast<const TDynamicElement *>(_data() + _fixedPartSize)};
 			}
 			else
 			{
 				return {
 					.fixedPart = *reinterpret_cast<const TFixedPart *>(_data()),
 					.nbElement = _dynamicElementCount,
-					.dynamicArray = reinterpret_cast<const TDynamicElement *>(_data() + _fixedPartSize)
-				};
+					.dynamicArray = reinterpret_cast<const TDynamicElement *>(_data() + _fixedPartSize)};
 			}
 		}
 
@@ -207,8 +217,7 @@ namespace spk
 			if constexpr (std::is_void_v<TFixedPart>)
 			{
 				GPUView<void, TDynamicElement> result{
-					.dynamicArray = std::vector<TDynamicElement>(_dynamicElementCount)
-				};
+					.dynamicArray = std::vector<TDynamicElement>(_dynamicElementCount)};
 
 				if (!result.dynamicArray.empty())
 				{
@@ -224,8 +233,7 @@ namespace spk
 			{
 				GPUView<TFixedPart, TDynamicElement> result{
 					.fixedPart = {},
-					.dynamicArray = std::vector<TDynamicElement>(_dynamicElementCount)
-				};
+					.dynamicArray = std::vector<TDynamicElement>(_dynamicElementCount)};
 
 				std::memcpy(
 					std::addressof(result.fixedPart),

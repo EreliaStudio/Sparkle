@@ -21,16 +21,15 @@ namespace spk
 	};
 
 	class Widget : public spk::NameTrait,
-		public spk::InherenceTrait<Widget, WidgetChildComparator>,
-		public spk::ResizeableTrait,
-		public spk::ActivableTrait
+				   public spk::InherenceTrait<Widget, WidgetChildComparator>,
+				   public spk::ResizeableTrait,
+				   public spk::ActivableTrait
 	{
 	public:
 		static inline spk::RenderPass::Key OverlayKey = {
-				.name = "sparkle.Overlay",
-				.order = 0
-			};
-			
+			.name = "sparkle.Overlay",
+			.order = 0};
+
 		using ZOrder = float;
 
 	private:

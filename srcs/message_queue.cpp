@@ -26,6 +26,8 @@ namespace spk::WinAPI
 			MWMO_INPUTAVAILABLE);
 
 		if (result == WAIT_FAILED)
+		{
 			throw std::system_error(static_cast<int>(::GetLastError()), std::system_category(), "MsgWaitForMultipleObjectsEx");
+		}
 	}
 }

@@ -22,29 +22,35 @@ namespace spk
 		{
 			glGenVertexArrays(1, &identifier);
 			if (identifier == 0)
+			{
 				throw std::runtime_error("Failed to create OpenGL vertex array");
+			}
 		}
 
 		~Instance() override
 		{
 			if (identifier != 0)
+			{
 				glDeleteVertexArrays(1, &identifier);
+			}
 		}
 	};
 
 	bool VertexArray::_needsConfiguration(const Instance &instance) const noexcept
 	{
 		return _vertexBuffer == nullptr ||
-			_indexBuffer == nullptr ||
-			instance.vertexBufferIdentifier != _vertexBuffer->identifier() ||
-			instance.indexBufferIdentifier != _indexBuffer->identifier() ||
-			instance.vertexConfigurationGeneration != _vertexBuffer->configurationGeneration();
+			   _indexBuffer == nullptr ||
+			   instance.vertexBufferIdentifier != _vertexBuffer->identifier() ||
+			   instance.indexBufferIdentifier != _indexBuffer->identifier() ||
+			   instance.vertexConfigurationGeneration != _vertexBuffer->configurationGeneration();
 	}
 
 	void VertexArray::_disableAttributes(Instance &instance) const
 	{
 		for (const auto location : instance.enabledAttributes)
+		{
 			glDisableVertexAttribArray(location);
+		}
 		instance.enabledAttributes.clear();
 	}
 
@@ -98,9 +104,13 @@ namespace spk
 	void VertexArray::_configure(Instance &instance, RenderContext &context) const
 	{
 		if (_vertexBuffer == nullptr || _indexBuffer == nullptr)
+		{
 			throw std::logic_error("VertexArray requires both buffers");
+		}
 		if (_vertexBuffer->stride() > static_cast<std::size_t>(std::numeric_limits<GLsizei>::max()))
+		{
 			throw std::overflow_error("VertexBuffer stride exceeds OpenGL GLsizei range");
+		}
 
 		glBindVertexArray(instance.identifier);
 		_disableAttributes(instance);
@@ -133,13 +143,17 @@ namespace spk
 		auto &instance = static_cast<Instance &>(base);
 		glBindVertexArray(instance.identifier);
 		if (_needsConfiguration(instance))
+		{
 			_configure(instance, context);
+		}
 	}
 
 	void VertexArray::setVertexBuffer(const VertexBuffer &vertexBuffer)
 	{
 		if (_vertexBuffer == &vertexBuffer)
+		{
 			return;
+		}
 
 		_vertexBuffer = &vertexBuffer;
 	}
@@ -147,7 +161,9 @@ namespace spk
 	void VertexArray::setIndexBuffer(const IndexBuffer &indexBuffer)
 	{
 		if (_indexBuffer == &indexBuffer)
+		{
 			return;
+		}
 
 		_indexBuffer = &indexBuffer;
 	}

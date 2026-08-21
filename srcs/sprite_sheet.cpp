@@ -18,7 +18,9 @@ namespace spk
 	void SpriteSheet::_buildSprites(const Vector2UInt &spriteCount)
 	{
 		if (spriteCount.x == 0 || spriteCount.y == 0)
+		{
 			throw std::invalid_argument("SpriteSheet: sprite count cannot be zero");
+		}
 
 		_nbSprite = spriteCount;
 		_unit = Vector2(1.0f, 1.0f) / Vector2(static_cast<float>(_nbSprite.x), static_cast<float>(_nbSprite.y));
@@ -61,7 +63,9 @@ namespace spk
 	std::size_t SpriteSheet::spriteID(const Vector2UInt &coord) const
 	{
 		if (coord.x >= _nbSprite.x || coord.y >= _nbSprite.y)
+		{
 			throw std::out_of_range("SpriteSheet: sprite coordinates out of range");
+		}
 
 		return static_cast<std::size_t>(_nbSprite.x) * static_cast<std::size_t>(coord.y) + static_cast<std::size_t>(coord.x);
 	}
@@ -74,7 +78,9 @@ namespace spk
 	const SpriteSheet::Sprite &SpriteSheet::sprite(std::size_t spriteID) const
 	{
 		if (spriteID >= _sprites.size())
+		{
 			throw std::out_of_range("SpriteSheet: sprite ID out of range");
+		}
 
 		return _sprites[spriteID];
 	}

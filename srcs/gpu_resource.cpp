@@ -37,8 +37,7 @@ namespace spk
 				try
 				{
 					callback(_identifier);
-				}
-				catch (...)
+				} catch (...)
 				{
 				}
 			}
@@ -73,7 +72,9 @@ namespace spk
 	void GPUResource::_subscribeToRelease(std::function<void(Identifier)> callback) const
 	{
 		if (_lifeTime == nullptr)
+		{
 			throw std::logic_error("Cannot subscribe to a moved-from GPU resource");
+		}
 		_lifeTime->subscribe(std::move(callback));
 	}
 
@@ -86,15 +87,21 @@ namespace spk
 	{
 		++_generation;
 		if (_generation == 0)
+		{
 			_generation = 1;
+		}
 	}
 
 	void GPUResource::activate(RenderContext &context) const
 	{
 		if (context.targetSurface == nullptr)
+		{
 			throw std::invalid_argument("Cannot activate a GPU resource without a target surface");
+		}
 		if (_lifeTime == nullptr)
+		{
 			throw std::logic_error("Cannot activate a moved-from GPU resource");
+		}
 
 		auto &entry = context.targetSurface->_gpuResources()._entry(*this, context);
 		if (entry.generation != _generation)

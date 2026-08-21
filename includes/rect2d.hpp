@@ -13,8 +13,7 @@ namespace spk
 		using Anchor = Vector2Int;
 		using Size = Vector2UInt;
 
-		union
-		{
+		union {
 			Anchor anchor{};
 			struct
 			{
@@ -23,8 +22,7 @@ namespace spk
 			};
 		};
 
-		union
-		{
+		union {
 			Size size{};
 			struct
 			{
@@ -40,7 +38,7 @@ namespace spk
 
 		bool operator==(const Rect2D &other) const noexcept;
 
-		friend std::ostream& operator << (std::ostream& os, const Rect2D& rect)
+		friend std::ostream &operator<<(std::ostream &os, const Rect2D &rect)
 		{
 			os << rect.anchor << " - " << rect.size;
 			return os;

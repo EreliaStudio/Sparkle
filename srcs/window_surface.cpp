@@ -156,18 +156,24 @@ namespace spk
 		void releaseRenderingContext()
 		{
 			if (renderingContext == nullptr)
+			{
 				return;
+			}
 
 			if (::wglGetCurrentContext() != renderingContext)
 			{
 				if (::wglMakeCurrent(deviceContext, renderingContext) == FALSE)
+				{
 					throwLastError("wglMakeCurrent");
+				}
 			}
 
 			_gpuResources->clear();
 
 			if (::wglMakeCurrent(nullptr, nullptr) == FALSE)
+			{
 				throwLastError("wglMakeCurrent");
+			}
 
 			deleteContext(renderingContext);
 			renderingContext = nullptr;

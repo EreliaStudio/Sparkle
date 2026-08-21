@@ -90,7 +90,9 @@ namespace spk
 	void Font::Glyph::rescale(const Vector2 &scaleRatio)
 	{
 		for (auto &uv : uvs)
+		{
 			uv *= scaleRatio;
+		}
 	}
 
 	void Font::Atlas::_rescaleGlyphs(const Vector2 &scaleRatio)
@@ -114,11 +116,15 @@ namespace spk
 	void Font::Atlas::_applyGlyphPixel(const std::uint8_t *data, const Vector2Int &position, const Vector2UInt &glyphSize)
 	{
 		if (position.x < 0 || position.y < 0)
+		{
 			throw std::logic_error("Font atlas generated a negative glyph position");
+		}
 
 		while (position.x + static_cast<int>(glyphSize.x) >= static_cast<int>(size().x) ||
 			   position.y + static_cast<int>(glyphSize.y) >= static_cast<int>(size().y))
+		{
 			_resizeData(size() * Vector2UInt{2, 2});
+		}
 
 		writePixels(
 			data,
@@ -220,7 +226,9 @@ namespace spk
 		{
 			const Glyph &glyphData = glyph(string[i]);
 			if (i == 0)
+			{
 				result.x = glyphData.baselineOffset.x;
+			}
 			result.y = std::max(result.y, glyphData.baselineOffset.y);
 		}
 
@@ -283,7 +291,9 @@ namespace spk
 		for (std::size_t delta : deltas)
 		{
 			if (delta > textArea.y)
+			{
 				continue;
+			}
 
 			bool enough = false;
 			while (enough == false)
@@ -293,9 +303,13 @@ namespace spk
 				const Vector2UInt temporarySize = computeStringSize(string, {glyphSize - outlineSize * 2, outlineSize});
 
 				if (temporarySize.x >= textArea.x || temporarySize.y >= textArea.y)
+				{
 					enough = true;
+				}
 				else
+				{
 					result.glyph += delta;
+				}
 			}
 		}
 
@@ -313,7 +327,9 @@ namespace spk
 	Font::Atlas &Font::atlas(const Size &fontSize)
 	{
 		if (_resource == nullptr)
+		{
 			throw std::logic_error("Cannot create a Font atlas without loaded font data");
+		}
 
 		auto it = _atlases.find(fontSize);
 		if (it == _atlases.end())

@@ -7,17 +7,22 @@
 namespace spk::WinAPI
 {
 	Frame::Class::Class(std::string identifier) :
-		_instance(::GetModuleHandleW(nullptr)), _identifier(Frame::_toWide(identifier))
+		_instance(::GetModuleHandleW(nullptr)),
+		_identifier(Frame::_toWide(identifier))
 	{
 		if (_instance == nullptr)
+		{
 			Frame::_throwLastError("GetModuleHandleW");
+		}
 		_register();
 	}
 
 	Frame::Class::~Class()
 	{
 		if (_atom != 0)
+		{
 			::UnregisterClassW(_identifier.c_str(), _instance);
+		}
 	}
 
 	void Frame::Class::_register()
@@ -31,7 +36,9 @@ namespace spk::WinAPI
 		description.lpszClassName = _identifier.c_str();
 		_atom = ::RegisterClassExW(&description);
 		if (_atom == 0)
+		{
 			Frame::_throwLastError("RegisterClassExW");
+		}
 	}
 
 	[[noreturn]] void Frame::_throwLastError(std::string_view operation)
@@ -43,7 +50,9 @@ namespace spk::WinAPI
 	{
 		const int result = ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, value.data(), static_cast<int>(value.size()), nullptr, 0);
 		if (result == 0)
+		{
 			_throwLastError("MultiByteToWideChar");
+		}
 		return result;
 	}
 
@@ -51,13 +60,17 @@ namespace spk::WinAPI
 	{
 		const int converted = ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, value.data(), static_cast<int>(value.size()), result.data(), static_cast<int>(result.size()));
 		if (converted == 0)
+		{
 			_throwLastError("MultiByteToWideChar");
+		}
 	}
 
 	std::wstring Frame::_toWide(std::string_view value)
 	{
 		if (value.empty())
+		{
 			return {};
+		}
 		std::wstring result(static_cast<std::size_t>(_wideSize(value)), L'\0');
 		_writeWide(value, result);
 		return result;
@@ -67,7 +80,9 @@ namespace spk::WinAPI
 	{
 		RECT rectangle{.left = 0, .top = 0, .right = static_cast<LONG>(info.width), .bottom = static_cast<LONG>(info.height)};
 		if (::AdjustWindowRectEx(&rectangle, Style, FALSE, 0) == FALSE)
+		{
 			_throwLastError("AdjustWindowRectEx");
+		}
 		return {.cx = rectangle.right - rectangle.left, .cy = rectangle.bottom - rectangle.top};
 	}
 
@@ -81,11 +96,15 @@ namespace spk::WinAPI
 		auto *creation = reinterpret_cast<CREATESTRUCTW *>(parameter);
 		auto *window = static_cast<Frame *>(creation->lpCreateParams);
 		if (window == nullptr)
+		{
 			return nullptr;
+		}
 		::SetLastError(ERROR_SUCCESS);
 		const LONG_PTR previous = ::SetWindowLongPtrW(handle, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(window));
 		if (previous == 0 && ::GetLastError() != ERROR_SUCCESS)
+		{
 			return nullptr;
+		}
 		window->_handle = handle;
 		return window;
 	}
@@ -98,7 +117,9 @@ namespace spk::WinAPI
 			return 0;
 		}
 		if (message == WM_NCDESTROY)
+		{
 			return _processDestruction(handle, message, wParam, lParam);
+		}
 		return _messageHandler ? _messageHandler(handle, message, wParam, lParam) : ::DefWindowProcW(handle, message, wParam, lParam);
 	}
 
@@ -114,17 +135,22 @@ namespace spk::WinAPI
 	{
 		Frame *window = _instance(handle);
 		if (message == WM_NCCREATE)
+		{
 			window = _bind(handle, lParam);
+		}
 		if (window == nullptr)
+		{
 			return message == WM_NCCREATE ? FALSE : ::DefWindowProcW(handle, message, wParam, lParam);
+		}
 		try
 		{
 			return window->_process(handle, message, wParam, lParam);
-		}
-		catch (...)
+		} catch (...)
 		{
 			if (window->_pendingException == nullptr)
+			{
 				window->_pendingException = std::current_exception();
+			}
 			return 0;
 		}
 	}
@@ -132,37 +158,48 @@ namespace spk::WinAPI
 	void Frame::_createHandle(const Class &windowClass, const CreationInfo &info, SIZE size)
 	{
 		const std::wstring title = _toWide(info.title);
-		const HWND handle = ::CreateWindowExW(0, windowClass._identifier.c_str(), title.c_str(), Style, info.x, info.y,
-			size.cx, size.cy, nullptr, nullptr, windowClass._instance, this);
+		const HWND handle = ::CreateWindowExW(0, windowClass._identifier.c_str(), title.c_str(), Style, info.x, info.y, size.cx, size.cy, nullptr, nullptr, windowClass._instance, this);
 		if (handle == nullptr)
+		{
 			_throwLastError("CreateWindowExW");
+		}
 		_handle = handle;
 	}
 
 	void Frame::create(const Class &windowClass, const CreationInfo &info)
 	{
 		if (_handle != nullptr)
+		{
 			throw std::logic_error("The WinAPI window is already created");
+		}
 		_closureRequested = false;
 		_closureDispatched = false;
 		_messageHandler = info.messageHandler;
 		_createHandle(windowClass, info, _outerSize(info));
 		if (info.visible)
+		{
 			::ShowWindow(_handle, SW_SHOW);
+		}
 	}
 
 	void Frame::destroy()
 	{
 		if (_handle == nullptr)
+		{
 			return;
+		}
 		if (::DestroyWindow(_handle) == FALSE)
+		{
 			_throwLastError("DestroyWindow");
+		}
 	}
 
 	bool Frame::consumeClosureRequest() noexcept
 	{
 		if (!_closureRequested || _closureDispatched)
+		{
 			return false;
+		}
 		_closureDispatched = true;
 		return true;
 	}
@@ -175,7 +212,9 @@ namespace spk::WinAPI
 	void Frame::rethrowPendingException()
 	{
 		if (_pendingException == nullptr)
+		{
 			return;
+		}
 		std::exception_ptr exception = std::exchange(_pendingException, nullptr);
 		std::rethrow_exception(exception);
 	}
@@ -183,18 +222,20 @@ namespace spk::WinAPI
 	spk::Rect2D Frame::geometry() const
 	{
 		if (_handle == nullptr)
+		{
 			throw std::logic_error("Cannot retrieve the geometry of an uninitialized WinAPI frame");
+		}
 
 		RECT area{};
 		if (::GetClientRect(_handle, &area) == FALSE)
+		{
 			_throwLastError("GetClientRect");
+		}
 
 		return spk::Rect2D{
 			.anchor = {area.left, area.top},
 			.size = {
 				static_cast<std::uint32_t>(area.right - area.left),
-				static_cast<std::uint32_t>(area.bottom - area.top)
-			}
-		};
+				static_cast<std::uint32_t>(area.bottom - area.top)}};
 	}
 }

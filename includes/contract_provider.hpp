@@ -199,8 +199,7 @@ namespace spk
 				{
 					dispatchLoop(std::move(arguments));
 					dispatching = false;
-				}
-				catch (...)
+				} catch (...)
 				{
 					recoverFromDispatchFailure();
 					throw;
@@ -236,7 +235,9 @@ namespace spk
 					dispatch(*currentArguments);
 					applyMutations();
 					if (!pendingArguments.has_value())
+					{
 						return;
+					}
 					currentArguments.emplace(std::move(*pendingArguments));
 					pendingArguments.reset();
 				}
@@ -248,8 +249,7 @@ namespace spk
 				try
 				{
 					applyMutations();
-				}
-				catch (...)
+				} catch (...)
 				{
 					std::terminate();
 				}

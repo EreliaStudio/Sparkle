@@ -4,7 +4,10 @@
 
 namespace spk
 {
-	Application::Application() : _impl(std::make_unique<Impl>()) {}
+	Application::Application() :
+		_impl(std::make_unique<Impl>())
+	{
+	}
 	Application::~Application() = default;
 
 	Window &Application::window(const Window::Identifier &identifier)
