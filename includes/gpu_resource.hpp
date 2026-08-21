@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -16,6 +17,7 @@ namespace spk
 	public:
 		using Identifier = std::uint64_t;
 		using Generation = std::uint64_t;
+		using RecyclingScore = std::uint32_t;
 
 		enum class Kind : std::uint8_t
 		{
@@ -27,7 +29,7 @@ namespace spk
 			Sampler
 		};
 
-		static inline constexpr size_t NbKind = 6;
+		static inline constexpr std::size_t NbKind = 6;
 
 	protected:
 		class Instance
@@ -50,6 +52,7 @@ namespace spk
 		GPUResource();
 
 		[[nodiscard]] virtual Kind _kind() const noexcept = 0;
+		[[nodiscard]] virtual RecyclingScore _recyclingScore(const Instance &instance) const noexcept;
 		[[nodiscard]] virtual std::unique_ptr<Instance> _create(RenderContext &context) const = 0;
 		virtual void _synchronize(Instance &instance, RenderContext &context) const = 0;
 		virtual void _bind(Instance &instance, RenderContext &context) const = 0;

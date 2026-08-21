@@ -35,7 +35,7 @@ namespace spk
 		std::vector<GPUResource::Identifier> _releasedIdentifiers;
 
 		[[nodiscard]] static constexpr std::size_t _kindIndex(GPUResource::Kind kind) noexcept;
-		[[nodiscard]] std::unique_ptr<Instance> _acquire(GPUResource::Kind kind);
+		[[nodiscard]] std::unique_ptr<Instance> _acquire(const GPUResource &resource);
 		[[nodiscard]] Entry &_entry(const GPUResource &resource, RenderContext &context);
 
 		void _subscribe(const GPUResource &resource);

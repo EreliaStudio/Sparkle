@@ -77,6 +77,11 @@ namespace spk
 		_lifeTime->subscribe(std::move(callback));
 	}
 
+	GPUResource::RecyclingScore GPUResource::_recyclingScore(const Instance &) const noexcept
+	{
+		return 1;
+	}
+
 	void GPUResource::validate() noexcept
 	{
 		++_generation;

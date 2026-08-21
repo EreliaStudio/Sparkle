@@ -93,6 +93,7 @@ namespace spk
 		Mipmap _mipmap = Mipmap::Disable;
 
 		[[nodiscard]] Kind _kind() const noexcept override;
+		[[nodiscard]] RecyclingScore _recyclingScore(const GPUResource::Instance &instance) const noexcept override;
 		[[nodiscard]] static GLenum _openGLTarget(Target target) noexcept;
 		[[nodiscard]] static std::size_t _bytesPerPixel(Format format);
 		[[nodiscard]] static std::size_t _checkedByteCount(const Vector2UInt &size, Format format);

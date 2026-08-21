@@ -18,6 +18,8 @@ namespace spk
 	public:
 		GLuint identifier = 0;
 		GLenum target = 0;
+		Vector2UInt size{0, 0};
+		GLint internalFormat = GL_NONE;
 
 		Instance()
 		{
@@ -60,6 +62,21 @@ namespace spk
 	GPUResource::Kind Texture::_kind() const noexcept
 	{
 		return GPUResource::Kind::Texture;
+	}
+
+	GPUResource::RecyclingScore Texture::_recyclingScore(const GPUResource::Instance &base) const noexcept
+	{
+		const auto &instance = static_cast<const Instance &>(base);
+		const GLenum target = _openGLTarget(_textureTarget);
+
+		if (instance.target != target)
+			return 0;
+
+		const TextureFormat descriptor = formatDescriptor(_format);
+		if (instance.size == _size && instance.internalFormat == descriptor.internalFormat)
+			return 2;
+
+		return 1;
 	}
 
 	GLenum Texture::_openGLTarget(Target target) noexcept
@@ -215,6 +232,9 @@ namespace spk
 
 	void Texture::setMipmap(Mipmap mipmap) noexcept
 	{
+		if (_mipmap == mipmap)
+			return;
+
 		_mipmap = mipmap;
 	}
 
@@ -238,15 +258,14 @@ namespace spk
 		const GLenum target = _openGLTarget(_textureTarget);
 
 		if (instance.target != 0 && instance.target != target)
-		{
-			glDeleteTextures(1, &instance.identifier);
-			glGenTextures(1, &instance.identifier);
-			if (instance.identifier == 0)
-				throw std::runtime_error("Failed to recreate OpenGL texture");
-		}
+			throw std::logic_error("Texture received an incompatible GPU instance");
 
-		instance.target = target;
 		glBindTexture(target, instance.identifier);
+
+		const bool storageMatches =
+			instance.target == target &&
+			instance.size == _size &&
+			instance.internalFormat == descriptor.internalFormat;
 
 		GLint previousAlignment = 0;
 		glGetIntegerv(GL_UNPACK_ALIGNMENT, &previousAlignment);
@@ -256,16 +275,39 @@ namespace spk
 			? _pixels.data()
 			: nullptr;
 
-		glTexImage2D(
-			target,
-			0,
-			descriptor.internalFormat,
-			static_cast<GLsizei>(_size.x),
-			static_cast<GLsizei>(_size.y),
-			0,
-			descriptor.externalFormat,
-			descriptor.elementType,
-			pixels);
+		if (storageMatches)
+		{
+			if (pixels != nullptr)
+			{
+				glTexSubImage2D(
+					target,
+					0,
+					0,
+					0,
+					static_cast<GLsizei>(_size.x),
+					static_cast<GLsizei>(_size.y),
+					descriptor.externalFormat,
+					descriptor.elementType,
+					pixels);
+			}
+		}
+		else
+		{
+			glTexImage2D(
+				target,
+				0,
+				descriptor.internalFormat,
+				static_cast<GLsizei>(_size.x),
+				static_cast<GLsizei>(_size.y),
+				0,
+				descriptor.externalFormat,
+				descriptor.elementType,
+				pixels);
+
+			instance.size = _size;
+			instance.internalFormat = descriptor.internalFormat;
+			instance.target = target;
+		}
 
 		glPixelStorei(GL_UNPACK_ALIGNMENT, previousAlignment);
 		glTexParameteri(target, GL_TEXTURE_BASE_LEVEL, 0);

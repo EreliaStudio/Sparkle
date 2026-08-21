@@ -63,8 +63,9 @@ namespace spk
 		return false;
 	}
 
-	std::unique_ptr<GPUResourceCollection::Instance> GPUResourceCollection::_acquire(GPUResource::Kind kind)
+	std::unique_ptr<GPUResourceCollection::Instance> GPUResourceCollection::_acquire(const GPUResource &resource)
 	{
+		const auto kind = resource._kind();
 		if (!_isRecyclable(kind))
 			return nullptr;
 
@@ -72,7 +73,25 @@ namespace spk
 		if (pool.empty())
 			return nullptr;
 
-		auto result = std::move(pool.back());
+		std::size_t bestIndex = pool.size();
+		GPUResource::RecyclingScore bestScore = 0;
+
+		for (std::size_t index = 0; index < pool.size(); ++index)
+		{
+			const auto score = resource._recyclingScore(*pool[index]);
+			if (score > bestScore)
+			{
+				bestIndex = index;
+				bestScore = score;
+			}
+		}
+
+		if (bestScore == 0)
+			return nullptr;
+
+		auto result = std::move(pool[bestIndex]);
+		if (bestIndex != pool.size() - 1)
+			pool[bestIndex] = std::move(pool.back());
 		pool.pop_back();
 		return result;
 	}
@@ -98,9 +117,15 @@ namespace spk
 			_subscribe(resource);
 		}
 
+		if (entry.instance != nullptr && resource._recyclingScore(*entry.instance) == 0)
+		{
+			_pools[_kindIndex(entry.kind)].push_back(std::move(entry.instance));
+			entry.generation = 0;
+		}
+
 		if (entry.instance == nullptr)
 		{
-			entry.instance = _acquire(entry.kind);
+			entry.instance = _acquire(resource);
 			if (entry.instance == nullptr)
 				entry.instance = resource._create(context);
 			if (entry.instance == nullptr)
