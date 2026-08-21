@@ -9,6 +9,7 @@ project(
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
+include(CTest)
 
 find_package(GLEW REQUIRED)
 find_package(OpenGL REQUIRED)
@@ -86,6 +87,12 @@ set_target_properties(sparkle PROPERTIES
     CXX_EXTENSIONS OFF
     DEBUG_POSTFIX d
 )
+
+if(BUILD_TESTING)
+    add_executable(sparkle_json_tests tests/json.cpp)
+    target_link_libraries(sparkle_json_tests PRIVATE sparkle::sparkle)
+    add_test(NAME sparkle.json COMMAND sparkle_json_tests)
+endif()
 
 install(
     TARGETS sparkle
