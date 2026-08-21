@@ -35,11 +35,28 @@ namespace spk
 		{
 			_children.push_back(child);
 			_sortChildren();
+			_onChildAdded(child);
 		}
 
 		void _removeChild(TType *child)
 		{
-			std::erase(_children, child);
+			const auto it = std::ranges::find(_children, child);
+			if (it == _children.end())
+			{
+				return;
+			}
+
+			_children.erase(it);
+			_onChildRemoved(child);
+		}
+
+	protected:
+		virtual void _onChildAdded(TType *)
+		{
+		}
+
+		virtual void _onChildRemoved(TType *)
+		{
 		}
 
 	public:
@@ -55,6 +72,8 @@ namespace spk
 				std::derived_from<TType, InherenceTrait<TType, TChildComparator>>,
 				"TType must inherit from InherenceTrait<TType, TChildComparator>");
 		}
+
+		virtual ~InherenceTrait() = default;
 
 		OnParentEditionContract subscribeToParentEdition(OnParentEditionCallback callback)
 		{

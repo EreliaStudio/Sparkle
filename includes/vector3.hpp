@@ -120,7 +120,7 @@ namespace spk
 			{
 				throw std::domain_error("Cannot normalize a zero-length vector");
 			}
-			return *this / TVector3{len, len, len};
+			return *this / TVector3{static_cast<float>(len), static_cast<float>(len), static_cast<float>(len)};
 		}
 
 		friend std::ostream &operator<<(std::ostream &os, const TVector3 &v)

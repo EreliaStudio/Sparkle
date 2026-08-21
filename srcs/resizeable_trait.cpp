@@ -31,6 +31,17 @@ namespace spk
 		return _sizeHint.preferred;
 	}
 
+	void ResizeableTrait::setSizeHint(const SizeHint &sizeHint)
+	{
+		if (_sizeHint == sizeHint)
+		{
+			return;
+		}
+
+		_sizeHint = sizeHint;
+		_triggerEdition();
+	}
+
 	void ResizeableTrait::setMinimalSize(const Vector2 &size)
 	{
 		if (_sizeHint.minimal == size)

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <unordered_map>
+
 #include "activable_trait.hpp"
 #include "cached_data.hpp"
 #include "inherence_trait.hpp"
@@ -33,7 +35,10 @@ namespace spk
 		using ZOrder = float;
 
 	private:
-		InherenceTrait<Widget>::OnParentEditionContract _onParentEditedContract;
+		using Inherence = InherenceTrait<Widget, WidgetChildComparator>;
+
+		Inherence::OnParentEditionContract _onParentEditedContract;
+		std::unordered_map<Widget *, ResizeableTrait::Contract> _childSizeHintEditionContracts;
 		ZOrder _zOrder = 0;
 		spk::CachedData<ZOrder> _absoluteZOrder;
 		spk::Rect2D _geometry{};
@@ -46,6 +51,10 @@ namespace spk
 		void _computeRatio();
 		[[nodiscard]] spk::Rect2D _geometryFromRatio(const Widget &child) const;
 		void _resize(const spk::Rect2D &geometry);
+		void _onChildSizeHintEdition();
+
+		void _onChildAdded(Widget *child) override final;
+		void _onChildRemoved(Widget *child) override final;
 
 		template <typename TEvent>
 		void _propagate(TEvent &event, void (Widget::*handler)(TEvent &));
@@ -54,6 +63,7 @@ namespace spk
 
 		virtual void _updateState(UpdateContext &context);
 		virtual void _buildRenderSnapshot(spk::RenderSnapshot::Builder &builder);
+		virtual void _updateSizeHint();
 		virtual void _onGeometryChange();
 
 		virtual void _onWindowResizedEvent(WindowResizedEvent &event);

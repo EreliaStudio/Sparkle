@@ -29,9 +29,4 @@ namespace spk
 		buffer.validate();
 		buffer.activate(context);
 	}
-
-	const Matrix4x4 &ViewportUniformRenderCommand::matrix() const noexcept
-	{
-		return _matrix;
-	}
 }

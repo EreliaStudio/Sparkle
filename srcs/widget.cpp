@@ -47,7 +47,39 @@ namespace spk
 		});
 	}
 
-	Widget::~Widget() = default;
+	Widget::~Widget()
+	{
+		while (!children().empty())
+		{
+			children().back()->setParent(nullptr);
+		}
+
+		setParent(nullptr);
+	}
+
+	void Widget::_onChildAdded(Widget *child)
+	{
+		auto contract = child->subscribeToSizeHintEdition([this](ResizeableTrait *) {
+			_onChildSizeHintEdition();
+		});
+		_childSizeHintEditionContracts.emplace(child, std::move(contract));
+	}
+
+	void Widget::_onChildRemoved(Widget *child)
+	{
+		_childSizeHintEditionContracts.erase(child);
+	}
+
+	void Widget::_onChildSizeHintEdition()
+	{
+		const ResizeableTrait::SizeHint previousSizeHint = sizeHint();
+		_updateSizeHint();
+
+		if (sizeHint() == previousSizeHint || !hasParent())
+		{
+			_onGeometryChange();
+		}
+	}
 
 	void Widget::_invalidateViewRegion()
 	{
@@ -148,10 +180,6 @@ namespace spk
 
 	void Widget::setGeometry(const spk::Rect2D &geometry)
 	{
-		if (_geometry == geometry)
-		{
-			return;
-		}
 		_geometry = geometry;
 		_computeRatio();
 		_invalidateViewRegion();
@@ -282,6 +310,9 @@ namespace spk
 	{
 	}
 	void Widget::_buildRenderSnapshot(spk::RenderSnapshot::Builder &)
+	{
+	}
+	void Widget::_updateSizeHint()
 	{
 	}
 	void Widget::_onGeometryChange()
