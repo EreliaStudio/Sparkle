@@ -43,6 +43,7 @@
 #include "render_request.hpp"
 #include "render_snapshot.hpp"
 #include "resizeable_trait.hpp"
+#include "resource.hpp"
 #include "sampler.hpp"
 #include "scissor_render_command.hpp"
 #include "shader_storage_buffer.hpp"

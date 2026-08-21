@@ -16,6 +16,10 @@ find_package(Stb REQUIRED)
 
 set(SPARKLE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/srcs")
 set(SPARKLE_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/includes")
+set(SPARKLE_RESOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/resources")
+
+add_subdirectory(tools/resource_builder)
+include(cmake/EmbedResources.cmake)
 
 file(GLOB_RECURSE SPARKLE_SOURCES
     CONFIGURE_DEPENDS
@@ -33,6 +37,19 @@ add_library(sparkle STATIC
     ${SPARKLE_HEADERS}
 )
 add_library(sparkle::sparkle ALIAS sparkle)
+
+file(GLOB_RECURSE SPARKLE_RESOURCES
+	CONFIGURE_DEPENDS
+	RELATIVE "${SPARKLE_RESOURCE_DIR}"
+	"${SPARKLE_RESOURCE_DIR}/*"
+)
+list(FILTER SPARKLE_RESOURCES EXCLUDE REGEX "(^|/)\\.")
+
+sparkle_embed_resources(
+	TARGET sparkle
+	ROOT "${SPARKLE_RESOURCE_DIR}"
+	FILES ${SPARKLE_RESOURCES}
+)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_compile_options(sparkle PRIVATE
