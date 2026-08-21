@@ -246,12 +246,12 @@ namespace spk
 
 	Vector2UInt Font::computeCharSize(Codepoint codepoint, const Size &fontSize)
 	{
-		return atlas(fontSize)->computeCharSize(codepoint);
+		return atlas(fontSize).computeCharSize(codepoint);
 	}
 
 	Vector2UInt Font::computeStringSize(const Text &string, const Size &fontSize)
 	{
-		return atlas(fontSize)->computeStringSize(string);
+		return atlas(fontSize).computeStringSize(string);
 	}
 
 	Vector2UInt Font::computeStringSize(std::string_view utf8String, const Size &fontSize)
@@ -261,7 +261,7 @@ namespace spk
 
 	Vector2Int Font::computeStringBaselineOffset(const Text &string, const Size &fontSize)
 	{
-		return atlas(fontSize)->computeStringBaselineOffset(string);
+		return atlas(fontSize).computeStringBaselineOffset(string);
 	}
 
 	Vector2Int Font::computeStringBaselineOffset(std::string_view utf8String, const Size &fontSize)
@@ -310,18 +310,18 @@ namespace spk
 		return computeOptimalTextSize(textFromUTF8(utf8String), outlineSizeRatio, textArea);
 	}
 
-	std::shared_ptr<Font::Atlas> Font::atlas(const Size &fontSize)
+	Font::Atlas &Font::atlas(const Size &fontSize)
 	{
 		if (_resource == nullptr)
 			throw std::logic_error("Cannot create a Font atlas without loaded font data");
 
 		auto it = _atlases.find(fontSize);
-		if (it == _atlases.end() || it->second == nullptr)
+		if (it == _atlases.end())
 		{
-			auto atlasEntry = std::shared_ptr<Atlas>(new Atlas(_resource, fontSize.glyph, fontSize.outline));
-			it = _atlases.insert_or_assign(fontSize, std::move(atlasEntry)).first;
+			auto atlasEntry = std::unique_ptr<Atlas>(new Atlas(_resource, fontSize.glyph, fontSize.outline));
+			it = _atlases.emplace(fontSize, std::move(atlasEntry)).first;
 		}
 
-		return it->second;
+		return *it->second;
 	}
 }

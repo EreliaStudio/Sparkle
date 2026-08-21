@@ -118,7 +118,7 @@ namespace spk
 		};
 
 	private:
-		std::map<Size, std::shared_ptr<Atlas>> _atlases;
+		std::map<Size, std::unique_ptr<Atlas>> _atlases;
 		std::shared_ptr<Resource> _resource;
 
 		void _loadFromFile(const std::filesystem::path &path);
@@ -140,7 +140,7 @@ namespace spk
 		[[nodiscard]] Size computeOptimalTextSize(const Text &string, float outlineSizeRatio, const Vector2UInt &textArea);
 		[[nodiscard]] Size computeOptimalTextSize(std::string_view utf8String, float outlineSizeRatio, const Vector2UInt &textArea);
 
-		[[nodiscard]] std::shared_ptr<Atlas> atlas(const Size &size);
+		[[nodiscard]] Atlas &atlas(const Size &size);
 	};
 
 	constexpr Font::Size::Size(std::size_t glyph) :
