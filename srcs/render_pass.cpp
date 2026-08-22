@@ -1,6 +1,7 @@
 #include "render_pass.hpp"
 
 #include "render_command.hpp"
+#include "exception.hpp"
 
 #include <utility>
 
@@ -18,9 +19,23 @@ namespace spk
 
 	void RenderPass::execute(RenderContext &renderContext) const
 	{
-		for (const auto &command : _commands)
+		for (std::size_t index = 0; index < _commands.size(); ++index)
 		{
-			command->execute(renderContext);
+			try
+			{
+				_commands[index]->execute(renderContext);
+			}
+			catch (spk::Exception &exception)
+			{
+				exception.addContext("Exception while executing render command [" + std::to_string(index) + "]");
+				throw;
+			}
+			catch (...)
+			{
+				throw spk::Exception(
+					"Exception while executing render command [" + std::to_string(index) + "]",
+					std::current_exception());
+			}
 		}
 	}
 }

@@ -5,6 +5,7 @@
 #include <variant>
 
 #include "input_state.hpp"
+#include "exception.hpp"
 #include "keyboard.hpp"
 #include "mouse.hpp"
 #include "widget.hpp"
@@ -16,6 +17,7 @@ namespace spk
 	Application::UpdateRuntime::UpdateRuntime(
 		spk::ThreadSafeFIFO<EventRecord>::Consumer eventRecordConsumer,
 		spk::ThreadSafeFIFO<UpdateRequest>::Consumer updateRequestConsumer) :
+		Runtime("update"),
 		_eventRecordConsumer(std::move(eventRecordConsumer)),
 		_updateRequestConsumer(std::move(updateRequestConsumer)),
 		_startTime(std::chrono::steady_clock::now()),
@@ -293,11 +295,25 @@ namespace spk
 		state.root().updateState(context);
 	}
 
-	spk::RenderSnapshot Application::UpdateRuntime::_buildRenderSnapshot(Window::State &state)
+	spk::RenderSnapshot Application::UpdateRuntime::_buildRenderSnapshot(const Window::Identifier &identifier, Window::State &state)
 	{
-		spk::RenderSnapshot::Builder builder;
-		state.root().buildRenderSnapshot(builder);
-		return builder.build();
+		try
+		{
+			spk::RenderSnapshot::Builder builder;
+			state.root().buildRenderSnapshot(builder);
+			return builder.build();
+		}
+		catch (spk::Exception &exception)
+		{
+			exception.addContext("Exception while building render snapshot for window [" + identifier + "]");
+			throw;
+		}
+		catch (...)
+		{
+			throw spk::Exception(
+				"Exception while building render snapshot for window [" + identifier + "]",
+				std::current_exception());
+		}
 	}
 
 	bool Application::UpdateRuntime::_consumeSnapshotRequest(const Window::Identifier &identifier)
@@ -329,11 +345,25 @@ namespace spk
 			.deltaTime = _deltaTime,
 			.keyboard = state.keyboard(),
 			.mouse = state.mouse()};
-		_updateState(state, context);
+		try
+		{
+			_updateState(state, context);
+		}
+		catch (spk::Exception &exception)
+		{
+			exception.addContext("Exception while updating window [" + identifier + "]");
+			throw;
+		}
+		catch (...)
+		{
+			throw spk::Exception(
+				"Exception while updating window [" + identifier + "]",
+				std::current_exception());
+		}
 
 		if (_consumeSnapshotRequest(identifier))
 		{
-			_publishSnapshot(identifier, _buildRenderSnapshot(state));
+			_publishSnapshot(identifier, _buildRenderSnapshot(identifier, state));
 		}
 	}
 

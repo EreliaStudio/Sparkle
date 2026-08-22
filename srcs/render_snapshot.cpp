@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <utility>
 
+#include "exception.hpp"
+
 namespace spk
 {
 	RenderPass &RenderSnapshot::Builder::renderPass(const RenderPass::Key &key)
@@ -38,12 +40,12 @@ namespace spk
 				return lhs.key.order < rhs.key.order;
 			});
 
-		std::vector<std::unique_ptr<const RenderPass>> passes;
+		std::vector<RenderSnapshot::Pass> passes;
 		passes.reserve(_passes.size());
 
 		for (auto &entry : _passes)
 		{
-			passes.push_back(std::move(entry.pass));
+			passes.push_back({.name = std::move(entry.key.name), .commands = std::move(entry.pass)});
 		}
 
 		_passes.clear();
@@ -70,12 +72,26 @@ namespace spk
 	{
 		for (const auto &pass : _renderPasses)
 		{
-			pass->execute(renderContext);
+			try
+			{
+				pass.commands->execute(renderContext);
+			}
+			catch (spk::Exception &exception)
+			{
+				exception.addContext("Exception while executing render pass [" + pass.name + "]");
+				throw;
+			}
+			catch (...)
+			{
+				throw spk::Exception(
+					"Exception while executing render pass [" + pass.name + "]",
+					std::current_exception());
+			}
 		}
 	}
 
 	RenderSnapshot::RenderSnapshot(
-		std::vector<std::unique_ptr<const RenderPass>> passes) :
+		std::vector<Pass> passes) :
 		_renderPasses(std::move(passes))
 	{
 	}

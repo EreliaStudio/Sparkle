@@ -13,6 +13,7 @@
 #include "draw_font_render_command.hpp"
 #include "draw_texture_mesh_render_command.hpp"
 #include "event.hpp"
+#include "exception.hpp"
 #include "focus_mode.hpp"
 #include "font.hpp"
 #include "frame.hpp"

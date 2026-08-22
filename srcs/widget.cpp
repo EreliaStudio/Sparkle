@@ -8,6 +8,7 @@
 #include "scissor_render_command.hpp"
 #include "viewport_render_command.hpp"
 #include "viewport_uniform_render_command.hpp"
+#include "exception.hpp"
 
 namespace spk
 {
@@ -138,24 +139,39 @@ namespace spk
 	}
 
 	template <typename TEvent>
-	void Widget::_propagate(TEvent &event, void (Widget::*handler)(TEvent &))
+	void Widget::_propagate(TEvent &event, void (Widget::*handler)(TEvent &), std::string_view eventName)
 	{
 		if (!isActive() || event.consumed)
 		{
 			return;
 		}
-		for (Widget *child : children())
+		try
 		{
-			if (child != nullptr)
+			for (Widget *child : children())
 			{
-				child->_propagate(event, handler);
+				if (child != nullptr)
+				{
+					child->_propagate(event, handler, eventName);
+				}
+				if (event.consumed)
+				{
+					return;
+				}
 			}
-			if (event.consumed)
-			{
-				return;
-			}
+			(this->*handler)(event);
 		}
-		(this->*handler)(event);
+		catch (spk::Exception &exception)
+		{
+			exception.addContext(
+				"Exception while dispatching " + std::string(eventName) + " to widget [" + name() + "]");
+			throw;
+		}
+		catch (...)
+		{
+			throw spk::Exception(
+				"Exception while dispatching " + std::string(eventName) + " to widget [" + name() + "]",
+				std::current_exception());
+		}
 	}
 
 	void Widget::setZOrder(ZOrder zOrder)
@@ -205,59 +221,59 @@ namespace spk
 
 	void Widget::dispatch(WindowResizedEvent &event)
 	{
-		_propagate(event, &Widget::_onWindowResizedEvent);
+		_propagate(event, &Widget::_onWindowResizedEvent, "window resized event");
 	}
 	void Widget::dispatch(WindowMovedEvent &event)
 	{
-		_propagate(event, &Widget::_onWindowMovedEvent);
+		_propagate(event, &Widget::_onWindowMovedEvent, "window moved event");
 	}
 	void Widget::dispatch(WindowFocusGainedEvent &event)
 	{
-		_propagate(event, &Widget::_onWindowFocusGainedEvent);
+		_propagate(event, &Widget::_onWindowFocusGainedEvent, "window focus gained event");
 	}
 	void Widget::dispatch(WindowFocusLostEvent &event)
 	{
-		_propagate(event, &Widget::_onWindowFocusLostEvent);
+		_propagate(event, &Widget::_onWindowFocusLostEvent, "window focus lost event");
 	}
 	void Widget::dispatch(MouseEnteredEvent &event)
 	{
-		_propagate(event, &Widget::_onMouseEnteredEvent);
+		_propagate(event, &Widget::_onMouseEnteredEvent, "mouse entered event");
 	}
 	void Widget::dispatch(MouseLeftEvent &event)
 	{
-		_propagate(event, &Widget::_onMouseLeftEvent);
+		_propagate(event, &Widget::_onMouseLeftEvent, "mouse left event");
 	}
 	void Widget::dispatch(MouseMovedEvent &event)
 	{
-		_propagate(event, &Widget::_onMouseMovedEvent);
+		_propagate(event, &Widget::_onMouseMovedEvent, "mouse moved event");
 	}
 	void Widget::dispatch(MouseWheelScrolledEvent &event)
 	{
-		_propagate(event, &Widget::_onMouseWheelScrolledEvent);
+		_propagate(event, &Widget::_onMouseWheelScrolledEvent, "mouse wheel scrolled event");
 	}
 	void Widget::dispatch(MouseButtonPressedEvent &event)
 	{
-		_propagate(event, &Widget::_onMouseButtonPressedEvent);
+		_propagate(event, &Widget::_onMouseButtonPressedEvent, "mouse button pressed event");
 	}
 	void Widget::dispatch(MouseButtonReleasedEvent &event)
 	{
-		_propagate(event, &Widget::_onMouseButtonReleasedEvent);
+		_propagate(event, &Widget::_onMouseButtonReleasedEvent, "mouse button released event");
 	}
 	void Widget::dispatch(MouseButtonDoubleClickedEvent &event)
 	{
-		_propagate(event, &Widget::_onMouseButtonDoubleClickedEvent);
+		_propagate(event, &Widget::_onMouseButtonDoubleClickedEvent, "mouse button double-clicked event");
 	}
 	void Widget::dispatch(KeyPressedEvent &event)
 	{
-		_propagate(event, &Widget::_onKeyPressedEvent);
+		_propagate(event, &Widget::_onKeyPressedEvent, "key pressed event");
 	}
 	void Widget::dispatch(KeyReleasedEvent &event)
 	{
-		_propagate(event, &Widget::_onKeyReleasedEvent);
+		_propagate(event, &Widget::_onKeyReleasedEvent, "key released event");
 	}
 	void Widget::dispatch(TextInputEvent &event)
 	{
-		_propagate(event, &Widget::_onTextInputEvent);
+		_propagate(event, &Widget::_onTextInputEvent, "text input event");
 	}
 
 	void Widget::updateState(UpdateContext &context)
@@ -267,14 +283,28 @@ namespace spk
 			return;
 		}
 
-		_updateState(context);
-
-		for (Widget *child : children())
+		try
 		{
-			if (child != nullptr)
+			_updateState(context);
+
+			for (Widget *child : children())
 			{
-				child->updateState(context);
+				if (child != nullptr)
+				{
+					child->updateState(context);
+				}
 			}
+		}
+		catch (spk::Exception &exception)
+		{
+			exception.addContext("Exception while updating widget [" + name() + "]");
+			throw;
+		}
+		catch (...)
+		{
+			throw spk::Exception(
+				"Exception while updating widget [" + name() + "]",
+				std::current_exception());
 		}
 	}
 
@@ -289,20 +319,34 @@ namespace spk
 
 	void Widget::buildRenderSnapshot(spk::RenderSnapshot::Builder &builder)
 	{
-		if (!isActive())
+		if (!isActive() || viewRegion().scissor.size == Rect2D::Size{0, 0})
 		{
 			return;
 		}
 
-		_buildViewRegionCommands(builder);
-		_buildRenderSnapshot(builder);
-
-		for (Widget *child : children())
+		try
 		{
-			if (child != nullptr)
+			_buildViewRegionCommands(builder);
+			_buildRenderSnapshot(builder);
+
+			for (Widget *child : children())
 			{
-				child->buildRenderSnapshot(builder);
+				if (child != nullptr)
+				{
+					child->buildRenderSnapshot(builder);
+				}
 			}
+		}
+		catch (spk::Exception &exception)
+		{
+			exception.addContext("Exception while building render snapshot of widget [" + name() + "]");
+			throw;
+		}
+		catch (...)
+		{
+			throw spk::Exception(
+				"Exception while building render snapshot of widget [" + name() + "]",
+				std::current_exception());
 		}
 	}
 

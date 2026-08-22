@@ -6,6 +6,7 @@
 #include <variant>
 
 #include "render_context.hpp"
+#include "exception.hpp"
 
 namespace spk
 {
@@ -13,6 +14,7 @@ namespace spk
 		WinAPI::WakeEvent &wakeEvent,
 		spk::ThreadSafeFIFO<RenderRequest>::Consumer renderRequestConsumer,
 		spk::ThreadSafeFIFO<PlatformRequest>::Producer platformRequestProducer) :
+		Runtime("render"),
 		_platformRequestProducer(std::move(platformRequestProducer), wakeEvent),
 		_renderRequestConsumer(std::move(renderRequestConsumer))
 	{
@@ -146,7 +148,21 @@ namespace spk
 		if (snapshot != nullptr && snapshot != entry->lastRenderedSnapshot)
 		{
 			entry->lastRenderedSnapshot = snapshot;
-			_render(surface, *snapshot);
+			try
+			{
+				_render(surface, *snapshot);
+			}
+			catch (spk::Exception &exception)
+			{
+				exception.addContext("Exception while rendering window [" + identifier + "]");
+				throw;
+			}
+			catch (...)
+			{
+				throw spk::Exception(
+					"Exception while rendering window [" + identifier + "]",
+					std::current_exception());
+			}
 			entry->isRequested->store(true, std::memory_order_relaxed);
 		}
 		surface._gpuResources().reclaimReleased();

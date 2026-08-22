@@ -1,6 +1,7 @@
 #pragma once
 
 #include "application.hpp"
+#include "exception.hpp"
 
 #include <Windows.h>
 
@@ -73,6 +74,7 @@ namespace spk
 
 	private:
 		Collection _registeredObjects;
+		std::string_view _name;
 
 	protected:
 		void append(const Identifier &identifier, Pointer object)
@@ -116,24 +118,87 @@ namespace spk
 		}
 
 	public:
+		explicit Runtime(std::string_view name) :
+			_name(name)
+		{
+		}
+
 		virtual ~Runtime() = default;
 
 		void executeOnce()
 		{
-			consumeIncoming();
-			prepareCycle();
+			try
+			{
+				consumeIncoming();
+				prepareCycle();
+			}
+			catch (spk::Exception &exception)
+			{
+				exception.addContext("Exception while preparing " + std::string(_name) + " runtime");
+				throw;
+			}
+			catch (...)
+			{
+				throw spk::Exception(
+					"Exception while preparing " + std::string(_name) + " runtime",
+					std::current_exception());
+			}
 			for (auto &[identifier, object] : _registeredObjects)
 			{
-				tickOnce(identifier, *object);
+				try
+				{
+					tickOnce(identifier, *object);
+				}
+				catch (spk::Exception &exception)
+				{
+					exception.addContext(
+						"Exception in " + std::string(_name) + " runtime for window [" + identifier + "]");
+					throw;
+				}
+				catch (...)
+				{
+					throw spk::Exception(
+						"Exception in " + std::string(_name) + " runtime for window [" + identifier + "]",
+						std::current_exception());
+				}
 			}
-			finishCycle();
+			try
+			{
+				finishCycle();
+			}
+			catch (spk::Exception &exception)
+			{
+				exception.addContext("Exception while finishing " + std::string(_name) + " runtime cycle");
+				throw;
+			}
+			catch (...)
+			{
+				throw spk::Exception(
+					"Exception while finishing " + std::string(_name) + " runtime cycle",
+					std::current_exception());
+			}
 		}
 
 		void shutdown()
 		{
 			for (auto &[identifier, object] : _registeredObjects)
 			{
-				release(*object);
+				try
+				{
+					release(*object);
+				}
+				catch (spk::Exception &exception)
+				{
+					exception.addContext(
+						"Exception while releasing window [" + identifier + "] from " + std::string(_name) + " runtime");
+					throw;
+				}
+				catch (...)
+				{
+					throw spk::Exception(
+						"Exception while releasing window [" + identifier + "] from " + std::string(_name) + " runtime",
+						std::current_exception());
+				}
 			}
 			_registeredObjects.clear();
 		}
@@ -262,7 +327,7 @@ namespace spk
 		void _consumeRequests();
 		void _resetInput(Window::State &state);
 		void _updateState(Window::State &state, UpdateContext &context);
-		[[nodiscard]] spk::RenderSnapshot _buildRenderSnapshot(Window::State &state);
+		[[nodiscard]] spk::RenderSnapshot _buildRenderSnapshot(const Window::Identifier &identifier, Window::State &state);
 		void _publishSnapshot(const Window::Identifier &identifier, spk::RenderSnapshot &&snapshot);
 		bool _consumeSnapshotRequest(const Window::Identifier &identifier);
 

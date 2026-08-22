@@ -41,9 +41,15 @@ namespace spk
 		void execute(RenderContext &renderContext) const;
 
 	private:
-		explicit RenderSnapshot(
-			std::vector<std::unique_ptr<const RenderPass>> passes);
+		struct Pass
+		{
+			RenderPass::Name name;
+			std::unique_ptr<const RenderPass> commands;
+		};
 
-		std::vector<std::unique_ptr<const RenderPass>> _renderPasses;
+		explicit RenderSnapshot(
+			std::vector<Pass> passes);
+
+		std::vector<Pass> _renderPasses;
 	};
 }

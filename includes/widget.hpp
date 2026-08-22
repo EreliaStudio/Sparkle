@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string_view>
 #include <unordered_map>
 
 #include "activable_trait.hpp"
@@ -57,7 +58,7 @@ namespace spk
 		void _onChildRemoved(Widget *child) override final;
 
 		template <typename TEvent>
-		void _propagate(TEvent &event, void (Widget::*handler)(TEvent &));
+		void _propagate(TEvent &event, void (Widget::*handler)(TEvent &), std::string_view eventName);
 
 		void _buildViewRegionCommands(spk::RenderSnapshot::Builder &builder);
 

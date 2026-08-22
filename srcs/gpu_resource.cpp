@@ -8,6 +8,7 @@
 
 #include "gpu_resource_collection.hpp"
 #include "render_context.hpp"
+#include "exception.hpp"
 
 namespace spk
 {
@@ -103,14 +104,28 @@ namespace spk
 			throw std::logic_error("Cannot activate a moved-from GPU resource");
 		}
 
-		auto &entry = context.targetSurface->_gpuResources()._entry(*this, context);
-		if (entry.generation != _generation)
+		try
 		{
-			_synchronize(*entry.instance, context);
-			entry.generation = _generation;
-		}
+			auto &entry = context.targetSurface->_gpuResources()._entry(*this, context);
+			if (entry.generation != _generation)
+			{
+				_synchronize(*entry.instance, context);
+				entry.generation = _generation;
+			}
 
-		_bind(*entry.instance, context);
+			_bind(*entry.instance, context);
+		}
+		catch (spk::Exception &exception)
+		{
+			exception.addContext("Exception while activating GPU resource [" + std::to_string(_identifier) + "]");
+			throw;
+		}
+		catch (...)
+		{
+			throw spk::Exception(
+				"Exception while activating GPU resource [" + std::to_string(_identifier) + "]",
+				std::current_exception());
+		}
 	}
 
 	GPUResource::Identifier GPUResource::identifier() const noexcept

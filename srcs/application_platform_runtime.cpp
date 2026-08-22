@@ -15,6 +15,7 @@ namespace spk
 		spk::ThreadSafeFIFO<EventRecord>::Producer eventRecordProducer,
 		spk::ThreadSafeFIFO<UpdateRequest>::Producer updateRequestProducer,
 		spk::ThreadSafeFIFO<RenderRequest>::Producer renderRequestProducer) :
+		Runtime("platform"),
 		_wakeEvent(wakeEvent),
 		_windowClass(std::string(ClassIdentifier)),
 		_platformRequestConsumer(std::move(platformRequestConsumer)),
