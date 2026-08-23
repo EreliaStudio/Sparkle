@@ -1,23 +1,20 @@
 #include "draw_color_mesh_render_command.hpp"
-#include "program.hpp"
-#include "viewport_uniform_render_command.hpp"
+
 #include <memory>
 #include <utility>
-namespace
-{
-	constexpr auto vertex = R"(#version 460 core
-layout(location=0)in vec2 inPosition;layout(location=1)in float inDepth;layout(location=2)in vec4 inColor;
-layout(std140)uniform ViewportData{mat4 uProjection;};layout(location=0)out vec4 vertexColor;
-void main(){gl_Position=uProjection*vec4(inPosition,inDepth,1.0);vertexColor=inColor;})";
-	constexpr auto fragment = R"(#version 460 core
-layout(location=0)in vec4 vertexColor;layout(location=0)out vec4 outColor;void main(){outColor=vertexColor;})";
-}
+
+#include "program.hpp"
+#include "resource.hpp"
+#include "viewport_uniform_render_command.hpp"
+
 namespace spk
 {
 	Program &DrawColorMeshRenderCommand::_sharedProgram()
 	{
 		static auto p = []() {
-			auto r = std::make_unique<Program>(vertex, fragment);
+			auto r = std::make_unique<Program>(
+				std::string(resources::text("shaders/draw_color_mesh.vert.glsl")),
+				std::string(resources::text("shaders/draw_color_mesh.frag.glsl")));
 			r->bindUniformBlock("ViewportData", ViewportUniformRenderCommand::MatrixUBOBindingPoint);
 			r->validate();
 			return r;
