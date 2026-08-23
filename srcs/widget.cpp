@@ -319,7 +319,9 @@ namespace spk
 
 	void Widget::buildRenderSnapshot(spk::RenderSnapshot::Builder &builder)
 	{
-		if (!isActive() || viewRegion().scissor.size == Rect2D::Size{0, 0})
+		if (!isActive() ||
+			viewRegion().scissor.height == 0 ||
+			viewRegion().scissor.width == 0)
 		{
 			return;
 		}

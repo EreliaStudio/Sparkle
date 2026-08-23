@@ -7,6 +7,7 @@
 #include <utility>
 #include <variant>
 
+
 namespace spk
 {
 	Application::PlatformRuntime::PlatformRuntime(

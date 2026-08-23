@@ -11,25 +11,25 @@ namespace spk
 		const float padding = float(s.outline + 2);
 		return float(s.outline) * 128 / (padding * 255);
 	}
-	TextureMesh2D TextRenderCommand::_mesh(Font::Atlas &a, const Font::Text &text, Vector2Int anchor, HorizontalAlignment h, VerticalAlignment v, float depth)
+	TextureMesh2D TextRenderCommand::_mesh(Font::Atlas &a, const Font::Text &text, const Anchor &anchor, float depth)
 	{
 		a.loadGlyphs(text);
 		const auto size = a.computeStringSize(text);
 		auto baseline = a.computeStringBaselineOffset(text);
-		int left = anchor.x, top = anchor.y;
-		if (h == HorizontalAlignment::Center)
+		int left = anchor.position.x, top = anchor.position.y;
+		if (anchor.horizontalAlignment == HorizontalAlignment::Center)
 		{
 			left -= int(size.x) / 2;
 		}
-		else if (h == HorizontalAlignment::Right)
+		else if (anchor.horizontalAlignment == HorizontalAlignment::Right)
 		{
 			left -= int(size.x);
 		}
-		if (v == VerticalAlignment::Center)
+		if (anchor.verticalAlignment == VerticalAlignment::Center)
 		{
 			top -= int(size.y) / 2;
 		}
-		else if (v == VerticalAlignment::Bottom)
+		else if (anchor.verticalAlignment == VerticalAlignment::Bottom)
 		{
 			top -= int(size.y);
 		}
@@ -49,17 +49,17 @@ namespace spk
 		}
 		return std::move(b).build();
 	}
-	TextRenderCommand::TextRenderCommand(Font *f, Font::Size s, Font::Text text, Vector2Int anchor, Color glyph, Color outline, HorizontalAlignment h, VerticalAlignment v, float depth)
+	TextRenderCommand::TextRenderCommand(Font *f, Font::Size s, Font::Text text, Anchor anchor, Color glyph, Color outline, float depth)
 	{
 		if (!f)
 		{
 			throw std::invalid_argument("TextRenderCommand font cannot be null");
 		}
 		auto &a = f->atlas(s);
-		_command = std::make_unique<DrawFontRenderCommand>(&a, _mesh(a, text, anchor, h, v, depth), glyph, outline, _outlineThickness(s));
+		_command = std::make_unique<DrawFontRenderCommand>(&a, _mesh(a, text, anchor, depth), glyph, outline, _outlineThickness(s));
 	}
-	TextRenderCommand::TextRenderCommand(Font *f, Font::Size s, std::string_view text, Vector2Int anchor, Color glyph, Color outline, HorizontalAlignment h, VerticalAlignment v, float depth) :
-		TextRenderCommand(f, s, Font::textFromUTF8(text), anchor, glyph, outline, h, v, depth)
+	TextRenderCommand::TextRenderCommand(Font *f, Font::Size s, std::string_view text, Anchor anchor, Color glyph, Color outline, float depth) :
+		TextRenderCommand(f, s, Font::textFromUTF8(text), anchor, glyph, outline, depth)
 	{
 	}
 	void TextRenderCommand::execute(RenderContext &c) const
