@@ -15,8 +15,8 @@ find_package(GLEW REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(Stb REQUIRED)
 
-set(SPARKLE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/srcs")
-set(SPARKLE_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/includes")
+set(SPARKLE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
+set(SPARKLE_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
 set(SPARKLE_RESOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/resources")
 
 add_subdirectory(tools/resource_builder)
@@ -98,7 +98,7 @@ install(
 )
 
 install(
-    DIRECTORY includes/
+    DIRECTORY include/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
