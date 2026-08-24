@@ -78,7 +78,7 @@ target_include_directories(sparkle
         ${Stb_INCLUDE_DIR}
 )
 target_link_libraries(sparkle
-    PRIVATE
+    PUBLIC
         GLEW::GLEW
         OpenGL::GL
 )
@@ -87,6 +87,14 @@ set_target_properties(sparkle PROPERTIES
     CXX_EXTENSIONS OFF
     DEBUG_POSTFIX d
 )
+
+if(BUILD_TESTING)
+	add_executable(sparkle_widget_foundation_tests
+		tests/ui/widget_foundation_tests.cpp
+	)
+	target_link_libraries(sparkle_widget_foundation_tests PRIVATE sparkle::sparkle)
+	add_test(NAME sparkle.widget_foundation COMMAND sparkle_widget_foundation_tests)
+endif()
 
 install(
     TARGETS sparkle

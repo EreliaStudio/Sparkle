@@ -12,6 +12,14 @@
 
 namespace spk
 {
+	struct Font::Resource
+	{
+		Data data;
+		stbtt_fontinfo fontInfo{};
+
+		explicit Resource(Data data);
+	};
+
 	namespace
 	{
 		const std::vector<std::pair<int, int>> UnicodeBlocks = {

@@ -12,7 +12,6 @@
 #include <vector>
 
 #include "design_pattern/contract_provider.hpp"
-#include "stb_truetype.h"
 #include "graphics/opengl/texture.hpp"
 #include "math/vector2.hpp"
 
@@ -53,13 +52,7 @@ namespace spk
 		};
 
 	private:
-		struct Resource
-		{
-			Data data;
-			stbtt_fontinfo fontInfo{};
-
-			explicit Resource(Data data);
-		};
+		struct Resource;
 
 	public:
 		class Atlas final : public Texture

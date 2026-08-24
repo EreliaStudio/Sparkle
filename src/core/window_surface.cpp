@@ -1,6 +1,5 @@
-#include "core/window.hpp"
 #include "core/platform/window.hpp"
-
+#include "core/window.hpp"
 
 #include <GL/glew.h>
 #include <Windows.h>
@@ -230,6 +229,17 @@ namespace spk
 		}
 	}
 
+	static void initializeRenderState()
+	{
+		::glEnable(GL_BLEND);
+		::glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
+		::glBlendFuncSeparate(
+			GL_SRC_ALPHA,
+			GL_ONE_MINUS_SRC_ALPHA,
+			GL_ONE,
+			GL_ONE_MINUS_SRC_ALPHA);
+	}
+
 	void Window::Surface::create(const WinAPI::Window &frame)
 	{
 		if (_impl->lifeCycle != LifeCycle::Pending)
@@ -249,6 +259,7 @@ namespace spk
 			makeCurrent();
 
 			initializeGLEW();
+			initializeRenderState();
 
 			_impl->lifeCycle = LifeCycle::Ready;
 		} catch (...)
