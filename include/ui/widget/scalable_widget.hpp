@@ -41,6 +41,7 @@ namespace spk
 		void _endResize(EventBase &event);
 
 	protected:
+		void _setGeometryWithoutConstraints(const Rect2D &geometry);
 		void _onGeometryChange() override;
 		void _onWindowFocusLostEvent(WindowFocusLostEvent &event) override;
 		void _onMouseLeftEvent(MouseLeftEvent &event) override;

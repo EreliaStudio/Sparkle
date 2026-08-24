@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <utility>
@@ -19,7 +20,8 @@ namespace spk
 	ScalableWidget::ScalableWidget(std::string name, Widget *parent) :
 		Widget(std::move(name), parent)
 	{
-		setMaximalSize({1000.0f, 1000.0f});
+		const float unlimitedSize = static_cast<float>(std::numeric_limits<std::size_t>::max());
+		setMaximalSize({unlimitedSize, unlimitedSize});
 		_sizeHintEditionContract = subscribeToSizeHintEdition([this](ResizeableTrait *) {
 			_applyGeometryConstraints();
 		});
@@ -36,7 +38,11 @@ namespace spk
 			return 0;
 		}
 		const float maximum = static_cast<float>(std::numeric_limits<unsigned int>::max());
-		return static_cast<unsigned int>(std::lround(std::min(value, maximum)));
+		if (value >= maximum)
+		{
+			return std::numeric_limits<unsigned int>::max();
+		}
+		return static_cast<unsigned int>(std::round(value));
 	}
 
 	Rect2D ScalableWidget::_constrainedGeometry(const Rect2D &candidate) const noexcept
@@ -167,6 +173,13 @@ namespace spk
 		_hoveredEdges = None;
 		event.releaseFocus(FocusMode::Channel::Mouse, this);
 		event.consumed = true;
+	}
+
+	void ScalableWidget::_setGeometryWithoutConstraints(const Rect2D &geometry)
+	{
+		_applyingConstraints = true;
+		Widget::setGeometry(geometry);
+		_applyingConstraints = false;
 	}
 
 	void ScalableWidget::_onGeometryChange()

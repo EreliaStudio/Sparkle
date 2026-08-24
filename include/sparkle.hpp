@@ -85,6 +85,7 @@
 #include "ui/widget/dynamic_text_label.hpp"
 #include "ui/widget/icon_button.hpp"
 #include "ui/widget/image_label.hpp"
+#include "ui/widget/interface_window.hpp"
 #include "ui/widget/numeric_spin_box.hpp"
 #include "ui/widget/panel.hpp"
 #include "ui/widget/push_button.hpp"
