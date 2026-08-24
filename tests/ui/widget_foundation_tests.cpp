@@ -12,10 +12,13 @@
 #include "type/horizontal_alignment.hpp"
 #include "type/vertical_alignment.hpp"
 #include "ui/widget/animation_label.hpp"
+#include "ui/widget/checkable_icon_button.hpp"
 #include "ui/widget/container_widget.hpp"
 #include "ui/widget/dynamic_text_label.hpp"
+#include "ui/widget/icon_button.hpp"
 #include "ui/widget/image_label.hpp"
 #include "ui/widget/panel.hpp"
+#include "ui/widget/push_button.hpp"
 #include "ui/widget/screen.hpp"
 #include "ui/widget/spacer_widget.hpp"
 #include "ui/widget/text_area.hpp"
@@ -201,6 +204,76 @@ namespace
 		area.setText("averylongwordthatmustnotbesplit");
 		require(area.computePreferredSize(80).x > 80, "TextArea should not split a single over-wide word");
 	}
+
+	void testPushButtonInteraction()
+	{
+		spk::PushButton button("button");
+		button.setGeometry({spk::Vector2Int{10, 20}, spk::Vector2UInt{100, 50}});
+		int clicks = 0;
+		auto clickContract = button.subscribeToClick([&]() {
+			++clicks;
+		});
+
+		spk::Mouse mouse;
+		mouse.position = {30, 40};
+		spk::MouseButtonPressedRecord pressedRecord;
+		pressedRecord.button = spk::Mouse::Button::Left;
+		spk::MouseButtonPressedEvent pressedEvent(pressedRecord, mouse);
+		button.dispatch(pressedEvent);
+		require(pressedEvent.consumed && button.isPressed(), "PushButton should consume a left press inside its viewport");
+		require(!pressedEvent.focusChange(spk::FocusMode::Channel::Keyboard).has_value() && !pressedEvent.focusChange(spk::FocusMode::Channel::Mouse).has_value(), "PushButton should not request focus");
+
+		spk::MouseButtonReleasedRecord releasedRecord;
+		releasedRecord.button = spk::Mouse::Button::Left;
+		spk::MouseButtonReleasedEvent releasedInside(releasedRecord, mouse);
+		button.dispatch(releasedInside);
+		require(releasedInside.consumed && clicks == 1 && !button.isPressed(), "PushButton should click once on release inside after a press");
+
+		spk::MouseButtonPressedEvent secondPress(pressedRecord, mouse);
+		button.dispatch(secondPress);
+		mouse.position = {200, 200};
+		spk::MouseButtonReleasedEvent releasedOutside(releasedRecord, mouse);
+		button.dispatch(releasedOutside);
+		require(!releasedOutside.consumed && clicks == 1 && !button.isPressed(), "PushButton should cancel a release outside");
+
+		button.setFlat(true);
+		require(!button.releasedBackground().isActive() && !button.pressedBackground().isActive(), "A flat PushButton should hide both backgrounds");
+	}
+
+	void testButtonIconsAndCheckableState()
+	{
+		spk::SpriteSheet sprites(resourceBytes("textures/default_iconset.png"), {10, 10});
+		spk::IconButton icon("icon", &sprites, 0);
+		icon.setGeometry({spk::Vector2Int{0, 0}, spk::Vector2UInt{80, 60}});
+		icon.setIconSpriteID(spk::Vector2UInt{2, 0});
+		icon.setIconSize({20, 20});
+		icon.setIconPadding({5, 5});
+		require(icon.iconSpriteID() == 2 && icon.hasIcon(), "IconButton should resolve coordinate sprite IDs and refresh its icon");
+		require(icon.releasedIcon().geometry() == spk::Rect2D{spk::Vector2Int{30, 20}, spk::Vector2UInt{20, 20}}, "PushButton should center a forced icon size");
+		require(icon.minimalSize() == spk::Vector2{30.0f, 30.0f}, "PushButton icon size and padding should contribute to its minimum");
+
+		spk::CheckableIconButton checkable("checkable", &sprites, 0, 8);
+		checkable.setGeometry({spk::Vector2Int{0, 0}, spk::Vector2UInt{50, 50}});
+		require(checkable.uncheckedButton().isActive() && !checkable.checkedButton().isActive(), "CheckableIconButton should initially show only its unchecked child");
+		int stateChanges = 0;
+		auto stateContract = checkable.subscribeToState([&](bool checked) {
+			require(checked, "The first CheckableIconButton transition should enter the checked state");
+			++stateChanges;
+		});
+
+		spk::Mouse mouse;
+		mouse.position = {25, 25};
+		spk::MouseButtonPressedRecord pressedRecord;
+		pressedRecord.button = spk::Mouse::Button::Left;
+		spk::MouseButtonPressedEvent pressedEvent(pressedRecord, mouse);
+		checkable.dispatch(pressedEvent);
+		spk::MouseButtonReleasedRecord releasedRecord;
+		releasedRecord.button = spk::Mouse::Button::Left;
+		spk::MouseButtonReleasedEvent releasedEvent(releasedRecord, mouse);
+		checkable.dispatch(releasedEvent);
+		require(checkable.isChecked() && stateChanges == 1, "Clicking the visible CheckableIconButton child should toggle once");
+		require(!checkable.uncheckedButton().isActive() && checkable.checkedButton().isActive(), "CheckableIconButton should show only its checked child after toggling");
+	}
 }
 
 int main()
@@ -212,4 +285,6 @@ int main()
 	testAnimationLabel();
 	testDynamicTextLabel();
 	testTextAreaMeasurement();
+	testPushButtonInteraction();
+	testButtonIconsAndCheckableState();
 }

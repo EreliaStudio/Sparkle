@@ -20,6 +20,17 @@ namespace spk
 		setSpriteSheet(spriteSheet);
 	}
 
+	void Panel::_updateSizeHint()
+	{
+		const Vector2 intrinsicSize{
+			static_cast<float>(_cornerSize.x * 2),
+			static_cast<float>(_cornerSize.y * 2)};
+		SizeHint hint = sizeHint();
+		hint.minimal = intrinsicSize;
+		hint.preferred = intrinsicSize;
+		setSizeHint(hint);
+	}
+
 	void Panel::_buildRenderSnapshot(RenderSnapshot::Builder &builder)
 	{
 		if (_spriteSheet == nullptr || geometry().width == 0 || geometry().height == 0)
@@ -48,6 +59,7 @@ namespace spk
 		_cornerSize = Vector2Int{
 			static_cast<int>(spriteSheet->size().x / 3),
 			static_cast<int>(spriteSheet->size().y / 3)};
+		_updateSizeHint();
 	}
 
 	void Panel::setCornerSize(const Vector2Int &cornerSize)
@@ -57,6 +69,7 @@ namespace spk
 			throw std::invalid_argument("Panel corner size cannot be negative");
 		}
 		_cornerSize = cornerSize;
+		_updateSizeHint();
 	}
 
 	void Panel::setDepth(float depth)

@@ -14,6 +14,7 @@ namespace spk
 		Vector2Int _cornerSize{0, 0};
 		float _depth = 0.0f;
 
+		void _updateSizeHint() override;
 		void _buildRenderSnapshot(RenderSnapshot::Builder &builder) override;
 
 	public:
