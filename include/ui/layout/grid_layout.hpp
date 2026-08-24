@@ -39,8 +39,8 @@ namespace spk
 		void removeRow(std::size_t row);
 		void removeColumn(std::size_t column);
 
-		Element *setWidget(std::size_t column, std::size_t row, Widget *widget, SizePolicy sizePolicy = SizePolicy::Extend);
-		Element *setLayout(std::size_t column, std::size_t row, Layout *layout, SizePolicy sizePolicy = SizePolicy::Extend);
+		Element *setWidget(std::size_t column, std::size_t row, Widget *widget, SizeSettings sizeSettings = {});
+		Element *setLayout(std::size_t column, std::size_t row, Layout *layout, SizeSettings sizeSettings = {});
 		void clearCell(std::size_t column, std::size_t row);
 
 		[[nodiscard]] Element *element(std::size_t column, std::size_t row) noexcept;
@@ -71,18 +71,18 @@ namespace spk
 		void addEmptyColumn() = delete;
 		void removeColumn(std::size_t) = delete;
 
-		Element *setWidget(std::size_t column, std::size_t row, Widget *widget, SizePolicy sizePolicy = SizePolicy::Extend)
+		Element *setWidget(std::size_t column, std::size_t row, Widget *widget, SizeSettings sizeSettings = {})
 		{
 			_validateColumn(column);
 			_ensureSize(row + 1, NbColumns);
-			return GridLayout::setWidget(column, row, widget, sizePolicy);
+			return GridLayout::setWidget(column, row, widget, sizeSettings);
 		}
 
-		Element *setLayout(std::size_t column, std::size_t row, Layout *layout, SizePolicy sizePolicy = SizePolicy::Extend)
+		Element *setLayout(std::size_t column, std::size_t row, Layout *layout, SizeSettings sizeSettings = {})
 		{
 			_validateColumn(column);
 			_ensureSize(row + 1, NbColumns);
-			return GridLayout::setLayout(column, row, layout, sizePolicy);
+			return GridLayout::setLayout(column, row, layout, sizeSettings);
 		}
 
 	private:
@@ -119,18 +119,18 @@ namespace spk
 		void addEmptyRow() = delete;
 		void removeRow(std::size_t) = delete;
 
-		Element *setWidget(std::size_t column, std::size_t row, Widget *widget, SizePolicy sizePolicy = SizePolicy::Extend)
+		Element *setWidget(std::size_t column, std::size_t row, Widget *widget, SizeSettings sizeSettings = {})
 		{
 			_validateRow(row);
 			_ensureSize(NbRows, column + 1);
-			return GridLayout::setWidget(column, row, widget, sizePolicy);
+			return GridLayout::setWidget(column, row, widget, sizeSettings);
 		}
 
-		Element *setLayout(std::size_t column, std::size_t row, Layout *layout, SizePolicy sizePolicy = SizePolicy::Extend)
+		Element *setLayout(std::size_t column, std::size_t row, Layout *layout, SizeSettings sizeSettings = {})
 		{
 			_validateRow(row);
 			_ensureSize(NbRows, column + 1);
-			return GridLayout::setLayout(column, row, layout, sizePolicy);
+			return GridLayout::setLayout(column, row, layout, sizeSettings);
 		}
 
 	private:
@@ -177,16 +177,16 @@ namespace spk
 		void removeRow(std::size_t) = delete;
 		void removeColumn(std::size_t) = delete;
 
-		Element *setWidget(std::size_t column, std::size_t row, Widget *widget, SizePolicy sizePolicy = SizePolicy::Extend)
+		Element *setWidget(std::size_t column, std::size_t row, Widget *widget, SizeSettings sizeSettings = {})
 		{
 			_validateCell(column, row);
-			return GridLayout::setWidget(column, row, widget, sizePolicy);
+			return GridLayout::setWidget(column, row, widget, sizeSettings);
 		}
 
-		Element *setLayout(std::size_t column, std::size_t row, Layout *layout, SizePolicy sizePolicy = SizePolicy::Extend)
+		Element *setLayout(std::size_t column, std::size_t row, Layout *layout, SizeSettings sizeSettings = {})
 		{
 			_validateCell(column, row);
-			return GridLayout::setLayout(column, row, layout, sizePolicy);
+			return GridLayout::setLayout(column, row, layout, sizeSettings);
 		}
 
 	private:

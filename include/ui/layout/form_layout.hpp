@@ -23,8 +23,8 @@ namespace spk
 		FormElement addRow(
 			Widget *labelWidget,
 			Widget *fieldWidget,
-			SizePolicy labelPolicy = SizePolicy::Fixed,
-			SizePolicy fieldPolicy = SizePolicy::HorizontalExtend);
+			SizeSettings labelSettings = SizePolicy::Fixed,
+			SizeSettings fieldSettings = {SizePolicy::Extend, SizePolicy::Fixed});
 
 		void removeRow(const FormElement &row);
 		[[nodiscard]] std::size_t nbRow() const noexcept;

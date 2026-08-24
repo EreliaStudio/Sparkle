@@ -152,18 +152,18 @@ namespace spk
 			_updateSizeHint();
 		}
 
-		Element *addWidget(Widget *widget, SizePolicy sizePolicy = SizePolicy::Extend)
+		Element *addWidget(Widget *widget, SizeSettings sizeSettings = {})
 		{
-			auto element = _createElement(widget, sizePolicy);
+			auto element = _createElement(widget, sizeSettings);
 			Element *result = element.get();
 			_elements.push_back(std::move(element));
 			updateSizeHint();
 			return result;
 		}
 
-		Element *addLayout(Layout *layout, SizePolicy sizePolicy = SizePolicy::Extend)
+		Element *addLayout(Layout *layout, SizeSettings sizeSettings = {})
 		{
-			auto element = _createElement(layout, sizePolicy);
+			auto element = _createElement(layout, sizeSettings);
 			Element *result = element.get();
 			_elements.push_back(std::move(element));
 			updateSizeHint();

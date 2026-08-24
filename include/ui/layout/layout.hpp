@@ -20,9 +20,23 @@ namespace spk
 		enum class SizePolicy
 		{
 			Fixed,
-			Extend,
-			HorizontalExtend,
-			VerticalExtend
+			Minimum,
+			Extend
+		};
+
+		struct SizeSettings
+		{
+			SizePolicy horizontal = SizePolicy::Extend;
+			SizePolicy vertical = SizePolicy::Extend;
+
+			constexpr SizeSettings() = default;
+			constexpr SizeSettings(SizePolicy policy) : horizontal(policy), vertical(policy) {}
+			constexpr SizeSettings(SizePolicy horizontalPolicy, SizePolicy verticalPolicy) :
+				horizontal(horizontalPolicy), vertical(verticalPolicy)
+			{
+			}
+
+			bool operator==(const SizeSettings &) const = default;
 		};
 
 		class Element
@@ -34,13 +48,13 @@ namespace spk
 			Widget *_widget = nullptr;
 			Layout *_layout = nullptr;
 			ResizeableTrait *_resizeable = nullptr;
-			SizePolicy _sizePolicy = SizePolicy::Extend;
+			SizeSettings _sizeSettings{};
 			HorizontalAlignment _horizontalAlignment = HorizontalAlignment::Left;
 			VerticalAlignment _verticalAlignment = VerticalAlignment::Top;
 			ResizeableTrait::Contract _sizeHintEditionContract;
 
-			Element(Layout &owner, Widget *widget, SizePolicy sizePolicy);
-			Element(Layout &owner, Layout *layout, SizePolicy sizePolicy);
+			Element(Layout &owner, Widget *widget, SizeSettings sizeSettings);
+			Element(Layout &owner, Layout *layout, SizeSettings sizeSettings);
 
 		public:
 			Element(const Element &) = delete;
@@ -59,8 +73,8 @@ namespace spk
 			[[nodiscard]] Vector2 maximalSize() const;
 			[[nodiscard]] Vector2 preferredSize() const;
 
-			void setSizePolicy(SizePolicy sizePolicy);
-			[[nodiscard]] SizePolicy sizePolicy() const noexcept;
+			void setSizeSettings(SizeSettings sizeSettings);
+			[[nodiscard]] const SizeSettings &sizeSettings() const noexcept;
 
 			void setHorizontalAlignment(HorizontalAlignment alignment);
 			[[nodiscard]] HorizontalAlignment horizontalAlignment() const noexcept;
@@ -79,8 +93,8 @@ namespace spk
 		std::vector<std::unique_ptr<Element>> _elements;
 		Vector2UInt _elementPadding{0, 0};
 
-		[[nodiscard]] std::unique_ptr<Element> _createElement(Widget *widget, SizePolicy sizePolicy);
-		[[nodiscard]] std::unique_ptr<Element> _createElement(Layout *layout, SizePolicy sizePolicy);
+		[[nodiscard]] std::unique_ptr<Element> _createElement(Widget *widget, SizeSettings sizeSettings);
+		[[nodiscard]] std::unique_ptr<Element> _createElement(Layout *layout, SizeSettings sizeSettings);
 		void _eraseElement(Element *element);
 
 		[[nodiscard]] static std::vector<float> _resolveAxis(const std::vector<SizeHint> &hints, float availableSize, bool horizontal);

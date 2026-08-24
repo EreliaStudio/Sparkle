@@ -4,15 +4,15 @@
 
 namespace spk
 {
-	FormLayout::FormElement FormLayout::addRow(Widget *labelWidget, Widget *fieldWidget, SizePolicy labelPolicy, SizePolicy fieldPolicy)
+	FormLayout::FormElement FormLayout::addRow(Widget *labelWidget, Widget *fieldWidget, SizeSettings labelSettings, SizeSettings fieldSettings)
 	{
 		if (labelWidget == nullptr || fieldWidget == nullptr)
 		{
 			throw std::invalid_argument("FormLayout cannot hold a null widget");
 		}
 		const std::size_t row = rowCount();
-		Element *label = GridLayoutFixedColumns<2>::setWidget(0, row, labelWidget, labelPolicy);
-		Element *field = GridLayoutFixedColumns<2>::setWidget(1, row, fieldWidget, fieldPolicy);
+		Element *label = GridLayoutFixedColumns<2>::setWidget(0, row, labelWidget, labelSettings);
+		Element *field = GridLayoutFixedColumns<2>::setWidget(1, row, fieldWidget, fieldSettings);
 		label->setHorizontalAlignment(HorizontalAlignment::Right);
 		label->setVerticalAlignment(VerticalAlignment::Center);
 		field->setVerticalAlignment(VerticalAlignment::Center);

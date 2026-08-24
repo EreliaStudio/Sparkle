@@ -97,8 +97,24 @@ namespace
 
 	uint32_t _clampedDimension(uint32_t available, float minimal, float maximal)
 	{
+		if (static_cast<float>(available) < minimal)
+		{
+			return available;
+		}
 		const float value = std::clamp(static_cast<float>(available), minimal, maximal);
 		return _toDimension(value);
+	}
+
+	void _applyPolicy(float &minimal, float &maximal, float &preferred, spk::Layout::SizePolicy policy)
+	{
+		if (policy == spk::Layout::SizePolicy::Fixed)
+		{
+			minimal = maximal = preferred;
+		}
+		else if (policy == spk::Layout::SizePolicy::Minimum)
+		{
+			preferred = maximal = minimal;
+		}
 	}
 
 	int32_t _horizontalOffset(spk::HorizontalAlignment alignment, uint32_t available, uint32_t used)
@@ -140,22 +156,22 @@ namespace
 
 namespace spk
 {
-	Layout::Element::Element(Layout &owner, Widget *widget, SizePolicy sizePolicy) :
+	Layout::Element::Element(Layout &owner, Widget *widget, SizeSettings sizeSettings) :
 		_owner(&owner),
 		_widget(widget),
 		_resizeable(widget),
-		_sizePolicy(sizePolicy),
+		_sizeSettings(sizeSettings),
 		_sizeHintEditionContract(widget->subscribeToSizeHintEdition([this](ResizeableTrait *) {
 			_owner->updateSizeHint();
 		}))
 	{
 	}
 
-	Layout::Element::Element(Layout &owner, Layout *layout, SizePolicy sizePolicy) :
+	Layout::Element::Element(Layout &owner, Layout *layout, SizeSettings sizeSettings) :
 		_owner(&owner),
 		_layout(layout),
 		_resizeable(layout),
-		_sizePolicy(sizePolicy),
+		_sizeSettings(sizeSettings),
 		_sizeHintEditionContract(layout->subscribeToSizeHintEdition([this](ResizeableTrait *) {
 			_owner->updateSizeHint();
 		}))
@@ -185,14 +201,8 @@ namespace spk
 	ResizeableTrait::SizeHint Layout::Element::sizeHint() const
 	{
 		SizeHint result = _resizeable->sizeHint();
-		if (_sizePolicy == SizePolicy::Fixed || _sizePolicy == SizePolicy::VerticalExtend)
-		{
-			result.minimal.x = result.maximal.x = result.preferred.x;
-		}
-		if (_sizePolicy == SizePolicy::Fixed || _sizePolicy == SizePolicy::HorizontalExtend)
-		{
-			result.minimal.y = result.maximal.y = result.preferred.y;
-		}
+		_applyPolicy(result.minimal.x, result.maximal.x, result.preferred.x, _sizeSettings.horizontal);
+		_applyPolicy(result.minimal.y, result.maximal.y, result.preferred.y, _sizeSettings.vertical);
 		return result;
 	}
 
@@ -211,19 +221,19 @@ namespace spk
 		return sizeHint().preferred;
 	}
 
-	void Layout::Element::setSizePolicy(SizePolicy sizePolicy)
+	void Layout::Element::setSizeSettings(SizeSettings sizeSettings)
 	{
-		if (_sizePolicy == sizePolicy)
+		if (_sizeSettings == sizeSettings)
 		{
 			return;
 		}
-		_sizePolicy = sizePolicy;
+		_sizeSettings = sizeSettings;
 		_owner->updateSizeHint();
 	}
 
-	Layout::SizePolicy Layout::Element::sizePolicy() const noexcept
+	const Layout::SizeSettings &Layout::Element::sizeSettings() const noexcept
 	{
-		return _sizePolicy;
+		return _sizeSettings;
 	}
 
 	void Layout::Element::setHorizontalAlignment(HorizontalAlignment alignment)
@@ -264,16 +274,16 @@ namespace spk
 		}
 	}
 
-	std::unique_ptr<Layout::Element> Layout::_createElement(Widget *widget, SizePolicy sizePolicy)
+	std::unique_ptr<Layout::Element> Layout::_createElement(Widget *widget, SizeSettings sizeSettings)
 	{
 		if (widget == nullptr)
 		{
 			throw std::invalid_argument("Layout cannot hold a null widget");
 		}
-		return std::unique_ptr<Element>(new Element(*this, widget, sizePolicy));
+		return std::unique_ptr<Element>(new Element(*this, widget, sizeSettings));
 	}
 
-	std::unique_ptr<Layout::Element> Layout::_createElement(Layout *layout, SizePolicy sizePolicy)
+	std::unique_ptr<Layout::Element> Layout::_createElement(Layout *layout, SizeSettings sizeSettings)
 	{
 		if (layout == nullptr)
 		{
@@ -283,7 +293,7 @@ namespace spk
 		{
 			throw std::invalid_argument("Layout cannot contain itself");
 		}
-		return std::unique_ptr<Element>(new Element(*this, layout, sizePolicy));
+		return std::unique_ptr<Element>(new Element(*this, layout, sizeSettings));
 	}
 
 	void Layout::_eraseElement(Element *element)
@@ -314,6 +324,16 @@ namespace spk
 		if (difference < 0.0f)
 		{
 			_shrink(result, hints, -difference, component);
+			const float resolvedTotal = _sum(result);
+			const float clampedAvailable = std::max(0.0f, availableSize);
+			if (resolvedTotal > clampedAvailable + Epsilon && resolvedTotal > Epsilon)
+			{
+				const float scale = clampedAvailable / resolvedTotal;
+				for (float &size : result)
+				{
+					size *= scale;
+				}
+			}
 		}
 		else
 		{

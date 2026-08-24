@@ -234,20 +234,20 @@ namespace spk
 		updateSizeHint();
 	}
 
-	Layout::Element *GridLayout::setWidget(std::size_t column, std::size_t row, Widget *widget, SizePolicy sizePolicy)
+	Layout::Element *GridLayout::setWidget(std::size_t column, std::size_t row, Widget *widget, SizeSettings sizeSettings)
 	{
 		_ensureSize(row + 1, column + 1);
-		auto element = _createElement(widget, sizePolicy);
+		auto element = _createElement(widget, sizeSettings);
 		Element *result = element.get();
 		_elements[_index(row, column)] = std::move(element);
 		updateSizeHint();
 		return result;
 	}
 
-	Layout::Element *GridLayout::setLayout(std::size_t column, std::size_t row, Layout *layout, SizePolicy sizePolicy)
+	Layout::Element *GridLayout::setLayout(std::size_t column, std::size_t row, Layout *layout, SizeSettings sizeSettings)
 	{
 		_ensureSize(row + 1, column + 1);
-		auto element = _createElement(layout, sizePolicy);
+		auto element = _createElement(layout, sizeSettings);
 		Element *result = element.get();
 		_elements[_index(row, column)] = std::move(element);
 		updateSizeHint();
