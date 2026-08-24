@@ -89,6 +89,7 @@
 #include "ui/widget/panel.hpp"
 #include "ui/widget/push_button.hpp"
 #include "ui/widget/screen.hpp"
+#include "ui/widget/scalable_widget.hpp"
 #include "ui/widget/scroll_area.hpp"
 #include "ui/widget/scroll_bar.hpp"
 #include "ui/widget/slider_bar.hpp"
