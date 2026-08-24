@@ -1,13 +1,24 @@
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
 #include <stdexcept>
 #include <string_view>
 
+#include "core/context/update_context.hpp"
+#include "graphics/resource.hpp"
+#include "input/keyboard.hpp"
+#include "input/mouse.hpp"
 #include "type/horizontal_alignment.hpp"
 #include "type/vertical_alignment.hpp"
+#include "ui/widget/animation_label.hpp"
 #include "ui/widget/container_widget.hpp"
+#include "ui/widget/dynamic_text_label.hpp"
 #include "ui/widget/image_label.hpp"
 #include "ui/widget/panel.hpp"
 #include "ui/widget/screen.hpp"
 #include "ui/widget/spacer_widget.hpp"
+#include "ui/widget/text_area.hpp"
 #include "ui/widget/text_label.hpp"
 
 namespace
@@ -18,6 +29,20 @@ namespace
 		{
 			throw std::runtime_error(std::string(message));
 		}
+	}
+
+	std::span<const std::uint8_t> resourceBytes(std::string_view path)
+	{
+		const spk::resources::Data data = spk::resources::get(path);
+		return {reinterpret_cast<const std::uint8_t *>(data.data()), data.size()};
+	}
+
+	spk::Font loadEmbeddedFont()
+	{
+		const spk::resources::Data data = spk::resources::get("fonts/arial.ttf");
+		spk::Font::Data fontData(data.size());
+		std::memcpy(fontData.data(), data.data(), data.size());
+		return spk::Font::fromRawData(std::move(fontData));
 	}
 
 	template <typename TException, typename TFunction>
@@ -122,6 +147,60 @@ namespace
 		require(text.verticalAlignment() == spk::VerticalAlignment::Bottom, "TextLabel should retain vertical alignment");
 		require(text.minimalSize() == spk::Vector2{0.0f, 0.0f}, "Text without a font should have no intrinsic size");
 	}
+
+	void testAnimationLabel()
+	{
+		using namespace std::chrono_literals;
+
+		spk::SpriteSheet sprites(resourceBytes("textures/default_iconset.png"), {10, 10});
+		spk::AnimationLabel animation("animation", &sprites);
+		spk::Keyboard keyboard;
+		spk::Mouse mouse;
+		spk::UpdateContext update{.time = 125ms, .deltaTime = 125ms, .keyboard = keyboard, .mouse = mouse};
+
+		require(animation.currentFrame() == 0, "AnimationLabel should begin at frame zero");
+		require(animation.rangeEnd() == 99, "AnimationLabel should initially cover the whole sheet");
+		animation.setAnimationRange(2, 3);
+		animation.updateState(update);
+		require(animation.currentFrame() == 3, "AnimationLabel should advance inside its custom range");
+		animation.updateState(update);
+		require(animation.currentFrame() == 2, "AnimationLabel should wrap its custom range");
+		requireThrows<std::invalid_argument>([&]() {
+			animation.setAnimationRange(4, 3);
+		},
+											 "AnimationLabel should reject a reversed range");
+	}
+
+	void testDynamicTextLabel()
+	{
+		int generation = 0;
+		spk::DynamicTextLabel label("dynamic");
+		label.setTextProducer([&]() {
+			return "generation " + std::to_string(++generation);
+		});
+		require(generation == 1 && label.text() == U"generation 1", "DynamicTextLabel should evaluate a producer immediately");
+		label.refresh();
+		require(generation == 2 && label.text() == U"generation 2", "DynamicTextLabel should refresh on request");
+	}
+
+	void testTextAreaMeasurement()
+	{
+		spk::Font font = loadEmbeddedFont();
+		spk::TextArea area("area", &font);
+		area.setTextSize(16);
+		area.setMinimalWidth(80);
+		area.setLinePadding(3);
+		require(area.computePreferredSize(20) == spk::Vector2UInt{80, 0}, "An empty TextArea should retain its minimal width and have zero height");
+
+		area.setText("line");
+		const spk::Vector2UInt oneLine = area.computePreferredSize(80);
+		area.setText("line\n");
+		const spk::Vector2UInt trailingBlankLine = area.computePreferredSize(80);
+		require(trailingBlankLine.y == oneLine.y * 2 + area.linePadding(), "TextArea should preserve a trailing blank line");
+
+		area.setText("averylongwordthatmustnotbesplit");
+		require(area.computePreferredSize(80).x > 80, "TextArea should not split a single over-wide word");
+	}
 }
 
 int main()
@@ -130,4 +209,7 @@ int main()
 	testScreenSelection();
 	testContainerGeometryAndValidation();
 	testValidationAndConfiguration();
+	testAnimationLabel();
+	testDynamicTextLabel();
+	testTextAreaMeasurement();
 }
