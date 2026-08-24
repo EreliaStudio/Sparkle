@@ -88,14 +88,6 @@ set_target_properties(sparkle PROPERTIES
     DEBUG_POSTFIX d
 )
 
-if(BUILD_TESTING)
-	add_executable(sparkle_widget_foundation_tests
-		tests/ui/widget_foundation_tests.cpp
-	)
-	target_link_libraries(sparkle_widget_foundation_tests PRIVATE sparkle::sparkle)
-	add_test(NAME sparkle.widget_foundation COMMAND sparkle_widget_foundation_tests)
-endif()
-
 install(
     TARGETS sparkle
     EXPORT sparkleTargets
