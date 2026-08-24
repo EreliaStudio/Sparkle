@@ -172,6 +172,18 @@ namespace spk
 		}
 	}
 
+	void PushButton::_onMouseButtonDoubleClickedEvent(MouseButtonDoubleClickedEvent &event)
+	{
+		if (event.record.button != Mouse::Button::Left || !viewRegion().viewport.contains(event.device.position))
+		{
+			return;
+		}
+		_hovered = true;
+		_pressed = true;
+		_applyVisualState();
+		event.consumed = true;
+	}
+
 	PushButton::ClickContract PushButton::subscribeToClick(ClickCallback callback)
 	{
 		return _clickProvider.subscribe(std::move(callback));

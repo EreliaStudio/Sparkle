@@ -44,6 +44,7 @@ namespace spk
 		void _onMouseMovedEvent(MouseMovedEvent &event) override;
 		void _onMouseButtonPressedEvent(MouseButtonPressedEvent &event) override;
 		void _onMouseButtonReleasedEvent(MouseButtonReleasedEvent &event) override;
+		void _onMouseButtonDoubleClickedEvent(MouseButtonDoubleClickedEvent &event) override;
 
 	public:
 		explicit PushButton(std::string name, Widget *parent = nullptr);
