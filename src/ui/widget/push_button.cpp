@@ -27,6 +27,18 @@ namespace spk
 		activate();
 	}
 
+	Vector2UInt PushButton::_effectiveTextPadding() const
+	{
+		if (_textPadding.has_value())
+		{
+			return *_textPadding;
+		}
+		const Vector2Int corner = _releasedBackground.cornerSize();
+		return {
+			static_cast<unsigned int>(std::max(corner.x, 0)),
+			static_cast<unsigned int>(std::max(corner.y, 0))};
+	}
+
 	Vector2UInt PushButton::_effectiveIconPadding() const
 	{
 		if (_iconPadding.has_value())
@@ -74,6 +86,18 @@ namespace spk
 		}
 	}
 
+	void PushButton::_updateTextGeometry()
+	{
+		const Vector2UInt padding = _effectiveTextPadding();
+		const unsigned int horizontalPadding = std::min(padding.x, geometry().width / 2);
+		const unsigned int verticalPadding = std::min(padding.y, geometry().height / 2);
+		const Rect2D textGeometry{
+			.anchor = {static_cast<int>(horizontalPadding), static_cast<int>(verticalPadding)},
+			.size = {geometry().width - 2 * horizontalPadding, geometry().height - 2 * verticalPadding}};
+		_releasedLabel.setGeometry(textGeometry);
+		_pressedLabel.setGeometry(textGeometry);
+	}
+
 	void PushButton::_updateIconGeometry()
 	{
 		const Vector2UInt padding = _effectiveIconPadding();
@@ -100,10 +124,12 @@ namespace spk
 
 	void PushButton::_updateSizeHint()
 	{
+		_updateTextGeometry();
 		_updateIconGeometry();
+		const Vector2UInt textPadding = _effectiveTextPadding();
 		Vector2 intrinsic{
-			std::max(_releasedLabel.minimalSize().x, _pressedLabel.minimalSize().x),
-			std::max(_releasedLabel.minimalSize().y, _pressedLabel.minimalSize().y)};
+			std::max(_releasedLabel.minimalSize().x, _pressedLabel.minimalSize().x) + 2.0f * static_cast<float>(textPadding.x),
+			std::max(_releasedLabel.minimalSize().y, _pressedLabel.minimalSize().y) + 2.0f * static_cast<float>(textPadding.y)};
 
 		const Vector2Int corner = _releasedBackground.cornerSize();
 		intrinsic.x = std::max(intrinsic.x, static_cast<float>(std::max(corner.x, 0) * 2));
@@ -128,8 +154,7 @@ namespace spk
 		const Rect2D fill{Vector2Int{0, 0}, geometry().size};
 		_releasedBackground.setGeometry(fill);
 		_pressedBackground.setGeometry(fill);
-		_releasedLabel.setGeometry(fill);
-		_pressedLabel.setGeometry(fill);
+		_updateTextGeometry();
 		_updateIconGeometry();
 	}
 
@@ -199,6 +224,28 @@ namespace spk
 	void PushButton::setText(std::string_view text)
 	{
 		setText(Font::textFromUTF8(text));
+	}
+
+	void PushButton::setTextPadding(const Vector2UInt &padding)
+	{
+		if (_textPadding == padding)
+		{
+			return;
+		}
+		_textPadding = padding;
+		_updateTextGeometry();
+		_updateSizeHint();
+	}
+
+	void PushButton::resetTextPadding()
+	{
+		if (!_textPadding.has_value())
+		{
+			return;
+		}
+		_textPadding.reset();
+		_updateTextGeometry();
+		_updateSizeHint();
 	}
 
 	void PushButton::setAlignment(HorizontalAlignment horizontal, VerticalAlignment vertical)
@@ -293,6 +340,10 @@ namespace spk
 	bool PushButton::isFlat() const noexcept
 	{
 		return _flat;
+	}
+	const std::optional<Vector2UInt> &PushButton::textPadding() const noexcept
+	{
+		return _textPadding;
 	}
 	const std::optional<Vector2UInt> &PushButton::iconSize() const noexcept
 	{

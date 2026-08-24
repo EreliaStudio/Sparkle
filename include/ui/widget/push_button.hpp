@@ -30,13 +30,16 @@ namespace spk
 		bool _pressed = false;
 		bool _hasIcon = false;
 		bool _flat = false;
+		std::optional<Vector2UInt> _textPadding;
 		std::optional<Vector2UInt> _iconSize;
 		std::optional<Vector2UInt> _iconPadding;
 		ClickProvider _clickProvider;
 
+		[[nodiscard]] Vector2UInt _effectiveTextPadding() const;
 		[[nodiscard]] Vector2UInt _effectiveIconPadding() const;
 		[[nodiscard]] Vector2UInt _naturalIconSize() const;
 		void _applyVisualState();
+		void _updateTextGeometry();
 		void _updateIconGeometry();
 		void _updateSizeHint() override;
 		void _onGeometryChange() override;
@@ -53,6 +56,8 @@ namespace spk
 
 		void setText(const Font::Text &text);
 		void setText(std::string_view text);
+		void setTextPadding(const Vector2UInt &padding);
+		void resetTextPadding();
 		void setAlignment(HorizontalAlignment horizontal, VerticalAlignment vertical);
 		void setIcon(const Texture *texture, const Texture::Section &section = Texture::Section::whole);
 		void setIcon(const SpriteSheet *spriteSheet, std::size_t spriteID);
@@ -68,6 +73,7 @@ namespace spk
 		[[nodiscard]] bool isHovered() const noexcept;
 		[[nodiscard]] bool isPressed() const noexcept;
 		[[nodiscard]] bool isFlat() const noexcept;
+		[[nodiscard]] const std::optional<Vector2UInt> &textPadding() const noexcept;
 		[[nodiscard]] const std::optional<Vector2UInt> &iconSize() const noexcept;
 		[[nodiscard]] const std::optional<Vector2UInt> &iconPadding() const noexcept;
 
