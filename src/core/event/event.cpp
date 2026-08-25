@@ -9,7 +9,12 @@ namespace spk
 		auto &change = _focusRecords[static_cast<std::size_t>(channel)];
 		if (change.has_value())
 		{
-			return false;
+			if (type != FocusMode::ChangeType::Take)
+			{
+				return false;
+			}
+			change = FocusMode::Record{.type = type, .widget = widget};
+			return true;
 		}
 		change = FocusMode::Record{.type = type, .widget = widget};
 		return true;

@@ -305,6 +305,27 @@ namespace spk
 		_recomputeVisibleRange();
 	}
 
+	void TextEdit::_onFocusAcquired(FocusMode::Channel channel) noexcept
+	{
+		if (channel != FocusMode::Channel::Keyboard || !_editEnabled)
+		{
+			return;
+		}
+		_focused = true;
+		_resetCaretBlink();
+	}
+
+	void TextEdit::_onFocusReleased(FocusMode::Channel channel) noexcept
+	{
+		if (channel != FocusMode::Channel::Keyboard)
+		{
+			return;
+		}
+		_focused = false;
+		_caretVisible = false;
+		_caretElapsed = {};
+	}
+
 	void TextEdit::_onWindowFocusLostEvent(WindowFocusLostEvent &event)
 	{
 		if (_focused)

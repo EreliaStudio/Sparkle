@@ -67,6 +67,8 @@ namespace spk
 		void _updateState(UpdateContext &context) override;
 		void _buildRenderSnapshot(RenderSnapshot::Builder &builder) override;
 		void _onGeometryChange() override;
+		void _onFocusAcquired(FocusMode::Channel channel) noexcept override;
+		void _onFocusReleased(FocusMode::Channel channel) noexcept override;
 		void _onWindowFocusLostEvent(WindowFocusLostEvent &event) override;
 		void _onMouseLeftEvent(MouseLeftEvent &event) override;
 		void _onMouseMovedEvent(MouseMovedEvent &event) override;

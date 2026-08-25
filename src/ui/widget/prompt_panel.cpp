@@ -30,10 +30,10 @@ namespace spk
 		_commandPanel.setMaximalSize({Unlimited, Unlimited});
 		_layout.setElementPadding(ElementPadding);
 		_textSizeContract = _textArea.subscribeToSizeHintEdition([this](ResizeableTrait *) {
-			_rebuildLayout();
+			_updateSizeHint();
 		});
 		_commandSizeContract = _commandPanel.subscribeToSizeHintEdition([this](ResizeableTrait *) {
-			_rebuildLayout();
+			_updateSizeHint();
 		});
 		_layoutReady = true;
 		_rebuildLayout();
@@ -109,12 +109,17 @@ namespace spk
 
 	void PromptPanel::setMessage(Font::Text message)
 	{
+		const bool wasEmpty = _textArea.text().empty();
 		_textArea.setText(std::move(message));
+		if (wasEmpty != _textArea.text().empty())
+		{
+			_rebuildLayout();
+		}
 	}
 
 	void PromptPanel::setMessage(std::string_view message)
 	{
-		_textArea.setText(message);
+		setMessage(Font::textFromUTF8(message));
 	}
 
 	const Font::Text &PromptPanel::message() const noexcept

@@ -158,6 +158,7 @@ namespace spk
 			{
 				if (dispatching)
 				{
+					registration->active = false;
 					try
 					{
 						mutations.push_back(Mutation{MutationKind::Removal, registration});
@@ -174,6 +175,10 @@ namespace spk
 			{
 				if (dispatching)
 				{
+					for (const std::shared_ptr<Registration> &registration : registrations)
+					{
+						registration->active = false;
+					}
 					try
 					{
 						mutations.push_back(Mutation{MutationKind::Invalidation, nullptr});
@@ -261,7 +266,10 @@ namespace spk
 				const std::vector<std::shared_ptr<Registration>> selected = registrations;
 				for (const std::shared_ptr<Registration> &registration : selected)
 				{
-					std::apply(registration->callback, arguments);
+					if (registration->active)
+					{
+						std::apply(registration->callback, arguments);
+					}
 				}
 			}
 

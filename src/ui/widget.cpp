@@ -364,6 +364,22 @@ namespace spk
 	void Widget::_onGeometryChange()
 	{
 	}
+	void Widget::_onFocusAcquired(FocusMode::Channel) noexcept
+	{
+	}
+	void Widget::_onFocusReleased(FocusMode::Channel) noexcept
+	{
+	}
+
+	void Widget::notifyFocusAcquired(FocusMode::Channel channel) noexcept
+	{
+		_onFocusAcquired(channel);
+	}
+
+	void Widget::notifyFocusReleased(FocusMode::Channel channel) noexcept
+	{
+		_onFocusReleased(channel);
+	}
 	void Widget::_onWindowResizedEvent(WindowResizedEvent &)
 	{
 	}

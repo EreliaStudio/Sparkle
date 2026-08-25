@@ -11,6 +11,7 @@
 #include "math/rect2d.hpp"
 #include "rendering/render_snapshot.hpp"
 #include "design_pattern/trait/resizeable_trait.hpp"
+#include "type/focus_mode.hpp"
 #include "ui/view_region.hpp"
 
 namespace spk
@@ -66,6 +67,8 @@ namespace spk
 		virtual void _buildRenderSnapshot(spk::RenderSnapshot::Builder &builder);
 		virtual void _updateSizeHint();
 		virtual void _onGeometryChange();
+		virtual void _onFocusAcquired(FocusMode::Channel channel) noexcept;
+		virtual void _onFocusReleased(FocusMode::Channel channel) noexcept;
 
 		virtual void _onWindowResizedEvent(WindowResizedEvent &event);
 		virtual void _onWindowMovedEvent(WindowMovedEvent &event);
@@ -112,5 +115,7 @@ namespace spk
 
 		void updateState(UpdateContext &context);
 		void buildRenderSnapshot(spk::RenderSnapshot::Builder &builder);
+		void notifyFocusAcquired(FocusMode::Channel channel) noexcept;
+		void notifyFocusReleased(FocusMode::Channel channel) noexcept;
 	};
 }

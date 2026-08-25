@@ -88,10 +88,21 @@ namespace spk
 
 	void Window::State::takeFocus(FocusMode::Channel channel, Widget *widget) noexcept
 	{
-		if (widget != nullptr)
+		if (widget == nullptr)
 		{
-			_impl->focusedWidgets[static_cast<std::size_t>(channel)] = widget;
+			return;
 		}
+		Widget *&owner = _impl->focusedWidgets[static_cast<std::size_t>(channel)];
+		if (owner == widget)
+		{
+			return;
+		}
+		if (owner != nullptr)
+		{
+			owner->notifyFocusReleased(channel);
+		}
+		owner = widget;
+		owner->notifyFocusAcquired(channel);
 	}
 
 	void Window::State::releaseFocus(FocusMode::Channel channel, Widget *widget) noexcept
@@ -99,13 +110,19 @@ namespace spk
 		Widget *&owner = _impl->focusedWidgets[static_cast<std::size_t>(channel)];
 		if (owner == widget)
 		{
+			owner->notifyFocusReleased(channel);
 			owner = nullptr;
 		}
 	}
 
 	void Window::State::clearFocus(FocusMode::Channel channel) noexcept
 	{
-		_impl->focusedWidgets[static_cast<std::size_t>(channel)] = nullptr;
+		Widget *&owner = _impl->focusedWidgets[static_cast<std::size_t>(channel)];
+		if (owner != nullptr)
+		{
+			owner->notifyFocusReleased(channel);
+			owner = nullptr;
+		}
 	}
 
 	Widget &Window::State::dispatchRoot(FocusMode::Channel channel) noexcept

@@ -87,6 +87,8 @@
 #include "ui/widget/icon_button.hpp"
 #include "ui/widget/image_label.hpp"
 #include "ui/widget/interface_window.hpp"
+#include "ui/widget/menu_bar.hpp"
+#include "ui/widget/message_box.hpp"
 #include "ui/widget/numeric_spin_box.hpp"
 #include "ui/widget/panel.hpp"
 #include "ui/widget/push_button.hpp"
@@ -102,3 +104,4 @@
 #include "ui/widget/text_area.hpp"
 #include "ui/widget/text_edit.hpp"
 #include "ui/widget/text_label.hpp"
+#include "ui/widget/workspace.hpp"
