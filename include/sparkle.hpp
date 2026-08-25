@@ -83,6 +83,7 @@
 #include "ui/widget/checkable_icon_button.hpp"
 #include "ui/widget/command_panel.hpp"
 #include "ui/widget/container_widget.hpp"
+#include "ui/widget/debug_overlay.hpp"
 #include "ui/widget/dynamic_text_label.hpp"
 #include "ui/widget/icon_button.hpp"
 #include "ui/widget/image_label.hpp"

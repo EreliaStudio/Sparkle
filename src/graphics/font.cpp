@@ -196,20 +196,27 @@ namespace spk
 
 	Vector2UInt Font::Atlas::computeStringSize(const Text &string)
 	{
-		int totalWidth = 0;
+		int cursor = 0;
+		int maxWidth = 0;
 		int maxHeight = 0;
 		int minHeight = 0;
+		if (!string.empty())
+		{
+			cursor = glyph(string.front()).baselineOffset.x;
+		}
 
 		for (Codepoint codepoint : string)
 		{
 			const Glyph &glyphData = glyph(codepoint);
-			totalWidth += glyphData.step.x;
+			maxWidth = std::max(maxWidth, cursor + glyphData.positions[3].x);
+			cursor += glyphData.step.x;
+			maxWidth = std::max(maxWidth, cursor);
 			maxHeight = std::max(maxHeight, glyphData.positions[3].y);
 			minHeight = std::min(minHeight, glyphData.positions[0].y);
 		}
 
 		return Vector2UInt(
-			static_cast<unsigned int>(totalWidth),
+			static_cast<unsigned int>(maxWidth),
 			static_cast<unsigned int>(maxHeight - minHeight));
 	}
 
