@@ -6,7 +6,7 @@
 
 #include "core/context/update_context.hpp"
 #include "core/platform/clipboard.hpp"
-#include "graphics/mesh/color_mesh_2d.hpp"
+#include "geometry/color_mesh_2d.hpp"
 #include "rendering/command/draw_color_mesh_render_command.hpp"
 #include "rendering/command/nine_slice_render_command.hpp"
 #include "rendering/command/text_render_command.hpp"

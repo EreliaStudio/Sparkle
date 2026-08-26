@@ -1,6 +1,6 @@
 #pragma once
 
-#include "graphics/mesh/color_mesh_2d.hpp"
+#include "geometry/color_mesh_2d.hpp"
 #include "rendering/render_command.hpp"
 
 namespace spk

@@ -2,7 +2,7 @@
 
 #include <cstddef>
 
-#include "graphics/mesh/texture_mesh_2d.hpp"
+#include "geometry/texture_mesh_2d.hpp"
 #include "graphics/opengl/sampler.hpp"
 #include "rendering/render_command.hpp"
 

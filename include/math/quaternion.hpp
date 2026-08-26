@@ -35,9 +35,45 @@ namespace spk
 		{
 		}
 
+		[[nodiscard]] constexpr bool operator==(const Quaternion&) const noexcept = default;
+
 		[[nodiscard]] static constexpr Quaternion identity() noexcept
 		{
 			return {};
+		}
+
+		[[nodiscard]] constexpr Quaternion operator*(const Quaternion& other) const noexcept
+		{
+			return {
+				w * other.x + x * other.w + y * other.z - z * other.y,
+				w * other.y - x * other.z + y * other.w + z * other.x,
+				w * other.z + x * other.y - y * other.x + z * other.w,
+				w * other.w - x * other.x - y * other.y - z * other.z
+			};
+		}
+
+		[[nodiscard]] constexpr Quaternion conjugated() const noexcept
+		{
+			return {-x, -y, -z, w};
+		}
+
+		[[nodiscard]] Quaternion inversed() const
+		{
+			const float squaredNorm = dot(*this);
+
+			if (squaredNorm == 0.0f)
+			{
+				throw std::runtime_error("Can't inverse a null quaternion");
+			}
+
+			const Quaternion conjugate = conjugated();
+
+			return {
+				conjugate.x / squaredNorm,
+				conjugate.y / squaredNorm,
+				conjugate.z / squaredNorm,
+				conjugate.w / squaredNorm
+			};
 		}
 
 		[[nodiscard]] static Quaternion fromAxisAngle(const Vector3 &axis, float angle);
