@@ -54,8 +54,19 @@ namespace spk
 			return;
 		}
 		Widget &rootWidget = root();
-		const Vector2UInt preferred = _textArea.computePreferredSize(_maximumWidth);
-		Vector2UInt size{std::min(preferred.x, rootWidget.geometry().width), std::min(preferred.y, rootWidget.geometry().height)};
+		const Vector2Int cornerSize = _background.cornerSize();
+		const Vector2UInt requestedPadding{
+			static_cast<unsigned int>(std::max(cornerSize.x, 0)),
+			static_cast<unsigned int>(std::max(cornerSize.y, 0))};
+		const unsigned int availableWidth = std::min(_maximumWidth, rootWidget.geometry().width);
+		const Vector2UInt measurementPadding{
+			std::min(requestedPadding.x, availableWidth / 2),
+			std::min(requestedPadding.y, rootWidget.geometry().height / 2)};
+		const unsigned int textWidth = availableWidth - 2 * measurementPadding.x;
+		const Vector2UInt preferred = _textArea.computePreferredSize(textWidth);
+		Vector2UInt size{
+			std::min(preferred.x + 2 * measurementPadding.x, rootWidget.geometry().width),
+			std::min(preferred.y + 2 * measurementPadding.y, rootWidget.geometry().height)};
 		const Rect2D targetRect = _target->viewRegion().viewport;
 		const Vector2Int origin = rootWidget.viewRegion().viewport.anchor;
 		Placement resolved = _placement;
@@ -82,7 +93,10 @@ namespace spk
 		position.y = std::clamp(position.y, 0, static_cast<int>(rootWidget.geometry().height - size.y));
 		setGeometry(Rect2D{position, size});
 		_background.setGeometry(Rect2D{Vector2Int{0, 0}, size});
-		_textArea.setGeometry(Rect2D{Vector2Int{0, 0}, size});
+		const Vector2UInt renderedPadding{
+			std::min(requestedPadding.x, size.x / 2),
+			std::min(requestedPadding.y, size.y / 2)};
+		_textArea.setGeometry(Rect2D{Vector2Int{static_cast<int>(renderedPadding.x), static_cast<int>(renderedPadding.y)}, Vector2UInt{size.x - 2 * renderedPadding.x, size.y - 2 * renderedPadding.y}});
 	}
 	void Tooltip::_updateState(UpdateContext &context)
 	{

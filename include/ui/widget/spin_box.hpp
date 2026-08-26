@@ -85,9 +85,9 @@ namespace spk
 			_valueEdit(this->name() + ".value", this),
 			_upButton(this->name() + ".up", this)
 		{
-			applyStyle(defaultStyle);
 			_downButton.setText("-");
 			_upButton.setText("+");
+			applyStyle(defaultStyle);
 			_valueEdit.setPlaceholder("...");
 			_valueEdit.disableEdit();
 			_downClickContract = _downButton.subscribeToClick([this]() {
@@ -106,6 +106,10 @@ namespace spk
 			_downButton.applyStyle(style);
 			_valueEdit.applyStyle(style);
 			_upButton.applyStyle(style);
+			if (style.iconset != nullptr)
+			{
+				setIconset(style.iconset.get());
+			}
 			_updateSizeHint();
 		}
 

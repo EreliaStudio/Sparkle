@@ -177,9 +177,9 @@ namespace spk
 			_lowerButton(this->name() + ".lower", this),
 			_raiseButton(this->name() + ".raise", this)
 		{
-			applyStyle(defaultStyle);
 			_lowerButton.setText("-");
 			_raiseButton.setText("+");
+			applyStyle(defaultStyle);
 			_valueEdit.setPlaceholder("...");
 			_valueEdit.setValidationCallback([](const Font::Text &text) {
 				return _validation(text);
@@ -203,6 +203,10 @@ namespace spk
 			_valueEdit.applyStyle(style);
 			_lowerButton.applyStyle(style);
 			_raiseButton.applyStyle(style);
+			if (style.iconset != nullptr)
+			{
+				setIconset(style.iconset.get());
+			}
 			_updateSizeHint();
 		}
 
