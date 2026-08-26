@@ -29,8 +29,8 @@ namespace spk
 		{
 			_body.setSpriteSheet(style.sliderBody.get());
 		}
-		_background.setCornerSize({5, 5});
-		_body.setCornerSize({8, 8});
+		_background.setCornerSize(style.sliderBarBackgroundCornerSize);
+		_body.setCornerSize(style.sliderBarBodyCornerSize);
 		_updateSizeHint();
 		_onGeometryChange();
 	}

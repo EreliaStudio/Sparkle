@@ -28,17 +28,6 @@ namespace spk
 		_closeButton(this->name() + ".close", this)
 	{
 		applyStyle(defaultStyle);
-		_title.setTextSize(18);
-		_title.setGlyphColor({0.94f, 0.96f, 1.0f, 1.0f});
-		_title.setOutlineColor({0.03f, 0.04f, 0.08f, 1.0f});
-		_title.setAlignment({Alignment::Horizontal::Left, Alignment::Vertical::Center});
-		for (IconButton *button : {&_minimizeButton, &_maximizeButton, &_closeButton})
-		{
-			button->setIconSize({12, 12});
-			button->setIconPadding({4, 4});
-			button->releasedBackground().setCornerSize({2, 2});
-			button->pressedBackground().setCornerSize({2, 2});
-		}
 		_closeButton.setIconSpriteID(0);
 		_maximizeButton.setIconSpriteID(1);
 		_minimizeButton.setIconSpriteID(3);
@@ -53,6 +42,19 @@ namespace spk
 		_minimizeButton.applyStyle(style);
 		_maximizeButton.applyStyle(style);
 		_closeButton.applyStyle(style);
+		_title.setTextSize(style.interfaceWindowMenuTitleTextSize);
+		_title.setGlyphColor(style.interfaceWindowMenuTitleGlyphColor);
+		_title.setOutlineColor(style.interfaceWindowMenuTitleOutlineColor);
+		_title.setAlignment(style.interfaceWindowMenuTitleAlignment);
+		for (IconButton *button : {&_minimizeButton, &_maximizeButton, &_closeButton})
+		{
+			button->setIconSize(style.interfaceWindowMenuButtonIconSize);
+			button->setIconPadding(style.interfaceWindowMenuButtonIconPadding);
+			button->releasedBackground().setCornerSize(style.interfaceWindowMenuButtonCornerSize);
+			button->pressedBackground().setCornerSize(style.interfaceWindowMenuButtonCornerSize);
+		}
+		_updateSizeHint();
+		_onGeometryChange();
 	}
 
 	IconButton &IInterfaceWindow::MenuBar::_button(Button button)
@@ -227,8 +229,8 @@ namespace spk
 		{
 			_minimizedBackground.setSpriteSheet(style.darkerNineSlice.get());
 		}
-		_normalBackground.setCornerSize({12, 12});
-		_minimizedBackground.setCornerSize({12, 12});
+		_normalBackground.setCornerSize(style.interfaceWindowBackgroundCornerSize);
+		_minimizedBackground.setCornerSize(style.interfaceWindowBackgroundCornerSize);
 		_menuBar.applyStyle(style);
 	}
 

@@ -110,7 +110,11 @@ namespace spk
 		{
 			setSpriteSheet(style.darkNineSlice.get());
 		}
-		setCornerSize({7, 7});
+		setCornerSize(style.textEditCornerSize);
+		setTextSize(style.textEditTextSize);
+		setGlyphColor(style.textEditGlyphColor);
+		setOutlineColor(style.textEditOutlineColor);
+		setCursorColor(style.textEditCursorColor);
 	}
 
 	Vector2UInt TextEdit::_innerSize() const noexcept

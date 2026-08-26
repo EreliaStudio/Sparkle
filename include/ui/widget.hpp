@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <memory>
 #include <optional>
 #include <string_view>
@@ -11,15 +12,17 @@
 #include "design_pattern/trait/inherence_trait.hpp"
 #include "design_pattern/trait/name_trait.hpp"
 #include "design_pattern/trait/resizeable_trait.hpp"
+#include "graphics/color.hpp"
+#include "graphics/font.hpp"
 #include "math/rect2d.hpp"
 #include "rendering/render_snapshot.hpp"
+#include "type/alignment.hpp"
 #include "type/focus_mode.hpp"
 #include "ui/view_region.hpp"
 
 namespace spk
 {
 	struct UpdateContext;
-	class Font;
 	class Image;
 	class SpriteSheet;
 	class Widget;
@@ -37,6 +40,39 @@ namespace spk
 	public:
 		struct Style
 		{
+			Font::Size textLabelTextSize{16};
+			Color textLabelGlyphColor{0.94f, 0.96f, 1.0f, 1.0f};
+			Color textLabelOutlineColor{0.03f, 0.04f, 0.08f, 1.0f};
+
+			Vector2Int pushButtonCornerSize{8, 8};
+			Font::Size pushButtonTextSize{16};
+			Color pushButtonReleasedGlyphColor{0.88f, 0.92f, 1.0f, 1.0f};
+			Color pushButtonPressedGlyphColor{1.0f, 1.0f, 1.0f, 1.0f};
+			Alignment pushButtonAlignment{Alignment::Horizontal::Center, Alignment::Vertical::Center};
+
+			Vector2UInt iconButtonIconSize{22, 22};
+			Vector2UInt iconButtonIconPadding{6, 6};
+
+			Vector2Int textEditCornerSize{7, 7};
+			Font::Size textEditTextSize{17};
+			Color textEditGlyphColor{0.92f, 0.95f, 1.0f, 1.0f};
+			Color textEditOutlineColor{0.03f, 0.04f, 0.08f, 1.0f};
+			Color textEditCursorColor{1.0f, 1.0f, 1.0f, 1.0f};
+
+			Vector2Int sliderBarBackgroundCornerSize{5, 5};
+			Vector2Int sliderBarBodyCornerSize{8, 8};
+
+			Vector2UInt scrollBarButtonIconSize{16, 16};
+
+			Vector2Int interfaceWindowBackgroundCornerSize{12, 12};
+			Font::Size interfaceWindowMenuTitleTextSize{18};
+			Color interfaceWindowMenuTitleGlyphColor{0.94f, 0.96f, 1.0f, 1.0f};
+			Color interfaceWindowMenuTitleOutlineColor{0.03f, 0.04f, 0.08f, 1.0f};
+			Alignment interfaceWindowMenuTitleAlignment{Alignment::Horizontal::Left, Alignment::Vertical::Center};
+			Vector2UInt interfaceWindowMenuButtonIconSize{12, 12};
+			Vector2UInt interfaceWindowMenuButtonIconPadding{4, 4};
+			Vector2Int interfaceWindowMenuButtonCornerSize{2, 2};
+
 			std::unique_ptr<Font> font;
 			std::unique_ptr<Image> iconsetImage;
 			std::unique_ptr<SpriteSheet> iconset;

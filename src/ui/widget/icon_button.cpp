@@ -9,8 +9,6 @@ namespace spk
 		PushButton(std::move(name), parent)
 	{
 		applyStyle(defaultStyle);
-		setIconSize({22, 22});
-		setIconPadding({6, 6});
 	}
 
 	IconButton::IconButton(std::string name, const SpriteSheet *iconset, std::size_t spriteID, Widget *parent) :
@@ -27,6 +25,8 @@ namespace spk
 		{
 			setIconset(style.iconset.get());
 		}
+		setIconSize(style.iconButtonIconSize);
+		setIconPadding(style.iconButtonIconPadding);
 	}
 
 	void IconButton::_refreshIcon()

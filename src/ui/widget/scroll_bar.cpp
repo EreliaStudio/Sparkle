@@ -44,6 +44,8 @@ namespace spk
 		{
 			setIconset(style.iconset.get());
 		}
+		_negativeButton.setIconSize(style.scrollBarButtonIconSize);
+		_positiveButton.setIconSize(style.scrollBarButtonIconSize);
 		_updateSizeHint();
 	}
 

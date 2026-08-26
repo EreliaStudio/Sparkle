@@ -24,6 +24,9 @@ namespace spk
 		{
 			setFont(style.font.get());
 		}
+		setTextSize(style.textLabelTextSize);
+		setGlyphColor(style.textLabelGlyphColor);
+		setOutlineColor(style.textLabelOutlineColor);
 	}
 
 	void TextLabel::_updateSizeHint()

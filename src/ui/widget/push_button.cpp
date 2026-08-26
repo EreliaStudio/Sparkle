@@ -38,14 +38,15 @@ namespace spk
 		{
 			_pressedBackground.setSpriteSheet(style.darkerNineSlice.get());
 		}
-		_releasedBackground.setCornerSize({8, 8});
-		_pressedBackground.setCornerSize({8, 8});
+		_releasedBackground.setCornerSize(style.pushButtonCornerSize);
+		_pressedBackground.setCornerSize(style.pushButtonCornerSize);
 		_releasedLabel.applyStyle(style);
 		_pressedLabel.applyStyle(style);
-		_releasedLabel.setTextSize(16);
-		_releasedLabel.setGlyphColor({0.88f, 0.92f, 1.0f, 1.0f});
-		_pressedLabel.setTextSize(16);
-		_pressedLabel.setGlyphColor({1.0f, 1.0f, 1.0f, 1.0f});
+		_releasedLabel.setTextSize(style.pushButtonTextSize);
+		_releasedLabel.setGlyphColor(style.pushButtonReleasedGlyphColor);
+		_pressedLabel.setTextSize(style.pushButtonTextSize);
+		_pressedLabel.setGlyphColor(style.pushButtonPressedGlyphColor);
+		setAlignment(style.pushButtonAlignment);
 		_updateSizeHint();
 		_onGeometryChange();
 	}
