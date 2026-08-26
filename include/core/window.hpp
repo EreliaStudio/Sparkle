@@ -4,8 +4,8 @@
 #include <string>
 
 #include "graphics/color.hpp"
-#include "type/focus_mode.hpp"
 #include "math/rect2d.hpp"
+#include "type/focus_mode.hpp"
 
 #include "graphics/opengl/gpu_resource.hpp"
 #include "graphics/opengl/gpu_resource_collection.hpp"

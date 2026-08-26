@@ -27,8 +27,11 @@ namespace spk
 		_maximizeButton(this->name() + ".maximize", this),
 		_closeButton(this->name() + ".close", this)
 	{
-		_title.setHorizontalAlignment(HorizontalAlignment::Left);
-		_title.setVerticalAlignment(VerticalAlignment::Center);
+		applyStyle(defaultStyle);
+		_title.setTextSize(18);
+		_title.setGlyphColor({0.94f, 0.96f, 1.0f, 1.0f});
+		_title.setOutlineColor({0.03f, 0.04f, 0.08f, 1.0f});
+		_title.setAlignment({Alignment::Horizontal::Left, Alignment::Vertical::Center});
 		for (IconButton *button : {&_minimizeButton, &_maximizeButton, &_closeButton})
 		{
 			button->setIconSize({12, 12});
@@ -42,6 +45,14 @@ namespace spk
 		_layoutReady = true;
 		_updateSizeHint();
 		activate();
+	}
+
+	void IInterfaceWindow::MenuBar::applyStyle(const Style &style)
+	{
+		_title.applyStyle(style);
+		_minimizeButton.applyStyle(style);
+		_maximizeButton.applyStyle(style);
+		_closeButton.applyStyle(style);
 	}
 
 	IconButton &IInterfaceWindow::MenuBar::_button(Button button)
@@ -189,6 +200,7 @@ namespace spk
 		_minimizedBackground(this->name() + ".minimized-background", this),
 		_menuBar(this->name() + ".menu", this)
 	{
+		applyStyle(defaultStyle);
 		_normalBackground.setZOrder(0.0f);
 		_minimizedBackground.setZOrder(0.0f);
 		_menuBar.setZOrder(1.0f);
@@ -203,6 +215,21 @@ namespace spk
 		_updateSizeHint();
 		_onGeometryChange();
 		activate();
+	}
+
+	void IInterfaceWindow::applyStyle(const Style &style)
+	{
+		if (style.darkNineSlice != nullptr)
+		{
+			_normalBackground.setSpriteSheet(style.darkNineSlice.get());
+		}
+		if (style.darkerNineSlice != nullptr)
+		{
+			_minimizedBackground.setSpriteSheet(style.darkerNineSlice.get());
+		}
+		_normalBackground.setCornerSize({12, 12});
+		_minimizedBackground.setCornerSize({12, 12});
+		_menuBar.applyStyle(style);
 	}
 
 	IInterfaceWindow::Padding IInterfaceWindow::_effectivePadding() const noexcept

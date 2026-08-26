@@ -52,6 +52,7 @@ namespace spk
 
 	public:
 		explicit SliderBar(std::string name, Widget *parent = nullptr);
+		void applyStyle(const Style &style) override;
 
 		[[nodiscard]] EditionContract subscribeToEdition(EditionCallback callback);
 

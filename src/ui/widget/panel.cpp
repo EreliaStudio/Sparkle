@@ -11,6 +11,7 @@ namespace spk
 	Panel::Panel(std::string name, Widget *parent) :
 		Widget(std::move(name), parent)
 	{
+		applyStyle(defaultStyle);
 		activate();
 	}
 
@@ -18,6 +19,14 @@ namespace spk
 		Panel(std::move(name), parent)
 	{
 		setSpriteSheet(spriteSheet);
+	}
+
+	void Panel::applyStyle(const Style &style)
+	{
+		if (style.nineSlice != nullptr)
+		{
+			setSpriteSheet(style.nineSlice.get());
+		}
 	}
 
 	void Panel::_updateSizeHint()
@@ -41,7 +50,7 @@ namespace spk
 		const Vector2UInt renderedCornerSize{
 			std::min(static_cast<unsigned int>(_cornerSize.x), geometry().width / 2),
 			std::min(static_cast<unsigned int>(_cornerSize.y), geometry().height / 2)};
-		builder.renderPass(Widget::OverlayKey).emplace<NineSliceRenderCommand>(_spriteSheet, Rect2D{Vector2Int{0, 0}, geometry().size}, renderedCornerSize, _depth);
+		builder.renderPass(targetRenderPass()).emplace<NineSliceRenderCommand>(_spriteSheet, Rect2D{Vector2Int{0, 0}, geometry().size}, renderedCornerSize, _depth);
 	}
 
 	void Panel::setSpriteSheet(const SpriteSheet *spriteSheet)
@@ -56,9 +65,12 @@ namespace spk
 		}
 
 		_spriteSheet = spriteSheet;
-		_cornerSize = Vector2Int{
-			static_cast<int>(spriteSheet->size().x / 3),
-			static_cast<int>(spriteSheet->size().y / 3)};
+		if (!_hasExplicitCornerSize)
+		{
+			_cornerSize = Vector2Int{
+				static_cast<int>(spriteSheet->size().x / 3),
+				static_cast<int>(spriteSheet->size().y / 3)};
+		}
 		_updateSizeHint();
 	}
 
@@ -69,6 +81,7 @@ namespace spk
 			throw std::invalid_argument("Panel corner size cannot be negative");
 		}
 		_cornerSize = cornerSize;
+		_hasExplicitCornerSize = true;
 		_updateSizeHint();
 	}
 

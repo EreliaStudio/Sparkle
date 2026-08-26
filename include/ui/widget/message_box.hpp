@@ -11,7 +11,7 @@
 // WinUser.h exposes MessageBox as a MessageBoxA/MessageBoxW selection macro.
 // It must not rewrite the public spk::MessageBox C++ type name.
 #ifdef MessageBox
-	#undef MessageBox
+#	undef MessageBox
 #endif
 
 namespace spk
@@ -22,7 +22,10 @@ namespace spk
 		class Content final : public PromptPanel
 		{
 		public:
-			explicit Content(std::string name, Widget *parent = nullptr) : PromptPanel(std::move(name), parent) {}
+			explicit Content(std::string name, Widget *parent = nullptr) :
+				PromptPanel(std::move(name), parent)
+			{
+			}
 		};
 
 	private:

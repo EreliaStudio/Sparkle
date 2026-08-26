@@ -1,7 +1,7 @@
 #include "rendering/render_pass.hpp"
 
-#include "rendering/render_command.hpp"
 #include "exception.hpp"
+#include "rendering/render_command.hpp"
 
 #include <utility>
 
@@ -24,13 +24,11 @@ namespace spk
 			try
 			{
 				_commands[index]->execute(renderContext);
-			}
-			catch (spk::Exception &exception)
+			} catch (spk::Exception &exception)
 			{
 				exception.addContext("Exception while executing render command [" + std::to_string(index) + "]");
 				throw;
-			}
-			catch (...)
+			} catch (...)
 			{
 				throw spk::Exception(
 					"Exception while executing render command [" + std::to_string(index) + "]",

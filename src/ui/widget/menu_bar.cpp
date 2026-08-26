@@ -31,7 +31,7 @@ namespace spk
 	{
 		setText(label);
 		setFlat(true);
-		setAlignment(HorizontalAlignment::Left, VerticalAlignment::Center);
+		setAlignment({Alignment::Horizontal::Left, Alignment::Vertical::Center});
 		_actionContract = subscribeToClick([this, callback = std::move(callback)]() {
 			if (callback)
 			{
@@ -46,6 +46,21 @@ namespace spk
 	{
 		setSpriteSheet(spriteSheet);
 		activate();
+	}
+
+	MenuBar::Menu::Break::Break(std::string name, Widget *parent) :
+		Widget(std::move(name), parent)
+	{
+		applyStyle(defaultStyle);
+		activate();
+	}
+
+	void MenuBar::Menu::Break::applyStyle(const Style &style)
+	{
+		if (style.menuBreak != nullptr)
+		{
+			setSpriteSheet(style.menuBreak.get());
+		}
 	}
 
 	void MenuBar::Menu::Break::_updateSizeHint()
@@ -64,7 +79,7 @@ namespace spk
 			return;
 		}
 		const unsigned int edge = std::min(_spriteSheet->size().x / 3, geometry().width / 2);
-		auto &pass = builder.renderPass(Widget::OverlayKey);
+		auto &pass = builder.renderPass(targetRenderPass());
 		pass.emplace<SpriteRenderCommand>(
 			_spriteSheet,
 			Vector2UInt{0, 0},
@@ -115,19 +130,42 @@ namespace spk
 		_depth = depth;
 	}
 
-	const SpriteSheet *MenuBar::Menu::Break::spriteSheet() const noexcept { return _spriteSheet; }
-	unsigned int MenuBar::Menu::Break::height() const noexcept { return _height; }
-	float MenuBar::Menu::Break::depth() const noexcept { return _depth; }
+	const SpriteSheet *MenuBar::Menu::Break::spriteSheet() const noexcept
+	{
+		return _spriteSheet;
+	}
+	unsigned int MenuBar::Menu::Break::height() const noexcept
+	{
+		return _height;
+	}
+	float MenuBar::Menu::Break::depth() const noexcept
+	{
+		return _depth;
+	}
 
 	MenuBar::Menu::Menu(std::string name, Widget *parent) :
 		Widget(std::move(name), parent),
 		_background(this->name() + ".background", this)
 	{
+		applyStyle(defaultStyle);
 		_background.setZOrder(0.0f);
 		setMaximalSize({Unlimited, Unlimited});
 		_layoutReady = true;
 		_updateSizeHint();
 		deactivate();
+	}
+
+	void MenuBar::Menu::applyStyle(const Style &style)
+	{
+		if (style.darkNineSlice != nullptr)
+		{
+			_background.setSpriteSheet(style.darkNineSlice.get());
+		}
+		_background.setCornerSize({10, 10});
+		for (const auto &element : _elements)
+		{
+			element->applyStyle(style);
+		}
 	}
 
 	void MenuBar::Menu::_updateSizeHint()
@@ -175,9 +213,7 @@ namespace spk
 		for (const auto &element : _elements)
 		{
 			const unsigned int height = dimension(element->minimalSize().y);
-			element->setGeometry(Rect2D{
-				Vector2Int{static_cast<int>(horizontalMargin), y},
-				Vector2UInt{width, height}});
+			element->setGeometry(Rect2D{Vector2Int{static_cast<int>(horizontalMargin), y}, Vector2UInt{width, height}});
 			y += static_cast<int>(height + _elementSpacing);
 		}
 	}
@@ -210,6 +246,16 @@ namespace spk
 		return result;
 	}
 
+	MenuBar::Menu::Break &MenuBar::Menu::addBreak(std::string name)
+	{
+		auto separator = std::make_unique<Break>(this->name() + ".break-" + name, this);
+		separator->setZOrder(1.0f);
+		Break &result = *separator;
+		_elements.push_back(std::move(separator));
+		_updateSizeHint();
+		return result;
+	}
+
 	void MenuBar::Menu::clear()
 	{
 		_elements.clear();
@@ -217,26 +263,56 @@ namespace spk
 		_updateSizeHint();
 	}
 
-	std::size_t MenuBar::Menu::nbElement() const noexcept { return _elements.size(); }
+	std::size_t MenuBar::Menu::nbElement() const noexcept
+	{
+		return _elements.size();
+	}
 	void MenuBar::Menu::setElementSpacing(unsigned int spacing)
 	{
-		if (_elementSpacing == spacing) return;
+		if (_elementSpacing == spacing)
+		{
+			return;
+		}
 		_elementSpacing = spacing;
 		_updateSizeHint();
 	}
-	unsigned int MenuBar::Menu::elementSpacing() const noexcept { return _elementSpacing; }
-	Panel &MenuBar::Menu::background() noexcept { return _background; }
-	const Panel &MenuBar::Menu::background() const noexcept { return _background; }
+	unsigned int MenuBar::Menu::elementSpacing() const noexcept
+	{
+		return _elementSpacing;
+	}
+	Panel &MenuBar::Menu::background() noexcept
+	{
+		return _background;
+	}
+	const Panel &MenuBar::Menu::background() const noexcept
+	{
+		return _background;
+	}
 
 	MenuBar::MenuBar(std::string name, Widget *parent) :
 		Widget(std::move(name), parent),
 		_background(this->name() + ".background", this)
 	{
+		applyStyle(defaultStyle);
 		_background.setZOrder(0.0f);
 		setMaximalSize({Unlimited, Unlimited});
 		_layoutReady = true;
 		_updateSizeHint();
 		activate();
+	}
+
+	void MenuBar::applyStyle(const Style &style)
+	{
+		if (style.darkerNineSlice != nullptr)
+		{
+			_background.setSpriteSheet(style.darkerNineSlice.get());
+		}
+		_background.setCornerSize({6, 6});
+		for (const auto &entry : _entries)
+		{
+			entry->button->applyStyle(style);
+			entry->menu->applyStyle(style);
+		}
 	}
 
 	unsigned int MenuBar::_effectiveHeight() const noexcept
@@ -263,7 +339,7 @@ namespace spk
 	void MenuBar::_configureButton(PushButton &button)
 	{
 		button.setFlat(true);
-		button.setAlignment(HorizontalAlignment::Center, VerticalAlignment::Center);
+		button.setAlignment({Alignment::Horizontal::Center, Alignment::Vertical::Center});
 		const unsigned int controlHeight = _effectiveHeight();
 		const Font::Size textSize{std::max<std::size_t>(8, controlHeight / 2)};
 		for (TextLabel *label : {&button.releasedLabel(), &button.pressedLabel()})
@@ -307,12 +383,8 @@ namespace spk
 		for (const auto &entry : _entries)
 		{
 			const unsigned int width = dimension(entry->button->minimalSize().x);
-			entry->button->setGeometry(Rect2D{
-				Vector2Int{x, static_cast<int>(_contentInset)},
-				Vector2UInt{width, reduced(barHeight, 2 * _contentInset)}});
-			entry->menu->setGeometry(Rect2D{
-				Vector2Int{x, static_cast<int>(barHeight)},
-				Vector2UInt{dimension(entry->menu->minimalSize().x), dimension(entry->menu->minimalSize().y)}});
+			entry->button->setGeometry(Rect2D{Vector2Int{x, static_cast<int>(_contentInset)}, Vector2UInt{width, reduced(barHeight, 2 * _contentInset)}});
+			entry->menu->setGeometry(Rect2D{Vector2Int{x, static_cast<int>(barHeight)}, Vector2UInt{dimension(entry->menu->minimalSize().x), dimension(entry->menu->minimalSize().y)}});
 			x += static_cast<int>(width + _menuSpacing);
 		}
 	}
@@ -350,51 +422,96 @@ namespace spk
 	MenuBar::Menu &MenuBar::menu(std::string_view name)
 	{
 		const auto it = _entriesByName.find(std::string(name));
-		if (it == _entriesByName.end()) throw std::out_of_range("MenuBar has no menu named '" + std::string(name) + "'");
+		if (it == _entriesByName.end())
+		{
+			throw std::out_of_range("MenuBar has no menu named '" + std::string(name) + "'");
+		}
 		return *it->second->menu;
 	}
 	const MenuBar::Menu &MenuBar::menu(std::string_view name) const
 	{
 		const auto it = _entriesByName.find(std::string(name));
-		if (it == _entriesByName.end()) throw std::out_of_range("MenuBar has no menu named '" + std::string(name) + "'");
+		if (it == _entriesByName.end())
+		{
+			throw std::out_of_range("MenuBar has no menu named '" + std::string(name) + "'");
+		}
 		return *it->second->menu;
 	}
 	PushButton &MenuBar::button(std::string_view name)
 	{
 		const auto it = _entriesByName.find(std::string(name));
-		if (it == _entriesByName.end()) throw std::out_of_range("MenuBar has no menu named '" + std::string(name) + "'");
+		if (it == _entriesByName.end())
+		{
+			throw std::out_of_range("MenuBar has no menu named '" + std::string(name) + "'");
+		}
 		return *it->second->button;
 	}
 	const PushButton &MenuBar::button(std::string_view name) const
 	{
 		const auto it = _entriesByName.find(std::string(name));
-		if (it == _entriesByName.end()) throw std::out_of_range("MenuBar has no menu named '" + std::string(name) + "'");
+		if (it == _entriesByName.end())
+		{
+			throw std::out_of_range("MenuBar has no menu named '" + std::string(name) + "'");
+		}
 		return *it->second->button;
 	}
-	std::size_t MenuBar::nbMenu() const noexcept { return _entries.size(); }
-	void MenuBar::closeMenus() { _closeMenus(); }
+	std::size_t MenuBar::nbMenu() const noexcept
+	{
+		return _entries.size();
+	}
+	void MenuBar::closeMenus()
+	{
+		_closeMenus();
+	}
 	void MenuBar::setHeight(unsigned int height)
 	{
-		if (_height == height) return;
+		if (_height == height)
+		{
+			return;
+		}
 		_height = height;
-		for (const auto &entry : _entries) _configureButton(*entry->button);
+		for (const auto &entry : _entries)
+		{
+			_configureButton(*entry->button);
+		}
 		_updateSizeHint();
 	}
-	unsigned int MenuBar::height() const noexcept { return _effectiveHeight(); }
+	unsigned int MenuBar::height() const noexcept
+	{
+		return _effectiveHeight();
+	}
 	void MenuBar::setContentInset(unsigned int inset)
 	{
-		if (_contentInset == inset) return;
+		if (_contentInset == inset)
+		{
+			return;
+		}
 		_contentInset = inset;
 		_updateSizeHint();
 	}
-	unsigned int MenuBar::contentInset() const noexcept { return _contentInset; }
+	unsigned int MenuBar::contentInset() const noexcept
+	{
+		return _contentInset;
+	}
 	void MenuBar::setMenuSpacing(unsigned int spacing)
 	{
-		if (_menuSpacing == spacing) return;
+		if (_menuSpacing == spacing)
+		{
+			return;
+		}
 		_menuSpacing = spacing;
 		_updateSizeHint();
 	}
-	unsigned int MenuBar::menuSpacing() const noexcept { return _menuSpacing; }
-	Panel &MenuBar::background() noexcept { return _background; }
-	const Panel &MenuBar::background() const noexcept { return _background; }
+	unsigned int MenuBar::menuSpacing() const noexcept
+	{
+		return _menuSpacing;
+	}
+	Panel &MenuBar::background() noexcept
+	{
+		return _background;
+	}
+	const Panel &MenuBar::background() const noexcept
+	{
+		return _background;
+	}
 }

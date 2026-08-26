@@ -31,6 +31,7 @@ namespace spk
 		std::optional<std::size_t> _selectedIndex;
 		unsigned int _tabBarHeight = 40;
 		unsigned int _tabWidth = 160;
+		unsigned int _contentTopPadding = 0;
 		SelectionProvider _selectionProvider;
 
 		void _applySelection();
@@ -45,6 +46,7 @@ namespace spk
 		void selectPage(std::size_t index);
 		void setTabBarHeight(unsigned int height);
 		void setTabWidth(unsigned int width);
+		void setContentTopPadding(unsigned int padding);
 
 		[[nodiscard]] SelectionContract subscribeToSelection(SelectionCallback callback);
 		[[nodiscard]] std::size_t pageCount() const noexcept;
@@ -57,5 +59,6 @@ namespace spk
 		[[nodiscard]] const PushButton &tabButton(std::size_t index) const;
 		[[nodiscard]] unsigned int tabBarHeight() const noexcept;
 		[[nodiscard]] unsigned int tabWidth() const noexcept;
+		[[nodiscard]] unsigned int contentTopPadding() const noexcept;
 	};
 }

@@ -11,6 +11,7 @@ namespace spk
 	AnimationLabel::AnimationLabel(std::string name, Widget *parent) :
 		Widget(std::move(name), parent)
 	{
+		applyStyle(defaultStyle);
 		activate();
 	}
 
@@ -18,6 +19,14 @@ namespace spk
 		AnimationLabel(std::move(name), parent)
 	{
 		setSpriteSheet(spriteSheet);
+	}
+
+	void AnimationLabel::applyStyle(const Style &style)
+	{
+		if (style.iconset != nullptr)
+		{
+			setSpriteSheet(style.iconset.get());
+		}
 	}
 
 	std::size_t AnimationLabel::_spriteCount() const noexcept
@@ -90,7 +99,7 @@ namespace spk
 		const Vector2UInt coordinates{
 			static_cast<unsigned int>(renderedFrame % columns),
 			static_cast<unsigned int>(renderedFrame / columns)};
-		builder.renderPass(Widget::OverlayKey).emplace<SpriteRenderCommand>(_spriteSheet, coordinates, Rect2D{Vector2Int{0, 0}, geometry().size}, _depth);
+		builder.renderPass(targetRenderPass()).emplace<SpriteRenderCommand>(_spriteSheet, coordinates, Rect2D{Vector2Int{0, 0}, geometry().size}, _depth);
 	}
 
 	void AnimationLabel::setSpriteSheet(const SpriteSheet *spriteSheet)

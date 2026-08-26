@@ -6,8 +6,7 @@
 #include "graphics/color.hpp"
 #include "graphics/font.hpp"
 #include "rendering/command/text_render_command.hpp"
-#include "type/horizontal_alignment.hpp"
-#include "type/vertical_alignment.hpp"
+#include "type/alignment.hpp"
 #include "ui/widget.hpp"
 
 namespace spk
@@ -21,8 +20,7 @@ namespace spk
 		Color _glyphColor{1.0f, 1.0f, 1.0f, 1.0f};
 		Color _outlineColor{0.0f, 0.0f, 0.0f, 1.0f};
 		float _depth = 0.0f;
-		HorizontalAlignment _horizontalAlignment = HorizontalAlignment::Center;
-		VerticalAlignment _verticalAlignment = VerticalAlignment::Center;
+		Alignment _alignment{Alignment::Horizontal::Center, Alignment::Vertical::Center};
 		Vector2UInt _padding{0, 0};
 
 		void _updateSizeHint() override;
@@ -32,6 +30,7 @@ namespace spk
 	public:
 		explicit TextLabel(std::string name, Widget *parent = nullptr);
 		TextLabel(std::string name, Font *font, Widget *parent = nullptr);
+		void applyStyle(const Style &style) override;
 
 		void setFont(Font *font);
 		void setText(Font::Text text);
@@ -40,9 +39,9 @@ namespace spk
 		void setGlyphColor(const Color &color);
 		void setOutlineColor(const Color &color);
 		void setDepth(float depth);
-		void setHorizontalAlignment(HorizontalAlignment alignment);
-		void setVerticalAlignment(VerticalAlignment alignment);
-		void setAlignment(HorizontalAlignment horizontal, VerticalAlignment vertical);
+		void setHorizontalAlignment(Alignment::Horizontal alignment);
+		void setVerticalAlignment(Alignment::Vertical alignment);
+		void setAlignment(Alignment alignment);
 		void setPadding(const Vector2UInt &padding);
 
 		[[nodiscard]] Font *font() noexcept;
@@ -52,8 +51,9 @@ namespace spk
 		[[nodiscard]] const Color &glyphColor() const noexcept;
 		[[nodiscard]] const Color &outlineColor() const noexcept;
 		[[nodiscard]] float depth() const noexcept;
-		[[nodiscard]] HorizontalAlignment horizontalAlignment() const noexcept;
-		[[nodiscard]] VerticalAlignment verticalAlignment() const noexcept;
+		[[nodiscard]] Alignment::Horizontal horizontalAlignment() const noexcept;
+		[[nodiscard]] Alignment::Vertical verticalAlignment() const noexcept;
+		[[nodiscard]] Alignment alignment() const noexcept;
 		[[nodiscard]] const Vector2UInt &padding() const noexcept;
 	};
 }

@@ -6,9 +6,9 @@
 #include <utility>
 #include <vector>
 
-#include "graphics/opengl/gpu_resource_collection.hpp"
 #include "core/context/render_context.hpp"
 #include "exception.hpp"
+#include "graphics/opengl/gpu_resource_collection.hpp"
 
 namespace spk
 {
@@ -114,13 +114,11 @@ namespace spk
 			}
 
 			_bind(*entry.instance, context);
-		}
-		catch (spk::Exception &exception)
+		} catch (spk::Exception &exception)
 		{
 			exception.addContext("Exception while activating GPU resource [" + std::to_string(_identifier) + "]");
 			throw;
-		}
-		catch (...)
+		} catch (...)
 		{
 			throw spk::Exception(
 				"Exception while activating GPU resource [" + std::to_string(_identifier) + "]",

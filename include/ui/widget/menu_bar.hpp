@@ -40,7 +40,9 @@ namespace spk
 				void _buildRenderSnapshot(RenderSnapshot::Builder &builder) override;
 
 			public:
+				explicit Break(std::string name, Widget *parent = nullptr);
 				Break(std::string name, const SpriteSheet *spriteSheet, Widget *parent = nullptr);
+				void applyStyle(const Style &style) override;
 
 				void setSpriteSheet(const SpriteSheet *spriteSheet);
 				void setHeight(unsigned int height);
@@ -62,8 +64,10 @@ namespace spk
 
 		public:
 			explicit Menu(std::string name, Widget *parent = nullptr);
+			void applyStyle(const Style &style) override;
 
 			Item &addItem(std::string name, std::string_view label, PushButton::ClickCallback callback = {});
+			Break &addBreak(std::string name);
 			Break &addBreak(std::string name, const SpriteSheet *spriteSheet);
 			void clear();
 			[[nodiscard]] std::size_t nbElement() const noexcept;
@@ -97,6 +101,7 @@ namespace spk
 
 	public:
 		explicit MenuBar(std::string name, Widget *parent = nullptr);
+		void applyStyle(const Style &style) override;
 
 		Menu &addMenu(std::string name, std::string_view label = {});
 		Menu &menu(std::string_view name);

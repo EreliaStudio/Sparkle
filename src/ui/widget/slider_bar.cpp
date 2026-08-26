@@ -12,10 +12,27 @@ namespace spk
 		_background(this->name() + ".background", this),
 		_body(this->name() + ".body", this)
 	{
+		applyStyle(defaultStyle);
 		_background.setZOrder(0.0f);
 		_body.setZOrder(1.0f);
 		_updateSizeHint();
 		activate();
+	}
+
+	void SliderBar::applyStyle(const Style &style)
+	{
+		if (style.darkerNineSlice != nullptr)
+		{
+			_background.setSpriteSheet(style.darkerNineSlice.get());
+		}
+		if (style.sliderBody != nullptr)
+		{
+			_body.setSpriteSheet(style.sliderBody.get());
+		}
+		_background.setCornerSize({5, 5});
+		_body.setCornerSize({8, 8});
+		_updateSizeHint();
+		_onGeometryChange();
 	}
 
 	unsigned int SliderBar::_primaryLength() const noexcept

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <utility>
 
 namespace spk
@@ -12,6 +13,7 @@ namespace spk
 		_horizontalScrollBar(this->name() + ".horizontal-scroll-bar", this),
 		_verticalScrollBar(this->name() + ".vertical-scroll-bar", this)
 	{
+		applyStyle(defaultStyle);
 		_verticalScrollBar.setOrientation(Orientation::Vertical);
 		_horizontalEditionContract = _horizontalScrollBar.subscribeToEdition([this](float) {
 			_updateContentAnchor();
@@ -31,6 +33,13 @@ namespace spk
 		_verticalScrollBar.setIconset(iconset);
 	}
 
+	void IScrollArea::applyStyle(const Style &style)
+	{
+		_horizontalScrollBar.applyStyle(style);
+		_verticalScrollBar.applyStyle(style);
+		_updateSizeHint();
+	}
+
 	float IScrollArea::_scrollScale(unsigned int viewLength, unsigned int contentLength) const noexcept
 	{
 		if (contentLength == 0 || contentLength <= viewLength)
@@ -38,6 +47,26 @@ namespace spk
 			return 1.0f;
 		}
 		return std::clamp(static_cast<float>(viewLength) / static_cast<float>(contentLength), 0.05f, 1.0f);
+	}
+
+	Vector2UInt IScrollArea::_contentMinimalSize() const noexcept
+	{
+		const Widget *currentContent = _container.content();
+		if (currentContent == nullptr)
+		{
+			return {};
+		}
+
+		const auto extent = [](float value) {
+			if (!(value > 0.0f))
+			{
+				return 0u;
+			}
+			const float maximum = static_cast<float>(std::numeric_limits<unsigned int>::max());
+			return static_cast<unsigned int>(std::ceil(std::min(value, maximum)));
+		};
+
+		return {extent(currentContent->minimalSize().x), extent(currentContent->minimalSize().y)};
 	}
 
 	void IScrollArea::_updateContentAnchor()
@@ -50,6 +79,32 @@ namespace spk
 
 	void IScrollArea::_synchronizeGeometry()
 	{
+		const Vector2UInt minimumContentSize = _contentMinimalSize();
+		bool horizontalVisible = false;
+		bool verticalVisible = false;
+		for (std::size_t iteration = 0; iteration < 3; ++iteration)
+		{
+			const unsigned int verticalThickness = verticalVisible ? std::min(_scrollBarWidth, geometry().width) : 0;
+			const unsigned int horizontalThickness = horizontalVisible ? std::min(_scrollBarWidth, geometry().height) : 0;
+			const Vector2UInt available{
+				geometry().width - verticalThickness,
+				geometry().height - horizontalThickness};
+			const bool nextHorizontalVisible = minimumContentSize.x > available.x;
+			const bool nextVerticalVisible = minimumContentSize.y > available.y;
+			if (horizontalVisible == nextHorizontalVisible && verticalVisible == nextVerticalVisible)
+			{
+				break;
+			}
+			horizontalVisible = nextHorizontalVisible;
+			verticalVisible = nextVerticalVisible;
+		}
+
+		const bool visibilityChanged =
+			_horizontalScrollBarVisible != horizontalVisible ||
+			_verticalScrollBarVisible != verticalVisible;
+		_horizontalScrollBarVisible = horizontalVisible;
+		_verticalScrollBarVisible = verticalVisible;
+
 		const unsigned int verticalThickness = _verticalScrollBarVisible ? std::min(_scrollBarWidth, geometry().width) : 0;
 		const unsigned int horizontalThickness = _horizontalScrollBarVisible ? std::min(_scrollBarWidth, geometry().height) : 0;
 		_viewSize = {
@@ -57,6 +112,7 @@ namespace spk
 			geometry().height - horizontalThickness};
 
 		_container.setGeometry({Vector2Int{0, 0}, _viewSize});
+		_container.setContentSize({std::max(minimumContentSize.x, _viewSize.x), std::max(minimumContentSize.y, _viewSize.y)});
 		if (_horizontalScrollBarVisible)
 		{
 			_horizontalScrollBar.activate();
@@ -83,6 +139,11 @@ namespace spk
 		_horizontalScrollBar.setScale(_scrollScale(_viewSize.x, contentSize.x));
 		_verticalScrollBar.setScale(_scrollScale(_viewSize.y, contentSize.y));
 		_updateContentAnchor();
+
+		if (visibilityChanged)
+		{
+			_updateSizeHint();
+		}
 	}
 
 	void IScrollArea::_updateSizeHint()
@@ -122,25 +183,17 @@ namespace spk
 
 	void IScrollArea::setContent(Widget *content)
 	{
+		_contentSizeHintContract.resign();
 		_container.setContent(content);
-		_updateContentAnchor();
-	}
-
-	void IScrollArea::setContentSize(const Vector2UInt &size)
-	{
-		_container.setContentSize(size);
-		_synchronizeGeometry();
-	}
-
-	void IScrollArea::setScrollBarVisible(Orientation orientation, bool visible)
-	{
-		bool &current = orientation == Orientation::Horizontal ? _horizontalScrollBarVisible : _verticalScrollBarVisible;
-		if (current == visible)
+		if (content != nullptr)
 		{
-			return;
+			_contentSizeHintContract = content->subscribeToSizeHintEdition([this, content](ResizeableTrait *) {
+				if (_container.content() == content)
+				{
+					_synchronizeGeometry();
+				}
+			});
 		}
-		current = visible;
-		_updateSizeHint();
 		_synchronizeGeometry();
 	}
 

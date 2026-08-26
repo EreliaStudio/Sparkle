@@ -4,9 +4,9 @@
 
 #include "core/event/event.hpp"
 
+#include "core/window.hpp"
 #include "input/keyboard.hpp"
 #include "input/mouse.hpp"
-#include "core/window.hpp"
 
 namespace spk
 {

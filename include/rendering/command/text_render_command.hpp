@@ -4,8 +4,7 @@
 #include <string_view>
 
 #include "rendering/command/draw_font_render_command.hpp"
-#include "type/horizontal_alignment.hpp"
-#include "type/vertical_alignment.hpp"
+#include "type/alignment.hpp"
 
 namespace spk
 {
@@ -15,8 +14,7 @@ namespace spk
 		struct Anchor
 		{
 			Vector2Int position;
-			HorizontalAlignment horizontalAlignment = HorizontalAlignment::Left;
-			VerticalAlignment verticalAlignment = VerticalAlignment::Top;
+			Alignment alignment;
 		};
 
 	private:

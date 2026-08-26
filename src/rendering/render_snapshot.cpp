@@ -75,13 +75,11 @@ namespace spk
 			try
 			{
 				pass.commands->execute(renderContext);
-			}
-			catch (spk::Exception &exception)
+			} catch (spk::Exception &exception)
 			{
 				exception.addContext("Exception while executing render pass [" + pass.name + "]");
 				throw;
-			}
-			catch (...)
+			} catch (...)
 			{
 				throw spk::Exception(
 					"Exception while executing render pass [" + pass.name + "]",

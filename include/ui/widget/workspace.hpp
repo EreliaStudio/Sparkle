@@ -43,9 +43,7 @@ namespace spk
 				return;
 			}
 			const unsigned int barHeight = std::min(_menuBar.height(), geometry().height);
-			_content.setGeometry(Rect2D{
-				Vector2Int{0, static_cast<int>(barHeight)},
-				Vector2UInt{geometry().width, geometry().height - barHeight}});
+			_content.setGeometry(Rect2D{Vector2Int{0, static_cast<int>(barHeight)}, Vector2UInt{geometry().width, geometry().height - barHeight}});
 			_menuBar.setGeometry(Rect2D{Vector2Int{0, 0}, geometry().size});
 		}
 
@@ -64,9 +62,21 @@ namespace spk
 			activate();
 		}
 
-		[[nodiscard]] MenuBar &menuBar() noexcept { return _menuBar; }
-		[[nodiscard]] const MenuBar &menuBar() const noexcept { return _menuBar; }
-		[[nodiscard]] TContent &content() noexcept { return _content; }
-		[[nodiscard]] const TContent &content() const noexcept { return _content; }
+		[[nodiscard]] MenuBar &menuBar() noexcept
+		{
+			return _menuBar;
+		}
+		[[nodiscard]] const MenuBar &menuBar() const noexcept
+		{
+			return _menuBar;
+		}
+		[[nodiscard]] TContent &content() noexcept
+		{
+			return _content;
+		}
+		[[nodiscard]] const TContent &content() const noexcept
+		{
+			return _content;
+		}
 	};
 }

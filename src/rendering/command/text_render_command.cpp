@@ -17,19 +17,19 @@ namespace spk
 		const auto size = a.computeStringSize(text);
 		auto baseline = a.computeStringBaselineOffset(text);
 		int left = anchor.position.x, top = anchor.position.y;
-		if (anchor.horizontalAlignment == HorizontalAlignment::Center)
+		if (anchor.alignment.horizontal == Alignment::Horizontal::Center)
 		{
 			left -= int(size.x) / 2;
 		}
-		else if (anchor.horizontalAlignment == HorizontalAlignment::Right)
+		else if (anchor.alignment.horizontal == Alignment::Horizontal::Right)
 		{
 			left -= int(size.x);
 		}
-		if (anchor.verticalAlignment == VerticalAlignment::Center)
+		if (anchor.alignment.vertical == Alignment::Vertical::Center)
 		{
 			top -= int(size.y) / 2;
 		}
-		else if (anchor.verticalAlignment == VerticalAlignment::Bottom)
+		else if (anchor.alignment.vertical == Alignment::Vertical::Bottom)
 		{
 			top -= int(size.y);
 		}

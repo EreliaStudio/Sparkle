@@ -2,9 +2,9 @@
 
 #include <cstddef>
 
-#include "rendering/render_command.hpp"
-#include "graphics/opengl/sampler.hpp"
 #include "graphics/mesh/texture_mesh_2d.hpp"
+#include "graphics/opengl/sampler.hpp"
+#include "rendering/render_command.hpp"
 
 namespace spk
 {

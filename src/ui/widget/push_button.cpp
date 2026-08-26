@@ -16,6 +16,7 @@ namespace spk
 		_releasedIcon(this->name() + ".released-icon", this),
 		_pressedIcon(this->name() + ".pressed-icon", this)
 	{
+		applyStyle(defaultStyle);
 		_releasedBackground.setZOrder(0.0f);
 		_pressedBackground.setZOrder(0.0f);
 		_releasedLabel.setZOrder(1.0f);
@@ -25,6 +26,28 @@ namespace spk
 		_applyVisualState();
 		_updateSizeHint();
 		activate();
+	}
+
+	void PushButton::applyStyle(const Style &style)
+	{
+		if (style.darkNineSlice != nullptr)
+		{
+			_releasedBackground.setSpriteSheet(style.darkNineSlice.get());
+		}
+		if (style.darkerNineSlice != nullptr)
+		{
+			_pressedBackground.setSpriteSheet(style.darkerNineSlice.get());
+		}
+		_releasedBackground.setCornerSize({8, 8});
+		_pressedBackground.setCornerSize({8, 8});
+		_releasedLabel.applyStyle(style);
+		_pressedLabel.applyStyle(style);
+		_releasedLabel.setTextSize(16);
+		_releasedLabel.setGlyphColor({0.88f, 0.92f, 1.0f, 1.0f});
+		_pressedLabel.setTextSize(16);
+		_pressedLabel.setGlyphColor({1.0f, 1.0f, 1.0f, 1.0f});
+		_updateSizeHint();
+		_onGeometryChange();
 	}
 
 	Vector2UInt PushButton::_effectiveTextPadding() const
@@ -248,10 +271,10 @@ namespace spk
 		_updateSizeHint();
 	}
 
-	void PushButton::setAlignment(HorizontalAlignment horizontal, VerticalAlignment vertical)
+	void PushButton::setAlignment(Alignment alignment)
 	{
-		_releasedLabel.setAlignment(horizontal, vertical);
-		_pressedLabel.setAlignment(horizontal, vertical);
+		_releasedLabel.setAlignment(alignment);
+		_pressedLabel.setAlignment(alignment);
 	}
 
 	void PushButton::setIcon(const Texture *texture, const Texture::Section &section)
@@ -340,6 +363,10 @@ namespace spk
 	bool PushButton::isFlat() const noexcept
 	{
 		return _flat;
+	}
+	Alignment PushButton::alignment() const noexcept
+	{
+		return _releasedLabel.alignment();
 	}
 	const std::optional<Vector2UInt> &PushButton::textPadding() const noexcept
 	{

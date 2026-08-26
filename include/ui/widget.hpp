@@ -1,22 +1,27 @@
 #pragma once
 
+#include <memory>
+#include <optional>
 #include <string_view>
 #include <unordered_map>
 
-#include "design_pattern/trait/activable_trait.hpp"
 #include "container/cached_data.hpp"
+#include "core/event/record.hpp"
+#include "design_pattern/trait/activable_trait.hpp"
 #include "design_pattern/trait/inherence_trait.hpp"
 #include "design_pattern/trait/name_trait.hpp"
-#include "core/event/record.hpp"
+#include "design_pattern/trait/resizeable_trait.hpp"
 #include "math/rect2d.hpp"
 #include "rendering/render_snapshot.hpp"
-#include "design_pattern/trait/resizeable_trait.hpp"
 #include "type/focus_mode.hpp"
 #include "ui/view_region.hpp"
 
 namespace spk
 {
 	struct UpdateContext;
+	class Font;
+	class Image;
+	class SpriteSheet;
 	class Widget;
 
 	struct WidgetChildComparator
@@ -30,15 +35,48 @@ namespace spk
 				   public spk::ActivableTrait
 	{
 	public:
+		struct Style
+		{
+			std::unique_ptr<Font> font;
+			std::unique_ptr<Image> iconsetImage;
+			std::unique_ptr<SpriteSheet> iconset;
+			std::unique_ptr<SpriteSheet> nineSlice;
+			std::unique_ptr<SpriteSheet> darkNineSlice;
+			std::unique_ptr<SpriteSheet> darkerNineSlice;
+			std::unique_ptr<SpriteSheet> lightNineSlice;
+			std::unique_ptr<SpriteSheet> sliderBody;
+			std::unique_ptr<SpriteSheet> menuBreak;
+			std::unique_ptr<SpriteSheet> toggleSwitchOutline;
+			std::unique_ptr<SpriteSheet> toggleSwitchThumb;
+			std::unique_ptr<SpriteSheet> toggleSwitchOffBackground;
+			std::unique_ptr<SpriteSheet> toggleSwitchOnBackground;
+
+			Style();
+			~Style();
+			Style(Style &&) noexcept;
+			Style &operator=(Style &&) noexcept;
+			Style(const Style &) = delete;
+			Style &operator=(const Style &) = delete;
+		};
+
 		static inline spk::RenderPass::Key OverlayKey = {
 			.name = "sparkle.Overlay",
 			.order = 0};
+		static inline spk::RenderPass::Key PopupKey = {
+			.name = "sparkle.Popup",
+			.order = 50};
+		static inline spk::RenderPass::Key TooltipKey = {
+			.name = "sparkle.Tooltip",
+			.order = 100};
+		static CachedData<Style> defaultStyle;
 
 		using ZOrder = float;
 
 	private:
 		using Inherence = InherenceTrait<Widget, WidgetChildComparator>;
 
+		bool _acceptChildSizeHintEditions = false;
+		ActivableTrait::ActivationContract _initialActivationContract;
 		Inherence::OnParentEditionContract _onParentEditedContract;
 		std::unordered_map<Widget *, ResizeableTrait::Contract> _childSizeHintEditionContracts;
 		ZOrder _zOrder = 0;
@@ -47,6 +85,7 @@ namespace spk
 		spk::Vector2 _anchorRatio{0.0f, 0.0f};
 		spk::Vector2 _sizeRatio{1.0f, 1.0f};
 		spk::CachedData<ViewRegion> _viewRegion;
+		std::optional<RenderPass::Key> _targetRenderPassOverride;
 
 		void _invalidateViewRegion();
 		void _invalidateAbsoluteZOrder();
@@ -84,10 +123,16 @@ namespace spk
 		virtual void _onKeyPressedEvent(KeyPressedEvent &event);
 		virtual void _onKeyReleasedEvent(KeyReleasedEvent &event);
 		virtual void _onTextInputEvent(TextInputEvent &event);
+		virtual void _onPassiveMouseMovedEvent(MouseMovedEvent &event);
+		virtual void _onPassiveMouseButtonPressedEvent(MouseButtonPressedEvent &event);
+		virtual void _onPassiveKeyPressedEvent(KeyPressedEvent &event);
+		virtual void _onPassiveKeyReleasedEvent(KeyReleasedEvent &event);
 
 	public:
 		Widget(std::string name, Widget *parent);
 		virtual ~Widget();
+
+		virtual void applyStyle(const Style &style);
 
 		void setZOrder(ZOrder zOrder);
 		[[nodiscard]] ZOrder zOrder() const;
@@ -97,6 +142,13 @@ namespace spk
 		void resize(const spk::Rect2D &geometry);
 		[[nodiscard]] const spk::Rect2D &geometry() const noexcept;
 		[[nodiscard]] const ViewRegion &viewRegion() const;
+		[[nodiscard]] Widget &root() noexcept;
+		[[nodiscard]] const Widget &root() const noexcept;
+
+		void setTargetRenderPass(const RenderPass::Key &key);
+		void inheritTargetRenderPass();
+		[[nodiscard]] bool hasTargetRenderPassOverride() const noexcept;
+		[[nodiscard]] const RenderPass::Key &targetRenderPass() const noexcept;
 
 		void dispatch(WindowResizedEvent &event);
 		void dispatch(WindowMovedEvent &event);
@@ -112,6 +164,10 @@ namespace spk
 		void dispatch(KeyPressedEvent &event);
 		void dispatch(KeyReleasedEvent &event);
 		void dispatch(TextInputEvent &event);
+		void observePointer(MouseMovedEvent &event);
+		void observePointer(MouseButtonPressedEvent &event);
+		void observeKeyboard(KeyPressedEvent &event);
+		void observeKeyboard(KeyReleasedEvent &event);
 
 		void updateState(UpdateContext &context);
 		void buildRenderSnapshot(spk::RenderSnapshot::Builder &builder);

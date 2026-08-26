@@ -47,6 +47,7 @@ namespace spk
 	public:
 		explicit ScrollBar(std::string name, Widget *parent = nullptr);
 		ScrollBar(std::string name, const SpriteSheet *iconset, Orientation orientation = Orientation::Horizontal, Widget *parent = nullptr);
+		void applyStyle(const Style &style) override;
 
 		[[nodiscard]] EditionContract subscribeToEdition(EditionCallback callback);
 

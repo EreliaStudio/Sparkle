@@ -40,7 +40,7 @@ namespace spk
 		for (const std::string &name : _buttonOrder)
 		{
 			Layout::Element *element = _layout.addWidget(_buttons.at(name).get(), _sizePolicy);
-			element->setVerticalAlignment(VerticalAlignment::Center);
+			element->setVerticalAlignment(Alignment::Vertical::Center);
 		}
 		_updateSizeHint();
 		_onGeometryChange();

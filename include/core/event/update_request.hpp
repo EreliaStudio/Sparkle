@@ -3,10 +3,10 @@
 #include <memory>
 #include <variant>
 
-#include "graphics/color.hpp"
-#include "rendering/render_snapshot.hpp"
 #include "container/thread_safe_slot.hpp"
 #include "core/window.hpp"
+#include "graphics/color.hpp"
+#include "rendering/render_snapshot.hpp"
 
 namespace spk
 {

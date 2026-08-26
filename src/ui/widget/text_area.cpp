@@ -11,6 +11,7 @@ namespace spk
 	TextArea::TextArea(std::string name, Widget *parent) :
 		Widget(std::move(name), parent)
 	{
+		applyStyle(defaultStyle);
 		activate();
 	}
 
@@ -18,6 +19,14 @@ namespace spk
 		TextArea(std::move(name), parent)
 	{
 		setFont(font);
+	}
+
+	void TextArea::applyStyle(const Style &style)
+	{
+		if (style.font != nullptr)
+		{
+			setFont(style.font.get());
+		}
 	}
 
 	std::vector<Font::Text> TextArea::_paragraphs() const
@@ -149,26 +158,26 @@ namespace spk
 		const std::vector<Font::Text> lines = _wrapLines(geometry().width);
 		const int blockHeight = static_cast<int>(_blockHeight(lines.size()));
 		int y = 0;
-		if (_verticalAlignment == VerticalAlignment::Center)
+		if (_alignment.vertical == Alignment::Vertical::Center)
 		{
 			y = (static_cast<int>(geometry().height) - blockHeight) / 2;
 		}
-		else if (_verticalAlignment == VerticalAlignment::Bottom)
+		else if (_alignment.vertical == Alignment::Vertical::Bottom)
 		{
 			y = static_cast<int>(geometry().height) - blockHeight;
 		}
 
 		int x = 0;
-		if (_horizontalAlignment == HorizontalAlignment::Center)
+		if (_alignment.horizontal == Alignment::Horizontal::Center)
 		{
 			x = static_cast<int>(geometry().width / 2);
 		}
-		else if (_horizontalAlignment == HorizontalAlignment::Right)
+		else if (_alignment.horizontal == Alignment::Horizontal::Right)
 		{
 			x = static_cast<int>(geometry().width);
 		}
 
-		auto &pass = builder.renderPass(Widget::OverlayKey);
+		auto &pass = builder.renderPass(targetRenderPass());
 		for (const Font::Text &line : lines)
 		{
 			if (!line.empty())
@@ -179,8 +188,7 @@ namespace spk
 					line,
 					TextRenderCommand::Anchor{
 						.position = {x, y},
-						.horizontalAlignment = _horizontalAlignment,
-						.verticalAlignment = VerticalAlignment::Top},
+						.alignment = {_alignment.horizontal, Alignment::Vertical::Top}},
 					_glyphColor,
 					_outlineColor,
 					_depth);
@@ -263,20 +271,19 @@ namespace spk
 		_updateSizeHint();
 	}
 
-	void TextArea::setHorizontalAlignment(HorizontalAlignment alignment)
+	void TextArea::setHorizontalAlignment(Alignment::Horizontal alignment)
 	{
-		_horizontalAlignment = alignment;
+		_alignment.horizontal = alignment;
 	}
 
-	void TextArea::setVerticalAlignment(VerticalAlignment alignment)
+	void TextArea::setVerticalAlignment(Alignment::Vertical alignment)
 	{
-		_verticalAlignment = alignment;
+		_alignment.vertical = alignment;
 	}
 
-	void TextArea::setAlignment(HorizontalAlignment horizontal, VerticalAlignment vertical)
+	void TextArea::setAlignment(Alignment alignment)
 	{
-		_horizontalAlignment = horizontal;
-		_verticalAlignment = vertical;
+		_alignment = alignment;
 	}
 
 	Vector2UInt TextArea::computePreferredSize(unsigned int availableWidth) const
@@ -344,13 +351,18 @@ namespace spk
 		return _linePadding;
 	}
 
-	HorizontalAlignment TextArea::horizontalAlignment() const noexcept
+	Alignment::Horizontal TextArea::horizontalAlignment() const noexcept
 	{
-		return _horizontalAlignment;
+		return _alignment.horizontal;
 	}
 
-	VerticalAlignment TextArea::verticalAlignment() const noexcept
+	Alignment::Vertical TextArea::verticalAlignment() const noexcept
 	{
-		return _verticalAlignment;
+		return _alignment.vertical;
+	}
+
+	Alignment TextArea::alignment() const noexcept
+	{
+		return _alignment;
 	}
 }

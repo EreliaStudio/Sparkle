@@ -75,6 +75,7 @@ target_include_directories(sparkle
         $<BUILD_INTERFACE:${SPARKLE_INCLUDE_DIR}>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
     PRIVATE
+		${SPARKLE_SOURCE_DIR}
         ${Stb_INCLUDE_DIR}
 )
 target_link_libraries(sparkle
@@ -82,6 +83,10 @@ target_link_libraries(sparkle
         GLEW::GLEW
         OpenGL::GL
 )
+
+if(WIN32)
+	target_link_libraries(sparkle PUBLIC user32)
+endif()
 
 set_target_properties(sparkle PROPERTIES
     CXX_EXTENSIONS OFF

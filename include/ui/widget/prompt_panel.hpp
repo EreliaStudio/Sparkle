@@ -28,6 +28,7 @@ namespace spk
 
 	public:
 		explicit PromptPanel(std::string name, Widget *parent = nullptr);
+		void applyStyle(const Style &style) override;
 
 		void setMessage(Font::Text message);
 		void setMessage(std::string_view message);

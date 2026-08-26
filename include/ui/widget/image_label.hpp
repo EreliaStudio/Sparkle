@@ -19,6 +19,7 @@ namespace spk
 	public:
 		explicit ImageLabel(std::string name, Widget *parent = nullptr);
 		ImageLabel(std::string name, const Texture *texture, Widget *parent = nullptr);
+		void applyStyle(const Style &style) override;
 
 		void setTexture(const Texture *texture);
 		void setSection(const Texture::Section &section);

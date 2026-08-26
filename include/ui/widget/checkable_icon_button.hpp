@@ -12,6 +12,9 @@ namespace spk
 	class CheckableIconButton : public Widget
 	{
 	public:
+		static constexpr std::size_t DefaultUncheckedSpriteID = 9;
+		static constexpr std::size_t DefaultCheckedSpriteID = 8;
+
 		using StateProvider = ContractProvider<bool>;
 		using StateCallback = StateProvider::callback_type;
 		using StateContract = StateProvider::Contract;
@@ -32,6 +35,7 @@ namespace spk
 		explicit CheckableIconButton(std::string name, Widget *parent = nullptr);
 		CheckableIconButton(std::string name, const SpriteSheet *iconset, Widget *parent = nullptr);
 		CheckableIconButton(std::string name, const SpriteSheet *iconset, std::size_t uncheckedSpriteID, std::size_t checkedSpriteID, Widget *parent = nullptr);
+		void applyStyle(const Style &style) override;
 
 		void setChecked(bool checked);
 		void toggle();

@@ -30,6 +30,8 @@ namespace spk
 			pass.emplace<spk::ClearRenderCommand>(
 				_backgroundColor,
 				spk::ClearRenderCommand::Mask::All);
+			builder.renderPass(Widget::PopupKey).emplace<spk::ClearRenderCommand>(spk::Color{}, spk::ClearRenderCommand::Mask::Depth);
+			builder.renderPass(Widget::TooltipKey).emplace<spk::ClearRenderCommand>(spk::Color{}, spk::ClearRenderCommand::Mask::Depth);
 		}
 
 	public:

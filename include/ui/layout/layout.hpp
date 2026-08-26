@@ -5,10 +5,9 @@
 #include <memory>
 #include <vector>
 
-#include "type/horizontal_alignment.hpp"
-#include "math/rect2d.hpp"
 #include "design_pattern/trait/resizeable_trait.hpp"
-#include "type/vertical_alignment.hpp"
+#include "math/rect2d.hpp"
+#include "type/alignment.hpp"
 
 namespace spk
 {
@@ -30,9 +29,14 @@ namespace spk
 			SizePolicy vertical = SizePolicy::Extend;
 
 			constexpr SizeSettings() = default;
-			constexpr SizeSettings(SizePolicy policy) : horizontal(policy), vertical(policy) {}
+			constexpr SizeSettings(SizePolicy policy) :
+				horizontal(policy),
+				vertical(policy)
+			{
+			}
 			constexpr SizeSettings(SizePolicy horizontalPolicy, SizePolicy verticalPolicy) :
-				horizontal(horizontalPolicy), vertical(verticalPolicy)
+				horizontal(horizontalPolicy),
+				vertical(verticalPolicy)
 			{
 			}
 
@@ -49,8 +53,7 @@ namespace spk
 			Layout *_layout = nullptr;
 			ResizeableTrait *_resizeable = nullptr;
 			SizeSettings _sizeSettings{};
-			HorizontalAlignment _horizontalAlignment = HorizontalAlignment::Left;
-			VerticalAlignment _verticalAlignment = VerticalAlignment::Top;
+			Alignment _alignment;
 			ResizeableTrait::Contract _sizeHintEditionContract;
 
 			Element(Layout &owner, Widget *widget, SizeSettings sizeSettings);
@@ -76,10 +79,12 @@ namespace spk
 			void setSizeSettings(SizeSettings sizeSettings);
 			[[nodiscard]] const SizeSettings &sizeSettings() const noexcept;
 
-			void setHorizontalAlignment(HorizontalAlignment alignment);
-			[[nodiscard]] HorizontalAlignment horizontalAlignment() const noexcept;
-			void setVerticalAlignment(VerticalAlignment alignment);
-			[[nodiscard]] VerticalAlignment verticalAlignment() const noexcept;
+			void setHorizontalAlignment(Alignment::Horizontal alignment);
+			[[nodiscard]] Alignment::Horizontal horizontalAlignment() const noexcept;
+			void setVerticalAlignment(Alignment::Vertical alignment);
+			[[nodiscard]] Alignment::Vertical verticalAlignment() const noexcept;
+			void setAlignment(Alignment alignment);
+			[[nodiscard]] Alignment alignment() const noexcept;
 
 			void setGeometry(const Rect2D &cell) const;
 		};

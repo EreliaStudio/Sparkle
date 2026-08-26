@@ -177,6 +177,7 @@ namespace spk
 			_lowerButton(this->name() + ".lower", this),
 			_raiseButton(this->name() + ".raise", this)
 		{
+			applyStyle(defaultStyle);
 			_lowerButton.setText("-");
 			_raiseButton.setText("+");
 			_valueEdit.setPlaceholder("...");
@@ -195,6 +196,14 @@ namespace spk
 			_synchronizeText();
 			_updateSizeHint();
 			activate();
+		}
+
+		void applyStyle(const Style &style) override
+		{
+			_valueEdit.applyStyle(style);
+			_lowerButton.applyStyle(style);
+			_raiseButton.applyStyle(style);
+			_updateSizeHint();
 		}
 
 		NumericSpinBox(std::string name, Font *font, Widget *parent = nullptr) :

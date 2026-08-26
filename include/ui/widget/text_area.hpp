@@ -6,8 +6,7 @@
 
 #include "graphics/color.hpp"
 #include "graphics/font.hpp"
-#include "type/horizontal_alignment.hpp"
-#include "type/vertical_alignment.hpp"
+#include "type/alignment.hpp"
 #include "ui/widget.hpp"
 
 namespace spk
@@ -23,8 +22,7 @@ namespace spk
 		float _depth = 0.0f;
 		unsigned int _linePadding = 0;
 		unsigned int _minimalWidth = 0;
-		HorizontalAlignment _horizontalAlignment = HorizontalAlignment::Left;
-		VerticalAlignment _verticalAlignment = VerticalAlignment::Top;
+		Alignment _alignment;
 
 		[[nodiscard]] std::vector<Font::Text> _paragraphs() const;
 		[[nodiscard]] std::vector<Font::Text> _wrapLines(unsigned int availableWidth) const;
@@ -37,6 +35,7 @@ namespace spk
 	public:
 		explicit TextArea(std::string name, Widget *parent = nullptr);
 		TextArea(std::string name, Font *font, Widget *parent = nullptr);
+		void applyStyle(const Style &style) override;
 
 		void setFont(Font *font);
 		void setText(Font::Text text);
@@ -47,9 +46,9 @@ namespace spk
 		void setDepth(float depth);
 		void setMinimalWidth(unsigned int width);
 		void setLinePadding(unsigned int padding);
-		void setHorizontalAlignment(HorizontalAlignment alignment);
-		void setVerticalAlignment(VerticalAlignment alignment);
-		void setAlignment(HorizontalAlignment horizontal, VerticalAlignment vertical);
+		void setHorizontalAlignment(Alignment::Horizontal alignment);
+		void setVerticalAlignment(Alignment::Vertical alignment);
+		void setAlignment(Alignment alignment);
 
 		[[nodiscard]] Vector2UInt computePreferredSize(unsigned int availableWidth) const;
 
@@ -62,7 +61,8 @@ namespace spk
 		[[nodiscard]] float depth() const noexcept;
 		[[nodiscard]] unsigned int minimalWidth() const noexcept;
 		[[nodiscard]] unsigned int linePadding() const noexcept;
-		[[nodiscard]] HorizontalAlignment horizontalAlignment() const noexcept;
-		[[nodiscard]] VerticalAlignment verticalAlignment() const noexcept;
+		[[nodiscard]] Alignment::Horizontal horizontalAlignment() const noexcept;
+		[[nodiscard]] Alignment::Vertical verticalAlignment() const noexcept;
+		[[nodiscard]] Alignment alignment() const noexcept;
 	};
 }

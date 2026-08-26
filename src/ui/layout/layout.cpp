@@ -117,36 +117,36 @@ namespace
 		}
 	}
 
-	int32_t _horizontalOffset(spk::HorizontalAlignment alignment, uint32_t available, uint32_t used)
+	int32_t _horizontalOffset(spk::Alignment::Horizontal alignment, uint32_t available, uint32_t used)
 	{
 		if (used >= available)
 		{
 			return 0;
 		}
 		const uint32_t freeSpace = available - used;
-		if (alignment == spk::HorizontalAlignment::Center)
+		if (alignment == spk::Alignment::Horizontal::Center)
 		{
 			return static_cast<int32_t>(freeSpace / 2);
 		}
-		if (alignment == spk::HorizontalAlignment::Right)
+		if (alignment == spk::Alignment::Horizontal::Right)
 		{
 			return static_cast<int32_t>(freeSpace);
 		}
 		return 0;
 	}
 
-	int32_t _verticalOffset(spk::VerticalAlignment alignment, uint32_t available, uint32_t used)
+	int32_t _verticalOffset(spk::Alignment::Vertical alignment, uint32_t available, uint32_t used)
 	{
 		if (used >= available)
 		{
 			return 0;
 		}
 		const uint32_t freeSpace = available - used;
-		if (alignment == spk::VerticalAlignment::Center)
+		if (alignment == spk::Alignment::Vertical::Center)
 		{
 			return static_cast<int32_t>(freeSpace / 2);
 		}
-		if (alignment == spk::VerticalAlignment::Bottom)
+		if (alignment == spk::Alignment::Vertical::Bottom)
 		{
 			return static_cast<int32_t>(freeSpace);
 		}
@@ -236,24 +236,34 @@ namespace spk
 		return _sizeSettings;
 	}
 
-	void Layout::Element::setHorizontalAlignment(HorizontalAlignment alignment)
+	void Layout::Element::setHorizontalAlignment(Alignment::Horizontal alignment)
 	{
-		_horizontalAlignment = alignment;
+		_alignment.horizontal = alignment;
 	}
 
-	HorizontalAlignment Layout::Element::horizontalAlignment() const noexcept
+	Alignment::Horizontal Layout::Element::horizontalAlignment() const noexcept
 	{
-		return _horizontalAlignment;
+		return _alignment.horizontal;
 	}
 
-	void Layout::Element::setVerticalAlignment(VerticalAlignment alignment)
+	void Layout::Element::setVerticalAlignment(Alignment::Vertical alignment)
 	{
-		_verticalAlignment = alignment;
+		_alignment.vertical = alignment;
 	}
 
-	VerticalAlignment Layout::Element::verticalAlignment() const noexcept
+	Alignment::Vertical Layout::Element::verticalAlignment() const noexcept
 	{
-		return _verticalAlignment;
+		return _alignment.vertical;
+	}
+
+	void Layout::Element::setAlignment(Alignment alignment)
+	{
+		_alignment = alignment;
+	}
+
+	Alignment Layout::Element::alignment() const noexcept
+	{
+		return _alignment;
 	}
 
 	void Layout::Element::setGeometry(const Rect2D &cell) const
@@ -261,8 +271,8 @@ namespace spk
 		const SizeHint hint = sizeHint();
 		const uint32_t width = _clampedDimension(cell.width, hint.minimal.x, hint.maximal.x);
 		const uint32_t height = _clampedDimension(cell.height, hint.minimal.y, hint.maximal.y);
-		const int32_t x = cell.x + _horizontalOffset(_horizontalAlignment, cell.width, width);
-		const int32_t y = cell.y + _verticalOffset(_verticalAlignment, cell.height, height);
+		const int32_t x = cell.x + _horizontalOffset(_alignment.horizontal, cell.width, width);
+		const int32_t y = cell.y + _verticalOffset(_alignment.vertical, cell.height, height);
 		const Rect2D geometry = Layout::_rect(x, y, width, height);
 		if (_widget != nullptr)
 		{

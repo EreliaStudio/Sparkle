@@ -13,6 +13,7 @@ namespace spk
 		_slider(this->name() + ".slider", this),
 		_positiveButton(this->name() + ".positive", this)
 	{
+		applyStyle(defaultStyle);
 		_updateIcons();
 		_negativeClickContract = _negativeButton.subscribeToClick([this]() {
 			_slider.setRatio(_slider.ratio() - _step);
@@ -32,6 +33,18 @@ namespace spk
 	{
 		setIconset(iconset);
 		setOrientation(orientation);
+	}
+
+	void ScrollBar::applyStyle(const Style &style)
+	{
+		_negativeButton.applyStyle(style);
+		_slider.applyStyle(style);
+		_positiveButton.applyStyle(style);
+		if (style.iconset != nullptr)
+		{
+			setIconset(style.iconset.get());
+		}
+		_updateSizeHint();
 	}
 
 	void ScrollBar::_updateIcons()

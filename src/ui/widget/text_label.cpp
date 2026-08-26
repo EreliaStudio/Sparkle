@@ -8,6 +8,7 @@ namespace spk
 	TextLabel::TextLabel(std::string name, Widget *parent) :
 		Widget(std::move(name), parent)
 	{
+		applyStyle(defaultStyle);
 		activate();
 	}
 
@@ -15,6 +16,14 @@ namespace spk
 		TextLabel(std::move(name), parent)
 	{
 		setFont(font);
+	}
+
+	void TextLabel::applyStyle(const Style &style)
+	{
+		if (style.font != nullptr)
+		{
+			setFont(style.font.get());
+		}
 	}
 
 	void TextLabel::_updateSizeHint()
@@ -37,36 +46,35 @@ namespace spk
 	TextRenderCommand::Anchor TextLabel::_textAnchor() const
 	{
 		Vector2Int position;
-		switch (_horizontalAlignment)
+		switch (_alignment.horizontal)
 		{
-		case HorizontalAlignment::Left:
+		case Alignment::Horizontal::Left:
 			position.x = static_cast<int>(_padding.x);
 			break;
-		case HorizontalAlignment::Center:
+		case Alignment::Horizontal::Center:
 			position.x = static_cast<int>(geometry().width / 2);
 			break;
-		case HorizontalAlignment::Right:
+		case Alignment::Horizontal::Right:
 			position.x = static_cast<int>(geometry().width) - static_cast<int>(_padding.x);
 			break;
 		}
 
-		switch (_verticalAlignment)
+		switch (_alignment.vertical)
 		{
-		case VerticalAlignment::Top:
+		case Alignment::Vertical::Top:
 			position.y = static_cast<int>(_padding.y);
 			break;
-		case VerticalAlignment::Center:
+		case Alignment::Vertical::Center:
 			position.y = static_cast<int>(geometry().height / 2);
 			break;
-		case VerticalAlignment::Bottom:
+		case Alignment::Vertical::Bottom:
 			position.y = static_cast<int>(geometry().height) - static_cast<int>(_padding.y);
 			break;
 		}
 
 		return TextRenderCommand::Anchor{
 			.position = position,
-			.horizontalAlignment = _horizontalAlignment,
-			.verticalAlignment = _verticalAlignment};
+			.alignment = _alignment};
 	}
 
 	void TextLabel::_buildRenderSnapshot(RenderSnapshot::Builder &builder)
@@ -76,7 +84,7 @@ namespace spk
 			return;
 		}
 
-		builder.renderPass(Widget::OverlayKey).emplace<TextRenderCommand>(_font, _textSize, _text, _textAnchor(), _glyphColor, _outlineColor, _depth);
+		builder.renderPass(targetRenderPass()).emplace<TextRenderCommand>(_font, _textSize, _text, _textAnchor(), _glyphColor, _outlineColor, _depth);
 	}
 
 	void TextLabel::setFont(Font *font)
@@ -133,20 +141,19 @@ namespace spk
 		_depth = depth;
 	}
 
-	void TextLabel::setHorizontalAlignment(HorizontalAlignment alignment)
+	void TextLabel::setHorizontalAlignment(Alignment::Horizontal alignment)
 	{
-		_horizontalAlignment = alignment;
+		_alignment.horizontal = alignment;
 	}
 
-	void TextLabel::setVerticalAlignment(VerticalAlignment alignment)
+	void TextLabel::setVerticalAlignment(Alignment::Vertical alignment)
 	{
-		_verticalAlignment = alignment;
+		_alignment.vertical = alignment;
 	}
 
-	void TextLabel::setAlignment(HorizontalAlignment horizontal, VerticalAlignment vertical)
+	void TextLabel::setAlignment(Alignment alignment)
 	{
-		_horizontalAlignment = horizontal;
-		_verticalAlignment = vertical;
+		_alignment = alignment;
 	}
 
 	void TextLabel::setPadding(const Vector2UInt &padding)
@@ -194,14 +201,19 @@ namespace spk
 		return _depth;
 	}
 
-	HorizontalAlignment TextLabel::horizontalAlignment() const noexcept
+	Alignment::Horizontal TextLabel::horizontalAlignment() const noexcept
 	{
-		return _horizontalAlignment;
+		return _alignment.horizontal;
 	}
 
-	VerticalAlignment TextLabel::verticalAlignment() const noexcept
+	Alignment::Vertical TextLabel::verticalAlignment() const noexcept
 	{
-		return _verticalAlignment;
+		return _alignment.vertical;
+	}
+
+	Alignment TextLabel::alignment() const noexcept
+	{
+		return _alignment;
 	}
 
 	const Vector2UInt &TextLabel::padding() const noexcept

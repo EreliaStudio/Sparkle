@@ -18,6 +18,7 @@ namespace spk
 	public:
 		explicit IconButton(std::string name, Widget *parent = nullptr);
 		IconButton(std::string name, const SpriteSheet *iconset, std::size_t spriteID = 0, Widget *parent = nullptr);
+		void applyStyle(const Style &style) override;
 
 		void setIconset(const SpriteSheet *iconset);
 		void setIconSpriteID(std::size_t spriteID);

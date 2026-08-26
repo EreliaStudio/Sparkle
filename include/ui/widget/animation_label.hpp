@@ -31,6 +31,7 @@ namespace spk
 	public:
 		explicit AnimationLabel(std::string name, Widget *parent = nullptr);
 		AnimationLabel(std::string name, const SpriteSheet *spriteSheet, Widget *parent = nullptr);
+		void applyStyle(const Style &style) override;
 
 		void setSpriteSheet(const SpriteSheet *spriteSheet);
 		void setLoopSpeed(Duration duration);

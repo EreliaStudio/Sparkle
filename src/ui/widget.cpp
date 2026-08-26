@@ -1,17 +1,63 @@
 #include "ui/widget.hpp"
 
 #include <cmath>
+#include <cstdint>
+#include <cstring>
+#include <span>
+#include <type_traits>
 #include <utility>
 
 #include "core/context/update_context.hpp"
 
+#include "exception.hpp"
+#include "graphics/font.hpp"
+#include "graphics/image.hpp"
+#include "graphics/internal/resource.hpp"
+#include "graphics/sprite_sheet.hpp"
 #include "rendering/command/scissor_render_command.hpp"
 #include "rendering/command/viewport_render_command.hpp"
 #include "rendering/command/viewport_uniform_render_command.hpp"
-#include "exception.hpp"
 
 namespace spk
 {
+	Widget::Style::Style() = default;
+	Widget::Style::~Style() = default;
+	Widget::Style::Style(Style &&) noexcept = default;
+	Widget::Style &Widget::Style::operator=(Style &&) noexcept = default;
+
+	CachedData<Widget::Style> Widget::defaultStyle([] {
+		const auto bytes = [](std::string_view path) {
+			const resources::Data data = resources::get(path);
+			return std::span<const std::uint8_t>{reinterpret_cast<const std::uint8_t *>(data.data()), data.size()};
+		};
+		const auto font = [](std::string_view path) {
+			const resources::Data data = resources::get(path);
+			Font::Data fontData(data.size());
+			std::memcpy(fontData.data(), data.data(), data.size());
+			return std::make_unique<Font>(Font::fromRawData(std::move(fontData)));
+		};
+
+		Style style;
+		style.font = font("fonts/arial.ttf");
+		style.iconsetImage = std::make_unique<Image>(bytes("textures/default_iconset.png"));
+		style.iconset = std::make_unique<SpriteSheet>(bytes("textures/default_iconset.png"), Vector2UInt{10, 10});
+		style.nineSlice = std::make_unique<SpriteSheet>(bytes("textures/default_nine_slice.png"), Vector2UInt{3, 3});
+		style.darkNineSlice = std::make_unique<SpriteSheet>(bytes("textures/default_nine_slice_dark.png"), Vector2UInt{3, 3});
+		style.darkerNineSlice = std::make_unique<SpriteSheet>(bytes("textures/default_nine_slice_darker.png"), Vector2UInt{3, 3});
+		style.lightNineSlice = std::make_unique<SpriteSheet>(bytes("textures/default_nine_slice_light.png"), Vector2UInt{3, 3});
+		style.sliderBody = std::make_unique<SpriteSheet>(bytes("textures/default_slider_body.png"), Vector2UInt{3, 3});
+		style.menuBreak = std::make_unique<SpriteSheet>(bytes("textures/default_break.png"), Vector2UInt{3, 1});
+		style.toggleSwitchOutline = std::make_unique<SpriteSheet>(bytes("textures/default_toggle_switch_nine_slice.png"), Vector2UInt{3, 3});
+		style.toggleSwitchThumb = std::make_unique<SpriteSheet>(bytes("textures/default_toggle_switch_thumb_nine_slice.png"), Vector2UInt{3, 3});
+		style.toggleSwitchOffBackground = std::make_unique<SpriteSheet>(bytes("textures/default_toggle_switch_off_background.png"), Vector2UInt{3, 3});
+		style.toggleSwitchOnBackground = std::make_unique<SpriteSheet>(bytes("textures/default_toggle_switch_on_background.png"), Vector2UInt{3, 3});
+		return style;
+	});
+
+	void Widget::applyStyle(const Style &)
+	{
+	}
+
 	bool WidgetChildComparator::operator()(const Widget *lhs, const Widget *rhs) const
 	{
 		return lhs->zOrder() < rhs->zOrder();
@@ -39,6 +85,11 @@ namespace spk
 			return result;
 		})
 	{
+		const Style &style = defaultStyle;
+		(void)style;
+		_initialActivationContract = subscribeToActivation([this]() {
+			_acceptChildSizeHintEditions = true;
+		});
 		setParent(parent);
 		_computeRatio();
 		_onParentEditedContract = subscribeToParentEdition([this](const Widget *) {
@@ -73,6 +124,11 @@ namespace spk
 
 	void Widget::_onChildSizeHintEdition()
 	{
+		if (!_acceptChildSizeHintEditions)
+		{
+			return;
+		}
+
 		const ResizeableTrait::SizeHint previousSizeHint = sizeHint();
 		_updateSizeHint();
 
@@ -147,26 +203,50 @@ namespace spk
 		}
 		try
 		{
-			for (Widget *child : children())
+			constexpr bool PointerEvent =
+				std::is_same_v<TEvent, MouseEnteredEvent> ||
+				std::is_same_v<TEvent, MouseLeftEvent> ||
+				std::is_same_v<TEvent, MouseMovedEvent> ||
+				std::is_same_v<TEvent, MouseWheelScrolledEvent> ||
+				std::is_same_v<TEvent, MouseButtonPressedEvent> ||
+				std::is_same_v<TEvent, MouseButtonReleasedEvent> ||
+				std::is_same_v<TEvent, MouseButtonDoubleClickedEvent>;
+
+			if constexpr (PointerEvent)
 			{
-				if (child != nullptr)
+				for (auto it = children().rbegin(); it != children().rend(); ++it)
 				{
-					child->_propagate(event, handler, eventName);
+					if (*it != nullptr)
+					{
+						(*it)->_propagate(event, handler, eventName);
+					}
+					if (event.consumed)
+					{
+						return;
+					}
 				}
-				if (event.consumed)
+			}
+			else
+			{
+				for (Widget *child : children())
 				{
-					return;
+					if (child != nullptr)
+					{
+						child->_propagate(event, handler, eventName);
+					}
+					if (event.consumed)
+					{
+						return;
+					}
 				}
 			}
 			(this->*handler)(event);
-		}
-		catch (spk::Exception &exception)
+		} catch (spk::Exception &exception)
 		{
 			exception.addContext(
 				"Exception while dispatching " + std::string(eventName) + " to widget [" + name() + "]");
 			throw;
-		}
-		catch (...)
+		} catch (...)
 		{
 			throw spk::Exception(
 				"Exception while dispatching " + std::string(eventName) + " to widget [" + name() + "]",
@@ -217,6 +297,50 @@ namespace spk
 	const ViewRegion &Widget::viewRegion() const
 	{
 		return _viewRegion.get();
+	}
+
+	Widget &Widget::root() noexcept
+	{
+		Widget *result = this;
+		while (result->hasParent())
+		{
+			result = result->parent();
+		}
+		return *result;
+	}
+
+	const Widget &Widget::root() const noexcept
+	{
+		const Widget *result = this;
+		while (result->hasParent())
+		{
+			result = result->parent();
+		}
+		return *result;
+	}
+
+	void Widget::setTargetRenderPass(const RenderPass::Key &key)
+	{
+		_targetRenderPassOverride = key;
+	}
+
+	void Widget::inheritTargetRenderPass()
+	{
+		_targetRenderPassOverride.reset();
+	}
+
+	bool Widget::hasTargetRenderPassOverride() const noexcept
+	{
+		return _targetRenderPassOverride.has_value();
+	}
+
+	const RenderPass::Key &Widget::targetRenderPass() const noexcept
+	{
+		if (_targetRenderPassOverride.has_value())
+		{
+			return *_targetRenderPassOverride;
+		}
+		return hasParent() ? parent()->targetRenderPass() : OverlayKey;
 	}
 
 	void Widget::dispatch(WindowResizedEvent &event)
@@ -294,13 +418,11 @@ namespace spk
 					child->updateState(context);
 				}
 			}
-		}
-		catch (spk::Exception &exception)
+		} catch (spk::Exception &exception)
 		{
 			exception.addContext("Exception while updating widget [" + name() + "]");
 			throw;
-		}
-		catch (...)
+		} catch (...)
 		{
 			throw spk::Exception(
 				"Exception while updating widget [" + name() + "]",
@@ -310,7 +432,7 @@ namespace spk
 
 	void Widget::_buildViewRegionCommands(spk::RenderSnapshot::Builder &builder)
 	{
-		auto &pass = builder.renderPass(Widget::OverlayKey);
+		auto &pass = builder.renderPass(targetRenderPass());
 
 		pass.emplace<spk::ViewportRenderCommand>(_viewRegion->viewport);
 		pass.emplace<spk::ViewportUniformRenderCommand>(_viewRegion->viewport);
@@ -338,13 +460,11 @@ namespace spk
 					child->buildRenderSnapshot(builder);
 				}
 			}
-		}
-		catch (spk::Exception &exception)
+		} catch (spk::Exception &exception)
 		{
 			exception.addContext("Exception while building render snapshot of widget [" + name() + "]");
 			throw;
-		}
-		catch (...)
+		} catch (...)
 		{
 			throw spk::Exception(
 				"Exception while building render snapshot of widget [" + name() + "]",
@@ -363,6 +483,70 @@ namespace spk
 	}
 	void Widget::_onGeometryChange()
 	{
+	}
+
+	void Widget::observePointer(MouseMovedEvent &event)
+	{
+		if (!isActive())
+		{
+			return;
+		}
+		_onPassiveMouseMovedEvent(event);
+		for (Widget *child : children())
+		{
+			if (child != nullptr)
+			{
+				child->observePointer(event);
+			}
+		}
+	}
+
+	void Widget::observePointer(MouseButtonPressedEvent &event)
+	{
+		if (!isActive())
+		{
+			return;
+		}
+		_onPassiveMouseButtonPressedEvent(event);
+		for (Widget *child : children())
+		{
+			if (child != nullptr)
+			{
+				child->observePointer(event);
+			}
+		}
+	}
+
+	void Widget::observeKeyboard(KeyPressedEvent &event)
+	{
+		if (!isActive())
+		{
+			return;
+		}
+		_onPassiveKeyPressedEvent(event);
+		for (Widget *child : children())
+		{
+			if (child != nullptr)
+			{
+				child->observeKeyboard(event);
+			}
+		}
+	}
+
+	void Widget::observeKeyboard(KeyReleasedEvent &event)
+	{
+		if (!isActive())
+		{
+			return;
+		}
+		_onPassiveKeyReleasedEvent(event);
+		for (Widget *child : children())
+		{
+			if (child != nullptr)
+			{
+				child->observeKeyboard(event);
+			}
+		}
 	}
 	void Widget::_onFocusAcquired(FocusMode::Channel) noexcept
 	{
@@ -420,6 +604,18 @@ namespace spk
 	{
 	}
 	void Widget::_onTextInputEvent(TextInputEvent &)
+	{
+	}
+	void Widget::_onPassiveMouseMovedEvent(MouseMovedEvent &)
+	{
+	}
+	void Widget::_onPassiveMouseButtonPressedEvent(MouseButtonPressedEvent &)
+	{
+	}
+	void Widget::_onPassiveKeyPressedEvent(KeyPressedEvent &)
+	{
+	}
+	void Widget::_onPassiveKeyReleasedEvent(KeyReleasedEvent &)
 	{
 	}
 }

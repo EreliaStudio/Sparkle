@@ -85,6 +85,7 @@ namespace spk
 			_valueEdit(this->name() + ".value", this),
 			_upButton(this->name() + ".up", this)
 		{
+			applyStyle(defaultStyle);
 			_downButton.setText("-");
 			_upButton.setText("+");
 			_valueEdit.setPlaceholder("...");
@@ -98,6 +99,14 @@ namespace spk
 			_updateDisplay();
 			_updateSizeHint();
 			activate();
+		}
+
+		void applyStyle(const Style &style) override
+		{
+			_downButton.applyStyle(style);
+			_valueEdit.applyStyle(style);
+			_upButton.applyStyle(style);
+			_updateSizeHint();
 		}
 
 		SpinBox(std::string name, Font *font, Widget *parent = nullptr) :

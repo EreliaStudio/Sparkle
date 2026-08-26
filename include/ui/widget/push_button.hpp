@@ -5,6 +5,7 @@
 #include <string>
 
 #include "design_pattern/contract_provider.hpp"
+#include "type/alignment.hpp"
 #include "ui/widget/image_label.hpp"
 #include "ui/widget/panel.hpp"
 #include "ui/widget/text_label.hpp"
@@ -51,6 +52,7 @@ namespace spk
 
 	public:
 		explicit PushButton(std::string name, Widget *parent = nullptr);
+		void applyStyle(const Style &style) override;
 
 		[[nodiscard]] ClickContract subscribeToClick(ClickCallback callback);
 
@@ -58,7 +60,7 @@ namespace spk
 		void setText(std::string_view text);
 		void setTextPadding(const Vector2UInt &padding);
 		void resetTextPadding();
-		void setAlignment(HorizontalAlignment horizontal, VerticalAlignment vertical);
+		void setAlignment(Alignment alignment);
 		void setIcon(const Texture *texture, const Texture::Section &section = Texture::Section::whole);
 		void setIcon(const SpriteSheet *spriteSheet, std::size_t spriteID);
 		void setIcon(const SpriteSheet *spriteSheet, const Vector2UInt &coordinates);
@@ -73,6 +75,7 @@ namespace spk
 		[[nodiscard]] bool isHovered() const noexcept;
 		[[nodiscard]] bool isPressed() const noexcept;
 		[[nodiscard]] bool isFlat() const noexcept;
+		[[nodiscard]] Alignment alignment() const noexcept;
 		[[nodiscard]] const std::optional<Vector2UInt> &textPadding() const noexcept;
 		[[nodiscard]] const std::optional<Vector2UInt> &iconSize() const noexcept;
 		[[nodiscard]] const std::optional<Vector2UInt> &iconPadding() const noexcept;

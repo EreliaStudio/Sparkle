@@ -3,9 +3,9 @@
 #include <memory>
 #include <variant>
 
-#include "rendering/render_snapshot.hpp"
 #include "container/thread_safe_slot.hpp"
 #include "core/window.hpp"
+#include "rendering/render_snapshot.hpp"
 
 namespace spk
 {

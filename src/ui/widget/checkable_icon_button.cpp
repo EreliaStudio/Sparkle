@@ -10,6 +10,9 @@ namespace spk
 		_uncheckedButton(this->name() + ".unchecked", this),
 		_checkedButton(this->name() + ".checked", this)
 	{
+		_uncheckedButton.setIconSpriteID(DefaultUncheckedSpriteID);
+		_checkedButton.setIconSpriteID(DefaultCheckedSpriteID);
+		applyStyle(defaultStyle);
 		_uncheckedClickContract = _uncheckedButton.subscribeToClick([this]() {
 			toggle();
 		});
@@ -22,10 +25,8 @@ namespace spk
 	}
 
 	CheckableIconButton::CheckableIconButton(std::string name, const SpriteSheet *iconset, Widget *parent) :
-		CheckableIconButton(std::move(name), iconset, 0, 8, parent)
+		CheckableIconButton(std::move(name), iconset, DefaultUncheckedSpriteID, DefaultCheckedSpriteID, parent)
 	{
-		_uncheckedButton.removeIcon();
-		_updateSizeHint();
 	}
 
 	CheckableIconButton::CheckableIconButton(std::string name, const SpriteSheet *iconset, std::size_t uncheckedSpriteID, std::size_t checkedSpriteID, Widget *parent) :
@@ -35,6 +36,13 @@ namespace spk
 		_checkedButton.setIconSpriteID(checkedSpriteID);
 		_uncheckedButton.setIconset(iconset);
 		_checkedButton.setIconset(iconset);
+		_updateSizeHint();
+	}
+
+	void CheckableIconButton::applyStyle(const Style &style)
+	{
+		_uncheckedButton.applyStyle(style);
+		_checkedButton.applyStyle(style);
 		_updateSizeHint();
 	}
 

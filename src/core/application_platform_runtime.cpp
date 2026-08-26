@@ -7,7 +7,6 @@
 #include <utility>
 #include <variant>
 
-
 namespace spk
 {
 	Application::PlatformRuntime::PlatformRuntime(
@@ -30,8 +29,8 @@ namespace spk
 	{
 		const Identifier identifier = request.windowIdentifier;
 		request.native->window().create(_windowClass, WinAPI::Window::CreationInfo{.title = request.configuration.title, .x = request.configuration.area.anchor.x, .y = request.configuration.area.anchor.y, .width = request.configuration.area.size.x, .height = request.configuration.area.size.y, .messageHandler = [this, identifier](HWND handle, UINT message, WPARAM wParam, LPARAM lParam) {
-																					 return _processMessage(identifier, handle, message, wParam, lParam);
-																				 }});
+																					   return _processMessage(identifier, handle, message, wParam, lParam);
+																				   }});
 		request.native->markReady();
 	}
 

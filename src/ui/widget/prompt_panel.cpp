@@ -25,6 +25,7 @@ namespace spk
 		_textArea(this->name() + ".message", &_background),
 		_commandPanel(this->name() + ".commands", &_background)
 	{
+		applyStyle(defaultStyle);
 		setMaximalSize({Unlimited, Unlimited});
 		_textArea.setMaximalSize({Unlimited, Unlimited});
 		_commandPanel.setMaximalSize({Unlimited, Unlimited});
@@ -38,6 +39,16 @@ namespace spk
 		_layoutReady = true;
 		_rebuildLayout();
 		activate();
+	}
+
+	void PromptPanel::applyStyle(const Style &style)
+	{
+		if (style.darkNineSlice != nullptr)
+		{
+			_background.setSpriteSheet(style.darkNineSlice.get());
+		}
+		_background.setCornerSize({16, 16});
+		_textArea.applyStyle(style);
 	}
 
 	void PromptPanel::_rebuildLayout()
@@ -55,7 +66,7 @@ namespace spk
 		Layout::Element *commands = _layout.addWidget(
 			&_commandPanel,
 			{Layout::SizePolicy::Extend, Layout::SizePolicy::Minimum});
-		commands->setHorizontalAlignment(HorizontalAlignment::Right);
+		commands->setHorizontalAlignment(Alignment::Horizontal::Right);
 		_updateSizeHint();
 		_onGeometryChange();
 	}
@@ -102,9 +113,7 @@ namespace spk
 		const unsigned int vertical = std::min(
 			static_cast<unsigned int>(std::max(corner.y, 0)),
 			geometry().height / 2);
-		_layout.setGeometry(Rect2D{
-			Vector2Int{static_cast<int>(horizontal), static_cast<int>(vertical)},
-			Vector2UInt{geometry().width - 2 * horizontal, geometry().height - 2 * vertical}});
+		_layout.setGeometry(Rect2D{Vector2Int{static_cast<int>(horizontal), static_cast<int>(vertical)}, Vector2UInt{geometry().width - 2 * horizontal, geometry().height - 2 * vertical}});
 	}
 
 	void PromptPanel::setMessage(Font::Text message)

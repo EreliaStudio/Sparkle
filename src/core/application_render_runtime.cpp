@@ -151,13 +151,11 @@ namespace spk
 			try
 			{
 				_render(surface, *snapshot);
-			}
-			catch (spk::Exception &exception)
+			} catch (spk::Exception &exception)
 			{
 				exception.addContext("Exception while rendering window [" + identifier + "]");
 				throw;
-			}
-			catch (...)
+			} catch (...)
 			{
 				throw spk::Exception(
 					"Exception while rendering window [" + identifier + "]",

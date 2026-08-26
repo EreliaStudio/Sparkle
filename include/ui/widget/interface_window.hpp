@@ -43,6 +43,7 @@ namespace spk
 
 		public:
 			explicit MenuBar(std::string name, Widget *parent = nullptr);
+			void applyStyle(const Style &style) override;
 
 			void setTitle(std::string_view title);
 			void setIconset(const SpriteSheet *iconset);
@@ -122,6 +123,7 @@ namespace spk
 
 	public:
 		explicit IInterfaceWindow(std::string name, Widget *parent = nullptr);
+		void applyStyle(const Style &style) override;
 
 		void setContent(Widget *content);
 		void setTitle(std::string_view title);

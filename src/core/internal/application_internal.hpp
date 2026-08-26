@@ -18,18 +18,18 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "core/window.hpp"
-#include "core/platform/window.hpp"
-#include "core/platform/message_queue.hpp"
-#include "core/event/platform_request.hpp"
-#include "core/event/record.hpp"
-#include "core/event/render_request.hpp"
-#include "rendering/render_snapshot.hpp"
 #include "container/thread_safe_fifo.hpp"
 #include "container/thread_safe_slot.hpp"
 #include "core/context/update_context.hpp"
+#include "core/event/platform_request.hpp"
+#include "core/event/record.hpp"
+#include "core/event/render_request.hpp"
 #include "core/event/update_request.hpp"
+#include "core/platform/message_queue.hpp"
 #include "core/platform/wake_event.hpp"
+#include "core/platform/window.hpp"
+#include "core/window.hpp"
+#include "rendering/render_snapshot.hpp"
 
 namespace spk
 {
@@ -132,13 +132,11 @@ namespace spk
 			{
 				consumeIncoming();
 				prepareCycle();
-			}
-			catch (spk::Exception &exception)
+			} catch (spk::Exception &exception)
 			{
 				exception.addContext("Exception while preparing " + std::string(_name) + " runtime");
 				throw;
-			}
-			catch (...)
+			} catch (...)
 			{
 				throw spk::Exception(
 					"Exception while preparing " + std::string(_name) + " runtime",
@@ -149,14 +147,12 @@ namespace spk
 				try
 				{
 					tickOnce(identifier, *object);
-				}
-				catch (spk::Exception &exception)
+				} catch (spk::Exception &exception)
 				{
 					exception.addContext(
 						"Exception in " + std::string(_name) + " runtime for window [" + identifier + "]");
 					throw;
-				}
-				catch (...)
+				} catch (...)
 				{
 					throw spk::Exception(
 						"Exception in " + std::string(_name) + " runtime for window [" + identifier + "]",
@@ -166,13 +162,11 @@ namespace spk
 			try
 			{
 				finishCycle();
-			}
-			catch (spk::Exception &exception)
+			} catch (spk::Exception &exception)
 			{
 				exception.addContext("Exception while finishing " + std::string(_name) + " runtime cycle");
 				throw;
-			}
-			catch (...)
+			} catch (...)
 			{
 				throw spk::Exception(
 					"Exception while finishing " + std::string(_name) + " runtime cycle",
@@ -187,14 +181,12 @@ namespace spk
 				try
 				{
 					release(*object);
-				}
-				catch (spk::Exception &exception)
+				} catch (spk::Exception &exception)
 				{
 					exception.addContext(
 						"Exception while releasing window [" + identifier + "] from " + std::string(_name) + " runtime");
 					throw;
-				}
-				catch (...)
+				} catch (...)
 				{
 					throw spk::Exception(
 						"Exception while releasing window [" + identifier + "] from " + std::string(_name) + " runtime",

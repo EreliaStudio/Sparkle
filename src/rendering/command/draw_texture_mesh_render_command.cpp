@@ -5,8 +5,8 @@
 #include <utility>
 
 #include "graphics/opengl/program.hpp"
-#include "graphics/resource.hpp"
 #include "graphics/opengl/texture.hpp"
+#include "graphics/internal/resource.hpp"
 #include "rendering/command/viewport_uniform_render_command.hpp"
 
 namespace spk

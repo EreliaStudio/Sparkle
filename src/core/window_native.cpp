@@ -1,9 +1,8 @@
-#include "core/window.hpp"
 #include "core/platform/window.hpp"
+#include "core/window.hpp"
 
 #include <atomic>
 #include <utility>
-
 
 namespace spk
 {

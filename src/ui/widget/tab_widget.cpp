@@ -43,20 +43,24 @@ namespace spk
 
 		const float tabsWidth = static_cast<float>(_tabWidth) * static_cast<float>(_pages.size());
 		SizeHint hint = sizeHint();
-		hint.minimal = {std::max(contentMinimum.x, tabsWidth), contentMinimum.y + static_cast<float>(_tabBarHeight)};
-		hint.preferred = {std::max(contentPreferred.x, tabsWidth), contentPreferred.y + static_cast<float>(_tabBarHeight)};
+		const float verticalChrome = static_cast<float>(_tabBarHeight) + static_cast<float>(_contentTopPadding);
+		hint.minimal = {std::max(contentMinimum.x, tabsWidth), contentMinimum.y + verticalChrome};
+		hint.preferred = {std::max(contentPreferred.x, tabsWidth), contentPreferred.y + verticalChrome};
 		setSizeHint(hint);
 	}
 
 	void TabWidget::_onGeometryChange()
 	{
 		const unsigned int barHeight = std::min(_tabBarHeight, geometry().height);
-		const unsigned int contentHeight = geometry().height - barHeight;
+		const unsigned int remainingHeight = geometry().height - barHeight;
+		const unsigned int contentTopPadding = std::min(_contentTopPadding, remainingHeight);
+		const unsigned int contentHeight = remainingHeight - contentTopPadding;
 		const unsigned int buttonWidth = _pages.empty() ? 0 : std::min(_tabWidth, geometry().width / static_cast<unsigned int>(_pages.size()));
 		for (std::size_t index = 0; index < _pages.size(); ++index)
 		{
 			_pages[index].button->setGeometry({Vector2Int{static_cast<int>(index * buttonWidth), 0}, Vector2UInt{buttonWidth, barHeight}});
-			_pages[index].content->setGeometry({Vector2Int{0, static_cast<int>(barHeight)}, Vector2UInt{geometry().width, contentHeight}});
+			_pages[index].content->setGeometry(
+				{Vector2Int{0, static_cast<int>(barHeight + contentTopPadding)}, Vector2UInt{geometry().width, contentHeight}});
 		}
 	}
 
@@ -172,6 +176,17 @@ namespace spk
 		_onGeometryChange();
 	}
 
+	void TabWidget::setContentTopPadding(unsigned int padding)
+	{
+		if (_contentTopPadding == padding)
+		{
+			return;
+		}
+		_contentTopPadding = padding;
+		_updateSizeHint();
+		_onGeometryChange();
+	}
+
 	TabWidget::SelectionContract TabWidget::subscribeToSelection(SelectionCallback callback)
 	{
 		return _selectionProvider.subscribe(std::move(callback));
@@ -225,5 +240,10 @@ namespace spk
 	unsigned int TabWidget::tabWidth() const noexcept
 	{
 		return _tabWidth;
+	}
+
+	unsigned int TabWidget::contentTopPadding() const noexcept
+	{
+		return _contentTopPadding;
 	}
 }

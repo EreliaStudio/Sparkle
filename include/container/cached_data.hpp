@@ -144,6 +144,11 @@ namespace spk
 			return *_data;
 		}
 
+		[[nodiscard]] operator const value_type &() const
+		{
+			return get();
+		}
+
 		[[nodiscard]] value_type &operator*()
 		{
 			return get();

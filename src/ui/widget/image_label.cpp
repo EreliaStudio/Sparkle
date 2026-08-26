@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <utility>
 
+#include "graphics/image.hpp"
 #include "rendering/command/image_render_command.hpp"
 
 namespace spk
@@ -10,6 +11,7 @@ namespace spk
 	ImageLabel::ImageLabel(std::string name, Widget *parent) :
 		Widget(std::move(name), parent)
 	{
+		applyStyle(defaultStyle);
 		activate();
 	}
 
@@ -19,6 +21,14 @@ namespace spk
 		setTexture(texture);
 	}
 
+	void ImageLabel::applyStyle(const Style &style)
+	{
+		if (style.iconsetImage != nullptr)
+		{
+			setTexture(style.iconsetImage.get());
+		}
+	}
+
 	void ImageLabel::_buildRenderSnapshot(RenderSnapshot::Builder &builder)
 	{
 		if (_texture == nullptr || geometry().width == 0 || geometry().height == 0)
@@ -26,7 +36,7 @@ namespace spk
 			return;
 		}
 
-		builder.renderPass(Widget::OverlayKey).emplace<ImageRenderCommand>(_texture, _section, Rect2D{Vector2Int{0, 0}, geometry().size}, _depth);
+		builder.renderPass(targetRenderPass()).emplace<ImageRenderCommand>(_texture, _section, Rect2D{Vector2Int{0, 0}, geometry().size}, _depth);
 	}
 
 	void ImageLabel::setTexture(const Texture *texture)

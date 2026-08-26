@@ -1,11 +1,12 @@
 #include "internal/application_internal.hpp"
 
 #include <cstdint>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
-#include "input/input_state.hpp"
 #include "exception.hpp"
+#include "input/input_state.hpp"
 #include "input/keyboard.hpp"
 #include "input/mouse.hpp"
 #include "ui/widget.hpp"
@@ -71,6 +72,14 @@ namespace spk
 	void Application::UpdateRuntime::_dispatchMouse(const TRecord &record, Window::State &state)
 	{
 		DeviceEvent<TRecord, spk::Mouse> event(record, state.mouse());
+		if constexpr (std::is_same_v<TRecord, MouseMovedRecord>)
+		{
+			state.root().observePointer(event);
+		}
+		else if constexpr (std::is_same_v<TRecord, MouseButtonPressedRecord>)
+		{
+			state.root().observePointer(event);
+		}
 		state.dispatchRoot(FocusMode::Channel::Mouse).dispatch(event);
 		_applyFocusChanges(event, state);
 	}
@@ -79,6 +88,14 @@ namespace spk
 	void Application::UpdateRuntime::_dispatchKeyboard(const TRecord &record, Window::State &state)
 	{
 		DeviceEvent<TRecord, spk::Keyboard> event(record, state.keyboard());
+		if constexpr (std::is_same_v<TRecord, KeyPressedRecord>)
+		{
+			state.root().observeKeyboard(event);
+		}
+		else if constexpr (std::is_same_v<TRecord, KeyReleasedRecord>)
+		{
+			state.root().observeKeyboard(event);
+		}
 		state.dispatchRoot(FocusMode::Channel::Keyboard).dispatch(event);
 		_applyFocusChanges(event, state);
 	}
@@ -302,13 +319,11 @@ namespace spk
 			spk::RenderSnapshot::Builder builder;
 			state.root().buildRenderSnapshot(builder);
 			return builder.build();
-		}
-		catch (spk::Exception &exception)
+		} catch (spk::Exception &exception)
 		{
 			exception.addContext("Exception while building render snapshot for window [" + identifier + "]");
 			throw;
-		}
-		catch (...)
+		} catch (...)
 		{
 			throw spk::Exception(
 				"Exception while building render snapshot for window [" + identifier + "]",
@@ -348,13 +363,11 @@ namespace spk
 		try
 		{
 			_updateState(state, context);
-		}
-		catch (spk::Exception &exception)
+		} catch (spk::Exception &exception)
 		{
 			exception.addContext("Exception while updating window [" + identifier + "]");
 			throw;
-		}
-		catch (...)
+		} catch (...)
 		{
 			throw spk::Exception(
 				"Exception while updating window [" + identifier + "]",

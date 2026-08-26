@@ -19,8 +19,12 @@ namespace spk
 		_messageContent(this->name() + ".content", &normalBackground())
 	{
 		setContent(&_messageContent);
-		_closeContract = subscribeToClose([this]() { close(); });
-		_resizeContract = subscribeToResize([this](const Vector2UInt &) { _updateMinimumContentSize(); });
+		_closeContract = subscribeToClose([this]() {
+			close();
+		});
+		_resizeContract = subscribeToResize([this](const Vector2UInt &) {
+			_updateMinimumContentSize();
+		});
 		_contentSizeContract = _messageContent.subscribeToSizeHintEdition([this](ResizeableTrait *) {
 			_updateMinimumContentSize();
 		});
@@ -41,60 +45,127 @@ namespace spk
 		setMinimumContentSize(minimum);
 	}
 
-	void MessageBox::setText(Font::Text text) { _messageContent.setMessage(std::move(text)); }
-	void MessageBox::setText(std::string_view text) { _messageContent.setMessage(text); }
-	const Font::Text &MessageBox::text() const noexcept { return _messageContent.message(); }
+	void MessageBox::setText(Font::Text text)
+	{
+		_messageContent.setMessage(std::move(text));
+	}
+	void MessageBox::setText(std::string_view text)
+	{
+		_messageContent.setMessage(text);
+	}
+	const Font::Text &MessageBox::text() const noexcept
+	{
+		return _messageContent.message();
+	}
 	void MessageBox::setMinimalWidth(unsigned int width)
 	{
-		if (_minimalWidth == width) return;
+		if (_minimalWidth == width)
+		{
+			return;
+		}
 		_minimalWidth = width;
 		_updateMinimumContentSize();
 	}
-	unsigned int MessageBox::minimalWidth() const noexcept { return _minimalWidth; }
+	unsigned int MessageBox::minimalWidth() const noexcept
+	{
+		return _minimalWidth;
+	}
 
-	PushButton &MessageBox::addButton(std::string name, std::string_view label) { return _messageContent.addButton(std::move(name), label); }
-	PushButton &MessageBox::button(std::string_view name) { return _messageContent.button(name); }
-	const PushButton &MessageBox::button(std::string_view name) const { return _messageContent.button(name); }
-	void MessageBox::removeButton(std::string_view name) { _messageContent.removeButton(name); }
-	std::size_t MessageBox::nbButton() const noexcept { return _messageContent.nbButton(); }
+	PushButton &MessageBox::addButton(std::string name, std::string_view label)
+	{
+		return _messageContent.addButton(std::move(name), label);
+	}
+	PushButton &MessageBox::button(std::string_view name)
+	{
+		return _messageContent.button(name);
+	}
+	const PushButton &MessageBox::button(std::string_view name) const
+	{
+		return _messageContent.button(name);
+	}
+	void MessageBox::removeButton(std::string_view name)
+	{
+		_messageContent.removeButton(name);
+	}
+	std::size_t MessageBox::nbButton() const noexcept
+	{
+		return _messageContent.nbButton();
+	}
 	PushButton::ClickContract MessageBox::subscribe(std::string_view name, PushButton::ClickCallback callback)
 	{
 		return _messageContent.subscribe(name, std::move(callback));
 	}
 
-	MessageBox::Content &MessageBox::messageContent() noexcept { return _messageContent; }
-	const MessageBox::Content &MessageBox::messageContent() const noexcept { return _messageContent; }
-	TextArea &MessageBox::textArea() noexcept { return _messageContent.textArea(); }
-	const TextArea &MessageBox::textArea() const noexcept { return _messageContent.textArea(); }
-	CommandPanel &MessageBox::commandPanel() noexcept { return _messageContent.commandPanel(); }
-	const CommandPanel &MessageBox::commandPanel() const noexcept { return _messageContent.commandPanel(); }
+	MessageBox::Content &MessageBox::messageContent() noexcept
+	{
+		return _messageContent;
+	}
+	const MessageBox::Content &MessageBox::messageContent() const noexcept
+	{
+		return _messageContent;
+	}
+	TextArea &MessageBox::textArea() noexcept
+	{
+		return _messageContent.textArea();
+	}
+	const TextArea &MessageBox::textArea() const noexcept
+	{
+		return _messageContent.textArea();
+	}
+	CommandPanel &MessageBox::commandPanel() noexcept
+	{
+		return _messageContent.commandPanel();
+	}
+	const CommandPanel &MessageBox::commandPanel() const noexcept
+	{
+		return _messageContent.commandPanel();
+	}
 
-	InformationMessageBox::InformationMessageBox(std::string name, Widget *parent) : MessageBox(std::move(name), parent)
+	InformationMessageBox::InformationMessageBox(std::string name, Widget *parent) :
+		MessageBox(std::move(name), parent)
 	{
 		setTitle("Information");
 		_closeButton = &addButton("close", "Close");
-		_buttonContract = subscribe("close", [this]() { close(); });
+		_buttonContract = subscribe("close", [this]() {
+			close();
+		});
 	}
 
-	PushButton &InformationMessageBox::closeButton() noexcept { return *_closeButton; }
-	const PushButton &InformationMessageBox::closeButton() const noexcept { return *_closeButton; }
+	PushButton &InformationMessageBox::closeButton() noexcept
+	{
+		return *_closeButton;
+	}
+	const PushButton &InformationMessageBox::closeButton() const noexcept
+	{
+		return *_closeButton;
+	}
 
-	RequestMessageBox::RequestMessageBox(std::string name, Widget *parent) : MessageBox(std::move(name), parent)
+	RequestMessageBox::RequestMessageBox(std::string name, Widget *parent) :
+		MessageBox(std::move(name), parent)
 	{
 		setTitle("Request");
 		_firstButton = &addButton("first", "Yes");
 		_secondButton = &addButton("second", "No");
 		_firstContract = subscribe("first", [this]() {
-			if (_firstAction) _firstAction();
+			if (_firstAction)
+			{
+				_firstAction();
+			}
 			close();
 		});
 		_secondContract = subscribe("second", [this]() {
-			if (_secondAction) _secondAction();
+			if (_secondAction)
+			{
+				_secondAction();
+			}
 			close();
 		});
 		_titleCloseContract = subscribeToClose([this]() {
 			const Action &action = _useSecondActionOnTitleClose ? _secondAction : _titleCloseAction;
-			if (action) action();
+			if (action)
+			{
+				action();
+			}
 		});
 	}
 
@@ -127,8 +198,20 @@ namespace spk
 		return _useSecondActionOnTitleClose;
 	}
 
-	PushButton &RequestMessageBox::firstButton() noexcept { return *_firstButton; }
-	const PushButton &RequestMessageBox::firstButton() const noexcept { return *_firstButton; }
-	PushButton &RequestMessageBox::secondButton() noexcept { return *_secondButton; }
-	const PushButton &RequestMessageBox::secondButton() const noexcept { return *_secondButton; }
+	PushButton &RequestMessageBox::firstButton() noexcept
+	{
+		return *_firstButton;
+	}
+	const PushButton &RequestMessageBox::firstButton() const noexcept
+	{
+		return *_firstButton;
+	}
+	PushButton &RequestMessageBox::secondButton() noexcept
+	{
+		return *_secondButton;
+	}
+	const PushButton &RequestMessageBox::secondButton() const noexcept
+	{
+		return *_secondButton;
+	}
 }

@@ -3,8 +3,8 @@
 #include <algorithm>
 #include <vector>
 
-#include "ui/layout/layout.hpp"
 #include "type/orientation.hpp"
+#include "ui/layout/layout.hpp"
 
 namespace spk
 {
