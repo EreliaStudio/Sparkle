@@ -5,7 +5,7 @@
 #include <string>
 #include <string_view>
 
-#include "ui/text_model.hpp"
+#include "ui/text_model_view.hpp"
 #include "ui/widget/panel.hpp"
 #include "ui/widget/popup_widget.hpp"
 #include "ui/widget/push_button.hpp"

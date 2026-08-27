@@ -38,6 +38,7 @@ namespace spk
 				   public spk::ActivableTrait
 	{
 	public:
+		//Need to refactor this to make it more manageable
 		struct Style
 		{
 			Font::Size textLabelTextSize{16};

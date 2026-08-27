@@ -1,4 +1,4 @@
-#include "ui/text_model.hpp"
+#include "ui/text_model_view.hpp"
 
 #include <stdexcept>
 #include <utility>
