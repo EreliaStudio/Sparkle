@@ -9,7 +9,7 @@ namespace spk
 class EventDispatcher
 {
 protected:
-	virtual bool _isInteractionActive() const = 0;
+	virtual bool _isAcceptingInteraction() const = 0;
 
 	virtual void _propagateInteraction(
 		const std::function<void(EventDispatcher *)> &callback)

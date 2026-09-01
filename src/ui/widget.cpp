@@ -121,7 +121,7 @@ namespace spk
 		_childSizeHintEditionContracts.erase(child);
 	}
 
-	bool Widget::_isInteractionActive() const
+	bool Widget::_isAcceptingInteraction() const
 	{
 		return isActive();
 	}

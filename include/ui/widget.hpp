@@ -137,7 +137,7 @@ namespace spk
 		void _onChildAdded(Widget *child) override final;
 		void _onChildRemoved(Widget *child) override final;
 
-		[[nodiscard]] bool _isInteractionActive() const override;
+		[[nodiscard]] bool _isAcceptingInteraction() const override;
 		void _propagateInteraction(
 			const std::function<void(EventDispatcher *)> &callback) override;
 

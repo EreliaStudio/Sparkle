@@ -6,6 +6,7 @@
 #include "container/json/concepts.hpp"
 #include "container/json/object.hpp"
 #include "container/json/reader.hpp"
+#include "container/polymorphic_container.hpp"
 #include "container/protected_data.hpp"
 #include "container/text_model.hpp"
 #include "container/thread_safe_collection.hpp"
