@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <cstring>
 #include <span>
-#include <type_traits>
 #include <utility>
 
 #include "core/context/update_context.hpp"
@@ -122,6 +121,23 @@ namespace spk
 		_childSizeHintEditionContracts.erase(child);
 	}
 
+	bool Widget::_isInteractionActive() const
+	{
+		return isActive();
+	}
+
+	void Widget::_propagateInteraction(
+		const std::function<void(EventDispatcher *)> &callback)
+	{
+		for (auto it = children().rbegin(); it != children().rend(); ++it)
+		{
+			if (*it != nullptr)
+			{
+				callback(*it);
+			}
+		}
+	}
+
 	void Widget::_onChildSizeHintEdition()
 	{
 		if (!_acceptChildSizeHintEditions)
@@ -194,65 +210,6 @@ namespace spk
 		_onGeometryChange();
 	}
 
-	template <typename TEvent>
-	void Widget::_propagate(TEvent &event, void (Widget::*handler)(TEvent &), std::string_view eventName)
-	{
-		if (!isActive() || event.consumed)
-		{
-			return;
-		}
-		try
-		{
-			constexpr bool PointerEvent =
-				std::is_same_v<TEvent, MouseEnteredEvent> ||
-				std::is_same_v<TEvent, MouseLeftEvent> ||
-				std::is_same_v<TEvent, MouseMovedEvent> ||
-				std::is_same_v<TEvent, MouseWheelScrolledEvent> ||
-				std::is_same_v<TEvent, MouseButtonPressedEvent> ||
-				std::is_same_v<TEvent, MouseButtonReleasedEvent> ||
-				std::is_same_v<TEvent, MouseButtonDoubleClickedEvent>;
-
-			if constexpr (PointerEvent)
-			{
-				for (auto it = children().rbegin(); it != children().rend(); ++it)
-				{
-					if (*it != nullptr)
-					{
-						(*it)->_propagate(event, handler, eventName);
-					}
-					if (event.consumed)
-					{
-						return;
-					}
-				}
-			}
-			else
-			{
-				for (Widget *child : children())
-				{
-					if (child != nullptr)
-					{
-						child->_propagate(event, handler, eventName);
-					}
-					if (event.consumed)
-					{
-						return;
-					}
-				}
-			}
-			(this->*handler)(event);
-		} catch (spk::Exception &exception)
-		{
-			exception.addContext(
-				"Exception while dispatching " + std::string(eventName) + " to widget [" + name() + "]");
-			throw;
-		} catch (...)
-		{
-			throw spk::Exception(
-				"Exception while dispatching " + std::string(eventName) + " to widget [" + name() + "]",
-				std::current_exception());
-		}
-	}
 
 	void Widget::setZOrder(ZOrder zOrder)
 	{
@@ -343,62 +300,6 @@ namespace spk
 		return hasParent() ? parent()->targetRenderPass() : OverlayKey;
 	}
 
-	void Widget::dispatch(WindowResizedEvent &event)
-	{
-		_propagate(event, &Widget::_onWindowResizedEvent, "window resized event");
-	}
-	void Widget::dispatch(WindowMovedEvent &event)
-	{
-		_propagate(event, &Widget::_onWindowMovedEvent, "window moved event");
-	}
-	void Widget::dispatch(WindowFocusGainedEvent &event)
-	{
-		_propagate(event, &Widget::_onWindowFocusGainedEvent, "window focus gained event");
-	}
-	void Widget::dispatch(WindowFocusLostEvent &event)
-	{
-		_propagate(event, &Widget::_onWindowFocusLostEvent, "window focus lost event");
-	}
-	void Widget::dispatch(MouseEnteredEvent &event)
-	{
-		_propagate(event, &Widget::_onMouseEnteredEvent, "mouse entered event");
-	}
-	void Widget::dispatch(MouseLeftEvent &event)
-	{
-		_propagate(event, &Widget::_onMouseLeftEvent, "mouse left event");
-	}
-	void Widget::dispatch(MouseMovedEvent &event)
-	{
-		_propagate(event, &Widget::_onMouseMovedEvent, "mouse moved event");
-	}
-	void Widget::dispatch(MouseWheelScrolledEvent &event)
-	{
-		_propagate(event, &Widget::_onMouseWheelScrolledEvent, "mouse wheel scrolled event");
-	}
-	void Widget::dispatch(MouseButtonPressedEvent &event)
-	{
-		_propagate(event, &Widget::_onMouseButtonPressedEvent, "mouse button pressed event");
-	}
-	void Widget::dispatch(MouseButtonReleasedEvent &event)
-	{
-		_propagate(event, &Widget::_onMouseButtonReleasedEvent, "mouse button released event");
-	}
-	void Widget::dispatch(MouseButtonDoubleClickedEvent &event)
-	{
-		_propagate(event, &Widget::_onMouseButtonDoubleClickedEvent, "mouse button double-clicked event");
-	}
-	void Widget::dispatch(KeyPressedEvent &event)
-	{
-		_propagate(event, &Widget::_onKeyPressedEvent, "key pressed event");
-	}
-	void Widget::dispatch(KeyReleasedEvent &event)
-	{
-		_propagate(event, &Widget::_onKeyReleasedEvent, "key released event");
-	}
-	void Widget::dispatch(TextInputEvent &event)
-	{
-		_propagate(event, &Widget::_onTextInputEvent, "text input event");
-	}
 
 	void Widget::updateState(UpdateContext &context)
 	{
@@ -485,69 +386,7 @@ namespace spk
 	{
 	}
 
-	void Widget::observePointer(MouseMovedEvent &event)
-	{
-		if (!isActive())
-		{
-			return;
-		}
-		_onPassiveMouseMovedEvent(event);
-		for (Widget *child : children())
-		{
-			if (child != nullptr)
-			{
-				child->observePointer(event);
-			}
-		}
-	}
 
-	void Widget::observePointer(MouseButtonPressedEvent &event)
-	{
-		if (!isActive())
-		{
-			return;
-		}
-		_onPassiveMouseButtonPressedEvent(event);
-		for (Widget *child : children())
-		{
-			if (child != nullptr)
-			{
-				child->observePointer(event);
-			}
-		}
-	}
-
-	void Widget::observeKeyboard(KeyPressedEvent &event)
-	{
-		if (!isActive())
-		{
-			return;
-		}
-		_onPassiveKeyPressedEvent(event);
-		for (Widget *child : children())
-		{
-			if (child != nullptr)
-			{
-				child->observeKeyboard(event);
-			}
-		}
-	}
-
-	void Widget::observeKeyboard(KeyReleasedEvent &event)
-	{
-		if (!isActive())
-		{
-			return;
-		}
-		_onPassiveKeyReleasedEvent(event);
-		for (Widget *child : children())
-		{
-			if (child != nullptr)
-			{
-				child->observeKeyboard(event);
-			}
-		}
-	}
 	void Widget::_onFocusAcquired(FocusMode::Channel) noexcept
 	{
 	}
@@ -563,59 +402,5 @@ namespace spk
 	void Widget::notifyFocusReleased(FocusMode::Channel channel) noexcept
 	{
 		_onFocusReleased(channel);
-	}
-	void Widget::_onWindowResizedEvent(WindowResizedEvent &)
-	{
-	}
-	void Widget::_onWindowMovedEvent(WindowMovedEvent &)
-	{
-	}
-	void Widget::_onWindowFocusGainedEvent(WindowFocusGainedEvent &)
-	{
-	}
-	void Widget::_onWindowFocusLostEvent(WindowFocusLostEvent &)
-	{
-	}
-	void Widget::_onMouseEnteredEvent(MouseEnteredEvent &)
-	{
-	}
-	void Widget::_onMouseLeftEvent(MouseLeftEvent &)
-	{
-	}
-	void Widget::_onMouseMovedEvent(MouseMovedEvent &)
-	{
-	}
-	void Widget::_onMouseWheelScrolledEvent(MouseWheelScrolledEvent &)
-	{
-	}
-	void Widget::_onMouseButtonPressedEvent(MouseButtonPressedEvent &)
-	{
-	}
-	void Widget::_onMouseButtonReleasedEvent(MouseButtonReleasedEvent &)
-	{
-	}
-	void Widget::_onMouseButtonDoubleClickedEvent(MouseButtonDoubleClickedEvent &)
-	{
-	}
-	void Widget::_onKeyPressedEvent(KeyPressedEvent &)
-	{
-	}
-	void Widget::_onKeyReleasedEvent(KeyReleasedEvent &)
-	{
-	}
-	void Widget::_onTextInputEvent(TextInputEvent &)
-	{
-	}
-	void Widget::_onPassiveMouseMovedEvent(MouseMovedEvent &)
-	{
-	}
-	void Widget::_onPassiveMouseButtonPressedEvent(MouseButtonPressedEvent &)
-	{
-	}
-	void Widget::_onPassiveKeyPressedEvent(KeyPressedEvent &)
-	{
-	}
-	void Widget::_onPassiveKeyReleasedEvent(KeyReleasedEvent &)
-	{
 	}
 }

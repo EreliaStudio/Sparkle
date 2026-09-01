@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string_view>
@@ -8,6 +9,7 @@
 
 #include "container/cached_data.hpp"
 #include "core/event/record.hpp"
+#include "core/event/event_dispatcher.hpp"
 #include "design_pattern/trait/activable_trait.hpp"
 #include "design_pattern/trait/inherence_trait.hpp"
 #include "design_pattern/trait/name_trait.hpp"
@@ -35,7 +37,8 @@ namespace spk
 	class Widget : public spk::NameTrait,
 				   public spk::InherenceTrait<Widget, WidgetChildComparator>,
 				   public spk::ResizeableTrait,
-				   public spk::ActivableTrait
+				   public spk::ActivableTrait,
+				   public spk::EventDispatcher
 	{
 	public:
 		//Need to refactor this to make it more manageable
@@ -134,8 +137,10 @@ namespace spk
 		void _onChildAdded(Widget *child) override final;
 		void _onChildRemoved(Widget *child) override final;
 
-		template <typename TEvent>
-		void _propagate(TEvent &event, void (Widget::*handler)(TEvent &), std::string_view eventName);
+		[[nodiscard]] bool _isInteractionActive() const override;
+		void _propagateInteraction(
+			const std::function<void(EventDispatcher *)> &callback) override;
+
 
 		void _buildViewRegionCommands(spk::RenderSnapshot::Builder &builder);
 
@@ -146,24 +151,6 @@ namespace spk
 		virtual void _onFocusAcquired(FocusMode::Channel channel) noexcept;
 		virtual void _onFocusReleased(FocusMode::Channel channel) noexcept;
 
-		virtual void _onWindowResizedEvent(WindowResizedEvent &event);
-		virtual void _onWindowMovedEvent(WindowMovedEvent &event);
-		virtual void _onWindowFocusGainedEvent(WindowFocusGainedEvent &event);
-		virtual void _onWindowFocusLostEvent(WindowFocusLostEvent &event);
-		virtual void _onMouseEnteredEvent(MouseEnteredEvent &event);
-		virtual void _onMouseLeftEvent(MouseLeftEvent &event);
-		virtual void _onMouseMovedEvent(MouseMovedEvent &event);
-		virtual void _onMouseWheelScrolledEvent(MouseWheelScrolledEvent &event);
-		virtual void _onMouseButtonPressedEvent(MouseButtonPressedEvent &event);
-		virtual void _onMouseButtonReleasedEvent(MouseButtonReleasedEvent &event);
-		virtual void _onMouseButtonDoubleClickedEvent(MouseButtonDoubleClickedEvent &event);
-		virtual void _onKeyPressedEvent(KeyPressedEvent &event);
-		virtual void _onKeyReleasedEvent(KeyReleasedEvent &event);
-		virtual void _onTextInputEvent(TextInputEvent &event);
-		virtual void _onPassiveMouseMovedEvent(MouseMovedEvent &event);
-		virtual void _onPassiveMouseButtonPressedEvent(MouseButtonPressedEvent &event);
-		virtual void _onPassiveKeyPressedEvent(KeyPressedEvent &event);
-		virtual void _onPassiveKeyReleasedEvent(KeyReleasedEvent &event);
 
 	public:
 		Widget(std::string name, Widget *parent);
@@ -187,24 +174,6 @@ namespace spk
 		[[nodiscard]] bool hasTargetRenderPassOverride() const noexcept;
 		[[nodiscard]] const RenderPass::Key &targetRenderPass() const noexcept;
 
-		void dispatch(WindowResizedEvent &event);
-		void dispatch(WindowMovedEvent &event);
-		void dispatch(WindowFocusGainedEvent &event);
-		void dispatch(WindowFocusLostEvent &event);
-		void dispatch(MouseEnteredEvent &event);
-		void dispatch(MouseLeftEvent &event);
-		void dispatch(MouseMovedEvent &event);
-		void dispatch(MouseWheelScrolledEvent &event);
-		void dispatch(MouseButtonPressedEvent &event);
-		void dispatch(MouseButtonReleasedEvent &event);
-		void dispatch(MouseButtonDoubleClickedEvent &event);
-		void dispatch(KeyPressedEvent &event);
-		void dispatch(KeyReleasedEvent &event);
-		void dispatch(TextInputEvent &event);
-		void observePointer(MouseMovedEvent &event);
-		void observePointer(MouseButtonPressedEvent &event);
-		void observeKeyboard(KeyPressedEvent &event);
-		void observeKeyboard(KeyReleasedEvent &event);
 
 		void updateState(UpdateContext &context);
 		void buildRenderSnapshot(spk::RenderSnapshot::Builder &builder);
