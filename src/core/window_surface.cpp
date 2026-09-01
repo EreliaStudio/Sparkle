@@ -238,6 +238,8 @@ namespace spk
 			GL_ONE_MINUS_SRC_ALPHA,
 			GL_ONE,
 			GL_ONE_MINUS_SRC_ALPHA);
+		::glEnable(GL_DEPTH_TEST);
+		::glDepthFunc(GL_LEQUAL);
 	}
 
 	void Window::Surface::create(const WinAPI::Window &frame)

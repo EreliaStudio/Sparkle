@@ -99,6 +99,9 @@ namespace spk
 			Style &operator=(const Style &) = delete;
 		};
 
+		static inline spk::RenderPass::Key BackgroundKey = {
+			.name = "sparkle.Background",
+			.order = -300};
 		static inline spk::RenderPass::Key OverlayKey = {
 			.name = "sparkle.Overlay",
 			.order = 0};
