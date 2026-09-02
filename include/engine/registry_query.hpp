@@ -125,8 +125,7 @@ namespace spk
 
 	public:
 		template <typename TOtherType>
-			requires requires(TType *element)
-			{
+			requires requires(TType *element) {
 				dynamic_cast<TOtherType *>(element);
 			}
 		class IntersectWith : public RegistryOperation<TOtherType>
@@ -169,8 +168,7 @@ namespace spk
 		};
 
 		template <typename TOtherType>
-			requires requires(TOtherType *element)
-			{
+			requires requires(TOtherType *element) {
 				dynamic_cast<TType *>(element);
 			}
 		class UnionWith : public RegistryOperation<TOtherType>
@@ -287,8 +285,7 @@ namespace spk
 
 	template <typename TContext, typename TType>
 		requires Hashable<TContext>
-	class FromRegistry :
-		public spk::Registry<TContext, TType>::Query::Operation
+	class FromRegistry : public spk::Registry<TContext, TType>::Query::Operation
 	{
 	private:
 		using RegistryType = spk::Registry<TContext, TType>;
@@ -349,8 +346,7 @@ namespace spk
 
 	template <typename TParticipantType>
 		requires std::derived_from<TParticipantType, System::Participant>
-	class ContainParticipant :
-		public spk::Registry<Engine *, Entity>::Query::Operation
+	class ContainParticipant : public spk::Registry<Engine *, Entity>::Query::Operation
 	{
 	private:
 		using Context = Engine *;
@@ -476,11 +472,9 @@ namespace spk
 		}
 	};
 
-
 	template <typename TBehaviourType>
 		requires std::derived_from<TBehaviourType, Behaviour>
-	class ContainBehaviour :
-		public spk::Registry<Engine *, Entity>::Query::Operation
+	class ContainBehaviour : public spk::Registry<Engine *, Entity>::Query::Operation
 	{
 	private:
 		using Context = Engine *;

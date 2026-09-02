@@ -5,18 +5,20 @@
 #include <functional>
 #include <memory>
 
+#include "design_pattern/trait/versioned_trait.hpp"
+
 namespace spk
 {
 	struct RenderContext;
 	class GPUResourceCollection;
 
-	class GPUResource
+	class GPUResource : public VersionedTrait
 	{
 		friend class GPUResourceCollection;
 
 	public:
 		using Identifier = std::uint64_t;
-		using Generation = std::uint64_t;
+		using Generation = Version;
 		using RecyclingScore = std::uint32_t;
 
 		enum class Kind : std::uint8_t
@@ -42,7 +44,6 @@ namespace spk
 		class LifeTime;
 
 		Identifier _identifier;
-		Generation _generation = 0;
 		std::shared_ptr<LifeTime> _lifeTime;
 
 		[[nodiscard]] static Identifier _generateIdentifier() noexcept;
@@ -67,7 +68,7 @@ namespace spk
 
 		void activate(RenderContext &context) const;
 
-		void validate() noexcept;
+		void validate();
 
 		[[nodiscard]] Identifier identifier() const noexcept;
 		[[nodiscard]] Generation generation() const noexcept;

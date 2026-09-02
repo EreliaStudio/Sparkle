@@ -222,6 +222,7 @@ namespace spk
 		[[nodiscard]] static spk::Keyboard::Key _key(WPARAM wParam, LPARAM lParam) noexcept;
 		void _consume(const NativeRegistrationRequest &request);
 		void _consume(const NativeDeletionRequest &request);
+		void _consume(const MousePositionRequest &request);
 		void _consumeRequests();
 		[[nodiscard]] MessageResult _processWindowMessage(const Identifier &identifier, UINT message, LPARAM lParam);
 		void _trackMouseLeave(HWND handle);
@@ -271,6 +272,7 @@ namespace spk
 			std::shared_ptr<std::atomic_bool> isRequested;
 		};
 
+		PlatformRequestProducer _platformRequestProducer;
 		spk::ThreadSafeFIFO<EventRecord>::Consumer _eventRecordConsumer;
 		spk::ThreadSafeFIFO<UpdateRequest>::Consumer _updateRequestConsumer;
 		std::unordered_map<Window::Identifier, RenderSnapshotEntry> _renderSnapshotEntries;
@@ -333,6 +335,8 @@ namespace spk
 
 	public:
 		UpdateRuntime(
+			WinAPI::WakeEvent &wakeEvent,
+			spk::ThreadSafeFIFO<PlatformRequest>::Producer platformRequestProducer,
 			spk::ThreadSafeFIFO<EventRecord>::Consumer eventRecordConsumer,
 			spk::ThreadSafeFIFO<UpdateRequest>::Consumer updateRequestConsumer);
 	};

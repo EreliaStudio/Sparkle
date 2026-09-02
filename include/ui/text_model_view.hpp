@@ -2,8 +2,8 @@
 
 #include <string>
 
-#include "graphics/font.hpp"
 #include "container/text_model.hpp"
+#include "graphics/font.hpp"
 #include "ui/data_model_view.hpp"
 #include "ui/widget/text_label.hpp"
 

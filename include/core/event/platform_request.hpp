@@ -19,5 +19,11 @@ namespace spk
 		Window::Identifier windowIdentifier;
 	};
 
-	using PlatformRequest = std::variant<NativeRegistrationRequest, NativeDeletionRequest>;
+	struct MousePositionRequest
+	{
+		Window::Identifier windowIdentifier;
+		spk::Vector2Int position;
+	};
+
+	using PlatformRequest = std::variant<NativeRegistrationRequest, NativeDeletionRequest, MousePositionRequest>;
 }

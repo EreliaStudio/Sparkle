@@ -25,9 +25,7 @@ namespace spk
 
 		void _buildRenderSnapshot(spk::RenderSnapshot::Builder &builder)
 		{
-			builder.renderPass(Widget::BackgroundKey).emplace<spk::ClearRenderCommand>(
-				_backgroundColor,
-				spk::ClearRenderCommand::Mask::All);
+			builder.renderPass(Widget::BackgroundKey).emplace<spk::ClearRenderCommand>(_backgroundColor, spk::ClearRenderCommand::Mask::All);
 			builder.renderPass(Widget::OverlayKey).emplace<spk::ClearRenderCommand>(spk::Color{}, spk::ClearRenderCommand::Mask::Depth);
 			builder.renderPass(Widget::PopupKey).emplace<spk::ClearRenderCommand>(spk::Color{}, spk::ClearRenderCommand::Mask::Depth);
 			builder.renderPass(Widget::TooltipKey).emplace<spk::ClearRenderCommand>(spk::Color{}, spk::ClearRenderCommand::Mask::Depth);

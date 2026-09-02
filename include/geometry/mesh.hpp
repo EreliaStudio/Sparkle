@@ -56,7 +56,9 @@ namespace spk
 
 		protected:
 			virtual void _setupAttributes(VertexBuffer &) = 0;
-			virtual void _setupMesh(TMeshType& mesh) {}
+			virtual void _setupMesh(TMeshType &mesh)
+			{
+			}
 
 		public:
 			Builder() :
@@ -130,7 +132,7 @@ namespace spk
 
 			template <typename... TArgs>
 				requires std::constructible_from<TMeshType, TArgs...>
-			[[nodiscard]] TMeshType build(TArgs&&... args) &&
+			[[nodiscard]] TMeshType build(TArgs &&...args) &&
 			{
 				_check();
 				_initializeAttributes();

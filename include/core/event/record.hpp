@@ -94,7 +94,17 @@ namespace spk
 
 	using MouseEnteredEvent = Event<MouseEnteredRecord>;
 	using MouseLeftEvent = Event<MouseLeftRecord>;
-	using MouseMovedEvent = DeviceEvent<MouseMovedRecord, spk::Mouse>;
+	struct MouseMovedEvent final : public DeviceEvent<MouseMovedRecord, spk::Mouse>
+	{
+	private:
+		std::optional<spk::Vector2Int> _mousePositionRequest;
+
+	public:
+		MouseMovedEvent(const MouseMovedRecord &record, const spk::Mouse &mouse);
+
+		void requestMousePosition(const spk::Vector2Int &position) noexcept;
+		[[nodiscard]] const std::optional<spk::Vector2Int> &mousePositionRequest() const noexcept;
+	};
 	using MouseWheelScrolledEvent = DeviceEvent<MouseWheelScrolledRecord, spk::Mouse>;
 	using MouseButtonPressedEvent = DeviceEvent<MouseButtonPressedRecord, spk::Mouse>;
 	using MouseButtonReleasedEvent = DeviceEvent<MouseButtonReleasedRecord, spk::Mouse>;

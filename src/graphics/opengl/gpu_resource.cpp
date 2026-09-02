@@ -58,8 +58,8 @@ namespace spk
 	}
 
 	GPUResource::GPUResource(GPUResource &&other) noexcept :
+		VersionedTrait(std::move(other)),
 		_identifier(std::exchange(other._identifier, _generateIdentifier())),
-		_generation(std::exchange(other._generation, 1)),
 		_lifeTime(std::move(other._lifeTime))
 	{
 	}
@@ -84,13 +84,9 @@ namespace spk
 		return 1;
 	}
 
-	void GPUResource::validate() noexcept
+	void GPUResource::validate()
 	{
-		++_generation;
-		if (_generation == 0)
-		{
-			_generation = 1;
-		}
+		invalidate();
 	}
 
 	void GPUResource::activate(RenderContext &context) const
@@ -107,10 +103,10 @@ namespace spk
 		try
 		{
 			auto &entry = context.targetSurface->_gpuResources()._entry(*this, context);
-			if (entry.generation != _generation)
+			if (entry.generation != version())
 			{
 				_synchronize(*entry.instance, context);
-				entry.generation = _generation;
+				entry.generation = version();
 			}
 
 			_bind(*entry.instance, context);
@@ -133,6 +129,6 @@ namespace spk
 
 	GPUResource::Generation GPUResource::generation() const noexcept
 	{
-		return _generation;
+		return version();
 	}
 }

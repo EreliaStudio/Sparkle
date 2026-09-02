@@ -3,8 +3,8 @@
 #include <memory>
 #include <utility>
 
-#include "graphics/opengl/program.hpp"
 #include "graphics/internal/resource.hpp"
+#include "graphics/opengl/program.hpp"
 #include "rendering/command/viewport_uniform_render_command.hpp"
 
 namespace spk

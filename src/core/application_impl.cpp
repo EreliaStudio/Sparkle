@@ -30,7 +30,11 @@ namespace spk
 			std::move(channels.eventRecords.producer),
 			std::move(channels.updateRequests.producer),
 			std::move(channels.renderRequests.producer)),
-		_updater(std::move(channels.eventRecords.consumer), std::move(channels.updateRequests.consumer)),
+		_updater(
+			_platformWakeEvent,
+			channels.platformRequests.producer,
+			std::move(channels.eventRecords.consumer),
+			std::move(channels.updateRequests.consumer)),
 		_renderer(_platformWakeEvent, std::move(channels.renderRequests.consumer), std::move(channels.platformRequests.producer))
 	{
 	}

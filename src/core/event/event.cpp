@@ -1,4 +1,4 @@
-#include "core/event/event.hpp"
+#include "core/event/record.hpp"
 
 #include <cstddef>
 
@@ -33,5 +33,20 @@ namespace spk
 	const std::optional<FocusMode::Record> &EventBase::focusChange(FocusMode::Channel channel) const
 	{
 		return _focusRecords[static_cast<std::size_t>(channel)];
+	}
+
+	MouseMovedEvent::MouseMovedEvent(const MouseMovedRecord &record, const spk::Mouse &mouse) :
+		DeviceEvent(record, mouse)
+	{
+	}
+
+	void MouseMovedEvent::requestMousePosition(const spk::Vector2Int &position) noexcept
+	{
+		_mousePositionRequest = position;
+	}
+
+	const std::optional<spk::Vector2Int> &MouseMovedEvent::mousePositionRequest() const noexcept
+	{
+		return _mousePositionRequest;
 	}
 }

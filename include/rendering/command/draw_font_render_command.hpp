@@ -3,9 +3,9 @@
 #include <array>
 #include <cstddef>
 
+#include "geometry/texture_mesh_2d.hpp"
 #include "graphics/color.hpp"
 #include "graphics/font.hpp"
-#include "geometry/texture_mesh_2d.hpp"
 #include "graphics/opengl/sampler.hpp"
 #include "rendering/render_command.hpp"
 

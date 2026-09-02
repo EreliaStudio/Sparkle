@@ -1,8 +1,8 @@
 #pragma once
 
-#include "engine/contextualizable_trait.hpp"
 #include "design_pattern/trait/activable_trait.hpp"
 #include "design_pattern/trait/name_trait.hpp"
+#include "engine/contextualizable_trait.hpp"
 
 #include <string>
 

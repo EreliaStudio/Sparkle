@@ -8,8 +8,8 @@
 #include <unordered_map>
 
 #include "container/cached_data.hpp"
-#include "core/event/record.hpp"
 #include "core/event/event_dispatcher.hpp"
+#include "core/event/record.hpp"
 #include "design_pattern/trait/activable_trait.hpp"
 #include "design_pattern/trait/inherence_trait.hpp"
 #include "design_pattern/trait/name_trait.hpp"
@@ -41,7 +41,7 @@ namespace spk
 				   public spk::EventDispatcher
 	{
 	public:
-		//Need to refactor this to make it more manageable
+		// Need to refactor this to make it more manageable
 		struct Style
 		{
 			Font::Size textLabelTextSize{16};
@@ -144,7 +144,6 @@ namespace spk
 		void _propagateInteraction(
 			const std::function<void(EventDispatcher *)> &callback) override;
 
-
 		void _buildViewRegionCommands(spk::RenderSnapshot::Builder &builder);
 
 		virtual void _updateState(UpdateContext &context);
@@ -153,7 +152,6 @@ namespace spk
 		virtual void _onGeometryChange();
 		virtual void _onFocusAcquired(FocusMode::Channel channel) noexcept;
 		virtual void _onFocusReleased(FocusMode::Channel channel) noexcept;
-
 
 	public:
 		Widget(std::string name, Widget *parent);
@@ -176,7 +174,6 @@ namespace spk
 		void inheritTargetRenderPass();
 		[[nodiscard]] bool hasTargetRenderPassOverride() const noexcept;
 		[[nodiscard]] const RenderPass::Key &targetRenderPass() const noexcept;
-
 
 		void updateState(UpdateContext &context);
 		void buildRenderSnapshot(spk::RenderSnapshot::Builder &builder);

@@ -16,15 +16,14 @@ namespace spk
 		Vector2 uv;
 	};
 
-	class TextureMesh2D :
-		public Mesh<Texture2DVertex>
+	class TextureMesh2D : public Mesh<Texture2DVertex>
 	{
 	public:
 		class Builder : public Mesh<Texture2DVertex>::Builder<TextureMesh2D>
 		{
 		private:
 			void _setupAttributes(VertexBuffer &vertexBuffer) override;
-			void _setupMesh(TextureMesh2D&) override;
+			void _setupMesh(TextureMesh2D &) override;
 		};
 
 		TextureMesh2D() = default;

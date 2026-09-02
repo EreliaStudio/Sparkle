@@ -23,8 +23,7 @@ namespace spk
 			2);
 	}
 
-	void TextureMesh2D::Builder::_setupMesh(TextureMesh2D&)
+	void TextureMesh2D::Builder::_setupMesh(TextureMesh2D &)
 	{
-		
 	}
 }

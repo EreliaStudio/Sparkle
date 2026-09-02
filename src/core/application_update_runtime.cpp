@@ -16,9 +16,12 @@
 namespace spk
 {
 	Application::UpdateRuntime::UpdateRuntime(
+		WinAPI::WakeEvent &wakeEvent,
+		spk::ThreadSafeFIFO<PlatformRequest>::Producer platformRequestProducer,
 		spk::ThreadSafeFIFO<EventRecord>::Consumer eventRecordConsumer,
 		spk::ThreadSafeFIFO<UpdateRequest>::Consumer updateRequestConsumer) :
 		Runtime("update"),
+		_platformRequestProducer(std::move(platformRequestProducer), wakeEvent),
 		_eventRecordConsumer(std::move(eventRecordConsumer)),
 		_updateRequestConsumer(std::move(updateRequestConsumer)),
 		_startTime(std::chrono::steady_clock::now()),
@@ -71,7 +74,11 @@ namespace spk
 	template <typename TRecord>
 	void Application::UpdateRuntime::_dispatchMouse(const TRecord &record, Window::State &state)
 	{
-		DeviceEvent<TRecord, spk::Mouse> event(record, state.mouse());
+		using EventType = std::conditional_t<
+			std::is_same_v<TRecord, MouseMovedRecord>,
+			MouseMovedEvent,
+			DeviceEvent<TRecord, spk::Mouse>>;
+		EventType event(record, state.mouse());
 		if constexpr (std::is_same_v<TRecord, MouseMovedRecord>)
 		{
 			state.root().observePointer(event);
@@ -82,6 +89,16 @@ namespace spk
 		}
 		state.dispatchRoot(FocusMode::Channel::Mouse).dispatch(event);
 		_applyFocusChanges(event, state);
+		if constexpr (std::is_same_v<TRecord, MouseMovedRecord>)
+		{
+			if (event.mousePositionRequest().has_value())
+			{
+				const spk::Vector2Int requestedPosition = *event.mousePositionRequest();
+				_platformRequestProducer.publish(MousePositionRequest{.windowIdentifier = record.windowIdentifier, .position = requestedPosition});
+				state.mouse().position = requestedPosition;
+				state.mouse().deltaPosition = {};
+			}
+		}
 	}
 
 	template <typename TRecord>

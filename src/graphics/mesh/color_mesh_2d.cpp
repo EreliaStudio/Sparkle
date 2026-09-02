@@ -20,8 +20,7 @@ namespace spk
 			4);
 	}
 
-	void ColorMesh2D::Builder::_setupMesh(ColorMesh2D&)
+	void ColorMesh2D::Builder::_setupMesh(ColorMesh2D &)
 	{
-		
 	}
 }

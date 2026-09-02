@@ -6,8 +6,7 @@
 namespace spk
 {
 	template <typename TContent>
-	class DataModel<TContent>::View :
-		public Widget
+	class DataModel<TContent>::View : public Widget
 	{
 	public:
 		class Delegate

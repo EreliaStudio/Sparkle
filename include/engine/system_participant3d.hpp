@@ -8,7 +8,7 @@
 namespace spk
 {
 	class System::Participant3D : public System::Participant,
-		public spk::Registry<Engine*, System::Participant3D>::Object
+								  public spk::Registry<Engine *, System::Participant3D>::Object
 	{
 	public:
 		Participant3D(

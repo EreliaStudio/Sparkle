@@ -110,6 +110,25 @@ namespace spk
 		remove(request.windowIdentifier);
 	}
 
+	void Application::PlatformRuntime::_consume(const MousePositionRequest &request)
+	{
+		if (!contains(request.windowIdentifier))
+		{
+			return;
+		}
+
+		POINT screenPosition{request.position.x, request.position.y};
+		const HWND handle = object(request.windowIdentifier).window().handle();
+		if (::ClientToScreen(handle, &screenPosition) == FALSE)
+		{
+			throw std::system_error(static_cast<int>(::GetLastError()), std::system_category(), "ClientToScreen");
+		}
+		if (::SetCursorPos(screenPosition.x, screenPosition.y) == FALSE)
+		{
+			throw std::system_error(static_cast<int>(::GetLastError()), std::system_category(), "SetCursorPos");
+		}
+	}
+
 	void Application::PlatformRuntime::_consumeRequests()
 	{
 		for (auto &request : _platformRequestConsumer.drain())

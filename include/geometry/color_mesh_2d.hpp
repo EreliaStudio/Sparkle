@@ -17,16 +17,14 @@ namespace spk
 		Color color;
 	};
 
-	class ColorMesh2D :
-		public Mesh<ColorVertex2D>
+	class ColorMesh2D : public Mesh<ColorVertex2D>
 	{
 	public:
-		class Builder :
-			public Mesh<ColorVertex2D>::Builder<ColorMesh2D>
+		class Builder : public Mesh<ColorVertex2D>::Builder<ColorMesh2D>
 		{
 		private:
 			void _setupAttributes(VertexBuffer &vertexBuffer) override;
-			void _setupMesh(ColorMesh2D&) override;
+			void _setupMesh(ColorMesh2D &) override;
 		};
 
 		ColorMesh2D() = default;

@@ -210,7 +210,6 @@ namespace spk
 		_onGeometryChange();
 	}
 
-
 	void Widget::setZOrder(ZOrder zOrder)
 	{
 		if (_zOrder == zOrder)
@@ -300,7 +299,6 @@ namespace spk
 		return hasParent() ? parent()->targetRenderPass() : OverlayKey;
 	}
 
-
 	void Widget::updateState(UpdateContext &context)
 	{
 		if (!isActive())
@@ -385,7 +383,6 @@ namespace spk
 	void Widget::_onGeometryChange()
 	{
 	}
-
 
 	void Widget::_onFocusAcquired(FocusMode::Channel) noexcept
 	{

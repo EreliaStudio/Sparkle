@@ -145,6 +145,23 @@ namespace spk
 			m[3][2] = -(farPlane + nearPlane) / (farPlane - nearPlane);
 			return m;
 		}
+		[[nodiscard]] static Matrix perspective(float verticalFieldOfView, float aspectRatio, float nearPlane, float farPlane)
+			requires(SizeX == 4 && SizeY == 4)
+		{
+			if (verticalFieldOfView <= 0.0f || verticalFieldOfView >= 3.14159265358979323846f ||
+				aspectRatio <= 0.0f || nearPlane <= 0.0f || farPlane <= nearPlane)
+			{
+				throw std::invalid_argument("Invalid perspective projection parameters");
+			}
+			const float scale = 1.0f / std::tan(verticalFieldOfView * 0.5f);
+			Matrix m;
+			m[0][0] = scale / aspectRatio;
+			m[1][1] = scale;
+			m[2][2] = -(farPlane + nearPlane) / (farPlane - nearPlane);
+			m[2][3] = -1.0f;
+			m[3][2] = -(2.0f * farPlane * nearPlane) / (farPlane - nearPlane);
+			return m;
+		}
 	};
 
 	using Matrix2x2 = Matrix<2, 2>;
