@@ -43,6 +43,26 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo"
       }
+    },
+    {
+      "name": "testDebug",
+      "displayName": "Tests (Debug)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "SPARKLE_BUILD_TESTS": "ON",
+        "VCPKG_MANIFEST_FEATURES": "tests"
+      }
+    },
+    {
+      "name": "testRelease",
+      "displayName": "Tests (Release)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "SPARKLE_BUILD_TESTS": "ON",
+        "VCPKG_MANIFEST_FEATURES": "tests"
+      }
     }
   ],
   "buildPresets": [
@@ -57,6 +77,84 @@
     {
       "name": "relWithDebInfo",
       "configurePreset": "relWithDebInfo"
+    },
+    {
+      "name": "testDebug",
+      "configurePreset": "testDebug",
+      "targets": [
+        "SparkleTestSuite"
+      ]
+    },
+    {
+      "name": "testRelease",
+      "configurePreset": "testRelease",
+      "targets": [
+        "SparkleTestSuite"
+      ]
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "testDebug",
+      "configurePreset": "testDebug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "filter": {
+        "include": {
+          "label": "unit"
+        }
+      }
+    },
+    {
+      "name": "testRelease",
+      "configurePreset": "testRelease",
+      "output": {
+        "outputOnFailure": true
+      },
+      "filter": {
+        "include": {
+          "label": "unit"
+        }
+      }
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "testDebug",
+      "displayName": "Configure, build, and run Debug tests",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "testDebug"
+        },
+        {
+          "type": "build",
+          "name": "testDebug"
+        },
+        {
+          "type": "test",
+          "name": "testDebug"
+        }
+      ]
+    },
+    {
+      "name": "testRelease",
+      "displayName": "Configure, build, and run Release tests",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "testRelease"
+        },
+        {
+          "type": "build",
+          "name": "testRelease"
+        },
+        {
+          "type": "test",
+          "name": "testRelease"
+        }
+      ]
     }
   ]
 }

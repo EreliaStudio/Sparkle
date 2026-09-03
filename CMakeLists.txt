@@ -11,6 +11,8 @@ include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 include(CTest)
 
+option(SPARKLE_BUILD_TESTS "Build the Sparkle unit-test suite" OFF)
+
 find_package(GLEW REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(Stb REQUIRED)
@@ -92,6 +94,10 @@ set_target_properties(sparkle PROPERTIES
     CXX_EXTENSIONS OFF
     DEBUG_POSTFIX d
 )
+
+if(SPARKLE_BUILD_TESTS)
+    add_subdirectory(tests)
+endif()
 
 install(
     TARGETS sparkle

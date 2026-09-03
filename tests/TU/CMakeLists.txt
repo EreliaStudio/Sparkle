@@ -1,0 +1,2 @@
+add_subdirectory(SparkleTestLibrary)
+add_subdirectory(TestSuite)
