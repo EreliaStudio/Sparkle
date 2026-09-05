@@ -1,5 +1,6 @@
 #pragma once
 
+#include "container/cached_data.hpp"
 #include "engine/entity.hpp"
 #include "engine/registry.hpp"
 

@@ -50,7 +50,10 @@ namespace spk
 		{
 		}
 
-		[[nodiscard]] constexpr bool operator==(const TVector3 &) const = default;
+		[[nodiscard]] constexpr bool operator==(const TVector3 &other) const
+		{
+			return x == other.x && y == other.y && z == other.z;
+		}
 		[[nodiscard]] constexpr TVector3 operator-() const
 		{
 			return {-x, -y, -z};

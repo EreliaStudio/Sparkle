@@ -57,7 +57,10 @@ namespace spk
 			w(w)
 		{
 		}
-		[[nodiscard]] constexpr bool operator==(const TVector4 &) const = default;
+		[[nodiscard]] constexpr bool operator==(const TVector4 &other) const
+		{
+			return x == other.x && y == other.y && z == other.z && w == other.w;
+		}
 		[[nodiscard]] constexpr TVector4 operator+(const TVector4 &v) const
 		{
 			return {x + v.x, y + v.y, z + v.z, w + v.w};
