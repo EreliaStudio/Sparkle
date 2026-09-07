@@ -1,15 +1,27 @@
 #include <gtest/gtest.h>
 
+#include <array>
+#include <cstdint>
 #include <stdexcept>
 
 #include "rendering/command/sprite_render_command.hpp"
+#include "render_command_test_utils.hpp"
 #include "ui/widget.hpp"
+
+namespace test = render_command_test;
 
 namespace
 {
 	[[nodiscard]] spk::Rect2D destination()
 	{
 		return spk::Rect2D{.anchor = {4, 6}, .size = {32, 24}};
+	}
+
+	[[nodiscard]] spk::SpriteSheet twoColorSheet()
+	{
+		constexpr std::array<std::uint8_t, 6> pixels{255, 0, 0, 0, 0, 255};
+		const auto encoded = test::encodedPpm({2, 1}, pixels);
+		return spk::SpriteSheet(encoded, {2, 1});
 	}
 }
 
@@ -20,28 +32,44 @@ TEST(SpriteRenderCommandTest, NullSpriteSheetIsRejected)
 		std::invalid_argument);
 }
 
-TEST(SpriteRenderCommandTest, DISABLED_FirstSpriteCoordinatesSelectFirstSection)
+TEST(SpriteRenderCommandTest, FirstSpriteCoordinatesSelectFirstSection)
 {
-	GTEST_SKIP() << "Requires SpriteSheet construction and deterministic Texture/offscreen readback APIs not included in section 10.";
-	// Intended assertion: coordinates {0,0} render the first sprite into the requested geometry.
+	auto sheet = twoColorSheet();
+	test::Target target;
+	target.clear();
+	spk::SpriteRenderCommand(&sheet, {0, 0}, destination()).execute(target.context());
+	EXPECT_EQ(test::pixel(target.capture(), {12, 12}), (std::array<std::uint8_t, 4>{255, 0, 0, 255}));
 }
 
-TEST(SpriteRenderCommandTest, DISABLED_LastSpriteCoordinatesSelectLastSection)
+TEST(SpriteRenderCommandTest, LastSpriteCoordinatesSelectLastSection)
 {
-	GTEST_SKIP() << "Requires SpriteSheet construction and deterministic Texture/offscreen readback APIs not included in section 10.";
-	// Intended assertion: the maximum valid coordinates render the last sprite section.
+	auto sheet = twoColorSheet();
+	test::Target target;
+	target.clear();
+	spk::SpriteRenderCommand(&sheet, {1, 0}, destination()).execute(target.context());
+	EXPECT_EQ(test::pixel(target.capture(), {12, 12}), (std::array<std::uint8_t, 4>{0, 0, 255, 255}));
 }
 
-TEST(SpriteRenderCommandTest, DISABLED_GeometryVariantsPreserveSelectedSprite)
+TEST(SpriteRenderCommandTest, GeometryVariantsPreserveSelectedSprite)
 {
-	GTEST_SKIP() << "Requires SpriteSheet construction and deterministic offscreen readback APIs not included in section 10.";
-	// Intended assertion: translated/scaled destination rectangles keep the same selected sprite content.
+	auto sheet = twoColorSheet();
+	test::Target target;
+	target.clear();
+	spk::SpriteRenderCommand(&sheet, {0, 0}, {.anchor = {2, 2}, .size = {12, 18}}).execute(target.context());
+	spk::SpriteRenderCommand(&sheet, {0, 0}, {.anchor = {30, 20}, .size = {28, 36}}).execute(target.context());
+	const auto image = target.capture();
+	EXPECT_EQ(test::pixel(image, {6, 6}), (std::array<std::uint8_t, 4>{255, 0, 0, 255}));
+	EXPECT_EQ(test::pixel(image, {40, 40}), (std::array<std::uint8_t, 4>{255, 0, 0, 255}));
 }
 
-TEST(SpriteRenderCommandTest, DISABLED_DepthVariantsParticipateInDepthTesting)
+TEST(SpriteRenderCommandTest, DepthVariantsParticipateInDepthTesting)
 {
-	GTEST_SKIP() << "Requires SpriteSheet construction and deterministic offscreen depth testing not included in section 10.";
-	// Intended assertion: overlapping sprites at different depth values obey the established depth convention.
+	auto sheet = twoColorSheet();
+	test::Target target;
+	target.clear();
+	spk::SpriteRenderCommand(&sheet, {0, 0}, destination(), 0.5f).execute(target.context());
+	spk::SpriteRenderCommand(&sheet, {1, 0}, destination(), -0.5f).execute(target.context());
+	EXPECT_EQ(test::pixel(target.capture(), {12, 12}), (std::array<std::uint8_t, 4>{255, 0, 0, 255}));
 }
 
 TEST(SpriteRenderCommandTest, OutOfRangeCoordinatesPropagateSpriteSheetFailure)

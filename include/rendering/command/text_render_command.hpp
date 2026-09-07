@@ -18,10 +18,14 @@ namespace spk
 		};
 
 	private:
+		struct State;
+
 		static float _outlineThickness(const Font::Size &);
 		static TextureMesh2D _mesh(Font::Atlas &, const Font::Text &, const Anchor &, float);
+		static void _refresh(State &);
 
-		std::unique_ptr<DrawFontRenderCommand> _command;
+		std::shared_ptr<State> _state;
+		Font::Atlas::Contract _atlasEditionContract;
 
 	public:
 		TextRenderCommand(Font *, Font::Size, Font::Text, Anchor, Color glyphColor, Color outlineColor = {}, float depth = 0);

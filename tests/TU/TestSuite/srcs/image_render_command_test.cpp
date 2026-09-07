@@ -1,39 +1,87 @@
 #include <gtest/gtest.h>
 
+#include <array>
+#include <cstdint>
+
 #include "rendering/command/image_render_command.hpp"
+#include "rendering/command/scissor_render_command.hpp"
+#include "render_command_test_utils.hpp"
 
-TEST(ImageRenderCommandTest, DISABLED_WholeTextureSectionFillsDestination)
+namespace test = render_command_test;
+
+namespace
 {
-	GTEST_SKIP() << "Requires deterministic Texture construction plus the shared offscreen OpenGL test harness; those transitive APIs are not included in section 10.";
-	// Intended assertion: render Texture::Section::whole into a normal destination and compare compact pixels.
+	constexpr std::array<std::uint8_t, 16> pattern{
+		255, 0, 0, 255, 0, 255, 0, 255,
+		0, 0, 255, 255, 255, 255, 0, 255};
 }
 
-TEST(ImageRenderCommandTest, DISABLED_PartialTextureSectionUsesOnlyRequestedUVRegion)
+TEST(ImageRenderCommandTest, WholeTextureSectionFillsDestination)
 {
-	GTEST_SKIP() << "Requires deterministic Texture construction plus the shared offscreen OpenGL test harness; those transitive APIs are not included in section 10.";
-	// Intended assertion: a uniquely colored source texture proves the partial section selects the expected texels.
+	test::Texture texture({2, 2}, pattern);
+	test::Target target;
+	target.clear();
+	spk::ImageRenderCommand(&texture, spk::Texture::Section::whole, {.anchor = {8, 8}, .size = {40, 40}}).execute(target.context());
+	const auto image = target.capture();
+	EXPECT_EQ(test::pixel(image, {14, 14}), (std::array<std::uint8_t, 4>{255, 0, 0, 255}));
+	EXPECT_EQ(test::pixel(image, {42, 42}), (std::array<std::uint8_t, 4>{255, 255, 0, 255}));
 }
 
-TEST(ImageRenderCommandTest, DISABLED_EmptyDestinationProducesNoVisiblePixels)
+TEST(ImageRenderCommandTest, PartialTextureSectionUsesOnlyRequestedUVRegion)
 {
-	GTEST_SKIP() << "Requires deterministic Texture construction plus offscreen pixel readback APIs not included in section 10.";
-	// Intended assertion: zero-width/height destination leaves the target unchanged.
+	test::Texture texture({2, 2}, pattern);
+	test::Target target;
+	target.clear();
+	spk::ImageRenderCommand(&texture, {{0, 0}, {0.5f, 0.5f}}, {.anchor = {8, 8}, .size = {40, 40}}).execute(target.context());
+	EXPECT_EQ(test::pixel(target.capture(), {28, 28}), (std::array<std::uint8_t, 4>{255, 0, 0, 255}));
 }
 
-TEST(ImageRenderCommandTest, DISABLED_ClippedDestinationOnlyAffectsVisiblePixels)
+TEST(ImageRenderCommandTest, EmptyDestinationProducesNoVisiblePixels)
 {
-	GTEST_SKIP() << "Requires viewport/scissor setup and offscreen pixel readback APIs not included in section 10.";
-	// Intended assertion: geometry outside the current clip region does not modify pixels.
+	test::Texture texture({2, 2}, pattern);
+	test::Target target;
+	target.clear({0.25f, 0.5f, 0.75f, 1});
+	const auto before = target.capture();
+	spk::ImageRenderCommand(&texture, spk::Texture::Section::whole, {.anchor = {8, 8}, .size = {0, 32}}).execute(target.context());
+	spk::ImageRenderCommand(&texture, spk::Texture::Section::whole, {.anchor = {8, 8}, .size = {32, 0}}).execute(target.context());
+	EXPECT_EQ(target.capture().pixels, before.pixels);
 }
 
-TEST(ImageRenderCommandTest, DISABLED_OverlappingImagesRespectDepth)
+TEST(ImageRenderCommandTest, ClippedDestinationOnlyAffectsVisiblePixels)
 {
-	GTEST_SKIP() << "Requires deterministic Texture construction, viewport UBO setup and offscreen depth testing not included in section 10.";
-	// Intended assertion: two overlapping images at different depths produce the expected front-most pixels.
+	const std::array<std::uint8_t, 4> whitePixel{255, 255, 255, 255};
+	test::Texture texture({1, 1}, whitePixel);
+	test::Target target;
+	target.clear();
+	spk::ScissorRenderCommand({.anchor = {16, 16}, .size = {16, 16}}).execute(target.context());
+	spk::ImageRenderCommand(&texture, spk::Texture::Section::whole, {.anchor = {8, 8}, .size = {32, 32}}).execute(target.context());
+	const auto image = target.capture();
+	EXPECT_EQ(test::pixel(image, {20, 20}), (std::array<std::uint8_t, 4>{255, 255, 255, 255}));
+	EXPECT_EQ(test::pixel(image, {12, 12}), (std::array<std::uint8_t, 4>{0, 0, 0, 0}));
 }
 
-TEST(ImageRenderCommandTest, DISABLED_DifferentDestinationGeometriesMapTextureConsistently)
+TEST(ImageRenderCommandTest, OverlappingImagesRespectDepth)
 {
-	GTEST_SKIP() << "Requires deterministic Texture construction plus offscreen pixel readback APIs not included in section 10.";
-	// Intended assertion: translated/scaled destinations preserve the requested section mapping.
+	const std::array<std::uint8_t, 4> redPixel{255, 0, 0, 255};
+	const std::array<std::uint8_t, 4> bluePixel{0, 0, 255, 255};
+	test::Texture red({1, 1}, redPixel);
+	test::Texture blue({1, 1}, bluePixel);
+	test::Target target;
+	target.clear();
+	const spk::Rect2D overlap{.anchor = {8, 8}, .size = {32, 32}};
+	spk::ImageRenderCommand(&red, spk::Texture::Section::whole, overlap, 0.5f).execute(target.context());
+	spk::ImageRenderCommand(&blue, spk::Texture::Section::whole, overlap, -0.5f).execute(target.context());
+	EXPECT_EQ(test::pixel(target.capture(), {20, 20}), (std::array<std::uint8_t, 4>{255, 0, 0, 255}));
+}
+
+TEST(ImageRenderCommandTest, DifferentDestinationGeometriesMapTextureConsistently)
+{
+	test::Texture texture({2, 2}, pattern);
+	test::Target target;
+	target.clear();
+	spk::ImageRenderCommand(&texture, spk::Texture::Section::whole, {.anchor = {2, 2}, .size = {20, 20}}).execute(target.context());
+	spk::ImageRenderCommand(&texture, spk::Texture::Section::whole, {.anchor = {32, 8}, .size = {28, 48}}).execute(target.context());
+	const auto image = target.capture();
+	EXPECT_EQ(test::pixel(image, {6, 6}), test::pixel(image, {36, 16}));
+	EXPECT_EQ(test::pixel(image, {18, 18}), test::pixel(image, {56, 48}));
 }

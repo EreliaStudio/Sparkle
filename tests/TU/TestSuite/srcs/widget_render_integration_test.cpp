@@ -328,8 +328,7 @@ TEST(WidgetRenderIntegrationTest, ComposedControlsRenderTheirDifferentStatesAndP
 	expectClipped(promptImage, prompt.geometry());
 }
 
-// TextRenderCommand currently stores UVs without subscribing to atlas rescaling.
-TEST(WidgetRenderIntegrationTest, DISABLED_ExistingTextSnapshotSurvivesAtlasGrowthAndFontMove)
+TEST(WidgetRenderIntegrationTest, ExistingTextSnapshotSurvivesAtlasGrowthAndFontMove)
 {
 	const auto path = std::filesystem::path(__FILE__).parent_path().parent_path().parent_path().parent_path().parent_path() / "resources/fonts/arial.ttf";
 	spk::Font font(path);

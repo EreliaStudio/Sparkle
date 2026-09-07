@@ -2,112 +2,84 @@
 
 #include <GL/glew.h>
 
-#include <algorithm>
 #include <array>
-#include <cstddef>
 #include <cstdint>
-#include <utility>
-#include <vector>
 
-#include "graphics/opengl/framebuffer.hpp"
-#include "rendering/command/clear_render_command.hpp"
 #include "rendering/command/draw_color_mesh_render_command.hpp"
-#include "rendering/command/viewport_render_command.hpp"
-#include "rendering/command/viewport_uniform_render_command.hpp"
-#include "sparkle_test/open_gl_test_context.hpp"
+#include "render_command_test_utils.hpp"
 
-namespace
+namespace test = render_command_test;
+
+TEST(DrawColorMeshRenderCommandTest, EmptyMeshProducesNoVisiblePixels)
 {
-	spk::ColorMesh2D colorQuad(const spk::Rect2D &geometry, const spk::Color &color)
-	{
-		spk::ColorMesh2D::Builder builder;
-		const float left = static_cast<float>(geometry.x);
-		const float top = static_cast<float>(geometry.y);
-		const float right = static_cast<float>(geometry.x + geometry.width);
-		const float bottom = static_cast<float>(geometry.y + geometry.height);
-		builder.addShape(
-			{{left, top}, 0.0f, color},
-			{{left, bottom}, 0.0f, color},
-			{{right, bottom}, 0.0f, color},
-			{{right, top}, 0.0f, color});
-		return std::move(builder).build();
-	}
-
-	std::vector<std::uint8_t> readPixels(const spk::Vector2UInt &size)
-	{
-		std::vector<std::uint8_t> result(static_cast<std::size_t>(size.x) * size.y * 4);
-		glReadPixels(0, 0, static_cast<GLsizei>(size.x), static_cast<GLsizei>(size.y), GL_RGBA, GL_UNSIGNED_BYTE, result.data());
-		return result;
-	}
-
-	std::size_t countColor(const std::vector<std::uint8_t> &pixels, const std::array<std::uint8_t, 4> &color)
-	{
-		std::size_t result = 0;
-		for (std::size_t index = 0; index < pixels.size(); index += 4)
-		{
-			result += std::equal(color.begin(), color.end(), pixels.begin() + static_cast<std::ptrdiff_t>(index));
-		}
-		return result;
-	}
+	test::Target target;
+	target.clear({0.2f, 0.4f, 0.6f, 1.0f});
+	const auto before = target.capture();
+	spk::DrawColorMeshRenderCommand(spk::ColorMesh2D{}).execute(target.context());
+	EXPECT_EQ(target.capture().pixels, before.pixels);
+	EXPECT_EQ(glGetError(), GL_NO_ERROR);
 }
 
-TEST(DrawColorMeshRenderCommandTest, DISABLED_EmptyMeshProducesNoVisiblePixels)
+TEST(DrawColorMeshRenderCommandTest, SingleMeshRendersVertexColors)
 {
-	GTEST_SKIP() << "Requires ColorMesh2D builder/inspection API plus the shared OpenGL render harness; those transitive APIs are not included in section 10.";
-	// Intended assertion: execute an empty mesh and verify the render target is unchanged and no GL error is produced.
+	test::Target target;
+	target.clear();
+	spk::DrawColorMeshRenderCommand(test::colorQuad({.anchor = {8, 10}, .size = {20, 16}}, {1, 0, 0, 1})).execute(target.context());
+	const auto image = target.capture();
+	EXPECT_EQ(test::pixel(image, {12, 14}), (std::array<std::uint8_t, 4>{255, 0, 0, 255}));
+	EXPECT_EQ(test::pixel(image, {2, 2}), (std::array<std::uint8_t, 4>{0, 0, 0, 0}));
 }
 
-TEST(DrawColorMeshRenderCommandTest, DISABLED_SingleMeshRendersVertexColors)
+TEST(DrawColorMeshRenderCommandTest, MultipleMeshesRenderIndependently)
 {
-	GTEST_SKIP() << "Requires ColorMesh2D construction and offscreen pixel readback APIs not included in section 10.";
-	// Intended assertion: draw a deterministic triangle/quad and compare sampled pixels with its vertex colors.
+	test::Target target;
+	target.clear();
+	spk::DrawColorMeshRenderCommand(test::colorQuad({.anchor = {4, 4}, .size = {20, 20}}, {1, 0, 0, 1})).execute(target.context());
+	spk::DrawColorMeshRenderCommand(test::colorQuad({.anchor = {36, 36}, .size = {20, 20}}, {0, 1, 0, 1})).execute(target.context());
+	const auto image = target.capture();
+	EXPECT_EQ(test::pixel(image, {10, 10}), (std::array<std::uint8_t, 4>{255, 0, 0, 255}));
+	EXPECT_EQ(test::pixel(image, {42, 42}), (std::array<std::uint8_t, 4>{0, 255, 0, 255}));
 }
 
-TEST(DrawColorMeshRenderCommandTest, DISABLED_MultipleMeshesRenderIndependently)
+TEST(DrawColorMeshRenderCommandTest, VertexAlphaBlendsWithExistingColor)
 {
-	GTEST_SKIP() << "Requires ColorMesh2D construction and offscreen pixel readback APIs not included in section 10.";
-	// Intended assertion: execute several commands and verify all expected regions are present.
+	test::Target target;
+	target.clear({0, 0, 1, 1});
+	spk::DrawColorMeshRenderCommand(test::colorQuad({.anchor = {8, 8}, .size = {24, 24}}, {1, 0, 0, 0.5f})).execute(target.context());
+	const auto actual = test::pixel(target.capture(), {12, 12});
+	EXPECT_NEAR(actual[0], 128, 1);
+	EXPECT_EQ(actual[1], 0);
+	EXPECT_NEAR(actual[2], 127, 1);
+	EXPECT_EQ(actual[3], 255);
 }
 
-TEST(DrawColorMeshRenderCommandTest, DISABLED_VertexAlphaBlendsWithExistingColor)
+TEST(DrawColorMeshRenderCommandTest, VertexDepthParticipatesInDepthTesting)
 {
-	GTEST_SKIP() << "Requires ColorMesh2D construction, deterministic blend state and offscreen pixel readback APIs not included in section 10.";
-	// Intended assertion: render translucent geometry over a known clear color and verify the blended result.
-}
-
-TEST(DrawColorMeshRenderCommandTest, DISABLED_VertexDepthParticipatesInDepthTesting)
-{
-	GTEST_SKIP() << "Requires ColorMesh2D construction, deterministic depth state and offscreen pixel readback APIs not included in section 10.";
-	// Intended assertion: overlap different-depth meshes and verify visibility follows the library depth convention.
+	test::Target target;
+	target.clear();
+	const spk::Rect2D overlap{.anchor = {8, 8}, .size = {32, 32}};
+	spk::DrawColorMeshRenderCommand(test::colorQuad(overlap, {1, 0, 0, 1}, 0.5f)).execute(target.context());
+	spk::DrawColorMeshRenderCommand(test::colorQuad(overlap, {0, 0, 1, 1}, -0.5f)).execute(target.context());
+	EXPECT_EQ(test::pixel(target.capture(), {20, 20}), (std::array<std::uint8_t, 4>{255, 0, 0, 255}));
 }
 
 TEST(DrawColorMeshRenderCommandTest, RepeatedIndependentCommandsProduceStablePixelsAndRasterState)
 {
-	auto &openGL = sparkle_test::OpenGLTestContext::instance();
-	openGL.reset();
-	constexpr spk::Vector2UInt size{32, 16};
-	const spk::Rect2D viewport{.anchor = {0, 0}, .size = size};
-	openGL.setGeometry(viewport);
-	spk::Framebuffer framebuffer(size);
-	framebuffer.activate(openGL.renderContext());
-	spk::ViewportRenderCommand(viewport).execute(openGL.renderContext());
-	spk::ViewportUniformRenderCommand(viewport).execute(openGL.renderContext());
-	glDisable(GL_SCISSOR_TEST);
-
-	spk::DrawColorMeshRenderCommand red(colorQuad({.anchor = {2, 2}, .size = {10, 10}}, {1, 0, 0, 1}));
-	spk::DrawColorMeshRenderCommand green(colorQuad({.anchor = {20, 2}, .size = {10, 10}}, {0, 1, 0, 1}));
+	test::Target target({32, 16});
+	spk::DrawColorMeshRenderCommand red(test::colorQuad({.anchor = {2, 2}, .size = {10, 10}}, {1, 0, 0, 1}));
+	spk::DrawColorMeshRenderCommand green(test::colorQuad({.anchor = {20, 2}, .size = {10, 10}}, {0, 1, 0, 1}));
 	const auto render = [&] {
-		spk::ClearRenderCommand({0, 0, 0, 0}, spk::ClearRenderCommand::Mask::All).execute(openGL.renderContext());
-		red.execute(openGL.renderContext());
-		green.execute(openGL.renderContext());
-		return readPixels(size);
+		target.clear();
+		red.execute(target.context());
+		green.execute(target.context());
+		return target.capture();
 	};
 
 	const auto first = render();
 	const auto second = render();
-	EXPECT_EQ(second, first);
-	EXPECT_GT(countColor(first, {255, 0, 0, 255}), 0u);
-	EXPECT_GT(countColor(first, {0, 255, 0, 255}), 0u);
+	EXPECT_EQ(second.pixels, first.pixels);
+	EXPECT_GT(test::countColor(first, {255, 0, 0, 255}), 0u);
+	EXPECT_GT(test::countColor(first, {0, 255, 0, 255}), 0u);
 
 	GLint activeFramebuffer = 0;
 	GLint actualViewport[4]{};

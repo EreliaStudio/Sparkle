@@ -3,9 +3,9 @@
 
 Last audited: **2026-09-07** against `docs/unit_test_plan.md` and all sources compiled by `SparkleTestSuite`.
 
-Current inventory: **96 disabled behaviors**, matching the 96 disabled test instances in the test sources.
+Current inventory: **52 disabled behaviors**, matching the 52 disabled test instances in the test sources.
 
-Disposition review: all **96** remaining entries are **Implement**. This means the behavior is useful and testable, although it may first need a product fix, a documented contract, or an internal test fixture.
+Disposition review: all **52** remaining entries are **Implement**. This means the behavior is useful and testable, although it may first need a product fix, a documented contract, or an internal test fixture.
 
 This file lists behavior that does not have complete TU coverage. **Missing** means no test exists; **Disabled** means a `DISABLED_` specification exists but does not implement the behavior; **Partial** means a test implements only part of the behavior. Test validation and enabled/disabled status do not affect whether complete coverage is removed from this inventory.
 
@@ -182,151 +182,6 @@ Render one populated cell and compare it with the reviewed golden image without 
 
 Render a deterministic multi-cell grid and compare it with the reviewed golden image without lifetime failures.
 
-## `spk::DrawColorMeshRenderCommand`
-
-1) **EmptyMeshProducesNoVisiblePixels** — Disabled  
-Verify no framebuffer change or GL error.
-
-2) **SingleMeshRendersVertexColors** — Disabled  
-Render deterministic geometry and compare sampled colors.
-
-3) **MultipleMeshesRenderIndependently** — Disabled  
-Verify every command region appears without cross-command corruption.
-
-4) **VertexAlphaBlendsWithExistingColor** — Disabled  
-Verify translucent geometry blends over a known clear color.
-
-5) **VertexDepthParticipatesInDepthTesting** — Disabled  
-Overlap depths and verify the library convention.
-
-## `spk::DrawTextureMeshRenderCommand`
-
-1) **TexturedMeshSamplesExpectedUVs** — Disabled  
-Render a patterned texture and verify UV sampling and orientation.
-
-2) **TextureAlphaBlendsWithExistingColor** — Disabled  
-Verify transparent/translucent texels blend correctly.
-
-3) **TextureMeshDepthParticipatesInDepthTesting** — Disabled  
-Verify depth ordering between overlapping textured meshes.
-
-4) **ExecutionBindsReservedTextureSampler** — Disabled  
-Verify texture/sampler binding at the reserved unit.
-
-5) **SourceTextureLifetimeIsExplicit** — Disabled  
-Exercise the documented ownership boundary without use-after-free.
-
-## `spk::DrawFontRenderCommand`
-
-1) **GlyphMeshSamplesAtlasAndRendersColor** — Disabled  
-Render a known atlas glyph and verify coverage and color.
-
-2) **OutlineColorAndThicknessAffectPixels** — Disabled  
-Verify outline coverage/color independently from glyph fill.
-
-3) **ExecutionUploadsFontUniformData** — Disabled  
-Inspect all uploaded font parameters.
-
-4) **ExecutionBindsAtlasSampler** — Disabled  
-Verify atlas/sampler binding at the reserved unit.
-
-5) **GlyphMeshDepthParticipatesInDepthTesting** — Disabled  
-Verify overlapping glyph depth behavior.
-
-## `spk::ImageRenderCommand`
-
-1) **WholeTextureFillsDestination** — Disabled  
-Verify patterned texture corners, center, and orientation.
-
-2) **PartialTextureSectionUsesRequestedUVRegion** — Disabled  
-Verify only the requested texels map to the destination.
-
-3) **EmptyDestinationProducesNoPixels** — Disabled  
-Verify zero-width/height destinations leave the target unchanged.
-
-4) **ClippedDestinationOnlyAffectsVisiblePixels** — Disabled  
-Verify pixels outside the scissor intersection remain untouched.
-
-5) **OverlappingImagesRespectDepth** — Disabled  
-Verify image depth ordering.
-
-6) **DestinationGeometryMapsTextureConsistently** — Disabled  
-Verify translated, scaled, wide, and tall destination mapping.
-
-## `spk::SpriteRenderCommand`
-
-1) **FirstSpriteCoordinatesSelectFirstSection** — Disabled  
-Verify `{0,0}` renders the first section.
-
-2) **LastSpriteCoordinatesSelectLastSection** — Disabled  
-Verify maximum valid coordinates render the last section.
-
-3) **GeometryVariantsPreserveSelectedSprite** — Disabled  
-Verify translation/scaling preserve sprite selection.
-
-4) **DepthVariantsParticipateInDepthTesting** — Disabled  
-Verify overlapping sprite depth behavior.
-
-## `spk::NineSliceRenderCommand`
-
-1) **UnstretchedSheetPreservesAllNineRegions** — Disabled  
-Render a deterministic 3x3 sheet and verify every region.
-
-2) **StretchedDestinationPreservesCornerSizes** — Disabled  
-Verify corners retain configured pixel sizes.
-
-3) **StretchedDestinationFillsEdges** — Disabled  
-Verify edge spans contain no seams or overlap.
-
-4) **StretchedDestinationFillsCenter** — Disabled  
-Verify the center fills the remaining interior.
-
-5) **WideDestinationKeepsCornersAndFillsCenter** — Disabled
-
-Verify wide-target regions and continuity.
-
-6) **TallDestinationKeepsCornersAndFillsCenter** — Disabled
-
-Verify tall-target regions and continuity.
-
-## `spk::TextRenderCommand`
-
-1) **UTF8TextRendersExpectedGlyphs** — Disabled  
-Render deterministic UTF-8 text and compare its golden image.
-
-2) **UTF32TextRendersExpectedGlyphs** — Disabled  
-Verify equivalent UTF-8/UTF-32 inputs produce identical glyphs.
-
-3) **AllAlignmentsPlaceTextCorrectly** — Disabled  
-Cover every horizontal/vertical alignment.
-
-4) **GlyphColorIsApplied** — Disabled  
-Verify visible glyph pixels use the requested color.
-
-5) **OutlineColorAndSizeAreApplied** — Disabled  
-Verify requested outline coverage and color.
-
-6) **DepthParticipatesInOverlapOrdering** — Disabled  
-Verify overlapping text depth behavior.
-
-7) **EmptyTextProducesNoVisiblePixels** — Disabled  
-Verify empty UTF-8/UTF-32 leave the target unchanged.
-
-8) **MissingGlyphUsesFallbackBehavior** — Disabled  
-Verify documented missing-glyph fallback or omission.
-
-9) **AtlasGrowthKeepsExistingCommandValid** — Disabled  
-Grow the atlas and verify an existing command renders identically.
-
-10) **RepeatedExecutionProducesStablePixels** — Disabled  
-Verify repeatability without leaked GPU state.
-
-11) **CommandsSharingFontRemainIndependent** — Disabled  
-Verify shared-font commands retain independent text, colors, and anchors.
-
-12) **FontLifetimeContractIsExercised** — Disabled  
-Verify ownership across command construction, execution, and destruction.
-
 ## `spk::SpinBox<T>`
 
 1) **ArithmeticAtUnsignedExtremaSaturatesBeforeApplyingLimits** — Disabled
@@ -368,12 +223,6 @@ Destroy the tooltip target and verify later updates do not retain or dereference
 5) **TooltipMaximumWidthClampsUnbreakableTextIncludingZero** — Disabled
 
 Verify long unbreakable text and a zero maximum width follow the defined wrapping and clamping behavior.
-
-## `spk::Widget` rendering
-
-1) **ExistingTextSnapshotSurvivesAtlasGrowthAndFontMove** — Disabled
-
-Grow and move the font atlas after snapshot creation and verify the existing text snapshot remains valid or follows the documented invalidation contract.
 
 ## `spk::Workspace`
 

@@ -2,6 +2,19 @@
 #include <stdexcept>
 namespace spk
 {
+	struct TextRenderCommand::State
+	{
+		Font::Atlas *atlas;
+		Font::Text text;
+		Anchor anchor;
+		Color glyphColor;
+		Color outlineColor;
+		float outlineThickness;
+		float depth;
+		std::unique_ptr<DrawFontRenderCommand> command;
+		bool dirty = true;
+	};
+
 	float TextRenderCommand::_outlineThickness(const Font::Size &s)
 	{
 		if (!s.outline)
@@ -49,6 +62,16 @@ namespace spk
 		}
 		return std::move(b).build();
 	}
+	void TextRenderCommand::_refresh(State &state)
+	{
+		state.command = std::make_unique<DrawFontRenderCommand>(
+			state.atlas,
+			_mesh(*state.atlas, state.text, state.anchor, state.depth),
+			state.glyphColor,
+			state.outlineColor,
+			state.outlineThickness);
+		state.dirty = false;
+	}
 	TextRenderCommand::TextRenderCommand(Font *f, Font::Size s, Font::Text text, Anchor anchor, Color glyph, Color outline, float depth)
 	{
 		if (!f)
@@ -56,7 +79,15 @@ namespace spk
 			throw std::invalid_argument("TextRenderCommand font cannot be null");
 		}
 		auto &a = f->atlas(s);
-		_command = std::make_unique<DrawFontRenderCommand>(&a, _mesh(a, text, anchor, depth), glyph, outline, _outlineThickness(s));
+		_state = std::make_shared<State>(State{&a, std::move(text), anchor, glyph, outline, _outlineThickness(s), depth});
+		_refresh(*_state);
+		std::weak_ptr<State> state = _state;
+		_atlasEditionContract = a.subscribe([state] {
+			if (const auto locked = state.lock())
+			{
+				locked->dirty = true;
+			}
+		});
 	}
 	TextRenderCommand::TextRenderCommand(Font *f, Font::Size s, std::string_view text, Anchor anchor, Color glyph, Color outline, float depth) :
 		TextRenderCommand(f, s, Font::textFromUTF8(text), anchor, glyph, outline, depth)
@@ -64,6 +95,10 @@ namespace spk
 	}
 	void TextRenderCommand::execute(RenderContext &c) const
 	{
-		_command->execute(c);
+		if (_state->dirty)
+		{
+			_refresh(*_state);
+		}
+		_state->command->execute(c);
 	}
 }
