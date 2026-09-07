@@ -107,11 +107,3 @@ TEST(WindowClassTest, MultipleIndependentClassesCanCoexist)
 	firstWindow.destroy();
 	secondWindow.destroy();
 }
-
-// Disabled: deterministic UnregisterClassW failure requires destroying Window::Class while
-// live windows still reference it or adding an injectable platform seam. The former would
-// make a throwing destructor a process-termination test, which is not a documented contract.
-TEST(WindowClassTest, DISABLED_UnregistrationFailureReportsCodeAndOperation)
-{
-	FAIL() << "Requires an injectable UnregisterClassW failure seam";
-}

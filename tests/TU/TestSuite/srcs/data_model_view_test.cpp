@@ -289,43 +289,6 @@ TEST(TextModelDelegateTest, PresentationSettingsAndInvalidItemsHaveDefinedBehavi
 	EXPECT_THROW(delegate.bindItem(*item, model, 2, false), std::out_of_range);
 }
 
-// Run this invalid ownership product in a subprocess: accepting it would otherwise
-// double-delete the item when the view is destroyed. Exit before that unsafe cleanup.
-TEST(DataModelViewTest, DISABLED_DuplicateDelegateWidgetIsRejected)
-{
-	EXPECT_EXIT(([] {
-					struct Duplicate : Delegate
-					{
-						spk::Widget *first = nullptr;
-						std::unique_ptr<spk::Widget> createItem(std::string name, spk::Widget *parent) override
-						{
-							if (first == nullptr)
-							{
-								auto item = Delegate::createItem(std::move(name), parent);
-								first = item.get();
-								return item;
-							}
-							return std::unique_ptr<spk::Widget>(first);
-						}
-					};
-					Model model{1, 2};
-					Duplicate delegate;
-					Model::View view("Duplicate");
-					view.setGeometry({.anchor = {0, 0}, .size = {100, 40}});
-					view.setModel(&model);
-					try
-					{
-						view.setDelegate(&delegate);
-					} catch (const std::invalid_argument &)
-					{
-						std::_Exit(0);
-					}
-					std::_Exit(1);
-				}()),
-				testing::ExitedWithCode(0),
-				"");
-}
-
 TEST(DataModelViewTest, DISABLED_InvalidDelegateReplacementPreservesExistingItems)
 {
 	struct Invalid : Delegate

@@ -120,10 +120,4 @@ namespace
 
 		EXPECT_FALSE(contract.isValid());
 	}
-
-	TEST(VersionedTraitTest, DISABLED_VersionWrapRequiresDeterministicPublicSeam)
-	{
-		GTEST_SKIP() << "VersionedTrait exposes no public seam for placing its uint64_t version near UINT64_MAX; "
-						 << "a deterministic wrap test cannot be written without relying on private state or billions of invalidations.";
-	}
 }

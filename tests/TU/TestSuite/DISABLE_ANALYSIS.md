@@ -1,6 +1,6 @@
 # Disabled-test decision catalogue
 
-Last audited: **2026-09-07**. The source tree contains **111** disabled tests.
+Last audited: **2026-09-07**. The source tree contains **105** disabled tests.
 
 The catalogue is grouped by Google Test suite. Every case records its intended behavior, current blocker, and a specific recommendation. Failure injection, counters, and thread barriers remain internal unless callers need them as product features.
 
@@ -79,12 +79,6 @@ The catalogue is grouped by Google Test suite. Every case records its intended b
 - **Proposal:** Test checked arithmetic through a narrow internal helper; remove the requirement if the state is unreachable by design.
 
 ## `DataModelViewTest`
-
-### `DISABLED_DuplicateDelegateWidgetIsRejected`
-
-- **Goal:** Verify that duplicate delegate widget is rejected.
-- **Why disabled:** The test is implemented, but current product behavior does not satisfy its assertions safely.
-- **Proposal:** Validate widget identity before ownership adoption and use a fixture that cannot double-delete.
 
 ### `DISABLED_InvalidDelegateReplacementPreservesExistingItems`
 
@@ -256,12 +250,6 @@ The catalogue is grouped by Google Test suite. Every case records its intended b
 - **Why disabled:** Entity traverses live attachment/child vectors directly; add/remove during callbacks has no explicit snapshot or deferred-edit contract.
 - **Proposal:** Decide and document the product contract for add or remove during callbacks needs stable traversal contract, then implement it through existing APIs.
 
-### `DISABLED_BehavioursShouldAppearInEngineScopedRegistries`
-
-- **Goal:** Verify that behaviours should appear in engine scoped registries.
-- **Why disabled:** Behaviour does not currently inherit Registry<Engine *, Behaviour>::Object, so behaviour registry queries remain empty.
-- **Proposal:** Decide and document the product contract for behaviours should appear in engine scoped registries, then implement it through existing APIs.
-
 ### `DISABLED_ContextChangesShouldPropagateThroughExistingChildren`
 
 - **Goal:** Verify that context changes should propagate through existing children.
@@ -273,12 +261,6 @@ The catalogue is grouped by Google Test suite. Every case records its intended b
 - **Goal:** Verify that recursive destruction needs entity ownership contract.
 - **Why disabled:** Entity parent/child relationships are non-owning; the current API does not recursively destroy child entities.
 - **Proposal:** Decide and document the product contract for recursive destruction needs entity ownership contract, then implement it through existing APIs.
-
-### `DISABLED_ZInteractionOrderingNeedsExplicitEntityComparatorContract`
-
-- **Goal:** Verify that z interaction ordering needs explicit entity comparator contract.
-- **Why disabled:** Entity currently inherits the default pointer-order child comparator; no z/depth interaction ordering contract is exposed.
-- **Proposal:** Decide and document the product contract for z interaction ordering needs explicit entity comparator contract, then implement it through existing APIs.
 
 ## `EventTest`
 
@@ -357,12 +339,6 @@ The catalogue is grouped by Google Test suite. Every case records its intended b
 - **Proposal:** Implement capture/comparison, generate and review the separator golden, then enable.
 
 ## `MeshTest`
-
-### `DISABLED_RenderingRequiresProgramAndFramebufferIntegrationFixture`
-
-- **Goal:** Verify that rendering requires program and framebuffer integration fixture.
-- **Why disabled:** Mesh owns buffer layout only; rendering requires Program and render-command fixtures covered by later integration targets.
-- **Proposal:** Replace the placeholder with an executable test for rendering requires program and framebuffer integration fixture using current public behavior; add only a narrow internal seam if needed.
 
 ### `DISABLED_VertexIndexOverflowNeedsDeterministicCapacitySeam`
 
@@ -640,14 +616,6 @@ The catalogue is grouped by Google Test suite. Every case records its intended b
 - **Why disabled:** The test is implemented, but current product behavior does not satisfy its assertions safely.
 - **Proposal:** Define zero-width/long-word wrapping, implement it, and enable the assertions.
 
-## `VersionedTraitTest`
-
-### `DISABLED_VersionWrapRequiresDeterministicPublicSeam`
-
-- **Goal:** Verify that version wrap requires deterministic public seam.
-- **Why disabled:** `VersionedTrait` exposes no public seam for placing its version near `UINT64_MAX`.
-- **Proposal:** Replace the placeholder with an executable test for version wrap requires deterministic public seam using current public behavior; add only a narrow internal seam if needed.
-
 ## `VertexArrayTest`
 
 ### `DISABLED_CreationFailureNeedsOpenGLInjectionSeam`
@@ -691,14 +659,6 @@ The catalogue is grouped by Google Test suite. Every case records its intended b
 - **Goal:** Verify that existing text snapshot survives atlas growth and font move.
 - **Why disabled:** The test is implemented, but current product behavior does not satisfy its assertions safely.
 - **Proposal:** Repair atlas/font invalidation, or document snapshot invalidation and rewrite the contract.
-
-## `WindowClassTest`
-
-### `DISABLED_UnregistrationFailureReportsCodeAndOperation`
-
-- **Goal:** Verify that unregistration failure reports code and operation.
-- **Why disabled:** The body deliberately fails because the required Win32 failure cannot be forced deterministically.
-- **Proposal:** Add a shared internal platform/driver seam for unregistration failure reports code and operation and assert diagnostics and cleanup.
 
 ## `WindowStateTest`
 

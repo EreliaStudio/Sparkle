@@ -178,8 +178,3 @@ TEST(MeshTest, DISABLED_VertexIndexOverflowNeedsDeterministicCapacitySeam)
 {
 	GTEST_SKIP() << "Reaching more than uint32_t vertices would require impractical memory; Builder exposes no injectable count seam.";
 }
-
-TEST(MeshTest, DISABLED_RenderingRequiresProgramAndFramebufferIntegrationFixture)
-{
-	GTEST_SKIP() << "Mesh owns buffer layout only; rendering requires Program and render-command fixtures covered by later integration targets.";
-}

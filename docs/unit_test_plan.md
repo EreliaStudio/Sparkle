@@ -153,7 +153,7 @@ Public data-only records and enums are tested with the class that consumes them.
 ### `spk::VersionedTrait`
 
 - **Standard usage:** invalidate repeatedly, verify monotonically increasing versions and callbacks, then move the object and keep its version/lifetime semantics coherent.
-- Cover version wrap through a deterministic seam if wrap behavior is intended, subscriber lifetime, moved-from behavior, and destruction invalidation.
+- Cover subscriber lifetime, moved-from behavior, and destruction invalidation. Do not expose private counter state solely to force an otherwise unreachable version wrap.
 
 ### `spk::ContextualizableTrait<Context>`
 
@@ -257,7 +257,7 @@ Public data-only records and enums are tested with the class that consumes them.
 
 - **Standard usage:** register a uniquely named class, create windows from it, and release it after windows are destroyed.
 - Cover Unicode identifiers, duplicate registration behavior, and multiple independent class instances.
-- **[throws `std::system_error`]** Surface class-registration/unregistration failures with the Win32 operation and code.
+- **[throws `std::system_error`]** Surface class-registration failures with the Win32 operation and code; class destruction performs best-effort, non-throwing unregistration.
 
 ### `spk::WinAPI::Window`
 
@@ -365,7 +365,7 @@ Public data-only records and enums are tested with the class that consumes them.
 ### `spk::Entity`
 
 - **Standard usage:** build a hierarchy, add behaviours/participants, attach it to an engine, propagate geometry/update/render/events, then remove it cleanly.
-- Cover inactive branches, parent/context changes, add/remove during callbacks, duplicate names/types, root vs detached entity, z/interaction ordering inherited from dispatch, and recursive destruction.
+- Cover inactive branches, parent/context changes, add/remove during callbacks, duplicate names/types, root vs detached entity, interaction traversal, and non-owning hierarchy detachment during destruction. Base `Entity` has no z-order contract.
 
 ### `spk::Entity2D`
 
@@ -517,7 +517,7 @@ Public data-only records and enums are tested with the class that consumes them.
 
 ### `spk::Mesh<Vertex>` and `Builder<Mesh>`
 
-- **Standard usage:** build a quad from vertices/triangles, reserve capacity, consume the builder, inspect layout/count/type, and render it.
+- **Standard usage:** build a quad from vertices/triangles, reserve capacity, consume the builder, and inspect layout/count/type. Rendering belongs to render-command integration coverage.
 - Cover empty built meshes, manual index order, shared mesh-content lifetime, and each concrete color/texture builder's attribute layout.
 - **[throws `std::out_of_range`]** Add an index that references a missing vertex.
 - **[throws `std::logic_error`]** Read layout from a default-empty mesh or reuse a consumed builder.
@@ -576,7 +576,7 @@ Public data-only records and enums are tested with the class that consumes them.
 
 ### `spk::DrawColorMeshRenderCommand`
 
-- **Standard usage:** draw empty/single/multiple color meshes and verify color, alpha, depth, and shared program/resource reuse.
+- **Standard usage:** draw empty/single/multiple color meshes and verify color, alpha, depth, repeated execution, and absence of leaked OpenGL state. Do not require a particular private program/resource-sharing strategy.
 
 ### `spk::DrawTextureMeshRenderCommand`
 

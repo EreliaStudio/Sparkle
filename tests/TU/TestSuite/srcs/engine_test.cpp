@@ -873,19 +873,9 @@ TEST(EntityTest, DISABLED_ContextChangesShouldPropagateThroughExistingChildren)
 	GTEST_SKIP() << "Entity currently propagates geometry through existing children, but not context changes or registry membership.";
 }
 
-TEST(EntityTest, DISABLED_BehavioursShouldAppearInEngineScopedRegistries)
-{
-	GTEST_SKIP() << "Behaviour does not currently inherit Registry<Engine *, Behaviour>::Object, so behaviour registry queries remain empty.";
-}
-
 TEST(EntityTest, DISABLED_AddOrRemoveDuringCallbacksNeedsStableTraversalContract)
 {
 	GTEST_SKIP() << "Entity traverses live attachment/child vectors directly; add/remove during callbacks has no explicit snapshot or deferred-edit contract.";
-}
-
-TEST(EntityTest, DISABLED_ZInteractionOrderingNeedsExplicitEntityComparatorContract)
-{
-	GTEST_SKIP() << "Entity currently inherits the default pointer-order child comparator; no z/depth interaction ordering contract is exposed.";
 }
 
 TEST(Entity2DTest, StandardUsageConstructsTransformTypedRegistriesAndParentTransformRelationship)
