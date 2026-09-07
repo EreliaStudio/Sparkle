@@ -3,6 +3,7 @@
 #include <stdexcept>
 
 #include "rendering/command/sprite_render_command.hpp"
+#include "ui/widget.hpp"
 
 namespace
 {
@@ -43,8 +44,15 @@ TEST(SpriteRenderCommandTest, DISABLED_DepthVariantsParticipateInDepthTesting)
 	// Intended assertion: overlapping sprites at different depth values obey the established depth convention.
 }
 
-TEST(SpriteRenderCommandTest, DISABLED_OutOfRangeCoordinatesPropagateSpriteSheetFailure)
+TEST(SpriteRenderCommandTest, OutOfRangeCoordinatesPropagateSpriteSheetFailure)
 {
-	GTEST_SKIP() << "Requires a concrete SpriteSheet instance and its coordinate bounds API, which are transitive dependencies not included in section 10.";
-	// Intended assertion: construction with coordinates outside the sheet propagates the SpriteSheet exception unchanged.
+	const auto *sheet = spk::Widget::defaultStyle->iconset.get();
+	ASSERT_NE(sheet, nullptr);
+
+	EXPECT_THROW(
+		(void)spk::SpriteRenderCommand(sheet, {sheet->nbSprite().x, 0}, destination()),
+		std::out_of_range);
+	EXPECT_THROW(
+		(void)spk::SpriteRenderCommand(sheet, {0, sheet->nbSprite().y}, destination()),
+		std::out_of_range);
 }

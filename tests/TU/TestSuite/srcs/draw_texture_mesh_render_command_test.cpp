@@ -37,8 +37,9 @@ TEST(DrawTextureMeshRenderCommandTest, DISABLED_SourceTextureLifetimeIsExplicitl
 	// Intended assertion: keep the source alive through command execution and verify the documented behavior when ownership is released afterward.
 }
 
-TEST(DrawTextureMeshRenderCommandTest, DISABLED_NullTextureIsRejected)
+TEST(DrawTextureMeshRenderCommandTest, NullTextureIsRejected)
 {
-	GTEST_SKIP() << "The null-texture constructor also requires a TextureMesh2D value, but its construction API is a transitive dependency not included in section 10.";
-	// Intended assertion: EXPECT_THROW(DrawTextureMeshRenderCommand(nullptr, validMesh), std::invalid_argument).
+	EXPECT_THROW(
+		(void)spk::DrawTextureMeshRenderCommand(nullptr, spk::TextureMesh2D{}),
+		std::invalid_argument);
 }

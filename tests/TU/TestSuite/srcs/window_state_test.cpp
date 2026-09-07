@@ -3,6 +3,9 @@
 #include <type_traits>
 
 #include "core/window.hpp"
+#include "rendering/render_snapshot.hpp"
+#include "sparkle_test/open_gl_test_context.hpp"
+#include "ui/widget.hpp"
 
 static_assert(!std::is_copy_constructible_v<spk::Window::State>);
 static_assert(!std::is_copy_assignable_v<spk::Window::State>);
@@ -133,7 +136,22 @@ TEST(WindowStateTest, DISABLED_InactiveFocusedWidgetHasDocumentedDispatchBehavio
 	GTEST_SKIP() << "The backlog requires inactive-focused-widget coverage, but the supplied window.hpp only forward-declares Widget. Enable this case beside the Widget tests once the complete Widget API is part of this handoff.";
 }
 
-TEST(WindowStateTest, DISABLED_BackgroundColorMutationIsObservableInProducedSnapshot)
+TEST(WindowStateTest, BackgroundColorMutationIsObservableInProducedSnapshot)
 {
-	GTEST_SKIP() << "State exposes setBackgroundColor() but no getter or public snapshot-building hook in the supplied section-05 API. Enable with the update/snapshot fixture and assert the clear command receives the configured color.";
+	auto &openGL = sparkle_test::OpenGLTestContext::instance();
+	openGL.reset();
+	spk::Window::State state("background-color");
+	state.root().setGeometry({.anchor = {0, 0}, .size = openGL.surface().geometry().size});
+	state.setBackgroundColor({0.2f, 0.4f, 0.6f, 0.8f});
+
+	spk::RenderSnapshot::Builder builder;
+	state.root().buildRenderSnapshot(builder);
+	builder.build().execute(openGL.renderContext());
+
+	const auto image = openGL.capture();
+	const auto *pixel = image.pixel({10, 10});
+	EXPECT_EQ(pixel[0], 51);
+	EXPECT_EQ(pixel[1], 102);
+	EXPECT_EQ(pixel[2], 153);
+	EXPECT_EQ(pixel[3], 204);
 }

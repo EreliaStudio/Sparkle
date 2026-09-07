@@ -3,6 +3,7 @@
 #include <stdexcept>
 
 #include "rendering/command/nine_slice_render_command.hpp"
+#include "ui/widget.hpp"
 
 namespace
 {
@@ -43,22 +44,34 @@ TEST(NineSliceRenderCommandTest, DISABLED_StretchedDestinationFillsCenterRegion)
 	// Intended assertion: the center sprite fills the remaining center rectangle.
 }
 
-TEST(NineSliceRenderCommandTest, DISABLED_NonThreeByThreeSpriteSheetIsRejected)
+TEST(NineSliceRenderCommandTest, NonThreeByThreeSpriteSheetIsRejected)
 {
-	GTEST_SKIP() << "Requires SpriteSheet construction/dimension API, which is a transitive dependency not included in section 10.";
-	// Intended assertion: EXPECT_THROW(NineSliceRenderCommand(non3x3Sheet, ...), std::invalid_argument).
+	EXPECT_THROW(
+		(void)spk::NineSliceRenderCommand(
+			spk::Widget::defaultStyle->iconset.get(),
+			destination(),
+			spk::Vector2UInt{10, 10}),
+		std::invalid_argument);
 }
 
-TEST(NineSliceRenderCommandTest, DISABLED_CornerWidthGreaterThanHalfDestinationIsRejected)
+TEST(NineSliceRenderCommandTest, CornerWidthGreaterThanHalfDestinationIsRejected)
 {
-	GTEST_SKIP() << "Requires a valid 3x3 SpriteSheet instance, whose construction API is not included in section 10.";
-	// Intended assertion: destination width 20 with corner width 11 throws std::invalid_argument.
+	EXPECT_THROW(
+		(void)spk::NineSliceRenderCommand(
+			spk::Widget::defaultStyle->nineSlice.get(),
+			destination({20, 40}),
+			spk::Vector2UInt{11, 10}),
+		std::invalid_argument);
 }
 
-TEST(NineSliceRenderCommandTest, DISABLED_CornerHeightGreaterThanHalfDestinationIsRejected)
+TEST(NineSliceRenderCommandTest, CornerHeightGreaterThanHalfDestinationIsRejected)
 {
-	GTEST_SKIP() << "Requires a valid 3x3 SpriteSheet instance, whose construction API is not included in section 10.";
-	// Intended assertion: destination height 20 with corner height 11 throws std::invalid_argument.
+	EXPECT_THROW(
+		(void)spk::NineSliceRenderCommand(
+			spk::Widget::defaultStyle->nineSlice.get(),
+			destination({40, 20}),
+			spk::Vector2UInt{10, 11}),
+		std::invalid_argument);
 }
 
 TEST(NineSliceRenderCommandTest, DISABLED_WideDestinationKeepsCornersAndFillsCenter)

@@ -1,6 +1,6 @@
 # Disabled-test decision catalogue
 
-Last audited: **2026-09-07**. The source tree contains **105** disabled tests.
+Last audited: **2026-09-07**. The source tree contains **96** disabled tests.
 
 The catalogue is grouped by Google Test suite. Every case records its intended behavior, current blocker, and a specific recommendation. Failure injection, counters, and thread barriers remain internal unless callers need them as product features.
 
@@ -108,12 +108,6 @@ The catalogue is grouped by Google Test suite. Every case records its intended b
 
 ## `DrawColorMeshRenderCommandTest`
 
-### `DISABLED_CommandsReuseSharedProgramAndGPUResources`
-
-- **Goal:** Verify that the render command commands reuse shared program and gpu resources.
-- **Why disabled:** The placeholder came from a partial source handoff; required repository types now exist, but the executable fixture was never implemented.
-- **Proposal:** Implement commands reuse shared program and gpu resources with the existing OpenGL capture fixture; use internal GL introspection only for exact bindings/reuse.
-
 ### `DISABLED_EmptyMeshProducesNoVisiblePixels`
 
 - **Goal:** Verify that the render command empty mesh produces no visible pixels.
@@ -170,12 +164,6 @@ The catalogue is grouped by Google Test suite. Every case records its intended b
 - **Why disabled:** The placeholder came from a partial source handoff; required repository types now exist, but the executable fixture was never implemented.
 - **Proposal:** Implement glyph mesh samples atlas and renders glyph color with the existing OpenGL capture fixture; use internal GL introspection only for exact bindings/reuse.
 
-### `DISABLED_NullAtlasIsRejected`
-
-- **Goal:** Verify that the render command null atlas is rejected.
-- **Why disabled:** The placeholder came from a partial source handoff; required repository types now exist, but the executable fixture was never implemented.
-- **Proposal:** Implement null atlas is rejected with the existing OpenGL capture fixture; use internal GL introspection only for exact bindings/reuse.
-
 ### `DISABLED_OutlineColorAndThicknessAffectRenderedPixels`
 
 - **Goal:** Verify that the render command outline color and thickness affect rendered pixels.
@@ -189,12 +177,6 @@ The catalogue is grouped by Google Test suite. Every case records its intended b
 - **Goal:** Verify that the render command execution binds texture sampler at reserved binding point.
 - **Why disabled:** The placeholder came from a partial source handoff; required repository types now exist, but the executable fixture was never implemented.
 - **Proposal:** Implement execution binds texture sampler at reserved binding point with the existing OpenGL capture fixture; use internal GL introspection only for exact bindings/reuse.
-
-### `DISABLED_NullTextureIsRejected`
-
-- **Goal:** Verify that the render command null texture is rejected.
-- **Why disabled:** The placeholder came from a partial source handoff; required repository types now exist, but the executable fixture was never implemented.
-- **Proposal:** Implement null texture is rejected with the existing OpenGL capture fixture; use internal GL introspection only for exact bindings/reuse.
 
 ### `DISABLED_SourceTextureLifetimeIsExplicitlyExercised`
 
@@ -322,14 +304,6 @@ The catalogue is grouped by Google Test suite. Every case records its intended b
 - **Why disabled:** A span larger than INT_MAX requires a genuinely addressable multi-gigabyte range; Image exposes no decoder-size seam.
 - **Proposal:** Test checked arithmetic through a narrow internal helper; remove the requirement if the state is unreachable by design.
 
-## `JSONValueTest`
-
-### `DISABLED_ExactParserOffsetContextContractRequiresParserImplementationSnapshot`
-
-- **Goal:** Verify that exact parser offset context contract requires parser implementation snapshot.
-- **Why disabled:** The backlog requires useful parse offsets/context, but the supplied Value header does not define the parser diagnostic format. The enabled parse-error test still verifies a non-empty diagnostic.
-- **Proposal:** Replace the placeholder with an executable test for exact parser offset context contract requires parser implementation snapshot using current public behavior; add only a narrow internal seam if needed.
-
 ## `MenuBarBreakRenderTest`
 
 ### `DISABLED_ThreePartSeparator`
@@ -347,24 +321,6 @@ The catalogue is grouped by Google Test suite. Every case records its intended b
 - **Proposal:** Test checked arithmetic through a narrow internal helper; remove the requirement if the state is unreachable by design.
 
 ## `NineSliceRenderCommandTest`
-
-### `DISABLED_CornerHeightGreaterThanHalfDestinationIsRejected`
-
-- **Goal:** Verify that the render command corner height greater than half destination is rejected.
-- **Why disabled:** The placeholder came from a partial source handoff; required repository types now exist, but the executable fixture was never implemented.
-- **Proposal:** Implement corner height greater than half destination is rejected with the existing OpenGL capture fixture; use internal GL introspection only for exact bindings/reuse.
-
-### `DISABLED_CornerWidthGreaterThanHalfDestinationIsRejected`
-
-- **Goal:** Verify that the render command corner width greater than half destination is rejected.
-- **Why disabled:** The placeholder came from a partial source handoff; required repository types now exist, but the executable fixture was never implemented.
-- **Proposal:** Implement corner width greater than half destination is rejected with the existing OpenGL capture fixture; use internal GL introspection only for exact bindings/reuse.
-
-### `DISABLED_NonThreeByThreeSpriteSheetIsRejected`
-
-- **Goal:** Verify that the render command non three by three sprite sheet is rejected.
-- **Why disabled:** The placeholder came from a partial source handoff; required repository types now exist, but the executable fixture was never implemented.
-- **Proposal:** Implement non three by three sprite sheet is rejected with the existing OpenGL capture fixture; use internal GL introspection only for exact bindings/reuse.
 
 ### `DISABLED_StretchedDestinationFillsCenterRegion`
 
@@ -505,12 +461,6 @@ The catalogue is grouped by Google Test suite. Every case records its intended b
 - **Goal:** Verify that the render command last sprite coordinates select last section.
 - **Why disabled:** The placeholder came from a partial source handoff; required repository types now exist, but the executable fixture was never implemented.
 - **Proposal:** Implement last sprite coordinates select last section with the existing OpenGL capture fixture; use internal GL introspection only for exact bindings/reuse.
-
-### `DISABLED_OutOfRangeCoordinatesPropagateSpriteSheetFailure`
-
-- **Goal:** Verify that the render command out of range coordinates propagate sprite sheet failure.
-- **Why disabled:** The placeholder came from a partial source handoff; required repository types now exist, but the executable fixture was never implemented.
-- **Proposal:** Implement out of range coordinates propagate sprite sheet failure with the existing OpenGL capture fixture; use internal GL introspection only for exact bindings/reuse.
 
 ## `TextRenderCommandTest`
 
@@ -661,12 +611,6 @@ The catalogue is grouped by Google Test suite. Every case records its intended b
 - **Proposal:** Repair atlas/font invalidation, or document snapshot invalidation and rewrite the contract.
 
 ## `WindowStateTest`
-
-### `DISABLED_BackgroundColorMutationIsObservableInProducedSnapshot`
-
-- **Goal:** Verify that background color mutation is observable in produced snapshot.
-- **Why disabled:** The placeholder came from a partial source handoff; required repository types now exist, but the executable fixture was never implemented.
-- **Proposal:** Replace the placeholder with an executable test for background color mutation is observable in produced snapshot using current public behavior; add only a narrow internal seam if needed.
 
 ### `DISABLED_InactiveFocusedWidgetHasDocumentedDispatchBehavior`
 

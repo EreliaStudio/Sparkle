@@ -3,9 +3,9 @@
 
 Last audited: **2026-09-07** against `docs/unit_test_plan.md` and all sources compiled by `SparkleTestSuite`.
 
-Current inventory: **105 disabled behaviors**, matching the 105 disabled test instances in the test sources.
+Current inventory: **96 disabled behaviors**, matching the 96 disabled test instances in the test sources.
 
-Disposition review: **103 Implement** and **2 Replace**. Entries are **Implement** unless explicitly marked **Replace**. “Implement” means the behavior is useful and testable, although it may first need a product fix, a documented contract, or an internal test fixture. “Replace” means the current test should not be implemented as written; its rationale describes the observable-behavior test that should take its place.
+Disposition review: all **96** remaining entries are **Implement**. This means the behavior is useful and testable, although it may first need a product fix, a documented contract, or an internal test fixture.
 
 This file lists behavior that does not have complete TU coverage. **Missing** means no test exists; **Disabled** means a `DISABLED_` specification exists but does not implement the behavior; **Partial** means a test implements only part of the behavior. Test validation and enabled/disabled status do not affect whether complete coverage is removed from this inventory.
 
@@ -26,12 +26,6 @@ Shrink the model and resize the viewport, then verify the scroll offset and visi
 
 Make delegate replacement transactional so a failing replacement leaves the existing items and delegate intact.
 
-## `spk::JSON::Value`
-
-1) **ParserDiagnosticsExposeExactOffsetAndContext** — Disabled — **Replace**
-
-Do not snapshot exact wording or nearby source excerpts because they are not a public format contract. Replace this with assertions for useful line/column information and a stable error category on representative malformed documents.
-
 ## `spk::WinAPI::WakeEvent`
 
 1) **CreateEventFailureReportsCodeAndOperation** — Disabled  
@@ -41,9 +35,6 @@ Inject `CreateEventW` failure and verify `std::system_error`, Win32 code, and op
 
 1) **InactiveFocusedWidgetDispatchBehavior** — Disabled  
 Deactivate a focused widget and verify event routing and focus-release policy.
-
-2) **BackgroundColorAppearsInSnapshot** — Disabled  
-Build a snapshot after mutation and verify its clear command uses the configured color.
 
 ## `spk::Window::Surface`
 
@@ -208,10 +199,6 @@ Verify translucent geometry blends over a known clear color.
 5) **VertexDepthParticipatesInDepthTesting** — Disabled  
 Overlap depths and verify the library convention.
 
-6) **CommandsReuseSharedProgramAndGPUResources** — Disabled — **Replace**
-
-Do not test pointer identity or the private static-resource strategy. Replace this with repeated and multi-command rendering assertions that verify stable pixels and no leaked OpenGL state; resource sharing can then change without breaking the behavioral suite.
-
 ## `spk::DrawTextureMeshRenderCommand`
 
 1) **TexturedMeshSamplesExpectedUVs** — Disabled  
@@ -229,9 +216,6 @@ Verify texture/sampler binding at the reserved unit.
 5) **SourceTextureLifetimeIsExplicit** — Disabled  
 Exercise the documented ownership boundary without use-after-free.
 
-6) **NullTextureIsRejected** — Disabled  
-Verify the exact exception without issuing GL calls.
-
 ## `spk::DrawFontRenderCommand`
 
 1) **GlyphMeshSamplesAtlasAndRendersColor** — Disabled  
@@ -248,9 +232,6 @@ Verify atlas/sampler binding at the reserved unit.
 
 5) **GlyphMeshDepthParticipatesInDepthTesting** — Disabled  
 Verify overlapping glyph depth behavior.
-
-6) **NullAtlasIsRejected** — Disabled  
-Verify `std::invalid_argument` without GL access.
 
 ## `spk::ImageRenderCommand`
 
@@ -286,9 +267,6 @@ Verify translation/scaling preserve sprite selection.
 4) **DepthVariantsParticipateInDepthTesting** — Disabled  
 Verify overlapping sprite depth behavior.
 
-5) **OutOfRangeCoordinatesPropagateFailure** — Disabled  
-Verify the sprite-sheet bounds exception propagates unchanged.
-
 ## `spk::NineSliceRenderCommand`
 
 1) **UnstretchedSheetPreservesAllNineRegions** — Disabled  
@@ -303,19 +281,12 @@ Verify edge spans contain no seams or overlap.
 4) **StretchedDestinationFillsCenter** — Disabled  
 Verify the center fills the remaining interior.
 
-5) **NonThreeByThreeSheetIsRejected** — Disabled  
-Verify `std::invalid_argument` for incompatible sheets.
+5) **WideDestinationKeepsCornersAndFillsCenter** — Disabled
 
-6) **OversizedCornerWidthIsRejected** — Disabled  
-Reject corner width greater than half the destination.
-
-7) **OversizedCornerHeightIsRejected** — Disabled  
-Reject corner height greater than half the destination.
-
-8) **WideDestinationKeepsCornersAndFillsCenter** — Disabled  
 Verify wide-target regions and continuity.
 
-9) **TallDestinationKeepsCornersAndFillsCenter** — Disabled  
+6) **TallDestinationKeepsCornersAndFillsCenter** — Disabled
+
 Verify tall-target regions and continuity.
 
 ## `spk::TextRenderCommand`

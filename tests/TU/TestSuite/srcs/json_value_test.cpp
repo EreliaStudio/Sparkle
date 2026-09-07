@@ -307,7 +307,22 @@ TEST(JSONValueTest, ParseErrorsExposeDiagnosticText)
 	}
 }
 
-TEST(JSONValueTest, DISABLED_ExactParserOffsetContextContractRequiresParserImplementationSnapshot)
+TEST(JSONValueTest, ParseErrorsExposeCategoryAndSourcePositionWithoutFreezingFullWording)
 {
-	GTEST_SKIP() << "The backlog requires useful parse offsets/context, but the supplied Value header does not define the parser diagnostic format. The enabled parse-error test still verifies a non-empty diagnostic.";
+	const auto expectDiagnostic = [](std::string_view document, std::string_view category, std::string_view position) {
+		try
+		{
+			(void)spk::JSON::Value::fromString(document);
+			FAIL() << "Expected parse failure";
+		}
+		catch (const std::runtime_error &exception)
+		{
+			const std::string diagnostic = exception.what();
+			EXPECT_NE(diagnostic.find(category), std::string::npos) << diagnostic;
+			EXPECT_NE(diagnostic.find(position), std::string::npos) << diagnostic;
+		}
+	};
+
+	expectDiagnostic("[\n?]", "Unexpected character", "line 2, column 1");
+	expectDiagnostic("{}\n trailing", "Unexpected trailing characters", "line 2, column 2");
 }

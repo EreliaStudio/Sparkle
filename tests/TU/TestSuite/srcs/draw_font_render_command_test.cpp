@@ -44,8 +44,14 @@ TEST(DrawFontRenderCommandTest, DISABLED_GlyphMeshDepthParticipatesInDepthTestin
 	// Intended assertion: overlapping glyph meshes at different depths obey the established depth convention.
 }
 
-TEST(DrawFontRenderCommandTest, DISABLED_NullAtlasIsRejected)
+TEST(DrawFontRenderCommandTest, NullAtlasIsRejected)
 {
-	GTEST_SKIP() << "The null-atlas constructor also requires a TextureMesh2D value, but its construction API is a transitive dependency not included in section 10.";
-	// Intended assertion: EXPECT_THROW(DrawFontRenderCommand(nullptr, validMesh, ...), std::invalid_argument).
+	EXPECT_THROW(
+		(void)spk::DrawFontRenderCommand(
+			nullptr,
+			spk::TextureMesh2D{},
+			spk::Color{},
+			spk::Color{},
+			0.0f),
+		std::invalid_argument);
 }
