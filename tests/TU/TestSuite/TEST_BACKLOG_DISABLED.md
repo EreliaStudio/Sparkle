@@ -3,9 +3,9 @@
 
 Last audited: **2026-09-07** against `docs/unit_test_plan.md` and all sources compiled by `SparkleTestSuite`.
 
-Current inventory: **52 disabled behaviors**, matching the 52 disabled test instances in the test sources.
+Current inventory: **48 disabled behaviors**, matching the 48 disabled test instances in the test sources.
 
-Disposition review: all **52** remaining entries are **Implement**. This means the behavior is useful and testable, although it may first need a product fix, a documented contract, or an internal test fixture.
+Disposition review: all **48** remaining entries are **Implement**. This means the behavior is useful and testable, although it may first need a product fix, a documented contract, or an internal test fixture.
 
 This file lists behavior that does not have complete TU coverage. **Missing** means no test exists; **Disabled** means a `DISABLED_` specification exists but does not implement the behavior; **Partial** means a test implements only part of the behavior. Test validation and enabled/disabled status do not affect whether complete coverage is removed from this inventory.
 
@@ -163,24 +163,6 @@ Inject create/compile/link/validate failures and verify logs, context, and handl
 
 1) **VertexIndexOverflowIsRejected** — Disabled  
 Use a capacity seam to exhaust the index type and verify atomic rejection before wraparound.
-
-## `spk::ViewportUniformRenderCommand`
-
-1) **OffsetViewportBuildsAndBindsProjectionMatrix** — Disabled  
-Execute an offset viewport and inspect its projection matrix and reserved UBO binding.
-
-2) **RepeatedExecutionKeepsProjectionAndBindingStable** — Disabled  
-Verify repeated execution uploads identical data without stale GL state.
-
-## `spk::DebugOverlay`
-
-1) **SingleCellRenderGolden** — Disabled
-
-Render one populated cell and compare it with the reviewed golden image without terminating during fixture teardown.
-
-2) **GridRenderGolden** — Disabled
-
-Render a deterministic multi-cell grid and compare it with the reviewed golden image without lifetime failures.
 
 ## `spk::SpinBox<T>`
 

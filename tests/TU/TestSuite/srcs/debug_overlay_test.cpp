@@ -139,7 +139,7 @@ TEST(DebugOverlayTest, ReparentingAndReplacementRemoveOldMappings)
 	EXPECT_NO_THROW(overlay.clear());
 }
 
-TEST(DebugOverlayRenderTest, DISABLED_SingleCell)
+TEST(DebugOverlayRenderTest, SingleCell)
 {
 	spk::DebugOverlay overlay("Overlay");
 	spk::TextLabel label("Label", &overlay);
@@ -151,7 +151,7 @@ TEST(DebugOverlayRenderTest, DISABLED_SingleCell)
 	expectWidgetImage(overlay, "ui/widget/debug_overlay", "single_cell");
 }
 
-TEST(DebugOverlayRenderTest, DISABLED_Grid)
+TEST(DebugOverlayRenderTest, Grid)
 {
 	spk::DebugOverlay overlay("Overlay");
 	spk::TextLabel a("A", &overlay);

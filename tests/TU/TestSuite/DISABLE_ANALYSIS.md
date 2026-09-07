@@ -1,6 +1,6 @@
 # Disabled-test decision catalogue
 
-Last audited: **2026-09-07**. The source tree contains **52** disabled tests.
+Last audited: **2026-09-07**. The source tree contains **48** disabled tests.
 
 The catalogue is grouped by Google Test suite. Every case records its intended behavior, current blocker, and a specific recommendation. Failure injection, counters, and thread barriers remain internal unless callers need them as product features.
 
@@ -91,20 +91,6 @@ The catalogue is grouped by Google Test suite. Every case records its intended b
 - **Goal:** Verify that reactive model shrink and resize clamp scroll offset.
 - **Why disabled:** The test is implemented, but current product behavior does not satisfy its assertions safely.
 - **Proposal:** Clamp scrolling after model/viewport changes, repopulate visible items, and enable the regression.
-
-## `DebugOverlayRenderTest`
-
-### `DISABLED_Grid`
-
-- **Goal:** Verify that grid.
-- **Why disabled:** The process terminates in the overlay setup/lifetime path before image comparison.
-- **Proposal:** Fix the overlay fixture/lifetime crash, generate and review its golden, then enable.
-
-### `DISABLED_SingleCell`
-
-- **Goal:** Verify that single cell.
-- **Why disabled:** The process terminates in the overlay setup/lifetime path before image comparison.
-- **Proposal:** Fix the overlay fixture/lifetime crash, generate and review its golden, then enable.
 
 ## `EngineFacadeTest`
 
@@ -307,20 +293,6 @@ The catalogue is grouped by Google Test suite. Every case records its intended b
 - **Goal:** Verify safe rejection at the boundary described by oversized stride needs deterministic configuration seam.
 - **Why disabled:** Constructing a stride above GLsizei max through padding would require a multi-gigabyte logical layout; no synthetic seam exists.
 - **Proposal:** Add a shared internal platform/driver seam for oversized stride needs deterministic configuration seam and assert diagnostics and cleanup.
-
-## `ViewportUniformRenderCommandTest`
-
-### `DISABLED_OffsetViewportBuildsAndBindsProjectionMatrix`
-
-- **Goal:** Verify that the render command offset viewport builds and binds projection matrix.
-- **Why disabled:** The placeholder came from a partial source handoff; required repository types now exist, but the executable fixture was never implemented.
-- **Proposal:** Implement offset viewport builds and binds projection matrix with the existing OpenGL capture fixture; use internal GL introspection only for exact bindings/reuse.
-
-### `DISABLED_RepeatedExecutionKeepsProjectionAndBindingStable`
-
-- **Goal:** Verify that the render command repeated execution keeps projection and binding stable.
-- **Why disabled:** The placeholder came from a partial source handoff; required repository types now exist, but the executable fixture was never implemented.
-- **Proposal:** Implement repeated execution keeps projection and binding stable with the existing OpenGL capture fixture; use internal GL introspection only for exact bindings/reuse.
 
 ## `WakeEventTest`
 

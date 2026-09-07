@@ -65,3 +65,13 @@ TEST(LayoutTest, PaddingClearAndInvalidChildrenHaveDefinedBehavior)
 	EXPECT_TRUE(layout.elements().empty());
 	EXPECT_EQ(layout.sizeHint(), (spk::ResizeableTrait::SizeHint{}));
 }
+
+TEST(LayoutTest, ContradictoryElementBoundsClampSafelyToMinimum)
+{
+	spk::HorizontalLayout layout;
+	spk::Widget widget("widget", nullptr);
+	widget.setSizeHint({.minimal = {30, 20}, .maximal = {0, 0}, .preferred = {30, 20}});
+	layout.addWidget(&widget);
+	EXPECT_NO_THROW(layout.setGeometry({.anchor = {4, 6}, .size = {100, 80}}));
+	EXPECT_EQ(widget.geometry(), (spk::Rect2D{.anchor = {4, 6}, .size = {30, 20}}));
+}

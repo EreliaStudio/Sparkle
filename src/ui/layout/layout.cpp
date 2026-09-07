@@ -101,7 +101,7 @@ namespace
 		{
 			return available;
 		}
-		const float value = std::clamp(static_cast<float>(available), minimal, maximal);
+		const float value = std::clamp(static_cast<float>(available), minimal, std::max(minimal, maximal));
 		return _toDimension(value);
 	}
 
