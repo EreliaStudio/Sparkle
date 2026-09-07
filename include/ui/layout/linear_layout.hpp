@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cmath>
 #include <vector>
 
 #include "type/orientation.hpp"
@@ -135,14 +136,30 @@ namespace spk
 			{
 				return;
 			}
-			const float available = std::max(0.0f, static_cast<float>(_primary(geometry.size)) - _paddingTotal());
-			const std::vector<float> sizes = _resolveAxis(_primaryHints(), available, Horizontal);
-			int32_t cursor = Horizontal ? geometry.x : geometry.y;
+			const uint32_t extent = _primary(geometry.size);
+			const uint32_t padding = _primary(_elementPadding);
+			const double paddingTotal = static_cast<double>(_elements.size() - 1) * padding;
+			const uint32_t budget = extent - static_cast<uint32_t>(std::min<double>(extent, paddingTotal));
+			const std::vector<float> sizes = _resolveAxis(_primaryHints(), static_cast<float>(budget), Horizontal);
+			double resolvedEdge = 0.0;
+			uint32_t allocated = 0;
+			uint32_t offset = 0;
+			const int32_t origin = Horizontal ? geometry.x : geometry.y;
 			for (std::size_t i = 0; i < _elements.size(); ++i)
 			{
-				const uint32_t primarySize = _dimension(sizes[i]);
+				// Round shared boundaries so fractional pixels are carried into
+				// the next cell instead of being allocated more than once.
+				resolvedEdge += std::max(0.0, static_cast<double>(sizes[i]));
+				const uint32_t edge = static_cast<uint32_t>(std::round(std::min<double>(budget, resolvedEdge)));
+				const uint32_t primarySize = edge - allocated;
+				const int32_t cursor = static_cast<int32_t>(static_cast<int64_t>(origin) + offset);
 				_elements[i]->setGeometry(_cell(geometry, cursor, primarySize));
-				cursor += static_cast<int32_t>(primarySize + _primary(_elementPadding));
+				allocated = edge;
+				offset += primarySize;
+				if (i + 1 < _elements.size())
+				{
+					offset += std::min(padding, extent - offset);
+				}
 			}
 		}
 

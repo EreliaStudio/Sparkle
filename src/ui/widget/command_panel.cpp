@@ -129,7 +129,7 @@ namespace spk
 		const auto it = _buttons.find(key);
 		if (it == _buttons.end())
 		{
-			return;
+			throw std::out_of_range("CommandPanel has no button named '" + key + "'");
 		}
 
 		_layout.removeWidget(it->second.get());

@@ -62,6 +62,14 @@ namespace spk
 		const float cosr = 1.0f - 2.0f * (q.x * q.x + q.y * q.y);
 
 		const float sinp = std::clamp(2.0f * (q.w * q.y - q.z * q.x), -1.0f, 1.0f);
+		constexpr float GimbalLockThreshold = 1.0f - 1.0e-6f;
+		if (std::abs(sinp) >= GimbalLockThreshold)
+		{
+			// At +/-90 degrees, roll and yaw are not independently observable.
+			// Use yaw = 0 and retain their combined rotation in the roll value.
+			const float roll = std::remainder(degrees(2.0f * std::atan2(q.x, q.w)), 360.0f);
+			return {roll, std::copysign(90.0f, sinp), 0.0f};
+		}
 
 		const float siny = 2.0f * (q.w * q.z + q.x * q.y);
 		const float cosy = 1.0f - 2.0f * (q.y * q.y + q.z * q.z);

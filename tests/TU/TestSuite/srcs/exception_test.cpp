@@ -121,8 +121,9 @@ TEST(ExceptionTest, MultipleContextsRemainOrderedAndWhatIsStable)
 	ASSERT_NE(firstPosition, std::string::npos);
 	ASSERT_NE(secondPosition, std::string::npos);
 	ASSERT_NE(thirdPosition, std::string::npos);
-	EXPECT_LT(firstPosition, secondPosition);
-	EXPECT_LT(secondPosition, thirdPosition);
+	EXPECT_LT(thirdPosition, secondPosition);
+	EXPECT_LT(secondPosition, firstPosition);
+	EXPECT_LT(firstPosition, first.find("root"));
 }
 
 TEST(ExceptionTest, EmptyMessageAndEmptyCauseRemainInspectable)

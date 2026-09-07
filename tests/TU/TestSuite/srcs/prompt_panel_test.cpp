@@ -46,7 +46,7 @@ TEST(PromptPanelTest, CommandErrorsPropagateWithoutCorruptingActions)
 	panel.addButton("ok", "OK");
 	EXPECT_THROW(panel.addButton("ok", "Duplicate"), std::invalid_argument);
 	EXPECT_THROW((void)panel.button("missing"), std::out_of_range);
-	panel.removeButton("missing");
+	EXPECT_THROW(panel.removeButton("missing"), std::out_of_range);
 	EXPECT_EQ(panel.nbButton(), 1u);
 	EXPECT_EQ(panel.button("ok").releasedLabel().text(), U"OK");
 }

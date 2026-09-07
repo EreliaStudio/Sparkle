@@ -39,6 +39,7 @@ namespace spk
 
 	public:
 		Engine();
+		~Engine() override;
 
 		void addEntity(Entity *entity);
 		void removeEntity(Entity *entity);

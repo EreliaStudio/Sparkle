@@ -109,7 +109,7 @@ namespace spk::WinAPI
 		return window;
 	}
 
-	LRESULT Window::_process(HWND handle, UINT message, WPARAM wParam, LPARAM lParam) noexcept
+	LRESULT Window::_process(HWND handle, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 		if (message == WM_CLOSE)
 		{
@@ -125,7 +125,19 @@ namespace spk::WinAPI
 
 	LRESULT Window::_processDestruction(HWND handle, UINT message, WPARAM wParam, LPARAM lParam) noexcept
 	{
-		const LRESULT result = ::DefWindowProcW(handle, message, wParam, lParam);
+		_destroying = true;
+		LRESULT result = 0;
+		try
+		{
+			result = _messageHandler ? _messageHandler(handle, message, wParam, lParam) : ::DefWindowProcW(handle, message, wParam, lParam);
+		} catch (...)
+		{
+			if (_pendingException == nullptr)
+			{
+				_pendingException = std::current_exception();
+			}
+			result = ::DefWindowProcW(handle, message, wParam, lParam);
+		}
 		::SetWindowLongPtrW(handle, GWLP_USERDATA, 0);
 		_handle = nullptr;
 		return result;
@@ -134,6 +146,32 @@ namespace spk::WinAPI
 	LRESULT CALLBACK Window::_procedure(HWND handle, UINT message, WPARAM wParam, LPARAM lParam) noexcept
 	{
 		Window *window = _instance(handle);
+		if (message == WM_GETMINMAXINFO)
+		{
+			// Windows sends this before WM_NCCREATE binds our instance.
+			// Allow a zero client area while retaining the native frame size.
+			const LRESULT result = ::DefWindowProcW(handle, message, wParam, lParam);
+			RECT frame{};
+			if (::AdjustWindowRectEx(&frame, Style, FALSE, 0))
+			{
+				auto *limits = reinterpret_cast<MINMAXINFO *>(lParam);
+				limits->ptMinTrackSize = {frame.right - frame.left, frame.bottom - frame.top};
+			}
+			if (window != nullptr && window->_messageHandler)
+			{
+				try
+				{
+					return window->_messageHandler(handle, message, wParam, lParam);
+				} catch (...)
+				{
+					if (window->_pendingException == nullptr)
+					{
+						window->_pendingException = std::current_exception();
+					}
+				}
+			}
+			return result;
+		}
 		if (message == WM_NCCREATE)
 		{
 			window = _bind(handle, lParam);
@@ -174,6 +212,7 @@ namespace spk::WinAPI
 		}
 		_closureRequested = false;
 		_closureDispatched = false;
+		_destroying = false;
 		_messageHandler = info.messageHandler;
 		_createHandle(windowClass, info, _outerSize(info));
 		if (info.visible)
@@ -184,14 +223,17 @@ namespace spk::WinAPI
 
 	void Window::destroy()
 	{
-		if (_handle == nullptr)
+		if (_handle == nullptr || _destroying)
 		{
 			return;
 		}
+		_destroying = true;
 		if (::DestroyWindow(_handle) == FALSE)
 		{
+			_destroying = false;
 			_throwLastError("DestroyWindow");
 		}
+		_destroying = false;
 	}
 
 	bool Window::consumeClosureRequest() noexcept

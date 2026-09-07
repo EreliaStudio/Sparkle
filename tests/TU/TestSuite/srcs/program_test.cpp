@@ -155,6 +155,7 @@ TEST(ProgramTest, SupportedPrimitivesAcceptZeroRawIndexedAndInstancedDraws)
 		spk::Program::Primitive::TriangleFan};
 	for (const auto primitive : primitives)
 	{
+		SCOPED_TRACE(static_cast<int>(primitive));
 		EXPECT_NO_THROW(program.renderRaw(primitive, 0, 0));
 		EXPECT_NO_THROW(program.render(primitive, spk::IndexBuffer::Type::UnsignedInt, 0, 0));
 		EXPECT_NO_THROW(program.renderInstanced(primitive, spk::IndexBuffer::Type::UnsignedInt, 0, 0, 0));
@@ -172,6 +173,19 @@ TEST(ProgramTest, DrawCountFirstVertexAndIndexOffsetOverflowAreRejected)
 		std::numeric_limits<std::size_t>::max(), 0), std::overflow_error);
 	EXPECT_THROW(program.renderInstanced(spk::Program::Primitive::Triangles, spk::IndexBuffer::Type::UnsignedInt,
 		0, 0, tooLargeCount), std::overflow_error);
+}
+
+TEST(ProgramTest, IndexedOffsetsRejectFirstOverflowBeforeOpenGLAccess)
+{
+	spk::Program program(VertexShader, FragmentShader);
+	for (const auto indexType : {spk::IndexBuffer::Type::UnsignedShort, spk::IndexBuffer::Type::UnsignedInt})
+	{
+		SCOPED_TRACE(static_cast<int>(indexType));
+		const std::size_t stride = indexType == spk::IndexBuffer::Type::UnsignedShort ? 2 : 4;
+		const std::size_t firstOverflow = std::numeric_limits<std::size_t>::max() / stride + 1;
+		EXPECT_THROW(program.render(spk::Program::Primitive::Triangles, indexType, firstOverflow, 0), std::overflow_error);
+		EXPECT_THROW(program.renderInstanced(spk::Program::Primitive::Triangles, indexType, firstOverflow, 0, 0), std::overflow_error);
+	}
 }
 
 TEST(ProgramTest, UnsupportedPrimitiveCastIsRejected)

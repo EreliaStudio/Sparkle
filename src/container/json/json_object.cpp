@@ -650,14 +650,68 @@ namespace spk::JSON
 						result += parseEscapeSequence();
 						continue;
 					}
-					if (current >= 0 && current < 0x20)
+					const auto byte = static_cast<unsigned char>(current);
+					if (byte < 0x20)
 					{
 						error("Control characters are not allowed in JSON strings");
 					}
-					result += current;
+					if (byte < 0x80)
+					{
+						result += current;
+						continue;
+					}
+					appendUtf8Sequence(result, byte);
 				}
 
 				error("Unterminated JSON string");
+			}
+
+			void appendUtf8Sequence(std::string &result, unsigned char lead)
+			{
+				std::size_t continuationCount = 0;
+				unsigned char secondMinimum = 0x80;
+				unsigned char secondMaximum = 0xBF;
+				if (lead >= 0xC2 && lead <= 0xDF)
+				{
+					continuationCount = 1;
+				}
+				else if (lead >= 0xE0 && lead <= 0xEF)
+				{
+					continuationCount = 2;
+					if (lead == 0xE0)
+						secondMinimum = 0xA0; // Reject overlong encodings.
+					else if (lead == 0xED)
+						secondMaximum = 0x9F; // Reject UTF-16 surrogates.
+				}
+				else if (lead >= 0xF0 && lead <= 0xF4)
+				{
+					continuationCount = 3;
+					if (lead == 0xF0)
+						secondMinimum = 0x90; // Reject overlong encodings.
+					else if (lead == 0xF4)
+						secondMaximum = 0x8F; // Reject values above U+10FFFF.
+				}
+				else
+				{
+					error("Invalid UTF-8 leading byte in JSON string");
+				}
+
+				result.push_back(static_cast<char>(lead));
+				for (std::size_t index = 0; index < continuationCount; ++index)
+				{
+					if (isAtEnd())
+					{
+						error("Truncated UTF-8 sequence in JSON string");
+					}
+					const auto continuation = static_cast<unsigned char>(consume());
+					const unsigned char minimum = index == 0 ? secondMinimum : 0x80;
+					const unsigned char maximum = index == 0 ? secondMaximum : 0xBF;
+					if (continuation < minimum || continuation > maximum)
+					{
+						error("Invalid UTF-8 continuation byte in JSON string");
+					}
+					result.push_back(static_cast<char>(continuation));
+				}
 			}
 
 			std::string parseEscapeSequence()

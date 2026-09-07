@@ -1,8 +1,9 @@
 #include <gtest/gtest.h>
 
-#include <future>
+#include <filesystem>
 #include <optional>
-#include <thread>
+#include <stdexcept>
+#include <string>
 
 #include "core/platform/clipboard.hpp"
 
@@ -12,6 +13,80 @@
 
 namespace
 {
+#if defined(_WIN32)
+	class ClipboardHolder
+	{
+		HANDLE _acquired = nullptr;
+		HANDLE _release = nullptr;
+		HANDLE _process = nullptr;
+
+		void cleanup() noexcept
+		{
+			if (_release != nullptr) ::SetEvent(_release);
+			if (_process != nullptr)
+			{
+				if (::WaitForSingleObject(_process, 5000) != WAIT_OBJECT_0)
+				{
+					::TerminateProcess(_process, 4);
+					::WaitForSingleObject(_process, 5000);
+				}
+				::CloseHandle(_process);
+			}
+			if (_release != nullptr) ::CloseHandle(_release);
+			if (_acquired != nullptr) ::CloseHandle(_acquired);
+		}
+
+	public:
+		ClipboardHolder()
+		{
+			try
+			{
+				const std::wstring prefix = L"Local\\SparkleClipboard_" + std::to_wstring(::GetCurrentProcessId()) +
+					L"_" + std::to_wstring(::GetTickCount64());
+				const std::wstring acquiredName = prefix + L"_acquired";
+				const std::wstring releaseName = prefix + L"_release";
+				_acquired = ::CreateEventW(nullptr, TRUE, FALSE, acquiredName.c_str());
+				_release = ::CreateEventW(nullptr, TRUE, FALSE, releaseName.c_str());
+				if (_acquired == nullptr || _release == nullptr)
+					throw std::runtime_error("Unable to create clipboard helper events");
+				std::wstring executable(32768, L'\0');
+				const DWORD length = ::GetModuleFileNameW(nullptr, executable.data(), static_cast<DWORD>(executable.size()));
+				if (length == 0 || length >= executable.size())
+					throw std::runtime_error("Unable to locate clipboard helper");
+				executable.resize(length);
+				const auto helper = std::filesystem::path(executable).parent_path() / L"SparkleClipboardHolder.exe";
+				std::wstring command = L"\"" + helper.wstring() + L"\" " + acquiredName + L" " + releaseName;
+				STARTUPINFOW startup{};
+				startup.cb = sizeof(startup);
+				PROCESS_INFORMATION process{};
+				if (!::CreateProcessW(helper.c_str(), command.data(), nullptr, nullptr, FALSE, CREATE_NO_WINDOW,
+					nullptr, nullptr, &startup, &process))
+					throw std::runtime_error("Unable to start clipboard helper");
+				_process = process.hProcess;
+				::CloseHandle(process.hThread);
+				const HANDLE waits[] = {_acquired, _process};
+				if (::WaitForMultipleObjects(2, waits, FALSE, 5000) != WAIT_OBJECT_0)
+					throw std::runtime_error("Clipboard helper did not acquire the clipboard");
+			} catch (...)
+			{
+				cleanup();
+				throw;
+			}
+		}
+		ClipboardHolder(const ClipboardHolder &) = delete;
+		ClipboardHolder &operator=(const ClipboardHolder &) = delete;
+		~ClipboardHolder() { cleanup(); }
+
+		bool release()
+		{
+			::SetEvent(_release);
+			DWORD result = 1;
+			return ::WaitForSingleObject(_process, 5000) == WAIT_OBJECT_0 &&
+				::GetExitCodeProcess(_process, &result) && result == 0;
+		}
+	};
+#endif
+
 	class ClipboardRestoreGuard
 	{
 	private:
@@ -142,30 +217,19 @@ TEST(ClipboardTest, ClipboardOpenContentionUsesNoThrowFailureReporting)
 	if (!restore.canRestore())
 		GTEST_SKIP() << "Existing non-text clipboard data cannot be restored losslessly by this public test helper";
 
-	std::promise<bool> openedPromise;
-	auto openedFuture = openedPromise.get_future();
-	std::promise<void> releasePromise;
-	auto releaseFuture = releasePromise.get_future();
+	const spk::Font::Text original = U"preserved while contended";
+	ASSERT_TRUE(spk::Clipboard::writeText(original));
+	ClipboardHolder holder;
+	const bool opened = ::OpenClipboard(nullptr) != FALSE;
+	if (opened) ::CloseClipboard();
+	ASSERT_FALSE(opened) << "The helper must block an independent clipboard open";
 
-	std::jthread holder([&] {
-		const bool opened = ::OpenClipboard(nullptr) != FALSE;
-		openedPromise.set_value(opened);
-		if (!opened)
-			return;
-		releaseFuture.wait();
-		(void)::CloseClipboard();
-	});
-
-	if (!openedFuture.get())
-	{
-		releasePromise.set_value();
-		GTEST_SKIP() << "Could not acquire the clipboard for the contention fixture";
-	}
-
-	EXPECT_NO_THROW({ EXPECT_FALSE(spk::Clipboard::hasText()); });
+	EXPECT_NO_THROW({ EXPECT_TRUE(spk::Clipboard::hasText()); });
 	EXPECT_NO_THROW({ EXPECT_FALSE(spk::Clipboard::writeText(U"contended")); });
 	EXPECT_NO_THROW({ EXPECT_FALSE(spk::Clipboard::readText().has_value()); });
 
-	releasePromise.set_value();
+	ASSERT_TRUE(holder.release());
+	EXPECT_EQ(spk::Clipboard::readText(), std::optional<spk::Font::Text>(original));
+	EXPECT_TRUE(spk::Clipboard::writeText(U"available again"));
 #endif
 }

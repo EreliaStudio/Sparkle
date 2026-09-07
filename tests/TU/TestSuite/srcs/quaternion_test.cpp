@@ -155,7 +155,22 @@ namespace
 		for (const float pitch : {89.9f, 90.0f, 90.1f, -89.9f, -90.0f, -90.1f})
 		{
 			const spk::Quaternion original = spk::Quaternion::fromEuler({15.0f, pitch, -25.0f});
-			const spk::Quaternion roundTrip = spk::Quaternion::fromEuler(original.toEuler());
+			const auto recovered = original.toEuler();
+			SCOPED_TRACE(::testing::Message() << "pitch=" << pitch << ", recovered Euler=("
+				<< recovered.x << ", " << recovered.y << ", " << recovered.z << ")");
+			if (pitch == 90.0f)
+			{
+				EXPECT_NEAR(recovered.x, 40.0f, 5.0e-4f);
+				EXPECT_NEAR(recovered.y, 90.0f, 5.0e-4f);
+				EXPECT_NEAR(recovered.z, 0.0f, 5.0e-4f);
+			}
+			else if (pitch == -90.0f)
+			{
+				EXPECT_NEAR(recovered.x, -10.0f, 5.0e-4f);
+				EXPECT_NEAR(recovered.y, -90.0f, 5.0e-4f);
+				EXPECT_NEAR(recovered.z, 0.0f, 5.0e-4f);
+			}
+			const spk::Quaternion roundTrip = spk::Quaternion::fromEuler(recovered);
 			expectQuaternionEquivalent(roundTrip, original, 2.0e-3f);
 		}
 	}

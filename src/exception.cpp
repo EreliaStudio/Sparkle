@@ -38,9 +38,9 @@ namespace spk
 
 	void Exception::_append(std::string &output, std::size_t indentation) const
 	{
-		for (auto context = _contexts.rbegin(); context != _contexts.rend(); ++context)
+		for (const auto &context : _contexts)
 		{
-			_appendFrame(output, indentation, context->message, context->location);
+			_appendFrame(output, indentation, context.message, context.location);
 			output += '\n';
 			++indentation;
 		}
@@ -79,7 +79,7 @@ namespace spk
 
 	void Exception::addContext(std::string message, std::source_location location)
 	{
-		_contexts.push_back(Context{.message = std::move(message), .location = location});
+		_contexts.insert(_contexts.begin(), Context{.message = std::move(message), .location = location});
 		_format();
 	}
 

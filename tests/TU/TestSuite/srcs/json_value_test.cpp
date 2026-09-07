@@ -202,6 +202,33 @@ TEST(JSONValueTest, MalformedJsonInputsAreRejected)
 	}
 }
 
+TEST(JSONValueTest, RawUtf8AcceptsValidSequencesAndRejectsEveryMalformedClass)
+{
+	const std::string valid = std::string("\"") +
+		char(0xC3) + char(0xA9) + // U+00E9
+		char(0xE2) + char(0x82) + char(0xAC) + // U+20AC
+		char(0xF0) + char(0x9F) + char(0x98) + char(0x80) + // U+1F600
+		"\"";
+	EXPECT_EQ(spk::JSON::Value::fromString(valid).as<std::string>(), valid.substr(1, valid.size() - 2));
+
+	const std::vector<std::string> malformedPayloads = {
+		std::string(1, char(0x80)),                         // Isolated continuation.
+		std::string{char(0xC0), char(0xAF)},                // Overlong two-byte form.
+		std::string{char(0xC3), char(0x28)},                // Invalid continuation.
+		std::string{char(0xC3)},                            // Truncated sequence.
+		std::string{char(0xE0), char(0x80), char(0x80)},    // Overlong three-byte form.
+		std::string{char(0xED), char(0xA0), char(0x80)},    // UTF-16 surrogate.
+		std::string{char(0xF0), char(0x80), char(0x80), char(0x80)}, // Overlong four-byte form.
+		std::string{char(0xF4), char(0x90), char(0x80), char(0x80)}, // Above U+10FFFF.
+		std::string{char(0xF5), char(0x80), char(0x80), char(0x80)}}; // Invalid lead.
+	for (const std::string &payload : malformedPayloads)
+	{
+		SCOPED_TRACE(::testing::PrintToString(payload));
+		EXPECT_THROW((void)spk::JSON::Value::fromString("\"" + payload + "\""), std::runtime_error);
+		EXPECT_THROW((void)spk::JSON::Value::fromString("{\"" + payload + "\":0}"), std::runtime_error);
+	}
+}
+
 TEST(JSONValueTest, DuplicateKeysCanBeRejectedOrAllowed)
 {
 	const std::string document = "{\"key\":1,\"key\":2}";

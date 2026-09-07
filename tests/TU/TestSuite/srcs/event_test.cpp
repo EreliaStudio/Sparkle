@@ -79,13 +79,13 @@ TEST(EventTest, DeviceEventBindsDeviceByReference)
 	EXPECT_EQ(event.device.value, 8);
 }
 
-TEST(EventTest, RepeatedIdenticalFocusRequestKeepsFirstRecord)
+TEST(EventTest, RepeatedIdenticalFocusRequestRemainsAccepted)
 {
 	spk::EventBase event;
 	spk::Widget *widget = widgetToken(0x1000);
 
 	EXPECT_TRUE(event.takeFocus(spk::FocusMode::Channel::Keyboard, widget));
-	EXPECT_FALSE(event.takeFocus(spk::FocusMode::Channel::Keyboard, widget));
+	EXPECT_TRUE(event.takeFocus(spk::FocusMode::Channel::Keyboard, widget));
 
 	const auto &change = event.focusChange(spk::FocusMode::Channel::Keyboard);
 	ASSERT_TRUE(change.has_value());
@@ -127,8 +127,17 @@ TEST(EventTest, FocusChannelsAreIndependent)
 
 	EXPECT_TRUE(event.takeFocus(spk::FocusMode::Channel::Keyboard, keyboardWidget));
 	EXPECT_TRUE(event.releaseFocus(spk::FocusMode::Channel::Mouse, mouseWidget));
-	EXPECT_FALSE(event.takeFocus(spk::FocusMode::Channel::Keyboard, mouseWidget));
+	EXPECT_TRUE(event.takeFocus(spk::FocusMode::Channel::Keyboard, mouseWidget));
 	EXPECT_FALSE(event.releaseFocus(spk::FocusMode::Channel::Mouse, keyboardWidget));
+
+	const auto &keyboard = event.focusChange(spk::FocusMode::Channel::Keyboard);
+	const auto &mouse = event.focusChange(spk::FocusMode::Channel::Mouse);
+	ASSERT_TRUE(keyboard.has_value());
+	ASSERT_TRUE(mouse.has_value());
+	EXPECT_EQ(keyboard->type, spk::FocusMode::ChangeType::Take);
+	EXPECT_EQ(keyboard->widget, mouseWidget);
+	EXPECT_EQ(mouse->type, spk::FocusMode::ChangeType::Release);
+	EXPECT_EQ(mouse->widget, mouseWidget);
 }
 
 // Disabled: EventBase currently exposes FocusMode::Channel as an enum that can be cast

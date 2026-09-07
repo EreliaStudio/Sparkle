@@ -153,12 +153,12 @@ namespace spk
 
 	InputState &Keyboard::operator[](Key key)
 	{
-		return keys[static_cast<std::size_t>(key)];
+		return keys.at(static_cast<std::size_t>(key));
 	}
 
 	const InputState &Keyboard::operator[](Key key) const
 	{
-		return keys[static_cast<std::size_t>(key)];
+		return keys.at(static_cast<std::size_t>(key));
 	}
 
 	std::string toString(Keyboard::Key p_key)

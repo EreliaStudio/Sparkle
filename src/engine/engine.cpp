@@ -11,6 +11,24 @@ namespace spk
 		_root.changeContext(this);
 	}
 
+	Engine::~Engine()
+	{
+		while (!_root.children().empty())
+		{
+			_root.children().back()->setParent(nullptr);
+		}
+		// Include detached and nested entities registered with this engine,
+		// not just direct root children. Context changes also notify attachments.
+		while (!Registry<Engine *, Entity>::elements(this).empty())
+		{
+			(*Registry<Engine *, Entity>::elements(this).begin())->changeContext(nullptr);
+		}
+		while (!systems().empty())
+		{
+			removeSystem(*systems().back());
+		}
+	}
+
 	bool Engine::_isAcceptingInteraction() const
 	{
 		return true;

@@ -26,6 +26,13 @@ target_link_libraries(SparkleTestSuite
 target_include_directories(SparkleTestSuite PRIVATE ${Stb_INCLUDE_DIR})
 set_target_properties(SparkleTestSuite PROPERTIES CXX_EXTENSIONS OFF)
 
+if(WIN32)
+    add_executable(SparkleClipboardHolder helpers/clipboard_holder.cpp)
+    target_compile_features(SparkleClipboardHolder PRIVATE cxx_std_23)
+    target_link_libraries(SparkleClipboardHolder PRIVATE user32)
+    add_dependencies(SparkleTestSuite SparkleClipboardHolder)
+endif()
+
 gtest_discover_tests(SparkleTestSuite
     PROPERTIES
         LABELS unit

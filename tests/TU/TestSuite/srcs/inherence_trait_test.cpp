@@ -243,6 +243,34 @@ TEST(InherenceTraitTest, CircularHierarchyThrowsLogicError)
 	EXPECT_EQ(grandChild.parent(), &child);
 }
 
+TEST(InherenceTraitTest, RejectedSelfAndDescendantParentsPreserveLinksAndNotifications)
+{
+	Node root("root");
+	Node child("child");
+	Node leaf("leaf");
+	root.addChild(&child);
+	child.addChild(&leaf);
+	int parentChanges = 0;
+	auto contract = child.subscribeToParentEdition([&](const Node *) {
+		++parentChanges;
+	});
+
+	EXPECT_THROW(root.setParent(&root), std::logic_error);
+	EXPECT_THROW(child.addChild(&child), std::logic_error);
+	EXPECT_THROW(child.setParent(&leaf), std::logic_error);
+	EXPECT_EQ(root.parent(), nullptr);
+	EXPECT_EQ(child.parent(), &root);
+	EXPECT_EQ(leaf.parent(), &child);
+	EXPECT_EQ(root.children(), (Node::ChildrenContainer{&child}));
+	EXPECT_EQ(child.children(), (Node::ChildrenContainer{&leaf}));
+	EXPECT_TRUE(leaf.children().empty());
+	EXPECT_EQ(parentChanges, 0);
+	EXPECT_EQ(root.childAddedCount, 1);
+	EXPECT_EQ(root.childRemovedCount, 0);
+	EXPECT_EQ(child.childAddedCount, 1);
+	EXPECT_EQ(child.childRemovedCount, 0);
+}
+
 TEST(InherenceTraitTest, DestroyingChildRemovesItFromLivingParent)
 {
 	Node parent("parent");
@@ -261,6 +289,14 @@ TEST(InherenceTraitTest, DestroyingChildRemovesItFromLivingParent)
 TEST(InherenceTraitTest, DestroyingParentDetachesLivingChildren)
 {
 	Node child("child");
+	int detachedCount = 0;
+	auto contract = child.subscribeToParentEdition([&](const Node *parent) {
+		if (parent == nullptr)
+		{
+			++detachedCount;
+			EXPECT_EQ(child.parent(), nullptr);
+		}
+	});
 
 	{
 		Node parent("parent");
@@ -270,6 +306,7 @@ TEST(InherenceTraitTest, DestroyingParentDetachesLivingChildren)
 
 	EXPECT_FALSE(child.hasParent());
 	EXPECT_EQ(child.parent(), nullptr);
+	EXPECT_EQ(detachedCount, 1);
 }
 
 TEST(InherenceTraitTest, DestroyingMiddleNodeDetachesFromParentAndOrphansChildren)

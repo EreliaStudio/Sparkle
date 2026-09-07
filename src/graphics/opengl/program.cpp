@@ -6,6 +6,21 @@
 #include <stdexcept>
 #include <utility>
 
+namespace
+{
+	[[nodiscard]] std::uintptr_t indexByteOffset(spk::IndexBuffer::Type indexType, std::size_t firstIndex)
+	{
+		const std::size_t stride = indexType == spk::IndexBuffer::Type::UnsignedByte ? 1 :
+			indexType == spk::IndexBuffer::Type::UnsignedShort ? 2 : 4;
+		if (firstIndex > std::numeric_limits<std::size_t>::max() / stride ||
+			firstIndex > std::numeric_limits<std::uintptr_t>::max() / stride)
+		{
+			throw std::overflow_error("Index byte offset exceeds addressable range");
+		}
+		return static_cast<std::uintptr_t>(firstIndex * stride);
+	}
+}
+
 namespace spk
 {
 	class Program::Instance final : public GPUResource::Instance
@@ -30,12 +45,16 @@ namespace spk
 			return GL_POINTS;
 		case Primitive::Lines:
 			return GL_LINES;
+		case Primitive::LineLoop:
+			return GL_LINE_LOOP;
 		case Primitive::LineStrip:
 			return GL_LINE_STRIP;
 		case Primitive::Triangles:
 			return GL_TRIANGLES;
 		case Primitive::TriangleStrip:
 			return GL_TRIANGLE_STRIP;
+		case Primitive::TriangleFan:
+			return GL_TRIANGLE_FAN;
 		default:
 			throw std::logic_error("Unsupported primitive");
 		}
@@ -231,9 +250,7 @@ namespace spk
 	void Program::render(Primitive primitive, IndexBuffer::Type indexType, std::size_t firstIndex, std::size_t indexCount) const
 	{
 		_validateGLCount(indexCount);
-		const std::size_t stride = indexType == IndexBuffer::Type::UnsignedByte ? 1 : indexType == IndexBuffer::Type::UnsignedShort ? 2
-																																	: 4;
-		const auto offset = static_cast<std::uintptr_t>(firstIndex * stride);
+		const auto offset = indexByteOffset(indexType, firstIndex);
 		glDrawElements(_openGLPrimitive(primitive), static_cast<GLsizei>(indexCount), _openGLIndexType(indexType), reinterpret_cast<const void *>(offset));
 	}
 
@@ -241,9 +258,7 @@ namespace spk
 	{
 		_validateGLCount(indexCount);
 		_validateGLCount(instanceCount);
-		const std::size_t stride = indexType == IndexBuffer::Type::UnsignedByte ? 1 : indexType == IndexBuffer::Type::UnsignedShort ? 2
-																																	: 4;
-		const auto offset = static_cast<std::uintptr_t>(firstIndex * stride);
+		const auto offset = indexByteOffset(indexType, firstIndex);
 		glDrawElementsInstanced(_openGLPrimitive(primitive), static_cast<GLsizei>(indexCount), _openGLIndexType(indexType), reinterpret_cast<const void *>(offset), static_cast<GLsizei>(instanceCount));
 	}
 

@@ -124,6 +124,33 @@ TEST(AnimationLabelTest, NullSheetAndOutOfSheetRangeAreRejected)
 	EXPECT_THROW(label.setAnimationRange(0, count), std::invalid_argument);
 }
 
+TEST(AnimationLabelTest, RejectedRangePreservesFramesAndElapsedTime)
+{
+	spk::AnimationLabel label("Animation", defaultStyle().iconset.get());
+	label.setAnimationRange(1, 2);
+	label.setLoopSpeed(std::chrono::milliseconds(10));
+	spk::Keyboard keyboard;
+	spk::Mouse mouse;
+	spk::UpdateContext context{.time = {}, .deltaTime = std::chrono::milliseconds(9), .keyboard = keyboard, .mouse = mouse};
+	label.updateState(context);
+	const std::size_t count = static_cast<std::size_t>(label.spriteSheet()->nbSprite().x) * label.spriteSheet()->nbSprite().y;
+
+	EXPECT_THROW(label.setAnimationRange(0, count), std::invalid_argument);
+	EXPECT_THROW(label.setAnimationRange(count, count), std::invalid_argument);
+	EXPECT_THROW(label.setAnimationRange(2, 1), std::invalid_argument);
+	EXPECT_EQ(label.rangeStart(), 1u);
+	EXPECT_EQ(label.rangeEnd(), 2u);
+	EXPECT_EQ(label.currentFrame(), 1u);
+	context.deltaTime = std::chrono::milliseconds(1);
+	label.updateState(context);
+	EXPECT_EQ(label.currentFrame(), 2u);
+
+	label.setAnimationRange(count - 1, count - 1);
+	context.deltaTime = std::chrono::milliseconds(20);
+	label.updateState(context);
+	EXPECT_EQ(label.currentFrame(), count - 1);
+}
+
 TEST(AnimationLabelTest, SheetReplacementRestoresFullRange)
 {
 	const auto *sheet = defaultStyle().iconset.get();

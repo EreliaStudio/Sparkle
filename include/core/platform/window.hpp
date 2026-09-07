@@ -53,6 +53,7 @@ namespace spk::WinAPI
 		static constexpr DWORD Style = WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
 
 		HWND _handle = nullptr;
+		bool _destroying = false;
 		bool _closureRequested = false;
 		bool _closureDispatched = false;
 		MessageHandler _messageHandler;
@@ -65,7 +66,7 @@ namespace spk::WinAPI
 		[[nodiscard]] static SIZE _outerSize(const CreationInfo &info);
 		[[nodiscard]] static Window *_instance(HWND handle) noexcept;
 		[[nodiscard]] static Window *_bind(HWND handle, LPARAM parameter) noexcept;
-		LRESULT _process(HWND handle, UINT message, WPARAM wParam, LPARAM lParam) noexcept;
+		LRESULT _process(HWND handle, UINT message, WPARAM wParam, LPARAM lParam);
 		LRESULT _processDestruction(HWND handle, UINT message, WPARAM wParam, LPARAM lParam) noexcept;
 		static LRESULT CALLBACK _procedure(HWND handle, UINT message, WPARAM wParam, LPARAM lParam) noexcept;
 		void _createHandle(const Class &windowClass, const CreationInfo &info, SIZE size);

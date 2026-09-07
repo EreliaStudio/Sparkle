@@ -83,6 +83,8 @@ namespace spk
 			return x * q.x + y * q.y + z * q.z + w * q.w;
 		}
 
+		// Returns one canonical Euler representation. At gimbal lock, yaw is
+		// zero and roll contains the coupled roll/yaw rotation.
 		[[nodiscard]] Vector3 toEuler() const;
 
 		[[nodiscard]] static Quaternion slerp(const Quaternion &from, const Quaternion &to, float alpha);

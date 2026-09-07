@@ -19,6 +19,7 @@ TEST(OpenGLTestContextTest, ReusesOneReadyContextAndRestoresDeterministicState)
 
 	::glEnable(GL_SCISSOR_TEST);
 	::glViewport(1, 2, 3, 4);
+	::glEnable(static_cast<GLenum>(-1));
 	first.reset();
 
 	EXPECT_EQ(::glIsEnabled(GL_SCISSOR_TEST), GL_FALSE);
@@ -28,6 +29,7 @@ TEST(OpenGLTestContextTest, ReusesOneReadyContextAndRestoresDeterministicState)
 	EXPECT_EQ(viewport[1], 0);
 	EXPECT_EQ(viewport[2], 640);
 	EXPECT_EQ(viewport[3], 480);
+	EXPECT_EQ(::glGetError(), GL_NO_ERROR);
 }
 
 TEST(OpenGLTestContextTest, CapturesPixelsWithTopLeftCoordinates)

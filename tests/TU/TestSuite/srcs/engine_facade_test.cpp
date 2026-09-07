@@ -223,6 +223,52 @@ TEST(EngineFacadeTest, DestroyingPopulatedEngineDestroysOwnedSystemsAndDetachesE
 	EXPECT_EQ(entity.context(), nullptr);
 }
 
+TEST(EngineFacadeTest, DestructionClearsNestedAndDetachedEntityContextsAndDetachesSystemsBeforeDeletion)
+{
+	struct ObservedSystem : spk::System
+	{
+		bool &detached;
+		bool &destroyed;
+		ObservedSystem(bool &p_detached, bool &p_destroyed) : detached(p_detached), destroyed(p_destroyed) {}
+		void attach(spk::Engine *value) override
+		{
+			spk::System::attach(value);
+			if (value == nullptr) detached = true;
+		}
+		~ObservedSystem() override
+		{
+			EXPECT_EQ(engine(), nullptr);
+			destroyed = true;
+		}
+	};
+	bool detached = false;
+	bool destroyed = false;
+	spk::Entity parent("parent");
+	spk::Entity child("child", &parent);
+	spk::Entity unparented("unparented");
+	auto &behaviour = child.addBehaviour<EngineBehaviour>();
+	using Registry = spk::Registry<spk::Engine *, spk::Entity>;
+	spk::Engine *oldEngine = nullptr;
+	{
+		spk::Engine engine;
+		oldEngine = &engine;
+		engine.addEntity(&parent);
+		child.changeContext(&engine);
+		unparented.changeContext(&engine);
+		engine.addSystem<ObservedSystem>(detached, destroyed);
+		ASSERT_EQ(behaviour.context(), &engine);
+	}
+	EXPECT_TRUE(detached);
+	EXPECT_TRUE(destroyed);
+	EXPECT_EQ(parent.parent(), nullptr);
+	EXPECT_EQ(child.parent(), &parent);
+	EXPECT_EQ(parent.context(), nullptr);
+	EXPECT_EQ(child.context(), nullptr);
+	EXPECT_EQ(unparented.context(), nullptr);
+	EXPECT_EQ(behaviour.context(), nullptr);
+	EXPECT_TRUE(Registry::elements(oldEngine).empty());
+}
+
 TEST(EngineFacadeTest, DISABLED_ModifyingSystemsDuringUpdateNeedsStableTraversalContract)
 {
 	GTEST_SKIP() << "Engine iterates its live system vector; the API exposes no deferred-mutation or snapshot traversal contract.";

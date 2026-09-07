@@ -137,6 +137,19 @@ TEST(CommandPanelTest, MissingOperationsReportRequestedName)
 	}),
 				 std::out_of_range);
 	EXPECT_THROW(panel.removeButton("absent"), std::out_of_range);
+	panel.addButton("present", "Present");
+	try
+	{
+		panel.removeButton("absent");
+		FAIL() << "Expected missing removal to throw";
+	} catch (const std::out_of_range &error)
+	{
+		EXPECT_NE(std::string(error.what()).find("absent"), std::string::npos);
+	}
+	EXPECT_EQ(panel.nbButton(), 1u);
+	EXPECT_NO_THROW((void)panel.button("present"));
+	panel.removeButton("present");
+	EXPECT_THROW(panel.removeButton("present"), std::out_of_range);
 }
 
 TEST(CommandPanelRenderTest, DISABLED_Empty)

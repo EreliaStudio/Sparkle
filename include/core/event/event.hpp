@@ -16,6 +16,9 @@ namespace spk
 	public:
 		bool consumed = false;
 
+		// A successful Take returns true even when the same widget already has
+		// the channel's pending focus request. A Take may replace an earlier
+		// request in that channel; requests in other channels remain unchanged.
 		bool takeFocus(FocusMode::Channel channel, Widget *widget);
 		bool releaseFocus(FocusMode::Channel channel, Widget *widget);
 		[[nodiscard]] const std::optional<FocusMode::Record> &focusChange(FocusMode::Channel channel) const;

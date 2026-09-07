@@ -13,6 +13,12 @@
 
 namespace
 {
+	BOOL WINAPI failSetEvent(HANDLE)
+	{
+		::SetLastError(ERROR_INVALID_HANDLE);
+		return FALSE;
+	}
+
 	bool contains(std::string_view text, std::string_view fragment)
 	{
 		return text.find(fragment) != std::string_view::npos;
@@ -56,9 +62,7 @@ TEST(WakeEventTest, AutoResetRequiresAnotherNotification)
 
 TEST(WakeEventTest, SetEventFailureReportsCodeAndOperation)
 {
-	spk::WinAPI::WakeEvent event;
-	const HANDLE handle = event.handle();
-	ASSERT_TRUE(::CloseHandle(handle));
+	spk::WinAPI::WakeEvent event(&failSetEvent);
 
 	try
 	{

@@ -130,6 +130,10 @@ namespace spk
 		{
 			throw std::invalid_argument("AnimationLabel range end cannot precede its start");
 		}
+		if (end >= _spriteCount())
+		{
+			throw std::invalid_argument("AnimationLabel range exceeds its sprite sheet");
+		}
 		_rangeStart = start;
 		_rangeEnd = end;
 		_currentFrame = start;

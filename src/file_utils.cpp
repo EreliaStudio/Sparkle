@@ -4,7 +4,7 @@ namespace spk
 {
 	[[nodiscard]] std::string readTextFile(const std::filesystem::path &path)
 	{
-		std::ifstream file(path, std::ios::in);
+		std::ifstream file(path, std::ios::in | std::ios::binary);
 
 		if (!file.is_open())
 			throw std::runtime_error("Failed to open file: " + path.string());

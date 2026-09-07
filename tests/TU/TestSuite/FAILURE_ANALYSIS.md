@@ -3,10 +3,218 @@
 Audited **2026-09-05** on Windows, against the working tree based on `38baf22`
 (`Implementing the base fundation of the futur test suite`). The working tree
 contains staged and untracked test additions; this is an analysis of that tree,
-not of the committed revision alone. No implementation or test fixes were made
-for this report.
+not of the committed revision alone. The original audit below is preserved as
+the failure baseline; the follow-up section records subsequent repairs.
 
-## Evidence and scope
+## Intermittent pipeline follow-up
+
+Two failures reported after the clean run were sensitive to the pipeline's
+Windows instrumentation and process layout:
+
+- `WakeEventTest.SetEventFailureReportsCodeAndOperation` closed the event's owned
+  handle and then called `SetEvent` through it. With invalid-handle checking
+  enabled, Windows raises SEH `0xc0000008` before `SetEvent` can return `FALSE`;
+  the object's destructor would also close the same handle a second time. The
+  test now injects a deterministic failing notify operation that sets
+  `ERROR_INVALID_HANDLE`, while the real event handle remains valid and owned for
+  its complete lifetime. This tests the error translation without undefined
+  fixture ownership.
+- `RenderCommandIntegrationTest.EveryFamilyRendersOneSceneWithDeterministicDepthAndRepeatability`
+  observed a queued `GL_INVALID_OPERATION` when the suite shared one OpenGL
+  context in a single process. OpenGL errors remain queued context state until
+  `glGetError` consumes them. `OpenGLTestContext::reset()` now clears errors left
+  deliberately by earlier tests before restoring state, then checks that the
+  reset operations themselves succeeded. A regression deliberately queues an
+  invalid enum and verifies that reset establishes a clean error boundary.
+
+After these changes, the three focused regressions pass in both configurations.
+Running the complete GoogleTest executable as one shared process also passes all
+855 enabled tests in Debug and Release; 157 backlog tests remain disabled.
+
+## Final follow-up implementation and decisions - 2026-09-05
+
+The requested follow-up changes are implemented:
+
+- **F02:** `SparkleClipboardHolder` is a separate executable with a message-only
+  HWND. Named events synchronize acquisition and release. The fixture proves
+  exclusion with an independent open attempt, checks non-throwing read/write
+  failures, preserves seeded content, and verifies recovery after release.
+  RAII releases the helper on assertion failures; waits are bounded. `hasText()`
+  remains a format-availability query and stays true for the seeded text.
+- **F03:** Missing removal now throws `std::out_of_range` containing the name.
+  CommandPanel and its PromptPanel wrapper test the strict removal contract and
+  preservation of existing actions.
+- **F04:** Engine teardown detaches root children, clears engine-scoped registry
+  contexts (including nested and detached entities), notifies their attachments,
+  and detaches owned systems before destroying them. External entities survive.
+- **F07:** Contexts are both stored and formatted newest-to-oldest. The ordering
+  test now explicitly asserts that policy and retains repeated-call stability.
+- **F10-F12:** Hierarchy teardown removes the dying node from its living parent
+  and nulls surviving children's parent pointers with notifications. It does not
+  call the dying object's own parent-edition subscribers after derived members
+  have been destroyed. Widget's existing early teardown remains compatible.
+- **F15:** Linear layouts round cumulative boundaries, cap the allocation to
+  the available extent, and constrain padding when it exceeds the space. Both
+  orientations are tested with fractional shares and sizes below minimum hints.
+- **F20-F21:** Native minimum tracking dimensions now allow a zero client area,
+  including the initial size query before `WM_NCCREATE` binds the instance.
+  Bound windows still pass size-limit messages to custom callbacks. Zero/one
+  client dimensions are verified on the current Windows/DPI environment.
+- **F23:** Final destruction messages reach the callback; exceptions are captured
+  and native handle cleanup still runs. Reentrant destruction is ignored while
+  destruction is in progress. The callback retains the normal responsibility to
+  use `DefWindowProcW` for messages it does not handle.
+- **F05-F06:** A successful `Take` reports `true`, including an identical repeat,
+  because the result indicates that the requested widget has focus. A later Take
+  in one channel may replace that channel's pending request without changing any
+  other channel. The tests now inspect both final records as well as the returns.
+- **F13:** JSON strings and object keys validate raw UTF-8 during parsing. Invalid
+  lead or continuation bytes, truncated sequences, overlong forms, surrogate
+  encodings, and values above U+10FFFF are rejected through the normal parser
+  error path. Valid two-, three-, and four-byte sequences remain accepted.
+- **F19:** `Quaternion::toEuler()` now has an explicit singularity convention.
+  At pitch +/-90 degrees it returns yaw zero and stores the coupled roll/yaw
+  rotation in roll. Reconstruction therefore preserves the orientation at and
+  around gimbal lock.
+
+Final validation: both builds succeeded. The focused Event, JSON, and Quaternion
+suites pass in Debug and Release. The complete serial runs are recorded below.
+
+| Preset | Discovered | Enabled | Passed | Failed | Disabled | Runtime skips |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `testDebug` | 1012 | 855 | 855 | 0 | 157 | 0 |
+| `testRelease` | 1012 | 855 | 855 | 0 | 157 | 0 |
+
+All fifteen failures from the second audit are now addressed. Disabled tests
+remain unchanged. Additional validation includes ten consecutive clipboard
+contention runs and focused coverage of engine teardown, both layout axes,
+throwing/reentrant final destruction, custom native size limits, UTF-8 sequence
+classes, and focus-channel records. There were no surviving clipboard helper
+processes after validation. The full runs took 85.76 seconds in Debug and 81.31
+seconds in Release. Evidence is in `build/followup_final_debug.log`,
+`build/followup_final_release.log`, and the matching JUnit reports under each
+preset build directory.
+
+### Focus: exactly what the two failures mean
+
+`EventTest.RepeatedIdenticalFocusRequestRemainsAccepted` performs:
+
+| Step | Request | Expected return | Current return | Current keyboard record |
+| --- | --- | --- | --- | --- |
+| 1 | Keyboard Take(A) | true | true | Take(A) |
+| 2 | Keyboard Take(A) again | true | true | Take(A) |
+
+Both calls succeed. The boolean means the Take request is accepted and the widget
+has the channel's pending focus, rather than indicating whether storage changed.
+
+`EventTest.FocusChannelsAreIndependent` performs:
+
+| Step | Request | Expected return | Current return | Keyboard after request | Mouse after request |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Keyboard Take(A) | true | true | Take(A) | empty |
+| 2 | Mouse Release(B) | true | true | Take(A) | Release(B) |
+| 3 | Keyboard Take(B) | true | true | Take(B) | Release(B) |
+| 4 | Mouse Release(A) | false | false | Take(B) | Release(B) |
+
+Step 3 replaces only the keyboard record. Step 4 remains rejected because the
+mouse channel already contains a request. The final assertions explicitly verify
+Keyboard=Take(B) and Mouse=Release(B), so arbitration and channel isolation are
+now tested separately.
+
+### JSON: encoding validation, not file-read protection
+
+The failing document is four bytes: `22 C3 28 22` (quotes around `C3 28`). Byte
+`C3` begins a two-byte UTF-8 sequence; its next byte must be in `80..BF`. `28` is
+ASCII `(`, so this is invalid UTF-8. By comparison, `22 C3 A9 22` is valid JSON
+containing the character e-acute. This case calls `Value::fromString` directly:
+there is no file access to protect.
+
+`Parser::parseString` now validates every non-ASCII sequence before appending it.
+The same path parses values and object keys, so both reject malformed input from
+`fromString` and file loading. This is encoding validation at the parser boundary;
+the file reader does not need separate UTF-8 logic. The policy follows
+[RFC 8259, sections 8.1 and 9](https://www.rfc-editor.org/rfc/rfc8259).
+
+### Quaternion: the test checks rotation, not identical Euler numbers
+
+The test creates `(roll=15, pitch, yaw=-25)`, converts its quaternion back to Euler
+angles, reconstructs a quaternion, and compares rotations using
+`abs(dot(normalized(q1), normalized(q2)))`. This treats `q` and `-q` as equivalent
+and permits different Euler triples for the same orientation.
+
+Before the correction, per-pitch traces showed:
+
+| Input Euler angles | Recovered Euler angles | Absolute dot | Rotation error |
+| --- | --- | ---: | ---: |
+| `(15, +90, -25)` | `(0, +90, 0)` | 0.9396927 | approximately 40 degrees |
+| `(15, -90, -25)` | `(0, -90, 0)` | 0.9961948 | approximately 10 degrees |
+
+The four nearby pitches (`+/-89.9` and `+/-90.1`) pass the current tolerance.
+At the exact singularities, roll and yaw cannot be recovered independently,
+but their combined rotation must survive. The current independent `atan2`
+expressions lose that combination as their inputs collapse toward zero.
+For this rotation convention, valid canonical answers for the two inputs would
+be `(40, +90, 0)` and `(-10, -90, 0)`, respectively.
+
+The conversion now uses that canonical answer at the singularity. The exact and
+nearby cases reconstruct equivalent quaternions in both build configurations.
+
+Removing Euler angles entirely would make authoring, inspectors, and simple
+axis-based APIs harder without removing the mathematical singularity. The current
+design keeps a quaternion as the authoritative rotation and uses Euler angles as
+an input/output representation. At exactly +/-90 degrees, a quaternion cannot
+contain the original roll and yaw independently: infinitely many roll/yaw pairs
+describe the same orientation. If an editor must display the exact values last
+typed by a user, it must retain that editor state separately or request the Euler
+solution closest to a previous reference; it cannot recover those two original
+numbers from the quaternion alone.
+
+## Earlier straightforward fixes - 2026-09-05
+
+Eight original failures have implementation fixes in the working tree:
+
+| IDs | Change |
+| --- | --- |
+| F01 | Reject an animation range ending outside the sheet before mutating state. |
+| F08 | Read files in binary mode to preserve exact newline bytes. |
+| F09 | Reject self/descendant parent assignments before unlinking or notifying. |
+| F14, F16 | Use checked array access in both const and mutable input accessors. |
+| F17 | Map the public LineLoop and TriangleFan primitives to OpenGL. |
+| F18 | Share checked byte-offset multiplication between indexed and instanced draws. |
+| F22 | Allow the internal dispatch helper to unwind into the existing exception capture; keep the native callback non-throwing. |
+
+Three regression tests were added for range state/elapsed-time preservation,
+atomic rejection of invalid hierarchy edits, and the first overflowing index
+offset in both indexed draw methods. The callback regression now also checks
+that the first exception is retained, rethrow consumes it, and destruction still
+succeeds. Existing failure assertions were preserved.
+
+Both builds succeeded. All **60 enabled targeted Debug tests passed** (one
+additional selected test was disabled). Full CTest runs then confirmed:
+
+| Preset | Discovered | Enabled | Passed | Failed | Disabled | Runtime skips |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `testDebug` | 1007 | 850 | 835 | 15 | 157 | 0 |
+| `testRelease` | 1007 | 850 | 835 | 15 | 157 | 0 |
+
+All eight repaired cases pass in both configurations, with **no new failures**.
+The 15 remaining failure names match between Debug and Release. CTest still
+returns exit code 8 because those failures remain. The disabled count is unchanged;
+no failing test was disabled or had its expected behavior relaxed.
+
+Follow-up evidence is in `build/easy_fixes_build_debug.log`,
+`build/easy_fixes_build_release.log`, `build/easy_fixes_targeted_debug.log`,
+`build/easy_fixes_debug.log`, `build/easy_fixes_release.log`, and the corresponding
+full-run JUnit reports `build/easy_fixes_debug.xml` / `build/easy_fixes_release.xml`.
+Full runs used the same serial, 30-second-timeout settings as the original audit.
+
+The remaining work is outside this small repair batch: F04/F10-F12 require
+coordinated lifetime teardown; F02 requires a reliable native contention fixture;
+F03/F05-F07/F20-F21 need explicit API-contract alignment; F13/F15/F19 require
+broader parser, layout, or numerical changes; and F23 requires cleanup-safe final
+notification dispatch.
+
+## Original audit evidence and scope
 
 Both `cmake --build --preset testDebug --parallel 4` and the equivalent
 `testRelease` build succeeded and reported no work to do. Tests were run through
@@ -50,7 +258,7 @@ See [TEST_BACKLOG_DISABLED.md](TEST_BACKLOG_DISABLED.md) and the executable
 disabled regressions documented in the coverage audit. They were not force-run
 for this report.
 
-## Failure inventory
+## Original failure inventory
 
 Priority means proposed repair order: **P1** for termination, invalid memory
 access, or broken lifetime invariants; **P2** for incorrect behavior or fixture
@@ -83,7 +291,11 @@ not externally assigned issue severities.
 | F22 | `WindowTest.CallbackExceptionIsCapturedAndRethrown` | Throw crosses internal `noexcept` boundary | P1 |
 | F23 | `WindowTest.DestructionMessagesReachCallback` | Final destruction callback bypassed | P2 |
 
-## Individual analyses
+## Original individual analyses
+
+These entries describe the pre-fix observations and source locations. All cases
+except F05, F06, F13, and F19 are now resolved as recorded above; their historical
+causes are retained here for reference. Source line numbers may shift after edits.
 
 ### F01 - Animation range accepts an invalid last frame
 

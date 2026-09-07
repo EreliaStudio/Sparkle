@@ -19,6 +19,7 @@ namespace spk
 		std::string _message;
 		std::source_location _location;
 		std::exception_ptr _cause;
+		// Stored and formatted from newest (outermost) to oldest context.
 		std::vector<Context> _contexts;
 		std::string _formattedMessage;
 

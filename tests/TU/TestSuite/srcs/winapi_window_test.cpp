@@ -128,6 +128,28 @@ TEST(WindowTest, MinimumNonZeroClientDimensionsAreSupported)
 	window.destroy();
 }
 
+TEST(WindowTest, BoundSizeLimitsCanBeCustomizedByCallback)
+{
+	spk::WinAPI::Window::Class windowClass(uniqueIdentifier("Sparkle_CustomLimits_"));
+	spk::WinAPI::Window window;
+	auto creation = info();
+	creation.messageHandler = [](HWND handle, UINT message, WPARAM wParam, LPARAM lParam) -> LRESULT {
+		if (message == WM_GETMINMAXINFO)
+		{
+			auto *limits = reinterpret_cast<MINMAXINFO *>(lParam);
+			limits->ptMinTrackSize = {200, 100};
+			return 0;
+		}
+		return ::DefWindowProcW(handle, message, wParam, lParam);
+	};
+	window.create(windowClass, creation);
+	MINMAXINFO limits{};
+	::SendMessageW(window.handle(), WM_GETMINMAXINFO, 0, reinterpret_cast<LPARAM>(&limits));
+	EXPECT_EQ(limits.ptMinTrackSize.x, 200);
+	EXPECT_EQ(limits.ptMinTrackSize.y, 100);
+	window.destroy();
+}
+
 TEST(WindowTest, NegativePositionIsAccepted)
 {
 	spk::WinAPI::Window::Class windowClass(uniqueIdentifier("Sparkle_NegativePosition_"));
@@ -159,21 +181,23 @@ TEST(WindowTest, UnicodeTitleIsConvertedToWideText)
 
 TEST(WindowTest, CallbackExceptionIsCapturedAndRethrown)
 {
-	// Isolate the native callback boundary: its current implementation lets the
-	// exception terminate the process instead of storing it for later rethrow.
+	// Keep regressions at the native exception boundary isolated in a subprocess.
 	EXPECT_EXIT(
 		{
 			spk::WinAPI::Window::Class windowClass(uniqueIdentifier("Sparkle_CallbackException_"));
 			spk::WinAPI::Window window;
 			auto creation = info();
-			creation.messageHandler = [](HWND handle, UINT message, WPARAM wParam, LPARAM lParam) -> LRESULT {
+			int callbackCount = 0;
+			creation.messageHandler = [&](HWND handle, UINT message, WPARAM wParam, LPARAM lParam) -> LRESULT {
 				if (message == WM_APP + 11)
 				{
-					throw std::runtime_error("callback exploded");
+					throw std::runtime_error(++callbackCount == 1 ? "callback exploded" : "second callback exploded");
 				}
 				return ::DefWindowProcW(handle, message, wParam, lParam);
 			};
 			window.create(windowClass, creation);
+			window.rethrowPendingException();
+			(void)::SendMessageW(window.handle(), WM_APP + 11, 0, 0);
 			(void)::SendMessageW(window.handle(), WM_APP + 11, 0, 0);
 
 			try
@@ -182,7 +206,10 @@ TEST(WindowTest, CallbackExceptionIsCapturedAndRethrown)
 			}
 			catch (const std::runtime_error &exception)
 			{
-				std::exit(std::string_view(exception.what()) == "callback exploded" ? 0 : 2);
+				const bool firstExceptionPreserved = std::string_view(exception.what()) == "callback exploded";
+				window.rethrowPendingException();
+				window.destroy();
+				std::exit(firstExceptionPreserved && callbackCount == 2 && window.handle() == nullptr ? 0 : 2);
 			}
 			catch (...)
 			{
@@ -223,6 +250,33 @@ TEST(WindowTest, DestructionMessagesReachCallback)
 
 	EXPECT_NE(std::find(messages.begin(), messages.end(), WM_DESTROY), messages.end());
 	EXPECT_NE(std::find(messages.begin(), messages.end(), WM_NCDESTROY), messages.end());
+}
+
+TEST(WindowTest, ThrowingFinalDestructionCallbackStillClearsNativeState)
+{
+	spk::WinAPI::Window::Class windowClass(uniqueIdentifier("Sparkle_FinalCallback_"));
+	spk::WinAPI::Window window;
+	auto creation = info();
+	int finalCallbacks = 0;
+	creation.messageHandler = [&](HWND handle, UINT message, WPARAM wParam, LPARAM lParam) -> LRESULT {
+		if (message == WM_NCDESTROY)
+		{
+			++finalCallbacks;
+			EXPECT_EQ(window.handle(), handle);
+			window.destroy();
+			throw std::runtime_error("final callback exploded");
+		}
+		return ::DefWindowProcW(handle, message, wParam, lParam);
+	};
+	window.create(windowClass, creation);
+	const HWND handle = window.handle();
+	EXPECT_NO_THROW(window.destroy());
+	EXPECT_EQ(finalCallbacks, 1);
+	EXPECT_EQ(window.handle(), nullptr);
+	EXPECT_FALSE(::IsWindow(handle));
+	EXPECT_THROW(window.rethrowPendingException(), std::runtime_error);
+	EXPECT_NO_THROW(window.rethrowPendingException());
+	EXPECT_NO_THROW(window.destroy());
 }
 
 TEST(WindowTest, ClassOutlivesNativeWindowHandle)

@@ -165,6 +165,11 @@ namespace sparkle_test
 	void OpenGLTestContext::reset()
 	{
 		makeCurrent();
+		// OpenGL errors belong to the context. Clear errors deliberately produced
+		// by an earlier test when this fixture is shared by one test process.
+		while (::glGetError() != GL_NO_ERROR)
+		{
+		}
 		_impl->surface.setGeometry({.anchor = {0, 0}, .size = {FramebufferWidth, FramebufferHeight}});
 		::glBindFramebuffer(GL_FRAMEBUFFER, _impl->framebuffer);
 		::glDrawBuffer(GL_COLOR_ATTACHMENT0);
@@ -190,6 +195,10 @@ namespace sparkle_test
 		::glClearDepth(1.0);
 		::glClearStencil(0);
 		::glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		if (const GLenum error = ::glGetError(); error != GL_NO_ERROR)
+		{
+			throw std::runtime_error("OpenGL test-context reset failed with error " + std::to_string(error));
+		}
 	}
 
 	void OpenGLTestContext::setGeometry(const spk::Rect2D &geometry)

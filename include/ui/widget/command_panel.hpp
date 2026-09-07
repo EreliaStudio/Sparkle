@@ -32,6 +32,7 @@ namespace spk
 		PushButton &addButton(std::string name, std::string_view label);
 		PushButton &button(std::string_view name);
 		[[nodiscard]] const PushButton &button(std::string_view name) const;
+		// Throws std::out_of_range when no button has the requested name.
 		void removeButton(std::string_view name);
 		[[nodiscard]] std::size_t nbButton() const noexcept;
 		[[nodiscard]] PushButton::ClickContract subscribe(std::string_view name, PushButton::ClickCallback callback);

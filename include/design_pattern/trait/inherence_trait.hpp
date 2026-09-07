@@ -22,6 +22,7 @@ namespace spk
 
 	private:
 		TType *_parent = nullptr;
+		bool _destroying = false;
 		ChildrenContainer _children;
 		TChildComparator _childComparator;
 		OnParentEditionContractProvider _onParentEditionContractProvider;
@@ -73,7 +74,23 @@ namespace spk
 				"TType must inherit from InherenceTrait<TType, TChildComparator>");
 		}
 
-		virtual ~InherenceTrait() = default;
+		virtual ~InherenceTrait()
+		{
+			_destroying = true;
+			// Only notify surviving objects. Derived members of this object may
+			// already be gone; its own parent-edition subscribers must not run.
+			if (TType *parent = std::exchange(_parent, nullptr))
+			{
+				parent->_removeChild(static_cast<TType *>(this));
+			}
+			while (!_children.empty())
+			{
+				TType *child = _children.back();
+				_children.pop_back();
+				child->_parent = nullptr;
+				child->_onParentEditionContractProvider.trigger(nullptr);
+			}
+		}
 
 		OnParentEditionContract subscribeToParentEdition(OnParentEditionCallback callback)
 		{
@@ -92,12 +109,23 @@ namespace spk
 
 		void setParent(TType *parent)
 		{
+			if (parent != nullptr && (_destroying || parent->_destroying))
+			{
+				throw std::logic_error("Can't attach an object during hierarchy destruction");
+			}
 			if (_parent == parent)
 			{
 				return;
 			}
 
 			TType *self = static_cast<TType *>(this);
+			for (TType *ancestor = parent; ancestor != nullptr; ancestor = ancestor->_parent)
+			{
+				if (ancestor == self)
+				{
+					throw std::logic_error("Can't create a circular hierarchy");
+				}
+			}
 
 			if (_parent != nullptr)
 			{

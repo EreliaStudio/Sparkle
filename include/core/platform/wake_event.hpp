@@ -2,18 +2,28 @@
 
 #include <Windows.h>
 
+#include <stdexcept>
 #include <system_error>
 
 namespace spk::WinAPI
 {
 	class WakeEvent final
 	{
+	public:
+		using NotifyOperation = BOOL(WINAPI *)(HANDLE);
+
 	private:
 		HANDLE _handle = nullptr;
+		NotifyOperation _notifyOperation;
 
 	public:
-		WakeEvent()
+		explicit WakeEvent(NotifyOperation notifyOperation = ::SetEvent) :
+			_notifyOperation(notifyOperation)
 		{
+			if (_notifyOperation == nullptr)
+			{
+				throw std::invalid_argument("WakeEvent notify operation cannot be null");
+			}
 			_handle = ::CreateEventW(nullptr, FALSE, FALSE, nullptr);
 			if (_handle == nullptr)
 			{
@@ -33,7 +43,7 @@ namespace spk::WinAPI
 
 		void notify() const
 		{
-			if (::SetEvent(_handle) == FALSE)
+			if (_notifyOperation(_handle) == FALSE)
 			{
 				throw std::system_error(static_cast<int>(::GetLastError()), std::system_category(), "SetEvent");
 			}
