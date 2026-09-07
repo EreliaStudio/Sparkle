@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <concepts>
 #include <cstddef>
+#include <limits>
 #include <optional>
 #include <string>
 #include <type_traits>
@@ -39,6 +40,46 @@ namespace spk
 		std::size_t _upSpriteID = 4;
 		const SpriteSheet *_iconset = nullptr;
 		EditionProvider _editionProvider;
+
+		[[nodiscard]] static TType _saturatedAdd(TType lhs, TType rhs)
+		{
+			if constexpr (!std::is_integral_v<TType>)
+			{
+				return lhs + rhs;
+			}
+			else if constexpr (std::is_unsigned_v<TType>)
+			{
+				return rhs > std::numeric_limits<TType>::max() - lhs ? std::numeric_limits<TType>::max() : static_cast<TType>(lhs + rhs);
+			}
+			else
+			{
+				if (rhs > 0 && lhs > std::numeric_limits<TType>::max() - rhs)
+					return std::numeric_limits<TType>::max();
+				if (rhs < 0 && lhs < std::numeric_limits<TType>::lowest() - rhs)
+					return std::numeric_limits<TType>::lowest();
+				return static_cast<TType>(lhs + rhs);
+			}
+		}
+
+		[[nodiscard]] static TType _saturatedSubtract(TType lhs, TType rhs)
+		{
+			if constexpr (!std::is_integral_v<TType>)
+			{
+				return lhs - rhs;
+			}
+			else if constexpr (std::is_unsigned_v<TType>)
+			{
+				return lhs < rhs ? 0 : static_cast<TType>(lhs - rhs);
+			}
+			else
+			{
+				if (rhs > 0 && lhs < std::numeric_limits<TType>::lowest() + rhs)
+					return std::numeric_limits<TType>::lowest();
+				if (rhs < 0 && lhs > std::numeric_limits<TType>::max() + rhs)
+					return std::numeric_limits<TType>::max();
+				return static_cast<TType>(lhs - rhs);
+			}
+		}
 
 		[[nodiscard]] TType _clamped(TType value) const
 		{
@@ -177,12 +218,12 @@ namespace spk
 
 		void increase()
 		{
-			setValue(static_cast<TType>(_value + _step));
+			setValue(_saturatedAdd(_value, _step));
 		}
 
 		void decrease()
 		{
-			setValue(static_cast<TType>(_value - _step));
+			setValue(_saturatedSubtract(_value, _step));
 		}
 
 		void setIconset(const SpriteSheet *iconset)

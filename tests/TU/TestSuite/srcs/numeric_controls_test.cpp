@@ -184,8 +184,7 @@ TEST(NumericControlsTest, NarrowGeometrySpriteChangesStylesAndButtonClicks)
 	EXPECT_EQ(numeric.value(), 1);
 }
 
-// Unsigned extrema provide a defined arithmetic oracle; signed overflow must not be executed.
-TEST(SpinBoxTest, DISABLED_ArithmeticAtUnsignedExtremaSaturatesBeforeApplyingLimits)
+TEST(SpinBoxTest, ArithmeticAtUnsignedExtremaSaturatesBeforeApplyingLimits)
 {
 	spk::SpinBox<unsigned> box("Spin");
 	box.setMinimum(0);
@@ -220,8 +219,7 @@ TEST(SpinBoxTest, InvertedLimitsUseMaximumAfterMinimumAndCanBeRemovedIndependent
 	EXPECT_THROW(box.setIconset(nullptr), std::invalid_argument);
 }
 
-// int8_t arithmetic is promoted to int, so these boundary checks do not execute signed overflow.
-TEST(SpinBoxTest, DISABLED_SignedExtremaSaturateBeforeNarrowing)
+TEST(SpinBoxTest, SignedExtremaSaturateBeforeNarrowing)
 {
 	spk::SpinBox<std::int8_t> box("Signed");
 	box.setMinimum(-128);

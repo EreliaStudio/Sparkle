@@ -3,9 +3,9 @@
 
 Last audited: **2026-09-07** against `docs/unit_test_plan.md` and all sources compiled by `SparkleTestSuite`.
 
-Current inventory: **48 disabled behaviors**, matching the 48 disabled test instances in the test sources.
+Current inventory: **41 disabled behaviors**, matching the 41 disabled test instances in the test sources.
 
-Disposition review: all **48** remaining entries are **Implement**. This means the behavior is useful and testable, although it may first need a product fix, a documented contract, or an internal test fixture.
+Disposition review: all **41** remaining entries are **Implement**. This means the behavior is useful and testable, although it may first need a product fix, a documented contract, or an internal test fixture.
 
 This file lists behavior that does not have complete TU coverage. **Missing** means no test exists; **Disabled** means a `DISABLED_` specification exists but does not implement the behavior; **Partial** means a test implements only part of the behavior. Test validation and enabled/disabled status do not affect whether complete coverage is removed from this inventory.
 
@@ -15,16 +15,6 @@ Remove an item when its behavior is fully implemented by a test. If only part is
 
 1) **RowIDOverflowThrows** — Disabled  
 Force row-ID exhaustion through a deterministic seam and verify `std::overflow_error` without model mutation.
-
-## `spk::DataModelView<T>`
-
-1) **ReactiveModelShrinkAndResizeClampScrollOffset** — Disabled
-
-Shrink the model and resize the viewport, then verify the scroll offset and visible delegates are clamped and refreshed consistently.
-
-2) **InvalidDelegateReplacementPreservesExistingItems** — Disabled
-
-Make delegate replacement transactional so a failing replacement leaves the existing items and delegate intact.
 
 ## `spk::WinAPI::WakeEvent`
 
@@ -117,12 +107,6 @@ Add/remove systems during update and verify current/next-frame traversal rules.
 2) **EntitiesMayMutateDuringUpdateSafely** — Disabled  
 Add/remove entities during traversal and verify iteration, ownership, and registry state.
 
-## `spk::Event`
-
-1) **OutOfRangeFocusChannelHasDefinedBehavior** — Disabled
-
-Pass an invalid focus-channel value and verify it is rejected before any channel-indexed access.
-
 ## `spk::Texture`
 
 1) **OpenGLAndPNGFailuresAreReported** — Disabled
@@ -132,9 +116,6 @@ Inject texture/OpenGL/PNG failures and verify diagnostics and cleanup.
 
 1) **OversizedEncodedSpanIsRejected** — Disabled  
 Use a synthetic address-space seam and verify rejection before decoder access.
-
-2) **DualChannelAndRGBAAssetsDecodeDeterministically** — Disabled  
-Add fixed encoded assets and verify dimensions, conversion, pixels, and orientation.
 
 ## `spk::BufferGPUResource` and `Storage`
 
@@ -163,16 +144,6 @@ Inject create/compile/link/validate failures and verify logs, context, and handl
 
 1) **VertexIndexOverflowIsRejected** — Disabled  
 Use a capacity seam to exhaust the index type and verify atomic rejection before wraparound.
-
-## `spk::SpinBox<T>`
-
-1) **ArithmeticAtUnsignedExtremaSaturatesBeforeApplyingLimits** — Disabled
-
-Exercise increments and decrements at unsigned extrema and verify checked arithmetic clamps before applying configured limits.
-
-2) **SignedExtremaSaturateBeforeNarrowing** — Disabled
-
-Exercise signed extrema and verify arithmetic saturates before narrowing or applying limits.
 
 ## `spk::ScalableWidget`
 
@@ -211,8 +182,3 @@ Verify long unbreakable text and a zero maximum width follow the defined wrappin
 1) **ApplyStylePropagatesToContentAndMenus** — Disabled
 
 Apply a new style after construction and verify existing content and menus receive it consistently.
-
-## `spk::MenuBar::Menu::Break`
-
-1) **ThreePartSeparatorRenderGolden** — Disabled  
-Verify 3x1 regions, height, depth, size hint, and style changes.

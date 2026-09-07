@@ -140,10 +140,7 @@ TEST(EventTest, FocusChannelsAreIndependent)
 	EXPECT_EQ(mouse->widget, mouseWidget);
 }
 
-// Disabled: EventBase currently exposes FocusMode::Channel as an enum that can be cast
-// out of range while the implementation indexes a fixed std::array without a documented
-// bounds guard. Exercising that value would use undefined behavior as the test oracle.
-TEST(EventTest, DISABLED_OutOfRangeFocusChannelHasDefinedBehavior)
+TEST(EventTest, OutOfRangeFocusChannelHasDefinedBehavior)
 {
 	spk::EventBase event;
 	for (const auto value : {spk::FocusMode::ChannelCount, spk::FocusMode::ChannelCount + 1, spk::FocusMode::ChannelCount + 100})
@@ -151,5 +148,6 @@ TEST(EventTest, DISABLED_OutOfRangeFocusChannelHasDefinedBehavior)
 		const auto invalid = static_cast<spk::FocusMode::Channel>(value);
 		EXPECT_FALSE(event.takeFocus(invalid, nullptr));
 		EXPECT_FALSE(event.releaseFocus(invalid, nullptr));
+		EXPECT_THROW((void)event.focusChange(invalid), std::out_of_range);
 	}
 }

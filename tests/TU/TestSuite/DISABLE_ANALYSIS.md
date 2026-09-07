@@ -1,6 +1,6 @@
 # Disabled-test decision catalogue
 
-Last audited: **2026-09-07**. The source tree contains **48** disabled tests.
+Last audited: **2026-09-07**. The source tree contains **41** disabled tests.
 
 The catalogue is grouped by Google Test suite. Every case records its intended behavior, current blocker, and a specific recommendation. Failure injection, counters, and thread barriers remain internal unless callers need them as product features.
 
@@ -78,20 +78,6 @@ The catalogue is grouped by Google Test suite. Every case records its intended b
 - **Why disabled:** _nextRowID is private and the supplied API exposes no deterministic seam for forcing uint64_t exhaustion.
 - **Proposal:** Test checked arithmetic through a narrow internal helper; remove the requirement if the state is unreachable by design.
 
-## `DataModelViewTest`
-
-### `DISABLED_InvalidDelegateReplacementPreservesExistingItems`
-
-- **Goal:** Verify that invalid delegate replacement preserves existing items.
-- **Why disabled:** The test is implemented, but current product behavior does not satisfy its assertions safely.
-- **Proposal:** Make replacement transactional by validating new items before committing.
-
-### `DISABLED_ReactiveModelShrinkAndResizeClampScrollOffset`
-
-- **Goal:** Verify that reactive model shrink and resize clamp scroll offset.
-- **Why disabled:** The test is implemented, but current product behavior does not satisfy its assertions safely.
-- **Proposal:** Clamp scrolling after model/viewport changes, repopulate visible items, and enable the regression.
-
 ## `EngineFacadeTest`
 
 ### `DISABLED_ModifyingEntitiesDuringUpdateNeedsStableTraversalContract`
@@ -134,35 +120,13 @@ The catalogue is grouped by Google Test suite. Every case records its intended b
 - **Why disabled:** Entity parent/child relationships are non-owning; the current API does not recursively destroy child entities.
 - **Proposal:** Decide and document the product contract for recursive destruction needs entity ownership contract, then implement it through existing APIs.
 
-## `EventTest`
-
-### `DISABLED_OutOfRangeFocusChannelHasDefinedBehavior`
-
-- **Goal:** Verify that out of range focus channel has defined behavior.
-- **Why disabled:** The test is implemented, but current product behavior does not satisfy its assertions safely.
-- **Proposal:** Validate channels before indexing or make invalid values unrepresentable, then test safe rejection.
-
 ## `ImageTest`
-
-### `DISABLED_DualChannelAndRGBAFixturesNeedDeterministicEncodedAssets`
-
-- **Goal:** Verify that dual channel and rgba fixtures need deterministic encoded assets.
-- **Why disabled:** The repository currently provides no deterministic two-channel or transparent encoded image fixture.
-- **Proposal:** Replace the placeholder with an executable test for dual channel and rgba fixtures need deterministic encoded assets using current public behavior; add only a narrow internal seam if needed.
 
 ### `DISABLED_OversizedEncodedSpanNeedsSyntheticAddressSpaceSeam`
 
 - **Goal:** Verify safe rejection at the boundary described by oversized encoded span needs synthetic address space seam.
 - **Why disabled:** A span larger than INT_MAX requires a genuinely addressable multi-gigabyte range; Image exposes no decoder-size seam.
 - **Proposal:** Test checked arithmetic through a narrow internal helper; remove the requirement if the state is unreachable by design.
-
-## `MenuBarBreakRenderTest`
-
-### `DISABLED_ThreePartSeparator`
-
-- **Goal:** Verify that three part separator.
-- **Why disabled:** The body is empty and currently provides no coverage.
-- **Proposal:** Implement capture/comparison, generate and review the separator golden, then enable.
 
 ## `MeshTest`
 
@@ -235,20 +199,6 @@ The catalogue is grouped by Google Test suite. Every case records its intended b
 - **Goal:** Verify that parent bounds constrain all resize directions.
 - **Why disabled:** The test is implemented, but current product behavior does not satisfy its assertions safely.
 - **Proposal:** Confirm the resize contract, implement bounds/cancellation behavior, and enable.
-
-## `SpinBoxTest`
-
-### `DISABLED_ArithmeticAtUnsignedExtremaSaturatesBeforeApplyingLimits`
-
-- **Goal:** Verify that arithmetic at unsigned extrema saturates before applying limits.
-- **Why disabled:** The test is implemented, but current product behavior does not satisfy its assertions safely.
-- **Proposal:** Use checked saturating arithmetic before narrowing/applying limits, then enable.
-
-### `DISABLED_SignedExtremaSaturateBeforeNarrowing`
-
-- **Goal:** Verify that signed extrema saturate before narrowing.
-- **Why disabled:** The test is implemented, but current product behavior does not satisfy its assertions safely.
-- **Proposal:** Use checked saturating arithmetic before narrowing/applying limits, then enable.
 
 ## `TextureTest`
 

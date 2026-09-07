@@ -6,7 +6,12 @@ namespace spk
 {
 	bool EventBase::_setFocusChange(FocusMode::Channel channel, FocusMode::ChangeType type, Widget *widget)
 	{
-		auto &change = _focusRecords[static_cast<std::size_t>(channel)];
+		const std::size_t index = static_cast<std::size_t>(channel);
+		if (index >= _focusRecords.size())
+		{
+			return false;
+		}
+		auto &change = _focusRecords[index];
 		if (change.has_value())
 		{
 			if (type != FocusMode::ChangeType::Take)
@@ -32,7 +37,7 @@ namespace spk
 
 	const std::optional<FocusMode::Record> &EventBase::focusChange(FocusMode::Channel channel) const
 	{
-		return _focusRecords[static_cast<std::size_t>(channel)];
+		return _focusRecords.at(static_cast<std::size_t>(channel));
 	}
 
 	MouseMovedEvent::MouseMovedEvent(const MouseMovedRecord &record, const spk::Mouse &mouse) :

@@ -28,6 +28,25 @@ namespace
 	{
 		return std::filesystem::temp_directory_path() / (std::string("sparkle_tu_") + name);
 	}
+
+	std::vector<std::uint8_t> makeTga(
+		std::uint8_t imageType,
+		unsigned int width,
+		unsigned int height,
+		std::uint8_t bitsPerPixel,
+		std::span<const std::uint8_t> pixels)
+	{
+		std::vector<std::uint8_t> result(18, 0);
+		result[2] = imageType;
+		result[12] = static_cast<std::uint8_t>(width);
+		result[13] = static_cast<std::uint8_t>(width >> 8);
+		result[14] = static_cast<std::uint8_t>(height);
+		result[15] = static_cast<std::uint8_t>(height >> 8);
+		result[16] = bitsPerPixel;
+		result[17] = 0x28; // Top-left origin with eight alpha bits.
+		result.insert(result.end(), pixels.begin(), pixels.end());
+		return result;
+	}
 }
 
 TEST(ImageTest, LoadsKnownRGBPixelsFromEncodedBytesAndDoesNotBorrowInput)
@@ -108,9 +127,25 @@ TEST(ImageTest, DISABLED_OversizedEncodedSpanNeedsSyntheticAddressSpaceSeam)
 	GTEST_SKIP() << "A span larger than INT_MAX requires a genuinely addressable multi-gigabyte range; Image exposes no decoder-size seam.";
 }
 
-TEST(ImageTest, DISABLED_DualChannelAndRGBAFixturesNeedDeterministicEncodedAssets)
+TEST(ImageTest, DualChannelAndRGBAFixturesNeedDeterministicEncodedAssets)
 {
-	GTEST_SKIP() << "The repository currently provides no deterministic two-channel or transparent encoded image fixture.";
+	const std::vector<std::uint8_t> dualPixels{10, 20, 30, 40, 50, 60, 70, 80};
+	const spk::Image dual(makeTga(3, 2, 2, 16, dualPixels));
+	EXPECT_EQ(dual.size(), spk::Vector2UInt(2, 2));
+	EXPECT_EQ(dual.format(), spk::Texture::Format::DualChannel);
+	EXPECT_EQ(dual.pixels(), dualPixels);
+
+	// TGA stores true-color channels as BGRA; Image exposes decoded RGBA pixels.
+	const std::vector<std::uint8_t> encodedBgra{
+		3, 2, 1, 4, 30, 20, 10, 40,
+		100, 90, 80, 110, 140, 130, 120, 150};
+	const std::vector<std::uint8_t> expectedRgba{
+		1, 2, 3, 4, 10, 20, 30, 40,
+		80, 90, 100, 110, 120, 130, 140, 150};
+	const spk::Image rgba(makeTga(2, 2, 2, 32, encodedBgra));
+	EXPECT_EQ(rgba.size(), spk::Vector2UInt(2, 2));
+	EXPECT_EQ(rgba.format(), spk::Texture::Format::RGBA);
+	EXPECT_EQ(rgba.pixels(), expectedRgba);
 }
 
 TEST(SpriteSheetTest, NonSquareGridMapsCoordinatesIDsAndPreciseSections)

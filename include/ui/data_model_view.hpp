@@ -44,6 +44,13 @@ namespace spk
 		ResetContract _resetContract;
 		SelectionProvider _selectionProvider;
 
+		void _clampScrollOffset()
+		{
+			const unsigned int contentExtent = _contentExtent();
+			const unsigned int maximum = contentExtent > geometry().height ? contentExtent - geometry().height : 0;
+			_scrollOffset = std::min(_scrollOffset, maximum);
+		}
+
 		void _detachModelContracts()
 		{
 			_insertedContract.resign();
@@ -71,6 +78,7 @@ namespace spk
 			}
 
 			_updateSizeHint();
+			_clampScrollOffset();
 			_updateItemGeometry();
 
 			if (notifySelection && previousID != _selectedRowID)
@@ -205,6 +213,7 @@ namespace spk
 
 		void _onGeometryChange() override
 		{
+			_clampScrollOffset();
 			_updateItemGeometry();
 		}
 

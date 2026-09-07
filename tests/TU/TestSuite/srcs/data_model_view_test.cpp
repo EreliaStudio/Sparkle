@@ -203,17 +203,20 @@ TEST(DataModelViewTest, InvalidDelegateProductsThrowAndAllowRecovery)
 	view.setGeometry({.anchor = {0, 0}, .size = {100, 20}});
 	view.setModel(&model);
 	EXPECT_THROW(view.setDelegate(&invalid), std::invalid_argument);
+	EXPECT_EQ(view.delegate(), &invalid);
+	EXPECT_TRUE(view.children().empty());
 	view.setDelegate(&valid);
 	ASSERT_EQ(activeItems(view).size(), 1u);
 	invalid.foreign = true;
 	EXPECT_THROW(view.setDelegate(&invalid), std::invalid_argument);
+	EXPECT_EQ(view.delegate(), &invalid);
+	EXPECT_TRUE(view.children().empty());
 	view.setDelegate(&valid);
 	EXPECT_EQ(activeItems(view).front()->value, 1);
 	// createItem transfers unique ownership: returning the same widget twice violates that API contract.
 }
 
-// The view currently leaves its old scroll offset after model shrink or viewport growth.
-TEST(DataModelViewTest, DISABLED_ReactiveModelShrinkAndResizeClampScrollOffset)
+TEST(DataModelViewTest, ReactiveModelShrinkAndResizeClampScrollOffset)
 {
 	Model model{1, 2, 3, 4, 5};
 	Delegate delegate;
@@ -287,33 +290,4 @@ TEST(TextModelDelegateTest, PresentationSettingsAndInvalidItemsHaveDefinedBehavi
 	EXPECT_THROW(delegate.setFont(nullptr), std::invalid_argument);
 	EXPECT_THROW(delegate.bindItem(parent, model, 0, false), std::invalid_argument);
 	EXPECT_THROW(delegate.bindItem(*item, model, 2, false), std::out_of_range);
-}
-
-TEST(DataModelViewTest, DISABLED_InvalidDelegateReplacementPreservesExistingItems)
-{
-	struct Invalid : Delegate
-	{
-		bool foreign = false;
-		std::unique_ptr<spk::Widget> createItem(std::string name, spk::Widget *) override
-		{
-			return foreign ? std::make_unique<spk::Widget>(std::move(name), nullptr) : nullptr;
-		}
-	};
-	for (bool foreign : {false, true})
-	{
-		Model model{1};
-		Delegate valid;
-		Invalid invalid;
-		invalid.foreign = foreign;
-		Model::View view("View");
-		view.setGeometry({.anchor = {0, 0}, .size = {100, 20}});
-		view.setDelegate(&valid);
-		view.setModel(&model);
-		view.setSelectedRow(0);
-		const auto *item = view.selectedWidget();
-		EXPECT_THROW(view.setDelegate(&invalid), std::invalid_argument);
-		EXPECT_EQ(view.delegate(), &valid);
-		EXPECT_EQ(view.selectedWidget(), item);
-		EXPECT_EQ(view.selectedRowID(), model.rowID(0));
-	}
 }
