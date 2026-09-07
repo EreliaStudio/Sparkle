@@ -23,13 +23,13 @@ namespace spk
 		bool stencil = false;
 	};
 
-	class FrameBufferObject;
+	class Framebuffer;
 	class RenderContext;
 	class Sampler;
 
 	class Texture : public GPUResource
 	{
-		friend class FrameBufferObject;
+		friend class Framebuffer;
 		friend class Sampler;
 
 	public:

@@ -13,6 +13,7 @@
 #include <stb_image_write.h>
 
 #include "core/platform/window.hpp"
+#include "graphics/opengl/framebuffer.hpp"
 
 namespace
 {
@@ -35,10 +36,8 @@ namespace sparkle_test
 		spk::Window::Native native{"OpenGL test native window"};
 		spk::Window::Surface surface{"OpenGL test surface"};
 		spk::RenderContext renderContext{.targetSurface = &surface};
+		spk::Framebuffer framebuffer{{FramebufferWidth, FramebufferHeight}};
 		std::thread::id ownerThread = std::this_thread::get_id();
-		GLuint framebuffer = 0;
-		GLuint colorTexture = 0;
-		GLuint depthStencilBuffer = 0;
 
 		Impl()
 		{
@@ -79,12 +78,6 @@ namespace sparkle_test
 			try
 			{
 				surface.makeCurrent();
-				if (depthStencilBuffer != 0)
-					::glDeleteRenderbuffers(1, &depthStencilBuffer);
-				if (colorTexture != 0)
-					::glDeleteTextures(1, &colorTexture);
-				if (framebuffer != 0)
-					::glDeleteFramebuffers(1, &framebuffer);
 				surface.destroy();
 			}
 			catch (...)
@@ -101,25 +94,7 @@ namespace sparkle_test
 
 		void createFramebuffer()
 		{
-			::glGenFramebuffers(1, &framebuffer);
-			::glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-
-			::glGenTextures(1, &colorTexture);
-			::glBindTexture(GL_TEXTURE_2D, colorTexture);
-			::glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, FramebufferWidth, FramebufferHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-			::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-			::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-			::glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorTexture, 0);
-
-			::glGenRenderbuffers(1, &depthStencilBuffer);
-			::glBindRenderbuffer(GL_RENDERBUFFER, depthStencilBuffer);
-			::glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, FramebufferWidth, FramebufferHeight);
-			::glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depthStencilBuffer);
-
-			if (::glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-			{
-				throw std::runtime_error("Failed to create the shared OpenGL test framebuffer");
-			}
+			framebuffer.activate(renderContext);
 		}
 
 		void requireOwnerThread() const
@@ -171,7 +146,7 @@ namespace sparkle_test
 		{
 		}
 		_impl->surface.setGeometry({.anchor = {0, 0}, .size = {FramebufferWidth, FramebufferHeight}});
-		::glBindFramebuffer(GL_FRAMEBUFFER, _impl->framebuffer);
+		_impl->framebuffer.activate(_impl->renderContext);
 		::glDrawBuffer(GL_COLOR_ATTACHMENT0);
 		::glReadBuffer(GL_COLOR_ATTACHMENT0);
 		::glUseProgram(0);

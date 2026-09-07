@@ -407,6 +407,14 @@ Public data-only records and enums are tested with the class that consumes them.
 - **[throws `std::logic_error`]** Unsupported target/source operations, resize/write a render target, pixels from render target, synchronize empty/invalid/incompatible textures, or export non-CPU/non-color/empty textures.
 - **[throws `std::runtime_error`]** OpenGL texture creation or PNG writing failure.
 
+### `spk::Framebuffer`
+
+- **Standard usage:** create color plus depth/depth-stencil render-target attachments, activate the framebuffer, render into it, and consume its color texture.
+- Cover multiple color attachments, depth-only framebuffers, move/lifetime behavior, resizing, per-surface realization/recycling, completeness, draw/read buffer selection, and attachment access.
+- **[throws `std::invalid_argument`/`std::overflow_error`]** Reject zero or oversized dimensions, color/depth format mismatches, and configurations without attachments.
+- **[throws `std::out_of_range`]** Reject color-attachment indices and counts beyond the current OpenGL limits.
+- **[throws `std::runtime_error`]** Report OpenGL framebuffer creation and incomplete attachment configurations.
+
 ### `spk::Image`
 
 - **Standard usage:** load the same known image from file and encoded bytes and verify dimensions, RGBA conversion, pixels, and PNG round trip.
