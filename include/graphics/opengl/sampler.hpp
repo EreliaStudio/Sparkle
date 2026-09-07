@@ -42,7 +42,7 @@ namespace spk
 	private:
 		std::size_t _bindingPoint = 0;
 		const Texture *_texture = nullptr;
-		Filtering _filtering = Filtering::Linear;
+		Filtering _filtering = Filtering::Nearest;
 		Wrap _wrap = Wrap::ClampToEdge;
 		MipmapFiltering _mipmapFiltering = MipmapFiltering::Disabled;
 
@@ -59,7 +59,7 @@ namespace spk
 	public:
 		explicit Sampler(
 			std::size_t bindingPoint,
-			Filtering filtering = Filtering::Linear,
+			Filtering filtering = Filtering::Nearest,
 			Wrap wrap = Wrap::ClampToEdge,
 			MipmapFiltering mipmapFiltering = MipmapFiltering::Disabled);
 

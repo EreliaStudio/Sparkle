@@ -42,6 +42,8 @@ namespace
 			<< "Different pixels: " << result.differentPixelCount << "\n"
 			<< "Actual size: " << result.actualWidth << "x" << result.actualHeight << "\n"
 			<< "Expected size: " << result.expectedWidth << "x" << result.expectedHeight << "\n"
+			<< "Actual image: " << actual << "\n"
+			<< "Expected image: " << expected << "\n"
 			<< "Difference image: " << difference;
 	}
 
@@ -198,7 +200,7 @@ TEST(AnimationLabelTest, InactiveLabelDoesNotAdvance)
 	EXPECT_EQ(label.currentFrame(), 1u);
 }
 
-TEST(AnimationLabelRenderTest, DISABLED_FirstFrame)
+TEST(AnimationLabelRenderTest, FirstFrame)
 {
 	spk::AnimationLabel label("Animation", defaultStyle().iconset.get());
 	label.setGeometry({.anchor = {80, 70}, .size = {180, 180}});
@@ -207,7 +209,7 @@ TEST(AnimationLabelRenderTest, DISABLED_FirstFrame)
 	expectWidgetImage(label, "ui/widget/animation_label", "first_frame");
 }
 
-TEST(AnimationLabelRenderTest, DISABLED_AlternateFrame)
+TEST(AnimationLabelRenderTest, AlternateFrame)
 {
 	spk::AnimationLabel label("Animation", defaultStyle().iconset.get());
 	label.setGeometry({.anchor = {80, 70}, .size = {180, 180}});
@@ -221,7 +223,7 @@ TEST(AnimationLabelRenderTest, DISABLED_AlternateFrame)
 	expectWidgetImage(label, "ui/widget/animation_label", "alternate_frame");
 }
 
-TEST(AnimationLabelRenderTest, DISABLED_Resized)
+TEST(AnimationLabelRenderTest, Resized)
 {
 	spk::AnimationLabel label("Animation", defaultStyle().iconset.get());
 	label.setGeometry({.anchor = {40, 40}, .size = {320, 120}});

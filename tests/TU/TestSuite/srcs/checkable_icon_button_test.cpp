@@ -39,6 +39,8 @@ namespace
 			<< "Different pixels: " << result.differentPixelCount << "\n"
 			<< "Actual size: " << result.actualWidth << "x" << result.actualHeight << "\n"
 			<< "Expected size: " << result.expectedWidth << "x" << result.expectedHeight << "\n"
+			<< "Actual image: " << actual << "\n"
+			<< "Expected image: " << expected << "\n"
 			<< "Difference image: " << difference;
 	}
 
@@ -164,7 +166,7 @@ TEST(CheckableIconButtonTest, InvalidSpriteCoordinatesPropagate)
 	EXPECT_THROW(button.setCheckedSpriteID(defaultStyle().iconset->nbSprite()), std::out_of_range);
 }
 
-TEST(CheckableIconButtonRenderTest, DISABLED_Unchecked)
+TEST(CheckableIconButtonRenderTest, Unchecked)
 {
 	spk::CheckableIconButton button("Checkable", defaultStyle().iconset.get());
 	button.setGeometry({.anchor = {90, 80}, .size = {96, 64}});
@@ -172,7 +174,7 @@ TEST(CheckableIconButtonRenderTest, DISABLED_Unchecked)
 	expectWidgetImage(button, "ui/widget/checkable_icon_button", "unchecked");
 }
 
-TEST(CheckableIconButtonRenderTest, DISABLED_Checked)
+TEST(CheckableIconButtonRenderTest, Checked)
 {
 	spk::CheckableIconButton button("Checkable", defaultStyle().iconset.get());
 	button.setGeometry({.anchor = {90, 80}, .size = {96, 64}});
@@ -181,7 +183,7 @@ TEST(CheckableIconButtonRenderTest, DISABLED_Checked)
 	expectWidgetImage(button, "ui/widget/checkable_icon_button", "checked");
 }
 
-TEST(CheckableIconButtonRenderTest, DISABLED_AlternateSprites)
+TEST(CheckableIconButtonRenderTest, AlternateSprites)
 {
 	spk::CheckableIconButton button("Checkable", defaultStyle().iconset.get(), 12, 13);
 	button.setGeometry({.anchor = {90, 80}, .size = {128, 96}});

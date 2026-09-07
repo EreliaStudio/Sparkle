@@ -42,6 +42,8 @@ namespace
 			<< "Different pixels: " << result.differentPixelCount << "\n"
 			<< "Actual size: " << result.actualWidth << "x" << result.actualHeight << "\n"
 			<< "Expected size: " << result.expectedWidth << "x" << result.expectedHeight << "\n"
+			<< "Actual image: " << actual << "\n"
+			<< "Expected image: " << expected << "\n"
 			<< "Difference image: " << difference;
 	}
 
@@ -151,7 +153,7 @@ TEST(DynamicTextLabelTest, ProducerExceptionsPropagateAndReplacementRemainsPossi
 	EXPECT_EQ(label.text(), spk::Font::textFromUTF8("recovered"));
 }
 
-TEST(DynamicTextLabelRenderTest, DISABLED_InitialValue)
+TEST(DynamicTextLabelRenderTest, InitialValue)
 {
 	spk::DynamicTextLabel label("Dynamic", defaultStyle().font.get(), [] {
 		return std::string("FPS: 60");
@@ -162,7 +164,7 @@ TEST(DynamicTextLabelRenderTest, DISABLED_InitialValue)
 	expectWidgetImage(label, "ui/widget/dynamic_text_label", "initial_value");
 }
 
-TEST(DynamicTextLabelRenderTest, DISABLED_RefreshedValue)
+TEST(DynamicTextLabelRenderTest, RefreshedValue)
 {
 	int value = 41;
 	spk::DynamicTextLabel label("Dynamic", defaultStyle().font.get(), [&] {

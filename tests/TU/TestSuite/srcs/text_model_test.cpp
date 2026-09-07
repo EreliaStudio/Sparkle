@@ -78,8 +78,3 @@ TEST(TextModelTest, StableIDsAndInheritedNotificationsMatchDataModelBehavior)
 	model.clear();
 	EXPECT_EQ(resets, 1);
 }
-
-TEST(TextModelTest, DISABLED_ViewAndDefaultDelegateRequireTheirDefinitions)
-{
-	GTEST_SKIP() << "TextModel::View and TextModel::Delegate are only forward-declared in the supplied snapshot; their construction/binding API is not available here.";
-}

@@ -1,47 +1,37 @@
 # Sparkle disabled unit-test backlog
 
 
-Last audited: **2026-09-04** against `docs/unit_test_plan.md` and all sources compiled by `SparkleTestSuite`.
+Last audited: **2026-09-07** against `docs/unit_test_plan.md` and all sources compiled by `SparkleTestSuite`.
+
+Current inventory: **111 disabled behaviors**, matching the 111 disabled test instances reported by Google Test.
 
 This file lists behavior that does not have complete TU coverage. **Missing** means no test exists; **Disabled** means a `DISABLED_` specification exists but does not implement the behavior; **Partial** means a test implements only part of the behavior. Test validation and enabled/disabled status do not affect whether complete coverage is removed from this inventory.
 
 Remove an item when its behavior is fully implemented by a test. If only part is implemented, retain the uncovered part.
-
-## `spk::Exception`
-
-1) **ExactFormattingContract** — Disabled  
-Verify exact `what()` formatting: indentation, source frames, nested causes, empty fields, and repeated-call stability.
 
 ## `spk::DataModel<T>`
 
 1) **RowIDOverflowThrows** — Disabled  
 Force row-ID exhaustion through a deterministic seam and verify `std::overflow_error` without model mutation.
 
-2) **MutableDataAccessor** — Disabled  
-If a mutable accessor is added, verify mutation, invalid indices, notifications, and stable row identity.
+## `spk::DataModelView<T>`
 
-## `spk::TextModel`
+1) **ReactiveModelShrinkAndResizeClampScrollOffset** — Disabled
 
-1) **ViewUsesDefaultDelegate** — Disabled  
-Construct its view/default delegate and verify text, enabled state, stable IDs, and inherited notifications.
+Shrink the model and resize the viewport, then verify the scroll offset and visible delegates are clamped and refreshed consistently.
+
+2) **DuplicateDelegateWidgetIsRejected** — Disabled
+
+Reject duplicate widget ownership from a delegate without double destruction or corrupting the existing view.
+
+3) **InvalidDelegateReplacementPreservesExistingItems** — Disabled
+
+Make delegate replacement transactional so a failing replacement leaves the existing items and delegate intact.
 
 ## `spk::JSON::Value`
 
 1) **ParserDiagnosticsExposeExactOffsetAndContext** — Disabled  
 Verify stable byte offsets, nearby source context, and wording for representative malformed documents.
-
-2) **InjectedNonFiniteValueCannotBeSerialized** — Disabled  
-Inject NaN/infinity into an existing value and verify serialization throws `std::runtime_error`.
-
-## `spk::JSON::Error`
-
-1) **ExactComposedWhatFormatting** — Disabled  
-Verify exact formatting for root, key, and index paths, empty fields, and copied/moved errors.
-
-## `spk::PolymorphicContainer<T>`
-
-1) **AlreadyRemovedOwnedElementCannotBeUnregisteredAgain** — Disabled  
-Provide a lifetime-safe seam and verify repeated removal is rejected without accessing destroyed storage.
 
 ## `spk::VersionedTrait`
 
@@ -57,11 +47,6 @@ Inject `CreateEventW` failure and verify `std::system_error`, Win32 code, and op
 
 1) **UnregistrationFailureReportsCodeAndOperation** — Disabled  
 Inject `UnregisterClassW` failure and verify diagnostics and safe cleanup.
-
-## `spk::Window::Native`
-
-1) **IdentifierPreservationIsObservable** — Disabled  
-Expose the identifier and verify it throughout the pending/ready/releasing/released lifecycle.
 
 ## `spk::Window::State`
 
@@ -113,16 +98,13 @@ Release native state between platform and surface creation and verify determinis
 
 ## `spk::Registry::Query`
 
-1) **CopyMoveRestrictionsAreExplicit** — Disabled  
-Add compile-time assertions for intended copy/move operations.
-
-2) **ContainParticipantSupportsTypeRegexPredicateAndReactiveEdits** — Disabled  
+1) **ContainParticipantSupportsTypeRegexPredicateAndReactiveEdits** — Disabled
 Query participants by type/name/predicate and verify additions, removals, and renames update results.
 
-3) **ContainBehaviourSupportsTypeRegexPredicateAndReactiveEdits** — Disabled  
+2) **ContainBehaviourSupportsTypeRegexPredicateAndReactiveEdits** — Disabled
 Exercise the same matrix for behaviours.
 
-4) **AttachmentNameChangesInvalidateRegexQueries** — Disabled  
+3) **AttachmentNameChangesInvalidateRegexQueries** — Disabled
 Rename after positive/negative caching and verify name/regex results invalidate.
 
 ## `spk::EntityAttachmentCollection<T>`
@@ -160,15 +142,15 @@ Add/remove systems during update and verify current/next-frame traversal rules.
 2) **EntitiesMayMutateDuringUpdateSafely** — Disabled  
 Add/remove entities during traversal and verify iteration, ownership, and registry state.
 
+## `spk::Event`
+
+1) **OutOfRangeFocusChannelHasDefinedBehavior** — Disabled
+
+Pass an invalid focus-channel value and verify it is rejected before any channel-indexed access.
+
 ## `spk::Texture`
 
-1) **RenderTargetConstructionAndLifecycle** — Disabled  
-Expose render-target allocation and verify format, dimensions, activation, resize, and cleanup.
-
-2) **ByteCountOverflowContract** — Disabled  
-Provide a synthetic size seam, or remove the unreachable requirement, and verify pre-allocation rejection.
-
-3) **OpenGLAndPNGFailuresAreReported** — Disabled  
+1) **OpenGLAndPNGFailuresAreReported** — Disabled
 Inject texture/OpenGL/PNG failures and verify diagnostics and cleanup.
 
 ## `spk::Image`
@@ -217,6 +199,16 @@ Execute an offset viewport and inspect its projection matrix and reserved UBO bi
 
 2) **RepeatedExecutionKeepsProjectionAndBindingStable** — Disabled  
 Verify repeated execution uploads identical data without stale GL state.
+
+## `spk::DebugOverlay`
+
+1) **SingleCellRenderGolden** — Disabled
+
+Render one populated cell and compare it with the reviewed golden image without terminating during fixture teardown.
+
+2) **GridRenderGolden** — Disabled
+
+Render a deterministic multi-cell grid and compare it with the reviewed golden image without lifetime failures.
 
 ## `spk::DrawColorMeshRenderCommand`
 
@@ -382,10 +374,59 @@ Verify shared-font commands retain independent text, colors, and anchors.
 12) **FontLifetimeContractIsExercised** — Disabled  
 Verify ownership across command construction, execution, and destruction.
 
-## `spk::IconButton`
+## `spk::SpinBox<T>`
 
-1) **CoordinatesWithoutIconsetThrow** — Disabled  
-Create a public no-iconset state and verify coordinate resolution throws `std::logic_error`.
+1) **ArithmeticAtUnsignedExtremaSaturatesBeforeApplyingLimits** — Disabled
+
+Exercise increments and decrements at unsigned extrema and verify checked arithmetic clamps before applying configured limits.
+
+2) **SignedExtremaSaturateBeforeNarrowing** — Disabled
+
+Exercise signed extrema and verify arithmetic saturates before narrowing or applying limits.
+
+## `spk::ScalableWidget`
+
+1) **ParentBoundsConstrainAllResizeDirections** — Disabled
+
+Resize from every edge and corner and verify the resulting geometry remains within the parent bounds.
+
+2) **MouseFocusReleaseAndDeactivationCancelResizing** — Disabled
+
+Lose mouse focus or deactivate during a resize and verify capture and pending resize state are cleared.
+
+## Widget interaction behavior
+
+1) **PushButtonWindowFocusLossCancelsPendingClick** — Disabled
+
+Press a push button, remove window focus, and verify release cannot complete the pending click.
+
+2) **PushButtonDeactivationCancelsPendingClick** — Disabled
+
+Deactivate a pressed push button and verify its pending click and capture state are cancelled.
+
+3) **ToggleSwitchFocusLossCancelsPendingToggle** — Disabled
+
+Remove focus during a pending toggle and verify release does not change the value.
+
+4) **TooltipDestroyedTargetIsForgotten** — Disabled
+
+Destroy the tooltip target and verify later updates do not retain or dereference the expired target.
+
+5) **TooltipMaximumWidthClampsUnbreakableTextIncludingZero** — Disabled
+
+Verify long unbreakable text and a zero maximum width follow the defined wrapping and clamping behavior.
+
+## `spk::Widget` rendering
+
+1) **ExistingTextSnapshotSurvivesAtlasGrowthAndFontMove** — Disabled
+
+Grow and move the font atlas after snapshot creation and verify the existing text snapshot remains valid or follows the documented invalidation contract.
+
+## `spk::Workspace`
+
+1) **ApplyStylePropagatesToContentAndMenus** — Disabled
+
+Apply a new style after construction and verify existing content and menus receive it consistently.
 
 ## `spk::MenuBar::Menu::Break`
 

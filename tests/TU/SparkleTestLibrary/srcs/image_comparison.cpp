@@ -141,6 +141,7 @@ namespace sparkle_test
 		else
 		{
 			std::filesystem::remove(p_actualPath);
+			std::filesystem::remove(p_differencePath);
 			removeEmptyResultDirectories(p_actualPath.parent_path());
 		}
 

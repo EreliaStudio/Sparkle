@@ -26,6 +26,8 @@ namespace spk
 		});
 		setIndicatorSize(_indicatorSize);
 		setSpacing(_spacing);
+		_indicator.setUncheckedSpriteID(DefaultUncheckedSpriteCoordinates);
+		_indicator.setCheckedSpriteID(DefaultCheckedSpriteCoordinates);
 		activate();
 	}
 
@@ -159,6 +161,11 @@ namespace spk
 		Widget(std::move(name), parent)
 	{
 		applyStyle(defaultStyle);
+		if (_iconset != nullptr)
+		{
+			_uncheckedSpriteID = _iconset->spriteID(RadioButton::DefaultUncheckedSpriteCoordinates);
+			_checkedSpriteID = _iconset->spriteID(RadioButton::DefaultCheckedSpriteCoordinates);
+		}
 		activate();
 	}
 	RadioButtonGroup::RadioButtonGroup(std::string name, const SpriteSheet *iconset, Font *font, Widget *parent) :

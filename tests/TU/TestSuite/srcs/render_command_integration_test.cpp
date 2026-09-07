@@ -196,8 +196,13 @@ TEST(RenderCommandIntegrationTest, CompleteGoldenScene)
 	snapshot.execute(context.renderContext());
 	const auto actual = sparkle_test::resultImagePath("rendering/integration", "complete_scene");
 	const auto expected = sparkle_test::expectedImagePath("rendering/integration", "complete_scene");
+	const auto difference = sparkle_test::resultImagePath("rendering/integration", "complete_scene_difference");
 	context.save(actual);
 	ASSERT_TRUE(std::filesystem::exists(expected)) << "Missing golden: " << expected << "; rendered: " << actual;
-	const auto result = sparkle_test::compareImages(actual, expected, sparkle_test::resultImagePath("rendering/integration", "complete_scene_difference"));
-	EXPECT_TRUE(result.matches) << result.differentPixelCount << " pixels differ";
+	const auto result = sparkle_test::compareImages(actual, expected, difference);
+	EXPECT_TRUE(result.matches)
+		<< result.differentPixelCount << " pixels differ\n"
+		<< "Actual image: " << actual << "\n"
+		<< "Expected image: " << expected << "\n"
+		<< "Difference image: " << difference;
 }

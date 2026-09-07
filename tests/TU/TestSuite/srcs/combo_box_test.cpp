@@ -71,6 +71,8 @@ namespace
 			<< "Different pixels: " << result.differentPixelCount << "\n"
 			<< "Actual size: " << result.actualWidth << "x" << result.actualHeight << "\n"
 			<< "Expected size: " << result.expectedWidth << "x" << result.expectedHeight << "\n"
+			<< "Actual image: " << actual << "\n"
+			<< "Expected image: " << expected << "\n"
 			<< "Difference image: " << difference;
 	}
 
@@ -278,7 +280,7 @@ TEST(ComboBoxTest, SelectingAViewRowUpdatesDisplayAndClosesPopup)
 	EXPECT_FALSE(combo.isOpen());
 }
 
-TEST(ComboBoxRenderTest, DISABLED_Placeholder)
+TEST(ComboBoxRenderTest, Placeholder)
 {
 	spk::ComboBox combo("Combo");
 	combo.setPlaceholder("Select an item");
@@ -287,7 +289,7 @@ TEST(ComboBoxRenderTest, DISABLED_Placeholder)
 	expectWidgetImage(combo, "ui/widget/combo_box", "placeholder");
 }
 
-TEST(ComboBoxRenderTest, DISABLED_SelectedItem)
+TEST(ComboBoxRenderTest, SelectedItem)
 {
 	spk::ComboBox::Model model{"Alpha", "Beta", "Gamma"};
 	spk::ComboBox combo("Combo");
@@ -298,7 +300,7 @@ TEST(ComboBoxRenderTest, DISABLED_SelectedItem)
 	expectWidgetImage(combo, "ui/widget/combo_box", "selected_item");
 }
 
-TEST(ComboBoxRenderTest, DISABLED_OpenPopup)
+TEST(ComboBoxRenderTest, OpenPopup)
 {
 	spk::ComboBox::Model model{"Alpha", "Beta", "Gamma", "Delta", "Epsilon"};
 	spk::ComboBox combo("Combo");

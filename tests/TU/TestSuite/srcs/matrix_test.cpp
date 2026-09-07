@@ -191,8 +191,7 @@ namespace
 		EXPECT_THROW((void)spk::Matrix4x4::perspective(pi / 2.0f, 1.0f, 2.0f, 1.0f), std::invalid_argument);
 	}
 
-	// Current public validation only compares numeric ranges and does not reject every NaN/infinity case.
-	TEST(MatrixTest, DISABLED_PerspectiveRejectsNonFiniteParameters)
+	TEST(MatrixTest, PerspectiveRejectsNonFiniteParameters)
 	{
 		const float nan = std::numeric_limits<float>::quiet_NaN();
 		const float infinity = std::numeric_limits<float>::infinity();

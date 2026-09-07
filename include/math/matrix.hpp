@@ -148,7 +148,9 @@ namespace spk
 		[[nodiscard]] static Matrix perspective(float verticalFieldOfView, float aspectRatio, float nearPlane, float farPlane)
 			requires(SizeX == 4 && SizeY == 4)
 		{
-			if (verticalFieldOfView <= 0.0f || verticalFieldOfView >= 3.14159265358979323846f ||
+			if (!std::isfinite(verticalFieldOfView) || !std::isfinite(aspectRatio) ||
+				!std::isfinite(nearPlane) || !std::isfinite(farPlane) ||
+				verticalFieldOfView <= 0.0f || verticalFieldOfView >= 3.14159265358979323846f ||
 				aspectRatio <= 0.0f || nearPlane <= 0.0f || farPlane <= nearPlane)
 			{
 				throw std::invalid_argument("Invalid perspective projection parameters");

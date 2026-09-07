@@ -144,16 +144,6 @@ TEST(TextureTest, MovePreservesIdentityAndPixelContent)
 	EXPECT_EQ(moved.pixels(), (std::vector<std::uint8_t>{1, 2, 3}));
 }
 
-TEST(TextureTest, DISABLED_RenderTargetContractNeedsPublicConstructionSeam)
-{
-	GTEST_SKIP() << "Texture render-target allocation is private and only framebuffer internals are friends; no public fixture can exercise it.";
-}
-
-TEST(TextureTest, DISABLED_ByteCountOverflowIsUnreachableWithPublic32BitDimensions)
-{
-	GTEST_SKIP() << "On this 64-bit build, two uint32 dimensions times four bytes cannot overflow size_t.";
-}
-
 TEST(TextureTest, DISABLED_OpenGLAndPngFailureInjectionNeedDedicatedSeams)
 {
 	GTEST_SKIP() << "The API cannot inject glGenTextures or stb_image_write failures deterministically.";
@@ -188,7 +178,7 @@ TEST(SamplerTest, PropertiesTextureAndBindingAreObservableInOpenGL)
 TEST(SamplerTest, AllSettersAndCombinedPropertiesUpdateAccessors)
 {
 	spk::Sampler sampler(7);
-	EXPECT_EQ(sampler.filtering(), spk::Sampler::Filtering::Linear);
+	EXPECT_EQ(sampler.filtering(), spk::Sampler::Filtering::Nearest);
 	EXPECT_EQ(sampler.wrap(), spk::Sampler::Wrap::ClampToEdge);
 	EXPECT_EQ(sampler.mipmapFiltering(), spk::Sampler::MipmapFiltering::Disabled);
 	sampler.setFiltering(spk::Sampler::Filtering::Nearest);

@@ -39,6 +39,8 @@ namespace
 			<< "Different pixels: " << result.differentPixelCount << "\n"
 			<< "Actual size: " << result.actualWidth << "x" << result.actualHeight << "\n"
 			<< "Expected size: " << result.expectedWidth << "x" << result.expectedHeight << "\n"
+			<< "Actual image: " << actual << "\n"
+			<< "Expected image: " << expected << "\n"
 			<< "Difference image: " << difference;
 	}
 
@@ -152,7 +154,7 @@ TEST(CommandPanelTest, MissingOperationsReportRequestedName)
 	EXPECT_THROW(panel.removeButton("present"), std::out_of_range);
 }
 
-TEST(CommandPanelRenderTest, DISABLED_Empty)
+TEST(CommandPanelRenderTest, Empty)
 {
 	spk::CommandPanel panel("Commands");
 	panel.setGeometry({.anchor = {40, 40}, .size = {360, 70}});
@@ -160,7 +162,7 @@ TEST(CommandPanelRenderTest, DISABLED_Empty)
 	expectWidgetImage(panel, "ui/widget/command_panel", "empty");
 }
 
-TEST(CommandPanelRenderTest, DISABLED_ThreeButtons)
+TEST(CommandPanelRenderTest, ThreeButtons)
 {
 	spk::CommandPanel panel("Commands");
 	panel.addButton("apply", "Apply");
@@ -171,7 +173,7 @@ TEST(CommandPanelRenderTest, DISABLED_ThreeButtons)
 	expectWidgetImage(panel, "ui/widget/command_panel", "three_buttons");
 }
 
-TEST(CommandPanelRenderTest, DISABLED_PaddedButtons)
+TEST(CommandPanelRenderTest, PaddedButtons)
 {
 	spk::CommandPanel panel("Commands");
 	panel.addButton("yes", "Yes");

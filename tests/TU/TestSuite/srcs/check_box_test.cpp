@@ -39,6 +39,8 @@ namespace
 			<< "Different pixels: " << result.differentPixelCount << "\n"
 			<< "Actual size: " << result.actualWidth << "x" << result.actualHeight << "\n"
 			<< "Expected size: " << result.expectedWidth << "x" << result.expectedHeight << "\n"
+			<< "Actual image: " << actual << "\n"
+			<< "Expected image: " << expected << "\n"
 			<< "Difference image: " << difference;
 	}
 
@@ -178,7 +180,7 @@ TEST(CheckBoxTest, InactiveCheckboxIgnoresClick)
 	EXPECT_FALSE(box.isChecked());
 }
 
-TEST(CheckBoxRenderTest, DISABLED_Unchecked)
+TEST(CheckBoxRenderTest, Unchecked)
 {
 	spk::CheckBox box("CheckBox");
 	box.setText("Enable shadows");
@@ -187,7 +189,7 @@ TEST(CheckBoxRenderTest, DISABLED_Unchecked)
 	expectWidgetImage(box, "ui/widget/check_box", "unchecked");
 }
 
-TEST(CheckBoxRenderTest, DISABLED_Checked)
+TEST(CheckBoxRenderTest, Checked)
 {
 	spk::CheckBox box("CheckBox");
 	box.setText("Enable shadows");
@@ -197,7 +199,7 @@ TEST(CheckBoxRenderTest, DISABLED_Checked)
 	expectWidgetImage(box, "ui/widget/check_box", "checked");
 }
 
-TEST(CheckBoxRenderTest, DISABLED_CustomSpacingAndIndicatorSize)
+TEST(CheckBoxRenderTest, CustomSpacingAndIndicatorSize)
 {
 	spk::CheckBox box("CheckBox");
 	box.setText("Large indicator");

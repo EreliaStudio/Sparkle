@@ -39,6 +39,8 @@ namespace
 			<< "Different pixels: " << result.differentPixelCount << "\n"
 			<< "Actual size: " << result.actualWidth << "x" << result.actualHeight << "\n"
 			<< "Expected size: " << result.expectedWidth << "x" << result.expectedHeight << "\n"
+			<< "Actual image: " << actual << "\n"
+			<< "Expected image: " << expected << "\n"
 			<< "Difference image: " << difference;
 	}
 
@@ -93,12 +95,6 @@ TEST(IconButtonTest, InvalidIconInputsPropagate)
 	EXPECT_THROW(button.setIconSpriteID(defaultStyle().iconset->nbSprite()), std::out_of_range);
 }
 
-TEST(IconButtonTest, DISABLED_CoordinateResolutionWithoutIconsetThrows)
-{
-	// No public API can currently create an IconButton without the default-style iconset.
-	// Keep this contract visible until such construction or iconset removal is supported.
-}
-
 TEST(IconButtonTest, ClickUsesInheritedPushButtonContract)
 {
 	spk::IconButton button("Icon", defaultStyle().iconset.get(), 0);
@@ -121,7 +117,7 @@ TEST(IconButtonTest, ClickUsesInheritedPushButtonContract)
 	EXPECT_EQ(calls, 1);
 }
 
-TEST(IconButtonRenderTest, DISABLED_DefaultSprite)
+TEST(IconButtonRenderTest, DefaultSprite)
 {
 	spk::IconButton button("Icon", defaultStyle().iconset.get(), 0);
 	button.setGeometry({.anchor = {80, 70}, .size = {120, 80}});
@@ -129,7 +125,7 @@ TEST(IconButtonRenderTest, DISABLED_DefaultSprite)
 	expectWidgetImage(button, "ui/widget/icon_button", "default_sprite");
 }
 
-TEST(IconButtonRenderTest, DISABLED_AlternateSprite)
+TEST(IconButtonRenderTest, AlternateSprite)
 {
 	spk::IconButton button("Icon", defaultStyle().iconset.get(), 22);
 	button.setGeometry({.anchor = {80, 70}, .size = {120, 80}});
@@ -137,7 +133,7 @@ TEST(IconButtonRenderTest, DISABLED_AlternateSprite)
 	expectWidgetImage(button, "ui/widget/icon_button", "alternate_sprite");
 }
 
-TEST(IconButtonRenderTest, DISABLED_LargeGeometry)
+TEST(IconButtonRenderTest, LargeGeometry)
 {
 	spk::IconButton button("Icon", defaultStyle().iconset.get(), 8);
 	button.setGeometry({.anchor = {40, 40}, .size = {260, 130}});

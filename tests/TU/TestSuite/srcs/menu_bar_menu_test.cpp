@@ -23,8 +23,15 @@ namespace
 		const auto expected = sparkle_test::expectedImagePath(category, name);
 		const auto difference = sparkle_test::resultImagePath(category, name + "_difference");
 		context.save(actual);
-		ASSERT_TRUE(std::filesystem::exists(expected)) << "Missing golden image: " << expected;
-		EXPECT_TRUE(sparkle_test::compareImages(actual, expected, difference).matches);
+		ASSERT_TRUE(std::filesystem::exists(expected))
+			<< "Missing golden image: " << expected << "\n"
+			<< "Actual image: " << actual;
+		const auto result = sparkle_test::compareImages(actual, expected, difference);
+		EXPECT_TRUE(result.matches)
+			<< "Different pixels: " << result.differentPixelCount << "\n"
+			<< "Actual image: " << actual << "\n"
+			<< "Expected image: " << expected << "\n"
+			<< "Difference image: " << difference;
 	}
 }
 
@@ -50,7 +57,7 @@ TEST(MenuBarMenuTest, BackgroundAccessorsAreStable)
 	EXPECT_EQ(&constant.background(), &menu.background());
 }
 
-TEST(MenuBarMenuRenderTest, DISABLED_StandaloneWithSeparator)
+TEST(MenuBarMenuRenderTest, StandaloneWithSeparator)
 {
 	spk::MenuBar::Menu menu("Menu");
 	menu.addItem("open", "Open");

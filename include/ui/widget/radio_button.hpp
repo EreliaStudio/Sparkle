@@ -21,6 +21,9 @@ namespace spk
 		friend class RadioButtonGroup;
 
 	public:
+		static constexpr Vector2UInt DefaultUncheckedSpriteCoordinates{9, 0};
+		static constexpr Vector2UInt DefaultCheckedSpriteCoordinates{0, 1};
+
 		using StateProvider = ContractProvider<bool>;
 		using StateCallback = StateProvider::callback_type;
 		using StateContract = StateProvider::Contract;

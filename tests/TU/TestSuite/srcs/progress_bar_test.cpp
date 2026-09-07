@@ -64,8 +64,7 @@ TEST(ProgressBarTest, InfiniteRatiosClampToEndpoints)
 	EXPECT_EQ(bar.ratio(), 0);
 }
 
-// NaN currently reaches lround and integer conversion while computing fill geometry.
-TEST(ProgressBarTest, DISABLED_NaNRatioIsRejectedWithoutMutation)
+TEST(ProgressBarTest, NaNRatioIsRejectedWithoutMutation)
 {
 	spk::ProgressBar bar("Progress");
 	bar.setRatio(0.5f);

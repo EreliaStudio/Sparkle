@@ -311,8 +311,3 @@ TEST(JSONValueTest, DISABLED_ExactParserOffsetContextContractRequiresParserImple
 {
 	GTEST_SKIP() << "The backlog requires useful parse offsets/context, but the supplied Value header does not define the parser diagnostic format. The enabled parse-error test still verifies a non-empty diagnostic.";
 }
-
-TEST(JSONValueTest, DISABLED_SerializingInjectedNonFiniteValueHasNoPublicConstructionPath)
-{
-	GTEST_SKIP() << "All public floating-point setters reject NaN/infinity before storage, and the supplied API exposes no lower-level test seam for injecting a non-finite stored value.";
-}

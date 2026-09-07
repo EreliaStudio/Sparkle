@@ -74,8 +74,3 @@ TEST(WindowNativeTest, DestructionIsSafeFromEveryPublicLifecycleState)
 		native.markReleased();
 	});
 }
-
-TEST(WindowNativeTest, DISABLED_IdentifierPreservationNeedsObservableAccessor)
-{
-	GTEST_SKIP() << "Window::Native stores an identifier internally, but the supplied public snapshot exposes no identifier accessor or other deterministic observable carrying it.";
-}

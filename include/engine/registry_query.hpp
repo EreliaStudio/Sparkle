@@ -255,6 +255,11 @@ namespace spk
 			insert<FromRegistry<TContext, TType>>();
 		}
 
+		Query(const Query &) = delete;
+		Query &operator=(const Query &) = delete;
+		Query(Query &&) = delete;
+		Query &operator=(Query &&) = delete;
+
 		template <typename TOperationType, typename... TArgs>
 		Query &insert(TArgs &&...args)
 		{

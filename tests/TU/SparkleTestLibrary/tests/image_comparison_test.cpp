@@ -48,6 +48,7 @@ TEST(ImageComparisonTest, MatchingImagesLeaveNoArtifacts)
 
 	ASSERT_NE(stbi_write_png(actualPath.string().c_str(), 2, 2, 4, pixels.data(), 2 * 4), 0);
 	ASSERT_NE(stbi_write_png(expectedPath.string().c_str(), 2, 2, 4, pixels.data(), 2 * 4), 0);
+	ASSERT_NE(stbi_write_png(diffPath.string().c_str(), 2, 2, 4, pixels.data(), 2 * 4), 0);
 
 	const sparkle_test::ImageComparisonResult result = sparkle_test::compareImages(actualPath, expectedPath, diffPath);
 

@@ -12,6 +12,13 @@ TEST(RadioButtonGroupTest, SparseInsertionSelectionAndAccessPreserveInsertionOrd
 	spk::RadioButton &first = group.insert(3, 1, "First");
 	spk::RadioButton &second = group.insert(0, 4, "Second");
 	spk::RadioButton &third = group.insert(2, 0, "Third");
+	ASSERT_NE(spk::Widget::defaultStyle->iconset, nullptr);
+	EXPECT_EQ(
+		first.indicator().uncheckedSpriteID(),
+		spk::Widget::defaultStyle->iconset->spriteID(spk::RadioButton::DefaultUncheckedSpriteCoordinates));
+	EXPECT_EQ(
+		first.indicator().checkedSpriteID(),
+		spk::Widget::defaultStyle->iconset->spriteID(spk::RadioButton::DefaultCheckedSpriteCoordinates));
 
 	EXPECT_EQ(group.size(), 3u);
 	EXPECT_EQ(group.columnCount(), 4u);

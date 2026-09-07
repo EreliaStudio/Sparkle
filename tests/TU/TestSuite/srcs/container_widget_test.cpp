@@ -40,6 +40,8 @@ namespace
 			<< "Different pixels: " << result.differentPixelCount << "\n"
 			<< "Actual size: " << result.actualWidth << "x" << result.actualHeight << "\n"
 			<< "Expected size: " << result.expectedWidth << "x" << result.expectedHeight << "\n"
+			<< "Actual image: " << actual << "\n"
+			<< "Expected image: " << expected << "\n"
 			<< "Difference image: " << difference;
 	}
 
@@ -123,7 +125,7 @@ TEST(ContainerWidgetTest, NegativeAnchorZeroAndOversizedContentArePreserved)
 	EXPECT_EQ(content.geometry().size, spk::Vector2UInt(1000, 900));
 }
 
-TEST(ContainerWidgetRenderTest, DISABLED_TextContent)
+TEST(ContainerWidgetRenderTest, TextContent)
 {
 	spk::ContainerWidget container("Container");
 	spk::TextLabel content("Content", &container);
@@ -137,7 +139,7 @@ TEST(ContainerWidgetRenderTest, DISABLED_TextContent)
 	expectWidgetImage(container, "ui/widget/container_widget", "text_content");
 }
 
-TEST(ContainerWidgetRenderTest, DISABLED_OffsetContent)
+TEST(ContainerWidgetRenderTest, OffsetContent)
 {
 	spk::ContainerWidget container("Container");
 	spk::TextLabel content("Content", &container);

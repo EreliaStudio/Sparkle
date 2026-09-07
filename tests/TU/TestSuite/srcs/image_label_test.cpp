@@ -40,6 +40,8 @@ namespace
 			<< "Different pixels: " << result.differentPixelCount << "\n"
 			<< "Actual size: " << result.actualWidth << "x" << result.actualHeight << "\n"
 			<< "Expected size: " << result.expectedWidth << "x" << result.expectedHeight << "\n"
+			<< "Actual image: " << actual << "\n"
+			<< "Expected image: " << expected << "\n"
 			<< "Difference image: " << difference;
 	}
 
@@ -106,7 +108,7 @@ TEST(ImageLabelTest, EmptyEdgeAndOutOfRangeSectionsAreStoredVerbatim)
 	}
 }
 
-TEST(ImageLabelRenderTest, DISABLED_WholeTexture)
+TEST(ImageLabelRenderTest, WholeTexture)
 {
 	spk::ImageLabel label("Image", defaultStyle().iconset.get());
 	label.setGeometry({.anchor = {60, 50}, .size = {240, 180}});
@@ -114,7 +116,7 @@ TEST(ImageLabelRenderTest, DISABLED_WholeTexture)
 	expectWidgetImage(label, "ui/widget/image_label", "whole_texture");
 }
 
-TEST(ImageLabelRenderTest, DISABLED_SpriteSection)
+TEST(ImageLabelRenderTest, SpriteSection)
 {
 	spk::ImageLabel label("Image", defaultStyle().iconset.get());
 	label.setGeometry({.anchor = {60, 50}, .size = {180, 180}});
@@ -123,7 +125,7 @@ TEST(ImageLabelRenderTest, DISABLED_SpriteSection)
 	expectWidgetImage(label, "ui/widget/image_label", "sprite_section");
 }
 
-TEST(ImageLabelRenderTest, DISABLED_WideGeometry)
+TEST(ImageLabelRenderTest, WideGeometry)
 {
 	spk::ImageLabel label("Image", defaultStyle().iconset.get());
 	label.setGeometry({.anchor = {40, 40}, .size = {340, 100}});

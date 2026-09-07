@@ -39,6 +39,8 @@ namespace
 			<< "Different pixels: " << result.differentPixelCount << "\n"
 			<< "Actual size: " << result.actualWidth << "x" << result.actualHeight << "\n"
 			<< "Expected size: " << result.expectedWidth << "x" << result.expectedHeight << "\n"
+			<< "Actual image: " << actual << "\n"
+			<< "Expected image: " << expected << "\n"
 			<< "Difference image: " << difference;
 	}
 
@@ -107,7 +109,7 @@ TEST(MenuBarTest, DuplicateMenuNameIsRejected)
 	EXPECT_THROW(bar.addMenu("file", "Duplicate"), std::invalid_argument);
 }
 
-TEST(MenuBarRenderTest, DISABLED_ClosedMenus)
+TEST(MenuBarRenderTest, ClosedMenus)
 {
 	spk::MenuBar bar("MenuBar");
 	bar.addMenu("file", "File").addItem("open", "Open");
@@ -117,7 +119,7 @@ TEST(MenuBarRenderTest, DISABLED_ClosedMenus)
 	expectWidgetImage(bar, "ui/widget/menu_bar", "closed_menus");
 }
 
-TEST(MenuBarRenderTest, DISABLED_CustomDimensions)
+TEST(MenuBarRenderTest, CustomDimensions)
 {
 	spk::MenuBar bar("MenuBar");
 	bar.addMenu("file", "File");

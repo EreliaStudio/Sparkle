@@ -69,11 +69,12 @@ namespace
 
 }
 
-TEST(RegistryQueryTest, DISABLED_CopyMoveRestrictionsNeedExplicitPublicContract)
+TEST(RegistryQueryTest, CopyMoveRestrictionsAreExplicit)
 {
-	// The snapshot does not explicitly declare Query copy/move policy.
-	// Keep this backlog requirement visible until the production contract is explicit.
-	GTEST_SKIP() << "Registry::Query copy/move restrictions are not explicit in the supplied snapshot";
+	static_assert(!std::is_copy_constructible_v<Query>);
+	static_assert(!std::is_copy_assignable_v<Query>);
+	static_assert(!std::is_move_constructible_v<Query>);
+	static_assert(!std::is_move_assignable_v<Query>);
 }
 
 TEST(RegistryQueryTest, StandardFromRegistryPredicateIntersectionAndUnionComposition)

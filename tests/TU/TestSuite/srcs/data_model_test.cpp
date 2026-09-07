@@ -187,8 +187,3 @@ TEST(DataModelTest, DISABLED_RowIDOverflowRequiresDeterministicPublicTestSeam)
 {
 	GTEST_SKIP() << "_nextRowID is private and the supplied API exposes no deterministic seam for forcing uint64_t exhaustion.";
 }
-
-TEST(DataModelTest, DISABLED_MutableDataAccessorIsNotPresentInSuppliedPublicAPI)
-{
-	GTEST_SKIP() << "data(std::size_t) is const-only in the supplied DataModel snapshot; a mutable accessor cannot be tested without inventing an API.";
-}

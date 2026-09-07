@@ -64,7 +64,11 @@ TEST(JSONErrorTest, CopiesAndMovesRetainObservableState)
 }
 
 
-TEST(JSONErrorTest, DISABLED_ExactComposedWhatFormattingRequiresImplementationSnapshot)
+TEST(JSONErrorTest, ExactComposedWhatFormatting)
 {
-	GTEST_SKIP() << "Error exposes file/path/message accessors, but the exact std::runtime_error what() composition is implemented outside the supplied header snapshot.";
+	EXPECT_STREQ(spk::JSON::Error("root.json", "$", "root failure").what(), "root.json:$: root failure");
+	EXPECT_STREQ(
+		spk::JSON::Error("config/game.json", "$.players[3].name", "missing value").what(),
+		"config/game.json:$.players[3].name: missing value");
+	EXPECT_STREQ(spk::JSON::Error({}, "", "").what(), ":: ");
 }

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <stdexcept>
 #include <utility>
 
 namespace spk
@@ -70,6 +71,10 @@ namespace spk
 
 	void ProgressBar::setRatio(float ratio)
 	{
+		if (std::isnan(ratio))
+		{
+			throw std::invalid_argument("ProgressBar ratio cannot be NaN");
+		}
 		ratio = std::clamp(ratio, 0.0f, 1.0f);
 		if (_ratio == ratio)
 		{

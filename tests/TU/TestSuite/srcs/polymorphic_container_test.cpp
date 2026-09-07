@@ -328,8 +328,3 @@ TEST(PolymorphicContainerTest, ContainerDestructionDestroysRemainingOwnedElement
 	}
 	EXPECT_EQ(destructionCount, 2);
 }
-
-TEST(PolymorphicContainerTest, DISABLED_UnregisteringAlreadyRemovedOwnedElementCannotBeCalledSafely)
-{
-	GTEST_SKIP() << "unregisterElement takes TBase&, while successful removal destroys the owned object before returning. Calling it again would require a dangling reference and would be undefined behavior.";
-}

@@ -19,6 +19,16 @@ namespace
 	{
 		return text.find(fragment) != std::string::npos;
 	}
+
+	[[nodiscard]] std::string frame(
+		std::size_t indentation,
+		const std::string &message,
+		const std::source_location &location)
+	{
+		const std::string prefix(indentation, '\t');
+		return prefix + location.file_name() + ":" + std::to_string(location.line()) +
+			"\n" + prefix + "\t" + message;
+	}
 }
 
 TEST(ExceptionTest, StandardUsagePreservesMessageLocationCauseAndContexts)
@@ -139,7 +149,22 @@ TEST(ExceptionTest, EmptyMessageAndEmptyCauseRemainInspectable)
 	EXPECT_NO_THROW((void)withExplicitEmptyCause.what());
 }
 
-TEST(ExceptionTest, DISABLED_ExactFormattingContractRequiresImplementationSnapshot)
+TEST(ExceptionTest, ExactFormattingContract)
 {
-	GTEST_SKIP() << "The public header exposes formatted what(), but the supplied snapshot does not define the exact frame/indentation syntax.";
+	const auto innerLocation = captureLocation();
+	const spk::Exception inner("inner failure", innerLocation);
+	const auto outerLocation = captureLocation();
+	spk::Exception outer("outer failure", std::make_exception_ptr(inner), outerLocation);
+	const auto contextLocation = captureLocation();
+	outer.addContext("while updating", contextLocation);
+
+	const std::string expected =
+		frame(0, "while updating", contextLocation) + "\n" +
+		frame(1, "outer failure", outerLocation) + "\n" +
+		frame(2, "inner failure", innerLocation);
+	EXPECT_EQ(outer.what(), expected);
+	EXPECT_EQ(outer.what(), expected);
+
+	const auto emptyLocation = captureLocation();
+	EXPECT_EQ(spk::Exception("", emptyLocation).what(), frame(0, "", emptyLocation));
 }

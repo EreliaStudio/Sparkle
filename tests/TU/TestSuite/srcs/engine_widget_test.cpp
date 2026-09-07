@@ -63,6 +63,8 @@ namespace
 			<< "Different pixels: " << result.differentPixelCount << "\n"
 			<< "Actual size: " << result.actualWidth << "x" << result.actualHeight << "\n"
 			<< "Expected size: " << result.expectedWidth << "x" << result.expectedHeight << "\n"
+			<< "Actual image: " << actual << "\n"
+			<< "Expected image: " << expected << "\n"
 			<< "Difference image: " << difference;
 	}
 
@@ -155,7 +157,7 @@ TEST(EngineWidgetTest, UpdateAndInteractionAreForwardedToAttachedEngine)
 	EXPECT_EQ(behaviour.keyPresses, 1);
 }
 
-TEST(EngineWidgetRenderTest, DISABLED_NoEngineSmallViewport)
+TEST(EngineWidgetRenderTest, NoEngineSmallViewport)
 {
 	spk::Widget parent("Parent", nullptr);
 	parent.setGeometry({.anchor = {0, 0}, .size = {640, 480}});
@@ -167,7 +169,7 @@ TEST(EngineWidgetRenderTest, DISABLED_NoEngineSmallViewport)
 	expectWidgetImage(widget, "ui/widget/engine_widget", "no_engine_small_viewport");
 }
 
-TEST(EngineWidgetRenderTest, DISABLED_NoEngineLargeViewport)
+TEST(EngineWidgetRenderTest, NoEngineLargeViewport)
 {
 	spk::Widget parent("Parent", nullptr);
 	parent.setGeometry({.anchor = {0, 0}, .size = {640, 480}});

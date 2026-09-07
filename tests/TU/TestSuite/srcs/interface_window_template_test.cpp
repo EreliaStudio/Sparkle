@@ -19,8 +19,15 @@ namespace
 		const auto expected = sparkle_test::expectedImagePath(category, name);
 		const auto difference = sparkle_test::resultImagePath(category, name + "_difference");
 		context.save(actual);
-		ASSERT_TRUE(std::filesystem::exists(expected)) << "Missing golden image: " << expected;
-		EXPECT_TRUE(sparkle_test::compareImages(actual, expected, difference).matches);
+		ASSERT_TRUE(std::filesystem::exists(expected))
+			<< "Missing golden image: " << expected << "\n"
+			<< "Actual image: " << actual;
+		const auto result = sparkle_test::compareImages(actual, expected, difference);
+		EXPECT_TRUE(result.matches)
+			<< "Different pixels: " << result.differentPixelCount << "\n"
+			<< "Actual image: " << actual << "\n"
+			<< "Expected image: " << expected << "\n"
+			<< "Difference image: " << difference;
 	}
 }
 
@@ -34,7 +41,7 @@ TEST(InterfaceWindowTemplateTest, OwnsTypedContentObject)
 	EXPECT_EQ(&constant.contentObject(), &window.contentObject());
 }
 
-TEST(InterfaceWindowTemplateRenderTest, DISABLED_Normal)
+TEST(InterfaceWindowTemplateRenderTest, Normal)
 {
 	spk::InterfaceWindow<spk::TextLabel> window("Window");
 	window.setTitle("Inspector");
@@ -45,7 +52,7 @@ TEST(InterfaceWindowTemplateRenderTest, DISABLED_Normal)
 	expectWidgetImage(window, "ui/widget/interface_window", "normal");
 }
 
-TEST(InterfaceWindowTemplateRenderTest, DISABLED_Minimized)
+TEST(InterfaceWindowTemplateRenderTest, Minimized)
 {
 	spk::InterfaceWindow<spk::TextLabel> window("Window");
 	window.setTitle("Inspector");
@@ -55,7 +62,7 @@ TEST(InterfaceWindowTemplateRenderTest, DISABLED_Minimized)
 	expectWidgetImage(window, "ui/widget/interface_window", "minimized");
 }
 
-TEST(InterfaceWindowTemplateRenderTest, DISABLED_CustomPaddingAndMenu)
+TEST(InterfaceWindowTemplateRenderTest, CustomPaddingAndMenu)
 {
 	spk::InterfaceWindow<spk::TextLabel> window("Window");
 	window.setTitle("Custom");

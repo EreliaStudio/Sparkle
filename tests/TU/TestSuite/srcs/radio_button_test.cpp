@@ -7,6 +7,13 @@
 TEST(RadioButtonTest, DetachedProgrammaticStateNotifiesOnlyOnChanges)
 {
 	spk::RadioButton button("Radio");
+	ASSERT_NE(spk::Widget::defaultStyle->iconset, nullptr);
+	EXPECT_EQ(
+		button.indicator().uncheckedSpriteID(),
+		spk::Widget::defaultStyle->iconset->spriteID(spk::RadioButton::DefaultUncheckedSpriteCoordinates));
+	EXPECT_EQ(
+		button.indicator().checkedSpriteID(),
+		spk::Widget::defaultStyle->iconset->spriteID(spk::RadioButton::DefaultCheckedSpriteCoordinates));
 	std::vector<bool> states;
 	auto contract = button.subscribeToState([&](bool checked) { states.push_back(checked); });
 	button.setChecked(true);
