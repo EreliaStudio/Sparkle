@@ -144,9 +144,15 @@ TEST(TextureTest, MovePreservesIdentityAndPixelContent)
 	EXPECT_EQ(moved.pixels(), (std::vector<std::uint8_t>{1, 2, 3}));
 }
 
-TEST(TextureTest, DISABLED_OpenGLAndPngFailureInjectionNeedDedicatedSeams)
+TEST(TextureTest, PngWriteFailureIsReported)
 {
-	GTEST_SKIP() << "The API cannot inject glGenTextures or stb_image_write failures deterministically.";
+	TestTexture texture;
+	texture.setPixels(std::vector<std::uint8_t>{1, 2, 3, 4}, {1, 1}, spk::Texture::Format::RGBA);
+
+	const auto directory = std::filesystem::temp_directory_path() / "sparkle_png_failure_target";
+	std::filesystem::create_directory(directory);
+	EXPECT_THROW(texture.saveAsPng(directory), std::runtime_error);
+	std::filesystem::remove(directory);
 }
 
 TEST(SamplerTest, PropertiesTextureAndBindingAreObservableInOpenGL)
@@ -200,11 +206,6 @@ TEST(SamplerTest, ActivationWithoutTextureIsRejected)
 	EXPECT_THROW(sampler.activate(openGL.renderContext()), spk::Exception);
 }
 
-TEST(SamplerTest, DISABLED_CreationFailureNeedsOpenGLInjectionSeam)
-{
-	GTEST_SKIP() << "The public API cannot force glGenSamplers to return zero.";
-}
-
 TEST(VertexArrayTest, MissingEitherBufferIsRejected)
 {
 	auto &openGL = sparkle_test::OpenGLTestContext::instance();
@@ -245,12 +246,25 @@ TEST(VertexArrayTest, ConfiguresAttributesAndReconfiguresAfterBufferReplacement)
 	EXPECT_NO_THROW(array.activate(openGL.renderContext()));
 }
 
-TEST(VertexArrayTest, DISABLED_OversizedStrideNeedsDeterministicConfigurationSeam)
+TEST(VertexArrayTest, OversizedStrideIsRejectedBeforeAttributeConfiguration)
 {
-	GTEST_SKIP() << "Constructing a stride above GLsizei max through padding would require a multi-gigabyte logical layout; no synthetic seam exists.";
-}
+	auto &openGL = sparkle_test::OpenGLTestContext::instance();
+	openGL.reset();
+	spk::VertexBuffer vertices;
+	vertices.addPadding(static_cast<std::size_t>(std::numeric_limits<GLsizei>::max()) + 1);
+	spk::IndexBuffer indices;
+	indices.setType(spk::IndexBuffer::Type::UnsignedInt);
+	spk::VertexArray array;
+	array.setVertexBuffer(vertices);
+	array.setIndexBuffer(indices);
+	array.validate();
 
-TEST(VertexArrayTest, DISABLED_CreationFailureNeedsOpenGLInjectionSeam)
-{
-	GTEST_SKIP() << "The public API cannot force glGenVertexArrays to return zero.";
+	try
+	{
+		array.activate(openGL.renderContext());
+		FAIL() << "Expected an oversized stride to be rejected";
+	} catch (const spk::Exception &exception)
+	{
+		EXPECT_NE(std::string(exception.what()).find("stride exceeds OpenGL GLsizei range"), std::string::npos);
+	}
 }

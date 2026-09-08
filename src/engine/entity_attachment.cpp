@@ -50,4 +50,9 @@ namespace spk
 	{
 		return _owner;
 	}
+
+	bool EntityAttachment::isEffectivelyActive() const
+	{
+		return isActive() && (_owner == nullptr || _owner->isEffectivelyActive());
+	}
 }

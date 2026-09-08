@@ -39,11 +39,15 @@ namespace spk
 		Panel _thumb;
 		StateProvider _stateProvider;
 
+		void _cancelPress() noexcept;
 		void _updateVisualGeometry();
 		void _updateSizeHint() override;
 		void _updateState(UpdateContext &context) override;
 		void _buildRenderSnapshot(RenderSnapshot::Builder &builder) override;
 		void _onGeometryChange() override;
+		void _onFocusReleased(FocusMode::Channel channel) noexcept override;
+		void _onDeactivation() noexcept override;
+		void _onWindowFocusLostEvent(WindowFocusLostEvent &event) override;
 		void _onMouseButtonPressedEvent(MouseButtonPressedEvent &event) override;
 		void _onMouseButtonReleasedEvent(MouseButtonReleasedEvent &event) override;
 

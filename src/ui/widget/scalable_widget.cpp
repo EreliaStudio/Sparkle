@@ -95,6 +95,42 @@ namespace spk
 		{
 			result.y = static_cast<int>(static_cast<std::int64_t>(_baseGeometry.y) + _baseGeometry.height - result.height);
 		}
+
+		if (hasParent())
+		{
+			const std::int64_t parentWidth = parent()->geometry().width;
+			const std::int64_t parentHeight = parent()->geometry().height;
+			const std::int64_t fixedLeft = std::clamp<std::int64_t>(_baseGeometry.x, 0, parentWidth);
+			const std::int64_t fixedRight = std::clamp<std::int64_t>(static_cast<std::int64_t>(_baseGeometry.x) + _baseGeometry.width, 0, parentWidth);
+			const std::int64_t fixedTop = std::clamp<std::int64_t>(_baseGeometry.y, 0, parentHeight);
+			const std::int64_t fixedBottom = std::clamp<std::int64_t>(static_cast<std::int64_t>(_baseGeometry.y) + _baseGeometry.height, 0, parentHeight);
+
+			if (containsEdge(_activeEdges, Left))
+			{
+				const std::int64_t left = std::clamp<std::int64_t>(result.x, 0, fixedRight);
+				result.x = static_cast<int>(left);
+				result.width = static_cast<unsigned int>(fixedRight - left);
+			}
+			else if (containsEdge(_activeEdges, Right))
+			{
+				const std::int64_t right = std::clamp<std::int64_t>(static_cast<std::int64_t>(result.x) + result.width, fixedLeft, parentWidth);
+				result.x = static_cast<int>(fixedLeft);
+				result.width = static_cast<unsigned int>(right - fixedLeft);
+			}
+
+			if (containsEdge(_activeEdges, Top))
+			{
+				const std::int64_t top = std::clamp<std::int64_t>(result.y, 0, fixedBottom);
+				result.y = static_cast<int>(top);
+				result.height = static_cast<unsigned int>(fixedBottom - top);
+			}
+			else if (containsEdge(_activeEdges, Bottom))
+			{
+				const std::int64_t bottom = std::clamp<std::int64_t>(static_cast<std::int64_t>(result.y) + result.height, fixedTop, parentHeight);
+				result.y = static_cast<int>(fixedTop);
+				result.height = static_cast<unsigned int>(bottom - fixedTop);
+			}
+		}
 		return result;
 	}
 
@@ -144,6 +180,12 @@ namespace spk
 		}
 	}
 
+	void ScalableWidget::_cancelResize() noexcept
+	{
+		_activeEdges = None;
+		_hoveredEdges = None;
+	}
+
 	void ScalableWidget::_beginResize(EventBase &event, Mouse::Button button, const Vector2Int &position)
 	{
 		if (button != Mouse::Button::Left || _activeEdges != None)
@@ -169,8 +211,7 @@ namespace spk
 		{
 			return;
 		}
-		_activeEdges = None;
-		_hoveredEdges = None;
+		_cancelResize();
 		event.releaseFocus(FocusMode::Channel::Mouse, this);
 		event.consumed = true;
 	}
@@ -195,6 +236,19 @@ namespace spk
 			Widget::setGeometry(constrained);
 			_applyingConstraints = false;
 		}
+	}
+
+	void ScalableWidget::_onFocusReleased(FocusMode::Channel channel) noexcept
+	{
+		if (channel == FocusMode::Channel::Mouse)
+		{
+			_cancelResize();
+		}
+	}
+
+	void ScalableWidget::_onDeactivation() noexcept
+	{
+		_cancelResize();
 	}
 
 	void ScalableWidget::_onWindowFocusLostEvent(WindowFocusLostEvent &event)

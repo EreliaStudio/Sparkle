@@ -1,10 +1,25 @@
 #include <gtest/gtest.h>
 
+#include <Windows.h>
+
+#include <atomic>
+#include <chrono>
 #include <cstdlib>
+#include <functional>
 #include <stdexcept>
+#include <string>
+#include <thread>
 #include <type_traits>
 
 #include "core/application.hpp"
+#include "core/context/render_context.hpp"
+#include "core/context/update_context.hpp"
+#include "core/platform/detail/window_surface_driver.hpp"
+#include "exception.hpp"
+#include "rendering/render_command.hpp"
+#include "rendering/render_snapshot.hpp"
+#include "sparkle_test/scoped_override.hpp"
+#include "ui/widget.hpp"
 
 static_assert(!std::is_copy_constructible_v<spk::Application>);
 static_assert(!std::is_copy_assignable_v<spk::Application>);
@@ -13,6 +28,78 @@ static_assert(!std::is_move_assignable_v<spk::Application>);
 
 namespace
 {
+	class CallbackRenderCommand final : public spk::RenderCommand
+	{
+	private:
+		std::function<void()> _callback;
+
+	public:
+		explicit CallbackRenderCommand(std::function<void()> callback) :
+			_callback(std::move(callback))
+		{
+		}
+
+		void execute(spk::RenderContext &) const override
+		{
+			_callback();
+		}
+	};
+
+	class ApplicationProbeWidget : public spk::Widget
+	{
+	private:
+		std::function<void()> _onRender;
+
+	protected:
+		void _updateState(spk::UpdateContext &) override
+		{
+			++updateCalls;
+		}
+
+		void _buildRenderSnapshot(spk::RenderSnapshot::Builder &builder) override
+		{
+			++snapshotCalls;
+			builder.renderPass(targetRenderPass()).emplace<CallbackRenderCommand>([this] {
+				++renderCalls;
+				_onRender();
+			});
+		}
+
+		void _onKeyPressedEvent(spk::KeyPressedEvent &) override
+		{
+			++keyCalls;
+		}
+
+	public:
+		std::atomic_size_t updateCalls = 0;
+		std::atomic_size_t snapshotCalls = 0;
+		std::atomic_size_t renderCalls = 0;
+		std::atomic_size_t keyCalls = 0;
+
+		ApplicationProbeWidget(std::string name, spk::Widget *parent, std::function<void()> onRender = {}) :
+			spk::Widget(std::move(name), parent),
+			_onRender(std::move(onRender))
+		{
+			activate();
+		}
+	};
+
+	class ThrowingUpdateWidget final : public spk::Widget
+	{
+	protected:
+		void _updateState(spk::UpdateContext &) override
+		{
+			throw std::runtime_error("injected update failure");
+		}
+
+	public:
+		ThrowingUpdateWidget(std::string name, spk::Widget *parent) :
+			spk::Widget(std::move(name), parent)
+		{
+			activate();
+		}
+	};
+
 	[[nodiscard]] spk::Window::Configuration offscreenConfiguration(const char *title)
 	{
 		return spk::Window::Configuration{
@@ -95,42 +182,146 @@ TEST(ApplicationTest, QuitBeforeRunningClosesCreatedWindowsAndPreservesExitCode)
 	EXPECT_THROW((void)application.window("quit-before-run"), std::out_of_range);
 }
 
-TEST(ApplicationTest, DISABLED_StandardReadyWindowInitializationUpdateRenderAndClose)
+TEST(ApplicationTest, StandardReadyWindowInitializationUpdateRenderAndClose)
 {
-	GTEST_SKIP() << "The public facade has no readiness/update/render synchronization hook. Enable with the suite's shared window-runtime fixture so the test can deterministically wait for Ready, one update and one rendered frame before closeWindow().";
+	spk::Application application;
+	spk::Window &window = application.createWindow("standard-runtime", offscreenConfiguration("standard-runtime"));
+	std::atomic_bool closureRequested = false;
+	ApplicationProbeWidget probe("probe", &window.root(), [&] {
+		if (!closureRequested.exchange(true))
+		{
+			application.closeWindow("standard-runtime");
+		}
+	});
+
+	EXPECT_EQ(application.run(), EXIT_SUCCESS);
+	EXPECT_GT(probe.updateCalls.load(), 0u);
+	EXPECT_GT(probe.snapshotCalls.load(), 0u);
+	EXPECT_GT(probe.renderCalls.load(), 0u);
+	EXPECT_THROW((void)application.window("standard-runtime"), std::out_of_range);
 }
 
-TEST(ApplicationTest, DISABLED_CloseWhileReadyAndReleasingIsIdempotentlyCoordinated)
+TEST(ApplicationTest, RepeatedCloseRequestsAreIdempotentlyCoordinated)
 {
-	GTEST_SKIP() << "Requires a deterministic runtime barrier exposing the Ready/Releasing milestones without polling private runtime state.";
+	spk::Application application;
+	spk::Window &window = application.createWindow("repeated-close", offscreenConfiguration("repeated-close"));
+	std::atomic_bool closureRequested = false;
+	ApplicationProbeWidget probe("probe", &window.root(), [&] {
+		if (!closureRequested.exchange(true))
+		{
+			application.closeWindow("repeated-close");
+			application.closeWindow("repeated-close");
+		}
+	});
+
+	EXPECT_EQ(application.run(), EXIT_SUCCESS);
+	EXPECT_TRUE(closureRequested.load());
+	EXPECT_THROW((void)application.window("repeated-close"), std::out_of_range);
 }
 
-TEST(ApplicationTest, DISABLED_QuitWhileRunIsActiveStopsAndJoinsAllRuntimes)
+TEST(ApplicationTest, QuitWhileRunIsActiveStopsAndJoinsAllRuntimes)
 {
-	GTEST_SKIP() << "Requires the shared runtime synchronization fixture so quit() can be issued after run() has deterministically entered its platform loop.";
+	spk::Application application;
+	spk::Window &window = application.createWindow("active-quit", offscreenConfiguration("active-quit"));
+	std::atomic_bool quitRequested = false;
+	ApplicationProbeWidget probe("probe", &window.root(), [&] {
+		if (!quitRequested.exchange(true))
+		{
+			application.quit(19);
+			application.closeWindow("active-quit");
+		}
+	});
+
+	EXPECT_EQ(application.run(), 19);
+	EXPECT_TRUE(quitRequested.load());
 }
 
-TEST(ApplicationTest, DISABLED_EventRoutingTargetsOnlyTheMatchingWindow)
+TEST(ApplicationTest, EventRoutingTargetsOnlyTheMatchingWindow)
 {
-	GTEST_SKIP() << "Event publication is private to PlatformRuntime in the supplied public snapshot. Enable when the test harness exposes deterministic platform-event injection.";
+	spk::Application application;
+	spk::Window &firstWindow = application.createWindow("routing-first", offscreenConfiguration("Sparkle routing first"));
+	spk::Window &secondWindow = application.createWindow("routing-second", offscreenConfiguration("Sparkle routing second"));
+	ApplicationProbeWidget first("first", &firstWindow.root());
+	ApplicationProbeWidget second("second", &secondWindow.root());
+	std::atomic_bool helperSucceeded = false;
+	std::jthread helper([&] {
+		HWND firstHandle = nullptr;
+		HWND secondHandle = nullptr;
+		const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+		while (std::chrono::steady_clock::now() < deadline && (firstHandle == nullptr || secondHandle == nullptr))
+		{
+			firstHandle = ::FindWindowA(nullptr, "Sparkle routing first");
+			secondHandle = ::FindWindowA(nullptr, "Sparkle routing second");
+			std::this_thread::yield();
+		}
+		if (firstHandle == nullptr || secondHandle == nullptr)
+		{
+			application.quit(EXIT_FAILURE);
+			return;
+		}
+		::PostMessageW(firstHandle, WM_KEYDOWN, 'A', 0);
+		while (std::chrono::steady_clock::now() < deadline && first.keyCalls.load() == 0)
+		{
+			std::this_thread::yield();
+		}
+		helperSucceeded.store(first.keyCalls.load() != 0 && second.keyCalls.load() == 0);
+		::PostMessageW(firstHandle, WM_CLOSE, 0, 0);
+		::PostMessageW(secondHandle, WM_CLOSE, 0, 0);
+	});
+
+	EXPECT_EQ(application.run(), EXIT_SUCCESS);
+	helper.join();
+	EXPECT_TRUE(helperSucceeded.load());
+	EXPECT_EQ(second.keyCalls.load(), 0u);
 }
 
-TEST(ApplicationTest, DISABLED_DuplicateRuntimeObjectsAndSnapshotEndpointsThrowLogicError)
+TEST(ApplicationTest, WorkerExceptionsCrossTheRunBoundary)
 {
-	GTEST_SKIP() << "Runtime registration and snapshot endpoint registration are private implementation details. This contract needs an internal test seam or friend test fixture.";
+	spk::Application application;
+	spk::Window &window = application.createWindow("worker-failure", offscreenConfiguration("worker-failure"));
+	ThrowingUpdateWidget throwing("throwing", &window.root());
+
+	EXPECT_THROW((void)application.run(), spk::Exception);
+	EXPECT_THROW((void)application.window("worker-failure"), std::out_of_range);
 }
 
-TEST(ApplicationTest, DISABLED_WorkerExceptionsCrossTheRunBoundary)
+TEST(ApplicationTest, RuntimeFailuresReceiveApplicationContext)
 {
-	GTEST_SKIP() << "No public deterministic fault-injection hook is present for UpdateRuntime/RenderRuntime. Enable when a throwing test workload can be injected into a worker.";
+	spk::Application application;
+	spk::Window &window = application.createWindow("context-failure", offscreenConfiguration("context-failure"));
+	ThrowingUpdateWidget throwing("throwing", &window.root());
+
+	try
+	{
+		(void)application.run();
+		FAIL() << "Expected worker failure";
+	} catch (const spk::Exception &exception)
+	{
+		const std::string message = exception.what();
+		EXPECT_NE(message.find("update runtime"), std::string::npos);
+		EXPECT_NE(message.find("context-failure"), std::string::npos);
+		EXPECT_NE(message.find("injected update failure"), std::string::npos);
+	}
 }
 
-TEST(ApplicationTest, DISABLED_RuntimeFailuresReceiveApplicationContext)
+TEST(ApplicationTest, NativeFailureDuringSurfaceCreationIsReported)
 {
-	GTEST_SKIP() << "The requested spk::Exception/std::runtime_error contextual wrapping cannot be forced deterministically through the supplied facade alone; pair with platform/update/render fault injection.";
-}
+	spk::Application application;
+	application.createWindow("native-surface-failure", offscreenConfiguration("native-surface-failure"));
+	auto &operation = spk::detail::windowSurfaceDriver().getDeviceContext;
+	auto override = sparkle_test::scopedOverride(operation, [](HWND) -> HDC {
+		::SetLastError(ERROR_INVALID_WINDOW_HANDLE);
+		return nullptr;
+	});
 
-TEST(ApplicationTest, DISABLED_ReleasedNativeDuringSurfaceCreationIsReported)
-{
-	GTEST_SKIP() << "Native/Surface parts are intentionally hidden behind Application. A runtime test seam is required to release the native frame between platform creation and surface creation.";
+	try
+	{
+		(void)application.run();
+		FAIL() << "Expected surface creation failure";
+	} catch (const spk::Exception &exception)
+	{
+		const std::string message = exception.what();
+		EXPECT_NE(message.find("render runtime"), std::string::npos);
+		EXPECT_NE(message.find("GetDC"), std::string::npos);
+	}
 }

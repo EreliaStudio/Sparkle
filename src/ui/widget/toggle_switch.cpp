@@ -46,6 +46,11 @@ namespace spk
 		}
 	}
 
+	void ToggleSwitch::_cancelPress() noexcept
+	{
+		_pressed = false;
+	}
+
 	void ToggleSwitch::_updateVisualGeometry()
 	{
 		_outline.setGeometry(Rect2D{Vector2Int{0, 0}, geometry().size});
@@ -166,11 +171,31 @@ namespace spk
 	{
 		_updateVisualGeometry();
 	}
+	void ToggleSwitch::_onFocusReleased(FocusMode::Channel channel) noexcept
+	{
+		if (channel == FocusMode::Channel::Mouse)
+		{
+			_cancelPress();
+		}
+	}
+	void ToggleSwitch::_onDeactivation() noexcept
+	{
+		_cancelPress();
+	}
+	void ToggleSwitch::_onWindowFocusLostEvent(WindowFocusLostEvent &event)
+	{
+		if (_pressed)
+		{
+			_cancelPress();
+			event.releaseFocus(FocusMode::Channel::Mouse, this);
+		}
+	}
 	void ToggleSwitch::_onMouseButtonPressedEvent(MouseButtonPressedEvent &event)
 	{
 		if (event.record.button == Mouse::Button::Left && viewRegion().viewport.contains(event.device.position))
 		{
 			_pressed = true;
+			event.takeFocus(FocusMode::Channel::Mouse, this);
 			event.consumed = true;
 		}
 	}
@@ -181,6 +206,7 @@ namespace spk
 			return;
 		}
 		_pressed = false;
+		event.releaseFocus(FocusMode::Channel::Mouse, this);
 		if (viewRegion().viewport.contains(event.device.position))
 		{
 			toggle();

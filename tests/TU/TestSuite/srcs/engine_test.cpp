@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <regex>
 #include <stdexcept>
@@ -144,6 +145,45 @@ namespace
 	{
 	public:
 		using RecordingBehaviour::RecordingBehaviour;
+	};
+
+	class CallbackBehaviour final : public spk::Behaviour
+	{
+	public:
+		std::function<void()> callback;
+		std::size_t *updateCalls;
+
+		explicit CallbackBehaviour(std::size_t &p_updateCalls) :
+			updateCalls(&p_updateCalls)
+		{
+		}
+
+	protected:
+		void _updateState(spk::UpdateContext &) override
+		{
+			++(*updateCalls);
+			if (callback)
+			{
+				callback();
+			}
+		}
+	};
+
+	class DestructionBehaviour final : public spk::Behaviour
+	{
+	private:
+		int *_destructionCount;
+
+	public:
+		explicit DestructionBehaviour(int &destructionCount) :
+			_destructionCount(&destructionCount)
+		{
+		}
+
+		~DestructionBehaviour() override
+		{
+			++(*_destructionCount);
+		}
 	};
 
 	class RecordingParticipant : public spk::System::Participant
@@ -565,9 +605,22 @@ TEST(BehaviourTest, NullOwnerDeactivateReactivateRepeatedGeometryAndHookOrdering
 					   "recorder:key"}));
 }
 
-TEST(BehaviourTest, DISABLED_DirectDispatchShouldRejectInteractionWhenOwnerIsInactive)
+TEST(BehaviourTest, DirectDispatchShouldRejectInteractionWhenOwnerIsInactive)
 {
-	GTEST_SKIP() << "Behaviour::_isAcceptingInteraction currently checks only the behaviour activation state; it does not inspect the owner activation state.";
+	spk::Entity owner("owner");
+	RecordingBehaviour &behaviour = owner.addBehaviour<RecordingBehaviour>("behaviour");
+	spk::Keyboard keyboard;
+
+	owner.deactivate();
+	auto inactiveEvent = keyPressedEvent(keyboard);
+	behaviour.dispatch(inactiveEvent);
+	EXPECT_EQ(behaviour.keyCalls, 0u);
+	EXPECT_FALSE(inactiveEvent.consumed);
+
+	owner.activate();
+	auto activeEvent = keyPressedEvent(keyboard);
+	behaviour.dispatch(activeEvent);
+	EXPECT_EQ(behaviour.keyCalls, 1u);
 }
 
 TEST(SystemTest, StandardUsageAddsToEngineUpdatesActiveSystemsAndDispatchesEvents)
@@ -863,19 +916,68 @@ TEST(EntityTest, DestructionRemovesEntityAndOwnedAttachmentsFromRegistries)
 	EXPECT_FALSE((spk::Registry<spk::Engine *, spk::Entity>::elements(&engine).contains(parent.get())));
 }
 
-TEST(EntityTest, DISABLED_RecursiveDestructionNeedsEntityOwnershipContract)
+TEST(EntityTest, DestructionDestroysOwnedAttachmentsAndDetachesNonOwnedChildren)
 {
-	GTEST_SKIP() << "Entity parent/child relationships are non-owning; the current API does not recursively destroy child entities.";
+	int attachmentDestructions = 0;
+	spk::Entity child("child");
+	{
+		auto parent = std::make_unique<spk::Entity>("parent");
+		child.setParent(parent.get());
+		parent->addBehaviour<DestructionBehaviour>(attachmentDestructions);
+	}
+
+	EXPECT_EQ(attachmentDestructions, 1);
+	EXPECT_EQ(child.parent(), nullptr);
+	EXPECT_EQ(child.context(), nullptr);
 }
 
-TEST(EntityTest, DISABLED_ContextChangesShouldPropagateThroughExistingChildren)
+TEST(EntityTest, ContextChangesPropagateThroughExistingDescendantsAndAttachments)
 {
-	GTEST_SKIP() << "Entity currently propagates geometry through existing children, but not context changes or registry membership.";
+	spk::Engine engine;
+	spk::Entity parent("parent");
+	spk::Entity child("child", &parent);
+	spk::Entity grandchild("grandchild", &child);
+	auto &behaviour = child.addBehaviour<RecordingBehaviour>();
+
+	parent.changeContext(&engine);
+	EXPECT_EQ(child.context(), &engine);
+	EXPECT_EQ(grandchild.context(), &engine);
+	EXPECT_EQ(behaviour.context(), &engine);
+
+	parent.changeContext(nullptr);
+	EXPECT_EQ(child.context(), nullptr);
+	EXPECT_EQ(grandchild.context(), nullptr);
+	EXPECT_EQ(behaviour.context(), nullptr);
 }
 
-TEST(EntityTest, DISABLED_AddOrRemoveDuringCallbacksNeedsStableTraversalContract)
+TEST(EntityTest, AttachmentEditsDuringUpdateUseStableTraversal)
 {
-	GTEST_SKIP() << "Entity traverses live attachment/child vectors directly; add/remove during callbacks has no explicit snapshot or deferred-edit contract.";
+	spk::Entity entity("entity");
+	std::size_t controllerCalls = 0;
+	std::size_t removedCalls = 0;
+	std::size_t addedCalls = 0;
+	auto &controller = entity.addBehaviour<CallbackBehaviour>(controllerCalls);
+	auto &removed = entity.addBehaviour<CallbackBehaviour>(removedCalls);
+	CallbackBehaviour *added = nullptr;
+	controller.callback = [&]() {
+		controller.callback = {};
+		entity.removeBehaviour(removed);
+		added = &entity.addBehaviour<CallbackBehaviour>(addedCalls);
+	};
+
+	spk::Keyboard keyboard;
+	spk::Mouse mouse;
+	auto context = updateContext(keyboard, mouse);
+	entity.updateState(context);
+
+	ASSERT_NE(added, nullptr);
+	EXPECT_EQ(controllerCalls, 1u);
+	EXPECT_EQ(removedCalls, 0u);
+	EXPECT_EQ(addedCalls, 0u);
+
+	entity.updateState(context);
+	EXPECT_EQ(controllerCalls, 2u);
+	EXPECT_EQ(addedCalls, 1u);
 }
 
 TEST(Entity2DTest, StandardUsageConstructsTransformTypedRegistriesAndParentTransformRelationship)

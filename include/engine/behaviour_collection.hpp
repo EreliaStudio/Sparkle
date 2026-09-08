@@ -36,6 +36,8 @@ namespace spk
 			typename Base::OnAttachmentEditionCallback;
 		using OnBehaviourEditionContract =
 			typename Base::OnAttachmentEditionContract;
+		using OnBehaviourNameEditionContract =
+			typename Base::OnAttachmentEditionContract;
 
 		[[nodiscard]] OnBehaviourEditionContract subscribeToBehaviourAddition(
 			OnBehaviourEditionCallback callback)
@@ -47,6 +49,12 @@ namespace spk
 			OnBehaviourEditionCallback callback)
 		{
 			return Base::subscribeToAttachmentRemoval(callback);
+		}
+
+		[[nodiscard]] OnBehaviourNameEditionContract subscribeToBehaviourNameEdition(
+			OnBehaviourEditionCallback callback)
+		{
+			return Base::subscribeToAttachmentNameEdition(std::move(callback));
 		}
 
 		template <typename TBehaviourType, typename TPredicate>

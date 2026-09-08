@@ -110,6 +110,17 @@ namespace spk
 		}
 	}
 
+	void PushButton::_cancelPress() noexcept
+	{
+		if (!_pressed)
+		{
+			return;
+		}
+		_pressed = false;
+		_hovered = false;
+		_applyVisualState();
+	}
+
 	void PushButton::_updateTextGeometry()
 	{
 		const Vector2UInt padding = _effectiveTextPadding();
@@ -182,6 +193,28 @@ namespace spk
 		_updateIconGeometry();
 	}
 
+	void PushButton::_onFocusReleased(FocusMode::Channel channel) noexcept
+	{
+		if (channel == FocusMode::Channel::Mouse)
+		{
+			_cancelPress();
+		}
+	}
+
+	void PushButton::_onDeactivation() noexcept
+	{
+		_cancelPress();
+	}
+
+	void PushButton::_onWindowFocusLostEvent(WindowFocusLostEvent &event)
+	{
+		if (_pressed)
+		{
+			_cancelPress();
+			event.releaseFocus(FocusMode::Channel::Mouse, this);
+		}
+	}
+
 	void PushButton::_onMouseLeftEvent(MouseLeftEvent &)
 	{
 		_hovered = false;
@@ -201,6 +234,7 @@ namespace spk
 		_hovered = true;
 		_pressed = true;
 		_applyVisualState();
+		event.takeFocus(FocusMode::Channel::Mouse, this);
 		event.consumed = true;
 	}
 
@@ -214,6 +248,7 @@ namespace spk
 		_pressed = false;
 		_hovered = viewRegion().viewport.contains(event.device.position);
 		_applyVisualState();
+		event.releaseFocus(FocusMode::Channel::Mouse, this);
 		if (_hovered)
 		{
 			_clickProvider.trigger();
@@ -230,6 +265,7 @@ namespace spk
 		_hovered = true;
 		_pressed = true;
 		_applyVisualState();
+		event.takeFocus(FocusMode::Channel::Mouse, this);
 		event.consumed = true;
 	}
 

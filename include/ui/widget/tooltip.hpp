@@ -37,6 +37,7 @@ namespace spk
 		bool _hovering = false;
 		Widget *_coordinatorRoot = nullptr;
 		InherenceTrait<Widget, WidgetChildComparator>::OnParentEditionContract _targetParentContract;
+		Widget::DestructionContract _targetDestructionContract;
 
 		void _updateGeometry();
 		void _updateState(UpdateContext &context) override;

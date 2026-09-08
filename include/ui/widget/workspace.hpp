@@ -62,6 +62,12 @@ namespace spk
 			activate();
 		}
 
+		void applyStyle(const Style &style) override
+		{
+			_content.applyStyle(style);
+			_menuBar.applyStyle(style);
+		}
+
 		[[nodiscard]] MenuBar &menuBar() noexcept
 		{
 			return _menuBar;

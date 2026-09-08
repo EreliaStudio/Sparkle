@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <unordered_map>
 
+#include "engine/engine.hpp"
 #include "engine/registry_query.hpp"
 
 namespace
@@ -64,6 +65,30 @@ namespace
 		void execute(ElementSet &, const int &context) override
 		{
 			++(*_executions)[context];
+		}
+	};
+
+	class QueryParticipant : public spk::System::Participant
+	{
+	public:
+		int value;
+
+		QueryParticipant(std::string name, int value = 0) :
+			spk::System::Participant(std::move(name)),
+			value(value)
+		{
+		}
+	};
+
+	class QueryBehaviour : public spk::Behaviour
+	{
+	public:
+		int value;
+
+		QueryBehaviour(std::string name, int value = 0) :
+			spk::Behaviour(std::move(name)),
+			value(value)
+		{
 		}
 	};
 
@@ -235,17 +260,91 @@ TEST(RegistryQueryTest, DestroyedQueryReleasesItsRegistrySubscriptions)
 	EXPECT_NO_THROW({ QueryObject second(12, 2); });
 }
 
-TEST(RegistryQueryTest, DISABLED_ContainParticipantSupportsTypeRegexPredicateAndReactiveEdits)
+TEST(RegistryQueryTest, ContainParticipantSupportsTypeRegexPredicateAndReactiveEdits)
 {
-	GTEST_SKIP() << "registry_query.hpp supplies ContainParticipant, but the section-05 archive does not include the matching Entity/System::Participant snapshots required to instantiate the operation reliably. Add this case when those transitive headers are supplied with the backlog.";
+	spk::Engine engine;
+	spk::Entity matching("matching"), reactive("reactive"), empty("empty");
+	engine.addEntity(&matching);
+	engine.addEntity(&reactive);
+	engine.addEntity(&empty);
+	auto &participant = matching.addParticipant<QueryParticipant>("selected-participant", 42);
+
+	auto byType = spk::Registry<spk::Engine *, spk::Entity>::query();
+	byType.insert<spk::ContainParticipant<QueryParticipant>>();
+	EXPECT_TRUE(byType.collect(&engine).contains(&matching));
+	EXPECT_FALSE(byType.collect(&engine).contains(&empty));
+
+	auto byName = spk::Registry<spk::Engine *, spk::Entity>::query();
+	byName.insert<spk::ContainParticipant<QueryParticipant>>(std::regex("^selected"));
+	EXPECT_TRUE(byName.collect(&engine).contains(&matching));
+
+	auto byPredicate = spk::Registry<spk::Engine *, spk::Entity>::query();
+	byPredicate.insert<spk::ContainParticipant<QueryParticipant>>([](QueryParticipant *candidate) {
+		return candidate->value == 42;
+	});
+	EXPECT_TRUE(byPredicate.collect(&engine).contains(&matching));
+
+	EXPECT_FALSE(byType.collect(&engine).contains(&reactive));
+	auto &added = reactive.addParticipant<QueryParticipant>("later", 7);
+	EXPECT_TRUE(byType.collect(&engine).contains(&reactive));
+	reactive.removeParticipant(added);
+	EXPECT_FALSE(byType.collect(&engine).contains(&reactive));
+	EXPECT_EQ(participant.owner(), &matching);
 }
 
-TEST(RegistryQueryTest, DISABLED_ContainBehaviourSupportsTypeRegexPredicateAndReactiveEdits)
+TEST(RegistryQueryTest, ContainBehaviourSupportsTypeRegexPredicateAndReactiveEdits)
 {
-	GTEST_SKIP() << "registry_query.hpp supplies ContainBehaviour, but the section-05 archive does not include the matching Entity/Behaviour snapshots required to instantiate the operation reliably. Add this case when those transitive headers are supplied with the backlog.";
+	spk::Engine engine;
+	spk::Entity matching("matching"), reactive("reactive"), empty("empty");
+	engine.addEntity(&matching);
+	engine.addEntity(&reactive);
+	engine.addEntity(&empty);
+	matching.addBehaviour<QueryBehaviour>("selected-behaviour", 42);
+
+	auto byType = spk::Registry<spk::Engine *, spk::Entity>::query();
+	byType.insert<spk::ContainBehaviour<QueryBehaviour>>();
+	EXPECT_TRUE(byType.collect(&engine).contains(&matching));
+	EXPECT_FALSE(byType.collect(&engine).contains(&empty));
+
+	auto byName = spk::Registry<spk::Engine *, spk::Entity>::query();
+	byName.insert<spk::ContainBehaviour<QueryBehaviour>>(std::regex("behaviour$"));
+	EXPECT_TRUE(byName.collect(&engine).contains(&matching));
+
+	auto byPredicate = spk::Registry<spk::Engine *, spk::Entity>::query();
+	byPredicate.insert<spk::ContainBehaviour<QueryBehaviour>>([](QueryBehaviour *candidate) {
+		return candidate->value == 42;
+	});
+	EXPECT_TRUE(byPredicate.collect(&engine).contains(&matching));
+
+	EXPECT_FALSE(byType.collect(&engine).contains(&reactive));
+	auto &added = reactive.addBehaviour<QueryBehaviour>("later", 7);
+	EXPECT_TRUE(byType.collect(&engine).contains(&reactive));
+	reactive.removeBehaviour(added);
+	EXPECT_FALSE(byType.collect(&engine).contains(&reactive));
 }
 
-TEST(RegistryQueryTest, DISABLED_AttachmentNameChangesInvalidateRegexQueries)
+TEST(RegistryQueryTest, AttachmentNameChangesInvalidateRegexQueries)
 {
-	GTEST_SKIP() << "The supplied ContainParticipant/ContainBehaviour implementation subscribes only to add/remove events; no name-edition subscription is visible. Keep this disabled until regex queries invalidate on attachment rename as required by the backlog.";
+	spk::Engine engine;
+	spk::Entity entity("entity");
+	engine.addEntity(&entity);
+	auto &participant = entity.addParticipant<QueryParticipant>("before");
+	auto &behaviour = entity.addBehaviour<QueryBehaviour>("before");
+
+	auto participantQuery = spk::Registry<spk::Engine *, spk::Entity>::query();
+	participantQuery.insert<spk::ContainParticipant<QueryParticipant>>(std::regex("^after$"));
+	auto behaviourQuery = spk::Registry<spk::Engine *, spk::Entity>::query();
+	behaviourQuery.insert<spk::ContainBehaviour<QueryBehaviour>>(std::regex("^after$"));
+	EXPECT_FALSE(participantQuery.collect(&engine).contains(&entity));
+	EXPECT_FALSE(behaviourQuery.collect(&engine).contains(&entity));
+
+	participant.setName("after");
+	behaviour.setName("after");
+	EXPECT_TRUE(participantQuery.collect(&engine).contains(&entity));
+	EXPECT_TRUE(behaviourQuery.collect(&engine).contains(&entity));
+
+	participant.setName("before");
+	behaviour.setName("before");
+	EXPECT_FALSE(participantQuery.collect(&engine).contains(&entity));
+	EXPECT_FALSE(behaviourQuery.collect(&engine).contains(&entity));
 }

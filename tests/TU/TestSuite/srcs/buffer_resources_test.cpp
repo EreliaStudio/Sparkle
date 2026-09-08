@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+
 #include <GL/glew.h>
 
 #include <array>
@@ -320,9 +321,4 @@ TEST(BufferGPUResourceTest, UsageAndGpuRetrievalTrackCpuEditsAcrossGenerations)
 	std::memcpy(&middle, second.data() + sizeof(std::uint32_t), sizeof(middle));
 	EXPECT_EQ(middle, 42u);
 	EXPECT_EQ(buffer.usage(), spk::BufferGPUResource::Usage::StreamDraw);
-}
-
-TEST(BufferGPUResourceTest, DISABLED_OpenGLCreationFailureNeedsDriverInjectionSeam)
-{
-	GTEST_SKIP() << "The public buffer API has no injectable glGenBuffers failure seam.";
 }

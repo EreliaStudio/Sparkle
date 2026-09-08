@@ -1,5 +1,8 @@
 #include "engine/engine.hpp"
 
+#include <algorithm>
+#include <vector>
+
 #include "core/context/update_context.hpp"
 #include "rendering/render_snapshot.hpp"
 
@@ -39,11 +42,12 @@ namespace spk
 	{
 		callback(&_root);
 
-		for (const auto &system : systems())
+		const auto systemSnapshot = SystemCollection::snapshotElements();
+		for (const auto &snapshot : systemSnapshot)
 		{
-			if (system != nullptr)
+			if (SystemCollection::containsSnapshotElement(snapshot))
 			{
-				callback(system.get());
+				callback(snapshot.element);
 			}
 		}
 	}
@@ -107,11 +111,12 @@ namespace spk
 	{
 		_root.updateState(context);
 
-		for (const auto &system : systems())
+		const auto systemSnapshot = SystemCollection::snapshotElements();
+		for (const auto &snapshot : systemSnapshot)
 		{
-			if (system != nullptr)
+			if (SystemCollection::containsSnapshotElement(snapshot))
 			{
-				system->updateState(context);
+				snapshot.element->updateState(context);
 			}
 		}
 	}

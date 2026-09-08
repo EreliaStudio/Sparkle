@@ -12,6 +12,7 @@
 #include <utility>
 
 #include "graphics/opengl/gpu_resource_collection.hpp"
+#include "core/platform/detail/window_surface_driver.hpp"
 
 namespace spk
 {
@@ -74,7 +75,7 @@ namespace spk
 			{
 				throw std::logic_error("Cannot create an OpenGL surface without a native window");
 			}
-			deviceContext = ::GetDC(windowHandle);
+			deviceContext = detail::windowSurfaceDriver().getDeviceContext(windowHandle);
 			if (deviceContext == nullptr)
 			{
 				throwLastError("GetDC");
@@ -84,12 +85,12 @@ namespace spk
 		void setPixelFormat()
 		{
 			const PIXELFORMATDESCRIPTOR descriptor = pixelFormatDescriptor();
-			const int format = ::ChoosePixelFormat(deviceContext, &descriptor);
+			const int format = detail::windowSurfaceDriver().choosePixelFormat(deviceContext, &descriptor);
 			if (format == 0)
 			{
 				throwLastError("ChoosePixelFormat");
 			}
-			if (::SetPixelFormat(deviceContext, format, &descriptor) == FALSE)
+			if (detail::windowSurfaceDriver().setPixelFormat(deviceContext, format, &descriptor) == FALSE)
 			{
 				throwLastError("SetPixelFormat");
 			}
@@ -97,14 +98,14 @@ namespace spk
 
 		[[nodiscard]] HGLRC createBootstrapContext()
 		{
-			HGLRC result = ::wglCreateContext(deviceContext);
+			HGLRC result = detail::windowSurfaceDriver().createContext(deviceContext);
 			if (result == nullptr)
 			{
 				throwLastError("wglCreateContext");
 			}
-			if (::wglMakeCurrent(deviceContext, result) == FALSE)
+			if (detail::windowSurfaceDriver().makeCurrent(deviceContext, result) == FALSE)
 			{
-				::wglDeleteContext(result);
+				detail::windowSurfaceDriver().deleteContext(result);
 				throwLastError("wglMakeCurrent");
 			}
 			return result;
@@ -112,7 +113,7 @@ namespace spk
 
 		[[nodiscard]] static CreateContextAttribs loadContextFactory()
 		{
-			const PROC procedure = ::wglGetProcAddress("wglCreateContextAttribsARB");
+			const PROC procedure = detail::windowSurfaceDriver().getProcedureAddress("wglCreateContextAttribsARB");
 			if (!isValidProcedure(procedure))
 			{
 				throw std::runtime_error("WGL_ARB_create_context is not supported");
@@ -138,7 +139,7 @@ namespace spk
 
 		static void deleteContext(HGLRC context)
 		{
-			if (context != nullptr && ::wglDeleteContext(context) == FALSE)
+			if (context != nullptr && detail::windowSurfaceDriver().deleteContext(context) == FALSE)
 			{
 				throwLastError("wglDeleteContext");
 			}
@@ -146,7 +147,7 @@ namespace spk
 
 		void destroyBootstrapContext(HGLRC context)
 		{
-			if (::wglMakeCurrent(nullptr, nullptr) == FALSE)
+			if (detail::windowSurfaceDriver().makeCurrent(nullptr, nullptr) == FALSE)
 			{
 				throwLastError("wglMakeCurrent");
 			}
@@ -162,7 +163,7 @@ namespace spk
 
 			if (::wglGetCurrentContext() != renderingContext)
 			{
-				if (::wglMakeCurrent(deviceContext, renderingContext) == FALSE)
+				if (detail::windowSurfaceDriver().makeCurrent(deviceContext, renderingContext) == FALSE)
 				{
 					throwLastError("wglMakeCurrent");
 				}
@@ -170,7 +171,7 @@ namespace spk
 
 			_gpuResources->clear();
 
-			if (::wglMakeCurrent(nullptr, nullptr) == FALSE)
+			if (detail::windowSurfaceDriver().makeCurrent(nullptr, nullptr) == FALSE)
 			{
 				throwLastError("wglMakeCurrent");
 			}
@@ -183,21 +184,21 @@ namespace spk
 		{
 			if (deviceContext != nullptr && windowHandle != nullptr)
 			{
-				::ReleaseDC(windowHandle, deviceContext);
+				detail::windowSurfaceDriver().releaseDeviceContext(windowHandle, deviceContext);
 			}
 			deviceContext = nullptr;
 		}
 
 		void cleanupAfterCreationFailure(HGLRC bootstrap) noexcept
 		{
-			::wglMakeCurrent(nullptr, nullptr);
+			detail::windowSurfaceDriver().makeCurrent(nullptr, nullptr);
 			if (renderingContext != nullptr)
 			{
-				::wglDeleteContext(renderingContext);
+				detail::windowSurfaceDriver().deleteContext(renderingContext);
 			}
 			if (bootstrap != nullptr)
 			{
-				::wglDeleteContext(bootstrap);
+				detail::windowSurfaceDriver().deleteContext(bootstrap);
 			}
 			renderingContext = nullptr;
 			releaseDeviceContext();
@@ -302,7 +303,7 @@ namespace spk
 		{
 			return;
 		}
-		if (::wglMakeCurrent(_impl->deviceContext, _impl->renderingContext) == FALSE)
+		if (detail::windowSurfaceDriver().makeCurrent(_impl->deviceContext, _impl->renderingContext) == FALSE)
 		{
 			Impl::throwLastError("wglMakeCurrent");
 		}
@@ -329,7 +330,7 @@ namespace spk
 		{
 			throw std::logic_error("Cannot present an uninitialized OpenGL surface");
 		}
-		if (::SwapBuffers(_impl->deviceContext) == FALSE)
+		if (detail::windowSurfaceDriver().swapBuffers(_impl->deviceContext) == FALSE)
 		{
 			Impl::throwLastError("SwapBuffers");
 		}

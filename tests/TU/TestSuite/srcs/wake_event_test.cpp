@@ -19,6 +19,12 @@ namespace
 		return FALSE;
 	}
 
+	HANDLE WINAPI failCreateEvent(LPSECURITY_ATTRIBUTES, BOOL, BOOL, LPCWSTR)
+	{
+		::SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+		return nullptr;
+	}
+
 	bool contains(std::string_view text, std::string_view fragment)
 	{
 		return text.find(fragment) != std::string_view::npos;
@@ -76,9 +82,15 @@ TEST(WakeEventTest, SetEventFailureReportsCodeAndOperation)
 	}
 }
 
-// Disabled: CreateEventW failure cannot be forced deterministically through WakeEvent's
-// public API. Add an injectable Win32 creation seam before enabling this contract test.
-TEST(WakeEventTest, DISABLED_CreateEventFailureReportsCodeAndOperation)
+TEST(WakeEventTest, CreateEventFailureReportsCodeAndOperation)
 {
-	FAIL() << "Requires a deterministic CreateEventW failure seam";
+	try
+	{
+		spk::WinAPI::WakeEvent event(::SetEvent, &failCreateEvent);
+		FAIL() << "Expected std::system_error";
+	} catch (const std::system_error &exception)
+	{
+		EXPECT_EQ(exception.code().value(), ERROR_NOT_ENOUGH_MEMORY);
+		EXPECT_TRUE(contains(exception.what(), "CreateEventW"));
+	}
 }

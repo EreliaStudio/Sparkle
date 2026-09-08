@@ -327,3 +327,32 @@ TEST(InherenceTraitTest, DestroyingMiddleNodeDetachesFromParentAndOrphansChildre
 	EXPECT_FALSE(leaf.hasParent());
 	EXPECT_EQ(leaf.parent(), nullptr);
 }
+
+TEST(InherenceTraitTest, ResolveInHierarchyUsesLocalValueAndConfigurableParentContinuation)
+{
+	Node root("root");
+	Node child("child");
+	Node leaf("leaf");
+	root.addChild(&child);
+	child.addChild(&leaf);
+	std::vector<std::string> visited;
+
+	const bool accepted = leaf.resolveInHierarchy([&](const Node &node) {
+		visited.push_back(node.name);
+		return node.name != "child";
+	});
+
+	EXPECT_FALSE(accepted);
+	EXPECT_EQ(visited, (std::vector<std::string>{"leaf", "child"}));
+	EXPECT_TRUE(root.resolveInHierarchy([](const Node &) { return true; }));
+
+	visited.clear();
+	const bool firstAcceptedAncestor = leaf.resolveInHierarchy(
+		[&](const Node &node) {
+			visited.push_back(node.name);
+			return node.name == "root";
+		},
+		[](bool value) { return !value; });
+	EXPECT_TRUE(firstAcceptedAncestor);
+	EXPECT_EQ(visited, (std::vector<std::string>{"leaf", "child", "root"}));
+}

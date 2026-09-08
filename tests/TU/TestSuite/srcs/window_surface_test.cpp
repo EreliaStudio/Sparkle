@@ -1,9 +1,17 @@
 #include <gtest/gtest.h>
 
+#include <Windows.h>
+
+#include <atomic>
 #include <stdexcept>
+#include <string>
+#include <system_error>
 #include <type_traits>
 
+#include "core/platform/detail/window_surface_driver.hpp"
+#include "core/platform/window.hpp"
 #include "core/window.hpp"
+#include "sparkle_test/scoped_override.hpp"
 
 static_assert(!std::is_copy_constructible_v<spk::Window::Surface>);
 static_assert(!std::is_copy_assignable_v<spk::Window::Surface>);
@@ -12,6 +20,48 @@ static_assert(!std::is_move_assignable_v<spk::Window::Surface>);
 
 namespace
 {
+	[[nodiscard]] std::string uniqueClassName()
+	{
+		static std::atomic_uint64_t counter = 0;
+		return "Sparkle_WindowSurfaceTest_" + std::to_string(::GetCurrentProcessId()) + "_" +
+			std::to_string(counter.fetch_add(1));
+	}
+
+	class HiddenNativeWindow
+	{
+	private:
+		spk::WinAPI::Window::Class _class{uniqueClassName()};
+
+	public:
+		spk::Window::Native native{"surface-test-native"};
+
+		HiddenNativeWindow()
+		{
+			spk::WinAPI::Window::CreationInfo info;
+			info.title = "Sparkle surface test";
+			info.width = 32;
+			info.height = 32;
+			info.visible = false;
+			native.window().create(_class, info);
+		}
+
+		~HiddenNativeWindow()
+		{
+			try
+			{
+				native.window().destroy();
+			} catch (...)
+			{
+			}
+		}
+	};
+
+	HGLRC WINAPI failContextCreation(HDC, HGLRC, const int *)
+	{
+		::SetLastError(ERROR_NOT_SUPPORTED);
+		return nullptr;
+	}
+
 	[[nodiscard]] spk::Rect2D testGeometry()
 	{
 		return spk::Rect2D{
@@ -101,22 +151,82 @@ TEST(WindowSurfaceTest, FailedCreationCanBeRetriedBecauseTheLifecycleRemainsPend
 	EXPECT_EQ(surface.lifeCycle(), spk::Window::LifeCycle::Pending);
 }
 
-TEST(WindowSurfaceTest, DISABLED_StandardNativeCreationMakeCurrentPresentAndDestroy)
+TEST(WindowSurfaceTest, StandardNativeCreationMakeCurrentPresentAndDestroy)
 {
-	GTEST_SKIP() << "A valid WinAPI::Window creation fixture is not part of the supplied section-05 archive. This test should create a hidden native frame, create the surface, verify Ready, make it current, reclaim resources, present, destroy, and verify Released.";
+	HiddenNativeWindow frame;
+	spk::Window::Surface surface("surface-standard-native");
+	surface.create(frame.native.window());
+	EXPECT_EQ(surface.lifeCycle(), spk::Window::LifeCycle::Ready);
+	EXPECT_NO_THROW(surface.makeCurrent());
+	EXPECT_NE(::wglGetCurrentContext(), nullptr);
+	EXPECT_NO_THROW(surface._gpuResources().reclaimReleased());
+	EXPECT_NO_THROW(surface.present());
+	surface.destroy();
+	EXPECT_EQ(surface.lifeCycle(), spk::Window::LifeCycle::Released);
+	EXPECT_EQ(::wglGetCurrentContext(), nullptr);
 }
 
-TEST(WindowSurfaceTest, DISABLED_RepeatedSuccessfulCreateIsRejected)
+TEST(WindowSurfaceTest, RepeatedSuccessfulCreateIsRejected)
 {
-	GTEST_SKIP() << "Requires the shared hidden native-window fixture. After one successful create(), a second create() must throw std::logic_error.";
+	HiddenNativeWindow frame;
+	spk::Window::Surface surface("surface-repeated-create");
+	surface.create(frame.native.window());
+	EXPECT_THROW(surface.create(frame.native.window()), std::logic_error);
+	EXPECT_EQ(surface.lifeCycle(), spk::Window::LifeCycle::Ready);
+	EXPECT_NO_THROW(surface.makeCurrent());
+	surface.destroy();
 }
 
-TEST(WindowSurfaceTest, DISABLED_DestroyFromPartiallyInitializedOpenGLStateCleansUp)
+TEST(WindowSurfaceTest, FailedRenderingContextCreationCleansUpPartialOpenGLState)
 {
-	GTEST_SKIP() << "The public API cannot intentionally stop WGL setup between device-context/bootstrap/render-context stages. Enable with a fault-injection WinAPI/OpenGL fixture.";
+	HiddenNativeWindow frame;
+	spk::Window::Surface surface("surface-partial-create");
+	{
+		auto &operation = spk::detail::windowSurfaceDriver().getProcedureAddress;
+		auto override = sparkle_test::scopedOverride(operation,
+			[](LPCSTR) { return reinterpret_cast<PROC>(&failContextCreation); });
+		EXPECT_THROW(surface.create(frame.native.window()), std::system_error);
+	}
+	EXPECT_EQ(surface.lifeCycle(), spk::Window::LifeCycle::Pending);
+	EXPECT_EQ(::wglGetCurrentContext(), nullptr);
+	EXPECT_NO_THROW(surface.destroy());
+	EXPECT_EQ(surface.lifeCycle(), spk::Window::LifeCycle::Released);
 }
 
-TEST(WindowSurfaceTest, DISABLED_UnsupportedWGLAndWin32SetupFailuresPropagatePrecisely)
+TEST(WindowSurfaceTest, UnsupportedWGLAndWin32SetupFailuresPropagatePrecisely)
 {
-	GTEST_SKIP() << "Capability-aware WGL failure injection is not exposed by the supplied public snapshots. Cover std::runtime_error/std::system_error when the platform test fixture can substitute WGL/Win32 capabilities.";
+	HiddenNativeWindow getDCFrame;
+	spk::Window::Surface getDCSurface("surface-getdc-failure");
+	{
+		auto &operation = spk::detail::windowSurfaceDriver().getDeviceContext;
+		auto override = sparkle_test::scopedOverride(operation, [](HWND) -> HDC {
+			::SetLastError(ERROR_ACCESS_DENIED);
+			return nullptr;
+		});
+		try
+		{
+			getDCSurface.create(getDCFrame.native.window());
+			FAIL() << "Expected GetDC failure";
+		} catch (const std::system_error &exception)
+		{
+			EXPECT_EQ(exception.code().value(), ERROR_ACCESS_DENIED);
+			EXPECT_NE(std::string(exception.what()).find("GetDC"), std::string::npos);
+		}
+	}
+
+	HiddenNativeWindow extensionFrame;
+	spk::Window::Surface extensionSurface("surface-extension-failure");
+	{
+		auto &operation = spk::detail::windowSurfaceDriver().getProcedureAddress;
+		auto override = sparkle_test::scopedOverride(operation, [](LPCSTR) -> PROC { return nullptr; });
+		try
+		{
+			extensionSurface.create(extensionFrame.native.window());
+			FAIL() << "Expected unsupported WGL failure";
+		} catch (const std::runtime_error &exception)
+		{
+			EXPECT_NE(std::string(exception.what()).find("WGL_ARB_create_context"), std::string::npos);
+		}
+	}
+	EXPECT_EQ(::wglGetCurrentContext(), nullptr);
 }

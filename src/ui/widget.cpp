@@ -89,6 +89,9 @@ namespace spk
 		_initialActivationContract = subscribeToActivation([this]() {
 			_acceptChildSizeHintEditions = true;
 		});
+		_deactivationContract = subscribeToDeactivation([this]() {
+			_onDeactivation();
+		});
 		setParent(parent);
 		_computeRatio();
 		_onParentEditedContract = subscribeToParentEdition([this](const Widget *) {
@@ -100,6 +103,7 @@ namespace spk
 
 	Widget::~Widget()
 	{
+		_destructionProvider.trigger(this);
 		while (!children().empty())
 		{
 			children().back()->setParent(nullptr);
@@ -390,6 +394,9 @@ namespace spk
 	void Widget::_onFocusReleased(FocusMode::Channel) noexcept
 	{
 	}
+	void Widget::_onDeactivation() noexcept
+	{
+	}
 
 	void Widget::notifyFocusAcquired(FocusMode::Channel channel) noexcept
 	{
@@ -399,5 +406,10 @@ namespace spk
 	void Widget::notifyFocusReleased(FocusMode::Channel channel) noexcept
 	{
 		_onFocusReleased(channel);
+	}
+
+	Widget::DestructionContract Widget::subscribeToDestruction(DestructionCallback callback)
+	{
+		return _destructionProvider.subscribe(std::move(callback));
 	}
 }

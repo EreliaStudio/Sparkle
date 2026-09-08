@@ -56,6 +56,10 @@ namespace spk
 
 		protected:
 			virtual void _setupAttributes(VertexBuffer &) = 0;
+			[[nodiscard]] virtual std::size_t _vertexCount() const
+			{
+				return _content->layout.vertexBuffer().count();
+			}
 			virtual void _setupMesh(TMeshType &mesh)
 			{
 			}
@@ -74,16 +78,16 @@ namespace spk
 				_check();
 				_initializeAttributes();
 
-				const Index index = _content->layout.vertexBuffer().count();
+				const std::size_t vertexCount = _vertexCount();
 
-				if (index > std::numeric_limits<Index>::max())
+				if (vertexCount > std::numeric_limits<Index>::max())
 				{
 					throw std::overflow_error("Mesh vertex index overflow");
 				}
 
 				_content->layout.vertexBuffer().pushBack(vertex);
 
-				return static_cast<Index>(index);
+				return static_cast<Index>(vertexCount);
 			}
 
 			void addIndex(Index index)

@@ -65,7 +65,7 @@ namespace spk
 		const unsigned int textWidth = availableWidth - 2 * measurementPadding.x;
 		const Vector2UInt preferred = _textArea.computePreferredSize(textWidth);
 		Vector2UInt size{
-			std::min(preferred.x + 2 * measurementPadding.x, rootWidget.geometry().width),
+			std::min(preferred.x + 2 * measurementPadding.x, availableWidth),
 			std::min(preferred.y + 2 * measurementPadding.y, rootWidget.geometry().height)};
 		const Rect2D targetRect = _target->viewRegion().viewport;
 		const Vector2Int origin = rootWidget.viewRegion().viewport.anchor;
@@ -100,11 +100,8 @@ namespace spk
 	}
 	void Tooltip::_updateState(UpdateContext &context)
 	{
-		bool targetIsEffectivelyActive = _target != nullptr;
-		for (const Widget *widget = _target; targetIsEffectivelyActive && widget != nullptr; widget = widget->parent())
-		{
-			targetIsEffectivelyActive = widget->isActive();
-		}
+		const bool targetIsEffectivelyActive = _target != nullptr &&
+			_target->resolveInHierarchy([](const Widget &widget) { return widget.isActive(); });
 		if (!targetIsEffectivelyActive || _textArea.text().empty())
 		{
 			hide();
@@ -171,6 +168,7 @@ namespace spk
 	{
 		hide();
 		_targetParentContract.resign();
+		_targetDestructionContract.resign();
 		_target = target;
 		if (_target != nullptr)
 		{
@@ -184,6 +182,12 @@ namespace spk
 				if (_target == observed)
 				{
 					hide();
+				}
+			});
+			_targetDestructionContract = observed->subscribeToDestruction([this, observed](Widget *) {
+				if (_target == observed)
+				{
+					setTarget(nullptr);
 				}
 			});
 		}

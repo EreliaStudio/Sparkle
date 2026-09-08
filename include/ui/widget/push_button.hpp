@@ -42,8 +42,12 @@ namespace spk
 		void _applyVisualState();
 		void _updateTextGeometry();
 		void _updateIconGeometry();
+		void _cancelPress() noexcept;
 		void _updateSizeHint() override;
 		void _onGeometryChange() override;
+		void _onFocusReleased(FocusMode::Channel channel) noexcept override;
+		void _onDeactivation() noexcept override;
+		void _onWindowFocusLostEvent(WindowFocusLostEvent &event) override;
 		void _onMouseLeftEvent(MouseLeftEvent &event) override;
 		void _onMouseMovedEvent(MouseMovedEvent &event) override;
 		void _onMouseButtonPressedEvent(MouseButtonPressedEvent &event) override;

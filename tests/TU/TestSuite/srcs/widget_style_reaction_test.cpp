@@ -131,8 +131,7 @@ TEST(WidgetStyleReactionTest, ResourceReplacementReachesComposedConsumers)
 	EXPECT_EQ(toggle.checkedBackgroundTexture(), style.toggleSwitchOnBackground.get());
 }
 
-// Workspace currently inherits Widget::applyStyle, whose implementation is a no-op.
-TEST(WorkspaceTest, DISABLED_ApplyStylePropagatesToContentAndMenus)
+TEST(WorkspaceTest, ApplyStylePropagatesToContentAndMenus)
 {
 	spk::Workspace<spk::TextLabel> workspace("Workspace");
 	workspace.menuBar().addMenu("file", "File");

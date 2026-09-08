@@ -13,6 +13,15 @@
 
 namespace
 {
+	class BoundaryDataModel : public spk::DataModel<int>
+	{
+	public:
+		void setNextRowID(RowID nextRowID)
+		{
+			_setNextRowID(nextRowID);
+		}
+	};
+
 	struct RangeEvent
 	{
 		std::size_t first;
@@ -183,7 +192,10 @@ TEST(DataModelTest, InvalidRowAccessInsertionAndEraseRangesThrowOutOfRange)
 	EXPECT_THROW(model.erase(1, 2), std::out_of_range);
 }
 
-TEST(DataModelTest, DISABLED_RowIDOverflowRequiresDeterministicPublicTestSeam)
+TEST(DataModelTest, RowIDOverflowThrowsWithoutMutatingTheModel)
 {
-	GTEST_SKIP() << "_nextRowID is private and the supplied API exposes no deterministic seam for forcing uint64_t exhaustion.";
+	BoundaryDataModel model;
+	model.setNextRowID(0);
+	EXPECT_THROW((void)model.append(42), std::overflow_error);
+	EXPECT_TRUE(model.empty());
 }

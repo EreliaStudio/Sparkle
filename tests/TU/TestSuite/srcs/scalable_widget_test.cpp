@@ -109,8 +109,7 @@ TEST(ScalableWidgetTest, FocusLossDoubleClickMouseLeaveAndDegenerateGeometry)
 	EXPECT_EQ(widget.hoveredEdges(), spk::ScalableWidget::Left | spk::ScalableWidget::Top);
 }
 
-// ScalableWidget enforces size hints, but currently does not enforce parent bounds.
-TEST(ScalableWidgetTest, DISABLED_ParentBoundsConstrainAllResizeDirections)
+TEST(ScalableWidgetTest, ParentBoundsConstrainAllResizeDirections)
 {
 	for (const auto position : {spk::Vector2Int{25, 25}, {75, 25}, {25, 75}, {75, 75}})
 	{
@@ -128,7 +127,7 @@ TEST(ScalableWidgetTest, DISABLED_ParentBoundsConstrainAllResizeDirections)
 	}
 }
 
-TEST(ScalableWidgetTest, DISABLED_MouseFocusReleaseAndDeactivationCancelResizing)
+TEST(ScalableWidgetTest, MouseFocusReleaseAndDeactivationCancelResizing)
 {
 	spk::ScalableWidget widget("Resizable");
 	widget.activate();

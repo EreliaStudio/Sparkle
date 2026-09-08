@@ -15,6 +15,7 @@ namespace spk
 
 	protected:
 		Image();
+		static void _validateEncodedDataSize(std::size_t size);
 
 		void _loadFromFile(const std::filesystem::path &path);
 		void _loadFromData(std::span<const std::uint8_t> data);

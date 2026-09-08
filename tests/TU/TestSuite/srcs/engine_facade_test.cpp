@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <chrono>
+#include <functional>
 #include <memory>
 #include <string>
 #include <utility>
@@ -72,6 +73,54 @@ namespace
 		void _onKeyPressedEvent(spk::KeyPressedEvent &) override
 		{
 			++keyCalls;
+		}
+	};
+
+	class CallbackSystem final : public spk::System
+	{
+	private:
+		std::size_t *_updateCalls;
+
+	public:
+		std::function<void()> callback;
+
+		explicit CallbackSystem(std::size_t &updateCalls) :
+			_updateCalls(&updateCalls)
+		{
+		}
+
+	protected:
+		void _updateState(spk::UpdateContext &) override
+		{
+			++(*_updateCalls);
+			if (callback)
+			{
+				callback();
+			}
+		}
+	};
+
+	class CallbackEngineBehaviour final : public spk::Behaviour
+	{
+	private:
+		std::size_t *_updateCalls;
+
+	public:
+		std::function<void()> callback;
+
+		explicit CallbackEngineBehaviour(std::size_t &updateCalls) :
+			_updateCalls(&updateCalls)
+		{
+		}
+
+	protected:
+		void _updateState(spk::UpdateContext &) override
+		{
+			++(*_updateCalls);
+			if (callback)
+			{
+				callback();
+			}
 		}
 	};
 
@@ -269,12 +318,68 @@ TEST(EngineFacadeTest, DestructionClearsNestedAndDetachedEntityContextsAndDetach
 	EXPECT_TRUE(Registry::elements(oldEngine).empty());
 }
 
-TEST(EngineFacadeTest, DISABLED_ModifyingSystemsDuringUpdateNeedsStableTraversalContract)
+TEST(EngineFacadeTest, ModifyingSystemsDuringUpdateUsesStableTraversal)
 {
-	GTEST_SKIP() << "Engine iterates its live system vector; the API exposes no deferred-mutation or snapshot traversal contract.";
+	spk::Engine engine;
+	std::size_t controllerCalls = 0;
+	std::size_t removedCalls = 0;
+	std::size_t addedCalls = 0;
+	auto &controller = engine.addSystem<CallbackSystem>(controllerCalls);
+	auto &removed = engine.addSystem<CallbackSystem>(removedCalls);
+	CallbackSystem *added = nullptr;
+	controller.callback = [&]() {
+		controller.callback = {};
+		engine.removeSystem(removed);
+		added = &engine.addSystem<CallbackSystem>(addedCalls);
+	};
+	spk::Keyboard keyboard;
+	spk::Mouse mouse;
+	auto update = makeUpdateContext(keyboard, mouse);
+
+	engine.updateState(update);
+	ASSERT_NE(added, nullptr);
+	EXPECT_EQ(controllerCalls, 1u);
+	EXPECT_EQ(removedCalls, 0u);
+	EXPECT_EQ(addedCalls, 0u);
+
+	engine.updateState(update);
+	EXPECT_EQ(controllerCalls, 2u);
+	EXPECT_EQ(addedCalls, 1u);
 }
 
-TEST(EngineFacadeTest, DISABLED_ModifyingEntitiesDuringUpdateNeedsStableTraversalContract)
+TEST(EngineFacadeTest, ModifyingEntitiesDuringUpdateUsesStableTraversal)
 {
-	GTEST_SKIP() << "Entity child traversal is live and non-owning; mutation during callbacks cannot be tested without risking iterator invalidation.";
+	spk::Engine engine;
+	spk::Entity first("first");
+	spk::Entity second("second");
+	spk::Entity added("added");
+	engine.addEntity(&first);
+	engine.addEntity(&second);
+
+	spk::Entity *controllerEntity = engine.root().children().front();
+	spk::Entity *removedEntity = engine.root().children().back();
+	std::size_t controllerCalls = 0;
+	std::size_t removedCalls = 0;
+	std::size_t addedCalls = 0;
+	auto &controller = controllerEntity->addBehaviour<CallbackEngineBehaviour>(controllerCalls);
+	removedEntity->addBehaviour<CallbackEngineBehaviour>(removedCalls);
+	added.addBehaviour<CallbackEngineBehaviour>(addedCalls);
+	controller.callback = [&]() {
+		controller.callback = {};
+		engine.removeEntity(removedEntity);
+		engine.addEntity(&added);
+	};
+	spk::Keyboard keyboard;
+	spk::Mouse mouse;
+	auto update = makeUpdateContext(keyboard, mouse);
+
+	engine.updateState(update);
+	EXPECT_EQ(controllerCalls, 1u);
+	EXPECT_EQ(removedCalls, 0u);
+	EXPECT_EQ(addedCalls, 0u);
+
+	engine.updateState(update);
+	EXPECT_EQ(controllerCalls, 2u);
+	EXPECT_EQ(removedCalls, 0u);
+	EXPECT_EQ(addedCalls, 1u);
 }

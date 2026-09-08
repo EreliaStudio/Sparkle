@@ -91,7 +91,7 @@ namespace spk
 
 			void setBackgroundColor(const spk::Color &backgroundColor);
 
-			void takeFocus(FocusMode::Channel channel, Widget *widget) noexcept;
+			void takeFocus(FocusMode::Channel channel, Widget *widget);
 			void releaseFocus(FocusMode::Channel channel, Widget *widget) noexcept;
 			void clearFocus(FocusMode::Channel channel) noexcept;
 			[[nodiscard]] Widget &dispatchRoot(FocusMode::Channel channel) noexcept;

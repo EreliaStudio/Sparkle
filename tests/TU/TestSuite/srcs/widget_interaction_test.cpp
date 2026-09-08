@@ -347,8 +347,7 @@ TEST(PushButtonInteractionTest, NonLeftDoubleClickLeaveAndInactiveBranches)
 	EXPECT_EQ(clicks, 1);
 }
 
-// PushButton does not currently cancel its pressed state when the window loses focus.
-TEST(PushButtonInteractionTest, DISABLED_WindowFocusLossCancelsPendingClick)
+TEST(PushButtonInteractionTest, WindowFocusLossCancelsPendingClick)
 {
 	spk::PushButton button("Button");
 	button.setGeometry({.anchor = {0, 0}, .size = {100, 40}});
@@ -635,8 +634,7 @@ TEST(TooltipInteractionTest, AllPlacementsAndRootEdgesConstrainOversizedText)
 	EXPECT_FALSE(tooltip.isShown());
 }
 
-// Tooltip observes reparenting but does not currently clear a destroyed target pointer.
-TEST(TooltipInteractionTest, DISABLED_DestroyedTargetIsForgotten)
+TEST(TooltipInteractionTest, DestroyedTargetIsForgotten)
 {
 	spk::Widget root("Root", nullptr);
 	root.setGeometry({.anchor = {0, 0}, .size = {200, 100}});
@@ -651,8 +649,7 @@ TEST(TooltipInteractionTest, DISABLED_DestroyedTargetIsForgotten)
 	EXPECT_EQ(tooltip.target(), nullptr);
 }
 
-// TextArea keeps long words intact, so the current tooltip can exceed its maximum width.
-TEST(TooltipInteractionTest, DISABLED_MaximumWidthClampsUnbreakableTextIncludingZero)
+TEST(TooltipInteractionTest, MaximumWidthClampsUnbreakableTextIncludingZero)
 {
 	spk::Widget root("Root", nullptr), target("Target", &root);
 	root.setGeometry({.anchor = {0, 0}, .size = {200, 100}});
@@ -710,8 +707,7 @@ TEST(SliderBarInteractionTest, MidDragRangeScaleAndGeometryChangesRemainClamped)
 	EXPECT_FALSE(slider.isDragging());
 }
 
-// Neither control currently clears its captured interaction on all cancellation paths.
-TEST(ToggleSwitchInteractionTest, DISABLED_FocusLossCancelsPendingToggle)
+TEST(ToggleSwitchInteractionTest, FocusLossCancelsPendingToggle)
 {
 	spk::ToggleSwitch toggle("Toggle");
 	toggle.setGeometry({.anchor = {0, 0}, .size = {80, 40}});
@@ -721,7 +717,7 @@ TEST(ToggleSwitchInteractionTest, DISABLED_FocusLossCancelsPendingToggle)
 	EXPECT_FALSE(toggle.isChecked());
 }
 
-TEST(PushButtonInteractionTest, DISABLED_DeactivationCancelsPendingClick)
+TEST(PushButtonInteractionTest, DeactivationCancelsPendingClick)
 {
 	spk::PushButton button("Button");
 	button.setGeometry({.anchor = {0, 0}, .size = {100, 40}});

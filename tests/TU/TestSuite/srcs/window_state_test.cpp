@@ -131,9 +131,26 @@ TEST(WindowStateTest, RepeatedLifecycleNotificationsAreTolerated)
 	EXPECT_EQ(state.lifeCycle(), spk::Window::LifeCycle::Released);
 }
 
-TEST(WindowStateTest, DISABLED_InactiveFocusedWidgetHasDocumentedDispatchBehavior)
+TEST(WindowStateTest, InactiveFocusedWidgetHasDocumentedDispatchBehavior)
 {
-	GTEST_SKIP() << "The backlog requires inactive-focused-widget coverage, but the supplied window.hpp only forward-declares Widget. Enable this case beside the Widget tests once the complete Widget API is part of this handoff.";
+	spk::Window::State state("state");
+	spk::Widget focused("Focused", &state.root());
+	focused.activate();
+	state.takeFocus(Channel0, &focused);
+	ASSERT_EQ(state.focusedWidget(Channel0), &focused);
+
+	focused.deactivate();
+	EXPECT_EQ(state.focusedWidget(Channel0), nullptr);
+	EXPECT_EQ(&state.dispatchRoot(Channel0), &state.root());
+
+	{
+		spk::Widget temporary("Temporary", &state.root());
+		temporary.activate();
+		state.takeFocus(Channel0, &temporary);
+		ASSERT_EQ(state.focusedWidget(Channel0), &temporary);
+	}
+	EXPECT_EQ(state.focusedWidget(Channel0), nullptr);
+	EXPECT_EQ(&state.dispatchRoot(Channel0), &state.root());
 }
 
 TEST(WindowStateTest, BackgroundColorMutationIsObservableInProducedSnapshot)

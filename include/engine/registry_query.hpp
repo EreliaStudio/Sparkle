@@ -363,6 +363,7 @@ namespace spk
 		{
 			Entity::OnParticipantEditionContract onAdditionContract;
 			Entity::OnParticipantEditionContract onRemovalContract;
+			Entity::OnParticipantNameEditionContract onNameEditionContract;
 		};
 
 		using EntitySubscriptions =
@@ -394,6 +395,15 @@ namespace spk
 
 			subscription.onRemovalContract =
 				entity->subscribeToParticipantRemoval(
+					[this, context](System::Participant &participant) {
+						if (dynamic_cast<TParticipantType *>(&participant) != nullptr)
+						{
+							this->invalidate(context);
+						}
+					});
+
+			subscription.onNameEditionContract =
+				entity->subscribeToParticipantNameEdition(
 					[this, context](System::Participant &participant) {
 						if (dynamic_cast<TParticipantType *>(&participant) != nullptr)
 						{
@@ -491,6 +501,7 @@ namespace spk
 		{
 			Entity::OnBehaviourEditionContract onAdditionContract;
 			Entity::OnBehaviourEditionContract onRemovalContract;
+			Entity::OnBehaviourNameEditionContract onNameEditionContract;
 		};
 
 		using EntitySubscriptions =
@@ -521,6 +532,15 @@ namespace spk
 
 			subscription.onRemovalContract =
 				entity->subscribeToBehaviourRemoval(
+					[this, context](Behaviour &behaviour) {
+						if (dynamic_cast<TBehaviourType *>(&behaviour) != nullptr)
+						{
+							this->invalidate(context);
+						}
+					});
+
+			subscription.onNameEditionContract =
+				entity->subscribeToBehaviourNameEdition(
 					[this, context](Behaviour &behaviour) {
 						if (dynamic_cast<TBehaviourType *>(&behaviour) != nullptr)
 						{

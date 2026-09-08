@@ -1,6 +1,7 @@
 #include "engine/behaviour.hpp"
 
 #include "core/context/update_context.hpp"
+#include "engine/entity.hpp"
 #include "rendering/render_snapshot.hpp"
 
 namespace spk
@@ -17,7 +18,7 @@ namespace spk
 
 	bool Behaviour::_isAcceptingInteraction() const
 	{
-		return isActive();
+		return isEffectivelyActive();
 	}
 
 	void Behaviour::_onGeometryChange(const spk::Rect2D &)
@@ -45,7 +46,7 @@ namespace spk
 
 	void Behaviour::buildRenderSnapshot(spk::RenderSnapshot::Builder &builder)
 	{
-		if (isActive())
+		if (isEffectivelyActive())
 		{
 			_buildRenderSnapshot(builder);
 		}
@@ -53,7 +54,7 @@ namespace spk
 
 	void Behaviour::updateState(UpdateContext &context)
 	{
-		if (!isActive())
+		if (!isEffectivelyActive())
 		{
 			return;
 		}

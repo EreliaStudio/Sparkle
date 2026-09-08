@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <utility>
 
+
 namespace
 {
 	[[nodiscard]] std::uintptr_t indexByteOffset(spk::IndexBuffer::Type indexType, std::size_t firstIndex)

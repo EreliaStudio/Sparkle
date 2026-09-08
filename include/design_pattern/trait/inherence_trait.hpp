@@ -15,6 +15,15 @@ namespace spk
 	class InherenceTrait
 	{
 	public:
+		struct ContinueWhileTruthy
+		{
+			template <typename TValue>
+			[[nodiscard]] bool operator()(const TValue &value) const
+			{
+				return static_cast<bool>(value);
+			}
+		};
+
 		using ChildrenContainer = std::vector<TType *>;
 		using OnParentEditionContractProvider = ContractProvider<const TType *>;
 		using OnParentEditionCallback = OnParentEditionContractProvider::callback_type;
@@ -188,6 +197,31 @@ namespace spk
 		[[nodiscard]] const TType *parent() const
 		{
 			return _parent;
+		}
+
+		template <typename TValuePredicate, typename TContinuePredicate = ContinueWhileTruthy>
+			requires std::invocable<const TValuePredicate &, const TType &> &&
+				std::predicate<
+					const TContinuePredicate &,
+					const std::remove_cvref_t<std::invoke_result_t<const TValuePredicate &, const TType &>> &>
+		[[nodiscard]] auto resolveInHierarchy(
+			const TValuePredicate &valuePredicate,
+			const TContinuePredicate &continuePredicate = {}) const
+			-> std::remove_cvref_t<std::invoke_result_t<const TValuePredicate &, const TType &>>
+		{
+			using Value = std::remove_cvref_t<std::invoke_result_t<const TValuePredicate &, const TType &>>;
+			for (const TType *current = static_cast<const TType *>(this);
+				 current != nullptr;
+				 current = current->_parent)
+			{
+				Value value = std::invoke(valuePredicate, *current);
+				if (current->_parent == nullptr || !std::invoke(continuePredicate, value))
+				{
+					return value;
+				}
+			}
+
+			throw std::logic_error("Invalid hierarchy traversal state");
 		}
 	};
 }

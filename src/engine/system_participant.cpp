@@ -35,7 +35,7 @@ namespace spk
 
 	void System::Participant::buildRenderSnapshot(spk::RenderSnapshot::Builder &builder)
 	{
-		if (isActive())
+		if (isEffectivelyActive())
 		{
 			_buildRenderSnapshot(builder);
 		}

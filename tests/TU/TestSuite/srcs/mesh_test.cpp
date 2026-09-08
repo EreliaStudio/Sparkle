@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <cstdint>
+#include <limits>
 #include <utility>
 
 #include "geometry/color_mesh_2d.hpp"
@@ -25,6 +26,24 @@ namespace
 			void _setupAttributes(spk::VertexBuffer &buffer) override
 			{
 				buffer.addAttribute(0, spk::VertexBuffer::Attribute::Type::Float, 2);
+			}
+		};
+	};
+
+	class BoundaryMesh final : public spk::Mesh<SimpleVertex>
+	{
+	public:
+		class Builder final : public spk::Mesh<SimpleVertex>::Builder<BoundaryMesh>
+		{
+		private:
+			void _setupAttributes(spk::VertexBuffer &buffer) override
+			{
+				buffer.addAttribute(0, spk::VertexBuffer::Attribute::Type::Float, 2);
+			}
+
+			[[nodiscard]] std::size_t _vertexCount() const override
+			{
+				return static_cast<std::size_t>(std::numeric_limits<Index>::max()) + 1;
 			}
 		};
 	};
@@ -174,7 +193,8 @@ TEST(TextureMesh3DTest, PayloadNormalsWindingUVsAndLayoutArePreserved)
 	EXPECT_EQ(mesh.layout().vertexBuffer().stride(), sizeof(spk::Texture3DVertex));
 }
 
-TEST(MeshTest, DISABLED_VertexIndexOverflowNeedsDeterministicCapacitySeam)
+TEST(MeshTest, VertexIndexOverflowIsRejectedBeforeMutation)
 {
-	GTEST_SKIP() << "Reaching more than uint32_t vertices would require impractical memory; Builder exposes no injectable count seam.";
+	BoundaryMesh::Builder builder;
+	EXPECT_THROW((void)builder.addVertex({1.0f, 2.0f}), std::overflow_error);
 }

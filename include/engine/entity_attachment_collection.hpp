@@ -5,6 +5,7 @@
 #include <concepts>
 #include <memory>
 #include <regex>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -27,6 +28,12 @@ namespace spk
 		using OnAttachmentEditionContract =
 			typename Base::OnElementEditionContract;
 
+	private:
+		using AttachmentNameEditionContract = NameTrait::NameEditionContract;
+
+		OnAttachmentEditionContractProvider _onAttachmentNameEditionContractProvider;
+		std::unordered_map<TAttachmentBase *, AttachmentNameEditionContract> _attachmentNameEditionContracts;
+
 	protected:
 		[[nodiscard]] OnAttachmentEditionContract subscribeToAttachmentAddition(
 			OnAttachmentEditionCallback callback)
@@ -40,16 +47,39 @@ namespace spk
 			return Base::subscribeToElementRemoval(callback);
 		}
 
+		[[nodiscard]] OnAttachmentEditionContract subscribeToAttachmentNameEdition(
+			OnAttachmentEditionCallback callback)
+		{
+			return _onAttachmentNameEditionContractProvider.subscribe(std::move(callback));
+		}
+
 		template <typename TAttachmentType>
 			requires std::derived_from<TAttachmentType, TAttachmentBase>
 		void registerAttachment(std::unique_ptr<TAttachmentType> &&attachment)
 		{
-			Base::registerElement(std::move(attachment));
+			TAttachmentBase *observed = attachment.get();
+			auto nameContract = observed->subscribeToNameEdition([this, observed](const std::string &) {
+				_onAttachmentNameEditionContractProvider.trigger(*observed);
+			});
+			_attachmentNameEditionContracts.emplace(observed, std::move(nameContract));
+			try
+			{
+				Base::registerElement(std::move(attachment));
+			} catch (...)
+			{
+				if (attachment != nullptr)
+				{
+					_attachmentNameEditionContracts.erase(observed);
+				}
+				throw;
+			}
 		}
 
 		void unregisterAttachment(TAttachmentBase &attachment)
 		{
+			TAttachmentBase *observed = &attachment;
 			Base::unregisterElement(attachment);
+			_attachmentNameEditionContracts.erase(observed);
 		}
 
 		[[nodiscard]] const std::vector<std::unique_ptr<TAttachmentBase>> &attachments() const noexcept

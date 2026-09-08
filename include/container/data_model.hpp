@@ -46,6 +46,13 @@ namespace spk
 		RowsProvider _rowsChangedProvider;
 		ResetProvider _resetProvider;
 
+	protected:
+		void _setNextRowID(RowID nextRowID) noexcept
+		{
+			_nextRowID = nextRowID;
+		}
+
+	private:
 		[[nodiscard]] RowID _takeNextRowID()
 		{
 			if (_nextRowID == 0)

@@ -114,13 +114,18 @@ namespace spk
 		static CachedData<Style> defaultStyle;
 
 		using ZOrder = float;
+		using DestructionProvider = ContractProvider<Widget *>;
+		using DestructionCallback = DestructionProvider::callback_type;
+		using DestructionContract = DestructionProvider::Contract;
 
 	private:
 		using Inherence = InherenceTrait<Widget, WidgetChildComparator>;
 
 		bool _acceptChildSizeHintEditions = false;
 		ActivableTrait::ActivationContract _initialActivationContract;
+		ActivableTrait::DeactivationContract _deactivationContract;
 		Inherence::OnParentEditionContract _onParentEditedContract;
+		DestructionProvider _destructionProvider;
 		std::unordered_map<Widget *, ResizeableTrait::Contract> _childSizeHintEditionContracts;
 		ZOrder _zOrder = 0;
 		spk::CachedData<ZOrder> _absoluteZOrder;
@@ -152,6 +157,7 @@ namespace spk
 		virtual void _onGeometryChange();
 		virtual void _onFocusAcquired(FocusMode::Channel channel) noexcept;
 		virtual void _onFocusReleased(FocusMode::Channel channel) noexcept;
+		virtual void _onDeactivation() noexcept;
 
 	public:
 		Widget(std::string name, Widget *parent);
@@ -179,5 +185,6 @@ namespace spk
 		void buildRenderSnapshot(spk::RenderSnapshot::Builder &builder);
 		void notifyFocusAcquired(FocusMode::Channel channel) noexcept;
 		void notifyFocusReleased(FocusMode::Channel channel) noexcept;
+		[[nodiscard]] DestructionContract subscribeToDestruction(DestructionCallback callback);
 	};
 }

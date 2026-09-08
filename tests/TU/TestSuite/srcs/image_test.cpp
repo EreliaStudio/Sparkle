@@ -12,6 +12,15 @@
 
 namespace
 {
+	class BoundaryImage : public spk::Image
+	{
+	public:
+		static void validateEncodedDataSize(std::size_t size)
+		{
+			_validateEncodedDataSize(size);
+		}
+	};
+
 	std::vector<std::uint8_t> makePnm(
 		char kind,
 		unsigned int width,
@@ -122,9 +131,12 @@ TEST(ImageTest, EmptyMissingUndecodableAndTruncatedInputsAreRejected)
 	EXPECT_THROW((void)spk::Image::open(temporaryImagePath("missing.file")), std::runtime_error);
 }
 
-TEST(ImageTest, DISABLED_OversizedEncodedSpanNeedsSyntheticAddressSpaceSeam)
+TEST(ImageTest, OversizedEncodedDataIsRejectedBeforeDecoderAccess)
 {
-	GTEST_SKIP() << "A span larger than INT_MAX requires a genuinely addressable multi-gigabyte range; Image exposes no decoder-size seam.";
+	EXPECT_THROW(
+		BoundaryImage::validateEncodedDataSize(
+			static_cast<std::size_t>(std::numeric_limits<int>::max()) + 1),
+		std::overflow_error);
 }
 
 TEST(ImageTest, DualChannelAndRGBAFixturesNeedDeterministicEncodedAssets)

@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "engine/entity_attachment_collection.hpp"
+#include "engine/engine.hpp"
 
 namespace
 {
@@ -72,6 +73,36 @@ namespace
 		{
 			Base::registerAttachment(std::move(attachment));
 		}
+	};
+
+	class PublicParticipant : public spk::System::Participant
+	{
+	private:
+		std::shared_ptr<int> _destructions;
+
+	public:
+		PublicParticipant(std::string name, std::shared_ptr<int> destructions) :
+			spk::System::Participant(std::move(name)),
+			_destructions(std::move(destructions))
+		{
+		}
+
+		~PublicParticipant() override
+		{
+			++*_destructions;
+		}
+	};
+
+	class PublicBehaviour : public spk::Behaviour
+	{
+	public:
+		using spk::Behaviour::Behaviour;
+	};
+
+	class PublicSystem : public spk::System
+	{
+	public:
+		using spk::System::System;
 	};
 }
 
@@ -246,7 +277,45 @@ TEST(EntityAttachmentCollectionTest, CollectionDestructionDestroysEveryRemaining
 	EXPECT_EQ(*destructions, 2);
 }
 
-TEST(EntityAttachmentCollectionTest, DISABLED_EntityAndEnginePublicWrappersExerciseTheSameCollectionSemantics)
+TEST(EntityAttachmentCollectionTest, EntityAndEnginePublicWrappersExerciseTheSameCollectionSemantics)
 {
-	GTEST_SKIP() << "The section-05 archive contains only EntityAttachmentCollection itself; the matching Entity/Engine wrapper snapshots are transitive main-repository dependencies. Keep wrapper-specific add/remove contract tests with those owning classes when supplied.";
+	spk::Engine engine;
+	spk::Entity entity("entity");
+	auto destructions = std::make_shared<int>(0);
+	int participantAdditions = 0;
+	int participantRemovals = 0;
+	int behaviourAdditions = 0;
+	int behaviourRemovals = 0;
+	int systemAdditions = 0;
+	int systemRemovals = 0;
+	auto participantAddition = entity.subscribeToParticipantAddition([&](spk::System::Participant &) { ++participantAdditions; });
+	auto participantRemoval = entity.subscribeToParticipantRemoval([&](spk::System::Participant &) { ++participantRemovals; });
+	auto behaviourAddition = entity.subscribeToBehaviourAddition([&](spk::Behaviour &) { ++behaviourAdditions; });
+	auto behaviourRemoval = entity.subscribeToBehaviourRemoval([&](spk::Behaviour &) { ++behaviourRemovals; });
+	auto systemAddition = engine.subscribeToSystemAddition([&](spk::System &) { ++systemAdditions; });
+	auto systemRemoval = engine.subscribeToSystemRemoval([&](spk::System &) { ++systemRemovals; });
+
+	auto &participant = entity.addParticipant<PublicParticipant>("participant", destructions);
+	auto &behaviour = entity.addBehaviour<PublicBehaviour>("behaviour");
+	auto &system = engine.addSystem<PublicSystem>("system");
+	EXPECT_EQ(participant.owner(), &entity);
+	EXPECT_EQ(behaviour.owner(), &entity);
+	EXPECT_EQ(system.engine(), &engine);
+	EXPECT_EQ(entity.getParticipant<PublicParticipant>(std::regex("participant")), &participant);
+	EXPECT_EQ(entity.getBehaviour<PublicBehaviour>(std::regex("behaviour")), &behaviour);
+	EXPECT_EQ(engine.getSystem<PublicSystem>(std::regex("system")), &system);
+	EXPECT_EQ(participantAdditions, 1);
+	EXPECT_EQ(behaviourAdditions, 1);
+	EXPECT_EQ(systemAdditions, 1);
+
+	entity.removeParticipant(participant);
+	entity.removeBehaviour(behaviour);
+	engine.removeSystem(system);
+	EXPECT_EQ(participantRemovals, 1);
+	EXPECT_EQ(behaviourRemovals, 1);
+	EXPECT_EQ(systemRemovals, 1);
+	EXPECT_EQ(*destructions, 1);
+	EXPECT_EQ(entity.getParticipant<PublicParticipant>(), nullptr);
+	EXPECT_EQ(entity.getBehaviour<PublicBehaviour>(), nullptr);
+	EXPECT_EQ(engine.getSystem<PublicSystem>(), nullptr);
 }

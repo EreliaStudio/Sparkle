@@ -37,6 +37,18 @@ namespace spk
 		_loadFromData(data);
 	}
 
+	void Image::_validateEncodedDataSize(std::size_t size)
+	{
+		if (size == 0)
+		{
+			throw std::invalid_argument("Image: encoded data cannot be empty");
+		}
+		if (size > static_cast<std::size_t>(std::numeric_limits<int>::max()))
+		{
+			throw std::overflow_error("Image: encoded data is too large for stb_image");
+		}
+	}
+
 	void Image::_loadFromFile(const std::filesystem::path &path)
 	{
 		int width = 0;
@@ -66,14 +78,7 @@ namespace spk
 
 	void Image::_loadFromData(std::span<const std::uint8_t> data)
 	{
-		if (data.empty())
-		{
-			throw std::invalid_argument("Image: encoded data cannot be empty");
-		}
-		if (data.size() > static_cast<std::size_t>(std::numeric_limits<int>::max()))
-		{
-			throw std::overflow_error("Image: encoded data is too large for stb_image");
-		}
+		_validateEncodedDataSize(data.size());
 
 		int width = 0;
 		int height = 0;

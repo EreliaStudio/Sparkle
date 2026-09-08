@@ -193,8 +193,3 @@ TEST(ProgramTest, UnsupportedPrimitiveCastIsRejected)
 	spk::Program program(VertexShader, FragmentShader);
 	EXPECT_THROW(program.renderRaw(static_cast<spk::Program::Primitive>(255), 0, 0), std::logic_error);
 }
-
-TEST(ProgramTest, DISABLED_ShaderAndProgramCreationFailureNeedDriverInjectionSeam)
-{
-	GTEST_SKIP() << "Compilation diagnostics are covered, but forcing glCreateShader/glCreateProgram to return zero needs an injectable GL seam.";
-}

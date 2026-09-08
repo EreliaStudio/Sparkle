@@ -36,7 +36,10 @@ namespace spk
 		using SystemParticipantCollection::registerParticipant;
 		using SystemParticipantCollection::unregisterParticipant;
 		spk::Rect2D _geometry{};
+		InherenceTrait<Entity>::OnParentEditionContract _parentEditionContract;
+		ContextualizableTrait<Engine *>::OnContextEditionContract _parentContextEditionContract;
 
+		void _followParentContext(Entity *parent);
 		[[nodiscard]] bool _isAcceptingInteraction() const override;
 		void _propagateInteraction(
 			const std::function<void(EventDispatcher *)> &callback) override;
@@ -90,6 +93,7 @@ namespace spk
 
 		void handleGeometryChange(const spk::Rect2D &geometry);
 		[[nodiscard]] const spk::Rect2D &geometry() const noexcept;
+		[[nodiscard]] bool isEffectivelyActive() const;
 		void buildRenderSnapshot(spk::RenderSnapshot::Builder &builder);
 		void updateState(UpdateContext &context);
 	};

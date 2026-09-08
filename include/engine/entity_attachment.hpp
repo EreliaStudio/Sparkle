@@ -33,5 +33,6 @@ namespace spk
 
 		[[nodiscard]] virtual Entity *owner();
 		[[nodiscard]] virtual const Entity *owner() const;
+		[[nodiscard]] bool isEffectivelyActive() const;
 	};
 }

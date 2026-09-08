@@ -5,6 +5,7 @@
 #include <limits>
 #include <stdexcept>
 
+
 namespace spk
 {
 	class BufferGPUResource::Instance final : public GPUResource::Instance

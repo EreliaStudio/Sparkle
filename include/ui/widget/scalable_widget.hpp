@@ -37,12 +37,15 @@ namespace spk
 		[[nodiscard]] Rect2D _resizedGeometry(const Vector2Int &position) const noexcept;
 		[[nodiscard]] Edges _edgesAt(const Vector2Int &position) const noexcept;
 		void _applyGeometryConstraints();
+		void _cancelResize() noexcept;
 		void _beginResize(EventBase &event, Mouse::Button button, const Vector2Int &position);
 		void _endResize(EventBase &event);
 
 	protected:
 		void _setGeometryWithoutConstraints(const Rect2D &geometry);
 		void _onGeometryChange() override;
+		void _onFocusReleased(FocusMode::Channel channel) noexcept override;
+		void _onDeactivation() noexcept override;
 		void _onWindowFocusLostEvent(WindowFocusLostEvent &event) override;
 		void _onMouseLeftEvent(MouseLeftEvent &event) override;
 		void _onMouseMovedEvent(MouseMovedEvent &event) override;

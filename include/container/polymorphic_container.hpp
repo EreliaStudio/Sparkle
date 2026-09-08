@@ -32,6 +32,8 @@ namespace spk
 		};
 
 		std::vector<std::unique_ptr<TBase>> _elements;
+		std::unordered_map<TBase *, std::size_t> _elementGenerations;
+		std::size_t _nextElementGeneration = 0;
 		mutable std::unordered_map<std::type_index, std::vector<TBase *>> _cachedElementsByType;
 		mutable std::unordered_map<TBase *, ElementCache> _typeidsPerElement;
 		OnElementEditionContractProvider _onElementAdditionContractProvider;
@@ -239,6 +241,29 @@ namespace spk
 		}
 
 	protected:
+		struct ElementSnapshot
+		{
+			TBase *element;
+			std::size_t generation;
+		};
+
+		[[nodiscard]] std::vector<ElementSnapshot> snapshotElements() const
+		{
+			std::vector<ElementSnapshot> result;
+			result.reserve(_elements.size());
+			for (const auto &element : _elements)
+			{
+				result.push_back({element.get(), _elementGenerations.at(element.get())});
+			}
+			return result;
+		}
+
+		[[nodiscard]] bool containsSnapshotElement(const ElementSnapshot &snapshot) const
+		{
+			const auto it = _elementGenerations.find(snapshot.element);
+			return it != _elementGenerations.end() && it->second == snapshot.generation;
+		}
+
 		[[nodiscard]] OnElementEditionContract subscribeToElementAddition(
 			OnElementEditionCallback callback)
 		{
@@ -257,6 +282,7 @@ namespace spk
 		{
 			TBase *elementPtr = element.get();
 
+			_elementGenerations.emplace(elementPtr, ++_nextElementGeneration);
 			_typeidsPerElement.emplace(elementPtr, ElementCache{});
 			_elements.push_back(std::move(element));
 			_onElementAdditionContractProvider.trigger(*elementPtr);
@@ -274,6 +300,7 @@ namespace spk
 			_onElementRemovalContractProvider.trigger(elementToRemove);
 			_removeFromTypeCaches(element);
 			_removeFromElements(element);
+			_elementGenerations.erase(element);
 		}
 
 		[[nodiscard]] const std::vector<std::unique_ptr<TBase>> &elements() noexcept

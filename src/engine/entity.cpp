@@ -1,5 +1,8 @@
 #include "engine/entity.hpp"
 
+#include <algorithm>
+#include <vector>
+
 #include "core/context/update_context.hpp"
 #include "rendering/render_snapshot.hpp"
 
@@ -9,6 +12,9 @@ namespace spk
 		NameTrait(name)
 	{
 		activate();
+		_parentEditionContract = subscribeToParentEdition([this](const Entity *newParent) {
+			_followParentContext(const_cast<Entity *>(newParent));
+		});
 		setParent(parent);
 		if (parent != nullptr)
 		{
@@ -16,27 +22,43 @@ namespace spk
 		}
 	}
 
+	void Entity::_followParentContext(Entity *parent)
+	{
+		_parentContextEditionContract.resign();
+		if (parent == nullptr)
+		{
+			changeContext(nullptr);
+			return;
+		}
+		changeContext(parent->context());
+		_parentContextEditionContract = parent->subscribeToContextEdition([this](Engine *const &, Engine *const &newContext) {
+			changeContext(newContext);
+		});
+	}
+
 	bool Entity::_isAcceptingInteraction() const
 	{
-		return isActive();
+		return isEffectivelyActive();
 	}
 
 	void Entity::_propagateInteraction(
 		const std::function<void(EventDispatcher *)> &callback)
 	{
-		for (Entity *child : children())
+		const std::vector<Entity *> childSnapshot(children().begin(), children().end());
+		for (Entity *child : childSnapshot)
 		{
-			if (child != nullptr)
+			if (child != nullptr && std::ranges::find(children(), child) != children().end())
 			{
 				callback(child);
 			}
 		}
 
-		for (const auto &behaviour : behaviours())
+		const auto behaviourSnapshot = BehaviourCollection::snapshotElements();
+		for (const auto &snapshot : behaviourSnapshot)
 		{
-			if (behaviour != nullptr)
+			if (BehaviourCollection::containsSnapshotElement(snapshot))
 			{
-				callback(behaviour.get());
+				callback(snapshot.element);
 			}
 		}
 	}
@@ -54,25 +76,28 @@ namespace spk
 		_geometry = geometry;
 		_onGeometryChange(_geometry);
 
-		for (const auto &participant : participants())
+		const auto participantSnapshot = SystemParticipantCollection::snapshotElements();
+		for (const auto &snapshot : participantSnapshot)
 		{
-			if (participant != nullptr)
+			if (SystemParticipantCollection::containsSnapshotElement(snapshot))
 			{
-				participant->handleGeometryChange(geometry);
+				snapshot.element->handleGeometryChange(geometry);
 			}
 		}
 
-		for (const auto &behaviour : behaviours())
+		const auto behaviourSnapshot = BehaviourCollection::snapshotElements();
+		for (const auto &snapshot : behaviourSnapshot)
 		{
-			if (behaviour != nullptr)
+			if (BehaviourCollection::containsSnapshotElement(snapshot))
 			{
-				behaviour->handleGeometryChange(geometry);
+				snapshot.element->handleGeometryChange(geometry);
 			}
 		}
 
-		for (Entity *child : children())
+		const std::vector<Entity *> childSnapshot(children().begin(), children().end());
+		for (Entity *child : childSnapshot)
 		{
-			if (child != nullptr)
+			if (child != nullptr && std::ranges::find(children(), child) != children().end())
 			{
 				child->handleGeometryChange(geometry);
 			}
@@ -84,34 +109,44 @@ namespace spk
 		return _geometry;
 	}
 
+	bool Entity::isEffectivelyActive() const
+	{
+		return resolveInHierarchy([](const Entity &entity) {
+			return entity.isActive();
+		});
+	}
+
 	void Entity::buildRenderSnapshot(spk::RenderSnapshot::Builder &builder)
 	{
-		if (!isActive())
+		if (!isEffectivelyActive())
 		{
 			return;
 		}
 
 		_buildRenderSnapshot(builder);
 
-		for (const auto &participant : participants())
+		const auto participantSnapshot = SystemParticipantCollection::snapshotElements();
+		for (const auto &snapshot : participantSnapshot)
 		{
-			if (participant != nullptr)
+			if (SystemParticipantCollection::containsSnapshotElement(snapshot))
 			{
-				participant->buildRenderSnapshot(builder);
+				snapshot.element->buildRenderSnapshot(builder);
 			}
 		}
 
-		for (const auto &behaviour : behaviours())
+		const auto behaviourSnapshot = BehaviourCollection::snapshotElements();
+		for (const auto &snapshot : behaviourSnapshot)
 		{
-			if (behaviour != nullptr)
+			if (BehaviourCollection::containsSnapshotElement(snapshot))
 			{
-				behaviour->buildRenderSnapshot(builder);
+				snapshot.element->buildRenderSnapshot(builder);
 			}
 		}
 
-		for (Entity *child : children())
+		const std::vector<Entity *> childSnapshot(children().begin(), children().end());
+		for (Entity *child : childSnapshot)
 		{
-			if (child != nullptr)
+			if (child != nullptr && std::ranges::find(children(), child) != children().end())
 			{
 				child->buildRenderSnapshot(builder);
 			}
@@ -120,22 +155,24 @@ namespace spk
 
 	void Entity::updateState(UpdateContext &context)
 	{
-		if (!isActive())
+		if (!isEffectivelyActive())
 		{
 			return;
 		}
 
-		for (const auto &behaviour : behaviours())
+		const auto behaviourSnapshot = BehaviourCollection::snapshotElements();
+		for (const auto &snapshot : behaviourSnapshot)
 		{
-			if (behaviour != nullptr)
+			if (BehaviourCollection::containsSnapshotElement(snapshot))
 			{
-				behaviour->updateState(context);
+				snapshot.element->updateState(context);
 			}
 		}
 
-		for (Entity *child : children())
+		const std::vector<Entity *> childSnapshot(children().begin(), children().end());
+		for (Entity *child : childSnapshot)
 		{
-			if (child != nullptr)
+			if (child != nullptr && std::ranges::find(children(), child) != children().end())
 			{
 				child->updateState(context);
 			}
