@@ -1,14 +1,9 @@
 #pragma once
 
-#include <algorithm>
-#include <cmath>
 #include <cstdint>
 #include <initializer_list>
-#include <limits>
-#include <memory>
 #include <optional>
 #include <stdexcept>
-#include <string>
 #include <utility>
 #include <vector>
 
@@ -21,8 +16,6 @@ namespace spk
 	{
 	public:
 		using Content = TContent;
-		class View;
-
 		using RowID = std::uint64_t;
 		using RowsProvider = ContractProvider<std::size_t, std::size_t>;
 		using RowsCallback = typename RowsProvider::callback_type;

@@ -13,6 +13,11 @@ namespace spk
 		using NameEditionCallback = NameEditionProvider::callback_type;
 		using NameEditionContract = NameEditionProvider::Contract;
 
+	private:
+		std::string _name;
+		NameEditionProvider _nameEditionProvider;
+
+	public:
 		NameTrait(std::string name);
 		NameTrait(const NameTrait &other);
 		NameTrait(NameTrait &&other) noexcept;
@@ -22,9 +27,5 @@ namespace spk
 		void setName(std::string name);
 		[[nodiscard]] const std::string &name() const noexcept;
 		[[nodiscard]] NameEditionContract subscribeToNameEdition(NameEditionCallback callback);
-
-	private:
-		std::string _name;
-		NameEditionProvider _nameEditionProvider;
 	};
 }

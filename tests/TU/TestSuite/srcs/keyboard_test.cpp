@@ -28,7 +28,7 @@ TEST(KeyboardTest, StandardUsage)
 	EXPECT_EQ(constant.glyph, U'X');
 
 	EXPECT_EQ(spk::toString(spk::Keyboard::A), "A");
-	EXPECT_EQ(spk::toWstring(spk::Keyboard::A), L"A");
+	EXPECT_EQ(spk::toWString(spk::Keyboard::A), L"A");
 	EXPECT_EQ(spk::fromString("A"), spk::Keyboard::A);
 
 	std::ostringstream stream;
@@ -61,7 +61,7 @@ TEST(KeyboardTest, RepresentativeKeyFamiliesRoundTrip)
 	{
 		SCOPED_TRACE(name);
 		EXPECT_EQ(spk::toString(key), name);
-		EXPECT_EQ(spk::toWstring(key), std::wstring(name.begin(), name.end()));
+		EXPECT_EQ(spk::toWString(key), std::wstring(name.begin(), name.end()));
 		ASSERT_TRUE(spk::fromString(name).has_value());
 		EXPECT_EQ(*spk::fromString(name), key);
 	}
@@ -88,7 +88,7 @@ TEST(KeyboardTest, InvalidKeyStringificationUsesUnknownFallback)
 {
 	const auto invalid = static_cast<spk::Keyboard::Key>(spk::Keyboard::NbKey + 42);
 	EXPECT_EQ(spk::toString(invalid), "Unknown");
-	EXPECT_EQ(spk::toWstring(invalid), L"Unknown");
+	EXPECT_EQ(spk::toWString(invalid), L"Unknown");
 }
 
 TEST(KeyboardTest, OutOfRangeIndexThrows)

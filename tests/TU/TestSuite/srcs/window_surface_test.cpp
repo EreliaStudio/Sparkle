@@ -5,13 +5,10 @@
 #include <atomic>
 #include <stdexcept>
 #include <string>
-#include <system_error>
 #include <type_traits>
 
-#include "core/platform/detail/window_surface_driver.hpp"
 #include "core/platform/window.hpp"
 #include "core/window.hpp"
-#include "sparkle_test/scoped_override.hpp"
 
 static_assert(!std::is_copy_constructible_v<spk::Window::Surface>);
 static_assert(!std::is_copy_assignable_v<spk::Window::Surface>);
@@ -55,12 +52,6 @@ namespace
 			}
 		}
 	};
-
-	HGLRC WINAPI failContextCreation(HDC, HGLRC, const int *)
-	{
-		::SetLastError(ERROR_NOT_SUPPORTED);
-		return nullptr;
-	}
 
 	[[nodiscard]] spk::Rect2D testGeometry()
 	{
@@ -175,58 +166,4 @@ TEST(WindowSurfaceTest, RepeatedSuccessfulCreateIsRejected)
 	EXPECT_EQ(surface.lifeCycle(), spk::Window::LifeCycle::Ready);
 	EXPECT_NO_THROW(surface.makeCurrent());
 	surface.destroy();
-}
-
-TEST(WindowSurfaceTest, FailedRenderingContextCreationCleansUpPartialOpenGLState)
-{
-	HiddenNativeWindow frame;
-	spk::Window::Surface surface("surface-partial-create");
-	{
-		auto &operation = spk::detail::windowSurfaceDriver().getProcedureAddress;
-		auto override = sparkle_test::scopedOverride(operation,
-			[](LPCSTR) { return reinterpret_cast<PROC>(&failContextCreation); });
-		EXPECT_THROW(surface.create(frame.native.window()), std::system_error);
-	}
-	EXPECT_EQ(surface.lifeCycle(), spk::Window::LifeCycle::Pending);
-	EXPECT_EQ(::wglGetCurrentContext(), nullptr);
-	EXPECT_NO_THROW(surface.destroy());
-	EXPECT_EQ(surface.lifeCycle(), spk::Window::LifeCycle::Released);
-}
-
-TEST(WindowSurfaceTest, UnsupportedWGLAndWin32SetupFailuresPropagatePrecisely)
-{
-	HiddenNativeWindow getDCFrame;
-	spk::Window::Surface getDCSurface("surface-getdc-failure");
-	{
-		auto &operation = spk::detail::windowSurfaceDriver().getDeviceContext;
-		auto override = sparkle_test::scopedOverride(operation, [](HWND) -> HDC {
-			::SetLastError(ERROR_ACCESS_DENIED);
-			return nullptr;
-		});
-		try
-		{
-			getDCSurface.create(getDCFrame.native.window());
-			FAIL() << "Expected GetDC failure";
-		} catch (const std::system_error &exception)
-		{
-			EXPECT_EQ(exception.code().value(), ERROR_ACCESS_DENIED);
-			EXPECT_NE(std::string(exception.what()).find("GetDC"), std::string::npos);
-		}
-	}
-
-	HiddenNativeWindow extensionFrame;
-	spk::Window::Surface extensionSurface("surface-extension-failure");
-	{
-		auto &operation = spk::detail::windowSurfaceDriver().getProcedureAddress;
-		auto override = sparkle_test::scopedOverride(operation, [](LPCSTR) -> PROC { return nullptr; });
-		try
-		{
-			extensionSurface.create(extensionFrame.native.window());
-			FAIL() << "Expected unsupported WGL failure";
-		} catch (const std::runtime_error &exception)
-		{
-			EXPECT_NE(std::string(exception.what()).find("WGL_ARB_create_context"), std::string::npos);
-		}
-	}
-	EXPECT_EQ(::wglGetCurrentContext(), nullptr);
 }

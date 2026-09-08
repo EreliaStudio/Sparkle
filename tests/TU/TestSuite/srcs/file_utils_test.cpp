@@ -1,10 +1,10 @@
 #include <gtest/gtest.h>
 
+#include "exception.hpp"
 #include "file_utils.hpp"
 #include "sparkle_test.hpp"
 
 #include <filesystem>
-#include <stdexcept>
 #include <string>
 
 TEST(ReadTextFileTest, StandardUsagePreservesExactContentsIncludingNulAndNewlines)
@@ -40,7 +40,7 @@ TEST(ReadTextFileTest, ReadsLargeFile)
 	EXPECT_EQ(spk::readTextFile(directory.file("large.txt")), content);
 }
 
-TEST(ReadTextFileTest, MissingFileThrowsRuntimeErrorContainingPath)
+TEST(ReadTextFileTest, MissingFileThrowsExceptionContainingPath)
 {
 	sparkle_test::TemporaryDirectory directory;
 	const std::filesystem::path missing = directory.file("does-not-exist.txt");
@@ -48,10 +48,11 @@ TEST(ReadTextFileTest, MissingFileThrowsRuntimeErrorContainingPath)
 	try
 	{
 		(void)spk::readTextFile(missing);
-		FAIL() << "Expected std::runtime_error";
+		FAIL() << "Expected spk::Exception";
 	}
-	catch (const std::runtime_error &exception)
+	catch (const spk::Exception &exception)
 	{
-		EXPECT_TRUE(sparkle_test::containsText(exception.what(), missing.string()));
+		EXPECT_TRUE(sparkle_test::containsText(exception.message(), missing.string()));
+		EXPECT_EQ(exception.cause(), nullptr);
 	}
 }

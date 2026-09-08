@@ -23,7 +23,7 @@ namespace spk
 
 	public:
 		template <typename... TArgs>
-		pointer emplace(
+		[[nodiscard]] pointer emplace(
 			const key_type &key,
 			TArgs &&...args)
 		{
@@ -51,19 +51,19 @@ namespace spk
 			_values.erase(key);
 		}
 
-		bool contains(const key_type &key) const
+		[[nodiscard]] bool contains(const key_type &key) const
 		{
 			std::shared_lock lock(_mutex);
 			return _values.contains(key);
 		}
 
-		pointer get(const key_type &key) const
+		[[nodiscard]] pointer get(const key_type &key) const
 		{
 			std::shared_lock lock(_mutex);
 			return _values.at(key);
 		}
 
-		pointer tryGet(const key_type &key) const
+		[[nodiscard]] pointer tryGet(const key_type &key) const
 		{
 			std::shared_lock lock(_mutex);
 

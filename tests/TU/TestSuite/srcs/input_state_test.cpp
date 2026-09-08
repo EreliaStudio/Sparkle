@@ -8,8 +8,8 @@ TEST(InputStateTest, StandardUsage)
 {
 	EXPECT_EQ(spk::toString(spk::InputState::Down), "Down");
 	EXPECT_EQ(spk::toString(spk::InputState::Up), "Up");
-	EXPECT_EQ(spk::toWstring(spk::InputState::Down), L"Down");
-	EXPECT_EQ(spk::toWstring(spk::InputState::Up), L"Up");
+	EXPECT_EQ(spk::toWString(spk::InputState::Down), L"Down");
+	EXPECT_EQ(spk::toWString(spk::InputState::Up), L"Up");
 }
 
 TEST(InputStateTest, StreamsUseTheSameTokens)
@@ -27,7 +27,7 @@ TEST(InputStateTest, InvalidValueProducesUnknownToken)
 {
 	const auto invalid = static_cast<spk::InputState>(42);
 	EXPECT_EQ(spk::toString(invalid), "Unknow InputState");
-	EXPECT_EQ(spk::toWstring(invalid), L"Unknow InputState");
+	EXPECT_EQ(spk::toWString(invalid), L"Unknow InputState");
 
 	std::ostringstream stream;
 	stream << invalid;

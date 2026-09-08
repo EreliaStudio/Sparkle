@@ -110,7 +110,7 @@ TEST(Transform2DTest, ParentEditsAndReparentingInvalidateDescendantWorldCaches)
 	first.transform().place({10.0f, 0.0f});
 	EXPECT_EQ(grandchild.transform().position(spk::ReferenceFrame::World), spk::Vector2(15.0f, 0.0f));
 	second.transform().place({-10.0f, 0.0f});
-	child.setParent(&second);
+	child.setParent(second);
 	EXPECT_EQ(grandchild.transform().position(spk::ReferenceFrame::World), spk::Vector2(-5.0f, 0.0f));
 }
 

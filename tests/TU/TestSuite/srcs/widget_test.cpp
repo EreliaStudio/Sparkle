@@ -80,7 +80,7 @@ TEST(WidgetTest, HierarchyReparentingDestructionGeometryAndZCaches)
 	EXPECT_EQ(grandchild.absoluteZOrder(), 17);
 	other.setGeometry({.anchor = {100, 100}, .size = {200, 200}});
 	other.setZOrder(20);
-	child.setParent(&other);
+	child.setParent(other);
 	EXPECT_EQ(&grandchild.root(), &other);
 	EXPECT_TRUE(root.children().empty());
 	EXPECT_EQ(grandchild.absoluteZOrder(), 27);
@@ -88,7 +88,7 @@ TEST(WidgetTest, HierarchyReparentingDestructionGeometryAndZCaches)
 	EXPECT_EQ(static_cast<const Probe &>(grandchild).root().name(), "Other");
 	{
 		Probe temporary("Temporary", nullptr);
-		child.setParent(&temporary);
+		child.setParent(temporary);
 	}
 	EXPECT_EQ(child.parent(), nullptr);
 	EXPECT_EQ(&grandchild.root(), &child);
@@ -156,7 +156,7 @@ TEST(WidgetTest, SnapshotSkipsClippedInactiveBranchesAndPassInheritanceTracksRep
 	EXPECT_EQ(child.targetRenderPass().name, spk::Widget::BackgroundKey.name);
 	child.setTargetRenderPass(spk::Widget::PopupKey);
 	EXPECT_TRUE(child.hasTargetRenderPassOverride());
-	child.setParent(&other);
+	child.setParent(other);
 	EXPECT_EQ(child.targetRenderPass().name, spk::Widget::PopupKey.name);
 	other.setTargetRenderPass(spk::Widget::TooltipKey);
 	child.inheritTargetRenderPass();
@@ -174,7 +174,7 @@ TEST(WidgetTest, ChildHintsPropagateAndDetachedChildrenStopNotifyingAncestors)
 	EXPECT_EQ(root.preferredSize(), spk::Vector2(50, 30));
 	EXPECT_GT(root.hintUpdates, 0);
 	EXPECT_GT(child.hintUpdates, 0);
-	leaf.setParent(nullptr);
+	leaf.clearParent();
 	const int before = child.hintUpdates;
 	leaf.setPreferredSize({80, 40});
 	EXPECT_EQ(child.hintUpdates, before);
@@ -214,9 +214,23 @@ TEST(WidgetTest, HookExceptionsRetainAncestorNamesAndOriginalCause)
 			try
 			{
 				std::rethrow_exception(error.cause());
-			} catch (const std::runtime_error &cause)
+			} catch (const spk::Exception &childError)
 			{
-				EXPECT_EQ(cause.what(), std::string(rendering ? "original render" : "original update"));
+				EXPECT_NE(childError.message().find("FailingChild"), std::string::npos);
+				ASSERT_NE(childError.cause(), nullptr);
+				try
+				{
+					std::rethrow_exception(childError.cause());
+				} catch (const std::runtime_error &cause)
+				{
+					EXPECT_EQ(cause.what(), std::string(rendering ? "original render" : "original update"));
+				} catch (...)
+				{
+					FAIL() << "Expected original std::runtime_error cause";
+				}
+			} catch (...)
+			{
+				FAIL() << "Expected child spk::Exception cause";
 			}
 		}
 	}

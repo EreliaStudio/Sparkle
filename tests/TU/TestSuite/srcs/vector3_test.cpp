@@ -94,9 +94,9 @@ namespace
 		}
 	}
 
-	TEST(Vector3Test, NormalizeZeroLengthFloatingVectorThrowsDomainError)
+	TEST(Vector3Test, NormalizeZeroLengthFloatingVectorThrowsSparkleException)
 	{
-		EXPECT_THROW((void)spk::Vector3{}.normalized(), std::domain_error);
+		EXPECT_THROW((void)spk::Vector3{}.normalized(), spk::Exception);
 	}
 
 	TEST(Vector3Test, DataArrayAliasesNamedComponents)

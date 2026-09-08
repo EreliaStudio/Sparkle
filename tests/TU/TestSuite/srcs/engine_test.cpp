@@ -922,7 +922,7 @@ TEST(EntityTest, DestructionDestroysOwnedAttachmentsAndDetachesNonOwnedChildren)
 	spk::Entity child("child");
 	{
 		auto parent = std::make_unique<spk::Entity>("parent");
-		child.setParent(parent.get());
+		child.setParent(*parent);
 		parent->addBehaviour<DestructionBehaviour>(attachmentDestructions);
 	}
 
@@ -1015,13 +1015,13 @@ TEST(Entity2DTest, ReparentingPlain2D3DContextChangesTransformLifetimeAndAccessA
 	engine.addEntity(&parent3D);
 	engine.addEntity(&child);
 
-	child.setParent(&parent2D);
+	child.setParent(parent2D);
 	EXPECT_EQ(child.transform().position(spk::ReferenceFrame::World), spk::Vector2(6.0f, 8.0f));
 
-	child.setParent(&plain);
+	child.setParent(plain);
 	EXPECT_EQ(child.transform().position(spk::ReferenceFrame::World), spk::Vector2(1.0f, 2.0f));
 
-	child.setParent(&parent3D);
+	child.setParent(parent3D);
 	EXPECT_EQ(child.transform().position(spk::ReferenceFrame::World), spk::Vector2(1.0f, 2.0f));
 	EXPECT_EQ(&child.transform(), transform);
 	EXPECT_EQ(&std::as_const(child).transform(), transform);

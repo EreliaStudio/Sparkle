@@ -92,7 +92,10 @@ namespace spk
 		_deactivationContract = subscribeToDeactivation([this]() {
 			_onDeactivation();
 		});
-		setParent(parent);
+		if (parent != nullptr)
+		{
+			setParent(*parent);
+		}
 		_computeRatio();
 		_onParentEditedContract = subscribeToParentEdition([this](const Widget *) {
 			_computeRatio();
@@ -106,10 +109,10 @@ namespace spk
 		_destructionProvider.trigger(this);
 		while (!children().empty())
 		{
-			children().back()->setParent(nullptr);
+			children().back()->clearParent();
 		}
 
-		setParent(nullptr);
+		clearParent();
 	}
 
 	void Widget::_onChildAdded(Widget *child)
@@ -321,10 +324,6 @@ namespace spk
 					child->updateState(context);
 				}
 			}
-		} catch (spk::Exception &exception)
-		{
-			exception.addContext("Exception while updating widget [" + name() + "]");
-			throw;
 		} catch (...)
 		{
 			throw spk::Exception(
@@ -363,10 +362,6 @@ namespace spk
 					child->buildRenderSnapshot(builder);
 				}
 			}
-		} catch (spk::Exception &exception)
-		{
-			exception.addContext("Exception while building render snapshot of widget [" + name() + "]");
-			throw;
 		} catch (...)
 		{
 			throw spk::Exception(

@@ -1,19 +1,26 @@
 #include "rendering/command/image_render_command.hpp"
 namespace spk
 {
-	TextureMesh2D ImageRenderCommand::_mesh(Texture::Section s, Rect2D r, float d)
+	TextureMesh2D ImageRenderCommand::_mesh(Texture::Section section, Rect2D rect, float depth)
 	{
-		const float l = static_cast<float>(r.x), t = static_cast<float>(r.y), rr = l + r.width, b = t + r.height;
-		TextureMesh2D::Builder m;
-		m.addShape({{l, t}, d, s.anchor}, {{l, b}, d, {s.anchor.x, s.anchor.y + s.size.y}}, {{rr, b}, d, s.anchor + s.size}, {{rr, t}, d, {s.anchor.x + s.size.x, s.anchor.y}});
-		return std::move(m).build();
+		const float left = static_cast<float>(rect.x), top = static_cast<float>(rect.y), right = left + rect.width, down = top + rect.height;
+		TextureMesh2D::Builder meshBuilder;
+
+		meshBuilder.addShape(
+			{{left, top}, depth, section.anchor},
+			{{left, down}, depth, {section.anchor.x, section.anchor.y + section.size.y}},
+			{{right, down}, depth, section.anchor + section.size},
+			{{right, top}, depth, {section.anchor.x + section.size.x, section.anchor.y}}
+		);
+		
+		return std::move(meshBuilder).build();
 	}
-	ImageRenderCommand::ImageRenderCommand(const Texture *t, Texture::Section s, Rect2D r, float d) :
-		_command(t, _mesh(s, r, d))
+	ImageRenderCommand::ImageRenderCommand(const Texture *texture, Texture::Section section, Rect2D rect, float depth) :
+		_command(texture, _mesh(section, rect, depth))
 	{
 	}
-	void ImageRenderCommand::execute(RenderContext &c) const
+	void ImageRenderCommand::execute(RenderContext &context) const
 	{
-		_command.execute(c);
+		_command.execute(context);
 	}
 }

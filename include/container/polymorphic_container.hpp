@@ -278,7 +278,7 @@ namespace spk
 
 		template <typename TElementType>
 			requires std::derived_from<TElementType, TBase>
-		void registerElement(std::unique_ptr<TElementType> &&element)
+		void registerElement(std::unique_ptr<TElementType> element)
 		{
 			TBase *elementPtr = element.get();
 
@@ -288,19 +288,35 @@ namespace spk
 			_onElementAdditionContractProvider.trigger(*elementPtr);
 		}
 
-		void unregisterElement(TBase &elementToRemove)
+		template <typename TElementType, typename... TArgs>
+			requires std::derived_from<TElementType, TBase>
+		TElementType &emplaceElement(TArgs &&...args)
+		{
+			auto element = std::make_unique<TElementType>(
+				std::forward<TArgs>(args)...);
+
+			TElementType &result = *element;
+
+			registerElement(std::move(element));
+
+			return result;
+		}
+
+		[[nodiscard]] bool unregisterElement(TBase &elementToRemove)
 		{
 			TBase *element = &elementToRemove;
 
 			if (_typeidsPerElement.contains(element) == false)
 			{
-				return;
+				return false;
 			}
 
 			_onElementRemovalContractProvider.trigger(elementToRemove);
 			_removeFromTypeCaches(element);
 			_removeFromElements(element);
 			_elementGenerations.erase(element);
+		
+			return true;
 		}
 
 		[[nodiscard]] const std::vector<std::unique_ptr<TBase>> &elements() noexcept

@@ -2,14 +2,14 @@
 
 #include <string>
 
-#include "container/text_model.hpp"
+#include "container/data_model.hpp"
 #include "graphics/font.hpp"
-#include "ui/data_model_view.hpp"
+#include "ui/model_view.hpp"
 #include "ui/widget/text_label.hpp"
 
 namespace spk
 {
-	class TextModel::Delegate : public DataModel<std::string>::View::Delegate
+	class TextModelDelegate : public ModelView<std::string>::Delegate
 	{
 		Font *_font = nullptr;
 		Font::Size _textSize{16};
@@ -19,7 +19,7 @@ namespace spk
 		unsigned int _rowHeight = 20;
 
 	public:
-		explicit Delegate(Font *font = nullptr);
+		explicit TextModelDelegate(Font *font = nullptr);
 		void setFont(Font *font);
 		void setTextSize(const Font::Size &size);
 		void setGlyphColor(const Color &color);
@@ -31,14 +31,13 @@ namespace spk
 		[[nodiscard]] unsigned int rowExtent(const DataModel<std::string> &model, std::size_t row) const override;
 	};
 
-	class TextModel::View : public DataModel<std::string>::View
+	class TextModelView : public ModelView<std::string>
 	{
-		TextModel::Delegate _defaultDelegate;
+		TextModelDelegate _defaultDelegate;
 
 	public:
-		explicit View(std::string name, Widget *parent = nullptr);
-		void setModel(TextModel *model);
-		[[nodiscard]] TextModel::Delegate &defaultDelegate() noexcept;
-		[[nodiscard]] const TextModel::Delegate &defaultDelegate() const noexcept;
+		explicit TextModelView(std::string name, DataModel<std::string> *model, Widget *parent = nullptr);
+		[[nodiscard]] TextModelDelegate &defaultDelegate() noexcept;
+		[[nodiscard]] const TextModelDelegate &defaultDelegate() const noexcept;
 	};
 }

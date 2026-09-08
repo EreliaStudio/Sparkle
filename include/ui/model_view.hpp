@@ -6,16 +6,19 @@
 namespace spk
 {
 	template <typename TContent>
-	class DataModel<TContent>::View : public Widget
+	class ModelView : public Widget
 	{
 	public:
+		using Model = DataModel<TContent>;
+		using RowID = typename Model::RowID;
+
 		class Delegate
 		{
 		public:
 			virtual ~Delegate() = default;
 			[[nodiscard]] virtual std::unique_ptr<Widget> createItem(std::string name, Widget *parent) = 0;
-			virtual void bindItem(Widget &item, const DataModel &model, std::size_t row, bool selected) = 0;
-			[[nodiscard]] virtual unsigned int rowExtent(const DataModel &model, std::size_t row) const = 0;
+			virtual void bindItem(Widget &item, const Model &model, std::size_t row, bool selected) = 0;
+			[[nodiscard]] virtual unsigned int rowExtent(const Model &model, std::size_t row) const = 0;
 		};
 
 		struct Selection
@@ -30,7 +33,7 @@ namespace spk
 		using SelectionContract = typename SelectionProvider::Contract;
 
 	private:
-		DataModel *_model = nullptr;
+		Model *_model = nullptr;
 		Delegate *_delegate = nullptr;
 		std::vector<std::unique_ptr<Widget>> _items;
 		std::vector<std::optional<std::size_t>> _boundRows;
@@ -38,10 +41,10 @@ namespace spk
 		std::optional<RowID> _selectedRowID;
 		unsigned int _scrollOffset = 0;
 		std::size_t _nextItemIdentifier = 0;
-		RowsContract _insertedContract;
-		RowsContract _removedContract;
-		RowsContract _changedContract;
-		ResetContract _resetContract;
+		typename Model::RowsContract _insertedContract;
+		typename Model::RowsContract _removedContract;
+		typename Model::RowsContract _changedContract;
+		typename Model::ResetContract _resetContract;
 		SelectionProvider _selectionProvider;
 
 		void _clampScrollOffset()
@@ -169,7 +172,7 @@ namespace spk
 
 				if (item == nullptr || item->parent() != this)
 				{
-					throw std::invalid_argument("DataModel view delegate item must be a non-null child of the view");
+					throw std::invalid_argument("ModelView delegate item must be a non-null child of the view");
 				}
 
 				_items.push_back(std::move(item));
@@ -247,13 +250,14 @@ namespace spk
 		}
 
 	public:
-		explicit View(std::string name, Widget *parent = nullptr) :
+		explicit ModelView(std::string name, Model *model, Widget *parent = nullptr) :
 			Widget(std::move(name), parent)
 		{
+			setModel(model);
 			activate();
 		}
 
-		void setModel(DataModel *model)
+		void setModel(Model *model)
 		{
 			if (_model == model)
 			{
@@ -297,7 +301,7 @@ namespace spk
 		{
 			if (row.has_value() && (_model == nullptr || *row >= _model->rowCount()))
 			{
-				throw std::out_of_range("DataModel view selected row is out of range");
+				throw std::out_of_range("ModelView selected row is out of range");
 			}
 
 			const auto id = row.has_value() ? std::optional<RowID>{_model->rowID(*row)} : std::nullopt;
@@ -316,7 +320,7 @@ namespace spk
 		{
 			if (_model == nullptr || _delegate == nullptr || row >= _model->rowCount())
 			{
-				throw std::out_of_range("DataModel view scroll row is out of range");
+				throw std::out_of_range("ModelView scroll row is out of range");
 			}
 
 			unsigned int top = 0;
@@ -338,7 +342,7 @@ namespace spk
 			_updateItemGeometry();
 		}
 
-		[[nodiscard]] DataModel *model() const noexcept
+		[[nodiscard]] Model *model() const noexcept
 		{
 			return _model;
 		}

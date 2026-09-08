@@ -75,11 +75,12 @@ namespace spk
 			}
 		}
 
-		void unregisterAttachment(TAttachmentBase &attachment)
+		bool unregisterAttachment(TAttachmentBase &attachment)
 		{
 			TAttachmentBase *observed = &attachment;
-			Base::unregisterElement(attachment);
+			bool result = Base::unregisterElement(attachment);
 			_attachmentNameEditionContracts.erase(observed);
+			return result;
 		}
 
 		[[nodiscard]] const std::vector<std::unique_ptr<TAttachmentBase>> &attachments() const noexcept

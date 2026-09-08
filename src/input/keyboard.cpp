@@ -174,7 +174,7 @@ namespace spk
 		return "Unknown";
 	}
 
-	std::wstring toWstring(Keyboard::Key p_key)
+	std::wstring toWString(Keyboard::Key p_key)
 	{
 		const std::string result = toString(p_key);
 
@@ -202,7 +202,7 @@ namespace spk
 
 	std::wostream &operator<<(std::wostream &p_stream, Keyboard::Key p_key)
 	{
-		p_stream << toWstring(p_key);
+		p_stream << toWString(p_key);
 		return p_stream;
 	}
 }

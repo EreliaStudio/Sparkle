@@ -24,10 +24,6 @@ namespace spk
 			try
 			{
 				_commands[index]->execute(renderContext);
-			} catch (spk::Exception &exception)
-			{
-				exception.addContext("Exception while executing render command [" + std::to_string(index) + "]");
-				throw;
 			} catch (...)
 			{
 				throw spk::Exception(

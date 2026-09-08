@@ -173,7 +173,7 @@ namespace spk
 		}
 		if (parent() != &rootWidget)
 		{
-			setParent(&rootWidget);
+			setParent(rootWidget);
 		}
 		setGeometry(target);
 		_open = true;
@@ -191,7 +191,7 @@ namespace spk
 		}
 		if (parent() != &rootWidget)
 		{
-			setParent(&rootWidget);
+			setParent(rootWidget);
 		}
 		setGeometry(target);
 		_open = true;

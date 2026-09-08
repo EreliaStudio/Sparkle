@@ -130,9 +130,9 @@ TEST(DebugOverlayTest, ReparentingAndReplacementRemoveOldMappings)
 	overlay.setWidget(0, 0, &first);
 	overlay.setWidget(0, 0, &second);
 	EXPECT_EQ(overlay.widget(0, 0), &second);
-	first.setParent(&other);
+	first.setParent(other);
 	EXPECT_EQ(overlay.widget(0, 0), &second);
-	second.setParent(&other);
+	second.setParent(other);
 	EXPECT_EQ(overlay.widget(0, 0), nullptr);
 	EXPECT_NO_THROW(overlay.clearCell(20, 20));
 	EXPECT_NO_THROW(overlay.clear());

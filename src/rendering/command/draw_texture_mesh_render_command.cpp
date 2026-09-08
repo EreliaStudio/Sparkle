@@ -13,39 +13,39 @@ namespace spk
 {
 	Program &DrawTextureMeshRenderCommand::_sharedProgram()
 	{
-		static auto p = []() {
-			auto r = std::make_unique<Program>(
+		static auto program = []() {
+			auto result = std::make_unique<Program>(
 				std::string(resources::text("shaders/draw_texture_mesh.vert.glsl")),
 				std::string(resources::text("shaders/draw_texture_mesh.frag.glsl")));
-			r->bindUniformBlock("ViewportData", ViewportUniformRenderCommand::MatrixUBOBindingPoint);
-			r->bindSampler("uTexture", TextureSamplerBindingPoint);
-			r->validate();
-			return r;
+			result->bindUniformBlock("ViewportData", ViewportUniformRenderCommand::MatrixUBOBindingPoint);
+			result->bindSampler("uTexture", TextureSamplerBindingPoint);
+			result->validate();
+			return result;
 		}();
-		return *p;
+		return *program;
 	}
-	DrawTextureMeshRenderCommand::DrawTextureMeshRenderCommand(const Texture *t, TextureMesh2D m) :
-		_texture(t),
-		_mesh(std::move(m)),
+	DrawTextureMeshRenderCommand::DrawTextureMeshRenderCommand(const Texture *texture, TextureMesh2D mesh) :
+		_texture(texture),
+		_mesh(std::move(mesh)),
 		_sampler(TextureSamplerBindingPoint)
 	{
-		if (!t)
+		if (!texture)
 		{
 			throw std::invalid_argument("DrawTextureMeshRenderCommand texture cannot be null");
 		}
-		_sampler.setTexture(t);
+		_sampler.setTexture(texture);
 		_sampler.validate();
 	}
-	void DrawTextureMeshRenderCommand::execute(RenderContext &c) const
+	void DrawTextureMeshRenderCommand::execute(RenderContext &context) const
 	{
 		if (_mesh.empty())
 		{
 			return;
 		}
 		auto &p = _sharedProgram();
-		p.activate(c);
-		_sampler.activate(c);
-		_mesh.layout().activate(c);
+		p.activate(context);
+		_sampler.activate(context);
+		_mesh.layout().activate(context);
 		p.render(Program::Primitive::Triangles, _mesh.indexType(), 0, _mesh.indexCount());
 	}
 }

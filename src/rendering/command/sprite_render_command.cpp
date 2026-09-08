@@ -2,20 +2,20 @@
 #include <stdexcept>
 namespace spk
 {
-	const SpriteSheet &SpriteRenderCommand::_sheet(const SpriteSheet *s)
+	const SpriteSheet &SpriteRenderCommand::_sheet(const SpriteSheet *spriteSheet)
 	{
-		if (!s)
+		if (!spriteSheet)
 		{
 			throw std::invalid_argument("SpriteRenderCommand sprite sheet cannot be null");
 		}
-		return *s;
+		return *spriteSheet;
 	}
-	SpriteRenderCommand::SpriteRenderCommand(const SpriteSheet *s, Vector2UInt c, Rect2D r, float d) :
-		_command(&_sheet(s), _sheet(s).sprite(c), r, d)
+	SpriteRenderCommand::SpriteRenderCommand(const SpriteSheet *spriteSheet, Vector2UInt spriteCoordinate, Rect2D rect, float depth) :
+		_command(&_sheet(spriteSheet), _sheet(spriteSheet).sprite(spriteCoordinate), rect, depth)
 	{
 	}
-	void SpriteRenderCommand::execute(RenderContext &c) const
+	void SpriteRenderCommand::execute(RenderContext &spriteCoordinate) const
 	{
-		_command.execute(c);
+		_command.execute(spriteCoordinate);
 	}
 }

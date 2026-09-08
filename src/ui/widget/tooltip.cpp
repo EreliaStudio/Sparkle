@@ -175,7 +175,7 @@ namespace spk
 			Widget &targetRoot = _target->root();
 			if (parent() != &targetRoot)
 			{
-				setParent(&targetRoot);
+				setParent(targetRoot);
 			}
 			Widget *observed = _target;
 			_targetParentContract = observed->subscribeToParentEdition([this, observed](const Widget *) {
@@ -261,7 +261,7 @@ namespace spk
 		}
 		if (parent() != &targetRoot)
 		{
-			setParent(&targetRoot);
+			setParent(targetRoot);
 		}
 		_shown = true;
 		_coordinatorRoot = &targetRoot;

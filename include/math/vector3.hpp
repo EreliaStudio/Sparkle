@@ -8,6 +8,7 @@
 #include <type_traits>
 
 #include "math/vector2.hpp"
+#include "exception.hpp"
 
 namespace spk
 {
@@ -18,7 +19,9 @@ namespace spk
 		union {
 			struct
 			{
-				TType x, y, z;
+				TType x;
+				TType y;
+				TType z;
 			};
 			std::array<TType, 3> data;
 		};
@@ -55,6 +58,7 @@ namespace spk
 			return x == other.x && y == other.y && z == other.z;
 		}
 		[[nodiscard]] constexpr TVector3 operator-() const
+			requires std::is_signed_v<TType>
 		{
 			return {-x, -y, -z};
 		}
@@ -121,7 +125,7 @@ namespace spk
 			const auto len = length();
 			if (len == 0.0)
 			{
-				throw std::domain_error("Cannot normalize a zero-length vector");
+				throw spk::Exception("Cannot normalize a zero-length vector");
 			}
 			return *this / TVector3{static_cast<float>(len), static_cast<float>(len), static_cast<float>(len)};
 		}

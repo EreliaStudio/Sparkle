@@ -132,10 +132,6 @@ namespace spk
 			{
 				consumeIncoming();
 				prepareCycle();
-			} catch (spk::Exception &exception)
-			{
-				exception.addContext("Exception while preparing " + std::string(_name) + " runtime");
-				throw;
 			} catch (...)
 			{
 				throw spk::Exception(
@@ -147,11 +143,6 @@ namespace spk
 				try
 				{
 					tickOnce(identifier, *object);
-				} catch (spk::Exception &exception)
-				{
-					exception.addContext(
-						"Exception in " + std::string(_name) + " runtime for window [" + identifier + "]");
-					throw;
 				} catch (...)
 				{
 					throw spk::Exception(
@@ -162,10 +153,6 @@ namespace spk
 			try
 			{
 				finishCycle();
-			} catch (spk::Exception &exception)
-			{
-				exception.addContext("Exception while finishing " + std::string(_name) + " runtime cycle");
-				throw;
 			} catch (...)
 			{
 				throw spk::Exception(
@@ -181,11 +168,6 @@ namespace spk
 				try
 				{
 					release(*object);
-				} catch (spk::Exception &exception)
-				{
-					exception.addContext(
-						"Exception while releasing window [" + identifier + "] from " + std::string(_name) + " runtime");
-					throw;
 				} catch (...)
 				{
 					throw spk::Exception(

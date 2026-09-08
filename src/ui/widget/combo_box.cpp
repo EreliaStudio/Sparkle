@@ -15,7 +15,7 @@ namespace spk
 		_openButton(this->name() + ".open-button", this),
 		_popup(this->name() + ".popup", this),
 		_popupBackground(this->name() + ".popup-background", &_popup),
-		_view(this->name() + ".view", &_popupBackground)
+		_view(this->name() + ".view", nullptr, &_popupBackground)
 	{
 		_view.setDelegate(&_defaultDelegate);
 		applyStyle(defaultStyle);

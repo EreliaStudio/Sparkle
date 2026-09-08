@@ -31,18 +31,20 @@ namespace
 	}
 }
 
-TEST(ExceptionTest, StandardUsagePreservesMessageLocationCauseAndContexts)
+TEST(ExceptionTest, StandardUsagePreservesMessageLocationAndCause)
 {
 	const std::source_location origin = captureLocation();
-	spk::Exception exception("unable to load scene", origin);
-
-	EXPECT_EQ(exception.message(), "unable to load scene");
-	EXPECT_EQ(exception.location().line(), origin.line());
-	EXPECT_STREQ(exception.location().file_name(), origin.file_name());
-	EXPECT_EQ(exception.cause(), nullptr);
-
+	const spk::Exception cause("unable to load scene", origin);
 	const std::source_location contextLocation = captureLocation();
-	exception.addContext("while opening startup world", contextLocation);
+	const spk::Exception exception(
+		"while opening startup world",
+		std::make_exception_ptr(cause),
+		contextLocation);
+
+	EXPECT_EQ(exception.message(), "while opening startup world");
+	EXPECT_EQ(exception.location().line(), contextLocation.line());
+	EXPECT_STREQ(exception.location().file_name(), contextLocation.file_name());
+	EXPECT_NE(exception.cause(), nullptr);
 
 	const std::string formatted = exception.what();
 	EXPECT_TRUE(contains(formatted, "unable to load scene"));
@@ -116,10 +118,10 @@ TEST(ExceptionTest, NestedStandardExceptionIsRetainedWithoutSlicing)
 
 TEST(ExceptionTest, MultipleContextsRemainOrderedAndWhatIsStable)
 {
-	spk::Exception exception("root");
-	exception.addContext("first context");
-	exception.addContext("second context");
-	exception.addContext("third context");
+	const spk::Exception root("root");
+	const spk::Exception firstContext("first context", std::make_exception_ptr(root));
+	const spk::Exception secondContext("second context", std::make_exception_ptr(firstContext));
+	const spk::Exception exception("third context", std::make_exception_ptr(secondContext));
 
 	const std::string first = exception.what();
 	const std::string second = exception.what();
@@ -154,16 +156,16 @@ TEST(ExceptionTest, ExactFormattingContract)
 	const auto innerLocation = captureLocation();
 	const spk::Exception inner("inner failure", innerLocation);
 	const auto outerLocation = captureLocation();
-	spk::Exception outer("outer failure", std::make_exception_ptr(inner), outerLocation);
+	const spk::Exception outer("outer failure", std::make_exception_ptr(inner), outerLocation);
 	const auto contextLocation = captureLocation();
-	outer.addContext("while updating", contextLocation);
+	const spk::Exception context("while updating", std::make_exception_ptr(outer), contextLocation);
 
 	const std::string expected =
 		frame(0, "while updating", contextLocation) + "\n" +
 		frame(1, "outer failure", outerLocation) + "\n" +
 		frame(2, "inner failure", innerLocation);
-	EXPECT_EQ(outer.what(), expected);
-	EXPECT_EQ(outer.what(), expected);
+	EXPECT_EQ(context.what(), expected);
+	EXPECT_EQ(context.what(), expected);
 
 	const auto emptyLocation = captureLocation();
 	EXPECT_EQ(spk::Exception("", emptyLocation).what(), frame(0, "", emptyLocation));

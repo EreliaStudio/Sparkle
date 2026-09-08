@@ -162,7 +162,7 @@ namespace spk
 	};
 
 	std::string toString(Keyboard::Key p_key);
-	std::wstring toWstring(Keyboard::Key p_key);
+	std::wstring toWString(Keyboard::Key p_key);
 	std::optional<Keyboard::Key> fromString(std::string_view p_keyName);
 
 	std::ostream &operator<<(std::ostream &p_stream, Keyboard::Key p_key);

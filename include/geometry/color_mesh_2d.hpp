@@ -24,9 +24,6 @@ namespace spk
 		{
 		private:
 			void _setupAttributes(VertexBuffer &vertexBuffer) override;
-			void _setupMesh(ColorMesh2D &) override;
 		};
-
-		ColorMesh2D() = default;
 	};
 }

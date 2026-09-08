@@ -336,10 +336,6 @@ namespace spk
 			spk::RenderSnapshot::Builder builder;
 			state.root().buildRenderSnapshot(builder);
 			return builder.build();
-		} catch (spk::Exception &exception)
-		{
-			exception.addContext("Exception while building render snapshot for window [" + identifier + "]");
-			throw;
 		} catch (...)
 		{
 			throw spk::Exception(
@@ -380,10 +376,6 @@ namespace spk
 		try
 		{
 			_updateState(state, context);
-		} catch (spk::Exception &exception)
-		{
-			exception.addContext("Exception while updating window [" + identifier + "]");
-			throw;
 		} catch (...)
 		{
 			throw spk::Exception(

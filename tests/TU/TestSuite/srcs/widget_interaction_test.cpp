@@ -627,7 +627,7 @@ TEST(TooltipInteractionTest, AllPlacementsAndRootEdgesConstrainOversizedText)
 			EXPECT_EQ(tooltip.viewRegion().scissor, tooltip.viewRegion().viewport);
 		}
 	}
-	target.setParent(nullptr);
+	target.clearParent();
 	EXPECT_FALSE(tooltip.isShown());
 	tooltip.setTarget(nullptr);
 	tooltip.show();
@@ -671,7 +671,7 @@ TEST(PopupWidgetInteractionTest, DestructionClearsCoordinatorAndContentOwnership
 	spk::Widget content("Content", nullptr);
 	{
 		spk::PopupWidget popup("Temporary", &root);
-		content.setParent(&popup);
+		content.setParent(popup);
 		popup.setContent(&content);
 		popup.openAt({0, 0});
 		popup.deactivate();

@@ -18,7 +18,7 @@ namespace spk
 	{
 		while (!_root.children().empty())
 		{
-			_root.children().back()->setParent(nullptr);
+			_root.children().back()->clearParent();
 		}
 		// Include detached and nested entities registered with this engine,
 		// not just direct root children. Context changes also notify attachments.
@@ -60,7 +60,7 @@ namespace spk
 		}
 
 		entity->changeContext(this);
-		entity->setParent(&_root);
+		entity->setParent(_root);
 		entity->handleGeometryChange(_geometry);
 	}
 
@@ -71,7 +71,7 @@ namespace spk
 			return;
 		}
 
-		entity->setParent(nullptr);
+		entity->clearParent();
 		entity->changeContext(nullptr);
 	}
 

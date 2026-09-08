@@ -143,7 +143,7 @@ TEST(InterfaceWindowTest, RejectsForeignContentAndForgetsReparentedContent)
 	EXPECT_THROW(window.setContent(&foreign), std::invalid_argument);
 	spk::TextLabel content("Content", &window.normalBackground());
 	window.setContent(&content);
-	content.setParent(nullptr);
+	content.clearParent();
 	EXPECT_EQ(window.content(), nullptr);
 }
 

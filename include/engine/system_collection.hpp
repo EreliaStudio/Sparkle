@@ -33,9 +33,9 @@ namespace spk
 			Base::registerElement(std::move(system));
 		}
 
-		void unregisterSystem(System &system)
+		bool unregisterSystem(System &system)
 		{
-			Base::unregisterElement(system);
+			return Base::unregisterElement(system);
 		}
 
 		[[nodiscard]] const std::vector<std::unique_ptr<System>> &systems() const noexcept

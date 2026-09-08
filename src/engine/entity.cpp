@@ -15,7 +15,10 @@ namespace spk
 		_parentEditionContract = subscribeToParentEdition([this](const Entity *newParent) {
 			_followParentContext(const_cast<Entity *>(newParent));
 		});
-		setParent(parent);
+		if (parent != nullptr)
+		{
+			setParent(*parent);
+		}
 		if (parent != nullptr)
 		{
 			handleGeometryChange(parent->geometry());

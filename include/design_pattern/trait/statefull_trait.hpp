@@ -16,6 +16,11 @@ namespace spk
 		using OnStateEditionCallback = OnStateEditionContractProvider::callback_type;
 		using OnStateEditionContract = OnStateEditionContractProvider::Contract;
 
+	private:
+		std::optional<TStateType> _currentState;
+		std::unordered_map<TStateType, OnStateEditionContractProvider> _stateChangeTriggers;
+
+	public:
 		StatefullTrait() = default;
 
 		const std::optional<TStateType> &state() const
@@ -41,9 +46,5 @@ namespace spk
 		{
 			return _stateChangeTriggers[state].subscribe(std::move(callback));
 		}
-
-	private:
-		std::optional<TStateType> _currentState;
-		std::unordered_map<TStateType, OnStateEditionContractProvider> _stateChangeTriggers;
 	};
 }

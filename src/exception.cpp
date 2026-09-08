@@ -1,5 +1,7 @@
 #include "exception.hpp"
 
+#include <utility>
+
 namespace spk
 {
 	Exception::Exception(std::string message, std::source_location location) :
@@ -9,7 +11,10 @@ namespace spk
 		_format();
 	}
 
-	Exception::Exception(std::string message, std::exception_ptr cause, std::source_location location) :
+	Exception::Exception(
+		std::string message,
+		std::exception_ptr cause,
+		std::source_location location) :
 		_message(std::move(message)),
 		_location(location),
 		_cause(std::move(cause))
@@ -17,54 +22,39 @@ namespace spk
 		_format();
 	}
 
-	void Exception::_appendFrame(
-		std::string &output,
-		std::size_t indentation,
-		const std::string &message,
-		const std::source_location &location)
+	void Exception::_composeMessage(std::string &output, std::size_t indentation) const
 	{
 		const std::string prefix(indentation, '\t');
 
 		output += prefix;
-		output += location.file_name();
+		output += _location.file_name();
 		output += ":";
-		output += std::to_string(location.line());
+		output += std::to_string(_location.line());
 		output += '\n';
 
 		output += prefix;
 		output += '\t';
-		output += message;
-	}
-
-	void Exception::_append(std::string &output, std::size_t indentation) const
-	{
-		for (const auto &context : _contexts)
-		{
-			_appendFrame(output, indentation, context.message, context.location);
-			output += '\n';
-			++indentation;
-		}
-
-		_appendFrame(output, indentation, _message, _location);
+		output += _message;
 
 		if (_cause == nullptr)
-		{
 			return;
-		}
 
 		output += '\n';
 
 		try
 		{
 			std::rethrow_exception(_cause);
-		} catch (const Exception &exception)
+		}
+		catch (const Exception &exception)
 		{
-			exception._append(output, indentation + 1);
-		} catch (const std::exception &exception)
+			exception._composeMessage(output, indentation + 1);
+		}
+		catch (const std::exception &exception)
 		{
 			output += std::string(indentation + 1, '\t');
 			output += exception.what();
-		} catch (...)
+		}
+		catch (...)
 		{
 			output += std::string(indentation + 1, '\t');
 			output += "Unknown exception";
@@ -74,13 +64,7 @@ namespace spk
 	void Exception::_format()
 	{
 		_formattedMessage.clear();
-		_append(_formattedMessage, 0);
-	}
-
-	void Exception::addContext(std::string message, std::source_location location)
-	{
-		_contexts.insert(_contexts.begin(), Context{.message = std::move(message), .location = location});
-		_format();
+		_composeMessage(_formattedMessage, 0);
 	}
 
 	const char *Exception::what() const noexcept

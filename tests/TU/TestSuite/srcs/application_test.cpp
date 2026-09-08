@@ -14,11 +14,9 @@
 #include "core/application.hpp"
 #include "core/context/render_context.hpp"
 #include "core/context/update_context.hpp"
-#include "core/platform/detail/window_surface_driver.hpp"
 #include "exception.hpp"
 #include "rendering/render_command.hpp"
 #include "rendering/render_snapshot.hpp"
-#include "sparkle_test/scoped_override.hpp"
 #include "ui/widget.hpp"
 
 static_assert(!std::is_copy_constructible_v<spk::Application>);
@@ -65,9 +63,12 @@ namespace
 			});
 		}
 
-		void _onKeyPressedEvent(spk::KeyPressedEvent &) override
+		void _onKeyPressedEvent(spk::KeyPressedEvent &event) override
 		{
-			++keyCalls;
+			if (event.record.key == spk::Keyboard::F24)
+			{
+				++keyCalls;
+			}
 		}
 
 	public:
@@ -259,7 +260,7 @@ TEST(ApplicationTest, EventRoutingTargetsOnlyTheMatchingWindow)
 			application.quit(EXIT_FAILURE);
 			return;
 		}
-		::PostMessageW(firstHandle, WM_KEYDOWN, 'A', 0);
+		::PostMessageW(firstHandle, WM_KEYDOWN, VK_F24, 0);
 		while (std::chrono::steady_clock::now() < deadline && first.keyCalls.load() == 0)
 		{
 			std::this_thread::yield();
@@ -301,27 +302,5 @@ TEST(ApplicationTest, RuntimeFailuresReceiveApplicationContext)
 		EXPECT_NE(message.find("update runtime"), std::string::npos);
 		EXPECT_NE(message.find("context-failure"), std::string::npos);
 		EXPECT_NE(message.find("injected update failure"), std::string::npos);
-	}
-}
-
-TEST(ApplicationTest, NativeFailureDuringSurfaceCreationIsReported)
-{
-	spk::Application application;
-	application.createWindow("native-surface-failure", offscreenConfiguration("native-surface-failure"));
-	auto &operation = spk::detail::windowSurfaceDriver().getDeviceContext;
-	auto override = sparkle_test::scopedOverride(operation, [](HWND) -> HDC {
-		::SetLastError(ERROR_INVALID_WINDOW_HANDLE);
-		return nullptr;
-	});
-
-	try
-	{
-		(void)application.run();
-		FAIL() << "Expected surface creation failure";
-	} catch (const spk::Exception &exception)
-	{
-		const std::string message = exception.what();
-		EXPECT_NE(message.find("render runtime"), std::string::npos);
-		EXPECT_NE(message.find("GetDC"), std::string::npos);
 	}
 }

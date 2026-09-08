@@ -110,10 +110,6 @@ namespace spk
 			}
 
 			_bind(*entry.instance, context);
-		} catch (spk::Exception &exception)
-		{
-			exception.addContext("Exception while activating GPU resource [" + std::to_string(_identifier) + "]");
-			throw;
 		} catch (...)
 		{
 			throw spk::Exception(

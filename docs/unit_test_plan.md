@@ -48,11 +48,6 @@ Public data-only records and enums are tested with the class that consumes them.
 - **[throws `std::out_of_range`]** Access invalid rows; insert past `rowCount`; erase a range whose start/count exceeds the model.
 - **[throws `std::overflow_error`]** Exhaust the row-ID counter through a focused test seam or equivalent deterministic fixture.
 
-### `spk::TextModel`
-
-- **Standard usage:** use the inherited string model API and connect it to `TextModel::View` with its default delegate.
-- Verify UTF-8 strings, empty strings, duplicate strings, enabled state, stable IDs, and inherited notifications.
-
 ### `spk::JSON::Value`
 
 - **Standard usage:** build a mixed object/array, serialize it, parse it back, and read every supported scalar and custom `toJSON`/`fromJSON` type.
@@ -135,9 +130,7 @@ Public data-only records and enums are tested with the class that consumes them.
 ### `spk::InherenceTrait<T, Comparator>`
 
 - **Standard usage:** build and reparent a small hierarchy, verify parent/children access, comparator ordering, hooks, and parent-edition callbacks.
-- Cover detaching to null, reparenting between parents, repeated same-parent assignment, resort after a key change, destruction order, and removing an already detached child through safe APIs.
-- **[throws `std::runtime_error`]** Add a null child.
-- **[throws `std::invalid_argument`]** Remove a null child.
+- Cover `clearParent()`, reparenting between parents, repeated same-parent assignment, resort after a key change, destruction order, and removing an already detached child through safe APIs.
 - **[throws `std::logic_error`]** Remove an object that is not a child.
 - **[throws `std::logic_error`]** Create a circular hierarchy. <<<--- This one may not be implemented yet, but create the test anyway
 
@@ -625,24 +618,24 @@ Public data-only records and enums are tested with the class that consumes them.
 
 ## UI models and layouts
 
-### `spk::DataModel<T>::View`
+### `spk::ModelView<T>`
 
 - **Standard usage:** bind a model/delegate, lay out visible rows, select one, scroll it into view, and observe a stable-ID selection while the model changes.
 - Cover null model/delegate, empty/disabled/variable-height rows, viewport virtualization/reuse, geometry zero, scrolling boundaries, wheel/click consumption, selection deletion/movement/reset, and const/mutable selected widget access.
 - **[throws `std::invalid_argument`]** Delegate returns null or a widget that is not a child of the view.
 - **[throws `std::out_of_range`]** Select beyond the model or scroll without a valid model/delegate/row.
 
-### `spk::DataModel<T>::View::Delegate`
+### `spk::ModelView<T>::Delegate`
 
 - Use valid and deliberately invalid recorder delegates to verify creation/binding/row-extent call order, visible-row virtualization, selected flags, and ownership preconditions.
 
-### `spk::TextModel::Delegate`
+### `spk::TextModelDelegate`
 
 - **Standard usage:** display string rows with the default delegate, customize font/size/colors/padding/height, select a row, and verify label binding.
 - Cover empty strings, selected/unselected rebinds, model replacement, and style changes after items exist.
 - **[throws `std::invalid_argument`]** Set a null font or bind an item that is not a `TextLabel`.
 
-### `spk::TextModel::View`
+### `spk::TextModelView`
 
 - Verify construction installs the default delegate, typed model assignment, delegate customization, selection, virtualization, and inherited exception behavior.
 

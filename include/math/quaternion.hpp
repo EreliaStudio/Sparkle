@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <numbers>
 
 #include "math/vector3.hpp"
@@ -20,12 +21,25 @@ namespace spk
 		}
 
 	public:
-		float x = 0.0f;
-		float y = 0.0f;
-		float z = 0.0f;
-		float w = 1.0f;
+		union
+		{
+			struct
+			{
+				float x;
+				float y;
+				float z;
+				float w;
+			};
+			std::array<float, 4> data;
+		};
 
-		constexpr Quaternion() noexcept = default;
+		constexpr Quaternion() noexcept :
+			x(0.0f),
+			y(0.0f),
+			z(0.0f),
+			w(1.0f)
+		{
+		}
 
 		constexpr Quaternion(float x, float y, float z, float w) noexcept :
 			x(x),
@@ -35,7 +49,15 @@ namespace spk
 		{
 		}
 
-		[[nodiscard]] constexpr bool operator==(const Quaternion &) const noexcept = default;
+		[[nodiscard]] constexpr bool operator==(const Quaternion &other) const noexcept
+		{
+			return other.x == x && other.y == y && other.z == z && other.w == w;
+		}
+
+		[[nodiscard]] constexpr bool operator!=(const Quaternion &other) const noexcept
+		{
+			return !this->operator==(other);
+		}
 
 		[[nodiscard]] static constexpr Quaternion identity() noexcept
 		{
@@ -56,23 +78,7 @@ namespace spk
 			return {-x, -y, -z, w};
 		}
 
-		[[nodiscard]] Quaternion inversed() const
-		{
-			const float squaredNorm = dot(*this);
-
-			if (squaredNorm == 0.0f)
-			{
-				throw std::runtime_error("Can't inverse a null quaternion");
-			}
-
-			const Quaternion conjugate = conjugated();
-
-			return {
-				conjugate.x / squaredNorm,
-				conjugate.y / squaredNorm,
-				conjugate.z / squaredNorm,
-				conjugate.w / squaredNorm};
-		}
+		[[nodiscard]] Quaternion inversed() const;
 
 		[[nodiscard]] static Quaternion fromAxisAngle(const Vector3 &axis, float angle);
 		[[nodiscard]] static Quaternion fromEuler(const Vector3 &angles);

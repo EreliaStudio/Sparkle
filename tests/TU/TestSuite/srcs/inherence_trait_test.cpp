@@ -68,9 +68,9 @@ TEST(InherenceTraitTest, StandardUsageBuildsReparentsSortsAndNotifiesHierarchy)
 		parentChanges.push_back(parent);
 	});
 
-	firstParent.addChild(&high);
-	firstParent.addChild(&low);
-	middle.setParent(&firstParent);
+	firstParent.addChild(high);
+	firstParent.addChild(low);
+	middle.setParent(firstParent);
 
 	ASSERT_EQ(firstParent.children().size(), 3u);
 	EXPECT_EQ(firstParent.children()[0], &low);
@@ -79,7 +79,7 @@ TEST(InherenceTraitTest, StandardUsageBuildsReparentsSortsAndNotifiesHierarchy)
 	EXPECT_EQ(middle.parent(), &firstParent);
 	EXPECT_TRUE(middle.hasParent());
 
-	middle.setParent(&secondParent);
+	middle.setParent(secondParent);
 
 	EXPECT_EQ(middle.parent(), &secondParent);
 	EXPECT_EQ(firstParent.children(), (Node::ChildrenContainer{&low, &high}));
@@ -93,7 +93,7 @@ TEST(InherenceTraitTest, StandardUsageBuildsReparentsSortsAndNotifiesHierarchy)
 	EXPECT_EQ(secondParent.lastAddedChild, &middle);
 }
 
-TEST(InherenceTraitTest, DetachingToNullRemovesChildAndNotifies)
+TEST(InherenceTraitTest, ClearParentRemovesChildAndNotifies)
 {
 	Node parent("parent");
 	Node child("child");
@@ -105,8 +105,8 @@ TEST(InherenceTraitTest, DetachingToNullRemovesChildAndNotifies)
 		lastParent = newParent;
 	});
 
-	child.setParent(&parent);
-	child.setParent(nullptr);
+	child.setParent(parent);
+	child.clearParent();
 
 	EXPECT_FALSE(child.hasParent());
 	EXPECT_EQ(child.parent(), nullptr);
@@ -127,11 +127,11 @@ TEST(InherenceTraitTest, RepeatedSameParentAssignmentIsANoOp)
 		++callbackCount;
 	});
 
-	child.setParent(&parent);
+	child.setParent(parent);
 	ASSERT_EQ(callbackCount, 1);
 	ASSERT_EQ(parent.childAddedCount, 1);
 
-	child.setParent(&parent);
+	child.setParent(parent);
 
 	EXPECT_EQ(callbackCount, 1);
 	EXPECT_EQ(parent.childAddedCount, 1);
@@ -145,9 +145,9 @@ TEST(InherenceTraitTest, NotifyOrderingChangeResortsParentChildren)
 	Node second("second", 20);
 	Node third("third", 30);
 
-	parent.addChild(&first);
-	parent.addChild(&second);
-	parent.addChild(&third);
+	parent.addChild(first);
+	parent.addChild(second);
+	parent.addChild(third);
 
 	first.orderingKey = 40;
 	first.notifyOrderingChange();
@@ -163,8 +163,8 @@ TEST(InherenceTraitTest, ExplicitSortChildrenUsesCurrentComparatorKeys)
 	Node first("first", 10);
 	Node second("second", 20);
 
-	parent.addChild(&first);
-	parent.addChild(&second);
+	parent.addChild(first);
+	parent.addChild(second);
 
 	first.orderingKey = 50;
 	parent.sortChildren();
@@ -183,28 +183,14 @@ TEST(InherenceTraitTest, ParentEditionContractCanBeResigned)
 		++callbackCount;
 	});
 
-	child.setParent(&firstParent);
+	child.setParent(firstParent);
 	EXPECT_EQ(callbackCount, 1);
 
 	contract.resign();
-	child.setParent(&secondParent);
+	child.setParent(secondParent);
 
 	EXPECT_EQ(callbackCount, 1);
 	EXPECT_EQ(child.parent(), &secondParent);
-}
-
-TEST(InherenceTraitTest, AddingNullChildThrowsRuntimeError)
-{
-	Node parent("parent");
-
-	EXPECT_THROW(parent.addChild(nullptr), std::runtime_error);
-}
-
-TEST(InherenceTraitTest, RemovingNullChildThrowsInvalidArgument)
-{
-	Node parent("parent");
-
-	EXPECT_THROW(parent.removeChild(nullptr), std::invalid_argument);
 }
 
 TEST(InherenceTraitTest, RemovingObjectThatIsNotAChildThrowsLogicError)
@@ -212,7 +198,7 @@ TEST(InherenceTraitTest, RemovingObjectThatIsNotAChildThrowsLogicError)
 	Node parent("parent");
 	Node other("other");
 
-	EXPECT_THROW(parent.removeChild(&other), std::logic_error);
+	EXPECT_THROW(parent.removeChild(other), std::logic_error);
 }
 
 TEST(InherenceTraitTest, RemovingAlreadyDetachedChildThrowsLogicError)
@@ -220,11 +206,11 @@ TEST(InherenceTraitTest, RemovingAlreadyDetachedChildThrowsLogicError)
 	Node parent("parent");
 	Node child("child");
 
-	parent.addChild(&child);
-	parent.removeChild(&child);
+	parent.addChild(child);
+	parent.removeChild(child);
 	ASSERT_FALSE(child.hasParent());
 
-	EXPECT_THROW(parent.removeChild(&child), std::logic_error);
+	EXPECT_THROW(parent.removeChild(child), std::logic_error);
 }
 
 TEST(InherenceTraitTest, CircularHierarchyThrowsLogicError)
@@ -233,10 +219,10 @@ TEST(InherenceTraitTest, CircularHierarchyThrowsLogicError)
 	Node child("child");
 	Node grandChild("grand-child");
 
-	root.addChild(&child);
-	child.addChild(&grandChild);
+	root.addChild(child);
+	child.addChild(grandChild);
 
-	EXPECT_THROW(grandChild.addChild(&root), std::logic_error);
+	EXPECT_THROW(grandChild.addChild(root), std::logic_error);
 
 	EXPECT_FALSE(root.hasParent());
 	EXPECT_EQ(child.parent(), &root);
@@ -248,16 +234,16 @@ TEST(InherenceTraitTest, RejectedSelfAndDescendantParentsPreserveLinksAndNotific
 	Node root("root");
 	Node child("child");
 	Node leaf("leaf");
-	root.addChild(&child);
-	child.addChild(&leaf);
+	root.addChild(child);
+	child.addChild(leaf);
 	int parentChanges = 0;
 	auto contract = child.subscribeToParentEdition([&](const Node *) {
 		++parentChanges;
 	});
 
-	EXPECT_THROW(root.setParent(&root), std::logic_error);
-	EXPECT_THROW(child.addChild(&child), std::logic_error);
-	EXPECT_THROW(child.setParent(&leaf), std::logic_error);
+	EXPECT_THROW(root.setParent(root), std::logic_error);
+	EXPECT_THROW(child.addChild(child), std::logic_error);
+	EXPECT_THROW(child.setParent(leaf), std::logic_error);
 	EXPECT_EQ(root.parent(), nullptr);
 	EXPECT_EQ(child.parent(), &root);
 	EXPECT_EQ(leaf.parent(), &child);
@@ -277,7 +263,7 @@ TEST(InherenceTraitTest, DestroyingChildRemovesItFromLivingParent)
 
 	{
 		Node child("child");
-		parent.addChild(&child);
+		parent.addChild(child);
 		ASSERT_EQ(parent.children().size(), 1u);
 		ASSERT_EQ(parent.children().front(), &child);
 	}
@@ -300,7 +286,7 @@ TEST(InherenceTraitTest, DestroyingParentDetachesLivingChildren)
 
 	{
 		Node parent("parent");
-		parent.addChild(&child);
+		parent.addChild(child);
 		ASSERT_EQ(child.parent(), &parent);
 	}
 
@@ -316,8 +302,8 @@ TEST(InherenceTraitTest, DestroyingMiddleNodeDetachesFromParentAndOrphansChildre
 
 	{
 		Node middle("middle");
-		root.addChild(&middle);
-		middle.addChild(&leaf);
+		root.addChild(middle);
+		middle.addChild(leaf);
 
 		ASSERT_EQ(middle.parent(), &root);
 		ASSERT_EQ(leaf.parent(), &middle);
@@ -333,8 +319,8 @@ TEST(InherenceTraitTest, ResolveInHierarchyUsesLocalValueAndConfigurableParentCo
 	Node root("root");
 	Node child("child");
 	Node leaf("leaf");
-	root.addChild(&child);
-	child.addChild(&leaf);
+	root.addChild(child);
+	child.addChild(leaf);
 	std::vector<std::string> visited;
 
 	const bool accepted = leaf.resolveInHierarchy([&](const Node &node) {

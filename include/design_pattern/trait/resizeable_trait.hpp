@@ -8,6 +8,9 @@ namespace spk
 	class ResizeableTrait
 	{
 	public:
+		using Contract = ContractProvider<ResizeableTrait *>::Contract;
+		using callback_type = ContractProvider<ResizeableTrait *>::callback_type;
+
 		struct SizeHint
 		{
 			Vector2 minimal;
@@ -17,9 +20,13 @@ namespace spk
 			[[nodiscard]] bool operator==(const SizeHint &other) const = default;
 		};
 
-		using Contract = ContractProvider<ResizeableTrait *>::Contract;
-		using callback_type = ContractProvider<ResizeableTrait *>::callback_type;
+	private:
+		void _triggerEdition();
 
+		SizeHint _sizeHint;
+		ContractProvider<ResizeableTrait *> _onSizeHintEditionContractProvider;
+
+	public:
 		virtual ~ResizeableTrait();
 
 		[[nodiscard]] const SizeHint &sizeHint() const;
@@ -33,11 +40,5 @@ namespace spk
 		void setPreferredSize(const Vector2 &size);
 
 		Contract subscribeToSizeHintEdition(callback_type job);
-
-	private:
-		void _triggerEdition();
-
-		SizeHint _sizeHint;
-		ContractProvider<ResizeableTrait *> _onSizeHintEditionContractProvider;
 	};
 }

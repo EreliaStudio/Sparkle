@@ -23,9 +23,6 @@ namespace spk
 		{
 		private:
 			void _setupAttributes(VertexBuffer &vertexBuffer) override;
-			void _setupMesh(TextureMesh2D &) override;
 		};
-
-		TextureMesh2D() = default;
 	};
 }

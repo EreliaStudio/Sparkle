@@ -15,7 +15,10 @@ namespace spk
 		union {
 			struct
 			{
-				TType x, y, z, w;
+				TType x;
+				TType y;
+				TType z;
+				TType w;
 			};
 			std::array<TType, 4> data;
 		};
@@ -60,6 +63,11 @@ namespace spk
 		[[nodiscard]] constexpr bool operator==(const TVector4 &other) const
 		{
 			return x == other.x && y == other.y && z == other.z && w == other.w;
+		}
+		[[nodiscard]] constexpr TVector4 operator-() const
+			requires std::is_signed_v<TType>
+		{
+			return {-x, -y, -z, -w};
 		}
 		[[nodiscard]] constexpr TVector4 operator+(const TVector4 &v) const
 		{

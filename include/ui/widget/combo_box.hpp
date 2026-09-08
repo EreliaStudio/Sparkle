@@ -16,7 +16,7 @@ namespace spk
 	{
 	public:
 		using Model = DataModel<std::string>;
-		using ModelView = Model::View;
+		using ModelView = spk::ModelView<std::string>;
 		using Selection = ModelView::Selection;
 		using SelectionProvider = ContractProvider<std::optional<Selection>>;
 		using SelectionCallback = SelectionProvider::callback_type;
@@ -29,7 +29,7 @@ namespace spk
 		PopupWidget _popup;
 		Panel _popupBackground;
 		ModelView _view;
-		TextModel::Delegate _defaultDelegate;
+		TextModelDelegate _defaultDelegate;
 		std::unique_ptr<Widget> _displayItem;
 		Font::Text _placeholder;
 		std::size_t _maximumVisibleRows = 0;

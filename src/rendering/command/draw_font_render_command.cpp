@@ -13,37 +13,37 @@ namespace spk
 {
 	Program &DrawFontRenderCommand::_sharedProgram()
 	{
-		static auto p = []() {
-			auto r = std::make_unique<Program>(
+		static auto program = []() {
+			auto result = std::make_unique<Program>(
 				std::string(resources::text("shaders/draw_font.vert.glsl")),
 				std::string(resources::text("shaders/draw_font.frag.glsl")));
-			r->bindUniformBlock("ViewportData", ViewportUniformRenderCommand::MatrixUBOBindingPoint);
-			r->bindUniformBlock("FontRenderData", FontDataUBOBindingPoint);
-			r->bindSampler("uAtlas", AtlasSamplerBindingPoint);
-			r->validate();
-			return r;
+			result->bindUniformBlock("ViewportData", ViewportUniformRenderCommand::MatrixUBOBindingPoint);
+			result->bindUniformBlock("FontRenderData", FontDataUBOBindingPoint);
+			result->bindSampler("uAtlas", AtlasSamplerBindingPoint);
+			result->validate();
+			return result;
 		}();
-		return *p;
+		return *program;
 	}
 	UniformBuffer &DrawFontRenderCommand::_sharedBuffer()
 	{
-		static UniformBuffer b(FontDataUBOBindingPoint, sizeof(FontRenderData));
-		return b;
+		static UniformBuffer buffer(FontDataUBOBindingPoint, sizeof(FontRenderData));
+		return buffer;
 	}
-	DrawFontRenderCommand::DrawFontRenderCommand(const Font::Atlas *a, TextureMesh2D m, Color g, Color o, float t) :
-		_atlas(a),
-		_mesh(std::move(m)),
-		_data{g, o, t, {}},
+	DrawFontRenderCommand::DrawFontRenderCommand(const Font::Atlas *atlas, TextureMesh2D mesh, Color glyphColor, Color outlineColor, float threshold) :
+		_atlas(atlas),
+		_mesh(std::move(mesh)),
+		_data{glyphColor, outlineColor, threshold, {}},
 		_sampler(AtlasSamplerBindingPoint)
 	{
-		if (!a)
+		if (!atlas)
 		{
 			throw std::invalid_argument("DrawFontRenderCommand atlas cannot be null");
 		}
-		_sampler.setTexture(a);
+		_sampler.setTexture(atlas);
 		_sampler.validate();
 	}
-	void DrawFontRenderCommand::execute(RenderContext &c) const
+	void DrawFontRenderCommand::execute(RenderContext &context) const
 	{
 		if (_mesh.empty())
 		{
@@ -52,11 +52,11 @@ namespace spk
 		auto &b = _sharedBuffer();
 		b.setData(_data);
 		b.validate();
-		b.activate(c);
+		b.activate(context);
 		auto &p = _sharedProgram();
-		p.activate(c);
-		_sampler.activate(c);
-		_mesh.layout().activate(c);
+		p.activate(context);
+		_sampler.activate(context);
+		_mesh.layout().activate(context);
 		p.render(Program::Primitive::Triangles, _mesh.indexType(), 0, _mesh.indexCount());
 	}
 }

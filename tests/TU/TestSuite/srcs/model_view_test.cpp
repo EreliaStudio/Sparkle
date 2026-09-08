@@ -1,13 +1,15 @@
 #include <gtest/gtest.h>
 
-#include "ui/data_model_view.hpp"
-#include "ui/text_model_view.hpp"
 #include <cstdlib>
 #include <set>
+
+#include "ui/model_view.hpp"
+#include "ui/text_model_view.hpp"
 
 namespace
 {
 	using Model = spk::DataModel<int>;
+	using View = spk::ModelView<int>;
 	struct Item : spk::Widget
 	{
 		int value = 0;
@@ -16,7 +18,7 @@ namespace
 		bool selected = false;
 		using Widget::Widget;
 	};
-	struct Delegate : Model::View::Delegate
+	struct Delegate : View::Delegate
 	{
 		int creations = 0;
 		std::unique_ptr<spk::Widget> createItem(std::string name, spk::Widget *parent) override
@@ -37,7 +39,7 @@ namespace
 			return 20;
 		}
 	};
-	std::vector<Item *> activeItems(Model::View &view)
+	std::vector<Item *> activeItems(View &view)
 	{
 		std::vector<Item *> result;
 		for (auto *child : view.children())
@@ -58,10 +60,9 @@ TEST(DataModelViewTest, BindingSelectionScrollingAndDelegateReusePreserveIdentit
 {
 	Model model{10, 20, 30, 40, 50};
 	Delegate delegate;
-	Model::View view("View");
+	View view("View", &model);
 	view.setGeometry({.anchor = {10, 10}, .size = {100, 40}});
 	view.setDelegate(&delegate);
-	view.setModel(&model);
 	ASSERT_EQ(activeItems(view).size(), 2u);
 	EXPECT_EQ(delegate.creations, 2);
 	EXPECT_EQ(activeItems(view)[0]->value, 10);
@@ -87,7 +88,7 @@ TEST(DataModelViewTest, BindingSelectionScrollingAndDelegateReusePreserveIdentit
 	view.scrollTo(4);
 	EXPECT_EQ(dynamic_cast<Item *>(view.selectedWidget())->id, model.rowID(1));
 	EXPECT_EQ(delegate.creations, 3); // Offscreen selection retains its item.
-	EXPECT_EQ(static_cast<const Model::View &>(view).selectedWidget(), view.selectedWidget());
+	EXPECT_EQ(static_cast<const View &>(view).selectedWidget(), view.selectedWidget());
 	view.setSelectedRow(std::nullopt);
 	EXPECT_EQ(view.selectedWidget(), nullptr);
 	EXPECT_EQ(selections, 2);
@@ -97,10 +98,9 @@ TEST(DataModelViewTest, ReactiveEditsPreserveRowIDAndClearRemovedSelection)
 {
 	Model model{10, 20, 30};
 	Delegate delegate;
-	Model::View view("View");
+	View view("View", &model);
 	view.setGeometry({.anchor = {0, 0}, .size = {100, 60}});
 	view.setDelegate(&delegate);
-	view.setModel(&model);
 	view.setSelectedRow(1);
 	const auto id = view.selectedRowID();
 	int notifications = 0;
@@ -127,9 +127,8 @@ TEST(DataModelViewTest, EmptyLargeZeroPartialAndExactPageGeometry)
 {
 	Model model;
 	Delegate delegate;
-	Model::View view("View");
+	View view("View", &model);
 	view.setDelegate(&delegate);
-	view.setModel(&model);
 	EXPECT_TRUE(view.children().empty());
 	view.setModel(nullptr);
 	for (int i = 0; i < 1000; ++i)
@@ -157,7 +156,7 @@ TEST(DataModelViewTest, NullReplacementInvalidRowsAndDisabledMouseSelection)
 	Model model{10, 20};
 	Model other{30};
 	Delegate delegate;
-	Model::View view("View");
+	View view("View", nullptr);
 	EXPECT_THROW(view.setSelectedRow(0), std::out_of_range);
 	EXPECT_THROW(view.scrollTo(0), std::out_of_range);
 	view.setGeometry({.anchor = {0, 0}, .size = {100, 40}});
@@ -199,9 +198,8 @@ TEST(DataModelViewTest, InvalidDelegateProductsThrowAndAllowRecovery)
 	Model model{1};
 	Delegate valid;
 	Invalid invalid;
-	Model::View view("View");
+	View view("View", &model);
 	view.setGeometry({.anchor = {0, 0}, .size = {100, 20}});
-	view.setModel(&model);
 	EXPECT_THROW(view.setDelegate(&invalid), std::invalid_argument);
 	EXPECT_EQ(view.delegate(), &invalid);
 	EXPECT_TRUE(view.children().empty());
@@ -220,10 +218,9 @@ TEST(DataModelViewTest, ReactiveModelShrinkAndResizeClampScrollOffset)
 {
 	Model model{1, 2, 3, 4, 5};
 	Delegate delegate;
-	Model::View view("View");
+	View view("View", &model);
 	view.setGeometry({.anchor = {0, 0}, .size = {100, 40}});
 	view.setDelegate(&delegate);
-	view.setModel(&model);
 	view.scrollTo(4);
 	model.erase(1, 4);
 	ASSERT_EQ(activeItems(view).size(), 1u);
@@ -238,10 +235,9 @@ TEST(DataModelViewTest, ReactiveModelShrinkAndResizeClampScrollOffset)
 
 TEST(TextModelViewTest, DefaultDelegatePresentsUnicodeEmptyAndDuplicateRowsWithStableSelection)
 {
-	spk::TextModel model{"", "same", "same", "\xc3\xa9"};
-	spk::TextModel::View view("Text");
+	spk::DataModel<std::string> model{"", "same", "same", "\xc3\xa9"};
+	spk::TextModelView view("Text", &model);
 	view.setGeometry({.anchor = {0, 0}, .size = {100, 40}});
-	view.setModel(&model);
 	EXPECT_EQ(view.delegate(), &view.defaultDelegate());
 	view.setSelectedRow(1);
 	const auto firstID = view.selectedRowID();
@@ -264,8 +260,8 @@ TEST(TextModelViewTest, DefaultDelegatePresentsUnicodeEmptyAndDuplicateRowsWithS
 
 TEST(TextModelDelegateTest, PresentationSettingsAndInvalidItemsHaveDefinedBehavior)
 {
-	spk::TextModel model{"text", ""};
-	spk::TextModel::Delegate delegate;
+	spk::DataModel<std::string> model{"text", ""};
+	spk::TextModelDelegate delegate;
 	spk::Widget parent("Parent", nullptr);
 	delegate.setTextSize({25, 1});
 	delegate.setPadding({7, 3});

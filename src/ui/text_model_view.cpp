@@ -7,56 +7,56 @@
 
 namespace spk
 {
-	TextModel::Delegate::Delegate(Font *font) :
+	TextModelDelegate::TextModelDelegate(Font *font) :
 		_font(font != nullptr ? font : Widget::defaultStyle->font.get())
 	{
 	}
 
-	void TextModel::Delegate::setFont(Font *font)
+	void TextModelDelegate::setFont(Font *font)
 	{
 		if (font == nullptr)
 		{
-			throw std::invalid_argument("TextModel delegate font cannot be null");
+			throw std::invalid_argument("TextModelDelegate font cannot be null");
 		}
 		_font = font;
 	}
 
-	void TextModel::Delegate::setTextSize(const Font::Size &size)
+	void TextModelDelegate::setTextSize(const Font::Size &size)
 	{
 		_textSize = size;
 	}
 
-	void TextModel::Delegate::setGlyphColor(const Color &color)
+	void TextModelDelegate::setGlyphColor(const Color &color)
 	{
 		_glyphColor = color;
 	}
 
-	void TextModel::Delegate::setOutlineColor(const Color &color)
+	void TextModelDelegate::setOutlineColor(const Color &color)
 	{
 		_outlineColor = color;
 	}
 
-	void TextModel::Delegate::setPadding(const Vector2UInt &padding)
+	void TextModelDelegate::setPadding(const Vector2UInt &padding)
 	{
 		_padding = padding;
 	}
 
-	void TextModel::Delegate::setRowHeight(unsigned int height)
+	void TextModelDelegate::setRowHeight(unsigned int height)
 	{
 		_rowHeight = height;
 	}
 
-	std::unique_ptr<Widget> TextModel::Delegate::createItem(std::string name, Widget *parent)
+	std::unique_ptr<Widget> TextModelDelegate::createItem(std::string name, Widget *parent)
 	{
 		return std::make_unique<TextLabel>(std::move(name), parent);
 	}
 
-	void TextModel::Delegate::bindItem(Widget &item, const DataModel<std::string> &model, std::size_t row, bool)
+	void TextModelDelegate::bindItem(Widget &item, const DataModel<std::string> &model, std::size_t row, bool)
 	{
 		auto *label = dynamic_cast<TextLabel *>(&item);
 		if (label == nullptr)
 		{
-			throw std::invalid_argument("TextModel delegate requires a TextLabel item");
+			throw std::invalid_argument("TextModelDelegate requires a TextLabel item");
 		}
 		if (_font != nullptr)
 		{
@@ -70,28 +70,23 @@ namespace spk
 		label->setAlignment({Alignment::Horizontal::Left, Alignment::Vertical::Center});
 	}
 
-	unsigned int TextModel::Delegate::rowExtent(const DataModel<std::string> &, std::size_t) const
+	unsigned int TextModelDelegate::rowExtent(const DataModel<std::string> &, std::size_t) const
 	{
 		return _rowHeight;
 	}
 
-	TextModel::View::View(std::string name, Widget *parent) :
-		DataModel<std::string>::View(std::move(name), parent)
+	TextModelView::TextModelView(std::string name, DataModel<std::string> *model, Widget *parent) :
+		ModelView<std::string>(std::move(name), model, parent)
 	{
 		setDelegate(&_defaultDelegate);
 	}
 
-	void TextModel::View::setModel(TextModel *model)
-	{
-		DataModel<std::string>::View::setModel(model);
-	}
-
-	TextModel::Delegate &TextModel::View::defaultDelegate() noexcept
+	TextModelDelegate &TextModelView::defaultDelegate() noexcept
 	{
 		return _defaultDelegate;
 	}
 
-	const TextModel::Delegate &TextModel::View::defaultDelegate() const noexcept
+	const TextModelDelegate &TextModelView::defaultDelegate() const noexcept
 	{
 		return _defaultDelegate;
 	}

@@ -53,6 +53,6 @@ TEST(PopupWidgetTest, OnePopupPerRootAndReparentedContentCleanupAreCoherent)
 	EXPECT_TRUE(second.isOpen());
 	spk::Widget content("Content", &second);
 	second.setContent(&content);
-	content.setParent(&root);
+	content.setParent(root);
 	EXPECT_EQ(second.content(), nullptr);
 }

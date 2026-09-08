@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <iostream>
 
+#include "exception.hpp"
+
 namespace spk
 {
 
@@ -42,12 +44,18 @@ namespace spk
 		{
 		}
 
-		constexpr bool operator==(const TVector2 &other) const
+		[[nodiscard]] constexpr bool operator==(const TVector2 &other) const
 		{
 			return x == other.x && y == other.y;
 		}
 
-		TVector2 operator+(const TVector2 &other) const
+		[[nodiscard]] constexpr TVector2 operator-() const
+			requires std::is_signed_v<TType>
+		{
+			return {-x, -y};
+		}
+
+		[[nodiscard]] TVector2 operator+(const TVector2 &other) const
 		{
 			return {x + other.x, y + other.y};
 		}
@@ -59,7 +67,7 @@ namespace spk
 			return *this;
 		}
 
-		TVector2 operator-(const TVector2 &other) const
+		[[nodiscard]] TVector2 operator-(const TVector2 &other) const
 		{
 			return {x - other.x, y - other.y};
 		}
@@ -71,7 +79,7 @@ namespace spk
 			return *this;
 		}
 
-		TVector2 operator*(const TVector2 &other) const
+		[[nodiscard]] TVector2 operator*(const TVector2 &other) const
 		{
 			return {x * other.x, y * other.y};
 		}
@@ -83,7 +91,7 @@ namespace spk
 			return *this;
 		}
 
-		TVector2 operator/(const TVector2 &other) const
+		[[nodiscard]] TVector2 operator/(const TVector2 &other) const
 		{
 			return {x / other.x, y / other.y};
 		}
@@ -93,6 +101,22 @@ namespace spk
 			x /= other.x;
 			y /= other.y;
 			return *this;
+		}
+
+		[[nodiscard]] auto length() const
+		{
+			return std::sqrt(x * x + y * y);
+		}
+
+		[[nodiscard]] TVector2 normalized() const
+			requires std::is_floating_point_v<TType>
+		{
+			const auto len = length();
+			if (len == 0.0)
+			{
+				throw spk::Exception("Cannot normalize a zero-length vector");
+			}
+			return *this / TVector2{static_cast<float>(len), static_cast<float>(len)};
 		}
 
 		friend std::ostream &operator<<(std::ostream &os, const TVector2 &value)

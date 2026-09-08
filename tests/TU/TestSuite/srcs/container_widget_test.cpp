@@ -108,7 +108,7 @@ TEST(ContainerWidgetTest, ReparentingContentClearsObservedPointer)
 	spk::Widget other("Other", nullptr);
 	spk::TextLabel content("Content", &container);
 	container.setContent(&content);
-	content.setParent(&other);
+	content.setParent(other);
 	EXPECT_EQ(container.content(), nullptr);
 }
 

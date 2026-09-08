@@ -33,10 +33,10 @@ TEST(Entity3DTest, ParentTransformComposesWorldValuesAndReparentingInvalidatesTh
 	child.transform().place({1.0f, 2.0f, 3.0f});
 	EXPECT_EQ(child.transform().position(spk::ReferenceFrame::World), spk::Vector3(11.0f, 22.0f, 33.0f));
 
-	child.setParent(&secondParent);
+	child.setParent(secondParent);
 	EXPECT_EQ(child.transform().position(spk::ReferenceFrame::World), spk::Vector3(-3.0f, -3.0f, -3.0f));
 
-	child.setParent(nullptr);
+	child.clearParent();
 	EXPECT_EQ(child.transform().position(spk::ReferenceFrame::World), child.transform().position());
 }
 
@@ -47,11 +47,11 @@ TEST(Entity3DTest, PlainAnd2DParentsDoNotContributeA3DTransform)
 	spk::Entity3D child("child");
 	child.transform().place({1.0f, 2.0f, 3.0f});
 
-	child.setParent(&plain);
+	child.setParent(plain);
 	EXPECT_EQ(child.transform().position(spk::ReferenceFrame::World), spk::Vector3(1.0f, 2.0f, 3.0f));
 
 	parent2D.transform().place({100.0f, 200.0f});
-	child.setParent(&parent2D);
+	child.setParent(parent2D);
 	EXPECT_EQ(child.transform().position(spk::ReferenceFrame::World), spk::Vector3(1.0f, 2.0f, 3.0f));
 }
 

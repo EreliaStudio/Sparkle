@@ -69,8 +69,6 @@ namespace spk
 			}
 		};
 
-		std::shared_ptr<State> _state;
-
 	public:
 		class Producer
 		{
@@ -134,6 +132,10 @@ namespace spk
 			Consumer consumer;
 		};
 
+	private:
+		std::shared_ptr<State> _state;
+
+	public:
 		ThreadSafeFIFO() :
 			_state(std::make_shared<State>())
 		{

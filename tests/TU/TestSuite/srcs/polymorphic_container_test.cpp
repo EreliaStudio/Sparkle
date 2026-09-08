@@ -65,9 +65,16 @@ namespace
 			return result;
 		}
 
-		void remove(Base &element)
+		template <typename T, typename... TArguments>
+		T &emplace(TArguments &&...arguments)
 		{
-			unregisterElement(element);
+			return emplaceElement<T>(
+				std::forward<TArguments>(arguments)...);
+		}
+
+		bool remove(Base &element)
+		{
+			return unregisterElement(element);
 		}
 
 		[[nodiscard]] AdditionContract onAddition(OnElementEditionCallback callback)
@@ -237,6 +244,57 @@ TEST(PolymorphicContainerTest, RegistrationOrderIsPreservedInMultiElementQueries
 	EXPECT_EQ(leaves[0], &a);
 	EXPECT_EQ(leaves[1], &b);
 	EXPECT_EQ(leaves[2], &c);
+}
+
+TEST(PolymorphicContainerTest, EmplaceElementConstructsOwnsRegistersAndReturnsElement)
+{
+	TestContainer container;
+
+	Leaf &leaf = container.emplace<Leaf>("emplaced");
+
+	EXPECT_EQ(container.size(), 1u);
+	EXPECT_EQ(leaf.name, "emplaced");
+	EXPECT_EQ(container.one<Leaf>(), &leaf);
+
+	const auto leaves = container.all<Leaf>();
+	ASSERT_EQ(leaves.size(), 1u);
+	EXPECT_EQ(leaves.front(), &leaf);
+}
+
+TEST(PolymorphicContainerTest, EmplaceElementTriggersAdditionCallbackAfterOwnership)
+{
+	TestContainer container;
+	Base *callbackAddress = nullptr;
+	std::size_t sizeDuringCallback = 0;
+
+	auto additionContract = container.onAddition(
+		[&](Base &element) {
+			callbackAddress = &element;
+			sizeDuringCallback = container.size();
+		});
+	(void)additionContract;
+
+	Leaf &leaf = container.emplace<Leaf>("emplaced");
+
+	EXPECT_EQ(callbackAddress, &leaf);
+	EXPECT_EQ(sizeDuringCallback, 1u);
+}
+
+TEST(PolymorphicContainerTest, EmplaceElementTransfersLifetimeToContainer)
+{
+	int destructionCount = 0;
+
+	{
+		TestContainer container;
+
+		Leaf &leaf =
+			container.emplace<Leaf>("emplaced", &destructionCount);
+
+		EXPECT_EQ(destructionCount, 0);
+		EXPECT_EQ(container.one<Leaf>(), &leaf);
+	}
+
+	EXPECT_EQ(destructionCount, 1);
 }
 
 TEST(PolymorphicContainerTest, RemovingForeignElementIsANoOp)

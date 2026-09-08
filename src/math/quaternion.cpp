@@ -6,6 +6,24 @@
 
 namespace spk
 {
+	Quaternion Quaternion::inversed() const
+	{
+		const float squaredNorm = dot(*this);
+
+		if (squaredNorm == 0.0f)
+		{
+			throw std::runtime_error("Can't inverse a null quaternion");
+		}
+
+		const Quaternion conjugate = conjugated();
+
+		return {
+			conjugate.x / squaredNorm,
+			conjugate.y / squaredNorm,
+			conjugate.z / squaredNorm,
+			conjugate.w / squaredNorm};
+	}
+
 	Quaternion Quaternion::fromAxisAngle(const Vector3 &axis, float angle)
 	{
 		const Vector3 n = axis.normalized();

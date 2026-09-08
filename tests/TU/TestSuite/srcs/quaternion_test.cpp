@@ -205,6 +205,6 @@ namespace
 	{
 		EXPECT_THROW(
 			(void)spk::Quaternion::lookAt({1.0f, 2.0f, 3.0f}, {1.0f, 2.0f, 3.0f}),
-			std::domain_error);
+			spk::Exception);
 	}
 }

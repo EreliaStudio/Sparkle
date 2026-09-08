@@ -15,19 +15,20 @@ namespace spk
 	class InherenceTrait
 	{
 	public:
-		struct ContinueWhileTruthy
-		{
-			template <typename TValue>
-			[[nodiscard]] bool operator()(const TValue &value) const
-			{
-				return static_cast<bool>(value);
-			}
-		};
-
 		using ChildrenContainer = std::vector<TType *>;
 		using OnParentEditionContractProvider = ContractProvider<const TType *>;
 		using OnParentEditionCallback = OnParentEditionContractProvider::callback_type;
 		using OnParentEditionContract = OnParentEditionContractProvider::Contract;
+
+		struct ContinueWhileTruthy
+		{
+			template <typename TValue>
+			[[nodiscard]] bool operator()(const TValue &value) const
+				noexcept(noexcept(static_cast<bool>(value)))
+			{
+				return static_cast<bool>(value);
+			}
+		};
 
 	private:
 		TType *_parent = nullptr;
@@ -58,6 +59,41 @@ namespace spk
 
 			_children.erase(it);
 			_onChildRemoved(child);
+		}
+
+		void _setParent(TType *parent)
+		{
+			if (parent != nullptr && (_destroying || parent->_destroying))
+			{
+				throw std::logic_error("Can't attach an object during hierarchy destruction");
+			}
+			if (_parent == parent)
+			{
+				return;
+			}
+
+			TType *self = static_cast<TType *>(this);
+			for (TType *ancestor = parent; ancestor != nullptr; ancestor = ancestor->_parent)
+			{
+				if (ancestor == self)
+				{
+					throw std::logic_error("Can't create a circular hierarchy");
+				}
+			}
+
+			if (_parent != nullptr)
+			{
+				_parent->_removeChild(self);
+			}
+
+			_parent = parent;
+
+			if (_parent != nullptr)
+			{
+				_parent->_appendChild(self);
+			}
+
+			_onParentEditionContractProvider.trigger(_parent);
 		}
 
 	protected:
@@ -106,64 +142,29 @@ namespace spk
 			return _onParentEditionContractProvider.subscribe(std::move(callback));
 		}
 
-		void addChild(TType *child)
+		void addChild(TType &child)
 		{
-			if (child == nullptr)
-			{
-				throw std::runtime_error("Can't assign an invalid child pointer");
-			}
-
-			child->setParent(static_cast<TType *>(this));
+			child.setParent(*static_cast<TType *>(this));
 		}
 
-		void setParent(TType *parent)
+		void setParent(TType &parent)
 		{
-			if (parent != nullptr && (_destroying || parent->_destroying))
-			{
-				throw std::logic_error("Can't attach an object during hierarchy destruction");
-			}
-			if (_parent == parent)
-			{
-				return;
-			}
-
-			TType *self = static_cast<TType *>(this);
-			for (TType *ancestor = parent; ancestor != nullptr; ancestor = ancestor->_parent)
-			{
-				if (ancestor == self)
-				{
-					throw std::logic_error("Can't create a circular hierarchy");
-				}
-			}
-
-			if (_parent != nullptr)
-			{
-				_parent->_removeChild(self);
-			}
-
-			_parent = parent;
-
-			if (_parent != nullptr)
-			{
-				_parent->_appendChild(self);
-			}
-
-			_onParentEditionContractProvider.trigger(_parent);
+			_setParent(&parent);
 		}
 
-		void removeChild(TType *child)
+		void clearParent()
 		{
-			if (child == nullptr)
-			{
-				throw std::invalid_argument("Can't remove an invalid child pointer");
-			}
+			_setParent(nullptr);
+		}
 
-			if (child->_parent != static_cast<TType *>(this))
+		void removeChild(TType &child)
+		{
+			if (child._parent != static_cast<TType *>(this))
 			{
 				throw std::logic_error("The specified object isn't a child of this object");
 			}
 
-			child->setParent(nullptr);
+			child.clearParent();
 		}
 
 		void sortChildren()
@@ -179,43 +180,43 @@ namespace spk
 			}
 		}
 
-		[[nodiscard]] const ChildrenContainer &children() const
+		[[nodiscard]] const ChildrenContainer &children() const noexcept
 		{
 			return _children;
 		}
 
-		[[nodiscard]] bool hasParent() const
+		[[nodiscard]] bool hasParent() const noexcept
 		{
 			return _parent != nullptr;
 		}
 
-		[[nodiscard]] TType *parent()
+		[[nodiscard]] TType *parent() noexcept
 		{
 			return _parent;
 		}
 
-		[[nodiscard]] const TType *parent() const
+		[[nodiscard]] const TType *parent() const noexcept
 		{
 			return _parent;
 		}
 
-		template <typename TValuePredicate, typename TContinuePredicate = ContinueWhileTruthy>
-			requires std::invocable<const TValuePredicate &, const TType &> &&
-				std::predicate<
-					const TContinuePredicate &,
-					const std::remove_cvref_t<std::invoke_result_t<const TValuePredicate &, const TType &>> &>
+		template <typename TValueResolver, typename TContinuePredicate = ContinueWhileTruthy>
+			requires std::invocable<const TValueResolver &, const TType &> &&
+					 std::predicate<
+						 const TContinuePredicate &,
+						 const std::remove_cvref_t<std::invoke_result_t<const TValueResolver &, const TType &>> &>
 		[[nodiscard]] auto resolveInHierarchy(
-			const TValuePredicate &valuePredicate,
-			const TContinuePredicate &continuePredicate = {}) const
-			-> std::remove_cvref_t<std::invoke_result_t<const TValuePredicate &, const TType &>>
+			const TValueResolver &resolver,
+			const TContinuePredicate &shouldContinue = {}) const
+			-> std::remove_cvref_t<std::invoke_result_t<const TValueResolver &, const TType &>>
 		{
-			using Value = std::remove_cvref_t<std::invoke_result_t<const TValuePredicate &, const TType &>>;
+			using Value = std::remove_cvref_t<std::invoke_result_t<const TValueResolver &, const TType &>>;
 			for (const TType *current = static_cast<const TType *>(this);
 				 current != nullptr;
 				 current = current->_parent)
 			{
-				Value value = std::invoke(valuePredicate, *current);
-				if (current->_parent == nullptr || !std::invoke(continuePredicate, value))
+				Value value = std::invoke(resolver, *current);
+				if (current->_parent == nullptr || !std::invoke(shouldContinue, value))
 				{
 					return value;
 				}

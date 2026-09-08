@@ -10,8 +10,11 @@ namespace spk
 	class ProtectedData final
 	{
 		/**
-		 * Reader and Writer shouldn't be able to outlive the ProtectedData they are originated from.
-		 * Making such situation is undefined behaviour
+		 * Reader and Writer are non-owning lock guards.
+		 *
+		 * They must not outlive the ProtectedData instance from which they were created.
+		 * Destroying the ProtectedData while one of its guards still exists results in
+		 * undefined behavior.
 		 */
 	public:
 		using value_type = TValue;
@@ -19,6 +22,16 @@ namespace spk
 		class Reader final
 		{
 			friend class ProtectedData;
+		
+		private:
+			explicit Reader(const ProtectedData &owner) :
+				_owner(owner),
+				_lock(owner._mutex)
+			{
+			}
+
+			const ProtectedData &_owner;
+			std::shared_lock<std::shared_mutex> _lock;
 
 		public:
 			Reader(const Reader &) = delete;
@@ -35,21 +48,21 @@ namespace spk
 			{
 				return &_owner._value;
 			}
-
-		private:
-			explicit Reader(const ProtectedData &owner) :
-				_owner(owner),
-				_lock(owner._mutex)
-			{
-			}
-
-			const ProtectedData &_owner;
-			std::shared_lock<std::shared_mutex> _lock;
 		};
 
 		class Writer final
 		{
 			friend class ProtectedData;
+
+		private:
+			explicit Writer(ProtectedData &owner) :
+				_owner(owner),
+				_lock(owner._mutex)
+			{
+			}
+
+			ProtectedData &_owner;
+			std::unique_lock<std::shared_mutex> _lock;
 
 		public:
 			Writer(const Writer &) = delete;
@@ -66,18 +79,14 @@ namespace spk
 			{
 				return &_owner._value;
 			}
-
-		private:
-			explicit Writer(ProtectedData &owner) :
-				_owner(owner),
-				_lock(owner._mutex)
-			{
-			}
-
-			ProtectedData &_owner;
-			std::unique_lock<std::shared_mutex> _lock;
 		};
+	
 
+	private:
+		value_type _value{};
+		mutable std::shared_mutex _mutex;
+
+	public:
 		ProtectedData() = default;
 
 		explicit ProtectedData(value_type value) :
@@ -100,9 +109,5 @@ namespace spk
 		{
 			return Writer(*this);
 		}
-
-	private:
-		value_type _value{};
-		mutable std::shared_mutex _mutex;
 	};
 }
