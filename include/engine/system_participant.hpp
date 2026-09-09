@@ -13,7 +13,7 @@ namespace spk
 	class Entity;
 
 	class System::Participant : public EntityAttachment,
-								public spk::Registry<Engine *, System::Participant>::Object
+								public spk::Registry<System::Participant, Engine *>::Object
 	{
 	private:
 		spk::Rect2D _geometry{};

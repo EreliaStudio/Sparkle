@@ -7,7 +7,7 @@ namespace spk
 	class Transform2D;
 
 	class Entity2D : public Entity,
-					 public Registry<Engine *, Entity2D>::Object
+					 public Registry<Entity2D, Engine *>::Object
 	{
 	private:
 		Transform2D &_transform;

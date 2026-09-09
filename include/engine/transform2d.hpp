@@ -16,7 +16,7 @@ namespace spk
 	class Entity2D;
 
 	class Transform2D : public System::Participant2D,
-						public Registry<Engine *, Transform2D>::Object
+						public Registry<Transform2D, Engine *>::Object
 	{
 		friend class Entity2D;
 

@@ -14,7 +14,7 @@
 namespace
 {
 	class QueryObject : public spk::ContextualizableTrait<int>,
-						public spk::Registry<int, QueryObject>::Object
+						public spk::Registry<QueryObject, int>::Object
 	{
 	public:
 		int value = 0;
@@ -29,7 +29,7 @@ namespace
 	};
 
 	class DerivedQueryObject : public QueryObject,
-							   public spk::Registry<int, DerivedQueryObject>::Object
+							   public spk::Registry<DerivedQueryObject, int>::Object
 	{
 	public:
 		DerivedQueryObject(int context, int value) :
@@ -38,7 +38,7 @@ namespace
 		}
 	};
 
-	using Registry = spk::Registry<int, QueryObject>;
+	using Registry = spk::Registry<QueryObject, int>;
 	using Query = spk::Query<QueryObject, int>;
 	using ElementSet = Registry::ElementSet;
 
@@ -154,7 +154,7 @@ TEST(RegistryQueryTest, StandardFromRegistryPredicateIntersectionAndUnionComposi
 	TestSource<QueryObject> baseProvider({&even});
 
 	Query query;
-	query.insert<spk::From<QueryObject, int>>(Registry::provider())
+	query.insert<spk::From<QueryObject, int>>(Registry::instance())
 		.insert<KeepEven>()
 		.insert<spk::Intersect<QueryObject, int>>(derivedProvider)
 		.insert<spk::Union<QueryObject, int>>(baseProvider);
@@ -169,7 +169,7 @@ TEST(RegistryQueryTest, StandardFromRegistryPredicateIntersectionAndUnionComposi
 TEST(RegistryQueryTest, EmptyAndAllRegistrySelectionsAreHandled)
 {
 	Query query;
-	query.insert<spk::From<QueryObject, int>>(Registry::provider());
+	query.insert<spk::From<QueryObject, int>>(Registry::instance());
 	EXPECT_TRUE(query.elements(1001).empty());
 
 	QueryObject first(1002, 1);
@@ -184,7 +184,7 @@ TEST(RegistryQueryTest, RepeatedElementsUsesCacheUntilTheRegistryChanges)
 {
 	auto executions = std::make_shared<std::unordered_map<int, int>>();
 	Query query;
-	query.insert<spk::From<QueryObject, int>>(Registry::provider())
+	query.insert<spk::From<QueryObject, int>>(Registry::instance())
 		.insert<CountingOperation>(executions);
 
 	QueryObject first(77, 1);
@@ -203,7 +203,7 @@ TEST(RegistryQueryTest, RegistryEditsInvalidateOnlyTheAffectedContext)
 {
 	auto executions = std::make_shared<std::unordered_map<int, int>>();
 	Query query;
-	query.insert<spk::From<QueryObject, int>>(Registry::provider())
+	query.insert<spk::From<QueryObject, int>>(Registry::instance())
 		.insert<CountingOperation>(executions);
 
 	QueryObject first(1, 1);
@@ -224,7 +224,7 @@ TEST(RegistryQueryTest, MovingAnObjectBetweenContextsRefreshesBothSelections)
 {
 	QueryObject object(3, 9);
 	Query query;
-	query.insert<spk::From<QueryObject, int>>(Registry::provider());
+	query.insert<spk::From<QueryObject, int>>(Registry::instance());
 
 	ASSERT_TRUE(query.elements(3).contains(&object));
 	ASSERT_FALSE(query.elements(4).contains(&object));
@@ -241,7 +241,7 @@ TEST(RegistryQueryTest, IntersectionWithExplicitSetDoesNotSubscribeToRegistryEdi
 	TestSource<DerivedQueryObject> explicitProvider({&selected});
 
 	Query query;
-	query.insert<spk::From<QueryObject, int>>(Registry::provider())
+	query.insert<spk::From<QueryObject, int>>(Registry::instance())
 		.insert<spk::Intersect<QueryObject, int>>(explicitProvider);
 	ASSERT_TRUE(query.elements(5).contains(&selected));
 
@@ -255,9 +255,9 @@ TEST(RegistryQueryTest, RegistryBackedIntersectionInvalidatesWhenOtherRegistryCh
 {
 	DerivedQueryObject first(6, 1);
 	Query query;
-	query.insert<spk::From<QueryObject, int>>(Registry::provider())
+	query.insert<spk::From<QueryObject, int>>(Registry::instance())
 		.insert<spk::Intersect<QueryObject, int>>(
-			spk::Registry<int, DerivedQueryObject>::provider());
+			spk::Registry<DerivedQueryObject, int>::instance());
 	ASSERT_TRUE(query.elements(6).contains(&first));
 
 	DerivedQueryObject second(6, 2);
@@ -270,7 +270,7 @@ TEST(RegistryQueryTest, QueryCompositionPropagatesOnlyTheEditedContext)
 {
 	auto executions = std::make_shared<std::unordered_map<int, int>>();
 	Query evenQuery;
-	evenQuery.insert<spk::From<QueryObject, int>>(Registry::provider())
+	evenQuery.insert<spk::From<QueryObject, int>>(Registry::instance())
 		.insert<KeepEven>();
 
 	Query composedQuery;
@@ -294,7 +294,7 @@ TEST(RegistryQueryTest, QueryCompositionPropagatesOnlyTheEditedContext)
 TEST(RegistryQueryTest, InsertingAnOperationInvalidatesComposedCachedResults)
 {
 	Query sourceQuery;
-	sourceQuery.insert<spk::From<QueryObject, int>>(Registry::provider());
+	sourceQuery.insert<spk::From<QueryObject, int>>(Registry::instance());
 
 	Query composedQuery;
 	composedQuery.insert<spk::From<QueryObject, int>>(sourceQuery);
@@ -315,7 +315,7 @@ TEST(RegistryQueryTest, WhereAndExcludeComposeWithProviders)
 	TestSource<QueryObject> excluded({&even});
 
 	Query query;
-	query.insert<spk::From<QueryObject, int>>(Registry::provider())
+	query.insert<spk::From<QueryObject, int>>(Registry::instance())
 		.insert<spk::Where<QueryObject, int>>([](QueryObject *object, const int &context) {
 			return object->value > 0 && context == 30;
 		})
@@ -333,17 +333,17 @@ TEST(RegistryQueryTest, OperationOrderIsObservable)
 
 	Query intersectThenUnion;
 	intersectThenUnion
-		.insert<spk::From<QueryObject, int>>(Registry::provider())
+		.insert<spk::From<QueryObject, int>>(Registry::instance())
 		.insert<spk::Intersect<QueryObject, int>>(
-			spk::Registry<int, DerivedQueryObject>::provider())
+			spk::Registry<DerivedQueryObject, int>::instance())
 		.insert<spk::Union<QueryObject, int>>(addBack);
 
 	Query unionThenIntersect;
 	unionThenIntersect
-		.insert<spk::From<QueryObject, int>>(Registry::provider())
+		.insert<spk::From<QueryObject, int>>(Registry::instance())
 		.insert<spk::Union<QueryObject, int>>(addBack)
 		.insert<spk::Intersect<QueryObject, int>>(
-			spk::Registry<int, DerivedQueryObject>::provider());
+			spk::Registry<DerivedQueryObject, int>::instance());
 
 	EXPECT_EQ(intersectThenUnion.elements(8).size(), 2u);
 	EXPECT_EQ(unionThenIntersect.elements(8).size(), 1u);
@@ -356,7 +356,7 @@ TEST(RegistryQueryTest, SetSemanticsSuppressDuplicatesIntroducedByUnion)
 	TestSource<QueryObject> explicitProvider({&object});
 
 	Query query;
-	query.insert<spk::From<QueryObject, int>>(Registry::provider())
+	query.insert<spk::From<QueryObject, int>>(Registry::instance())
 		.insert<spk::Union<QueryObject, int>>(explicitProvider)
 		.insert<spk::Union<QueryObject, int>>(explicitProvider);
 
@@ -368,7 +368,7 @@ TEST(RegistryQueryTest, DestroyedQueryReleasesItsRegistrySubscriptions)
 	QueryObject first(12, 1);
 	{
 		Query query;
-		query.insert<spk::From<QueryObject, int>>(Registry::provider());
+		query.insert<spk::From<QueryObject, int>>(Registry::instance());
 		ASSERT_TRUE(query.elements(12).contains(&first));
 	}
 
@@ -385,21 +385,18 @@ TEST(RegistryQueryTest, ContainParticipantSupportsTypeRegexPredicateAndReactiveE
 	auto &participant = matching.addParticipant<QueryParticipant>("selected-participant", 42);
 
 	spk::Query<spk::Entity, spk::Engine *> byType;
-	byType.insert<spk::From<spk::Entity, spk::Engine *>>(
-			  spk::Registry<spk::Engine *, spk::Entity>::provider())
+	byType.insert<spk::FromRegistry<spk::Entity>>()
 		.insert<spk::ContainParticipant<QueryParticipant>>();
 	EXPECT_TRUE(byType.elements(&engine).contains(&matching));
 	EXPECT_FALSE(byType.elements(&engine).contains(&empty));
 
 	spk::Query<spk::Entity, spk::Engine *> byName;
-	byName.insert<spk::From<spk::Entity, spk::Engine *>>(
-			  spk::Registry<spk::Engine *, spk::Entity>::provider())
+	byName.insert<spk::FromRegistry<spk::Entity>>()
 		.insert<spk::ContainParticipant<QueryParticipant>>(std::regex("^selected"));
 	EXPECT_TRUE(byName.elements(&engine).contains(&matching));
 
 	spk::Query<spk::Entity, spk::Engine *> byPredicate;
-	byPredicate.insert<spk::From<spk::Entity, spk::Engine *>>(
-				   spk::Registry<spk::Engine *, spk::Entity>::provider())
+	byPredicate.insert<spk::FromRegistry<spk::Entity>>()
 		.insert<spk::ContainParticipant<QueryParticipant>>([](QueryParticipant *candidate) {
 			return candidate->value == 42;
 		});
@@ -423,21 +420,18 @@ TEST(RegistryQueryTest, ContainBehaviourSupportsTypeRegexPredicateAndReactiveEdi
 	matching.addBehaviour<QueryBehaviour>("selected-behaviour", 42);
 
 	spk::Query<spk::Entity, spk::Engine *> byType;
-	byType.insert<spk::From<spk::Entity, spk::Engine *>>(
-			  spk::Registry<spk::Engine *, spk::Entity>::provider())
+	byType.insert<spk::FromRegistry<spk::Entity>>()
 		.insert<spk::ContainBehaviour<QueryBehaviour>>();
 	EXPECT_TRUE(byType.elements(&engine).contains(&matching));
 	EXPECT_FALSE(byType.elements(&engine).contains(&empty));
 
 	spk::Query<spk::Entity, spk::Engine *> byName;
-	byName.insert<spk::From<spk::Entity, spk::Engine *>>(
-			  spk::Registry<spk::Engine *, spk::Entity>::provider())
+	byName.insert<spk::FromRegistry<spk::Entity>>()
 		.insert<spk::ContainBehaviour<QueryBehaviour>>(std::regex("behaviour$"));
 	EXPECT_TRUE(byName.elements(&engine).contains(&matching));
 
 	spk::Query<spk::Entity, spk::Engine *> byPredicate;
-	byPredicate.insert<spk::From<spk::Entity, spk::Engine *>>(
-				   spk::Registry<spk::Engine *, spk::Entity>::provider())
+	byPredicate.insert<spk::FromRegistry<spk::Entity>>()
 		.insert<spk::ContainBehaviour<QueryBehaviour>>([](QueryBehaviour *candidate) {
 			return candidate->value == 42;
 		});
@@ -459,12 +453,10 @@ TEST(RegistryQueryTest, AttachmentNameChangesInvalidateRegexQueries)
 	auto &behaviour = entity.addBehaviour<QueryBehaviour>("before");
 
 	spk::Query<spk::Entity, spk::Engine *> participantQuery;
-	participantQuery.insert<spk::From<spk::Entity, spk::Engine *>>(
-						spk::Registry<spk::Engine *, spk::Entity>::provider())
+	participantQuery.insert<spk::FromRegistry<spk::Entity>>()
 		.insert<spk::ContainParticipant<QueryParticipant>>(std::regex("^after$"));
 	spk::Query<spk::Entity, spk::Engine *> behaviourQuery;
-	behaviourQuery.insert<spk::From<spk::Entity, spk::Engine *>>(
-					  spk::Registry<spk::Engine *, spk::Entity>::provider())
+	behaviourQuery.insert<spk::FromRegistry<spk::Entity>>()
 		.insert<spk::ContainBehaviour<QueryBehaviour>>(std::regex("^after$"));
 	EXPECT_FALSE(participantQuery.elements(&engine).contains(&entity));
 	EXPECT_FALSE(behaviourQuery.elements(&engine).contains(&entity));

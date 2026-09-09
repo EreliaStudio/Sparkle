@@ -296,7 +296,7 @@ Public data-only records and enums are tested with the class that consumes them.
 
 ## Engine and registries
 
-### `spk::Registry<Context, Type>` and `Object`
+### `spk::Registry<Type, Context>` and `Object`
 
 - **Standard usage:** construct contextual objects, query by context, change context, and verify automatic add/remove on construction, context change, and destruction.
 - Cover null/default contexts, multiple objects, same-context no-op, context destruction order, const behavior, and registry cleanup between tests.

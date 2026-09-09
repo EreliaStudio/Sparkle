@@ -693,7 +693,7 @@ TEST(ParticipantTest, StandardUsageAttachesToEntityReceivesGeometryRendersAndApp
 
 	EXPECT_EQ(participant.owner(), &entity);
 	EXPECT_EQ(participant.context(), &engine);
-	EXPECT_TRUE((spk::Registry<spk::Engine *, spk::System::Participant>::elements(&engine).contains(&participant)));
+	EXPECT_TRUE((spk::Registry<spk::System::Participant, spk::Engine *>::instance().elements(&engine).contains(&participant)));
 	EXPECT_EQ(participant.geometry(), testGeometry());
 	EXPECT_EQ(participant.geometryCalls, 2u);
 	EXPECT_EQ(participant.renderCalls, 1u);
@@ -750,7 +750,7 @@ TEST(Participant2DTest, StandardUsageAttachesToEntity2DWithCovariantOwnerAndType
 	EXPECT_EQ(participant.owner(), &entity);
 	EXPECT_EQ(std::as_const(participant).owner(), &entity);
 	EXPECT_EQ(entity.getParticipant<RecordingParticipant2D>(), &participant);
-	EXPECT_TRUE((spk::Registry<spk::Engine *, spk::System::Participant2D>::elements(&engine).contains(&participant)));
+	EXPECT_TRUE((spk::Registry<spk::System::Participant2D, spk::Engine *>::instance().elements(&engine).contains(&participant)));
 }
 
 TEST(Participant2DTest, AttachToPlainOr3DEntityThrowsAndPreservesPriorOwnershipAndContext)
@@ -785,7 +785,7 @@ TEST(Participant3DTest, StandardUsageAttachesToEntity3DWithCovariantOwnerAndType
 	EXPECT_EQ(participant.owner(), &entity);
 	EXPECT_EQ(std::as_const(participant).owner(), &entity);
 	EXPECT_EQ(entity.getParticipant<RecordingParticipant3D>(), &participant);
-	EXPECT_TRUE((spk::Registry<spk::Engine *, spk::System::Participant3D>::elements(&engine).contains(&participant)));
+	EXPECT_TRUE((spk::Registry<spk::System::Participant3D, spk::Engine *>::instance().elements(&engine).contains(&participant)));
 }
 
 TEST(Participant3DTest, AttachToPlainOr2DEntityThrowsAndPreservesPriorOwnershipAndContext)
@@ -885,12 +885,12 @@ TEST(EntityTest, ContextParentDuplicateNamesDuplicateTypesAndRegistryQueriesAreO
 	spk::Entity child("duplicate", &parent);
 
 	EXPECT_EQ(detached.context(), nullptr);
-	EXPECT_TRUE((spk::Registry<spk::Engine *, spk::Entity>::elements(nullptr).contains(&detached)));
+	EXPECT_TRUE((spk::Registry<spk::Entity, spk::Engine *>::instance().elements(nullptr).contains(&detached)));
 
 	engine.addEntity(&parent);
 	child.changeContext(&engine);
-	EXPECT_TRUE((spk::Registry<spk::Engine *, spk::Entity>::elements(&engine).contains(&parent)));
-	EXPECT_TRUE((spk::Registry<spk::Engine *, spk::Entity>::elements(&engine).contains(&child)));
+	EXPECT_TRUE((spk::Registry<spk::Entity, spk::Engine *>::instance().elements(&engine).contains(&parent)));
+	EXPECT_TRUE((spk::Registry<spk::Entity, spk::Engine *>::instance().elements(&engine).contains(&child)));
 
 	RecordingBehaviour &first = child.addBehaviour<RecordingBehaviour>("same");
 	RecordingBehaviour &second = child.addBehaviour<RecordingBehaviour>("same");
@@ -898,8 +898,7 @@ TEST(EntityTest, ContextParentDuplicateNamesDuplicateTypesAndRegistryQueriesAreO
 	ASSERT_EQ(child.getBehaviours<RecordingBehaviour>(std::regex("same")).size(), 2u);
 
 	spk::Query<spk::Entity, spk::Engine *> query;
-	query.insert<spk::From<spk::Entity, spk::Engine *>>(
-			 spk::Registry<spk::Engine *, spk::Entity>::provider())
+	query.insert<spk::FromRegistry<spk::Entity>>()
 		.insert<spk::ContainBehaviour<RecordingBehaviour>>();
 	EXPECT_TRUE(query.elements(&engine).contains(&child));
 
@@ -914,11 +913,11 @@ TEST(EntityTest, DestructionRemovesEntityAndOwnedAttachmentsFromRegistries)
 	spk::Engine engine;
 	auto parent = std::make_unique<spk::Entity>("parent");
 	engine.addEntity(parent.get());
-	ASSERT_TRUE((spk::Registry<spk::Engine *, spk::Entity>::elements(&engine).contains(parent.get())));
+	ASSERT_TRUE((spk::Registry<spk::Entity, spk::Engine *>::instance().elements(&engine).contains(parent.get())));
 
 	parent.reset();
 
-	EXPECT_FALSE((spk::Registry<spk::Engine *, spk::Entity>::elements(&engine).contains(parent.get())));
+	EXPECT_FALSE((spk::Registry<spk::Entity, spk::Engine *>::instance().elements(&engine).contains(parent.get())));
 }
 
 TEST(EntityTest, DestructionDestroysOwnedAttachmentsAndDetachesNonOwnedChildren)
@@ -999,8 +998,8 @@ TEST(Entity2DTest, StandardUsageConstructsTransformTypedRegistriesAndParentTrans
 	EXPECT_EQ(child.getParticipant<spk::Transform2D>(), &child.transform());
 	EXPECT_EQ(parent.transform().owner(), &parent);
 	EXPECT_EQ(std::as_const(child).transform().owner(), &child);
-	EXPECT_TRUE((spk::Registry<spk::Engine *, spk::Entity2D>::elements(&engine).contains(&parent)));
-	EXPECT_TRUE((spk::Registry<spk::Engine *, spk::Transform2D>::elements(&engine).contains(&child.transform())));
+	EXPECT_TRUE((spk::Registry<spk::Entity2D, spk::Engine *>::instance().elements(&engine).contains(&parent)));
+	EXPECT_TRUE((spk::Registry<spk::Transform2D, spk::Engine *>::instance().elements(&engine).contains(&child.transform())));
 	EXPECT_EQ(child.transform().position(spk::ReferenceFrame::World), spk::Vector2(13.0f, 24.0f));
 }
 

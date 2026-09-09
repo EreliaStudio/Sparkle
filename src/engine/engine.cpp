@@ -22,9 +22,10 @@ namespace spk
 		}
 		// Include detached and nested entities registered with this engine,
 		// not just direct root children. Context changes also notify attachments.
-		while (!Registry<Engine *, Entity>::elements(this).empty())
+		Registry<Entity, Engine *> &entityRegistry = Registry<Entity, Engine *>::instance();
+		while (!entityRegistry.elements(this).empty())
 		{
-			(*Registry<Engine *, Entity>::elements(this).begin())->changeContext(nullptr);
+			(*entityRegistry.elements(this).begin())->changeContext(nullptr);
 		}
 		while (!systems().empty())
 		{

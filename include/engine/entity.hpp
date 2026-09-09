@@ -22,7 +22,7 @@ namespace spk
 	class Engine;
 
 	class Entity : public ContextualizableTrait<Engine *>,
-				   public Registry<Engine *, Entity>::Object,
+				   public Registry<Entity, Engine *>::Object,
 				   public InherenceTrait<Entity>,
 				   public ActivableTrait,
 				   public NameTrait,

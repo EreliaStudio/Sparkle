@@ -62,12 +62,12 @@ TEST(Entity3DTest, EngineContextControlsTypedEntityAndTransformRegistryMembershi
 	spk::Transform3D *transform = &entity.transform();
 
 	engine.addEntity(&entity);
-	EXPECT_TRUE((spk::Registry<spk::Engine *, spk::Entity3D>::elements(&engine).contains(&entity)));
-	EXPECT_TRUE((spk::Registry<spk::Engine *, spk::Transform3D>::elements(&engine).contains(transform)));
+	EXPECT_TRUE((spk::Registry<spk::Entity3D, spk::Engine *>::instance().elements(&engine).contains(&entity)));
+	EXPECT_TRUE((spk::Registry<spk::Transform3D, spk::Engine *>::instance().elements(&engine).contains(transform)));
 
 	engine.removeEntity(&entity);
-	EXPECT_FALSE((spk::Registry<spk::Engine *, spk::Entity3D>::elements(&engine).contains(&entity)));
-	EXPECT_FALSE((spk::Registry<spk::Engine *, spk::Transform3D>::elements(&engine).contains(transform)));
+	EXPECT_FALSE((spk::Registry<spk::Entity3D, spk::Engine *>::instance().elements(&engine).contains(&entity)));
+	EXPECT_FALSE((spk::Registry<spk::Transform3D, spk::Engine *>::instance().elements(&engine).contains(transform)));
 }
 
 TEST(Entity3DTest, TransformLivesForTheWholeEntityLifetime)
@@ -79,5 +79,5 @@ TEST(Entity3DTest, TransformLivesForTheWholeEntityLifetime)
 		EXPECT_EQ(transform->owner(), &entity);
 	}
 
-	EXPECT_FALSE((spk::Registry<spk::Engine *, spk::Transform3D>::elements(nullptr).contains(transform)));
+	EXPECT_FALSE((spk::Registry<spk::Transform3D, spk::Engine *>::instance().elements(nullptr).contains(transform)));
 }

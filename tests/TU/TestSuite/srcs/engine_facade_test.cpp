@@ -296,7 +296,7 @@ TEST(EngineFacadeTest, DestructionClearsNestedAndDetachedEntityContextsAndDetach
 	spk::Entity child("child", &parent);
 	spk::Entity unparented("unparented");
 	auto &behaviour = child.addBehaviour<EngineBehaviour>();
-	using Registry = spk::Registry<spk::Engine *, spk::Entity>;
+	using Registry = spk::Registry<spk::Entity, spk::Engine *>;
 	spk::Engine *oldEngine = nullptr;
 	{
 		spk::Engine engine;
@@ -315,7 +315,7 @@ TEST(EngineFacadeTest, DestructionClearsNestedAndDetachedEntityContextsAndDetach
 	EXPECT_EQ(child.context(), nullptr);
 	EXPECT_EQ(unparented.context(), nullptr);
 	EXPECT_EQ(behaviour.context(), nullptr);
-	EXPECT_TRUE(Registry::elements(oldEngine).empty());
+	EXPECT_TRUE(Registry::instance().elements(oldEngine).empty());
 }
 
 TEST(EngineFacadeTest, ModifyingSystemsDuringUpdateUsesStableTraversal)

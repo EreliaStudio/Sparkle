@@ -17,7 +17,7 @@ namespace spk
 	class Entity3D;
 
 	class Transform3D : public System::Participant3D,
-						public Registry<Engine *, Transform3D>::Object
+						public Registry<Transform3D, Engine *>::Object
 	{
 		friend class Entity3D;
 

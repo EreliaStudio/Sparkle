@@ -9,9 +9,9 @@
 
 namespace spk
 {
-	template <typename TContext, typename TType>
+	template <typename TType, typename TContext>
 		requires Hashable<TContext>
-	class Registry
+	class Registry final : public QuerySourceTrait<TType, TContext>
 	{
 	public:
 		using Base = QuerySourceTrait<TType, TContext>;
@@ -19,25 +19,6 @@ namespace spk
 		using OnEditionContractProvider = spk::ContractProvider<const TContext &, TType *>;
 		using OnEditionCallback = typename OnEditionContractProvider::callback_type;
 		using OnEditionContract = typename OnEditionContractProvider::Contract;
-
-		class Provider final : public Base
-		{
-		private:
-			friend class Registry;
-
-			Provider() = default;
-
-			void _notifyEdition(const TContext &context)
-			{
-				this->notifyEdition(context);
-			}
-
-		public:
-			[[nodiscard]] const ElementSet &elements(const TContext &context) const override
-			{
-				return Registry::elements(context);
-			}
-		};
 
 		class Object
 		{
@@ -53,12 +34,13 @@ namespace spk
 
 				TType *object = static_cast<TType *>(this);
 				ContextualType *contextual = static_cast<ContextualType *>(object);
-				Registry::add(contextual->context(), object);
+				Registry::instance().add(contextual->context(), object);
 
 				_contextEditionContract = contextual->subscribeToContextEdition(
 					[object](const TContext &oldContext, const TContext &newContext) {
-						Registry::remove(oldContext, object);
-						Registry::add(newContext, object);
+						Registry &registry = Registry::instance();
+						registry.remove(oldContext, object);
+						registry.add(newContext, object);
 					});
 			}
 
@@ -66,7 +48,7 @@ namespace spk
 			{
 				TType *object = static_cast<TType *>(this);
 				ContextualType *contextual = static_cast<ContextualType *>(object);
-				Registry::remove(contextual->context(), object);
+				Registry::instance().remove(contextual->context(), object);
 			}
 
 			Object(const Object &) = delete;
@@ -83,9 +65,12 @@ namespace spk
 			ElementSet elements;
 		};
 
-		static inline std::unordered_map<TContext, Entry> _entries;
+		std::unordered_map<TContext, Entry> _entries;
+		ElementSet _emptyElements;
 
-		static bool add(const TContext &context, TType *element)
+		Registry() = default;
+
+		bool add(const TContext &context, TType *element)
 		{
 			Entry &entry = _entries[context];
 			const bool inserted = entry.elements.insert(element).second;
@@ -93,13 +78,13 @@ namespace spk
 			if (inserted)
 			{
 				entry.onAdditionContractProvider.trigger(context, element);
-				provider()._notifyEdition(context);
+				this->notifyEdition(context);
 			}
 
 			return inserted;
 		}
 
-		static bool remove(const TContext &context, TType *element)
+		bool remove(const TContext &context, TType *element)
 		{
 			auto it = _entries.find(context);
 
@@ -113,38 +98,42 @@ namespace spk
 			if (removed)
 			{
 				it->second.onRemovalContractProvider.trigger(context, element);
-				provider()._notifyEdition(context);
+				this->notifyEdition(context);
 			}
 
 			return removed;
 		}
 
 	public:
-		[[nodiscard]] static Provider &provider()
+		Registry(const Registry &) = delete;
+		Registry &operator=(const Registry &) = delete;
+		Registry(Registry &&) = delete;
+		Registry &operator=(Registry &&) = delete;
+
+		[[nodiscard]] static Registry &instance()
 		{
-			static Provider instance;
+			static Registry instance;
 			return instance;
 		}
 
-		[[nodiscard]] static OnEditionContract subscribeToAddition(
+		[[nodiscard]] OnEditionContract subscribeToAddition(
 			const TContext &context,
 			OnEditionCallback callback)
 		{
 			return _entries[context].onAdditionContractProvider.subscribe(std::move(callback));
 		}
 
-		[[nodiscard]] static OnEditionContract subscribeToRemoval(
+		[[nodiscard]] OnEditionContract subscribeToRemoval(
 			const TContext &context,
 			OnEditionCallback callback)
 		{
 			return _entries[context].onRemovalContractProvider.subscribe(std::move(callback));
 		}
 
-		[[nodiscard]] static const ElementSet &elements(const TContext &context)
+		[[nodiscard]] const ElementSet &elements(const TContext &context) const override
 		{
-			static const ElementSet empty;
 			auto it = _entries.find(context);
-			return it == _entries.end() ? empty : it->second.elements;
+			return it == _entries.end() ? _emptyElements : it->second.elements;
 		}
 	};
 }
