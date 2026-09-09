@@ -1,10 +1,11 @@
 #pragma once
 
+#include "design_pattern/trait/query_source_trait.hpp"
 #include "engine/contextualizable_trait.hpp"
 
 #include <concepts>
-#include <set>
 #include <unordered_map>
+#include <utility>
 
 namespace spk
 {
@@ -13,19 +14,36 @@ namespace spk
 	class Registry
 	{
 	public:
-		using ElementSet = std::set<TType *>;
+		using Base = QuerySourceTrait<TType, TContext>;
+		using ElementSet = typename Base::ElementSet;
 		using OnEditionContractProvider = spk::ContractProvider<const TContext &, TType *>;
 		using OnEditionCallback = typename OnEditionContractProvider::callback_type;
 		using OnEditionContract = typename OnEditionContractProvider::Contract;
 
-		class Query;
+		class Provider final : public Base
+		{
+		private:
+			friend class Registry;
+
+			Provider() = default;
+
+			void _notifyEdition(const TContext &context)
+			{
+				this->notifyEdition(context);
+			}
+
+		public:
+			[[nodiscard]] const ElementSet &elements(const TContext &context) const override
+			{
+				return Registry::elements(context);
+			}
+		};
 
 		class Object
 		{
 		private:
 			using ContextualType = ContextualizableTrait<TContext>;
 			using ContextEditionContract = typename ContextualType::OnContextEditionContract;
-
 			ContextEditionContract _contextEditionContract;
 
 		protected:
@@ -35,7 +53,6 @@ namespace spk
 
 				TType *object = static_cast<TType *>(this);
 				ContextualType *contextual = static_cast<ContextualType *>(object);
-
 				Registry::add(contextual->context(), object);
 
 				_contextEditionContract = contextual->subscribeToContextEdition(
@@ -49,13 +66,11 @@ namespace spk
 			{
 				TType *object = static_cast<TType *>(this);
 				ContextualType *contextual = static_cast<ContextualType *>(object);
-
 				Registry::remove(contextual->context(), object);
 			}
 
 			Object(const Object &) = delete;
 			Object &operator=(const Object &) = delete;
-
 			Object(Object &&) = delete;
 			Object &operator=(Object &&) = delete;
 		};
@@ -73,12 +88,12 @@ namespace spk
 		static bool add(const TContext &context, TType *element)
 		{
 			Entry &entry = _entries[context];
-
 			const bool inserted = entry.elements.insert(element).second;
 
 			if (inserted)
 			{
 				entry.onAdditionContractProvider.trigger(context, element);
+				provider()._notifyEdition(context);
 			}
 
 			return inserted;
@@ -98,40 +113,38 @@ namespace spk
 			if (removed)
 			{
 				it->second.onRemovalContractProvider.trigger(context, element);
+				provider()._notifyEdition(context);
 			}
 
 			return removed;
 		}
 
 	public:
-		static OnEditionContract subscribeToAddition(
-			const TContext &context,
-			OnEditionCallback callback)
+		[[nodiscard]] static Provider &provider()
 		{
-			return _entries[context].onAdditionContractProvider.subscribe(callback);
+			static Provider instance;
+			return instance;
 		}
 
-		static OnEditionContract subscribeToRemoval(
+		[[nodiscard]] static OnEditionContract subscribeToAddition(
 			const TContext &context,
 			OnEditionCallback callback)
 		{
-			return _entries[context].onRemovalContractProvider.subscribe(callback);
+			return _entries[context].onAdditionContractProvider.subscribe(std::move(callback));
+		}
+
+		[[nodiscard]] static OnEditionContract subscribeToRemoval(
+			const TContext &context,
+			OnEditionCallback callback)
+		{
+			return _entries[context].onRemovalContractProvider.subscribe(std::move(callback));
 		}
 
 		[[nodiscard]] static const ElementSet &elements(const TContext &context)
 		{
 			static const ElementSet empty;
-
 			auto it = _entries.find(context);
-
-			if (it == _entries.end())
-			{
-				return empty;
-			}
-
-			return it->second.elements;
+			return it == _entries.end() ? empty : it->second.elements;
 		}
-
-		[[nodiscard]] static Query query();
 	};
 }

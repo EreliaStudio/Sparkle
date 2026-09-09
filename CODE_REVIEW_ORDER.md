@@ -53,6 +53,14 @@ Each checkbox represents exactly one file. A class or component therefore appear
 - [x] - [VersionedTrait](src/design_pattern/trait/versioned_trait.cpp)
 - [x] - [InherenceTrait](include/design_pattern/trait/inherence_trait.hpp)
 - [x] - [ContractProvider / Contract / Registration / Mutation](include/design_pattern/contract_provider.hpp)
+- [x] - [QuerySourceTrait](include/design_pattern/trait/query_source_trait.hpp)
+- [x] - [Query / Query::Operation](include/container/query.hpp)
+- [x] - [From query operation](include/query/from.hpp)
+- [x] - [Where query operation](include/query/where.hpp)
+- [x] - [Union query operation](include/query/union.hpp)
+- [x] - [Intersect query operation](include/query/intersect.hpp)
+- [x] - [Exclude query operation](include/query/exclude.hpp)
+- [x] - [Generic query operations umbrella](include/query/operations.hpp)
 
 ## 4. Input, events, and execution contexts
 
@@ -154,7 +162,6 @@ Each checkbox represents exactly one file. A class or component therefore appear
 - [x] - [ContextualizableTrait](include/engine/contextualizable_trait.hpp)
 - [x] - [ReferenceFrame](include/engine/reference_frame.hpp)
 - [ ] - [Registry](include/engine/registry.hpp)
-- [ ] - [Registry::Query and query operations](include/engine/registry_query.hpp)
 - [ ] - [EntityAttachment](include/engine/entity_attachment.hpp)
 - [ ] - [EntityAttachment](src/engine/entity_attachment.cpp)
 - [ ] - [EntityAttachmentCollection](include/engine/entity_attachment_collection.hpp)
@@ -169,6 +176,9 @@ Each checkbox represents exactly one file. A class or component therefore appear
 - [ ] - [SystemParticipantCollection](include/engine/system_participant_collection.hpp)
 - [ ] - [Entity](include/engine/entity.hpp)
 - [ ] - [Entity](src/engine/entity.cpp)
+- [ ] - [ContainBehaviour query operation](include/engine/query/contain_behaviour.hpp)
+- [ ] - [ContainParticipant query operation](include/engine/query/contain_participant.hpp)
+- [ ] - [Engine query operations umbrella](include/engine/query_operations.hpp)
 - [ ] - [Entity2D](include/engine/entity2d.hpp)
 - [ ] - [Entity2D](src/engine/entity2d.cpp)
 - [ ] - [System::Participant2D](include/engine/system_participant2d.hpp)

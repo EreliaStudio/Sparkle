@@ -18,7 +18,10 @@
 #include "engine/entity.hpp"
 #include "engine/entity2d.hpp"
 #include "engine/entity3d.hpp"
-#include "engine/registry_query.hpp"
+#include "engine/query_operations.hpp"
+#include "query/operations.hpp"
+#include "container/query.hpp"
+#include "engine/registry.hpp"
 #include "engine/system_collection.hpp"
 #include "engine/system_participant2d.hpp"
 #include "engine/system_participant3d.hpp"
@@ -894,14 +897,16 @@ TEST(EntityTest, ContextParentDuplicateNamesDuplicateTypesAndRegistryQueriesAreO
 	EXPECT_EQ(child.getBehaviour<RecordingBehaviour>(), &first);
 	ASSERT_EQ(child.getBehaviours<RecordingBehaviour>(std::regex("same")).size(), 2u);
 
-	auto query = spk::Registry<spk::Engine *, spk::Entity>::query();
-	query.insert<spk::ContainBehaviour<RecordingBehaviour>>();
-	EXPECT_TRUE(query.collect(&engine).contains(&child));
+	spk::Query<spk::Entity, spk::Engine *> query;
+	query.insert<spk::From<spk::Entity, spk::Engine *>>(
+			 spk::Registry<spk::Engine *, spk::Entity>::provider())
+		.insert<spk::ContainBehaviour<RecordingBehaviour>>();
+	EXPECT_TRUE(query.elements(&engine).contains(&child));
 
 	child.removeBehaviour(first);
-	EXPECT_TRUE(query.collect(&engine).contains(&child));
+	EXPECT_TRUE(query.elements(&engine).contains(&child));
 	child.removeBehaviour(second);
-	EXPECT_FALSE(query.collect(&engine).contains(&child));
+	EXPECT_FALSE(query.elements(&engine).contains(&child));
 }
 
 TEST(EntityTest, DestructionRemovesEntityAndOwnedAttachmentsFromRegistries)

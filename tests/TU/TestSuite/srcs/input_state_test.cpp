@@ -26,14 +26,14 @@ TEST(InputStateTest, StreamsUseTheSameTokens)
 TEST(InputStateTest, InvalidValueProducesUnknownToken)
 {
 	const auto invalid = static_cast<spk::InputState>(42);
-	EXPECT_EQ(spk::toString(invalid), "Unknow InputState");
-	EXPECT_EQ(spk::toWString(invalid), L"Unknow InputState");
+	EXPECT_EQ(spk::toString(invalid), "Unknown");
+	EXPECT_EQ(spk::toWString(invalid), L"Unknown");
 
 	std::ostringstream stream;
 	stream << invalid;
-	EXPECT_EQ(stream.str(), "Unknow InputState");
+	EXPECT_EQ(stream.str(), "Unknown");
 
 	std::wostringstream wideStream;
 	wideStream << invalid;
-	EXPECT_EQ(wideStream.str(), L"Unknow InputState");
+	EXPECT_EQ(wideStream.str(), L"Unknown");
 }
