@@ -4,7 +4,7 @@
 #include "design_pattern/contract_provider.hpp"
 #include "engine/reference_frame.hpp"
 #include "engine/registry.hpp"
-#include "engine/system_participant3d.hpp"
+#include "engine/component3d.hpp"
 #include "math/matrix.hpp"
 #include "math/quaternion.hpp"
 #include "math/vector3.hpp"
@@ -16,7 +16,7 @@ namespace spk
 	class Entity;
 	class Entity3D;
 
-	class Transform3D : public System::Participant3D,
+	class Transform3D : public Component3D,
 						public Registry<Transform3D, Engine *>::Object
 	{
 		friend class Entity3D;

@@ -6,7 +6,7 @@ namespace spk
 {
 	Entity2D::Entity2D(const std::string &name, Entity *parent) :
 		Entity(name, parent),
-		_transform(addParticipant<Transform2D>("Transform"))
+		_transform(addComponent<Transform2D>("Transform"))
 	{
 		_onParentEditionContract = subscribeToParentEdition(
 			[this](const Entity *) {

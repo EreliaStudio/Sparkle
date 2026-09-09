@@ -306,7 +306,7 @@ Public data-only records and enums are tested with the class that consumes them.
 
 - **Standard usage:** compose base registry selection with predicate, intersection, and union operations; execute repeatedly and observe invalidation after registry edits.
 - Cover empty/all sets, duplicates, different contexts, operation order, cached execution, operation copy/move restrictions, and subscriptions disappearing with a query.
-- Exercise `FromRegistry`, `IntersectWith`, `UnionWith`, `ContainParticipant`, and `ContainBehaviour` with type, regex, and predicate forms; additions/removals/name/context changes must invalidate only affected queries.
+- Exercise `FromRegistry`, `IntersectWith`, `UnionWith`, `ContainComponent`, and `ContainBehaviour` with type, regex, and predicate forms; additions/removals/name/context changes must invalidate only affected queries.
 
 ### `spk::EntityAttachment`
 
@@ -322,9 +322,9 @@ Public data-only records and enums are tested with the class that consumes them.
 
 - Apply the attachment-collection matrix specifically to behaviours, including type/predicate/regex lookup and addition/removal notifications.
 
-### `spk::SystemParticipantCollection`
+### `spk::ComponentCollection`
 
-- Apply the attachment-collection matrix specifically to participants, including typed 2D/3D queries and cache invalidation.
+- Apply the attachment-collection matrix specifically to components, including typed 2D/3D queries and cache invalidation.
 
 ### `spk::SystemCollection`
 
@@ -340,24 +340,24 @@ Public data-only records and enums are tested with the class that consumes them.
 - **Standard usage:** derive a recorder, add it to an engine, attach/detach context, update active systems, and dispatch events.
 - Cover null engine, reattachment, deactivation, repeated attach, and removal/destruction contracts.
 
-### `spk::System::Participant`
+### `spk::Component`
 
 - **Standard usage:** attach to an entity, receive geometry, contribute a render command, and appear in registry queries.
 - Cover null owner, active/inactive state, reattachment, removal, and hook ordering.
 
-### `spk::System::Participant2D`
+### `spk::Component2D`
 
 - **Standard usage:** attach to an `Entity2D` and verify covariant owner access and typed registry membership.
 - **[throws `std::invalid_argument`]** Attach to a plain/3D entity; verify a failed attach preserves prior ownership/context.
 
-### `spk::System::Participant3D`
+### `spk::Component3D`
 
 - **Standard usage:** attach to an `Entity3D` and verify covariant owner access and typed registry membership.
 - **[throws `std::invalid_argument`]** Attach to a plain/2D entity; verify a failed attach preserves prior ownership/context.
 
 ### `spk::Entity`
 
-- **Standard usage:** build a hierarchy, add behaviours/participants, attach it to an engine, propagate geometry/update/render/events, then remove it cleanly.
+- **Standard usage:** build a hierarchy, add behaviours/components, attach it to an engine, propagate geometry/update/render/events, then remove it cleanly.
 - Cover inactive branches, parent/context changes, add/remove during callbacks, duplicate names/types, root vs detached entity, interaction traversal, and non-owning hierarchy detachment during destruction. Base `Entity` has no z-order contract.
 
 ### `spk::Entity2D`

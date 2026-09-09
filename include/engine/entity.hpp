@@ -15,7 +15,7 @@
 #include "design_pattern/trait/updatable_trait.hpp"
 #include "engine/behaviour_collection.hpp"
 #include "engine/registry.hpp"
-#include "engine/system_participant_collection.hpp"
+#include "engine/component_collection.hpp"
 #include "math/rect2d.hpp"
 #include "rendering/render_snapshot.hpp"
 
@@ -29,7 +29,7 @@ namespace spk
 				   public InherenceTrait<Entity>,
 				   public ActivableTrait,
 				   public NameTrait,
-				   public SystemParticipantCollection,
+				   public ComponentCollection,
 				   public BehaviourCollection,
 				   public EventDispatcher,
 				   public GeometryStateTrait,
@@ -39,8 +39,8 @@ namespace spk
 	private:
 		using BehaviourCollection::registerBehaviour;
 		using BehaviourCollection::unregisterBehaviour;
-		using SystemParticipantCollection::registerParticipant;
-		using SystemParticipantCollection::unregisterParticipant;
+		using ComponentCollection::registerComponent;
+		using ComponentCollection::unregisterComponent;
 		InherenceTrait<Entity>::OnParentEditionContract _parentEditionContract;
 		ContextualizableTrait<Engine *>::OnContextEditionContract _parentContextEditionContract;
 
@@ -60,24 +60,24 @@ namespace spk
 	public:
 		Entity(const std::string &name, Entity *parent = nullptr);
 
-		template <typename TParticipantType, typename... TArgs>
-			requires std::derived_from<TParticipantType, System::Participant>
-		TParticipantType &addParticipant(TArgs &&...args)
+		template <typename TComponentType, typename... TArgs>
+			requires std::derived_from<TComponentType, Component>
+		TComponentType &addComponent(TArgs &&...args)
 		{
-			std::unique_ptr<TParticipantType> participant =
-				std::make_unique<TParticipantType>(std::forward<TArgs>(args)...);
+			std::unique_ptr<TComponentType> component =
+				std::make_unique<TComponentType>(std::forward<TArgs>(args)...);
 
-			TParticipantType &result = *participant;
+			TComponentType &result = *component;
 			result.attach(this);
-			registerParticipant(std::move(participant));
+			registerComponent(std::move(component));
 			result.setGeometry(geometry());
 
 			return result;
 		}
 
-		void removeParticipant(System::Participant &participant)
+		void removeComponent(Component &component)
 		{
-			unregisterParticipant(participant);
+			unregisterComponent(component);
 		}
 
 		template <typename TBehaviourType, typename... TArgs>

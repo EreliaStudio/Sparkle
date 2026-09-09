@@ -24,10 +24,6 @@ namespace spk
 		[[nodiscard]] bool _canUpdate() const override;
 
 	public:
-		class Participant;
-		class Participant2D;
-		class Participant3D;
-
 		System(
 			const std::string &name = "Unnamed system",
 			Engine *engine = nullptr);

@@ -14,7 +14,7 @@ TEST(Entity3DTest, ConstructsAnOwnedTransformAndSupportsConstAndMutableAccess)
 	spk::Entity3D entity("entity");
 	spk::Transform3D *transform = &entity.transform();
 
-	EXPECT_EQ(entity.getParticipant<spk::Transform3D>(), transform);
+	EXPECT_EQ(entity.getComponent<spk::Transform3D>(), transform);
 	EXPECT_EQ(transform->owner(), &entity);
 	EXPECT_EQ(&std::as_const(entity).transform(), transform);
 	EXPECT_EQ(transform->position(), spk::Vector3(0.0f, 0.0f, 0.0f));

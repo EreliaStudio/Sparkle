@@ -5,11 +5,11 @@
 #include <type_traits>
 #include <unordered_map>
 
+#include "container/query.hpp"
 #include "engine/engine.hpp"
 #include "engine/query_operations.hpp"
-#include "query/operations.hpp"
-#include "container/query.hpp"
 #include "engine/registry.hpp"
+#include "query/operations.hpp"
 
 namespace
 {
@@ -56,8 +56,8 @@ namespace
 	public:
 		TestSource() = default;
 
-		explicit TestSource(ElementSet elements)
-			: _defaultElements(std::move(elements))
+		explicit TestSource(ElementSet elements) :
+			_defaultElements(std::move(elements))
 		{
 		}
 
@@ -110,13 +110,13 @@ namespace
 		}
 	};
 
-	class QueryParticipant : public spk::System::Participant
+	class QueryComponent : public spk::Component
 	{
 	public:
 		int value;
 
-		QueryParticipant(std::string name, int value = 0) :
-			spk::System::Participant(std::move(name)),
+		QueryComponent(std::string name, int value = 0) :
+			spk::Component(std::move(name)),
 			value(value)
 		{
 		}
@@ -375,39 +375,39 @@ TEST(RegistryQueryTest, DestroyedQueryReleasesItsRegistrySubscriptions)
 	EXPECT_NO_THROW({ QueryObject second(12, 2); });
 }
 
-TEST(RegistryQueryTest, ContainParticipantSupportsTypeRegexPredicateAndReactiveEdits)
+TEST(RegistryQueryTest, ContainComponentSupportsTypeRegexPredicateAndReactiveEdits)
 {
 	spk::Engine engine;
 	spk::Entity matching("matching"), reactive("reactive"), empty("empty");
 	engine.addEntity(&matching);
 	engine.addEntity(&reactive);
 	engine.addEntity(&empty);
-	auto &participant = matching.addParticipant<QueryParticipant>("selected-participant", 42);
+	auto &component = matching.addComponent<QueryComponent>("selected-component", 42);
 
 	spk::Query<spk::Entity, spk::Engine *> byType;
 	byType.insert<spk::FromRegistry<spk::Entity>>()
-		.insert<spk::ContainParticipant<QueryParticipant>>();
+		.insert<spk::ContainComponent<QueryComponent>>();
 	EXPECT_TRUE(byType.elements(&engine).contains(&matching));
 	EXPECT_FALSE(byType.elements(&engine).contains(&empty));
 
 	spk::Query<spk::Entity, spk::Engine *> byName;
 	byName.insert<spk::FromRegistry<spk::Entity>>()
-		.insert<spk::ContainParticipant<QueryParticipant>>(std::regex("^selected"));
+		.insert<spk::ContainComponent<QueryComponent>>(std::regex("^selected"));
 	EXPECT_TRUE(byName.elements(&engine).contains(&matching));
 
 	spk::Query<spk::Entity, spk::Engine *> byPredicate;
 	byPredicate.insert<spk::FromRegistry<spk::Entity>>()
-		.insert<spk::ContainParticipant<QueryParticipant>>([](QueryParticipant *candidate) {
+		.insert<spk::ContainComponent<QueryComponent>>([](QueryComponent *candidate) {
 			return candidate->value == 42;
 		});
 	EXPECT_TRUE(byPredicate.elements(&engine).contains(&matching));
 
 	EXPECT_FALSE(byType.elements(&engine).contains(&reactive));
-	auto &added = reactive.addParticipant<QueryParticipant>("later", 7);
+	auto &added = reactive.addComponent<QueryComponent>("later", 7);
 	EXPECT_TRUE(byType.elements(&engine).contains(&reactive));
-	reactive.removeParticipant(added);
+	reactive.removeComponent(added);
 	EXPECT_FALSE(byType.elements(&engine).contains(&reactive));
-	EXPECT_EQ(participant.owner(), &matching);
+	EXPECT_EQ(component.owner(), &matching);
 }
 
 TEST(RegistryQueryTest, ContainBehaviourSupportsTypeRegexPredicateAndReactiveEdits)
@@ -449,25 +449,25 @@ TEST(RegistryQueryTest, AttachmentNameChangesInvalidateRegexQueries)
 	spk::Engine engine;
 	spk::Entity entity("entity");
 	engine.addEntity(&entity);
-	auto &participant = entity.addParticipant<QueryParticipant>("before");
+	auto &component = entity.addComponent<QueryComponent>("before");
 	auto &behaviour = entity.addBehaviour<QueryBehaviour>("before");
 
-	spk::Query<spk::Entity, spk::Engine *> participantQuery;
-	participantQuery.insert<spk::FromRegistry<spk::Entity>>()
-		.insert<spk::ContainParticipant<QueryParticipant>>(std::regex("^after$"));
+	spk::Query<spk::Entity, spk::Engine *> componentQuery;
+	componentQuery.insert<spk::FromRegistry<spk::Entity>>()
+		.insert<spk::ContainComponent<QueryComponent>>(std::regex("^after$"));
 	spk::Query<spk::Entity, spk::Engine *> behaviourQuery;
 	behaviourQuery.insert<spk::FromRegistry<spk::Entity>>()
 		.insert<spk::ContainBehaviour<QueryBehaviour>>(std::regex("^after$"));
-	EXPECT_FALSE(participantQuery.elements(&engine).contains(&entity));
+	EXPECT_FALSE(componentQuery.elements(&engine).contains(&entity));
 	EXPECT_FALSE(behaviourQuery.elements(&engine).contains(&entity));
 
-	participant.setName("after");
+	component.setName("after");
 	behaviour.setName("after");
-	EXPECT_TRUE(participantQuery.elements(&engine).contains(&entity));
+	EXPECT_TRUE(componentQuery.elements(&engine).contains(&entity));
 	EXPECT_TRUE(behaviourQuery.elements(&engine).contains(&entity));
 
-	participant.setName("before");
+	component.setName("before");
 	behaviour.setName("before");
-	EXPECT_FALSE(participantQuery.elements(&engine).contains(&entity));
+	EXPECT_FALSE(componentQuery.elements(&engine).contains(&entity));
 	EXPECT_FALSE(behaviourQuery.elements(&engine).contains(&entity));
 }

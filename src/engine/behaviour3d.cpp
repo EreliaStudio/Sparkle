@@ -11,7 +11,7 @@ namespace spk
 	}
 
 	Behaviour3D::Behaviour3D(Entity3D *owner) :
-		Behaviour3D("Unnamed participant", owner)
+		Behaviour3D("Unnamed behaviour", owner)
 	{
 	}
 

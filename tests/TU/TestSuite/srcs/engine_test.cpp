@@ -10,6 +10,7 @@
 #include <utility>
 #include <vector>
 
+#include "container/query.hpp"
 #include "core/context/render_context.hpp"
 #include "core/context/update_context.hpp"
 #include "engine/behaviour.hpp"
@@ -19,16 +20,15 @@
 #include "engine/entity2d.hpp"
 #include "engine/entity3d.hpp"
 #include "engine/query_operations.hpp"
-#include "query/operations.hpp"
-#include "container/query.hpp"
 #include "engine/registry.hpp"
 #include "engine/system_collection.hpp"
-#include "engine/system_participant2d.hpp"
-#include "engine/system_participant3d.hpp"
-#include "engine/system_participant_collection.hpp"
+#include "engine/component2d.hpp"
+#include "engine/component3d.hpp"
+#include "engine/component_collection.hpp"
 #include "engine/transform2d.hpp"
 #include "input/keyboard.hpp"
 #include "input/mouse.hpp"
+#include "query/operations.hpp"
 #include "rendering/render_command.hpp"
 
 namespace
@@ -189,17 +189,17 @@ namespace
 		}
 	};
 
-	class RecordingParticipant : public spk::System::Participant
+	class RecordingComponent : public spk::Component
 	{
 	public:
 		std::vector<std::string> *log = nullptr;
 		std::size_t geometryCalls = 0;
 		std::size_t renderCalls = 0;
 
-		RecordingParticipant(
-			std::string name = "participant",
+		RecordingComponent(
+			std::string name = "component",
 			std::vector<std::string> *p_log = nullptr) :
-			spk::System::Participant(std::move(name)),
+			spk::Component(std::move(name)),
 			log(p_log)
 		{
 		}
@@ -225,26 +225,26 @@ namespace
 		}
 	};
 
-	class OtherParticipant final : public RecordingParticipant
+	class OtherComponent final : public RecordingComponent
 	{
 	public:
-		using RecordingParticipant::RecordingParticipant;
+		using RecordingComponent::RecordingComponent;
 	};
 
-	class RecordingParticipant2D final : public spk::System::Participant2D
+	class RecordingComponent2D final : public spk::Component2D
 	{
 	public:
-		explicit RecordingParticipant2D(std::string name = "participant2d") :
-			spk::System::Participant2D(std::move(name))
+		explicit RecordingComponent2D(std::string name = "component2d") :
+			spk::Component2D(std::move(name))
 		{
 		}
 	};
 
-	class RecordingParticipant3D final : public spk::System::Participant3D
+	class RecordingComponent3D final : public spk::Component3D
 	{
 	public:
-		explicit RecordingParticipant3D(std::string name = "participant3d") :
-			spk::System::Participant3D(std::move(name))
+		explicit RecordingComponent3D(std::string name = "component3d") :
+			spk::Component3D(std::move(name))
 		{
 		}
 	};
@@ -358,26 +358,26 @@ namespace
 		}
 	};
 
-	class TestParticipantCollection : public spk::SystemParticipantCollection
+	class TestComponentCollection : public spk::ComponentCollection
 	{
 	public:
-		template <typename TParticipant, typename... TArgs>
-		TParticipant &add(TArgs &&...args)
+		template <typename TComponent, typename... TArgs>
+		TComponent &add(TArgs &&...args)
 		{
-			auto participant = std::make_unique<TParticipant>(std::forward<TArgs>(args)...);
-			TParticipant &result = *participant;
-			registerParticipant(std::move(participant));
+			auto component = std::make_unique<TComponent>(std::forward<TArgs>(args)...);
+			TComponent &result = *component;
+			registerComponent(std::move(component));
 			return result;
 		}
 
-		void remove(spk::System::Participant &participant)
+		void remove(spk::Component &component)
 		{
-			unregisterParticipant(participant);
+			unregisterComponent(component);
 		}
 
 		[[nodiscard]] std::size_t size() const
 		{
-			return participants().size();
+			return components().size();
 		}
 	};
 
@@ -411,9 +411,13 @@ TEST(BehaviourCollectionTest, AppliesAttachmentCollectionMatrixToBehaviours)
 	std::vector<std::string> additions;
 	std::vector<std::string> removals;
 	auto addContract = collection.subscribeToBehaviourAddition(
-		[&](spk::Behaviour &behaviour) { additions.push_back(behaviour.name()); });
+		[&](spk::Behaviour &behaviour) {
+			additions.push_back(behaviour.name());
+		});
 	auto removeContract = collection.subscribeToBehaviourRemoval(
-		[&](spk::Behaviour &behaviour) { removals.push_back(behaviour.name()); });
+		[&](spk::Behaviour &behaviour) {
+			removals.push_back(behaviour.name());
+		});
 
 	RecordingBehaviour &first = collection.add<RecordingBehaviour>("player.move");
 	OtherBehaviour &second = collection.add<OtherBehaviour>("enemy.move");
@@ -422,8 +426,9 @@ TEST(BehaviourCollectionTest, AppliesAttachmentCollectionMatrixToBehaviours)
 	EXPECT_EQ(additions, (std::vector<std::string>{"player.move", "enemy.move", "enemy.ai"}));
 	EXPECT_EQ(collection.getBehaviour<RecordingBehaviour>(), &first);
 	EXPECT_EQ(collection.getBehaviour<OtherBehaviour>(), &second);
-	EXPECT_EQ(collection.getBehaviour<RecordingBehaviour>(
-				  [](RecordingBehaviour *behaviour) { return behaviour->name() == "enemy.ai"; }),
+	EXPECT_EQ(collection.getBehaviour<RecordingBehaviour>([](RecordingBehaviour *behaviour) {
+		return behaviour->name() == "enemy.ai";
+	}),
 			  &third);
 
 	const std::regex enemyRegex(R"(^enemy\..+$)");
@@ -442,58 +447,62 @@ TEST(BehaviourCollectionTest, AppliesAttachmentCollectionMatrixToBehaviours)
 	EXPECT_EQ(collection.getBehaviour<OtherBehaviour>(), nullptr);
 }
 
-TEST(SystemParticipantCollectionTest, AppliesAttachmentCollectionMatrixToParticipants)
+TEST(ComponentCollectionTest, AppliesAttachmentCollectionMatrixToComponents)
 {
-	TestParticipantCollection collection;
+	TestComponentCollection collection;
 	std::vector<std::string> additions;
 	std::vector<std::string> removals;
-	auto addContract = collection.subscribeToParticipantAddition(
-		[&](spk::System::Participant &participant) { additions.push_back(participant.name()); });
-	auto removeContract = collection.subscribeToParticipantRemoval(
-		[&](spk::System::Participant &participant) { removals.push_back(participant.name()); });
+	auto addContract = collection.subscribeToComponentAddition(
+		[&](spk::Component &component) {
+			additions.push_back(component.name());
+		});
+	auto removeContract = collection.subscribeToComponentRemoval(
+		[&](spk::Component &component) {
+			removals.push_back(component.name());
+		});
 
-	RecordingParticipant &base = collection.add<RecordingParticipant>("physics.body");
-	OtherParticipant &other = collection.add<OtherParticipant>("physics.sensor");
-	RecordingParticipant &late = collection.add<RecordingParticipant>("render.mesh");
+	RecordingComponent &base = collection.add<RecordingComponent>("physics.body");
+	OtherComponent &other = collection.add<OtherComponent>("physics.sensor");
+	RecordingComponent &late = collection.add<RecordingComponent>("render.mesh");
 
 	EXPECT_EQ(additions, (std::vector<std::string>{"physics.body", "physics.sensor", "render.mesh"}));
-	EXPECT_EQ(collection.getParticipant<RecordingParticipant>(), &base);
-	EXPECT_EQ(collection.getParticipant<OtherParticipant>(), &other);
+	EXPECT_EQ(collection.getComponent<RecordingComponent>(), &base);
+	EXPECT_EQ(collection.getComponent<OtherComponent>(), &other);
 
 	const std::regex physicsRegex(R"(^physics\..+$)");
-	const auto physics = collection.getParticipants<RecordingParticipant>(physicsRegex);
+	const auto physics = collection.getComponents<RecordingComponent>(physicsRegex);
 	ASSERT_EQ(physics.size(), 2u);
 	EXPECT_EQ(physics[0], &base);
 	EXPECT_EQ(physics[1], &other);
 
 	collection.remove(base);
 	EXPECT_EQ(removals, (std::vector<std::string>{"physics.body"}));
-	EXPECT_EQ(collection.getParticipant<RecordingParticipant>(), &other);
+	EXPECT_EQ(collection.getComponent<RecordingComponent>(), &other);
 
 	collection.remove(other);
-	EXPECT_EQ(collection.getParticipant<OtherParticipant>(), nullptr);
-	EXPECT_EQ(collection.getParticipant<RecordingParticipant>(), &late);
+	EXPECT_EQ(collection.getComponent<OtherComponent>(), nullptr);
+	EXPECT_EQ(collection.getComponent<RecordingComponent>(), &late);
 
-	const TestParticipantCollection &constCollection = collection;
-	ASSERT_EQ(constCollection.getParticipants<RecordingParticipant>().size(), 1u);
-	EXPECT_EQ(constCollection.getParticipant<RecordingParticipant>(), &late);
+	const TestComponentCollection &constCollection = collection;
+	ASSERT_EQ(constCollection.getComponents<RecordingComponent>().size(), 1u);
+	EXPECT_EQ(constCollection.getComponent<RecordingComponent>(), &late);
 }
 
-TEST(SystemParticipantCollectionTest, Typed2DAnd3DQueriesSurviveCacheInvalidation)
+TEST(ComponentCollectionTest, Typed2DAnd3DQueriesSurviveCacheInvalidation)
 {
-	TestParticipantCollection collection;
-	EXPECT_EQ(collection.getParticipant<RecordingParticipant2D>(), nullptr);
-	EXPECT_TRUE(collection.getParticipants<RecordingParticipant3D>().empty());
+	TestComponentCollection collection;
+	EXPECT_EQ(collection.getComponent<RecordingComponent2D>(), nullptr);
+	EXPECT_TRUE(collection.getComponents<RecordingComponent3D>().empty());
 
-	RecordingParticipant2D &participant2D = collection.add<RecordingParticipant2D>("sprite.transform");
-	RecordingParticipant3D &participant3D = collection.add<RecordingParticipant3D>("mesh.transform");
+	RecordingComponent2D &component2D = collection.add<RecordingComponent2D>("sprite.transform");
+	RecordingComponent3D &component3D = collection.add<RecordingComponent3D>("mesh.transform");
 
-	EXPECT_EQ(collection.getParticipant<RecordingParticipant2D>(), &participant2D);
-	EXPECT_EQ(collection.getParticipant<RecordingParticipant3D>(), &participant3D);
+	EXPECT_EQ(collection.getComponent<RecordingComponent2D>(), &component2D);
+	EXPECT_EQ(collection.getComponent<RecordingComponent3D>(), &component3D);
 
-	collection.remove(participant2D);
-	EXPECT_EQ(collection.getParticipant<RecordingParticipant2D>(), nullptr);
-	EXPECT_EQ(collection.getParticipant<RecordingParticipant3D>(), &participant3D);
+	collection.remove(component2D);
+	EXPECT_EQ(collection.getComponent<RecordingComponent2D>(), nullptr);
+	EXPECT_EQ(collection.getComponent<RecordingComponent3D>(), &component3D);
 }
 
 TEST(SystemCollectionTest, AppliesPolymorphicCollectionMatrixToSystems)
@@ -502,9 +511,13 @@ TEST(SystemCollectionTest, AppliesPolymorphicCollectionMatrixToSystems)
 	std::vector<std::string> additions;
 	std::vector<std::string> removals;
 	auto addContract = collection.subscribeToSystemAddition(
-		[&](spk::System &system) { additions.push_back(system.name()); });
+		[&](spk::System &system) {
+			additions.push_back(system.name());
+		});
 	auto removeContract = collection.subscribeToSystemRemoval(
-		[&](spk::System &system) { removals.push_back(system.name()); });
+		[&](spk::System &system) {
+			removals.push_back(system.name());
+		});
 
 	RecordingSystem &render = collection.add<RecordingSystem>("render");
 	OtherSystem &physics = collection.add<OtherSystem>("physics");
@@ -513,8 +526,9 @@ TEST(SystemCollectionTest, AppliesPolymorphicCollectionMatrixToSystems)
 	EXPECT_EQ(additions, (std::vector<std::string>{"render", "physics", "ai"}));
 	EXPECT_EQ(collection.getSystem<RecordingSystem>(), &render);
 	EXPECT_EQ(collection.getSystem<OtherSystem>(), &physics);
-	EXPECT_EQ(collection.getSystem<RecordingSystem>(
-				  [](RecordingSystem *system) { return system->name() == "ai"; }),
+	EXPECT_EQ(collection.getSystem<RecordingSystem>([](RecordingSystem *system) {
+		return system->name() == "ai";
+	}),
 			  &ai);
 
 	const std::regex shortNameRegex(R"(^[a-z]{2}$)");
@@ -557,12 +571,7 @@ TEST(BehaviourTest, StandardUsagePropagatesGeometryUpdateRenderAndInteractionsWh
 	EXPECT_EQ(behaviour.updateCalls, 1u);
 	EXPECT_EQ(behaviour.renderCalls, 1u);
 	EXPECT_EQ(behaviour.keyCalls, 1u);
-	EXPECT_EQ(log, (std::vector<std::string>{
-					   "recorder:geometry",
-					   "recorder:update",
-					   "recorder:render",
-					   "recorder:key",
-					   "recorder:command"}));
+	EXPECT_EQ(log, (std::vector<std::string>{"recorder:geometry", "recorder:update", "recorder:render", "recorder:key", "recorder:command"}));
 }
 
 TEST(BehaviourTest, NullOwnerDeactivateReactivateRepeatedGeometryAndHookOrderingAreObservable)
@@ -600,12 +609,7 @@ TEST(BehaviourTest, NullOwnerDeactivateReactivateRepeatedGeometryAndHookOrdering
 	EXPECT_EQ(behaviour.updateCalls, 1u);
 	EXPECT_EQ(behaviour.renderCalls, 1u);
 	EXPECT_EQ(behaviour.keyCalls, 1u);
-	EXPECT_EQ(log, (std::vector<std::string>{
-					   "recorder:geometry",
-					   "recorder:geometry",
-					   "recorder:update",
-					   "recorder:render",
-					   "recorder:key"}));
+	EXPECT_EQ(log, (std::vector<std::string>{"recorder:geometry", "recorder:geometry", "recorder:update", "recorder:render", "recorder:key"}));
 }
 
 TEST(BehaviourTest, DirectDispatchShouldRejectInteractionWhenOwnerIsInactive)
@@ -677,83 +681,79 @@ TEST(SystemTest, NullEngineReattachmentDeactivationRepeatedAttachAndRemovalAreOb
 	EXPECT_EQ(engine.getSystem<RecordingSystem>(), nullptr);
 }
 
-TEST(ParticipantTest, StandardUsageAttachesToEntityReceivesGeometryRendersAndAppearsInRegistries)
+TEST(ComponentTest, StandardUsageAttachesToEntityReceivesGeometryRendersAndAppearsInRegistries)
 {
 	spk::Engine engine;
 	spk::Entity entity("entity");
 	engine.addEntity(&entity);
 	std::vector<std::string> log;
 
-	RecordingParticipant &participant = entity.addParticipant<RecordingParticipant>("participant", &log);
+	RecordingComponent &component = entity.addComponent<RecordingComponent>("component", &log);
 	entity.setGeometry(testGeometry());
 	spk::RenderSnapshot::Builder builder;
 	entity.buildRenderSnapshot(builder);
 	spk::RenderContext renderContext{.targetSurface = nullptr};
 	builder.build().execute(renderContext);
 
-	EXPECT_EQ(participant.owner(), &entity);
-	EXPECT_EQ(participant.context(), &engine);
-	EXPECT_TRUE((spk::Registry<spk::System::Participant, spk::Engine *>::instance().elements(&engine).contains(&participant)));
-	EXPECT_EQ(participant.geometry(), testGeometry());
-	EXPECT_EQ(participant.geometryCalls, 2u);
-	EXPECT_EQ(participant.renderCalls, 1u);
-	EXPECT_EQ(log, (std::vector<std::string>{
-					   "participant:geometry",
-					   "participant:geometry",
-					   "participant:render",
-					   "participant:command"}));
+	EXPECT_EQ(component.owner(), &entity);
+	EXPECT_EQ(component.context(), &engine);
+	EXPECT_TRUE((spk::Registry<spk::Component, spk::Engine *>::instance().elements(&engine).contains(&component)));
+	EXPECT_EQ(component.geometry(), testGeometry());
+	EXPECT_EQ(component.geometryCalls, 2u);
+	EXPECT_EQ(component.renderCalls, 1u);
+	EXPECT_EQ(log, (std::vector<std::string>{"component:geometry", "component:geometry", "component:render", "component:command"}));
 }
 
-TEST(ParticipantTest, NullOwnerActiveInactiveReattachmentRemovalAndHookOrderingAreObservable)
+TEST(ComponentTest, NullOwnerActiveInactiveReattachmentRemovalAndHookOrderingAreObservable)
 {
 	spk::Engine engine;
 	spk::Entity first("first");
 	spk::Entity second("second");
 	engine.addEntity(&first);
 	engine.addEntity(&second);
-	RecordingParticipant participant("participant");
+	RecordingComponent component("component");
 
-	EXPECT_EQ(participant.owner(), nullptr);
-	EXPECT_EQ(participant.context(), nullptr);
+	EXPECT_EQ(component.owner(), nullptr);
+	EXPECT_EQ(component.context(), nullptr);
 
-	participant.attach(&first);
-	EXPECT_EQ(participant.owner(), &first);
-	EXPECT_EQ(participant.context(), &engine);
-	participant.attach(&second);
-	EXPECT_EQ(participant.owner(), &second);
-	EXPECT_EQ(participant.context(), &engine);
+	component.attach(&first);
+	EXPECT_EQ(component.owner(), &first);
+	EXPECT_EQ(component.context(), &engine);
+	component.attach(&second);
+	EXPECT_EQ(component.owner(), &second);
+	EXPECT_EQ(component.context(), &engine);
 
-	participant.deactivate();
+	component.deactivate();
 	spk::RenderSnapshot::Builder inactiveBuilder;
-	participant.buildRenderSnapshot(inactiveBuilder);
-	EXPECT_EQ(participant.renderCalls, 0u);
+	component.buildRenderSnapshot(inactiveBuilder);
+	EXPECT_EQ(component.renderCalls, 0u);
 
-	participant.activate();
+	component.activate();
 	spk::RenderSnapshot::Builder activeBuilder;
-	participant.buildRenderSnapshot(activeBuilder);
-	EXPECT_EQ(participant.renderCalls, 1u);
+	component.buildRenderSnapshot(activeBuilder);
+	EXPECT_EQ(component.renderCalls, 1u);
 
-	RecordingParticipant &owned = second.addParticipant<RecordingParticipant>("owned");
-	EXPECT_EQ(second.getParticipant<RecordingParticipant>(), &owned);
-	second.removeParticipant(owned);
-	EXPECT_EQ(second.getParticipant<RecordingParticipant>(), nullptr);
+	RecordingComponent &owned = second.addComponent<RecordingComponent>("owned");
+	EXPECT_EQ(second.getComponent<RecordingComponent>(), &owned);
+	second.removeComponent(owned);
+	EXPECT_EQ(second.getComponent<RecordingComponent>(), nullptr);
 }
 
-TEST(Participant2DTest, StandardUsageAttachesToEntity2DWithCovariantOwnerAndTypedRegistryMembership)
+TEST(Component2DTest, StandardUsageAttachesToEntity2DWithCovariantOwnerAndTypedRegistryMembership)
 {
 	spk::Engine engine;
 	spk::Entity2D entity("entity2d");
 	engine.addEntity(&entity);
 
-	RecordingParticipant2D &participant = entity.addParticipant<RecordingParticipant2D>("sprite");
+	RecordingComponent2D &component = entity.addComponent<RecordingComponent2D>("sprite");
 
-	EXPECT_EQ(participant.owner(), &entity);
-	EXPECT_EQ(std::as_const(participant).owner(), &entity);
-	EXPECT_EQ(entity.getParticipant<RecordingParticipant2D>(), &participant);
-	EXPECT_TRUE((spk::Registry<spk::System::Participant2D, spk::Engine *>::instance().elements(&engine).contains(&participant)));
+	EXPECT_EQ(component.owner(), &entity);
+	EXPECT_EQ(std::as_const(component).owner(), &entity);
+	EXPECT_EQ(entity.getComponent<RecordingComponent2D>(), &component);
+	EXPECT_TRUE((spk::Registry<spk::Component2D, spk::Engine *>::instance().elements(&engine).contains(&component)));
 }
 
-TEST(Participant2DTest, AttachToPlainOr3DEntityThrowsAndPreservesPriorOwnershipAndContext)
+TEST(Component2DTest, AttachToPlainOr3DEntityThrowsAndPreservesPriorOwnershipAndContext)
 {
 	spk::Engine engine;
 	spk::Entity plain("plain");
@@ -763,32 +763,32 @@ TEST(Participant2DTest, AttachToPlainOr3DEntityThrowsAndPreservesPriorOwnershipA
 	engine.addEntity(&entity3D);
 	engine.addEntity(&prior);
 
-	RecordingParticipant2D participant("sprite");
-	participant.attach(&prior);
+	RecordingComponent2D component("sprite");
+	component.attach(&prior);
 
-	EXPECT_THROW(participant.attach(&plain), std::invalid_argument);
-	EXPECT_EQ(participant.owner(), &prior);
-	EXPECT_EQ(participant.context(), &engine);
-	EXPECT_THROW(participant.attach(&entity3D), std::invalid_argument);
-	EXPECT_EQ(participant.owner(), &prior);
-	EXPECT_EQ(participant.context(), &engine);
+	EXPECT_THROW(component.attach(&plain), std::invalid_argument);
+	EXPECT_EQ(component.owner(), &prior);
+	EXPECT_EQ(component.context(), &engine);
+	EXPECT_THROW(component.attach(&entity3D), std::invalid_argument);
+	EXPECT_EQ(component.owner(), &prior);
+	EXPECT_EQ(component.context(), &engine);
 }
 
-TEST(Participant3DTest, StandardUsageAttachesToEntity3DWithCovariantOwnerAndTypedRegistryMembership)
+TEST(Component3DTest, StandardUsageAttachesToEntity3DWithCovariantOwnerAndTypedRegistryMembership)
 {
 	spk::Engine engine;
 	spk::Entity3D entity("entity3d");
 	engine.addEntity(&entity);
 
-	RecordingParticipant3D &participant = entity.addParticipant<RecordingParticipant3D>("mesh");
+	RecordingComponent3D &component = entity.addComponent<RecordingComponent3D>("mesh");
 
-	EXPECT_EQ(participant.owner(), &entity);
-	EXPECT_EQ(std::as_const(participant).owner(), &entity);
-	EXPECT_EQ(entity.getParticipant<RecordingParticipant3D>(), &participant);
-	EXPECT_TRUE((spk::Registry<spk::System::Participant3D, spk::Engine *>::instance().elements(&engine).contains(&participant)));
+	EXPECT_EQ(component.owner(), &entity);
+	EXPECT_EQ(std::as_const(component).owner(), &entity);
+	EXPECT_EQ(entity.getComponent<RecordingComponent3D>(), &component);
+	EXPECT_TRUE((spk::Registry<spk::Component3D, spk::Engine *>::instance().elements(&engine).contains(&component)));
 }
 
-TEST(Participant3DTest, AttachToPlainOr2DEntityThrowsAndPreservesPriorOwnershipAndContext)
+TEST(Component3DTest, AttachToPlainOr2DEntityThrowsAndPreservesPriorOwnershipAndContext)
 {
 	spk::Engine engine;
 	spk::Entity plain("plain");
@@ -798,15 +798,15 @@ TEST(Participant3DTest, AttachToPlainOr2DEntityThrowsAndPreservesPriorOwnershipA
 	engine.addEntity(&entity2D);
 	engine.addEntity(&prior);
 
-	RecordingParticipant3D participant("mesh");
-	participant.attach(&prior);
+	RecordingComponent3D component("mesh");
+	component.attach(&prior);
 
-	EXPECT_THROW(participant.attach(&plain), std::invalid_argument);
-	EXPECT_EQ(participant.owner(), &prior);
-	EXPECT_EQ(participant.context(), &engine);
-	EXPECT_THROW(participant.attach(&entity2D), std::invalid_argument);
-	EXPECT_EQ(participant.owner(), &prior);
-	EXPECT_EQ(participant.context(), &engine);
+	EXPECT_THROW(component.attach(&plain), std::invalid_argument);
+	EXPECT_EQ(component.owner(), &prior);
+	EXPECT_EQ(component.context(), &engine);
+	EXPECT_THROW(component.attach(&entity2D), std::invalid_argument);
+	EXPECT_EQ(component.owner(), &prior);
+	EXPECT_EQ(component.context(), &engine);
 }
 
 TEST(EntityTest, StandardUsageHierarchyAttachmentsEngineGeometryUpdateRenderEventsAndCleanRemoval)
@@ -816,7 +816,7 @@ TEST(EntityTest, StandardUsageHierarchyAttachmentsEngineGeometryUpdateRenderEven
 	RecordingEntity parent("parent", nullptr, &log);
 	RecordingEntity child("child", &parent, &log);
 	RecordingBehaviour &behaviour = parent.addBehaviour<RecordingBehaviour>("behaviour", &log);
-	RecordingParticipant &participant = parent.addParticipant<RecordingParticipant>("participant", &log);
+	RecordingComponent &component = parent.addComponent<RecordingComponent>("component", &log);
 	RecordingBehaviour &childBehaviour = child.addBehaviour<RecordingBehaviour>("child.behaviour", &log);
 	spk::Keyboard keyboard;
 	spk::Mouse mouse;
@@ -836,7 +836,7 @@ TEST(EntityTest, StandardUsageHierarchyAttachmentsEngineGeometryUpdateRenderEven
 	EXPECT_EQ(child.parent(), &parent);
 	EXPECT_EQ(parent.context(), &engine);
 	EXPECT_EQ(behaviour.owner(), &parent);
-	EXPECT_EQ(participant.owner(), &parent);
+	EXPECT_EQ(component.owner(), &parent);
 	EXPECT_EQ(parent.geometry(), testGeometry());
 	EXPECT_EQ(child.geometry(), testGeometry());
 	EXPECT_EQ(behaviour.updateCalls, 1u);
@@ -994,8 +994,8 @@ TEST(Entity2DTest, StandardUsageConstructsTransformTypedRegistriesAndParentTrans
 	engine.addEntity(&parent);
 	child.changeContext(&engine);
 
-	EXPECT_EQ(parent.getParticipant<spk::Transform2D>(), &parent.transform());
-	EXPECT_EQ(child.getParticipant<spk::Transform2D>(), &child.transform());
+	EXPECT_EQ(parent.getComponent<spk::Transform2D>(), &parent.transform());
+	EXPECT_EQ(child.getComponent<spk::Transform2D>(), &child.transform());
 	EXPECT_EQ(parent.transform().owner(), &parent);
 	EXPECT_EQ(std::as_const(child).transform().owner(), &child);
 	EXPECT_TRUE((spk::Registry<spk::Entity2D, spk::Engine *>::instance().elements(&engine).contains(&parent)));

@@ -6,7 +6,7 @@ namespace spk
 {
 	Entity3D::Entity3D(const std::string &name, Entity *parent) :
 		Entity(name, parent),
-		_transform(addParticipant<Transform3D>("Transform"))
+		_transform(addComponent<Transform3D>("Transform"))
 	{
 		_onParentEditionContract = subscribeToParentEdition(
 			[this](const Entity *) {

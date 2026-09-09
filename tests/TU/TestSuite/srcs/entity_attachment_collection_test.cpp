@@ -9,8 +9,8 @@
 #include <string>
 #include <vector>
 
-#include "engine/entity_attachment_collection.hpp"
 #include "engine/engine.hpp"
+#include "engine/entity_attachment_collection.hpp"
 
 namespace
 {
@@ -36,7 +36,9 @@ namespace
 		~AttachmentA() override
 		{
 			if (_destructions)
+			{
 				++*_destructions;
+			}
 		}
 	};
 
@@ -75,19 +77,19 @@ namespace
 		}
 	};
 
-	class PublicParticipant : public spk::System::Participant
+	class PublicComponent : public spk::Component
 	{
 	private:
 		std::shared_ptr<int> _destructions;
 
 	public:
-		PublicParticipant(std::string name, std::shared_ptr<int> destructions) :
-			spk::System::Participant(std::move(name)),
+		PublicComponent(std::string name, std::shared_ptr<int> destructions) :
+			spk::Component(std::move(name)),
 			_destructions(std::move(destructions))
 		{
 		}
 
-		~PublicParticipant() override
+		~PublicComponent() override
 		{
 			++*_destructions;
 		}
@@ -114,9 +116,13 @@ TEST(EntityAttachmentCollectionTest, StandardTypedAddQueryContractsRemoveAndDest
 	int removals = 0;
 
 	auto additionContract = collection.subscribeToAttachmentAddition(
-		[&](TestAttachment &) { ++additions; });
+		[&](TestAttachment &) {
+			++additions;
+		});
 	auto removalContract = collection.subscribeToAttachmentRemoval(
-		[&](TestAttachment &) { ++removals; });
+		[&](TestAttachment &) {
+			++removals;
+		});
 
 	AttachmentA &first = collection.add<AttachmentA>("first", destructions);
 	AttachmentB &second = collection.add<AttachmentB>("second");
@@ -163,7 +169,9 @@ TEST(EntityAttachmentCollectionTest, PredicateAndRegexQueriesSelectExpectedAttac
 	collection.add<AttachmentB>("alpha-b");
 
 	EXPECT_EQ(
-		collection.getAttachment<AttachmentA>([](AttachmentA *attachment) { return attachment->name() == "beta"; }),
+		collection.getAttachment<AttachmentA>([](AttachmentA *attachment) {
+			return attachment->name() == "beta";
+		}),
 		&beta);
 
 	const auto regexMatches = collection.getAttachments<AttachmentA>(std::regex("^a"));
@@ -206,7 +214,9 @@ TEST(EntityAttachmentCollectionTest, RemovingAForeignAttachmentIsANoOp)
 	AttachmentA &owned = collection.add<AttachmentA>("owned");
 	AttachmentA foreign("foreign");
 	int removals = 0;
-	auto contract = collection.subscribeToAttachmentRemoval([&](TestAttachment &) { ++removals; });
+	auto contract = collection.subscribeToAttachmentRemoval([&](TestAttachment &) {
+		++removals;
+	});
 
 	collection.unregisterAttachment(foreign);
 
@@ -236,9 +246,13 @@ TEST(EntityAttachmentCollectionTest, AdditionCallbackMayRemoveTheElementBeingAdd
 	TestCollection collection;
 	bool removalCallbackCalled = false;
 	auto removal = collection.subscribeToAttachmentRemoval(
-		[&](TestAttachment &) { removalCallbackCalled = true; });
+		[&](TestAttachment &) {
+			removalCallbackCalled = true;
+		});
 	auto addition = collection.subscribeToAttachmentAddition(
-		[&](TestAttachment &added) { collection.unregisterAttachment(added); });
+		[&](TestAttachment &added) {
+			collection.unregisterAttachment(added);
+		});
 
 	auto attachment = std::make_unique<AttachmentA>("remove-during-add");
 	collection.insert(std::move(attachment));
@@ -282,40 +296,52 @@ TEST(EntityAttachmentCollectionTest, EntityAndEnginePublicWrappersExerciseTheSam
 	spk::Engine engine;
 	spk::Entity entity("entity");
 	auto destructions = std::make_shared<int>(0);
-	int participantAdditions = 0;
-	int participantRemovals = 0;
+	int componentAdditions = 0;
+	int componentRemovals = 0;
 	int behaviourAdditions = 0;
 	int behaviourRemovals = 0;
 	int systemAdditions = 0;
 	int systemRemovals = 0;
-	auto participantAddition = entity.subscribeToParticipantAddition([&](spk::System::Participant &) { ++participantAdditions; });
-	auto participantRemoval = entity.subscribeToParticipantRemoval([&](spk::System::Participant &) { ++participantRemovals; });
-	auto behaviourAddition = entity.subscribeToBehaviourAddition([&](spk::Behaviour &) { ++behaviourAdditions; });
-	auto behaviourRemoval = entity.subscribeToBehaviourRemoval([&](spk::Behaviour &) { ++behaviourRemovals; });
-	auto systemAddition = engine.subscribeToSystemAddition([&](spk::System &) { ++systemAdditions; });
-	auto systemRemoval = engine.subscribeToSystemRemoval([&](spk::System &) { ++systemRemovals; });
+	auto componentAddition = entity.subscribeToComponentAddition([&](spk::Component &) {
+		++componentAdditions;
+	});
+	auto componentRemoval = entity.subscribeToComponentRemoval([&](spk::Component &) {
+		++componentRemovals;
+	});
+	auto behaviourAddition = entity.subscribeToBehaviourAddition([&](spk::Behaviour &) {
+		++behaviourAdditions;
+	});
+	auto behaviourRemoval = entity.subscribeToBehaviourRemoval([&](spk::Behaviour &) {
+		++behaviourRemovals;
+	});
+	auto systemAddition = engine.subscribeToSystemAddition([&](spk::System &) {
+		++systemAdditions;
+	});
+	auto systemRemoval = engine.subscribeToSystemRemoval([&](spk::System &) {
+		++systemRemovals;
+	});
 
-	auto &participant = entity.addParticipant<PublicParticipant>("participant", destructions);
+	auto &component = entity.addComponent<PublicComponent>("component", destructions);
 	auto &behaviour = entity.addBehaviour<PublicBehaviour>("behaviour");
 	auto &system = engine.addSystem<PublicSystem>("system");
-	EXPECT_EQ(participant.owner(), &entity);
+	EXPECT_EQ(component.owner(), &entity);
 	EXPECT_EQ(behaviour.owner(), &entity);
 	EXPECT_EQ(system.engine(), &engine);
-	EXPECT_EQ(entity.getParticipant<PublicParticipant>(std::regex("participant")), &participant);
+	EXPECT_EQ(entity.getComponent<PublicComponent>(std::regex("component")), &component);
 	EXPECT_EQ(entity.getBehaviour<PublicBehaviour>(std::regex("behaviour")), &behaviour);
 	EXPECT_EQ(engine.getSystem<PublicSystem>(std::regex("system")), &system);
-	EXPECT_EQ(participantAdditions, 1);
+	EXPECT_EQ(componentAdditions, 1);
 	EXPECT_EQ(behaviourAdditions, 1);
 	EXPECT_EQ(systemAdditions, 1);
 
-	entity.removeParticipant(participant);
+	entity.removeComponent(component);
 	entity.removeBehaviour(behaviour);
 	engine.removeSystem(system);
-	EXPECT_EQ(participantRemovals, 1);
+	EXPECT_EQ(componentRemovals, 1);
 	EXPECT_EQ(behaviourRemovals, 1);
 	EXPECT_EQ(systemRemovals, 1);
 	EXPECT_EQ(*destructions, 1);
-	EXPECT_EQ(entity.getParticipant<PublicParticipant>(), nullptr);
+	EXPECT_EQ(entity.getComponent<PublicComponent>(), nullptr);
 	EXPECT_EQ(entity.getBehaviour<PublicBehaviour>(), nullptr);
 	EXPECT_EQ(engine.getSystem<PublicSystem>(), nullptr);
 }

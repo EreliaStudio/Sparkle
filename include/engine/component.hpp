@@ -4,7 +4,6 @@
 #include "design_pattern/trait/render_snapshot_contributor_trait.hpp"
 #include "engine/entity_attachment.hpp"
 #include "engine/registry.hpp"
-#include "engine/system.hpp"
 #include "math/rect2d.hpp"
 #include "rendering/render_snapshot.hpp"
 
@@ -13,22 +12,22 @@
 namespace spk
 {
 	class Entity;
+	class Engine;
 
-	class System::Participant : public EntityAttachment,
-								public spk::Registry<System::Participant, Engine *>::Object,
-								public GeometryStateTrait,
-								public RenderSnapshotContributorTrait
+	class Component : public EntityAttachment,
+						public Registry<Component, Engine *>::Object,
+						public GeometryStateTrait,
+						public RenderSnapshotContributorTrait
 	{
 	protected:
 		[[nodiscard]] bool _canBuildRenderSnapshot() const override;
-		void _onGeometryChange(const spk::Rect2D &geometry) override;
 
 	public:
-		Participant(
-			const std::string &name = "Unnamed participant",
+		Component(
+			const std::string &name = "Unnamed component",
 			Entity *owner = nullptr);
-		explicit Participant(Entity *owner);
+		explicit Component(Entity *owner);
 
-		~Participant() override = default;
+		~Component() override = default;
 	};
 }

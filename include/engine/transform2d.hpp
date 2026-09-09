@@ -4,7 +4,7 @@
 #include "design_pattern/contract_provider.hpp"
 #include "engine/reference_frame.hpp"
 #include "engine/registry.hpp"
-#include "engine/system_participant2d.hpp"
+#include "engine/component2d.hpp"
 #include "math/matrix.hpp"
 #include "math/vector2.hpp"
 
@@ -15,7 +15,7 @@ namespace spk
 	class Entity;
 	class Entity2D;
 
-	class Transform2D : public System::Participant2D,
+	class Transform2D : public Component2D,
 						public Registry<Transform2D, Engine *>::Object
 	{
 		friend class Entity2D;

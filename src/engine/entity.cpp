@@ -82,10 +82,10 @@ namespace spk
 
 	void Entity::_afterGeometryChange(const spk::Rect2D &geometry)
 	{
-		const auto participantSnapshot = SystemParticipantCollection::snapshotElements();
-		for (const auto &snapshot : participantSnapshot)
+		const auto componentSnapshot = ComponentCollection::snapshotElements();
+		for (const auto &snapshot : componentSnapshot)
 		{
-			if (SystemParticipantCollection::containsSnapshotElement(snapshot))
+			if (ComponentCollection::containsSnapshotElement(snapshot))
 			{
 				snapshot.element->setGeometry(geometry);
 			}
@@ -119,10 +119,10 @@ namespace spk
 
 	void Entity::_afterBuildRenderSnapshot(spk::RenderSnapshot::Builder &builder)
 	{
-		const auto participantSnapshot = SystemParticipantCollection::snapshotElements();
-		for (const auto &snapshot : participantSnapshot)
+		const auto componentSnapshot = ComponentCollection::snapshotElements();
+		for (const auto &snapshot : componentSnapshot)
 		{
-			if (SystemParticipantCollection::containsSnapshotElement(snapshot))
+			if (ComponentCollection::containsSnapshotElement(snapshot))
 			{
 				snapshot.element->buildRenderSnapshot(builder);
 			}

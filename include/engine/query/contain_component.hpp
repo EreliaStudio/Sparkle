@@ -1,7 +1,7 @@
 #pragma once
 
-#include "engine/entity.hpp"
 #include "container/query.hpp"
+#include "engine/entity.hpp"
 
 #include <concepts>
 #include <functional>
@@ -12,9 +12,9 @@
 
 namespace spk
 {
-	template <typename TParticipantType>
-		requires std::derived_from<TParticipantType, System::Participant>
-	class ContainParticipant : public Query<Entity, Engine *>::Operation
+	template <typename TComponentType>
+		requires std::derived_from<TComponentType, Component>
+	class ContainComponent : public Query<Entity, Engine *>::Operation
 	{
 	private:
 		using Context = Engine *;
@@ -22,9 +22,9 @@ namespace spk
 
 		struct ContractSubscription
 		{
-			Entity::OnParticipantEditionContract onAdditionContract;
-			Entity::OnParticipantEditionContract onRemovalContract;
-			Entity::OnParticipantNameEditionContract onNameEditionContract;
+			Entity::OnComponentEditionContract onAdditionContract;
+			Entity::OnComponentEditionContract onRemovalContract;
+			Entity::OnComponentNameEditionContract onNameEditionContract;
 		};
 
 		using EntitySubscriptions = std::unordered_map<Entity *, ContractSubscription>;
@@ -40,23 +40,23 @@ namespace spk
 			}
 
 			ContractSubscription subscription;
-			subscription.onAdditionContract = entity->subscribeToParticipantAddition(
-				[this, context](System::Participant &participant) {
-					if (dynamic_cast<TParticipantType *>(&participant) != nullptr)
+			subscription.onAdditionContract = entity->subscribeToComponentAddition(
+				[this, context](Component &component) {
+					if (dynamic_cast<TComponentType *>(&component) != nullptr)
 					{
 						this->invalidate(context);
 					}
 				});
-			subscription.onRemovalContract = entity->subscribeToParticipantRemoval(
-				[this, context](System::Participant &participant) {
-					if (dynamic_cast<TParticipantType *>(&participant) != nullptr)
+			subscription.onRemovalContract = entity->subscribeToComponentRemoval(
+				[this, context](Component &component) {
+					if (dynamic_cast<TComponentType *>(&component) != nullptr)
 					{
 						this->invalidate(context);
 					}
 				});
-			subscription.onNameEditionContract = entity->subscribeToParticipantNameEdition(
-				[this, context](System::Participant &participant) {
-					if (dynamic_cast<TParticipantType *>(&participant) != nullptr)
+			subscription.onNameEditionContract = entity->subscribeToComponentNameEdition(
+				[this, context](Component &component) {
+					if (dynamic_cast<TComponentType *>(&component) != nullptr)
 					{
 						this->invalidate(context);
 					}
@@ -80,25 +80,25 @@ namespace spk
 		}
 
 	public:
-		ContainParticipant() :
+		ContainComponent() :
 			_predicate([](Entity *entity) {
-				return entity->getParticipant<TParticipantType>() != nullptr;
+				return entity->getComponent<TComponentType>() != nullptr;
 			})
 		{
 		}
 
-		explicit ContainParticipant(const std::regex &regexExpression) :
+		explicit ContainComponent(const std::regex &regexExpression) :
 			_predicate([regexExpression](Entity *entity) {
-				return entity->getParticipant<TParticipantType>(regexExpression) != nullptr;
+				return entity->getComponent<TComponentType>(regexExpression) != nullptr;
 			})
 		{
 		}
 
 		template <typename TPredicate>
-			requires std::predicate<const TPredicate &, TParticipantType *>
-		explicit ContainParticipant(const TPredicate &predicate) :
+			requires std::predicate<const TPredicate &, TComponentType *>
+		explicit ContainComponent(const TPredicate &predicate) :
 			_predicate([predicate](Entity *entity) {
-				return entity->getParticipant<TParticipantType>(predicate) != nullptr;
+				return entity->getComponent<TComponentType>(predicate) != nullptr;
 			})
 		{
 		}
