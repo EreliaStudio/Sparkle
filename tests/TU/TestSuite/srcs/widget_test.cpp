@@ -15,6 +15,7 @@ namespace
 		bool failUpdate = false;
 		bool failRender = false;
 		int hintUpdates = 0;
+		int geometryChanges = 0;
 		using Widget::Widget;
 		void _updateState(spk::UpdateContext &) override
 		{
@@ -61,7 +62,29 @@ namespace
 				setPreferredSize(children().front()->preferredSize());
 			}
 		}
+		void _onGeometryChange() override
+		{
+			++geometryChanges;
+		}
 	};
+}
+
+TEST(WidgetTest, GeometrySetAndResizeNotifyExactlyOncePerChangedWidget)
+{
+	Probe root("Root", nullptr), child("Child", &root);
+	root.setGeometry({.anchor = {0, 0}, .size = {100, 80}});
+	child.setGeometry({.anchor = {10, 20}, .size = {50, 40}});
+
+	EXPECT_EQ(root.geometryChanges, 1);
+	EXPECT_EQ(child.geometryChanges, 1);
+
+	root.setGeometry({.anchor = {5, 7}, .size = {120, 90}}, false);
+	EXPECT_EQ(root.geometryChanges, 1);
+	EXPECT_EQ(root.geometry(), (spk::Rect2D{.anchor = {5, 7}, .size = {120, 90}}));
+
+	root.resize({.anchor = {5, 7}, .size = {240, 180}});
+	EXPECT_EQ(root.geometryChanges, 2);
+	EXPECT_EQ(child.geometryChanges, 2);
 }
 
 TEST(WidgetTest, HierarchyReparentingDestructionGeometryAndZCaches)

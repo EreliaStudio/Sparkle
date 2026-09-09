@@ -29,12 +29,12 @@ namespace
 		}
 
 	private:
-		[[nodiscard]] bool _isAcceptingInteraction() const override
+		[[nodiscard]] bool _isAcceptingEvent() const override
 		{
 			return accepting;
 		}
 
-		void _propagateInteraction(const std::function<void(spk::EventDispatcher *)> &callback) override
+		void _propagateEvent(const std::function<void(spk::EventDispatcher *)> &callback) override
 		{
 			for (RecordingDispatcher *child : children)
 			{

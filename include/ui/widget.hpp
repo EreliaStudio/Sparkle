@@ -11,9 +11,12 @@
 #include "core/event/event_dispatcher.hpp"
 #include "core/event/record.hpp"
 #include "design_pattern/trait/activable_trait.hpp"
+#include "design_pattern/trait/geometry_state_trait.hpp"
 #include "design_pattern/trait/inherence_trait.hpp"
 #include "design_pattern/trait/name_trait.hpp"
+#include "design_pattern/trait/render_snapshot_contributor_trait.hpp"
 #include "design_pattern/trait/resizeable_trait.hpp"
+#include "design_pattern/trait/updatable_trait.hpp"
 #include "graphics/color.hpp"
 #include "graphics/font.hpp"
 #include "math/rect2d.hpp"
@@ -38,7 +41,10 @@ namespace spk
 				   public spk::InherenceTrait<Widget, WidgetChildComparator>,
 				   public spk::ResizeableTrait,
 				   public spk::ActivableTrait,
-				   public spk::EventDispatcher
+				   public spk::EventDispatcher,
+				   public spk::GeometryStateTrait,
+				   public spk::UpdatableTrait,
+				   public spk::RenderSnapshotContributorTrait
 	{
 	public:
 		// Need to refactor this to make it more manageable
@@ -129,7 +135,6 @@ namespace spk
 		std::unordered_map<Widget *, ResizeableTrait::Contract> _childSizeHintEditionContracts;
 		ZOrder _zOrder = 0;
 		spk::CachedData<ZOrder> _absoluteZOrder;
-		spk::Rect2D _geometry{};
 		spk::Vector2 _anchorRatio{0.0f, 0.0f};
 		spk::Vector2 _sizeRatio{1.0f, 1.0f};
 		spk::CachedData<ViewRegion> _viewRegion;
@@ -145,14 +150,21 @@ namespace spk
 		void _onChildAdded(Widget *child) override final;
 		void _onChildRemoved(Widget *child) override final;
 
-		[[nodiscard]] bool _isAcceptingInteraction() const override;
-		void _propagateInteraction(
+		[[nodiscard]] bool _isAcceptingEvent() const override;
+		[[nodiscard]] bool _canUpdate() const override;
+		[[nodiscard]] bool _canBuildRenderSnapshot() const override;
+		void _propagateEvent(
 			const std::function<void(EventDispatcher *)> &callback) override;
 
 		void _buildViewRegionCommands(spk::RenderSnapshot::Builder &builder);
+		void _afterUpdate(UpdateContext &context) override final;
+		void _beforeBuildRenderSnapshot(spk::RenderSnapshot::Builder &builder) override final;
+		void _afterBuildRenderSnapshot(spk::RenderSnapshot::Builder &builder) override final;
+		void _onUpdateException(std::exception_ptr exception) override;
+		void _onBuildRenderSnapshotException(std::exception_ptr exception) override;
+		void _onSetGeometry() override final;
+		void _onGeometryChange(const spk::Rect2D &geometry) override final;
 
-		virtual void _updateState(UpdateContext &context);
-		virtual void _buildRenderSnapshot(spk::RenderSnapshot::Builder &builder);
 		virtual void _updateSizeHint();
 		virtual void _onGeometryChange();
 		virtual void _onFocusAcquired(FocusMode::Channel channel) noexcept;
@@ -169,9 +181,7 @@ namespace spk
 		[[nodiscard]] ZOrder zOrder() const;
 		[[nodiscard]] ZOrder absoluteZOrder() const;
 
-		void setGeometry(const spk::Rect2D &geometry);
 		void resize(const spk::Rect2D &geometry);
-		[[nodiscard]] const spk::Rect2D &geometry() const noexcept;
 		[[nodiscard]] const ViewRegion &viewRegion() const;
 		[[nodiscard]] Widget &root() noexcept;
 		[[nodiscard]] const Widget &root() const noexcept;
@@ -181,8 +191,6 @@ namespace spk
 		[[nodiscard]] bool hasTargetRenderPassOverride() const noexcept;
 		[[nodiscard]] const RenderPass::Key &targetRenderPass() const noexcept;
 
-		void updateState(UpdateContext &context);
-		void buildRenderSnapshot(spk::RenderSnapshot::Builder &builder);
 		void notifyFocusAcquired(FocusMode::Channel channel) noexcept;
 		void notifyFocusReleased(FocusMode::Channel channel) noexcept;
 		[[nodiscard]] DestructionContract subscribeToDestruction(DestructionCallback callback);

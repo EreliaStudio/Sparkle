@@ -1,9 +1,10 @@
 #pragma once
 
 #include "core/event/event_dispatcher.hpp"
+#include "design_pattern/trait/geometry_state_trait.hpp"
+#include "design_pattern/trait/render_snapshot_contributor_trait.hpp"
+#include "design_pattern/trait/updatable_trait.hpp"
 #include "engine/entity_attachment.hpp"
-#include "math/rect2d.hpp"
-#include "rendering/render_snapshot.hpp"
 
 #include <string>
 
@@ -13,17 +14,15 @@ namespace spk
 	class Entity;
 
 	class Behaviour : public EntityAttachment,
-					  public EventDispatcher
+					  public EventDispatcher,
+					  public GeometryStateTrait,
+					  public UpdatableTrait,
+					  public RenderSnapshotContributorTrait
 	{
-	private:
-		spk::Rect2D _geometry{};
-
 	protected:
-		[[nodiscard]] bool _isAcceptingInteraction() const override;
-
-		virtual void _onGeometryChange(const spk::Rect2D &geometry);
-		virtual void _buildRenderSnapshot(spk::RenderSnapshot::Builder &builder);
-		virtual void _updateState(UpdateContext &context);
+		[[nodiscard]] bool _isAcceptingEvent() const override;
+		[[nodiscard]] bool _canUpdate() const override;
+		[[nodiscard]] bool _canBuildRenderSnapshot() const override;
 
 	public:
 		Behaviour(
@@ -32,10 +31,5 @@ namespace spk
 		explicit Behaviour(Entity *owner);
 
 		~Behaviour() override = default;
-
-		void handleGeometryChange(const spk::Rect2D &geometry);
-		[[nodiscard]] const spk::Rect2D &geometry() const noexcept;
-		void buildRenderSnapshot(spk::RenderSnapshot::Builder &builder);
-		void updateState(UpdateContext &context);
 	};
 }

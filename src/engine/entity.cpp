@@ -21,7 +21,7 @@ namespace spk
 		}
 		if (parent != nullptr)
 		{
-			handleGeometryChange(parent->geometry());
+			setGeometry(parent->geometry());
 		}
 	}
 
@@ -39,12 +39,22 @@ namespace spk
 		});
 	}
 
-	bool Entity::_isAcceptingInteraction() const
+	bool Entity::_isAcceptingEvent() const
 	{
 		return isEffectivelyActive();
 	}
 
-	void Entity::_propagateInteraction(
+	bool Entity::_canUpdate() const
+	{
+		return isEffectivelyActive();
+	}
+
+	bool Entity::_canBuildRenderSnapshot() const
+	{
+		return isEffectivelyActive();
+	}
+
+	void Entity::_propagateEvent(
 		const std::function<void(EventDispatcher *)> &callback)
 	{
 		const std::vector<Entity *> childSnapshot(children().begin(), children().end());
@@ -70,21 +80,14 @@ namespace spk
 	{
 	}
 
-	void Entity::_buildRenderSnapshot(spk::RenderSnapshot::Builder &)
+	void Entity::_afterGeometryChange(const spk::Rect2D &geometry)
 	{
-	}
-
-	void Entity::handleGeometryChange(const spk::Rect2D &geometry)
-	{
-		_geometry = geometry;
-		_onGeometryChange(_geometry);
-
 		const auto participantSnapshot = SystemParticipantCollection::snapshotElements();
 		for (const auto &snapshot : participantSnapshot)
 		{
 			if (SystemParticipantCollection::containsSnapshotElement(snapshot))
 			{
-				snapshot.element->handleGeometryChange(geometry);
+				snapshot.element->setGeometry(geometry);
 			}
 		}
 
@@ -93,7 +96,7 @@ namespace spk
 		{
 			if (BehaviourCollection::containsSnapshotElement(snapshot))
 			{
-				snapshot.element->handleGeometryChange(geometry);
+				snapshot.element->setGeometry(geometry);
 			}
 		}
 
@@ -102,14 +105,9 @@ namespace spk
 		{
 			if (child != nullptr && std::ranges::find(children(), child) != children().end())
 			{
-				child->handleGeometryChange(geometry);
+				child->setGeometry(geometry);
 			}
 		}
-	}
-
-	const spk::Rect2D &Entity::geometry() const noexcept
-	{
-		return _geometry;
 	}
 
 	bool Entity::isEffectivelyActive() const
@@ -119,15 +117,8 @@ namespace spk
 		});
 	}
 
-	void Entity::buildRenderSnapshot(spk::RenderSnapshot::Builder &builder)
+	void Entity::_afterBuildRenderSnapshot(spk::RenderSnapshot::Builder &builder)
 	{
-		if (!isEffectivelyActive())
-		{
-			return;
-		}
-
-		_buildRenderSnapshot(builder);
-
 		const auto participantSnapshot = SystemParticipantCollection::snapshotElements();
 		for (const auto &snapshot : participantSnapshot)
 		{
@@ -156,13 +147,8 @@ namespace spk
 		}
 	}
 
-	void Entity::updateState(UpdateContext &context)
+	void Entity::_afterUpdate(UpdateContext &context)
 	{
-		if (!isEffectivelyActive())
-		{
-			return;
-		}
-
 		const auto behaviourSnapshot = BehaviourCollection::snapshotElements();
 		for (const auto &snapshot : behaviourSnapshot)
 		{

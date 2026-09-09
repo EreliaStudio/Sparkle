@@ -543,7 +543,7 @@ TEST(BehaviourTest, StandardUsagePropagatesGeometryUpdateRenderAndInteractionsWh
 	spk::Mouse mouse;
 	auto context = updateContext(keyboard, mouse);
 
-	behaviour.handleGeometryChange(testGeometry());
+	behaviour.setGeometry(testGeometry());
 	behaviour.updateState(context);
 	spk::RenderSnapshot::Builder builder;
 	behaviour.buildRenderSnapshot(builder);
@@ -577,8 +577,8 @@ TEST(BehaviourTest, NullOwnerDeactivateReactivateRepeatedGeometryAndHookOrdering
 	EXPECT_EQ(behaviour.context(), nullptr);
 
 	behaviour.deactivate();
-	behaviour.handleGeometryChange(testGeometry());
-	behaviour.handleGeometryChange(testGeometry());
+	behaviour.setGeometry(testGeometry());
+	behaviour.setGeometry(testGeometry());
 	behaviour.updateState(context);
 	spk::RenderSnapshot::Builder inactiveBuilder;
 	behaviour.buildRenderSnapshot(inactiveBuilder);
@@ -685,7 +685,7 @@ TEST(ParticipantTest, StandardUsageAttachesToEntityReceivesGeometryRendersAndApp
 	std::vector<std::string> log;
 
 	RecordingParticipant &participant = entity.addParticipant<RecordingParticipant>("participant", &log);
-	entity.handleGeometryChange(testGeometry());
+	entity.setGeometry(testGeometry());
 	spk::RenderSnapshot::Builder builder;
 	entity.buildRenderSnapshot(builder);
 	spk::RenderContext renderContext{.targetSurface = nullptr};

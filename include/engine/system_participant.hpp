@@ -1,5 +1,7 @@
 #pragma once
 
+#include "design_pattern/trait/geometry_state_trait.hpp"
+#include "design_pattern/trait/render_snapshot_contributor_trait.hpp"
 #include "engine/entity_attachment.hpp"
 #include "engine/registry.hpp"
 #include "engine/system.hpp"
@@ -13,14 +15,13 @@ namespace spk
 	class Entity;
 
 	class System::Participant : public EntityAttachment,
-								public spk::Registry<System::Participant, Engine *>::Object
+								public spk::Registry<System::Participant, Engine *>::Object,
+								public GeometryStateTrait,
+								public RenderSnapshotContributorTrait
 	{
-	private:
-		spk::Rect2D _geometry{};
-
 	protected:
-		virtual void _onGeometryChange(const spk::Rect2D &geometry);
-		virtual void _buildRenderSnapshot(spk::RenderSnapshot::Builder &builder);
+		[[nodiscard]] bool _canBuildRenderSnapshot() const override;
+		void _onGeometryChange(const spk::Rect2D &geometry) override;
 
 	public:
 		Participant(
@@ -29,9 +30,5 @@ namespace spk
 		explicit Participant(Entity *owner);
 
 		~Participant() override = default;
-
-		void handleGeometryChange(const spk::Rect2D &geometry);
-		[[nodiscard]] const spk::Rect2D &geometry() const noexcept;
-		void buildRenderSnapshot(spk::RenderSnapshot::Builder &builder);
 	};
 }

@@ -16,13 +16,14 @@ namespace spk
 	{
 	}
 
-	bool System::_isAcceptingInteraction() const
+	bool System::_isAcceptingEvent() const
 	{
 		return isActive();
 	}
 
-	void System::_updateState(UpdateContext &)
+	bool System::_canUpdate() const
 	{
+		return isActive();
 	}
 
 	void System::attach(Engine *engine)
@@ -38,15 +39,5 @@ namespace spk
 	const Engine *System::engine() const
 	{
 		return context();
-	}
-
-	void System::updateState(UpdateContext &context)
-	{
-		if (!isActive())
-		{
-			return;
-		}
-
-		_updateState(context);
 	}
 }

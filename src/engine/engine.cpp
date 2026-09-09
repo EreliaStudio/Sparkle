@@ -33,12 +33,12 @@ namespace spk
 		}
 	}
 
-	bool Engine::_isAcceptingInteraction() const
+	bool Engine::_isAcceptingEvent() const
 	{
 		return true;
 	}
 
-	void Engine::_propagateInteraction(
+	void Engine::_propagateEvent(
 		const std::function<void(EventDispatcher *)> &callback)
 	{
 		callback(&_root);
@@ -62,7 +62,7 @@ namespace spk
 
 		entity->changeContext(this);
 		entity->setParent(_root);
-		entity->handleGeometryChange(_geometry);
+		entity->setGeometry(_geometry);
 	}
 
 	void Engine::removeEntity(Entity *entity)
@@ -95,7 +95,7 @@ namespace spk
 	void Engine::handleGeometryChange(const spk::Rect2D &geometry)
 	{
 		_geometry = geometry;
-		_root.handleGeometryChange(_geometry);
+		_root.setGeometry(_geometry);
 	}
 
 	const spk::Rect2D &Engine::geometry() const noexcept

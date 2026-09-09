@@ -16,49 +16,18 @@ namespace spk
 	{
 	}
 
-	bool Behaviour::_isAcceptingInteraction() const
+	bool Behaviour::_isAcceptingEvent() const
 	{
 		return isEffectivelyActive();
 	}
 
-	void Behaviour::_onGeometryChange(const spk::Rect2D &)
+	bool Behaviour::_canUpdate() const
 	{
+		return isEffectivelyActive();
 	}
 
-	void Behaviour::_buildRenderSnapshot(spk::RenderSnapshot::Builder &)
+	bool Behaviour::_canBuildRenderSnapshot() const
 	{
-	}
-
-	void Behaviour::_updateState(UpdateContext &)
-	{
-	}
-
-	void Behaviour::handleGeometryChange(const spk::Rect2D &geometry)
-	{
-		_geometry = geometry;
-		_onGeometryChange(_geometry);
-	}
-
-	const spk::Rect2D &Behaviour::geometry() const noexcept
-	{
-		return _geometry;
-	}
-
-	void Behaviour::buildRenderSnapshot(spk::RenderSnapshot::Builder &builder)
-	{
-		if (isEffectivelyActive())
-		{
-			_buildRenderSnapshot(builder);
-		}
-	}
-
-	void Behaviour::updateState(UpdateContext &context)
-	{
-		if (!isEffectivelyActive())
-		{
-			return;
-		}
-
-		_updateState(context);
+		return isEffectivelyActive();
 	}
 }

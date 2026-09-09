@@ -8,8 +8,11 @@
 
 #include "core/event/event_dispatcher.hpp"
 #include "design_pattern/trait/activable_trait.hpp"
+#include "design_pattern/trait/geometry_state_trait.hpp"
 #include "design_pattern/trait/inherence_trait.hpp"
 #include "design_pattern/trait/name_trait.hpp"
+#include "design_pattern/trait/render_snapshot_contributor_trait.hpp"
+#include "design_pattern/trait/updatable_trait.hpp"
 #include "engine/behaviour_collection.hpp"
 #include "engine/registry.hpp"
 #include "engine/system_participant_collection.hpp"
@@ -28,25 +31,31 @@ namespace spk
 				   public NameTrait,
 				   public SystemParticipantCollection,
 				   public BehaviourCollection,
-				   public EventDispatcher
+				   public EventDispatcher,
+				   public GeometryStateTrait,
+				   public UpdatableTrait,
+				   public RenderSnapshotContributorTrait
 	{
 	private:
 		using BehaviourCollection::registerBehaviour;
 		using BehaviourCollection::unregisterBehaviour;
 		using SystemParticipantCollection::registerParticipant;
 		using SystemParticipantCollection::unregisterParticipant;
-		spk::Rect2D _geometry{};
 		InherenceTrait<Entity>::OnParentEditionContract _parentEditionContract;
 		ContextualizableTrait<Engine *>::OnContextEditionContract _parentContextEditionContract;
 
 		void _followParentContext(Entity *parent);
-		[[nodiscard]] bool _isAcceptingInteraction() const override;
-		void _propagateInteraction(
+		[[nodiscard]] bool _isAcceptingEvent() const override;
+		[[nodiscard]] bool _canUpdate() const override;
+		[[nodiscard]] bool _canBuildRenderSnapshot() const override;
+		void _propagateEvent(
 			const std::function<void(EventDispatcher *)> &callback) override;
+		void _afterGeometryChange(const spk::Rect2D &geometry) override final;
+		void _afterUpdate(UpdateContext &context) override final;
+		void _afterBuildRenderSnapshot(spk::RenderSnapshot::Builder &builder) override final;
 
 	protected:
-		virtual void _onGeometryChange(const spk::Rect2D &geometry);
-		virtual void _buildRenderSnapshot(spk::RenderSnapshot::Builder &builder);
+		void _onGeometryChange(const spk::Rect2D &geometry) override;
 
 	public:
 		Entity(const std::string &name, Entity *parent = nullptr);
@@ -61,7 +70,7 @@ namespace spk
 			TParticipantType &result = *participant;
 			result.attach(this);
 			registerParticipant(std::move(participant));
-			result.handleGeometryChange(_geometry);
+			result.setGeometry(geometry());
 
 			return result;
 		}
@@ -81,7 +90,7 @@ namespace spk
 			TBehaviourType &result = *behaviour;
 			result.attach(this);
 			registerBehaviour(std::move(behaviour));
-			result.handleGeometryChange(_geometry);
+			result.setGeometry(geometry());
 
 			return result;
 		}
@@ -91,10 +100,6 @@ namespace spk
 			unregisterBehaviour(behaviour);
 		}
 
-		void handleGeometryChange(const spk::Rect2D &geometry);
-		[[nodiscard]] const spk::Rect2D &geometry() const noexcept;
 		[[nodiscard]] bool isEffectivelyActive() const;
-		void buildRenderSnapshot(spk::RenderSnapshot::Builder &builder);
-		void updateState(UpdateContext &context);
 	};
 }

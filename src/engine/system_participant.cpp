@@ -14,30 +14,12 @@ namespace spk
 	{
 	}
 
+	bool System::Participant::_canBuildRenderSnapshot() const
+	{
+		return isEffectivelyActive();
+	}
+
 	void System::Participant::_onGeometryChange(const spk::Rect2D &)
 	{
-	}
-
-	void System::Participant::_buildRenderSnapshot(spk::RenderSnapshot::Builder &)
-	{
-	}
-
-	void System::Participant::handleGeometryChange(const spk::Rect2D &geometry)
-	{
-		_geometry = geometry;
-		_onGeometryChange(_geometry);
-	}
-
-	const spk::Rect2D &System::Participant::geometry() const noexcept
-	{
-		return _geometry;
-	}
-
-	void System::Participant::buildRenderSnapshot(spk::RenderSnapshot::Builder &builder)
-	{
-		if (isEffectivelyActive())
-		{
-			_buildRenderSnapshot(builder);
-		}
 	}
 }

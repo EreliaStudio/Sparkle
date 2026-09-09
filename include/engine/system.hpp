@@ -3,6 +3,7 @@
 #include "core/event/event_dispatcher.hpp"
 #include "design_pattern/trait/activable_trait.hpp"
 #include "design_pattern/trait/name_trait.hpp"
+#include "design_pattern/trait/updatable_trait.hpp"
 #include "engine/contextualizable_trait.hpp"
 
 #include <string>
@@ -15,12 +16,12 @@ namespace spk
 	class System : public ContextualizableTrait<Engine *>,
 				   public ActivableTrait,
 				   public NameTrait,
-				   public EventDispatcher
+				   public EventDispatcher,
+				   public UpdatableTrait
 	{
 	protected:
-		[[nodiscard]] bool _isAcceptingInteraction() const override;
-
-		virtual void _updateState(UpdateContext &context);
+		[[nodiscard]] bool _isAcceptingEvent() const override;
+		[[nodiscard]] bool _canUpdate() const override;
 
 	public:
 		class Participant;
@@ -38,7 +39,5 @@ namespace spk
 
 		[[nodiscard]] Engine *engine();
 		[[nodiscard]] const Engine *engine() const;
-
-		void updateState(UpdateContext &context);
 	};
 }

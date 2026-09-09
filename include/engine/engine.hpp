@@ -33,8 +33,8 @@ namespace spk
 		Entity _root;
 		spk::Rect2D _geometry{};
 
-		[[nodiscard]] bool _isAcceptingInteraction() const override;
-		void _propagateInteraction(
+		[[nodiscard]] bool _isAcceptingEvent() const override;
+		void _propagateEvent(
 			const std::function<void(EventDispatcher *)> &callback) override;
 
 	public:

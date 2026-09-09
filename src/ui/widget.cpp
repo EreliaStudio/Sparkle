@@ -69,7 +69,7 @@ namespace spk
 		}),
 		_viewRegion([this] {
 			ViewRegion result{};
-			spk::Rect2D absoluteGeometry = _geometry;
+			spk::Rect2D absoluteGeometry = geometry();
 			if (hasParent())
 			{
 				const ViewRegion &parentRegion = this->parent()->viewRegion();
@@ -128,12 +128,24 @@ namespace spk
 		_childSizeHintEditionContracts.erase(child);
 	}
 
-	bool Widget::_isAcceptingInteraction() const
+	bool Widget::_isAcceptingEvent() const
 	{
 		return isActive();
 	}
 
-	void Widget::_propagateInteraction(
+	bool Widget::_canUpdate() const
+	{
+		return isActive();
+	}
+
+	bool Widget::_canBuildRenderSnapshot() const
+	{
+		return isActive() &&
+			   viewRegion().scissor.height != 0 &&
+			   viewRegion().scissor.width != 0;
+	}
+
+	void Widget::_propagateEvent(
 		const std::function<void(EventDispatcher *)> &callback)
 	{
 		for (auto it = children().rbegin(); it != children().rend(); ++it)
@@ -187,17 +199,17 @@ namespace spk
 
 	void Widget::_computeRatio()
 	{
-		const spk::Vector2UInt referenceSize = hasParent() ? parent()->_geometry.size : _geometry.size;
-		_anchorRatio.x = referenceSize.x != 0 ? static_cast<float>(_geometry.anchor.x) / static_cast<float>(referenceSize.x) : 0.0f;
-		_anchorRatio.y = referenceSize.y != 0 ? static_cast<float>(_geometry.anchor.y) / static_cast<float>(referenceSize.y) : 0.0f;
-		_sizeRatio.x = referenceSize.x != 0 ? static_cast<float>(_geometry.size.x) / static_cast<float>(referenceSize.x) : 1.0f;
-		_sizeRatio.y = referenceSize.y != 0 ? static_cast<float>(_geometry.size.y) / static_cast<float>(referenceSize.y) : 1.0f;
+		const spk::Vector2UInt referenceSize = hasParent() ? parent()->geometry().size : geometry().size;
+		_anchorRatio.x = referenceSize.x != 0 ? static_cast<float>(geometry().anchor.x) / static_cast<float>(referenceSize.x) : 0.0f;
+		_anchorRatio.y = referenceSize.y != 0 ? static_cast<float>(geometry().anchor.y) / static_cast<float>(referenceSize.y) : 0.0f;
+		_sizeRatio.x = referenceSize.x != 0 ? static_cast<float>(geometry().size.x) / static_cast<float>(referenceSize.x) : 1.0f;
+		_sizeRatio.y = referenceSize.y != 0 ? static_cast<float>(geometry().size.y) / static_cast<float>(referenceSize.y) : 1.0f;
 	}
 
 	spk::Rect2D Widget::_geometryFromRatio(const Widget &child) const
 	{
-		const float width = static_cast<float>(_geometry.size.x);
-		const float height = static_cast<float>(_geometry.size.y);
+		const float width = static_cast<float>(geometry().size.x);
+		const float height = static_cast<float>(geometry().size.y);
 		return spk::Rect2D{
 			.anchor = spk::Vector2Int(static_cast<int>(std::lround(width * child._anchorRatio.x)), static_cast<int>(std::lround(height * child._anchorRatio.y))),
 			.size = spk::Vector2UInt(static_cast<unsigned int>(std::lround(width * child._sizeRatio.x)), static_cast<unsigned int>(std::lround(height * child._sizeRatio.y)))};
@@ -205,7 +217,7 @@ namespace spk
 
 	void Widget::_resize(const spk::Rect2D &geometry)
 	{
-		_geometry = geometry;
+		setGeometry(geometry, false);
 		_viewRegion.invalidate();
 		for (Widget *child : children())
 		{
@@ -214,7 +226,7 @@ namespace spk
 				child->_resize(_geometryFromRatio(*child));
 			}
 		}
-		_onGeometryChange();
+		notifyGeometryChange();
 	}
 
 	void Widget::setZOrder(ZOrder zOrder)
@@ -237,26 +249,20 @@ namespace spk
 		return _absoluteZOrder.get();
 	}
 
-	void Widget::setGeometry(const spk::Rect2D &geometry)
+	void Widget::_onSetGeometry()
 	{
-		_geometry = geometry;
 		_computeRatio();
 		_invalidateViewRegion();
-		_onGeometryChange();
 	}
 
 	void Widget::resize(const spk::Rect2D &geometry)
 	{
-		if (_geometry != geometry)
+		if (this->geometry() != geometry)
 		{
 			_resize(geometry);
 		}
 	}
 
-	const spk::Rect2D &Widget::geometry() const noexcept
-	{
-		return _geometry;
-	}
 	const ViewRegion &Widget::viewRegion() const
 	{
 		return _viewRegion.get();
@@ -306,29 +312,14 @@ namespace spk
 		return hasParent() ? parent()->targetRenderPass() : OverlayKey;
 	}
 
-	void Widget::updateState(UpdateContext &context)
+	void Widget::_afterUpdate(UpdateContext &context)
 	{
-		if (!isActive())
+		for (Widget *child : children())
 		{
-			return;
-		}
-
-		try
-		{
-			_updateState(context);
-
-			for (Widget *child : children())
+			if (child != nullptr)
 			{
-				if (child != nullptr)
-				{
-					child->updateState(context);
-				}
+				child->updateState(context);
 			}
-		} catch (...)
-		{
-			throw spk::Exception(
-				"Exception while updating widget [" + name() + "]",
-				std::current_exception());
 		}
 	}
 
@@ -341,40 +332,39 @@ namespace spk
 		pass.emplace<spk::ScissorRenderCommand>(_viewRegion->scissor);
 	}
 
-	void Widget::buildRenderSnapshot(spk::RenderSnapshot::Builder &builder)
+	void Widget::_beforeBuildRenderSnapshot(spk::RenderSnapshot::Builder &builder)
 	{
-		if (!isActive() ||
-			viewRegion().scissor.height == 0 ||
-			viewRegion().scissor.width == 0)
-		{
-			return;
-		}
+		_buildViewRegionCommands(builder);
+	}
 
-		try
+	void Widget::_afterBuildRenderSnapshot(spk::RenderSnapshot::Builder &builder)
+	{
+		for (Widget *child : children())
 		{
-			_buildViewRegionCommands(builder);
-			_buildRenderSnapshot(builder);
-
-			for (Widget *child : children())
+			if (child != nullptr)
 			{
-				if (child != nullptr)
-				{
-					child->buildRenderSnapshot(builder);
-				}
+				child->buildRenderSnapshot(builder);
 			}
-		} catch (...)
-		{
-			throw spk::Exception(
-				"Exception while building render snapshot of widget [" + name() + "]",
-				std::current_exception());
 		}
 	}
 
-	void Widget::_updateState(UpdateContext &)
+	void Widget::_onUpdateException(std::exception_ptr exception)
 	{
+		throw spk::Exception(
+			"Exception while updating widget [" + name() + "]",
+			std::move(exception));
 	}
-	void Widget::_buildRenderSnapshot(spk::RenderSnapshot::Builder &)
+
+	void Widget::_onBuildRenderSnapshotException(std::exception_ptr exception)
 	{
+		throw spk::Exception(
+			"Exception while building render snapshot of widget [" + name() + "]",
+			std::move(exception));
+	}
+
+	void Widget::_onGeometryChange(const spk::Rect2D &)
+	{
+		_onGeometryChange();
 	}
 	void Widget::_updateSizeHint()
 	{

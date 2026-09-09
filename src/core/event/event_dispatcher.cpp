@@ -4,12 +4,12 @@ namespace spk
 {
 	void EventDispatcher::dispatch(WindowResizedEvent &event)
 	{
-		if (!_isAcceptingInteraction() || event.consumed)
+		if (!_isAcceptingEvent() || event.consumed)
 		{
 			return;
 		}
 
-		_propagateInteraction([&event](EventDispatcher *dispatcher) {
+		_propagateEvent([&event](EventDispatcher *dispatcher) {
 			if (dispatcher != nullptr && !event.consumed)
 			{
 				dispatcher->dispatch(event);
@@ -24,12 +24,12 @@ namespace spk
 
 	void EventDispatcher::dispatch(WindowMovedEvent &event)
 	{
-		if (!_isAcceptingInteraction() || event.consumed)
+		if (!_isAcceptingEvent() || event.consumed)
 		{
 			return;
 		}
 
-		_propagateInteraction([&event](EventDispatcher *dispatcher) {
+		_propagateEvent([&event](EventDispatcher *dispatcher) {
 			if (dispatcher != nullptr && !event.consumed)
 			{
 				dispatcher->dispatch(event);
@@ -44,12 +44,12 @@ namespace spk
 
 	void EventDispatcher::dispatch(WindowFocusGainedEvent &event)
 	{
-		if (!_isAcceptingInteraction() || event.consumed)
+		if (!_isAcceptingEvent() || event.consumed)
 		{
 			return;
 		}
 
-		_propagateInteraction([&event](EventDispatcher *dispatcher) {
+		_propagateEvent([&event](EventDispatcher *dispatcher) {
 			if (dispatcher != nullptr && !event.consumed)
 			{
 				dispatcher->dispatch(event);
@@ -64,12 +64,12 @@ namespace spk
 
 	void EventDispatcher::dispatch(WindowFocusLostEvent &event)
 	{
-		if (!_isAcceptingInteraction() || event.consumed)
+		if (!_isAcceptingEvent() || event.consumed)
 		{
 			return;
 		}
 
-		_propagateInteraction([&event](EventDispatcher *dispatcher) {
+		_propagateEvent([&event](EventDispatcher *dispatcher) {
 			if (dispatcher != nullptr && !event.consumed)
 			{
 				dispatcher->dispatch(event);
@@ -84,12 +84,12 @@ namespace spk
 
 	void EventDispatcher::dispatch(MouseEnteredEvent &event)
 	{
-		if (!_isAcceptingInteraction() || event.consumed)
+		if (!_isAcceptingEvent() || event.consumed)
 		{
 			return;
 		}
 
-		_propagateInteraction([&event](EventDispatcher *dispatcher) {
+		_propagateEvent([&event](EventDispatcher *dispatcher) {
 			if (dispatcher != nullptr && !event.consumed)
 			{
 				dispatcher->dispatch(event);
@@ -104,12 +104,12 @@ namespace spk
 
 	void EventDispatcher::dispatch(MouseLeftEvent &event)
 	{
-		if (!_isAcceptingInteraction() || event.consumed)
+		if (!_isAcceptingEvent() || event.consumed)
 		{
 			return;
 		}
 
-		_propagateInteraction([&event](EventDispatcher *dispatcher) {
+		_propagateEvent([&event](EventDispatcher *dispatcher) {
 			if (dispatcher != nullptr && !event.consumed)
 			{
 				dispatcher->dispatch(event);
@@ -124,12 +124,12 @@ namespace spk
 
 	void EventDispatcher::dispatch(MouseMovedEvent &event)
 	{
-		if (!_isAcceptingInteraction() || event.consumed)
+		if (!_isAcceptingEvent() || event.consumed)
 		{
 			return;
 		}
 
-		_propagateInteraction([&event](EventDispatcher *dispatcher) {
+		_propagateEvent([&event](EventDispatcher *dispatcher) {
 			if (dispatcher != nullptr && !event.consumed)
 			{
 				dispatcher->dispatch(event);
@@ -144,12 +144,12 @@ namespace spk
 
 	void EventDispatcher::dispatch(MouseWheelScrolledEvent &event)
 	{
-		if (!_isAcceptingInteraction() || event.consumed)
+		if (!_isAcceptingEvent() || event.consumed)
 		{
 			return;
 		}
 
-		_propagateInteraction([&event](EventDispatcher *dispatcher) {
+		_propagateEvent([&event](EventDispatcher *dispatcher) {
 			if (dispatcher != nullptr && !event.consumed)
 			{
 				dispatcher->dispatch(event);
@@ -164,12 +164,12 @@ namespace spk
 
 	void EventDispatcher::dispatch(MouseButtonPressedEvent &event)
 	{
-		if (!_isAcceptingInteraction() || event.consumed)
+		if (!_isAcceptingEvent() || event.consumed)
 		{
 			return;
 		}
 
-		_propagateInteraction([&event](EventDispatcher *dispatcher) {
+		_propagateEvent([&event](EventDispatcher *dispatcher) {
 			if (dispatcher != nullptr && !event.consumed)
 			{
 				dispatcher->dispatch(event);
@@ -184,12 +184,12 @@ namespace spk
 
 	void EventDispatcher::dispatch(MouseButtonReleasedEvent &event)
 	{
-		if (!_isAcceptingInteraction() || event.consumed)
+		if (!_isAcceptingEvent() || event.consumed)
 		{
 			return;
 		}
 
-		_propagateInteraction([&event](EventDispatcher *dispatcher) {
+		_propagateEvent([&event](EventDispatcher *dispatcher) {
 			if (dispatcher != nullptr && !event.consumed)
 			{
 				dispatcher->dispatch(event);
@@ -204,12 +204,12 @@ namespace spk
 
 	void EventDispatcher::dispatch(MouseButtonDoubleClickedEvent &event)
 	{
-		if (!_isAcceptingInteraction() || event.consumed)
+		if (!_isAcceptingEvent() || event.consumed)
 		{
 			return;
 		}
 
-		_propagateInteraction([&event](EventDispatcher *dispatcher) {
+		_propagateEvent([&event](EventDispatcher *dispatcher) {
 			if (dispatcher != nullptr && !event.consumed)
 			{
 				dispatcher->dispatch(event);
@@ -224,12 +224,12 @@ namespace spk
 
 	void EventDispatcher::dispatch(KeyPressedEvent &event)
 	{
-		if (!_isAcceptingInteraction() || event.consumed)
+		if (!_isAcceptingEvent() || event.consumed)
 		{
 			return;
 		}
 
-		_propagateInteraction([&event](EventDispatcher *dispatcher) {
+		_propagateEvent([&event](EventDispatcher *dispatcher) {
 			if (dispatcher != nullptr && !event.consumed)
 			{
 				dispatcher->dispatch(event);
@@ -244,12 +244,12 @@ namespace spk
 
 	void EventDispatcher::dispatch(KeyReleasedEvent &event)
 	{
-		if (!_isAcceptingInteraction() || event.consumed)
+		if (!_isAcceptingEvent() || event.consumed)
 		{
 			return;
 		}
 
-		_propagateInteraction([&event](EventDispatcher *dispatcher) {
+		_propagateEvent([&event](EventDispatcher *dispatcher) {
 			if (dispatcher != nullptr && !event.consumed)
 			{
 				dispatcher->dispatch(event);
@@ -264,12 +264,12 @@ namespace spk
 
 	void EventDispatcher::dispatch(TextInputEvent &event)
 	{
-		if (!_isAcceptingInteraction() || event.consumed)
+		if (!_isAcceptingEvent() || event.consumed)
 		{
 			return;
 		}
 
-		_propagateInteraction([&event](EventDispatcher *dispatcher) {
+		_propagateEvent([&event](EventDispatcher *dispatcher) {
 			if (dispatcher != nullptr && !event.consumed)
 			{
 				dispatcher->dispatch(event);
@@ -284,14 +284,14 @@ namespace spk
 
 	void EventDispatcher::observePointer(MouseMovedEvent &event)
 	{
-		if (!_isAcceptingInteraction())
+		if (!_isAcceptingEvent())
 		{
 			return;
 		}
 
 		_onPassiveMouseMovedEvent(event);
 
-		_propagateInteraction([&event](EventDispatcher *dispatcher) {
+		_propagateEvent([&event](EventDispatcher *dispatcher) {
 			if (dispatcher != nullptr)
 			{
 				dispatcher->observePointer(event);
@@ -301,14 +301,14 @@ namespace spk
 
 	void EventDispatcher::observePointer(MouseButtonPressedEvent &event)
 	{
-		if (!_isAcceptingInteraction())
+		if (!_isAcceptingEvent())
 		{
 			return;
 		}
 
 		_onPassiveMouseButtonPressedEvent(event);
 
-		_propagateInteraction([&event](EventDispatcher *dispatcher) {
+		_propagateEvent([&event](EventDispatcher *dispatcher) {
 			if (dispatcher != nullptr)
 			{
 				dispatcher->observePointer(event);
@@ -318,14 +318,14 @@ namespace spk
 
 	void EventDispatcher::observeKeyboard(KeyPressedEvent &event)
 	{
-		if (!_isAcceptingInteraction())
+		if (!_isAcceptingEvent())
 		{
 			return;
 		}
 
 		_onPassiveKeyPressedEvent(event);
 
-		_propagateInteraction([&event](EventDispatcher *dispatcher) {
+		_propagateEvent([&event](EventDispatcher *dispatcher) {
 			if (dispatcher != nullptr)
 			{
 				dispatcher->observeKeyboard(event);
@@ -335,14 +335,14 @@ namespace spk
 
 	void EventDispatcher::observeKeyboard(KeyReleasedEvent &event)
 	{
-		if (!_isAcceptingInteraction())
+		if (!_isAcceptingEvent())
 		{
 			return;
 		}
 
 		_onPassiveKeyReleasedEvent(event);
 
-		_propagateInteraction([&event](EventDispatcher *dispatcher) {
+		_propagateEvent([&event](EventDispatcher *dispatcher) {
 			if (dispatcher != nullptr)
 			{
 				dispatcher->observeKeyboard(event);
