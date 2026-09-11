@@ -24,8 +24,7 @@ namespace spk
 		}();
 		return *program;
 	}
-	DrawTextureMeshRenderCommand::DrawTextureMeshRenderCommand(const Texture *texture, TextureMesh2D mesh) :
-		_texture(texture),
+	DrawTextureMeshRenderCommand::DrawTextureMeshRenderCommand(Texture::Handle texture, TextureMesh2D mesh) :
 		_mesh(std::move(mesh)),
 		_sampler(TextureSamplerBindingPoint)
 	{
@@ -33,8 +32,13 @@ namespace spk
 		{
 			throw std::invalid_argument("DrawTextureMeshRenderCommand texture cannot be null");
 		}
-		_sampler.setTexture(texture);
+		_sampler.setTexture(std::move(texture));
 		_sampler.validate();
+	}
+
+	DrawTextureMeshRenderCommand::DrawTextureMeshRenderCommand(const Texture *texture, TextureMesh2D mesh) :
+		DrawTextureMeshRenderCommand(texture ? texture->handle() : Texture::Handle{}, std::move(mesh))
+	{
 	}
 	void DrawTextureMeshRenderCommand::execute(RenderContext &context) const
 	{

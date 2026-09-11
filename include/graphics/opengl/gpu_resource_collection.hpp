@@ -18,6 +18,7 @@ namespace spk
 
 	private:
 		using Instance = GPUResource::Instance;
+		using State = GPUResource::State;
 		using InstancePool = std::vector<std::unique_ptr<Instance>>;
 
 		struct Entry
@@ -35,10 +36,10 @@ namespace spk
 		std::vector<GPUResource::Identifier> _releasedIdentifiers;
 
 		[[nodiscard]] static constexpr std::size_t _kindIndex(GPUResource::Kind kind) noexcept;
-		[[nodiscard]] std::unique_ptr<Instance> _acquire(const GPUResource &resource);
-		[[nodiscard]] Entry &_entry(const GPUResource &resource, RenderContext &context);
+		[[nodiscard]] std::unique_ptr<Instance> _acquire(const State &resource);
+		[[nodiscard]] Entry &_entry(const State &resource, RenderContext &context);
 
-		void _subscribe(const GPUResource &resource);
+		void _subscribe(const State &resource);
 		void _recycle(GPUResource::Identifier identifier);
 
 	public:

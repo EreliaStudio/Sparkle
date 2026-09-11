@@ -5,6 +5,11 @@
 
 namespace spk
 {
+	IndexBuffer::IndexBuffer() :
+		BufferGPUResource(std::make_shared<State>())
+	{
+	}
+
 	std::size_t IndexBuffer::_typeSize(Type type) noexcept
 	{
 		switch (type)
@@ -28,14 +33,15 @@ namespace spk
 		return count * stride;
 	}
 
-	GLenum IndexBuffer::_target() const noexcept
+	GLenum IndexBuffer::State::_target() const noexcept
 	{
 		return GL_ELEMENT_ARRAY_BUFFER;
 	}
 
 	void IndexBuffer::setType(Type type)
 	{
-		if (_type == type)
+		auto &content = state<State>();
+		if (content._type == type)
 		{
 			return;
 		}
@@ -43,37 +49,39 @@ namespace spk
 		{
 			throw std::logic_error("IndexBuffer type cannot change while it contains data");
 		}
-		_type = type;
-		_stride = _typeSize(type);
+		content._type = type;
+		content._stride = _typeSize(type);
 	}
 
 	void IndexBuffer::clearConfiguration()
 	{
+		auto &content = state<State>();
 		if (size() != 0)
 		{
 			throw std::logic_error("IndexBuffer configuration cannot change while it contains data");
 		}
-		_type.reset();
-		_stride = 0;
+		content._type.reset();
+		content._stride = 0;
 	}
 
 	bool IndexBuffer::isConfigured() const noexcept
 	{
-		return _type.has_value();
+		return state<State>()._type.has_value();
 	}
 
 	std::optional<IndexBuffer::Type> IndexBuffer::type() const noexcept
 	{
-		return _type;
+		return state<State>()._type;
 	}
 
 	std::size_t IndexBuffer::stride() const noexcept
 	{
-		return _stride;
+		return state<State>()._stride;
 	}
 
 	std::size_t IndexBuffer::count() const noexcept
 	{
-		return _stride == 0 ? 0 : size() / _stride;
+		const auto stride = state<State>()._stride;
+		return stride == 0 ? 0 : size() / stride;
 	}
 }

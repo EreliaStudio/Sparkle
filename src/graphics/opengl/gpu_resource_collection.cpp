@@ -63,7 +63,7 @@ namespace spk
 		return false;
 	}
 
-	std::unique_ptr<GPUResourceCollection::Instance> GPUResourceCollection::_acquire(const GPUResource &resource)
+	std::unique_ptr<GPUResourceCollection::Instance> GPUResourceCollection::_acquire(const State &resource)
 	{
 		const auto kind = resource._kind();
 		if (!_isRecyclable(kind))
@@ -104,7 +104,7 @@ namespace spk
 		return result;
 	}
 
-	void GPUResourceCollection::_subscribe(const GPUResource &resource)
+	void GPUResourceCollection::_subscribe(const State &resource)
 	{
 		const std::weak_ptr<ReclamationQueue> queue = _reclamationQueue;
 
@@ -116,7 +116,7 @@ namespace spk
 		});
 	}
 
-	GPUResourceCollection::Entry &GPUResourceCollection::_entry(const GPUResource &resource, RenderContext &context)
+	GPUResourceCollection::Entry &GPUResourceCollection::_entry(const State &resource, RenderContext &context)
 	{
 		auto [it, inserted] = _entries.try_emplace(resource._identifier);
 		auto &entry = it->second;

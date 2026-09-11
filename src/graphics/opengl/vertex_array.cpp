@@ -36,16 +36,16 @@ namespace spk
 		}
 	};
 
-	bool VertexArray::_needsConfiguration(const Instance &instance) const noexcept
+	bool VertexArray::State::_needsConfiguration(const Instance &instance) const noexcept
 	{
-		return _vertexBuffer == nullptr ||
-			   _indexBuffer == nullptr ||
-			   instance.vertexBufferIdentifier != _vertexBuffer->identifier() ||
-			   instance.indexBufferIdentifier != _indexBuffer->identifier() ||
+		return !_vertexBuffer ||
+			   !_indexBuffer ||
+			   instance.vertexBufferIdentifier != _vertexBuffer.identifier() ||
+			   instance.indexBufferIdentifier != _indexBuffer.identifier() ||
 			   instance.vertexConfigurationGeneration != _vertexBuffer->configurationGeneration();
 	}
 
-	void VertexArray::_disableAttributes(Instance &instance) const
+	void VertexArray::State::_disableAttributes(Instance &instance) const
 	{
 		for (const auto location : instance.enabledAttributes)
 		{
@@ -54,7 +54,7 @@ namespace spk
 		instance.enabledAttributes.clear();
 	}
 
-	void VertexArray::_configureAttributes(Instance &instance) const
+	void VertexArray::State::_configureAttributes(Instance &instance) const
 	{
 		const auto stride = static_cast<GLsizei>(_vertexBuffer->stride());
 
@@ -101,9 +101,9 @@ namespace spk
 		}
 	}
 
-	void VertexArray::_configure(Instance &instance, RenderContext &context) const
+	void VertexArray::State::_configure(Instance &instance, RenderContext &context) const
 	{
-		if (_vertexBuffer == nullptr || _indexBuffer == nullptr)
+		if (!_vertexBuffer || !_indexBuffer)
 		{
 			throw std::logic_error("VertexArray requires both buffers");
 		}
@@ -114,31 +114,31 @@ namespace spk
 
 		glBindVertexArray(instance.identifier);
 		_disableAttributes(instance);
-		_vertexBuffer->activate(context);
-		_indexBuffer->activate(context);
+		_vertexBuffer.activate(context);
+		_indexBuffer.activate(context);
 		_configureAttributes(instance);
 
-		instance.vertexBufferIdentifier = _vertexBuffer->identifier();
-		instance.indexBufferIdentifier = _indexBuffer->identifier();
+		instance.vertexBufferIdentifier = _vertexBuffer.identifier();
+		instance.indexBufferIdentifier = _indexBuffer.identifier();
 		instance.vertexConfigurationGeneration = _vertexBuffer->configurationGeneration();
 	}
 
-	std::unique_ptr<GPUResource::Instance> VertexArray::_create(RenderContext &) const
+	std::unique_ptr<GPUResource::Instance> VertexArray::State::_create(RenderContext &) const
 	{
 		return std::make_unique<Instance>();
 	}
 
-	GPUResource::Kind VertexArray::_kind() const noexcept
+	GPUResource::Kind VertexArray::State::_kind() const noexcept
 	{
 		return GPUResource::Kind::VertexArray;
 	}
 
-	void VertexArray::_synchronize(GPUResource::Instance &base, RenderContext &context) const
+	void VertexArray::State::_synchronize(GPUResource::Instance &base, RenderContext &context) const
 	{
 		_configure(static_cast<Instance &>(base), context);
 	}
 
-	void VertexArray::_bind(GPUResource::Instance &base, RenderContext &context) const
+	void VertexArray::State::_bind(GPUResource::Instance &base, RenderContext &context) const
 	{
 		auto &instance = static_cast<Instance &>(base);
 		glBindVertexArray(instance.identifier);
@@ -148,23 +148,30 @@ namespace spk
 		}
 	}
 
+	VertexArray::VertexArray() :
+		GPUResource(std::make_shared<State>())
+	{
+	}
+
 	void VertexArray::setVertexBuffer(const VertexBuffer &vertexBuffer)
 	{
-		if (_vertexBuffer == &vertexBuffer)
+		auto &content = state<State>();
+		if (content._vertexBuffer.identifier() == vertexBuffer.identifier())
 		{
 			return;
 		}
 
-		_vertexBuffer = &vertexBuffer;
+		content._vertexBuffer = vertexBuffer.handle();
 	}
 
 	void VertexArray::setIndexBuffer(const IndexBuffer &indexBuffer)
 	{
-		if (_indexBuffer == &indexBuffer)
+		auto &content = state<State>();
+		if (content._indexBuffer.identifier() == indexBuffer.identifier())
 		{
 			return;
 		}
 
-		_indexBuffer = &indexBuffer;
+		content._indexBuffer = indexBuffer.handle();
 	}
 }

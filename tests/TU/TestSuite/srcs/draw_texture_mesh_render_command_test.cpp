@@ -5,11 +5,12 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <stdexcept>
 #include <vector>
 
-#include "rendering/command/draw_texture_mesh_render_command.hpp"
 #include "render_command_test_utils.hpp"
+#include "rendering/command/draw_texture_mesh_render_command.hpp"
 
 namespace test = render_command_test;
 
@@ -18,8 +19,7 @@ static_assert(spk::DrawTextureMeshRenderCommand::TextureSamplerBindingPoint == 0
 TEST(DrawTextureMeshRenderCommandTest, TexturedMeshSamplesExpectedUVs)
 {
 	const std::array<std::uint8_t, 16> pixels{
-		255, 0, 0, 255, 0, 255, 0, 255,
-		0, 0, 255, 255, 255, 255, 0, 255};
+		255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 0, 255};
 	test::Texture texture({2, 2}, pixels);
 	test::Target target;
 	target.clear();
@@ -79,17 +79,19 @@ TEST(DrawTextureMeshRenderCommandTest, ExecutionBindsTextureSamplerAtReservedBin
 TEST(DrawTextureMeshRenderCommandTest, SourceTextureLifetimeIsExplicitlyExercised)
 {
 	const std::array<std::uint8_t, 4> pixels{0, 255, 0, 255};
-	test::Texture texture({1, 1}, pixels);
+	std::unique_ptr<spk::DrawTextureMeshRenderCommand> command;
+	{
+		test::Texture texture({1, 1}, pixels);
+		command = std::make_unique<spk::DrawTextureMeshRenderCommand>(
+			&texture,
+			test::textureQuad({.anchor = {4, 4}, .size = {16, 16}}));
+	}
+
 	test::Target target;
 	target.clear();
-	{
-		spk::DrawTextureMeshRenderCommand command(&texture, test::textureQuad({.anchor = {4, 4}, .size = {16, 16}}));
-		command.execute(target.context());
-	}
-	spk::DrawTextureMeshRenderCommand(&texture, test::textureQuad({.anchor = {32, 32}, .size = {16, 16}})).execute(target.context());
+	command->execute(target.context());
 	const auto image = target.capture();
 	EXPECT_EQ(test::pixel(image, {8, 8}), (std::array<std::uint8_t, 4>{0, 255, 0, 255}));
-	EXPECT_EQ(test::pixel(image, {36, 36}), (std::array<std::uint8_t, 4>{0, 255, 0, 255}));
 }
 
 TEST(DrawTextureMeshRenderCommandTest, NullTextureIsRejected)

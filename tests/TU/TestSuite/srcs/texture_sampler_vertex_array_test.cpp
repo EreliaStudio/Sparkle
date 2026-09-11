@@ -21,7 +21,10 @@ namespace
 	class TestTexture final : public spk::Texture
 	{
 	public:
-		explicit TestTexture(Target target = Target::Texture2D) : Texture(target) {}
+		explicit TestTexture(Target target = Target::Texture2D) :
+			Texture(target)
+		{
+		}
 
 		using Texture::resizePixels;
 		using Texture::setMipmap;
@@ -85,8 +88,7 @@ TEST(TextureTest, SubregionWritesSupportExactBoundaryAndRejectInvalidRanges)
 	texture.setPixels(nullptr, {3, 2}, spk::Texture::Format::RGBA);
 	const std::array<std::uint8_t, 8> replacement{1, 2, 3, 4, 5, 6, 7, 8};
 	texture.writePixels(replacement.data(), {1, 1}, {2, 1});
-	EXPECT_EQ(std::vector<std::uint8_t>(texture.pixels().end() - 8, texture.pixels().end()),
-		(std::vector<std::uint8_t>{1, 2, 3, 4, 5, 6, 7, 8}));
+	EXPECT_EQ(std::vector<std::uint8_t>(texture.pixels().end() - 8, texture.pixels().end()), (std::vector<std::uint8_t>{1, 2, 3, 4, 5, 6, 7, 8}));
 	EXPECT_NO_THROW(texture.writePixels(nullptr, {3, 2}, {0, 0}));
 	EXPECT_THROW(texture.writePixels(nullptr, {0, 0}, {1, 1}), std::invalid_argument);
 	EXPECT_THROW(texture.writePixels(replacement.data(), {2, 0}, {2, 1}), std::out_of_range);
@@ -168,7 +170,7 @@ TEST(SamplerTest, PropertiesTextureAndBindingAreObservableInOpenGL)
 	sampler.activate(openGL.renderContext());
 
 	EXPECT_EQ(sampler.bindingPoint(), 2u);
-	EXPECT_EQ(sampler.texture(), &texture);
+	EXPECT_EQ(sampler.texture().identifier(), texture.identifier());
 	GLint samplerIdentifier = 0;
 	::glGetIntegeri_v(GL_SAMPLER_BINDING, 2, &samplerIdentifier);
 	ASSERT_NE(samplerIdentifier, 0);

@@ -47,47 +47,65 @@ namespace
 			}
 		};
 
-		std::shared_ptr<ResourceCounters> _counters;
-
-		Kind _kind() const noexcept override
+	public:
+		class State final : public spk::GPUResource::State
 		{
-			return Kind::Program;
-		}
+		private:
+			std::shared_ptr<ResourceCounters> _counters;
 
-		std::unique_ptr<Instance> _create(spk::RenderContext &) const override
-		{
-			++_counters->creations;
-			if (_counters->failCreation)
+			Kind _kind() const noexcept override
 			{
-				throw std::runtime_error("creation failure");
+				return Kind::Program;
 			}
-			return std::make_unique<FakeInstance>(_counters);
-		}
 
-		void _synchronize(Instance &, spk::RenderContext &) const override
-		{
-			++_counters->synchronizations;
-			if (_counters->failSynchronization)
+			std::unique_ptr<Instance> _create(spk::RenderContext &) const override
 			{
-				throw std::runtime_error("synchronization failure");
+				++_counters->creations;
+				if (_counters->failCreation)
+				{
+					throw std::runtime_error("creation failure");
+				}
+				return std::make_unique<FakeInstance>(_counters);
 			}
-		}
 
-		void _bind(Instance &, spk::RenderContext &) const override
-		{
-			++_counters->bindings;
-			if (_counters->failBinding)
+			void _synchronize(Instance &, spk::RenderContext &) const override
 			{
-				throw std::runtime_error("binding failure");
+				++_counters->synchronizations;
+				if (_counters->failSynchronization)
+				{
+					throw std::runtime_error("synchronization failure");
+				}
 			}
-		}
+
+			void _bind(Instance &, spk::RenderContext &) const override
+			{
+				++_counters->bindings;
+				if (_counters->failBinding)
+				{
+					throw std::runtime_error("binding failure");
+				}
+			}
+
+		public:
+			explicit State(std::shared_ptr<ResourceCounters> counters) :
+				_counters(std::move(counters))
+			{
+			}
+		};
+
+		using Handle = spk::GPUResource::Handle<State>;
 
 	public:
 		explicit FakeGPUResource(std::shared_ptr<ResourceCounters> counters) :
-			_counters(std::move(counters))
+			GPUResource(std::make_shared<State>(std::move(counters)))
 		{
 			// A concrete resource publishes its initial CPU-side state before first use.
 			validate();
+		}
+
+		Handle handle() const
+		{
+			return createHandle<State>();
 		}
 	};
 
@@ -131,6 +149,27 @@ TEST(GPUResourceTest, ReleasedInstanceIsDestroyedExactlyOnce)
 	EXPECT_EQ(counters->destructions, 0);
 	openGL.surface()._gpuResources().reclaimReleased();
 	EXPECT_EQ(counters->destructions, 1);
+	openGL.surface()._gpuResources().reclaimReleased();
+	EXPECT_EQ(counters->destructions, 1);
+}
+
+TEST(GPUResourceTest, HandleKeepsStateAndContextInstanceAliveAfterOwnerDestruction)
+{
+	auto counters = std::make_shared<ResourceCounters>();
+	auto &openGL = sparkle_test::OpenGLTestContext::instance();
+	FakeGPUResource::Handle handle;
+	{
+		FakeGPUResource resource(counters);
+		handle = resource.handle();
+		handle.activate(openGL.renderContext());
+	}
+
+	openGL.surface()._gpuResources().reclaimReleased();
+	EXPECT_EQ(counters->destructions, 0);
+	EXPECT_NO_THROW(handle.activate(openGL.renderContext()));
+	EXPECT_EQ(counters->creations, 1);
+
+	handle = {};
 	openGL.surface()._gpuResources().reclaimReleased();
 	EXPECT_EQ(counters->destructions, 1);
 }

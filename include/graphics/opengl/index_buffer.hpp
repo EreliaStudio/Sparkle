@@ -27,10 +27,31 @@ namespace spk
 			UnsignedInt
 		};
 
-	private:
-		std::optional<Type> _type;
-		std::size_t _stride = 0;
+	public:
+		class State final : public BufferGPUResource::State
+		{
+			friend class IndexBuffer;
 
+		private:
+			std::optional<Type> _type;
+			std::size_t _stride = 0;
+
+		protected:
+			[[nodiscard]] GLenum _target() const noexcept override;
+
+		public:
+			[[nodiscard]] std::optional<Type> type() const noexcept
+			{
+				return _type;
+			}
+			[[nodiscard]] std::size_t stride() const noexcept
+			{
+				return _stride;
+			}
+		};
+		using Handle = GPUResource::Handle<State>;
+
+	private:
 		[[nodiscard]] static std::size_t _typeSize(Type type) noexcept;
 
 		template <typename TIndex>
@@ -38,11 +59,12 @@ namespace spk
 		{
 			static_assert(std::is_integral_v<TIndex>, "IndexBuffer requires an integral type.");
 			static_assert(std::is_unsigned_v<TIndex>, "IndexBuffer requires an unsigned type.");
-			if (!_type.has_value())
+			const auto &content = state<State>();
+			if (!content._type.has_value())
 			{
 				throw std::logic_error("IndexBuffer has no configured type");
 			}
-			if (sizeof(TIndex) != _stride)
+			if (sizeof(TIndex) != content._stride)
 			{
 				throw std::logic_error("Index type size does not match the configured IndexBuffer stride");
 			}
@@ -50,11 +72,12 @@ namespace spk
 
 		[[nodiscard]] static std::size_t _checkedSize(std::size_t count, std::size_t stride);
 
-	protected:
-		[[nodiscard]] GLenum _target() const noexcept override;
-
 	public:
-		IndexBuffer() = default;
+		IndexBuffer();
+		[[nodiscard]] Handle handle() const
+		{
+			return createHandle<State>();
+		}
 
 		void setType(Type type);
 		void clearConfiguration();
@@ -63,14 +86,14 @@ namespace spk
 		void resize(std::size_t count)
 		{
 			_validateType<TIndex>();
-			_resize(_checkedSize(count, _stride));
+			_resize(_checkedSize(count, state<State>()._stride));
 		}
 
 		template <typename TIndex>
 		void reserve(std::size_t count)
 		{
 			_validateType<TIndex>();
-			_reserve(_checkedSize(count, _stride));
+			_reserve(_checkedSize(count, state<State>()._stride));
 		}
 
 		template <typename TIndex>

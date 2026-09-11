@@ -5,6 +5,11 @@
 
 namespace spk
 {
+	VertexBuffer::VertexBuffer() :
+		BufferGPUResource(std::make_shared<State>())
+	{
+	}
+
 	std::size_t VertexBuffer::_typeSize(Attribute::Type type)
 	{
 		switch (type)
@@ -115,10 +120,11 @@ namespace spk
 
 	void VertexBuffer::_touchConfiguration() noexcept
 	{
-		++_configurationGeneration;
-		if (_configurationGeneration == 0)
+		auto &content = state<State>();
+		++content._configurationGeneration;
+		if (content._configurationGeneration == 0)
 		{
-			_configurationGeneration = 1;
+			content._configurationGeneration = 1;
 		}
 	}
 
@@ -132,17 +138,18 @@ namespace spk
 		return count * stride;
 	}
 
-	GLenum VertexBuffer::_target() const noexcept
+	GLenum VertexBuffer::State::_target() const noexcept
 	{
 		return GL_ARRAY_BUFFER;
 	}
 
 	void VertexBuffer::addAttribute(Attribute attribute)
 	{
+		auto &content = state<State>();
 		_validateConfigurationEdition();
 		_validateAttribute(attribute);
 
-		for (const auto &element : _attributes)
+		for (const auto &element : content._attributes)
 		{
 			if (element.attribute.location == attribute.location)
 			{
@@ -157,14 +164,14 @@ namespace spk
 		}
 
 		const std::size_t attributeSize = typeSize * attribute.componentCount;
-		if (_stride > std::numeric_limits<std::size_t>::max() - attributeSize)
+		if (content._stride > std::numeric_limits<std::size_t>::max() - attributeSize)
 		{
 			throw std::overflow_error("VertexBuffer stride overflow");
 		}
 
-		_attributes.push_back({.attribute = attribute, .offset = _stride});
+		content._attributes.push_back({.attribute = attribute, .offset = content._stride});
 
-		_stride += attributeSize;
+		content._stride += attributeSize;
 		_touchConfiguration();
 	}
 
@@ -180,9 +187,10 @@ namespace spk
 
 	void VertexBuffer::addPadding(std::size_t byteCount)
 	{
+		auto &content = state<State>();
 		_validateConfigurationEdition();
 
-		if (_stride > std::numeric_limits<std::size_t>::max() - byteCount)
+		if (content._stride > std::numeric_limits<std::size_t>::max() - byteCount)
 		{
 			throw std::overflow_error("VertexBuffer stride overflow");
 		}
@@ -192,47 +200,49 @@ namespace spk
 			return;
 		}
 
-		_stride += byteCount;
+		content._stride += byteCount;
 		_touchConfiguration();
 	}
 
 	void VertexBuffer::clearConfiguration()
 	{
+		auto &content = state<State>();
 		_validateConfigurationEdition();
 
-		if (_attributes.empty() && _stride == 0)
+		if (content._attributes.empty() && content._stride == 0)
 		{
 			return;
 		}
 
-		_attributes.clear();
-		_stride = 0;
+		content._attributes.clear();
+		content._stride = 0;
 		_touchConfiguration();
 	}
 
 	std::size_t VertexBuffer::stride() const noexcept
 	{
-		return _stride;
+		return state<State>()._stride;
 	}
 
 	std::size_t VertexBuffer::count() const noexcept
 	{
-		if (_stride == 0)
+		const auto stride = state<State>()._stride;
+		if (stride == 0)
 		{
 			return 0;
 		}
 
-		return size() / _stride;
+		return size() / stride;
 	}
 
 	std::span<const VertexBuffer::ResolvedAttribute> VertexBuffer::attributes() const noexcept
 	{
-		return _attributes;
+		return state<State>()._attributes;
 	}
 
 	GPUResource::Generation VertexBuffer::configurationGeneration() const noexcept
 	{
-		return _configurationGeneration;
+		return state<State>()._configurationGeneration;
 	}
 
 	GLenum VertexBuffer::openGLType(Attribute::Type type)

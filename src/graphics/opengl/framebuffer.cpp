@@ -70,17 +70,17 @@ namespace spk
 		}
 	}
 
-	GPUResource::Kind Framebuffer::_kind() const noexcept
+	GPUResource::Kind Framebuffer::State::_kind() const noexcept
 	{
 		return GPUResource::Kind::Framebuffer;
 	}
 
-	std::unique_ptr<GPUResource::Instance> Framebuffer::_create(RenderContext &) const
+	std::unique_ptr<GPUResource::Instance> Framebuffer::State::_create(RenderContext &) const
 	{
 		return std::make_unique<Instance>();
 	}
 
-	void Framebuffer::_synchronize(GPUResource::Instance &base, RenderContext &context) const
+	void Framebuffer::State::_synchronize(GPUResource::Instance &base, RenderContext &context) const
 	{
 		auto &instance = static_cast<Instance &>(base);
 		glBindFramebuffer(GL_FRAMEBUFFER, instance.identifier);
@@ -165,7 +165,7 @@ namespace spk
 		instance.depthAttachmentPoint = depthAttachmentPoint;
 	}
 
-	void Framebuffer::_bind(GPUResource::Instance &base, RenderContext &) const
+	void Framebuffer::State::_bind(GPUResource::Instance &base, RenderContext &) const
 	{
 		glBindFramebuffer(GL_FRAMEBUFFER, static_cast<Instance &>(base).identifier);
 	}
@@ -174,28 +174,30 @@ namespace spk
 		const Vector2UInt &size,
 		std::vector<Texture::Format> colorFormats,
 		std::optional<Texture::Format> depthStencilFormat) :
-		_size(size)
+		GPUResource(std::make_shared<State>())
 	{
+		auto &content = state<State>();
+		content._size = size;
 		_validateSize(size);
 		if (colorFormats.empty() && depthStencilFormat.has_value() == false)
 		{
 			throw std::invalid_argument("Framebuffer requires at least one attachment");
 		}
 
-		_colorAttachments.reserve(colorFormats.size());
+		content._colorAttachments.reserve(colorFormats.size());
 		for (const Texture::Format format : colorFormats)
 		{
 			if (Texture::isColorFormat(format) == false)
 			{
 				throw std::invalid_argument("Framebuffer color attachment requires a color format");
 			}
-			_colorAttachments.push_back(_makeAttachment(size, format));
+			content._colorAttachments.push_back(_makeAttachment(size, format));
 		}
 
 		if (depthStencilFormat.has_value())
 		{
 			(void)_depthAttachmentPoint(*depthStencilFormat);
-			_depthStencilAttachment = _makeAttachment(size, *depthStencilFormat);
+			content._depthStencilAttachment = _makeAttachment(size, *depthStencilFormat);
 		}
 
 		validate();
@@ -203,44 +205,45 @@ namespace spk
 
 	void Framebuffer::resize(const Vector2UInt &size)
 	{
+		auto &content = state<State>();
 		_validateSize(size);
-		if (_size == size)
+		if (content._size == size)
 		{
 			return;
 		}
 
-		for (auto &attachment : _colorAttachments)
+		for (auto &attachment : content._colorAttachments)
 		{
 			attachment->_allocateRenderTarget(size, attachment->format());
 			attachment->validate();
 		}
-		if (_depthStencilAttachment != nullptr)
+		if (content._depthStencilAttachment != nullptr)
 		{
-			_depthStencilAttachment->_allocateRenderTarget(size, _depthStencilAttachment->format());
-			_depthStencilAttachment->validate();
+			content._depthStencilAttachment->_allocateRenderTarget(size, content._depthStencilAttachment->format());
+			content._depthStencilAttachment->validate();
 		}
 
-		_size = size;
+		content._size = size;
 		validate();
 	}
 
 	const Vector2UInt &Framebuffer::size() const noexcept
 	{
-		return _size;
+		return state<State>()._size;
 	}
 
 	std::size_t Framebuffer::colorAttachmentCount() const noexcept
 	{
-		return _colorAttachments.size();
+		return state<State>()._colorAttachments.size();
 	}
 
 	const Texture &Framebuffer::colorAttachment(std::size_t index) const
 	{
-		return *_colorAttachments.at(index);
+		return *state<State>()._colorAttachments.at(index);
 	}
 
 	const Texture *Framebuffer::depthStencilAttachment() const noexcept
 	{
-		return _depthStencilAttachment.get();
+		return state<State>()._depthStencilAttachment.get();
 	}
 }

@@ -5,7 +5,6 @@
 #include <limits>
 #include <stdexcept>
 
-
 namespace spk
 {
 	class BufferGPUResource::Instance final : public GPUResource::Instance
@@ -33,12 +32,12 @@ namespace spk
 		}
 	};
 
-	std::size_t BufferGPUResource::Storage::_unitCount(std::size_t size) noexcept
+	std::size_t BufferGPUResource::State::Storage::_unitCount(std::size_t size) noexcept
 	{
 		return (size + sizeof(std::max_align_t) - 1) / sizeof(std::max_align_t);
 	}
 
-	void BufferGPUResource::Storage::resize(std::size_t size)
+	void BufferGPUResource::State::Storage::resize(std::size_t size)
 	{
 		const std::size_t previousSize = _size;
 		_storage.resize(_unitCount(size));
@@ -49,12 +48,12 @@ namespace spk
 		}
 	}
 
-	void BufferGPUResource::Storage::reserve(std::size_t size)
+	void BufferGPUResource::State::Storage::reserve(std::size_t size)
 	{
 		_storage.reserve(_unitCount(size));
 	}
 
-	void BufferGPUResource::Storage::append(const void *source, std::size_t size)
+	void BufferGPUResource::State::Storage::append(const void *source, std::size_t size)
 	{
 		if (size == 0)
 		{
@@ -65,28 +64,28 @@ namespace spk
 		std::memcpy(data() + offset, source, size);
 	}
 
-	void BufferGPUResource::Storage::clear()
+	void BufferGPUResource::State::Storage::clear()
 	{
 		_storage.clear();
 		_size = 0;
 	}
 
-	std::byte *BufferGPUResource::Storage::data() noexcept
+	std::byte *BufferGPUResource::State::Storage::data() noexcept
 	{
 		return reinterpret_cast<std::byte *>(_storage.data());
 	}
 
-	const std::byte *BufferGPUResource::Storage::data() const noexcept
+	const std::byte *BufferGPUResource::State::Storage::data() const noexcept
 	{
 		return reinterpret_cast<const std::byte *>(_storage.data());
 	}
 
-	std::size_t BufferGPUResource::Storage::size() const noexcept
+	std::size_t BufferGPUResource::State::Storage::size() const noexcept
 	{
 		return _size;
 	}
 
-	GPUResource::Kind BufferGPUResource::_kind() const noexcept
+	GPUResource::Kind BufferGPUResource::State::_kind() const noexcept
 	{
 		return GPUResource::Kind::Buffer;
 	}
@@ -120,8 +119,9 @@ namespace spk
 		return static_cast<Instance &>(instance).identifier;
 	}
 
-	void BufferGPUResource::_allocate(Instance &instance) const
+	void BufferGPUResource::State::_allocate(GPUResource::Instance &base) const
 	{
+		auto &instance = static_cast<BufferGPUResource::Instance &>(base);
 		instance.allocatedSize = std::max(instance.allocatedSize, _nextCapacity(size()));
 		glBufferData(_target(), static_cast<GLsizeiptr>(instance.allocatedSize), nullptr, _openGLUsage(_usage));
 		instance.allocationUsage = _usage;
@@ -129,16 +129,18 @@ namespace spk
 
 	void BufferGPUResource::_append(const void *data, std::size_t size)
 	{
-		if (size > std::numeric_limits<std::size_t>::max() - _storage.size())
+		auto &content = state<State>();
+		if (size > std::numeric_limits<std::size_t>::max() - content._storage.size())
 		{
 			throw std::overflow_error("GPU buffer size overflow");
 		}
-		_storage.append(data, size);
+		content._storage.append(data, size);
 	}
 
 	void BufferGPUResource::_write(const void *data, std::size_t size, std::size_t offset)
 	{
-		if (offset > _storage.size() || size > _storage.size() - offset)
+		auto &content = state<State>();
+		if (offset > content._storage.size() || size > content._storage.size() - offset)
 		{
 			throw std::out_of_range("GPU buffer write exceeds buffer size");
 		}
@@ -148,39 +150,40 @@ namespace spk
 			return;
 		}
 
-		std::memcpy(_storage.data() + offset, data, size);
+		std::memcpy(content._storage.data() + offset, data, size);
 	}
 
 	void BufferGPUResource::_resize(std::size_t size)
 	{
-		if (_storage.size() == size)
+		auto &content = state<State>();
+		if (content._storage.size() == size)
 		{
 			return;
 		}
-		_storage.resize(size);
+		content._storage.resize(size);
 	}
 
 	void BufferGPUResource::_reserve(std::size_t size)
 	{
-		_storage.reserve(size);
+		state<State>()._storage.reserve(size);
 	}
 
 	std::byte *BufferGPUResource::_data() noexcept
 	{
-		return _storage.data();
+		return state<State>()._storage.data();
 	}
 
 	const std::byte *BufferGPUResource::_data() const noexcept
 	{
-		return _storage.data();
+		return state<State>()._storage.data();
 	}
 
-	std::unique_ptr<GPUResource::Instance> BufferGPUResource::_create(RenderContext &) const
+	std::unique_ptr<GPUResource::Instance> BufferGPUResource::State::_create(RenderContext &) const
 	{
 		return std::make_unique<Instance>();
 	}
 
-	void BufferGPUResource::_synchronize(GPUResource::Instance &base, RenderContext &) const
+	void BufferGPUResource::State::_synchronize(GPUResource::Instance &base, RenderContext &) const
 	{
 		auto &instance = static_cast<Instance &>(base);
 		glBindBuffer(_target(), instance.identifier);
@@ -191,11 +194,11 @@ namespace spk
 		}
 		if (size() != 0)
 		{
-			glBufferSubData(_target(), 0, static_cast<GLsizeiptr>(size()), _data());
+			glBufferSubData(_target(), 0, static_cast<GLsizeiptr>(size()), _storage.data());
 		}
 	}
 
-	void BufferGPUResource::_bind(GPUResource::Instance &base, RenderContext &) const
+	void BufferGPUResource::State::_bind(GPUResource::Instance &base, RenderContext &) const
 	{
 		glBindBuffer(_target(), static_cast<Instance &>(base).identifier);
 	}
@@ -206,33 +209,34 @@ namespace spk
 		{
 			return;
 		}
-		_storage.clear();
+		state<State>()._storage.clear();
 	}
 
 	void BufferGPUResource::setUsage(Usage usage)
 	{
-		if (_usage == usage)
+		auto &content = state<State>();
+		if (content._usage == usage)
 		{
 			return;
 		}
-		_usage = usage;
+		content._usage = usage;
 	}
 
 	BufferGPUResource::Usage BufferGPUResource::usage() const noexcept
 	{
-		return _usage;
+		return state<State>()._usage;
 	}
 
 	std::size_t BufferGPUResource::size() const noexcept
 	{
-		return _storage.size();
+		return state<State>()._storage.size();
 	}
 
 	std::vector<std::byte> BufferGPUResource::retrieve(RenderContext &context) const
 	{
 		activate(context);
 
-		std::vector<std::byte> result(_storage.size());
+		std::vector<std::byte> result(state<State>()._storage.size());
 
 		if (result.empty())
 		{
@@ -240,7 +244,7 @@ namespace spk
 		}
 
 		glGetBufferSubData(
-			_target(),
+			state<State>()._target(),
 			0,
 			static_cast<GLsizeiptr>(result.size()),
 			result.data());

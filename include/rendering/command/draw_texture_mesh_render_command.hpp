@@ -16,12 +16,12 @@ namespace spk
 	private:
 		static Program &_sharedProgram();
 
-		const Texture *_texture;
 		TextureMesh2D _mesh;
 		Sampler _sampler;
 
 	public:
 		static constexpr std::size_t TextureSamplerBindingPoint = 0;
+		DrawTextureMeshRenderCommand(Texture::Handle texture, TextureMesh2D mesh);
 		DrawTextureMeshRenderCommand(const Texture *texture, TextureMesh2D mesh);
 		void execute(RenderContext &) const override;
 	};

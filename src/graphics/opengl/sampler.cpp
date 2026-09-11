@@ -30,7 +30,7 @@ namespace spk
 		}
 	};
 
-	GPUResource::Kind Sampler::_kind() const noexcept
+	GPUResource::Kind Sampler::State::_kind() const noexcept
 	{
 		return GPUResource::Kind::Sampler;
 	}
@@ -69,12 +69,12 @@ namespace spk
 		return GL_CLAMP_TO_EDGE;
 	}
 
-	std::unique_ptr<GPUResource::Instance> Sampler::_create(RenderContext &) const
+	std::unique_ptr<GPUResource::Instance> Sampler::State::_create(RenderContext &) const
 	{
 		return std::make_unique<Instance>();
 	}
 
-	void Sampler::_synchronize(GPUResource::Instance &base, RenderContext &) const
+	void Sampler::State::_synchronize(GPUResource::Instance &base, RenderContext &) const
 	{
 		auto &instance = static_cast<Instance &>(base);
 
@@ -93,14 +93,15 @@ namespace spk
 		}
 	}
 
-	void Sampler::_bind(GPUResource::Instance &base, RenderContext &context) const
+	void Sampler::State::_bind(GPUResource::Instance &base, RenderContext &context) const
 	{
-		if (_texture == nullptr)
+		if (!_texture)
 		{
 			throw std::logic_error("Cannot activate a Sampler without a Texture");
 		}
 
-		_texture->_bindToUnit(_bindingPoint, context);
+		glActiveTexture(GL_TEXTURE0 + static_cast<GLenum>(_bindingPoint));
+		_texture.activate(context);
 		glBindSampler(static_cast<GLuint>(_bindingPoint), static_cast<Instance &>(base).identifier);
 	}
 
@@ -109,63 +110,70 @@ namespace spk
 		Filtering filtering,
 		Wrap wrap,
 		MipmapFiltering mipmapFiltering) :
-		_bindingPoint(bindingPoint),
-		_texture(nullptr),
-		_filtering(filtering),
-		_wrap(wrap),
-		_mipmapFiltering(mipmapFiltering)
+		GPUResource(std::make_shared<State>())
 	{
+		auto &content = state<State>();
+		content._bindingPoint = bindingPoint;
+		content._filtering = filtering;
+		content._wrap = wrap;
+		content._mipmapFiltering = mipmapFiltering;
 	}
 
 	void Sampler::setTexture(const Texture *texture) noexcept
 	{
-		_texture = texture;
+		state<State>()._texture = texture ? texture->handle() : Texture::Handle{};
+	}
+
+	void Sampler::setTexture(Texture::Handle texture) noexcept
+	{
+		state<State>()._texture = std::move(texture);
 	}
 
 	void Sampler::setFiltering(Filtering filtering) noexcept
 	{
-		_filtering = filtering;
+		state<State>()._filtering = filtering;
 	}
 
 	void Sampler::setWrap(Wrap wrap) noexcept
 	{
-		_wrap = wrap;
+		state<State>()._wrap = wrap;
 	}
 
 	void Sampler::setMipmapFiltering(MipmapFiltering mipmapFiltering) noexcept
 	{
-		_mipmapFiltering = mipmapFiltering;
+		state<State>()._mipmapFiltering = mipmapFiltering;
 	}
 
 	void Sampler::setProperties(Filtering filtering, Wrap wrap, MipmapFiltering mipmapFiltering) noexcept
 	{
-		_filtering = filtering;
-		_wrap = wrap;
-		_mipmapFiltering = mipmapFiltering;
+		auto &content = state<State>();
+		content._filtering = filtering;
+		content._wrap = wrap;
+		content._mipmapFiltering = mipmapFiltering;
 	}
 
 	std::size_t Sampler::bindingPoint() const noexcept
 	{
-		return _bindingPoint;
+		return state<State>()._bindingPoint;
 	}
 
-	const Texture *Sampler::texture() const noexcept
+	const Texture::Handle &Sampler::texture() const noexcept
 	{
-		return _texture;
+		return state<State>()._texture;
 	}
 
 	Sampler::Filtering Sampler::filtering() const noexcept
 	{
-		return _filtering;
+		return state<State>()._filtering;
 	}
 
 	Sampler::Wrap Sampler::wrap() const noexcept
 	{
-		return _wrap;
+		return state<State>()._wrap;
 	}
 
 	Sampler::MipmapFiltering Sampler::mipmapFiltering() const noexcept
 	{
-		return _mipmapFiltering;
+		return state<State>()._mipmapFiltering;
 	}
 }

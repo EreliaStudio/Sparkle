@@ -55,11 +55,37 @@ namespace spk
 			std::size_t offset;
 		};
 
-	private:
-		std::vector<ResolvedAttribute> _attributes;
-		std::size_t _stride = 0;
-		Generation _configurationGeneration = 1;
+	public:
+		class State final : public BufferGPUResource::State
+		{
+			friend class VertexBuffer;
 
+		private:
+			std::vector<ResolvedAttribute> _attributes;
+			std::size_t _stride = 0;
+			Generation _configurationGeneration = 1;
+
+		protected:
+			[[nodiscard]] GLenum _target() const noexcept override;
+
+		public:
+			[[nodiscard]] std::size_t stride() const noexcept
+			{
+				return _stride;
+			}
+			[[nodiscard]] std::span<const ResolvedAttribute> attributes() const noexcept
+			{
+				return _attributes;
+			}
+			[[nodiscard]] Generation configurationGeneration() const noexcept
+			{
+				return _configurationGeneration;
+			}
+		};
+
+		using Handle = GPUResource::Handle<State>;
+
+	private:
 		[[nodiscard]] static std::size_t _typeSize(Attribute::Type type);
 		[[nodiscard]] static bool _isIntegerType(Attribute::Type type) noexcept;
 		static void _validateAttribute(const Attribute &attribute);
@@ -71,11 +97,12 @@ namespace spk
 		{
 			static_assert(std::is_trivially_copyable_v<TVertex>, "VertexBuffer requires a trivially copyable type.");
 			static_assert(alignof(TVertex) <= alignof(std::max_align_t), "VertexBuffer cannot store an over-aligned type.");
-			if (_stride == 0)
+			const auto &content = state<State>();
+			if (content._stride == 0)
 			{
 				throw std::logic_error("VertexBuffer has no configured layout");
 			}
-			if (sizeof(TVertex) != _stride)
+			if (sizeof(TVertex) != content._stride)
 			{
 				throw std::logic_error("Vertex type size does not match the configured VertexBuffer stride");
 			}
@@ -83,11 +110,12 @@ namespace spk
 
 		[[nodiscard]] static std::size_t _checkedSize(std::size_t count, std::size_t stride);
 
-	protected:
-		[[nodiscard]] GLenum _target() const noexcept override;
-
 	public:
-		VertexBuffer() = default;
+		VertexBuffer();
+		[[nodiscard]] Handle handle() const
+		{
+			return createHandle<State>();
+		}
 
 		void addAttribute(Attribute attribute);
 		void addAttribute(
@@ -114,14 +142,14 @@ namespace spk
 		void resize(std::size_t count)
 		{
 			_validateType<TVertex>();
-			_resize(_checkedSize(count, _stride));
+			_resize(_checkedSize(count, state<State>()._stride));
 		}
 
 		template <typename TVertex>
 		void reserve(std::size_t count)
 		{
 			_validateType<TVertex>();
-			_reserve(_checkedSize(count, _stride));
+			_reserve(_checkedSize(count, state<State>()._stride));
 		}
 
 		template <typename TVertex>

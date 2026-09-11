@@ -31,12 +31,31 @@ namespace spk
 	private:
 		class Instance;
 
-		std::string _vertexShaderSource;
-		std::string _fragmentShaderSource;
-		std::unordered_map<std::string, std::size_t> _uniformBlockBindings;
-		std::unordered_map<std::string, std::size_t> _shaderStorageBlockBindings;
-		std::unordered_map<std::string, std::size_t> _samplerBindings;
+	public:
+		class State final : public GPUResource::State
+		{
+			friend class Program;
 
+		private:
+			std::string _vertexShaderSource;
+			std::string _fragmentShaderSource;
+			std::unordered_map<std::string, std::size_t> _uniformBlockBindings;
+			std::unordered_map<std::string, std::size_t> _shaderStorageBlockBindings;
+			std::unordered_map<std::string, std::size_t> _samplerBindings;
+
+			void _applyUniformBlockBindings(GLuint identifier) const;
+			void _applyShaderStorageBlockBindings(GLuint identifier) const;
+			void _applySamplerBindings(GLuint identifier) const;
+
+		protected:
+			[[nodiscard]] Kind _kind() const noexcept override;
+			[[nodiscard]] std::unique_ptr<GPUResource::Instance> _create(RenderContext &context) const override;
+			void _synchronize(GPUResource::Instance &instance, RenderContext &context) const override;
+			void _bind(GPUResource::Instance &instance, RenderContext &context) const override;
+		};
+		using Handle = GPUResource::Handle<State>;
+
+	private:
 		[[nodiscard]] static GLenum _openGLPrimitive(Primitive primitive);
 		[[nodiscard]] static GLenum _openGLIndexType(IndexBuffer::Type type) noexcept;
 		[[nodiscard]] static std::string _shaderLog(GLuint shader);
@@ -46,19 +65,13 @@ namespace spk
 		[[nodiscard]] static GLuint _buildProgram(const std::string &vertexSource, const std::string &fragmentSource);
 		static void _validateGLCount(std::size_t count);
 
-		void _applyUniformBlockBindings(GLuint identifier) const;
-		void _applyShaderStorageBlockBindings(GLuint identifier) const;
-		void _applySamplerBindings(GLuint identifier) const;
-
-	protected:
-		[[nodiscard]] Kind _kind() const noexcept override;
-		[[nodiscard]] std::unique_ptr<GPUResource::Instance> _create(RenderContext &context) const override;
-		void _synchronize(GPUResource::Instance &instance, RenderContext &context) const override;
-		void _bind(GPUResource::Instance &instance, RenderContext &context) const override;
-
 	public:
-		Program() = default;
+		Program();
 		Program(std::string vertexShaderSource, std::string fragmentShaderSource);
+		[[nodiscard]] Handle handle() const
+		{
+			return createHandle<State>();
+		}
 
 		void setSources(std::string vertexShaderSource, std::string fragmentShaderSource);
 		[[nodiscard]] bool isValid() const noexcept;

@@ -13,6 +13,7 @@ namespace spk
 		static TextureMesh2D _mesh(Texture::Section, Rect2D, float);
 
 	public:
+		ImageRenderCommand(Texture::Handle, Texture::Section, Rect2D, float depth = 0);
 		ImageRenderCommand(const Texture *, Texture::Section, Rect2D, float depth = 0);
 		void execute(RenderContext &) const override;
 	};

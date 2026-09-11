@@ -63,12 +63,12 @@ namespace spk
 		return (*this == other) == false;
 	}
 
-	GPUResource::Kind Texture::_kind() const noexcept
+	GPUResource::Kind Texture::State::_kind() const noexcept
 	{
 		return GPUResource::Kind::Texture;
 	}
 
-	GPUResource::RecyclingScore Texture::_recyclingScore(const GPUResource::Instance &base) const noexcept
+	GPUResource::RecyclingScore Texture::State::_recyclingScore(const GPUResource::Instance &base) const noexcept
 	{
 		const auto &instance = static_cast<const Instance &>(base);
 		const GLenum target = _openGLTarget(_textureTarget);
@@ -155,7 +155,8 @@ namespace spk
 
 	void Texture::_allocateRenderTarget(const Vector2UInt &size, Format format)
 	{
-		if (_textureTarget != Target::Texture2D)
+		auto &content = state<State>();
+		if (content._textureTarget != Target::Texture2D)
 		{
 			throw std::logic_error("Render targets currently support Texture2D only");
 		}
@@ -168,21 +169,22 @@ namespace spk
 			throw std::invalid_argument("Render target format cannot be invalid");
 		}
 
-		_pixels.clear();
-		_size = size;
-		_format = format;
-		_contentSource = ContentSource::RenderTarget;
-		_mipmap = Mipmap::Disable;
+		content._pixels.clear();
+		content._size = size;
+		content._format = format;
+		content._contentSource = ContentSource::RenderTarget;
+		content._mipmap = Mipmap::Disable;
 	}
 
 	Texture::Texture(Target target) :
-		_textureTarget(target)
+		GPUResource(std::shared_ptr<GPUResource::State>(new State(target)))
 	{
 	}
 
 	void Texture::setPixels(const std::uint8_t *data, const Vector2UInt &size, Format format)
 	{
-		if (_textureTarget != Target::Texture2D)
+		auto &content = state<State>();
+		if (content._textureTarget != Target::Texture2D)
 		{
 			throw std::logic_error("CPU pixel storage currently supports Texture2D only");
 		}
@@ -192,20 +194,20 @@ namespace spk
 		}
 
 		const std::size_t byteCount = _checkedByteCount(size, format);
-		_pixels.resize(byteCount);
+		content._pixels.resize(byteCount);
 
 		if (data == nullptr)
 		{
-			std::fill(_pixels.begin(), _pixels.end(), 0);
+			std::fill(content._pixels.begin(), content._pixels.end(), 0);
 		}
 		else
 		{
-			std::memcpy(_pixels.data(), data, byteCount);
+			std::memcpy(content._pixels.data(), data, byteCount);
 		}
 
-		_size = size;
-		_format = format;
-		_contentSource = ContentSource::PixelData;
+		content._size = size;
+		content._format = format;
+		content._contentSource = ContentSource::PixelData;
 	}
 
 	void Texture::setPixels(std::span<const std::uint8_t> data, const Vector2UInt &size, Format format)
@@ -221,34 +223,36 @@ namespace spk
 
 	void Texture::resizePixels(const Vector2UInt &size)
 	{
-		if (_contentSource != ContentSource::PixelData)
+		auto &content = state<State>();
+		if (content._contentSource != ContentSource::PixelData)
 		{
 			throw std::logic_error("Cannot resize CPU pixels of a render-target Texture");
 		}
-		if (_format == Format::Error)
+		if (content._format == Format::Error)
 		{
 			throw std::logic_error("Cannot resize a Texture without a configured format");
 		}
 
-		const std::size_t bytesPerPixel = _bytesPerPixel(_format);
-		std::vector<std::uint8_t> result(_checkedByteCount(size, _format), 0);
-		const std::size_t copyWidth = std::min<std::size_t>(_size.x, size.x);
-		const std::size_t copyHeight = std::min<std::size_t>(_size.y, size.y);
+		const std::size_t bytesPerPixel = _bytesPerPixel(content._format);
+		std::vector<std::uint8_t> result(_checkedByteCount(size, content._format), 0);
+		const std::size_t copyWidth = std::min<std::size_t>(content._size.x, size.x);
+		const std::size_t copyHeight = std::min<std::size_t>(content._size.y, size.y);
 
 		for (std::size_t y = 0; y < copyHeight; ++y)
 		{
-			const std::size_t sourceOffset = y * static_cast<std::size_t>(_size.x) * bytesPerPixel;
+			const std::size_t sourceOffset = y * static_cast<std::size_t>(content._size.x) * bytesPerPixel;
 			const std::size_t destinationOffset = y * static_cast<std::size_t>(size.x) * bytesPerPixel;
-			std::memcpy(result.data() + destinationOffset, _pixels.data() + sourceOffset, copyWidth * bytesPerPixel);
+			std::memcpy(result.data() + destinationOffset, content._pixels.data() + sourceOffset, copyWidth * bytesPerPixel);
 		}
 
-		_pixels.swap(result);
-		_size = size;
+		content._pixels.swap(result);
+		content._size = size;
 	}
 
 	void Texture::writePixels(const std::uint8_t *data, const Vector2UInt &position, const Vector2UInt &size)
 	{
-		if (_contentSource != ContentSource::PixelData)
+		auto &content = state<State>();
+		if (content._contentSource != ContentSource::PixelData)
 		{
 			throw std::logic_error("Cannot write CPU pixels into a render-target Texture");
 		}
@@ -256,22 +260,22 @@ namespace spk
 		{
 			throw std::invalid_argument("Texture pixel source cannot be null");
 		}
-		if (position.x > _size.x || size.x > _size.x - position.x ||
-			position.y > _size.y || size.y > _size.y - position.y)
+		if (position.x > content._size.x || size.x > content._size.x - position.x ||
+			position.y > content._size.y || size.y > content._size.y - position.y)
 		{
 			throw std::out_of_range("Texture pixel write exceeds texture bounds");
 		}
 
-		const std::size_t bytesPerPixel = _bytesPerPixel(_format);
+		const std::size_t bytesPerPixel = _bytesPerPixel(content._format);
 		for (std::size_t y = 0; y < static_cast<std::size_t>(size.y); ++y)
 		{
 			const std::size_t sourceOffset = y * static_cast<std::size_t>(size.x) * bytesPerPixel;
 			const std::size_t destinationPixel =
 				static_cast<std::size_t>(position.x) +
-				(static_cast<std::size_t>(position.y) + y) * static_cast<std::size_t>(_size.x);
+				(static_cast<std::size_t>(position.y) + y) * static_cast<std::size_t>(content._size.x);
 
 			std::memcpy(
-				_pixels.data() + destinationPixel * bytesPerPixel,
+				content._pixels.data() + destinationPixel * bytesPerPixel,
 				data + sourceOffset,
 				static_cast<std::size_t>(size.x) * bytesPerPixel);
 		}
@@ -279,20 +283,21 @@ namespace spk
 
 	void Texture::setMipmap(Mipmap mipmap) noexcept
 	{
-		if (_mipmap == mipmap)
+		auto &content = state<State>();
+		if (content._mipmap == mipmap)
 		{
 			return;
 		}
 
-		_mipmap = mipmap;
+		content._mipmap = mipmap;
 	}
 
-	std::unique_ptr<GPUResource::Instance> Texture::_create(RenderContext &) const
+	std::unique_ptr<GPUResource::Instance> Texture::State::_create(RenderContext &) const
 	{
 		return std::make_unique<Instance>();
 	}
 
-	void Texture::_synchronize(GPUResource::Instance &base, RenderContext &) const
+	void Texture::State::_synchronize(GPUResource::Instance &base, RenderContext &) const
 	{
 		if (_textureTarget != Target::Texture2D)
 		{
@@ -381,7 +386,7 @@ namespace spk
 		}
 	}
 
-	void Texture::_bind(GPUResource::Instance &base, RenderContext &) const
+	void Texture::State::_bind(GPUResource::Instance &base, RenderContext &) const
 	{
 		auto &instance = static_cast<Instance &>(base);
 		glBindTexture(_openGLTarget(_textureTarget), instance.identifier);
@@ -443,62 +448,64 @@ namespace spk
 
 	Texture::Target Texture::target() const noexcept
 	{
-		return _textureTarget;
+		return state<State>()._textureTarget;
 	}
 
 	const Vector2UInt &Texture::size() const noexcept
 	{
-		return _size;
+		return state<State>()._size;
 	}
 
 	Texture::Format Texture::format() const noexcept
 	{
-		return _format;
+		return state<State>()._format;
 	}
 
 	Texture::ContentSource Texture::contentSource() const noexcept
 	{
-		return _contentSource;
+		return state<State>()._contentSource;
 	}
 
 	bool Texture::isRenderTarget() const noexcept
 	{
-		return _contentSource == ContentSource::RenderTarget;
+		return state<State>()._contentSource == ContentSource::RenderTarget;
 	}
 
 	Texture::Mipmap Texture::mipmap() const noexcept
 	{
-		return _mipmap;
+		return state<State>()._mipmap;
 	}
 
 	const std::vector<std::uint8_t> &Texture::pixels() const
 	{
-		if (_contentSource == ContentSource::RenderTarget)
+		const auto &content = state<State>();
+		if (content._contentSource == ContentSource::RenderTarget)
 		{
 			throw std::logic_error("Render-target textures do not expose CPU pixel data");
 		}
 
-		return _pixels;
+		return content._pixels;
 	}
 
 	void Texture::saveAsPng(const std::filesystem::path &path) const
 	{
-		if (_contentSource == ContentSource::RenderTarget || isColorFormat(_format) == false)
+		const auto &content = state<State>();
+		if (content._contentSource == ContentSource::RenderTarget || isColorFormat(content._format) == false)
 		{
 			throw std::logic_error("Only CPU color textures can be exported as PNG files");
 		}
-		if (_pixels.empty() || _size.x == 0 || _size.y == 0)
+		if (content._pixels.empty() || content._size.x == 0 || content._size.y == 0)
 		{
 			throw std::logic_error("Cannot save an empty Texture");
 		}
 
-		const int channels = static_cast<int>(_bytesPerPixel(_format));
-		const std::uint8_t *data = _pixels.data();
+		const int channels = static_cast<int>(_bytesPerPixel(content._format));
+		const std::uint8_t *data = content._pixels.data();
 		std::vector<std::uint8_t> converted;
 
-		if (_format == Format::BGR || _format == Format::BGRA)
+		if (content._format == Format::BGR || content._format == Format::BGRA)
 		{
-			converted = _pixels;
+			converted = content._pixels;
 			for (std::size_t index = 0; index < converted.size(); index += static_cast<std::size_t>(channels))
 			{
 				std::swap(converted[index], converted[index + 2]);
@@ -511,11 +518,11 @@ namespace spk
 			std::filesystem::create_directories(path.parent_path());
 		}
 
-		const int stride = static_cast<int>(_size.x) * channels;
+		const int stride = static_cast<int>(content._size.x) * channels;
 		if (stbi_write_png(
 				path.string().c_str(),
-				static_cast<int>(_size.x),
-				static_cast<int>(_size.y),
+				static_cast<int>(content._size.x),
+				static_cast<int>(content._size.y),
 				channels,
 				data,
 				stride) == 0)

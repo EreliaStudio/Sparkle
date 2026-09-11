@@ -17,18 +17,36 @@ namespace spk
 
 	class UniformBuffer final : public BufferGPUResource
 	{
-	private:
-		std::size_t _bindingPoint = 0;
+	public:
+		class State final : public BufferGPUResource::State
+		{
+			friend class UniformBuffer;
 
+		private:
+			std::size_t _bindingPoint = 0;
+
+		protected:
+			[[nodiscard]] GLenum _target() const noexcept override;
+			void _bind(GPUResource::Instance &instance, RenderContext &context) const override;
+
+		public:
+			explicit State(std::size_t bindingPoint) :
+				_bindingPoint(bindingPoint)
+			{
+			}
+		};
+		using Handle = GPUResource::Handle<State>;
+
+	private:
 		using BufferGPUResource::clear;
 
-	protected:
-		[[nodiscard]] GLenum _target() const noexcept override;
-		void _bind(GPUResource::Instance &instance, RenderContext &context) const override;
-
 	public:
-		UniformBuffer() = default;
+		UniformBuffer();
 		explicit UniformBuffer(std::size_t bindingPoint, std::size_t size);
+		[[nodiscard]] Handle handle() const
+		{
+			return createHandle<State>();
+		}
 
 		[[nodiscard]] std::size_t bindingPoint() const noexcept;
 

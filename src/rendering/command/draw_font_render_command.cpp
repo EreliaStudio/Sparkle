@@ -30,8 +30,7 @@ namespace spk
 		static UniformBuffer buffer(FontDataUBOBindingPoint, sizeof(FontRenderData));
 		return buffer;
 	}
-	DrawFontRenderCommand::DrawFontRenderCommand(const Font::Atlas *atlas, TextureMesh2D mesh, Color glyphColor, Color outlineColor, float threshold) :
-		_atlas(atlas),
+	DrawFontRenderCommand::DrawFontRenderCommand(Texture::Handle atlas, TextureMesh2D mesh, Color glyphColor, Color outlineColor, float threshold) :
 		_mesh(std::move(mesh)),
 		_data{glyphColor, outlineColor, threshold, {}},
 		_sampler(AtlasSamplerBindingPoint)
@@ -40,8 +39,13 @@ namespace spk
 		{
 			throw std::invalid_argument("DrawFontRenderCommand atlas cannot be null");
 		}
-		_sampler.setTexture(atlas);
+		_sampler.setTexture(std::move(atlas));
 		_sampler.validate();
+	}
+
+	DrawFontRenderCommand::DrawFontRenderCommand(const Font::Atlas *atlas, TextureMesh2D mesh, Color glyphColor, Color outlineColor, float threshold) :
+		DrawFontRenderCommand(atlas ? atlas->handle() : Texture::Handle{}, std::move(mesh), glyphColor, outlineColor, threshold)
+	{
 	}
 	void DrawFontRenderCommand::execute(RenderContext &context) const
 	{

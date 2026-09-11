@@ -6,13 +6,12 @@
 #include <stdexcept>
 #include <utility>
 
-
 namespace
 {
 	[[nodiscard]] std::uintptr_t indexByteOffset(spk::IndexBuffer::Type indexType, std::size_t firstIndex)
 	{
-		const std::size_t stride = indexType == spk::IndexBuffer::Type::UnsignedByte ? 1 :
-			indexType == spk::IndexBuffer::Type::UnsignedShort ? 2 : 4;
+		const std::size_t stride = indexType == spk::IndexBuffer::Type::UnsignedByte ? 1 : indexType == spk::IndexBuffer::Type::UnsignedShort ? 2
+																																			  : 4;
 		if (firstIndex > std::numeric_limits<std::size_t>::max() / stride ||
 			firstIndex > std::numeric_limits<std::uintptr_t>::max() / stride)
 		{
@@ -171,19 +170,19 @@ namespace spk
 		}
 	}
 
-	GPUResource::Kind Program::_kind() const noexcept
+	GPUResource::Kind Program::State::_kind() const noexcept
 	{
 		return GPUResource::Kind::Program;
 	}
 
-	std::unique_ptr<GPUResource::Instance> Program::_create(RenderContext &) const
+	std::unique_ptr<GPUResource::Instance> Program::State::_create(RenderContext &) const
 	{
 		return std::make_unique<Instance>();
 	}
 
-	void Program::_synchronize(GPUResource::Instance &base, RenderContext &) const
+	void Program::State::_synchronize(GPUResource::Instance &base, RenderContext &) const
 	{
-		if (!isValid())
+		if (_vertexShaderSource.empty() || _fragmentShaderSource.empty())
 		{
 			throw std::logic_error("Cannot synchronize an invalid Program");
 		}
@@ -210,32 +209,41 @@ namespace spk
 		instance.identifier = identifier;
 	}
 
-	void Program::_bind(GPUResource::Instance &base, RenderContext &) const
+	void Program::State::_bind(GPUResource::Instance &base, RenderContext &) const
 	{
 		glUseProgram(static_cast<Instance &>(base).identifier);
 	}
 
-	Program::Program(std::string vertexShaderSource, std::string fragmentShaderSource) :
-		_vertexShaderSource(std::move(vertexShaderSource)),
-		_fragmentShaderSource(std::move(fragmentShaderSource))
+	Program::Program() :
+		GPUResource(std::make_shared<State>())
 	{
+	}
+
+	Program::Program(std::string vertexShaderSource, std::string fragmentShaderSource) :
+		Program()
+	{
+		auto &content = state<State>();
+		content._vertexShaderSource = std::move(vertexShaderSource);
+		content._fragmentShaderSource = std::move(fragmentShaderSource);
 		validate();
 	}
 
 	void Program::setSources(std::string vertexShaderSource, std::string fragmentShaderSource)
 	{
-		if (_vertexShaderSource == vertexShaderSource && _fragmentShaderSource == fragmentShaderSource)
+		auto &content = state<State>();
+		if (content._vertexShaderSource == vertexShaderSource && content._fragmentShaderSource == fragmentShaderSource)
 		{
 			return;
 		}
-		_vertexShaderSource = std::move(vertexShaderSource);
-		_fragmentShaderSource = std::move(fragmentShaderSource);
+		content._vertexShaderSource = std::move(vertexShaderSource);
+		content._fragmentShaderSource = std::move(fragmentShaderSource);
 		validate();
 	}
 
 	bool Program::isValid() const noexcept
 	{
-		return !_vertexShaderSource.empty() && !_fragmentShaderSource.empty();
+		const auto &content = state<State>();
+		return !content._vertexShaderSource.empty() && !content._fragmentShaderSource.empty();
 	}
 
 	void Program::renderRaw(Primitive primitive, std::size_t firstVertex, std::size_t vertexCount) const
@@ -263,7 +271,7 @@ namespace spk
 		glDrawElementsInstanced(_openGLPrimitive(primitive), static_cast<GLsizei>(indexCount), _openGLIndexType(indexType), reinterpret_cast<const void *>(offset), static_cast<GLsizei>(instanceCount));
 	}
 
-	void Program::_applyUniformBlockBindings(GLuint identifier) const
+	void Program::State::_applyUniformBlockBindings(GLuint identifier) const
 	{
 		GLint maximumBindings = 0;
 		glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &maximumBindings);
@@ -287,22 +295,23 @@ namespace spk
 
 	void Program::bindUniformBlock(std::string name, std::size_t bindingPoint)
 	{
+		auto &content = state<State>();
 		if (name.empty())
 		{
 			throw std::invalid_argument("Uniform block name cannot be empty");
 		}
 
-		auto iterator = _uniformBlockBindings.find(name);
-		if (iterator != _uniformBlockBindings.end() && iterator->second == bindingPoint)
+		auto iterator = content._uniformBlockBindings.find(name);
+		if (iterator != content._uniformBlockBindings.end() && iterator->second == bindingPoint)
 		{
 			return;
 		}
 
-		_uniformBlockBindings[std::move(name)] = bindingPoint;
+		content._uniformBlockBindings[std::move(name)] = bindingPoint;
 		validate();
 	}
 
-	void Program::_applyShaderStorageBlockBindings(GLuint identifier) const
+	void Program::State::_applyShaderStorageBlockBindings(GLuint identifier) const
 	{
 		GLint maximumBindings = 0;
 		glGetIntegerv(GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS, &maximumBindings);
@@ -326,22 +335,23 @@ namespace spk
 
 	void Program::bindShaderStorageBlock(std::string name, std::size_t bindingPoint)
 	{
+		auto &content = state<State>();
 		if (name.empty())
 		{
 			throw std::invalid_argument("Shader storage block name cannot be empty");
 		}
 
-		auto iterator = _shaderStorageBlockBindings.find(name);
-		if (iterator != _shaderStorageBlockBindings.end() && iterator->second == bindingPoint)
+		auto iterator = content._shaderStorageBlockBindings.find(name);
+		if (iterator != content._shaderStorageBlockBindings.end() && iterator->second == bindingPoint)
 		{
 			return;
 		}
 
-		_shaderStorageBlockBindings[std::move(name)] = bindingPoint;
+		content._shaderStorageBlockBindings[std::move(name)] = bindingPoint;
 		validate();
 	}
 
-	void Program::_applySamplerBindings(GLuint identifier) const
+	void Program::State::_applySamplerBindings(GLuint identifier) const
 	{
 		for (const auto &[name, bindingPoint] : _samplerBindings)
 		{
@@ -358,7 +368,7 @@ namespace spk
 
 	void Program::bindSampler(std::string name, std::size_t bindingPoint)
 	{
-		_samplerBindings[std::move(name)] = bindingPoint;
+		state<State>()._samplerBindings[std::move(name)] = bindingPoint;
 		validate();
 	}
 }

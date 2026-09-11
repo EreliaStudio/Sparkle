@@ -32,12 +32,12 @@ namespace spk
 		static Program &_sharedProgram();
 		static UniformBuffer &_sharedBuffer();
 
-		const Font::Atlas *_atlas;
 		TextureMesh2D _mesh;
 		FontRenderData _data;
 		Sampler _sampler;
 
 	public:
+		DrawFontRenderCommand(Texture::Handle, TextureMesh2D, Color glyphColor, Color outlineColor, float outlineThickness);
 		DrawFontRenderCommand(const Font::Atlas *, TextureMesh2D, Color glyphColor, Color outlineColor, float outlineThickness);
 		void execute(RenderContext &) const override;
 	};

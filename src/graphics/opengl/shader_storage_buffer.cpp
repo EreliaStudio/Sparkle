@@ -9,52 +9,51 @@ namespace spk
 {
 	std::size_t ShaderStorageBuffer::_checkedSize(std::size_t nbElement) const
 	{
-		if (nbElement > (std::numeric_limits<std::size_t>::max() - _fixedPartSize) / _dynamicElementSize)
+		const auto &content = state<State>();
+		if (nbElement > (std::numeric_limits<std::size_t>::max() - content._fixedPartSize) / content._dynamicElementSize)
 		{
 			throw std::overflow_error("ShaderStorageBuffer size overflow");
 		}
 
-		return _fixedPartSize + nbElement * _dynamicElementSize;
+		return content._fixedPartSize + nbElement * content._dynamicElementSize;
 	}
 
-	GLenum ShaderStorageBuffer::_target() const noexcept
+	GLenum ShaderStorageBuffer::State::_target() const noexcept
 	{
 		return GL_SHADER_STORAGE_BUFFER;
 	}
 
-	void ShaderStorageBuffer::_bind(GPUResource::Instance &instance, RenderContext &) const
+	void ShaderStorageBuffer::State::_bind(GPUResource::Instance &instance, RenderContext &) const
 	{
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, static_cast<GLuint>(_bindingPoint), _identifier(instance));
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, static_cast<GLuint>(_bindingPoint), BufferGPUResource::_identifier(instance));
 	}
 
-	ShaderStorageBuffer::ShaderStorageBuffer(std::size_t bindingPoint, std::size_t fixedPartSize, std::size_t dynamicElementSize)
+	ShaderStorageBuffer::ShaderStorageBuffer(std::size_t bindingPoint, std::size_t fixedPartSize, std::size_t dynamicElementSize) :
+		BufferGPUResource(std::make_shared<State>(bindingPoint, fixedPartSize, dynamicElementSize))
 	{
 		if (dynamicElementSize == 0)
 		{
 			throw std::invalid_argument("ShaderStorageBuffer dynamic element size cannot be zero");
 		}
 
-		_bindingPoint = bindingPoint;
-		_fixedPartSize = fixedPartSize;
-		_dynamicElementSize = dynamicElementSize;
-
-		_resize(_fixedPartSize);
+		_resize(fixedPartSize);
 	}
 
 	void ShaderStorageBuffer::resize(std::size_t nbElement)
 	{
-		if (_dynamicElementCount == nbElement)
+		auto &content = state<State>();
+		if (content._dynamicElementCount == nbElement)
 		{
 			return;
 		}
 
 		_resize(_checkedSize(nbElement));
-		_dynamicElementCount = nbElement;
+		content._dynamicElementCount = nbElement;
 	}
 
 	void ShaderStorageBuffer::setFixedData(const void *data, std::size_t size)
 	{
-		if (size != _fixedPartSize)
+		if (size != state<State>()._fixedPartSize)
 		{
 			throw std::invalid_argument("ShaderStorageBuffer fixed data size is invalid");
 		}
@@ -64,31 +63,32 @@ namespace spk
 
 	void ShaderStorageBuffer::setDynamicData(const void *data, std::size_t nbElement)
 	{
-		if (nbElement != _dynamicElementCount)
+		const auto &content = state<State>();
+		if (nbElement != content._dynamicElementCount)
 		{
 			throw std::invalid_argument("ShaderStorageBuffer dynamic element count is invalid");
 		}
 
-		_write(data, nbElement * _dynamicElementSize, _fixedPartSize);
+		_write(data, nbElement * content._dynamicElementSize, content._fixedPartSize);
 	}
 
 	std::size_t ShaderStorageBuffer::bindingPoint() const noexcept
 	{
-		return _bindingPoint;
+		return state<State>()._bindingPoint;
 	}
 
 	std::size_t ShaderStorageBuffer::fixedPartSize() const noexcept
 	{
-		return _fixedPartSize;
+		return state<State>()._fixedPartSize;
 	}
 
 	std::size_t ShaderStorageBuffer::dynamicElementSize() const noexcept
 	{
-		return _dynamicElementSize;
+		return state<State>()._dynamicElementSize;
 	}
 
 	std::size_t ShaderStorageBuffer::dynamicElementCount() const noexcept
 	{
-		return _dynamicElementCount;
+		return state<State>()._dynamicElementCount;
 	}
 }

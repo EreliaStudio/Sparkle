@@ -6,6 +6,7 @@
 #include <memory>
 
 #include "graphics/opengl/gpu_resource.hpp"
+#include "graphics/opengl/texture.hpp"
 
 namespace spk
 {
@@ -36,25 +37,33 @@ namespace spk
 			Linear
 		};
 
-	protected:
+	private:
 		class Instance;
 
-	private:
-		std::size_t _bindingPoint = 0;
-		const Texture *_texture = nullptr;
-		Filtering _filtering = Filtering::Nearest;
-		Wrap _wrap = Wrap::ClampToEdge;
-		MipmapFiltering _mipmapFiltering = MipmapFiltering::Disabled;
+	public:
+		class State final : public GPUResource::State
+		{
+			friend class Sampler;
 
-		[[nodiscard]] Kind _kind() const noexcept override;
+		private:
+			std::size_t _bindingPoint = 0;
+			Texture::Handle _texture;
+			Filtering _filtering = Filtering::Nearest;
+			Wrap _wrap = Wrap::ClampToEdge;
+			MipmapFiltering _mipmapFiltering = MipmapFiltering::Disabled;
+
+		protected:
+			[[nodiscard]] Kind _kind() const noexcept override;
+			[[nodiscard]] std::unique_ptr<GPUResource::Instance> _create(RenderContext &context) const override;
+			void _synchronize(GPUResource::Instance &instance, RenderContext &context) const override;
+			void _bind(GPUResource::Instance &instance, RenderContext &context) const override;
+		};
+		using Handle = GPUResource::Handle<State>;
+
+	private:
 		[[nodiscard]] static GLint _openGLMagFilter(Filtering filtering) noexcept;
 		[[nodiscard]] static GLint _openGLMinFilter(Filtering filtering, MipmapFiltering mipmapFiltering) noexcept;
 		[[nodiscard]] static GLint _openGLWrap(Wrap wrap) noexcept;
-
-	protected:
-		[[nodiscard]] std::unique_ptr<GPUResource::Instance> _create(RenderContext &context) const override;
-		void _synchronize(GPUResource::Instance &instance, RenderContext &context) const override;
-		void _bind(GPUResource::Instance &instance, RenderContext &context) const override;
 
 	public:
 		explicit Sampler(
@@ -63,14 +72,19 @@ namespace spk
 			Wrap wrap = Wrap::ClampToEdge,
 			MipmapFiltering mipmapFiltering = MipmapFiltering::Disabled);
 
+		[[nodiscard]] Handle handle() const
+		{
+			return createHandle<State>();
+		}
 		void setTexture(const Texture *texture) noexcept;
+		void setTexture(Texture::Handle texture) noexcept;
 		void setFiltering(Filtering filtering) noexcept;
 		void setWrap(Wrap wrap) noexcept;
 		void setMipmapFiltering(MipmapFiltering mipmapFiltering) noexcept;
 		void setProperties(Filtering filtering, Wrap wrap, MipmapFiltering mipmapFiltering) noexcept;
 
 		[[nodiscard]] std::size_t bindingPoint() const noexcept;
-		[[nodiscard]] const Texture *texture() const noexcept;
+		[[nodiscard]] const Texture::Handle &texture() const noexcept;
 		[[nodiscard]] Filtering filtering() const noexcept;
 		[[nodiscard]] Wrap wrap() const noexcept;
 		[[nodiscard]] MipmapFiltering mipmapFiltering() const noexcept;

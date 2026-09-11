@@ -12,7 +12,7 @@
 
 namespace spk
 {
-	class GPUResource::LifeTime
+	class GPUResource::State::LifeTime
 	{
 	private:
 		Identifier _identifier;
@@ -51,17 +51,19 @@ namespace spk
 		}
 	};
 
-	GPUResource::GPUResource() :
+	GPUResource::State::State() :
 		_identifier(_generateIdentifier()),
 		_lifeTime(std::make_shared<LifeTime>(_identifier))
 	{
 	}
 
-	GPUResource::GPUResource(GPUResource &&other) noexcept :
-		VersionedTrait(std::move(other)),
-		_identifier(std::exchange(other._identifier, _generateIdentifier())),
-		_lifeTime(std::move(other._lifeTime))
+	GPUResource::GPUResource(std::shared_ptr<State> state) :
+		_state(std::move(state))
 	{
+		if (_state == nullptr)
+		{
+			throw std::invalid_argument("GPU resource state cannot be null");
+		}
 	}
 
 	GPUResource::Identifier GPUResource::_generateIdentifier() noexcept
@@ -70,7 +72,7 @@ namespace spk
 		return nextIdentifier.fetch_add(1, std::memory_order_relaxed);
 	}
 
-	void GPUResource::_subscribeToRelease(std::function<void(Identifier)> callback) const
+	void GPUResource::State::_subscribeToRelease(std::function<void(Identifier)> callback) const
 	{
 		if (_lifeTime == nullptr)
 		{
@@ -79,52 +81,60 @@ namespace spk
 		_lifeTime->subscribe(std::move(callback));
 	}
 
-	GPUResource::RecyclingScore GPUResource::_recyclingScore(const Instance &) const noexcept
+	GPUResource::RecyclingScore GPUResource::State::_recyclingScore(const Instance &) const noexcept
 	{
 		return 1;
 	}
 
 	void GPUResource::validate()
 	{
-		invalidate();
+		if (_state == nullptr)
+		{
+			throw std::logic_error("Cannot validate a moved-from GPU resource");
+		}
+		_state->invalidate();
 	}
 
 	void GPUResource::activate(RenderContext &context) const
+	{
+		if (_state == nullptr)
+		{
+			throw std::logic_error("Cannot activate a moved-from GPU resource");
+		}
+		_activate(*_state, context);
+	}
+
+	void GPUResource::_activate(const State &state, RenderContext &context)
 	{
 		if (context.targetSurface == nullptr)
 		{
 			throw std::invalid_argument("Cannot activate a GPU resource without a target surface");
 		}
-		if (_lifeTime == nullptr)
-		{
-			throw std::logic_error("Cannot activate a moved-from GPU resource");
-		}
-
 		try
 		{
-			auto &entry = context.targetSurface->_gpuResources()._entry(*this, context);
-			if (entry.generation != version())
+			auto &entry = context.targetSurface->_gpuResources()._entry(state, context);
+			if (entry.generation != state.version())
 			{
-				_synchronize(*entry.instance, context);
-				entry.generation = version();
+				state._synchronize(*entry.instance, context);
+				entry.generation = state.version();
 			}
 
-			_bind(*entry.instance, context);
+			state._bind(*entry.instance, context);
 		} catch (...)
 		{
 			throw spk::Exception(
-				"Exception while activating GPU resource [" + std::to_string(_identifier) + "]",
+				"Exception while activating GPU resource [" + std::to_string(state._identifier) + "]",
 				std::current_exception());
 		}
 	}
 
 	GPUResource::Identifier GPUResource::identifier() const noexcept
 	{
-		return _identifier;
+		return _state ? _state->_identifier : 0;
 	}
 
 	GPUResource::Generation GPUResource::generation() const noexcept
 	{
-		return version();
+		return _state ? _state->version() : 0;
 	}
 }

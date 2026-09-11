@@ -81,19 +81,58 @@ namespace spk
 			[[nodiscard]] bool operator!=(const Section &other) const noexcept;
 		};
 
+		class State final : public GPUResource::State
+		{
+			friend class Texture;
+
+		private:
+			Target _textureTarget = Target::Texture2D;
+			std::vector<std::uint8_t> _pixels;
+			Vector2UInt _size{0, 0};
+			Format _format = Format::Error;
+			ContentSource _contentSource = ContentSource::PixelData;
+			Mipmap _mipmap = Mipmap::Disable;
+
+			[[nodiscard]] Kind _kind() const noexcept override;
+			[[nodiscard]] RecyclingScore _recyclingScore(const GPUResource::Instance &instance) const noexcept override;
+			[[nodiscard]] std::unique_ptr<GPUResource::Instance> _create(RenderContext &context) const override;
+			void _synchronize(GPUResource::Instance &instance, RenderContext &context) const override;
+			void _bind(GPUResource::Instance &instance, RenderContext &context) const override;
+
+			explicit State(Target target) :
+				_textureTarget(target)
+			{
+			}
+
+		public:
+			[[nodiscard]] Target target() const noexcept
+			{
+				return _textureTarget;
+			}
+			[[nodiscard]] const Vector2UInt &size() const noexcept
+			{
+				return _size;
+			}
+			[[nodiscard]] Format format() const noexcept
+			{
+				return _format;
+			}
+			[[nodiscard]] ContentSource contentSource() const noexcept
+			{
+				return _contentSource;
+			}
+			[[nodiscard]] Mipmap mipmap() const noexcept
+			{
+				return _mipmap;
+			}
+		};
+
+		using Handle = GPUResource::Handle<State>;
+
 	protected:
 		class Instance;
 
 	private:
-		Target _textureTarget = Target::Texture2D;
-		std::vector<std::uint8_t> _pixels;
-		Vector2UInt _size{0, 0};
-		Format _format = Format::Error;
-		ContentSource _contentSource = ContentSource::PixelData;
-		Mipmap _mipmap = Mipmap::Disable;
-
-		[[nodiscard]] Kind _kind() const noexcept override;
-		[[nodiscard]] RecyclingScore _recyclingScore(const GPUResource::Instance &instance) const noexcept override;
 		[[nodiscard]] static GLenum _openGLTarget(Target target) noexcept;
 		[[nodiscard]] static std::size_t _bytesPerPixel(Format format);
 		[[nodiscard]] static std::size_t _checkedByteCount(const Vector2UInt &size, Format format);
@@ -110,11 +149,11 @@ namespace spk
 		void writePixels(const std::uint8_t *data, const Vector2UInt &position, const Vector2UInt &size);
 		void setMipmap(Mipmap mipmap) noexcept;
 
-		[[nodiscard]] std::unique_ptr<GPUResource::Instance> _create(RenderContext &context) const override;
-		void _synchronize(GPUResource::Instance &instance, RenderContext &context) const override;
-		void _bind(GPUResource::Instance &instance, RenderContext &context) const override;
-
 	public:
+		[[nodiscard]] Handle handle() const
+		{
+			return createHandle<State>();
+		}
 		[[nodiscard]] static TextureFormat formatDescriptor(Format format) noexcept;
 		[[nodiscard]] static bool isColorFormat(Format format) noexcept;
 		[[nodiscard]] static bool isDepthFormat(Format format) noexcept;
