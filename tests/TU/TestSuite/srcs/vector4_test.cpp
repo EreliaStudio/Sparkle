@@ -107,4 +107,54 @@ namespace
 
 		EXPECT_EQ(stream.str(), "(-1, 2, -3, 4)");
 	}
+
+	TEST(Vector4Test, ToJSONSerializesComponentsAsArray)
+	{
+		const spk::Vector4 value{1.5f, -2.25f, -3.125f, 4.25};
+
+		const spk::JSON::Value json = value.toJSON();
+		const auto &array = json.asArray();
+
+		ASSERT_EQ(array.size(), 4u);
+		EXPECT_FLOAT_EQ(array[0].as<float>(), 1.5f);
+		EXPECT_FLOAT_EQ(array[1].as<float>(), -2.25f);
+		EXPECT_FLOAT_EQ(array[2].as<float>(), -3.125f);
+		EXPECT_FLOAT_EQ(array[3].as<float>(), 4.25f);
+	}
+
+	TEST(Vector4Test, FromJSONDeserializesComponentsFromArray)
+	{
+		spk::JSON::Value json = spk::JSON::Value::array();
+		json.pushBack(1.5f);
+		json.pushBack(-2.25f);
+		json.pushBack(-3.125f);
+		json.pushBack(4.25f);
+
+		const spk::Vector4 value = spk::Vector4::fromJSON(json);
+
+		EXPECT_EQ(value, spk::Vector4(1.5f, -2.25f, -3.125f, 4.25f));
+	}
+
+	TEST(Vector4Test, ConstructorFromJSONDeserializesComponentsFromArray)
+	{
+		spk::JSON::Value json = spk::JSON::Value::array();
+		json.pushBack(3.5f);
+		json.pushBack(-4.25f);
+		json.pushBack(-5.125f);
+		json.pushBack(4.25f);
+
+		const spk::Vector4 value = spk::Vector4(json);
+
+		EXPECT_EQ(value, spk::Vector4(3.5f, -4.25f, -5.125f, 4.25f));
+	}
+
+	TEST(Vector4Test, JSONRoundTripPreservesValue)
+	{
+		const spk::Vector4 original{3.25f, -7.5f, -5.125f, 4.25f};
+
+		const spk::Vector4 result =
+			spk::Vector4::fromJSON(original.toJSON());
+
+		EXPECT_EQ(result, original);
+	}
 }

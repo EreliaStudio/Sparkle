@@ -9,18 +9,41 @@
 
 namespace json_reader_test
 {
-	struct Point
+	struct FreePoint
 	{
 		int x = 0;
 		int y = 0;
-		bool operator==(const Point &) const = default;
+
+		bool operator==(const FreePoint &) const = default;
 	};
 
-	void fromJSON(const spk::JSON::Value &value, Point &point)
+	void fromJSON(const spk::JSON::Value &value, FreePoint &point)
 	{
 		point.x = value.at("x").as<int>();
 		point.y = value.at("y").as<int>();
 	}
+
+	struct MemberPoint
+	{
+		int x;
+		int y;
+
+		MemberPoint() = delete;
+		MemberPoint(int x, int y) :
+			x(x),
+			y(y)
+		{
+		}
+
+		[[nodiscard]] static MemberPoint fromJSON(const spk::JSON::Value &value)
+		{
+			return {
+				value.at("x").as<int>(),
+				value.at("y").as<int>()};
+		}
+
+		bool operator==(const MemberPoint &) const = default;
+	};
 }
 
 namespace
@@ -46,9 +69,12 @@ namespace
 		root["fixed"].pushBack(8);
 		root["fixed"].pushBack(9);
 		root["mode"] = "windowed";
-		root["point"] = spk::JSON::Value::object();
-		root["point"]["x"] = 5;
-		root["point"]["y"] = 6;
+		root["freePoint"] = spk::JSON::Value::object();
+		root["freePoint"]["x"] = 5;
+		root["freePoint"]["y"] = 6;
+		root["memberPoint"] = spk::JSON::Value::object();
+		root["memberPoint"]["x"] = 7;
+		root["memberPoint"]["y"] = 8;
 		root["child"] = spk::JSON::Value::object();
 		root["child"]["value"] = 12;
 		root["children"] = spk::JSON::Value::array();
@@ -73,7 +99,8 @@ TEST(JSONReaderTest, StandardUsageReadsScalarsSequencesEnumsChildrenAndCustomTyp
 	EXPECT_DOUBLE_EQ(reader.require<double>("ratio"), 1.5);
 	EXPECT_EQ(reader.require<std::vector<int>>("numbers"), (std::vector<int>{1, 2, 3}));
 	EXPECT_EQ((reader.require<std::array<int, 2>>("fixed")), (std::array<int, 2>{8, 9}));
-	EXPECT_EQ(reader.require<json_reader_test::Point>("point"), (json_reader_test::Point{5, 6}));
+	EXPECT_EQ(reader.require<json_reader_test::FreePoint>("freePoint"), (json_reader_test::FreePoint{5, 6}));
+	EXPECT_EQ(reader.require<json_reader_test::MemberPoint>("memberPoint"), (json_reader_test::MemberPoint{7, 8}));
 
 	const std::map<std::string, Mode> modes = {
 		{"fullscreen", Mode::Fullscreen},
@@ -167,25 +194,48 @@ TEST(JSONReaderTest, WrongScalarContainerAndCustomTypesReportMemberPath)
 	spk::JSON::Value document = spk::JSON::Value::object();
 	document["number"] = "wrong";
 	document["vector"] = 1;
-	document["point"] = 1;
+	document["freePoint"] = 1;
+	document["memberPoint"] = 1;
 	const spk::JSON::Reader reader(document, "config.json");
 
-	for (const std::string key : {"number", "vector", "point"})
+	try
 	{
-		try
-		{
-			if (key == "number")
-				(void)reader.require<int>(key);
-			else if (key == "vector")
-				(void)reader.require<std::vector<int>>(key);
-			else
-				(void)reader.require<json_reader_test::Point>(key);
-			FAIL() << "Expected spk::JSON::Error for " << key;
-		}
-		catch (const spk::JSON::Error &error)
-		{
-			EXPECT_EQ(error.path(), std::string("$.") + key);
-		}
+		(void)reader.require<int>("number");
+		FAIL() << "Expected spk::JSON::Error";
+	}
+	catch (const spk::JSON::Error &error)
+	{
+		EXPECT_EQ(error.path(), "$.number");
+	}
+
+	try
+	{
+		(void)reader.require<std::vector<int>>("vector");
+		FAIL() << "Expected spk::JSON::Error";
+	}
+	catch (const spk::JSON::Error &error)
+	{
+		EXPECT_EQ(error.path(), "$.vector");
+	}
+
+	try
+	{
+		(void)reader.require<json_reader_test::FreePoint>("freePoint");
+		FAIL() << "Expected spk::JSON::Error";
+	}
+	catch (const spk::JSON::Error &error)
+	{
+		EXPECT_EQ(error.path(), "$.freePoint");
+	}
+
+	try
+	{
+		(void)reader.require<json_reader_test::MemberPoint>("memberPoint");
+		FAIL() << "Expected spk::JSON::Error";
+	}
+	catch (const spk::JSON::Error &error)
+	{
+		EXPECT_EQ(error.path(), "$.memberPoint");
 	}
 }
 

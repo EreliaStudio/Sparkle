@@ -12,26 +12,57 @@
 
 namespace json_value_test
 {
-	struct Point
+	struct FreePoint
 	{
 		int x = 0;
 		int y = 0;
-		bool operator==(const Point &) const = default;
+
+		bool operator==(const FreePoint &) const = default;
 	};
 
-	spk::JSON::Value toJSON(const Point &point)
+	spk::JSON::Value toJSON(const FreePoint &p_point)
 	{
 		spk::JSON::Value result = spk::JSON::Value::object();
-		result["x"] = point.x;
-		result["y"] = point.y;
+		result["x"] = p_point.x;
+		result["y"] = p_point.y;
 		return result;
 	}
 
-	void fromJSON(const spk::JSON::Value &value, Point &point)
+	void fromJSON(const spk::JSON::Value &p_value, FreePoint &p_point)
 	{
-		point.x = value.at("x").as<int>();
-		point.y = value.at("y").as<int>();
+		p_point.x = p_value.at("x").as<int>();
+		p_point.y = p_value.at("y").as<int>();
 	}
+
+	struct MemberPoint
+	{
+		int x;
+		int y;
+
+		MemberPoint() = delete;
+		MemberPoint(int p_x, int p_y) :
+			x(p_x),
+			y(p_y)
+		{
+		}
+
+		[[nodiscard]] spk::JSON::Value toJSON() const
+		{
+			spk::JSON::Value result = spk::JSON::Value::object();
+			result["x"] = x;
+			result["y"] = y;
+			return result;
+		}
+
+		[[nodiscard]] static MemberPoint fromJSON(const spk::JSON::Value &p_value)
+		{
+			return {
+				p_value.at("x").as<int>(),
+				p_value.at("y").as<int>()};
+		}
+
+		bool operator==(const MemberPoint &) const = default;
+	};
 }
 
 namespace
@@ -42,7 +73,7 @@ namespace
 	}
 }
 
-TEST(JSONValueTest, StandardUsageRoundTripsMixedDocumentAndCustomType)
+TEST(JSONValueTest, StandardUsageRoundTripsMixedDocumentAndCustomTypes)
 {
 	spk::JSON::Value root = spk::JSON::Value::object();
 	root["null"] = nullptr;
@@ -50,7 +81,8 @@ TEST(JSONValueTest, StandardUsageRoundTripsMixedDocumentAndCustomType)
 	root["integer"] = -42;
 	root["floating"] = 3.5;
 	root["string"] = "hello";
-	root["custom"] = json_value_test::Point{4, 7};
+	root["freeCustom"] = json_value_test::FreePoint{4, 7};
+	root["memberCustom"] = json_value_test::MemberPoint{8, 3};
 	root["array"] = spk::JSON::Value::array();
 	root["array"].pushBack(1);
 	root["array"].pushBack("two");
@@ -64,7 +96,8 @@ TEST(JSONValueTest, StandardUsageRoundTripsMixedDocumentAndCustomType)
 	EXPECT_EQ(parsed.at("integer").as<int>(), -42);
 	EXPECT_DOUBLE_EQ(parsed.at("floating").as<double>(), 3.5);
 	EXPECT_EQ(parsed.at("string").as<std::string>(), "hello");
-	EXPECT_EQ(parsed.at("custom").as<json_value_test::Point>(), (json_value_test::Point{4, 7}));
+	EXPECT_EQ(parsed.at("freeCustom").as<json_value_test::FreePoint>(), (json_value_test::FreePoint{4, 7}));
+	EXPECT_EQ(parsed.at("memberCustom").as<json_value_test::MemberPoint>(), (json_value_test::MemberPoint{8, 3}));
 	ASSERT_EQ(parsed.at("array").size(), 3u);
 	EXPECT_EQ(parsed.at("array").at(0).as<int>(), 1);
 	EXPECT_EQ(parsed.at("array").at(1).as<std::string>(), "two");

@@ -212,7 +212,17 @@ namespace spk::JSON
 		template <json_writable T>
 		void set(const T &p_value)
 		{
-			Value serialized = toJSON(p_value);
+			Value serialized;
+
+			if constexpr (member_json_writable<T>)
+			{
+				serialized = p_value.toJSON();
+			}
+			else
+			{
+				serialized = toJSON(p_value);
+			}
+
 			_storage = std::move(serialized._storage);
 		}
 
@@ -330,7 +340,11 @@ namespace spk::JSON
 				}
 				detail::raise("Wrong JSON type requested: expected string");
 			}
-			else if constexpr (json_readable<CleanType>)
+			else if constexpr (member_json_readable<CleanType>)
+			{
+				return CleanType::fromJSON(*this);
+			}
+			else if constexpr (free_json_readable<CleanType>)
 			{
 				CleanType result{};
 				fromJSON(*this, result);

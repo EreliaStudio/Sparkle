@@ -10,6 +10,8 @@
 #include "math/vector2.hpp"
 #include "exception.hpp"
 
+#include "container/json/object.hpp"
+
 namespace spk
 {
 	template <typename TType>
@@ -31,6 +33,11 @@ namespace spk
 			y{},
 			z{}
 		{
+		}
+
+		explicit TVector3(const JSON::Value &p_value) noexcept
+		{
+			*this = fromJSON(p_value);
 		}
 		constexpr TVector3(TType x, TType y, TType z) noexcept :
 			x(x),
@@ -133,6 +140,34 @@ namespace spk
 		friend std::ostream &operator<<(std::ostream &os, const TVector3 &v)
 		{
 			return os << '(' << v.x << ", " << v.y << ", " << v.z << ')';
+		}
+
+		[[nodiscard]] JSON::Value toJSON() const
+		{
+			JSON::Value result = JSON::Value::array();
+
+			result.pushBack(x);
+			result.pushBack(y);
+			result.pushBack(z);
+
+			return result;
+		}
+
+		[[nodiscard]] static TVector3 fromJSON(const JSON::Value &p_value)
+		{
+			const auto &array = p_value.asArray();
+
+			if (array.size() != 3)
+			{
+				throw std::runtime_error(
+					"Expected 3 elements for TVector3");
+			}
+
+			return {
+				array[0].as<TType>(),
+				array[1].as<TType>(),
+				array[2].as<TType>()
+			};
 		}
 	};
 

@@ -7,6 +7,8 @@
 
 #include "exception.hpp"
 
+#include "container/json/object.hpp"
+
 namespace spk
 {
 
@@ -29,6 +31,11 @@ namespace spk
 			x{},
 			y{}
 		{
+		}
+
+		explicit TVector2(const JSON::Value &p_value) noexcept
+		{
+			*this = fromJSON(p_value);
 		}
 
 		constexpr TVector2(TType p_x, TType p_y) noexcept :
@@ -123,6 +130,32 @@ namespace spk
 		{
 			os << '(' << value.x << ", " << value.y << ')';
 			return os;
+		}
+
+		[[nodiscard]] JSON::Value toJSON() const
+		{
+			JSON::Value result = JSON::Value::array();
+
+			result.pushBack(x);
+			result.pushBack(y);
+
+			return result;
+		}
+
+		[[nodiscard]] static TVector2 fromJSON(const JSON::Value &p_value)
+		{
+			const auto &array = p_value.asArray();
+
+			if (array.size() != 2)
+			{
+				throw std::runtime_error(
+					"Expected 2 elements for TVector2");
+			}
+
+			return {
+				array[0].as<TType>(),
+				array[1].as<TType>()
+			};
 		}
 	};
 
