@@ -10,6 +10,10 @@ namespace spk
 	std::size_t ShaderStorageBuffer::_checkedSize(std::size_t nbElement) const
 	{
 		const auto &content = state<State>();
+		if (content._dynamicElementSize == 0)
+		{
+			throw std::logic_error("ShaderStorageBuffer has no configured dynamic element size");
+		}
 		if (nbElement > (std::numeric_limits<std::size_t>::max() - content._fixedPartSize) / content._dynamicElementSize)
 		{
 			throw std::overflow_error("ShaderStorageBuffer size overflow");
@@ -37,6 +41,11 @@ namespace spk
 		}
 
 		_resize(fixedPartSize);
+	}
+
+	ShaderStorageBuffer::ShaderStorageBuffer() :
+		BufferGPUResource(std::make_shared<State>())
+	{
 	}
 
 	void ShaderStorageBuffer::resize(std::size_t nbElement)

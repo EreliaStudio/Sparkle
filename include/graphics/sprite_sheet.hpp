@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <memory>
 #include <span>
 #include <vector>
 
@@ -20,12 +21,17 @@ namespace spk
 		Vector2 _unit{0.0f, 0.0f};
 		std::vector<Sprite> _sprites;
 
-		SpriteSheet();
-
 		void _buildSprites(const Vector2UInt &spriteCount);
 
 	public:
+		SpriteSheet();
 		SpriteSheet(std::span<const std::uint8_t> data, const Vector2UInt &spriteCount);
+		[[nodiscard]] std::unique_ptr<GPUResource> clone() const override
+		{
+			auto result = std::make_unique<SpriteSheet>(*this);
+			result->_setState(_cloneState());
+			return result;
+		}
 
 		[[nodiscard]] static SpriteSheet open(const std::filesystem::path &path, const Vector2UInt &spriteCount);
 

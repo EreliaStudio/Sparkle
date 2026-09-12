@@ -2,6 +2,8 @@
 
 #include <unordered_set>
 
+#include "exception.hpp"
+
 namespace
 {
 	std::string makeErrorMessage(
@@ -43,9 +45,11 @@ namespace spk::JSON
 		try
 		{
 			return spk::JSON::Value::loadFromFile(p_file);
-		} catch (const std::exception &exception)
+		} catch (...)
 		{
-			throw Error(p_file, "$", std::string("invalid JSON: ") + exception.what());
+			throw spk::Exception(
+				"Failed to parse JSON file \"" + p_file.string() + "\"",
+				std::current_exception());
 		}
 	}
 

@@ -66,6 +66,10 @@ namespace spk
 			Generation _configurationGeneration = 1;
 
 		protected:
+			[[nodiscard]] std::unique_ptr<GPUResource::State> _clone() const override
+			{
+				return std::make_unique<State>(*this);
+			}
 			[[nodiscard]] GLenum _target() const noexcept override;
 
 		public:
@@ -112,6 +116,12 @@ namespace spk
 
 	public:
 		VertexBuffer();
+		[[nodiscard]] std::unique_ptr<GPUResource> clone() const override
+		{
+			auto result = std::make_unique<VertexBuffer>(*this);
+			result->_setState(_cloneState());
+			return result;
+		}
 		[[nodiscard]] Handle handle() const
 		{
 			return createHandle<State>();

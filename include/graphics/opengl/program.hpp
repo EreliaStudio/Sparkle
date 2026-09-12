@@ -48,6 +48,10 @@ namespace spk
 			void _applySamplerBindings(GLuint identifier) const;
 
 		protected:
+			[[nodiscard]] std::unique_ptr<GPUResource::State> _clone() const override
+			{
+				return std::make_unique<State>(*this);
+			}
 			[[nodiscard]] Kind _kind() const noexcept override;
 			[[nodiscard]] std::unique_ptr<GPUResource::Instance> _create(RenderContext &context) const override;
 			void _synchronize(GPUResource::Instance &instance, RenderContext &context) const override;
@@ -67,6 +71,12 @@ namespace spk
 
 	public:
 		Program();
+		[[nodiscard]] std::unique_ptr<GPUResource> clone() const override
+		{
+			auto result = std::make_unique<Program>(*this);
+			result->_setState(_cloneState());
+			return result;
+		}
 		Program(std::string vertexShaderSource, std::string fragmentShaderSource);
 		[[nodiscard]] Handle handle() const
 		{

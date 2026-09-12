@@ -57,6 +57,14 @@ namespace spk
 	{
 	}
 
+	GPUResource::State::State(const State &) :
+		VersionedTrait(),
+		_identifier(_generateIdentifier()),
+		_lifeTime(std::make_shared<LifeTime>(_identifier))
+	{
+		invalidate();
+	}
+
 	GPUResource::GPUResource(std::shared_ptr<State> state) :
 		_state(std::move(state))
 	{
@@ -64,6 +72,43 @@ namespace spk
 		{
 			throw std::invalid_argument("GPU resource state cannot be null");
 		}
+	}
+
+	GPUResource::GPUResource(const GPUResource &other) :
+		_state(other._state)
+	{
+	}
+
+	GPUResource &GPUResource::operator=(const GPUResource &other)
+	{
+		if (this != &other)
+		{
+			_state = other._state;
+		}
+		return *this;
+	}
+
+	std::shared_ptr<GPUResource::State> GPUResource::_cloneState() const
+	{
+		if (_state == nullptr)
+		{
+			return nullptr;
+		}
+		return std::shared_ptr<State>(_state->_clone());
+	}
+
+	void GPUResource::_setState(std::shared_ptr<State> state)
+	{
+		if (state == nullptr)
+		{
+			throw std::invalid_argument("GPU resource state cannot be null");
+		}
+		_state = std::move(state);
+	}
+
+	std::unique_ptr<GPUResource> GPUResource::clone() const
+	{
+		throw std::logic_error("This GPU resource type does not support cloning");
 	}
 
 	GPUResource::Identifier GPUResource::_generateIdentifier() noexcept

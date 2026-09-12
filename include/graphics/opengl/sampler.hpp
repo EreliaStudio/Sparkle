@@ -53,6 +53,10 @@ namespace spk
 			MipmapFiltering _mipmapFiltering = MipmapFiltering::Disabled;
 
 		protected:
+			[[nodiscard]] std::unique_ptr<GPUResource::State> _clone() const override
+			{
+				return std::make_unique<State>(*this);
+			}
 			[[nodiscard]] Kind _kind() const noexcept override;
 			[[nodiscard]] std::unique_ptr<GPUResource::Instance> _create(RenderContext &context) const override;
 			void _synchronize(GPUResource::Instance &instance, RenderContext &context) const override;
@@ -67,10 +71,16 @@ namespace spk
 
 	public:
 		explicit Sampler(
-			std::size_t bindingPoint,
+			std::size_t bindingPoint = 0,
 			Filtering filtering = Filtering::Nearest,
 			Wrap wrap = Wrap::ClampToEdge,
 			MipmapFiltering mipmapFiltering = MipmapFiltering::Disabled);
+		[[nodiscard]] std::unique_ptr<GPUResource> clone() const override
+		{
+			auto result = std::make_unique<Sampler>(*this);
+			result->_setState(_cloneState());
+			return result;
+		}
 
 		[[nodiscard]] Handle handle() const
 		{

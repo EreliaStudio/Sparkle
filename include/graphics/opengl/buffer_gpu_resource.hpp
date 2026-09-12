@@ -55,6 +55,7 @@ namespace spk
 			void _allocate(GPUResource::Instance &instance) const;
 
 		protected:
+			[[nodiscard]] std::unique_ptr<GPUResource::State> _clone() const override = 0;
 			[[nodiscard]] virtual GLenum _target() const noexcept = 0;
 			[[nodiscard]] std::unique_ptr<GPUResource::Instance> _create(RenderContext &context) const override;
 			void _synchronize(GPUResource::Instance &instance, RenderContext &context) const override;

@@ -75,6 +75,21 @@ namespace spk
 		return GPUResource::Kind::Framebuffer;
 	}
 
+	Framebuffer::State::State(const State &other) :
+		GPUResource::State(other),
+		_size(other._size)
+	{
+		_colorAttachments.reserve(other._colorAttachments.size());
+		for (const auto &attachment : other._colorAttachments)
+		{
+			_colorAttachments.push_back(std::make_unique<Texture>(*attachment));
+		}
+		if (other._depthStencilAttachment != nullptr)
+		{
+			_depthStencilAttachment = std::make_unique<Texture>(*other._depthStencilAttachment);
+		}
+	}
+
 	std::unique_ptr<GPUResource::Instance> Framebuffer::State::_create(RenderContext &) const
 	{
 		return std::make_unique<Instance>();
@@ -174,7 +189,7 @@ namespace spk
 		const Vector2UInt &size,
 		std::vector<Texture::Format> colorFormats,
 		std::optional<Texture::Format> depthStencilFormat) :
-		GPUResource(std::make_shared<State>())
+		GPUResource(std::shared_ptr<State>(new State()))
 	{
 		auto &content = state<State>();
 		content._size = size;
@@ -201,6 +216,11 @@ namespace spk
 		}
 
 		validate();
+	}
+
+	Framebuffer::Framebuffer() :
+		GPUResource(std::shared_ptr<State>(new State()))
+	{
 	}
 
 	void Framebuffer::resize(const Vector2UInt &size)

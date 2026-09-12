@@ -57,15 +57,19 @@ namespace spk
 
 		protected:
 			State();
+			State(const State &other);
 
 			[[nodiscard]] virtual Kind _kind() const noexcept = 0;
+			[[nodiscard]] virtual std::unique_ptr<State> _clone() const
+			{
+				throw std::logic_error("This GPU resource state does not support cloning");
+			}
 			[[nodiscard]] virtual RecyclingScore _recyclingScore(const Instance &instance) const noexcept;
 			[[nodiscard]] virtual std::unique_ptr<Instance> _create(RenderContext &context) const = 0;
 			virtual void _synchronize(Instance &instance, RenderContext &context) const = 0;
 			virtual void _bind(Instance &instance, RenderContext &context) const = 0;
 
 		public:
-			State(const State &) = delete;
 			State(State &&) = delete;
 			~State() override = default;
 
@@ -137,8 +141,10 @@ namespace spk
 		[[nodiscard]] static Identifier _generateIdentifier() noexcept;
 		static void _activate(const State &state, RenderContext &context);
 
-	protected:
-		explicit GPUResource(std::shared_ptr<State> state);
+		protected:
+			explicit GPUResource(std::shared_ptr<State> state);
+			[[nodiscard]] std::shared_ptr<State> _cloneState() const;
+			void _setState(std::shared_ptr<State> state);
 
 		template <typename TState>
 			requires std::derived_from<TState, State>
@@ -162,11 +168,14 @@ namespace spk
 		}
 
 	public:
-		GPUResource(const GPUResource &) = delete;
+		GPUResource() = default;
+		GPUResource(const GPUResource &other);
 		GPUResource(GPUResource &&other) noexcept = default;
 		virtual ~GPUResource() = default;
 
-		GPUResource &operator=(const GPUResource &) = delete;
+		[[nodiscard]] virtual std::unique_ptr<GPUResource> clone() const;
+
+		GPUResource &operator=(const GPUResource &other);
 		GPUResource &operator=(GPUResource &&) = delete;
 
 		void activate(RenderContext &context) const;

@@ -34,6 +34,10 @@ namespace spk
 			void _configure(Instance &instance, RenderContext &context) const;
 
 		protected:
+			[[nodiscard]] std::unique_ptr<GPUResource::State> _clone() const override
+			{
+				return std::make_unique<State>(*this);
+			}
 			[[nodiscard]] Kind _kind() const noexcept override;
 			[[nodiscard]] std::unique_ptr<GPUResource::Instance> _create(RenderContext &context) const override;
 			void _synchronize(GPUResource::Instance &instance, RenderContext &context) const override;
@@ -43,6 +47,12 @@ namespace spk
 
 	public:
 		VertexArray();
+		[[nodiscard]] std::unique_ptr<GPUResource> clone() const override
+		{
+			auto result = std::make_unique<VertexArray>(*this);
+			result->_setState(_cloneState());
+			return result;
+		}
 		[[nodiscard]] Handle handle() const
 		{
 			return createHandle<State>();

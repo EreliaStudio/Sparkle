@@ -26,6 +26,10 @@ namespace spk
 			std::size_t _bindingPoint = 0;
 
 		protected:
+			[[nodiscard]] std::unique_ptr<GPUResource::State> _clone() const override
+			{
+				return std::make_unique<State>(*this);
+			}
 			[[nodiscard]] GLenum _target() const noexcept override;
 			void _bind(GPUResource::Instance &instance, RenderContext &context) const override;
 
@@ -42,6 +46,12 @@ namespace spk
 
 	public:
 		UniformBuffer();
+		[[nodiscard]] std::unique_ptr<GPUResource> clone() const override
+		{
+			auto result = std::make_unique<UniformBuffer>(*this);
+			result->_setState(_cloneState());
+			return result;
+		}
 		explicit UniformBuffer(std::size_t bindingPoint, std::size_t size);
 		[[nodiscard]] Handle handle() const
 		{

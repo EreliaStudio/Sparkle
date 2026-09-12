@@ -59,10 +59,15 @@ namespace spk
 			std::size_t _dynamicElementCount = 0;
 
 		protected:
+			[[nodiscard]] std::unique_ptr<GPUResource::State> _clone() const override
+			{
+				return std::make_unique<State>(*this);
+			}
 			[[nodiscard]] GLenum _target() const noexcept override;
 			void _bind(GPUResource::Instance &instance, RenderContext &context) const override;
 
 		public:
+			State() = default;
 			State(std::size_t bindingPoint, std::size_t fixedPartSize, std::size_t dynamicElementSize) :
 				_bindingPoint(bindingPoint),
 				_fixedPartSize(fixedPartSize),
@@ -143,6 +148,13 @@ namespace spk
 		}
 
 	public:
+		ShaderStorageBuffer();
+		[[nodiscard]] std::unique_ptr<GPUResource> clone() const override
+		{
+			auto result = std::make_unique<ShaderStorageBuffer>(*this);
+			result->_setState(_cloneState());
+			return result;
+		}
 		ShaderStorageBuffer(std::size_t bindingPoint, std::size_t fixedPartSize, std::size_t dynamicElementSize);
 		[[nodiscard]] Handle handle() const
 		{

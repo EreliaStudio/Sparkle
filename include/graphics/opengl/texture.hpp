@@ -86,6 +86,10 @@ namespace spk
 			friend class Texture;
 
 		private:
+			[[nodiscard]] std::unique_ptr<GPUResource::State> _clone() const override
+			{
+				return std::make_unique<State>(*this);
+			}
 			Target _textureTarget = Target::Texture2D;
 			std::vector<std::uint8_t> _pixels;
 			Vector2UInt _size{0, 0};
@@ -141,15 +145,20 @@ namespace spk
 		void _allocateRenderTarget(const Vector2UInt &size, Format format);
 
 	protected:
-		explicit Texture(Target target = Target::Texture2D);
-
 		void setPixels(const std::uint8_t *data, const Vector2UInt &size, Format format);
 		void setPixels(std::span<const std::uint8_t> data, const Vector2UInt &size, Format format);
 		void resizePixels(const Vector2UInt &size);
 		void writePixels(const std::uint8_t *data, const Vector2UInt &position, const Vector2UInt &size);
 		void setMipmap(Mipmap mipmap) noexcept;
 
-	public:
+		public:
+			explicit Texture(Target target = Target::Texture2D);
+			[[nodiscard]] std::unique_ptr<GPUResource> clone() const override
+			{
+				auto result = std::make_unique<Texture>(*this);
+				result->_setState(_cloneState());
+				return result;
+			}
 		[[nodiscard]] Handle handle() const
 		{
 			return createHandle<State>();
