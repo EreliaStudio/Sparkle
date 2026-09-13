@@ -372,7 +372,8 @@ namespace spk
 			.time = _currentTime - _startTime,
 			.deltaTime = _deltaTime,
 			.keyboard = state.keyboard(),
-			.mouse = state.mouse()};
+			.mouse = state.mouse(),
+			.profiler = state.profiler()};
 		try
 		{
 			_updateState(state, context);

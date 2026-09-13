@@ -7,8 +7,8 @@
 #include <stdexcept>
 #include <type_traits>
 
-#include "math/vector2.hpp"
 #include "exception.hpp"
+#include "math/vector2.hpp"
 
 #include "container/json/object.hpp"
 
@@ -35,9 +35,9 @@ namespace spk
 		{
 		}
 
-		explicit TVector3(const JSON::Value &p_value) noexcept
+		explicit TVector3(const JSON::Value &value) noexcept
 		{
-			*this = fromJSON(p_value);
+			*this = fromJSON(value);
 		}
 		constexpr TVector3(TType x, TType y, TType z) noexcept :
 			x(x),
@@ -153,9 +153,9 @@ namespace spk
 			return result;
 		}
 
-		[[nodiscard]] static TVector3 fromJSON(const JSON::Value &p_value)
+		[[nodiscard]] static TVector3 fromJSON(const JSON::Value &value)
 		{
-			const auto &array = p_value.asArray();
+			const auto &array = value.asArray();
 
 			if (array.size() != 3)
 			{
@@ -166,8 +166,7 @@ namespace spk
 			return {
 				array[0].as<TType>(),
 				array[1].as<TType>(),
-				array[2].as<TType>()
-			};
+				array[2].as<TType>()};
 		}
 	};
 

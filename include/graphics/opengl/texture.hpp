@@ -151,14 +151,14 @@ namespace spk
 		void writePixels(const std::uint8_t *data, const Vector2UInt &position, const Vector2UInt &size);
 		void setMipmap(Mipmap mipmap) noexcept;
 
-		public:
-			explicit Texture(Target target = Target::Texture2D);
-			[[nodiscard]] std::unique_ptr<GPUResource> clone() const override
-			{
-				auto result = std::make_unique<Texture>(*this);
-				result->_setState(_cloneState());
-				return result;
-			}
+	public:
+		explicit Texture(Target target = Target::Texture2D);
+		[[nodiscard]] std::unique_ptr<GPUResource> clone() const override
+		{
+			auto result = std::make_unique<Texture>(*this);
+			result->_setState(_cloneState());
+			return result;
+		}
 		[[nodiscard]] Handle handle() const
 		{
 			return createHandle<State>();

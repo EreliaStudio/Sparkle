@@ -1,12 +1,13 @@
 #pragma once
 
 #include "container/json/object.hpp"
+#include "exception.hpp"
 
 #include <array>
 #include <cstddef>
+#include <exception>
 #include <filesystem>
 #include <initializer_list>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -15,29 +16,22 @@
 
 namespace spk::JSON
 {
-	class Error : public std::runtime_error
-	{
-	private:
-		std::filesystem::path _file;
-		std::string _path;
-		std::string _message;
-
-	public:
-		Error(std::filesystem::path p_file, std::string p_path, std::string p_message);
-
-		[[nodiscard]] const std::filesystem::path &file() const noexcept;
-		[[nodiscard]] const std::string &path() const noexcept;
-		[[nodiscard]] const std::string &message() const noexcept;
-	};
-
 	class Loader
 	{
 	public:
-		[[nodiscard]] static spk::JSON::Value parseFile(const std::filesystem::path &p_file);
+		[[nodiscard]] static spk::JSON::Value parseFile(const std::filesystem::path &file);
 	};
 
 	namespace detail
 	{
+		[[nodiscard]] inline std::string makeErrorMessage(
+			const std::filesystem::path &file,
+			const std::string &path,
+			const std::string &message)
+		{
+			return file.generic_string() + ":" + path + ": " + message;
+		}
+
 		template <typename TType>
 		struct JsonSequence : std::false_type
 		{
@@ -60,13 +54,13 @@ namespace spk::JSON
 		};
 
 		template <typename TType>
-		[[nodiscard]] TType readJsonValue(const spk::JSON::Value &p_value)
+		[[nodiscard]] TType readJsonValue(const spk::JSON::Value &value)
 		{
 			if constexpr (JsonSequence<TType>::value)
 			{
 				using Element = typename JsonSequence<TType>::Element;
 				TType result;
-				const spk::JSON::Value::Array &array = p_value.asArray();
+				const spk::JSON::Value::Array &array = value.asArray();
 				result.reserve(array.size());
 				for (const spk::JSON::Value &element : array)
 				{
@@ -77,7 +71,7 @@ namespace spk::JSON
 			else if constexpr (JsonFixedArray<TType>::value)
 			{
 				using Element = typename JsonFixedArray<TType>::Element;
-				const spk::JSON::Value::Array &array = p_value.asArray();
+				const spk::JSON::Value::Array &array = value.asArray();
 				if (array.size() != JsonFixedArray<TType>::Count)
 				{
 					throw std::runtime_error(
@@ -93,7 +87,7 @@ namespace spk::JSON
 			}
 			else
 			{
-				return p_value.as<TType>();
+				return value.as<TType>();
 			}
 		}
 	}
@@ -106,39 +100,41 @@ namespace spk::JSON
 		std::string _path;
 
 		void _requireObject() const;
-		[[nodiscard]] const spk::JSON::Value &_requireMember(const std::string &p_key) const;
+		[[nodiscard]] const spk::JSON::Value &_requireMember(const std::string &key) const;
 
 	public:
-		Reader(const spk::JSON::Value &p_value, std::filesystem::path p_file, std::string p_path = "$");
+		Reader(const spk::JSON::Value &value, std::filesystem::path file, std::string path = "$");
 
 		[[nodiscard]] const std::filesystem::path &file() const noexcept;
 		[[nodiscard]] const std::string &path() const noexcept;
 		[[nodiscard]] const spk::JSON::Value &value() const noexcept;
-		[[nodiscard]] std::string pathFor(const std::string &p_key) const;
-		[[nodiscard]] bool contains(const std::string &p_key) const;
+		[[nodiscard]] std::string pathFor(const std::string &key) const;
+		[[nodiscard]] bool contains(const std::string &key) const;
 
 		template <typename TType>
-		[[nodiscard]] TType require(const std::string &p_key) const
+		[[nodiscard]] TType require(const std::string &key) const
 		{
-			const spk::JSON::Value &member = _requireMember(p_key);
+			const spk::JSON::Value &member = _requireMember(key);
 
 			try
 			{
 				return detail::readJsonValue<TType>(member);
-			} catch (const std::exception &exception)
+			} catch (...)
 			{
-				throw Error(_file, pathFor(p_key), std::string("invalid value: ") + exception.what());
+				throw spk::Exception(
+					detail::makeErrorMessage(_file, pathFor(key), "invalid value"),
+					std::current_exception());
 			}
 		}
 
 		template <typename TType>
-		[[nodiscard]] TType optional(const std::string &p_key, TType p_default) const
+		[[nodiscard]] TType optional(const std::string &key, TType defaultValue) const
 		{
 			_requireObject();
-			const spk::JSON::Value *member = _value.find(p_key);
+			const spk::JSON::Value *member = _value.find(key);
 			if (member == nullptr)
 			{
-				return p_default;
+				return defaultValue;
 			}
 
 			try
@@ -146,19 +142,21 @@ namespace spk::JSON
 				return detail::readJsonValue<TType>(*member);
 			} catch (const std::exception &exception)
 			{
-				throw Error(_file, pathFor(p_key), std::string("invalid value: ") + exception.what());
+				throw spk::Exception(
+					detail::makeErrorMessage(_file, pathFor(key), "invalid value"),
+					std::current_exception());
 			}
 		}
 
 		template <typename TType, typename TMap>
-		[[nodiscard]] TType requireEnum(const std::string &p_key, const TMap &p_values) const
+		[[nodiscard]] TType requireEnum(const std::string &key, const TMap &values) const
 		{
-			const std::string value = require<std::string>(p_key);
-			const auto iterator = p_values.find(value);
-			if (iterator == p_values.end())
+			const std::string value = require<std::string>(key);
+			const auto iterator = values.find(value);
+			if (iterator == values.end())
 			{
 				std::string knownValues;
-				for (const auto &[name, unused] : p_values)
+				for (const auto &[name, unused] : values)
 				{
 					(void)unused;
 					if (!knownValues.empty())
@@ -168,17 +166,14 @@ namespace spk::JSON
 					knownValues += name;
 				}
 
-				throw Error(
-					_file,
-					pathFor(p_key),
-					"unknown enum value '" + value + "' (expected one of: " + knownValues + ")");
+				throw spk::Exception(detail::makeErrorMessage(_file, pathFor(key), "unknown enum value '" + value + "' (expected one of: " + knownValues + ")"));
 			}
 
 			return iterator->second;
 		}
 
-		[[nodiscard]] Reader child(const std::string &p_key) const;
-		[[nodiscard]] std::vector<Reader> childArray(const std::string &p_key) const;
-		void forbidUnknown(std::initializer_list<std::string_view> p_allowedKeys) const;
+		[[nodiscard]] Reader child(const std::string &key) const;
+		[[nodiscard]] std::vector<Reader> childArray(const std::string &key) const;
+		void forbidUnknown(std::initializer_list<std::string_view> allowedKeys) const;
 	};
 }

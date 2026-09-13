@@ -15,9 +15,9 @@ namespace
 		std::string name;
 		int *destructionCount = nullptr;
 
-		explicit Base(std::string p_name, int *p_destructionCount = nullptr) :
-			name(std::move(p_name)),
-			destructionCount(p_destructionCount)
+		explicit Base(std::string name, int *destructionCount = nullptr) :
+			name(std::move(name)),
+			destructionCount(destructionCount)
 		{
 		}
 

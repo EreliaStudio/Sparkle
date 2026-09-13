@@ -7,6 +7,7 @@
 #include "math/rect2d.hpp"
 #include "type/focus_mode.hpp"
 
+#include "diagnostics/profiler.hpp"
 #include "graphics/opengl/gpu_resource.hpp"
 #include "graphics/opengl/gpu_resource_collection.hpp"
 
@@ -106,6 +107,8 @@ namespace spk
 			[[nodiscard]] const spk::Keyboard &keyboard() const noexcept;
 			[[nodiscard]] spk::Mouse &mouse() noexcept;
 			[[nodiscard]] const spk::Mouse &mouse() const noexcept;
+			[[nodiscard]] Profiler &profiler() noexcept;
+			[[nodiscard]] const Profiler &profiler() const noexcept;
 		};
 
 		class Surface
@@ -135,6 +138,8 @@ namespace spk
 			[[nodiscard]] const spk::Rect2D &geometry() const noexcept;
 
 			[[nodiscard]] GPUResourceCollection &_gpuResources();
+			void setProfiler(Profiler *profiler) noexcept;
+			[[nodiscard]] Profiler &profiler() noexcept;
 		};
 
 	private:
@@ -150,5 +155,7 @@ namespace spk
 		[[nodiscard]] Widget &root() noexcept;
 		[[nodiscard]] const Widget &root() const noexcept;
 		[[nodiscard]] const spk::Rect2D &geometry() const noexcept;
+		[[nodiscard]] Profiler &profiler() noexcept;
+		[[nodiscard]] const Profiler &profiler() const noexcept;
 	};
 }

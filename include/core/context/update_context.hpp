@@ -2,6 +2,8 @@
 
 #include <chrono>
 
+#include "diagnostics/profiler.hpp"
+
 namespace spk
 {
 	struct Keyboard;
@@ -13,5 +15,6 @@ namespace spk
 		std::chrono::steady_clock::duration deltaTime;
 		const spk::Keyboard &keyboard;
 		const spk::Mouse &mouse;
+		Profiler &profiler = Profiler::defaultProfiler();
 	};
 }

@@ -65,7 +65,7 @@ namespace spk
 		Framebuffer(Framebuffer &&) noexcept = default;
 
 		Framebuffer &operator=(const Framebuffer &) = default;
-		Framebuffer &operator=(Framebuffer &&) = delete;
+		Framebuffer &operator=(Framebuffer &&) noexcept = default;
 		[[nodiscard]] Handle handle() const
 		{
 			return createHandle<State>();

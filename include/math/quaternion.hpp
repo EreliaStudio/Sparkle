@@ -21,8 +21,7 @@ namespace spk
 		}
 
 	public:
-		union
-		{
+		union {
 			struct
 			{
 				float x;

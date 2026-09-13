@@ -20,8 +20,8 @@ namespace spk
 
 	public:
 		constexpr UUID() noexcept = default;
-		explicit constexpr UUID(Storage p_bytes) noexcept :
-			_bytes(p_bytes)
+		explicit constexpr UUID(Storage bytes) noexcept :
+			_bytes(bytes)
 		{
 		}
 
@@ -30,8 +30,8 @@ namespace spk
 		{
 			return UUID();
 		}
-		[[nodiscard]] static UUID fromString(std::string_view p_string);
-		[[nodiscard]] static std::optional<UUID> tryParse(std::string_view p_string) noexcept;
+		[[nodiscard]] static UUID fromString(std::string_view string);
+		[[nodiscard]] static std::optional<UUID> tryParse(std::string_view string) noexcept;
 
 		[[nodiscard]] constexpr const Storage &bytes() const noexcept
 		{

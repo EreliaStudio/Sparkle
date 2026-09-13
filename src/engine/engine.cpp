@@ -106,6 +106,15 @@ namespace spk
 	void Engine::buildRenderSnapshot(spk::RenderSnapshot::Builder &builder)
 	{
 		_root.buildRenderSnapshot(builder);
+
+		const auto systemSnapshot = SystemCollection::snapshotElements();
+		for (const auto &snapshot : systemSnapshot)
+		{
+			if (SystemCollection::containsSnapshotElement(snapshot))
+			{
+				snapshot.element->buildRenderSnapshot(builder);
+			}
+		}
 	}
 
 	void Engine::updateState(UpdateContext &context)

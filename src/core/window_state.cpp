@@ -52,6 +52,7 @@ namespace spk
 		std::array<Widget::DestructionContract, FocusMode::ChannelCount> focusedWidgetDestructionContracts{};
 		spk::Keyboard keyboard;
 		spk::Mouse mouse;
+		spk::Profiler profiler;
 
 		explicit Impl(Window::Identifier windowID) :
 			windowID(std::move(windowID)),
@@ -159,7 +160,9 @@ namespace spk
 	Widget &Window::State::dispatchRoot(FocusMode::Channel channel) noexcept
 	{
 		Widget *focused = focusedWidget(channel);
-		if (focused != nullptr && !focused->resolveInHierarchy([](const Widget &widget) { return widget.isActive(); }))
+		if (focused != nullptr && !focused->resolveInHierarchy([](const Widget &widget) {
+				return widget.isActive();
+			}))
 		{
 			_impl->forgetFocus(static_cast<std::size_t>(channel), focused, true);
 			focused = nullptr;
@@ -202,5 +205,13 @@ namespace spk
 	const spk::Mouse &Window::State::mouse() const noexcept
 	{
 		return _impl->mouse;
+	}
+	Profiler &Window::State::profiler() noexcept
+	{
+		return _impl->profiler;
+	}
+	const Profiler &Window::State::profiler() const noexcept
+	{
+		return _impl->profiler;
 	}
 }

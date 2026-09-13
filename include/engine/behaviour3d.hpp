@@ -1,7 +1,7 @@
 #pragma once
 
-#include "engine/entity3d.hpp"
 #include "engine/behaviour.hpp"
+#include "engine/entity3d.hpp"
 
 #include <string>
 

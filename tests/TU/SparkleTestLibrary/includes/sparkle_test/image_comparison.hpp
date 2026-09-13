@@ -24,8 +24,8 @@ namespace sparkle_test
     };
 
     [[nodiscard]] ImageComparisonResult compareImages(
-        const std::filesystem::path& p_actualPath,
-        const std::filesystem::path& p_expectedPath,
-        const std::filesystem::path& p_differencePath,
-        ImageComparisonOptions p_options = {});
+        const std::filesystem::path& actualPath,
+        const std::filesystem::path& expectedPath,
+        const std::filesystem::path& differencePath,
+        ImageComparisonOptions options = {});
 }

@@ -315,7 +315,7 @@ namespace spk
 			_removeFromTypeCaches(element);
 			_removeFromElements(element);
 			_elementGenerations.erase(element);
-		
+
 			return true;
 		}
 

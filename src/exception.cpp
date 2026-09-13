@@ -37,24 +37,23 @@ namespace spk
 		output += _message;
 
 		if (_cause == nullptr)
+		{
 			return;
+		}
 
 		output += '\n';
 
 		try
 		{
 			std::rethrow_exception(_cause);
-		}
-		catch (const Exception &exception)
+		} catch (const Exception &exception)
 		{
 			exception._composeMessage(output, indentation + 1);
-		}
-		catch (const std::exception &exception)
+		} catch (const std::exception &exception)
 		{
 			output += std::string(indentation + 1, '\t');
 			output += exception.what();
-		}
-		catch (...)
+		} catch (...)
 		{
 			output += std::string(indentation + 1, '\t');
 			output += "Unknown exception";

@@ -28,10 +28,10 @@ namespace
 		Node *lastAddedChild = nullptr;
 		Node *lastRemovedChild = nullptr;
 
-		explicit Node(std::string p_name, int p_orderingKey = 0) :
+		explicit Node(std::string name, int orderingKey = 0) :
 			Base(NodeComparator{}),
-			name(std::move(p_name)),
-			orderingKey(p_orderingKey)
+			name(std::move(name)),
+			orderingKey(orderingKey)
 		{
 		}
 

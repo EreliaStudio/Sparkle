@@ -57,7 +57,7 @@ Public data-only records and enums are tested with the class that consumes them.
 - **[throws `std::runtime_error`]** Use object operations on non-objects, array operations on non-arrays, miss an object key, exceed an array index, or request `size()` on a scalar.
 - **[throws `std::runtime_error`]** Read/write missing or inaccessible files and serialize non-finite floating values; verify parse diagnostics include useful offsets/context.
 
-### `spk::JSON::Error`
+### JSON errors (`spk::Exception`)
 
 - **Standard usage:** construct an error and verify file, JSON path, raw message, and composed `what()` text.
 - Cover root and nested/indexed paths, empty file/path/message, and stable access after copies/moves.
@@ -65,14 +65,14 @@ Public data-only records and enums are tested with the class that consumes them.
 ### `spk::JSON::Loader`
 
 - **Standard usage:** parse a valid JSON file into a `Value`.
-- **[throws `spk::JSON::Error`]** Parse a missing, unreadable, or invalid file; verify file, root path, and wrapped parser message.
+- **[throws `spk::Exception`]** Parse a missing, unreadable, or invalid file; verify file, root path, and wrapped parser message.
 
 ### `spk::JSON::Reader`
 
 - **Standard usage:** read required/optional scalars, vectors, fixed arrays, enums, child objects, and child arrays from a realistic document.
 - Verify optional defaults apply only to absent fields, exact fixed-array arity, path extension through keys/indices, `contains`, `value`, `file`, `path`, and `forbidUnknown` with all keys allowed.
-- **[throws `spk::JSON::Error`]** Read a missing required member, a wrong scalar/container/custom type, or a fixed array with wrong arity; verify the exact failing path.
-- **[throws `spk::JSON::Error`]** Use an unknown enum value (listing known values), request a child with the wrong shape, encounter a non-object child-array element, call object operations on a scalar, or reject an unknown key.
+- **[throws `spk::Exception`]** Read a missing required member, a wrong scalar/container/custom type, or a fixed array with wrong arity; verify the exact failing path.
+- **[throws `spk::Exception`]** Use an unknown enum value (listing known values), request a child with the wrong shape, encounter a non-object child-array element, call object operations on a scalar, or reject an unknown key.
 
 ### `spk::PolymorphicContainer<T>`
 

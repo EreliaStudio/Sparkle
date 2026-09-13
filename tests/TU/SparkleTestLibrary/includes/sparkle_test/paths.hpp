@@ -11,10 +11,10 @@ namespace sparkle_test
     [[nodiscard]] std::filesystem::path expectedImagesDirectory();
     [[nodiscard]] std::filesystem::path resultsDirectory();
     [[nodiscard]] std::filesystem::path expectedImagePath(
-        const std::filesystem::path& p_category,
-        const std::string& p_name);
+        const std::filesystem::path&category,
+        const std::string&name);
     [[nodiscard]] std::filesystem::path resultImagePath(
-        const std::filesystem::path& p_category,
-        const std::string& p_name);
-    void removeEmptyResultDirectories(const std::filesystem::path& p_startingPath);
+        const std::filesystem::path&category,
+        const std::string&name);
+    void removeEmptyResultDirectories(const std::filesystem::path&startingPath);
 }

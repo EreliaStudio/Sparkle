@@ -23,22 +23,22 @@ namespace sparkle_test
 {
     namespace
     {
-        [[nodiscard]] std::filesystem::path normalized(const std::filesystem::path& p_path)
+        [[nodiscard]] std::filesystem::path normalized(const std::filesystem::path&path)
         {
             std::error_code error;
-            const std::filesystem::path result = std::filesystem::weakly_canonical(p_path, error);
-            return error ? p_path.lexically_normal() : result;
+            const std::filesystem::path result = std::filesystem::weakly_canonical(path, error);
+            return error ?path.lexically_normal() : result;
         }
 
         [[nodiscard]] bool isSameOrChildPath(
-            const std::filesystem::path& p_path,
-            const std::filesystem::path& p_parent)
+            const std::filesystem::path&path,
+            const std::filesystem::path&parent)
         {
-            auto pathIterator = p_path.begin();
-            auto parentIterator = p_parent.begin();
-            for (; parentIterator != p_parent.end(); ++parentIterator, ++pathIterator)
+            auto pathIterator =path.begin();
+            auto parentIterator =parent.begin();
+            for (; parentIterator !=parent.end(); ++parentIterator, ++pathIterator)
             {
-                if (pathIterator == p_path.end() || *pathIterator != *parentIterator)
+                if (pathIterator ==path.end() || *pathIterator != *parentIterator)
                 {
                     return false;
                 }
@@ -107,23 +107,23 @@ namespace sparkle_test
     }
 
     std::filesystem::path expectedImagePath(
-        const std::filesystem::path& p_category,
-        const std::string& p_name)
+        const std::filesystem::path&category,
+        const std::string&name)
     {
-        return expectedImagesDirectory() / p_category / (p_name + ".png");
+        return expectedImagesDirectory() /category / (name + ".png");
     }
 
     std::filesystem::path resultImagePath(
-        const std::filesystem::path& p_category,
-        const std::string& p_name)
+        const std::filesystem::path&category,
+        const std::string&name)
     {
-        return resultsDirectory() / p_category / (p_name + ".png");
+        return resultsDirectory() /category / (name + ".png");
     }
 
-    void removeEmptyResultDirectories(const std::filesystem::path& p_startingPath)
+    void removeEmptyResultDirectories(const std::filesystem::path&startingPath)
     {
         const std::filesystem::path resultRoot = normalized(resultsDirectory());
-        std::filesystem::path cursor = normalized(p_startingPath);
+        std::filesystem::path cursor = normalized(startingPath);
 
         if (std::filesystem::is_regular_file(cursor))
         {

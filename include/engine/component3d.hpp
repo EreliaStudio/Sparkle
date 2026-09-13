@@ -1,14 +1,14 @@
 #pragma once
 
-#include "engine/entity3d.hpp"
 #include "engine/component.hpp"
+#include "engine/entity3d.hpp"
 
 #include <string>
 
 namespace spk
 {
 	class Component3D : public Component,
-						  public Registry<Component3D, Engine *>::Object
+						public Registry<Component3D, Engine *>::Object
 	{
 	public:
 		Component3D(

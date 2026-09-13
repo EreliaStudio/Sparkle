@@ -101,7 +101,9 @@ namespace spk
 	void Tooltip::_updateState(UpdateContext &context)
 	{
 		const bool targetIsEffectivelyActive = _target != nullptr &&
-			_target->resolveInHierarchy([](const Widget &widget) { return widget.isActive(); });
+											   _target->resolveInHierarchy([](const Widget &widget) {
+												   return widget.isActive();
+											   });
 		if (!targetIsEffectivelyActive || _textArea.text().empty())
 		{
 			hide();

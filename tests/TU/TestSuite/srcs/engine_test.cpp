@@ -99,9 +99,9 @@ namespace
 
 		RecordingBehaviour(
 			std::string name = "behaviour",
-			std::vector<std::string> *p_log = nullptr) :
+			std::vector<std::string> *inputLog = nullptr) :
 			spk::Behaviour(std::move(name)),
-			log(p_log)
+			log(inputLog)
 		{
 		}
 
@@ -156,8 +156,8 @@ namespace
 		std::function<void()> callback;
 		std::size_t *updateCalls;
 
-		explicit CallbackBehaviour(std::size_t &p_updateCalls) :
-			updateCalls(&p_updateCalls)
+		explicit CallbackBehaviour(std::size_t &inputLpdateCalls) :
+			updateCalls(&inputLpdateCalls)
 		{
 		}
 
@@ -198,9 +198,9 @@ namespace
 
 		RecordingComponent(
 			std::string name = "component",
-			std::vector<std::string> *p_log = nullptr) :
+			std::vector<std::string> *inputLog = nullptr) :
 			spk::Component(std::move(name)),
-			log(p_log)
+			log(inputLog)
 		{
 		}
 
@@ -259,11 +259,11 @@ namespace
 
 		RecordingSystem(
 			std::string name = "system",
-			std::vector<std::string> *p_log = nullptr,
-			int *p_destructionCount = nullptr) :
+			std::vector<std::string> *inputLog = nullptr,
+			int *inputLestructionCount = nullptr) :
 			spk::System(std::move(name)),
-			log(p_log),
-			destructionCount(p_destructionCount)
+			log(inputLog),
+			destructionCount(inputLestructionCount)
 		{
 		}
 
@@ -308,9 +308,9 @@ namespace
 		std::size_t geometryCalls = 0;
 		std::size_t renderCalls = 0;
 
-		RecordingEntity(std::string name, spk::Entity *parent = nullptr, std::vector<std::string> *p_log = nullptr) :
+		RecordingEntity(std::string name, spk::Entity *parent = nullptr, std::vector<std::string> *inputLog = nullptr) :
 			spk::Entity(std::move(name), parent),
-			log(p_log)
+			log(inputLog)
 		{
 		}
 

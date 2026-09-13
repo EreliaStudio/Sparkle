@@ -25,14 +25,14 @@ namespace spk::JSON
 
 	template <typename T>
 	concept free_json_writable =
-		requires(const clean_type<T> &p_value) {
-			{ toJSON(p_value) } -> std::convertible_to<Value>;
+		requires(const clean_type<T> &value) {
+			{ toJSON(value) } -> std::convertible_to<Value>;
 		};
 
 	template <typename T>
 	concept member_json_writable =
-		requires(const clean_type<T> &p_value) {
-			{ p_value.toJSON() } -> std::convertible_to<Value>;
+		requires(const clean_type<T> &value) {
+			{ value.toJSON() } -> std::convertible_to<Value>;
 		};
 
 	template <typename T>
@@ -43,14 +43,14 @@ namespace spk::JSON
 	template <typename T>
 	concept free_json_readable =
 		std::default_initializable<clean_type<T>> &&
-		requires(clean_type<T> &p_value, const Value &p_object) {
-			{ fromJSON(p_object, p_value) } -> std::same_as<void>;
+		requires(clean_type<T> &value, const Value &object) {
+			{ fromJSON(object, value) } -> std::same_as<void>;
 		};
 
 	template <typename T>
 	concept member_json_readable =
-		requires(const Value &p_value) {
-			{ clean_type<T>::fromJSON(p_value) } -> std::same_as<clean_type<T>>;
+		requires(const Value &value) {
+			{ clean_type<T>::fromJSON(value) } -> std::same_as<clean_type<T>>;
 		};
 
 	template <typename T>

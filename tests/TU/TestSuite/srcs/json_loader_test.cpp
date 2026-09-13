@@ -25,14 +25,11 @@ TEST(JSONLoaderTest, MissingFileThrowsJsonErrorWithFileRootPathAndWrappedMessage
 	try
 	{
 		(void)spk::JSON::Loader::parseFile(file);
-		FAIL() << "Expected spk::JSON::Error";
+		FAIL() << "Expected spk::Exception";
 	}
-	catch (const spk::JSON::Error &error)
+	catch (const spk::Exception &error)
 	{
-		EXPECT_EQ(error.file(), file);
-		EXPECT_EQ(error.path(), "$");
-		EXPECT_FALSE(error.message().empty());
-		EXPECT_NE(std::string(error.what()).find(file.string()), std::string::npos);
+		EXPECT_NE(std::string(error.what()).find(file.generic_string() + ":$:"), std::string::npos);
 	}
 }
 
@@ -45,14 +42,11 @@ TEST(JSONLoaderTest, InvalidFileThrowsJsonErrorWithFileRootPathAndParserMessage)
 	try
 	{
 		(void)spk::JSON::Loader::parseFile(file);
-		FAIL() << "Expected spk::JSON::Error";
+		FAIL() << "Expected spk::Exception";
 	}
-	catch (const spk::JSON::Error &error)
+	catch (const spk::Exception &error)
 	{
-		EXPECT_EQ(error.file(), file);
-		EXPECT_EQ(error.path(), "$");
-		EXPECT_FALSE(error.message().empty());
-		EXPECT_NE(std::string(error.what()).find(error.message()), std::string::npos);
+		EXPECT_NE(std::string(error.what()).find(file.generic_string() + ":$: invalid JSON"), std::string::npos);
 	}
 }
 
@@ -63,12 +57,10 @@ TEST(JSONLoaderTest, DirectoryPathIsReportedAsJsonError)
 	try
 	{
 		(void)spk::JSON::Loader::parseFile(directory.path());
-		FAIL() << "Expected spk::JSON::Error";
+		FAIL() << "Expected spk::Exception";
 	}
-	catch (const spk::JSON::Error &error)
+	catch (const spk::Exception &error)
 	{
-		EXPECT_EQ(error.file(), directory.path());
-		EXPECT_EQ(error.path(), "$");
-		EXPECT_FALSE(error.message().empty());
+		EXPECT_NE(std::string(error.what()).find(directory.path().generic_string() + ":$:"), std::string::npos);
 	}
 }

@@ -12,10 +12,10 @@
 #include "graphics/opengl/framebuffer.hpp"
 #include "sparkle_test/open_gl_test_context.hpp"
 
-static_assert(!std::is_copy_constructible_v<spk::Framebuffer>);
+static_assert(std::is_copy_constructible_v<spk::Framebuffer>);
 static_assert(std::is_move_constructible_v<spk::Framebuffer>);
-static_assert(!std::is_copy_assignable_v<spk::Framebuffer>);
-static_assert(!std::is_move_assignable_v<spk::Framebuffer>);
+static_assert(std::is_copy_assignable_v<spk::Framebuffer>);
+static_assert(std::is_move_assignable_v<spk::Framebuffer>);
 
 TEST(FramebufferTest, DefaultAttachmentsExposeRenderTargetTextures)
 {

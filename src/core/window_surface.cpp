@@ -34,6 +34,7 @@ namespace spk
 		HDC deviceContext = nullptr;
 		HGLRC renderingContext = nullptr;
 		spk::Rect2D geometry;
+		Profiler *profiler = nullptr;
 
 		explicit Impl(Window::Identifier windowID) :
 			windowID(std::move(windowID)),
@@ -321,6 +322,15 @@ namespace spk
 	GPUResourceCollection &Window::Surface::_gpuResources()
 	{
 		return *_impl->_gpuResources;
+	}
+
+	void Window::Surface::setProfiler(Profiler *profiler) noexcept
+	{
+		_impl->profiler = profiler;
+	}
+	Profiler &Window::Surface::profiler() noexcept
+	{
+		return *_impl->profiler;
 	}
 
 	void Window::Surface::present()

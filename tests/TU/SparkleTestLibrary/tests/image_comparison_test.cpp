@@ -27,9 +27,9 @@ namespace
 		return imageComparisonTempDirectory();
 	}
 
-	void writePng(const std::filesystem::path& p_path, int p_width, int p_height, const std::vector<unsigned char>& p_pixels)
+	void writePng(const std::filesystem::path&path, int width, int height, const std::vector<unsigned char>&pixels)
 	{
-		ASSERT_NE(stbi_write_png(p_path.string().c_str(), p_width, p_height, 4, p_pixels.data(), p_width * 4), 0);
+		ASSERT_NE(stbi_write_png(path.string().c_str(),width,height, 4,pixels.data(),width * 4), 0);
 	}
 }
 

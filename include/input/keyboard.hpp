@@ -161,11 +161,11 @@ namespace spk
 		[[nodiscard]] const InputState &operator[](Key key) const;
 	};
 
-	std::string toString(Keyboard::Key p_key);
-	std::wstring toWString(Keyboard::Key p_key);
-	std::optional<Keyboard::Key> fromString(std::string_view p_keyName);
+	std::string toString(Keyboard::Key key);
+	std::wstring toWString(Keyboard::Key key);
+	std::optional<Keyboard::Key> fromString(std::string_view keyName);
 
-	std::ostream &operator<<(std::ostream &p_stream, Keyboard::Key p_key);
-	std::wostream &operator<<(std::wostream &p_stream, Keyboard::Key p_key);
+	std::ostream &operator<<(std::ostream &stream, Keyboard::Key key);
+	std::wostream &operator<<(std::wostream &stream, Keyboard::Key key);
 
 }

@@ -22,9 +22,9 @@ namespace
 		std::vector<std::string> *log = nullptr;
 		std::function<void()> nestedAction;
 
-		explicit RecordingDispatcher(std::string p_name, std::vector<std::string> &p_log) :
-			name(std::move(p_name)),
-			log(&p_log)
+		explicit RecordingDispatcher(std::string name, std::vector<std::string> &log) :
+			name(std::move(name)),
+			log(&log)
 		{
 		}
 

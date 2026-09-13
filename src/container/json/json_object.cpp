@@ -13,9 +13,9 @@ namespace spk::JSON
 {
 	namespace detail
 	{
-		[[noreturn]] void raise(std::string_view p_message)
+		[[noreturn]] void raise(std::string_view message)
 		{
-			throw std::runtime_error(std::string(p_message));
+			throw std::runtime_error(std::string(message));
 		}
 	}
 
@@ -24,24 +24,24 @@ namespace spk::JSON
 		set(nullptr);
 	}
 
-	Value::Value(bool p_value)
+	Value::Value(bool value)
 	{
-		set(p_value);
+		set(value);
 	}
 
-	Value::Value(const char *p_value)
+	Value::Value(const char *value)
 	{
-		set(p_value);
+		set(value);
 	}
 
-	Value::Value(std::string p_value)
+	Value::Value(std::string value)
 	{
-		set(std::move(p_value));
+		set(std::move(value));
 	}
 
-	Value::Value(std::string_view p_value)
+	Value::Value(std::string_view value)
 	{
-		set(p_value);
+		set(value);
 	}
 
 	Value Value::null()
@@ -182,91 +182,91 @@ namespace spk::JSON
 		detail::raise("JSON value is not an array");
 	}
 
-	bool Value::contains(std::string_view p_key) const
+	bool Value::contains(std::string_view key) const
 	{
 		const Members &members = asObject();
-		return members.find(p_key) != members.end();
+		return members.find(key) != members.end();
 	}
 
-	std::size_t Value::count(std::string_view p_key) const
+	std::size_t Value::count(std::string_view key) const
 	{
-		return contains(p_key) ? 1u : 0u;
+		return contains(key) ? 1u : 0u;
 	}
 
-	Value *Value::find(std::string_view p_key)
+	Value *Value::find(std::string_view key)
 	{
 		Members &members = asObject();
-		auto it = members.find(p_key);
+		auto it = members.find(key);
 		return it == members.end() ? nullptr : &it->second;
 	}
 
-	const Value *Value::find(std::string_view p_key) const
+	const Value *Value::find(std::string_view key) const
 	{
 		const Members &members = asObject();
-		auto it = members.find(p_key);
+		auto it = members.find(key);
 		return it == members.end() ? nullptr : &it->second;
 	}
 
-	Value &Value::at(std::string_view p_key)
+	Value &Value::at(std::string_view key)
 	{
-		if (Value *value = find(p_key))
+		if (Value *value = find(key))
 		{
 			return *value;
 		}
-		detail::raise("Missing JSON object member: " + std::string(p_key));
+		detail::raise("Missing JSON object member: " + std::string(key));
 	}
 
-	const Value &Value::at(std::string_view p_key) const
+	const Value &Value::at(std::string_view key) const
 	{
-		if (const Value *value = find(p_key))
+		if (const Value *value = find(key))
 		{
 			return *value;
 		}
-		detail::raise("Missing JSON object member: " + std::string(p_key));
+		detail::raise("Missing JSON object member: " + std::string(key));
 	}
 
-	Value &Value::at(std::size_t p_index)
+	Value &Value::at(std::size_t index)
 	{
 		Array &array = asArray();
-		if (p_index >= array.size())
+		if (index >= array.size())
 		{
 			detail::raise("JSON array index is out of range");
 		}
-		return array[p_index];
+		return array[index];
 	}
 
-	const Value &Value::at(std::size_t p_index) const
+	const Value &Value::at(std::size_t index) const
 	{
 		const Array &array = asArray();
-		if (p_index >= array.size())
+		if (index >= array.size())
 		{
 			detail::raise("JSON array index is out of range");
 		}
-		return array[p_index];
+		return array[index];
 	}
 
-	Value &Value::operator[](std::string_view p_key)
+	Value &Value::operator[](std::string_view key)
 	{
 		if (isNull())
 		{
 			resetToObject();
 		}
-		return asObject()[std::string(p_key)];
+		return asObject()[std::string(key)];
 	}
 
-	const Value &Value::operator[](std::string_view p_key) const
+	const Value &Value::operator[](std::string_view key) const
 	{
-		return at(p_key);
+		return at(key);
 	}
 
-	Value &Value::operator[](std::size_t p_index)
+	Value &Value::operator[](std::size_t index)
 	{
-		return at(p_index);
+		return at(index);
 	}
 
-	const Value &Value::operator[](std::size_t p_index) const
+	const Value &Value::operator[](std::size_t index) const
 	{
-		return at(p_index);
+		return at(index);
 	}
 
 	Value &Value::append()
@@ -280,24 +280,24 @@ namespace spk::JSON
 		return array.back();
 	}
 
-	Value &Value::pushBack(Value p_value)
+	Value &Value::pushBack(Value value)
 	{
 		if (isNull())
 		{
 			resetToArray();
 		}
 		Array &array = asArray();
-		array.push_back(std::move(p_value));
+		array.push_back(std::move(value));
 		return array.back();
 	}
 
-	void Value::resize(std::size_t p_size)
+	void Value::resize(std::size_t size)
 	{
 		if (isNull())
 		{
 			resetToArray();
 		}
-		asArray().resize(p_size);
+		asArray().resize(size);
 	}
 
 	std::size_t Value::size() const
@@ -324,27 +324,27 @@ namespace spk::JSON
 		return *this;
 	}
 
-	Value &Value::operator=(bool p_value)
+	Value &Value::operator=(bool value)
 	{
-		set(p_value);
+		set(value);
 		return *this;
 	}
 
-	Value &Value::operator=(const char *p_value)
+	Value &Value::operator=(const char *value)
 	{
-		set(p_value);
+		set(value);
 		return *this;
 	}
 
-	Value &Value::operator=(std::string p_value)
+	Value &Value::operator=(std::string value)
 	{
-		set(std::move(p_value));
+		set(std::move(value));
 		return *this;
 	}
 
-	Value &Value::operator=(std::string_view p_value)
+	Value &Value::operator=(std::string_view value)
 	{
-		set(p_value);
+		set(value);
 		return *this;
 	}
 
@@ -353,29 +353,29 @@ namespace spk::JSON
 		_storage = nullptr;
 	}
 
-	void Value::set(bool p_value)
+	void Value::set(bool value)
 	{
-		_storage = p_value;
+		_storage = value;
 	}
 
-	void Value::set(const char *p_value)
+	void Value::set(const char *value)
 	{
-		if (p_value == nullptr)
+		if (value == nullptr)
 		{
 			set(nullptr);
 			return;
 		}
-		_storage = std::string(p_value);
+		_storage = std::string(value);
 	}
 
-	void Value::set(std::string p_value)
+	void Value::set(std::string value)
 	{
-		_storage = std::move(p_value);
+		_storage = std::move(value);
 	}
 
-	void Value::set(std::string_view p_value)
+	void Value::set(std::string_view value)
 	{
-		_storage = std::string(p_value);
+		_storage = std::string(value);
 	}
 
 	namespace
@@ -388,9 +388,9 @@ namespace spk::JSON
 			std::size_t _index = 0;
 
 		public:
-			explicit Parser(std::string_view p_source, const ParseOptions &p_options) :
-				_source(p_source),
-				_options(p_options)
+			explicit Parser(std::string_view source, const ParseOptions &options) :
+				_source(source),
+				_options(options)
 			{
 				constexpr std::string_view utf8Bom = "\xEF\xBB\xBF";
 				if (_source.starts_with(utf8Bom))
@@ -416,10 +416,10 @@ namespace spk::JSON
 			}
 
 		private:
-			[[noreturn]] void error(std::string_view p_message) const
+			[[noreturn]] void error(std::string_view message) const
 			{
 				std::ostringstream stream;
-				stream << p_message << " at line " << line() << ", column " << column();
+				stream << message << " at line " << line() << ", column " << column();
 				detail::raise(stream.str());
 			}
 
@@ -444,9 +444,9 @@ namespace spk::JSON
 				return result;
 			}
 
-			bool consumeIf(char p_expected)
+			bool consumeIf(char expected)
 			{
-				if (!isAtEnd() && _source[_index] == p_expected)
+				if (!isAtEnd() && _source[_index] == expected)
 				{
 					++_index;
 					return true;
@@ -454,11 +454,11 @@ namespace spk::JSON
 				return false;
 			}
 
-			void expect(char p_expected, std::string_view p_message)
+			void expect(char expected, std::string_view message)
 			{
-				if (!consumeIf(p_expected))
+				if (!consumeIf(expected))
 				{
-					error(p_message);
+					error(message);
 				}
 			}
 
@@ -507,9 +507,9 @@ namespace spk::JSON
 				return result;
 			}
 
-			Value parseValue(std::size_t p_depth)
+			Value parseValue(std::size_t depth)
 			{
-				if (p_depth > _options.maxDepth)
+				if (depth > _options.maxDepth)
 				{
 					error("Maximum JSON nesting depth exceeded");
 				}
@@ -533,9 +533,9 @@ namespace spk::JSON
 				case '"':
 					return Value(parseString());
 				case '{':
-					return parseObject(p_depth);
+					return parseObject(depth);
 				case '[':
-					return parseArray(p_depth);
+					return parseArray(depth);
 				case '-':
 				case '0':
 				case '1':
@@ -553,9 +553,9 @@ namespace spk::JSON
 				}
 			}
 
-			void parseLiteral(std::string_view p_literal)
+			void parseLiteral(std::string_view literal)
 			{
-				for (char expected : p_literal)
+				for (char expected : literal)
 				{
 					if (consume() != expected)
 					{
@@ -564,7 +564,7 @@ namespace spk::JSON
 				}
 			}
 
-			Value parseObject(std::size_t p_depth)
+			Value parseObject(std::size_t depth)
 			{
 				Value result = Value::object();
 				expect('{', "Expected '{'");
@@ -585,7 +585,7 @@ namespace spk::JSON
 					std::string key = parseString();
 					skipWhitespaces();
 					expect(':', "Expected ':' after object key");
-					Value value = parseValue(p_depth + 1);
+					Value value = parseValue(depth + 1);
 
 					auto &members = result.asObject();
 					auto existing = members.find(key);
@@ -611,7 +611,7 @@ namespace spk::JSON
 				}
 			}
 
-			Value parseArray(std::size_t p_depth)
+			Value parseArray(std::size_t depth)
 			{
 				Value result = Value::array();
 				expect('[', "Expected '['");
@@ -623,7 +623,7 @@ namespace spk::JSON
 
 				while (true)
 				{
-					result.pushBack(parseValue(p_depth + 1));
+					result.pushBack(parseValue(depth + 1));
 					skipWhitespaces();
 					if (consumeIf(']'))
 					{
@@ -679,17 +679,25 @@ namespace spk::JSON
 				{
 					continuationCount = 2;
 					if (lead == 0xE0)
+					{
 						secondMinimum = 0xA0; // Reject overlong encodings.
+					}
 					else if (lead == 0xED)
+					{
 						secondMaximum = 0x9F; // Reject UTF-16 surrogates.
+					}
 				}
 				else if (lead >= 0xF0 && lead <= 0xF4)
 				{
 					continuationCount = 3;
 					if (lead == 0xF0)
+					{
 						secondMinimum = 0x90; // Reject overlong encodings.
+					}
 					else if (lead == 0xF4)
+					{
 						secondMaximum = 0x8F; // Reject values above U+10FFFF.
+					}
 				}
 				else
 				{
@@ -742,26 +750,26 @@ namespace spk::JSON
 				}
 			}
 
-			static bool isHexDigit(char p_character)
+			static bool isHexDigit(char character)
 			{
-				return (p_character >= '0' && p_character <= '9') ||
-					   (p_character >= 'a' && p_character <= 'f') ||
-					   (p_character >= 'A' && p_character <= 'F');
+				return (character >= '0' && character <= '9') ||
+					   (character >= 'a' && character <= 'f') ||
+					   (character >= 'A' && character <= 'F');
 			}
 
-			static std::uint32_t hexValue(char p_character)
+			static std::uint32_t hexValue(char character)
 			{
-				if (p_character >= '0' && p_character <= '9')
+				if (character >= '0' && character <= '9')
 				{
-					return static_cast<std::uint32_t>(p_character - '0');
+					return static_cast<std::uint32_t>(character - '0');
 				}
-				if (p_character >= 'a' && p_character <= 'f')
+				if (character >= 'a' && character <= 'f')
 				{
-					return static_cast<std::uint32_t>(10 + p_character - 'a');
+					return static_cast<std::uint32_t>(10 + character - 'a');
 				}
-				if (p_character >= 'A' && p_character <= 'F')
+				if (character >= 'A' && character <= 'F')
 				{
-					return static_cast<std::uint32_t>(10 + p_character - 'A');
+					return static_cast<std::uint32_t>(10 + character - 'A');
 				}
 				return 0;
 			}
@@ -806,30 +814,30 @@ namespace spk::JSON
 				return codePointToString(codePoint);
 			}
 
-			static std::string codePointToString(std::uint32_t p_codePoint)
+			static std::string codePointToString(std::uint32_t codePoint)
 			{
 				std::string result;
-				if (p_codePoint <= 0x7F)
+				if (codePoint <= 0x7F)
 				{
-					result.push_back(static_cast<char>(p_codePoint));
+					result.push_back(static_cast<char>(codePoint));
 				}
-				else if (p_codePoint <= 0x7FF)
+				else if (codePoint <= 0x7FF)
 				{
-					result.push_back(static_cast<char>(0xC0 | (p_codePoint >> 6)));
-					result.push_back(static_cast<char>(0x80 | (p_codePoint & 0x3F)));
+					result.push_back(static_cast<char>(0xC0 | (codePoint >> 6)));
+					result.push_back(static_cast<char>(0x80 | (codePoint & 0x3F)));
 				}
-				else if (p_codePoint <= 0xFFFF)
+				else if (codePoint <= 0xFFFF)
 				{
-					result.push_back(static_cast<char>(0xE0 | (p_codePoint >> 12)));
-					result.push_back(static_cast<char>(0x80 | ((p_codePoint >> 6) & 0x3F)));
-					result.push_back(static_cast<char>(0x80 | (p_codePoint & 0x3F)));
+					result.push_back(static_cast<char>(0xE0 | (codePoint >> 12)));
+					result.push_back(static_cast<char>(0x80 | ((codePoint >> 6) & 0x3F)));
+					result.push_back(static_cast<char>(0x80 | (codePoint & 0x3F)));
 				}
 				else
 				{
-					result.push_back(static_cast<char>(0xF0 | (p_codePoint >> 18)));
-					result.push_back(static_cast<char>(0x80 | ((p_codePoint >> 12) & 0x3F)));
-					result.push_back(static_cast<char>(0x80 | ((p_codePoint >> 6) & 0x3F)));
-					result.push_back(static_cast<char>(0x80 | (p_codePoint & 0x3F)));
+					result.push_back(static_cast<char>(0xF0 | (codePoint >> 18)));
+					result.push_back(static_cast<char>(0x80 | ((codePoint >> 12) & 0x3F)));
+					result.push_back(static_cast<char>(0x80 | ((codePoint >> 6) & 0x3F)));
+					result.push_back(static_cast<char>(0x80 | (codePoint & 0x3F)));
 				}
 
 				return result;
@@ -895,11 +903,11 @@ namespace spk::JSON
 				return Value(value);
 			}
 
-			void consumeDigits(std::string_view p_errorMessage)
+			void consumeDigits(std::string_view errorMessage)
 			{
 				if (isAtEnd() || peek() < '0' || peek() > '9')
 				{
-					error(p_errorMessage);
+					error(errorMessage);
 				}
 				while (!isAtEnd() && peek() >= '0' && peek() <= '9')
 				{
@@ -908,12 +916,12 @@ namespace spk::JSON
 			}
 		};
 
-		static std::string escapeString(std::string_view p_value)
+		static std::string escapeString(std::string_view value)
 		{
 			std::ostringstream stream;
 			stream << '"';
 
-			for (char c : p_value)
+			for (char c : value)
 			{
 				switch (c)
 				{
@@ -963,28 +971,28 @@ namespace spk::JSON
 			FormatOptions _options;
 
 		public:
-			Writer(std::ostream &p_stream, const FormatOptions &p_options) :
-				_stream(p_stream),
-				_options(p_options)
+			Writer(std::ostream &stream, const FormatOptions &options) :
+				_stream(stream),
+				_options(options)
 			{
 			}
 
-			void write(const Value &p_value)
+			void write(const Value &value)
 			{
-				writeValue(p_value, 0);
+				writeValue(value, 0);
 			}
 
 		private:
-			void writeDouble(double p_value)
+			void writeDouble(double value)
 			{
-				if (!std::isfinite(p_value))
+				if (!std::isfinite(value))
 				{
 					detail::raise("JSON floating value must be finite");
 				}
 
 				std::array<char, 128> buffer{};
 				const auto [end, error] = std::to_chars(
-					buffer.data(), buffer.data() + buffer.size(), p_value, std::chars_format::general);
+					buffer.data(), buffer.data() + buffer.size(), value, std::chars_format::general);
 				if (error != std::errc{})
 				{
 					detail::raise("Unable to serialize JSON floating value");
@@ -992,13 +1000,13 @@ namespace spk::JSON
 				_stream.write(buffer.data(), static_cast<std::streamsize>(end - buffer.data()));
 			}
 
-			void writeIndent(std::size_t p_depth)
+			void writeIndent(std::size_t depth)
 			{
 				if (!_options.pretty)
 				{
 					return;
 				}
-				for (std::size_t i = 0; i < p_depth * _options.indentationSize; ++i)
+				for (std::size_t i = 0; i < depth * _options.indentationSize; ++i)
 				{
 					_stream << ' ';
 				}
@@ -1012,38 +1020,38 @@ namespace spk::JSON
 				}
 			}
 
-			void writeValue(const Value &p_value, std::size_t p_depth)
+			void writeValue(const Value &value, std::size_t depth)
 			{
-				switch (p_value.type())
+				switch (value.type())
 				{
 				case Value::Type::Null:
 					_stream << "null";
 					break;
 				case Value::Type::Boolean:
-					_stream << (p_value.as<bool>() ? "true" : "false");
+					_stream << (value.as<bool>() ? "true" : "false");
 					break;
 				case Value::Type::Integer:
-					_stream << p_value.as<std::int64_t>();
+					_stream << value.as<std::int64_t>();
 					break;
 				case Value::Type::Floating:
-					writeDouble(p_value.as<double>());
+					writeDouble(value.as<double>());
 					break;
 				case Value::Type::String:
-					_stream << escapeString(p_value.as<std::string>());
+					_stream << escapeString(value.as<std::string>());
 					break;
 				case Value::Type::Object:
-					writeObject(p_value.asObject(), p_depth);
+					writeObject(value.asObject(), depth);
 					break;
 				case Value::Type::Array:
-					writeArray(p_value.asArray(), p_depth);
+					writeArray(value.asArray(), depth);
 					break;
 				}
 			}
 
-			void writeObject(const Value::Members &p_members, std::size_t p_depth)
+			void writeObject(const Value::Members &members, std::size_t depth)
 			{
 				_stream << '{';
-				if (p_members.empty())
+				if (members.empty())
 				{
 					_stream << '}';
 					return;
@@ -1052,26 +1060,26 @@ namespace spk::JSON
 				writeNewLine();
 
 				std::size_t index = 0;
-				for (const auto &[key, value] : p_members)
+				for (const auto &[key, value] : members)
 				{
-					writeIndent(p_depth + 1);
+					writeIndent(depth + 1);
 					_stream << escapeString(key) << (_options.pretty ? ": " : ":");
-					writeValue(value, p_depth + 1);
-					if (++index != p_members.size())
+					writeValue(value, depth + 1);
+					if (++index != members.size())
 					{
 						_stream << ',';
 					}
 					writeNewLine();
 				}
 
-				writeIndent(p_depth);
+				writeIndent(depth);
 				_stream << '}';
 			}
 
-			void writeArray(const Value::Array &p_array, std::size_t p_depth)
+			void writeArray(const Value::Array &array, std::size_t depth)
 			{
 				_stream << '[';
-				if (p_array.empty())
+				if (array.empty())
 				{
 					_stream << ']';
 					return;
@@ -1079,74 +1087,74 @@ namespace spk::JSON
 
 				writeNewLine();
 
-				for (std::size_t i = 0; i < p_array.size(); ++i)
+				for (std::size_t i = 0; i < array.size(); ++i)
 				{
-					writeIndent(p_depth + 1);
-					writeValue(p_array[i], p_depth + 1);
-					if (i + 1 != p_array.size())
+					writeIndent(depth + 1);
+					writeValue(array[i], depth + 1);
+					if (i + 1 != array.size())
 					{
 						_stream << ',';
 					}
 					writeNewLine();
 				}
 
-				writeIndent(p_depth);
+				writeIndent(depth);
 				_stream << ']';
 			}
 		};
 	}
 
-	Value Value::fromString(std::string_view p_content, const ParseOptions &p_options)
+	Value Value::fromString(std::string_view content, const ParseOptions &options)
 	{
-		return Parser(p_content, p_options).parse();
+		return Parser(content, options).parse();
 	}
 
-	Value Value::loadFromFile(const std::filesystem::path &p_path, const ParseOptions &p_options)
+	Value Value::loadFromFile(const std::filesystem::path &path, const ParseOptions &options)
 	{
-		std::ifstream file(p_path, std::ios::binary);
+		std::ifstream file(path, std::ios::binary);
 		if (!file)
 		{
-			detail::raise("Unable to open JSON file: " + p_path.string());
+			detail::raise("Unable to open JSON file: " + path.string());
 		}
 
 		std::ostringstream stream;
 		stream << file.rdbuf();
 		if (!file.good() && !file.eof())
 		{
-			detail::raise("Unable to read JSON file: " + p_path.string());
+			detail::raise("Unable to read JSON file: " + path.string());
 		}
-		return fromString(stream.str(), p_options);
+		return fromString(stream.str(), options);
 	}
 
-	void Value::saveToFile(const std::filesystem::path &p_path, const FormatOptions &p_options) const
+	void Value::saveToFile(const std::filesystem::path &path, const FormatOptions &options) const
 	{
-		std::ofstream file(p_path, std::ios::binary);
+		std::ofstream file(path, std::ios::binary);
 		if (!file)
 		{
-			detail::raise("Unable to open JSON file for writing: " + p_path.string());
+			detail::raise("Unable to open JSON file for writing: " + path.string());
 		}
-		write(file, p_options);
+		write(file, options);
 		if (!file)
 		{
-			detail::raise("Unable to write JSON file: " + p_path.string());
+			detail::raise("Unable to write JSON file: " + path.string());
 		}
 	}
 
-	std::string Value::toString(const FormatOptions &p_options) const
+	std::string Value::toString(const FormatOptions &options) const
 	{
 		std::ostringstream stream;
-		write(stream, p_options);
+		write(stream, options);
 		return stream.str();
 	}
 
-	void Value::write(std::ostream &p_stream, const FormatOptions &p_options) const
+	void Value::write(std::ostream &stream, const FormatOptions &options) const
 	{
-		Writer(p_stream, p_options).write(*this);
+		Writer(stream, options).write(*this);
 	}
 
-	std::ostream &operator<<(std::ostream &p_stream, const Value &p_value)
+	std::ostream &operator<<(std::ostream &stream, const Value &value)
 	{
-		p_value.write(p_stream);
-		return p_stream;
+		value.write(stream);
+		return stream;
 	}
 }

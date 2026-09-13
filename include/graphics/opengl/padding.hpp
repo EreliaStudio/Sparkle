@@ -13,9 +13,9 @@ namespace spk
 	};
 }
 
-#	define SPK_DETAIL_CONCAT_IMPL(p_left, p_right) p_left##p_right
-#	define SPK_DETAIL_CONCAT(p_left, p_right) SPK_DETAIL_CONCAT_IMPL(p_left, p_right)
-#	define SPK_DETAIL_PADDING_NAME_IMPL(p_line, p_counter) SPK_DETAIL_CONCAT(SPK_DETAIL_CONCAT(SPK_DETAIL_CONCAT(_spk_padding_, p_line), _), p_counter)
-#	define SPK_DETAIL_PADDING_NAME(p_line, p_counter) SPK_DETAIL_PADDING_NAME_IMPL(p_line, p_counter)
-#	define SPK_PADDING(p_size) ::spk::Padding<p_size> SPK_DETAIL_PADDING_NAME(__LINE__, __COUNTER__)
+#	define SPK_DETAIL_CONCAT_IMPL(left, right) left##right
+#	define SPK_DETAIL_CONCAT(left, right) SPK_DETAIL_CONCAT_IMPL(left, right)
+#	define SPK_DETAIL_PADDING_NAME_IMPL(line, counter) SPK_DETAIL_CONCAT(SPK_DETAIL_CONCAT(SPK_DETAIL_CONCAT(_spk_padding_, line), _), counter)
+#	define SPK_DETAIL_PADDING_NAME(line, counter) SPK_DETAIL_PADDING_NAME_IMPL(line, counter)
+#	define SPK_PADDING(size) ::spk::Padding<size> SPK_DETAIL_PADDING_NAME(__LINE__, __COUNTER__)
 #endif

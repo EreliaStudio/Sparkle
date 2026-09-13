@@ -21,15 +21,15 @@ namespace
 		std::vector<std::uint8_t> pixels;
 	};
 
-	[[nodiscard]] LoadedImage loadImage(const std::filesystem::path& p_path)
+	[[nodiscard]] LoadedImage loadImage(const std::filesystem::path& path)
 	{
 		int width = 0;
 		int height = 0;
 		int channels = 0;
-		unsigned char* rawPixels = stbi_load(p_path.string().c_str(), &width, &height, &channels, 4);
+		unsigned char* rawPixels = stbi_load(path.string().c_str(), &width, &height, &channels, 4);
 		if (rawPixels == nullptr)
 		{
-			throw std::runtime_error("Failed to load image [" + p_path.string() + "]: " + stbi_failure_reason());
+			throw std::runtime_error("Failed to load image [" +path.string() + "]: " + stbi_failure_reason());
 		}
 
 		LoadedImage result;
@@ -40,29 +40,29 @@ namespace
 		return result;
 	}
 
-	[[nodiscard]] bool channelDiffers(std::uint8_t p_left, std::uint8_t p_right, std::uint8_t p_tolerance)
+	[[nodiscard]] bool channelDiffers(std::uint8_t left, std::uint8_t right, std::uint8_t tolerance)
 	{
-		return std::abs(static_cast<int>(p_left) - static_cast<int>(p_right)) > static_cast<int>(p_tolerance);
+		return std::abs(static_cast<int>(left) - static_cast<int>(right)) > static_cast<int>(tolerance);
 	}
 
 	[[nodiscard]] bool pixelDiffers(
-		const std::uint8_t* p_actual,
-		const std::uint8_t* p_expected,
-		sparkle_test::ImageComparisonOptions p_options)
+		const std::uint8_t*actual,
+		const std::uint8_t*expected,
+		sparkle_test::ImageComparisonOptions options)
 	{
-		if (channelDiffers(p_actual[3], p_expected[3], p_options.alphaTolerance) == true)
+		if (channelDiffers(actual[3],expected[3],options.alphaTolerance) == true)
 		{
 			return true;
 		}
 
-		if (p_actual[3] <= p_options.transparentAlphaThreshold && p_expected[3] <= p_options.transparentAlphaThreshold)
+		if (actual[3] <=options.transparentAlphaThreshold &&expected[3] <=options.transparentAlphaThreshold)
 		{
 			return false;
 		}
 
 		for (std::size_t channel = 0; channel < 3; ++channel)
 		{
-			if (channelDiffers(p_actual[channel], p_expected[channel], p_options.rgbTolerance) == true)
+			if (channelDiffers(actual[channel],expected[channel],options.rgbTolerance) == true)
 			{
 				return true;
 			}
@@ -75,13 +75,13 @@ namespace
 namespace sparkle_test
 {
 	ImageComparisonResult compareImages(
-		const std::filesystem::path& p_actualPath,
-		const std::filesystem::path& p_expectedPath,
-		const std::filesystem::path& p_differencePath,
-		ImageComparisonOptions p_options)
+		const std::filesystem::path&actualPath,
+		const std::filesystem::path&expectedPath,
+		const std::filesystem::path&differencePath,
+		ImageComparisonOptions options)
 	{
-		const LoadedImage actual = loadImage(p_actualPath);
-		const LoadedImage expected = loadImage(p_expectedPath);
+		const LoadedImage actual = loadImage(actualPath);
+		const LoadedImage expected = loadImage(expectedPath);
 
 		ImageComparisonResult result;
 		result.actualWidth = actual.width;
@@ -110,7 +110,7 @@ namespace sparkle_test
 				{
 					const std::size_t actualIndex = (static_cast<std::size_t>(y) * static_cast<std::size_t>(actual.width) + static_cast<std::size_t>(x)) * 4;
 					const std::size_t expectedIndex = (static_cast<std::size_t>(y) * static_cast<std::size_t>(expected.width) + static_cast<std::size_t>(x)) * 4;
-					pixelMatches = (pixelDiffers(actual.pixels.data() + actualIndex, expected.pixels.data() + expectedIndex, p_options) == false);
+					pixelMatches = (pixelDiffers(actual.pixels.data() + actualIndex, expected.pixels.data() + expectedIndex,options) == false);
 				}
 
 				if (pixelMatches == false)
@@ -129,20 +129,20 @@ namespace sparkle_test
 
 		if (result.matches == false)
 		{
-			if (p_differencePath.has_parent_path())
+			if (differencePath.has_parent_path())
 			{
-				std::filesystem::create_directories(p_differencePath.parent_path());
+				std::filesystem::create_directories(differencePath.parent_path());
 			}
-			if (stbi_write_png(p_differencePath.string().c_str(), diffWidth, diffHeight, 4, difference.data(), diffWidth * 4) == 0)
+			if (stbi_write_png(differencePath.string().c_str(), diffWidth, diffHeight, 4, difference.data(), diffWidth * 4) == 0)
 			{
-				throw std::runtime_error("Failed to write image comparison diff [" + p_differencePath.string() + "]");
+				throw std::runtime_error("Failed to write image comparison diff [" +differencePath.string() + "]");
 			}
 		}
 		else
 		{
-			std::filesystem::remove(p_actualPath);
-			std::filesystem::remove(p_differencePath);
-			removeEmptyResultDirectories(p_actualPath.parent_path());
+			std::filesystem::remove(actualPath);
+			std::filesystem::remove(differencePath);
+			removeEmptyResultDirectories(actualPath.parent_path());
 		}
 
 		return result;

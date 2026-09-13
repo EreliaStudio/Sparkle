@@ -3,6 +3,7 @@
 #include "core/event/event_dispatcher.hpp"
 #include "design_pattern/trait/activable_trait.hpp"
 #include "design_pattern/trait/name_trait.hpp"
+#include "design_pattern/trait/render_snapshot_contributor_trait.hpp"
 #include "design_pattern/trait/updatable_trait.hpp"
 #include "engine/contextualizable_trait.hpp"
 
@@ -17,7 +18,8 @@ namespace spk
 				   public ActivableTrait,
 				   public NameTrait,
 				   public EventDispatcher,
-				   public UpdatableTrait
+				   public UpdatableTrait,
+				   public RenderSnapshotContributorTrait
 	{
 	protected:
 		[[nodiscard]] bool _isAcceptingEvent() const override;

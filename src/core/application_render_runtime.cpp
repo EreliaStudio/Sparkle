@@ -58,7 +58,8 @@ namespace spk
 		surface.makeCurrent();
 
 		spk::RenderContext context{
-			.targetSurface = &surface};
+			.targetSurface = &surface,
+			.profiler = surface.profiler()};
 
 		snapshot.execute(context);
 

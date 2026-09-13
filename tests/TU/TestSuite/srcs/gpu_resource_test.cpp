@@ -109,10 +109,10 @@ namespace
 		}
 	};
 
-	static_assert(!std::is_copy_constructible_v<FakeGPUResource>);
-	static_assert(!std::is_copy_assignable_v<FakeGPUResource>);
+	static_assert(std::is_copy_constructible_v<FakeGPUResource>);
+	static_assert(std::is_copy_assignable_v<FakeGPUResource>);
 	static_assert(std::is_nothrow_move_constructible_v<FakeGPUResource>);
-	static_assert(!std::is_move_assignable_v<FakeGPUResource>);
+	static_assert(std::is_move_assignable_v<FakeGPUResource>);
 }
 
 TEST(GPUResourceTest, CreationIsLazyAndActivationReusesTheContextInstance)

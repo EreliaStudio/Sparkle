@@ -46,8 +46,7 @@ namespace spk
 					{{xs[x], ys[y]}, depth, section.anchor},
 					{{xs[x], ys[y + 1]}, depth, {section.anchor.x, section.anchor.y + section.size.y}},
 					{{xs[x + 1], ys[y + 1]}, depth, section.anchor + section.size},
-					{{xs[x + 1], ys[y]}, depth, {section.anchor.x + section.size.x, section.anchor.y}}
-				);
+					{{xs[x + 1], ys[y]}, depth, {section.anchor.x + section.size.x, section.anchor.y}});
 			}
 		}
 		return std::move(meshBuilder).build();

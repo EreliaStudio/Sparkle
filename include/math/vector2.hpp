@@ -33,14 +33,14 @@ namespace spk
 		{
 		}
 
-		explicit TVector2(const JSON::Value &p_value) noexcept
+		explicit TVector2(const JSON::Value &value) noexcept
 		{
-			*this = fromJSON(p_value);
+			*this = fromJSON(value);
 		}
 
-		constexpr TVector2(TType p_x, TType p_y) noexcept :
-			x(p_x),
-			y(p_y)
+		constexpr TVector2(TType x, TType y) noexcept :
+			x(x),
+			y(y)
 		{
 		}
 
@@ -142,9 +142,9 @@ namespace spk
 			return result;
 		}
 
-		[[nodiscard]] static TVector2 fromJSON(const JSON::Value &p_value)
+		[[nodiscard]] static TVector2 fromJSON(const JSON::Value &value)
 		{
-			const auto &array = p_value.asArray();
+			const auto &array = value.asArray();
 
 			if (array.size() != 2)
 			{
@@ -154,8 +154,7 @@ namespace spk
 
 			return {
 				array[0].as<TType>(),
-				array[1].as<TType>()
-			};
+				array[1].as<TType>()};
 		}
 	};
 

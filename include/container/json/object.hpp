@@ -21,7 +21,7 @@ namespace spk::JSON
 {
 	namespace detail
 	{
-		[[noreturn]] void raise(std::string_view p_message);
+		[[noreturn]] void raise(std::string_view message);
 	}
 
 	struct FormatOptions
@@ -69,38 +69,38 @@ namespace spk::JSON
 	public:
 		Value() = default;
 		Value(std::nullptr_t);
-		Value(bool p_value);
-		Value(const char *p_value);
-		Value(std::string p_value);
-		Value(std::string_view p_value);
+		Value(bool value);
+		Value(const char *value);
+		Value(std::string value);
+		Value(std::string_view value);
 
 		template <native_integer T>
-		Value(T p_value)
+		Value(T value)
 		{
-			set(p_value);
+			set(value);
 		}
 
 		template <native_floating T>
-		Value(T p_value)
+		Value(T value)
 		{
-			set(p_value);
+			set(value);
 		}
 
 		template <json_writable T>
-		Value(const T &p_value)
+		Value(const T &value)
 		{
-			set(p_value);
+			set(value);
 		}
 
 		static Value null();
 		static Value object();
 		static Value array();
 
-		static Value fromString(std::string_view p_content, const ParseOptions &p_options = {});
-		static Value loadFromFile(const std::filesystem::path &p_path, const ParseOptions &p_options = {});
+		static Value fromString(std::string_view content, const ParseOptions &options = {});
+		static Value loadFromFile(const std::filesystem::path &path, const ParseOptions &options = {});
 
-		void saveToFile(const std::filesystem::path &p_path, const FormatOptions &p_options = {}) const;
-		std::string toString(const FormatOptions &p_options = {}) const;
+		void saveToFile(const std::filesystem::path &path, const FormatOptions &options = {}) const;
+		std::string toString(const FormatOptions &options = {}) const;
 
 		void reset();
 
@@ -124,103 +124,103 @@ namespace spk::JSON
 		Array &asArray();
 		const Array &asArray() const;
 
-		bool contains(std::string_view p_key) const;
-		std::size_t count(std::string_view p_key) const;
+		bool contains(std::string_view key) const;
+		std::size_t count(std::string_view key) const;
 
-		Value *find(std::string_view p_key);
-		const Value *find(std::string_view p_key) const;
+		Value *find(std::string_view key);
+		const Value *find(std::string_view key) const;
 
-		Value &at(std::string_view p_key);
-		const Value &at(std::string_view p_key) const;
+		Value &at(std::string_view key);
+		const Value &at(std::string_view key) const;
 
-		Value &at(std::size_t p_index);
-		const Value &at(std::size_t p_index) const;
+		Value &at(std::size_t index);
+		const Value &at(std::size_t index) const;
 
-		Value &operator[](std::string_view p_key);
-		const Value &operator[](std::string_view p_key) const;
+		Value &operator[](std::string_view key);
+		const Value &operator[](std::string_view key) const;
 
-		Value &operator[](std::size_t p_index);
-		const Value &operator[](std::size_t p_index) const;
+		Value &operator[](std::size_t index);
+		const Value &operator[](std::size_t index) const;
 
 		Value &append();
-		Value &pushBack(Value p_value);
-		void resize(std::size_t p_size);
+		Value &pushBack(Value value);
+		void resize(std::size_t size);
 		std::size_t size() const;
 		bool empty() const;
 
 		Value &operator=(std::nullptr_t);
-		Value &operator=(bool p_value);
-		Value &operator=(const char *p_value);
-		Value &operator=(std::string p_value);
-		Value &operator=(std::string_view p_value);
+		Value &operator=(bool value);
+		Value &operator=(const char *value);
+		Value &operator=(std::string value);
+		Value &operator=(std::string_view value);
 
 		template <native_integer T>
-		Value &operator=(T p_value)
+		Value &operator=(T value)
 		{
-			set(p_value);
+			set(value);
 			return *this;
 		}
 
 		template <native_floating T>
-		Value &operator=(T p_value)
+		Value &operator=(T value)
 		{
-			set(p_value);
+			set(value);
 			return *this;
 		}
 
 		template <json_writable T>
-		Value &operator=(const T &p_value)
+		Value &operator=(const T &value)
 		{
-			set(p_value);
+			set(value);
 			return *this;
 		}
 
 		void set(std::nullptr_t);
-		void set(bool p_value);
-		void set(const char *p_value);
-		void set(std::string p_value);
-		void set(std::string_view p_value);
+		void set(bool value);
+		void set(const char *value);
+		void set(std::string value);
+		void set(std::string_view value);
 
 		template <native_integer T>
-		void set(T p_value)
+		void set(T value)
 		{
 			if constexpr (std::signed_integral<T>)
 			{
-				_storage = static_cast<std::int64_t>(p_value);
+				_storage = static_cast<std::int64_t>(value);
 			}
 			else
 			{
-				if (p_value > static_cast<std::make_unsigned_t<std::int64_t>>(std::numeric_limits<std::int64_t>::max()))
+				if (value > static_cast<std::make_unsigned_t<std::int64_t>>(std::numeric_limits<std::int64_t>::max()))
 				{
 					detail::raise("Unsigned integer value is too large for JSON integer storage");
 				}
-				_storage = static_cast<std::int64_t>(p_value);
+				_storage = static_cast<std::int64_t>(value);
 			}
 		}
 
 		template <native_floating T>
-		void set(T p_value)
+		void set(T value)
 		{
-			const double value = static_cast<double>(p_value);
-			if (!std::isfinite(value))
+			const double castedValue = static_cast<double>(value);
+			if (!std::isfinite(castedValue))
 			{
 				detail::raise("JSON floating value must be finite");
 			}
-			_storage = value;
+			_storage = castedValue;
 		}
 
 		template <json_writable T>
-		void set(const T &p_value)
+		void set(const T &value)
 		{
 			Value serialized;
 
 			if constexpr (member_json_writable<T>)
 			{
-				serialized = p_value.toJSON();
+				serialized = value.toJSON();
 			}
 			else
 			{
-				serialized = toJSON(p_value);
+				serialized = toJSON(value);
 			}
 
 			_storage = std::move(serialized._storage);
@@ -356,10 +356,10 @@ namespace spk::JSON
 			}
 		}
 
-		void write(std::ostream &p_stream, const FormatOptions &p_options = {}) const;
+		void write(std::ostream &stream, const FormatOptions &options = {}) const;
 
 		bool operator==(const Value &) const = default;
 
-		friend std::ostream &operator<<(std::ostream &p_stream, const Value &p_value);
+		friend std::ostream &operator<<(std::ostream &stream, const Value &value);
 	};
 }

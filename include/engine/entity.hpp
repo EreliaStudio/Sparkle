@@ -14,8 +14,8 @@
 #include "design_pattern/trait/render_snapshot_contributor_trait.hpp"
 #include "design_pattern/trait/updatable_trait.hpp"
 #include "engine/behaviour_collection.hpp"
-#include "engine/registry.hpp"
 #include "engine/component_collection.hpp"
+#include "engine/registry.hpp"
 #include "math/rect2d.hpp"
 #include "rendering/render_snapshot.hpp"
 

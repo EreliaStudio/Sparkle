@@ -18,7 +18,7 @@ namespace
 		std::string label;
 
 		Record() = default;
-		Record(int p_value, std::string p_label) : value(p_value), label(std::move(p_label)) {}
+		Record(int value, std::string label) : value(value), label(std::move(label)) {}
 	};
 }
 

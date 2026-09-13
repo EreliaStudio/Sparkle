@@ -161,11 +161,11 @@ namespace spk
 		return keys.at(static_cast<std::size_t>(key));
 	}
 
-	std::string toString(Keyboard::Key p_key)
+	std::string toString(Keyboard::Key key)
 	{
-		for (const auto &[key, name] : keyboardKeyNames)
+		for (const auto &[savedKey, name] : keyboardKeyNames)
 		{
-			if (key == p_key)
+			if (savedKey == key)
 			{
 				return std::string(name);
 			}
@@ -174,18 +174,18 @@ namespace spk
 		return "Unknown";
 	}
 
-	std::wstring toWString(Keyboard::Key p_key)
+	std::wstring toWString(Keyboard::Key key)
 	{
-		const std::string result = toString(p_key);
+		const std::string result = toString(key);
 
 		return std::wstring(result.begin(), result.end());
 	}
 
-	std::optional<Keyboard::Key> fromString(std::string_view p_keyName)
+	std::optional<Keyboard::Key> fromString(std::string_view keyName)
 	{
 		for (const auto &[key, name] : keyboardKeyNames)
 		{
-			if (name == p_keyName)
+			if (name == keyName)
 			{
 				return key;
 			}
@@ -194,15 +194,15 @@ namespace spk
 		return std::nullopt;
 	}
 
-	std::ostream &operator<<(std::ostream &p_stream, Keyboard::Key p_key)
+	std::ostream &operator<<(std::ostream &stream, Keyboard::Key key)
 	{
-		p_stream << toString(p_key);
-		return p_stream;
+		stream << toString(key);
+		return stream;
 	}
 
-	std::wostream &operator<<(std::wostream &p_stream, Keyboard::Key p_key)
+	std::wostream &operator<<(std::wostream &stream, Keyboard::Key key)
 	{
-		p_stream << toWString(p_key);
-		return p_stream;
+		stream << toWString(key);
+		return stream;
 	}
 }

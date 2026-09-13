@@ -22,7 +22,7 @@ namespace spk
 		class Reader final
 		{
 			friend class ProtectedData;
-		
+
 		private:
 			explicit Reader(const ProtectedData &owner) :
 				_owner(owner),
@@ -80,7 +80,6 @@ namespace spk
 				return &_owner._value;
 			}
 		};
-	
 
 	private:
 		value_type _value{};

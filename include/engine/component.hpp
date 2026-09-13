@@ -15,9 +15,9 @@ namespace spk
 	class Engine;
 
 	class Component : public EntityAttachment,
-						public Registry<Component, Engine *>::Object,
-						public GeometryStateTrait,
-						public RenderSnapshotContributorTrait
+					  public Registry<Component, Engine *>::Object,
+					  public GeometryStateTrait,
+					  public RenderSnapshotContributorTrait
 	{
 	protected:
 		[[nodiscard]] bool _canBuildRenderSnapshot() const override;

@@ -16,9 +16,9 @@ namespace
 		int id;
 		std::string name;
 
-		Record(int p_id, std::string p_name) :
-			id(p_id),
-			name(std::move(p_name))
+		Record(int id, std::string name) :
+			id(id),
+			name(std::move(name))
 		{
 		}
 	};

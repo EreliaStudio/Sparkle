@@ -20,18 +20,18 @@ namespace json_value_test
 		bool operator==(const FreePoint &) const = default;
 	};
 
-	spk::JSON::Value toJSON(const FreePoint &p_point)
+	spk::JSON::Value toJSON(const FreePoint &point)
 	{
 		spk::JSON::Value result = spk::JSON::Value::object();
-		result["x"] = p_point.x;
-		result["y"] = p_point.y;
+		result["x"] = point.x;
+		result["y"] = point.y;
 		return result;
 	}
 
-	void fromJSON(const spk::JSON::Value &p_value, FreePoint &p_point)
+	void fromJSON(const spk::JSON::Value &value, FreePoint &point)
 	{
-		p_point.x = p_value.at("x").as<int>();
-		p_point.y = p_value.at("y").as<int>();
+		point.x = value.at("x").as<int>();
+		point.y = value.at("y").as<int>();
 	}
 
 	struct MemberPoint
@@ -40,9 +40,9 @@ namespace json_value_test
 		int y;
 
 		MemberPoint() = delete;
-		MemberPoint(int p_x, int p_y) :
-			x(p_x),
-			y(p_y)
+		MemberPoint(int x, int y) :
+			x(x),
+			y(y)
 		{
 		}
 
@@ -54,11 +54,11 @@ namespace json_value_test
 			return result;
 		}
 
-		[[nodiscard]] static MemberPoint fromJSON(const spk::JSON::Value &p_value)
+		[[nodiscard]] static MemberPoint fromJSON(const spk::JSON::Value &value)
 		{
 			return {
-				p_value.at("x").as<int>(),
-				p_value.at("y").as<int>()};
+				value.at("x").as<int>(),
+				value.at("y").as<int>()};
 		}
 
 		bool operator==(const MemberPoint &) const = default;
@@ -238,21 +238,21 @@ TEST(JSONValueTest, MalformedJsonInputsAreRejected)
 TEST(JSONValueTest, RawUtf8AcceptsValidSequencesAndRejectsEveryMalformedClass)
 {
 	const std::string valid = std::string("\"") +
-		char(0xC3) + char(0xA9) + // U+00E9
-		char(0xE2) + char(0x82) + char(0xAC) + // U+20AC
-		char(0xF0) + char(0x9F) + char(0x98) + char(0x80) + // U+1F600
-		"\"";
+							  char(0xC3) + char(0xA9) +							  // U+00E9
+							  char(0xE2) + char(0x82) + char(0xAC) +			  // U+20AC
+							  char(0xF0) + char(0x9F) + char(0x98) + char(0x80) + // U+1F600
+							  "\"";
 	EXPECT_EQ(spk::JSON::Value::fromString(valid).as<std::string>(), valid.substr(1, valid.size() - 2));
 
 	const std::vector<std::string> malformedPayloads = {
-		std::string(1, char(0x80)),                         // Isolated continuation.
-		std::string{char(0xC0), char(0xAF)},                // Overlong two-byte form.
-		std::string{char(0xC3), char(0x28)},                // Invalid continuation.
-		std::string{char(0xC3)},                            // Truncated sequence.
-		std::string{char(0xE0), char(0x80), char(0x80)},    // Overlong three-byte form.
-		std::string{char(0xED), char(0xA0), char(0x80)},    // UTF-16 surrogate.
-		std::string{char(0xF0), char(0x80), char(0x80), char(0x80)}, // Overlong four-byte form.
-		std::string{char(0xF4), char(0x90), char(0x80), char(0x80)}, // Above U+10FFFF.
+		std::string(1, char(0x80)),									  // Isolated continuation.
+		std::string{char(0xC0), char(0xAF)},						  // Overlong two-byte form.
+		std::string{char(0xC3), char(0x28)},						  // Invalid continuation.
+		std::string{char(0xC3)},									  // Truncated sequence.
+		std::string{char(0xE0), char(0x80), char(0x80)},			  // Overlong three-byte form.
+		std::string{char(0xED), char(0xA0), char(0x80)},			  // UTF-16 surrogate.
+		std::string{char(0xF0), char(0x80), char(0x80), char(0x80)},  // Overlong four-byte form.
+		std::string{char(0xF4), char(0x90), char(0x80), char(0x80)},  // Above U+10FFFF.
 		std::string{char(0xF5), char(0x80), char(0x80), char(0x80)}}; // Invalid lead.
 	for (const std::string &payload : malformedPayloads)
 	{
@@ -333,8 +333,7 @@ TEST(JSONValueTest, ParseErrorsExposeDiagnosticText)
 	{
 		(void)spk::JSON::Value::fromString("{\"a\": [1, }");
 		FAIL() << "Expected parse failure";
-	}
-	catch (const std::runtime_error &exception)
+	} catch (const std::runtime_error &exception)
 	{
 		EXPECT_FALSE(std::string(exception.what()).empty());
 	}
@@ -347,8 +346,7 @@ TEST(JSONValueTest, ParseErrorsExposeCategoryAndSourcePositionWithoutFreezingFul
 		{
 			(void)spk::JSON::Value::fromString(document);
 			FAIL() << "Expected parse failure";
-		}
-		catch (const std::runtime_error &exception)
+		} catch (const std::runtime_error &exception)
 		{
 			const std::string diagnostic = exception.what();
 			EXPECT_NE(diagnostic.find(category), std::string::npos) << diagnostic;

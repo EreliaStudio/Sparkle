@@ -1,14 +1,14 @@
 #pragma once
 
-#include "engine/entity2d.hpp"
 #include "engine/component.hpp"
+#include "engine/entity2d.hpp"
 
 #include <string>
 
 namespace spk
 {
 	class Component2D : public Component,
-						  public Registry<Component2D, Engine *>::Object
+						public Registry<Component2D, Engine *>::Object
 	{
 	public:
 		Component2D(

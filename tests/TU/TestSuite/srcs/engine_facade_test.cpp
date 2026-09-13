@@ -278,7 +278,7 @@ TEST(EngineFacadeTest, DestructionClearsNestedAndDetachedEntityContextsAndDetach
 	{
 		bool &detached;
 		bool &destroyed;
-		ObservedSystem(bool &p_detached, bool &p_destroyed) : detached(p_detached), destroyed(p_destroyed) {}
+		ObservedSystem(bool &detached, bool &destroyed) : detached(detached), destroyed(destroyed) {}
 		void attach(spk::Engine *value) override
 		{
 			spk::System::attach(value);

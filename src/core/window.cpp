@@ -11,6 +11,7 @@ namespace spk
 		_state(std::move(state)),
 		_surface(std::move(surface))
 	{
+		_surface->setProfiler(&_state->profiler());
 	}
 
 	bool Window::isClosing() const noexcept
@@ -46,5 +47,13 @@ namespace spk
 	const spk::Rect2D &Window::geometry() const noexcept
 	{
 		return _surface->geometry();
+	}
+	Profiler &Window::profiler() noexcept
+	{
+		return _state->profiler();
+	}
+	const Profiler &Window::profiler() const noexcept
+	{
+		return _state->profiler();
 	}
 }

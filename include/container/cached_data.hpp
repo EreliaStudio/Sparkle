@@ -53,10 +53,10 @@ namespace spk
 		CachedData() = default;
 
 		explicit CachedData(
-			generator p_generator,
-			destructor p_destructor = nullptr) :
-			_generator(std::move(p_generator)),
-			_destructor(std::move(p_destructor))
+			generator generator,
+			destructor destructor = nullptr) :
+			_generator(std::move(generator)),
+			_destructor(std::move(destructor))
 		{
 		}
 
@@ -65,68 +65,68 @@ namespace spk
 			_destroyData();
 		}
 
-		CachedData(const CachedData &p_other)
+		CachedData(const CachedData &other)
 			requires std::copy_constructible<value_type>
 			:
-			_generator(p_other._generator),
-			_destructor(p_other._destructor)
+			_generator(other._generator),
+			_destructor(other._destructor)
 		{
-			if (p_other._data.has_value())
+			if (other._data.has_value())
 			{
-				_data.emplace(*p_other._data);
+				_data.emplace(*other._data);
 			}
 		}
 
-		CachedData &operator=(const CachedData &p_other)
+		CachedData &operator=(const CachedData &other)
 			requires std::copy_constructible<value_type>
 		{
-			if (this == &p_other)
+			if (this == &other)
 			{
 				return *this;
 			}
 
 			_destroyData();
 
-			_generator = p_other._generator;
-			_destructor = p_other._destructor;
+			_generator = other._generator;
+			_destructor = other._destructor;
 
-			if (p_other._data.has_value())
+			if (other._data.has_value())
 			{
-				_data.emplace(*p_other._data);
+				_data.emplace(*other._data);
 			}
 
 			return *this;
 		}
 
-		CachedData(CachedData &&p_other) noexcept(std::is_nothrow_move_constructible_v<value_type>) :
-			_generator(std::move(p_other._generator)),
-			_destructor(std::move(p_other._destructor))
+		CachedData(CachedData &&other) noexcept(std::is_nothrow_move_constructible_v<value_type>) :
+			_generator(std::move(other._generator)),
+			_destructor(std::move(other._destructor))
 		{
-			if (p_other._data.has_value())
+			if (other._data.has_value())
 			{
-				_data.emplace(std::move(*p_other._data));
-				p_other._data.reset();
+				_data.emplace(std::move(*other._data));
+				other._data.reset();
 			}
 		}
 
-		CachedData &operator=(CachedData &&p_other) noexcept(
+		CachedData &operator=(CachedData &&other) noexcept(
 			std::is_nothrow_move_constructible_v<value_type> &&
 			std::is_nothrow_destructible_v<value_type>)
 		{
-			if (this == &p_other)
+			if (this == &other)
 			{
 				return *this;
 			}
 
 			_destroyData();
 
-			_generator = std::move(p_other._generator);
-			_destructor = std::move(p_other._destructor);
+			_generator = std::move(other._generator);
+			_destructor = std::move(other._destructor);
 
-			if (p_other._data.has_value())
+			if (other._data.has_value())
 			{
-				_data.emplace(std::move(*p_other._data));
-				p_other._data.reset();
+				_data.emplace(std::move(*other._data));
+				other._data.reset();
 			}
 
 			return *this;
@@ -188,19 +188,19 @@ namespace spk
 
 		template <typename TValue>
 			requires std::constructible_from<value_type, TValue &&>
-		void set(TValue &&p_value)
+		void set(TValue &&value)
 		{
 			_destroyData();
-			_data.emplace(std::forward<TValue>(p_value));
+			_data.emplace(std::forward<TValue>(value));
 		}
 
 		template <typename... TArguments>
 			requires std::constructible_from<value_type, TArguments &&...>
-		value_type &emplace(TArguments &&...p_arguments)
+		value_type &emplace(TArguments &&...arguments)
 		{
 			_destroyData();
 
-			return _data.emplace(std::forward<TArguments>(p_arguments)...);
+			return _data.emplace(std::forward<TArguments>(arguments)...);
 		}
 
 		[[nodiscard]] std::optional<value_type> take()

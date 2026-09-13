@@ -54,9 +54,13 @@ namespace spk
 			else
 			{
 				if (rhs > 0 && lhs > std::numeric_limits<TType>::max() - rhs)
+				{
 					return std::numeric_limits<TType>::max();
+				}
 				if (rhs < 0 && lhs < std::numeric_limits<TType>::lowest() - rhs)
+				{
 					return std::numeric_limits<TType>::lowest();
+				}
 				return static_cast<TType>(lhs + rhs);
 			}
 		}
@@ -74,9 +78,13 @@ namespace spk
 			else
 			{
 				if (rhs > 0 && lhs < std::numeric_limits<TType>::lowest() + rhs)
+				{
 					return std::numeric_limits<TType>::lowest();
+				}
 				if (rhs < 0 && lhs > std::numeric_limits<TType>::max() + rhs)
+				{
 					return std::numeric_limits<TType>::max();
+				}
 				return static_cast<TType>(lhs - rhs);
 			}
 		}

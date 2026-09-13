@@ -30,6 +30,5 @@ namespace spk
 		void invalidate();
 		[[nodiscard]] Version version() const noexcept;
 		[[nodiscard]] Contract subscribeToVersionEdition(callback_type callback);
-
 	};
 }

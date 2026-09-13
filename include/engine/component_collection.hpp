@@ -1,7 +1,7 @@
 #pragma once
 
-#include "engine/entity_attachment_collection.hpp"
 #include "engine/component.hpp"
+#include "engine/entity_attachment_collection.hpp"
 
 namespace spk
 {

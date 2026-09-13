@@ -141,10 +141,10 @@ namespace spk
 		[[nodiscard]] static Identifier _generateIdentifier() noexcept;
 		static void _activate(const State &state, RenderContext &context);
 
-		protected:
-			explicit GPUResource(std::shared_ptr<State> state);
-			[[nodiscard]] std::shared_ptr<State> _cloneState() const;
-			void _setState(std::shared_ptr<State> state);
+	protected:
+		explicit GPUResource(std::shared_ptr<State> state);
+		[[nodiscard]] std::shared_ptr<State> _cloneState() const;
+		void _setState(std::shared_ptr<State> state);
 
 		template <typename TState>
 			requires std::derived_from<TState, State>
@@ -176,7 +176,7 @@ namespace spk
 		[[nodiscard]] virtual std::unique_ptr<GPUResource> clone() const;
 
 		GPUResource &operator=(const GPUResource &other);
-		GPUResource &operator=(GPUResource &&) = delete;
+		GPUResource &operator=(GPUResource &&) noexcept = default;
 
 		void activate(RenderContext &context) const;
 

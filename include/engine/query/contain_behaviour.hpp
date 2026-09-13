@@ -1,7 +1,7 @@
 #pragma once
 
-#include "engine/entity.hpp"
 #include "container/query.hpp"
+#include "engine/entity.hpp"
 
 #include <concepts>
 #include <functional>
