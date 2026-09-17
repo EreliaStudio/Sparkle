@@ -11,6 +11,8 @@
 #include "ui/widget.hpp"
 
 #include "rendering/command/clear_render_command.hpp"
+#include "rendering/command/scissor_render_command.hpp"
+#include "rendering/command/viewport_render_command.hpp"
 
 namespace spk
 {
@@ -25,10 +27,25 @@ namespace spk
 
 		void _buildRenderSnapshot(spk::RenderSnapshot::Builder &builder)
 		{
-			builder.renderPass(Widget::BackgroundKey).emplace<spk::ClearRenderCommand>(_backgroundColor, spk::ClearRenderCommand::Mask::All);
-			builder.renderPass(Widget::OverlayKey).emplace<spk::ClearRenderCommand>(spk::Color{}, spk::ClearRenderCommand::Mask::Depth);
-			builder.renderPass(Widget::PopupKey).emplace<spk::ClearRenderCommand>(spk::Color{}, spk::ClearRenderCommand::Mask::Depth);
-			builder.renderPass(Widget::TooltipKey).emplace<spk::ClearRenderCommand>(spk::Color{}, spk::ClearRenderCommand::Mask::Depth);
+			const auto appendRootRenderState = [this](spk::RenderPass &pass) {
+				pass.emplace<spk::ViewportRenderCommand>(viewRegion().viewport);
+				pass.emplace<spk::ScissorRenderCommand>(viewRegion().scissor);
+			};
+
+			auto &backgroundPass = builder.renderPass(Widget::BackgroundKey);
+			appendRootRenderState(backgroundPass);
+			backgroundPass.emplace<spk::ClearRenderCommand>(_backgroundColor, spk::ClearRenderCommand::Mask::All);
+
+			auto &overlayPass = builder.renderPass(Widget::OverlayKey);
+			overlayPass.emplace<spk::ClearRenderCommand>(spk::Color{}, spk::ClearRenderCommand::Mask::Depth);
+
+			auto &popupPass = builder.renderPass(Widget::PopupKey);
+			appendRootRenderState(popupPass);
+			popupPass.emplace<spk::ClearRenderCommand>(spk::Color{}, spk::ClearRenderCommand::Mask::Depth);
+
+			auto &tooltipPass = builder.renderPass(Widget::TooltipKey);
+			appendRootRenderState(tooltipPass);
+			tooltipPass.emplace<spk::ClearRenderCommand>(spk::Color{}, spk::ClearRenderCommand::Mask::Depth);
 		}
 
 	public:

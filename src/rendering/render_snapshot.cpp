@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <utility>
 
+#include "core/context/render_context.hpp"
 #include "exception.hpp"
 
 namespace spk
@@ -70,8 +71,23 @@ namespace spk
 
 	void RenderSnapshot::execute(RenderContext &renderContext) const
 	{
+		auto &totalCommandCount = renderContext.profiler.gaugeMeasurement<std::size_t>(
+			Profiler::RenderCommandCountMeasurement);
+		std::size_t totalCommands = 0;
 		for (const auto &pass : _renderPasses)
 		{
+			const std::size_t commandCount = pass.commands->commandCount();
+			totalCommands += commandCount;
+			renderContext.profiler.gaugeMeasurement<std::size_t>(
+				std::string(Profiler::RenderPassCommandCountMeasurementPrefix) + pass.name)
+				.insert(commandCount);
+		}
+		totalCommandCount.insert(totalCommands);
+
+		for (const auto &pass : _renderPasses)
+		{
+			Profiler::TimeMeasurement::Scope duration(
+				renderContext.profiler.timeMeasurement(pass.name + Profiler::RenderPassDuration));
 			try
 			{
 				pass.commands->execute(renderContext);

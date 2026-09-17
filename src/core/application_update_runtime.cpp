@@ -368,6 +368,11 @@ namespace spk
 
 	void Application::UpdateRuntime::tickOnce(const Window::Identifier &identifier, Window::State &state)
 	{
+		if (_updateFrameDuration == nullptr)
+		{
+			_updateFrameDuration = &state.profiler().timeMeasurement(spk::Profiler::UpdateFrameMeasurement);
+		}
+
 		UpdateContext context{
 			.time = _currentTime - _startTime,
 			.deltaTime = _deltaTime,
@@ -376,6 +381,8 @@ namespace spk
 			.profiler = state.profiler()};
 		try
 		{
+			spk::Profiler::TimeMeasurement::Scope frame(*_updateFrameDuration);
+
 			_updateState(state, context);
 		} catch (...)
 		{
@@ -384,8 +391,15 @@ namespace spk
 				std::current_exception());
 		}
 
+		if (_buildRenderSnapshotFrameDuration == nullptr)
+		{
+			_buildRenderSnapshotFrameDuration = &state.profiler().timeMeasurement(spk::Profiler::BuildRenderSnapshotMeasurement);
+		}
+
 		if (_consumeSnapshotRequest(identifier))
 		{
+			spk::Profiler::TimeMeasurement::Scope frame(*_buildRenderSnapshotFrameDuration);
+
 			_publishSnapshot(identifier, _buildRenderSnapshot(identifier, state));
 		}
 	}

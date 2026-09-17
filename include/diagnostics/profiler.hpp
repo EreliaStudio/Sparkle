@@ -26,6 +26,13 @@ namespace spk
 	public:
 		using Identifier = std::string;
 
+		inline static constexpr const char *UpdateFrameMeasurement = "Update/frame";
+		inline static constexpr const char *BuildRenderSnapshotMeasurement = "BuildRenderSnapshot/frame";
+		inline static constexpr const char *RenderFrameMeasurement = "Render/frame";
+		inline static constexpr const char *RenderCommandCountMeasurement = "Render/commands";
+		inline static constexpr const char *RenderPassCommandCountMeasurementPrefix = "Render/commands/";
+		inline static constexpr const char *RenderPassDuration = "/duration";
+
 		class Measurement
 		{
 		private:

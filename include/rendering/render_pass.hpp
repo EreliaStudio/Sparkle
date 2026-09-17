@@ -32,6 +32,7 @@ namespace spk
 		RenderPass &operator=(RenderPass &&) noexcept;
 
 		void append(std::unique_ptr<const RenderCommand> renderCommand);
+		[[nodiscard]] std::size_t commandCount() const noexcept;
 
 		template <typename TCommandType, typename... TArgs>
 		void emplace(TArgs &&...args)

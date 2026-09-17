@@ -61,8 +61,17 @@ namespace spk
 			.targetSurface = &surface,
 			.profiler = surface.profiler()};
 
-		snapshot.execute(context);
+		if (_renderFrameDuration == nullptr)
+		{
+			_renderFrameDuration = &surface.profiler().timeMeasurement(spk::Profiler::RenderFrameMeasurement);
+		}
 
+		{
+			spk::Profiler::TimeMeasurement::Scope frame(*_renderFrameDuration);
+			
+			snapshot.execute(context);
+		}
+			
 		surface.present();
 	}
 
@@ -138,7 +147,6 @@ namespace spk
 		{
 			return;
 		}
-
 		auto *entry = _tryGetSnapshotConsumer(identifier);
 		if (entry == nullptr)
 		{

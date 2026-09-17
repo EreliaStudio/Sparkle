@@ -262,6 +262,8 @@ namespace spk
 		std::chrono::steady_clock::time_point _currentTime;
 		std::optional<std::chrono::steady_clock::time_point> _lastTime;
 		std::chrono::steady_clock::duration _deltaTime = std::chrono::steady_clock::duration::zero();
+		Profiler::TimeMeasurement *_updateFrameDuration = nullptr;
+		Profiler::TimeMeasurement *_buildRenderSnapshotFrameDuration = nullptr;
 
 		void _registerSnapshotProducer(
 			const Window::Identifier &identifier,
@@ -336,6 +338,7 @@ namespace spk
 		PlatformRequestProducer _platformRequestProducer;
 		spk::ThreadSafeFIFO<RenderRequest>::Consumer _renderRequestConsumer;
 		std::unordered_map<Window::Identifier, RenderSnapshotEntry> _renderSnapshotEnties;
+		Profiler::TimeMeasurement *_renderFrameDuration = nullptr;
 
 		void _registerSnapshotConsumer(
 			const Window::Identifier &identifier,

@@ -17,6 +17,11 @@ namespace spk
 		_commands.push_back(std::move(renderCommand));
 	}
 
+	std::size_t RenderPass::commandCount() const noexcept
+	{
+		return _commands.size();
+	}
+
 	void RenderPass::execute(RenderContext &renderContext) const
 	{
 		for (std::size_t index = 0; index < _commands.size(); ++index)
