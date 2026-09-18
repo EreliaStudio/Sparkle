@@ -63,6 +63,22 @@ namespace
 		const std::string bytes{std::istreambuf_iterator<char>{reference}, std::istreambuf_iterator<char>{}};
 		require(bytes == "P6\n1 1\n255\nabc", "Reference image was modified");
 	}
+	void checkConfiguredTolerance(const fs::path &root)
+	{
+		const auto expected = root / "resources" / "reference.ppm";
+		const auto actual = sparkle_test::resultImagePath("custom", "actual");
+		const auto diff = sparkle_test::resultImagePath("custom", "diff");
+		sparkle_test::ImageComparisonOptions options;
+		options.channelDeltas = sparkle_test::ImageComparisonOptions::ColorDelta{
+			.red = {0, 0}, .green = {0, 9}, .blue = {-6, 0}, .alpha = {0, 0}};
+		fs::create_directories(actual.parent_path());
+		std::ofstream(actual, std::ios::binary) << "P6\n1 1\n255\nak]";
+		require(sparkle_test::compareImages(actual, expected, diff, options).matches, "Installed consumer must accept configured component deltas");
+		fs::create_directories(actual.parent_path());
+		std::ofstream(actual, std::ios::binary) << "P6\n1 1\n255\nal]";
+		require(!sparkle_test::compareImages(actual, expected, diff, options).matches && fs::exists(diff), "Installed consumer must reject pixels outside configured component deltas");
+	}
+
 }
 
 int main()
@@ -70,5 +86,6 @@ int main()
 	const auto root = fs::current_path() / "consumer-fixture";
 	checkPaths(root);
 	checkImages(root);
+	checkConfiguredTolerance(root);
 	fs::remove_all(root);
 }

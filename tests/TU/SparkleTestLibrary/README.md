@@ -69,3 +69,37 @@ This report copies existing test output without updating references or changing
 comparison tolerances. Intentional mismatch fixtures from comparator unit tests
 are excluded. If no reference-backed outputs remain, the report says so and
 points to the logs; this alone does not mean the tests passed.
+
+### Configurable component deltas
+
+The existing defaults already accept RGB differences of ±4 and alpha differences
+of ±8, measured in 8-bit component units (0–255). For independent or asymmetric
+ranges, pass options explicitly at the comparison call:
+
+```cpp
+sparkle_test::ImageComparisonOptions options;
+options.channelDeltas = sparkle_test::ImageComparisonOptions::ColorDelta{
+    .red = {-6, 8},
+    .green = {-6, 8},
+    .blue = {-6, 8},
+    .alpha = {-8, 8}};
+auto result = sparkle_test::compareImages(actual, reference, difference, options);
+```
+
+For each component, `minimum <= actual - reference <= maximum` is accepted,
+including both endpoints. For example, a reference red value of 100 with
+`{-6, 8}` accepts actual red values from 94 through 108. Arithmetic is signed,
+so values near 0/255 do not wrap. Each range must satisfy
+`-255 <= minimum <= 0 <= maximum <= 255`; invalid options throw
+`std::invalid_argument` before reading or changing files.
+
+When `channelDeltas` is set it replaces `rgbTolerance`/`alphaTolerance` for all
+four components. When unset, those existing settings continue to work unchanged.
+`{0, 0}` requires an exact component match. RGB values are still ignored when
+both alpha values are at or below `transparentAlphaThreshold`, but alpha itself
+is always compared. Image dimensions must still match. Only pixels outside the
+configured ranges are counted and marked red in the difference image.
+
+Choose ranges at the affected test's comparison call based on its reviewed
+images. These defaults and the existing rendering-test tolerances are unchanged;
+adding configurability alone does not accept the current CI image differences.

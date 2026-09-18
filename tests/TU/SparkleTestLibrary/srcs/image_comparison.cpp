@@ -1,8 +1,9 @@
 #include "sparkle_test/image_comparison.hpp"
 
 #include <algorithm>
-#include <cstdlib>
+#include <array>
 #include <cstdint>
+#include <cstdlib>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -21,15 +22,15 @@ namespace
 		std::vector<std::uint8_t> pixels;
 	};
 
-	[[nodiscard]] LoadedImage loadImage(const std::filesystem::path& path)
+	[[nodiscard]] LoadedImage loadImage(const std::filesystem::path &path)
 	{
 		int width = 0;
 		int height = 0;
 		int channels = 0;
-		unsigned char* rawPixels = stbi_load(path.string().c_str(), &width, &height, &channels, 4);
+		unsigned char *rawPixels = stbi_load(path.string().c_str(), &width, &height, &channels, 4);
 		if (rawPixels == nullptr)
 		{
-			throw std::runtime_error("Failed to load image [" +path.string() + "]: " + stbi_failure_reason());
+			throw std::runtime_error("Failed to load image [" + path.string() + "]: " + stbi_failure_reason());
 		}
 
 		LoadedImage result;
@@ -40,46 +41,71 @@ namespace
 		return result;
 	}
 
-	[[nodiscard]] bool channelDiffers(std::uint8_t left, std::uint8_t right, std::uint8_t tolerance)
+	using ChannelDelta = sparkle_test::ImageComparisonOptions::ChannelDelta;
+	using ChannelDeltas = std::array<ChannelDelta, 4>;
+
+	[[nodiscard]] ChannelDeltas resolveDeltas(const sparkle_test::ImageComparisonOptions &options)
 	{
-		return std::abs(static_cast<int>(left) - static_cast<int>(right)) > static_cast<int>(tolerance);
+		if (options.channelDeltas)
+		{
+			const auto &deltas = *options.channelDeltas;
+			return {deltas.red, deltas.green, deltas.blue, deltas.alpha};
+		}
+		const ChannelDelta rgb{-static_cast<int>(options.rgbTolerance), options.rgbTolerance};
+		const ChannelDelta alpha{-static_cast<int>(options.alphaTolerance), options.alphaTolerance};
+		return {rgb, rgb, rgb, alpha};
+	}
+
+	void validateDeltas(const ChannelDeltas &deltas)
+	{
+		for (const auto &delta : deltas)
+		{
+			if (delta.minimum < -255 || delta.minimum > 0 || delta.maximum < 0 || delta.maximum > 255)
+			{
+				throw std::invalid_argument("Image comparison deltas require -255 <= minimum <= 0 <= maximum <= 255");
+			}
+		}
+	}
+
+	[[nodiscard]] bool channelDiffers(std::uint8_t actual, std::uint8_t expected, ChannelDelta tolerance)
+	{
+		const int delta = static_cast<int>(actual) - static_cast<int>(expected);
+		return delta < tolerance.minimum || delta > tolerance.maximum;
 	}
 
 	[[nodiscard]] bool pixelDiffers(
-		const std::uint8_t*actual,
-		const std::uint8_t*expected,
-		sparkle_test::ImageComparisonOptions options)
+		const std::uint8_t *actual, const std::uint8_t *expected, const ChannelDeltas &deltas, std::uint8_t transparentAlphaThreshold)
 	{
-		if (channelDiffers(actual[3],expected[3],options.alphaTolerance) == true)
+		if (channelDiffers(actual[3], expected[3], deltas[3]))
 		{
 			return true;
 		}
-
-		if (actual[3] <=options.transparentAlphaThreshold &&expected[3] <=options.transparentAlphaThreshold)
+		if (actual[3] <= transparentAlphaThreshold && expected[3] <= transparentAlphaThreshold)
 		{
 			return false;
 		}
-
 		for (std::size_t channel = 0; channel < 3; ++channel)
 		{
-			if (channelDiffers(actual[channel],expected[channel],options.rgbTolerance) == true)
+			if (channelDiffers(actual[channel], expected[channel], deltas[channel]))
 			{
 				return true;
 			}
 		}
-
 		return false;
 	}
+
 }
 
 namespace sparkle_test
 {
 	ImageComparisonResult compareImages(
-		const std::filesystem::path&actualPath,
-		const std::filesystem::path&expectedPath,
-		const std::filesystem::path&differencePath,
+		const std::filesystem::path &actualPath,
+		const std::filesystem::path &expectedPath,
+		const std::filesystem::path &differencePath,
 		ImageComparisonOptions options)
 	{
+		const auto deltas = resolveDeltas(options);
+		validateDeltas(deltas);
 		const LoadedImage actual = loadImage(actualPath);
 		const LoadedImage expected = loadImage(expectedPath);
 
@@ -110,7 +136,7 @@ namespace sparkle_test
 				{
 					const std::size_t actualIndex = (static_cast<std::size_t>(y) * static_cast<std::size_t>(actual.width) + static_cast<std::size_t>(x)) * 4;
 					const std::size_t expectedIndex = (static_cast<std::size_t>(y) * static_cast<std::size_t>(expected.width) + static_cast<std::size_t>(x)) * 4;
-					pixelMatches = (pixelDiffers(actual.pixels.data() + actualIndex, expected.pixels.data() + expectedIndex,options) == false);
+					pixelMatches = (pixelDiffers(actual.pixels.data() + actualIndex, expected.pixels.data() + expectedIndex, deltas, options.transparentAlphaThreshold) == false);
 				}
 
 				if (pixelMatches == false)
@@ -135,7 +161,7 @@ namespace sparkle_test
 			}
 			if (stbi_write_png(differencePath.string().c_str(), diffWidth, diffHeight, 4, difference.data(), diffWidth * 4) == 0)
 			{
-				throw std::runtime_error("Failed to write image comparison diff [" +differencePath.string() + "]");
+				throw std::runtime_error("Failed to write image comparison diff [" + differencePath.string() + "]");
 			}
 		}
 		else
