@@ -27,6 +27,7 @@ namespace spk
 		{
 			auto result = std::make_unique<Image>(*this);
 			result->_setState(_cloneState());
+			result->_cloneResolutions(handle());
 			return result;
 		}
 

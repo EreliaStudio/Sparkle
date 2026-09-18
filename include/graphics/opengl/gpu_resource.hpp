@@ -143,6 +143,12 @@ namespace spk
 
 	protected:
 		explicit GPUResource(std::shared_ptr<State> state);
+		template <typename TState>
+		explicit GPUResource(const Handle<TState> &handle) :
+			GPUResource(std::const_pointer_cast<TState>(handle._state))
+		{
+		}
+
 		[[nodiscard]] std::shared_ptr<State> _cloneState() const;
 		void _setState(std::shared_ptr<State> state);
 
