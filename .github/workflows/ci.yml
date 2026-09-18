@@ -81,6 +81,30 @@ jobs:
         run: ./tools/ci/install-mesa.ps1 -Destination build/test/tests/TU/TestSuite
       - name: Run all unit tests (including rendering)
         run: ctest --test-dir build/test --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit results.xml
+      - name: Build visual comparison gallery
+        if: always()
+        run: >-
+          python tools/ci/image-diff-report.py
+          --results build/test/tests/TU/TestSuite/results
+          --references tests/TU/TestSuite/resources/expectedImages
+          --output build/visual-diffs
+      - name: Upload visual comparisons
+        if: always()
+        id: visual-diffs
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-diffs-${{ matrix.configuration }}
+          path: build/visual-diffs
+          if-no-files-found: error
+          retention-days: 30
+      - name: Link visual comparisons in run summary
+        if: always() && steps.visual-diffs.outputs.artifact-url != ''
+        env:
+          ARTIFACT_URL: ${{ steps.visual-diffs.outputs.artifact-url }}
+        run: |
+          "### Visual comparisons (${{ matrix.configuration }})" >> $env:GITHUB_STEP_SUMMARY
+          "[Download reference / actual / difference images]($env:ARTIFACT_URL)" >> $env:GITHUB_STEP_SUMMARY
+          'Extract the ZIP and open index.html for the gallery, or inspect the PNG folders directly.' >> $env:GITHUB_STEP_SUMMARY
       - name: Upload test logs and image differences
         if: always()
         uses: actions/upload-artifact@v4

@@ -53,3 +53,19 @@ preservation. LLVM coverage runs separately and uploads its HTML/profile report;
 test failures remain blocking, with no arbitrary coverage percentage gate yet.
 Software rendering validates the Windows OpenGL path, not vendor GPU drivers.
 There is no documentation generation, Pages deployment or release publishing.
+
+### Reviewing failed images
+
+Each Debug/Release test job publishes a dedicated `visual-diffs-Debug` or
+`visual-diffs-Release` artifact even when tests fail. The job summary links directly
+to its download. Extract the ZIP and open `index.html` to compare reference,
+actual and difference images side by side at their native resolution. The HTML
+embeds the images, so it can also be opened independently on a phone. Separate
+PNGs are organized in `reference/`, `actual/` and `difference/` with matching paths.
+Artifacts are retained for 30 days. GitHub downloads these reports; it does not
+host the HTML as a webpage.
+
+This report copies existing test output without updating references or changing
+comparison tolerances. Intentional mismatch fixtures from comparator unit tests
+are excluded. If no reference-backed outputs remain, the report says so and
+points to the logs; this alone does not mean the tests passed.
