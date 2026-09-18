@@ -1,9 +1,12 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <map>
 #include <optional>
+#include <utility>
 
 namespace sparkle_test
 {
@@ -31,12 +34,17 @@ namespace sparkle_test
 
 	struct ImageComparisonResult
 	{
+		using Color = std::array<std::uint8_t, 4>;
+		// Key order: actual RGBA, reference RGBA. Only rejected pixels are counted.
+		using ColorPair = std::pair<Color, Color>;
 		bool matches = false;
 		int actualWidth = 0;
 		int actualHeight = 0;
 		int expectedWidth = 0;
 		int expectedHeight = 0;
 		std::size_t differentPixelCount = 0;
+		std::map<ColorPair, std::size_t> colorDifferences;
+		std::size_t outOfBoundsPixelCount = 0;
 	};
 
 	[[nodiscard]] ImageComparisonResult compareImages(

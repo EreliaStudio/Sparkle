@@ -103,3 +103,31 @@ configured ranges are counted and marked red in the difference image.
 Choose ranges at the affected test's comparison call based on its reviewed
 images. These defaults and the existing rendering-test tolerances are unchanged;
 adding configurability alone does not accept the current CI image differences.
+
+### Failed-comparison diagnostics
+
+Every failed comparison writes a grouped summary to `std::cout`, so CTest's
+failure output and the uploaded test logs contain the exact rejected values:
+
+```text
+Difference :
+Actual: ".../actual.png"
+Reference: ".../reference.png"
+Allowed deltas (actual-reference), RGBA: [-4, 4] [-4, 4] [-4, 4] [-8, 8]
+Transparent alpha threshold: 4
+RGBA(110, 90, 100, 255) diff to RGBA(100, 100, 100, 255) - 2 times; delta(actual-reference) = (+10, -10, 0, 0)
+Outside image overlap: 0 pixels
+Total different pixels: 2
+```
+
+The first color is the actual render and the second is the reference. Values are
+RGBA bytes (0–255); deltas are signed. Identical ordered color pairs are grouped
+with an occurrence count in deterministic order. Accepted differences are omitted.
+Dimension-related failures are counted separately without inventing a missing
+pixel's color. Successful comparisons produce no diagnostic output.
+
+`ImageComparisonResult::colorDifferences` retains the same counts, keyed by
+`{actualColor, referenceColor}`; `outOfBoundsPixelCount` retains dimension-related
+failures. Their counts sum to `differentPixelCount`. Existing PNG difference
+artifacts remain unchanged. These diagnostics help select a tolerance from the
+observed errors; they do not automatically widen tolerances or accept references.

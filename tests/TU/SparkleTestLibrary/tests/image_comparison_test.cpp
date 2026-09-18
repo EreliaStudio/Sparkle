@@ -342,3 +342,50 @@ TEST(ImageComparisonTest, InvalidRangesThrowBeforeReadingOrChangingImages)
 		EXPECT_THROW(static_cast<void>(sparkle_test::compareImages({}, {}, {}, options)), std::invalid_argument);
 	}
 }
+
+TEST(ImageComparisonTest, RepeatedRejectedColorPairsAreCountedAndLogged)
+{
+	const auto root = imageComparisonTempDirectory();
+	writePng(root / "group_actual.png", 4, 1, {110, 90, 100, 255, 110, 90, 100, 255, 100, 100, 100, 240, 104, 100, 100, 255});
+	writePng(root / "group_expected.png", 4, 1, {100, 100, 100, 255, 100, 100, 100, 255, 100, 100, 100, 255, 100, 100, 100, 255});
+	::testing::internal::CaptureStdout();
+	const auto result = sparkle_test::compareImages(root / "group_actual.png", root / "group_expected.png", root / "group_diff.png");
+	const auto output = ::testing::internal::GetCapturedStdout();
+	const sparkle_test::ImageComparisonResult::ColorPair pair{{110, 90, 100, 255}, {100, 100, 100, 255}};
+	EXPECT_EQ(result.colorDifferences.at(pair), 2);
+	EXPECT_EQ(result.colorDifferences.size(), 2);
+	EXPECT_EQ(result.differentPixelCount, 3);
+	EXPECT_EQ(result.outOfBoundsPixelCount, 0);
+	EXPECT_NE(output.find("RGBA(110, 90, 100, 255) diff to RGBA(100, 100, 100, 255) - 2 times; delta(actual-reference) = (+10, -10, 0, 0)"), std::string::npos);
+	EXPECT_NE(output.find("delta(actual-reference) = (0, 0, 0, -15)"), std::string::npos);
+	EXPECT_NE(output.find("Allowed deltas (actual-reference), RGBA: [-4, 4] [-4, 4] [-4, 4] [-8, 8]"), std::string::npos);
+	EXPECT_NE(output.find("Total different pixels: 3"), std::string::npos);
+}
+
+TEST(ImageComparisonTest, AcceptedDifferencesProduceNoDiagnosticEntriesOrOutput)
+{
+	Options options;
+	options.channelDeltas = uniformDeltas({-20, 20});
+	::testing::internal::CaptureStdout();
+	const auto result = comparePixel({110, 90, 100, 255}, {100, 100, 100, 255}, options);
+	const auto output = ::testing::internal::GetCapturedStdout();
+	EXPECT_TRUE(result.matches);
+	EXPECT_TRUE(result.colorDifferences.empty());
+	EXPECT_EQ(result.outOfBoundsPixelCount, 0);
+	EXPECT_TRUE(output.empty());
+}
+
+TEST(ImageComparisonTest, DimensionErrorsAreReportedWithoutInventingColorPairs)
+{
+	const auto root = imageComparisonTempDirectory();
+	writePng(root / "size_actual.png", 2, 1, {10, 20, 30, 255, 10, 20, 30, 255});
+	writePng(root / "size_expected.png", 1, 1, {10, 20, 30, 255});
+	::testing::internal::CaptureStdout();
+	const auto result = sparkle_test::compareImages(root / "size_actual.png", root / "size_expected.png", root / "size_diff.png");
+	const auto output = ::testing::internal::GetCapturedStdout();
+	EXPECT_FALSE(result.matches);
+	EXPECT_TRUE(result.colorDifferences.empty());
+	EXPECT_EQ(result.outOfBoundsPixelCount, 1);
+	EXPECT_EQ(result.differentPixelCount, 1);
+	EXPECT_NE(output.find("Outside image overlap: 1 pixels"), std::string::npos);
+}

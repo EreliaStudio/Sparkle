@@ -4,6 +4,8 @@
 #include <array>
 #include <cstdint>
 #include <cstdlib>
+#include <iostream>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -94,6 +96,56 @@ namespace
 		return false;
 	}
 
+	using ComparisonResult = sparkle_test::ImageComparisonResult;
+
+	void recordColorDifference(ComparisonResult &result, const std::uint8_t *actual, const std::uint8_t *expected)
+	{
+		ComparisonResult::Color actualColor;
+		ComparisonResult::Color expectedColor;
+		std::copy_n(actual, 4, actualColor.begin());
+		std::copy_n(expected, 4, expectedColor.begin());
+		++result.colorDifferences[{actualColor, expectedColor}];
+	}
+
+	void writeColor(std::ostream &output, const ComparisonResult::Color &color)
+	{
+		output << "RGBA(" << static_cast<int>(color[0]) << ", " << static_cast<int>(color[1])
+			   << ", " << static_cast<int>(color[2]) << ", " << static_cast<int>(color[3]) << ")";
+	}
+
+	void writeColorDifference(std::ostream &output, const ComparisonResult::ColorPair &colors, std::size_t count)
+	{
+		writeColor(output, colors.first);
+		output << " diff to ";
+		writeColor(output, colors.second);
+		output << " - " << count << " times; delta(actual-reference) = (";
+		for (std::size_t channel = 0; channel < 4; ++channel)
+		{
+			const int delta = static_cast<int>(colors.first[channel]) - static_cast<int>(colors.second[channel]);
+			output << (channel == 0 ? "" : ", ") << (delta > 0 ? "+" : "") << delta;
+		}
+		output << ")\n";
+	}
+
+	void logDifferences(const ComparisonResult &result, const std::filesystem::path &actualPath, const std::filesystem::path &expectedPath, const ChannelDeltas &deltas, std::uint8_t transparentAlphaThreshold)
+	{
+		std::ostringstream output;
+		output << "Difference :\nActual: " << actualPath << "\nReference: " << expectedPath << "\n";
+		output << "Allowed deltas (actual-reference), RGBA:";
+		for (const auto &delta : deltas)
+		{
+			output << " [" << delta.minimum << ", " << delta.maximum << "]";
+		}
+		output << "\nTransparent alpha threshold: " << static_cast<int>(transparentAlphaThreshold) << "\n";
+		for (const auto &[colors, count] : result.colorDifferences)
+		{
+			writeColorDifference(output, colors, count);
+		}
+		output << "Outside image overlap: " << result.outOfBoundsPixelCount << " pixels\n";
+		output << "Total different pixels: " << result.differentPixelCount << "\n";
+		std::cout << output.str();
+	}
+
 }
 
 namespace sparkle_test
@@ -137,6 +189,14 @@ namespace sparkle_test
 					const std::size_t actualIndex = (static_cast<std::size_t>(y) * static_cast<std::size_t>(actual.width) + static_cast<std::size_t>(x)) * 4;
 					const std::size_t expectedIndex = (static_cast<std::size_t>(y) * static_cast<std::size_t>(expected.width) + static_cast<std::size_t>(x)) * 4;
 					pixelMatches = (pixelDiffers(actual.pixels.data() + actualIndex, expected.pixels.data() + expectedIndex, deltas, options.transparentAlphaThreshold) == false);
+					if (!pixelMatches)
+					{
+						recordColorDifference(result, actual.pixels.data() + actualIndex, expected.pixels.data() + expectedIndex);
+					}
+				}
+				else
+				{
+					++result.outOfBoundsPixelCount;
 				}
 
 				if (pixelMatches == false)
@@ -155,6 +215,7 @@ namespace sparkle_test
 
 		if (result.matches == false)
 		{
+			logDifferences(result, actualPath, expectedPath, deltas, options.transparentAlphaThreshold);
 			if (differencePath.has_parent_path())
 			{
 				std::filesystem::create_directories(differencePath.parent_path());
