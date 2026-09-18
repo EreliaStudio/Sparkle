@@ -54,6 +54,7 @@ TEST(TextureResolutionTest, KeepsSingleTextureScalingAndClearsStaleVariants)
 	image.addResolution(Pixels({16, 16}));
 	auto selected = image.resolve(spk::Texture::Section::whole, {18, 18});
 	EXPECT_EQ(selected.size, (spk::Vector2UInt{16, 16}));
+	EXPECT_GT(selected.texture.generation(), 0u);
 	image.resize({64, 64});
 	EXPECT_EQ(image.resolution(spk::Vector2UInt{18, 18}).handle().identifier(), image.handle().identifier());
 	EXPECT_EQ(selected.texture->size(), (spk::Vector2UInt{16, 16}));
@@ -67,6 +68,7 @@ TEST(TextureResolutionTest, DefaultAtlasSelectsBySpriteDimensionsThroughTextureI
 	EXPECT_EQ(texture.resolution(spk::Vector2UInt{12, 12}).size(), (spk::Vector2UInt{80, 80}));
 	const auto selected = sheet.resolve(sheet.sprite(4), {18, 18});
 	EXPECT_EQ(selected.size, (spk::Vector2UInt{16, 16}));
+	EXPECT_GT(selected.texture.generation(), 0u);
 	EXPECT_EQ(selected.texture->size(), (spk::Vector2UInt{160, 160}));
 }
 

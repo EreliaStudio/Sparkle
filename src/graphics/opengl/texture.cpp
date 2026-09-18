@@ -593,6 +593,8 @@ namespace spk
 		_validateResolution(texture);
 		Texture copy;
 		copy.setPixels(texture.pixels(), texture.size(), texture.format());
+		copy.setMipmap(texture.mipmap());
+		copy.validate();
 		if (!_resolutions)
 		{
 			auto resolutions = std::make_shared<ResolutionSet>();
