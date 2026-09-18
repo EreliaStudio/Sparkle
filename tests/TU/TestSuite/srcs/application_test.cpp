@@ -59,7 +59,10 @@ namespace
 			++snapshotCalls;
 			builder.renderPass(targetRenderPass()).emplace<CallbackRenderCommand>([this] {
 				++renderCalls;
-				_onRender();
+				if (_onRender)
+				{
+					_onRender();
+				}
 			});
 		}
 
