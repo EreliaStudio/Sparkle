@@ -3,8 +3,7 @@
 Builds Sparkle with LLVM coverage instrumentation and generates an HTML report.
 
 .DESCRIPTION
-Configures a dedicated Clang coverage build, runs the complete SparkleTestSuite
-once, merges every generated raw profile, and writes an llvm-cov HTML report.
+Configures a dedicated Clang coverage build, runs every test in its own CTest process with a timeout, merges every generated raw profile, and writes an llvm-cov HTML report.
 
 .PARAMETER Clean
 Deletes the dedicated build/coverage directory before configuring.
@@ -22,7 +21,8 @@ Does not open the generated index.html in the default browser.
 [CmdletBinding()]
 param(
     [switch]$Clean,
-    [switch]$NoOpen
+    [switch]$NoOpen,
+    [string]$Triplet = "x64-windows"
 )
 
 Set-StrictMode -Version Latest
@@ -36,7 +36,7 @@ if (-not $coverageBuildDirectory.StartsWith($expectedBuildPrefix, [System.String
     throw "Refusing to use coverage directory outside the repository build directory: $coverageBuildDirectory"
 }
 
-foreach ($command in @("cmake", "clang++", "llvm-profdata", "llvm-cov")) {
+foreach ($command in @("cmake", "ctest", "clang++", "llvm-profdata", "llvm-cov")) {
     if ($null -eq (Get-Command $command -ErrorAction SilentlyContinue)) {
         throw "Required command '$command' was not found in PATH. Install LLVM and CMake/Ninja before running coverage."
     }
@@ -74,11 +74,15 @@ $configureArguments = @(
     "-DVCPKG_MANIFEST_FEATURES=tests",
     "-DCMAKE_TOOLCHAIN_FILE=$toolchainFile",
     "-DCMAKE_CXX_COMPILER=clang++",
-    '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>',
+    "-DVCPKG_TARGET_TRIPLET=$Triplet",
     "-DCMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE=PRE_TEST",
     "-DCMAKE_CXX_FLAGS=-fprofile-instr-generate -fcoverage-mapping",
     "-DCMAKE_EXE_LINKER_FLAGS=-fprofile-instr-generate"
 )
+
+if ($Triplet.EndsWith("-static")) {
+    $configureArguments += '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>'
+}
 
 Write-Host "Configuring coverage build..."
 & cmake @configureArguments
@@ -102,7 +106,7 @@ $testExitCode = 0
 try {
     $env:LLVM_PROFILE_FILE = Join-Path $profileDirectory "sparkle-%p-%m.profraw"
     Write-Host "Running the complete test suite..."
-    & $testExecutable --gtest_brief=1
+    & ctest --test-dir $coverageBuildDirectory --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit (Join-Path $runDirectory "results.xml")
     $testExitCode = $LASTEXITCODE
 }
 finally {
@@ -120,7 +124,7 @@ if ($profilePaths.Count -eq 0) {
 }
 
 Write-Host "Merging $($profilePaths.Count) coverage profile(s)..."
-& llvm-profdata merge -sparse @profilePaths "-o=$profileDataPath"
+& llvm-profdata merge -sparse $profileDirectory "-o=$profileDataPath"
 if ($LASTEXITCODE -ne 0) {
     throw "Coverage profile merge failed with exit code $LASTEXITCODE."
 }

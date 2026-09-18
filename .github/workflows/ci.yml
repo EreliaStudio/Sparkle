@@ -132,13 +132,16 @@ jobs:
           ./tools/ci/install-mesa.ps1 -Destination build/coverage/tests/TU/TestSuite
           "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV
       - name: Build, test and produce coverage
-        run: ./tools/coverage.ps1 -NoOpen
+        run: ./tools/coverage.ps1 -NoOpen -Triplet x64-windows-static
       - name: Upload coverage and image differences
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coverage
           path: |
-            build/coverage/reports
+            build/coverage/reports/**/html
+            build/coverage/reports/**/*.profdata
+            build/coverage/reports/**/results.xml
+            build/coverage/Testing
             build/coverage/tests/TU/TestSuite/results
             build/coverage/CMakeFiles/CMakeConfigureLog.yaml
