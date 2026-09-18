@@ -3,17 +3,16 @@
 #include <array>
 #include <cstdint>
 
+#include "render_command_test_utils.hpp"
 #include "rendering/command/image_render_command.hpp"
 #include "rendering/command/scissor_render_command.hpp"
-#include "render_command_test_utils.hpp"
 
 namespace test = render_command_test;
 
 namespace
 {
 	constexpr std::array<std::uint8_t, 16> pattern{
-		255, 0, 0, 255, 0, 255, 0, 255,
-		0, 0, 255, 255, 255, 255, 0, 255};
+		255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 0, 255};
 }
 
 TEST(ImageRenderCommandTest, WholeTextureSectionFillsDestination)
@@ -84,4 +83,34 @@ TEST(ImageRenderCommandTest, DifferentDestinationGeometriesMapTextureConsistentl
 	const auto image = target.capture();
 	EXPECT_EQ(test::pixel(image, {6, 6}), test::pixel(image, {36, 16}));
 	EXPECT_EQ(test::pixel(image, {18, 18}), test::pixel(image, {56, 48}));
+}
+
+TEST(ImageRenderCommandTest, ResolutionFamilyUsesNativePixelsAndSurvivesSourceDestruction)
+{
+	auto command = [] {
+		const std::array<std::uint8_t, 4> bluePixel{0, 0, 255, 255};
+		test::Texture texture({2, 2}, pattern);
+		texture.addResolution(test::Texture({1, 1}, bluePixel));
+		return spk::ImageRenderCommand(&texture, spk::Texture::Section::whole, {.anchor = {8, 8}, .size = {3, 3}});
+	}();
+	test::Target target;
+	target.clear();
+	command.execute(target.context());
+	const auto image = target.capture();
+	EXPECT_EQ(test::pixel(image, {8, 8}), (std::array<std::uint8_t, 4>{255, 0, 0, 255}));
+	EXPECT_EQ(test::pixel(image, {9, 9}), (std::array<std::uint8_t, 4>{255, 255, 0, 255}));
+	EXPECT_EQ(test::pixel(image, {10, 10}), (std::array<std::uint8_t, 4>{0, 0, 0, 0}));
+}
+
+TEST(ImageRenderCommandTest, ResolutionFamilyUploadsAndSelectsSmallerLevel)
+{
+	const std::array<std::uint8_t, 4> bluePixel{0, 0, 255, 255};
+	test::Texture texture({2, 2}, pattern);
+	texture.addResolution(test::Texture({1, 1}, bluePixel));
+	test::Target target;
+	target.clear();
+	spk::ImageRenderCommand(&texture, spk::Texture::Section::whole, {.anchor = {8, 8}, .size = {1, 1}}).execute(target.context());
+	const auto image = target.capture();
+	EXPECT_EQ(test::pixel(image, {8, 8}), bluePixel);
+	EXPECT_EQ(test::pixel(image, {9, 8}), (std::array<std::uint8_t, 4>{0, 0, 0, 0}));
 }

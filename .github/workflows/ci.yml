@@ -1,0 +1,171 @@
+name: CI
+
+on:
+  push:
+    branches: [main, Version0.1.1]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: pwsh
+
+env:
+  VCPKG_DEFAULT_TRIPLET: x64-windows-static
+  VCPKG_DEFAULT_HOST_TRIPLET: x64-windows-static
+  GALLIUM_DRIVER: llvmpipe
+  # Sparkle requests a 4.6 core context and compiles GLSL 460 shaders.
+  MESA_GL_VERSION_OVERRIDE: '4.6'
+  MESA_GLSL_VERSION_OVERRIDE: '460'
+
+jobs:
+  format-check:
+    name: Clang-format (changed C++ files)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install clang-format==19.1.7
+        shell: bash
+      - name: Check changed files
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          base="$BASE_SHA"
+          if [[ -z "$base" || "$base" =~ ^0+$ ]]; then
+            base="$(git rev-parse HEAD^)"
+          fi
+          git diff --name-only --diff-filter=ACMR -z "$base" HEAD -- '*.cpp' '*.hpp' '*.h' |
+            xargs -0 -r clang-format --style=file --dry-run --Werror
+
+  unit-tests:
+    name: Unit tests (${{ matrix.configuration }})
+    runs-on: windows-2022
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        configuration: [Debug, Release]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: Configure
+        run: >-
+          cmake -S . -B build/test -G Ninja
+          -DCMAKE_CXX_COMPILER=clang-cl
+          -DCMAKE_BUILD_TYPE=${{ matrix.configuration }}
+          '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>'
+          -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+          -DVCPKG_TARGET_TRIPLET=x64-windows-static
+          -DVCPKG_MANIFEST_FEATURES=tests
+          -DSPARKLE_BUILD_TESTS=ON
+          -DCMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE=PRE_TEST
+      - name: Build
+        run: cmake --build build/test --parallel 4
+      - name: Install software OpenGL
+        run: ./tools/ci/install-mesa.ps1 -Destination build/test/tests/TU/TestSuite
+      - name: Run all unit tests (including rendering)
+        run: ctest --test-dir build/test --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit results.xml
+      - name: Build visual comparison gallery
+        if: always()
+        run: >-
+          python tools/ci/image-diff-report.py
+          --results build/test/tests/TU/TestSuite/results
+          --references tests/TU/TestSuite/resources/expectedImages
+          --output build/visual-diffs
+      - name: Upload visual comparisons
+        if: always()
+        id: visual-diffs
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-diffs-${{ matrix.configuration }}
+          path: build/visual-diffs
+          if-no-files-found: error
+          retention-days: 30
+      - name: Link visual comparisons in run summary
+        if: always() && steps.visual-diffs.outputs.artifact-url != ''
+        env:
+          ARTIFACT_URL: ${{ steps.visual-diffs.outputs.artifact-url }}
+        run: |
+          "### Visual comparisons (${{ matrix.configuration }})" >> $env:GITHUB_STEP_SUMMARY
+          "[Download reference / actual / difference images]($env:ARTIFACT_URL)" >> $env:GITHUB_STEP_SUMMARY
+          'Extract the ZIP and open index.html for the gallery, or inspect the PNG folders directly.' >> $env:GITHUB_STEP_SUMMARY
+      - name: Upload test logs and image differences
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-tests-${{ matrix.configuration }}
+          path: |
+            build/test/Testing
+            build/test/results.xml
+            build/test/tests/TU/TestSuite/results
+            build/test/CMakeFiles/CMakeConfigureLog.yaml
+
+  package:
+    name: Installed package (${{ matrix.configuration }})
+    runs-on: windows-2022
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        configuration: [Debug, Release]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: Verify optional component, installation and relocation
+        run: ./tools/ci/test-package.ps1 -Configuration ${{ matrix.configuration }}
+      - name: Upload packaging evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-${{ matrix.configuration }}
+          path: |
+            build/package-check/**/*.log
+            build/package-check/**/results.xml
+            build/package-check/**/CMakeConfigureLog.yaml
+            build/package-check/**/consumer-fixture
+
+  coverage:
+    name: LLVM coverage
+    runs-on: windows-2022
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: Set up software OpenGL and vcpkg
+        run: |
+          ./tools/ci/install-mesa.ps1 -Destination build/coverage/tests/TU/TestSuite
+          "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV
+      - name: Build, test and produce coverage
+        run: ./tools/coverage.ps1 -NoOpen -Triplet x64-windows-static
+      - name: Upload coverage and image differences
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: |
+            build/coverage/reports/**/html
+            build/coverage/reports/**/*.profdata
+            build/coverage/reports/**/results.xml
+            build/coverage/Testing
+            build/coverage/tests/TU/TestSuite/results
+            build/coverage/CMakeFiles/CMakeConfigureLog.yaml

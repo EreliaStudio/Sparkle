@@ -40,6 +40,11 @@ namespace spk
 		style.font = font("fonts/arial.ttf");
 		style.iconsetImage = std::make_unique<Image>(bytes("textures/default_iconset.png"));
 		style.iconset = std::make_unique<SpriteSheet>(bytes("textures/default_iconset.png"), Vector2UInt{10, 10});
+		for (const auto path : {"textures/default_iconset_16.png", "textures/default_iconset_8.png"})
+		{
+			style.iconset->addResolution(bytes(path));
+			style.iconsetImage->addResolution(bytes(path));
+		}
 		style.nineSlice = std::make_unique<SpriteSheet>(bytes("textures/default_nine_slice.png"), Vector2UInt{3, 3});
 		style.darkNineSlice = std::make_unique<SpriteSheet>(bytes("textures/default_nine_slice_dark.png"), Vector2UInt{3, 3});
 		style.darkerNineSlice = std::make_unique<SpriteSheet>(bytes("textures/default_nine_slice_darker.png"), Vector2UInt{3, 3});

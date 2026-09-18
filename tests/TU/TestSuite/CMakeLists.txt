@@ -17,11 +17,15 @@ add_executable(SparkleTestSuite
     ${SPARKLE_TEST_LIBRARY_TEST_SOURCES}
 )
 target_compile_features(SparkleTestSuite PRIVATE cxx_std_23)
+target_compile_definitions(SparkleTestSuite PRIVATE
+    SPARKLE_TEST_RESOURCES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/resources"
+    SPARKLE_TEST_RESULTS_DIR="${CMAKE_CURRENT_BINARY_DIR}/results"
+)
 target_link_libraries(SparkleTestSuite
     PRIVATE
         sparkle
         Sparkle::TestLibrary
-        GTest::gtest_main
+        GTest::gtest
 )
 target_include_directories(SparkleTestSuite PRIVATE ${Stb_INCLUDE_DIR})
 set_target_properties(SparkleTestSuite PROPERTIES CXX_EXTENSIONS OFF)

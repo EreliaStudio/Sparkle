@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <span>
 #include <vector>
@@ -133,10 +134,27 @@ namespace spk
 
 		using Handle = GPUResource::Handle<State>;
 
+		struct ResolutionSet
+		{
+		private:
+			friend class Texture;
+			std::vector<Handle> levels;
+		};
+
+		struct Resolution
+		{
+			Handle texture;
+			Vector2UInt size;
+		};
+
 	protected:
 		class Instance;
 
 	private:
+		std::shared_ptr<ResolutionSet> _resolutions;
+		Texture(Handle handle, std::shared_ptr<ResolutionSet> resolutions);
+		void _detachResolutions();
+		void _validateResolution(const Texture &texture) const;
 		[[nodiscard]] static GLenum _openGLTarget(Target target) noexcept;
 		[[nodiscard]] static std::size_t _bytesPerPixel(Format format);
 		[[nodiscard]] static std::size_t _checkedByteCount(const Vector2UInt &size, Format format);
@@ -145,6 +163,7 @@ namespace spk
 		void _allocateRenderTarget(const Vector2UInt &size, Format format);
 
 	protected:
+		void _cloneResolutions(Handle previous);
 		void setPixels(const std::uint8_t *data, const Vector2UInt &size, Format format);
 		void setPixels(std::span<const std::uint8_t> data, const Vector2UInt &size, Format format);
 		void resizePixels(const Vector2UInt &size);
@@ -157,6 +176,7 @@ namespace spk
 		{
 			auto result = std::make_unique<Texture>(*this);
 			result->_setState(_cloneState());
+			result->_cloneResolutions(handle());
 			return result;
 		}
 		[[nodiscard]] Handle handle() const
@@ -175,6 +195,17 @@ namespace spk
 		[[nodiscard]] bool isRenderTarget() const noexcept;
 		[[nodiscard]] Mipmap mipmap() const noexcept;
 		[[nodiscard]] const std::vector<std::uint8_t> &pixels() const;
+
+		using ResolutionPredicate = std::function<bool(const Texture &)>;
+		// Returns a shared view of the largest accepted level, or this level when none fits.
+		[[nodiscard]] Texture resolution(const ResolutionPredicate &predicate) const;
+		[[nodiscard]] virtual Texture resolution(const Vector2UInt &available) const;
+
+		// Variants must preserve the base aspect ratio and normalized UV layout.
+		void addResolution(const Texture &texture);
+		void addResolution(const std::filesystem::path &path);
+		void addResolution(std::span<const std::uint8_t> encodedData);
+		[[nodiscard]] Resolution resolve(const Section &section, const Vector2UInt &available) const;
 
 		void saveAsPng(const std::filesystem::path &path) const;
 	};

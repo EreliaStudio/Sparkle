@@ -7,4 +7,10 @@ find_dependency(OpenGL)
 
 include("${CMAKE_CURRENT_LIST_DIR}/sparkleTargets.cmake")
 
+set(sparkle_TestLibrary_FOUND FALSE)
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/sparkleTestTargets.cmake")
+    include("${CMAKE_CURRENT_LIST_DIR}/sparkleTestTargets.cmake")
+    set(sparkle_TestLibrary_FOUND TRUE)
+endif()
+
 check_required_components(sparkle)

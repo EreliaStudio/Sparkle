@@ -14,13 +14,21 @@ namespace spk
 
 		return std::move(meshBuilder).build();
 	}
+	DrawTextureMeshRenderCommand ImageRenderCommand::_resolve(const Texture *texture, Texture::Section section, Rect2D rect, float depth)
+	{
+		const auto resolution = texture ? texture->resolve(section, rect.size) : Texture::Resolution{{}, rect.size};
+		rect.anchor += Vector2Int{static_cast<int>((rect.width - resolution.size.x) / 2), static_cast<int>((rect.height - resolution.size.y) / 2)};
+		rect.size = resolution.size;
+		return DrawTextureMeshRenderCommand(resolution.texture, _mesh(section, rect, depth));
+	}
+
 	ImageRenderCommand::ImageRenderCommand(Texture::Handle texture, Texture::Section section, Rect2D rect, float depth) :
 		_command(std::move(texture), _mesh(section, rect, depth))
 	{
 	}
 
 	ImageRenderCommand::ImageRenderCommand(const Texture *texture, Texture::Section section, Rect2D rect, float depth) :
-		ImageRenderCommand(texture ? texture->handle() : Texture::Handle{}, section, rect, depth)
+		_command(_resolve(texture, section, rect, depth))
 	{
 	}
 	void ImageRenderCommand::execute(RenderContext &context) const

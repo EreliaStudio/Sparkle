@@ -24,12 +24,16 @@ namespace spk
 		void _buildSprites(const Vector2UInt &spriteCount);
 
 	public:
+		using Texture::resolution;
+		[[nodiscard]] Texture resolution(const Vector2UInt &available) const override;
+
 		SpriteSheet();
 		SpriteSheet(std::span<const std::uint8_t> data, const Vector2UInt &spriteCount);
 		[[nodiscard]] std::unique_ptr<GPUResource> clone() const override
 		{
 			auto result = std::make_unique<SpriteSheet>(*this);
 			result->_setState(_cloneState());
+			result->_cloneResolutions(handle());
 			return result;
 		}
 

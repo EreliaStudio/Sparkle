@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
   "name": "sparkle",
   "version": "0.1.0",
-  "port-version": 178,
+  "port-version": 179,
   "description": "Sparkle static library",
   "dependencies": [
     "glew",
@@ -16,5 +16,10 @@
       "name": "vcpkg-cmake-config",
       "host": true
     }
-  ]
+  ],
+  "features": {
+    "test-library": {
+      "description": "Install reusable image comparison and Windows/OpenGL test utilities"
+    }
+  }
 }

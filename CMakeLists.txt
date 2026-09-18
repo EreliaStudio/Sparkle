@@ -12,6 +12,7 @@ include(CMakePackageConfigHelpers)
 include(CTest)
 
 option(SPARKLE_BUILD_TESTS "Build the Sparkle unit-test suite" OFF)
+option(SPARKLE_BUILD_TEST_LIBRARY "Build and install reusable test utilities" OFF)
 
 find_package(GLEW REQUIRED)
 find_package(OpenGL REQUIRED)
@@ -94,6 +95,10 @@ set_target_properties(sparkle PROPERTIES
     CXX_EXTENSIONS OFF
     DEBUG_POSTFIX d
 )
+
+if(SPARKLE_BUILD_TEST_LIBRARY OR SPARKLE_BUILD_TESTS)
+    add_subdirectory(tests/TU/SparkleTestLibrary)
+endif()
 
 if(SPARKLE_BUILD_TESTS)
     add_subdirectory(tests)

@@ -4,6 +4,15 @@
 
 namespace spk
 {
+	Texture SpriteSheet::resolution(const Vector2UInt &available) const
+	{
+		return Texture::resolution([&](const Texture &candidate) {
+			return _nbSprite.x != 0 && _nbSprite.y != 0 &&
+				   candidate.size().x % _nbSprite.x == 0 && candidate.size().y % _nbSprite.y == 0 &&
+				   candidate.size().x / _nbSprite.x <= available.x && candidate.size().y / _nbSprite.y <= available.y;
+		});
+	}
+
 	SpriteSheet::SpriteSheet() :
 		Image()
 	{

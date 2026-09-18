@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <bit>
+#include <cmath>
+
 #include <cstring>
 #include <limits>
 #include <stdexcept>
@@ -10,6 +12,8 @@
 #include <stb_image_write.h>
 
 #include "core/context/render_context.hpp"
+#include "exception.hpp"
+#include "graphics/image.hpp"
 
 namespace spk
 {
@@ -155,6 +159,7 @@ namespace spk
 
 	void Texture::_allocateRenderTarget(const Vector2UInt &size, Format format)
 	{
+		_detachResolutions();
 		auto &content = state<State>();
 		if (content._textureTarget != Target::Texture2D)
 		{
@@ -183,6 +188,7 @@ namespace spk
 
 	void Texture::setPixels(const std::uint8_t *data, const Vector2UInt &size, Format format)
 	{
+		_detachResolutions();
 		auto &content = state<State>();
 		if (content._textureTarget != Target::Texture2D)
 		{
@@ -223,6 +229,7 @@ namespace spk
 
 	void Texture::resizePixels(const Vector2UInt &size)
 	{
+		_detachResolutions();
 		auto &content = state<State>();
 		if (content._contentSource != ContentSource::PixelData)
 		{
@@ -251,6 +258,7 @@ namespace spk
 
 	void Texture::writePixels(const std::uint8_t *data, const Vector2UInt &position, const Vector2UInt &size)
 	{
+		_detachResolutions();
 		auto &content = state<State>();
 		if (content._contentSource != ContentSource::PixelData)
 		{
@@ -485,6 +493,153 @@ namespace spk
 		}
 
 		return content._pixels;
+	}
+
+	Texture::Texture(Handle handle, std::shared_ptr<ResolutionSet> resolutions) :
+		GPUResource(handle),
+		_resolutions(std::move(resolutions))
+	{
+	}
+
+	void Texture::_cloneResolutions(Handle previous)
+	{
+		if (!_resolutions)
+		{
+			return;
+		}
+		_resolutions = std::make_shared<ResolutionSet>(*_resolutions);
+		for (auto &level : _resolutions->levels)
+		{
+			if (level.identifier() == previous.identifier())
+			{
+				level = handle();
+			}
+		}
+	}
+
+	void Texture::_detachResolutions()
+	{
+		if (_resolutions)
+		{
+			_setState(_cloneState());
+			_resolutions.reset();
+		}
+	}
+
+	Texture Texture::resolution(const ResolutionPredicate &predicate) const
+	{
+		if (!predicate)
+		{
+			throw Exception("Texture resolution predicate cannot be empty");
+		}
+		Texture result(*this);
+		bool found = false;
+		const auto consider = [&](const Texture &candidate) {
+			if (predicate(candidate) && (!found || candidate.size().x > result.size().x))
+			{
+				result = candidate;
+				found = true;
+			}
+		};
+		if (_resolutions)
+		{
+			for (const auto &level : _resolutions->levels)
+			{
+				consider(Texture(level, _resolutions));
+			}
+		}
+		else
+		{
+			consider(*this);
+		}
+		return result;
+	}
+
+	Texture Texture::resolution(const Vector2UInt &available) const
+	{
+		return resolution([&](const Texture &candidate) {
+			return candidate.size().x <= available.x && candidate.size().y <= available.y;
+		});
+	}
+
+	void Texture::_validateResolution(const Texture &texture) const
+	{
+		const auto base = size(), candidate = texture.size();
+		if (target() != Target::Texture2D || texture.target() != Target::Texture2D ||
+			isRenderTarget() || texture.isRenderTarget() || !isColorFormat(format()) || format() != texture.format() ||
+			base.x == 0 || base.y == 0 || candidate.x == 0 || candidate.y == 0 ||
+			std::uint64_t(base.x) * candidate.y != std::uint64_t(base.y) * candidate.x)
+		{
+			throw Exception("Texture resolution must be a CPU color texture with matching format and aspect ratio");
+		}
+		if (base == candidate)
+		{
+			throw Exception("Texture resolution already exists");
+		}
+		if (_resolutions)
+		{
+			for (const auto &level : _resolutions->levels)
+			{
+				if (level->size() == candidate)
+				{
+					throw Exception("Texture resolution already exists");
+				}
+			}
+		}
+	}
+
+	void Texture::addResolution(const Texture &texture)
+	{
+		_validateResolution(texture);
+		Texture copy;
+		copy.setPixels(texture.pixels(), texture.size(), texture.format());
+		copy.setMipmap(texture.mipmap());
+		copy.validate();
+		if (!_resolutions)
+		{
+			auto resolutions = std::make_shared<ResolutionSet>();
+			resolutions->levels = {handle(), copy.handle()};
+			_resolutions = std::move(resolutions);
+		}
+		else
+		{
+			_resolutions->levels.push_back(copy.handle());
+		}
+	}
+
+	void Texture::addResolution(const std::filesystem::path &path)
+	{
+		addResolution(Image::open(path));
+	}
+
+	void Texture::addResolution(std::span<const std::uint8_t> encodedData)
+	{
+		addResolution(Image(encodedData));
+	}
+
+	Texture::Resolution Texture::resolve(const Section &section, const Vector2UInt &available) const
+	{
+		if (!_resolutions)
+		{
+			return {handle(), available};
+		}
+		Vector2UInt selectedSize = available;
+		unsigned int bestWidth = 0;
+		const auto selected = resolution([&](const Texture &candidate) {
+			const double width = std::round(std::abs(double(section.size.x)) * candidate.size().x);
+			const double height = std::round(std::abs(double(section.size.y)) * candidate.size().y);
+			if (!std::isfinite(width) || !std::isfinite(height) || width < 1 || height < 1 || width > available.x || height > available.y)
+			{
+				return false;
+			}
+			if (candidate.size().x > bestWidth)
+			{
+				bestWidth = candidate.size().x;
+				selectedSize = {static_cast<unsigned int>(width), static_cast<unsigned int>(height)};
+			}
+			return true;
+		});
+		return {selected.handle(), selectedSize};
 	}
 
 	void Texture::saveAsPng(const std::filesystem::path &path) const
