@@ -74,6 +74,8 @@ $configureArguments = @(
     "-DVCPKG_MANIFEST_FEATURES=tests",
     "-DCMAKE_TOOLCHAIN_FILE=$toolchainFile",
     "-DCMAKE_CXX_COMPILER=clang++",
+    '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>',
+    "-DCMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE=PRE_TEST",
     "-DCMAKE_CXX_FLAGS=-fprofile-instr-generate -fcoverage-mapping",
     "-DCMAKE_EXE_LINKER_FLAGS=-fprofile-instr-generate"
 )

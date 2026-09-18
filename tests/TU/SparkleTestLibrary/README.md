@@ -27,3 +27,27 @@ PNG comparison does not initialize OpenGL. On success the comparator deletes act
 On the supported Windows toolchain, build/install Sparkle with the test library enabled and tests disabled, then configure `tests/package-consumer` with the installed prefix and the same dependency toolchain. Build it and run `ctest --test-dir <consumer-build> --output-on-failure`. Repeat after relocating the install prefix, with the original checkout/build inaccessible. The consumer uses only installed headers/targets, configures its own paths and checks both image-match and image-difference behavior without creating a GPU context.
 
 Also verify that a default install omits the optional target and that `find_package(sparkle REQUIRED COMPONENTS TestLibrary)` rejects that install. Run SparkleTestSuite with tests enabled to validate its configured resource paths and existing GPU tests.
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on pull requests (including drafts), pushes to
+`Version0.1.1`/`main`, and manual dispatch. It builds and runs the full unit suite
+in Debug and Release on Windows with LLVM and Mesa 23.3.4 software OpenGL.
+CTest runs serially because window/clipboard tests share desktop state; missing
+tests and failures are errors. Image references are never regenerated in CI.
+Logs, JUnit results and image differences are downloadable workflow artifacts.
+
+Independent Debug/Release packaging jobs build with tests disabled and GTest
+explicitly unavailable. They verify that the default install omits TestLibrary,
+that the base package still configures/builds/runs, and that requesting the absent
+component fails for the expected reason. They then enable TestLibrary, run the
+installed consumer, move the install into a path containing a space, remove the
+producer source/build trees, and rebuild/run a fresh consumer. Third-party
+vcpkg dependencies remain available outside those trees.
+
+The consumer checks executable-relative defaults, custom paths, preservation of
+both roots after invalid input, image match cleanup, mismatch output and reference
+preservation. LLVM coverage runs separately and uploads its HTML/profile report;
+test failures remain blocking, with no arbitrary coverage percentage gate yet.
+Software rendering validates the Windows OpenGL path, not vendor GPU drivers.
+There is no documentation generation, Pages deployment or release publishing.
