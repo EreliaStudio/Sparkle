@@ -1,4 +1,7 @@
+#include <exception.hpp>
+
 int main()
 {
-	return 0;
+	const spk::Exception error("Installed Sparkle consumer");
+	return error.message() == "Installed Sparkle consumer" ? 0 : 1;
 }

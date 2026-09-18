@@ -33,6 +33,8 @@ Also verify that a default install omits the optional target and that `find_pack
 `.github/workflows/ci.yml` runs on pull requests (including drafts), pushes to
 `Version0.1.1`/`main`, and manual dispatch. It builds and runs the full unit suite
 in Debug and Release on Windows with LLVM and Mesa 23.3.4 software OpenGL.
+CI sets Mesa GL/GLSL overrides to 4.6/460 to match Sparkle's requested core
+context and shader versions; this is not a claim of full driver conformance.
 CTest runs serially because window/clipboard tests share desktop state; missing
 tests and failures are errors. Image references are never regenerated in CI.
 Logs, JUnit results and image differences are downloadable workflow artifacts.

@@ -22,6 +22,9 @@ env:
   VCPKG_DEFAULT_TRIPLET: x64-windows-static
   VCPKG_DEFAULT_HOST_TRIPLET: x64-windows-static
   GALLIUM_DRIVER: llvmpipe
+  # Sparkle requests a 4.6 core context and compiles GLSL 460 shaders.
+  MESA_GL_VERSION_OVERRIDE: '4.6'
+  MESA_GLSL_VERSION_OVERRIDE: '460'
 
 jobs:
   format-check:

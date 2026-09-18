@@ -54,9 +54,11 @@ Invoke-Checked cmake (@('-S', $source, '-B', "$root/library-build", '-DSPARKLE_B
 Invoke-Checked cmake @('--build', "$root/library-build", '--parallel', '4')
 Invoke-Checked cmake @('--install', "$root/library-build")
 Test-Consumer "$root/consumer" "$root/consumer-build" $installed
+Copy-Item "$root/consumer-build/results.xml" "$root/installed-results.xml"
+Copy-Item "$root/consumer-build/Testing/Temporary/LastTest.log" "$root/installed-test.log"
 
 $relocated = Join-Path $root 'relocated install'
 Move-Item $installed $relocated
-Remove-Item $source, "$root/library-build", "$root/normal-build", "$root/consumer-build" -Recurse -Force
+Remove-Item $source, "$root/library-build", "$root/normal-build" -Recurse -Force
 Test-Consumer "$root/consumer" "$root/relocated-build" $relocated
 'Optional component absence, installed consumer and relocated consumer passed.' | Set-Content "$root/verification.log"
