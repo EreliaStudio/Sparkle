@@ -11,18 +11,13 @@
 #include <unistd.h>
 #endif
 
-#if !defined(SPARKLE_TEST_RESOURCES_DIR)
-#error SPARKLE_TEST_RESOURCES_DIR must be provided by the build system
-#endif
-
-#if !defined(SPARKLE_TEST_RESULTS_DIR)
-#error SPARKLE_TEST_RESULTS_DIR must be provided by the build system
-#endif
-
 namespace sparkle_test
 {
     namespace
     {
+        std::filesystem::path resourceRoot;
+        std::filesystem::path resultRoot;
+
         [[nodiscard]] std::filesystem::path normalized(const std::filesystem::path&path)
         {
             std::error_code error;
@@ -45,6 +40,18 @@ namespace sparkle_test
             }
             return true;
         }
+    }
+
+    void configurePaths(const std::filesystem::path& resources, const std::filesystem::path& results)
+    {
+        if (resources.empty() || results.empty())
+        {
+            throw std::invalid_argument("Test resource and result roots must not be empty");
+        }
+        auto newResources = normalized(std::filesystem::absolute(resources));
+        auto newResults = normalized(std::filesystem::absolute(results));
+        resourceRoot.swap(newResources);
+        resultRoot.swap(newResults);
     }
 
     std::filesystem::path executablePath()
@@ -91,7 +98,7 @@ namespace sparkle_test
 
     std::filesystem::path resourcesDirectory()
     {
-        return normalized(SPARKLE_TEST_RESOURCES_DIR);
+        return resourceRoot.empty() ? executableDirectory() / "resources" : resourceRoot;
     }
 
     std::filesystem::path expectedImagesDirectory()
@@ -101,7 +108,7 @@ namespace sparkle_test
 
     std::filesystem::path resultsDirectory()
     {
-        const std::filesystem::path result = normalized(SPARKLE_TEST_RESULTS_DIR);
+        const std::filesystem::path result = (resultRoot.empty() ? executableDirectory() / "results" : resultRoot);
         std::filesystem::create_directories(result);
         return result;
     }

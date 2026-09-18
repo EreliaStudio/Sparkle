@@ -1,4 +1,5 @@
 #include <filesystem>
+#include <stdexcept>
 
 #include <gtest/gtest.h>
 
@@ -30,4 +31,19 @@ TEST(TestPathsTest, BuildsImagePathsInTheirDedicatedRoots)
     EXPECT_EQ(
         sparkle_test::resultImagePath("widgets", "button"),
         sparkle_test::resultsDirectory() / "widgets" / "button.png");
+}
+
+TEST(TestPathsTest, ConfiguresConsumerRootsAndRejectsEmptyPaths)
+{
+    const auto resources = sparkle_test::resourcesDirectory();
+    const auto results = sparkle_test::resultsDirectory();
+    const auto root = results / "consumer-paths";
+    sparkle_test::configurePaths(root / "resources", root / "results");
+    EXPECT_EQ(sparkle_test::resourcesDirectory(), root / "resources");
+    EXPECT_EQ(sparkle_test::resultsDirectory(), root / "results");
+    EXPECT_THROW(sparkle_test::configurePaths({}, root), std::invalid_argument);
+    EXPECT_THROW(sparkle_test::configurePaths(root, {}), std::invalid_argument);
+    EXPECT_EQ(sparkle_test::resourcesDirectory(), root / "resources");
+    sparkle_test::configurePaths(resources, results);
+    std::filesystem::remove_all(root);
 }
