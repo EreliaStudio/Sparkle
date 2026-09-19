@@ -1,0 +1,74 @@
+name: Prebuilt Windows package
+
+on:
+  push:
+    branches:
+      - Version0.1.1
+      - 'feat/prebuilt-*'
+  pull_request:
+    branches: [Version0.1.1]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prebuilt-windows-${{ github.sha }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: pwsh
+
+env:
+  VCPKG_DEFAULT_TRIPLET: x64-windows-static-release
+  VCPKG_DEFAULT_HOST_TRIPLET: x64-windows-static
+
+jobs:
+  package:
+    name: Windows x64 clang-cl static Release
+    runs-on: windows-2022
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: Build, install, relocate, and validate consumers
+        id: package
+        run: ./tools/ci/build-prebuilt-package.ps1
+      - name: Upload validation artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package.outputs.package_name }}
+          path: |
+            ${{ steps.package.outputs.archive }}
+            ${{ steps.package.outputs.checksum }}
+            build/prebuilt-package/*-consumer-build/Testing
+          if-no-files-found: error
+          retention-days: 7
+      - name: Publish immutable GitHub Release assets
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.package.outputs.release_tag }}
+          PACKAGE_NAME: ${{ steps.package.outputs.package_name }}
+          ARCHIVE: ${{ steps.package.outputs.archive }}
+          CHECKSUM: ${{ steps.package.outputs.checksum }}
+          SHA256: ${{ steps.package.outputs.sha256 }}
+        run: |
+          if (gh release view $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY 2>$null) {
+            throw "Release $env:RELEASE_TAG already exists; immutable assets are never overwritten"
+          }
+          $arguments = @(
+            'release', 'create', $env:RELEASE_TAG, $env:ARCHIVE, $env:CHECKSUM,
+            '--repo', $env:GITHUB_REPOSITORY,
+            '--target', $env:GITHUB_SHA,
+            '--title', "$env:PACKAGE_NAME",
+            '--notes', "Windows x64 clang-cl/MSVC-ABI static Release package with static CRT and Sparkle::TestLibrary.`n`nRevision: $env:GITHUB_SHA`nSHA-256: $env:SHA256"
+          )
+          if ($env:GITHUB_REF_NAME -ne 'Version0.1.1') { $arguments += '--prerelease' }
+          & gh @arguments
+          if ($LASTEXITCODE -ne 0) { throw 'GitHub Release creation failed' }
