@@ -1,0 +1,124 @@
+#pragma once
+
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <vector>
+
+#include "design_pattern/trait/resizeable_trait.hpp"
+#include "math/rect2d.hpp"
+#include "type/alignment.hpp"
+
+namespace spk
+{
+	class Widget;
+
+	class Layout : public ResizeableTrait
+	{
+	public:
+		enum class SizePolicy
+		{
+			Fixed,
+			Minimum,
+			Extend
+		};
+
+		struct SizeSettings
+		{
+			SizePolicy horizontal = SizePolicy::Extend;
+			SizePolicy vertical = SizePolicy::Extend;
+
+			constexpr SizeSettings() = default;
+			constexpr SizeSettings(SizePolicy policy) :
+				horizontal(policy),
+				vertical(policy)
+			{
+			}
+			constexpr SizeSettings(SizePolicy horizontalPolicy, SizePolicy verticalPolicy) :
+				horizontal(horizontalPolicy),
+				vertical(verticalPolicy)
+			{
+			}
+
+			bool operator==(const SizeSettings &) const = default;
+		};
+
+		class Element
+		{
+			friend class Layout;
+
+		private:
+			Layout *_owner = nullptr;
+			Widget *_widget = nullptr;
+			Layout *_layout = nullptr;
+			ResizeableTrait *_resizeable = nullptr;
+			SizeSettings _sizeSettings{};
+			Alignment _alignment;
+			ResizeableTrait::Contract _sizeHintEditionContract;
+
+			Element(Layout &owner, Widget *widget, SizeSettings sizeSettings);
+			Element(Layout &owner, Layout *layout, SizeSettings sizeSettings);
+
+		public:
+			Element(const Element &) = delete;
+			Element &operator=(const Element &) = delete;
+			Element(Element &&) = delete;
+			Element &operator=(Element &&) = delete;
+			~Element() = default;
+
+			[[nodiscard]] Widget *widget() const noexcept;
+			[[nodiscard]] Layout *layout() const noexcept;
+			[[nodiscard]] bool isWidget() const noexcept;
+			[[nodiscard]] bool isLayout() const noexcept;
+
+			[[nodiscard]] SizeHint sizeHint() const;
+			[[nodiscard]] Vector2 minimalSize() const;
+			[[nodiscard]] Vector2 maximalSize() const;
+			[[nodiscard]] Vector2 preferredSize() const;
+
+			void setSizeSettings(SizeSettings sizeSettings);
+			[[nodiscard]] const SizeSettings &sizeSettings() const noexcept;
+
+			void setHorizontalAlignment(Alignment::Horizontal alignment);
+			[[nodiscard]] Alignment::Horizontal horizontalAlignment() const noexcept;
+			void setVerticalAlignment(Alignment::Vertical alignment);
+			[[nodiscard]] Alignment::Vertical verticalAlignment() const noexcept;
+			void setAlignment(Alignment alignment);
+			[[nodiscard]] Alignment alignment() const noexcept;
+
+			void setGeometry(const Rect2D &cell) const;
+		};
+
+	protected:
+		using ResizeableTrait::setMaximalSize;
+		using ResizeableTrait::setMinimalSize;
+		using ResizeableTrait::setPreferredSize;
+		using ResizeableTrait::setSizeHint;
+
+		std::vector<std::unique_ptr<Element>> _elements;
+		Vector2UInt _elementPadding{0, 0};
+
+		[[nodiscard]] std::unique_ptr<Element> _createElement(Widget *widget, SizeSettings sizeSettings);
+		[[nodiscard]] std::unique_ptr<Element> _createElement(Layout *layout, SizeSettings sizeSettings);
+		void _eraseElement(Element *element);
+
+		[[nodiscard]] static std::vector<float> _resolveAxis(const std::vector<SizeHint> &hints, float availableSize, bool horizontal);
+		[[nodiscard]] static uint32_t _dimension(float value) noexcept;
+		[[nodiscard]] static Rect2D _rect(int32_t x, int32_t y, uint32_t width, uint32_t height) noexcept;
+
+		void _setComputedSizeHint(const SizeHint &hint);
+		virtual void _updateSizeHint() = 0;
+		virtual void _applyGeometry(const Rect2D &geometry) = 0;
+
+	public:
+		virtual ~Layout() = default;
+
+		void updateSizeHint();
+		void setGeometry(const Rect2D &geometry);
+
+		virtual void clear();
+		void setElementPadding(const Vector2UInt &padding);
+		[[nodiscard]] const Vector2UInt &elementPadding() const noexcept;
+		[[nodiscard]] const std::vector<std::unique_ptr<Element>> &elements() const noexcept;
+	};
+}

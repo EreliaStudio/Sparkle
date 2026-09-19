@@ -2,20 +2,28 @@ cmake_minimum_required(VERSION 3.25)
 
 project(
     sparkle
-    VERSION 0.1.0
+    VERSION 0.1.1
     DESCRIPTION "Sparkle static library"
     LANGUAGES CXX
 )
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
+include(CTest)
+
+option(SPARKLE_BUILD_TESTS "Build the Sparkle unit-test suite" OFF)
+option(SPARKLE_BUILD_TEST_LIBRARY "Build and install reusable test utilities" OFF)
 
 find_package(GLEW REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(Stb REQUIRED)
 
-set(SPARKLE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/srcs")
-set(SPARKLE_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/includes")
+set(SPARKLE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
+set(SPARKLE_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
+set(SPARKLE_RESOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/resources")
+
+add_subdirectory(tools/resource_builder)
+include(cmake/EmbedResources.cmake)
 
 file(GLOB_RECURSE SPARKLE_SOURCES
     CONFIGURE_DEPENDS
@@ -33,6 +41,19 @@ add_library(sparkle STATIC
     ${SPARKLE_HEADERS}
 )
 add_library(sparkle::sparkle ALIAS sparkle)
+
+file(GLOB_RECURSE SPARKLE_RESOURCES
+	CONFIGURE_DEPENDS
+	RELATIVE "${SPARKLE_RESOURCE_DIR}"
+	"${SPARKLE_RESOURCE_DIR}/*"
+)
+list(FILTER SPARKLE_RESOURCES EXCLUDE REGEX "(^|/)\\.")
+
+sparkle_embed_resources(
+	TARGET sparkle
+	ROOT "${SPARKLE_RESOURCE_DIR}"
+	FILES ${SPARKLE_RESOURCES}
+)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_compile_options(sparkle PRIVATE
@@ -57,18 +78,31 @@ target_include_directories(sparkle
         $<BUILD_INTERFACE:${SPARKLE_INCLUDE_DIR}>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
     PRIVATE
+		${SPARKLE_SOURCE_DIR}
         ${Stb_INCLUDE_DIR}
 )
 target_link_libraries(sparkle
-    PRIVATE
+    PUBLIC
         GLEW::GLEW
         OpenGL::GL
 )
+
+if(WIN32)
+	target_link_libraries(sparkle PUBLIC user32)
+endif()
 
 set_target_properties(sparkle PROPERTIES
     CXX_EXTENSIONS OFF
     DEBUG_POSTFIX d
 )
+
+if(SPARKLE_BUILD_TEST_LIBRARY OR SPARKLE_BUILD_TESTS)
+    add_subdirectory(tests/TU/SparkleTestLibrary)
+endif()
+
+if(SPARKLE_BUILD_TESTS)
+    add_subdirectory(tests)
+endif()
 
 install(
     TARGETS sparkle
@@ -80,7 +114,7 @@ install(
 )
 
 install(
-    DIRECTORY includes/
+    DIRECTORY include/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 

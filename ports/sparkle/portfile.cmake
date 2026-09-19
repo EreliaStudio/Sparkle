@@ -6,8 +6,13 @@ get_filename_component(
     ABSOLUTE
 )
 
+vcpkg_check_features(OUT_FEATURE_OPTIONS SPARKLE_FEATURE_OPTIONS
+    FEATURES test-library SPARKLE_BUILD_TEST_LIBRARY
+)
+
 vcpkg_cmake_configure(
     SOURCE_PATH "${SPARKLE_SOURCE_PATH}"
+    OPTIONS ${SPARKLE_FEATURE_OPTIONS} -DSPARKLE_BUILD_TESTS=OFF
 )
 
 vcpkg_cmake_install()

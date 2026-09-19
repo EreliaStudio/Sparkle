@@ -1,0 +1,212 @@
+#pragma once
+
+#include <GL/glew.h>
+
+#include <cstddef>
+#include <cstdint>
+#include <filesystem>
+#include <functional>
+#include <memory>
+#include <span>
+#include <vector>
+
+#include "graphics/opengl/gpu_resource.hpp"
+#include "math/vector2.hpp"
+
+namespace spk
+{
+	struct TextureFormat
+	{
+		GLint internalFormat = GL_NONE;
+		GLenum externalFormat = GL_NONE;
+		GLenum elementType = GL_NONE;
+		bool depth = false;
+		bool stencil = false;
+	};
+
+	class Framebuffer;
+	class RenderContext;
+	class Sampler;
+
+	class Texture : public GPUResource
+	{
+		friend class Framebuffer;
+		friend class Sampler;
+
+	public:
+		enum class Target
+		{
+			Texture1D,
+			Texture2D,
+			Texture3D,
+			TextureCubeMap
+		};
+
+		enum class Format
+		{
+			RGB,
+			RGBA,
+			BGR,
+			BGRA,
+			GreyLevel,
+			DualChannel,
+			Depth24,
+			Depth32F,
+			Depth24Stencil8,
+			Error
+		};
+
+		enum class ContentSource
+		{
+			PixelData,
+			RenderTarget
+		};
+
+		enum class Mipmap
+		{
+			Disable,
+			Enable
+		};
+
+		struct Section
+		{
+			Vector2 anchor;
+			Vector2 size;
+
+			static const Section whole;
+
+			Section();
+			Section(Vector2 anchor, Vector2 size);
+
+			[[nodiscard]] bool operator==(const Section &other) const noexcept;
+			[[nodiscard]] bool operator!=(const Section &other) const noexcept;
+		};
+
+		class State final : public GPUResource::State
+		{
+			friend class Texture;
+
+		private:
+			[[nodiscard]] std::unique_ptr<GPUResource::State> _clone() const override
+			{
+				return std::make_unique<State>(*this);
+			}
+			Target _textureTarget = Target::Texture2D;
+			std::vector<std::uint8_t> _pixels;
+			Vector2UInt _size{0, 0};
+			Format _format = Format::Error;
+			ContentSource _contentSource = ContentSource::PixelData;
+			Mipmap _mipmap = Mipmap::Disable;
+
+			[[nodiscard]] Kind _kind() const noexcept override;
+			[[nodiscard]] RecyclingScore _recyclingScore(const GPUResource::Instance &instance) const noexcept override;
+			[[nodiscard]] std::unique_ptr<GPUResource::Instance> _create(RenderContext &context) const override;
+			void _synchronize(GPUResource::Instance &instance, RenderContext &context) const override;
+			void _bind(GPUResource::Instance &instance, RenderContext &context) const override;
+
+			explicit State(Target target) :
+				_textureTarget(target)
+			{
+			}
+
+		public:
+			[[nodiscard]] Target target() const noexcept
+			{
+				return _textureTarget;
+			}
+			[[nodiscard]] const Vector2UInt &size() const noexcept
+			{
+				return _size;
+			}
+			[[nodiscard]] Format format() const noexcept
+			{
+				return _format;
+			}
+			[[nodiscard]] ContentSource contentSource() const noexcept
+			{
+				return _contentSource;
+			}
+			[[nodiscard]] Mipmap mipmap() const noexcept
+			{
+				return _mipmap;
+			}
+		};
+
+		using Handle = GPUResource::Handle<State>;
+
+		struct ResolutionSet
+		{
+		private:
+			friend class Texture;
+			std::vector<Handle> levels;
+		};
+
+		struct Resolution
+		{
+			Handle texture;
+			Vector2UInt size;
+		};
+
+	protected:
+		class Instance;
+
+	private:
+		std::shared_ptr<ResolutionSet> _resolutions;
+		Texture(Handle handle, std::shared_ptr<ResolutionSet> resolutions);
+		void _detachResolutions();
+		void _validateResolution(const Texture &texture) const;
+		[[nodiscard]] static GLenum _openGLTarget(Target target) noexcept;
+		[[nodiscard]] static std::size_t _bytesPerPixel(Format format);
+		[[nodiscard]] static std::size_t _checkedByteCount(const Vector2UInt &size, Format format);
+
+		void _bindToUnit(std::size_t bindingPoint, RenderContext &context) const;
+		void _allocateRenderTarget(const Vector2UInt &size, Format format);
+
+	protected:
+		void _cloneResolutions(Handle previous);
+		void setPixels(const std::uint8_t *data, const Vector2UInt &size, Format format);
+		void setPixels(std::span<const std::uint8_t> data, const Vector2UInt &size, Format format);
+		void resizePixels(const Vector2UInt &size);
+		void writePixels(const std::uint8_t *data, const Vector2UInt &position, const Vector2UInt &size);
+		void setMipmap(Mipmap mipmap) noexcept;
+
+	public:
+		explicit Texture(Target target = Target::Texture2D);
+		[[nodiscard]] std::unique_ptr<GPUResource> clone() const override
+		{
+			auto result = std::make_unique<Texture>(*this);
+			result->_setState(_cloneState());
+			result->_cloneResolutions(handle());
+			return result;
+		}
+		[[nodiscard]] Handle handle() const
+		{
+			return createHandle<State>();
+		}
+		[[nodiscard]] static TextureFormat formatDescriptor(Format format) noexcept;
+		[[nodiscard]] static bool isColorFormat(Format format) noexcept;
+		[[nodiscard]] static bool isDepthFormat(Format format) noexcept;
+		[[nodiscard]] static bool isDepthStencilFormat(Format format) noexcept;
+
+		[[nodiscard]] Target target() const noexcept;
+		[[nodiscard]] const Vector2UInt &size() const noexcept;
+		[[nodiscard]] Format format() const noexcept;
+		[[nodiscard]] ContentSource contentSource() const noexcept;
+		[[nodiscard]] bool isRenderTarget() const noexcept;
+		[[nodiscard]] Mipmap mipmap() const noexcept;
+		[[nodiscard]] const std::vector<std::uint8_t> &pixels() const;
+
+		using ResolutionPredicate = std::function<bool(const Texture &)>;
+		// Returns a shared view of the largest accepted level, or this level when none fits.
+		[[nodiscard]] Texture resolution(const ResolutionPredicate &predicate) const;
+		[[nodiscard]] virtual Texture resolution(const Vector2UInt &available) const;
+
+		// Variants must preserve the base aspect ratio and normalized UV layout.
+		void addResolution(const Texture &texture);
+		void addResolution(const std::filesystem::path &path);
+		void addResolution(std::span<const std::uint8_t> encodedData);
+		[[nodiscard]] Resolution resolve(const Section &section, const Vector2UInt &available) const;
+
+		void saveAsPng(const std::filesystem::path &path) const;
+	};
+}

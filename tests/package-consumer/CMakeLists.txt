@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.25)
+project(SparkleTestConsumer LANGUAGES CXX)
+find_package(sparkle CONFIG REQUIRED COMPONENTS TestLibrary)
+add_executable(consumer main.cpp)
+target_link_libraries(consumer PRIVATE Sparkle::TestLibrary)
+enable_testing()
+add_test(NAME installed-test-library COMMAND consumer)

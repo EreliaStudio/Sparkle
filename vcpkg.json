@@ -1,11 +1,19 @@
 {
   "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
   "name": "sparkle",
-  "version-string": "0.1.0",
+  "version-string": "0.1.1",
   "description": "Sparkle static library",
   "dependencies": [
     "glew",
     "opengl",
     "stb"
-  ]
+  ],
+  "features": {
+    "tests": {
+      "description": "Dependencies required to build the Sparkle test suite",
+      "dependencies": [
+        "gtest"
+      ]
+    }
+  }
 }
