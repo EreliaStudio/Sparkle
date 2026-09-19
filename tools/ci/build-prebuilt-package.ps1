@@ -93,7 +93,9 @@ $metadata | ConvertTo-Json | Set-Content "$installed/package-metadata.json"
 
 $cmakeFiles = Get-ChildItem "$installed/lib/cmake/sparkle" -File -Filter '*.cmake'
 foreach ($forbidden in @($source, $build)) {
-    if ($cmakeFiles | Select-String -SimpleMatch $forbidden -Quiet) {
+    $matches = $cmakeFiles | Select-String -SimpleMatch $forbidden
+    if ($matches) {
+        $matches | ForEach-Object { Write-Error "$($_.Path):$($_.LineNumber): $($_.Line)" }
         throw "Installed CMake metadata embeds $forbidden"
     }
 }
