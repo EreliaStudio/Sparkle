@@ -16,7 +16,7 @@ namespace spk
 {
 	class RenderContext;
 
-	class ShaderStorageBuffer final : public BufferGPUResource
+	class ShaderStorageBuffer : public BufferGPUResource
 	{
 	public:
 		template <typename TFixedPart, typename TDynamicElement>
@@ -145,6 +145,16 @@ namespace spk
 					throw std::logic_error("ShaderStorageBuffer fixed part is not correctly aligned for the requested type");
 				}
 			}
+		}
+
+	protected:
+		[[nodiscard]] std::byte *data() noexcept
+		{
+			return _data();
+		}
+		[[nodiscard]] const std::byte *data() const noexcept
+		{
+			return _data();
 		}
 
 	public:
