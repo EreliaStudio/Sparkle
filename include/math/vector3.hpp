@@ -64,6 +64,14 @@ namespace spk
 		{
 			return x == other.x && y == other.y && z == other.z;
 		}
+		[[nodiscard]] constexpr auto operator<=>(const TVector3 &other) const
+		{
+			if (const auto comparison = x <=> other.x; comparison != 0)
+				return comparison;
+			if (const auto comparison = y <=> other.y; comparison != 0)
+				return comparison;
+			return z <=> other.z;
+		}
 		[[nodiscard]] constexpr TVector3 operator-() const
 			requires std::is_signed_v<TType>
 		{
@@ -173,4 +181,19 @@ namespace spk
 	using Vector3 = TVector3<float>;
 	using Vector3Int = TVector3<std::int32_t>;
 	using Vector3UInt = TVector3<std::uint32_t>;
+}
+
+namespace std
+{
+	template <typename TType>
+	struct hash<spk::TVector3<TType>>
+	{
+		[[nodiscard]] size_t operator()(const spk::TVector3<TType> &value) const
+		{
+			size_t seed = hash<TType>{}(value.x);
+			seed ^= hash<TType>{}(value.y) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+			seed ^= hash<TType>{}(value.z) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+			return seed;
+		}
+	};
 }
