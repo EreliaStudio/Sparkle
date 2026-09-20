@@ -6,7 +6,7 @@ The archive is named:
 
 `sparkle-<version>-g<full-commit>-windows-x64-clangcl-static-release.zip`
 
-It is published with its SHA-256 file on the revision-specific GitHub Release `sparkle-v<version>-g<full-commit>`. Existing releases are never updated or overwritten. Feature-branch packages are prereleases; pushes to `Version0.1.1` produce normal releases. A push to either `Version0.1.1` or a `feat/prebuilt-*` branch rebuilds the package. The workflow can also be started manually for its selected immutable revision.
+It is published with its SHA-256 file on the revision-specific GitHub Release `sparkle-v<version>-g<full-commit>`. Existing releases are never updated or overwritten. Feature-branch packages are prereleases; pushes to `main`, including pull-request merges, produce normal releases automatically. A push to either `main` or a `feat/prebuilt-*` branch rebuilds the package. The workflow can also be started manually for its selected immutable revision.
 
 The archive is the unmodified shape of a `cmake --install` prefix plus `package-metadata.json`. It contains `sparkle::sparkle` and `Sparkle::TestLibrary`. GLEW and OpenGL remain normal external package dependencies resolved by `sparkleConfig.cmake`.
 

@@ -2,8 +2,10 @@
 
 #include <cmath>
 #include <cstdint>
+#include <set>
 #include <sstream>
 #include <type_traits>
+#include <unordered_set>
 
 #include "math/vector3.hpp"
 
@@ -115,6 +117,26 @@ namespace
 	{
 		EXPECT_EQ(spk::Vector3UInt(1u, 2u, 3u), spk::Vector3UInt(1u, 2u, 3u));
 		EXPECT_NE(spk::Vector3UInt(1u, 2u, 3u), spk::Vector3UInt(1u, 3u, 2u));
+	}
+
+	TEST(Vector3Test, ThreeWayComparisonUsesLexicographicalComponentOrder)
+	{
+		EXPECT_LT(spk::Vector3Int(1, 9, 9), spk::Vector3Int(2, 0, 0));
+		EXPECT_LT(spk::Vector3Int(1, 2, 9), spk::Vector3Int(1, 3, 0));
+		EXPECT_LT(spk::Vector3Int(1, 2, 3), spk::Vector3Int(1, 2, 4));
+		EXPECT_EQ((spk::Vector3Int(1, 2, 3) <=> spk::Vector3Int(1, 2, 3)), std::strong_ordering::equal);
+	}
+
+	TEST(Vector3Test, HashSupportsOrderedAndUnorderedAssociativeContainers)
+	{
+		const std::set<spk::Vector3Int> ordered = {{2, 0, 0}, {1, 3, 0}, {1, 2, 4}};
+		const std::unordered_set<spk::Vector3Int> unordered = {{1, 2, 3}, {1, 2, 3}, {3, 2, 1}};
+		const std::unordered_set<spk::Vector3> floating = {{1.5f, 2.5f, 3.5f}, {1.5f, 2.5f, 3.5f}};
+
+		EXPECT_EQ(*ordered.begin(), spk::Vector3Int(1, 2, 4));
+		EXPECT_EQ(unordered.size(), 2u);
+		EXPECT_TRUE(unordered.contains({3, 2, 1}));
+		EXPECT_EQ(floating.size(), 1u);
 	}
 
 	TEST(Vector3Test, StreamsAllAliasesConsistently)

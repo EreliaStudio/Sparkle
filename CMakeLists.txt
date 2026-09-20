@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.25)
 
 project(
     sparkle
-    VERSION 0.1.1
+    VERSION 0.1.2
     DESCRIPTION "Sparkle static library"
     LANGUAGES CXX
 )

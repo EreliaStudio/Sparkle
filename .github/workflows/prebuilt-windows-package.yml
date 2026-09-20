@@ -3,7 +3,7 @@ name: Prebuilt Windows package
 on:
   push:
     branches:
-      - Version0.1.1
+      - main
       - 'feat/prebuilt-*'
   workflow_dispatch:
 
@@ -67,6 +67,6 @@ jobs:
             '--title', "$env:PACKAGE_NAME",
             '--notes', "Windows x64 clang-cl/MSVC-ABI static Release package with static CRT and Sparkle::TestLibrary.`n`nRevision: $env:GITHUB_SHA`nSHA-256: $env:SHA256"
           )
-          if ($env:GITHUB_REF_NAME -ne 'Version0.1.1') { $arguments += '--prerelease' }
+          if ($env:GITHUB_REF_NAME -ne 'main') { $arguments += '--prerelease' }
           & gh @arguments
           if ($LASTEXITCODE -ne 0) { throw 'GitHub Release creation failed' }

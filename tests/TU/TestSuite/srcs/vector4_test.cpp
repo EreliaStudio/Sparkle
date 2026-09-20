@@ -2,8 +2,10 @@
 
 #include <cstdint>
 #include <limits>
+#include <set>
 #include <sstream>
 #include <type_traits>
+#include <unordered_set>
 
 #include "math/vector4.hpp"
 
@@ -79,6 +81,26 @@ namespace
 	{
 		EXPECT_EQ(spk::Vector4Int(1, 2, 3, 4), spk::Vector4Int(1, 2, 3, 4));
 		EXPECT_NE(spk::Vector4Int(1, 2, 3, 4), spk::Vector4Int(1, 2, 3, 5));
+	}
+
+	TEST(Vector4Test, ThreeWayComparisonUsesLexicographicalComponentOrder)
+	{
+		EXPECT_LT(spk::Vector4Int(1, 9, 9, 9), spk::Vector4Int(2, 0, 0, 0));
+		EXPECT_LT(spk::Vector4Int(1, 2, 9, 9), spk::Vector4Int(1, 3, 0, 0));
+		EXPECT_LT(spk::Vector4Int(1, 2, 3, 9), spk::Vector4Int(1, 2, 4, 0));
+		EXPECT_LT(spk::Vector4Int(1, 2, 3, 4), spk::Vector4Int(1, 2, 3, 5));
+	}
+
+	TEST(Vector4Test, HashSupportsOrderedAndUnorderedAssociativeContainers)
+	{
+		const std::set<spk::Vector4Int> ordered = {{2, 0, 0, 0}, {1, 3, 0, 0}, {1, 2, 4, 0}};
+		const std::unordered_set<spk::Vector4Int> unordered = {{1, 2, 3, 4}, {1, 2, 3, 4}, {4, 3, 2, 1}};
+		const std::unordered_set<spk::Vector4> floating = {{1.5f, 2.5f, 3.5f, 4.5f}, {1.5f, 2.5f, 3.5f, 4.5f}};
+
+		EXPECT_EQ(*ordered.begin(), spk::Vector4Int(1, 2, 4, 0));
+		EXPECT_EQ(unordered.size(), 2u);
+		EXPECT_TRUE(unordered.contains({4, 3, 2, 1}));
+		EXPECT_EQ(floating.size(), 1u);
 	}
 
 	TEST(Vector4Test, NegativeAndExtremeValuesCanBeRepresentedWithoutOverflowingArithmetic)

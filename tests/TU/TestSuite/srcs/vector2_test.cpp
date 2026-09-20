@@ -2,8 +2,10 @@
 
 #include <cstdint>
 #include <limits>
+#include <set>
 #include <sstream>
 #include <type_traits>
+#include <unordered_set>
 
 #include "math/vector2.hpp"
 
@@ -86,6 +88,26 @@ namespace
 	{
 		EXPECT_EQ(spk::Vector2Int(1, 2), spk::Vector2Int(1, 2));
 		EXPECT_NE(spk::Vector2Int(1, 2), spk::Vector2Int(2, 1));
+	}
+
+	TEST(Vector2Test, ThreeWayComparisonUsesLexicographicalComponentOrder)
+	{
+		EXPECT_LT(spk::Vector2Int(1, 9), spk::Vector2Int(2, 0));
+		EXPECT_LT(spk::Vector2Int(1, 2), spk::Vector2Int(1, 3));
+		EXPECT_GT(spk::Vector2Int(2, 0), spk::Vector2Int(1, 9));
+		EXPECT_EQ((spk::Vector2Int(1, 2) <=> spk::Vector2Int(1, 2)), std::strong_ordering::equal);
+	}
+
+	TEST(Vector2Test, HashSupportsOrderedAndUnorderedAssociativeContainers)
+	{
+		const std::set<spk::Vector2Int> ordered = {{2, 0}, {1, 3}, {1, 2}};
+		const std::unordered_set<spk::Vector2Int> unordered = {{1, 2}, {1, 2}, {2, 1}};
+		const std::unordered_set<spk::Vector2> floating = {{1.5f, 2.5f}, {1.5f, 2.5f}};
+
+		EXPECT_EQ(*ordered.begin(), spk::Vector2Int(1, 2));
+		EXPECT_EQ(unordered.size(), 2u);
+		EXPECT_TRUE(unordered.contains({2, 1}));
+		EXPECT_EQ(floating.size(), 1u);
 	}
 
 	TEST(Vector2Test, FractionalAndNegativeFloatingPointValuesArePreserved)

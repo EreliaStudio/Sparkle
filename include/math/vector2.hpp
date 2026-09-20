@@ -2,7 +2,10 @@
 
 #include <array>
 #include <cmath>
+#include <compare>
+#include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <iostream>
 
 #include "exception.hpp"
@@ -54,6 +57,13 @@ namespace spk
 		[[nodiscard]] constexpr bool operator==(const TVector2 &other) const
 		{
 			return x == other.x && y == other.y;
+		}
+
+		[[nodiscard]] constexpr auto operator<=>(const TVector2 &other) const
+		{
+			if (const auto comparison = x <=> other.x; comparison != 0)
+				return comparison;
+			return y <=> other.y;
 		}
 
 		[[nodiscard]] constexpr TVector2 operator-() const
@@ -161,4 +171,18 @@ namespace spk
 	using Vector2 = TVector2<float_t>;
 	using Vector2Int = TVector2<int32_t>;
 	using Vector2UInt = TVector2<uint32_t>;
+}
+
+namespace std
+{
+	template <typename TType>
+	struct hash<spk::TVector2<TType>>
+	{
+		[[nodiscard]] size_t operator()(const spk::TVector2<TType> &value) const
+		{
+			size_t seed = hash<TType>{}(value.x);
+			seed ^= hash<TType>{}(value.y) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+			return seed;
+		}
+	};
 }
