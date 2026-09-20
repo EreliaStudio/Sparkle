@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <concepts>
 #include <limits>
 #include <span>
 #include <type_traits>
@@ -37,6 +38,29 @@ namespace
 	{
 		std::uint32_t count;
 		float scale;
+	};
+
+	class DerivedStorage final : public spk::ShaderStorageBuffer
+	{
+	public:
+		struct Data
+		{
+			std::uint32_t value;
+		};
+
+	private:
+		Data *_content = nullptr;
+
+	public:
+		explicit DerivedStorage(std::size_t count) :
+			spk::ShaderStorageBuffer(5, 0, sizeof(Data))
+		{
+			resize(count);
+			_content = reinterpret_cast<Data *>(data());
+		}
+
+		[[nodiscard]] Data &at(std::size_t index) { return _content[index]; }
+		[[nodiscard]] const Data &at(std::size_t index) const { return _content[index]; }
 	};
 
 	void configureVertexBuffer(spk::VertexBuffer &buffer)
@@ -247,6 +271,21 @@ TEST(ShaderStorageBufferTest, DynamicOnlyZeroAndMultipleElementCountsAreSupporte
 	const auto view = std::as_const(buffer).cast<void, float>();
 	EXPECT_EQ(view.nbElement, 2u);
 	EXPECT_FLOAT_EQ(view.dynamicArray[1], 2.5f);
+}
+
+TEST(ShaderStorageBufferTest, DerivedTypedResourceCanAccessAndShareCpuStorage)
+{
+	static_assert(std::derived_from<DerivedStorage, spk::ShaderStorageBuffer>);
+	DerivedStorage original(2);
+	original.at(0).value = 12;
+	original.at(1).value = 34;
+	original.validate();
+	const DerivedStorage copy = original;
+
+	EXPECT_EQ(copy.identifier(), original.identifier());
+	EXPECT_EQ(copy.at(0).value, 12u);
+	EXPECT_EQ(copy.at(1).value, 34u);
+	EXPECT_EQ(&copy.at(0), &original.at(0));
 }
 
 TEST(ShaderStorageBufferTest, InvalidSizesTypesCountsAlignmentAndOverflowAreRejected)
