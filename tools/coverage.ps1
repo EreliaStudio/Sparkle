@@ -90,15 +90,18 @@ if ($LASTEXITCODE -ne 0) {
     throw "Coverage configuration failed with exit code $LASTEXITCODE."
 }
 
-Write-Host "Building SparkleTestSuite..."
-& cmake --build $coverageBuildDirectory --target SparkleTestSuite
+Write-Host "Building Core and Graphics test suites..."
+& cmake --build $coverageBuildDirectory --target SparkleCoreTestSuite SparkleGraphicsTestSuite
 if ($LASTEXITCODE -ne 0) {
     throw "Coverage build failed with exit code $LASTEXITCODE."
 }
 
-$testExecutable = Join-Path $coverageBuildDirectory "tests/TU/TestSuite/SparkleTestSuite.exe"
-if (-not (Test-Path -LiteralPath $testExecutable -PathType Leaf)) {
-    throw "The test executable was not produced: $testExecutable"
+$coreTestExecutable = Join-Path $coverageBuildDirectory "tests/TU/Core/SparkleCoreTestSuite.exe"
+$graphicsTestExecutable = Join-Path $coverageBuildDirectory "tests/TU/Graphics/SparkleGraphicsTestSuite.exe"
+foreach ($testExecutable in @($coreTestExecutable, $graphicsTestExecutable)) {
+    if (-not (Test-Path -LiteralPath $testExecutable -PathType Leaf)) {
+        throw "The test executable was not produced: $testExecutable"
+    }
 }
 
 $previousProfilePattern = $env:LLVM_PROFILE_FILE
@@ -132,13 +135,14 @@ if ($LASTEXITCODE -ne 0) {
 $ignorePattern = "(tests|build|vcpkg_installed)[\\/]"
 
 Write-Host "Coverage summary:"
-& llvm-cov report $testExecutable "-instr-profile=$profileDataPath" "-ignore-filename-regex=$ignorePattern"
+& llvm-cov report $graphicsTestExecutable "-object=$coreTestExecutable" "-instr-profile=$profileDataPath" "-ignore-filename-regex=$ignorePattern"
 if ($LASTEXITCODE -ne 0) {
     throw "Coverage summary generation failed with exit code $LASTEXITCODE."
 }
 
 Write-Host "Generating HTML report..."
-& llvm-cov show $testExecutable `
+& llvm-cov show $graphicsTestExecutable `
+    "-object=$coreTestExecutable" `
     "-instr-profile=$profileDataPath" `
     -format=html `
     "-output-dir=$htmlDirectory" `
@@ -160,5 +164,5 @@ if (-not $NoOpen) {
 }
 
 if ($testExitCode -ne 0) {
-    throw "SparkleTestSuite failed with exit code $testExitCode. The partial coverage report is available at: $indexPath"
+    throw "Sparkle test suites failed with exit code $testExitCode. The partial coverage report is available at: $indexPath"
 }

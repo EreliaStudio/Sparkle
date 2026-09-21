@@ -82,14 +82,16 @@
       "name": "testDebug",
       "configurePreset": "testDebug",
       "targets": [
-        "SparkleTestSuite"
+        "SparkleCoreTestSuite",
+        "SparkleGraphicsTestSuite"
       ]
     },
     {
       "name": "testRelease",
       "configurePreset": "testRelease",
       "targets": [
-        "SparkleTestSuite"
+        "SparkleCoreTestSuite",
+        "SparkleGraphicsTestSuite"
       ]
     }
   ],
