@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.25)
 project(
     sparkle
     VERSION 0.1.3
-    DESCRIPTION "Sparkle static library"
+    DESCRIPTION "C++23 UI, OpenGL rendering, and application runtime library"
     LANGUAGES CXX
 )
 
