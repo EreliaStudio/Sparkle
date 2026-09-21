@@ -1,5 +1,8 @@
 #include "rendering/engine/rendering_engine.hpp"
 
+#include <algorithm>
+#include <vector>
+
 #include "rendering/engine/rendering_behaviour.hpp"
 #include "rendering/engine/rendering_component.hpp"
 #include "rendering/engine/rendering_entity.hpp"
@@ -36,25 +39,43 @@ namespace spk
 			callback(*rendering);
 		}
 
-		for (Component *component : entity.getComponents<Component>())
+		const auto componentSnapshot = entity.getComponents<Component>();
+		for (Component *component : componentSnapshot)
 		{
+			const auto currentComponents = entity.getComponents<Component>();
+			if (std::ranges::find(currentComponents, component) == currentComponents.end())
+			{
+				continue;
+			}
+
 			if (auto *rendering = dynamic_cast<RenderingObjectTrait *>(component))
 			{
 				callback(*rendering);
 			}
 		}
 
-		for (Behaviour *behaviour : entity.getBehaviours<Behaviour>())
+		const auto behaviourSnapshot = entity.getBehaviours<Behaviour>();
+		for (Behaviour *behaviour : behaviourSnapshot)
 		{
+			const auto currentBehaviours = entity.getBehaviours<Behaviour>();
+			if (std::ranges::find(currentBehaviours, behaviour) == currentBehaviours.end())
+			{
+				continue;
+			}
+
 			if (auto *rendering = dynamic_cast<RenderingObjectTrait *>(behaviour))
 			{
 				callback(*rendering);
 			}
 		}
 
-		for (Entity *child : entity.children())
+		const std::vector<Entity *> childSnapshot(
+			entity.children().begin(),
+			entity.children().end());
+		for (Entity *child : childSnapshot)
 		{
-			if (child != nullptr)
+			if (child != nullptr &&
+				std::ranges::find(entity.children(), child) != entity.children().end())
 			{
 				_visitEntity(*child, callback);
 			}
@@ -70,8 +91,15 @@ namespace spk
 		}
 
 		_visitEntity(_engine->root(), callback);
-		for (System *system : _engine->getSystems<System>())
+		const auto systemSnapshot = _engine->getSystems<System>();
+		for (System *system : systemSnapshot)
 		{
+			const auto currentSystems = _engine->getSystems<System>();
+			if (std::ranges::find(currentSystems, system) == currentSystems.end())
+			{
+				continue;
+			}
+
 			if (auto *rendering = dynamic_cast<RenderingObjectTrait *>(system))
 			{
 				callback(*rendering);
