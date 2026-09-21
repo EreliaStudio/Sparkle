@@ -11,7 +11,7 @@ namespace
 	class MemoryClipboard final : public spk::Clipboard::Backend
 	{
 	public:
-		std::optional<spk::Font::Text> text;
+		std::optional<spk::Clipboard::Text> text;
 		bool readEnabled = true;
 		bool writeEnabled = true;
 
@@ -20,12 +20,12 @@ namespace
 			return text.has_value();
 		}
 
-		[[nodiscard]] std::optional<spk::Font::Text> readText() const override
+		[[nodiscard]] std::optional<spk::Clipboard::Text> readText() const override
 		{
 			return readEnabled ? text : std::nullopt;
 		}
 
-		bool writeText(const spk::Font::Text &value) override
+		bool writeText(const spk::Clipboard::Text &value) override
 		{
 			if (!writeEnabled)
 			{
@@ -290,12 +290,12 @@ TEST(TextEditTest, ClipboardCopyCutAndPasteUseInjectedBackend)
 	edit.setSelection(1, 3);
 
 	ASSERT_TRUE(edit.copySelection());
-	EXPECT_EQ(clipboard.text, std::optional<spk::Font::Text>(U"\u00e9\U0001f600"));
+	EXPECT_EQ(clipboard.text, std::optional<spk::Clipboard::Text>(U"\u00e9\U0001f600"));
 
 	ASSERT_TRUE(edit.cutSelection());
 	EXPECT_EQ(edit.text(), U"AZ");
 	EXPECT_EQ(edit.cursor(), 1u);
-	EXPECT_EQ(clipboard.text, std::optional<spk::Font::Text>(U"\u00e9\U0001f600"));
+	EXPECT_EQ(clipboard.text, std::optional<spk::Clipboard::Text>(U"\u00e9\U0001f600"));
 
 	ASSERT_TRUE(edit.pasteClipboard());
 	EXPECT_EQ(edit.text(), U"A\u00e9\U0001f600Z");
@@ -306,7 +306,7 @@ TEST(TextEditTest, ClipboardCopyCutAndPasteUseInjectedBackend)
 
 	edit.setCopyObscuredTextEnabled(true);
 	ASSERT_TRUE(edit.copySelection());
-	EXPECT_EQ(clipboard.text, std::optional<spk::Font::Text>(edit.text()));
+	EXPECT_EQ(clipboard.text, std::optional<spk::Clipboard::Text>(edit.text()));
 }
 
 TEST(TextEditTest, ClipboardFailuresPreserveTextAndSelection)
