@@ -183,8 +183,19 @@ TEST(RenderingEngineTest, InactiveObjectsAreSkippedByGraphicalContracts)
 	spk::DeviceContext deviceContext;
 	renderingEngine.updateState(updateContext, deviceContext);
 
+	std::vector<std::string> log;
+	entity.renderLog = &log;
+	component.renderLog = &log;
+	behaviour.renderLog = &log;
+	system.renderLog = &log;
+	spk::RenderSnapshot::Builder builder;
+	renderingEngine.buildRenderSnapshot(builder);
+	spk::RenderContext renderContext{.targetSurface = nullptr};
+	builder.build().execute(renderContext);
+
 	EXPECT_EQ(entity.deviceUpdates, 0u);
 	EXPECT_EQ(component.deviceUpdates, 0u);
 	EXPECT_EQ(behaviour.deviceUpdates, 0u);
 	EXPECT_EQ(system.deviceUpdates, 0u);
+	EXPECT_TRUE(log.empty());
 }
