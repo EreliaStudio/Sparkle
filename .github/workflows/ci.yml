@@ -19,8 +19,6 @@ defaults:
     shell: pwsh
 
 env:
-  VCPKG_DEFAULT_TRIPLET: x64-windows-static
-  VCPKG_DEFAULT_HOST_TRIPLET: x64-windows-static
   GALLIUM_DRIVER: llvmpipe
   # Sparkle requests a 4.6 core context and compiles GLSL 460 shaders.
   MESA_GL_VERSION_OVERRIDE: '4.6'
@@ -51,8 +49,64 @@ jobs:
           git diff --name-only --diff-filter=ACMR -z "$base" HEAD -- '*.cpp' '*.hpp' '*.h' |
             xargs -0 -r clang-format --style=file --dry-run --Werror
 
-  unit-tests:
-    name: Unit tests (${{ matrix.configuration }})
+  core-unit-tests:
+    name: Core unit tests (${{ matrix.os }}, ${{ matrix.configuration }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, ubuntu-24.04]
+        configuration: [Debug, Release]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
+        with:
+          arch: x64
+      - name: Configure Core (Windows)
+        if: runner.os == 'Windows'
+        run: >-
+          cmake -S . -B build/core-test -G Ninja
+          -DCMAKE_CXX_COMPILER=clang-cl
+          -DCMAKE_BUILD_TYPE=${{ matrix.configuration }}
+          '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>'
+          -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+          -DVCPKG_TARGET_TRIPLET=x64-windows-static
+          -DVCPKG_MANIFEST_NO_DEFAULT_FEATURES=ON
+          -DVCPKG_MANIFEST_FEATURES=tests
+          -DSPARKLE_BUILD_GRAPHICS=OFF
+          -DSPARKLE_BUILD_TESTS=ON
+          -DCMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE=PRE_TEST
+      - name: Configure Core (Linux)
+        if: runner.os == 'Linux'
+        run: >-
+          cmake -S . -B build/core-test -G Ninja
+          -DCMAKE_CXX_COMPILER=clang++
+          -DCMAKE_BUILD_TYPE=${{ matrix.configuration }}
+          -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+          -DVCPKG_TARGET_TRIPLET=x64-linux
+          -DVCPKG_MANIFEST_NO_DEFAULT_FEATURES=ON
+          -DVCPKG_MANIFEST_FEATURES=tests
+          -DSPARKLE_BUILD_GRAPHICS=OFF
+          -DSPARKLE_BUILD_TESTS=ON
+          -DCMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE=PRE_TEST
+      - name: Build Core tests
+        run: cmake --build build/core-test --target SparkleCoreTestSuite --parallel 4
+      - name: Run Core tests
+        run: ctest --test-dir build/core-test -L core --output-on-failure --no-tests=error --timeout 120 --parallel 2 --output-junit results.xml
+      - name: Upload Core test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-unit-tests-${{ matrix.os }}-${{ matrix.configuration }}
+          path: |
+            build/core-test/Testing
+            build/core-test/results.xml
+            build/core-test/CMakeFiles/CMakeConfigureLog.yaml
+
+  graphics-unit-tests:
+    name: Graphics unit tests (${{ matrix.configuration }})
     runs-on: windows-2022
     timeout-minutes: 60
     strategy:
@@ -64,29 +118,30 @@ jobs:
       - uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
-      - name: Configure
+      - name: Configure Graphics
         run: >-
-          cmake -S . -B build/test -G Ninja
+          cmake -S . -B build/graphics-test -G Ninja
           -DCMAKE_CXX_COMPILER=clang-cl
           -DCMAKE_BUILD_TYPE=${{ matrix.configuration }}
           '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>'
           -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
           -DVCPKG_TARGET_TRIPLET=x64-windows-static
           -DVCPKG_MANIFEST_FEATURES=tests
+          -DSPARKLE_BUILD_GRAPHICS=ON
           -DSPARKLE_BUILD_TESTS=ON
           -DCMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE=PRE_TEST
-      - name: Build
-        run: cmake --build build/test --parallel 4
+      - name: Build Graphics tests
+        run: cmake --build build/graphics-test --target SparkleGraphicsTestSuite --parallel 4
       - name: Install software OpenGL
-        run: ./tools/ci/install-mesa.ps1 -Destination build/test/tests/TU/TestSuite
-      - name: Run all unit tests (including rendering)
-        run: ctest --test-dir build/test --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit results.xml
+        run: ./tools/ci/install-mesa.ps1 -Destination build/graphics-test/tests/TU/Graphics
+      - name: Run Graphics tests
+        run: ctest --test-dir build/graphics-test -L graphics --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit results.xml
       - name: Build visual comparison gallery
         if: always()
         run: >-
           python tools/ci/image-diff-report.py
-          --results build/test/tests/TU/TestSuite/results
-          --references tests/TU/TestSuite/resources/expectedImages
+          --results build/graphics-test/tests/TU/Graphics/results
+          --references tests/TU/Graphics/resources/expectedImages
           --output build/visual-diffs
       - name: Upload visual comparisons
         if: always()
@@ -105,16 +160,16 @@ jobs:
           "### Visual comparisons (${{ matrix.configuration }})" >> $env:GITHUB_STEP_SUMMARY
           "[Download reference / actual / difference images]($env:ARTIFACT_URL)" >> $env:GITHUB_STEP_SUMMARY
           'Extract the ZIP and open index.html for the gallery, or inspect the PNG folders directly.' >> $env:GITHUB_STEP_SUMMARY
-      - name: Upload test logs and image differences
+      - name: Upload Graphics test logs and image differences
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: unit-tests-${{ matrix.configuration }}
+          name: graphics-unit-tests-${{ matrix.configuration }}
           path: |
-            build/test/Testing
-            build/test/results.xml
-            build/test/tests/TU/TestSuite/results
-            build/test/CMakeFiles/CMakeConfigureLog.yaml
+            build/graphics-test/Testing
+            build/graphics-test/results.xml
+            build/graphics-test/tests/TU/Graphics/results
+            build/graphics-test/CMakeFiles/CMakeConfigureLog.yaml
 
   package:
     name: Installed package (${{ matrix.configuration }})
@@ -175,7 +230,7 @@ jobs:
           arch: x64
       - name: Set up software OpenGL and vcpkg
         run: |
-          ./tools/ci/install-mesa.ps1 -Destination build/coverage/tests/TU/TestSuite
+          ./tools/ci/install-mesa.ps1 -Destination build/coverage/tests/TU/Graphics
           "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV
       - name: Build, test and produce coverage
         run: ./tools/coverage.ps1 -NoOpen -Triplet x64-windows-static
@@ -189,5 +244,5 @@ jobs:
             build/coverage/reports/**/*.profdata
             build/coverage/reports/**/results.xml
             build/coverage/Testing
-            build/coverage/tests/TU/TestSuite/results
+            build/coverage/tests/TU/Graphics/results
             build/coverage/CMakeFiles/CMakeConfigureLog.yaml
