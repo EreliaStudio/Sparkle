@@ -19,11 +19,6 @@ namespace spk
 			return isActive();
 		}
 
-		[[nodiscard]] bool _canBuildRenderSnapshot() const override
-		{
-			return isActive();
-		}
-
 	public:
 		using System::System;
 		using System::updateState;
