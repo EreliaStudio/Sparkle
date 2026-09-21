@@ -25,7 +25,7 @@ namespace spk::Clipboard
 			}
 		};
 
-		std::vector<wchar_t> toUTF16(const Font::Text &text)
+		std::vector<wchar_t> toUTF16(const Text &text)
 		{
 			std::vector<wchar_t> result;
 			result.reserve(text.size() + 1);
@@ -50,9 +50,9 @@ namespace spk::Clipboard
 			return result;
 		}
 
-		Font::Text fromUTF16(const wchar_t *text)
+		Text fromUTF16(const wchar_t *text)
 		{
-			Font::Text result;
+			Text result;
 			for (std::size_t index = 0; text[index] != L'\0'; ++index)
 			{
 				char32_t value = static_cast<char32_t>(text[index]);
@@ -91,7 +91,7 @@ namespace spk::Clipboard
 #endif
 			}
 
-			[[nodiscard]] std::optional<Font::Text> readText() const override
+			[[nodiscard]] std::optional<Text> readText() const override
 			{
 #ifdef _WIN32
 				if (!hasText())
@@ -117,7 +117,7 @@ namespace spk::Clipboard
 					return std::nullopt;
 				}
 
-				Font::Text result = fromUTF16(data);
+				Text result = fromUTF16(data);
 				GlobalUnlock(handle);
 				return result;
 #else
@@ -125,7 +125,7 @@ namespace spk::Clipboard
 #endif
 			}
 
-			bool writeText(const Font::Text &text) override
+			bool writeText(const Text &text) override
 			{
 #ifdef _WIN32
 				ClipboardGuard guard;
@@ -175,12 +175,12 @@ namespace spk::Clipboard
 		return systemBackend().hasText();
 	}
 
-	std::optional<Font::Text> readText()
+	std::optional<Text> readText()
 	{
 		return systemBackend().readText();
 	}
 
-	bool writeText(const Font::Text &text)
+	bool writeText(const Text &text)
 	{
 		return systemBackend().writeText(text);
 	}
