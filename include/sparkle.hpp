@@ -37,7 +37,7 @@
 #include "design_pattern/trait/statefull_trait.hpp"
 #include "design_pattern/trait/updatable_trait.hpp"
 #include "design_pattern/trait/versioned_trait.hpp"
-#include "diagnostics/profiler.hpp"
+#include "diagnostics/logger.hpp"\n#include "diagnostics/profiler.hpp"
 #include "engine/behaviour.hpp"
 #include "engine/behaviour_collection.hpp"
 #include "engine/component.hpp"
