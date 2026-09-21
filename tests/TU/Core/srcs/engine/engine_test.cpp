@@ -7,6 +7,8 @@
 #include "engine/behaviour.hpp"
 #include "engine/engine.hpp"
 #include "engine/entity3d.hpp"
+#include "engine/transform3d.hpp"
+#include "math/vector3.hpp"
 #include "engine/system.hpp"
 
 namespace
