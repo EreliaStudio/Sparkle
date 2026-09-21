@@ -118,6 +118,11 @@ install(
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
+install(
+    FILES LICENSE
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/sparkle
+)
+
 configure_package_config_file(
     cmake/sparkleConfig.cmake.in
     ${CMAKE_CURRENT_BINARY_DIR}/sparkleConfig.cmake
