@@ -1,6 +1,6 @@
 # Reusable test utilities
 
-Build with `-DSPARKLE_BUILD_TEST_LIBRARY=ON -DSPARKLE_BUILD_TESTS=OFF`, then install Sparkle normally. This installs headers and the static library without requiring GTest or building SparkleTestSuite. The overlay vcpkg port offers the `test-library` feature. Enabling Sparkle's own tests also builds/installs the utilities.
+Build with `-DSPARKLE_BUILD_TEST_LIBRARY=ON -DSPARKLE_BUILD_TESTS=OFF`, then install Sparkle normally. This installs headers and the static library without requiring GTest or building SparkleTestSuite. The `erelia-sparkle` vcpkg port offers the `test-library` feature. Enabling Sparkle's own tests also builds/installs the utilities.
 
 ```cmake
 find_package(sparkle CONFIG REQUIRED COMPONENTS TestLibrary)
@@ -45,7 +45,9 @@ that the base package still configures/builds/runs, and that requesting the abse
 component fails for the expected reason. They then enable TestLibrary, run the
 installed consumer, move the install into a path containing a space, remove the
 producer source/build trees, and rebuild/run a fresh consumer. Third-party
-vcpkg dependencies remain available outside those trees.
+vcpkg dependencies remain available outside those trees. A separate port job also
+installs `erelia-sparkle` through the repository overlay and validates both the
+base package and the `test-library` feature from clean consumer manifests.
 
 The consumer checks executable-relative defaults, custom paths, preservation of
 both roots after invalid input, image match cleanup, mismatch output and reference
