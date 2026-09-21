@@ -71,7 +71,7 @@ namespace
 
 	std::filesystem::path fontPath()
 	{
-		return std::filesystem::path(__FILE__).parent_path().parent_path().parent_path().parent_path().parent_path() / "resources/fonts/arial.ttf";
+		return std::filesystem::path(__FILE__).parent_path().parent_path().parent_path().parent_path().parent_path() / "resources/fonts/liberation_sans_regular.ttf";
 	}
 }
 

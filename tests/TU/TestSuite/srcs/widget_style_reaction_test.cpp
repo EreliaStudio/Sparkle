@@ -93,7 +93,7 @@ TEST(WidgetStyleReactionTest, ResourceReplacementReachesComposedConsumers)
 		return std::make_unique<spk::SpriteSheet>(spk::SpriteSheet::open(root / "textures" / file, grid));
 	};
 	spk::Widget::Style style;
-	style.font = std::make_unique<spk::Font>(root / "fonts/arial.ttf");
+	style.font = std::make_unique<spk::Font>(root / "fonts/liberation_sans_regular.ttf");
 	style.iconsetImage = std::make_unique<spk::Image>(spk::Image::open(root / "textures/default_iconset.png"));
 	style.iconset = sheet("default_iconset.png", {10, 10});
 	style.nineSlice = sheet("default_nine_slice.png");

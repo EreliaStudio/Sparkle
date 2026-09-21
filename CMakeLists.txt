@@ -119,7 +119,10 @@ install(
 )
 
 install(
-    FILES LICENSE
+    FILES
+        LICENSE
+        THIRD_PARTY_NOTICES.md
+        resources/fonts/LICENSE-Liberation.txt
     DESTINATION ${CMAKE_INSTALL_DATADIR}/sparkle
 )
 
