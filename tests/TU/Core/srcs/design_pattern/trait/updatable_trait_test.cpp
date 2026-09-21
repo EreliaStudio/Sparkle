@@ -5,8 +5,6 @@
 
 #include "core/context/update_context.hpp"
 #include "design_pattern/trait/updatable_trait.hpp"
-#include "input/keyboard.hpp"
-#include "input/mouse.hpp"
 
 namespace
 {
@@ -41,9 +39,7 @@ namespace
 
 TEST(UpdatableTraitTest, RunsPhasesInOrderAndHonorsEligibility)
 {
-	spk::Keyboard keyboard;
-	spk::Mouse mouse;
-	spk::UpdateContext context{.time = {}, .deltaTime = {}, .keyboard = keyboard, .mouse = mouse};
+	spk::UpdateContext context{.time = {}, .deltaTime = {}};
 	UpdatableProbe probe;
 
 	probe.updateState(context);
