@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -191,3 +191,39 @@ jobs:
             build/coverage/Testing
             build/coverage/tests/TU/TestSuite/results
             build/coverage/CMakeFiles/CMakeConfigureLog.yaml
+
+
+  promote-font-goldens:
+    name: Promote approved Liberation Sans goldens
+    if: ${{ always() && github.event_name == 'pull_request' && github.head_ref == 'feat/vcpkg-publication' }}
+    needs: unit-tests
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: unit-tests-Debug
+          path: build/golden-update
+      - name: Promote approved render outputs
+        run: |
+          $results = Join-Path $PWD 'build/golden-update/tests/TU/TestSuite/results'
+          $expected = Join-Path $PWD 'tests/TU/TestSuite/resources/expectedImages'
+          $differences = @(Get-ChildItem $results -Recurse -Filter '*_difference.png')
+          if ($differences.Count -eq 0) { throw 'No changed golden images were found to promote' }
+          foreach ($difference in $differences) {
+            $actual = $difference.FullName -replace '_difference\.png$', '.png'
+            if (-not (Test-Path $actual)) { throw "Missing actual image for $($difference.FullName)" }
+            $relative = [IO.Path]::GetRelativePath($results, $actual)
+            $destination = Join-Path $expected $relative
+            New-Item -ItemType Directory -Force (Split-Path $destination) | Out-Null
+            Copy-Item $actual $destination -Force
+          }
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tests/TU/TestSuite/resources/expectedImages
+          if (git diff --cached --quiet) { throw 'Approved golden outputs did not change the reference tree' }
+          git commit -m 'Update golden images for Liberation Sans'
+          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"

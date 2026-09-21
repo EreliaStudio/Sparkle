@@ -89,9 +89,9 @@ TEST(ThreadSafeCollectionTest, SharedOwnershipRemainsStableAfterErase)
 TEST(ThreadSafeCollectionTest, DuplicateKeyThrowsLogicError)
 {
 	spk::ThreadSafeCollection<int, int> collection;
-	collection.emplace(1, 10);
+	(void)collection.emplace(1, 10);
 
-	EXPECT_THROW(collection.emplace(1, 20), std::logic_error);
+	EXPECT_THROW((void)collection.emplace(1, 20), std::logic_error);
 	EXPECT_EQ(*collection.get(1), 10);
 }
 
@@ -109,7 +109,7 @@ TEST(ThreadSafeCollectionTest, ConcurrentReadersAndWritersCanUseDistinctAndShare
 	constexpr int valuesPerWriter = 250;
 
 	spk::ThreadSafeCollection<int, int> collection;
-	collection.emplace(-1, 777);
+	(void)collection.emplace(-1, 777);
 
 	std::atomic<bool> failed = false;
 	std::vector<std::jthread> readers;

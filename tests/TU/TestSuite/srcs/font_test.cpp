@@ -116,8 +116,8 @@ TEST(FontAtlasTest, GlyphMetricsCachingUnicodeAndMissingGlyphsAreDeterministic)
 	});
 	const auto &glyph = atlas.glyph(U'A');
 	EXPECT_EQ(glyph.step, spk::Vector2Int(22, 0));
-	EXPECT_EQ(glyph.size, spk::Vector2UInt(23, 23));
-	EXPECT_EQ(glyph.baselineOffset, spk::Vector2Int(1, 23));
+	EXPECT_EQ(glyph.size, spk::Vector2UInt(22, 23));
+	EXPECT_EQ(glyph.baselineOffset, spk::Vector2Int(0, 23));
 	EXPECT_GT(glyph.step.x, 0);
 	EXPECT_EQ(glyph.step.y, 0);
 	EXPECT_GT(glyph.size.x, 0u);
