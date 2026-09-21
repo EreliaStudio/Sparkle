@@ -15,7 +15,7 @@ function Invoke-Checked([string]$Program, [string[]]$Arguments) {
 $repo = (Resolve-Path "$PSScriptRoot/../..").Path
 if ([string]::IsNullOrWhiteSpace($Version)) {
     $manifest = Get-Content (Join-Path $repo 'vcpkg.json') -Raw | ConvertFrom-Json
-    $Version = $manifest.'version-string'
+    $Version = $manifest.version
 }
 if ([string]::IsNullOrWhiteSpace($Version)) { throw 'Unable to resolve the Sparkle version' }
 
