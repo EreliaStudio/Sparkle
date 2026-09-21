@@ -101,9 +101,15 @@ TEST(CoreEngineTest, SystemTraversalRemainsStableDuringMutation)
 	auto &controller = engine.addSystem<CallbackSystem>();
 	auto &removed = engine.addSystem<CallbackSystem>();
 	CallbackSystem *added = nullptr;
+	bool mutated = false;
 
 	controller.callback = [&]() {
-		controller.callback = {};
+		if (mutated)
+		{
+			return;
+		}
+
+		mutated = true;
 		engine.removeSystem(removed);
 		added = &engine.addSystem<CallbackSystem>();
 	};
