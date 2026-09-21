@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.25)
 
 project(
     sparkle
-    VERSION 0.1.2
-    DESCRIPTION "Sparkle static library"
+    VERSION 0.1.3
+    DESCRIPTION "C++23 UI, OpenGL rendering, and application runtime library"
     LANGUAGES CXX
 )
 
@@ -116,6 +116,14 @@ install(
 install(
     DIRECTORY include/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+install(
+    FILES
+        LICENSE
+        THIRD_PARTY_NOTICES.md
+        resources/fonts/LICENSE-Liberation.txt
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/sparkle
 )
 
 configure_package_config_file(

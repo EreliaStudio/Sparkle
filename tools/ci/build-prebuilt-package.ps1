@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$Version = '0.1.2',
+    [string]$Version = '',
     [string]$OutputDirectory = 'build/prebuilt-package/output'
 )
 
@@ -13,6 +13,12 @@ function Invoke-Checked([string]$Program, [string[]]$Arguments) {
 }
 
 $repo = (Resolve-Path "$PSScriptRoot/../..").Path
+if ([string]::IsNullOrWhiteSpace($Version)) {
+    $manifest = Get-Content (Join-Path $repo 'vcpkg.json') -Raw | ConvertFrom-Json
+    $Version = $manifest.version
+}
+if ([string]::IsNullOrWhiteSpace($Version)) { throw 'Unable to resolve the Sparkle version' }
+
 $revision = (& git -C $repo rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0 -or $revision -notmatch '^[0-9a-f]{40}$') { throw 'Unable to resolve the Sparkle revision' }
 
@@ -69,7 +75,10 @@ $required = @(
     "$installed/lib/cmake/sparkle/sparkleConfigVersion.cmake",
     "$installed/lib/cmake/sparkle/sparkleTargets.cmake",
     "$installed/lib/cmake/sparkle/sparkleTargets-release.cmake",
-    "$installed/lib/cmake/sparkle/sparkleTestTargets.cmake"
+    "$installed/lib/cmake/sparkle/sparkleTestTargets.cmake",
+    "$installed/share/sparkle/LICENSE",
+    "$installed/share/sparkle/THIRD_PARTY_NOTICES.md",
+    "$installed/share/sparkle/LICENSE-Liberation.txt"
 )
 foreach ($path in $required) {
     if (-not (Test-Path $path)) { throw "Installed package is missing $path" }

@@ -30,12 +30,21 @@ function Test-Consumer([string]$SourcePath, [string]$BuildPath, [string]$Prefix)
     Invoke-Checked ctest @('--test-dir', $BuildPath, '--output-on-failure', '--no-tests=error', '--output-junit', 'results.xml')
 }
 
+function Assert-LicenseFiles([string]$Prefix) {
+    $licenseRoot = Join-Path $Prefix 'share/sparkle'
+    foreach ($name in @('LICENSE', 'THIRD_PARTY_NOTICES.md', 'LICENSE-Liberation.txt')) {
+        $path = Join-Path $licenseRoot $name
+        if (-not (Test-Path $path)) { throw "Installed package is missing $path" }
+    }
+}
+
 # Leave SPARKLE_BUILD_TEST_LIBRARY unspecified: verify its actual default.
 $normal = Join-Path $root 'normal-install'
 Invoke-Checked cmake (@('-S', $source, '-B', "$root/normal-build", '-DSPARKLE_BUILD_TESTS=OFF',
     '-DCMAKE_DISABLE_FIND_PACKAGE_GTest=TRUE', "-DCMAKE_INSTALL_PREFIX=$normal") + $common)
 Invoke-Checked cmake @('--build', "$root/normal-build", '--parallel', '4')
 Invoke-Checked cmake @('--install', "$root/normal-build")
+Assert-LicenseFiles $normal
 Test-Consumer "$root/default-consumer" "$root/default-build" $normal
 if (Test-Path "$normal/include/sparkle_test.hpp") { throw 'Optional headers installed by default' }
 if (@(Get-ChildItem "$normal/lib" -Recurse -Filter '*TestLibrary*').Count -gt 0) { throw 'Optional library installed by default' }
@@ -53,6 +62,7 @@ Invoke-Checked cmake (@('-S', $source, '-B', "$root/library-build", '-DSPARKLE_B
     "-DCMAKE_INSTALL_PREFIX=$installed") + $common)
 Invoke-Checked cmake @('--build', "$root/library-build", '--parallel', '4')
 Invoke-Checked cmake @('--install', "$root/library-build")
+Assert-LicenseFiles $installed
 Test-Consumer "$root/consumer" "$root/consumer-build" $installed
 Copy-Item "$root/consumer-build/results.xml" "$root/installed-results.xml"
 Copy-Item "$root/consumer-build/Testing/Temporary/LastTest.log" "$root/installed-test.log"

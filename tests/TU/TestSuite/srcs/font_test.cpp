@@ -14,7 +14,7 @@ namespace
 	static_assert(std::is_move_constructible_v<spk::Font>);
 	spk::Font::Data fontBytes()
 	{
-		const auto path = std::filesystem::path(__FILE__).parent_path().parent_path().parent_path().parent_path().parent_path() / "resources/fonts/arial.ttf";
+		const auto path = sparkle_test::resourcesDirectory() / "fonts/liberation_sans_regular.ttf";
 		std::ifstream file(path, std::ios::binary);
 		if (!file)
 		{
@@ -116,8 +116,8 @@ TEST(FontAtlasTest, GlyphMetricsCachingUnicodeAndMissingGlyphsAreDeterministic)
 	});
 	const auto &glyph = atlas.glyph(U'A');
 	EXPECT_EQ(glyph.step, spk::Vector2Int(22, 0));
-	EXPECT_EQ(glyph.size, spk::Vector2UInt(23, 23));
-	EXPECT_EQ(glyph.baselineOffset, spk::Vector2Int(1, 23));
+	EXPECT_EQ(glyph.size, spk::Vector2UInt(22, 23));
+	EXPECT_EQ(glyph.baselineOffset, spk::Vector2Int(0, 23));
 	EXPECT_GT(glyph.step.x, 0);
 	EXPECT_EQ(glyph.step.y, 0);
 	EXPECT_GT(glyph.size.x, 0u);

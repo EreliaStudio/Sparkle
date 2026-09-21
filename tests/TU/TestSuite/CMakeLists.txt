@@ -16,6 +16,7 @@ add_executable(SparkleTestSuite
     ${SPARKLE_TEST_SUITE_SOURCES}
     ${SPARKLE_TEST_LIBRARY_TEST_SOURCES}
 )
+
 target_compile_features(SparkleTestSuite PRIVATE cxx_std_23)
 target_compile_definitions(SparkleTestSuite PRIVATE
     SPARKLE_TEST_RESOURCES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/resources"

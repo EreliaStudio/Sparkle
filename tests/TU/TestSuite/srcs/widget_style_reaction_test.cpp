@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "graphics/image.hpp"
+#include "sparkle_test.hpp"
 #include "ui/widget/interface_window.hpp"
 #include "ui/widget/scroll_bar.hpp"
 #include "ui/widget/text_edit.hpp"
@@ -88,12 +89,12 @@ TEST(WidgetStyleReactionTest, EveryScalarFieldReappliesToItsConsumerAndChangesHi
 
 TEST(WidgetStyleReactionTest, ResourceReplacementReachesComposedConsumers)
 {
-	const auto root = std::filesystem::path(__FILE__).parent_path().parent_path().parent_path().parent_path().parent_path() / "resources";
+	const auto root = sparkle_test::resourcesDirectory();
 	const auto sheet = [&](const char *file, spk::Vector2UInt grid = {3, 3}) {
 		return std::make_unique<spk::SpriteSheet>(spk::SpriteSheet::open(root / "textures" / file, grid));
 	};
 	spk::Widget::Style style;
-	style.font = std::make_unique<spk::Font>(root / "fonts/arial.ttf");
+	style.font = std::make_unique<spk::Font>(root / "fonts/liberation_sans_regular.ttf");
 	style.iconsetImage = std::make_unique<spk::Image>(spk::Image::open(root / "textures/default_iconset.png"));
 	style.iconset = sheet("default_iconset.png", {10, 10});
 	style.nineSlice = sheet("default_nine_slice.png");

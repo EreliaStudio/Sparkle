@@ -43,7 +43,7 @@ TEST(TextureResolutionTest, RejectsInvalidVariantsAndPreservesExistingOnFailure)
 	EXPECT_THROW(image.addResolution(Pixels({16, 16})), spk::Exception);
 	EXPECT_THROW(image.addResolution(Pixels({8, 4})), spk::Exception);
 	EXPECT_THROW(image.addResolution(image), spk::Exception);
-	EXPECT_THROW(image.resolution(spk::Texture::ResolutionPredicate{}), spk::Exception);
+	EXPECT_THROW((void)image.resolution(spk::Texture::ResolutionPredicate{}), spk::Exception);
 	EXPECT_EQ(image.resolution(spk::Vector2UInt{18, 18}).size().x, 16u);
 }
 

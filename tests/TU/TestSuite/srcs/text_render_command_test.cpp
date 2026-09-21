@@ -9,8 +9,9 @@
 #include <string_view>
 #include <type_traits>
 
-#include "rendering/command/text_render_command.hpp"
 #include "render_command_test_utils.hpp"
+#include "rendering/command/text_render_command.hpp"
+#include "sparkle_test.hpp"
 #include "ui/widget.hpp"
 
 namespace test = render_command_test;
@@ -39,7 +40,9 @@ namespace
 			for (unsigned int x = 0; x < image.size.x; ++x)
 			{
 				if (test::pixel(image, {x, y})[3] == 0)
+				{
 					continue;
+				}
 				result.left = std::min(result.left, static_cast<int>(x));
 				result.top = std::min(result.top, static_cast<int>(y));
 				result.right = std::max(result.right, static_cast<int>(x));
@@ -47,7 +50,9 @@ namespace
 			}
 		}
 		if (result.right < result.left)
+		{
 			return std::nullopt;
+		}
 		return result;
 	}
 
@@ -56,11 +61,13 @@ namespace
 		const spk::Rect2D bounds = area ? *area : spk::Rect2D{.anchor = {0, 0}, .size = image.size};
 		std::size_t result = 0;
 		for (unsigned int y = bounds.y; y < bounds.y + bounds.height; ++y)
+		{
 			for (unsigned int x = bounds.x; x < bounds.x + bounds.width; ++x)
 			{
 				const auto value = test::pixel(image, {x, y});
 				result += value[channel] > 32 && value[channel] > value[(channel + 1) % 3] * 2 && value[channel] > value[(channel + 2) % 3] * 2;
 			}
+		}
 		return result;
 	}
 
@@ -71,7 +78,7 @@ namespace
 
 	std::filesystem::path fontPath()
 	{
-		return std::filesystem::path(__FILE__).parent_path().parent_path().parent_path().parent_path().parent_path() / "resources/fonts/arial.ttf";
+		return sparkle_test::resourcesDirectory() / "fonts/liberation_sans_regular.ttf";
 	}
 }
 
@@ -124,9 +131,27 @@ TEST(TextRenderCommandTest, AllHorizontalAndVerticalAlignmentsPlaceTextCorrectly
 			const auto actual = visibleBounds(target.capture());
 			ASSERT_TRUE(actual.has_value());
 			if (!reference)
+			{
 				reference = actual;
-			const int expectedX = horizontal == Horizontal::Left ? 0 : horizontal == Horizontal::Center ? -static_cast<int>(textSize.x) / 2 : -static_cast<int>(textSize.x);
-			const int expectedY = vertical == Vertical::Top ? 0 : vertical == Vertical::Center ? -static_cast<int>(textSize.y) / 2 : -static_cast<int>(textSize.y);
+			}
+			int expectedX = 0;
+			if (horizontal == Horizontal::Center)
+			{
+				expectedX = -static_cast<int>(textSize.x) / 2;
+			}
+			else if (horizontal == Horizontal::Right)
+			{
+				expectedX = -static_cast<int>(textSize.x);
+			}
+			int expectedY = 0;
+			if (vertical == Vertical::Center)
+			{
+				expectedY = -static_cast<int>(textSize.y) / 2;
+			}
+			else if (vertical == Vertical::Bottom)
+			{
+				expectedY = -static_cast<int>(textSize.y);
+			}
 			EXPECT_EQ(actual->left - reference->left, expectedX);
 			EXPECT_EQ(actual->top - reference->top, expectedY);
 			EXPECT_EQ(actual->right - reference->right, expectedX);
