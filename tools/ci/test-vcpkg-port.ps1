@@ -11,7 +11,6 @@ function Invoke-Checked([string]$Program, [string[]]$Arguments) {
 
 $repo = (Resolve-Path "$PSScriptRoot/../..").Path
 $root = Join-Path $repo 'build/vcpkg-port-check'
-$installed = Join-Path $root 'installed'
 $overlay = Join-Path $repo 'ports'
 $toolchain = "$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
 Remove-Item $root -Recurse -Force -ErrorAction SilentlyContinue
@@ -19,6 +18,7 @@ New-Item -ItemType Directory -Force $root | Out-Null
 
 function Test-ManifestConsumer([string]$Name, [string]$SourcePath) {
     $build = Join-Path $root $Name
+    $installed = Join-Path $root "$Name-installed"
     $arguments = @(
         '-S', $SourcePath, '-B', $build, '-G', 'Ninja',
         '-DCMAKE_CXX_COMPILER=clang-cl',
