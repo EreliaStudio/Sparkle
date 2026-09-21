@@ -3,7 +3,7 @@
   "name": "erelia-sparkle",
   "version": "0.1.3",
   "port-version": 0,
-  "description": "Sparkle C++23 static library",
+  "description": "Sparkle C++23 UI, OpenGL rendering, and application runtime library",
   "homepage": "https://github.com/EreliaStudio/Sparkle",
   "license": "MIT",
   "supports": "windows & x64 & static & !uwp & !mingw & !xbox",
