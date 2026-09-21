@@ -133,8 +133,24 @@ TEST(TextRenderCommandTest, AllHorizontalAndVerticalAlignmentsPlaceTextCorrectly
 			{
 				reference = actual;
 			}
-			const int expectedX = horizontal == Horizontal::Left ? 0 : horizontal == Horizontal::Center ? -static_cast<int>(textSize.x) / 2 : -static_cast<int>(textSize.x);
-			const int expectedY = vertical == Vertical::Top ? 0 : vertical == Vertical::Center ? -static_cast<int>(textSize.y) / 2 : -static_cast<int>(textSize.y);
+			int expectedX = 0;
+			if (horizontal == Horizontal::Center)
+			{
+				expectedX = -static_cast<int>(textSize.x) / 2;
+			}
+			else if (horizontal == Horizontal::Right)
+			{
+				expectedX = -static_cast<int>(textSize.x);
+			}
+			int expectedY = 0;
+			if (vertical == Vertical::Center)
+			{
+				expectedY = -static_cast<int>(textSize.y) / 2;
+			}
+			else if (vertical == Vertical::Bottom)
+			{
+				expectedY = -static_cast<int>(textSize.y);
+			}
 			EXPECT_EQ(actual->left - reference->left, expectedX);
 			EXPECT_EQ(actual->top - reference->top, expectedY);
 			EXPECT_EQ(actual->right - reference->right, expectedX);
