@@ -154,7 +154,8 @@ namespace sparkle_test
 		const std::filesystem::path &actualPath,
 		const std::filesystem::path &expectedPath,
 		const std::filesystem::path &differencePath,
-		ImageComparisonOptions options)
+		ImageComparisonOptions options,
+		bool printDifferences)
 	{
 		const auto deltas = resolveDeltas(options);
 		validateDeltas(deltas);
@@ -215,7 +216,10 @@ namespace sparkle_test
 
 		if (result.matches == false)
 		{
-			logDifferences(result, actualPath, expectedPath, deltas, options.transparentAlphaThreshold);
+			if (printDifferences)
+			{
+				logDifferences(result, actualPath, expectedPath, deltas, options.transparentAlphaThreshold);
+			}
 			if (differencePath.has_parent_path())
 			{
 				std::filesystem::create_directories(differencePath.parent_path());
