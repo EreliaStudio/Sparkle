@@ -71,7 +71,7 @@ namespace spk
 
 		inline static thread_local ThreadState _threadState{};
 
-		Logger() = default;
+		Logger();
 
 		void _dispatch() noexcept;
 		void _removeOutput(std::size_t identifier) noexcept;

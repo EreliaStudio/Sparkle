@@ -93,6 +93,8 @@ namespace spk
 		}
 	}
 
+	Logger::Logger() = default;
+
 	Logger::~Logger() = default;
 
 	Logger &Logger::instance() noexcept
@@ -141,7 +143,7 @@ namespace spk
 		}
 		catch (...)
 		{
-			throw spk::Exception("Failed to add logger output [" + path.string() + "]", std::current_exception());
+			throw spk::Exception("Failed to add logger output", std::current_exception());
 		}
 	}
 
