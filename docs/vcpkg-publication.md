@@ -15,7 +15,7 @@ target_link_libraries(my_target PRIVATE sparkle::sparkle)
 
 - Sparkle is licensed under the MIT License.
 - The vcpkg port is named `erelia-sparkle` to avoid ambiguity with other projects named Sparkle.
-- The current package is desktop Windows static-only (`windows & static & !uwp & !mingw & !xbox`) and is validated with the official `x64-windows-static` triplet.
+- The current package is x64 desktop Windows static-only (`windows & x64 & static & !uwp & !mingw & !xbox`) and is validated with the official `x64-windows-static` triplet.
 - The port must build Sparkle from source rather than consume the prebuilt Sparkle release archive.
 - The optional `test-library` vcpkg feature maps to `SPARKLE_BUILD_TEST_LIBRARY`.
 - Sparkle's own unit tests remain disabled when building the normal vcpkg port.
