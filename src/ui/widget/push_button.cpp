@@ -138,9 +138,7 @@ namespace spk
 		const Vector2UInt padding = _effectiveIconPadding();
 		const unsigned int horizontalPadding = std::min(padding.x, geometry().width / 2);
 		const unsigned int verticalPadding = std::min(padding.y, geometry().height / 2);
-		Rect2D iconGeometry{
-			.anchor = {static_cast<int>(horizontalPadding), static_cast<int>(verticalPadding)},
-			.size = {geometry().width - 2 * horizontalPadding, geometry().height - 2 * verticalPadding}};
+		Rect2D iconGeometry = geometry().atOrigin().shrink({static_cast<int>(horizontalPadding / 2.0f) - 1, static_cast<int>(verticalPadding / 2.0f) - 1});
 
 		if (_iconSize.has_value())
 		{
