@@ -1,7 +1,7 @@
 #include <Windows.h>
 
 // A separate process and real HWND establish native clipboard exclusion.
-// It never empties or writes the clipboard; the parent owns content restoration.
+// It never empties or writes the clipboard; the parent owns the isolated test content.
 int main(int argc, char **argv)
 {
 	if (argc != 3)
