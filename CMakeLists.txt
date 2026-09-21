@@ -117,7 +117,7 @@ foreach(SPARKLE_TARGET IN ITEMS sparkle_core sparkle)
         continue()
     endif()
 
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         target_compile_options(${SPARKLE_TARGET} PRIVATE
             $<$<CONFIG:RelWithDebInfo>:-gcodeview>
             $<$<CONFIG:Release>:-gcodeview>
