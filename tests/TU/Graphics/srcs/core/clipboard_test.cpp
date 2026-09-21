@@ -186,7 +186,7 @@ namespace
 
 TEST_F(ClipboardTest, StandardUnicodeRoundTrip)
 {
-	const spk::Font::Text text = U"Sparkle — café — 日本語 — 😀";
+	const spk::Clipboard::Text text = U"Sparkle — café — 日本語 — 😀";
 
 	ASSERT_TRUE(spk::Clipboard::writeText(text));
 	EXPECT_TRUE(spk::Clipboard::hasText());
@@ -198,7 +198,7 @@ TEST_F(ClipboardTest, StandardUnicodeRoundTrip)
 
 TEST_F(ClipboardTest, EmptyTextRoundTripsSafely)
 {
-	const spk::Font::Text text;
+	const spk::Clipboard::Text text;
 
 	ASSERT_TRUE(spk::Clipboard::writeText(text));
 	const auto result = spk::Clipboard::readText();
@@ -209,7 +209,7 @@ TEST_F(ClipboardTest, EmptyTextRoundTripsSafely)
 
 TEST_F(ClipboardTest, MultilineAndSupplementaryCharactersRoundTrip)
 {
-	const spk::Font::Text text = U"first line\nsecond line\r\nU+1F680: 🚀";
+	const spk::Clipboard::Text text = U"first line\nsecond line\r\nU+1F680: 🚀";
 
 	ASSERT_TRUE(spk::Clipboard::writeText(text));
 	const auto result = spk::Clipboard::readText();
@@ -225,7 +225,7 @@ TEST_F(ClipboardTest, WriteReplacesExistingText)
 
 	EXPECT_EQ(
 		spk::Clipboard::readText(),
-		std::optional<spk::Font::Text>(U"after"));
+		std::optional<spk::Clipboard::Text>(U"after"));
 }
 
 TEST_F(ClipboardTest, NonTextClipboardContentReportsNoText)
@@ -253,7 +253,7 @@ TEST_F(ClipboardTest, NonTextClipboardContentReportsNoText)
 
 TEST_F(ClipboardTest, ClipboardOpenContentionUsesNoThrowFailureReporting)
 {
-	const spk::Font::Text original = U"preserved while contended";
+	const spk::Clipboard::Text original = U"preserved while contended";
 	ASSERT_TRUE(spk::Clipboard::writeText(original));
 
 	ClipboardHolder holder;
@@ -271,6 +271,6 @@ TEST_F(ClipboardTest, ClipboardOpenContentionUsesNoThrowFailureReporting)
 	ASSERT_TRUE(holder.release());
 	EXPECT_EQ(
 		spk::Clipboard::readText(),
-		std::optional<spk::Font::Text>(original));
+		std::optional<spk::Clipboard::Text>(original));
 	EXPECT_TRUE(spk::Clipboard::writeText(U"available again"));
 }
