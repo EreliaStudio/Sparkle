@@ -13,7 +13,7 @@ target_link_libraries(my_target PRIVATE sparkle::sparkle)
 
 ## Upstream preparation
 
-- Sparkle is licensed under the MIT License.
+- Sparkle's own source is licensed under MIT. The bundled Liberation Sans default font is separately licensed under SIL OFL 1.1, so vcpkg metadata declares `MIT AND OFL-1.1` and installs both license texts.
 - The vcpkg port is named `erelia-sparkle` to avoid ambiguity with other projects named Sparkle.
 - The current package is x64 desktop Windows static-only (`windows & x64 & static & !uwp & !mingw & !xbox`) and is validated with the official `x64-windows-static` triplet.
 - The port must build Sparkle from source rather than consume the prebuilt Sparkle release archive.
