@@ -215,6 +215,7 @@ TEST(RenderingEngineTest, SystemTraversalRemainsStableDuringMutation)
 	renderingEngine.updateState(updateContext, deviceContext);
 
 	ASSERT_NE(added, nullptr);
+	EXPECT_TRUE(added->isActive());
 	EXPECT_EQ(controller.updates, 1u);
 	EXPECT_EQ(added->updates, 0u);
 
