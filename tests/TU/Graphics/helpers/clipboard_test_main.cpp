@@ -17,17 +17,19 @@ namespace
 	public:
 		PrivateWindowStation()
 		{
-			const std::wstring stationName =
-				L"SparkleClipboardTest_" +
-				std::to_wstring(::GetCurrentProcessId()) +
-				L"_" +
-				std::to_wstring(::GetTickCount64());
-
 			_station = ::CreateWindowStationW(
-				stationName.c_str(),
-				0,
+				nullptr,
+				CWF_CREATE_ONLY,
 				WINSTA_ALL_ACCESS,
 				nullptr);
+			if (_station == nullptr && ::GetLastError() == ERROR_ALREADY_EXISTS)
+			{
+				_station = ::CreateWindowStationW(
+					nullptr,
+					0,
+					WINSTA_ALL_ACCESS,
+					nullptr);
+			}
 			if (_station == nullptr)
 			{
 				throw std::runtime_error("Unable to create private window station");
@@ -38,8 +40,12 @@ namespace
 				throw std::runtime_error("Unable to activate private window station");
 			}
 
+			const std::wstring desktopName =
+				L"SparkleClipboardTest_" +
+				std::to_wstring(::GetCurrentProcessId());
+
 			_desktop = ::CreateDesktopW(
-				L"Default",
+				desktopName.c_str(),
 				nullptr,
 				nullptr,
 				0,
@@ -48,11 +54,6 @@ namespace
 			if (_desktop == nullptr)
 			{
 				throw std::runtime_error("Unable to create private clipboard desktop");
-			}
-
-			if (::SetThreadDesktop(_desktop) == FALSE)
-			{
-				throw std::runtime_error("Unable to activate private clipboard desktop");
 			}
 		}
 
