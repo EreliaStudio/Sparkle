@@ -91,20 +91,12 @@ namespace spk
 		}
 
 		_visitEntity(_engine->root(), callback);
-		const auto systemSnapshot = _engine->getSystems<System>();
-		for (System *system : systemSnapshot)
-		{
-			const auto currentSystems = _engine->getSystems<System>();
-			if (std::ranges::find(currentSystems, system) == currentSystems.end())
-			{
-				continue;
-			}
-
-			if (auto *rendering = dynamic_cast<RenderingObjectTrait *>(system))
+		_engine->forEachSystem([&callback](System &system) {
+			if (auto *rendering = dynamic_cast<RenderingObjectTrait *>(&system))
 			{
 				callback(*rendering);
 			}
-		}
+		});
 	}
 
 	bool RenderingEngine::_isAcceptingEvent() const
