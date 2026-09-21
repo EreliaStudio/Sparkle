@@ -48,7 +48,7 @@ Invoke-Checked cmake @('--build', "$root/core-build", '--parallel', '4')
 Invoke-Checked cmake @('--install', "$root/core-build")
 Assert-LicenseFiles $core
 Test-Consumer "$root/core-consumer" "$root/core-consumer-build" $core
-if (Test-Path "$core/lib/sparkle.lib" -or Test-Path "$core/lib/sparkled.lib") {
+if ((Test-Path "$core/lib/sparkle.lib") -or (Test-Path "$core/lib/sparkled.lib")) {
     throw 'Core-only installation unexpectedly contains the graphical Sparkle library'
 }
 
