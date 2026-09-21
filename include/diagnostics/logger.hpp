@@ -108,8 +108,7 @@ namespace spk
 			try
 			{
 				_threadState.stream << std::forward<TType>(value);
-			}
-			catch (...)
+			} catch (...)
 			{
 			}
 			return *this;

@@ -100,8 +100,7 @@ namespace
 				std::clog.rdbuf(_previous);
 				std::clog.clear();
 				std::clog.exceptions(_exceptions);
-			}
-			catch (...)
+			} catch (...)
 			{
 			}
 		}

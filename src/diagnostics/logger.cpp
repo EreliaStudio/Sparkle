@@ -28,8 +28,7 @@ namespace
 		{
 			stream << '[' << levelName(level) << "] " << message << '\n';
 			stream.flush();
-		}
-		catch (...)
+		} catch (...)
 		{
 		}
 	}
@@ -146,12 +145,10 @@ namespace spk
 			const std::size_t identifier = output->identifier;
 			_outputs.push_back(std::move(output));
 			return Output(this, identifier);
-		}
-		catch (const spk::Exception &)
+		} catch (const spk::Exception &)
 		{
 			throw;
-		}
-		catch (...)
+		} catch (...)
 		{
 			throw spk::Exception("Failed to add logger output", std::current_exception());
 		}
@@ -163,8 +160,7 @@ namespace spk
 		{
 			const std::scoped_lock lock(_mutex);
 			_consoleMuted = true;
-		}
-		catch (...)
+		} catch (...)
 		{
 		}
 	}
@@ -175,8 +171,7 @@ namespace spk
 		{
 			const std::scoped_lock lock(_mutex);
 			_consoleMuted = false;
-		}
-		catch (...)
+		} catch (...)
 		{
 		}
 	}
@@ -192,8 +187,7 @@ namespace spk
 		try
 		{
 			_threadState.stream << location.file_name() << ':' << location.line() << ' ';
-		}
-		catch (...)
+		} catch (...)
 		{
 		}
 		return *this;
@@ -211,8 +205,7 @@ namespace spk
 		try
 		{
 			manipulator(_threadState.stream);
-		}
-		catch (...)
+		} catch (...)
 		{
 		}
 		return *this;
@@ -223,8 +216,7 @@ namespace spk
 		try
 		{
 			manipulator(_threadState.stream);
-		}
-		catch (...)
+		} catch (...)
 		{
 		}
 		return *this;
@@ -235,8 +227,7 @@ namespace spk
 		try
 		{
 			manipulator(_threadState.stream);
-		}
-		catch (...)
+		} catch (...)
 		{
 		}
 		return *this;
@@ -252,8 +243,7 @@ namespace spk
 			_threadState.stream.clear();
 			_threadState.level = Level::Info;
 			return true;
-		}
-		catch (...)
+		} catch (...)
 		{
 			return false;
 		}
@@ -275,8 +265,7 @@ namespace spk
 					writeRecord(output->stream, level, message);
 				}
 			}
-		}
-		catch (...)
+		} catch (...)
 		{
 		}
 	}
@@ -299,8 +288,7 @@ namespace spk
 			std::erase_if(_outputs, [&](const auto &output) {
 				return output->identifier == identifier;
 			});
-		}
-		catch (...)
+		} catch (...)
 		{
 		}
 	}
@@ -317,8 +305,7 @@ namespace spk
 			{
 				(*it)->lowerAcceptedLevel = level;
 			}
-		}
-		catch (...)
+		} catch (...)
 		{
 		}
 	}
