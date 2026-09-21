@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$Version = '0.1.2',
+    [string]$Version = '',
     [string]$OutputDirectory = 'build/prebuilt-package/output'
 )
 
@@ -13,6 +13,12 @@ function Invoke-Checked([string]$Program, [string[]]$Arguments) {
 }
 
 $repo = (Resolve-Path "$PSScriptRoot/../..").Path
+if ([string]::IsNullOrWhiteSpace($Version)) {
+    $manifest = Get-Content (Join-Path $repo 'vcpkg.json') -Raw | ConvertFrom-Json
+    $Version = $manifest.'version-string'
+}
+if ([string]::IsNullOrWhiteSpace($Version)) { throw 'Unable to resolve the Sparkle version' }
+
 $revision = (& git -C $repo rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0 -or $revision -notmatch '^[0-9a-f]{40}$') { throw 'Unable to resolve the Sparkle revision' }
 
