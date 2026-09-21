@@ -60,6 +60,8 @@ if(WIN32)
 
     gtest_discover_tests(SparkleClipboardTestSuite
         TEST_PREFIX "Graphics.Native."
+        PROPERTIES
+            RUN_SERIAL TRUE
     )
 endif()
 
