@@ -6,7 +6,7 @@
   "description": "Sparkle C++23 static library",
   "homepage": "https://github.com/EreliaStudio/Sparkle",
   "license": "MIT",
-  "supports": "windows & static & !uwp & !mingw & !xbox",
+  "supports": "windows & x64 & static & !uwp & !mingw & !xbox",
   "dependencies": [
     "glew",
     "opengl",
