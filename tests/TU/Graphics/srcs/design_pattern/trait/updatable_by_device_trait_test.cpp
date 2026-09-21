@@ -52,8 +52,8 @@ TEST(UpdatableByDeviceTraitTest, RunsIndependentTwoContextLifecycle)
 	spk::Mouse mouse;
 	spk::UpdateContext updateContext{};
 	spk::DeviceContext deviceContext{
-		.keyboard = &keyboard,
-		.mouse = &mouse};
+		.keyboard = keyboard,
+		.mouse = mouse};
 	DeviceProbe probe;
 
 	probe.updateState(updateContext, deviceContext);

@@ -25,8 +25,8 @@ namespace spk
 		}
 
 	public:
+		using RenderingObjectTrait::updateState;
 		using System::System;
 		using System::updateState;
-		using RenderingObjectTrait::updateState;
 	};
 }

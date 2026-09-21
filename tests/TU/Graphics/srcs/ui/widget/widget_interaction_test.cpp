@@ -59,7 +59,7 @@ namespace
 		spk::Mouse mouse;
 		mouse.position = position;
 		spk::UpdateContext context{.time = {}, .deltaTime = std::chrono::milliseconds(milliseconds)};
-		spk::DeviceContext deviceContext{.keyboard = &keyboard, .mouse = &mouse};
+		spk::DeviceContext deviceContext{.keyboard = keyboard, .mouse = mouse};
 		widget.updateState(context);
 		widget.updateState(context, deviceContext);
 	}

@@ -126,7 +126,7 @@ TEST(EngineWidgetTest, NullEngineUpdateAndSnapshotAreNoOps)
 	spk::Mouse mouse;
 	spk::UpdateContext context{.time = {}, .deltaTime = std::chrono::milliseconds(16)};
 	EXPECT_NO_THROW(widget.updateState(context));
-	spk::DeviceContext deviceContext{.keyboard = &keyboard, .mouse = &mouse};
+	spk::DeviceContext deviceContext{.keyboard = keyboard, .mouse = mouse};
 	EXPECT_NO_THROW(widget.updateState(context, deviceContext));
 	spk::RenderSnapshot::Builder builder;
 	EXPECT_NO_THROW(widget.buildRenderSnapshot(builder));

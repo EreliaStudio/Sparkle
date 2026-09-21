@@ -14,10 +14,14 @@ namespace
 	{
 		switch (level)
 		{
-		case spk::Logger::Level::Trace: return "Trace";
-		case spk::Logger::Level::Info: return "Info";
-		case spk::Logger::Level::Warning: return "Warning";
-		case spk::Logger::Level::Error: return "Error";
+		case spk::Logger::Level::Trace:
+			return "Trace";
+		case spk::Logger::Level::Info:
+			return "Info";
+		case spk::Logger::Level::Warning:
+			return "Warning";
+		case spk::Logger::Level::Error:
+			return "Error";
 		}
 		return "Unknown";
 	}

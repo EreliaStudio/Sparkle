@@ -24,6 +24,7 @@
 #include "type/orientation.hpp"
 #include "ui/view_region.hpp"
 #include "ui/widget/scalable_widget.hpp"
+#include "input/device_context.hpp"
 
 namespace
 {
@@ -182,8 +183,8 @@ namespace
 	{
 		static_assert(std::is_same_v<decltype(spk::UpdateContext::time), std::chrono::steady_clock::duration>);
 		static_assert(std::is_same_v<decltype(spk::UpdateContext::deltaTime), std::chrono::steady_clock::duration>);
-		static_assert(std::is_same_v<decltype(spk::UpdateContext::keyboard), const spk::Keyboard &>);
-		static_assert(std::is_same_v<decltype(spk::UpdateContext::mouse), const spk::Mouse &>);
+		static_assert(std::is_same_v<decltype(spk::DeviceContext::keyboard), const spk::Keyboard &>);
+		static_assert(std::is_same_v<decltype(spk::DeviceContext::mouse), const spk::Mouse &>);
 
 		SUCCEED();
 	}

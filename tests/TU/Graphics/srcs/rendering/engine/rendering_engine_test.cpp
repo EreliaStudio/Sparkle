@@ -121,8 +121,8 @@ TEST(RenderingEngineTest, GraphicalExtensionsReuseTheCoreEngineObjects)
 	spk::Mouse mouse;
 	spk::UpdateContext updateContext{};
 	spk::DeviceContext deviceContext{
-		.keyboard = &keyboard,
-		.mouse = &mouse};
+		.keyboard = keyboard,
+		.mouse = mouse};
 
 	renderingEngine.updateState(updateContext, deviceContext);
 
@@ -209,7 +209,9 @@ TEST(RenderingEngineTest, SystemTraversalRemainsStableDuringMutation)
 
 	spk::RenderingEngine renderingEngine(&engine);
 	spk::UpdateContext updateContext{};
-	spk::DeviceContext deviceContext;
+	spk::Keyboard keyboard;
+	spk::Mouse mouse;
+	spk::DeviceContext deviceContext{.keyboard = keyboard, .mouse = mouse};
 	renderingEngine.updateState(updateContext, deviceContext);
 
 	ASSERT_NE(added, nullptr);
@@ -234,7 +236,9 @@ TEST(RenderingEngineTest, InactiveObjectsAreSkippedByGraphicalContracts)
 
 	spk::RenderingEngine renderingEngine(&engine);
 	spk::UpdateContext updateContext{};
-	spk::DeviceContext deviceContext;
+	spk::Keyboard keyboard;
+	spk::Mouse mouse;
+	spk::DeviceContext deviceContext{.keyboard = keyboard, .mouse = mouse};
 	renderingEngine.updateState(updateContext, deviceContext);
 
 	std::vector<std::string> log;

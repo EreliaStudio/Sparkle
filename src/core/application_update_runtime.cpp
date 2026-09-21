@@ -328,8 +328,8 @@ namespace spk
 	void Application::UpdateRuntime::_updateState(Window::State &state, UpdateContext &context)
 	{
 		DeviceContext deviceContext{
-			.keyboard = &state.keyboard(),
-			.mouse = &state.mouse()};
+			.keyboard = state.keyboard(),
+			.mouse = state.mouse()};
 
 		state.root().updateState(context);
 		state.root().updateState(context, deviceContext);

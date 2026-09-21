@@ -86,7 +86,7 @@ namespace
 		spk::Keyboard keyboard;
 		spk::Mouse mouse;
 		spk::UpdateContext context{.time = {}, .deltaTime = duration};
-		spk::DeviceContext deviceContext{.keyboard = &keyboard, .mouse = &mouse};
+		spk::DeviceContext deviceContext{.keyboard = keyboard, .mouse = mouse};
 		widget.updateState(context);
 		widget.updateState(context, deviceContext);
 	}

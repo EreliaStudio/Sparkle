@@ -6,6 +6,7 @@
 #include <utility>
 
 #include "core/context/update_context.hpp"
+#include "input/device_context.hpp"
 
 namespace
 {
@@ -109,14 +110,9 @@ namespace spk
 			hide();
 			return;
 		}
-		if (deviceContext.mouse == nullptr)
-		{
-			hide();
-			return;
-		}
 
-		_lastCursor = deviceContext.mouse->position;
-		const bool hovering = _target->viewRegion().viewport.contains(deviceContext.mouse->position);
+		_lastCursor = deviceContext.mouse.position;
+		const bool hovering = _target->viewRegion().viewport.contains(deviceContext.mouse.position);
 		if (hovering)
 		{
 			_leaveElapsed = {};

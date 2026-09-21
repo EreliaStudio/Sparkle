@@ -23,7 +23,7 @@ namespace spk
 			correction(section.size.x, textureSize.x),
 			correction(section.size.y, textureSize.y)};
 		section.anchor += inset;
-		section.size -= inset * 2.0f;
+		section.size -= inset * Vector2{2.0f, 2.0f};
 		return section;
 	}
 
@@ -54,15 +54,15 @@ namespace spk
 		float depth)
 	{
 		const auto resolution = texture
-			? texture->resolve(section, rect.size)
-			: Texture::Resolution{{}, rect.size};
+									? texture->resolve(section, rect.size)
+									: Texture::Resolution{{}, rect.size};
 		rect.anchor += Vector2Int{
 			static_cast<int>((rect.width - resolution.size.x) / 2),
 			static_cast<int>((rect.height - resolution.size.y) / 2)};
 		rect.size = resolution.size;
 		const Vector2UInt textureSize = resolution.texture
-			? resolution.texture->size()
-			: Vector2UInt{};
+											? resolution.texture->size()
+											: Vector2UInt{};
 		return DrawTextureMeshRenderCommand(
 			resolution.texture,
 			_mesh(section, rect, depth, textureSize));

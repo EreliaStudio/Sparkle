@@ -43,7 +43,7 @@ namespace spk
 		[[nodiscard]] Engine *engine() noexcept;
 		[[nodiscard]] const Engine *engine() const noexcept;
 
-		using UpdatableByDeviceTrait::updateState;
 		using RenderSnapshotContributorTrait::buildRenderSnapshot;
+		using UpdatableByDeviceTrait::updateState;
 	};
 }

@@ -16,8 +16,8 @@
 #include "design_pattern/trait/name_trait.hpp"
 #include "design_pattern/trait/render_snapshot_contributor_trait.hpp"
 #include "design_pattern/trait/resizeable_trait.hpp"
-#include "design_pattern/trait/updatable_trait.hpp"
 #include "design_pattern/trait/updatable_by_device_trait.hpp"
+#include "design_pattern/trait/updatable_trait.hpp"
 #include "graphics/color.hpp"
 #include "graphics/font.hpp"
 #include "math/rect2d.hpp"
@@ -177,8 +177,8 @@ namespace spk
 		virtual void _onDeactivation() noexcept;
 
 	public:
-		using spk::UpdatableTrait::updateState;
 		using spk::UpdatableByDeviceTrait::updateState;
+		using spk::UpdatableTrait::updateState;
 
 		Widget(std::string name, Widget *parent);
 		virtual ~Widget();

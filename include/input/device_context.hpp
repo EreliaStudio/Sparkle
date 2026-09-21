@@ -1,5 +1,8 @@
 #pragma once
 
+#include "input/keyboard.hpp"
+#include "input/mouse.hpp"
+
 namespace spk
 {
 	struct Keyboard;
@@ -7,7 +10,7 @@ namespace spk
 
 	struct DeviceContext
 	{
-		const Keyboard *keyboard = nullptr;
-		const Mouse *mouse = nullptr;
+		const Keyboard &keyboard;
+		const Mouse &mouse;
 	};
 }
