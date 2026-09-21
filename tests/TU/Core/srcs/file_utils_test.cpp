@@ -2,14 +2,14 @@
 
 #include "exception.hpp"
 #include "file_utils.hpp"
-#include "sparkle_test.hpp"
+#include "temporary_directory.hpp"
 
 #include <filesystem>
 #include <string>
 
 TEST(ReadTextFileTest, StandardUsagePreservesExactContentsIncludingNulAndNewlines)
 {
-	sparkle_test::TemporaryDirectory directory;
+	sparkle_core_test::TemporaryDirectory directory;
 	const std::string content("alpha\nbe\0ta\r\ngamma\n", 19);
 	directory.write("sample.txt", content);
 
@@ -20,7 +20,7 @@ TEST(ReadTextFileTest, StandardUsagePreservesExactContentsIncludingNulAndNewline
 
 TEST(ReadTextFileTest, ReadsEmptyFile)
 {
-	sparkle_test::TemporaryDirectory directory;
+	sparkle_core_test::TemporaryDirectory directory;
 	directory.write("empty.txt", "");
 
 	EXPECT_TRUE(spk::readTextFile(directory.file("empty.txt")).empty());
@@ -28,7 +28,7 @@ TEST(ReadTextFileTest, ReadsEmptyFile)
 
 TEST(ReadTextFileTest, ReadsLargeFile)
 {
-	sparkle_test::TemporaryDirectory directory;
+	sparkle_core_test::TemporaryDirectory directory;
 	std::string content;
 	content.reserve(1024 * 1024);
 	for (std::size_t index = 0; index < 16384; ++index)
@@ -42,7 +42,7 @@ TEST(ReadTextFileTest, ReadsLargeFile)
 
 TEST(ReadTextFileTest, MissingFileThrowsExceptionContainingPath)
 {
-	sparkle_test::TemporaryDirectory directory;
+	sparkle_core_test::TemporaryDirectory directory;
 	const std::filesystem::path missing = directory.file("does-not-exist.txt");
 
 	try
@@ -52,7 +52,7 @@ TEST(ReadTextFileTest, MissingFileThrowsExceptionContainingPath)
 	}
 	catch (const spk::Exception &exception)
 	{
-		EXPECT_TRUE(sparkle_test::containsText(exception.message(), missing.string()));
+		EXPECT_NE(exception.message().find(missing.string()), std::string::npos);
 		EXPECT_EQ(exception.cause(), nullptr);
 	}
 }
