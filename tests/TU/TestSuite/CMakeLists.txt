@@ -16,9 +16,20 @@ add_executable(SparkleTestSuite
     ${SPARKLE_TEST_SUITE_SOURCES}
     ${SPARKLE_TEST_LIBRARY_TEST_SOURCES}
 )
+
+set(SPARKLE_TEST_RESOURCES_DIR "${CMAKE_CURRENT_BINARY_DIR}/resources")
+add_custom_command(TARGET SparkleTestSuite PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${PROJECT_SOURCE_DIR}/resources"
+        "${SPARKLE_TEST_RESOURCES_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/resources"
+        "${SPARKLE_TEST_RESOURCES_DIR}"
+)
+
 target_compile_features(SparkleTestSuite PRIVATE cxx_std_23)
 target_compile_definitions(SparkleTestSuite PRIVATE
-    SPARKLE_TEST_RESOURCES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/resources"
+    SPARKLE_TEST_RESOURCES_DIR="${SPARKLE_TEST_RESOURCES_DIR}"
     SPARKLE_TEST_RESULTS_DIR="${CMAKE_CURRENT_BINARY_DIR}/results"
 )
 target_link_libraries(SparkleTestSuite

@@ -10,6 +10,7 @@
 #include <type_traits>
 
 #include "render_command_test_utils.hpp"
+#include "sparkle_test.hpp"
 #include "rendering/command/text_render_command.hpp"
 #include "ui/widget.hpp"
 
@@ -77,7 +78,7 @@ namespace
 
 	std::filesystem::path fontPath()
 	{
-		return std::filesystem::path(__FILE__).parent_path().parent_path().parent_path().parent_path().parent_path() / "resources/fonts/liberation_sans_regular.ttf";
+		return sparkle_test::resourcesDirectory() / "fonts/liberation_sans_regular.ttf";
 	}
 }
 

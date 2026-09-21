@@ -14,7 +14,7 @@ namespace
 	static_assert(std::is_move_constructible_v<spk::Font>);
 	spk::Font::Data fontBytes()
 	{
-		const auto path = std::filesystem::path(__FILE__).parent_path().parent_path().parent_path().parent_path().parent_path() / "resources/fonts/liberation_sans_regular.ttf";
+		const auto path = sparkle_test::resourcesDirectory() / "fonts/liberation_sans_regular.ttf";
 		std::ifstream file(path, std::ios::binary);
 		if (!file)
 		{
