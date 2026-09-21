@@ -10,8 +10,8 @@
 #include <type_traits>
 
 #include "render_command_test_utils.hpp"
-#include "sparkle_test.hpp"
 #include "rendering/command/text_render_command.hpp"
+#include "sparkle_test.hpp"
 #include "ui/widget.hpp"
 
 namespace test = render_command_test;
