@@ -5,7 +5,6 @@
 #include <utility>
 
 #include "core/context/update_context.hpp"
-#include "core/platform/clipboard.hpp"
 #include "geometry/color_mesh_2d.hpp"
 #include "rendering/command/draw_color_mesh_render_command.hpp"
 #include "rendering/command/nine_slice_render_command.hpp"
@@ -888,13 +887,18 @@ namespace spk
 		_copyObscuredTextEnabled = enabled;
 	}
 
+	void TextEdit::setClipboardBackend(Clipboard::Backend &backend) noexcept
+	{
+		_clipboardBackend = &backend;
+	}
+
 	bool TextEdit::copySelection() const
 	{
 		if (!hasSelection() || (_obscured && !_copyObscuredTextEnabled))
 		{
 			return false;
 		}
-		return Clipboard::writeText(selectedText());
+		return _clipboardBackend->writeText(selectedText());
 	}
 
 	bool TextEdit::cutSelection()
@@ -912,7 +916,7 @@ namespace spk
 		{
 			return false;
 		}
-		const auto text = Clipboard::readText();
+		const auto text = _clipboardBackend->readText();
 		return text.has_value() && _replaceSelection(*text);
 	}
 
@@ -974,6 +978,16 @@ namespace spk
 	bool TextEdit::isCopyObscuredTextEnabled() const noexcept
 	{
 		return _copyObscuredTextEnabled;
+	}
+
+	Clipboard::Backend &TextEdit::clipboardBackend() noexcept
+	{
+		return *_clipboardBackend;
+	}
+
+	const Clipboard::Backend &TextEdit::clipboardBackend() const noexcept
+	{
+		return *_clipboardBackend;
 	}
 
 	Font::Text TextEdit::renderedText() const
