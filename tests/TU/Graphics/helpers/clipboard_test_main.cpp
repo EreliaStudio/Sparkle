@@ -49,7 +49,7 @@ namespace
 				nullptr,
 				nullptr,
 				0,
-				DESKTOP_ALL_ACCESS,
+				GENERIC_ALL,
 				nullptr);
 			if (_desktop == nullptr)
 			{
