@@ -94,7 +94,7 @@ jobs:
       - name: Build Core tests
         run: cmake --build build/core-test --target SparkleCoreTestSuite --parallel 4
       - name: Run Core tests
-        run: ctest --test-dir build/core-test -L core --output-on-failure --no-tests=error --timeout 120 --parallel 2 --output-junit results.xml
+        run: ctest --test-dir build/core-test -R '^Core\.' --output-on-failure --no-tests=error --timeout 120 --parallel 2 --output-junit results.xml
       - name: Upload Core test evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -135,7 +135,7 @@ jobs:
       - name: Install software OpenGL
         run: ./tools/ci/install-mesa.ps1 -Destination build/graphics-test/tests/TU/Graphics
       - name: Run Graphics tests
-        run: ctest --test-dir build/graphics-test -L graphics --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit results.xml
+        run: ctest --test-dir build/graphics-test -R '^Graphics\.' --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit results.xml
       - name: Build visual comparison gallery
         if: always()
         run: >-
