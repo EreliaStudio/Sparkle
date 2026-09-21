@@ -11,16 +11,40 @@
 
 namespace
 {
-	[[nodiscard]] bool clearClipboard()
+	class ClipboardOpenGuard
 	{
-		if (::OpenClipboard(nullptr) == FALSE)
+	private:
+		bool _open = ::OpenClipboard(nullptr) != FALSE;
+
+	public:
+		[[nodiscard]] bool isOpen() const noexcept
 		{
-			return false;
+			return _open;
 		}
 
-		const bool emptied = ::EmptyClipboard() != FALSE;
-		const bool closed = ::CloseClipboard() != FALSE;
-		return emptied && closed;
+		[[nodiscard]] bool close() noexcept
+		{
+			if (!_open)
+			{
+				return true;
+			}
+
+			_open = false;
+			return ::CloseClipboard() != FALSE;
+		}
+
+		~ClipboardOpenGuard()
+		{
+			(void)close();
+		}
+	};
+
+	[[nodiscard]] bool clearClipboard()
+	{
+		ClipboardOpenGuard guard;
+		return guard.isOpen() &&
+			::EmptyClipboard() != FALSE &&
+			guard.close();
 	}
 
 	class ClipboardHolder
@@ -206,7 +230,8 @@ TEST_F(ClipboardTest, WriteReplacesExistingText)
 
 TEST_F(ClipboardTest, NonTextClipboardContentReportsNoText)
 {
-	ASSERT_TRUE(::OpenClipboard(nullptr));
+	ClipboardOpenGuard guard;
+	ASSERT_TRUE(guard.isOpen());
 	ASSERT_TRUE(::EmptyClipboard());
 
 	const UINT testFormat =
@@ -218,10 +243,9 @@ TEST_F(ClipboardTest, NonTextClipboardContentReportsNoText)
 	if (::SetClipboardData(testFormat, payload) == nullptr)
 	{
 		::GlobalFree(payload);
-		::CloseClipboard();
 		FAIL() << "SetClipboardData failed";
 	}
-	ASSERT_TRUE(::CloseClipboard());
+	ASSERT_TRUE(guard.close());
 
 	EXPECT_FALSE(spk::Clipboard::hasText());
 	EXPECT_FALSE(spk::Clipboard::readText().has_value());
