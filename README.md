@@ -2,7 +2,7 @@
 
 Sparkle is a C++23 static library for building graphical applications with a focus on UI, rendering, resources, and application runtime infrastructure.
 
-The current public release line is validated for x64 desktop Windows and uses OpenGL. Sparkle is developed in `EreliaStudio/Sparkle` and is licensed under the MIT License.
+The current public release line is validated for x64 desktop Windows and uses OpenGL. Sparkle is developed in `EreliaStudio/Sparkle`. Sparkle's own source is licensed under the MIT License; bundled third-party material retains its own license.
 
 ## Requirements
 
@@ -88,4 +88,6 @@ To build the unit-test suite, enable `SPARKLE_BUILD_TESTS` and the root manifest
 
 ## License
 
-Sparkle is distributed under the [MIT License](LICENSE).
+Sparkle's own source is distributed under the [MIT License](LICENSE).
+
+The bundled Liberation Sans default font is distributed under the SIL Open Font License 1.1. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [resources/fonts/LICENSE-Liberation.txt](resources/fonts/LICENSE-Liberation.txt).
