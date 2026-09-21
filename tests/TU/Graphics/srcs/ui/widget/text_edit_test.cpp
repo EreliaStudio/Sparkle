@@ -3,14 +3,40 @@
 #include "core/context/update_context.hpp"
 #include "core/platform/clipboard.hpp"
 #include "ui/widget/text_edit.hpp"
-#include <Windows.h>
 #include <chrono>
-#include <future>
 #include <limits>
-#include <thread>
 
 namespace
 {
+	class MemoryClipboard final : public spk::Clipboard::Backend
+	{
+	public:
+		std::optional<spk::Font::Text> text;
+		bool readEnabled = true;
+		bool writeEnabled = true;
+
+		[[nodiscard]] bool hasText() const override
+		{
+			return text.has_value();
+		}
+
+		[[nodiscard]] std::optional<spk::Font::Text> readText() const override
+		{
+			return readEnabled ? text : std::nullopt;
+		}
+
+		bool writeText(const spk::Font::Text &value) override
+		{
+			if (!writeEnabled)
+			{
+				return false;
+			}
+
+			text = value;
+			return true;
+		}
+	};
+
 	bool type(spk::TextEdit &edit, char32_t glyph)
 	{
 		spk::Keyboard keyboard;
@@ -256,74 +282,59 @@ TEST(TextEditTest, ReadOnlyObscuredAndInvalidResourcesPreserveState)
 	EXPECT_EQ(edit.cornerSize(), corners);
 }
 
-TEST(TextEditTest, ClipboardCopyCutPasteAndContentionPreserveTextAndSelection)
+TEST(TextEditTest, ClipboardCopyCutAndPasteUseInjectedBackend)
 {
-	struct Restore
-	{
-		std::optional<spk::Font::Text> previous = spk::Clipboard::readText();
-		bool empty = CountClipboardFormats() == 0;
-		~Restore()
-		{
-			if (previous)
-			{
-				(void)spk::Clipboard::writeText(*previous);
-			}
-			else if (empty && OpenClipboard(nullptr))
-			{
-				EmptyClipboard();
-				CloseClipboard();
-			}
-		}
-	} restore;
-	if (!restore.previous && !restore.empty)
-	{
-		GTEST_SKIP() << "Preserving existing non-text clipboard contents";
-	}
-	spk::TextEdit edit("Edit");
+	MemoryClipboard clipboard;
+	spk::TextEdit edit("Edit", clipboard);
 	edit.setText(U"A\u00e9\U0001f600Z");
 	edit.setSelection(1, 3);
+
 	ASSERT_TRUE(edit.copySelection());
-	EXPECT_EQ(spk::Clipboard::readText(), U"\u00e9\U0001f600");
+	EXPECT_EQ(clipboard.text, std::optional<spk::Font::Text>(U"\u00e9\U0001f600"));
+
 	ASSERT_TRUE(edit.cutSelection());
 	EXPECT_EQ(edit.text(), U"AZ");
 	EXPECT_EQ(edit.cursor(), 1u);
+	EXPECT_EQ(clipboard.text, std::optional<spk::Font::Text>(U"\u00e9\U0001f600"));
+
 	ASSERT_TRUE(edit.pasteClipboard());
 	EXPECT_EQ(edit.text(), U"A\u00e9\U0001f600Z");
+
 	edit.selectAll();
 	edit.setObscured(true);
 	EXPECT_FALSE(edit.copySelection());
+
 	edit.setCopyObscuredTextEnabled(true);
 	ASSERT_TRUE(edit.copySelection());
-	EXPECT_EQ(spk::Clipboard::readText(), edit.text());
-	std::promise<bool> opened;
-	auto ready = opened.get_future();
-	std::promise<void> release;
-	auto released = release.get_future();
-	std::jthread holder([&] {
-		const HWND owner = CreateWindowExW(0, L"STATIC", L"Sparkle clipboard lock", 0, 0, 0, 1, 1, nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
-		const bool success = owner != nullptr && OpenClipboard(owner);
-		opened.set_value(success);
-		if (success)
-		{
-			released.wait();
-			CloseClipboard();
-		}
-		if (owner)
-		{
-			DestroyWindow(owner);
-		}
-	});
-	const bool locked = ready.get();
-	if (locked)
-	{
-		const auto before = edit.text();
-		const auto selection = edit.selection();
-		EXPECT_FALSE(edit.copySelection());
-		EXPECT_FALSE(edit.cutSelection());
-		EXPECT_FALSE(edit.pasteClipboard());
-		EXPECT_EQ(edit.text(), before);
-		EXPECT_EQ(edit.selection(), selection);
-	}
-	release.set_value();
-	EXPECT_TRUE(locked);
+	EXPECT_EQ(clipboard.text, std::optional<spk::Font::Text>(edit.text()));
+}
+
+TEST(TextEditTest, ClipboardFailuresPreserveTextAndSelection)
+{
+	MemoryClipboard clipboard;
+	spk::TextEdit edit("Edit", clipboard);
+	edit.setText(U"abcd");
+	edit.setSelection(1, 3);
+
+	const auto expectedText = edit.text();
+	const auto expectedSelection = edit.selection();
+
+	clipboard.writeEnabled = false;
+	EXPECT_FALSE(edit.copySelection());
+	EXPECT_FALSE(edit.cutSelection());
+	EXPECT_EQ(edit.text(), expectedText);
+	EXPECT_EQ(edit.selection(), expectedSelection);
+
+	clipboard.writeEnabled = true;
+	clipboard.text = U"replacement";
+	clipboard.readEnabled = false;
+	EXPECT_FALSE(edit.pasteClipboard());
+	EXPECT_EQ(edit.text(), expectedText);
+	EXPECT_EQ(edit.selection(), expectedSelection);
+
+	clipboard.readEnabled = true;
+	clipboard.text.reset();
+	EXPECT_FALSE(edit.pasteClipboard());
+	EXPECT_EQ(edit.text(), expectedText);
+	EXPECT_EQ(edit.selection(), expectedSelection);
 }
