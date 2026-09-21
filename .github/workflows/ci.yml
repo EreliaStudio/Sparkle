@@ -142,6 +142,28 @@ jobs:
             build/package-check/**/CMakeConfigureLog.yaml
             build/package-check/**/consumer-fixture
 
+  vcpkg-port:
+    name: vcpkg port consumers
+    runs-on: windows-2022
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: Validate erelia-sparkle overlay port
+        run: ./tools/ci/test-vcpkg-port.ps1 -Configuration Release
+      - name: Upload vcpkg port evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vcpkg-port
+          path: |
+            build/vcpkg-port-check/verification.log
+            build/vcpkg-port-check/**/CMakeConfigureLog.yaml
+            build/vcpkg-port-check/**/Testing
+
+
   coverage:
     name: LLVM coverage
     runs-on: windows-2022
