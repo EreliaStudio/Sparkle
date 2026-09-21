@@ -39,6 +39,5 @@ if(WIN32)
 endif()
 
 gtest_discover_tests(SparkleGraphicsTestSuite
-    PROPERTIES
-        LABELS "unit;graphics"
+    TEST_PREFIX "Graphics."
 )
