@@ -131,7 +131,7 @@ TEST(WidgetTest, ActiveBranchesUpdateAscendingAndDispatchDescendingWithConsumpti
 	high.setZOrder(2);
 	spk::Keyboard keyboard;
 	spk::Mouse mouse;
-	spk::UpdateContext context{.time = {}, .deltaTime = {}, .keyboard = keyboard, .mouse = mouse};
+	spk::UpdateContext context{.time = {}, .deltaTime = {}};
 	root.updateState(context);
 	EXPECT_EQ(log, (std::vector<std::string>{"Root", "Low", "High"}));
 	log.clear();
@@ -212,7 +212,7 @@ TEST(WidgetTest, HookExceptionsRetainAncestorNamesAndOriginalCause)
 	child.setGeometry(root.geometry());
 	spk::Keyboard keyboard;
 	spk::Mouse mouse;
-	spk::UpdateContext context{.time = {}, .deltaTime = {}, .keyboard = keyboard, .mouse = mouse};
+	spk::UpdateContext context{.time = {}, .deltaTime = {}};
 	for (bool rendering : {false, true})
 	{
 		child.failUpdate = !rendering;

@@ -98,7 +98,7 @@ TEST(DynamicTextLabelTest, UpdateRefreshesAtConfiguredInterval)
 	EXPECT_EQ(calls, 1);
 	spk::Keyboard keyboard;
 	spk::Mouse mouse;
-	spk::UpdateContext shortTick{.time = {}, .deltaTime = std::chrono::milliseconds(10), .keyboard = keyboard, .mouse = mouse};
+	spk::UpdateContext shortTick{.time = {}, .deltaTime = std::chrono::milliseconds(10)};
 	label.updateState(shortTick);
 	EXPECT_EQ(calls, 1);
 	label.updateState(shortTick);
@@ -131,7 +131,7 @@ TEST(DynamicTextLabelTest, ZeroAndNegativeDurationsRefreshOncePerUpdate)
 	});
 	spk::Keyboard keyboard;
 	spk::Mouse mouse;
-	spk::UpdateContext context{.time = {}, .deltaTime = std::chrono::milliseconds(100), .keyboard = keyboard, .mouse = mouse};
+	spk::UpdateContext context{.time = {}, .deltaTime = std::chrono::milliseconds(100)};
 	label.setRefreshDuration(spk::DynamicTextLabel::Duration::zero());
 	label.updateState(context);
 	EXPECT_EQ(calls, 2);

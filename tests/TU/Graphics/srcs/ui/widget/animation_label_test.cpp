@@ -111,7 +111,7 @@ TEST(AnimationLabelTest, UpdateAdvancesAndWrapsConfiguredRange)
 	label.activate();
 	spk::Keyboard keyboard;
 	spk::Mouse mouse;
-	spk::UpdateContext context{.time = {}, .deltaTime = std::chrono::milliseconds(10), .keyboard = keyboard, .mouse = mouse};
+	spk::UpdateContext context{.time = {}, .deltaTime = std::chrono::milliseconds(10)};
 	label.updateState(context);
 	EXPECT_EQ(label.currentFrame(), 2u);
 	label.updateState(context);
@@ -133,7 +133,7 @@ TEST(AnimationLabelTest, RejectedRangePreservesFramesAndElapsedTime)
 	label.setLoopSpeed(std::chrono::milliseconds(10));
 	spk::Keyboard keyboard;
 	spk::Mouse mouse;
-	spk::UpdateContext context{.time = {}, .deltaTime = std::chrono::milliseconds(9), .keyboard = keyboard, .mouse = mouse};
+	spk::UpdateContext context{.time = {}, .deltaTime = std::chrono::milliseconds(9)};
 	label.updateState(context);
 	const std::size_t count = static_cast<std::size_t>(label.spriteSheet()->nbSprite().x) * label.spriteSheet()->nbSprite().y;
 
@@ -173,7 +173,7 @@ TEST(AnimationLabelTest, PartialMultipleZeroAndNegativeDurationsFollowContract)
 	label.setLoopSpeed(std::chrono::milliseconds(10));
 	spk::Keyboard keyboard;
 	spk::Mouse mouse;
-	spk::UpdateContext partial{.time = {}, .deltaTime = std::chrono::milliseconds(9), .keyboard = keyboard, .mouse = mouse};
+	spk::UpdateContext partial{.time = {}, .deltaTime = std::chrono::milliseconds(9)};
 	label.updateState(partial);
 	EXPECT_EQ(label.currentFrame(), 1u);
 	partial.deltaTime = std::chrono::milliseconds(21);
@@ -195,7 +195,7 @@ TEST(AnimationLabelTest, InactiveLabelDoesNotAdvance)
 	label.deactivate();
 	spk::Keyboard keyboard;
 	spk::Mouse mouse;
-	spk::UpdateContext context{.time = {}, .deltaTime = std::chrono::milliseconds(20), .keyboard = keyboard, .mouse = mouse};
+	spk::UpdateContext context{.time = {}, .deltaTime = std::chrono::milliseconds(20)};
 	label.updateState(context);
 	EXPECT_EQ(label.currentFrame(), 1u);
 }
@@ -218,7 +218,7 @@ TEST(AnimationLabelRenderTest, AlternateFrame)
 	label.activate();
 	spk::Keyboard keyboard;
 	spk::Mouse mouse;
-	spk::UpdateContext context{.time = {}, .deltaTime = std::chrono::milliseconds(1), .keyboard = keyboard, .mouse = mouse};
+	spk::UpdateContext context{.time = {}, .deltaTime = std::chrono::milliseconds(1)};
 	label.updateState(context);
 	expectWidgetImage(label, "ui/widget/animation_label", "alternate_frame");
 }

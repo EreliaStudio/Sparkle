@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "core/context/update_context.hpp"
-#include "engine/behaviour.hpp"
+#include "rendering/engine/rendering_behaviour.hpp"
 #include "exception.hpp"
 #include "rendering/render_command.hpp"
 #include "sparkle_test.hpp"
@@ -9,7 +9,7 @@
 
 namespace
 {
-	struct Events : spk::Behaviour
+	struct Events : spk::RenderingBehaviour
 	{
 		std::vector<std::string> received;
 #define RECORD_EVENT(Name)                             \
@@ -79,7 +79,7 @@ namespace
 			log.push_back(value);
 		}
 	};
-	struct Rendering : spk::Behaviour
+	struct Rendering : spk::RenderingBehaviour
 	{
 		bool fail = false;
 		std::vector<int> *log = nullptr;
@@ -89,7 +89,7 @@ namespace
 			{
 				throw std::runtime_error("engine render failure");
 			}
-			builder.renderPass(spk::Engine::SceneRenderPassKey).emplace<Mark>(*log, 2);
+			builder.renderPass(spk::RenderingEngine::SceneRenderPassKey).emplace<Mark>(*log, 2);
 		}
 	};
 }
@@ -137,8 +137,8 @@ TEST(EngineWidgetIntegrationTest, RenderPassOrderingExceptionsAndExplicitDetachm
 	widget.setGeometry({.anchor = {0, 0}, .size = {100, 100}});
 	widget.setEngine(engine.get());
 	spk::RenderSnapshot::Builder builder;
-	builder.renderPass({"before-scene", spk::Engine::SceneRenderPassKey.order - 1}).emplace<Mark>(log, 1);
-	builder.renderPass({"after-scene", spk::Engine::SceneRenderPassKey.order + 1}).emplace<Mark>(log, 3);
+	builder.renderPass({"before-scene", spk::RenderingEngine::SceneRenderPassKey.order - 1}).emplace<Mark>(log, 1);
+	builder.renderPass({"after-scene", spk::RenderingEngine::SceneRenderPassKey.order + 1}).emplace<Mark>(log, 3);
 	widget.buildRenderSnapshot(builder);
 	const auto snapshot = builder.build();
 	auto &context = sparkle_test::OpenGLTestContext::instance();

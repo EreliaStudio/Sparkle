@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "core/context/update_context.hpp"
+#include "input/device_context.hpp"
 #include "rendering/render_snapshot.hpp"
 #include "sparkle_test/image_comparison.hpp"
 #include "sparkle_test/open_gl_test_context.hpp"
@@ -84,8 +85,10 @@ namespace
 	{
 		spk::Keyboard keyboard;
 		spk::Mouse mouse;
-		spk::UpdateContext context{.time = {}, .deltaTime = duration, .keyboard = keyboard, .mouse = mouse};
+		spk::UpdateContext context{.time = {}, .deltaTime = duration};
+		spk::DeviceContext deviceContext{.keyboard = &keyboard, .mouse = &mouse};
 		widget.updateState(context);
+		widget.updateState(context, deviceContext);
 	}
 }
 

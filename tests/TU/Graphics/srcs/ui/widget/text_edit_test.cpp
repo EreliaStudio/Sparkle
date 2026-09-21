@@ -124,7 +124,7 @@ TEST(TextEditTest, UnicodeScrollingBlinkAndFocusLossUseDeterministicTime)
 	edit.notifyFocusAcquired(spk::FocusMode::Channel::Keyboard);
 	spk::Keyboard keyboard;
 	spk::Mouse mouse;
-	spk::UpdateContext context{.time = {}, .deltaTime = std::chrono::milliseconds(249), .keyboard = keyboard, .mouse = mouse};
+	spk::UpdateContext context{.time = {}, .deltaTime = std::chrono::milliseconds(249)};
 	edit.updateState(context);
 	EXPECT_TRUE(edit.isCaretVisible());
 	context.deltaTime = std::chrono::milliseconds(1);

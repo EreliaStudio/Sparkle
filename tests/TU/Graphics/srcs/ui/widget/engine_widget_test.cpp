@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "core/context/update_context.hpp"
-#include "engine/behaviour.hpp"
+#include "rendering/engine/rendering_behaviour.hpp"
 #include "rendering/render_snapshot.hpp"
 #include "sparkle_test/image_comparison.hpp"
 #include "sparkle_test/open_gl_test_context.hpp"
@@ -15,7 +15,7 @@
 
 namespace
 {
-	class RecordingBehaviour final : public spk::Behaviour
+	class RecordingBehaviour final : public spk::RenderingBehaviour
 	{
 	public:
 		int updates = 0;
@@ -124,8 +124,10 @@ TEST(EngineWidgetTest, NullEngineUpdateAndSnapshotAreNoOps)
 	widget.activate();
 	spk::Keyboard keyboard;
 	spk::Mouse mouse;
-	spk::UpdateContext context{.time = {}, .deltaTime = std::chrono::milliseconds(16), .keyboard = keyboard, .mouse = mouse};
+	spk::UpdateContext context{.time = {}, .deltaTime = std::chrono::milliseconds(16)};
 	EXPECT_NO_THROW(widget.updateState(context));
+	spk::DeviceContext deviceContext{.keyboard = &keyboard, .mouse = &mouse};
+	EXPECT_NO_THROW(widget.updateState(context, deviceContext));
 	spk::RenderSnapshot::Builder builder;
 	EXPECT_NO_THROW(widget.buildRenderSnapshot(builder));
 }
@@ -142,7 +144,7 @@ TEST(EngineWidgetTest, UpdateAndInteractionAreForwardedToAttachedEngine)
 	spk::Keyboard keyboard;
 	spk::Mouse mouse;
 	mouse.position = {10, 10};
-	spk::UpdateContext context{.time = {}, .deltaTime = std::chrono::milliseconds(16), .keyboard = keyboard, .mouse = mouse};
+	spk::UpdateContext context{.time = {}, .deltaTime = std::chrono::milliseconds(16)};
 	widget.updateState(context);
 	EXPECT_EQ(behaviour.updates, 1);
 	spk::MouseButtonPressedRecord mouseRecord{};

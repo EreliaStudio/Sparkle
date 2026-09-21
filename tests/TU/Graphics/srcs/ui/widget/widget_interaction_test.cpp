@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "core/context/update_context.hpp"
+#include "input/device_context.hpp"
 #include "ui/widget/interface_window.hpp"
 #include "ui/widget/message_box.hpp"
 #include "ui/widget/popup_widget.hpp"
@@ -57,8 +58,10 @@ namespace
 		spk::Keyboard keyboard;
 		spk::Mouse mouse;
 		mouse.position = position;
-		spk::UpdateContext context{.time = {}, .deltaTime = std::chrono::milliseconds(milliseconds), .keyboard = keyboard, .mouse = mouse};
+		spk::UpdateContext context{.time = {}, .deltaTime = std::chrono::milliseconds(milliseconds)};
+		spk::DeviceContext deviceContext{.keyboard = &keyboard, .mouse = &mouse};
 		widget.updateState(context);
+		widget.updateState(context, deviceContext);
 	}
 }
 
