@@ -30,9 +30,9 @@ TEST(ToggleSwitchTest, OrientationPaddingThumbAndResourcesRoundTrip)
 	const auto &style = spk::Widget::defaultStyle.get();
 	ASSERT_NE(style.toggleSwitchOffBackground, nullptr);
 	ASSERT_NE(style.toggleSwitchOnBackground, nullptr);
+	EXPECT_EQ(toggle.thumbCornerSize(), spk::Vector2Int(8, 8));
 	toggle.setOrientation(spk::Orientation::Vertical);
 	toggle.setPadding({3, 4});
-	toggle.setThumbSize({18, 22});
 	toggle.setUncheckedBackgroundTexture(style.toggleSwitchOffBackground.get());
 	toggle.setCheckedBackgroundTexture(style.toggleSwitchOnBackground.get());
 	toggle.setOutlineTexture(style.toggleSwitchOutline.get());
@@ -41,7 +41,6 @@ TEST(ToggleSwitchTest, OrientationPaddingThumbAndResourcesRoundTrip)
 	toggle.setThumbCornerSize({7, 8});
 	EXPECT_EQ(toggle.orientation(), spk::Orientation::Vertical);
 	EXPECT_EQ(toggle.padding(), spk::Vector2UInt(3, 4));
-	EXPECT_EQ(toggle.thumbSize(), spk::Vector2UInt(18, 22));
 	EXPECT_EQ(toggle.uncheckedBackgroundTexture(), style.toggleSwitchOffBackground.get());
 	EXPECT_EQ(toggle.checkedBackgroundTexture(), style.toggleSwitchOnBackground.get());
 	EXPECT_EQ(toggle.outlineCornerSize(), spk::Vector2Int(5, 6));

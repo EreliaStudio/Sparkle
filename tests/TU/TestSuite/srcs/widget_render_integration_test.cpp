@@ -410,7 +410,6 @@ TEST(WidgetRenderIntegrationTest, ToggleRawBackgroundsAndNineSliceStylesRenderBo
 		toggle.setAnimationDuration({});
 		toggle.setGeometry({.anchor = {20, 20}, .size = {80, 80}});
 		toggle.setPadding({5, 7});
-		toggle.setThumbSize({20, 30});
 		toggle.setUncheckedBackgroundTexture(static_cast<const spk::Texture *>(&red));
 		toggle.setCheckedBackgroundTexture(static_cast<const spk::Texture *>(&green));
 		const auto off = render(toggle);
@@ -421,7 +420,6 @@ TEST(WidgetRenderIntegrationTest, ToggleRawBackgroundsAndNineSliceStylesRenderBo
 		toggle.applyStyle(spk::Widget::defaultStyle);
 		EXPECT_NE(render(toggle).pixels, on.pixels);
 		toggle.setPadding({100, 100});
-		toggle.setThumbSize({1000, 1000});
 		expectClipped(render(toggle), toggle.geometry());
 	}
 }
