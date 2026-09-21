@@ -98,7 +98,7 @@ namespace spk
 			std::min(requestedPadding.y, size.y / 2)};
 		_textArea.setGeometry(Rect2D{Vector2Int{static_cast<int>(renderedPadding.x), static_cast<int>(renderedPadding.y)}, Vector2UInt{size.x - 2 * renderedPadding.x, size.y - 2 * renderedPadding.y}});
 	}
-	void Tooltip::_updateState(UpdateContext &context)
+	void Tooltip::_updateState(UpdateContext &context, DeviceContext &deviceContext)
 	{
 		const bool targetIsEffectivelyActive = _target != nullptr &&
 											   _target->resolveInHierarchy([](const Widget &widget) {
@@ -109,8 +109,14 @@ namespace spk
 			hide();
 			return;
 		}
-		_lastCursor = context.mouse.position;
-		const bool hovering = _target->viewRegion().viewport.contains(context.mouse.position);
+		if (deviceContext.mouse == nullptr)
+		{
+			hide();
+			return;
+		}
+
+		_lastCursor = deviceContext.mouse->position;
+		const bool hovering = _target->viewRegion().viewport.contains(deviceContext.mouse->position);
 		if (hovering)
 		{
 			_leaveElapsed = {};
