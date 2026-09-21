@@ -1,0 +1,9 @@
+erelia-sparkle provides CMake targets:
+
+    find_package(sparkle CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE sparkle::sparkle)
+
+The optional test-library feature provides reusable test utilities:
+
+    find_package(sparkle CONFIG REQUIRED COMPONENTS TestLibrary)
+    target_link_libraries(tests PRIVATE Sparkle::TestLibrary)
