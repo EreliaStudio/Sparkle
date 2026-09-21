@@ -62,9 +62,7 @@ namespace spk
 		[[nodiscard]] constexpr auto operator<=>(const TVector2 &other) const
 		{
 			if (const auto comparison = x <=> other.x; comparison != 0)
-			{
 				return comparison;
-			}
 			return y <=> other.y;
 		}
 

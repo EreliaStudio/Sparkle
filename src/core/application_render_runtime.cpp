@@ -68,10 +68,10 @@ namespace spk
 
 		{
 			spk::Profiler::TimeMeasurement::Scope frame(*_renderFrameDuration);
-
+			
 			snapshot.execute(context);
 		}
-
+			
 		surface.present();
 	}
 

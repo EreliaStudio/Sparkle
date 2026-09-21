@@ -79,7 +79,7 @@ namespace spk
 			const std::size_t commandCount = pass.commands->commandCount();
 			totalCommands += commandCount;
 			renderContext.profiler.gaugeMeasurement<std::size_t>(
-									  std::string(Profiler::RenderPassCommandCountMeasurementPrefix) + pass.name)
+				std::string(Profiler::RenderPassCommandCountMeasurementPrefix) + pass.name)
 				.insert(commandCount);
 		}
 		totalCommandCount.insert(totalCommands);
