@@ -9,6 +9,7 @@
 #include <ostream>
 #include <source_location>
 #include <sstream>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -73,6 +74,10 @@ namespace spk
 
 		Logger();
 
+		void _ensureOutputPathAvailable(const std::filesystem::path &path) const;
+		[[nodiscard]] std::unique_ptr<FileOutput> _makeOutput(const std::filesystem::path &path, Level level);
+		[[nodiscard]] bool _extractRecord(Level &level, std::string &message) noexcept;
+		void _publishRecord(Level level, const std::string &message) noexcept;
 		void _dispatch() noexcept;
 		void _removeOutput(std::size_t identifier) noexcept;
 		void _setOutputLevel(std::size_t identifier, Level level) noexcept;

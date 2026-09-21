@@ -110,31 +110,39 @@ namespace spk
 		return LevelSetter{level};
 	}
 
+	void Logger::_ensureOutputPathAvailable(const std::filesystem::path &path) const
+	{
+		const auto duplicate = std::find_if(_outputs.begin(), _outputs.end(), [&](const auto &output) {
+			return output->path == path;
+		});
+		if (duplicate != _outputs.end())
+		{
+			throw spk::Exception("Logger output already registered [" + path.string() + "]");
+		}
+	}
+
+	std::unique_ptr<Logger::FileOutput> Logger::_makeOutput(const std::filesystem::path &path, Level level)
+	{
+		auto output = std::make_unique<FileOutput>();
+		output->identifier = _nextOutputIdentifier++;
+		output->path = path;
+		output->lowerAcceptedLevel = level;
+		output->stream.open(path, std::ios::out | std::ios::app);
+		if (!output->stream.is_open())
+		{
+			throw spk::Exception("Failed to open logger output [" + path.string() + "]");
+		}
+		return output;
+	}
+
 	Logger::Output Logger::addOutput(const std::filesystem::path &path, Level lowerAcceptedLevel)
 	{
 		try
 		{
 			const std::filesystem::path normalizedPath = path.lexically_normal();
 			const std::scoped_lock lock(_mutex);
-
-			const auto duplicate = std::find_if(_outputs.begin(), _outputs.end(), [&](const auto &output) {
-				return output->path == normalizedPath;
-			});
-			if (duplicate != _outputs.end())
-			{
-				throw spk::Exception("Logger output already registered [" + normalizedPath.string() + "]");
-			}
-
-			auto output = std::make_unique<FileOutput>();
-			output->identifier = _nextOutputIdentifier++;
-			output->path = normalizedPath;
-			output->lowerAcceptedLevel = lowerAcceptedLevel;
-			output->stream.open(normalizedPath, std::ios::out | std::ios::app);
-			if (!output->stream.is_open())
-			{
-				throw spk::Exception("Failed to open logger output [" + normalizedPath.string() + "]");
-			}
-
+			_ensureOutputPathAvailable(normalizedPath);
+			auto output = _makeOutput(normalizedPath, lowerAcceptedLevel);
 			const std::size_t identifier = output->identifier;
 			_outputs.push_back(std::move(output));
 			return Output(this, identifier);
@@ -234,22 +242,25 @@ namespace spk
 		return *this;
 	}
 
-	void Logger::_dispatch() noexcept
+	bool Logger::_extractRecord(Level &level, std::string &message) noexcept
 	{
-		const Level level = _threadState.level;
-		std::string message;
 		try
 		{
+			level = _threadState.level;
 			message = _threadState.stream.str();
 			_threadState.stream.str({});
 			_threadState.stream.clear();
 			_threadState.level = Level::Info;
+			return true;
 		}
 		catch (...)
 		{
-			return;
+			return false;
 		}
+	}
 
+	void Logger::_publishRecord(Level level, const std::string &message) noexcept
+	{
 		try
 		{
 			const std::scoped_lock lock(_mutex);
@@ -259,15 +270,24 @@ namespace spk
 			}
 			for (auto &output : _outputs)
 			{
-				if (static_cast<std::uint8_t>(level) < static_cast<std::uint8_t>(output->lowerAcceptedLevel))
+				if (static_cast<std::uint8_t>(level) >= static_cast<std::uint8_t>(output->lowerAcceptedLevel))
 				{
-					continue;
+					writeRecord(output->stream, level, message);
 				}
-				writeRecord(output->stream, level, message);
 			}
 		}
 		catch (...)
 		{
+		}
+	}
+
+	void Logger::_dispatch() noexcept
+	{
+		Level level;
+		std::string message;
+		if (_extractRecord(level, message))
+		{
+			_publishRecord(level, message);
 		}
 	}
 

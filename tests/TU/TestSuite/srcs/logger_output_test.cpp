@@ -28,6 +28,20 @@ namespace
 			std::istreambuf_iterator<char>());
 	}
 
+	class ConsoleMute final
+	{
+	public:
+		ConsoleMute()
+		{
+			spk::logger.muteConsole();
+		}
+
+		~ConsoleMute()
+		{
+			spk::logger.unmuteConsole();
+		}
+	};
+
 	class ClogCapture final
 	{
 	private:
@@ -109,7 +123,7 @@ TEST(LoggerOutputTest, ConsoleAlwaysReceivesEveryLevelUnlessMuted)
 
 TEST(LoggerOutputTest, FileOutputAppendsAndFiltersBelowThreshold)
 {
-	spk::logger.muteConsole();
+	ConsoleMute mute;
 	const auto path = logPath("output_append_filter");
 	{
 		std::ofstream seed(path);
@@ -120,14 +134,13 @@ TEST(LoggerOutputTest, FileOutputAppendsAndFiltersBelowThreshold)
 	spk::logger << "ignored" << std::endl;
 	spk::logger << spk::Logger::setLevel(spk::Logger::Level::Warning) << "warning" << std::endl;
 	spk::logger << spk::Logger::setLevel(spk::Logger::Level::Error) << "error" << std::endl;
-	spk::logger.unmuteConsole();
 
 	EXPECT_EQ(readFile(path), "existing\n[Warning] warning\n[Error] error\n");
 }
 
 TEST(LoggerOutputTest, SeveralOutputsAndDynamicLevelAreIndependent)
 {
-	spk::logger.muteConsole();
+	ConsoleMute mute;
 	const auto broadPath = logPath("output_broad");
 	const auto strictPath = logPath("output_strict");
 	auto broad = spk::logger.addOutput(broadPath, spk::Logger::Level::Trace);
@@ -139,7 +152,6 @@ TEST(LoggerOutputTest, SeveralOutputsAndDynamicLevelAreIndependent)
 	broad.setLevel(spk::Logger::Level::Warning);
 	spk::logger << "ignored-info" << std::endl;
 	spk::logger << spk::Logger::setLevel(spk::Logger::Level::Warning) << "warning-b" << std::endl;
-	spk::logger.unmuteConsole();
 
 	EXPECT_EQ(readFile(broadPath), "[Info] info\n[Warning] warning-a\n[Warning] warning-b\n");
 	EXPECT_EQ(readFile(strictPath), "[Warning] warning-b\n");
@@ -147,33 +159,31 @@ TEST(LoggerOutputTest, SeveralOutputsAndDynamicLevelAreIndependent)
 
 TEST(LoggerOutputTest, OutputLifetimeUnregistersFile)
 {
-	spk::logger.muteConsole();
+	ConsoleMute mute;
 	const auto path = logPath("output_raii");
 	{
 		auto output = spk::logger.addOutput(path, spk::Logger::Level::Trace);
 		spk::logger << "inside" << std::endl;
 	}
 	spk::logger << "outside" << std::endl;
-	spk::logger.unmuteConsole();
 
 	EXPECT_EQ(readFile(path), "[Info] inside\n");
 }
 
 TEST(LoggerOutputTest, DuplicatePathRegistrationThrowsSparkleException)
 {
-	spk::logger.muteConsole();
+	ConsoleMute mute;
 	const auto path = logPath("output_duplicate");
 	auto output = spk::logger.addOutput(path, spk::Logger::Level::Info);
 
 	EXPECT_THROW(
 		(void)spk::logger.addOutput(path, spk::Logger::Level::Warning),
 		spk::Exception);
-	spk::logger.unmuteConsole();
 }
 
 TEST(LoggerOutputTest, FileOpenFailureThrowsSparkleException)
 {
-	spk::logger.muteConsole();
+	ConsoleMute mute;
 	const auto root = std::filesystem::path(SPARKLE_TEST_RESULTS_DIR) / "logger" / "missing-parent";
 	std::filesystem::remove_all(root);
 	const auto path = root / "nested" / "output.log";
@@ -181,7 +191,6 @@ TEST(LoggerOutputTest, FileOpenFailureThrowsSparkleException)
 	EXPECT_THROW(
 		(void)spk::logger.addOutput(path, spk::Logger::Level::Info),
 		spk::Exception);
-	spk::logger.unmuteConsole();
 }
 
 TEST(LoggerOutputTest, FailingConsoleNeverEscapesOrBlocksFileOutput)
