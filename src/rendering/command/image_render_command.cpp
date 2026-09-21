@@ -23,7 +23,7 @@ namespace spk
 			correction(section.size.x, textureSize.x),
 			correction(section.size.y, textureSize.y)};
 		section.anchor += inset;
-		section.size -= inset * 2.0f;
+		section.size -= inset * Vector2{2.0f, 2.0f};
 		return section;
 	}
 
