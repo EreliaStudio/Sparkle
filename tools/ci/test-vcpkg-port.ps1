@@ -16,6 +16,19 @@ $toolchain = "$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
 Remove-Item $root -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force $root | Out-Null
 
+function Assert-VcpkgLicenseFiles([string]$Installed) {
+    $tripletRoot = Join-Path $Installed 'x64-windows-static'
+    foreach ($relative in @(
+        'share/sparkle/LICENSE',
+        'share/sparkle/THIRD_PARTY_NOTICES.md',
+        'share/sparkle/LICENSE-Liberation.txt',
+        'share/erelia-sparkle/copyright'
+    )) {
+        $path = Join-Path $tripletRoot $relative
+        if (-not (Test-Path $path)) { throw "vcpkg package is missing $path" }
+    }
+}
+
 function Test-ManifestConsumer([string]$Name, [string]$SourcePath) {
     $build = Join-Path $root $Name
     $installed = Join-Path $root "$Name-installed"
@@ -34,6 +47,7 @@ function Test-ManifestConsumer([string]$Name, [string]$SourcePath) {
     Invoke-Checked cmake $arguments
     Invoke-Checked cmake @('--build', $build, '--parallel', '4')
     Invoke-Checked ctest @('--test-dir', $build, '--output-on-failure', '--no-tests=error')
+    Assert-VcpkgLicenseFiles $installed
 }
 
 Test-ManifestConsumer 'default-consumer' (Join-Path $repo 'tests/package-default')
