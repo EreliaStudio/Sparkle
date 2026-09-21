@@ -3,6 +3,8 @@
   "name": "sparkle",
   "version-string": "0.1.2",
   "description": "Sparkle static library",
+  "homepage": "https://github.com/EreliaStudio/Sparkle",
+  "license": "MIT",
   "dependencies": [
     "glew",
     "opengl",
