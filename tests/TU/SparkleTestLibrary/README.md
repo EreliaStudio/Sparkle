@@ -16,7 +16,7 @@ sparkle_test::configurePaths(referenceResourceRoot, writableResultRoot);
 auto result = sparkle_test::compareImages(actualPng, expectedPng, differencePng);
 ```
 
-`expectedImagePath(category, name)` resolves under `resources/expectedImages`; `resultImagePath` resolves under the configured result root. No Sparkle checkout/build paths are embedded in the installed utilities. Configuration is process-wide and must not race with tests; empty roots throw without changing existing configuration.
+`expectedImagePath(category, name)` resolves under `resources/expectedImages`; `resultImagePath` resolves under the configured result root. `freshResultFilePath(category, filename)` prepares a writable result path by creating its parent directory and removing a stale file, while `readTextFile(path)` reads a complete text fixture/result into a string. No Sparkle checkout/build paths are embedded in the installed utilities. Configuration is process-wide and must not race with tests; empty roots throw without changing existing configuration.
 
 PNG comparison does not initialize OpenGL. On success the comparator deletes actual/difference files; never use your reference path as the actual/result path. On mismatch it retains actual output and writes a red difference PNG. References are never automatically accepted. See `ImageComparisonOptions` for per-channel tolerances.
 

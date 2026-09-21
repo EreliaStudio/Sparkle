@@ -127,6 +127,16 @@ namespace sparkle_test
 		return resultsDirectory() / category / (name + ".png");
 	}
 
+	std::filesystem::path freshResultFilePath(
+		const std::filesystem::path &category,
+		const std::filesystem::path &filename)
+	{
+		const auto result = resultsDirectory() / category / filename;
+		std::filesystem::create_directories(result.parent_path());
+		std::filesystem::remove(result);
+		return result;
+	}
+
 	void removeEmptyResultDirectories(const std::filesystem::path &startingPath)
 	{
 		const std::filesystem::path resultRoot = normalized(resultsDirectory());

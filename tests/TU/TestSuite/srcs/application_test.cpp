@@ -5,8 +5,6 @@
 #include <atomic>
 #include <chrono>
 #include <cstdlib>
-#include <filesystem>
-#include <fstream>
 #include <functional>
 #include <stdexcept>
 #include <string>
@@ -20,6 +18,7 @@
 #include "exception.hpp"
 #include "rendering/render_command.hpp"
 #include "rendering/render_snapshot.hpp"
+#include "sparkle_test.hpp"
 #include "ui/widget.hpp"
 
 static_assert(!std::is_copy_constructible_v<spk::Application>);
@@ -106,23 +105,6 @@ namespace
 			activate();
 		}
 	};
-
-	[[nodiscard]] std::filesystem::path applicationLogPath(const std::string &name)
-	{
-		const auto root = std::filesystem::path(SPARKLE_TEST_RESULTS_DIR) / "application";
-		std::filesystem::create_directories(root);
-		const auto path = root / (name + ".log");
-		std::filesystem::remove(path);
-		return path;
-	}
-
-	[[nodiscard]] std::string readFile(const std::filesystem::path &path)
-	{
-		std::ifstream stream(path);
-		return std::string(
-			std::istreambuf_iterator<char>(stream),
-			std::istreambuf_iterator<char>());
-	}
 
 	[[nodiscard]] spk::Window::Configuration offscreenConfiguration(const char *title)
 	{
@@ -301,7 +283,7 @@ TEST(ApplicationTest, EventRoutingTargetsOnlyTheMatchingWindow)
 
 TEST(ApplicationTest, WorkerExceptionsAreLoggedBeforeCrossingTheRunBoundary)
 {
-	const auto path = applicationLogPath("worker_failure");
+	const auto path = sparkle_test::freshResultFilePath("application", "worker_failure.log");
 	auto output = spk::logger.addOutput(path, spk::Logger::Level::Error);
 	spk::Application application;
 	spk::Window &window = application.createWindow("worker-failure", offscreenConfiguration("worker-failure"));
@@ -310,7 +292,7 @@ TEST(ApplicationTest, WorkerExceptionsAreLoggedBeforeCrossingTheRunBoundary)
 	EXPECT_THROW((void)application.run(), spk::Exception);
 	EXPECT_THROW((void)application.window("worker-failure"), std::out_of_range);
 
-	const std::string log = readFile(path);
+	const std::string log = sparkle_test::readTextFile(path);
 	EXPECT_NE(log.find("[Error]"), std::string::npos);
 	EXPECT_NE(log.find("update runtime"), std::string::npos);
 	EXPECT_NE(log.find("worker-failure"), std::string::npos);

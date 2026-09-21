@@ -19,5 +19,8 @@ namespace sparkle_test
 	[[nodiscard]] std::filesystem::path resultImagePath(
 		const std::filesystem::path &category,
 		const std::string &name);
+	[[nodiscard]] std::filesystem::path freshResultFilePath(
+		const std::filesystem::path &category,
+		const std::filesystem::path &filename);
 	void removeEmptyResultDirectories(const std::filesystem::path &startingPath);
 }

@@ -1,4 +1,5 @@
 #include <filesystem>
+#include <fstream>
 #include <stdexcept>
 
 #include <gtest/gtest.h>
@@ -49,4 +50,21 @@ TEST(TestPathsTest, ConfiguresConsumerRootsAndRejectsEmptyPaths)
 	EXPECT_EQ(sparkle_test::resultsDirectory(), root / "results");
 	sparkle_test::configurePaths(resources, results);
 	std::filesystem::remove_all(root);
+}
+
+
+TEST(TestPathsTest, FreshResultFilePathCreatesParentAndRemovesStaleFile)
+{
+	const auto path = sparkle_test::freshResultFilePath("logs", "application.log");
+	EXPECT_TRUE(std::filesystem::is_directory(path.parent_path()));
+	{
+		std::ofstream stream(path);
+		stream << "stale";
+	}
+	ASSERT_TRUE(std::filesystem::exists(path));
+
+	const auto refreshed = sparkle_test::freshResultFilePath("logs", "application.log");
+	EXPECT_EQ(refreshed, path);
+	EXPECT_FALSE(std::filesystem::exists(path));
+	std::filesystem::remove_all(path.parent_path());
 }
