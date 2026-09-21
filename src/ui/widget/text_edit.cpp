@@ -80,7 +80,16 @@ namespace spk
 	}
 
 	TextEdit::TextEdit(std::string name, Widget *parent) :
-		Widget(std::move(name), parent)
+		TextEdit(std::move(name), Clipboard::systemBackend(), parent)
+	{
+	}
+
+	TextEdit::TextEdit(
+		std::string name,
+		Clipboard::Backend &clipboardBackend,
+		Widget *parent) :
+		Widget(std::move(name), parent),
+		_clipboardBackend(clipboardBackend)
 	{
 		applyStyle(defaultStyle);
 		_updateSizeHint();
@@ -887,18 +896,13 @@ namespace spk
 		_copyObscuredTextEnabled = enabled;
 	}
 
-	void TextEdit::setClipboardBackend(Clipboard::Backend &backend) noexcept
-	{
-		_clipboardBackend = &backend;
-	}
-
 	bool TextEdit::copySelection() const
 	{
 		if (!hasSelection() || (_obscured && !_copyObscuredTextEnabled))
 		{
 			return false;
 		}
-		return _clipboardBackend->writeText(selectedText());
+		return _clipboardBackend.writeText(selectedText());
 	}
 
 	bool TextEdit::cutSelection()
@@ -916,7 +920,7 @@ namespace spk
 		{
 			return false;
 		}
-		const auto text = _clipboardBackend->readText();
+		const auto text = _clipboardBackend.readText();
 		return text.has_value() && _replaceSelection(*text);
 	}
 
@@ -978,16 +982,6 @@ namespace spk
 	bool TextEdit::isCopyObscuredTextEnabled() const noexcept
 	{
 		return _copyObscuredTextEnabled;
-	}
-
-	Clipboard::Backend &TextEdit::clipboardBackend() noexcept
-	{
-		return *_clipboardBackend;
-	}
-
-	const Clipboard::Backend &TextEdit::clipboardBackend() const noexcept
-	{
-		return *_clipboardBackend;
 	}
 
 	Font::Text TextEdit::renderedText() const

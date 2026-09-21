@@ -72,7 +72,7 @@ namespace spk
 		ValidationCallback _validationCallback;
 		EditionProvider _editionProvider;
 		SelectionProvider _selectionProvider;
-		Clipboard::Backend *_clipboardBackend = &Clipboard::systemBackend();
+		Clipboard::Backend &_clipboardBackend;
 
 		[[nodiscard]] Vector2UInt _innerSize() const noexcept;
 		[[nodiscard]] Font::Text _editableRepresentation() const;
@@ -108,6 +108,7 @@ namespace spk
 
 	public:
 		explicit TextEdit(std::string name, Widget *parent = nullptr);
+		TextEdit(std::string name, Clipboard::Backend &clipboardBackend, Widget *parent = nullptr);
 		TextEdit(std::string name, Font *font, Widget *parent = nullptr);
 		TextEdit(std::string name, const SpriteSheet *spriteSheet, Font *font, Widget *parent = nullptr);
 		void applyStyle(const Style &style) override;
@@ -136,7 +137,6 @@ namespace spk
 		void selectAll();
 		void setSelectionColor(const Color &color);
 		void setCopyObscuredTextEnabled(bool enabled);
-		void setClipboardBackend(Clipboard::Backend &backend) noexcept;
 		bool copySelection() const;
 		bool cutSelection();
 		bool pasteClipboard();
@@ -153,8 +153,6 @@ namespace spk
 		[[nodiscard]] Font::Text selectedText() const;
 		[[nodiscard]] const Color &selectionColor() const noexcept;
 		[[nodiscard]] bool isCopyObscuredTextEnabled() const noexcept;
-		[[nodiscard]] Clipboard::Backend &clipboardBackend() noexcept;
-		[[nodiscard]] const Clipboard::Backend &clipboardBackend() const noexcept;
 		[[nodiscard]] Font::Text renderedText() const;
 		[[nodiscard]] Font::Text visibleText() const;
 		[[nodiscard]] const Font::Text &text() const noexcept;
