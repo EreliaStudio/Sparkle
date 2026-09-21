@@ -6,6 +6,7 @@
 #include <string>
 #include <string_view>
 
+#include "core/platform/clipboard.hpp"
 #include "design_pattern/contract_provider.hpp"
 #include "graphics/color.hpp"
 #include "graphics/font.hpp"
@@ -71,6 +72,7 @@ namespace spk
 		ValidationCallback _validationCallback;
 		EditionProvider _editionProvider;
 		SelectionProvider _selectionProvider;
+		Clipboard::Backend *_clipboardBackend = &Clipboard::systemBackend();
 
 		[[nodiscard]] Vector2UInt _innerSize() const noexcept;
 		[[nodiscard]] Font::Text _editableRepresentation() const;
@@ -134,6 +136,7 @@ namespace spk
 		void selectAll();
 		void setSelectionColor(const Color &color);
 		void setCopyObscuredTextEnabled(bool enabled);
+		void setClipboardBackend(Clipboard::Backend &backend) noexcept;
 		bool copySelection() const;
 		bool cutSelection();
 		bool pasteClipboard();
@@ -150,6 +153,8 @@ namespace spk
 		[[nodiscard]] Font::Text selectedText() const;
 		[[nodiscard]] const Color &selectionColor() const noexcept;
 		[[nodiscard]] bool isCopyObscuredTextEnabled() const noexcept;
+		[[nodiscard]] Clipboard::Backend &clipboardBackend() noexcept;
+		[[nodiscard]] const Clipboard::Backend &clipboardBackend() const noexcept;
 		[[nodiscard]] Font::Text renderedText() const;
 		[[nodiscard]] Font::Text visibleText() const;
 		[[nodiscard]] const Font::Text &text() const noexcept;
