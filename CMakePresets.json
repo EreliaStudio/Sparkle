@@ -101,11 +101,6 @@
       "configurePreset": "testDebug",
       "output": {
         "outputOnFailure": true
-      },
-      "filter": {
-        "include": {
-          "label": "unit"
-        }
       }
     },
     {
@@ -113,11 +108,6 @@
       "configurePreset": "testRelease",
       "output": {
         "outputOnFailure": true
-      },
-      "filter": {
-        "include": {
-          "label": "unit"
-        }
       }
     }
   ],
