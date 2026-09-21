@@ -69,7 +69,7 @@ namespace spk
 		bool _consoleMuted = false;
 		std::size_t _nextOutputIdentifier = 1;
 
-		inline static thread_local ThreadState _threadState{};
+		static thread_local ThreadState _threadState;
 
 		Logger();
 
@@ -92,7 +92,7 @@ namespace spk
 		void unmuteConsole() noexcept;
 
 		Logger &operator<<(LevelSetter setter) noexcept;
-		Logger &operator<<(const std::source_location &location) noexcept;
+		Logger &operator<<(std::source_location location) noexcept;
 		Logger &operator<<(OStreamManipulator manipulator) noexcept;
 		Logger &operator<<(IOSManipulator manipulator) noexcept;
 		Logger &operator<<(IOSBaseManipulator manipulator) noexcept;

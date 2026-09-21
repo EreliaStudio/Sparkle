@@ -37,6 +37,8 @@ namespace
 
 namespace spk
 {
+	thread_local Logger::ThreadState Logger::_threadState{};
+
 	struct Logger::FileOutput
 	{
 		std::size_t identifier = 0;
@@ -177,7 +179,7 @@ namespace spk
 		return *this;
 	}
 
-	Logger &Logger::operator<<(const std::source_location &location) noexcept
+	Logger &Logger::operator<<(std::source_location location) noexcept
 	{
 		try
 		{
