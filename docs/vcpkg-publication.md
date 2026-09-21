@@ -15,21 +15,38 @@ target_link_libraries(my_target PRIVATE sparkle::sparkle)
 
 - Sparkle is licensed under the MIT License.
 - The vcpkg port is named `erelia-sparkle` to avoid ambiguity with other projects named Sparkle.
-- The current package is Windows-only and must be validated on at least one official Windows triplet.
+- The current package is desktop Windows-only (`windows & !uwp & !mingw & !xbox`) and is validated with the official `x64-windows-static` triplet.
 - The port must build Sparkle from source rather than consume the prebuilt Sparkle release archive.
 - The optional `test-library` vcpkg feature maps to `SPARKLE_BUILD_TEST_LIBRARY`.
 - Sparkle's own unit tests remain disabled when building the normal vcpkg port.
 
+## Current staging port
+
+The checked-in `ports/erelia-sparkle` directory is intentionally an overlay port while this branch is under review. It builds the current checkout so CI can validate the complete vcpkg consumer path before a release tag exists. It is not the final source-acquisition block that will be copied to `microsoft/vcpkg`.
+
+Both the base dependency and the optional `test-library` feature are exercised from clean manifest-mode consumer projects by `tools/ci/test-vcpkg-port.ps1`.
+
 ## Release step
+
+The publication version prepared by this branch is `0.1.3`; existing `0.1.2` prebuilt releases remain valid and unchanged.
 
 Before submitting the upstream vcpkg pull request:
 
 1. Merge the publication-readiness changes into Sparkle.
-2. Publish a canonical immutable source release/tag for the selected Sparkle version.
-3. Replace the local overlay source path in `ports/erelia-sparkle/portfile.cmake` with `vcpkg_from_github()`.
-4. Pin the exact source revision and SHA512 required by vcpkg.
-5. Validate installation and an external consumer using an official vcpkg Windows triplet.
-6. Reproduce the port in a fork of `microsoft/vcpkg`, run the required port checks, and generate the vcpkg version database entry.
+2. Publish a canonical immutable `v0.1.3` source tag/release.
+3. In the port copied to `microsoft/vcpkg`, replace the checkout-relative source block with:
+   ```cmake
+   vcpkg_from_github(
+       OUT_SOURCE_PATH SOURCE_PATH
+       REPO EreliaStudio/Sparkle
+       REF "v${VERSION}"
+       SHA512 <archive SHA512>
+       HEAD_REF main
+   )
+   ```
+4. Obtain and pin the exact SHA512 by running the port once with `SHA512 0`, as documented by vcpkg.
+5. Re-run installation and the external consumers using an official Windows triplet.
+6. Copy `ports/erelia-sparkle` into a fork of `microsoft/vcpkg`, run vcpkg's formatting/port checks, and run `vcpkg x-add-version erelia-sparkle` so the curated registry version database is updated.
 7. Submit the vcpkg change as a draft pull request first.
 
 ## Maturity note for the vcpkg pull request
@@ -44,7 +61,7 @@ Do not include the older JGL/JGL2 lineage in the initial vcpkg pull request unle
 
 ## Final consumer experience
 
-A consumer should only need a vcpkg dependency on `erelia-sparkle` and normal CMake package discovery. It must not need:
+A consumer should only need a vcpkg dependency on `erelia-sparkle` and normal CMake package discovery once the port is accepted into the curated registry. It must not need:
 
 - a Sparkle source checkout;
 - an overlay port;
