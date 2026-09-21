@@ -12,6 +12,9 @@ add_executable(SparkleCoreTestSuite
 )
 
 target_compile_features(SparkleCoreTestSuite PRIVATE cxx_std_23)
+target_compile_definitions(SparkleCoreTestSuite PRIVATE
+    SPARKLE_TEST_RESULTS_DIR="${CMAKE_CURRENT_BINARY_DIR}/results"
+)
 target_include_directories(SparkleCoreTestSuite PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/helpers
 )

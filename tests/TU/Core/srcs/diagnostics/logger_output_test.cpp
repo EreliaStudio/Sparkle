@@ -7,7 +7,7 @@
 #include <streambuf>
 #include <string>
 
-#include <sparkle>
+#include <sparkle_core>
 
 namespace
 {

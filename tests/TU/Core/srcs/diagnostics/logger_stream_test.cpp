@@ -10,7 +10,7 @@
 #include <thread>
 #include <vector>
 
-#include <sparkle>
+#include <sparkle_core>
 
 namespace
 {
