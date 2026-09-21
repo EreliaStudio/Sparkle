@@ -98,7 +98,8 @@ if ($LASTEXITCODE -ne 0) {
 
 $coreTestExecutable = Join-Path $coverageBuildDirectory "tests/TU/Core/SparkleCoreTestSuite.exe"
 $graphicsTestExecutable = Join-Path $coverageBuildDirectory "tests/TU/Graphics/SparkleGraphicsTestSuite.exe"
-foreach ($testExecutable in @($coreTestExecutable, $graphicsTestExecutable)) {
+$clipboardTestExecutable = Join-Path $coverageBuildDirectory "tests/TU/Graphics/SparkleClipboardTestSuite.exe"
+foreach ($testExecutable in @($coreTestExecutable, $graphicsTestExecutable, $clipboardTestExecutable)) {
     if (-not (Test-Path -LiteralPath $testExecutable -PathType Leaf)) {
         throw "The test executable was not produced: $testExecutable"
     }
@@ -134,15 +135,20 @@ if ($LASTEXITCODE -ne 0) {
 
 $ignorePattern = "(tests|build|vcpkg_installed)[\\/]"
 
+$coverageObjects = @(
+    "-object=$coreTestExecutable",
+    "-object=$clipboardTestExecutable"
+)
+
 Write-Host "Coverage summary:"
-& llvm-cov report $graphicsTestExecutable "-object=$coreTestExecutable" "-instr-profile=$profileDataPath" "-ignore-filename-regex=$ignorePattern"
+& llvm-cov report $graphicsTestExecutable @coverageObjects "-instr-profile=$profileDataPath" "-ignore-filename-regex=$ignorePattern"
 if ($LASTEXITCODE -ne 0) {
     throw "Coverage summary generation failed with exit code $LASTEXITCODE."
 }
 
 Write-Host "Generating HTML report..."
 & llvm-cov show $graphicsTestExecutable `
-    "-object=$coreTestExecutable" `
+    @coverageObjects `
     "-instr-profile=$profileDataPath" `
     -format=html `
     "-output-dir=$htmlDirectory" `

@@ -6,11 +6,16 @@ The unit tests are split along the same boundary as the installed libraries.
   It links only `sparkle::core` and GoogleTest and is expected to run on Windows and Linux.
 - `Graphics` builds `SparkleGraphicsTestSuite` and mirrors graphical production folders below
   `Graphics/srcs`. It links `sparkle::sparkle`, `Sparkle::TestLibrary`, and GoogleTest.
+- On Windows, the native clipboard integration tests are extracted into
+  `SparkleClipboardTestSuite`. Its custom main switches the process to a private window station
+  and desktop before GoogleTest starts, so the tests use a real Win32 clipboard without reading,
+  replacing, or restoring the interactive user's clipboard.
 - `SparkleTestLibrary` remains the reusable graphical test-support package.
 
 Graphical fixtures, golden images, fonts and texture resources live under `Graphics/resources`.
-The Win32 clipboard helper lives under `Graphics/helpers`. Core tests deliberately have no
-dependency on those files.
+The Win32 clipboard test runner and contention helper live under `Graphics/helpers`. The
+`TextEdit` unit tests use an injected in-memory clipboard backend and never depend on Win32.
+Core tests deliberately have no dependency on those files.
 
 Both source trees are discovered recursively, so a test should be placed beside the production
 subsystem it validates rather than appended to a flat source list.
