@@ -2,7 +2,6 @@
 
 #include "core/context/update_context.hpp"
 #include "engine/entity.hpp"
-#include "rendering/render_snapshot.hpp"
 
 namespace spk
 {
@@ -16,17 +15,7 @@ namespace spk
 	{
 	}
 
-	bool Behaviour::_isAcceptingEvent() const
-	{
-		return isEffectivelyActive();
-	}
-
 	bool Behaviour::_canUpdate() const
-	{
-		return isEffectivelyActive();
-	}
-
-	bool Behaviour::_canBuildRenderSnapshot() const
 	{
 		return isEffectivelyActive();
 	}
