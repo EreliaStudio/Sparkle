@@ -84,6 +84,27 @@ namespace
 	using ProbeComponent = RenderingProbe<spk::RenderingComponent3D>;
 	using ProbeBehaviour = RenderingProbe<spk::RenderingBehaviour3D>;
 	using ProbeSystem = RenderingProbe<spk::RenderingSystem>;
+
+	class MutatingSystem final : public spk::RenderingSystem
+	{
+	public:
+		std::function<void()> callback;
+		std::size_t updates = 0;
+
+		using RenderingSystem::RenderingSystem;
+
+	protected:
+		void _updateState(
+			spk::UpdateContext &,
+			spk::DeviceContext &) override
+		{
+			++updates;
+			if (callback)
+			{
+				callback();
+			}
+		}
+	};
 }
 
 TEST(RenderingEngineTest, GraphicalExtensionsReuseTheCoreEngineObjects)
@@ -165,6 +186,39 @@ TEST(RenderingEngineTest, SnapshotCollectsEveryRenderingExtension)
 			"component",
 			"behaviour",
 			"system"}));
+}
+
+TEST(RenderingEngineTest, SystemTraversalRemainsStableDuringMutation)
+{
+	spk::Engine engine;
+	auto &controller = engine.addSystem<MutatingSystem>("controller");
+	auto &removed = engine.addSystem<MutatingSystem>("removed");
+	MutatingSystem *added = nullptr;
+	bool mutated = false;
+
+	controller.callback = [&]() {
+		if (mutated)
+		{
+			return;
+		}
+
+		mutated = true;
+		engine.removeSystem(removed);
+		added = &engine.addSystem<MutatingSystem>("added");
+	};
+
+	spk::RenderingEngine renderingEngine(&engine);
+	spk::UpdateContext updateContext{};
+	spk::DeviceContext deviceContext;
+	renderingEngine.updateState(updateContext, deviceContext);
+
+	ASSERT_NE(added, nullptr);
+	EXPECT_EQ(controller.updates, 1u);
+	EXPECT_EQ(added->updates, 0u);
+
+	renderingEngine.updateState(updateContext, deviceContext);
+	EXPECT_EQ(controller.updates, 2u);
+	EXPECT_EQ(added->updates, 1u);
 }
 
 TEST(RenderingEngineTest, InactiveObjectsAreSkippedByGraphicalContracts)
