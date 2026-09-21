@@ -1,14 +1,14 @@
 #include <gtest/gtest.h>
 
 #include "container/json/reader.hpp"
-#include "sparkle_test.hpp"
+#include "temporary_directory.hpp"
 
 #include <filesystem>
 #include <string>
 
 TEST(JSONLoaderTest, StandardUsageParsesValidJsonFile)
 {
-	sparkle_test::TemporaryDirectory directory;
+	sparkle_core_test::TemporaryDirectory directory;
 	directory.write("valid.json", R"({"name":"sparkle","enabled":true,"count":3})");
 
 	const spk::JSON::Value value = spk::JSON::Loader::parseFile(directory.file("valid.json"));
@@ -19,7 +19,7 @@ TEST(JSONLoaderTest, StandardUsageParsesValidJsonFile)
 
 TEST(JSONLoaderTest, MissingFileThrowsJsonErrorWithFileRootPathAndWrappedMessage)
 {
-	sparkle_test::TemporaryDirectory directory;
+	sparkle_core_test::TemporaryDirectory directory;
 	const std::filesystem::path file = directory.file("missing.json");
 
 	try
@@ -35,7 +35,7 @@ TEST(JSONLoaderTest, MissingFileThrowsJsonErrorWithFileRootPathAndWrappedMessage
 
 TEST(JSONLoaderTest, InvalidFileThrowsJsonErrorWithFileRootPathAndParserMessage)
 {
-	sparkle_test::TemporaryDirectory directory;
+	sparkle_core_test::TemporaryDirectory directory;
 	directory.write("invalid.json", R"({"broken":[1,})");
 	const std::filesystem::path file = directory.file("invalid.json");
 
@@ -53,7 +53,7 @@ TEST(JSONLoaderTest, InvalidFileThrowsJsonErrorWithFileRootPathAndParserMessage)
 
 TEST(JSONLoaderTest, DirectoryPathIsReportedAsJsonError)
 {
-	sparkle_test::TemporaryDirectory directory;
+	sparkle_core_test::TemporaryDirectory directory;
 	try
 	{
 		(void)spk::JSON::Loader::parseFile(directory.path());

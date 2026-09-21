@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "container/json/object.hpp"
-#include "sparkle_test.hpp"
+#include "temporary_directory.hpp"
 
 #include <cstdint>
 #include <limits>
@@ -315,7 +315,7 @@ TEST(JSONValueTest, WrongContainerOperationsMissingKeysAndIndicesThrowRuntimeErr
 
 TEST(JSONValueTest, FileLoadSaveRoundTripAndMissingPaths)
 {
-	sparkle_test::TemporaryDirectory directory;
+	sparkle_core_test::TemporaryDirectory directory;
 	spk::JSON::Value value = spk::JSON::Value::object();
 	value["name"] = "sparkle";
 	value["version"] = 1;
