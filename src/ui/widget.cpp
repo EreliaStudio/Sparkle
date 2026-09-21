@@ -143,6 +143,11 @@ namespace spk
 		return isActive();
 	}
 
+	bool Widget::_canUpdateByDevice() const
+	{
+		return isActive();
+	}
+
 	bool Widget::_canBuildRenderSnapshot() const
 	{
 		return isActive() &&
@@ -324,6 +329,17 @@ namespace spk
 			if (child != nullptr)
 			{
 				child->updateState(context);
+			}
+		}
+	}
+
+	void Widget::_afterUpdate(UpdateContext &context, DeviceContext &deviceContext)
+	{
+		for (Widget *child : children())
+		{
+			if (child != nullptr)
+			{
+				child->updateState(context, deviceContext);
 			}
 		}
 	}

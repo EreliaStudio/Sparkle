@@ -6,6 +6,7 @@
 #include <variant>
 
 #include "exception.hpp"
+#include "input/device_context.hpp"
 #include "input/input_state.hpp"
 #include "input/keyboard.hpp"
 #include "input/mouse.hpp"
@@ -326,7 +327,12 @@ namespace spk
 
 	void Application::UpdateRuntime::_updateState(Window::State &state, UpdateContext &context)
 	{
+		DeviceContext deviceContext{
+			.keyboard = &state.keyboard(),
+			.mouse = &state.mouse()};
+
 		state.root().updateState(context);
+		state.root().updateState(context, deviceContext);
 	}
 
 	spk::RenderSnapshot Application::UpdateRuntime::_buildRenderSnapshot(const Window::Identifier &identifier, Window::State &state)
@@ -376,8 +382,6 @@ namespace spk
 		UpdateContext context{
 			.time = _currentTime - _startTime,
 			.deltaTime = _deltaTime,
-			.keyboard = state.keyboard(),
-			.mouse = state.mouse(),
 			.profiler = state.profiler()};
 		try
 		{
