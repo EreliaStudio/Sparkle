@@ -75,7 +75,8 @@ $required = @(
     "$installed/lib/cmake/sparkle/sparkleConfigVersion.cmake",
     "$installed/lib/cmake/sparkle/sparkleTargets.cmake",
     "$installed/lib/cmake/sparkle/sparkleTargets-release.cmake",
-    "$installed/lib/cmake/sparkle/sparkleTestTargets.cmake"
+    "$installed/lib/cmake/sparkle/sparkleTestTargets.cmake",
+    "$installed/share/sparkle/LICENSE"
 )
 foreach ($path in $required) {
     if (-not (Test-Path $path)) { throw "Installed package is missing $path" }
