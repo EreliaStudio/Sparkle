@@ -5,6 +5,25 @@
 #include <stdexcept>
 #include <utility>
 
+#include "diagnostics/logger.hpp"
+
+namespace
+{
+	void logApplicationException(const std::exception_ptr &exception) noexcept
+	{
+		try
+		{
+			std::rethrow_exception(exception);
+		} catch (const std::exception &caught)
+		{
+			spk::logger << spk::Logger::setLevel(spk::Logger::Level::Error) << caught.what() << std::endl;
+		} catch (...)
+		{
+			spk::logger << spk::Logger::setLevel(spk::Logger::Level::Error) << "Unknown exception" << std::endl;
+		}
+	}
+}
+
 namespace spk
 {
 	Application::Channels::Channels() :
@@ -254,6 +273,7 @@ namespace spk
 			auto exception = std::current_exception();
 			_stopAndJoinWorkers(updaterThread, rendererThread);
 			_shutdownAfterFailure();
+			logApplicationException(exception);
 			std::rethrow_exception(exception);
 		}
 	}
