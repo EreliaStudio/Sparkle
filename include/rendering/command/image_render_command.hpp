@@ -10,8 +10,10 @@ namespace spk
 	{
 	private:
 		DrawTextureMeshRenderCommand _command;
+
 		static DrawTextureMeshRenderCommand _resolve(const Texture *, Texture::Section, Rect2D, float);
-		static TextureMesh2D _mesh(Texture::Section, Rect2D, float);
+		static Texture::Section _texelCenteredSection(Texture::Section, const Vector2UInt &);
+		static TextureMesh2D _mesh(Texture::Section, Rect2D, float, const Vector2UInt &);
 
 	public:
 		ImageRenderCommand(Texture::Handle, Texture::Section, Rect2D, float depth = 0);
