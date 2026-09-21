@@ -33,13 +33,13 @@ The publication version prepared by this branch is `0.1.3`; existing `0.1.2` pre
 Before submitting the upstream vcpkg pull request:
 
 1. Merge the publication-readiness changes into Sparkle.
-2. Publish a canonical immutable `v0.1.3` source tag/release.
+2. Let Sparkle's existing `Prebuilt Windows package` workflow publish the normal `main` release for `0.1.3`. Its revision-specific tag (`sparkle-v0.1.3-g<full-commit>`) also provides the immutable GitHub source archive used by vcpkg.
 3. In the port copied to `microsoft/vcpkg`, replace the checkout-relative source block with:
    ```cmake
    vcpkg_from_github(
        OUT_SOURCE_PATH SOURCE_PATH
        REPO EreliaStudio/Sparkle
-       REF "v${VERSION}"
+       REF "sparkle-v0.1.3-g<full-commit>"
        SHA512 <archive SHA512>
        HEAD_REF main
    )
