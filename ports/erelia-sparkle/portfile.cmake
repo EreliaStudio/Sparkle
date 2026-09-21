@@ -7,7 +7,9 @@ get_filename_component(
 )
 
 vcpkg_check_features(OUT_FEATURE_OPTIONS SPARKLE_FEATURE_OPTIONS
-    FEATURES test-library SPARKLE_BUILD_TEST_LIBRARY
+    FEATURES
+        graphics SPARKLE_BUILD_GRAPHICS
+        test-library SPARKLE_BUILD_TEST_LIBRARY
 )
 
 vcpkg_cmake_configure(

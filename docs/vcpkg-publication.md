@@ -4,10 +4,17 @@
 
 Publish Sparkle in the official Microsoft vcpkg curated registry under the port name `erelia-sparkle`.
 
-The vcpkg port name is intentionally distinct from Sparkle's CMake package and target names:
+The vcpkg port name is intentionally distinct from Sparkle's CMake package and target names. The base port installs the independently consumable Core target:
 
 ```cmake
-find_package(sparkle CONFIG REQUIRED)
+find_package(sparkle CONFIG REQUIRED COMPONENTS Core)
+target_link_libraries(my_target PRIVATE sparkle::core)
+```
+
+The optional `graphics` feature installs the full graphical target:
+
+```cmake
+find_package(sparkle CONFIG REQUIRED COMPONENTS Core Graphics)
 target_link_libraries(my_target PRIVATE sparkle::sparkle)
 ```
 
@@ -15,16 +22,23 @@ target_link_libraries(my_target PRIVATE sparkle::sparkle)
 
 - Sparkle's own source is licensed under MIT. The bundled Liberation Sans default font is separately licensed under SIL OFL 1.1, so vcpkg metadata declares `MIT AND OFL-1.1` and installs both license texts.
 - The vcpkg port is named `erelia-sparkle` to avoid ambiguity with other projects named Sparkle.
-- The current package is x64 desktop Windows static-only (`windows & x64 & static & !uwp & !mingw & !xbox`) and is validated with the official `x64-windows-static` triplet.
+- The current publication scope is x64 desktop Windows static-only (`windows & x64 & static & !uwp & !mingw & !xbox`) and is validated with the official `x64-windows-static` triplet.
+- The base `erelia-sparkle` port builds Core only and has no GLEW, OpenGL or stb dependency.
+- The optional `graphics` feature maps to `SPARKLE_BUILD_GRAPHICS` and adds GLEW, OpenGL and stb.
+- The optional `test-library` feature maps to `SPARKLE_BUILD_TEST_LIBRARY` and requires `graphics`.
 - The port must build Sparkle from source rather than consume the prebuilt Sparkle release archive.
-- The optional `test-library` vcpkg feature maps to `SPARKLE_BUILD_TEST_LIBRARY`.
 - Sparkle's own unit tests remain disabled when building the normal vcpkg port.
+- Graphical functionality is intentionally not a default feature: the curated registry requires features that add additional APIs or binaries to be opt-in.
 
 ## Current staging port
 
 The checked-in `ports/erelia-sparkle` directory is intentionally an overlay port while this branch is under review. It builds the current checkout so CI can validate the complete vcpkg consumer path before a release tag exists. It is not the final source-acquisition block that will be copied to `microsoft/vcpkg`.
 
-Both the base dependency and the optional `test-library` feature are exercised from clean manifest-mode consumer projects by `tools/ci/test-vcpkg-port.ps1`.
+Three clean manifest-mode consumers are exercised by `tools/ci/test-vcpkg-port.ps1`:
+
+1. base `erelia-sparkle`, proving that Core installs without Graphics or graphical dependencies;
+2. `erelia-sparkle[graphics]`, proving that the full graphical CMake package is available;
+3. `erelia-sparkle[test-library]`, proving that the reusable test component is available and brings in Graphics.
 
 ## Release step
 
@@ -45,7 +59,7 @@ Before submitting the upstream vcpkg pull request:
    )
    ```
 4. Obtain and pin the exact SHA512 by running the port once with `SHA512 0`, as documented by vcpkg.
-5. Re-run installation and the external consumers using an official Windows triplet.
+5. Re-run all three external consumers using an official Windows triplet.
 6. Copy `ports/erelia-sparkle` into a fork of `microsoft/vcpkg`, run vcpkg's formatting/port checks, and run `vcpkg x-add-version erelia-sparkle` so the curated registry version database is updated.
 7. Submit the vcpkg change as a draft pull request first.
 
@@ -61,7 +75,9 @@ Do not include the older JGL/JGL2 lineage in the initial vcpkg pull request unle
 
 ## Final consumer experience
 
-A consumer should only need a vcpkg dependency on `erelia-sparkle` and normal CMake package discovery once the port is accepted into the curated registry. It must not need:
+A Core-only consumer should depend on `erelia-sparkle`. A graphical consumer should request `erelia-sparkle[graphics]`, and a consumer of the reusable graphical test utilities should request `erelia-sparkle[test-library]`.
+
+Once the port is accepted into the curated registry, consumers must not need:
 
 - a Sparkle source checkout;
 - an overlay port;

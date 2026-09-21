@@ -1,14 +1,11 @@
 {
   "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
-  "name": "sparkle-test-library-consumer",
+  "name": "sparkle-core-consumer",
   "version-string": "0",
   "dependencies": [
     {
       "name": "erelia-sparkle",
-      "default-features": false,
-      "features": [
-        "test-library"
-      ]
+      "default-features": false
     }
   ]
 }

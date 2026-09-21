@@ -3,6 +3,12 @@
   "name": "sparkle-default-consumer",
   "version-string": "0",
   "dependencies": [
-    "erelia-sparkle"
+    {
+      "name": "erelia-sparkle",
+      "default-features": false,
+      "features": [
+        "graphics"
+      ]
+    }
   ]
 }
