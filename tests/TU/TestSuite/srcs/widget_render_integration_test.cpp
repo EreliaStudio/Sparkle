@@ -330,7 +330,7 @@ TEST(WidgetRenderIntegrationTest, ComposedControlsRenderTheirDifferentStatesAndP
 
 TEST(WidgetRenderIntegrationTest, ExistingTextSnapshotSurvivesAtlasGrowthAndFontMove)
 {
-	const auto path = std::filesystem::path(__FILE__).parent_path().parent_path().parent_path().parent_path().parent_path() / "resources/fonts/arial.ttf";
+	const auto path = std::filesystem::path(__FILE__).parent_path().parent_path().parent_path().parent_path().parent_path() / "resources/fonts/liberation_sans_regular.ttf";
 	spk::Font font(path);
 	spk::Font moved;
 	spk::TextLabel label("Text", &font);
