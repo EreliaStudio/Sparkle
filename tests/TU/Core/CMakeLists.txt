@@ -26,6 +26,5 @@ target_link_libraries(SparkleCoreTestSuite
 set_target_properties(SparkleCoreTestSuite PROPERTIES CXX_EXTENSIONS OFF)
 
 gtest_discover_tests(SparkleCoreTestSuite
-    PROPERTIES
-        LABELS "unit;core"
+    TEST_PREFIX "Core."
 )
