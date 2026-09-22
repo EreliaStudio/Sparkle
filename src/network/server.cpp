@@ -11,18 +11,24 @@ namespace spk
 	private:
 		std::unique_ptr<NetworkInternal::ServerBackend> _backend;
 
+		[[nodiscard]] static NetworkInternal::ServerCallbacks _callbacks(Server &owner)
+		{
+			NetworkInternal::ServerCallbacks result;
+			result.onMessage = [&owner](ReceivedMessage message) {
+				owner._publish(std::move(message));
+			};
+			result.onConnection = [&owner](ConnectionID connection) {
+				owner._notifyConnection(connection);
+			};
+			result.onDisconnection = [&owner](ConnectionID connection) {
+				owner._notifyDisconnection(connection);
+			};
+			return result;
+		}
+
 	public:
 		explicit Impl(Server &owner) :
-			_backend(NetworkInternal::createServerBackend({
-				.onMessage = [&owner](ReceivedMessage message) {
-					owner._publish(std::move(message));
-				},
-				.onConnection = [&owner](ConnectionID connection) {
-					owner._notifyConnection(connection);
-				},
-				.onDisconnection = [&owner](ConnectionID connection) {
-					owner._notifyDisconnection(connection);
-				}}))
+			_backend(NetworkInternal::createServerBackend(_callbacks(owner)))
 		{
 		}
 
