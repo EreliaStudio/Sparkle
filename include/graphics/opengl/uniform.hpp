@@ -17,73 +17,63 @@
 
 namespace spk
 {
-	namespace detail
+	template <typename TType>
+	class Uniform
 	{
-		template <typename TType>
-		struct UniformPusher
-		{
-			static constexpr bool supported = false;
-		};
+	public:
+		using Data = std::remove_cvref_t<TType>;
 
-		template <typename TType>
-		inline constexpr bool UniformScalar =
-			std::is_same_v<TType, float> ||
-			std::is_same_v<TType, double> ||
-			std::is_same_v<TType, std::int32_t> ||
-			std::is_same_v<TType, std::uint32_t>;
-
-		template <>
-		struct UniformPusher<bool>
+	private:
+		struct Pusher
 		{
-			static constexpr bool supported = true;
+			template <typename TValue>
+			static void push(GLint, const TValue &) = delete;
+
 			static void push(GLint location, bool value)
 			{
 				glUniform1i(location, value ? GL_TRUE : GL_FALSE);
 			}
-		};
 
-		template <typename TType>
-			requires UniformScalar<TType>
-		struct UniformPusher<TType>
-		{
-			static constexpr bool supported = true;
-			static void push(GLint location, TType value)
+			static void push(GLint location, float value)
 			{
-				if constexpr (std::is_same_v<TType, float>)
-				{
-					glUniform1f(location, value);
-				}
-				else if constexpr (std::is_same_v<TType, double>)
-				{
-					glUniform1d(location, value);
-				}
-				else if constexpr (std::is_same_v<TType, std::int32_t>)
-				{
-					glUniform1i(location, value);
-				}
-				else
-				{
-					glUniform1ui(location, value);
-				}
+				glUniform1f(location, value);
 			}
-		};
 
-		template <typename TType>
-			requires UniformScalar<TType>
-		struct UniformPusher<TVector2<TType>>
-		{
-			static constexpr bool supported = true;
-			static void push(GLint location, const TVector2<TType> &value)
+			static void push(GLint location, double value)
 			{
-				if constexpr (std::is_same_v<TType, float>)
+				glUniform1d(location, value);
+			}
+
+			static void push(GLint location, std::int32_t value)
+			{
+				glUniform1i(location, value);
+			}
+
+			static void push(GLint location, std::uint32_t value)
+			{
+				glUniform1ui(location, value);
+			}
+
+			template <typename TValue>
+			static constexpr bool Numeric =
+				std::is_same_v<TValue, float> ||
+				std::is_same_v<TValue, double> ||
+				std::is_same_v<TValue, std::int32_t> ||
+				std::is_same_v<TValue, std::uint32_t>;
+
+			template <typename TValue>
+				requires Numeric<TValue>
+			static void push(GLint location, const TVector2<TValue> &value)
+			{
+				if constexpr (std::is_same_v<TValue, float>)
 				{
 					glUniform2f(location, value.x, value.y);
 				}
-				else if constexpr (std::is_same_v<TType, double>)
+				else if constexpr (std::is_same_v<TValue, double>)
 				{
 					glUniform2d(location, value.x, value.y);
 				}
-				else if constexpr (std::is_same_v<TType, std::int32_t>)
+				else if constexpr (std::is_same_v<TValue, std::int32_t>)
 				{
 					glUniform2i(location, value.x, value.y);
 				}
@@ -92,24 +82,20 @@ namespace spk
 					glUniform2ui(location, value.x, value.y);
 				}
 			}
-		};
 
-		template <typename TType>
-			requires UniformScalar<TType>
-		struct UniformPusher<TVector3<TType>>
-		{
-			static constexpr bool supported = true;
-			static void push(GLint location, const TVector3<TType> &value)
+			template <typename TValue>
+				requires Numeric<TValue>
+			static void push(GLint location, const TVector3<TValue> &value)
 			{
-				if constexpr (std::is_same_v<TType, float>)
+				if constexpr (std::is_same_v<TValue, float>)
 				{
 					glUniform3f(location, value.x, value.y, value.z);
 				}
-				else if constexpr (std::is_same_v<TType, double>)
+				else if constexpr (std::is_same_v<TValue, double>)
 				{
 					glUniform3d(location, value.x, value.y, value.z);
 				}
-				else if constexpr (std::is_same_v<TType, std::int32_t>)
+				else if constexpr (std::is_same_v<TValue, std::int32_t>)
 				{
 					glUniform3i(location, value.x, value.y, value.z);
 				}
@@ -118,24 +104,20 @@ namespace spk
 					glUniform3ui(location, value.x, value.y, value.z);
 				}
 			}
-		};
 
-		template <typename TType>
-			requires UniformScalar<TType>
-		struct UniformPusher<TVector4<TType>>
-		{
-			static constexpr bool supported = true;
-			static void push(GLint location, const TVector4<TType> &value)
+			template <typename TValue>
+				requires Numeric<TValue>
+			static void push(GLint location, const TVector4<TValue> &value)
 			{
-				if constexpr (std::is_same_v<TType, float>)
+				if constexpr (std::is_same_v<TValue, float>)
 				{
 					glUniform4f(location, value.x, value.y, value.z, value.w);
 				}
-				else if constexpr (std::is_same_v<TType, double>)
+				else if constexpr (std::is_same_v<TValue, double>)
 				{
 					glUniform4d(location, value.x, value.y, value.z, value.w);
 				}
-				else if constexpr (std::is_same_v<TType, std::int32_t>)
+				else if constexpr (std::is_same_v<TValue, std::int32_t>)
 				{
 					glUniform4i(location, value.x, value.y, value.z, value.w);
 				}
@@ -144,25 +126,26 @@ namespace spk
 					glUniform4ui(location, value.x, value.y, value.z, value.w);
 				}
 			}
-		};
 
-		template <std::size_t TSize>
-		struct UniformPusher<Matrix<TSize, TSize>>
-		{
-			static constexpr bool supported = TSize >= 2 && TSize <= 4;
-
-			static void push(GLint location, const Matrix<TSize, TSize> &value)
+			template <std::size_t TSize>
+			[[nodiscard]] static std::array<float, TSize * TSize> _matrixData(const Matrix<TSize, TSize> &matrix)
 			{
-				static_assert(supported, "Unsupported OpenGL uniform matrix type");
-				std::array<float, TSize * TSize> data{};
+				std::array<float, TSize * TSize> result{};
 				for (std::size_t column = 0; column < TSize; ++column)
 				{
 					for (std::size_t row = 0; row < TSize; ++row)
 					{
-						data[column * TSize + row] = value[column][row];
+						result[column * TSize + row] = matrix[column][row];
 					}
 				}
+				return result;
+			}
 
+			template <std::size_t TSize>
+				requires(TSize >= 2 && TSize <= 4)
+			static void push(GLint location, const Matrix<TSize, TSize> &value)
+			{
+				const auto data = _matrixData(value);
 				if constexpr (TSize == 2)
 				{
 					glUniformMatrix2fv(location, 1, GL_FALSE, data.data());
@@ -177,16 +160,11 @@ namespace spk
 				}
 			}
 		};
-	}
 
-	template <typename TType>
-	class Uniform
-	{
-	public:
-		using Data = std::remove_cvref_t<TType>;
-
-	private:
-		static_assert(detail::UniformPusher<Data>::supported, "Unsupported OpenGL uniform type");
+		static constexpr bool Supported = requires(GLint location, const Data &data) {
+			Pusher::push(location, data);
+		};
+		static_assert(Supported, "Unsupported OpenGL uniform type");
 
 		std::string _name;
 		Data _data{};
@@ -206,8 +184,12 @@ namespace spk
 		static void _push(GLint location, const TValue &value)
 		{
 			using Value = std::remove_cvref_t<TValue>;
-			static_assert(detail::UniformPusher<Value>::supported, "Unsupported OpenGL uniform type");
-			detail::UniformPusher<Value>::push(location, value);
+			static_assert(
+				requires(GLint target, const Value &data) {
+					Pusher::push(target, data);
+				},
+				"Unsupported OpenGL uniform type");
+			Pusher::push(location, value);
 		}
 
 	public:
