@@ -87,8 +87,7 @@ namespace spk
 
 	void NodeRouter::_dispatchIncoming()
 	{
-		_server.messages().drain(_incomingBuffer);
-		for (ReceivedMessage &received : _incomingBuffer)
+		for (ReceivedMessage &received : _server.messages().drain(_incomingBuffer))
 		{
 			const auto iterator = _redirections.find(received.message.type());
 			if (iterator == _redirections.end())
@@ -109,8 +108,7 @@ namespace spk
 
 	void NodeRouter::_dispatchOutgoing(Node &node)
 	{
-		node.outgoing().drain(_outgoingBuffer);
-		for (const OutgoingMessage &outgoing : _outgoingBuffer)
+		for (const OutgoingMessage &outgoing : node.outgoing().drain(_outgoingBuffer))
 		{
 			if (outgoing.recipient.has_value())
 			{

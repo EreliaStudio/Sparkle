@@ -40,8 +40,7 @@ namespace spk
 
 	void RemoteNode::_forwardRequests()
 	{
-		_incoming.drain(_requests);
-		for (ReceivedMessage &message : _requests)
+		for (ReceivedMessage &message : _incoming.drain(_requests))
 		{
 			if (!_client.isConnected())
 			{
@@ -57,8 +56,7 @@ namespace spk
 
 	void RemoteNode::_collectResponses()
 	{
-		_client.messages().drain(_responses);
-		for (Message &message : _responses)
+		for (Message &message : _client.messages().drain(_responses))
 		{
 			auto envelope = NetworkInternal::decodeRemoteEnvelope(message);
 			if (envelope.kind != NetworkInternal::RemoteEnvelopeKind::Response)

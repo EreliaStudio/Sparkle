@@ -29,8 +29,7 @@ namespace spk
 
 	void RemoteNode::Endpoint::dispatch()
 	{
-		_server.messages().drain(_received);
-		for (ReceivedMessage &received : _received)
+		for (ReceivedMessage &received : _server.messages().drain(_received))
 		{
 			auto envelope = NetworkInternal::decodeRemoteEnvelope(received.message);
 			if (envelope.kind != NetworkInternal::RemoteEnvelopeKind::Request)
