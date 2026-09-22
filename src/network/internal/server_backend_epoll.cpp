@@ -2,29 +2,29 @@
 
 #if defined(__linux__) || defined(__ANDROID__)
 
-#include "exception.hpp"
-#include "network/internal/frame.hpp"
-#include "network/internal/socket.hpp"
+#    include "exception.hpp"
+#    include "network/internal/frame.hpp"
+#    include "network/internal/socket.hpp"
 
-#include <algorithm>
-#include <array>
-#include <atomic>
-#include <cerrno>
-#include <cstddef>
-#include <cstdint>
-#include <deque>
-#include <memory>
-#include <mutex>
-#include <optional>
-#include <string>
-#include <sys/epoll.h>
-#include <sys/eventfd.h>
-#include <sys/socket.h>
-#include <thread>
-#include <unordered_map>
-#include <unistd.h>
-#include <utility>
-#include <vector>
+#    include <algorithm>
+#    include <array>
+#    include <atomic>
+#    include <cerrno>
+#    include <cstddef>
+#    include <cstdint>
+#    include <deque>
+#    include <memory>
+#    include <mutex>
+#    include <optional>
+#    include <string>
+#    include <sys/epoll.h>
+#    include <sys/eventfd.h>
+#    include <sys/socket.h>
+#    include <thread>
+#    include <unordered_map>
+#    include <unistd.h>
+#    include <utility>
+#    include <vector>
 
 namespace spk::NetworkInternal
 {
