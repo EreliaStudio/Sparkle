@@ -126,7 +126,6 @@ TEST(NodeRouterIntegrationTest, TwoClientsRouteThroughIndependentRouterAndNodeTh
 			EXPECT_EQ(payload.sequence, sequence);
 		}
 	}
-
 }
 
 TEST(NodeRouterIntegrationTest, LocalNodeBroadcastReachesAllClients)
