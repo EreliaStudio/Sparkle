@@ -48,6 +48,36 @@ namespace
 			spk::VertexBuffer::Interpretation::Floating,
 			true);
 	}
+
+	class DerivedShaderStorageBuffer : public spk::ShaderStorageBuffer
+	{
+	public:
+		struct Data
+		{
+			std::uint32_t value;
+		};
+		using DataView = spk::ShaderStorageBuffer::View<void, Data>;
+
+	private:
+		DataView _view{};
+
+	public:
+		explicit DerivedShaderStorageBuffer(std::size_t nbElement) :
+			ShaderStorageBuffer(0, 0, sizeof(Data))
+		{
+			resize(nbElement);
+			_view = cast<void, Data>();
+		}
+
+		[[nodiscard]] DataView &view() noexcept
+		{
+			return _view;
+		}
+		[[nodiscard]] const DataView &view() const noexcept
+		{
+			return _view;
+		}
+	};
 }
 
 TEST(VertexBufferTest, MixedLayoutResolvesOffsetsStrideAndConfigurationGeneration)
@@ -246,6 +276,26 @@ TEST(ShaderStorageBufferTest, DynamicOnlyZeroAndMultipleElementCountsAreSupporte
 	const auto view = std::as_const(buffer).cast<void, float>();
 	EXPECT_EQ(view.nbElement, 2u);
 	EXPECT_FLOAT_EQ(view.dynamicArray[1], 2.5f);
+}
+
+TEST(ShaderStorageBufferTest, DerivedResourceRetainsTypedViewAndSharesStateWhenCopied)
+{
+	DerivedShaderStorageBuffer source(2);
+	ASSERT_EQ(source.view().nbElement, 2u);
+	source.view().dynamicArray[0].value = 10;
+	source.view().dynamicArray[1].value = 20;
+
+	auto copy = source;
+	DerivedShaderStorageBuffer assigned(1);
+	assigned = source;
+	EXPECT_EQ(copy.identifier(), source.identifier());
+	EXPECT_EQ(assigned.identifier(), source.identifier());
+	EXPECT_EQ(copy.view().dynamicArray, source.view().dynamicArray);
+	EXPECT_EQ(assigned.view().dynamicArray, source.view().dynamicArray);
+
+	copy.view().dynamicArray[1].value = 99;
+	EXPECT_EQ(source.view().dynamicArray[1].value, 99u);
+	EXPECT_EQ(assigned.view().dynamicArray[1].value, 99u);
 }
 
 TEST(ShaderStorageBufferTest, InvalidSizesTypesCountsAlignmentAndOverflowAreRejected)
