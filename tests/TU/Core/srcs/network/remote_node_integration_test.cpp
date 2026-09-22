@@ -50,8 +50,7 @@ namespace
 			std::vector<spk::RemoteRequest> requests;
 			std::vector<spk::RemoteRequest> batch;
 			const auto deadline = std::chrono::steady_clock::now() + 5s;
-			while (requests.size() < expectedRequests &&
-				std::chrono::steady_clock::now() < deadline)
+			while (requests.size() < expectedRequests && std::chrono::steady_clock::now() < deadline)
 			{
 				endpoint.dispatch();
 				endpoint.requests().drain(batch);
@@ -158,7 +157,6 @@ TEST(RemoteNodeIntegrationTest, TwoClientsRemainCorrelatedAcrossOutOfOrderRemote
 			return value;
 		}));
 	}
-
 }
 
 TEST(RemoteNodeIntegrationTest, ForwardingWhileDisconnectedThrows)
