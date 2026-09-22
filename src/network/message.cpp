@@ -69,6 +69,10 @@ namespace spk
 
 	void Message::append(const void *data, std::size_t size)
 	{
+		if (size == 0)
+		{
+			return;
+		}
 		const auto *bytes = static_cast<const std::byte *>(data);
 		_payload.insert(_payload.end(), bytes, bytes + size);
 	}
