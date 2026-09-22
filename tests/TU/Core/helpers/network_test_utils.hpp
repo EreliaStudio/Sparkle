@@ -64,8 +64,7 @@ namespace NetworkTestUtils
 			try
 			{
 				function();
-			}
-			catch (...)
+			} catch (...)
 			{
 				const std::scoped_lock lock(_mutex);
 				if (_exception == nullptr)
