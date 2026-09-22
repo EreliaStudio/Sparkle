@@ -54,6 +54,33 @@ TEST(ImageComparisonTest, MatchingImagesLeaveNoArtifacts)
 	EXPECT_FALSE(std::filesystem::exists(diffPath));
 }
 
+TEST(ImageComparisonTest, MatchingImagesSupportArbitraryDimensions)
+{
+	const std::filesystem::path actualPath = imageComparisonResultDirectory() / "arbitrary_size_actual.png";
+	const std::filesystem::path expectedPath = imageComparisonExpectedDirectory() / "arbitrary_size_expected.png";
+	const std::filesystem::path diffPath = imageComparisonResultDirectory() / "arbitrary_size_diff.png";
+	constexpr int width = 7;
+	constexpr int height = 3;
+	std::vector<unsigned char> pixels(static_cast<std::size_t>(width * height * 4), 0);
+	for (std::size_t index = 0; index < pixels.size(); index += 4)
+	{
+		pixels[index + 0] = static_cast<unsigned char>(index % 251);
+		pixels[index + 1] = static_cast<unsigned char>((index + 17) % 251);
+		pixels[index + 2] = static_cast<unsigned char>((index + 43) % 251);
+		pixels[index + 3] = 255;
+	}
+
+	writePng(actualPath, width, height, pixels);
+	writePng(expectedPath, width, height, pixels);
+	const auto result = sparkle_test::compareImages(actualPath, expectedPath, diffPath);
+
+	EXPECT_TRUE(result.matches);
+	EXPECT_EQ(result.actualWidth, width);
+	EXPECT_EQ(result.actualHeight, height);
+	EXPECT_EQ(result.expectedWidth, width);
+	EXPECT_EQ(result.expectedHeight, height);
+}
+
 TEST(ImageComparisonTest, RgbDifferenceAtToleranceMatchesAndAboveToleranceDiffers)
 {
 	const std::filesystem::path actualPath = imageComparisonResultDirectory() / "tolerance_boundary_actual.png";
