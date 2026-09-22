@@ -9,7 +9,7 @@ namespace spk
 		_incoming.publish(std::move(message));
 	}
 
-	Node::OutgoingQueue &LocalNode::outgoing() noexcept
+	Node::OutgoingQueue &LocalNode::outgoing()
 	{
 		return _outgoing;
 	}
