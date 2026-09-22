@@ -48,7 +48,9 @@ namespace
 		failure.run([&] {
 			std::vector<spk::RemoteRequest> requests;
 			std::vector<spk::RemoteRequest> batch;
-			while (requests.size() < expectedRequests)
+			const auto deadline = std::chrono::steady_clock::now() + 5s;
+			while (requests.size() < expectedRequests &&
+				std::chrono::steady_clock::now() < deadline)
 			{
 				endpoint.dispatch();
 				endpoint.requests().drain(batch);
@@ -57,6 +59,10 @@ namespace
 					requests.push_back(std::move(request));
 				}
 				std::this_thread::sleep_for(1ms);
+			}
+			if (requests.size() != expectedRequests)
+			{
+				throw spk::Exception("Timed out waiting for remote requests.");
 			}
 
 			for (auto iterator = requests.rbegin(); iterator != requests.rend(); ++iterator)
@@ -123,6 +129,15 @@ TEST(RemoteNodeIntegrationTest, TwoClientsRemainCorrelatedAcrossOutOfOrderRemote
 	});
 	firstThread.join();
 	secondThread.join();
+	endpointThread.join();
+
+	firstClient.disconnect();
+	secondClient.disconnect();
+	routerRunning = false;
+	routerThread.join();
+	remoteNode.disconnect();
+	router.stop();
+	endpoint.stop();
 
 	ASSERT_NO_THROW(failure.rethrow());
 	ASSERT_TRUE(endpointFinished);
@@ -137,14 +152,6 @@ TEST(RemoteNodeIntegrationTest, TwoClientsRemainCorrelatedAcrossOutOfOrderRemote
 		}
 	}
 
-	firstClient.disconnect();
-	secondClient.disconnect();
-	routerRunning = false;
-	routerThread.join();
-	endpointThread.join();
-	remoteNode.disconnect();
-	router.stop();
-	endpoint.stop();
 }
 
 TEST(RemoteNodeIntegrationTest, ForwardingWhileDisconnectedThrows)
