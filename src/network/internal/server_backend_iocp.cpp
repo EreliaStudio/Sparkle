@@ -2,28 +2,28 @@
 
 #ifdef _WIN32
 
-#include "exception.hpp"
-#include "network/internal/frame.hpp"
-#include "network/internal/socket.hpp"
+#    include "exception.hpp"
+#    include "network/internal/frame.hpp"
+#    include "network/internal/socket.hpp"
 
-#include <algorithm>
-#include <array>
-#include <atomic>
-#include <cstddef>
-#include <cstdint>
-#include <deque>
-#include <memory>
-#include <mutex>
-#include <string>
-#include <thread>
-#include <unordered_map>
-#include <utility>
-#include <vector>
+#    include <algorithm>
+#    include <array>
+#    include <atomic>
+#    include <cstddef>
+#    include <cstdint>
+#    include <deque>
+#    include <memory>
+#    include <mutex>
+#    include <string>
+#    include <thread>
+#    include <unordered_map>
+#    include <utility>
+#    include <vector>
 
-#include <mswsock.h>
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <Windows.h>
+#    include <mswsock.h>
+#    include <winsock2.h>
+#    include <ws2tcpip.h>
+#    include <Windows.h>
 
 namespace spk::NetworkInternal
 {
