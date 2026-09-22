@@ -37,10 +37,11 @@ namespace spk
 			{
 				throw Exception("RemoteNodeEndpoint received a non-request envelope.");
 			}
-			_requests.publish(RemoteRequest{
+			RemoteRequest request{
 				received.emitter,
 				envelope.route,
-				std::move(envelope.message)});
+				std::move(envelope.message)};
+			_requests.publish(std::move(request));
 		}
 	}
 
