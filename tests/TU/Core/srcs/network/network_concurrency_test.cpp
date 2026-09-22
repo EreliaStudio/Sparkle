@@ -10,6 +10,7 @@
 #include <chrono>
 #include <cstdint>
 #include <cstring>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -391,4 +392,57 @@ TEST(NetworkConcurrencyTest, ServerCanStopFromConnectionCallback)
 		return !server.isRunning() && !client.isConnected();
 	}));
 	server.stop();
+}
+
+TEST(NetworkConcurrencyTest, ManyClientsConnectAndExchangeConcurrently)
+{
+	constexpr std::uint32_t ClientCount = 16;
+	spk::Server server;
+	server.start(0);
+
+	std::array<std::unique_ptr<spk::Client>, ClientCount> clients;
+	std::array<std::vector<spk::Message>, ClientCount> responses;
+	NetworkTestUtils::ThreadFailure failure;
+	std::vector<std::jthread> threads;
+	for (std::uint32_t index = 0; index < ClientCount; ++index)
+	{
+		clients[index] = std::make_unique<spk::Client>();
+		threads.emplace_back([&, index] {
+			failure.run([&, index] {
+				clients[index]->connect("127.0.0.1", server.port());
+				spk::Message message(29);
+				message << index;
+				clients[index]->send(message);
+				responses[index] = NetworkTestUtils::collect(clients[index]->messages(), 1, 5s);
+			});
+		});
+	}
+
+	auto requests = NetworkTestUtils::collect(server.messages(), ClientCount, 5s);
+	ASSERT_EQ(requests.size(), ClientCount);
+	for (spk::ReceivedMessage &request : requests)
+	{
+		const std::uint32_t index = request.message.get<std::uint32_t>();
+		ASSERT_LT(index, ClientCount);
+		spk::Message response(30);
+		response << index;
+		server.sendTo(request.emitter, response);
+	}
+
+	for (auto &thread : threads)
+	{
+		thread.join();
+	}
+	for (auto &client : clients)
+	{
+		client->disconnect();
+	}
+	server.stop();
+
+	ASSERT_NO_THROW(failure.rethrow());
+	for (std::uint32_t index = 0; index < ClientCount; ++index)
+	{
+		ASSERT_EQ(responses[index].size(), 1u);
+		EXPECT_EQ(responses[index].front().get<std::uint32_t>(), index);
+	}
 }
