@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cstdint>
 #include <memory>
 #include <thread>
@@ -96,6 +97,10 @@ TEST(NetworkStressTest, BroadcastBurstPreservesOrderForEveryClient)
 	constexpr std::uint32_t ClientCount = 8;
 	constexpr std::uint32_t MessageCount = 100;
 	spk::Server server;
+	std::atomic_uint32_t connected = 0;
+	auto contract = server.subscribeToConnection([&](spk::ConnectionID) {
+		++connected;
+	});
 	server.start(0);
 
 	std::array<std::unique_ptr<spk::Client>, ClientCount> clients;
@@ -104,6 +109,10 @@ TEST(NetworkStressTest, BroadcastBurstPreservesOrderForEveryClient)
 		client = std::make_unique<spk::Client>();
 		client->connect("127.0.0.1", server.port());
 	}
+
+	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
+		return connected.load() == ClientCount;
+	}, 5s));
 
 	for (std::uint32_t sequence = 0; sequence < MessageCount; ++sequence)
 	{
@@ -154,9 +163,17 @@ TEST(NetworkStressTest, DisconnectingOneClientDuringBroadcastDoesNotBreakOthers)
 	spk::Server server;
 	spk::Client disconnected;
 	spk::Client survivor;
+	std::atomic_uint32_t connected = 0;
+	auto contract = server.subscribeToConnection([&](spk::ConnectionID) {
+		++connected;
+	});
 	server.start(0);
 	disconnected.connect("127.0.0.1", server.port());
 	survivor.connect("127.0.0.1", server.port());
+
+	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
+		return connected.load() == 2;
+	}, 5s));
 
 	for (std::uint32_t sequence = 0; sequence < MessageCount / 2; ++sequence)
 	{
