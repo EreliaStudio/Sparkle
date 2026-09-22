@@ -3,21 +3,18 @@
 #include "exception.hpp"
 
 #include <algorithm>
-#include <array>
 #include <cerrno>
 #include <climits>
-#include <cstring>
 #include <string>
-#include <utility>
 
 #ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #else
 #include <arpa/inet.h>
+#include <fcntl.h>
 #include <netdb.h>
 #include <netinet/in.h>
-#include <poll.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #endif
@@ -55,6 +52,11 @@ namespace spk::NetworkInternal
 			(void)runtime;
 		}
 
+		[[nodiscard]] SystemSocket createSystemSocket(int family)
+		{
+			return ::WSASocketW(family, SOCK_STREAM, IPPROTO_TCP, nullptr, 0, WSA_FLAG_OVERLAPPED);
+		}
+
 		[[nodiscard]] int lastSocketError() noexcept
 		{
 			return ::WSAGetLastError();
@@ -77,6 +79,11 @@ namespace spk::NetworkInternal
 		{
 		}
 
+		[[nodiscard]] SystemSocket createSystemSocket(int family)
+		{
+			return ::socket(family, SOCK_STREAM, IPPROTO_TCP);
+		}
+
 		[[nodiscard]] int lastSocketError() noexcept
 		{
 			return errno;
@@ -93,9 +100,9 @@ namespace spk::NetworkInternal
 		}
 #endif
 
-		[[nodiscard]] SystemSocket createTCP(int family)
+		[[nodiscard]] SystemSocket checkedTCP(int family)
 		{
-			const SystemSocket socket = ::socket(family, SOCK_STREAM, IPPROTO_TCP);
+			const SystemSocket socket = createSystemSocket(family);
 			if (socket == InvalidSystemSocket)
 			{
 				throw Exception("Unable to create TCP socket [" + std::to_string(lastSocketError()) + "].");
@@ -143,6 +150,17 @@ namespace spk::NetworkInternal
 		return *this;
 	}
 
+	Socket Socket::createTCPv4()
+	{
+		ensureSocketRuntime();
+		return adopt(static_cast<NativeHandle>(checkedTCP(AF_INET)));
+	}
+
+	Socket Socket::adopt(NativeHandle handle) noexcept
+	{
+		return Socket(handle);
+	}
+
 	Socket Socket::connectTCP(std::string_view address, std::uint16_t port)
 	{
 		ensureSocketRuntime();
@@ -155,24 +173,22 @@ namespace spk::NetworkInternal
 		addrinfo *addresses = nullptr;
 		const std::string host(address);
 		const std::string service = portString(port);
-		const int result = ::getaddrinfo(host.c_str(), service.c_str(), &hints, &addresses);
-		if (result != 0)
+		if (::getaddrinfo(host.c_str(), service.c_str(), &hints, &addresses) != 0)
 		{
 			throw Exception("Unable to resolve network address [" + host + "].");
 		}
 
 		for (addrinfo *entry = addresses; entry != nullptr; entry = entry->ai_next)
 		{
-			const SystemSocket candidate = ::socket(entry->ai_family, entry->ai_socktype, entry->ai_protocol);
+			const SystemSocket candidate = createSystemSocket(entry->ai_family);
 			if (candidate == InvalidSystemSocket)
 			{
 				continue;
 			}
-
 			if (::connect(candidate, entry->ai_addr, static_cast<int>(entry->ai_addrlen)) == 0)
 			{
 				::freeaddrinfo(addresses);
-				return Socket(static_cast<NativeHandle>(candidate));
+				return adopt(static_cast<NativeHandle>(candidate));
 			}
 			closeSystemSocket(candidate);
 		}
@@ -183,10 +199,8 @@ namespace spk::NetworkInternal
 
 	Socket Socket::listenTCP(std::uint16_t port)
 	{
-		ensureSocketRuntime();
-
-		const SystemSocket handle = createTCP(AF_INET);
-		Socket result(static_cast<NativeHandle>(handle));
+		Socket result = createTCPv4();
+		const SystemSocket handle = static_cast<SystemSocket>(result.nativeHandle());
 
 		int reuse = 1;
 #ifdef _WIN32
@@ -213,13 +227,13 @@ namespace spk::NetworkInternal
 
 	Socket Socket::accept() const
 	{
-		const SystemSocket handle = static_cast<SystemSocket>(_nativeHandle());
+		const SystemSocket handle = static_cast<SystemSocket>(nativeHandle());
 		const SystemSocket accepted = ::accept(handle, nullptr, nullptr);
 		if (accepted == InvalidSystemSocket)
 		{
 			throw Exception("Unable to accept TCP connection [" + std::to_string(lastSocketError()) + "].");
 		}
-		return Socket(static_cast<NativeHandle>(accepted));
+		return adopt(static_cast<NativeHandle>(accepted));
 	}
 
 	std::uint16_t Socket::localPort() const
@@ -230,7 +244,7 @@ namespace spk::NetworkInternal
 #else
 		socklen_t size = sizeof(address);
 #endif
-		const SystemSocket handle = static_cast<SystemSocket>(_nativeHandle());
+		const SystemSocket handle = static_cast<SystemSocket>(nativeHandle());
 		if (::getsockname(handle, reinterpret_cast<sockaddr *>(&address), &size) != 0)
 		{
 			throw Exception("Unable to query TCP socket port [" + std::to_string(lastSocketError()) + "].");
@@ -238,15 +252,37 @@ namespace spk::NetworkInternal
 		return ntohs(address.sin_port);
 	}
 
+	void Socket::setNonBlocking(bool value) const
+	{
+		const SystemSocket handle = static_cast<SystemSocket>(nativeHandle());
+#ifdef _WIN32
+		u_long mode = value ? 1UL : 0UL;
+		if (::ioctlsocket(handle, FIONBIO, &mode) != 0)
+		{
+			throw Exception("Unable to configure TCP socket blocking mode [" + std::to_string(lastSocketError()) + "].");
+		}
+#else
+		const int flags = ::fcntl(handle, F_GETFL, 0);
+		if (flags < 0)
+		{
+			throw Exception("Unable to query TCP socket flags [" + std::to_string(lastSocketError()) + "].");
+		}
+		const int updated = value ? flags | O_NONBLOCK : flags & ~O_NONBLOCK;
+		if (::fcntl(handle, F_SETFL, updated) != 0)
+		{
+			throw Exception("Unable to configure TCP socket blocking mode [" + std::to_string(lastSocketError()) + "].");
+		}
+#endif
+	}
+
 	void Socket::sendAll(std::span<const std::byte> data) const
 	{
 		std::size_t offset = 0;
-		const SystemSocket handle = static_cast<SystemSocket>(_nativeHandle());
-
+		const SystemSocket handle = static_cast<SystemSocket>(nativeHandle());
 		while (offset < data.size())
 		{
-			const std::size_t remaining = data.size() - offset;
-			const int requested = static_cast<int>(std::min<std::size_t>(remaining, INT_MAX));
+			const int requested = static_cast<int>(
+				std::min<std::size_t>(data.size() - offset, INT_MAX));
 #ifdef _WIN32
 			const int sent = ::send(
 				handle,
@@ -265,7 +301,6 @@ namespace spk::NetworkInternal
 				offset += static_cast<std::size_t>(sent);
 				continue;
 			}
-
 			const int error = lastSocketError();
 			if (sent < 0 && interrupted(error))
 			{
@@ -282,10 +317,11 @@ namespace spk::NetworkInternal
 			return {};
 		}
 
-		const SystemSocket handle = static_cast<SystemSocket>(_nativeHandle());
+		const SystemSocket handle = static_cast<SystemSocket>(nativeHandle());
 		while (true)
 		{
-			const int requested = static_cast<int>(std::min<std::size_t>(buffer.size(), INT_MAX));
+			const int requested = static_cast<int>(
+				std::min<std::size_t>(buffer.size(), INT_MAX));
 #ifdef _WIN32
 			const int received = ::recv(
 				handle,
@@ -307,7 +343,6 @@ namespace spk::NetworkInternal
 			{
 				return ReceiveResult{0, true};
 			}
-
 			const int error = lastSocketError();
 			if (interrupted(error))
 			{
@@ -350,68 +385,8 @@ namespace spk::NetworkInternal
 		return _handle.load() != InvalidHandle;
 	}
 
-	Socket::NativeHandle Socket::_nativeHandle() const noexcept
+	Socket::NativeHandle Socket::nativeHandle() const noexcept
 	{
 		return _handle.load();
-	}
-
-	std::vector<std::size_t> waitReadable(
-		std::span<const Socket *const> sockets,
-		std::chrono::milliseconds timeout)
-	{
-		ensureSocketRuntime();
-		std::vector<std::size_t> result;
-		if (sockets.empty())
-		{
-			return result;
-		}
-
-#ifdef _WIN32
-		std::vector<WSAPOLLFD> descriptors(sockets.size());
-		for (std::size_t index = 0; index < sockets.size(); ++index)
-		{
-			descriptors[index].fd = static_cast<SOCKET>(sockets[index]->_nativeHandle());
-			descriptors[index].events = POLLRDNORM;
-		}
-
-		const int pollResult = ::WSAPoll(
-			descriptors.data(),
-			static_cast<ULONG>(descriptors.size()),
-			static_cast<int>(timeout.count()));
-#else
-		std::vector<pollfd> descriptors(sockets.size());
-		for (std::size_t index = 0; index < sockets.size(); ++index)
-		{
-			descriptors[index].fd = sockets[index]->_nativeHandle();
-			descriptors[index].events = POLLIN;
-		}
-
-		const int pollResult = ::poll(
-			descriptors.data(),
-			descriptors.size(),
-			static_cast<int>(timeout.count()));
-#endif
-		if (pollResult < 0)
-		{
-			const int error = lastSocketError();
-			if (interrupted(error))
-			{
-				return result;
-			}
-			throw Exception("Unable to poll TCP sockets [" + std::to_string(error) + "].");
-		}
-		if (pollResult == 0)
-		{
-			return result;
-		}
-
-		for (std::size_t index = 0; index < descriptors.size(); ++index)
-		{
-			if (descriptors[index].revents != 0)
-			{
-				result.push_back(index);
-			}
-		}
-		return result;
 	}
 }
