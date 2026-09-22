@@ -37,6 +37,8 @@ namespace spk::NetworkInternal
 		constexpr std::uint64_t ConnectionTokenOffset = 2;
 		constexpr std::size_t EventBatchSize = 128;
 		constexpr std::size_t ReceptionBufferSize = 64u * 1024u;
+		constexpr std::size_t MaximumQueuedBytes = 64u * 1024u * 1024u;
+		constexpr std::size_t WriteBudget = 256u * 1024u;
 
 		struct Session
 		{
@@ -45,6 +47,7 @@ namespace spk::NetworkInternal
 			std::vector<std::byte> receivedBytes;
 			std::deque<Frame> outgoing;
 			std::size_t outgoingOffset = 0;
+			std::size_t queuedBytes = 0;
 
 			Session(ConnectionID id, Socket socket) :
 				id(id),
@@ -271,7 +274,8 @@ namespace spk::NetworkInternal
 
 			void _flushSession(const std::shared_ptr<Session> &session)
 			{
-				while (!session->outgoing.empty())
+				std::size_t budget = WriteBudget;
+				while (!session->outgoing.empty() && budget != 0)
 				{
 					const Frame &frame = session->outgoing.front();
 					const auto sent = _send(*session, *frame);
@@ -286,13 +290,15 @@ namespace spk::NetworkInternal
 						return;
 					}
 					session->outgoingOffset += *sent;
+					session->queuedBytes -= *sent;
+					budget = *sent >= budget ? 0 : budget - *sent;
 					if (session->outgoingOffset == frame->size())
 					{
 						session->outgoing.pop_front();
 						session->outgoingOffset = 0;
 					}
 				}
-				_modify(*session, false);
+				_modify(*session, !session->outgoing.empty());
 			}
 
 			[[nodiscard]] std::optional<std::size_t> _send(
@@ -326,7 +332,13 @@ namespace spk::NetworkInternal
 
 			void _queueFrame(const std::shared_ptr<Session> &session, Frame frame)
 			{
+				if (frame->size() > MaximumQueuedBytes - session->queuedBytes)
+				{
+					_disconnect(session->id);
+					return;
+				}
 				const bool wasEmpty = session->outgoing.empty();
+				session->queuedBytes += frame->size();
 				session->outgoing.push_back(std::move(frame));
 				if (wasEmpty)
 				{
@@ -488,11 +500,6 @@ namespace spk::NetworkInternal
 					return;
 				}
 				const auto session = iterator->second;
-				if ((events & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) != 0)
-				{
-					_disconnect(id);
-					return;
-				}
 				if ((events & EPOLLIN) != 0)
 				{
 					_readSession(session);
@@ -507,6 +514,11 @@ namespace spk::NetworkInternal
 					{
 						_disconnect(id);
 					}
+				}
+				if (_sessions.contains(id) &&
+					(events & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) != 0)
+				{
+					_disconnect(id);
 				}
 			}
 
