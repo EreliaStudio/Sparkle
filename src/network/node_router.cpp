@@ -2,6 +2,7 @@
 
 #include "exception.hpp"
 
+#include <iterator>
 #include <utility>
 
 namespace spk
@@ -22,9 +23,9 @@ namespace spk
 		{
 			throw Exception("A network node named [" + name + "] already exists.");
 		}
-		for (const auto &[existingName, existingNode] : _nodes)
+		for (const auto &entry : _nodes)
 		{
-			if (existingNode == &node)
+			if (entry.second == &node)
 			{
 				throw Exception("The same network node cannot be registered twice.");
 			}
@@ -100,9 +101,9 @@ namespace spk
 
 	void NodeRouter::_dispatchOutgoing()
 	{
-		for (const auto &[name, node] : _nodes)
+		for (const auto &entry : _nodes)
 		{
-			_dispatchOutgoing(*node);
+			_dispatchOutgoing(*entry.second);
 		}
 	}
 
