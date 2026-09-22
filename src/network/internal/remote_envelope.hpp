@@ -60,8 +60,7 @@ namespace spk::NetworkInternal
 		std::uint16_t result = 0;
 		for (std::size_t index = 0; index < 2; ++index)
 		{
-			result |= static_cast<std::uint16_t>(std::to_integer<std::uint8_t>(source[index]))
-				<< (index * 8u);
+			result |= static_cast<std::uint16_t>(std::to_integer<std::uint8_t>(source[index])) << (index * 8u);
 		}
 		return result;
 	}
@@ -71,8 +70,7 @@ namespace spk::NetworkInternal
 		std::uint32_t result = 0;
 		for (std::size_t index = 0; index < 4; ++index)
 		{
-			result |= static_cast<std::uint32_t>(std::to_integer<std::uint8_t>(source[index]))
-				<< (index * 8u);
+			result |= static_cast<std::uint32_t>(std::to_integer<std::uint8_t>(source[index])) << (index * 8u);
 		}
 		return result;
 	}
@@ -82,8 +80,7 @@ namespace spk::NetworkInternal
 		std::uint64_t result = 0;
 		for (std::size_t index = 0; index < 8; ++index)
 		{
-			result |= static_cast<std::uint64_t>(std::to_integer<std::uint8_t>(source[index]))
-				<< (index * 8u);
+			result |= static_cast<std::uint64_t>(std::to_integer<std::uint8_t>(source[index])) << (index * 8u);
 		}
 		return result;
 	}
