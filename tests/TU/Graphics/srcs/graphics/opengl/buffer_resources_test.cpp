@@ -78,6 +78,34 @@ namespace
 			return _view;
 		}
 	};
+
+	class DerivedUniformBuffer : public spk::UniformBuffer
+	{
+	public:
+		struct Data
+		{
+			float value;
+		};
+
+	private:
+		Data *_view = nullptr;
+
+	public:
+		DerivedUniformBuffer() :
+			UniformBuffer(0, sizeof(Data)),
+			_view(&cast<Data>())
+		{
+		}
+
+		[[nodiscard]] Data &view() noexcept
+		{
+			return *_view;
+		}
+		[[nodiscard]] const Data &view() const noexcept
+		{
+			return *_view;
+		}
+	};
 }
 
 TEST(VertexBufferTest, MixedLayoutResolvesOffsetsStrideAndConfigurationGeneration)
@@ -239,6 +267,24 @@ TEST(UniformBufferTest, DefaultZeroSizeAndWrongSizesHaveDefinedBehavior)
 	EXPECT_THROW(buffer.setData(std::vector<std::byte>(5)), std::invalid_argument);
 	EXPECT_THROW(buffer.setData(std::uint64_t{7}), std::logic_error);
 	EXPECT_THROW((void)buffer.cast<std::uint64_t>(), std::logic_error);
+}
+
+TEST(UniformBufferTest, DerivedResourceRetainsTypedViewAndSharesStateWhenCopied)
+{
+	DerivedUniformBuffer source;
+	source.view().value = 12.0f;
+
+	auto copy = source;
+	DerivedUniformBuffer assigned;
+	assigned = source;
+	EXPECT_EQ(copy.identifier(), source.identifier());
+	EXPECT_EQ(assigned.identifier(), source.identifier());
+	EXPECT_EQ(&copy.view(), &source.view());
+	EXPECT_EQ(&assigned.view(), &source.view());
+
+	copy.view().value = 42.0f;
+	EXPECT_FLOAT_EQ(source.view().value, 42.0f);
+	EXPECT_FLOAT_EQ(assigned.view().value, 42.0f);
 }
 
 TEST(ShaderStorageBufferTest, FixedAndDynamicCpuViewsGpuRetrievalAndBindingRoundTrip)

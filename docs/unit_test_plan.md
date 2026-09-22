@@ -483,6 +483,13 @@ Public data-only records and enums are tested with the class that consumes them.
 - **[throws `std::invalid_argument`]** Raw data size differs from allocation.
 - **[throws `std::logic_error`]** Typed set/get/retrieve size differs from the requested type.
 
+### `spk::Uniform`
+
+- **Standard usage:** store one classic GLSL scalar/vector/matrix uniform, edit it through typed access, activate it after its program, and verify the linked uniform value.
+- Cover every supported scalar/vector/matrix type, missing optimized-out uniforms, derived typed resources, and active-program requirements.
+- **[throws `std::invalid_argument`]** Empty uniform name.
+- **[throws `std::logic_error`]** Activation without an active program, or typed access/set using a different type than the one configured at construction.
+
 ### `spk::ShaderStorageBuffer`
 
 - **Standard usage:** configure fixed plus dynamic parts, set typed data, resize, edit through CPU views, retrieve a GPU view, and verify binding/alignment.

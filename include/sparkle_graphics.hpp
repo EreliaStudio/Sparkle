@@ -33,6 +33,7 @@
 #include "graphics/opengl/sampler.hpp"
 #include "graphics/opengl/shader_storage_buffer.hpp"
 #include "graphics/opengl/texture.hpp"
+#include "graphics/opengl/uniform.hpp"
 #include "graphics/opengl/uniform_buffer.hpp"
 #include "graphics/opengl/vertex_array.hpp"
 #include "graphics/opengl/vertex_buffer.hpp"
