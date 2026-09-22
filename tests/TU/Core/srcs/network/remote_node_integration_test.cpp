@@ -183,8 +183,7 @@ TEST(RemoteNodeIntegrationTest, EndpointRejectsOrdinaryClientMessages)
 		{
 			endpoint.dispatch();
 			return false;
-		}
-		catch (const spk::Exception &)
+		} catch (const spk::Exception &)
 		{
 			return true;
 		}
