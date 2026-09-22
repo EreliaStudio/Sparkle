@@ -27,7 +27,9 @@ int main()
 	spk::UpdateContext updateContext{
 		.time = std::chrono::steady_clock::duration{},
 		.deltaTime = std::chrono::milliseconds(16)};
-	spk::DeviceContext deviceContext;
+	spk::Keyboard keyboard;
+	spk::Mouse mouse;
+	spk::DeviceContext deviceContext{keyboard, mouse};
 
 	renderingEngine.updateState(updateContext, deviceContext);
 	return system.updates == 1 ? 0 : 1;
