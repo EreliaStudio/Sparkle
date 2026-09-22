@@ -5,6 +5,8 @@
 #include <array>
 #include <cstdint>
 #include <string>
+#include <type_traits>
+#include <utility>
 
 #include "graphics/opengl/program.hpp"
 #include "graphics/opengl/uniform.hpp"
@@ -46,18 +48,10 @@ layout(location = 0) out vec4 outputColor;
 void main() { outputColor = vec4(1.0); }
 )";
 
-	class FloatUniform : public spk::Uniform
+	class FloatUniform : public spk::Uniform<float>
 	{
 	public:
-		FloatUniform(std::string name, float value) :
-			Uniform(std::move(name), value)
-		{
-		}
-
-		[[nodiscard]] float &value()
-		{
-			return cast<float>();
-		}
+		using Uniform::Uniform;
 	};
 
 	[[nodiscard]] GLuint activeProgram()
@@ -68,17 +62,19 @@ void main() { outputColor = vec4(1.0); }
 	}
 }
 
-TEST(UniformTest, TypedDataCanBeEditedAndDerivedWithoutChangingItsType)
+TEST(UniformTest, TypeIsDeclaredAtCompileTimeAndDataIsDirectlyEditable)
 {
+	static_assert(std::is_same_v<spk::Uniform<std::uint32_t>::Data, std::uint32_t>);
+	static_assert(std::is_same_v<spk::Uniform<float_t>::Data, float_t>);
+	static_assert(std::is_same_v<spk::Uniform<spk::Vector3>::Data, spk::Vector3>);
+
 	FloatUniform uniform("uFloat", 1.0f);
 	EXPECT_EQ(uniform.name(), "uFloat");
-	EXPECT_FLOAT_EQ(uniform.value(), 1.0f);
-	uniform.value() = 2.0f;
+	EXPECT_FLOAT_EQ(uniform.data(), 1.0f);
+	uniform.data() = 2.0f;
 	uniform.setData(3.0f);
-	EXPECT_FLOAT_EQ(std::as_const(uniform).cast<float>(), 3.0f);
-	EXPECT_THROW((void)uniform.cast<std::int32_t>(), std::logic_error);
-	EXPECT_THROW(uniform.setData(std::int32_t{4}), std::logic_error);
-	EXPECT_THROW((void)spk::Uniform("", 1.0f), std::invalid_argument);
+	EXPECT_FLOAT_EQ(std::as_const(uniform).data(), 3.0f);
+	EXPECT_THROW((void)spk::Uniform<float>(""), std::invalid_argument);
 }
 
 TEST(UniformTest, EverySupportedTypeActivatesOnTheCurrentProgram)
@@ -88,22 +84,22 @@ TEST(UniformTest, EverySupportedTypeActivatesOnTheCurrentProgram)
 	spk::Program program(UniformVertexShader, UniformFragmentShader);
 	program.activate(openGL.renderContext());
 
-	spk::Uniform uBool("uBool", true);
-	spk::Uniform uInt("uInt", std::int32_t{-2});
-	spk::Uniform uUInt("uUInt", std::uint32_t{3});
-	spk::Uniform uFloat("uFloat", 4.5f);
-	spk::Uniform uVec2("uVec2", spk::Vector2{1.0f, 2.0f});
-	spk::Uniform uIVec2("uIVec2", spk::Vector2Int{3, 4});
-	spk::Uniform uUVec2("uUVec2", spk::Vector2UInt{5, 6});
-	spk::Uniform uVec3("uVec3", spk::Vector3{7.0f, 8.0f, 9.0f});
-	spk::Uniform uIVec3("uIVec3", spk::Vector3Int{10, 11, 12});
-	spk::Uniform uUVec3("uUVec3", spk::Vector3UInt{13, 14, 15});
-	spk::Uniform uVec4("uVec4", spk::Vector4{16.0f, 17.0f, 18.0f, 19.0f});
-	spk::Uniform uIVec4("uIVec4", spk::Vector4Int{20, 21, 22, 23});
-	spk::Uniform uUVec4("uUVec4", spk::Vector4UInt{24, 25, 26, 27});
-	spk::Uniform uMat2("uMat2", spk::Matrix2x2::identity());
-	spk::Uniform uMat3("uMat3", spk::Matrix3x3::identity());
-	spk::Uniform uMat4("uMat4", spk::Matrix4x4::identity());
+	spk::Uniform<bool> uBool("uBool", true);
+	spk::Uniform<std::int32_t> uInt("uInt", -2);
+	spk::Uniform<std::uint32_t> uUInt("uUInt", 3u);
+	spk::Uniform<float_t> uFloat("uFloat", 4.5f);
+	spk::Uniform<spk::Vector2> uVec2("uVec2", {1.0f, 2.0f});
+	spk::Uniform<spk::Vector2Int> uIVec2("uIVec2", {3, 4});
+	spk::Uniform<spk::Vector2UInt> uUVec2("uUVec2", {5, 6});
+	spk::Uniform<spk::Vector3> uVec3("uVec3", {7.0f, 8.0f, 9.0f});
+	spk::Uniform<spk::Vector3Int> uIVec3("uIVec3", {10, 11, 12});
+	spk::Uniform<spk::Vector3UInt> uUVec3("uUVec3", {13, 14, 15});
+	spk::Uniform<spk::Vector4> uVec4("uVec4", {16.0f, 17.0f, 18.0f, 19.0f});
+	spk::Uniform<spk::Vector4Int> uIVec4("uIVec4", {20, 21, 22, 23});
+	spk::Uniform<spk::Vector4UInt> uUVec4("uUVec4", {24, 25, 26, 27});
+	spk::Uniform<spk::Matrix2x2> uMat2("uMat2", spk::Matrix2x2::identity());
+	spk::Uniform<spk::Matrix3x3> uMat3("uMat3", spk::Matrix3x3::identity());
+	spk::Uniform<spk::Matrix4x4> uMat4("uMat4", spk::Matrix4x4::identity());
 
 	uBool.activate();
 	uInt.activate();
@@ -153,7 +149,7 @@ TEST(UniformTest, ActivationRequiresAProgramAndMissingUniformIsIgnored)
 {
 	auto &openGL = sparkle_test::OpenGLTestContext::instance();
 	openGL.reset();
-	spk::Uniform uniform("missing", 1.0f);
+	spk::Uniform<float> uniform("missing", 1.0f);
 	EXPECT_THROW(uniform.activate(), std::logic_error);
 
 	spk::Program program(UniformVertexShader, UniformFragmentShader);
