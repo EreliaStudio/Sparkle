@@ -15,7 +15,7 @@ namespace spk
 
 	public:
 		void receive(ReceivedMessage message) override;
-		[[nodiscard]] OutgoingQueue &outgoing() noexcept override;
+		[[nodiscard]] OutgoingQueue &outgoing() override;
 		[[nodiscard]] IncomingQueue &incoming() noexcept;
 
 		void sendTo(ConnectionID connection, Message message);
