@@ -25,7 +25,8 @@ namespace spk
 
 		template <typename TValue>
 		static constexpr bool _wireScalar =
-			std::integral<TValue> || std::floating_point<TValue> || std::is_enum_v<TValue>;
+			std::integral<TValue> || std::is_enum_v<TValue> ||
+			(std::floating_point<TValue> && (sizeof(TValue) == 4 || sizeof(TValue) == 8));
 
 		template <std::unsigned_integral TValue>
 		void _appendUnsigned(TValue value)
