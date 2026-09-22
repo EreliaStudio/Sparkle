@@ -8,6 +8,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "core/platform/window.hpp"
 #include "graphics/opengl/program.hpp"
 #include "graphics/opengl/uniform.hpp"
 #include "sparkle_test/open_gl_test_context.hpp"
@@ -67,6 +68,41 @@ void main() { outputColor = vec4(1.0); }
 		::glGetUniformfv(program, ::glGetUniformLocation(program, name), &value);
 		return value;
 	}
+
+	class SecondaryOpenGLContext
+	{
+	private:
+		spk::WinAPI::Window::Class _windowClass{"Sparkle_Uniform_Secondary_Context"};
+		spk::Window::Native _native{"UniformSecondaryNative"};
+		spk::Window::Surface _surface{"UniformSecondarySurface"};
+		spk::RenderContext _context{.targetSurface = &_surface};
+
+	public:
+		SecondaryOpenGLContext()
+		{
+			spk::WinAPI::Window::CreationInfo creation;
+			creation.title = "Sparkle uniform secondary context";
+			creation.width = 64;
+			creation.height = 64;
+			creation.visible = false;
+			_native.window().create(_windowClass, creation);
+			_surface.create(_native.window());
+			_surface.setGeometry({.anchor = {0, 0}, .size = {64, 64}});
+		}
+
+		~SecondaryOpenGLContext()
+		{
+			_surface.makeCurrent();
+			_surface.destroy();
+			_native.window().destroy();
+		}
+
+		[[nodiscard]] spk::RenderContext &context()
+		{
+			_surface.makeCurrent();
+			return _context;
+		}
+	};
 }
 
 TEST(UniformTest, TypeIsDeclaredAtCompileTimeAndDataIsDirectlyEditable)
@@ -152,6 +188,73 @@ TEST(UniformTest, EverySupportedTypeActivatesOnTheCurrentProgram)
 	EXPECT_FLOAT_EQ(matrixValue[15], 1.0f);
 }
 
+
+TEST(UniformTest, RepeatedActivationUpdatesTheResolvedBinding)
+{
+	auto &openGL = sparkle_test::OpenGLTestContext::instance();
+	openGL.reset();
+	auto &context = openGL.renderContext();
+	spk::Program program(UniformVertexShader, UniformFragmentShader);
+	spk::Uniform<float> uniform("uFloat", 1.0f);
+	program.activate(context);
+	const GLuint identifier = activeProgram();
+
+	uniform.activate(context);
+	EXPECT_FLOAT_EQ(uniformFloat(identifier, "uFloat"), 1.0f);
+
+	uniform.setData(6.0f);
+	uniform.activate(context);
+	EXPECT_FLOAT_EQ(uniformFloat(identifier, "uFloat"), 6.0f);
+}
+
+TEST(UniformTest, BindingCacheIsIndependentForEachSurface)
+{
+	auto &shared = sparkle_test::OpenGLTestContext::instance();
+	shared.reset();
+	auto &sharedContext = shared.renderContext();
+	spk::Program program(UniformVertexShader, UniformFragmentShader);
+	spk::Uniform<float> uniform("uFloat", 1.0f);
+
+	program.activate(sharedContext);
+	const GLuint sharedProgram = activeProgram();
+	uniform.activate(sharedContext);
+	EXPECT_FLOAT_EQ(uniformFloat(sharedProgram, "uFloat"), 1.0f);
+
+	{
+		SecondaryOpenGLContext secondary;
+		auto &secondaryContext = secondary.context();
+		program.activate(secondaryContext);
+		const GLuint secondaryProgram = activeProgram();
+		uniform.setData(2.0f);
+		uniform.activate(secondaryContext);
+		EXPECT_FLOAT_EQ(uniformFloat(secondaryProgram, "uFloat"), 2.0f);
+	}
+
+	shared.makeCurrent();
+	program.activate(sharedContext);
+	uniform.setData(3.0f);
+	uniform.activate(sharedContext);
+	EXPECT_FLOAT_EQ(uniformFloat(sharedProgram, "uFloat"), 3.0f);
+}
+
+TEST(UniformTest, ActiveProgramTrackingBelongsToEachRenderContext)
+{
+	auto &openGL = sparkle_test::OpenGLTestContext::instance();
+	openGL.reset();
+	spk::RenderContext first{.targetSurface = &openGL.surface()};
+	spk::RenderContext second{.targetSurface = &openGL.surface()};
+	spk::Program program(UniformVertexShader, UniformFragmentShader);
+	spk::Uniform<float> uniform("uFloat", 7.0f);
+
+	program.activate(first);
+	EXPECT_NO_THROW(uniform.activate(first));
+	EXPECT_THROW(uniform.activate(second), std::logic_error);
+
+	program.activate(second);
+	EXPECT_NO_THROW(uniform.activate(second));
+	EXPECT_FLOAT_EQ(uniformFloat(activeProgram(), "uFloat"), 7.0f);
+}
+
 TEST(UniformTest, TracksProgramsThroughTheRenderContext)
 {
 	auto &openGL = sparkle_test::OpenGLTestContext::instance();
@@ -213,16 +316,25 @@ TEST(UniformTest, ProgramHandleActivationUpdatesTheRenderContext)
 	EXPECT_FLOAT_EQ(uniformFloat(activeProgram(), "uFloat"), 5.0f);
 }
 
-TEST(UniformTest, ActivationRequiresAProgramAndMissingUniformIsIgnored)
+TEST(UniformTest, ActivationRequiresTargetSurfaceAndActiveProgram)
 {
 	auto &openGL = sparkle_test::OpenGLTestContext::instance();
 	openGL.reset();
-	spk::RenderContext inactiveContext{.targetSurface = &openGL.surface()};
-	spk::Uniform<float> uniform("missing", 1.0f);
-	EXPECT_THROW(uniform.activate(inactiveContext), std::logic_error);
+	spk::Uniform<float> uniform("uFloat", 1.0f);
+	spk::RenderContext noSurface{};
+	EXPECT_THROW(uniform.activate(noSurface), std::invalid_argument);
 
+	spk::RenderContext inactiveContext{.targetSurface = &openGL.surface()};
+	EXPECT_THROW(uniform.activate(inactiveContext), std::logic_error);
+}
+
+TEST(UniformTest, MissingUniformIsIgnored)
+{
+	auto &openGL = sparkle_test::OpenGLTestContext::instance();
+	openGL.reset();
 	auto &context = openGL.renderContext();
 	spk::Program program(UniformVertexShader, UniformFragmentShader);
+	spk::Uniform<float> uniform("missing", 1.0f);
 	program.activate(context);
 	EXPECT_NO_THROW(uniform.activate(context));
 	EXPECT_EQ(::glGetError(), GL_NO_ERROR);

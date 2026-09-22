@@ -7,6 +7,7 @@
 
 #include "exception.hpp"
 #include "graphics/opengl/program.hpp"
+#include "graphics/opengl/uniform.hpp"
 #include "sparkle_test/open_gl_test_context.hpp"
 
 namespace
@@ -23,6 +24,28 @@ void main()
 layout(location = 0) out vec4 outputColor;
 void main() { outputColor = vec4(1.0, 0.0, 0.0, 1.0); }
 )";
+
+	const std::string TrackedVertexShader = R"(#version 430 core
+uniform float uValue;
+void main()
+{
+	gl_Position = vec4(uValue * 0.000001, 0.0, 0.0, 1.0);
+}
+)";
+
+	[[nodiscard]] GLuint activeProgram()
+	{
+		GLint program = 0;
+		::glGetIntegerv(GL_CURRENT_PROGRAM, &program);
+		return static_cast<GLuint>(program);
+	}
+
+	[[nodiscard]] float uniformFloat(GLuint program, const char *name)
+	{
+		GLfloat value = 0.0f;
+		::glGetUniformfv(program, ::glGetUniformLocation(program, name), &value);
+		return value;
+	}
 
 	const std::string BindingVertexShader = R"(#version 430 core
 layout(std140) uniform TransformBlock { mat4 transform; };
@@ -74,6 +97,28 @@ TEST(ProgramTest, EmptyOrInvalidSourcesAreRejectedAtActivationWithDriverLog)
 	{
 		EXPECT_NE(std::string(exception.what()).find("shader compilation failed"), std::string::npos);
 	}
+}
+
+
+TEST(ProgramTest, FailedActivationPreservesRenderContextProgramSelection)
+{
+	auto &openGL = sparkle_test::OpenGLTestContext::instance();
+	openGL.reset();
+	auto &context = openGL.renderContext();
+	spk::Program valid(TrackedVertexShader, FragmentShader);
+	spk::Uniform<float> uniform("uValue", 1.0f);
+	valid.activate(context);
+	const GLuint validIdentifier = activeProgram();
+	uniform.activate(context);
+	EXPECT_FLOAT_EQ(uniformFloat(validIdentifier, "uValue"), 1.0f);
+
+	spk::Program invalid("not valid GLSL", FragmentShader);
+	EXPECT_THROW(invalid.activate(context), spk::Exception);
+	EXPECT_EQ(activeProgram(), validIdentifier);
+
+	uniform.setData(2.0f);
+	EXPECT_NO_THROW(uniform.activate(context));
+	EXPECT_FLOAT_EQ(uniformFloat(validIdentifier, "uValue"), 2.0f);
 }
 
 TEST(ProgramTest, UniformStorageAndSamplerBindingsReachLinkedProgram)
