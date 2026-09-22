@@ -13,3 +13,12 @@ Sparkle includes third-party material that retains its own license.
 - License text: `resources/fonts/LICENSE-Liberation.txt`
 
 Liberation Sans is bundled as the redistributable default sans-serif font. It is not licensed under Sparkle's MIT License.
+
+## Asio
+
+- Project: Asio
+- Upstream: https://think-async.com/Asio/
+- License: Boost Software License 1.0
+- Usage: portable networking backend used by Sparkle Core
+
+Asio is consumed as an external dependency and is not licensed under Sparkle's MIT License.
