@@ -371,9 +371,12 @@ TEST(NetworkConcurrencyTest, ServerStopDisconnectsConnectedClient)
 	client.connect("127.0.0.1", server.port());
 	server.stop();
 
-	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
-		return !client.isConnected();
+	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
+		return disconnected.load() == 1;
 	}));
+	EXPECT_FALSE(client.isConnected());
+
+	client.disconnect();
 	EXPECT_EQ(disconnected.load(), 1u);
 }
 
