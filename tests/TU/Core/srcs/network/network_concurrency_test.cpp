@@ -419,14 +419,19 @@ TEST(NetworkConcurrencyTest, ManyClientsConnectAndExchangeConcurrently)
 	}
 
 	auto requests = NetworkTestUtils::collect(server.messages(), ClientCount, 5s);
-	ASSERT_EQ(requests.size(), ClientCount);
-	for (spk::ReceivedMessage &request : requests)
+	if (requests.size() == ClientCount)
 	{
-		const std::uint32_t index = request.message.get<std::uint32_t>();
-		ASSERT_LT(index, ClientCount);
-		spk::Message response(30);
-		response << index;
-		server.sendTo(request.emitter, response);
+		for (spk::ReceivedMessage &request : requests)
+		{
+			const std::uint32_t index = request.message.get<std::uint32_t>();
+			if (index >= ClientCount)
+			{
+				continue;
+			}
+			spk::Message response(30);
+			response << index;
+			server.sendTo(request.emitter, response);
+		}
 	}
 
 	for (auto &thread : threads)
@@ -440,6 +445,7 @@ TEST(NetworkConcurrencyTest, ManyClientsConnectAndExchangeConcurrently)
 	server.stop();
 
 	ASSERT_NO_THROW(failure.rethrow());
+	ASSERT_EQ(requests.size(), ClientCount);
 	for (std::uint32_t index = 0; index < ClientCount; ++index)
 	{
 		ASSERT_EQ(responses[index].size(), 1u);
