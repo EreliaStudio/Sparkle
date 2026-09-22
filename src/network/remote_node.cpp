@@ -29,10 +29,11 @@ namespace spk
 			throw Exception("Unable to forward through a disconnected RemoteNode.");
 		}
 
-		_client.send(NetworkInternal::encodeRemoteEnvelope(
-			NetworkInternal::RemoteEnvelopeKind::Request,
-			message.emitter,
-			message.message));
+		_client.send(
+			NetworkInternal::encodeRemoteEnvelope(
+				NetworkInternal::RemoteEnvelopeKind::Request,
+				message.emitter,
+				message.message));
 	}
 
 	Node::OutgoingQueue &RemoteNode::outgoing()
@@ -51,9 +52,10 @@ namespace spk
 			{
 				throw Exception("RemoteNode received a non-response envelope.");
 			}
-			_outgoing.publish(OutgoingMessage::to(
-				envelope.route,
-				std::move(envelope.message)));
+			_outgoing.publish(
+				OutgoingMessage::to(
+					envelope.route,
+					std::move(envelope.message)));
 		}
 	}
 }
