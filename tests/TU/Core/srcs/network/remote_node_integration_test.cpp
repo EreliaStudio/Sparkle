@@ -210,3 +210,96 @@ TEST(RemoteNodeIntegrationTest, EndpointRejectsOrdinaryClientMessages)
 	client.disconnect();
 	endpoint.stop();
 }
+
+
+TEST(RemoteNodeIntegrationTest, TwoRoutersSharingEndpointKeepOriginConnectionsIndependent)
+{
+	spk::RemoteNode::Endpoint endpoint;
+	spk::RemoteNode firstRemote;
+	spk::RemoteNode secondRemote;
+	spk::NodeRouter firstRouter;
+	spk::NodeRouter secondRouter;
+	spk::Client firstClient;
+	spk::Client secondClient;
+	NetworkTestUtils::ThreadFailure failure;
+	std::atomic_bool running = true;
+
+	endpoint.start(0);
+	firstRemote.connect("127.0.0.1", endpoint.port());
+	secondRemote.connect("127.0.0.1", endpoint.port());
+
+	firstRouter.addNode("remote", firstRemote);
+	firstRouter.redirect(220, "remote");
+	firstRouter.start(0);
+	secondRouter.addNode("remote", secondRemote);
+	secondRouter.redirect(220, "remote");
+	secondRouter.start(0);
+
+	std::jthread firstRouterThread([&] {
+		runRemoteRouter(firstRouter, running, failure);
+	});
+	std::jthread secondRouterThread([&] {
+		runRemoteRouter(secondRouter, running, failure);
+	});
+	std::jthread firstRemoteThread([&] {
+		runRemoteNode(firstRemote, running, failure);
+	});
+	std::jthread secondRemoteThread([&] {
+		runRemoteNode(secondRemote, running, failure);
+	});
+
+	firstClient.connect("127.0.0.1", firstRouter.server().port());
+	secondClient.connect("127.0.0.1", secondRouter.server().port());
+
+	spk::Message firstRequest(220);
+	firstRequest << RemotePayload{10, 1};
+	firstClient.send(firstRequest);
+	spk::Message secondRequest(220);
+	secondRequest << RemotePayload{20, 2};
+	secondClient.send(secondRequest);
+
+	std::vector<spk::RemoteNode::Endpoint::Request> requests;
+	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
+		endpoint.dispatch();
+		std::vector<spk::RemoteNode::Endpoint::Request> batch;
+		endpoint.requests().drain(batch);
+		for (auto &request : batch)
+		{
+			requests.push_back(std::move(request));
+		}
+		return requests.size() == 2;
+	}, 5s));
+
+	ASSERT_EQ(requests.size(), 2u);
+	EXPECT_NE(requests[0].proxyConnection, requests[1].proxyConnection);
+	EXPECT_EQ(requests[0].originConnection, requests[1].originConnection);
+
+	for (const auto &request : requests)
+	{
+		const RemotePayload payload = request.message.peek<RemotePayload>();
+		spk::Message response(221);
+		response << payload;
+		endpoint.reply(request, std::move(response));
+	}
+
+	auto firstResponses = NetworkTestUtils::collect(firstClient.messages(), 1, 5s);
+	auto secondResponses = NetworkTestUtils::collect(secondClient.messages(), 1, 5s);
+	ASSERT_EQ(firstResponses.size(), 1u);
+	ASSERT_EQ(secondResponses.size(), 1u);
+	EXPECT_EQ(firstResponses.front().get<RemotePayload>().client, 10u);
+	EXPECT_EQ(secondResponses.front().get<RemotePayload>().client, 20u);
+
+	firstClient.disconnect();
+	secondClient.disconnect();
+	running = false;
+	firstRouterThread.join();
+	secondRouterThread.join();
+	firstRemoteThread.join();
+	secondRemoteThread.join();
+	firstRemote.disconnect();
+	secondRemote.disconnect();
+	firstRouter.stop();
+	secondRouter.stop();
+	endpoint.stop();
+	ASSERT_NO_THROW(failure.rethrow());
+}
