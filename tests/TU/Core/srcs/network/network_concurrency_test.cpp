@@ -4,9 +4,12 @@
 #include "network/server.hpp"
 #include "network_test_utils.hpp"
 
+#include <algorithm>
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
+#include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
