@@ -20,7 +20,7 @@ namespace sparkle_test
 			static std::atomic_uint64_t counter = 0;
 			const auto stamp = std::chrono::steady_clock::now().time_since_epoch().count();
 			return std::filesystem::temp_directory_path() /
-				("sparkle_tests_" + std::to_string(stamp) + "_" + std::to_string(counter.fetch_add(1)));
+				   ("sparkle_tests_" + std::to_string(stamp) + "_" + std::to_string(counter.fetch_add(1)));
 		}
 
 	public:

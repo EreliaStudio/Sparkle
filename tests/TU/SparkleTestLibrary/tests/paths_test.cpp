@@ -52,7 +52,6 @@ TEST(TestPathsTest, ConfiguresConsumerRootsAndRejectsEmptyPaths)
 	std::filesystem::remove_all(root);
 }
 
-
 TEST(TestPathsTest, FreshResultFilePathCreatesParentAndRemovesStaleFile)
 {
 	const auto path = sparkle_test::freshResultFilePath("logs", "application.log");

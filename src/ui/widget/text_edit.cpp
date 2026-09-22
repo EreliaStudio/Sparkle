@@ -5,7 +5,6 @@
 #include <utility>
 
 #include "core/context/update_context.hpp"
-#include "core/platform/clipboard.hpp"
 #include "geometry/color_mesh_2d.hpp"
 #include "rendering/command/draw_color_mesh_render_command.hpp"
 #include "rendering/command/nine_slice_render_command.hpp"
@@ -81,7 +80,16 @@ namespace spk
 	}
 
 	TextEdit::TextEdit(std::string name, Widget *parent) :
-		Widget(std::move(name), parent)
+		TextEdit(std::move(name), Clipboard::systemBackend(), parent)
+	{
+	}
+
+	TextEdit::TextEdit(
+		std::string name,
+		Clipboard::Backend &clipboardBackend,
+		Widget *parent) :
+		Widget(std::move(name), parent),
+		_clipboardBackend(clipboardBackend)
 	{
 		applyStyle(defaultStyle);
 		_updateSizeHint();
@@ -894,7 +902,7 @@ namespace spk
 		{
 			return false;
 		}
-		return Clipboard::writeText(selectedText());
+		return _clipboardBackend.writeText(selectedText());
 	}
 
 	bool TextEdit::cutSelection()
@@ -912,7 +920,7 @@ namespace spk
 		{
 			return false;
 		}
-		const auto text = Clipboard::readText();
+		const auto text = _clipboardBackend.readText();
 		return text.has_value() && _replaceSelection(*text);
 	}
 

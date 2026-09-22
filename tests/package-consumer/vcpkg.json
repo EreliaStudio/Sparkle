@@ -5,6 +5,7 @@
   "dependencies": [
     {
       "name": "erelia-sparkle",
+      "default-features": false,
       "features": [
         "test-library"
       ]

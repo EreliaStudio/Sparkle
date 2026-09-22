@@ -16,7 +16,7 @@ namespace spk
 {
 	class RenderContext;
 
-	class ShaderStorageBuffer final : public BufferGPUResource
+	class ShaderStorageBuffer : public BufferGPUResource
 	{
 	public:
 		template <typename TFixedPart, typename TDynamicElement>

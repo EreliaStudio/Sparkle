@@ -16,6 +16,7 @@
 #include "design_pattern/trait/name_trait.hpp"
 #include "design_pattern/trait/render_snapshot_contributor_trait.hpp"
 #include "design_pattern/trait/resizeable_trait.hpp"
+#include "design_pattern/trait/updatable_by_device_trait.hpp"
 #include "design_pattern/trait/updatable_trait.hpp"
 #include "graphics/color.hpp"
 #include "graphics/font.hpp"
@@ -27,6 +28,7 @@
 
 namespace spk
 {
+	struct DeviceContext;
 	struct UpdateContext;
 	class Image;
 	class SpriteSheet;
@@ -44,6 +46,7 @@ namespace spk
 				   public spk::EventDispatcher,
 				   public spk::GeometryStateTrait,
 				   public spk::UpdatableTrait,
+				   public spk::UpdatableByDeviceTrait,
 				   public spk::RenderSnapshotContributorTrait
 	{
 	public:
@@ -152,12 +155,14 @@ namespace spk
 
 		[[nodiscard]] bool _isAcceptingEvent() const override;
 		[[nodiscard]] bool _canUpdate() const override;
+		[[nodiscard]] bool _canUpdateByDevice() const override;
 		[[nodiscard]] bool _canBuildRenderSnapshot() const override;
 		void _propagateEvent(
 			const std::function<void(EventDispatcher *)> &callback) override;
 
 		void _buildViewRegionCommands(spk::RenderSnapshot::Builder &builder);
 		void _afterUpdate(UpdateContext &context) override final;
+		void _afterUpdate(UpdateContext &context, DeviceContext &deviceContext) override final;
 		void _beforeBuildRenderSnapshot(spk::RenderSnapshot::Builder &builder) override final;
 		void _afterBuildRenderSnapshot(spk::RenderSnapshot::Builder &builder) override final;
 		void _onUpdateException(std::exception_ptr exception) override;
@@ -172,6 +177,9 @@ namespace spk
 		virtual void _onDeactivation() noexcept;
 
 	public:
+		using spk::UpdatableByDeviceTrait::updateState;
+		using spk::UpdatableTrait::updateState;
+
 		Widget(std::string name, Widget *parent);
 		virtual ~Widget();
 

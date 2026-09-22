@@ -29,7 +29,25 @@ function Assert-VcpkgLicenseFiles([string]$Installed) {
     }
 }
 
-function Test-ManifestConsumer([string]$Name, [string]$SourcePath) {
+function Assert-CoreOnlyInstall([string]$Installed) {
+    $tripletRoot = Join-Path $Installed 'x64-windows-static'
+    foreach ($relative in @(
+        'lib/sparkle.lib',
+        'debug/lib/sparkled.lib',
+        'share/glew',
+        'share/opengl',
+        'share/stb'
+    )) {
+        $path = Join-Path $tripletRoot $relative
+        if (Test-Path $path) { throw "Core-only vcpkg install unexpectedly contains $path" }
+    }
+}
+
+function Test-ManifestConsumer(
+    [string]$Name,
+    [string]$SourcePath,
+    [bool]$CoreOnly = $false
+) {
     $build = Join-Path $root $Name
     $installed = Join-Path $root "$Name-installed"
     $arguments = @(
@@ -48,9 +66,11 @@ function Test-ManifestConsumer([string]$Name, [string]$SourcePath) {
     Invoke-Checked cmake @('--build', $build, '--parallel', '4')
     Invoke-Checked ctest @('--test-dir', $build, '--output-on-failure', '--no-tests=error')
     Assert-VcpkgLicenseFiles $installed
+    if ($CoreOnly) { Assert-CoreOnlyInstall $installed }
 }
 
-Test-ManifestConsumer 'default-consumer' (Join-Path $repo 'tests/package-default')
+Test-ManifestConsumer 'core-consumer' (Join-Path $repo 'tests/package-core-consumer') $true
+Test-ManifestConsumer 'graphics-consumer' (Join-Path $repo 'tests/package-default')
 Test-ManifestConsumer 'test-library-consumer' (Join-Path $repo 'tests/package-consumer')
-'Base erelia-sparkle port and test-library feature both passed through vcpkg manifest consumption.' |
+'Core-only, graphics and test-library erelia-sparkle configurations passed through vcpkg manifest consumption.' |
     Set-Content (Join-Path $root 'verification.log')

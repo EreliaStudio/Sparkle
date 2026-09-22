@@ -15,6 +15,7 @@ $source = Join-Path $root 'source'
 Invoke-Checked git @('-C', $repo, 'archive', '--format=zip', '-o', "$root/source.zip", 'HEAD')
 Expand-Archive "$root/source.zip" $source -Force
 Copy-Item "$source/tests/package-consumer" "$root/consumer" -Recurse
+Copy-Item "$source/tests/package-core-consumer" "$root/core-consumer" -Recurse
 Copy-Item "$source/tests/package-default" "$root/default-consumer" -Recurse
 $dependencies = Join-Path $root 'dependencies'
 $common = @('-G', 'Ninja', '-DCMAKE_CXX_COMPILER=clang-cl', "-DCMAKE_BUILD_TYPE=$Configuration",
@@ -36,6 +37,19 @@ function Assert-LicenseFiles([string]$Prefix) {
         $path = Join-Path $licenseRoot $name
         if (-not (Test-Path $path)) { throw "Installed package is missing $path" }
     }
+}
+
+# Validate the independently installable headless Core package first.
+$core = Join-Path $root 'core-install'
+Invoke-Checked cmake (@('-S', $source, '-B', "$root/core-build", '-DSPARKLE_BUILD_GRAPHICS=OFF',
+    '-DSPARKLE_BUILD_TESTS=OFF', '-DSPARKLE_BUILD_TEST_LIBRARY=OFF',
+    '-DVCPKG_MANIFEST_MODE=OFF', "-DCMAKE_INSTALL_PREFIX=$core") + $common)
+Invoke-Checked cmake @('--build', "$root/core-build", '--parallel', '4')
+Invoke-Checked cmake @('--install', "$root/core-build")
+Assert-LicenseFiles $core
+Test-Consumer "$root/core-consumer" "$root/core-consumer-build" $core
+if ((Test-Path "$core/lib/sparkle.lib") -or (Test-Path "$core/lib/sparkled.lib")) {
+    throw 'Core-only installation unexpectedly contains the graphical Sparkle library'
 }
 
 # Leave SPARKLE_BUILD_TEST_LIBRARY unspecified: verify its actual default.
@@ -69,6 +83,6 @@ Copy-Item "$root/consumer-build/Testing/Temporary/LastTest.log" "$root/installed
 
 $relocated = Join-Path $root 'relocated install'
 Move-Item $installed $relocated
-Remove-Item $source, "$root/library-build", "$root/normal-build" -Recurse -Force
+Remove-Item $source, "$root/library-build", "$root/normal-build", "$root/core-build" -Recurse -Force
 Test-Consumer "$root/consumer" "$root/relocated-build" $relocated
-'Optional component absence, installed consumer and relocated consumer passed.' | Set-Content "$root/verification.log"
+'Core-only, default graphical, optional component and relocated consumers passed.' | Set-Content "$root/verification.log"

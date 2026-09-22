@@ -59,6 +59,10 @@ namespace spk
 			State();
 			State(const State &other);
 
+			[[nodiscard]] Identifier identifier() const noexcept
+			{
+				return _identifier;
+			}
 			[[nodiscard]] virtual Kind _kind() const noexcept = 0;
 			[[nodiscard]] virtual std::unique_ptr<State> _clone() const
 			{

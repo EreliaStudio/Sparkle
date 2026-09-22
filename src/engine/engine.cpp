@@ -1,10 +1,6 @@
 #include "engine/engine.hpp"
 
-#include <algorithm>
-#include <vector>
-
 #include "core/context/update_context.hpp"
-#include "rendering/render_snapshot.hpp"
 
 namespace spk
 {
@@ -20,36 +16,16 @@ namespace spk
 		{
 			_root.children().back()->clearParent();
 		}
-		// Include detached and nested entities registered with this engine,
-		// not just direct root children. Context changes also notify attachments.
+
 		Registry<Entity, Engine *> &entityRegistry = Registry<Entity, Engine *>::instance();
 		while (!entityRegistry.elements(this).empty())
 		{
 			(*entityRegistry.elements(this).begin())->changeContext(nullptr);
 		}
+
 		while (!systems().empty())
 		{
 			removeSystem(*systems().back());
-		}
-	}
-
-	bool Engine::_isAcceptingEvent() const
-	{
-		return true;
-	}
-
-	void Engine::_propagateEvent(
-		const std::function<void(EventDispatcher *)> &callback)
-	{
-		callback(&_root);
-
-		const auto systemSnapshot = SystemCollection::snapshotElements();
-		for (const auto &snapshot : systemSnapshot)
-		{
-			if (SystemCollection::containsSnapshotElement(snapshot))
-			{
-				callback(snapshot.element);
-			}
 		}
 	}
 
@@ -101,20 +77,6 @@ namespace spk
 	const spk::Rect2D &Engine::geometry() const noexcept
 	{
 		return _geometry;
-	}
-
-	void Engine::buildRenderSnapshot(spk::RenderSnapshot::Builder &builder)
-	{
-		_root.buildRenderSnapshot(builder);
-
-		const auto systemSnapshot = SystemCollection::snapshotElements();
-		for (const auto &snapshot : systemSnapshot)
-		{
-			if (SystemCollection::containsSnapshotElement(snapshot))
-			{
-				snapshot.element->buildRenderSnapshot(builder);
-			}
-		}
 	}
 
 	void Engine::updateState(UpdateContext &context)

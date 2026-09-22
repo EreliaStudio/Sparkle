@@ -54,15 +54,15 @@ namespace spk
 		float depth)
 	{
 		const auto resolution = texture
-			? texture->resolve(section, rect.size)
-			: Texture::Resolution{{}, rect.size};
+									? texture->resolve(section, rect.size)
+									: Texture::Resolution{{}, rect.size};
 		rect.anchor += Vector2Int{
 			static_cast<int>((rect.width - resolution.size.x) / 2),
 			static_cast<int>((rect.height - resolution.size.y) / 2)};
 		rect.size = resolution.size;
 		const Vector2UInt textureSize = resolution.texture
-			? resolution.texture->size()
-			: Vector2UInt{};
+											? resolution.texture->size()
+											: Vector2UInt{};
 		return DrawTextureMeshRenderCommand(
 			resolution.texture,
 			_mesh(section, rect, depth, textureSize));

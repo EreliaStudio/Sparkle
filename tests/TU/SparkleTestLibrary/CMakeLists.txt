@@ -8,7 +8,7 @@ add_library(SparkleTestLibrary STATIC
 add_library(Sparkle::TestLibrary ALIAS SparkleTestLibrary)
 
 target_compile_features(SparkleTestLibrary PUBLIC cxx_std_23)
-target_link_libraries(SparkleTestLibrary PUBLIC sparkle)
+target_link_libraries(SparkleTestLibrary PUBLIC sparkle::sparkle)
 target_include_directories(SparkleTestLibrary
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/includes>

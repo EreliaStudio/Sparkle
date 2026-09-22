@@ -68,7 +68,7 @@ TEST(ImageComparisonTest, RgbDifferenceAtToleranceMatchesAndAboveToleranceDiffer
 	writePng(actualPath, 2, 1, actualPixels);
 	writePng(expectedPath, 2, 1, expectedPixels);
 
-	const sparkle_test::ImageComparisonResult result = sparkle_test::compareImages(actualPath, expectedPath, diffPath);
+	const sparkle_test::ImageComparisonResult result = sparkle_test::compareImages(actualPath, expectedPath, diffPath, {}, false);
 
 	EXPECT_FALSE(result.matches);
 	EXPECT_EQ(result.differentPixelCount, 1);
@@ -127,7 +127,7 @@ TEST(ImageComparisonTest, DimensionMismatchMarksOutOfOverlapPixels)
 	writePng(actualPath, 2, 2, actualPixels);
 	writePng(expectedPath, 2, 1, expectedPixels);
 
-	const sparkle_test::ImageComparisonResult result = sparkle_test::compareImages(actualPath, expectedPath, diffPath);
+	const sparkle_test::ImageComparisonResult result = sparkle_test::compareImages(actualPath, expectedPath, diffPath, {}, false);
 
 	EXPECT_FALSE(result.matches);
 	EXPECT_EQ(result.actualWidth, 2);
@@ -174,7 +174,7 @@ TEST(ImageComparisonTest, AlphaDifferenceAboveToleranceDiffers)
 	writePng(actualPath, 1, 1, actualPixels);
 	writePng(expectedPath, 1, 1, expectedPixels);
 
-	const sparkle_test::ImageComparisonResult result = sparkle_test::compareImages(actualPath, expectedPath, diffPath);
+	const sparkle_test::ImageComparisonResult result = sparkle_test::compareImages(actualPath, expectedPath, diffPath, {}, false);
 
 	EXPECT_FALSE(result.matches);
 	EXPECT_EQ(result.differentPixelCount, 1);
@@ -207,7 +207,7 @@ TEST(ImageComparisonTest, AllPixelsDifferentAreCounted)
 	writePng(actualPath, 2, 2, actualPixels);
 	writePng(expectedPath, 2, 2, expectedPixels);
 
-	const sparkle_test::ImageComparisonResult result = sparkle_test::compareImages(actualPath, expectedPath, diffPath);
+	const sparkle_test::ImageComparisonResult result = sparkle_test::compareImages(actualPath, expectedPath, diffPath, {}, false);
 
 	EXPECT_FALSE(result.matches);
 	EXPECT_EQ(result.differentPixelCount, 4);
@@ -227,7 +227,7 @@ TEST(ImageComparisonTest, DifferentPixelsAreMarkedInRed)
 	ASSERT_NE(stbi_write_png(actualPath.string().c_str(), 2, 2, 4, actualPixels.data(), 2 * 4), 0);
 	ASSERT_NE(stbi_write_png(expectedPath.string().c_str(), 2, 2, 4, expectedPixels.data(), 2 * 4), 0);
 
-	const sparkle_test::ImageComparisonResult result = sparkle_test::compareImages(actualPath, expectedPath, diffPath);
+	const sparkle_test::ImageComparisonResult result = sparkle_test::compareImages(actualPath, expectedPath, diffPath, {}, false);
 
 	EXPECT_FALSE(result.matches);
 	EXPECT_EQ(result.differentPixelCount, 1);
@@ -260,7 +260,7 @@ namespace
 		const auto root = imageComparisonTempDirectory();
 		writePng(root / "custom_actual.png", 1, 1, actual);
 		writePng(root / "custom_expected.png", 1, 1, expected);
-		return sparkle_test::compareImages(root / "custom_actual.png", root / "custom_expected.png", root / "custom_diff.png", options);
+		return sparkle_test::compareImages(root / "custom_actual.png", root / "custom_expected.png", root / "custom_diff.png", options, false);
 	}
 	[[nodiscard]] ColorDelta uniformDeltas(ChannelDelta value)
 	{

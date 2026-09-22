@@ -483,6 +483,15 @@ Public data-only records and enums are tested with the class that consumes them.
 - **[throws `std::invalid_argument`]** Raw data size differs from allocation.
 - **[throws `std::logic_error`]** Typed set/get/retrieve size differs from the requested type.
 
+### `spk::Uniform<T>`
+
+- **Standard usage:** declare the GLSL scalar/vector/matrix type at compile time, edit its typed data directly, activate a program on a render context, then activate the uniform on that context and verify the linked value.
+- Cover supported scalar/vector/matrix types, repeated activation, missing optimized-out uniforms, derived typed resources, program switching, program-handle activation, relinking, and active-program requirements.
+- Verify binding-point caches are isolated per `Window::Surface` with independent native OpenGL contexts, while active-program tracking remains local to each `RenderContext`.
+- Unsupported uniform types are rejected at compile time through the uniform push static assertion.
+- **[throws `std::invalid_argument`]** Empty uniform name or activation without a target surface.
+- **[throws `std::logic_error`]** Activation without a program previously activated on the same render context.
+
 ### `spk::ShaderStorageBuffer`
 
 - **Standard usage:** configure fixed plus dynamic parts, set typed data, resize, edit through CPU views, retrieve a GPU view, and verify binding/alignment.
@@ -510,8 +519,8 @@ Public data-only records and enums are tested with the class that consumes them.
 
 ### `spk::Program`
 
-- **Standard usage:** compile/link known shaders, bind uniform/storage blocks and samplers, then issue raw/indexed/instanced draws with every supported primitive.
-- Cover source replacement, generation reuse, zero draw counts, first/count boundaries, absent/optimized-out blocks, maximum binding points, and GL state verification.
+- **Standard usage:** compile/link known shaders, activate them on a render context, bind uniform/storage blocks and samplers, then issue raw/indexed/instanced draws with every supported primitive.
+- Cover render-context active-program tracking, failed activation preserving the previously active program, source replacement, generation reuse, zero draw counts, first/count boundaries, absent/optimized-out blocks, maximum binding points, and GL state verification.
 - **[throws `std::runtime_error`]** Shader/program creation, compilation, linking, or named block lookup failure; preserve driver logs.
 - **[throws `std::invalid_argument`/`std::out_of_range`]** Empty block names or binding points beyond GL limits.
 - **[throws `std::overflow_error`]** Draw counts/first vertex exceed GL integer ranges; **[throws `std::logic_error`]** invalid program synchronization or unsupported primitive cast.
