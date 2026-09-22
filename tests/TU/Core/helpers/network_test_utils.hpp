@@ -38,7 +38,7 @@ namespace NetworkTestUtils
 	{
 		std::vector<TValue> result;
 		std::vector<TValue> batch;
-		waitUntil(
+		(void)waitUntil(
 			[&] {
 				queue.drain(batch);
 				for (TValue &value : batch)
