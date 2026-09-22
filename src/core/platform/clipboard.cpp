@@ -5,22 +5,49 @@
 
 #	include <cstring>
 #	include <vector>
+
+#	include "core/platform/clipboard_internal.hpp"
 #endif
 
 namespace spk::Clipboard
 {
+#ifdef _WIN32
+	namespace Internal
+	{
+		namespace
+		{
+			[[nodiscard]] bool systemOpenClipboard()
+			{
+				return ::OpenClipboard(nullptr) != FALSE;
+			}
+
+			OpenClipboardFunction openClipboardFunction = systemOpenClipboard;
+		}
+
+		void setOpenClipboardFunctionForTesting(OpenClipboardFunction function) noexcept
+		{
+			openClipboardFunction = function != nullptr ? function : systemOpenClipboard;
+		}
+
+		[[nodiscard]] bool openClipboard()
+		{
+			return openClipboardFunction();
+		}
+	}
+#endif
+
 	namespace
 	{
 #ifdef _WIN32
 		struct ClipboardGuard
 		{
-			bool open = OpenClipboard(nullptr) != FALSE;
+			bool open = Internal::openClipboard();
 
 			~ClipboardGuard()
 			{
 				if (open)
 				{
-					CloseClipboard();
+					::CloseClipboard();
 				}
 			}
 		};

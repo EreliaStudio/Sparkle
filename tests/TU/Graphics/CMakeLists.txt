@@ -39,15 +39,14 @@ target_include_directories(SparkleGraphicsTestSuite PRIVATE ${Stb_INCLUDE_DIR})
 set_target_properties(SparkleGraphicsTestSuite PROPERTIES CXX_EXTENSIONS OFF)
 
 if(WIN32)
-    add_executable(SparkleClipboardHolder helpers/clipboard_holder.cpp)
-    target_compile_features(SparkleClipboardHolder PRIVATE cxx_std_23)
-    target_link_libraries(SparkleClipboardHolder PRIVATE user32)
-
     add_executable(SparkleClipboardTestSuite
         ${SPARKLE_CLIPBOARD_TEST_SOURCE}
         helpers/clipboard_test_main.cpp
     )
     target_compile_features(SparkleClipboardTestSuite PRIVATE cxx_std_23)
+    target_include_directories(SparkleClipboardTestSuite PRIVATE
+        ${PROJECT_SOURCE_DIR}/src
+    )
     target_link_libraries(SparkleClipboardTestSuite
         PRIVATE
             sparkle::sparkle
@@ -55,7 +54,6 @@ if(WIN32)
             user32
     )
     set_target_properties(SparkleClipboardTestSuite PROPERTIES CXX_EXTENSIONS OFF)
-    add_dependencies(SparkleClipboardTestSuite SparkleClipboardHolder)
     add_dependencies(SparkleGraphicsTestSuite SparkleClipboardTestSuite)
 
     gtest_discover_tests(SparkleClipboardTestSuite
