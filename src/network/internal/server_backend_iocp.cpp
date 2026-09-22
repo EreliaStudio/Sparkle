@@ -33,6 +33,7 @@ namespace spk::NetworkInternal
 		constexpr ULONG_PTR WakeKey = 1;
 		constexpr std::size_t ReceptionBufferSize = 64u * 1024u;
 		constexpr std::size_t AcceptOperationCount = 4;
+		constexpr std::size_t MaximumQueuedBytes = 64u * 1024u * 1024u;
 
 		struct Session
 		{
@@ -41,6 +42,7 @@ namespace spk::NetworkInternal
 			std::vector<std::byte> receivedBytes;
 			std::deque<Frame> outgoing;
 			std::size_t outgoingOffset = 0;
+			std::size_t queuedBytes = 0;
 			bool writeInFlight = false;
 
 			Session(ConnectionID id, Socket socket) :
@@ -196,6 +198,10 @@ namespace spk::NetworkInternal
 			{
 				if (!success || _stopping)
 				{
+					if (!_stopping)
+					{
+						_postAccept();
+					}
 					return;
 				}
 
@@ -315,6 +321,12 @@ namespace spk::NetworkInternal
 
 			void _queueFrame(const std::shared_ptr<Session> &session, Frame frame)
 			{
+				if (frame->size() > MaximumQueuedBytes - session->queuedBytes)
+				{
+					_disconnect(session->id);
+					return;
+				}
+				session->queuedBytes += frame->size();
 				session->outgoing.push_back(std::move(frame));
 				if (!session->writeInFlight)
 				{
@@ -368,6 +380,7 @@ namespace spk::NetworkInternal
 				}
 
 				session->outgoingOffset += static_cast<std::size_t>(bytes);
+				session->queuedBytes -= static_cast<std::size_t>(bytes);
 				const Frame &frame = session->outgoing.front();
 				if (session->outgoingOffset == frame->size())
 				{
