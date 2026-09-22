@@ -3,6 +3,7 @@
 #include "exception.hpp"
 #include "network/message.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
