@@ -7,6 +7,7 @@
 #include "network/remote_node_endpoint.hpp"
 #include "network_test_utils.hpp"
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <chrono>
@@ -144,12 +145,18 @@ TEST(RemoteNodeIntegrationTest, TwoClientsRemainCorrelatedAcrossOutOfOrderRemote
 	for (std::uint32_t client = 0; client < responses.size(); ++client)
 	{
 		ASSERT_EQ(responses[client].size(), 50u);
+		std::array<bool, 50> seen{};
 		for (spk::Message &message : responses[client])
 		{
 			const RemotePayload payload = message.get<RemotePayload>();
 			EXPECT_EQ(payload.client, client);
-			EXPECT_LT(payload.sequence, 50u);
+			ASSERT_LT(payload.sequence, seen.size());
+			EXPECT_FALSE(seen[payload.sequence]);
+			seen[payload.sequence] = true;
 		}
+		EXPECT_TRUE(std::all_of(seen.begin(), seen.end(), [](bool value) {
+			return value;
+		}));
 	}
 
 }
