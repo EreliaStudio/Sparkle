@@ -45,7 +45,10 @@ namespace
 		auto &pass = builder.renderPass({"all-command-families", 0});
 		viewCommands(pass);
 		pass.emplace<spk::DrawColorMeshRenderCommand>(colorQuad(20, 20, 80, {1, 0, 0, 1}));
-		pass.emplace<spk::DrawTextureMeshRenderCommand>(style.iconsetImage.get(), textureQuad(120, 20, 160));
+		const auto iconsetImage = style.iconsetImage->resolution({160, 160});
+		pass.emplace<spk::DrawTextureMeshRenderCommand>(
+			&iconsetImage,
+			textureQuad(120, 20, 160));
 		pass.emplace<spk::ImageRenderCommand>(style.iconsetImage.get(), spk::Texture::Section::whole, spk::Rect2D{.anchor = {120, 90}, .size = {160, 160}});
 		pass.emplace<spk::SpriteRenderCommand>(style.iconset.get(), spk::Vector2UInt{1, 0}, spk::Rect2D{.anchor = {320, 20}, .size = {80, 80}});
 		pass.emplace<spk::NineSliceRenderCommand>(style.nineSlice.get(), spk::Rect2D{.anchor = {420, 20}, .size = {160, 80}}, spk::Vector2UInt{8, 8});
