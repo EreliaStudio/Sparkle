@@ -110,8 +110,7 @@ namespace spk::NetworkInternal
 				try
 				{
 					_callbacks.onConnection(id);
-				}
-				catch (...)
+				} catch (...)
 				{
 				}
 			}
@@ -121,8 +120,7 @@ namespace spk::NetworkInternal
 				try
 				{
 					_callbacks.onDisconnection(id);
-				}
-				catch (...)
+				} catch (...)
 				{
 				}
 			}
@@ -132,8 +130,7 @@ namespace spk::NetworkInternal
 				try
 				{
 					_callbacks.onMessage(std::move(message));
-				}
-				catch (...)
+				} catch (...)
 				{
 				}
 			}
@@ -274,8 +271,7 @@ namespace spk::NetworkInternal
 				try
 				{
 					_extractMessages(*session);
-				}
-				catch (...)
+				} catch (...)
 				{
 					_disconnect(session->id);
 					return;
@@ -608,8 +604,7 @@ namespace spk::NetworkInternal
 					{
 						_postAccept();
 					}
-				}
-				catch (...)
+				} catch (...)
 				{
 					_listener.close();
 					_closeIocp();
