@@ -19,7 +19,6 @@ set(SPARKLE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 set(SPARKLE_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
 set(SPARKLE_RESOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/resources")
 
-
 file(GLOB_RECURSE SPARKLE_CORE_SOURCES
     CONFIGURE_DEPENDS
     "${SPARKLE_SOURCE_DIR}/container/*.cpp"
@@ -48,6 +47,7 @@ target_compile_features(sparkle_core PUBLIC cxx_std_23)
 if(WIN32)
     target_link_libraries(sparkle_core PRIVATE ws2_32)
 endif()
+
 target_include_directories(sparkle_core
     PUBLIC
         $<BUILD_INTERFACE:${SPARKLE_INCLUDE_DIR}>
