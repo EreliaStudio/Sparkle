@@ -47,3 +47,27 @@ TEST(OpenGLTestContextTest, CapturesPixelsWithTopLeftCoordinates)
 	EXPECT_EQ(image.pixel({0, 479})[1], 0);
 	EXPECT_THROW((void)image.pixel({640, 0}), std::out_of_range);
 }
+
+TEST(OpenGLTestContextTest, SupportsArbitraryCaptureDimensions)
+{
+	auto &openGL = sparkle_test::OpenGLTestContext::instance();
+	openGL.reset({37, 23});
+
+	GLint viewport[4]{};
+	::glGetIntegerv(GL_VIEWPORT, viewport);
+	EXPECT_EQ(viewport[0], 0);
+	EXPECT_EQ(viewport[1], 0);
+	EXPECT_EQ(viewport[2], 37);
+	EXPECT_EQ(viewport[3], 23);
+
+	const auto resized = openGL.capture();
+	EXPECT_EQ(resized.size, (spk::Vector2UInt{37, 23}));
+	EXPECT_EQ(resized.pixels.size(), 37u * 23u * 4u);
+
+	openGL.setGeometry({.anchor = {4, 6}, .size = {19, 11}});
+	const auto geometryResized = openGL.capture();
+	EXPECT_EQ(geometryResized.size, (spk::Vector2UInt{19, 11}));
+	EXPECT_EQ(geometryResized.pixels.size(), 19u * 11u * 4u);
+
+	openGL.reset();
+}

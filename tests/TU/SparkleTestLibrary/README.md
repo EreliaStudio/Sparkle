@@ -20,7 +20,7 @@ auto result = sparkle_test::compareImages(actualPng, expectedPng, differencePng)
 
 PNG comparison does not initialize OpenGL. On success the comparator deletes actual/difference files; never use your reference path as the actual/result path. On mismatch it retains actual output and writes a red difference PNG. References are never automatically accepted. See `ImageComparisonOptions` for per-channel tolerances.
 
-`OpenGLTestContext::instance()` creates a hidden Windows/WGL context lazily and must be used on its creating runner thread. The current capture framebuffer is 640×480; use that size. Exporting these utilities does not port Sparkle or GPU capture to Linux. No test framework is required by the public utilities.
+`OpenGLTestContext::instance()` creates a hidden Windows/WGL context lazily and must be used on its creating runner thread. The default capture framebuffer remains 640×480 for compatibility, but callers can select any non-zero size with `reset({width, height})`. `setGeometry()` also resizes the backing framebuffer and viewport, so `capture()` and `save()` use the selected dimensions. Exporting these utilities does not port Sparkle or GPU capture to Linux. No test framework is required by the public utilities.
 
 ## Installed-package smoke test
 
