@@ -4,7 +4,6 @@
 #include "network/client.hpp"
 #include "network/node_router.hpp"
 #include "network/remote_node.hpp"
-#include "network/remote_node_endpoint.hpp"
 #include "network_test_utils.hpp"
 
 #include <algorithm>
@@ -56,20 +55,20 @@ namespace
 	}
 
 	void runRemoteEndpoint(
-		spk::RemoteNodeEndpoint &endpoint,
+		spk::RemoteNode::Endpoint &endpoint,
 		std::size_t expectedRequests,
 		std::atomic_bool &finished,
 		NetworkTestUtils::ThreadFailure &failure)
 	{
 		failure.run([&] {
-			std::vector<spk::RemoteRequest> requests;
-			std::vector<spk::RemoteRequest> batch;
+			std::vector<spk::RemoteNode::Endpoint::Request> requests;
+			std::vector<spk::RemoteNode::Endpoint::Request> batch;
 			const auto deadline = std::chrono::steady_clock::now() + 5s;
 			while (requests.size() < expectedRequests && std::chrono::steady_clock::now() < deadline)
 			{
 				endpoint.dispatch();
 				endpoint.requests().drain(batch);
-				for (spk::RemoteRequest &request : batch)
+				for (spk::RemoteNode::Endpoint::Request &request : batch)
 				{
 					requests.push_back(std::move(request));
 				}
@@ -113,7 +112,7 @@ namespace
 TEST(RemoteNodeIntegrationTest, TwoClientsRemainCorrelatedAcrossOutOfOrderRemoteReplies)
 {
 	constexpr std::size_t RequestCount = 100;
-	spk::RemoteNodeEndpoint endpoint;
+	spk::RemoteNode::Endpoint endpoint;
 	spk::RemoteNode remoteNode;
 	spk::NodeRouter router;
 	spk::Client firstClient;
@@ -191,7 +190,7 @@ TEST(RemoteNodeIntegrationTest, ForwardingWhileDisconnectedThrows)
 
 TEST(RemoteNodeIntegrationTest, EndpointRejectsOrdinaryClientMessages)
 {
-	spk::RemoteNodeEndpoint endpoint;
+	spk::RemoteNode::Endpoint endpoint;
 	spk::Client client;
 	endpoint.start(0);
 	client.connect("127.0.0.1", endpoint.port());
