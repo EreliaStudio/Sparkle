@@ -45,8 +45,8 @@ namespace
 		auto &pass = builder.renderPass({"all-command-families", 0});
 		viewCommands(pass);
 		pass.emplace<spk::DrawColorMeshRenderCommand>(colorQuad(20, 20, 80, {1, 0, 0, 1}));
-		pass.emplace<spk::DrawTextureMeshRenderCommand>(style.iconsetImage.get(), textureQuad(120, 20, 80));
-		pass.emplace<spk::ImageRenderCommand>(style.iconsetImage.get(), spk::Texture::Section::whole, spk::Rect2D{.anchor = {220, 20}, .size = {80, 80}});
+		pass.emplace<spk::DrawTextureMeshRenderCommand>(style.iconsetImage.get(), textureQuad(120, 20, 160));
+		pass.emplace<spk::ImageRenderCommand>(style.iconsetImage.get(), spk::Texture::Section::whole, spk::Rect2D{.anchor = {120, 90}, .size = {160, 160}});
 		pass.emplace<spk::SpriteRenderCommand>(style.iconset.get(), spk::Vector2UInt{1, 0}, spk::Rect2D{.anchor = {320, 20}, .size = {80, 80}});
 		pass.emplace<spk::NineSliceRenderCommand>(style.nineSlice.get(), spk::Rect2D{.anchor = {420, 20}, .size = {160, 80}}, spk::Vector2UInt{8, 8});
 		pass.emplace<spk::TextRenderCommand>(style.font.get(), spk::Font::Size{32, 1}, "Sparkle", spk::TextRenderCommand::Anchor{{20, 140}, {spk::Alignment::Horizontal::Left, spk::Alignment::Vertical::Top}}, spk::Color{1, 1, 1, 1}, spk::Color{0, 0, 1, 1});
