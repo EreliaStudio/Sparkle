@@ -218,8 +218,15 @@ namespace spk
 			auto completion = std::make_shared<std::promise<void>>();
 			auto future = completion->get_future();
 			asio::post(_context, [function = std::move(function), completion]() mutable {
-				function();
-				completion->set_value();
+				try
+				{
+					function();
+					completion->set_value();
+				}
+				catch (...)
+				{
+					completion->set_exception(std::current_exception());
+				}
 			});
 			future.get();
 		}
@@ -240,7 +247,13 @@ namespace spk
 
 		~Impl()
 		{
-			stop();
+			try
+			{
+				stop();
+			}
+			catch (...)
+			{
+			}
 		}
 
 		[[nodiscard]] bool isRunning() const noexcept
