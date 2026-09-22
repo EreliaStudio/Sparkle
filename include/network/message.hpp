@@ -118,9 +118,17 @@ namespace spk
 		[[nodiscard]] TValue peek() const
 		{
 			const std::size_t offset = _readOffset;
-			const TValue result = get<TValue>();
-			_readOffset = offset;
-			return result;
+			try
+			{
+				const TValue result = get<TValue>();
+				_readOffset = offset;
+				return result;
+			}
+			catch (...)
+			{
+				_readOffset = offset;
+				throw;
+			}
 		}
 	};
 }
