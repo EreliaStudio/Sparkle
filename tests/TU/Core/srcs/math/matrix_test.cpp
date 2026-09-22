@@ -19,8 +19,7 @@ namespace
 	};
 
 	template <typename T>
-	concept HasMatrixMultiplication = requires(const T &left, const T &right)
-	{
+	concept HasMatrixMultiplication = requires(const T &left, const T &right) {
 		left * right;
 	};
 
