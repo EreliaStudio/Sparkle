@@ -9,6 +9,7 @@
 #include <atomic>
 #include <chrono>
 #include <cstdint>
+#include <cstring>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -98,10 +99,9 @@ TEST(NetworkConcurrencyTest, LargePayloadCrossesReceptionBufferBoundaries)
 	auto received = NetworkTestUtils::collect(server.messages(), 1, 5s);
 	ASSERT_EQ(received.size(), 1u);
 	ASSERT_EQ(received.front().message.size(), payload.size());
-	EXPECT_TRUE(std::equal(
-		received.front().message.data().begin(),
-		received.front().message.data().end(),
-		payload.begin()));
+	EXPECT_EQ(
+		std::memcmp(received.front().message.data().data(), payload.data(), payload.size()),
+		0);
 
 	client.disconnect();
 	server.stop();
