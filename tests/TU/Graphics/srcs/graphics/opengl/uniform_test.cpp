@@ -188,7 +188,6 @@ TEST(UniformTest, EverySupportedTypeActivatesOnTheCurrentProgram)
 	EXPECT_FLOAT_EQ(matrixValue[15], 1.0f);
 }
 
-
 TEST(UniformTest, RepeatedActivationUpdatesTheResolvedBinding)
 {
 	auto &openGL = sparkle_test::OpenGLTestContext::instance();

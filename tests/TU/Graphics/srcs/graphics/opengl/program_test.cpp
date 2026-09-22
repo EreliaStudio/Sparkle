@@ -99,7 +99,6 @@ TEST(ProgramTest, EmptyOrInvalidSourcesAreRejectedAtActivationWithDriverLog)
 	}
 }
 
-
 TEST(ProgramTest, FailedActivationPreservesRenderContextProgramSelection)
 {
 	auto &openGL = sparkle_test::OpenGLTestContext::instance();
