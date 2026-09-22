@@ -20,7 +20,7 @@ namespace
 	};
 
 	class PointerTrackedObject : public spk::ContextualizableTrait<void *>,
-							 public spk::Registry<PointerTrackedObject, void *>::Object
+								 public spk::Registry<PointerTrackedObject, void *>::Object
 	{
 	public:
 		explicit PointerTrackedObject(void *context = nullptr) :
@@ -85,8 +85,12 @@ TEST(RegistryTest, SameContextChangeIsANoOpForRegistryContracts)
 	int additions = 0;
 	int removals = 0;
 
-	auto addition = IntRegistry::instance().subscribeToAddition(5, [&](const int &, TrackedObject *) { ++additions; });
-	auto removal = IntRegistry::instance().subscribeToRemoval(5, [&](const int &, TrackedObject *) { ++removals; });
+	auto addition = IntRegistry::instance().subscribeToAddition(5, [&](const int &, TrackedObject *) {
+		++additions;
+	});
+	auto removal = IntRegistry::instance().subscribeToRemoval(5, [&](const int &, TrackedObject *) {
+		++removals;
+	});
 
 	object.changeContext(5);
 
@@ -164,7 +168,10 @@ TEST(RegistryTest, ContextKeyCanDieBeforeTheRegisteredObjectWhenItIsANonOwningPo
 				   public spk::Registry<Object, RegistryContext *>::Object
 	{
 	public:
-		explicit Object(RegistryContext *context) : spk::ContextualizableTrait<RegistryContext *>(context) {}
+		explicit Object(RegistryContext *context) :
+			spk::ContextualizableTrait<RegistryContext *>(context)
+		{
+		}
 	};
 
 	using Registry = spk::Registry<Object, RegistryContext *>;
@@ -195,7 +202,8 @@ TEST(RegistryTest, RegistryIsObservablyCleanAfterObjectsAndContractsLeaveScope)
 {
 	constexpr int Context = 1337;
 	{
-		auto addition = IntRegistry::instance().subscribeToAddition(Context, [](const int &, TrackedObject *) {});
+		auto addition = IntRegistry::instance().subscribeToAddition(Context, [](const int &, TrackedObject *) {
+		});
 		TrackedObject first(Context);
 		TrackedObject second(Context);
 		ASSERT_EQ(IntRegistry::instance().elements(Context).size(), 2u);

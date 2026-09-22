@@ -70,8 +70,7 @@ TEST(ProgramTest, EmptyOrInvalidSourcesAreRejectedAtActivationWithDriverLog)
 	{
 		invalid.activate(openGL.renderContext());
 		FAIL() << "Expected shader compilation failure";
-	}
-	catch (const spk::Exception &exception)
+	} catch (const spk::Exception &exception)
 	{
 		EXPECT_NE(std::string(exception.what()).find("shader compilation failed"), std::string::npos);
 	}
@@ -95,8 +94,7 @@ TEST(ProgramTest, UniformStorageAndSamplerBindingsReachLinkedProgram)
 	const GLuint storageIndex = ::glGetProgramResourceIndex(static_cast<GLuint>(identifier), GL_SHADER_STORAGE_BLOCK, "OffsetBlock");
 	GLint storageBinding = -1;
 	const GLenum bindingProperty = GL_BUFFER_BINDING;
-	::glGetProgramResourceiv(static_cast<GLuint>(identifier), GL_SHADER_STORAGE_BLOCK, storageIndex, 1,
-		&bindingProperty, 1, nullptr, &storageBinding);
+	::glGetProgramResourceiv(static_cast<GLuint>(identifier), GL_SHADER_STORAGE_BLOCK, storageIndex, 1, &bindingProperty, 1, nullptr, &storageBinding);
 	EXPECT_EQ(storageBinding, 3);
 	GLint samplerBinding = -1;
 	::glGetUniformiv(static_cast<GLuint>(identifier), ::glGetUniformLocation(static_cast<GLuint>(identifier), "imageSampler"), &samplerBinding);
@@ -169,10 +167,8 @@ TEST(ProgramTest, DrawCountFirstVertexAndIndexOffsetOverflowAreRejected)
 	const std::size_t tooLargeFirst = static_cast<std::size_t>(std::numeric_limits<GLint>::max()) + 1;
 	EXPECT_THROW(program.renderRaw(spk::Program::Primitive::Triangles, 0, tooLargeCount), std::overflow_error);
 	EXPECT_THROW(program.renderRaw(spk::Program::Primitive::Triangles, tooLargeFirst, 0), std::overflow_error);
-	EXPECT_THROW(program.render(spk::Program::Primitive::Triangles, spk::IndexBuffer::Type::UnsignedInt,
-		std::numeric_limits<std::size_t>::max(), 0), std::overflow_error);
-	EXPECT_THROW(program.renderInstanced(spk::Program::Primitive::Triangles, spk::IndexBuffer::Type::UnsignedInt,
-		0, 0, tooLargeCount), std::overflow_error);
+	EXPECT_THROW(program.render(spk::Program::Primitive::Triangles, spk::IndexBuffer::Type::UnsignedInt, std::numeric_limits<std::size_t>::max(), 0), std::overflow_error);
+	EXPECT_THROW(program.renderInstanced(spk::Program::Primitive::Triangles, spk::IndexBuffer::Type::UnsignedInt, 0, 0, tooLargeCount), std::overflow_error);
 }
 
 TEST(ProgramTest, IndexedOffsetsRejectFirstOverflowBeforeOpenGLAccess)

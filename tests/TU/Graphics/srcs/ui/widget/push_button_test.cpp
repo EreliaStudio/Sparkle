@@ -26,7 +26,9 @@ TEST(PushButtonTest, StandardClickAndOutsideReleaseHaveDefinedState)
 	spk::PushButton button("Button");
 	button.setGeometry({.anchor = {0, 0}, .size = {120, 40}});
 	int clicks = 0;
-	auto contract = button.subscribeToClick([&]() { ++clicks; });
+	auto contract = button.subscribeToClick([&]() {
+		++clicks;
+	});
 	click(button, {10, 10});
 	EXPECT_EQ(clicks, 1);
 	EXPECT_FALSE(button.isPressed());

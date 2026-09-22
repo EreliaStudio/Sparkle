@@ -24,7 +24,7 @@ namespace
 	{
 		static std::atomic_uint64_t counter = 0;
 		return "Sparkle_OpenGLTestContext_" + std::to_string(::GetCurrentProcessId()) + "_" +
-			std::to_string(::GetTickCount64()) + "_" + std::to_string(counter.fetch_add(1));
+			   std::to_string(::GetTickCount64()) + "_" + std::to_string(counter.fetch_add(1));
 	}
 }
 
@@ -52,21 +52,18 @@ namespace sparkle_test
 			{
 				surface.create(native.window());
 				createFramebuffer();
-			}
-			catch (...)
+			} catch (...)
 			{
 				try
 				{
 					surface.destroy();
-				}
-				catch (...)
+				} catch (...)
 				{
 				}
 				try
 				{
 					native.window().destroy();
-				}
-				catch (...)
+				} catch (...)
 				{
 				}
 				throw;
@@ -79,15 +76,13 @@ namespace sparkle_test
 			{
 				surface.makeCurrent();
 				surface.destroy();
-			}
-			catch (...)
+			} catch (...)
 			{
 			}
 			try
 			{
 				native.window().destroy();
-			}
-			catch (...)
+			} catch (...)
 			{
 			}
 		}

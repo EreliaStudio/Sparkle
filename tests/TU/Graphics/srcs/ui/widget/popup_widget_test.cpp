@@ -17,7 +17,9 @@ TEST(PopupWidgetTest, AnchoredAndExplicitOpeningPlaceContentAndCloseOnce)
 	popup.setAnchorWidget(&anchor);
 	popup.setPlacement({spk::Alignment::Horizontal::Right, spk::Alignment::Vertical::Bottom});
 	int closes = 0;
-	auto contract = popup.subscribeToClose([&]() { ++closes; });
+	auto contract = popup.subscribeToClose([&]() {
+		++closes;
+	});
 	popup.open();
 	EXPECT_TRUE(popup.isOpen());
 	EXPECT_EQ(popup.geometry(), (spk::Rect2D{.anchor = {140, 70}, .size = {80, 30}}));

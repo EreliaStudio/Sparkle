@@ -12,8 +12,7 @@ TEST(SpacerWidgetTest, DefaultStateIsActiveAndExpandsWithoutVisualContent)
 	EXPECT_TRUE(spacer.isActive());
 	EXPECT_EQ(spacer.minimalSize(), spk::Vector2(0, 0));
 	EXPECT_EQ(spacer.preferredSize(), spk::Vector2(0, 0));
-	EXPECT_EQ(spacer.maximalSize(), (spk::Vector2{
-		std::numeric_limits<float>::max(), std::numeric_limits<float>::max()}));
+	EXPECT_EQ(spacer.maximalSize(), (spk::Vector2{std::numeric_limits<float>::max(), std::numeric_limits<float>::max()}));
 	EXPECT_TRUE(spacer.children().empty());
 }
 

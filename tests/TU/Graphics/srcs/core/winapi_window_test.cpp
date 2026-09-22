@@ -20,7 +20,7 @@ namespace
 	{
 		static std::atomic_uint64_t counter = 0;
 		return std::string(prefix) + std::to_string(::GetCurrentProcessId()) + "_" +
-			std::to_string(::GetTickCount64()) + "_" + std::to_string(counter.fetch_add(1));
+			   std::to_string(::GetTickCount64()) + "_" + std::to_string(counter.fetch_add(1));
 	}
 
 	bool contains(std::string_view text, std::string_view fragment)
@@ -203,21 +203,20 @@ TEST(WindowTest, CallbackExceptionIsCapturedAndRethrown)
 			try
 			{
 				window.rethrowPendingException();
-			}
-			catch (const std::runtime_error &exception)
+			} catch (const std::runtime_error &exception)
 			{
 				const bool firstExceptionPreserved = std::string_view(exception.what()) == "callback exploded";
 				window.rethrowPendingException();
 				window.destroy();
 				std::exit(firstExceptionPreserved && callbackCount == 2 && window.handle() == nullptr ? 0 : 2);
-			}
-			catch (...)
+			} catch (...)
 			{
 				std::exit(2);
 			}
 			std::exit(1);
 		},
-		::testing::ExitedWithCode(0), "");
+		::testing::ExitedWithCode(0),
+		"");
 }
 
 TEST(WindowTest, DestroyIsIdempotent)
@@ -322,8 +321,7 @@ TEST(WindowTest, InvalidUtf8TitleReportsConversionSystemError)
 	{
 		window.create(windowClass, creation);
 		FAIL() << "Expected std::system_error";
-	}
-	catch (const std::system_error &exception)
+	} catch (const std::system_error &exception)
 	{
 		EXPECT_EQ(exception.code().value(), ERROR_NO_UNICODE_TRANSLATION);
 		EXPECT_TRUE(contains(exception.what(), "MultiByteToWideChar"));

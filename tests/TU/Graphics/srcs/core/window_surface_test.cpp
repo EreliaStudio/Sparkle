@@ -21,7 +21,7 @@ namespace
 	{
 		static std::atomic_uint64_t counter = 0;
 		return "Sparkle_WindowSurfaceTest_" + std::to_string(::GetCurrentProcessId()) + "_" +
-			std::to_string(counter.fetch_add(1));
+			   std::to_string(counter.fetch_add(1));
 	}
 
 	class HiddenNativeWindow

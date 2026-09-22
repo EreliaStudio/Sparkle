@@ -180,8 +180,7 @@ TEST(JSONReaderTest, MissingRequiredMemberReportsExactFailingPath)
 	{
 		(void)reader.require<int>("missing");
 		FAIL() << "Expected spk::Exception";
-	}
-	catch (const spk::Exception &error)
+	} catch (const spk::Exception &error)
 	{
 		EXPECT_NE(std::string(error.what()).find("config.json:$.root.missing:"), std::string::npos);
 	}
@@ -200,8 +199,7 @@ TEST(JSONReaderTest, WrongScalarContainerAndCustomTypesReportMemberPath)
 	{
 		(void)reader.require<int>("number");
 		FAIL() << "Expected spk::Exception";
-	}
-	catch (const spk::Exception &error)
+	} catch (const spk::Exception &error)
 	{
 		EXPECT_NE(std::string(error.what()).find("config.json:$.number:"), std::string::npos);
 	}
@@ -210,8 +208,7 @@ TEST(JSONReaderTest, WrongScalarContainerAndCustomTypesReportMemberPath)
 	{
 		(void)reader.require<std::vector<int>>("vector");
 		FAIL() << "Expected spk::Exception";
-	}
-	catch (const spk::Exception &error)
+	} catch (const spk::Exception &error)
 	{
 		EXPECT_NE(std::string(error.what()).find("config.json:$.vector:"), std::string::npos);
 	}
@@ -220,8 +217,7 @@ TEST(JSONReaderTest, WrongScalarContainerAndCustomTypesReportMemberPath)
 	{
 		(void)reader.require<json_reader_test::FreePoint>("freePoint");
 		FAIL() << "Expected spk::Exception";
-	}
-	catch (const spk::Exception &error)
+	} catch (const spk::Exception &error)
 	{
 		EXPECT_NE(std::string(error.what()).find("config.json:$.freePoint:"), std::string::npos);
 	}
@@ -230,8 +226,7 @@ TEST(JSONReaderTest, WrongScalarContainerAndCustomTypesReportMemberPath)
 	{
 		(void)reader.require<json_reader_test::MemberPoint>("memberPoint");
 		FAIL() << "Expected spk::Exception";
-	}
-	catch (const spk::Exception &error)
+	} catch (const spk::Exception &error)
 	{
 		EXPECT_NE(std::string(error.what()).find("config.json:$.memberPoint:"), std::string::npos);
 	}
@@ -248,8 +243,7 @@ TEST(JSONReaderTest, FixedArrayWrongArityReportsExactMemberPath)
 	{
 		(void)reader.require<std::array<int, 2>>("fixed");
 		FAIL() << "Expected spk::Exception";
-	}
-	catch (const spk::Exception &error)
+	} catch (const spk::Exception &error)
 	{
 		EXPECT_NE(std::string(error.what()).find("config.json:$.root.fixed:"), std::string::npos);
 		EXPECT_NE(std::string(error.what()).find("expected exactly 2 elements"), std::string::npos);
@@ -269,8 +263,7 @@ TEST(JSONReaderTest, UnknownEnumListsKnownValuesAndReportsExactPath)
 	{
 		(void)reader.requireEnum<Mode>("mode", modes);
 		FAIL() << "Expected spk::Exception";
-	}
-	catch (const spk::Exception &error)
+	} catch (const spk::Exception &error)
 	{
 		EXPECT_NE(std::string(error.what()).find("config.json:$.mode:"), std::string::npos);
 		EXPECT_NE(std::string(error.what()).find("borderless"), std::string::npos);
@@ -289,8 +282,7 @@ TEST(JSONReaderTest, ChildWithWrongShapeReportsChildPath)
 	{
 		(void)reader.child("child");
 		FAIL() << "Expected spk::Exception";
-	}
-	catch (const spk::Exception &error)
+	} catch (const spk::Exception &error)
 	{
 		EXPECT_NE(std::string(error.what()).find("config.json:$.child:"), std::string::npos);
 	}
@@ -308,8 +300,7 @@ TEST(JSONReaderTest, ChildArrayRejectsNonObjectElementAtIndexedPath)
 	{
 		(void)reader.childArray("children");
 		FAIL() << "Expected spk::Exception";
-	}
-	catch (const spk::Exception &error)
+	} catch (const spk::Exception &error)
 	{
 		EXPECT_NE(std::string(error.what()).find("config.json:$.children[1]:"), std::string::npos);
 	}
@@ -336,8 +327,7 @@ TEST(JSONReaderTest, UnknownKeyIsRejected)
 	{
 		reader.forbidUnknown({"known"});
 		FAIL() << "Expected spk::Exception";
-	}
-	catch (const spk::Exception &error)
+	} catch (const spk::Exception &error)
 	{
 		EXPECT_NE(std::string(error.what()).find("config.json:$.root.unknown:"), std::string::npos);
 		EXPECT_NE(std::string(error.what()).find("unknown"), std::string::npos);

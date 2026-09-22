@@ -17,8 +17,7 @@ namespace
 		std::size_t callbackCount = 0;
 
 		auto contract = value.subscribeToContextEdition(
-			[&](const int &oldContext, const int &newContext)
-			{
+			[&](const int &oldContext, const int &newContext) {
 				++callbackCount;
 				observedOld = oldContext;
 				observedNew = newContext;
@@ -46,8 +45,7 @@ namespace
 		spk::ContextualizableTrait<std::string> value("sparkle");
 		std::size_t callbackCount = 0;
 		auto contract = value.subscribeToContextEdition(
-			[&](const std::string &, const std::string &)
-			{
+			[&](const std::string &, const std::string &) {
 				++callbackCount;
 			});
 
@@ -65,8 +63,7 @@ namespace
 		std::vector<std::pair<int *, int *>> editions;
 
 		auto contract = value.subscribeToContextEdition(
-			[&](int *const &oldContext, int *const &newContext)
-			{
+			[&](int *const &oldContext, int *const &newContext) {
 				editions.emplace_back(oldContext, newContext);
 			});
 
@@ -102,8 +99,7 @@ namespace
 		spk::ContextualizableTrait<int> value(3);
 		int derivedState = 0;
 		auto contract = value.subscribeToContextEdition(
-			[&](const int &oldContext, const int &newContext)
-			{
+			[&](const int &oldContext, const int &newContext) {
 				derivedState = newContext - oldContext;
 			});
 
@@ -118,8 +114,7 @@ namespace
 		spk::ContextualizableTrait<int> value(1);
 		std::size_t callbackCount = 0;
 		auto contract = value.subscribeToContextEdition(
-			[&](const int &, const int &)
-			{
+			[&](const int &, const int &) {
 				++callbackCount;
 			});
 

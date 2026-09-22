@@ -45,23 +45,19 @@ TEST(AlignmentTest, EqualityComparesHorizontalAndVerticalValues)
 {
 	const spk::Alignment first{
 		spk::Alignment::Horizontal::Center,
-		spk::Alignment::Vertical::Bottom
-	};
+		spk::Alignment::Vertical::Bottom};
 
 	const spk::Alignment same{
 		spk::Alignment::Horizontal::Center,
-		spk::Alignment::Vertical::Bottom
-	};
+		spk::Alignment::Vertical::Bottom};
 
 	const spk::Alignment differentHorizontal{
 		spk::Alignment::Horizontal::Left,
-		spk::Alignment::Vertical::Bottom
-	};
+		spk::Alignment::Vertical::Bottom};
 
 	const spk::Alignment differentVertical{
 		spk::Alignment::Horizontal::Center,
-		spk::Alignment::Vertical::Top
-	};
+		spk::Alignment::Vertical::Top};
 
 	EXPECT_EQ(first, same);
 	EXPECT_NE(first, differentHorizontal);
@@ -72,8 +68,7 @@ TEST(AlignmentTest, ToStringReturnsExpectedValue)
 {
 	const spk::Alignment alignment{
 		spk::Alignment::Horizontal::Center,
-		spk::Alignment::Vertical::Bottom
-	};
+		spk::Alignment::Vertical::Bottom};
 
 	EXPECT_EQ(spk::toString(alignment), "(Center, Bottom)");
 }
@@ -82,8 +77,7 @@ TEST(AlignmentTest, ToWStringReturnsExpectedValue)
 {
 	const spk::Alignment alignment{
 		spk::Alignment::Horizontal::Center,
-		spk::Alignment::Vertical::Bottom
-	};
+		spk::Alignment::Vertical::Bottom};
 
 	EXPECT_EQ(spk::toWString(alignment), L"(Center, Bottom)");
 }
@@ -136,8 +130,7 @@ TEST(AlignmentTest, OutputStreamReturnsExpectedValue)
 {
 	const spk::Alignment alignment{
 		spk::Alignment::Horizontal::Center,
-		spk::Alignment::Vertical::Bottom
-	};
+		spk::Alignment::Vertical::Bottom};
 
 	std::ostringstream stream;
 	stream << alignment;
@@ -149,8 +142,7 @@ TEST(AlignmentTest, WideOutputStreamReturnsExpectedValue)
 {
 	const spk::Alignment alignment{
 		spk::Alignment::Horizontal::Center,
-		spk::Alignment::Vertical::Bottom
-	};
+		spk::Alignment::Vertical::Bottom};
 
 	std::wostringstream stream;
 	stream << alignment;

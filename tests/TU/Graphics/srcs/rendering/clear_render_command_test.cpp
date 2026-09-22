@@ -57,8 +57,7 @@ TEST(ClearRenderCommandTest, DepthAndStencilMasksLeaveColorUntouched)
 	seedAttachments();
 	::glClearDepth(0.75);
 	::glClearStencil(3);
-	spk::ClearRenderCommand({1.0f, 0.0f, 0.0f, 1.0f},
-		spk::ClearRenderCommand::Mask::Depth | spk::ClearRenderCommand::Mask::Stencil).execute(openGL.renderContext());
+	spk::ClearRenderCommand({1.0f, 0.0f, 0.0f, 1.0f}, spk::ClearRenderCommand::Mask::Depth | spk::ClearRenderCommand::Mask::Stencil).execute(openGL.renderContext());
 	const auto actual = readAttachments();
 	EXPECT_EQ(actual.color, (std::array<std::uint8_t, 4>{51, 102, 153, 204}));
 	EXPECT_NEAR(actual.depth, 0.75f, 1.0e-5f);

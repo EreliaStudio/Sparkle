@@ -27,7 +27,7 @@ namespace
 	{
 		const std::string prefix(indentation, '\t');
 		return prefix + location.file_name() + ":" + std::to_string(location.line()) +
-			"\n" + prefix + "\t" + message;
+			   "\n" + prefix + "\t" + message;
 	}
 }
 
@@ -59,8 +59,7 @@ TEST(ExceptionTest, NestedSparkleExceptionIsRetainedAsItsConcreteType)
 	try
 	{
 		throw spk::Exception("inner sparkle failure");
-	}
-	catch (...)
+	} catch (...)
 	{
 		cause = std::current_exception();
 	}
@@ -72,12 +71,10 @@ TEST(ExceptionTest, NestedSparkleExceptionIsRetainedAsItsConcreteType)
 	{
 		std::rethrow_exception(outer.cause());
 		FAIL() << "Expected nested exception";
-	}
-	catch (const spk::Exception &nested)
+	} catch (const spk::Exception &nested)
 	{
 		EXPECT_EQ(nested.message(), "inner sparkle failure");
-	}
-	catch (...)
+	} catch (...)
 	{
 		FAIL() << "Nested spk::Exception was not preserved";
 	}
@@ -92,8 +89,7 @@ TEST(ExceptionTest, NestedStandardExceptionIsRetainedWithoutSlicing)
 	try
 	{
 		throw std::runtime_error("standard failure");
-	}
-	catch (...)
+	} catch (...)
 	{
 		cause = std::current_exception();
 	}
@@ -105,8 +101,7 @@ TEST(ExceptionTest, NestedStandardExceptionIsRetainedWithoutSlicing)
 			try
 			{
 				std::rethrow_exception(outer.cause());
-			}
-			catch (const std::runtime_error &nested)
+			} catch (const std::runtime_error &nested)
 			{
 				EXPECT_STREQ(nested.what(), "standard failure");
 				throw;

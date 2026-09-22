@@ -16,7 +16,7 @@ namespace
 	{
 		static std::atomic_uint64_t counter = 0;
 		return std::string(prefix) + std::to_string(::GetCurrentProcessId()) + "_" +
-			std::to_string(::GetTickCount64()) + "_" + std::to_string(counter.fetch_add(1));
+			   std::to_string(::GetTickCount64()) + "_" + std::to_string(counter.fetch_add(1));
 	}
 
 	bool contains(std::string_view text, std::string_view fragment)
@@ -85,8 +85,7 @@ TEST(WindowClassTest, DuplicateRegistrationReportsWin32Error)
 	{
 		spk::WinAPI::Window::Class second(identifier);
 		FAIL() << "Expected std::system_error";
-	}
-	catch (const std::system_error &exception)
+	} catch (const std::system_error &exception)
 	{
 		EXPECT_EQ(exception.code().value(), ERROR_CLASS_ALREADY_EXISTS);
 		EXPECT_TRUE(contains(exception.what(), "RegisterClassExW"));

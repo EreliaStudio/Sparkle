@@ -102,18 +102,17 @@ TEST(KeyboardTest, OutOfRangeIndexThrows)
 			try
 			{
 				(void)keyboard[invalid];
-			}
-			catch (const std::out_of_range &)
+			} catch (const std::out_of_range &)
 			{
 				std::exit(0);
-			}
-			catch (...)
+			} catch (...)
 			{
 				std::exit(2);
 			}
 			std::exit(1);
 		},
-		::testing::ExitedWithCode(0), "");
+		::testing::ExitedWithCode(0),
+		"");
 
 	EXPECT_EXIT(
 		{
@@ -122,16 +121,15 @@ TEST(KeyboardTest, OutOfRangeIndexThrows)
 			try
 			{
 				(void)keyboard[invalid];
-			}
-			catch (const std::out_of_range &)
+			} catch (const std::out_of_range &)
 			{
 				std::exit(0);
-			}
-			catch (...)
+			} catch (...)
 			{
 				std::exit(2);
 			}
 			std::exit(1);
 		},
-		::testing::ExitedWithCode(0), "");
+		::testing::ExitedWithCode(0),
+		"");
 }

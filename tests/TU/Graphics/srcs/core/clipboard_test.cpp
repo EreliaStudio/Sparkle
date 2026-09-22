@@ -43,8 +43,8 @@ namespace
 	{
 		ClipboardOpenGuard guard;
 		return guard.isOpen() &&
-			::EmptyClipboard() != FALSE &&
-			guard.close();
+			   ::EmptyClipboard() != FALSE &&
+			   guard.close();
 	}
 
 	class ClipboardHolder
@@ -163,8 +163,8 @@ namespace
 			::SetEvent(_release);
 			DWORD result = 1;
 			return ::WaitForSingleObject(_process, 5000) == WAIT_OBJECT_0 &&
-				::GetExitCodeProcess(_process, &result) &&
-				result == 0;
+				   ::GetExitCodeProcess(_process, &result) &&
+				   result == 0;
 		}
 	};
 

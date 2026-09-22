@@ -36,7 +36,9 @@ namespace
 		const spk::UUID null = spk::UUID::null();
 
 		EXPECT_TRUE(null.isNull());
-		EXPECT_TRUE(std::all_of(null.bytes().begin(), null.bytes().end(), [](std::uint8_t byte) { return byte == 0u; }));
+		EXPECT_TRUE(std::all_of(null.bytes().begin(), null.bytes().end(), [](std::uint8_t byte) {
+			return byte == 0u;
+		}));
 		EXPECT_EQ(null.version(), 0u);
 		EXPECT_FALSE(null.hasRFCVariant());
 		EXPECT_EQ(null.toString(), "00000000-0000-0000-0000-000000000000");
@@ -45,11 +47,7 @@ namespace
 	TEST(UUIDTest, ExplicitStorageIsExposedWithoutModification)
 	{
 		const spk::UUID::Storage storage{
-			0x00u, 0x11u, 0x22u, 0x33u,
-			0x44u, 0x55u,
-			0x46u, 0x77u,
-			0x88u, 0x99u,
-			0xAAu, 0xBBu, 0xCCu, 0xDDu, 0xEEu, 0xFFu};
+			0x00u, 0x11u, 0x22u, 0x33u, 0x44u, 0x55u, 0x46u, 0x77u, 0x88u, 0x99u, 0xAAu, 0xBBu, 0xCCu, 0xDDu, 0xEEu, 0xFFu};
 		const spk::UUID value(storage);
 
 		EXPECT_EQ(value.bytes(), storage);

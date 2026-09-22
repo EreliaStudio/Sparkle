@@ -21,12 +21,11 @@ namespace
 		return text.find(fragment) != std::string_view::npos;
 	}
 
-
 	std::string uniqueIdentifier(std::string_view prefix)
 	{
 		static std::atomic_uint64_t counter = 0;
 		return std::string(prefix) + std::to_string(::GetCurrentProcessId()) + "_" +
-			std::to_string(::GetTickCount64()) + "_" + std::to_string(counter.fetch_add(1));
+			   std::to_string(::GetTickCount64()) + "_" + std::to_string(counter.fetch_add(1));
 	}
 
 	void ensureThreadQueueExists()
@@ -97,7 +96,6 @@ TEST(MessageQueueTest, DispatchPendingDispatchesPostedWindowMessage)
 	EXPECT_EQ(dispatchCount, 1);
 	window.destroy();
 }
-
 
 TEST(MessageQueueTest, RepeatedWakeupsCanDriveRepeatedWaits)
 {
@@ -180,8 +178,7 @@ TEST(MessageQueueTest, InvalidWaitHandleThrowsSystemError)
 	{
 		spk::WinAPI::MessageQueue::waitForActivity(INVALID_HANDLE_VALUE);
 		FAIL() << "Expected std::system_error";
-	}
-	catch (const std::system_error &exception)
+	} catch (const std::system_error &exception)
 	{
 		EXPECT_EQ(exception.code().value(), ERROR_INVALID_HANDLE);
 		EXPECT_TRUE(contains(exception.what(), "MsgWaitForMultipleObjectsEx"));

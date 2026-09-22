@@ -56,11 +56,17 @@ TEST(WindowTest, AnyPartStartingReleaseMakesTheFacadeClosing)
 		spk::Window window(parts.native, parts.state, parts.surface);
 
 		if (releasingPart == 0)
+		{
 			parts.native->beginRelease();
+		}
 		else if (releasingPart == 1)
+		{
 			parts.state->beginRelease();
+		}
 		else
+		{
 			parts.surface->destroy();
+		}
 
 		EXPECT_TRUE(window.isClosing());
 		EXPECT_FALSE(window.isClosed());

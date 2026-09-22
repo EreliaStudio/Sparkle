@@ -210,9 +210,13 @@ TEST(WidgetGoldenRenderStateTest, PushButtonContentAndPointerStates)
 		}
 		widget.setFlat(flat);
 		if (hovered)
+		{
 			movePointer(widget, {30, 30});
+		}
 		if (pressed)
+		{
 			pressPointer(widget, {30, 30});
+		}
 		expectWidgetImage(widget, "push_button", std::string(state));
 	};
 

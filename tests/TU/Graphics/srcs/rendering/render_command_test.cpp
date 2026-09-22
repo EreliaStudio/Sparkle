@@ -15,9 +15,19 @@ namespace
 		int *_destructions;
 
 	public:
-		PolymorphicRecordingCommand(std::vector<int> &log, int &destructions) : _log(&log), _destructions(&destructions) {}
-		~PolymorphicRecordingCommand() override { ++*_destructions; }
-		void execute(spk::RenderContext &) const override { _log->push_back(9); }
+		PolymorphicRecordingCommand(std::vector<int> &log, int &destructions) :
+			_log(&log),
+			_destructions(&destructions)
+		{
+		}
+		~PolymorphicRecordingCommand() override
+		{
+			++*_destructions;
+		}
+		void execute(spk::RenderContext &) const override
+		{
+			_log->push_back(9);
+		}
 	};
 }
 

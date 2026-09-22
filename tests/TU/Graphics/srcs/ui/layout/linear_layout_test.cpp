@@ -67,7 +67,9 @@ TEST(LinearLayoutTest, PixelRoundingUsesAllSpaceWithoutGapsOrOverlap)
 	spk::HorizontalLayout layout;
 	spk::Widget a("a", nullptr), b("b", nullptr), c("c", nullptr);
 	for (auto *widget : {&a, &b, &c})
+	{
 		widget->setSizeHint({.minimal = {0, 1}, .maximal = {100, 1}, .preferred = {0, 1}});
+	}
 	layout.addWidget(&a);
 	layout.addWidget(&b);
 	layout.addWidget(&c);

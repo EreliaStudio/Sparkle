@@ -59,10 +59,7 @@ TEST(ResizeableTraitTest, EachEffectiveSetterCallProducesOneNotification)
 	trait.setPreferredSize({1.5f, 1.5f});
 	EXPECT_EQ(notificationCount, 3);
 
-	trait.setSizeHint({
-		.minimal = {3.0f, 3.0f},
-		.maximal = {4.0f, 4.0f},
-		.preferred = {3.5f, 3.5f}});
+	trait.setSizeHint({.minimal = {3.0f, 3.0f}, .maximal = {4.0f, 4.0f}, .preferred = {3.5f, 3.5f}});
 	EXPECT_EQ(notificationCount, 4);
 }
 
@@ -95,7 +92,8 @@ TEST(ResizeableTraitTest, DestructorInvalidatesOutstandingContracts)
 
 	{
 		spk::ResizeableTrait trait;
-		contract = trait.subscribeToSizeHintEdition([](spk::ResizeableTrait *) {});
+		contract = trait.subscribeToSizeHintEdition([](spk::ResizeableTrait *) {
+		});
 		ASSERT_TRUE(contract.isValid());
 	}
 

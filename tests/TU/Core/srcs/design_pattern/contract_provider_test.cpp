@@ -110,7 +110,8 @@ TEST(ContractProviderTest, ProviderDestructionInvalidatesOutstandingContracts)
 
 	{
 		spk::ContractProvider<> provider;
-		contract = provider.subscribe([]() {});
+		contract = provider.subscribe([]() {
+		});
 		ASSERT_TRUE(contract.isValid());
 	}
 
@@ -122,8 +123,10 @@ TEST(ContractProviderTest, ExplicitInvalidationInvalidatesAllContractsAndEmpties
 {
 	spk::ContractProvider<> provider;
 
-	auto first = provider.subscribe([]() {});
-	auto second = provider.subscribe([]() {});
+	auto first = provider.subscribe([]() {
+	});
+	auto second = provider.subscribe([]() {
+	});
 	ASSERT_FALSE(provider.empty());
 
 	provider.invalidate();
@@ -259,8 +262,7 @@ TEST(ContractProviderTest, ThrowingCallbackRestoresProviderAndAppliesPendingRemo
 	{
 		provider.trigger();
 		FAIL() << "Expected callback exception";
-	}
-	catch (const std::runtime_error &exception)
+	} catch (const std::runtime_error &exception)
 	{
 		EXPECT_STREQ(exception.what(), "callback failure");
 	}

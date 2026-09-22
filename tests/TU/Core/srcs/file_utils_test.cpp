@@ -49,8 +49,7 @@ TEST(ReadTextFileTest, MissingFileThrowsExceptionContainingPath)
 	{
 		(void)spk::readTextFile(missing);
 		FAIL() << "Expected spk::Exception";
-	}
-	catch (const spk::Exception &exception)
+	} catch (const spk::Exception &exception)
 	{
 		EXPECT_NE(exception.message().find(missing.string()), std::string::npos);
 		EXPECT_EQ(exception.cause(), nullptr);

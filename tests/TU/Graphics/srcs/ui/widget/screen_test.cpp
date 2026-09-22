@@ -8,8 +8,12 @@ TEST(ScreenTest, ActivatingScreensMaintainsOneGlobalActiveScreen)
 	spk::Screen second("Second");
 	int firstDeactivations = 0;
 	int secondActivations = 0;
-	auto firstContract = first.subscribeToDeactivation([&]() { ++firstDeactivations; });
-	auto secondContract = second.subscribeToActivation([&]() { ++secondActivations; });
+	auto firstContract = first.subscribeToDeactivation([&]() {
+		++firstDeactivations;
+	});
+	auto secondContract = second.subscribeToActivation([&]() {
+		++secondActivations;
+	});
 
 	EXPECT_EQ(spk::Screen::activeScreen(), nullptr);
 	first.activate();

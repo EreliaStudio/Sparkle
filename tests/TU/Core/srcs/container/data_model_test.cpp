@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include <concepts>
 #include "container/data_model.hpp"
+#include <concepts>
 
 #include <cstddef>
 #include <optional>
@@ -51,7 +51,9 @@ TEST(DataModelTest, StandardUsageEditsRowsAndReportsExactNotificationRanges)
 		[&removedEvents](std::size_t first, std::size_t count) {
 			removedEvents.push_back({first, count});
 		});
-	auto resetContract = model.subscribeToReset([&resetCount]() { ++resetCount; });
+	auto resetContract = model.subscribeToReset([&resetCount]() {
+		++resetCount;
+	});
 	(void)insertedContract;
 	(void)changedContract;
 	(void)removedContract;
@@ -90,9 +92,13 @@ TEST(DataModelTest, EmptyModelSupportsNoOpClearAndZeroCountErase)
 	spk::DataModel<int> model;
 	int resetCount = 0;
 	int removedCount = 0;
-	auto resetContract = model.subscribeToReset([&resetCount]() { ++resetCount; });
+	auto resetContract = model.subscribeToReset([&resetCount]() {
+		++resetCount;
+	});
 	auto removedContract = model.subscribeToRowsRemoved(
-		[&removedCount](std::size_t, std::size_t) { ++removedCount; });
+		[&removedCount](std::size_t, std::size_t) {
+			++removedCount;
+		});
 	(void)resetContract;
 	(void)removedContract;
 
@@ -157,7 +163,9 @@ TEST(DataModelTest, RepeatedNoOpEnableDoesNotNotify)
 	spk::DataModel<int> model({1});
 	int changedCount = 0;
 	auto contract = model.subscribeToRowsChanged(
-		[&changedCount](std::size_t, std::size_t) { ++changedCount; });
+		[&changedCount](std::size_t, std::size_t) {
+			++changedCount;
+		});
 	(void)contract;
 
 	model.setEnabled(0, true);

@@ -17,6 +17,7 @@
 #include "engine/reference_frame.hpp"
 #include "graphics/color.hpp"
 #include "graphics/opengl/padding.hpp"
+#include "input/device_context.hpp"
 #include "rendering/command/clear_render_command.hpp"
 #include "type/activation_status.hpp"
 #include "type/alignment.hpp"
@@ -24,7 +25,6 @@
 #include "type/orientation.hpp"
 #include "ui/view_region.hpp"
 #include "ui/widget/scalable_widget.hpp"
-#include "input/device_context.hpp"
 
 namespace
 {
@@ -37,8 +37,7 @@ namespace
 		return result;
 	}
 	template <typename TVariant, typename TAlternative>
-	inline constexpr bool VariantContains = []<std::size_t... Indices>(std::index_sequence<Indices...>)
-	{
+	inline constexpr bool VariantContains = []<std::size_t... Indices>(std::index_sequence<Indices...>) {
 		return (std::is_same_v<std::variant_alternative_t<Indices, TVariant>, TAlternative> || ...);
 	}(std::make_index_sequence<std::variant_size_v<TVariant>>{});
 

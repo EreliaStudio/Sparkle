@@ -5,8 +5,8 @@
 #include <stdexcept>
 #include <vector>
 
-#include "rendering/command/nine_slice_render_command.hpp"
 #include "render_command_test_utils.hpp"
+#include "rendering/command/nine_slice_render_command.hpp"
 #include "ui/widget.hpp"
 
 namespace test = render_command_test;
@@ -21,9 +21,7 @@ namespace
 	[[nodiscard]] spk::SpriteSheet coloredNineSlice()
 	{
 		constexpr std::array<std::uint8_t, 27> pixels{
-			255, 0, 0, 0, 255, 0, 0, 0, 255,
-			255, 255, 0, 255, 0, 255, 0, 255, 255,
-			255, 128, 0, 255, 255, 255, 128, 128, 128};
+			255, 0, 0, 0, 255, 0, 0, 0, 255, 255, 255, 0, 255, 0, 255, 0, 255, 255, 255, 128, 0, 255, 255, 255, 128, 128, 128};
 		const auto encoded = test::encodedPpm({3, 3}, pixels);
 		return spk::SpriteSheet(encoded, {3, 3});
 	}
@@ -47,8 +45,12 @@ namespace
 	void expectOpaque(const sparkle_test::FramebufferImage &image, const spk::Rect2D &area)
 	{
 		for (unsigned int y = area.y; y < area.y + area.height; ++y)
+		{
 			for (unsigned int x = area.x; x < area.x + area.width; ++x)
+			{
 				EXPECT_EQ(test::pixel(image, {x, y})[3], 255) << "pixel (" << x << ", " << y << ")";
+			}
+		}
 	}
 }
 
@@ -64,13 +66,14 @@ TEST(NineSliceRenderCommandTest, UnstretchedThreeByThreeSheetPreservesAllNineReg
 	target.clear();
 	spk::NineSliceRenderCommand(&sheet, destination({30, 30}), {10, 10}).execute(target.context());
 	const auto image = target.capture();
-	constexpr std::array<std::array<std::uint8_t, 4>, 9> colors{{
-		{255, 0, 0, 255}, {0, 255, 0, 255}, {0, 0, 255, 255},
-		{255, 255, 0, 255}, {255, 0, 255, 255}, {0, 255, 255, 255},
-		{255, 128, 0, 255}, {255, 255, 255, 255}, {128, 128, 128, 255}}};
+	constexpr std::array<std::array<std::uint8_t, 4>, 9> colors{{{255, 0, 0, 255}, {0, 255, 0, 255}, {0, 0, 255, 255}, {255, 255, 0, 255}, {255, 0, 255, 255}, {0, 255, 255, 255}, {255, 128, 0, 255}, {255, 255, 255, 255}, {128, 128, 128, 255}}};
 	for (unsigned int y = 0; y < 3; ++y)
+	{
 		for (unsigned int x = 0; x < 3; ++x)
+		{
 			EXPECT_EQ(test::pixel(image, {x * 10 + 5, y * 10 + 5}), colors[y * 3 + x]);
+		}
+	}
 }
 
 TEST(NineSliceRenderCommandTest, DownscaledCornersUseDeterministicNearestTexels)

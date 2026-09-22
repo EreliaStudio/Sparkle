@@ -17,8 +17,7 @@ namespace
 		std::vector<VersionedTrait::Version> observedVersions;
 
 		auto contract = value.subscribeToVersionEdition(
-			[&](VersionedTrait *edited)
-			{
+			[&](VersionedTrait *edited) {
 				ASSERT_EQ(edited, &value);
 				observedVersions.push_back(edited->version());
 			});
@@ -48,8 +47,7 @@ namespace
 
 		{
 			auto contract = value.subscribeToVersionEdition(
-				[&](VersionedTrait *)
-				{
+				[&](VersionedTrait *) {
 					++callbackCount;
 				});
 
@@ -66,8 +64,7 @@ namespace
 		VersionedTrait value;
 		std::size_t callbackCount = 0;
 		auto contract = value.subscribeToVersionEdition(
-			[&](VersionedTrait *)
-			{
+			[&](VersionedTrait *) {
 				++callbackCount;
 			});
 
@@ -114,7 +111,8 @@ namespace
 
 		{
 			auto value = std::make_unique<VersionedTrait>();
-			contract = value->subscribeToVersionEdition([](VersionedTrait *) {});
+			contract = value->subscribeToVersionEdition([](VersionedTrait *) {
+			});
 			ASSERT_TRUE(contract.isValid());
 		}
 

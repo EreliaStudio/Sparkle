@@ -79,8 +79,7 @@ namespace
 		{
 			(void)spk::Quaternion{0.0f, 0.0f, 0.0f, 0.0f}.inversed();
 			FAIL() << "Expected std::runtime_error";
-		}
-		catch (const std::runtime_error &exception)
+		} catch (const std::runtime_error &exception)
 		{
 			EXPECT_STREQ(exception.what(), "Can't inverse a null quaternion");
 		}
@@ -156,8 +155,7 @@ namespace
 		{
 			const spk::Quaternion original = spk::Quaternion::fromEuler({15.0f, pitch, -25.0f});
 			const auto recovered = original.toEuler();
-			SCOPED_TRACE(::testing::Message() << "pitch=" << pitch << ", recovered Euler=("
-				<< recovered.x << ", " << recovered.y << ", " << recovered.z << ")");
+			SCOPED_TRACE(::testing::Message() << "pitch=" << pitch << ", recovered Euler=(" << recovered.x << ", " << recovered.y << ", " << recovered.z << ")");
 			if (pitch == 90.0f)
 			{
 				EXPECT_NEAR(recovered.x, 40.0f, 5.0e-4f);

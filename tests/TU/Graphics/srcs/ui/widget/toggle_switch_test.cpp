@@ -10,7 +10,9 @@ TEST(ToggleSwitchTest, StateAnimationAndZeroDurationNotifyOnce)
 {
 	spk::ToggleSwitch toggle("Toggle");
 	std::vector<bool> states;
-	auto contract = toggle.subscribeToState([&](bool value) { states.push_back(value); });
+	auto contract = toggle.subscribeToState([&](bool value) {
+		states.push_back(value);
+	});
 	toggle.setChecked(true);
 	toggle.setChecked(true);
 	EXPECT_TRUE(toggle.isChecked());

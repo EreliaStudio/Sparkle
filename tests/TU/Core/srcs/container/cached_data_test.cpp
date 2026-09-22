@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include <concepts>
 #include "container/cached_data.hpp"
+#include <concepts>
 
 #include <memory>
 #include <optional>
@@ -18,7 +18,11 @@ namespace
 		std::string label;
 
 		Record() = default;
-		Record(int value, std::string label) : value(value), label(std::move(label)) {}
+		Record(int value, std::string label) :
+			value(value),
+			label(std::move(label))
+		{
+		}
 	};
 }
 
@@ -65,8 +69,12 @@ TEST(CachedDataTest, RefreshDestroysOldValueAndImmediatelyRegenerates)
 	int generationCount = 0;
 	int destructionCount = 0;
 	spk::CachedData<int> cache(
-		[&generationCount]() { return ++generationCount; },
-		[&destructionCount](int &) { ++destructionCount; });
+		[&generationCount]() {
+			return ++generationCount;
+		},
+		[&destructionCount](int &) {
+			++destructionCount;
+		});
 
 	EXPECT_EQ(cache.get(), 1);
 	EXPECT_EQ(cache.refresh(), 2);
@@ -79,8 +87,12 @@ TEST(CachedDataTest, SetAndEmplaceDiscardPreviousCachedValuesExactlyOnce)
 	int destructionCount = 0;
 	{
 		spk::CachedData<Record> cache(
-			[]() { return Record{1, "generated"}; },
-			[&destructionCount](Record &) { ++destructionCount; });
+			[]() {
+				return Record{1, "generated"};
+			},
+			[&destructionCount](Record &) {
+				++destructionCount;
+			});
 
 		(void)cache.get();
 		cache.set(Record{2, "set"});
@@ -99,8 +111,12 @@ TEST(CachedDataTest, TakeTransfersCurrentValueWithoutInvokingConfiguredDestructo
 {
 	int destructionCount = 0;
 	spk::CachedData<std::string> cache(
-		[]() { return std::string("generated"); },
-		[&destructionCount](std::string &) { ++destructionCount; });
+		[]() {
+			return std::string("generated");
+		},
+		[&destructionCount](std::string &) {
+			++destructionCount;
+		});
 
 	EXPECT_EQ(cache.get(), "generated");
 	std::optional<std::string> value = cache.take();
@@ -118,8 +134,12 @@ TEST(CachedDataTest, InvalidateAndTakeOnEmptyCacheAreNoOps)
 {
 	int destructionCount = 0;
 	spk::CachedData<int> cache(
-		[]() { return 12; },
-		[&destructionCount](int &) { ++destructionCount; });
+		[]() {
+			return 12;
+		},
+		[&destructionCount](int &) {
+			++destructionCount;
+		});
 
 	cache.invalidate();
 	EXPECT_EQ(destructionCount, 0);
@@ -130,12 +150,16 @@ TEST(CachedDataTest, InvalidateAndTakeOnEmptyCacheAreNoOps)
 TEST(CachedDataTest, EmptyAndPopulatedCopyConstructionAreIndependent)
 {
 	int generationCount = 0;
-	spk::CachedData<int> empty([&generationCount]() { return ++generationCount; });
+	spk::CachedData<int> empty([&generationCount]() {
+		return ++generationCount;
+	});
 	spk::CachedData<int> emptyCopy(empty);
 	EXPECT_EQ(emptyCopy.get(), 1);
 	EXPECT_EQ(generationCount, 1);
 
-	spk::CachedData<int> populated([&generationCount]() { return ++generationCount; });
+	spk::CachedData<int> populated([&generationCount]() {
+		return ++generationCount;
+	});
 	EXPECT_EQ(populated.get(), 2);
 	spk::CachedData<int> populatedCopy(populated);
 	EXPECT_EQ(populatedCopy.get(), 2);
@@ -148,11 +172,19 @@ TEST(CachedDataTest, CopyAssignmentDestroysDestinationAndSupportsSelfAssignment)
 {
 	int destructionCount = 0;
 	spk::CachedData<int> source(
-		[]() { return 11; },
-		[&destructionCount](int &) { ++destructionCount; });
+		[]() {
+			return 11;
+		},
+		[&destructionCount](int &) {
+			++destructionCount;
+		});
 	spk::CachedData<int> destination(
-		[]() { return 22; },
-		[&destructionCount](int &) { ++destructionCount; });
+		[]() {
+			return 22;
+		},
+		[&destructionCount](int &) {
+			++destructionCount;
+		});
 
 	EXPECT_EQ(source.get(), 11);
 	EXPECT_EQ(destination.get(), 22);
@@ -188,11 +220,19 @@ TEST(CachedDataTest, MoveAssignmentDiscardsDestinationAndMovesCurrentValue)
 {
 	int destructionCount = 0;
 	spk::CachedData<std::string> source(
-		[]() { return std::string("source"); },
-		[&destructionCount](std::string &) { ++destructionCount; });
+		[]() {
+			return std::string("source");
+		},
+		[&destructionCount](std::string &) {
+			++destructionCount;
+		});
 	spk::CachedData<std::string> destination(
-		[]() { return std::string("destination"); },
-		[&destructionCount](std::string &) { ++destructionCount; });
+		[]() {
+			return std::string("destination");
+		},
+		[&destructionCount](std::string &) {
+			++destructionCount;
+		});
 
 	(void)source.get();
 	(void)destination.get();
@@ -204,19 +244,24 @@ TEST(CachedDataTest, MoveAssignmentDiscardsDestinationAndMovesCurrentValue)
 	EXPECT_EQ(destination.get(), "source");
 }
 
-
 TEST(CachedDataTest, EmptyMoveConstructionAndAssignmentTransferGeneratorConfiguration)
 {
 	int generationCount = 0;
-	spk::CachedData<int> source([&generationCount]() { return ++generationCount; });
+	spk::CachedData<int> source([&generationCount]() {
+		return ++generationCount;
+	});
 	spk::CachedData<int> moved(std::move(source));
 	EXPECT_EQ(moved.get(), 1);
 
 	source.set(9);
 	EXPECT_EQ(source.get(), 9);
 
-	spk::CachedData<int> empty([&generationCount]() { return ++generationCount; });
-	spk::CachedData<int> destination([]() { return 99; });
+	spk::CachedData<int> empty([&generationCount]() {
+		return ++generationCount;
+	});
+	spk::CachedData<int> destination([]() {
+		return 99;
+	});
 	EXPECT_EQ(destination.get(), 99);
 	destination = std::move(empty);
 	EXPECT_EQ(destination.get(), 2);
@@ -225,8 +270,12 @@ TEST(CachedDataTest, EmptyMoveConstructionAndAssignmentTransferGeneratorConfigur
 TEST(CachedDataTest, CopyAssignmentFromEmptyCacheCopiesGeneratorWithoutMaterializingSource)
 {
 	int generationCount = 0;
-	spk::CachedData<int> source([&generationCount]() { return ++generationCount; });
-	spk::CachedData<int> destination([]() { return 99; });
+	spk::CachedData<int> source([&generationCount]() {
+		return ++generationCount;
+	});
+	spk::CachedData<int> destination([]() {
+		return 99;
+	});
 	EXPECT_EQ(destination.get(), 99);
 
 	destination = source;
@@ -242,8 +291,7 @@ TEST(CachedDataTest, EmptyCacheWithoutGeneratorThrowsDocumentedRuntimeError)
 	{
 		(void)cache.get();
 		FAIL() << "Expected std::runtime_error";
-	}
-	catch (const std::runtime_error &exception)
+	} catch (const std::runtime_error &exception)
 	{
 		EXPECT_STREQ(exception.what(), "CachedData: generator not set");
 	}
@@ -252,7 +300,9 @@ TEST(CachedDataTest, EmptyCacheWithoutGeneratorThrowsDocumentedRuntimeError)
 TEST(CachedDataTest, BacklogRegenerateAndReleaseSemanticsAreProvidedByRefreshAndTake)
 {
 	int generationCount = 0;
-	spk::CachedData<int> cache([&generationCount]() { return ++generationCount; });
+	spk::CachedData<int> cache([&generationCount]() {
+		return ++generationCount;
+	});
 	EXPECT_EQ(cache.get(), 1);
 	EXPECT_EQ(cache.refresh(), 2);
 	std::optional<int> released = cache.take();

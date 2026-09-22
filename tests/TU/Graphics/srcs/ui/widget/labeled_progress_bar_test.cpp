@@ -30,15 +30,21 @@ TEST(LabeledProgressBarTest, PredicateCanBeClearedReplacedAndRecoveredAfterFailu
 	bar.setTextPredicate({});
 	EXPECT_TRUE(bar.label().text().empty());
 
-	bar.setTextPredicate([](float) { return "stable"; });
+	bar.setTextPredicate([](float) {
+		return "stable";
+	});
 	EXPECT_EQ(bar.label().text(), U"stable");
 	EXPECT_THROW(
-		bar.setTextPredicate([](float) -> std::string { throw std::runtime_error("predicate failure"); }),
+		bar.setTextPredicate([](float) -> std::string {
+			throw std::runtime_error("predicate failure");
+		}),
 		std::runtime_error);
 	EXPECT_FLOAT_EQ(bar.ratio(), 0.5f);
 	EXPECT_EQ(bar.label().text(), U"stable");
 
-	bar.setTextPredicate([](float ratio) { return ratio == 0.5f ? "recovered" : "changed"; });
+	bar.setTextPredicate([](float ratio) {
+		return ratio == 0.5f ? "recovered" : "changed";
+	});
 	EXPECT_EQ(bar.label().text(), U"recovered");
 }
 

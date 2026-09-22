@@ -14,8 +14,7 @@ namespace
 	constexpr float Tolerance = 1.0e-5f;
 
 	template <typename T>
-	concept HasIdentity = requires
-	{
+	concept HasIdentity = requires {
 		T::identity();
 	};
 
@@ -167,9 +166,15 @@ namespace
 	TEST(MatrixTest, OrthographicProjectionRejectsEqualBoundsOnEveryAxis)
 	{
 		for (const auto &call : {
-				 std::function<void()>([] { (void)spk::Matrix4x4::ortho(1.0f, 1.0f, -1.0f, 1.0f); }),
-				 std::function<void()>([] { (void)spk::Matrix4x4::ortho(-1.0f, 1.0f, 2.0f, 2.0f); }),
-				 std::function<void()>([] { (void)spk::Matrix4x4::ortho(-1.0f, 1.0f, -1.0f, 1.0f, 3.0f, 3.0f); })})
+				 std::function<void()>([] {
+					 (void)spk::Matrix4x4::ortho(1.0f, 1.0f, -1.0f, 1.0f);
+				 }),
+				 std::function<void()>([] {
+					 (void)spk::Matrix4x4::ortho(-1.0f, 1.0f, 2.0f, 2.0f);
+				 }),
+				 std::function<void()>([] {
+					 (void)spk::Matrix4x4::ortho(-1.0f, 1.0f, -1.0f, 1.0f, 3.0f, 3.0f);
+				 })})
 		{
 			EXPECT_THROW(call(), std::invalid_argument);
 		}

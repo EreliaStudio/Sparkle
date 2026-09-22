@@ -66,7 +66,10 @@ namespace
 		}
 
 #define SPK_RECORD_HANDLER(Method, EventType, Label) \
-		void Method(EventType &event) override { record(Label, event); }
+	void Method(EventType &event) override           \
+	{                                                \
+		record(Label, event);                        \
+	}
 
 		SPK_RECORD_HANDLER(_onWindowResizedEvent, spk::WindowResizedEvent, "window-resized")
 		SPK_RECORD_HANDLER(_onWindowMovedEvent, spk::WindowMovedEvent, "window-moved")
@@ -149,11 +152,7 @@ TEST(EventDispatcherTest, StandardUsageDispatchesEveryEventType)
 	spk::TextInputEvent text(textRecord, keyboard);
 	dispatcher.dispatch(text);
 
-	EXPECT_EQ(log, (std::vector<std::string>{
-		"root:window-resized", "root:window-moved", "root:focus-gained", "root:focus-lost",
-		"root:mouse-entered", "root:mouse-left", "root:mouse-moved", "root:mouse-wheel",
-		"root:mouse-pressed", "root:mouse-released", "root:mouse-double", "root:key-pressed",
-		"root:key-released", "root:text-input"}));
+	EXPECT_EQ(log, (std::vector<std::string>{"root:window-resized", "root:window-moved", "root:focus-gained", "root:focus-lost", "root:mouse-entered", "root:mouse-left", "root:mouse-moved", "root:mouse-wheel", "root:mouse-pressed", "root:mouse-released", "root:mouse-double", "root:key-pressed", "root:key-released", "root:text-input"}));
 }
 
 TEST(EventDispatcherTest, ChildrenAreVisitedBeforeParentInPropagationOrder)
@@ -170,11 +169,7 @@ TEST(EventDispatcherTest, ChildrenAreVisitedBeforeParentInPropagationOrder)
 	spk::WindowMovedEvent event(eventRecord);
 	root.dispatch(event);
 
-	EXPECT_EQ(log, (std::vector<std::string>{
-		"grandchild:window-moved",
-		"first:window-moved",
-		"second:window-moved",
-		"root:window-moved"}));
+	EXPECT_EQ(log, (std::vector<std::string>{"grandchild:window-moved", "first:window-moved", "second:window-moved", "root:window-moved"}));
 }
 
 TEST(EventDispatcherTest, ConsumptionShortCircuitsRemainingPropagation)
@@ -245,11 +240,7 @@ TEST(EventDispatcherTest, PassiveObserversVisitNodeThenChildrenAndIgnoreConsumpt
 	spk::KeyReleasedEvent keyReleased(keyReleasedRecord, keyboard);
 	root.observeKeyboard(keyReleased);
 
-	EXPECT_EQ(log, (std::vector<std::string>{
-		"root:passive-mouse-moved", "child:passive-mouse-moved",
-		"root:passive-mouse-pressed", "child:passive-mouse-pressed",
-		"root:passive-key-pressed", "child:passive-key-pressed",
-		"root:passive-key-released", "child:passive-key-released"}));
+	EXPECT_EQ(log, (std::vector<std::string>{"root:passive-mouse-moved", "child:passive-mouse-moved", "root:passive-mouse-pressed", "child:passive-mouse-pressed", "root:passive-key-pressed", "child:passive-key-pressed", "root:passive-key-released", "child:passive-key-released"}));
 }
 
 TEST(EventDispatcherTest, NestedDispatchIsSupported)
@@ -259,7 +250,9 @@ TEST(EventDispatcherTest, NestedDispatchIsSupported)
 	auto nestedRecord = record<spk::KeyReleasedRecord>();
 	spk::Keyboard keyboard;
 	spk::KeyReleasedEvent nestedEvent(nestedRecord, keyboard);
-	root.nestedAction = [&] { root.dispatch(nestedEvent); };
+	root.nestedAction = [&] {
+		root.dispatch(nestedEvent);
+	};
 
 	auto outerRecord = record<spk::WindowMovedRecord>();
 	spk::WindowMovedEvent outerEvent(outerRecord);

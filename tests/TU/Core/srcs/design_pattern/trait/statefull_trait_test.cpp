@@ -73,9 +73,15 @@ TEST(StatefullTraitTest, SeveralStatesHaveIndependentProviders)
 	int runningCount = 0;
 	int pausedCount = 0;
 
-	auto idle = trait.subscribeToStateEnter(State::Idle, [&]() { ++idleCount; });
-	auto running = trait.subscribeToStateEnter(State::Running, [&]() { ++runningCount; });
-	auto paused = trait.subscribeToStateEnter(State::Paused, [&]() { ++pausedCount; });
+	auto idle = trait.subscribeToStateEnter(State::Idle, [&]() {
+		++idleCount;
+	});
+	auto running = trait.subscribeToStateEnter(State::Running, [&]() {
+		++runningCount;
+	});
+	auto paused = trait.subscribeToStateEnter(State::Paused, [&]() {
+		++pausedCount;
+	});
 
 	trait.setState(State::Idle);
 	trait.setState(State::Running);

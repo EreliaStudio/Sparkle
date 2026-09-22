@@ -33,7 +33,9 @@ TEST(RadioButtonGroupTest, SparseInsertionSelectionAndAccessPreserveInsertionOrd
 	EXPECT_EQ(group.selectedCell(), (std::optional<spk::RadioButtonGroup::Cell>{{3, 1}}));
 
 	std::vector<std::optional<spk::RadioButtonGroup::Selection>> editions;
-	auto contract = group.subscribeToSelection([&](auto selection) { editions.push_back(selection); });
+	auto contract = group.subscribeToSelection([&](auto selection) {
+		editions.push_back(selection);
+	});
 	group.select(0, 4);
 	group.select(second);
 

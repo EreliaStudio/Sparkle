@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
 
-
 #include <GL/glew.h>
 
 #include <array>

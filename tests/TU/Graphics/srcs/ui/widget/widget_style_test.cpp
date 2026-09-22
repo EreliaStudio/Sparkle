@@ -16,10 +16,14 @@ TEST(WidgetStyleTest, DefaultResourcesAndCoreValuesAreValid)
 {
 	const auto &style = spk::Widget::defaultStyle.get();
 	const auto expectColor = [](const spk::Color &color) {
-		EXPECT_GE(color.r, 0.0f); EXPECT_LE(color.r, 1.0f);
-		EXPECT_GE(color.g, 0.0f); EXPECT_LE(color.g, 1.0f);
-		EXPECT_GE(color.b, 0.0f); EXPECT_LE(color.b, 1.0f);
-		EXPECT_GE(color.a, 0.0f); EXPECT_LE(color.a, 1.0f);
+		EXPECT_GE(color.r, 0.0f);
+		EXPECT_LE(color.r, 1.0f);
+		EXPECT_GE(color.g, 0.0f);
+		EXPECT_LE(color.g, 1.0f);
+		EXPECT_GE(color.b, 0.0f);
+		EXPECT_LE(color.b, 1.0f);
+		EXPECT_GE(color.a, 0.0f);
+		EXPECT_LE(color.a, 1.0f);
 	};
 	EXPECT_NE(style.font, nullptr);
 	EXPECT_NE(style.iconsetImage, nullptr);

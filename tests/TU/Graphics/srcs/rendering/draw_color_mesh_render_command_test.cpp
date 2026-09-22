@@ -5,8 +5,8 @@
 #include <array>
 #include <cstdint>
 
-#include "rendering/command/draw_color_mesh_render_command.hpp"
 #include "render_command_test_utils.hpp"
+#include "rendering/command/draw_color_mesh_render_command.hpp"
 
 namespace test = render_command_test;
 

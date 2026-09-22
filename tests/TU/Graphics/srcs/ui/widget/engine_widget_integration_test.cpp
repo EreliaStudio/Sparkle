@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
 #include "core/context/update_context.hpp"
-#include "rendering/engine/rendering_behaviour.hpp"
 #include "exception.hpp"
+#include "rendering/engine/rendering_behaviour.hpp"
 #include "rendering/render_command.hpp"
 #include "sparkle_test.hpp"
 #include "ui/widget/engine_widget.hpp"
@@ -12,48 +12,75 @@ namespace
 	struct Events : spk::RenderingBehaviour
 	{
 		std::vector<std::string> received;
+
 #define RECORD_EVENT(Name)                             \
 	void _on##Name##Event(spk::Name##Event &) override \
 	{                                                  \
 		received.push_back(#Name);                     \
 	}
 		RECORD_EVENT(WindowResized)
-		RECORD_EVENT(WindowMoved) RECORD_EVENT(WindowFocusGained) RECORD_EVENT(WindowFocusLost)
-			RECORD_EVENT(MouseEntered) RECORD_EVENT(MouseLeft) RECORD_EVENT(MouseMoved) RECORD_EVENT(MouseWheelScrolled)
-				RECORD_EVENT(MouseButtonPressed) RECORD_EVENT(MouseButtonReleased) RECORD_EVENT(MouseButtonDoubleClicked)
-					RECORD_EVENT(KeyPressed) RECORD_EVENT(KeyReleased) RECORD_EVENT(TextInput)
+		RECORD_EVENT(WindowMoved)
+		RECORD_EVENT(WindowFocusGained)
+		RECORD_EVENT(WindowFocusLost)
+		RECORD_EVENT(MouseEntered)
+		RECORD_EVENT(MouseLeft)
+		RECORD_EVENT(MouseMoved)
+		RECORD_EVENT(MouseWheelScrolled)
+		RECORD_EVENT(MouseButtonPressed)
+		RECORD_EVENT(MouseButtonReleased)
+		RECORD_EVENT(MouseButtonDoubleClicked)
+		RECORD_EVENT(KeyPressed)
+		RECORD_EVENT(KeyReleased)
+		RECORD_EVENT(TextInput)
 #undef RECORD_EVENT
+
 #define RECORD_PASSIVE(Name)                                  \
 	void _onPassive##Name##Event(spk::Name##Event &) override \
 	{                                                         \
 		received.push_back("Passive" #Name);                  \
 	}
-						RECORD_PASSIVE(MouseMoved) RECORD_PASSIVE(MouseButtonPressed) RECORD_PASSIVE(KeyPressed) RECORD_PASSIVE(KeyReleased)
+	RECORD_PASSIVE(MouseMoved)
+	RECORD_PASSIVE(MouseButtonPressed)
+	RECORD_PASSIVE(KeyPressed)
+	RECORD_PASSIVE(KeyReleased)
 #undef RECORD_PASSIVE
+
 	};
 	void allEvents(spk::EngineWidget &widget)
 	{
 		spk::Mouse mouse;
 		spk::Keyboard keyboard;
+
 #define SEND_EVENT(Name)                \
 	{                                   \
 		spk::Name##Record record{};     \
 		spk::Name##Event event(record); \
 		widget.dispatch(event);         \
 	}
-		SEND_EVENT(WindowResized)
-		SEND_EVENT(WindowMoved) SEND_EVENT(WindowFocusGained) SEND_EVENT(WindowFocusLost) SEND_EVENT(MouseEntered) SEND_EVENT(MouseLeft)
+	SEND_EVENT(WindowResized)
+	SEND_EVENT(WindowMoved)
+	SEND_EVENT(WindowFocusGained)
+	SEND_EVENT(WindowFocusLost)
+	SEND_EVENT(MouseEntered)
+	SEND_EVENT(MouseLeft)
 #undef SEND_EVENT
+
 #define SEND_DEVICE(Name, Device)               \
 	{                                           \
 		spk::Name##Record record{};             \
 		spk::Name##Event event(record, Device); \
 		widget.dispatch(event);                 \
 	}
-			SEND_DEVICE(MouseMoved, mouse) SEND_DEVICE(MouseWheelScrolled, mouse) SEND_DEVICE(MouseButtonPressed, mouse)
-				SEND_DEVICE(MouseButtonReleased, mouse) SEND_DEVICE(MouseButtonDoubleClicked, mouse)
-					SEND_DEVICE(KeyPressed, keyboard) SEND_DEVICE(KeyReleased, keyboard) SEND_DEVICE(TextInput, keyboard)
+	SEND_DEVICE(MouseMoved, mouse)
+	SEND_DEVICE(MouseWheelScrolled, mouse)
+	SEND_DEVICE(MouseButtonPressed, mouse)
+	SEND_DEVICE(MouseButtonReleased, mouse)
+	SEND_DEVICE(MouseButtonDoubleClicked, mouse)
+	SEND_DEVICE(KeyPressed, keyboard)
+	SEND_DEVICE(KeyReleased, keyboard)
+	SEND_DEVICE(TextInput, keyboard)
 #undef SEND_DEVICE
+
 #define OBSERVE(Name, Device, Method)           \
 	{                                           \
 		spk::Name##Record record{};             \
@@ -61,9 +88,12 @@ namespace
 		event.consumed = true;                  \
 		widget.Method(event);                   \
 	}
-						OBSERVE(MouseMoved, mouse, observePointer) OBSERVE(MouseButtonPressed, mouse, observePointer)
-							OBSERVE(KeyPressed, keyboard, observeKeyboard) OBSERVE(KeyReleased, keyboard, observeKeyboard)
+	OBSERVE(MouseMoved, mouse, observePointer)
+	OBSERVE(MouseButtonPressed, mouse, observePointer)
+	OBSERVE(KeyPressed, keyboard, observeKeyboard)
+	OBSERVE(KeyReleased, keyboard, observeKeyboard)
 #undef OBSERVE
+
 	}
 	struct Mark : spk::RenderCommand
 	{

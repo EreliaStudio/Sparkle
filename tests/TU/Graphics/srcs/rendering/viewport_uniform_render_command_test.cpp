@@ -40,8 +40,12 @@ namespace
 	void expectMatrixEqual(const spk::Matrix4x4 &actual, const spk::Matrix4x4 &expected)
 	{
 		for (std::size_t column = 0; column < 4; ++column)
+		{
 			for (std::size_t row = 0; row < 4; ++row)
+			{
 				EXPECT_FLOAT_EQ(actual[column][row], expected[column][row]);
+			}
+		}
 	}
 }
 

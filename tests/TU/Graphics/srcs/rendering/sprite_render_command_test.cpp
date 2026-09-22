@@ -4,8 +4,8 @@
 #include <cstdint>
 #include <stdexcept>
 
-#include "rendering/command/sprite_render_command.hpp"
 #include "render_command_test_utils.hpp"
+#include "rendering/command/sprite_render_command.hpp"
 #include "ui/widget.hpp"
 
 namespace test = render_command_test;

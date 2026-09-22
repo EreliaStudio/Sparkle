@@ -22,19 +22,31 @@ namespace
 
 	public:
 		PassRecordingCommand(std::vector<int> &log, int value, int *destructions = nullptr) :
-			_log(&log), _value(value), _destructions(destructions) {}
+			_log(&log),
+			_value(value),
+			_destructions(destructions)
+		{
+		}
 		~PassRecordingCommand() override
 		{
 			if (_destructions != nullptr)
+			{
 				++*_destructions;
+			}
 		}
-		void execute(spk::RenderContext &) const override { _log->push_back(_value); }
+		void execute(spk::RenderContext &) const override
+		{
+			_log->push_back(_value);
+		}
 	};
 
 	class PassThrowingCommand final : public spk::RenderCommand
 	{
 	public:
-		void execute(spk::RenderContext &) const override { throw std::runtime_error("command failure"); }
+		void execute(spk::RenderContext &) const override
+		{
+			throw std::runtime_error("command failure");
+		}
 	};
 }
 
@@ -82,8 +94,7 @@ TEST(RenderPassTest, CommandFailureIsWrappedWithIndexAndRetainsCause)
 	{
 		pass.execute(context);
 		FAIL() << "Expected spk::Exception";
-	}
-	catch (const spk::Exception &exception)
+	} catch (const spk::Exception &exception)
 	{
 		EXPECT_NE(std::string(exception.what()).find("render command [1]"), std::string::npos);
 		EXPECT_NE(exception.cause(), nullptr);

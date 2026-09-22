@@ -6,8 +6,8 @@
 #include <cstdint>
 #include <utility>
 
-#include "rendering/command/draw_font_render_command.hpp"
 #include "render_command_test_utils.hpp"
+#include "rendering/command/draw_font_render_command.hpp"
 #include "ui/widget.hpp"
 
 namespace test = render_command_test;

@@ -74,8 +74,7 @@ TEST(WakeEventTest, SetEventFailureReportsCodeAndOperation)
 	{
 		event.notify();
 		FAIL() << "Expected std::system_error";
-	}
-	catch (const std::system_error &exception)
+	} catch (const std::system_error &exception)
 	{
 		EXPECT_EQ(exception.code().value(), ERROR_INVALID_HANDLE);
 		EXPECT_TRUE(contains(exception.what(), "SetEvent"));

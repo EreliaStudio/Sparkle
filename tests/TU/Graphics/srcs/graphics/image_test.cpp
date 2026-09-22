@@ -149,11 +149,9 @@ TEST(ImageTest, DualChannelAndRGBAFixturesNeedDeterministicEncodedAssets)
 
 	// TGA stores true-color channels as BGRA; Image exposes decoded RGBA pixels.
 	const std::vector<std::uint8_t> encodedBgra{
-		3, 2, 1, 4, 30, 20, 10, 40,
-		100, 90, 80, 110, 140, 130, 120, 150};
+		3, 2, 1, 4, 30, 20, 10, 40, 100, 90, 80, 110, 140, 130, 120, 150};
 	const std::vector<std::uint8_t> expectedRgba{
-		1, 2, 3, 4, 10, 20, 30, 40,
-		80, 90, 100, 110, 120, 130, 140, 150};
+		1, 2, 3, 4, 10, 20, 30, 40, 80, 90, 100, 110, 120, 130, 140, 150};
 	const spk::Image rgba(makeTga(2, 2, 2, 32, encodedBgra));
 	EXPECT_EQ(rgba.size(), spk::Vector2UInt(2, 2));
 	EXPECT_EQ(rgba.format(), spk::Texture::Format::RGBA);

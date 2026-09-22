@@ -26,7 +26,13 @@ TEST(RequestMessageBoxTest, ConfigureReplacesCaptionsAndBothActions)
 	box.activate();
 	int first = 0;
 	int second = 0;
-	box.configure("Proceed", [&]() { ++first; }, "Cancel", [&]() { ++second; });
+	box.configure("Proceed", [&]() {
+		++first;
+	},
+				  "Cancel",
+				  [&]() {
+					  ++second;
+				  });
 	EXPECT_EQ(box.firstButton().releasedLabel().text(), U"Proceed");
 	EXPECT_EQ(box.secondButton().releasedLabel().text(), U"Cancel");
 	click(box.firstButton());
@@ -42,11 +48,15 @@ TEST(RequestMessageBoxTest, TitleClosePolicyCanOverrideAndReset)
 	box.activate();
 	int second = 0;
 	int custom = 0;
-	box.configure("Yes", {}, "No", [&]() { ++second; });
+	box.configure("Yes", {}, "No", [&]() {
+		++second;
+	});
 	EXPECT_TRUE(box.usesSecondActionOnTitleClose());
 	click(box.menuBar().closeButton());
 	EXPECT_EQ(second, 1);
-	box.setTitleCloseAction([&]() { ++custom; });
+	box.setTitleCloseAction([&]() {
+		++custom;
+	});
 	EXPECT_FALSE(box.usesSecondActionOnTitleClose());
 	click(box.menuBar().closeButton());
 	EXPECT_EQ(custom, 1);

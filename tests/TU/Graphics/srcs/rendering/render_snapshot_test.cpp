@@ -18,14 +18,24 @@ namespace
 		int _value;
 
 	public:
-		SnapshotRecordingCommand(std::vector<int> &log, int value) : _log(&log), _value(value) {}
-		void execute(spk::RenderContext &) const override { _log->push_back(_value); }
+		SnapshotRecordingCommand(std::vector<int> &log, int value) :
+			_log(&log),
+			_value(value)
+		{
+		}
+		void execute(spk::RenderContext &) const override
+		{
+			_log->push_back(_value);
+		}
 	};
 
 	class SnapshotThrowingCommand final : public spk::RenderCommand
 	{
 	public:
-		void execute(spk::RenderContext &) const override { throw std::runtime_error("command failure"); }
+		void execute(spk::RenderContext &) const override
+		{
+			throw std::runtime_error("command failure");
+		}
 	};
 }
 
@@ -78,8 +88,7 @@ TEST(RenderSnapshotTest, FailureIdentifiesPassAndNestedCommandIndex)
 	{
 		builder.build().execute(context);
 		FAIL() << "Expected spk::Exception";
-	}
-	catch (const spk::Exception &exception)
+	} catch (const spk::Exception &exception)
 	{
 		const std::string message = exception.what();
 		EXPECT_NE(message.find("render pass [broken]"), std::string::npos);

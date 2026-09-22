@@ -148,9 +148,13 @@ TEST(PolymorphicContainerTest, StandardUsageRegistersQueriesAndUnregistersDerive
 	std::vector<std::string> additions;
 	std::vector<std::string> removals;
 	auto additionContract = container.onAddition(
-		[&additions](Base &element) { additions.push_back(element.name); });
+		[&additions](Base &element) {
+			additions.push_back(element.name);
+		});
 	auto removalContract = container.onRemoval(
-		[&removals](Base &element) { removals.push_back(element.name); });
+		[&removals](Base &element) {
+			removals.push_back(element.name);
+		});
 	(void)additionContract;
 	(void)removalContract;
 
@@ -162,7 +166,10 @@ TEST(PolymorphicContainerTest, StandardUsageRegistersQueriesAndUnregistersDerive
 	EXPECT_EQ(container.size(), 3u);
 	EXPECT_EQ(container.one<Leaf>(), &first);
 	EXPECT_EQ(container.one<Other>(), &second);
-	EXPECT_EQ(container.one<Leaf>([](Leaf *leaf) { return leaf->name == "third"; }), &third);
+	EXPECT_EQ(container.one<Leaf>([](Leaf *leaf) {
+		return leaf->name == "third";
+	}),
+			  &third);
 
 	const auto leaves = container.all<Leaf>();
 	ASSERT_EQ(leaves.size(), 2u);
@@ -200,7 +207,10 @@ TEST(PolymorphicContainerTest, NoMatchReturnsNullOrEmptyCollection)
 
 	EXPECT_EQ(container.one<Leaf>(), nullptr);
 	EXPECT_TRUE(container.all<Leaf>().empty());
-	EXPECT_EQ(container.one<Other>([](Other *other) { return other->name == "missing"; }), nullptr);
+	EXPECT_EQ(container.one<Other>([](Other *other) {
+		return other->name == "missing";
+	}),
+			  nullptr);
 }
 
 TEST(PolymorphicContainerTest, QueryingIntermediateTypeIncludesFurtherDerivedObjects)
@@ -229,7 +239,10 @@ TEST(PolymorphicContainerTest, PredicateWrappersCanImplementRegexLikeQueries)
 	});
 	ASSERT_EQ(enemies.size(), 2u);
 	EXPECT_EQ(enemies[1], &enemyBoss);
-	EXPECT_EQ(container.one<Leaf>([](Leaf *leaf) { return leaf->name == "player.main"; }), &player);
+	EXPECT_EQ(container.one<Leaf>([](Leaf *leaf) {
+		return leaf->name == "player.main";
+	}),
+			  &player);
 }
 
 TEST(PolymorphicContainerTest, RegistrationOrderIsPreservedInMultiElementQueries)

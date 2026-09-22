@@ -330,7 +330,9 @@ TEST(InherenceTraitTest, ResolveInHierarchyUsesLocalValueAndConfigurableParentCo
 
 	EXPECT_FALSE(accepted);
 	EXPECT_EQ(visited, (std::vector<std::string>{"leaf", "child"}));
-	EXPECT_TRUE(root.resolveInHierarchy([](const Node &) { return true; }));
+	EXPECT_TRUE(root.resolveInHierarchy([](const Node &) {
+		return true;
+	}));
 
 	visited.clear();
 	const bool firstAcceptedAncestor = leaf.resolveInHierarchy(
@@ -338,7 +340,9 @@ TEST(InherenceTraitTest, ResolveInHierarchyUsesLocalValueAndConfigurableParentCo
 			visited.push_back(node.name);
 			return node.name == "root";
 		},
-		[](bool value) { return !value; });
+		[](bool value) {
+			return !value;
+		});
 	EXPECT_TRUE(firstAcceptedAncestor);
 	EXPECT_EQ(visited, (std::vector<std::string>{"leaf", "child", "root"}));
 }
