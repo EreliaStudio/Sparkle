@@ -108,6 +108,13 @@ TEST(NodeRouterIntegrationTest, TwoClientsRouteThroughIndependentRouterAndNodeTh
 	firstThread.join();
 	secondThread.join();
 
+	firstClient.disconnect();
+	secondClient.disconnect();
+	running = false;
+	nodeThread.join();
+	routerThread.join();
+	router.stop();
+
 	ASSERT_NO_THROW(failure.rethrow());
 	for (std::uint32_t client = 0; client < responses.size(); ++client)
 	{
@@ -120,12 +127,6 @@ TEST(NodeRouterIntegrationTest, TwoClientsRouteThroughIndependentRouterAndNodeTh
 		}
 	}
 
-	firstClient.disconnect();
-	secondClient.disconnect();
-	running = false;
-	nodeThread.join();
-	routerThread.join();
-	router.stop();
 }
 
 TEST(NodeRouterIntegrationTest, LocalNodeBroadcastReachesAllClients)
