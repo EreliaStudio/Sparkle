@@ -2,14 +2,14 @@
 
 #include "exception.hpp"
 #include "network/internal/frame.hpp"
+#include "network/internal/socket.hpp"
 
-#include <asio.hpp>
-
+#include <algorithm>
 #include <array>
 #include <atomic>
-#include <deque>
-#include <future>
-#include <optional>
+#include <chrono>
+#include <memory>
+#include <mutex>
 #include <thread>
 #include <unordered_map>
 #include <utility>
@@ -20,82 +20,121 @@ namespace spk
 	class Server::Impl
 	{
 	private:
-		using TCP = asio::ip::tcp;
-		using WorkGuard = asio::executor_work_guard<asio::io_context::executor_type>;
-		using Frame = std::shared_ptr<std::vector<std::byte>>;
-
 		struct Session
 		{
 			ConnectionID id;
-			TCP::socket socket;
-			std::array<std::byte, NetworkInternal::FrameHeaderSize> header{};
-			std::vector<std::byte> payload;
-			std::deque<Frame> writes;
+			NetworkInternal::Socket socket;
+			std::vector<std::byte> receivedBytes;
+			std::mutex sendMutex;
 
-			Session(ConnectionID id, TCP::socket socket) :
+			Session(ConnectionID id, NetworkInternal::Socket socket) :
 				id(id),
 				socket(std::move(socket))
 			{
 			}
 		};
 
+		static constexpr auto PollInterval = std::chrono::milliseconds(50);
+		static constexpr std::size_t ReceptionBufferSize = 64u * 1024u;
+
 		Server &_owner;
-		asio::io_context _context;
-		std::optional<WorkGuard> _work;
-		std::unique_ptr<TCP::acceptor> _acceptor;
+		NetworkInternal::Socket _listener;
 		std::jthread _worker;
 		std::atomic_bool _running = false;
 		std::atomic_uint16_t _port = 0;
 		ConnectionID _nextConnectionID = 1;
 		std::unordered_map<ConnectionID, std::shared_ptr<Session>> _sessions;
+		std::mutex _sessionsMutex;
 
-		[[nodiscard]] bool _onWorkerThread() const noexcept
+		void _run() noexcept
 		{
-			return _worker.joinable() && _worker.get_id() == std::this_thread::get_id();
+			try
+			{
+				while (_running)
+				{
+					const auto sessions = _sessionsSnapshot();
+					std::vector<const NetworkInternal::Socket *> sockets;
+					sockets.reserve(sessions.size() + 1);
+					sockets.push_back(&_listener);
+					for (const auto &session : sessions)
+					{
+						sockets.push_back(&session->socket);
+					}
+
+					const auto ready = NetworkInternal::waitReadable(sockets, PollInterval);
+					for (const std::size_t index : ready)
+					{
+						if (!_running)
+						{
+							break;
+						}
+						if (index == 0)
+						{
+							_accept();
+						}
+						else if (index <= sessions.size())
+						{
+							_receive(sessions[index - 1]);
+						}
+					}
+				}
+			}
+			catch (...)
+			{
+				_running = false;
+			}
+			_disconnectAll();
+		}
+
+		[[nodiscard]] std::vector<std::shared_ptr<Session>> _sessionsSnapshot()
+		{
+			const std::scoped_lock lock(_sessionsMutex);
+			std::vector<std::shared_ptr<Session>> result;
+			result.reserve(_sessions.size());
+			for (const auto &entry : _sessions)
+			{
+				result.push_back(entry.second);
+			}
+			return result;
 		}
 
 		void _accept()
 		{
-			_acceptor->async_accept([this](const std::error_code &error, TCP::socket socket) {
-				if (!error && _running)
-				{
-					_addSession(std::move(socket));
-				}
-				if (_running)
-				{
-					_accept();
-				}
-			});
-		}
-
-		void _addSession(TCP::socket socket)
-		{
+			auto socket = _listener.accept();
 			const ConnectionID id = _nextConnectionID++;
 			auto session = std::make_shared<Session>(id, std::move(socket));
-			_sessions.emplace(id, session);
-			_owner._notifyConnection(id);
-			_readHeader(std::move(session));
-		}
 
-		void _readHeader(const std::shared_ptr<Session> &session)
-		{
-			asio::async_read(session->socket, asio::buffer(session->header),
-				[this, session](const std::error_code &error, std::size_t) {
-					if (error)
-					{
-						_disconnect(session->id);
-						return;
-					}
-					_handleHeader(session);
-				});
-		}
+			{
+				const std::scoped_lock lock(_sessionsMutex);
+				_sessions.emplace(id, session);
+			}
 
-		void _handleHeader(const std::shared_ptr<Session> &session)
-		{
 			try
 			{
-				const auto header = NetworkInternal::decode(session->header);
-				_readPayload(session, header);
+				_owner._notifyConnection(id);
+			}
+			catch (...)
+			{
+			}
+		}
+
+		void _receive(const std::shared_ptr<Session> &session)
+		{
+			std::array<std::byte, ReceptionBufferSize> buffer{};
+			try
+			{
+				const auto result = session->socket.receive(buffer);
+				if (result.disconnected)
+				{
+					_disconnect(session->id);
+					return;
+				}
+
+				session->receivedBytes.insert(
+					session->receivedBytes.end(),
+					buffer.begin(),
+					buffer.begin() + static_cast<std::ptrdiff_t>(result.size));
+				_extractMessages(*session);
 			}
 			catch (...)
 			{
@@ -103,140 +142,97 @@ namespace spk
 			}
 		}
 
-		void _readPayload(const std::shared_ptr<Session> &session, NetworkInternal::FrameHeader header)
+		void _extractMessages(Session &session)
 		{
-			session->payload.resize(header.payloadSize);
-			if (session->payload.empty())
+			while (session.receivedBytes.size() >= NetworkInternal::FrameHeaderSize)
 			{
-				_publish(session, Message(header.type));
-				return;
-			}
-			asio::async_read(session->socket, asio::buffer(session->payload),
-				[this, session, header](const std::error_code &error, std::size_t) {
-					if (error)
-					{
-						_disconnect(session->id);
-						return;
-					}
-					_publish(session, Message(header.type, std::move(session->payload)));
-				});
-		}
+				const auto headerBytes = std::span<const std::byte, NetworkInternal::FrameHeaderSize>(
+					session.receivedBytes.data(),
+					NetworkInternal::FrameHeaderSize);
+				const auto header = NetworkInternal::decode(headerBytes);
+				const std::size_t frameSize = NetworkInternal::FrameHeaderSize + header.payloadSize;
+				if (session.receivedBytes.size() < frameSize)
+				{
+					return;
+				}
 
-		void _publish(const std::shared_ptr<Session> &session, Message message)
-		{
-			_owner._publish(ReceivedMessage{session->id, std::move(message)});
-			_readHeader(session);
-		}
-
-		void _queueWrite(const std::shared_ptr<Session> &session, Frame frame)
-		{
-			const bool idle = session->writes.empty();
-			session->writes.push_back(std::move(frame));
-			if (idle)
-			{
-				_writeNext(session);
+				Message::Storage payload(header.payloadSize);
+				std::copy_n(
+					session.receivedBytes.begin() + NetworkInternal::FrameHeaderSize,
+					header.payloadSize,
+					payload.begin());
+				_owner._publish(ReceivedMessage{session.id, Message(header.type, std::move(payload))});
+				session.receivedBytes.erase(
+					session.receivedBytes.begin(),
+					session.receivedBytes.begin() + static_cast<std::ptrdiff_t>(frameSize));
 			}
 		}
 
-		void _writeNext(const std::shared_ptr<Session> &session)
+		void _disconnect(ConnectionID id) noexcept
 		{
-			if (session->writes.empty())
+			std::shared_ptr<Session> session;
 			{
-				return;
-			}
-			asio::async_write(session->socket, asio::buffer(*session->writes.front()),
-				[this, session](const std::error_code &error, std::size_t) {
-					if (error)
-					{
-						_disconnect(session->id);
-						return;
-					}
-					session->writes.pop_front();
-					_writeNext(session);
-				});
-		}
-
-		void _closeSession(const std::shared_ptr<Session> &session) noexcept
-		{
-			std::error_code ignored;
-			session->socket.cancel(ignored);
-			session->socket.shutdown(TCP::socket::shutdown_both, ignored);
-			session->socket.close(ignored);
-			session->writes.clear();
-		}
-
-		void _disconnect(ConnectionID id)
-		{
-			const auto iterator = _sessions.find(id);
-			if (iterator == _sessions.end())
-			{
-				return;
-			}
-			_closeSession(iterator->second);
-			_sessions.erase(iterator);
-			_owner._notifyDisconnection(id);
-		}
-
-		void _shutdown()
-		{
-			if (!_running.exchange(false))
-			{
-				return;
+				const std::scoped_lock lock(_sessionsMutex);
+				const auto iterator = _sessions.find(id);
+				if (iterator == _sessions.end())
+				{
+					return;
+				}
+				session = std::move(iterator->second);
+				_sessions.erase(iterator);
 			}
 
-			std::error_code ignored;
-			if (_acceptor != nullptr)
-			{
-				_acceptor->cancel(ignored);
-				_acceptor->close(ignored);
-			}
-
-			std::vector<ConnectionID> connections;
-			connections.reserve(_sessions.size());
-			for (const auto &[id, session] : _sessions)
-			{
-				_closeSession(session);
-				connections.push_back(id);
-			}
-			_sessions.clear();
-			for (const ConnectionID id : connections)
+			session->socket.close();
+			try
 			{
 				_owner._notifyDisconnection(id);
 			}
-			_work.reset();
+			catch (...)
+			{
+			}
 		}
 
-		template <typename TFunction>
-		void _invoke(TFunction function)
+		void _disconnectAll() noexcept
 		{
-			if (_onWorkerThread())
+			auto sessions = _sessionsSnapshot();
 			{
-				function();
-				return;
+				const std::scoped_lock lock(_sessionsMutex);
+				_sessions.clear();
 			}
 
-			auto completion = std::make_shared<std::promise<void>>();
-			auto future = completion->get_future();
-			asio::post(_context, [function = std::move(function), completion]() mutable {
+			for (const auto &session : sessions)
+			{
+				session->socket.close();
 				try
 				{
-					function();
-					completion->set_value();
+					_owner._notifyDisconnection(session->id);
 				}
 				catch (...)
 				{
-					completion->set_exception(std::current_exception());
 				}
-			});
-			future.get();
+			}
 		}
 
-		void _joinWorker()
+		[[nodiscard]] std::shared_ptr<Session> _session(ConnectionID id)
 		{
-			if (_worker.joinable() && !_onWorkerThread())
+			const std::scoped_lock lock(_sessionsMutex);
+			const auto iterator = _sessions.find(id);
+			return iterator == _sessions.end() ? nullptr : iterator->second;
+		}
+
+		void _ensureRunning() const
+		{
+			if (!_running)
 			{
-				_worker.join();
+				throw Exception("Unable to send through a stopped network server.");
 			}
+		}
+
+		void _send(const std::shared_ptr<Session> &session, const Message &message)
+		{
+			const auto frame = NetworkInternal::encode(message);
+			const std::scoped_lock lock(session->sendMutex);
+			session->socket.sendAll(*frame);
 		}
 
 	public:
@@ -269,83 +265,66 @@ namespace spk
 		void start(std::uint16_t requestedPort)
 		{
 			stop();
-			_context.restart();
-			_work.emplace(_context.get_executor());
-			_acceptor = std::make_unique<TCP::acceptor>(_context);
 
 			try
 			{
-				_open(requestedPort);
+				_listener = NetworkInternal::Socket::listenTCP(requestedPort);
+				_port = _listener.localPort();
 			}
 			catch (...)
 			{
-				_work.reset();
-				_acceptor.reset();
 				throw Exception("Unable to start the network server.", std::current_exception());
 			}
 
 			_running = true;
-			_accept();
 			_worker = std::jthread([this] {
-				_context.run();
+				_run();
 			});
 		}
 
 		void stop()
 		{
-			if (_running)
+			_running = false;
+			if (_worker.joinable() && _worker.get_id() != std::this_thread::get_id())
 			{
-				_invoke([this] {
-					_shutdown();
-				});
+				_worker.join();
 			}
-			_joinWorker();
-			_work.reset();
-			_context.stop();
-			_acceptor.reset();
+			_listener.close();
 			_port = 0;
 		}
 
 		void sendTo(ConnectionID connection, const Message &message)
 		{
 			_ensureRunning();
-			Frame frame = NetworkInternal::encode(message);
-			asio::post(_context, [this, connection, frame = std::move(frame)] {
-				const auto iterator = _sessions.find(connection);
-				if (iterator != _sessions.end())
-				{
-					_queueWrite(iterator->second, std::move(frame));
-				}
-			});
+			const auto session = _session(connection);
+			if (session == nullptr)
+			{
+				return;
+			}
+
+			try
+			{
+				_send(session, message);
+			}
+			catch (...)
+			{
+				_disconnect(connection);
+			}
 		}
 
 		void sendToAll(const Message &message)
 		{
 			_ensureRunning();
-			Frame frame = NetworkInternal::encode(message);
-			asio::post(_context, [this, frame = std::move(frame)] {
-				for (const auto &[id, session] : _sessions)
-				{
-					_queueWrite(session, frame);
-				}
-			});
-		}
-
-	private:
-		void _open(std::uint16_t requestedPort)
-		{
-			_acceptor->open(TCP::v4());
-			_acceptor->set_option(TCP::acceptor::reuse_address(true));
-			_acceptor->bind(TCP::endpoint(TCP::v4(), requestedPort));
-			_acceptor->listen();
-			_port = _acceptor->local_endpoint().port();
-		}
-
-		void _ensureRunning() const
-		{
-			if (!_running)
+			for (const auto &session : _sessionsSnapshot())
 			{
-				throw Exception("Unable to send through a stopped network server.");
+				try
+				{
+					_send(session, message);
+				}
+				catch (...)
+				{
+					_disconnect(session->id);
+				}
 			}
 		}
 	};
