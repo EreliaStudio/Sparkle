@@ -603,6 +603,10 @@ namespace spk::NetworkInternal
 			void start(std::uint16_t port) override
 			{
 				stop();
+				{
+					const std::scoped_lock lock(_commandMutex);
+					_commands.clear();
+				}
 				_stopping = false;
 				_openKernelEvents();
 				try
@@ -617,6 +621,7 @@ namespace spk::NetworkInternal
 				}
 				catch (...)
 				{
+					_listener.close();
 					_closeKernelEvents();
 					throw;
 				}
@@ -628,6 +633,12 @@ namespace spk::NetworkInternal
 
 			void stop() override
 			{
+				if (_worker.joinable() &&
+					_worker.get_id() == std::this_thread::get_id())
+				{
+					_beginStop();
+					return;
+				}
 				if (_worker.joinable())
 				{
 					if (_running)
@@ -638,10 +649,7 @@ namespace spk::NetworkInternal
 					{
 						_wake();
 					}
-					if (_worker.get_id() != std::this_thread::get_id())
-					{
-						_worker.join();
-					}
+					_worker.join();
 				}
 				_listener.close();
 				_disconnectAll();
