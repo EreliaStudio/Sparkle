@@ -64,7 +64,10 @@ namespace spk
 		{
 			throw Exception("Unable to edit outside a network message payload.");
 		}
-		std::memcpy(_payload.data() + offset, data, size);
+		if (size != 0)
+		{
+			std::memcpy(_payload.data() + offset, data, size);
+		}
 	}
 
 	void Message::append(const void *data, std::size_t size)
@@ -88,7 +91,10 @@ namespace spk
 		{
 			throw Exception("Unable to read beyond the end of a network message.");
 		}
-		std::memcpy(data, _payload.data() + _readOffset, size);
+		if (size != 0)
+		{
+			std::memcpy(data, _payload.data() + _readOffset, size);
+		}
 		_readOffset += size;
 	}
 
@@ -118,7 +124,9 @@ namespace spk
 		{
 			throw Exception("String is too large to serialize into a network message.");
 		}
-		*this << static_cast<std::uint32_t>(value.size());
+
+		const auto size = static_cast<std::uint32_t>(value.size());
+		append(size);
 		append(value.data(), value.size());
 		return *this;
 	}
@@ -129,14 +137,5 @@ namespace spk
 		value.resize(size);
 		pull(value.data(), size);
 		return *this;
-	}
-
-	std::byte Message::_readByte() const
-	{
-		if (_readOffset >= _payload.size())
-		{
-			throw Exception("Unable to read beyond the end of a network message.");
-		}
-		return _payload[_readOffset++];
 	}
 }
