@@ -15,10 +15,13 @@
 #include <deque>
 #include <memory>
 #include <mutex>
+#include <optional>
+#include <string>
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
 #include <sys/socket.h>
 #include <thread>
+#include <unordered_map>
 #include <unistd.h>
 #include <utility>
 #include <vector>
