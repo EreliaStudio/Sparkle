@@ -375,3 +375,20 @@ TEST(NetworkConcurrencyTest, ServerStopDisconnectsConnectedClient)
 	}));
 	EXPECT_EQ(disconnected.load(), 1u);
 }
+
+TEST(NetworkConcurrencyTest, ServerCanStopFromConnectionCallback)
+{
+	spk::Server server;
+	spk::Client client;
+	auto contract = server.subscribeToConnection([&](spk::ConnectionID) {
+		server.stop();
+	});
+
+	server.start(0);
+	client.connect("127.0.0.1", server.port());
+
+	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+		return !server.isRunning() && !client.isConnected();
+	}));
+	server.stop();
+}
