@@ -214,6 +214,7 @@ namespace spk::NetworkInternal
 						reinterpret_cast<const char *>(&listener),
 						sizeof(listener)) != 0)
 				{
+					_postAccept();
 					return;
 				}
 
@@ -223,7 +224,10 @@ namespace spk::NetworkInternal
 				_sessions.emplace(id, session);
 				_postRead(session);
 				_notifyConnection(id);
-				_postAccept();
+				if (!_stopping)
+				{
+					_postAccept();
+				}
 			}
 
 			void _postRead(const std::shared_ptr<Session> &session)
@@ -587,6 +591,10 @@ namespace spk::NetworkInternal
 			void start(std::uint16_t port) override
 			{
 				stop();
+				{
+					const std::scoped_lock lock(_commandMutex);
+					_commands.clear();
+				}
 				_stopping = false;
 				_pendingOperations = 0;
 				_openIocp();
@@ -616,6 +624,12 @@ namespace spk::NetworkInternal
 
 			void stop() override
 			{
+				if (_worker.joinable() &&
+					_worker.get_id() == std::this_thread::get_id())
+				{
+					_beginStop();
+					return;
+				}
 				if (_worker.joinable())
 				{
 					if (_running)
@@ -626,10 +640,7 @@ namespace spk::NetworkInternal
 					{
 						::PostQueuedCompletionStatus(_iocp, 0, WakeKey, nullptr);
 					}
-					if (_worker.get_id() != std::this_thread::get_id())
-					{
-						_worker.join();
-					}
+					_worker.join();
 				}
 				_listener.close();
 				_disconnectAll();
