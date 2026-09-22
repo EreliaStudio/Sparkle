@@ -5,5 +5,7 @@
 #include "network/message.hpp"
 #include "network/node.hpp"
 #include "network/node_router.hpp"
+#include "network/remote_node.hpp"
+#include "network/remote_node_endpoint.hpp"
 #include "network/server.hpp"
 #include "network/types.hpp"
