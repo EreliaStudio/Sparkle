@@ -452,3 +452,40 @@ TEST(NetworkConcurrencyTest, ManyClientsConnectAndExchangeConcurrently)
 		EXPECT_EQ(responses[index].front().get<std::uint32_t>(), index);
 	}
 }
+
+TEST(NetworkConcurrencyTest, EmptyPayloadMessageRoundTrips)
+{
+	spk::Server server;
+	spk::Client client;
+	server.start(0);
+	client.connect("127.0.0.1", server.port());
+
+	client.send(spk::Message(31));
+	auto received = NetworkTestUtils::collect(server.messages(), 1);
+
+	ASSERT_EQ(received.size(), 1u);
+	EXPECT_EQ(received.front().message.type(), 31u);
+	EXPECT_TRUE(received.front().message.empty());
+
+	client.disconnect();
+	server.stop();
+}
+
+TEST(NetworkConcurrencyTest, SendingToUnknownConnectionDoesNotAffectConnectedClient)
+{
+	spk::Server server;
+	spk::Client client;
+	server.start(0);
+	const spk::ConnectionID connection = connectAndIdentify(server, client);
+	ASSERT_NE(connection, spk::InvalidConnectionID);
+
+	server.sendTo(connection + 100000u, spk::Message(32));
+	std::this_thread::sleep_for(50ms);
+
+	std::vector<spk::Message> received;
+	client.messages().drain(received);
+	EXPECT_TRUE(received.empty());
+
+	client.disconnect();
+	server.stop();
+}
