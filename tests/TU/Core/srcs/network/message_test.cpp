@@ -104,3 +104,75 @@ TEST(MessageTest, ReadingPastPayloadThrows)
 
 	EXPECT_THROW((void)message.get<std::uint32_t>(), spk::Exception);
 }
+
+TEST(MessageTest, FailedPeekPreservesReadOffset)
+{
+	spk::Message message;
+	message << std::uint16_t{7};
+
+	EXPECT_THROW((void)message.peek<std::uint64_t>(), spk::Exception);
+	EXPECT_EQ(message.readOffset(), 0u);
+	EXPECT_EQ(message.get<std::uint16_t>(), 7u);
+}
+
+TEST(MessageTest, SkipAdvancesReaderWithoutCopying)
+{
+	spk::Message message;
+	message << std::uint32_t{11} << std::uint32_t{22};
+
+	message.skip<std::uint32_t>();
+
+	EXPECT_EQ(message.get<std::uint32_t>(), 22u);
+}
+
+TEST(MessageTest, SkipBeyondPayloadThrowsWithoutAdvancing)
+{
+	spk::Message message;
+	message << std::uint16_t{3};
+
+	EXPECT_THROW(message.skip(sizeof(std::uint64_t)), spk::Exception);
+	EXPECT_EQ(message.readOffset(), 0u);
+}
+
+TEST(MessageTest, ClearResetsPayloadAndReader)
+{
+	spk::Message message;
+	message << std::uint32_t{9};
+	EXPECT_EQ(message.get<std::uint32_t>(), 9u);
+
+	message.clear();
+
+	EXPECT_TRUE(message.empty());
+	EXPECT_EQ(message.readOffset(), 0u);
+}
+
+TEST(MessageTest, ResizeClampsReadOffset)
+{
+	spk::Message message;
+	message << std::uint32_t{1} << std::uint32_t{2};
+	message.skip(sizeof(std::uint32_t) * 2u);
+
+	message.resize(sizeof(std::uint32_t));
+
+	EXPECT_EQ(message.size(), sizeof(std::uint32_t));
+	EXPECT_EQ(message.readOffset(), sizeof(std::uint32_t));
+}
+
+TEST(MessageTest, EmptyStringRoundTrips)
+{
+	spk::Message message;
+	message << std::string{};
+
+	std::string result = "not empty";
+	message >> result;
+
+	EXPECT_TRUE(result.empty());
+}
+
+TEST(MessageTest, EditOutsidePayloadThrows)
+{
+	spk::Message message;
+	message << std::uint32_t{1};
+
+	EXPECT_THROW(message.edit(sizeof(std::uint32_t), std::uint32_t{2}), spk::Exception);
+}
