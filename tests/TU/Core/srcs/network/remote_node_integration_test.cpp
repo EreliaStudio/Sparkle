@@ -211,7 +211,6 @@ TEST(RemoteNodeIntegrationTest, EndpointRejectsOrdinaryClientMessages)
 	endpoint.stop();
 }
 
-
 TEST(RemoteNodeIntegrationTest, TwoRoutersSharingEndpointKeepOriginConnectionsIndependent)
 {
 	spk::RemoteNode::Endpoint endpoint;
@@ -259,16 +258,18 @@ TEST(RemoteNodeIntegrationTest, TwoRoutersSharingEndpointKeepOriginConnectionsIn
 	secondClient.send(secondRequest);
 
 	std::vector<spk::RemoteNode::Endpoint::Request> requests;
-	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
-		endpoint.dispatch();
-		std::vector<spk::RemoteNode::Endpoint::Request> batch;
-		endpoint.requests().drain(batch);
-		for (auto &request : batch)
-		{
-			requests.push_back(std::move(request));
-		}
-		return requests.size() == 2;
-	}, 5s));
+	ASSERT_TRUE(NetworkTestUtils::waitUntil(
+		[&] {
+			endpoint.dispatch();
+			std::vector<spk::RemoteNode::Endpoint::Request> batch;
+			endpoint.requests().drain(batch);
+			for (auto &request : batch)
+			{
+				requests.push_back(std::move(request));
+			}
+			return requests.size() == 2;
+		},
+		5s));
 
 	ASSERT_EQ(requests.size(), 2u);
 	EXPECT_NE(requests[0].proxyConnection, requests[1].proxyConnection);
