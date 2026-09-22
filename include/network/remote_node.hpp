@@ -2,6 +2,7 @@
 
 #include "network/client.hpp"
 #include "network/node.hpp"
+#include "network/server.hpp"
 
 #include <cstdint>
 #include <string_view>
@@ -12,6 +13,34 @@ namespace spk
 	class RemoteNode final : public Node
 	{
 	public:
+		class Endpoint
+		{
+		public:
+			struct Request
+			{
+				ConnectionID proxyConnection = InvalidConnectionID;
+				ConnectionID originConnection = InvalidConnectionID;
+				Message message;
+			};
+
+			using RequestQueue = ThreadSafeFIFO<Request>;
+
+		private:
+			Server _server;
+			RequestQueue _requests;
+			std::vector<ReceivedMessage> _received;
+
+		public:
+			void start(std::uint16_t port);
+			void stop();
+			[[nodiscard]] std::uint16_t port() const noexcept;
+			[[nodiscard]] bool isRunning() const noexcept;
+
+			void dispatch();
+			[[nodiscard]] RequestQueue &requests() noexcept;
+			void reply(const Request &request, Message message);
+		};
+
 		using IncomingQueue = ThreadSafeFIFO<ReceivedMessage>;
 
 	private:
