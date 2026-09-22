@@ -40,6 +40,21 @@ namespace
 		});
 	}
 
+	void runRemoteNode(
+		spk::RemoteNode &remoteNode,
+		std::atomic_bool &running,
+		NetworkTestUtils::ThreadFailure &failure)
+	{
+		failure.run([&] {
+			while (running)
+			{
+				remoteNode.dispatch();
+				std::this_thread::sleep_for(1ms);
+			}
+			remoteNode.dispatch();
+		});
+	}
+
 	void runRemoteEndpoint(
 		spk::RemoteNodeEndpoint &endpoint,
 		std::size_t expectedRequests,
@@ -105,6 +120,7 @@ TEST(RemoteNodeIntegrationTest, TwoClientsRemainCorrelatedAcrossOutOfOrderRemote
 	spk::Client secondClient;
 	NetworkTestUtils::ThreadFailure failure;
 	std::atomic_bool routerRunning = true;
+	std::atomic_bool remoteNodeRunning = true;
 	std::atomic_bool endpointFinished = false;
 
 	endpoint.start(0);
@@ -115,6 +131,9 @@ TEST(RemoteNodeIntegrationTest, TwoClientsRemainCorrelatedAcrossOutOfOrderRemote
 
 	std::jthread routerThread([&] {
 		runRemoteRouter(router, routerRunning, failure);
+	});
+	std::jthread remoteNodeThread([&] {
+		runRemoteNode(remoteNode, remoteNodeRunning, failure);
 	});
 	std::jthread endpointThread([&] {
 		runRemoteEndpoint(endpoint, RequestCount, endpointFinished, failure);
@@ -135,6 +154,8 @@ TEST(RemoteNodeIntegrationTest, TwoClientsRemainCorrelatedAcrossOutOfOrderRemote
 	secondClient.disconnect();
 	routerRunning = false;
 	routerThread.join();
+	remoteNodeRunning = false;
+	remoteNodeThread.join();
 	remoteNode.disconnect();
 	router.stop();
 	endpoint.stop();
@@ -164,7 +185,7 @@ TEST(RemoteNodeIntegrationTest, ForwardingWhileDisconnectedThrows)
 	spk::RemoteNode remoteNode;
 
 	EXPECT_THROW(
-		remoteNode.receive(spk::ReceivedMessage{12, spk::Message(200)}),
+		(remoteNode.receive(spk::ReceivedMessage{12, spk::Message(200)}), remoteNode.dispatch()),
 		spk::Exception);
 }
 
