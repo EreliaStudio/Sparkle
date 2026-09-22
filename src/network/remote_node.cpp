@@ -22,24 +22,37 @@ namespace spk
 		_client.disconnect();
 	}
 
+	void RemoteNode::dispatch()
+	{
+		_forwardRequests();
+		_collectResponses();
+	}
+
 	void RemoteNode::receive(ReceivedMessage message)
 	{
-		if (!_client.isConnected())
-		{
-			throw Exception("Unable to forward through a disconnected RemoteNode.");
-		}
-
-		_client.send(
-			NetworkInternal::encodeRemoteEnvelope(
-				NetworkInternal::RemoteEnvelopeKind::Request,
-				message.emitter,
-				message.message));
+		_incoming.publish(std::move(message));
 	}
 
 	Node::OutgoingQueue &RemoteNode::outgoing()
 	{
-		_collectResponses();
 		return _outgoing;
+	}
+
+	void RemoteNode::_forwardRequests()
+	{
+		_incoming.drain(_requests);
+		for (ReceivedMessage &message : _requests)
+		{
+			if (!_client.isConnected())
+			{
+				throw Exception("Unable to forward through a disconnected RemoteNode.");
+			}
+			_client.send(
+				NetworkInternal::encodeRemoteEnvelope(
+					NetworkInternal::RemoteEnvelopeKind::Request,
+					message.emitter,
+					message.message));
+		}
 	}
 
 	void RemoteNode::_collectResponses()
