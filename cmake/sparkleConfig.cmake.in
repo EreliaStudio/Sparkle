@@ -5,8 +5,6 @@ include(CMakeFindDependencyMacro)
 set(sparkle_Core_FOUND TRUE)
 set(sparkle_Graphics_FOUND @SPARKLE_BUILD_GRAPHICS@)
 
-find_dependency(asio CONFIG)
-
 if(sparkle_Graphics_FOUND)
     find_dependency(GLEW)
     find_dependency(OpenGL)
