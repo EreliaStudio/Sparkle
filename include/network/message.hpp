@@ -123,8 +123,7 @@ namespace spk
 				const TValue result = get<TValue>();
 				_readOffset = offset;
 				return result;
-			}
-			catch (...)
+			} catch (...)
 			{
 				_readOffset = offset;
 				throw;
