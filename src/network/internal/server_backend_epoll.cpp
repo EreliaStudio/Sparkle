@@ -132,8 +132,7 @@ namespace spk::NetworkInternal
 				try
 				{
 					_callbacks.onConnection(id);
-				}
-				catch (...)
+				} catch (...)
 				{
 				}
 			}
@@ -143,8 +142,7 @@ namespace spk::NetworkInternal
 				try
 				{
 					_callbacks.onDisconnection(id);
-				}
-				catch (...)
+				} catch (...)
 				{
 				}
 			}
@@ -154,8 +152,7 @@ namespace spk::NetworkInternal
 				try
 				{
 					_callbacks.onMessage(std::move(message));
-				}
-				catch (...)
+				} catch (...)
 				{
 				}
 			}
@@ -345,8 +342,7 @@ namespace spk::NetworkInternal
 					try
 					{
 						_flushSession(session);
-					}
-					catch (...)
+					} catch (...)
 					{
 						_disconnect(session->id);
 					}
@@ -509,8 +505,7 @@ namespace spk::NetworkInternal
 					try
 					{
 						_flushSession(session);
-					}
-					catch (...)
+					} catch (...)
 					{
 						_disconnect(id);
 					}
@@ -543,8 +538,7 @@ namespace spk::NetworkInternal
 							_handleEvent(events[static_cast<std::size_t>(index)]);
 						}
 					}
-				}
-				catch (...)
+				} catch (...)
 				{
 					_beginStop();
 				}
@@ -618,8 +612,7 @@ namespace spk::NetworkInternal
 						static_cast<int>(_listener.nativeHandle()),
 						ListenerToken,
 						EPOLLIN | EPOLLERR);
-				}
-				catch (...)
+				} catch (...)
 				{
 					_listener.close();
 					_closeKernelEvents();
