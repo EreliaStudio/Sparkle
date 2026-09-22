@@ -13,6 +13,6 @@ namespace spk
 		virtual ~Node() = default;
 
 		virtual void receive(ReceivedMessage message) = 0;
-		[[nodiscard]] virtual OutgoingQueue &outgoing() noexcept = 0;
+		[[nodiscard]] virtual OutgoingQueue &outgoing() = 0;
 	};
 }
