@@ -1,4 +1,4 @@
-#include "network/remote_node_endpoint.hpp"
+#include "network/remote_node.hpp"
 
 #include "exception.hpp"
 #include "network/internal/remote_envelope.hpp"
@@ -7,27 +7,27 @@
 
 namespace spk
 {
-	void RemoteNodeEndpoint::start(std::uint16_t port)
+	void RemoteNode::Endpoint::start(std::uint16_t port)
 	{
 		_server.start(port);
 	}
 
-	void RemoteNodeEndpoint::stop()
+	void RemoteNode::Endpoint::stop()
 	{
 		_server.stop();
 	}
 
-	std::uint16_t RemoteNodeEndpoint::port() const noexcept
+	std::uint16_t RemoteNode::Endpoint::port() const noexcept
 	{
 		return _server.port();
 	}
 
-	bool RemoteNodeEndpoint::isRunning() const noexcept
+	bool RemoteNode::Endpoint::isRunning() const noexcept
 	{
 		return _server.isRunning();
 	}
 
-	void RemoteNodeEndpoint::dispatch()
+	void RemoteNode::Endpoint::dispatch()
 	{
 		_server.messages().drain(_received);
 		for (ReceivedMessage &received : _received)
@@ -35,9 +35,9 @@ namespace spk
 			auto envelope = NetworkInternal::decodeRemoteEnvelope(received.message);
 			if (envelope.kind != NetworkInternal::RemoteEnvelopeKind::Request)
 			{
-				throw Exception("RemoteNodeEndpoint received a non-request envelope.");
+				throw Exception("RemoteNode::Endpoint received a non-request envelope.");
 			}
-			RemoteRequest request{
+			RemoteNode::Endpoint::Request request{
 				received.emitter,
 				envelope.route,
 				std::move(envelope.message)};
@@ -45,12 +45,12 @@ namespace spk
 		}
 	}
 
-	RemoteNodeEndpoint::RequestQueue &RemoteNodeEndpoint::requests() noexcept
+	RemoteNode::Endpoint::RequestQueue &RemoteNode::Endpoint::requests() noexcept
 	{
 		return _requests;
 	}
 
-	void RemoteNodeEndpoint::reply(const RemoteRequest &request, Message message)
+	void RemoteNode::Endpoint::reply(const RemoteNode::Endpoint::Request &request, Message message)
 	{
 		_server.sendTo(
 			request.proxyConnection,
