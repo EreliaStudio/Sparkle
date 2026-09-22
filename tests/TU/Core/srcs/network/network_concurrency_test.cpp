@@ -333,3 +333,45 @@ TEST(NetworkConcurrencyTest, ServerAndClientCanRestartAndExchangeAgain)
 		server.stop();
 	}
 }
+
+TEST(NetworkConcurrencyTest, ClientLifecycleCallbacksFireExactlyOnce)
+{
+	spk::Server server;
+	spk::Client client;
+	std::atomic_uint32_t connected = 0;
+	std::atomic_uint32_t disconnected = 0;
+	auto connectionContract = client.subscribeToConnection([&] {
+		++connected;
+	});
+	auto disconnectionContract = client.subscribeToDisconnection([&] {
+		++disconnected;
+	});
+
+	server.start(0);
+	client.connect("127.0.0.1", server.port());
+	client.disconnect();
+	client.disconnect();
+	server.stop();
+
+	EXPECT_EQ(connected.load(), 1u);
+	EXPECT_EQ(disconnected.load(), 1u);
+}
+
+TEST(NetworkConcurrencyTest, ServerStopDisconnectsConnectedClient)
+{
+	spk::Server server;
+	spk::Client client;
+	std::atomic_uint32_t disconnected = 0;
+	auto contract = client.subscribeToDisconnection([&] {
+		++disconnected;
+	});
+
+	server.start(0);
+	client.connect("127.0.0.1", server.port());
+	server.stop();
+
+	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+		return !client.isConnected();
+	}));
+	EXPECT_EQ(disconnected.load(), 1u);
+}
