@@ -42,8 +42,7 @@ namespace spk
 					}
 					_owner._publish(Message(header.type, std::move(payload)));
 				}
-			}
-			catch (...)
+			} catch (...)
 			{
 			}
 			_remoteDisconnect();
@@ -60,8 +59,7 @@ namespace spk
 			try
 			{
 				_owner._notifyDisconnection();
-			}
-			catch (...)
+			} catch (...)
 			{
 			}
 		}
@@ -85,8 +83,7 @@ namespace spk
 			try
 			{
 				disconnect();
-			}
-			catch (...)
+			} catch (...)
 			{
 			}
 		}
@@ -103,8 +100,7 @@ namespace spk
 			try
 			{
 				_socket = NetworkInternal::Socket::connectTCP(address, port);
-			}
-			catch (...)
+			} catch (...)
 			{
 				throw Exception("Unable to connect the network client.", std::current_exception());
 			}
@@ -117,8 +113,7 @@ namespace spk
 			try
 			{
 				_owner._notifyConnection();
-			}
-			catch (...)
+			} catch (...)
 			{
 				disconnect();
 				throw;
