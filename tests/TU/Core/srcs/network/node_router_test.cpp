@@ -62,3 +62,35 @@ TEST(NodeRouterTest, RemovingNodeAlsoRemovesItsRoutes)
 
 	EXPECT_THROW(router.dispatch(), spk::Exception);
 }
+
+TEST(NodeRouterTest, RejectsSameNodeRegisteredUnderDifferentNames)
+{
+	spk::NodeRouter router;
+	spk::LocalNode node;
+	router.addNode("first", node);
+
+	EXPECT_THROW(router.addNode("second", node), spk::Exception);
+}
+
+TEST(NodeRouterTest, RedirectCanBeReassignedToAnotherNode)
+{
+	spk::NodeRouter router;
+	spk::LocalNode first;
+	spk::LocalNode second;
+	router.addNode("first", first);
+	router.addNode("second", second);
+	router.redirect(8, "first");
+	router.redirect(8, "second");
+	router.server().messages().publish(
+		spk::ReceivedMessage{5, spk::Message(8)});
+
+	router.dispatch();
+
+	std::vector<spk::ReceivedMessage> firstMessages;
+	std::vector<spk::ReceivedMessage> secondMessages;
+	first.incoming().drain(firstMessages);
+	second.incoming().drain(secondMessages);
+	EXPECT_TRUE(firstMessages.empty());
+	ASSERT_EQ(secondMessages.size(), 1u);
+	EXPECT_EQ(secondMessages.front().emitter, 5u);
+}
