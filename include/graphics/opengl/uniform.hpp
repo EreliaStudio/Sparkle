@@ -8,8 +8,10 @@
 #include <stdexcept>
 #include <string>
 #include <type_traits>
+#include <unordered_map>
 #include <utility>
 
+#include "core/context/render_context.hpp"
 #include "math/matrix.hpp"
 #include "math/vector2.hpp"
 #include "math/vector3.hpp"
@@ -22,6 +24,7 @@ namespace spk
 	{
 	public:
 		using Data = std::remove_cvref_t<TType>;
+		using BindingPoint = GLint;
 
 	private:
 		struct Pusher
@@ -161,6 +164,16 @@ namespace spk
 			}
 		};
 
+		struct Binding
+		{
+			GPUResource::Generation generation = 0;
+			std::uint32_t nativeProgramIdentifier = 0;
+			BindingPoint point = -1;
+		};
+
+		using ProgramBindings = std::unordered_map<GPUResource::Identifier, Binding>;
+		using ContextBindings = std::unordered_map<Window::Surface *, ProgramBindings>;
+
 		static constexpr bool Supported = requires(GLint location, const Data &data) {
 			Pusher::push(location, data);
 		};
@@ -168,16 +181,31 @@ namespace spk
 
 		std::string _name;
 		Data _data{};
+		mutable ContextBindings _bindings;
 
-		[[nodiscard]] GLint _location() const
+		[[nodiscard]] BindingPoint _bindingPoint(RenderContext &context) const
 		{
-			GLint program = 0;
-			glGetIntegerv(GL_CURRENT_PROGRAM, &program);
-			if (program == 0)
+			if (context.targetSurface == nullptr)
+			{
+				throw std::invalid_argument("Cannot activate a Uniform without a target surface");
+			}
+
+			const auto &program = context._activeProgram;
+			if (program._surface != context.targetSurface || program._identifier == 0 || program._nativeIdentifier == 0)
 			{
 				throw std::logic_error("Cannot activate a Uniform without an active Program");
 			}
-			return glGetUniformLocation(static_cast<GLuint>(program), _name.c_str());
+
+			auto &programs = _bindings[context.targetSurface];
+			auto [iterator, inserted] = programs.try_emplace(program._identifier);
+			auto &binding = iterator->second;
+			if (inserted || binding.generation != program._generation || binding.nativeProgramIdentifier != program._nativeIdentifier)
+			{
+				binding.generation = program._generation;
+				binding.nativeProgramIdentifier = program._nativeIdentifier;
+				binding.point = glGetUniformLocation(static_cast<GLuint>(program._nativeIdentifier), _name.c_str());
+			}
+			return binding.point;
 		}
 
 		template <typename TValue>
@@ -228,12 +256,12 @@ namespace spk
 			_data = data;
 		}
 
-		void activate() const
+		void activate(RenderContext &context) const
 		{
-			const GLint location = _location();
-			if (location != -1)
+			const BindingPoint point = _bindingPoint(context);
+			if (point != -1)
 			{
-				_push(location, _data);
+				_push(point, _data);
 			}
 		}
 	};

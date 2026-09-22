@@ -60,6 +60,13 @@ void main() { outputColor = vec4(1.0); }
 		::glGetIntegerv(GL_CURRENT_PROGRAM, &program);
 		return static_cast<GLuint>(program);
 	}
+
+	[[nodiscard]] float uniformFloat(GLuint program, const char *name)
+	{
+		GLfloat value = 0.0f;
+		::glGetUniformfv(program, ::glGetUniformLocation(program, name), &value);
+		return value;
+	}
 }
 
 TEST(UniformTest, TypeIsDeclaredAtCompileTimeAndDataIsDirectlyEditable)
@@ -67,6 +74,7 @@ TEST(UniformTest, TypeIsDeclaredAtCompileTimeAndDataIsDirectlyEditable)
 	static_assert(std::is_same_v<spk::Uniform<std::uint32_t>::Data, std::uint32_t>);
 	static_assert(std::is_same_v<spk::Uniform<float_t>::Data, float_t>);
 	static_assert(std::is_same_v<spk::Uniform<spk::Vector3>::Data, spk::Vector3>);
+	static_assert(std::is_same_v<spk::Uniform<float>::BindingPoint, GLint>);
 
 	FloatUniform uniform("uFloat", 1.0f);
 	EXPECT_EQ(uniform.name(), "uFloat");
@@ -81,8 +89,9 @@ TEST(UniformTest, EverySupportedTypeActivatesOnTheCurrentProgram)
 {
 	auto &openGL = sparkle_test::OpenGLTestContext::instance();
 	openGL.reset();
+	auto &context = openGL.renderContext();
 	spk::Program program(UniformVertexShader, UniformFragmentShader);
-	program.activate(openGL.renderContext());
+	program.activate(context);
 
 	spk::Uniform<bool> uBool("uBool", true);
 	spk::Uniform<std::int32_t> uInt("uInt", -2);
@@ -101,22 +110,22 @@ TEST(UniformTest, EverySupportedTypeActivatesOnTheCurrentProgram)
 	spk::Uniform<spk::Matrix3x3> uMat3("uMat3", spk::Matrix3x3::identity());
 	spk::Uniform<spk::Matrix4x4> uMat4("uMat4", spk::Matrix4x4::identity());
 
-	uBool.activate();
-	uInt.activate();
-	uUInt.activate();
-	uFloat.activate();
-	uVec2.activate();
-	uIVec2.activate();
-	uUVec2.activate();
-	uVec3.activate();
-	uIVec3.activate();
-	uUVec3.activate();
-	uVec4.activate();
-	uIVec4.activate();
-	uUVec4.activate();
-	uMat2.activate();
-	uMat3.activate();
-	uMat4.activate();
+	uBool.activate(context);
+	uInt.activate(context);
+	uUInt.activate(context);
+	uFloat.activate(context);
+	uVec2.activate(context);
+	uIVec2.activate(context);
+	uUVec2.activate(context);
+	uVec3.activate(context);
+	uIVec3.activate(context);
+	uUVec3.activate(context);
+	uVec4.activate(context);
+	uIVec4.activate(context);
+	uUVec4.activate(context);
+	uMat2.activate(context);
+	uMat3.activate(context);
+	uMat4.activate(context);
 	EXPECT_EQ(::glGetError(), GL_NO_ERROR);
 
 	const GLuint identifier = activeProgram();
@@ -129,9 +138,7 @@ TEST(UniformTest, EverySupportedTypeActivatesOnTheCurrentProgram)
 	GLuint uintValue = 0;
 	::glGetUniformuiv(identifier, ::glGetUniformLocation(identifier, "uUInt"), &uintValue);
 	EXPECT_EQ(uintValue, 3u);
-	GLfloat floatValue = 0.0f;
-	::glGetUniformfv(identifier, ::glGetUniformLocation(identifier, "uFloat"), &floatValue);
-	EXPECT_FLOAT_EQ(floatValue, 4.5f);
+	EXPECT_FLOAT_EQ(uniformFloat(identifier, "uFloat"), 4.5f);
 
 	std::array<GLfloat, 4> vectorValue{};
 	::glGetUniformfv(identifier, ::glGetUniformLocation(identifier, "uVec4"), vectorValue.data());
@@ -145,15 +152,78 @@ TEST(UniformTest, EverySupportedTypeActivatesOnTheCurrentProgram)
 	EXPECT_FLOAT_EQ(matrixValue[15], 1.0f);
 }
 
+TEST(UniformTest, TracksProgramsThroughTheRenderContext)
+{
+	auto &openGL = sparkle_test::OpenGLTestContext::instance();
+	openGL.reset();
+	auto &context = openGL.renderContext();
+	spk::Program first(UniformVertexShader, UniformFragmentShader);
+	spk::Program second(UniformVertexShader, UniformFragmentShader);
+	spk::Uniform<float> uniform("uFloat", 1.0f);
+
+	first.activate(context);
+	const GLuint firstIdentifier = activeProgram();
+	uniform.activate(context);
+	EXPECT_FLOAT_EQ(uniformFloat(firstIdentifier, "uFloat"), 1.0f);
+
+	second.activate(context);
+	const GLuint secondIdentifier = activeProgram();
+	uniform.setData(2.0f);
+	uniform.activate(context);
+	EXPECT_FLOAT_EQ(uniformFloat(secondIdentifier, "uFloat"), 2.0f);
+
+	first.activate(context);
+	uniform.setData(3.0f);
+	uniform.activate(context);
+	EXPECT_FLOAT_EQ(uniformFloat(firstIdentifier, "uFloat"), 3.0f);
+}
+
+TEST(UniformTest, RefreshesBindingAfterProgramRelink)
+{
+	auto &openGL = sparkle_test::OpenGLTestContext::instance();
+	openGL.reset();
+	auto &context = openGL.renderContext();
+	spk::Program program(UniformVertexShader, UniformFragmentShader);
+	spk::Uniform<float> uniform("uFloat", 1.0f);
+
+	program.activate(context);
+	uniform.activate(context);
+	const auto generation = program.generation();
+
+	program.setSources(UniformVertexShader + "\n", UniformFragmentShader);
+	program.activate(context);
+	EXPECT_GT(program.generation(), generation);
+
+	uniform.setData(4.0f);
+	uniform.activate(context);
+	EXPECT_FLOAT_EQ(uniformFloat(activeProgram(), "uFloat"), 4.0f);
+}
+
+TEST(UniformTest, ProgramHandleActivationUpdatesTheRenderContext)
+{
+	auto &openGL = sparkle_test::OpenGLTestContext::instance();
+	openGL.reset();
+	auto &context = openGL.renderContext();
+	spk::Program program(UniformVertexShader, UniformFragmentShader);
+	const auto handle = program.handle();
+	spk::Uniform<float> uniform("uFloat", 5.0f);
+
+	handle.activate(context);
+	EXPECT_NO_THROW(uniform.activate(context));
+	EXPECT_FLOAT_EQ(uniformFloat(activeProgram(), "uFloat"), 5.0f);
+}
+
 TEST(UniformTest, ActivationRequiresAProgramAndMissingUniformIsIgnored)
 {
 	auto &openGL = sparkle_test::OpenGLTestContext::instance();
 	openGL.reset();
+	spk::RenderContext inactiveContext{.targetSurface = &openGL.surface()};
 	spk::Uniform<float> uniform("missing", 1.0f);
-	EXPECT_THROW(uniform.activate(), std::logic_error);
+	EXPECT_THROW(uniform.activate(inactiveContext), std::logic_error);
 
+	auto &context = openGL.renderContext();
 	spk::Program program(UniformVertexShader, UniformFragmentShader);
-	program.activate(openGL.renderContext());
-	EXPECT_NO_THROW(uniform.activate());
+	program.activate(context);
+	EXPECT_NO_THROW(uniform.activate(context));
 	EXPECT_EQ(::glGetError(), GL_NO_ERROR);
 }

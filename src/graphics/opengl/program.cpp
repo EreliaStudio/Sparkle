@@ -6,6 +6,8 @@
 #include <stdexcept>
 #include <utility>
 
+#include "core/context/render_context.hpp"
+
 namespace
 {
 	[[nodiscard]] std::uintptr_t indexByteOffset(spk::IndexBuffer::Type indexType, std::size_t firstIndex)
@@ -23,6 +25,23 @@ namespace
 
 namespace spk
 {
+	class RenderContextProgramAccess final
+	{
+	public:
+		static void set(
+			RenderContext &context,
+			GPUResource::Identifier identifier,
+			GPUResource::Generation generation,
+			GLuint nativeIdentifier) noexcept
+		{
+			auto &program = context._activeProgram;
+			program._surface = context.targetSurface;
+			program._identifier = identifier;
+			program._generation = generation;
+			program._nativeIdentifier = nativeIdentifier;
+		}
+	};
+
 	class Program::Instance final : public GPUResource::Instance
 	{
 	public:
@@ -209,9 +228,11 @@ namespace spk
 		instance.identifier = identifier;
 	}
 
-	void Program::State::_bind(GPUResource::Instance &base, RenderContext &) const
+	void Program::State::_bind(GPUResource::Instance &base, RenderContext &context) const
 	{
-		glUseProgram(static_cast<Instance &>(base).identifier);
+		auto &instance = static_cast<Instance &>(base);
+		glUseProgram(instance.identifier);
+		RenderContextProgramAccess::set(context, identifier(), version(), instance.identifier);
 	}
 
 	Program::Program() :
