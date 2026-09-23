@@ -8,6 +8,7 @@
 #include "container/json/object.hpp"
 #include "container/json/reader.hpp"
 #include "container/polymorphic_container.hpp"
+#include "container/pool.hpp"
 #include "container/protected_data.hpp"
 #include "container/query.hpp"
 #include "container/rolling_statistic.hpp"
