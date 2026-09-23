@@ -184,7 +184,7 @@ namespace spk
 				requires std::is_copy_assignable_v<Element>
 			{
 				if (this == &other)
-				{
+			{
 					return *this;
 				}
 
@@ -322,7 +322,8 @@ namespace spk
 
 		[[nodiscard]] Lease obtain()
 		{
-			return obtain([](Element &) {});
+			return obtain([](Element &) {
+			});
 		}
 
 		[[nodiscard]] std::size_t available() const
