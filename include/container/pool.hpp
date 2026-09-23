@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <functional>
 #include <memory>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -24,8 +25,20 @@ namespace spk
 		{
 		private:
 			std::vector<Element *> _availableElements;
+			Factory _factory;
+			OnObtain _onObtain;
 
 		public:
+			explicit State(Factory factory, OnObtain onObtain = {}) :
+				_factory(std::move(factory)),
+				_onObtain(std::move(onObtain))
+			{
+				if (!_factory)
+				{
+					throw spk::Exception("Pool requires a valid factory");
+				}
+			}
+
 			~State()
 			{
 				clear();
@@ -33,13 +46,34 @@ namespace spk
 
 			[[nodiscard]] Element *obtain()
 			{
-				if (_availableElements.empty())
+				Element *element = nullptr;
+
+				if (!_availableElements.empty())
 				{
-					return nullptr;
+					element = _availableElements.back();
+					_availableElements.pop_back();
+				}
+				else
+				{
+					element = _factory();
+
+					if (element == nullptr)
+					{
+						throw spk::Exception("Pool factory returned a null element");
+					}
 				}
 
-				Element *element = _availableElements.back();
-				_availableElements.pop_back();
+				try
+				{
+					if (_onObtain)
+					{
+						_onObtain(*element);
+					}
+				} catch (...)
+				{
+					delete element;
+					throw;
+				}
 
 				return element;
 			}
@@ -53,6 +87,21 @@ namespace spk
 				{
 					delete element;
 				}
+			}
+
+			void setFactory(Factory factory)
+			{
+				if (!factory)
+				{
+					throw spk::Exception("Pool requires a valid factory");
+				}
+
+				_factory = std::move(factory);
+			}
+
+			void setOnObtain(OnObtain onObtain)
+			{
+				_onObtain = std::move(onObtain);
 			}
 
 			[[nodiscard]] std::size_t available() const
@@ -106,7 +155,36 @@ namespace spk
 
 		public:
 			Lease() = default;
-			Lease(const Lease &) = delete;
+
+			Lease(const Lease &other)
+				requires std::is_copy_assignable_v<Element>
+			{
+				if (other._element == nullptr)
+				{
+					return;
+				}
+
+				auto state = other._state.lock();
+
+				if (state == nullptr)
+				{
+					throw spk::Exception("Cannot copy a Pool::Lease after its Pool has been destroyed");
+				}
+
+				Element *element = state->obtain();
+
+				try
+				{
+					*element = *other._element;
+				} catch (...)
+				{
+					delete element;
+					throw;
+				}
+
+				_element = element;
+				_state = std::move(state);
+			}
 
 			Lease(Lease &&other) noexcept :
 				_element(std::exchange(other._element, nullptr)),
@@ -119,7 +197,19 @@ namespace spk
 				_recycle();
 			}
 
-			Lease &operator=(const Lease &) = delete;
+			Lease &operator=(const Lease &other)
+				requires std::is_copy_assignable_v<Element>
+			{
+				if (this == &other)
+				{
+					return *this;
+				}
+
+				Lease copy(other);
+				*this = std::move(copy);
+
+				return *this;
+			}
 
 			Lease &operator=(Lease &&other) noexcept
 			{
@@ -174,8 +264,6 @@ namespace spk
 
 	private:
 		std::shared_ptr<State> _state;
-		Factory _factory;
-		OnObtain _onObtain;
 
 		[[nodiscard]] static Factory _defaultFactory()
 			requires std::default_initializable<Element>
@@ -201,14 +289,10 @@ namespace spk
 		}
 
 		explicit Pool(Factory factory, OnObtain onObtain = {}) :
-			_state(std::make_shared<State>()),
-			_factory(std::move(factory)),
-			_onObtain(std::move(onObtain))
+			_state(std::make_shared<State>(
+				std::move(factory),
+				std::move(onObtain)))
 		{
-			if (!_factory)
-			{
-				throw spk::Exception("Pool requires a valid factory");
-			}
 		}
 
 		Pool(const Pool &) = delete;
@@ -220,46 +304,17 @@ namespace spk
 
 		void setFactory(Factory factory)
 		{
-			if (!factory)
-			{
-				throw spk::Exception("Pool requires a valid factory");
-			}
-
-			_factory = std::move(factory);
+			_state->setFactory(std::move(factory));
 		}
 
 		void setOnObtain(OnObtain onObtain)
 		{
-			_onObtain = std::move(onObtain);
+			_state->setOnObtain(std::move(onObtain));
 		}
 
 		[[nodiscard]] Lease obtain()
 		{
-			Element *element = _state->obtain();
-
-			if (element == nullptr)
-			{
-				element = _factory();
-
-				if (element == nullptr)
-				{
-					throw spk::Exception("Pool factory returned a null element");
-				}
-			}
-
-			try
-			{
-				if (_onObtain)
-				{
-					_onObtain(*element);
-				}
-			} catch (...)
-			{
-				delete element;
-				throw;
-			}
-
-			return Lease(element, _state);
+			return Lease(_state->obtain(), _state);
 		}
 
 		[[nodiscard]] std::size_t available() const

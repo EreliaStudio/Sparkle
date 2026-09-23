@@ -27,6 +27,31 @@ namespace
 		NonMovableElement &operator=(NonMovableElement &&) = delete;
 	};
 
+	struct ThrowingCopyAssignableElement
+	{
+		int value = 0;
+		bool throwOnCopy = false;
+
+		ThrowingCopyAssignableElement() = default;
+		ThrowingCopyAssignableElement(const ThrowingCopyAssignableElement &) = delete;
+		ThrowingCopyAssignableElement(ThrowingCopyAssignableElement &&) = delete;
+
+		ThrowingCopyAssignableElement &operator=(const ThrowingCopyAssignableElement &other)
+		{
+			value = other.value;
+
+			if (other.throwOnCopy)
+			{
+				throw std::runtime_error("copy failed");
+			}
+
+			throwOnCopy = other.throwOnCopy;
+			return *this;
+		}
+
+		ThrowingCopyAssignableElement &operator=(ThrowingCopyAssignableElement &&) = delete;
+	};
+
 	struct TrackedElement
 	{
 		std::atomic<int> *destructionCount;
@@ -56,10 +81,15 @@ static_assert(!std::is_move_constructible_v<IntPool>);
 static_assert(!std::is_copy_assignable_v<IntPool>);
 static_assert(!std::is_move_assignable_v<IntPool>);
 
-static_assert(!std::is_copy_constructible_v<IntPool::Lease>);
+static_assert(std::is_copy_constructible_v<IntPool::Lease>);
 static_assert(std::is_move_constructible_v<IntPool::Lease>);
-static_assert(!std::is_copy_assignable_v<IntPool::Lease>);
+static_assert(std::is_copy_assignable_v<IntPool::Lease>);
 static_assert(std::is_move_assignable_v<IntPool::Lease>);
+
+using NonMovablePool = spk::Pool<NonMovableElement>;
+
+static_assert(!std::is_copy_constructible_v<NonMovablePool::Lease>);
+static_assert(!std::is_copy_assignable_v<NonMovablePool::Lease>);
 
 TEST(PoolTest, DefaultFactoryCreatesAndRecyclesElement)
 {
@@ -325,4 +355,99 @@ TEST(PoolTest, SetOnObtainAffectsSubsequentObtainsAndCanBeDisabled)
 		auto value = pool.obtain();
 		EXPECT_EQ(*value, 9);
 	}
+}
+
+TEST(PoolTest, LeaseCopyConstructsIndependentElementFromSamePool)
+{
+	int obtainCount = 0;
+
+	IntPool pool(
+		[]() {
+			return new int();
+		},
+		[&](int &value) {
+			++obtainCount;
+			value = -1;
+		});
+
+	auto first = pool.obtain();
+	*first = 73;
+
+	auto second = first;
+
+	EXPECT_NE(second.get(), first.get());
+	EXPECT_EQ(*first, 73);
+	EXPECT_EQ(*second, 73);
+	EXPECT_EQ(obtainCount, 2);
+
+	*second = 91;
+
+	EXPECT_EQ(*first, 73);
+	EXPECT_EQ(*second, 91);
+}
+
+TEST(PoolTest, LeaseCopyAssignmentRecyclesPreviousDestinationAfterSuccessfulCopy)
+{
+	IntPool pool;
+
+	auto source = pool.obtain();
+	auto destination = pool.obtain();
+
+	*source = 12;
+	*destination = 48;
+
+	int *previousDestination = destination.get();
+
+	destination = source;
+
+	EXPECT_NE(destination.get(), source.get());
+	EXPECT_EQ(*source, 12);
+	EXPECT_EQ(*destination, 12);
+	ASSERT_EQ(pool.available(), 1u);
+
+	auto recycled = pool.obtain();
+	EXPECT_EQ(recycled.get(), previousDestination);
+	EXPECT_EQ(*recycled, 48);
+}
+
+TEST(PoolTest, LeaseCopyAfterPoolDestructionThrows)
+{
+	IntPool::Lease source;
+
+	{
+		IntPool pool;
+		source = pool.obtain();
+		*source = 37;
+	}
+
+	EXPECT_THROW(
+		{
+			IntPool::Lease copy(source);
+		},
+		spk::Exception);
+
+	EXPECT_EQ(*source, 37);
+}
+
+TEST(PoolTest, ThrowingLeaseCopyDiscardsNewElementAndLeavesDestinationUntouched)
+{
+	using Element = ThrowingCopyAssignableElement;
+	using ElementPool = spk::Pool<Element>;
+
+	ElementPool pool;
+
+	auto source = pool.obtain();
+	source->value = 27;
+	source->throwOnCopy = true;
+
+	auto destination = pool.obtain();
+	destination->value = 84;
+
+	Element *destinationAddress = destination.get();
+
+	EXPECT_THROW(destination = source, std::runtime_error);
+
+	EXPECT_EQ(destination.get(), destinationAddress);
+	EXPECT_EQ(destination->value, 84);
+	EXPECT_EQ(pool.available(), 0u);
 }
