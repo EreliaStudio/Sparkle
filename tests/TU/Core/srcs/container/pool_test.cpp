@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <stdexcept>
+#include <string>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -208,7 +209,7 @@ TEST(PoolTest, CustomFactorySupportsNonDefaultConstructibleNonMovableElements)
 	}
 }
 
-TEST(PoolTest, ThrowingOnObtainDiscardsElementAndRethrows)
+TEST(PoolTest, ThrowingOnObtainDiscardsElementAndWrapsCause)
 {
 	int destructionCount = 0;
 
@@ -216,14 +217,51 @@ TEST(PoolTest, ThrowingOnObtainDiscardsElementAndRethrows)
 		return new TrackedElement(destructionCount);
 	});
 
-	EXPECT_THROW(
+	try
+	{
 		(void)pool.obtain([](TrackedElement &) {
 			throw std::runtime_error("prepare failed");
-		}),
-		std::runtime_error);
+		});
+		FAIL() << "Expected spk::Exception";
+	} catch (const spk::Exception &exception)
+	{
+		EXPECT_EQ(exception.message(), "Pool on-obtain callback failed");
+		ASSERT_NE(exception.cause(), nullptr);
+
+		try
+		{
+			std::rethrow_exception(exception.cause());
+		} catch (const std::runtime_error &cause)
+		{
+			EXPECT_STREQ(cause.what(), "prepare failed");
+		} catch (...)
+		{
+			FAIL() << "Expected std::runtime_error cause";
+		}
+	}
 
 	EXPECT_EQ(pool.available(), 0u);
 	EXPECT_EQ(destructionCount, 1);
+}
+
+TEST(PoolTest, UnknownOnObtainExceptionIsWrappedAsUnknownCause)
+{
+	IntPool pool;
+
+	try
+	{
+		(void)pool.obtain([](int &) {
+			throw 42;
+		});
+		FAIL() << "Expected spk::Exception";
+	} catch (const spk::Exception &exception)
+	{
+		EXPECT_EQ(exception.message(), "Pool on-obtain callback failed");
+		ASSERT_NE(exception.cause(), nullptr);
+		EXPECT_NE(
+			std::string(exception.what()).find("Unknown exception"),
+			std::string::npos);
+	}
 }
 
 TEST(PoolTest, NullFactoryResultIsRejected)
@@ -532,7 +570,7 @@ TEST(PoolTest, LeaseCopyAfterPoolDestructionThrows)
 	EXPECT_EQ(*source, 37);
 }
 
-TEST(PoolTest, ThrowingLeaseCopyDiscardsNewElementAndLeavesDestinationUntouched)
+TEST(PoolTest, ThrowingLeaseCopyDiscardsNewElementAndWrapsCause)
 {
 	using Element = ThrowingCopyAssignableElement;
 	using ElementPool = spk::Pool<Element>;
@@ -548,7 +586,26 @@ TEST(PoolTest, ThrowingLeaseCopyDiscardsNewElementAndLeavesDestinationUntouched)
 
 	Element *destinationAddress = destination.get();
 
-	EXPECT_THROW(destination = source, std::runtime_error);
+	try
+	{
+		destination = source;
+		FAIL() << "Expected spk::Exception";
+	} catch (const spk::Exception &exception)
+	{
+		EXPECT_EQ(exception.message(), "Pool::Lease failed to copy its element");
+		ASSERT_NE(exception.cause(), nullptr);
+
+		try
+		{
+			std::rethrow_exception(exception.cause());
+		} catch (const std::runtime_error &cause)
+		{
+			EXPECT_STREQ(cause.what(), "copy failed");
+		} catch (...)
+		{
+			FAIL() << "Expected std::runtime_error cause";
+		}
+	}
 
 	EXPECT_EQ(destination.get(), destinationAddress);
 	EXPECT_EQ(destination->value, 84);
