@@ -65,8 +65,7 @@ namespace spk
 						state->availableElements.push_back(_element);
 						_element = nullptr;
 						return;
-					}
-					catch (...)
+					} catch (...)
 					{
 					}
 				}
@@ -218,8 +217,7 @@ namespace spk
 				{
 					_onObtain(*element);
 				}
-			}
-			catch (...)
+			} catch (...)
 			{
 				delete element;
 				throw;
