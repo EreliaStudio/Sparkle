@@ -4,7 +4,6 @@
 #include <cstddef>
 #include <functional>
 #include <memory>
-#include <mutex>
 #include <utility>
 #include <vector>
 
@@ -24,7 +23,6 @@ namespace spk
 		class State
 		{
 		private:
-			mutable std::mutex _mutex;
 			std::vector<Element *> _availableElements;
 
 		public:
@@ -35,8 +33,6 @@ namespace spk
 
 			[[nodiscard]] Element *obtain()
 			{
-				const std::scoped_lock lock(_mutex);
-
 				if (_availableElements.empty())
 				{
 					return nullptr;
@@ -52,7 +48,6 @@ namespace spk
 			{
 				try
 				{
-					const std::scoped_lock lock(_mutex);
 					_availableElements.push_back(element);
 				} catch (...)
 				{
@@ -62,23 +57,17 @@ namespace spk
 
 			[[nodiscard]] std::size_t available() const
 			{
-				const std::scoped_lock lock(_mutex);
 				return _availableElements.size();
 			}
 
 			void clear()
 			{
-				std::vector<Element *> elements;
-
-				{
-					const std::scoped_lock lock(_mutex);
-					elements.swap(_availableElements);
-				}
-
-				for (Element *element : elements)
+				for (Element *element : _availableElements)
 				{
 					delete element;
 				}
+
+				_availableElements.clear();
 			}
 		};
 
@@ -228,6 +217,21 @@ namespace spk
 
 		Pool &operator=(const Pool &) = delete;
 		Pool &operator=(Pool &&) = delete;
+
+		void setFactory(Factory factory)
+		{
+			if (!factory)
+			{
+				throw spk::Exception("Pool requires a valid factory");
+			}
+
+			_factory = std::move(factory);
+		}
+
+		void setOnObtain(OnObtain onObtain)
+		{
+			_onObtain = std::move(onObtain);
+		}
 
 		[[nodiscard]] Lease obtain()
 		{
