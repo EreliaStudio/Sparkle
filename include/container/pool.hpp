@@ -18,7 +18,6 @@ namespace spk
 	public:
 		using Element = TElement;
 		using Factory = std::function<Element *()>;
-		using OnObtain = std::function<void(Element &)>;
 
 	private:
 		class State
@@ -26,12 +25,10 @@ namespace spk
 		private:
 			std::vector<Element *> _availableElements;
 			Factory _factory;
-			OnObtain _onObtain;
 
 		public:
-			explicit State(Factory factory, OnObtain onObtain = {}) :
-				_factory(std::move(factory)),
-				_onObtain(std::move(onObtain))
+			explicit State(Factory factory) :
+				_factory(std::move(factory))
 			{
 				if (!_factory)
 				{
@@ -46,33 +43,19 @@ namespace spk
 
 			[[nodiscard]] Element *obtain()
 			{
-				Element *element = nullptr;
-
 				if (!_availableElements.empty())
 				{
-					element = _availableElements.back();
+					Element *element = _availableElements.back();
 					_availableElements.pop_back();
-				}
-				else
-				{
-					element = _factory();
 
-					if (element == nullptr)
-					{
-						throw spk::Exception("Pool factory returned a null element");
-					}
+					return element;
 				}
 
-				try
+				Element *element = _factory();
+
+				if (element == nullptr)
 				{
-					if (_onObtain)
-					{
-						_onObtain(*element);
-					}
-				} catch (...)
-				{
-					delete element;
-					throw;
+					throw spk::Exception("Pool factory returned a null element");
 				}
 
 				return element;
@@ -99,9 +82,9 @@ namespace spk
 				_factory = std::move(factory);
 			}
 
-			void setOnObtain(OnObtain onObtain)
+			[[nodiscard]] std::shared_ptr<State> cloneEmpty() const
 			{
-				_onObtain = std::move(onObtain);
+				return std::make_shared<State>(_factory);
 			}
 
 			[[nodiscard]] std::size_t available() const
@@ -281,40 +264,65 @@ namespace spk
 		{
 		}
 
-		explicit Pool(OnObtain onObtain)
-			requires std::default_initializable<Element>
-			:
-			Pool(_defaultFactory(), std::move(onObtain))
+		explicit Pool(Factory factory) :
+			_state(std::make_shared<State>(std::move(factory)))
 		{
 		}
 
-		explicit Pool(Factory factory, OnObtain onObtain = {}) :
-			_state(std::make_shared<State>(
-				std::move(factory),
-				std::move(onObtain)))
+		Pool(const Pool &other) :
+			_state(other._state != nullptr ? other._state->cloneEmpty() : nullptr)
 		{
 		}
 
-		Pool(const Pool &) = delete;
-		Pool(Pool &&) = delete;
+		Pool(Pool &&) noexcept = default;
 		~Pool() = default;
 
-		Pool &operator=(const Pool &) = delete;
-		Pool &operator=(Pool &&) = delete;
+		Pool &operator=(const Pool &other)
+		{
+			if (this == &other)
+				{
+				return *this;
+			}
+
+			std::shared_ptr<State> state =
+				other._state != nullptr ? other._state->cloneEmpty() : nullptr;
+
+			_state = std::move(state);
+
+			return *this;
+		}
+
+		Pool &operator=(Pool &&) noexcept = default;
 
 		void setFactory(Factory factory)
 		{
 			_state->setFactory(std::move(factory));
 		}
 
-		void setOnObtain(OnObtain onObtain)
+		template <typename TOnObtain, typename... TArguments>
+			requires std::invocable<TOnObtain &&, Element &, TArguments &&...>
+		[[nodiscard]] Lease obtain(TOnObtain &&onObtain, TArguments &&...arguments)
 		{
-			_state->setOnObtain(std::move(onObtain));
+			Element *element = _state->obtain();
+
+			try
+			{
+				std::invoke(
+					std::forward<TOnObtain>(onObtain),
+					*element,
+					std::forward<TArguments>(arguments)...);
+			} catch (...)
+			{
+				delete element;
+				throw;
+			}
+
+			return Lease(element, _state);
 		}
 
 		[[nodiscard]] Lease obtain()
 		{
-			return Lease(_state->obtain(), _state);
+			return obtain([](Element &) {});
 		}
 
 		[[nodiscard]] std::size_t available() const

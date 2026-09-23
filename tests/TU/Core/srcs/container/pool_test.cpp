@@ -2,7 +2,6 @@
 
 #include "container/pool.hpp"
 
-#include <atomic>
 #include <cstddef>
 #include <stdexcept>
 #include <type_traits>
@@ -54,9 +53,9 @@ namespace
 
 	struct TrackedElement
 	{
-		std::atomic<int> *destructionCount;
+		int *destructionCount;
 
-		explicit TrackedElement(std::atomic<int> &destructionCount) :
+		explicit TrackedElement(int &destructionCount) :
 			destructionCount(&destructionCount)
 		{
 		}
@@ -69,17 +68,17 @@ namespace
 
 		~TrackedElement()
 		{
-			destructionCount->fetch_add(1, std::memory_order_relaxed);
+			++(*destructionCount);
 		}
 	};
 }
 
 using IntPool = spk::Pool<int>;
 
-static_assert(!std::is_copy_constructible_v<IntPool>);
-static_assert(!std::is_move_constructible_v<IntPool>);
-static_assert(!std::is_copy_assignable_v<IntPool>);
-static_assert(!std::is_move_assignable_v<IntPool>);
+static_assert(std::is_copy_constructible_v<IntPool>);
+static_assert(std::is_move_constructible_v<IntPool>);
+static_assert(std::is_copy_assignable_v<IntPool>);
+static_assert(std::is_move_assignable_v<IntPool>);
 
 static_assert(std::is_copy_constructible_v<IntPool::Lease>);
 static_assert(std::is_move_constructible_v<IntPool::Lease>);
@@ -116,42 +115,58 @@ TEST(PoolTest, DefaultFactoryCreatesAndRecyclesElement)
 	EXPECT_EQ(pool.available(), 1u);
 }
 
-TEST(PoolTest, OnObtainRunsForNewAndRecycledElements)
+TEST(PoolTest, PerCallOnObtainRunsForNewAndRecycledElements)
 {
 	int obtainCount = 0;
+	IntPool pool;
 
-	IntPool pool([&](int &value) {
+	auto onObtain = [&](int &value) {
 		++obtainCount;
 		value = 7;
-	});
+	};
 
 	{
-		auto first = pool.obtain();
+		auto first = pool.obtain(onObtain);
 		EXPECT_EQ(*first, 7);
 		*first = 99;
 	}
 
 	{
-		auto second = pool.obtain();
+		auto second = pool.obtain(onObtain);
 		EXPECT_EQ(*second, 7);
 	}
 
 	EXPECT_EQ(obtainCount, 2);
 }
 
-TEST(PoolTest, OnObtainCanClearVectorWithoutReleasingCapacity)
+TEST(PoolTest, PerCallOnObtainForwardsArguments)
+{
+	IntPool pool;
+
+	auto value = pool.obtain(
+		[](int &element, int base, int multiplier) {
+			element = base * multiplier;
+		},
+		6,
+		7);
+
+	EXPECT_EQ(*value, 42);
+}
+
+TEST(PoolTest, PerCallOnObtainCanClearVectorWithoutReleasingCapacity)
 {
 	using Buffer = std::vector<int>;
 
-	spk::Pool<Buffer> pool([](Buffer &buffer) {
+	spk::Pool<Buffer> pool;
+	auto clear = [](Buffer &buffer) {
 		buffer.clear();
-	});
+	};
 
 	Buffer *firstAddress = nullptr;
 	std::size_t retainedCapacity = 0;
 
 	{
-		auto first = pool.obtain();
+		auto first = pool.obtain(clear);
 		firstAddress = first.get();
 
 		first->reserve(128);
@@ -163,7 +178,7 @@ TEST(PoolTest, OnObtainCanClearVectorWithoutReleasingCapacity)
 	}
 
 	{
-		auto second = pool.obtain();
+		auto second = pool.obtain(clear);
 
 		EXPECT_EQ(second.get(), firstAddress);
 		EXPECT_TRUE(second->empty());
@@ -195,19 +210,20 @@ TEST(PoolTest, CustomFactorySupportsNonDefaultConstructibleNonMovableElements)
 
 TEST(PoolTest, ThrowingOnObtainDiscardsElementAndRethrows)
 {
-	std::atomic<int> destructionCount = 0;
+	int destructionCount = 0;
 
-	spk::Pool<TrackedElement> pool(
-		[&]() {
-			return new TrackedElement(destructionCount);
-		},
-		[](TrackedElement &) {
+	spk::Pool<TrackedElement> pool([&]() {
+		return new TrackedElement(destructionCount);
+	});
+
+	EXPECT_THROW(
+		(void)pool.obtain([](TrackedElement &) {
 			throw std::runtime_error("prepare failed");
-		});
+		}),
+		std::runtime_error);
 
-	EXPECT_THROW((void)pool.obtain(), std::runtime_error);
 	EXPECT_EQ(pool.available(), 0u);
-	EXPECT_EQ(destructionCount.load(std::memory_order_relaxed), 1);
+	EXPECT_EQ(destructionCount, 1);
 }
 
 TEST(PoolTest, NullFactoryResultIsRejected)
@@ -222,7 +238,7 @@ TEST(PoolTest, NullFactoryResultIsRejected)
 
 TEST(PoolTest, LeaseCanOutliveOriginatingPool)
 {
-	std::atomic<int> destructionCount = 0;
+	int destructionCount = 0;
 	spk::Pool<TrackedElement>::Lease lease;
 
 	{
@@ -231,14 +247,14 @@ TEST(PoolTest, LeaseCanOutliveOriginatingPool)
 		});
 
 		lease = pool.obtain();
-		EXPECT_EQ(destructionCount.load(std::memory_order_relaxed), 0);
+		EXPECT_EQ(destructionCount, 0);
 	}
 
-	EXPECT_EQ(destructionCount.load(std::memory_order_relaxed), 0);
+	EXPECT_EQ(destructionCount, 0);
 
 	lease = {};
 
-	EXPECT_EQ(destructionCount.load(std::memory_order_relaxed), 1);
+	EXPECT_EQ(destructionCount, 1);
 }
 
 TEST(PoolTest, LeaseMoveAssignmentRecyclesPreviouslyHeldElement)
@@ -266,7 +282,7 @@ TEST(PoolTest, LeaseMoveAssignmentRecyclesPreviouslyHeldElement)
 
 TEST(PoolTest, ClearDestroysAvailableElementsWithoutTouchingOutstandingLeases)
 {
-	std::atomic<int> destructionCount = 0;
+	int destructionCount = 0;
 
 	spk::Pool<TrackedElement> pool([&]() {
 		return new TrackedElement(destructionCount);
@@ -283,17 +299,17 @@ TEST(PoolTest, ClearDestroysAvailableElementsWithoutTouchingOutstandingLeases)
 	pool.clear();
 
 	EXPECT_EQ(pool.available(), 0u);
-	EXPECT_EQ(destructionCount.load(std::memory_order_relaxed), 1);
+	EXPECT_EQ(destructionCount, 1);
 	ASSERT_TRUE(outstanding);
 
 	outstanding = {};
 
-	EXPECT_EQ(destructionCount.load(std::memory_order_relaxed), 1);
+	EXPECT_EQ(destructionCount, 1);
 	ASSERT_EQ(pool.available(), 1u);
 
 	pool.clear();
 
-	EXPECT_EQ(destructionCount.load(std::memory_order_relaxed), 2);
+	EXPECT_EQ(destructionCount, 2);
 }
 
 TEST(PoolTest, SetFactoryAffectsOnlyFutureAllocations)
@@ -340,50 +356,132 @@ TEST(PoolTest, SetFactoryRejectsEmptyFactory)
 	EXPECT_THROW(pool.setFactory({}), spk::Exception);
 }
 
-TEST(PoolTest, SetOnObtainAffectsSubsequentObtainsAndCanBeDisabled)
+TEST(PoolTest, PoolCopyConstructionCopiesFactoryIntoIndependentEmptyState)
 {
-	IntPool pool;
+	IntPool source([]() {
+		return new int(17);
+	});
 
-	pool.setOnObtain([](int &value) {
-		value = 41;
+	int *sourceElementAddress = nullptr;
+
+	{
+		auto sourceElement = source.obtain();
+		sourceElementAddress = sourceElement.get();
+	}
+
+	ASSERT_EQ(source.available(), 1u);
+
+	IntPool copy(source);
+
+	EXPECT_EQ(source.available(), 1u);
+	EXPECT_EQ(copy.available(), 0u);
+
+	{
+		auto copiedElement = copy.obtain();
+
+		EXPECT_NE(copiedElement.get(), sourceElementAddress);
+		EXPECT_EQ(*copiedElement, 17);
+	}
+
+	source.setFactory([]() {
+		return new int(23);
+	});
+	source.clear();
+	copy.clear();
+
+	{
+		auto sourceElement = source.obtain();
+		auto copiedElement = copy.obtain();
+
+		EXPECT_EQ(*sourceElement, 23);
+		EXPECT_EQ(*copiedElement, 17);
+	}
+}
+
+TEST(PoolTest, PoolCopyAssignmentReplacesStateWithIndependentEmptyFactoryCopy)
+{
+	IntPool source([]() {
+		return new int(31);
+	});
+	IntPool destination([]() {
+		return new int(99);
 	});
 
 	{
-		auto value = pool.obtain();
-		EXPECT_EQ(*value, 41);
-		*value = 9;
+		auto cached = destination.obtain();
+		*cached = 84;
 	}
 
-	pool.setOnObtain({});
+	ASSERT_EQ(destination.available(), 1u);
+
+	destination = source;
+
+	EXPECT_EQ(destination.available(), 0u);
+	EXPECT_EQ(source.available(), 0u);
 
 	{
-		auto value = pool.obtain();
-		EXPECT_EQ(*value, 9);
+		auto sourceElement = source.obtain();
+		auto destinationElement = destination.obtain();
+
+		EXPECT_EQ(*sourceElement, 31);
+		EXPECT_EQ(*destinationElement, 31);
+		EXPECT_NE(sourceElement.get(), destinationElement.get());
 	}
+
+	source.setFactory([]() {
+		return new int(47);
+	});
+	source.clear();
+	destination.clear();
+
+	{
+		auto sourceElement = source.obtain();
+		auto destinationElement = destination.obtain();
+
+		EXPECT_EQ(*sourceElement, 47);
+		EXPECT_EQ(*destinationElement, 31);
+	}
+}
+
+TEST(PoolTest, PoolMoveTransfersExistingStateAndAvailableElements)
+{
+	IntPool source;
+	int *elementAddress = nullptr;
+
+	{
+		auto element = source.obtain();
+		elementAddress = element.get();
+		*element = 64;
+	}
+
+	ASSERT_EQ(source.available(), 1u);
+
+	IntPool destination(std::move(source));
+
+	ASSERT_EQ(destination.available(), 1u);
+
+	auto element = destination.obtain();
+
+	EXPECT_EQ(element.get(), elementAddress);
+	EXPECT_EQ(*element, 64);
 }
 
 TEST(PoolTest, LeaseCopyConstructsIndependentElementFromSamePool)
 {
-	int obtainCount = 0;
+	int onObtainCount = 0;
+	IntPool pool;
 
-	IntPool pool(
-		[]() {
-			return new int();
-		},
-		[&](int &value) {
-			++obtainCount;
-			value = -1;
-		});
-
-	auto first = pool.obtain();
-	*first = 73;
+	auto first = pool.obtain([&](int &value) {
+		++onObtainCount;
+		value = 73;
+	});
 
 	auto second = first;
 
 	EXPECT_NE(second.get(), first.get());
 	EXPECT_EQ(*first, 73);
 	EXPECT_EQ(*second, 73);
-	EXPECT_EQ(obtainCount, 2);
+	EXPECT_EQ(onObtainCount, 1);
 
 	*second = 91;
 
