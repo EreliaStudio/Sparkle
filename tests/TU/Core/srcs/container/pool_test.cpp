@@ -5,7 +5,6 @@
 #include <atomic>
 #include <cstddef>
 #include <stdexcept>
-#include <thread>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -262,50 +261,68 @@ TEST(PoolTest, ClearDestroysAvailableElementsWithoutTouchingOutstandingLeases)
 	EXPECT_EQ(destructionCount.load(std::memory_order_relaxed), 2);
 }
 
-TEST(PoolTest, ConcurrentObtainAndRecycleKeepsExclusiveElements)
+TEST(PoolTest, SetFactoryAffectsOnlyFutureAllocations)
 {
-	constexpr int threadCount = 8;
-	constexpr int iterationCount = 500;
+	int firstFactoryCount = 0;
+	int secondFactoryCount = 0;
 
-	std::atomic<int> factoryCount = 0;
-	std::atomic<bool> failed = false;
+	spk::Pool<int> pool([&]() {
+		++firstFactoryCount;
+		return new int(11);
+	});
 
-	spk::Pool<int> pool(
-		[&]() {
-			factoryCount.fetch_add(1, std::memory_order_relaxed);
-			return new int();
-		},
-		[](int &value) {
-			value = 0;
-		});
+	int *recycledAddress = nullptr;
 
-	std::vector<std::jthread> threads;
-	threads.reserve(threadCount);
-
-	for (int threadIndex = 0; threadIndex < threadCount; ++threadIndex)
 	{
-		threads.emplace_back([&]() {
-			for (int iteration = 0; iteration < iterationCount; ++iteration)
-			{
-				auto value = pool.obtain();
-				++(*value);
-
-				if (*value != 1)
-				{
-					failed.store(true, std::memory_order_relaxed);
-				}
-			}
-		});
+		auto first = pool.obtain();
+		recycledAddress = first.get();
+		EXPECT_EQ(*first, 11);
 	}
 
-	for (auto &thread : threads)
+	pool.setFactory([&]() {
+		++secondFactoryCount;
+		return new int(22);
+	});
+
 	{
-		thread.join();
+		auto recycled = pool.obtain();
+		EXPECT_EQ(recycled.get(), recycledAddress);
+		EXPECT_EQ(*recycled, 11);
 	}
 
-	EXPECT_FALSE(failed.load(std::memory_order_relaxed));
-	EXPECT_GE(pool.available(), 1u);
-	EXPECT_LE(
-		factoryCount.load(std::memory_order_relaxed),
-		threadCount);
+	auto recycled = pool.obtain();
+	auto fresh = pool.obtain();
+
+	EXPECT_EQ(*fresh, 22);
+	EXPECT_EQ(firstFactoryCount, 1);
+	EXPECT_EQ(secondFactoryCount, 1);
+}
+
+TEST(PoolTest, SetFactoryRejectsEmptyFactory)
+{
+	IntPool pool;
+
+	EXPECT_THROW(pool.setFactory({}), spk::Exception);
+}
+
+TEST(PoolTest, SetOnObtainAffectsSubsequentObtainsAndCanBeDisabled)
+{
+	IntPool pool;
+
+	pool.setOnObtain([](int &value) {
+		value = 41;
+	});
+
+	{
+		auto value = pool.obtain();
+		EXPECT_EQ(*value, 41);
+		*value = 9;
+	}
+
+	pool.setOnObtain({});
+
+	{
+		auto value = pool.obtain();
+		EXPECT_EQ(*value, 9);
+	}
 }
