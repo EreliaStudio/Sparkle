@@ -21,26 +21,61 @@ namespace spk
 		using OnObtain = std::function<void(Element &)>;
 
 	private:
-		struct State
+		class State
 		{
-			mutable std::mutex mutex;
-			std::vector<Element *> availableElements;
+		private:
+			mutable std::mutex _mutex;
+			std::vector<Element *> _availableElements;
 
+		public:
 			~State()
 			{
-				for (Element *element : availableElements)
+				clear();
+			}
+
+			[[nodiscard]] Element *obtain() noexcept
+			{
+				const std::scoped_lock lock(_mutex);
+
+				if (_availableElements.empty())
 				{
-					delete element;
+					return nullptr;
 				}
+
+				Element *element = _availableElements.back();
+				_availableElements.pop_back();
+
+				return element;
 			}
 
 			void recycle(Element *element) noexcept
 			{
 				try
 				{
-					const std::scoped_lock lock(mutex);
-					availableElements.push_back(element);
+					const std::scoped_lock lock(_mutex);
+					_availableElements.push_back(element);
 				} catch (...)
+				{
+					delete element;
+				}
+			}
+
+			[[nodiscard]] std::size_t available() const noexcept
+			{
+				const std::scoped_lock lock(_mutex);
+				return _availableElements.size();
+			}
+
+			void clear() noexcept
+			{
+				std::vector<Element *> elements;
+
+				{
+					const std::scoped_lock lock(_mutex);
+					elements.swap(_availableElements);
+				}
+
+				for (Element *element : elements)
 				{
 					delete element;
 				}
@@ -196,17 +231,7 @@ namespace spk
 
 		[[nodiscard]] Lease obtain()
 		{
-			Element *element = nullptr;
-
-			{
-				const std::scoped_lock lock(_state->mutex);
-
-				if (!_state->availableElements.empty())
-				{
-					element = _state->availableElements.back();
-					_state->availableElements.pop_back();
-				}
-			}
+			Element *element = _state->obtain();
 
 			if (element == nullptr)
 			{
@@ -233,25 +258,14 @@ namespace spk
 			return Lease(element, _state);
 		}
 
-		[[nodiscard]] std::size_t available() const
+		[[nodiscard]] std::size_t available() const noexcept
 		{
-			const std::scoped_lock lock(_state->mutex);
-			return _state->availableElements.size();
+			return _state->available();
 		}
 
-		void clear()
+		void clear() noexcept
 		{
-			std::vector<Element *> elements;
-
-			{
-				const std::scoped_lock lock(_state->mutex);
-				elements.swap(_state->availableElements);
-			}
-
-			for (Element *element : elements)
-			{
-				delete element;
-			}
+			_state->clear();
 		}
 	};
 }
