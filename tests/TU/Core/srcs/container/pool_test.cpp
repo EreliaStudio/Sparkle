@@ -288,6 +288,11 @@ TEST(PoolTest, ClearDestroysAvailableElementsWithoutTouchingOutstandingLeases)
 
 	outstanding = {};
 
+	EXPECT_EQ(destructionCount.load(std::memory_order_relaxed), 1);
+	ASSERT_EQ(pool.available(), 1u);
+
+	pool.clear();
+
 	EXPECT_EQ(destructionCount.load(std::memory_order_relaxed), 2);
 }
 
