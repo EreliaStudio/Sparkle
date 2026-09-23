@@ -33,7 +33,7 @@ namespace spk
 				clear();
 			}
 
-			[[nodiscard]] Element *obtain() noexcept
+			[[nodiscard]] Element *obtain()
 			{
 				const std::scoped_lock lock(_mutex);
 
@@ -60,13 +60,13 @@ namespace spk
 				}
 			}
 
-			[[nodiscard]] std::size_t available() const noexcept
+			[[nodiscard]] std::size_t available() const
 			{
 				const std::scoped_lock lock(_mutex);
 				return _availableElements.size();
 			}
 
-			void clear() noexcept
+			void clear()
 			{
 				std::vector<Element *> elements;
 
@@ -258,12 +258,12 @@ namespace spk
 			return Lease(element, _state);
 		}
 
-		[[nodiscard]] std::size_t available() const noexcept
+		[[nodiscard]] std::size_t available() const
 		{
 			return _state->available();
 		}
 
-		void clear() noexcept
+		void clear()
 		{
 			_state->clear();
 		}
