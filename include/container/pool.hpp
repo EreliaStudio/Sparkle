@@ -2,6 +2,7 @@
 
 #include <concepts>
 #include <cstddef>
+#include <exception>
 #include <functional>
 #include <memory>
 #include <type_traits>
@@ -162,7 +163,9 @@ namespace spk
 				} catch (...)
 				{
 					delete element;
-					throw;
+					throw spk::Exception(
+						"Pool::Lease failed to copy its element",
+						std::current_exception());
 				}
 
 				_element = element;
@@ -314,7 +317,9 @@ namespace spk
 			} catch (...)
 			{
 				delete element;
-				throw;
+				throw spk::Exception(
+					"Pool on-obtain callback failed",
+					std::current_exception());
 			}
 
 			return Lease(element, _state);
