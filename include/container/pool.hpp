@@ -280,7 +280,7 @@ namespace spk
 		Pool &operator=(const Pool &other)
 		{
 			if (this == &other)
-				{
+			{
 				return *this;
 			}
 
