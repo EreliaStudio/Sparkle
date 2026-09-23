@@ -184,9 +184,9 @@ namespace spk
 				requires std::is_copy_assignable_v<Element>
 			{
 				if (this == &other)
-			{
-				return *this;
-			}
+				{
+					return *this;
+				}
 
 				Lease copy(other);
 				*this = std::move(copy);
