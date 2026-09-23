@@ -33,6 +33,18 @@ namespace spk
 					delete element;
 				}
 			}
+
+			void recycle(Element *element) noexcept
+			{
+				try
+				{
+					const std::scoped_lock lock(mutex);
+					availableElements.push_back(element);
+				} catch (...)
+				{
+					delete element;
+				}
+			}
 		};
 
 	public:
@@ -52,25 +64,20 @@ namespace spk
 
 			void _recycle() noexcept
 			{
-				if (_element == nullptr)
+				Element *element = std::exchange(_element, nullptr);
+
+				if (element == nullptr)
 				{
 					return;
 				}
 
 				if (auto state = _state.lock())
 				{
-					try
-					{
-						const std::scoped_lock lock(state->mutex);
-						state->availableElements.push_back(_element);
-						_element = nullptr;
-						return;
-					} catch (...)
-					{
-					}
+					state->recycle(element);
+					return;
 				}
 
-				delete std::exchange(_element, nullptr);
+				delete element;
 			}
 
 		public:
