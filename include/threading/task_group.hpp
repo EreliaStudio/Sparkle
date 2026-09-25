@@ -27,8 +27,7 @@ namespace spk
 	private:
 		using CompletionProvider = ContractProvider<>;
 
-		struct State final :
-			std::enable_shared_from_this<State>
+		struct State final : std::enable_shared_from_this<State>
 		{
 			std::atomic<Status> status = Status::Pending;
 			std::recursive_mutex mutex;
