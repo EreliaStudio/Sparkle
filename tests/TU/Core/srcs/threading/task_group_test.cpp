@@ -10,28 +10,46 @@
 #include <future>
 #include <stdexcept>
 #include <thread>
+#include <type_traits>
 #include <utility>
 
 namespace
 {
-	template <typename TAnswer>
-	bool waitUntilSettled(const TAnswer &answer)
+	template <typename TPredicate>
+	bool waitUntil(TPredicate predicate)
 	{
 		const auto deadline =
 			std::chrono::steady_clock::now() +
 			std::chrono::seconds(5);
 
 		while (
-			answer.status() ==
-				spk::Task<int>::Status::Pending &&
+			!predicate() &&
 			std::chrono::steady_clock::now() < deadline)
 		{
 			std::this_thread::yield();
 		}
 
-		return answer.status() !=
-			   spk::Task<int>::Status::Pending;
+		return predicate();
 	}
+
+	template <typename TAnswer>
+	bool waitUntilSettled(const TAnswer &answer)
+	{
+		return waitUntil([&]() {
+			return answer.status() !=
+				   spk::Task<int>::Status::Pending;
+		});
+	}
+}
+
+static_assert(
+	std::is_same_v<
+		spk::Task<int>::Answer::CompletionContract,
+		spk::ContractProvider<>::Contract>);
+
+TEST(TaskCompletion, CompletionContractIsTheProviderContract)
+{
+	SUCCEED();
 }
 
 TEST(TaskCompletion, SubscriberRunsOnceWhenTaskSettles)
@@ -58,10 +76,12 @@ TEST(TaskCompletion, SubscriberRunsOnceWhenTaskSettles)
 	release.set_value();
 
 	ASSERT_TRUE(waitUntilSettled(answer));
-	EXPECT_EQ(
-		calls.load(std::memory_order_relaxed),
-		1);
-	EXPECT_FALSE(contract.isValid());
+	ASSERT_TRUE(waitUntil([&]() {
+		return calls.load(std::memory_order_relaxed) == 1;
+	}));
+	ASSERT_TRUE(waitUntil([&]() {
+		return !contract.isValid();
+	}));
 }
 
 TEST(TaskCompletion, SubscriberAddedAfterCompletionRunsImmediately)
@@ -177,12 +197,10 @@ TEST(TaskCompletion, ConcurrentSubscribeAndCompletionNeverLosesNotification)
 								std::memory_order_relaxed);
 						});
 
-				while (
-					answer.status() ==
-					spk::Task<int>::Status::Pending)
-				{
-					std::this_thread::yield();
-				}
+				(void)waitUntil([&]() {
+					return calls.load(
+							   std::memory_order_relaxed) == 1;
+				});
 			});
 
 		release.set_value();
@@ -257,10 +275,12 @@ TEST(TaskGroup, CompletionWaitsForEveryChild)
 	EXPECT_EQ(
 		answer.status(),
 		spk::Task<int>::Status::Completed);
-	EXPECT_EQ(
-		calls.load(std::memory_order_relaxed),
-		1);
-	EXPECT_FALSE(contract.isValid());
+	ASSERT_TRUE(waitUntil([&]() {
+		return calls.load(std::memory_order_relaxed) == 1;
+	}));
+	ASSERT_TRUE(waitUntil([&]() {
+		return !contract.isValid();
+	}));
 }
 
 TEST(TaskGroup, FailureWaitsForEveryChildAndPreservesAnswers)
