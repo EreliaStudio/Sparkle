@@ -108,6 +108,23 @@ Public data-only records and enums are tested with the class that consumes them.
 - Stress concurrent publication/acquisition; readers must only see complete values and eventually observe the final publication.
 - Verify copied producers/consumers share state and remain valid after the factory/wrapper is destroyed.
 
+### `spk::Task<TResult>`, completion contracts, and `spk::WorkerPool`
+
+- **Standard usage:** submit a Task to a WorkerPool, retain its shared Answer, subscribe to completion, and observe the final result or failure.
+- Completion subscriptions are race-safe with worker completion: subscribing while Pending registers the callback; subscribing after the Task is terminal invokes the callback immediately.
+- Completion callbacks execute synchronously on the thread that observes/triggers completion; ordinary WorkerPool completion therefore invokes them on the worker thread, while a late subscription invokes immediately on the subscribing thread.
+- Completion contracts use RAII resignation. Resigning before completion prevents the callback; destroying/resigning concurrently with completion is serialized by the Task state.
+- A completion callback exception is isolated from the Task result/failure and from other completion subscribers.
+- Preserve the existing Pending / Completed / Failed result-access invariants and shared-Answer lifetime behavior.
+
+### `spk::TaskGroup<TResult>`
+
+- **Standard usage:** add several already-submitted `Task<TResult>::Answer` values, seal the group into one Answer, subscribe once, and receive one completion notification after every child is terminal.
+- A group is Pending while any child is Pending, Completed when all children completed successfully, and Failed only after every child is terminal when at least one child failed.
+- Preserve child Answer insertion order and expose child Answers so mixed success/failure results remain inspectable.
+- Cover empty groups, already-settled children, concurrent child completion, completion subscription races, callback resignation, callback exception isolation, and group lifetime after the original child Answer variables are destroyed.
+- TaskGroup is passive: it never occupies a WorkerPool thread merely to wait for its children.
+
 ## Design-pattern traits
 
 ### `spk::ContractProvider<Args...>` and `Contract`
