@@ -46,6 +46,10 @@ static_assert(
 	std::is_same_v<
 		spk::Task<int>::Answer::CompletionContract,
 		spk::ContractProvider<>::Contract>);
+static_assert(
+	std::is_same_v<
+		spk::TaskGroup<int>::Answer::CompletionContract,
+		spk::ContractProvider<>::Contract>);
 
 TEST(TaskCompletion, CompletionContractIsTheProviderContract)
 {
@@ -163,11 +167,13 @@ TEST(TaskCompletion, ThrowingSubscriberDoesNotSuppressOtherSubscribers)
 	release.set_value();
 
 	ASSERT_TRUE(waitUntilSettled(answer));
-	EXPECT_EQ(
-		calls.load(std::memory_order_relaxed),
-		1);
-	EXPECT_FALSE(throwing.isValid());
-	EXPECT_FALSE(observing.isValid());
+	ASSERT_TRUE(waitUntil([&]() {
+		return calls.load(std::memory_order_relaxed) == 1;
+	}));
+	ASSERT_TRUE(waitUntil([&]() {
+		return !throwing.isValid() &&
+			   !observing.isValid();
+	}));
 }
 
 TEST(TaskCompletion, ConcurrentSubscribeAndCompletionNeverLosesNotification)
