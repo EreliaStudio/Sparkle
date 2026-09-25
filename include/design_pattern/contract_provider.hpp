@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <tuple>
 #include <type_traits>
@@ -59,10 +60,11 @@ namespace spk
 			{
 				const std::shared_ptr<Registration> registration = _registration.lock();
 				_registration.reset();
-				if (registration == nullptr || !registration->active)
+				if (registration == nullptr)
 				{
 					return;
 				}
+
 				if (const std::shared_ptr<State> state = registration->state.lock(); state != nullptr)
 				{
 					state->requestRemoval(registration);
@@ -72,7 +74,17 @@ namespace spk
 			[[nodiscard]] bool isValid() const noexcept
 			{
 				const std::shared_ptr<Registration> registration = _registration.lock();
-				return registration != nullptr && registration->active && !registration->state.expired();
+				if (registration == nullptr)
+				{
+					return false;
+				}
+
+				if (const std::shared_ptr<State> state = registration->state.lock(); state != nullptr)
+				{
+					return state->isRegistrationActive(registration);
+				}
+
+				return false;
 			}
 
 			[[nodiscard]] explicit operator bool() const noexcept
@@ -146,6 +158,7 @@ namespace spk
 		{
 			void requestAddition(const std::shared_ptr<Registration> &registration)
 			{
+				const std::scoped_lock lock(mutex);
 				if (dispatching)
 				{
 					mutations.push_back(Mutation{MutationKind::Addition, registration});
@@ -156,6 +169,12 @@ namespace spk
 
 			void requestRemoval(const std::shared_ptr<Registration> &registration) noexcept
 			{
+				const std::scoped_lock lock(mutex);
+				if (!registration->active)
+				{
+					return;
+				}
+
 				if (dispatching)
 				{
 					registration->active = false;
@@ -173,6 +192,7 @@ namespace spk
 
 			void requestInvalidation() noexcept
 			{
+				const std::scoped_lock lock(mutex);
 				if (dispatching)
 				{
 					for (const std::shared_ptr<Registration> &registration : registrations)
@@ -194,6 +214,7 @@ namespace spk
 			void trigger(stored_arguments_type &&arguments)
 			{
 				const std::shared_ptr<State> dispatchLifetime = this->shared_from_this();
+				const std::scoped_lock lock(mutex);
 				if (dispatching)
 				{
 					pendingArguments.emplace(std::move(arguments));
@@ -213,6 +234,7 @@ namespace spk
 
 			[[nodiscard]] bool empty() const noexcept
 			{
+				const std::scoped_lock lock(mutex);
 				for (const std::shared_ptr<Registration> &registration : registrations)
 				{
 					if (registration->active)
@@ -228,6 +250,13 @@ namespace spk
 					}
 				}
 				return true;
+			}
+
+			[[nodiscard]] bool isRegistrationActive(
+				const std::shared_ptr<Registration> &registration) const noexcept
+			{
+				const std::scoped_lock lock(mutex);
+				return registration->active;
 			}
 
 		private:
@@ -311,6 +340,7 @@ namespace spk
 				registrations.clear();
 			}
 
+			mutable std::recursive_mutex mutex;
 			std::vector<std::shared_ptr<Registration>> registrations;
 			std::vector<Mutation> mutations;
 			std::optional<stored_arguments_type> pendingArguments;
