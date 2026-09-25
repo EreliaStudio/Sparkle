@@ -29,6 +29,16 @@ namespace spk
 		return _type;
 	}
 
+	void Message::setRequestID(RequestID requestID) noexcept
+	{
+		_requestID = requestID;
+	}
+
+	Message::RequestID Message::requestID() const noexcept
+	{
+		return _requestID;
+	}
+
 	void Message::clear() noexcept
 	{
 		_payload.clear();
@@ -67,6 +77,18 @@ namespace spk
 		if (size != 0)
 		{
 			std::memcpy(_payload.data() + offset, data, size);
+		}
+	}
+
+	void Message::readAt(std::size_t offset, void *destination, std::size_t size) const
+	{
+		if (offset > _payload.size() || size > _payload.size() - offset)
+		{
+			throw Exception("Unable to read outside a network message payload.");
+		}
+		if (size != 0)
+		{
+			std::memcpy(destination, _payload.data() + offset, size);
 		}
 	}
 
