@@ -2,43 +2,90 @@
 
 #include <atomic>
 #include <concepts>
-#include <exception>
-#include <functional>
+#include <cstddef>
 #include <memory>
 #include <mutex>
 #include <optional>
-#include <type_traits>
+#include <span>
 #include <utility>
+#include <vector>
 
 #include <design_pattern/contract_provider.hpp>
 #include <exception.hpp>
+#include <threading/task.hpp>
 
 namespace spk
 {
-	class WorkerPool;
-
 	template <typename TResult>
 		requires std::movable<TResult>
-	class Task final
+	class TaskGroup final
 	{
 	public:
-		enum class Status
-		{
-			Pending,
-			Completed,
-			Failed
-		};
+		using TaskType = Task<TResult>;
+		using TaskAnswer = typename TaskType::Answer;
+		using Status = typename TaskType::Status;
 
 	private:
 		using CompletionProvider = ContractProvider<>;
 
-		struct State
+		struct State final :
+			std::enable_shared_from_this<State>
 		{
 			std::atomic<Status> status = Status::Pending;
-			std::optional<TResult> result;
-			std::exception_ptr failure;
 			std::recursive_mutex completionMutex;
 			CompletionProvider completionProvider;
+			std::vector<TaskAnswer> answers;
+			std::vector<
+				typename TaskAnswer::CompletionContract>
+				completionContracts;
+			std::size_t remaining = 0u;
+			bool sealed = false;
+
+			void childCompleted()
+			{
+				const std::scoped_lock lock(completionMutex);
+				if (remaining == 0u)
+				{
+					return;
+				}
+
+				--remaining;
+				tryComplete();
+			}
+
+			void tryComplete()
+			{
+				if (
+					!sealed ||
+					remaining != 0u ||
+					status.load(std::memory_order_acquire) !=
+						Status::Pending)
+				{
+					return;
+				}
+
+				Status finalStatus = Status::Completed;
+				for (const TaskAnswer &answer : answers)
+				{
+					if (answer.status() == Status::Failed)
+					{
+						finalStatus = Status::Failed;
+						break;
+					}
+				}
+
+				status.store(
+					finalStatus,
+					std::memory_order_release);
+
+				try
+				{
+					completionProvider.trigger();
+				} catch (...)
+				{
+				}
+				completionProvider.invalidate();
+			}
 		};
 
 	public:
@@ -140,7 +187,7 @@ namespace spk
 			{
 			}
 
-			friend class Task;
+			friend class TaskGroup;
 
 		public:
 			[[nodiscard]] Status status() const noexcept
@@ -149,24 +196,26 @@ namespace spk
 					std::memory_order_acquire);
 			}
 
-			[[nodiscard]] const TResult &result() const
+			[[nodiscard]] std::size_t size() const noexcept
 			{
-				if (status() != Status::Completed)
-				{
-					throw spk::Exception(
-						"Task result is not available");
-				}
-				return *_state->result;
+				return _state->answers.size();
 			}
 
-			[[nodiscard]] std::exception_ptr failure() const
+			[[nodiscard]] const TaskAnswer &at(
+				std::size_t index) const
 			{
-				if (status() != Status::Failed)
+				if (index >= _state->answers.size())
 				{
 					throw spk::Exception(
-						"Task failure is not available");
+						"TaskGroup answer index is outside the group");
 				}
-				return _state->failure;
+				return _state->answers[index];
+			}
+
+			[[nodiscard]] std::span<const TaskAnswer> answers()
+				const noexcept
+			{
+				return _state->answers;
 			}
 
 			[[nodiscard]] CompletionContract subscribeToCompletion(
@@ -194,65 +243,62 @@ namespace spk
 		};
 
 	private:
-		std::shared_ptr<State> _state;
-		std::move_only_function<TResult()> _operation;
+		std::shared_ptr<State> _state =
+			std::make_shared<State>();
 
-		void _notifyCompletion() noexcept
+	public:
+		TaskGroup() = default;
+		TaskGroup(const TaskGroup &) = delete;
+		TaskGroup(TaskGroup &&) noexcept = default;
+
+		TaskGroup &operator=(const TaskGroup &) = delete;
+		TaskGroup &operator=(TaskGroup &&) noexcept = default;
+
+		void add(TaskAnswer answer)
 		{
 			const std::scoped_lock lock(
 				_state->completionMutex);
-			try
-			{
-				_state->completionProvider.trigger();
-			} catch (...)
-			{
-			}
-			_state->completionProvider.invalidate();
-		}
 
-		void _execute() noexcept
-		{
-			try
+			if (_state->sealed)
 			{
-				_state->result.emplace(_operation());
-				_state->status.store(
-					Status::Completed,
-					std::memory_order_release);
-			} catch (...)
-			{
-				_state->failure = std::current_exception();
-				_state->status.store(
-					Status::Failed,
-					std::memory_order_release);
+				throw spk::Exception(
+					"TaskGroup cannot add an Answer after it is sealed");
 			}
 
-			_notifyCompletion();
+			_state->answers.push_back(answer);
+			++_state->remaining;
+
+			const std::weak_ptr<State> weakState = _state;
+			_state->completionContracts.push_back(
+				answer.subscribeToCompletion(
+					[weakState] {
+						if (
+							const std::shared_ptr<State> state =
+								weakState.lock();
+							state != nullptr)
+						{
+							state->childCompleted();
+						}
+					}));
 		}
 
-		friend class WorkerPool;
-
-	public:
-		template <typename TOperation>
-			requires std::invocable<std::decay_t<TOperation> &>
-		explicit Task(TOperation &&operation) :
-			_state(std::make_shared<State>()),
-			_operation(std::forward<TOperation>(operation))
+		[[nodiscard]] std::size_t size() const noexcept
 		{
-			static_assert(
-				std::convertible_to<
-					std::invoke_result_t<std::decay_t<TOperation> &>,
-					TResult>);
+			const std::scoped_lock lock(
+				_state->completionMutex);
+			return _state->answers.size();
 		}
 
-		Task(const Task &) = delete;
-		Task(Task &&) noexcept = default;
-
-		Task &operator=(const Task &) = delete;
-		Task &operator=(Task &&) noexcept = default;
-
-		[[nodiscard]] Answer answer() const
+		[[nodiscard]] Answer answer() &&
 		{
-			return Answer(_state);
+			{
+				const std::scoped_lock lock(
+					_state->completionMutex);
+				_state->sealed = true;
+				_state->tryComplete();
+			}
+
+			return Answer(std::move(_state));
 		}
 	};
 }
