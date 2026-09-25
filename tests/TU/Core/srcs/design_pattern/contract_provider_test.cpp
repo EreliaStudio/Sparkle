@@ -417,12 +417,20 @@ TEST(ContractProviderTest, CrossThreadMutationWaitsForActiveDispatch)
 {
 	spk::ContractProvider<> provider;
 	std::promise<void> callbackEntered;
+	auto callbackEnteredFuture =
+		callbackEntered.get_future();
 	std::promise<void> releaseCallback;
 	const std::shared_future<void> releaseGate =
 		releaseCallback.get_future().share();
+	std::atomic<bool> firstEntry = true;
 
 	auto blocking = provider.subscribe([&]() {
-		callbackEntered.set_value();
+		if (firstEntry.exchange(
+				false,
+				std::memory_order_acq_rel))
+		{
+			callbackEntered.set_value();
+		}
 		releaseGate.wait();
 	});
 
@@ -430,7 +438,7 @@ TEST(ContractProviderTest, CrossThreadMutationWaitsForActiveDispatch)
 		provider.trigger();
 	});
 
-	callbackEntered.get_future().wait();
+	callbackEnteredFuture.wait();
 
 	std::atomic<int> lateCalls = 0;
 	spk::ContractProvider<>::Contract late;
