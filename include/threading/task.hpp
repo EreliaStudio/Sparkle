@@ -184,11 +184,24 @@ namespace spk
 						return CompletionContract(
 							_state,
 							_state->completionProvider.subscribe(
-								std::move(callback)));
+								[callback = std::move(callback)]() mutable {
+									try
+									{
+										callback();
+									} catch (...)
+									{
+									}
+								}));
 					}
 				}
 
-				callback();
+				try
+				{
+					callback();
+				} catch (...)
+				{
+				}
+
 				return CompletionContract();
 			}
 		};
@@ -201,12 +214,7 @@ namespace spk
 		{
 			const std::scoped_lock lock(
 				_state->completionMutex);
-			try
-			{
-				_state->completionProvider.trigger();
-			} catch (...)
-			{
-			}
+			_state->completionProvider.trigger();
 			_state->completionProvider.invalidate();
 		}
 

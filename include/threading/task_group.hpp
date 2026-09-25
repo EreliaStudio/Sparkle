@@ -77,13 +77,7 @@ namespace spk
 				status.store(
 					finalStatus,
 					std::memory_order_release);
-
-				try
-				{
-					completionProvider.trigger();
-				} catch (...)
-				{
-				}
+				completionProvider.trigger();
 				completionProvider.invalidate();
 			}
 		};
@@ -233,11 +227,24 @@ namespace spk
 						return CompletionContract(
 							_state,
 							_state->completionProvider.subscribe(
-								std::move(callback)));
+								[callback = std::move(callback)]() mutable {
+									try
+									{
+										callback();
+									} catch (...)
+									{
+									}
+								}));
 					}
 				}
 
-				callback();
+				try
+				{
+					callback();
+				} catch (...)
+				{
+				}
+
 				return CompletionContract();
 			}
 		};

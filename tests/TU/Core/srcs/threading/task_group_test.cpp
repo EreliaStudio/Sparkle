@@ -114,6 +114,42 @@ TEST(TaskCompletion, ResignedSubscriberIsNotCalled)
 		0);
 }
 
+TEST(TaskCompletion, ThrowingSubscriberDoesNotSuppressOtherSubscribers)
+{
+	spk::WorkerPool workerPool(1u);
+	std::promise<void> release;
+	const auto gate = release.get_future().share();
+	std::atomic<int> calls = 0;
+
+	auto answer = workerPool.submit(
+		spk::Task<int>(
+			[gate] {
+				gate.wait();
+				return 1;
+			}));
+
+	auto throwing = answer.subscribeToCompletion(
+		[] {
+			throw std::runtime_error(
+				"completion callback failure");
+		});
+	auto observing = answer.subscribeToCompletion(
+		[&calls] {
+			calls.fetch_add(
+				1,
+				std::memory_order_relaxed);
+		});
+
+	release.set_value();
+
+	ASSERT_TRUE(waitUntilSettled(answer));
+	EXPECT_EQ(
+		calls.load(std::memory_order_relaxed),
+		1);
+	EXPECT_FALSE(throwing.isValid());
+	EXPECT_FALSE(observing.isValid());
+}
+
 TEST(TaskCompletion, ConcurrentSubscribeAndCompletionNeverLosesNotification)
 {
 	spk::WorkerPool workerPool(4u);
