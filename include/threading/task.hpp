@@ -128,7 +128,12 @@ namespace spk
 
 		void _notifyCompletion() noexcept
 		{
-			_state->completionProvider.trigger();
+			try
+			{
+				_state->completionProvider.trigger();
+			} catch (...)
+			{
+			}
 			_state->completionProvider.invalidate();
 		}
 
