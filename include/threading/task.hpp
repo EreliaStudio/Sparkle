@@ -37,7 +37,7 @@ namespace spk
 			std::atomic<Status> status = Status::Pending;
 			std::optional<TResult> result;
 			std::exception_ptr failure;
-			std::recursive_mutex completionMutex;
+			std::mutex completionMutex;
 			CompletionProvider completionProvider;
 		};
 
@@ -47,90 +47,8 @@ namespace spk
 		public:
 			using CompletionCallback =
 				typename CompletionProvider::callback_type;
-
-			class CompletionContract final
-			{
-			private:
-				using Contract =
-					typename CompletionProvider::Contract;
-
-				std::shared_ptr<State> _state;
-				std::optional<Contract> _contract;
-
-				CompletionContract(
-					std::shared_ptr<State> state,
-					Contract contract) :
-					_state(std::move(state)),
-					_contract(std::move(contract))
-				{
-				}
-
-				friend class Answer;
-
-			public:
-				CompletionContract() = default;
-				~CompletionContract()
-				{
-					resign();
-				}
-
-				CompletionContract(
-					const CompletionContract &) = delete;
-				CompletionContract &operator=(
-					const CompletionContract &) = delete;
-
-				CompletionContract(
-					CompletionContract &&other) noexcept :
-					_state(std::move(other._state)),
-					_contract(std::move(other._contract))
-				{
-				}
-
-				CompletionContract &operator=(
-					CompletionContract &&other) noexcept
-				{
-					if (this != &other)
-					{
-						resign();
-						_state = std::move(other._state);
-						_contract = std::move(other._contract);
-					}
-					return *this;
-				}
-
-				void resign() noexcept
-				{
-					if (_state == nullptr)
-					{
-						_contract.reset();
-						return;
-					}
-
-					const std::scoped_lock lock(
-						_state->completionMutex);
-					_contract.reset();
-					_state.reset();
-				}
-
-				[[nodiscard]] bool isValid() const noexcept
-				{
-					if (
-						_state == nullptr ||
-						!_contract.has_value())
-					{
-						return false;
-					}
-
-					const std::scoped_lock lock(
-						_state->completionMutex);
-					return _contract->isValid();
-				}
-
-				[[nodiscard]] explicit operator bool() const noexcept
-				{
-					return isValid();
-				}
-			};
+			using CompletionContract =
+				typename CompletionProvider::Contract;
 
 		private:
 			std::shared_ptr<State> _state;
@@ -181,17 +99,15 @@ namespace spk
 							std::memory_order_acquire) ==
 						Status::Pending)
 					{
-						return CompletionContract(
-							_state,
-							_state->completionProvider.subscribe(
-								[callback = std::move(callback)]() mutable {
-									try
-									{
-										callback();
-									} catch (...)
-									{
-									}
-								}));
+						return _state->completionProvider.subscribe(
+							[callback = std::move(callback)]() mutable {
+								try
+								{
+									callback();
+								} catch (...)
+								{
+								}
+							});
 					}
 				}
 
@@ -212,8 +128,6 @@ namespace spk
 
 		void _notifyCompletion() noexcept
 		{
-			const std::scoped_lock lock(
-				_state->completionMutex);
 			_state->completionProvider.trigger();
 			_state->completionProvider.invalidate();
 		}
@@ -222,12 +136,20 @@ namespace spk
 		{
 			try
 			{
-				_state->result.emplace(_operation());
-				_state->status.store(
-					Status::Completed,
-					std::memory_order_release);
+				TResult result = _operation();
+
+				{
+					const std::scoped_lock lock(
+						_state->completionMutex);
+					_state->result.emplace(std::move(result));
+					_state->status.store(
+						Status::Completed,
+						std::memory_order_release);
+				}
 			} catch (...)
 			{
+				const std::scoped_lock lock(
+					_state->completionMutex);
 				_state->failure = std::current_exception();
 				_state->status.store(
 					Status::Failed,
