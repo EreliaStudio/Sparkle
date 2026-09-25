@@ -5,10 +5,12 @@
 #include <exception>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <type_traits>
 #include <utility>
 
+#include <design_pattern/contract_provider.hpp>
 #include <exception.hpp>
 
 namespace spk
@@ -28,16 +30,26 @@ namespace spk
 		};
 
 	private:
+		using CompletionProvider = ContractProvider<>;
+
 		struct State
 		{
 			std::atomic<Status> status = Status::Pending;
 			std::optional<TResult> result;
 			std::exception_ptr failure;
+			std::mutex completionMutex;
+			CompletionProvider completionProvider;
 		};
 
 	public:
 		class Answer final
 		{
+		public:
+			using CompletionCallback =
+				typename CompletionProvider::callback_type;
+			using CompletionContract =
+				typename CompletionProvider::Contract;
+
 		private:
 			std::shared_ptr<State> _state;
 
@@ -51,14 +63,16 @@ namespace spk
 		public:
 			[[nodiscard]] Status status() const noexcept
 			{
-				return _state->status.load(std::memory_order_acquire);
+				return _state->status.load(
+					std::memory_order_acquire);
 			}
 
 			[[nodiscard]] const TResult &result() const
 			{
 				if (status() != Status::Completed)
 				{
-					throw spk::Exception("Task result is not available");
+					throw spk::Exception(
+						"Task result is not available");
 				}
 				return *_state->result;
 			}
@@ -67,9 +81,44 @@ namespace spk
 			{
 				if (status() != Status::Failed)
 				{
-					throw spk::Exception("Task failure is not available");
+					throw spk::Exception(
+						"Task failure is not available");
 				}
 				return _state->failure;
+			}
+
+			[[nodiscard]] CompletionContract subscribeToCompletion(
+				CompletionCallback callback) const
+			{
+				{
+					const std::scoped_lock lock(
+						_state->completionMutex);
+
+					if (
+						_state->status.load(
+							std::memory_order_acquire) ==
+						Status::Pending)
+					{
+						return _state->completionProvider.subscribe(
+							[callback = std::move(callback)]() mutable {
+								try
+								{
+									callback();
+								} catch (...)
+								{
+								}
+							});
+					}
+				}
+
+				try
+				{
+					callback();
+				} catch (...)
+				{
+				}
+
+				return CompletionContract();
 			}
 		};
 
@@ -77,17 +126,42 @@ namespace spk
 		std::shared_ptr<State> _state;
 		std::move_only_function<TResult()> _operation;
 
+		void _notifyCompletion() noexcept
+		{
+			try
+			{
+				_state->completionProvider.trigger();
+			} catch (...)
+			{
+			}
+			_state->completionProvider.invalidate();
+		}
+
 		void _execute() noexcept
 		{
 			try
 			{
-				_state->result.emplace(_operation());
-				_state->status.store(Status::Completed, std::memory_order_release);
+				TResult result = _operation();
+
+				{
+					const std::scoped_lock lock(
+						_state->completionMutex);
+					_state->result.emplace(std::move(result));
+					_state->status.store(
+						Status::Completed,
+						std::memory_order_release);
+				}
 			} catch (...)
 			{
+				const std::scoped_lock lock(
+					_state->completionMutex);
 				_state->failure = std::current_exception();
-				_state->status.store(Status::Failed, std::memory_order_release);
+				_state->status.store(
+					Status::Failed,
+					std::memory_order_release);
 			}
+
+			_notifyCompletion();
 		}
 
 		friend class WorkerPool;

@@ -108,6 +108,23 @@ Public data-only records and enums are tested with the class that consumes them.
 - Stress concurrent publication/acquisition; readers must only see complete values and eventually observe the final publication.
 - Verify copied producers/consumers share state and remain valid after the factory/wrapper is destroyed.
 
+### `spk::Task<TResult>`, completion contracts, and `spk::WorkerPool`
+
+- **Standard usage:** submit a Task to a WorkerPool, retain its shared Answer, subscribe to completion, and observe the final result or failure.
+- Completion subscriptions are race-safe with worker completion: subscribing while Pending registers the callback; subscribing after the Task is terminal invokes the callback immediately.
+- Completion callbacks execute synchronously on the thread that observes/triggers completion; ordinary WorkerPool completion therefore invokes them on the worker thread, while a late subscription invokes immediately on the subscribing thread.
+- Completion subscriptions return the ordinary thread-safe `ContractProvider<>::Contract`. Resigning before completion prevents the callback; concurrent resignation is synchronized by ContractProvider itself. The Task state keeps only the small mutex required to make terminal-state publication and completion subscription atomic.
+- A completion callback exception is isolated from the Task result/failure and from other completion subscribers.
+- Preserve the existing Pending / Completed / Failed result-access invariants and shared-Answer lifetime behavior.
+
+### `spk::TaskGroup<TResult>`
+
+- **Standard usage:** add several already-submitted `Task<TResult>::Answer` values, seal the group into one Answer, subscribe once, and receive one completion notification after every child is terminal.
+- A group is Pending while any child is Pending, Completed when all children completed successfully, and Failed only after every child is terminal when at least one child failed.
+- Preserve child Answer insertion order and expose child Answers so mixed success/failure results remain inspectable.
+- Cover empty groups, already-settled children, concurrent child completion, completion subscription races, callback resignation, callback exception isolation, and group lifetime after the original child Answer variables are destroyed.
+- TaskGroup is passive: it never occupies a WorkerPool thread merely to wait for its children.
+
 ## Design-pattern traits
 
 ### `spk::ContractProvider<Args...>` and `Contract`
@@ -115,6 +132,7 @@ Public data-only records and enums are tested with the class that consumes them.
 - **Standard usage:** subscribe several callbacks, trigger in registration order, resign one contract, trigger again and than verify RAII unsubscription.
 - Cover empty providers, empty callbacks if supported, move construction/assignment of contracts, self move-assignment, provider destruction before contracts, explicit invalidation, and `empty`/validity state.
 - Exercise subscribe, resign, invalidate, provider destruction, and nested trigger during dispatch; verify mutations are deferred, order is deterministic, and the latest queued nested arguments are delivered.
+- Verify cross-thread subscribe, resign, validity checks, invalidation, and trigger calls are synchronized. Concurrent triggers are serialized; cross-thread mutations wait for the active synchronous dispatch, while same-thread callback reentrancy remains supported.
 - Verify a throwing callback restores a usable provider, applies pending removals safely, and propagates the original exception.
 
 ### `spk::StatefullTrait<State>`

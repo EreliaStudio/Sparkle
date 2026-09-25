@@ -2,11 +2,17 @@
 
 #include "design_pattern/contract_provider.hpp"
 
+#include <atomic>
+#include <chrono>
 #include <functional>
+#include <future>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
+
+using namespace std::chrono_literals;
 
 TEST(ContractProviderTest, StandardUsageTriggersInOrderResignsAndUsesRAIIUnsubscription)
 {
@@ -274,4 +280,198 @@ TEST(ContractProviderTest, ThrowingCallbackRestoresProviderAndAppliesPendingRemo
 	EXPECT_NO_THROW(provider.trigger());
 	EXPECT_EQ(firstCalls, 2);
 	EXPECT_EQ(secondCalls, 0);
+}
+
+TEST(ContractProviderTest, ConcurrentTriggersAreSerialized)
+{
+	spk::ContractProvider<> provider;
+	std::atomic<int> activeCallbacks = 0;
+	std::atomic<int> maximumActiveCallbacks = 0;
+	std::atomic<int> callCount = 0;
+
+	auto contract = provider.subscribe([&]() {
+		const int active =
+			activeCallbacks.fetch_add(
+				1,
+				std::memory_order_acq_rel) +
+			1;
+
+		int maximum =
+			maximumActiveCallbacks.load(
+				std::memory_order_acquire);
+		while (
+			active > maximum &&
+			!maximumActiveCallbacks.compare_exchange_weak(
+				maximum,
+				active,
+				std::memory_order_acq_rel,
+				std::memory_order_acquire))
+		{
+		}
+
+		for (int iteration = 0; iteration < 64; ++iteration)
+		{
+			std::this_thread::yield();
+		}
+
+		callCount.fetch_add(
+			1,
+			std::memory_order_relaxed);
+		activeCallbacks.fetch_sub(
+			1,
+			std::memory_order_release);
+	});
+
+	constexpr int ThreadCount = 8;
+	constexpr int TriggerCount = 128;
+	{
+		std::vector<std::jthread> threads;
+		threads.reserve(ThreadCount);
+
+		for (int threadIndex = 0; threadIndex < ThreadCount; ++threadIndex)
+		{
+			threads.emplace_back([&]() {
+				for (int triggerIndex = 0; triggerIndex < TriggerCount; ++triggerIndex)
+				{
+					provider.trigger();
+				}
+			});
+		}
+	}
+
+	EXPECT_EQ(
+		callCount.load(std::memory_order_relaxed),
+		ThreadCount * TriggerCount);
+	EXPECT_EQ(
+		maximumActiveCallbacks.load(
+			std::memory_order_acquire),
+		1);
+	EXPECT_TRUE(contract.isValid());
+}
+
+TEST(ContractProviderTest, ConcurrentSubscribeResignAndTriggerRemainSafe)
+{
+	spk::ContractProvider<> provider;
+	std::atomic<int> permanentCalls = 0;
+	std::atomic<int> transientCalls = 0;
+
+	auto permanent = provider.subscribe([&]() {
+		permanentCalls.fetch_add(
+			1,
+			std::memory_order_relaxed);
+	});
+
+	constexpr int TriggerThreadCount = 4;
+	constexpr int MutationThreadCount = 4;
+	constexpr int IterationCount = 256;
+
+	{
+		std::vector<std::jthread> threads;
+		threads.reserve(
+			TriggerThreadCount +
+			MutationThreadCount);
+
+		for (int threadIndex = 0; threadIndex < TriggerThreadCount; ++threadIndex)
+		{
+			threads.emplace_back([&]() {
+				for (int iteration = 0; iteration < IterationCount; ++iteration)
+				{
+					provider.trigger();
+				}
+			});
+		}
+
+		for (int threadIndex = 0; threadIndex < MutationThreadCount; ++threadIndex)
+		{
+			threads.emplace_back([&]() {
+				for (int iteration = 0; iteration < IterationCount; ++iteration)
+				{
+					auto transient = provider.subscribe([&]() {
+						transientCalls.fetch_add(
+							1,
+							std::memory_order_relaxed);
+					});
+
+					if ((iteration % 2) == 0)
+					{
+						transient.resign();
+					}
+				}
+			});
+		}
+	}
+
+	EXPECT_EQ(
+		permanentCalls.load(
+			std::memory_order_relaxed),
+		TriggerThreadCount * IterationCount);
+	EXPECT_GE(
+		transientCalls.load(
+			std::memory_order_relaxed),
+		0);
+	EXPECT_TRUE(permanent.isValid());
+}
+
+TEST(ContractProviderTest, CrossThreadMutationWaitsForActiveDispatch)
+{
+	spk::ContractProvider<> provider;
+	std::promise<void> callbackEntered;
+	auto callbackEnteredFuture =
+		callbackEntered.get_future();
+	std::promise<void> releaseCallback;
+	const std::shared_future<void> releaseGate =
+		releaseCallback.get_future().share();
+	std::atomic<bool> firstEntry = true;
+
+	auto blocking = provider.subscribe([&]() {
+		if (firstEntry.exchange(
+				false,
+				std::memory_order_acq_rel))
+		{
+			callbackEntered.set_value();
+		}
+		releaseGate.wait();
+	});
+
+	std::thread triggerThread([&]() {
+		provider.trigger();
+	});
+
+	callbackEnteredFuture.wait();
+
+	std::atomic<int> lateCalls = 0;
+	spk::ContractProvider<>::Contract late;
+	std::promise<void> mutationStarted;
+	std::promise<void> mutationCompleted;
+	auto mutationCompletedFuture =
+		mutationCompleted.get_future();
+
+	std::thread mutationThread([&]() {
+		mutationStarted.set_value();
+		late = provider.subscribe([&]() {
+			lateCalls.fetch_add(
+				1,
+				std::memory_order_relaxed);
+		});
+		mutationCompleted.set_value();
+	});
+
+	mutationStarted.get_future().wait();
+	EXPECT_EQ(
+		mutationCompletedFuture.wait_for(0ms),
+		std::future_status::timeout);
+
+	releaseCallback.set_value();
+	triggerThread.join();
+	mutationThread.join();
+
+	EXPECT_EQ(
+		mutationCompletedFuture.wait_for(0ms),
+		std::future_status::ready);
+	EXPECT_TRUE(late.isValid());
+
+	provider.trigger();
+	EXPECT_EQ(
+		lateCalls.load(std::memory_order_relaxed),
+		1);
 }
