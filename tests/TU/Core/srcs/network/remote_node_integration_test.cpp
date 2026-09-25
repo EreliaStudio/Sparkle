@@ -24,6 +24,11 @@ namespace
 		std::uint32_t sequence = 0;
 	};
 
+	[[nodiscard]] spk::Message::RequestID requestID(std::uint32_t client, std::uint32_t sequence)
+	{
+		return (static_cast<spk::Message::RequestID>(client) + 1u) * 1000u + sequence;
+	}
+
 	void runRemoteRouter(
 		spk::NodeRouter &router,
 		std::atomic_bool &running,
@@ -81,8 +86,14 @@ namespace
 
 			for (auto iterator = requests.rbegin(); iterator != requests.rend(); ++iterator)
 			{
+				const RemotePayload payload = iterator->message.peek<RemotePayload>();
+				if (iterator->message.requestID() != requestID(payload.client, payload.sequence))
+				{
+					throw spk::Exception("Remote request ID was not preserved.");
+				}
 				spk::Message response(201);
-				response << iterator->message.peek<RemotePayload>();
+				response.setRequestID(iterator->message.requestID());
+				response << payload;
 				endpoint.reply(*iterator, std::move(response));
 			}
 			finished = true;
@@ -101,6 +112,7 @@ namespace
 			for (std::uint32_t sequence = 0; sequence < 50; ++sequence)
 			{
 				spk::Message request(200);
+				request.setRequestID(requestID(clientIndex, sequence));
 				request << RemotePayload{clientIndex, sequence};
 				client.send(request);
 			}
@@ -169,6 +181,7 @@ TEST(RemoteNodeIntegrationTest, TwoClientsRemainCorrelatedAcrossOutOfOrderRemote
 		{
 			const RemotePayload payload = message.get<RemotePayload>();
 			EXPECT_EQ(payload.client, client);
+			EXPECT_EQ(message.requestID(), requestID(payload.client, payload.sequence));
 			ASSERT_LT(payload.sequence, seen.size());
 			EXPECT_FALSE(seen[payload.sequence]);
 			seen[payload.sequence] = true;
