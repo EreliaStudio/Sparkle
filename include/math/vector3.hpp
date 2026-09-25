@@ -35,7 +35,7 @@ namespace spk
 		{
 		}
 
-		explicit TVector3(const JSON::Value &value) noexcept
+		explicit TVector3(const JSON::Value &value)
 		{
 			*this = fromJSON(value);
 		}

@@ -98,7 +98,9 @@ namespace spk::NetworkInternal
 		writeRemote32(payload.data() + 16, message.type());
 		writeRemote32(payload.data() + 20, static_cast<std::uint32_t>(message.size()));
 		std::copy(message.data().begin(), message.data().end(), payload.begin() + RemoteEnvelopeHeaderSize);
-		return Message(RemoteEnvelopeType, std::move(payload));
+		Message envelope(RemoteEnvelopeType, std::move(payload));
+		envelope.setRequestID(message.requestID());
+		return envelope;
 	}
 
 	[[nodiscard]] inline RemoteEnvelope decodeRemoteEnvelope(const Message &message)
@@ -126,9 +128,11 @@ namespace spk::NetworkInternal
 			data.begin() + RemoteEnvelopeHeaderSize,
 			data.end(),
 			payload.begin());
+		Message decoded(readRemote32(data.data() + 16), std::move(payload));
+		decoded.setRequestID(message.requestID());
 		return RemoteEnvelope{
 			static_cast<RemoteEnvelopeKind>(readRemote16(data.data() + 6)),
 			readRemote64(data.data() + 8),
-			Message(readRemote32(data.data() + 16), std::move(payload))};
+			std::move(decoded)};
 	}
 }

@@ -41,6 +41,7 @@ TEST(NetworkIntegrationTest, ClientAndServerExchangeFramedMessages)
 	client.connect("127.0.0.1", server.port());
 
 	spk::Message request(12);
+	request.setRequestID(0x1020304050607080ull);
 	request << std::uint32_t{42} << std::string("ping");
 	client.send(request);
 
@@ -48,6 +49,7 @@ TEST(NetworkIntegrationTest, ClientAndServerExchangeFramedMessages)
 	ASSERT_EQ(receivedByServer.size(), 1u);
 	EXPECT_NE(receivedByServer.front().emitter, spk::InvalidConnectionID);
 	EXPECT_EQ(receivedByServer.front().message.type(), 12u);
+	EXPECT_EQ(receivedByServer.front().message.requestID(), 0x1020304050607080ull);
 
 	std::uint32_t value = 0;
 	std::string text;
@@ -56,12 +58,14 @@ TEST(NetworkIntegrationTest, ClientAndServerExchangeFramedMessages)
 	EXPECT_EQ(text, "ping");
 
 	spk::Message response(13);
+	response.setRequestID(0x8877665544332211ull);
 	response << std::string("pong");
 	server.sendTo(receivedByServer.front().emitter, response);
 
 	auto receivedByClient = waitForMessages(client.messages());
 	ASSERT_EQ(receivedByClient.size(), 1u);
 	EXPECT_EQ(receivedByClient.front().type(), 13u);
+	EXPECT_EQ(receivedByClient.front().requestID(), 0x8877665544332211ull);
 
 	std::string responseText;
 	receivedByClient.front() >> responseText;

@@ -26,8 +26,38 @@ TEST(MessageTest, StoresTypeAndStartsEmpty)
 	const spk::Message message(42);
 
 	EXPECT_EQ(message.type(), 42u);
+	EXPECT_EQ(message.requestID(), 0u);
 	EXPECT_TRUE(message.empty());
 	EXPECT_EQ(message.size(), 0u);
+}
+
+TEST(MessageTest, RequestIDIsIndependentMessageMetadata)
+{
+	spk::Message message(42);
+
+	message.setRequestID(0x123456789ABCDEF0ull);
+	EXPECT_EQ(message.requestID(), 0x123456789ABCDEF0ull);
+	EXPECT_EQ(message.type(), 42u);
+
+	message.setType(84);
+	EXPECT_EQ(message.type(), 84u);
+	EXPECT_EQ(message.requestID(), 0x123456789ABCDEF0ull);
+}
+
+TEST(MessageTest, RequestIDSurvivesPayloadAndCursorOperations)
+{
+	spk::Message message(7);
+	message.setRequestID(91);
+	message << std::uint32_t{11} << std::uint32_t{22};
+
+	EXPECT_EQ(message.get<std::uint32_t>(), 11u);
+	EXPECT_EQ(message.requestID(), 91u);
+	message.reset();
+	EXPECT_EQ(message.requestID(), 91u);
+	message.resize(sizeof(std::uint32_t));
+	EXPECT_EQ(message.requestID(), 91u);
+	message.clear();
+	EXPECT_EQ(message.requestID(), 91u);
 }
 
 TEST(MessageTest, RoundTripsTriviallyCopyableValues)
@@ -77,6 +107,38 @@ TEST(MessageTest, PeekDoesNotAdvanceReadOffset)
 	EXPECT_EQ(message.readOffset(), 0u);
 	EXPECT_EQ(message.get<std::uint32_t>(), 73u);
 	EXPECT_EQ(message.readOffset(), sizeof(std::uint32_t));
+}
+
+TEST(MessageTest, ReadAtUsesAbsoluteOffsetsWithoutAdvancingCursor)
+{
+	spk::Message message;
+	message << std::uint32_t{11} << std::uint32_t{22};
+	message.skip<std::uint32_t>();
+
+	EXPECT_EQ(message.readAt<std::uint32_t>(0), 11u);
+	EXPECT_EQ(message.readOffset(), sizeof(std::uint32_t));
+
+	std::uint32_t value = 0;
+	message.readAt(sizeof(std::uint32_t), &value, sizeof(value));
+	EXPECT_EQ(value, 22u);
+	EXPECT_EQ(message.readOffset(), sizeof(std::uint32_t));
+}
+
+TEST(MessageTest, ReadAtOutOfBoundsThrowsWithoutChangingCursor)
+{
+	spk::Message message;
+	message << std::uint16_t{7};
+	message.skip<std::uint16_t>();
+
+	EXPECT_THROW((void)message.readAt<std::uint32_t>(0), spk::Exception);
+	EXPECT_THROW(message.readAt(message.size() + 1, nullptr, 0), spk::Exception);
+	EXPECT_EQ(message.readOffset(), sizeof(std::uint16_t));
+}
+
+TEST(MessageTest, ReadAtAllowsEmptyReadAtPayloadEnd)
+{
+	const spk::Message message;
+	EXPECT_NO_THROW(message.readAt(0, nullptr, 0));
 }
 
 TEST(MessageTest, EditReplacesBytesInPlace)

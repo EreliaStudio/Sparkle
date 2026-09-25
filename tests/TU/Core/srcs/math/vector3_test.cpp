@@ -16,6 +16,7 @@ namespace
 	static_assert(std::is_same_v<spk::Vector3::value_type, float>);
 	static_assert(std::is_same_v<spk::Vector3Int::value_type, std::int32_t>);
 	static_assert(std::is_same_v<spk::Vector3UInt::value_type, std::uint32_t>);
+	static_assert(!std::is_nothrow_constructible_v<spk::Vector3, const spk::JSON::Value &>);
 
 	TEST(Vector3Test, StandardUsageConstructsConvertsAndCalculatesVectorOperations)
 	{
@@ -189,6 +190,15 @@ namespace
 		const spk::Vector3 value = spk::Vector3(json);
 
 		EXPECT_EQ(value, spk::Vector3(3.5f, -4.25f, -5.125f));
+	}
+
+	TEST(Vector3Test, ConstructorFromMalformedJSONPropagatesException)
+	{
+		spk::JSON::Value json = spk::JSON::Value::array();
+		json.pushBack(1.0f);
+		json.pushBack(2.0f);
+
+		EXPECT_THROW((void)spk::Vector3(json), std::runtime_error);
 	}
 
 	TEST(Vector3Test, JSONRoundTripPreservesValue)

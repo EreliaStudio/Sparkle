@@ -288,22 +288,28 @@ TEST(JSONReaderTest, ChildWithWrongShapeReportsChildPath)
 	}
 }
 
-TEST(JSONReaderTest, ChildArrayRejectsNonObjectElementAtIndexedPath)
+TEST(JSONReaderTest, ChildArraySupportsArbitraryElementTypesWithIndexedPaths)
 {
 	spk::JSON::Value document = spk::JSON::Value::object();
 	document["children"] = spk::JSON::Value::array();
-	document["children"].pushBack(spk::JSON::Value::object());
 	document["children"].pushBack(12);
-	const spk::JSON::Reader reader(document, "config.json");
+	spk::JSON::Value nested = spk::JSON::Value::array();
+	nested.pushBack(1.0f);
+	nested.pushBack(2.0f);
+	nested.pushBack(3.0f);
+	document["children"].pushBack(std::move(nested));
+	const spk::JSON::Reader reader(document, "config.json", "$.root");
 
-	try
-	{
-		(void)reader.childArray("children");
-		FAIL() << "Expected spk::Exception";
-	} catch (const spk::Exception &error)
-	{
-		EXPECT_NE(std::string(error.what()).find("config.json:$.children[1]:"), std::string::npos);
-	}
+	const auto children = reader.childArray("children");
+	ASSERT_EQ(children.size(), 2u);
+	EXPECT_EQ(children[0].path(), "$.root.children[0]");
+	EXPECT_EQ(children[0].value().as<int>(), 12);
+	EXPECT_EQ(children[1].path(), "$.root.children[1]");
+	const auto &values = children[1].value().asArray();
+	ASSERT_EQ(values.size(), 3u);
+	EXPECT_FLOAT_EQ(values[0].as<float>(), 1.0f);
+	EXPECT_FLOAT_EQ(values[1].as<float>(), 2.0f);
+	EXPECT_FLOAT_EQ(values[2].as<float>(), 3.0f);
 }
 
 TEST(JSONReaderTest, ObjectOperationsOnScalarThrowJsonError)
