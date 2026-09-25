@@ -113,7 +113,7 @@ Public data-only records and enums are tested with the class that consumes them.
 - **Standard usage:** submit a Task to a WorkerPool, retain its shared Answer, subscribe to completion, and observe the final result or failure.
 - Completion subscriptions are race-safe with worker completion: subscribing while Pending registers the callback; subscribing after the Task is terminal invokes the callback immediately.
 - Completion callbacks execute synchronously on the thread that observes/triggers completion; ordinary WorkerPool completion therefore invokes them on the worker thread, while a late subscription invokes immediately on the subscribing thread.
-- Completion contracts use RAII resignation. Resigning before completion prevents the callback; destroying/resigning concurrently with completion is serialized by the Task state.
+- Completion subscriptions return the ordinary thread-safe `ContractProvider<>::Contract`. Resigning before completion prevents the callback; concurrent resignation is synchronized by ContractProvider itself. The Task state keeps only the small mutex required to make terminal-state publication and completion subscription atomic.
 - A completion callback exception is isolated from the Task result/failure and from other completion subscribers.
 - Preserve the existing Pending / Completed / Failed result-access invariants and shared-Answer lifetime behavior.
 
@@ -132,6 +132,7 @@ Public data-only records and enums are tested with the class that consumes them.
 - **Standard usage:** subscribe several callbacks, trigger in registration order, resign one contract, trigger again and than verify RAII unsubscription.
 - Cover empty providers, empty callbacks if supported, move construction/assignment of contracts, self move-assignment, provider destruction before contracts, explicit invalidation, and `empty`/validity state.
 - Exercise subscribe, resign, invalidate, provider destruction, and nested trigger during dispatch; verify mutations are deferred, order is deterministic, and the latest queued nested arguments are delivered.
+- Verify cross-thread subscribe, resign, validity checks, invalidation, and trigger calls are synchronized. Concurrent triggers are serialized; cross-thread mutations wait for the active synchronous dispatch, while same-thread callback reentrancy remains supported.
 - Verify a throwing callback restores a usable provider, applies pending removals safely, and propagates the original exception.
 
 ### `spk::StatefullTrait<State>`
