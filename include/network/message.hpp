@@ -16,10 +16,12 @@ namespace spk
 	{
 	public:
 		using Type = std::uint32_t;
+		using RequestID = std::uint64_t;
 		using Storage = std::vector<std::byte>;
 
 	private:
 		Type _type = 0;
+		RequestID _requestID = 0;
 		Storage _payload;
 		mutable std::size_t _readOffset = 0;
 
@@ -30,12 +32,15 @@ namespace spk
 
 		void setType(Type type) noexcept;
 		[[nodiscard]] Type type() const noexcept;
+		void setRequestID(RequestID requestID) noexcept;
+		[[nodiscard]] RequestID requestID() const noexcept;
 
 		void clear() noexcept;
 		void reset() const noexcept;
 		void resize(std::size_t size);
 		void skip(std::size_t size) const;
 		void edit(std::size_t offset, const void *data, std::size_t size);
+		void readAt(std::size_t offset, void *destination, std::size_t size) const;
 		void append(const void *data, std::size_t size);
 		void push(const void *data, std::size_t size);
 		void pull(void *data, std::size_t size) const;
@@ -52,6 +57,15 @@ namespace spk
 		void edit(std::size_t offset, const TValue &value)
 		{
 			edit(offset, &value, sizeof(TValue));
+		}
+
+		template <typename TValue>
+			requires std::is_trivially_copyable_v<TValue>
+		[[nodiscard]] TValue readAt(std::size_t offset) const
+		{
+			std::array<std::byte, sizeof(TValue)> bytes;
+			readAt(offset, bytes.data(), bytes.size());
+			return std::bit_cast<TValue>(bytes);
 		}
 
 		template <typename TValue>
@@ -117,17 +131,7 @@ namespace spk
 			requires std::is_trivially_copyable_v<TValue>
 		[[nodiscard]] TValue peek() const
 		{
-			const std::size_t offset = _readOffset;
-			try
-			{
-				const TValue result = get<TValue>();
-				_readOffset = offset;
-				return result;
-			} catch (...)
-			{
-				_readOffset = offset;
-				throw;
-			}
+			return readAt<TValue>(_readOffset);
 		}
 	};
 }
