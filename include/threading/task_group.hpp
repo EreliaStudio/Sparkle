@@ -69,7 +69,12 @@ namespace spk
 
 			void notifyCompletion() noexcept
 			{
-				completionProvider.trigger();
+				try
+				{
+					completionProvider.trigger();
+				} catch (...)
+				{
+				}
 				completionProvider.invalidate();
 			}
 
