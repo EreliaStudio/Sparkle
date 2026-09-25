@@ -40,7 +40,9 @@ namespace spk
 					{
 						break;
 					}
-					_owner._publish(Message(header.type, std::move(payload)));
+					Message message(header.type, std::move(payload));
+					message.setRequestID(header.requestID);
+					_owner._publish(std::move(message));
 				}
 			} catch (...)
 			{
