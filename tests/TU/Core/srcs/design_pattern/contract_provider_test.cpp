@@ -282,7 +282,6 @@ TEST(ContractProviderTest, ThrowingCallbackRestoresProviderAndAppliesPendingRemo
 	EXPECT_EQ(secondCalls, 0);
 }
 
-
 TEST(ContractProviderTest, ConcurrentTriggersAreSerialized)
 {
 	spk::ContractProvider<> provider;
