@@ -265,7 +265,9 @@ namespace spk::NetworkInternal
 				Message::Storage payload(header.payloadSize);
 				std::copy_n(data + FrameHeaderSize, header.payloadSize, payload.begin());
 				consumed += frameSize;
-				_publish(ReceivedMessage{session.id, Message(header.type, std::move(payload))});
+				Message message(header.type, std::move(payload));
+				message.setRequestID(header.requestID);
+				_publish(ReceivedMessage{session.id, std::move(message)});
 				return true;
 			}
 
