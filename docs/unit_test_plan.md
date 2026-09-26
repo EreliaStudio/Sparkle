@@ -110,16 +110,19 @@ Public data-only records and enums are tested with the class that consumes them.
 
 ### `spk::Task<TResult>`, completion contracts, and `spk::WorkerPool`
 
-- **Standard usage:** submit a Task to a WorkerPool, retain its shared Answer, subscribe to completion, and observe the final result or failure.
-- Completion subscriptions are race-safe with worker completion: subscribing while Pending registers the callback; subscribing after the Task is terminal invokes the callback immediately.
-- Completion callbacks execute synchronously on the thread that observes/triggers completion; ordinary WorkerPool completion therefore invokes them on the worker thread, while a late subscription invokes immediately on the subscribing thread.
+- **Standard usage:** create a generic Task, retain its shared Answer, explicitly settle it with `validate(result)` or `fail(exception_ptr)`, and observe the final result or failure.
+- `Task<TResult>` is an asynchronous result state, not an executable callable. It owns Pending / Completed / Failed state, the result/failure, shared Answer lifetime, and completion subscriptions.
+- `validate(result)` publishes the completed TResult and `fail(exception_ptr)` publishes the failure. A Task is settled once; null failures and repeated terminal transitions are rejected.
+- Completion subscriptions are race-safe with settlement: subscribing while Pending registers the callback; subscribing after the Task is terminal invokes the callback immediately.
+- Completion callbacks execute synchronously on the thread that settles the Task; a late subscription invokes immediately on the subscribing thread.
 - Completion subscriptions return the ordinary thread-safe `ContractProvider<>::Contract`. Resigning before completion prevents the callback; concurrent resignation is synchronized by ContractProvider itself. The Task state keeps only the small mutex required to make terminal-state publication and completion subscription atomic.
 - A completion callback exception is isolated from the Task result/failure and from other completion subscribers.
-- Preserve the existing Pending / Completed / Failed result-access invariants and shared-Answer lifetime behavior.
+- `WorkerPool` keeps its type-erased `Job` queue. Its internal `TaskJob<TResult>` privately inherits `Task<TResult>`, owns the executable callable, invokes `validate(operation())` on success, and `fail(std::current_exception())` on failure.
+- WorkerPool callers submit callables directly and receive the same `Task<TResult>::Answer` type used by manually settled Tasks. Cover move-only callable captures/results, heterogeneous result types, failure isolation, FIFO/concurrent execution, queued-job draining, and Answer lifetime after pool destruction.
 
 ### `spk::TaskGroup<TResult>`
 
-- **Standard usage:** add several already-submitted `Task<TResult>::Answer` values, seal the group into one Answer, subscribe once, and receive one completion notification after every child is terminal.
+- **Standard usage:** add several `Task<TResult>::Answer` values, regardless of whether they are manually settled or WorkerPool-produced, seal the group into one Answer, subscribe once, and receive one completion notification after every child is terminal.
 - A group is Pending while any child is Pending, Completed when all children completed successfully, and Failed only after every child is terminal when at least one child failed.
 - Preserve child Answer insertion order and expose child Answers so mixed success/failure results remain inspectable.
 - Cover empty groups, already-settled children, concurrent child completion, completion subscription races, callback resignation, callback exception isolation, and group lifetime after the original child Answer variables are destroyed.

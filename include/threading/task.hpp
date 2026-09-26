@@ -3,11 +3,9 @@
 #include <atomic>
 #include <concepts>
 #include <exception>
-#include <functional>
 #include <memory>
 #include <mutex>
 #include <optional>
-#include <type_traits>
 #include <utility>
 
 #include <design_pattern/contract_provider.hpp>
@@ -15,11 +13,9 @@
 
 namespace spk
 {
-	class WorkerPool;
-
 	template <typename TResult>
 		requires std::movable<TResult>
-	class Task final
+	class Task
 	{
 	public:
 		enum class Status
@@ -123,8 +119,8 @@ namespace spk
 		};
 
 	private:
-		std::shared_ptr<State> _state;
-		std::move_only_function<TResult()> _operation;
+		std::shared_ptr<State> _state =
+			std::make_shared<State>();
 
 		void _notifyCompletion() noexcept
 		{
@@ -137,48 +133,20 @@ namespace spk
 			_state->completionProvider.invalidate();
 		}
 
-		void _execute() noexcept
+		void _ensurePendingLocked() const
 		{
-			try
+			if (
+				_state->status.load(
+					std::memory_order_relaxed) !=
+				Status::Pending)
 			{
-				TResult result = _operation();
-
-				{
-					const std::scoped_lock lock(
-						_state->completionMutex);
-					_state->result.emplace(std::move(result));
-					_state->status.store(
-						Status::Completed,
-						std::memory_order_release);
-				}
-			} catch (...)
-			{
-				const std::scoped_lock lock(
-					_state->completionMutex);
-				_state->failure = std::current_exception();
-				_state->status.store(
-					Status::Failed,
-					std::memory_order_release);
+				throw spk::Exception(
+					"Task is already settled");
 			}
-
-			_notifyCompletion();
 		}
-
-		friend class WorkerPool;
 
 	public:
-		template <typename TOperation>
-			requires std::invocable<std::decay_t<TOperation> &>
-		explicit Task(TOperation &&operation) :
-			_state(std::make_shared<State>()),
-			_operation(std::forward<TOperation>(operation))
-		{
-			static_assert(
-				std::convertible_to<
-					std::invoke_result_t<std::decay_t<TOperation> &>,
-					TResult>);
-		}
-
+		Task() = default;
 		Task(const Task &) = delete;
 		Task(Task &&) noexcept = default;
 
@@ -188,6 +156,43 @@ namespace spk
 		[[nodiscard]] Answer answer() const
 		{
 			return Answer(_state);
+		}
+
+		void validate(TResult result)
+		{
+			{
+				const std::scoped_lock lock(
+					_state->completionMutex);
+				_ensurePendingLocked();
+				_state->result.emplace(
+					std::move(result));
+				_state->status.store(
+					Status::Completed,
+					std::memory_order_release);
+			}
+
+			_notifyCompletion();
+		}
+
+		void fail(std::exception_ptr failure)
+		{
+			if (failure == nullptr)
+			{
+				throw spk::Exception(
+					"Task failure cannot be null");
+			}
+
+			{
+				const std::scoped_lock lock(
+					_state->completionMutex);
+				_ensurePendingLocked();
+				_state->failure = std::move(failure);
+				_state->status.store(
+					Status::Failed,
+					std::memory_order_release);
+			}
+
+			_notifyCompletion();
 		}
 	};
 }
