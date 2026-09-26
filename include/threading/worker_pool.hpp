@@ -35,9 +35,7 @@ namespace spk
 	private:
 		template <typename TResult>
 			requires std::movable<TResult>
-		class TaskJob final :
-			public Job,
-			private Task<TResult>
+		class TaskJob final : public Job, private Task<TResult>
 		{
 		private:
 			std::move_only_function<TResult()> _operation;
@@ -61,12 +59,10 @@ namespace spk
 
 		public:
 			template <typename TOperation>
-				requires
-					std::invocable<std::decay_t<TOperation> &> &&
-					std::convertible_to<
-						std::invoke_result_t<
-							std::decay_t<TOperation> &>,
-						TResult>
+				requires std::invocable<std::decay_t<TOperation> &> &&
+						 std::convertible_to<
+							 std::invoke_result_t<std::decay_t<TOperation> &>,
+							 TResult>
 			explicit TaskJob(TOperation &&operation) :
 				_operation(std::forward<TOperation>(operation))
 			{
@@ -93,9 +89,7 @@ namespace spk
 		{
 			const unsigned int count =
 				std::thread::hardware_concurrency();
-			return count == 0u ?
-					   1u :
-					   static_cast<std::size_t>(count);
+			return count == 0u ? 1u : static_cast<std::size_t>(count);
 		}
 
 		static void _run(
@@ -144,9 +138,8 @@ namespace spk
 		~WorkerPool() = default;
 
 		template <typename TOperation>
-			requires
-				std::invocable<std::decay_t<TOperation> &> &&
-				std::movable<OperationResult<TOperation>>
+			requires std::invocable<std::decay_t<TOperation> &> &&
+					 std::movable<OperationResult<TOperation>>
 		[[nodiscard]] auto submit(TOperation &&operation)
 		{
 			using TResult =
