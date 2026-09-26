@@ -3,6 +3,7 @@
 #include <atomic>
 #include <concepts>
 #include <cstddef>
+#include <exception>
 #include <memory>
 #include <mutex>
 #include <span>
