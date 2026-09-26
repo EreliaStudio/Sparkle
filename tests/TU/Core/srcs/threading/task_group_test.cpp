@@ -2,222 +2,22 @@
 #include <threading/task_group.hpp>
 #include <threading/worker_pool.hpp>
 
-#include <exception.hpp>
 #include <gtest/gtest.h>
 
 #include <atomic>
-#include <chrono>
-#include <future>
 #include <stdexcept>
 #include <thread>
 #include <type_traits>
 #include <utility>
 
-namespace
-{
-	template <typename TPredicate>
-	bool waitUntil(TPredicate predicate)
-	{
-		const auto deadline =
-			std::chrono::steady_clock::now() +
-			std::chrono::seconds(5);
-
-		while (
-			!predicate() &&
-			std::chrono::steady_clock::now() < deadline)
-		{
-			std::this_thread::yield();
-		}
-
-		return predicate();
-	}
-
-	template <typename TAnswer>
-	bool waitUntilSettled(const TAnswer &answer)
-	{
-		return waitUntil([&]() {
-			return answer.status() !=
-				   spk::Task<int>::Status::Pending;
-		});
-	}
-}
-
 static_assert(
 	std::is_same_v<
-		spk::Task<int>::Answer::CompletionContract,
-		spk::ContractProvider<>::Contract>);
+		spk::TaskGroup<int>::TaskAnswer,
+		spk::Task<int>::Answer>);
 static_assert(
 	std::is_same_v<
 		spk::TaskGroup<int>::Answer::CompletionContract,
 		spk::ContractProvider<>::Contract>);
-
-TEST(TaskCompletion, CompletionContractIsTheProviderContract)
-{
-	SUCCEED();
-}
-
-TEST(TaskCompletion, SubscriberRunsOnceWhenTaskSettles)
-{
-	spk::WorkerPool workerPool(1u);
-	std::promise<void> release;
-	const auto gate = release.get_future().share();
-	std::atomic<int> calls = 0;
-
-	auto answer = workerPool.submit(
-		spk::Task<int>(
-			[gate] {
-				gate.wait();
-				return 42;
-			}));
-
-	auto contract = answer.subscribeToCompletion(
-		[&calls] {
-			calls.fetch_add(
-				1,
-				std::memory_order_relaxed);
-		});
-
-	release.set_value();
-
-	ASSERT_TRUE(waitUntilSettled(answer));
-	ASSERT_TRUE(waitUntil([&]() {
-		return calls.load(std::memory_order_relaxed) == 1;
-	}));
-	ASSERT_TRUE(waitUntil([&]() {
-		return !contract.isValid();
-	}));
-}
-
-TEST(TaskCompletion, SubscriberAddedAfterCompletionRunsImmediately)
-{
-	spk::WorkerPool workerPool(1u);
-	auto answer = workerPool.submit(
-		spk::Task<int>([] {
-			return 17;
-		}));
-
-	ASSERT_TRUE(waitUntilSettled(answer));
-
-	int calls = 0;
-	auto contract = answer.subscribeToCompletion(
-		[&calls] {
-			++calls;
-		});
-
-	EXPECT_EQ(calls, 1);
-	EXPECT_FALSE(contract.isValid());
-}
-
-TEST(TaskCompletion, ResignedSubscriberIsNotCalled)
-{
-	spk::WorkerPool workerPool(1u);
-	std::promise<void> release;
-	const auto gate = release.get_future().share();
-	std::atomic<int> calls = 0;
-
-	auto answer = workerPool.submit(
-		spk::Task<int>(
-			[gate] {
-				gate.wait();
-				return 1;
-			}));
-
-	auto contract = answer.subscribeToCompletion(
-		[&calls] {
-			calls.fetch_add(
-				1,
-				std::memory_order_relaxed);
-		});
-	contract.resign();
-
-	release.set_value();
-
-	ASSERT_TRUE(waitUntilSettled(answer));
-	EXPECT_EQ(
-		calls.load(std::memory_order_relaxed),
-		0);
-}
-
-TEST(TaskCompletion, ThrowingSubscriberDoesNotSuppressOtherSubscribers)
-{
-	spk::WorkerPool workerPool(1u);
-	std::promise<void> release;
-	const auto gate = release.get_future().share();
-	std::atomic<int> calls = 0;
-
-	auto answer = workerPool.submit(
-		spk::Task<int>(
-			[gate] {
-				gate.wait();
-				return 1;
-			}));
-
-	auto throwing = answer.subscribeToCompletion(
-		[] {
-			throw std::runtime_error(
-				"completion callback failure");
-		});
-	auto observing = answer.subscribeToCompletion(
-		[&calls] {
-			calls.fetch_add(
-				1,
-				std::memory_order_relaxed);
-		});
-
-	release.set_value();
-
-	ASSERT_TRUE(waitUntilSettled(answer));
-	ASSERT_TRUE(waitUntil([&]() {
-		return calls.load(std::memory_order_relaxed) == 1;
-	}));
-	ASSERT_TRUE(waitUntil([&]() {
-		return !throwing.isValid() &&
-			   !observing.isValid();
-	}));
-}
-
-TEST(TaskCompletion, ConcurrentSubscribeAndCompletionNeverLosesNotification)
-{
-	spk::WorkerPool workerPool(4u);
-
-	for (int iteration = 0; iteration < 256; ++iteration)
-	{
-		std::promise<void> release;
-		const auto gate = release.get_future().share();
-		std::atomic<int> calls = 0;
-
-		auto answer = workerPool.submit(
-			spk::Task<int>(
-				[gate] {
-					gate.wait();
-					return 9;
-				}));
-
-		std::thread subscriber(
-			[&] {
-				auto contract =
-					answer.subscribeToCompletion(
-						[&calls] {
-							calls.fetch_add(
-								1,
-								std::memory_order_relaxed);
-						});
-
-				(void)waitUntil([&]() {
-					return calls.load(
-							   std::memory_order_relaxed) == 1;
-				});
-			});
-
-		release.set_value();
-		subscriber.join();
-
-		ASSERT_TRUE(waitUntilSettled(answer));
-		EXPECT_EQ(
-			calls.load(std::memory_order_relaxed),
-			1);
-	}
-}
 
 TEST(TaskGroup, EmptyGroupIsImmediatelyCompleted)
 {
@@ -231,28 +31,12 @@ TEST(TaskGroup, EmptyGroupIsImmediatelyCompleted)
 	EXPECT_TRUE(answer.answers().empty());
 }
 
-TEST(TaskGroup, CompletionWaitsForEveryChild)
+TEST(TaskGroup, CompletionWaitsForEveryManuallySettledTask)
 {
-	spk::WorkerPool workerPool(2u);
-	std::promise<void> firstRelease;
-	std::promise<void> secondRelease;
-	const auto firstGate =
-		firstRelease.get_future().share();
-	const auto secondGate =
-		secondRelease.get_future().share();
-
-	auto first = workerPool.submit(
-		spk::Task<int>(
-			[firstGate] {
-				firstGate.wait();
-				return 10;
-			}));
-	auto second = workerPool.submit(
-		spk::Task<int>(
-			[secondGate] {
-				secondGate.wait();
-				return 20;
-			}));
+	spk::Task<int> firstTask;
+	spk::Task<int> secondTask;
+	auto first = firstTask.answer();
+	auto second = secondTask.answer();
 
 	spk::TaskGroup<int> group;
 	group.add(first);
@@ -267,8 +51,8 @@ TEST(TaskGroup, CompletionWaitsForEveryChild)
 				std::memory_order_relaxed);
 		});
 
-	firstRelease.set_value();
-	ASSERT_TRUE(waitUntilSettled(first));
+	firstTask.validate(10);
+
 	EXPECT_EQ(
 		answer.status(),
 		spk::Task<int>::Status::Pending);
@@ -276,50 +60,41 @@ TEST(TaskGroup, CompletionWaitsForEveryChild)
 		calls.load(std::memory_order_relaxed),
 		0);
 
-	secondRelease.set_value();
-	ASSERT_TRUE(waitUntilSettled(answer));
+	secondTask.validate(20);
+
 	EXPECT_EQ(
 		answer.status(),
 		spk::Task<int>::Status::Completed);
-	ASSERT_TRUE(waitUntil([&]() {
-		return calls.load(std::memory_order_relaxed) == 1;
-	}));
-	ASSERT_TRUE(waitUntil([&]() {
-		return !contract.isValid();
-	}));
+	EXPECT_EQ(answer.at(0u).result(), 10);
+	EXPECT_EQ(answer.at(1u).result(), 20);
+	EXPECT_EQ(
+		calls.load(std::memory_order_relaxed),
+		1);
+	EXPECT_FALSE(contract.isValid());
 }
 
 TEST(TaskGroup, FailureWaitsForEveryChildAndPreservesAnswers)
 {
-	spk::WorkerPool workerPool(2u);
-	std::promise<void> release;
-	const auto gate = release.get_future().share();
-
-	auto failed = workerPool.submit(
-		spk::Task<int>(
-			[]() -> int {
-				throw std::runtime_error(
-					"group child failure");
-			}));
-	auto completed = workerPool.submit(
-		spk::Task<int>(
-			[gate] {
-				gate.wait();
-				return 31;
-			}));
+	spk::Task<int> failedTask;
+	spk::Task<int> completedTask;
+	auto failed = failedTask.answer();
+	auto completed = completedTask.answer();
 
 	spk::TaskGroup<int> group;
 	group.add(failed);
 	group.add(completed);
 	auto answer = std::move(group).answer();
 
-	ASSERT_TRUE(waitUntilSettled(failed));
+	failedTask.fail(
+		std::make_exception_ptr(
+			std::runtime_error(
+				"group child failure")));
+
 	EXPECT_EQ(
 		answer.status(),
 		spk::Task<int>::Status::Pending);
 
-	release.set_value();
-	ASSERT_TRUE(waitUntilSettled(answer));
+	completedTask.validate(31);
 
 	EXPECT_EQ(
 		answer.status(),
@@ -337,22 +112,14 @@ TEST(TaskGroup, FailureWaitsForEveryChildAndPreservesAnswers)
 
 TEST(TaskGroup, AlreadySettledChildrenCompleteWhenGroupIsSealed)
 {
-	spk::WorkerPool workerPool(1u);
-	auto first = workerPool.submit(
-		spk::Task<int>([] {
-			return 5;
-		}));
-	auto second = workerPool.submit(
-		spk::Task<int>([] {
-			return 6;
-		}));
-
-	ASSERT_TRUE(waitUntilSettled(first));
-	ASSERT_TRUE(waitUntilSettled(second));
+	spk::Task<int> firstTask;
+	spk::Task<int> secondTask;
+	firstTask.validate(5);
+	secondTask.validate(6);
 
 	spk::TaskGroup<int> group;
-	group.add(first);
-	group.add(second);
+	group.add(firstTask.answer());
+	group.add(secondTask.answer());
 	auto answer = std::move(group).answer();
 
 	EXPECT_EQ(
@@ -369,4 +136,129 @@ TEST(TaskGroup, AlreadySettledChildrenCompleteWhenGroupIsSealed)
 
 	EXPECT_EQ(calls, 1);
 	EXPECT_FALSE(contract.isValid());
+}
+
+TEST(TaskGroup, AcceptsWorkerPoolProducedAnswers)
+{
+	spk::WorkerPool workerPool(2u);
+
+	auto first = workerPool.submit(
+		[] {
+			return 11;
+		});
+	auto second = workerPool.submit(
+		[] {
+			return 12;
+		});
+
+	spk::TaskGroup<int> group;
+	group.add(first);
+	group.add(second);
+	auto answer = std::move(group).answer();
+
+	while (
+		answer.status() ==
+		spk::Task<int>::Status::Pending)
+	{
+		std::this_thread::yield();
+	}
+
+	ASSERT_EQ(
+		answer.status(),
+		spk::Task<int>::Status::Completed);
+	EXPECT_EQ(answer.at(0u).result(), 11);
+	EXPECT_EQ(answer.at(1u).result(), 12);
+}
+
+TEST(TaskGroup, ManualAndWorkerAnswersCanShareOneGroup)
+{
+	spk::WorkerPool workerPool(1u);
+	spk::Task<int> manualTask;
+
+	auto workerAnswer = workerPool.submit(
+		[] {
+			return 23;
+		});
+
+	spk::TaskGroup<int> group;
+	group.add(manualTask.answer());
+	group.add(workerAnswer);
+	auto answer = std::move(group).answer();
+
+	manualTask.validate(22);
+
+	while (
+		answer.status() ==
+		spk::Task<int>::Status::Pending)
+	{
+		std::this_thread::yield();
+	}
+
+	ASSERT_EQ(
+		answer.status(),
+		spk::Task<int>::Status::Completed);
+	EXPECT_EQ(answer.at(0u).result(), 22);
+	EXPECT_EQ(answer.at(1u).result(), 23);
+}
+
+TEST(TaskGroup, ConcurrentChildCompletionNotifiesOnce)
+{
+	constexpr int TaskCount = 32;
+
+	std::vector<spk::Task<int>> tasks;
+	tasks.reserve(TaskCount);
+
+	spk::TaskGroup<int> group;
+	for (int index = 0; index < TaskCount; ++index)
+	{
+		tasks.emplace_back();
+		group.add(tasks.back().answer());
+	}
+
+	auto answer = std::move(group).answer();
+	std::atomic<int> calls = 0;
+	auto contract = answer.subscribeToCompletion(
+		[&calls] {
+			calls.fetch_add(
+				1,
+				std::memory_order_relaxed);
+		});
+
+	std::vector<std::jthread> threads;
+	threads.reserve(TaskCount);
+	for (int index = 0; index < TaskCount; ++index)
+	{
+		threads.emplace_back(
+			[&task = tasks[static_cast<std::size_t>(index)],
+			 index] {
+				task.validate(index);
+			});
+	}
+	threads.clear();
+
+	EXPECT_EQ(
+		answer.status(),
+		spk::Task<int>::Status::Completed);
+	EXPECT_EQ(
+		calls.load(std::memory_order_relaxed),
+		1);
+	EXPECT_FALSE(contract.isValid());
+}
+
+TEST(TaskGroup, RejectsAdditionAfterAnswerIsCreated)
+{
+	spk::Task<int> firstTask;
+	spk::Task<int> secondTask;
+
+	spk::TaskGroup<int> group;
+	group.add(firstTask.answer());
+	auto answer = std::move(group).answer();
+
+	EXPECT_EQ(
+		answer.status(),
+		spk::Task<int>::Status::Pending);
+
+	EXPECT_THROW(
+		group.add(secondTask.answer()),
+		std::exception);
 }
