@@ -75,7 +75,7 @@
 #include "query/operations.hpp"
 #include "query/union.hpp"
 #include "query/where.hpp"
-#include "structure/system/argument_parser.hpp"
+#include "system/argument_parser.hpp"
 #include "threading/task.hpp"
 #include "threading/worker_pool.hpp"
 #include "type/activation_status.hpp"
