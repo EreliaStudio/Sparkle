@@ -9,6 +9,7 @@
 #include <thread>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 static_assert(
 	std::is_same_v<
@@ -245,20 +246,14 @@ TEST(TaskGroup, ConcurrentChildCompletionNotifiesOnce)
 	EXPECT_FALSE(contract.isValid());
 }
 
-TEST(TaskGroup, RejectsAdditionAfterAnswerIsCreated)
+TEST(TaskGroup, AnswerAtRejectsOutOfRangeIndex)
 {
-	spk::Task<int> firstTask;
-	spk::Task<int> secondTask;
+	spk::Task<int> task;
+	task.validate(4);
 
 	spk::TaskGroup<int> group;
-	group.add(firstTask.answer());
+	group.add(task.answer());
 	auto answer = std::move(group).answer();
 
-	EXPECT_EQ(
-		answer.status(),
-		spk::Task<int>::Status::Pending);
-
-	EXPECT_THROW(
-		group.add(secondTask.answer()),
-		std::exception);
+	EXPECT_THROW((void)answer.at(1u), spk::Exception);
 }
