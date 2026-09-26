@@ -77,6 +77,7 @@
 #include "query/where.hpp"
 #include "system/argument_parser.hpp"
 #include "threading/task.hpp"
+#include "threading/task_group.hpp"
 #include "threading/worker_pool.hpp"
 #include "type/activation_status.hpp"
 #include "type/alignment.hpp"
