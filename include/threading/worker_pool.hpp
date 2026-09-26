@@ -1,9 +1,13 @@
 #pragma once
 
+#include <concepts>
 #include <cstddef>
+#include <exception>
+#include <functional>
 #include <memory>
 #include <stop_token>
 #include <thread>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -31,32 +35,67 @@ namespace spk
 	private:
 		template <typename TResult>
 			requires std::movable<TResult>
-		class TaskJob final : public Job
+		class TaskJob final :
+			public Job,
+			private Task<TResult>
 		{
 		private:
-			Task<TResult> _task;
+			std::move_only_function<TResult()> _operation;
 
 			void _execute() noexcept override
 			{
-				_task._execute();
+				try
+				{
+					this->validate(_operation());
+				} catch (...)
+				{
+					try
+					{
+						this->fail(std::current_exception());
+					} catch (...)
+					{
+						std::terminate();
+					}
+				}
 			}
 
 		public:
-			explicit TaskJob(Task<TResult> task) :
-				_task(std::move(task))
+			template <typename TOperation>
+				requires
+					std::invocable<std::decay_t<TOperation> &> &&
+					std::convertible_to<
+						std::invoke_result_t<
+							std::decay_t<TOperation> &>,
+						TResult>
+			explicit TaskJob(TOperation &&operation) :
+				_operation(std::forward<TOperation>(operation))
 			{
+			}
+
+			[[nodiscard]] typename Task<TResult>::Answer answer() const
+			{
+				return Task<TResult>::answer();
 			}
 		};
 
-		using JobQueue = ThreadSafeQueue<std::unique_ptr<Job>>;
+		template <typename TOperation>
+		using OperationResult = std::remove_cvref_t<
+			std::invoke_result_t<
+				std::decay_t<TOperation> &>>;
+
+		using JobQueue =
+			ThreadSafeQueue<std::unique_ptr<Job>>;
 
 		JobQueue _jobs;
 		std::vector<std::jthread> _workers;
 
 		[[nodiscard]] static std::size_t _defaultWorkerCount() noexcept
 		{
-			const unsigned int count = std::thread::hardware_concurrency();
-			return count == 0u ? 1u : static_cast<std::size_t>(count);
+			const unsigned int count =
+				std::thread::hardware_concurrency();
+			return count == 0u ?
+					   1u :
+					   static_cast<std::size_t>(count);
 		}
 
 		static void _run(
@@ -104,15 +143,22 @@ namespace spk
 
 		~WorkerPool() = default;
 
-		template <typename TResult>
-			requires std::movable<TResult>
-		[[nodiscard]] typename Task<TResult>::Answer submit(
-			Task<TResult> task)
+		template <typename TOperation>
+			requires
+				std::invocable<std::decay_t<TOperation> &> &&
+				std::movable<OperationResult<TOperation>>
+		[[nodiscard]] auto submit(TOperation &&operation)
 		{
-			auto answer = task.answer();
-			_jobs.publish(
+			using TResult =
+				OperationResult<TOperation>;
+
+			auto task =
 				std::make_unique<TaskJob<TResult>>(
-					std::move(task)));
+					std::forward<TOperation>(operation));
+			auto answer = task->answer();
+
+			_jobs.publish(std::move(task));
+
 			return answer;
 		}
 
