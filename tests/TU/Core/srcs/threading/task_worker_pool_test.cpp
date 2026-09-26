@@ -71,165 +71,8 @@ namespace
 		MoveOnlyResult &operator=(MoveOnlyResult &&) noexcept = default;
 	};
 
-	static_assert(!std::is_copy_constructible_v<spk::Task<int>>);
-	static_assert(std::is_move_constructible_v<spk::Task<int>>);
-	static_assert(
-		std::is_copy_constructible_v<
-			spk::Task<int>::Answer>);
 	static_assert(!std::is_copy_constructible_v<spk::WorkerPool>);
 	static_assert(!std::is_move_constructible_v<spk::WorkerPool>);
-}
-
-TEST(Task, NewAnswerStartsPending)
-{
-	spk::Task<int> task([] {
-		return 1;
-	});
-	const auto answer = task.answer();
-
-	EXPECT_EQ(
-		answer.status(),
-		spk::Task<int>::Status::Pending);
-	EXPECT_THROW((void)answer.result(), spk::Exception);
-	EXPECT_THROW((void)answer.failure(), spk::Exception);
-}
-
-TEST(Task, MultipleAnswersObserveSameCompletion)
-{
-	spk::WorkerPool workerPool(1u);
-	std::promise<void> release;
-	const auto gate = release.get_future().share();
-
-	spk::Task<int> task(
-		[gate] {
-			gate.wait();
-			return 42;
-		});
-
-	auto first = task.answer();
-	auto second = first;
-	auto submitted = workerPool.submit(std::move(task));
-
-	EXPECT_EQ(first.status(), spk::Task<int>::Status::Pending);
-	EXPECT_EQ(second.status(), spk::Task<int>::Status::Pending);
-	EXPECT_EQ(
-		submitted.status(),
-		spk::Task<int>::Status::Pending);
-
-	release.set_value();
-
-	ASSERT_TRUE(waitUntilSettled<int>(first));
-	EXPECT_EQ(first.result(), 42);
-	EXPECT_EQ(second.result(), 42);
-	EXPECT_EQ(submitted.result(), 42);
-}
-
-TEST(Task, SupportsMoveOnlyCallableCapture)
-{
-	spk::WorkerPool workerPool(1u);
-	auto captured = std::make_unique<int>(67);
-
-	spk::Task<int> task(
-		[value = std::move(captured)] {
-			return *value;
-		});
-
-	auto answer = workerPool.submit(std::move(task));
-
-	ASSERT_TRUE(waitUntilSettled<int>(answer));
-	EXPECT_EQ(answer.result(), 67);
-}
-
-TEST(Task, SupportsMoveOnlyResult)
-{
-	spk::WorkerPool workerPool(1u);
-	spk::Task<MoveOnlyResult> task([] {
-		return MoveOnlyResult(83);
-	});
-
-	auto answer = workerPool.submit(std::move(task));
-
-	ASSERT_TRUE(waitUntilSettled<MoveOnlyResult>(answer));
-	ASSERT_NE(answer.result().value, nullptr);
-	EXPECT_EQ(*answer.result().value, 83);
-}
-
-TEST(Task, CompletedAnswerRejectsFailureAccess)
-{
-	spk::WorkerPool workerPool(1u);
-	auto answer = workerPool.submit(
-		spk::Task<int>([] {
-			return 5;
-		}));
-
-	ASSERT_TRUE(waitUntilSettled<int>(answer));
-	ASSERT_EQ(
-		answer.status(),
-		spk::Task<int>::Status::Completed);
-	EXPECT_EQ(answer.result(), 5);
-	EXPECT_THROW((void)answer.failure(), spk::Exception);
-}
-
-TEST(Task, EscapingSpkExceptionProducesFailedAnswer)
-{
-	spk::WorkerPool workerPool(1u);
-	auto answer = workerPool.submit(
-		spk::Task<int>(
-			[]() -> int {
-				throw spk::Exception(
-					"expected task failure");
-			}));
-
-	ASSERT_TRUE(waitUntilSettled<int>(answer));
-	EXPECT_EQ(
-		answer.status(),
-		spk::Task<int>::Status::Failed);
-	EXPECT_THROW((void)answer.result(), spk::Exception);
-
-	try
-	{
-		std::rethrow_exception(answer.failure());
-		FAIL() << "Expected stored task failure";
-	} catch (const spk::Exception &exception)
-	{
-		EXPECT_NE(
-			std::string(exception.what()).find("expected task failure"),
-			std::string::npos);
-	}
-}
-
-TEST(Task, EscapingStandardExceptionPreservesDynamicType)
-{
-	spk::WorkerPool workerPool(1u);
-	auto answer = workerPool.submit(
-		spk::Task<int>(
-			[]() -> int {
-				throw std::runtime_error(
-					"standard failure");
-			}));
-
-	ASSERT_TRUE(waitUntilSettled<int>(answer));
-	ASSERT_EQ(
-		answer.status(),
-		spk::Task<int>::Status::Failed);
-
-	EXPECT_THROW(
-		std::rethrow_exception(answer.failure()),
-		std::runtime_error);
-}
-
-TEST(Task, FailedAnswerRejectsResultAccess)
-{
-	spk::WorkerPool workerPool(1u);
-	auto answer = workerPool.submit(
-		spk::Task<int>(
-			[]() -> int {
-				throw std::runtime_error("failure");
-			}));
-
-	ASSERT_TRUE(waitUntilSettled<int>(answer));
-	EXPECT_THROW((void)answer.result(), spk::Exception);
-	EXPECT_NO_THROW((void)answer.failure());
 }
 
 TEST(WorkerPool, RejectsZeroWorkers)
@@ -249,6 +92,107 @@ TEST(WorkerPool, DefaultWorkerCountIsNeverZero)
 	EXPECT_GE(workerPool.workerCount(), 1u);
 }
 
+TEST(WorkerPool, SubmittedCallableProducesTaskAnswer)
+{
+	spk::WorkerPool workerPool(1u);
+	std::promise<void> release;
+	const auto gate =
+		release.get_future().share();
+
+	auto answer = workerPool.submit(
+		[gate] {
+			gate.wait();
+			return 42;
+		});
+
+	EXPECT_EQ(
+		answer.status(),
+		spk::Task<int>::Status::Pending);
+
+	release.set_value();
+
+	ASSERT_TRUE(waitUntilSettled<int>(answer));
+	EXPECT_EQ(answer.result(), 42);
+}
+
+TEST(WorkerPool, SupportsMoveOnlyCallableCapture)
+{
+	spk::WorkerPool workerPool(1u);
+	auto captured = std::make_unique<int>(67);
+
+	auto answer = workerPool.submit(
+		[value = std::move(captured)] {
+			return *value;
+		});
+
+	ASSERT_TRUE(waitUntilSettled<int>(answer));
+	EXPECT_EQ(answer.result(), 67);
+}
+
+TEST(WorkerPool, SupportsMoveOnlyResult)
+{
+	spk::WorkerPool workerPool(1u);
+
+	auto answer = workerPool.submit(
+		[] {
+			return MoveOnlyResult(83);
+		});
+
+	ASSERT_TRUE(
+		waitUntilSettled<MoveOnlyResult>(answer));
+	ASSERT_NE(answer.result().value, nullptr);
+	EXPECT_EQ(*answer.result().value, 83);
+}
+
+TEST(WorkerPool, EscapingSpkExceptionProducesFailedAnswer)
+{
+	spk::WorkerPool workerPool(1u);
+
+	auto answer = workerPool.submit(
+		[]() -> int {
+			throw spk::Exception(
+				"expected task failure");
+		});
+
+	ASSERT_TRUE(waitUntilSettled<int>(answer));
+	EXPECT_EQ(
+		answer.status(),
+		spk::Task<int>::Status::Failed);
+	EXPECT_THROW((void)answer.result(), spk::Exception);
+
+	try
+	{
+		std::rethrow_exception(answer.failure());
+		FAIL() << "Expected stored task failure";
+	} catch (const spk::Exception &exception)
+	{
+		EXPECT_NE(
+			std::string(exception.what()).find(
+				"expected task failure"),
+			std::string::npos);
+	}
+}
+
+TEST(WorkerPool, EscapingStandardExceptionPreservesDynamicType)
+{
+	spk::WorkerPool workerPool(1u);
+
+	auto answer = workerPool.submit(
+		[]() -> int {
+			throw std::runtime_error(
+				"standard failure");
+		});
+
+	ASSERT_TRUE(waitUntilSettled<int>(answer));
+	ASSERT_EQ(
+		answer.status(),
+		spk::Task<int>::Status::Failed);
+
+	EXPECT_THROW(
+		std::rethrow_exception(answer.failure()),
+		std::runtime_error);
+}
+
 TEST(WorkerPool, SingleWorkerExecutesTasksInSubmissionOrder)
 {
 	spk::WorkerPool workerPool(1u);
@@ -260,15 +204,14 @@ TEST(WorkerPool, SingleWorkerExecutesTasksInSubmissionOrder)
 	{
 		answers.push_back(
 			workerPool.submit(
-				spk::Task<int>(
-					[index, &order, &orderMutex] {
-						{
-							const std::scoped_lock lock(
-								orderMutex);
-							order.push_back(index);
-						}
-						return index;
-					})));
+				[index, &order, &orderMutex] {
+					{
+						const std::scoped_lock lock(
+							orderMutex);
+						order.push_back(index);
+					}
+					return index;
+				}));
 	}
 
 	for (const auto &answer : answers)
@@ -290,28 +233,28 @@ TEST(WorkerPool, MultipleWorkersCanExecuteTasksConcurrently)
 	spk::WorkerPool workerPool(2u);
 	std::atomic<int> started = 0;
 	std::promise<void> release;
-	const auto gate = release.get_future().share();
+	const auto gate =
+		release.get_future().share();
 
 	auto first = workerPool.submit(
-		spk::Task<int>(
-			[&started, gate] {
-				started.fetch_add(
-					1,
-					std::memory_order_release);
-				gate.wait();
-				return 1;
-			}));
+		[&started, gate] {
+			started.fetch_add(
+				1,
+				std::memory_order_release);
+			gate.wait();
+			return 1;
+		});
 	auto second = workerPool.submit(
-		spk::Task<int>(
-			[&started, gate] {
-				started.fetch_add(
-					1,
-					std::memory_order_release);
-				gate.wait();
-				return 2;
-			}));
+		[&started, gate] {
+			started.fetch_add(
+				1,
+				std::memory_order_release);
+			gate.wait();
+			return 2;
+		});
 
-	const bool bothStarted = waitUntilAtLeast(started, 2);
+	const bool bothStarted =
+		waitUntilAtLeast(started, 2);
 	release.set_value();
 
 	EXPECT_TRUE(bothStarted);
@@ -334,18 +277,17 @@ TEST(WorkerPool, HighContentionExecutesEveryTaskExactlyOnce)
 	{
 		answers.push_back(
 			workerPool.submit(
-				spk::Task<int>(
-					[index,
-					 &executionCount,
-					 &executionSum] {
-						executionCount.fetch_add(
-							1,
-							std::memory_order_relaxed);
-						executionSum.fetch_add(
-							index,
-							std::memory_order_relaxed);
-						return index;
-					})));
+				[index,
+				 &executionCount,
+				 &executionSum] {
+					executionCount.fetch_add(
+						1,
+						std::memory_order_relaxed);
+					executionSum.fetch_add(
+						index,
+						std::memory_order_relaxed);
+					return index;
+				}));
 	}
 
 	for (int index = 0; index < TaskCount; ++index)
@@ -370,14 +312,13 @@ TEST(WorkerPool, FailedTaskDoesNotStopWorker)
 	spk::WorkerPool workerPool(1u);
 
 	auto failed = workerPool.submit(
-		spk::Task<int>(
-			[]() -> int {
-				throw std::runtime_error("failure");
-			}));
+		[]() -> int {
+			throw std::runtime_error("failure");
+		});
 	auto completed = workerPool.submit(
-		spk::Task<int>([] {
+		[] {
 			return 99;
-		}));
+		});
 
 	ASSERT_TRUE(waitUntilSettled<int>(failed));
 	ASSERT_TRUE(waitUntilSettled<int>(completed));
@@ -390,22 +331,22 @@ TEST(WorkerPool, FailedTaskDoesNotStopWorker)
 	EXPECT_EQ(completed.result(), 99);
 }
 
-TEST(WorkerPool, DifferentTaskResultTypesShareSamePool)
+TEST(WorkerPool, DifferentResultTypesShareSamePool)
 {
 	spk::WorkerPool workerPool(3u);
 
 	auto integerAnswer = workerPool.submit(
-		spk::Task<int>([] {
+		[] {
 			return 12;
-		}));
+		});
 	auto stringAnswer = workerPool.submit(
-		spk::Task<std::string>([] {
+		[] {
 			return std::string("worker");
-		}));
+		});
 	auto moveOnlyAnswer = workerPool.submit(
-		spk::Task<MoveOnlyResult>([] {
+		[] {
 			return MoveOnlyResult(44);
-		}));
+		});
 
 	ASSERT_TRUE(waitUntilSettled<int>(integerAnswer));
 	ASSERT_TRUE(
@@ -417,6 +358,41 @@ TEST(WorkerPool, DifferentTaskResultTypesShareSamePool)
 	EXPECT_EQ(integerAnswer.result(), 12);
 	EXPECT_EQ(stringAnswer.result(), "worker");
 	EXPECT_EQ(*moveOnlyAnswer.result().value, 44);
+}
+
+TEST(WorkerPool, CompletionSubscriberRunsOnWorkerSettlement)
+{
+	spk::WorkerPool workerPool(1u);
+	std::promise<void> release;
+	const auto gate =
+		release.get_future().share();
+	std::atomic<int> calls = 0;
+
+	auto answer = workerPool.submit(
+		[gate] {
+			gate.wait();
+			return 7;
+		});
+	auto contract = answer.subscribeToCompletion(
+		[&calls] {
+			calls.fetch_add(
+				1,
+				std::memory_order_relaxed);
+		});
+
+	release.set_value();
+
+	ASSERT_TRUE(waitUntilSettled<int>(answer));
+	while (
+		calls.load(std::memory_order_acquire) == 0)
+	{
+		std::this_thread::yield();
+	}
+
+	EXPECT_EQ(
+		calls.load(std::memory_order_relaxed),
+		1);
+	EXPECT_FALSE(contract.isValid());
 }
 
 TEST(WorkerPool, DestructionDrainsQueuedJobs)
@@ -433,13 +409,12 @@ TEST(WorkerPool, DestructionDrainsQueuedJobs)
 		{
 			answers.push_back(
 				workerPool.submit(
-					spk::Task<int>(
-						[index, &executionCount] {
-							executionCount.fetch_add(
-								1,
-								std::memory_order_relaxed);
-							return index;
-						})));
+					[index, &executionCount] {
+						executionCount.fetch_add(
+							1,
+							std::memory_order_relaxed);
+						return index;
+					}));
 		}
 	}
 
@@ -460,12 +435,13 @@ TEST(WorkerPool, DestructionDrainsQueuedJobs)
 
 TEST(WorkerPool, AnswersRemainValidAfterPoolDestruction)
 {
-	spk::Task<std::string>::Answer answer = [&] {
+	spk::Task<std::string>::Answer answer = [] {
 		spk::WorkerPool workerPool(1u);
 		return workerPool.submit(
-			spk::Task<std::string>([] {
-				return std::string("persistent answer");
-			}));
+			[] {
+				return std::string(
+					"persistent answer");
+			});
 	}();
 
 	EXPECT_EQ(
