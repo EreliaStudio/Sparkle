@@ -32,6 +32,104 @@ TEST(TaskGroup, EmptyGroupIsImmediatelyCompleted)
 	EXPECT_TRUE(answer.answers().empty());
 }
 
+TEST(TaskGroup, WaitBlocksUntilEveryChildIsTerminal)
+{
+	spk::Task<int> firstTask;
+	spk::Task<int> secondTask;
+
+	spk::TaskGroup<int> group;
+	group.add(firstTask.answer());
+	group.add(secondTask.answer());
+	const auto answer = std::move(group).answer();
+
+	std::atomic<bool> waiting = false;
+	std::atomic<bool> returned = false;
+	std::thread waiter(
+		[&] {
+			waiting.store(
+				true,
+				std::memory_order_release);
+			answer.wait();
+			returned.store(
+				true,
+				std::memory_order_release);
+		});
+
+	while (
+		waiting.load(
+			std::memory_order_acquire) == false)
+	{
+		std::this_thread::yield();
+	}
+
+	firstTask.validate(1);
+	EXPECT_FALSE(
+		returned.load(
+			std::memory_order_acquire));
+
+	secondTask.validate(2);
+	waiter.join();
+
+	EXPECT_TRUE(
+		returned.load(
+			std::memory_order_acquire));
+	EXPECT_EQ(
+		answer.status(),
+		spk::Task<int>::Status::Completed);
+}
+
+TEST(TaskGroup, GetWaitsAndReturnsAnswers)
+{
+	spk::Task<int> firstTask;
+	spk::Task<int> secondTask;
+
+	spk::TaskGroup<int> group;
+	group.add(firstTask.answer());
+	group.add(secondTask.answer());
+	const auto answer = std::move(group).answer();
+
+	std::thread producer(
+		[&] {
+			firstTask.validate(7);
+			secondTask.validate(8);
+		});
+
+	const auto answers = answer.get();
+	producer.join();
+
+	ASSERT_EQ(answers.size(), 2u);
+	EXPECT_EQ(answers[0u].result(), 7);
+	EXPECT_EQ(answers[1u].result(), 8);
+}
+
+TEST(TaskGroup, GetRethrowsFirstStoredFailure)
+{
+	spk::Task<int> failedTask;
+	spk::Task<int> completedTask;
+
+	spk::TaskGroup<int> group;
+	group.add(failedTask.answer());
+	group.add(completedTask.answer());
+	const auto answer = std::move(group).answer();
+
+	failedTask.fail(
+		std::make_exception_ptr(
+			std::runtime_error(
+				"group get failure")));
+	completedTask.validate(12);
+
+	try
+	{
+		(void)answer.get();
+		FAIL() << "Expected stored group failure";
+	} catch (const std::runtime_error &exception)
+	{
+		EXPECT_STREQ(
+			exception.what(),
+			"group get failure");
+	}
+}
+
 TEST(TaskGroup, CompletionWaitsForEveryManuallySettledTask)
 {
 	spk::Task<int> firstTask;
@@ -157,12 +255,7 @@ TEST(TaskGroup, AcceptsWorkerPoolProducedAnswers)
 	group.add(second);
 	auto answer = std::move(group).answer();
 
-	while (
-		answer.status() ==
-		spk::Task<int>::Status::Pending)
-	{
-		std::this_thread::yield();
-	}
+	answer.wait();
 
 	ASSERT_EQ(
 		answer.status(),
@@ -188,12 +281,7 @@ TEST(TaskGroup, ManualAndWorkerAnswersCanShareOneGroup)
 
 	manualTask.validate(22);
 
-	while (
-		answer.status() ==
-		spk::Task<int>::Status::Pending)
-	{
-		std::this_thread::yield();
-	}
+	answer.wait();
 
 	ASSERT_EQ(
 		answer.status(),

@@ -63,6 +63,29 @@ namespace spk
 					std::memory_order_acquire);
 			}
 
+			void wait() const noexcept
+			{
+				Status current = status();
+				while (current == Status::Pending)
+				{
+					_state->status.wait(
+						Status::Pending,
+						std::memory_order_acquire);
+					current = status();
+				}
+			}
+
+			[[nodiscard]] const TResult &get() const
+			{
+				wait();
+				if (status() == Status::Failed)
+				{
+					std::rethrow_exception(
+						_state->failure);
+				}
+				return *_state->result;
+			}
+
 			[[nodiscard]] const TResult &result() const
 			{
 				if (status() != Status::Completed)
@@ -124,6 +147,7 @@ namespace spk
 
 		void _notifyCompletion() noexcept
 		{
+			_state->status.notify_all();
 			try
 			{
 				_state->completionProvider.trigger();

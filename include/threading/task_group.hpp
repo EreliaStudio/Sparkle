@@ -68,6 +68,7 @@ namespace spk
 
 			void notifyCompletion() noexcept
 			{
+				status.notify_all();
 				try
 				{
 					completionProvider.trigger();
@@ -122,6 +123,38 @@ namespace spk
 			{
 				return _state->status.load(
 					std::memory_order_acquire);
+			}
+
+			void wait() const noexcept
+			{
+				Status current = status();
+				while (current == Status::Pending)
+				{
+					_state->status.wait(
+						Status::Pending,
+						std::memory_order_acquire);
+					current = status();
+				}
+			}
+
+			[[nodiscard]] std::span<const TaskAnswer> get() const
+			{
+				wait();
+				if (status() == Status::Failed)
+				{
+					for (const TaskAnswer &answer : _state->answers)
+					{
+						if (answer.status() == Status::Failed)
+						{
+							std::rethrow_exception(
+								answer.failure());
+						}
+					}
+
+					throw spk::Exception(
+						"TaskGroup failed without a failed child");
+				}
+				return _state->answers;
 			}
 
 			[[nodiscard]] std::size_t size() const noexcept

@@ -51,6 +51,80 @@ TEST(Task, NewAnswerStartsPending)
 	EXPECT_THROW((void)answer.failure(), spk::Exception);
 }
 
+TEST(Task, WaitBlocksUntilTaskCompletes)
+{
+	spk::Task<int> task;
+	const auto answer = task.answer();
+	std::atomic<bool> waiting = false;
+	std::atomic<bool> returned = false;
+
+	std::thread waiter(
+		[&] {
+			waiting.store(
+				true,
+				std::memory_order_release);
+			answer.wait();
+			returned.store(
+				true,
+				std::memory_order_release);
+		});
+
+	while (
+		waiting.load(
+			std::memory_order_acquire) == false)
+	{
+		std::this_thread::yield();
+	}
+
+	EXPECT_FALSE(
+		returned.load(
+			std::memory_order_acquire));
+
+	task.validate(42);
+	waiter.join();
+
+	EXPECT_TRUE(
+		returned.load(
+			std::memory_order_acquire));
+	EXPECT_EQ(answer.status(), spk::Task<int>::Status::Completed);
+}
+
+TEST(Task, GetWaitsAndReturnsCompletedResult)
+{
+	spk::Task<int> task;
+	const auto answer = task.answer();
+
+	std::thread producer(
+		[&] {
+			task.validate(53);
+		});
+
+	EXPECT_EQ(answer.get(), 53);
+	producer.join();
+}
+
+TEST(Task, GetRethrowsStoredFailure)
+{
+	spk::Task<int> task;
+	const auto answer = task.answer();
+
+	task.fail(
+		std::make_exception_ptr(
+			std::runtime_error(
+				"get failure")));
+
+	try
+	{
+		(void)answer.get();
+		FAIL() << "Expected stored task failure";
+	} catch (const std::runtime_error &exception)
+	{
+		EXPECT_STREQ(
+			exception.what(),
+			"get failure");
+	}
+}
+
 TEST(Task, ValidateCompletesTaskAndPublishesResult)
 {
 	spk::Task<int> task;
