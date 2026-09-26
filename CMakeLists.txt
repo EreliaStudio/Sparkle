@@ -28,6 +28,7 @@ file(GLOB_RECURSE SPARKLE_CORE_SOURCES
     "${SPARKLE_SOURCE_DIR}/math/*.cpp"
     "${SPARKLE_SOURCE_DIR}/network/*.cpp"
     "${SPARKLE_SOURCE_DIR}/structure/*.cpp"
+    "${SPARKLE_SOURCE_DIR}/system/*.cpp"
     "${SPARKLE_SOURCE_DIR}/type/*.cpp"
 )
 list(APPEND SPARKLE_CORE_SOURCES
