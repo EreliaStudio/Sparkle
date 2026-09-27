@@ -236,6 +236,9 @@ namespace spk
 
 		auto native = std::make_shared<Window::Native>(identifier);
 		auto state = std::make_shared<Window::State>(identifier);
+		state->root().setGeometry(spk::Rect2D{
+			.anchor = {0, 0},
+			.size = configuration.area.size});
 		auto surface = std::make_shared<Window::Surface>(identifier);
 		auto window = std::make_unique<Window>(native, state, surface);
 
