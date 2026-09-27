@@ -144,25 +144,52 @@ namespace spk
 		_platformRequestProducer.publish(NativeRegistrationRequest{.windowIdentifier = identifier, .configuration = configuration, .native = std::move(native)});
 	}
 
-	void Application::Impl::_requestWindowClosure(const Window::Identifier &identifier)
+	Task<void>::Answer Application::Impl::_requestWindowClosure(const Window::Identifier &identifier)
 	{
+		const std::scoped_lock lock(_windowClosureMutex);
+		if (const auto found = _windowClosureTasks.find(identifier); found != _windowClosureTasks.end())
+		{
+			return found->second.answer();
+		}
+
+		static_cast<void>(window(identifier));
+		auto [task, inserted] = _windowClosureTasks.emplace(identifier, Task<void>{});
+		static_cast<void>(inserted);
+		Task<void>::Answer answer = task->second.answer();
+
 		_updateRequestProducer.publish(StateDeletionRequest{.windowIdentifier = identifier});
 		_renderRequestProducer.publish(SurfaceDeletionRequest{.windowIdentifier = identifier});
+		return answer;
 	}
 
 	void Application::Impl::_requestAllWindowClosures()
 	{
 		for (const auto &[identifier, window] : _windows)
 		{
-			_requestWindowClosure(identifier);
+			static_cast<void>(_requestWindowClosure(identifier));
 		}
 	}
 
 	void Application::Impl::_removeClosedWindows()
 	{
-		std::erase_if(_windows, [](const auto &entry) {
-			return entry.second->isClosed();
-		});
+		for (auto iterator = _windows.begin(); iterator != _windows.end();)
+		{
+			if (iterator->second->isClosed() == false)
+			{
+				++iterator;
+				continue;
+			}
+
+			{
+				const std::scoped_lock lock(_windowClosureMutex);
+				if (const auto found = _windowClosureTasks.find(iterator->first); found != _windowClosureTasks.end())
+				{
+					found->second.validate();
+					_windowClosureTasks.erase(found);
+				}
+			}
+			iterator = _windows.erase(iterator);
+		}
 	}
 
 	void Application::Impl::_finishExecution()
@@ -249,14 +276,9 @@ namespace spk
 		return result;
 	}
 
-	void Application::Impl::closeWindow(const Window::Identifier &identifier)
+	Task<void>::Answer Application::Impl::closeWindow(const Window::Identifier &identifier)
 	{
-		Window &target = window(identifier);
-		if (target.isClosing() == true || target.isClosed() == true)
-		{
-			return;
-		}
-		_requestWindowClosure(identifier);
+		return _requestWindowClosure(identifier);
 	}
 
 	void Application::Impl::quit(int exitCode)
