@@ -32,6 +32,7 @@ namespace spk
 			std::string description;
 			std::size_t arity = 1;
 			std::vector<std::string> defaultValues;
+			bool optional = false;
 		};
 
 		struct Invocation
