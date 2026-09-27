@@ -49,13 +49,18 @@ namespace spk
 		class Command
 		{
 		private:
+			std::string _name;
 			std::string _description;
 			std::vector<Parameter> _parameters;
 
 		public:
-			Command(std::string description, std::vector<Parameter> parameters = {});
+			Command(
+				std::string name,
+				std::string description,
+				std::vector<Parameter> parameters = {});
 			virtual ~Command() = default;
 
+			[[nodiscard]] const std::string &name() const noexcept;
 			[[nodiscard]] const std::string &description() const noexcept;
 			[[nodiscard]] const std::vector<Parameter> &parameters() const noexcept;
 
@@ -69,6 +74,7 @@ namespace spk
 
 		public:
 			LambdaCommand(
+				std::string name,
 				std::string description,
 				std::vector<Parameter> parameters,
 				Callback callback);
@@ -103,7 +109,7 @@ namespace spk
 
 	public:
 		void addCommand(LambdaCommandDefinition command);
-		void addCommand(std::string name, std::unique_ptr<Command> command);
+		void addCommand(std::unique_ptr<Command> command);
 		[[nodiscard]] Result execute(const std::string &input) const;
 		[[nodiscard]] std::string help() const;
 		[[nodiscard]] std::string help(const std::string &command) const;

@@ -233,6 +233,7 @@ namespace
 	public:
 		explicit RecordingCommand(std::vector<std::string> &received) :
 			Command(
+				"custom",
 				"Polymorphic command",
 				{{.name = "value", .description = "Value"}}),
 			_received(received)
@@ -250,7 +251,7 @@ TEST(CommandParserTest, AcceptsPolymorphicCommandImplementation)
 {
 	spk::CommandParser parser;
 	std::vector<std::string> received;
-	parser.addCommand("custom", std::make_unique<RecordingCommand>(received));
+	parser.addCommand(std::make_unique<RecordingCommand>(received));
 
 	EXPECT_EQ(parser.execute("/custom payload").status, spk::CommandParser::Status::Accepted);
 	EXPECT_EQ(received, (std::vector<std::string>{"payload"}));
@@ -262,6 +263,19 @@ TEST(CommandParserTest, RejectsNullPolymorphicCommand)
 {
 	spk::CommandParser parser;
 	EXPECT_THROW(
-		parser.addCommand("invalid", std::unique_ptr<spk::CommandParser::Command>{}),
+		parser.addCommand(std::unique_ptr<spk::CommandParser::Command>{}),
+		spk::Exception);
+}
+
+
+TEST(CommandParserTest, RejectsDuplicatePolymorphicCommandName)
+{
+	spk::CommandParser parser;
+	std::vector<std::string> first;
+	std::vector<std::string> second;
+	parser.addCommand(std::make_unique<RecordingCommand>(first));
+
+	EXPECT_THROW(
+		parser.addCommand(std::make_unique<RecordingCommand>(second)),
 		spk::Exception);
 }

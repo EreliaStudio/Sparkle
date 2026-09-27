@@ -18,11 +18,18 @@ namespace spk
 	}
 
 	CommandParser::Command::Command(
+		std::string name,
 		std::string description,
 		std::vector<Parameter> parameters) :
+		_name(std::move(name)),
 		_description(std::move(description)),
 		_parameters(std::move(parameters))
 	{
+	}
+
+	const std::string &CommandParser::Command::name() const noexcept
+	{
+		return _name;
 	}
 
 	const std::string &CommandParser::Command::description() const noexcept
@@ -36,10 +43,14 @@ namespace spk
 	}
 
 	CommandParser::LambdaCommand::LambdaCommand(
+		std::string name,
 		std::string description,
 		std::vector<Parameter> parameters,
 		Callback callback) :
-		Command(std::move(description), std::move(parameters)),
+		Command(
+			std::move(name),
+			std::move(description),
+			std::move(parameters)),
 		_callback(std::move(callback))
 	{
 	}
@@ -118,31 +129,32 @@ namespace spk
 
 	void CommandParser::addCommand(LambdaCommandDefinition command)
 	{
-		const std::string name = std::move(command.name);
 		addCommand(
-			name,
 			std::make_unique<LambdaCommand>(
+				std::move(command.name),
 				std::move(command.description),
 				std::move(command.parameters),
 				std::move(command.callback)));
 	}
 
-	void CommandParser::addCommand(std::string name, std::unique_ptr<Command> command)
+	void CommandParser::addCommand(std::unique_ptr<Command> command)
 	{
-		if (name.empty() == true)
-		{
-			throw spk::Exception("CommandParser command name cannot be empty");
-		}
 		if (command == nullptr)
 		{
 			throw spk::Exception("CommandParser command cannot be null");
 		}
-		if (_commands.contains(name) == true)
+		if (command->name().empty() == true)
 		{
-			throw spk::Exception("Duplicate command registration: " + name);
+			throw spk::Exception("CommandParser command name cannot be empty");
 		}
+		if (_commands.contains(command->name()) == true)
+		{
+			throw spk::Exception("Duplicate command registration: " + command->name());
+		}
+
 		_validateParameters(command->parameters());
-		_commands.emplace(std::move(name), std::move(command));
+		const std::string name = command->name();
+		_commands.emplace(name, std::move(command));
 	}
 
 	CommandParser::Result CommandParser::execute(const std::string &input) const
@@ -266,7 +278,7 @@ namespace spk
 		std::ostringstream output;
 		for (const auto &[name, command] : _commands)
 		{
-			output << '/' << name << " - " << command->description() << '\n';
+			output << '/' << command->name() << " - " << command->description() << '\n';
 		}
 		return output.str();
 	}
@@ -280,7 +292,7 @@ namespace spk
 		}
 		const Command &command = *iterator->second;
 		std::ostringstream output;
-		output << "Usage: /" << commandName;
+		output << "Usage: /" << command.name();
 		for (const Parameter &parameter : command.parameters())
 		{
 			output << " [--" << parameter.name << " <" << parameter.arity << (parameter.arity == 1 ? " value" : " values") << ">]";
