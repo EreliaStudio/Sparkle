@@ -378,7 +378,6 @@ namespace spk
 			std::shared_ptr<Task<void>> stateDeletion = std::make_shared<Task<void>>();
 			std::shared_ptr<Task<void>> surfaceDeletion = std::make_shared<Task<void>>();
 			std::shared_ptr<Task<void>> nativeDeletion = std::make_shared<Task<void>>();
-			std::optional<Task<void>::Answer::CompletionContract> surfaceContract;
 			std::optional<Task<void>::Answer::CompletionContract> stateContract;
 			std::optional<Task<void>::Answer::CompletionContract> nativeContract;
 		};
