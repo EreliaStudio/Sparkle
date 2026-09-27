@@ -213,16 +213,12 @@ namespace spk
 			const Task<void>::Status stateStatus = found->second->stateDeletion->answer().status();
 			const Task<void>::Status surfaceStatus = found->second->surfaceDeletion->answer().status();
 			const Task<void>::Status nativeStatus = found->second->nativeDeletion->answer().status();
-			const bool failed =
-				stateStatus == Task<void>::Status::Failed ||
-				surfaceStatus == Task<void>::Status::Failed ||
-				nativeStatus == Task<void>::Status::Failed;
-			const bool completed =
-				stateStatus == Task<void>::Status::Completed &&
-				surfaceStatus == Task<void>::Status::Completed &&
-				nativeStatus == Task<void>::Status::Completed;
+			const bool stateSettled = stateStatus != Task<void>::Status::Pending;
+			const bool surfaceSettled = surfaceStatus != Task<void>::Status::Pending;
+			const bool nativeRequired = surfaceStatus == Task<void>::Status::Completed;
+			const bool nativeSettled = nativeStatus != Task<void>::Status::Pending;
 
-			if (failed == false && completed == false)
+			if (stateSettled == false || surfaceSettled == false || (nativeRequired == true && nativeSettled == false))
 			{
 				return;
 			}
