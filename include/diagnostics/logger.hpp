@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <array>
 #include <filesystem>
 #include <ios>
 #include <memory>
@@ -24,6 +25,8 @@ namespace spk
 		{
 			Trace,
 			Info,
+			UserValueA,
+			UserValueB,
 			Warning,
 			Error
 		};
@@ -77,6 +80,7 @@ namespace spk
 		bool _consoleMuted = false;
 		std::size_t _nextOutputIdentifier = 1;
 		OnEntryContractProvider _onEntryContractProvider;
+		std::array<std::string, 6> _levelIdentifiers{"Trace", "Info", "UserValueA", "UserValueB", "Warning", "Error"};
 
 		static thread_local ThreadState _threadState;
 
@@ -89,6 +93,7 @@ namespace spk
 		void _dispatch() noexcept;
 		void _removeOutput(std::size_t identifier) noexcept;
 		void _setOutputLevel(std::size_t identifier, Level level) noexcept;
+		[[nodiscard]] std::string _levelIdentifier(Level level) const;
 
 	public:
 		Logger(const Logger &) = delete;
@@ -104,6 +109,7 @@ namespace spk
 		[[nodiscard]] Output addOutput(const std::filesystem::path &path, Level lowerAcceptedLevel);
 		void muteConsole() noexcept;
 		void unmuteConsole() noexcept;
+		void setLevelIdentifier(Level level, std::string identifier);
 		[[nodiscard]] OnEntryContract subscribeToEntry(OnEntryCallback callback);
 
 		Logger &operator<<(LevelSetter setter) noexcept;
