@@ -255,6 +255,7 @@ namespace spk
 		};
 
 		PlatformRequestProducer _platformRequestProducer;
+		WinAPI::WakeEvent &_wakeEvent;
 		spk::ThreadSafeFIFO<EventRecord>::Consumer _eventRecordConsumer;
 		spk::ThreadSafeFIFO<UpdateRequest>::Consumer _updateRequestConsumer;
 		std::unordered_map<Window::Identifier, RenderSnapshotEntry> _renderSnapshotEntries;
