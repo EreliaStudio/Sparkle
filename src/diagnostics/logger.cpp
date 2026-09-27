@@ -10,31 +10,15 @@
 
 namespace
 {
-	[[nodiscard]] const char *levelName(spk::Logger::Level level) noexcept
-	{
-		switch (level)
-		{
-		case spk::Logger::Level::Trace:
-			return "Trace";
-		case spk::Logger::Level::Info:
-			return "Info";
-		case spk::Logger::Level::Warning:
-			return "Warning";
-		case spk::Logger::Level::Error:
-			return "Error";
-		}
-		return "Unknown";
-	}
-
 	void writeRecord(
 		std::ostream &stream,
-		spk::Logger::Level level,
+		const std::string &levelIdentifier,
 		std::source_location location,
 		const std::string &message) noexcept
 	{
 		try
 		{
-			stream << '[' << levelName(level) << "] ";
+			stream << '[' << levelIdentifier << "] ";
 			if (location.line() != 0)
 			{
 				stream << location.file_name() << ':' << location.line() << ' ';
@@ -46,7 +30,6 @@ namespace
 		}
 	}
 }
-
 namespace spk
 {
 	thread_local Logger::ThreadState Logger::_threadState{};
@@ -178,6 +161,17 @@ namespace spk
 		}
 	}
 
+	void Logger::setLevelIdentifier(Level level, std::string identifier)
+	{
+		const std::scoped_lock lock(_mutex);
+		_levelIdentifiers.at(static_cast<std::size_t>(level)) = std::move(identifier);
+	}
+
+	std::string Logger::_levelIdentifier(Level level) const
+	{
+		return _levelIdentifiers.at(static_cast<std::size_t>(level));
+	}
+
 	void Logger::unmuteConsole() noexcept
 	{
 		try
@@ -272,13 +266,13 @@ namespace spk
 				const std::scoped_lock lock(_mutex);
 				if (_consoleMuted == false)
 				{
-					writeRecord(std::clog, level, location, message);
+					writeRecord(std::clog, _levelIdentifier(level), location, message);
 				}
 				for (auto &output : _outputs)
 				{
 					if (static_cast<std::uint8_t>(level) >= static_cast<std::uint8_t>(output->lowerAcceptedLevel))
 					{
-						writeRecord(output->stream, level, location, message);
+						writeRecord(output->stream, _levelIdentifier(level), location, message);
 					}
 				}
 			}
