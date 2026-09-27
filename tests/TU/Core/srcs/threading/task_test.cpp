@@ -369,3 +369,49 @@ TEST(Task, ConcurrentSubscribeAndCompletionNeverLosesNotification)
 		EXPECT_EQ(answer.result(), iteration);
 	}
 }
+
+TEST(Task, VoidTaskCompletesWithoutResult)
+{
+	spk::Task<void> task;
+	const auto answer = task.answer();
+
+	EXPECT_EQ(answer.status(), spk::Task<void>::Status::Pending);
+	task.validate();
+	answer.wait();
+	EXPECT_EQ(answer.status(), spk::Task<void>::Status::Completed);
+	EXPECT_THROW((void)answer.failure(), spk::Exception);
+}
+
+TEST(Task, VoidTaskWaitBlocksUntilCompletion)
+{
+	spk::Task<void> task;
+	const auto answer = task.answer();
+	std::atomic<bool> returned = false;
+
+	std::thread waiter([&] {
+		answer.wait();
+		returned.store(true, std::memory_order_release);
+	});
+
+	EXPECT_FALSE(returned.load(std::memory_order_acquire));
+	task.validate();
+	waiter.join();
+	EXPECT_TRUE(returned.load(std::memory_order_acquire));
+}
+
+TEST(Task, VoidTaskPublishesFailure)
+{
+	spk::Task<void> task;
+	const auto answer = task.answer();
+	task.fail(std::make_exception_ptr(std::runtime_error("void failure")));
+
+	EXPECT_EQ(answer.status(), spk::Task<void>::Status::Failed);
+	try
+	{
+		std::rethrow_exception(answer.failure());
+		FAIL() << "Expected stored task failure";
+	} catch (const std::runtime_error &exception)
+	{
+		EXPECT_STREQ(exception.what(), "void failure");
+	}
+}

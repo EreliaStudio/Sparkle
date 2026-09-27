@@ -194,6 +194,10 @@ namespace spk
 				invocation.parameters.emplace(parameter.name, parameter.defaultValues);
 				continue;
 			}
+			if (parameter.optional == true)
+			{
+				continue;
+			}
 			return {.status = Status::MissingParameter, .command = commandName, .parameter = parameter.name, .expectedValueCount = parameter.arity};
 		}
 
@@ -228,7 +232,8 @@ namespace spk
 		{
 			output << " [--" << parameter.name << " <" << parameter.arity << (parameter.arity == 1 ? " value" : " values") << ">]";
 		}
-		output << "\n" << command.description << "\n";
+		output << "\n"
+			   << command.description << "\n";
 		for (const Parameter &parameter : command.parameters)
 		{
 			output << "  --" << parameter.name << ": " << parameter.description;

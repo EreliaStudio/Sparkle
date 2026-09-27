@@ -362,8 +362,8 @@ namespace spk
 		[[nodiscard]] bool isLastRowVisible() const
 		{
 			return _model != nullptr &&
-				_model->empty() == false &&
-				isRowVisible(_model->rowCount() - 1);
+				   _model->empty() == false &&
+				   isRowVisible(_model->rowCount() - 1);
 		}
 
 		[[nodiscard]] Model *model() const noexcept

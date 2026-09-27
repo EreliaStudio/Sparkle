@@ -92,8 +92,8 @@ TEST(WidgetTest, GeometrySetAndResizeNotifyExactlyOncePerChangedWidget)
 	EXPECT_EQ(root.geometryChanges, 2);
 	EXPECT_EQ(child.geometryChanges, 2);
 	EXPECT_EQ(grandchild.geometryChanges, 2);
-	EXPECT_EQ(child.geometry(), (spk::Rect2D{.anchor = {20, 40}, .size = {100, 80}}));
-	EXPECT_EQ(grandchild.geometry(), (spk::Rect2D{.anchor = {10, 20}, .size = {50, 40}}));
+	EXPECT_EQ(child.geometry(), (spk::Rect2D{.anchor = {24, 45}, .size = {120, 90}}));
+	EXPECT_EQ(grandchild.geometry(), (spk::Rect2D{.anchor = {12, 23}, .size = {60, 45}}));
 }
 
 TEST(WidgetTest, HierarchyReparentingDestructionGeometryAndZCaches)

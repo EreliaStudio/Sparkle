@@ -6,6 +6,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <functional>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -86,6 +87,10 @@ namespace
 			spk::Widget(std::move(name), parent),
 			_onRender(std::move(onRender))
 		{
+			if (parent != nullptr)
+			{
+				setGeometry(parent->geometry());
+			}
 			activate();
 		}
 	};
@@ -134,11 +139,10 @@ TEST(ApplicationTest, WindowLookupProvidesMutableAndConstAccess)
 	const spk::Application &constApplication = application;
 	EXPECT_EQ(&constApplication.window("lookup"), &created);
 
-	application.closeWindow("lookup");
+	static_cast<void>(application.closeWindow("lookup"));
 	application.quit();
 	EXPECT_EQ(application.run(), EXIT_SUCCESS);
 }
-
 
 TEST(ApplicationTest, CreatedWindowRootUsesConfiguredClientSizeBeforeRun)
 {
@@ -154,7 +158,7 @@ TEST(ApplicationTest, CreatedWindowRootUsesConfiguredClientSizeBeforeRun)
 			.anchor = {0, 0},
 			.size = {320, 240}}));
 
-	application.closeWindow("initial-geometry");
+	static_cast<void>(application.closeWindow("initial-geometry"));
 	application.quit();
 	EXPECT_EQ(application.run(), EXIT_SUCCESS);
 }
@@ -172,7 +176,7 @@ TEST(ApplicationTest, ChildCreatedBeforeRunUsesInitializedRootGeometry)
 	EXPECT_EQ(child.geometry().size, spk::Vector2UInt(320, 240));
 	EXPECT_EQ(child.viewRegion().viewport.size, spk::Vector2UInt(320, 240));
 
-	application.closeWindow("initialized-child");
+	static_cast<void>(application.closeWindow("initialized-child"));
 	application.quit();
 	EXPECT_EQ(application.run(), EXIT_SUCCESS);
 }
@@ -186,7 +190,7 @@ TEST(ApplicationTest, DuplicateWindowIdentifierThrowsLogicError)
 		application.createWindow("duplicate", offscreenConfiguration("second")),
 		std::logic_error);
 
-	application.closeWindow("duplicate");
+	static_cast<void>(application.closeWindow("duplicate"));
 	application.quit();
 	EXPECT_EQ(application.run(), EXIT_SUCCESS);
 }
@@ -198,7 +202,7 @@ TEST(ApplicationTest, UnknownWindowLookupAndCloseThrowOutOfRange)
 	EXPECT_THROW((void)application.window("missing"), std::out_of_range);
 	const spk::Application &constApplication = application;
 	EXPECT_THROW((void)constApplication.window("missing"), std::out_of_range);
-	EXPECT_THROW(application.closeWindow("missing"), std::out_of_range);
+	EXPECT_THROW(static_cast<void>(application.closeWindow("missing")), std::out_of_range);
 }
 
 TEST(ApplicationTest, MultiplePendingWindowsCanBeClosedAndAllRuntimesJoin)
@@ -207,8 +211,8 @@ TEST(ApplicationTest, MultiplePendingWindowsCanBeClosedAndAllRuntimesJoin)
 	application.createWindow("first", offscreenConfiguration("first"));
 	application.createWindow("second", offscreenConfiguration("second"));
 
-	application.closeWindow("first");
-	application.closeWindow("second");
+	static_cast<void>(application.closeWindow("first"));
+	static_cast<void>(application.closeWindow("second"));
 	application.quit(7);
 
 	EXPECT_EQ(application.run(), 7);
@@ -231,14 +235,18 @@ TEST(ApplicationTest, StandardReadyWindowInitializationUpdateRenderAndClose)
 	spk::Application application;
 	spk::Window &window = application.createWindow("standard-runtime", offscreenConfiguration("standard-runtime"));
 	std::atomic_bool closureRequested = false;
+	std::optional<spk::Task<void>::Answer> closureAnswer;
 	ApplicationProbeWidget probe("probe", &window.root(), [&] {
 		if (!closureRequested.exchange(true))
 		{
-			application.closeWindow("standard-runtime");
+			closureAnswer.emplace(application.closeWindow("standard-runtime"));
+			EXPECT_EQ(closureAnswer->status(), spk::Task<void>::Status::Pending);
 		}
 	});
 
 	EXPECT_EQ(application.run(), EXIT_SUCCESS);
+	ASSERT_TRUE(closureAnswer.has_value());
+	EXPECT_EQ(closureAnswer->status(), spk::Task<void>::Status::Completed);
 	EXPECT_GT(probe.updateCalls.load(), 0u);
 	EXPECT_GT(probe.snapshotCalls.load(), 0u);
 	EXPECT_GT(probe.renderCalls.load(), 0u);
@@ -253,8 +261,8 @@ TEST(ApplicationTest, RepeatedCloseRequestsAreIdempotentlyCoordinated)
 	ApplicationProbeWidget probe("probe", &window.root(), [&] {
 		if (!closureRequested.exchange(true))
 		{
-			application.closeWindow("repeated-close");
-			application.closeWindow("repeated-close");
+			static_cast<void>(application.closeWindow("repeated-close"));
+			static_cast<void>(application.closeWindow("repeated-close"));
 		}
 	});
 
@@ -272,7 +280,7 @@ TEST(ApplicationTest, QuitWhileRunIsActiveStopsAndJoinsAllRuntimes)
 		if (!quitRequested.exchange(true))
 		{
 			application.quit(19);
-			application.closeWindow("active-quit");
+			static_cast<void>(application.closeWindow("active-quit"));
 		}
 	});
 

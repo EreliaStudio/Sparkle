@@ -50,7 +50,6 @@ TEST(LoggerTest, ResignedEntrySubscriptionStopsReceivingEntries)
 	EXPECT_EQ(callCount, 1u);
 }
 
-
 TEST(LoggerTest, UserLevelsPreserveSeverityOrdering)
 {
 	EXPECT_LT(
