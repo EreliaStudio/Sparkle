@@ -6,6 +6,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <functional>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -231,14 +232,18 @@ TEST(ApplicationTest, StandardReadyWindowInitializationUpdateRenderAndClose)
 	spk::Application application;
 	spk::Window &window = application.createWindow("standard-runtime", offscreenConfiguration("standard-runtime"));
 	std::atomic_bool closureRequested = false;
+	std::optional<spk::Task<void>::Answer> closureAnswer;
 	ApplicationProbeWidget probe("probe", &window.root(), [&] {
 		if (!closureRequested.exchange(true))
 		{
-			application.closeWindow("standard-runtime");
+			closureAnswer.emplace(application.closeWindow("standard-runtime"));
+			EXPECT_EQ(closureAnswer->status(), spk::Task<void>::Status::Pending);
 		}
 	});
 
 	EXPECT_EQ(application.run(), EXIT_SUCCESS);
+	ASSERT_TRUE(closureAnswer.has_value());
+	EXPECT_EQ(closureAnswer->status(), spk::Task<void>::Status::Completed);
 	EXPECT_GT(probe.updateCalls.load(), 0u);
 	EXPECT_GT(probe.snapshotCalls.load(), 0u);
 	EXPECT_GT(probe.renderCalls.load(), 0u);
