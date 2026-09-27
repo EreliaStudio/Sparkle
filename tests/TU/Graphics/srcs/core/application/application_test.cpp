@@ -199,7 +199,7 @@ TEST(ApplicationTest, UnknownWindowLookupAndCloseThrowOutOfRange)
 	EXPECT_THROW((void)application.window("missing"), std::out_of_range);
 	const spk::Application &constApplication = application;
 	EXPECT_THROW((void)constApplication.window("missing"), std::out_of_range);
-	EXPECT_THROW(application.closeWindow("missing"), std::out_of_range);
+	EXPECT_THROW(static_cast<void>(application.closeWindow("missing")), std::out_of_range);
 }
 
 TEST(ApplicationTest, MultiplePendingWindowsCanBeClosedAndAllRuntimesJoin)
