@@ -79,6 +79,8 @@ namespace spk
 	{
 		append(request.windowIdentifier, request.surface);
 		_registerSnapshotConsumer(request.windowIdentifier, request.renderSnapshotConsumer, request.isRequested);
+	
+		request.task->validate();
 	}
 
 	void Application::RenderRuntime::_consume(const SurfaceCreationRequest &request)
@@ -88,6 +90,8 @@ namespace spk
 		{
 			_createSurface(*surface, request.native);
 		}
+	
+		request.task->validate();
 	}
 
 	void Application::RenderRuntime::_consume(const SurfaceResizeRequest &request)
@@ -95,6 +99,7 @@ namespace spk
 		Window::Surface *surface = tryGet(request.windowIdentifier);
 		if (surface == nullptr)
 		{
+			request.task->validate();
 			return;
 		}
 
@@ -104,18 +109,23 @@ namespace spk
 			static_cast<spk::Rect2D::Size::value_type>(request.newSize.y)};
 
 		surface->setGeometry(geometry);
+	
+		request.task->validate();
 	}
 
 	void Application::RenderRuntime::_consume(const SurfaceDeletionRequest &request)
 	{
 		if (!contains(request.windowIdentifier))
 		{
+			request.task->validate();
 			return;
 		}
 		_destroySurface(object(request.windowIdentifier));
 		remove(request.windowIdentifier);
 		_renderSnapshotEnties.erase(request.windowIdentifier);
 		_platformRequestProducer.publish(NativeDeletionRequest{.windowIdentifier = request.windowIdentifier});
+	
+		request.task->validate();
 	}
 
 	void Application::RenderRuntime::_consumeRequests()
