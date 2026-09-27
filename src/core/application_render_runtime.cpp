@@ -132,7 +132,17 @@ namespace spk
 		for (auto &request : _renderRequestConsumer.drain())
 		{
 			std::visit([this](const auto &value) {
-				_consume(value);
+				try
+				{
+					_consume(value);
+				} catch (...)
+				{
+					if (value.task->answer().status() == Task<void>::Status::Pending)
+					{
+						value.task->fail(std::current_exception());
+					}
+					throw;
+				}
 			},
 					   request);
 		}
