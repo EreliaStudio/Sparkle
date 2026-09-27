@@ -52,6 +52,12 @@ namespace
 		ThrowingCopyAssignableElement &operator=(ThrowingCopyAssignableElement &&) = delete;
 	};
 
+	struct NestedPoolElement : public std::vector<int>
+	{
+		using Pool = spk::Pool<NestedPoolElement>;
+		using Lease = Pool::Lease;
+	};
+
 	struct TrackedElement
 	{
 		int *destructionCount;
@@ -90,6 +96,19 @@ using NonMovablePool = spk::Pool<NonMovableElement>;
 
 static_assert(!std::is_copy_constructible_v<NonMovablePool::Lease>);
 static_assert(!std::is_copy_assignable_v<NonMovablePool::Lease>);
+
+
+TEST(PoolTest, NestedElementCanExposePoolAndLeaseWhileBeingDefined)
+{
+	NestedPoolElement::Pool pool([]() {
+		return new NestedPoolElement();
+	});
+
+	auto lease = pool.obtain();
+	ASSERT_TRUE(lease);
+	lease->push_back(42);
+	EXPECT_EQ(lease->front(), 42);
+}
 
 TEST(PoolTest, DefaultFactoryCreatesAndRecyclesElement)
 {
