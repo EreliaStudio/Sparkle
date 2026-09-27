@@ -181,8 +181,8 @@ namespace spk
 
 		_updateRequestProducer.publish(
 			StateDeletionRequest{
-				.task = std::move(stateDeletion),
-				.windowIdentifier = identifier});
+				.windowIdentifier = identifier,
+				.task = std::move(stateDeletion)});
 		_renderRequestProducer.publish(
 			SurfaceDeletionRequest{.windowIdentifier = identifier, .task = std::move(surfaceDeletion), .nativeDeletionTask = stored.nativeDeletion});
 		return answer;
