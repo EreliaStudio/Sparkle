@@ -1,0 +1,108 @@
+#include <system/translator.hpp>
+
+#include <container/json/reader.hpp>
+#include <exception.hpp>
+
+#include <exception>
+#include <format>
+#include <mutex>
+#include <string>
+#include <unordered_map>
+#include <utility>
+
+namespace spk
+{
+	void Translator::append(std::filesystem::path path)
+	{
+		const spk::JSON::Value document =
+			spk::JSON::Loader::parseFile(path);
+
+		if (document.isObject() == false)
+		{
+			throw spk::Exception(
+				"Translation catalog root must be a JSON object: " +
+				path.generic_string());
+		}
+
+		std::unordered_map<std::string, std::string> translations;
+		translations.reserve(document.size());
+
+		for (const auto &[key, value] : document.asObject())
+		{
+			if (key.empty() == true)
+			{
+				throw spk::Exception(
+					"Translation key cannot be empty: " +
+					path.generic_string());
+			}
+			if (value.isString() == false)
+			{
+				throw spk::Exception(
+					"Translation value must be a string for key '" +
+					key + "': " + path.generic_string());
+			}
+
+			translations.insert_or_assign(
+				key,
+				value.as<std::string>());
+		}
+
+		const std::unique_lock lock(_mutex);
+		for (auto &[key, value] : translations)
+		{
+			_translations.insert_or_assign(
+				std::move(key),
+				std::move(value));
+		}
+	}
+
+	void Translator::append(
+		std::string key,
+		std::string value)
+	{
+		if (key.empty() == true)
+		{
+			throw spk::Exception("Translation key cannot be empty");
+		}
+
+		const std::unique_lock lock(_mutex);
+		_translations.insert_or_assign(
+			std::move(key),
+			std::move(value));
+	}
+
+	void Translator::clear()
+	{
+		const std::unique_lock lock(_mutex);
+		_translations.clear();
+	}
+
+	std::string Translator::_translate(
+		const std::string &key,
+		std::format_args arguments) const
+	{
+		std::string format;
+		{
+			const std::shared_lock lock(_mutex);
+			const auto iterator = _translations.find(key);
+			if (iterator == _translations.end())
+			{
+				throw spk::Exception(
+					"Unknown translation key: " + key);
+			}
+
+			format = iterator->second;
+		}
+
+		try
+		{
+			return std::vformat(format, arguments);
+		}
+		catch (const std::format_error &)
+		{
+			throw spk::Exception(
+				"Invalid translation format for key: " + key,
+				std::current_exception());
+		}
+	}
+}

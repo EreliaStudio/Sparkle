@@ -76,6 +76,7 @@
 #include "query/union.hpp"
 #include "query/where.hpp"
 #include "system/argument_parser.hpp"
+#include "system/translator.hpp"
 #include "threading/task.hpp"
 #include "threading/task_group.hpp"
 #include "threading/worker_pool.hpp"
