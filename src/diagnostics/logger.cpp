@@ -26,11 +26,20 @@ namespace
 		return "Unknown";
 	}
 
-	void writeRecord(std::ostream &stream, spk::Logger::Level level, const std::string &message) noexcept
+	void writeRecord(
+		std::ostream &stream,
+		spk::Logger::Level level,
+		std::source_location location,
+		const std::string &message) noexcept
 	{
 		try
 		{
-			stream << '[' << levelName(level) << "] " << message << '\n';
+			stream << '[' << levelName(level) << "] ";
+			if (location.line() != 0)
+			{
+				stream << location.file_name() << ':' << location.line() << ' ';
+			}
+			stream << message << '\n';
 			stream.flush();
 		} catch (...)
 		{
@@ -180,6 +189,11 @@ namespace spk
 		}
 	}
 
+	Logger::OnEntryContract Logger::subscribeToEntry(OnEntryCallback callback)
+	{
+		return _onEntryContractProvider.subscribe(std::move(callback));
+	}
+
 	Logger &Logger::operator<<(LevelSetter setter) noexcept
 	{
 		_threadState.level = setter.level;
@@ -188,12 +202,7 @@ namespace spk
 
 	Logger &Logger::operator<<(std::source_location location) noexcept
 	{
-		try
-		{
-			_threadState.stream << location.file_name() << ':' << location.line() << ' ';
-		} catch (...)
-		{
-		}
+		_threadState.location = location;
 		return *this;
 	}
 
@@ -237,15 +246,17 @@ namespace spk
 		return *this;
 	}
 
-	bool Logger::_extractRecord(Level &level, std::string &message) noexcept
+	bool Logger::_extractRecord(Level &level, std::source_location &location, std::string &message) noexcept
 	{
 		try
 		{
 			level = _threadState.level;
+			location = _threadState.location;
 			message = _threadState.stream.str();
 			_threadState.stream.str({});
 			_threadState.stream.clear();
 			_threadState.level = Level::Info;
+			_threadState.location = {};
 			return true;
 		} catch (...)
 		{
@@ -253,22 +264,25 @@ namespace spk
 		}
 	}
 
-	void Logger::_publishRecord(Level level, const std::string &message) noexcept
+	void Logger::_publishRecord(Level level, std::source_location location, const std::string &message) noexcept
 	{
 		try
 		{
-			const std::scoped_lock lock(_mutex);
-			if (!_consoleMuted)
 			{
-				writeRecord(std::clog, level, message);
-			}
-			for (auto &output : _outputs)
-			{
-				if (static_cast<std::uint8_t>(level) >= static_cast<std::uint8_t>(output->lowerAcceptedLevel))
+				const std::scoped_lock lock(_mutex);
+				if (_consoleMuted == false)
 				{
-					writeRecord(output->stream, level, message);
+					writeRecord(std::clog, level, location, message);
+				}
+				for (auto &output : _outputs)
+				{
+					if (static_cast<std::uint8_t>(level) >= static_cast<std::uint8_t>(output->lowerAcceptedLevel))
+					{
+						writeRecord(output->stream, level, location, message);
+					}
 				}
 			}
+			_onEntryContractProvider.trigger(level, message);
 		} catch (...)
 		{
 		}
@@ -277,10 +291,11 @@ namespace spk
 	void Logger::_dispatch() noexcept
 	{
 		Level level;
+		std::source_location location;
 		std::string message;
-		if (_extractRecord(level, message))
+		if (_extractRecord(level, location, message) == true)
 		{
-			_publishRecord(level, message);
+			_publishRecord(level, location, message);
 		}
 	}
 
