@@ -251,7 +251,7 @@ TEST(CommandParserTest, AcceptsPolymorphicCommandImplementation)
 {
 	spk::CommandParser parser;
 	std::vector<std::string> received;
-	parser.addCommand(std::make_unique<RecordingCommand>(received));
+	parser.addCommand<RecordingCommand>(received);
 
 	EXPECT_EQ(parser.execute("/custom payload").status, spk::CommandParser::Status::Accepted);
 	EXPECT_EQ(received, (std::vector<std::string>{"payload"}));
@@ -259,23 +259,14 @@ TEST(CommandParserTest, AcceptsPolymorphicCommandImplementation)
 	EXPECT_NE(parser.help("custom").find("--value"), std::string::npos);
 }
 
-TEST(CommandParserTest, RejectsNullPolymorphicCommand)
-{
-	spk::CommandParser parser;
-	EXPECT_THROW(
-		parser.addCommand(std::unique_ptr<spk::CommandParser::Command>{}),
-		spk::Exception);
-}
-
-
 TEST(CommandParserTest, RejectsDuplicatePolymorphicCommandName)
 {
 	spk::CommandParser parser;
 	std::vector<std::string> first;
 	std::vector<std::string> second;
-	parser.addCommand(std::make_unique<RecordingCommand>(first));
+	parser.addCommand<RecordingCommand>(first);
 
 	EXPECT_THROW(
-		parser.addCommand(std::make_unique<RecordingCommand>(second)),
+		parser.addCommand<RecordingCommand>(second),
 		spk::Exception);
 }

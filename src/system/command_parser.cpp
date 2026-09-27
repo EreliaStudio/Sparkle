@@ -129,7 +129,7 @@ namespace spk
 
 	void CommandParser::addCommand(LambdaCommandDefinition command)
 	{
-		addCommand(
+		_addCommand(
 			std::make_unique<LambdaCommand>(
 				std::move(command.name),
 				std::move(command.description),
@@ -137,7 +137,7 @@ namespace spk
 				std::move(command.callback)));
 	}
 
-	void CommandParser::addCommand(std::unique_ptr<Command> command)
+	void CommandParser::_addCommand(std::unique_ptr<Command> command)
 	{
 		if (command == nullptr)
 		{

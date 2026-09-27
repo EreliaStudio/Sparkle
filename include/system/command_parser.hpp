@@ -1,11 +1,13 @@
 #pragma once
 
+#include <concepts>
 #include <cstddef>
 #include <functional>
 #include <memory>
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace spk
@@ -106,10 +108,19 @@ namespace spk
 		[[nodiscard]] static std::vector<std::string> _splitValues(const std::string &value);
 		[[nodiscard]] const Parameter *_parameter(const Command &command, const std::string &name) const noexcept;
 		static void _validateParameters(const std::vector<Parameter> &parameters);
+		void _addCommand(std::unique_ptr<Command> command);
 
 	public:
 		void addCommand(LambdaCommandDefinition command);
-		void addCommand(std::unique_ptr<Command> command);
+
+		template <typename TCommandType, typename... TArgs>
+			requires std::derived_from<TCommandType, Command>
+		void addCommand(TArgs &&...args)
+		{
+			_addCommand(
+				std::make_unique<TCommandType>(
+					std::forward<TArgs>(args)...));
+		}
 		[[nodiscard]] Result execute(const std::string &input) const;
 		[[nodiscard]] std::string help() const;
 		[[nodiscard]] std::string help(const std::string &command) const;
