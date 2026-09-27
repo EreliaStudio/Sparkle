@@ -251,8 +251,9 @@ TEST(CommandParserTest, AcceptsPolymorphicCommandImplementation)
 {
 	spk::CommandParser parser;
 	std::vector<std::string> received;
-	parser.addCommand<RecordingCommand>(received);
+	RecordingCommand &command = parser.addCommand<RecordingCommand>(received);
 
+	EXPECT_EQ(command.name(), "custom");
 	EXPECT_EQ(parser.execute("/custom payload").status, spk::CommandParser::Status::Accepted);
 	EXPECT_EQ(received, (std::vector<std::string>{"payload"}));
 	EXPECT_NE(parser.help().find("/custom - Polymorphic command"), std::string::npos);

@@ -115,11 +115,13 @@ namespace spk
 
 		template <typename TCommandType, typename... TArgs>
 			requires std::derived_from<TCommandType, Command>
-		void addCommand(TArgs &&...args)
+		TCommandType &addCommand(TArgs &&...args)
 		{
-			_addCommand(
-				std::make_unique<TCommandType>(
-					std::forward<TArgs>(args)...));
+			auto command = std::make_unique<TCommandType>(
+				std::forward<TArgs>(args)...);
+			TCommandType &result = *command;
+			_addCommand(std::move(command));
+			return result;
 		}
 		[[nodiscard]] Result execute(const std::string &input) const;
 		[[nodiscard]] std::string help() const;
