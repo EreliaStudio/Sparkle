@@ -287,3 +287,28 @@ TEST(TextModelDelegateTest, PresentationSettingsAndInvalidItemsHaveDefinedBehavi
 	EXPECT_THROW(delegate.bindItem(parent, model, 0, false), std::invalid_argument);
 	EXPECT_THROW(delegate.bindItem(*item, model, 2, false), std::out_of_range);
 }
+
+
+TEST(DataModelViewTest, ReportsVisibleRowsAndTail)
+{
+	Model model{1, 2, 3, 4, 5};
+	Delegate delegate;
+	View view("View", &model);
+	view.setGeometry({.anchor = {0, 0}, .size = {100, 40}});
+	view.setDelegate(&delegate);
+
+	EXPECT_TRUE(view.isRowVisible(0));
+	EXPECT_TRUE(view.isRowVisible(1));
+	EXPECT_FALSE(view.isRowVisible(2));
+	EXPECT_FALSE(view.isLastRowVisible());
+
+	view.scrollTo(4);
+	EXPECT_FALSE(view.isRowVisible(0));
+	EXPECT_TRUE(view.isRowVisible(4));
+	EXPECT_TRUE(view.isLastRowVisible());
+
+	EXPECT_THROW(view.isRowVisible(5), std::out_of_range);
+
+	model.clear();
+	EXPECT_FALSE(view.isLastRowVisible());
+}
