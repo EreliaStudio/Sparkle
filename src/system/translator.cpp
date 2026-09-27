@@ -48,9 +48,19 @@ namespace spk
 		}
 
 		const std::unique_lock lock(_mutex);
+		for (const auto &[key, value] : translations)
+		{
+			(void)value;
+			if (_translations.contains(key) == true)
+			{
+				throw spk::Exception(
+					"Duplicate translation key: " + key);
+			}
+		}
+
 		for (auto &[key, value] : translations)
 		{
-			_translations.insert_or_assign(
+			_translations.emplace(
 				std::move(key),
 				std::move(value));
 		}
@@ -66,7 +76,13 @@ namespace spk
 		}
 
 		const std::unique_lock lock(_mutex);
-		_translations.insert_or_assign(
+		if (_translations.contains(key) == true)
+		{
+			throw spk::Exception(
+				"Duplicate translation key: " + key);
+		}
+
+		_translations.emplace(
 			std::move(key),
 			std::move(value));
 	}

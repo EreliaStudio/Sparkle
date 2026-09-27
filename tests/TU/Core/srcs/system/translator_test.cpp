@@ -78,15 +78,17 @@ TEST(TranslatorTest, DirectAppendSupportsDottedKeys)
 		"Stopped");
 }
 
-TEST(TranslatorTest, DirectAppendOverridesExistingTranslation)
+TEST(TranslatorTest, DirectAppendRejectsDuplicateKey)
 {
 	spk::Translator translator;
 	translator.append("message", "First");
-	translator.append("message", "Second");
 
+	EXPECT_THROW(
+		translator.append("message", "Second"),
+		spk::Exception);
 	EXPECT_EQ(
 		translator.translate("message"),
-		"Second");
+		"First");
 }
 
 TEST(TranslatorTest, FormatsSingleArgument)
@@ -210,7 +212,7 @@ TEST(TranslatorTest, JsonAppendPreservesExistingUnrelatedTranslations)
 		"File");
 }
 
-TEST(TranslatorTest, JsonAppendOverridesOnlyMatchingTranslations)
+TEST(TranslatorTest, JsonAppendRejectsDuplicateExistingKeyWithoutPartialAppend)
 {
 	const TemporaryTranslationFile file(
 		R"({"shared":"File","new":"New"})");
@@ -218,17 +220,19 @@ TEST(TranslatorTest, JsonAppendOverridesOnlyMatchingTranslations)
 	spk::Translator translator;
 	translator.append("shared", "Initial");
 	translator.append("preserved", "Preserved");
-	translator.append(file.path());
 
+	EXPECT_THROW(
+		translator.append(file.path()),
+		spk::Exception);
 	EXPECT_EQ(
 		translator.translate("shared"),
-		"File");
-	EXPECT_EQ(
-		translator.translate("new"),
-		"New");
+		"Initial");
 	EXPECT_EQ(
 		translator.translate("preserved"),
 		"Preserved");
+	EXPECT_THROW(
+		(void)translator.translate("new"),
+		spk::Exception);
 }
 
 TEST(TranslatorTest, EmptyJsonCatalogDoesNotChangeExistingTranslations)
@@ -244,12 +248,12 @@ TEST(TranslatorTest, EmptyJsonCatalogDoesNotChangeExistingTranslations)
 		"Existing");
 }
 
-TEST(TranslatorTest, MultipleJsonCatalogsAccumulateTranslations)
+TEST(TranslatorTest, MultipleJsonCatalogsAccumulateDistinctTranslations)
 {
 	const TemporaryTranslationFile first(
-		R"({"first":"First","shared":"First shared"})");
+		R"({"first":"First","shared":"Shared"})");
 	const TemporaryTranslationFile second(
-		R"({"second":"Second","shared":"Second shared"})");
+		R"({"second":"Second"})");
 
 	spk::Translator translator;
 	translator.append(first.path());
@@ -263,7 +267,31 @@ TEST(TranslatorTest, MultipleJsonCatalogsAccumulateTranslations)
 		"Second");
 	EXPECT_EQ(
 		translator.translate("shared"),
-		"Second shared");
+		"Shared");
+}
+
+TEST(TranslatorTest, MultipleJsonCatalogsRejectDuplicateKeysTransactionally)
+{
+	const TemporaryTranslationFile first(
+		R"({"first":"First","shared":"Shared"})");
+	const TemporaryTranslationFile second(
+		R"({"second":"Second","shared":"Duplicate"})");
+
+	spk::Translator translator;
+	translator.append(first.path());
+
+	EXPECT_THROW(
+		translator.append(second.path()),
+		spk::Exception);
+	EXPECT_EQ(
+		translator.translate("first"),
+		"First");
+	EXPECT_EQ(
+		translator.translate("shared"),
+		"Shared");
+	EXPECT_THROW(
+		(void)translator.translate("second"),
+		spk::Exception);
 }
 
 TEST(TranslatorTest, JsonCatalogSupportsUtf8Text)
@@ -452,10 +480,10 @@ TEST(TranslatorTest, RejectsMissingFormatArguments)
 		spk::Exception);
 }
 
-TEST(TranslatorTest, ConcurrentTranslationAndReplacementRemainValid)
+TEST(TranslatorTest, ConcurrentTranslationAndDistinctAppendRemainValid)
 {
 	spk::Translator translator;
-	translator.append("message", "A {}");
+	translator.append("message", "Value {}");
 
 	std::atomic_bool valid = true;
 
@@ -463,8 +491,8 @@ TEST(TranslatorTest, ConcurrentTranslationAndReplacementRemainValid)
 		for (std::size_t index = 0; index < 2'000; ++index)
 		{
 			translator.append(
-				"message",
-				index % 2 == 0 ? "A {}" : "B {}");
+				"dynamic." + std::to_string(index),
+				"Dynamic");
 		}
 	});
 
@@ -477,11 +505,9 @@ TEST(TranslatorTest, ConcurrentTranslationAndReplacementRemainValid)
 			{
 				try
 				{
-					const std::string value =
-						translator.translate("message", index);
 					if (
-						value.starts_with("A ") == false &&
-						value.starts_with("B ") == false)
+						translator.translate("message", index) !=
+						"Value " + std::to_string(index))
 					{
 						valid = false;
 						return;
