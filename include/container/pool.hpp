@@ -251,19 +251,21 @@ namespace spk
 	private:
 		std::shared_ptr<State> _state;
 
+		template <typename TElementType = Element>
 		[[nodiscard]] static Factory _defaultFactory()
-			requires std::default_initializable<Element>
+			requires std::default_initializable<TElementType>
 		{
 			return []() {
-				return new Element();
+				return new TElementType();
 			};
 		}
 
 	public:
-		Pool()
-			requires std::default_initializable<Element>
-			:
-			Pool(_defaultFactory())
+		template <typename TElementType = Element>
+			requires std::same_as<TElementType, Element> &&
+					 std::default_initializable<TElementType>
+		Pool() :
+			Pool(_defaultFactory<TElementType>())
 		{
 		}
 
