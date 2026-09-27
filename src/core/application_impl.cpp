@@ -180,15 +180,15 @@ namespace spk
 				continue;
 			}
 
-			{
-				const std::scoped_lock lock(_windowClosureMutex);
-				if (const auto found = _windowClosureTasks.find(iterator->first); found != _windowClosureTasks.end())
-				{
-					found->second.validate();
-					_windowClosureTasks.erase(found);
-				}
-			}
+			const Window::Identifier identifier = iterator->first;
 			iterator = _windows.erase(iterator);
+
+			const std::scoped_lock lock(_windowClosureMutex);
+			if (const auto found = _windowClosureTasks.find(identifier); found != _windowClosureTasks.end())
+			{
+				found->second.validate();
+				_windowClosureTasks.erase(found);
+			}
 		}
 	}
 
