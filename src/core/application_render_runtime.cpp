@@ -123,7 +123,6 @@ namespace spk
 		_destroySurface(object(request.windowIdentifier));
 		remove(request.windowIdentifier);
 		_renderSnapshotEnties.erase(request.windowIdentifier);
-		_platformRequestProducer.publish(NativeDeletionRequest{.windowIdentifier = request.windowIdentifier});
 	
 		request.task->validate();
 	}
