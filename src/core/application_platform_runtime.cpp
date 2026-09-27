@@ -97,23 +97,29 @@ namespace spk
 		append(request.windowIdentifier, request.native);
 		_createNative(request);
 		_renderRequestProducer.publish(SurfaceCreationRequest{.windowIdentifier = request.windowIdentifier, .native = request.native});
+	
+		request.task->validate();
 	}
 
 	void Application::PlatformRuntime::_consume(const NativeDeletionRequest &request)
 	{
 		if (!contains(request.windowIdentifier))
 		{
+			request.task->validate();
 			return;
 		}
 		_mouseInsideWindows.erase(request.windowIdentifier);
 		_destroyNative(object(request.windowIdentifier));
 		remove(request.windowIdentifier);
+	
+		request.task->validate();
 	}
 
 	void Application::PlatformRuntime::_consume(const MousePositionRequest &request)
 	{
 		if (!contains(request.windowIdentifier))
 		{
+			request.task->validate();
 			return;
 		}
 
@@ -127,6 +133,8 @@ namespace spk
 		{
 			throw std::system_error(static_cast<int>(::GetLastError()), std::system_category(), "SetCursorPos");
 		}
+	
+		request.task->validate();
 	}
 
 	void Application::PlatformRuntime::_consumeRequests()
