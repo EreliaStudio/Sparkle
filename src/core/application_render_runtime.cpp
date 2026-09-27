@@ -121,9 +121,7 @@ namespace spk
 				if (surfaceDeletionAnswer.status() == Task<void>::Status::Completed)
 				{
 					_platformRequestProducer.publish(
-						NativeDeletionRequest{
-							.task = nativeDeletionTask,
-							.windowIdentifier = identifier});
+						NativeDeletionRequest{.windowIdentifier = identifier, .task = nativeDeletionTask});
 				}
 			});
 
