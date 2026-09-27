@@ -307,7 +307,7 @@ TEST(DataModelViewTest, ReportsVisibleRowsAndTail)
 	EXPECT_TRUE(view.isRowVisible(4));
 	EXPECT_TRUE(view.isLastRowVisible());
 
-	EXPECT_THROW(view.isRowVisible(5), std::out_of_range);
+	EXPECT_THROW(static_cast<void>(view.isRowVisible(5)), std::out_of_range);
 
 	model.clear();
 	EXPECT_FALSE(view.isLastRowVisible());
