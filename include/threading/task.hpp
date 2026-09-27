@@ -17,9 +17,9 @@ namespace spk
 	class Task;
 
 	template <typename TResult>
-		requires std::movable<TResult>
 	class Task
 	{
+		static_assert(std::movable<TResult>);
 	public:
 		enum class Status
 		{
