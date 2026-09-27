@@ -105,6 +105,22 @@ namespace spk
 		return LevelSetter{level};
 	}
 
+	Logger &Logger::beginRecord(
+		Level level,
+		std::source_location location) noexcept
+	{
+		try
+		{
+			_threadState.stack.emplace_back();
+			Composition &composition = _threadState.stack.back();
+			composition.level = level;
+			composition.location = location;
+		} catch (...)
+		{
+		}
+		return *this;
+	}
+
 	void Logger::_ensureOutputPathAvailable(const std::filesystem::path &path) const
 	{
 		const auto duplicate = std::find_if(_outputs.begin(), _outputs.end(), [&](const auto &output) {
@@ -190,7 +206,7 @@ namespace spk
 
 	Logger &Logger::operator<<(LevelSetter setter) noexcept
 	{
-		_threadState.level = setter.level;
+		_threadState.current().level = setter.level;
 		return *this;
 	}
 
@@ -201,7 +217,7 @@ namespace spk
 
 	Logger &Logger::setSourceLocation(std::source_location location) noexcept
 	{
-		_threadState.location = location;
+		_threadState.current().location = location;
 		return *this;
 	}
 
@@ -216,7 +232,7 @@ namespace spk
 		}
 		try
 		{
-			manipulator(_threadState.stream);
+			manipulator(_threadState.current().stream);
 		} catch (...)
 		{
 		}
@@ -227,7 +243,7 @@ namespace spk
 	{
 		try
 		{
-			manipulator(_threadState.stream);
+			manipulator(_threadState.current().stream);
 		} catch (...)
 		{
 		}
@@ -238,7 +254,7 @@ namespace spk
 	{
 		try
 		{
-			manipulator(_threadState.stream);
+			manipulator(_threadState.current().stream);
 		} catch (...)
 		{
 		}
@@ -249,13 +265,22 @@ namespace spk
 	{
 		try
 		{
-			level = _threadState.level;
-			location = _threadState.location;
-			message = _threadState.stream.str();
-			_threadState.stream.str({});
-			_threadState.stream.clear();
-			_threadState.level = Level::Info;
-			_threadState.location = {};
+			Composition &composition = _threadState.current();
+			level = composition.level;
+			location = composition.location;
+			message = composition.stream.str();
+
+			if (_threadState.stack.empty() == false)
+			{
+				_threadState.stack.pop_back();
+			}
+			else
+			{
+				composition.stream.str({});
+				composition.stream.clear();
+				composition.level = Level::Info;
+				composition.location = {};
+			}
 			return true;
 		} catch (...)
 		{

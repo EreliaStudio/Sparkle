@@ -142,3 +142,58 @@ TEST(LoggerStreamTest, StreamInsertionFailureNeverEscapes)
 	EXPECT_NO_THROW(
 		spk::logger << "before" << ThrowingValue{} << "after" << std::endl);
 }
+
+
+TEST(LoggerStreamTest, NestedRecordResumesOuterComposition)
+{
+	ConsoleMute mute;
+	std::vector<std::pair<spk::Logger::Level, std::string>> entries;
+	auto contract = spk::logger.subscribeToEntry(
+		[&](const spk::Logger::Level &level, const std::string &message) {
+			entries.emplace_back(level, message);
+		});
+
+	SPK_LOG(Info)
+		<< "outer-before "
+		<< [&]() {
+			SPK_LOG(Warning) << "nested" << std::endl;
+			return "middle";
+		}()
+		<< " outer-after"
+		<< std::endl;
+
+	ASSERT_EQ(entries.size(), 2u);
+	EXPECT_EQ(entries[0].first, spk::Logger::Level::Warning);
+	EXPECT_EQ(entries[0].second, "nested");
+	EXPECT_EQ(entries[1].first, spk::Logger::Level::Info);
+	EXPECT_EQ(entries[1].second, "outer-before middle outer-after");
+}
+
+TEST(LoggerStreamTest, MultipleNestedRecordsResumeInStackOrder)
+{
+	ConsoleMute mute;
+	std::vector<std::string> entries;
+	auto contract = spk::logger.subscribeToEntry(
+		[&](const spk::Logger::Level &, const std::string &message) {
+			entries.emplace_back(message);
+		});
+
+	SPK_LOG(Info)
+		<< "outer "
+		<< [&]() {
+			SPK_LOG(Warning)
+				<< "middle "
+				<< [&]() {
+					SPK_LOG(Error) << "inner" << std::endl;
+					return "continued";
+				}()
+				<< std::endl;
+			return "finished";
+		}()
+		<< std::endl;
+
+	ASSERT_EQ(entries.size(), 3u);
+	EXPECT_EQ(entries[0], "inner");
+	EXPECT_EQ(entries[1], "middle continued");
+	EXPECT_EQ(entries[2], "outer finished");
+}

@@ -1,5 +1,6 @@
 #include <system/translator.hpp>
 
+#include <diagnostics/logger.hpp>
 #include <exception.hpp>
 #include <gtest/gtest.h>
 #include <type/uuid.hpp>
@@ -230,9 +231,9 @@ TEST(TranslatorTest, JsonAppendRejectsDuplicateExistingKeyWithoutPartialAppend)
 	EXPECT_EQ(
 		translator.translate("preserved"),
 		"Preserved");
-	EXPECT_THROW(
-		(void)translator.translate("new"),
-		spk::Exception);
+	EXPECT_EQ(
+		translator.translate("new"),
+		"new");
 }
 
 TEST(TranslatorTest, EmptyJsonCatalogDoesNotChangeExistingTranslations)
@@ -289,9 +290,9 @@ TEST(TranslatorTest, MultipleJsonCatalogsRejectDuplicateKeysTransactionally)
 	EXPECT_EQ(
 		translator.translate("shared"),
 		"Shared");
-	EXPECT_THROW(
-		(void)translator.translate("second"),
-		spk::Exception);
+	EXPECT_EQ(
+		translator.translate("second"),
+		"second");
 }
 
 TEST(TranslatorTest, JsonCatalogSupportsUtf8Text)
@@ -307,7 +308,7 @@ TEST(TranslatorTest, JsonCatalogSupportsUtf8Text)
 		"Connexion échouée — réessayez");
 }
 
-TEST(TranslatorTest, ClearRemovesAllTranslations)
+TEST(TranslatorTest, ClearFallsBackToKeys)
 {
 	spk::Translator translator;
 	translator.append("first", "First");
@@ -315,12 +316,12 @@ TEST(TranslatorTest, ClearRemovesAllTranslations)
 
 	translator.clear();
 
-	EXPECT_THROW(
-		(void)translator.translate("first"),
-		spk::Exception);
-	EXPECT_THROW(
-		(void)translator.translate("second"),
-		spk::Exception);
+	EXPECT_EQ(
+		translator.translate("first"),
+		"first");
+	EXPECT_EQ(
+		translator.translate("second"),
+		"second");
 }
 
 TEST(TranslatorTest, TranslatorCanBeReusedAfterClear)
@@ -362,9 +363,9 @@ TEST(TranslatorTest, RejectsEmptyJsonKeyWithoutPartiallyAppending)
 	EXPECT_EQ(
 		translator.translate("existing"),
 		"Existing");
-	EXPECT_THROW(
-		(void)translator.translate("valid"),
-		spk::Exception);
+	EXPECT_EQ(
+		translator.translate("valid"),
+		"valid");
 }
 
 TEST(TranslatorTest, RejectsNonObjectJsonRoot)
@@ -408,9 +409,9 @@ TEST(TranslatorTest, RejectsNonStringJsonValuesWithoutPartiallyAppending)
 		EXPECT_EQ(
 			translator.translate("existing"),
 			"Existing");
-		EXPECT_THROW(
-			(void)translator.translate("valid"),
-			spk::Exception);
+		EXPECT_EQ(
+			translator.translate("valid"),
+			"valid");
 	}
 }
 
@@ -449,13 +450,22 @@ TEST(TranslatorTest, RejectsMissingJsonFileWithoutChangingExistingTranslations)
 		"Existing");
 }
 
-TEST(TranslatorTest, RejectsUnknownKey)
+TEST(TranslatorTest, UnknownKeyReturnsKeyAndLogsWarning)
 {
 	spk::Translator translator;
+	std::vector<std::pair<spk::Logger::Level, std::string>> entries;
+	auto contract = spk::logger.subscribeToEntry(
+		[&](const spk::Logger::Level &level, const std::string &message) {
+			entries.emplace_back(level, message);
+		});
 
-	EXPECT_THROW(
-		(void)translator.translate("unknown"),
-		spk::Exception);
+	EXPECT_EQ(
+		translator.translate("unknown"),
+		"unknown");
+
+	ASSERT_FALSE(entries.empty());
+	EXPECT_EQ(entries.back().first, spk::Logger::Level::Warning);
+	EXPECT_EQ(entries.back().second, "Missing translation key: unknown");
 }
 
 TEST(TranslatorTest, RejectsMalformedFormatString)
@@ -529,4 +539,35 @@ TEST(TranslatorTest, ConcurrentTranslationAndDistinctAppendRemainValid)
 	}
 
 	EXPECT_TRUE(valid.load());
+}
+
+
+TEST(TranslatorTest, MissingTranslationLogDoesNotCorruptOuterLogComposition)
+{
+	spk::Translator translator;
+	std::vector<std::pair<spk::Logger::Level, std::string>> entries;
+	auto contract = spk::logger.subscribeToEntry(
+		[&](const spk::Logger::Level &level, const std::string &message) {
+			entries.emplace_back(level, message);
+		});
+
+	SPK_LOG(Error)
+		<< "before "
+		<< translator.translate("missing.translation")
+		<< " after"
+		<< std::endl;
+
+	ASSERT_GE(entries.size(), 2u);
+	EXPECT_EQ(
+		entries[entries.size() - 2].first,
+		spk::Logger::Level::Warning);
+	EXPECT_EQ(
+		entries[entries.size() - 2].second,
+		"Missing translation key: missing.translation");
+	EXPECT_EQ(
+		entries.back().first,
+		spk::Logger::Level::Error);
+	EXPECT_EQ(
+		entries.back().second,
+		"before missing.translation after");
 }

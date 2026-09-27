@@ -68,11 +68,22 @@ namespace spk
 		using IOSBaseManipulator = std::ios_base &(*)(std::ios_base &);
 
 		struct FileOutput;
-		struct ThreadState
+		struct Composition
 		{
 			Level level = Level::Info;
 			std::source_location location;
 			std::ostringstream stream;
+		};
+
+		struct ThreadState
+		{
+			Composition direct;
+			std::vector<Composition> stack;
+
+			[[nodiscard]] Composition &current() noexcept
+			{
+				return stack.empty() == true ? direct : stack.back();
+			}
 		};
 
 		std::mutex _mutex;
@@ -104,6 +115,7 @@ namespace spk
 
 		[[nodiscard]] static Logger &instance() noexcept;
 		[[nodiscard]] static LevelSetter setLevel(Level level) noexcept;
+		Logger &beginRecord(Level level, std::source_location location) noexcept;
 		Logger &setSourceLocation(std::source_location location) noexcept;
 
 		[[nodiscard]] Output addOutput(const std::filesystem::path &path, Level lowerAcceptedLevel);
@@ -123,7 +135,7 @@ namespace spk
 		{
 			try
 			{
-				_threadState.stream << std::forward<TType>(value);
+				_threadState.current().stream << std::forward<TType>(value);
 			} catch (...)
 			{
 			}
@@ -135,4 +147,4 @@ namespace spk
 }
 
 #define SPK_LOG(level) \
-	(::spk::logger.setSourceLocation(std::source_location::current()) << ::spk::Logger::setLevel(::spk::Logger::Level::level))
+	(::spk::logger.beginRecord(::spk::Logger::Level::level, std::source_location::current()))

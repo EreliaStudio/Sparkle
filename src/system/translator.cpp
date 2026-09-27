@@ -1,6 +1,7 @@
 #include <system/translator.hpp>
 
 #include <container/json/reader.hpp>
+#include <diagnostics/logger.hpp>
 #include <exception.hpp>
 
 #include <exception>
@@ -98,16 +99,27 @@ namespace spk
 		std::format_args arguments) const
 	{
 		std::string format;
+		bool missing = false;
 		{
 			const std::shared_lock lock(_mutex);
 			const auto iterator = _translations.find(key);
 			if (iterator == _translations.end())
 			{
-				throw spk::Exception(
-					"Unknown translation key: " + key);
+				missing = true;
 			}
+			else
+			{
+				format = iterator->second;
+			}
+		}
 
-			format = iterator->second;
+		if (missing == true)
+		{
+			SPK_LOG(Warning)
+				<< "Missing translation key: "
+				<< key
+				<< std::endl;
+			return key;
 		}
 
 		try
