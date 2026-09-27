@@ -48,8 +48,10 @@ namespace spk
 			_platformWakeEvent,
 			std::move(channels.platformRequests.consumer),
 			std::move(channels.eventRecords.producer),
-			std::move(channels.updateRequests.producer),
-			std::move(channels.renderRequests.producer)),
+			std::move(channels.renderRequests.producer),
+			[this](const Window::Identifier &identifier) {
+				static_cast<void>(_requestWindowClosure(identifier));
+			}),
 		_updater(
 			_platformWakeEvent,
 			channels.platformRequests.producer,

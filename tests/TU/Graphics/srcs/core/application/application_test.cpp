@@ -87,6 +87,10 @@ namespace
 			spk::Widget(std::move(name), parent),
 			_onRender(std::move(onRender))
 		{
+			if (parent != nullptr)
+			{
+				setGeometry(parent->geometry());
+			}
 			activate();
 		}
 	};

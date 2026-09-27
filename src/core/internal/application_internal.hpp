@@ -8,6 +8,7 @@
 #include <atomic>
 #include <chrono>
 #include <exception>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -184,6 +185,7 @@ namespace spk
 	{
 	private:
 		using MessageResult = std::optional<LRESULT>;
+		using ClosureRequest = std::function<void(const Window::Identifier &)>;
 		static constexpr std::string_view ClassIdentifier = "sparkle.class";
 
 		WinAPI::Window::Class _windowClass;
@@ -191,8 +193,8 @@ namespace spk
 		std::unordered_set<Window::Identifier> _mouseInsideWindows;
 		spk::ThreadSafeFIFO<PlatformRequest>::Consumer _platformRequestConsumer;
 		spk::ThreadSafeFIFO<EventRecord>::Producer _eventRecordProducer;
-		spk::ThreadSafeFIFO<UpdateRequest>::Producer _updateRequestProducer;
 		spk::ThreadSafeFIFO<RenderRequest>::Producer _renderRequestProducer;
+		ClosureRequest _closureRequest;
 
 		void _createNative(const NativeRegistrationRequest &request);
 		void _destroyNative(Window::Native &native);
@@ -237,8 +239,8 @@ namespace spk
 			WinAPI::WakeEvent &wakeEvent,
 			spk::ThreadSafeFIFO<PlatformRequest>::Consumer platformRequestConsumer,
 			spk::ThreadSafeFIFO<EventRecord>::Producer eventRecordProducer,
-			spk::ThreadSafeFIFO<UpdateRequest>::Producer updateRequestProducer,
-			spk::ThreadSafeFIFO<RenderRequest>::Producer renderRequestProducer);
+			spk::ThreadSafeFIFO<RenderRequest>::Producer renderRequestProducer,
+			ClosureRequest closureRequest);
 
 		void waitForActivity()
 		{

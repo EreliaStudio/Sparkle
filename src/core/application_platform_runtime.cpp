@@ -13,15 +13,15 @@ namespace spk
 		WinAPI::WakeEvent &wakeEvent,
 		spk::ThreadSafeFIFO<PlatformRequest>::Consumer platformRequestConsumer,
 		spk::ThreadSafeFIFO<EventRecord>::Producer eventRecordProducer,
-		spk::ThreadSafeFIFO<UpdateRequest>::Producer updateRequestProducer,
-		spk::ThreadSafeFIFO<RenderRequest>::Producer renderRequestProducer) :
+		spk::ThreadSafeFIFO<RenderRequest>::Producer renderRequestProducer,
+		ClosureRequest closureRequest) :
 		Runtime("platform"),
 		_wakeEvent(wakeEvent),
 		_windowClass(std::string(ClassIdentifier)),
 		_platformRequestConsumer(std::move(platformRequestConsumer)),
 		_eventRecordProducer(std::move(eventRecordProducer)),
-		_updateRequestProducer(std::move(updateRequestProducer)),
-		_renderRequestProducer(std::move(renderRequestProducer))
+		_renderRequestProducer(std::move(renderRequestProducer)),
+		_closureRequest(std::move(closureRequest))
 	{
 	}
 
@@ -370,9 +370,7 @@ namespace spk
 		{
 			return;
 		}
-		native.beginRelease();
-		_updateRequestProducer.publish(StateDeletionRequest{.windowIdentifier = identifier});
-		_renderRequestProducer.publish(SurfaceDeletionRequest{.windowIdentifier = identifier});
+		_closureRequest(identifier);
 	}
 
 	void Application::PlatformRuntime::release(Window::Native &native)
