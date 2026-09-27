@@ -139,6 +139,44 @@ TEST(ApplicationTest, WindowLookupProvidesMutableAndConstAccess)
 	EXPECT_EQ(application.run(), EXIT_SUCCESS);
 }
 
+
+TEST(ApplicationTest, CreatedWindowRootUsesConfiguredClientSizeBeforeRun)
+{
+	spk::Application application;
+	spk::Window::Configuration configuration = offscreenConfiguration("initial geometry");
+	configuration.area.size = {320, 240};
+
+	spk::Window &window = application.createWindow("initial-geometry", configuration);
+
+	EXPECT_EQ(
+		window.root().geometry(),
+		(spk::Rect2D{
+			.anchor = {0, 0},
+			.size = {320, 240}}));
+
+	application.closeWindow("initial-geometry");
+	application.quit();
+	EXPECT_EQ(application.run(), EXIT_SUCCESS);
+}
+
+TEST(ApplicationTest, ChildCreatedBeforeRunUsesInitializedRootGeometry)
+{
+	spk::Application application;
+	spk::Window::Configuration configuration = offscreenConfiguration("initialized child");
+	configuration.area.size = {320, 240};
+
+	spk::Window &window = application.createWindow("initialized-child", configuration);
+	ApplicationProbeWidget child("child", &window.root());
+	child.setGeometry(window.root().geometry());
+
+	EXPECT_EQ(child.geometry().size, spk::Vector2UInt(320, 240));
+	EXPECT_EQ(child.viewRegion().viewport.size, spk::Vector2UInt(320, 240));
+
+	application.closeWindow("initialized-child");
+	application.quit();
+	EXPECT_EQ(application.run(), EXIT_SUCCESS);
+}
+
 TEST(ApplicationTest, DuplicateWindowIdentifierThrowsLogicError)
 {
 	spk::Application application;
