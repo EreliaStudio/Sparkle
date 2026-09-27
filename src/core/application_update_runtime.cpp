@@ -293,12 +293,15 @@ namespace spk
 		request.state->setBackgroundColor(request.backgroundColor);
 		_registerSnapshotProducer(request.windowIdentifier, request.renderSnapshotProducer, request.isRequested);
 		request.state->markReady();
+	
+		request.task->validate();
 	}
 
 	void Application::UpdateRuntime::_consume(const StateDeletionRequest &request)
 	{
 		if (!contains(request.windowIdentifier))
 		{
+			request.task->validate();
 			return;
 		}
 		auto &state = object(request.windowIdentifier);
@@ -306,6 +309,8 @@ namespace spk
 		_renderSnapshotEntries.erase(request.windowIdentifier);
 		remove(request.windowIdentifier);
 		_wakeEvent.notify();
+	
+		request.task->validate();
 	}
 
 	void Application::UpdateRuntime::_consumeEvents()
