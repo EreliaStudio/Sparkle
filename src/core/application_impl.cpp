@@ -159,6 +159,11 @@ namespace spk
 		_windowClosureOperations.emplace(identifier, std::move(operation));
 
 
+		stored.surfaceContract.emplace(
+			stored.surfaceDeletion->answer().subscribeToCompletion(
+				[this, identifier] {
+					_completeWindowClosure(identifier);
+				}));
 		stored.stateContract.emplace(
 			stored.stateDeletion->answer().subscribeToCompletion(
 				[this, identifier] {
