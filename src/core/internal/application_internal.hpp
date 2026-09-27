@@ -17,6 +17,7 @@
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 #include "container/thread_safe_fifo.hpp"
 #include "container/thread_safe_slot.hpp"
