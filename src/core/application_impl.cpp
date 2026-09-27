@@ -251,7 +251,11 @@ namespace spk
 
 	void Application::Impl::closeWindow(const Window::Identifier &identifier)
 	{
-		static_cast<void>(window(identifier));
+		Window &target = window(identifier);
+		if (target.isClosing() == true || target.isClosed() == true)
+		{
+			return;
+		}
 		_requestWindowClosure(identifier);
 	}
 
