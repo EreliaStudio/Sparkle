@@ -194,6 +194,10 @@ namespace spk
 				invocation.parameters.emplace(parameter.name, parameter.defaultValues);
 				continue;
 			}
+			if (parameter.optional == true)
+			{
+				continue;
+			}
 			return {.status = Status::MissingParameter, .command = commandName, .parameter = parameter.name, .expectedValueCount = parameter.arity};
 		}
 
