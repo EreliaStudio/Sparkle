@@ -115,12 +115,16 @@ namespace spk
 
 	void Application::RenderRuntime::_consume(const SurfaceDeletionRequest &request)
 	{
-		auto nativeDeletionContract = request.task->answer().subscribeToCompletion(
-			[this, identifier = request.windowIdentifier, nativeDeletionTask = request.nativeDeletionTask] {
-				_platformRequestProducer.publish(
-					NativeDeletionRequest{
-						.task = nativeDeletionTask,
-						.windowIdentifier = identifier});
+		const Task<void>::Answer surfaceDeletionAnswer = request.task->answer();
+		auto nativeDeletionContract = surfaceDeletionAnswer.subscribeToCompletion(
+			[this, surfaceDeletionAnswer, identifier = request.windowIdentifier, nativeDeletionTask = request.nativeDeletionTask] {
+				if (surfaceDeletionAnswer.status() == Task<void>::Status::Completed)
+				{
+					_platformRequestProducer.publish(
+						NativeDeletionRequest{
+							.task = nativeDeletionTask,
+							.windowIdentifier = identifier});
+				}
 			});
 
 		if (contains(request.windowIdentifier) == true)
