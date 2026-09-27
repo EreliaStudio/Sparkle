@@ -158,36 +158,6 @@ namespace spk
 		WindowClosureOperation &stored = *operation;
 		_windowClosureOperations.emplace(identifier, std::move(operation));
 
-		stored.surfaceContract.emplace(
-			stored.surfaceDeletion->answer().subscribeToCompletion(
-				[this, identifier] {
-					std::shared_ptr<Task<void>> nativeDeletion;
-					{
-						const std::scoped_lock closureLock(_windowClosureMutex);
-						const auto found = _windowClosureOperations.find(identifier);
-						if (found == _windowClosureOperations.end())
-						{
-							return;
-						}
-						if (found->second->surfaceDeletion->answer().status() != Task<void>::Status::Completed)
-						{
-							nativeDeletion = nullptr;
-						}
-						else
-						{
-							nativeDeletion = found->second->nativeDeletion;
-						}
-					}
-					if (nativeDeletion == nullptr)
-					{
-						_completeWindowClosure(identifier);
-						return;
-					}
-					_platformRequestProducer.publish(
-						NativeDeletionRequest{
-							.task = std::move(nativeDeletion),
-							.windowIdentifier = identifier});
-				}));
 
 		stored.stateContract.emplace(
 			stored.stateDeletion->answer().subscribeToCompletion(
@@ -211,6 +181,7 @@ namespace spk
 		_renderRequestProducer.publish(
 			SurfaceDeletionRequest{
 				.task = std::move(surfaceDeletion),
+				.nativeDeletionTask = stored.nativeDeletion,
 				.windowIdentifier = identifier});
 		return answer;
 	}
