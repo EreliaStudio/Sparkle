@@ -71,20 +71,29 @@ namespace
 
 TEST(WidgetTest, GeometrySetAndResizeNotifyExactlyOncePerChangedWidget)
 {
-	Probe root("Root", nullptr), child("Child", &root);
+	Probe root("Root", nullptr), child("Child", &root), grandchild("Grandchild", &child);
 	root.setGeometry({.anchor = {0, 0}, .size = {100, 80}});
 	child.setGeometry({.anchor = {10, 20}, .size = {50, 40}});
+	grandchild.setGeometry({.anchor = {5, 10}, .size = {25, 20}});
 
 	EXPECT_EQ(root.geometryChanges, 1);
 	EXPECT_EQ(child.geometryChanges, 1);
+	EXPECT_EQ(grandchild.geometryChanges, 1);
 
 	root.setGeometry({.anchor = {5, 7}, .size = {120, 90}}, false);
 	EXPECT_EQ(root.geometryChanges, 1);
+	EXPECT_EQ(child.geometryChanges, 1);
+	EXPECT_EQ(grandchild.geometryChanges, 1);
 	EXPECT_EQ(root.geometry(), (spk::Rect2D{.anchor = {5, 7}, .size = {120, 90}}));
+	EXPECT_EQ(child.geometry(), (spk::Rect2D{.anchor = {10, 20}, .size = {50, 40}}));
+	EXPECT_EQ(grandchild.geometry(), (spk::Rect2D{.anchor = {5, 10}, .size = {25, 20}}));
 
 	root.resize({.anchor = {5, 7}, .size = {240, 180}});
 	EXPECT_EQ(root.geometryChanges, 2);
 	EXPECT_EQ(child.geometryChanges, 2);
+	EXPECT_EQ(grandchild.geometryChanges, 2);
+	EXPECT_EQ(child.geometry(), (spk::Rect2D{.anchor = {20, 40}, .size = {100, 80}}));
+	EXPECT_EQ(grandchild.geometry(), (spk::Rect2D{.anchor = {10, 20}, .size = {50, 40}}));
 }
 
 TEST(WidgetTest, HierarchyReparentingDestructionGeometryAndZCaches)
