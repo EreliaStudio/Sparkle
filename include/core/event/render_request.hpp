@@ -12,32 +12,33 @@ namespace spk
 {
 	struct SurfaceRegistrationRequest
 	{
-		std::shared_ptr<Task<void>> task = std::make_shared<Task<void>>();
 		Window::Identifier windowIdentifier;
 		std::shared_ptr<Window::Surface> surface;
 		spk::ThreadSafeSlot<spk::RenderSnapshot>::Consumer renderSnapshotConsumer;
 		std::shared_ptr<std::atomic_bool> isRequested;
+			std::shared_ptr<Task<void>> task = std::make_shared<Task<void>>();
 	};
 
 	struct SurfaceCreationRequest
 	{
-		std::shared_ptr<Task<void>> task = std::make_shared<Task<void>>();
 		Window::Identifier windowIdentifier;
 		std::weak_ptr<Window::Native> native;
+			std::shared_ptr<Task<void>> task = std::make_shared<Task<void>>();
 	};
 
 	struct SurfaceResizeRequest
 	{
-		std::shared_ptr<Task<void>> task = std::make_shared<Task<void>>();
 		Window::Identifier windowIdentifier;
 		spk::Vector2UInt newSize;
+			std::shared_ptr<Task<void>> task = std::make_shared<Task<void>>();
 	};
 
 	struct SurfaceDeletionRequest
 	{
+		Window::Identifier windowIdentifier;
+	
 		std::shared_ptr<Task<void>> task = std::make_shared<Task<void>>();
 		std::shared_ptr<Task<void>> nativeDeletionTask = std::make_shared<Task<void>>();
-		Window::Identifier windowIdentifier;
 	};
 
 	using RenderRequest = std::variant<
