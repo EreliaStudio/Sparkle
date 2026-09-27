@@ -159,7 +159,6 @@ TEST(CommandParserTest, RejectsInvalidRegistrations)
 		spk::Exception);
 }
 
-
 TEST(CommandParserTest, OmittedOptionalParameterIsAbsentFromInvocation)
 {
 	spk::CommandParser parser;
@@ -220,7 +219,11 @@ TEST(CommandParserTest, OptionalParameterWithDefaultStillReceivesDefault)
 	parser.addCommand({
 		.name = "optional",
 		.description = "Optional",
-		.parameters = {{.name = "value", .description = "Value", .defaultValues = {"default"}, .optional = true}},
+		.parameters = {{
+			.name = "value",
+			.description = "Value",
+			.defaultValues = {"default"},
+			.optional = true}},
 		.callback = [](const spk::CommandParser::Invocation &invocation) {
 			EXPECT_EQ(invocation.get("value"), (std::vector<std::string>{"default"}));
 		}});
