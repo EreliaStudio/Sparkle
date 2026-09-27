@@ -10,23 +10,23 @@ namespace spk
 {
 	struct NativeRegistrationRequest
 	{
-		std::shared_ptr<Task<void>> task = std::make_shared<Task<void>>();
 		Window::Identifier windowIdentifier;
 		Window::Configuration configuration;
 		std::shared_ptr<Window::Native> native;
+			std::shared_ptr<Task<void>> task = std::make_shared<Task<void>>();
 	};
 
 	struct NativeDeletionRequest
 	{
-		std::shared_ptr<Task<void>> task = std::make_shared<Task<void>>();
 		Window::Identifier windowIdentifier;
+			std::shared_ptr<Task<void>> task = std::make_shared<Task<void>>();
 	};
 
 	struct MousePositionRequest
 	{
-		std::shared_ptr<Task<void>> task = std::make_shared<Task<void>>();
 		Window::Identifier windowIdentifier;
 		spk::Vector2Int position;
+			std::shared_ptr<Task<void>> task = std::make_shared<Task<void>>();
 	};
 
 	using PlatformRequest = std::variant<NativeRegistrationRequest, NativeDeletionRequest, MousePositionRequest>;
