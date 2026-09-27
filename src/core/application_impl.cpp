@@ -146,19 +146,65 @@ namespace spk
 
 	Task<void>::Answer Application::Impl::_requestWindowClosure(const Window::Identifier &identifier)
 	{
-		const std::scoped_lock lock(_windowClosureMutex);
-		if (const auto found = _windowClosureTasks.find(identifier); found != _windowClosureTasks.end())
+		std::unique_lock lock(_windowClosureMutex);
+		if (const auto found = _windowClosureOperations.find(identifier); found != _windowClosureOperations.end())
 		{
-			return found->second.answer();
+			return found->second->task.answer();
 		}
 
 		static_cast<void>(window(identifier));
-		auto [task, inserted] = _windowClosureTasks.emplace(identifier, Task<void>{});
-		static_cast<void>(inserted);
-		Task<void>::Answer answer = task->second.answer();
+		auto operation = std::make_unique<WindowClosureOperation>();
+		Task<void>::Answer answer = operation->task.answer();
+		WindowClosureOperation &stored = *operation;
+		_windowClosureOperations.emplace(identifier, std::move(operation));
 
-		_updateRequestProducer.publish(StateDeletionRequest{.windowIdentifier = identifier});
-		_renderRequestProducer.publish(SurfaceDeletionRequest{.windowIdentifier = identifier});
+		stored.surfaceContract.emplace(
+			stored.surfaceDeletion->answer().subscribeToCompletion(
+				[this, identifier] {
+					std::shared_ptr<Task<void>> nativeDeletion;
+					{
+						const std::scoped_lock closureLock(_windowClosureMutex);
+						const auto found = _windowClosureOperations.find(identifier);
+						if (found == _windowClosureOperations.end())
+						{
+							return;
+						}
+						if (found->second->surfaceDeletion->answer().status() == Task<void>::Status::Failed)
+						{
+							_completeWindowClosure(identifier);
+							return;
+						}
+						nativeDeletion = found->second->nativeDeletion;
+					}
+					_platformRequestProducer.publish(
+						NativeDeletionRequest{
+							.task = std::move(nativeDeletion),
+							.windowIdentifier = identifier});
+				}));
+
+		stored.stateContract.emplace(
+			stored.stateDeletion->answer().subscribeToCompletion(
+				[this, identifier] {
+					_completeWindowClosure(identifier);
+				}));
+		stored.nativeContract.emplace(
+			stored.nativeDeletion->answer().subscribeToCompletion(
+				[this, identifier] {
+					_completeWindowClosure(identifier);
+				}));
+
+		auto stateDeletion = stored.stateDeletion;
+		auto surfaceDeletion = stored.surfaceDeletion;
+		lock.unlock();
+
+		_updateRequestProducer.publish(
+			StateDeletionRequest{
+				.task = std::move(stateDeletion),
+				.windowIdentifier = identifier});
+		_renderRequestProducer.publish(
+			SurfaceDeletionRequest{
+				.task = std::move(surfaceDeletion),
+				.windowIdentifier = identifier});
 		return answer;
 	}
 
@@ -170,24 +216,88 @@ namespace spk
 		}
 	}
 
-	void Application::Impl::_removeClosedWindows()
+	void Application::Impl::_completeWindowClosure(const Window::Identifier &identifier)
 	{
-		for (auto iterator = _windows.begin(); iterator != _windows.end();)
+		bool shouldWake = false;
 		{
-			if (iterator->second->isClosed() == false)
+			const std::scoped_lock lock(_windowClosureMutex);
+			const auto found = _windowClosureOperations.find(identifier);
+			if (found == _windowClosureOperations.end())
 			{
-				++iterator;
-				continue;
+				return;
 			}
 
-			const Window::Identifier identifier = iterator->first;
-			iterator = _windows.erase(iterator);
+			const Task<void>::Status stateStatus = found->second->stateDeletion->answer().status();
+			const Task<void>::Status surfaceStatus = found->second->surfaceDeletion->answer().status();
+			const Task<void>::Status nativeStatus = found->second->nativeDeletion->answer().status();
+			const bool failed =
+				stateStatus == Task<void>::Status::Failed ||
+				surfaceStatus == Task<void>::Status::Failed ||
+				nativeStatus == Task<void>::Status::Failed;
+			const bool completed =
+				stateStatus == Task<void>::Status::Completed &&
+				surfaceStatus == Task<void>::Status::Completed &&
+				nativeStatus == Task<void>::Status::Completed;
 
-			const std::scoped_lock lock(_windowClosureMutex);
-			if (const auto found = _windowClosureTasks.find(identifier); found != _windowClosureTasks.end())
+			if (failed == false && completed == false)
 			{
-				found->second.validate();
-				_windowClosureTasks.erase(found);
+				return;
+			}
+
+			if (std::find(_completedWindowClosures.begin(), _completedWindowClosures.end(), identifier) == _completedWindowClosures.end())
+			{
+				_completedWindowClosures.push_back(identifier);
+				shouldWake = true;
+			}
+		}
+		if (shouldWake == true)
+		{
+			_platformWakeEvent.notify();
+		}
+	}
+
+	void Application::Impl::_removeCompletedWindows()
+	{
+		std::vector<Window::Identifier> completed;
+		{
+			const std::scoped_lock lock(_windowClosureMutex);
+			completed.swap(_completedWindowClosures);
+		}
+
+		for (const Window::Identifier &identifier : completed)
+		{
+			std::unique_ptr<WindowClosureOperation> operation;
+			{
+				const std::scoped_lock lock(_windowClosureMutex);
+				const auto found = _windowClosureOperations.find(identifier);
+				if (found == _windowClosureOperations.end())
+				{
+					continue;
+				}
+				operation = std::move(found->second);
+				_windowClosureOperations.erase(found);
+			}
+
+			const auto failure = [&]() -> std::exception_ptr {
+				for (const auto &task : {operation->stateDeletion, operation->surfaceDeletion, operation->nativeDeletion})
+				{
+					const auto taskAnswer = task->answer();
+					if (taskAnswer.status() == Task<void>::Status::Failed)
+					{
+						return taskAnswer.failure();
+					}
+				}
+				return nullptr;
+			}();
+
+			_windows.erase(identifier);
+			if (failure != nullptr)
+			{
+				operation->task.fail(failure);
+			}
+			else
+			{
+				operation->task.validate();
 			}
 		}
 	}
@@ -225,7 +335,7 @@ namespace spk
 		while (!_stopSource.stop_requested())
 		{
 			_platform.executeOnce();
-			_removeClosedWindows();
+			_removeCompletedWindows();
 			_processApplicationState(closureRequested);
 			if (!_stopSource.stop_requested())
 			{
