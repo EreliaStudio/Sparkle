@@ -20,6 +20,7 @@ namespace spk
 	class Task
 	{
 		static_assert(std::movable<TResult>);
+
 	public:
 		enum class Status
 		{

@@ -144,7 +144,6 @@ TEST(ApplicationTest, WindowLookupProvidesMutableAndConstAccess)
 	EXPECT_EQ(application.run(), EXIT_SUCCESS);
 }
 
-
 TEST(ApplicationTest, CreatedWindowRootUsesConfiguredClientSizeBeforeRun)
 {
 	spk::Application application;

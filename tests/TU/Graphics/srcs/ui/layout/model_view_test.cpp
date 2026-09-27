@@ -288,7 +288,6 @@ TEST(TextModelDelegateTest, PresentationSettingsAndInvalidItemsHaveDefinedBehavi
 	EXPECT_THROW(delegate.bindItem(*item, model, 2, false), std::out_of_range);
 }
 
-
 TEST(DataModelViewTest, ReportsVisibleRowsAndTail)
 {
 	Model model{1, 2, 3, 4, 5};

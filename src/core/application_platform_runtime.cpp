@@ -121,7 +121,7 @@ namespace spk
 		_mouseInsideWindows.erase(request.windowIdentifier);
 		_destroyNative(object(request.windowIdentifier));
 		remove(request.windowIdentifier);
-	
+
 		request.task->validate();
 	}
 
@@ -143,7 +143,7 @@ namespace spk
 		{
 			throw std::system_error(static_cast<int>(::GetLastError()), std::system_category(), "SetCursorPos");
 		}
-	
+
 		request.task->validate();
 	}
 

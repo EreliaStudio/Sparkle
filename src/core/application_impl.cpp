@@ -160,7 +160,6 @@ namespace spk
 		WindowClosureOperation &stored = *operation;
 		_windowClosureOperations.emplace(identifier, std::move(operation));
 
-
 		stored.surfaceContract.emplace(
 			stored.surfaceDeletion->answer().subscribeToCompletion(
 				[this, identifier] {
@@ -352,9 +351,7 @@ namespace spk
 
 		auto native = std::make_shared<Window::Native>(identifier);
 		auto state = std::make_shared<Window::State>(identifier);
-		state->root().setGeometry(spk::Rect2D{
-			.anchor = {0, 0},
-			.size = configuration.area.size});
+		state->root().setGeometry(spk::Rect2D{.anchor = {0, 0}, .size = configuration.area.size});
 		auto surface = std::make_shared<Window::Surface>(identifier);
 		auto window = std::make_unique<Window>(native, state, surface);
 

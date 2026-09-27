@@ -292,7 +292,7 @@ namespace spk
 		request.state->setBackgroundColor(request.backgroundColor);
 		_registerSnapshotProducer(request.windowIdentifier, request.renderSnapshotProducer, request.isRequested);
 		request.state->markReady();
-	
+
 		request.task->validate();
 	}
 
@@ -307,7 +307,7 @@ namespace spk
 		release(state);
 		_renderSnapshotEntries.erase(request.windowIdentifier);
 		remove(request.windowIdentifier);
-	
+
 		request.task->validate();
 	}
 

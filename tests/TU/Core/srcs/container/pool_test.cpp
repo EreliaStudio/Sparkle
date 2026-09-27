@@ -97,7 +97,6 @@ using NonMovablePool = spk::Pool<NonMovableElement>;
 static_assert(!std::is_copy_constructible_v<NonMovablePool::Lease>);
 static_assert(!std::is_copy_assignable_v<NonMovablePool::Lease>);
 
-
 TEST(PoolTest, NestedElementCanExposePoolAndLeaseWhileBeingDefined)
 {
 	NestedPoolElement::Pool pool([]() {

@@ -10,13 +10,9 @@ TEST(CommandParserTest, AcceptsNamedInlineAndSeparatedValues)
 {
 	spk::CommandParser parser;
 	std::vector<std::string> received;
-	parser.addCommand({
-		.name = "sample",
-		.description = "Sample command",
-		.parameters = {{.name = "value", .description = "Values", .arity = 3}},
-		.callback = [&received](const spk::CommandParser::Invocation &invocation) {
-			received = invocation.get("value");
-		}});
+	parser.addCommand({.name = "sample", .description = "Sample command", .parameters = {{.name = "value", .description = "Values", .arity = 3}}, .callback = [&received](const spk::CommandParser::Invocation &invocation) {
+						   received = invocation.get("value");
+					   }});
 
 	EXPECT_EQ(parser.execute("/sample --value A B C").status, spk::CommandParser::Status::Accepted);
 	EXPECT_EQ(received, (std::vector<std::string>{"A", "B", "C"}));
@@ -29,16 +25,10 @@ TEST(CommandParserTest, AcceptsPositionalNamedAndMixedParameters)
 	spk::CommandParser parser;
 	std::string address;
 	std::string port;
-	parser.addCommand({
-		.name = "connect",
-		.description = "Connect",
-		.parameters = {
-			{.name = "address", .description = "Address"},
-			{.name = "port", .description = "Port"}},
-		.callback = [&](const spk::CommandParser::Invocation &invocation) {
-			address = invocation.get("address").front();
-			port = invocation.get("port").front();
-		}});
+	parser.addCommand({.name = "connect", .description = "Connect", .parameters = {{.name = "address", .description = "Address"}, {.name = "port", .description = "Port"}}, .callback = [&](const spk::CommandParser::Invocation &invocation) {
+						   address = invocation.get("address").front();
+						   port = invocation.get("port").front();
+					   }});
 
 	EXPECT_EQ(parser.execute("/connect localhost 2550").status, spk::CommandParser::Status::Accepted);
 	EXPECT_EQ(address, "localhost");
@@ -55,11 +45,9 @@ TEST(CommandParserTest, DefaultsFillMissingParameters)
 {
 	spk::CommandParser parser;
 	std::vector<std::string> received;
-	parser.addCommand({
-		.name = "sample",
-		.description = "Sample",
-		.parameters = {{.name = "value", .description = "Value", .arity = 2, .defaultValues = {"A", "B"}}},
-		.callback = [&](const spk::CommandParser::Invocation &invocation) { received = invocation.get("value"); }});
+	parser.addCommand({.name = "sample", .description = "Sample", .parameters = {{.name = "value", .description = "Value", .arity = 2, .defaultValues = {"A", "B"}}}, .callback = [&](const spk::CommandParser::Invocation &invocation) {
+						   received = invocation.get("value");
+					   }});
 
 	EXPECT_EQ(parser.execute("/sample").status, spk::CommandParser::Status::Accepted);
 	EXPECT_EQ(received, (std::vector<std::string>{"A", "B"}));
@@ -68,10 +56,7 @@ TEST(CommandParserTest, DefaultsFillMissingParameters)
 TEST(CommandParserTest, RejectsDuplicateParameterWithDiagnosticContext)
 {
 	spk::CommandParser parser;
-	parser.addCommand({
-		.name = "sample",
-		.description = "Sample",
-		.parameters = {{.name = "value", .description = "Value"}}});
+	parser.addCommand({.name = "sample", .description = "Sample", .parameters = {{.name = "value", .description = "Value"}}});
 
 	const auto result = parser.execute("/sample --value A --value B");
 	EXPECT_EQ(result.status, spk::CommandParser::Status::DuplicateParameter);
@@ -83,11 +68,9 @@ TEST(CommandParserTest, ReportsNormalInputFailuresWithoutExecutingCallback)
 {
 	spk::CommandParser parser;
 	std::size_t calls = 0;
-	parser.addCommand({
-		.name = "sample",
-		.description = "Sample",
-		.parameters = {{.name = "value", .description = "Values", .arity = 3}},
-		.callback = [&](const spk::CommandParser::Invocation &) { ++calls; }});
+	parser.addCommand({.name = "sample", .description = "Sample", .parameters = {{.name = "value", .description = "Values", .arity = 3}}, .callback = [&](const spk::CommandParser::Invocation &) {
+						   ++calls;
+					   }});
 
 	auto result = parser.execute("sample");
 	EXPECT_EQ(result.status, spk::CommandParser::Status::InvalidFormat);
@@ -112,10 +95,7 @@ TEST(CommandParserTest, ReportsNormalInputFailuresWithoutExecutingCallback)
 TEST(CommandParserTest, ReportsMissingAndExtraPositionalParameters)
 {
 	spk::CommandParser parser;
-	parser.addCommand({
-		.name = "sample",
-		.description = "Sample",
-		.parameters = {{.name = "required", .description = "Required"}}});
+	parser.addCommand({.name = "sample", .description = "Sample", .parameters = {{.name = "required", .description = "Required"}}});
 
 	auto result = parser.execute("/sample");
 	EXPECT_EQ(result.status, spk::CommandParser::Status::MissingParameter);
@@ -128,11 +108,9 @@ TEST(CommandParserTest, HelpDoesNotExecuteCommand)
 {
 	spk::CommandParser parser;
 	bool executed = false;
-	parser.addCommand({
-		.name = "sample",
-		.description = "Sample description",
-		.parameters = {{.name = "value", .description = "Value description", .defaultValues = {"default"}}},
-		.callback = [&](const spk::CommandParser::Invocation &) { executed = true; }});
+	parser.addCommand({.name = "sample", .description = "Sample description", .parameters = {{.name = "value", .description = "Value description", .defaultValues = {"default"}}}, .callback = [&](const spk::CommandParser::Invocation &) {
+						   executed = true;
+					   }});
 
 	const auto result = parser.execute("/sample --help");
 	EXPECT_EQ(result.status, spk::CommandParser::Status::HelpRequested);
@@ -152,10 +130,7 @@ TEST(CommandParserTest, RejectsInvalidRegistrations)
 	parser.addCommand({.name = "sample", .description = "Sample"});
 	EXPECT_THROW(parser.addCommand({.name = "sample", .description = "Duplicate"}), spk::Exception);
 	EXPECT_THROW(
-		parser.addCommand({
-			.name = "invalid",
-			.description = "Invalid",
-			.parameters = {{.name = "value", .description = "Value", .arity = 2, .defaultValues = {"only-one"}}}}),
+		parser.addCommand({.name = "invalid", .description = "Invalid", .parameters = {{.name = "value", .description = "Value", .arity = 2, .defaultValues = {"only-one"}}}}),
 		spk::Exception);
 }
 
@@ -163,14 +138,10 @@ TEST(CommandParserTest, OmittedOptionalParameterIsAbsentFromInvocation)
 {
 	spk::CommandParser parser;
 	bool executed = false;
-	parser.addCommand({
-		.name = "optional",
-		.description = "Optional",
-		.parameters = {{.name = "value", .description = "Value", .optional = true}},
-		.callback = [&](const spk::CommandParser::Invocation &invocation) {
-			executed = true;
-			EXPECT_FALSE(invocation.parameters.contains("value"));
-		}});
+	parser.addCommand({.name = "optional", .description = "Optional", .parameters = {{.name = "value", .description = "Value", .optional = true}}, .callback = [&](const spk::CommandParser::Invocation &invocation) {
+						   executed = true;
+						   EXPECT_FALSE(invocation.parameters.contains("value"));
+					   }});
 
 	EXPECT_EQ(parser.execute("/optional").status, spk::CommandParser::Status::Accepted);
 	EXPECT_TRUE(executed);
@@ -179,13 +150,9 @@ TEST(CommandParserTest, OmittedOptionalParameterIsAbsentFromInvocation)
 TEST(CommandParserTest, PresentOptionalParameterIsAvailable)
 {
 	spk::CommandParser parser;
-	parser.addCommand({
-		.name = "optional",
-		.description = "Optional",
-		.parameters = {{.name = "value", .description = "Value", .optional = true}},
-		.callback = [](const spk::CommandParser::Invocation &invocation) {
-			EXPECT_EQ(invocation.get("value"), (std::vector<std::string>{"provided"}));
-		}});
+	parser.addCommand({.name = "optional", .description = "Optional", .parameters = {{.name = "value", .description = "Value", .optional = true}}, .callback = [](const spk::CommandParser::Invocation &invocation) {
+						   EXPECT_EQ(invocation.get("value"), (std::vector<std::string>{"provided"}));
+					   }});
 
 	EXPECT_EQ(parser.execute("/optional --value provided").status, spk::CommandParser::Status::Accepted);
 	EXPECT_EQ(parser.execute("/optional --value=provided").status, spk::CommandParser::Status::Accepted);
@@ -194,10 +161,7 @@ TEST(CommandParserTest, PresentOptionalParameterIsAvailable)
 TEST(CommandParserTest, OptionalParameterStillValidatesPresentValue)
 {
 	spk::CommandParser parser;
-	parser.addCommand({
-		.name = "optional",
-		.description = "Optional",
-		.parameters = {{.name = "value", .description = "Value", .arity = 2, .optional = true}}});
+	parser.addCommand({.name = "optional", .description = "Optional", .parameters = {{.name = "value", .description = "Value", .arity = 2, .optional = true}}});
 
 	auto result = parser.execute("/optional --value");
 	EXPECT_EQ(result.status, spk::CommandParser::Status::MissingValue);
@@ -216,17 +180,9 @@ TEST(CommandParserTest, OptionalParameterStillValidatesPresentValue)
 TEST(CommandParserTest, OptionalParameterWithDefaultStillReceivesDefault)
 {
 	spk::CommandParser parser;
-	parser.addCommand({
-		.name = "optional",
-		.description = "Optional",
-		.parameters = {{
-			.name = "value",
-			.description = "Value",
-			.defaultValues = {"default"},
-			.optional = true}},
-		.callback = [](const spk::CommandParser::Invocation &invocation) {
-			EXPECT_EQ(invocation.get("value"), (std::vector<std::string>{"default"}));
-		}});
+	parser.addCommand({.name = "optional", .description = "Optional", .parameters = {{.name = "value", .description = "Value", .defaultValues = {"default"}, .optional = true}}, .callback = [](const spk::CommandParser::Invocation &invocation) {
+						   EXPECT_EQ(invocation.get("value"), (std::vector<std::string>{"default"}));
+					   }});
 
 	EXPECT_EQ(parser.execute("/optional").status, spk::CommandParser::Status::Accepted);
 }
@@ -234,13 +190,9 @@ TEST(CommandParserTest, OptionalParameterWithDefaultStillReceivesDefault)
 TEST(CommandParserTest, InvocationGetRejectsAbsentOptionalParameter)
 {
 	spk::CommandParser parser;
-	parser.addCommand({
-		.name = "optional",
-		.description = "Optional",
-		.parameters = {{.name = "value", .description = "Value", .optional = true}},
-		.callback = [](const spk::CommandParser::Invocation &invocation) {
-			EXPECT_THROW((void)invocation.get("value"), spk::Exception);
-		}});
+	parser.addCommand({.name = "optional", .description = "Optional", .parameters = {{.name = "value", .description = "Value", .optional = true}}, .callback = [](const spk::CommandParser::Invocation &invocation) {
+						   EXPECT_THROW((void)invocation.get("value"), spk::Exception);
+					   }});
 
 	EXPECT_EQ(parser.execute("/optional").status, spk::CommandParser::Status::Accepted);
 }
@@ -248,17 +200,11 @@ TEST(CommandParserTest, InvocationGetRejectsAbsentOptionalParameter)
 TEST(CommandParserTest, MultipleOptionalParametersMayBeIndependentlyOmitted)
 {
 	spk::CommandParser parser;
-	parser.addCommand({
-		.name = "connect",
-		.description = "Connect",
-		.parameters = {
-			{.name = "address", .description = "Address", .optional = true},
-			{.name = "port", .description = "Port", .optional = true}},
-		.callback = [](const spk::CommandParser::Invocation &invocation) {
-			EXPECT_FALSE(invocation.parameters.contains("address"));
-			ASSERT_TRUE(invocation.parameters.contains("port"));
-			EXPECT_EQ(invocation.get("port").front(), "2550");
-		}});
+	parser.addCommand({.name = "connect", .description = "Connect", .parameters = {{.name = "address", .description = "Address", .optional = true}, {.name = "port", .description = "Port", .optional = true}}, .callback = [](const spk::CommandParser::Invocation &invocation) {
+						   EXPECT_FALSE(invocation.parameters.contains("address"));
+						   ASSERT_TRUE(invocation.parameters.contains("port"));
+						   EXPECT_EQ(invocation.get("port").front(), "2550");
+					   }});
 
 	EXPECT_EQ(parser.execute("/connect --port 2550").status, spk::CommandParser::Status::Accepted);
 }

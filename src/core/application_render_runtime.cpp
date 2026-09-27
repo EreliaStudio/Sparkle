@@ -79,7 +79,7 @@ namespace spk
 	{
 		append(request.windowIdentifier, request.surface);
 		_registerSnapshotConsumer(request.windowIdentifier, request.renderSnapshotConsumer, request.isRequested);
-	
+
 		request.task->validate();
 	}
 
@@ -90,7 +90,7 @@ namespace spk
 		{
 			_createSurface(*surface, request.native);
 		}
-	
+
 		request.task->validate();
 	}
 
@@ -109,7 +109,7 @@ namespace spk
 			static_cast<spk::Rect2D::Size::value_type>(request.newSize.y)};
 
 		surface->setGeometry(geometry);
-	
+
 		request.task->validate();
 	}
 
