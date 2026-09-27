@@ -169,12 +169,19 @@ namespace spk
 						{
 							return;
 						}
-						if (found->second->surfaceDeletion->answer().status() == Task<void>::Status::Failed)
+						if (found->second->surfaceDeletion->answer().status() != Task<void>::Status::Completed)
 						{
-							_completeWindowClosure(identifier);
-							return;
+							nativeDeletion = nullptr;
 						}
-						nativeDeletion = found->second->nativeDeletion;
+						else
+						{
+							nativeDeletion = found->second->nativeDeletion;
+						}
+					}
+					if (nativeDeletion == nullptr)
+					{
+						_completeWindowClosure(identifier);
+						return;
 					}
 					_platformRequestProducer.publish(
 						NativeDeletionRequest{
