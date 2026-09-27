@@ -371,6 +371,8 @@ namespace spk
 	private:
 		WinAPI::WakeEvent _platformWakeEvent;
 		std::unordered_map<Window::Identifier, std::unique_ptr<Window>> _windows;
+		std::unordered_map<Window::Identifier, Task<void>> _windowClosureTasks;
+		std::mutex _windowClosureMutex;
 		PlatformRequestProducer _platformRequestProducer;
 		spk::ThreadSafeFIFO<UpdateRequest>::Producer _updateRequestProducer;
 		spk::ThreadSafeFIFO<RenderRequest>::Producer _renderRequestProducer;
@@ -397,7 +399,7 @@ namespace spk
 		void _rethrowWorkerFailure();
 		void _stopAndJoinWorkers(std::jthread &updaterThread, std::jthread &rendererThread);
 		void _registerWindowObjects(const Window::Identifier &identifier, const Window::Configuration &configuration, std::shared_ptr<Window::Native> native, std::shared_ptr<Window::State> state, std::shared_ptr<Window::Surface> surface, spk::ThreadSafeSlot<spk::RenderSnapshot>::Endpoints channel, std::shared_ptr<std::atomic_bool> isRenderSnapshotRequested);
-		void _requestWindowClosure(const Window::Identifier &identifier);
+		[[nodiscard]] Task<void>::Answer _requestWindowClosure(const Window::Identifier &identifier);
 		void _requestAllWindowClosures();
 		void _removeClosedWindows();
 		void _finishExecution();
@@ -410,7 +412,7 @@ namespace spk
 		[[nodiscard]] Window &window(const Window::Identifier &identifier);
 		[[nodiscard]] const Window &window(const Window::Identifier &identifier) const;
 		Window &createWindow(const Window::Identifier &identifier, const Window::Configuration &configuration);
-		void closeWindow(const Window::Identifier &identifier);
+		[[nodiscard]] Task<void>::Answer closeWindow(const Window::Identifier &identifier);
 		void quit(int exitCode);
 		int run();
 	};
