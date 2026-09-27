@@ -284,6 +284,7 @@ namespace spk
 	void Application::Impl::quit(int exitCode)
 	{
 		_exitCode.store(exitCode);
+		_platformWakeEvent.notify();
 	}
 
 	int Application::Impl::run()
