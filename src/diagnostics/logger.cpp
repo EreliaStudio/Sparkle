@@ -200,7 +200,7 @@ namespace spk
 		return *this;
 	}
 
-	Logger &Logger::operator<<(std::source_location location) noexcept
+	Logger &Logger::setSourceLocation(std::source_location location) noexcept
 	{
 		_threadState.location = location;
 		return *this;
