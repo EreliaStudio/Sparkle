@@ -36,6 +36,7 @@ namespace spk
 	struct SurfaceDeletionRequest
 	{
 		std::shared_ptr<Task<void>> task = std::make_shared<Task<void>>();
+		std::shared_ptr<Task<void>> nativeDeletionTask = std::make_shared<Task<void>>();
 		Window::Identifier windowIdentifier;
 	};
 
