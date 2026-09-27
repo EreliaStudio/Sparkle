@@ -123,7 +123,14 @@ namespace spk
 		_destroySurface(object(request.windowIdentifier));
 		remove(request.windowIdentifier);
 		_renderSnapshotEnties.erase(request.windowIdentifier);
-	
+
+		auto nativeDeletionContract = request.task->answer().subscribeToCompletion(
+			[this, identifier = request.windowIdentifier, nativeDeletionTask = request.nativeDeletionTask] {
+				_platformRequestProducer.publish(
+					NativeDeletionRequest{
+						.task = nativeDeletionTask,
+						.windowIdentifier = identifier});
+			});
 		request.task->validate();
 	}
 
