@@ -49,3 +49,33 @@ TEST(LoggerTest, ResignedEntrySubscriptionStopsReceivingEntries)
 
 	EXPECT_EQ(callCount, 1u);
 }
+
+
+TEST(LoggerTest, UserLevelsPreserveSeverityOrdering)
+{
+	EXPECT_LT(
+		static_cast<std::uint8_t>(spk::Logger::Level::Info),
+		static_cast<std::uint8_t>(spk::Logger::Level::UserValueA));
+	EXPECT_LT(
+		static_cast<std::uint8_t>(spk::Logger::Level::UserValueA),
+		static_cast<std::uint8_t>(spk::Logger::Level::UserValueB));
+	EXPECT_LT(
+		static_cast<std::uint8_t>(spk::Logger::Level::UserValueB),
+		static_cast<std::uint8_t>(spk::Logger::Level::Warning));
+}
+
+TEST(LoggerTest, EntrySubscriptionReceivesUserLevelAndRawMessage)
+{
+	spk::Logger::Level receivedLevel = spk::Logger::Level::Trace;
+	std::string receivedMessage;
+	auto contract = spk::logger.subscribeToEntry(
+		[&](const spk::Logger::Level &level, const std::string &message) {
+			receivedLevel = level;
+			receivedMessage = message;
+		});
+
+	SPK_LOG(UserValueA) << "user value" << std::endl;
+
+	EXPECT_EQ(receivedLevel, spk::Logger::Level::UserValueA);
+	EXPECT_EQ(receivedMessage, "user value");
+}
