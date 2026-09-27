@@ -115,15 +115,6 @@ namespace spk
 
 	void Application::RenderRuntime::_consume(const SurfaceDeletionRequest &request)
 	{
-		if (!contains(request.windowIdentifier))
-		{
-			request.task->validate();
-			return;
-		}
-		_destroySurface(object(request.windowIdentifier));
-		remove(request.windowIdentifier);
-		_renderSnapshotEnties.erase(request.windowIdentifier);
-
 		auto nativeDeletionContract = request.task->answer().subscribeToCompletion(
 			[this, identifier = request.windowIdentifier, nativeDeletionTask = request.nativeDeletionTask] {
 				_platformRequestProducer.publish(
@@ -131,6 +122,13 @@ namespace spk
 						.task = nativeDeletionTask,
 						.windowIdentifier = identifier});
 			});
+
+		if (contains(request.windowIdentifier) == true)
+		{
+			_destroySurface(object(request.windowIdentifier));
+			remove(request.windowIdentifier);
+			_renderSnapshotEnties.erase(request.windowIdentifier);
+		}
 		request.task->validate();
 	}
 
