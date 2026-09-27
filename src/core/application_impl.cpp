@@ -6,6 +6,7 @@
 #include <utility>
 
 #include "diagnostics/logger.hpp"
+#include "ui/widget.hpp"
 
 namespace
 {
