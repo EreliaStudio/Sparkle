@@ -135,7 +135,7 @@ TEST(ApplicationTest, WindowLookupProvidesMutableAndConstAccess)
 	const spk::Application &constApplication = application;
 	EXPECT_EQ(&constApplication.window("lookup"), &created);
 
-	application.closeWindow("lookup");
+	static_cast<void>(application.closeWindow("lookup"));
 	application.quit();
 	EXPECT_EQ(application.run(), EXIT_SUCCESS);
 }
@@ -155,7 +155,7 @@ TEST(ApplicationTest, CreatedWindowRootUsesConfiguredClientSizeBeforeRun)
 			.anchor = {0, 0},
 			.size = {320, 240}}));
 
-	application.closeWindow("initial-geometry");
+	static_cast<void>(application.closeWindow("initial-geometry"));
 	application.quit();
 	EXPECT_EQ(application.run(), EXIT_SUCCESS);
 }
@@ -173,7 +173,7 @@ TEST(ApplicationTest, ChildCreatedBeforeRunUsesInitializedRootGeometry)
 	EXPECT_EQ(child.geometry().size, spk::Vector2UInt(320, 240));
 	EXPECT_EQ(child.viewRegion().viewport.size, spk::Vector2UInt(320, 240));
 
-	application.closeWindow("initialized-child");
+	static_cast<void>(application.closeWindow("initialized-child"));
 	application.quit();
 	EXPECT_EQ(application.run(), EXIT_SUCCESS);
 }
@@ -187,7 +187,7 @@ TEST(ApplicationTest, DuplicateWindowIdentifierThrowsLogicError)
 		application.createWindow("duplicate", offscreenConfiguration("second")),
 		std::logic_error);
 
-	application.closeWindow("duplicate");
+	static_cast<void>(application.closeWindow("duplicate"));
 	application.quit();
 	EXPECT_EQ(application.run(), EXIT_SUCCESS);
 }
@@ -208,8 +208,8 @@ TEST(ApplicationTest, MultiplePendingWindowsCanBeClosedAndAllRuntimesJoin)
 	application.createWindow("first", offscreenConfiguration("first"));
 	application.createWindow("second", offscreenConfiguration("second"));
 
-	application.closeWindow("first");
-	application.closeWindow("second");
+	static_cast<void>(application.closeWindow("first"));
+	static_cast<void>(application.closeWindow("second"));
 	application.quit(7);
 
 	EXPECT_EQ(application.run(), 7);
@@ -258,8 +258,8 @@ TEST(ApplicationTest, RepeatedCloseRequestsAreIdempotentlyCoordinated)
 	ApplicationProbeWidget probe("probe", &window.root(), [&] {
 		if (!closureRequested.exchange(true))
 		{
-			application.closeWindow("repeated-close");
-			application.closeWindow("repeated-close");
+			static_cast<void>(application.closeWindow("repeated-close"));
+			static_cast<void>(application.closeWindow("repeated-close"));
 		}
 	});
 
@@ -277,7 +277,7 @@ TEST(ApplicationTest, QuitWhileRunIsActiveStopsAndJoinsAllRuntimes)
 		if (!quitRequested.exchange(true))
 		{
 			application.quit(19);
-			application.closeWindow("active-quit");
+			static_cast<void>(application.closeWindow("active-quit"));
 		}
 	});
 
