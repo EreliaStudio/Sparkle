@@ -255,7 +255,6 @@ namespace spk
 		};
 
 		PlatformRequestProducer _platformRequestProducer;
-		WinAPI::WakeEvent &_wakeEvent;
 		spk::ThreadSafeFIFO<EventRecord>::Consumer _eventRecordConsumer;
 		spk::ThreadSafeFIFO<UpdateRequest>::Consumer _updateRequestConsumer;
 		std::unordered_map<Window::Identifier, RenderSnapshotEntry> _renderSnapshotEntries;
@@ -372,7 +371,19 @@ namespace spk
 	private:
 		WinAPI::WakeEvent _platformWakeEvent;
 		std::unordered_map<Window::Identifier, std::unique_ptr<Window>> _windows;
-		std::unordered_map<Window::Identifier, Task<void>> _windowClosureTasks;
+		struct WindowClosureOperation
+		{
+			Task<void> task;
+			std::shared_ptr<Task<void>> stateDeletion = std::make_shared<Task<void>>();
+			std::shared_ptr<Task<void>> surfaceDeletion = std::make_shared<Task<void>>();
+			std::shared_ptr<Task<void>> nativeDeletion = std::make_shared<Task<void>>();
+			std::optional<Task<void>::Answer::CompletionContract> surfaceContract;
+			std::optional<Task<void>::Answer::CompletionContract> stateContract;
+			std::optional<Task<void>::Answer::CompletionContract> nativeContract;
+		};
+
+		std::unordered_map<Window::Identifier, std::unique_ptr<WindowClosureOperation>> _windowClosureOperations;
+		std::vector<Window::Identifier> _completedWindowClosures;
 		std::mutex _windowClosureMutex;
 		PlatformRequestProducer _platformRequestProducer;
 		spk::ThreadSafeFIFO<UpdateRequest>::Producer _updateRequestProducer;
@@ -402,7 +413,8 @@ namespace spk
 		void _registerWindowObjects(const Window::Identifier &identifier, const Window::Configuration &configuration, std::shared_ptr<Window::Native> native, std::shared_ptr<Window::State> state, std::shared_ptr<Window::Surface> surface, spk::ThreadSafeSlot<spk::RenderSnapshot>::Endpoints channel, std::shared_ptr<std::atomic_bool> isRenderSnapshotRequested);
 		[[nodiscard]] Task<void>::Answer _requestWindowClosure(const Window::Identifier &identifier);
 		void _requestAllWindowClosures();
-		void _removeClosedWindows();
+		void _completeWindowClosure(const Window::Identifier &identifier);
+		void _removeCompletedWindows();
 		void _finishExecution();
 		void _processApplicationState(bool &closureRequested);
 		void _runPlatform();
