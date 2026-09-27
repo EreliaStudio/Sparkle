@@ -23,7 +23,6 @@ namespace spk
 		spk::ThreadSafeFIFO<UpdateRequest>::Consumer updateRequestConsumer) :
 		Runtime("update"),
 		_platformRequestProducer(std::move(platformRequestProducer), wakeEvent),
-		_wakeEvent(wakeEvent),
 		_eventRecordConsumer(std::move(eventRecordConsumer)),
 		_updateRequestConsumer(std::move(updateRequestConsumer)),
 		_startTime(std::chrono::steady_clock::now()),
@@ -308,7 +307,6 @@ namespace spk
 		release(state);
 		_renderSnapshotEntries.erase(request.windowIdentifier);
 		remove(request.windowIdentifier);
-		_wakeEvent.notify();
 	
 		request.task->validate();
 	}
