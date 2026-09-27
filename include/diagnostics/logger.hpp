@@ -99,6 +99,7 @@ namespace spk
 
 		[[nodiscard]] static Logger &instance() noexcept;
 		[[nodiscard]] static LevelSetter setLevel(Level level) noexcept;
+		Logger &setSourceLocation(std::source_location location) noexcept;
 
 		[[nodiscard]] Output addOutput(const std::filesystem::path &path, Level lowerAcceptedLevel);
 		void muteConsole() noexcept;
@@ -106,7 +107,6 @@ namespace spk
 		[[nodiscard]] OnEntryContract subscribeToEntry(OnEntryCallback callback);
 
 		Logger &operator<<(LevelSetter setter) noexcept;
-		Logger &operator<<(std::source_location location) noexcept;
 		Logger &operator<<(OStreamManipulator manipulator) noexcept;
 		Logger &operator<<(IOSManipulator manipulator) noexcept;
 		Logger &operator<<(IOSBaseManipulator manipulator) noexcept;
@@ -128,4 +128,4 @@ namespace spk
 }
 
 #define SPK_LOG(level) \
-	(::spk::logger << ::spk::Logger::setLevel(::spk::Logger::Level::level) << std::source_location::current())
+	(::spk::logger.setSourceLocation(std::source_location::current()) << ::spk::Logger::setLevel(::spk::Logger::Level::level))
