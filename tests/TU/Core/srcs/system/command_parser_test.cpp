@@ -221,3 +221,47 @@ TEST(CommandParserTest, UnknownCommandHelpIsEmpty)
 	spk::CommandParser parser;
 	EXPECT_TRUE(parser.help("unknown").empty());
 }
+
+
+namespace
+{
+	class RecordingCommand final : public spk::CommandParser::Command
+	{
+	private:
+		std::vector<std::string> &_received;
+
+	public:
+		explicit RecordingCommand(std::vector<std::string> &received) :
+			Command(
+				"Polymorphic command",
+				{{.name = "value", .description = "Value"}}),
+			_received(received)
+		{
+		}
+
+		void execute(const spk::CommandParser::Invocation &invocation) override
+		{
+			_received = invocation.get("value");
+		}
+	};
+}
+
+TEST(CommandParserTest, AcceptsPolymorphicCommandImplementation)
+{
+	spk::CommandParser parser;
+	std::vector<std::string> received;
+	parser.addCommand("custom", std::make_unique<RecordingCommand>(received));
+
+	EXPECT_EQ(parser.execute("/custom payload").status, spk::CommandParser::Status::Accepted);
+	EXPECT_EQ(received, (std::vector<std::string>{"payload"}));
+	EXPECT_NE(parser.help().find("/custom - Polymorphic command"), std::string::npos);
+	EXPECT_NE(parser.help("custom").find("--value"), std::string::npos);
+}
+
+TEST(CommandParserTest, RejectsNullPolymorphicCommand)
+{
+	spk::CommandParser parser;
+	EXPECT_THROW(
+		parser.addCommand("invalid", std::unique_ptr<spk::CommandParser::Command>{}),
+		spk::Exception);
+}

@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <functional>
+#include <memory>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -45,7 +46,37 @@ namespace spk
 
 		using Callback = std::function<void(const Invocation &)>;
 
-		struct Command
+		class Command
+		{
+		private:
+			std::string _description;
+			std::vector<Parameter> _parameters;
+
+		public:
+			Command(std::string description, std::vector<Parameter> parameters = {});
+			virtual ~Command() = default;
+
+			[[nodiscard]] const std::string &description() const noexcept;
+			[[nodiscard]] const std::vector<Parameter> &parameters() const noexcept;
+
+			virtual void execute(const Invocation &invocation) = 0;
+		};
+
+		class LambdaCommand final : public Command
+		{
+		private:
+			Callback _callback;
+
+		public:
+			LambdaCommand(
+				std::string description,
+				std::vector<Parameter> parameters,
+				Callback callback);
+
+			void execute(const Invocation &invocation) override;
+		};
+
+		struct LambdaCommandDefinition
 		{
 			std::string name;
 			std::string description;
@@ -63,14 +94,16 @@ namespace spk
 		};
 
 	private:
-		std::unordered_map<std::string, Command> _commands;
+		std::unordered_map<std::string, std::unique_ptr<Command>> _commands;
 
 		[[nodiscard]] static std::vector<std::string> _tokenize(const std::string &input);
 		[[nodiscard]] static std::vector<std::string> _splitValues(const std::string &value);
 		[[nodiscard]] const Parameter *_parameter(const Command &command, const std::string &name) const noexcept;
+		static void _validateParameters(const std::vector<Parameter> &parameters);
 
 	public:
-		void addCommand(Command command);
+		void addCommand(LambdaCommandDefinition command);
+		void addCommand(std::string name, std::unique_ptr<Command> command);
 		[[nodiscard]] Result execute(const std::string &input) const;
 		[[nodiscard]] std::string help() const;
 		[[nodiscard]] std::string help(const std::string &command) const;

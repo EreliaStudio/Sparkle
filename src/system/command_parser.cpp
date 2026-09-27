@@ -17,6 +17,41 @@ namespace spk
 		return iterator->second;
 	}
 
+	CommandParser::Command::Command(
+		std::string description,
+		std::vector<Parameter> parameters) :
+		_description(std::move(description)),
+		_parameters(std::move(parameters))
+	{
+	}
+
+	const std::string &CommandParser::Command::description() const noexcept
+	{
+		return _description;
+	}
+
+	const std::vector<CommandParser::Parameter> &CommandParser::Command::parameters() const noexcept
+	{
+		return _parameters;
+	}
+
+	CommandParser::LambdaCommand::LambdaCommand(
+		std::string description,
+		std::vector<Parameter> parameters,
+		Callback callback) :
+		Command(std::move(description), std::move(parameters)),
+		_callback(std::move(callback))
+	{
+	}
+
+	void CommandParser::LambdaCommand::execute(const Invocation &invocation)
+	{
+		if (_callback)
+		{
+			_callback(invocation);
+		}
+	}
+
 	std::vector<std::string> CommandParser::_tokenize(const std::string &input)
 	{
 		std::istringstream stream(input);
@@ -48,7 +83,7 @@ namespace spk
 
 	const CommandParser::Parameter *CommandParser::_parameter(const Command &command, const std::string &name) const noexcept
 	{
-		for (const Parameter &parameter : command.parameters)
+		for (const Parameter &parameter : command.parameters())
 		{
 			if (parameter.name == name)
 			{
@@ -58,19 +93,11 @@ namespace spk
 		return nullptr;
 	}
 
-	void CommandParser::addCommand(Command command)
+	void CommandParser::_validateParameters(const std::vector<Parameter> &parameters)
 	{
-		if (command.name.empty() == true)
+		for (std::size_t index = 0; index < parameters.size(); ++index)
 		{
-			throw spk::Exception("CommandParser command name cannot be empty");
-		}
-		if (_commands.contains(command.name) == true)
-		{
-			throw spk::Exception("Duplicate command registration: " + command.name);
-		}
-		for (std::size_t index = 0; index < command.parameters.size(); ++index)
-		{
-			const Parameter &parameter = command.parameters[index];
+			const Parameter &parameter = parameters[index];
 			if (parameter.name.empty() == true || parameter.arity == 0)
 			{
 				throw spk::Exception("CommandParser parameter requires a name and non-zero arity");
@@ -81,13 +108,41 @@ namespace spk
 			}
 			for (std::size_t other = 0; other < index; ++other)
 			{
-				if (command.parameters[other].name == parameter.name)
+				if (parameters[other].name == parameter.name)
 				{
 					throw spk::Exception("Duplicate command parameter registration: " + parameter.name);
 				}
 			}
 		}
-		_commands.emplace(command.name, std::move(command));
+	}
+
+	void CommandParser::addCommand(LambdaCommandDefinition command)
+	{
+		const std::string name = std::move(command.name);
+		addCommand(
+			name,
+			std::make_unique<LambdaCommand>(
+				std::move(command.description),
+				std::move(command.parameters),
+				std::move(command.callback)));
+	}
+
+	void CommandParser::addCommand(std::string name, std::unique_ptr<Command> command)
+	{
+		if (name.empty() == true)
+		{
+			throw spk::Exception("CommandParser command name cannot be empty");
+		}
+		if (command == nullptr)
+		{
+			throw spk::Exception("CommandParser command cannot be null");
+		}
+		if (_commands.contains(name) == true)
+		{
+			throw spk::Exception("Duplicate command registration: " + name);
+		}
+		_validateParameters(command->parameters());
+		_commands.emplace(std::move(name), std::move(command));
 	}
 
 	CommandParser::Result CommandParser::execute(const std::string &input) const
@@ -104,7 +159,7 @@ namespace spk
 		{
 			return {.status = Status::UnknownCommand, .command = commandName};
 		}
-		const Command &command = commandIterator->second;
+		Command &command = *commandIterator->second;
 		Invocation invocation{.command = commandName};
 		std::size_t positionalIndex = 0;
 
@@ -162,15 +217,16 @@ namespace spk
 				continue;
 			}
 
-			while (positionalIndex < command.parameters.size() && invocation.parameters.contains(command.parameters[positionalIndex].name) == true)
+			const std::vector<Parameter> &parameters = command.parameters();
+			while (positionalIndex < parameters.size() && invocation.parameters.contains(parameters[positionalIndex].name) == true)
 			{
 				++positionalIndex;
 			}
-			if (positionalIndex >= command.parameters.size())
+			if (positionalIndex >= parameters.size())
 			{
 				return {.status = Status::TooManyParameters, .command = commandName};
 			}
-			const Parameter &parameter = command.parameters[positionalIndex++];
+			const Parameter &parameter = parameters[positionalIndex++];
 			std::vector<std::string> values{token};
 			while (values.size() < parameter.arity && index + 1 < tokens.size() && tokens[index + 1].starts_with("--") == false)
 			{
@@ -183,7 +239,7 @@ namespace spk
 			invocation.parameters.emplace(parameter.name, std::move(values));
 		}
 
-		for (const Parameter &parameter : command.parameters)
+		for (const Parameter &parameter : command.parameters())
 		{
 			if (invocation.parameters.contains(parameter.name) == true)
 			{
@@ -201,10 +257,7 @@ namespace spk
 			return {.status = Status::MissingParameter, .command = commandName, .parameter = parameter.name, .expectedValueCount = parameter.arity};
 		}
 
-		if (command.callback)
-		{
-			command.callback(invocation);
-		}
+		command.execute(invocation);
 		return {.status = Status::Accepted, .command = commandName};
 	}
 
@@ -213,7 +266,7 @@ namespace spk
 		std::ostringstream output;
 		for (const auto &[name, command] : _commands)
 		{
-			output << '/' << name << " - " << command.description << '\n';
+			output << '/' << name << " - " << command->description() << '\n';
 		}
 		return output.str();
 	}
@@ -225,16 +278,16 @@ namespace spk
 		{
 			return {};
 		}
-		const Command &command = iterator->second;
+		const Command &command = *iterator->second;
 		std::ostringstream output;
-		output << "Usage: /" << command.name;
-		for (const Parameter &parameter : command.parameters)
+		output << "Usage: /" << commandName;
+		for (const Parameter &parameter : command.parameters())
 		{
 			output << " [--" << parameter.name << " <" << parameter.arity << (parameter.arity == 1 ? " value" : " values") << ">]";
 		}
 		output << "\n"
-			   << command.description << "\n";
-		for (const Parameter &parameter : command.parameters)
+			   << command.description() << "\n";
+		for (const Parameter &parameter : command.parameters())
 		{
 			output << "  --" << parameter.name << ": " << parameter.description;
 			if (parameter.defaultValues.empty() == false)
