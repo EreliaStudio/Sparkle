@@ -158,3 +158,117 @@ TEST(CommandParserTest, RejectsInvalidRegistrations)
 			.parameters = {{.name = "value", .description = "Value", .arity = 2, .defaultValues = {"only-one"}}}}),
 		spk::Exception);
 }
+
+
+TEST(CommandParserTest, OmittedOptionalParameterIsAbsentFromInvocation)
+{
+	spk::CommandParser parser;
+	bool executed = false;
+	parser.addCommand({
+		.name = "optional",
+		.description = "Optional",
+		.parameters = {{.name = "value", .description = "Value", .optional = true}},
+		.callback = [&](const spk::CommandParser::Invocation &invocation) {
+			executed = true;
+			EXPECT_FALSE(invocation.parameters.contains("value"));
+		}});
+
+	EXPECT_EQ(parser.execute("/optional").status, spk::CommandParser::Status::Accepted);
+	EXPECT_TRUE(executed);
+}
+
+TEST(CommandParserTest, PresentOptionalParameterIsAvailable)
+{
+	spk::CommandParser parser;
+	parser.addCommand({
+		.name = "optional",
+		.description = "Optional",
+		.parameters = {{.name = "value", .description = "Value", .optional = true}},
+		.callback = [](const spk::CommandParser::Invocation &invocation) {
+			EXPECT_EQ(invocation.get("value"), (std::vector<std::string>{"provided"}));
+		}});
+
+	EXPECT_EQ(parser.execute("/optional --value provided").status, spk::CommandParser::Status::Accepted);
+	EXPECT_EQ(parser.execute("/optional --value=provided").status, spk::CommandParser::Status::Accepted);
+}
+
+TEST(CommandParserTest, OptionalParameterStillValidatesPresentValue)
+{
+	spk::CommandParser parser;
+	parser.addCommand({
+		.name = "optional",
+		.description = "Optional",
+		.parameters = {{.name = "value", .description = "Value", .arity = 2, .optional = true}}});
+
+	auto result = parser.execute("/optional --value");
+	EXPECT_EQ(result.status, spk::CommandParser::Status::MissingValue);
+	EXPECT_EQ(result.expectedValueCount, 2u);
+	EXPECT_EQ(result.actualValueCount, 0u);
+
+	result = parser.execute("/optional --value one");
+	EXPECT_EQ(result.status, spk::CommandParser::Status::MissingValue);
+	EXPECT_EQ(result.actualValueCount, 1u);
+
+	result = parser.execute("/optional --value=one,two,three");
+	EXPECT_EQ(result.status, spk::CommandParser::Status::TooManyValues);
+	EXPECT_EQ(result.actualValueCount, 3u);
+}
+
+TEST(CommandParserTest, OptionalParameterWithDefaultStillReceivesDefault)
+{
+	spk::CommandParser parser;
+	parser.addCommand({
+		.name = "optional",
+		.description = "Optional",
+		.parameters = {{.name = "value", .description = "Value", .defaultValues = {"default"}, .optional = true}},
+		.callback = [](const spk::CommandParser::Invocation &invocation) {
+			EXPECT_EQ(invocation.get("value"), (std::vector<std::string>{"default"}));
+		}});
+
+	EXPECT_EQ(parser.execute("/optional").status, spk::CommandParser::Status::Accepted);
+}
+
+TEST(CommandParserTest, InvocationGetRejectsAbsentOptionalParameter)
+{
+	spk::CommandParser parser;
+	parser.addCommand({
+		.name = "optional",
+		.description = "Optional",
+		.parameters = {{.name = "value", .description = "Value", .optional = true}},
+		.callback = [](const spk::CommandParser::Invocation &invocation) {
+			EXPECT_THROW((void)invocation.get("value"), spk::Exception);
+		}});
+
+	EXPECT_EQ(parser.execute("/optional").status, spk::CommandParser::Status::Accepted);
+}
+
+TEST(CommandParserTest, MultipleOptionalParametersMayBeIndependentlyOmitted)
+{
+	spk::CommandParser parser;
+	parser.addCommand({
+		.name = "connect",
+		.description = "Connect",
+		.parameters = {
+			{.name = "address", .description = "Address", .optional = true},
+			{.name = "port", .description = "Port", .optional = true}},
+		.callback = [](const spk::CommandParser::Invocation &invocation) {
+			EXPECT_FALSE(invocation.parameters.contains("address"));
+			ASSERT_TRUE(invocation.parameters.contains("port"));
+			EXPECT_EQ(invocation.get("port").front(), "2550");
+		}});
+
+	EXPECT_EQ(parser.execute("/connect --port 2550").status, spk::CommandParser::Status::Accepted);
+}
+
+TEST(CommandParserTest, HelpRequestWithAdditionalTokensIsInvalid)
+{
+	spk::CommandParser parser;
+	parser.addCommand({.name = "sample", .description = "Sample"});
+	EXPECT_EQ(parser.execute("/sample --help extra").status, spk::CommandParser::Status::InvalidFormat);
+}
+
+TEST(CommandParserTest, UnknownCommandHelpIsEmpty)
+{
+	spk::CommandParser parser;
+	EXPECT_TRUE(parser.help("unknown").empty());
+}
