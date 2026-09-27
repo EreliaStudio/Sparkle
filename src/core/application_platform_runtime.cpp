@@ -96,8 +96,18 @@ namespace spk
 	{
 		append(request.windowIdentifier, request.native);
 		_createNative(request);
-		_renderRequestProducer.publish(SurfaceCreationRequest{.windowIdentifier = request.windowIdentifier, .native = request.native});
-	
+
+		const Task<void>::Answer registrationAnswer = request.task->answer();
+		auto surfaceCreationContract = registrationAnswer.subscribeToCompletion(
+			[this, registrationAnswer, identifier = request.windowIdentifier, native = request.native] {
+				if (registrationAnswer.status() == Task<void>::Status::Completed)
+				{
+					_renderRequestProducer.publish(
+						SurfaceCreationRequest{
+							.windowIdentifier = identifier,
+							.native = native});
+				}
+			});
 		request.task->validate();
 	}
 
