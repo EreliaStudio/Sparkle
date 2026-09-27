@@ -1,5 +1,7 @@
 #pragma once
 
+#include "exception.hpp"
+
 #include <concepts>
 #include <cstddef>
 #include <functional>
@@ -112,6 +114,64 @@ namespace spk
 
 	public:
 		void addCommand(LambdaCommandDefinition command);
+
+		template <typename TCommandType>
+			requires std::derived_from<TCommandType, Command>
+		[[nodiscard]] TCommandType &command()
+		{
+			TCommandType *result = nullptr;
+			for (auto &[name, registeredCommand] : _commands)
+			{
+				(void)name;
+				TCommandType *candidate =
+					dynamic_cast<TCommandType *>(registeredCommand.get());
+				if (candidate == nullptr)
+				{
+					continue;
+				}
+				if (result != nullptr)
+				{
+					throw spk::Exception(
+						"Multiple commands registered for requested type");
+				}
+				result = candidate;
+			}
+			if (result == nullptr)
+			{
+				throw spk::Exception(
+					"Command type is not registered");
+			}
+			return *result;
+		}
+
+		template <typename TCommandType>
+			requires std::derived_from<TCommandType, Command>
+		[[nodiscard]] const TCommandType &command() const
+		{
+			const TCommandType *result = nullptr;
+			for (const auto &[name, registeredCommand] : _commands)
+			{
+				(void)name;
+				const TCommandType *candidate =
+					dynamic_cast<const TCommandType *>(registeredCommand.get());
+				if (candidate == nullptr)
+				{
+					continue;
+				}
+				if (result != nullptr)
+				{
+					throw spk::Exception(
+						"Multiple commands registered for requested type");
+				}
+				result = candidate;
+			}
+			if (result == nullptr)
+			{
+				throw spk::Exception(
+					"Command type is not registered");
+			}
+			return *result;
+		}
 
 		template <typename TCommandType, typename... TArgs>
 			requires std::derived_from<TCommandType, Command>

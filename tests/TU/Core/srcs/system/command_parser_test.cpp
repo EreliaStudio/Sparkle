@@ -245,6 +245,19 @@ namespace
 			_received = invocation.get("value");
 		}
 	};
+
+	class NamedCommand final : public spk::CommandParser::Command
+	{
+	public:
+		explicit NamedCommand(std::string name) :
+			Command(std::move(name), "Named command")
+		{
+		}
+
+		void execute(const spk::CommandParser::Invocation &) override
+		{
+		}
+	};
 }
 
 TEST(CommandParserTest, AcceptsPolymorphicCommandImplementation)
@@ -269,5 +282,51 @@ TEST(CommandParserTest, RejectsDuplicatePolymorphicCommandName)
 
 	EXPECT_THROW(
 		parser.addCommand<RecordingCommand>(second),
+		spk::Exception);
+}
+
+
+TEST(CommandParserTest, RetrievesRegisteredCommandByConcreteType)
+{
+	spk::CommandParser parser;
+	std::vector<std::string> received;
+	RecordingCommand &registered =
+		parser.addCommand<RecordingCommand>(received);
+
+	EXPECT_EQ(
+		&parser.command<RecordingCommand>(),
+		&registered);
+}
+
+TEST(CommandParserTest, RetrievesRegisteredCommandByConcreteTypeFromConstParser)
+{
+	spk::CommandParser parser;
+	std::vector<std::string> received;
+	RecordingCommand &registered =
+		parser.addCommand<RecordingCommand>(received);
+	const spk::CommandParser &constParser = parser;
+
+	EXPECT_EQ(
+		&constParser.command<RecordingCommand>(),
+		&registered);
+}
+
+TEST(CommandParserTest, TypedCommandLookupRejectsMissingType)
+{
+	spk::CommandParser parser;
+
+	EXPECT_THROW(
+		(void)parser.command<RecordingCommand>(),
+		spk::Exception);
+}
+
+TEST(CommandParserTest, TypedCommandLookupRejectsAmbiguousType)
+{
+	spk::CommandParser parser;
+	parser.addCommand<NamedCommand>("first");
+	parser.addCommand<NamedCommand>("second");
+
+	EXPECT_THROW(
+		(void)parser.command<NamedCommand>(),
 		spk::Exception);
 }
