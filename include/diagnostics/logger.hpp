@@ -13,6 +13,8 @@
 #include <utility>
 #include <vector>
 
+#include "design_pattern/contract_provider.hpp"
+
 namespace spk
 {
 	class Logger final
@@ -25,6 +27,10 @@ namespace spk
 			Warning,
 			Error
 		};
+
+		using OnEntryContractProvider = ContractProvider<const Level &, const std::string &>;
+		using OnEntryCallback = OnEntryContractProvider::callback_type;
+		using OnEntryContract = OnEntryContractProvider::Contract;
 
 		struct LevelSetter
 		{
@@ -62,6 +68,7 @@ namespace spk
 		struct ThreadState
 		{
 			Level level = Level::Info;
+			std::source_location location;
 			std::ostringstream stream;
 		};
 
@@ -69,6 +76,7 @@ namespace spk
 		std::vector<std::unique_ptr<FileOutput>> _outputs;
 		bool _consoleMuted = false;
 		std::size_t _nextOutputIdentifier = 1;
+		OnEntryContractProvider _onEntryContractProvider;
 
 		static thread_local ThreadState _threadState;
 
@@ -76,8 +84,8 @@ namespace spk
 
 		void _ensureOutputPathAvailable(const std::filesystem::path &path) const;
 		[[nodiscard]] std::unique_ptr<FileOutput> _makeOutput(const std::filesystem::path &path, Level level);
-		[[nodiscard]] bool _extractRecord(Level &level, std::string &message) noexcept;
-		void _publishRecord(Level level, const std::string &message) noexcept;
+		[[nodiscard]] bool _extractRecord(Level &level, std::source_location &location, std::string &message) noexcept;
+		void _publishRecord(Level level, std::source_location location, const std::string &message) noexcept;
 		void _dispatch() noexcept;
 		void _removeOutput(std::size_t identifier) noexcept;
 		void _setOutputLevel(std::size_t identifier, Level level) noexcept;
@@ -95,6 +103,7 @@ namespace spk
 		[[nodiscard]] Output addOutput(const std::filesystem::path &path, Level lowerAcceptedLevel);
 		void muteConsole() noexcept;
 		void unmuteConsole() noexcept;
+		[[nodiscard]] OnEntryContract subscribeToEntry(OnEntryCallback callback);
 
 		Logger &operator<<(LevelSetter setter) noexcept;
 		Logger &operator<<(std::source_location location) noexcept;
