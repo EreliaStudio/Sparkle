@@ -146,5 +146,6 @@ namespace spk
 	inline Logger &logger = Logger::instance();
 }
 
-#define SPK_LOG(level) \
-	(::spk::logger.beginRecord(::spk::Logger::Level::level, std::source_location::current()))
+#define SPK_LOG_LOCATED(level, location) 	(::spk::logger.beginRecord(::spk::Logger::Level::level, (location)))
+
+#define SPK_LOG(level) 	SPK_LOG_LOCATED(level, std::source_location::current())

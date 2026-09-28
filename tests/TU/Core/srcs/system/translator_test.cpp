@@ -468,6 +468,48 @@ TEST(TranslatorTest, UnknownKeyReturnsKeyAndLogsWarning)
 	EXPECT_EQ(entries.back().second, "Missing translation key: unknown");
 }
 
+TEST(TranslatorTest, MissingTranslationLogUsesTranslationCallSite)
+{
+	spk::Translator translator;
+	const std::filesystem::path path =
+		std::filesystem::temp_directory_path() /
+		("sparkle-translator-location-" +
+		 spk::UUID::generate().toString() +
+		 ".log");
+	std::filesystem::remove(path);
+
+	int translationLine = 0;
+	{
+		auto output =
+			spk::logger.addOutput(
+				path,
+				spk::Logger::Level::Trace);
+
+		translationLine = __LINE__ + 1;
+		const std::string translated = translator.translate("missing.location");
+		EXPECT_EQ(translated, "missing.location");
+	}
+
+	std::ifstream stream(path);
+	std::string line;
+	ASSERT_TRUE(static_cast<bool>(std::getline(stream, line)));
+
+	EXPECT_NE(
+		line.find(
+			"translator_test.cpp:" +
+			std::to_string(translationLine)),
+		std::string::npos);
+	EXPECT_NE(
+		line.find(
+			"Missing translation key: missing.location"),
+		std::string::npos);
+	EXPECT_EQ(
+		line.find("translator.cpp:"),
+		std::string::npos);
+
+	std::filesystem::remove(path);
+}
+
 TEST(TranslatorTest, RejectsMalformedFormatString)
 {
 	spk::Translator translator;

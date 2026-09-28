@@ -95,6 +95,28 @@ TEST(LoggerStreamTest, SupportsSourceLocationAndMacroAtCallerSite)
 	EXPECT_NE(content.find("[Warning]"), std::string::npos);
 }
 
+TEST(LoggerStreamTest, LocatedMacroUsesProvidedSourceLocation)
+{
+	ConsoleMute mute;
+	const auto path = logPath("stream_explicit_source_location");
+	auto output = spk::logger.addOutput(path, spk::Logger::Level::Trace);
+
+	const auto location = std::source_location::current();
+	SPK_LOG_LOCATED(Warning, location)
+		<< "located"
+		<< std::endl;
+
+	const std::string content = readFile(path);
+	EXPECT_NE(
+		content.find(
+			std::string(location.file_name()) +
+			":" +
+			std::to_string(location.line())),
+		std::string::npos);
+	EXPECT_NE(content.find("[Warning]"), std::string::npos);
+	EXPECT_NE(content.find("located"), std::string::npos);
+}
+
 TEST(LoggerStreamTest, ConcurrentRecordsNeverInterleave)
 {
 	ConsoleMute mute;

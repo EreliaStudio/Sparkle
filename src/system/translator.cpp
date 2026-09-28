@@ -96,7 +96,8 @@ namespace spk
 
 	std::string Translator::_translate(
 		const std::string &key,
-		std::format_args arguments) const
+		std::format_args arguments,
+		std::source_location location) const
 	{
 		std::string format;
 		bool missing = false;
@@ -115,7 +116,7 @@ namespace spk
 
 		if (missing == true)
 		{
-			SPK_LOG(Warning)
+			SPK_LOG_LOCATED(Warning, location)
 				<< "Missing translation key: "
 				<< key
 				<< std::endl;
