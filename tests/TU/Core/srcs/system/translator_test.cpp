@@ -564,8 +564,7 @@ TEST(TranslatorTest, ConcurrentTranslationAndDistinctAppendRemainValid)
 						valid = false;
 						return;
 					}
-				}
-				catch (...)
+				} catch (...)
 				{
 					valid = false;
 					return;
@@ -582,7 +581,6 @@ TEST(TranslatorTest, ConcurrentTranslationAndDistinctAppendRemainValid)
 
 	EXPECT_TRUE(valid.load());
 }
-
 
 TEST(TranslatorTest, MissingTranslationLogDoesNotCorruptOuterLogComposition)
 {

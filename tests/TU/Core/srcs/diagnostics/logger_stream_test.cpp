@@ -165,7 +165,6 @@ TEST(LoggerStreamTest, StreamInsertionFailureNeverEscapes)
 		spk::logger << "before" << ThrowingValue{} << "after" << std::endl);
 }
 
-
 TEST(LoggerStreamTest, NestedRecordResumesOuterComposition)
 {
 	ConsoleMute mute;
@@ -178,11 +177,10 @@ TEST(LoggerStreamTest, NestedRecordResumesOuterComposition)
 	SPK_LOG(Info)
 		<< "outer-before "
 		<< [&]() {
-			SPK_LOG(Warning) << "nested" << std::endl;
-			return "middle";
-		}()
-		<< " outer-after"
-		<< std::endl;
+			   SPK_LOG(Warning) << "nested" << std::endl;
+			   return "middle";
+		   }()
+		<< " outer-after" << std::endl;
 
 	ASSERT_EQ(entries.size(), 2u);
 	EXPECT_EQ(entries[0].first, spk::Logger::Level::Warning);
@@ -203,15 +201,15 @@ TEST(LoggerStreamTest, MultipleNestedRecordsResumeInStackOrder)
 	SPK_LOG(Info)
 		<< "outer "
 		<< [&]() {
-			SPK_LOG(Warning)
-				<< "middle "
-				<< [&]() {
-					SPK_LOG(Error) << "inner" << std::endl;
-					return "continued";
-				}()
-				<< std::endl;
-			return "finished";
-		}()
+			   SPK_LOG(Warning)
+				   << "middle "
+				   << [&]() {
+						  SPK_LOG(Error) << "inner" << std::endl;
+						  return "continued";
+					  }()
+				   << std::endl;
+			   return "finished";
+		   }()
 		<< std::endl;
 
 	ASSERT_EQ(entries.size(), 3u);

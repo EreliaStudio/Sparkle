@@ -70,9 +70,9 @@ namespace spk
 
 			template <typename TOperation>
 				requires std::invocable<std::decay_t<TOperation> &> &&
-						 std::convertible_to<
-							 std::invoke_result_t<std::decay_t<TOperation> &>,
-							 TResult>
+							 std::convertible_to<
+								 std::invoke_result_t<std::decay_t<TOperation> &>,
+								 TResult>
 			TaskJob(
 				Task<TResult> &&task,
 				TOperation &&operation) :

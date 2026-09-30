@@ -222,7 +222,6 @@ TEST(CommandParserTest, UnknownCommandHelpIsEmpty)
 	EXPECT_TRUE(parser.help("unknown").empty());
 }
 
-
 namespace
 {
 	class RecordingCommand final : public spk::CommandParser::Command
@@ -284,7 +283,6 @@ TEST(CommandParserTest, RejectsDuplicatePolymorphicCommandName)
 		parser.addCommand<RecordingCommand>(second),
 		spk::Exception);
 }
-
 
 TEST(CommandParserTest, RetrievesRegisteredCommandByConcreteType)
 {

@@ -126,8 +126,7 @@ namespace spk
 		try
 		{
 			return std::vformat(format, arguments);
-		}
-		catch (const std::format_error &)
+		} catch (const std::format_error &)
 		{
 			throw spk::Exception(
 				"Invalid translation format for key: " + key,
