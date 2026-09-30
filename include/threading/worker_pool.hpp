@@ -68,6 +68,19 @@ namespace spk
 			{
 			}
 
+			template <typename TOperation>
+				requires std::invocable<std::decay_t<TOperation> &> &&
+						 std::convertible_to<
+							 std::invoke_result_t<std::decay_t<TOperation> &>,
+							 TResult>
+			TaskJob(
+				Task<TResult> &&task,
+				TOperation &&operation) :
+				Task<TResult>(std::move(task)),
+				_operation(std::forward<TOperation>(operation))
+			{
+			}
+
 			[[nodiscard]] typename Task<TResult>::Answer answer() const
 			{
 				return Task<TResult>::answer();
@@ -136,6 +149,27 @@ namespace spk
 		WorkerPool &operator=(WorkerPool &&) = delete;
 
 		~WorkerPool() = default;
+
+		template <typename TResult, typename TOperation>
+			requires std::movable<TResult> &&
+					 std::invocable<std::decay_t<TOperation> &> &&
+					 std::convertible_to<
+						 std::invoke_result_t<std::decay_t<TOperation> &>,
+						 TResult>
+		[[nodiscard]] typename Task<TResult>::Answer submit(
+			Task<TResult> &&task,
+			TOperation &&operation)
+		{
+			auto job =
+				std::make_unique<TaskJob<TResult>>(
+					std::move(task),
+					std::forward<TOperation>(operation));
+			auto answer = job->answer();
+
+			_jobs.publish(std::move(job));
+
+			return answer;
+		}
 
 		template <typename TOperation>
 			requires std::invocable<std::decay_t<TOperation> &> &&
