@@ -115,6 +115,77 @@ TEST(WorkerPool, SubmittedCallableProducesTaskAnswer)
 	EXPECT_EQ(answer.result(), 42);
 }
 
+TEST(WorkerPool, SubmittedExistingTaskPreservesPreparedAnswer)
+{
+	spk::WorkerPool workerPool(1u);
+	std::promise<void> release;
+	const auto gate =
+		release.get_future().share();
+
+	spk::Task<int> task;
+	auto preparedAnswer = task.answer();
+
+	EXPECT_EQ(
+		preparedAnswer.status(),
+		spk::Task<int>::Status::Pending);
+
+	auto submittedAnswer = workerPool.submit(
+		std::move(task),
+		[gate] {
+			gate.wait();
+			return 73;
+		});
+
+	EXPECT_EQ(
+		preparedAnswer.status(),
+		spk::Task<int>::Status::Pending);
+	EXPECT_EQ(
+		submittedAnswer.status(),
+		spk::Task<int>::Status::Pending);
+
+	release.set_value();
+
+	ASSERT_TRUE(waitUntilSettled<int>(preparedAnswer));
+	ASSERT_TRUE(waitUntilSettled<int>(submittedAnswer));
+	EXPECT_EQ(preparedAnswer.result(), 73);
+	EXPECT_EQ(submittedAnswer.result(), 73);
+}
+
+TEST(WorkerPool, ExistingTaskCompletionSubscriptionSurvivesSubmission)
+{
+	spk::WorkerPool workerPool(1u);
+	spk::Task<int> task;
+	auto answer = task.answer();
+	std::atomic<int> calls = 0;
+
+	auto contract = answer.subscribeToCompletion(
+		[&calls] {
+			calls.fetch_add(
+				1,
+				std::memory_order_relaxed);
+		});
+
+	[[maybe_unused]] auto submittedAnswer =
+		workerPool.submit(
+			std::move(task),
+			[] {
+				return 91;
+			});
+
+	ASSERT_TRUE(waitUntilSettled<int>(answer));
+	while (
+		calls.load(std::memory_order_acquire) == 0)
+	{
+		std::this_thread::yield();
+	}
+
+	EXPECT_EQ(
+		calls.load(std::memory_order_relaxed),
+		1);
+	EXPECT_EQ(answer.result(), 91);
+	EXPECT_FALSE(contract.isValid());
+}
+
 TEST(WorkerPool, SupportsMoveOnlyCallableCapture)
 {
 	spk::WorkerPool workerPool(1u);
