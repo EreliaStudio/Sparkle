@@ -66,6 +66,7 @@ TEST(GridLayoutTest, ComputesHintsPaddingAndGeometryForWidgetAndNestedLayout)
 	grid.setLayout(1, 0, &nested);
 	grid.setElementPadding({4, 7});
 	EXPECT_EQ(grid.preferredSize(), spk::Vector2(49, 35));
+	EXPECT_EQ(grid.maximalSize(), spk::Vector2(84, 60));
 	grid.setGeometry({.anchor = {10, 20}, .size = {104, 60}});
 	EXPECT_EQ(widget.geometry().x, 10);
 	EXPECT_EQ(nestedWidget.geometry().y, 20);

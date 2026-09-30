@@ -56,6 +56,23 @@ namespace
 		return value.load(std::memory_order_acquire) >= expected;
 	}
 
+	template <typename TContract>
+	bool waitUntilInvalid(const TContract &contract)
+	{
+		const auto deadline =
+			std::chrono::steady_clock::now() +
+			std::chrono::seconds(5);
+
+		while (
+			contract.isValid() &&
+			std::chrono::steady_clock::now() < deadline)
+		{
+			std::this_thread::yield();
+		}
+
+		return !contract.isValid();
+	}
+
 	struct MoveOnlyResult
 	{
 		std::unique_ptr<int> value;
@@ -173,11 +190,8 @@ TEST(WorkerPool, ExistingTaskCompletionSubscriptionSurvivesSubmission)
 			});
 
 	ASSERT_TRUE(waitUntilSettled<int>(answer));
-	while (
-		calls.load(std::memory_order_acquire) == 0)
-	{
-		std::this_thread::yield();
-	}
+	ASSERT_TRUE(waitUntilAtLeast(calls, 1));
+	EXPECT_TRUE(waitUntilInvalid(contract));
 
 	EXPECT_EQ(
 		calls.load(std::memory_order_relaxed),
@@ -453,11 +467,8 @@ TEST(WorkerPool, CompletionSubscriberRunsOnWorkerSettlement)
 	release.set_value();
 
 	ASSERT_TRUE(waitUntilSettled<int>(answer));
-	while (
-		calls.load(std::memory_order_acquire) == 0)
-	{
-		std::this_thread::yield();
-	}
+	ASSERT_TRUE(waitUntilAtLeast(calls, 1));
+	EXPECT_TRUE(waitUntilInvalid(contract));
 
 	EXPECT_EQ(
 		calls.load(std::memory_order_relaxed),

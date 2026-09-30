@@ -490,9 +490,11 @@ TEST(TranslatorTest, MissingTranslationLogUsesTranslationCallSite)
 		EXPECT_EQ(translated, "missing.location");
 	}
 
-	std::ifstream stream(path);
 	std::string line;
-	ASSERT_TRUE(static_cast<bool>(std::getline(stream, line)));
+	{
+		std::ifstream stream(path);
+		ASSERT_TRUE(static_cast<bool>(std::getline(stream, line)));
+	}
 
 	EXPECT_NE(
 		line.find(

@@ -63,7 +63,7 @@ TEST(LayoutTest, PaddingClearAndInvalidChildrenHaveDefinedBehavior)
 	EXPECT_THROW(layout.addLayout(&layout), std::invalid_argument);
 	layout.clear();
 	EXPECT_TRUE(layout.elements().empty());
-	EXPECT_EQ(layout.sizeHint(), (spk::ResizeableTrait::SizeHint{}));
+	EXPECT_EQ(layout.sizeHint(), hint({0, 0}, {0, 0}, {0, 0}));
 }
 
 TEST(LayoutTest, ContradictoryElementBoundsClampSafelyToMinimum)
