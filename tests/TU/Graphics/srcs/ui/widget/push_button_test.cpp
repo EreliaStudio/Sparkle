@@ -73,6 +73,20 @@ TEST(PushButtonTest, TextIconAlignmentSizingAndFlatModeRoundTrip)
 	EXPECT_FALSE(button.textPadding().has_value());
 }
 
+TEST(PushButtonTest, IconPaddingShrinksDrawableAreaOnEverySide)
+{
+	spk::PushButton button("Button");
+	const auto *icons = spk::Widget::defaultStyle.get().iconset.get();
+	ASSERT_NE(icons, nullptr);
+	button.setIcon(icons, 0);
+	button.setIconSize({22, 22});
+	button.setIconPadding({6, 6});
+	button.setGeometry({.anchor = {0, 0}, .size = {20, 20}});
+	const spk::Rect2D expected{.anchor = {6, 6}, .size = {8, 8}};
+	EXPECT_EQ(button.releasedIcon().geometry(), expected);
+	EXPECT_EQ(button.pressedIcon().geometry(), expected);
+}
+
 TEST(PushButtonTest, InvalidIconsThrowWithoutReplacingValidIcon)
 {
 	spk::PushButton button("Button");
