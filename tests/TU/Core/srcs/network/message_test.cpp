@@ -12,6 +12,13 @@
 
 namespace
 {
+	const spk::Message staticMessage = [] {
+		spk::Message::Writer writer(42);
+		writer.setRequestID(91);
+		writer << std::uint32_t{17};
+		return std::move(writer).build();
+	}();
+
 	struct Payload
 	{
 		std::uint32_t identifier = 0;
@@ -30,6 +37,13 @@ namespace
 	{
 		return spk::Message::Writer(type).build();
 	}
+}
+
+TEST(MessageTest, MessageCanBeBuiltBeforeMain)
+{
+	EXPECT_EQ(staticMessage.type(), 42u);
+	EXPECT_EQ(staticMessage.requestID(), 91u);
+	EXPECT_EQ(staticMessage.reader().get<std::uint32_t>(), 17u);
 }
 
 TEST(MessageTest, WriterBuildsImmutableMessageMetadata)

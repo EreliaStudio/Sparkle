@@ -25,18 +25,44 @@ namespace spk
 		class State
 		{
 		private:
+			class FactoryState
+			{
+			private:
+				Factory _factory;
+				mutable std::recursive_mutex _mutex;
+
+			public:
+				explicit FactoryState(Factory factory) :
+					_factory(std::move(factory))
+				{
+					if (!_factory)
+					{
+						throw spk::Exception("Pool requires a valid factory");
+					}
+				}
+
+				[[nodiscard]] Element *obtain()
+				{
+					// Factories may obtain another element from the same pool.
+					const std::scoped_lock lock(_mutex);
+					return _factory();
+				}
+
+				[[nodiscard]] Factory copy() const
+				{
+					const std::scoped_lock lock(_mutex);
+					return _factory;
+				}
+			};
+
 			std::vector<Element *> _availableElements;
-			Factory _factory;
+			std::shared_ptr<FactoryState> _factory;
 			mutable std::mutex _mutex;
 
 		public:
 			explicit State(Factory factory) :
-				_factory(std::move(factory))
+				_factory(std::make_shared<FactoryState>(std::move(factory)))
 			{
-				if (!_factory)
-				{
-					throw spk::Exception("Pool requires a valid factory");
-				}
 			}
 
 			~State()
@@ -46,7 +72,7 @@ namespace spk
 
 			[[nodiscard]] Element *obtain()
 			{
-				Factory factory;
+				std::shared_ptr<FactoryState> factory;
 				{
 					const std::scoped_lock lock(_mutex);
 					if (_availableElements.empty() == false)
@@ -58,7 +84,7 @@ namespace spk
 					factory = _factory;
 				}
 
-				Element *element = factory();
+				Element *element = factory->obtain();
 
 				if (element == nullptr)
 				{
@@ -82,23 +108,21 @@ namespace spk
 
 			void setFactory(Factory factory)
 			{
-				if (!factory)
+				auto replacement = std::make_shared<FactoryState>(std::move(factory));
 				{
-					throw spk::Exception("Pool requires a valid factory");
+					const std::scoped_lock lock(_mutex);
+					_factory.swap(replacement);
 				}
-
-				const std::scoped_lock lock(_mutex);
-				_factory = std::move(factory);
 			}
 
 			[[nodiscard]] std::shared_ptr<State> cloneEmpty() const
 			{
-				Factory factory;
+				std::shared_ptr<FactoryState> factory;
 				{
 					const std::scoped_lock lock(_mutex);
 					factory = _factory;
 				}
-				return std::make_shared<State>(std::move(factory));
+				return std::make_shared<State>(factory->copy());
 			}
 
 			[[nodiscard]] std::size_t available() const

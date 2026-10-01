@@ -2,6 +2,7 @@
 
 #include "container/pool.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <stdexcept>
 #include <string>
@@ -133,6 +134,98 @@ TEST(PoolTest, DefaultFactoryCreatesAndRecyclesElement)
 	}
 
 	EXPECT_EQ(pool.available(), 1u);
+}
+
+TEST(PoolTest, MutableFactoryRetainsStateAcrossAllocations)
+{
+	IntPool pool([next = 0]() mutable {
+		return new int(++next);
+	});
+	auto first = pool.obtain();
+	auto second = pool.obtain();
+	EXPECT_EQ(*first, 1);
+	EXPECT_EQ(*second, 2);
+}
+
+TEST(PoolTest, CopiedPoolClonesCurrentMutableFactoryState)
+{
+	IntPool source([next = 0]() mutable {
+		return new int(++next);
+	});
+	auto first = source.obtain();
+	IntPool copy(source);
+	auto second = source.obtain();
+	auto copied = copy.obtain();
+	auto third = source.obtain();
+	EXPECT_EQ(*first, 1);
+	EXPECT_EQ(*second, 2);
+	EXPECT_EQ(*copied, 2);
+	EXPECT_EQ(*third, 3);
+}
+
+TEST(PoolTest, FactoryCanObtainFromItsOwnPool)
+{
+	IntPool pool;
+	pool.setFactory([&pool, next = 0]() mutable {
+		const int value = ++next;
+		if (value == 1)
+		{
+			auto nested = pool.obtain();
+			EXPECT_EQ(*nested, 2);
+		}
+		return new int(value);
+	});
+	auto first = pool.obtain();
+	EXPECT_EQ(*first, 1);
+}
+
+TEST(PoolTest, FactoryCanReplaceItselfDuringAllocation)
+{
+	IntPool pool;
+	pool.setFactory([&pool, value = 1]() {
+		pool.setFactory([] {
+			return new int(2);
+		});
+		return new int(value);
+	});
+	auto first = pool.obtain();
+	auto second = pool.obtain();
+	EXPECT_EQ(*first, 1);
+	EXPECT_EQ(*second, 2);
+}
+
+TEST(PoolTest, ConcurrentAllocationsSerializeMutableFactoryState)
+{
+	IntPool pool([next = 0]() mutable {
+		return new int(++next);
+	});
+	constexpr std::size_t ThreadCount = 8;
+	constexpr std::size_t AllocationCount = 32;
+	std::vector<std::vector<IntPool::Lease>> leases(ThreadCount);
+	std::vector<std::jthread> threads;
+	for (std::size_t index = 0; index < ThreadCount; ++index)
+	{
+		threads.emplace_back([&, index] {
+			for (std::size_t allocation = 0; allocation < AllocationCount; ++allocation)
+			{
+				leases[index].push_back(pool.obtain());
+			}
+		});
+	}
+	threads.clear();
+	std::vector<int> values;
+	for (const auto &batch : leases)
+	{
+		for (const auto &lease : batch)
+		{
+			values.push_back(*lease);
+		}
+	}
+	std::sort(values.begin(), values.end());
+	for (std::size_t index = 0; index < values.size(); ++index)
+	{
+		EXPECT_EQ(values[index], static_cast<int>(index + 1));
+	}
 }
 
 TEST(PoolTest, PerCallOnObtainRunsForNewAndRecycledElements)

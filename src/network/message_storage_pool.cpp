@@ -71,7 +71,11 @@ namespace
 		}
 	};
 
-	StoragePoolCollection storagePools;
+	[[nodiscard]] StoragePoolCollection &storagePools()
+	{
+		static StoragePoolCollection collection;
+		return collection;
+	}
 }
 
 namespace spk
@@ -84,6 +88,6 @@ namespace spk
 			return {};
 		}
 
-		return storagePools.obtain(minimumCapacity);
+		return storagePools().obtain(minimumCapacity);
 	}
 }
