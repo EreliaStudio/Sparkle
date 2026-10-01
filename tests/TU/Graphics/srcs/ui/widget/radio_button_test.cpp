@@ -52,7 +52,8 @@ TEST(RadioButtonTest, TextStyleSpacingIndicatorAndGeometryAreExposed)
 	button.setGeometry({.anchor = {5, 6}, .size = {180, 30}});
 	EXPECT_EQ(button.label().text(), U"Unicode ✓");
 	EXPECT_EQ(button.indicator().preferredSize(), spk::Vector2(24, 18));
-	EXPECT_EQ(button.indicator().geometry().size, spk::Vector2UInt(24, 18));
+	EXPECT_EQ(button.indicator().geometry(), (spk::Rect2D{.anchor = {0, 6}, .size = {24, 18}}));
+	EXPECT_EQ(button.indicator().checkedButton().releasedIcon().geometry(), (spk::Rect2D{.anchor = {1, 1}, .size = {22, 16}}));
 	EXPECT_EQ(button.label().parent(), &button);
 	EXPECT_EQ(button.indicator().parent(), &button);
 }

@@ -18,6 +18,7 @@ TEST(ScrollBarTest, OrientationRangeScaleRatioAndGeometryAreForwarded)
 	EXPECT_FLOAT_EQ(bar.ratio(), 0.75f);
 	EXPECT_FLOAT_EQ(bar.value(), 5.0f);
 	EXPECT_EQ(bar.negativeButton().geometry().size, spk::Vector2UInt(20, 20));
+	EXPECT_EQ(bar.negativeButton().releasedIcon().geometry(), (spk::Rect2D{.anchor = {2, 2}, .size = {16, 16}}));
 	EXPECT_EQ(bar.slider().geometry().size, spk::Vector2UInt(160, 20));
 	EXPECT_EQ(bar.positiveButton().geometry().anchor, spk::Vector2Int(180, 0));
 

@@ -20,7 +20,7 @@ TEST(WidgetStyleReactionTest, EveryScalarFieldReappliesToItsConsumerAndChangesHi
 	style.pushButtonPressedGlyphColor = {0, 1, 1, 1};
 	style.pushButtonAlignment = {spk::Alignment::Horizontal::Right, spk::Alignment::Vertical::Bottom};
 	style.iconButtonIconSize = {31, 29};
-	style.iconButtonIconPadding = {9, 8};
+	style.iconButtonIconPaddingRatio = {0.12f, 0.08f};
 	style.textEditCornerSize = {10, 11};
 	style.textEditTextSize = {29, 2};
 	style.textEditGlyphColor = {1, 0, 1, 1};
@@ -56,7 +56,8 @@ TEST(WidgetStyleReactionTest, EveryScalarFieldReappliesToItsConsumerAndChangesHi
 	EXPECT_EQ(button.pressedLabel().glyphColor(), style.pushButtonPressedGlyphColor);
 	EXPECT_EQ(button.alignment(), style.pushButtonAlignment);
 	EXPECT_EQ(button.iconSize(), style.iconButtonIconSize);
-	EXPECT_EQ(button.iconPadding(), style.iconButtonIconPadding);
+	EXPECT_FALSE(button.iconPadding().has_value());
+	EXPECT_EQ(button.iconPaddingRatio(), style.iconButtonIconPaddingRatio);
 	spk::TextEdit edit("Edit");
 	edit.applyStyle(style);
 	EXPECT_EQ(edit.cornerSize(), style.textEditCornerSize);

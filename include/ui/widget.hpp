@@ -64,7 +64,7 @@ namespace spk
 			Alignment pushButtonAlignment{Alignment::Horizontal::Center, Alignment::Vertical::Center};
 
 			Vector2UInt iconButtonIconSize{22, 22};
-			Vector2UInt iconButtonIconPadding{6, 6};
+			Vector2 iconButtonIconPaddingRatio{0.05f, 0.05f};
 
 			Vector2Int textEditCornerSize{7, 7};
 			Font::Size textEditTextSize{17};

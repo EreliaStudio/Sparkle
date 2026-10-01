@@ -44,7 +44,8 @@ TEST(WidgetStyleTest, DefaultResourcesAndCoreValuesAreValid)
 	EXPECT_GT(style.interfaceWindowMenuTitleTextSize.glyph, 0u);
 	EXPECT_GT(style.iconButtonIconSize.x, 0u);
 	EXPECT_GT(style.iconButtonIconSize.y, 0u);
-	EXPECT_GT(style.iconButtonIconPadding.x, 0u);
+	EXPECT_GT(style.iconButtonIconPaddingRatio.x, 0.0f);
+	EXPECT_LT(style.iconButtonIconPaddingRatio.x, 0.5f);
 	EXPECT_GE(style.pushButtonCornerSize.x, 0);
 	EXPECT_GE(style.textEditCornerSize.x, 0);
 	EXPECT_GE(style.sliderBarBackgroundCornerSize.x, 0);
