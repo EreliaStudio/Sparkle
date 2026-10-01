@@ -59,12 +59,8 @@ namespace spk
 		const unsigned int verticalOffset = (geometry().height - side) / 2;
 		const unsigned int spacing = std::min(_spacing, geometry().width - side);
 		const unsigned int labelOffset = side + spacing;
-		_indicator.setGeometry({
-			.anchor = {0, static_cast<int>(verticalOffset)},
-			.size = {side, side}});
-		_label.setGeometry({
-			.anchor = {static_cast<int>(labelOffset), 0},
-			.size = {geometry().width - labelOffset, geometry().height}});
+		_indicator.setGeometry({.anchor = {0, static_cast<int>(verticalOffset)}, .size = {side, side}});
+		_label.setGeometry({.anchor = {static_cast<int>(labelOffset), 0}, .size = {geometry().width - labelOffset, geometry().height}});
 	}
 
 	void CheckBox::_onMouseButtonPressedEvent(MouseButtonPressedEvent &event)
