@@ -118,6 +118,35 @@ namespace spk
 	{
 	}
 
+	Message::Writer::Writer(Message &&message) :
+		_type(std::exchange(message._type, 0)),
+		_requestID(std::exchange(message._requestID, 0))
+	{
+		if (message._storage == nullptr)
+		{
+			return;
+		}
+
+		if (message._storage.use_count() == 1)
+		{
+			_storage = std::move(*message._storage);
+			message._storage.reset();
+			return;
+		}
+
+		const auto source = message.data();
+		_ensureCapacity(source.size());
+		if (source.empty() == false)
+		{
+			_storage->resize(source.size());
+			std::memcpy(
+				_storage->data(),
+				source.data(),
+				source.size());
+		}
+		message._storage.reset();
+	}
+
 	void Message::Writer::_ensureCapacity(std::size_t requiredCapacity)
 	{
 		if (requiredCapacity == 0)
