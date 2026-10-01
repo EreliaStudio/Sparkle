@@ -24,7 +24,7 @@ namespace
 	{
 		static std::atomic_uint64_t counter = 0;
 		return "Sparkle_OpenGLTestContext_" + std::to_string(::GetCurrentProcessId()) + "_" +
-			std::to_string(::GetTickCount64()) + "_" + std::to_string(counter.fetch_add(1));
+			   std::to_string(::GetTickCount64()) + "_" + std::to_string(counter.fetch_add(1));
 	}
 }
 
@@ -52,21 +52,18 @@ namespace sparkle_test
 			{
 				surface.create(native.window());
 				createFramebuffer();
-			}
-			catch (...)
+			} catch (...)
 			{
 				try
 				{
 					surface.destroy();
-				}
-				catch (...)
+				} catch (...)
 				{
 				}
 				try
 				{
 					native.window().destroy();
-				}
-				catch (...)
+				} catch (...)
 				{
 				}
 				throw;
@@ -79,15 +76,13 @@ namespace sparkle_test
 			{
 				surface.makeCurrent();
 				surface.destroy();
-			}
-			catch (...)
+			} catch (...)
 			{
 			}
 			try
 			{
 				native.window().destroy();
-			}
-			catch (...)
+			} catch (...)
 			{
 			}
 		}
@@ -95,6 +90,18 @@ namespace sparkle_test
 		void createFramebuffer()
 		{
 			framebuffer.activate(renderContext);
+		}
+
+		void setGeometry(const spk::Rect2D &geometry)
+		{
+			framebuffer.resize(geometry.size);
+			surface.setGeometry(geometry);
+			framebuffer.activate(renderContext);
+			::glViewport(
+				0,
+				0,
+				static_cast<GLsizei>(geometry.size.x),
+				static_cast<GLsizei>(geometry.size.y));
 		}
 
 		void requireOwnerThread() const
@@ -137,7 +144,7 @@ namespace sparkle_test
 		_impl->surface.makeCurrent();
 	}
 
-	void OpenGLTestContext::reset()
+	void OpenGLTestContext::reset(spk::Vector2UInt size)
 	{
 		makeCurrent();
 		// OpenGL errors belong to the context. Clear errors deliberately produced
@@ -145,8 +152,7 @@ namespace sparkle_test
 		while (::glGetError() != GL_NO_ERROR)
 		{
 		}
-		_impl->surface.setGeometry({.anchor = {0, 0}, .size = {FramebufferWidth, FramebufferHeight}});
-		_impl->framebuffer.activate(_impl->renderContext);
+		_impl->setGeometry({.anchor = {0, 0}, .size = size});
 		::glDrawBuffer(GL_COLOR_ATTACHMENT0);
 		::glReadBuffer(GL_COLOR_ATTACHMENT0);
 		::glUseProgram(0);
@@ -165,7 +171,6 @@ namespace sparkle_test
 		::glCullFace(GL_BACK);
 		::glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 		::glStencilMask(~0u);
-		::glViewport(0, 0, static_cast<GLsizei>(FramebufferWidth), static_cast<GLsizei>(FramebufferHeight));
 		::glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 		::glClearDepth(1.0);
 		::glClearStencil(0);
@@ -179,7 +184,7 @@ namespace sparkle_test
 	void OpenGLTestContext::setGeometry(const spk::Rect2D &geometry)
 	{
 		makeCurrent();
-		_impl->surface.setGeometry(geometry);
+		_impl->setGeometry(geometry);
 	}
 
 	spk::RenderContext &OpenGLTestContext::renderContext()

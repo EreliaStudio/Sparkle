@@ -1,7 +1,36 @@
-#include <exception.hpp>
+#include <sparkle>
+
+#include <chrono>
+
+namespace
+{
+	class DeviceSystem final : public spk::RenderingSystem
+	{
+	public:
+		int updates = 0;
+
+	protected:
+		void _updateState(
+			spk::UpdateContext &,
+			spk::DeviceContext &) override
+		{
+			++updates;
+		}
+	};
+}
 
 int main()
 {
-	const spk::Exception error("Installed Sparkle consumer");
-	return error.message() == "Installed Sparkle consumer" ? 0 : 1;
+	spk::Engine engine;
+	auto &system = engine.addSystem<DeviceSystem>();
+	spk::RenderingEngine renderingEngine(&engine);
+	spk::UpdateContext updateContext{
+		.time = std::chrono::steady_clock::duration{},
+		.deltaTime = std::chrono::milliseconds(16)};
+	spk::Keyboard keyboard;
+	spk::Mouse mouse;
+	spk::DeviceContext deviceContext{keyboard, mouse};
+
+	renderingEngine.updateState(updateContext, deviceContext);
+	return system.updates == 1 ? 0 : 1;
 }

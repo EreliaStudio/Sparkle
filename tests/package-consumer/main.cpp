@@ -56,7 +56,7 @@ namespace
 		fs::create_directories(actual.parent_path());
 		std::ofstream(actual, std::ios::binary) << "P6\n1 1\n255\n"
 												<< "xyz";
-		require(!sparkle_test::compareImages(actual, expected, diff).matches, "Different images must not match");
+		require(!sparkle_test::compareImages(actual, expected, diff, {}, false).matches, "Different images must not match");
 		require(fs::is_regular_file(diff) && fs::file_size(diff) > 0, "Mismatch must produce a difference image");
 		require(fs::exists(actual) && fs::exists(expected), "Mismatch must preserve actual and reference images");
 		std::ifstream reference(expected, std::ios::binary);
@@ -76,7 +76,7 @@ namespace
 		require(sparkle_test::compareImages(actual, expected, diff, options).matches, "Installed consumer must accept configured component deltas");
 		fs::create_directories(actual.parent_path());
 		std::ofstream(actual, std::ios::binary) << "P6\n1 1\n255\nal]";
-		require(!sparkle_test::compareImages(actual, expected, diff, options).matches && fs::exists(diff), "Installed consumer must reject pixels outside configured component deltas");
+		require(!sparkle_test::compareImages(actual, expected, diff, options, false).matches && fs::exists(diff), "Installed consumer must reject pixels outside configured component deltas");
 	}
 
 }

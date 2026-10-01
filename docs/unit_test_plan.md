@@ -108,6 +108,26 @@ Public data-only records and enums are tested with the class that consumes them.
 - Stress concurrent publication/acquisition; readers must only see complete values and eventually observe the final publication.
 - Verify copied producers/consumers share state and remain valid after the factory/wrapper is destroyed.
 
+### `spk::Task<TResult>`, completion contracts, and `spk::WorkerPool`
+
+- **Standard usage:** create a generic Task, retain its shared Answer, explicitly settle it with `validate(result)` or `fail(exception_ptr)`, and observe the final result or failure.
+- `Task<TResult>` is an asynchronous result state, not an executable callable. It owns Pending / Completed / Failed state, the result/failure, shared Answer lifetime, and completion subscriptions.
+- `validate(result)` publishes the completed TResult and `fail(exception_ptr)` publishes the failure. A Task is settled once; null failures and repeated terminal transitions are rejected.
+- Completion subscriptions are race-safe with settlement: subscribing while Pending registers the callback; subscribing after the Task is terminal invokes the callback immediately.
+- Completion callbacks execute synchronously on the thread that settles the Task; a late subscription invokes immediately on the subscribing thread.
+- Completion subscriptions return the ordinary thread-safe `ContractProvider<>::Contract`. Resigning before completion prevents the callback; concurrent resignation is synchronized by ContractProvider itself. The Task state keeps only the small mutex required to make terminal-state publication and completion subscription atomic.
+- A completion callback exception is isolated from the Task result/failure and from other completion subscribers.
+- `WorkerPool` keeps its type-erased `Job` queue. Its internal `TaskJob<TResult>` privately inherits `Task<TResult>`, owns the executable callable, invokes `validate(operation())` on success, and `fail(std::current_exception())` on failure.
+- WorkerPool callers submit callables directly and receive the same `Task<TResult>::Answer` type used by manually settled Tasks. Cover move-only callable captures/results, heterogeneous result types, failure isolation, FIFO/concurrent execution, queued-job draining, and Answer lifetime after pool destruction.
+
+### `spk::TaskGroup<TResult>`
+
+- **Standard usage:** add several `Task<TResult>::Answer` values, regardless of whether they are manually settled or WorkerPool-produced, seal the group into one Answer, subscribe once, and receive one completion notification after every child is terminal.
+- A group is Pending while any child is Pending, Completed when all children completed successfully, and Failed only after every child is terminal when at least one child failed.
+- Preserve child Answer insertion order and expose child Answers so mixed success/failure results remain inspectable.
+- Cover empty groups, already-settled children, concurrent child completion, completion subscription races, callback resignation, callback exception isolation, and group lifetime after the original child Answer variables are destroyed.
+- TaskGroup is passive: it never occupies a WorkerPool thread merely to wait for its children.
+
 ## Design-pattern traits
 
 ### `spk::ContractProvider<Args...>` and `Contract`
@@ -115,6 +135,7 @@ Public data-only records and enums are tested with the class that consumes them.
 - **Standard usage:** subscribe several callbacks, trigger in registration order, resign one contract, trigger again and than verify RAII unsubscription.
 - Cover empty providers, empty callbacks if supported, move construction/assignment of contracts, self move-assignment, provider destruction before contracts, explicit invalidation, and `empty`/validity state.
 - Exercise subscribe, resign, invalidate, provider destruction, and nested trigger during dispatch; verify mutations are deferred, order is deterministic, and the latest queued nested arguments are delivered.
+- Verify cross-thread subscribe, resign, validity checks, invalidation, and trigger calls are synchronized. Concurrent triggers are serialized; cross-thread mutations wait for the active synchronous dispatch, while same-thread callback reentrancy remains supported.
 - Verify a throwing callback restores a usable provider, applies pending removals safely, and propagates the original exception.
 
 ### `spk::StatefullTrait<State>`
@@ -483,6 +504,15 @@ Public data-only records and enums are tested with the class that consumes them.
 - **[throws `std::invalid_argument`]** Raw data size differs from allocation.
 - **[throws `std::logic_error`]** Typed set/get/retrieve size differs from the requested type.
 
+### `spk::Uniform<T>`
+
+- **Standard usage:** declare the GLSL scalar/vector/matrix type at compile time, edit its typed data directly, activate a program on a render context, then activate the uniform on that context and verify the linked value.
+- Cover supported scalar/vector/matrix types, repeated activation, missing optimized-out uniforms, derived typed resources, program switching, program-handle activation, relinking, and active-program requirements.
+- Verify binding-point caches are isolated per `Window::Surface` with independent native OpenGL contexts, while active-program tracking remains local to each `RenderContext`.
+- Unsupported uniform types are rejected at compile time through the uniform push static assertion.
+- **[throws `std::invalid_argument`]** Empty uniform name or activation without a target surface.
+- **[throws `std::logic_error`]** Activation without a program previously activated on the same render context.
+
 ### `spk::ShaderStorageBuffer`
 
 - **Standard usage:** configure fixed plus dynamic parts, set typed data, resize, edit through CPU views, retrieve a GPU view, and verify binding/alignment.
@@ -510,8 +540,8 @@ Public data-only records and enums are tested with the class that consumes them.
 
 ### `spk::Program`
 
-- **Standard usage:** compile/link known shaders, bind uniform/storage blocks and samplers, then issue raw/indexed/instanced draws with every supported primitive.
-- Cover source replacement, generation reuse, zero draw counts, first/count boundaries, absent/optimized-out blocks, maximum binding points, and GL state verification.
+- **Standard usage:** compile/link known shaders, activate them on a render context, bind uniform/storage blocks and samplers, then issue raw/indexed/instanced draws with every supported primitive.
+- Cover render-context active-program tracking, failed activation preserving the previously active program, source replacement, generation reuse, zero draw counts, first/count boundaries, absent/optimized-out blocks, maximum binding points, and GL state verification.
 - **[throws `std::runtime_error`]** Shader/program creation, compilation, linking, or named block lookup failure; preserve driver logs.
 - **[throws `std::invalid_argument`/`std::out_of_range`]** Empty block names or binding points beyond GL limits.
 - **[throws `std::overflow_error`]** Draw counts/first vertex exceed GL integer ranges; **[throws `std::logic_error`]** invalid program synchronization or unsupported primitive cast.

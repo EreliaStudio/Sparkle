@@ -129,8 +129,7 @@ int main(int argc, char **argv)
 
 		writeIfDifferent(outputPath, output.str());
 		return 0;
-	}
-	catch (const std::exception &exception)
+	} catch (const std::exception &exception)
 	{
 		std::cerr << "sparkleResourceBuilder: " << exception.what() << '\n';
 		return 1;

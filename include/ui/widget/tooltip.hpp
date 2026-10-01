@@ -40,7 +40,7 @@ namespace spk
 		Widget::DestructionContract _targetDestructionContract;
 
 		void _updateGeometry();
-		void _updateState(UpdateContext &context) override;
+		void _updateState(UpdateContext &context, DeviceContext &deviceContext) override;
 		void _onMouseMovedEvent(MouseMovedEvent &event) override;
 		void _onMouseButtonPressedEvent(MouseButtonPressedEvent &event) override;
 		void _onWindowFocusLostEvent(WindowFocusLostEvent &event) override;

@@ -3,6 +3,8 @@
 #include <string>
 
 #include "engine/engine.hpp"
+#include "input/device_context.hpp"
+#include "rendering/engine/rendering_engine.hpp"
 #include "ui/widget.hpp"
 
 namespace spk
@@ -16,11 +18,12 @@ namespace spk
 	class EngineWidget : public Widget
 	{
 	private:
-		Engine *_engine = nullptr;
+		RenderingEngine _renderingEngine;
 
 		void _onGeometryChange() override;
 		void _buildRenderSnapshot(spk::RenderSnapshot::Builder &builder) override;
 		void _updateState(UpdateContext &context) override;
+		void _updateState(UpdateContext &context, DeviceContext &deviceContext) override;
 
 		void _onWindowResizedEvent(WindowResizedEvent &event) override;
 		void _onWindowMovedEvent(WindowMovedEvent &event) override;

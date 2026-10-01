@@ -1,16 +1,24 @@
 {
   "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
   "name": "sparkle",
-  "version-string": "0.1.2",
-  "description": "Sparkle static library",
-  "dependencies": [
-    "glew",
-    "opengl",
-    "stb"
+  "version": "0.1.3",
+  "description": "C++23 engine core with optional UI, OpenGL rendering, and application runtime",
+  "homepage": "https://github.com/EreliaStudio/Sparkle",
+  "license": "MIT AND OFL-1.1",
+  "default-features": [
+    "graphics"
   ],
   "features": {
+    "graphics": {
+      "description": "Build Sparkle graphical application, input, UI and OpenGL support",
+      "dependencies": [
+        "glew",
+        "opengl",
+        "stb"
+      ]
+    },
     "tests": {
-      "description": "Dependencies required to build the Sparkle test suite",
+      "description": "Dependencies required to build the Sparkle test suites",
       "dependencies": [
         "gtest"
       ]

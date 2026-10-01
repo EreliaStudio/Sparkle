@@ -13,15 +13,15 @@ namespace spk
 		WinAPI::WakeEvent &wakeEvent,
 		spk::ThreadSafeFIFO<PlatformRequest>::Consumer platformRequestConsumer,
 		spk::ThreadSafeFIFO<EventRecord>::Producer eventRecordProducer,
-		spk::ThreadSafeFIFO<UpdateRequest>::Producer updateRequestProducer,
-		spk::ThreadSafeFIFO<RenderRequest>::Producer renderRequestProducer) :
+		spk::ThreadSafeFIFO<RenderRequest>::Producer renderRequestProducer,
+		ClosureRequest closureRequest) :
 		Runtime("platform"),
 		_wakeEvent(wakeEvent),
 		_windowClass(std::string(ClassIdentifier)),
 		_platformRequestConsumer(std::move(platformRequestConsumer)),
 		_eventRecordProducer(std::move(eventRecordProducer)),
-		_updateRequestProducer(std::move(updateRequestProducer)),
-		_renderRequestProducer(std::move(renderRequestProducer))
+		_renderRequestProducer(std::move(renderRequestProducer)),
+		_closureRequest(std::move(closureRequest))
 	{
 	}
 
@@ -96,24 +96,40 @@ namespace spk
 	{
 		append(request.windowIdentifier, request.native);
 		_createNative(request);
-		_renderRequestProducer.publish(SurfaceCreationRequest{.windowIdentifier = request.windowIdentifier, .native = request.native});
+
+		const Task<void>::Answer registrationAnswer = request.task->answer();
+		auto surfaceCreationContract = registrationAnswer.subscribeToCompletion(
+			[this, registrationAnswer, identifier = request.windowIdentifier, native = request.native] {
+				if (registrationAnswer.status() == Task<void>::Status::Completed)
+				{
+					_renderRequestProducer.publish(
+						SurfaceCreationRequest{
+							.windowIdentifier = identifier,
+							.native = native});
+				}
+			});
+		request.task->validate();
 	}
 
 	void Application::PlatformRuntime::_consume(const NativeDeletionRequest &request)
 	{
 		if (!contains(request.windowIdentifier))
 		{
+			request.task->validate();
 			return;
 		}
 		_mouseInsideWindows.erase(request.windowIdentifier);
 		_destroyNative(object(request.windowIdentifier));
 		remove(request.windowIdentifier);
+
+		request.task->validate();
 	}
 
 	void Application::PlatformRuntime::_consume(const MousePositionRequest &request)
 	{
 		if (!contains(request.windowIdentifier))
 		{
+			request.task->validate();
 			return;
 		}
 
@@ -127,6 +143,8 @@ namespace spk
 		{
 			throw std::system_error(static_cast<int>(::GetLastError()), std::system_category(), "SetCursorPos");
 		}
+
+		request.task->validate();
 	}
 
 	void Application::PlatformRuntime::_consumeRequests()
@@ -134,7 +152,17 @@ namespace spk
 		for (auto &request : _platformRequestConsumer.drain())
 		{
 			std::visit([this](const auto &value) {
-				_consume(value);
+				try
+				{
+					_consume(value);
+				} catch (...)
+				{
+					if (value.task->answer().status() == Task<void>::Status::Pending)
+					{
+						value.task->fail(std::current_exception());
+					}
+					throw;
+				}
 			},
 					   request);
 		}
@@ -342,9 +370,7 @@ namespace spk
 		{
 			return;
 		}
-		native.beginRelease();
-		_updateRequestProducer.publish(StateDeletionRequest{.windowIdentifier = identifier});
-		_renderRequestProducer.publish(SurfaceDeletionRequest{.windowIdentifier = identifier});
+		_closureRequest(identifier);
 	}
 
 	void Application::PlatformRuntime::release(Window::Native &native)

@@ -51,5 +51,6 @@ namespace sparkle_test
 		const std::filesystem::path &actualPath,
 		const std::filesystem::path &expectedPath,
 		const std::filesystem::path &differencePath,
-		ImageComparisonOptions options = {});
+		ImageComparisonOptions options = {},
+		bool printDifferences = true);
 }

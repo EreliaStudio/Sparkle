@@ -1,6 +1,6 @@
 # Reusable test utilities
 
-Build with `-DSPARKLE_BUILD_TEST_LIBRARY=ON -DSPARKLE_BUILD_TESTS=OFF`, then install Sparkle normally. This installs headers and the static library without requiring GTest or building SparkleTestSuite. The overlay vcpkg port offers the `test-library` feature. Enabling Sparkle's own tests also builds/installs the utilities.
+Build with `-DSPARKLE_BUILD_TEST_LIBRARY=ON -DSPARKLE_BUILD_TESTS=OFF`, then install Sparkle normally. This installs headers and the static library without requiring GTest or building SparkleTestSuite. The `erelia-sparkle` vcpkg port offers the `test-library` feature. Enabling Sparkle's own tests also builds/installs the utilities.
 
 ```cmake
 find_package(sparkle CONFIG REQUIRED COMPONENTS TestLibrary)
@@ -16,11 +16,11 @@ sparkle_test::configurePaths(referenceResourceRoot, writableResultRoot);
 auto result = sparkle_test::compareImages(actualPng, expectedPng, differencePng);
 ```
 
-`expectedImagePath(category, name)` resolves under `resources/expectedImages`; `resultImagePath` resolves under the configured result root. No Sparkle checkout/build paths are embedded in the installed utilities. Configuration is process-wide and must not race with tests; empty roots throw without changing existing configuration.
+`expectedImagePath(category, name)` resolves under `resources/expectedImages`; `resultImagePath` resolves under the configured result root. `freshResultFilePath(category, filename)` prepares a writable result path by creating its parent directory and removing a stale file, while `readTextFile(path)` reads a complete text fixture/result into a string. No Sparkle checkout/build paths are embedded in the installed utilities. Configuration is process-wide and must not race with tests; empty roots throw without changing existing configuration.
 
 PNG comparison does not initialize OpenGL. On success the comparator deletes actual/difference files; never use your reference path as the actual/result path. On mismatch it retains actual output and writes a red difference PNG. References are never automatically accepted. See `ImageComparisonOptions` for per-channel tolerances.
 
-`OpenGLTestContext::instance()` creates a hidden Windows/WGL context lazily and must be used on its creating runner thread. The current capture framebuffer is 640×480; use that size. Exporting these utilities does not port Sparkle or GPU capture to Linux. No test framework is required by the public utilities.
+`OpenGLTestContext::instance()` creates a hidden Windows/WGL context lazily and must be used on its creating runner thread. The default capture framebuffer remains 640×480 for compatibility, but callers can select any non-zero size with `reset({width, height})`. `setGeometry()` also resizes the backing framebuffer and viewport, so `capture()` and `save()` use the selected dimensions. Exporting these utilities does not port Sparkle or GPU capture to Linux. No test framework is required by the public utilities.
 
 ## Installed-package smoke test
 
@@ -45,7 +45,9 @@ that the base package still configures/builds/runs, and that requesting the abse
 component fails for the expected reason. They then enable TestLibrary, run the
 installed consumer, move the install into a path containing a space, remove the
 producer source/build trees, and rebuild/run a fresh consumer. Third-party
-vcpkg dependencies remain available outside those trees.
+vcpkg dependencies remain available outside those trees. A separate port job also
+installs `erelia-sparkle` through the repository overlay and validates both the
+base package and the `test-library` feature from clean consumer manifests.
 
 The consumer checks executable-relative defaults, custom paths, preservation of
 both roots after invalid input, image match cleanup, mismatch output and reference

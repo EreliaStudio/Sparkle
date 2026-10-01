@@ -69,10 +69,29 @@ namespace spk
 		{
 			return *_iconPadding;
 		}
-		const Vector2Int corner = _releasedBackground.cornerSize();
+		if (!_iconPaddingRatio.has_value())
+		{
+			return {0, 0};
+		}
 		return {
-			static_cast<unsigned int>(std::max(corner.x, 0)),
-			static_cast<unsigned int>(std::max(corner.y, 0))};
+			static_cast<unsigned int>(std::lround(static_cast<float>(geometry().width) * _iconPaddingRatio->x)),
+			static_cast<unsigned int>(std::lround(static_cast<float>(geometry().height) * _iconPaddingRatio->y))};
+	}
+
+	Vector2UInt PushButton::_intrinsicIconSize(const Vector2UInt &size) const
+	{
+		if (_iconPadding.has_value())
+		{
+			return {size.x + 2 * _iconPadding->x, size.y + 2 * _iconPadding->y};
+		}
+		if (!_iconPaddingRatio.has_value())
+		{
+			return size;
+		}
+		const auto extent = [](unsigned int value, float ratio) {
+			return static_cast<unsigned int>(std::ceil(static_cast<float>(value) / (1.0f - 2.0f * ratio)));
+		};
+		return {extent(size.x, _iconPaddingRatio->x), extent(size.y, _iconPaddingRatio->y)};
 	}
 
 	Vector2UInt PushButton::_naturalIconSize() const
@@ -172,10 +191,9 @@ namespace spk
 
 		if (_hasIcon)
 		{
-			const Vector2UInt size = _iconSize.value_or(_naturalIconSize());
-			const Vector2UInt padding = _effectiveIconPadding();
-			intrinsic.x = std::max(intrinsic.x, static_cast<float>(size.x + 2 * padding.x));
-			intrinsic.y = std::max(intrinsic.y, static_cast<float>(size.y + 2 * padding.y));
+			const Vector2UInt size = _intrinsicIconSize(_iconSize.value_or(_naturalIconSize()));
+			intrinsic.x = std::max(intrinsic.x, static_cast<float>(size.x));
+			intrinsic.y = std::max(intrinsic.y, static_cast<float>(size.y));
 		}
 
 		SizeHint hint = sizeHint();
@@ -361,6 +379,21 @@ namespace spk
 	void PushButton::setIconPadding(const Vector2UInt &padding)
 	{
 		_iconPadding = padding;
+		_iconPaddingRatio.reset();
+		_updateIconGeometry();
+		_updateSizeHint();
+	}
+
+	void PushButton::setIconPaddingRatio(const Vector2 &ratio)
+	{
+		if (!std::isfinite(ratio.x) || !std::isfinite(ratio.y) ||
+			ratio.x < 0.0f || ratio.y < 0.0f ||
+			ratio.x >= 0.5f || ratio.y >= 0.5f)
+		{
+			throw std::invalid_argument("PushButton icon padding ratio must be in [0, 0.5)");
+		}
+		_iconPadding.reset();
+		_iconPaddingRatio = ratio;
 		_updateIconGeometry();
 		_updateSizeHint();
 	}
@@ -368,6 +401,7 @@ namespace spk
 	void PushButton::resetIconPadding()
 	{
 		_iconPadding.reset();
+		_iconPaddingRatio = Vector2{0.05f, 0.05f};
 		_updateIconGeometry();
 		_updateSizeHint();
 	}
@@ -416,6 +450,10 @@ namespace spk
 	const std::optional<Vector2UInt> &PushButton::iconPadding() const noexcept
 	{
 		return _iconPadding;
+	}
+	const std::optional<Vector2> &PushButton::iconPaddingRatio() const noexcept
+	{
+		return _iconPaddingRatio;
 	}
 	Panel &PushButton::releasedBackground() noexcept
 	{

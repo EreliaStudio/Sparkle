@@ -34,10 +34,12 @@ namespace spk
 		std::optional<Vector2UInt> _textPadding;
 		std::optional<Vector2UInt> _iconSize;
 		std::optional<Vector2UInt> _iconPadding;
+		std::optional<Vector2> _iconPaddingRatio = Vector2{0.05f, 0.05f};
 		ClickProvider _clickProvider;
 
 		[[nodiscard]] Vector2UInt _effectiveTextPadding() const;
 		[[nodiscard]] Vector2UInt _effectiveIconPadding() const;
+		[[nodiscard]] Vector2UInt _intrinsicIconSize(const Vector2UInt &size) const;
 		[[nodiscard]] Vector2UInt _naturalIconSize() const;
 		void _applyVisualState();
 		void _updateTextGeometry();
@@ -71,6 +73,7 @@ namespace spk
 		void setIconSize(const Vector2UInt &size);
 		void resetIconSize();
 		void setIconPadding(const Vector2UInt &padding);
+		void setIconPaddingRatio(const Vector2 &ratio);
 		void resetIconPadding();
 		void removeIcon();
 		void setFlat(bool flat);
@@ -83,6 +86,7 @@ namespace spk
 		[[nodiscard]] const std::optional<Vector2UInt> &textPadding() const noexcept;
 		[[nodiscard]] const std::optional<Vector2UInt> &iconSize() const noexcept;
 		[[nodiscard]] const std::optional<Vector2UInt> &iconPadding() const noexcept;
+		[[nodiscard]] const std::optional<Vector2> &iconPaddingRatio() const noexcept;
 
 		[[nodiscard]] Panel &releasedBackground() noexcept;
 		[[nodiscard]] const Panel &releasedBackground() const noexcept;

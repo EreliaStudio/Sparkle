@@ -1,31 +1,19 @@
 #pragma once
 
 #include <concepts>
-#include <functional>
 #include <memory>
 #include <utility>
 
-#include "core/event/event_dispatcher.hpp"
 #include "engine/entity.hpp"
 #include "engine/system_collection.hpp"
 #include "math/rect2d.hpp"
-#include "rendering/render_snapshot.hpp"
 
 namespace spk
 {
 	struct UpdateContext;
 
-	class Engine : public EventDispatcher,
-				   public SystemCollection
+	class Engine : public SystemCollection
 	{
-	public:
-		static inline const spk::RenderPass::Key SceneRenderPassKey{
-			.name = "engine.Scene",
-			.order = -100};
-		static inline const spk::RenderPass::Key PreSceneRenderPassKey{
-			.name = "engine.PreScene",
-			.order = -200};
-
 	private:
 		using SystemCollection::registerSystem;
 		using SystemCollection::unregisterSystem;
@@ -33,13 +21,9 @@ namespace spk
 		Entity _root;
 		spk::Rect2D _geometry{};
 
-		[[nodiscard]] bool _isAcceptingEvent() const override;
-		void _propagateEvent(
-			const std::function<void(EventDispatcher *)> &callback) override;
-
 	public:
 		Engine();
-		~Engine() override;
+		~Engine();
 
 		void addEntity(Entity *entity);
 		void removeEntity(Entity *entity);
@@ -65,7 +49,6 @@ namespace spk
 
 		void handleGeometryChange(const spk::Rect2D &geometry);
 		[[nodiscard]] const spk::Rect2D &geometry() const noexcept;
-		void buildRenderSnapshot(spk::RenderSnapshot::Builder &builder);
 		void updateState(UpdateContext &context);
 	};
 }
