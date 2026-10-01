@@ -12,6 +12,7 @@
 #include <chrono>
 #include <cstdint>
 #include <thread>
+#include <utility>
 #include <vector>
 
 using namespace std::chrono_literals;
@@ -24,9 +25,22 @@ namespace
 		std::uint32_t sequence = 0;
 	};
 
-	[[nodiscard]] spk::Message::RequestID requestID(std::uint32_t client, std::uint32_t sequence)
+	[[nodiscard]] spk::Message::RequestID requestID(
+		std::uint32_t client,
+		std::uint32_t sequence)
 	{
 		return (static_cast<spk::Message::RequestID>(client) + 1u) * 1000u + sequence;
+	}
+
+	[[nodiscard]] spk::Message payloadMessage(
+		spk::Message::Type type,
+		const RemotePayload &payload,
+		spk::Message::RequestID id = 0)
+	{
+		spk::Message::Writer writer(type);
+		writer.setRequestID(id);
+		writer << payload;
+		return std::move(writer).build();
 	}
 
 	void runRemoteRouter(
@@ -69,7 +83,9 @@ namespace
 			std::vector<spk::RemoteNode::Endpoint::Request> requests;
 			std::vector<spk::RemoteNode::Endpoint::Request> batch;
 			const auto deadline = std::chrono::steady_clock::now() + 5s;
-			while (requests.size() < expectedRequests && std::chrono::steady_clock::now() < deadline)
+			while (
+				requests.size() < expectedRequests &&
+				std::chrono::steady_clock::now() < deadline)
 			{
 				endpoint.dispatch();
 				endpoint.requests().drain(batch);
@@ -86,15 +102,18 @@ namespace
 
 			for (auto iterator = requests.rbegin(); iterator != requests.rend(); ++iterator)
 			{
-				const RemotePayload payload = iterator->message.peek<RemotePayload>();
+				const RemotePayload payload =
+					iterator->message.reader().get<RemotePayload>();
 				if (iterator->message.requestID() != requestID(payload.client, payload.sequence))
 				{
 					throw spk::Exception("Remote request ID was not preserved.");
 				}
-				spk::Message response(201);
-				response.setRequestID(iterator->message.requestID());
-				response << payload;
-				endpoint.reply(*iterator, std::move(response));
+				endpoint.reply(
+					*iterator,
+					payloadMessage(
+						201,
+						payload,
+						iterator->message.requestID()));
 			}
 			finished = true;
 		});
@@ -111,10 +130,11 @@ namespace
 			client.connect("127.0.0.1", port);
 			for (std::uint32_t sequence = 0; sequence < 50; ++sequence)
 			{
-				spk::Message request(200);
-				request.setRequestID(requestID(clientIndex, sequence));
-				request << RemotePayload{clientIndex, sequence};
-				client.send(request);
+				client.send(
+					payloadMessage(
+						200,
+						RemotePayload{clientIndex, sequence},
+						requestID(clientIndex, sequence)));
 			}
 			responses = NetworkTestUtils::collect(client.messages(), 50, 5s);
 		});
@@ -177,9 +197,10 @@ TEST(RemoteNodeIntegrationTest, TwoClientsRemainCorrelatedAcrossOutOfOrderRemote
 	{
 		ASSERT_EQ(responses[client].size(), 50u);
 		std::array<bool, 50> seen{};
-		for (spk::Message &message : responses[client])
+		for (const spk::Message &message : responses[client])
 		{
-			const RemotePayload payload = message.get<RemotePayload>();
+			const RemotePayload payload =
+				message.reader().get<RemotePayload>();
 			EXPECT_EQ(payload.client, client);
 			EXPECT_EQ(message.requestID(), requestID(payload.client, payload.sequence));
 			ASSERT_LT(payload.sequence, seen.size());
@@ -197,7 +218,11 @@ TEST(RemoteNodeIntegrationTest, ForwardingWhileDisconnectedThrows)
 	spk::RemoteNode remoteNode;
 
 	EXPECT_THROW(
-		(remoteNode.receive(spk::ReceivedMessage{12, spk::Message(200)}), remoteNode.dispatch()),
+		(remoteNode.receive(
+			 spk::ReceivedMessage{
+				 12,
+				 spk::Message::Writer(200).build()}),
+		 remoteNode.dispatch()),
 		spk::Exception);
 }
 
@@ -207,7 +232,7 @@ TEST(RemoteNodeIntegrationTest, EndpointRejectsOrdinaryClientMessages)
 	spk::Client client;
 	endpoint.start(0);
 	client.connect("127.0.0.1", endpoint.port());
-	client.send(spk::Message(77));
+	client.send(spk::Message::Writer(77).build());
 
 	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
 		try
@@ -263,12 +288,8 @@ TEST(RemoteNodeIntegrationTest, TwoRoutersSharingEndpointKeepOriginConnectionsIn
 	firstClient.connect("127.0.0.1", firstRouter.server().port());
 	secondClient.connect("127.0.0.1", secondRouter.server().port());
 
-	spk::Message firstRequest(220);
-	firstRequest << RemotePayload{10, 1};
-	firstClient.send(firstRequest);
-	spk::Message secondRequest(220);
-	secondRequest << RemotePayload{20, 2};
-	secondClient.send(secondRequest);
+	firstClient.send(payloadMessage(220, RemotePayload{10, 1}));
+	secondClient.send(payloadMessage(220, RemotePayload{20, 2}));
 
 	std::vector<spk::RemoteNode::Endpoint::Request> requests;
 	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
@@ -289,18 +310,21 @@ TEST(RemoteNodeIntegrationTest, TwoRoutersSharingEndpointKeepOriginConnectionsIn
 
 	for (const auto &request : requests)
 	{
-		const RemotePayload payload = request.message.peek<RemotePayload>();
-		spk::Message response(221);
-		response << payload;
-		endpoint.reply(request, std::move(response));
+		const RemotePayload payload =
+			request.message.reader().get<RemotePayload>();
+		endpoint.reply(request, payloadMessage(221, payload));
 	}
 
 	auto firstResponses = NetworkTestUtils::collect(firstClient.messages(), 1, 5s);
 	auto secondResponses = NetworkTestUtils::collect(secondClient.messages(), 1, 5s);
 	ASSERT_EQ(firstResponses.size(), 1u);
 	ASSERT_EQ(secondResponses.size(), 1u);
-	EXPECT_EQ(firstResponses.front().get<RemotePayload>().client, 10u);
-	EXPECT_EQ(secondResponses.front().get<RemotePayload>().client, 20u);
+	EXPECT_EQ(
+		firstResponses.front().reader().get<RemotePayload>().client,
+		10u);
+	EXPECT_EQ(
+		secondResponses.front().reader().get<RemotePayload>().client,
+		20u);
 
 	firstClient.disconnect();
 	secondClient.disconnect();
