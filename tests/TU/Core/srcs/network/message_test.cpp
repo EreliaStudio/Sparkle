@@ -231,7 +231,6 @@ TEST(MessageTest, EmptyMessageReaderRejectsDataReads)
 	EXPECT_THROW((void)reader.get<std::uint32_t>(), spk::Exception);
 }
 
-
 TEST(MessageTest, WriterRebuildTakesUniqueMessageStorageWithoutCopy)
 {
 	spk::Message::Writer sourceWriter(52);

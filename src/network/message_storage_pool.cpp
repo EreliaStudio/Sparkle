@@ -20,8 +20,7 @@ namespace
 		}
 
 		constexpr std::size_t highestPowerOfTwo =
-			std::size_t{1} <<
-			(std::numeric_limits<std::size_t>::digits - 1);
+			std::size_t{1} << (std::numeric_limits<std::size_t>::digits - 1);
 
 		if (requestedSize > highestPowerOfTwo)
 		{

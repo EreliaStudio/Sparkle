@@ -631,7 +631,6 @@ TEST(PoolTest, ThrowingLeaseCopyDiscardsNewElementAndWrapsCause)
 	EXPECT_EQ(pool.available(), 0u);
 }
 
-
 TEST(PoolTest, ConcurrentObtainAndRecycleIsSafe)
 {
 	spk::Pool<std::vector<int>> pool;

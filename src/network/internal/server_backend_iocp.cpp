@@ -322,9 +322,7 @@ namespace spk::NetworkInternal
 					header.payloadSize,
 					writer.data().begin());
 				consumed += frameSize;
-				_publish(ReceivedMessage{
-					session.id,
-					std::move(writer).build()});
+				_publish(ReceivedMessage{session.id, std::move(writer).build()});
 				return true;
 			}
 
