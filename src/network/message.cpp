@@ -8,15 +8,127 @@
 
 namespace spk
 {
+	Message::Reader::Reader(
+		const Message &message,
+		std::size_t offset) :
+		_message(&message)
+	{
+		_seek(offset);
+	}
+
+	void Message::Reader::_seek(std::size_t offset) const
+	{
+		if (offset > _message->size())
+		{
+			throw Exception("Unable to seek beyond the end of a network message.");
+		}
+		_readOffset = offset;
+	}
+
+	void Message::Reader::reset() const noexcept
+	{
+		_readOffset = 0;
+	}
+
+	void Message::Reader::seek(std::size_t offset) const
+	{
+		_seek(offset);
+	}
+
+	void Message::Reader::skip(std::size_t size) const
+	{
+		if (
+			_readOffset > _message->size() ||
+			size > _message->size() - _readOffset)
+		{
+			throw Exception("Unable to skip beyond the end of a network message.");
+		}
+		_readOffset += size;
+	}
+
+	void Message::Reader::pull(void *data, std::size_t size) const
+	{
+		_message->readAt(_readOffset, data, size);
+		_readOffset += size;
+	}
+
+	std::size_t Message::Reader::readOffset() const noexcept
+	{
+		return _readOffset;
+	}
+
+	const Message::Reader &Message::Reader::operator>>(std::string &value) const
+	{
+		const std::uint32_t size = get<std::uint32_t>();
+		value.resize(size);
+		pull(value.data(), size);
+		return *this;
+	}
+
+	Message::Message() noexcept :
+		_reader(*this)
+	{
+	}
+
 	Message::Message(Type type) noexcept :
-		_type(type)
+		_type(type),
+		_reader(*this)
 	{
 	}
 
 	Message::Message(Type type, Storage payload) noexcept :
 		_type(type),
-		_payload(std::move(payload))
+		_payload(std::move(payload)),
+		_reader(*this)
 	{
+	}
+
+	Message::Message(const Message &other) :
+		_type(other._type),
+		_requestID(other._requestID),
+		_payload(other._payload),
+		_reader(*this, other.readOffset())
+	{
+	}
+
+	Message::Message(Message &&other) noexcept :
+		_type(other._type),
+		_requestID(other._requestID),
+		_payload(std::move(other._payload)),
+		_reader(*this, other.readOffset())
+	{
+		other._reader.reset();
+	}
+
+	Message &Message::operator=(const Message &other)
+	{
+		if (this == &other)
+		{
+			return *this;
+		}
+
+		_type = other._type;
+		_requestID = other._requestID;
+		_payload = other._payload;
+		_reader.seek(other.readOffset());
+		return *this;
+	}
+
+	Message &Message::operator=(Message &&other) noexcept
+	{
+		if (this == &other)
+		{
+			return *this;
+		}
+
+		const std::size_t offset = other.readOffset();
+
+		_type = other._type;
+		_requestID = other._requestID;
+		_payload = std::move(other._payload);
+		_reader.seek(offset);
+		other._reader.reset();
+		return *this;
 	}
 
 	void Message::setType(Type type) noexcept
@@ -42,30 +154,26 @@ namespace spk
 	void Message::clear() noexcept
 	{
 		_payload.clear();
-		_readOffset = 0;
+		_reader.reset();
 	}
 
 	void Message::reset() const noexcept
 	{
-		_readOffset = 0;
+		_reader.reset();
 	}
 
 	void Message::resize(std::size_t size)
 	{
 		_payload.resize(size);
-		if (_readOffset > size)
+		if (_reader.readOffset() > size)
 		{
-			_readOffset = size;
+			_reader.seek(size);
 		}
 	}
 
 	void Message::skip(std::size_t size) const
 	{
-		if (size > _payload.size() - _readOffset)
-		{
-			throw Exception("Unable to skip beyond the end of a network message.");
-		}
-		_readOffset += size;
+		_reader.skip(size);
 	}
 
 	void Message::edit(std::size_t offset, const void *data, std::size_t size)
@@ -109,15 +217,7 @@ namespace spk
 
 	void Message::pull(void *data, std::size_t size) const
 	{
-		if (size > _payload.size() - _readOffset)
-		{
-			throw Exception("Unable to read beyond the end of a network message.");
-		}
-		if (size != 0)
-		{
-			std::memcpy(data, _payload.data() + _readOffset, size);
-		}
-		_readOffset += size;
+		_reader.pull(data, size);
 	}
 
 	std::span<const std::byte> Message::data() const noexcept
@@ -137,7 +237,7 @@ namespace spk
 
 	std::size_t Message::readOffset() const noexcept
 	{
-		return _readOffset;
+		return _reader.readOffset();
 	}
 
 	Message &Message::operator<<(std::string_view value)
@@ -155,9 +255,12 @@ namespace spk
 
 	const Message &Message::operator>>(std::string &value) const
 	{
-		const std::uint32_t size = get<std::uint32_t>();
-		value.resize(size);
-		pull(value.data(), size);
+		_reader >> value;
 		return *this;
+	}
+
+	Message::Reader Message::reader(std::size_t offset) const
+	{
+		return Reader(*this, offset);
 	}
 }

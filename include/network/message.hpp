@@ -19,16 +19,74 @@ namespace spk
 		using RequestID = std::uint64_t;
 		using Storage = std::vector<std::byte>;
 
+		class Reader
+		{
+		private:
+			const Message *_message = nullptr;
+			mutable std::size_t _readOffset = 0;
+
+			void _seek(std::size_t offset) const;
+
+		public:
+			explicit Reader(
+				const Message &message,
+				std::size_t offset = 0);
+
+			void reset() const noexcept;
+			void seek(std::size_t offset) const;
+			void skip(std::size_t size) const;
+			void pull(void *data, std::size_t size) const;
+
+			template <typename TValue>
+				requires std::is_trivially_copyable_v<TValue>
+			void skip() const
+			{
+				skip(sizeof(TValue));
+			}
+
+			[[nodiscard]] std::size_t readOffset() const noexcept;
+
+			template <typename TValue>
+				requires std::is_trivially_copyable_v<TValue>
+			const Reader &operator>>(TValue &value) const
+			{
+				pull(&value, sizeof(TValue));
+				return *this;
+			}
+
+			const Reader &operator>>(std::string &value) const;
+
+			template <typename TValue>
+				requires std::is_trivially_copyable_v<TValue>
+			[[nodiscard]] TValue get() const
+			{
+				std::array<std::byte, sizeof(TValue)> bytes;
+				pull(bytes.data(), bytes.size());
+				return std::bit_cast<TValue>(bytes);
+			}
+
+			template <typename TValue>
+				requires std::is_trivially_copyable_v<TValue>
+			[[nodiscard]] TValue peek() const
+			{
+				return _message->readAt<TValue>(_readOffset);
+			}
+		};
+
 	private:
 		Type _type = 0;
 		RequestID _requestID = 0;
 		Storage _payload;
-		mutable std::size_t _readOffset = 0;
+		mutable Reader _reader;
 
 	public:
-		Message() = default;
+		Message() noexcept;
 		explicit Message(Type type) noexcept;
 		Message(Type type, Storage payload) noexcept;
+		Message(const Message &other);
+		Message(Message &&other) noexcept;
+		Message &operator=(const Message &other);
+		Message &operator=(Message &&other) noexcept;
 
 		void setType(Type type) noexcept;
 		[[nodiscard]] Type type() const noexcept;
@@ -49,7 +107,7 @@ namespace spk
 			requires std::is_trivially_copyable_v<TValue>
 		void skip() const
 		{
-			skip(sizeof(TValue));
+			_reader.skip<TValue>();
 		}
 
 		template <typename TValue>
@@ -82,13 +140,6 @@ namespace spk
 			append(value);
 		}
 
-		template <typename TValue>
-			requires std::is_trivially_copyable_v<TValue>
-		void pull(TValue &value) const
-		{
-			pull(&value, sizeof(TValue));
-		}
-
 		[[nodiscard]] std::span<const std::byte> data() const noexcept;
 		[[nodiscard]] std::size_t size() const noexcept;
 		[[nodiscard]] bool empty() const noexcept;
@@ -112,7 +163,7 @@ namespace spk
 			requires std::is_trivially_copyable_v<TValue>
 		const Message &operator>>(TValue &value) const
 		{
-			pull(value);
+			_reader >> value;
 			return *this;
 		}
 
@@ -122,16 +173,16 @@ namespace spk
 			requires std::is_trivially_copyable_v<TValue>
 		[[nodiscard]] TValue get() const
 		{
-			std::array<std::byte, sizeof(TValue)> bytes;
-			pull(bytes.data(), bytes.size());
-			return std::bit_cast<TValue>(bytes);
+			return _reader.get<TValue>();
 		}
 
 		template <typename TValue>
 			requires std::is_trivially_copyable_v<TValue>
 		[[nodiscard]] TValue peek() const
 		{
-			return readAt<TValue>(_readOffset);
+			return _reader.peek<TValue>();
 		}
+
+		[[nodiscard]] Reader reader(std::size_t offset = 0) const;
 	};
 }

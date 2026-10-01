@@ -238,3 +238,90 @@ TEST(MessageTest, EditOutsidePayloadThrows)
 
 	EXPECT_THROW(message.edit(sizeof(std::uint32_t), std::uint32_t{2}), spk::Exception);
 }
+
+
+TEST(MessageTest, IndependentReadersKeepIndependentOffsets)
+{
+	spk::Message message;
+	message << std::uint32_t{11} << std::uint32_t{22};
+
+	auto first = message.reader();
+	auto second = message.reader();
+
+	EXPECT_EQ(first.get<std::uint32_t>(), 11u);
+	EXPECT_EQ(first.readOffset(), sizeof(std::uint32_t));
+	EXPECT_EQ(second.readOffset(), 0u);
+	EXPECT_EQ(second.get<std::uint32_t>(), 11u);
+	EXPECT_EQ(second.get<std::uint32_t>(), 22u);
+	EXPECT_EQ(first.get<std::uint32_t>(), 22u);
+}
+
+TEST(MessageTest, ReaderCanStartAtExplicitOffset)
+{
+	spk::Message message;
+	message << std::uint32_t{11} << std::uint32_t{22};
+
+	auto reader = message.reader(sizeof(std::uint32_t));
+
+	EXPECT_EQ(reader.readOffset(), sizeof(std::uint32_t));
+	EXPECT_EQ(reader.get<std::uint32_t>(), 22u);
+}
+
+TEST(MessageTest, ExternalReaderDoesNotAffectMessageInternalReader)
+{
+	spk::Message message;
+	message << std::uint32_t{11} << std::uint32_t{22};
+
+	auto reader = message.reader();
+	EXPECT_EQ(reader.get<std::uint32_t>(), 11u);
+
+	EXPECT_EQ(message.readOffset(), 0u);
+	EXPECT_EQ(message.get<std::uint32_t>(), 11u);
+	EXPECT_EQ(message.readOffset(), sizeof(std::uint32_t));
+	EXPECT_EQ(reader.readOffset(), sizeof(std::uint32_t));
+}
+
+TEST(MessageTest, ReaderSupportsStreamingAndStrings)
+{
+	spk::Message message;
+	message << std::uint32_t{17} << std::string{"reader"};
+
+	auto reader = message.reader();
+	std::uint32_t integer = 0;
+	std::string text;
+
+	reader >> integer >> text;
+
+	EXPECT_EQ(integer, 17u);
+	EXPECT_EQ(text, "reader");
+}
+
+TEST(MessageTest, ReaderSeekAndResetAffectOnlyThatReader)
+{
+	spk::Message message;
+	message << std::uint32_t{11} << std::uint32_t{22};
+
+	auto reader = message.reader(sizeof(std::uint32_t));
+	EXPECT_EQ(reader.get<std::uint32_t>(), 22u);
+
+	reader.reset();
+	EXPECT_EQ(reader.get<std::uint32_t>(), 11u);
+
+	reader.seek(sizeof(std::uint32_t));
+	EXPECT_EQ(reader.get<std::uint32_t>(), 22u);
+	EXPECT_EQ(message.readOffset(), 0u);
+}
+
+TEST(MessageTest, CopyKeepsIndependentInternalReaderBoundToCopiedMessage)
+{
+	spk::Message original;
+	original << std::uint32_t{11} << std::uint32_t{22};
+	EXPECT_EQ(original.get<std::uint32_t>(), 11u);
+
+	spk::Message copy = original;
+
+	EXPECT_EQ(copy.readOffset(), sizeof(std::uint32_t));
+	EXPECT_EQ(copy.get<std::uint32_t>(), 22u);
+	EXPECT_EQ(original.readOffset(), sizeof(std::uint32_t));
+	EXPECT_EQ(original.get<std::uint32_t>(), 22u);
+}
