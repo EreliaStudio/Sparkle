@@ -14,6 +14,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 using namespace std::chrono_literals;
@@ -26,14 +27,22 @@ namespace
 		std::uint32_t sequence = 0;
 	};
 
+	template <typename TValue>
+	[[nodiscard]] spk::Message makeMessage(
+		spk::Message::Type type,
+		const TValue &value)
+	{
+		spk::Message::Writer writer(type);
+		writer << value;
+		return std::move(writer).build();
+	}
+
 	[[nodiscard]] spk::ConnectionID connectAndIdentify(
 		spk::Server &server,
 		spk::Client &client)
 	{
 		client.connect("127.0.0.1", server.port());
-		spk::Message hello(1);
-		hello << std::uint32_t{0xCAFE};
-		client.send(hello);
+		client.send(makeMessage(1, std::uint32_t{0xCAFE}));
 
 		auto received = NetworkTestUtils::collect(server.messages(), 1);
 		if (received.empty())
@@ -63,9 +72,7 @@ TEST(NetworkConcurrencyTest, ServerAndClientCanBeDrivenFromIndependentThreads)
 	std::jthread clientThread([&] {
 		failure.run([&] {
 			client.connect("127.0.0.1", port.load());
-			spk::Message message(21);
-			message << std::uint32_t{42};
-			client.send(message);
+			client.send(makeMessage(21, std::uint32_t{42}));
 		});
 	});
 	clientThread.join();
@@ -74,7 +81,7 @@ TEST(NetworkConcurrencyTest, ServerAndClientCanBeDrivenFromIndependentThreads)
 	auto received = NetworkTestUtils::collect(server.messages(), 1);
 	ASSERT_EQ(received.size(), 1u);
 	EXPECT_EQ(received.front().message.type(), 21u);
-	EXPECT_EQ(received.front().message.get<std::uint32_t>(), 42u);
+	EXPECT_EQ(received.front().message.reader().get<std::uint32_t>(), 42u);
 
 	client.disconnect();
 	server.stop();
@@ -93,15 +100,18 @@ TEST(NetworkConcurrencyTest, LargePayloadCrossesReceptionBufferBoundaries)
 		payload[index] = static_cast<std::byte>(index % 251u);
 	}
 
-	spk::Message message(22);
-	message.append(payload.data(), payload.size());
-	client.send(message);
+	spk::Message::Writer writer(22);
+	writer.append(payload.data(), payload.size());
+	client.send(std::move(writer).build());
 
 	auto received = NetworkTestUtils::collect(server.messages(), 1, 5s);
 	ASSERT_EQ(received.size(), 1u);
 	ASSERT_EQ(received.front().message.size(), payload.size());
 	EXPECT_EQ(
-		std::memcmp(received.front().message.data().data(), payload.data(), payload.size()),
+		std::memcmp(
+			received.front().message.data().data(),
+			payload.data(),
+			payload.size()),
 		0);
 
 	client.disconnect();
@@ -118,16 +128,16 @@ TEST(NetworkConcurrencyTest, ClientBurstPreservesMessageOrder)
 
 	for (std::uint32_t sequence = 0; sequence < MessageCount; ++sequence)
 	{
-		spk::Message message(23);
-		message << sequence;
-		client.send(message);
+		client.send(makeMessage(23, sequence));
 	}
 
 	auto received = NetworkTestUtils::collect(server.messages(), MessageCount, 5s);
 	ASSERT_EQ(received.size(), MessageCount);
 	for (std::uint32_t sequence = 0; sequence < MessageCount; ++sequence)
 	{
-		EXPECT_EQ(received[sequence].message.get<std::uint32_t>(), sequence);
+		EXPECT_EQ(
+			received[sequence].message.reader().get<std::uint32_t>(),
+			sequence);
 	}
 
 	client.disconnect();
@@ -145,16 +155,16 @@ TEST(NetworkConcurrencyTest, ServerQueuedBurstPreservesMessageOrder)
 
 	for (std::uint32_t sequence = 0; sequence < MessageCount; ++sequence)
 	{
-		spk::Message message(24);
-		message << sequence;
-		server.sendTo(connection, message);
+		server.sendTo(connection, makeMessage(24, sequence));
 	}
 
 	auto received = NetworkTestUtils::collect(client.messages(), MessageCount, 5s);
 	ASSERT_EQ(received.size(), MessageCount);
 	for (std::uint32_t sequence = 0; sequence < MessageCount; ++sequence)
 	{
-		EXPECT_EQ(received[sequence].get<std::uint32_t>(), sequence);
+		EXPECT_EQ(
+			received[sequence].reader().get<std::uint32_t>(),
+			sequence);
 	}
 
 	client.disconnect();
@@ -174,13 +184,13 @@ TEST(NetworkConcurrencyTest, TargetedSendDoesNotReachOtherClients)
 	ASSERT_NE(secondID, spk::InvalidConnectionID);
 	ASSERT_NE(firstID, secondID);
 
-	spk::Message message(25);
-	message << std::uint32_t{91};
-	server.sendTo(firstID, message);
+	server.sendTo(firstID, makeMessage(25, std::uint32_t{91}));
 
 	auto firstMessages = NetworkTestUtils::collect(first.messages(), 1);
 	ASSERT_EQ(firstMessages.size(), 1u);
-	EXPECT_EQ(firstMessages.front().get<std::uint32_t>(), 91u);
+	EXPECT_EQ(
+		firstMessages.front().reader().get<std::uint32_t>(),
+		91u);
 
 	std::vector<spk::Message> secondMessages;
 	std::this_thread::sleep_for(50ms);
@@ -202,19 +212,19 @@ TEST(NetworkConcurrencyTest, BroadcastReachesEveryConnectedClient)
 	ASSERT_NE(connectAndIdentify(server, first), spk::InvalidConnectionID);
 	ASSERT_NE(connectAndIdentify(server, second), spk::InvalidConnectionID);
 
-	spk::Message message(26);
-	message << std::string("broadcast");
-	server.sendToAll(message);
+	server.sendToAll(makeMessage(26, std::string("broadcast")));
 
 	auto firstMessages = NetworkTestUtils::collect(first.messages(), 1);
 	auto secondMessages = NetworkTestUtils::collect(second.messages(), 1);
 	ASSERT_EQ(firstMessages.size(), 1u);
 	ASSERT_EQ(secondMessages.size(), 1u);
 
+	auto firstReader = firstMessages.front().reader();
+	auto secondReader = secondMessages.front().reader();
 	std::string firstText;
 	std::string secondText;
-	firstMessages.front() >> firstText;
-	secondMessages.front() >> secondText;
+	firstReader >> firstText;
+	secondReader >> secondText;
 	EXPECT_EQ(firstText, "broadcast");
 	EXPECT_EQ(secondText, "broadcast");
 
@@ -242,9 +252,11 @@ TEST(NetworkConcurrencyTest, ConcurrentServerProducersAreSerializedSafely)
 			failure.run([&] {
 				for (std::uint32_t sequence = 0; sequence < MessageCount; ++sequence)
 				{
-					spk::Message message(27);
-					message << SequencePayload{producer, sequence};
-					server.sendTo(connection, message);
+					server.sendTo(
+						connection,
+						makeMessage(
+							27,
+							SequencePayload{producer, sequence}));
 				}
 			});
 		});
@@ -262,9 +274,10 @@ TEST(NetworkConcurrencyTest, ConcurrentServerProducersAreSerializedSafely)
 	ASSERT_EQ(received.size(), ProducerCount * MessageCount);
 
 	std::array<std::uint32_t, ProducerCount> next{};
-	for (spk::Message &message : received)
+	for (const spk::Message &message : received)
 	{
-		const SequencePayload payload = message.get<SequencePayload>();
+		const SequencePayload payload =
+			message.reader().get<SequencePayload>();
 		ASSERT_LT(payload.producer, ProducerCount);
 		EXPECT_EQ(payload.sequence, next[payload.producer]);
 		++next[payload.producer];
@@ -305,8 +318,12 @@ TEST(NetworkConcurrencyTest, DisconnectCallbacksIdentifyEachConnection)
 
 	{
 		const std::scoped_lock lock(disconnectedMutex);
-		EXPECT_NE(std::find(disconnected.begin(), disconnected.end(), firstID), disconnected.end());
-		EXPECT_NE(std::find(disconnected.begin(), disconnected.end(), secondID), disconnected.end());
+		EXPECT_NE(
+			std::find(disconnected.begin(), disconnected.end(), firstID),
+			disconnected.end());
+		EXPECT_NE(
+			std::find(disconnected.begin(), disconnected.end(), secondID),
+			disconnected.end());
 	}
 
 	server.stop();
@@ -322,13 +339,13 @@ TEST(NetworkConcurrencyTest, ServerAndClientCanRestartAndExchangeAgain)
 		server.start(0);
 		client.connect("127.0.0.1", server.port());
 
-		spk::Message message(28);
-		message << iteration;
-		client.send(message);
+		client.send(makeMessage(28, iteration));
 
 		auto received = NetworkTestUtils::collect(server.messages(), 1);
 		ASSERT_EQ(received.size(), 1u);
-		EXPECT_EQ(received.front().message.get<std::uint32_t>(), iteration);
+		EXPECT_EQ(
+			received.front().message.reader().get<std::uint32_t>(),
+			iteration);
 
 		client.disconnect();
 		server.stop();
@@ -413,10 +430,12 @@ TEST(NetworkConcurrencyTest, ManyClientsConnectAndExchangeConcurrently)
 		threads.emplace_back([&, index] {
 			failure.run([&, index] {
 				clients[index]->connect("127.0.0.1", server.port());
-				spk::Message message(29);
-				message << index;
-				clients[index]->send(message);
-				responses[index] = NetworkTestUtils::collect(clients[index]->messages(), 1, 5s);
+				clients[index]->send(makeMessage(29, index));
+				responses[index] =
+					NetworkTestUtils::collect(
+						clients[index]->messages(),
+						1,
+						5s);
 			});
 		});
 	}
@@ -426,14 +445,13 @@ TEST(NetworkConcurrencyTest, ManyClientsConnectAndExchangeConcurrently)
 	{
 		for (spk::ReceivedMessage &request : requests)
 		{
-			const std::uint32_t index = request.message.get<std::uint32_t>();
+			const std::uint32_t index =
+				request.message.reader().get<std::uint32_t>();
 			if (index >= ClientCount)
 			{
 				continue;
 			}
-			spk::Message response(30);
-			response << index;
-			server.sendTo(request.emitter, response);
+			server.sendTo(request.emitter, makeMessage(30, index));
 		}
 	}
 
@@ -452,7 +470,9 @@ TEST(NetworkConcurrencyTest, ManyClientsConnectAndExchangeConcurrently)
 	for (std::uint32_t index = 0; index < ClientCount; ++index)
 	{
 		ASSERT_EQ(responses[index].size(), 1u);
-		EXPECT_EQ(responses[index].front().get<std::uint32_t>(), index);
+		EXPECT_EQ(
+			responses[index].front().reader().get<std::uint32_t>(),
+			index);
 	}
 }
 
@@ -463,7 +483,7 @@ TEST(NetworkConcurrencyTest, EmptyPayloadMessageRoundTrips)
 	server.start(0);
 	client.connect("127.0.0.1", server.port());
 
-	client.send(spk::Message(31));
+	client.send(spk::Message::Writer(31).build());
 	auto received = NetworkTestUtils::collect(server.messages(), 1);
 
 	ASSERT_EQ(received.size(), 1u);
@@ -482,7 +502,9 @@ TEST(NetworkConcurrencyTest, SendingToUnknownConnectionDoesNotAffectConnectedCli
 	const spk::ConnectionID connection = connectAndIdentify(server, client);
 	ASSERT_NE(connection, spk::InvalidConnectionID);
 
-	server.sendTo(connection + 100000u, spk::Message(32));
+	server.sendTo(
+		connection + 100000u,
+		spk::Message::Writer(32).build());
 	std::this_thread::sleep_for(50ms);
 
 	std::vector<spk::Message> received;
