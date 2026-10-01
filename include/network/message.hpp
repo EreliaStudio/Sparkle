@@ -111,6 +111,7 @@ namespace spk
 
 		public:
 			explicit Writer(Type type = 0) noexcept;
+			explicit Writer(Message &&message);
 
 			Writer(const Writer &) = delete;
 			Writer(Writer &&) noexcept = default;
