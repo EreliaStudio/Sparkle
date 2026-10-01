@@ -9,16 +9,26 @@
 namespace spk
 {
 	Message::Reader::Reader(
-		const Message &message,
+		std::shared_ptr<const Storage::Lease> storage,
 		std::size_t offset) :
-		_message(&message)
+		_storage(std::move(storage))
 	{
 		_seek(offset);
 	}
 
+	std::size_t Message::Reader::_size() const noexcept
+	{
+		if (_storage == nullptr || static_cast<bool>(*_storage) == false)
+		{
+			return 0;
+		}
+
+		return (**_storage).size();
+	}
+
 	void Message::Reader::_seek(std::size_t offset) const
 	{
-		if (offset > _message->size())
+		if (offset > _size())
 		{
 			throw Exception("Unable to seek beyond the end of a network message.");
 		}
@@ -37,9 +47,10 @@ namespace spk
 
 	void Message::Reader::skip(std::size_t size) const
 	{
+		const std::size_t payloadSize = _size();
 		if (
-			_readOffset > _message->size() ||
-			size > _message->size() - _readOffset)
+			_readOffset > payloadSize ||
+			size > payloadSize - _readOffset)
 		{
 			throw Exception("Unable to skip beyond the end of a network message.");
 		}
@@ -48,13 +59,50 @@ namespace spk
 
 	void Message::Reader::pull(void *data, std::size_t size) const
 	{
-		_message->readAt(_readOffset, data, size);
+		readAt(_readOffset, data, size);
 		_readOffset += size;
+	}
+
+	void Message::Reader::readAt(
+		std::size_t offset,
+		void *destination,
+		std::size_t size) const
+	{
+		const auto bytes = data();
+		if (offset > bytes.size() || size > bytes.size() - offset)
+		{
+			throw Exception("Unable to read outside a network message payload.");
+		}
+		if (size != 0)
+		{
+			std::memcpy(destination, bytes.data() + offset, size);
+		}
 	}
 
 	std::size_t Message::Reader::readOffset() const noexcept
 	{
 		return _readOffset;
+	}
+
+	std::span<const std::byte> Message::Reader::data() const noexcept
+	{
+		if (_storage == nullptr || static_cast<bool>(*_storage) == false)
+		{
+			return {};
+		}
+
+		const Storage &storage = **_storage;
+		return std::span<const std::byte>(storage.data(), storage.size());
+	}
+
+	std::size_t Message::Reader::size() const noexcept
+	{
+		return _size();
+	}
+
+	bool Message::Reader::empty() const noexcept
+	{
+		return _size() == 0;
 	}
 
 	const Message::Reader &Message::Reader::operator>>(std::string &value) const
@@ -65,182 +113,164 @@ namespace spk
 		return *this;
 	}
 
-	Message::Message() noexcept :
-		_reader(*this)
+	Message::Writer::Writer(Type type) noexcept :
+		_type(type)
 	{
 	}
 
-	Message::Message(Type type) noexcept :
-		_type(type),
-		_reader(*this)
+	void Message::Writer::_ensureCapacity(std::size_t requiredCapacity)
 	{
-	}
-
-	Message::Message(Type type, Storage payload) noexcept :
-		_type(type),
-		_payload(std::move(payload)),
-		_reader(*this)
-	{
-	}
-
-	Message::Message(const Message &other) :
-		_type(other._type),
-		_requestID(other._requestID),
-		_payload(other._payload),
-		_reader(*this, other.readOffset())
-	{
-	}
-
-	Message::Message(Message &&other) noexcept :
-		_type(other._type),
-		_requestID(other._requestID),
-		_payload(std::move(other._payload)),
-		_reader(*this, other.readOffset())
-	{
-		other._reader.reset();
-	}
-
-	Message &Message::operator=(const Message &other)
-	{
-		if (this == &other)
+		if (requiredCapacity == 0)
 		{
-			return *this;
+			return;
 		}
 
-		_type = other._type;
-		_requestID = other._requestID;
-		_payload = other._payload;
-		_reader.seek(other.readOffset());
-		return *this;
-	}
-
-	Message &Message::operator=(Message &&other) noexcept
-	{
-		if (this == &other)
+		if (
+			static_cast<bool>(_storage) == true &&
+			_storage->capacity() >= requiredCapacity)
 		{
-			return *this;
+			return;
 		}
 
-		const std::size_t offset = other.readOffset();
+		Storage::Lease replacement = Message::_obtainStorage(requiredCapacity);
 
-		_type = other._type;
-		_requestID = other._requestID;
-		_payload = std::move(other._payload);
-		_reader.seek(offset);
-		other._reader.reset();
-		return *this;
+		if (static_cast<bool>(_storage) == true)
+		{
+			replacement->resize(_storage->size());
+			if (_storage->empty() == false)
+			{
+				std::memcpy(
+					replacement->data(),
+					_storage->data(),
+					_storage->size());
+			}
+		}
+
+		_storage = std::move(replacement);
 	}
 
-	void Message::setType(Type type) noexcept
+	void Message::Writer::setType(Type type) noexcept
 	{
 		_type = type;
 	}
 
-	Message::Type Message::type() const noexcept
+	Message::Type Message::Writer::type() const noexcept
 	{
 		return _type;
 	}
 
-	void Message::setRequestID(RequestID requestID) noexcept
+	void Message::Writer::setRequestID(RequestID requestID) noexcept
 	{
 		_requestID = requestID;
 	}
 
-	Message::RequestID Message::requestID() const noexcept
+	Message::RequestID Message::Writer::requestID() const noexcept
 	{
 		return _requestID;
 	}
 
-	void Message::clear() noexcept
+	void Message::Writer::clear() noexcept
 	{
-		_payload.clear();
-		_reader.reset();
-	}
-
-	void Message::reset() const noexcept
-	{
-		_reader.reset();
-	}
-
-	void Message::resize(std::size_t size)
-	{
-		_payload.resize(size);
-		if (_reader.readOffset() > size)
+		if (static_cast<bool>(_storage) == true)
 		{
-			_reader.seek(size);
+			_storage->clear();
 		}
 	}
 
-	void Message::skip(std::size_t size) const
+	void Message::Writer::resize(std::size_t size)
 	{
-		_reader.skip(size);
+		_ensureCapacity(size);
+		if (static_cast<bool>(_storage) == true)
+		{
+			_storage->resize(size);
+		}
 	}
 
-	void Message::edit(std::size_t offset, const void *data, std::size_t size)
+	void Message::Writer::edit(
+		std::size_t offset,
+		const void *data,
+		std::size_t size)
 	{
-		if (offset > _payload.size() || size > _payload.size() - offset)
+		if (offset > this->size() || size > this->size() - offset)
 		{
 			throw Exception("Unable to edit outside a network message payload.");
 		}
 		if (size != 0)
 		{
-			std::memcpy(_payload.data() + offset, data, size);
+			std::memcpy(_storage->data() + offset, data, size);
 		}
 	}
 
-	void Message::readAt(std::size_t offset, void *destination, std::size_t size) const
-	{
-		if (offset > _payload.size() || size > _payload.size() - offset)
-		{
-			throw Exception("Unable to read outside a network message payload.");
-		}
-		if (size != 0)
-		{
-			std::memcpy(destination, _payload.data() + offset, size);
-		}
-	}
-
-	void Message::append(const void *data, std::size_t size)
+	void Message::Writer::append(const void *data, std::size_t size)
 	{
 		if (size == 0)
 		{
 			return;
 		}
-		const auto *bytes = static_cast<const std::byte *>(data);
-		_payload.insert(_payload.end(), bytes, bytes + size);
+
+		const std::size_t currentSize = this->size();
+		if (size > std::numeric_limits<std::size_t>::max() - currentSize)
+		{
+			throw Exception("Network message payload size overflow.");
+		}
+
+		const std::size_t requiredSize = currentSize + size;
+		_ensureCapacity(requiredSize);
+		_storage->resize(requiredSize);
+		std::memcpy(_storage->data() + currentSize, data, size);
 	}
 
-	void Message::push(const void *data, std::size_t size)
+	void Message::Writer::push(const void *data, std::size_t size)
 	{
 		append(data, size);
 	}
 
-	void Message::pull(void *data, std::size_t size) const
+	std::span<std::byte> Message::Writer::data() noexcept
 	{
-		_reader.pull(data, size);
+		if (static_cast<bool>(_storage) == false)
+		{
+			return {};
+		}
+
+		return std::span<std::byte>(_storage->data(), _storage->size());
 	}
 
-	std::span<const std::byte> Message::data() const noexcept
+	std::span<const std::byte> Message::Writer::data() const noexcept
 	{
-		return _payload;
+		if (static_cast<bool>(_storage) == false)
+		{
+			return {};
+		}
+
+		return std::span<const std::byte>(_storage->data(), _storage->size());
 	}
 
-	std::size_t Message::size() const noexcept
+	std::size_t Message::Writer::size() const noexcept
 	{
-		return _payload.size();
+		if (static_cast<bool>(_storage) == false)
+		{
+			return 0;
+		}
+
+		return _storage->size();
 	}
 
-	bool Message::empty() const noexcept
+	std::size_t Message::Writer::capacity() const noexcept
 	{
-		return _payload.empty();
+		if (static_cast<bool>(_storage) == false)
+		{
+			return 0;
+		}
+
+		return _storage->capacity();
 	}
 
-	std::size_t Message::readOffset() const noexcept
+	bool Message::Writer::empty() const noexcept
 	{
-		return _reader.readOffset();
+		return size() == 0;
 	}
 
-	Message &Message::operator<<(std::string_view value)
+	Message::Writer &Message::Writer::operator<<(std::string_view value)
 	{
 		if (value.size() > std::numeric_limits<std::uint32_t>::max())
 		{
@@ -253,14 +283,62 @@ namespace spk
 		return *this;
 	}
 
-	const Message &Message::operator>>(std::string &value) const
+	Message Message::Writer::build() &&
 	{
-		_reader >> value;
-		return *this;
+		return Message(
+			std::exchange(_type, 0),
+			std::exchange(_requestID, 0),
+			std::move(_storage));
+	}
+
+	Message::Message(
+		Type type,
+		RequestID requestID,
+		Storage::Lease storage) :
+		_type(type),
+		_requestID(requestID)
+	{
+		if (static_cast<bool>(storage) == true)
+		{
+			_storage =
+				std::make_shared<Storage::Lease>(
+					std::move(storage));
+		}
+	}
+
+	Message::Type Message::type() const noexcept
+	{
+		return _type;
+	}
+
+	Message::RequestID Message::requestID() const noexcept
+	{
+		return _requestID;
+	}
+
+	std::span<const std::byte> Message::data() const noexcept
+	{
+		if (_storage == nullptr || static_cast<bool>(*_storage) == false)
+		{
+			return {};
+		}
+
+		const Storage &storage = **_storage;
+		return std::span<const std::byte>(storage.data(), storage.size());
+	}
+
+	std::size_t Message::size() const noexcept
+	{
+		return data().size();
+	}
+
+	bool Message::empty() const noexcept
+	{
+		return size() == 0;
 	}
 
 	Message::Reader Message::reader(std::size_t offset) const
 	{
-		return Reader(*this, offset);
+		return Reader(_storage, offset);
 	}
 }

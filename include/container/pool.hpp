@@ -5,6 +5,7 @@
 #include <exception>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -26,6 +27,7 @@ namespace spk
 		private:
 			std::vector<Element *> _availableElements;
 			Factory _factory;
+			mutable std::mutex _mutex;
 
 		public:
 			explicit State(Factory factory) :
@@ -44,15 +46,19 @@ namespace spk
 
 			[[nodiscard]] Element *obtain()
 			{
-				if (!_availableElements.empty())
+				Factory factory;
 				{
-					Element *element = _availableElements.back();
-					_availableElements.pop_back();
-
-					return element;
+					const std::scoped_lock lock(_mutex);
+					if (_availableElements.empty() == false)
+					{
+						Element *element = _availableElements.back();
+						_availableElements.pop_back();
+						return element;
+					}
+					factory = _factory;
 				}
 
-				Element *element = _factory();
+				Element *element = factory();
 
 				if (element == nullptr)
 				{
@@ -66,6 +72,7 @@ namespace spk
 			{
 				try
 				{
+					const std::scoped_lock lock(_mutex);
 					_availableElements.push_back(element);
 				} catch (...)
 				{
@@ -80,27 +87,38 @@ namespace spk
 					throw spk::Exception("Pool requires a valid factory");
 				}
 
+				const std::scoped_lock lock(_mutex);
 				_factory = std::move(factory);
 			}
 
 			[[nodiscard]] std::shared_ptr<State> cloneEmpty() const
 			{
-				return std::make_shared<State>(_factory);
+				Factory factory;
+				{
+					const std::scoped_lock lock(_mutex);
+					factory = _factory;
+				}
+				return std::make_shared<State>(std::move(factory));
 			}
 
 			[[nodiscard]] std::size_t available() const
 			{
+				const std::scoped_lock lock(_mutex);
 				return _availableElements.size();
 			}
 
 			void clear()
 			{
-				for (Element *element : _availableElements)
+				std::vector<Element *> elements;
+				{
+					const std::scoped_lock lock(_mutex);
+					elements.swap(_availableElements);
+				}
+
+				for (Element *element : elements)
 				{
 					delete element;
 				}
-
-				_availableElements.clear();
 			}
 		};
 
