@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -628,4 +629,33 @@ TEST(PoolTest, ThrowingLeaseCopyDiscardsNewElementAndWrapsCause)
 	EXPECT_EQ(destination.get(), destinationAddress);
 	EXPECT_EQ(destination->value, 84);
 	EXPECT_EQ(pool.available(), 0u);
+}
+
+
+TEST(PoolTest, ConcurrentObtainAndRecycleIsSafe)
+{
+	spk::Pool<std::vector<int>> pool;
+	constexpr std::size_t ThreadCount = 8;
+	constexpr std::size_t IterationCount = 2000;
+
+	std::vector<std::jthread> threads;
+	for (std::size_t threadIndex = 0; threadIndex < ThreadCount; ++threadIndex)
+	{
+		threads.emplace_back([&] {
+			for (std::size_t iteration = 0; iteration < IterationCount; ++iteration)
+			{
+				auto lease = pool.obtain([](std::vector<int> &value) {
+					value.clear();
+				});
+				lease->push_back(42);
+			}
+		});
+	}
+
+	for (auto &thread : threads)
+	{
+		thread.join();
+	}
+
+	EXPECT_GT(pool.available(), 0u);
 }

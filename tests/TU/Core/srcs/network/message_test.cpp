@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <string>
 #include <type_traits>
+#include <utility>
 
 namespace
 {
@@ -19,67 +20,53 @@ namespace
 	};
 
 	static_assert(std::is_trivially_copyable_v<Payload>);
+	static_assert(std::is_default_constructible_v<spk::Message> == false);
+	static_assert(std::is_copy_constructible_v<spk::Message>);
+	static_assert(std::is_copy_constructible_v<spk::Message::Writer> == false);
+
+	[[nodiscard]] spk::Message emptyMessage(spk::Message::Type type)
+	{
+		return spk::Message::Writer(type).build();
+	}
 }
 
-TEST(MessageTest, StoresTypeAndStartsEmpty)
+TEST(MessageTest, WriterBuildsImmutableMessageMetadata)
 {
-	const spk::Message message(42);
+	spk::Message::Writer writer(42);
+	writer.setRequestID(0x123456789ABCDEF0ull);
+
+	const spk::Message message = std::move(writer).build();
 
 	EXPECT_EQ(message.type(), 42u);
-	EXPECT_EQ(message.requestID(), 0u);
+	EXPECT_EQ(message.requestID(), 0x123456789ABCDEF0ull);
 	EXPECT_TRUE(message.empty());
 	EXPECT_EQ(message.size(), 0u);
 }
 
-TEST(MessageTest, RequestIDIsIndependentMessageMetadata)
-{
-	spk::Message message(42);
-
-	message.setRequestID(0x123456789ABCDEF0ull);
-	EXPECT_EQ(message.requestID(), 0x123456789ABCDEF0ull);
-	EXPECT_EQ(message.type(), 42u);
-
-	message.setType(84);
-	EXPECT_EQ(message.type(), 84u);
-	EXPECT_EQ(message.requestID(), 0x123456789ABCDEF0ull);
-}
-
-TEST(MessageTest, RequestIDSurvivesPayloadAndCursorOperations)
-{
-	spk::Message message(7);
-	message.setRequestID(91);
-	message << std::uint32_t{11} << std::uint32_t{22};
-
-	EXPECT_EQ(message.get<std::uint32_t>(), 11u);
-	EXPECT_EQ(message.requestID(), 91u);
-	message.reset();
-	EXPECT_EQ(message.requestID(), 91u);
-	message.resize(sizeof(std::uint32_t));
-	EXPECT_EQ(message.requestID(), 91u);
-	message.clear();
-	EXPECT_EQ(message.requestID(), 91u);
-}
-
-TEST(MessageTest, RoundTripsTriviallyCopyableValues)
+TEST(MessageTest, WriterRoundTripsTriviallyCopyableValues)
 {
 	const Payload expected{17, 12.5f, true};
-	spk::Message message(1);
+	spk::Message::Writer writer(1);
+	writer << expected;
 
-	message << expected;
+	const spk::Message message = std::move(writer).build();
+	auto reader = message.reader();
 
 	EXPECT_EQ(message.size(), sizeof(Payload));
-	EXPECT_EQ(message.get<Payload>(), expected);
+	EXPECT_EQ(reader.get<Payload>(), expected);
 }
 
-TEST(MessageTest, StreamsSeveralValuesInInsertionOrder)
+TEST(MessageTest, WriterAndReaderStreamSeveralValuesInOrder)
 {
-	spk::Message message;
-	message << std::uint32_t{14} << float{3.5f} << true;
+	spk::Message::Writer writer;
+	writer << std::uint32_t{14} << float{3.5f} << true;
+	const spk::Message message = std::move(writer).build();
 
+	auto reader = message.reader();
 	std::uint32_t integer = 0;
 	float decimal = 0.0f;
 	bool boolean = false;
-	message >> integer >> decimal >> boolean;
+	reader >> integer >> decimal >> boolean;
 
 	EXPECT_EQ(integer, 14u);
 	EXPECT_FLOAT_EQ(decimal, 3.5f);
@@ -88,162 +75,23 @@ TEST(MessageTest, StreamsSeveralValuesInInsertionOrder)
 
 TEST(MessageTest, StringUsesLogicalContentInsteadOfObjectRepresentation)
 {
-	spk::Message message;
 	const std::string expected = "portable network payload";
+	spk::Message::Writer writer;
+	writer << expected;
+	const spk::Message message = std::move(writer).build();
 
-	message << expected;
-
+	auto reader = message.reader();
 	std::string actual;
-	message >> actual;
+	reader >> actual;
+
 	EXPECT_EQ(actual, expected);
 }
 
-TEST(MessageTest, PeekDoesNotAdvanceReadOffset)
-{
-	spk::Message message;
-	message << std::uint32_t{73};
-
-	EXPECT_EQ(message.peek<std::uint32_t>(), 73u);
-	EXPECT_EQ(message.readOffset(), 0u);
-	EXPECT_EQ(message.get<std::uint32_t>(), 73u);
-	EXPECT_EQ(message.readOffset(), sizeof(std::uint32_t));
-}
-
-TEST(MessageTest, ReadAtUsesAbsoluteOffsetsWithoutAdvancingCursor)
-{
-	spk::Message message;
-	message << std::uint32_t{11} << std::uint32_t{22};
-	message.skip<std::uint32_t>();
-
-	EXPECT_EQ(message.readAt<std::uint32_t>(0), 11u);
-	EXPECT_EQ(message.readOffset(), sizeof(std::uint32_t));
-
-	std::uint32_t value = 0;
-	message.readAt(sizeof(std::uint32_t), &value, sizeof(value));
-	EXPECT_EQ(value, 22u);
-	EXPECT_EQ(message.readOffset(), sizeof(std::uint32_t));
-}
-
-TEST(MessageTest, ReadAtOutOfBoundsThrowsWithoutChangingCursor)
-{
-	spk::Message message;
-	message << std::uint16_t{7};
-	message.skip<std::uint16_t>();
-
-	EXPECT_THROW((void)message.readAt<std::uint32_t>(0), spk::Exception);
-	EXPECT_THROW(message.readAt(message.size() + 1, nullptr, 0), spk::Exception);
-	EXPECT_EQ(message.readOffset(), sizeof(std::uint16_t));
-}
-
-TEST(MessageTest, ReadAtAllowsEmptyReadAtPayloadEnd)
-{
-	const spk::Message message;
-	EXPECT_NO_THROW(message.readAt(0, nullptr, 0));
-}
-
-TEST(MessageTest, EditReplacesBytesInPlace)
-{
-	spk::Message message;
-	message << std::uint32_t{12};
-	message.edit(0, std::uint32_t{29});
-
-	EXPECT_EQ(message.get<std::uint32_t>(), 29u);
-}
-
-TEST(MessageTest, ResetReturnsReaderToBeginning)
-{
-	spk::Message message;
-	message << std::uint32_t{9};
-
-	EXPECT_EQ(message.get<std::uint32_t>(), 9u);
-	message.reset();
-	EXPECT_EQ(message.get<std::uint32_t>(), 9u);
-}
-
-TEST(MessageTest, ReadingPastPayloadThrows)
-{
-	const spk::Message message;
-
-	EXPECT_THROW((void)message.get<std::uint32_t>(), spk::Exception);
-}
-
-TEST(MessageTest, FailedPeekPreservesReadOffset)
-{
-	spk::Message message;
-	message << std::uint16_t{7};
-
-	EXPECT_THROW((void)message.peek<std::uint64_t>(), spk::Exception);
-	EXPECT_EQ(message.readOffset(), 0u);
-	EXPECT_EQ(message.get<std::uint16_t>(), 7u);
-}
-
-TEST(MessageTest, SkipAdvancesReaderWithoutCopying)
-{
-	spk::Message message;
-	message << std::uint32_t{11} << std::uint32_t{22};
-
-	message.skip<std::uint32_t>();
-
-	EXPECT_EQ(message.get<std::uint32_t>(), 22u);
-}
-
-TEST(MessageTest, SkipBeyondPayloadThrowsWithoutAdvancing)
-{
-	spk::Message message;
-	message << std::uint16_t{3};
-
-	EXPECT_THROW(message.skip(sizeof(std::uint64_t)), spk::Exception);
-	EXPECT_EQ(message.readOffset(), 0u);
-}
-
-TEST(MessageTest, ClearResetsPayloadAndReader)
-{
-	spk::Message message;
-	message << std::uint32_t{9};
-	EXPECT_EQ(message.get<std::uint32_t>(), 9u);
-
-	message.clear();
-
-	EXPECT_TRUE(message.empty());
-	EXPECT_EQ(message.readOffset(), 0u);
-}
-
-TEST(MessageTest, ResizeClampsReadOffset)
-{
-	spk::Message message;
-	message << std::uint32_t{1} << std::uint32_t{2};
-	message.skip(sizeof(std::uint32_t) * 2u);
-
-	message.resize(sizeof(std::uint32_t));
-
-	EXPECT_EQ(message.size(), sizeof(std::uint32_t));
-	EXPECT_EQ(message.readOffset(), sizeof(std::uint32_t));
-}
-
-TEST(MessageTest, EmptyStringRoundTrips)
-{
-	spk::Message message;
-	message << std::string{};
-
-	std::string result = "not empty";
-	message >> result;
-
-	EXPECT_TRUE(result.empty());
-}
-
-TEST(MessageTest, EditOutsidePayloadThrows)
-{
-	spk::Message message;
-	message << std::uint32_t{1};
-
-	EXPECT_THROW(message.edit(sizeof(std::uint32_t), std::uint32_t{2}), spk::Exception);
-}
-
-
 TEST(MessageTest, IndependentReadersKeepIndependentOffsets)
 {
-	spk::Message message;
-	message << std::uint32_t{11} << std::uint32_t{22};
+	spk::Message::Writer writer;
+	writer << std::uint32_t{11} << std::uint32_t{22};
+	const spk::Message message = std::move(writer).build();
 
 	auto first = message.reader();
 	auto second = message.reader();
@@ -256,50 +104,11 @@ TEST(MessageTest, IndependentReadersKeepIndependentOffsets)
 	EXPECT_EQ(first.get<std::uint32_t>(), 22u);
 }
 
-TEST(MessageTest, ReaderCanStartAtExplicitOffset)
+TEST(MessageTest, ReaderCanStartSeekAndResetIndependently)
 {
-	spk::Message message;
-	message << std::uint32_t{11} << std::uint32_t{22};
-
-	auto reader = message.reader(sizeof(std::uint32_t));
-
-	EXPECT_EQ(reader.readOffset(), sizeof(std::uint32_t));
-	EXPECT_EQ(reader.get<std::uint32_t>(), 22u);
-}
-
-TEST(MessageTest, ExternalReaderDoesNotAffectMessageInternalReader)
-{
-	spk::Message message;
-	message << std::uint32_t{11} << std::uint32_t{22};
-
-	auto reader = message.reader();
-	EXPECT_EQ(reader.get<std::uint32_t>(), 11u);
-
-	EXPECT_EQ(message.readOffset(), 0u);
-	EXPECT_EQ(message.get<std::uint32_t>(), 11u);
-	EXPECT_EQ(message.readOffset(), sizeof(std::uint32_t));
-	EXPECT_EQ(reader.readOffset(), sizeof(std::uint32_t));
-}
-
-TEST(MessageTest, ReaderSupportsStreamingAndStrings)
-{
-	spk::Message message;
-	message << std::uint32_t{17} << std::string{"reader"};
-
-	auto reader = message.reader();
-	std::uint32_t integer = 0;
-	std::string text;
-
-	reader >> integer >> text;
-
-	EXPECT_EQ(integer, 17u);
-	EXPECT_EQ(text, "reader");
-}
-
-TEST(MessageTest, ReaderSeekAndResetAffectOnlyThatReader)
-{
-	spk::Message message;
-	message << std::uint32_t{11} << std::uint32_t{22};
+	spk::Message::Writer writer;
+	writer << std::uint32_t{11} << std::uint32_t{22};
+	const spk::Message message = std::move(writer).build();
 
 	auto reader = message.reader(sizeof(std::uint32_t));
 	EXPECT_EQ(reader.get<std::uint32_t>(), 22u);
@@ -309,19 +118,113 @@ TEST(MessageTest, ReaderSeekAndResetAffectOnlyThatReader)
 
 	reader.seek(sizeof(std::uint32_t));
 	EXPECT_EQ(reader.get<std::uint32_t>(), 22u);
-	EXPECT_EQ(message.readOffset(), 0u);
 }
 
-TEST(MessageTest, CopyKeepsIndependentInternalReaderBoundToCopiedMessage)
+TEST(MessageTest, ReaderReadAtDoesNotAdvanceCursor)
 {
-	spk::Message original;
-	original << std::uint32_t{11} << std::uint32_t{22};
-	EXPECT_EQ(original.get<std::uint32_t>(), 11u);
+	spk::Message::Writer writer;
+	writer << std::uint32_t{11} << std::uint32_t{22};
+	const spk::Message message = std::move(writer).build();
 
-	spk::Message copy = original;
+	auto reader = message.reader(sizeof(std::uint32_t));
 
-	EXPECT_EQ(copy.readOffset(), sizeof(std::uint32_t));
-	EXPECT_EQ(copy.get<std::uint32_t>(), 22u);
-	EXPECT_EQ(original.readOffset(), sizeof(std::uint32_t));
-	EXPECT_EQ(original.get<std::uint32_t>(), 22u);
+	EXPECT_EQ(reader.readAt<std::uint32_t>(0), 11u);
+	EXPECT_EQ(reader.readOffset(), sizeof(std::uint32_t));
+
+	std::uint32_t value = 0;
+	reader.readAt(sizeof(std::uint32_t), &value, sizeof(value));
+	EXPECT_EQ(value, 22u);
+	EXPECT_EQ(reader.readOffset(), sizeof(std::uint32_t));
+}
+
+TEST(MessageTest, ReaderBoundsChecksPreserveOffset)
+{
+	spk::Message::Writer writer;
+	writer << std::uint16_t{7};
+	const spk::Message message = std::move(writer).build();
+
+	auto reader = message.reader();
+	EXPECT_THROW((void)reader.peek<std::uint64_t>(), spk::Exception);
+	EXPECT_THROW(reader.skip(sizeof(std::uint64_t)), spk::Exception);
+	EXPECT_THROW((void)reader.readAt<std::uint32_t>(0), spk::Exception);
+	EXPECT_EQ(reader.readOffset(), 0u);
+}
+
+TEST(MessageTest, WriterEditReplacesBytesBeforeBuild)
+{
+	spk::Message::Writer writer;
+	writer << std::uint32_t{12};
+	writer.edit(0, std::uint32_t{29});
+
+	const spk::Message message = std::move(writer).build();
+
+	EXPECT_EQ(message.reader().get<std::uint32_t>(), 29u);
+}
+
+TEST(MessageTest, WriterGrowthPreservesAlreadyWrittenBytes)
+{
+	spk::Message::Writer writer;
+	writer << std::uint32_t{11};
+
+	const std::size_t firstCapacity = writer.capacity();
+	while (writer.capacity() == firstCapacity)
+	{
+		writer << std::uint32_t{22};
+	}
+
+	const spk::Message message = std::move(writer).build();
+	EXPECT_EQ(message.reader().get<std::uint32_t>(), 11u);
+}
+
+TEST(MessageTest, ReaderKeepsStorageAliveAfterMessageDestruction)
+{
+	auto reader = [] {
+		spk::Message::Writer writer;
+		writer << std::uint32_t{73};
+		const spk::Message message = std::move(writer).build();
+		return message.reader();
+	}();
+
+	EXPECT_EQ(reader.get<std::uint32_t>(), 73u);
+}
+
+TEST(MessageTest, MessageCopiesShareImmutablePayloadStorage)
+{
+	spk::Message::Writer writer;
+	writer << std::uint32_t{31};
+	const spk::Message original = std::move(writer).build();
+	const spk::Message copy = original;
+
+	ASSERT_FALSE(original.empty());
+	ASSERT_FALSE(copy.empty());
+	EXPECT_EQ(original.data().data(), copy.data().data());
+	EXPECT_EQ(copy.reader().get<std::uint32_t>(), 31u);
+}
+
+TEST(MessageTest, PooledStorageIsReusedAfterLastOwnerIsDestroyed)
+{
+	const std::byte *firstAddress = nullptr;
+
+	{
+		spk::Message::Writer writer;
+		writer.resize(70);
+		firstAddress = writer.data().data();
+		const spk::Message message = std::move(writer).build();
+		ASSERT_EQ(message.size(), 70u);
+	}
+
+	spk::Message::Writer writer;
+	writer.resize(70);
+
+	EXPECT_EQ(writer.data().data(), firstAddress);
+}
+
+TEST(MessageTest, EmptyMessageReaderRejectsDataReads)
+{
+	const spk::Message message = emptyMessage(7);
+	auto reader = message.reader();
+
+	EXPECT_TRUE(reader.empty());
+	EXPECT_NO_THROW(reader.readAt(0, nullptr, 0));
+	EXPECT_THROW((void)reader.get<std::uint32_t>(), spk::Exception);
 }

@@ -14,5 +14,5 @@ TEST(ClientTest, SendingWhileDisconnectedThrows)
 {
 	spk::Client client;
 
-	EXPECT_THROW(client.send(spk::Message(1)), spk::Exception);
+	EXPECT_THROW(client.send(spk::Message::Writer(1).build()), spk::Exception);
 }

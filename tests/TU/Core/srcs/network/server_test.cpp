@@ -21,5 +21,5 @@ TEST(ServerTest, SendingWhileStoppedThrows)
 {
 	spk::Server server;
 
-	EXPECT_THROW(server.sendToAll(spk::Message(1)), spk::Exception);
+	EXPECT_THROW(server.sendToAll(spk::Message::Writer(1).build()), spk::Exception);
 }

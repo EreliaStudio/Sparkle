@@ -8,7 +8,7 @@
 TEST(LocalNodeTest, ReceivePublishesIncomingMessage)
 {
 	spk::LocalNode node;
-	node.receive(spk::ReceivedMessage{41, spk::Message(7)});
+	node.receive(spk::ReceivedMessage{41, spk::Message::Writer(7).build()});
 
 	std::vector<spk::ReceivedMessage> received;
 	node.incoming().drain(received);
@@ -21,9 +21,9 @@ TEST(LocalNodeTest, ReceivePublishesIncomingMessage)
 TEST(LocalNodeTest, ReplyTargetsRequestEmitter)
 {
 	spk::LocalNode node;
-	const spk::ReceivedMessage request{52, spk::Message(1)};
+	const spk::ReceivedMessage request{52, spk::Message::Writer(1).build()};
 
-	node.reply(request, spk::Message(2));
+	node.reply(request, spk::Message::Writer(2).build());
 
 	std::vector<spk::OutgoingMessage> outgoing;
 	node.outgoing().drain(outgoing);
@@ -37,7 +37,7 @@ TEST(LocalNodeTest, ReplyTargetsRequestEmitter)
 TEST(LocalNodeTest, BroadcastHasNoRecipient)
 {
 	spk::LocalNode node;
-	node.broadcast(spk::Message(5));
+	node.broadcast(spk::Message::Writer(5).build());
 
 	std::vector<spk::OutgoingMessage> outgoing;
 	node.outgoing().drain(outgoing);
