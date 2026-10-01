@@ -203,4 +203,11 @@ namespace spk
 
 		[[nodiscard]] Reader reader(std::size_t offset = 0) const;
 	};
+
+	// Checks the Writer/Reader serialization API, including custom operators found through ADL.
+	template <typename T>
+	concept MessageSerializable = requires(Message::Writer &writer, const Message::Reader &reader, const T &input, T &output) {
+		writer << input;
+		reader >> output;
+	};
 }
