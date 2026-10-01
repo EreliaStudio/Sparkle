@@ -5,6 +5,7 @@
 #include <exception>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -24,17 +25,44 @@ namespace spk
 		class State
 		{
 		private:
+			class FactoryState
+			{
+			private:
+				Factory _factory;
+				mutable std::recursive_mutex _mutex;
+
+			public:
+				explicit FactoryState(Factory factory) :
+					_factory(std::move(factory))
+				{
+					if (!_factory)
+					{
+						throw spk::Exception("Pool requires a valid factory");
+					}
+				}
+
+				[[nodiscard]] Element *obtain()
+				{
+					// Factories may obtain another element from the same pool.
+					const std::scoped_lock lock(_mutex);
+					return _factory();
+				}
+
+				[[nodiscard]] Factory copy() const
+				{
+					const std::scoped_lock lock(_mutex);
+					return _factory;
+				}
+			};
+
 			std::vector<Element *> _availableElements;
-			Factory _factory;
+			std::shared_ptr<FactoryState> _factory;
+			mutable std::mutex _mutex;
 
 		public:
 			explicit State(Factory factory) :
-				_factory(std::move(factory))
+				_factory(std::make_shared<FactoryState>(std::move(factory)))
 			{
-				if (!_factory)
-				{
-					throw spk::Exception("Pool requires a valid factory");
-				}
 			}
 
 			~State()
@@ -44,15 +72,19 @@ namespace spk
 
 			[[nodiscard]] Element *obtain()
 			{
-				if (!_availableElements.empty())
+				std::shared_ptr<FactoryState> factory;
 				{
-					Element *element = _availableElements.back();
-					_availableElements.pop_back();
-
-					return element;
+					const std::scoped_lock lock(_mutex);
+					if (_availableElements.empty() == false)
+					{
+						Element *element = _availableElements.back();
+						_availableElements.pop_back();
+						return element;
+					}
+					factory = _factory;
 				}
 
-				Element *element = _factory();
+				Element *element = factory->obtain();
 
 				if (element == nullptr)
 				{
@@ -66,6 +98,7 @@ namespace spk
 			{
 				try
 				{
+					const std::scoped_lock lock(_mutex);
 					_availableElements.push_back(element);
 				} catch (...)
 				{
@@ -75,32 +108,41 @@ namespace spk
 
 			void setFactory(Factory factory)
 			{
-				if (!factory)
+				auto replacement = std::make_shared<FactoryState>(std::move(factory));
 				{
-					throw spk::Exception("Pool requires a valid factory");
+					const std::scoped_lock lock(_mutex);
+					_factory.swap(replacement);
 				}
-
-				_factory = std::move(factory);
 			}
 
 			[[nodiscard]] std::shared_ptr<State> cloneEmpty() const
 			{
-				return std::make_shared<State>(_factory);
+				std::shared_ptr<FactoryState> factory;
+				{
+					const std::scoped_lock lock(_mutex);
+					factory = _factory;
+				}
+				return std::make_shared<State>(factory->copy());
 			}
 
 			[[nodiscard]] std::size_t available() const
 			{
+				const std::scoped_lock lock(_mutex);
 				return _availableElements.size();
 			}
 
 			void clear()
 			{
-				for (Element *element : _availableElements)
+				std::vector<Element *> elements;
+				{
+					const std::scoped_lock lock(_mutex);
+					elements.swap(_availableElements);
+				}
+
+				for (Element *element : elements)
 				{
 					delete element;
 				}
-
-				_availableElements.clear();
 			}
 		};
 

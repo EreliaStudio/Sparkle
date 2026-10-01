@@ -10,6 +10,7 @@
 #include <chrono>
 #include <cstdint>
 #include <thread>
+#include <utility>
 #include <vector>
 
 using namespace std::chrono_literals;
@@ -21,6 +22,15 @@ namespace
 		std::uint32_t client = 0;
 		std::uint32_t sequence = 0;
 	};
+
+	[[nodiscard]] spk::Message payloadMessage(
+		spk::Message::Type type,
+		const RoutedPayload &payload)
+	{
+		spk::Message::Writer writer(type);
+		writer << payload;
+		return std::move(writer).build();
+	}
 
 	void runRouter(
 		spk::NodeRouter &router,
@@ -49,9 +59,9 @@ namespace
 				node.incoming().drain(messages);
 				for (const auto &request : messages)
 				{
-					spk::Message response(101);
-					response << request.message.peek<RoutedPayload>();
-					node.reply(request, std::move(response));
+					const RoutedPayload payload =
+						request.message.reader().get<RoutedPayload>();
+					node.reply(request, payloadMessage(101, payload));
 				}
 				std::this_thread::sleep_for(1ms);
 			}
@@ -69,9 +79,10 @@ namespace
 			client.connect("127.0.0.1", port);
 			for (std::uint32_t sequence = 0; sequence < 50; ++sequence)
 			{
-				spk::Message request(100);
-				request << RoutedPayload{clientIndex, sequence};
-				client.send(request);
+				client.send(
+					payloadMessage(
+						100,
+						RoutedPayload{clientIndex, sequence}));
 			}
 			responses = NetworkTestUtils::collect(client.messages(), 50, 5s);
 		});
@@ -121,7 +132,8 @@ TEST(NodeRouterIntegrationTest, TwoClientsRouteThroughIndependentRouterAndNodeTh
 		ASSERT_EQ(responses[client].size(), 50u);
 		for (std::uint32_t sequence = 0; sequence < responses[client].size(); ++sequence)
 		{
-			const RoutedPayload payload = responses[client][sequence].get<RoutedPayload>();
+			const RoutedPayload payload =
+				responses[client][sequence].reader().get<RoutedPayload>();
 			EXPECT_EQ(payload.client, client);
 			EXPECT_EQ(payload.sequence, sequence);
 		}
@@ -146,16 +158,16 @@ TEST(NodeRouterIntegrationTest, LocalNodeBroadcastReachesAllClients)
 		runRouter(router, running, failure);
 	});
 
-	spk::Message broadcast(102);
-	broadcast << std::uint32_t{77};
-	node.broadcast(std::move(broadcast));
+	spk::Message::Writer writer(102);
+	writer << std::uint32_t{77};
+	node.broadcast(std::move(writer).build());
 
 	auto first = NetworkTestUtils::collect(firstClient.messages(), 1);
 	auto second = NetworkTestUtils::collect(secondClient.messages(), 1);
 	ASSERT_EQ(first.size(), 1u);
 	ASSERT_EQ(second.size(), 1u);
-	EXPECT_EQ(first.front().get<std::uint32_t>(), 77u);
-	EXPECT_EQ(second.front().get<std::uint32_t>(), 77u);
+	EXPECT_EQ(first.front().reader().get<std::uint32_t>(), 77u);
+	EXPECT_EQ(second.front().reader().get<std::uint32_t>(), 77u);
 
 	firstClient.disconnect();
 	secondClient.disconnect();

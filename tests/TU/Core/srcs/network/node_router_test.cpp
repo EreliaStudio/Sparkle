@@ -13,7 +13,7 @@ TEST(NodeRouterTest, RoutesIncomingMessageByType)
 	router.addNode("game", node);
 	router.redirect(17, "game");
 	router.server().messages().publish(
-		spk::ReceivedMessage{91, spk::Message(17)});
+		spk::ReceivedMessage{91, spk::Message::Writer(17).build()});
 
 	router.dispatch();
 
@@ -45,7 +45,7 @@ TEST(NodeRouterTest, RejectsUnroutedIncomingMessage)
 {
 	spk::NodeRouter router;
 	router.server().messages().publish(
-		spk::ReceivedMessage{3, spk::Message(99)});
+		spk::ReceivedMessage{3, spk::Message::Writer(99).build()});
 
 	EXPECT_THROW(router.dispatch(), spk::Exception);
 }
@@ -58,7 +58,7 @@ TEST(NodeRouterTest, RemovingNodeAlsoRemovesItsRoutes)
 	router.redirect(4, "game");
 	router.removeNode("game");
 	router.server().messages().publish(
-		spk::ReceivedMessage{3, spk::Message(4)});
+		spk::ReceivedMessage{3, spk::Message::Writer(4).build()});
 
 	EXPECT_THROW(router.dispatch(), spk::Exception);
 }
@@ -82,7 +82,7 @@ TEST(NodeRouterTest, RedirectCanBeReassignedToAnotherNode)
 	router.redirect(8, "first");
 	router.redirect(8, "second");
 	router.server().messages().publish(
-		spk::ReceivedMessage{5, spk::Message(8)});
+		spk::ReceivedMessage{5, spk::Message::Writer(8).build()});
 
 	router.dispatch();
 

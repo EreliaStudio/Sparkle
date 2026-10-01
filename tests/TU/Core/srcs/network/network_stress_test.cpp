@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <memory>
 #include <thread>
+#include <utility>
 #include <vector>
 
 using namespace std::chrono_literals;
@@ -21,6 +22,16 @@ namespace
 		std::uint32_t client = 0;
 		std::uint32_t sequence = 0;
 	};
+
+	template <typename TValue>
+	[[nodiscard]] spk::Message makeMessage(
+		spk::Message::Type type,
+		const TValue &value)
+	{
+		spk::Message::Writer writer(type);
+		writer << value;
+		return std::move(writer).build();
+	}
 
 	[[nodiscard]] bool allSeen(const std::vector<bool> &values)
 	{
@@ -48,9 +59,10 @@ TEST(NetworkStressTest, ConcurrentClientsDeliverEveryMessageExactlyOnce)
 				clients[client]->connect("127.0.0.1", server.port());
 				for (std::uint32_t sequence = 0; sequence < MessagesPerClient; ++sequence)
 				{
-					spk::Message message(40);
-					message << StressPayload{client, sequence};
-					clients[client]->send(message);
+					clients[client]->send(
+						makeMessage(
+							40,
+							StressPayload{client, sequence}));
 				}
 			});
 		});
@@ -72,9 +84,10 @@ TEST(NetworkStressTest, ConcurrentClientsDeliverEveryMessageExactlyOnce)
 	{
 		client.resize(MessagesPerClient, false);
 	}
-	for (spk::ReceivedMessage &entry : received)
+	for (const spk::ReceivedMessage &entry : received)
 	{
-		const StressPayload payload = entry.message.get<StressPayload>();
+		const StressPayload payload =
+			entry.message.reader().get<StressPayload>();
 		ASSERT_LT(payload.client, ClientCount);
 		ASSERT_LT(payload.sequence, MessagesPerClient);
 		EXPECT_FALSE(seen[payload.client][payload.sequence]);
@@ -117,18 +130,22 @@ TEST(NetworkStressTest, BroadcastBurstPreservesOrderForEveryClient)
 
 	for (std::uint32_t sequence = 0; sequence < MessageCount; ++sequence)
 	{
-		spk::Message message(41);
-		message << sequence;
-		server.sendToAll(message);
+		server.sendToAll(makeMessage(41, sequence));
 	}
 
 	for (auto &client : clients)
 	{
-		auto messages = NetworkTestUtils::collect(client->messages(), MessageCount, 10s);
+		auto messages =
+			NetworkTestUtils::collect(
+				client->messages(),
+				MessageCount,
+				10s);
 		ASSERT_EQ(messages.size(), MessageCount);
 		for (std::uint32_t sequence = 0; sequence < MessageCount; ++sequence)
 		{
-			EXPECT_EQ(messages[sequence].get<std::uint32_t>(), sequence);
+			EXPECT_EQ(
+				messages[sequence].reader().get<std::uint32_t>(),
+				sequence);
 		}
 		client->disconnect();
 	}
@@ -145,13 +162,13 @@ TEST(NetworkStressTest, RepeatedConnectionCyclesRemainUsable)
 	for (std::uint32_t cycle = 0; cycle < CycleCount; ++cycle)
 	{
 		client.connect("127.0.0.1", server.port());
-		spk::Message message(42);
-		message << cycle;
-		client.send(message);
+		client.send(makeMessage(42, cycle));
 
 		auto received = NetworkTestUtils::collect(server.messages(), 1, 5s);
 		ASSERT_EQ(received.size(), 1u);
-		EXPECT_EQ(received.front().message.get<std::uint32_t>(), cycle);
+		EXPECT_EQ(
+			received.front().message.reader().get<std::uint32_t>(),
+			cycle);
 		client.disconnect();
 	}
 
@@ -179,23 +196,25 @@ TEST(NetworkStressTest, DisconnectingOneClientDuringBroadcastDoesNotBreakOthers)
 
 	for (std::uint32_t sequence = 0; sequence < MessageCount / 2; ++sequence)
 	{
-		spk::Message message(43);
-		message << sequence;
-		server.sendToAll(message);
+		server.sendToAll(makeMessage(43, sequence));
 	}
 	disconnected.disconnect();
 	for (std::uint32_t sequence = MessageCount / 2; sequence < MessageCount; ++sequence)
 	{
-		spk::Message message(43);
-		message << sequence;
-		server.sendToAll(message);
+		server.sendToAll(makeMessage(43, sequence));
 	}
 
-	auto messages = NetworkTestUtils::collect(survivor.messages(), MessageCount, 10s);
+	auto messages =
+		NetworkTestUtils::collect(
+			survivor.messages(),
+			MessageCount,
+			10s);
 	ASSERT_EQ(messages.size(), MessageCount);
 	for (std::uint32_t sequence = 0; sequence < MessageCount; ++sequence)
 	{
-		EXPECT_EQ(messages[sequence].get<std::uint32_t>(), sequence);
+		EXPECT_EQ(
+			messages[sequence].reader().get<std::uint32_t>(),
+			sequence);
 	}
 
 	survivor.disconnect();

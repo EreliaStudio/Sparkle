@@ -262,12 +262,15 @@ namespace spk::NetworkInternal
 					return false;
 				}
 
-				Message::Storage payload(header.payloadSize);
-				std::copy_n(data + FrameHeaderSize, header.payloadSize, payload.begin());
+				Message::Writer writer(header.type);
+				writer.setRequestID(header.requestID);
+				writer.resize(header.payloadSize);
+				std::copy_n(
+					data + FrameHeaderSize,
+					header.payloadSize,
+					writer.data().begin());
 				consumed += frameSize;
-				Message message(header.type, std::move(payload));
-				message.setRequestID(header.requestID);
-				_publish(ReceivedMessage{session.id, std::move(message)});
+				_publish(ReceivedMessage{session.id, std::move(writer).build()});
 				return true;
 			}
 

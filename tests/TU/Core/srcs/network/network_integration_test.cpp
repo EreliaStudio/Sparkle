@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 using namespace std::chrono_literals;
@@ -40,10 +41,10 @@ TEST(NetworkIntegrationTest, ClientAndServerExchangeFramedMessages)
 	server.start(0);
 	client.connect("127.0.0.1", server.port());
 
-	spk::Message request(12);
-	request.setRequestID(0x1020304050607080ull);
-	request << std::uint32_t{42} << std::string("ping");
-	client.send(request);
+	spk::Message::Writer requestWriter(12);
+	requestWriter.setRequestID(0x1020304050607080ull);
+	requestWriter << std::uint32_t{42} << std::string("ping");
+	client.send(std::move(requestWriter).build());
 
 	auto receivedByServer = waitForMessages(server.messages());
 	ASSERT_EQ(receivedByServer.size(), 1u);
@@ -51,24 +52,28 @@ TEST(NetworkIntegrationTest, ClientAndServerExchangeFramedMessages)
 	EXPECT_EQ(receivedByServer.front().message.type(), 12u);
 	EXPECT_EQ(receivedByServer.front().message.requestID(), 0x1020304050607080ull);
 
+	auto requestReader = receivedByServer.front().message.reader();
 	std::uint32_t value = 0;
 	std::string text;
-	receivedByServer.front().message >> value >> text;
+	requestReader >> value >> text;
 	EXPECT_EQ(value, 42u);
 	EXPECT_EQ(text, "ping");
 
-	spk::Message response(13);
-	response.setRequestID(0x8877665544332211ull);
-	response << std::string("pong");
-	server.sendTo(receivedByServer.front().emitter, response);
+	spk::Message::Writer responseWriter(13);
+	responseWriter.setRequestID(0x8877665544332211ull);
+	responseWriter << std::string("pong");
+	server.sendTo(
+		receivedByServer.front().emitter,
+		std::move(responseWriter).build());
 
 	auto receivedByClient = waitForMessages(client.messages());
 	ASSERT_EQ(receivedByClient.size(), 1u);
 	EXPECT_EQ(receivedByClient.front().type(), 13u);
 	EXPECT_EQ(receivedByClient.front().requestID(), 0x8877665544332211ull);
 
+	auto responseReader = receivedByClient.front().reader();
 	std::string responseText;
-	receivedByClient.front() >> responseText;
+	responseReader >> responseText;
 	EXPECT_EQ(responseText, "pong");
 
 	client.disconnect();

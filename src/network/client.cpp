@@ -35,14 +35,14 @@ namespace spk
 					}
 
 					const auto header = NetworkInternal::decode(bytes);
-					Message::Storage payload(header.payloadSize);
-					if (!payload.empty() && !_socket.receiveAll(payload))
+					Message::Writer writer(header.type);
+					writer.setRequestID(header.requestID);
+					writer.resize(header.payloadSize);
+					if (writer.empty() == false && !_socket.receiveAll(writer.data()))
 					{
 						break;
 					}
-					Message message(header.type, std::move(payload));
-					message.setRequestID(header.requestID);
-					_owner._publish(std::move(message));
+					_owner._publish(std::move(writer).build());
 				}
 			} catch (...)
 			{

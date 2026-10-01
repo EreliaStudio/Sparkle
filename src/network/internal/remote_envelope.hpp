@@ -90,17 +90,21 @@ namespace spk::NetworkInternal
 		ConnectionID route,
 		const Message &message)
 	{
-		Message::Storage payload(RemoteEnvelopeHeaderSize + message.size());
+		Message::Writer writer(RemoteEnvelopeType);
+		writer.setRequestID(message.requestID());
+		writer.resize(RemoteEnvelopeHeaderSize + message.size());
+		auto payload = writer.data();
 		writeRemote32(payload.data(), RemoteEnvelopeMagic);
 		writeRemote16(payload.data() + 4, RemoteEnvelopeVersion);
 		writeRemote16(payload.data() + 6, static_cast<std::uint16_t>(kind));
 		writeRemote64(payload.data() + 8, route);
 		writeRemote32(payload.data() + 16, message.type());
 		writeRemote32(payload.data() + 20, static_cast<std::uint32_t>(message.size()));
-		std::copy(message.data().begin(), message.data().end(), payload.begin() + RemoteEnvelopeHeaderSize);
-		Message envelope(RemoteEnvelopeType, std::move(payload));
-		envelope.setRequestID(message.requestID());
-		return envelope;
+		std::copy(
+			message.data().begin(),
+			message.data().end(),
+			payload.begin() + RemoteEnvelopeHeaderSize);
+		return std::move(writer).build();
 	}
 
 	[[nodiscard]] inline RemoteEnvelope decodeRemoteEnvelope(const Message &message)
@@ -123,16 +127,16 @@ namespace spk::NetworkInternal
 			throw Exception("Invalid remote node envelope payload size.");
 		}
 
-		Message::Storage payload(payloadSize);
+		Message::Writer writer(readRemote32(data.data() + 16));
+		writer.setRequestID(message.requestID());
+		writer.resize(payloadSize);
 		std::copy(
 			data.begin() + RemoteEnvelopeHeaderSize,
 			data.end(),
-			payload.begin());
-		Message decoded(readRemote32(data.data() + 16), std::move(payload));
-		decoded.setRequestID(message.requestID());
+			writer.data().begin());
 		return RemoteEnvelope{
 			static_cast<RemoteEnvelopeKind>(readRemote16(data.data() + 6)),
 			readRemote64(data.data() + 8),
-			std::move(decoded)};
+			std::move(writer).build()};
 	}
 }
