@@ -1,5 +1,6 @@
 #include "ui/widget/check_box.hpp"
 
+#include <algorithm>
 #include <limits>
 #include <utility>
 
@@ -12,10 +13,10 @@ namespace spk
 	{
 		applyStyle(defaultStyle);
 		_label.setMaximalSize({std::numeric_limits<float>::max(), std::numeric_limits<float>::max()});
-		auto *indicatorElement = _layout.addWidget(&_indicator, Layout::SizeSettings{Layout::SizePolicy::Fixed});
-		indicatorElement->setVerticalAlignment(Alignment::Vertical::Center);
-		auto *labelElement = _layout.addWidget(&_label, {Layout::SizePolicy::Extend, Layout::SizePolicy::Minimum});
-		labelElement->setVerticalAlignment(Alignment::Vertical::Center);
+		_layout.addWidget(&_indicator, Layout::SizeSettings{Layout::SizePolicy::Fixed});
+		_layout.addWidget(&_label, {Layout::SizePolicy::Extend, Layout::SizePolicy::Minimum});
+		_label.setHorizontalAlignment(Alignment::Horizontal::Left);
+		_label.setVerticalAlignment(Alignment::Vertical::Center);
 		_indicatorContract = _indicator.subscribeToState([this](bool checked) {
 			_stateProvider.trigger(checked);
 		});
@@ -42,8 +43,10 @@ namespace spk
 	void CheckBox::applyStyle(const Style &style)
 	{
 		_indicator.applyStyle(style);
+		_indicator.uncheckedButton().resetIconSize();
+		_indicator.checkedButton().resetIconSize();
 		_label.applyStyle(style);
-		_updateSizeHint();
+		setIndicatorSize(_indicatorSize);
 	}
 
 	void CheckBox::_updateSizeHint()
@@ -52,7 +55,16 @@ namespace spk
 	}
 	void CheckBox::_onGeometryChange()
 	{
-		_layout.setGeometry(Rect2D{Vector2Int{0, 0}, geometry().size});
+		const unsigned int side = std::min(geometry().width, geometry().height);
+		const unsigned int verticalOffset = (geometry().height - side) / 2;
+		const unsigned int spacing = std::min(_spacing, geometry().width - side);
+		const unsigned int labelOffset = side + spacing;
+		_indicator.setGeometry({
+			.anchor = {0, static_cast<int>(verticalOffset)},
+			.size = {side, side}});
+		_label.setGeometry({
+			.anchor = {static_cast<int>(labelOffset), 0},
+			.size = {geometry().width - labelOffset, geometry().height}});
 	}
 
 	void CheckBox::_onMouseButtonPressedEvent(MouseButtonPressedEvent &event)

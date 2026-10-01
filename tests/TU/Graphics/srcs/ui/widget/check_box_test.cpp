@@ -110,12 +110,16 @@ TEST(CheckBoxTest, SpacingAndIndicatorSizeRoundTrip)
 	EXPECT_EQ(box.indicatorSize(), spk::Vector2UInt(31, 27));
 }
 
-TEST(CheckBoxTest, IndicatorIsCenteredAndUsesRatioIconPadding)
+TEST(CheckBoxTest, IndicatorAndIconUseAvailableHeight)
 {
 	spk::CheckBox box("CheckBox");
 	box.setGeometry({.anchor = {0, 0}, .size = {260, 48}});
-	EXPECT_EQ(box.indicator().geometry(), (spk::Rect2D{.anchor = {0, 16}, .size = {16, 16}}));
-	EXPECT_EQ(box.indicator().checkedButton().releasedIcon().geometry(), (spk::Rect2D{.anchor = {1, 1}, .size = {14, 14}}));
+	EXPECT_EQ(box.indicator().geometry(), (spk::Rect2D{.anchor = {0, 0}, .size = {48, 48}}));
+	EXPECT_EQ(box.indicator().checkedButton().releasedBackground().geometry().size, spk::Vector2UInt(48, 48));
+	EXPECT_EQ(box.indicator().checkedButton().releasedIcon().geometry(), (spk::Rect2D{.anchor = {2, 2}, .size = {44, 44}}));
+	EXPECT_FALSE(box.indicator().checkedButton().iconSize().has_value());
+	EXPECT_EQ(box.label().geometry(), (spk::Rect2D{.anchor = {52, 0}, .size = {208, 48}}));
+	EXPECT_EQ(box.label().horizontalAlignment(), spk::Alignment::Horizontal::Left);
 }
 
 TEST(CheckBoxTest, ConstAndMutableAccessorsReferenceSameChildren)
