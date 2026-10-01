@@ -3,6 +3,8 @@
 #include "exception.hpp"
 #include "network/message.hpp"
 
+#include <array>
+#include <bit>
 #include <cstdint>
 #include <string>
 #include <type_traits>
@@ -227,4 +229,102 @@ TEST(MessageTest, EmptyMessageReaderRejectsDataReads)
 	EXPECT_TRUE(reader.empty());
 	EXPECT_NO_THROW(reader.readAt(0, nullptr, 0));
 	EXPECT_THROW((void)reader.get<std::uint32_t>(), spk::Exception);
+}
+
+
+TEST(MessageTest, WriterRebuildTakesUniqueMessageStorageWithoutCopy)
+{
+	spk::Message::Writer sourceWriter(52);
+	sourceWriter.setRequestID(91u);
+	sourceWriter << std::uint32_t{17};
+	spk::Message source = std::move(sourceWriter).build();
+
+	const std::byte *sourceAddress = source.data().data();
+
+	spk::Message::Writer writer(std::move(source));
+
+	EXPECT_EQ(writer.type(), 52u);
+	EXPECT_EQ(writer.requestID(), 91u);
+	ASSERT_EQ(writer.size(), sizeof(std::uint32_t));
+	EXPECT_EQ(writer.data().data(), sourceAddress);
+	EXPECT_EQ(
+		std::bit_cast<std::uint32_t>(
+			std::array<std::byte, sizeof(std::uint32_t)>{
+				writer.data()[0],
+				writer.data()[1],
+				writer.data()[2],
+				writer.data()[3]}),
+		17u);
+
+	writer.edit(0u, std::uint32_t{29});
+	const spk::Message rebuilt = std::move(writer).build();
+
+	EXPECT_EQ(rebuilt.type(), 52u);
+	EXPECT_EQ(rebuilt.requestID(), 91u);
+	EXPECT_EQ(rebuilt.data().data(), sourceAddress);
+	EXPECT_EQ(rebuilt.reader().get<std::uint32_t>(), 29u);
+}
+
+TEST(MessageTest, WriterRebuildCopiesSharedMessageStorageBeforeEditing)
+{
+	spk::Message::Writer sourceWriter(53);
+	sourceWriter.setRequestID(92u);
+	sourceWriter << std::uint32_t{31};
+	spk::Message source = std::move(sourceWriter).build();
+	const spk::Message shared = source;
+
+	const std::byte *sharedAddress = shared.data().data();
+
+	spk::Message::Writer writer(std::move(source));
+
+	ASSERT_EQ(writer.size(), sizeof(std::uint32_t));
+	EXPECT_NE(writer.data().data(), sharedAddress);
+	EXPECT_EQ(shared.reader().get<std::uint32_t>(), 31u);
+
+	writer.edit(0u, std::uint32_t{47});
+	const spk::Message rebuilt = std::move(writer).build();
+
+	EXPECT_EQ(rebuilt.type(), 53u);
+	EXPECT_EQ(rebuilt.requestID(), 92u);
+	EXPECT_EQ(rebuilt.reader().get<std::uint32_t>(), 47u);
+	EXPECT_EQ(shared.reader().get<std::uint32_t>(), 31u);
+}
+
+TEST(MessageTest, WriterRebuildPreservesLiveReaderStorage)
+{
+	spk::Message::Writer sourceWriter(54);
+	sourceWriter << std::uint32_t{73};
+	spk::Message source = std::move(sourceWriter).build();
+	auto reader = source.reader();
+
+	const std::byte *readerAddress = reader.data().data();
+
+	spk::Message::Writer writer(std::move(source));
+
+	EXPECT_NE(writer.data().data(), readerAddress);
+	writer.edit(0u, std::uint32_t{99});
+	const spk::Message rebuilt = std::move(writer).build();
+
+	EXPECT_EQ(reader.get<std::uint32_t>(), 73u);
+	EXPECT_EQ(rebuilt.reader().get<std::uint32_t>(), 99u);
+}
+
+TEST(MessageTest, WriterRebuildPreservesEmptyMessageMetadata)
+{
+	spk::Message::Writer sourceWriter(55);
+	sourceWriter.setRequestID(93u);
+	spk::Message source = std::move(sourceWriter).build();
+
+	spk::Message::Writer writer(std::move(source));
+
+	EXPECT_EQ(writer.type(), 55u);
+	EXPECT_EQ(writer.requestID(), 93u);
+	EXPECT_TRUE(writer.empty());
+	EXPECT_EQ(writer.capacity(), 0u);
+
+	const spk::Message rebuilt = std::move(writer).build();
+
+	EXPECT_EQ(rebuilt.type(), 55u);
+	EXPECT_EQ(rebuilt.requestID(), 93u);
+	EXPECT_TRUE(rebuilt.empty());
 }
