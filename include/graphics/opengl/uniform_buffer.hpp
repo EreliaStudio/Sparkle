@@ -15,7 +15,7 @@ namespace spk
 {
 	class RenderContext;
 
-	class UniformBuffer final : public BufferGPUResource
+	class UniformBuffer : public BufferGPUResource
 	{
 	public:
 		class State final : public BufferGPUResource::State

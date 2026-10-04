@@ -28,7 +28,7 @@ namespace spk
 		Duration _animationDuration = std::chrono::milliseconds(150);
 		Orientation _orientation = Orientation::Horizontal;
 		Vector2UInt _padding{2, 2};
-		Vector2UInt _thumbSize{16, 16};
+		Vector2Int _thumbCornerSize{8, 8};
 		const Texture *_uncheckedTexture = nullptr;
 		Texture::Section _uncheckedSection = Texture::Section::whole;
 		const SpriteSheet *_uncheckedNineSlice = nullptr;
@@ -59,7 +59,6 @@ namespace spk
 		void toggle();
 		void setOrientation(Orientation orientation);
 		void setPadding(const Vector2UInt &padding);
-		void setThumbSize(const Vector2UInt &size);
 		void setAnimationDuration(Duration duration);
 		void setUncheckedBackgroundTexture(const Texture *texture, const Texture::Section &section = Texture::Section::whole);
 		void setUncheckedBackgroundTexture(const SpriteSheet *texture);
@@ -75,7 +74,6 @@ namespace spk
 		[[nodiscard]] float visualRatio() const noexcept;
 		[[nodiscard]] Orientation orientation() const noexcept;
 		[[nodiscard]] const Vector2UInt &padding() const noexcept;
-		[[nodiscard]] const Vector2UInt &thumbSize() const noexcept;
 		[[nodiscard]] Duration animationDuration() const noexcept;
 		[[nodiscard]] const Texture *uncheckedBackgroundTexture() const noexcept;
 		[[nodiscard]] const Texture::Section &uncheckedBackgroundSection() const noexcept;

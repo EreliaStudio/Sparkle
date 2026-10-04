@@ -7,6 +7,7 @@
 #include "core/window.hpp"
 #include "graphics/color.hpp"
 #include "rendering/render_snapshot.hpp"
+#include "threading/task.hpp"
 
 namespace spk
 {
@@ -17,11 +18,13 @@ namespace spk
 		std::shared_ptr<Window::State> state;
 		spk::ThreadSafeSlot<spk::RenderSnapshot>::Producer renderSnapshotProducer;
 		std::shared_ptr<std::atomic_bool> isRequested;
+		std::shared_ptr<Task<void>> task = std::make_shared<Task<void>>();
 	};
 
 	struct StateDeletionRequest
 	{
 		Window::Identifier windowIdentifier;
+		std::shared_ptr<Task<void>> task = std::make_shared<Task<void>>();
 	};
 
 	using UpdateRequest = std::variant<

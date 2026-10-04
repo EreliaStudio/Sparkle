@@ -95,10 +95,6 @@ namespace spk::JSON
 		for (std::size_t index = 0; index < array.size(); ++index)
 		{
 			const std::string elementPath = pathFor(key) + "[" + std::to_string(index) + "]";
-			if (!array[index].isObject())
-			{
-				throw spk::Exception(detail::makeErrorMessage(_file, elementPath, "expected an object"));
-			}
 			result.emplace_back(array[index], _file, elementPath);
 		}
 		return result;

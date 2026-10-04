@@ -8,6 +8,7 @@
 #include <atomic>
 #include <chrono>
 #include <exception>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -17,6 +18,7 @@
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 #include "container/thread_safe_fifo.hpp"
 #include "container/thread_safe_slot.hpp"
@@ -183,6 +185,7 @@ namespace spk
 	{
 	private:
 		using MessageResult = std::optional<LRESULT>;
+		using ClosureRequest = std::function<void(const Window::Identifier &)>;
 		static constexpr std::string_view ClassIdentifier = "sparkle.class";
 
 		WinAPI::Window::Class _windowClass;
@@ -190,8 +193,8 @@ namespace spk
 		std::unordered_set<Window::Identifier> _mouseInsideWindows;
 		spk::ThreadSafeFIFO<PlatformRequest>::Consumer _platformRequestConsumer;
 		spk::ThreadSafeFIFO<EventRecord>::Producer _eventRecordProducer;
-		spk::ThreadSafeFIFO<UpdateRequest>::Producer _updateRequestProducer;
 		spk::ThreadSafeFIFO<RenderRequest>::Producer _renderRequestProducer;
+		ClosureRequest _closureRequest;
 
 		void _createNative(const NativeRegistrationRequest &request);
 		void _destroyNative(Window::Native &native);
@@ -236,8 +239,8 @@ namespace spk
 			WinAPI::WakeEvent &wakeEvent,
 			spk::ThreadSafeFIFO<PlatformRequest>::Consumer platformRequestConsumer,
 			spk::ThreadSafeFIFO<EventRecord>::Producer eventRecordProducer,
-			spk::ThreadSafeFIFO<UpdateRequest>::Producer updateRequestProducer,
-			spk::ThreadSafeFIFO<RenderRequest>::Producer renderRequestProducer);
+			spk::ThreadSafeFIFO<RenderRequest>::Producer renderRequestProducer,
+			ClosureRequest closureRequest);
 
 		void waitForActivity()
 		{
@@ -371,6 +374,20 @@ namespace spk
 	private:
 		WinAPI::WakeEvent _platformWakeEvent;
 		std::unordered_map<Window::Identifier, std::unique_ptr<Window>> _windows;
+		struct WindowClosureOperation
+		{
+			Task<void> task;
+			std::shared_ptr<Task<void>> stateDeletion = std::make_shared<Task<void>>();
+			std::shared_ptr<Task<void>> surfaceDeletion = std::make_shared<Task<void>>();
+			std::shared_ptr<Task<void>> nativeDeletion = std::make_shared<Task<void>>();
+			std::optional<Task<void>::Answer::CompletionContract> surfaceContract;
+			std::optional<Task<void>::Answer::CompletionContract> stateContract;
+			std::optional<Task<void>::Answer::CompletionContract> nativeContract;
+		};
+
+		std::unordered_map<Window::Identifier, std::unique_ptr<WindowClosureOperation>> _windowClosureOperations;
+		std::vector<Window::Identifier> _completedWindowClosures;
+		std::mutex _windowClosureMutex;
 		PlatformRequestProducer _platformRequestProducer;
 		spk::ThreadSafeFIFO<UpdateRequest>::Producer _updateRequestProducer;
 		spk::ThreadSafeFIFO<RenderRequest>::Producer _renderRequestProducer;
@@ -397,9 +414,10 @@ namespace spk
 		void _rethrowWorkerFailure();
 		void _stopAndJoinWorkers(std::jthread &updaterThread, std::jthread &rendererThread);
 		void _registerWindowObjects(const Window::Identifier &identifier, const Window::Configuration &configuration, std::shared_ptr<Window::Native> native, std::shared_ptr<Window::State> state, std::shared_ptr<Window::Surface> surface, spk::ThreadSafeSlot<spk::RenderSnapshot>::Endpoints channel, std::shared_ptr<std::atomic_bool> isRenderSnapshotRequested);
-		void _requestWindowClosure(const Window::Identifier &identifier);
+		[[nodiscard]] Task<void>::Answer _requestWindowClosure(const Window::Identifier &identifier);
 		void _requestAllWindowClosures();
-		void _removeClosedWindows();
+		void _completeWindowClosure(const Window::Identifier &identifier);
+		void _removeCompletedWindows();
 		void _finishExecution();
 		void _processApplicationState(bool &closureRequested);
 		void _runPlatform();
@@ -410,7 +428,7 @@ namespace spk
 		[[nodiscard]] Window &window(const Window::Identifier &identifier);
 		[[nodiscard]] const Window &window(const Window::Identifier &identifier) const;
 		Window &createWindow(const Window::Identifier &identifier, const Window::Configuration &configuration);
-		void closeWindow(const Window::Identifier &identifier);
+		[[nodiscard]] Task<void>::Answer closeWindow(const Window::Identifier &identifier);
 		void quit(int exitCode);
 		int run();
 	};

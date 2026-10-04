@@ -68,10 +68,10 @@ namespace spk
 
 		{
 			spk::Profiler::TimeMeasurement::Scope frame(*_renderFrameDuration);
-			
+
 			snapshot.execute(context);
 		}
-			
+
 		surface.present();
 	}
 
@@ -79,6 +79,8 @@ namespace spk
 	{
 		append(request.windowIdentifier, request.surface);
 		_registerSnapshotConsumer(request.windowIdentifier, request.renderSnapshotConsumer, request.isRequested);
+
+		request.task->validate();
 	}
 
 	void Application::RenderRuntime::_consume(const SurfaceCreationRequest &request)
@@ -88,6 +90,8 @@ namespace spk
 		{
 			_createSurface(*surface, request.native);
 		}
+
+		request.task->validate();
 	}
 
 	void Application::RenderRuntime::_consume(const SurfaceResizeRequest &request)
@@ -95,6 +99,7 @@ namespace spk
 		Window::Surface *surface = tryGet(request.windowIdentifier);
 		if (surface == nullptr)
 		{
+			request.task->validate();
 			return;
 		}
 
@@ -104,18 +109,29 @@ namespace spk
 			static_cast<spk::Rect2D::Size::value_type>(request.newSize.y)};
 
 		surface->setGeometry(geometry);
+
+		request.task->validate();
 	}
 
 	void Application::RenderRuntime::_consume(const SurfaceDeletionRequest &request)
 	{
-		if (!contains(request.windowIdentifier))
+		const Task<void>::Answer surfaceDeletionAnswer = request.task->answer();
+		auto nativeDeletionContract = surfaceDeletionAnswer.subscribeToCompletion(
+			[this, surfaceDeletionAnswer, identifier = request.windowIdentifier, nativeDeletionTask = request.nativeDeletionTask] {
+				if (surfaceDeletionAnswer.status() == Task<void>::Status::Completed)
+				{
+					_platformRequestProducer.publish(
+						NativeDeletionRequest{.windowIdentifier = identifier, .task = nativeDeletionTask});
+				}
+			});
+
+		if (contains(request.windowIdentifier) == true)
 		{
-			return;
+			_destroySurface(object(request.windowIdentifier));
+			remove(request.windowIdentifier);
+			_renderSnapshotEnties.erase(request.windowIdentifier);
 		}
-		_destroySurface(object(request.windowIdentifier));
-		remove(request.windowIdentifier);
-		_renderSnapshotEnties.erase(request.windowIdentifier);
-		_platformRequestProducer.publish(NativeDeletionRequest{.windowIdentifier = request.windowIdentifier});
+		request.task->validate();
 	}
 
 	void Application::RenderRuntime::_consumeRequests()
@@ -123,7 +139,17 @@ namespace spk
 		for (auto &request : _renderRequestConsumer.drain())
 		{
 			std::visit([this](const auto &value) {
-				_consume(value);
+				try
+				{
+					_consume(value);
+				} catch (...)
+				{
+					if (value.task->answer().status() == Task<void>::Status::Pending)
+					{
+						value.task->fail(std::current_exception());
+					}
+					throw;
+				}
 			},
 					   request);
 		}
