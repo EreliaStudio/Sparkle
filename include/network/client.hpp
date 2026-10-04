@@ -3,6 +3,7 @@
 #include "container/thread_safe_fifo.hpp"
 #include "design_pattern/contract_provider.hpp"
 #include "network/message.hpp"
+#include "network/message_dispatcher.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -13,6 +14,7 @@ namespace spk
 	class Client
 	{
 	public:
+		using MessageDispatcher = spk::MessageDispatcher<Message>;
 		using MessageQueue = ThreadSafeFIFO<Message>;
 		using ConnectionProvider = ContractProvider<>;
 		using ConnectionCallback = ConnectionProvider::callback_type;
@@ -25,6 +27,7 @@ namespace spk
 		class Impl;
 		std::unique_ptr<Impl> _impl;
 		MessageQueue _messages;
+		MessageDispatcher _messageDispatcher;
 		ConnectionProvider _connectionProvider;
 		DisconnectionProvider _disconnectionProvider;
 
@@ -49,5 +52,8 @@ namespace spk
 		void disconnect();
 		void send(const Message &message);
 		[[nodiscard]] MessageQueue &messages() noexcept;
+		[[nodiscard]] MessageDispatcher &messageDispatcher() noexcept;
+		// Dispatch a receive batch on the calling thread; do not also drain messages().
+		void treatMessages();
 	};
 }

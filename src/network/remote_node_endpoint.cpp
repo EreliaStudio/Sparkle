@@ -49,6 +49,16 @@ namespace spk
 		return _requests;
 	}
 
+	RemoteNode::Endpoint::MessageDispatcher &RemoteNode::Endpoint::messageDispatcher() noexcept
+	{
+		return _messageDispatcher;
+	}
+
+	void RemoteNode::Endpoint::treatMessages()
+	{
+		_messageDispatcher.treatMessages(_requests);
+	}
+
 	void RemoteNode::Endpoint::reply(const RemoteNode::Endpoint::Request &request, Message message)
 	{
 		_server.sendTo(

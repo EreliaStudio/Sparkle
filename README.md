@@ -91,3 +91,7 @@ To build the unit-test suite, enable `SPARKLE_BUILD_TESTS` and the root manifest
 Sparkle's own source is distributed under the [MIT License](LICENSE).
 
 The bundled Liberation Sans default font is distributed under the SIL Open Font License 1.1. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [resources/fonts/LICENSE-Liberation.txt](resources/fonts/LICENSE-Liberation.txt).
+
+## Network message subscriptions
+
+Clients, servers, and routed node endpoints expose typed `messageDispatcher()` subscriptions. Call `treatMessages()` from the owning update loop to process received messages. See [network message dispatch](docs/network-message-dispatch.md) for callbacks, reply routing, and lifetime rules.

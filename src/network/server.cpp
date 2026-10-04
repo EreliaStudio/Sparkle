@@ -123,6 +123,16 @@ namespace spk
 		return _messages;
 	}
 
+	Server::MessageDispatcher &Server::messageDispatcher() noexcept
+	{
+		return _messageDispatcher;
+	}
+
+	void Server::treatMessages()
+	{
+		_messageDispatcher.treatMessages(_messages);
+	}
+
 	void Server::_publish(ReceivedMessage message)
 	{
 		_messages.publish(std::move(message));

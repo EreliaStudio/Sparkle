@@ -189,6 +189,16 @@ namespace spk
 		return _messages;
 	}
 
+	Client::MessageDispatcher &Client::messageDispatcher() noexcept
+	{
+		return _messageDispatcher;
+	}
+
+	void Client::treatMessages()
+	{
+		_messageDispatcher.treatMessages(_messages);
+	}
+
 	void Client::_publish(Message message)
 	{
 		_messages.publish(std::move(message));

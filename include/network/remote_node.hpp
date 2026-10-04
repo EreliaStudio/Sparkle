@@ -23,11 +23,13 @@ namespace spk
 				Message message;
 			};
 
+			using MessageDispatcher = spk::MessageDispatcher<Request>;
 			using RequestQueue = ThreadSafeFIFO<Request>;
 
 		private:
 			Server _server;
 			RequestQueue _requests;
+			MessageDispatcher _messageDispatcher;
 			std::vector<ReceivedMessage> _received;
 
 		public:
@@ -39,6 +41,9 @@ namespace spk
 			void dispatch();
 			[[nodiscard]] RequestQueue &requests() noexcept;
 			void reply(const Request &request, Message message);
+			[[nodiscard]] MessageDispatcher &messageDispatcher() noexcept;
+			// Dispatch requests already unwrapped by dispatch(), on the calling thread.
+			void treatMessages();
 		};
 
 		using IncomingQueue = ThreadSafeFIFO<ReceivedMessage>;
