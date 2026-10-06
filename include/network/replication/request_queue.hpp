@@ -54,6 +54,7 @@ namespace spk::Network
 		// Explicit transition: desired IDs are returned so the owner can choose to
 		// re-request.
 		[[nodiscard]] std::vector<ObjectID> reset(SessionID session);
+		void close();
 		void request(ObjectID id, Clock::time_point now);
 		// Cancels the LOCAL transaction. Send application interest-release separately.
 		// Provider completions for a released transaction are ignored by this queue.

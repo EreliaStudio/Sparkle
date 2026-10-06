@@ -54,6 +54,13 @@ namespace spk::Network
 		return desired;
 	}
 
+	void RequestQueue::close()
+	{
+		_entries.clear();
+		_order.clear();
+		_session = {};
+	}
+
 	void RequestQueue::request(ObjectID id, Clock::time_point now)
 	{
 		if (id.isNull())

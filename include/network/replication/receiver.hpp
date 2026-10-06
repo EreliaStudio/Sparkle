@@ -1,14 +1,17 @@
 #pragma once
 
+#include "operation_guard.hpp"
 #include "update.hpp"
 #include <cstddef>
 #include <exception.hpp>
+#include <functional>
 #include <map>
 #include <optional>
+#include <vector>
 
 namespace spk::Network
 {
-	// No application object ownership; returns accepted updates for application.
+	// Tracking history belongs to the receiver, not to removable replicas.
 	// All operations run on one owner thread.
 	template <typename State>
 	class Receiver final
@@ -21,6 +24,45 @@ namespace spk::Network
 		SessionID _session;
 		std::size_t _maximumTracked;
 		std::map<ObjectID, Tracking> _tracking;
+		bool _receiving = false;
+
+		static void _validate(const Update<State> &update)
+		{
+			if (update.object.isNull())
+			{
+				throw spk::Exception("Null network identity");
+			}
+			if (update.tracking == 0 || update.revision == 0 || update.edit > Edit::Destroy ||
+				(update.edit == Edit::Set) != static_cast<bool>(update.state))
+			{
+				throw spk::Exception("Invalid replication update");
+			}
+		}
+
+		[[nodiscard]] static bool _obsolete(const Tracking &tracked, const Update<State> &update)
+		{
+			return update.tracking < tracked.identity ||
+				   (update.tracking == tracked.identity &&
+					(!tracked.active || (update.edit == Edit::Set && update.revision <= tracked.revision)));
+		}
+
+		template <typename Consumer>
+		void _apply(const Update<State> &update, Consumer &&consume)
+		{
+			auto [found, inserted] = _tracking.try_emplace(update.object);
+			try
+			{
+				std::invoke(std::forward<Consumer>(consume), update);
+			} catch (...)
+			{
+				if (inserted)
+				{
+					_tracking.erase(found);
+				}
+				throw;
+			}
+			found->second = {update.tracking, update.revision, update.edit == Edit::Set};
+		}
 
 	public:
 		explicit Receiver(std::size_t maximumTracked = 65536) :
@@ -31,53 +73,84 @@ namespace spk::Network
 				throw spk::Exception("Invalid receiver capacity");
 			}
 		}
-		// Explicit trusted handshake only; an ordinary update cannot change the session.
-		// Caller must also clear its application replicas on a real session transition.
+
 		void reset(SessionID session)
 		{
+			OperationGuard guard(_receiving);
 			if (session.isNull())
 			{
 				throw spk::Exception("Null network identity");
 			}
-			if (_session == session)
+			if (_session != session)
 			{
-				return;
+				_session = session;
+				_tracking.clear();
 			}
-			_session = session;
+		}
+
+		void close()
+		{
+			OperationGuard guard(_receiving);
+			_session = {};
 			_tracking.clear();
 		}
-		[[nodiscard]] std::optional<Update<State>> receive(Update<State> update)
+
+		[[nodiscard]] SessionID session() const noexcept
 		{
+			return _session;
+		}
+
+		[[nodiscard]] bool contains(ObjectID id) const
+		{
+			const auto found = _tracking.find(id);
+			return found != _tracking.end() && found->second.active;
+		}
+
+		[[nodiscard]] std::vector<ObjectID> objects() const
+		{
+			std::vector<ObjectID> result;
+			for (const auto &[id, tracking] : _tracking)
+			{
+				if (tracking.active)
+				{
+					result.push_back(id);
+				}
+			}
+			return result;
+		}
+
+		// Commit tracking only after application succeeds. A throwing consumer
+		// must leave its application object unchanged and can retry the frame.
+		template <typename Consumer>
+		[[nodiscard]] bool receive(const Update<State> &update, Consumer &&consume)
+		{
+			OperationGuard guard(_receiving);
 			if (_session.isNull() || update.session != _session)
 			{
-				return std::nullopt;
+				return false;
 			}
-			if (update.object.isNull())
+			_validate(update);
+			const auto found = _tracking.find(update.object);
+			if (found != _tracking.end() && _obsolete(found->second, update))
 			{
-				throw spk::Exception("Null network identity");
+				return false;
 			}
-			if (update.tracking == 0 || update.revision == 0 || update.edit > Edit::Destroy ||
-				(update.edit == Edit::Set) != static_cast<bool>(update.state))
-			{
-				throw spk::Exception("Invalid replication update");
-			}
-			if (!_tracking.contains(update.object) && _tracking.size() == _maximumTracked)
+			if (found == _tracking.end() && _tracking.size() == _maximumTracked)
 			{
 				throw spk::Exception("Tracking history full; negotiate a fresh session");
 			}
-			auto &tracked = _tracking[update.object];
-			if (update.tracking < tracked.identity)
+			_apply(update, std::forward<Consumer>(consume));
+			return true;
+		}
+
+		[[nodiscard]] std::optional<Update<State>> receive(Update<State> update)
+		{
+			if (!receive(update, [](const Update<State> &) {
+				}))
 			{
 				return std::nullopt;
 			}
-			if (update.tracking == tracked.identity &&
-				(!tracked.active ||
-				 (update.edit == Edit::Set && update.revision <= tracked.revision)))
-			{
-				return std::nullopt;
-			}
-			tracked = {update.tracking, update.revision, update.edit == Edit::Set};
 			return update;
 		}
 	};
-} // namespace spk::Network
+}

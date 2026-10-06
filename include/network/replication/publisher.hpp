@@ -248,6 +248,10 @@ namespace spk::Network
 			}
 			_objects.erase(found);
 		}
+		[[nodiscard]] bool publicationDue(Clock::time_point now) const noexcept
+		{
+			return now >= _nextPublication;
+		}
 		// Sender(peer, update) returns true ONLY when the ordered transport accepts it.
 		// false or exception retains this update, but other peers still get a turn.
 		template <typename Sender>
