@@ -1,8 +1,10 @@
 #pragma once
 
+#include "network/client.hpp"
 #include "network/replication/protocol.hpp"
 #include "network/replication/sequence.hpp"
 #include "replicable_trait.hpp"
+#include <atomic>
 #include <map>
 #include <optional>
 
@@ -38,6 +40,52 @@ namespace spk::Network
 		std::map<ObjectID, Acquisition> _requests;
 		Sequence _sequence;
 		bool _active = false;
+		spk::Client *_client = nullptr;
+		std::shared_ptr<std::atomic<std::uint64_t>> _connectionEdition;
+		std::uint64_t _observedConnection = 0;
+		SessionID _handshakeToken;
+		bool _helloSent = false;
+		spk::Client::ConnectionContract _connectionContract;
+		spk::Client::DisconnectionContract _disconnectionContract;
+		spk::Client::MessageDispatcher::Contract _messageContract;
+		spk::Client::MessageDispatcher::TreatmentContract _treatmentContract;
+		void _synchronizeBinding()
+		{
+			const auto edition = _connectionEdition->load();
+			if (_observedConnection != edition)
+			{
+				closeSession();
+				_handshakeToken = SessionID::generate();
+				_helloSent = false;
+				_observedConnection = edition;
+			}
+			if (!_helloSent && _client->isConnected())
+			{
+				_client->send(_protocol.encodeHandshake(_handshakeToken));
+				_helloSent = true;
+			}
+		}
+		void _receiveBoundMessage(const spk::Message &message)
+		{
+			_synchronizeBinding();
+			if (!_client->isConnected())
+			{
+				return;
+			}
+			if (_protocol.kind(message) == Protocol<State, Codec>::Kind::Session)
+			{
+				const auto handshake = _protocol.decodeHandshake(message);
+				if (handshake.token == _handshakeToken)
+				{
+					resetSession(handshake.session);
+				}
+			}
+			else
+			{
+				(void)receiveMessage(message);
+			}
+		}
+
 		void _clear()
 		{
 			for (const auto &[id, tracking] : _tracking)
@@ -172,9 +220,18 @@ namespace spk::Network
 		[[nodiscard]] virtual ReplicableTrait<State> &_createReplica(ObjectID id) = 0;
 		virtual void _removeReplica(ObjectID id) = 0;
 		// Only needed by collections that explicitly request objects.
-		[[nodiscard]] virtual bool _sendMessage(const spk::Message &)
+		[[nodiscard]] virtual bool _sendMessage(const spk::Message &message)
 		{
-			throw spk::Exception("This replica collection has no request transport");
+			if (!isBound())
+			{
+				throw spk::Exception("This replica collection has no request transport");
+			}
+			if (!isSynchronized())
+			{
+				return false;
+			}
+			_client->send(message);
+			return true;
 		}
 
 	public:
@@ -190,6 +247,59 @@ namespace spk::Network
 		virtual ~ReplicaCollectionTrait() = default;
 		ReplicaCollectionTrait(const ReplicaCollectionTrait &) = delete;
 		ReplicaCollectionTrait &operator=(const ReplicaCollectionTrait &) = delete;
+		// Bind/treat/unbind on the collection owner thread. Network callbacks only signal changes.
+		void bind(spk::Client &client)
+		{
+			if (_active)
+			{
+				throw spk::Exception("Replica binding during application hook");
+			}
+			if (_client == &client && isBound())
+			{
+				return;
+			}
+			unbind();
+			auto edition = std::make_shared<std::atomic<std::uint64_t>>(1);
+			auto connected = client.subscribeToConnection([edition] {
+				++*edition;
+			});
+			auto disconnected = client.subscribeToDisconnection([edition] {
+				++*edition;
+			});
+			auto messages = client.messageDispatcher().subscribeTo(_protocol.type(), [this](const auto &message) {
+				_receiveBoundMessage(message);
+			});
+			auto treatment = client.messageDispatcher().subscribeToTreatment([this] {
+				_synchronizeBinding();
+			});
+			_client = &client;
+			_connectionEdition = std::move(edition);
+			_observedConnection = 0;
+			_connectionContract = std::move(connected);
+			_disconnectionContract = std::move(disconnected);
+			_messageContract = std::move(messages);
+			_treatmentContract = std::move(treatment);
+		}
+		void unbind()
+		{
+			closeSession();
+			_messageContract.resign();
+			_treatmentContract.resign();
+			_connectionContract.resign();
+			_disconnectionContract.resign();
+			_connectionEdition.reset();
+			_client = nullptr;
+			_handshakeToken = {};
+		}
+		[[nodiscard]] bool isBound() const noexcept
+		{
+			return _messageContract.isValid();
+		}
+		[[nodiscard]] bool isSynchronized() const noexcept
+		{
+			return isBound() && !_session.isNull() && _client->isConnected() && _observedConnection == _connectionEdition->load();
+		}
+
 		void resetSession(SessionID session)
 		{
 			OperationGuard guard(_active);

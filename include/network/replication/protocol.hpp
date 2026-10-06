@@ -17,7 +17,14 @@ namespace spk::Network
 		{
 			Update,
 			Request,
-			Rejected
+			Rejected,
+			Hello,
+			Session
+		};
+
+		struct Handshake
+		{
+			SessionID token, session;
 		};
 
 	private:
@@ -80,6 +87,38 @@ namespace spk::Network
 				throw spk::Exception("Replication frame limit too small");
 			}
 		}
+		[[nodiscard]] spk::Message::Type type() const noexcept
+		{
+			return _type;
+		}
+		[[nodiscard]] spk::Message encodeHandshake(SessionID token, SessionID session = {}) const
+		{
+			if (token.isNull())
+			{
+				throw spk::Exception("Null handshake token");
+			}
+			auto writer = _writer(session.isNull() ? Kind::Hello : Kind::Session, 0);
+			writer << token << session;
+			return _finish(std::move(writer));
+		}
+		[[nodiscard]] Handshake decodeHandshake(const spk::Message &message) const
+		{
+			const auto value = kind(message);
+			if (value != Kind::Hello && value != Kind::Session)
+			{
+				throw spk::Exception("Unexpected handshake kind");
+			}
+			auto reader = _reader(message, value);
+			Handshake result;
+			reader >> result.token >> result.session;
+			if (result.token.isNull() || (value == Kind::Hello) != result.session.isNull() || message.requestID() != 0)
+			{
+				throw spk::Exception("Invalid handshake");
+			}
+			_end(reader);
+			return result;
+		}
+
 		[[nodiscard]] Kind kind(const spk::Message &message) const
 		{
 			if (message.type() != _type || message.size() > _maximumBytes)
@@ -92,7 +131,7 @@ namespace spk::Network
 				throw spk::Exception("Invalid replication protocol");
 			}
 			const auto result = reader.get<Kind>();
-			if (result > Kind::Rejected)
+			if (result > Kind::Session)
 			{
 				throw spk::Exception("Invalid replication kind");
 			}

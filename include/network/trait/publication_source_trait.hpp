@@ -1,11 +1,14 @@
 #pragma once
 
+#include "container/thread_safe_set.hpp"
 #include "network/replication/operation_guard.hpp"
 #include "network/replication/protocol.hpp"
+#include "network/server.hpp"
 #include "publishable_trait.hpp"
 #include <algorithm>
 #include <deque>
 #include <map>
+#include <optional>
 #include <set>
 
 namespace spk::Network
@@ -47,6 +50,14 @@ namespace spk::Network
 			std::map<ObjectID, Pending> pending;
 			std::deque<ObjectID> order;
 		};
+		struct Connection
+		{
+			PeerID peer;
+			SessionID token;
+		};
+		spk::Server *_server = nullptr;
+		std::shared_ptr<spk::ThreadSafeSet<spk::ConnectionID>> _live;
+		std::map<spk::ConnectionID, Connection> _connections;
 		Configuration _configuration;
 		Protocol<State, Codec> _protocol;
 		std::map<ObjectID, Object> _objects;
@@ -55,6 +66,11 @@ namespace spk::Network
 		Sequence _sequence;
 		Clock::time_point _nextPublication = Clock::time_point::min();
 		bool _active = false, _requesting = false;
+		spk::Server::ConnectionContract _connectionContract;
+		spk::Server::DisconnectionContract _disconnectionContract;
+		spk::Server::MessageDispatcher::Contract _messageContract;
+		spk::Server::MessageDispatcher::TreatmentContract _treatmentContract;
+
 		void _requireIdle() const
 		{
 			if (_active)
@@ -198,9 +214,71 @@ namespace spk::Network
 			return false;
 		}
 
+		void _synchronizeBinding()
+		{
+			_requireIdle();
+			std::erase_if(_connections, [this](const auto &entry) {
+				if (_live->contains(entry.first))
+				{
+					return false;
+				}
+				closePeer(entry.second.peer);
+				return true;
+			});
+		}
+		void _receiveHello(spk::ConnectionID id, const spk::Message &message)
+		{
+			const auto hello = _protocol.decodeHandshake(message);
+			auto found = _connections.find(id);
+			if (found != _connections.end() && (found->second.token != hello.token || !_peers.contains(found->second.peer)))
+			{
+				closePeer(found->second.peer);
+				_connections.erase(found);
+			}
+			if (!_connections.contains(id))
+			{
+				const auto peer = PeerID::generate();
+				(void)openPeer(peer);
+				_connections.emplace(id, Connection{peer, hello.token});
+			}
+			const auto peer = _connections.at(id).peer;
+			_server->sendTo(id, _protocol.encodeHandshake(hello.token, _peer(peer).session));
+		}
+		void _receiveBoundMessage(const spk::ReceivedMessage &received)
+		{
+			_synchronizeBinding();
+			if (!_live->contains(received.emitter))
+			{
+				return;
+			}
+			if (_protocol.kind(received.message) == Protocol<State, Codec>::Kind::Hello)
+			{
+				_receiveHello(received.emitter, received.message);
+			}
+			else if (auto peer = peerID(received.emitter))
+			{
+				(void)receiveMessage(*peer, received.message);
+			}
+		}
+
 	protected:
 		// true means accepted by the ordered transport, not acknowledged remotely.
-		[[nodiscard]] virtual bool _sendMessage(PeerID peer, const spk::Message &message) = 0;
+		[[nodiscard]] virtual bool _sendMessage(PeerID peer, const spk::Message &message)
+		{
+			if (!isBound())
+			{
+				throw spk::Exception("Publication source has no transport");
+			}
+			for (const auto &[connection, binding] : _connections)
+			{
+				if (binding.peer == peer && _live->contains(connection))
+				{
+					_server->sendTo(connection, message);
+					return true;
+				}
+			}
+			return false;
+		}
 		// May accept/reject immediately, or complete later on the owner thread.
 		virtual void _requestObject(PeerID peer, const Request &request)
 		{
@@ -227,6 +305,64 @@ namespace spk::Network
 		virtual ~PublicationSourceTrait() = default;
 		PublicationSourceTrait(const PublicationSourceTrait &) = delete;
 		PublicationSourceTrait &operator=(const PublicationSourceTrait &) = delete;
+		// Bind before starting the server. Treat messages and mutate this source on one owner thread.
+		void bind(spk::Server &server)
+		{
+			_requireIdle();
+			if (_server == &server && isBound())
+			{
+				return;
+			}
+			if (server.isRunning())
+			{
+				throw spk::Exception("Bind publication before starting the server");
+			}
+			unbind();
+			auto live = std::make_shared<spk::ThreadSafeSet<spk::ConnectionID>>();
+			auto connected = server.subscribeToConnection([live](spk::ConnectionID id) {
+				(void)live->publish(id);
+			});
+			auto disconnected = server.subscribeToDisconnection([live](spk::ConnectionID id) {
+				(void)live->erase(id);
+			});
+			auto messages = server.messageDispatcher().subscribeTo(_protocol.type(), [this](const auto &message) {
+				_receiveBoundMessage(message);
+			});
+			auto treatment = server.messageDispatcher().subscribeToTreatment([this] {
+				_synchronizeBinding();
+			});
+			_server = &server;
+			_live = std::move(live);
+			_connectionContract = std::move(connected);
+			_disconnectionContract = std::move(disconnected);
+			_messageContract = std::move(messages);
+			_treatmentContract = std::move(treatment);
+		}
+		void unbind()
+		{
+			_requireIdle();
+			_messageContract.resign();
+			_treatmentContract.resign();
+			_connectionContract.resign();
+			_disconnectionContract.resign();
+			for (const auto &[id, connection] : _connections)
+			{
+				closePeer(connection.peer);
+			}
+			_connections.clear();
+			_live.reset();
+			_server = nullptr;
+		}
+		[[nodiscard]] bool isBound() const noexcept
+		{
+			return _messageContract.isValid();
+		}
+		[[nodiscard]] std::optional<PeerID> peerID(spk::ConnectionID connection) const
+		{
+			auto found = _connections.find(connection);
+			return found == _connections.end() || !_peers.contains(found->second.peer) ? std::nullopt : std::optional{found->second.peer};
+		}
+
 		void registerObject(ObjectID id, PublishableTrait<State> &instance)
 		{
 			OperationGuard guard(_active);

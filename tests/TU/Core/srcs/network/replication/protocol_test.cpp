@@ -72,3 +72,34 @@ TEST_F(NetworkTraitsTest, ProtocolRejectsInvalidIdentityMetadataKindAndFrameLimi
 	writer.resize(65);
 	EXPECT_THROW((void)Protocol(42, 64).decodeUpdate(std::move(writer).build()), spk::Exception);
 }
+
+TEST_F(NetworkTraitsTest, HandshakeRoundTripsAndRejectsTruncationTrailingDataAndInvalidMetadata)
+{
+	const auto token = ID::generate();
+	for (const auto &frame : {protocol.encodeHandshake(token), protocol.encodeHandshake(token, session)})
+	{
+		const auto handshake = protocol.decodeHandshake(frame);
+		EXPECT_EQ(handshake.token, token);
+		EXPECT_EQ(handshake.session.isNull(), protocol.kind(frame) == Protocol::Kind::Hello);
+		for (std::size_t length = 0; length < frame.size(); ++length)
+		{
+			spk::Message::Writer writer(42);
+			writer.append(frame.data().data(), length);
+			EXPECT_THROW((void)protocol.decodeHandshake(std::move(writer).build()), spk::Exception);
+		}
+		auto copy = frame;
+		spk::Message::Writer writer(std::move(copy));
+		writer << 1;
+		EXPECT_THROW((void)protocol.decodeHandshake(std::move(writer).build()), spk::Exception);
+		copy = frame;
+		writer = spk::Message::Writer(std::move(copy));
+		writer.setRequestID(1);
+		EXPECT_THROW((void)protocol.decodeHandshake(std::move(writer).build()), spk::Exception);
+	}
+	EXPECT_THROW((void)protocol.encodeHandshake({}), spk::Exception);
+	EXPECT_THROW((void)protocol.decodeHandshake(protocol.encode(update(1))), spk::Exception);
+	auto frame = protocol.encodeHandshake(token);
+	spk::Message::Writer writer(std::move(frame));
+	writer.edit(sizeof(std::uint32_t), Protocol::Kind::Session);
+	EXPECT_THROW((void)protocol.decodeHandshake(std::move(writer).build()), spk::Exception);
+}
