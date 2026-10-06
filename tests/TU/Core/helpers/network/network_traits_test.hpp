@@ -1,8 +1,10 @@
 #pragma once
 
+#include <functional>
 #include <gtest/gtest.h>
 #include <network/network.hpp>
 #include <set>
+#include <vector>
 
 class NetworkTraitsTest : public testing::Test
 {
@@ -29,9 +31,8 @@ protected:
 	using Protocol = spk::Network::Protocol<State, Codec>;
 	using Update = spk::Network::Update<State>;
 	using Request = spk::Network::Request;
-	using Reply = spk::Network::Reply;
 	using Edit = spk::Network::Edit;
-	using Status = spk::Network::RequestQueue::Status;
+	using Status = spk::Network::ReplicaCollectionTrait<State, Codec>::RequestStatus;
 
 	class Object final : public spk::Network::PublishableTrait<State>, public spk::Network::ReplicableTrait<State>
 	{
@@ -88,8 +89,8 @@ protected:
 		}
 
 	public:
-		Source() :
-			PublicationSourceTrait(42)
+		explicit Source(Configuration configuration = {}) :
+			PublicationSourceTrait(42, configuration)
 		{
 		}
 		std::set<ID> blocked, throwing;
@@ -100,7 +101,7 @@ protected:
 	class Replicas : public spk::Network::ReplicaCollectionTrait<State, Codec>
 	{
 	protected:
-		void _applyReplica(ID id, const State &state) override
+		spk::Network::ReplicableTrait<State> *_findReplica(ID id) override
 		{
 			if (onApply)
 			{
@@ -110,7 +111,15 @@ protected:
 			{
 				throw spk::Exception("Collection failure");
 			}
-			objects[id].applyNetworkState(state);
+			auto found = objects.find(id);
+			return found == objects.end() ? nullptr : &found->second;
+		}
+		spk::Network::ReplicableTrait<State> &_createReplica(ID id) override
+		{
+			++creations;
+			auto &object = objects[id];
+			object.failApply = failInitialApply;
+			return object;
 		}
 		void _removeReplica(ID id) override
 		{
@@ -128,27 +137,14 @@ protected:
 		{
 		}
 		std::map<ID, Object> objects;
-		int removals = 0;
-		bool failApply = false, failRemove = false;
+		int removals = 0, creations = 0;
+		bool failApply = false, failRemove = false, failInitialApply = false;
 		std::function<void()> onApply;
 	};
 
-	class RequestSource : public spk::Network::RequestSourceTrait<State, Codec>
+	class RequestSource : public Source
 	{
 	protected:
-		bool _sendMessage(ID peer, const spk::Message &message) override
-		{
-			if (onSend)
-			{
-				onSend();
-			}
-			if (blocked)
-			{
-				return false;
-			}
-			sent.emplace_back(peer, message);
-			return true;
-		}
 		void _requestObject(ID peer, const Request &request) override
 		{
 			requests.emplace_back(peer, request);
@@ -163,17 +159,11 @@ protected:
 		}
 
 	public:
-		RequestSource() :
-			RequestSourceTrait(42)
-		{
-		}
+		using Source::Source;
 		std::vector<std::pair<ID, Request>> requests;
-		std::vector<std::pair<ID, spk::Message>> sent;
-		bool blocked = false, immediate = false, failRequest = false;
-		std::function<void()> onSend;
+		bool immediate = false, failRequest = false;
 	};
-
-	class RequestReplicas : public spk::Network::RequestReplicaCollectionTrait<State, Codec>
+	class RequestReplicas : public Replicas
 	{
 	protected:
 		bool _sendMessage(const spk::Message &message) override
@@ -193,21 +183,9 @@ protected:
 			sent.push_back(message);
 			return true;
 		}
-		void _applyReplica(ID id, const State &state) override
-		{
-			objects[id].applyNetworkState(state);
-		}
-		void _removeReplica(ID id) override
-		{
-			objects.erase(id);
-		}
 
 	public:
-		RequestReplicas() :
-			RequestReplicaCollectionTrait(42)
-		{
-		}
-		std::map<ID, Object> objects;
+		using Replicas::Replicas;
 		std::vector<spk::Message> sent;
 		bool blocked = false, throwSend = false;
 		std::function<void()> onSend;

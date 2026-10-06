@@ -1,15 +1,13 @@
 #pragma once
 
-#include "reply.hpp"
+#include "exception.hpp"
+#include "request.hpp"
 #include "state_codec.hpp"
 #include "update.hpp"
-#include <cstddef>
-#include <exception.hpp>
-#include <utility>
 
 namespace spk::Network
 {
-	// One message type per typed channel. Native Sparkle scalar encoding.
+	// One typed channel on an ordered transport. Uses native Sparkle encoding.
 	template <typename State, typename Codec>
 		requires StateCodec<Codec, State>
 	class Protocol final
@@ -19,31 +17,27 @@ namespace spk::Network
 		{
 			Update,
 			Request,
-			Reply
+			Rejected
 		};
 
 	private:
-		static constexpr std::uint32_t Magic = 0x31525053;
+		static constexpr std::uint32_t Magic = 0x32525053;
 		spk::Message::Type _type;
 		std::size_t _maximumBytes;
-		[[nodiscard]] spk::Message::Writer _writer(Kind kind) const
+		[[nodiscard]] spk::Message::Writer _writer(Kind kind, spk::Message::RequestID requestID) const
 		{
 			spk::Message::Writer writer(_type);
+			writer.setRequestID(requestID);
 			writer << Magic << kind;
 			return writer;
 		}
-		[[nodiscard]] spk::Message::Reader _reader(const spk::Message &message, Kind kind) const
+		[[nodiscard]] spk::Message::Reader _reader(const spk::Message &message, Kind expected) const
 		{
-			if (message.type() != _type || message.size() > _maximumBytes)
+			if (kind(message) != expected)
 			{
-				throw spk::Exception("Invalid replication frame");
+				throw spk::Exception("Unexpected replication message");
 			}
-			auto reader = message.reader();
-			if (reader.get<std::uint32_t>() != Magic || reader.get<Kind>() != kind)
-			{
-				throw spk::Exception("Invalid replication protocol/kind");
-			}
-			return reader;
+			return message.reader(sizeof(Magic) + sizeof(Kind));
 		}
 		[[nodiscard]] spk::Message _finish(spk::Message::Writer writer) const
 		{
@@ -60,32 +54,20 @@ namespace spk::Network
 				throw spk::Exception("Trailing replication bytes");
 			}
 		}
-		static void _validate(const Request &request)
+		static void _validate(SessionID session, ObjectID object)
 		{
-			if (request.session.isNull())
+			if (session.isNull() || object.isNull())
 			{
 				throw spk::Exception("Null network identity");
 			}
-			if (request.object.isNull())
-			{
-				throw spk::Exception("Null network identity");
-			}
-			if (request.attempt == 0)
-			{
-				throw spk::Exception("Invalid request attempt");
-			}
 		}
-		static void _write(spk::Message::Writer &writer, const Request &request)
+		static void _validate(const Update<State> &update)
 		{
-			_validate(request);
-			writer << request.session << request.object << request.attempt;
-		}
-		[[nodiscard]] static Request _read(const spk::Message::Reader &reader)
-		{
-			Request request;
-			reader >> request.session >> request.object >> request.attempt;
-			_validate(request);
-			return request;
+			_validate(update.session, update.object);
+			if (update.tracking == 0 || update.revision == 0 || update.edit > Edit::Destroy)
+			{
+				throw spk::Exception("Invalid update metadata");
+			}
 		}
 
 	public:
@@ -107,33 +89,24 @@ namespace spk::Network
 			auto reader = message.reader();
 			if (reader.get<std::uint32_t>() != Magic)
 			{
-				throw spk::Exception("Invalid replication magic");
+				throw spk::Exception("Invalid replication protocol");
 			}
 			const auto result = reader.get<Kind>();
-			if (result > Kind::Reply)
+			if (result > Kind::Rejected)
 			{
 				throw spk::Exception("Invalid replication kind");
 			}
 			return result;
 		}
-		[[nodiscard]] spk::Message encode(const Update<State> &update) const
+		[[nodiscard]] spk::Message encode(const Update<State> &update, spk::Message::RequestID requestID = 0) const
 		{
-			if (update.session.isNull())
+			_validate(update);
+			if ((update.edit == Edit::Set) != static_cast<bool>(update.state))
 			{
-				throw spk::Exception("Null network identity");
+				throw spk::Exception("Invalid update state");
 			}
-			if (update.object.isNull())
-			{
-				throw spk::Exception("Null network identity");
-			}
-			if (update.tracking == 0 || update.revision == 0 || update.edit > Edit::Destroy ||
-				(update.edit == Edit::Set) != static_cast<bool>(update.state))
-			{
-				throw spk::Exception("Invalid update");
-			}
-			auto writer = _writer(Kind::Update);
-			writer << update.session << update.object << update.tracking << update.revision
-				   << update.edit;
+			auto writer = _writer(Kind::Update, requestID);
+			writer << update.session << update.object << update.tracking << update.revision << update.edit;
 			if (update.state)
 			{
 				Codec::encode(writer, *update.state);
@@ -144,20 +117,8 @@ namespace spk::Network
 		{
 			auto reader = _reader(message, Kind::Update);
 			Update<State> update;
-			reader >> update.session >> update.object >> update.tracking >> update.revision >>
-				update.edit;
-			if (update.session.isNull())
-			{
-				throw spk::Exception("Null network identity");
-			}
-			if (update.object.isNull())
-			{
-				throw spk::Exception("Null network identity");
-			}
-			if (update.tracking == 0 || update.revision == 0 || update.edit > Edit::Destroy)
-			{
-				throw spk::Exception("Invalid update metadata");
-			}
+			reader >> update.session >> update.object >> update.tracking >> update.revision >> update.edit;
+			_validate(update);
 			if (update.edit == Edit::Set)
 			{
 				update.state = std::make_shared<const State>(Codec::decode(reader));
@@ -165,41 +126,30 @@ namespace spk::Network
 			_end(reader);
 			return update;
 		}
-		[[nodiscard]] spk::Message encode(const Request &request) const
+		[[nodiscard]] spk::Message encode(const Request &request, Kind kind = Kind::Request) const
 		{
-			auto writer = _writer(Kind::Request);
-			_write(writer, request);
+			_validate(request.session, request.object);
+			if (request.id == 0 || (kind != Kind::Request && kind != Kind::Rejected))
+			{
+				throw spk::Exception("Invalid acquisition request");
+			}
+			auto writer = _writer(kind, request.id);
+			writer << request.session << request.object;
 			return _finish(std::move(writer));
 		}
-		[[nodiscard]] Request decodeRequest(const spk::Message &message) const
+		[[nodiscard]] Request decodeRequest(const spk::Message &message, Kind kind = Kind::Request) const
 		{
-			auto reader = _reader(message, Kind::Request);
-			auto request = _read(reader);
+			auto reader = _reader(message, kind);
+			Request request;
+			reader >> request.session >> request.object;
+			request.id = message.requestID();
+			_validate(request.session, request.object);
+			if (request.id == 0 || (kind != Kind::Request && kind != Kind::Rejected))
+			{
+				throw spk::Exception("Invalid acquisition request");
+			}
 			_end(reader);
 			return request;
 		}
-		[[nodiscard]] spk::Message encode(const Reply &reply) const
-		{
-			if (reply.result > Reply::Result::Rejected)
-			{
-				throw spk::Exception("Invalid reply");
-			}
-			auto writer = _writer(Kind::Reply);
-			_write(writer, reply.request);
-			writer << reply.result;
-			return _finish(std::move(writer));
-		}
-		[[nodiscard]] Reply decodeReply(const spk::Message &message) const
-		{
-			auto reader = _reader(message, Kind::Reply);
-			Reply reply{_read(reader)};
-			reader >> reply.result;
-			if (reply.result > Reply::Result::Rejected)
-			{
-				throw spk::Exception("Invalid reply");
-			}
-			_end(reader);
-			return reply;
-		}
 	};
-} // namespace spk::Network
+}

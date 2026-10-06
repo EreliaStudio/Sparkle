@@ -2,188 +2,381 @@
 
 #include "network/replication/operation_guard.hpp"
 #include "network/replication/protocol.hpp"
-#include "network/replication/publisher.hpp"
 #include "publishable_trait.hpp"
+#include <algorithm>
+#include <deque>
+#include <map>
+#include <set>
 
 namespace spk::Network
 {
-	// One owner thread, including invalidation and object destruction. The source
-	// observes application-owned objects; it never owns their storage.
+	// Owner-thread only. Objects are observed, never owned. Send hooks use one ordered transport.
 	template <typename State, typename Codec>
 	class PublicationSourceTrait
 	{
 	public:
-		using Configuration = typename Publisher<State>::Configuration;
-		using DispatchResult = typename Publisher<State>::DispatchResult;
+		struct Configuration
+		{
+			std::size_t maximumObjects = 16384, maximumPeers = 256;
+			Clock::duration interval = std::chrono::milliseconds(50);
+		};
+		struct DispatchResult
+		{
+			std::size_t sent = 0, blocked = 0, errors = 0;
+		};
 
 	private:
-		struct Registration
+		struct Object
 		{
-			PublishableTrait<State> *object;
+			PublishableTrait<State> *instance = nullptr;
 			std::weak_ptr<void> lifetime;
-			std::shared_ptr<bool> dirty;
-			typename PublishableTrait<State>::EditionContract contract;
+			std::uint64_t edition = 0, revision = 0;
+			std::shared_ptr<const State> state;
 		};
-		Publisher<State> _publisher;
-		Protocol<State, Codec> _protocol;
-		std::map<ObjectID, Registration> _registrations;
-		bool _dispatching = false;
-
-		void _capture(ObjectID id, Registration &registration)
+		struct Pending
 		{
-			*registration.dirty = false;
-			try
+			Update<State> update;
+			spk::Message::RequestID requestID = 0;
+		};
+		struct Peer
+		{
+			SessionID session = SessionID::generate();
+			spk::Message::RequestID lastRequest = 0;
+			std::map<ObjectID, std::uint64_t> tracking;
+			std::map<ObjectID, Request> requests;
+			std::map<ObjectID, Pending> pending;
+			std::deque<ObjectID> order;
+		};
+		Configuration _configuration;
+		Protocol<State, Codec> _protocol;
+		std::map<ObjectID, Object> _objects;
+		std::map<PeerID, Peer> _peers;
+		std::deque<PeerID> _roundRobin;
+		Sequence _sequence;
+		Clock::time_point _nextPublication = Clock::time_point::min();
+		bool _active = false, _requesting = false;
+		void _requireIdle() const
+		{
+			if (_active)
 			{
-				_publisher.publish(id, registration.object->buildNetworkState());
-			} catch (...)
-			{
-				*registration.dirty = true;
-				throw;
+				throw spk::Exception("Publication mutation during application hook");
 			}
 		}
-
-		void _captureChanges()
+		Peer &_peer(PeerID id)
 		{
-			std::erase_if(_registrations, [](const auto &entry) {
-				return entry.second.lifetime.expired();
-			});
-			for (auto &[id, registration] : _registrations)
+			auto found = _peers.find(id);
+			if (found == _peers.end())
 			{
-				if (!registration.lifetime.expired() && *registration.dirty)
+				throw spk::Exception("Unknown replication peer");
+			}
+			return found->second;
+		}
+		Object &_object(ObjectID id)
+		{
+			auto found = _objects.find(id);
+			if (found == _objects.end())
+			{
+				throw spk::Exception("Unknown replication object");
+			}
+			return found->second;
+		}
+		void _room(const Peer &peer, ObjectID id) const
+		{
+			if (!peer.pending.contains(id) && peer.pending.size() >= _configuration.maximumObjects)
+			{
+				throw spk::Exception("Replication queue full; drain or close peer");
+			}
+		}
+		void _queue(Peer &peer, ObjectID id, Edit edit)
+		{
+			auto [found, inserted] = peer.pending.try_emplace(id);
+			if (inserted)
+			{
+				peer.order.push_back(id);
+			}
+			const auto &object = _object(id);
+			found->second.update = {peer.session, id, peer.tracking.at(id), object.revision, edit, edit == Edit::Set ? object.state : nullptr};
+			if (edit != Edit::Set)
+			{
+				found->second.requestID = 0;
+			}
+		}
+		void _notify(ObjectID id, Edit edit)
+		{
+			for (auto &[peerID, peer] : _peers)
+			{
+				if (peer.tracking.contains(id))
 				{
-					_capture(id, registration);
+					_queue(peer, id, edit);
 				}
 			}
 		}
-
-		auto _register(ObjectID id, PublishableTrait<State> &object)
+		void _checkFollowers(ObjectID id) const
 		{
-			const auto previous = _registrations.find(id);
-			if (previous != _registrations.end() && previous->second.lifetime.expired())
+			for (const auto &[peerID, peer] : _peers)
 			{
-				_registrations.erase(previous);
+				if (peer.tracking.contains(id))
+				{
+					_room(peer, id);
+				}
 			}
-			auto dirty = std::make_shared<bool>(true);
-			auto contract = object.subscribeToNetworkEdition([dirty] {
-				*dirty = true;
-			});
-			auto [found, inserted] = _registrations.emplace(id, Registration{&object, object._lifetime, dirty, std::move(contract)});
-			if (!inserted)
+		}
+		void _publish(ObjectID id, State state)
+		{
+			if (id.isNull() || (!_objects.contains(id) && _objects.size() >= _configuration.maximumObjects))
 			{
-				throw spk::Exception("Network object already registered");
+				throw spk::Exception("Invalid object identity or object limit reached");
 			}
-			return found;
+			_checkFollowers(id);
+			auto snapshot = std::make_shared<const State>(std::move(state));
+			const auto revision = _sequence.next();
+			auto &object = _objects[id];
+			object.state = std::move(snapshot);
+			object.revision = revision;
+			_notify(id, Edit::Set);
+		}
+		void _captureChanges()
+		{
+			for (auto &[id, object] : _objects)
+			{
+				if (object.lifetime.expired() || object.edition == object.instance->networkEdition())
+				{
+					continue;
+				}
+				const auto edition = object.instance->networkEdition();
+				_publish(id, object.instance->buildNetworkState());
+				object.edition = edition;
+			}
+		}
+		void _follow(Peer &peer, ObjectID id, spk::Message::RequestID requestID = 0)
+		{
+			(void)_object(id);
+			_room(peer, id);
+			if (!peer.tracking.contains(id))
+			{
+				peer.tracking.emplace(id, _sequence.next());
+			}
+			_queue(peer, id, Edit::Set);
+			if (requestID != 0)
+			{
+				peer.pending.at(id).requestID = requestID;
+			}
+		}
+		Peer *_requestPeer(PeerID id, const Request &request)
+		{
+			auto found = _peers.find(id);
+			if (found == _peers.end() || found->second.session != request.session)
+			{
+				return nullptr;
+			}
+			auto &peer = found->second;
+			auto pending = peer.requests.find(request.object);
+			return pending != peer.requests.end() && pending->second == request ? &peer : nullptr;
+		}
+		bool _dispatchOne(PeerID id, DispatchResult &result)
+		{
+			auto &peer = _peer(id);
+			if (peer.order.empty())
+			{
+				return false;
+			}
+			const auto &pending = peer.pending.at(peer.order.front());
+			try
+			{
+				if (_sendMessage(id, _protocol.encode(pending.update, pending.requestID)))
+				{
+					peer.pending.erase(peer.order.front());
+					peer.order.pop_front();
+					++result.sent;
+					return true;
+				}
+			} catch (...)
+			{
+				++result.errors;
+			}
+			++result.blocked;
+			return false;
 		}
 
 	protected:
-		// true means this ordered transport accepted the frame, not remote ACK.
+		// true means accepted by the ordered transport, not acknowledged remotely.
 		[[nodiscard]] virtual bool _sendMessage(PeerID peer, const spk::Message &message) = 0;
-		virtual void _closeRequests(PeerID)
+		// May accept/reject immediately, or complete later on the owner thread.
+		virtual void _requestObject(PeerID peer, const Request &request)
 		{
-		}
-		virtual void _dispatchReplies(std::size_t)
-		{
-		}
-		virtual bool _receiveRequest(PeerID, const Request &)
-		{
-			throw spk::Exception("This publication source does not serve requests");
-		}
-		[[nodiscard]] Publisher<State> &_publication() noexcept
-		{
-			return _publisher;
-		}
-		[[nodiscard]] const Protocol<State, Codec> &_protocolCodec() const noexcept
-		{
-			return _protocol;
-		}
-		void _requireIdle() const
-		{
-			if (_dispatching)
+			if (_objects.contains(request.object))
 			{
-				throw spk::Exception("Publication source mutation during dispatch");
+				(void)acceptRequest(peer, request);
+			}
+			else
+			{
+				(void)rejectRequest(peer, request);
 			}
 		}
 
 	public:
 		explicit PublicationSourceTrait(spk::Message::Type type, Configuration configuration = {}, std::size_t maximumBytes = 2 * 1024 * 1024) :
-			_publisher(configuration),
+			_configuration(configuration),
 			_protocol(type, maximumBytes)
 		{
-		}
-		virtual ~PublicationSourceTrait() = default;
-
-		void registerObject(ObjectID id, PublishableTrait<State> &object)
-		{
-			_requireIdle();
-			const auto found = _register(id, object);
-			try
+			if (configuration.maximumObjects == 0 || configuration.maximumPeers == 0 || configuration.interval < Clock::duration::zero())
 			{
-				OperationGuard guard(_dispatching);
-				_capture(id, found->second);
-			} catch (...)
-			{
-				_registrations.erase(found);
-				throw;
+				throw spk::Exception("Invalid publication configuration");
 			}
 		}
-
-		// Local detachment retains the last published snapshot and followers.
+		virtual ~PublicationSourceTrait() = default;
+		PublicationSourceTrait(const PublicationSourceTrait &) = delete;
+		PublicationSourceTrait &operator=(const PublicationSourceTrait &) = delete;
+		void registerObject(ObjectID id, PublishableTrait<State> &instance)
+		{
+			OperationGuard guard(_active);
+			auto found = _objects.find(id);
+			if (found != _objects.end() && !found->second.lifetime.expired())
+			{
+				throw spk::Exception("Network object already registered");
+			}
+			const auto edition = instance.networkEdition();
+			_publish(id, instance.buildNetworkState());
+			auto &object = _object(id);
+			object.instance = &instance;
+			object.lifetime = instance._lifetime;
+			object.edition = edition;
+		}
+		// Detachment and C++ destruction retain the last snapshot. Deletion is explicit.
 		void unregisterObject(ObjectID id)
 		{
 			_requireIdle();
-			_registrations.erase(id);
+			if (auto found = _objects.find(id); found != _objects.end())
+			{
+				found->second.lifetime.reset();
+				found->second.instance = nullptr;
+			}
 		}
-
-		// Explicit authoritative deletion, unlike detachment or C++ destruction.
 		void destroyObject(ObjectID id)
 		{
 			_requireIdle();
-			_publisher.destroy(id);
-			_registrations.erase(id);
-		}
-
-		[[nodiscard]] SessionID openPeer(PeerID peer)
-		{
-			_requireIdle();
-			return _publisher.open(peer);
-		}
-
-		virtual void closePeer(PeerID peer) final
-		{
-			_requireIdle();
-			_closeRequests(peer);
-			_publisher.close(peer);
-		}
-
-		void follow(PeerID peer, ObjectID object)
-		{
-			_requireIdle();
-			_publisher.follow(peer, object);
-		}
-
-		void forget(PeerID peer, ObjectID object)
-		{
-			_requireIdle();
-			_publisher.forget(peer, object);
-		}
-
-		[[nodiscard]] virtual bool receiveMessage(PeerID peer, const spk::Message &message) final
-		{
-			_requireIdle();
-			return _receiveRequest(peer, _protocol.decodeRequest(message));
-		}
-
-		virtual DispatchResult dispatch(Clock::time_point now, std::size_t maximumAttempts = 64) final
-		{
-			OperationGuard guard(_dispatching);
-			if (maximumAttempts != 0 && _publisher.publicationDue(now))
+			_checkFollowers(id);
+			_notify(id, Edit::Destroy);
+			for (auto &[peerID, peer] : _peers)
 			{
-				_captureChanges();
+				peer.tracking.erase(id);
+				peer.requests.erase(id);
 			}
-			auto result = _publisher.dispatch(now, maximumAttempts, [this](PeerID peer, const Update<State> &update) {
-				return _sendMessage(peer, _protocol.encode(update));
-			});
-			_dispatchReplies(maximumAttempts);
+			_objects.erase(id);
+		}
+		[[nodiscard]] SessionID openPeer(PeerID id)
+		{
+			_requireIdle();
+			if (id.isNull() || _peers.contains(id) || _peers.size() >= _configuration.maximumPeers)
+			{
+				throw spk::Exception("Invalid, duplicate or excess replication peer");
+			}
+			auto [found, inserted] = _peers.try_emplace(id);
+			_roundRobin.push_back(id);
+			return found->second.session;
+		}
+		void closePeer(PeerID id)
+		{
+			_requireIdle();
+			_peers.erase(id);
+			std::erase(_roundRobin, id);
+		}
+		void follow(PeerID peer, ObjectID id)
+		{
+			_requireIdle();
+			if (!_peer(peer).tracking.contains(id))
+			{
+				_follow(_peer(peer), id);
+			}
+		}
+		void forget(PeerID peerID, ObjectID id)
+		{
+			_requireIdle();
+			auto &peer = _peer(peerID);
+			if (peer.tracking.contains(id))
+			{
+				_room(peer, id);
+				_queue(peer, id, Edit::Forget);
+				peer.tracking.erase(id);
+			}
+			peer.requests.erase(id);
+		}
+		[[nodiscard]] bool receiveMessage(PeerID id, const spk::Message &message)
+		{
+			_requireIdle();
+			OperationGuard guard(_requesting);
+			const auto request = _protocol.decodeRequest(message);
+			auto found = _peers.find(id);
+			if (found == _peers.end() || found->second.session != request.session || request.id <= found->second.lastRequest)
+			{
+				return false;
+			}
+			auto &peer = found->second;
+			if (!peer.requests.contains(request.object) && peer.requests.size() >= _configuration.maximumObjects)
+			{
+				throw spk::Exception("Pending request limit reached");
+			}
+			peer.requests.insert_or_assign(request.object, request);
+			peer.lastRequest = request.id;
+			_requestObject(id, request);
+			return true;
+		}
+		[[nodiscard]] bool acceptRequest(PeerID id, const Request &request)
+		{
+			_requireIdle();
+			auto *peer = _requestPeer(id, request);
+			if (peer == nullptr)
+			{
+				return false;
+			}
+			_follow(*peer, request.object, request.id);
+			peer->requests.erase(request.object);
+			return true;
+		}
+		[[nodiscard]] bool fulfillRequest(PeerID id, const Request &request, State state)
+		{
+			_requireIdle();
+			if (_requestPeer(id, request) == nullptr)
+			{
+				return false;
+			}
+			_room(_peer(id), request.object);
+			_publish(request.object, std::move(state));
+			return acceptRequest(id, request);
+		}
+		// A rejected/throwing send leaves the request pending for an explicit retry.
+		[[nodiscard]] bool rejectRequest(PeerID id, const Request &request)
+		{
+			OperationGuard guard(_active);
+			auto *peer = _requestPeer(id, request);
+			if (peer == nullptr || !_sendMessage(id, _protocol.encode(request, Protocol<State, Codec>::Kind::Rejected)))
+			{
+				return false;
+			}
+			peer->requests.erase(request.object);
+			return true;
+		}
+		DispatchResult dispatch(Clock::time_point now, std::size_t maximumAttempts = 64)
+		{
+			OperationGuard guard(_active);
+			DispatchResult result;
+			if (now < _nextPublication || maximumAttempts == 0 || _peers.empty())
+			{
+				return result;
+			}
+			_captureChanges();
+			_nextPublication = now + _configuration.interval;
+			std::set<PeerID> skipped;
+			for (std::size_t count = 0; count < maximumAttempts && skipped.size() < _peers.size(); ++count)
+			{
+				const auto id = _roundRobin.front();
+				_roundRobin.pop_front();
+				_roundRobin.push_back(id);
+				if (!skipped.contains(id) && !_dispatchOne(id, result))
+				{
+					skipped.insert(id);
+				}
+			}
 			return result;
 		}
 	};

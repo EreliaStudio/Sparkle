@@ -1,195 +1,140 @@
-#include "network_replication/codec.hpp"
-#include "network_replication/id.hpp"
-#include "network_replication/publisher.hpp"
-#include <gtest/gtest.h>
-#include <network/replication/protocol.hpp>
-#include <network/replication/receiver.hpp>
-#include <network/replication/request_queue.hpp>
-#include <network/replication/request_service.hpp>
-using namespace spk::Network;
+#include "network/network_traits_test.hpp"
 using namespace std::chrono_literals;
-using namespace ReplicationTest;
-TEST(NetworkReplicationTest, All65ContinuouslyDirtyObjectsArePublished)
+
+TEST_F(NetworkTraitsTest, All65ContinuouslyDirtyObjectsArePublishedWithoutStarvation)
 {
-	auto server = publisher();
-	(void)server.open(id(200));
-	std::map<ObjectID, int> observed, lastSeen;
-	for (unsigned i = 1; i <= 65; ++i)
+	Source source({.interval = 0ms});
+	(void)source.openPeer(peer);
+	std::map<ID, Object> objects;
+	for (int i = 0; i < 65; ++i)
 	{
-		server.publish(id(i), {0});
-		server.follow(id(200), id(i));
+		const auto id = ID::generate();
+		source.registerObject(id, objects[id]);
+		source.follow(peer, id);
 	}
+	std::map<ID, int> observed, lastSeen;
 	for (int tick = 0; tick < 100; ++tick)
 	{
-		for (unsigned i = 1; i <= 65; ++i)
+		for (auto &[id, entity] : objects)
 		{
-			server.publish(id(i), {tick});
+			entity.change(tick);
 		}
-		server.dispatch(Clock::time_point{}, 64, [&](auto, const auto &update) {
-			++observed[update.object];
-			lastSeen[update.object] = tick;
-			return true;
-		});
+		source.sent.clear();
+		(void)source.dispatch(now, 64);
+		for (const auto &[recipient, message] : source.sent)
+		{
+			const auto state = protocol.decodeUpdate(message);
+			++observed[state.object];
+			lastSeen[state.object] = tick;
+			EXPECT_EQ(state.state->value, tick);
+		}
 		if (tick > 0)
 		{
 			ASSERT_EQ(lastSeen.size(), 65u);
-			for (const auto &[key, seen] : lastSeen)
+			for (const auto &[id, seen] : lastSeen)
 			{
 				EXPECT_GE(seen, tick - 1);
 			}
 		}
 	}
-	ASSERT_EQ(observed.size(), 65);
-	for (const auto &[key, count] : observed)
+	for (const auto &[id, count] : observed)
 	{
 		EXPECT_GE(count, 50);
 	}
 }
 
-TEST(NetworkReplicationTest, CoalescesLatestStateWithoutMovingItsQueuePosition)
+TEST_F(NetworkTraitsTest, CoalescingRetainsFifoPosition)
 {
-	auto server = publisher();
-	(void)server.open(id(200));
-	for (unsigned i = 1; i <= 3; ++i)
+	Source source;
+	(void)source.openPeer(peer);
+	std::map<ID, Object> objects;
+	std::vector<ID> expected;
+	for (int i = 0; i < 3; ++i)
 	{
-		server.publish(id(i), {0});
-		server.follow(id(200), id(i));
+		const auto id = ID::generate();
+		expected.push_back(id);
+		source.registerObject(id, objects[id]);
+		source.follow(peer, id);
 	}
-	server.publish(id(1), {7});
-	std::vector<ObjectID> order;
-	server.dispatch({}, 3, [&](auto, const auto &update) {
-		order.push_back(update.object);
-		if (update.object == id(1))
-		{
-			EXPECT_EQ(update.state->value, 7);
-		}
-		return true;
-	});
-	EXPECT_EQ(order, (std::vector<ObjectID>{id(1), id(2), id(3)}));
+	objects.at(expected.front()).change(7);
+	EXPECT_EQ(source.dispatch(now, 3).sent, 3u);
+	std::vector<ID> actual;
+	for (const auto &[recipient, message] : source.sent)
+	{
+		actual.push_back(protocol.decodeUpdate(message).object);
+	}
+	EXPECT_EQ(actual, expected);
+	EXPECT_EQ(protocol.decodeUpdate(source.sent.front().second).state->value, 7);
 }
 
-TEST(NetworkReplicationTest, BlockedPeerDoesNotBlockHealthyPeer)
+TEST_F(NetworkTraitsTest, ReintroductionAfterForgetOrDestructionUsesNewTracking)
 {
-	auto server = publisher();
-	(void)server.open(id(1));
-	(void)server.open(id(2));
-	server.publish(id(3), {4});
-	server.follow(id(1), id(3));
-	server.follow(id(2), id(3));
-	const auto result =
-		server.dispatch({}, 4, [](auto peer, const auto &) {
-			return peer != id(1);
-		});
-	EXPECT_EQ(result.sent, 1);
-	EXPECT_EQ(result.blocked, 1);
-	const auto recovery = server.dispatch({}, 4, [](auto, const auto &) {
-		return true;
-	});
-	EXPECT_EQ(recovery.sent, 1);
+	Source source({.interval = 0ms});
+	Object entity;
+	session = source.openPeer(peer);
+	source.registerObject(object, entity);
+	source.follow(peer, object);
+	(void)source.dispatch(now);
+	source.forget(peer, object);
+	(void)source.dispatch(now);
+	source.follow(peer, object);
+	(void)source.dispatch(now);
+	source.destroyObject(object);
+	(void)source.dispatch(now);
+	source.registerObject(object, entity);
+	source.follow(peer, object);
+	(void)source.dispatch(now);
+	ASSERT_EQ(source.sent.size(), 5u);
+	EXPECT_EQ(protocol.decodeUpdate(source.sent[1].second).edit, Edit::Forget);
+	EXPECT_GT(protocol.decodeUpdate(source.sent[2].second).tracking, protocol.decodeUpdate(source.sent[0].second).tracking);
+	EXPECT_EQ(protocol.decodeUpdate(source.sent[3].second).edit, Edit::Destroy);
+	Replicas replicas;
+	replicas.resetSession(session);
+	for (const auto &[recipient, message] : source.sent)
+	{
+		EXPECT_TRUE(replicas.receiveMessage(message));
+	}
+	EXPECT_EQ(replicas.objects.size(), 1u);
+	EXPECT_EQ(replicas.creations, 3);
+	EXPECT_FALSE(replicas.receiveMessage(source.sent[3].second));
 }
 
-TEST(NetworkReplicationTest, ThrowingSenderDoesNotBlockHealthyPeer)
+TEST_F(NetworkTraitsTest, CapacityFailureRetainsQueuedRemovalUntilDrained)
 {
-	auto server = publisher();
-	(void)server.open(id(1));
-	(void)server.open(id(2));
-	server.publish(id(3), {4});
-	server.follow(id(1), id(3));
-	server.follow(id(2), id(3));
-	auto result = server.dispatch({}, 4, [](auto peer, const auto &) {
-		if (peer == id(1))
-		{
-			throw spk::Exception("transport unavailable");
-		}
-		return true;
-	});
-	EXPECT_EQ(result.sent, 1);
-	EXPECT_EQ(result.errors, 1);
+	Source source({.maximumObjects = 1, .maximumPeers = 1, .interval = 0ms});
+	session = source.openPeer(peer);
+	EXPECT_THROW((void)source.openPeer(ID::generate()), spk::Exception);
+	Object first, second;
+	source.registerObject(object, first);
+	source.follow(peer, object);
+	source.destroyObject(object);
+	const auto other = ID::generate();
+	source.registerObject(other, second);
+	EXPECT_THROW(source.follow(peer, other), spk::Exception);
+	EXPECT_EQ(source.dispatch(now).sent, 1u);
+	EXPECT_EQ(protocol.decodeUpdate(source.sent.back().second).edit, Edit::Destroy);
+	EXPECT_NO_THROW(source.follow(peer, other));
+	Replicas replicas(1);
+	replicas.resetSession(session);
+	ASSERT_TRUE(replicas.receiveMessage(source.sent.back().second));
+	(void)source.dispatch(now);
+	EXPECT_THROW((void)replicas.receiveMessage(source.sent.back().second), spk::Exception);
 }
 
-TEST(NetworkReplicationTest, TerminationCannotBeUndoneByLateState)
+TEST_F(NetworkTraitsTest, PerPeerBudgetRotatesEvenWhenOnePeerIsBlocked)
 {
-	Receiver<State> client;
-	client.reset(id(1));
-	Update<State> update{id(1), id(2), 1, 1, Edit::Set, std::make_shared<State>(State{3})};
-	ASSERT_TRUE(client.receive(update));
-	auto stop = update;
-	stop.edit = Edit::Forget;
-	stop.state.reset();
-	ASSERT_TRUE(client.receive(stop));
-	update.revision = 100;
-	EXPECT_FALSE(client.receive(update));
-	update.tracking = 2;
-	EXPECT_TRUE(client.receive(update));
-	EXPECT_FALSE(client.receive(stop));
-}
-
-TEST(NetworkReplicationTest, SessionResetRejectsOldTraffic)
-{
-	Receiver<State> client;
-	client.reset(id(1));
-	client.reset(id(2));
-	EXPECT_FALSE(client.receive(
-		{id(1), id(3), 1, 1, Edit::Set, std::make_shared<State>(State{4})}));
-	EXPECT_TRUE(client.receive(
-		{id(2), id(3), 1, 1, Edit::Set, std::make_shared<State>(State{4})}));
-}
-
-TEST(NetworkReplicationTest, PublisherReintroductionUsesNewTracking)
-{
-	auto server = publisher();
-	(void)server.open(id(1));
-	server.publish(id(2), {0});
-	server.follow(id(1), id(2));
-	std::vector<Update<State>> updates;
-	auto send = [&](auto, const auto &update) {
-		updates.push_back(update);
-		return true;
-	};
-	server.dispatch({}, 10, send);
-	server.forget(id(1), id(2));
-	server.dispatch({}, 10, send);
-	server.follow(id(1), id(2));
-	server.dispatch({}, 10, send);
-	server.destroy(id(2));
-	server.dispatch({}, 10, send);
-	ASSERT_EQ(updates.size(), 4);
-	EXPECT_EQ(updates[1].edit, Edit::Forget);
-	EXPECT_GT(updates[2].tracking, updates[0].tracking);
-	EXPECT_EQ(updates[3].edit, Edit::Destroy);
-}
-
-TEST(NetworkReplicationTest, PublicationIntervalCoalescesChanges)
-{
-	Publisher<State> server({.interval = 50ms});
-	(void)server.open(id(1));
-	server.publish(id(2), {0});
-	server.follow(id(1), id(2));
-	auto send = [](auto, const auto &) {
-		return true;
-	};
-	EXPECT_EQ(server.dispatch({}, 5, send).sent, 1);
-	server.publish(id(2), {1});
-	EXPECT_EQ(server.dispatch(Clock::time_point{} + 49ms, 5, send).sent, 0);
-	EXPECT_EQ(server.dispatch(Clock::time_point{} + 50ms, 5, send).sent, 1);
-}
-
-TEST(NetworkReplicationTest, LimitsRejectExplicitlyWithoutSilentEviction)
-{
-	Publisher<State> server({.maximumObjects = 1, .maximumPeers = 1, .interval = 0ms});
-	const auto session = server.open(id(1));
-	EXPECT_THROW((void)server.open(id(2)), spk::Exception);
-	server.publish(id(2), {1});
-	server.follow(id(1), id(2));
-	server.destroy(id(2));
-	server.publish(id(3), {1});
-	EXPECT_THROW(server.follow(id(1), id(3)), spk::Exception);
-	server.dispatch({}, 10, [](auto, const auto &) {
-		return true;
-	});
-	EXPECT_NO_THROW(server.follow(id(1), id(3)));
-	Receiver<State> receiver(1);
-	receiver.reset(session);
-	EXPECT_TRUE(receiver.receive({session, id(2), 1, 1, Edit::Destroy, nullptr}));
-	EXPECT_THROW((void)receiver.receive({session, id(3), 2, 1, Edit::Destroy, nullptr}), spk::Exception);
+	Source source({.interval = 0ms});
+	Object entity;
+	const auto other = ID::generate();
+	source.registerObject(object, entity);
+	(void)source.openPeer(peer);
+	(void)source.openPeer(other);
+	source.follow(peer, object);
+	source.follow(other, object);
+	source.blocked.insert(peer);
+	EXPECT_EQ(source.dispatch(now, 1).sent, 0u);
+	EXPECT_EQ(source.dispatch(now, 1).sent, 1u);
+	EXPECT_EQ(source.sent.back().first, other);
+	source.blocked.clear();
+	EXPECT_EQ(source.dispatch(now, 1).sent, 1u);
 }

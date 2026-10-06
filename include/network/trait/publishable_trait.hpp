@@ -1,25 +1,16 @@
 #pragma once
 
-#include "design_pattern/contract_provider.hpp"
+#include "network/replication/sequence.hpp"
 #include <memory>
 
 namespace spk::Network
 {
-	template <typename State, typename Codec>
-	class PublicationSourceTrait;
-
-	// Owner-thread only. Registered objects have stable addresses and produce
-	// snapshots without mutable aliases into the live object.
+	// Owner-thread only. Registered objects retain a stable address.
 	template <typename State>
 	class PublishableTrait
 	{
-	public:
-		using EditionProvider = spk::ContractProvider<>;
-		using EditionContract = typename EditionProvider::Contract;
-
-	private:
+		Sequence _edition;
 		std::shared_ptr<void> _lifetime = std::make_shared<int>(0);
-		EditionProvider _editions;
 		template <typename, typename>
 		friend class PublicationSourceTrait;
 
@@ -30,23 +21,18 @@ namespace spk::Network
 		PublishableTrait() = default;
 		PublishableTrait(const PublishableTrait &) = delete;
 		PublishableTrait &operator=(const PublishableTrait &) = delete;
-		PublishableTrait(PublishableTrait &&) = delete;
-		PublishableTrait &operator=(PublishableTrait &&) = delete;
 		virtual ~PublishableTrait() = default;
-
 		void invalidateNetworkState()
 		{
-			_editions.trigger();
+			(void)_edition.next();
 		}
-
-		[[nodiscard]] virtual State buildNetworkState() const final
+		[[nodiscard]] std::uint64_t networkEdition() const noexcept
+		{
+			return _edition.value();
+		}
+		[[nodiscard]] State buildNetworkState() const
 		{
 			return _buildNetworkState();
-		}
-
-		[[nodiscard]] EditionContract subscribeToNetworkEdition(typename EditionProvider::callback_type callback)
-		{
-			return _editions.subscribe(std::move(callback));
 		}
 	};
 }

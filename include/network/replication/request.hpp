@@ -1,8 +1,8 @@
 #pragma once
 
+#include "network/message.hpp"
 #include "types.hpp"
 #include <compare>
-#include <cstdint>
 
 namespace spk::Network
 {
@@ -10,7 +10,7 @@ namespace spk::Network
 	{
 		SessionID session;
 		ObjectID object;
-		std::uint64_t attempt = 0;
+		spk::Message::RequestID id = 0;
 		auto operator<=>(const Request &) const = default;
 	};
 } // namespace spk::Network
