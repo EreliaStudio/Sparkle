@@ -1,4 +1,6 @@
+#include "exception.hpp"
 #include <gtest/gtest.h>
+#include <limits>
 #include <network/replication/sequence.hpp>
 TEST(NetworkSequenceTest, AdvancesFromInitialValue)
 {

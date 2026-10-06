@@ -1,4 +1,3 @@
-#include "../../../../../../examples/network_replication/requested_object.hpp"
 #include "network_replication/codec.hpp"
 #include "network_replication/id.hpp"
 #include "network_replication/publisher.hpp"
