@@ -9,3 +9,10 @@
 #include "network/remote_node.hpp"
 #include "network/server.hpp"
 #include "network/types.hpp"
+
+#include "network/replication/protocol.hpp"
+#include "network/replication/publisher.hpp"
+#include "network/replication/receiver.hpp"
+#include "network/replication/request_queue.hpp"
+#include "network/replication/request_service.hpp"
+#include "network/replication/sequence.hpp"

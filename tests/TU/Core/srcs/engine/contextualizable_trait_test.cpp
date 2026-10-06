@@ -73,9 +73,9 @@ namespace
 		value.changeContext(nullptr);
 
 		ASSERT_EQ(editions.size(), 3u);
-		EXPECT_EQ(editions[0], std::make_pair(nullptr, &first));
+		EXPECT_EQ(editions[0], (std::pair<int *, int *>{nullptr, &first}));
 		EXPECT_EQ(editions[1], std::make_pair(&first, &second));
-		EXPECT_EQ(editions[2], std::make_pair(&second, nullptr));
+		EXPECT_EQ(editions[2], (std::pair<int *, int *>{&second, nullptr}));
 		EXPECT_EQ(value.context(), nullptr);
 	}
 
