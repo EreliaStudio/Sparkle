@@ -18,7 +18,7 @@ protected:
 	using ID = spk::UUID;
 	using Clock = spk::Network::Clock;
 	using Protocol = spk::Network::Protocol;
-	using Update = spk::Network::Update;
+	using Update = spk::Network::Update<spk::Message>;
 	using Request = spk::Network::Request;
 	using Edit = spk::Network::Edit;
 	using Status = spk::Network::ReplicaCollectionTrait::RequestStatus;

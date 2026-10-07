@@ -62,7 +62,7 @@ namespace spk::Network
 			throw spk::Exception("Replication queue full; drain or close peer");
 		}
 	}
-	void PublicationQueueTrait::_queue(PeerID peer, Update update, spk::Message::RequestID requestID)
+	void PublicationQueueTrait::_queue(PeerID peer, Update<spk::Message> update, spk::Message::RequestID requestID)
 	{
 		_room(peer, update.object);
 		auto &queue = _queues.at(peer);

@@ -8,13 +8,14 @@
 
 namespace spk::Network
 {
-	// Immutable serialized application payload; absence denotes a removal, not an empty state.
+	// Absence denotes a removal; State may be a typed value or an immutable captured Message.
+	template <typename State = spk::Message>
 	struct Update
 	{
 		SessionID session;
 		ObjectID object;
 		std::uint64_t tracking = 0, revision = 0;
 		Edit edit = Edit::Set;
-		std::optional<spk::Message> payload;
+		std::optional<State> payload;
 	};
 } // namespace spk::Network

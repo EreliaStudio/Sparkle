@@ -41,7 +41,7 @@ namespace spk::Network
 			throw spk::Exception("Null network identity");
 		}
 	}
-	void Protocol::_validate(const Update &update)
+	void Protocol::_validate(const Update<spk::Message> &update)
 	{
 		_validate(update.session, update.object);
 		if (update.tracking == 0 || update.revision == 0 || update.edit > Edit::Destroy)
@@ -107,7 +107,7 @@ namespace spk::Network
 		}
 		return result;
 	}
-	spk::Message Protocol::encode(const Update &update, spk::Message::RequestID requestID) const
+	spk::Message Protocol::encode(const Update<spk::Message> &update, spk::Message::RequestID requestID) const
 	{
 		_validate(update);
 		if ((update.edit == Edit::Set) != static_cast<bool>(update.payload))
@@ -128,10 +128,10 @@ namespace spk::Network
 		}
 		return _finish(std::move(writer));
 	}
-	Update Protocol::decodeUpdate(const spk::Message &message) const
+	Update<spk::Message> Protocol::decodeUpdate(const spk::Message &message) const
 	{
 		auto reader = _reader(message, Kind::Update);
-		Update update;
+		Update<spk::Message> update;
 		reader >> update.session >> update.object >> update.tracking >> update.revision >> update.edit;
 		_validate(update);
 		if (update.edit == Edit::Set)

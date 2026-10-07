@@ -26,7 +26,7 @@ namespace spk::Network
 	{
 		_cancelObjectRequests(object);
 	}
-	bool PublicationSourceTrait::_sendUpdate(PeerID peer, const Update &update, spk::Message::RequestID requestID)
+	bool PublicationSourceTrait::_sendUpdate(PeerID peer, const Update<spk::Message> &update, spk::Message::RequestID requestID)
 	{
 		return _sendMessage(peer, _protocol.encode(update, requestID));
 	}

@@ -19,14 +19,14 @@ namespace spk::Network
 		virtual void _onReplicasCleared();
 		virtual void _onReplicaRemoved(ObjectID);
 		using ReplicaHistoryTrait::_tracksActive;
-		[[nodiscard]] bool _acceptUpdate(const Update &update);
+		[[nodiscard]] bool _acceptUpdate(const Update<spk::Message> &update);
 
 	public:
 		explicit ReplicaTrait(std::size_t maximumTracked = 65536);
 		virtual ~ReplicaTrait() = default;
 		ReplicaTrait(const ReplicaTrait &) = delete;
 		ReplicaTrait &operator=(const ReplicaTrait &) = delete;
-		[[nodiscard]] bool receiveUpdate(const Update &update);
+		[[nodiscard]] bool receiveUpdate(const Update<spk::Message> &update);
 		void resetSession(SessionID session);
 		void closeSession();
 	};

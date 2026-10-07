@@ -20,7 +20,7 @@ namespace spk::Network
 	private:
 		struct Pending
 		{
-			Update update;
+			Update<spk::Message> update;
 			spk::Message::RequestID requestID = 0;
 		};
 		struct Queue
@@ -37,11 +37,11 @@ namespace spk::Network
 
 	protected:
 		virtual void _capturePublicationChanges();
-		[[nodiscard]] virtual bool _sendUpdate(PeerID, const Update &, spk::Message::RequestID) = 0;
+		[[nodiscard]] virtual bool _sendUpdate(PeerID, const Update<spk::Message> &, spk::Message::RequestID) = 0;
 		void _openQueue(PeerID peer);
 		void _closeQueue(PeerID peer);
 		void _room(PeerID peer, ObjectID id) const;
-		void _queue(PeerID peer, Update update, spk::Message::RequestID requestID = 0);
+		void _queue(PeerID peer, Update<spk::Message> update, spk::Message::RequestID requestID = 0);
 		DispatchResult _dispatchPublication(Clock::time_point now, std::size_t maximumAttempts);
 
 	public:

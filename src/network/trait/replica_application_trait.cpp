@@ -2,7 +2,7 @@
 
 namespace spk::Network
 {
-	void ReplicaApplicationTrait::_applyReplica(const Update &update)
+	void ReplicaApplicationTrait::_applyReplica(const Update<spk::Message> &update)
 	{
 		if (update.edit != Edit::Set)
 		{

@@ -2,11 +2,13 @@
 
 #include "request.hpp"
 
+#include "exception.hpp"
 #include "update.hpp"
+#include <concepts>
 
 namespace spk::Network
 {
-	// Replication envelope on an ordered transport. Application payloads remain opaque.
+	// Ordered replication envelope with typed serialization and captured-payload operations.
 	class Protocol final
 	{
 	public:
@@ -33,7 +35,7 @@ namespace spk::Network
 		[[nodiscard]] spk::Message _finish(spk::Message::Writer writer) const;
 		static void _end(const spk::Message::Reader &reader);
 		static void _validate(SessionID session, ObjectID object);
-		static void _validate(const Update &update);
+		static void _validate(const Update<spk::Message> &update);
 
 	public:
 		explicit Protocol(spk::Message::Type type, std::size_t maximumBytes = 2 * 1024 * 1024);
@@ -42,8 +44,44 @@ namespace spk::Network
 		[[nodiscard]] Handshake decodeHandshake(const spk::Message &message) const;
 
 		[[nodiscard]] Kind kind(const spk::Message &message) const;
-		[[nodiscard]] spk::Message encode(const Update &update, spk::Message::RequestID requestID = 0) const;
-		[[nodiscard]] Update decodeUpdate(const spk::Message &message) const;
+		[[nodiscard]] spk::Message encode(const Update<spk::Message> &update, spk::Message::RequestID requestID = 0) const;
+		[[nodiscard]] Update<spk::Message> decodeUpdate(const spk::Message &message) const;
+		// Typed operations use the same envelope as captured object payloads.
+		template <typename State>
+			requires requires(spk::Message::Writer &writer, const State &state) { writer << state; }
+		[[nodiscard]] spk::Message encode(const Update<State> &update, spk::Message::RequestID requestID = 0) const
+		{
+			Update<spk::Message> captured{update.session, update.object, update.tracking, update.revision, update.edit, std::nullopt};
+			_validate(captured);
+			if ((update.edit == Edit::Set) != update.payload.has_value())
+			{
+				throw spk::Exception("Invalid update state");
+			}
+			if (update.payload)
+			{
+				spk::Message::Writer writer;
+				writer << *update.payload;
+				captured.payload = std::move(writer).build();
+			}
+			return encode(captured, requestID);
+		}
+
+		template <typename State>
+			requires std::default_initializable<State> && std::move_constructible<State> &&
+					 requires(const spk::Message::Reader &reader, State &state) { reader >> state; }
+		[[nodiscard]] Update<State> decodeUpdate(const spk::Message &message) const
+		{
+			const auto captured = decodeUpdate(message);
+			Update<State> update{captured.session, captured.object, captured.tracking, captured.revision, captured.edit, std::nullopt};
+			if (captured.payload)
+			{
+				auto reader = captured.payload->reader();
+				reader >> update.payload.emplace();
+				_end(reader);
+			}
+			return update;
+		}
+
 		[[nodiscard]] spk::Message encode(const Request &request, Kind kind = Kind::Request) const;
 		[[nodiscard]] Request decodeRequest(const spk::Message &message, Kind kind = Kind::Request) const;
 	};

@@ -32,7 +32,7 @@ namespace spk::Network
 	void ReplicaTrait::_onReplicaRemoved(ObjectID)
 	{
 	}
-	bool ReplicaTrait::_acceptUpdate(const Update &update)
+	bool ReplicaTrait::_acceptUpdate(const Update<spk::Message> &update)
 	{
 		if (_session.isNull() || update.session != _session)
 		{
@@ -54,7 +54,7 @@ namespace spk::Network
 		ReplicaHistoryTrait(maximumTracked)
 	{
 	}
-	bool ReplicaTrait::receiveUpdate(const Update &update)
+	bool ReplicaTrait::receiveUpdate(const Update<spk::Message> &update)
 	{
 		OperationGuard guard(_active);
 		return _acceptUpdate(update);

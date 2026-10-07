@@ -23,7 +23,7 @@ namespace spk::Network
 		void _onPeerClosed(PeerID peer) override;
 		void _onObjectForgotten(PeerID peer, ObjectID object) override;
 		void _onObjectDestroyed(ObjectID object) override;
-		bool _sendUpdate(PeerID peer, const Update &update, spk::Message::RequestID requestID) override;
+		bool _sendUpdate(PeerID peer, const Update<spk::Message> &update, spk::Message::RequestID requestID) override;
 		void _onServerConnectionClosed(spk::ConnectionID connection) override;
 		void _onServerUnbinding() override;
 		void _receiveHello(spk::ConnectionID connection, const spk::Message &message);

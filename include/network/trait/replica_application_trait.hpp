@@ -11,7 +11,7 @@ namespace spk::Network
 		// and must succeed when rolling back a failed initial state application.
 		[[nodiscard]] virtual ReplicableTrait &_createReplica(ObjectID id) = 0;
 		virtual void _removeReplica(ObjectID id) = 0;
-		void _applyReplica(const Update &update);
+		void _applyReplica(const Update<spk::Message> &update);
 
 	public:
 		virtual ~ReplicaApplicationTrait() = default;
