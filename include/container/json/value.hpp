@@ -362,6 +362,4 @@ namespace spk::JSON
 
 		friend std::ostream &operator<<(std::ostream &stream, const Value &value);
 	};
-	using Object = Value;
-
 }

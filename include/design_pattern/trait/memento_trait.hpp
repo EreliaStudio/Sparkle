@@ -1,5 +1,5 @@
 #pragma once
-#include "container/json/object.hpp"
+#include "container/json/value.hpp"
 
 namespace spk
 {
@@ -7,7 +7,7 @@ namespace spk
 	class MementoTrait
 	{
 	public:
-		using Snapshot = spk::JSON::Object;
+		using Snapshot = spk::JSON::Value;
 
 	protected:
 		[[nodiscard]] virtual Snapshot _save() const = 0;

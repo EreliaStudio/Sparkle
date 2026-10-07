@@ -61,7 +61,7 @@ TEST(MementoTraitTest, ApplicationRejectsIncompatibleSnapshotsWithoutMutation)
 {
 	Counter value;
 	value.value = 7;
-	EXPECT_THROW(value.restore(spk::JSON::Object::object()), spk::Exception);
+	EXPECT_THROW(value.restore(spk::JSON::Value::object()), spk::Exception);
 	EXPECT_EQ(value.value, 7);
 }
 
@@ -85,7 +85,7 @@ TEST(MementoTraitTest, EmptyObjectSnapshotsAreValid)
 
 TEST(MementoTraitTest, SnapshotIsAnIndependentEditableJSONValue)
 {
-	static_assert(std::same_as<spk::MementoTrait::Snapshot, spk::JSON::Object>);
+	static_assert(std::same_as<spk::MementoTrait::Snapshot, spk::JSON::Value>);
 	Counter value;
 	value.value = 7;
 	const auto original = value.save();
@@ -95,6 +95,6 @@ TEST(MementoTraitTest, SnapshotIsAnIndependentEditableJSONValue)
 	EXPECT_EQ(value.value, 7);
 	value.restore(edited);
 	EXPECT_EQ(value.value, 12);
-	value.restore(spk::JSON::Object::fromString(original.toString()));
+	value.restore(spk::JSON::Value::fromString(original.toString()));
 	EXPECT_EQ(value.value, 7);
 }
