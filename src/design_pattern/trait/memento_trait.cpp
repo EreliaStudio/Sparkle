@@ -1,20 +1,13 @@
 #include "design_pattern/trait/memento_trait.hpp"
-#include "exception.hpp"
 
 namespace spk
 {
-	MementoTrait::Snapshot::~Snapshot() = default;
-	std::unique_ptr<const MementoTrait::Snapshot> MementoTrait::saveSnapshot() const
+	MementoTrait::Snapshot MementoTrait::save() const
 	{
-		auto snapshot = _saveSnapshot();
-		if (!snapshot)
-		{
-			throw spk::Exception("Cannot save an empty memento");
-		}
-		return snapshot;
+		return _save();
 	}
-	void MementoTrait::restoreSnapshot(const Snapshot &snapshot)
+	void MementoTrait::restore(const Snapshot &snapshot)
 	{
-		_restoreSnapshot(snapshot);
+		_restore(snapshot);
 	}
 }

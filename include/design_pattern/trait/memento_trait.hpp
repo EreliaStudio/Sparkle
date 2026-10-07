@@ -1,5 +1,5 @@
 #pragma once
-#include <memory>
+#include "container/json/object.hpp"
 
 namespace spk
 {
@@ -7,21 +7,15 @@ namespace spk
 	class MementoTrait
 	{
 	public:
-		class Snapshot
-		{
-		public:
-			virtual ~Snapshot();
-		};
+		using Snapshot = spk::JSON::Object;
 
 	protected:
-		// Snapshots own the data required for restoration; they must not borrow mutable object state.
-		[[nodiscard]] virtual std::unique_ptr<const Snapshot> _saveSnapshot() const = 0;
-		// The implementation validates the snapshot type and restores its own invariants.
-		virtual void _restoreSnapshot(const Snapshot &snapshot) = 0;
+		[[nodiscard]] virtual Snapshot _save() const = 0;
+		virtual void _restore(const Snapshot &snapshot) = 0;
 
 	public:
 		virtual ~MementoTrait() = default;
-		[[nodiscard]] std::unique_ptr<const Snapshot> saveSnapshot() const;
-		void restoreSnapshot(const Snapshot &snapshot);
+		[[nodiscard]] Snapshot save() const;
+		void restore(const Snapshot &snapshot);
 	};
 }

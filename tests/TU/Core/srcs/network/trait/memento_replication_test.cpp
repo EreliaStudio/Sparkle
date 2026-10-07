@@ -9,16 +9,6 @@ protected:
 	using ID = spk::UUID;
 	class Object : public spk::Network::ReplicableTrait, public spk::MementoTrait
 	{
-		struct Snapshot final : spk::MementoTrait::Snapshot
-		{
-			int number;
-			std::string name;
-			Snapshot(int number, std::string name) :
-				number(number),
-				name(std::move(name))
-			{
-			}
-		};
 
 	protected:
 		void _readNetworkState(const spk::Message::Reader &reader) override
@@ -26,20 +16,19 @@ protected:
 			reader >> number; // Deliberately mutates before parsing the next field.
 			reader >> name;
 		}
-		std::unique_ptr<const spk::MementoTrait::Snapshot> _saveSnapshot() const override
+		Snapshot _save() const override
 		{
-			return std::make_unique<Snapshot>(number, name);
+			auto snapshot = Snapshot::object();
+			snapshot["number"] = number;
+			snapshot["name"] = name;
+			return snapshot;
 		}
-		void _restoreSnapshot(const spk::MementoTrait::Snapshot &snapshot) override
+		void _restore(const Snapshot &snapshot) override
 		{
-			const auto *saved = dynamic_cast<const Snapshot *>(&snapshot);
-			if (!saved)
-			{
-				throw spk::Exception("Incompatible object snapshot");
-			}
-			auto restoredName = saved->name;
+			const auto restoredNumber = snapshot.at("number").as<int>();
+			auto restoredName = snapshot.at("name").as<std::string>();
 			name = std::move(restoredName);
-			number = saved->number;
+			number = restoredNumber;
 			++restorations;
 		}
 
@@ -48,13 +37,13 @@ protected:
 		std::string name = "original";
 		void readSafely(const spk::Message::Reader &reader)
 		{
-			const auto previous = saveSnapshot();
+			const auto previous = save();
 			try
 			{
 				readNetworkState(reader);
 			} catch (...)
 			{
-				restoreSnapshot(*previous);
+				restore(previous);
 				throw;
 			}
 		}
@@ -63,7 +52,7 @@ protected:
 	{
 		void _readNetworkState(const spk::Message::Reader &reader) override
 		{
-			const auto previous = saveSnapshot();
+			const auto previous = save();
 			try
 			{
 				Object::_readNetworkState(reader);
@@ -74,7 +63,7 @@ protected:
 				}
 			} catch (...)
 			{
-				restoreSnapshot(*previous);
+				restore(previous);
 				throw;
 			}
 		}
@@ -187,14 +176,14 @@ TEST_F(NetworkMementoTest, CallerCanRollBackAroundCollectionReceiveAndRetryTheSa
 	replicas.resetSession(session);
 	ASSERT_TRUE(replicas.receiveMessage(update(complete(1, "original"), 1)));
 	auto &value = replicas.objects.at(object);
-	const auto previous = value.saveSnapshot();
+	const auto previous = value.save();
 	auto receiveSafely = [&](const spk::Message &message) {
 		try
 		{
 			return replicas.receiveMessage(message);
 		} catch (...)
 		{
-			value.restoreSnapshot(*previous);
+			value.restore(previous);
 			throw;
 		}
 	};

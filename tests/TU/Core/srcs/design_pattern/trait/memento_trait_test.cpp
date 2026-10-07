@@ -7,26 +7,20 @@ namespace
 {
 	class Counter : public spk::MementoTrait
 	{
-		struct Snapshot final : spk::MementoTrait::Snapshot
+		Snapshot _save() const override
 		{
-			int value;
-			explicit Snapshot(int value) :
-				value(value)
-			{
-			}
-		};
-		std::unique_ptr<const spk::MementoTrait::Snapshot> _saveSnapshot() const override
-		{
-			return std::make_unique<Snapshot>(value);
+			auto snapshot = Snapshot::object();
+			snapshot["value"] = value;
+			return snapshot;
 		}
-		void _restoreSnapshot(const spk::MementoTrait::Snapshot &snapshot) override
+		void _restore(const Snapshot &snapshot) override
 		{
-			const auto *saved = dynamic_cast<const Snapshot *>(&snapshot);
-			if (!saved)
+			const auto *saved = snapshot.find("value");
+			if (!saved || !saved->canAs<int>())
 			{
-				throw spk::Exception("Incompatible counter snapshot");
+				throw spk::Exception("Invalid counter snapshot");
 			}
-			value = saved->value;
+			value = saved->as<int>();
 		}
 
 	public:
@@ -38,53 +32,69 @@ TEST(MementoTraitTest, MultipleSnapshotsRemainIndependentAndCanBeRestoredRepeate
 {
 	Counter value;
 	value.value = 1;
-	const auto first = value.saveSnapshot();
+	const auto first = value.save();
 	value.value = 2;
-	const auto second = value.saveSnapshot();
+	const auto second = value.save();
 	value.value = 3;
-	value.restoreSnapshot(*first);
+	value.restore(first);
 	EXPECT_EQ(value.value, 1);
-	value.restoreSnapshot(*second);
+	value.restore(second);
 	EXPECT_EQ(value.value, 2);
-	value.restoreSnapshot(*first);
+	value.restore(first);
 	EXPECT_EQ(value.value, 1);
 }
 
 TEST(MementoTraitTest, SnapshotOutlivesItsOriginAndCompatibleObjectsMayRestoreIt)
 {
-	std::unique_ptr<const spk::MementoTrait::Snapshot> saved;
+	spk::MementoTrait::Snapshot saved;
 	{
 		Counter origin;
 		origin.value = 42;
-		saved = origin.saveSnapshot();
+		saved = origin.save();
 	}
 	Counter target;
-	target.restoreSnapshot(*saved);
+	target.restore(saved);
 	EXPECT_EQ(target.value, 42);
 }
 
 TEST(MementoTraitTest, ApplicationRejectsIncompatibleSnapshotsWithoutMutation)
 {
-	struct Other final : spk::MementoTrait::Snapshot
-	{
-	};
 	Counter value;
 	value.value = 7;
-	EXPECT_THROW(value.restoreSnapshot(Other{}), spk::Exception);
+	EXPECT_THROW(value.restore(spk::JSON::Object::object()), spk::Exception);
 	EXPECT_EQ(value.value, 7);
 }
 
-TEST(MementoTraitTest, EmptySnapshotsAreRejected)
+TEST(MementoTraitTest, EmptyObjectSnapshotsAreValid)
 {
 	class Empty final : public spk::MementoTrait
 	{
-		std::unique_ptr<const Snapshot> _saveSnapshot() const override
+		Snapshot _save() const override
 		{
-			return nullptr;
+			return Snapshot::object();
 		}
-		void _restoreSnapshot(const Snapshot &) override
+		void _restore(const Snapshot &) override
 		{
 		}
 	} value;
-	EXPECT_THROW((void)value.saveSnapshot(), spk::Exception);
+	const auto snapshot = value.save();
+	EXPECT_TRUE(snapshot.isObject());
+	EXPECT_TRUE(snapshot.empty());
+	EXPECT_NO_THROW(value.restore(snapshot));
+}
+
+TEST(MementoTraitTest, SnapshotIsAnIndependentEditableJSONValue)
+{
+	static_assert(std::same_as<spk::MementoTrait::Snapshot, spk::JSON::Object>);
+	Counter value;
+	value.value = 7;
+	const auto original = value.save();
+	auto edited = original;
+	edited["value"] = 12;
+	EXPECT_EQ(original.at("value").as<int>(), 7);
+	EXPECT_EQ(value.value, 7);
+	value.restore(edited);
+	EXPECT_EQ(value.value, 12);
+	value.restore(spk::JSON::Object::fromString(original.toString()));
+	EXPECT_EQ(value.value, 7);
 }
