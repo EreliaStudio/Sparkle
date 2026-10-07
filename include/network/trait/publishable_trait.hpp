@@ -1,15 +1,14 @@
 #pragma once
 
-#include "network/replication/sequence.hpp"
+#include "design_pattern/trait/versioned_trait.hpp"
 #include <memory>
 
 namespace spk::Network
 {
 	// Owner-thread only. Registered objects retain a stable address.
 	template <typename State>
-	class PublishableTrait
+	class PublishableTrait : public spk::VersionedTrait
 	{
-		Sequence _edition;
 		std::shared_ptr<void> _lifetime = std::make_shared<int>(0);
 		template <typename, typename>
 		friend class PublicationSourceTrait;
@@ -21,15 +20,7 @@ namespace spk::Network
 		PublishableTrait() = default;
 		PublishableTrait(const PublishableTrait &) = delete;
 		PublishableTrait &operator=(const PublishableTrait &) = delete;
-		virtual ~PublishableTrait() = default;
-		void invalidateNetworkState()
-		{
-			(void)_edition.next();
-		}
-		[[nodiscard]] std::uint64_t networkEdition() const noexcept
-		{
-			return _edition.value();
-		}
+		~PublishableTrait() override = default;
 		[[nodiscard]] State buildNetworkState() const
 		{
 			return _buildNetworkState();

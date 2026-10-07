@@ -20,6 +20,7 @@ namespace spk
 
 	public:
 		VersionedTrait() = default;
+		explicit VersionedTrait(Version initialVersion);
 		VersionedTrait(const VersionedTrait &) = delete;
 		VersionedTrait(VersionedTrait &&other) noexcept;
 		virtual ~VersionedTrait();
@@ -27,6 +28,7 @@ namespace spk
 		VersionedTrait &operator=(const VersionedTrait &) = delete;
 		VersionedTrait &operator=(VersionedTrait &&) = delete;
 
+		// Throws on exhaustion without changing the version. Subscriber exceptions propagate after advancement.
 		void invalidate();
 		[[nodiscard]] Version version() const noexcept;
 		[[nodiscard]] Contract subscribeToVersionEdition(callback_type callback);

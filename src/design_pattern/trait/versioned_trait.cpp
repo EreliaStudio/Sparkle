@@ -1,9 +1,16 @@
 #include "design_pattern/trait/versioned_trait.hpp"
+#include "exception.hpp"
 
+#include <limits>
 #include <utility>
 
 namespace spk
 {
+	VersionedTrait::VersionedTrait(Version initialVersion) :
+		_version(initialVersion)
+	{
+	}
+
 	VersionedTrait::VersionedTrait(VersionedTrait &&other) noexcept :
 		_version(std::exchange(other._version, 1))
 	{
@@ -13,11 +20,11 @@ namespace spk
 
 	void VersionedTrait::invalidate()
 	{
-		++_version;
-		if (_version == 0)
+		if (_version == std::numeric_limits<Version>::max())
 		{
-			_version = 1;
+			throw spk::Exception("Version exhausted");
 		}
+		++_version;
 		_versionProvider.trigger(this);
 	}
 

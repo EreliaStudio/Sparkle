@@ -63,7 +63,7 @@ protected:
 		void change(int next)
 		{
 			value = next;
-			invalidateNetworkState();
+			invalidate();
 		}
 	};
 

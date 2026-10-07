@@ -62,7 +62,7 @@ protected:
 		void change(int next)
 		{
 			value = next;
-			invalidateNetworkState();
+			invalidate();
 		}
 	};
 	class Source : public spk::Network::PublicationSourceTrait<State, Codec>

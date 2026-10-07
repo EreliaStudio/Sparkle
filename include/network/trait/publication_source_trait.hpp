@@ -3,6 +3,7 @@
 #include "container/thread_safe_set.hpp"
 #include "network/replication/operation_guard.hpp"
 #include "network/replication/protocol.hpp"
+#include "network/replication/sequence.hpp"
 #include "network/server.hpp"
 #include "publishable_trait.hpp"
 #include <algorithm>
@@ -33,7 +34,8 @@ namespace spk::Network
 		{
 			PublishableTrait<State> *instance = nullptr;
 			std::weak_ptr<void> lifetime;
-			std::uint64_t edition = 0, revision = 0;
+			spk::VersionedTrait::Version edition = 0;
+			std::uint64_t revision = 0;
 			std::shared_ptr<const State> state;
 		};
 		struct Pending
@@ -155,11 +157,11 @@ namespace spk::Network
 		{
 			for (auto &[id, object] : _objects)
 			{
-				if (object.lifetime.expired() || object.edition == object.instance->networkEdition())
+				if (object.lifetime.expired() || object.edition == object.instance->version())
 				{
 					continue;
 				}
-				const auto edition = object.instance->networkEdition();
+				const auto edition = object.instance->version();
 				_publish(id, object.instance->buildNetworkState());
 				object.edition = edition;
 			}
@@ -371,7 +373,7 @@ namespace spk::Network
 			{
 				throw spk::Exception("Network object already registered");
 			}
-			const auto edition = instance.networkEdition();
+			const auto edition = instance.version();
 			_publish(id, instance.buildNetworkState());
 			auto &object = _object(id);
 			object.instance = &instance;
