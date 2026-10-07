@@ -1,14 +1,15 @@
 #include "network/network_traits_test.hpp"
+#include <limits>
 
-TEST_F(NetworkTraitsTest, ProtocolDecodesStateOnceAndRoundTripsRequestCorrelation)
+TEST_F(NetworkTraitsTest, ProtocolPreservesOpaquePayloadAndRequestCorrelation)
 {
 	const auto frame = protocol.encode(update(5), 17);
 	EXPECT_EQ(protocol.kind(frame), Protocol::Kind::Update);
 	EXPECT_EQ(frame.requestID(), 17u);
-	Codec::decodes = 0;
+	Object::reads = 0;
 	const auto decoded = protocol.decodeUpdate(frame);
-	EXPECT_EQ(decoded.state->value, 5);
-	EXPECT_EQ(Codec::decodes, 1);
+	EXPECT_EQ(decoded.payload->reader().get<int>(), 5);
+	EXPECT_EQ(Object::reads, 0);
 	const Request request{session, object, 3};
 	EXPECT_EQ(protocol.decodeRequest(protocol.encode(request)), request);
 	EXPECT_EQ(protocol.encode(request).requestID(), 3u);
@@ -54,7 +55,7 @@ TEST_F(NetworkTraitsTest, ProtocolRejectsInvalidIdentityMetadataKindAndFrameLimi
 	invalid = update(1, 0);
 	EXPECT_THROW((void)protocol.encode(invalid), spk::Exception);
 	invalid = update(1);
-	invalid.state.reset();
+	invalid.payload.reset();
 	EXPECT_THROW((void)protocol.encode(invalid), spk::Exception);
 	EXPECT_THROW((void)protocol.encode(Request{session, object, 0}), spk::Exception);
 	EXPECT_THROW((void)protocol.decodeRequest(protocol.encode(update(1))), spk::Exception);
@@ -102,4 +103,52 @@ TEST_F(NetworkTraitsTest, HandshakeRoundTripsAndRejectsTruncationTrailingDataAnd
 	spk::Message::Writer writer(std::move(frame));
 	writer.edit(sizeof(std::uint32_t), Protocol::Kind::Session);
 	EXPECT_THROW((void)protocol.decodeHandshake(std::move(writer).build()), spk::Exception);
+}
+
+TEST_F(NetworkTraitsTest, EmptySerializedStateIsDistinctFromMissingState)
+{
+	auto value = update(1);
+	value.payload = std::move(spk::Message::Writer{}).build();
+	const auto decoded = protocol.decodeUpdate(protocol.encode(value));
+	ASSERT_TRUE(decoded.payload.has_value());
+	EXPECT_TRUE(decoded.payload->empty());
+	value.payload.reset();
+	EXPECT_THROW((void)protocol.encode(value), spk::Exception);
+	value.edit = Edit::Forget;
+	EXPECT_FALSE(protocol.decodeUpdate(protocol.encode(value)).payload.has_value());
+}
+
+TEST_F(NetworkTraitsTest, DeclaredPayloadLengthMustMatchRemainingBytesBeforeCopying)
+{
+	const auto frame = protocol.encode(update(1));
+	constexpr auto lengthOffset = sizeof(std::uint32_t) + sizeof(Protocol::Kind) + 2 * sizeof(ID) + 2 * sizeof(std::uint64_t) + sizeof(Edit);
+	for (const auto length : {0u, 3u, 5u, std::numeric_limits<std::uint32_t>::max()})
+	{
+		auto copy = frame;
+		spk::Message::Writer writer(std::move(copy));
+		writer.edit(lengthOffset, length);
+		EXPECT_THROW((void)protocol.decodeUpdate(std::move(writer).build()), spk::Exception);
+	}
+	auto value = update(1);
+	spk::Message::Writer payload;
+	payload.resize(1024);
+	value.payload = std::move(payload).build();
+	EXPECT_THROW((void)Protocol(42, 64).encode(value), spk::Exception);
+}
+
+TEST_F(NetworkTraitsTest, ProtocolDoesNotParseApplicationFieldsOrAcceptOlderWireVersion)
+{
+	auto value = update(1);
+	spk::Message::Writer opaque;
+	opaque << std::uint8_t{255};
+	value.payload = std::move(opaque).build();
+	const auto frame = protocol.encode(value);
+	const auto decoded = protocol.decodeUpdate(frame);
+	ASSERT_EQ(decoded.payload->size(), 1u);
+	Object replica;
+	EXPECT_THROW(replica.readNetworkState(decoded.payload->reader()), spk::Exception);
+	auto copy = frame;
+	spk::Message::Writer old(std::move(copy));
+	old.edit<std::uint32_t>(0, 0x32525053);
+	EXPECT_THROW((void)protocol.decodeUpdate(std::move(old).build()), spk::Exception);
 }

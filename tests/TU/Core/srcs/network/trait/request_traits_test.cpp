@@ -10,7 +10,7 @@ TEST_F(NetworkTraitsTest, RequestedStateCreatesReplicaAndCompletesAcquisitionWit
 	ASSERT_TRUE(replicas.requestObject(object));
 	ASSERT_TRUE(source.receiveMessage(peer, replicas.sent.back()));
 	EXPECT_FALSE(source.receiveMessage(peer, replicas.sent.back()));
-	ASSERT_TRUE(source.fulfillRequest(peer, source.requests.back().second, {24}));
+	ASSERT_TRUE(source.fulfillRequest(peer, source.requests.back().second, payload(24)));
 	source.blocked.insert(peer);
 	EXPECT_EQ(source.dispatch(now).sent, 0u);
 	EXPECT_EQ(replicas.requestStatus(object), Status::Pending);
@@ -53,7 +53,7 @@ TEST_F(NetworkTraitsTest, ProviderMayCompleteSynchronouslyOrAfterRegisteringAnOb
 	source.immediate = true;
 	ASSERT_TRUE(source.receiveMessage(peer, protocol.encode(first)));
 	EXPECT_EQ(source.dispatch(now).sent, 1u);
-	EXPECT_EQ(protocol.decodeUpdate(source.sent.back().second).state->value, 37);
+	EXPECT_EQ(protocol.decodeUpdate(source.sent.back().second).payload->reader().get<int>(), 37);
 	source.immediate = false;
 	const Request second{session, ID::generate(), 2};
 	ASSERT_TRUE(source.receiveMessage(peer, protocol.encode(second)));
@@ -62,7 +62,7 @@ TEST_F(NetworkTraitsTest, ProviderMayCompleteSynchronouslyOrAfterRegisteringAnOb
 	source.registerObject(second.object, entity);
 	EXPECT_TRUE(source.acceptRequest(peer, second));
 	EXPECT_EQ(source.dispatch(now + 50ms).sent, 1u);
-	EXPECT_EQ(protocol.decodeUpdate(source.sent.back().second).state->value, 12);
+	EXPECT_EQ(protocol.decodeUpdate(source.sent.back().second).payload->reader().get<int>(), 12);
 }
 
 TEST_F(NetworkTraitsTest, ClosingPeerCancelsProviderCompletionAndQueuedState)
@@ -71,18 +71,18 @@ TEST_F(NetworkTraitsTest, ClosingPeerCancelsProviderCompletionAndQueuedState)
 	session = source.openPeer(peer);
 	const Request request{session, object, 1};
 	ASSERT_TRUE(source.receiveMessage(peer, protocol.encode(request)));
-	EXPECT_TRUE(source.fulfillRequest(peer, request, {1}));
+	EXPECT_TRUE(source.fulfillRequest(peer, request, payload(1)));
 	source.closePeer(peer);
-	EXPECT_FALSE(source.fulfillRequest(peer, request, {99}));
+	EXPECT_FALSE(source.fulfillRequest(peer, request, payload(99)));
 	EXPECT_EQ(source.dispatch(now).sent, 0u);
 	const auto nextSession = source.openPeer(peer);
 	EXPECT_NE(nextSession, session);
 	EXPECT_FALSE(source.receiveMessage(peer, protocol.encode(request)));
 	const Request next{nextSession, object, 1};
 	ASSERT_TRUE(source.receiveMessage(peer, protocol.encode(next)));
-	EXPECT_TRUE(source.fulfillRequest(peer, next, {2}));
+	EXPECT_TRUE(source.fulfillRequest(peer, next, payload(2)));
 	EXPECT_EQ(source.dispatch(now).sent, 1u);
-	EXPECT_EQ(protocol.decodeUpdate(source.sent.back().second).state->value, 2);
+	EXPECT_EQ(protocol.decodeUpdate(source.sent.back().second).payload->reader().get<int>(), 2);
 }
 
 TEST_F(NetworkTraitsTest, SupersededProviderResultCannotPublish)
@@ -92,11 +92,11 @@ TEST_F(NetworkTraitsTest, SupersededProviderResultCannotPublish)
 	const Request first{session, object, 1}, next{session, object, 2};
 	ASSERT_TRUE(source.receiveMessage(peer, protocol.encode(first)));
 	ASSERT_TRUE(source.receiveMessage(peer, protocol.encode(next)));
-	EXPECT_FALSE(source.fulfillRequest(peer, first, {99}));
-	EXPECT_TRUE(source.fulfillRequest(peer, next, {2}));
-	EXPECT_FALSE(source.fulfillRequest(peer, next, {3}));
+	EXPECT_FALSE(source.fulfillRequest(peer, first, payload(99)));
+	EXPECT_TRUE(source.fulfillRequest(peer, next, payload(2)));
+	EXPECT_FALSE(source.fulfillRequest(peer, next, payload(3)));
 	EXPECT_EQ(source.dispatch(now).sent, 1u);
-	EXPECT_EQ(protocol.decodeUpdate(source.sent.back().second).state->value, 2);
+	EXPECT_EQ(protocol.decodeUpdate(source.sent.back().second).payload->reader().get<int>(), 2);
 }
 
 TEST_F(NetworkTraitsTest, FailedProviderCanRejectAndClientExplicitlyRequestsAgain)
@@ -249,7 +249,7 @@ TEST_F(NetworkTraitsTest, ForgetCancelsPendingProviderAndRemovesAcquisitionStatu
 	ASSERT_TRUE(replicas.requestObject(object));
 	ASSERT_TRUE(source.receiveMessage(peer, replicas.sent.back()));
 	source.forget(peer, object);
-	EXPECT_FALSE(source.fulfillRequest(peer, source.requests.back().second, {99}));
+	EXPECT_FALSE(source.fulfillRequest(peer, source.requests.back().second, payload(99)));
 	(void)source.dispatch(now + 50ms);
 	EXPECT_TRUE(replicas.receiveMessage(source.sent.back().second));
 	EXPECT_TRUE(replicas.objects.empty());
@@ -317,8 +317,8 @@ TEST_F(NetworkTraitsTest, RequestCorrelationAndDuplicateHistoryAreIndependentPer
 	const Request second{source.openPeer(other), object, 1};
 	ASSERT_TRUE(source.receiveMessage(peer, protocol.encode(first)));
 	ASSERT_TRUE(source.receiveMessage(other, protocol.encode(second)));
-	ASSERT_TRUE(source.fulfillRequest(peer, first, {1}));
-	ASSERT_TRUE(source.fulfillRequest(other, second, {2}));
+	ASSERT_TRUE(source.fulfillRequest(peer, first, payload(1)));
+	ASSERT_TRUE(source.fulfillRequest(other, second, payload(2)));
 	EXPECT_FALSE(source.receiveMessage(peer, protocol.encode(first)));
 	EXPECT_FALSE(source.receiveMessage(other, protocol.encode(second)));
 	EXPECT_EQ(source.dispatch(now).sent, 2u);
@@ -326,6 +326,6 @@ TEST_F(NetworkTraitsTest, RequestCorrelationAndDuplicateHistoryAreIndependentPer
 	{
 		EXPECT_EQ(message.requestID(), 1u);
 		EXPECT_EQ(protocol.decodeUpdate(message).session, recipient == peer ? first.session : second.session);
-		EXPECT_EQ(protocol.decodeUpdate(message).state->value, 2);
+		EXPECT_EQ(protocol.decodeUpdate(message).payload->reader().get<int>(), 2);
 	}
 }

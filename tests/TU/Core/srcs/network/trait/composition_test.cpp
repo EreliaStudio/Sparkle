@@ -5,7 +5,7 @@ using namespace std::chrono_literals;
 class NetworkTraitCompositionTest : public NetworkTraitsTest
 {
 protected:
-	class Snapshots : public spk::Network::PublishedObjectCollectionTrait<State>
+	class Snapshots : public spk::Network::PublishedObjectCollectionTrait
 	{
 	public:
 		using PublishedObjectCollectionTrait::_captureChanges;
@@ -28,7 +28,7 @@ protected:
 		using PeerSessionTrait::_findSession;
 		using PeerSessionTrait::_openSession;
 	};
-	class Queue : public spk::Network::PublicationQueueTrait<State>
+	class Queue : public spk::Network::PublicationQueueTrait
 	{
 		bool _sendUpdate(ID peer, const Update &update, spk::Message::RequestID request) override
 		{
@@ -113,14 +113,14 @@ protected:
 		using ReplicaHistoryTrait::_applyTracked;
 		using ReplicaHistoryTrait::_tracksActive;
 	};
-	class TypedReplicas : public spk::Network::ReplicaTrait<State>
+	class PayloadReplicas : public spk::Network::ReplicaTrait
 	{
-		spk::Network::ReplicableTrait<State> *_findReplica(ID id) override
+		spk::Network::ReplicableTrait *_findReplica(ID id) override
 		{
 			auto found = objects.find(id);
 			return found == objects.end() ? nullptr : &found->second;
 		}
-		spk::Network::ReplicableTrait<State> &_createReplica(ID id) override
+		spk::Network::ReplicableTrait &_createReplica(ID id) override
 		{
 			return objects[id];
 		}
@@ -132,7 +132,7 @@ protected:
 	public:
 		std::map<ID, Object> objects;
 	};
-	class TypedSource : public spk::Network::PublicationTrait<State>
+	class PayloadSource : public spk::Network::PublicationTrait
 	{
 		bool _sendUpdate(ID, const Update &update, spk::Message::RequestID) override
 		{
@@ -145,12 +145,12 @@ protected:
 		}
 
 	public:
-		explicit TypedSource(TypedReplicas &replicas) :
+		explicit PayloadSource(PayloadReplicas &replicas) :
 			PublicationTrait({.interval = 0ms}),
 			target(replicas)
 		{
 		}
-		TypedReplicas &target;
+		PayloadReplicas &target;
 		std::function<void()> onSend;
 	};
 };
@@ -164,10 +164,10 @@ TEST_F(NetworkTraitCompositionTest, SnapshotObservationKeepsIndependentVersionsA
 		second._registerObject(object, entity);
 		entity.change(8);
 		first._captureChanges();
-		EXPECT_EQ(first._snapshot(object).state->value, 8);
-		EXPECT_EQ(second._snapshot(object).state->value, 0);
+		EXPECT_EQ(first._snapshot(object).payload->reader().get<int>(), 8);
+		EXPECT_EQ(second._snapshot(object).payload->reader().get<int>(), 0);
 		second._captureChanges();
-		EXPECT_EQ(second._snapshot(object).state->value, 8);
+		EXPECT_EQ(second._snapshot(object).payload->reader().get<int>(), 8);
 		first._unregisterObject(object);
 		entity.change(9);
 		first._captureChanges();
@@ -175,8 +175,8 @@ TEST_F(NetworkTraitCompositionTest, SnapshotObservationKeepsIndependentVersionsA
 	}
 	EXPECT_NO_THROW(first._captureChanges());
 	EXPECT_NO_THROW(second._captureChanges());
-	EXPECT_EQ(first._snapshot(object).state->value, 8);
-	EXPECT_EQ(second._snapshot(object).state->value, 9);
+	EXPECT_EQ(first._snapshot(object).payload->reader().get<int>(), 8);
+	EXPECT_EQ(second._snapshot(object).payload->reader().get<int>(), 9);
 }
 
 TEST_F(NetworkTraitCompositionTest, PeerSessionsAndInterestGenerationsHaveIndependentLifetimes)
@@ -203,18 +203,18 @@ TEST_F(NetworkTraitCompositionTest, QueueCoalescesWithoutLosingCorrelationOrFifo
 	second.object = ID::generate();
 	queue._queue(peer, first, 7);
 	queue._queue(peer, second);
-	first.state = std::make_shared<const State>(State{3});
+	first.payload = payload(3);
 	first.revision = 2;
 	queue._queue(peer, first);
 	EXPECT_EQ(queue._dispatchPublication(now, 1).sent, 1u);
 	ASSERT_EQ(queue.sent.size(), 1u);
-	EXPECT_EQ(queue.sent[0].first.state->value, 3);
+	EXPECT_EQ(queue.sent[0].first.payload->reader().get<int>(), 3);
 	EXPECT_EQ(queue.sent[0].second, 7u);
 	EXPECT_EQ(queue._dispatchPublication(now + 49ms, 1).sent, 0u);
 	EXPECT_EQ(queue._dispatchPublication(now + 50ms, 1).sent, 1u);
 	EXPECT_EQ(queue.sent[1].first.object, second.object);
 	first.edit = Edit::Forget;
-	first.state.reset();
+	first.payload.reset();
 	queue._queue(peer, update(4), 9);
 	queue._queue(peer, first);
 	EXPECT_EQ(queue._dispatchPublication(now + 100ms, 1).sent, 1u);
@@ -280,10 +280,10 @@ TEST_F(NetworkTraitCompositionTest, HistoryCommitsOnlyAfterApplicationAndRetains
 	EXPECT_EQ(applied, 3);
 }
 
-TEST_F(NetworkTraitCompositionTest, TypedPublicationAndReplicationWorkWithoutTransportOrCodec)
+TEST_F(NetworkTraitCompositionTest, PayloadPublicationAndReplicationWorkWithoutTransportOrCodec)
 {
-	TypedReplicas replicas;
-	TypedSource source(replicas);
+	PayloadReplicas replicas;
+	PayloadSource source(replicas);
 	Object entity;
 	replicas.resetSession(source.openPeer(peer));
 	source.registerObject(object, entity);

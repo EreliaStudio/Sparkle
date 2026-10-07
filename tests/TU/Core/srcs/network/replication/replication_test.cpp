@@ -26,7 +26,7 @@ TEST_F(NetworkTraitsTest, All65ContinuouslyDirtyObjectsArePublishedWithoutStarva
 			const auto state = protocol.decodeUpdate(message);
 			++observed[state.object];
 			lastSeen[state.object] = tick;
-			EXPECT_EQ(state.state->value, tick);
+			EXPECT_EQ(state.payload->reader().get<int>(), tick);
 		}
 		if (tick > 0)
 		{
@@ -64,7 +64,7 @@ TEST_F(NetworkTraitsTest, CoalescingRetainsFifoPosition)
 		actual.push_back(protocol.decodeUpdate(message).object);
 	}
 	EXPECT_EQ(actual, expected);
-	EXPECT_EQ(protocol.decodeUpdate(source.sent.front().second).state->value, 7);
+	EXPECT_EQ(protocol.decodeUpdate(source.sent.front().second).payload->reader().get<int>(), 7);
 }
 
 TEST_F(NetworkTraitsTest, ReintroductionAfterForgetOrDestructionUsesNewTracking)

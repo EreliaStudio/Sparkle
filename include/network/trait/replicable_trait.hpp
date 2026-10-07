@@ -1,26 +1,19 @@
 #pragma once
-
+#include "exception.hpp"
+#include "network/message.hpp"
 #include "network/replication/operation_guard.hpp"
-
 namespace spk::Network
 {
-	template <typename State>
 	class ReplicableTrait
 	{
-		bool _applying = false;
+		bool _reading = false;
 
 	protected:
-		// Validate before changing the object; a throwing hook must leave it
-		// unchanged so the same update can be retried.
-		virtual void _applyNetworkState(const State &state) = 0;
+		// A throwing read may leave partial changes. Recovery is the application's responsibility.
+		virtual void _readNetworkState(const spk::Message::Reader &reader) = 0;
 
 	public:
 		virtual ~ReplicableTrait() = default;
-
-		virtual void applyNetworkState(const State &state) final
-		{
-			OperationGuard guard(_applying);
-			_applyNetworkState(state);
-		}
+		virtual void readNetworkState(const spk::Message::Reader &reader) final;
 	};
 }

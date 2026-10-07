@@ -1,20 +1,20 @@
 #pragma once
+#include <optional>
 
 #include "edit.hpp"
+#include "network/message.hpp"
 #include "types.hpp"
 #include <cstdint>
-#include <memory>
 
 namespace spk::Network
 {
-	// Immutable data snapshot, never a live application entity.
-	template <typename State>
+	// Immutable serialized application payload; absence denotes a removal, not an empty state.
 	struct Update
 	{
 		SessionID session;
 		ObjectID object;
 		std::uint64_t tracking = 0, revision = 0;
 		Edit edit = Edit::Set;
-		std::shared_ptr<const State> state;
+		std::optional<spk::Message> payload;
 	};
 } // namespace spk::Network

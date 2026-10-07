@@ -31,8 +31,8 @@ TEST_F(NetworkTraitsTest, VersionNotificationsDoNotReplacePerSourceObservation)
 	EXPECT_EQ(notifications, 1);
 	EXPECT_EQ(first.dispatch(now + 50ms).sent, 1u);
 	EXPECT_EQ(second.dispatch(now + 50ms).sent, 1u);
-	EXPECT_EQ(protocol.decodeUpdate(first.sent.back().second).state->value, 13);
-	EXPECT_EQ(protocol.decodeUpdate(second.sent.back().second).state->value, 13);
+	EXPECT_EQ(protocol.decodeUpdate(first.sent.back().second).payload->reader().get<int>(), 13);
+	EXPECT_EQ(protocol.decodeUpdate(second.sent.back().second).payload->reader().get<int>(), 13);
 	contract.resign();
 	EXPECT_NO_THROW(entity.change(14));
 	EXPECT_EQ(versioned.version(), 2u);
@@ -89,7 +89,7 @@ TEST_F(NetworkTraitsTest, PublishesInheritedStateAndCoalescesBeforeSnapshotCaptu
 	}
 	EXPECT_EQ(replicas.objects.at(object).value, 3);
 	EXPECT_EQ(replicas.objects.at(object).applications, 2);
-	EXPECT_EQ(Codec::decodes, 2);
+	EXPECT_EQ(Object::reads, 2);
 	EXPECT_EQ(source.dispatch(now + 100ms).sent, 0u);
 	EXPECT_EQ(entity.builds, 2);
 }
@@ -123,7 +123,7 @@ TEST_F(NetworkTraitsTest, EitherLifetimeOrderDetachesSafely)
 	session = source.openPeer(peer);
 	source.follow(peer, object);
 	EXPECT_EQ(source.dispatch(now).sent, 1u);
-	EXPECT_EQ(protocol.decodeUpdate(source.sent.back().second).state->value, 8);
+	EXPECT_EQ(protocol.decodeUpdate(source.sent.back().second).payload->reader().get<int>(), 8);
 	Object survivor;
 	{
 		Source temporary;
@@ -132,7 +132,7 @@ TEST_F(NetworkTraitsTest, EitherLifetimeOrderDetachesSafely)
 	EXPECT_NO_THROW(survivor.change(5));
 	source.registerObject(object, survivor);
 	EXPECT_EQ(source.dispatch(now + 50ms).sent, 1u);
-	EXPECT_EQ(protocol.decodeUpdate(source.sent.back().second).state->value, 5);
+	EXPECT_EQ(protocol.decodeUpdate(source.sent.back().second).payload->reader().get<int>(), 5);
 }
 
 TEST_F(NetworkTraitsTest, FailedSnapshotCaptureCanRetryAndDuplicateRegistrationIsRejected)
@@ -151,7 +151,7 @@ TEST_F(NetworkTraitsTest, FailedSnapshotCaptureCanRetryAndDuplicateRegistrationI
 	EXPECT_THROW(source.dispatch(now), spk::Exception);
 	entity.failBuild = false;
 	EXPECT_EQ(source.dispatch(now).sent, 1u);
-	EXPECT_EQ(protocol.decodeUpdate(source.sent.back().second).state->value, 7);
+	EXPECT_EQ(protocol.decodeUpdate(source.sent.back().second).payload->reader().get<int>(), 7);
 }
 
 TEST_F(NetworkTraitsTest, BlockedAndThrowingPeersDoNotBlockOthers)
@@ -206,6 +206,6 @@ TEST_F(NetworkTraitsTest, EachSourceObservesInvalidationIndependently)
 	entity.change(13);
 	EXPECT_EQ(first.dispatch(now + 50ms).sent, 1u);
 	EXPECT_EQ(second.dispatch(now + 50ms).sent, 1u);
-	EXPECT_EQ(protocol.decodeUpdate(first.sent.back().second).state->value, 13);
-	EXPECT_EQ(protocol.decodeUpdate(second.sent.back().second).state->value, 13);
+	EXPECT_EQ(protocol.decodeUpdate(first.sent.back().second).payload->reader().get<int>(), 13);
+	EXPECT_EQ(protocol.decodeUpdate(second.sent.back().second).payload->reader().get<int>(), 13);
 }

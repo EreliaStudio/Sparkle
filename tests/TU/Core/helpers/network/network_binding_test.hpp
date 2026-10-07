@@ -27,32 +27,23 @@ protected:
 			disconnect();
 		}
 	};
-	struct State
+	static spk::Message payload(int value)
 	{
-		int value = 0;
-	};
-	struct Codec
+		spk::Message::Writer writer;
+		writer << value;
+		return std::move(writer).build();
+	}
+	using Protocol = spk::Network::Protocol;
+	class Object : public spk::Network::PublishableTrait, public spk::Network::ReplicableTrait
 	{
-		static void encode(spk::Message::Writer &writer, const State &state)
+		void _writeNetworkState(spk::Message::Writer &writer) const override
 		{
-			writer << state.value;
+			writer << value;
 		}
-		static State decode(const spk::Message::Reader &reader)
-		{
-			return {reader.get<int>()};
-		}
-	};
-	using Protocol = spk::Network::Protocol<State, Codec>;
-	class Object : public spk::Network::PublishableTrait<State>, public spk::Network::ReplicableTrait<State>
-	{
-		State _buildNetworkState() const override
-		{
-			return {value};
-		}
-		void _applyNetworkState(const State &state) override
+		void _readNetworkState(const spk::Message::Reader &reader) override
 		{
 			EXPECT_EQ(std::this_thread::get_id(), owner);
-			value = state.value;
+			value = reader.get<int>();
 			++applications;
 		}
 
@@ -65,7 +56,7 @@ protected:
 			invalidate();
 		}
 	};
-	class Source : public spk::Network::PublicationSourceTrait<State, Codec>
+	class Source : public spk::Network::PublicationSourceTrait
 	{
 		const std::thread::id _owner = std::this_thread::get_id();
 		void _requestObject(ID peer, const spk::Network::Request &request) override
@@ -80,15 +71,15 @@ protected:
 		{
 		}
 	};
-	class Replicas : public spk::Network::ReplicaCollectionTrait<State, Codec>
+	class Replicas : public spk::Network::ReplicaCollectionTrait
 	{
-		spk::Network::ReplicableTrait<State> *_findReplica(ID id) override
+		spk::Network::ReplicableTrait *_findReplica(ID id) override
 		{
 			EXPECT_EQ(std::this_thread::get_id(), owner);
 			auto found = objects.find(id);
 			return found == objects.end() ? nullptr : &found->second;
 		}
-		spk::Network::ReplicableTrait<State> &_createReplica(ID id) override
+		spk::Network::ReplicableTrait &_createReplica(ID id) override
 		{
 			EXPECT_EQ(std::this_thread::get_id(), owner);
 			++creations;

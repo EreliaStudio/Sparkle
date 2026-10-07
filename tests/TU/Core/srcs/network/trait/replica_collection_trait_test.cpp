@@ -3,14 +3,14 @@
 TEST_F(NetworkTraitsTest, ReplicaTraitAppliesThroughInheritedOperation)
 {
 	Object entity;
-	entity.applyNetworkState({19});
+	entity.readNetworkState(payload(19).reader());
 	EXPECT_EQ(entity.value, 19);
 	EXPECT_EQ(entity.applications, 1);
 	entity.failApply = true;
-	EXPECT_THROW(entity.applyNetworkState({20}), spk::Exception);
+	EXPECT_THROW(entity.readNetworkState(payload(20).reader()), spk::Exception);
 	EXPECT_EQ(entity.value, 19);
 	entity.failApply = false;
-	entity.applyNetworkState({20});
+	entity.readNetworkState(payload(20).reader());
 	EXPECT_EQ(entity.applications, 2);
 }
 
@@ -22,7 +22,7 @@ TEST_F(NetworkTraitsTest, CollectionPreservesTombstonesAfterRemovingReplica)
 	EXPECT_TRUE(replicas.receiveMessage(initial));
 	auto stop = update(0);
 	stop.edit = Edit::Forget;
-	stop.state.reset();
+	stop.payload.reset();
 	EXPECT_TRUE(replicas.receiveMessage(protocol.encode(stop)));
 	EXPECT_TRUE(replicas.objects.empty());
 	EXPECT_FALSE(replicas.receiveMessage(initial));
@@ -71,7 +71,7 @@ TEST_F(NetworkTraitsTest, FailedRemovalAndResetCanRetry)
 	replicas.failRemove = true;
 	auto stop = update(0);
 	stop.edit = Edit::Destroy;
-	stop.state.reset();
+	stop.payload.reset();
 	EXPECT_THROW((void)replicas.receiveMessage(protocol.encode(stop)), spk::Exception);
 	EXPECT_THROW(replicas.resetSession(ID::generate()), spk::Exception);
 	replicas.failRemove = false;
@@ -106,7 +106,7 @@ TEST_F(NetworkTraitsTest, UnsolicitedStateCreatesThenUpdatesTheSameReplica)
 	EXPECT_EQ(original->value, 20);
 	auto stop = update(0, 2);
 	stop.edit = Edit::Destroy;
-	stop.state.reset();
+	stop.payload.reset();
 	ASSERT_TRUE(replicas.receiveMessage(protocol.encode(stop)));
 	EXPECT_TRUE(replicas.objects.empty());
 	EXPECT_FALSE(replicas.receiveMessage(protocol.encode(update(30, 3))));

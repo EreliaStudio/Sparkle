@@ -349,7 +349,7 @@ TEST_F(NetworkBindingTest, DisconnectInvalidatesDeferredProviderCompletion)
 		pump();
 		return connection && !source.peerID(*connection);
 	}));
-	EXPECT_FALSE(source.fulfillRequest(peer, request, {99}));
+	EXPECT_FALSE(source.fulfillRequest(peer, request, payload(99)));
 	EXPECT_FALSE(replicas.requestStatus(object));
 	EXPECT_TRUE(replicas.objects.empty());
 }

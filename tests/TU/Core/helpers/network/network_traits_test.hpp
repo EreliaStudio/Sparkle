@@ -9,54 +9,45 @@
 class NetworkTraitsTest : public testing::Test
 {
 protected:
-	struct State
+	static spk::Message payload(int value)
 	{
-		int value = 0;
-	};
-	struct Codec
-	{
-		inline static int decodes = 0;
-		static void encode(spk::Message::Writer &writer, const State &state)
-		{
-			writer << state.value;
-		}
-		static State decode(const spk::Message::Reader &reader)
-		{
-			++decodes;
-			return {reader.get<int>()};
-		}
-	};
+		spk::Message::Writer writer;
+		writer << value;
+		return std::move(writer).build();
+	}
 	using ID = spk::UUID;
 	using Clock = spk::Network::Clock;
-	using Protocol = spk::Network::Protocol<State, Codec>;
-	using Update = spk::Network::Update<State>;
+	using Protocol = spk::Network::Protocol;
+	using Update = spk::Network::Update;
 	using Request = spk::Network::Request;
 	using Edit = spk::Network::Edit;
-	using Status = spk::Network::ReplicaCollectionTrait<State, Codec>::RequestStatus;
+	using Status = spk::Network::ReplicaCollectionTrait::RequestStatus;
 
-	class Object final : public spk::Network::PublishableTrait<State>, public spk::Network::ReplicableTrait<State>
+	class Object final : public spk::Network::PublishableTrait, public spk::Network::ReplicableTrait
 	{
 	protected:
-		State _buildNetworkState() const override
+		void _writeNetworkState(spk::Message::Writer &writer) const override
 		{
 			++builds;
 			if (failBuild)
 			{
 				throw spk::Exception("Snapshot failure");
 			}
-			return {value};
+			writer << value;
 		}
-		void _applyNetworkState(const State &state) override
+		void _readNetworkState(const spk::Message::Reader &reader) override
 		{
 			if (failApply)
 			{
 				throw spk::Exception("Application failure");
 			}
-			value = state.value;
+			value = reader.get<int>();
+			++reads;
 			++applications;
 		}
 
 	public:
+		inline static int reads = 0;
 		int value = 0, applications = 0;
 		mutable int builds = 0;
 		bool failBuild = false, failApply = false;
@@ -67,7 +58,7 @@ protected:
 		}
 	};
 
-	class Source : public spk::Network::PublicationSourceTrait<State, Codec>
+	class Source : public spk::Network::PublicationSourceTrait
 	{
 	protected:
 		bool _sendMessage(ID peer, const spk::Message &message) override
@@ -98,10 +89,10 @@ protected:
 		std::function<void()> onSend;
 	};
 
-	class Replicas : public spk::Network::ReplicaCollectionTrait<State, Codec>
+	class Replicas : public spk::Network::ReplicaCollectionTrait
 	{
 	protected:
-		spk::Network::ReplicableTrait<State> *_findReplica(ID id) override
+		spk::Network::ReplicableTrait *_findReplica(ID id) override
 		{
 			if (onApply)
 			{
@@ -114,7 +105,7 @@ protected:
 			auto found = objects.find(id);
 			return found == objects.end() ? nullptr : &found->second;
 		}
-		spk::Network::ReplicableTrait<State> &_createReplica(ID id) override
+		spk::Network::ReplicableTrait &_createReplica(ID id) override
 		{
 			++creations;
 			auto &object = objects[id];
@@ -154,7 +145,7 @@ protected:
 			}
 			if (immediate)
 			{
-				EXPECT_TRUE(fulfillRequest(peer, request, {37}));
+				EXPECT_TRUE(fulfillRequest(peer, request, payload(37)));
 			}
 		}
 
@@ -196,10 +187,10 @@ protected:
 	Clock::time_point now{};
 	void SetUp() override
 	{
-		Codec::decodes = 0;
+		Object::reads = 0;
 	}
 	Update update(int value, std::uint64_t revision = 1, std::uint64_t tracking = 1)
 	{
-		return {session, object, tracking, revision, Edit::Set, std::make_shared<const State>(State{value})};
+		return {session, object, tracking, revision, Edit::Set, payload(value)};
 	}
 };
