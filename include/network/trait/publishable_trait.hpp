@@ -10,8 +10,8 @@ namespace spk::Network
 	class PublishableTrait : public spk::VersionedTrait
 	{
 		std::shared_ptr<void> _lifetime = std::make_shared<int>(0);
-		template <typename, typename>
-		friend class PublicationSourceTrait;
+		template <typename>
+		friend class PublishedObjectCollectionTrait;
 
 	protected:
 		[[nodiscard]] virtual State _buildNetworkState() const = 0;
