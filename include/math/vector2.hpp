@@ -10,7 +10,7 @@
 
 #include "exception.hpp"
 
-#include "container/json/object.hpp"
+#include "container/json/value.hpp"
 
 namespace spk
 {

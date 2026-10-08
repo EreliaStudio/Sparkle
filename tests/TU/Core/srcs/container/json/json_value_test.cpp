@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "container/json/object.hpp"
+#include "container/json/value.hpp"
 #include "temporary_directory.hpp"
 
 #include <cstdint>

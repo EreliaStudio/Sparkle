@@ -25,8 +25,11 @@ namespace spk
 		using Callback = typename Provider::callback_type;
 		using Contract = typename Provider::Contract;
 		using MessageQueue = ThreadSafeFIFO<TIncoming>;
+		using TreatmentProvider = ContractProvider<>;
+		using TreatmentContract = TreatmentProvider::Contract;
 
 	private:
+		TreatmentProvider _treatmentProvider;
 		std::mutex _mutex;
 		std::unordered_map<Message::Type, std::shared_ptr<Provider>> _subscriptions;
 		std::vector<TIncoming> _pending;
@@ -70,6 +73,15 @@ namespace spk
 		}
 
 	public:
+		// Runs on the treating thread, even for an empty queue, before message callbacks.
+		[[nodiscard]] TreatmentContract subscribeToTreatment(TreatmentProvider::callback_type callback)
+		{
+			if (!callback)
+			{
+				throw Exception("Cannot subscribe an empty treatment callback.");
+			}
+			return _treatmentProvider.subscribe(std::move(callback));
+		}
 		[[nodiscard]] Contract subscribeTo(Message::Type type, Callback callback)
 		{
 			if (!callback)
@@ -99,6 +111,7 @@ namespace spk
 				throw Exception("Message treatment is already in progress.");
 			}
 			const TreatmentGuard guard{_treating};
+			_treatmentProvider.trigger();
 			if (_next == _pending.size())
 			{
 				_next = 0;

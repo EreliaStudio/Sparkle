@@ -1,15 +1,35 @@
 #include <gtest/gtest.h>
 
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <utility>
 #include <vector>
 
 #include "design_pattern/trait/versioned_trait.hpp"
+#include "exception.hpp"
 
 namespace
 {
 	using spk::VersionedTrait;
+
+	TEST(VersionedTraitTest, ExhaustionPreservesVersionAndDoesNotNotify)
+	{
+		const auto maximum = std::numeric_limits<VersionedTrait::Version>::max();
+		VersionedTrait value(maximum - 1);
+		std::vector<VersionedTrait::Version> observed;
+		auto contract = value.subscribeToVersionEdition([&](VersionedTrait *edited) {
+			observed.push_back(edited->version());
+		});
+		EXPECT_EQ(value.version(), maximum - 1);
+		value.invalidate();
+		EXPECT_EQ(value.version(), maximum);
+		EXPECT_THROW(value.invalidate(), spk::Exception);
+		EXPECT_THROW(value.invalidate(), spk::Exception);
+		EXPECT_EQ(value.version(), maximum);
+		ASSERT_EQ(observed.size(), 1u);
+		EXPECT_EQ(observed.front(), maximum);
+	}
 
 	TEST(VersionedTraitTest, StandardUsageInvalidatesMonotonicallyAndNotifiesSubscribers)
 	{

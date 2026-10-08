@@ -269,3 +269,41 @@ TEST(MessageDispatcherTest, ConcurrentTreatmentIsRejectedAndDispatcherRecovers)
 	EXPECT_EQ(failure, nullptr);
 	EXPECT_NO_THROW(client.treatMessages());
 }
+
+TEST(MessageDispatcherTest, TreatmentSubscriptionsRunBeforeMessagesAndForEmptyQueues)
+{
+	spk::Client client;
+	std::vector<int> seen;
+	auto treatment = client.messageDispatcher().subscribeToTreatment([&] {
+		seen.push_back(1);
+	});
+	auto messageContract = client.messageDispatcher().subscribeTo(7, [&](const auto &) {
+		seen.push_back(2);
+	});
+	client.treatMessages();
+	client.messages().publish(message(7));
+	client.treatMessages();
+	EXPECT_EQ(seen, (std::vector<int>{1, 1, 2}));
+	treatment.resign();
+	client.treatMessages();
+	EXPECT_EQ(seen.size(), 3u);
+}
+
+TEST(MessageDispatcherTest, ThrowingTreatmentPreservesMessagesAndRejectsReentry)
+{
+	spk::Client client;
+	int received = 0;
+	auto subscriber = client.messageDispatcher().subscribeTo(7, [&](const auto &) {
+		++received;
+	});
+	auto treatment = client.messageDispatcher().subscribeToTreatment([&] {
+		client.treatMessages();
+	});
+	client.messages().publish(message(7));
+	EXPECT_THROW(client.treatMessages(), spk::Exception);
+	EXPECT_EQ(received, 0);
+	treatment.resign();
+	client.treatMessages();
+	EXPECT_EQ(received, 1);
+	EXPECT_THROW((void)client.messageDispatcher().subscribeToTreatment({}), spk::Exception);
+}

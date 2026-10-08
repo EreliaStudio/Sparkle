@@ -160,7 +160,7 @@ Define an error policy by layer. A reasonable split is standard exceptions for a
 
 #### M11. Large units obscure responsibilities
 
-Notable examples are `json_object.cpp` (1,152 lines), `text_edit.cpp` (1,069), `interface_window.cpp` (650), `registry_query.hpp` (625), and `radio_button.cpp` (530). Size alone is not a defect, but several mix state machines, layout, rendering, input, conversion, and public API behavior.
+Notable examples are `json_value.cpp` (1,152 lines), `text_edit.cpp` (1,069), `interface_window.cpp` (650), `registry_query.hpp` (625), and `radio_button.cpp` (530). Size alone is not a defect, but several mix state machines, layout, rendering, input, conversion, and public API behavior.
 
 Split by responsibility, not arbitrary line count: JSON parser/writer/value; text-edit model/selection/layout/interaction/rendering; registry operations in separate headers; composite widget subcomponents. This will make the review order and unit ownership much clearer.
 
@@ -170,7 +170,7 @@ Split by responsibility, not arbitrary line count: JSON parser/writer/value; tex
 
 `StatefullTrait`, `ResizeableTrait`, `InherenceTrait`, `LifeTime`, and `NbKind` are public vocabulary. Prefer `StatefulTrait`, `ResizableTrait`, a domain name such as `HierarchyNode`, `Lifetime`, and `KindCount`. Make these changes before API stability; afterward aliases and deprecation would be required.
 
-Parameter naming also alternates between `p_value`, plain `value`, and single-letter names, and implementation placement is inconsistent (`src/graphics/mesh/*` implements `include/geometry/*`; `json_object.cpp` implements `object.hpp`). Pick one convention and align physical module names.
+Parameter naming also alternates between `p_value`, plain `value`, and single-letter names, and implementation placement is inconsistent (`src/graphics/mesh/*` implements `include/geometry/*`; `json_value.cpp` implements `value.hpp`). Pick one convention and align physical module names.
 
 #### L2. The public umbrella has an unexplained duplicate
 
