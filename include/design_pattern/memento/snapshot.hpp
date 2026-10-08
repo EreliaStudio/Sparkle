@@ -1,7 +1,12 @@
 #pragma once
 
 #include <concepts>
-#include <utility>
+
+namespace spk
+{
+	template <typename TObject>
+	class MementoTrait;
+}
 
 namespace spk::Memento
 {
@@ -12,14 +17,12 @@ namespace spk::Memento
 		TState _state;
 
 		template <typename TObject>
-		explicit Snapshot(const TObject &object) requires std::default_initializable<TState> :
+			requires std::default_initializable<TState>
+		explicit Snapshot(const TObject &object) :
 			_state()
 		{
 			_state.saveFrom(object);
 		}
-
-		template <typename>
-		friend class spk::Memento::Snapshot;
 
 		template <typename>
 		friend class spk::MementoTrait;
