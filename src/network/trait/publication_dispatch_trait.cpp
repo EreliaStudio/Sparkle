@@ -1,5 +1,4 @@
 #include "network/trait/publication_dispatch_trait.hpp"
-#include "exception.hpp"
 #include <algorithm>
 #include <set>
 namespace spk::Network
@@ -48,13 +47,17 @@ namespace spk::Network
 	}
 	PublicationDispatchTrait::DispatchResult PublicationDispatchTrait::_dispatchPublication(Clock::time_point now, std::size_t maximumAttempts)
 	{
-		DispatchResult result;
-		if (now < _nextPublication || maximumAttempts == 0 || _roundRobin.empty())
+		if (!_publicationDue(now) || maximumAttempts == 0 || _roundRobin.empty())
 		{
-			return result;
+			return {};
 		}
 		_capturePublicationChanges();
-		_nextPublication = now + _interval;
+		_advancePublication(now);
+		return _dispatchReady(maximumAttempts);
+	}
+	PublicationDispatchTrait::DispatchResult PublicationDispatchTrait::_dispatchReady(std::size_t maximumAttempts)
+	{
+		DispatchResult result;
 		std::set<PeerID> skipped;
 		for (std::size_t count = 0; count < maximumAttempts && skipped.size() < _roundRobin.size(); ++count)
 		{
@@ -70,11 +73,7 @@ namespace spk::Network
 	}
 	PublicationDispatchTrait::PublicationDispatchTrait(std::size_t maximumPending, Clock::duration interval) :
 		PublicationQueueTrait(maximumPending),
-		_interval(interval)
+		PublicationCadenceTrait(interval)
 	{
-		if (interval < Clock::duration::zero())
-		{
-			throw spk::Exception("Invalid publication interval");
-		}
 	}
 }

@@ -1,19 +1,13 @@
 #pragma once
-#include "network/client.hpp"
-#include <atomic>
-#include <memory>
+#include "client_connection_observation_trait.hpp"
 namespace spk::Network
 {
 	// Connection callbacks only signal; all virtual hooks run on the treating thread.
-	class ClientBindingTrait
+	class ClientBindingTrait : protected ClientConnectionObservationTrait
 	{
 		spk::Client *_client = nullptr;
-		std::shared_ptr<std::atomic<std::uint64_t>> _connectionEdition;
-		std::uint64_t _observedConnection = 0;
 		spk::Message::Type _type{};
 		bool _handling = false;
-		spk::Client::ConnectionContract _connectionContract;
-		spk::Client::DisconnectionContract _disconnectionContract;
 		spk::Client::MessageDispatcher::Contract _messageContract;
 		spk::Client::MessageDispatcher::TreatmentContract _treatmentContract;
 		void _releaseClientBinding() noexcept;
@@ -23,7 +17,6 @@ namespace spk::Network
 
 	protected:
 		virtual void _requireClientIdle() const;
-		virtual void _onClientConnectionChanged();
 		virtual void _onClientTreatment();
 		virtual void _onClientUnbinding();
 		virtual void _onClientMessage(const spk::Message &) = 0;

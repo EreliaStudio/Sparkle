@@ -6,25 +6,9 @@ namespace spk::Network
 	{
 		_requireReplicaIdle();
 	}
-	bool &ReplicaCollectionTrait::_requestOperation()
-	{
-		return _replicaOperation();
-	}
-	SessionID ReplicaCollectionTrait::_requestSession() const
-	{
-		return _replicaSession();
-	}
 	bool ReplicaCollectionTrait::_sendObjectRequest(const Request &request)
 	{
 		return _sendMessage(_protocol.encode(request));
-	}
-	void ReplicaCollectionTrait::_onReplicasCleared()
-	{
-		_clearAcquisitions();
-	}
-	void ReplicaCollectionTrait::_onReplicaRemoved(ObjectID id)
-	{
-		_eraseAcquisition(id);
 	}
 	void ReplicaCollectionTrait::_closeHandshakeSession()
 	{
@@ -62,21 +46,6 @@ namespace spk::Network
 			(void)receiveMessage(message);
 		}
 	}
-	bool ReplicaCollectionTrait::_receiveUpdate(const spk::Message &message)
-	{
-		const auto update = _protocol.decodeUpdate(message);
-		if (update.session != _replicaSession() || update.session.isNull())
-		{
-			return false;
-		}
-		const bool accepted = _acceptUpdate(update);
-		if (update.edit == Edit::Set && _tracksActive(update.object, update.tracking) &&
-			_completeAcquisition(update.object, message.requestID()))
-		{
-			return true;
-		}
-		return accepted;
-	}
 	bool ReplicaCollectionTrait::_sendMessage(const spk::Message &message)
 	{
 		if (!isBound())
@@ -86,8 +55,7 @@ namespace spk::Network
 		return isSynchronized() && _sendToServer(message);
 	}
 	ReplicaCollectionTrait::ReplicaCollectionTrait(spk::Message::Type type, std::size_t maximumTracked, std::size_t maximumBytes) :
-		ReplicaTrait(maximumTracked),
-		ObjectRequesterTrait(maximumTracked),
+		RequestedReplicaTrait(maximumTracked),
 		_protocol(type, maximumBytes)
 	{
 	}
@@ -101,13 +69,13 @@ namespace spk::Network
 	}
 	bool ReplicaCollectionTrait::receiveMessage(const spk::Message &message)
 	{
-		OperationGuard guard(_replicaOperation());
+		_requireReplicaIdle();
 		switch (_protocol.kind(message))
 		{
 		case Protocol::Kind::Update:
-			return _receiveUpdate(message);
+			return receiveUpdate(_protocol.decodeUpdate(message), message.requestID());
 		case Protocol::Kind::Rejected:
-			return _rejectAcquisition(_protocol.decodeRequest(message, Protocol::Kind::Rejected));
+			return receiveRejection(_protocol.decodeRequest(message, Protocol::Kind::Rejected));
 		default:
 			throw spk::Exception("Unexpected request sent to replica collection");
 		}

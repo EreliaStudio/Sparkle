@@ -1,4 +1,5 @@
 #include "network/network_traits_test.hpp"
+#include <algorithm>
 
 namespace
 {

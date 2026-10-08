@@ -6,26 +6,6 @@ namespace spk::Network
 	{
 		_requirePublicationIdle();
 	}
-	void PublicationSourceTrait::_requireRequestHandlerIdle() const
-	{
-		_requirePublicationIdle();
-	}
-	std::optional<SessionID> PublicationSourceTrait::_requestSession(PeerID peer) const
-	{
-		return _findSession(peer);
-	}
-	void PublicationSourceTrait::_onPeerClosed(PeerID peer)
-	{
-		_cancelPeerRequests(peer);
-	}
-	void PublicationSourceTrait::_onObjectForgotten(PeerID peer, ObjectID object)
-	{
-		_completeRequest(peer, object);
-	}
-	void PublicationSourceTrait::_onObjectDestroyed(ObjectID object)
-	{
-		_cancelObjectRequests(object);
-	}
 	bool PublicationSourceTrait::_sendUpdate(PeerID peer, const Update<spk::Message> &update, spk::Message::RequestID requestID)
 	{
 		return _sendMessage(peer, _protocol.encode(update, requestID));
@@ -74,22 +54,14 @@ namespace spk::Network
 		const auto connection = _peerConnection(peer);
 		return connection && _sendTo(*connection, message);
 	}
-	void PublicationSourceTrait::_requestObject(PeerID peer, const Request &request)
-	{
-		if (_hasSnapshot(request.object))
-		{
-			(void)acceptRequest(peer, request);
-		}
-		else
-		{
-			(void)rejectRequest(peer, request);
-		}
-	}
 	PublicationSourceTrait::PublicationSourceTrait(spk::Message::Type type, Configuration configuration, std::size_t maximumBytes) :
-		PublicationTrait(configuration),
-		ObjectRequestHandlerTrait(configuration.maximumObjects),
+		PublicationRequestTrait(configuration),
 		_protocol(type, maximumBytes)
 	{
+	}
+	bool PublicationSourceTrait::_sendRejection(PeerID peer, const Request &request)
+	{
+		return _sendMessage(peer, _protocol.encode(request, Protocol::Kind::Rejected));
 	}
 	void PublicationSourceTrait::bind(spk::Server &server)
 	{
@@ -103,39 +75,5 @@ namespace spk::Network
 	{
 		_requirePublicationIdle();
 		return receiveRequest(peer, _protocol.decodeRequest(message));
-	}
-	bool PublicationSourceTrait::acceptRequest(PeerID peer, const Request &request)
-	{
-		OperationGuard guard(_publicationOperation());
-		if (!_isCurrentRequest(peer, request))
-		{
-			return false;
-		}
-		_follow(peer, request.object, request.id);
-		_completeRequest(peer, request.object);
-		return true;
-	}
-	bool PublicationSourceTrait::fulfillRequest(PeerID peer, const Request &request, spk::Message payload)
-	{
-		OperationGuard guard(_publicationOperation());
-		if (!_isCurrentRequest(peer, request))
-		{
-			return false;
-		}
-		_room(peer, request.object);
-		_publish(request.object, std::move(payload));
-		_follow(peer, request.object, request.id);
-		_completeRequest(peer, request.object);
-		return true;
-	}
-	bool PublicationSourceTrait::rejectRequest(PeerID peer, const Request &request)
-	{
-		OperationGuard guard(_publicationOperation());
-		if (!_isCurrentRequest(peer, request) || !_sendMessage(peer, _protocol.encode(request, Protocol::Kind::Rejected)))
-		{
-			return false;
-		}
-		_completeRequest(peer, request.object);
-		return true;
 	}
 }

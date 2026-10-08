@@ -10,9 +10,6 @@ namespace spk::Network
 	void ClientBindingTrait::_requireClientIdle() const
 	{
 	}
-	void ClientBindingTrait::_onClientConnectionChanged()
-	{
-	}
 	void ClientBindingTrait::_onClientTreatment()
 	{
 	}
@@ -31,9 +28,7 @@ namespace spk::Network
 	{
 		_messageContract.resign();
 		_treatmentContract.resign();
-		_connectionContract.resign();
-		_disconnectionContract.resign();
-		_connectionEdition.reset();
+		_releaseClientObservation();
 		_client = nullptr;
 	}
 	bool ClientBindingTrait::isBound() const noexcept
@@ -46,7 +41,7 @@ namespace spk::Network
 	}
 	bool ClientBindingTrait::_connectionSynchronized() const noexcept
 	{
-		return _clientConnected() && _observedConnection == _connectionEdition->load();
+		return _clientConnected() && _clientConnectionObserved();
 	}
 	bool ClientBindingTrait::_sendToServer(const spk::Message &message)
 	{
@@ -61,12 +56,7 @@ namespace spk::Network
 	{
 		_requireBindingIdle();
 		OperationGuard guard(_handling);
-		const auto edition = _connectionEdition->load();
-		if (_observedConnection != edition)
-		{
-			_onClientConnectionChanged();
-			_observedConnection = edition;
-		}
+		_synchronizeClientConnection();
 		_onClientTreatment();
 	}
 	void ClientBindingTrait::_receiveClientMessage(const spk::Message &message)
@@ -80,25 +70,15 @@ namespace spk::Network
 	}
 	void ClientBindingTrait::_subscribe(spk::Client &client, spk::Message::Type type)
 	{
-		auto edition = std::make_shared<std::atomic<std::uint64_t>>(1);
-		auto connected = client.subscribeToConnection([edition] {
-			++*edition;
-		});
-		auto disconnected = client.subscribeToDisconnection([edition] {
-			++*edition;
-		});
 		auto messages = client.messageDispatcher().subscribeTo(type, [this](const auto &message) {
 			_receiveClientMessage(message);
 		});
 		auto treatment = client.messageDispatcher().subscribeToTreatment([this] {
 			_synchronizeClientBinding();
 		});
+		_observeClientConnection(client);
 		_client = &client;
 		_type = type;
-		_connectionEdition = std::move(edition);
-		_observedConnection = 0;
-		_connectionContract = std::move(connected);
-		_disconnectionContract = std::move(disconnected);
 		_messageContract = std::move(messages);
 		_treatmentContract = std::move(treatment);
 	}

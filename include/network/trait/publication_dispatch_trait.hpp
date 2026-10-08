@@ -1,9 +1,10 @@
 #pragma once
+#include "publication_cadence_trait.hpp"
 #include "publication_queue_trait.hpp"
 namespace spk::Network
 {
 	// Schedules fair delivery; blocked or throwing sends retain their queued update.
-	class PublicationDispatchTrait : protected PublicationQueueTrait
+	class PublicationDispatchTrait : protected PublicationQueueTrait, protected PublicationCadenceTrait
 	{
 	public:
 		struct DispatchResult
@@ -13,9 +14,8 @@ namespace spk::Network
 
 	private:
 		std::deque<PeerID> _roundRobin;
-		Clock::duration _interval;
-		Clock::time_point _nextPublication = Clock::time_point::min();
 		bool _dispatchOne(PeerID peer, DispatchResult &result);
+		DispatchResult _dispatchReady(std::size_t maximumAttempts);
 
 	protected:
 		virtual void _capturePublicationChanges();
