@@ -1,16 +1,16 @@
 #pragma once
 #include "publication_cadence_trait.hpp"
 #include "publication_delivery_trait.hpp"
+#include "publication_fairness_trait.hpp"
 namespace spk::Network
 {
 	// Schedules fair delivery; blocked or throwing sends retain their queued update.
-	class PublicationDispatchTrait : protected PublicationDeliveryTrait, protected PublicationCadenceTrait
+	class PublicationDispatchTrait : protected PublicationDeliveryTrait, protected PublicationCadenceTrait, protected PublicationFairnessTrait
 	{
 	public:
 		using PublicationDeliveryTrait::DispatchResult;
 
 	private:
-		std::deque<PeerID> _roundRobin;
 		DispatchResult _dispatchReady(std::size_t maximumAttempts);
 
 	protected:
