@@ -29,8 +29,7 @@ namespace
 				component._health = _health;
 			}
 
-			template <typename>
-			friend class spk::Memento::Snapshot;
+			friend class spk::MementoTrait<Health>;
 		};
 
 		class MinimalState
@@ -48,8 +47,7 @@ namespace
 				component._health = _health;
 			}
 
-			template <typename>
-			friend class spk::Memento::Snapshot;
+			friend class spk::MementoTrait<Health>;
 		};
 
 	private:
