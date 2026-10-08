@@ -3,40 +3,18 @@
 #include <set>
 namespace spk::Network
 {
-	bool PublicationDispatchTrait::_dispatchOne(PeerID peer, DispatchResult &result)
-	{
-		const auto *pending = _front(peer);
-		if (pending == nullptr)
-		{
-			return false;
-		}
-		try
-		{
-			if (_sendUpdate(peer, pending->update, pending->requestID))
-			{
-				_pop(peer);
-				++result.sent;
-				return true;
-			}
-		} catch (...)
-		{
-			++result.errors;
-		}
-		++result.blocked;
-		return false;
-	}
 	void PublicationDispatchTrait::_capturePublicationChanges()
 	{
 	}
 	void PublicationDispatchTrait::_openQueue(PeerID peer)
 	{
-		PublicationQueueTrait::_openQueue(peer);
+		PublicationDeliveryTrait::_openQueue(peer);
 		try
 		{
 			_roundRobin.push_back(peer);
 		} catch (...)
 		{
-			PublicationQueueTrait::_closeQueue(peer);
+			PublicationDeliveryTrait::_closeQueue(peer);
 			throw;
 		}
 	}
@@ -72,7 +50,7 @@ namespace spk::Network
 		return result;
 	}
 	PublicationDispatchTrait::PublicationDispatchTrait(std::size_t maximumPending, Clock::duration interval) :
-		PublicationQueueTrait(maximumPending),
+		PublicationDeliveryTrait(maximumPending),
 		PublicationCadenceTrait(interval)
 	{
 	}
