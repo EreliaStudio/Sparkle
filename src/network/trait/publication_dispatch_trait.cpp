@@ -11,7 +11,7 @@ namespace spk::Network
 		PublicationDeliveryTrait::_openQueue(peer);
 		try
 		{
-			_roundRobin.push_back(peer);
+			_schedulePeer(peer);
 		} catch (...)
 		{
 			PublicationDeliveryTrait::_closeQueue(peer);
@@ -21,11 +21,11 @@ namespace spk::Network
 	void PublicationDispatchTrait::_closeQueue(PeerID peer)
 	{
 		PublicationQueueTrait::_closeQueue(peer);
-		std::erase(_roundRobin, peer);
+		_unschedulePeer(peer);
 	}
 	PublicationDispatchTrait::DispatchResult PublicationDispatchTrait::_dispatchPublication(Clock::time_point now, std::size_t maximumAttempts)
 	{
-		if (!_publicationDue(now) || maximumAttempts == 0 || _roundRobin.empty())
+		if (!_publicationDue(now) || maximumAttempts == 0 || !_hasScheduledPeers())
 		{
 			return {};
 		}
@@ -37,7 +37,7 @@ namespace spk::Network
 	{
 		DispatchResult result;
 		std::set<PeerID> skipped;
-		for (std::size_t count = 0; count < maximumAttempts && skipped.size() < _roundRobin.size(); ++count)
+		for (std::size_t count = 0; count < maximumAttempts && skipped.size() < _scheduledPeerCount(); ++count)
 		{
 			const auto peer = _roundRobin.front();
 			_roundRobin.pop_front();
