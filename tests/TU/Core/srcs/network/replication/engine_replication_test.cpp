@@ -1,5 +1,6 @@
 #include "design_pattern/trait/memento_trait.hpp"
 #include "engine/engine.hpp"
+#include "exception.hpp"
 #include "network/replication/replicated_component.hpp"
 #include "network/replication/replication_system.hpp"
 
