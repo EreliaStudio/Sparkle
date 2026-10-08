@@ -10,14 +10,6 @@ namespace spk::Network
 			throw spk::Exception("Invalid replica capacity");
 		}
 	}
-	bool ReplicaHistoryTrait::_obsolete(const Tracking &tracked, std::uint64_t identity, std::uint64_t revision, Edit edit)
-	{
-		if (identity != tracked.identity)
-		{
-			return identity < tracked.identity;
-		}
-		return !tracked.active || (edit == Edit::Set && revision <= tracked.revision);
-	}
 	bool ReplicaHistoryTrait::_applyTracked(ObjectID object, std::uint64_t identity, std::uint64_t revision, Edit edit, const std::function<void()> &apply)
 	{
 		if (object.isNull() || identity == 0 || revision == 0 || edit > Edit::Destroy)
@@ -25,7 +17,7 @@ namespace spk::Network
 			throw spk::Exception("Invalid replica history metadata");
 		}
 		auto found = _tracking.find(object);
-		if (found != _tracking.end() && _obsolete(found->second, identity, revision, edit))
+		if (found != _tracking.end() && _obsoleteRevision(found->second.identity, found->second.revision, found->second.active, identity, revision, edit))
 		{
 			return false;
 		}
