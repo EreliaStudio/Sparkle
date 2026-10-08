@@ -1,14 +1,14 @@
 #pragma once
 #include "network/replication/request.hpp"
+#include "incoming_request_history_trait.hpp"
 #include <map>
 #include <optional>
 namespace spk::Network
 {
-	class ObjectRequestHandlerTrait
+	class ObjectRequestHandlerTrait : protected IncomingRequestHistoryTrait
 	{
 		struct History
 		{
-			spk::Message::RequestID lastRequest = 0;
 			std::map<ObjectID, Request> pending;
 		};
 		std::map<PeerID, History> _requests;
