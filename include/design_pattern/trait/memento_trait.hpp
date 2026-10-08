@@ -26,16 +26,21 @@ namespace spk::Memento
 			_state.saveFrom(object);
 		}
 
+		template <typename TObject>
+		void loadInto(TObject &object) const
+		{
+			_state.loadInto(object);
+		}
+
 		template <typename>
 		friend class spk::MementoTrait;
 
 	public:
 		using State = TState;
 
-		template <typename TObject>
-		void loadInto(TObject &object) const
+		[[nodiscard]] const State &state() const noexcept
 		{
-			_state.loadInto(object);
+			return _state;
 		}
 	};
 }
