@@ -1,12 +1,13 @@
 #pragma once
 #include "network/replication/edit.hpp"
+#include "replica_revision_trait.hpp"
 #include "network/replication/types.hpp"
 #include <functional>
 #include <map>
 #include <vector>
 namespace spk::Network
 {
-	class ReplicaHistoryTrait
+	class ReplicaHistoryTrait : protected ReplicaRevisionTrait
 	{
 		struct Tracking
 		{
@@ -15,7 +16,6 @@ namespace spk::Network
 		};
 		std::map<ObjectID, Tracking> _tracking;
 		std::size_t _maximumTracked;
-		[[nodiscard]] static bool _obsolete(const Tracking &tracked, std::uint64_t identity, std::uint64_t revision, Edit edit);
 
 	protected:
 		[[nodiscard]] bool _applyTracked(ObjectID object, std::uint64_t identity, std::uint64_t revision, Edit edit, const std::function<void()> &apply);
