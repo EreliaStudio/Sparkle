@@ -39,9 +39,7 @@ namespace spk::Network
 		std::set<PeerID> skipped;
 		for (std::size_t count = 0; count < maximumAttempts && skipped.size() < _scheduledPeerCount(); ++count)
 		{
-			const auto peer = _roundRobin.front();
-			_roundRobin.pop_front();
-			_roundRobin.push_back(peer);
+			const auto peer = _nextScheduledPeer();
 			if (!skipped.contains(peer) && !_dispatchOne(peer, result))
 			{
 				skipped.insert(peer);
