@@ -27,7 +27,7 @@ namespace spk::Network
 			return false;
 		}
 		auto &history = _requests[peer];
-		if (request.id <= history.lastRequest)
+		if (!_isNewRequest(peer, request.id))
 		{
 			return false;
 		}
@@ -36,7 +36,7 @@ namespace spk::Network
 			throw spk::Exception("Pending request limit reached");
 		}
 		history.pending.insert_or_assign(request.object, request);
-		history.lastRequest = request.id;
+		_recordRequest(peer, request.id);
 		_requestObject(peer, request);
 		return true;
 	}
@@ -65,6 +65,7 @@ namespace spk::Network
 	void ObjectRequestHandlerTrait::_cancelPeerRequests(PeerID peer)
 	{
 		_requests.erase(peer);
+		_clearRequestHistory(peer);
 	}
 	void ObjectRequestHandlerTrait::_cancelObjectRequests(ObjectID object)
 	{
