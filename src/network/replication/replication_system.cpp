@@ -40,6 +40,7 @@ namespace spk::Network
 		_disconnectionContract = server.subscribeToDisconnection([this](spk::ConnectionID peer) {
 			const std::scoped_lock lock(_peerMutex);
 			_peers.erase(peer);
+			_sent.erase(peer);
 		});
 	}
 
@@ -114,6 +115,7 @@ namespace spk::Network
 		if (!_authorizer || !_authorizer(incoming.emitter, *component))
 			return;
 		_server->sendTo(incoming.emitter, stateMessage(*component));
+		const std::scoped_lock lock(_peerMutex);
 		_sent[incoming.emitter][component->identifier()] = component->version();
 	}
 
