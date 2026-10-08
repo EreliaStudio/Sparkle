@@ -28,7 +28,7 @@ protected:
 		using PeerSessionTrait::_findSession;
 		using PeerSessionTrait::_openSession;
 	};
-	class Queue : public spk::Network::PublicationQueueTrait
+	class Queue : public spk::Network::PublicationDispatchTrait
 	{
 		bool _sendUpdate(ID peer, const Update &update, spk::Message::RequestID request) override
 		{
@@ -42,12 +42,12 @@ protected:
 
 	public:
 		Queue() :
-			PublicationQueueTrait(2, 50ms)
+			PublicationDispatchTrait(2, 50ms)
 		{
 		}
-		using PublicationQueueTrait::_dispatchPublication;
-		using PublicationQueueTrait::_openQueue;
-		using PublicationQueueTrait::_queue;
+		using PublicationDispatchTrait::_dispatchPublication;
+		using PublicationDispatchTrait::_openQueue;
+		using PublicationDispatchTrait::_queue;
 		std::set<ID> blocked;
 		std::vector<std::pair<Update, spk::Message::RequestID>> sent;
 	};

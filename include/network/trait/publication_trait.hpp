@@ -2,14 +2,14 @@
 #include "network/replication/operation_guard.hpp"
 #include "object_interest_trait.hpp"
 #include "peer_session_trait.hpp"
-#include "publication_queue_trait.hpp"
+#include "publication_dispatch_trait.hpp"
 #include "published_object_collection_trait.hpp"
 namespace spk::Network
 {
-	class PublicationTrait : protected PublishedObjectCollectionTrait, protected PeerSessionTrait, protected ObjectInterestTrait, protected PublicationQueueTrait
+	class PublicationTrait : protected PublishedObjectCollectionTrait, protected PeerSessionTrait, protected ObjectInterestTrait, protected PublicationDispatchTrait
 	{
 		using Objects = PublishedObjectCollectionTrait;
-		using Queue = PublicationQueueTrait;
+		using Dispatch = PublicationDispatchTrait;
 		bool _active = false;
 		void _beforeSnapshot(ObjectID id) override;
 		void _onSnapshot(ObjectID id) override;
@@ -21,11 +21,11 @@ namespace spk::Network
 	protected:
 		void _requirePublicationIdle() const;
 		[[nodiscard]] bool &_publicationOperation();
+		using Dispatch::_room;
 		using Objects::_hasSnapshot;
 		using Objects::_publish;
 		using PeerSessionTrait::_findSession;
 		using PeerSessionTrait::_peerSession;
-		using Queue::_room;
 		virtual void _onPeerClosed(PeerID);
 		virtual void _onObjectForgotten(PeerID, ObjectID);
 		virtual void _onObjectDestroyed(ObjectID);
@@ -37,7 +37,7 @@ namespace spk::Network
 			std::size_t maximumObjects = 16384, maximumPeers = 256;
 			Clock::duration interval = std::chrono::milliseconds(50);
 		};
-		using DispatchResult = Queue::DispatchResult;
+		using DispatchResult = Dispatch::DispatchResult;
 		PublicationTrait();
 		explicit PublicationTrait(Configuration configuration);
 		virtual ~PublicationTrait() = default;

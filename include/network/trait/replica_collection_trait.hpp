@@ -1,16 +1,18 @@
 #pragma once
 #include "client_binding_trait.hpp"
+#include "client_handshake_trait.hpp"
 #include "network/replication/protocol.hpp"
 #include "object_requester_trait.hpp"
 #include "replica_trait.hpp"
 namespace spk::Network
 {
 	// Complete client replication channel. Application storage remains in replica hooks.
-	class ReplicaCollectionTrait : public ReplicaTrait, public ObjectRequesterTrait, protected ClientBindingTrait
+	class ReplicaCollectionTrait : public ReplicaTrait, public ObjectRequesterTrait, protected ClientBindingTrait, protected ClientHandshakeTrait
 	{
 		Protocol _protocol;
-		SessionID _handshakeToken;
-		bool _helloSent = false;
+		void _closeHandshakeSession() override;
+		void _resetHandshakeSession(SessionID session) override;
+		bool _sendHello(SessionID token) override;
 		void _requireClientIdle() const override;
 		bool &_requestOperation() override;
 		SessionID _requestSession() const override;

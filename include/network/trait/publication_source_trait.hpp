@@ -3,20 +3,18 @@
 #include "object_request_handler_trait.hpp"
 #include "publication_trait.hpp"
 #include "server_binding_trait.hpp"
-#include <map>
+#include "server_handshake_trait.hpp"
 #include <optional>
 namespace spk::Network
 {
 	// Complete server replication channel; lower traits also support custom transports.
-	class PublicationSourceTrait : public PublicationTrait, protected ObjectRequestHandlerTrait, protected ServerBindingTrait
+	class PublicationSourceTrait : public PublicationTrait, protected ObjectRequestHandlerTrait, protected ServerBindingTrait, protected ServerHandshakeTrait
 	{
-		struct Connection
-		{
-			PeerID peer;
-			SessionID token;
-		};
 		Protocol _protocol;
-		std::map<spk::ConnectionID, Connection> _connections;
+		SessionID _openHandshakePeer(PeerID peer) override;
+		void _closeHandshakePeer(PeerID peer) override;
+		std::optional<SessionID> _findHandshakeSession(PeerID peer) const override;
+		void _sendHandshakeSession(spk::ConnectionID connection, SessionID token, SessionID session) override;
 		void _requireServerIdle() const override;
 		void _requireRequestHandlerIdle() const override;
 		std::optional<SessionID> _requestSession(PeerID peer) const override;
@@ -26,7 +24,6 @@ namespace spk::Network
 		bool _sendUpdate(PeerID peer, const Update<spk::Message> &update, spk::Message::RequestID requestID) override;
 		void _onServerConnectionClosed(spk::ConnectionID connection) override;
 		void _onServerUnbinding() override;
-		void _receiveHello(spk::ConnectionID connection, const spk::Message &message);
 		void _onServerMessage(const spk::ReceivedMessage &received) override;
 
 	protected:

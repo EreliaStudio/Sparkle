@@ -26,34 +26,36 @@ namespace spk::Network
 	{
 		_eraseAcquisition(id);
 	}
-	void ReplicaCollectionTrait::_onClientConnectionChanged()
+	void ReplicaCollectionTrait::_closeHandshakeSession()
 	{
 		closeSession();
-		_handshakeToken = SessionID::generate();
-		_helloSent = false;
+	}
+	void ReplicaCollectionTrait::_resetHandshakeSession(SessionID session)
+	{
+		resetSession(session);
+	}
+	bool ReplicaCollectionTrait::_sendHello(SessionID token)
+	{
+		return _clientConnected() && _sendToServer(_protocol.encodeHandshake(token));
+	}
+	void ReplicaCollectionTrait::_onClientConnectionChanged()
+	{
+		_beginClientHandshake();
 	}
 	void ReplicaCollectionTrait::_onClientTreatment()
 	{
-		if (!_helloSent && _clientConnected())
-		{
-			_helloSent = _sendToServer(_protocol.encodeHandshake(_handshakeToken));
-		}
+		_treatClientHandshake();
 	}
 	void ReplicaCollectionTrait::_onClientUnbinding()
 	{
-		closeSession();
-		_handshakeToken = {};
-		_helloSent = false;
+		_clearClientHandshake();
 	}
 	void ReplicaCollectionTrait::_onClientMessage(const spk::Message &message)
 	{
 		if (_protocol.kind(message) == Protocol::Kind::Session)
 		{
 			const auto handshake = _protocol.decodeHandshake(message);
-			if (handshake.token == _handshakeToken)
-			{
-				resetSession(handshake.session);
-			}
+			(void)_receiveSession(handshake.token, handshake.session);
 		}
 		else
 		{

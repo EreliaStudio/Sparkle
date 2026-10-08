@@ -68,7 +68,7 @@ namespace spk::Network
 	PublicationTrait::PublicationTrait(Configuration configuration) :
 		Objects(configuration.maximumObjects),
 		PeerSessionTrait(configuration.maximumPeers),
-		Queue(configuration.maximumObjects, configuration.interval)
+		Dispatch(configuration.maximumObjects, configuration.interval)
 	{
 	}
 	void PublicationTrait::registerObject(ObjectID id, PublishableTrait &instance)

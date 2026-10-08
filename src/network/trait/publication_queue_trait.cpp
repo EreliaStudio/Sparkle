@@ -1,54 +1,17 @@
 #include "network/trait/publication_queue_trait.hpp"
-
+#include "exception.hpp"
 namespace spk::Network
 {
-	bool PublicationQueueTrait::_dispatchOne(PeerID peer, DispatchResult &result)
-	{
-		auto &queue = _queues.at(peer);
-		if (queue.order.empty())
-		{
-			return false;
-		}
-		const auto &pending = queue.pending.at(queue.order.front());
-		try
-		{
-			if (_sendUpdate(peer, pending.update, pending.requestID))
-			{
-				queue.pending.erase(queue.order.front());
-				queue.order.pop_front();
-				++result.sent;
-				return true;
-			}
-		} catch (...)
-		{
-			++result.errors;
-		}
-		++result.blocked;
-		return false;
-	}
-	void PublicationQueueTrait::_capturePublicationChanges()
-	{
-	}
 	void PublicationQueueTrait::_openQueue(PeerID peer)
 	{
-		if (_queues.contains(peer))
+		if (!_queues.try_emplace(peer).second)
 		{
 			throw spk::Exception("Duplicate publication queue");
-		}
-		auto [entry, inserted] = _queues.try_emplace(peer);
-		try
-		{
-			_roundRobin.push_back(peer);
-		} catch (...)
-		{
-			_queues.erase(entry);
-			throw;
 		}
 	}
 	void PublicationQueueTrait::_closeQueue(PeerID peer)
 	{
 		_queues.erase(peer);
-		std::erase(_roundRobin, peer);
 	}
 	void PublicationQueueTrait::_room(PeerID peer, ObjectID id) const
 	{
@@ -88,35 +51,32 @@ namespace spk::Network
 			found->second.requestID = requestID;
 		}
 	}
-	PublicationQueueTrait::DispatchResult PublicationQueueTrait::_dispatchPublication(Clock::time_point now, std::size_t maximumAttempts)
+	const PublicationQueueTrait::Pending *PublicationQueueTrait::_front(PeerID peer) const
 	{
-		DispatchResult result;
-		if (now < _nextPublication || maximumAttempts == 0 || _queues.empty())
+		const auto found = _queues.find(peer);
+		if (found == _queues.end())
 		{
-			return result;
+			throw spk::Exception("Unknown publication queue");
 		}
-		_capturePublicationChanges();
-		_nextPublication = now + _interval;
-		std::set<PeerID> skipped;
-		for (std::size_t count = 0; count < maximumAttempts && skipped.size() < _queues.size(); ++count)
-		{
-			const auto peer = _roundRobin.front();
-			_roundRobin.pop_front();
-			_roundRobin.push_back(peer);
-			if (!skipped.contains(peer) && !_dispatchOne(peer, result))
-			{
-				skipped.insert(peer);
-			}
-		}
-		return result;
+		const auto &queue = found->second;
+		return queue.order.empty() ? nullptr : &queue.pending.at(queue.order.front());
 	}
-	PublicationQueueTrait::PublicationQueueTrait(std::size_t maximumPending, Clock::duration interval) :
-		_maximumPending(maximumPending),
-		_interval(interval)
+	void PublicationQueueTrait::_pop(PeerID peer)
 	{
-		if (maximumPending == 0 || interval < Clock::duration::zero())
+		if (_front(peer) == nullptr)
 		{
-			throw spk::Exception("Invalid publication queue configuration");
+			throw spk::Exception("Empty publication queue");
+		}
+		auto &queue = _queues.at(peer);
+		queue.pending.erase(queue.order.front());
+		queue.order.pop_front();
+	}
+	PublicationQueueTrait::PublicationQueueTrait(std::size_t maximumPending) :
+		_maximumPending(maximumPending)
+	{
+		if (maximumPending == 0)
+		{
+			throw spk::Exception("Invalid publication queue capacity");
 		}
 	}
 }

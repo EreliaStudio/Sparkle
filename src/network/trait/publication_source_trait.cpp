@@ -30,53 +30,35 @@ namespace spk::Network
 	{
 		return _sendMessage(peer, _protocol.encode(update, requestID));
 	}
+	SessionID PublicationSourceTrait::_openHandshakePeer(PeerID peer)
+	{
+		return openPeer(peer);
+	}
+	void PublicationSourceTrait::_closeHandshakePeer(PeerID peer)
+	{
+		closePeer(peer);
+	}
+	std::optional<SessionID> PublicationSourceTrait::_findHandshakeSession(PeerID peer) const
+	{
+		return _findSession(peer);
+	}
+	void PublicationSourceTrait::_sendHandshakeSession(spk::ConnectionID connection, SessionID token, SessionID session)
+	{
+		(void)_sendTo(connection, _protocol.encodeHandshake(token, session));
+	}
 	void PublicationSourceTrait::_onServerConnectionClosed(spk::ConnectionID connection)
 	{
-		auto found = _connections.find(connection);
-		if (found != _connections.end())
-		{
-			closePeer(found->second.peer);
-			_connections.erase(found);
-		}
+		_closeHandshakeConnection(connection);
 	}
 	void PublicationSourceTrait::_onServerUnbinding()
 	{
-		for (const auto &[id, connection] : _connections)
-		{
-			closePeer(connection.peer);
-		}
-		_connections.clear();
-	}
-	void PublicationSourceTrait::_receiveHello(spk::ConnectionID connection, const spk::Message &message)
-	{
-		const auto hello = _protocol.decodeHandshake(message);
-		auto found = _connections.find(connection);
-		if (found != _connections.end() && (found->second.token != hello.token || !_findSession(found->second.peer)))
-		{
-			closePeer(found->second.peer);
-			_connections.erase(found);
-		}
-		if (!_connections.contains(connection))
-		{
-			const auto peer = PeerID::generate();
-			(void)openPeer(peer);
-			try
-			{
-				_connections.emplace(connection, Connection{peer, hello.token});
-			} catch (...)
-			{
-				closePeer(peer);
-				throw;
-			}
-		}
-		const auto peer = _connections.at(connection).peer;
-		(void)_sendTo(connection, _protocol.encodeHandshake(hello.token, _peerSession(peer)));
+		_clearServerHandshake();
 	}
 	void PublicationSourceTrait::_onServerMessage(const spk::ReceivedMessage &received)
 	{
 		if (_protocol.kind(received.message) == Protocol::Kind::Hello)
 		{
-			_receiveHello(received.emitter, received.message);
+			_receiveHello(received.emitter, _protocol.decodeHandshake(received.message).token);
 		}
 		else if (auto peer = peerID(received.emitter))
 		{
@@ -89,14 +71,8 @@ namespace spk::Network
 		{
 			throw spk::Exception("Publication source has no transport");
 		}
-		for (const auto &[connection, binding] : _connections)
-		{
-			if (binding.peer == peer)
-			{
-				return _sendTo(connection, message);
-			}
-		}
-		return false;
+		const auto connection = _peerConnection(peer);
+		return connection && _sendTo(*connection, message);
 	}
 	void PublicationSourceTrait::_requestObject(PeerID peer, const Request &request)
 	{
@@ -121,8 +97,7 @@ namespace spk::Network
 	}
 	std::optional<PeerID> PublicationSourceTrait::peerID(spk::ConnectionID connection) const
 	{
-		auto found = _connections.find(connection);
-		return found == _connections.end() || !_findSession(found->second.peer) ? std::nullopt : std::optional{found->second.peer};
+		return _handshakePeerID(connection);
 	}
 	bool PublicationSourceTrait::receiveMessage(PeerID peer, const spk::Message &message)
 	{

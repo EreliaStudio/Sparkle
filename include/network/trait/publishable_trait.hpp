@@ -8,7 +8,7 @@ namespace spk::Network
 	class PublishableTrait : public spk::VersionedTrait
 	{
 		std::shared_ptr<void> _lifetime = std::make_shared<int>(0);
-		friend class PublishedObjectCollectionTrait;
+		friend class PublishedObjectObservationTrait;
 
 	protected:
 		virtual void _writeNetworkState(spk::Message::Writer &writer) const = 0;
