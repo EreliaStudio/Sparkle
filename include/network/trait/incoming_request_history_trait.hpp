@@ -1,5 +1,6 @@
 #pragma once
 #include "network/replication/types.hpp"
+#include "network/message.hpp"
 #include <map>
 #include <cstdint>
 
