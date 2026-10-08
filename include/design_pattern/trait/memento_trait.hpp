@@ -7,61 +7,44 @@
 namespace spk
 {
 	template <typename TObject>
-	class MementoTrait;
-}
-
-namespace spk::Memento
-{
-	template <typename TState>
-	class Snapshot final
-	{
-	private:
-		TState _state;
-
-		template <typename TObject>
-			requires std::default_initializable<TState>
-		explicit Snapshot(const TObject &object) :
-			_state()
-		{
-			_state.saveFrom(object);
-		}
-
-		template <typename TObject>
-		void loadInto(TObject &object) const
-		{
-			_state.loadInto(object);
-		}
-
-		template <typename>
-		friend class spk::MementoTrait;
-
-	public:
-		using State = TState;
-
-		[[nodiscard]] const State &state() const noexcept
-		{
-			return _state;
-		}
-	};
-}
-
-namespace spk
-{
-	// CRTP refers to the object, not to its (possibly nested) snapshot types.
-	template <typename TObject>
 	class MementoTrait
 	{
 	public:
 		template <typename TState>
-		[[nodiscard]] Memento::Snapshot<TState> save() const
+		class Snapshot final
 		{
-			return Memento::Snapshot<TState>(static_cast<const TObject &>(*this));
+		private:
+			TState _state;
+
+			explicit Snapshot(TState state) :
+				_state(std::move(state))
+			{
+			}
+
+			friend class MementoTrait<TObject>;
+
+		public:
+			using State = TState;
+
+			[[nodiscard]] const State &state() const noexcept
+			{
+				return _state;
+			}
+		};
+
+		template <typename TState>
+			requires std::default_initializable<TState>
+		[[nodiscard]] Snapshot<TState> save() const
+		{
+			TState state{};
+			state.saveFrom(static_cast<const TObject &>(*this));
+			return Snapshot<TState>(std::move(state));
 		}
 
 		template <typename TState>
-		void load(const Memento::Snapshot<TState> &snapshot)
+		void load(const Snapshot<TState> &snapshot)
 		{
-			snapshot.loadInto(static_cast<TObject &>(*this));
+			snapshot._state.loadInto(static_cast<TObject &>(*this));
 		}
 
 		template <typename TState, typename TOperation>
