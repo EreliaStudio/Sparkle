@@ -56,7 +56,7 @@ namespace spk::Network
 		_authorizer = std::move(authorizer);
 	}
 
-	ReplicatedComponent *ReplicationSystem::find(const spk::UUID &id) const
+	ReplicatedComponent *ReplicationSystem::find(const spk::UUID &id)
 	{
 		if (engine() == nullptr)
 			return nullptr;
