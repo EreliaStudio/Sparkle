@@ -34,7 +34,7 @@ namespace spk::Network
 		std::map<spk::UUID, std::uint64_t> _received;
 		Authorizer _authorizer;
 
-		[[nodiscard]] ReplicatedComponent *find(const spk::UUID &id) const;
+		[[nodiscard]] ReplicatedComponent *find(const spk::UUID &id);
 		[[nodiscard]] spk::Message stateMessage(const ReplicatedComponent &component) const;
 		void sendUpdates();
 		void onRequest(const spk::ReceivedMessage &incoming);
