@@ -206,7 +206,7 @@ namespace spk::Network
 
 	void ClientReplicationSystem::onState(const spk::Message &message)
 	{
-		auto reader = message.reader();
+		auto reader = message.payload().reader();
 		if (reader.size() < sizeof(spk::UUID::Storage) + sizeof(std::uint64_t))
 		{
 			return;
