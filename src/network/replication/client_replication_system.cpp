@@ -14,7 +14,9 @@ namespace spk::Network
 		for (auto &[identifier, weak] : subscriptions)
 		{
 			if (auto entry = weak.lock())
+			{
 				entry->valid = false;
+			}
 		}
 		subscriptions.clear();
 		client = nullptr;
@@ -47,7 +49,9 @@ namespace spk::Network
 	{
 		auto owner = _owner.lock();
 		if (!owner || !_entry)
+		{
 			return false;
+		}
 		const std::scoped_lock lock(owner->mutex);
 		return _entry->valid && owner->client != nullptr;
 	}
@@ -56,10 +60,14 @@ namespace spk::Network
 	{
 		auto owner = _owner.lock();
 		if (!owner || !_entry)
+		{
 			throw spk::Exception("Interest subscription is no longer valid.");
+		}
 		const std::scoped_lock lock(owner->mutex);
 		if (!_entry->valid || owner->client == nullptr)
+		{
 			throw spk::Exception("Interest subscription is no longer valid.");
+		}
 		spk::Message::Writer writer(owner->updateType);
 		writer << _entry->identifier.bytes() << interest.type().bytes();
 		interest.serialize(writer);
@@ -107,7 +115,9 @@ namespace spk::Network
 	void ClientReplicationSystem::bind(spk::Client &client)
 	{
 		if (_client == &client)
+		{
 			return;
+		}
 		unbind();
 		auto state = client.messageDispatcher().subscribeTo(stateType(),
 			[this](const spk::Message &message) { onState(message); });
@@ -150,7 +160,9 @@ namespace spk::Network
 	ClientReplicationSystem::Subscription ClientReplicationSystem::subscribe(const Interest &interest)
 	{
 		if (_client == nullptr || !_client->isConnected())
+		{
 			throw spk::Exception("Client must be connected to subscribe to an interest.");
+		}
 		auto entry = std::make_shared<SubscriptionEntry>();
 		entry->identifier = spk::UUID::generate();
 		Subscription result(_subscriptions, entry);
@@ -158,7 +170,10 @@ namespace spk::Network
 			const std::scoped_lock lock(_subscriptions->mutex);
 			_subscriptions->subscriptions.emplace(entry->identifier, entry);
 		}
-		try { result.update(interest); }
+		try
+		{
+			result.update(interest);
+		}
 		catch (...) { result.cancel(); throw; }
 		return result;
 	}
@@ -166,12 +181,16 @@ namespace spk::Network
 	void ClientReplicationSystem::resetReceivedRevisions()
 	{
 		if (engine() == nullptr)
+		{
 			return;
+		}
 		const auto &components = spk::Registry<spk::Component, spk::Engine *>::instance().elements(engine());
 		for (spk::Component *item : components)
 		{
 			if (auto *component = dynamic_cast<ClientReplicatedComponent *>(item))
+			{
 				component->resetReceivedRevision();
+			}
 		}
 	}
 
@@ -184,32 +203,44 @@ namespace spk::Network
 	{
 		auto reader = message.reader();
 		if (reader.size() < sizeof(spk::UUID::Storage) + sizeof(std::uint64_t))
+		{
 			return;
+		}
 		spk::UUID::Storage bytes{};
 		std::uint64_t revision = 0;
 		reader >> bytes >> revision;
 		auto *component = dynamic_cast<ClientReplicatedComponent *>(find(spk::UUID(bytes)));
 		if (component != nullptr)
+		{
 			component->apply(reader, revision);
+		}
 	}
 
 	void ClientReplicationSystem::onComponentRemoval(const spk::Message &message)
 	{
 		auto reader = message.reader();
 		if (reader.size() != sizeof(spk::UUID::Storage))
+		{
 			return;
+		}
 		spk::UUID::Storage bytes{};
 		reader >> bytes;
 		auto *component = dynamic_cast<ClientReplicatedComponent *>(find(spk::UUID(bytes)));
 		if (component != nullptr)
+		{
 			component->leaveInterest();
+		}
 	}
 
 	void ClientReplicationSystem::_updateState(spk::UpdateContext &)
 	{
 		if (_resetPending.exchange(false, std::memory_order_acq_rel))
+		{
 			resetReceivedRevisions();
+		}
 		if (_client != nullptr)
+		{
 			_client->treatMessages();
+		}
 	}
 }
