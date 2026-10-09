@@ -19,6 +19,12 @@ namespace spk::Network
 		_receivedRevision.reset();
 	}
 
+	void ClientReplicatedComponent::leaveInterest()
+	{
+		_onInterestLost();
+		resetReceivedRevision();
+	}
+
 	void ClientReplicatedComponent::apply(const spk::Message::Reader &reader)
 	{
 		_readNetworkState(reader);
