@@ -17,7 +17,10 @@ namespace
 	public:
 		std::int32_t threshold = 0;
 
-		explicit ThresholdInterest(std::int32_t value) : threshold(value) {}
+		explicit ThresholdInterest(std::int32_t value) :
+			threshold(value)
+		{
+		}
 
 		[[nodiscard]] spk::UUID type() const override
 		{
@@ -47,7 +50,8 @@ namespace
 	class ThresholdEvaluator final : public spk::Network::InterestEvaluator
 	{
 	public:
-		[[nodiscard]] bool matches(const spk::Network::Interest &interest,
+		[[nodiscard]] bool matches(
+			const spk::Network::Interest &interest,
 			const spk::Network::ServerReplicatedComponent &component,
 			spk::ConnectionID) const override
 		{
@@ -67,7 +71,9 @@ namespace
 			std::int32_t threshold = 0;
 			reader >> typeBytes >> threshold;
 			if (spk::UUID(typeBytes) != ThresholdInterest(0).type())
+			{
 				return nullptr;
+			}
 			return std::make_unique<ThresholdInterest>(threshold);
 		}
 	};
