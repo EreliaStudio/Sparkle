@@ -94,7 +94,6 @@ namespace spk::Network
 		return _refreshInterval;
 	}
 
-
 	void ServerReplicationSystem::setComponentsPerSection(std::uint32_t count)
 	{
 		if (count == 0)
