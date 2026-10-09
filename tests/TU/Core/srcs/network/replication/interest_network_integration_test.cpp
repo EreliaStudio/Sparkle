@@ -123,6 +123,7 @@ namespace
 		spk::Engine serverEngine;
 		spk::Engine firstEngine;
 		spk::Engine secondEngine;
+		spk::UUID componentID = spk::UUID::generate();
 		ValueReplicationServer &serverSystem;
 		spk::Network::ClientReplicationSystem &firstSystem;
 		spk::Network::ClientReplicationSystem &secondSystem;
@@ -130,7 +131,6 @@ namespace
 		ClientValue &firstReplica;
 		ClientValue &secondReplica;
 		spk::UpdateContext context{};
-		spk::UUID componentID = spk::UUID::generate();
 
 		NetworkScenario() :
 			serverSystem(serverEngine.addSystem<ValueReplicationServer>()),
