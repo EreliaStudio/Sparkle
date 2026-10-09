@@ -37,65 +37,46 @@ namespace
 	class ClientHealth final : public spk::Network::ClientReplicatedComponent,
 							   public spk::MementoTrait<ClientHealth>
 	{
-	public:
-		class State
-		{
-		private:
-			int _health = 0;
-
-			void capture(const ClientHealth &component)
-			{
-				_health = component._health;
-			}
-
-			void restore(ClientHealth &component) const noexcept
-			{
-				component._health = _health;
-			}
-
-			friend class spk::MementoTrait<ClientHealth>;
-		};
-
-		class MinimalState
-		{
-		private:
-			int _health = 0;
-
-			void capture(const ClientHealth &component)
-			{
-				_health = component._health;
-			}
-
-			void restore(ClientHealth &component) const noexcept
-			{
-				component._health = _health;
-			}
-
-			friend class spk::MementoTrait<ClientHealth>;
-		};
-
 	private:
 		int _health = 100;
-		int _pendingHealth = 100;
 		bool _throwAfterRead = false;
 
 	protected:
-		void _decodeNetworkState(const spk::Message::Reader &reader) override
+		[[nodiscard]] spk::ByteStream _decodeByteStream(const spk::Message::Reader &reader) const override
 		{
-			reader >> _pendingHealth;
-			if (_throwAfterRead)
-			{
-				throw std::runtime_error("invalid state");
-			}
+			int decoded = 0;
+			reader >> decoded;
+			spk::ByteStream::Writer writer;
+			writer << decoded;
+			return std::move(writer).build();
 		}
 
-		void _commitNetworkState() noexcept override
+		[[nodiscard]] bool _validateByteStream(const spk::ByteStream &state) const override
 		{
-			_health = _pendingHealth;
+			if (_throwAfterRead || state.size() != sizeof(int))
+				return false;
+			int decoded = 0;
+			state.reader() >> decoded;
+			return decoded >= 0;
+		}
+
+		void _commitByteStream(const spk::ByteStream &state) override
+		{
+			state.reader() >> _health;
 		}
 
 	public:
 		using ClientReplicatedComponent::ClientReplicatedComponent;
+
+		void saveMemento(spk::ByteStream::Writer &writer) const
+		{
+			writer << _health;
+		}
+
+		void loadMemento(const spk::ByteStream::Slice &reader)
+		{
+			reader >> _health;
+		}
 
 		void setHealth(int value)
 		{
@@ -114,11 +95,11 @@ namespace
 	};
 }
 
-TEST(EngineReplication, TypedMementoSupportsNestedMultipleSnapshots)
+TEST(EngineReplication, SerializedMementoSupportsMultipleSnapshots)
 {
 	ClientHealth health(spk::UUID::generate());
-	auto full = health.save<ClientHealth::State>();
-	auto minimal = health.save<ClientHealth::MinimalState>();
+	auto full = health.save();
+	auto minimal = health.save();
 	health.setHealth(8);
 	health.load(full);
 	EXPECT_EQ(health.health(), 100);
@@ -137,7 +118,7 @@ TEST(EngineReplication, FailedDecodeRestoresPriorState)
 	authority.capture(writer);
 	auto message = std::move(writer).build();
 	replica.rejectNextRead(true);
-	EXPECT_THROW(replica.apply(message.reader(), 1), std::runtime_error);
+	EXPECT_THROW(replica.apply(message.reader(), 1), spk::Exception);
 	EXPECT_EQ(replica.health(), 100);
 	replica.rejectNextRead(false);
 	EXPECT_NO_THROW(replica.apply(message.reader(), 1));
@@ -212,7 +193,7 @@ TEST(EngineReplication, FailedApplicationDoesNotAdvanceReceivedRevision)
 	writer << 25;
 	auto message = std::move(writer).build();
 	component.rejectNextRead(true);
-	EXPECT_THROW(component.apply(message.reader(), 8), std::runtime_error);
+	EXPECT_THROW(component.apply(message.reader(), 8), spk::Exception);
 	EXPECT_FALSE(component.receivedRevision().has_value());
 	EXPECT_EQ(component.health(), 100);
 	component.rejectNextRead(false);
