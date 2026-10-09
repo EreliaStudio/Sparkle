@@ -4,8 +4,6 @@
 #include "network/replication/client_replicated_component.hpp"
 #include "network/client.hpp"
 
-#include <map>
-
 namespace spk::Network
 {
 	class ClientReplicationSystem final : public ReplicationSystem
@@ -14,9 +12,9 @@ namespace spk::Network
 		spk::Client *_client = nullptr;
 		spk::Client::MessageDispatcher::Contract _stateContract;
 		spk::Client::DisconnectionContract _disconnectionContract;
-		std::map<spk::UUID, std::uint64_t> _received;
 
 		void onState(const spk::Message &message);
+		void resetReceivedRevisions();
 
 	protected:
 		void _updateState(spk::UpdateContext &) override;
