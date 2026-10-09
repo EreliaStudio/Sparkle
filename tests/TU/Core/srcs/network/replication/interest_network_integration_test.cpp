@@ -683,3 +683,53 @@ TEST(InterestNetwork, SubscribeAndCancelWithoutSystemLeavesSafeHandle)
 	client.disconnect();
 	server.stop();
 }
+
+
+TEST(InterestNetwork, MultipleComponentsAreBatchedIntoOneSection)
+{
+	NetworkScenario scenario;
+	scenario.serverSystem.setComponentsPerSection(8);
+	const spk::UUID secondID = spk::UUID::generate();
+	auto &secondSource = scenario.serverEngine.root().addComponent<ServerValue>(secondID);
+	auto &secondReplica = scenario.firstEngine.root().addComponent<ClientValue>(secondID);
+	scenario.source.change(31);
+	secondSource.change(47);
+	auto subscription = scenario.firstSystem.subscribe(ValueInterest(0));
+	ASSERT_TRUE(scenario.await([&] {
+		return scenario.firstReplica.value() == 31 && secondReplica.value() == 47;
+	}));
+	EXPECT_EQ(scenario.firstReplica.applications(), 1u);
+	EXPECT_EQ(secondReplica.applications(), 1u);
+}
+
+TEST(InterestNetwork, PartialLastSectionPublishesEveryComponent)
+{
+	NetworkScenario scenario;
+	scenario.serverSystem.setComponentsPerSection(1);
+	const spk::UUID secondID = spk::UUID::generate();
+	const spk::UUID thirdID = spk::UUID::generate();
+	auto &secondSource = scenario.serverEngine.root().addComponent<ServerValue>(secondID);
+	auto &thirdSource = scenario.serverEngine.root().addComponent<ServerValue>(thirdID);
+	auto &secondReplica = scenario.firstEngine.root().addComponent<ClientValue>(secondID);
+	auto &thirdReplica = scenario.firstEngine.root().addComponent<ClientValue>(thirdID);
+	scenario.source.change(41);
+	secondSource.change(52);
+	thirdSource.change(63);
+	auto subscription = scenario.firstSystem.subscribe(ValueInterest(0));
+	ASSERT_TRUE(scenario.await([&] {
+		return scenario.firstReplica.value() == 41 && secondReplica.value() == 52 && thirdReplica.value() == 63;
+	}));
+	EXPECT_EQ(scenario.firstReplica.applications(), 1u);
+	EXPECT_EQ(secondReplica.applications(), 1u);
+	EXPECT_EQ(thirdReplica.applications(), 1u);
+}
+
+TEST(InterestNetwork, SectionCapacityCanBeChangedAndRejectsZero)
+{
+	NetworkScenario scenario;
+	EXPECT_EQ(scenario.serverSystem.componentsPerSection(), 16u);
+	scenario.serverSystem.setComponentsPerSection(1);
+	EXPECT_EQ(scenario.serverSystem.componentsPerSection(), 1u);
+	EXPECT_THROW(scenario.serverSystem.setComponentsPerSection(0), spk::Exception);
+	EXPECT_EQ(scenario.serverSystem.componentsPerSection(), 1u);
+}
