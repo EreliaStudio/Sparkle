@@ -8,108 +8,64 @@
 
 namespace spk
 {
-	Message::Reader::Reader(
-		std::shared_ptr<const Storage::Lease> storage,
-		std::size_t offset) :
-		_storage(std::move(storage))
+	Message::Reader::Reader(spk::ByteStream payload, std::size_t offset) :
+		_slice(payload.reader())
 	{
-		_seek(offset);
-	}
-
-	std::size_t Message::Reader::_size() const noexcept
-	{
-		if (_storage == nullptr || static_cast<bool>(*_storage) == false)
-		{
-			return 0;
-		}
-
-		return (**_storage).size();
-	}
-
-	void Message::Reader::_seek(std::size_t offset) const
-	{
-		if (offset > _size())
-		{
-			throw Exception("Unable to seek beyond the end of a network message.");
-		}
-		_readOffset = offset;
+		_slice.seek(offset);
 	}
 
 	void Message::Reader::reset() const noexcept
 	{
-		_readOffset = 0;
+		_slice.reset();
 	}
 
 	void Message::Reader::seek(std::size_t offset) const
 	{
-		_seek(offset);
+		_slice.seek(offset);
 	}
 
-	void Message::Reader::skip(std::size_t size) const
+	void Message::Reader::skip(std::size_t count) const
 	{
-		const std::size_t payloadSize = _size();
-		if (
-			_readOffset > payloadSize ||
-			size > payloadSize - _readOffset)
-		{
-			throw Exception("Unable to skip beyond the end of a network message.");
-		}
-		_readOffset += size;
+		_slice.skip(count);
 	}
 
-	void Message::Reader::pull(void *data, std::size_t size) const
+	void Message::Reader::pull(void *destination, std::size_t count) const
 	{
-		readAt(_readOffset, data, size);
-		_readOffset += size;
+		_slice.pull(destination, count);
 	}
 
-	void Message::Reader::readAt(
-		std::size_t offset,
-		void *destination,
-		std::size_t size) const
+	void Message::Reader::readAt(std::size_t offset, void *destination, std::size_t count) const
 	{
-		const auto bytes = data();
-		if (offset > bytes.size() || size > bytes.size() - offset)
+		if (offset > _slice.size() || count > _slice.size() - offset)
 		{
-			throw Exception("Unable to read outside a network message payload.");
+			throw spk::Exception("Unable to read outside a network message payload.");
 		}
-		if (size != 0)
-		{
-			std::memcpy(destination, bytes.data() + offset, size);
-		}
+		_slice.slice(offset, offset + count).pull(destination, count);
 	}
 
 	std::size_t Message::Reader::readOffset() const noexcept
 	{
-		return _readOffset;
+		return _slice.readOffset();
 	}
 
 	std::span<const std::byte> Message::Reader::data() const noexcept
 	{
-		if (_storage == nullptr || static_cast<bool>(*_storage) == false)
-		{
-			return {};
-		}
-
-		const Storage &storage = **_storage;
-		return std::span<const std::byte>(storage.data(), storage.size());
+		return _slice.data();
 	}
 
 	std::size_t Message::Reader::size() const noexcept
 	{
-		return _size();
+		return _slice.size();
 	}
 
 	bool Message::Reader::empty() const noexcept
 	{
-		return _size() == 0;
+		return _slice.empty();
 	}
 
 	const Message::Reader &Message::Reader::operator>>(std::string &value) const
 	{
-		const std::uint32_t size = get<std::uint32_t>();
-		value.resize(size);
-		pull(value.data(), size);
+		_slice >> value;
 		return *this;
 	}
 
@@ -378,6 +334,6 @@ namespace spk
 
 	Message::Reader Message::reader(std::size_t offset) const
 	{
-		return Reader(_storage, offset);
+		return Reader(payload(), offset);
 	}
 }
