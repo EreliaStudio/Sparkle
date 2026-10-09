@@ -57,12 +57,14 @@ namespace spk::Network
 	private:
 		spk::Client *_client = nullptr;
 		spk::Client::MessageDispatcher::Contract _stateContract;
+		spk::Client::MessageDispatcher::Contract _componentRemovalContract;
 		spk::Client::DisconnectionContract _disconnectionContract;
 		spk::Client::ConnectionContract _connectionContract;
 		std::atomic_bool _resetPending{true};
 		std::shared_ptr<SubscriptionState> _subscriptions = std::make_shared<SubscriptionState>();
 
 		void onState(const spk::Message &message);
+		void onComponentRemoval(const spk::Message &message);
 		void resetReceivedRevisions();
 
 	protected:
