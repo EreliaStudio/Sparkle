@@ -37,14 +37,14 @@ namespace spk
 		[[nodiscard]] Snapshot<TState> save() const
 		{
 			TState state{};
-			state.saveFrom(static_cast<const TObject &>(*this));
+			state.capture(static_cast<const TObject &>(*this));
 			return Snapshot<TState>(std::move(state));
 		}
 
 		template <typename TState>
 		void load(const Snapshot<TState> &snapshot)
 		{
-			snapshot._state.loadInto(static_cast<TObject &>(*this));
+			snapshot._state.restore(static_cast<TObject &>(*this));
 		}
 
 		template <typename TState, typename TOperation>
