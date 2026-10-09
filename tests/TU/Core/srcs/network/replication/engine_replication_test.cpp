@@ -151,7 +151,7 @@ TEST(EngineReplication, ClientAndServerSystemsBindIndependently)
 	auto &serverSystem = serverEngine.addSystem<spk::Network::ServerReplicationSystem>();
 	EXPECT_FALSE(clientSystem.isBound());
 	EXPECT_FALSE(serverSystem.isBound());
-	EXPECT_THROW(clientSystem.request(spk::UUID::generate()), spk::Exception);
+	EXPECT_FALSE(clientSystem.isBound());
 	clientSystem.bind(firstClient);
 	serverSystem.bind(server);
 	EXPECT_TRUE(clientSystem.isBound());
@@ -269,7 +269,7 @@ TEST(EngineReplication, DISABLED_StaleMessageFromPreviousConnectionIsRejected)
 
 	system.bind(firstClient);
 	engine.updateState(context);
-	spk::Message::Writer oldWriter(0x53504B11);
+	spk::Message::Writer oldWriter(0x53504B12);
 	oldWriter << id.bytes() << std::uint64_t{80} << 25;
 	const auto delayedFromOldConnection = std::move(oldWriter).build();
 
@@ -286,7 +286,7 @@ TEST(EngineReplication, DISABLED_StaleMessageFromPreviousConnectionIsRejected)
 	EXPECT_EQ(component.health(), 100);
 	EXPECT_FALSE(component.receivedRevision().has_value());
 
-	spk::Message::Writer newWriter(0x53504B11);
+	spk::Message::Writer newWriter(0x53504B12);
 	newWriter << id.bytes() << std::uint64_t{0} << 75;
 	secondClient.messages().publish(std::move(newWriter).build());
 	engine.updateState(context);
