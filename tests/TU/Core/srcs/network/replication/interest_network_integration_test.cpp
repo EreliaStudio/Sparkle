@@ -432,3 +432,97 @@ TEST(InterestNetwork, UnbindingClientInvalidatesAllSubscriptions)
 	EXPECT_NO_THROW(first.cancel());
 	EXPECT_NO_THROW(second.cancel());
 }
+
+TEST(InterestNetwork, ServerRejectsUnknownInterestType)
+{
+	NetworkScenario scenario;
+	scenario.source.change(30);
+	spk::Message::Writer writer(0x53504B10);
+	writer << spk::UUID::generate().bytes();
+	writer << spk::UUID::generate().bytes();
+	writer << std::int32_t{0};
+	scenario.firstClient.send(std::move(writer).build());
+	for (int i = 0; i < 15; ++i)
+	{
+		scenario.tick();
+		std::this_thread::sleep_for(2ms);
+	}
+	EXPECT_EQ(scenario.firstReplica.applications(), 0u);
+}
+
+TEST(InterestNetwork, ServerIgnoresTruncatedInterestUpdate)
+{
+	NetworkScenario scenario;
+	scenario.source.change(30);
+	spk::Message::Writer writer(0x53504B10);
+	writer << spk::UUID::generate().bytes();
+	scenario.firstClient.send(std::move(writer).build());
+	for (int i = 0; i < 15; ++i)
+	{
+		scenario.tick();
+		std::this_thread::sleep_for(2ms);
+	}
+	EXPECT_EQ(scenario.firstReplica.applications(), 0u);
+}
+
+TEST(InterestNetwork, ServerAuthorizationDeniesMatchingInterest)
+{
+	NetworkScenario scenario;
+	scenario.serverSystem.setRequestAuthorizer(
+		[](spk::ConnectionID, const spk::Network::ServerReplicatedComponent &) {
+			return false;
+		});
+	scenario.source.change(30);
+	auto subscription = scenario.firstSystem.subscribe(ValueInterest(0));
+	for (int i = 0; i < 15; ++i)
+	{
+		scenario.tick();
+		std::this_thread::sleep_for(2ms);
+	}
+	EXPECT_EQ(scenario.firstReplica.applications(), 0u);
+	EXPECT_TRUE(subscription.isValid());
+}
+
+TEST(InterestNetwork, AuthorizingPreviouslyDeniedInterestPublishesCurrentState)
+{
+	NetworkScenario scenario;
+	scenario.serverSystem.setRequestAuthorizer(
+		[](spk::ConnectionID, const spk::Network::ServerReplicatedComponent &) {
+			return false;
+		});
+	scenario.source.change(30);
+	auto subscription = scenario.firstSystem.subscribe(ValueInterest(0));
+	for (int i = 0; i < 10; ++i)
+	{
+		scenario.tick();
+		std::this_thread::sleep_for(2ms);
+	}
+	EXPECT_EQ(scenario.firstReplica.applications(), 0u);
+	scenario.serverSystem.setRequestAuthorizer(
+		[](spk::ConnectionID, const spk::Network::ServerReplicatedComponent &) {
+			return true;
+		});
+	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.value() == 30; }));
+}
+
+TEST(InterestNetwork, ZeroRevisionIsValidInitialState)
+{
+	NetworkScenario scenario;
+	auto subscription = scenario.firstSystem.subscribe(ValueInterest(0));
+	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.value() == 0; }));
+	ASSERT_TRUE(scenario.firstReplica.receivedRevision().has_value());
+	EXPECT_EQ(*scenario.firstReplica.receivedRevision(), 0u);
+}
+
+TEST(InterestNetwork, NewSubscriptionAfterComponentLeavingViewGetsFreshState)
+{
+	NetworkScenario scenario;
+	scenario.source.change(30);
+	auto interest = scenario.firstSystem.subscribe(ValueInterest(20));
+	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.value() == 30; }));
+	interest.cancel();
+	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.removals() == 1; }));
+	auto secondInterest = scenario.firstSystem.subscribe(ValueInterest(20));
+	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.applications() == 2; }));
+	EXPECT_EQ(scenario.firstReplica.value(), 30);
+}
