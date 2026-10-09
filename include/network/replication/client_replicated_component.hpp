@@ -1,6 +1,7 @@
 #pragma once
 
 #include "network/message.hpp"
+#include "container/byte_stream.hpp"
 #include "network/replication/replicated_component.hpp"
 
 #include <cstdint>
@@ -14,10 +15,9 @@ namespace spk::Network
 		std::optional<std::uint64_t> _receivedRevision;
 
 	protected:
-		// Decode into a private pending state; never mutate the live state here.
-		virtual void _decodeNetworkState(const spk::Message::Reader &reader) = 0;
-		// Commit validated pending state without throwing.
-		virtual void _commitNetworkState() noexcept = 0;
+		[[nodiscard]] virtual spk::ByteStream _decodeByteStream(const spk::Message::Reader &reader) const = 0;
+		[[nodiscard]] virtual bool _validateByteStream(const spk::ByteStream &state) const = 0;
+		virtual void _commitByteStream(const spk::ByteStream &state) = 0;
 		virtual void _onInterestLost()
 		{
 		}
