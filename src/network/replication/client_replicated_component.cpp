@@ -33,10 +33,14 @@ namespace spk::Network
 	void ClientReplicatedComponent::apply(const spk::Message::Reader &reader, std::uint64_t revision)
 	{
 		if (_receivedRevision && revision <= *_receivedRevision)
+		{
 			return;
+		}
 		_readNetworkState(reader);
 		if (reader.readOffset() != reader.size())
+		{
 			throw spk::Exception("Replication payload contains trailing bytes.");
+		}
 		_receivedRevision = revision;
 	}
 }
