@@ -1,5 +1,7 @@
 #include "network/replication/client_replication_system.hpp"
 
+#include "engine/engine.hpp"
+#include "engine/registry.hpp"
 #include "exception.hpp"
 
 #include <utility>
@@ -24,7 +26,7 @@ namespace spk::Network
 		auto stateContract = client.messageDispatcher().subscribeTo(stateType(),
 			[this](const spk::Message &message) { onState(message); });
 		auto disconnectionContract = client.subscribeToDisconnection([this] {
-			_received.clear();
+			resetReceivedRevisions();
 		});
 		_stateContract = std::move(stateContract);
 		_disconnectionContract = std::move(disconnectionContract);
@@ -36,7 +38,19 @@ namespace spk::Network
 		_stateContract.resign();
 		_disconnectionContract.resign();
 		_client = nullptr;
-		_received.clear();
+		resetReceivedRevisions();
+	}
+
+	void ClientReplicationSystem::resetReceivedRevisions()
+	{
+		if (engine() == nullptr)
+			return;
+		const auto &components = spk::Registry<spk::Component, spk::Engine *>::instance().elements(engine());
+		for (spk::Component *item : components)
+		{
+			if (auto *component = dynamic_cast<ClientReplicatedComponent *>(item))
+				component->resetReceivedRevision();
+		}
 	}
 
 	bool ClientReplicationSystem::isBound() const noexcept
@@ -52,17 +66,9 @@ namespace spk::Network
 		spk::UUID::Storage bytes{};
 		std::uint64_t revision = 0;
 		reader >> bytes >> revision;
-		const spk::UUID identifier(bytes);
-		auto *component = dynamic_cast<ClientReplicatedComponent *>(find(identifier));
-		if (component == nullptr)
-			return;
-		auto previous = _received.find(identifier);
-		if (previous != _received.end() && revision <= previous->second)
-			return;
-		component->apply(reader);
-		if (reader.readOffset() != reader.size())
-			throw spk::Exception("Replication payload contains trailing bytes.");
-		_received[identifier] = revision;
+		auto *component = dynamic_cast<ClientReplicatedComponent *>(find(spk::UUID(bytes)));
+		if (component != nullptr)
+			component->apply(reader, revision);
 	}
 
 	void ClientReplicationSystem::_updateState(spk::UpdateContext &)
