@@ -4,16 +4,16 @@
 #include "network/replication/client_replicated_component.hpp"
 #include "network/replication/interest.hpp"
 #include "network/replication/replication_batch.hpp"
+#include "network/replication/replication_system.hpp"
 #include "threading/task.hpp"
 #include "threading/worker_pool.hpp"
-#include "network/replication/replication_system.hpp"
 
 #include <atomic>
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <vector>
-#include <cstdint>
 
 namespace spk::Network
 {
