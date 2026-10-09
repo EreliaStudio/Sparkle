@@ -86,7 +86,7 @@ namespace
 		std::size_t _removals = 0;
 
 	protected:
-		[[nodiscard]] spk::ByteStream _decodeByteStream(const spk::Message::Reader &reader) const override
+		[[nodiscard]] spk::ByteStream _decodeByteStream(const spk::ByteStream::Slice &reader) const override
 		{
 			std::int32_t value = 0;
 			reader >> value;
