@@ -2,6 +2,7 @@
 
 #include "container/byte_stream.hpp"
 
+#include <exception>
 #include <functional>
 #include <utility>
 
@@ -10,6 +11,26 @@ namespace spk
 	template <typename TObject>
 	class MementoTrait
 	{
+private:
+		void _restore(const spk::ByteStream &snapshot)
+		{
+			const auto previous = save();
+			try
+			{
+				_restore(snapshot);
+			} catch (...)
+			{
+				try
+				{
+					_restore(previous);
+				} catch (...)
+				{
+					throw spk::Exception("Memento restoration and rollback both failed.");
+				}
+				throw;
+			}
+		}
+
 	public:
 		[[nodiscard]] spk::ByteStream save() const
 		{
@@ -37,7 +58,13 @@ namespace spk
 				std::invoke(std::forward<TOperation>(operation));
 			} catch (...)
 			{
-				load(snapshot);
+				try
+				{
+					_restore(snapshot);
+				} catch (...)
+				{
+					throw spk::Exception("Memento transaction rollback failed.");
+				}
 				throw;
 			}
 		}
