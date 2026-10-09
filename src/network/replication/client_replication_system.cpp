@@ -5,6 +5,7 @@
 #include "exception.hpp"
 
 #include <utility>
+#include <exception>
 
 namespace spk::Network
 {
@@ -127,6 +128,7 @@ namespace spk::Network
 		});
 		auto disconnected = client.subscribeToDisconnection([this] {
 			_subscriptions->invalidate();
+			_generation.fetch_add(1, std::memory_order_acq_rel);
 			_resetPending.store(true, std::memory_order_release);
 		});
 		auto connected = client.subscribeToConnection([this, &client] {
@@ -204,20 +206,85 @@ namespace spk::Network
 		return _client != nullptr;
 	}
 
+	void ClientReplicationSystem::setWorkerPool(std::shared_ptr<spk::WorkerPool> pool)
+	{
+		_pendingSections.clear();
+		_workerPool = std::move(pool);
+	}
+
+	void ClientReplicationSystem::applyRecords(const Records &records)
+	{
+		for (const auto &record : records)
+		{
+			auto *component = dynamic_cast<ClientReplicatedComponent *>(find(record.identifier));
+			if (component == nullptr)
+			{
+				continue;
+			}
+			try
+			{
+				component->apply(record.payload, record.revision);
+			} catch (const std::exception &)
+			{
+				// A malformed or rejected component cannot prevent subsequent records.
+			}
+		}
+	}
+
+	void ClientReplicationSystem::drainSections()
+	{
+		for (auto it = _pendingSections.begin(); it != _pendingSections.end();)
+		{
+			if (it->generation != _generation.load(std::memory_order_acquire))
+			{
+				it = _pendingSections.erase(it);
+				continue;
+			}
+			if (it->answer.status() == spk::Task<Records>::Status::Pending)
+			{
+				++it;
+				continue;
+			}
+			try
+			{
+				applyRecords(it->answer.get());
+			} catch (const std::exception &)
+			{
+				// A damaged section is independent of all other sections.
+			}
+			it = _pendingSections.erase(it);
+		}
+	}
+
 	void ClientReplicationSystem::onState(const spk::Message &message)
 	{
-		auto reader = message.payload().reader();
-		if (reader.size() < sizeof(spk::UUID::Storage) + sizeof(std::uint64_t))
+		try
 		{
-			return;
-		}
-		spk::UUID::Storage bytes{};
-		std::uint64_t revision = 0;
-		reader >> bytes >> revision;
-		auto *component = dynamic_cast<ClientReplicatedComponent *>(find(spk::UUID(bytes)));
-		if (component != nullptr)
+			const auto batch = ReplicationBatch::decode(message.payload());
+			const std::uint64_t generation = _generation.load(std::memory_order_acquire);
+			for (std::size_t i = 0; i < batch.sectionCount(); ++i)
+			{
+				const auto section = batch.section(i);
+				const auto count = batch.count(i);
+				if (_workerPool)
+				{
+					auto answer = _workerPool->submit([section, count] {
+						return ReplicationBatch::decodeSection(section, count);
+					});
+					_pendingSections.push_back({generation, std::move(answer)});
+					continue;
+				}
+				try
+				{
+					applyRecords(ReplicationBatch::decodeSection(section, count));
+				} catch (const std::exception &)
+				{
+					// A malformed section does not invalidate other sections.
+				}
+			}
+		} catch (const std::exception &)
 		{
-			component->apply(reader, revision);
+			// Reject malformed batch headers without mutating the engine.
 		}
 	}
 
@@ -247,5 +314,10 @@ namespace spk::Network
 		{
 			_client->treatMessages();
 		}
+		if (_resetPending.exchange(false, std::memory_order_acq_rel))
+		{
+			resetReceivedRevisions();
+		}
+		drainSections();
 	}
 }
