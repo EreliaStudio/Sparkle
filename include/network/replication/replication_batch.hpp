@@ -173,6 +173,12 @@ namespace spk::Network
 			spk::ByteStream::Slice section,
 			std::size_t expectedCount)
 		{
+			constexpr std::size_t headerSize =
+				sizeof(spk::UUID::Storage) + sizeof(std::uint64_t) + sizeof(std::uint32_t);
+			if (expectedCount > section.size() / headerSize)
+			{
+				throw spk::Exception("Replication section cannot contain the declared component count.");
+			}
 			std::vector<Record> records;
 			records.reserve(expectedCount);
 			for (std::size_t i = 0; i < expectedCount; ++i)
