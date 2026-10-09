@@ -42,7 +42,7 @@ namespace
 		bool _throwAfterRead = false;
 
 	protected:
-		[[nodiscard]] spk::ByteStream _decodeByteStream(const spk::Message::Reader &reader) const override
+		[[nodiscard]] spk::ByteStream _decodeByteStream(const spk::ByteStream::Slice &reader) const override
 		{
 			int decoded = 0;
 			reader >> decoded;
@@ -120,10 +120,10 @@ TEST(EngineReplication, FailedDecodeRestoresPriorState)
 	authority.capture(writer);
 	auto message = std::move(writer).build();
 	replica.rejectNextRead(true);
-	EXPECT_THROW(replica.apply(message.reader(), 1), spk::Exception);
+	EXPECT_THROW(replica.apply(message.payload().reader(), 1), spk::Exception);
 	EXPECT_EQ(replica.health(), 100);
 	replica.rejectNextRead(false);
-	EXPECT_NO_THROW(replica.apply(message.reader(), 1));
+	EXPECT_NO_THROW(replica.apply(message.payload().reader(), 1));
 	EXPECT_EQ(replica.health(), 20);
 }
 
@@ -168,7 +168,7 @@ TEST(EngineReplication, ClientComponentTracksRevisionAndIgnoresStaleUpdates)
 	spk::Message::Writer firstWriter(121);
 	firstWriter << 30;
 	auto first = std::move(firstWriter).build();
-	component.apply(first.reader(), 5);
+	component.apply(first.payload().reader(), 5);
 	EXPECT_EQ(component.health(), 30);
 	ASSERT_TRUE(component.receivedRevision().has_value());
 	EXPECT_EQ(*component.receivedRevision(), 5u);
@@ -176,14 +176,14 @@ TEST(EngineReplication, ClientComponentTracksRevisionAndIgnoresStaleUpdates)
 	spk::Message::Writer staleWriter(121);
 	staleWriter << 99;
 	auto stale = std::move(staleWriter).build();
-	component.apply(stale.reader(), 4);
-	component.apply(stale.reader(), 5);
+	component.apply(stale.payload().reader(), 4);
+	component.apply(stale.payload().reader(), 5);
 	EXPECT_EQ(component.health(), 30);
 	EXPECT_EQ(*component.receivedRevision(), 5u);
 
 	component.resetReceivedRevision();
 	EXPECT_FALSE(component.receivedRevision().has_value());
-	component.apply(stale.reader(), 0);
+	component.apply(stale.payload().reader(), 0);
 	EXPECT_EQ(component.health(), 99);
 	EXPECT_EQ(*component.receivedRevision(), 0u);
 }
@@ -195,11 +195,11 @@ TEST(EngineReplication, FailedApplicationDoesNotAdvanceReceivedRevision)
 	writer << 25;
 	auto message = std::move(writer).build();
 	component.rejectNextRead(true);
-	EXPECT_THROW(component.apply(message.reader(), 8), spk::Exception);
+	EXPECT_THROW(component.apply(message.payload().reader(), 8), spk::Exception);
 	EXPECT_FALSE(component.receivedRevision().has_value());
 	EXPECT_EQ(component.health(), 100);
 	component.rejectNextRead(false);
-	component.apply(message.reader(), 8);
+	component.apply(message.payload().reader(), 8);
 	EXPECT_EQ(component.health(), 25);
 	EXPECT_EQ(*component.receivedRevision(), 8u);
 }
@@ -217,7 +217,7 @@ TEST(EngineReplication, RebindingResetsComponentRevisionOnUpdateThread)
 	spk::Message::Writer writer(121);
 	writer << 45;
 	auto message = std::move(writer).build();
-	component.apply(message.reader(), 40);
+	component.apply(message.payload().reader(), 40);
 	ASSERT_EQ(component.receivedRevision(), 40u);
 
 	system.bind(firstClient);
@@ -226,13 +226,13 @@ TEST(EngineReplication, RebindingResetsComponentRevisionOnUpdateThread)
 	engine.updateState(context);
 	EXPECT_FALSE(component.receivedRevision().has_value());
 
-	component.apply(message.reader(), 50);
+	component.apply(message.payload().reader(), 50);
 	system.bind(secondClient);
 	EXPECT_EQ(component.receivedRevision(), 50u);
 	engine.updateState(context);
 	EXPECT_FALSE(component.receivedRevision().has_value());
 
-	component.apply(message.reader(), 60);
+	component.apply(message.payload().reader(), 60);
 	system.unbind();
 	EXPECT_EQ(component.receivedRevision(), 60u);
 	engine.updateState(context);
@@ -288,7 +288,7 @@ TEST(EngineReplication, ComponentDecoderCanLeaveTrailingBytesForSubsequentCompon
 	spk::Message::Writer writer(121);
 	writer << 25 << std::uint32_t{1234};
 	auto message = std::move(writer).build();
-	EXPECT_NO_THROW(component.apply(message.reader(), 8));
+	EXPECT_NO_THROW(component.apply(message.payload().reader(), 8));
 	EXPECT_EQ(component.health(), 25);
 	EXPECT_EQ(component.receivedRevision(), 8u);
 }
@@ -298,7 +298,7 @@ TEST(EngineReplication, TruncatedPayloadDoesNotCommitPendingStateOrRevision)
 	ClientHealth component(spk::UUID::generate());
 	spk::Message::Writer writer(121);
 	auto message = std::move(writer).build();
-	EXPECT_ANY_THROW(component.apply(message.reader(), 8));
+	EXPECT_ANY_THROW(component.apply(message.payload().reader(), 8));
 	EXPECT_EQ(component.health(), 100);
 	EXPECT_FALSE(component.receivedRevision().has_value());
 }
@@ -309,11 +309,11 @@ TEST(EngineReplication, ValidPayloadCommitsAfterRejectedInvalidValue)
 	spk::Message::Writer invalidWriter(121);
 	invalidWriter << -25;
 	auto invalid = std::move(invalidWriter).build();
-	EXPECT_THROW(component.apply(invalid.reader(), 8), spk::Exception);
+	EXPECT_THROW(component.apply(invalid.payload().reader(), 8), spk::Exception);
 	spk::Message::Writer validWriter(121);
 	validWriter << 45;
 	auto valid = std::move(validWriter).build();
-	EXPECT_NO_THROW(component.apply(valid.reader(), 8));
+	EXPECT_NO_THROW(component.apply(valid.payload().reader(), 8));
 	EXPECT_EQ(component.health(), 45);
 	EXPECT_EQ(component.receivedRevision(), 8u);
 }
