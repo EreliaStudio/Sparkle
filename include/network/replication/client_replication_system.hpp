@@ -3,12 +3,17 @@
 #include "network/client.hpp"
 #include "network/replication/client_replicated_component.hpp"
 #include "network/replication/interest.hpp"
+#include "network/replication/replication_batch.hpp"
+#include "threading/task.hpp"
+#include "threading/worker_pool.hpp"
 #include "network/replication/replication_system.hpp"
 
 #include <atomic>
 #include <map>
 #include <memory>
 #include <mutex>
+#include <vector>
+#include <cstdint>
 
 namespace spk::Network
 {
@@ -54,17 +59,29 @@ namespace spk::Network
 		};
 
 	private:
+		using Records = std::vector<ReplicationBatch::Record>;
+		struct PendingSection
+		{
+			std::uint64_t generation = 0;
+			spk::Task<Records>::Answer answer;
+		};
+
 		spk::Client *_client = nullptr;
 		spk::Client::MessageDispatcher::Contract _stateContract;
 		spk::Client::MessageDispatcher::Contract _componentRemovalContract;
 		spk::Client::DisconnectionContract _disconnectionContract;
 		spk::Client::ConnectionContract _connectionContract;
 		std::atomic_bool _resetPending{true};
+		std::atomic<std::uint64_t> _generation{0};
+		std::shared_ptr<spk::WorkerPool> _workerPool;
+		std::vector<PendingSection> _pendingSections;
 		std::shared_ptr<SubscriptionState> _subscriptions = std::make_shared<SubscriptionState>();
 
 		void onState(const spk::Message &message);
 		void onComponentRemoval(const spk::Message &message);
 		void resetReceivedRevisions();
+		void applyRecords(const Records &records);
+		void drainSections();
 
 	protected:
 		void _updateState(spk::UpdateContext &) override;
@@ -77,5 +94,6 @@ namespace spk::Network
 		void unbind();
 		[[nodiscard]] bool isBound() const noexcept;
 		[[nodiscard]] Subscription subscribe(const Interest &interest);
+		void setWorkerPool(std::shared_ptr<spk::WorkerPool> pool);
 	};
 }
