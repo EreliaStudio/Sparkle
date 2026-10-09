@@ -19,12 +19,12 @@ namespace
 		private:
 			int _health = 0;
 
-			void saveFrom(const Health &component)
+			void capture(const Health &component)
 			{
 				_health = component._health;
 			}
 
-			void loadInto(Health &component) const noexcept
+			void restore(Health &component) const noexcept
 			{
 				component._health = _health;
 			}
@@ -37,12 +37,12 @@ namespace
 		private:
 			int _health = 0;
 
-			void saveFrom(const Health &component)
+			void capture(const Health &component)
 			{
 				_health = component._health;
 			}
 
-			void loadInto(Health &component) const noexcept
+			void restore(Health &component) const noexcept
 			{
 				component._health = _health;
 			}
