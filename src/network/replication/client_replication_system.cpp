@@ -117,7 +117,11 @@ namespace spk::Network
 			_subscriptions->invalidate();
 			_resetPending.store(true, std::memory_order_release);
 		});
-		auto connected = client.subscribeToConnection([this] {
+		auto connected = client.subscribeToConnection([this, &client] {
+			{
+				const std::scoped_lock lock(_subscriptions->mutex);
+				_subscriptions->client = &client;
+			}
 			_resetPending.store(true, std::memory_order_release);
 		});
 		_stateContract = std::move(state);
