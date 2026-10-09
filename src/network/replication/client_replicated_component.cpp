@@ -31,12 +31,12 @@ namespace spk::Network
 		{
 			return;
 		}
-		_decodeNetworkState(reader);
-		if (reader.readOffset() != reader.size())
+		const spk::ByteStream state = _decodeByteStream(reader);
+		if (!_validateByteStream(state))
 		{
-			throw spk::Exception("Replication payload contains trailing bytes.");
+			throw spk::Exception("Invalid replicated state.");
 		}
-		_commitNetworkState();
+		_commitByteStream(state);
 		_receivedRevision = revision;
 	}
 }
