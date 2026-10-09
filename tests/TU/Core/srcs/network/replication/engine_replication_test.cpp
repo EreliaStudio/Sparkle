@@ -76,22 +76,22 @@ namespace
 
 	private:
 		int _health = 100;
+		int _pendingHealth = 100;
 		bool _throwAfterRead = false;
 
 	protected:
-		void _readNetworkState(const spk::Message::Reader &reader) override
+		void _decodeNetworkState(const spk::Message::Reader &reader) override
 		{
-			transaction<State>([&] {
-				reader >> _health;
-				if (_throwAfterRead)
-				{
-					throw std::runtime_error("invalid state");
-				}
-				if (reader.readOffset() != reader.size())
-				{
-					throw std::runtime_error("unexpected bytes");
-				}
-			});
+			reader >> _pendingHealth;
+			if (_throwAfterRead)
+			{
+				throw std::runtime_error("invalid state");
+			}
+		}
+
+		void _commitNetworkState() noexcept override
+		{
+			_health = _pendingHealth;
 		}
 
 	public:
@@ -137,10 +137,10 @@ TEST(EngineReplication, FailedDecodeRestoresPriorState)
 	authority.capture(writer);
 	auto message = std::move(writer).build();
 	replica.rejectNextRead(true);
-	EXPECT_THROW(replica.apply(message.reader()), std::runtime_error);
+	EXPECT_THROW(replica.apply(message.reader(), 1), std::runtime_error);
 	EXPECT_EQ(replica.health(), 100);
 	replica.rejectNextRead(false);
-	EXPECT_NO_THROW(replica.apply(message.reader()));
+	EXPECT_NO_THROW(replica.apply(message.reader(), 1));
 	EXPECT_EQ(replica.health(), 20);
 }
 
