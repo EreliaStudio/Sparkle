@@ -6,6 +6,7 @@
 #include "exception.hpp"
 
 #include <utility>
+#include <vector>
 
 namespace spk::Network
 {
@@ -93,6 +94,21 @@ namespace spk::Network
 		return _refreshInterval;
 	}
 
+
+	void ServerReplicationSystem::setComponentsPerSection(std::uint32_t count)
+	{
+		if (count == 0)
+		{
+			throw spk::Exception("Replication components per section must be positive.");
+		}
+		_componentsPerSection = count;
+	}
+
+	std::uint32_t ServerReplicationSystem::componentsPerSection() const noexcept
+	{
+		return _componentsPerSection;
+	}
+
 	std::unique_ptr<Interest> ServerReplicationSystem::_createInterest(const spk::Message::Reader &)
 	{
 		return nullptr;
@@ -144,12 +160,11 @@ namespace spk::Network
 		peer->second.erase(spk::UUID(bytes));
 	}
 
-	spk::Message ServerReplicationSystem::stateMessage(const ServerReplicatedComponent &component) const
+	spk::ByteStream ServerReplicationSystem::stateMessage(const ServerReplicatedComponent &component) const
 	{
 		spk::Message::Writer writer(stateType());
-		writer << component.identifier().bytes() << component.version();
 		component.capture(writer);
-		return std::move(writer).build();
+		return std::move(writer).build().payload();
 	}
 
 	void ServerReplicationSystem::publishUpdates()
@@ -159,11 +174,13 @@ namespace spk::Network
 			return;
 		}
 		const auto &all = spk::Registry<spk::Component, spk::Engine *>::instance().elements(engine());
-		std::map<spk::UUID, spk::Message> messages;
+		std::map<spk::UUID, spk::ByteStream> states;
 		const std::scoped_lock lock(_peerMutex);
 		for (spk::ConnectionID peer : _peers)
 		{
 			std::set<spk::UUID> visible;
+			std::vector<ReplicationBatch::Component> updates;
+			auto &sent = _sent[peer];
 			for (spk::Component *item : all)
 			{
 				auto *component = dynamic_cast<ServerReplicatedComponent *>(item);
@@ -171,33 +188,42 @@ namespace spk::Network
 				{
 					continue;
 				}
-				for (auto &[id, subscription] : _interests[peer])
+				bool matches = false;
+				for (const auto &[id, subscription] : _interests[peer])
 				{
 					if (_evaluator->matches(*subscription.interest, *component, peer))
 					{
-						visible.insert(component->identifier());
+						matches = true;
 						break;
 					}
 				}
-				if (!visible.contains(component->identifier()))
+				if (!matches || !visible.insert(component->identifier()).second)
 				{
 					continue;
 				}
-				auto &sent = _sent[peer];
-				auto previous = sent.find(component->identifier());
+				const auto previous = sent.find(component->identifier());
 				if (previous != sent.end() && previous->second == component->version())
 				{
 					continue;
 				}
-				auto message = messages.find(component->identifier());
-				if (message == messages.end())
+				auto found = states.find(component->identifier());
+				if (found == states.end())
 				{
-					message = messages.emplace(component->identifier(), stateMessage(*component)).first;
+					found = states.emplace(component->identifier(), stateMessage(*component)).first;
 				}
-				_server->sendTo(peer, message->second);
-				sent[component->identifier()] = component->version();
+				updates.push_back({component->identifier(), component->version(), found->second});
 			}
-			auto &sent = _sent[peer];
+			if (!updates.empty())
+			{
+				const auto payload = ReplicationBatch::encode(updates, _componentsPerSection);
+				spk::Message::Writer writer(stateType());
+				writer.append(payload.data().data(), payload.size());
+				_server->sendTo(peer, std::move(writer).build());
+				for (const auto &update : updates)
+				{
+					sent[update.identifier] = update.revision;
+				}
+			}
 			for (auto it = sent.begin(); it != sent.end();)
 			{
 				if (visible.contains(it->first))
