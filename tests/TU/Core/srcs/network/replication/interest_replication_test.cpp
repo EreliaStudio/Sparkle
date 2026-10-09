@@ -126,3 +126,11 @@ TEST(InterestReplication, ClientRequiresConnectionBeforeSubscribing)
 	EXPECT_THROW((void)system.subscribe(interest), spk::Exception);
 	system.unbind();
 }
+
+TEST(InterestReplication, RefreshIntervalRejectsNegativeDuration)
+{
+	GameServerReplicationSystem system;
+	const auto original = system.refreshInterval();
+	EXPECT_THROW(system.setRefreshInterval(std::chrono::milliseconds(-1)), spk::Exception);
+	EXPECT_EQ(system.refreshInterval(), original);
+}
