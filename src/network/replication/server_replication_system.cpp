@@ -142,7 +142,6 @@ namespace spk::Network
 			return;
 		}
 		peer->second.erase(spk::UUID(bytes));
-		_sent[incoming.emitter].clear();
 	}
 
 	spk::Message ServerReplicationSystem::stateMessage(const ServerReplicatedComponent &component) const
