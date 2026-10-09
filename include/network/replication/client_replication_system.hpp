@@ -63,6 +63,7 @@ namespace spk::Network
 		struct PendingSection
 		{
 			std::uint64_t generation = 0;
+			std::uint64_t sequence = 0;
 			spk::Task<Records>::Answer answer;
 		};
 
@@ -75,12 +76,14 @@ namespace spk::Network
 		std::atomic<std::uint64_t> _generation{0};
 		std::shared_ptr<spk::WorkerPool> _workerPool;
 		std::vector<PendingSection> _pendingSections;
+		std::uint64_t _incomingSequence = 0;
+		std::map<spk::UUID, std::uint64_t> _removalSequence;
 		std::shared_ptr<SubscriptionState> _subscriptions = std::make_shared<SubscriptionState>();
 
 		void onState(const spk::Message &message);
 		void onComponentRemoval(const spk::Message &message);
 		void resetReceivedRevisions();
-		void applyRecords(const Records &records);
+		void applyRecords(const Records &records, std::uint64_t sequence);
 		void drainSections();
 
 	protected:
