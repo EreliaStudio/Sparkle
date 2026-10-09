@@ -7,12 +7,12 @@
 #include "network/server.hpp"
 
 #include <chrono>
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <set>
-#include <cstdint>
 
 namespace spk::Network
 {
