@@ -4,6 +4,8 @@
 #include "network/replication/client_replicated_component.hpp"
 #include "network/client.hpp"
 
+#include <atomic>
+
 namespace spk::Network
 {
 	class ClientReplicationSystem final : public ReplicationSystem
@@ -12,6 +14,8 @@ namespace spk::Network
 		spk::Client *_client = nullptr;
 		spk::Client::MessageDispatcher::Contract _stateContract;
 		spk::Client::DisconnectionContract _disconnectionContract;
+		spk::Client::ConnectionContract _connectionContract;
+		std::atomic_bool _resetPending{true};
 
 		void onState(const spk::Message &message);
 		void resetReceivedRevisions();
