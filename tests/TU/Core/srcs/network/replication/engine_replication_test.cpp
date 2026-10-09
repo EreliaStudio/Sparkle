@@ -173,3 +173,45 @@ TEST(EngineReplication, RebindingToSameTransportKeepsSubscription)
 	system.unbind();
 	EXPECT_FALSE(system.isBound());
 }
+
+TEST(EngineReplication, ClientComponentTracksRevisionAndIgnoresStaleUpdates)
+{
+	ClientHealth component(spk::UUID::generate());
+	spk::Message::Writer firstWriter(121);
+	firstWriter << 30;
+	auto first = std::move(firstWriter).build();
+	component.apply(first.reader(), 5);
+	EXPECT_EQ(component.health(), 30);
+	ASSERT_TRUE(component.receivedRevision().has_value());
+	EXPECT_EQ(*component.receivedRevision(), 5u);
+
+	spk::Message::Writer staleWriter(121);
+	staleWriter << 99;
+	auto stale = std::move(staleWriter).build();
+	component.apply(stale.reader(), 4);
+	component.apply(stale.reader(), 5);
+	EXPECT_EQ(component.health(), 30);
+	EXPECT_EQ(*component.receivedRevision(), 5u);
+
+	component.resetReceivedRevision();
+	EXPECT_FALSE(component.receivedRevision().has_value());
+	component.apply(stale.reader(), 0);
+	EXPECT_EQ(component.health(), 99);
+	EXPECT_EQ(*component.receivedRevision(), 0u);
+}
+
+TEST(EngineReplication, FailedApplicationDoesNotAdvanceReceivedRevision)
+{
+	ClientHealth component(spk::UUID::generate());
+	spk::Message::Writer writer(121);
+	writer << 25;
+	auto message = std::move(writer).build();
+	component.rejectNextRead(true);
+	EXPECT_THROW(component.apply(message.reader(), 8), std::runtime_error);
+	EXPECT_FALSE(component.receivedRevision().has_value());
+	EXPECT_EQ(component.health(), 100);
+	component.rejectNextRead(false);
+	component.apply(message.reader(), 8);
+	EXPECT_EQ(component.health(), 25);
+	EXPECT_EQ(*component.receivedRevision(), 8u);
+}
