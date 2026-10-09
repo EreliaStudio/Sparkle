@@ -6,16 +6,42 @@
 
 namespace spk::Network
 {
-	ClientReplicationSystem::ClientReplicationSystem(spk::Client &client, spk::Message::Type type) :
-		ReplicationSystem(type), _client(client)
+	ClientReplicationSystem::ClientReplicationSystem(spk::Message::Type type) :
+		ReplicationSystem(type)
 	{
-		_stateContract = client.messageDispatcher().subscribeTo(stateType(),
-			[this](const spk::Message &message) { onState(message); });
 	}
 
 	ClientReplicationSystem::~ClientReplicationSystem()
 	{
+		unbind();
+	}
+
+	void ClientReplicationSystem::bind(spk::Client &client)
+	{
+		if (_client == &client)
+			return;
+		unbind();
+		auto stateContract = client.messageDispatcher().subscribeTo(stateType(),
+			[this](const spk::Message &message) { onState(message); });
+		auto disconnectionContract = client.subscribeToDisconnection([this] {
+			_received.clear();
+		});
+		_stateContract = std::move(stateContract);
+		_disconnectionContract = std::move(disconnectionContract);
+		_client = &client;
+	}
+
+	void ClientReplicationSystem::unbind()
+	{
 		_stateContract.resign();
+		_disconnectionContract.resign();
+		_client = nullptr;
+		_received.clear();
+	}
+
+	bool ClientReplicationSystem::isBound() const noexcept
+	{
+		return _client != nullptr;
 	}
 
 	void ClientReplicationSystem::onState(const spk::Message &message)
@@ -41,13 +67,16 @@ namespace spk::Network
 
 	void ClientReplicationSystem::_updateState(spk::UpdateContext &)
 	{
-		_client.treatMessages();
+		if (_client != nullptr)
+			_client->treatMessages();
 	}
 
 	void ClientReplicationSystem::request(const spk::UUID &identifier)
 	{
+		if (_client == nullptr)
+			throw spk::Exception("Client replication system is not bound.");
 		spk::Message::Writer writer(requestType());
 		writer << identifier.bytes();
-		_client.send(std::move(writer).build());
+		_client->send(std::move(writer).build());
 	}
 }
