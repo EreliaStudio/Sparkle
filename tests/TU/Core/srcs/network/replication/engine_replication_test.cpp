@@ -251,3 +251,18 @@ TEST(EngineReplication, RebindingResetsComponentRevisionOnUpdateThread)
 	engine.updateState(context);
 	EXPECT_FALSE(component.receivedRevision().has_value());
 }
+
+TEST(EngineReplication, StaleMessageFromPreviousConnectionIsRejected)
+{
+	// TODO: Connection generations are not yet encoded in incoming state messages.
+	// A delayed message from session A can therefore be accepted after reconnecting
+	// to session B, even if component revisions have been reset correctly.
+	// Enable this regression test when session identity is added to the protocol.
+	GTEST_SKIP() << "Deferred: replication messages have no connection/session identity.";
+
+	// Intended regression scenario:
+	// 1. Establish session A and retain an undelivered state message.
+	// 2. Disconnect, reconnect as session B, and reset component revisions.
+	// 3. Deliver the session A message after the session B reset.
+	// 4. Verify the client discards it without changing state or revision.
+}
