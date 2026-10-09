@@ -24,7 +24,6 @@ namespace spk::Network
 		struct ClientSubscription
 		{
 			std::unique_ptr<Interest> interest;
-			std::set<spk::UUID> visible;
 		};
 
 		spk::Server *_server = nullptr;
