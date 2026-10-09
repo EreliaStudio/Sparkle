@@ -1,6 +1,7 @@
 #include "network/replication/server_replication_system.hpp"
 
 #include "engine/engine.hpp"
+#include "core/context/update_context.hpp"
 #include "engine/registry.hpp"
 #include "exception.hpp"
 
@@ -109,7 +110,6 @@ namespace spk::Network
 			return;
 		auto &entry = _interests[incoming.emitter][identifier];
 		entry.interest = std::move(interest);
-		entry.visible.clear();
 	}
 
 	void ServerReplicationSystem::onInterestRemoval(const spk::ReceivedMessage &incoming)
