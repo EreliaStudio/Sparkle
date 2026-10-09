@@ -25,6 +25,8 @@ namespace spk::Network
 		{
 			std::mutex mutex;
 			spk::Client *client = nullptr;
+			spk::Message::Type updateType = 0;
+			spk::Message::Type removalType = 0;
 			std::map<spk::UUID, std::weak_ptr<SubscriptionEntry>> subscriptions;
 			void invalidate() noexcept;
 		};
