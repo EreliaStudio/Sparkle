@@ -294,3 +294,36 @@ TEST(ReplicationSections, EmptyBatchDoesNotMutateComponents)
 	EXPECT_FALSE(fixture.first.receivedRevision().has_value());
 	EXPECT_EQ(fixture.first.value(), -1);
 }
+
+
+TEST(ReplicationSections, InterestRemovalInvalidatesOnlyEarlierPendingUpdates)
+{
+	Fixture fixture;
+	auto pool = std::make_shared<spk::WorkerPool>(1);
+	std::atomic_bool release = false;
+	auto blocker = pool->submit([&] {
+		while (!release.load(std::memory_order_acquire))
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		}
+		return 0;
+	});
+	fixture.system.setWorkerPool(pool);
+	fixture.publish({makeState(fixture.firstID, 55, 12), makeState(fixture.secondID, 65, 12)}, 2);
+	fixture.tick();
+	spk::Message::Writer removal(0x53504B13);
+	removal << fixture.firstID.bytes();
+	fixture.client.messages().publish(std::move(removal).build());
+	fixture.tick();
+	release.store(true, std::memory_order_release);
+	blocker.wait();
+	ASSERT_TRUE(fixture.until([&] {
+		return fixture.second.value() == 65;
+	}));
+	EXPECT_EQ(fixture.first.value(), -1);
+	EXPECT_FALSE(fixture.first.receivedRevision().has_value());
+	fixture.publish({makeState(fixture.firstID, 75, 0)});
+	ASSERT_TRUE(fixture.until([&] {
+		return fixture.first.value() == 75;
+	}));
+}
