@@ -1,6 +1,7 @@
 #pragma once
 
-#include <concepts>
+#include "container/byte_stream.hpp"
+
 #include <functional>
 #include <utility>
 
@@ -10,51 +11,30 @@ namespace spk
 	class MementoTrait
 	{
 	public:
-		template <typename TState>
-		class Snapshot final
+		[[nodiscard]] spk::ByteStream save() const
 		{
-		private:
-			TState _state;
-
-			explicit Snapshot(TState state) :
-				_state(std::move(state))
-			{
-			}
-
-			friend class MementoTrait<TObject>;
-
-		public:
-			using State = TState;
-
-			[[nodiscard]] const State &state() const noexcept
-			{
-				return _state;
-			}
-		};
-
-		template <typename TState>
-			requires std::default_initializable<TState>
-		[[nodiscard]] Snapshot<TState> save() const
-		{
-			TState state{};
-			state.capture(static_cast<const TObject &>(*this));
-			return Snapshot<TState>(std::move(state));
+			spk::ByteStream::Writer writer;
+			static_cast<const TObject &>(*this).saveMemento(writer);
+			return std::move(writer).build();
 		}
 
-		template <typename TState>
-		void load(const Snapshot<TState> &snapshot)
+		void load(const spk::ByteStream &snapshot)
 		{
-			snapshot._state.restore(static_cast<TObject &>(*this));
+			auto reader = snapshot.reader();
+			static_cast<TObject &>(*this).loadMemento(reader);
+			if (reader.remaining() != 0)
+				throw spk::Exception("Memento snapshot contains trailing bytes.");
 		}
 
-		template <typename TState, typename TOperation>
+		template <typename TOperation>
 		void transaction(TOperation &&operation)
 		{
-			const auto snapshot = save<TState>();
+			const auto snapshot = save();
 			try
 			{
 				std::invoke(std::forward<TOperation>(operation));
-			} catch (...)
+			}
+			catch (...)
 			{
 				load(snapshot);
 				throw;
