@@ -110,7 +110,6 @@ namespace spk::Network
 		auto &entry = _interests[incoming.emitter][identifier];
 		entry.interest = std::move(interest);
 		entry.visible.clear();
-		_sent[incoming.emitter].clear();
 	}
 
 	void ServerReplicationSystem::onInterestRemoval(const spk::ReceivedMessage &incoming)
