@@ -42,6 +42,10 @@ namespace spk::Network
 			spk::ByteStream::Slice _data;
 
 			friend class ReplicationBatch;
+			Index() :
+				_data(spk::ByteStream{}.reader())
+			{
+			}
 
 		public:
 			[[nodiscard]] std::size_t componentCount() const noexcept
@@ -95,8 +99,8 @@ namespace spk::Network
 			{
 				const auto size = components[index].payload.size();
 				if (size > std::numeric_limits<std::uint32_t>::max() ||
-					size > std::numeric_limits<std::uint64_t>::max() - offset - sizeof(spk::UUID::Storage) -
-							   sizeof(std::uint64_t) - sizeof(std::uint32_t))
+					offset > std::numeric_limits<std::uint64_t>::max() - 28 ||
+					size > std::numeric_limits<std::uint64_t>::max() - offset - 28)
 				{
 					throw spk::Exception("Replication component payload exceeds wire limits.");
 				}
