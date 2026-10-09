@@ -4,8 +4,8 @@
 #include "engine/registry.hpp"
 #include "exception.hpp"
 
-#include <utility>
 #include <exception>
+#include <utility>
 
 namespace spk::Network
 {
