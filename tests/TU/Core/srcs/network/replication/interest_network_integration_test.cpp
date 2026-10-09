@@ -684,7 +684,6 @@ TEST(InterestNetwork, SubscribeAndCancelWithoutSystemLeavesSafeHandle)
 	server.stop();
 }
 
-
 TEST(InterestNetwork, MultipleComponentsAreBatchedIntoOneSection)
 {
 	NetworkScenario scenario;
