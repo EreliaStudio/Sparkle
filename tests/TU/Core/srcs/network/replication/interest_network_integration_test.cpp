@@ -431,9 +431,16 @@ TEST(InterestNetwork, EquivalentClientsShareSerializedComponentMessage)
 {
 	NetworkScenario scenario;
 	scenario.connectSecond();
+	scenario.serverSystem.setRefreshInterval(1s);
 	scenario.source.change(30);
 	auto first = scenario.firstSystem.subscribe(ValueInterest(20));
 	auto second = scenario.secondSystem.subscribe(ValueInterest(20));
+	for (int i = 0; i < 30; ++i)
+	{
+		scenario.tick(0ms);
+		std::this_thread::sleep_for(2ms);
+	}
+	scenario.serverSystem.setRefreshInterval(50ms);
 	ASSERT_TRUE(scenario.await([&] {
 		return scenario.firstReplica.value() == 30 && scenario.secondReplica.value() == 30;
 	}));
