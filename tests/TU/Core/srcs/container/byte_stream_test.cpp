@@ -114,3 +114,37 @@ TEST(ByteStream, MessageSlicesOutliveMessage)
 	slice >> value;
 	EXPECT_EQ(value, 73u);
 }
+
+TEST(ByteStream, EmptySliceIsSafe)
+{
+	spk::ByteStream stream;
+	auto slice = stream.reader();
+	EXPECT_EQ(slice.size(), 0u);
+	EXPECT_EQ(slice.remaining(), 0u);
+	EXPECT_THROW(slice.skip(1), spk::Exception);
+}
+
+TEST(ByteStream, SlicesShareBytesButNotReadPosition)
+{
+	spk::ByteStream::Writer writer;
+	writer << std::uint32_t{7} << std::uint32_t{8};
+	auto stream = std::move(writer).build();
+	auto first = stream.reader();
+	auto second = stream.reader();
+	std::uint32_t value = 0;
+	first >> value;
+	EXPECT_EQ(value, 7u);
+	EXPECT_EQ(first.readOffset(), 4u);
+	EXPECT_EQ(second.readOffset(), 0u);
+	second >> value;
+	EXPECT_EQ(value, 7u);
+}
+
+TEST(ByteStream, CopiedByteStreamsShareTheSameImmutableBuffer)
+{
+	spk::ByteStream::Writer writer;
+	writer << std::uint32_t{99};
+	auto original = std::move(writer).build();
+	auto copy = original;
+	EXPECT_EQ(original.data().data(), copy.data().data());
+}
