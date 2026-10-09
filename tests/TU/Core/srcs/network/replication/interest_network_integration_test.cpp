@@ -526,3 +526,54 @@ TEST(InterestNetwork, NewSubscriptionAfterComponentLeavingViewGetsFreshState)
 	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.applications() == 2; }));
 	EXPECT_EQ(scenario.firstReplica.value(), 30);
 }
+
+TEST(InterestNetwork, MultipleMutationsBetweenPublicationsSendOnlyLatest)
+{
+	NetworkScenario scenario;
+	scenario.serverSystem.setRefreshInterval(250ms);
+	scenario.source.change(10);
+	auto subscription = scenario.firstSystem.subscribe(ValueInterest(0));
+	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.value() == 10; }));
+	const auto initial = scenario.firstReplica.applications();
+	scenario.source.change(11);
+	scenario.source.change(12);
+	scenario.source.change(13);
+	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.value() == 13; }));
+	EXPECT_EQ(scenario.firstReplica.applications(), initial + 1);
+}
+
+TEST(InterestNetwork, SubscriptionHandlesAreInvalidatedBeforeClientDestruction)
+{
+	spk::Server server;
+	server.start(0);
+	spk::Network::ClientReplicationSystem system;
+	auto client = std::make_unique<spk::Client>();
+	system.bind(*client);
+	client->connect("127.0.0.1", server.port());
+	auto subscription = system.subscribe(ValueInterest(0));
+	ASSERT_TRUE(subscription.isValid());
+	client.reset();
+	EXPECT_FALSE(subscription.isValid());
+	EXPECT_NO_THROW(subscription.cancel());
+	system.unbind();
+	server.stop();
+}
+
+TEST(InterestNetwork, SubscribeAndCancelWithoutSystemLeavesSafeHandle)
+{
+	spk::Server server;
+	server.start(0);
+	spk::Client client;
+	client.connect("127.0.0.1", server.port());
+	spk::Network::ClientReplicationSystem::Subscription subscription;
+	{
+		auto system = std::make_unique<spk::Network::ClientReplicationSystem>();
+		system->bind(client);
+		subscription = system->subscribe(ValueInterest(0));
+		ASSERT_TRUE(subscription.isValid());
+	}
+	EXPECT_FALSE(subscription.isValid());
+	EXPECT_NO_THROW(subscription.cancel());
+	client.disconnect();
+	server.stop();
+}
