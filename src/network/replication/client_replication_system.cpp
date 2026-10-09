@@ -26,19 +26,25 @@ namespace spk::Network
 		auto stateContract = client.messageDispatcher().subscribeTo(stateType(),
 			[this](const spk::Message &message) { onState(message); });
 		auto disconnectionContract = client.subscribeToDisconnection([this] {
-			resetReceivedRevisions();
+			_resetPending.store(true, std::memory_order_release);
+		});
+		auto connectionContract = client.subscribeToConnection([this] {
+			_resetPending.store(true, std::memory_order_release);
 		});
 		_stateContract = std::move(stateContract);
 		_disconnectionContract = std::move(disconnectionContract);
+		_connectionContract = std::move(connectionContract);
 		_client = &client;
+		_resetPending.store(true, std::memory_order_release);
 	}
 
 	void ClientReplicationSystem::unbind()
 	{
 		_stateContract.resign();
 		_disconnectionContract.resign();
+		_connectionContract.resign();
 		_client = nullptr;
-		resetReceivedRevisions();
+		_resetPending.store(true, std::memory_order_release);
 	}
 
 	void ClientReplicationSystem::resetReceivedRevisions()
@@ -73,6 +79,8 @@ namespace spk::Network
 
 	void ClientReplicationSystem::_updateState(spk::UpdateContext &)
 	{
+		if (_resetPending.exchange(false, std::memory_order_acq_rel))
+			resetReceivedRevisions();
 		if (_client != nullptr)
 			_client->treatMessages();
 	}
