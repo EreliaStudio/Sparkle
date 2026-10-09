@@ -17,7 +17,7 @@ namespace spk::Network
 		using Authorizer = std::function<bool(spk::ConnectionID, const ServerReplicatedComponent &)>;
 
 	private:
-		spk::Server &_server;
+		spk::Server *_server = nullptr;
 		spk::Server::MessageDispatcher::Contract _requestContract;
 		spk::Server::ConnectionContract _connectionContract;
 		spk::Server::DisconnectionContract _disconnectionContract;
@@ -34,9 +34,12 @@ namespace spk::Network
 		void _updateState(spk::UpdateContext &) override;
 
 	public:
-		explicit ServerReplicationSystem(spk::Server &server, spk::Message::Type requestType = 0x53504B10);
+		explicit ServerReplicationSystem(spk::Message::Type requestType = 0x53504B10);
 		~ServerReplicationSystem() override;
 
+		void bind(spk::Server &server);
+		void unbind();
+		[[nodiscard]] bool isBound() const noexcept;
 		void setRequestAuthorizer(Authorizer authorizer);
 	};
 }
