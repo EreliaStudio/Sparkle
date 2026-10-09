@@ -282,15 +282,15 @@ TEST(EngineReplication, DISABLED_StaleMessageFromPreviousConnectionIsRejected)
 	EXPECT_EQ(*component.receivedRevision(), 0u);
 }
 
-TEST(EngineReplication, TrailingBytesDoNotCommitPendingStateOrRevision)
+TEST(EngineReplication, ComponentDecoderCanLeaveTrailingBytesForSubsequentComponents)
 {
 	ClientHealth component(spk::UUID::generate());
 	spk::Message::Writer writer(121);
 	writer << 25 << std::uint32_t{1234};
 	auto message = std::move(writer).build();
-	EXPECT_THROW(component.apply(message.reader(), 8), spk::Exception);
-	EXPECT_EQ(component.health(), 100);
-	EXPECT_FALSE(component.receivedRevision().has_value());
+	EXPECT_NO_THROW(component.apply(message.reader(), 8));
+	EXPECT_EQ(component.health(), 25);
+	EXPECT_EQ(component.receivedRevision(), 8u);
 }
 
 TEST(EngineReplication, TruncatedPayloadDoesNotCommitPendingStateOrRevision)
@@ -303,11 +303,11 @@ TEST(EngineReplication, TruncatedPayloadDoesNotCommitPendingStateOrRevision)
 	EXPECT_FALSE(component.receivedRevision().has_value());
 }
 
-TEST(EngineReplication, ValidPayloadCommitsAfterRejectedPendingState)
+TEST(EngineReplication, ValidPayloadCommitsAfterRejectedInvalidValue)
 {
 	ClientHealth component(spk::UUID::generate());
 	spk::Message::Writer invalidWriter(121);
-	invalidWriter << 25 << std::uint32_t{1234};
+	invalidWriter << -25;
 	auto invalid = std::move(invalidWriter).build();
 	EXPECT_THROW(component.apply(invalid.reader(), 8), spk::Exception);
 	spk::Message::Writer validWriter(121);
