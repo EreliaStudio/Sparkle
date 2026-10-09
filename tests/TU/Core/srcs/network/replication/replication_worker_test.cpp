@@ -295,7 +295,6 @@ TEST(ReplicationSections, EmptyBatchDoesNotMutateComponents)
 	EXPECT_EQ(fixture.first.value(), -1);
 }
 
-
 TEST(ReplicationSections, InterestRemovalInvalidatesOnlyEarlierPendingUpdates)
 {
 	Fixture fixture;
