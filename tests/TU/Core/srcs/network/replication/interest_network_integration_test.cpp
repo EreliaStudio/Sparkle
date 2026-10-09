@@ -25,9 +25,15 @@ namespace
 		std::int32_t _minimum;
 
 	public:
-		explicit ValueInterest(std::int32_t minimum) : _minimum(minimum) {}
+		explicit ValueInterest(std::int32_t minimum) :
+			_minimum(minimum)
+		{
+		}
 
-		[[nodiscard]] std::int32_t minimum() const noexcept { return _minimum; }
+		[[nodiscard]] std::int32_t minimum() const noexcept
+		{
+			return _minimum;
+		}
 
 		[[nodiscard]] spk::UUID type() const override
 		{
@@ -62,8 +68,14 @@ namespace
 			invalidate();
 		}
 
-		[[nodiscard]] std::int32_t value() const noexcept { return _value; }
-		[[nodiscard]] std::size_t captures() const noexcept { return _captures; }
+		[[nodiscard]] std::int32_t value() const noexcept
+		{
+			return _value;
+		}
+		[[nodiscard]] std::size_t captures() const noexcept
+		{
+			return _captures;
+		}
 	};
 
 	class ClientValue final : public spk::Network::ClientReplicatedComponent
@@ -80,20 +92,33 @@ namespace
 			++_applications;
 		}
 
-		void _onInterestLost() override { ++_removals; }
+		void _onInterestLost() override
+		{
+			++_removals;
+		}
 
 	public:
 		using ClientReplicatedComponent::ClientReplicatedComponent;
 
-		[[nodiscard]] std::int32_t value() const noexcept { return _value; }
-		[[nodiscard]] std::size_t applications() const noexcept { return _applications; }
-		[[nodiscard]] std::size_t removals() const noexcept { return _removals; }
+		[[nodiscard]] std::int32_t value() const noexcept
+		{
+			return _value;
+		}
+		[[nodiscard]] std::size_t applications() const noexcept
+		{
+			return _applications;
+		}
+		[[nodiscard]] std::size_t removals() const noexcept
+		{
+			return _removals;
+		}
 	};
 
 	class ValueEvaluator final : public spk::Network::InterestEvaluator
 	{
 	public:
-		[[nodiscard]] bool matches(const spk::Network::Interest &interest,
+		[[nodiscard]] bool matches(
+			const spk::Network::Interest &interest,
 			const spk::Network::ServerReplicatedComponent &component,
 			spk::ConnectionID) const override
 		{
@@ -113,7 +138,9 @@ namespace
 			std::int32_t minimum = 0;
 			reader >> type >> minimum;
 			if (spk::UUID(type) != ValueInterest(0).type())
+			{
 				return nullptr;
+			}
 			return std::make_unique<ValueInterest>(minimum);
 		}
 	};
@@ -184,7 +211,9 @@ namespace
 			{
 				tick();
 				if (predicate())
+				{
 					return true;
+				}
 				std::this_thread::sleep_for(2ms);
 			}
 			return false;
@@ -197,7 +226,9 @@ TEST(InterestNetwork, ClientWithoutSubscriptionReceivesNoState)
 	NetworkScenario scenario;
 	scenario.source.change(30);
 	for (int i = 0; i < 4; ++i)
+	{
 		scenario.tick();
+	}
 	EXPECT_FALSE(scenario.firstReplica.receivedRevision().has_value());
 	EXPECT_EQ(scenario.firstReplica.applications(), 0u);
 }
@@ -207,7 +238,9 @@ TEST(InterestNetwork, SubscriptionReceivesMatchingInitialState)
 	NetworkScenario scenario;
 	scenario.source.change(30);
 	auto subscription = scenario.firstSystem.subscribe(ValueInterest(20));
-	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.value() == 30; }));
+	ASSERT_TRUE(scenario.await([&] {
+		return scenario.firstReplica.value() == 30;
+	}));
 	EXPECT_TRUE(subscription.isValid());
 	EXPECT_EQ(scenario.firstReplica.applications(), 1u);
 }
@@ -231,13 +264,19 @@ TEST(InterestNetwork, MutationPublishesOnlyNewRevision)
 	NetworkScenario scenario;
 	scenario.source.change(25);
 	auto subscription = scenario.firstSystem.subscribe(ValueInterest(0));
-	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.value() == 25; }));
+	ASSERT_TRUE(scenario.await([&] {
+		return scenario.firstReplica.value() == 25;
+	}));
 	const auto before = scenario.firstReplica.applications();
 	for (int i = 0; i < 5; ++i)
+	{
 		scenario.tick();
+	}
 	EXPECT_EQ(scenario.firstReplica.applications(), before);
 	scenario.source.change(26);
-	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.value() == 26; }));
+	ASSERT_TRUE(scenario.await([&] {
+		return scenario.firstReplica.value() == 26;
+	}));
 	EXPECT_EQ(scenario.firstReplica.applications(), before + 1);
 }
 
@@ -247,12 +286,18 @@ TEST(InterestNetwork, InterestUpdateChangesMembership)
 	scenario.source.change(25);
 	auto subscription = scenario.firstSystem.subscribe(ValueInterest(30));
 	for (int i = 0; i < 5; ++i)
+	{
 		scenario.tick();
+	}
 	EXPECT_EQ(scenario.firstReplica.applications(), 0u);
 	subscription.update(ValueInterest(20));
-	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.value() == 25; }));
+	ASSERT_TRUE(scenario.await([&] {
+		return scenario.firstReplica.value() == 25;
+	}));
 	subscription.update(ValueInterest(50));
-	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.removals() == 1; }));
+	ASSERT_TRUE(scenario.await([&] {
+		return scenario.firstReplica.removals() == 1;
+	}));
 	EXPECT_FALSE(scenario.firstReplica.receivedRevision().has_value());
 }
 
@@ -262,9 +307,13 @@ TEST(InterestNetwork, RAIIDestructionRemovesInterestAndNotifiesReplica)
 	scenario.source.change(25);
 	{
 		auto subscription = scenario.firstSystem.subscribe(ValueInterest(0));
-		ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.value() == 25; }));
+		ASSERT_TRUE(scenario.await([&] {
+		return scenario.firstReplica.value() == 25;
+	}));
 	}
-	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.removals() == 1; }));
+	ASSERT_TRUE(scenario.await([&] {
+		return scenario.firstReplica.removals() == 1;
+	}));
 	EXPECT_FALSE(scenario.firstReplica.receivedRevision().has_value());
 }
 
@@ -274,14 +323,20 @@ TEST(InterestNetwork, TwoOverlappingSubscriptionsDoNotDuplicateComponent)
 	scenario.source.change(25);
 	auto first = scenario.firstSystem.subscribe(ValueInterest(0));
 	auto second = scenario.firstSystem.subscribe(ValueInterest(20));
-	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.value() == 25; }));
+	ASSERT_TRUE(scenario.await([&] {
+		return scenario.firstReplica.value() == 25;
+	}));
 	EXPECT_EQ(scenario.firstReplica.applications(), 1u);
 	first.cancel();
 	for (int i = 0; i < 5; ++i)
+	{
 		scenario.tick();
+	}
 	EXPECT_EQ(scenario.firstReplica.removals(), 0u);
 	second.cancel();
-	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.removals() == 1; }));
+	ASSERT_TRUE(scenario.await([&] {
+		return scenario.firstReplica.removals() == 1;
+	}));
 }
 
 TEST(InterestNetwork, SameInterestAcrossClientsMaintainsIndependentRevisions)
@@ -335,7 +390,9 @@ TEST(InterestNetwork, RefreshIntervalDelaysPublication)
 		std::this_thread::sleep_for(2ms);
 	}
 	EXPECT_EQ(scenario.firstReplica.applications(), 0u);
-	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.value() == 30; }));
+	ASSERT_TRUE(scenario.await([&] {
+		return scenario.firstReplica.value() == 30;
+	}));
 }
 
 TEST(InterestNetwork, EnteringInterestAfterServerStateChangeSendsInitialState)
@@ -344,10 +401,14 @@ TEST(InterestNetwork, EnteringInterestAfterServerStateChangeSendsInitialState)
 	scenario.source.change(5);
 	auto subscription = scenario.firstSystem.subscribe(ValueInterest(20));
 	for (int i = 0; i < 5; ++i)
+	{
 		scenario.tick();
+	}
 	EXPECT_EQ(scenario.firstReplica.applications(), 0u);
 	scenario.source.change(21);
-	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.value() == 21; }));
+	ASSERT_TRUE(scenario.await([&] {
+		return scenario.firstReplica.value() == 21;
+	}));
 	EXPECT_EQ(scenario.firstReplica.applications(), 1u);
 }
 
@@ -356,9 +417,13 @@ TEST(InterestNetwork, LeavingInterestAfterServerStateChangeNotifiesClient)
 	NetworkScenario scenario;
 	scenario.source.change(30);
 	auto subscription = scenario.firstSystem.subscribe(ValueInterest(20));
-	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.value() == 30; }));
+	ASSERT_TRUE(scenario.await([&] {
+		return scenario.firstReplica.value() == 30;
+	}));
 	scenario.source.change(10);
-	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.removals() == 1; }));
+	ASSERT_TRUE(scenario.await([&] {
+		return scenario.firstReplica.removals() == 1;
+	}));
 	EXPECT_FALSE(scenario.firstReplica.receivedRevision().has_value());
 }
 
@@ -386,9 +451,13 @@ TEST(InterestNetwork, CancelOnOneClientDoesNotRemoveOtherClientsInterest)
 		return scenario.firstReplica.value() == 30 && scenario.secondReplica.value() == 30;
 	}));
 	first.cancel();
-	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.removals() == 1; }));
+	ASSERT_TRUE(scenario.await([&] {
+		return scenario.firstReplica.removals() == 1;
+	}));
 	scenario.source.change(40);
-	ASSERT_TRUE(scenario.await([&] { return scenario.secondReplica.value() == 40; }));
+	ASSERT_TRUE(scenario.await([&] {
+		return scenario.secondReplica.value() == 40;
+	}));
 	EXPECT_EQ(scenario.firstReplica.value(), 30);
 	EXPECT_EQ(scenario.firstReplica.applications(), 1u);
 }
@@ -404,7 +473,9 @@ TEST(InterestNetwork, NewSubscriptionAfterReconnectWorksWhileOldHandleRemainsInv
 	ASSERT_TRUE(current.isValid());
 	EXPECT_FALSE(previous.isValid());
 	scenario.source.change(40);
-	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.value() == 40; }));
+	ASSERT_TRUE(scenario.await([&] {
+		return scenario.firstReplica.value() == 40;
+	}));
 	EXPECT_THROW(previous.update(ValueInterest(0)), spk::Exception);
 }
 
@@ -502,14 +573,18 @@ TEST(InterestNetwork, AuthorizingPreviouslyDeniedInterestPublishesCurrentState)
 		[](spk::ConnectionID, const spk::Network::ServerReplicatedComponent &) {
 			return true;
 		});
-	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.value() == 30; }));
+	ASSERT_TRUE(scenario.await([&] {
+		return scenario.firstReplica.value() == 30;
+	}));
 }
 
 TEST(InterestNetwork, ZeroRevisionIsValidInitialState)
 {
 	NetworkScenario scenario;
 	auto subscription = scenario.firstSystem.subscribe(ValueInterest(0));
-	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.value() == 0; }));
+	ASSERT_TRUE(scenario.await([&] {
+		return scenario.firstReplica.value() == 0;
+	}));
 	ASSERT_TRUE(scenario.firstReplica.receivedRevision().has_value());
 	EXPECT_EQ(*scenario.firstReplica.receivedRevision(), 0u);
 }
@@ -519,11 +594,17 @@ TEST(InterestNetwork, NewSubscriptionAfterComponentLeavingViewGetsFreshState)
 	NetworkScenario scenario;
 	scenario.source.change(30);
 	auto interest = scenario.firstSystem.subscribe(ValueInterest(20));
-	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.value() == 30; }));
+	ASSERT_TRUE(scenario.await([&] {
+		return scenario.firstReplica.value() == 30;
+	}));
 	interest.cancel();
-	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.removals() == 1; }));
+	ASSERT_TRUE(scenario.await([&] {
+		return scenario.firstReplica.removals() == 1;
+	}));
 	auto secondInterest = scenario.firstSystem.subscribe(ValueInterest(20));
-	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.applications() == 2; }));
+	ASSERT_TRUE(scenario.await([&] {
+		return scenario.firstReplica.applications() == 2;
+	}));
 	EXPECT_EQ(scenario.firstReplica.value(), 30);
 }
 
@@ -533,12 +614,16 @@ TEST(InterestNetwork, MultipleMutationsBetweenPublicationsSendOnlyLatest)
 	scenario.serverSystem.setRefreshInterval(250ms);
 	scenario.source.change(10);
 	auto subscription = scenario.firstSystem.subscribe(ValueInterest(0));
-	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.value() == 10; }));
+	ASSERT_TRUE(scenario.await([&] {
+		return scenario.firstReplica.value() == 10;
+	}));
 	const auto initial = scenario.firstReplica.applications();
 	scenario.source.change(11);
 	scenario.source.change(12);
 	scenario.source.change(13);
-	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.value() == 13; }));
+	ASSERT_TRUE(scenario.await([&] {
+		return scenario.firstReplica.value() == 13;
+	}));
 	EXPECT_EQ(scenario.firstReplica.applications(), initial + 1);
 }
 
