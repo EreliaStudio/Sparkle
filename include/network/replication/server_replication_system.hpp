@@ -1,6 +1,7 @@
 #pragma once
 
 #include "network/replication/interest_evaluator.hpp"
+#include "network/replication/replication_batch.hpp"
 #include "network/replication/replication_system.hpp"
 #include "network/replication/server_replicated_component.hpp"
 #include "network/server.hpp"
@@ -11,6 +12,7 @@
 #include <memory>
 #include <mutex>
 #include <set>
+#include <cstdint>
 
 namespace spk::Network
 {
@@ -39,8 +41,9 @@ namespace spk::Network
 		std::shared_ptr<const InterestEvaluator> _evaluator;
 		Interval _refreshInterval = std::chrono::milliseconds(50);
 		Interval _elapsed{};
+		std::uint32_t _componentsPerSection = 16;
 
-		[[nodiscard]] spk::Message stateMessage(const ServerReplicatedComponent &component) const;
+		[[nodiscard]] spk::ByteStream stateMessage(const ServerReplicatedComponent &component) const;
 		void publishUpdates();
 		void onInterestUpdate(const spk::ReceivedMessage &incoming);
 		void onInterestRemoval(const spk::ReceivedMessage &incoming);
@@ -61,5 +64,7 @@ namespace spk::Network
 		void setInterestEvaluator(std::shared_ptr<const InterestEvaluator> evaluator);
 		void setRefreshInterval(Interval interval);
 		[[nodiscard]] Interval refreshInterval() const noexcept;
+		void setComponentsPerSection(std::uint32_t count);
+		[[nodiscard]] std::uint32_t componentsPerSection() const noexcept;
 	};
 }
