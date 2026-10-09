@@ -8,11 +8,11 @@
 
 namespace spk::Network
 {
-	ReplicationSystem::ReplicationSystem(spk::Message::Type requestType) :
-		spk::System("Replication"), _requestType(requestType)
+	ReplicationSystem::ReplicationSystem(spk::Message::Type messageType) :
+		spk::System("Replication"), _messageType(messageType)
 	{
-		if (_requestType == std::numeric_limits<spk::Message::Type>::max())
-			throw spk::Exception("Replication message type has no state successor.");
+		if (_messageType > std::numeric_limits<spk::Message::Type>::max() - 3)
+			throw spk::Exception("Replication message types overflow.");
 	}
 
 	ReplicatedComponent *ReplicationSystem::find(const spk::UUID &identifier)
@@ -29,13 +29,23 @@ namespace spk::Network
 		return nullptr;
 	}
 
-	spk::Message::Type ReplicationSystem::requestType() const noexcept
+	spk::Message::Type ReplicationSystem::interestUpdateType() const noexcept
 	{
-		return _requestType;
+		return _messageType;
+	}
+
+	spk::Message::Type ReplicationSystem::interestRemovalType() const noexcept
+	{
+		return _messageType + 1;
 	}
 
 	spk::Message::Type ReplicationSystem::stateType() const noexcept
 	{
-		return _requestType + 1;
+		return _messageType + 2;
+	}
+
+	spk::Message::Type ReplicationSystem::componentRemovalType() const noexcept
+	{
+		return _messageType + 3;
 	}
 }
