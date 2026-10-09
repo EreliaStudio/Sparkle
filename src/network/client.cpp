@@ -152,7 +152,10 @@ namespace spk
 	{
 	}
 
-	Client::~Client() = default;
+	Client::~Client()
+	{
+		_impl->disconnect();
+	}
 
 	Client::ConnectionContract Client::subscribeToConnection(ConnectionCallback callback)
 	{
