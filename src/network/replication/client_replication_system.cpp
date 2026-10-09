@@ -8,6 +8,90 @@
 
 namespace spk::Network
 {
+	void ClientReplicationSystem::SubscriptionState::invalidate() noexcept
+	{
+		const std::scoped_lock lock(mutex);
+		for (auto &[identifier, weak] : subscriptions)
+		{
+			if (auto entry = weak.lock())
+				entry->valid = false;
+		}
+		subscriptions.clear();
+		client = nullptr;
+	}
+
+	ClientReplicationSystem::Subscription::Subscription(
+		std::shared_ptr<SubscriptionState> owner, std::shared_ptr<SubscriptionEntry> entry) :
+		_owner(owner), _entry(std::move(entry))
+	{
+	}
+
+	ClientReplicationSystem::Subscription &ClientReplicationSystem::Subscription::operator=(
+		Subscription &&other) noexcept
+	{
+		if (this != &other)
+		{
+			cancel();
+			_owner = std::move(other._owner);
+			_entry = std::move(other._entry);
+		}
+		return *this;
+	}
+
+	ClientReplicationSystem::Subscription::~Subscription()
+	{
+		cancel();
+	}
+
+	bool ClientReplicationSystem::Subscription::isValid() const noexcept
+	{
+		auto owner = _owner.lock();
+		if (!owner || !_entry)
+			return false;
+		const std::scoped_lock lock(owner->mutex);
+		return _entry->valid && owner->client != nullptr;
+	}
+
+	void ClientReplicationSystem::Subscription::update(const Interest &interest)
+	{
+		auto owner = _owner.lock();
+		if (!owner || !_entry)
+			throw spk::Exception("Interest subscription is no longer valid.");
+		const std::scoped_lock lock(owner->mutex);
+		if (!_entry->valid || owner->client == nullptr)
+			throw spk::Exception("Interest subscription is no longer valid.");
+		spk::Message::Writer writer(0x53504B10);
+		writer << _entry->identifier.bytes() << interest.type().bytes();
+		interest.serialize(writer);
+		owner->client->send(std::move(writer).build());
+	}
+
+	void ClientReplicationSystem::Subscription::cancel() noexcept
+	{
+		auto owner = _owner.lock();
+		if (owner && _entry)
+		{
+			const std::scoped_lock lock(owner->mutex);
+			if (_entry->valid && owner->client != nullptr)
+			{
+				try
+				{
+					spk::Message::Writer writer(0x53504B11);
+					writer << _entry->identifier.bytes();
+					owner->client->send(std::move(writer).build());
+				}
+				catch (...)
+				{
+					// The connection may be closing; the server clears its subscriptions on disconnect.
+				}
+			}
+			_entry->valid = false;
+			owner->subscriptions.erase(_entry->identifier);
+		}
+		_entry.reset();
+		_owner.reset();
+	}
+
 	ClientReplicationSystem::ClientReplicationSystem(spk::Message::Type type) :
 		ReplicationSystem(type)
 	{
@@ -23,18 +107,23 @@ namespace spk::Network
 		if (_client == &client)
 			return;
 		unbind();
-		auto stateContract = client.messageDispatcher().subscribeTo(stateType(),
+		auto state = client.messageDispatcher().subscribeTo(stateType(),
 			[this](const spk::Message &message) { onState(message); });
-		auto disconnectionContract = client.subscribeToDisconnection([this] {
+		auto disconnected = client.subscribeToDisconnection([this] {
+			_subscriptions->invalidate();
 			_resetPending.store(true, std::memory_order_release);
 		});
-		auto connectionContract = client.subscribeToConnection([this] {
+		auto connected = client.subscribeToConnection([this] {
 			_resetPending.store(true, std::memory_order_release);
 		});
-		_stateContract = std::move(stateContract);
-		_disconnectionContract = std::move(disconnectionContract);
-		_connectionContract = std::move(connectionContract);
+		_stateContract = std::move(state);
+		_disconnectionContract = std::move(disconnected);
+		_connectionContract = std::move(connected);
 		_client = &client;
+		{
+			const std::scoped_lock lock(_subscriptions->mutex);
+			_subscriptions->client = &client;
+		}
 		_resetPending.store(true, std::memory_order_release);
 	}
 
@@ -43,8 +132,25 @@ namespace spk::Network
 		_stateContract.resign();
 		_disconnectionContract.resign();
 		_connectionContract.resign();
+		_subscriptions->invalidate();
 		_client = nullptr;
 		_resetPending.store(true, std::memory_order_release);
+	}
+
+	ClientReplicationSystem::Subscription ClientReplicationSystem::subscribe(const Interest &interest)
+	{
+		if (_client == nullptr || !_client->isConnected())
+			throw spk::Exception("Client must be connected to subscribe to an interest.");
+		auto entry = std::make_shared<SubscriptionEntry>();
+		entry->identifier = spk::UUID::generate();
+		Subscription result(_subscriptions, entry);
+		{
+			const std::scoped_lock lock(_subscriptions->mutex);
+			_subscriptions->subscriptions.emplace(entry->identifier, entry);
+		}
+		try { result.update(interest); }
+		catch (...) { result.cancel(); throw; }
+		return result;
 	}
 
 	void ClientReplicationSystem::resetReceivedRevisions()
@@ -83,14 +189,5 @@ namespace spk::Network
 			resetReceivedRevisions();
 		if (_client != nullptr)
 			_client->treatMessages();
-	}
-
-	void ClientReplicationSystem::request(const spk::UUID &identifier)
-	{
-		if (_client == nullptr)
-			throw spk::Exception("Client replication system is not bound.");
-		spk::Message::Writer writer(requestType());
-		writer << identifier.bytes();
-		_client->send(std::move(writer).build());
 	}
 }
