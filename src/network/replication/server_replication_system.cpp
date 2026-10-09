@@ -7,27 +7,52 @@
 
 namespace spk::Network
 {
-	ServerReplicationSystem::ServerReplicationSystem(spk::Server &server, spk::Message::Type type) :
-		ReplicationSystem(type), _server(server)
+	ServerReplicationSystem::ServerReplicationSystem(spk::Message::Type type) :
+		ReplicationSystem(type)
 	{
-		_requestContract = server.messageDispatcher().subscribeTo(requestType(),
-			[this](const spk::ReceivedMessage &incoming) { onRequest(incoming); });
-		_connectionContract = server.subscribeToConnection([this](spk::ConnectionID peer) {
-			const std::scoped_lock lock(_peerMutex);
-			_peers.insert(peer);
-		});
-		_disconnectionContract = server.subscribeToDisconnection([this](spk::ConnectionID peer) {
-			const std::scoped_lock lock(_peerMutex);
-			_peers.erase(peer);
-			_sent.erase(peer);
-		});
 	}
 
 	ServerReplicationSystem::~ServerReplicationSystem()
 	{
+		unbind();
+	}
+
+	void ServerReplicationSystem::bind(spk::Server &server)
+	{
+		if (_server == &server)
+			return;
+		unbind();
+		auto requestContract = server.messageDispatcher().subscribeTo(requestType(),
+			[this](const spk::ReceivedMessage &incoming) { onRequest(incoming); });
+		auto connectionContract = server.subscribeToConnection([this](spk::ConnectionID peer) {
+			const std::scoped_lock lock(_peerMutex);
+			_peers.insert(peer);
+		});
+		auto disconnectionContract = server.subscribeToDisconnection([this](spk::ConnectionID peer) {
+			const std::scoped_lock lock(_peerMutex);
+			_peers.erase(peer);
+			_sent.erase(peer);
+		});
+		_requestContract = std::move(requestContract);
+		_connectionContract = std::move(connectionContract);
+		_disconnectionContract = std::move(disconnectionContract);
+		_server = &server;
+	}
+
+	void ServerReplicationSystem::unbind()
+	{
 		_requestContract.resign();
 		_connectionContract.resign();
 		_disconnectionContract.resign();
+		_server = nullptr;
+		const std::scoped_lock lock(_peerMutex);
+		_peers.clear();
+		_sent.clear();
+	}
+
+	bool ServerReplicationSystem::isBound() const noexcept
+	{
+		return _server != nullptr;
 	}
 
 	void ServerReplicationSystem::setRequestAuthorizer(Authorizer authorizer)
@@ -45,9 +70,9 @@ namespace spk::Network
 
 	void ServerReplicationSystem::sendUpdates()
 	{
-		const std::scoped_lock lock(_peerMutex);
-		if (engine() == nullptr)
+		if (_server == nullptr || engine() == nullptr)
 			return;
+		const std::scoped_lock lock(_peerMutex);
 		for (spk::ConnectionID peer : _peers)
 		{
 			const auto &components = spk::Registry<spk::Component, spk::Engine *>::instance().elements(engine());
@@ -60,7 +85,7 @@ namespace spk::Network
 				auto previous = versions.find(component->identifier());
 				if (previous != versions.end() && previous->second == component->version())
 					continue;
-				_server.sendTo(peer, stateMessage(*component));
+				_server->sendTo(peer, stateMessage(*component));
 				versions[component->identifier()] = component->version();
 			}
 		}
@@ -76,14 +101,16 @@ namespace spk::Network
 		auto *component = dynamic_cast<ServerReplicatedComponent *>(find(spk::UUID(bytes)));
 		if (component == nullptr || !_authorizer || !_authorizer(incoming.emitter, *component))
 			return;
-		_server.sendTo(incoming.emitter, stateMessage(*component));
+		_server->sendTo(incoming.emitter, stateMessage(*component));
 		const std::scoped_lock lock(_peerMutex);
 		_sent[incoming.emitter][component->identifier()] = component->version();
 	}
 
 	void ServerReplicationSystem::_updateState(spk::UpdateContext &)
 	{
-		_server.treatMessages();
+		if (_server == nullptr)
+			return;
+		_server->treatMessages();
 		sendUpdates();
 	}
 }
