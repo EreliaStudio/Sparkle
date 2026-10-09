@@ -59,6 +59,8 @@ namespace spk
 
 			[[nodiscard]] std::span<const std::byte> data() const noexcept
 			{
+				if (size() == 0)
+					return {};
 				return std::span<const std::byte>(_buffer->data() + _begin, size());
 			}
 
@@ -113,6 +115,8 @@ namespace spk
 			{
 				if (count > _buffer.max_size() - _buffer.size())
 					throw spk::Exception("ByteStream buffer size overflow.");
+				if (count == 0)
+					return;
 				const auto *bytes = static_cast<const std::byte *>(source);
 				_buffer.insert(_buffer.end(), bytes, bytes + count);
 			}
@@ -151,6 +155,12 @@ namespace spk
 
 	public:
 		ByteStream() : _buffer(std::make_shared<const Buffer>()) {}
+		[[nodiscard]] static ByteStream share(std::shared_ptr<const Buffer> buffer)
+		{
+			if (!buffer)
+				throw spk::Exception("ByteStream requires valid storage.");
+			return ByteStream(std::move(buffer));
+		}
 		[[nodiscard]] std::size_t size() const noexcept { return _buffer->size(); }
 		[[nodiscard]] bool empty() const noexcept { return _buffer->empty(); }
 		[[nodiscard]] std::span<const std::byte> data() const noexcept { return *_buffer; }
