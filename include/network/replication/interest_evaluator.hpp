@@ -1,11 +1,7 @@
 #pragma once
 
 #include "network/replication/interest.hpp"
-
-namespace spk
-{
-	using ConnectionID = std::uint64_t;
-}
+#include "network/types.hpp"
 
 namespace spk::Network
 {
