@@ -1,6 +1,7 @@
 #pragma once
 
 #include "concept.hpp"
+#include "container/byte_stream.hpp"
 #include "container/cached_data.hpp"
 #include "container/data_model.hpp"
 #include "container/histogram.hpp"
