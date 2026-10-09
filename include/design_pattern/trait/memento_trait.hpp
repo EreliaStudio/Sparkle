@@ -2,7 +2,6 @@
 
 #include "container/byte_stream.hpp"
 
-#include <exception>
 #include <functional>
 #include <utility>
 
@@ -11,8 +10,26 @@ namespace spk
 	template <typename TObject>
 	class MementoTrait
 	{
-private:
+	private:
 		void _restore(const spk::ByteStream &snapshot)
+		{
+			auto reader = snapshot.reader();
+			static_cast<TObject &>(*this).loadMemento(reader);
+			if (reader.remaining() != 0)
+			{
+				throw spk::Exception("Memento snapshot contains trailing bytes.");
+			}
+		}
+
+	public:
+		[[nodiscard]] spk::ByteStream save() const
+		{
+			spk::ByteStream::Writer writer;
+			static_cast<const TObject &>(*this).saveMemento(writer);
+			return std::move(writer).build();
+		}
+
+		void load(const spk::ByteStream &snapshot)
 		{
 			const auto previous = save();
 			try
@@ -28,24 +45,6 @@ private:
 					throw spk::Exception("Memento restoration and rollback both failed.");
 				}
 				throw;
-			}
-		}
-
-	public:
-		[[nodiscard]] spk::ByteStream save() const
-		{
-			spk::ByteStream::Writer writer;
-			static_cast<const TObject &>(*this).saveMemento(writer);
-			return std::move(writer).build();
-		}
-
-		void load(const spk::ByteStream &snapshot)
-		{
-			auto reader = snapshot.reader();
-			static_cast<TObject &>(*this).loadMemento(reader);
-			if (reader.remaining() != 0)
-			{
-				throw spk::Exception("Memento snapshot contains trailing bytes.");
 			}
 		}
 
