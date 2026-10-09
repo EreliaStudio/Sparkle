@@ -1,7 +1,7 @@
 #pragma once
 
-#include "network/message.hpp"
 #include "container/byte_stream.hpp"
+#include "network/message.hpp"
 #include "network/replication/replicated_component.hpp"
 
 #include <cstdint>

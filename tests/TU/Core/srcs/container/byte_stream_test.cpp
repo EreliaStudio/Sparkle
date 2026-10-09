@@ -1,9 +1,9 @@
 #include "container/byte_stream.hpp"
-#include "network/message.hpp"
 #include "exception.hpp"
+#include "network/message.hpp"
 
-#include <gtest/gtest.h>
 #include <cstdint>
+#include <gtest/gtest.h>
 #include <string>
 #include <type_traits>
 #include <utility>

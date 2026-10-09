@@ -1,7 +1,7 @@
 #pragma once
 
-#include "container/pool.hpp"
 #include "container/byte_stream.hpp"
+#include "container/pool.hpp"
 
 #include <array>
 #include <bit>

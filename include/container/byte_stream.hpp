@@ -32,44 +32,71 @@ namespace spk
 
 			friend class ByteStream;
 			Slice(std::shared_ptr<const Buffer> buffer, std::size_t begin, std::size_t end) :
-				_buffer(std::move(buffer)), _begin(begin), _end(end)
+				_buffer(std::move(buffer)),
+				_begin(begin),
+				_end(end)
 			{
 			}
 
 		public:
-			[[nodiscard]] std::size_t size() const noexcept { return _end - _begin; }
-			[[nodiscard]] std::size_t readOffset() const noexcept { return _cursor; }
-			[[nodiscard]] std::size_t remaining() const noexcept { return size() - _cursor; }
-			[[nodiscard]] bool empty() const noexcept { return size() == 0; }
-			void reset() const noexcept { _cursor = 0; }
+			[[nodiscard]] std::size_t size() const noexcept
+			{
+				return _end - _begin;
+			}
+			[[nodiscard]] std::size_t readOffset() const noexcept
+			{
+				return _cursor;
+			}
+			[[nodiscard]] std::size_t remaining() const noexcept
+			{
+				return size() - _cursor;
+			}
+			[[nodiscard]] bool empty() const noexcept
+			{
+				return size() == 0;
+			}
+			void reset() const noexcept
+			{
+				_cursor = 0;
+			}
 
 			void seek(std::size_t offset) const
 			{
 				if (offset > size())
+				{
 					throw spk::Exception("ByteStream slice seek outside bounds.");
+				}
 				_cursor = offset;
 			}
 
 			void skip(std::size_t count) const
 			{
 				if (count > remaining())
+				{
 					throw spk::Exception("ByteStream slice skip outside bounds.");
+				}
 				_cursor += count;
 			}
 
 			[[nodiscard]] std::span<const std::byte> data() const noexcept
 			{
 				if (size() == 0)
+				{
 					return {};
+				}
 				return std::span<const std::byte>(_buffer->data() + _begin, size());
 			}
 
 			void pull(void *destination, std::size_t count) const
 			{
 				if (count > remaining())
+				{
 					throw spk::Exception("ByteStream slice read outside bounds.");
+				}
 				if (count != 0)
+				{
 					std::memcpy(destination, _buffer->data() + _begin + _cursor, count);
+				}
 				_cursor += count;
 			}
 
@@ -86,7 +113,9 @@ namespace spk
 				std::uint32_t length = 0;
 				*this >> length;
 				if (length > remaining())
+				{
 					throw spk::Exception("ByteStream string exceeds slice bounds.");
+				}
 				std::string decoded(length, '\0');
 				pull(decoded.data(), length);
 				value = std::move(decoded);
@@ -96,7 +125,9 @@ namespace spk
 			[[nodiscard]] Slice slice(std::size_t begin, std::size_t end) const
 			{
 				if (begin > end || end > size())
+				{
 					throw spk::Exception("Invalid nested ByteStream slice bounds.");
+				}
 				return Slice(_buffer, _begin + begin, _begin + end);
 			}
 		};
@@ -107,16 +138,29 @@ namespace spk
 			Buffer _buffer;
 
 		public:
-			void clear() noexcept { _buffer.clear(); }
-			[[nodiscard]] std::size_t size() const noexcept { return _buffer.size(); }
-			[[nodiscard]] std::span<const std::byte> data() const noexcept { return _buffer; }
+			void clear() noexcept
+			{
+				_buffer.clear();
+			}
+			[[nodiscard]] std::size_t size() const noexcept
+			{
+				return _buffer.size();
+			}
+			[[nodiscard]] std::span<const std::byte> data() const noexcept
+			{
+				return _buffer;
+			}
 
 			void append(const void *source, std::size_t count)
 			{
 				if (count > _buffer.max_size() - _buffer.size())
+				{
 					throw spk::Exception("ByteStream buffer size overflow.");
+				}
 				if (count == 0)
+				{
 					return;
+				}
 				const auto *bytes = static_cast<const std::byte *>(source);
 				_buffer.insert(_buffer.end(), bytes, bytes + count);
 			}
@@ -132,7 +176,9 @@ namespace spk
 			Writer &operator<<(std::string_view value)
 			{
 				if (value.size() > std::numeric_limits<std::uint32_t>::max())
+				{
 					throw spk::Exception("ByteStream string exceeds maximum length.");
+				}
 				*this << static_cast<std::uint32_t>(value.size());
 				append(value.data(), value.size());
 				return *this;
@@ -151,27 +197,49 @@ namespace spk
 
 	private:
 		std::shared_ptr<const Buffer> _buffer;
-		explicit ByteStream(std::shared_ptr<const Buffer> buffer) : _buffer(std::move(buffer)) {}
+		explicit ByteStream(std::shared_ptr<const Buffer> buffer) :
+			_buffer(std::move(buffer))
+		{
+		}
 
 	public:
-		ByteStream() : _buffer(std::make_shared<const Buffer>()) {}
+		ByteStream() :
+			_buffer(std::make_shared<const Buffer>())
+		{
+		}
 		[[nodiscard]] static ByteStream share(std::shared_ptr<const Buffer> buffer)
 		{
 			if (!buffer)
+			{
 				throw spk::Exception("ByteStream requires valid storage.");
+			}
 			return ByteStream(std::move(buffer));
 		}
-		[[nodiscard]] std::size_t size() const noexcept { return _buffer->size(); }
-		[[nodiscard]] bool empty() const noexcept { return _buffer->empty(); }
-		[[nodiscard]] std::span<const std::byte> data() const noexcept { return *_buffer; }
+		[[nodiscard]] std::size_t size() const noexcept
+		{
+			return _buffer->size();
+		}
+		[[nodiscard]] bool empty() const noexcept
+		{
+			return _buffer->empty();
+		}
+		[[nodiscard]] std::span<const std::byte> data() const noexcept
+		{
+			return *_buffer;
+		}
 
 		[[nodiscard]] Slice slice(std::size_t begin, std::size_t end) const
 		{
 			if (begin > end || end > size())
+			{
 				throw spk::Exception("Invalid ByteStream slice bounds.");
+			}
 			return Slice(_buffer, begin, end);
 		}
 
-		[[nodiscard]] Slice reader() const { return slice(0, size()); }
+		[[nodiscard]] Slice reader() const
+		{
+			return slice(0, size());
+		}
 	};
 }

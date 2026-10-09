@@ -369,7 +369,9 @@ namespace spk
 	spk::ByteStream Message::payload() const
 	{
 		if (_storage == nullptr || static_cast<bool>(*_storage) == false)
+		{
 			return spk::ByteStream{};
+		}
 		const auto *buffer = static_cast<const spk::ByteStream::Buffer *>(&(**_storage));
 		return spk::ByteStream::share(std::shared_ptr<const spk::ByteStream::Buffer>(_storage, buffer));
 	}

@@ -54,7 +54,9 @@ namespace
 		[[nodiscard]] bool _validateByteStream(const spk::ByteStream &state) const override
 		{
 			if (_throwAfterRead || state.size() != sizeof(int))
+			{
 				return false;
+			}
 			int decoded = 0;
 			state.reader() >> decoded;
 			return decoded >= 0;

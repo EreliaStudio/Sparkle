@@ -23,7 +23,9 @@ namespace spk
 			auto reader = snapshot.reader();
 			static_cast<TObject &>(*this).loadMemento(reader);
 			if (reader.remaining() != 0)
+			{
 				throw spk::Exception("Memento snapshot contains trailing bytes.");
+			}
 		}
 
 		template <typename TOperation>
@@ -33,8 +35,7 @@ namespace spk
 			try
 			{
 				std::invoke(std::forward<TOperation>(operation));
-			}
-			catch (...)
+			} catch (...)
 			{
 				load(snapshot);
 				throw;
