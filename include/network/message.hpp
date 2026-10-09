@@ -1,6 +1,7 @@
 #pragma once
 
 #include "container/pool.hpp"
+#include "container/byte_stream.hpp"
 
 #include <array>
 #include <bit>
@@ -202,6 +203,7 @@ namespace spk
 		[[nodiscard]] bool empty() const noexcept;
 
 		[[nodiscard]] Reader reader(std::size_t offset = 0) const;
+		[[nodiscard]] spk::ByteStream payload() const;
 	};
 
 	// Checks the Writer/Reader serialization API, including custom operators found through ADL.
