@@ -252,17 +252,45 @@ TEST(EngineReplication, RebindingResetsComponentRevisionOnUpdateThread)
 	EXPECT_FALSE(component.receivedRevision().has_value());
 }
 
-TEST(EngineReplication, StaleMessageFromPreviousConnectionIsRejected)
+TEST(EngineReplication, DISABLED_StaleMessageFromPreviousConnectionIsRejected)
 {
-	// TODO: Connection generations are not yet encoded in incoming state messages.
-	// A delayed message from session A can therefore be accepted after reconnecting
-	// to session B, even if component revisions have been reset correctly.
-	// Enable this regression test when session identity is added to the protocol.
-	GTEST_SKIP() << "Deferred: replication messages have no connection/session identity.";
+	// Issue #26: a queued packet from session A must not mutate session B's replica.
+	// The current wire format has no session identifier, so this test is disabled
+	// until the protocol can distinguish the two connections.
+	const spk::UUID id = spk::UUID::generate();
+	spk::Client firstClient;
+	spk::Client secondClient;
+	spk::Engine engine;
+	auto &system = engine.addSystem<spk::Network::ClientReplicationSystem>();
+	spk::Entity player("Player");
+	engine.addEntity(&player);
+	auto &component = player.addComponent<ClientHealth>(id);
+	spk::UpdateContext context{};
 
-	// Intended regression scenario:
-	// 1. Establish session A and retain an undelivered state message.
-	// 2. Disconnect, reconnect as session B, and reset component revisions.
-	// 3. Deliver the session A message after the session B reset.
-	// 4. Verify the client discards it without changing state or revision.
+	system.bind(firstClient);
+	engine.updateState(context);
+	spk::Message::Writer oldWriter(0x53504B11);
+	oldWriter << id.bytes() << std::uint64_t{80} << 25;
+	const auto delayedFromOldConnection = std::move(oldWriter).build();
+
+	system.bind(secondClient);
+	engine.updateState(context);
+	ASSERT_FALSE(component.receivedRevision().has_value());
+	ASSERT_EQ(component.health(), 100);
+
+	// Simulate late delivery of session A bytes through the currently bound
+	// receive queue. The transport currently exposes no original-session tag.
+	secondClient.messages().publish(delayedFromOldConnection);
+	engine.updateState(context);
+
+	EXPECT_EQ(component.health(), 100);
+	EXPECT_FALSE(component.receivedRevision().has_value());
+
+	spk::Message::Writer newWriter(0x53504B11);
+	newWriter << id.bytes() << std::uint64_t{0} << 75;
+	secondClient.messages().publish(std::move(newWriter).build());
+	engine.updateState(context);
+	EXPECT_EQ(component.health(), 75);
+	ASSERT_TRUE(component.receivedRevision().has_value());
+	EXPECT_EQ(*component.receivedRevision(), 0u);
 }
