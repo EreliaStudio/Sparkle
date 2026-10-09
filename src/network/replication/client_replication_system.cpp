@@ -136,6 +136,7 @@ namespace spk::Network
 				const std::scoped_lock lock(_subscriptions->mutex);
 				_subscriptions->client = &client;
 			}
+			_generation.fetch_add(1, std::memory_order_acq_rel);
 			_resetPending.store(true, std::memory_order_release);
 		});
 		_stateContract = std::move(state);
@@ -147,6 +148,7 @@ namespace spk::Network
 			const std::scoped_lock lock(_subscriptions->mutex);
 			_subscriptions->client = &client;
 		}
+		_generation.fetch_add(1, std::memory_order_acq_rel);
 		_resetPending.store(true, std::memory_order_release);
 	}
 
@@ -158,6 +160,8 @@ namespace spk::Network
 		_connectionContract.resign();
 		_subscriptions->invalidate();
 		_client = nullptr;
+		_generation.fetch_add(1, std::memory_order_acq_rel);
+		_pendingSections.clear();
 		_resetPending.store(true, std::memory_order_release);
 	}
 
