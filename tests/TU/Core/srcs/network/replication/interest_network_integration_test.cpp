@@ -141,7 +141,7 @@ namespace
 			secondReplica(secondEngine.root().addComponent<ClientValue>(componentID))
 		{
 			serverSystem.setInterestEvaluator(std::make_shared<ValueEvaluator>());
-			serverSystem.setRequestAuthorizer([](spk::ConnectionID, const ServerValue &) {
+			serverSystem.setRequestAuthorizer([](spk::ConnectionID, const spk::Network::ServerReplicatedComponent &) {
 				return true;
 			});
 			server.start(0);
