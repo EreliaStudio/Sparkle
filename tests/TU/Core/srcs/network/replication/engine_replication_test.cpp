@@ -1,5 +1,6 @@
 #include "design_pattern/trait/memento_trait.hpp"
 #include "engine/engine.hpp"
+#include "core/context/update_context.hpp"
 #include "exception.hpp"
 #include "network/replication/client_replicated_component.hpp"
 #include "network/replication/client_replication_system.hpp"
@@ -214,4 +215,39 @@ TEST(EngineReplication, FailedApplicationDoesNotAdvanceReceivedRevision)
 	component.apply(message.reader(), 8);
 	EXPECT_EQ(component.health(), 25);
 	EXPECT_EQ(*component.receivedRevision(), 8u);
+}
+
+TEST(EngineReplication, RebindingResetsComponentRevisionOnUpdateThread)
+{
+	spk::Client firstClient;
+	spk::Client secondClient;
+	spk::Engine engine;
+	auto &system = engine.addSystem<spk::Network::ClientReplicationSystem>();
+	spk::Entity player("Player");
+	engine.addEntity(&player);
+	auto &component = player.addComponent<ClientHealth>(spk::UUID::generate());
+
+	spk::Message::Writer writer(121);
+	writer << 45;
+	auto message = std::move(writer).build();
+	component.apply(message.reader(), 40);
+	ASSERT_EQ(component.receivedRevision(), 40u);
+
+	system.bind(firstClient);
+	EXPECT_EQ(component.receivedRevision(), 40u);
+	spk::UpdateContext context{};
+	engine.updateState(context);
+	EXPECT_FALSE(component.receivedRevision().has_value());
+
+	component.apply(message.reader(), 50);
+	system.bind(secondClient);
+	EXPECT_EQ(component.receivedRevision(), 50u);
+	engine.updateState(context);
+	EXPECT_FALSE(component.receivedRevision().has_value());
+
+	component.apply(message.reader(), 60);
+	system.unbind();
+	EXPECT_EQ(component.receivedRevision(), 60u);
+	engine.updateState(context);
+	EXPECT_FALSE(component.receivedRevision().has_value());
 }
