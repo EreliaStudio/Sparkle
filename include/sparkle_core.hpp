@@ -76,6 +76,8 @@
 #include "network/replication/client_replication_system.hpp"
 #include "network/replication/server_replication_system.hpp"
 #include "network/replication/replication_system.hpp"
+#include "network/replication/interest.hpp"
+#include "network/replication/interest_evaluator.hpp"
 #include "query/exclude.hpp"
 #include "query/from.hpp"
 #include "query/intersect.hpp"
