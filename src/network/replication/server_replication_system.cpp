@@ -1,7 +1,7 @@
 #include "network/replication/server_replication_system.hpp"
 
-#include "engine/engine.hpp"
 #include "core/context/update_context.hpp"
+#include "engine/engine.hpp"
 #include "engine/registry.hpp"
 #include "exception.hpp"
 
@@ -22,7 +22,9 @@ namespace spk::Network
 	void ServerReplicationSystem::bind(spk::Server &server)
 	{
 		if (_server == &server)
+		{
 			return;
+		}
 		unbind();
 		auto interest = server.messageDispatcher().subscribeTo(interestUpdateType(),
 			[this](const spk::ReceivedMessage &incoming) { onInterestUpdate(incoming); });
@@ -77,7 +79,9 @@ namespace spk::Network
 	void ServerReplicationSystem::setRefreshInterval(Interval interval)
 	{
 		if (interval <= Interval::zero())
+		{
 			throw spk::Exception("Replication refresh interval must be positive.");
+		}
 		_refreshInterval = interval;
 		_elapsed = Interval{};
 	}
@@ -96,18 +100,26 @@ namespace spk::Network
 	{
 		auto reader = incoming.message.reader();
 		if (reader.size() < 2 * sizeof(spk::UUID::Storage))
+		{
 			return;
+		}
 		spk::UUID::Storage bytes{};
 		reader >> bytes;
 		const spk::UUID identifier(bytes);
 		if (identifier.isNull())
+		{
 			return;
+		}
 		auto interest = _createInterest(reader);
 		if (!interest || !_evaluator || reader.readOffset() != reader.size())
+		{
 			return;
+		}
 		const std::scoped_lock lock(_peerMutex);
 		if (!_peers.contains(incoming.emitter))
+		{
 			return;
+		}
 		auto &entry = _interests[incoming.emitter][identifier];
 		entry.interest = std::move(interest);
 	}
@@ -116,13 +128,17 @@ namespace spk::Network
 	{
 		auto reader = incoming.message.reader();
 		if (reader.size() != sizeof(spk::UUID::Storage))
+		{
 			return;
+		}
 		spk::UUID::Storage bytes{};
 		reader >> bytes;
 		const std::scoped_lock lock(_peerMutex);
 		auto peer = _interests.find(incoming.emitter);
 		if (peer == _interests.end())
+		{
 			return;
+		}
 		peer->second.erase(spk::UUID(bytes));
 		_sent[incoming.emitter].clear();
 	}
@@ -138,7 +154,9 @@ namespace spk::Network
 	void ServerReplicationSystem::publishUpdates()
 	{
 		if (_server == nullptr || engine() == nullptr || !_evaluator)
+		{
 			return;
+		}
 		const auto &all = spk::Registry<spk::Component, spk::Engine *>::instance().elements(engine());
 		std::map<spk::UUID, spk::Message> messages;
 		const std::scoped_lock lock(_peerMutex);
@@ -149,7 +167,9 @@ namespace spk::Network
 			{
 				auto *component = dynamic_cast<ServerReplicatedComponent *>(item);
 				if (!component || !_authorizer || !_authorizer(peer, *component))
+				{
 					continue;
+				}
 				for (auto &[id, subscription] : _interests[peer])
 				{
 					if (_evaluator->matches(*subscription.interest, *component, peer))
@@ -159,14 +179,20 @@ namespace spk::Network
 					}
 				}
 				if (!visible.contains(component->identifier()))
+				{
 					continue;
+				}
 				auto &sent = _sent[peer];
 				auto previous = sent.find(component->identifier());
 				if (previous != sent.end() && previous->second == component->version())
+				{
 					continue;
+				}
 				auto message = messages.find(component->identifier());
 				if (message == messages.end())
+				{
 					message = messages.emplace(component->identifier(), stateMessage(*component)).first;
+				}
 				_server->sendTo(peer, message->second);
 				sent[component->identifier()] = component->version();
 			}
@@ -189,11 +215,15 @@ namespace spk::Network
 	void ServerReplicationSystem::_updateState(spk::UpdateContext &context)
 	{
 		if (_server == nullptr)
+		{
 			return;
+		}
 		_server->treatMessages();
 		_elapsed += context.deltaTime;
 		if (_elapsed < _refreshInterval)
+		{
 			return;
+		}
 		_elapsed = Interval{};
 		publishUpdates();
 	}
