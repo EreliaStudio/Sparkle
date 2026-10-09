@@ -44,10 +44,12 @@ namespace
 	{
 	private:
 		std::int32_t _value = 0;
+		mutable std::size_t _captures = 0;
 
 	protected:
 		void _writeNetworkState(spk::Message::Writer &writer) const override
 		{
+			++_captures;
 			writer << _value;
 		}
 
@@ -61,6 +63,7 @@ namespace
 		}
 
 		[[nodiscard]] std::int32_t value() const noexcept { return _value; }
+		[[nodiscard]] std::size_t captures() const noexcept { return _captures; }
 	};
 
 	class ClientValue final : public spk::Network::ClientReplicatedComponent
@@ -333,4 +336,99 @@ TEST(InterestNetwork, RefreshIntervalDelaysPublication)
 	}
 	EXPECT_EQ(scenario.firstReplica.applications(), 0u);
 	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.value() == 30; }));
+}
+
+TEST(InterestNetwork, EnteringInterestAfterServerStateChangeSendsInitialState)
+{
+	NetworkScenario scenario;
+	scenario.source.change(5);
+	auto subscription = scenario.firstSystem.subscribe(ValueInterest(20));
+	for (int i = 0; i < 5; ++i)
+		scenario.tick();
+	EXPECT_EQ(scenario.firstReplica.applications(), 0u);
+	scenario.source.change(21);
+	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.value() == 21; }));
+	EXPECT_EQ(scenario.firstReplica.applications(), 1u);
+}
+
+TEST(InterestNetwork, LeavingInterestAfterServerStateChangeNotifiesClient)
+{
+	NetworkScenario scenario;
+	scenario.source.change(30);
+	auto subscription = scenario.firstSystem.subscribe(ValueInterest(20));
+	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.value() == 30; }));
+	scenario.source.change(10);
+	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.removals() == 1; }));
+	EXPECT_FALSE(scenario.firstReplica.receivedRevision().has_value());
+}
+
+TEST(InterestNetwork, EquivalentClientsShareSerializedComponentMessage)
+{
+	NetworkScenario scenario;
+	scenario.connectSecond();
+	scenario.source.change(30);
+	auto first = scenario.firstSystem.subscribe(ValueInterest(20));
+	auto second = scenario.secondSystem.subscribe(ValueInterest(20));
+	ASSERT_TRUE(scenario.await([&] {
+		return scenario.firstReplica.value() == 30 && scenario.secondReplica.value() == 30;
+	}));
+	EXPECT_EQ(scenario.source.captures(), 1u);
+}
+
+TEST(InterestNetwork, CancelOnOneClientDoesNotRemoveOtherClientsInterest)
+{
+	NetworkScenario scenario;
+	scenario.connectSecond();
+	scenario.source.change(30);
+	auto first = scenario.firstSystem.subscribe(ValueInterest(0));
+	auto second = scenario.secondSystem.subscribe(ValueInterest(0));
+	ASSERT_TRUE(scenario.await([&] {
+		return scenario.firstReplica.value() == 30 && scenario.secondReplica.value() == 30;
+	}));
+	first.cancel();
+	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.removals() == 1; }));
+	scenario.source.change(40);
+	ASSERT_TRUE(scenario.await([&] { return scenario.secondReplica.value() == 40; }));
+	EXPECT_EQ(scenario.firstReplica.value(), 30);
+	EXPECT_EQ(scenario.firstReplica.applications(), 1u);
+}
+
+TEST(InterestNetwork, NewSubscriptionAfterReconnectWorksWhileOldHandleRemainsInvalid)
+{
+	NetworkScenario scenario;
+	auto previous = scenario.firstSystem.subscribe(ValueInterest(0));
+	scenario.firstClient.disconnect();
+	EXPECT_FALSE(previous.isValid());
+	scenario.firstClient.connect("127.0.0.1", scenario.server.port());
+	auto current = scenario.firstSystem.subscribe(ValueInterest(0));
+	ASSERT_TRUE(current.isValid());
+	EXPECT_FALSE(previous.isValid());
+	scenario.source.change(40);
+	ASSERT_TRUE(scenario.await([&] { return scenario.firstReplica.value() == 40; }));
+	EXPECT_THROW(previous.update(ValueInterest(0)), spk::Exception);
+}
+
+TEST(InterestNetwork, RAIICancelIsIdempotent)
+{
+	NetworkScenario scenario;
+	auto subscription = scenario.firstSystem.subscribe(ValueInterest(0));
+	ASSERT_TRUE(subscription.isValid());
+	subscription.cancel();
+	EXPECT_FALSE(subscription.isValid());
+	EXPECT_NO_THROW(subscription.cancel());
+	EXPECT_THROW(subscription.update(ValueInterest(1)), spk::Exception);
+}
+
+TEST(InterestNetwork, UnbindingClientInvalidatesAllSubscriptions)
+{
+	NetworkScenario scenario;
+	auto first = scenario.firstSystem.subscribe(ValueInterest(0));
+	auto second = scenario.firstSystem.subscribe(ValueInterest(20));
+	ASSERT_TRUE(first.isValid());
+	ASSERT_TRUE(second.isValid());
+	scenario.firstSystem.unbind();
+	EXPECT_FALSE(first.isValid());
+	EXPECT_FALSE(second.isValid());
+	EXPECT_NO_THROW(first.cancel());
+	EXPECT_NO_THROW(second.cancel());
 }
