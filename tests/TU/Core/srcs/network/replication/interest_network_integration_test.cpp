@@ -82,13 +82,19 @@ namespace
 	{
 	private:
 		std::int32_t _value = -1;
+		std::int32_t _pendingValue = -1;
 		std::size_t _applications = 0;
 		std::size_t _removals = 0;
 
 	protected:
-		void _readNetworkState(const spk::Message::Reader &reader) override
+		void _decodeNetworkState(const spk::Message::Reader &reader) override
 		{
-			reader >> _value;
+			reader >> _pendingValue;
+		}
+
+		void _commitNetworkState() noexcept override
+		{
+			_value = _pendingValue;
 			++_applications;
 		}
 
