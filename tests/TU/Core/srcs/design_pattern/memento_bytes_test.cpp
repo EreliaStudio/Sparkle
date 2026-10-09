@@ -98,10 +98,13 @@ TEST(MementoBytes, SuccessfulTransactionCommits)
 TEST(MementoBytes, FailedTransactionRollsBack)
 {
 	Character character;
-	EXPECT_THROW(character.transaction([&] {
-		character.assign(20, 30);
-		throw std::runtime_error("transaction failed");
-	}), std::runtime_error);
+	auto failingOperation = [&] {
+		character.transaction([&] {
+			character.assign(20, 30);
+			throw std::runtime_error("transaction failed");
+		});
+	};
+	EXPECT_THROW(failingOperation(), std::runtime_error);
 	EXPECT_EQ(character.health(), 100);
 	EXPECT_EQ(character.shield(), 50);
 }
@@ -109,16 +112,22 @@ TEST(MementoBytes, FailedTransactionRollsBack)
 TEST(MementoBytes, NestedTransactionRestoresInnerAndOuterStates)
 {
 	Character character;
-	EXPECT_THROW(character.transaction([&] {
-		character.assign(10, 15);
-		EXPECT_THROW(character.transaction([&] {
+	auto inner = [&] {
+		character.transaction([&] {
 			character.assign(20, 25);
 			throw spk::Exception("inner");
-		}), spk::Exception);
-		EXPECT_EQ(character.health(), 10);
-		EXPECT_EQ(character.shield(), 15);
-		throw spk::Exception("outer");
-	}), spk::Exception);
+		});
+	};
+	auto outer = [&] {
+		character.transaction([&] {
+			character.assign(10, 15);
+			EXPECT_THROW(inner(), spk::Exception);
+			EXPECT_EQ(character.health(), 10);
+			EXPECT_EQ(character.shield(), 15);
+			throw spk::Exception("outer");
+		});
+	};
+	EXPECT_THROW(outer(), spk::Exception);
 	EXPECT_EQ(character.health(), 100);
 	EXPECT_EQ(character.shield(), 50);
 }
