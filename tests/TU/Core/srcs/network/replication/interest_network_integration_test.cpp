@@ -82,19 +82,27 @@ namespace
 	{
 	private:
 		std::int32_t _value = -1;
-		std::int32_t _pendingValue = -1;
 		std::size_t _applications = 0;
 		std::size_t _removals = 0;
 
 	protected:
-		void _decodeNetworkState(const spk::Message::Reader &reader) override
+		[[nodiscard]] spk::ByteStream _decodeByteStream(const spk::Message::Reader &reader) const override
 		{
-			reader >> _pendingValue;
+			std::int32_t value = 0;
+			reader >> value;
+			spk::ByteStream::Writer writer;
+			writer << value;
+			return std::move(writer).build();
 		}
 
-		void _commitNetworkState() noexcept override
+		[[nodiscard]] bool _validateByteStream(const spk::ByteStream &state) const override
 		{
-			_value = _pendingValue;
+			return state.size() == sizeof(std::int32_t);
+		}
+
+		void _commitByteStream(const spk::ByteStream &state) override
+		{
+			state.reader() >> _value;
 			++_applications;
 		}
 
