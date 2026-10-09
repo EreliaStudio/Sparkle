@@ -162,6 +162,7 @@ namespace spk::Network
 		_client = nullptr;
 		_generation.fetch_add(1, std::memory_order_acq_rel);
 		_pendingSections.clear();
+		_removalSequence.clear();
 		_resetPending.store(true, std::memory_order_release);
 	}
 
@@ -216,10 +217,15 @@ namespace spk::Network
 		_workerPool = std::move(pool);
 	}
 
-	void ClientReplicationSystem::applyRecords(const Records &records)
+	void ClientReplicationSystem::applyRecords(const Records &records, std::uint64_t sequence)
 	{
 		for (const auto &record : records)
 		{
+			const auto removal = _removalSequence.find(record.identifier);
+			if (removal != _removalSequence.end() && sequence < removal->second)
+			{
+				continue;
+			}
 			auto *component = dynamic_cast<ClientReplicatedComponent *>(find(record.identifier));
 			if (component == nullptr)
 			{
@@ -251,7 +257,7 @@ namespace spk::Network
 			}
 			try
 			{
-				applyRecords(it->answer.get());
+				applyRecords(it->answer.get(), it->sequence);
 			} catch (const std::exception &)
 			{
 				// A damaged section is independent of all other sections.
@@ -266,6 +272,7 @@ namespace spk::Network
 		{
 			const auto batch = ReplicationBatch::decode(message.payload());
 			const std::uint64_t generation = _generation.load(std::memory_order_acquire);
+			const std::uint64_t sequence = ++_incomingSequence;
 			for (std::size_t i = 0; i < batch.sectionCount(); ++i)
 			{
 				const auto section = batch.section(i);
@@ -275,12 +282,12 @@ namespace spk::Network
 					auto answer = _workerPool->submit([section, count] {
 						return ReplicationBatch::decodeSection(section, count);
 					});
-					_pendingSections.push_back({generation, std::move(answer)});
+					_pendingSections.push_back({generation, sequence, std::move(answer)});
 					continue;
 				}
 				try
 				{
-					applyRecords(ReplicationBatch::decodeSection(section, count));
+					applyRecords(ReplicationBatch::decodeSection(section, count), sequence);
 				} catch (const std::exception &)
 				{
 					// A malformed section does not invalidate other sections.
@@ -301,6 +308,7 @@ namespace spk::Network
 		}
 		spk::UUID::Storage bytes{};
 		reader >> bytes;
+		_removalSequence[spk::UUID(bytes)] = ++_incomingSequence;
 		auto *component = dynamic_cast<ClientReplicatedComponent *>(find(spk::UUID(bytes)));
 		if (component != nullptr)
 		{
@@ -313,6 +321,7 @@ namespace spk::Network
 		if (_resetPending.exchange(false, std::memory_order_acq_rel))
 		{
 			resetReceivedRevisions();
+			_removalSequence.clear();
 		}
 		if (_client != nullptr)
 		{
@@ -321,7 +330,12 @@ namespace spk::Network
 		if (_resetPending.exchange(false, std::memory_order_acq_rel))
 		{
 			resetReceivedRevisions();
+			_removalSequence.clear();
 		}
 		drainSections();
+		if (_pendingSections.empty())
+		{
+			_removalSequence.clear();
+		}
 	}
 }
