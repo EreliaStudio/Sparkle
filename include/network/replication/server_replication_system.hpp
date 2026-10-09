@@ -2,44 +2,65 @@
 
 #include "network/replication/replication_system.hpp"
 #include "network/replication/server_replicated_component.hpp"
+#include "network/replication/interest_evaluator.hpp"
 #include "network/server.hpp"
 
+#include <chrono>
 #include <functional>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <set>
 
 namespace spk::Network
 {
-	class ServerReplicationSystem final : public ReplicationSystem
+	class ServerReplicationSystem : public ReplicationSystem
 	{
 	public:
 		using Authorizer = std::function<bool(spk::ConnectionID, const ServerReplicatedComponent &)>;
+		using Interval = std::chrono::steady_clock::duration;
 
 	private:
+		struct ClientSubscription
+		{
+			std::unique_ptr<Interest> interest;
+			std::set<spk::UUID> visible;
+		};
+
 		spk::Server *_server = nullptr;
-		spk::Server::MessageDispatcher::Contract _requestContract;
+		spk::Server::MessageDispatcher::Contract _interestContract;
+		spk::Server::MessageDispatcher::Contract _removalContract;
 		spk::Server::ConnectionContract _connectionContract;
 		spk::Server::DisconnectionContract _disconnectionContract;
 		std::mutex _peerMutex;
 		std::set<spk::ConnectionID> _peers;
+		std::map<spk::ConnectionID, std::map<spk::UUID, ClientSubscription>> _interests;
 		std::map<spk::ConnectionID, std::map<spk::UUID, std::uint64_t>> _sent;
 		Authorizer _authorizer;
+		std::shared_ptr<const InterestEvaluator> _evaluator;
+		Interval _refreshInterval = std::chrono::milliseconds(50);
+		Interval _elapsed{};
 
 		[[nodiscard]] spk::Message stateMessage(const ServerReplicatedComponent &component) const;
-		void sendUpdates();
-		void onRequest(const spk::ReceivedMessage &incoming);
+		void publishUpdates();
+		void onInterestUpdate(const spk::ReceivedMessage &incoming);
+		void onInterestRemoval(const spk::ReceivedMessage &incoming);
 
 	protected:
-		void _updateState(spk::UpdateContext &) override;
+		[[nodiscard]] virtual std::unique_ptr<Interest> _createInterest(
+			const spk::Message::Reader &reader);
+		void _updateState(spk::UpdateContext &context) override;
 
 	public:
-		explicit ServerReplicationSystem(spk::Message::Type requestType = 0x53504B10);
+		explicit ServerReplicationSystem(spk::Message::Type messageType = 0x53504B10);
 		~ServerReplicationSystem() override;
 
 		void bind(spk::Server &server);
 		void unbind();
 		[[nodiscard]] bool isBound() const noexcept;
 		void setRequestAuthorizer(Authorizer authorizer);
+		void setInterestEvaluator(std::shared_ptr<const InterestEvaluator> evaluator);
+		void setRefreshInterval(Interval interval);
+		[[nodiscard]] Interval refreshInterval() const noexcept;
 	};
 }
