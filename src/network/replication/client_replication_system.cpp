@@ -60,7 +60,7 @@ namespace spk::Network
 		const std::scoped_lock lock(owner->mutex);
 		if (!_entry->valid || owner->client == nullptr)
 			throw spk::Exception("Interest subscription is no longer valid.");
-		spk::Message::Writer writer(0x53504B10);
+		spk::Message::Writer writer(owner->updateType);
 		writer << _entry->identifier.bytes() << interest.type().bytes();
 		interest.serialize(writer);
 		owner->client->send(std::move(writer).build());
@@ -76,7 +76,7 @@ namespace spk::Network
 			{
 				try
 				{
-					spk::Message::Writer writer(0x53504B11);
+					spk::Message::Writer writer(owner->removalType);
 					writer << _entry->identifier.bytes();
 					owner->client->send(std::move(writer).build());
 				}
@@ -95,6 +95,8 @@ namespace spk::Network
 	ClientReplicationSystem::ClientReplicationSystem(spk::Message::Type type) :
 		ReplicationSystem(type)
 	{
+		_subscriptions->updateType = interestUpdateType();
+		_subscriptions->removalType = interestRemovalType();
 	}
 
 	ClientReplicationSystem::~ClientReplicationSystem()
