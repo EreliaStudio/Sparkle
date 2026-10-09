@@ -25,7 +25,7 @@ namespace spk::Network
 		resetReceivedRevision();
 	}
 
-	void ClientReplicatedComponent::apply(const spk::Message::Reader &reader, std::uint64_t revision)
+	void ClientReplicatedComponent::apply(const spk::ByteStream::Slice &reader, std::uint64_t revision)
 	{
 		if (_receivedRevision && revision <= *_receivedRevision)
 		{
