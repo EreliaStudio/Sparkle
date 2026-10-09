@@ -1,8 +1,8 @@
 #pragma once
 
-#include "network/replication/replicated_component.hpp"
 #include "design_pattern/trait/versioned_trait.hpp"
 #include "network/message.hpp"
+#include "network/replication/replicated_component.hpp"
 
 namespace spk::Network
 {

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "network/replication/replicated_component.hpp"
 #include "network/message.hpp"
+#include "network/replication/replicated_component.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -16,7 +16,9 @@ namespace spk::Network
 	protected:
 		// Implement using MementoTrait::transaction<State>() for rollback on malformed input.
 		virtual void _readNetworkState(const spk::Message::Reader &reader) = 0;
-		virtual void _onInterestLost() {}
+		virtual void _onInterestLost()
+		{
+		}
 
 	public:
 		explicit ClientReplicatedComponent(spk::UUID identifier);

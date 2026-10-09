@@ -24,7 +24,8 @@ namespace spk::Network
 
 	ClientReplicationSystem::Subscription::Subscription(
 		std::shared_ptr<SubscriptionState> owner, std::shared_ptr<SubscriptionEntry> entry) :
-		_owner(owner), _entry(std::move(entry))
+		_owner(owner),
+		_entry(std::move(entry))
 	{
 	}
 
@@ -87,8 +88,7 @@ namespace spk::Network
 					spk::Message::Writer writer(owner->removalType);
 					writer << _entry->identifier.bytes();
 					owner->client->send(std::move(writer).build());
-				}
-				catch (...)
+				} catch (...)
 				{
 					// The connection may be closing; the server clears its subscriptions on disconnect.
 				}
@@ -119,10 +119,12 @@ namespace spk::Network
 			return;
 		}
 		unbind();
-		auto state = client.messageDispatcher().subscribeTo(stateType(),
-			[this](const spk::Message &message) { onState(message); });
-		auto removal = client.messageDispatcher().subscribeTo(componentRemovalType(),
-			[this](const spk::Message &message) { onComponentRemoval(message); });
+		auto state = client.messageDispatcher().subscribeTo(stateType(), [this](const spk::Message &message) {
+			onState(message);
+		});
+		auto removal = client.messageDispatcher().subscribeTo(componentRemovalType(), [this](const spk::Message &message) {
+			onComponentRemoval(message);
+		});
 		auto disconnected = client.subscribeToDisconnection([this] {
 			_subscriptions->invalidate();
 			_resetPending.store(true, std::memory_order_release);
@@ -173,8 +175,11 @@ namespace spk::Network
 		try
 		{
 			result.update(interest);
+		} catch (...)
+		{
+			result.cancel();
+			throw;
 		}
-		catch (...) { result.cancel(); throw; }
 		return result;
 	}
 

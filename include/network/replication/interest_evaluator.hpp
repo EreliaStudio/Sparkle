@@ -10,7 +10,6 @@ namespace spk::Network
 	{
 	public:
 		virtual ~InterestEvaluator() = default;
-		[[nodiscard]] virtual bool matches(const Interest &interest,
-			const ServerReplicatedComponent &component, spk::ConnectionID client) const = 0;
+		[[nodiscard]] virtual bool matches(const Interest &interest, const ServerReplicatedComponent &component, spk::ConnectionID client) const = 0;
 	};
 }

@@ -9,7 +9,8 @@
 namespace spk::Network
 {
 	ReplicationSystem::ReplicationSystem(spk::Message::Type messageType) :
-		spk::System("Replication"), _messageType(messageType)
+		spk::System("Replication"),
+		_messageType(messageType)
 	{
 		if (_messageType > std::numeric_limits<spk::Message::Type>::max() - 3)
 		{

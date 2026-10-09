@@ -5,7 +5,8 @@
 namespace spk::Network
 {
 	ReplicatedComponent::ReplicatedComponent(spk::UUID identifier) :
-		spk::Component("Replicated component"), _identifier(identifier)
+		spk::Component("Replicated component"),
+		_identifier(identifier)
 	{
 		if (_identifier.isNull())
 		{

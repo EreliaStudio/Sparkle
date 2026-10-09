@@ -1,8 +1,8 @@
 #pragma once
 
+#include "network/replication/interest_evaluator.hpp"
 #include "network/replication/replication_system.hpp"
 #include "network/replication/server_replicated_component.hpp"
-#include "network/replication/interest_evaluator.hpp"
 #include "network/server.hpp"
 
 #include <chrono>

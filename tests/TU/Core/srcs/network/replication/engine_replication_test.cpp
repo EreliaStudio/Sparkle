@@ -1,6 +1,6 @@
+#include "core/context/update_context.hpp"
 #include "design_pattern/trait/memento_trait.hpp"
 #include "engine/engine.hpp"
-#include "core/context/update_context.hpp"
 #include "exception.hpp"
 #include "network/replication/client_replicated_component.hpp"
 #include "network/replication/client_replication_system.hpp"
@@ -84,9 +84,13 @@ namespace
 			transaction<State>([&] {
 				reader >> _health;
 				if (_throwAfterRead)
+				{
 					throw std::runtime_error("invalid state");
+				}
 				if (reader.readOffset() != reader.size())
+				{
 					throw std::runtime_error("unexpected bytes");
+				}
 			});
 		}
 

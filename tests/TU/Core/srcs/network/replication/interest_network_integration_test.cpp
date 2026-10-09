@@ -8,9 +8,9 @@
 #include "network/replication/server_replicated_component.hpp"
 #include "network/replication/server_replication_system.hpp"
 
-#include <gtest/gtest.h>
 #include <chrono>
 #include <cstdint>
+#include <gtest/gtest.h>
 #include <memory>
 #include <thread>
 #include <utility>
@@ -308,8 +308,8 @@ TEST(InterestNetwork, RAIIDestructionRemovesInterestAndNotifiesReplica)
 	{
 		auto subscription = scenario.firstSystem.subscribe(ValueInterest(0));
 		ASSERT_TRUE(scenario.await([&] {
-		return scenario.firstReplica.value() == 25;
-	}));
+			return scenario.firstReplica.value() == 25;
+		}));
 	}
 	ASSERT_TRUE(scenario.await([&] {
 		return scenario.firstReplica.removals() == 1;

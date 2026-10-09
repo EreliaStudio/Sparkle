@@ -1,8 +1,8 @@
 #pragma once
 
 #include "engine/system.hpp"
-#include "network/replication/replicated_component.hpp"
 #include "network/message.hpp"
+#include "network/replication/replicated_component.hpp"
 
 namespace spk::Network
 {

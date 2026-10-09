@@ -54,8 +54,7 @@ namespace spk
 			try
 			{
 				std::invoke(std::forward<TOperation>(operation));
-			}
-			catch (...)
+			} catch (...)
 			{
 				load(snapshot);
 				throw;

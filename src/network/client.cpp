@@ -157,8 +157,7 @@ namespace spk
 		try
 		{
 			_impl->disconnect();
-		}
-		catch (...)
+		} catch (...)
 		{
 		}
 	}

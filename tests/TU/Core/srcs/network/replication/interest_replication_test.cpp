@@ -1,12 +1,12 @@
-#include "network/replication/client_replication_system.hpp"
 #include "exception.hpp"
+#include "network/replication/client_replication_system.hpp"
 #include "network/replication/interest.hpp"
 #include "network/replication/interest_evaluator.hpp"
 #include "network/replication/server_replicated_component.hpp"
 #include "network/replication/server_replication_system.hpp"
 
-#include <gtest/gtest.h>
 #include <chrono>
+#include <gtest/gtest.h>
 #include <memory>
 #include <utility>
 

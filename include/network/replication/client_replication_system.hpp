@@ -1,9 +1,9 @@
 #pragma once
 
-#include "network/replication/replication_system.hpp"
+#include "network/client.hpp"
 #include "network/replication/client_replicated_component.hpp"
 #include "network/replication/interest.hpp"
-#include "network/client.hpp"
+#include "network/replication/replication_system.hpp"
 
 #include <atomic>
 #include <map>
@@ -38,8 +38,7 @@ namespace spk::Network
 			std::weak_ptr<SubscriptionState> _owner;
 			std::shared_ptr<SubscriptionEntry> _entry;
 			friend class ClientReplicationSystem;
-			Subscription(std::shared_ptr<SubscriptionState> owner,
-				std::shared_ptr<SubscriptionEntry> entry);
+			Subscription(std::shared_ptr<SubscriptionState> owner, std::shared_ptr<SubscriptionEntry> entry);
 
 		public:
 			Subscription() = default;

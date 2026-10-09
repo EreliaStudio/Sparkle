@@ -26,10 +26,12 @@ namespace spk::Network
 			return;
 		}
 		unbind();
-		auto interest = server.messageDispatcher().subscribeTo(interestUpdateType(),
-			[this](const spk::ReceivedMessage &incoming) { onInterestUpdate(incoming); });
-		auto removal = server.messageDispatcher().subscribeTo(interestRemovalType(),
-			[this](const spk::ReceivedMessage &incoming) { onInterestRemoval(incoming); });
+		auto interest = server.messageDispatcher().subscribeTo(interestUpdateType(), [this](const spk::ReceivedMessage &incoming) {
+			onInterestUpdate(incoming);
+		});
+		auto removal = server.messageDispatcher().subscribeTo(interestRemovalType(), [this](const spk::ReceivedMessage &incoming) {
+			onInterestRemoval(incoming);
+		});
 		auto connected = server.subscribeToConnection([this](spk::ConnectionID peer) {
 			const std::scoped_lock lock(_peerMutex);
 			_peers.insert(peer);
