@@ -111,6 +111,8 @@ namespace spk::Network
 		unbind();
 		auto state = client.messageDispatcher().subscribeTo(stateType(),
 			[this](const spk::Message &message) { onState(message); });
+		auto removal = client.messageDispatcher().subscribeTo(componentRemovalType(),
+			[this](const spk::Message &message) { onComponentRemoval(message); });
 		auto disconnected = client.subscribeToDisconnection([this] {
 			_subscriptions->invalidate();
 			_resetPending.store(true, std::memory_order_release);
@@ -119,6 +121,7 @@ namespace spk::Network
 			_resetPending.store(true, std::memory_order_release);
 		});
 		_stateContract = std::move(state);
+		_componentRemovalContract = std::move(removal);
 		_disconnectionContract = std::move(disconnected);
 		_connectionContract = std::move(connected);
 		_client = &client;
@@ -132,6 +135,7 @@ namespace spk::Network
 	void ClientReplicationSystem::unbind()
 	{
 		_stateContract.resign();
+		_componentRemovalContract.resign();
 		_disconnectionContract.resign();
 		_connectionContract.resign();
 		_subscriptions->invalidate();
@@ -183,6 +187,18 @@ namespace spk::Network
 		auto *component = dynamic_cast<ClientReplicatedComponent *>(find(spk::UUID(bytes)));
 		if (component != nullptr)
 			component->apply(reader, revision);
+	}
+
+	void ClientReplicationSystem::onComponentRemoval(const spk::Message &message)
+	{
+		auto reader = message.reader();
+		if (reader.size() != sizeof(spk::UUID::Storage))
+			return;
+		spk::UUID::Storage bytes{};
+		reader >> bytes;
+		auto *component = dynamic_cast<ClientReplicatedComponent *>(find(spk::UUID(bytes)));
+		if (component != nullptr)
+			component->leaveInterest();
 	}
 
 	void ClientReplicationSystem::_updateState(spk::UpdateContext &)
