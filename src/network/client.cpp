@@ -154,7 +154,13 @@ namespace spk
 
 	Client::~Client()
 	{
-		_impl->disconnect();
+		try
+		{
+			_impl->disconnect();
+		}
+		catch (...)
+		{
+		}
 	}
 
 	Client::ConnectionContract Client::subscribeToConnection(ConnectionCallback callback)
