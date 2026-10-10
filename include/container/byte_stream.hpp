@@ -5,13 +5,11 @@
 
 #include <array>
 #include <bit>
-#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <limits>
 #include <memory>
-#include <ranges>
 #include <span>
 #include <string>
 #include <string_view>
@@ -21,57 +19,6 @@
 
 namespace spk
 {
-	template <typename TValue, typename TWriter, typename TReader>
-	concept ByteStreamSerializable =
-		std::default_initializable<TValue> &&
-		requires(TWriter &writer, const TReader &reader, const TValue &source, TValue &destination) {
-			writer << source;
-			reader >> destination;
-		};
-
-	// Dynamically sized collections supporting element insertion.
-	template <typename TCollection>
-	concept ByteStreamPushBack = requires(TCollection &collection, typename TCollection::value_type value) {
-		collection.push_back(std::move(value));
-	};
-
-	template <typename TCollection>
-	concept ByteStreamInsert = requires(TCollection &collection, typename TCollection::value_type value) {
-		collection.insert(std::move(value));
-	};
-
-	template <typename TCollection>
-	concept ByteStreamClearable = requires(TCollection &collection) {
-		typename TCollection::value_type;
-		collection.clear();
-	};
-
-	template <typename TCollection>
-	concept ByteStreamCollection = std::ranges::sized_range<const TCollection> && !std::same_as<TCollection, std::string> && ByteStreamClearable<TCollection> && (ByteStreamPushBack<TCollection> || ByteStreamInsert<TCollection>);
-
-	template <typename TCollection>
-	concept ByteStreamMap = ByteStreamCollection<TCollection> && requires {
-		typename TCollection::key_type;
-		typename TCollection::mapped_type;
-	};
-
-	template <typename TCollection, typename TWriter, typename TReader>
-	concept ByteStreamSequenceSerializable = ByteStreamCollection<TCollection> && !ByteStreamMap<TCollection> && ByteStreamSerializable<typename TCollection::value_type, TWriter, TReader>;
-
-	template <typename TCollection, typename TWriter, typename TReader>
-	concept ByteStreamMapSerializable = ByteStreamMap<TCollection> && ByteStreamSerializable<typename TCollection::key_type, TWriter, TReader> && ByteStreamSerializable<typename TCollection::mapped_type, TWriter, TReader>;
-
-	template <typename TCollection, typename TWriter, typename TReader>
-	concept ByteStreamCollectionSerializable = ByteStreamSequenceSerializable<TCollection, TWriter, TReader> || ByteStreamMapSerializable<TCollection, TWriter, TReader>;
-
-	template <typename TCollection>
-	concept ByteStreamResizable = requires(TCollection &collection, std::size_t count) {
-		collection.resize(count);
-	};
-
-	template <typename TCollection>
-	concept ByteStreamContiguousCollection = ByteStreamCollection<TCollection> && !ByteStreamMap<TCollection> && std::ranges::contiguous_range<TCollection> && std::ranges::contiguous_range<const TCollection> && std::is_trivially_copyable_v<typename TCollection::value_type> && !std::same_as<typename TCollection::value_type, bool> && ByteStreamResizable<TCollection>;
-
 	class ByteStream
 	{
 	public:
@@ -157,7 +104,7 @@ namespace spk
 			}
 
 			template <typename TValue>
-				requires(std::is_trivially_copyable_v<TValue> && !std::is_pointer_v<TValue> && !std::is_member_pointer_v<TValue> && !std::is_array_v<TValue> && !std::same_as<TValue, std::string_view>)
+				requires std::is_trivially_copyable_v<TValue>
 			const Reader &operator>>(TValue &value) const
 			{
 				pull(&value, sizeof(TValue));
@@ -219,75 +166,7 @@ namespace spk
 				return *this;
 			}
 
-			template <typename TCollection>
-				requires ByteStreamCollectionSerializable<TCollection, Writer, Reader>
-			const Reader &operator>>(TCollection &value) const
-			{
-				std::uint32_t count = 0;
-				*this >> count;
-				using Element = typename TCollection::value_type;
-				if constexpr (ByteStreamContiguousCollection<TCollection>)
-				{
-					if (count > remaining() / sizeof(Element))
-					{
-						throw spk::Exception("ByteStream collection exceeds reader bounds.");
-					}
-					TCollection decoded;
-					decoded.resize(count);
-					pull(std::ranges::data(decoded), decoded.size() * sizeof(Element));
-					value = std::move(decoded);
-				}
-				else
-				{
-					_readCollectionElements(value, count);
-				}
-				return *this;
-			}
 
-		private:
-			template <typename TCollection>
-			void _readCollectionElements(TCollection &value, std::uint32_t count) const
-			{
-				using Element = typename TCollection::value_type;
-				constexpr std::size_t minimum = ByteStreamMap<TCollection> ? 2 : (std::same_as<Element, std::string> ? sizeof(std::uint32_t) : 1);
-				if (count > remaining() / minimum)
-				{
-					throw spk::Exception("ByteStream collection exceeds reader bounds.");
-				}
-				TCollection decoded;
-				for (std::uint32_t index = 0; index < count; ++index)
-				{
-					_readCollectionElement(decoded);
-				}
-				value = std::move(decoded);
-			}
-
-			template <typename TCollection>
-			void _readCollectionElement(TCollection &decoded) const
-			{
-				if constexpr (ByteStreamMap<TCollection>)
-				{
-					typename TCollection::key_type key{};
-					typename TCollection::mapped_type mapped{};
-					*this >> key >> mapped;
-					decoded.emplace(std::move(key), std::move(mapped));
-				}
-				else
-				{
-					typename TCollection::value_type element{};
-					*this >> element;
-					if constexpr (requires { decoded.push_back(std::move(element)); })
-					{
-						decoded.push_back(std::move(element));
-					}
-					else
-					{
-						decoded.insert(std::move(element));
-					}
-				}
-			}
-
-		public:
 			[[nodiscard]] Reader subreader(std::size_t begin, std::size_t end) const
 			{
 				if (begin > end || end > size())
@@ -361,7 +240,7 @@ namespace spk
 			}
 
 			template <typename TValue>
-				requires(std::is_trivially_copyable_v<TValue> && !std::is_pointer_v<TValue> && !std::is_member_pointer_v<TValue> && !std::is_array_v<TValue> && !std::same_as<TValue, std::string_view>)
+				requires std::is_trivially_copyable_v<TValue>
 			Writer &operator<<(const TValue &value)
 			{
 				append(&value, sizeof(TValue));
@@ -384,54 +263,33 @@ namespace spk
 				return *this << std::string_view(value);
 			}
 
-			template <typename TCollection>
-				requires ByteStreamCollectionSerializable<TCollection, Writer, Reader>
-			Writer &operator<<(const TCollection &value)
+
+			void push(const void *data, std::size_t count)
 			{
-				if (value.size() > std::numeric_limits<std::uint32_t>::max())
-				{
-					throw spk::Exception("ByteStream collection exceeds maximum element count.");
-				}
-				using Element = typename TCollection::value_type;
-				if constexpr (ByteStreamContiguousCollection<TCollection>)
-				{
-					if (value.size() > Buffer{}.max_size() / sizeof(Element))
-					{
-						throw spk::Exception("ByteStream collection exceeds maximum byte count.");
-					}
-					*this << static_cast<std::uint32_t>(value.size());
-					append(std::ranges::data(value), value.size() * sizeof(Element));
-				}
-				else
-				{
-					*this << static_cast<std::uint32_t>(value.size());
-					for (const auto &element : value)
-					{
-						_writeCollectionElement<TCollection>(element);
-					}
-				}
-				return *this;
+				append(data, count);
 			}
 
-		private:
-			template <typename TCollection>
-			void _writeCollectionElement(const typename TCollection::value_type &element)
+			template <typename TValue>
+				requires std::is_trivially_copyable_v<TValue>
+			void append(const TValue &value)
 			{
-				if constexpr (ByteStreamMap<TCollection>)
-				{
-					*this << element.first << element.second;
-				}
-				else if constexpr (std::same_as<typename TCollection::value_type, bool>)
-				{
-					*this << static_cast<bool>(element);
-				}
-				else
-				{
-					*this << element;
-				}
+				append(&value, sizeof(TValue));
 			}
 
-		public:
+			template <typename TValue>
+				requires std::is_trivially_copyable_v<TValue>
+			void push(const TValue &value)
+			{
+				append(value);
+			}
+
+			template <typename TValue>
+				requires std::is_trivially_copyable_v<TValue>
+			void edit(std::size_t offset, const TValue &value)
+			{
+				edit(offset, &value, sizeof(TValue));
+			}
+
 			void resize(std::size_t size)
 			{
 				if (size != 0)
@@ -491,30 +349,7 @@ namespace spk
 		{
 		}
 
-		template <typename TValue>
-			requires ByteStreamSerializable<TValue, Writer, Reader>
-		explicit ByteStream(const TValue &value)
-		{
-			Writer writer;
-			writer << value;
-			*this = std::move(writer).build();
-		}
 
-		explicit ByteStream(std::string_view value)
-		{
-			Writer writer;
-			writer << value;
-			*this = std::move(writer).build();
-		}
-
-		[[nodiscard]] static ByteStream share(std::shared_ptr<const Buffer> buffer)
-		{
-			if (!buffer)
-			{
-				throw spk::Exception("ByteStream requires valid storage.");
-			}
-			return ByteStream(std::move(buffer));
-		}
 		[[nodiscard]] std::size_t size() const noexcept
 		{
 			return _buffer->size();
@@ -526,16 +361,6 @@ namespace spk
 		[[nodiscard]] std::span<const std::byte> data() const noexcept
 		{
 			return *_buffer;
-		}
-
-		template <typename TValue>
-			requires ByteStreamSerializable<TValue, Writer, Reader>
-		[[nodiscard]] TValue cast() const
-		{
-			TValue result{};
-			auto reader = this->reader();
-			reader >> result;
-			return result;
 		}
 
 		[[nodiscard]] Reader reader(std::size_t begin, std::size_t end) const

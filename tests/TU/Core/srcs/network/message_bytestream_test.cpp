@@ -22,7 +22,7 @@ TEST(MessageByteStream, HeaderAndPayloadAreIndependent)
 	const spk::Message message = std::move(writer).build();
 	EXPECT_EQ(message.header().messageType, 0x1234u);
 	EXPECT_EQ(message.header().requestID, 77u);
-	EXPECT_EQ(message.payload().cast<std::uint32_t>(), 42u);
+	EXPECT_EQ(message.payload().reader().get<std::uint32_t>(), 42u);
 }
 
 TEST(MessageByteStream, PayloadGetterReturnsOwnedByteStreamReference)
@@ -46,7 +46,7 @@ TEST(MessageByteStream, UniqueRebuildReusesPooledStorage)
 	EXPECT_EQ(rebuild.payload().data().data(), original);
 	rebuild.edit(0, std::uint32_t{31});
 	const auto updated = std::move(rebuild).build();
-	EXPECT_EQ(updated.payload().cast<std::uint32_t>(), 31u);
+	EXPECT_EQ(updated.payload().reader().get<std::uint32_t>(), 31u);
 	EXPECT_EQ(updated.payload().data().data(), original);
 }
 
@@ -60,8 +60,8 @@ TEST(MessageByteStream, SharedPayloadStaysImmutableWhenRebuilt)
 	spk::Message::Writer rebuild(std::move(message));
 	EXPECT_NE(rebuild.payload().data().data(), original);
 	rebuild.edit(0, std::uint32_t{31});
-	EXPECT_EQ(copy.payload().cast<std::uint32_t>(), 17u);
-	EXPECT_EQ(std::move(rebuild).build().payload().cast<std::uint32_t>(), 31u);
+	EXPECT_EQ(copy.payload().reader().get<std::uint32_t>(), 17u);
+	EXPECT_EQ(std::move(rebuild).build().payload().reader().get<std::uint32_t>(), 31u);
 }
 
 TEST(MessageByteStream, MessageReaderAndByteStreamReaderAreSameType)
