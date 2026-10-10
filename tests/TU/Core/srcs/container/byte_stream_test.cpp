@@ -363,7 +363,7 @@ TEST(ByteStream, TrivialVectorUsesElementCountAndRawBytes)
 
 TEST(ByteStream, StringVectorPreservesDynamicLengthsAndEmbeddedNulls)
 {
-	const std::vector<std::string> source{"", std::string("ab\\0c", 4), "longer value"};
+	const std::vector<std::string> source{"", std::string("ab\0c", 4), "longer value"};
 	const spk::ByteStream encoded(source);
 	EXPECT_EQ(encoded.cast<std::vector<std::string>>(), source);
 }
