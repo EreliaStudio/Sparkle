@@ -181,6 +181,10 @@ namespace
 		}
 	};
 
+	static_assert(spk::ByteStreamSerializable<TrivialState, spk::ByteStream::Writer, spk::ByteStream::Slice>);
+	static_assert(spk::ByteStreamSerializable<SerializableState, spk::ByteStream::Writer, spk::ByteStream::Slice>);
+	static_assert(!spk::ByteStreamSerializable<NonTrivialState, spk::ByteStream::Writer, spk::ByteStream::Slice>);
+	static_assert(!spk::ByteStreamSerializable<std::uint32_t *, spk::ByteStream::Writer, spk::ByteStream::Slice>);
 	static_assert(std::is_trivially_copyable_v<TrivialState>);
 	static_assert(std::is_constructible_v<spk::ByteStream, TrivialState>);
 	static_assert(!std::is_constructible_v<spk::ByteStream, NonTrivialState>);
@@ -301,9 +305,10 @@ TEST(ByteStream, NonTrivialCodecSerializesStringAndScalar)
 {
 	const SerializableState original{"Alice", 42};
 	const spk::ByteStream bytes(original);
-	std::uint32_t payloadLength = 0;
-	bytes.reader() >> payloadLength;
-	EXPECT_EQ(payloadLength + sizeof(payloadLength), bytes.size());
+	std::uint32_t nameLength = 0;
+	bytes.reader() >> nameLength;
+	EXPECT_EQ(nameLength, original.name.size());
+	EXPECT_EQ(bytes.size(), sizeof(nameLength) + original.name.size() + sizeof(original.health));
 	const auto decoded = bytes.cast<SerializableState>();
 	EXPECT_EQ(decoded.name, original.name);
 	EXPECT_EQ(decoded.health, original.health);
@@ -319,22 +324,18 @@ TEST(ByteStream, NonTrivialCodecRetainsIndependentStorage)
 	EXPECT_EQ(bytes.cast<SerializableState>().health, 77u);
 }
 
-TEST(ByteStream, NonTrivialCastIgnoresBytesFollowingFramedObject)
+TEST(ByteStream, NonTrivialCastIgnoresBytesAfterDecodedObject)
 {
 	const SerializableState source{"first", 5};
-	spk::ByteStream::Writer payload;
-	payload << source;
-	spk::ByteStream::Writer outer;
-	outer << static_cast<std::uint32_t>(payload.size());
-	outer.append(payload.data().data(), payload.size());
-	outer << std::uint64_t{987};
-	const auto bytes = std::move(outer).build();
+	spk::ByteStream::Writer writer;
+	writer << source << std::uint64_t{987};
+	const auto bytes = std::move(writer).build();
 	const auto decoded = bytes.cast<SerializableState>();
 	EXPECT_EQ(decoded.name, "first");
 	EXPECT_EQ(decoded.health, 5u);
 }
 
-TEST(ByteStream, NonTrivialCastRejectsBrokenFrameBoundaries)
+TEST(ByteStream, NonTrivialCastRejectsStringOutsideBounds)
 {
 	spk::ByteStream::Writer writer;
 	writer << std::uint32_t{50} << std::uint16_t{1};
@@ -342,10 +343,10 @@ TEST(ByteStream, NonTrivialCastRejectsBrokenFrameBoundaries)
 	EXPECT_THROW((void)bytes.cast<SerializableState>(), spk::Exception);
 }
 
-TEST(ByteStream, NonTrivialCastRejectsTruncatedNestedString)
+TEST(ByteStream, NonTrivialCastRejectsMissingScalar)
 {
 	spk::ByteStream::Writer writer;
-	writer << std::uint32_t{sizeof(std::uint32_t)} << std::uint32_t{99};
+	writer << std::string("Alice");
 	const auto bytes = std::move(writer).build();
 	EXPECT_THROW((void)bytes.cast<SerializableState>(), spk::Exception);
 }
@@ -356,9 +357,10 @@ TEST(ByteStream, TrivialVectorUsesElementCountAndRawBytes)
 	const spk::ByteStream encoded(source);
 	const auto decoded = encoded.cast<std::vector<std::uint16_t>>();
 	EXPECT_EQ(decoded, source);
-	std::uint32_t payloadSize = 0;
-	encoded.reader() >> payloadSize;
-	EXPECT_EQ(payloadSize, sizeof(std::uint32_t) + source.size() * sizeof(std::uint16_t));
+	std::uint32_t count = 0;
+	encoded.reader() >> count;
+	EXPECT_EQ(count, source.size());
+	EXPECT_EQ(encoded.size(), sizeof(count) + source.size() * sizeof(std::uint16_t));
 }
 
 TEST(ByteStream, StringVectorPreservesDynamicLengthsAndEmbeddedNulls)
@@ -371,7 +373,7 @@ TEST(ByteStream, StringVectorPreservesDynamicLengthsAndEmbeddedNulls)
 TEST(ByteStream, VectorCastRejectsTruncatedData)
 {
 	spk::ByteStream::Writer writer;
-	writer << std::uint32_t{sizeof(std::uint32_t) + sizeof(std::uint16_t)} << std::uint32_t{2} << std::uint16_t{7};
+	writer << std::uint32_t{2} << std::uint16_t{7};
 	const auto truncated = std::move(writer).build();
 	EXPECT_THROW((void)truncated.cast<std::vector<std::uint16_t>>(), spk::Exception);
 }
@@ -379,7 +381,61 @@ TEST(ByteStream, VectorCastRejectsTruncatedData)
 TEST(ByteStream, StringVectorCastRejectsImpossibleElementCount)
 {
 	spk::ByteStream::Writer writer;
-	writer << std::uint32_t{sizeof(std::uint32_t)} << std::uint32_t{100000};
+	writer << std::uint32_t{100000};
 	const auto truncated = std::move(writer).build();
 	EXPECT_THROW((void)truncated.cast<std::vector<std::string>>(), spk::Exception);
+}
+
+TEST(ByteStream, TypedConstructorMatchesWriterForComplexObject)
+{
+	const SerializableState original{"Bob", 17};
+	spk::ByteStream::Writer writer;
+	writer << original;
+	const auto expected = std::move(writer).build();
+	const spk::ByteStream actual(original);
+	ASSERT_EQ(actual.size(), expected.size());
+	EXPECT_EQ(std::memcmp(actual.data().data(), expected.data().data(), actual.size()), 0);
+	EXPECT_EQ(actual.cast<SerializableState>().name, "Bob");
+	EXPECT_EQ(actual.cast<SerializableState>().health, 17u);
+}
+
+TEST(ByteStream, VectorOfCustomObjectsUsesEachElementCodec)
+{
+	const std::vector<SerializableState> input{{"A", 10}, {"Longer", 20}};
+	const spk::ByteStream bytes(input);
+	const auto decoded = bytes.cast<std::vector<SerializableState>>();
+	ASSERT_EQ(decoded.size(), input.size());
+	EXPECT_EQ(decoded[0].name, "A");
+	EXPECT_EQ(decoded[0].health, 10u);
+	EXPECT_EQ(decoded[1].name, "Longer");
+	EXPECT_EQ(decoded[1].health, 20u);
+}
+
+TEST(ByteStream, NestedVectorsRoundTrip)
+{
+	const std::vector<std::vector<std::uint16_t>> input{{1, 2}, {}, {3}};
+	const spk::ByteStream bytes(input);
+	EXPECT_EQ(bytes.cast<std::vector<std::vector<std::uint16_t>>>(), input);
+}
+
+TEST(ByteStream, PackedBooleanVectorRoundTrip)
+{
+	const std::vector<bool> input{true, false, false, true};
+	const spk::ByteStream bytes(input);
+	EXPECT_EQ(bytes.cast<std::vector<bool>>(), input);
+}
+
+TEST(ByteStream, ComplexValuesInWriterCanBeDecodedSequentially)
+{
+	spk::ByteStream::Writer writer;
+	writer << SerializableState{"first", 1} << SerializableState{"second", 2};
+	const auto bytes = std::move(writer).build();
+	auto reader = bytes.reader();
+	SerializableState first;
+	SerializableState second;
+	reader >> first >> second;
+	EXPECT_EQ(reader.remaining(), 0u);
+	EXPECT_EQ(first.name, "first");
+	EXPECT_EQ(second.name, "second");
+	EXPECT_EQ(second.health, 2u);
 }
