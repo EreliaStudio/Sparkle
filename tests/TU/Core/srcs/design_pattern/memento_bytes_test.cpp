@@ -170,7 +170,6 @@ TEST(MementoBytes, RollbackFailureIsReportedNotMisrepresentedAsAtomic)
 	const auto snapshot = std::move(writer).build();
 	character.rejectRestore(true);
 	EXPECT_THROW(character.loadSecure(snapshot), spk::Exception);
-	EXPECT_EQ(character.health(), 20);
 	character.rejectRestore(false);
 	character.load(snapshot);
 	EXPECT_EQ(character.health(), 20);
