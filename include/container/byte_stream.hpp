@@ -27,6 +27,9 @@ namespace spk
 		!std::is_array_v<TValue> &&
 		!std::same_as<std::remove_cv_t<TValue>, std::string_view>;
 
+	template <typename TValue>
+	concept ByteStreamVectorElement = std::same_as<TValue, std::string> || (ByteStreamRawValue<TValue> && !std::same_as<TValue, bool>);
+
 	template <typename TValue, typename TWriter, typename TReader>
 	concept ByteStreamSerializable =
 		!ByteStreamRawValue<TValue> &&
@@ -142,6 +145,37 @@ namespace spk
 				return *this;
 			}
 
+			template <typename TValue>
+				requires ByteStreamVectorElement<TValue>
+			const Slice &operator>>(std::vector<TValue> &value) const
+			{
+				std::uint32_t count = 0;
+				*this >> count;
+				const std::size_t minimum = std::same_as<TValue, std::string> ? sizeof(std::uint32_t) : sizeof(TValue);
+				if (count > remaining() / minimum)
+				{
+					throw spk::Exception("ByteStream vector exceeds slice bounds.");
+				}
+				std::vector<TValue> decoded;
+				if constexpr (ByteStreamRawValue<TValue>)
+				{
+					decoded.resize(count);
+					pull(decoded.data(), decoded.size() * sizeof(TValue));
+				}
+				else
+				{
+					decoded.reserve(count);
+					for (std::uint32_t i = 0; i < count; ++i)
+					{
+						std::string element;
+						*this >> element;
+						decoded.push_back(std::move(element));
+					}
+				}
+				value = std::move(decoded);
+				return *this;
+			}
+
 			[[nodiscard]] Slice slice(std::size_t begin, std::size_t end) const
 			{
 				if (begin > end || end > size())
@@ -207,6 +241,33 @@ namespace spk
 			Writer &operator<<(const std::string &value)
 			{
 				return *this << std::string_view(value);
+			}
+
+			template <typename TValue>
+				requires ByteStreamVectorElement<TValue>
+			Writer &operator<<(const std::vector<TValue> &value)
+			{
+				if (value.size() > std::numeric_limits<std::uint32_t>::max())
+				{
+					throw spk::Exception("ByteStream vector exceeds maximum element count.");
+				}
+				*this << static_cast<std::uint32_t>(value.size());
+				if constexpr (ByteStreamRawValue<TValue>)
+				{
+					if (value.size() > _buffer.max_size() / sizeof(TValue))
+					{
+						throw spk::Exception("ByteStream vector exceeds maximum byte count.");
+					}
+					append(value.data(), value.size() * sizeof(TValue));
+				}
+				else
+				{
+					for (const auto &element : value)
+					{
+						*this << element;
+					}
+				}
+				return *this;
 			}
 
 			[[nodiscard]] ByteStream build() &&
