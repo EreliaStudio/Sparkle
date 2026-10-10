@@ -20,7 +20,8 @@
 namespace spk
 {
 	template <typename TValue, typename TWriter, typename TReader>
-	concept ByteStreamSerializable = std::default_initializable<TValue> &&
+	concept ByteStreamSerializable =
+		std::default_initializable<TValue> &&
 		requires(TWriter &writer, const TReader &reader, const TValue &source, TValue &destination) {
 			writer << source;
 			reader >> destination;
