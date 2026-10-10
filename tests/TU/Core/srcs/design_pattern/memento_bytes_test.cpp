@@ -172,6 +172,19 @@ TEST(MementoBytes, TruncatedRestoreDoesNotChangeOriginal)
 	EXPECT_EQ(character.shield(), 50);
 }
 
+TEST(MementoBytes, SecureLoadCreatesOneBackupOnFailure)
+{
+	Character character;
+	spk::ByteStream::Writer writer;
+	writer << std::int32_t{20};
+	const auto malformed = std::move(writer).build();
+	const auto before = character.saveCalls();
+	EXPECT_THROW(character.loadSecure(malformed), spk::Exception);
+	EXPECT_EQ(character.saveCalls(), before + 1);
+	EXPECT_EQ(character.health(), 100);
+	EXPECT_EQ(character.shield(), 50);
+}
+
 TEST(MementoBytes, TrailingBytesCauseRollback)
 {
 	Character character;
