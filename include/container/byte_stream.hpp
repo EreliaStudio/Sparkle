@@ -139,7 +139,7 @@ namespace spk
 			{
 				std::uint32_t count = 0;
 				*this >> count;
-				if constexpr ((std::is_arithmetic_v<TValue> || std::is_enum_v<TValue>) && !std::same_as<TValue, bool>)
+				if constexpr (std::is_trivially_copyable_v<TValue> && !std::same_as<TValue, bool>)
 				{
 					if (count > remaining() / sizeof(TValue))
 					{
@@ -243,7 +243,7 @@ namespace spk
 				{
 					throw spk::Exception("ByteStream vector exceeds maximum element count.");
 				}
-				if constexpr ((std::is_arithmetic_v<TValue> || std::is_enum_v<TValue>) && !std::same_as<TValue, bool>)
+				if constexpr (std::is_trivially_copyable_v<TValue> && !std::same_as<TValue, bool>)
 				{
 					if (value.size() > _buffer.max_size() / sizeof(TValue))
 					{
