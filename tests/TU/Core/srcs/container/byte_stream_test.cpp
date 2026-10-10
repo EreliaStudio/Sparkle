@@ -250,7 +250,7 @@ TEST(ByteStream, TypedConstructorPreservesCopyAndMoveSemantics)
 
 TEST(ByteStream, StringConstructorMatchesMessageLengthPrefix)
 {
-	const std::string text{"Example\\0NUL", 11};
+	const std::string text{"Example\0NUL", 11};
 	const spk::ByteStream value(std::string_view(text.data(), text.size()));
 	auto reader = value.reader();
 	std::uint32_t length = 0;
@@ -274,7 +274,7 @@ TEST(ByteStream, EmptyStringIsLengthPrefixed)
 TEST(ByteStream, StringViewConstructorOwnsItsBytes)
 {
 	std::string source = "initial";
-	const spk::ByteStream bytes(std::string_view(source));
+	const spk::ByteStream bytes{std::string_view(source)};
 	source.assign("changed");
 	EXPECT_EQ(bytes.cast<std::string>(), "initial");
 }
