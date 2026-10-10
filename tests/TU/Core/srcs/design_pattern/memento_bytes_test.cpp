@@ -2,6 +2,7 @@
 #include "design_pattern/trait/memento_trait.hpp"
 #include "exception.hpp"
 
+#include <cstddef>
 #include <cstdint>
 #include <gtest/gtest.h>
 #include <stdexcept>
@@ -9,20 +10,21 @@
 
 namespace
 {
-	class Character final : public spk::MementoTrait<Character>
+	class Character final : public spk::MementoTrait
 	{
 	private:
 		std::int32_t _health = 100;
 		std::int32_t _shield = 50;
 		bool _rejectRestore = false;
+		mutable std::size_t _saveCalls = 0;
 
-	public:
-		void saveMemento(spk::ByteStream::Writer &writer) const
+		void _saveMemento(spk::ByteStream::Writer &writer) const override
 		{
+			++_saveCalls;
 			writer << _health << _shield;
 		}
 
-		void loadMemento(const spk::ByteStream::Slice &reader)
+		void _loadMemento(const spk::ByteStream::Slice &reader) override
 		{
 			reader >> _health;
 			if (_rejectRestore)
@@ -30,6 +32,12 @@ namespace
 				throw spk::Exception("Simulated restore failure after partial mutation.");
 			}
 			reader >> _shield;
+		}
+
+	public:
+		[[nodiscard]] std::size_t saveCalls() const noexcept
+		{
+			return _saveCalls;
 		}
 
 		void assign(std::int32_t health, std::int32_t shield)
@@ -138,7 +146,7 @@ TEST(MementoBytes, TruncatedRestoreDoesNotChangeOriginal)
 	spk::ByteStream::Writer writer;
 	writer << std::int32_t{20};
 	auto malformed = std::move(writer).build();
-	EXPECT_THROW(character.load(malformed), spk::Exception);
+	EXPECT_THROW(character.loadSecure(malformed), spk::Exception);
 	EXPECT_EQ(character.health(), 100);
 	EXPECT_EQ(character.shield(), 50);
 }
@@ -161,9 +169,60 @@ TEST(MementoBytes, RollbackFailureIsReportedNotMisrepresentedAsAtomic)
 	writer << std::int32_t{20} << std::int32_t{30};
 	const auto snapshot = std::move(writer).build();
 	character.rejectRestore(true);
-	EXPECT_THROW(character.load(snapshot), spk::Exception);
-	EXPECT_EQ(character.health(), 100);
+	EXPECT_THROW(character.loadSecure(snapshot), spk::Exception);
+	EXPECT_EQ(character.health(), 20);
 	character.rejectRestore(false);
 	character.load(snapshot);
 	EXPECT_EQ(character.health(), 20);
+}
+
+TEST(MementoBytes, DirectLoadAvoidsBackupSerialization)
+{
+	Character character;
+	character.assign(11, 12);
+	const auto snapshot = character.save();
+	character.assign(30, 40);
+	const auto before = character.saveCalls();
+	character.load(snapshot);
+	EXPECT_EQ(character.saveCalls(), before);
+	EXPECT_EQ(character.health(), 11);
+	EXPECT_EQ(character.shield(), 12);
+	character.assign(50, 60);
+	character.loadSecure(snapshot);
+	EXPECT_EQ(character.saveCalls(), before + 1);
+	EXPECT_EQ(character.health(), 11);
+	EXPECT_EQ(character.shield(), 12);
+}
+
+TEST(MementoBytes, DirectLoadMayLeavePartiallyRestoredState)
+{
+	Character character;
+	spk::ByteStream::Writer writer;
+	writer << std::int32_t{20};
+	const auto malformed = std::move(writer).build();
+	EXPECT_THROW(character.load(malformed), spk::Exception);
+	EXPECT_EQ(character.health(), 20);
+	EXPECT_EQ(character.shield(), 50);
+}
+
+TEST(MementoBytes, DirectLoadMayCommitBeforeTrailingByteRejection)
+{
+	Character character;
+	spk::ByteStream::Writer writer;
+	writer << std::int32_t{20} << std::int32_t{30} << std::uint8_t{4};
+	const auto malformed = std::move(writer).build();
+	EXPECT_THROW(character.load(malformed), spk::Exception);
+	EXPECT_EQ(character.health(), 20);
+	EXPECT_EQ(character.shield(), 30);
+}
+
+TEST(MementoBytes, SecureLoadDoesNotSaveWhenSnapshotCreationFails)
+{
+	Character character;
+	character.assign(3, 4);
+	const auto snapshot = character.save();
+	character.assign(9, 10);
+	character.loadSecure(snapshot);
+	EXPECT_EQ(character.health(), 3);
+	EXPECT_EQ(character.shield(), 4);
 }
