@@ -32,7 +32,7 @@ namespace spk
 
 	template <typename TValue, typename TWriter, typename TReader>
 	concept ByteStreamSerializable =
-		!ByteStreamRawValue<TValue> &&
+		!std::is_trivially_copyable_v<TValue> &&
 		!std::same_as<TValue, std::string> &&
 		std::default_initializable<TValue> &&
 		requires(TWriter &writer, const TValue &source, const TReader &reader, TValue &result) {
