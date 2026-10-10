@@ -629,7 +629,7 @@ TEST(ByteStream, OrderedMapRoundTrip)
 {
 	const std::map<std::string, std::uint32_t> scores{{"alice", 42}, {"bob", 17}};
 	const spk::ByteStream stream(scores);
-	EXPECT_EQ(stream.cast<std::map<std::string, std::uint32_t>>(), scores);
+	EXPECT_EQ((stream.cast<std::map<std::string, std::uint32_t>>()), scores);
 }
 
 TEST(ByteStream, UnorderedMapWithNestedContainerRoundTrip)
@@ -675,7 +675,7 @@ TEST(ByteStream, InvalidCollectionCountFailsBeforeInsertion)
 	writer << std::uint32_t{1000000};
 	const auto stream = std::move(writer).build();
 	EXPECT_THROW((void)stream.cast<std::list<std::string>>(), spk::Exception);
-	EXPECT_THROW((void)stream.cast<std::map<std::string, std::uint32_t>>(), spk::Exception);
+	EXPECT_THROW(((void)stream.cast<std::map<std::string, std::uint32_t>>()), spk::Exception);
 }
 
 TEST(ByteStream, GenericCollectionConceptRejectsFixedAndTextRanges)
