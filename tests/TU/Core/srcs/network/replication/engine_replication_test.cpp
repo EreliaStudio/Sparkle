@@ -35,7 +35,7 @@ namespace
 	};
 
 	class ClientHealth final : public spk::Network::ClientReplicatedComponent,
-							   public spk::MementoTrait
+							   public spk::MementoTrait<ClientHealth>
 	{
 	private:
 		int _health = 100;
@@ -67,18 +67,17 @@ namespace
 			state.reader() >> _health;
 		}
 
-	private:
-		void _saveMemento(spk::ByteStream::Writer &writer) const override
+	public:
+		void saveMemento(spk::ByteStream::Writer &writer) const
 		{
 			writer << _health;
 		}
 
-		void _loadMemento(const spk::ByteStream::Slice &reader) override
+		void loadMemento(const spk::ByteStream::Slice &reader)
 		{
 			reader >> _health;
 		}
 
-	public:
 		using ClientReplicatedComponent::ClientReplicatedComponent;
 
 		void setHealth(int value)

@@ -2,7 +2,9 @@
 #include "exception.hpp"
 #include "network/message.hpp"
 
+#include <array>
 #include <cstdint>
+#include <cstring>
 #include <gtest/gtest.h>
 #include <string>
 #include <type_traits>
@@ -147,4 +149,81 @@ TEST(ByteStream, CopiedByteStreamsShareTheSameImmutableBuffer)
 	auto original = std::move(writer).build();
 	auto copy = original;
 	EXPECT_EQ(original.data().data(), copy.data().data());
+}
+
+namespace
+{
+	struct TrivialState
+	{
+		std::uint32_t id;
+		float position;
+		std::uint16_t flags;
+	};
+
+	struct NonTrivialState
+	{
+		std::string text;
+	};
+
+	static_assert(std::is_trivially_copyable_v<TrivialState>);
+	static_assert(std::is_constructible_v<spk::ByteStream, TrivialState>);
+	static_assert(!std::is_constructible_v<spk::ByteStream, NonTrivialState>);
+	static_assert(std::is_copy_constructible_v<spk::ByteStream>);
+}
+
+TEST(ByteStream, TypedConstructorPreservesTrivialStructRepresentation)
+{
+	const TrivialState original{42u, 8.5f, 7u};
+	const spk::ByteStream stream(original);
+	EXPECT_EQ(stream.size(), sizeof(TrivialState));
+	EXPECT_EQ(std::memcmp(stream.data().data(), &original, sizeof(TrivialState)), 0);
+	const auto restored = stream.cast<TrivialState>();
+	EXPECT_EQ(restored.id, original.id);
+	EXPECT_FLOAT_EQ(restored.position, original.position);
+	EXPECT_EQ(restored.flags, original.flags);
+}
+
+TEST(ByteStream, TypedConstructorCopiesStorageRatherThanReferencingSource)
+{
+	TrivialState source{3u, 2.0f, 1u};
+	const spk::ByteStream stream(source);
+	source.id = 100u;
+	EXPECT_EQ(stream.cast<TrivialState>().id, 3u);
+}
+
+TEST(ByteStream, CastAcceptsTrailingBytes)
+{
+	spk::ByteStream::Writer writer;
+	writer << std::uint32_t{0x12345678} << std::uint64_t{99};
+	const auto stream = std::move(writer).build();
+	EXPECT_EQ(stream.size(), sizeof(std::uint32_t) + sizeof(std::uint64_t));
+	EXPECT_EQ(stream.cast<std::uint32_t>(), 0x12345678u);
+}
+
+TEST(ByteStream, CastRejectsTooSmallAndEmptyBuffers)
+{
+	const spk::ByteStream stream(std::uint16_t{9});
+	EXPECT_THROW((void)stream.cast<std::uint32_t>(), spk::Exception);
+	const spk::ByteStream empty;
+	EXPECT_THROW((void)empty.cast<std::uint8_t>(), spk::Exception);
+}
+
+TEST(ByteStream, CastDoesNotAdvanceIndependentSliceCursors)
+{
+	const spk::ByteStream stream(std::uint64_t{42});
+	auto reader = stream.reader();
+	EXPECT_EQ(stream.cast<std::uint64_t>(), 42u);
+	EXPECT_EQ(reader.readOffset(), 0u);
+	std::uint64_t value = 0;
+	reader >> value;
+	EXPECT_EQ(value, 42u);
+}
+
+TEST(ByteStream, TypedConstructorPreservesCopyAndMoveSemantics)
+{
+	const spk::ByteStream original(std::uint64_t{25});
+	const spk::ByteStream shared(original);
+	spk::ByteStream moved(shared);
+	EXPECT_EQ(original.data().data(), moved.data().data());
+	EXPECT_EQ(moved.cast<std::uint64_t>(), 25u);
 }

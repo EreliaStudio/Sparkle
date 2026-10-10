@@ -2,38 +2,49 @@
 
 #include "container/byte_stream.hpp"
 
+#include <concepts>
 #include <functional>
 #include <utility>
 
 namespace spk
 {
+	template <typename TObject>
+	concept MementoSerializable = requires(
+		const TObject &object,
+		TObject &mutableObject,
+		spk::ByteStream::Writer &writer,
+		const spk::ByteStream::Slice &reader) {
+		{ object.saveMemento(writer) } -> std::same_as<void>;
+		{ mutableObject.loadMemento(reader) } -> std::same_as<void>;
+	};
+
+	template <typename TObject>
 	class MementoTrait
 	{
-	private:
-		virtual void _saveMemento(spk::ByteStream::Writer &writer) const = 0;
-		virtual void _loadMemento(const spk::ByteStream::Slice &reader) = 0;
-
 	public:
-		virtual ~MementoTrait() = default;
+		~MementoTrait()
+		{
+			static_assert(MementoSerializable<TObject>, "MementoTrait requires saveMemento(Writer&) const and loadMemento(const Slice&).");
+		}
 
-		[[nodiscard]] spk::ByteStream save() const
+		[[nodiscard]] spk::ByteStream save() const requires MementoSerializable<TObject>
 		{
 			spk::ByteStream::Writer writer;
-			_saveMemento(writer);
+			static_cast<const TObject &>(*this).saveMemento(writer);
 			return std::move(writer).build();
 		}
 
-		void load(const spk::ByteStream &snapshot)
+		void load(const spk::ByteStream &snapshot) requires MementoSerializable<TObject>
 		{
 			auto reader = snapshot.reader();
-			_loadMemento(reader);
+			static_cast<TObject &>(*this).loadMemento(reader);
 			if (reader.remaining() != 0)
 			{
 				throw spk::Exception("Memento snapshot contains trailing bytes.");
 			}
 		}
 
-		void loadSecure(const spk::ByteStream &snapshot)
+		void loadSecure(const spk::ByteStream &snapshot) requires MementoSerializable<TObject>
 		{
 			const auto previous = save();
 			try
@@ -53,6 +64,7 @@ namespace spk
 		}
 
 		template <typename TOperation>
+			requires MementoSerializable<TObject>
 		void transaction(TOperation &&operation)
 		{
 			const auto snapshot = save();

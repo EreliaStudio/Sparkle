@@ -2,7 +2,9 @@
 
 #include "exception.hpp"
 
+#include <array>
 #include <bit>
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -207,6 +209,15 @@ namespace spk
 			_buffer(std::make_shared<const Buffer>())
 		{
 		}
+
+		template <typename TValue>
+			requires(std::is_trivially_copyable_v<TValue> && !std::same_as<std::remove_cv_t<TValue>, ByteStream>)
+		explicit ByteStream(const TValue &value)
+		{
+			Buffer bytes(sizeof(TValue));
+			std::memcpy(bytes.data(), &value, sizeof(TValue));
+			_buffer = std::make_shared<const Buffer>(std::move(bytes));
+		}
 		[[nodiscard]] static ByteStream share(std::shared_ptr<const Buffer> buffer)
 		{
 			if (!buffer)
@@ -226,6 +237,19 @@ namespace spk
 		[[nodiscard]] std::span<const std::byte> data() const noexcept
 		{
 			return *_buffer;
+		}
+
+		template <typename TValue>
+			requires std::is_trivially_copyable_v<TValue>
+		[[nodiscard]] TValue cast() const
+		{
+			if (size() < sizeof(TValue))
+			{
+				throw spk::Exception("ByteStream contains too few bytes for the requested type.");
+			}
+			std::array<std::byte, sizeof(TValue)> bytes;
+			std::memcpy(bytes.data(), data().data(), bytes.size());
+			return std::bit_cast<TValue>(bytes);
 		}
 
 		[[nodiscard]] Slice slice(std::size_t begin, std::size_t end) const

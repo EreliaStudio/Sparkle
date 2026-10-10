@@ -10,7 +10,7 @@
 
 namespace
 {
-	class Character final : public spk::MementoTrait
+	class Character final : public spk::MementoTrait<Character>
 	{
 	private:
 		std::int32_t _health = 100;
@@ -18,13 +18,14 @@ namespace
 		bool _rejectRestore = false;
 		mutable std::size_t _saveCalls = 0;
 
-		void _saveMemento(spk::ByteStream::Writer &writer) const override
+	public:
+		void saveMemento(spk::ByteStream::Writer &writer) const
 		{
 			++_saveCalls;
 			writer << _health << _shield;
 		}
 
-		void _loadMemento(const spk::ByteStream::Slice &reader) override
+		void loadMemento(const spk::ByteStream::Slice &reader)
 		{
 			reader >> _health;
 			if (_rejectRestore)
@@ -34,7 +35,6 @@ namespace
 			reader >> _shield;
 		}
 
-	public:
 		[[nodiscard]] std::size_t saveCalls() const noexcept
 		{
 			return _saveCalls;
@@ -61,6 +61,27 @@ namespace
 			_rejectRestore = value;
 		}
 	};
+
+	struct MissingLoadHook
+	{
+		void saveMemento(spk::ByteStream::Writer &) const
+		{
+		}
+	};
+
+	struct WrongSaveSignature
+	{
+		void saveMemento(spk::ByteStream::Writer &)
+		{
+		}
+		void loadMemento(const spk::ByteStream::Slice &)
+		{
+		}
+	};
+
+	static_assert(spk::MementoSerializable<Character>);
+	static_assert(!spk::MementoSerializable<MissingLoadHook>);
+	static_assert(!spk::MementoSerializable<WrongSaveSignature>);
 }
 
 TEST(MementoBytes, RestoresMultipleIndependentSnapshots)
