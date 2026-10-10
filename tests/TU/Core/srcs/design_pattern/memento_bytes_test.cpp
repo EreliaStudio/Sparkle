@@ -157,7 +157,7 @@ TEST(MementoBytes, TrailingBytesCauseRollback)
 	spk::ByteStream::Writer writer;
 	writer << std::int32_t{20} << std::int32_t{30} << std::uint8_t{4};
 	auto malformed = std::move(writer).build();
-	EXPECT_THROW(character.load(malformed), spk::Exception);
+	EXPECT_THROW(character.loadSecure(malformed), spk::Exception);
 	EXPECT_EQ(character.health(), 100);
 	EXPECT_EQ(character.shield(), 50);
 }
@@ -216,7 +216,7 @@ TEST(MementoBytes, DirectLoadMayCommitBeforeTrailingByteRejection)
 	EXPECT_EQ(character.shield(), 30);
 }
 
-TEST(MementoBytes, SecureLoadDoesNotSaveWhenSnapshotCreationFails)
+TEST(MementoBytes, SecureLoadRestoresValidSnapshot)
 {
 	Character character;
 	character.assign(3, 4);
