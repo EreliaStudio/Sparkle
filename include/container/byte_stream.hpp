@@ -211,12 +211,47 @@ namespace spk
 		}
 
 		template <typename TValue>
-			requires(std::is_trivially_copyable_v<TValue> && !std::same_as<std::remove_cv_t<TValue>, ByteStream>)
+			requires(std::is_trivially_copyable_v<TValue> && !std::same_as<std::remove_cv_t<TValue>, ByteStream> &&
+				!std::same_as<std::remove_cv_t<TValue>, std::string_view> && !std::is_pointer_v<TValue> &&
+				!std::is_member_pointer_v<TValue> && !std::is_array_v<TValue>)
 		explicit ByteStream(const TValue &value)
 		{
 			Buffer bytes(sizeof(TValue));
 			std::memcpy(bytes.data(), &value, sizeof(TValue));
 			_buffer = std::make_shared<const Buffer>(std::move(bytes));
+		}
+
+		explicit ByteStream(std::string_view value)
+		{
+			Writer writer;
+			writer << value;
+			*this = std::move(writer).build();
+		}
+
+		explicit ByteStream(const std::string &value) :
+			ByteStream(std::string_view(value))
+		{
+		}
+
+		template <typename TValue>
+			requires(!std::is_trivially_copyable_v<TValue> && !std::same_as<TValue, std::string> &&
+				std::default_initializable<TValue> &&
+				requires(Writer &writer, const TValue &source, const Slice &reader, TValue &result) {
+					writer << source;
+					reader >> result;
+				})
+		explicit ByteStream(const TValue &value)
+		{
+			Writer payload;
+			payload << value;
+			if (payload.size() > std::numeric_limits<std::uint32_t>::max())
+			{
+				throw spk::Exception("ByteStream object exceeds maximum serialized size.");
+			}
+			Writer writer;
+			writer << static_cast<std::uint32_t>(payload.size());
+			writer.append(payload.data().data(), payload.size());
+			*this = std::move(writer).build();
 		}
 		[[nodiscard]] static ByteStream share(std::shared_ptr<const Buffer> buffer)
 		{
@@ -240,7 +275,9 @@ namespace spk
 		}
 
 		template <typename TValue>
-			requires std::is_trivially_copyable_v<TValue>
+			requires(std::is_trivially_copyable_v<TValue> && !std::is_pointer_v<TValue> &&
+				!std::is_member_pointer_v<TValue> && !std::is_array_v<TValue> &&
+				!std::same_as<TValue, std::string_view>)
 		[[nodiscard]] TValue cast() const
 		{
 			if (size() < sizeof(TValue))
@@ -250,6 +287,36 @@ namespace spk
 			std::array<std::byte, sizeof(TValue)> bytes;
 			std::memcpy(bytes.data(), data().data(), bytes.size());
 			return std::bit_cast<TValue>(bytes);
+		}
+
+		template <typename TValue>
+			requires(std::same_as<TValue, std::string> ||
+				(!std::is_trivially_copyable_v<TValue> && std::default_initializable<TValue> &&
+					requires(const Slice &reader, TValue &value) {
+						reader >> value;
+					}))
+		[[nodiscard]] TValue cast() const
+		{
+			auto reader = this->reader();
+			if constexpr (std::same_as<TValue, std::string>)
+			{
+				TValue value;
+				reader >> value;
+				return value;
+			}
+			else
+			{
+				std::uint32_t length = 0;
+				reader >> length;
+				if (length > reader.remaining())
+				{
+					throw spk::Exception("ByteStream object exceeds stream bounds.");
+				}
+				auto payload = reader.slice(reader.readOffset(), reader.readOffset() + length);
+				TValue value{};
+				payload >> value;
+				return value;
+			}
 		}
 
 		[[nodiscard]] Slice slice(std::size_t begin, std::size_t end) const
