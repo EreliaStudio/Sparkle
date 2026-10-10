@@ -1,6 +1,6 @@
 #pragma once
 
-#include "container/pool.hpp"
+#include "container/byte_stream.hpp"
 
 #include <array>
 #include <bit>
@@ -21,27 +21,18 @@ namespace spk
 		using Type = std::uint32_t;
 		using RequestID = std::uint64_t;
 
-		struct Storage final : public std::vector<std::byte>
+		struct Header
 		{
-			using Base = std::vector<std::byte>;
-			using Pool = spk::Pool<Storage>;
-			using Lease = Pool::Lease;
-
-			using Base::Base;
+			Type messageType = 0;
+			RequestID requestID = 0;
 		};
 
 		class Reader
 		{
 		private:
-			std::shared_ptr<const Storage::Lease> _storage;
-			mutable std::size_t _readOffset = 0;
+			spk::ByteStream::Slice _slice;
 
-			explicit Reader(
-				std::shared_ptr<const Storage::Lease> storage,
-				std::size_t offset = 0);
-
-			[[nodiscard]] std::size_t _size() const noexcept;
-			void _seek(std::size_t offset) const;
+			explicit Reader(const spk::ByteStream &payload, std::size_t offset = 0);
 
 			friend class Message;
 
@@ -87,7 +78,7 @@ namespace spk
 				requires std::is_trivially_copyable_v<TValue>
 			[[nodiscard]] TValue peek() const
 			{
-				return readAt<TValue>(_readOffset);
+				return readAt<TValue>(readOffset());
 			}
 
 			template <typename TValue>
@@ -103,23 +94,21 @@ namespace spk
 		class Writer
 		{
 		private:
-			Type _type = 0;
-			RequestID _requestID = 0;
-			Storage::Lease _storage;
-
-			void _ensureCapacity(std::size_t requiredCapacity);
+			Header _header{};
+			spk::ByteStream::Writer _payload;
 
 		public:
 			explicit Writer(Type type = 0) noexcept;
 			explicit Writer(Message &&message);
-
 			Writer(const Writer &) = delete;
 			Writer(Writer &&) noexcept = default;
-			~Writer() = default;
-
 			Writer &operator=(const Writer &) = delete;
 			Writer &operator=(Writer &&) noexcept = default;
 
+			[[nodiscard]] Header &header() noexcept;
+			[[nodiscard]] const Header &header() const noexcept;
+			[[nodiscard]] spk::ByteStream::Writer &payload() noexcept;
+			[[nodiscard]] const spk::ByteStream::Writer &payload() const noexcept;
 			void setType(Type type) noexcept;
 			[[nodiscard]] Type type() const noexcept;
 			void setRequestID(RequestID requestID) noexcept;
@@ -162,7 +151,7 @@ namespace spk
 				requires std::is_trivially_copyable_v<TValue>
 			Writer &operator<<(const TValue &value)
 			{
-				append(value);
+				payload() << value;
 				return *this;
 			}
 
@@ -176,35 +165,29 @@ namespace spk
 		};
 
 	private:
-		Type _type = 0;
-		RequestID _requestID = 0;
-		std::shared_ptr<Storage::Lease> _storage;
+		Header _header;
+		spk::ByteStream _payload;
 
-		explicit Message(
-			Type type,
-			RequestID requestID,
-			Storage::Lease storage);
-
-		[[nodiscard]] static Storage::Lease _obtainStorage(std::size_t minimumCapacity);
+		explicit Message(Header header, spk::ByteStream payload);
 
 	public:
 		Message(const Message &) = default;
 		Message(Message &&) noexcept = default;
 		~Message() = default;
-
 		Message &operator=(const Message &) = default;
 		Message &operator=(Message &&) noexcept = default;
 
+		[[nodiscard]] const Header &header() const noexcept;
+		[[nodiscard]] const spk::ByteStream &payload() const noexcept;
+		[[nodiscard]] spk::ByteStream &payload() noexcept;
 		[[nodiscard]] Type type() const noexcept;
 		[[nodiscard]] RequestID requestID() const noexcept;
 		[[nodiscard]] std::span<const std::byte> data() const noexcept;
 		[[nodiscard]] std::size_t size() const noexcept;
 		[[nodiscard]] bool empty() const noexcept;
-
 		[[nodiscard]] Reader reader(std::size_t offset = 0) const;
 	};
 
-	// Checks the Writer/Reader serialization API, including custom operators found through ADL.
 	template <typename T>
 	concept MessageSerializable = requires(Message::Writer &writer, const Message::Reader &reader, const T &input, T &output) {
 		writer << input;
