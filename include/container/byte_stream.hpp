@@ -41,12 +41,13 @@ namespace spk
 	};
 
 	template <typename TCollection>
-	concept ByteStreamCollection = std::ranges::sized_range<const TCollection> && !std::same_as<TCollection, std::string> &&
-		requires(TCollection &collection) {
-			typename TCollection::value_type;
-			collection.clear();
-		} &&
-		(ByteStreamPushBack<TCollection> || ByteStreamInsert<TCollection>);
+	concept ByteStreamClearable = requires(TCollection &collection) {
+		typename TCollection::value_type;
+		collection.clear();
+	};
+
+	template <typename TCollection>
+	concept ByteStreamCollection = std::ranges::sized_range<const TCollection> && !std::same_as<TCollection, std::string> && ByteStreamClearable<TCollection> && (ByteStreamPushBack<TCollection> || ByteStreamInsert<TCollection>);
 
 	template <typename TCollection>
 	concept ByteStreamMap = ByteStreamCollection<TCollection> && requires {
@@ -55,17 +56,13 @@ namespace spk
 	};
 
 	template <typename TCollection, typename TWriter, typename TReader>
-	concept ByteStreamSequenceSerializable = ByteStreamCollection<TCollection> && !ByteStreamMap<TCollection> &&
-		ByteStreamSerializable<typename TCollection::value_type, TWriter, TReader>;
+	concept ByteStreamSequenceSerializable = ByteStreamCollection<TCollection> && !ByteStreamMap<TCollection> && ByteStreamSerializable<typename TCollection::value_type, TWriter, TReader>;
 
 	template <typename TCollection, typename TWriter, typename TReader>
-	concept ByteStreamMapSerializable = ByteStreamMap<TCollection> &&
-		ByteStreamSerializable<typename TCollection::key_type, TWriter, TReader> &&
-		ByteStreamSerializable<typename TCollection::mapped_type, TWriter, TReader>;
+	concept ByteStreamMapSerializable = ByteStreamMap<TCollection> && ByteStreamSerializable<typename TCollection::key_type, TWriter, TReader> && ByteStreamSerializable<typename TCollection::mapped_type, TWriter, TReader>;
 
 	template <typename TCollection, typename TWriter, typename TReader>
-	concept ByteStreamCollectionSerializable = ByteStreamSequenceSerializable<TCollection, TWriter, TReader> ||
-		ByteStreamMapSerializable<TCollection, TWriter, TReader>;
+	concept ByteStreamCollectionSerializable = ByteStreamSequenceSerializable<TCollection, TWriter, TReader> || ByteStreamMapSerializable<TCollection, TWriter, TReader>;
 
 	template <typename TCollection>
 	concept ByteStreamResizable = requires(TCollection &collection, std::size_t count) {
@@ -73,10 +70,7 @@ namespace spk
 	};
 
 	template <typename TCollection>
-	concept ByteStreamContiguousCollection = ByteStreamCollection<TCollection> && !ByteStreamMap<TCollection> &&
-		std::ranges::contiguous_range<TCollection> && std::ranges::contiguous_range<const TCollection> &&
-		std::is_trivially_copyable_v<typename TCollection::value_type> &&
-		!std::same_as<typename TCollection::value_type, bool> && ByteStreamResizable<TCollection>;
+	concept ByteStreamContiguousCollection = ByteStreamCollection<TCollection> && !ByteStreamMap<TCollection> && std::ranges::contiguous_range<TCollection> && std::ranges::contiguous_range<const TCollection> && std::is_trivially_copyable_v<typename TCollection::value_type> && !std::same_as<typename TCollection::value_type, bool> && ByteStreamResizable<TCollection>;
 
 	class ByteStream
 	{
