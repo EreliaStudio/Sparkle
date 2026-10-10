@@ -11,6 +11,7 @@
 #include <cstring>
 #include <limits>
 #include <memory>
+#include <ranges>
 #include <span>
 #include <string>
 #include <string_view>
@@ -27,6 +28,35 @@ namespace spk
 			writer << source;
 			reader >> destination;
 		};
+
+	// Dynamically sized collections with value insertion (vectors, sets, maps, etc.).
+	template <typename TCollection>
+	concept ByteStreamCollection =
+		std::ranges::sized_range<const TCollection> &&
+		!std::same_as<TCollection, std::string> &&
+		requires(TCollection &collection, typename TCollection::value_type value) {
+			{ collection.clear() } -> std::same_as<void>;
+		} &&
+		(requires(TCollection &collection, typename TCollection::value_type value) {
+			collection.push_back(std::move(value));
+		} || requires(TCollection &collection, typename TCollection::value_type value) {
+			collection.insert(std::move(value));
+		});
+
+	template <typename TCollection>
+	concept ByteStreamMap = ByteStreamCollection<TCollection> &&
+		requires {
+			typename TCollection::key_type;
+			typename TCollection::mapped_type;
+		};
+
+	template <typename TCollection, typename TWriter, typename TReader>
+	concept ByteStreamCollectionSerializable = ByteStreamCollection<TCollection> &&
+		((ByteStreamMap<TCollection> &&
+		  ByteStreamSerializable<typename TCollection::key_type, TWriter, TReader> &&
+		  ByteStreamSerializable<typename TCollection::mapped_type, TWriter, TReader>) ||
+		 (!ByteStreamMap<TCollection> &&
+		  ByteStreamSerializable<typename TCollection::value_type, TWriter, TReader>));
 
 	class ByteStream
 	{
@@ -175,40 +205,83 @@ namespace spk
 				return *this;
 			}
 
-			template <typename TValue>
-				requires ByteStreamSerializable<TValue, Writer, Reader>
-			const Reader &operator>>(std::vector<TValue> &value) const
+			template <typename TCollection>
+				requires ByteStreamCollectionSerializable<TCollection, Writer, Reader>
+			const Reader &operator>>(TCollection &value) const
 			{
 				std::uint32_t count = 0;
 				*this >> count;
-				if constexpr (std::is_trivially_copyable_v<TValue> && !std::same_as<TValue, bool>)
+				using Element = typename TCollection::value_type;
+				constexpr bool bulk = !ByteStreamMap<TCollection> &&
+					std::ranges::contiguous_range<TCollection> &&
+					std::is_trivially_copyable_v<Element> &&
+					!std::same_as<Element, bool> &&
+					requires(TCollection &collection, std::size_t n) {
+						collection.resize(n);
+					};
+				if constexpr (bulk)
 				{
-					if (count > remaining() / sizeof(TValue))
+					if (count > remaining() / sizeof(Element))
 					{
-						throw spk::Exception("ByteStream vector exceeds reader bounds.");
+						throw spk::Exception("ByteStream collection exceeds reader bounds.");
 					}
-					std::vector<TValue> decoded(count);
-					pull(decoded.data(), decoded.size() * sizeof(TValue));
+					TCollection decoded;
+					decoded.resize(count);
+					pull(std::ranges::data(decoded), decoded.size() * sizeof(Element));
 					value = std::move(decoded);
 				}
 				else
 				{
-					const std::size_t minimum = std::same_as<TValue, std::string> ? sizeof(std::uint32_t) : 1;
-					if (count > remaining() / minimum)
-					{
-						throw spk::Exception("ByteStream vector exceeds reader bounds.");
-					}
-					std::vector<TValue> decoded;
-					for (std::uint32_t index = 0; index < count; ++index)
-					{
-						TValue element{};
-						*this >> element;
-						decoded.push_back(std::move(element));
-					}
-					value = std::move(decoded);
+					_readCollectionElements(value, count);
 				}
 				return *this;
 			}
+
+		private:
+			template <typename TCollection>
+			void _readCollectionElements(TCollection &value, std::uint32_t count) const
+			{
+				using Element = typename TCollection::value_type;
+				constexpr std::size_t minimum = ByteStreamMap<TCollection> ? 2 :
+					(std::same_as<Element, std::string> ? sizeof(std::uint32_t) : 1);
+				if (count > remaining() / minimum)
+				{
+					throw spk::Exception("ByteStream collection exceeds reader bounds.");
+				}
+				TCollection decoded;
+				for (std::uint32_t index = 0; index < count; ++index)
+				{
+					_readCollectionElement(decoded);
+				}
+				value = std::move(decoded);
+			}
+
+			template <typename TCollection>
+			void _readCollectionElement(TCollection &decoded) const
+			{
+				if constexpr (ByteStreamMap<TCollection>)
+				{
+					typename TCollection::key_type key{};
+					typename TCollection::mapped_type mapped{};
+					*this >> key >> mapped;
+					decoded.emplace(std::move(key), std::move(mapped));
+				}
+				else
+				{
+					typename TCollection::value_type element{};
+					*this >> element;
+					if constexpr (requires { decoded.push_back(std::move(element)); })
+					{
+						decoded.push_back(std::move(element));
+					}
+					else
+					{
+						decoded.insert(std::move(element));
+					}
+				}
+			}
+
+		public:
 
 			[[nodiscard]] Reader subreader(std::size_t begin, std::size_t end) const
 			{
@@ -306,40 +379,58 @@ namespace spk
 				return *this << std::string_view(value);
 			}
 
-			template <typename TValue>
-				requires ByteStreamSerializable<TValue, Writer, Reader>
-			Writer &operator<<(const std::vector<TValue> &value)
+			template <typename TCollection>
+				requires ByteStreamCollectionSerializable<TCollection, Writer, Reader>
+			Writer &operator<<(const TCollection &value)
 			{
 				if (value.size() > std::numeric_limits<std::uint32_t>::max())
 				{
-					throw spk::Exception("ByteStream vector exceeds maximum element count.");
+					throw spk::Exception("ByteStream collection exceeds maximum element count.");
 				}
-				if constexpr (std::is_trivially_copyable_v<TValue> && !std::same_as<TValue, bool>)
+				using Element = typename TCollection::value_type;
+				constexpr bool bulk = !ByteStreamMap<TCollection> &&
+					std::ranges::contiguous_range<const TCollection> &&
+					std::is_trivially_copyable_v<Element> &&
+					!std::same_as<Element, bool>;
+				if constexpr (bulk)
 				{
-					if (value.size() > Buffer{}.max_size() / sizeof(TValue))
+					if (value.size() > Buffer{}.max_size() / sizeof(Element))
 					{
-						throw spk::Exception("ByteStream vector exceeds maximum byte count.");
+						throw spk::Exception("ByteStream collection exceeds maximum byte count.");
 					}
 					*this << static_cast<std::uint32_t>(value.size());
-					append(value.data(), value.size() * sizeof(TValue));
+					append(std::ranges::data(value), value.size() * sizeof(Element));
 				}
 				else
 				{
 					*this << static_cast<std::uint32_t>(value.size());
 					for (const auto &element : value)
 					{
-						if constexpr (std::same_as<TValue, bool>)
-						{
-							*this << static_cast<bool>(element);
-						}
-						else
-						{
-							*this << element;
-						}
+						_writeCollectionElement<TCollection>(element);
 					}
 				}
 				return *this;
 			}
+
+		private:
+			template <typename TCollection>
+			void _writeCollectionElement(const typename TCollection::value_type &element)
+			{
+				if constexpr (ByteStreamMap<TCollection>)
+				{
+					*this << element.first << element.second;
+				}
+				else if constexpr (std::same_as<typename TCollection::value_type, bool>)
+				{
+					*this << static_cast<bool>(element);
+				}
+				else
+				{
+					*this << element;
+				}
+			}
+
+		public:
 
 			void resize(std::size_t size)
 			{

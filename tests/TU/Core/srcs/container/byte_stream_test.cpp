@@ -5,10 +5,16 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <deque>
+#include <list>
+#include <map>
+#include <set>
 #include <cstring>
 #include <gtest/gtest.h>
 #include <string>
 #include <type_traits>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
 
 namespace
@@ -579,4 +585,105 @@ TEST(ByteStream, TruncatedBulkReadPreservesTargetAndReadCursorAfterPrefix)
 	EXPECT_THROW(reader >> value, spk::Exception);
 	EXPECT_EQ(value, (std::vector<std::uint32_t>{99}));
 	EXPECT_EQ(reader.readOffset(), sizeof(std::uint32_t));
+}
+
+TEST(ByteStream, OrderedSetRoundTrip)
+{
+	const std::set<std::uint32_t> values{1, 3, 8, 13};
+	const spk::ByteStream stream(values);
+	EXPECT_EQ(stream.cast<std::set<std::uint32_t>>(), values);
+	EXPECT_EQ(stream.size(), sizeof(std::uint32_t) + values.size() * sizeof(std::uint32_t));
+}
+
+TEST(ByteStream, ListAndDequeRoundTrip)
+{
+	const std::list<std::string> words{"alpha", "beta", ""};
+	const std::deque<std::uint16_t> numbers{1, 2, 3, 4};
+	spk::ByteStream::Writer writer;
+	writer << words << numbers;
+	const auto stream = std::move(writer).build();
+	auto reader = stream.reader();
+	std::list<std::string> decodedWords;
+	std::deque<std::uint16_t> decodedNumbers;
+	reader >> decodedWords >> decodedNumbers;
+	EXPECT_EQ(decodedWords, words);
+	EXPECT_EQ(decodedNumbers, numbers);
+	EXPECT_EQ(reader.remaining(), 0u);
+}
+
+TEST(ByteStream, MultisetPreservesDuplicateElements)
+{
+	const std::multiset<int> values{2, 2, 5, 5, 7};
+	const spk::ByteStream stream(values);
+	EXPECT_EQ(stream.cast<std::multiset<int>>(), values);
+}
+
+TEST(ByteStream, UnorderedSetRoundTrip)
+{
+	const std::unordered_set<std::uint32_t> values{8, 1, 99, 3};
+	const spk::ByteStream stream(values);
+	EXPECT_EQ(stream.cast<std::unordered_set<std::uint32_t>>(), values);
+}
+
+TEST(ByteStream, OrderedMapRoundTrip)
+{
+	const std::map<std::string, std::uint32_t> scores{{"alice", 42}, {"bob", 17}};
+	const spk::ByteStream stream(scores);
+	EXPECT_EQ(stream.cast<std::map<std::string, std::uint32_t>>(), scores);
+}
+
+TEST(ByteStream, UnorderedMapWithNestedContainerRoundTrip)
+{
+	const std::unordered_map<std::string, std::vector<std::uint16_t>> values{
+		{"north", {1, 2, 3}}, {"south", {8, 13}}};
+	const spk::ByteStream stream(values);
+	EXPECT_EQ((stream.cast<std::unordered_map<std::string, std::vector<std::uint16_t>>>()), values);
+}
+
+TEST(ByteStream, NestedNonContiguousCollectionsRoundTrip)
+{
+	const std::vector<std::set<std::uint16_t>> values{{3, 1}, {}, {7, 8}};
+	const spk::ByteStream stream(values);
+	EXPECT_EQ(stream.cast<std::vector<std::set<std::uint16_t>>>(), values);
+}
+
+
+TEST(ByteStream, GenericCollectionsHaveCompatibleElementEncoding)
+{
+	const std::vector<std::uint32_t> vector{1, 4, 7};
+	const std::set<std::uint32_t> set{1, 4, 7};
+	const spk::ByteStream a(vector);
+	const spk::ByteStream b(set);
+	EXPECT_EQ(a.size(), b.size());
+	EXPECT_EQ(std::memcmp(a.data().data(), b.data().data(), a.size()), 0);
+}
+
+TEST(ByteStream, MalformedCollectionDoesNotModifyDestination)
+{
+	spk::ByteStream::Writer writer;
+	writer << std::uint32_t{3} << std::uint32_t{42};
+	const auto stream = std::move(writer).build();
+	auto reader = stream.reader();
+	std::set<std::uint32_t> existing{77};
+	EXPECT_THROW(reader >> existing, spk::Exception);
+	EXPECT_EQ(existing, (std::set<std::uint32_t>{77}));
+}
+
+TEST(ByteStream, InvalidCollectionCountFailsBeforeInsertion)
+{
+	spk::ByteStream::Writer writer;
+	writer << std::uint32_t{1000000};
+	const auto stream = std::move(writer).build();
+	EXPECT_THROW((void)stream.cast<std::list<std::string>>(), spk::Exception);
+	EXPECT_THROW((void)stream.cast<std::map<std::string, std::uint32_t>>(), spk::Exception);
+}
+
+TEST(ByteStream, GenericCollectionConceptRejectsFixedAndTextRanges)
+{
+	static_assert(spk::ByteStreamCollection<std::vector<int>>);
+	static_assert(spk::ByteStreamCollection<std::set<int>>);
+	static_assert(spk::ByteStreamCollection<std::map<int, int>>);
+	static_assert(!spk::ByteStreamCollection<std::array<int, 3>>);
+	static_assert(!spk::ByteStreamCollection<std::string>);
+	SUCCEED();
 }
