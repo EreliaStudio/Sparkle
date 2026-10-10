@@ -7,39 +7,43 @@
 
 namespace spk
 {
-	template <typename TObject>
 	class MementoTrait
 	{
 	private:
-		void _restore(const spk::ByteStream &snapshot)
+		virtual void _saveMemento(spk::ByteStream::Writer &writer) const = 0;
+		virtual void _loadMemento(const spk::ByteStream::Slice &reader) = 0;
+
+	public:
+		virtual ~MementoTrait() = default;
+
+		[[nodiscard]] spk::ByteStream save() const
+		{
+			spk::ByteStream::Writer writer;
+			_saveMemento(writer);
+			return std::move(writer).build();
+		}
+
+		void load(const spk::ByteStream &snapshot)
 		{
 			auto reader = snapshot.reader();
-			static_cast<TObject &>(*this).loadMemento(reader);
+			_loadMemento(reader);
 			if (reader.remaining() != 0)
 			{
 				throw spk::Exception("Memento snapshot contains trailing bytes.");
 			}
 		}
 
-	public:
-		[[nodiscard]] spk::ByteStream save() const
-		{
-			spk::ByteStream::Writer writer;
-			static_cast<const TObject &>(*this).saveMemento(writer);
-			return std::move(writer).build();
-		}
-
-		void load(const spk::ByteStream &snapshot)
+		void loadSecure(const spk::ByteStream &snapshot)
 		{
 			const auto previous = save();
 			try
 			{
-				_restore(snapshot);
+				load(snapshot);
 			} catch (...)
 			{
 				try
 				{
-					_restore(previous);
+					load(previous);
 				} catch (...)
 				{
 					throw spk::Exception("Memento restoration and rollback both failed.");
@@ -59,7 +63,7 @@ namespace spk
 			{
 				try
 				{
-					_restore(snapshot);
+					load(snapshot);
 				} catch (...)
 				{
 					throw spk::Exception("Memento transaction rollback failed.");
