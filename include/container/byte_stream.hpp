@@ -139,19 +139,32 @@ namespace spk
 			{
 				std::uint32_t count = 0;
 				*this >> count;
-				const std::size_t minimum = std::same_as<TValue, std::string> ? sizeof(std::uint32_t) : 1;
-				if (count > remaining() / minimum)
+				if constexpr ((std::is_arithmetic_v<TValue> || std::is_enum_v<TValue>) && !std::same_as<TValue, bool>)
 				{
-					throw spk::Exception("ByteStream vector exceeds slice bounds.");
+					if (count > remaining() / sizeof(TValue))
+					{
+						throw spk::Exception("ByteStream vector exceeds slice bounds.");
+					}
+					std::vector<TValue> decoded(count);
+					pull(decoded.data(), decoded.size() * sizeof(TValue));
+					value = std::move(decoded);
 				}
-				std::vector<TValue> decoded;
-				for (std::uint32_t index = 0; index < count; ++index)
+				else
 				{
-					TValue element{};
-					*this >> element;
-					decoded.push_back(std::move(element));
+					const std::size_t minimum = std::same_as<TValue, std::string> ? sizeof(std::uint32_t) : 1;
+					if (count > remaining() / minimum)
+					{
+						throw spk::Exception("ByteStream vector exceeds slice bounds.");
+					}
+					std::vector<TValue> decoded;
+					for (std::uint32_t index = 0; index < count; ++index)
+					{
+						TValue element{};
+						*this >> element;
+						decoded.push_back(std::move(element));
+					}
+					value = std::move(decoded);
 				}
-				value = std::move(decoded);
 				return *this;
 			}
 
@@ -230,16 +243,28 @@ namespace spk
 				{
 					throw spk::Exception("ByteStream vector exceeds maximum element count.");
 				}
-				*this << static_cast<std::uint32_t>(value.size());
-				for (const auto &element : value)
+				if constexpr ((std::is_arithmetic_v<TValue> || std::is_enum_v<TValue>) && !std::same_as<TValue, bool>)
 				{
-					if constexpr (std::same_as<TValue, bool>)
+					if (value.size() > _buffer.max_size() / sizeof(TValue))
 					{
-						*this << static_cast<bool>(element);
+						throw spk::Exception("ByteStream vector exceeds maximum byte count.");
 					}
-					else
+					*this << static_cast<std::uint32_t>(value.size());
+					append(value.data(), value.size() * sizeof(TValue));
+				}
+				else
+				{
+					*this << static_cast<std::uint32_t>(value.size());
+					for (const auto &element : value)
 					{
-						*this << element;
+						if constexpr (std::same_as<TValue, bool>)
+						{
+							*this << static_cast<bool>(element);
+						}
+						else
+						{
+							*this << element;
+						}
 					}
 				}
 				return *this;
