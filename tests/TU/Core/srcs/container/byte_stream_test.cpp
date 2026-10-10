@@ -3,6 +3,7 @@
 #include "network/message.hpp"
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <gtest/gtest.h>
@@ -160,6 +161,13 @@ namespace
 		std::uint16_t flags;
 	};
 
+	struct TrivialVectorPayload
+	{
+		std::array<float, 4> position;
+		std::array<float, 4> rotation;
+		std::size_t id;
+	};
+
 	struct EncodedTrivialState
 	{
 		std::uint32_t value = 0;
@@ -203,6 +211,7 @@ namespace
 	static_assert(!spk::ByteStreamSerializable<NonTrivialState, spk::ByteStream::Writer, spk::ByteStream::Slice>);
 	static_assert(!spk::ByteStreamSerializable<std::uint32_t *, spk::ByteStream::Writer, spk::ByteStream::Slice>);
 	static_assert(std::is_trivially_copyable_v<TrivialState>);
+	static_assert(std::is_trivially_copyable_v<TrivialVectorPayload>);
 	static_assert(std::is_constructible_v<spk::ByteStream, TrivialState>);
 	static_assert(!std::is_constructible_v<spk::ByteStream, NonTrivialState>);
 	static_assert(std::is_constructible_v<spk::ByteStream, SerializableState>);
@@ -505,26 +514,59 @@ TEST(ByteStream, ByteVectorIsWrittenAsContiguousPayload)
 	EXPECT_EQ(stream.cast<std::vector<std::byte>>(), bytes);
 }
 
-TEST(ByteStream, TrivialStructWithCustomCodecStillUsesItsOperators)
+TEST(ByteStream, TrivialStructWithCustomCodecUsesRawVectorBytes)
 {
 	static_assert(std::is_trivially_copyable_v<EncodedTrivialState>);
 	const std::vector<EncodedTrivialState> values{{1}, {2}, {100}};
 	const spk::ByteStream encoded(values);
+	const std::size_t bytes = values.size() * sizeof(EncodedTrivialState);
+	ASSERT_EQ(encoded.size(), sizeof(std::uint32_t) + bytes);
+	EXPECT_EQ(std::memcmp(encoded.data().data() + sizeof(std::uint32_t), values.data(), bytes), 0);
 	spk::ByteStream::Writer writer;
 	writer << static_cast<std::uint32_t>(values.size());
 	for (const auto &value : values)
 	{
 		writer << value;
 	}
-	const auto expected = std::move(writer).build();
-	ASSERT_EQ(encoded.size(), expected.size());
-	EXPECT_EQ(std::memcmp(encoded.data().data(), expected.data().data(), encoded.size()), 0);
+	const auto elementEncoded = std::move(writer).build();
+	EXPECT_NE(std::memcmp(encoded.data().data(), elementEncoded.data().data(), encoded.size()), 0);
 	const auto decoded = encoded.cast<std::vector<EncodedTrivialState>>();
 	ASSERT_EQ(decoded.size(), values.size());
 	for (std::size_t index = 0; index < values.size(); ++index)
 	{
 		EXPECT_EQ(decoded[index].value, values[index].value);
 	}
+}
+
+TEST(ByteStream, TrivialStructVectorCopiesContiguousObjects)
+{
+	const std::vector<TrivialVectorPayload> values{
+		{{1, 2, 3, 4}, {5, 6, 7, 8}, 9},
+		{{10, 20, 30, 40}, {50, 60, 70, 80}, 90},
+		{{0, 0, 0, 0}, {-1, -2, -3, -4}, 12345}};
+	const spk::ByteStream encoded(values);
+	const std::size_t payloadSize = values.size() * sizeof(TrivialVectorPayload);
+	ASSERT_EQ(encoded.size(), sizeof(std::uint32_t) + payloadSize);
+	std::uint32_t count = 0;
+	encoded.reader() >> count;
+	EXPECT_EQ(count, values.size());
+	EXPECT_EQ(std::memcmp(encoded.data().data() + sizeof(count), values.data(), payloadSize), 0);
+	const auto decoded = encoded.cast<std::vector<TrivialVectorPayload>>();
+	ASSERT_EQ(decoded.size(), values.size());
+	for (std::size_t index = 0; index < values.size(); ++index)
+	{
+		EXPECT_EQ(decoded[index].position, values[index].position);
+		EXPECT_EQ(decoded[index].rotation, values[index].rotation);
+		EXPECT_EQ(decoded[index].id, values[index].id);
+	}
+}
+
+TEST(ByteStream, TrivialStructVectorRejectsTruncatedPayload)
+{
+	spk::ByteStream::Writer writer;
+	writer << std::uint32_t{2} << TrivialVectorPayload{{1, 2, 3, 4}, {5, 6, 7, 8}, 9};
+	const auto encoded = std::move(writer).build();
+	EXPECT_THROW((void)encoded.cast<std::vector<TrivialVectorPayload>>(), spk::Exception);
 }
 
 TEST(ByteStream, TruncatedBulkReadPreservesTargetAndReadCursorAfterPrefix)
