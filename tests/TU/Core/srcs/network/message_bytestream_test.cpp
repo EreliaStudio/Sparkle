@@ -8,15 +8,9 @@
 
 namespace
 {
-	static_assert(std::is_same_v<
-		decltype(std::declval<const spk::Message &>().payload()),
-		const spk::ByteStream &>);
-	static_assert(std::is_same_v<
-		decltype(std::declval<spk::Message &>().payload()),
-		spk::ByteStream &>);
-	static_assert(std::is_same_v<
-		decltype(std::declval<spk::Message::Writer &>().payload()),
-		spk::ByteStream::Writer &>);
+	static_assert(std::is_same_v<decltype(std::declval<const spk::Message &>().payload()), const spk::ByteStream &>);
+	static_assert(std::is_same_v<decltype(std::declval<spk::Message &>().payload()), spk::ByteStream &>);
+	static_assert(std::is_same_v<decltype(std::declval<spk::Message::Writer &>().payload()), spk::ByteStream::Writer &>);
 }
 
 TEST(MessageByteStream, HeaderAndPayloadAreIndependent)
