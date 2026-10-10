@@ -27,14 +27,14 @@ namespace spk
 			static_assert(MementoSerializable<TObject>, "MementoTrait requires saveMemento(Writer&) const and loadMemento(const Slice&).");
 		}
 
-		[[nodiscard]] spk::ByteStream save() const requires MementoSerializable<TObject>
+		[[nodiscard]] spk::ByteStream save() const
 		{
 			spk::ByteStream::Writer writer;
 			static_cast<const TObject &>(*this).saveMemento(writer);
 			return std::move(writer).build();
 		}
 
-		void load(const spk::ByteStream &snapshot) requires MementoSerializable<TObject>
+		void load(const spk::ByteStream &snapshot)
 		{
 			auto reader = snapshot.reader();
 			static_cast<TObject &>(*this).loadMemento(reader);
@@ -44,7 +44,7 @@ namespace spk
 			}
 		}
 
-		void loadSecure(const spk::ByteStream &snapshot) requires MementoSerializable<TObject>
+		void loadSecure(const spk::ByteStream &snapshot)
 		{
 			const auto previous = save();
 			try
