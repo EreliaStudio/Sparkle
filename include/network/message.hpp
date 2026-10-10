@@ -1,5 +1,6 @@
 #pragma once
 
+#include "container/byte_stream.hpp"
 #include "container/pool.hpp"
 
 #include <array>
@@ -33,15 +34,9 @@ namespace spk
 		class Reader
 		{
 		private:
-			std::shared_ptr<const Storage::Lease> _storage;
-			mutable std::size_t _readOffset = 0;
+			spk::ByteStream::Slice _slice;
 
-			explicit Reader(
-				std::shared_ptr<const Storage::Lease> storage,
-				std::size_t offset = 0);
-
-			[[nodiscard]] std::size_t _size() const noexcept;
-			void _seek(std::size_t offset) const;
+			explicit Reader(spk::ByteStream payload, std::size_t offset = 0);
 
 			friend class Message;
 
@@ -87,7 +82,7 @@ namespace spk
 				requires std::is_trivially_copyable_v<TValue>
 			[[nodiscard]] TValue peek() const
 			{
-				return readAt<TValue>(_readOffset);
+				return readAt<TValue>(readOffset());
 			}
 
 			template <typename TValue>
@@ -202,6 +197,7 @@ namespace spk
 		[[nodiscard]] bool empty() const noexcept;
 
 		[[nodiscard]] Reader reader(std::size_t offset = 0) const;
+		[[nodiscard]] spk::ByteStream payload() const;
 	};
 
 	// Checks the Writer/Reader serialization API, including custom operators found through ADL.
