@@ -349,3 +349,37 @@ TEST(ByteStream, NonTrivialCastRejectsTruncatedNestedString)
 	const auto bytes = std::move(writer).build();
 	EXPECT_THROW((void)bytes.cast<SerializableState>(), spk::Exception);
 }
+
+TEST(ByteStream, TrivialVectorUsesElementCountAndRawBytes)
+{
+	const std::vector<std::uint16_t> source{2, 4, 6, 8};
+	const spk::ByteStream encoded(source);
+	const auto decoded = encoded.cast<std::vector<std::uint16_t>>();
+	EXPECT_EQ(decoded, source);
+	std::uint32_t payloadSize = 0;
+	encoded.reader() >> payloadSize;
+	EXPECT_EQ(payloadSize, sizeof(std::uint32_t) + source.size() * sizeof(std::uint16_t));
+}
+
+TEST(ByteStream, StringVectorPreservesDynamicLengthsAndEmbeddedNulls)
+{
+	const std::vector<std::string> source{"", std::string("ab\\0c", 4), "longer value"};
+	const spk::ByteStream encoded(source);
+	EXPECT_EQ(encoded.cast<std::vector<std::string>>(), source);
+}
+
+TEST(ByteStream, VectorCastRejectsTruncatedData)
+{
+	spk::ByteStream::Writer writer;
+	writer << std::uint32_t{sizeof(std::uint32_t) + sizeof(std::uint16_t)} << std::uint32_t{2} << std::uint16_t{7};
+	const auto truncated = std::move(writer).build();
+	EXPECT_THROW((void)truncated.cast<std::vector<std::uint16_t>>(), spk::Exception);
+}
+
+TEST(ByteStream, StringVectorCastRejectsImpossibleElementCount)
+{
+	spk::ByteStream::Writer writer;
+	writer << std::uint32_t{sizeof(std::uint32_t)} << std::uint32_t{100000};
+	const auto truncated = std::move(writer).build();
+	EXPECT_THROW((void)truncated.cast<std::vector<std::string>>(), spk::Exception);
+}
