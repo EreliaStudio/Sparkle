@@ -160,6 +160,23 @@ namespace
 		std::uint16_t flags;
 	};
 
+	struct EncodedTrivialState
+	{
+		std::uint32_t value = 0;
+
+		friend spk::ByteStream::Writer &operator<<(spk::ByteStream::Writer &writer, const EncodedTrivialState &state)
+		{
+			return writer << (state.value ^ 0xA5A5A5A5u);
+		}
+
+		friend const spk::ByteStream::Slice &operator>>(const spk::ByteStream::Slice &reader, EncodedTrivialState &state)
+		{
+			reader >> state.value;
+			state.value ^= 0xA5A5A5A5u;
+			return reader;
+		}
+	};
+
 	struct NonTrivialState
 	{
 		std::string text;
@@ -438,4 +455,86 @@ TEST(ByteStream, ComplexValuesInWriterCanBeDecodedSequentially)
 	EXPECT_EQ(first.name, "first");
 	EXPECT_EQ(second.name, "second");
 	EXPECT_EQ(second.health, 2u);
+}
+
+TEST(ByteStream, WriterAppendCopiesRawByteSpan)
+{
+	const std::array<std::byte, 4> source{std::byte{1}, std::byte{2}, std::byte{3}, std::byte{4}};
+	spk::ByteStream::Writer writer;
+	writer.append(source.data(), source.size());
+	writer.append(nullptr, 0);
+	const auto stream = std::move(writer).build();
+	ASSERT_EQ(stream.size(), source.size());
+	EXPECT_EQ(std::memcmp(stream.data().data(), source.data(), source.size()), 0);
+}
+
+TEST(ByteStream, PrimitiveVectorWireFormatMatchesElementWiseSerialization)
+{
+	const std::vector<std::uint32_t> values{0, 1, 0xFEDCBA98u, 123456};
+	const spk::ByteStream bulk(values);
+	spk::ByteStream::Writer manual;
+	manual << static_cast<std::uint32_t>(values.size());
+	for (const auto value : values)
+	{
+		manual << value;
+	}
+	const auto expected = std::move(manual).build();
+	ASSERT_EQ(bulk.size(), expected.size());
+	EXPECT_EQ(std::memcmp(bulk.data().data(), expected.data().data(), bulk.size()), 0);
+	EXPECT_EQ(bulk.cast<std::vector<std::uint32_t>>(), values);
+}
+
+TEST(ByteStream, BulkVectorHandlesEmptyAndLargeArrays)
+{
+	const std::vector<float> empty;
+	const spk::ByteStream emptyBytes(empty);
+	EXPECT_EQ(emptyBytes.size(), sizeof(std::uint32_t));
+	EXPECT_EQ(emptyBytes.cast<std::vector<float>>(), empty);
+	const std::vector<float> values(4096, 3.5f);
+	const spk::ByteStream encoded(values);
+	EXPECT_EQ(encoded.size(), sizeof(std::uint32_t) + values.size() * sizeof(float));
+	EXPECT_EQ(encoded.cast<std::vector<float>>(), values);
+}
+
+TEST(ByteStream, ByteVectorIsWrittenAsContiguousPayload)
+{
+	const std::vector<std::byte> bytes{std::byte{0}, std::byte{1}, std::byte{255}};
+	const spk::ByteStream stream(bytes);
+	ASSERT_EQ(stream.size(), sizeof(std::uint32_t) + bytes.size());
+	EXPECT_EQ(std::memcmp(stream.data().data() + sizeof(std::uint32_t), bytes.data(), bytes.size()), 0);
+	EXPECT_EQ(stream.cast<std::vector<std::byte>>(), bytes);
+}
+
+TEST(ByteStream, TrivialStructWithCustomCodecStillUsesItsOperators)
+{
+	static_assert(std::is_trivially_copyable_v<EncodedTrivialState>);
+	const std::vector<EncodedTrivialState> values{{1}, {2}, {100}};
+	const spk::ByteStream encoded(values);
+	spk::ByteStream::Writer writer;
+	writer << static_cast<std::uint32_t>(values.size());
+	for (const auto &value : values)
+	{
+		writer << value;
+	}
+	const auto expected = std::move(writer).build();
+	ASSERT_EQ(encoded.size(), expected.size());
+	EXPECT_EQ(std::memcmp(encoded.data().data(), expected.data().data(), encoded.size()), 0);
+	const auto decoded = encoded.cast<std::vector<EncodedTrivialState>>();
+	ASSERT_EQ(decoded.size(), values.size());
+	for (std::size_t index = 0; index < values.size(); ++index)
+	{
+		EXPECT_EQ(decoded[index].value, values[index].value);
+	}
+}
+
+TEST(ByteStream, TruncatedBulkReadPreservesTargetAndReadCursorAfterPrefix)
+{
+	spk::ByteStream::Writer writer;
+	writer << std::uint32_t{3} << std::uint32_t{12} << std::uint32_t{34};
+	const auto stream = std::move(writer).build();
+	auto reader = stream.reader();
+	std::vector<std::uint32_t> value{99};
+	EXPECT_THROW(reader >> value, spk::Exception);
+	EXPECT_EQ(value, (std::vector<std::uint32_t>{99}));
+	EXPECT_EQ(reader.readOffset(), sizeof(std::uint32_t));
 }
