@@ -46,21 +46,9 @@ namespace spk
 
 		void loadSecure(const spk::ByteStream &snapshot)
 		{
-			const auto previous = save();
-			try
-			{
+			transaction([&] {
 				load(snapshot);
-			} catch (...)
-			{
-				try
-				{
-					load(previous);
-				} catch (...)
-				{
-					throw spk::Exception("Memento restoration and rollback both failed.");
-				}
-				throw;
-			}
+			});
 		}
 
 		template <typename TOperation>
