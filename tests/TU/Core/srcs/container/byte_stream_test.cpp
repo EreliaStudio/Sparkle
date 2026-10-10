@@ -14,7 +14,7 @@
 namespace
 {
 	template <typename T>
-	concept WritableSlice = requires(T slice, std::uint32_t number) {
+	concept WritableReader = requires(T slice, std::uint32_t number) {
 		slice << number;
 	};
 }
@@ -35,7 +35,7 @@ TEST(ByteStream, SerializeScalarAndString)
 
 TEST(ByteStream, SliceRetainsStorageAfterOwnerDestruction)
 {
-	spk::ByteStream::Slice slice = [] {
+	spk::ByteStream::Reader slice = [] {
 		spk::ByteStream::Writer writer;
 		writer << std::uint32_t{42};
 		return std::move(writer).build().reader();
@@ -50,9 +50,9 @@ TEST(ByteStream, NestedSlicesHaveIndependentRelativeCursors)
 	spk::ByteStream::Writer writer;
 	writer << std::uint32_t{1} << std::uint32_t{2} << std::uint32_t{3};
 	const auto bytes = std::move(writer).build();
-	auto parent = bytes.slice(4, 12);
-	auto first = parent.slice(0, 4);
-	auto second = parent.slice(4, 8);
+	auto parent = bytes.reader(4, 12);
+	auto first = parent.subreader(0, 4);
+	auto second = parent.subreader(4, 8);
 	std::uint32_t a = 0;
 	std::uint32_t b = 0;
 	first >> a;
@@ -80,15 +80,15 @@ TEST(ByteStream, RejectsInvalidParentAndNestedBounds)
 	spk::ByteStream::Writer writer;
 	writer << std::uint32_t{1};
 	auto bytes = std::move(writer).build();
-	EXPECT_THROW(bytes.slice(3, 2), spk::Exception);
-	EXPECT_THROW(bytes.slice(0, 5), spk::Exception);
+	EXPECT_THROW(bytes.reader(3, 2), spk::Exception);
+	EXPECT_THROW(bytes.reader(0, 5), spk::Exception);
 	auto reader = bytes.reader();
-	EXPECT_THROW(reader.slice(4, 5), spk::Exception);
+	EXPECT_THROW(reader.subreader(4, 5), spk::Exception);
 }
 
 TEST(ByteStream, SliceIsNotWritable)
 {
-	static_assert(!WritableSlice<spk::ByteStream::Slice>);
+	static_assert(!WritableReader<spk::ByteStream::Reader>);
 	SUCCEED();
 }
 
@@ -107,7 +107,7 @@ TEST(ByteStream, MessagePayloadSharesStorageWithoutCopying)
 
 TEST(ByteStream, MessageSlicesOutliveMessage)
 {
-	spk::ByteStream::Slice slice = [] {
+	spk::ByteStream::Reader slice = [] {
 		spk::Message::Writer writer(12);
 		writer << std::uint32_t{73};
 		auto message = std::move(writer).build();
@@ -177,7 +177,7 @@ namespace
 			return writer << (state.value ^ 0xA5A5A5A5u);
 		}
 
-		friend const spk::ByteStream::Slice &operator>>(const spk::ByteStream::Slice &reader, EncodedTrivialState &state)
+		friend const spk::ByteStream::Reader &operator>>(const spk::ByteStream::Reader &reader, EncodedTrivialState &state)
 		{
 			reader >> state.value;
 			state.value ^= 0xA5A5A5A5u;
@@ -200,16 +200,16 @@ namespace
 			return writer << state.name << state.health;
 		}
 
-		friend const spk::ByteStream::Slice &operator>>(const spk::ByteStream::Slice &reader, SerializableState &state)
+		friend const spk::ByteStream::Reader &operator>>(const spk::ByteStream::Reader &reader, SerializableState &state)
 		{
 			return reader >> state.name >> state.health;
 		}
 	};
 
-	static_assert(spk::ByteStreamSerializable<TrivialState, spk::ByteStream::Writer, spk::ByteStream::Slice>);
-	static_assert(spk::ByteStreamSerializable<SerializableState, spk::ByteStream::Writer, spk::ByteStream::Slice>);
-	static_assert(!spk::ByteStreamSerializable<NonTrivialState, spk::ByteStream::Writer, spk::ByteStream::Slice>);
-	static_assert(!spk::ByteStreamSerializable<std::uint32_t *, spk::ByteStream::Writer, spk::ByteStream::Slice>);
+	static_assert(spk::ByteStreamSerializable<TrivialState, spk::ByteStream::Writer, spk::ByteStream::Reader>);
+	static_assert(spk::ByteStreamSerializable<SerializableState, spk::ByteStream::Writer, spk::ByteStream::Reader>);
+	static_assert(!spk::ByteStreamSerializable<NonTrivialState, spk::ByteStream::Writer, spk::ByteStream::Reader>);
+	static_assert(!spk::ByteStreamSerializable<std::uint32_t *, spk::ByteStream::Writer, spk::ByteStream::Reader>);
 	static_assert(std::is_trivially_copyable_v<TrivialState>);
 	static_assert(std::is_trivially_copyable_v<TrivialVectorPayload>);
 	static_assert(std::is_constructible_v<spk::ByteStream, TrivialState>);

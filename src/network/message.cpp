@@ -8,67 +8,6 @@
 
 namespace spk
 {
-	Message::Reader::Reader(const spk::ByteStream &payload, std::size_t offset) :
-		_slice(payload.reader())
-	{
-		_slice.seek(offset);
-	}
-
-	void Message::Reader::reset() const noexcept
-	{
-		_slice.reset();
-	}
-
-	void Message::Reader::seek(std::size_t offset) const
-	{
-		_slice.seek(offset);
-	}
-
-	void Message::Reader::skip(std::size_t count) const
-	{
-		_slice.skip(count);
-	}
-
-	void Message::Reader::pull(void *destination, std::size_t count) const
-	{
-		_slice.pull(destination, count);
-	}
-
-	void Message::Reader::readAt(std::size_t offset, void *destination, std::size_t count) const
-	{
-		if (offset > _slice.size() || count > _slice.size() - offset)
-		{
-			throw spk::Exception("Unable to read outside a network message payload.");
-		}
-		_slice.slice(offset, offset + count).pull(destination, count);
-	}
-
-	std::size_t Message::Reader::readOffset() const noexcept
-	{
-		return _slice.readOffset();
-	}
-
-	std::span<const std::byte> Message::Reader::data() const noexcept
-	{
-		return _slice.data();
-	}
-
-	std::size_t Message::Reader::size() const noexcept
-	{
-		return _slice.size();
-	}
-
-	bool Message::Reader::empty() const noexcept
-	{
-		return _slice.empty();
-	}
-
-	const Message::Reader &Message::Reader::operator>>(std::string &value) const
-	{
-		_slice >> value;
-		return *this;
-	}
-
 	Message::Writer::Writer(Type type) noexcept
 	{
 		_header.messageType = type;
@@ -229,6 +168,8 @@ namespace spk
 
 	Message::Reader Message::reader(std::size_t offset) const
 	{
-		return Reader(_payload, offset);
+		auto result = _payload.reader();
+		result.seek(offset);
+		return result;
 	}
 }

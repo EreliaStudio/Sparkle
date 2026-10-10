@@ -25,7 +25,7 @@ namespace
 			writer << _health << _shield;
 		}
 
-		void loadMemento(const spk::ByteStream::Slice &reader)
+		void loadMemento(const spk::ByteStream::Reader &reader)
 		{
 			reader >> _health;
 			if (_rejectRestore)
@@ -74,7 +74,7 @@ namespace
 		void saveMemento(spk::ByteStream::Writer &)
 		{
 		}
-		void loadMemento(const spk::ByteStream::Slice &)
+		void loadMemento(const spk::ByteStream::Reader &)
 		{
 		}
 	};

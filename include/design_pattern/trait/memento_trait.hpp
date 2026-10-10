@@ -13,7 +13,7 @@ namespace spk
 		const TObject &object,
 		TObject &mutableObject,
 		spk::ByteStream::Writer &writer,
-		const spk::ByteStream::Slice &reader) {
+		const spk::ByteStream::Reader &reader) {
 		{ object.saveMemento(writer) } -> std::same_as<void>;
 		{ mutableObject.loadMemento(reader) } -> std::same_as<void>;
 	};
@@ -24,7 +24,7 @@ namespace spk
 	public:
 		~MementoTrait()
 		{
-			static_assert(MementoSerializable<TObject>, "MementoTrait requires saveMemento(Writer&) const and loadMemento(const Slice&).");
+			static_assert(MementoSerializable<TObject>, "MementoTrait requires saveMemento(Writer&) const and loadMemento(const Reader&).");
 		}
 
 		[[nodiscard]] spk::ByteStream save() const

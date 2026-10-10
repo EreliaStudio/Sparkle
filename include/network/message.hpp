@@ -27,69 +27,7 @@ namespace spk
 			RequestID requestID = 0;
 		};
 
-		class Reader
-		{
-		private:
-			spk::ByteStream::Slice _slice;
-
-			explicit Reader(const spk::ByteStream &payload, std::size_t offset = 0);
-
-			friend class Message;
-
-		public:
-			void reset() const noexcept;
-			void seek(std::size_t offset) const;
-			void skip(std::size_t size) const;
-			void pull(void *data, std::size_t size) const;
-			void readAt(std::size_t offset, void *destination, std::size_t size) const;
-
-			template <typename TValue>
-				requires std::is_trivially_copyable_v<TValue>
-			void skip() const
-			{
-				skip(sizeof(TValue));
-			}
-
-			[[nodiscard]] std::size_t readOffset() const noexcept;
-			[[nodiscard]] std::span<const std::byte> data() const noexcept;
-			[[nodiscard]] std::size_t size() const noexcept;
-			[[nodiscard]] bool empty() const noexcept;
-
-			template <typename TValue>
-				requires std::is_trivially_copyable_v<TValue>
-			const Reader &operator>>(TValue &value) const
-			{
-				pull(&value, sizeof(TValue));
-				return *this;
-			}
-
-			const Reader &operator>>(std::string &value) const;
-
-			template <typename TValue>
-				requires std::is_trivially_copyable_v<TValue>
-			[[nodiscard]] TValue get() const
-			{
-				std::array<std::byte, sizeof(TValue)> bytes;
-				pull(bytes.data(), bytes.size());
-				return std::bit_cast<TValue>(bytes);
-			}
-
-			template <typename TValue>
-				requires std::is_trivially_copyable_v<TValue>
-			[[nodiscard]] TValue peek() const
-			{
-				return readAt<TValue>(readOffset());
-			}
-
-			template <typename TValue>
-				requires std::is_trivially_copyable_v<TValue>
-			[[nodiscard]] TValue readAt(std::size_t offset) const
-			{
-				std::array<std::byte, sizeof(TValue)> bytes;
-				readAt(offset, bytes.data(), bytes.size());
-				return std::bit_cast<TValue>(bytes);
-			}
-		};
+		using Reader = spk::ByteStream::Reader;
 
 		class Writer
 		{

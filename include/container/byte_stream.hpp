@@ -34,7 +34,7 @@ namespace spk
 		using Buffer = std::vector<std::byte>;
 		class Writer;
 
-		class Slice
+		class Reader
 		{
 		private:
 			std::shared_ptr<const Buffer> _buffer;
@@ -43,7 +43,7 @@ namespace spk
 			mutable std::size_t _cursor = 0;
 
 			friend class ByteStream;
-			Slice(std::shared_ptr<const Buffer> buffer, std::size_t begin, std::size_t end) :
+			Reader(std::shared_ptr<const Buffer> buffer, std::size_t begin, std::size_t end) :
 				_buffer(std::move(buffer)),
 				_begin(begin),
 				_end(end)
@@ -76,7 +76,7 @@ namespace spk
 			{
 				if (offset > size())
 				{
-					throw spk::Exception("ByteStream slice seek outside bounds.");
+					throw spk::Exception("ByteStream reader seek outside bounds.");
 				}
 				_cursor = offset;
 			}
@@ -85,7 +85,7 @@ namespace spk
 			{
 				if (count > remaining())
 				{
-					throw spk::Exception("ByteStream slice skip outside bounds.");
+					throw spk::Exception("ByteStream reader skip outside bounds.");
 				}
 				_cursor += count;
 			}
@@ -103,7 +103,7 @@ namespace spk
 			{
 				if (count > remaining())
 				{
-					throw spk::Exception("ByteStream slice read outside bounds.");
+					throw spk::Exception("ByteStream reader read outside bounds.");
 				}
 				if (count != 0)
 				{
@@ -114,19 +114,60 @@ namespace spk
 
 			template <typename TValue>
 				requires(std::is_trivially_copyable_v<TValue> && !std::is_pointer_v<TValue> && !std::is_member_pointer_v<TValue> && !std::is_array_v<TValue> && !std::same_as<TValue, std::string_view>)
-			const Slice &operator>>(TValue &value) const
+			const Reader &operator>>(TValue &value) const
 			{
 				pull(&value, sizeof(TValue));
 				return *this;
 			}
 
-			const Slice &operator>>(std::string &value) const
+			void readAt(std::size_t offset, void *destination, std::size_t count) const
+			{
+				if (offset > size() || count > size() - offset)
+				{
+					throw spk::Exception("ByteStream reader read outside bounds.");
+				}
+				subreader(offset, offset + count).pull(destination, count);
+			}
+
+			template <typename TValue>
+				requires std::is_trivially_copyable_v<TValue>
+			void skip() const
+			{
+				skip(sizeof(TValue));
+			}
+
+			template <typename TValue>
+				requires std::is_trivially_copyable_v<TValue>
+			[[nodiscard]] TValue get() const
+			{
+				std::array<std::byte, sizeof(TValue)> bytes;
+				pull(bytes.data(), bytes.size());
+				return std::bit_cast<TValue>(bytes);
+			}
+
+			template <typename TValue>
+				requires std::is_trivially_copyable_v<TValue>
+			[[nodiscard]] TValue peek() const
+			{
+				return readAt<TValue>(readOffset());
+			}
+
+			template <typename TValue>
+				requires std::is_trivially_copyable_v<TValue>
+			[[nodiscard]] TValue readAt(std::size_t offset) const
+			{
+				std::array<std::byte, sizeof(TValue)> bytes;
+				readAt(offset, bytes.data(), bytes.size());
+				return std::bit_cast<TValue>(bytes);
+			}
+
+			const Reader &operator>>(std::string &value) const
 			{
 				std::uint32_t length = 0;
 				*this >> length;
 				if (length > remaining())
 				{
-					throw spk::Exception("ByteStream string exceeds slice bounds.");
+					throw spk::Exception("ByteStream string exceeds reader bounds.");
 				}
 				std::string decoded(length, '\0');
 				pull(decoded.data(), length);
@@ -135,8 +176,8 @@ namespace spk
 			}
 
 			template <typename TValue>
-				requires ByteStreamSerializable<TValue, Writer, Slice>
-			const Slice &operator>>(std::vector<TValue> &value) const
+				requires ByteStreamSerializable<TValue, Writer, Reader>
+			const Reader &operator>>(std::vector<TValue> &value) const
 			{
 				std::uint32_t count = 0;
 				*this >> count;
@@ -144,7 +185,7 @@ namespace spk
 				{
 					if (count > remaining() / sizeof(TValue))
 					{
-						throw spk::Exception("ByteStream vector exceeds slice bounds.");
+						throw spk::Exception("ByteStream vector exceeds reader bounds.");
 					}
 					std::vector<TValue> decoded(count);
 					pull(decoded.data(), decoded.size() * sizeof(TValue));
@@ -155,7 +196,7 @@ namespace spk
 					const std::size_t minimum = std::same_as<TValue, std::string> ? sizeof(std::uint32_t) : 1;
 					if (count > remaining() / minimum)
 					{
-						throw spk::Exception("ByteStream vector exceeds slice bounds.");
+						throw spk::Exception("ByteStream vector exceeds reader bounds.");
 					}
 					std::vector<TValue> decoded;
 					for (std::uint32_t index = 0; index < count; ++index)
@@ -169,13 +210,13 @@ namespace spk
 				return *this;
 			}
 
-			[[nodiscard]] Slice slice(std::size_t begin, std::size_t end) const
+			[[nodiscard]] Reader subreader(std::size_t begin, std::size_t end) const
 			{
 				if (begin > end || end > size())
 				{
-					throw spk::Exception("Invalid nested ByteStream slice bounds.");
+					throw spk::Exception("Invalid nested ByteStream reader bounds.");
 				}
-				return Slice(_buffer, _begin + begin, _begin + end);
+				return Reader(_buffer, _begin + begin, _begin + end);
 			}
 		};
 
@@ -266,7 +307,7 @@ namespace spk
 			}
 
 			template <typename TValue>
-				requires ByteStreamSerializable<TValue, Writer, Slice>
+				requires ByteStreamSerializable<TValue, Writer, Reader>
 			Writer &operator<<(const std::vector<TValue> &value)
 			{
 				if (value.size() > std::numeric_limits<std::uint32_t>::max())
@@ -360,7 +401,7 @@ namespace spk
 		}
 
 		template <typename TValue>
-			requires ByteStreamSerializable<TValue, Writer, Slice>
+			requires ByteStreamSerializable<TValue, Writer, Reader>
 		explicit ByteStream(const TValue &value)
 		{
 			Writer writer;
@@ -397,27 +438,27 @@ namespace spk
 		}
 
 		template <typename TValue>
-			requires ByteStreamSerializable<TValue, Writer, Slice>
+			requires ByteStreamSerializable<TValue, Writer, Reader>
 		[[nodiscard]] TValue cast() const
 		{
 			TValue result{};
-			auto slice = reader();
-			slice >> result;
+			auto reader = this->reader();
+			reader >> result;
 			return result;
 		}
 
-		[[nodiscard]] Slice slice(std::size_t begin, std::size_t end) const
+		[[nodiscard]] Reader reader(std::size_t begin, std::size_t end) const
 		{
 			if (begin > end || end > size())
 			{
-				throw spk::Exception("Invalid ByteStream slice bounds.");
+				throw spk::Exception("Invalid ByteStream reader bounds.");
 			}
-			return Slice(_buffer, begin, end);
+			return Reader(_buffer, begin, end);
 		}
 
-		[[nodiscard]] Slice reader() const
+		[[nodiscard]] Reader reader() const
 		{
-			return slice(0, size());
+			return reader(0, size());
 		}
 	};
 }
