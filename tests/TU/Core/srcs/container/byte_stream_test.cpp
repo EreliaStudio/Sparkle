@@ -5,12 +5,12 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <deque>
+#include <gtest/gtest.h>
 #include <list>
 #include <map>
 #include <set>
-#include <cstring>
-#include <gtest/gtest.h>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -646,7 +646,6 @@ TEST(ByteStream, NestedNonContiguousCollectionsRoundTrip)
 	const spk::ByteStream stream(values);
 	EXPECT_EQ(stream.cast<std::vector<std::set<std::uint16_t>>>(), values);
 }
-
 
 TEST(ByteStream, GenericCollectionsHaveCompatibleElementEncoding)
 {
