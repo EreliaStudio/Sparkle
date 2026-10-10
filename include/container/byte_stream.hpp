@@ -166,7 +166,6 @@ namespace spk
 				return *this;
 			}
 
-
 			[[nodiscard]] Reader subreader(std::size_t begin, std::size_t end) const
 			{
 				if (begin > end || end > size())
@@ -263,7 +262,6 @@ namespace spk
 				return *this << std::string_view(value);
 			}
 
-
 			void push(const void *data, std::size_t count)
 			{
 				append(data, count);
@@ -348,7 +346,6 @@ namespace spk
 			_buffer(std::make_shared<const Buffer>())
 		{
 		}
-
 
 		[[nodiscard]] std::size_t size() const noexcept
 		{
