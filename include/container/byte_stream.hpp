@@ -19,6 +19,24 @@
 
 namespace spk
 {
+	template <typename TValue>
+	concept ByteStreamRawValue =
+		std::is_trivially_copyable_v<TValue> &&
+		!std::is_pointer_v<TValue> &&
+		!std::is_member_pointer_v<TValue> &&
+		!std::is_array_v<TValue> &&
+		!std::same_as<std::remove_cv_t<TValue>, std::string_view>;
+
+	template <typename TValue, typename TWriter, typename TReader>
+	concept ByteStreamSerializable =
+		!ByteStreamRawValue<TValue> &&
+		!std::same_as<TValue, std::string> &&
+		std::default_initializable<TValue> &&
+		requires(TWriter &writer, const TValue &source, const TReader &reader, TValue &result) {
+			writer << source;
+			reader >> result;
+		};
+
 	class ByteStream
 	{
 	public:
@@ -211,9 +229,7 @@ namespace spk
 		}
 
 		template <typename TValue>
-			requires(std::is_trivially_copyable_v<TValue> && !std::same_as<std::remove_cv_t<TValue>, ByteStream> &&
-				!std::same_as<std::remove_cv_t<TValue>, std::string_view> && !std::is_pointer_v<TValue> &&
-				!std::is_member_pointer_v<TValue> && !std::is_array_v<TValue>)
+			requires ByteStreamRawValue<TValue>
 		explicit ByteStream(const TValue &value)
 		{
 			Buffer bytes(sizeof(TValue));
@@ -234,12 +250,7 @@ namespace spk
 		}
 
 		template <typename TValue>
-			requires(!std::is_trivially_copyable_v<TValue> && !std::same_as<TValue, std::string> &&
-				std::default_initializable<TValue> &&
-				requires(Writer &writer, const TValue &source, const Slice &reader, TValue &result) {
-					writer << source;
-					reader >> result;
-				})
+			requires ByteStreamSerializable<TValue, Writer, Slice>
 		explicit ByteStream(const TValue &value)
 		{
 			Writer payload;
@@ -275,9 +286,7 @@ namespace spk
 		}
 
 		template <typename TValue>
-			requires(std::is_trivially_copyable_v<TValue> && !std::is_pointer_v<TValue> &&
-				!std::is_member_pointer_v<TValue> && !std::is_array_v<TValue> &&
-				!std::same_as<TValue, std::string_view>)
+			requires ByteStreamRawValue<TValue>
 		[[nodiscard]] TValue cast() const
 		{
 			if (size() < sizeof(TValue))
@@ -290,33 +299,30 @@ namespace spk
 		}
 
 		template <typename TValue>
-			requires(std::same_as<TValue, std::string> ||
-				(!std::is_trivially_copyable_v<TValue> && std::default_initializable<TValue> &&
-					requires(const Slice &reader, TValue &value) {
-						reader >> value;
-					}))
+			requires std::same_as<TValue, std::string>
 		[[nodiscard]] TValue cast() const
 		{
 			auto reader = this->reader();
-			if constexpr (std::same_as<TValue, std::string>)
+			TValue value;
+			reader >> value;
+			return value;
+		}
+
+		template <typename TValue>
+			requires ByteStreamSerializable<TValue, Writer, Slice>
+		[[nodiscard]] TValue cast() const
+		{
+			auto reader = this->reader();
+			std::uint32_t length = 0;
+			reader >> length;
+			if (length > reader.remaining())
 			{
-				TValue value;
-				reader >> value;
-				return value;
+				throw spk::Exception("ByteStream object exceeds stream bounds.");
 			}
-			else
-			{
-				std::uint32_t length = 0;
-				reader >> length;
-				if (length > reader.remaining())
-				{
-					throw spk::Exception("ByteStream object exceeds stream bounds.");
-				}
-				auto payload = reader.slice(reader.readOffset(), reader.readOffset() + length);
-				TValue value{};
-				payload >> value;
-				return value;
-			}
+			auto payload = reader.slice(reader.readOffset(), reader.readOffset() + length);
+			TValue value{};
+			payload >> value;
+			return value;
 		}
 
 		[[nodiscard]] Slice slice(std::size_t begin, std::size_t end) const
