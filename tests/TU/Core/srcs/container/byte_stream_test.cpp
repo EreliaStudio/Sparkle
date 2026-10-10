@@ -165,9 +165,29 @@ namespace
 		std::string text;
 	};
 
+	struct SerializableState
+	{
+		std::string name;
+		std::uint32_t health = 0;
+
+		friend spk::ByteStream::Writer &operator<<(spk::ByteStream::Writer &writer, const SerializableState &state)
+		{
+			return writer << state.name << state.health;
+		}
+
+		friend const spk::ByteStream::Slice &operator>>(const spk::ByteStream::Slice &reader, SerializableState &state)
+		{
+			return reader >> state.name >> state.health;
+		}
+	};
+
 	static_assert(std::is_trivially_copyable_v<TrivialState>);
 	static_assert(std::is_constructible_v<spk::ByteStream, TrivialState>);
 	static_assert(!std::is_constructible_v<spk::ByteStream, NonTrivialState>);
+	static_assert(std::is_constructible_v<spk::ByteStream, SerializableState>);
+	static_assert(std::is_constructible_v<spk::ByteStream, std::string>);
+	static_assert(std::is_constructible_v<spk::ByteStream, std::string_view>);
+	static_assert(!std::is_constructible_v<spk::ByteStream, std::uint32_t *>);
 	static_assert(std::is_copy_constructible_v<spk::ByteStream>);
 }
 
@@ -226,4 +246,106 @@ TEST(ByteStream, TypedConstructorPreservesCopyAndMoveSemantics)
 	spk::ByteStream moved(shared);
 	EXPECT_EQ(original.data().data(), moved.data().data());
 	EXPECT_EQ(moved.cast<std::uint64_t>(), 25u);
+}
+
+TEST(ByteStream, StringConstructorMatchesMessageLengthPrefix)
+{
+	const std::string text{"Example\\0NUL", 11};
+	const spk::ByteStream value(std::string_view(text.data(), text.size()));
+	auto reader = value.reader();
+	std::uint32_t length = 0;
+	reader >> length;
+	EXPECT_EQ(length, text.size());
+	std::string decoded;
+	EXPECT_EQ(value.cast<std::string>(), text);
+	reader.reset();
+	reader >> decoded;
+	EXPECT_EQ(decoded, text);
+	EXPECT_EQ(reader.remaining(), 0u);
+}
+
+TEST(ByteStream, EmptyStringIsLengthPrefixed)
+{
+	const spk::ByteStream empty(std::string{});
+	EXPECT_EQ(empty.size(), sizeof(std::uint32_t));
+	EXPECT_EQ(empty.cast<std::string>(), "");
+}
+
+TEST(ByteStream, StringViewConstructorOwnsItsBytes)
+{
+	std::string source = "initial";
+	const spk::ByteStream bytes(std::string_view(source));
+	source.assign("changed");
+	EXPECT_EQ(bytes.cast<std::string>(), "initial");
+}
+
+TEST(ByteStream, StringCastAllowsTrailingBytes)
+{
+	spk::ByteStream::Writer writer;
+	writer << std::string("first") << std::uint64_t{0x1234};
+	const auto bytes = std::move(writer).build();
+	EXPECT_EQ(bytes.cast<std::string>(), "first");
+}
+
+TEST(ByteStream, StringCastRejectsTruncatedAndOversizedLength)
+{
+	spk::ByteStream::Writer shortWriter;
+	shortWriter << std::uint16_t{1};
+	EXPECT_THROW((void)std::move(shortWriter).build().cast<std::string>(), spk::Exception);
+	spk::ByteStream::Writer invalidWriter;
+	invalidWriter << std::uint32_t{100u} << std::uint8_t{5};
+	EXPECT_THROW((void)std::move(invalidWriter).build().cast<std::string>(), spk::Exception);
+}
+
+TEST(ByteStream, NonTrivialCodecSerializesStringAndScalar)
+{
+	const SerializableState original{"Alice", 42};
+	const spk::ByteStream bytes(original);
+	std::uint32_t payloadLength = 0;
+	bytes.reader() >> payloadLength;
+	EXPECT_EQ(payloadLength + sizeof(payloadLength), bytes.size());
+	const auto decoded = bytes.cast<SerializableState>();
+	EXPECT_EQ(decoded.name, original.name);
+	EXPECT_EQ(decoded.health, original.health);
+}
+
+TEST(ByteStream, NonTrivialCodecRetainsIndependentStorage)
+{
+	spk::ByteStream bytes = [] {
+		SerializableState source{"temporary", 77};
+		return spk::ByteStream(source);
+	}();
+	EXPECT_EQ(bytes.cast<SerializableState>().name, "temporary");
+	EXPECT_EQ(bytes.cast<SerializableState>().health, 77u);
+}
+
+TEST(ByteStream, NonTrivialCastIgnoresBytesFollowingFramedObject)
+{
+	const SerializableState source{"first", 5};
+	spk::ByteStream::Writer payload;
+	payload << source;
+	spk::ByteStream::Writer outer;
+	outer << static_cast<std::uint32_t>(payload.size());
+	outer.append(payload.data().data(), payload.size());
+	outer << std::uint64_t{987};
+	const auto bytes = std::move(outer).build();
+	const auto decoded = bytes.cast<SerializableState>();
+	EXPECT_EQ(decoded.name, "first");
+	EXPECT_EQ(decoded.health, 5u);
+}
+
+TEST(ByteStream, NonTrivialCastRejectsBrokenFrameBoundaries)
+{
+	spk::ByteStream::Writer writer;
+	writer << std::uint32_t{50} << std::uint16_t{1};
+	const auto bytes = std::move(writer).build();
+	EXPECT_THROW((void)bytes.cast<SerializableState>(), spk::Exception);
+}
+
+TEST(ByteStream, NonTrivialCastRejectsTruncatedNestedString)
+{
+	spk::ByteStream::Writer writer;
+	writer << std::uint32_t{sizeof(std::uint32_t)} << std::uint32_t{99};
+	const auto bytes = std::move(writer).build();
+	EXPECT_THROW((void)bytes.cast<SerializableState>(), spk::Exception);
 }
