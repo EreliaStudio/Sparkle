@@ -5,6 +5,7 @@
 #include "engine/replicated_component.hpp"
 #include "network/client.hpp"
 #include <cstdint>
+#include <atomic>
 #include <map>
 #include <memory>
 
@@ -14,6 +15,8 @@ namespace spk
     {
         struct State;
         Client &_client;
+        std::atomic_uint64_t _lifecycle{0};
+        std::uint64_t _processedLifecycle = 0;
         std::shared_ptr<State> _state;
         Client::ConnectionContract _connected;
         Client::DisconnectionContract _disconnected;

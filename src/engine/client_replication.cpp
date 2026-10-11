@@ -44,16 +44,8 @@ namespace spk
     ClientReplication::ClientReplication(Client &client) :
         System("Client replication"), _client(client), _state(std::make_shared<State>(State{&client, {}, {}}))
     {
-        _connected = client.subscribeToConnection([this] {
-            _state->session = {};
-        });
-        _disconnected = client.subscribeToDisconnection([this] {
-            _state->session = {};
-            if (engine())
-                for (auto *base : Registry<Component, Engine *>::instance().elements(engine()))
-                    if (auto *component = dynamic_cast<ReplicatedComponent *>(base))
-                        component->resetReceivedRevision();
-        });
+        _connected = client.subscribeToConnection([this] { ++_lifecycle; });
+        _disconnected = client.subscribeToDisconnection([this] { ++_lifecycle; });
         _welcome = client.messageDispatcher().subscribeTo(WelcomeMessage,
             [this](const Message &message) { _onWelcome(message); });
         _updates = client.messageDispatcher().subscribeTo(StateMessage,
@@ -102,7 +94,19 @@ namespace spk
         }
     }
 
-    void ClientReplication::_updateState(UpdateContext &) { _client.treatMessages(); }
+    void ClientReplication::_updateState(UpdateContext &)
+    {
+        const auto lifecycle = _lifecycle.load();
+        if (lifecycle != _processedLifecycle) {
+            _processedLifecycle = lifecycle;
+            _state->session = {};
+            if (engine())
+                for (auto *base : Registry<Component, Engine *>::instance().elements(engine()))
+                    if (auto *component = dynamic_cast<ReplicatedComponent *>(base))
+                        component->resetReceivedRevision();
+        }
+        _client.treatMessages();
+    }
 
     ReplicationInterest ClientReplication::subscribe(std::uint32_t type, const ByteStream &parameters)
     {

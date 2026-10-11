@@ -6,7 +6,7 @@ namespace spk
 {
     ReplicationInterest::ReplicationInterest(std::function<void()> cancel, std::function<void(std::uint32_t, const ByteStream &)> update) : _cancel(std::move(cancel)), _update(std::move(update)) {}
     ReplicationInterest::ReplicationInterest(ReplicationInterest &&other) noexcept : _cancel(std::move(other._cancel)), _update(std::move(other._update)) { other._cancel = {};
-            other._update = {}; other._update = {}; }
+            other._update = {}; }
     ReplicationInterest &ReplicationInterest::operator=(ReplicationInterest &&other) noexcept
     {
         if (this != &other) {
@@ -14,6 +14,7 @@ namespace spk
             _cancel = std::move(other._cancel);
             _update = std::move(other._update);
             other._cancel = {};
+            other._update = {};
         }
         return *this;
     }
