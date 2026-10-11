@@ -6,11 +6,12 @@
 #include <cstdint>
 #include <gtest/gtest.h>
 #include <stdexcept>
+#include <type_traits>
 #include <utility>
 
 namespace
 {
-	class Character final : public spk::MementoTrait<Character>
+	class Character final : public spk::MementoTrait
 	{
 	private:
 		std::int32_t _health = 100;
@@ -18,14 +19,14 @@ namespace
 		bool _rejectRestore = false;
 		mutable std::size_t _saveCalls = 0;
 
-	public:
-		void saveMemento(spk::ByteStream::Writer &writer) const
+	protected:
+		void saveMemento(spk::ByteStream::Writer &writer) const override
 		{
 			++_saveCalls;
 			writer << _health << _shield;
 		}
 
-		void loadMemento(const spk::ByteStream::Reader &reader)
+		void loadMemento(const spk::ByteStream::Reader &reader) override
 		{
 			reader >> _health;
 			if (_rejectRestore)
@@ -34,6 +35,8 @@ namespace
 			}
 			reader >> _shield;
 		}
+
+	public:
 
 		[[nodiscard]] std::size_t saveCalls() const noexcept
 		{
@@ -62,26 +65,28 @@ namespace
 		}
 	};
 
-	struct MissingLoadHook
+	struct MissingLoadHook : spk::MementoTrait
 	{
-		void saveMemento(spk::ByteStream::Writer &) const
+		void saveMemento(spk::ByteStream::Writer &) const override
 		{
 		}
 	};
 
-	struct WrongSaveSignature
+	struct WrongSaveSignature : spk::MementoTrait
 	{
 		void saveMemento(spk::ByteStream::Writer &)
 		{
 		}
-		void loadMemento(const spk::ByteStream::Reader &)
+		void loadMemento(const spk::ByteStream::Reader &) override
 		{
 		}
 	};
 
-	static_assert(spk::MementoSerializable<Character>);
-	static_assert(!spk::MementoSerializable<MissingLoadHook>);
-	static_assert(!spk::MementoSerializable<WrongSaveSignature>);
+	static_assert(std::is_abstract_v<spk::MementoTrait>);
+	static_assert(!std::is_abstract_v<Character>);
+	static_assert(std::is_abstract_v<MissingLoadHook>);
+	static_assert(std::is_abstract_v<WrongSaveSignature>);
+	static_assert(std::has_virtual_destructor_v<spk::MementoTrait>);
 }
 
 TEST(MementoBytes, RestoresMultipleIndependentSnapshots)
@@ -258,4 +263,16 @@ TEST(MementoBytes, SecureLoadRestoresValidSnapshot)
 	character.loadSecure(snapshot);
 	EXPECT_EQ(character.health(), 3);
 	EXPECT_EQ(character.shield(), 4);
+}
+
+TEST(MementoBytes, SaveAndRestoreThroughBaseReference)
+{
+	Character character;
+	spk::MementoTrait &memento = character;
+	character.assign(30, 60);
+	const auto snapshot = memento.save();
+	character.assign(5, 6);
+	memento.load(snapshot);
+	EXPECT_EQ(character.health(), 30);
+	EXPECT_EQ(character.shield(), 60);
 }
