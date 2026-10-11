@@ -19,7 +19,7 @@ namespace spk
         if (!_matches || !_authorizes || interval < std::chrono::steady_clock::duration::zero())
             throw Exception("Invalid server replication configuration.");
     }
-    bool ServerReplicationPublication::_visible(ConnectionID connection, const ServerReplicationInterests::ServerReplicationInterests::Peer &peer,
+    bool ServerReplicationPublication::_visible(ConnectionID connection, const ServerReplicationInterests::Peer &peer,
         const ReplicatedComponent &component) const
     {
         if (!_authorizes(connection, component)) return false;
@@ -28,7 +28,7 @@ namespace spk
         return false;
     }
 
-    void ServerReplicationPublication::_send(ConnectionID connection, Peer &peer)
+    void ServerReplicationPublication::_send(Server &server, Engine *engine, ConnectionID connection, ServerReplicationInterests::Peer &peer)
     {
         if (engine == nullptr) return;
         std::map<UUID, std::uint64_t> visible;
