@@ -73,10 +73,12 @@ TEST(ReplicationV4Test, SocketReplicationFollowsInterestAndRevision)
     auto &target = replica.addComponent<NumberComponent>(id);
     serverEngine.addEntity(&authoritative);
     clientEngine.addEntity(&replica);
-    serverEngine.addSystem<spk::ServerReplication>(server,
+    serverEngine.addSystem<spk::ServerReplication>(
         [](const spk::ReplicatedComponent &, std::uint32_t type, const spk::ByteStream::Reader &) { return type == 7; },
         [](spk::ConnectionID, const spk::ReplicatedComponent &) { return true; }, 0ms);
-    auto &receiver = clientEngine.addSystem<spk::ClientReplication>(client);
+    auto &receiver = clientEngine.addSystem<spk::ClientReplication>();
+    serverEngine.getSystem<spk::ServerReplication>()->setServer(&server);
+    receiver.setClient(&client);
     server.start(0);
     client.connect("127.0.0.1", server.port());
     auto interest = receiver.subscribe(7, {});
@@ -90,6 +92,8 @@ TEST(ReplicationV4Test, SocketReplicationFollowsInterestAndRevision)
     EXPECT_EQ(target.value, 123u);
     EXPECT_EQ(target.receivedRevision(), source.version() + 1);
     interest.cancel();
+    receiver.setClient(nullptr);
+    serverEngine.getSystem<spk::ServerReplication>()->setServer(nullptr);
     client.disconnect();
     server.stop();
 }

@@ -1,8 +1,7 @@
 #include "engine/client_replication.hpp"
-#include "engine/engine.hpp"
-#include "engine/registry.hpp"
 #include "exception.hpp"
 #include <limits>
+#include <map>
 #include <utility>
 
 namespace spk
@@ -15,21 +14,20 @@ namespace spk
         void writeUUID(ByteStream::Writer &writer, const UUID &id) { writer.append(id.bytes().data(), UUID::Size); }
         UUID readUUID(const ByteStream::Reader &reader)
         {
-            UUID::Storage bytes;
+            UUID::Storage bytes{};
             reader.pull(bytes.data(), bytes.size());
             return UUID(bytes);
         }
     }
-
-    struct ClientReplication::State
+    struct ClientReplication::Interests
     {
-        Client *client;
+        Client *client = nullptr;
         UUID session;
         std::map<UUID, std::pair<std::uint32_t, ByteStream>> interests;
 
         void send(UUID id, std::uint32_t type, const ByteStream &parameters)
         {
-            if (session.isNull()) return;
+            if (session.isNull() || !client) return;
             if (parameters.size() > std::numeric_limits<std::uint32_t>::max())
                 throw Exception("Interest parameters too large.");
             Message::Writer writer(InterestMessage);
@@ -41,15 +39,28 @@ namespace spk
         }
     };
 
-    ClientReplication::ClientReplication(Client &client) :
-        System("Client replication"), _client(client), _state(std::make_shared<State>(State{&client, {}, {}}))
+
+    ClientReplication::ClientReplication() :
+        System("Client replication"), _interests(std::make_shared<Interests>()) {}
+    ClientReplication::~ClientReplication() { setClient(nullptr); }
+
+    void ClientReplication::setClient(Client *client)
     {
-        _connected = client.subscribeToConnection([this] { ++_lifecycle; });
-        _disconnected = client.subscribeToDisconnection([this] { ++_lifecycle; });
-        _welcome = client.messageDispatcher().subscribeTo(WelcomeMessage,
+        _welcome.resign();
+        _updates.resign();
+        _connected.resign();
+        _disconnected.resign();
+        _client = client;
+        _interests->client = client;
+        _interests->session = {};
+        _receiver.reset(engine());
+        if (!client) return;
+        _connected = client->subscribeToConnection([this] { ++_lifecycle; });
+        _disconnected = client->subscribeToDisconnection([this] { ++_lifecycle; });
+        _welcome = client->messageDispatcher().subscribeTo(WelcomeMessage,
             [this](const Message &message) { _onWelcome(message); });
-        _updates = client.messageDispatcher().subscribeTo(StateMessage,
-            [this](const Message &message) { _onState(message); });
+        _updates = client->messageDispatcher().subscribeTo(StateMessage,
+            [this](const Message &message) { _receiver.receive(message, _interests->session, engine()); });
     }
 
     void ClientReplication::_onWelcome(const Message &message)
@@ -57,70 +68,36 @@ namespace spk
         auto reader = message.reader();
         const auto session = readUUID(reader);
         if (session.isNull() || reader.remaining()) throw Exception("Invalid replication session.");
-        _state->session = session;
-        if (engine())
-            for (auto *base : Registry<Component, Engine *>::instance().elements(engine()))
-                if (auto *component = dynamic_cast<ReplicatedComponent *>(base))
-                    component->resetReceivedRevision();
-        for (const auto &[id, data] : _state->interests)
-            _state->send(id, data.first, data.second);
-    }
-
-    void ClientReplication::_onState(const Message &message)
-    {
-        auto reader = message.reader();
-        if (_state->session.isNull() || readUUID(reader) != _state->session) return;
-        while (reader.remaining()) {
-            const auto operation = reader.get<std::uint8_t>();
-            const auto id = readUUID(reader);
-            ReplicatedComponent *found = nullptr;
-            if (engine())
-                for (auto *base : Registry<Component, Engine *>::instance().elements(engine()))
-                    if (auto *component = dynamic_cast<ReplicatedComponent *>(base); component && component->id() == id) {
-                        found = component;
-                        break;
-                    }
-            if (operation == 2) {
-                if (found) found->resetReceivedRevision();
-                continue;
-            }
-            if (operation != 1) throw Exception("Invalid replication operation.");
-            const auto revision = reader.get<std::uint64_t>();
-            const auto length = reader.get<std::uint32_t>();
-            if (length > reader.remaining()) throw Exception("Invalid replicated section length.");
-            const auto begin = reader.readOffset();
-            if (found) found->applyState(revision, reader.subreader(begin, begin + length));
-            reader.skip(length);
-        }
+        _interests->session = session;
+        _receiver.reset(engine());
+        for (const auto &[id, data] : _interests->interests)
+            _interests->send(id, data.first, data.second);
     }
 
     void ClientReplication::_updateState(UpdateContext &)
     {
+        if (!_client) return;
         const auto lifecycle = _lifecycle.load();
         if (lifecycle != _processedLifecycle) {
             _processedLifecycle = lifecycle;
-            _state->session = {};
-            if (engine())
-                for (auto *base : Registry<Component, Engine *>::instance().elements(engine()))
-                    if (auto *component = dynamic_cast<ReplicatedComponent *>(base))
-                        component->resetReceivedRevision();
+            _interests->session = {};
+            _receiver.reset(engine());
         }
-        _client.treatMessages();
+        _client->treatMessages();
     }
-
     ReplicationInterest ClientReplication::subscribe(std::uint32_t type, const ByteStream &parameters)
     {
         if (type == 0) throw Exception("Interest type zero is reserved.");
-        auto state = _state;
+        auto state = _interests;
         const auto id = UUID::generate();
         state->interests.emplace(id, std::make_pair(type, parameters));
         state->send(id, type, parameters);
-        return ReplicationInterest([weak = std::weak_ptr<State>(state), id] {
+        return ReplicationInterest([weak = std::weak_ptr<Interests>(state), id] {
             if (auto current = weak.lock()) {
                 current->interests.erase(id);
                 current->send(id, 0, {});
             }
-        }, [weak = std::weak_ptr<State>(state), id](std::uint32_t type, const ByteStream &parameters) {
+        }, [weak = std::weak_ptr<Interests>(state), id](std::uint32_t type, const ByteStream &parameters) {
             if (type == 0) throw Exception("Interest type zero is reserved.");
             auto current = weak.lock();
             if (!current || !current->interests.contains(id)) throw Exception("Interest expired.");
