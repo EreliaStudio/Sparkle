@@ -29,15 +29,35 @@ namespace spk
         if (!_matches || !_authorize || interval < std::chrono::steady_clock::duration::zero())
             throw Exception("Invalid server replication configuration.");
         _connected = _server.subscribeToConnection([this](ConnectionID connection) {
+            const std::scoped_lock lock(_eventsMutex);
+            _events.emplace_back(connection, true);
+        });
+        _disconnected = _server.subscribeToDisconnection([this](ConnectionID connection) {
+            const std::scoped_lock lock(_eventsMutex);
+            _events.emplace_back(connection, false);
+        });
+        _subscriptions = _server.messageDispatcher().subscribeTo(InterestMessage,
+            [this](const ReceivedMessage &incoming) { _onInterest(incoming); });
+    }
+
+    void ServerReplication::_processConnections()
+    {
+        std::vector<std::pair<ConnectionID, bool>> events;
+        {
+            const std::scoped_lock lock(_eventsMutex);
+            events.swap(_events);
+        }
+        for (const auto &[connection, connected] : events) {
+            if (!connected) {
+                _peers.erase(connection);
+                continue;
+            }
             auto &peer = _peers[connection];
             peer = Peer{UUID::generate(), {}, {}};
             Message::Writer welcome(WelcomeMessage);
             writeUUID(welcome.payload(), peer.session);
             _server.sendTo(connection, std::move(welcome).build());
-        });
-        _disconnected = _server.subscribeToDisconnection([this](ConnectionID connection) { _peers.erase(connection); });
-        _subscriptions = _server.messageDispatcher().subscribeTo(InterestMessage,
-            [this](const ReceivedMessage &incoming) { _onInterest(incoming); });
+        }
     }
 
     void ServerReplication::_onInterest(const ReceivedMessage &incoming)
@@ -106,6 +126,7 @@ namespace spk
 
     void ServerReplication::_updateState(UpdateContext &)
     {
+        _processConnections();
         _server.treatMessages();
         const auto now = std::chrono::steady_clock::now();
         if (_last != std::chrono::steady_clock::time_point{} && now - _last < _interval) return;

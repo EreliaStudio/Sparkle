@@ -6,6 +6,8 @@
 #include <chrono>
 #include <functional>
 #include <map>
+#include <mutex>
+#include <vector>
 #include <unordered_map>
 
 namespace spk
@@ -24,6 +26,9 @@ namespace spk
             std::map<UUID, std::uint64_t> published;
         };
         Server &_server;
+        std::mutex _eventsMutex;
+        std::vector<std::pair<ConnectionID, bool>> _events;
+        void _processConnections();
         Matcher _matches;
         Authorizer _authorize;
         std::map<ConnectionID, Peer> _peers;

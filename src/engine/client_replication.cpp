@@ -116,14 +116,13 @@ namespace spk
                 current->interests.erase(id);
                 current->send(id, 0, {});
             }
+        }, [weak = std::weak_ptr<State>(state), id](std::uint32_t type, const ByteStream &parameters) {
+            if (type == 0) throw Exception("Interest type zero is reserved.");
+            auto current = weak.lock();
+            if (!current || !current->interests.contains(id)) throw Exception("Interest expired.");
+            current->interests[id] = {type, parameters};
+            current->send(id, type, parameters);
         });
     }
 
-    void ClientReplication::updateInterest(const UUID &id, std::uint32_t type, const ByteStream &parameters)
-    {
-        if (type == 0 || !_state->interests.contains(id))
-            throw Exception("Unknown or invalid interest.");
-        _state->interests[id] = {type, parameters};
-        _state->send(id, type, parameters);
-    }
 }

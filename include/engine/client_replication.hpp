@@ -26,6 +26,5 @@ namespace spk
     public:
         explicit ClientReplication(Client &client);
         [[nodiscard]] ReplicationInterest subscribe(std::uint32_t type, const ByteStream &parameters);
-        void updateInterest(const UUID &id, std::uint32_t type, const ByteStream &parameters);
     };
 }
