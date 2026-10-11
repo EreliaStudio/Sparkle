@@ -37,7 +37,6 @@ namespace
 		}
 
 	public:
-
 		[[nodiscard]] std::size_t saveCalls() const noexcept
 		{
 			return _saveCalls;
