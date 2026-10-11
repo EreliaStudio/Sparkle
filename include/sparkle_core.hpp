@@ -1,6 +1,7 @@
 #pragma once
 
 #include "concept.hpp"
+#include "container/byte_stream.hpp"
 #include "container/cached_data.hpp"
 #include "container/data_model.hpp"
 #include "container/histogram.hpp"
@@ -27,6 +28,7 @@
 #include "design_pattern/trait/activable_trait.hpp"
 #include "design_pattern/trait/geometry_state_trait.hpp"
 #include "design_pattern/trait/inherence_trait.hpp"
+#include "design_pattern/trait/memento_trait.hpp"
 #include "design_pattern/trait/name_trait.hpp"
 #include "design_pattern/trait/query_source_trait.hpp"
 #include "design_pattern/trait/resizeable_trait.hpp"
