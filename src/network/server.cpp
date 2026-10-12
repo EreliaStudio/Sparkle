@@ -69,7 +69,10 @@ namespace spk
 	{
 	}
 
-	Server::~Server() = default;
+	Server::~Server()
+	{
+		stop();
+	}
 
 	Server::StatusContract Server::subscribeToConnectionStatusChange(StatusCallback callback)
 	{
@@ -122,9 +125,18 @@ namespace spk
 
 	void Server::sendTo(std::span<const Connection> connections, const Message &message, Message::Priority priority)
 	{
+		const std::scoped_lock lock(_connectionsMutex);
 		for (const Connection &connection : connections)
 		{
-			sendTo(connection, message, priority);
+			const auto it = _connections.find(connection.id());
+			if (it == _connections.end() || it->second._data != connection._data || !connection.isConnected())
+			{
+				throw Exception("Unable to send to an unknown or disconnected network connection.");
+			}
+		}
+		for (const Connection &connection : connections)
+		{
+			_impl->sendTo(connection.id(), message, priority);
 		}
 	}
 
@@ -163,6 +175,13 @@ namespace spk
 		}
 		connection._setStatus(Connection::Status::Pending);
 		_statusProvider.trigger(connection, Connection::Status::Pending, Connection::Error::None);
+		{
+			const std::scoped_lock lock(_connectionsMutex);
+			if (!_connections.contains(id) || !connection.isConnected() && connection.status() != Connection::Status::Pending)
+			{
+				return;
+			}
+		}
 		connection._setStatus(Connection::Status::Connected);
 		_statusProvider.trigger(connection, Connection::Status::Connected, Connection::Error::None);
 	}

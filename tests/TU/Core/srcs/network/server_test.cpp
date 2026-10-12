@@ -23,3 +23,11 @@ TEST(ServerTest, SendingWhileStoppedThrows)
 
 	EXPECT_THROW(server.sendToAll(spk::Message::Writer(1).build()), spk::Exception);
 }
+
+TEST(ServerTest, RejectsInvalidConnectionHandle)
+{
+	spk::Server server;
+	server.start(0);
+	EXPECT_THROW(server.sendTo(spk::Connection(), spk::Message::Writer(1).build()), spk::Exception);
+	server.stop();
+}

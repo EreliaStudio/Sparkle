@@ -216,7 +216,10 @@ namespace spk
 	{
 	}
 
-	Client::~Client() = default;
+	Client::~Client()
+	{
+		disconnect();
+	}
 
 	Client::StatusContract Client::subscribeToConnectionStatusChange(StatusCallback callback)
 	{
