@@ -1,6 +1,7 @@
 #pragma once
 
 #include "network/types.hpp"
+#include "network/page_failure_limits.hpp"
 
 #include <cstdint>
 #include <functional>
@@ -24,6 +25,7 @@ namespace spk::NetworkInternal
 		[[nodiscard]] virtual std::uint16_t port() const noexcept = 0;
 		virtual void start(std::uint16_t port) = 0;
 		virtual void stop() = 0;
+		virtual void setPageFailureLimits(PageFailureLimits limits) = 0;
 		virtual void sendTo(ConnectionID connection, const Message &message, Message::Priority priority) = 0;
 		virtual void sendToAll(const Message &message, Message::Priority priority) = 0;
 	};
