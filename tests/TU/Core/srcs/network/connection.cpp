@@ -24,6 +24,6 @@ TEST(Connection, NewConnectionStartsDisconnected)
 TEST(Connection, CanSubscribeToStatusChanges)
 {
 	spk::Connection connection;
-	auto callback = connection.subscribeToStatusChange([](spk::Connection::Status, spk::Connection::Error) {});
+	auto callback = connection.subscribeToStatusChange([](auto, auto) {});
 	EXPECT_TRUE(callback.isValid());
 }
