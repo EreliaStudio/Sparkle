@@ -37,6 +37,7 @@ namespace spk
 					const auto header = NetworkInternal::decode(bytes);
 					Message::Writer writer(header.type);
 					writer.setRequestID(header.requestID);
+					writer.setConnectionID(header.connectionID);
 					writer.resize(header.payloadSize);
 					if (writer.empty() == false && !_socket.receiveAll(writer.data()))
 					{
