@@ -130,6 +130,10 @@ namespace spk::NetworkInternal
 				_transfers.erase(iterator);
 			}
 			_failedTransfers.insert_or_assign(page.transferID, now);
+			if (_failedTransfers.size() > 1024)
+			{
+				throw Exception("Too many failed incoming transfers in one session.");
+			}
 			if (error.reason() != PageReassemblyError::Reason::Capacity)
 			{
 				(void)_failureLimiter.malformedPage(page.data.size() + FrameHeaderSize + PageMetadataSize, now);
@@ -158,6 +162,7 @@ namespace spk::NetworkInternal
 				continue;
 			}
 			_reservedBytes -= iterator->second.writer.size();
+			_failedTransfers.insert_or_assign(iterator->first, now);
 			iterator = _transfers.erase(iterator);
 		}
 		for (auto iterator = _failedTransfers.begin(); iterator != _failedTransfers.end();)
