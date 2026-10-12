@@ -1,6 +1,7 @@
 #pragma once
 
 #include "network/page_failure_limits.hpp"
+#include "network/internal/server_send_batch.hpp"
 #include "network/types.hpp"
 
 #include <chrono>
@@ -29,8 +30,8 @@ namespace spk::NetworkInternal
 		virtual void stop() = 0;
 		virtual void setPageFailureLimits(PageFailureLimits limits) = 0;
 		virtual void setHandshakeTimeout(std::chrono::milliseconds timeout) = 0;
-		virtual void sendTo(ConnectionID connection, const Message &message, Message::Priority priority) = 0;
-		virtual void sendToAll(const Message &message, Message::Priority priority) = 0;
+		virtual void setGlobalMaxQueuedBytes(std::size_t bytes) = 0;
+		virtual void send(std::shared_ptr<ServerSendBatch> batch) = 0;
 	};
 
 	[[nodiscard]] std::unique_ptr<ServerBackend> createServerBackend(ServerCallbacks callbacks);
