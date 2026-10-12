@@ -123,7 +123,7 @@ namespace spk
 		_impl->sendTo(connection.id(), message, priority);
 	}
 
-	void Server::sendTo(std::span<const Connection> connections, const Message &message, Message::Priority priority)
+	void Server::sendTo(const ConnectionSet &connections, const Message &message, Message::Priority priority)
 	{
 		const std::scoped_lock lock(_connectionsMutex);
 		for (const Connection &connection : connections)
