@@ -34,7 +34,7 @@ namespace spk::NetworkInternal
 		{
 			throw Exception("Invalid network message priority.");
 		}
-		if (message.size() > 64u * 1024u * 1024u)
+		if (message.size() > 128u * 1024u * 1024u)
 		{
 			throw Exception("Outgoing logical message exceeds the network limit.");
 		}
