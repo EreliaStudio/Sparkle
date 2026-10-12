@@ -22,6 +22,13 @@ namespace spk
 		using Type = std::uint32_t;
 		using RequestID = std::uint64_t;
 
+		enum class Priority
+		{
+			Low,
+			Normal,
+			High
+		};
+
 		struct Header
 		{
 			Type messageType = 0;

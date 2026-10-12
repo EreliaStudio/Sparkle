@@ -17,6 +17,7 @@ target_compile_definitions(SparkleCoreTestSuite PRIVATE
 )
 target_include_directories(SparkleCoreTestSuite PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/helpers
+    ${SPARKLE_SOURCE_DIR}
 )
 target_link_libraries(SparkleCoreTestSuite
     PRIVATE

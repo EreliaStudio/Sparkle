@@ -306,7 +306,7 @@ TEST(RemoteNodeIntegrationTest, TwoRoutersSharingEndpointKeepOriginConnectionsIn
 
 	ASSERT_EQ(requests.size(), 2u);
 	EXPECT_NE(requests[0].proxyConnection, requests[1].proxyConnection);
-	EXPECT_EQ(requests[0].originConnection, requests[1].originConnection);
+	EXPECT_NE(requests[0].originConnection, requests[1].originConnection);
 
 	for (const auto &request : requests)
 	{

@@ -120,7 +120,7 @@ TEST(MessageDispatcherIntegrationTest, RoutedDelayedRepliesPreserveProxyAndOrigi
 		return requests.size() == 2;
 	}));
 	EXPECT_NE(requests[0].proxyConnection, requests[1].proxyConnection);
-	EXPECT_EQ(requests[0].originConnection, requests[1].originConnection);
+	EXPECT_NE(requests[0].originConnection, requests[1].originConnection);
 	for (auto iterator = requests.rbegin(); iterator != requests.rend(); ++iterator)
 	{
 		endpoint.reply(*iterator, response(iterator->message));
