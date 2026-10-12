@@ -620,13 +620,32 @@ namespace spk::NetworkInternal
 
 			void _expireReassemblies()
 			{
-				for (auto &[id, session] : _sessions)
+				std::vector<ConnectionID> ids;
+				ids.reserve(_sessions.size());
+				for (const auto &[id, session] : _sessions)
 				{
+					ids.push_back(id);
+				}
+				for (const auto id : ids)
+				{
+					const auto it = _sessions.find(id);
+					if (it == _sessions.end())
+					{
+						continue;
+					}
+					auto session = it->second;
 					for (const auto &response : session->reception.expire(id))
 					{
+						if (!_sessions.contains(id))
+						{
+							break;
+						}
 						_queueResponse(*session, response);
 					}
-					session->transfers.expire();
+					if (_sessions.contains(id))
+					{
+						session->transfers.expire();
+					}
 				}
 			}
 
