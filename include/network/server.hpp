@@ -59,7 +59,7 @@ namespace spk
 		void setGlobalMaxQueuedBytes(std::size_t bytes);
 		Transfer sendTo(const Connection &connection, const Message &message, Message::Priority priority = Message::Priority::Normal);
 		TransferResults sendTo(const ConnectionSet &connections, const Message &message, Message::Priority priority = Message::Priority::Normal, Connection::OverflowPolicy policy = Connection::OverflowPolicy::Reject);
-		TransferResults sendToAll(const Message &message, Message::Priority priority = Message::Priority::Normal, Connection::OverflowPolicy policy = Connection::OverflowPolicy::Reject);
+		TransferResults sendToAll(const Message &message, Message::Priority priority = Message::Priority::Normal, Connection::OverflowPolicy policy = Connection::OverflowPolicy::SkipRecipient);
 		[[nodiscard]] MessageQueue &messages() noexcept;
 		[[nodiscard]] MessageDispatcher &messageDispatcher() noexcept;
 		// Dispatch a receive batch on the calling thread; do not also drain messages().
