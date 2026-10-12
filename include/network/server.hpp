@@ -8,7 +8,6 @@
 #include <cstdint>
 #include <memory>
 #include <mutex>
-#include <span>
 #include <unordered_map>
 
 namespace spk
@@ -51,7 +50,7 @@ namespace spk
 		void start(std::uint16_t port);
 		void stop();
 		void sendTo(const Connection &connection, const Message &message, Message::Priority priority = Message::Priority::Normal);
-		void sendTo(std::span<const Connection> connections, const Message &message, Message::Priority priority = Message::Priority::Normal);
+		void sendTo(const ConnectionSet &connections, const Message &message, Message::Priority priority = Message::Priority::Normal);
 		void sendToAll(const Message &message, Message::Priority priority = Message::Priority::Normal);
 		[[nodiscard]] MessageQueue &messages() noexcept;
 		[[nodiscard]] MessageDispatcher &messageDispatcher() noexcept;
