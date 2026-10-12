@@ -616,7 +616,7 @@ namespace spk::NetworkInternal
 					return;
 				}
 				const auto iterator = _sessions.find(command.connection);
-				if (iterator != _sessions.end() && iterator->second->ready)
+				if (iterator != _sessions.end() && iterator->second->handshake.ready())
 				{
 					try
 					{
