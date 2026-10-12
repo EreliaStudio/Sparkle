@@ -81,7 +81,8 @@ namespace spk
 	{
 		{
 			const std::scoped_lock lock(_data->mutex);
-			if (_data->status == status)
+			if (_data->status == status || (status == Status::Connected && _data->status != Status::Pending) ||
+				(status == Status::Pending && _data->status != Status::Disconnected))
 			{
 				return;
 			}

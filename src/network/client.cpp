@@ -251,7 +251,7 @@ namespace spk
 
 		[[nodiscard]] bool isConnected() const noexcept
 		{
-			return _connected.load();
+			return _connected.load() && _session.isConnected();
 		}
 
 		void _startWorkers()
@@ -341,7 +341,12 @@ namespace spk
 			Connection::Error error = Connection::Error::Refused;
 			try
 			{
-				_socket = NetworkInternal::Socket::connectTCP(address, port, deadline, stop);
+				NetworkInternal::Socket candidate = NetworkInternal::Socket::connectTCP(address, port, deadline, stop);
+				if (stop.stop_requested() || !_active)
+				{
+					return;
+				}
+				_socket = std::move(candidate);
 				error = Connection::Error::TransportFailure;
 				_negotiate(deadline, stop, error);
 				if (!_active || stop.stop_requested())
@@ -388,6 +393,7 @@ namespace spk
 			_socket.close();
 			_sendAvailable.notify_all();
 			_joinWorkers();
+			_socket.close();
 			_transfers.clear();
 			{
 				const std::scoped_lock lock(_sendMutex);

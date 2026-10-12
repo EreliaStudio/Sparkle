@@ -212,6 +212,10 @@ namespace spk
 			}
 			connection = it->second;
 		}
+		if (connection.status() != Connection::Status::Pending)
+		{
+			return;
+		}
 		connection._setStatus(Connection::Status::Connected);
 		_statusProvider.trigger(connection, Connection::Status::Connected, Connection::Error::None);
 	}

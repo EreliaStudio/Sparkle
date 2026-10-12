@@ -698,8 +698,20 @@ namespace spk::NetworkInternal
 
 			void _expireReassemblies()
 			{
-				for (auto &[id, session] : _sessions)
+				std::vector<ConnectionID> ids;
+				ids.reserve(_sessions.size());
+				for (const auto &[id, session] : _sessions)
 				{
+					ids.push_back(id);
+				}
+				for (const ConnectionID id : ids)
+				{
+					const auto it = _sessions.find(id);
+					if (it == _sessions.end())
+					{
+						continue;
+					}
+					auto session = it->second;
 					if (!session->ready)
 					{
 						if (session->handshakeDeadline.expired())
