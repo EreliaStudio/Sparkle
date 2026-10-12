@@ -356,7 +356,7 @@ namespace spk::NetworkInternal
 				}
 			}
 
-						void _queueResponse(Session &session, const TransferResponse &response)
+			void _queueResponse(Session &session, const TransferResponse &response)
 			{
 				auto frame = response.encode();
 				session.queuedBytes += frame->size();
