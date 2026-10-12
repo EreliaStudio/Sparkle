@@ -316,6 +316,7 @@ namespace spk::NetworkInternal
 
 				Message::Writer writer(header.type);
 				writer.setRequestID(header.requestID);
+				writer.setConnectionID(header.connectionID);
 				writer.resize(header.payloadSize);
 				std::copy_n(
 					data + FrameHeaderSize,
