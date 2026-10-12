@@ -53,10 +53,11 @@ namespace spk::NetworkInternal
 			std::size_t queuedBytes = 0;
 			bool writeInFlight = false;
 
-			Session(ConnectionID id, Socket socket) :
+			Session(ConnectionID id, Socket socket, PageFailureLimits limits) :
 				id(id),
 				socket(std::move(socket))
 			{
+				reassembler.configureFailureLimits(limits);
 			}
 		};
 
@@ -86,6 +87,7 @@ namespace spk::NetworkInternal
 		{
 			Send,
 			Broadcast,
+			ConfigureLimits,
 			Stop
 		};
 
@@ -95,6 +97,7 @@ namespace spk::NetworkInternal
 			ConnectionID connection = InvalidConnectionID;
 			std::shared_ptr<const Message> message;
 			Message::Priority priority = Message::Priority::Normal;
+			PageFailureLimits limits;
 		};
 
 		class IocpServerBackend final : public ServerBackend
@@ -110,6 +113,7 @@ namespace spk::NetworkInternal
 			std::unordered_map<ConnectionID, std::shared_ptr<Session>> _sessions;
 			std::mutex _commandMutex;
 			std::deque<Command> _commands;
+			PageFailureLimits _failureLimits;
 			std::size_t _pendingOperations = 0;
 			bool _stopping = false;
 
@@ -224,7 +228,7 @@ namespace spk::NetworkInternal
 				}
 
 				const ConnectionID id = allocateConnectionID();
-				auto session = std::make_shared<Session>(id, std::move(operation->acceptedSocket));
+				auto session = std::make_shared<Session>(id, std::move(operation->acceptedSocket), _failureLimits);
 				_associate(session->socket);
 				_sessions.emplace(id, session);
 				_postRead(session);
@@ -499,6 +503,16 @@ namespace spk::NetworkInternal
 					_beginStop();
 					return;
 				}
+				if (command.kind == CommandKind::ConfigureLimits)
+				{
+					_failureLimits = command.limits;
+					for (auto &[id, session] : _sessions)
+					{
+						(void)id;
+						session->reassembler.configureFailureLimits(_failureLimits);
+					}
+					return;
+				}
 				if (command.kind == CommandKind::Broadcast)
 				{
 					_broadcast(*command.message, command.priority);
@@ -699,6 +713,24 @@ namespace spk::NetworkInternal
 				_port = 0;
 				_running = false;
 				_stopping = true;
+			}
+
+			void setPageFailureLimits(PageFailureLimits limits) override
+			{
+				if (!limits.valid())
+				{
+					throw Exception("Network page failure limits must be positive.");
+				}
+				if (_running)
+				{
+					Command command{CommandKind::ConfigureLimits};
+					command.limits = limits;
+					_enqueue(std::move(command));
+				}
+				else
+				{
+					_failureLimits = limits;
+				}
 			}
 
 			void sendTo(ConnectionID connection, const Message &message, Message::Priority priority) override
