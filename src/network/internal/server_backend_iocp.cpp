@@ -311,7 +311,9 @@ namespace spk::NetworkInternal
 
 			void _queueResponse(Session &session, const TransferResponse &response)
 			{
-				session.outgoing.push_back(TransmissionFrame{response.encode(), 0});
+				auto frame = response.encode();
+				session.queuedBytes += frame->size();
+				session.outgoing.push_back(TransmissionFrame{std::move(frame), 0});
 				if (!session.writeInFlight)
 				{
 					_postWrite(_sessions.at(session.id));
