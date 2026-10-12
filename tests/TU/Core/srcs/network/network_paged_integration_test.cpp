@@ -8,6 +8,7 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <future>
 #include <utility>
 #include <vector>
 
@@ -109,6 +110,34 @@ TEST(NetworkPagedIntegration, ServerSendsPagedResponseWithoutSynchronousSocketWr
 	EXPECT_EQ(responses.front().type(), 202u);
 	EXPECT_EQ(responses.front().connectionID(), requests.front().emitter);
 	expectPayload(responses.front(), 1200000);
+
+	client.disconnect();
+	server.stop();
+}
+
+TEST(NetworkPagedIntegration, TransferSuccessRequiresReceiverAcknowledgment)
+{
+	spk::Server server;
+	spk::Client client;
+	server.start(0);
+	client.connect("127.0.0.1", server.port());
+
+	auto transfer = client.send(makeMessage(801, 200000));
+	EXPECT_NE(transfer.id(), spk::Transfer::InvalidID);
+	std::promise<spk::Transfer::Status> promise;
+	auto completed = promise.get_future();
+	auto contract = transfer.subscribeToCompletion([&](spk::Transfer::Status status, spk::Transfer::Reason reason) {
+		EXPECT_EQ(reason, spk::Transfer::Reason::None);
+		promise.set_value(status);
+	});
+
+	const auto received = NetworkTestUtils::collect(server.messages(), 1, 10s);
+	ASSERT_EQ(received.size(), 1u);
+	EXPECT_EQ(received.front().message.type(), 801u);
+	ASSERT_EQ(completed.wait_for(10s), std::future_status::ready);
+	EXPECT_EQ(completed.get(), spk::Transfer::Status::Success);
+	EXPECT_EQ(transfer.status(), spk::Transfer::Status::Success);
+	EXPECT_TRUE(client.isConnected());
 
 	client.disconnect();
 	server.stop();

@@ -6,6 +6,7 @@
 #include "network/message.hpp"
 #include "network/message_dispatcher.hpp"
 #include "network/page_failure_limits.hpp"
+#include "network/transfer.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -51,7 +52,7 @@ namespace spk
 		void connect(std::string_view address, std::uint16_t port);
 		void disconnect();
 		void setPageFailureLimits(PageFailureLimits limits);
-		void send(const Message &message, Message::Priority priority = Message::Priority::Normal);
+		Transfer send(const Message &message, Message::Priority priority = Message::Priority::Normal);
 		[[nodiscard]] MessageQueue &messages() noexcept;
 		[[nodiscard]] MessageDispatcher &messageDispatcher() noexcept;
 		// Dispatch a receive batch on the calling thread; do not also drain messages().

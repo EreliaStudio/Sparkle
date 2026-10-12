@@ -314,15 +314,16 @@ namespace spk
 			_reassembler.configureFailureLimits(limits);
 		}
 
-		void send(const Message &message, Message::Priority priority)
+		Transfer send(const Message &message, Message::Priority priority)
 		{
 			const std::scoped_lock lock(_sendMutex);
 			if (!_connected)
 			{
 				throw Exception("Unable to send through a disconnected network client.");
 			}
-			(void)_transfers.enqueue(message, priority);
+			Transfer transfer = _transfers.enqueue(message, priority);
 			_sendAvailable.notify_one();
+			return transfer;
 		}
 	};
 
@@ -367,9 +368,9 @@ namespace spk
 		_impl->setPageFailureLimits(limits);
 	}
 
-	void Client::send(const Message &message, Message::Priority priority)
+	Transfer Client::send(const Message &message, Message::Priority priority)
 	{
-		_impl->send(message, priority);
+		return _impl->send(message, priority);
 	}
 
 	Client::MessageQueue &Client::messages() noexcept
