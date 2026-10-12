@@ -285,10 +285,20 @@ namespace spk::NetworkInternal
 				if (kind == PageFrameKind)
 				{
 					session.reassembler.expire();
-					auto complete = session.reassembler.accept(decodePage(std::span(data, frameSize)));
-					if (complete.has_value())
+					try
 					{
-						_publish(ReceivedMessage{session.id, complete->withConnectionID(session.id)});
+						auto complete = session.reassembler.accept(decodePage(std::span(data, frameSize)));
+						if (complete.has_value())
+						{
+							_publish(ReceivedMessage{session.id, complete->withConnectionID(session.id)});
+						}
+					}
+					catch (const PageReassemblyError &)
+					{
+						if (session.reassembler.failureLimitReached())
+						{
+							throw;
+						}
 					}
 				}
 				else if (kind == 0)
@@ -299,6 +309,7 @@ namespace spk::NetworkInternal
 					writer.resize(header.payloadSize);
 					std::copy_n(data + FrameHeaderSize, header.payloadSize, writer.data().begin());
 					_publish(ReceivedMessage{session.id, std::move(writer).build()});
+					session.reassembler.successfulMessage();
 				}
 				else
 				{
