@@ -85,7 +85,7 @@ namespace spk::NetworkInternal
 		const auto totalSize = read64(bytes.data() + FrameHeaderSize + 8);
 		const auto offset = read64(bytes.data() + FrameHeaderSize + 16);
 		const auto length = header.payloadSize - PageMetadataSize;
-		if (transferID == 0 || offset > totalSize || length > totalSize - offset)
+		if (transferID == 0)
 		{
 			throw Exception("Invalid network page offset or transfer ID.");
 		}
