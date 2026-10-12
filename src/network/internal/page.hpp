@@ -14,6 +14,7 @@
 namespace spk::NetworkInternal
 {
 	inline constexpr std::size_t PageMetadataSize = 24;
+	inline constexpr std::size_t DefaultMaximumPageBytes = 64u * 1024u;
 	inline constexpr std::uint16_t PageFrameKind = 1;
 
 	struct Page final
