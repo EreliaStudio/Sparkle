@@ -112,18 +112,33 @@ TEST(PageReassembler, RejectsConflictingDuplicateAndOverlappingPages)
 	spk::NetworkInternal::PageReassembler assembler;
 	const auto received = fragment(*first);
 	EXPECT_FALSE(assembler.accept(received).has_value());
+	EXPECT_THROW((void)assembler.accept(received), spk::NetworkInternal::PageReassemblyError);
+	EXPECT_EQ(assembler.reservedBytes(), 0u);
+	EXPECT_EQ(assembler.pendingTransfers(), 0u);
 	EXPECT_FALSE(assembler.accept(received).has_value());
 
+	spk::NetworkInternal::PageReassembler conflictingAssembler;
+	EXPECT_FALSE(conflictingAssembler.accept(received).has_value());
 	std::vector<std::byte> corrupted(received.data.begin(), received.data.end());
 	corrupted[0] = std::byte{0xFF};
 	auto conflicting = received;
 	conflicting.data = corrupted;
-	EXPECT_THROW((void)assembler.accept(conflicting), spk::Exception);
+	try
+	{
+		(void)conflictingAssembler.accept(conflicting);
+		FAIL() << "Expected conflicting page failure.";
+	}
+	catch (const spk::NetworkInternal::PageReassemblyError &error)
+	{
+		EXPECT_EQ(error.reason(), spk::NetworkInternal::PageReassemblyError::Reason::ConflictingPage);
+	}
 
-	(void)assembler.accept(received);
+	spk::NetworkInternal::PageReassembler overlapAssembler;
+	EXPECT_FALSE(overlapAssembler.accept(received).has_value());
 	auto overlapping = received;
 	overlapping.offset = 2;
-	EXPECT_THROW((void)assembler.accept(overlapping), spk::Exception);
+	EXPECT_THROW((void)overlapAssembler.accept(overlapping), spk::NetworkInternal::PageReassemblyError);
+	EXPECT_EQ(overlapAssembler.reservedBytes(), 0u);
 }
 
 TEST(PageReassembler, RejectsMismatchedMetadataAndMalformedFrameOffsets)
@@ -139,7 +154,9 @@ TEST(PageReassembler, RejectsMismatchedMetadataAndMalformedFrameOffsets)
 
 	auto frame = spk::NetworkInternal::encodePage(*first);
 	spk::NetworkInternal::write64(frame->data() + spk::NetworkInternal::FrameHeaderSize + 16, 50);
-	EXPECT_THROW((void)spk::NetworkInternal::decodePage(*frame), spk::Exception);
+	const auto invalidOffset = spk::NetworkInternal::decodePage(*frame);
+	spk::NetworkInternal::PageReassembler offsetAssembler;
+	EXPECT_THROW((void)offsetAssembler.accept(invalidOffset), spk::NetworkInternal::PageReassemblyError);
 }
 
 TEST(PageReassembler, TimedOutTransfersReleaseTheirReservedMemory)
@@ -172,4 +189,41 @@ TEST(PageReassembler, HandlesEmptyAndExactBoundaryPayloads)
 		completed += assembler.accept(fragment).has_value() ? 1u : 0u;
 	}
 	EXPECT_EQ(completed, 2u);
+}
+
+TEST(PageReassembler, ValidPagesRefreshTheIncomingInactivityDeadline)
+{
+	spk::NetworkInternal::PageScheduler scheduler;
+	(void)scheduler.enqueue(message(12, 8));
+	const auto first = scheduler.nextPage(4);
+	const auto second = scheduler.nextPage(4);
+	spk::NetworkInternal::PageReassembler assembler(100, 100, std::chrono::milliseconds(100));
+	const auto now = spk::NetworkInternal::PageReassembler::Clock::now();
+	EXPECT_FALSE(assembler.accept(fragment(*first), now).has_value());
+	EXPECT_FALSE(assembler.accept(fragment(*second), now + std::chrono::milliseconds(90)).has_value());
+	assembler.expire(now + std::chrono::milliseconds(170));
+	EXPECT_EQ(assembler.pendingTransfers(), 1u);
+	assembler.expire(now + std::chrono::milliseconds(191));
+	EXPECT_EQ(assembler.pendingTransfers(), 0u);
+}
+
+TEST(PageReassembler, TenConsecutiveMalformedTransfersReachAbuseThreshold)
+{
+	spk::NetworkInternal::PageScheduler scheduler;
+	spk::NetworkInternal::PageReassembler assembler;
+	for (std::size_t index = 0; index < 9; ++index)
+	{
+		(void)scheduler.enqueue(message(10, static_cast<std::uint32_t>(index)));
+		const auto first = scheduler.nextPage(3);
+		auto malformed = fragment(*first);
+		malformed.offset = 1;
+		EXPECT_THROW((void)assembler.accept(malformed), spk::NetworkInternal::PageReassemblyError);
+		EXPECT_FALSE(assembler.failureLimitReached());
+	}
+	(void)scheduler.enqueue(message(10, 42));
+	const auto first = scheduler.nextPage(3);
+	auto malformed = fragment(*first);
+	malformed.offset = 1;
+	EXPECT_THROW((void)assembler.accept(malformed), spk::NetworkInternal::PageReassemblyError);
+	EXPECT_TRUE(assembler.failureLimitReached());
 }
