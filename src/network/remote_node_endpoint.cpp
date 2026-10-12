@@ -62,7 +62,7 @@ namespace spk
 	void RemoteNode::Endpoint::reply(const RemoteNode::Endpoint::Request &request, Message message)
 	{
 		_server.sendTo(
-			request.proxyConnection,
+			_server.connection(request.proxyConnection),
 			NetworkInternal::encodeRemoteEnvelope(
 				NetworkInternal::RemoteEnvelopeKind::Response,
 				request.originConnection,

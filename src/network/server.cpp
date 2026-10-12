@@ -1,5 +1,6 @@
 #include "network/server.hpp"
 
+#include "exception.hpp"
 #include "network/internal/server_backend.hpp"
 
 #include <utility>
@@ -70,14 +71,20 @@ namespace spk
 
 	Server::~Server() = default;
 
-	Server::ConnectionContract Server::subscribeToConnection(ConnectionCallback callback)
+	Server::StatusContract Server::subscribeToConnectionStatusChange(StatusCallback callback)
 	{
-		return _connectionProvider.subscribe(std::move(callback));
+		return _statusProvider.subscribe(std::move(callback));
 	}
 
-	Server::DisconnectionContract Server::subscribeToDisconnection(DisconnectionCallback callback)
+	Connection Server::connection(ConnectionID id) const
 	{
-		return _disconnectionProvider.subscribe(std::move(callback));
+		const std::scoped_lock lock(_connectionsMutex);
+		const auto it = _connections.find(id);
+		if (it == _connections.end())
+		{
+			throw Exception("Unknown or disconnected network connection.");
+		}
+		return it->second;
 	}
 
 	bool Server::isRunning() const noexcept
@@ -100,14 +107,22 @@ namespace spk
 		_impl->stop();
 	}
 
-	void Server::sendTo(ConnectionID connection, const Message &message, Message::Priority priority)
+	void Server::sendTo(const Connection &connection, const Message &message, Message::Priority priority)
 	{
-		_impl->sendTo(connection, message, priority);
+		{
+			const std::scoped_lock lock(_connectionsMutex);
+			const auto it = _connections.find(connection.id());
+			if (it == _connections.end() || it->second._data != connection._data || !connection.isConnected())
+			{
+				throw Exception("Unable to send to an unknown or disconnected network connection.");
+			}
+		}
+		_impl->sendTo(connection.id(), message, priority);
 	}
 
-	void Server::sendTo(std::span<const ConnectionID> connections, const Message &message, Message::Priority priority)
+	void Server::sendTo(std::span<const Connection> connections, const Message &message, Message::Priority priority)
 	{
-		for (const ConnectionID connection : connections)
+		for (const Connection &connection : connections)
 		{
 			sendTo(connection, message, priority);
 		}
@@ -138,13 +153,34 @@ namespace spk
 		_messages.publish(std::move(message));
 	}
 
-	void Server::_notifyConnection(ConnectionID connection)
+	void Server::_notifyConnection(ConnectionID id)
 	{
-		_connectionProvider.trigger(connection);
+		Connection connection;
+		connection._assignID(id);
+		{
+			const std::scoped_lock lock(_connectionsMutex);
+			_connections.insert_or_assign(id, connection);
+		}
+		connection._setStatus(Connection::Status::Pending);
+		_statusProvider.trigger(connection, Connection::Status::Pending, Connection::Error::None);
+		connection._setStatus(Connection::Status::Connected);
+		_statusProvider.trigger(connection, Connection::Status::Connected, Connection::Error::None);
 	}
 
-	void Server::_notifyDisconnection(ConnectionID connection)
+	void Server::_notifyDisconnection(ConnectionID id)
 	{
-		_disconnectionProvider.trigger(connection);
+		Connection connection;
+		{
+			const std::scoped_lock lock(_connectionsMutex);
+			const auto it = _connections.find(id);
+			if (it == _connections.end())
+			{
+				return;
+			}
+			connection = it->second;
+			_connections.erase(it);
+		}
+		connection._setStatus(Connection::Status::Disconnected);
+		_statusProvider.trigger(connection, Connection::Status::Disconnected, Connection::Error::None);
 	}
 }

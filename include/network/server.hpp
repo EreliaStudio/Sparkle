@@ -7,7 +7,9 @@
 
 #include <cstdint>
 #include <memory>
+#include <mutex>
 #include <span>
+#include <unordered_map>
 
 namespace spk
 {
@@ -16,20 +18,18 @@ namespace spk
 	public:
 		using MessageDispatcher = spk::MessageDispatcher<ReceivedMessage>;
 		using MessageQueue = ThreadSafeFIFO<ReceivedMessage>;
-		using ConnectionProvider = ContractProvider<ConnectionID>;
-		using ConnectionCallback = ConnectionProvider::callback_type;
-		using ConnectionContract = ConnectionProvider::Contract;
-		using DisconnectionProvider = ContractProvider<ConnectionID>;
-		using DisconnectionCallback = DisconnectionProvider::callback_type;
-		using DisconnectionContract = DisconnectionProvider::Contract;
+		using StatusProvider = ContractProvider<Connection, Connection::Status, Connection::Error>;
+		using StatusCallback = StatusProvider::callback_type;
+		using StatusContract = StatusProvider::Contract;
 
 	private:
 		class Impl;
 		std::unique_ptr<Impl> _impl;
 		MessageQueue _messages;
 		MessageDispatcher _messageDispatcher;
-		ConnectionProvider _connectionProvider;
-		DisconnectionProvider _disconnectionProvider;
+		StatusProvider _statusProvider;
+		mutable std::mutex _connectionsMutex;
+		std::unordered_map<ConnectionID, Connection> _connections;
 
 		void _publish(ReceivedMessage message);
 		void _notifyConnection(ConnectionID connection);
@@ -44,15 +44,14 @@ namespace spk
 		Server &operator=(const Server &) = delete;
 		Server &operator=(Server &&) = delete;
 
-		[[nodiscard]] ConnectionContract subscribeToConnection(ConnectionCallback callback);
-		[[nodiscard]] DisconnectionContract subscribeToDisconnection(DisconnectionCallback callback);
-
+		[[nodiscard]] StatusContract subscribeToConnectionStatusChange(StatusCallback callback);
+		[[nodiscard]] Connection connection(ConnectionID id) const;
 		[[nodiscard]] bool isRunning() const noexcept;
 		[[nodiscard]] std::uint16_t port() const noexcept;
 		void start(std::uint16_t port);
 		void stop();
-		void sendTo(ConnectionID connection, const Message &message, Message::Priority priority = Message::Priority::Normal);
-		void sendTo(std::span<const ConnectionID> connections, const Message &message, Message::Priority priority = Message::Priority::Normal);
+		void sendTo(const Connection &connection, const Message &message, Message::Priority priority = Message::Priority::Normal);
+		void sendTo(std::span<const Connection> connections, const Message &message, Message::Priority priority = Message::Priority::Normal);
 		void sendToAll(const Message &message, Message::Priority priority = Message::Priority::Normal);
 		[[nodiscard]] MessageQueue &messages() noexcept;
 		[[nodiscard]] MessageDispatcher &messageDispatcher() noexcept;

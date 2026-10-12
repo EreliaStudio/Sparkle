@@ -1,6 +1,7 @@
 #include "network/connection.hpp"
 
 #include <atomic>
+#include <mutex>
 #include <utility>
 
 namespace spk
@@ -8,8 +9,9 @@ namespace spk
 	struct Connection::Data
 	{
 		std::atomic<ID> id = InvalidID;
-		std::atomic<Status> status = Status::Disconnected;
-		std::atomic<Error> error = Error::None;
+		mutable std::mutex mutex;
+		Status status = Status::Disconnected;
+		Error error = Error::None;
 		std::atomic<std::size_t> maxQueuedBytes = 64u * 1024u * 1024u;
 		StatusProvider statusProvider;
 	};
@@ -26,12 +28,14 @@ namespace spk
 
 	Connection::Status Connection::status() const noexcept
 	{
-		return _data->status.load();
+		const std::scoped_lock lock(_data->mutex);
+		return _data->status;
 	}
 
 	Connection::Error Connection::error() const noexcept
 	{
-		return _data->error.load();
+		const std::scoped_lock lock(_data->mutex);
+		return _data->error;
 	}
 
 	bool Connection::isConnected() const noexcept
@@ -51,21 +55,28 @@ namespace spk
 
 	Connection::StatusContract Connection::subscribeToStatusChange(StatusCallback callback)
 	{
-		return _data->statusProvider.subscribe(std::move(callback));
+		auto contract = _data->statusProvider.subscribe(callback);
+		callback(status(), error());
+		return contract;
 	}
 
 	void Connection::_assignID(ID id) noexcept
 	{
-		_data->id.store(id);
+		ID expected = InvalidID;
+		(void)_data->id.compare_exchange_strong(expected, id);
 	}
 
 	void Connection::_setStatus(Status status, Error error)
 	{
-		if (_data->status.exchange(status) == status)
 		{
-			return;
+			const std::scoped_lock lock(_data->mutex);
+			if (_data->status == status)
+			{
+				return;
+			}
+			_data->status = status;
+			_data->error = error;
 		}
-		_data->error.store(error);
 		_data->statusProvider.trigger(status, error);
 	}
 }

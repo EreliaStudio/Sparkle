@@ -26,6 +26,7 @@ namespace spk
 		std::jthread _reader;
 		std::jthread _sender;
 		std::atomic_bool _connected = false;
+		Connection _session;
 		std::mutex _sendMutex;
 		std::condition_variable _sendAvailable;
 		NetworkInternal::PageScheduler _scheduler;
@@ -121,7 +122,7 @@ namespace spk
 			_sendAvailable.notify_all();
 			try
 			{
-				_owner._notifyDisconnection();
+				_owner._setStatus(_session, Connection::Status::Disconnected, Connection::Error::TransportFailure);
 			} catch (...)
 			{
 			}
@@ -158,11 +159,13 @@ namespace spk
 		void connect(std::string_view address, std::uint16_t port)
 		{
 			disconnect();
+			_session = _owner._beginConnection();
 			try
 			{
 				_socket = NetworkInternal::Socket::connectTCP(address, port);
 			} catch (...)
 			{
+				_owner._setStatus(_session, Connection::Status::Disconnected, Connection::Error::Refused);
 				throw Exception("Unable to connect the network client.", std::current_exception());
 			}
 			_connected = true;
@@ -174,7 +177,7 @@ namespace spk
 			});
 			try
 			{
-				_owner._notifyConnection();
+				_owner._setStatus(_session, Connection::Status::Connected);
 			} catch (...)
 			{
 				disconnect();
@@ -192,7 +195,7 @@ namespace spk
 			_reassembler.clear();
 			if (notify)
 			{
-				_owner._notifyDisconnection();
+				_owner._setStatus(_session, Connection::Status::Disconnected);
 			}
 		}
 
@@ -215,14 +218,15 @@ namespace spk
 
 	Client::~Client() = default;
 
-	Client::ConnectionContract Client::subscribeToConnection(ConnectionCallback callback)
+	Client::StatusContract Client::subscribeToConnectionStatusChange(StatusCallback callback)
 	{
-		return _connectionProvider.subscribe(std::move(callback));
+		return _statusProvider.subscribe(std::move(callback));
 	}
 
-	Client::DisconnectionContract Client::subscribeToDisconnection(DisconnectionCallback callback)
+	Connection Client::connection() const
 	{
-		return _disconnectionProvider.subscribe(std::move(callback));
+		const std::scoped_lock lock(_connectionMutex);
+		return _connection;
 	}
 
 	bool Client::isConnected() const noexcept
@@ -265,13 +269,28 @@ namespace spk
 		_messages.publish(std::move(message));
 	}
 
-	void Client::_notifyConnection()
+	Connection Client::_beginConnection()
 	{
-		_connectionProvider.trigger();
+		Connection connection;
+		{
+			const std::scoped_lock lock(_connectionMutex);
+			_connection = connection;
+		}
+		connection._setStatus(Connection::Status::Pending);
+		_statusProvider.trigger(connection, Connection::Status::Pending, Connection::Error::None);
+		return connection;
 	}
 
-	void Client::_notifyDisconnection()
+	void Client::_setStatus(const Connection &connection, Connection::Status status, Connection::Error error)
 	{
-		_disconnectionProvider.trigger();
+		{
+			const std::scoped_lock lock(_connectionMutex);
+			if (_connection._data != connection._data || connection.status() == status)
+			{
+				return;
+			}
+		}
+		connection._setStatus(status, error);
+		_statusProvider.trigger(connection, status, error);
 	}
 }

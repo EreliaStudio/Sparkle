@@ -2,11 +2,13 @@
 
 #include "container/thread_safe_fifo.hpp"
 #include "design_pattern/contract_provider.hpp"
+#include "network/connection.hpp"
 #include "network/message.hpp"
 #include "network/message_dispatcher.hpp"
 
 #include <cstdint>
 #include <memory>
+#include <mutex>
 #include <string_view>
 
 namespace spk
@@ -16,24 +18,22 @@ namespace spk
 	public:
 		using MessageDispatcher = spk::MessageDispatcher<Message>;
 		using MessageQueue = ThreadSafeFIFO<Message>;
-		using ConnectionProvider = ContractProvider<>;
-		using ConnectionCallback = ConnectionProvider::callback_type;
-		using ConnectionContract = ConnectionProvider::Contract;
-		using DisconnectionProvider = ContractProvider<>;
-		using DisconnectionCallback = DisconnectionProvider::callback_type;
-		using DisconnectionContract = DisconnectionProvider::Contract;
+		using StatusProvider = ContractProvider<Connection, Connection::Status, Connection::Error>;
+		using StatusCallback = StatusProvider::callback_type;
+		using StatusContract = StatusProvider::Contract;
 
 	private:
 		class Impl;
 		std::unique_ptr<Impl> _impl;
 		MessageQueue _messages;
 		MessageDispatcher _messageDispatcher;
-		ConnectionProvider _connectionProvider;
-		DisconnectionProvider _disconnectionProvider;
+		StatusProvider _statusProvider;
+		mutable std::mutex _connectionMutex;
+		Connection _connection;
 
 		void _publish(Message message);
-		void _notifyConnection();
-		void _notifyDisconnection();
+		[[nodiscard]] Connection _beginConnection();
+		void _setStatus(const Connection &connection, Connection::Status status, Connection::Error error = Connection::Error::None);
 
 	public:
 		Client();
@@ -44,9 +44,8 @@ namespace spk
 		Client &operator=(const Client &) = delete;
 		Client &operator=(Client &&) = delete;
 
-		[[nodiscard]] ConnectionContract subscribeToConnection(ConnectionCallback callback);
-		[[nodiscard]] DisconnectionContract subscribeToDisconnection(DisconnectionCallback callback);
-
+		[[nodiscard]] StatusContract subscribeToConnectionStatusChange(StatusCallback callback);
+		[[nodiscard]] Connection connection() const;
 		[[nodiscard]] bool isConnected() const noexcept;
 		void connect(std::string_view address, std::uint16_t port);
 		void disconnect();
