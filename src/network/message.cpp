@@ -59,6 +59,16 @@ namespace spk
 		return _header.requestID;
 	}
 
+	void Message::Writer::setConnectionID(Connection::ID id) noexcept
+	{
+		_header.connectionID = id;
+	}
+
+	Connection::ID Message::Writer::connectionID() const noexcept
+	{
+		return _header.connectionID;
+	}
+
 	void Message::Writer::clear() noexcept
 	{
 		_payload.clear();
@@ -149,6 +159,11 @@ namespace spk
 	Message::RequestID Message::requestID() const noexcept
 	{
 		return _header.requestID;
+	}
+
+	Connection::ID Message::connectionID() const noexcept
+	{
+		return _header.connectionID;
 	}
 
 	std::span<const std::byte> Message::data() const noexcept
