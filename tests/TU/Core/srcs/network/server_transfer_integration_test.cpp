@@ -97,7 +97,7 @@ TEST(ServerTransferIntegration, RejectDoesNotPartiallyAdmitBroadcast)
 	ASSERT_TRUE(secondConnection.isConnected());
 	firstConnection.setMaxQueuedBytes(1);
 
-	const auto transfers = server.sendToAll(makeMessage(153, 100));
+	const auto transfers = server.sendToAll(makeMessage(153, 100), spk::Message::Priority::Normal, spk::Connection::OverflowPolicy::Reject);
 	ASSERT_EQ(transfers.size(), 2u);
 	EXPECT_TRUE(finished(transfers.at(firstConnection.id()), spk::Transfer::Status::Rejected));
 	EXPECT_TRUE(finished(transfers.at(secondConnection.id()), spk::Transfer::Status::Rejected));
