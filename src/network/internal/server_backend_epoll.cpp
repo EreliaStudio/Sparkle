@@ -324,7 +324,7 @@ namespace spk::NetworkInternal
 					writer.resize(header.payloadSize);
 					std::copy_n(data + FrameHeaderSize, header.payloadSize, writer.data().begin());
 					_publish(ReceivedMessage{session.id, std::move(writer).build()});
-					session.reassembler.successfulMessage();
+					session.reception.successfulMessage();
 				}
 				else
 				{

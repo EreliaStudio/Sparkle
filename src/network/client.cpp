@@ -311,7 +311,7 @@ namespace spk
 
 		void setPageFailureLimits(PageFailureLimits limits)
 		{
-			_reassembler.configureFailureLimits(limits);
+			_reception.configureFailureLimits(limits);
 		}
 
 		Transfer send(const Message &message, Message::Priority priority)
