@@ -4,7 +4,6 @@
 #include "network/internal/frame.hpp"
 #include "network/internal/handshake.hpp"
 
-#include <algorithm>
 #include <array>
 #include <utility>
 
@@ -16,14 +15,8 @@ namespace spk::NetworkInternal
 	{
 	}
 
-	void ClientHandshake::_negotiate(Socket &socket)
+	void ClientHandshake::_validateHeader(std::span<const std::byte, FrameHeaderSize> header)
 	{
-		socket.sendAll(*Handshake::encode(Handshake::Kind::Hello));
-		std::array<std::byte, FrameHeaderSize> header{};
-		if (!socket.receiveAllUntil(header, _deadline.expiresAt(), _stop))
-		{
-			throw Exception("Unable to receive the handshake header.");
-		}
 		if (header[0] != std::byte{'S'} || header[1] != std::byte{'P'} ||
 			header[2] != std::byte{'K'} || header[3] != std::byte{'N'})
 		{
@@ -39,15 +32,27 @@ namespace spk::NetworkInternal
 		{
 			throw Exception("Invalid handshake response length.");
 		}
-		std::array<std::byte, Handshake::PayloadSize> payload{};
+	}
+
+	Handshake::Packet ClientHandshake::_readReply(Socket &socket)
+	{
+		std::array<std::byte, FrameHeaderSize + Handshake::PayloadSize> frame{};
+		auto header = std::span(frame).first<FrameHeaderSize>();
+		if (!socket.receiveAllUntil(header, _deadline.expiresAt(), _stop))
+		{
+			throw Exception("Unable to receive handshake header.");
+		}
+		_validateHeader(header);
+		auto payload = std::span(frame).last<Handshake::PayloadSize>();
 		if (!socket.receiveAllUntil(payload, _deadline.expiresAt(), _stop))
 		{
 			throw Exception("Incomplete handshake response.");
 		}
-		std::array<std::byte, FrameHeaderSize + Handshake::PayloadSize> bytes{};
-		std::copy(header.begin(), header.end(), bytes.begin());
-		std::copy(payload.begin(), payload.end(), bytes.begin() + FrameHeaderSize);
-		const auto packet = Handshake::decode(bytes);
+		return Handshake::decode(frame);
+	}
+
+	void ClientHandshake::_validateReply(const Handshake::Packet &packet)
+	{
 		if (packet.validationError != Connection::Error::None)
 		{
 			_error = packet.validationError;
@@ -64,6 +69,12 @@ namespace spk::NetworkInternal
 			throw Exception("Unexpected handshake control frame.");
 		}
 		_id = packet.connectionID;
+	}
+
+	void ClientHandshake::_negotiate(Socket &socket)
+	{
+		socket.sendAll(*Handshake::encode(Handshake::Kind::Hello));
+		_validateReply(_readReply(socket));
 	}
 
 	ClientHandshake::Result ClientHandshake::connect(std::string_view address, std::uint16_t port) noexcept

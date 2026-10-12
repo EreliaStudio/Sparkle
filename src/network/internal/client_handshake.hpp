@@ -4,6 +4,7 @@
 #include "network/internal/socket.hpp"
 
 #include <cstdint>
+#include <span>
 #include <stop_token>
 #include <string_view>
 
@@ -25,6 +26,9 @@ namespace spk::NetworkInternal
 		Connection::ID _id = Connection::InvalidID;
 		Connection::Error _error = Connection::Error::Refused;
 
+		void _validateHeader(std::span<const std::byte, FrameHeaderSize> header);
+		[[nodiscard]] Handshake::Packet _readReply(Socket &socket);
+		void _validateReply(const Handshake::Packet &packet);
 		void _negotiate(Socket &socket);
 
 	public:
