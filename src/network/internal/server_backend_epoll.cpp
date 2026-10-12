@@ -3,6 +3,7 @@
 #if defined(__linux__) || defined(__ANDROID__)
 
 #	include "exception.hpp"
+#	include "network/internal/connection_id.hpp"
 #	include "network/internal/frame.hpp"
 #	include "network/internal/socket.hpp"
 
@@ -80,7 +81,6 @@ namespace spk::NetworkInternal
 			std::atomic_uint16_t _port = 0;
 			int _epoll = -1;
 			int _wakeEvent = -1;
-			ConnectionID _nextConnectionID = 1;
 			std::unordered_map<ConnectionID, std::shared_ptr<Session>> _sessions;
 			std::mutex _commandMutex;
 			std::deque<Command> _commands;
@@ -183,7 +183,7 @@ namespace spk::NetworkInternal
 			void _addSession(Socket socket)
 			{
 				socket.setNonBlocking(true);
-				const ConnectionID id = _nextConnectionID++;
+				const ConnectionID id = allocateConnectionID();
 				auto session = std::make_shared<Session>(id, std::move(socket));
 				_register(
 					static_cast<int>(session->socket.nativeHandle()),
