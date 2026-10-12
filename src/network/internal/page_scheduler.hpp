@@ -44,6 +44,7 @@ namespace spk::NetworkInternal
 		[[nodiscard]] std::optional<Page> nextPage(std::size_t maxPayloadBytes);
 		[[nodiscard]] std::size_t pendingBytes() const noexcept;
 		[[nodiscard]] std::size_t pendingTransfers() const noexcept;
+		[[nodiscard]] bool isTracked(std::uint64_t id) const noexcept;
 		[[nodiscard]] std::size_t maxPendingBytes() const noexcept;
 		void setMaxPendingBytes(std::size_t bytes) noexcept;
 		void clear() noexcept;

@@ -67,10 +67,17 @@ namespace spk::NetworkInternal
 	spk::Transfer PageScheduler::enqueueTracked(Message message, Message::Priority priority)
 	{
 		const std::scoped_lock lock(_mutex);
-		const std::uint64_t id = _enqueue(std::move(message), priority);
 		spk::Transfer transfer;
+		const std::uint64_t id = _enqueue(std::move(message), priority);
 		TransferCompletion::assignID(transfer, id);
-		_tracked.emplace(id, transfer);
+		try
+		{
+			_tracked.emplace(id, transfer);
+		} catch (...)
+		{
+			_removeQueued(id);
+			throw;
+		}
 		return transfer;
 	}
 
@@ -157,6 +164,12 @@ namespace spk::NetworkInternal
 			count += queue.size();
 		}
 		return count;
+	}
+
+	bool PageScheduler::isTracked(std::uint64_t id) const noexcept
+	{
+		const std::scoped_lock lock(_mutex);
+		return _tracked.contains(id);
 	}
 
 	std::size_t PageScheduler::maxPendingBytes() const noexcept
