@@ -45,7 +45,7 @@ namespace spk::NetworkInternal
 		if (page.totalSize != page.message.size() ||
 			page.offset > page.totalSize ||
 			page.length > page.totalSize - page.offset ||
-			page.length > MaximumPayloadSize - PageMetadataSize || page.transferID == 0)
+			page.length > DefaultMaximumPageBytes || page.transferID == 0)
 		{
 			throw Exception("Invalid outgoing network page.");
 		}
