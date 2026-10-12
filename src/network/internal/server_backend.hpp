@@ -1,7 +1,7 @@
 #pragma once
 
-#include "network/types.hpp"
 #include "network/page_failure_limits.hpp"
+#include "network/types.hpp"
 
 #include <cstdint>
 #include <functional>
