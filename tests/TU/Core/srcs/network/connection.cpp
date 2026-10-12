@@ -1,5 +1,6 @@
-#include "exception.hpp"
 #include "network/connection.hpp"
+
+#include "exception.hpp"
 #include "network/client.hpp"
 #include "network/server.hpp"
 #include "network_test_utils.hpp"
