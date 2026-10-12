@@ -77,6 +77,9 @@ namespace
 	{
 		failure.run([&] {
 			client.connect("127.0.0.1", port);
+			EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+				return client.isConnected();
+			}, std::chrono::seconds(5)));
 			for (std::uint32_t sequence = 0; sequence < 50; ++sequence)
 			{
 				client.send(
@@ -152,7 +155,13 @@ TEST(NodeRouterIntegrationTest, LocalNodeBroadcastReachesAllClients)
 	router.addNode("broadcast", node);
 	router.start(0);
 	firstClient.connect("127.0.0.1", router.server().port());
+	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+		return firstClient.isConnected();
+	}, std::chrono::seconds(5)));
 	secondClient.connect("127.0.0.1", router.server().port());
+	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+		return secondClient.isConnected();
+	}, std::chrono::seconds(5)));
 
 	std::jthread routerThread([&] {
 		runRouter(router, running, failure);

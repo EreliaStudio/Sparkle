@@ -60,7 +60,13 @@ TEST(MessageDispatcherIntegrationTest, DirectServerRepliesReachOnlyTheirEmitter)
 	});
 	server.start(0);
 	first.connect("127.0.0.1", server.port());
+	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+		return first.isConnected();
+	}, std::chrono::seconds(5)));
 	second.connect("127.0.0.1", server.port());
+	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+		return second.isConnected();
+	}, std::chrono::seconds(5)));
 	first.send(request(1));
 	second.send(request(2));
 	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
@@ -93,10 +99,16 @@ TEST(MessageDispatcherIntegrationTest, RoutedDelayedRepliesPreserveProxyAndOrigi
 	for (std::size_t index = 0; index < clients.size(); ++index)
 	{
 		remotes[index].connect("127.0.0.1", endpoint.port());
+		EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+			return remotes[index].isConnected();
+		}, std::chrono::seconds(5)));
 		routers[index].addNode("remote", remotes[index]);
 		routers[index].redirect(70, "remote");
 		routers[index].start(0);
 		clients[index].connect("127.0.0.1", routers[index].server().port());
+		EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+			return clients[index].isConnected();
+		}, std::chrono::seconds(5)));
 		clients[index].send(request(static_cast<std::uint32_t>(index + 1)));
 	}
 	auto pump = [&] {
