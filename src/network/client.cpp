@@ -2,6 +2,7 @@
 
 #include "exception.hpp"
 #include "network/internal/frame.hpp"
+#include "network/internal/handshake.hpp"
 #include "network/internal/page.hpp"
 #include "network/internal/socket.hpp"
 #include "network/internal/transfer_reception.hpp"
@@ -14,6 +15,7 @@
 #include <condition_variable>
 #include <deque>
 #include <memory>
+#include <string>
 #include <mutex>
 #include <thread>
 #include <utility>
@@ -26,11 +28,14 @@ namespace spk
 	private:
 		Client &_owner;
 		NetworkInternal::Socket _socket;
+		std::jthread _connector;
 		std::jthread _reader;
 		std::jthread _sender;
 		std::jthread _expirationWorker;
 		std::mutex _receiveMutex;
 		std::atomic_bool _connected = false;
+		std::atomic_bool _active = false;
+		std::chrono::milliseconds _handshakeTimeout = NetworkInternal::Handshake::DefaultTimeout;
 		Connection _session;
 		std::mutex _sendMutex;
 		std::condition_variable _sendAvailable;
@@ -85,6 +90,7 @@ namespace spk
 			{
 				throw Exception("Unknown network frame kind.");
 			}
+			_acceptRemoteID(header.connectionID);
 			Message::Writer writer(header.type);
 			writer.setRequestID(header.requestID);
 			writer.setConnectionID(header.connectionID);
@@ -193,18 +199,19 @@ namespace spk
 			_remoteDisconnect();
 		}
 
-		void _remoteDisconnect() noexcept
+		void _remoteDisconnect(Connection::Error error = Connection::Error::TransportFailure) noexcept
 		{
-			if (!_connected.exchange(false))
+			if (!_active.exchange(false))
 			{
 				return;
 			}
+			_connected = false;
 			_socket.close();
 			_sendAvailable.notify_all();
 			_transfers.clear();
 			try
 			{
-				_owner._setStatus(_session, Connection::Status::Disconnected, Connection::Error::TransportFailure);
+				_owner._setStatus(_session, Connection::Status::Disconnected, error);
 			} catch (...)
 			{
 			}
@@ -212,6 +219,11 @@ namespace spk
 
 		void _joinWorkers()
 		{
+			if (_connector.joinable() && _connector.get_id() != std::this_thread::get_id())
+			{
+				_connector.request_stop();
+				_connector.join();
+			}
 			if (_reader.joinable() && _reader.get_id() != std::this_thread::get_id())
 			{
 				_reader.join();
@@ -242,18 +254,8 @@ namespace spk
 			return _connected.load();
 		}
 
-		void connect(std::string_view address, std::uint16_t port)
+		void _startWorkers()
 		{
-			disconnect();
-			_session = _owner._beginConnection();
-			try
-			{
-				_socket = NetworkInternal::Socket::connectTCP(address, port);
-			} catch (...)
-			{
-				_owner._setStatus(_session, Connection::Status::Disconnected, Connection::Error::Refused);
-				throw Exception("Unable to connect the network client.", std::current_exception());
-			}
 			_connected = true;
 			_reader = std::jthread([this] {
 				_run();
@@ -277,19 +279,90 @@ namespace spk
 					_transfers.expire();
 				}
 			});
+			_owner._setStatus(_session, Connection::Status::Connected);
+		}
+
+		void _negotiate(std::chrono::steady_clock::time_point deadline, std::stop_token stop)
+		{
+			using Handshake = NetworkInternal::Handshake;
+			_socket.sendAll(*Handshake::encode(Handshake::Kind::Hello));
+			std::array<std::byte, NetworkInternal::FrameHeaderSize> header{};
+			if (!_socket.receiveAllUntil(header, deadline, stop))
+			{
+				throw Exception("Unable to receive the handshake header.");
+			}
+			const auto decoded = NetworkInternal::decode(header);
+			if (decoded.payloadSize != Handshake::PayloadSize)
+			{
+				throw Exception("Invalid handshake response length.");
+			}
+			std::array<std::byte, Handshake::PayloadSize> payload{};
+			if (!_socket.receiveAllUntil(payload, deadline, stop))
+			{
+				throw Exception("Incomplete handshake response.");
+			}
+			std::array<std::byte, NetworkInternal::FrameHeaderSize + Handshake::PayloadSize> bytes{};
+			std::copy(header.begin(), header.end(), bytes.begin());
+			std::copy(payload.begin(), payload.end(), bytes.begin() + NetworkInternal::FrameHeaderSize);
+			const auto packet = Handshake::decode(bytes);
+			if (packet.kind != Handshake::Kind::Accepted || !Handshake::validAcceptance(packet))
+			{
+				throw Exception("Server rejected the network handshake.");
+			}
+			_acceptRemoteID(packet.connectionID);
+			_owner._acceptConnection(_session, packet.connectionID);
+		}
+
+		void _connectWorker(std::string address, std::uint16_t port,
+			std::chrono::steady_clock::time_point deadline, std::stop_token stop)
+		{
+			Connection::Error error = Connection::Error::Refused;
 			try
 			{
-				_owner._setStatus(_session, Connection::Status::Connected);
+				_socket = NetworkInternal::Socket::connectTCP(address, port, deadline, stop);
+				error = Connection::Error::TransportFailure;
+				_negotiate(deadline, stop);
+				if (!_active || stop.stop_requested())
+				{
+					return;
+				}
+				_startWorkers();
+				return;
 			} catch (...)
 			{
-				disconnect();
-				throw;
+				if (std::chrono::steady_clock::now() >= deadline)
+				{
+					error = Connection::Error::Timeout;
+				}
 			}
+			_remoteDisconnect(error);
+		}
+
+		Connection connect(std::string_view address, std::uint16_t port)
+		{
+			disconnect();
+			_session = _owner._beginConnection();
+			_active = true;
+			const auto deadline = std::chrono::steady_clock::now() + _handshakeTimeout;
+			_connector = std::jthread([this, address = std::string(address), port, deadline](std::stop_token stop) {
+				_connectWorker(address, port, deadline, stop);
+			});
+			return _session;
+		}
+
+		void setHandshakeTimeout(std::chrono::milliseconds timeout)
+		{
+			if (timeout.count() <= 0)
+			{
+				throw Exception("Handshake timeout must be positive.");
+			}
+			_handshakeTimeout = timeout;
 		}
 
 		void disconnect()
 		{
-			const bool notify = _connected.exchange(false);
+			const bool notify = _active.exchange(false);
+			_connected = false;
 			_socket.close();
 			_sendAvailable.notify_all();
 			_joinWorkers();
@@ -317,9 +390,9 @@ namespace spk
 		Transfer send(const Message &message, Message::Priority priority)
 		{
 			const std::scoped_lock lock(_sendMutex);
-			if (!_connected)
+			if (!_connected || _session.status() != Connection::Status::Connected)
 			{
-				throw Exception("Unable to send through a disconnected network client.");
+				throw Exception("Cannot send through a pending or disconnected network client.");
 			}
 			Transfer transfer = _transfers.enqueue(message, priority);
 			_sendAvailable.notify_one();
@@ -353,9 +426,14 @@ namespace spk
 		return _impl->isConnected();
 	}
 
-	void Client::connect(std::string_view address, std::uint16_t port)
+	Connection Client::connect(std::string_view address, std::uint16_t port)
 	{
-		_impl->connect(address, port);
+		return _impl->connect(address, port);
+	}
+
+	void Client::setHandshakeTimeout(std::chrono::milliseconds timeout)
+	{
+		_impl->setHandshakeTimeout(timeout);
 	}
 
 	void Client::disconnect()
@@ -395,6 +473,8 @@ namespace spk
 
 	Connection Client::_beginConnection()
 	{
+		std::vector<Message> stale;
+		_messages.drain(stale);
 		Connection connection;
 		{
 			const std::scoped_lock lock(_connectionMutex);
@@ -403,6 +483,15 @@ namespace spk
 		connection._setStatus(Connection::Status::Pending);
 		_statusProvider.trigger(connection, Connection::Status::Pending, Connection::Error::None);
 		return connection;
+	}
+
+	void Client::_acceptConnection(Connection connection, Connection::ID id)
+	{
+		const std::scoped_lock lock(_connectionMutex);
+		if (_connection._data == connection._data && connection.status() == Connection::Status::Pending)
+		{
+			connection._assignID(id);
+		}
 	}
 
 	void Client::_setStatus(Connection connection, Connection::Status status, Connection::Error error)

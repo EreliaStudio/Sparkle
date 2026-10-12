@@ -8,6 +8,7 @@
 #include "network/page_failure_limits.hpp"
 #include "network/transfer.hpp"
 
+#include <chrono>
 #include <cstdint>
 #include <memory>
 #include <mutex>
@@ -34,6 +35,7 @@ namespace spk
 		Connection _connection;
 
 		void _publish(Message message);
+		void _acceptConnection(Connection connection, Connection::ID id);
 		[[nodiscard]] Connection _beginConnection();
 		void _setStatus(Connection connection, Connection::Status status, Connection::Error error = Connection::Error::None);
 
@@ -49,7 +51,8 @@ namespace spk
 		[[nodiscard]] StatusContract subscribeToConnectionStatusChange(StatusCallback callback);
 		[[nodiscard]] Connection connection() const;
 		[[nodiscard]] bool isConnected() const noexcept;
-		void connect(std::string_view address, std::uint16_t port);
+		Connection connect(std::string_view address, std::uint16_t port);
+		void setHandshakeTimeout(std::chrono::milliseconds timeout);
 		void disconnect();
 		void setPageFailureLimits(PageFailureLimits limits);
 		Transfer send(const Message &message, Message::Priority priority = Message::Priority::Normal);
