@@ -4,9 +4,20 @@
 
 namespace spk::NetworkInternal
 {
-	spk::Transfer TransferSender::enqueue(Message message, Message::Priority priority)
+	spk::Transfer TransferSender::enqueue(Message message, Message::Priority priority, spk::Transfer transfer)
 	{
-		return _pages.enqueueTracked(std::move(message), priority);
+		return _pages.enqueueTracked(std::move(message), priority, std::move(transfer));
+	}
+
+	bool TransferSender::fail(spk::Transfer::ID id, spk::Transfer::Status status, spk::Transfer::Reason reason)
+	{
+		_deadlines.forget(id);
+		return _pages.complete(id, status, reason);
+	}
+
+	void TransferSender::setMaxPendingBytes(std::size_t bytes) noexcept
+	{
+		_pages.setMaxPendingBytes(bytes);
 	}
 
 	std::optional<Page> TransferSender::nextPage(std::size_t maxPageBytes)
