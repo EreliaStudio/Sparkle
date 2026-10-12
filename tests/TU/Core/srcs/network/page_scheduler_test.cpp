@@ -96,15 +96,16 @@ TEST(PageScheduler, LowPriorityEventuallyGetsTimeUnderHighPriorityLoad)
 	EXPECT_EQ(lowPages, 10u);
 }
 
-TEST(PageScheduler, PendingBudgetUsesSaturationThresholdNotHardAllocationCap)
+TEST(PageScheduler, PendingBudgetIsEnforcedBeforeAllocation)
 {
-	spk::NetworkInternal::PageScheduler scheduler(1);
+	spk::NetworkInternal::PageScheduler scheduler(20);
 	const auto first = scheduler.enqueue(message(20));
 	EXPECT_EQ(scheduler.pendingBytes(), 20u);
 	EXPECT_THROW((void)scheduler.enqueue(message(1)), spk::Exception);
+	EXPECT_THROW((void)scheduler.enqueue(message(21)), spk::Exception);
 	EXPECT_EQ(scheduler.nextPage(30)->transferID, first);
 	EXPECT_EQ(scheduler.pendingBytes(), 0u);
-	EXPECT_NO_THROW((void)scheduler.enqueue(message(1)));
+	EXPECT_NO_THROW((void)scheduler.enqueue(message(20)));
 }
 
 TEST(PageScheduler, ReducingBudgetPreservesExistingTransfers)
