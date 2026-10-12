@@ -146,6 +146,10 @@ namespace spk
 
 	Server::TransferResults Server::sendTo(const ConnectionSet &connections, const Message &message, Message::Priority priority, Connection::OverflowPolicy policy)
 	{
+		if (connections.empty())
+		{
+			throw Exception("Cannot send to an empty connection set.");
+		}
 		auto batch = std::make_shared<NetworkInternal::ServerSendBatch>(message, priority, policy);
 		TransferResults results;
 		batch->recipients.reserve(connections.size());
@@ -173,13 +177,17 @@ namespace spk
 		TransferResults results;
 		{
 			const std::scoped_lock lock(_connectionsMutex);
+			if (_connections.empty())
+			{
+				throw Exception("Cannot broadcast without connected recipients.");
+			}
 			batch->recipients.reserve(_connections.size());
 			results.reserve(_connections.size());
 			for (const auto &[id, connection] : _connections)
 			{
 				if (!connection.isConnected())
 				{
-					continue;
+					throw Exception("Cannot broadcast while a recipient is pending or disconnected.");
 				}
 				batch->recipients.push_back({connection, Transfer{}});
 				results.emplace(id, batch->recipients.back().transfer);

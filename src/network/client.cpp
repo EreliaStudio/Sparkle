@@ -310,6 +310,10 @@ namespace spk
 
 		Connection connect(std::string_view address, std::uint16_t port)
 		{
+			if (_active.load())
+			{
+				throw Exception("Disconnect the current network session before connecting again.");
+			}
 			disconnect();
 			_session = _owner._beginConnection();
 			_active = true;

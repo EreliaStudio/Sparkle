@@ -85,6 +85,9 @@ TEST(HandshakeIntegration, ReconnectReplacesPendingSessionWithoutRevivingIt)
 	EXPECT_EQ(abandoned.status(), spk::Connection::Status::Pending);
 	spk::Server server;
 	server.start(0);
+	EXPECT_THROW(client.connect("127.0.0.1", server.port()), spk::Exception);
+	EXPECT_EQ(abandoned.status(), spk::Connection::Status::Pending);
+	client.disconnect();
 	auto connected = client.connect("127.0.0.1", server.port());
 	EXPECT_NE(abandoned, connected);
 	EXPECT_EQ(abandoned.status(), spk::Connection::Status::Disconnected);

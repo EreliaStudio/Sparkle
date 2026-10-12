@@ -858,6 +858,10 @@ namespace spk::NetworkInternal
 
 			void start(std::uint16_t port) override
 			{
+				if (_running.load())
+				{
+					throw Exception("Stop the network server before starting it again.");
+				}
 				stop();
 				{
 					const std::scoped_lock lock(_commandMutex);
@@ -940,6 +944,11 @@ namespace spk::NetworkInternal
 				if (timeout.count() <= 0)
 				{
 					throw Exception("Handshake timeout must be positive.");
+				}
+				if (!_running.load())
+				{
+					_handshakeTimeout = timeout;
+					return;
 				}
 				Command command{};
 				command.kind = CommandKind::ConfigureHandshakeTimeout;
