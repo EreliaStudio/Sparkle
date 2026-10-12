@@ -57,11 +57,17 @@ TEST(Connection, ClientReconnectDoesNotReanimateOldHandle)
 	spk::Client client;
 	server.start(0);
 	client.connect("127.0.0.1", server.port());
+	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+		return client.isConnected();
+	}, std::chrono::seconds(5)));
 	spk::Connection previous = client.connection();
 	ASSERT_TRUE(previous.isConnected());
 	client.disconnect();
 	EXPECT_EQ(previous.status(), spk::Connection::Status::Disconnected);
 	client.connect("127.0.0.1", server.port());
+	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+		return client.isConnected();
+	}, std::chrono::seconds(5)));
 	EXPECT_FALSE(previous.isConnected());
 	EXPECT_TRUE(client.connection().isConnected());
 	client.disconnect();
@@ -87,6 +93,9 @@ TEST(Connection, ServerRetainedHandleSurvivesStop)
 			});
 		server.start(0);
 		client.connect("127.0.0.1", server.port());
+		EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+			return client.isConnected();
+		}, std::chrono::seconds(5)));
 		ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
 			return received.load();
 		}));
@@ -124,6 +133,9 @@ TEST(Connection, SetRetainsIdentityAcrossSessionChanges)
 	spk::Client client;
 	server.start(0);
 	client.connect("127.0.0.1", server.port());
+	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+		return client.isConnected();
+	}, std::chrono::seconds(5)));
 	spk::Connection connection = client.connection();
 	spk::ConnectionSet recipients{connection};
 	EXPECT_EQ(recipients.count(client.connection()), 1u);

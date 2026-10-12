@@ -2,6 +2,7 @@
 
 #include "network/client.hpp"
 #include "network/server.hpp"
+#include "network_test_utils.hpp"
 
 #include <chrono>
 #include <cstdint>
@@ -40,6 +41,9 @@ TEST(NetworkIntegrationTest, ClientAndServerExchangeFramedMessages)
 	spk::Client client;
 	server.start(0);
 	client.connect("127.0.0.1", server.port());
+	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+		return client.isConnected();
+	}, std::chrono::seconds(5)));
 
 	spk::Message::Writer requestWriter(12);
 	requestWriter.setRequestID(0x1020304050607080ull);

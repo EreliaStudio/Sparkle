@@ -43,6 +43,9 @@ namespace
 		spk::Client &client)
 	{
 		client.connect("127.0.0.1", server.port());
+		EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+			return client.isConnected();
+		}, std::chrono::seconds(5)));
 		client.send(makeMessage(1, std::uint32_t{0xCAFE}));
 
 		auto received = NetworkTestUtils::collect(server.messages(), 1);
@@ -73,6 +76,9 @@ TEST(NetworkConcurrencyTest, ServerAndClientCanBeDrivenFromIndependentThreads)
 	std::jthread clientThread([&] {
 		failure.run([&] {
 			client.connect("127.0.0.1", port.load());
+			EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+				return client.isConnected();
+			}, std::chrono::seconds(5)));
 			client.send(makeMessage(21, std::uint32_t{42}));
 		});
 	});
@@ -94,6 +100,9 @@ TEST(NetworkConcurrencyTest, LargePayloadCrossesReceptionBufferBoundaries)
 	spk::Client client;
 	server.start(0);
 	client.connect("127.0.0.1", server.port());
+	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+		return client.isConnected();
+	}, std::chrono::seconds(5)));
 
 	std::vector<std::byte> payload(512u * 1024u);
 	for (std::size_t index = 0; index < payload.size(); ++index)
@@ -126,6 +135,9 @@ TEST(NetworkConcurrencyTest, ClientBurstPreservesMessageOrder)
 	spk::Client client;
 	server.start(0);
 	client.connect("127.0.0.1", server.port());
+	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+		return client.isConnected();
+	}, std::chrono::seconds(5)));
 
 	for (std::uint32_t sequence = 0; sequence < MessageCount; ++sequence)
 	{
@@ -343,6 +355,9 @@ TEST(NetworkConcurrencyTest, ServerAndClientCanRestartAndExchangeAgain)
 	{
 		server.start(0);
 		client.connect("127.0.0.1", server.port());
+		EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+			return client.isConnected();
+		}, std::chrono::seconds(5)));
 
 		client.send(makeMessage(28, iteration));
 
@@ -377,6 +392,9 @@ TEST(NetworkConcurrencyTest, ClientLifecycleCallbacksFireExactlyOnce)
 
 	server.start(0);
 	client.connect("127.0.0.1", server.port());
+	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+		return client.isConnected();
+	}, std::chrono::seconds(5)));
 	client.disconnect();
 	client.disconnect();
 	server.stop();
@@ -400,6 +418,9 @@ TEST(NetworkConcurrencyTest, ServerStopDisconnectsConnectedClient)
 
 	server.start(0);
 	client.connect("127.0.0.1", server.port());
+	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+		return client.isConnected();
+	}, std::chrono::seconds(5)));
 	server.stop();
 
 	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
@@ -425,6 +446,9 @@ TEST(NetworkConcurrencyTest, ServerCanStopFromConnectionCallback)
 
 	server.start(0);
 	client.connect("127.0.0.1", server.port());
+	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+		return client.isConnected();
+	}, std::chrono::seconds(5)));
 
 	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
 		return !server.isRunning() && !client.isConnected();
@@ -448,6 +472,9 @@ TEST(NetworkConcurrencyTest, ManyClientsConnectAndExchangeConcurrently)
 		threads.emplace_back([&, index] {
 			failure.run([&, index] {
 				clients[index]->connect("127.0.0.1", server.port());
+				EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+					return clients[index]->isConnected();
+				}, std::chrono::seconds(5)));
 				clients[index]->send(makeMessage(29, index));
 				responses[index] =
 					NetworkTestUtils::collect(
@@ -500,6 +527,9 @@ TEST(NetworkConcurrencyTest, EmptyPayloadMessageRoundTrips)
 	spk::Client client;
 	server.start(0);
 	client.connect("127.0.0.1", server.port());
+	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+		return client.isConnected();
+	}, std::chrono::seconds(5)));
 
 	client.send(spk::Message::Writer(31).build());
 	auto received = NetworkTestUtils::collect(server.messages(), 1);
