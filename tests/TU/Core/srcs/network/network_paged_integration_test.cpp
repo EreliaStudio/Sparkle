@@ -45,9 +45,7 @@ TEST(NetworkPagedIntegration, LargeLogicalMessageCrossesFormerFrameLimit)
 	spk::Client client;
 	server.start(0);
 	client.connect("127.0.0.1", server.port());
-	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
-		return client.isConnected();
-	}, std::chrono::seconds(5)));
+	EXPECT_TRUE(NetworkTestUtils::waitConnected(client));
 
 	constexpr std::size_t Size = 33u * 1024u * 1024u + 5u;
 	client.send(makeMessage(701, Size));
@@ -67,9 +65,7 @@ TEST(NetworkPagedIntegration, InterleavedTransfersRestoreExactlyOneMessageEach)
 	spk::Client client;
 	server.start(0);
 	client.connect("127.0.0.1", server.port());
-	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
-		return client.isConnected();
-	}, std::chrono::seconds(5)));
+	EXPECT_TRUE(NetworkTestUtils::waitConnected(client));
 
 	client.send(makeMessage(101, 600000), spk::Message::Priority::Low);
 	client.send(makeMessage(102, 17), spk::Message::Priority::High);
@@ -106,9 +102,7 @@ TEST(NetworkPagedIntegration, ServerSendsPagedResponseWithoutSynchronousSocketWr
 	spk::Client client;
 	server.start(0);
 	client.connect("127.0.0.1", server.port());
-	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
-		return client.isConnected();
-	}, std::chrono::seconds(5)));
+	EXPECT_TRUE(NetworkTestUtils::waitConnected(client));
 	client.send(makeMessage(201, 1));
 	const auto requests = NetworkTestUtils::collect(server.messages(), 1, 5s);
 	ASSERT_EQ(requests.size(), 1u);
@@ -130,9 +124,7 @@ TEST(NetworkPagedIntegration, TransferSuccessRequiresReceiverAcknowledgment)
 	spk::Client client;
 	server.start(0);
 	client.connect("127.0.0.1", server.port());
-	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
-		return client.isConnected();
-	}, std::chrono::seconds(5)));
+	EXPECT_TRUE(NetworkTestUtils::waitConnected(client));
 
 	auto transfer = client.send(makeMessage(801, 200000));
 	EXPECT_NE(transfer.id(), spk::Transfer::InvalidID);

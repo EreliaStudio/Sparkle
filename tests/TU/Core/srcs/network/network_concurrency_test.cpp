@@ -456,9 +456,7 @@ TEST(NetworkConcurrencyTest, ManyClientsConnectAndExchangeConcurrently)
 		threads.emplace_back([&, index] {
 			failure.run([&, index] {
 				clients[index]->connect("127.0.0.1", server.port());
-				EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
-					return clients[index]->isConnected();
-				}, std::chrono::seconds(5)));
+				EXPECT_TRUE(NetworkTestUtils::waitConnected(*clients[index]));
 				clients[index]->send(makeMessage(29, index));
 				responses[index] =
 					NetworkTestUtils::collect(

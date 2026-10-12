@@ -166,9 +166,7 @@ TEST(NetworkStressTest, RepeatedConnectionCyclesRemainUsable)
 	for (std::uint32_t cycle = 0; cycle < CycleCount; ++cycle)
 	{
 		client.connect("127.0.0.1", server.port());
-		EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
-			return client.isConnected();
-		}, std::chrono::seconds(5)));
+		EXPECT_TRUE(NetworkTestUtils::waitConnected(client));
 		client.send(makeMessage(42, cycle));
 
 		auto received = NetworkTestUtils::collect(server.messages(), 1, 5s);
@@ -198,13 +196,9 @@ TEST(NetworkStressTest, DisconnectingOneClientDuringBroadcastDoesNotBreakOthers)
 		});
 	server.start(0);
 	disconnected.connect("127.0.0.1", server.port());
-	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
-		return disconnected.isConnected();
-	}, std::chrono::seconds(5)));
+	EXPECT_TRUE(NetworkTestUtils::waitConnected(disconnected));
 	survivor.connect("127.0.0.1", server.port());
-	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
-		return survivor.isConnected();
-	}, std::chrono::seconds(5)));
+	EXPECT_TRUE(NetworkTestUtils::waitConnected(survivor));
 
 	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
 		return connected.load() == 2;
