@@ -263,7 +263,6 @@ namespace spk::NetworkInternal
 				}
 			}
 
-
 			[[nodiscard]] bool _extractMessage(Session &session, std::size_t &consumed)
 			{
 				const std::size_t remaining = session.receivedBytes.size() - consumed;
@@ -378,7 +377,6 @@ namespace spk::NetworkInternal
 				}
 			}
 
-
 			void _queueMessage(const std::shared_ptr<Session> &session, const Message &message, Message::Priority priority)
 			{
 				(void)session->scheduler.enqueue(message.withConnectionID(session->id), priority);
@@ -465,7 +463,6 @@ namespace spk::NetworkInternal
 					}
 				}
 			}
-
 
 			void _processCommand(Command command)
 			{

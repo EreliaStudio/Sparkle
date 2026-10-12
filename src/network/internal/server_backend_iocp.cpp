@@ -304,7 +304,6 @@ namespace spk::NetworkInternal
 				}
 			}
 
-
 			[[nodiscard]] bool _extractMessage(Session &session, std::size_t &consumed)
 			{
 				const std::size_t remaining = session.receivedBytes.size() - consumed;
@@ -481,7 +480,6 @@ namespace spk::NetworkInternal
 					}
 				}
 			}
-
 
 			void _processCommand(Command command)
 			{
