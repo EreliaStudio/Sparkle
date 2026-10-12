@@ -73,5 +73,5 @@ namespace spk::NetworkInternal
 	bool Handshake::validAcceptance(const Packet &packet) noexcept
 	{
 		return packet.kind == Kind::Accepted && packet.connectionID != Connection::InvalidID && packet.error == Connection::Error::None && packet.validationError == Connection::Error::None;
-	
+	}
 }
