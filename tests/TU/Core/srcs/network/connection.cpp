@@ -102,3 +102,33 @@ TEST(Connection, ServerRetainedHandleSurvivesStop)
 	}
 	EXPECT_EQ(retained.status(), spk::Connection::Status::Disconnected);
 }
+
+TEST(Connection, SetUsesStableSharedHandleIdentity)
+{
+	spk::Connection first;
+	spk::Connection copy = first;
+	spk::Connection second;
+	const auto originalHash = spk::Connection::Hash{}(first);
+	spk::ConnectionSet recipients{first, copy, second};
+	EXPECT_EQ(recipients.size(), 2u);
+	EXPECT_EQ(recipients.count(copy), 1u);
+	EXPECT_EQ(recipients.count(second), 1u);
+	EXPECT_EQ(spk::Connection::Hash{}(first), originalHash);
+	EXPECT_EQ(first, copy);
+	EXPECT_FALSE(first == second);
+}
+
+TEST(Connection, SetRetainsIdentityAcrossSessionChanges)
+{
+	spk::Server server;
+	spk::Client client;
+	server.start(0);
+	client.connect("127.0.0.1", server.port());
+	spk::Connection connection = client.connection();
+	spk::ConnectionSet recipients{connection};
+	EXPECT_EQ(recipients.count(client.connection()), 1u);
+	client.disconnect();
+	EXPECT_EQ(recipients.count(connection), 1u);
+	EXPECT_EQ(recipients.size(), 1u);
+	server.stop();
+}
