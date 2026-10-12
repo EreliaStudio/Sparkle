@@ -1,6 +1,7 @@
 #pragma once
 
 #include "exception.hpp"
+#include "network/page_failure_limits.hpp"
 
 #include <chrono>
 #include <cstddef>
@@ -15,13 +16,7 @@ namespace spk::NetworkInternal
 	public:
 		using Clock = std::chrono::steady_clock;
 
-		struct Config final
-		{
-			std::size_t minimumPages = 2;
-			std::size_t minimumBytes = 128u * 1024u;
-			std::chrono::milliseconds window = std::chrono::seconds(60);
-			std::size_t consecutiveFailures = 10;
-		};
+		using Config = spk::PageFailureLimits;
 
 	private:
 		mutable std::mutex _mutex;
@@ -43,8 +38,7 @@ namespace spk::NetworkInternal
 	public:
 		void configure(Config config)
 		{
-			if (config.minimumPages == 0 || config.minimumBytes == 0 ||
-				config.window.count() <= 0 || config.consecutiveFailures == 0)
+			if (!config.valid())
 			{
 				throw spk::Exception("Network failure limits must be positive.");
 			}
