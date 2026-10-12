@@ -590,6 +590,15 @@ namespace spk::NetworkInternal
 				}
 			}
 
+			void _expireReassemblies()
+			{
+				for (auto &[id, session] : _sessions)
+				{
+					(void)id;
+					session->reassembler.expire();
+				}
+			}
+
 			void _run() noexcept
 			{
 				std::array<epoll_event, EventBatchSize> events{};
@@ -597,7 +606,7 @@ namespace spk::NetworkInternal
 				{
 					while (!_stopping)
 					{
-						const int count = ::epoll_wait(_epoll, events.data(), events.size(), -1);
+						const int count = ::epoll_wait(_epoll, events.data(), events.size(), 1000);
 						if (count < 0 && errno == EINTR)
 						{
 							continue;
@@ -610,6 +619,7 @@ namespace spk::NetworkInternal
 						{
 							_handleEvent(events[static_cast<std::size_t>(index)]);
 						}
+						_expireReassemblies();
 					}
 				} catch (...)
 				{
