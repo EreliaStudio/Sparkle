@@ -10,6 +10,7 @@
 #include <map>
 #include <optional>
 #include <unordered_map>
+#include <vector>
 
 namespace spk::NetworkInternal
 {
@@ -48,7 +49,7 @@ namespace spk::NetworkInternal
 			std::chrono::milliseconds timeout = std::chrono::seconds(60));
 
 		[[nodiscard]] std::optional<Message> accept(const PageFragment &page, Clock::time_point now = Clock::now());
-		void expire(Clock::time_point now = Clock::now());
+		std::vector<std::uint64_t> expire(Clock::time_point now = Clock::now());
 		void clear() noexcept;
 		[[nodiscard]] std::size_t reservedBytes() const noexcept;
 		[[nodiscard]] std::size_t pendingTransfers() const noexcept;

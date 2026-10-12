@@ -167,9 +167,12 @@ TEST(PageReassembler, TimedOutTransfersReleaseTheirReservedMemory)
 	const auto now = spk::NetworkInternal::PageReassembler::Clock::now();
 	EXPECT_FALSE(assembler.accept(fragment(*first), now).has_value());
 	EXPECT_EQ(assembler.reservedBytes(), 200u);
-	assembler.expire(now + std::chrono::milliseconds(99));
+	EXPECT_TRUE(assembler.expire(now + std::chrono::milliseconds(99)).empty());
 	EXPECT_EQ(assembler.pendingTransfers(), 1u);
-	assembler.expire(now + std::chrono::milliseconds(101));
+	const auto expired = assembler.expire(now + std::chrono::milliseconds(101));
+	ASSERT_EQ(expired.size(), 1u);
+	EXPECT_EQ(expired.front(), first->transferID);
+	EXPECT_TRUE(assembler.expire(now + std::chrono::milliseconds(102)).empty());
 	EXPECT_EQ(assembler.pendingTransfers(), 0u);
 	EXPECT_EQ(assembler.reservedBytes(), 0u);
 }
@@ -222,4 +225,19 @@ TEST(PageReassembler, TenConsecutiveMalformedTransfersReachAbuseThreshold)
 		EXPECT_THROW((void)assembler.accept(malformed), spk::NetworkInternal::PageReassemblyError);
 		EXPECT_EQ(assembler.failureLimitReached(), index == 9);
 	}
+}
+
+TEST(PageReassembler, ExpiredTransferRejectsLatePagesWithoutReallocation)
+{
+	spk::NetworkInternal::PageScheduler scheduler;
+	(void)scheduler.enqueue(message(20, 17));
+	const auto first = scheduler.nextPage(5);
+	const auto later = scheduler.nextPage(5);
+	spk::NetworkInternal::PageReassembler assembler(100, 100, std::chrono::milliseconds(50));
+	const auto now = spk::NetworkInternal::PageReassembler::Clock::now();
+	ASSERT_FALSE(assembler.accept(fragment(*first), now).has_value());
+	EXPECT_EQ(assembler.expire(now + std::chrono::milliseconds(50)).size(), 1u);
+	EXPECT_FALSE(assembler.accept(fragment(*later), now + std::chrono::milliseconds(51)).has_value());
+	EXPECT_EQ(assembler.pendingTransfers(), 0u);
+	EXPECT_EQ(assembler.reservedBytes(), 0u);
 }

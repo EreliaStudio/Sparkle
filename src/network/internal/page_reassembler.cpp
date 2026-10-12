@@ -152,8 +152,10 @@ namespace spk::NetworkInternal
 		return result;
 	}
 
-	void PageReassembler::expire(Clock::time_point now)
+	std::vector<std::uint64_t> PageReassembler::expire(Clock::time_point now)
 	{
+		std::vector<std::uint64_t> expired;
+		expired.reserve(_transfers.size());
 		for (auto iterator = _transfers.begin(); iterator != _transfers.end();)
 		{
 			if (now - iterator->second.updated < _timeout)
@@ -162,6 +164,7 @@ namespace spk::NetworkInternal
 				continue;
 			}
 			_reservedBytes -= iterator->second.writer.size();
+			expired.push_back(iterator->first);
 			_failedTransfers.insert_or_assign(iterator->first, now);
 			iterator = _transfers.erase(iterator);
 		}
@@ -176,6 +179,7 @@ namespace spk::NetworkInternal
 				++iterator;
 			}
 		}
+		return expired;
 	}
 
 	void PageReassembler::clear() noexcept
