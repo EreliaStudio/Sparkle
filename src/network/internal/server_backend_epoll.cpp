@@ -6,7 +6,7 @@
 #	include "network/internal/connection_id.hpp"
 #	include "network/internal/frame.hpp"
 #	include "network/internal/page.hpp"
-#	include "network/internal/page_reassembler.hpp"
+#	include "network/internal/transfer_reception.hpp"
 #	include "network/internal/page_scheduler.hpp"
 #	include "network/internal/socket.hpp"
 
@@ -49,7 +49,7 @@ namespace spk::NetworkInternal
 			ConnectionID id;
 			Socket socket;
 			std::vector<std::byte> receivedBytes;
-			PageReassembler reassembler;
+			TransferReception reception;
 			PageScheduler scheduler;
 			std::deque<Frame> outgoing;
 			std::size_t outgoingOffset = 0;
@@ -59,7 +59,7 @@ namespace spk::NetworkInternal
 				id(id),
 				socket(std::move(socket))
 			{
-				reassembler.configureFailureLimits(limits);
+				reception.configureFailureLimits(limits);
 			}
 		};
 
@@ -267,6 +267,12 @@ namespace spk::NetworkInternal
 				}
 			}
 
+			void _queueResponse(Session &session, const TransferResponse &response)
+			{
+				session.outgoing.push_back(response.encode());
+				_modify(session, true);
+			}
+
 			[[nodiscard]] bool _extractMessage(Session &session, std::size_t &consumed)
 			{
 				const std::size_t remaining = session.receivedBytes.size() - consumed;
@@ -288,21 +294,24 @@ namespace spk::NetworkInternal
 				}
 				if (kind == PageFrameKind)
 				{
-					session.reassembler.expire();
-					try
+					auto received = session.reception.accept(decodePage(std::span(data, frameSize)), session.id);
+					if (received.message.has_value())
 					{
-						auto complete = session.reassembler.accept(decodePage(std::span(data, frameSize)));
-						if (complete.has_value())
-						{
-							_publish(ReceivedMessage{session.id, complete->withConnectionID(session.id)});
-						}
-					} catch (const PageReassemblyError &)
-					{
-						if (session.reassembler.failureLimitReached())
-						{
-							throw;
-						}
+						_publish(ReceivedMessage{session.id, received.message->withConnectionID(session.id)});
 					}
+					if (received.response.has_value())
+					{
+						_queueResponse(session, *received.response);
+					}
+				}
+				else if (kind == TransferResponse::FrameKind)
+				{
+					const auto response = TransferResponse::decode(std::span(data, frameSize));
+					if (response.connectionID != session.id)
+					{
+						throw Exception("Transfer response has an incorrect connection ID.");
+					}
+					(void)session.scheduler.complete(response.transferID, response.status, response.reason);
 				}
 				else if (kind == 0)
 				{
@@ -491,7 +500,7 @@ namespace spk::NetworkInternal
 					for (auto &[id, session] : _sessions)
 					{
 						(void)id;
-						session->reassembler.configureFailureLimits(_failureLimits);
+						session->reception.configureFailureLimits(_failureLimits);
 					}
 					return;
 				}
@@ -593,8 +602,10 @@ namespace spk::NetworkInternal
 			{
 				for (auto &[id, session] : _sessions)
 				{
-					(void)id;
-					session->reassembler.expire();
+					for (const auto &response : session->reception.expire(id))
+					{
+						_queueResponse(*session, response);
+					}
 				}
 			}
 
