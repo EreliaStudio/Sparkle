@@ -34,9 +34,11 @@ namespace
 
 	[[nodiscard]] bool finished(const spk::Transfer &transfer, spk::Transfer::Status status)
 	{
-		return NetworkTestUtils::waitUntil([&] {
-			return transfer.status() == status;
-		}, 5s);
+		return NetworkTestUtils::waitUntil(
+			[&] {
+				return transfer.status() == status;
+			},
+			5s);
 	}
 }
 
@@ -149,9 +151,11 @@ TEST(ServerTransferIntegration, DisconnectRecipientLeavesOtherConnectionsUsable)
 
 	const auto transfers = server.sendToAll(makeMessage(155, 200), spk::Message::Priority::Normal, spk::Connection::OverflowPolicy::DisconnectRecipient);
 	EXPECT_TRUE(finished(transfers.at(firstConnection.id()), spk::Transfer::Status::Rejected));
-	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
-		return !first.isConnected();
-	}, 5s));
+	EXPECT_TRUE(NetworkTestUtils::waitUntil(
+		[&] {
+			return !first.isConnected();
+		},
+		5s));
 	EXPECT_EQ(NetworkTestUtils::collect(second.messages(), 1, 5s).size(), 1u);
 	EXPECT_TRUE(finished(transfers.at(secondConnection.id()), spk::Transfer::Status::Success));
 	EXPECT_TRUE(second.isConnected());
