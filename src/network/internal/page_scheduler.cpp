@@ -1,6 +1,6 @@
 #include "network/internal/page_scheduler.hpp"
-#include "network/internal/transfer_completion.hpp"
 #include "network/internal/outgoing_message_validator.hpp"
+#include "network/internal/transfer_completion.hpp"
 
 #include "exception.hpp"
 

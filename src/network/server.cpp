@@ -1,8 +1,8 @@
 #include "network/server.hpp"
 
 #include "exception.hpp"
-#include "network/internal/server_backend.hpp"
 #include "network/internal/outgoing_message_validator.hpp"
+#include "network/internal/server_backend.hpp"
 
 #include <utility>
 
