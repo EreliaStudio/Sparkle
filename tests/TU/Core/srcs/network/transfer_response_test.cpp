@@ -32,12 +32,13 @@ TEST(TransferResponse, EncodesAndDecodesSuccessAndFailure)
 
 TEST(TransferResponse, RejectsUnacceptableControlOutcomes)
 {
-	EXPECT_THROW((void)TransferResponse{42, 1, Transfer::Status::Indeterminate,
-		Transfer::Reason::AcknowledgmentTimeout}.encode(), spk::Exception);
-	EXPECT_THROW((void)TransferResponse{42, 0, Transfer::Status::Success,
-		Transfer::Reason::None}.encode(), spk::Exception);
-	EXPECT_THROW((void)TransferResponse{42, 1, Transfer::Status::Success,
-		Transfer::Reason::ReceiverCapacity}.encode(), spk::Exception);
+	const TransferResponse indeterminate{42, 1, Transfer::Status::Indeterminate,
+		Transfer::Reason::AcknowledgmentTimeout};
+	const TransferResponse missingID{42, 0, Transfer::Status::Success, Transfer::Reason::None};
+	const TransferResponse inconsistent{42, 1, Transfer::Status::Success, Transfer::Reason::ReceiverCapacity};
+	EXPECT_THROW((void)indeterminate.encode(), spk::Exception);
+	EXPECT_THROW((void)missingID.encode(), spk::Exception);
+	EXPECT_THROW((void)inconsistent.encode(), spk::Exception);
 }
 
 TEST(TransferResponse, RejectsMalformedFrames)
