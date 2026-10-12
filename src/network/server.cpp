@@ -177,7 +177,7 @@ namespace spk
 		_statusProvider.trigger(connection, Connection::Status::Pending, Connection::Error::None);
 		{
 			const std::scoped_lock lock(_connectionsMutex);
-			if (!_connections.contains(id) || !connection.isConnected() && connection.status() != Connection::Status::Pending)
+			if (!_connections.contains(id) || connection.status() != Connection::Status::Pending)
 			{
 				return;
 			}

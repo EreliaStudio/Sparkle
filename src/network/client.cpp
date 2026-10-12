@@ -284,7 +284,7 @@ namespace spk
 		return connection;
 	}
 
-	void Client::_setStatus(const Connection &connection, Connection::Status status, Connection::Error error)
+	void Client::_setStatus(Connection connection, Connection::Status status, Connection::Error error)
 	{
 		{
 			const std::scoped_lock lock(_connectionMutex);

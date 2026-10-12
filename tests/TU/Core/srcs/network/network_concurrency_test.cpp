@@ -253,7 +253,8 @@ TEST(NetworkConcurrencyTest, ConcurrentServerProducersAreSerializedSafely)
 			failure.run([&] {
 				for (std::uint32_t sequence = 0; sequence < MessageCount; ++sequence)
 				{
-					server.sendTo(server.connection(connection),
+					server.sendTo(
+						server.connection(connection),
 						makeMessage(
 							27,
 							SequencePayload{producer, sequence}));

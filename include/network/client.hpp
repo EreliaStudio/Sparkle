@@ -33,7 +33,7 @@ namespace spk
 
 		void _publish(Message message);
 		[[nodiscard]] Connection _beginConnection();
-		void _setStatus(const Connection &connection, Connection::Status status, Connection::Error error = Connection::Error::None);
+		void _setStatus(Connection connection, Connection::Status status, Connection::Error error = Connection::Error::None);
 
 	public:
 		Client();
