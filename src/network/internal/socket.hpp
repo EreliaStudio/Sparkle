@@ -1,9 +1,11 @@
 #pragma once
 
 #include <atomic>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <span>
+#include <stop_token>
 #include <string_view>
 
 namespace spk::NetworkInternal
@@ -39,6 +41,7 @@ namespace spk::NetworkInternal
 		[[nodiscard]] static Socket createTCPv4();
 		[[nodiscard]] static Socket adopt(NativeHandle handle) noexcept;
 		[[nodiscard]] static Socket connectTCP(std::string_view address, std::uint16_t port);
+		[[nodiscard]] static Socket connectTCP(std::string_view address, std::uint16_t port, std::chrono::steady_clock::time_point deadline, std::stop_token stop);
 		[[nodiscard]] static Socket listenTCP(std::uint16_t port);
 
 		[[nodiscard]] Socket accept() const;
@@ -47,6 +50,7 @@ namespace spk::NetworkInternal
 		void sendAll(std::span<const std::byte> data) const;
 		[[nodiscard]] ReceiveResult receive(std::span<std::byte> buffer) const;
 		[[nodiscard]] bool receiveAll(std::span<std::byte> buffer) const;
+		[[nodiscard]] bool receiveAllUntil(std::span<std::byte> buffer, std::chrono::steady_clock::time_point deadline, std::stop_token stop) const;
 
 		void close() noexcept;
 		[[nodiscard]] bool valid() const noexcept;

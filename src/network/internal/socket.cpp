@@ -5,6 +5,9 @@
 #include <algorithm>
 #include <cerrno>
 #include <climits>
+#include <chrono>
+#include <memory>
+#include <stop_token>
 #include <string>
 
 #ifdef _WIN32
@@ -123,6 +126,73 @@ namespace spk::NetworkInternal
 		{
 			return std::to_string(static_cast<unsigned int>(port));
 		}
+
+		[[nodiscard]] bool connecting(int error) noexcept
+		{
+#ifdef _WIN32
+			return error == WSAEWOULDBLOCK || error == WSAEINPROGRESS;
+#else
+			return error == EINPROGRESS || error == EWOULDBLOCK;
+#endif
+		}
+
+		[[nodiscard]] bool waiting(int error) noexcept
+		{
+#ifdef _WIN32
+			return error == WSAEWOULDBLOCK;
+#else
+			return error == EAGAIN || error == EWOULDBLOCK;
+#endif
+		}
+
+		[[nodiscard]] bool waitForSocket(
+			SystemSocket socket, bool writing, std::chrono::steady_clock::time_point deadline, std::stop_token stop)
+		{
+			while (!stop.stop_requested() && std::chrono::steady_clock::now() < deadline)
+			{
+				fd_set sockets;
+				FD_ZERO(&sockets);
+				FD_SET(socket, &sockets);
+				const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(
+					deadline - std::chrono::steady_clock::now());
+				const auto duration = std::clamp(remaining, std::chrono::milliseconds(1), std::chrono::milliseconds(50));
+				timeval timeout{static_cast<long>(duration.count() / 1000), static_cast<long>((duration.count() % 1000) * 1000)};
+				const int ready = ::select(static_cast<int>(socket) + 1,
+					writing ? nullptr : &sockets, writing ? &sockets : nullptr, nullptr, &timeout);
+				if (ready > 0)
+				{
+					return true;
+				}
+				if (ready < 0 && !interrupted(lastSocketError()))
+				{
+					throw Exception("Unable to poll TCP socket.");
+				}
+			}
+			return false;
+		}
+
+		[[nodiscard]] bool connectReady(
+			SystemSocket socket, const addrinfo &entry,
+			std::chrono::steady_clock::time_point deadline, std::stop_token stop)
+		{
+			if (::connect(socket, entry.ai_addr, static_cast<int>(entry.ai_addrlen)) == 0)
+			{
+				return true;
+			}
+			if (!connecting(lastSocketError()) || !waitForSocket(socket, true, deadline, stop))
+			{
+				return false;
+			}
+			int error = 0;
+#ifdef _WIN32
+			int length = sizeof(error);
+			return ::getsockopt(socket, SOL_SOCKET, SO_ERROR, reinterpret_cast<char *>(&error), &length) == 0 && error == 0;
+#else
+			socklen_t length = sizeof(error);
+			return ::getsockopt(socket, SOL_SOCKET, SO_ERROR, &error, &length) == 0 && error == 0;
+#endif
+		}
+
 	}
 
 	Socket::Socket(NativeHandle handle) noexcept :
@@ -195,6 +265,43 @@ namespace spk::NetworkInternal
 
 		::freeaddrinfo(addresses);
 		throw Exception("Unable to connect to [" + host + ":" + service + "].");
+	}
+
+	Socket Socket::connectTCP(
+		std::string_view address, std::uint16_t port, std::chrono::steady_clock::time_point deadline, std::stop_token stop)
+	{
+		ensureSocketRuntime();
+		addrinfo hints{};
+		hints.ai_family = AF_UNSPEC;
+		hints.ai_socktype = SOCK_STREAM;
+		hints.ai_protocol = IPPROTO_TCP;
+		addrinfo *addresses = nullptr;
+		const std::string host(address);
+		if (::getaddrinfo(host.c_str(), portString(port).c_str(), &hints, &addresses) != 0)
+		{
+			throw Exception("Unable to resolve network address [" + host + "].");
+		}
+		std::unique_ptr<addrinfo, decltype(&::freeaddrinfo)> resolved(addresses, &::freeaddrinfo);
+		for (auto *entry = addresses; entry != nullptr && !stop.stop_requested(); entry = entry->ai_next)
+		{
+			if (std::chrono::steady_clock::now() >= deadline)
+			{
+				break;
+			}
+			const auto native = createSystemSocket(entry->ai_family);
+			if (native == InvalidSystemSocket)
+			{
+				continue;
+			}
+			Socket candidate = adopt(static_cast<NativeHandle>(native));
+			candidate.setNonBlocking(true);
+			if (connectReady(native, *entry, deadline, stop))
+			{
+				candidate.setNonBlocking(false);
+				return candidate;
+			}
+		}
+		throw Exception("Unable to connect to [" + host + ":" + portString(port) + "].");
 	}
 
 	Socket Socket::listenTCP(std::uint16_t port)
@@ -365,6 +472,50 @@ namespace spk::NetworkInternal
 			offset += result.size;
 		}
 		return true;
+	}
+
+	bool Socket::receiveAllUntil(
+		std::span<std::byte> buffer, std::chrono::steady_clock::time_point deadline, std::stop_token stop) const
+	{
+		setNonBlocking(true);
+		std::size_t offset = 0;
+		try
+		{
+			while (offset < buffer.size() && waitForSocket(static_cast<SystemSocket>(nativeHandle()), false, deadline, stop))
+			{
+				const auto socket = static_cast<SystemSocket>(nativeHandle());
+#ifdef _WIN32
+				const int received = ::recv(socket, reinterpret_cast<char *>(buffer.data() + offset),
+					static_cast<int>(std::min<std::size_t>(buffer.size() - offset, INT_MAX)), 0);
+#else
+				const int received = static_cast<int>(::recv(socket, buffer.data() + offset, buffer.size() - offset, 0));
+#endif
+				if (received == 0)
+				{
+					break;
+				}
+				if (received > 0)
+				{
+					offset += static_cast<std::size_t>(received);
+				}
+				else if (!waiting(lastSocketError()) && !interrupted(lastSocketError()))
+				{
+					throw Exception("Unable to receive handshake data.");
+				}
+			}
+		} catch (...)
+		{
+			if (valid())
+			{
+				setNonBlocking(false);
+			}
+			throw;
+		}
+		if (valid())
+		{
+			setNonBlocking(false);
+		}
+		return offset == buffer.size();
 	}
 
 	void Socket::close() noexcept
