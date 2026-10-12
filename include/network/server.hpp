@@ -4,6 +4,7 @@
 #include "design_pattern/contract_provider.hpp"
 #include "network/message_dispatcher.hpp"
 #include "network/page_failure_limits.hpp"
+#include "network/transfer.hpp"
 #include "network/types.hpp"
 
 #include <chrono>
@@ -19,6 +20,7 @@ namespace spk
 	public:
 		using MessageDispatcher = spk::MessageDispatcher<ReceivedMessage>;
 		using MessageQueue = ThreadSafeFIFO<ReceivedMessage>;
+		using TransferResults = std::unordered_map<ConnectionID, Transfer>;
 		using StatusProvider = ContractProvider<Connection, Connection::Status, Connection::Error>;
 		using StatusCallback = StatusProvider::callback_type;
 		using StatusContract = StatusProvider::Contract;
@@ -54,9 +56,10 @@ namespace spk
 		void stop();
 		void setPageFailureLimits(PageFailureLimits limits);
 		void setHandshakeTimeout(std::chrono::milliseconds timeout);
-		void sendTo(const Connection &connection, const Message &message, Message::Priority priority = Message::Priority::Normal);
-		void sendTo(const ConnectionSet &connections, const Message &message, Message::Priority priority = Message::Priority::Normal);
-		void sendToAll(const Message &message, Message::Priority priority = Message::Priority::Normal);
+		void setGlobalMaxQueuedBytes(std::size_t bytes);
+		Transfer sendTo(const Connection &connection, const Message &message, Message::Priority priority = Message::Priority::Normal);
+		TransferResults sendTo(const ConnectionSet &connections, const Message &message, Message::Priority priority = Message::Priority::Normal, Connection::OverflowPolicy policy = Connection::OverflowPolicy::Reject);
+		TransferResults sendToAll(const Message &message, Message::Priority priority = Message::Priority::Normal, Connection::OverflowPolicy policy = Connection::OverflowPolicy::Reject);
 		[[nodiscard]] MessageQueue &messages() noexcept;
 		[[nodiscard]] MessageDispatcher &messageDispatcher() noexcept;
 		// Dispatch a receive batch on the calling thread; do not also drain messages().
