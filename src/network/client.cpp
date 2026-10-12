@@ -3,7 +3,7 @@
 #include "exception.hpp"
 #include "network/internal/frame.hpp"
 #include "network/internal/page.hpp"
-#include "network/internal/page_reassembler.hpp"
+#include "network/internal/transfer_reception.hpp"
 #include "network/internal/page_scheduler.hpp"
 #include "network/internal/socket.hpp"
 
@@ -12,6 +12,8 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <deque>
+#include <memory>
 #include <mutex>
 #include <thread>
 #include <utility>
@@ -33,7 +35,9 @@ namespace spk
 		std::mutex _sendMutex;
 		std::condition_variable _sendAvailable;
 		NetworkInternal::PageScheduler _scheduler;
-		NetworkInternal::PageReassembler _reassembler;
+		NetworkInternal::TransferReception _reception;
+		std::deque<std::shared_ptr<std::vector<std::byte>>> _responses;
+		std::atomic<Connection::ID> _remoteID = Connection::InvalidID;
 
 		void _run()
 		{
@@ -67,22 +71,14 @@ namespace spk
 			const auto kind = NetworkInternal::read16(frame.data() + 6);
 			if (kind == NetworkInternal::PageFrameKind)
 			{
-				const std::scoped_lock lock(_receiveMutex);
-				_reassembler.expire();
-				try
-				{
-					auto message = _reassembler.accept(NetworkInternal::decodePage(frame));
-					if (message.has_value())
-					{
-						_owner._publish(std::move(*message));
-					}
-				} catch (const NetworkInternal::PageReassemblyError &)
-				{
-					if (_reassembler.failureLimitReached())
-					{
-						throw;
-					}
-				}
+				_receivePage(frame);
+				return;
+			}
+			if (kind == NetworkInternal::TransferResponse::FrameKind)
+			{
+				const auto response = NetworkInternal::TransferResponse::decode(frame);
+				_acceptRemoteID(response.connectionID);
+				(void)_scheduler.complete(response.transferID, response.status, response.reason);
 				return;
 			}
 			if (kind != 0)
@@ -97,7 +93,53 @@ namespace spk
 			_owner._publish(std::move(writer).build());
 			{
 				const std::scoped_lock lock(_receiveMutex);
-				_reassembler.successfulMessage();
+				_reception.successfulMessage();
+			}
+		}
+
+		void _acceptRemoteID(Connection::ID id)
+		{
+			if (id == Connection::InvalidID)
+			{
+				throw Exception("Incoming message has no server-assigned connection ID.");
+			}
+			Connection::ID expected = Connection::InvalidID;
+			if (!_remoteID.compare_exchange_strong(expected, id) && expected != id)
+			{
+				throw Exception("Unexpected connection ID in incoming message.");
+			}
+		}
+
+		void _queueResponse(const NetworkInternal::TransferResponse &response)
+		{
+			auto frame = response.encode();
+			{
+				const std::scoped_lock lock(_sendMutex);
+				if (!_connected)
+				{
+					return;
+				}
+				_responses.push_back(std::move(frame));
+			}
+			_sendAvailable.notify_one();
+		}
+
+		void _receivePage(std::span<const std::byte> frame)
+		{
+			const auto page = NetworkInternal::decodePage(frame);
+			_acceptRemoteID(page.header.connectionID);
+			NetworkInternal::TransferReception::Result received;
+			{
+				const std::scoped_lock lock(_receiveMutex);
+				received = _reception.accept(page, page.header.connectionID);
+			}
+			if (received.message.has_value())
+			{
+				_owner._publish(std::move(*received.message));
+			}
+			if (received.response.has_value())
+			{
+				_queueResponse(*received.response);
 			}
 		}
 
@@ -107,20 +149,33 @@ namespace spk
 			{
 				while (_connected)
 				{
+					std::shared_ptr<std::vector<std::byte>> frame;
 					{
 						std::unique_lock lock(_sendMutex);
 						_sendAvailable.wait(lock, [this] {
-							return !_connected || _scheduler.pendingTransfers() != 0;
+							return !_connected || !_responses.empty() || _scheduler.pendingTransfers() != 0;
 						});
+						if (!_connected)
+						{
+							break;
+						}
+						if (!_responses.empty())
+						{
+							frame = std::move(_responses.front());
+							_responses.pop_front();
+						}
 					}
-					if (!_connected)
+					if (frame == nullptr)
 					{
-						break;
+						const auto page = _scheduler.nextPage(NetworkInternal::DefaultMaximumPageBytes);
+						if (page.has_value())
+						{
+							frame = NetworkInternal::encodePage(*page);
+						}
 					}
-					const auto page = _scheduler.nextPage(NetworkInternal::DefaultMaximumPageBytes);
-					if (page.has_value())
+					if (frame != nullptr)
 					{
-						_socket.sendAll(*NetworkInternal::encodePage(*page));
+						_socket.sendAll(*frame);
 					}
 				}
 			} catch (...)
@@ -200,8 +255,15 @@ namespace spk
 				while (_connected)
 				{
 					std::this_thread::sleep_for(std::chrono::seconds(1));
-					const std::scoped_lock lock(_receiveMutex);
-					_reassembler.expire();
+					std::vector<NetworkInternal::TransferResponse> responses;
+					{
+						const std::scoped_lock lock(_receiveMutex);
+						responses = _reception.expire(_remoteID.load());
+					}
+					for (const auto &response : responses)
+					{
+						_queueResponse(response);
+					}
 				}
 			});
 			try
@@ -222,9 +284,14 @@ namespace spk
 			_joinWorkers();
 			_scheduler.clear();
 			{
-				const std::scoped_lock lock(_receiveMutex);
-				_reassembler.clear();
+				const std::scoped_lock lock(_sendMutex);
+				_responses.clear();
 			}
+			{
+				const std::scoped_lock lock(_receiveMutex);
+				_reception.clear();
+			}
+			_remoteID = Connection::InvalidID;
 			if (notify)
 			{
 				_owner._setStatus(_session, Connection::Status::Disconnected);
