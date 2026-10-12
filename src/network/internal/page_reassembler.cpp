@@ -33,12 +33,28 @@ namespace spk::NetworkInternal
 
 	void PageReassembler::_validateNew(const PageFragment &page) const
 	{
-		if (page.transferID == 0 || page.offset != 0 || page.totalSize > _maxMessageBytes ||
-			page.totalSize > _maxIncompleteBytes - std::min(_reservedBytes, _maxIncompleteBytes) ||
-			page.totalSize > std::numeric_limits<std::size_t>::max() ||
-			_transfers.size() >= 512 || (page.totalSize != 0 && page.data.empty()))
+		using Reason = PageReassemblyError::Reason;
+		if (page.transferID == 0)
 		{
-			throw Exception("Incoming transfer exceeds configured limits or has an invalid first page.");
+			throw Exception("Network page has an invalid transfer ID.");
+		}
+		if (page.totalSize > _maxMessageBytes || page.totalSize > std::numeric_limits<std::size_t>::max())
+		{
+			throw PageReassemblyError(page.transferID, Reason::InvalidLength);
+		}
+		if (page.offset > page.totalSize || page.data.size() > page.totalSize - page.offset ||
+			(page.totalSize != 0 && page.data.empty()))
+		{
+			throw PageReassemblyError(page.transferID, Reason::InvalidLength);
+		}
+		if (page.offset != 0)
+		{
+			throw PageReassemblyError(page.transferID, Reason::InvalidFirstPage);
+		}
+		if (_transfers.size() >= 512 ||
+			page.totalSize > _maxIncompleteBytes - std::min(_reservedBytes, _maxIncompleteBytes))
+		{
+			throw PageReassemblyError(page.transferID, Reason::Capacity);
 		}
 	}
 
@@ -56,30 +72,33 @@ namespace spk::NetworkInternal
 
 	void PageReassembler::_insert(Transfer &transfer, const PageFragment &page, Clock::time_point now)
 	{
-		if ((page.totalSize != 0 && page.data.empty()) ||
-			page.totalSize != transfer.writer.size() ||
+		using Reason = PageReassemblyError::Reason;
+		if (page.totalSize != transfer.writer.size() ||
 			page.header.messageType != transfer.writer.type() ||
 			page.header.requestID != transfer.writer.requestID() ||
-			page.header.connectionID != transfer.writer.connectionID() ||
-			page.offset > page.totalSize || page.data.size() > page.totalSize - page.offset)
+			page.header.connectionID != transfer.writer.connectionID())
 		{
-			throw Exception("Inconsistent network page metadata.");
+			throw PageReassemblyError(page.transferID, Reason::InconsistentMetadata);
+		}
+		if (page.offset > page.totalSize || page.data.size() > page.totalSize - page.offset)
+		{
+			throw PageReassemblyError(page.transferID, Reason::InvalidOffset);
+		}
+		if (page.totalSize != 0 && page.data.empty())
+		{
+			throw PageReassemblyError(page.transferID, Reason::InvalidLength);
 		}
 		auto next = transfer.portions.lower_bound(page.offset);
 		if (next != transfer.portions.end() && next->first == page.offset)
 		{
-			if (!_duplicate(transfer, page))
-			{
-				throw Exception("Conflicting duplicate network page.");
-			}
-			transfer.updated = now;
-			return;
+			throw PageReassemblyError(
+				page.transferID, _duplicate(transfer, page) ? Reason::DuplicatePage : Reason::ConflictingPage);
 		}
 		if ((next != transfer.portions.end() && page.data.size() > next->first - page.offset) ||
 			(next != transfer.portions.begin() &&
 			 std::prev(next)->second > page.offset - std::prev(next)->first))
 		{
-			throw Exception("Overlapping network page.");
+			throw PageReassemblyError(page.transferID, Reason::OverlappingPage);
 		}
 		std::copy(page.data.begin(), page.data.end(), transfer.writer.data().begin() + page.offset);
 		transfer.portions.emplace(page.offset, page.data.size());
@@ -89,30 +108,43 @@ namespace spk::NetworkInternal
 
 	std::optional<Message> PageReassembler::accept(const PageFragment &page, Clock::time_point now)
 	{
-		auto iterator = _transfers.find(page.transferID);
-		if (iterator == _transfers.end())
-		{
-			_validateNew(page);
-			iterator = _transfers.try_emplace(page.transferID, page, now).first;
-			_reservedBytes += static_cast<std::size_t>(page.totalSize);
-		}
-		Transfer &transfer = iterator->second;
-		try
-		{
-			_insert(transfer, page, now);
-		} catch (...)
-		{
-			_reservedBytes -= transfer.writer.size();
-			_transfers.erase(iterator);
-			throw;
-		}
-		if (transfer.receivedBytes != transfer.writer.size())
+		if (_failedTransfers.contains(page.transferID))
 		{
 			return std::nullopt;
 		}
-		Message result = std::move(transfer.writer).build();
+		auto iterator = _transfers.find(page.transferID);
+		try
+		{
+			if (iterator == _transfers.end())
+			{
+				_validateNew(page);
+				iterator = _transfers.try_emplace(page.transferID, page, now).first;
+				_reservedBytes += static_cast<std::size_t>(page.totalSize);
+			}
+			_insert(iterator->second, page, now);
+		} catch (const PageReassemblyError &error)
+		{
+			if (iterator != _transfers.end())
+			{
+				_reservedBytes -= iterator->second.writer.size();
+				_transfers.erase(iterator);
+			}
+			_failedTransfers.insert_or_assign(page.transferID, now);
+			if (error.reason() != PageReassemblyError::Reason::Capacity)
+			{
+				(void)_failureLimiter.malformedPage(page.data.size() + FrameHeaderSize + PageMetadataSize, now);
+				(void)_failureLimiter.failedMessage();
+			}
+			throw;
+		}
+		if (iterator->second.receivedBytes != iterator->second.writer.size())
+		{
+			return std::nullopt;
+		}
+		Message result = std::move(iterator->second.writer).build();
 		_reservedBytes -= result.size();
 		_transfers.erase(iterator);
+		_failureLimiter.successfulMessage();
 		return result;
 	}
 
@@ -128,12 +160,25 @@ namespace spk::NetworkInternal
 			_reservedBytes -= iterator->second.writer.size();
 			iterator = _transfers.erase(iterator);
 		}
+		for (auto iterator = _failedTransfers.begin(); iterator != _failedTransfers.end();)
+		{
+			if (now - iterator->second >= _timeout)
+			{
+				iterator = _failedTransfers.erase(iterator);
+			}
+			else
+			{
+				++iterator;
+			}
+		}
 	}
 
 	void PageReassembler::clear() noexcept
 	{
 		_transfers.clear();
+		_failedTransfers.clear();
 		_reservedBytes = 0;
+		_failureLimiter.clear();
 	}
 
 	std::size_t PageReassembler::reservedBytes() const noexcept
@@ -144,5 +189,20 @@ namespace spk::NetworkInternal
 	std::size_t PageReassembler::pendingTransfers() const noexcept
 	{
 		return _transfers.size();
+	}
+
+	bool PageReassembler::failureLimitReached() const
+	{
+		return _failureLimiter.tripped();
+	}
+
+	void PageReassembler::configureFailureLimits(PageFailureLimiter::Config config)
+	{
+		_failureLimiter.configure(config);
+	}
+
+	void PageReassembler::successfulMessage()
+	{
+		_failureLimiter.successfulMessage();
 	}
 }
