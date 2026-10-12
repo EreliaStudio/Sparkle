@@ -23,9 +23,10 @@ TEST(HandshakeIntegration, PendingClientRejectsApplicationMessagesAndTimesOut)
 	EXPECT_EQ(connection.status(), spk::Connection::Status::Pending);
 	EXPECT_EQ(connection.id(), spk::Connection::InvalidID);
 	EXPECT_THROW(client.send(spk::Message::Writer(1).build()), spk::Exception);
-	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+	const auto disconnected = [&] {
 		return connection.status() == spk::Connection::Status::Disconnected;
-	}, 3s));
+	};
+	EXPECT_TRUE(NetworkTestUtils::waitUntil(disconnected, 3s));
 	EXPECT_EQ(connection.error(), spk::Connection::Error::Timeout);
 	EXPECT_FALSE(client.isConnected());
 	client.disconnect();
@@ -52,9 +53,7 @@ TEST(HandshakeIntegration, ServerRejectsTargetedSendDuringPending)
 		});
 	server.start(0);
 	spk::Connection connection = client.connect("127.0.0.1", server.port());
-	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
-		return connection.isConnected();
-	}, 5s));
+	EXPECT_TRUE(NetworkTestUtils::waitConnected(connection));
 	EXPECT_TRUE(rejected.load());
 	EXPECT_NE(connection.id(), spk::Connection::InvalidID);
 	client.disconnect();
