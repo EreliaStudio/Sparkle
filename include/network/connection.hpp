@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <unordered_set>
 
 namespace spk
 {
@@ -42,6 +43,11 @@ namespace spk
 			DisconnectRecipient
 		};
 
+		struct Hash final
+		{
+			[[nodiscard]] std::size_t operator()(const Connection &connection) const noexcept;
+		};
+
 		using StatusProvider = ContractProvider<Status, Error>;
 		using StatusCallback = StatusProvider::callback_type;
 		using StatusContract = StatusProvider::Contract;
@@ -63,6 +69,7 @@ namespace spk
 		Connection &operator=(const Connection &) = default;
 		Connection &operator=(Connection &&) noexcept = default;
 
+		[[nodiscard]] bool operator==(const Connection &other) const noexcept;
 		[[nodiscard]] ID id() const noexcept;
 		[[nodiscard]] Status status() const noexcept;
 		[[nodiscard]] Error error() const noexcept;
@@ -71,4 +78,6 @@ namespace spk
 		void setMaxQueuedBytes(std::size_t bytes) noexcept;
 		[[nodiscard]] StatusContract subscribeToStatusChange(StatusCallback callback);
 	};
+
+	using ConnectionSet = std::unordered_set<Connection, Connection::Hash>;
 }
