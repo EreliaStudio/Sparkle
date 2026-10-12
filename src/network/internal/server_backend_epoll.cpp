@@ -6,8 +6,9 @@
 #	include "network/internal/connection_id.hpp"
 #	include "network/internal/frame.hpp"
 #	include "network/internal/page.hpp"
+#	include "network/internal/transmission_frame.hpp"
 #	include "network/internal/transfer_reception.hpp"
-#	include "network/internal/page_scheduler.hpp"
+#	include "network/internal/transfer_sender.hpp"
 #	include "network/internal/socket.hpp"
 
 #	include <algorithm>
@@ -50,8 +51,8 @@ namespace spk::NetworkInternal
 			Socket socket;
 			std::vector<std::byte> receivedBytes;
 			TransferReception reception;
-			PageScheduler scheduler;
-			std::deque<Frame> outgoing;
+			TransferSender transfers;
+			std::deque<TransmissionFrame> outgoing;
 			std::size_t outgoingOffset = 0;
 			std::size_t queuedBytes = 0;
 
@@ -269,7 +270,7 @@ namespace spk::NetworkInternal
 
 			void _queueResponse(Session &session, const TransferResponse &response)
 			{
-				session.outgoing.push_back(response.encode());
+				session.outgoing.push_back(TransmissionFrame{response.encode(), 0});
 				_modify(session, true);
 			}
 
@@ -311,7 +312,7 @@ namespace spk::NetworkInternal
 					{
 						throw Exception("Transfer response has an incorrect connection ID.");
 					}
-					(void)session.scheduler.complete(response.transferID, response.status, response.reason);
+					(void)session.transfers.acknowledge(response);
 				}
 				else if (kind == 0)
 				{
@@ -338,16 +339,16 @@ namespace spk::NetworkInternal
 				{
 					if (session->outgoing.empty())
 					{
-						auto page = session->scheduler.nextPage(DefaultMaximumPageBytes);
+						auto page = session->transfers.nextPage(DefaultMaximumPageBytes);
 						if (!page.has_value())
 						{
 							break;
 						}
 						Frame frame = encodePage(*page);
 						session->queuedBytes += frame->size();
-						session->outgoing.push_back(std::move(frame));
+						session->outgoing.push_back(TransmissionFrame{std::move(frame), page->offset + page->length == page->totalSize ? page->transferID : 0});
 					}
-					const Frame &frame = session->outgoing.front();
+					const Frame &frame = session->outgoing.front().bytes;
 					const auto sent = _send(*session, *frame);
 					if (!sent.has_value())
 					{
@@ -364,11 +365,16 @@ namespace spk::NetworkInternal
 					if (session->outgoingOffset == frame->size())
 					{
 						session->queuedBytes -= frame->size();
+						const auto finalPage = session->outgoing.front().finalPage;
 						session->outgoing.pop_front();
 						session->outgoingOffset = 0;
+						if (finalPage != 0)
+						{
+							session->transfers.finalPageWritten(finalPage);
+						}
 					}
 				}
-				_modify(*session, !session->outgoing.empty() || session->scheduler.pendingTransfers() != 0);
+				_modify(*session, !session->outgoing.empty() || session->transfers.pendingTransfers() != 0);
 			}
 
 			[[nodiscard]] std::optional<std::size_t> _send(
@@ -402,7 +408,7 @@ namespace spk::NetworkInternal
 
 			void _queueMessage(const std::shared_ptr<Session> &session, const Message &message, Message::Priority priority)
 			{
-				(void)session->scheduler.enqueue(message.withConnectionID(session->id), priority);
+				(void)session->transfers.enqueue(message.withConnectionID(session->id), priority);
 				if (session->outgoing.empty())
 				{
 					_flushSession(session);
@@ -421,6 +427,7 @@ namespace spk::NetworkInternal
 				_sessions.erase(iterator);
 				_unregister(session->socket);
 				session->socket.close();
+				session->transfers.clear();
 				_notifyDisconnection(id);
 			}
 
@@ -606,6 +613,7 @@ namespace spk::NetworkInternal
 					{
 						_queueResponse(*session, response);
 					}
+					session->transfers.expire();
 				}
 			}
 
