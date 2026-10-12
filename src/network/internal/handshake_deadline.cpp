@@ -28,4 +28,5 @@ namespace spk::NetworkInternal
 	std::chrono::milliseconds HandshakeDeadline::remaining(Clock::time_point now) const noexcept
 	{
 		return std::max(std::chrono::milliseconds::zero(), std::chrono::duration_cast<std::chrono::milliseconds>(_expiresAt - now));
-	}}
+	}
+}
