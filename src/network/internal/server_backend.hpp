@@ -1,7 +1,7 @@
 #pragma once
 
-#include "network/page_failure_limits.hpp"
 #include "network/internal/server_send_batch.hpp"
+#include "network/page_failure_limits.hpp"
 #include "network/types.hpp"
 
 #include <chrono>
