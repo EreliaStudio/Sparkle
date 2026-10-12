@@ -6,7 +6,7 @@
 #	include "network/internal/connection_id.hpp"
 #	include "network/internal/frame.hpp"
 #	include "network/internal/handshake.hpp"
-#	include "network/internal/handshake_deadline.hpp"
+#	include "network/internal/server_handshake.hpp"
 #	include "network/internal/page.hpp"
 #	include "network/internal/transmission_frame.hpp"
 #	include "network/internal/transfer_reception.hpp"
@@ -54,10 +54,7 @@ namespace spk::NetworkInternal
 			Socket socket;
 			std::vector<std::byte> receivedBytes;
 			TransferReception reception;
-			HandshakeDeadline handshakeDeadline;
-			bool ready = false;
-			bool helloReceived = false;
-			Connection::Error disconnectError = Connection::Error::None;
+			ServerHandshake handshake;
 			TransferSender transfers;
 			std::deque<TransmissionFrame> outgoing;
 			std::size_t outgoingOffset = 0;
@@ -66,7 +63,7 @@ namespace spk::NetworkInternal
 			Session(ConnectionID id, Socket socket, PageFailureLimits limits, std::chrono::milliseconds timeout) :
 				id(id),
 				socket(std::move(socket)),
-				handshakeDeadline(timeout)
+				handshake(timeout)
 			{
 				reception.configureFailureLimits(limits);
 			}
@@ -299,39 +296,23 @@ namespace spk::NetworkInternal
 
 			void _handleHello(Session &session, std::span<const std::byte> bytes)
 			{
-				if (session.helloReceived)
-				{
-					throw Exception("Duplicate connection handshake.");
-				}
-				const auto packet = Handshake::decode(bytes);
-				session.helloReceived = true;
-				if (!Handshake::validHello(packet))
-				{
-					session.disconnectError = Connection::Error::Rejected;
-					if (packet.validationError != Connection::Error::None)
-					{
-						session.disconnectError = packet.validationError;
-					}
-					_queueHandshake(session, Handshake::Kind::Rejected, session.disconnectError);
-					return;
-				}
-				_queueHandshake(session, Handshake::Kind::Accepted);
+				const auto kind = session.handshake.accept(bytes);
+				_queueHandshake(session, kind, session.handshake.error());
 			}
 
 			void _handshakeWritten(Session &session, std::uint16_t kind)
 			{
-				if (kind == static_cast<std::uint16_t>(Handshake::Kind::Accepted))
+				if (session.handshake.written(static_cast<Handshake::Kind>(kind)))
 				{
-					session.ready = true;
 					_notifyReady(session.id);
 				}
-				else if (kind == static_cast<std::uint16_t>(Handshake::Kind::Rejected))
+				else
 				{
 					_disconnect(session.id);
 				}
 			}
 
-			void _queueResponse(Session &session, const TransferResponse &response)
+						void _queueResponse(Session &session, const TransferResponse &response)
 			{
 				auto frame = response.encode();
 				session.queuedBytes += frame->size();
@@ -350,11 +331,11 @@ namespace spk::NetworkInternal
 				const auto header = decode(std::span<const std::byte, FrameHeaderSize>(data, FrameHeaderSize));
 				const std::size_t frameSize = FrameHeaderSize + header.payloadSize;
 				const auto kind = read16(data + 6);
-				if (!session.ready && kind != static_cast<std::uint16_t>(Handshake::Kind::Hello))
+				if (!session.handshake.ready() && kind != static_cast<std::uint16_t>(Handshake::Kind::Hello))
 				{
 					throw Exception("Application traffic is forbidden during handshake.");
 				}
-				if (!session.ready && header.payloadSize != Handshake::PayloadSize)
+				if (!session.handshake.ready() && header.payloadSize != Handshake::PayloadSize)
 				{
 					throw Exception("Invalid initial handshake payload size.");
 				}
@@ -366,7 +347,7 @@ namespace spk::NetworkInternal
 				{
 					throw Exception("Incoming message contains a forged connection ID.");
 				}
-				if (!session.ready)
+				if (!session.handshake.ready())
 				{
 					_handleHello(session, std::span(data, frameSize));
 				}
@@ -494,7 +475,7 @@ namespace spk::NetworkInternal
 
 			void _queueMessage(const std::shared_ptr<Session> &session, const Message &message, Message::Priority priority)
 			{
-				if (!session->ready)
+				if (!session->handshake.ready())
 				{
 					throw Exception("Cannot send to a pending network connection.");
 				}
@@ -518,7 +499,7 @@ namespace spk::NetworkInternal
 				_unregister(session->socket);
 				session->socket.close();
 				session->transfers.clear();
-				_notifyDisconnection(id, session->disconnectError);
+				_notifyDisconnection(id, session->handshake.error());
 			}
 
 			void _disconnectAll() noexcept
@@ -634,7 +615,7 @@ namespace spk::NetworkInternal
 				}
 				for (const auto &session : sessions)
 				{
-					if (_sessions.contains(session->id) && session->ready)
+					if (_sessions.contains(session->id) && session->handshake.ready())
 					{
 						try
 						{
@@ -716,11 +697,11 @@ namespace spk::NetworkInternal
 						continue;
 					}
 					auto session = it->second;
-					if (!session->ready)
+					if (!session->handshake.ready())
 					{
-						if (session->handshakeDeadline.expired())
+						if (session->handshake.expired())
 						{
-							session->disconnectError = Connection::Error::Timeout;
+							session->handshake.fail(Connection::Error::Timeout);
 							_disconnect(id);
 						}
 						continue;
