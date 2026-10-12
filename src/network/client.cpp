@@ -65,10 +65,20 @@ namespace spk
 			if (kind == NetworkInternal::PageFrameKind)
 			{
 				_reassembler.expire();
-				auto message = _reassembler.accept(NetworkInternal::decodePage(frame));
-				if (message.has_value())
+				try
 				{
-					_owner._publish(std::move(*message));
+					auto message = _reassembler.accept(NetworkInternal::decodePage(frame));
+					if (message.has_value())
+					{
+						_owner._publish(std::move(*message));
+					}
+				}
+				catch (const NetworkInternal::PageReassemblyError &)
+				{
+					if (_reassembler.failureLimitReached())
+					{
+						throw;
+					}
 				}
 				return;
 			}
@@ -82,6 +92,7 @@ namespace spk
 			writer.resize(header.payloadSize);
 			std::copy(frame.begin() + NetworkInternal::FrameHeaderSize, frame.end(), writer.data().begin());
 			_owner._publish(std::move(writer).build());
+			_reassembler.successfulMessage();
 		}
 
 		void _sendLoop()
