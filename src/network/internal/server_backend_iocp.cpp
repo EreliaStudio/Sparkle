@@ -598,6 +598,15 @@ namespace spk::NetworkInternal
 				}
 			}
 
+			void _expireReassemblies()
+			{
+				for (auto &[id, session] : _sessions)
+				{
+					(void)id;
+					session->reassembler.expire();
+				}
+			}
+
 			void _run() noexcept
 			{
 				while (!_stopping || _pendingOperations != 0)
@@ -610,8 +619,12 @@ namespace spk::NetworkInternal
 						&bytes,
 						&key,
 						&overlapped,
-						INFINITE);
-					_handleCompletion(success, bytes, key, overlapped);
+						1000);
+					if (overlapped != nullptr || success)
+					{
+						_handleCompletion(success, bytes, key, overlapped);
+					}
+					_expireReassemblies();
 				}
 			}
 
