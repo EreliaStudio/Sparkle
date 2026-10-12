@@ -66,7 +66,7 @@ TEST(ServerTransferIntegration, BroadcastReportsEachRecipient)
 	spk::Client first;
 	spk::Client second;
 	server.start(0);
-	const auto firstConnection = identify(server, first);
+	auto firstConnection = identify(server, first);
 	const auto secondConnection = identify(server, second);
 	ASSERT_TRUE(firstConnection.isConnected());
 	ASSERT_TRUE(secondConnection.isConnected());
@@ -89,7 +89,7 @@ TEST(ServerTransferIntegration, RejectDoesNotPartiallyAdmitBroadcast)
 	spk::Client first;
 	spk::Client second;
 	server.start(0);
-	const auto firstConnection = identify(server, first);
+	auto firstConnection = identify(server, first);
 	const auto secondConnection = identify(server, second);
 	ASSERT_TRUE(firstConnection.isConnected());
 	ASSERT_TRUE(secondConnection.isConnected());
@@ -116,7 +116,7 @@ TEST(ServerTransferIntegration, SkipRecipientPreservesEligibleTransfer)
 	spk::Client first;
 	spk::Client second;
 	server.start(0);
-	const auto firstConnection = identify(server, first);
+	auto firstConnection = identify(server, first);
 	const auto secondConnection = identify(server, second);
 	ASSERT_TRUE(firstConnection.isConnected());
 	ASSERT_TRUE(secondConnection.isConnected());
@@ -141,7 +141,7 @@ TEST(ServerTransferIntegration, DisconnectRecipientLeavesOtherConnectionsUsable)
 	spk::Client first;
 	spk::Client second;
 	server.start(0);
-	const auto firstConnection = identify(server, first);
+	auto firstConnection = identify(server, first);
 	const auto secondConnection = identify(server, second);
 	ASSERT_TRUE(firstConnection.isConnected());
 	ASSERT_TRUE(secondConnection.isConnected());
