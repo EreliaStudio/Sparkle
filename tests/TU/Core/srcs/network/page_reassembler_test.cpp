@@ -127,8 +127,7 @@ TEST(PageReassembler, RejectsConflictingDuplicateAndOverlappingPages)
 	{
 		(void)conflictingAssembler.accept(conflicting);
 		FAIL() << "Expected conflicting page failure.";
-	}
-	catch (const spk::NetworkInternal::PageReassemblyError &error)
+	} catch (const spk::NetworkInternal::PageReassemblyError &error)
 	{
 		EXPECT_EQ(error.reason(), spk::NetworkInternal::PageReassemblyError::Reason::ConflictingPage);
 	}
