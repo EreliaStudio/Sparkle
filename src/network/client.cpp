@@ -4,7 +4,7 @@
 #include "network/internal/frame.hpp"
 #include "network/internal/page.hpp"
 #include "network/internal/transfer_reception.hpp"
-#include "network/internal/page_scheduler.hpp"
+#include "network/internal/transfer_sender.hpp"
 #include "network/internal/socket.hpp"
 
 #include <algorithm>
@@ -34,7 +34,7 @@ namespace spk
 		Connection _session;
 		std::mutex _sendMutex;
 		std::condition_variable _sendAvailable;
-		NetworkInternal::PageScheduler _scheduler;
+		NetworkInternal::TransferSender _transfers;
 		NetworkInternal::TransferReception _reception;
 		std::deque<std::shared_ptr<std::vector<std::byte>>> _responses;
 		std::atomic<Connection::ID> _remoteID = Connection::InvalidID;
@@ -78,7 +78,7 @@ namespace spk
 			{
 				const auto response = NetworkInternal::TransferResponse::decode(frame);
 				_acceptRemoteID(response.connectionID);
-				(void)_scheduler.complete(response.transferID, response.status, response.reason);
+				(void)_transfers.acknowledge(response);
 				return;
 			}
 			if (kind != 0)
@@ -150,10 +150,11 @@ namespace spk
 				while (_connected)
 				{
 					std::shared_ptr<std::vector<std::byte>> frame;
+					std::uint64_t finalPage = 0;
 					{
 						std::unique_lock lock(_sendMutex);
 						_sendAvailable.wait(lock, [this] {
-							return !_connected || !_responses.empty() || _scheduler.pendingTransfers() != 0;
+							return !_connected || !_responses.empty() || _transfers.pendingTransfers() != 0;
 						});
 						if (!_connected)
 						{
@@ -167,15 +168,23 @@ namespace spk
 					}
 					if (frame == nullptr)
 					{
-						const auto page = _scheduler.nextPage(NetworkInternal::DefaultMaximumPageBytes);
+						const auto page = _transfers.nextPage(NetworkInternal::DefaultMaximumPageBytes);
 						if (page.has_value())
 						{
 							frame = NetworkInternal::encodePage(*page);
+							if (page->offset + page->length == page->totalSize)
+							{
+								finalPage = page->transferID;
+							}
 						}
 					}
 					if (frame != nullptr)
 					{
 						_socket.sendAll(*frame);
+						if (finalPage != 0)
+						{
+							_transfers.finalPageWritten(finalPage);
+						}
 					}
 				}
 			} catch (...)
@@ -192,6 +201,7 @@ namespace spk
 			}
 			_socket.close();
 			_sendAvailable.notify_all();
+			_transfers.clear();
 			try
 			{
 				_owner._setStatus(_session, Connection::Status::Disconnected, Connection::Error::TransportFailure);
@@ -264,6 +274,7 @@ namespace spk
 					{
 						_queueResponse(response);
 					}
+					_transfers.expire();
 				}
 			});
 			try
@@ -282,7 +293,7 @@ namespace spk
 			_socket.close();
 			_sendAvailable.notify_all();
 			_joinWorkers();
-			_scheduler.clear();
+			_transfers.clear();
 			{
 				const std::scoped_lock lock(_sendMutex);
 				_responses.clear();
@@ -310,7 +321,7 @@ namespace spk
 			{
 				throw Exception("Unable to send through a disconnected network client.");
 			}
-			(void)_scheduler.enqueue(message, priority);
+			(void)_transfers.enqueue(message, priority);
 			_sendAvailable.notify_one();
 		}
 	};
