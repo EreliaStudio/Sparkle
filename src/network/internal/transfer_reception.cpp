@@ -10,14 +10,22 @@ namespace spk::NetworkInternal
 		using Target = spk::Transfer::Reason;
 		switch (reason)
 		{
-		case Source::DuplicatePage: return Target::DuplicatePage;
-		case Source::ConflictingPage: return Target::ConflictingPage;
-		case Source::OverlappingPage: return Target::OverlappingPage;
-		case Source::InvalidOffset: return Target::InvalidOffset;
-		case Source::InvalidLength: return Target::InvalidLength;
-		case Source::InvalidFirstPage: return Target::InvalidFirstPage;
-		case Source::InconsistentMetadata: return Target::InconsistentMetadata;
-		case Source::Capacity: return Target::ReceiverCapacity;
+		case Source::DuplicatePage:
+			return Target::DuplicatePage;
+		case Source::ConflictingPage:
+			return Target::ConflictingPage;
+		case Source::OverlappingPage:
+			return Target::OverlappingPage;
+		case Source::InvalidOffset:
+			return Target::InvalidOffset;
+		case Source::InvalidLength:
+			return Target::InvalidLength;
+		case Source::InvalidFirstPage:
+			return Target::InvalidFirstPage;
+		case Source::InconsistentMetadata:
+			return Target::InconsistentMetadata;
+		case Source::Capacity:
+			return Target::ReceiverCapacity;
 		}
 		return Target::TransportFailure;
 	}
@@ -39,8 +47,11 @@ namespace spk::NetworkInternal
 			{
 				throw;
 			}
-			const auto status = error.reason() == PageReassemblyError::Reason::Capacity ?
-				spk::Transfer::Status::Rejected : spk::Transfer::Status::Failed;
+			auto status = spk::Transfer::Status::Failed;
+			if (error.reason() == PageReassemblyError::Reason::Capacity)
+			{
+				status = spk::Transfer::Status::Rejected;
+			}
 			return {std::nullopt, TransferResponse{connectionID, error.transferID(), status, _reason(error.reason())}};
 		}
 	}

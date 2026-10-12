@@ -3,9 +3,9 @@
 #include "exception.hpp"
 #include "network/internal/frame.hpp"
 #include "network/internal/page.hpp"
+#include "network/internal/socket.hpp"
 #include "network/internal/transfer_reception.hpp"
 #include "network/internal/transfer_sender.hpp"
-#include "network/internal/socket.hpp"
 
 #include <algorithm>
 #include <array>
