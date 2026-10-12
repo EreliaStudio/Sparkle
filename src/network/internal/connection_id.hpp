@@ -20,9 +20,7 @@ namespace spk::NetworkInternal
 				throw Exception("Network connection ID space is exhausted.");
 			}
 			if (NextConnectionID.compare_exchange_weak(
-					next, next + 1,
-					std::memory_order_relaxed,
-					std::memory_order_relaxed))
+					next, next + 1, std::memory_order_relaxed, std::memory_order_relaxed))
 			{
 				return next;
 			}
