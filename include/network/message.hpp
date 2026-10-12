@@ -1,6 +1,7 @@
 #pragma once
 
 #include "container/byte_stream.hpp"
+#include "network/connection.hpp"
 
 #include <array>
 #include <bit>
@@ -25,6 +26,7 @@ namespace spk
 		{
 			Type messageType = 0;
 			RequestID requestID = 0;
+			Connection::ID connectionID = Connection::InvalidID;
 		};
 
 		using Reader = spk::ByteStream::Reader;
@@ -51,6 +53,8 @@ namespace spk
 			[[nodiscard]] Type type() const noexcept;
 			void setRequestID(RequestID requestID) noexcept;
 			[[nodiscard]] RequestID requestID() const noexcept;
+			void setConnectionID(Connection::ID id) noexcept;
+			[[nodiscard]] Connection::ID connectionID() const noexcept;
 
 			void clear() noexcept;
 			void resize(std::size_t size);
@@ -120,6 +124,7 @@ namespace spk
 		[[nodiscard]] spk::ByteStream &payload() noexcept;
 		[[nodiscard]] Type type() const noexcept;
 		[[nodiscard]] RequestID requestID() const noexcept;
+		[[nodiscard]] Connection::ID connectionID() const noexcept;
 		[[nodiscard]] std::span<const std::byte> data() const noexcept;
 		[[nodiscard]] std::size_t size() const noexcept;
 		[[nodiscard]] bool empty() const noexcept;
