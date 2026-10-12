@@ -422,18 +422,21 @@ TEST(NetworkConcurrencyTest, ServerCanStopFromConnectionCallback)
 {
 	spk::Server server;
 	spk::Client client;
+	std::atomic_bool stopRequested = false;
 	auto contract = server.subscribeToConnectionStatusChange(
 		[&](spk::Connection, spk::Connection::Status status, spk::Connection::Error) {
 			if (status == spk::Connection::Status::Connected)
 			{
+				stopRequested = true;
 				server.stop();
 			}
 		});
 
 	server.start(0);
 	client.connect("127.0.0.1", server.port());
-	EXPECT_TRUE(NetworkTestUtils::waitConnected(client));
-
+	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
+		return stopRequested.load();
+	}));
 	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
 		return !server.isRunning() && !client.isConnected();
 	}));
