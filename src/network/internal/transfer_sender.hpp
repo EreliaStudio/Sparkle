@@ -13,7 +13,9 @@ namespace spk::NetworkInternal
 		AcknowledgmentDeadlines _deadlines;
 
 	public:
-		[[nodiscard]] spk::Transfer enqueue(Message message, Message::Priority priority = Message::Priority::Normal);
+		[[nodiscard]] spk::Transfer enqueue(Message message, Message::Priority priority = Message::Priority::Normal, spk::Transfer transfer = {});
+		[[nodiscard]] bool fail(spk::Transfer::ID id, spk::Transfer::Status status, spk::Transfer::Reason reason);
+		void setMaxPendingBytes(std::size_t bytes) noexcept;
 		[[nodiscard]] std::optional<Page> nextPage(std::size_t maxPageBytes);
 		void finalPageWritten(std::uint64_t id, AcknowledgmentDeadlines::Clock::time_point now = AcknowledgmentDeadlines::Clock::now());
 		[[nodiscard]] bool acknowledge(const TransferResponse &response);
