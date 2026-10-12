@@ -111,7 +111,7 @@ namespace spk
 					{
 						break;
 					}
-					const auto page = _scheduler.nextPage(16u * 1024u);
+					const auto page = _scheduler.nextPage(DefaultMaximumPageBytes);
 					if (page.has_value())
 					{
 						_socket.sendAll(*NetworkInternal::encodePage(*page));
