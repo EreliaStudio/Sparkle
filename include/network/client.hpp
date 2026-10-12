@@ -3,9 +3,9 @@
 #include "container/thread_safe_fifo.hpp"
 #include "design_pattern/contract_provider.hpp"
 #include "network/connection.hpp"
-#include "network/page_failure_limits.hpp"
 #include "network/message.hpp"
 #include "network/message_dispatcher.hpp"
+#include "network/page_failure_limits.hpp"
 
 #include <cstdint>
 #include <memory>
