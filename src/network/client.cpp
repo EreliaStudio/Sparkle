@@ -365,6 +365,7 @@ namespace spk
 			{
 				throw Exception("Cannot send through a pending or disconnected network client.");
 			}
+			_transfers.setMaxPendingBytes(_session.maxQueuedBytes());
 			Transfer transfer = _transfers.enqueue(message, priority);
 			_sendAvailable.notify_one();
 			return transfer;
