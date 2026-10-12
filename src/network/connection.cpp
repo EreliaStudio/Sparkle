@@ -1,6 +1,7 @@
 #include "network/connection.hpp"
 
 #include <atomic>
+#include <functional>
 #include <mutex>
 #include <utility>
 
@@ -19,6 +20,16 @@ namespace spk
 	Connection::Connection() :
 		_data(std::make_shared<Data>())
 	{
+	}
+
+	bool Connection::operator==(const Connection &other) const noexcept
+	{
+		return _data == other._data;
+	}
+
+	std::size_t Connection::Hash::operator()(const Connection &connection) const noexcept
+	{
+		return std::hash<const void *>{}(connection._data.get());
 	}
 
 	Connection::ID Connection::id() const noexcept
