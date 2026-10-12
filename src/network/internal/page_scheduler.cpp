@@ -38,13 +38,9 @@ namespace spk::NetworkInternal
 		{
 			throw Exception("Outgoing logical message exceeds the network limit.");
 		}
-		if (_pendingBytes >= _maxPendingBytes)
+		if (_pendingBytes > _maxPendingBytes || message.size() > _maxPendingBytes - _pendingBytes)
 		{
 			throw Exception("Outgoing pending transfer storage is saturated.");
-		}
-		if (message.size() > std::numeric_limits<std::size_t>::max() - _pendingBytes)
-		{
-			throw Exception("Outgoing pending transfer size overflows.");
 		}
 		if (_nextTransferID == std::numeric_limits<std::uint64_t>::max())
 		{
