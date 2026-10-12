@@ -1,6 +1,8 @@
 #pragma once
 
 #include "network/internal/page.hpp"
+#include "network/internal/page_failure_limiter.hpp"
+#include "network/internal/page_reassembly_error.hpp"
 
 #include <chrono>
 #include <cstddef>
@@ -28,6 +30,8 @@ namespace spk::NetworkInternal
 		};
 
 		std::unordered_map<std::uint64_t, Transfer> _transfers;
+		std::unordered_map<std::uint64_t, Clock::time_point> _failedTransfers;
+		PageFailureLimiter _failureLimiter;
 		std::size_t _reservedBytes = 0;
 		std::size_t _maxMessageBytes;
 		std::size_t _maxIncompleteBytes;
@@ -48,5 +52,8 @@ namespace spk::NetworkInternal
 		void clear() noexcept;
 		[[nodiscard]] std::size_t reservedBytes() const noexcept;
 		[[nodiscard]] std::size_t pendingTransfers() const noexcept;
+		[[nodiscard]] bool failureLimitReached() const;
+		void configureFailureLimits(PageFailureLimiter::Config config);
+		void successfulMessage();
 	};
 }
