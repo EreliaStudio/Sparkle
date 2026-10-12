@@ -3,8 +3,8 @@
 #include "container/thread_safe_fifo.hpp"
 #include "design_pattern/contract_provider.hpp"
 #include "network/message_dispatcher.hpp"
-#include "network/types.hpp"
 #include "network/page_failure_limits.hpp"
+#include "network/types.hpp"
 
 #include <cstdint>
 #include <memory>
