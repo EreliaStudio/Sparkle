@@ -77,7 +77,7 @@ TEST(HandshakeIntegration, IncompatibleVersionReceivesExplicitRejection)
 	server.stop();
 }
 
-TEST(HandshakeIntegration, ReconnectReplacesPendingSessionWithoutRevivingIt)
+TEST(HandshakeIntegration, ReconnectRequiresExplicitDisconnect)
 {
 	auto listener = spk::NetworkInternal::Socket::listenTCP(0);
 	spk::Client client;
@@ -94,5 +94,43 @@ TEST(HandshakeIntegration, ReconnectReplacesPendingSessionWithoutRevivingIt)
 	EXPECT_TRUE(NetworkTestUtils::waitConnected(connected));
 	EXPECT_FALSE(abandoned.isConnected());
 	client.disconnect();
+	server.stop();
+}
+
+TEST(HandshakeIntegration, ServerBroadcastRejectsPendingRecipient)
+{
+	spk::Server server;
+	std::atomic_bool pending = false;
+	auto contract = server.subscribeToConnectionStatusChange(
+		[&](spk::Connection, spk::Connection::Status status, spk::Connection::Error) {
+			if (status == spk::Connection::Status::Pending)
+			{
+				pending = true;
+			}
+		});
+	server.start(0);
+	auto socket = spk::NetworkInternal::Socket::connectTCP("127.0.0.1", server.port());
+	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] { return pending.load(); }, 3s));
+	EXPECT_THROW(server.sendToAll(spk::Message::Writer(3).build()), spk::Exception);
+	socket.close();
+	server.stop();
+}
+
+TEST(HandshakeIntegration, ServerUsesTimeoutConfiguredBeforeStart)
+{
+	spk::Server server;
+	std::atomic_bool timedOut = false;
+	auto contract = server.subscribeToConnectionStatusChange(
+		[&](spk::Connection, spk::Connection::Status status, spk::Connection::Error error) {
+			if (status == spk::Connection::Status::Disconnected && error == spk::Connection::Error::Timeout)
+			{
+				timedOut = true;
+			}
+		});
+	server.setHandshakeTimeout(100ms);
+	server.start(0);
+	auto socket = spk::NetworkInternal::Socket::connectTCP("127.0.0.1", server.port());
+	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] { return timedOut.load(); }, 3s));
+	socket.close();
 	server.stop();
 }
