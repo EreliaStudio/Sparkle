@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include "exception.hpp"
 #include "network/client.hpp"
 #include "network/server.hpp"
 #include "network_test_utils.hpp"
@@ -57,6 +58,10 @@ TEST(NetworkStressTest, ConcurrentClientsDeliverEveryMessageExactlyOnce)
 		threads.emplace_back([&, client] {
 			failure.run([&, client] {
 				clients[client]->connect("127.0.0.1", server.port());
+				if (!NetworkTestUtils::waitConnected(*clients[client]))
+				{
+					throw spk::Exception("Stress client failed to connect.");
+				}
 				for (std::uint32_t sequence = 0; sequence < MessagesPerClient; ++sequence)
 				{
 					clients[client]->send(
