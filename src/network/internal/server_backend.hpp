@@ -24,8 +24,8 @@ namespace spk::NetworkInternal
 		[[nodiscard]] virtual std::uint16_t port() const noexcept = 0;
 		virtual void start(std::uint16_t port) = 0;
 		virtual void stop() = 0;
-		virtual void sendTo(ConnectionID connection, const Message &message) = 0;
-		virtual void sendToAll(const Message &message) = 0;
+		virtual void sendTo(ConnectionID connection, const Message &message, Message::Priority priority) = 0;
+		virtual void sendToAll(const Message &message, Message::Priority priority) = 0;
 	};
 
 	[[nodiscard]] std::unique_ptr<ServerBackend> createServerBackend(ServerCallbacks callbacks);

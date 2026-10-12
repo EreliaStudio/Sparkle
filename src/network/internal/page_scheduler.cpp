@@ -34,6 +34,10 @@ namespace spk::NetworkInternal
 		{
 			throw Exception("Invalid network message priority.");
 		}
+		if (message.size() > 64u * 1024u * 1024u)
+		{
+			throw Exception("Outgoing logical message exceeds the network limit.");
+		}
 		if (_pendingBytes >= _maxPendingBytes)
 		{
 			throw Exception("Outgoing pending transfer storage is saturated.");

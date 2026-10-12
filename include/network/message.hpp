@@ -132,6 +132,7 @@ namespace spk
 		[[nodiscard]] Type type() const noexcept;
 		[[nodiscard]] RequestID requestID() const noexcept;
 		[[nodiscard]] Connection::ID connectionID() const noexcept;
+		[[nodiscard]] Message withConnectionID(Connection::ID id) const;
 		[[nodiscard]] std::span<const std::byte> data() const noexcept;
 		[[nodiscard]] std::size_t size() const noexcept;
 		[[nodiscard]] bool empty() const noexcept;

@@ -51,9 +51,9 @@ namespace spk
 		[[nodiscard]] std::uint16_t port() const noexcept;
 		void start(std::uint16_t port);
 		void stop();
-		void sendTo(ConnectionID connection, const Message &message);
-		void sendTo(std::span<const ConnectionID> connections, const Message &message);
-		void sendToAll(const Message &message);
+		void sendTo(ConnectionID connection, const Message &message, Message::Priority priority = Message::Priority::Normal);
+		void sendTo(std::span<const ConnectionID> connections, const Message &message, Message::Priority priority = Message::Priority::Normal);
+		void sendToAll(const Message &message, Message::Priority priority = Message::Priority::Normal);
 		[[nodiscard]] MessageQueue &messages() noexcept;
 		[[nodiscard]] MessageDispatcher &messageDispatcher() noexcept;
 		// Dispatch a receive batch on the calling thread; do not also drain messages().

@@ -50,7 +50,7 @@ namespace spk
 		[[nodiscard]] bool isConnected() const noexcept;
 		void connect(std::string_view address, std::uint16_t port);
 		void disconnect();
-		void send(const Message &message);
+		void send(const Message &message, Message::Priority priority = Message::Priority::Normal);
 		[[nodiscard]] MessageQueue &messages() noexcept;
 		[[nodiscard]] MessageDispatcher &messageDispatcher() noexcept;
 		// Dispatch a receive batch on the calling thread; do not also drain messages().

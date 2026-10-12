@@ -166,6 +166,13 @@ namespace spk
 		return _header.connectionID;
 	}
 
+	Message Message::withConnectionID(Connection::ID id) const
+	{
+		Message result = *this;
+		result._header.connectionID = id;
+		return result;
+	}
+
 	std::span<const std::byte> Message::data() const noexcept
 	{
 		return _payload.data();

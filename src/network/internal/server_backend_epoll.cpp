@@ -5,6 +5,9 @@
 #	include "exception.hpp"
 #	include "network/internal/connection_id.hpp"
 #	include "network/internal/frame.hpp"
+#	include "network/internal/page.hpp"
+#	include "network/internal/page_reassembler.hpp"
+#	include "network/internal/page_scheduler.hpp"
 #	include "network/internal/socket.hpp"
 
 #	include <algorithm>
@@ -46,6 +49,8 @@ namespace spk::NetworkInternal
 			ConnectionID id;
 			Socket socket;
 			std::vector<std::byte> receivedBytes;
+			PageReassembler reassembler;
+			PageScheduler scheduler;
 			std::deque<Frame> outgoing;
 			std::size_t outgoingOffset = 0;
 			std::size_t queuedBytes = 0;
@@ -68,7 +73,8 @@ namespace spk::NetworkInternal
 		{
 			CommandKind kind;
 			ConnectionID connection = InvalidConnectionID;
-			Frame frame;
+			std::shared_ptr<const Message> message;
+			Message::Priority priority = Message::Priority::Normal;
 		};
 
 		class EpollServerBackend final : public ServerBackend
@@ -205,7 +211,18 @@ namespace spk::NetworkInternal
 						0);
 					if (result > 0)
 					{
-						_appendReceived(*session, buffer.data(), static_cast<std::size_t>(result));
+						try
+						{
+							_appendReceived(*session, buffer.data(), static_cast<std::size_t>(result));
+						} catch (...)
+						{
+							_disconnect(session->id);
+							return;
+						}
+						if (!_sessions.contains(session->id))
+						{
+							return;
+						}
 						continue;
 					}
 					if (result == 0)
@@ -246,6 +263,7 @@ namespace spk::NetworkInternal
 				}
 			}
 
+
 			[[nodiscard]] bool _extractMessage(Session &session, std::size_t &consumed)
 			{
 				const std::size_t remaining = session.receivedBytes.size() - consumed;
@@ -253,7 +271,6 @@ namespace spk::NetworkInternal
 				{
 					return false;
 				}
-
 				const auto *data = session.receivedBytes.data() + consumed;
 				const auto header = decode(std::span<const std::byte, FrameHeaderSize>(data, FrameHeaderSize));
 				const std::size_t frameSize = FrameHeaderSize + header.payloadSize;
@@ -261,25 +278,53 @@ namespace spk::NetworkInternal
 				{
 					return false;
 				}
-
-				Message::Writer writer(header.type);
-				writer.setRequestID(header.requestID);
-				writer.setConnectionID(header.connectionID);
-				writer.resize(header.payloadSize);
-				std::copy_n(
-					data + FrameHeaderSize,
-					header.payloadSize,
-					writer.data().begin());
+				const auto kind = read16(data + 6);
+				if (header.connectionID != InvalidConnectionID && header.connectionID != session.id)
+				{
+					throw Exception("Incoming message contains a forged connection ID.");
+				}
+				if (kind == PageFrameKind)
+				{
+					session.reassembler.expire();
+					auto complete = session.reassembler.accept(decodePage(std::span(data, frameSize)));
+					if (complete.has_value())
+					{
+						_publish(ReceivedMessage{session.id, complete->withConnectionID(session.id)});
+					}
+				}
+				else if (kind == 0)
+				{
+					Message::Writer writer(header.type);
+					writer.setRequestID(header.requestID);
+					writer.setConnectionID(session.id);
+					writer.resize(header.payloadSize);
+					std::copy_n(data + FrameHeaderSize, header.payloadSize, writer.data().begin());
+					_publish(ReceivedMessage{session.id, std::move(writer).build()});
+				}
+				else
+				{
+					throw Exception("Unknown network frame kind.");
+				}
 				consumed += frameSize;
-				_publish(ReceivedMessage{session.id, std::move(writer).build()});
 				return true;
 			}
 
 			void _flushSession(const std::shared_ptr<Session> &session)
 			{
 				std::size_t budget = WriteBudget;
-				while (!session->outgoing.empty() && budget != 0)
+				while (budget != 0)
 				{
+					if (session->outgoing.empty())
+					{
+						auto page = session->scheduler.nextPage(16u * 1024u);
+						if (!page.has_value())
+						{
+							break;
+						}
+						Frame frame = encodePage(*page);
+						session->queuedBytes += frame->size();
+						session->outgoing.push_back(std::move(frame));
+					}
 					const Frame &frame = session->outgoing.front();
 					const auto sent = _send(*session, *frame);
 					if (!sent.has_value())
@@ -293,15 +338,15 @@ namespace spk::NetworkInternal
 						return;
 					}
 					session->outgoingOffset += *sent;
-					session->queuedBytes -= *sent;
 					budget = *sent >= budget ? 0 : budget - *sent;
 					if (session->outgoingOffset == frame->size())
 					{
+						session->queuedBytes -= frame->size();
 						session->outgoing.pop_front();
 						session->outgoingOffset = 0;
 					}
 				}
-				_modify(*session, !session->outgoing.empty());
+				_modify(*session, !session->outgoing.empty() || session->scheduler.pendingTransfers() != 0);
 			}
 
 			[[nodiscard]] std::optional<std::size_t> _send(
@@ -333,25 +378,13 @@ namespace spk::NetworkInternal
 				}
 			}
 
-			void _queueFrame(const std::shared_ptr<Session> &session, Frame frame)
+
+			void _queueMessage(const std::shared_ptr<Session> &session, const Message &message, Message::Priority priority)
 			{
-				if (frame->size() > MaximumQueuedBytes - session->queuedBytes)
+				(void)session->scheduler.enqueue(message.withConnectionID(session->id), priority);
+				if (session->outgoing.empty())
 				{
-					_disconnect(session->id);
-					return;
-				}
-				const bool wasEmpty = session->outgoing.empty();
-				session->queuedBytes += frame->size();
-				session->outgoing.push_back(std::move(frame));
-				if (wasEmpty)
-				{
-					try
-					{
-						_flushSession(session);
-					} catch (...)
-					{
-						_disconnect(session->id);
-					}
+					_flushSession(session);
 				}
 			}
 
@@ -433,6 +466,7 @@ namespace spk::NetworkInternal
 				}
 			}
 
+
 			void _processCommand(Command command)
 			{
 				if (command.kind == CommandKind::Stop)
@@ -442,18 +476,23 @@ namespace spk::NetworkInternal
 				}
 				if (command.kind == CommandKind::Broadcast)
 				{
-					_broadcast(std::move(command.frame));
+					_broadcast(*command.message, command.priority);
 					return;
 				}
-
 				const auto iterator = _sessions.find(command.connection);
 				if (iterator != _sessions.end())
 				{
-					_queueFrame(iterator->second, std::move(command.frame));
+					try
+					{
+						_queueMessage(iterator->second, *command.message, command.priority);
+					} catch (...)
+					{
+						_disconnect(command.connection);
+					}
 				}
 			}
 
-			void _broadcast(Frame frame)
+			void _broadcast(const Message &message, Message::Priority priority)
 			{
 				std::vector<std::shared_ptr<Session>> sessions;
 				sessions.reserve(_sessions.size());
@@ -465,7 +504,13 @@ namespace spk::NetworkInternal
 				{
 					if (_sessions.contains(session->id))
 					{
-						_queueFrame(session, frame);
+						try
+						{
+							_queueMessage(session, message, priority);
+						} catch (...)
+						{
+							_disconnect(session->id);
+						}
 					}
 				}
 			}
@@ -658,22 +703,22 @@ namespace spk::NetworkInternal
 				_stopping = true;
 			}
 
-			void sendTo(ConnectionID connection, const Message &message) override
+			void sendTo(ConnectionID connection, const Message &message, Message::Priority priority) override
 			{
 				if (!_running)
 				{
 					throw Exception("Unable to send through a stopped network server.");
 				}
-				_enqueue(Command{CommandKind::Send, connection, encode(message)});
+				_enqueue(Command{CommandKind::Send, connection, std::make_shared<Message>(message), priority});
 			}
 
-			void sendToAll(const Message &message) override
+			void sendToAll(const Message &message, Message::Priority priority) override
 			{
 				if (!_running)
 				{
 					throw Exception("Unable to send through a stopped network server.");
 				}
-				_enqueue(Command{CommandKind::Broadcast, InvalidConnectionID, encode(message)});
+				_enqueue(Command{CommandKind::Broadcast, InvalidConnectionID, std::make_shared<Message>(message), priority});
 			}
 		};
 	}

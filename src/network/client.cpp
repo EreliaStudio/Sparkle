@@ -2,10 +2,15 @@
 
 #include "exception.hpp"
 #include "network/internal/frame.hpp"
+#include "network/internal/page.hpp"
+#include "network/internal/page_reassembler.hpp"
+#include "network/internal/page_scheduler.hpp"
 #include "network/internal/socket.hpp"
 
+#include <algorithm>
 #include <array>
 #include <atomic>
+#include <condition_variable>
 #include <mutex>
 #include <thread>
 #include <utility>
@@ -18,9 +23,13 @@ namespace spk
 	private:
 		Client &_owner;
 		NetworkInternal::Socket _socket;
-		std::jthread _worker;
+		std::jthread _reader;
+		std::jthread _sender;
 		std::atomic_bool _connected = false;
 		std::mutex _sendMutex;
+		std::condition_variable _sendAvailable;
+		NetworkInternal::PageScheduler _scheduler;
+		NetworkInternal::PageReassembler _reassembler;
 
 		void _run()
 		{
@@ -28,22 +37,73 @@ namespace spk
 			{
 				while (_connected)
 				{
-					std::array<std::byte, NetworkInternal::FrameHeaderSize> bytes{};
-					if (!_socket.receiveAll(bytes))
+					std::array<std::byte, NetworkInternal::FrameHeaderSize> headerBytes{};
+					if (!_socket.receiveAll(headerBytes))
 					{
 						break;
 					}
+					const auto header = NetworkInternal::decode(headerBytes);
+					std::vector<std::byte> frame(NetworkInternal::FrameHeaderSize + header.payloadSize);
+					std::copy(headerBytes.begin(), headerBytes.end(), frame.begin());
+					if (header.payloadSize != 0 &&
+						!_socket.receiveAll(std::span<std::byte>(frame).subspan(NetworkInternal::FrameHeaderSize)))
+					{
+						break;
+					}
+					_receive(header, frame);
+				}
+			} catch (...)
+			{
+			}
+			_remoteDisconnect();
+		}
 
-					const auto header = NetworkInternal::decode(bytes);
-					Message::Writer writer(header.type);
-					writer.setRequestID(header.requestID);
-					writer.setConnectionID(header.connectionID);
-					writer.resize(header.payloadSize);
-					if (writer.empty() == false && !_socket.receiveAll(writer.data()))
+		void _receive(const NetworkInternal::FrameHeader &header, std::span<const std::byte> frame)
+		{
+			const auto kind = NetworkInternal::read16(frame.data() + 6);
+			if (kind == NetworkInternal::PageFrameKind)
+			{
+				_reassembler.expire();
+				auto message = _reassembler.accept(NetworkInternal::decodePage(frame));
+				if (message.has_value())
+				{
+					_owner._publish(std::move(*message));
+				}
+				return;
+			}
+			if (kind != 0)
+			{
+				throw Exception("Unknown network frame kind.");
+			}
+			Message::Writer writer(header.type);
+			writer.setRequestID(header.requestID);
+			writer.setConnectionID(header.connectionID);
+			writer.resize(header.payloadSize);
+			std::copy(frame.begin() + NetworkInternal::FrameHeaderSize, frame.end(), writer.data().begin());
+			_owner._publish(std::move(writer).build());
+		}
+
+		void _sendLoop()
+		{
+			try
+			{
+				while (_connected)
+				{
+					{
+						std::unique_lock lock(_sendMutex);
+						_sendAvailable.wait(lock, [this] {
+							return !_connected || _scheduler.pendingTransfers() != 0;
+						});
+					}
+					if (!_connected)
 					{
 						break;
 					}
-					_owner._publish(std::move(writer).build());
+					const auto page = _scheduler.nextPage(16u * 1024u);
+					if (page.has_value())
+					{
+						_socket.sendAll(*NetworkInternal::encodePage(*page));
+					}
 				}
 			} catch (...)
 			{
@@ -57,8 +117,8 @@ namespace spk
 			{
 				return;
 			}
-
 			_socket.close();
+			_sendAvailable.notify_all();
 			try
 			{
 				_owner._notifyDisconnection();
@@ -67,11 +127,15 @@ namespace spk
 			}
 		}
 
-		void _joinWorker()
+		void _joinWorkers()
 		{
-			if (_worker.joinable() && _worker.get_id() != std::this_thread::get_id())
+			if (_reader.joinable() && _reader.get_id() != std::this_thread::get_id())
 			{
-				_worker.join();
+				_reader.join();
+			}
+			if (_sender.joinable() && _sender.get_id() != std::this_thread::get_id())
+			{
+				_sender.join();
 			}
 		}
 
@@ -83,12 +147,7 @@ namespace spk
 
 		~Impl()
 		{
-			try
-			{
-				disconnect();
-			} catch (...)
-			{
-			}
+			disconnect();
 		}
 
 		[[nodiscard]] bool isConnected() const noexcept
@@ -99,7 +158,6 @@ namespace spk
 		void connect(std::string_view address, std::uint16_t port)
 		{
 			disconnect();
-
 			try
 			{
 				_socket = NetworkInternal::Socket::connectTCP(address, port);
@@ -107,12 +165,13 @@ namespace spk
 			{
 				throw Exception("Unable to connect the network client.", std::current_exception());
 			}
-
 			_connected = true;
-			_worker = std::jthread([this] {
+			_reader = std::jthread([this] {
 				_run();
 			});
-
+			_sender = std::jthread([this] {
+				_sendLoop();
+			});
 			try
 			{
 				_owner._notifyConnection();
@@ -127,24 +186,25 @@ namespace spk
 		{
 			const bool notify = _connected.exchange(false);
 			_socket.close();
-			_joinWorker();
-
+			_sendAvailable.notify_all();
+			_joinWorkers();
+			_scheduler.clear();
+			_reassembler.clear();
 			if (notify)
 			{
 				_owner._notifyDisconnection();
 			}
 		}
 
-		void send(const Message &message)
+		void send(const Message &message, Message::Priority priority)
 		{
-			const auto frame = NetworkInternal::encode(message);
 			const std::scoped_lock lock(_sendMutex);
-
 			if (!_connected)
 			{
 				throw Exception("Unable to send through a disconnected network client.");
 			}
-			_socket.sendAll(*frame);
+			(void)_scheduler.enqueue(message, priority);
+			_sendAvailable.notify_one();
 		}
 	};
 
@@ -180,9 +240,9 @@ namespace spk
 		_impl->disconnect();
 	}
 
-	void Client::send(const Message &message)
+	void Client::send(const Message &message, Message::Priority priority)
 	{
-		_impl->send(message);
+		_impl->send(message, priority);
 	}
 
 	Client::MessageQueue &Client::messages() noexcept

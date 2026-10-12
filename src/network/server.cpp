@@ -52,14 +52,14 @@ namespace spk
 			_backend->stop();
 		}
 
-		void sendTo(ConnectionID connection, const Message &message)
+		void sendTo(ConnectionID connection, const Message &message, Message::Priority priority)
 		{
-			_backend->sendTo(connection, message);
+			_backend->sendTo(connection, message, priority);
 		}
 
-		void sendToAll(const Message &message)
+		void sendToAll(const Message &message, Message::Priority priority)
 		{
-			_backend->sendToAll(message);
+			_backend->sendToAll(message, priority);
 		}
 	};
 
@@ -100,22 +100,22 @@ namespace spk
 		_impl->stop();
 	}
 
-	void Server::sendTo(ConnectionID connection, const Message &message)
+	void Server::sendTo(ConnectionID connection, const Message &message, Message::Priority priority)
 	{
-		_impl->sendTo(connection, message);
+		_impl->sendTo(connection, message, priority);
 	}
 
-	void Server::sendTo(std::span<const ConnectionID> connections, const Message &message)
+	void Server::sendTo(std::span<const ConnectionID> connections, const Message &message, Message::Priority priority)
 	{
 		for (const ConnectionID connection : connections)
 		{
-			sendTo(connection, message);
+			sendTo(connection, message, priority);
 		}
 	}
 
-	void Server::sendToAll(const Message &message)
+	void Server::sendToAll(const Message &message, Message::Priority priority)
 	{
-		_impl->sendToAll(message);
+		_impl->sendToAll(message, priority);
 	}
 
 	Server::MessageQueue &Server::messages() noexcept
