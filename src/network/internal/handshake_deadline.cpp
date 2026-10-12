@@ -15,6 +15,11 @@ namespace spk::NetworkInternal
 		}
 	}
 
+	HandshakeDeadline::HandshakeDeadline(Clock::time_point expiresAt) noexcept :
+		_expiresAt(expiresAt)
+	{
+	}
+
 	HandshakeDeadline::Clock::time_point HandshakeDeadline::expiresAt() const noexcept
 	{
 		return _expiresAt;

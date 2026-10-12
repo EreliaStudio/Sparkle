@@ -18,6 +18,7 @@ namespace spk::NetworkInternal
 		explicit HandshakeDeadline(
 			std::chrono::milliseconds duration = Handshake::DefaultTimeout,
 			Clock::time_point now = Clock::now());
+		explicit HandshakeDeadline(Clock::time_point expiresAt) noexcept;
 		[[nodiscard]] Clock::time_point expiresAt() const noexcept;
 		[[nodiscard]] bool expired(Clock::time_point now = Clock::now()) const noexcept;
 		[[nodiscard]] std::chrono::milliseconds remaining(Clock::time_point now = Clock::now()) const noexcept;

@@ -1,6 +1,7 @@
 #include "network/client.hpp"
 
 #include "exception.hpp"
+#include "network/internal/client_handshake.hpp"
 #include "network/internal/frame.hpp"
 #include "network/internal/handshake.hpp"
 #include "network/internal/page.hpp"
@@ -282,86 +283,29 @@ namespace spk
 			_owner._setStatus(_session, Connection::Status::Connected);
 		}
 
-		void _negotiate(std::chrono::steady_clock::time_point deadline, std::stop_token stop, Connection::Error &error)
-		{
-			using Handshake = NetworkInternal::Handshake;
-			_socket.sendAll(*Handshake::encode(Handshake::Kind::Hello));
-			std::array<std::byte, NetworkInternal::FrameHeaderSize> header{};
-			if (!_socket.receiveAllUntil(header, deadline, stop))
-			{
-				throw Exception("Unable to receive the handshake header.");
-			}
-			if (header[0] != std::byte{'S'} || header[1] != std::byte{'P'} ||
-				header[2] != std::byte{'K'} || header[3] != std::byte{'N'})
-			{
-				error = Connection::Error::InvalidMagic;
-				throw Exception("Invalid handshake frame magic.");
-			}
-			if (NetworkInternal::read16(header.data() + 4) != NetworkInternal::ProtocolVersion)
-			{
-				error = Connection::Error::VersionMismatch;
-				throw Exception("Incompatible network framing version.");
-			}
-			const auto decoded = NetworkInternal::decode(header);
-			if (decoded.payloadSize != Handshake::PayloadSize)
-			{
-				throw Exception("Invalid handshake response length.");
-			}
-			std::array<std::byte, Handshake::PayloadSize> payload{};
-			if (!_socket.receiveAllUntil(payload, deadline, stop))
-			{
-				throw Exception("Incomplete handshake response.");
-			}
-			std::array<std::byte, NetworkInternal::FrameHeaderSize + Handshake::PayloadSize> bytes{};
-			std::copy(header.begin(), header.end(), bytes.begin());
-			std::copy(payload.begin(), payload.end(), bytes.begin() + NetworkInternal::FrameHeaderSize);
-			const auto packet = Handshake::decode(bytes);
-			if (packet.validationError != Connection::Error::None)
-			{
-				error = packet.validationError;
-				throw Exception("Invalid protocol handshake.");
-			}
-			if (packet.kind == Handshake::Kind::Rejected)
-			{
-				error = packet.error == Connection::Error::None ? Connection::Error::Rejected : packet.error;
-				throw Exception("Server rejected the network handshake.");
-			}
-			if (!Handshake::validAcceptance(packet))
-			{
-				error = Connection::Error::Rejected;
-				throw Exception("Unexpected handshake control frame.");
-			}
-			_acceptRemoteID(packet.connectionID);
-			_owner._acceptConnection(_session, packet.connectionID);
-		}
-
 		void _connectWorker(std::string address, std::uint16_t port, std::chrono::steady_clock::time_point deadline, std::stop_token stop)
 		{
-			Connection::Error error = Connection::Error::Refused;
+			NetworkInternal::ClientHandshake handshake(deadline, stop);
+			auto result = handshake.connect(address, port);
+			if (result.error != Connection::Error::None)
+			{
+				_remoteDisconnect(result.error);
+				return;
+			}
+			if (!_active || stop.stop_requested())
+			{
+				return;
+			}
 			try
 			{
-				NetworkInternal::Socket candidate = NetworkInternal::Socket::connectTCP(address, port, deadline, stop);
-				if (stop.stop_requested() || !_active)
-				{
-					return;
-				}
-				_socket = std::move(candidate);
-				error = Connection::Error::TransportFailure;
-				_negotiate(deadline, stop, error);
-				if (!_active || stop.stop_requested())
-				{
-					return;
-				}
+				_socket = std::move(result.socket);
+				_acceptRemoteID(result.id);
+				_owner._acceptConnection(_session, result.id);
 				_startWorkers();
-				return;
 			} catch (...)
 			{
-				if (std::chrono::steady_clock::now() >= deadline)
-				{
-					error = Connection::Error::Timeout;
-				}
+				_remoteDisconnect();
 			}
-			_remoteDisconnect(error);
 		}
 
 		Connection connect(std::string_view address, std::uint16_t port)
