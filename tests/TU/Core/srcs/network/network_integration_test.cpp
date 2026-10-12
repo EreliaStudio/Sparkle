@@ -62,8 +62,7 @@ TEST(NetworkIntegrationTest, ClientAndServerExchangeFramedMessages)
 	spk::Message::Writer responseWriter(13);
 	responseWriter.setRequestID(0x8877665544332211ull);
 	responseWriter << std::string("pong");
-	server.sendTo(
-		receivedByServer.front().emitter,
+	server.sendTo(server.connection(receivedByServer.front().emitter),
 		std::move(responseWriter).build());
 
 	auto receivedByClient = waitForMessages(client.messages());

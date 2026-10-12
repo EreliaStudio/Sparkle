@@ -103,7 +103,7 @@ TEST(NetworkPagedIntegration, ServerSendsPagedResponseWithoutSynchronousSocketWr
 	const auto requests = NetworkTestUtils::collect(server.messages(), 1, 5s);
 	ASSERT_EQ(requests.size(), 1u);
 
-	server.sendTo(requests.front().emitter, makeMessage(202, 1200000), spk::Message::Priority::High);
+	server.sendTo(server.connection(requests.front().emitter), makeMessage(202, 1200000), spk::Message::Priority::High);
 	const auto responses = NetworkTestUtils::collect(client.messages(), 1, 10s);
 	ASSERT_EQ(responses.size(), 1u);
 	EXPECT_EQ(responses.front().type(), 202u);

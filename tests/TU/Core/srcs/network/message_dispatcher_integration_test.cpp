@@ -56,7 +56,7 @@ TEST(MessageDispatcherIntegrationTest, DirectServerRepliesReachOnlyTheirEmitter)
 	auto contract = server.messageDispatcher().subscribeTo(70, [&](const spk::ReceivedMessage &received) {
 		EXPECT_EQ(std::this_thread::get_id(), owner);
 		emitters.push_back(received.emitter);
-		server.sendTo(received.emitter, response(received.message));
+		server.sendTo(server.connection(received.emitter), response(received.message));
 	});
 	server.start(0);
 	first.connect("127.0.0.1", server.port());

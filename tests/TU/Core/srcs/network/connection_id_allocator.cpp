@@ -15,13 +15,18 @@ namespace
 		std::mutex mutex;
 		std::condition_variable changed;
 		spk::ConnectionID assigned = spk::InvalidConnectionID;
-		auto subscription = server.subscribeToConnection([&](spk::ConnectionID id) {
-			{
-				std::scoped_lock lock(mutex);
-				assigned = id;
-			}
-			changed.notify_all();
-		});
+		auto subscription = server.subscribeToConnectionStatusChange(
+			[&](spk::Connection connection, spk::Connection::Status status, spk::Connection::Error) {
+				if (status != spk::Connection::Status::Connected)
+				{
+					return;
+				}
+				{
+					std::scoped_lock lock(mutex);
+					assigned = connection.id();
+				}
+				changed.notify_all();
+			});
 		server.start(0);
 
 		spk::Client client;

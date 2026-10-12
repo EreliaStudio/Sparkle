@@ -111,9 +111,13 @@ TEST(NetworkStressTest, BroadcastBurstPreservesOrderForEveryClient)
 	constexpr std::uint32_t MessageCount = 100;
 	spk::Server server;
 	std::atomic_uint32_t connected = 0;
-	auto contract = server.subscribeToConnection([&](spk::ConnectionID) {
-		++connected;
-	});
+	auto contract = server.subscribeToConnectionStatusChange(
+		[&](spk::Connection, spk::Connection::Status status, spk::Connection::Error) {
+			if (status == spk::Connection::Status::Connected)
+			{
+				++connected;
+			}
+		});
 	server.start(0);
 
 	std::array<std::unique_ptr<spk::Client>, ClientCount> clients;
@@ -182,9 +186,13 @@ TEST(NetworkStressTest, DisconnectingOneClientDuringBroadcastDoesNotBreakOthers)
 	spk::Client disconnected;
 	spk::Client survivor;
 	std::atomic_uint32_t connected = 0;
-	auto contract = server.subscribeToConnection([&](spk::ConnectionID) {
-		++connected;
-	});
+	auto contract = server.subscribeToConnectionStatusChange(
+		[&](spk::Connection, spk::Connection::Status status, spk::Connection::Error) {
+			if (status == spk::Connection::Status::Connected)
+			{
+				++connected;
+			}
+		});
 	server.start(0);
 	disconnected.connect("127.0.0.1", server.port());
 	survivor.connect("127.0.0.1", server.port());

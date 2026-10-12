@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include "exception.hpp"
 #include "network/client.hpp"
 #include "network/server.hpp"
 #include "network_test_utils.hpp"
@@ -155,7 +156,7 @@ TEST(NetworkConcurrencyTest, ServerQueuedBurstPreservesMessageOrder)
 
 	for (std::uint32_t sequence = 0; sequence < MessageCount; ++sequence)
 	{
-		server.sendTo(connection, makeMessage(24, sequence));
+		server.sendTo(server.connection(connection), makeMessage(24, sequence));
 	}
 
 	auto received = NetworkTestUtils::collect(client.messages(), MessageCount, 5s);
@@ -184,7 +185,7 @@ TEST(NetworkConcurrencyTest, TargetedSendDoesNotReachOtherClients)
 	ASSERT_NE(secondID, spk::InvalidConnectionID);
 	ASSERT_NE(firstID, secondID);
 
-	server.sendTo(firstID, makeMessage(25, std::uint32_t{91}));
+	server.sendTo(server.connection(firstID), makeMessage(25, std::uint32_t{91}));
 
 	auto firstMessages = NetworkTestUtils::collect(first.messages(), 1);
 	ASSERT_EQ(firstMessages.size(), 1u);
@@ -252,8 +253,7 @@ TEST(NetworkConcurrencyTest, ConcurrentServerProducersAreSerializedSafely)
 			failure.run([&] {
 				for (std::uint32_t sequence = 0; sequence < MessageCount; ++sequence)
 				{
-					server.sendTo(
-						connection,
+					server.sendTo(server.connection(connection),
 						makeMessage(
 							27,
 							SequencePayload{producer, sequence}));
@@ -299,10 +299,14 @@ TEST(NetworkConcurrencyTest, DisconnectCallbacksIdentifyEachConnection)
 	std::mutex disconnectedMutex;
 	std::vector<spk::ConnectionID> disconnected;
 
-	auto contract = server.subscribeToDisconnection(
-		[&](spk::ConnectionID id) {
+	auto contract = server.subscribeToConnectionStatusChange(
+		[&](spk::Connection connection, spk::Connection::Status status, spk::Connection::Error) {
+			if (status != spk::Connection::Status::Disconnected)
+			{
+				return;
+			}
 			const std::scoped_lock lock(disconnectedMutex);
-			disconnected.push_back(id);
+			disconnected.push_back(connection.id());
 		});
 
 	server.start(0);
@@ -358,12 +362,17 @@ TEST(NetworkConcurrencyTest, ClientLifecycleCallbacksFireExactlyOnce)
 	spk::Client client;
 	std::atomic_uint32_t connected = 0;
 	std::atomic_uint32_t disconnected = 0;
-	auto connectionContract = client.subscribeToConnection([&] {
-		++connected;
-	});
-	auto disconnectionContract = client.subscribeToDisconnection([&] {
-		++disconnected;
-	});
+	auto statusContract = client.subscribeToConnectionStatusChange(
+		[&](spk::Connection, spk::Connection::Status status, spk::Connection::Error) {
+			if (status == spk::Connection::Status::Connected)
+			{
+				++connected;
+			}
+			if (status == spk::Connection::Status::Disconnected)
+			{
+				++disconnected;
+			}
+		});
 
 	server.start(0);
 	client.connect("127.0.0.1", server.port());
@@ -380,9 +389,13 @@ TEST(NetworkConcurrencyTest, ServerStopDisconnectsConnectedClient)
 	spk::Server server;
 	spk::Client client;
 	std::atomic_uint32_t disconnected = 0;
-	auto contract = client.subscribeToDisconnection([&] {
-		++disconnected;
-	});
+	auto contract = client.subscribeToConnectionStatusChange(
+		[&](spk::Connection, spk::Connection::Status status, spk::Connection::Error) {
+			if (status == spk::Connection::Status::Disconnected)
+			{
+				++disconnected;
+			}
+		});
 
 	server.start(0);
 	client.connect("127.0.0.1", server.port());
@@ -401,9 +414,13 @@ TEST(NetworkConcurrencyTest, ServerCanStopFromConnectionCallback)
 {
 	spk::Server server;
 	spk::Client client;
-	auto contract = server.subscribeToConnection([&](spk::ConnectionID) {
-		server.stop();
-	});
+	auto contract = server.subscribeToConnectionStatusChange(
+		[&](spk::Connection, spk::Connection::Status status, spk::Connection::Error) {
+			if (status == spk::Connection::Status::Connected)
+			{
+				server.stop();
+			}
+		});
 
 	server.start(0);
 	client.connect("127.0.0.1", server.port());
@@ -451,7 +468,7 @@ TEST(NetworkConcurrencyTest, ManyClientsConnectAndExchangeConcurrently)
 			{
 				continue;
 			}
-			server.sendTo(request.emitter, makeMessage(30, index));
+			server.sendTo(server.connection(request.emitter), makeMessage(30, index));
 		}
 	}
 
@@ -502,9 +519,7 @@ TEST(NetworkConcurrencyTest, SendingToUnknownConnectionDoesNotAffectConnectedCli
 	const spk::ConnectionID connection = connectAndIdentify(server, client);
 	ASSERT_NE(connection, spk::InvalidConnectionID);
 
-	server.sendTo(
-		connection + 100000u,
-		spk::Message::Writer(32).build());
+	EXPECT_THROW(server.connection(connection + 100000u), spk::Exception);
 	std::this_thread::sleep_for(50ms);
 
 	std::vector<spk::Message> received;
