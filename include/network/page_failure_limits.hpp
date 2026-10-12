@@ -14,8 +14,7 @@ namespace spk
 
 		[[nodiscard]] bool valid() const noexcept
 		{
-			return minimumPages != 0 && minimumBytes != 0 &&
-				window.count() > 0 && consecutiveFailures != 0;
+			return minimumPages != 0 && minimumBytes != 0 && window.count() > 0 && consecutiveFailures != 0;
 		}
 	};
 }
