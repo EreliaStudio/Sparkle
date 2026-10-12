@@ -135,3 +135,52 @@ TEST(PageScheduler, ValidatesPriorityAndPageSize)
 	EXPECT_THROW((void)scheduler.nextPage(0), spk::Exception);
 	EXPECT_THROW((void)scheduler.nextPage(spk::NetworkInternal::MaximumPayloadSize), spk::Exception);
 }
+
+TEST(PageScheduler, TrackedTransferCompletesOnlyAfterAcknowledgment)
+{
+	spk::NetworkInternal::PageScheduler scheduler;
+	auto transfer = scheduler.enqueueTracked(message(10));
+	EXPECT_NE(transfer.id(), spk::Transfer::InvalidID);
+	while (scheduler.nextPage(3))
+	{
+	}
+	EXPECT_EQ(transfer.status(), spk::Transfer::Status::Pending);
+	EXPECT_TRUE(scheduler.complete(transfer.id(), spk::Transfer::Status::Success));
+	EXPECT_EQ(transfer.status(), spk::Transfer::Status::Success);
+	EXPECT_FALSE(scheduler.complete(transfer.id(), spk::Transfer::Status::Failed));
+}
+
+TEST(PageScheduler, FailureDiscardsRemainingPagesWithoutAffectingOthers)
+{
+	spk::NetworkInternal::PageScheduler scheduler;
+	auto failed = scheduler.enqueueTracked(message(40));
+	auto healthy = scheduler.enqueueTracked(message(12));
+	ASSERT_TRUE(scheduler.nextPage(4).has_value());
+	EXPECT_TRUE(scheduler.complete(failed.id(), spk::Transfer::Status::Rejected,
+		spk::Transfer::Reason::ReceiverCapacity));
+	EXPECT_EQ(failed.reason(), spk::Transfer::Reason::ReceiverCapacity);
+	while (const auto page = scheduler.nextPage(4))
+	{
+		EXPECT_EQ(page->transferID, healthy.id());
+	}
+	EXPECT_EQ(healthy.status(), spk::Transfer::Status::Pending);
+	EXPECT_TRUE(scheduler.complete(healthy.id(), spk::Transfer::Status::Success));
+}
+
+TEST(PageScheduler, ClearLeavesRetainedTransfersIndeterminate)
+{
+	spk::NetworkInternal::PageScheduler scheduler;
+	auto transfer = scheduler.enqueueTracked(message(100));
+	int notified = 0;
+	auto contract = transfer.subscribeToCompletion([&](spk::Transfer::Status status, spk::Transfer::Reason reason) {
+		EXPECT_EQ(status, spk::Transfer::Status::Indeterminate);
+		EXPECT_EQ(reason, spk::Transfer::Reason::TransportFailure);
+		++notified;
+	});
+	scheduler.clear();
+	EXPECT_EQ(transfer.status(), spk::Transfer::Status::Indeterminate);
+	EXPECT_EQ(scheduler.pendingBytes(), 0u);
+	EXPECT_EQ(notified, 1);
+	scheduler.clear();
+	EXPECT_EQ(notified, 1);
+}

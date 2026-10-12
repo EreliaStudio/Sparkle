@@ -1,4 +1,5 @@
 #include "network/internal/page_scheduler.hpp"
+#include "network/internal/transfer_completion.hpp"
 
 #include "exception.hpp"
 
@@ -27,9 +28,8 @@ namespace spk::NetworkInternal
 		return _transfers.size();
 	}
 
-	std::uint64_t PageScheduler::enqueue(Message message, Message::Priority priority)
+	std::uint64_t PageScheduler::_enqueue(Message message, Message::Priority priority)
 	{
-		const std::scoped_lock lock(_mutex);
 		if (static_cast<std::size_t>(priority) >= _transfers.size())
 		{
 			throw Exception("Invalid network message priority.");
@@ -56,6 +56,60 @@ namespace spk::NetworkInternal
 		++_nextTransferID;
 		_pendingBytes += bytes;
 		return id;
+	}
+
+	std::uint64_t PageScheduler::enqueue(Message message, Message::Priority priority)
+	{
+		const std::scoped_lock lock(_mutex);
+		return _enqueue(std::move(message), priority);
+	}
+
+	spk::Transfer PageScheduler::enqueueTracked(Message message, Message::Priority priority)
+	{
+		const std::scoped_lock lock(_mutex);
+		const std::uint64_t id = _enqueue(std::move(message), priority);
+		spk::Transfer transfer;
+		TransferCompletion::assignID(transfer, id);
+		_tracked.emplace(id, transfer);
+		return transfer;
+	}
+
+	void PageScheduler::_removeQueued(std::uint64_t id) noexcept
+	{
+		for (auto &queue : _transfers)
+		{
+			for (auto it = queue.begin(); it != queue.end(); ++it)
+			{
+				if (it->id != id)
+				{
+					continue;
+				}
+				_pendingBytes -= it->message.size();
+				queue.erase(it);
+				return;
+			}
+		}
+	}
+
+	bool PageScheduler::complete(std::uint64_t id, spk::Transfer::Status status, spk::Transfer::Reason reason)
+	{
+		if (status == spk::Transfer::Status::Pending)
+		{
+			return false;
+		}
+		std::optional<spk::Transfer> transfer;
+		{
+			const std::scoped_lock lock(_mutex);
+			const auto it = _tracked.find(id);
+			if (it == _tracked.end())
+			{
+				return false;
+			}
+			transfer = it->second;
+			_tracked.erase(it);
+			_removeQueued(id);
+		}
+		return TransferCompletion::complete(*transfer, status, reason);
 	}
 
 	std::optional<Page> PageScheduler::nextPage(std::size_t maxPayloadBytes)
@@ -119,11 +173,21 @@ namespace spk::NetworkInternal
 
 	void PageScheduler::clear() noexcept
 	{
-		const std::scoped_lock lock(_mutex);
-		for (auto &queue : _transfers)
+		std::unordered_map<std::uint64_t, spk::Transfer> tracked;
 		{
-			queue.clear();
+			const std::scoped_lock lock(_mutex);
+			for (auto &queue : _transfers)
+			{
+				queue.clear();
+			}
+			_pendingBytes = 0;
+			tracked.swap(_tracked);
 		}
-		_pendingBytes = 0;
+		for (auto &[id, transfer] : tracked)
+		{
+			(void)id;
+			(void)TransferCompletion::complete(transfer, spk::Transfer::Status::Indeterminate,
+				spk::Transfer::Reason::TransportFailure);
+		}
 	}
 }
