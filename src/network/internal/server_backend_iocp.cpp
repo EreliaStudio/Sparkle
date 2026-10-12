@@ -350,8 +350,11 @@ namespace spk::NetworkInternal
 				session.helloReceived = true;
 				if (!Handshake::validHello(packet))
 				{
-					session.disconnectError = packet.validationError != Connection::Error::None ?
-						packet.validationError : Connection::Error::Rejected;
+					session.disconnectError = Connection::Error::Rejected;
+					if (packet.validationError != Connection::Error::None)
+					{
+						session.disconnectError = packet.validationError;
+					}
 					_queueHandshake(session, Handshake::Kind::Rejected, session.disconnectError);
 					return;
 				}

@@ -4,8 +4,8 @@
 
 #include <algorithm>
 #include <cerrno>
-#include <climits>
 #include <chrono>
+#include <climits>
 #include <memory>
 #include <stop_token>
 #include <string>
@@ -157,8 +157,7 @@ namespace spk::NetworkInternal
 					deadline - std::chrono::steady_clock::now());
 				const auto duration = std::clamp(remaining, std::chrono::milliseconds(1), std::chrono::milliseconds(50));
 				timeval timeout{static_cast<long>(duration.count() / 1000), static_cast<long>((duration.count() % 1000) * 1000)};
-				const int ready = ::select(static_cast<int>(socket) + 1,
-					writing ? nullptr : &sockets, writing ? &sockets : nullptr, nullptr, &timeout);
+				const int ready = ::select(static_cast<int>(socket) + 1, writing ? nullptr : &sockets, writing ? &sockets : nullptr, nullptr, &timeout);
 				if (ready > 0)
 				{
 					return true;
@@ -171,9 +170,7 @@ namespace spk::NetworkInternal
 			return false;
 		}
 
-		[[nodiscard]] bool connectReady(
-			SystemSocket socket, const addrinfo &entry,
-			std::chrono::steady_clock::time_point deadline, std::stop_token stop)
+		[[nodiscard]] bool connectReady(SystemSocket socket, const addrinfo &entry, std::chrono::steady_clock::time_point deadline, std::stop_token stop)
 		{
 			if (::connect(socket, entry.ai_addr, static_cast<int>(entry.ai_addrlen)) == 0)
 			{
@@ -485,8 +482,7 @@ namespace spk::NetworkInternal
 			{
 				const auto socket = static_cast<SystemSocket>(nativeHandle());
 #ifdef _WIN32
-				const int received = ::recv(socket, reinterpret_cast<char *>(buffer.data() + offset),
-					static_cast<int>(std::min<std::size_t>(buffer.size() - offset, INT_MAX)), 0);
+				const int received = ::recv(socket, reinterpret_cast<char *>(buffer.data() + offset), static_cast<int>(std::min<std::size_t>(buffer.size() - offset, INT_MAX)), 0);
 #else
 				const int received = static_cast<int>(::recv(socket, buffer.data() + offset, buffer.size() - offset, 0));
 #endif

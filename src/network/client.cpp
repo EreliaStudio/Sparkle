@@ -15,8 +15,8 @@
 #include <condition_variable>
 #include <deque>
 #include <memory>
-#include <string>
 #include <mutex>
+#include <string>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -335,8 +335,7 @@ namespace spk
 			_owner._acceptConnection(_session, packet.connectionID);
 		}
 
-		void _connectWorker(std::string address, std::uint16_t port,
-			std::chrono::steady_clock::time_point deadline, std::stop_token stop)
+		void _connectWorker(std::string address, std::uint16_t port, std::chrono::steady_clock::time_point deadline, std::stop_token stop)
 		{
 			Connection::Error error = Connection::Error::Refused;
 			try

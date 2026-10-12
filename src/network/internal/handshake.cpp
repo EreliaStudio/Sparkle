@@ -67,14 +67,12 @@ namespace spk::NetworkInternal
 
 	bool Handshake::validHello(const Packet &packet) noexcept
 	{
-		return packet.kind == Kind::Hello && packet.connectionID == Connection::InvalidID &&
-			packet.error == Connection::Error::None && packet.validationError == Connection::Error::None;
+		return packet.kind == Kind::Hello && packet.connectionID == Connection::InvalidID && packet.error == Connection::Error::None && packet.validationError == Connection::Error::None;
 	}
 
 	bool Handshake::validAcceptance(const Packet &packet) noexcept
 	{
-		return packet.kind == Kind::Accepted && packet.connectionID != Connection::InvalidID &&
-			packet.error == Connection::Error::None && packet.validationError == Connection::Error::None;
+		return packet.kind == Kind::Accepted && packet.connectionID != Connection::InvalidID && packet.error == Connection::Error::None && packet.validationError == Connection::Error::None;
 	}
 
 	HandshakeDeadline::HandshakeDeadline(std::chrono::milliseconds duration, Clock::time_point now) :
@@ -98,7 +96,6 @@ namespace spk::NetworkInternal
 
 	std::chrono::milliseconds HandshakeDeadline::remaining(Clock::time_point now) const noexcept
 	{
-		return std::max(std::chrono::milliseconds::zero(),
-			std::chrono::duration_cast<std::chrono::milliseconds>(_expiresAt - now));
+		return std::max(std::chrono::milliseconds::zero(), std::chrono::duration_cast<std::chrono::milliseconds>(_expiresAt - now));
 	}
 }
