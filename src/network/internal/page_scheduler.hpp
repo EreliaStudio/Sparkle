@@ -39,7 +39,7 @@ namespace spk::NetworkInternal
 		explicit PageScheduler(std::size_t maxPendingBytes = 64u * 1024u * 1024u);
 
 		[[nodiscard]] std::uint64_t enqueue(Message message, Message::Priority priority = Message::Priority::Normal);
-		[[nodiscard]] spk::Transfer enqueueTracked(Message message, Message::Priority priority = Message::Priority::Normal);
+		[[nodiscard]] spk::Transfer enqueueTracked(Message message, Message::Priority priority = Message::Priority::Normal, spk::Transfer transfer = {});
 		[[nodiscard]] bool complete(std::uint64_t id, spk::Transfer::Status status, spk::Transfer::Reason reason = spk::Transfer::Reason::None);
 		[[nodiscard]] std::optional<Page> nextPage(std::size_t maxPayloadBytes);
 		[[nodiscard]] std::size_t pendingBytes() const noexcept;
