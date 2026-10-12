@@ -64,10 +64,9 @@ namespace spk::NetworkInternal
 		return _enqueue(std::move(message), priority);
 	}
 
-	spk::Transfer PageScheduler::enqueueTracked(Message message, Message::Priority priority)
+	spk::Transfer PageScheduler::enqueueTracked(Message message, Message::Priority priority, spk::Transfer transfer)
 	{
 		const std::scoped_lock lock(_mutex);
-		spk::Transfer transfer;
 		const std::uint64_t id = _enqueue(std::move(message), priority);
 		TransferCompletion::assignID(transfer, id);
 		try
