@@ -10,8 +10,8 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
-#include <condition_variable>
 #include <chrono>
+#include <condition_variable>
 #include <mutex>
 #include <thread>
 #include <utility>
@@ -76,8 +76,7 @@ namespace spk
 					{
 						_owner._publish(std::move(*message));
 					}
-				}
-				catch (const NetworkInternal::PageReassemblyError &)
+				} catch (const NetworkInternal::PageReassemblyError &)
 				{
 					if (_reassembler.failureLimitReached())
 					{
@@ -198,12 +197,12 @@ namespace spk
 				_sendLoop();
 			});
 			_expirationWorker = std::jthread([this] {
-					while (_connected)
-					{
-						std::this_thread::sleep_for(std::chrono::seconds(1));
-						const std::scoped_lock lock(_receiveMutex);
-						_reassembler.expire();
-					}
+				while (_connected)
+				{
+					std::this_thread::sleep_for(std::chrono::seconds(1));
+					const std::scoped_lock lock(_receiveMutex);
+					_reassembler.expire();
+				}
 			});
 			try
 			{
