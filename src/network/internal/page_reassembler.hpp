@@ -39,9 +39,9 @@ namespace spk::NetworkInternal
 
 	public:
 		explicit PageReassembler(
-			std::size_t maxMessageBytes = 64u * 1024u * 1024u,
-			std::size_t maxIncompleteBytes = 128u * 1024u * 1024u,
-			std::chrono::milliseconds timeout = std::chrono::seconds(30));
+			std::size_t maxMessageBytes = 128u * 1024u * 1024u,
+			std::size_t maxIncompleteBytes = 512u * 1024u * 1024u,
+			std::chrono::milliseconds timeout = std::chrono::seconds(60));
 
 		[[nodiscard]] std::optional<Message> accept(const PageFragment &page, Clock::time_point now = Clock::now());
 		void expire(Clock::time_point now = Clock::now());
