@@ -186,8 +186,7 @@ namespace spk::NetworkInternal
 		for (auto &[id, transfer] : tracked)
 		{
 			(void)id;
-			(void)TransferCompletion::complete(transfer, spk::Transfer::Status::Indeterminate,
-				spk::Transfer::Reason::TransportFailure);
+			(void)TransferCompletion::complete(transfer, spk::Transfer::Status::Indeterminate, spk::Transfer::Reason::TransportFailure);
 		}
 	}
 }

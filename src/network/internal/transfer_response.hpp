@@ -39,8 +39,11 @@ namespace spk::NetworkInternal
 			{
 				return false;
 			}
-			return status == spk::Transfer::Status::Success ?
-				reason == spk::Transfer::Reason::None : reason != spk::Transfer::Reason::None;
+			if (status == spk::Transfer::Status::Success)
+			{
+				return reason == spk::Transfer::Reason::None;
+			}
+			return reason != spk::Transfer::Reason::None;
 		}
 
 		[[nodiscard]] std::shared_ptr<std::vector<std::byte>> encode() const

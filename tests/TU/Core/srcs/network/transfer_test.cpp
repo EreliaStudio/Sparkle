@@ -1,5 +1,5 @@
-#include "network/transfer.hpp"
 #include "network/internal/transfer_completion.hpp"
+#include "network/transfer.hpp"
 
 #include <gtest/gtest.h>
 
@@ -76,7 +76,6 @@ TEST(Transfer, DroppingApplicationCopiesDoesNotCompleteTransfer)
 		EXPECT_FALSE(user.isComplete());
 	}
 	EXPECT_EQ(transport.status(), Transfer::Status::Pending);
-	EXPECT_TRUE(TransferCompletion::complete(
-		transport, Transfer::Status::Indeterminate, Transfer::Reason::AcknowledgmentTimeout));
+	EXPECT_TRUE(TransferCompletion::complete(transport, Transfer::Status::Indeterminate, Transfer::Reason::AcknowledgmentTimeout));
 	EXPECT_EQ(transport.reason(), Transfer::Reason::AcknowledgmentTimeout);
 }

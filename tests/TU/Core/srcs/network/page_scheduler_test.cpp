@@ -156,8 +156,7 @@ TEST(PageScheduler, FailureDiscardsRemainingPagesWithoutAffectingOthers)
 	auto failed = scheduler.enqueueTracked(message(40));
 	auto healthy = scheduler.enqueueTracked(message(12));
 	ASSERT_TRUE(scheduler.nextPage(4).has_value());
-	EXPECT_TRUE(scheduler.complete(failed.id(), spk::Transfer::Status::Rejected,
-		spk::Transfer::Reason::ReceiverCapacity));
+	EXPECT_TRUE(scheduler.complete(failed.id(), spk::Transfer::Status::Rejected, spk::Transfer::Reason::ReceiverCapacity));
 	EXPECT_EQ(failed.reason(), spk::Transfer::Reason::ReceiverCapacity);
 	while (const auto page = scheduler.nextPage(4))
 	{
