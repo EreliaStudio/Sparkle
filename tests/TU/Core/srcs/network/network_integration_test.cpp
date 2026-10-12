@@ -41,9 +41,7 @@ TEST(NetworkIntegrationTest, ClientAndServerExchangeFramedMessages)
 	spk::Client client;
 	server.start(0);
 	client.connect("127.0.0.1", server.port());
-	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
-		return client.isConnected();
-	}, std::chrono::seconds(5)));
+	EXPECT_TRUE(NetworkTestUtils::waitConnected(client));
 
 	spk::Message::Writer requestWriter(12);
 	requestWriter.setRequestID(0x1020304050607080ull);
