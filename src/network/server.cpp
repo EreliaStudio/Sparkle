@@ -2,6 +2,7 @@
 
 #include "exception.hpp"
 #include "network/internal/server_backend.hpp"
+#include "network/internal/outgoing_message_validator.hpp"
 
 #include <utility>
 
@@ -150,6 +151,7 @@ namespace spk
 		{
 			throw Exception("Cannot send to an empty connection set.");
 		}
+		NetworkInternal::OutgoingMessageValidator::validate(message, priority);
 		auto batch = std::make_shared<NetworkInternal::ServerSendBatch>(message, priority, policy);
 		TransferResults results;
 		batch->recipients.reserve(connections.size());
@@ -163,6 +165,10 @@ namespace spk
 				{
 					throw Exception("Unable to send to an unknown or disconnected network connection.");
 				}
+				if (policy == Connection::OverflowPolicy::Reject)
+				{
+					NetworkInternal::OutgoingMessageValidator::validateCapacity(message, connection.maxQueuedBytes());
+				}
 				batch->recipients.push_back({connection, Transfer{}});
 				results.emplace(connection.id(), batch->recipients.back().transfer);
 			}
@@ -173,6 +179,7 @@ namespace spk
 
 	Server::TransferResults Server::sendToAll(const Message &message, Message::Priority priority, Connection::OverflowPolicy policy)
 	{
+		NetworkInternal::OutgoingMessageValidator::validate(message, priority);
 		auto batch = std::make_shared<NetworkInternal::ServerSendBatch>(message, priority, policy);
 		TransferResults results;
 		{
@@ -188,6 +195,10 @@ namespace spk
 				if (!connection.isConnected())
 				{
 					throw Exception("Cannot broadcast while a recipient is pending or disconnected.");
+				}
+				if (policy == Connection::OverflowPolicy::Reject)
+				{
+					NetworkInternal::OutgoingMessageValidator::validateCapacity(message, connection.maxQueuedBytes());
 				}
 				batch->recipients.push_back({connection, Transfer{}});
 				results.emplace(id, batch->recipients.back().transfer);

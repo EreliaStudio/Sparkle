@@ -1,3 +1,4 @@
+#include "exception.hpp"
 #include "network/client.hpp"
 #include "network/server.hpp"
 #include "network_test_utils.hpp"
@@ -97,11 +98,7 @@ TEST(ServerTransferIntegration, RejectDoesNotPartiallyAdmitBroadcast)
 	ASSERT_TRUE(secondConnection.isConnected());
 	firstConnection.setMaxQueuedBytes(1);
 
-	const auto transfers = server.sendToAll(makeMessage(153, 100), spk::Message::Priority::Normal, spk::Connection::OverflowPolicy::Reject);
-	ASSERT_EQ(transfers.size(), 2u);
-	EXPECT_TRUE(finished(transfers.at(firstConnection.id()), spk::Transfer::Status::Rejected));
-	EXPECT_TRUE(finished(transfers.at(secondConnection.id()), spk::Transfer::Status::Rejected));
-	EXPECT_EQ(transfers.at(firstConnection.id()).reason(), spk::Transfer::Reason::QueueOverflow);
+	EXPECT_THROW(server.sendToAll(makeMessage(153, 100), spk::Message::Priority::Normal, spk::Connection::OverflowPolicy::Reject), spk::Exception);
 	EXPECT_TRUE(first.isConnected());
 	EXPECT_TRUE(second.isConnected());
 	EXPECT_TRUE(NetworkTestUtils::collect(first.messages(), 1, 100ms).empty());
@@ -161,5 +158,32 @@ TEST(ServerTransferIntegration, DisconnectRecipientLeavesOtherConnectionsUsable)
 
 	first.disconnect();
 	second.disconnect();
+	server.stop();
+}
+
+TEST(ServerTransferIntegration, TargetedSendThrowsImmediatelyWhenRecipientCannotFitMessage)
+{
+	spk::Server server;
+	spk::Client client;
+	server.start(0);
+	const auto recipient = identify(server, client);
+	ASSERT_TRUE(recipient.isConnected());
+	recipient.setMaxQueuedBytes(1);
+	EXPECT_THROW(server.sendTo(recipient, makeMessage(156, 200)), spk::Exception);
+	EXPECT_TRUE(client.isConnected());
+	EXPECT_TRUE(NetworkTestUtils::collect(client.messages(), 1, 100ms).empty());
+	client.disconnect();
+	server.stop();
+}
+
+TEST(ServerTransferIntegration, InvalidPriorityThrowsBeforeScheduling)
+{
+	spk::Server server;
+	spk::Client client;
+	server.start(0);
+	const auto recipient = identify(server, client);
+	ASSERT_TRUE(recipient.isConnected());
+	EXPECT_THROW(server.sendTo(recipient, makeMessage(157, 1), static_cast<spk::Message::Priority>(99)), spk::Exception);
+	client.disconnect();
 	server.stop();
 }

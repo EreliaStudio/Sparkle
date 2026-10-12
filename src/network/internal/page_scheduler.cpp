@@ -1,5 +1,6 @@
 #include "network/internal/page_scheduler.hpp"
 #include "network/internal/transfer_completion.hpp"
+#include "network/internal/outgoing_message_validator.hpp"
 
 #include "exception.hpp"
 
@@ -30,14 +31,7 @@ namespace spk::NetworkInternal
 
 	std::uint64_t PageScheduler::_enqueue(Message message, Message::Priority priority)
 	{
-		if (static_cast<std::size_t>(priority) >= _transfers.size())
-		{
-			throw Exception("Invalid network message priority.");
-		}
-		if (message.size() > 128u * 1024u * 1024u)
-		{
-			throw Exception("Outgoing logical message exceeds the network limit.");
-		}
+		OutgoingMessageValidator::validate(message, priority);
 		if (_pendingBytes > _maxPendingBytes || message.size() > _maxPendingBytes - _pendingBytes)
 		{
 			throw Exception("Outgoing pending transfer storage is saturated.");
