@@ -66,14 +66,14 @@ namespace spk
 			_backend->setHandshakeTimeout(timeout);
 		}
 
-		void sendTo(ConnectionID connection, const Message &message, Message::Priority priority)
+		void setGlobalMaxQueuedBytes(std::size_t bytes)
 		{
-			_backend->sendTo(connection, message, priority);
+			_backend->setGlobalMaxQueuedBytes(bytes);
 		}
 
-		void sendToAll(const Message &message, Message::Priority priority)
+		void send(std::shared_ptr<NetworkInternal::ServerSendBatch> batch)
 		{
-			_backend->sendToAll(message, priority);
+			_backend->send(std::move(batch));
 		}
 	};
 
@@ -133,39 +133,60 @@ namespace spk
 		_impl->setHandshakeTimeout(timeout);
 	}
 
-	void Server::sendTo(const Connection &connection, const Message &message, Message::Priority priority)
+	void Server::setGlobalMaxQueuedBytes(std::size_t bytes)
 	{
+		_impl->setGlobalMaxQueuedBytes(bytes);
+	}
+
+	Transfer Server::sendTo(const Connection &connection, const Message &message, Message::Priority priority)
+	{
+		const ConnectionSet recipients{connection};
+		return sendTo(recipients, message, priority).at(connection.id());
+	}
+
+	Server::TransferResults Server::sendTo(const ConnectionSet &connections, const Message &message, Message::Priority priority, Connection::OverflowPolicy policy)
+	{
+		auto batch = std::make_shared<NetworkInternal::ServerSendBatch>(message, priority, policy);
+		TransferResults results;
+		batch->recipients.reserve(connections.size());
+		results.reserve(connections.size());
 		{
 			const std::scoped_lock lock(_connectionsMutex);
-			const auto it = _connections.find(connection.id());
-			if (it == _connections.end() || it->second._data != connection._data || !connection.isConnected())
+			for (const Connection &connection : connections)
 			{
-				throw Exception("Unable to send to an unknown or disconnected network connection.");
+				const auto it = _connections.find(connection.id());
+				if (it == _connections.end() || it->second._data != connection._data || !connection.isConnected())
+				{
+					throw Exception("Unable to send to an unknown or disconnected network connection.");
+				}
+				batch->recipients.push_back({connection, Transfer{}});
+				results.emplace(connection.id(), batch->recipients.back().transfer);
 			}
 		}
-		_impl->sendTo(connection.id(), message, priority);
+		_impl->send(std::move(batch));
+		return results;
 	}
 
-	void Server::sendTo(const ConnectionSet &connections, const Message &message, Message::Priority priority)
+	Server::TransferResults Server::sendToAll(const Message &message, Message::Priority priority, Connection::OverflowPolicy policy)
 	{
-		const std::scoped_lock lock(_connectionsMutex);
-		for (const Connection &connection : connections)
+		auto batch = std::make_shared<NetworkInternal::ServerSendBatch>(message, priority, policy);
+		TransferResults results;
 		{
-			const auto it = _connections.find(connection.id());
-			if (it == _connections.end() || it->second._data != connection._data || !connection.isConnected())
+			const std::scoped_lock lock(_connectionsMutex);
+			batch->recipients.reserve(_connections.size());
+			results.reserve(_connections.size());
+			for (const auto &[id, connection] : _connections)
 			{
-				throw Exception("Unable to send to an unknown or disconnected network connection.");
+				if (!connection.isConnected())
+				{
+					continue;
+				}
+				batch->recipients.push_back({connection, Transfer{}});
+				results.emplace(id, batch->recipients.back().transfer);
 			}
 		}
-		for (const Connection &connection : connections)
-		{
-			_impl->sendTo(connection.id(), message, priority);
-		}
-	}
-
-	void Server::sendToAll(const Message &message, Message::Priority priority)
-	{
-		_impl->sendToAll(message, priority);
+		_impl->send(std::move(batch));
+		return results;
 	}
 
 	Server::MessageQueue &Server::messages() noexcept
