@@ -326,7 +326,7 @@ namespace spk::NetworkInternal
 				{
 					if (session->outgoing.empty())
 					{
-						auto page = session->scheduler.nextPage(16u * 1024u);
+						auto page = session->scheduler.nextPage(DefaultMaximumPageBytes);
 						if (!page.has_value())
 						{
 							break;
