@@ -92,7 +92,6 @@ namespace spk::NetworkInternal
 		enum class CommandKind
 		{
 			Send,
-			Broadcast,
 			ConfigureLimits,
 			ConfigureHandshakeTimeout,
 			Stop
@@ -106,6 +105,7 @@ namespace spk::NetworkInternal
 			Message::Priority priority = Message::Priority::Normal;
 			PageFailureLimits limits;
 			std::chrono::milliseconds handshakeTimeout = Handshake::DefaultTimeout;
+			std::shared_ptr<ServerSendBatch> batch;
 		};
 
 		class IocpServerBackend final : public ServerBackend
@@ -123,6 +123,7 @@ namespace spk::NetworkInternal
 			std::deque<Command> _commands;
 			PageFailureLimits _failureLimits;
 			std::chrono::milliseconds _handshakeTimeout = Handshake::DefaultTimeout;
+			std::atomic_size_t _maxGlobalQueuedBytes = 256u * 1024u * 1024u;
 			std::size_t _pendingOperations = 0;
 			bool _stopping = false;
 
@@ -437,17 +438,13 @@ namespace spk::NetworkInternal
 				return true;
 			}
 
-			void _queueMessage(const std::shared_ptr<Session> &session, const Message &message, Message::Priority priority)
+			void _queueMessage(const std::shared_ptr<Session> &session, const Message &message, Message::Priority priority, spk::Transfer transfer)
 			{
 				if (!session->handshake.ready())
 				{
 					throw Exception("Cannot send to a pending network connection.");
 				}
-				(void)session->transfers.enqueue(message.withConnectionID(session->id), priority);
-				if (!session->writeInFlight)
-				{
-					_postWrite(session);
-				}
+				(void)session->transfers.enqueue(message.withConnectionID(session->id), priority, std::move(transfer));
 			}
 
 			void _postWrite(const std::shared_ptr<Session> &session)
@@ -610,44 +607,99 @@ namespace spk::NetworkInternal
 					_handshakeTimeout = command.handshakeTimeout;
 					return;
 				}
-				if (command.kind == CommandKind::Broadcast)
+				_sendBatch(*command.batch);
+			}
+
+			void _sendBatch(ServerSendBatch &batch)
+			{
+				struct Candidate
 				{
-					_broadcast(*command.message, command.priority);
+					ServerSendBatch::Recipient *recipient;
+					std::shared_ptr<Session> session;
+				};
+				std::vector<Candidate> candidates;
+				std::vector<ConnectionID> overflowed;
+				std::size_t used = 0;
+				for (const auto &[id, session] : _sessions)
+				{
+					(void)id;
+					used += session->queuedBytes + session->transfers.pendingBytes();
+				}
+				const std::size_t limit = _maxGlobalQueuedBytes.load();
+				const std::size_t size = std::max<std::size_t>(1, batch.message.size());
+				bool rejected = false;
+				for (auto &recipient : batch.recipients)
+				{
+					const auto it = _sessions.find(recipient.connection.id());
+					if (it == _sessions.end() || !it->second->handshake.ready())
+					{
+						(void)TransferCompletion::complete(recipient.transfer, spk::Transfer::Status::Rejected, spk::Transfer::Reason::InvalidRecipient);
+						rejected = true;
+						continue;
+					}
+					const auto &session = it->second;
+					const std::size_t pending = session->queuedBytes + session->transfers.pendingBytes();
+					const std::size_t budget = recipient.connection.maxQueuedBytes();
+					if (pending > budget || size > budget - pending || used > limit || size > limit - used)
+					{
+						(void)TransferCompletion::complete(recipient.transfer, spk::Transfer::Status::Rejected, spk::Transfer::Reason::QueueOverflow);
+						rejected = true;
+						if (batch.policy == Connection::OverflowPolicy::DisconnectRecipient)
+						{
+							overflowed.push_back(session->id);
+						}
+						continue;
+					}
+					used += size;
+					candidates.push_back({&recipient, session});
+				}
+				if (rejected && batch.policy == Connection::OverflowPolicy::Reject)
+				{
+					for (auto &recipient : batch.recipients)
+					{
+						(void)TransferCompletion::complete(recipient.transfer, spk::Transfer::Status::Rejected, spk::Transfer::Reason::QueueOverflow);
+					}
 					return;
 				}
-				const auto iterator = _sessions.find(command.connection);
-				if (iterator != _sessions.end() && iterator->second->handshake.ready())
+				try
+				{
+					for (auto &candidate : candidates)
+					{
+						candidate.session->transfers.setMaxPendingBytes(candidate.recipient->connection.maxQueuedBytes());
+						_queueMessage(candidate.session, batch.message, batch.priority, candidate.recipient->transfer);
+						candidate.recipient->admitted = true;
+					}
+				} catch (...)
+				{
+					for (auto &candidate : candidates)
+					{
+						if (candidate.recipient->admitted)
+						{
+							(void)candidate.session->transfers.fail(candidate.recipient->transfer.id(), spk::Transfer::Status::Rejected, spk::Transfer::Reason::QueueOverflow);
+						}
+						else
+						{
+							(void)TransferCompletion::complete(candidate.recipient->transfer, spk::Transfer::Status::Rejected, spk::Transfer::Reason::QueueOverflow);
+						}
+					}
+					return;
+				}
+				for (const auto &candidate : candidates)
 				{
 					try
 					{
-						_queueMessage(iterator->second, *command.message, command.priority);
+						if (!candidate.session->writeInFlight)
+						{
+							_postWrite(candidate.session);
+						}
 					} catch (...)
 					{
-						_disconnect(command.connection);
+						_disconnect(candidate.session->id);
 					}
 				}
-			}
-
-			void _broadcast(const Message &message, Message::Priority priority)
-			{
-				std::vector<std::shared_ptr<Session>> sessions;
-				sessions.reserve(_sessions.size());
-				for (const auto &entry : _sessions)
+				for (const ConnectionID id : overflowed)
 				{
-					sessions.push_back(entry.second);
-				}
-				for (const auto &session : sessions)
-				{
-					if (_sessions.contains(session->id) && session->handshake.ready())
-					{
-						try
-						{
-							_queueMessage(session, message, priority);
-						} catch (...)
-						{
-							_disconnect(session->id);
-						}
-					}
+					_disconnect(id);
 				}
 			}
 
@@ -886,22 +938,20 @@ namespace spk::NetworkInternal
 				_enqueue(std::move(command));
 			}
 
-			void sendTo(ConnectionID connection, const Message &message, Message::Priority priority) override
+			void setGlobalMaxQueuedBytes(std::size_t bytes) override
 			{
-				if (!_running)
-				{
-					throw Exception("Unable to send through a stopped network server.");
-				}
-				_enqueue(Command{CommandKind::Send, connection, std::make_shared<Message>(message), priority});
+				_maxGlobalQueuedBytes.store(bytes);
 			}
 
-			void sendToAll(const Message &message, Message::Priority priority) override
+			void send(std::shared_ptr<ServerSendBatch> batch) override
 			{
 				if (!_running)
 				{
 					throw Exception("Unable to send through a stopped network server.");
 				}
-				_enqueue(Command{CommandKind::Broadcast, InvalidConnectionID, std::make_shared<Message>(message), priority});
+				Command command{CommandKind::Send};
+				command.batch = std::move(batch);
+				_enqueue(std::move(command));
 			}
 		};
 	}
