@@ -53,6 +53,11 @@ namespace spk
 			_backend->stop();
 		}
 
+		void setPageFailureLimits(PageFailureLimits limits)
+		{
+			_backend->setPageFailureLimits(limits);
+		}
+
 		void sendTo(ConnectionID connection, const Message &message, Message::Priority priority)
 		{
 			_backend->sendTo(connection, message, priority);
@@ -108,6 +113,11 @@ namespace spk
 	void Server::stop()
 	{
 		_impl->stop();
+	}
+
+	void Server::setPageFailureLimits(PageFailureLimits limits)
+	{
+		_impl->setPageFailureLimits(limits);
 	}
 
 	void Server::sendTo(const Connection &connection, const Message &message, Message::Priority priority)
