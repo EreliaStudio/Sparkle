@@ -211,19 +211,16 @@ TEST(PageReassembler, TenConsecutiveMalformedTransfersReachAbuseThreshold)
 {
 	spk::NetworkInternal::PageScheduler scheduler;
 	spk::NetworkInternal::PageReassembler assembler;
-	for (std::size_t index = 0; index < 9; ++index)
+	for (std::size_t index = 0; index < 10; ++index)
 	{
 		(void)scheduler.enqueue(message(10, static_cast<std::uint32_t>(index)));
+	}
+	for (std::size_t index = 0; index < 10; ++index)
+	{
 		const auto first = scheduler.nextPage(3);
 		auto malformed = fragment(*first);
 		malformed.offset = 1;
 		EXPECT_THROW((void)assembler.accept(malformed), spk::NetworkInternal::PageReassemblyError);
-		EXPECT_FALSE(assembler.failureLimitReached());
+		EXPECT_EQ(assembler.failureLimitReached(), index == 9);
 	}
-	(void)scheduler.enqueue(message(10, 42));
-	const auto first = scheduler.nextPage(3);
-	auto malformed = fragment(*first);
-	malformed.offset = 1;
-	EXPECT_THROW((void)assembler.accept(malformed), spk::NetworkInternal::PageReassemblyError);
-	EXPECT_TRUE(assembler.failureLimitReached());
 }
