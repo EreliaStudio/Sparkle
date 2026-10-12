@@ -3,6 +3,7 @@
 #include "container/thread_safe_fifo.hpp"
 #include "design_pattern/contract_provider.hpp"
 #include "network/connection.hpp"
+#include "network/page_failure_limits.hpp"
 #include "network/message.hpp"
 #include "network/message_dispatcher.hpp"
 
@@ -49,6 +50,7 @@ namespace spk
 		[[nodiscard]] bool isConnected() const noexcept;
 		void connect(std::string_view address, std::uint16_t port);
 		void disconnect();
+		void setPageFailureLimits(PageFailureLimits limits);
 		void send(const Message &message, Message::Priority priority = Message::Priority::Normal);
 		[[nodiscard]] MessageQueue &messages() noexcept;
 		[[nodiscard]] MessageDispatcher &messageDispatcher() noexcept;
