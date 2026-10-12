@@ -596,6 +596,7 @@ namespace spk::NetworkInternal
 				};
 				std::vector<Candidate> candidates;
 				std::vector<ConnectionID> overflowed;
+				std::vector<std::pair<ServerSendBatch::Recipient *, spk::Transfer::Reason>> declined;
 				std::size_t used = 0;
 				for (const auto &[id, session] : _sessions)
 				{
@@ -610,7 +611,7 @@ namespace spk::NetworkInternal
 					const auto it = _sessions.find(recipient.connection.id());
 					if (it == _sessions.end() || !it->second->handshake.ready())
 					{
-						(void)TransferCompletion::complete(recipient.transfer, spk::Transfer::Status::Rejected, spk::Transfer::Reason::InvalidRecipient);
+						declined.push_back({&recipient, spk::Transfer::Reason::InvalidRecipient});
 						rejected = true;
 						continue;
 					}
@@ -619,7 +620,7 @@ namespace spk::NetworkInternal
 					const std::size_t budget = recipient.connection.maxQueuedBytes();
 					if (pending > budget || size > budget - pending || used > limit || size > limit - used)
 					{
-						(void)TransferCompletion::complete(recipient.transfer, spk::Transfer::Status::Rejected, spk::Transfer::Reason::QueueOverflow);
+						declined.push_back({&recipient, spk::Transfer::Reason::QueueOverflow});
 						rejected = true;
 						if (batch.policy == Connection::OverflowPolicy::DisconnectRecipient)
 						{
@@ -659,6 +660,10 @@ namespace spk::NetworkInternal
 							(void)TransferCompletion::complete(candidate.recipient->transfer, spk::Transfer::Status::Rejected, spk::Transfer::Reason::QueueOverflow);
 						}
 					}
+					for (const auto &[recipient, reason] : declined)
+					{
+						(void)TransferCompletion::complete(recipient->transfer, spk::Transfer::Status::Rejected, reason);
+					}
 					return;
 				}
 				for (const auto &candidate : candidates)
@@ -674,6 +679,10 @@ namespace spk::NetworkInternal
 				for (const ConnectionID id : overflowed)
 				{
 					_disconnect(id);
+				}
+				for (const auto &[recipient, reason] : declined)
+				{
+					(void)TransferCompletion::complete(recipient->transfer, spk::Transfer::Status::Rejected, reason);
 				}
 			}
 
