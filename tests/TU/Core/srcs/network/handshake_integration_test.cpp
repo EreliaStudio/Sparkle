@@ -7,6 +7,7 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <utility>
@@ -88,9 +89,7 @@ TEST(HandshakeIntegration, ReconnectReplacesPendingSessionWithoutRevivingIt)
 	auto connected = client.connect("127.0.0.1", server.port());
 	EXPECT_NE(abandoned, connected);
 	EXPECT_EQ(abandoned.status(), spk::Connection::Status::Disconnected);
-	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
-		return connected.isConnected();
-	}, 5s));
+	EXPECT_TRUE(NetworkTestUtils::waitConnected(connected));
 	EXPECT_FALSE(abandoned.isConnected());
 	client.disconnect();
 	server.stop();

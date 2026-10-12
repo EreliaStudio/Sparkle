@@ -33,9 +33,10 @@ namespace NetworkTestUtils
 	template <typename TClient>
 	[[nodiscard]] bool waitConnected(const TClient &client, std::chrono::milliseconds timeout = 5s)
 	{
-		return waitUntil([&] {
+		const auto connected = [&] {
 			return client.isConnected();
-		}, timeout);
+		};
+		return waitUntil(connected, timeout);
 	}
 
 	template <typename TValue>

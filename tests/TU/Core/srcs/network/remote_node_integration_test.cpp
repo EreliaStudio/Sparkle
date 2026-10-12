@@ -128,9 +128,7 @@ namespace
 	{
 		failure.run([&] {
 			client.connect("127.0.0.1", port);
-			EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
-				return client.isConnected();
-			}, std::chrono::seconds(5)));
+			EXPECT_TRUE(NetworkTestUtils::waitConnected(client));
 			for (std::uint32_t sequence = 0; sequence < 50; ++sequence)
 			{
 				client.send(
@@ -159,9 +157,7 @@ TEST(RemoteNodeIntegrationTest, TwoClientsRemainCorrelatedAcrossOutOfOrderRemote
 
 	endpoint.start(0);
 	remoteNode.connect("127.0.0.1", endpoint.port());
-	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
-		return remoteNode.isConnected();
-	}, std::chrono::seconds(5)));
+	EXPECT_TRUE(NetworkTestUtils::waitConnected(remoteNode));
 	router.addNode("remote", remoteNode);
 	router.redirect(200, "remote");
 	router.start(0);
@@ -238,9 +234,7 @@ TEST(RemoteNodeIntegrationTest, EndpointRejectsOrdinaryClientMessages)
 	spk::Client client;
 	endpoint.start(0);
 	client.connect("127.0.0.1", endpoint.port());
-	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
-		return client.isConnected();
-	}, std::chrono::seconds(5)));
+	EXPECT_TRUE(NetworkTestUtils::waitConnected(client));
 	client.send(spk::Message::Writer(77).build());
 
 	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
@@ -272,13 +266,9 @@ TEST(RemoteNodeIntegrationTest, TwoRoutersSharingEndpointKeepOriginConnectionsIn
 
 	endpoint.start(0);
 	firstRemote.connect("127.0.0.1", endpoint.port());
-	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
-		return firstRemote.isConnected();
-	}, std::chrono::seconds(5)));
+	EXPECT_TRUE(NetworkTestUtils::waitConnected(firstRemote));
 	secondRemote.connect("127.0.0.1", endpoint.port());
-	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
-		return secondRemote.isConnected();
-	}, std::chrono::seconds(5)));
+	EXPECT_TRUE(NetworkTestUtils::waitConnected(secondRemote));
 
 	firstRouter.addNode("remote", firstRemote);
 	firstRouter.redirect(220, "remote");
@@ -301,13 +291,9 @@ TEST(RemoteNodeIntegrationTest, TwoRoutersSharingEndpointKeepOriginConnectionsIn
 	});
 
 	firstClient.connect("127.0.0.1", firstRouter.server().port());
-	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
-		return firstClient.isConnected();
-	}, std::chrono::seconds(5)));
+	EXPECT_TRUE(NetworkTestUtils::waitConnected(firstClient));
 	secondClient.connect("127.0.0.1", secondRouter.server().port());
-	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
-		return secondClient.isConnected();
-	}, std::chrono::seconds(5)));
+	EXPECT_TRUE(NetworkTestUtils::waitConnected(secondClient));
 
 	firstClient.send(payloadMessage(220, RemotePayload{10, 1}));
 	secondClient.send(payloadMessage(220, RemotePayload{20, 2}));
