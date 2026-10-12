@@ -296,8 +296,7 @@ namespace spk::NetworkInternal
 						{
 							_publish(ReceivedMessage{session.id, complete->withConnectionID(session.id)});
 						}
-					}
-					catch (const PageReassemblyError &)
+					} catch (const PageReassemblyError &)
 					{
 						if (session.reassembler.failureLimitReached())
 						{
