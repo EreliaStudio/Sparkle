@@ -4,6 +4,7 @@
 #include "design_pattern/contract_provider.hpp"
 #include "network/message_dispatcher.hpp"
 #include "network/types.hpp"
+#include "network/page_failure_limits.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -49,6 +50,7 @@ namespace spk
 		[[nodiscard]] std::uint16_t port() const noexcept;
 		void start(std::uint16_t port);
 		void stop();
+		void setPageFailureLimits(PageFailureLimits limits);
 		void sendTo(const Connection &connection, const Message &message, Message::Priority priority = Message::Priority::Normal);
 		void sendTo(const ConnectionSet &connections, const Message &message, Message::Priority priority = Message::Priority::Normal);
 		void sendToAll(const Message &message, Message::Priority priority = Message::Priority::Normal);
