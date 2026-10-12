@@ -17,7 +17,8 @@ namespace spk::NetworkInternal
 			InvalidOffset,
 			InvalidLength,
 			InvalidFirstPage,
-			InconsistentMetadata
+			InconsistentMetadata,
+			Capacity
 		};
 
 	private:
