@@ -6,6 +6,7 @@
 #	include "network/internal/connection_id.hpp"
 #	include "network/internal/frame.hpp"
 #	include "network/internal/handshake.hpp"
+#	include "network/internal/handshake_deadline.hpp"
 #	include "network/internal/page.hpp"
 #	include "network/internal/transmission_frame.hpp"
 #	include "network/internal/transfer_reception.hpp"
