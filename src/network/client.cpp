@@ -282,7 +282,7 @@ namespace spk
 			_owner._setStatus(_session, Connection::Status::Connected);
 		}
 
-		void _negotiate(std::chrono::steady_clock::time_point deadline, std::stop_token stop)
+		void _negotiate(std::chrono::steady_clock::time_point deadline, std::stop_token stop, Connection::Error &error)
 		{
 			using Handshake = NetworkInternal::Handshake;
 			_socket.sendAll(*Handshake::encode(Handshake::Kind::Hello));
@@ -290,6 +290,17 @@ namespace spk
 			if (!_socket.receiveAllUntil(header, deadline, stop))
 			{
 				throw Exception("Unable to receive the handshake header.");
+			}
+			if (header[0] != std::byte{'S'} || header[1] != std::byte{'P'} ||
+				header[2] != std::byte{'K'} || header[3] != std::byte{'N'})
+			{
+				error = Connection::Error::InvalidMagic;
+				throw Exception("Invalid handshake frame magic.");
+			}
+			if (NetworkInternal::read16(header.data() + 4) != NetworkInternal::ProtocolVersion)
+			{
+				error = Connection::Error::VersionMismatch;
+				throw Exception("Incompatible network framing version.");
 			}
 			const auto decoded = NetworkInternal::decode(header);
 			if (decoded.payloadSize != Handshake::PayloadSize)
@@ -305,9 +316,20 @@ namespace spk
 			std::copy(header.begin(), header.end(), bytes.begin());
 			std::copy(payload.begin(), payload.end(), bytes.begin() + NetworkInternal::FrameHeaderSize);
 			const auto packet = Handshake::decode(bytes);
-			if (packet.kind != Handshake::Kind::Accepted || !Handshake::validAcceptance(packet))
+			if (packet.validationError != Connection::Error::None)
 			{
+				error = packet.validationError;
+				throw Exception("Invalid protocol handshake.");
+			}
+			if (packet.kind == Handshake::Kind::Rejected)
+			{
+				error = packet.error == Connection::Error::None ? Connection::Error::Rejected : packet.error;
 				throw Exception("Server rejected the network handshake.");
+			}
+			if (!Handshake::validAcceptance(packet))
+			{
+				error = Connection::Error::Rejected;
+				throw Exception("Unexpected handshake control frame.");
 			}
 			_acceptRemoteID(packet.connectionID);
 			_owner._acceptConnection(_session, packet.connectionID);
@@ -321,7 +343,7 @@ namespace spk
 			{
 				_socket = NetworkInternal::Socket::connectTCP(address, port, deadline, stop);
 				error = Connection::Error::TransportFailure;
-				_negotiate(deadline, stop);
+				_negotiate(deadline, stop, error);
 				if (!_active || stop.stop_requested())
 				{
 					return;
