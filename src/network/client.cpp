@@ -11,6 +11,7 @@
 #include <array>
 #include <atomic>
 #include <condition_variable>
+#include <chrono>
 #include <mutex>
 #include <thread>
 #include <utility>
@@ -25,6 +26,8 @@ namespace spk
 		NetworkInternal::Socket _socket;
 		std::jthread _reader;
 		std::jthread _sender;
+		std::jthread _expirationWorker;
+		std::mutex _receiveMutex;
 		std::atomic_bool _connected = false;
 		Connection _session;
 		std::mutex _sendMutex;
@@ -64,6 +67,7 @@ namespace spk
 			const auto kind = NetworkInternal::read16(frame.data() + 6);
 			if (kind == NetworkInternal::PageFrameKind)
 			{
+				const std::scoped_lock lock(_receiveMutex);
 				_reassembler.expire();
 				try
 				{
@@ -92,7 +96,10 @@ namespace spk
 			writer.resize(header.payloadSize);
 			std::copy(frame.begin() + NetworkInternal::FrameHeaderSize, frame.end(), writer.data().begin());
 			_owner._publish(std::move(writer).build());
-			_reassembler.successfulMessage();
+			{
+				const std::scoped_lock lock(_receiveMutex);
+				_reassembler.successfulMessage();
+			}
 		}
 
 		void _sendLoop()
@@ -149,6 +156,10 @@ namespace spk
 			{
 				_sender.join();
 			}
+			if (_expirationWorker.joinable() && _expirationWorker.get_id() != std::this_thread::get_id())
+			{
+				_expirationWorker.join();
+			}
 		}
 
 	public:
@@ -186,6 +197,14 @@ namespace spk
 			_sender = std::jthread([this] {
 				_sendLoop();
 			});
+			_expirationWorker = std::jthread([this] {
+					while (_connected)
+					{
+						std::this_thread::sleep_for(std::chrono::seconds(1));
+						const std::scoped_lock lock(_receiveMutex);
+						_reassembler.expire();
+					}
+			});
 			try
 			{
 				_owner._setStatus(_session, Connection::Status::Connected);
@@ -203,7 +222,10 @@ namespace spk
 			_sendAvailable.notify_all();
 			_joinWorkers();
 			_scheduler.clear();
-			_reassembler.clear();
+			{
+				const std::scoped_lock lock(_receiveMutex);
+				_reassembler.clear();
+			}
 			if (notify)
 			{
 				_owner._setStatus(_session, Connection::Status::Disconnected);
