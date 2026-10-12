@@ -21,8 +21,11 @@ namespace spk
 			result.onConnection = [&owner](ConnectionID connection) {
 				owner._notifyConnection(connection);
 			};
-			result.onDisconnection = [&owner](ConnectionID connection) {
-				owner._notifyDisconnection(connection);
+			result.onReady = [&owner](ConnectionID connection) {
+				owner._notifyReady(connection);
+			};
+			result.onDisconnection = [&owner](ConnectionID connection, Connection::Error error) {
+				owner._notifyDisconnection(connection, error);
 			};
 			return result;
 		}
@@ -56,6 +59,11 @@ namespace spk
 		void setPageFailureLimits(PageFailureLimits limits)
 		{
 			_backend->setPageFailureLimits(limits);
+		}
+
+		void setHandshakeTimeout(std::chrono::milliseconds timeout)
+		{
+			_backend->setHandshakeTimeout(timeout);
 		}
 
 		void sendTo(ConnectionID connection, const Message &message, Message::Priority priority)
@@ -118,6 +126,11 @@ namespace spk
 	void Server::setPageFailureLimits(PageFailureLimits limits)
 	{
 		_impl->setPageFailureLimits(limits);
+	}
+
+	void Server::setHandshakeTimeout(std::chrono::milliseconds timeout)
+	{
+		_impl->setHandshakeTimeout(timeout);
 	}
 
 	void Server::sendTo(const Connection &connection, const Message &message, Message::Priority priority)
@@ -185,18 +198,25 @@ namespace spk
 		}
 		connection._setStatus(Connection::Status::Pending);
 		_statusProvider.trigger(connection, Connection::Status::Pending, Connection::Error::None);
+	}
+
+	void Server::_notifyReady(ConnectionID id)
+	{
+		Connection connection;
 		{
 			const std::scoped_lock lock(_connectionsMutex);
-			if (!_connections.contains(id) || connection.status() != Connection::Status::Pending)
+			const auto it = _connections.find(id);
+			if (it == _connections.end())
 			{
 				return;
 			}
+			connection = it->second;
 		}
 		connection._setStatus(Connection::Status::Connected);
 		_statusProvider.trigger(connection, Connection::Status::Connected, Connection::Error::None);
 	}
 
-	void Server::_notifyDisconnection(ConnectionID id)
+	void Server::_notifyDisconnection(ConnectionID id, Connection::Error error)
 	{
 		Connection connection;
 		{
@@ -209,7 +229,7 @@ namespace spk
 			connection = it->second;
 			_connections.erase(it);
 		}
-		connection._setStatus(Connection::Status::Disconnected);
-		_statusProvider.trigger(connection, Connection::Status::Disconnected, Connection::Error::None);
+		connection._setStatus(Connection::Status::Disconnected, error);
+		_statusProvider.trigger(connection, Connection::Status::Disconnected, error);
 	}
 }

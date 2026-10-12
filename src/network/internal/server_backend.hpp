@@ -3,6 +3,7 @@
 #include "network/page_failure_limits.hpp"
 #include "network/types.hpp"
 
+#include <chrono>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -13,7 +14,8 @@ namespace spk::NetworkInternal
 	{
 		std::function<void(ReceivedMessage)> onMessage;
 		std::function<void(ConnectionID)> onConnection;
-		std::function<void(ConnectionID)> onDisconnection;
+		std::function<void(ConnectionID)> onReady;
+		std::function<void(ConnectionID, Connection::Error)> onDisconnection;
 	};
 
 	class ServerBackend
@@ -26,6 +28,7 @@ namespace spk::NetworkInternal
 		virtual void start(std::uint16_t port) = 0;
 		virtual void stop() = 0;
 		virtual void setPageFailureLimits(PageFailureLimits limits) = 0;
+		virtual void setHandshakeTimeout(std::chrono::milliseconds timeout) = 0;
 		virtual void sendTo(ConnectionID connection, const Message &message, Message::Priority priority) = 0;
 		virtual void sendToAll(const Message &message, Message::Priority priority) = 0;
 	};

@@ -6,6 +6,7 @@
 #include "network/page_failure_limits.hpp"
 #include "network/types.hpp"
 
+#include <chrono>
 #include <cstdint>
 #include <memory>
 #include <mutex>
@@ -33,7 +34,8 @@ namespace spk
 
 		void _publish(ReceivedMessage message);
 		void _notifyConnection(ConnectionID connection);
-		void _notifyDisconnection(ConnectionID connection);
+		void _notifyReady(ConnectionID connection);
+		void _notifyDisconnection(ConnectionID connection, Connection::Error error);
 
 	public:
 		Server();
@@ -51,6 +53,7 @@ namespace spk
 		void start(std::uint16_t port);
 		void stop();
 		void setPageFailureLimits(PageFailureLimits limits);
+		void setHandshakeTimeout(std::chrono::milliseconds timeout);
 		void sendTo(const Connection &connection, const Message &message, Message::Priority priority = Message::Priority::Normal);
 		void sendTo(const ConnectionSet &connections, const Message &message, Message::Priority priority = Message::Priority::Normal);
 		void sendToAll(const Message &message, Message::Priority priority = Message::Priority::Normal);
