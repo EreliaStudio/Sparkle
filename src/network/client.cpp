@@ -210,6 +210,11 @@ namespace spk
 			}
 		}
 
+		void setPageFailureLimits(PageFailureLimits limits)
+		{
+			_reassembler.configureFailureLimits(limits);
+		}
+
 		void send(const Message &message, Message::Priority priority)
 		{
 			const std::scoped_lock lock(_sendMutex);
@@ -256,6 +261,11 @@ namespace spk
 	void Client::disconnect()
 	{
 		_impl->disconnect();
+	}
+
+	void Client::setPageFailureLimits(PageFailureLimits limits)
+	{
+		_impl->setPageFailureLimits(limits);
 	}
 
 	void Client::send(const Message &message, Message::Priority priority)
