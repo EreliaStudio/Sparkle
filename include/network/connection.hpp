@@ -60,7 +60,7 @@ namespace spk
 		friend class Server;
 
 		void _assignID(ID id) noexcept;
-		void _setStatus(Status status, Error error = Error::None);
+		bool _setStatus(Status status, Error error = Error::None);
 
 	public:
 		Connection();
