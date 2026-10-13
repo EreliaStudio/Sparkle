@@ -7,10 +7,13 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <future>
 #include <memory>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -347,4 +350,54 @@ TEST(PageReassembler, CompletedTransferPagesNeverRepublishTheSameLogicalMessage)
 	EXPECT_FALSE(assembler.accept(fragment(*last)).has_value());
 	EXPECT_EQ(assembler.pendingTransfers(), 0u);
 	EXPECT_EQ(assembler.reservedBytes(), 0u);
+}
+
+TEST(PageReassembler, SharedBudgetIsAtomicAcrossConcurrentSessions)
+{
+	using spk::NetworkInternal::PageReassembler;
+	using spk::NetworkInternal::PageReassemblyError;
+	auto budget = std::make_shared<spk::NetworkInternal::ReassemblyBudget>(1024);
+	spk::NetworkInternal::PageScheduler scheduler;
+	(void)scheduler.enqueue(message(256, 98));
+	const auto first = scheduler.nextPage(64);
+	ASSERT_TRUE(first.has_value());
+	std::vector<std::unique_ptr<PageReassembler>> sessions;
+	std::vector<std::future<bool>> results;
+	std::atomic_bool begin = false;
+	for (std::size_t index = 0; index < 24; ++index)
+	{
+		sessions.push_back(std::make_unique<PageReassembler>(512, 4096, std::chrono::seconds(60), budget));
+		auto *session = sessions.back().get();
+		results.push_back(std::async(std::launch::async, [session, &first, &begin] {
+			while (!begin.load())
+			{
+				std::this_thread::yield();
+			}
+			try
+			{
+				return !session->accept(fragment(*first)).has_value();
+			} catch (const PageReassemblyError &error)
+			{
+				if (error.reason() != PageReassemblyError::Reason::Capacity)
+				{
+					throw;
+				}
+				return false;
+			}
+		}));
+	}
+	begin = true;
+	std::size_t accepted = 0;
+	for (auto &result : results)
+	{
+		accepted += result.get() ? 1 : 0;
+	}
+	EXPECT_GT(accepted, 0u);
+	EXPECT_LT(accepted, sessions.size());
+	EXPECT_LE(budget->used(), 1024u);
+	for (auto &session : sessions)
+	{
+		session->clear();
+	}
+	EXPECT_EQ(budget->used(), 0u);
 }
