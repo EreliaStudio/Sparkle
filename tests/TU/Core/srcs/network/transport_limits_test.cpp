@@ -1,8 +1,8 @@
 #include "exception.hpp"
 #include "network/client.hpp"
-#include "network/internal/page_scheduler.hpp"
-#include "network/internal/incoming_frame_validator.hpp"
 #include "network/internal/handshake.hpp"
+#include "network/internal/incoming_frame_validator.hpp"
+#include "network/internal/page_scheduler.hpp"
 #include "network/internal/socket.hpp"
 #include "network/server.hpp"
 #include "network_test_utils.hpp"
@@ -120,9 +120,10 @@ TEST(TransportLimits, ServerRejectsOversizedDeclaredPageBeforeReceivingItsBody)
 	write16(forged->data() + 6, PageFrameKind);
 	write32(forged->data() + 28, PageMetadataSize + 129);
 	peer.sendAll(std::span<const std::byte>(*forged).first(FrameHeaderSize));
-	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+	const auto disconnected = [&] {
 		return retained.status() == spk::Connection::Status::Disconnected;
-	}, std::chrono::seconds(3)));
+	};
+	EXPECT_TRUE(NetworkTestUtils::waitUntil(disconnected, std::chrono::seconds(3)));
 	peer.close();
 	server.stop();
 }
