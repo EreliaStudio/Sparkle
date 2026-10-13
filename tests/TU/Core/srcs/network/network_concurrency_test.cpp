@@ -471,6 +471,34 @@ TEST(NetworkConcurrencyTest, ServerCanStopFromConnectionCallback)
 	server.stop();
 }
 
+TEST(NetworkConcurrencyTest, HandshakeTimeoutCanChangeWhileConnectionsStartAndStop)
+{
+	spk::Server server;
+	spk::Client client;
+	server.start(0);
+	std::atomic_bool updating = true;
+	NetworkTestUtils::ThreadFailure failure;
+	std::jthread setter([&] {
+		failure.run([&] {
+			std::uint32_t iteration = 0;
+			while (updating.load())
+			{
+				client.setHandshakeTimeout((++iteration % 2u) == 0 ? 100ms : 500ms);
+			}
+		});
+	});
+	for (std::uint32_t iteration = 0; iteration < 32; ++iteration)
+	{
+		const auto connection = client.connect("127.0.0.1", server.port());
+		client.disconnect();
+		EXPECT_EQ(connection.status(), spk::Connection::Status::Disconnected);
+	}
+	updating = false;
+	setter.join();
+	EXPECT_NO_THROW(failure.rethrow());
+	server.stop();
+}
+
 TEST(NetworkConcurrencyTest, ManyClientsConnectAndExchangeConcurrently)
 {
 	constexpr std::uint32_t ClientCount = 16;
