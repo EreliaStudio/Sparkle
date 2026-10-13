@@ -13,6 +13,7 @@
 #include <cstring>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <thread>
 #include <utility>
@@ -637,4 +638,38 @@ TEST(NetworkConcurrencyTest, ClientSendRacingRemoteShutdownCompletesEveryAdmitte
 	{
 		EXPECT_TRUE(transfer.isComplete());
 	}
+}
+
+TEST(NetworkConcurrencyTest, NestedConnectionCallbackCannotPublishStaleServerReadyEvent)
+{
+	spk::Server server;
+	spk::Client client;
+	std::atomic_uint32_t staleReady = 0;
+	std::optional<spk::Connection::StatusContract> connectionContract;
+	auto statusContract = server.subscribeToConnectionStatusChange(
+		[&](spk::Connection connection, spk::Connection::Status status, spk::Connection::Error) {
+			if (status == spk::Connection::Status::Pending)
+			{
+				connectionContract.emplace(connection.subscribeToStatusChange(
+					[&](spk::Connection::Status next, spk::Connection::Error) {
+						if (next == spk::Connection::Status::Connected)
+						{
+							server.stop();
+						}
+					}));
+			}
+			if (status == spk::Connection::Status::Connected)
+			{
+				++staleReady;
+			}
+		});
+	server.start(0);
+	client.connect("127.0.0.1", server.port());
+	const auto stopped = [&] {
+		return !server.isRunning();
+	};
+	ASSERT_TRUE(NetworkTestUtils::waitUntil(stopped, 5s));
+	EXPECT_EQ(staleReady.load(), 0u);
+	client.disconnect();
+	server.stop();
 }
