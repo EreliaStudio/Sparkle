@@ -673,3 +673,23 @@ TEST(NetworkConcurrencyTest, NestedConnectionCallbackCannotPublishStaleServerRea
 	client.disconnect();
 	server.stop();
 }
+
+TEST(NetworkConcurrencyTest, HandshakeConfigurationAndConnectionQueriesCanRunDuringConnect)
+{
+	spk::Server server;
+	spk::Client client;
+	server.start(0);
+	std::jthread configure([&] {
+		for (std::size_t index = 0; index < 1000; ++index)
+		{
+			client.setHandshakeTimeout(index % 2 == 0 ? 5s : 6s);
+			(void)client.isConnected();
+		}
+	});
+	const auto session = client.connect("127.0.0.1", server.port());
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(client));
+	configure.join();
+	EXPECT_EQ(session.status(), spk::Connection::Status::Connected);
+	client.disconnect();
+	server.stop();
+}
