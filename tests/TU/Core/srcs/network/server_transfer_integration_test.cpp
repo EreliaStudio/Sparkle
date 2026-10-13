@@ -166,7 +166,7 @@ TEST(ServerTransferIntegration, TargetedSendThrowsImmediatelyWhenRecipientCannot
 	spk::Server server;
 	spk::Client client;
 	server.start(0);
-	const auto recipient = identify(server, client);
+	auto recipient = identify(server, client);
 	ASSERT_TRUE(recipient.isConnected());
 	recipient.setMaxQueuedBytes(1);
 	EXPECT_THROW(server.sendTo(recipient, makeMessage(156, 200)), spk::Exception);
