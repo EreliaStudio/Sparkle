@@ -127,3 +127,31 @@ TEST(TransportLimits, ServerRejectsOversizedDeclaredPageBeforeReceivingItsBody)
 	peer.close();
 	server.stop();
 }
+
+TEST(TransportLimits, ServerRejectsForgedConnectionIDBeforeReceivingFrameBody)
+{
+	using namespace spk::NetworkInternal;
+	spk::Server server;
+	server.setMaxPageBytes(128);
+	server.start(0);
+	auto peer = Socket::connectTCP("127.0.0.1", server.port());
+	peer.sendAll(*Handshake::encode(Handshake::Kind::Hello, spk::Connection::InvalidID, spk::Connection::Error::None, 128));
+	std::array<std::byte, FrameHeaderSize + Handshake::PayloadSize> reply{};
+	ASSERT_TRUE(peer.receiveAllUntil(reply, std::chrono::steady_clock::now() + std::chrono::seconds(3), {}));
+	const auto accepted = Handshake::decode(reply);
+	ASSERT_TRUE(Handshake::validAcceptance(accepted));
+	const auto retained = server.connection(accepted.connectionID);
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(retained));
+
+	auto forged = Handshake::encode(Handshake::Kind::Accepted, accepted.connectionID);
+	write16(forged->data() + 6, PageFrameKind);
+	write64(forged->data() + 20, accepted.connectionID + 1);
+	write32(forged->data() + 28, PageMetadataSize + 1);
+	peer.sendAll(std::span<const std::byte>(*forged).first(FrameHeaderSize));
+	const auto disconnected = [&] {
+		return retained.status() == spk::Connection::Status::Disconnected;
+	};
+	EXPECT_TRUE(NetworkTestUtils::waitUntil(disconnected, std::chrono::seconds(3)));
+	peer.close();
+	server.stop();
+}

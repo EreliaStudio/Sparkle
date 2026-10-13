@@ -75,6 +75,7 @@ namespace spk
 						header.payloadSize,
 						_negotiatedPageBytes.load(),
 						_maxMessageBytes.load());
+					_acceptRemoteID(header.connectionID);
 					std::vector<std::byte> frame(NetworkInternal::FrameHeaderSize + header.payloadSize);
 					std::copy(headerBytes.begin(), headerBytes.end(), frame.begin());
 					if (header.payloadSize != 0 &&
@@ -101,7 +102,7 @@ namespace spk
 			if (kind == NetworkInternal::TransferResponse::FrameKind)
 			{
 				const auto response = NetworkInternal::TransferResponse::decode(frame);
-				_acceptRemoteID(response.connectionID);
+
 				(void)_transfers.acknowledge(response);
 				{
 					const std::scoped_lock lock(_sendMutex);
@@ -113,7 +114,6 @@ namespace spk
 			{
 				throw Exception("Unknown network frame kind.");
 			}
-			_acceptRemoteID(header.connectionID);
 			Message::Writer writer(header.type);
 			writer.setRequestID(header.requestID);
 			writer.setConnectionID(header.connectionID);
@@ -157,7 +157,7 @@ namespace spk
 		void _receivePage(std::span<const std::byte> frame)
 		{
 			const auto page = NetworkInternal::decodePage(frame);
-			_acceptRemoteID(page.header.connectionID);
+
 			NetworkInternal::TransferReception::Result received;
 			{
 				const std::scoped_lock lock(_receiveMutex);

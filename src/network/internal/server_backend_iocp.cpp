@@ -424,13 +424,13 @@ namespace spk::NetworkInternal
 				{
 					throw Exception("Invalid initial handshake payload size.");
 				}
-				if (remaining < frameSize)
-				{
-					return false;
-				}
 				if (header.connectionID != InvalidConnectionID && header.connectionID != session.id)
 				{
 					throw Exception("Incoming message contains a forged connection ID.");
+				}
+				if (remaining < frameSize)
+				{
+					return false;
 				}
 				if (!session.handshake.ready())
 				{
