@@ -490,8 +490,13 @@ TEST(NetworkPagedIntegration, ReplayOlderThanOneThousandCompletedTransfersNeverR
 	}
 	write64(frame->data() + FrameHeaderSize, 1);
 	socket.sendAll(*frame);
-	const auto messages = NetworkTestUtils::collect(server.messages(), 1201, 250ms);
-	EXPECT_EQ(messages.size(), 1200u);
+	write64(frame->data() + FrameHeaderSize, 1201);
+	socket.sendAll(*frame);
+	ASSERT_TRUE(socket.receiveAllUntil(answer, std::chrono::steady_clock::now() + 5s, {}));
+	EXPECT_EQ(TransferResponse::decode(answer).transferID, 1201u);
+	const auto messages = NetworkTestUtils::collect(server.messages(), 1201, 5s);
+	EXPECT_EQ(messages.size(), 1201u);
+	EXPECT_TRUE(NetworkTestUtils::collect(server.messages(), 1, 0ms).empty());
 	EXPECT_TRUE(server.connection(accepted.connectionID).isConnected());
 	socket.close();
 	server.stop();
