@@ -356,3 +356,29 @@ TEST(HandshakeIntegration, ServerCanSynchronouslySendFromConnectedCallback)
 	client.disconnect();
 	server.stop();
 }
+
+TEST(HandshakeIntegration, ExpiredAndCancelledHostnameLookupsFailBeforeResolving)
+{
+	using spk::NetworkInternal::Socket;
+	std::stop_source cancellation;
+	const auto start = std::chrono::steady_clock::now();
+	EXPECT_THROW(Socket::connectTCP("sparkle-name-resolution-test.invalid", 12345, start - 1s, {}), spk::Exception);
+	cancellation.request_stop();
+	EXPECT_THROW(Socket::connectTCP("sparkle-name-resolution-test.invalid", 12345, start + 5s, cancellation.get_token()), spk::Exception);
+	EXPECT_LT(std::chrono::steady_clock::now() - start, 1s);
+}
+
+TEST(HandshakeIntegration, HostnameLookupCannotBlockBeyondClientAttemptDeadline)
+{
+	spk::Client client;
+	client.setHandshakeTimeout(150ms);
+	const auto start = std::chrono::steady_clock::now();
+	const auto connection = client.connect("sparkle-name-resolution-test.invalid", 12345);
+	const auto disconnected = [&] {
+		return connection.status() == spk::Connection::Status::Disconnected;
+	};
+	EXPECT_TRUE(NetworkTestUtils::waitUntil(disconnected, 2s));
+	EXPECT_LT(std::chrono::steady_clock::now() - start, 2s);
+	EXPECT_FALSE(client.isConnected());
+	client.disconnect();
+}
