@@ -1,12 +1,17 @@
 #include "exception.hpp"
 #include "network/client.hpp"
+#include "network/internal/handshake.hpp"
+#include "network/internal/socket.hpp"
 #include "network/server.hpp"
 #include "network_test_utils.hpp"
 
 #include <gtest/gtest.h>
 
+#include <array>
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <future>
 #include <thread>
 #include <utility>
@@ -337,4 +342,33 @@ TEST(ServerTransferIntegration, ShutdownUnblocksConcurrentAdmissionCallers)
 		EXPECT_NO_THROW(call.get());
 	}
 	client.disconnect();
+}
+
+TEST(ServerTransferIntegration, DisconnectReclaimsOutgoingMemoryForNextClient)
+{
+	using namespace spk::NetworkInternal;
+	spk::Server server;
+	server.setGlobalMaxQueuedBytes(3u * 1024u * 1024u);
+	server.start(0);
+	auto peer = Socket::connectTCP("127.0.0.1", server.port());
+	peer.sendAll(*Handshake::encode(Handshake::Kind::Hello));
+	std::array<std::byte, FrameHeaderSize + Handshake::PayloadSize> response{};
+	ASSERT_TRUE(peer.receiveAllUntil(response, std::chrono::steady_clock::now() + 3s, {}));
+	const auto accepted = Handshake::decode(response);
+	ASSERT_TRUE(Handshake::validAcceptance(accepted));
+	const auto recipient = server.connection(accepted.connectionID);
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(recipient));
+	auto abandoned = server.sendTo(recipient, makeMessage(195, 2u * 1024u * 1024u));
+	peer.close();
+	ASSERT_TRUE(NetworkTestUtils::waitUntil(std::bind_front(&spk::Transfer::isComplete, abandoned), 5s));
+	EXPECT_EQ(abandoned.status(), spk::Transfer::Status::Indeterminate);
+
+	spk::Client healthy;
+	const auto current = identify(server, healthy);
+	ASSERT_TRUE(current.isConnected());
+	const auto transfer = server.sendTo(current, makeMessage(196, 2u * 1024u * 1024u));
+	EXPECT_EQ(NetworkTestUtils::collect(healthy.messages(), 1, 10s).size(), 1u);
+	EXPECT_TRUE(finished(transfer, spk::Transfer::Status::Success));
+	healthy.disconnect();
+	server.stop();
 }
