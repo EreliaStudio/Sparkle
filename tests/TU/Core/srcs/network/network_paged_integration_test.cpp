@@ -535,7 +535,10 @@ TEST(NetworkPagedIntegration, ExpirationResponseCapacityFailureDisconnectsOnlyAf
 	const auto messages = NetworkTestUtils::collect(server.messages(), 1, 3s);
 	ASSERT_EQ(messages.size(), 1u);
 	EXPECT_EQ(messages.front().message.type(), 997u);
-	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] { return transfer.isComplete(); }, 3s));
+	const auto completed = [&] {
+		return transfer.isComplete();
+	};
+	EXPECT_TRUE(NetworkTestUtils::waitUntil(completed, 3s));
 	peer.close();
 	healthy.disconnect();
 	server.stop();
