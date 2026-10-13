@@ -1,5 +1,6 @@
 #include "network/internal/page_reassembler.hpp"
 #include "network/internal/page_scheduler.hpp"
+#include "network/internal/reassembly_budget.hpp"
 
 #include "exception.hpp"
 
@@ -256,4 +257,70 @@ TEST(PageReassembler, RuntimeInactivityTimeoutChangesExistingTransferDeadline)
 	EXPECT_EQ(assembler.reservedBytes(), 0u);
 	EXPECT_THROW(assembler.setInactivityTimeout(std::chrono::milliseconds(0)), spk::Exception);
 	EXPECT_THROW(assembler.setInactivityTimeout(std::chrono::milliseconds(-1)), spk::Exception);
+}
+
+TEST(PageReassembler, SharedBudgetRejectsOnlyNewTransferAndReclaimsOnClear)
+{
+	auto budget = std::make_shared<spk::NetworkInternal::ReassemblyBudget>(4096);
+	spk::NetworkInternal::PageReassembler first(1024, 4096, std::chrono::milliseconds(100), budget);
+	spk::NetworkInternal::PageReassembler second(1024, 4096, std::chrono::milliseconds(100), budget);
+	spk::NetworkInternal::PageScheduler scheduler;
+	(void)scheduler.enqueue(message(128, 90));
+	const auto initial = scheduler.nextPage(16);
+	ASSERT_TRUE(initial.has_value());
+	const auto now = spk::NetworkInternal::PageReassembler::Clock::now();
+	EXPECT_FALSE(first.accept(fragment(*initial), now).has_value());
+	const auto charged = budget->used();
+	EXPECT_GT(charged, 128u);
+	budget->setMaximum(charged * 2 - 1);
+	try
+	{
+		(void)second.accept(fragment(*initial), now);
+		FAIL() << "Expected the shared reassembly budget to reject the new transfer.";
+	} catch (const spk::NetworkInternal::PageReassemblyError &error)
+	{
+		EXPECT_EQ(error.reason(), spk::NetworkInternal::PageReassemblyError::Reason::Capacity);
+	}
+	EXPECT_EQ(budget->used(), charged);
+	first.clear();
+	EXPECT_EQ(budget->used(), 0u);
+	(void)second.expire(now + std::chrono::milliseconds(100));
+	EXPECT_FALSE(second.accept(fragment(*initial), now + std::chrono::milliseconds(101)).has_value());
+	EXPECT_EQ(budget->used(), charged);
+	second.clear();
+	EXPECT_EQ(budget->used(), 0u);
+}
+
+TEST(PageReassembler, SharedBudgetIsReleasedOnNormalCompletionAndExpiration)
+{
+	auto budget = std::make_shared<spk::NetworkInternal::ReassemblyBudget>(4096);
+	spk::NetworkInternal::PageScheduler scheduler;
+	(void)scheduler.enqueue(message(24, 91));
+	const auto firstPage = scheduler.nextPage(12);
+	const auto secondPage = scheduler.nextPage(12);
+	spk::NetworkInternal::PageReassembler assembler(1024, 4096, std::chrono::milliseconds(50), budget);
+	const auto now = spk::NetworkInternal::PageReassembler::Clock::now();
+	EXPECT_FALSE(assembler.accept(fragment(*firstPage), now).has_value());
+	EXPECT_GT(budget->used(), 24u);
+	EXPECT_TRUE(assembler.accept(fragment(*secondPage), now).has_value());
+	EXPECT_EQ(budget->used(), 0u);
+	(void)scheduler.enqueue(message(24, 92));
+	const auto next = scheduler.nextPage(12);
+	EXPECT_FALSE(assembler.accept(fragment(*next), now).has_value());
+	EXPECT_GT(budget->used(), 0u);
+	EXPECT_EQ(assembler.expire(now + std::chrono::milliseconds(50)).size(), 1u);
+	EXPECT_EQ(budget->used(), 0u);
+}
+
+TEST(PageReassembler, RuntimeLimitsRejectInvalidSettingsWithoutChangingActiveReservations)
+{
+	spk::NetworkInternal::PageReassembler assembler;
+	EXPECT_THROW(assembler.setLimits(0, 512), spk::Exception);
+	EXPECT_THROW(assembler.setLimits(512, 0), spk::Exception);
+	assembler.setLimits(12, 4096);
+	spk::NetworkInternal::PageScheduler scheduler;
+	(void)scheduler.enqueue(message(13, 93));
+	const auto first = scheduler.nextPage(4);
+	EXPECT_THROW((void)assembler.accept(fragment(*first)), spk::NetworkInternal::PageReassemblyError);
+	EXPECT_EQ(assembler.reservedBytes(), 0u);
 }
