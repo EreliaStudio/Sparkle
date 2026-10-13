@@ -1,5 +1,6 @@
 #include "network/internal/page_reassembler.hpp"
 #include "network/internal/page_scheduler.hpp"
+#include "network/internal/transfer_reception.hpp"
 
 #include "exception.hpp"
 
@@ -256,4 +257,23 @@ TEST(PageReassembler, RuntimeInactivityTimeoutChangesExistingTransferDeadline)
 	EXPECT_EQ(assembler.reservedBytes(), 0u);
 	EXPECT_THROW(assembler.setInactivityTimeout(std::chrono::milliseconds(0)), spk::Exception);
 	EXPECT_THROW(assembler.setInactivityTimeout(std::chrono::milliseconds(-1)), spk::Exception);
+}
+
+TEST(PageReassembler, InvalidTransferIDFailsOnlyTheLogicalTransfer)
+{
+	spk::NetworkInternal::PageScheduler scheduler;
+	(void)scheduler.enqueue(message(12, 75));
+	const auto first = scheduler.nextPage(4);
+	ASSERT_TRUE(first.has_value());
+	spk::NetworkInternal::TransferReception reception;
+	auto invalid = fragment(*first);
+	invalid.transferID = 0;
+	const auto failure = reception.accept(invalid, invalid.header.connectionID);
+	ASSERT_TRUE(failure.response.has_value());
+	EXPECT_EQ(failure.response->status, spk::Transfer::Status::Failed);
+	EXPECT_EQ(failure.response->reason, spk::Transfer::Reason::InvalidTransferID);
+	EXPECT_FALSE(reception.failureLimitReached());
+	const auto healthy = reception.accept(fragment(*first), first->message.connectionID());
+	EXPECT_FALSE(healthy.message.has_value());
+	EXPECT_FALSE(healthy.response.has_value());
 }
