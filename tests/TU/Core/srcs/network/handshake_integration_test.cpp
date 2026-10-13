@@ -382,3 +382,57 @@ TEST(HandshakeIntegration, HostnameLookupCannotBlockBeyondClientAttemptDeadline)
 	EXPECT_FALSE(client.isConnected());
 	client.disconnect();
 }
+
+TEST(HandshakeIntegration, DisconnectDuringHandshakeCannotStartWorkersAfterShutdown)
+{
+	spk::Server server;
+	server.start(0);
+	for (std::size_t attempt = 0; attempt < 96; ++attempt)
+	{
+		spk::Client client;
+		const auto connection = client.connect("127.0.0.1", server.port());
+		std::jthread stopper([&client] {
+			client.disconnect();
+		});
+		stopper.join();
+		EXPECT_EQ(connection.status(), spk::Connection::Status::Disconnected);
+		EXPECT_FALSE(client.isConnected());
+	}
+	server.stop();
+}
+
+TEST(HandshakeIntegration, NestedConnectionCallbackDisconnectCannotPublishStaleConnectedEvent)
+{
+	using spk::NetworkInternal::Socket;
+	using spk::NetworkInternal::Handshake;
+	using spk::NetworkInternal::FrameHeaderSize;
+	auto listener = Socket::listenTCP(0);
+	spk::Client client;
+	std::atomic_uint32_t staleConnected = 0;
+	auto statusContract = client.subscribeToConnectionStatusChange(
+		[&](spk::Connection, spk::Connection::Status status, spk::Connection::Error) {
+			if (status == spk::Connection::Status::Connected)
+			{
+				++staleConnected;
+			}
+		});
+	const auto connection = client.connect("127.0.0.1", listener.localPort());
+	auto connectionContract = connection.subscribeToStatusChange(
+		[&](spk::Connection::Status status, spk::Connection::Error) {
+			if (status == spk::Connection::Status::Connected)
+			{
+				client.disconnect();
+			}
+		});
+	auto peer = listener.accept();
+	std::array<std::byte, FrameHeaderSize + Handshake::PayloadSize> hello{};
+	ASSERT_TRUE(peer.receiveAllUntil(hello, std::chrono::steady_clock::now() + 3s, {}));
+	peer.sendAll(*Handshake::encode(Handshake::Kind::Accepted, 73));
+	const auto disconnected = [&] {
+		return connection.status() == spk::Connection::Status::Disconnected;
+	};
+	ASSERT_TRUE(NetworkTestUtils::waitUntil(disconnected, 3s));
+	client.disconnect();
+	EXPECT_EQ(staleConnected.load(), 0u);
+	peer.close();
+}
