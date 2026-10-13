@@ -35,3 +35,33 @@ TEST(CommandBudget, LoweredLimitDoesNotEvictExistingReservations)
 	auto second = budget.reserve(50);
 	EXPECT_EQ(budget.used(), 50u);
 }
+
+TEST(CommandBudget, TracksPendingCommandsAndActiveTransfersUnderOneLimit)
+{
+	using Budget = spk::NetworkInternal::CommandBudget;
+	Budget budget(128);
+	auto pending = budget.reserve(64);
+	auto active = budget.reserve(48);
+	active->transition(Budget::Stage::Transfer);
+	EXPECT_EQ(budget.used(), 112u);
+	EXPECT_EQ(budget.used(Budget::Stage::Command), 64u);
+	EXPECT_EQ(budget.used(Budget::Stage::Transfer), 48u);
+	EXPECT_THROW((void)budget.reserve(17), spk::Exception);
+	pending.reset();
+	EXPECT_EQ(budget.used(), 48u);
+	active.reset();
+	EXPECT_EQ(budget.used(), 0u);
+}
+
+TEST(CommandBudget, FrameReservationsRemainChargedDuringPartialWrites)
+{
+	using Budget = spk::NetworkInternal::CommandBudget;
+	Budget budget(100);
+	auto first = budget.reserve(60, Budget::Stage::Frame);
+	budget.setMaximum(30);
+	EXPECT_EQ(budget.used(Budget::Stage::Frame), 60u);
+	EXPECT_THROW((void)budget.reserve(1), spk::Exception);
+	first.reset();
+	EXPECT_EQ(budget.used(Budget::Stage::Frame), 0u);
+	EXPECT_EQ(budget.used(), 0u);
+}

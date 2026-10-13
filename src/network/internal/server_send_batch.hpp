@@ -1,5 +1,6 @@
 #pragma once
 
+#include "network/internal/command_budget.hpp"
 #include "network/internal/transfer_completion.hpp"
 #include "network/types.hpp"
 
@@ -16,6 +17,7 @@ namespace spk::NetworkInternal
 			Connection connection;
 			Transfer transfer;
 			bool admitted = false;
+			std::shared_ptr<CommandBudget::Lease> reservation;
 		};
 
 		Message message;
