@@ -42,7 +42,6 @@ namespace spk::NetworkInternal
 
 		constexpr std::uint64_t WakeToken = 0;
 		constexpr std::uint64_t ListenerToken = 1;
-		constexpr std::uint64_t ConnectionTokenOffset = 2;
 		constexpr std::size_t EventBatchSize = 128;
 		constexpr std::size_t ReceptionBufferSize = 64u * 1024u;
 		constexpr std::size_t MaximumQueuedBytes = 64u * 1024u * 1024u;

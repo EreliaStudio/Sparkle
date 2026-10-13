@@ -117,7 +117,7 @@ TEST(NetworkIntegrationTest, RemoteDisconnectDiscardsUnreadIncomingMessages)
 	ASSERT_TRUE(NetworkTestUtils::waitUntil(delivered, 5s));
 	server.stop();
 	const auto disconnected = [&] {
-		return !client.isConnected();
+		return client.connection().status() == spk::Connection::Status::Disconnected;
 	};
 	ASSERT_TRUE(NetworkTestUtils::waitUntil(disconnected, 5s));
 	std::vector<spk::Message> messages;
