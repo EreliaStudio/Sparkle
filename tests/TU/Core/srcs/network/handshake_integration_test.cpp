@@ -416,7 +416,7 @@ TEST(HandshakeIntegration, NestedConnectionCallbackDisconnectCannotPublishStaleC
 				++staleConnected;
 			}
 		});
-	const auto connection = client.connect("127.0.0.1", listener.localPort());
+	auto connection = client.connect("127.0.0.1", listener.localPort());
 	auto connectionContract = connection.subscribeToStatusChange(
 		[&](spk::Connection::Status status, spk::Connection::Error) {
 			if (status == spk::Connection::Status::Connected)
