@@ -211,6 +211,14 @@ namespace spk
 			_socket.close();
 			_sendAvailable.notify_all();
 			_transfers.clear();
+			{
+				const std::scoped_lock lock(_receiveMutex);
+				_reception.clear();
+			}
+			{
+				const std::scoped_lock lock(_sendMutex);
+				_responses.clear();
+			}
 			try
 			{
 				_owner._setStatus(_session, Connection::Status::Disconnected, error);
