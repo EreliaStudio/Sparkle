@@ -1,7 +1,9 @@
 #include "network/client.hpp"
 #include "network/internal/handshake.hpp"
 #include "network/internal/page.hpp"
+#include "network/internal/page_reassembler.hpp"
 #include "network/internal/page_scheduler.hpp"
+#include "network/internal/reassembly_budget.hpp"
 #include "network/internal/socket.hpp"
 #include "network/internal/transfer_response.hpp"
 #include "network/server.hpp"
@@ -17,6 +19,7 @@
 #include <cstdint>
 #include <functional>
 #include <future>
+#include <memory>
 #include <stop_token>
 #include <thread>
 #include <utility>
@@ -369,4 +372,60 @@ TEST(NetworkPagedIntegration, LateAcknowledgmentCannotChangeTimedOutTransfer)
 	EXPECT_TRUE(client.isConnected());
 	client.disconnect();
 	peer.close();
+}
+
+TEST(NetworkPagedIntegration, GlobalIncomingBudgetIsSharedAcrossSimultaneousPeers)
+{
+	using namespace spk::NetworkInternal;
+	auto probeBudget = std::make_shared<ReassemblyBudget>(4096);
+	PageReassembler probe(1024, 4096, 60s, probeBudget);
+	const auto prototype = makeMessage(970, 128);
+	const auto probeFrame = encodePage(Page{prototype, 1, 128, 0, 16});
+	EXPECT_FALSE(probe.accept(decodePage(*probeFrame)).has_value());
+	const auto charge = probeBudget->used();
+	ASSERT_GT(charge, 128u);
+	probe.clear();
+
+	spk::Server server;
+	server.setGlobalMaxIncomingBytes(charge * 2 - 1);
+	server.start(0);
+	auto connectRaw = [&server] {
+		auto socket = Socket::connectTCP("127.0.0.1", server.port());
+		socket.sendAll(*Handshake::encode(Handshake::Kind::Hello));
+		std::array<std::byte, FrameHeaderSize + Handshake::PayloadSize> hello{};
+		if (!socket.receiveAllUntil(hello, std::chrono::steady_clock::now() + 3s, {}))
+		{
+			throw spk::Exception("Unable to receive raw peer acceptance.");
+		}
+		return std::make_pair(std::move(socket), Handshake::decode(hello));
+	};
+	auto [firstSocket, firstAcceptance] = connectRaw();
+	auto [secondSocket, secondAcceptance] = connectRaw();
+	ASSERT_TRUE(Handshake::validAcceptance(firstAcceptance));
+	ASSERT_TRUE(Handshake::validAcceptance(secondAcceptance));
+
+	const auto first = prototype.withConnectionID(firstAcceptance.connectionID);
+	const auto second = prototype.withConnectionID(secondAcceptance.connectionID);
+	firstSocket.sendAll(*encodePage(Page{first, 1, first.size(), 0, 16}));
+	std::this_thread::sleep_for(100ms);
+	secondSocket.sendAll(*encodePage(Page{second, 1, second.size(), 0, 16}));
+	std::array<std::byte, FrameHeaderSize + TransferResponse::PayloadSize> responseBytes{};
+	ASSERT_TRUE(secondSocket.receiveAllUntil(responseBytes, std::chrono::steady_clock::now() + 3s, {}));
+	const auto rejected = TransferResponse::decode(responseBytes);
+	EXPECT_EQ(rejected.status, spk::Transfer::Status::Rejected);
+	EXPECT_EQ(rejected.reason, spk::Transfer::Reason::ReceiverCapacity);
+	EXPECT_TRUE(server.connection(secondAcceptance.connectionID).isConnected());
+
+	firstSocket.sendAll(*encodePage(Page{first, 1, first.size(), 16, first.size() - 16}));
+	const auto receivedFirst = NetworkTestUtils::collect(server.messages(), 1, 3s);
+	ASSERT_EQ(receivedFirst.size(), 1u);
+	EXPECT_EQ(receivedFirst.front().emitter, firstAcceptance.connectionID);
+
+	secondSocket.sendAll(*encodePage(Page{second, 2, second.size(), 0, second.size()}));
+	const auto receivedSecond = NetworkTestUtils::collect(server.messages(), 1, 3s);
+	ASSERT_EQ(receivedSecond.size(), 1u);
+	EXPECT_EQ(receivedSecond.front().emitter, secondAcceptance.connectionID);
+	firstSocket.close();
+	secondSocket.close();
+	server.stop();
 }
