@@ -25,8 +25,7 @@ namespace spk::NetworkInternal
 		std::uint32_t _maximumPageBytes = DefaultMaximumPageBytes;
 
 	public:
-		explicit ServerHandshake(std::chrono::milliseconds timeout = Handshake::DefaultTimeout,
-			std::uint32_t maximumPageBytes = DefaultMaximumPageBytes);
+		explicit ServerHandshake(std::chrono::milliseconds timeout = Handshake::DefaultTimeout, std::uint32_t maximumPageBytes = DefaultMaximumPageBytes);
 		[[nodiscard]] Handshake::Kind accept(std::span<const std::byte> frame);
 		[[nodiscard]] bool written(Handshake::Kind kind);
 		[[nodiscard]] State state() const noexcept;

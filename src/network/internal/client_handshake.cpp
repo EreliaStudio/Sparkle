@@ -9,8 +9,7 @@
 
 namespace spk::NetworkInternal
 {
-	ClientHandshake::ClientHandshake(HandshakeDeadline::Clock::time_point expiresAt, std::stop_token stop,
-		std::uint32_t maximumPageBytes) :
+	ClientHandshake::ClientHandshake(HandshakeDeadline::Clock::time_point expiresAt, std::stop_token stop, std::uint32_t maximumPageBytes) :
 		_deadline(expiresAt),
 		_stop(stop),
 		_requestedPageBytes(maximumPageBytes)

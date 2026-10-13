@@ -35,8 +35,7 @@ namespace spk::NetworkInternal
 		void _negotiate(Socket &socket);
 
 	public:
-		ClientHandshake(HandshakeDeadline::Clock::time_point expiresAt, std::stop_token stop,
-			std::uint32_t maximumPageBytes = DefaultMaximumPageBytes);
+		ClientHandshake(HandshakeDeadline::Clock::time_point expiresAt, std::stop_token stop, std::uint32_t maximumPageBytes = DefaultMaximumPageBytes);
 		[[nodiscard]] Result connect(std::string_view address, std::uint16_t port) noexcept;
 	};
 }

@@ -52,14 +52,16 @@ TEST(TransportLimits, OutgoingAndIncomingLimitsApplyToClientAndServer)
 	EXPECT_EQ(received.front().message.size(), 64u);
 	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
 		return transfer.status() == spk::Transfer::Status::Success;
-	}, std::chrono::seconds(5)));
+	},
+		std::chrono::seconds(5)));
 	const auto connection = server.connection(received.front().emitter);
 	EXPECT_THROW(server.sendTo(connection, makeMessage(65)), spk::Exception);
 	const auto reply = server.sendTo(connection, makeMessage(64));
 	EXPECT_EQ(NetworkTestUtils::collect(client.messages(), 1, std::chrono::seconds(5)).size(), 1u);
 	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
 		return reply.status() == spk::Transfer::Status::Success;
-	}, std::chrono::seconds(5)));
+	},
+		std::chrono::seconds(5)));
 	client.disconnect();
 	server.stop();
 }

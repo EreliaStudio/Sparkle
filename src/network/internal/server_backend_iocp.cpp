@@ -58,8 +58,7 @@ namespace spk::NetworkInternal
 			std::size_t queuedBytes = 0;
 			bool writeInFlight = false;
 
-			Session(ConnectionID id, Socket socket, PageFailureLimits limits, std::chrono::milliseconds timeout,
-				std::shared_ptr<ReassemblyBudget> sharedBudget, std::uint32_t maximumPageBytes) :
+			Session(ConnectionID id, Socket socket, PageFailureLimits limits, std::chrono::milliseconds timeout, std::shared_ptr<ReassemblyBudget> sharedBudget, std::uint32_t maximumPageBytes) :
 				id(id),
 				socket(std::move(socket)),
 				reception(std::move(sharedBudget)),
@@ -262,8 +261,7 @@ namespace spk::NetworkInternal
 				}
 
 				const ConnectionID id = allocateConnectionID();
-				auto session = std::make_shared<Session>(id, std::move(operation->acceptedSocket), _failureLimits, _handshakeTimeout, _incomingBudget,
-					static_cast<std::uint32_t>(_maxPageBytes.load()));
+				auto session = std::make_shared<Session>(id, std::move(operation->acceptedSocket), _failureLimits, _handshakeTimeout, _incomingBudget, static_cast<std::uint32_t>(_maxPageBytes.load()));
 				session->reception.setInactivityTimeout(_incomingTransferTimeout);
 				session->reception.setLimits(_maxMessageBytes.load(), _maxIncomingBytes.load());
 				session->transfers.setMaxMessageBytes(_maxMessageBytes.load());
@@ -475,8 +473,7 @@ namespace spk::NetworkInternal
 			{
 				if (session->outgoing.empty() && !_stopping)
 				{
-					auto page = session->transfers.nextPage(std::min(_maxPageBytes.load(),
-						static_cast<std::size_t>(session->handshake.maximumPageBytes())));
+					auto page = session->transfers.nextPage((std::min)(_maxPageBytes.load(), static_cast<std::size_t>(session->handshake.maximumPageBytes())));
 					if (page.has_value())
 					{
 						Frame frame = encodePage(*page);
