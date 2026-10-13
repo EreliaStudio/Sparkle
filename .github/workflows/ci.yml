@@ -119,13 +119,15 @@ jobs:
           $resource = (clang-cl -print-resource-dir).Trim()
           $runtime = Join-Path $resource 'lib/windows'
           "LIB=$env:LIB;$runtime" >> $env:GITHUB_ENV
+          $symbolizer = Join-Path (Split-Path (Get-Command clang-cl).Source) 'llvm-symbolizer.exe'
+          if (Test-Path $symbolizer) { "ASAN_SYMBOLIZER_PATH=$symbolizer" >> $env:GITHUB_ENV }
       - name: Configure Windows Core with AddressSanitizer
         run: >-
           cmake -S . -B build/network-asan -G Ninja
           -DCMAKE_CXX_COMPILER=clang-cl
           -DCMAKE_BUILD_TYPE=Release
-          '-DCMAKE_CXX_FLAGS=/fsanitize=address /EHsc /D_DISABLE_STRING_ANNOTATION /D_DISABLE_VECTOR_ANNOTATION'
-          '-DCMAKE_EXE_LINKER_FLAGS=/wholearchive:clang_rt.asan-x86_64.lib /wholearchive:clang_rt.asan_cxx-x86_64.lib'
+          '-DCMAKE_CXX_FLAGS=/fsanitize=address /EHsc /Zi /D_DISABLE_STRING_ANNOTATION /D_DISABLE_VECTOR_ANNOTATION'
+          '-DCMAKE_EXE_LINKER_FLAGS=/DEBUG:FULL /wholearchive:clang_rt.asan-x86_64.lib /wholearchive:clang_rt.asan_cxx-x86_64.lib'
           '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded'
           -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
           -DVCPKG_TARGET_TRIPLET=x64-windows-static
@@ -138,7 +140,7 @@ jobs:
         run: cmake --build build/network-asan --target SparkleCoreTestSuite --parallel 4
       - name: Repeat concurrent connections under ASan
         env:
-          ASAN_OPTIONS: detect_odr_violation=0
+          ASAN_OPTIONS: detect_odr_violation=0:fast_unwind_on_malloc=0
         run: ctest --test-dir build/network-asan -R '^Core[.]NetworkConcurrencyTest[.]ManyClientsConnectAndExchangeConcurrently$' --repeat until-fail:30 --timeout 120 --output-on-failure
       - name: Upload sanitizer evidence
         if: always()
