@@ -83,8 +83,9 @@ namespace spk
 		Transfer sendTo(const Connection &connection, const Message &message, Message::Priority priority = Message::Priority::Normal);
 		// Multi-recipient admission is atomic and completes before return, not remote acknowledgment.
 		// Synchronous admission: Reject is all-or-nothing and throws before return.
-		// SkipRecipient explicitly excludes Pending or capacity-limited recipients.
-		// The returned transfers report eventual transport outcomes, not app receipt.
+		// Explicit targets must be valid and Connected, regardless of policy.
+		// SkipRecipient reports capacity-limited explicit targets as Rejected transfers.
+		// Returned transfer success means transport acknowledgment, not app receipt.
 		TransferResults sendTo(const ConnectionSet &connections, const Message &message, Message::Priority priority = Message::Priority::Normal, Connection::OverflowPolicy policy = Connection::OverflowPolicy::Reject);
 		// Applies the same admission policy to the backend's recipient snapshot.
 		TransferResults sendToAll(const Message &message, Message::Priority priority = Message::Priority::Normal, Connection::OverflowPolicy policy = Connection::OverflowPolicy::Reject);
