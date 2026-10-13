@@ -77,18 +77,19 @@ namespace spk
 		(void)_data->id.compare_exchange_strong(expected, id);
 	}
 
-	void Connection::_setStatus(Status status, Error error)
+	bool Connection::_setStatus(Status status, Error error)
 	{
 		{
 			const std::scoped_lock lock(_data->mutex);
 			if (_data->status == status || (status == Status::Connected && _data->status != Status::Pending) ||
 				(status == Status::Pending && _data->status != Status::Disconnected))
 			{
-				return;
+				return false;
 			}
 			_data->status = status;
 			_data->error = error;
 		}
 		_data->statusProvider.trigger(status, error);
+		return true;
 	}
 }
