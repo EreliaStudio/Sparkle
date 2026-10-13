@@ -46,6 +46,8 @@ namespace spk
 		std::atomic<Connection::ID> _remoteID = Connection::InvalidID;
 		std::atomic_size_t _maxMessageBytes = 128u * 1024u * 1024u;
 		std::atomic_size_t _maxIncomingBytes = 512u * 1024u * 1024u;
+		std::atomic_size_t _maxPageBytes = NetworkInternal::DefaultMaximumPageBytes;
+		std::atomic_size_t _negotiatedPageBytes = NetworkInternal::DefaultMaximumPageBytes;
 
 		void _run()
 		{
@@ -136,6 +138,10 @@ namespace spk
 		void _receivePage(std::span<const std::byte> frame)
 		{
 			const auto page = NetworkInternal::decodePage(frame);
+			if (page.data.size() > _negotiatedPageBytes.load())
+			{
+				throw Exception("Network page exceeds the negotiated maximum payload size.");
+			}
 			_acceptRemoteID(page.header.connectionID);
 			NetworkInternal::TransferReception::Result received;
 			{
@@ -177,7 +183,7 @@ namespace spk
 					}
 					if (frame == nullptr)
 					{
-						const auto page = _transfers.nextPage(NetworkInternal::DefaultMaximumPageBytes);
+						const auto page = _transfers.nextPage(std::min(_maxPageBytes.load(), _negotiatedPageBytes.load()));
 						if (page.has_value())
 						{
 							frame = NetworkInternal::encodePage(*page);
@@ -296,7 +302,7 @@ namespace spk
 
 		void _connectWorker(std::string address, std::uint16_t port, std::chrono::steady_clock::time_point deadline, std::stop_token stop)
 		{
-			NetworkInternal::ClientHandshake handshake(deadline, stop);
+			NetworkInternal::ClientHandshake handshake(deadline, stop, static_cast<std::uint32_t>(_maxPageBytes.load()));
 			auto result = handshake.connect(address, port);
 			if (result.error != Connection::Error::None)
 			{
@@ -309,6 +315,7 @@ namespace spk
 			}
 			try
 			{
+				_negotiatedPageBytes.store(result.maximumPageBytes);
 				_socket = std::move(result.socket);
 				_acceptRemoteID(result.id);
 				_owner._acceptConnection(_session, result.id);
@@ -395,6 +402,15 @@ namespace spk
 			_transfers.setMaxMessageBytes(bytes);
 			_maxMessageBytes.store(bytes);
 		}
+		void setMaxPageBytes(std::size_t bytes)
+		{
+			if (bytes == 0 || bytes > NetworkInternal::MaximumSupportedPageBytes)
+			{
+				throw Exception("Network page size must be within the supported protocol limit.");
+			}
+			_maxPageBytes.store(bytes);
+		}
+
 		void setMaxIncomingBytes(std::size_t bytes)
 		{
 			const std::scoped_lock lock(_receiveMutex);
@@ -476,6 +492,11 @@ namespace spk
 	{
 		_impl->setMaxMessageBytes(bytes);
 	}
+	void Client::setMaxPageBytes(std::size_t bytes)
+	{
+		_impl->setMaxPageBytes(bytes);
+	}
+
 	void Client::setMaxIncomingBytes(std::size_t bytes)
 	{
 		_impl->setMaxIncomingBytes(bytes);

@@ -60,6 +60,7 @@ namespace spk
 		void setAcknowledgmentTimeout(std::chrono::milliseconds timeout);
 		void setMaxMessageBytes(std::size_t bytes);
 		void setMaxIncomingBytes(std::size_t bytes);
+		void setMaxPageBytes(std::size_t bytes);
 		void disconnect();
 		void setPageFailureLimits(PageFailureLimits limits);
 		Transfer send(const Message &message, Message::Priority priority = Message::Priority::Normal);
