@@ -142,8 +142,11 @@ namespace spk::NetworkInternal
 		};
 
 		[[nodiscard]] AddressList resolveUntil(
-			std::string host, std::string service, addrinfo hints,
-			std::chrono::steady_clock::time_point deadline, std::stop_token stop)
+			std::string host,
+			std::string service,
+			addrinfo hints,
+			std::chrono::steady_clock::time_point deadline,
+			std::stop_token stop)
 		{
 			if (stop.stop_requested() || std::chrono::steady_clock::now() >= deadline)
 			{
@@ -182,7 +185,7 @@ namespace spk::NetworkInternal
 			while (!stop.stop_requested() && std::chrono::steady_clock::now() < deadline)
 			{
 				const auto remaining = deadline - std::chrono::steady_clock::now();
-				const auto interval = std::min(remaining, std::chrono::steady_clock::duration(std::chrono::milliseconds(25)));
+				const auto interval = (std::min)(remaining, std::chrono::steady_clock::duration(std::chrono::milliseconds(25)));
 				if (future.wait_for(interval) == std::future_status::ready)
 				{
 					auto result = future.get();
