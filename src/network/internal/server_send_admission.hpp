@@ -112,6 +112,7 @@ namespace spk::NetworkInternal
 			{
 				candidate.recipient->reservation = {};
 			}
+			_batch.rejectAll(_declined);
 			throw Exception("Insufficient capacity for atomic network broadcast admission.");
 		}
 
