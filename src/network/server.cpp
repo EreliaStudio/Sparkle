@@ -235,10 +235,6 @@ namespace spk
 				{
 					throw Exception("Unable to send to an unknown or disconnected network connection.");
 				}
-				if (policy == Connection::OverflowPolicy::Reject)
-				{
-					NetworkInternal::OutgoingMessageValidator::validateCapacity(message, connection.maxQueuedBytes());
-				}
 				batch->recipients.push_back({connection, Transfer{}});
 				results.emplace(connection.id(), batch->recipients.back().transfer);
 			}

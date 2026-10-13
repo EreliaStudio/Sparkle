@@ -4,7 +4,6 @@
 #include "network/connection.hpp"
 #include "network/message.hpp"
 
-#include <algorithm>
 #include <cstddef>
 
 namespace spk::NetworkInternal
@@ -30,14 +29,6 @@ namespace spk::NetworkInternal
 				policy != Connection::OverflowPolicy::DisconnectRecipient)
 			{
 				throw Exception("Invalid network overflow policy.");
-			}
-		}
-
-		static void validateCapacity(const Message &message, std::size_t available)
-		{
-			if (std::max<std::size_t>(1, message.size()) > available)
-			{
-				throw Exception("Insufficient network transfer capacity.");
 			}
 		}
 	};
