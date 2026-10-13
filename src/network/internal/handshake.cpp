@@ -8,6 +8,14 @@ namespace spk::NetworkInternal
 {
 	std::shared_ptr<std::vector<std::byte>> Handshake::encode(Kind kind, Connection::ID id, Connection::Error error, std::uint32_t maximumPageBytes)
 	{
+		if (kind != Kind::Hello && kind != Kind::Accepted && kind != Kind::Rejected)
+		{
+			throw Exception("Invalid handshake control-frame kind.");
+		}
+		if (error > Connection::Error::TransportFailure)
+		{
+			throw Exception("Invalid handshake connection error.");
+		}
 		if (maximumPageBytes == 0 || maximumPageBytes > MaximumSupportedPageBytes)
 		{
 			throw Exception("Invalid negotiated maximum page size.");
@@ -57,6 +65,10 @@ namespace spk::NetworkInternal
 			throw Exception("Invalid handshake frame metadata.");
 		}
 		const auto error = static_cast<Connection::Error>(std::to_integer<std::uint8_t>(bytes[39]));
+		if (error > Connection::Error::TransportFailure)
+		{
+			throw Exception("Unknown handshake connection error.");
+		}
 		Packet packet{kind, header.connectionID, error};
 		packet.maximumPageBytes = read32(bytes.data() + 40);
 		if (bytes[32] != std::byte{'S'} || bytes[33] != std::byte{'P'} ||

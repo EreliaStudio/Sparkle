@@ -66,3 +66,13 @@ TEST(Handshake, PageSizeIsNegotiatedInBothDirections)
 	EXPECT_THROW(Handshake::encode(Handshake::Kind::Hello, 0, spk::Connection::Error::None, 0), spk::Exception);
 	EXPECT_THROW(Handshake::encode(Handshake::Kind::Hello, 0, spk::Connection::Error::None, spk::NetworkInternal::MaximumSupportedPageBytes + 1), spk::Exception);
 }
+
+TEST(Handshake, UnknownControlKindAndErrorAreRejected)
+{
+	using Handshake = spk::NetworkInternal::Handshake;
+	EXPECT_THROW(Handshake::encode(static_cast<Handshake::Kind>(99)), spk::Exception);
+	EXPECT_THROW(Handshake::encode(Handshake::Kind::Rejected, 0, static_cast<spk::Connection::Error>(255)), spk::Exception);
+	auto frame = Handshake::encode(Handshake::Kind::Hello);
+	(*frame)[39] = std::byte{255};
+	EXPECT_THROW(Handshake::decode(*frame), spk::Exception);
+}
