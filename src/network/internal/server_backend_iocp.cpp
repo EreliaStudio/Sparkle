@@ -658,17 +658,31 @@ namespace spk::NetworkInternal
 
 			void _processCommands()
 			{
-				for (Command &command : _takeCommands())
+				auto commands = _takeCommands();
+				try
 				{
-					if (_stopping)
+					for (Command &command : commands)
+					{
+						if (_stopping)
+						{
+							if (command.batch != nullptr)
+							{
+								command.batch->cancelAdmission();
+							}
+							continue;
+						}
+						_processCommand(std::move(command));
+					}
+				} catch (...)
+				{
+					for (Command &command : commands)
 					{
 						if (command.batch != nullptr)
 						{
 							command.batch->cancelAdmission();
 						}
-						continue;
 					}
-					_processCommand(std::move(command));
+					throw;
 				}
 			}
 
