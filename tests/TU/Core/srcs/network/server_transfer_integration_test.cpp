@@ -7,6 +7,9 @@
 
 #include <chrono>
 #include <cstdint>
+#include <future>
+#include <thread>
+#include <vector>
 #include <utility>
 
 using namespace std::chrono_literals;
@@ -192,11 +195,11 @@ TEST(ServerTransferIntegration, RejectsImpossibleGlobalCommandQueueAdmissionSync
 {
 	spk::Server server;
 	spk::Client client;
-	server.setGlobalMaxQueuedBytes(2);
+	server.setGlobalMaxQueuedBytes(1024);
 	server.start(0);
 	const auto recipient = identify(server, client);
 	ASSERT_TRUE(recipient.isConnected());
-	EXPECT_THROW(server.sendTo(recipient, makeMessage(158, 3)), spk::Exception);
+	EXPECT_THROW(server.sendTo(recipient, makeMessage(158, 1025)), spk::Exception);
 	EXPECT_TRUE(client.isConnected());
 	const auto transfer = server.sendTo(recipient, makeMessage(159, 2));
 	EXPECT_EQ(NetworkTestUtils::collect(client.messages(), 1, 5s).size(), 1u);
@@ -230,5 +233,54 @@ TEST(ServerTransferIntegration, ExplicitSkipRecipientCanBroadcastToEmptyAudience
 		spk::Connection::OverflowPolicy::SkipRecipient);
 	EXPECT_TRUE(results.empty());
 	EXPECT_THROW(server.sendToAll(makeMessage(163, 16)), spk::Exception);
+	server.stop();
+}
+
+TEST(ServerTransferIntegration, RejectReservesLogicalAndFrameBytesBeforeReturning)
+{
+	spk::Server server;
+	spk::Client client;
+	server.start(0);
+	const auto recipient = identify(server, client);
+	ASSERT_TRUE(recipient.isConnected());
+	server.setGlobalMaxQueuedBytes(80);
+	EXPECT_THROW(server.sendTo(recipient, makeMessage(170, 16)), spk::Exception);
+	EXPECT_TRUE(NetworkTestUtils::collect(client.messages(), 1, 100ms).empty());
+	const auto transfer = server.sendTo(recipient, makeMessage(171, 1));
+	EXPECT_EQ(NetworkTestUtils::collect(client.messages(), 1, 5s).size(), 1u);
+	EXPECT_TRUE(finished(transfer, spk::Transfer::Status::Success));
+	client.disconnect();
+	server.stop();
+}
+
+TEST(ServerTransferIntegration, ConcurrentBroadcastAdmissionsReturnBothCommittedRecipients)
+{
+	spk::Server server;
+	spk::Client first;
+	spk::Client second;
+	server.start(0);
+	ASSERT_TRUE(identify(server, first).isConnected());
+	ASSERT_TRUE(identify(server, second).isConnected());
+	std::vector<std::future<spk::Server::TransferResults>> calls;
+	for (std::uint32_t index = 0; index < 4; ++index)
+	{
+		calls.push_back(std::async(std::launch::async, [&server, index] {
+			return server.sendToAll(makeMessage(180 + index, 512));
+		}));
+	}
+	for (auto &call : calls)
+	{
+		const auto transfers = call.get();
+		ASSERT_EQ(transfers.size(), 2u);
+		for (const auto &[id, transfer] : transfers)
+		{
+			(void)id;
+			EXPECT_TRUE(finished(transfer, spk::Transfer::Status::Success));
+		}
+	}
+	EXPECT_EQ(NetworkTestUtils::collect(first.messages(), 4, 5s).size(), 4u);
+	EXPECT_EQ(NetworkTestUtils::collect(second.messages(), 4, 5s).size(), 4u);
+	first.disconnect();
+	second.disconnect();
 	server.stop();
 }

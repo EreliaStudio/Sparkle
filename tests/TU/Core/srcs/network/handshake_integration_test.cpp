@@ -329,3 +329,29 @@ TEST(HandshakeIntegration, ClientObservesExplicitHandshakeRejectionOnOriginalHan
 	client.disconnect();
 	peer.close();
 }
+
+TEST(HandshakeIntegration, ServerCanSynchronouslySendFromConnectedCallback)
+{
+	spk::Server server;
+	spk::Client client;
+	std::atomic_bool sent = false;
+	auto contract = server.subscribeToConnectionStatusChange(
+		[&](spk::Connection, spk::Connection::Status status, spk::Connection::Error) {
+			if (status == spk::Connection::Status::Connected)
+			{
+				const auto transfers = server.sendToAll(spk::Message::Writer(995).build());
+				sent = transfers.size() == 1u;
+			}
+		});
+	server.start(0);
+	client.connect("127.0.0.1", server.port());
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(client));
+	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+		return sent.load();
+	}, 3s));
+	const auto received = NetworkTestUtils::collect(client.messages(), 1, 3s);
+	ASSERT_EQ(received.size(), 1u);
+	EXPECT_EQ(received.front().type(), 995u);
+	client.disconnect();
+	server.stop();
+}

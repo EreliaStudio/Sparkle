@@ -66,3 +66,20 @@ TEST(TransportLimits, OutgoingAndIncomingLimitsApplyToClientAndServer)
 	client.disconnect();
 	server.stop();
 }
+
+TEST(TransportLimits, ClientOutgoingBudgetCoversFrameHeadroom)
+{
+	spk::Server server;
+	spk::Client client;
+	server.start(0);
+	client.connect("127.0.0.1", server.port());
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(client));
+	client.connection().setMaxQueuedBytes(80);
+	EXPECT_THROW(client.send(makeMessage(16)), spk::Exception);
+	const auto transfer = client.send(makeMessage(1));
+	EXPECT_EQ(NetworkTestUtils::collect(server.messages(), 1, std::chrono::seconds(5)).size(), 1u);
+	EXPECT_TRUE(NetworkTestUtils::waitUntil(std::bind_front(&spk::Transfer::isComplete, transfer), std::chrono::seconds(5)));
+	EXPECT_EQ(transfer.status(), spk::Transfer::Status::Success);
+	client.disconnect();
+	server.stop();
+}
