@@ -47,7 +47,9 @@ namespace spk::NetworkInternal
 			const auto oldest = std::min_element(
 				_retiredTransfers.begin(),
 				_retiredTransfers.end(),
-				[](const auto &left, const auto &right) { return left.second < right.second; });
+				[](const auto &left, const auto &right) {
+					return left.second < right.second;
+				});
 			_retiredTransfers.erase(oldest);
 		}
 	}
