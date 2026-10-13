@@ -60,3 +60,24 @@ TEST(TransferSender, RejectionCancelsQueuedPagesWithoutDisconnect)
 	sender.clear();
 	EXPECT_EQ(other.status(), spk::Transfer::Status::Indeterminate);
 }
+
+TEST(TransferSender, ClearCompletesAllTransfersAndIgnoresLateAcknowledgments)
+{
+	spk::NetworkInternal::TransferSender sender;
+	auto waiting = sender.enqueue(makeMessage(12));
+	auto queued = sender.enqueue(makeMessage(16));
+	const auto now = spk::NetworkInternal::AcknowledgmentDeadlines::Clock::now();
+	sender.finalPageWritten(waiting.id(), now);
+	sender.clear();
+	EXPECT_EQ(waiting.status(), spk::Transfer::Status::Indeterminate);
+	EXPECT_EQ(queued.status(), spk::Transfer::Status::Indeterminate);
+	EXPECT_EQ(waiting.reason(), spk::Transfer::Reason::TransportFailure);
+	EXPECT_EQ(sender.pendingTransfers(), 0u);
+	EXPECT_EQ(sender.pendingBytes(), 0u);
+	const auto response = spk::NetworkInternal::TransferResponse{
+		11, waiting.id(), spk::Transfer::Status::Success, spk::Transfer::Reason::None};
+	EXPECT_FALSE(sender.acknowledge(response));
+	sender.expire(now + std::chrono::minutes(5));
+	EXPECT_EQ(waiting.status(), spk::Transfer::Status::Indeterminate);
+	EXPECT_EQ(queued.status(), spk::Transfer::Status::Indeterminate);
+}

@@ -82,6 +82,5 @@ namespace spk::NetworkInternal
 	{
 		_deadlines.clear();
 		_pages.clear();
-		_deadlines.clear();
 	}
 }
