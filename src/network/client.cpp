@@ -678,7 +678,9 @@ namespace spk
 				return;
 			}
 		}
-		connection._setStatus(status, error);
-		_statusProvider.trigger(connection, status, error);
+		if (connection._setStatus(status, error) && connection.status() == status)
+		{
+			_statusProvider.trigger(connection, status, error);
+		}
 	}
 }
