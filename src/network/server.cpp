@@ -194,6 +194,10 @@ namespace spk
 			{
 				if (!connection.isConnected())
 				{
+					if (policy == Connection::OverflowPolicy::SkipRecipient)
+					{
+						continue;
+					}
 					throw Exception("Cannot broadcast while a recipient is pending or disconnected.");
 				}
 				if (policy == Connection::OverflowPolicy::Reject)

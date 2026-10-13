@@ -110,9 +110,10 @@ TEST(HandshakeIntegration, ServerBroadcastRejectsPendingRecipient)
 		});
 	server.start(0);
 	auto socket = spk::NetworkInternal::Socket::connectTCP("127.0.0.1", server.port());
-	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
+	const auto pendingReported = [&] {
 		return pending.load();
-	}, 3s));
+	};
+	ASSERT_TRUE(NetworkTestUtils::waitUntil(pendingReported, 3s));
 	EXPECT_THROW(server.sendToAll(spk::Message::Writer(3).build()), spk::Exception);
 	socket.close();
 	server.stop();
@@ -132,9 +133,10 @@ TEST(HandshakeIntegration, ServerUsesTimeoutConfiguredBeforeStart)
 	server.setHandshakeTimeout(100ms);
 	server.start(0);
 	auto socket = spk::NetworkInternal::Socket::connectTCP("127.0.0.1", server.port());
-	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+	const auto timedOutReported = [&] {
 		return timedOut.load();
-	}, 3s));
+	};
+	EXPECT_TRUE(NetworkTestUtils::waitUntil(timedOutReported, 3s));
 	socket.close();
 	server.stop();
 }

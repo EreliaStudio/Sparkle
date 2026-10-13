@@ -212,12 +212,12 @@ TEST(NetworkStressTest, DisconnectingOneClientDuringBroadcastDoesNotBreakOthers)
 
 	for (std::uint32_t sequence = 0; sequence < MessageCount / 2; ++sequence)
 	{
-		server.sendToAll(makeMessage(43, sequence));
+		server.sendToAll(makeMessage(43, sequence), spk::Message::Priority::Normal, spk::Connection::OverflowPolicy::SkipRecipient);
 	}
 	disconnected.disconnect();
 	for (std::uint32_t sequence = MessageCount / 2; sequence < MessageCount; ++sequence)
 	{
-		server.sendToAll(makeMessage(43, sequence));
+		server.sendToAll(makeMessage(43, sequence), spk::Message::Priority::Normal, spk::Connection::OverflowPolicy::SkipRecipient);
 	}
 
 	auto messages =
