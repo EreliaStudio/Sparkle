@@ -595,3 +595,46 @@ TEST(NetworkConcurrencyTest, ClientCanDisconnectFromConnectedStatusCallback)
 	client.disconnect();
 	server.stop();
 }
+
+TEST(NetworkConcurrencyTest, ClientSendRacingRemoteShutdownCompletesEveryAdmittedTransfer)
+{
+	spk::Server server;
+	spk::Client client;
+	server.start(0);
+	client.connect("127.0.0.1", server.port());
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(client));
+	std::mutex mutex;
+	std::vector<spk::Transfer> accepted;
+	std::atomic_bool unexpectedFailure = false;
+	std::jthread producer([&] {
+		for (std::uint32_t attempt = 0; attempt < 512; ++attempt)
+		{
+			try
+			{
+				auto transfer = client.send(makeMessage(901, std::string(4096, 'x')));
+				const std::scoped_lock lock(mutex);
+				accepted.push_back(std::move(transfer));
+			} catch (const spk::Exception &)
+			{
+				return;
+			} catch (...)
+			{
+				unexpectedFailure = true;
+				return;
+			}
+		}
+	});
+	const auto submitted = [&] {
+		const std::scoped_lock lock(mutex);
+		return !accepted.empty();
+	};
+	EXPECT_TRUE(NetworkTestUtils::waitUntil(submitted, 3s));
+	server.stop();
+	producer.join();
+	client.disconnect();
+	EXPECT_FALSE(unexpectedFailure.load());
+	for (const auto &transfer : accepted)
+	{
+		EXPECT_TRUE(transfer.isComplete());
+	}
+}
