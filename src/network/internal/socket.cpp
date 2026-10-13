@@ -6,9 +6,12 @@
 #include <cerrno>
 #include <chrono>
 #include <climits>
+#include <future>
 #include <memory>
+#include <semaphore>
 #include <stop_token>
 #include <string>
+#include <thread>
 
 #ifdef _WIN32
 #	include <winsock2.h>
@@ -102,6 +105,96 @@ namespace spk::NetworkInternal
 			return error == EINTR;
 		}
 #endif
+
+		using AddressList = std::unique_ptr<addrinfo, decltype(&::freeaddrinfo)>;
+
+		struct DnsResult final
+		{
+			int error;
+			AddressList addresses;
+		};
+
+		class DnsPermit final
+		{
+		private:
+			bool _acquired = false;
+
+			[[nodiscard]] static std::counting_semaphore<8> &_capacity()
+			{
+				static std::counting_semaphore<8> slots{8};
+				return slots;
+			}
+
+		public:
+			[[nodiscard]] bool acquire() noexcept
+			{
+				_acquired = _capacity().try_acquire();
+				return _acquired;
+			}
+
+			~DnsPermit()
+			{
+				if (_acquired)
+				{
+					_capacity().release();
+				}
+			}
+		};
+
+		[[nodiscard]] AddressList resolveUntil(
+			std::string host, std::string service, addrinfo hints,
+			std::chrono::steady_clock::time_point deadline, std::stop_token stop)
+		{
+			if (stop.stop_requested() || std::chrono::steady_clock::now() >= deadline)
+			{
+				throw Exception("Network name resolution was cancelled or timed out.");
+			}
+			addrinfo numericHints = hints;
+			numericHints.ai_flags |= AI_NUMERICHOST;
+			addrinfo *numeric = nullptr;
+			if (::getaddrinfo(host.c_str(), service.c_str(), &numericHints, &numeric) == 0)
+			{
+				return AddressList(numeric, &::freeaddrinfo);
+			}
+			auto permit = std::make_shared<DnsPermit>();
+			if (!permit->acquire())
+			{
+				throw Exception("Network name resolution capacity is exhausted.");
+			}
+			auto promise = std::make_shared<std::promise<DnsResult>>();
+			auto future = promise->get_future();
+			std::thread([promise, permit, host, service, hints] {
+				try
+				{
+					addrinfo *found = nullptr;
+					const int error = ::getaddrinfo(host.c_str(), service.c_str(), &hints, &found);
+					promise->set_value(DnsResult{error, AddressList(found, &::freeaddrinfo)});
+				} catch (...)
+				{
+					try
+					{
+						promise->set_exception(std::current_exception());
+					} catch (...)
+					{
+					}
+				}
+			}).detach();
+			while (!stop.stop_requested() && std::chrono::steady_clock::now() < deadline)
+			{
+				const auto remaining = deadline - std::chrono::steady_clock::now();
+				const auto interval = std::min(remaining, std::chrono::steady_clock::duration(std::chrono::milliseconds(25)));
+				if (future.wait_for(interval) == std::future_status::ready)
+				{
+					auto result = future.get();
+					if (result.error != 0)
+					{
+						throw Exception("Unable to resolve network address [" + host + "].");
+					}
+					return std::move(result.addresses);
+				}
+			}
+			throw Exception("Network name resolution was cancelled or timed out.");
+		}
 
 		[[nodiscard]] SystemSocket checkedTCP(int family)
 		{
@@ -272,14 +365,9 @@ namespace spk::NetworkInternal
 		hints.ai_family = AF_UNSPEC;
 		hints.ai_socktype = SOCK_STREAM;
 		hints.ai_protocol = IPPROTO_TCP;
-		addrinfo *addresses = nullptr;
 		const std::string host(address);
-		if (::getaddrinfo(host.c_str(), portString(port).c_str(), &hints, &addresses) != 0)
-		{
-			throw Exception("Unable to resolve network address [" + host + "].");
-		}
-		std::unique_ptr<addrinfo, decltype(&::freeaddrinfo)> resolved(addresses, &::freeaddrinfo);
-		for (auto *entry = addresses; entry != nullptr && !stop.stop_requested(); entry = entry->ai_next)
+		auto resolved = resolveUntil(host, portString(port), hints, deadline, stop);
+		for (auto *entry = resolved.get(); entry != nullptr && !stop.stop_requested(); entry = entry->ai_next)
 		{
 			if (std::chrono::steady_clock::now() >= deadline)
 			{
