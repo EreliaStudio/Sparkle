@@ -4,6 +4,7 @@
 #include "network/internal/page_reassembler.hpp"
 #include "network/internal/page_scheduler.hpp"
 #include "network/internal/reassembly_budget.hpp"
+#include "network/internal/retired_transfer_ids.hpp"
 #include "network/internal/socket.hpp"
 #include "network/internal/transfer_response.hpp"
 #include "network/server.hpp"
@@ -543,6 +544,64 @@ TEST(NetworkPagedIntegration, ExpirationResponseCapacityFailureDisconnectsOnlyAf
 		return transfer.isComplete();
 	};
 	EXPECT_TRUE(NetworkTestUtils::waitUntil(completed, 3s));
+	peer.close();
+	healthy.disconnect();
+	server.stop();
+}
+
+TEST(NetworkPagedIntegration, SparseReplayHistoryExhaustionDisconnectsOnlyOffendingPeer)
+{
+	using namespace spk::NetworkInternal;
+	spk::Server server;
+	spk::Client healthy;
+	server.start(0);
+	healthy.connect("127.0.0.1", server.port());
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(healthy));
+	auto peer = Socket::connectTCP("127.0.0.1", server.port());
+	peer.sendAll(*Handshake::encode(Handshake::Kind::Hello));
+	std::array<std::byte, FrameHeaderSize + Handshake::PayloadSize> acceptance{};
+	ASSERT_TRUE(peer.receiveAllUntil(acceptance, std::chrono::steady_clock::now() + 3s, {}));
+	const auto accepted = Handshake::decode(acceptance);
+	ASSERT_TRUE(Handshake::validAcceptance(accepted));
+	const auto victim = server.connection(accepted.connectionID);
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(victim));
+
+	spk::Message::Writer writer(998);
+	writer.setConnectionID(accepted.connectionID);
+	writer.resize(1);
+	const auto message = std::move(writer).build();
+	auto frame = encodePage(Page{message, 2, message.size(), 0, message.size()});
+	std::array<std::byte, FrameHeaderSize + TransferResponse::PayloadSize> answer{};
+	constexpr auto Count = RetiredTransferIDs::MaximumSparseRanges;
+	for (std::uint64_t first = 1; first <= Count; first += 32)
+	{
+		const auto last = std::min<std::uint64_t>(Count, first + 31);
+		for (std::uint64_t index = first; index <= last; ++index)
+		{
+			write64(frame->data() + FrameHeaderSize, index * 2);
+			peer.sendAll(*frame);
+		}
+		for (std::uint64_t index = first; index <= last; ++index)
+		{
+			ASSERT_TRUE(peer.receiveAllUntil(answer, std::chrono::steady_clock::now() + 5s, {}));
+			EXPECT_EQ(TransferResponse::decode(answer).transferID, index * 2);
+		}
+	}
+	write64(frame->data() + FrameHeaderSize, (Count + 1) * 2);
+	peer.sendAll(*frame);
+	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+		return victim.status() == spk::Connection::Status::Disconnected;
+	}, 5s));
+	EXPECT_TRUE(server.isRunning());
+	EXPECT_TRUE(healthy.isConnected());
+	auto transfer = healthy.send(makeMessage(999, 1));
+	const auto received = NetworkTestUtils::collect(server.messages(), Count + 1, 10s);
+	ASSERT_EQ(received.size(), Count + 1);
+	EXPECT_EQ(received.back().message.type(), 999u);
+	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+		return transfer.isComplete();
+	}, 5s));
+	EXPECT_EQ(transfer.status(), spk::Transfer::Status::Success);
 	peer.close();
 	healthy.disconnect();
 	server.stop();
