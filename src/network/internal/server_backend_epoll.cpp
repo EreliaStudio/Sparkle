@@ -22,6 +22,8 @@
 #	include <cstddef>
 #	include <cstdint>
 #	include <deque>
+#	include <exception>
+#	include <future>
 #	include <memory>
 #	include <mutex>
 #	include <optional>
@@ -548,7 +550,7 @@ namespace spk::NetworkInternal
 					const std::scoped_lock lock(_commandMutex);
 					if (command.batch != nullptr)
 					{
-						const std::size_t count = command.batch->recipients.size();
+						const std::size_t count = std::max<std::size_t>(1, command.batch->recipients.size());
 						const std::size_t bytes = std::max<std::size_t>(1, command.batch->message.size());
 						const std::size_t limit = _maxGlobalQueuedBytes.load();
 						if (count == 0 || bytes > limit / count)
@@ -656,11 +658,41 @@ namespace spk::NetworkInternal
 					}
 					return;
 				}
-				_sendBatch(*command.batch);
+				command.reservation.reset();
+				try
+				{
+					_sendBatch(*command.batch);
+					command.batch->acceptAdmission();
+				} catch (...)
+				{
+					command.batch->rejectAdmission(std::current_exception());
+				}
 			}
 
 			void _sendBatch(ServerSendBatch &batch)
 			{
+				if (batch.allRecipients)
+				{
+					const auto connections = _callbacks.snapshotConnections();
+					if (connections.empty() && batch.policy != Connection::OverflowPolicy::SkipRecipient)
+					{
+						throw Exception("Cannot broadcast without connected recipients.");
+					}
+					batch.recipients.reserve(connections.size());
+					for (const Connection &connection : connections)
+					{
+						const auto it = _sessions.find(connection.id());
+						if (!connection.isConnected() || it == _sessions.end() || !it->second->handshake.ready())
+						{
+							if (batch.policy == Connection::OverflowPolicy::SkipRecipient)
+							{
+								continue;
+							}
+							throw Exception("Cannot broadcast while a recipient is pending or disconnected.");
+						}
+						batch.recipients.push_back({connection, spk::Transfer{}});
+					}
+				}
 				struct Candidate
 				{
 					ServerSendBatch::Recipient *recipient;
@@ -683,9 +715,7 @@ namespace spk::NetworkInternal
 					const auto it = _sessions.find(recipient.connection.id());
 					if (it == _sessions.end() || !it->second->handshake.ready())
 					{
-						declined.push_back({&recipient, spk::Transfer::Reason::InvalidRecipient});
-						rejected = true;
-						continue;
+						throw Exception("Cannot send to an invalid, pending or disconnected recipient.");
 					}
 					const auto &session = it->second;
 					const std::size_t pending = session->queuedBytes + session->transfers.pendingBytes();
@@ -705,8 +735,7 @@ namespace spk::NetworkInternal
 				}
 				if (rejected && batch.policy == Connection::OverflowPolicy::Reject)
 				{
-					batch.rejectAll(declined);
-					return;
+					throw Exception("Insufficient capacity for atomic network broadcast admission.");
 				}
 				try
 				{
@@ -1109,9 +1138,25 @@ namespace spk::NetworkInternal
 				{
 					throw Exception("Unable to send through a stopped network server.");
 				}
+				if (_worker.get_id() == std::this_thread::get_id())
+				{
+					_sendBatch(*batch);
+					return;
+				}
+				auto admitted = batch->admission.get_future();
 				Command command{CommandKind::Send};
 				command.batch = std::move(batch);
 				_enqueue(std::move(command));
+				try
+				{
+					admitted.get();
+				} catch (const Exception &)
+				{
+					throw;
+				} catch (...)
+				{
+					throw Exception("Network send admission failed.");
+				}
 			}
 		};
 	}
