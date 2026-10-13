@@ -472,13 +472,34 @@ namespace spk::NetworkInternal
 				return true;
 			}
 
-			void _queueMessage(const std::shared_ptr<Session> &session, const Message &message, Message::Priority priority, spk::Transfer transfer)
+			void _releaseReservation(Session &session, spk::Transfer::ID id) noexcept
+			{
+				const auto it = session.outgoingReservations.find(id);
+				if (it == session.outgoingReservations.end())
+				{
+					return;
+				}
+				session.reservedOutgoingBytes -= it->second.bytes();
+				session.outgoingReservations.erase(it);
+			}
+
+			void _queueMessage(const std::shared_ptr<Session> &session, const Message &message, Message::Priority priority, ServerSendBatch::Recipient &recipient)
 			{
 				if (!session->handshake.ready())
 				{
 					throw Exception("Cannot send to a pending network connection.");
 				}
-				(void)session->transfers.enqueue(message.withConnectionID(session->id), priority, std::move(transfer));
+			auto tracked = session->transfers.enqueue(message.withConnectionID(session->id), priority, recipient.transfer);
+				try
+				{
+					const std::size_t bytes = recipient.reservation.bytes();
+					session->outgoingReservations.emplace(tracked.id(), std::move(recipient.reservation));
+					session->reservedOutgoingBytes += bytes;
+				} catch (...)
+				{
+					(void)session->transfers.fail(tracked.id(), spk::Transfer::Status::Rejected, spk::Transfer::Reason::QueueOverflow);
+					throw;
+				}
 			}
 
 			void _postWrite(const std::shared_ptr<Session> &session)
@@ -722,15 +743,7 @@ namespace spk::NetworkInternal
 				std::vector<Candidate> candidates;
 				std::vector<ConnectionID> overflowed;
 				std::vector<std::pair<ServerSendBatch::Recipient *, spk::Transfer::Reason>> declined;
-				std::size_t used = 0;
-				for (const auto &[id, session] : _sessions)
-				{
-					(void)id;
-					used += session->queuedBytes + session->transfers.pendingBytes();
-				}
-				const std::size_t limit = _maxGlobalQueuedBytes.load();
-				const std::size_t size = std::max<std::size_t>(1, batch.message.size());
-				bool rejected = false;
+				const std::size_t logicalBytes = std::max<std::size_t>(1, batch.message.size());
 				for (auto &recipient : batch.recipients)
 				{
 					const auto it = _sessions.find(recipient.connection.id());
@@ -739,23 +752,38 @@ namespace spk::NetworkInternal
 						throw Exception("Cannot send to an invalid, pending or disconnected recipient.");
 					}
 					const auto &session = it->second;
-					const std::size_t pending = session->queuedBytes + session->transfers.pendingBytes();
+					const auto frameBytes = OutgoingReservation::frameBytes(batch.message.size(), session->handshake.maximumPageBytes());
 					const std::size_t budget = recipient.connection.maxQueuedBytes();
-					if (pending > budget || size > budget - pending || used > limit || size > limit - used)
+					const std::size_t used = session->reservedOutgoingBytes;
+					if (used > budget || logicalBytes + frameBytes > budget - used)
 					{
 						declined.push_back({&recipient, spk::Transfer::Reason::QueueOverflow});
-						rejected = true;
 						if (batch.policy == Connection::OverflowPolicy::DisconnectRecipient)
 						{
 							overflowed.push_back(session->id);
 						}
 						continue;
 					}
-					used += size;
+					try
+					{
+						recipient.reservation = OutgoingReservation::reserve(_commandBudget, batch.message.size(), session->handshake.maximumPageBytes());
+					} catch (const Exception &)
+					{
+						declined.push_back({&recipient, spk::Transfer::Reason::QueueOverflow});
+						if (batch.policy == Connection::OverflowPolicy::DisconnectRecipient)
+						{
+							overflowed.push_back(session->id);
+						}
+						continue;
+					}
 					candidates.push_back({&recipient, session});
 				}
-				if (rejected && batch.policy == Connection::OverflowPolicy::Reject)
+				if (!declined.empty() && batch.policy == Connection::OverflowPolicy::Reject)
 				{
+					for (auto &candidate : candidates)
+					{
+						candidate.recipient->reservation = {};
+					}
 					throw Exception("Insufficient capacity for atomic network broadcast admission.");
 				}
 				try
@@ -763,7 +791,7 @@ namespace spk::NetworkInternal
 					for (auto &candidate : candidates)
 					{
 						candidate.session->transfers.setMaxPendingBytes(candidate.recipient->connection.maxQueuedBytes());
-						_queueMessage(candidate.session, batch.message, batch.priority, candidate.recipient->transfer);
+						_queueMessage(candidate.session, batch.message, batch.priority, *candidate.recipient);
 						candidate.recipient->admitted = true;
 					}
 				} catch (...)
@@ -773,17 +801,11 @@ namespace spk::NetworkInternal
 						if (candidate.recipient->admitted)
 						{
 							(void)candidate.session->transfers.fail(candidate.recipient->transfer.id(), spk::Transfer::Status::Rejected, spk::Transfer::Reason::QueueOverflow);
+							_releaseReservation(*candidate.session, candidate.recipient->transfer.id());
 						}
-						else
-						{
-							(void)TransferCompletion::complete(candidate.recipient->transfer, spk::Transfer::Status::Rejected, spk::Transfer::Reason::QueueOverflow);
-						}
+						candidate.recipient->reservation = {};
 					}
-					for (const auto &[recipient, reason] : declined)
-					{
-						(void)TransferCompletion::complete(recipient->transfer, spk::Transfer::Status::Rejected, reason);
-					}
-					return;
+					throw Exception("Unable to commit atomic network send admission.");
 				}
 				for (const auto &candidate : candidates)
 				{
