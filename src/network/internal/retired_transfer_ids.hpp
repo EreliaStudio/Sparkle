@@ -17,9 +17,12 @@ namespace spk::NetworkInternal
 
 		void _compact() noexcept
 		{
-			while (!_ranges.empty() && _prefix != std::numeric_limits<std::uint64_t>::max() &&
-				_ranges.begin()->first == _prefix + 1)
+			while (!_ranges.empty())
 			{
+				if (_prefix == std::numeric_limits<std::uint64_t>::max() || _ranges.begin()->first != _prefix + 1)
+				{
+					break;
+				}
 				_prefix = _ranges.begin()->second;
 				_ranges.erase(_ranges.begin());
 			}
