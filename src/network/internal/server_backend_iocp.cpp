@@ -357,7 +357,8 @@ namespace spk::NetworkInternal
 			{
 				auto frame = Handshake::encode(kind, session.id, error, session.handshake.maximumPageBytes());
 				session.queuedBytes += frame->size();
-				session.outgoing.push_back(TransmissionFrame{std::move(frame), 0, static_cast<std::uint16_t>(kind)});
+				auto reservation = _commandBudget.reserve(frame->size(), CommandBudget::Stage::Frame);
+				session.outgoing.push_back(TransmissionFrame{std::move(frame), 0, static_cast<std::uint16_t>(kind), std::move(reservation)});
 				if (!session.writeInFlight)
 				{
 					_postWrite(_sessions.at(session.id));
@@ -386,7 +387,8 @@ namespace spk::NetworkInternal
 			{
 				auto frame = response.encode();
 				session.queuedBytes += frame->size();
-				session.outgoing.push_back(TransmissionFrame{std::move(frame), 0});
+				auto reservation = _commandBudget.reserve(frame->size(), CommandBudget::Stage::Frame);
+				session.outgoing.push_back(TransmissionFrame{std::move(frame), 0, 0, std::move(reservation)});
 				if (!session.writeInFlight)
 				{
 					_postWrite(_sessions.at(session.id));
@@ -453,6 +455,7 @@ namespace spk::NetworkInternal
 						throw Exception("Transfer response has an incorrect connection ID.");
 					}
 					(void)session.transfers.acknowledge(response);
+					_releaseReservation(session, response.transferID);
 				}
 				else if (kind == 0)
 				{
@@ -511,7 +514,12 @@ namespace spk::NetworkInternal
 					{
 						Frame frame = encodePage(*page);
 						session->queuedBytes += frame->size();
-						session->outgoing.push_back(TransmissionFrame{std::move(frame), page->offset + page->length == page->totalSize ? page->transferID : 0});
+						const auto reservation = session->outgoingReservations.find(page->transferID);
+						if (reservation == session->outgoingReservations.end())
+						{
+							throw Exception("Missing outgoing page reservation.");
+						}
+						session->outgoing.push_back(TransmissionFrame{std::move(frame), page->offset + page->length == page->totalSize ? page->transferID : 0, 0, reservation->second.frame, page->transferID});
 					}
 				}
 				if (session->outgoing.empty() || _stopping)
@@ -521,6 +529,10 @@ namespace spk::NetworkInternal
 				}
 
 				const Frame &frame = session->outgoing.front().bytes;
+				if (session->outgoing.front().reservation != nullptr)
+				{
+					session->outgoing.front().reservation->transition(CommandBudget::Stage::InFlight);
+				}
 				auto *operation = new Operation(OperationKind::Write);
 				operation->session = session;
 				operation->wsabuf.buf = reinterpret_cast<char *>(
@@ -564,11 +576,16 @@ namespace spk::NetworkInternal
 					session->queuedBytes -= frame->size();
 					const auto finalPage = session->outgoing.front().finalPage;
 					const auto handshakeKind = session->outgoing.front().handshakeKind;
+					if (session->outgoing.front().reservation != nullptr)
+					{
+						session->outgoing.front().reservation->transition(CommandBudget::Stage::Frame);
+					}
 					session->outgoing.pop_front();
 					session->outgoingOffset = 0;
 					if (finalPage != 0)
 					{
 						session->transfers.finalPageWritten(finalPage);
+						_releaseReservation(*session, finalPage);
 					}
 					if (handshakeKind != 0)
 					{
@@ -910,6 +927,15 @@ namespace spk::NetworkInternal
 					if (_sessions.contains(id))
 					{
 						session->transfers.expire();
+					for (auto reservation = session->outgoingReservations.begin(); reservation != session->outgoingReservations.end();)
+					{
+						const auto id = reservation->first;
+						++reservation;
+						if (!session->transfers.isTracked(id))
+						{
+							_releaseReservation(*session, id);
+						}
+					}
 					}
 				}
 			}
