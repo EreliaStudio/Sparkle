@@ -194,7 +194,7 @@ namespace spk::NetworkInternal
 		_reservedBytes -= result.size();
 		_release(iterator->second.chargedBytes);
 		_transfers.erase(iterator);
-		_retire(page.transferID, now);
+		_retiredTransfers.retire(page.transferID);
 		_failureLimiter.successfulMessage();
 		return result;
 	}
