@@ -372,3 +372,56 @@ TEST(ServerTransferIntegration, DisconnectReclaimsOutgoingMemoryForNextClient)
 	healthy.disconnect();
 	server.stop();
 }
+
+TEST(ServerTransferIntegration, LoweringOutgoingLimitPreservesAcceptedTransfer)
+{
+	spk::Server server;
+	spk::Client client;
+	server.setGlobalMaxQueuedBytes(512u * 1024u);
+	server.start(0);
+	const auto recipient = identify(server, client);
+	ASSERT_TRUE(recipient.isConnected());
+
+	const auto accepted = server.sendTo(recipient, makeMessage(197, 128u * 1024u));
+	server.setGlobalMaxQueuedBytes(1);
+	EXPECT_THROW(server.sendTo(recipient, makeMessage(198, 1)), spk::Exception);
+	auto received = NetworkTestUtils::collect(client.messages(), 1, 10s);
+	ASSERT_EQ(received.size(), 1u);
+	EXPECT_EQ(received.front().type(), 197u);
+	EXPECT_TRUE(finished(accepted, spk::Transfer::Status::Success));
+
+	server.setGlobalMaxQueuedBytes(4096);
+	const auto resumed = server.sendTo(recipient, makeMessage(199, 1));
+	EXPECT_EQ(NetworkTestUtils::collect(client.messages(), 1, 5s).size(), 1u);
+	EXPECT_TRUE(finished(resumed, spk::Transfer::Status::Success));
+	client.disconnect();
+	server.stop();
+}
+
+TEST(ServerTransferIntegration, ExplicitTargetSetSkipReportsSaturatedRecipientWithoutBlockingHealthyPeer)
+{
+	spk::Server server;
+	spk::Client first;
+	spk::Client second;
+	server.start(0);
+	auto saturated = identify(server, first);
+	const auto healthy = identify(server, second);
+	ASSERT_TRUE(saturated.isConnected());
+	ASSERT_TRUE(healthy.isConnected());
+	saturated.setMaxQueuedBytes(1);
+	const spk::ConnectionSet targets{saturated, healthy};
+
+	const auto results = server.sendTo(
+		targets, makeMessage(200, 64), spk::Message::Priority::Normal,
+		spk::Connection::OverflowPolicy::SkipRecipient);
+	ASSERT_EQ(results.size(), 2u);
+	EXPECT_TRUE(finished(results.at(saturated.id()), spk::Transfer::Status::Rejected));
+	EXPECT_TRUE(finished(results.at(healthy.id()), spk::Transfer::Status::Success));
+	EXPECT_EQ(NetworkTestUtils::collect(second.messages(), 1, 5s).size(), 1u);
+	EXPECT_TRUE(NetworkTestUtils::collect(first.messages(), 1, 100ms).empty());
+	EXPECT_TRUE(first.isConnected());
+	EXPECT_TRUE(second.isConnected());
+	first.disconnect();
+	second.disconnect();
+	server.stop();
+}
