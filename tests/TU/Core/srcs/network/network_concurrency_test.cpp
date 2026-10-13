@@ -55,6 +55,33 @@ namespace
 	}
 }
 
+TEST(NetworkConcurrencyTest, ClientDestructorDoesNotAccessOwnerAfterExplicitDisconnect)
+{
+	for (std::size_t attempt = 0; attempt < 64; ++attempt)
+	{
+		auto client = std::make_unique<spk::Client>();
+		client->disconnect();
+		EXPECT_FALSE(client->isConnected());
+	}
+}
+
+TEST(NetworkConcurrencyTest, ClientDestructorDisconnectsActiveWorkersBeforeDestroyingOwner)
+{
+	spk::Server server;
+	server.start(0);
+	for (std::uint32_t attempt = 0; attempt < 8; ++attempt)
+	{
+		auto client = std::make_unique<spk::Client>();
+		client->connect("127.0.0.1", server.port());
+		ASSERT_TRUE(NetworkTestUtils::waitConnected(*client));
+		(void)client->send(makeMessage(93, attempt));
+		auto received = NetworkTestUtils::collect(server.messages(), 1, 5s);
+		ASSERT_EQ(received.size(), 1u);
+		EXPECT_EQ(received.front().message.reader().get<std::uint32_t>(), attempt);
+	}
+	server.stop();
+}
+
 TEST(NetworkConcurrencyTest, ServerAndClientCanBeDrivenFromIndependentThreads)
 {
 	spk::Server server;
