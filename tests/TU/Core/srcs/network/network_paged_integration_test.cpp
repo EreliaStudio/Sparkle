@@ -453,3 +453,39 @@ TEST(NetworkPagedIntegration, DisconnectInterruptsBlockedClientPayloadWrite)
 	EXPECT_EQ(transfer.status(), spk::Transfer::Status::Indeterminate);
 	peer.close();
 }
+
+TEST(NetworkPagedIntegration, ReplayOlderThanOneThousandCompletedTransfersNeverRepublishes)
+{
+	using namespace spk::NetworkInternal;
+	spk::Server server;
+	server.start(0);
+	auto socket = Socket::connectTCP("127.0.0.1", server.port());
+	socket.sendAll(*Handshake::encode(Handshake::Kind::Hello));
+	std::array<std::byte, FrameHeaderSize + Handshake::PayloadSize> acceptance{};
+	ASSERT_TRUE(socket.receiveAllUntil(acceptance, std::chrono::steady_clock::now() + 3s, {}));
+	const auto accepted = Handshake::decode(acceptance);
+	ASSERT_TRUE(Handshake::validAcceptance(accepted));
+
+	spk::Message::Writer writer(975);
+	writer.setConnectionID(accepted.connectionID);
+	writer.resize(1);
+	const auto message = std::move(writer).build();
+	auto frame = encodePage(Page{message, 1, message.size(), 0, message.size()});
+	std::array<std::byte, FrameHeaderSize + TransferResponse::PayloadSize> answer{};
+	for (std::uint64_t id = 1; id <= 1200; ++id)
+	{
+		write64(frame->data() + FrameHeaderSize, id);
+		socket.sendAll(*frame);
+		ASSERT_TRUE(socket.receiveAllUntil(answer, std::chrono::steady_clock::now() + 5s, {}));
+		const auto response = TransferResponse::decode(answer);
+		ASSERT_EQ(response.transferID, id);
+		ASSERT_EQ(response.status, spk::Transfer::Status::Success);
+	}
+	write64(frame->data() + FrameHeaderSize, 1);
+	socket.sendAll(*frame);
+	const auto messages = NetworkTestUtils::collect(server.messages(), 1201, 250ms);
+	EXPECT_EQ(messages.size(), 1200u);
+	EXPECT_TRUE(server.connection(accepted.connectionID).isConnected());
+	socket.close();
+	server.stop();
+}
