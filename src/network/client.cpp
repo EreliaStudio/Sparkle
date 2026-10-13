@@ -38,6 +38,8 @@ namespace spk
 		std::jthread _sender;
 		std::jthread _expirationWorker;
 		std::mutex _receiveMutex;
+		std::mutex _expirationMutex;
+		std::condition_variable _expirationWake;
 		std::atomic_bool _connected = false;
 		std::atomic_bool _active = false;
 		std::chrono::milliseconds _handshakeTimeout = NetworkInternal::Handshake::DefaultTimeout;
@@ -248,6 +250,7 @@ namespace spk
 				return;
 			}
 			_connected = false;
+			_expirationWake.notify_all();
 			_owner._retireIncoming(_session);
 			_socket.close();
 			_sendAvailable.notify_all();
@@ -306,6 +309,56 @@ namespace spk
 			return _connected.load() && _session.isConnected();
 		}
 
+		void _expireTransfers()
+		{
+std::vector<NetworkInternal::TransferResponse> responses;
+		{
+			const std::scoped_lock lock(_receiveMutex);
+			responses = _reception.expire(_remoteID.load());
+		}
+		for (const auto &response : responses)
+		{
+			_queueResponse(response);
+		}
+		_transfers.expire();
+		{
+			const std::scoped_lock lock(_sendMutex);
+			for (auto it = _outgoingReservations.begin(); it != _outgoingReservations.end();)
+			{
+				if (!_transfers.isTracked(it->first))
+				{
+					it = _outgoingReservations.erase(it);
+				}
+				else
+				{
+					++it;
+				}
+			}
+		}
+		}
+
+		void _expirationLoop() noexcept
+		{
+			try
+			{
+				while (_connected)
+				{
+					std::unique_lock lock(_expirationMutex);
+					_expirationWake.wait_for(lock, std::chrono::seconds(1), [this] {
+						return !_connected.load();
+					});
+					lock.unlock();
+					if (_connected)
+					{
+						_expireTransfers();
+					}
+				}
+			} catch (...)
+			{
+				_remoteDisconnect();
+			}
+		}
+
 		void _startWorkers()
 		{
 			_connected = true;
@@ -316,34 +369,7 @@ namespace spk
 				_sendLoop();
 			});
 			_expirationWorker = std::jthread([this] {
-				while (_connected)
-				{
-					std::this_thread::sleep_for(std::chrono::seconds(1));
-					std::vector<NetworkInternal::TransferResponse> responses;
-					{
-						const std::scoped_lock lock(_receiveMutex);
-						responses = _reception.expire(_remoteID.load());
-					}
-					for (const auto &response : responses)
-					{
-						_queueResponse(response);
-					}
-					_transfers.expire();
-					{
-						const std::scoped_lock lock(_sendMutex);
-						for (auto it = _outgoingReservations.begin(); it != _outgoingReservations.end();)
-						{
-							if (!_transfers.isTracked(it->first))
-							{
-								it = _outgoingReservations.erase(it);
-							}
-							else
-							{
-								++it;
-							}
-						}
-					}
-				}
+				_expirationLoop();
 			});
 			_owner._setStatus(_session, Connection::Status::Connected);
 		}
@@ -407,6 +433,7 @@ namespace spk
 		{
 			const bool notify = _active.exchange(false);
 			_connected = false;
+			_expirationWake.notify_all();
 			_owner._retireIncoming(_session);
 			_socket.close();
 			_sendAvailable.notify_all();
