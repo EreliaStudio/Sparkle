@@ -3,6 +3,7 @@
 #include "network/internal/transfer_completion.hpp"
 #include "network/types.hpp"
 
+#include <utility>
 #include <vector>
 
 namespace spk::NetworkInternal
@@ -27,6 +28,23 @@ namespace spk::NetworkInternal
 			priority(priority),
 			policy(policy)
 		{
+		}
+
+		void rejectAll(const std::vector<std::pair<Recipient *, Transfer::Reason>> &declined) noexcept
+		{
+			for (Recipient &recipient : recipients)
+			{
+				Transfer::Reason reason = Transfer::Reason::AtomicBatchRejected;
+				for (const auto &[rejected, cause] : declined)
+				{
+					if (rejected == &recipient)
+					{
+						reason = cause;
+						break;
+					}
+				}
+				(void)TransferCompletion::complete(recipient.transfer, Transfer::Status::Rejected, reason);
+			}
 		}
 
 		~ServerSendBatch() noexcept

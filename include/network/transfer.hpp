@@ -42,7 +42,8 @@ namespace spk
 			InconsistentMetadata,
 			InactivityTimeout,
 			AcknowledgmentTimeout,
-			TransportFailure
+			TransportFailure,
+			AtomicBatchRejected
 		};
 
 		using CompletionProvider = ContractProvider<Status, Reason>;

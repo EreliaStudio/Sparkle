@@ -729,19 +729,7 @@ namespace spk::NetworkInternal
 				}
 				if (rejected && batch.policy == Connection::OverflowPolicy::Reject)
 				{
-					for (auto &recipient : batch.recipients)
-					{
-						auto reason = spk::Transfer::Reason::QueueOverflow;
-						for (const auto &[declinedRecipient, declinedReason] : declined)
-						{
-							if (declinedRecipient == &recipient)
-							{
-								reason = declinedReason;
-								break;
-							}
-						}
-						(void)TransferCompletion::complete(recipient.transfer, spk::Transfer::Status::Rejected, reason);
-					}
+					batch.rejectAll(declined);
 					return;
 				}
 				try
