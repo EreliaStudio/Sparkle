@@ -132,7 +132,7 @@ jobs:
       - name: Build sanitized Core tests
         run: cmake --build build/network-asan --target SparkleCoreTestSuite --parallel 4
       - name: Repeat concurrent connections under ASan
-        run: ctest --test-dir build/network-asan -R '^Core\\.NetworkConcurrencyTest\\.ManyClientsConnectAndExchangeConcurrently$' --repeat until-fail:30 --timeout 120 --output-on-failure
+        run: ctest --test-dir build/network-asan -R '^Core[.]NetworkConcurrencyTest[.]ManyClientsConnectAndExchangeConcurrently$' --repeat until-fail:30 --timeout 120 --output-on-failure
       - name: Upload sanitizer evidence
         if: always()
         uses: actions/upload-artifact@v4
