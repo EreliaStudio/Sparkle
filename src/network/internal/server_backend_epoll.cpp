@@ -59,9 +59,11 @@ namespace spk::NetworkInternal
 			std::size_t outgoingOffset = 0;
 			std::size_t queuedBytes = 0;
 
-			Session(ConnectionID id, Socket socket, PageFailureLimits limits, std::chrono::milliseconds timeout) :
+			Session(ConnectionID id, Socket socket, PageFailureLimits limits, std::chrono::milliseconds timeout,
+				std::shared_ptr<ReassemblyBudget> sharedBudget) :
 				id(id),
 				socket(std::move(socket)),
+				reception(std::move(sharedBudget)),
 				handshake(timeout)
 			{
 				reception.configureFailureLimits(limits);
@@ -75,6 +77,7 @@ namespace spk::NetworkInternal
 			ConfigureHandshakeTimeout,
 			ConfigureIncomingTransferTimeout,
 			ConfigureAcknowledgmentTimeout,
+			ConfigureIncomingLimits,
 			Stop
 		};
 
@@ -88,6 +91,8 @@ namespace spk::NetworkInternal
 			std::chrono::milliseconds handshakeTimeout = Handshake::DefaultTimeout;
 			std::chrono::milliseconds transferTimeout = std::chrono::seconds(60);
 			std::shared_ptr<ServerSendBatch> batch;
+			std::size_t maxMessageBytes = 128u * 1024u * 1024u;
+			std::size_t maxIncomingBytes = 512u * 1024u * 1024u;
 		};
 
 		class EpollServerBackend final : public ServerBackend
@@ -108,6 +113,9 @@ namespace spk::NetworkInternal
 			std::chrono::milliseconds _incomingTransferTimeout = std::chrono::seconds(60);
 			std::chrono::milliseconds _acknowledgmentTimeout = std::chrono::seconds(30);
 			std::atomic_size_t _maxGlobalQueuedBytes = 256u * 1024u * 1024u;
+			std::atomic_size_t _maxMessageBytes = 128u * 1024u * 1024u;
+			std::atomic_size_t _maxIncomingBytes = 512u * 1024u * 1024u;
+			std::shared_ptr<ReassemblyBudget> _incomingBudget = std::make_shared<ReassemblyBudget>();
 			bool _stopping = false;
 
 			[[nodiscard]] static std::uint64_t _token(ConnectionID id)
@@ -218,8 +226,9 @@ namespace spk::NetworkInternal
 			{
 				socket.setNonBlocking(true);
 				const ConnectionID id = allocateConnectionID();
-				auto session = std::make_shared<Session>(id, std::move(socket), _failureLimits, _handshakeTimeout);
+				auto session = std::make_shared<Session>(id, std::move(socket), _failureLimits, _handshakeTimeout, _incomingBudget);
 				session->reception.setInactivityTimeout(_incomingTransferTimeout);
+				session->reception.setLimits(_maxMessageBytes.load(), _maxIncomingBytes.load());
 				session->transfers.setAcknowledgmentTimeout(_acknowledgmentTimeout);
 				_register(
 					static_cast<int>(session->socket.nativeHandle()),
@@ -607,6 +616,17 @@ namespace spk::NetworkInternal
 					{
 						(void)id;
 						session->transfers.setAcknowledgmentTimeout(_acknowledgmentTimeout);
+					}
+					return;
+				}
+				if (command.kind == CommandKind::ConfigureIncomingLimits)
+				{
+					_maxMessageBytes.store(command.maxMessageBytes);
+					_maxIncomingBytes.store(command.maxIncomingBytes);
+					for (auto &[id, session] : _sessions)
+					{
+						(void)id;
+						session->reception.setLimits(command.maxMessageBytes, command.maxIncomingBytes);
 					}
 					return;
 				}
@@ -1019,6 +1039,44 @@ namespace spk::NetworkInternal
 			void setGlobalMaxQueuedBytes(std::size_t bytes) override
 			{
 				_maxGlobalQueuedBytes.store(bytes);
+			}
+
+			void _configureIncomingLimits(std::size_t messageBytes, std::size_t incomingBytes)
+			{
+				_maxMessageBytes.store(messageBytes);
+				_maxIncomingBytes.store(incomingBytes);
+				if (!_running.load())
+				{
+					return;
+				}
+				Command command{};
+				command.kind = CommandKind::ConfigureIncomingLimits;
+				command.maxMessageBytes = messageBytes;
+				command.maxIncomingBytes = incomingBytes;
+				_enqueue(std::move(command));
+			}
+
+			void setMaxMessageBytes(std::size_t bytes) override
+			{
+				if (bytes == 0)
+				{
+					throw Exception("Maximum logical message size must be positive.");
+				}
+				_configureIncomingLimits(bytes, _maxIncomingBytes.load());
+			}
+
+			void setMaxIncomingBytes(std::size_t bytes) override
+			{
+				if (bytes == 0)
+				{
+					throw Exception("Incoming reassembly budget must be positive.");
+				}
+				_configureIncomingLimits(_maxMessageBytes.load(), bytes);
+			}
+
+			void setGlobalMaxIncomingBytes(std::size_t bytes) override
+			{
+				_incomingBudget->setMaximum(bytes);
 			}
 
 			void send(std::shared_ptr<ServerSendBatch> batch) override
