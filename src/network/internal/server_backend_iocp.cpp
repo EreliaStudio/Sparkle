@@ -742,9 +742,9 @@ namespace spk::NetworkInternal
 					},
 					[this](const std::shared_ptr<Session> &session) {
 						if (!session->writeInFlight)
-					{
-						_postWrite(session);
-					}
+						{
+							_postWrite(session);
+						}
 					},
 					[this](ConnectionID id) {
 						_disconnect(id);
