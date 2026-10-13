@@ -307,8 +307,10 @@ namespace spk
 		{
 			return;
 		}
-		connection._setStatus(Connection::Status::Connected);
-		_statusProvider.trigger(connection, Connection::Status::Connected, Connection::Error::None);
+		if (connection._setStatus(Connection::Status::Connected) && connection.isConnected())
+		{
+			_statusProvider.trigger(connection, Connection::Status::Connected, Connection::Error::None);
+		}
 	}
 
 	void Server::_notifyDisconnection(ConnectionID id, Connection::Error error)
