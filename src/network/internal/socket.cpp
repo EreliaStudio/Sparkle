@@ -119,16 +119,18 @@ namespace spk::NetworkInternal
 		private:
 			bool _acquired = false;
 
-			[[nodiscard]] static std::counting_semaphore<8> &_capacity()
+			[[nodiscard]] static std::shared_ptr<std::counting_semaphore<8>> _capacity()
 			{
-				static std::counting_semaphore<8> slots{8};
+				static auto slots = std::make_shared<std::counting_semaphore<8>>(8);
 				return slots;
 			}
+
+			std::shared_ptr<std::counting_semaphore<8>> _slots = _capacity();
 
 		public:
 			[[nodiscard]] bool acquire() noexcept
 			{
-				_acquired = _capacity().try_acquire();
+				_acquired = _slots->try_acquire();
 				return _acquired;
 			}
 
@@ -136,7 +138,7 @@ namespace spk::NetworkInternal
 			{
 				if (_acquired)
 				{
-					_capacity().release();
+					_slots->release();
 				}
 			}
 		};
