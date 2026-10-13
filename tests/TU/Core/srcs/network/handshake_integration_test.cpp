@@ -236,3 +236,27 @@ TEST(HandshakeIntegration, CancelledHandshakeWriteDoesNotSendData)
 	EXPECT_TRUE(socket.valid());
 	socket.close();
 }
+ 
+TEST(HandshakeIntegration, NegotiatesDifferentPageLimitsAndReassemblesMessages)
+{
+	spk::Server server;
+	spk::Client client;
+	server.setMaxPageBytes(4096);
+	client.setMaxPageBytes(8192);
+	server.start(0);
+	client.connect("127.0.0.1", server.port());
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(client));
+	spk::Message::Writer writer(320);
+	writer.resize(32768);
+	const auto transfer = client.send(std::move(writer).build());
+	const auto received = NetworkTestUtils::collect(server.messages(), 1, 5s);
+	ASSERT_EQ(received.size(), 1u);
+	EXPECT_EQ(received.front().message.size(), 32768u);
+	EXPECT_TRUE(NetworkTestUtils::waitUntil(
+		[&] {
+			return transfer.status() == spk::Transfer::Status::Success;
+		},
+		5s));
+	client.disconnect();
+	server.stop();
+}

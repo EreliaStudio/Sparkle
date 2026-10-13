@@ -52,3 +52,17 @@ TEST(Handshake, DeadlineIsRelativeToStartNotEachPage)
 	EXPECT_EQ(deadline.remaining(now + 9s), 0ms);
 	EXPECT_THROW(HandshakeDeadline(0ms), spk::Exception);
 }
+ 
+TEST(Handshake, PageSizeIsNegotiatedInBothDirections)
+{
+	const auto hello = Handshake::decode(*Handshake::encode(
+		Handshake::Kind::Hello, spk::Connection::InvalidID, spk::Connection::Error::None, 8192));
+	EXPECT_TRUE(Handshake::validHello(hello));
+	EXPECT_EQ(hello.maximumPageBytes, 8192u);
+	const auto accepted = Handshake::decode(*Handshake::encode(
+		Handshake::Kind::Accepted, 42, spk::Connection::Error::None, 4096));
+	EXPECT_TRUE(Handshake::validAcceptance(accepted));
+	EXPECT_EQ(accepted.maximumPageBytes, 4096u);
+	EXPECT_THROW(Handshake::encode(Handshake::Kind::Hello, 0, spk::Connection::Error::None, 0), spk::Exception);
+	EXPECT_THROW(Handshake::encode(Handshake::Kind::Hello, 0, spk::Connection::Error::None, spk::NetworkInternal::MaximumSupportedPageBytes + 1), spk::Exception);
+}
