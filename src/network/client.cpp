@@ -61,6 +61,10 @@ namespace spk
 						break;
 					}
 					const auto header = NetworkInternal::decode(headerBytes);
+					if (NetworkInternal::read16(headerBytes.data() + 6) == 0 && header.payloadSize > _maxMessageBytes.load())
+					{
+						throw Exception("Incoming logical message exceeds the configured maximum.");
+					}
 					std::vector<std::byte> frame(NetworkInternal::FrameHeaderSize + header.payloadSize);
 					std::copy(headerBytes.begin(), headerBytes.end(), frame.begin());
 					if (header.payloadSize != 0 &&

@@ -396,6 +396,10 @@ namespace spk::NetworkInternal
 				const auto header = decode(std::span<const std::byte, FrameHeaderSize>(data, FrameHeaderSize));
 				const std::size_t frameSize = FrameHeaderSize + header.payloadSize;
 				const auto kind = read16(data + 6);
+				if (kind == 0 && header.payloadSize > _maxMessageBytes.load())
+				{
+					throw Exception("Incoming logical message exceeds the configured maximum.");
+				}
 				if (!session.handshake.ready() && kind != static_cast<std::uint16_t>(Handshake::Kind::Hello))
 				{
 					throw Exception("Application traffic is forbidden during handshake.");
