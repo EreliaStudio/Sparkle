@@ -403,9 +403,9 @@ TEST(HandshakeIntegration, DisconnectDuringHandshakeCannotStartWorkersAfterShutd
 
 TEST(HandshakeIntegration, NestedConnectionCallbackDisconnectCannotPublishStaleConnectedEvent)
 {
-	using spk::NetworkInternal::Socket;
-	using spk::NetworkInternal::Handshake;
 	using spk::NetworkInternal::FrameHeaderSize;
+	using spk::NetworkInternal::Handshake;
+	using spk::NetworkInternal::Socket;
 	auto listener = Socket::listenTCP(0);
 	spk::Client client;
 	std::atomic_uint32_t staleConnected = 0;
