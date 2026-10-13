@@ -589,6 +589,10 @@ namespace spk::NetworkInternal
 			{
 				{
 					const std::scoped_lock lock(_commandMutex);
+					if (command.batch != nullptr && !_running.load())
+					{
+						throw Exception("Unable to admit sends on a stopped network server.");
+					}
 					if (command.batch != nullptr)
 					{
 						const std::size_t bytes = std::max<std::size_t>(1, command.batch->message.size());
@@ -827,6 +831,11 @@ namespace spk::NetworkInternal
 				_unregister(_listener);
 				_listener.close();
 				_disconnectAll();
+				std::deque<Command> abandoned;
+				{
+					const std::scoped_lock lock(_commandMutex);
+					abandoned.swap(_commands);
+				}
 			}
 
 			void _handleEvent(const epoll_event &event)
