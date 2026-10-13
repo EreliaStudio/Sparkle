@@ -362,7 +362,6 @@ namespace spk::NetworkInternal
 				const std::size_t queuedBytes = frame->size();
 				session.outgoing.push_back(TransmissionFrame{std::move(frame), 0, static_cast<std::uint16_t>(kind), std::move(reservation)});
 				session.queuedBytes += queuedBytes;
-				session.queuedBytes += queuedBytes;
 				if (!session.writeInFlight)
 				{
 					_postWrite(_sessions.at(session.id));
@@ -393,6 +392,7 @@ namespace spk::NetworkInternal
 				auto reservation = _commandBudget.reserve(frame->size(), CommandBudget::Stage::Frame);
 				const std::size_t queuedBytes = frame->size();
 				session.outgoing.push_back(TransmissionFrame{std::move(frame), 0, 0, std::move(reservation)});
+				session.queuedBytes += queuedBytes;
 				if (!session.writeInFlight)
 				{
 					_postWrite(_sessions.at(session.id));
