@@ -4,6 +4,11 @@
 
 namespace spk::NetworkInternal
 {
+	TransferReception::TransferReception(std::shared_ptr<ReassemblyBudget> sharedBudget) :
+		_reassembler(128u * 1024u * 1024u, 512u * 1024u * 1024u, std::chrono::seconds(60), std::move(sharedBudget))
+	{
+	}
+
 	spk::Transfer::Reason TransferReception::_reason(PageReassemblyError::Reason reason) noexcept
 	{
 		using Source = PageReassemblyError::Reason;
@@ -69,6 +74,11 @@ namespace spk::NetworkInternal
 	void TransferReception::setInactivityTimeout(std::chrono::milliseconds timeout)
 	{
 		_reassembler.setInactivityTimeout(timeout);
+	}
+
+	void TransferReception::setLimits(std::size_t maximumMessageBytes, std::size_t maximumIncompleteBytes)
+	{
+		_reassembler.setLimits(maximumMessageBytes, maximumIncompleteBytes);
 	}
 
 	void TransferReception::configureFailureLimits(PageFailureLimits limits)

@@ -20,7 +20,9 @@ namespace spk::NetworkInternal
 	PageReassembler::PageReassembler(
 		std::size_t maxMessageBytes,
 		std::size_t maxIncompleteBytes,
-		std::chrono::milliseconds timeout) :
+		std::chrono::milliseconds timeout,
+		std::shared_ptr<ReassemblyBudget> sharedBudget) :
+		_sharedBudget(std::move(sharedBudget)),
 		_maxMessageBytes(maxMessageBytes),
 		_maxIncompleteBytes(maxIncompleteBytes),
 		_timeout(timeout)
@@ -28,6 +30,31 @@ namespace spk::NetworkInternal
 		if (timeout.count() <= 0)
 		{
 			throw Exception("Reassembly timeout must be positive.");
+		}
+		setLimits(maxMessageBytes, maxIncompleteBytes);
+	}
+
+	PageReassembler::~PageReassembler()
+	{
+		clear();
+	}
+
+	void PageReassembler::_reserve(std::size_t bytes, std::uint64_t id)
+	{
+		if (_chargedBytes > _maxIncompleteBytes || bytes > _maxIncompleteBytes - _chargedBytes ||
+			(_sharedBudget != nullptr && !_sharedBudget->reserve(bytes)))
+		{
+			throw PageReassemblyError(id, PageReassemblyError::Reason::Capacity);
+		}
+		_chargedBytes += bytes;
+	}
+
+	void PageReassembler::_release(std::size_t bytes) noexcept
+	{
+		_chargedBytes -= bytes;
+		if (_sharedBudget != nullptr)
+		{
+			_sharedBudget->release(bytes);
 		}
 	}
 
@@ -38,7 +65,8 @@ namespace spk::NetworkInternal
 		{
 			throw Exception("Network page has an invalid transfer ID.");
 		}
-		if (page.totalSize > _maxMessageBytes || page.totalSize > std::numeric_limits<std::size_t>::max())
+		if (page.totalSize > _maxMessageBytes ||
+			page.totalSize > std::numeric_limits<std::size_t>::max() - sizeof(Transfer))
 		{
 			throw PageReassemblyError(page.transferID, Reason::InvalidLength);
 		}
@@ -52,7 +80,7 @@ namespace spk::NetworkInternal
 			throw PageReassemblyError(page.transferID, Reason::InvalidFirstPage);
 		}
 		if (_transfers.size() >= 512 ||
-			page.totalSize > _maxIncompleteBytes - std::min(_reservedBytes, _maxIncompleteBytes))
+			page.totalSize + sizeof(Transfer) > _maxIncompleteBytes - std::min(_chargedBytes, _maxIncompleteBytes))
 		{
 			throw PageReassemblyError(page.transferID, Reason::Capacity);
 		}
@@ -100,8 +128,18 @@ namespace spk::NetworkInternal
 		{
 			throw PageReassemblyError(page.transferID, Reason::OverlappingPage);
 		}
+		constexpr std::size_t PageCharge = sizeof(std::pair<const std::uint64_t, std::size_t>) + 3 * sizeof(void *);
+		_reserve(PageCharge, page.transferID);
+		try
+		{
+			transfer.portions.emplace(page.offset, page.data.size());
+		} catch (...)
+		{
+			_release(PageCharge);
+			throw;
+		}
+		transfer.chargedBytes += PageCharge;
 		std::copy(page.data.begin(), page.data.end(), transfer.writer.data().begin() + page.offset);
-		transfer.portions.emplace(page.offset, page.data.size());
 		transfer.receivedBytes += page.data.size();
 		transfer.updated = now;
 	}
@@ -118,7 +156,17 @@ namespace spk::NetworkInternal
 			if (iterator == _transfers.end())
 			{
 				_validateNew(page);
-				iterator = _transfers.try_emplace(page.transferID, page, now).first;
+				const std::size_t charge = static_cast<std::size_t>(page.totalSize) + sizeof(Transfer);
+				_reserve(charge, page.transferID);
+				try
+				{
+					iterator = _transfers.try_emplace(page.transferID, page, now).first;
+				} catch (...)
+				{
+					_release(charge);
+					throw;
+				}
+				iterator->second.chargedBytes = charge;
 				_reservedBytes += static_cast<std::size_t>(page.totalSize);
 			}
 			_insert(iterator->second, page, now);
@@ -127,6 +175,7 @@ namespace spk::NetworkInternal
 			if (iterator != _transfers.end())
 			{
 				_reservedBytes -= iterator->second.writer.size();
+				_release(iterator->second.chargedBytes);
 				_transfers.erase(iterator);
 			}
 			_failedTransfers.insert_or_assign(page.transferID, now);
@@ -147,6 +196,7 @@ namespace spk::NetworkInternal
 		}
 		Message result = std::move(iterator->second.writer).build();
 		_reservedBytes -= result.size();
+		_release(iterator->second.chargedBytes);
 		_transfers.erase(iterator);
 		_failureLimiter.successfulMessage();
 		return result;
@@ -164,6 +214,7 @@ namespace spk::NetworkInternal
 				continue;
 			}
 			_reservedBytes -= iterator->second.writer.size();
+			_release(iterator->second.chargedBytes);
 			expired.push_back(iterator->first);
 			_failedTransfers.insert_or_assign(iterator->first, now);
 			iterator = _transfers.erase(iterator);
@@ -191,8 +242,19 @@ namespace spk::NetworkInternal
 		_timeout = timeout;
 	}
 
+	void PageReassembler::setLimits(std::size_t maximumMessageBytes, std::size_t maximumIncompleteBytes)
+	{
+		if (maximumMessageBytes == 0 || maximumIncompleteBytes == 0)
+		{
+			throw Exception("Reassembly limits must be positive.");
+		}
+		_maxMessageBytes = maximumMessageBytes;
+		_maxIncompleteBytes = maximumIncompleteBytes;
+	}
+
 	void PageReassembler::clear() noexcept
 	{
+		_release(_chargedBytes);
 		_transfers.clear();
 		_failedTransfers.clear();
 		_reservedBytes = 0;
