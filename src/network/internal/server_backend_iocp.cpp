@@ -561,6 +561,7 @@ namespace spk::NetworkInternal
 				_sessions.erase(iterator);
 				session->socket.close();
 				session->transfers.clear();
+				session->reception.clear();
 				_notifyDisconnection(id, session->handshake.error());
 			}
 

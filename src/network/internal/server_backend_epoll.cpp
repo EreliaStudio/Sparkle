@@ -517,6 +517,7 @@ namespace spk::NetworkInternal
 				_unregister(session->socket);
 				session->socket.close();
 				session->transfers.clear();
+				session->reception.clear();
 				_notifyDisconnection(id, session->handshake.error());
 			}
 
