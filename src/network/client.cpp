@@ -309,18 +309,7 @@ namespace spk
 			return _connected.load() && _session.isConnected();
 		}
 
-		void _expireTransfers()
-		{
-std::vector<NetworkInternal::TransferResponse> responses;
-		{
-			const std::scoped_lock lock(_receiveMutex);
-			responses = _reception.expire(_remoteID.load());
-		}
-		for (const auto &response : responses)
-		{
-			_queueResponse(response);
-		}
-		_transfers.expire();
+		void _reclaimOutgoingReservations()
 		{
 			const std::scoped_lock lock(_sendMutex);
 			for (auto it = _outgoingReservations.begin(); it != _outgoingReservations.end();)
@@ -335,6 +324,20 @@ std::vector<NetworkInternal::TransferResponse> responses;
 				}
 			}
 		}
+
+		void _expireTransfers()
+		{
+			std::vector<NetworkInternal::TransferResponse> responses;
+			{
+				const std::scoped_lock lock(_receiveMutex);
+				responses = _reception.expire(_remoteID.load());
+			}
+			for (const auto &response : responses)
+			{
+				_queueResponse(response);
+			}
+			_transfers.expire();
+			_reclaimOutgoingReservations();
 		}
 
 		void _expirationLoop() noexcept
