@@ -22,6 +22,9 @@ TEST(ClientTest, SendingWhileDisconnectedThrows)
 TEST(ClientTest, TransferTimeoutConfigurationRejectsNonPositiveValues)
 {
 	spk::Client client;
+	EXPECT_THROW(client.setHandshakeTimeout(std::chrono::milliseconds(0)), spk::Exception);
+	EXPECT_THROW(client.setHandshakeTimeout(std::chrono::milliseconds(-1)), spk::Exception);
+	EXPECT_NO_THROW(client.setHandshakeTimeout(std::chrono::milliseconds(250)));
 	EXPECT_THROW(client.setIncomingTransferTimeout(std::chrono::milliseconds(0)), spk::Exception);
 	EXPECT_THROW(client.setAcknowledgmentTimeout(std::chrono::milliseconds(-1)), spk::Exception);
 	EXPECT_NO_THROW(client.setIncomingTransferTimeout(std::chrono::milliseconds(250)));
