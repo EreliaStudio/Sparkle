@@ -316,9 +316,11 @@ namespace spk::NetworkInternal
 			void _queueHandshake(Session &session, Handshake::Kind kind, Connection::Error error = Connection::Error::None)
 			{
 				auto frame = Handshake::encode(kind, session.id, error, session.handshake.maximumPageBytes());
-				session.queuedBytes += frame->size();
 				auto reservation = _commandBudget.reserve(frame->size(), CommandBudget::Stage::Frame);
+				const std::size_t queuedBytes = frame->size();
 				session.outgoing.push_back(TransmissionFrame{std::move(frame), 0, static_cast<std::uint16_t>(kind), std::move(reservation)});
+				session.queuedBytes += queuedBytes;
+				session.queuedBytes += queuedBytes;
 				_modify(session, true);
 			}
 
@@ -343,8 +345,8 @@ namespace spk::NetworkInternal
 			void _queueResponse(Session &session, const TransferResponse &response)
 			{
 				auto frame = response.encode();
-				session.queuedBytes += frame->size();
 				auto reservation = _commandBudget.reserve(frame->size(), CommandBudget::Stage::Frame);
+				const std::size_t queuedBytes = frame->size();
 				session.outgoing.push_back(TransmissionFrame{std::move(frame), 0, 0, std::move(reservation)});
 				_modify(session, true);
 			}
@@ -833,19 +835,25 @@ namespace spk::NetworkInternal
 						}
 						continue;
 					}
-					for (const auto &response : session->reception.expire(id))
+					try
 					{
-						_queueResponse(*session, response);
-					}
-					session->transfers.expire();
-					for (auto reservation = session->outgoingReservations.begin(); reservation != session->outgoingReservations.end();)
-					{
-						const auto id = reservation->first;
-						++reservation;
-						if (!session->transfers.isTracked(id))
+						for (const auto &response : session->reception.expire(id))
 						{
-							_releaseReservation(*session, id);
+							_queueResponse(*session, response);
 						}
+						session->transfers.expire();
+						for (auto reservation = session->outgoingReservations.begin(); reservation != session->outgoingReservations.end();)
+						{
+							const auto id = reservation->first;
+							++reservation;
+							if (!session->transfers.isTracked(id))
+							{
+								_releaseReservation(*session, id);
+							}
+						}
+					} catch (...)
+					{
+						_disconnect(id);
 					}
 				}
 			}
