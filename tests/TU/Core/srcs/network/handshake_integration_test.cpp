@@ -208,7 +208,10 @@ TEST(HandshakeIntegration, MalformedPeerDoesNotStopHealthyClientOrServer)
 	write16(malformed.data() + 4, ProtocolVersion);
 	write32(malformed.data() + 28, MaximumPayloadSize + 1);
 	socket.sendAll(malformed);
-	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] { return disconnected.load(); }, 3s));
+	const auto peerDisconnected = [&] {
+		return disconnected.load();
+	};
+	ASSERT_TRUE(NetworkTestUtils::waitUntil(peerDisconnected, 3s));
 	EXPECT_TRUE(server.isRunning());
 	EXPECT_TRUE(healthy.isConnected());
 
