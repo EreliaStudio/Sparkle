@@ -472,14 +472,21 @@ TEST(NetworkPagedIntegration, ReplayOlderThanOneThousandCompletedTransfersNeverR
 	const auto message = std::move(writer).build();
 	auto frame = encodePage(Page{message, 1, message.size(), 0, message.size()});
 	std::array<std::byte, FrameHeaderSize + TransferResponse::PayloadSize> answer{};
-	for (std::uint64_t id = 1; id <= 1200; ++id)
+	for (std::uint64_t first = 1; first <= 1200; first += 32)
 	{
-		write64(frame->data() + FrameHeaderSize, id);
-		socket.sendAll(*frame);
-		ASSERT_TRUE(socket.receiveAllUntil(answer, std::chrono::steady_clock::now() + 5s, {}));
-		const auto response = TransferResponse::decode(answer);
-		ASSERT_EQ(response.transferID, id);
-		ASSERT_EQ(response.status, spk::Transfer::Status::Success);
+		const auto last = std::min<std::uint64_t>(1200, first + 31);
+		for (std::uint64_t id = first; id <= last; ++id)
+		{
+			write64(frame->data() + FrameHeaderSize, id);
+			socket.sendAll(*frame);
+		}
+		for (std::uint64_t id = first; id <= last; ++id)
+		{
+			ASSERT_TRUE(socket.receiveAllUntil(answer, std::chrono::steady_clock::now() + 5s, {}));
+			const auto response = TransferResponse::decode(answer);
+			ASSERT_EQ(response.transferID, id);
+			ASSERT_EQ(response.status, spk::Transfer::Status::Success);
+		}
 	}
 	write64(frame->data() + FrameHeaderSize, 1);
 	socket.sendAll(*frame);
