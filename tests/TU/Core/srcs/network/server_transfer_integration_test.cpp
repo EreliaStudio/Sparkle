@@ -412,7 +412,9 @@ TEST(ServerTransferIntegration, ExplicitTargetSetSkipReportsSaturatedRecipientWi
 	const spk::ConnectionSet targets{saturated, healthy};
 
 	const auto results = server.sendTo(
-		targets, makeMessage(200, 64), spk::Message::Priority::Normal,
+		targets,
+		makeMessage(200, 64),
+		spk::Message::Priority::Normal,
 		spk::Connection::OverflowPolicy::SkipRecipient);
 	ASSERT_EQ(results.size(), 2u);
 	EXPECT_TRUE(finished(results.at(saturated.id()), spk::Transfer::Status::Rejected));
