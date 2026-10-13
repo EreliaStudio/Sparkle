@@ -8,6 +8,7 @@
 #	include "network/internal/connection_id.hpp"
 #	include "network/internal/frame.hpp"
 #	include "network/internal/handshake.hpp"
+#	include "network/internal/incoming_frame_validator.hpp"
 #	include "network/internal/server_handshake.hpp"
 #	include "network/internal/server_send_admission.hpp"
 #	include "network/internal/page.hpp"
@@ -359,9 +360,13 @@ namespace spk::NetworkInternal
 				const auto header = decode(std::span<const std::byte, FrameHeaderSize>(data, FrameHeaderSize));
 				const std::size_t frameSize = FrameHeaderSize + header.payloadSize;
 				const auto kind = read16(data + 6);
-				if (kind == 0 && header.payloadSize > _maxMessageBytes.load())
+				if (session.handshake.ready())
 				{
-					throw Exception("Incoming logical message exceeds the configured maximum.");
+					IncomingFrameValidator::validate(
+						kind,
+						header.payloadSize,
+						session.handshake.maximumPageBytes(),
+						_maxMessageBytes.load());
 				}
 				if (!session.handshake.ready() && kind != static_cast<std::uint16_t>(Handshake::Kind::Hello))
 				{
@@ -386,10 +391,6 @@ namespace spk::NetworkInternal
 				else if (kind == PageFrameKind)
 				{
 					const auto page = decodePage(std::span(data, frameSize));
-					if (page.data.size() > session.handshake.maximumPageBytes())
-					{
-						throw Exception("Network page exceeds the negotiated maximum payload size.");
-					}
 					auto received = session.reception.accept(page, session.id);
 					if (received.message.has_value())
 					{

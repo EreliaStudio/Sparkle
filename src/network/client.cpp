@@ -5,6 +5,7 @@
 #include "network/internal/command_budget.hpp"
 #include "network/internal/frame.hpp"
 #include "network/internal/handshake.hpp"
+#include "network/internal/incoming_frame_validator.hpp"
 #include "network/internal/outgoing_reservation.hpp"
 #include "network/internal/page.hpp"
 #include "network/internal/socket.hpp"
@@ -69,10 +70,11 @@ namespace spk
 						break;
 					}
 					const auto header = NetworkInternal::decode(headerBytes);
-					if (NetworkInternal::read16(headerBytes.data() + 6) == 0 && header.payloadSize > _maxMessageBytes.load())
-					{
-						throw Exception("Incoming logical message exceeds the configured maximum.");
-					}
+					NetworkInternal::IncomingFrameValidator::validate(
+						NetworkInternal::read16(headerBytes.data() + 6),
+						header.payloadSize,
+						_negotiatedPageBytes.load(),
+						_maxMessageBytes.load());
 					std::vector<std::byte> frame(NetworkInternal::FrameHeaderSize + header.payloadSize);
 					std::copy(headerBytes.begin(), headerBytes.end(), frame.begin());
 					if (header.payloadSize != 0 &&
@@ -155,10 +157,6 @@ namespace spk
 		void _receivePage(std::span<const std::byte> frame)
 		{
 			const auto page = NetworkInternal::decodePage(frame);
-			if (page.data.size() > _negotiatedPageBytes.load())
-			{
-				throw Exception("Network page exceeds the negotiated maximum payload size.");
-			}
 			_acceptRemoteID(page.header.connectionID);
 			NetworkInternal::TransferReception::Result received;
 			{

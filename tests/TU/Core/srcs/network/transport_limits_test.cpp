@@ -1,11 +1,15 @@
 #include "exception.hpp"
 #include "network/client.hpp"
 #include "network/internal/page_scheduler.hpp"
+#include "network/internal/incoming_frame_validator.hpp"
+#include "network/internal/handshake.hpp"
+#include "network/internal/socket.hpp"
 #include "network/server.hpp"
 #include "network_test_utils.hpp"
 
 #include <gtest/gtest.h>
 
+#include <array>
 #include <chrono>
 #include <cstddef>
 #include <functional>
@@ -82,5 +86,43 @@ TEST(TransportLimits, ClientOutgoingBudgetCoversFrameHeadroom)
 	EXPECT_TRUE(NetworkTestUtils::waitUntil(std::bind_front(&spk::Transfer::isComplete, transfer), std::chrono::seconds(5)));
 	EXPECT_EQ(transfer.status(), spk::Transfer::Status::Success);
 	client.disconnect();
+	server.stop();
+}
+
+TEST(TransportLimits, IncomingFrameHeadersEnforceNegotiatedBoundsBeforePayloadAllocation)
+{
+	using namespace spk::NetworkInternal;
+	EXPECT_NO_THROW(IncomingFrameValidator::validate(PageFrameKind, PageMetadataSize + 128, 128, 2048));
+	EXPECT_THROW(IncomingFrameValidator::validate(PageFrameKind, PageMetadataSize + 129, 128, 2048), spk::Exception);
+	EXPECT_THROW(IncomingFrameValidator::validate(PageFrameKind, PageMetadataSize - 1, 128, 2048), spk::Exception);
+	EXPECT_NO_THROW(IncomingFrameValidator::validate(TransferResponse::FrameKind, TransferResponse::PayloadSize, 128, 2048));
+	EXPECT_THROW(IncomingFrameValidator::validate(TransferResponse::FrameKind, 4096, 128, 2048), spk::Exception);
+	EXPECT_THROW(IncomingFrameValidator::validate(0, 2049, 128, 2048), spk::Exception);
+	EXPECT_THROW(IncomingFrameValidator::validate(99, 1, 128, 2048), spk::Exception);
+}
+
+TEST(TransportLimits, ServerRejectsOversizedDeclaredPageBeforeReceivingItsBody)
+{
+	using namespace spk::NetworkInternal;
+	spk::Server server;
+	server.setMaxPageBytes(128);
+	server.start(0);
+	auto peer = Socket::connectTCP("127.0.0.1", server.port());
+	peer.sendAll(*Handshake::encode(Handshake::Kind::Hello, spk::Connection::InvalidID, spk::Connection::Error::None, 128));
+	std::array<std::byte, FrameHeaderSize + Handshake::PayloadSize> reply{};
+	ASSERT_TRUE(peer.receiveAllUntil(reply, std::chrono::steady_clock::now() + std::chrono::seconds(3), {}));
+	const auto accepted = Handshake::decode(reply);
+	ASSERT_TRUE(Handshake::validAcceptance(accepted));
+	const auto retained = server.connection(accepted.connectionID);
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(retained));
+
+	auto forged = Handshake::encode(Handshake::Kind::Accepted, accepted.connectionID);
+	write16(forged->data() + 6, PageFrameKind);
+	write32(forged->data() + 28, PageMetadataSize + 129);
+	peer.sendAll(std::span<const std::byte>(*forged).first(FrameHeaderSize));
+	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+		return retained.status() == spk::Connection::Status::Disconnected;
+	}, std::chrono::seconds(3)));
+	peer.close();
 	server.stop();
 }
