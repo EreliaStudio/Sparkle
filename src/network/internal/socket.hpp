@@ -48,6 +48,7 @@ namespace spk::NetworkInternal
 		[[nodiscard]] std::uint16_t localPort() const;
 		void setNonBlocking(bool value) const;
 		void sendAll(std::span<const std::byte> data) const;
+		[[nodiscard]] bool sendAllUntil(std::span<const std::byte> data, std::chrono::steady_clock::time_point deadline, std::stop_token stop) const;
 		[[nodiscard]] ReceiveResult receive(std::span<std::byte> buffer) const;
 		[[nodiscard]] bool receiveAll(std::span<std::byte> buffer) const;
 		[[nodiscard]] bool receiveAllUntil(std::span<std::byte> buffer, std::chrono::steady_clock::time_point deadline, std::stop_token stop) const;

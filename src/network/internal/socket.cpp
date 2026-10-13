@@ -414,6 +414,46 @@ namespace spk::NetworkInternal
 		}
 	}
 
+	bool Socket::sendAllUntil(
+		std::span<const std::byte> data, std::chrono::steady_clock::time_point deadline, std::stop_token stop) const
+	{
+		setNonBlocking(true);
+		std::size_t offset = 0;
+		try
+		{
+			while (offset < data.size() && waitForSocket(static_cast<SystemSocket>(nativeHandle()), true, deadline, stop))
+			{
+				const auto socket = static_cast<SystemSocket>(nativeHandle());
+				const int requested = static_cast<int>(std::min<std::size_t>(data.size() - offset, INT_MAX));
+#ifdef _WIN32
+				const int sent = ::send(socket, reinterpret_cast<const char *>(data.data() + offset), requested, 0);
+#else
+				const int sent = static_cast<int>(::send(socket, data.data() + offset, static_cast<std::size_t>(requested), MSG_NOSIGNAL));
+#endif
+				if (sent > 0)
+				{
+					offset += static_cast<std::size_t>(sent);
+				}
+				else if (sent == 0 || (!waiting(lastSocketError()) && !interrupted(lastSocketError())))
+				{
+					throw Exception("Unable to send handshake data.");
+				}
+			}
+		} catch (...)
+		{
+			if (valid())
+			{
+				setNonBlocking(false);
+			}
+			throw;
+		}
+		if (valid())
+		{
+			setNonBlocking(false);
+		}
+		return offset == data.size();
+	}
+
 	Socket::ReceiveResult Socket::receive(std::span<std::byte> buffer) const
 	{
 		if (buffer.empty())

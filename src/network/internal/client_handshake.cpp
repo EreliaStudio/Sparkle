@@ -73,7 +73,10 @@ namespace spk::NetworkInternal
 
 	void ClientHandshake::_negotiate(Socket &socket)
 	{
-		socket.sendAll(*Handshake::encode(Handshake::Kind::Hello));
+		if (!socket.sendAllUntil(*Handshake::encode(Handshake::Kind::Hello), _deadline.expiresAt(), _stop))
+		{
+			throw Exception("Unable to send handshake request before deadline.");
+		}
 		_validateReply(_readReply(socket));
 	}
 
