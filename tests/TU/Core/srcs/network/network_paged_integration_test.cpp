@@ -501,3 +501,42 @@ TEST(NetworkPagedIntegration, ReplayOlderThanOneThousandCompletedTransfersNeverR
 	socket.close();
 	server.stop();
 }
+
+TEST(NetworkPagedIntegration, ExpirationResponseCapacityFailureDisconnectsOnlyAffectedPeer)
+{
+	using namespace spk::NetworkInternal;
+	spk::Server server;
+	spk::Client healthy;
+	server.setIncomingTransferTimeout(100ms);
+	server.start(0);
+	healthy.connect("127.0.0.1", server.port());
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(healthy));
+	auto peer = Socket::connectTCP("127.0.0.1", server.port());
+	peer.sendAll(*Handshake::encode(Handshake::Kind::Hello));
+	std::array<std::byte, FrameHeaderSize + Handshake::PayloadSize> reply{};
+	ASSERT_TRUE(peer.receiveAllUntil(reply, std::chrono::steady_clock::now() + 3s, {}));
+	const auto accepted = Handshake::decode(reply);
+	ASSERT_TRUE(Handshake::validAcceptance(accepted));
+	const auto victim = server.connection(accepted.connectionID);
+	server.setGlobalMaxQueuedBytes(1);
+	spk::Message::Writer writer(996);
+	writer.setConnectionID(accepted.connectionID);
+	writer.resize(12);
+	auto incomplete = std::move(writer).build();
+	peer.sendAll(*encodePage(Page{incomplete, 1, incomplete.size(), 0, 4}));
+	const auto victimDisconnected = [&] {
+		return victim.status() == spk::Connection::Status::Disconnected;
+	};
+	ASSERT_TRUE(NetworkTestUtils::waitUntil(victimDisconnected, 5s));
+	EXPECT_TRUE(server.isRunning());
+	server.setGlobalMaxQueuedBytes(256u * 1024u * 1024u);
+	EXPECT_TRUE(healthy.isConnected());
+	auto transfer = healthy.send(makeMessage(997, 4));
+	const auto messages = NetworkTestUtils::collect(server.messages(), 1, 3s);
+	ASSERT_EQ(messages.size(), 1u);
+	EXPECT_EQ(messages.front().message.type(), 997u);
+	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] { return transfer.isComplete(); }, 3s));
+	peer.close();
+	healthy.disconnect();
+	server.stop();
+}
