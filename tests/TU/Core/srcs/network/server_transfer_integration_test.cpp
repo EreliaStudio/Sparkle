@@ -187,3 +187,20 @@ TEST(ServerTransferIntegration, InvalidPriorityThrowsBeforeScheduling)
 	client.disconnect();
 	server.stop();
 }
+
+TEST(ServerTransferIntegration, RejectsImpossibleGlobalCommandQueueAdmissionSynchronously)
+{
+	spk::Server server;
+	spk::Client client;
+	server.setGlobalMaxQueuedBytes(2);
+	server.start(0);
+	const auto recipient = identify(server, client);
+	ASSERT_TRUE(recipient.isConnected());
+	EXPECT_THROW(server.sendTo(recipient, makeMessage(158, 3)), spk::Exception);
+	EXPECT_TRUE(client.isConnected());
+	const auto transfer = server.sendTo(recipient, makeMessage(159, 2));
+	EXPECT_EQ(NetworkTestUtils::collect(client.messages(), 1, 5s).size(), 1u);
+	EXPECT_TRUE(finished(transfer, spk::Transfer::Status::Success));
+	client.disconnect();
+	server.stop();
+}
