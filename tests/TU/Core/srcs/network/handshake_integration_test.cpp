@@ -285,3 +285,47 @@ TEST(HandshakeIntegration, SkipRecipientBroadcastWithOnlyPendingClientsReturnsEm
 	socket.close();
 	server.stop();
 }
+
+TEST(HandshakeIntegration, ClientRequiresOnlyHelloAndAcceptedToBecomeConnected)
+{
+	using namespace spk::NetworkInternal;
+	auto listener = Socket::listenTCP(0);
+	spk::Client client;
+	const auto connection = client.connect("127.0.0.1", listener.localPort());
+	EXPECT_EQ(connection.status(), spk::Connection::Status::Pending);
+	auto peer = listener.accept();
+	std::array<std::byte, FrameHeaderSize + Handshake::PayloadSize> hello{};
+	ASSERT_TRUE(peer.receiveAllUntil(hello, std::chrono::steady_clock::now() + 3s, {}));
+	ASSERT_TRUE(Handshake::validHello(Handshake::decode(hello)));
+	peer.sendAll(*Handshake::encode(Handshake::Kind::Accepted, 42));
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(connection));
+	EXPECT_EQ(connection.id(), 42u);
+	std::array<std::byte, 1> unexpected{};
+	EXPECT_FALSE(peer.receiveAllUntil(unexpected, std::chrono::steady_clock::now() + 100ms, {}));
+	EXPECT_TRUE(connection.isConnected());
+	client.disconnect();
+	peer.close();
+}
+
+TEST(HandshakeIntegration, ClientObservesExplicitHandshakeRejectionOnOriginalHandle)
+{
+	using namespace spk::NetworkInternal;
+	auto listener = Socket::listenTCP(0);
+	spk::Client client;
+	const auto connection = client.connect("127.0.0.1", listener.localPort());
+	const auto copy = connection;
+	auto peer = listener.accept();
+	std::array<std::byte, FrameHeaderSize + Handshake::PayloadSize> hello{};
+	ASSERT_TRUE(peer.receiveAllUntil(hello, std::chrono::steady_clock::now() + 3s, {}));
+	peer.sendAll(*Handshake::encode(Handshake::Kind::Rejected, 0, spk::Connection::Error::VersionMismatch));
+	const auto disconnected = [&] {
+		return connection.status() == spk::Connection::Status::Disconnected;
+	};
+	ASSERT_TRUE(NetworkTestUtils::waitUntil(disconnected, 3s));
+	EXPECT_EQ(connection.error(), spk::Connection::Error::VersionMismatch);
+	EXPECT_EQ(copy.error(), spk::Connection::Error::VersionMismatch);
+	EXPECT_EQ(copy.id(), spk::Connection::InvalidID);
+	EXPECT_FALSE(client.isConnected());
+	client.disconnect();
+	peer.close();
+}
