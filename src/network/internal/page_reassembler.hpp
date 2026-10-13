@@ -34,7 +34,7 @@ namespace spk::NetworkInternal
 		};
 
 		std::unordered_map<std::uint64_t, Transfer> _transfers;
-		std::unordered_map<std::uint64_t, Clock::time_point> _failedTransfers;
+		std::unordered_map<std::uint64_t, Clock::time_point> _retiredTransfers;
 		PageFailureLimiter _failureLimiter;
 		std::size_t _reservedBytes = 0;
 		std::size_t _chargedBytes = 0;
@@ -45,6 +45,7 @@ namespace spk::NetworkInternal
 
 		void _validateNew(const PageFragment &page) const;
 		void _insert(Transfer &transfer, const PageFragment &page, Clock::time_point now);
+		void _retire(std::uint64_t id, Clock::time_point now);
 		void _reserve(std::size_t bytes, std::uint64_t id);
 		void _release(std::size_t bytes) noexcept;
 		[[nodiscard]] bool _duplicate(const Transfer &transfer, const PageFragment &page) const;

@@ -324,3 +324,21 @@ TEST(PageReassembler, RuntimeLimitsRejectInvalidSettingsWithoutChangingActiveRes
 	EXPECT_THROW((void)assembler.accept(fragment(*first)), spk::NetworkInternal::PageReassemblyError);
 	EXPECT_EQ(assembler.reservedBytes(), 0u);
 }
+
+TEST(PageReassembler, CompletedTransferPagesNeverRepublishTheSameLogicalMessage)
+{
+	spk::NetworkInternal::PageScheduler scheduler;
+	spk::NetworkInternal::PageReassembler assembler;
+	(void)scheduler.enqueue(message(16, 96));
+	const auto first = scheduler.nextPage(8);
+	const auto last = scheduler.nextPage(8);
+	ASSERT_TRUE(first.has_value());
+	ASSERT_TRUE(last.has_value());
+	EXPECT_FALSE(assembler.accept(fragment(*first)).has_value());
+	ASSERT_TRUE(assembler.accept(fragment(*last)).has_value());
+	EXPECT_EQ(assembler.pendingTransfers(), 0u);
+	EXPECT_FALSE(assembler.accept(fragment(*first)).has_value());
+	EXPECT_FALSE(assembler.accept(fragment(*last)).has_value());
+	EXPECT_EQ(assembler.pendingTransfers(), 0u);
+	EXPECT_EQ(assembler.reservedBytes(), 0u);
+}
