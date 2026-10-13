@@ -52,7 +52,7 @@ TEST(Handshake, DeadlineIsRelativeToStartNotEachPage)
 	EXPECT_EQ(deadline.remaining(now + 9s), 0ms);
 	EXPECT_THROW(HandshakeDeadline(0ms), spk::Exception);
 }
- 
+
 TEST(Handshake, PageSizeIsNegotiatedInBothDirections)
 {
 	const auto hello = Handshake::decode(*Handshake::encode(

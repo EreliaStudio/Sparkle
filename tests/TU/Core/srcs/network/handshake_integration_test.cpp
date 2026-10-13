@@ -11,6 +11,7 @@
 #include <array>
 #include <atomic>
 #include <chrono>
+#include <functional>
 #include <stop_token>
 #include <utility>
 
@@ -236,7 +237,7 @@ TEST(HandshakeIntegration, CancelledHandshakeWriteDoesNotSendData)
 	EXPECT_TRUE(socket.valid());
 	socket.close();
 }
- 
+
 TEST(HandshakeIntegration, NegotiatesDifferentPageLimitsAndReassemblesMessages)
 {
 	spk::Server server;
@@ -252,11 +253,8 @@ TEST(HandshakeIntegration, NegotiatesDifferentPageLimitsAndReassemblesMessages)
 	const auto received = NetworkTestUtils::collect(server.messages(), 1, 5s);
 	ASSERT_EQ(received.size(), 1u);
 	EXPECT_EQ(received.front().message.size(), 32768u);
-	EXPECT_TRUE(NetworkTestUtils::waitUntil(
-		[&] {
-			return transfer.status() == spk::Transfer::Status::Success;
-		},
-		5s));
+	EXPECT_TRUE(NetworkTestUtils::waitUntil(std::bind_front(&spk::Transfer::isComplete, transfer), 5s));
+	EXPECT_EQ(transfer.status(), spk::Transfer::Status::Success);
 	client.disconnect();
 	server.stop();
 }

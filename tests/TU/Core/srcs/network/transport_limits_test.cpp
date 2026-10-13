@@ -8,6 +8,7 @@
 
 #include <chrono>
 #include <cstddef>
+#include <functional>
 #include <utility>
 
 namespace
@@ -54,20 +55,14 @@ TEST(TransportLimits, OutgoingAndIncomingLimitsApplyToClientAndServer)
 	const auto received = NetworkTestUtils::collect(server.messages(), 1, std::chrono::seconds(5));
 	ASSERT_EQ(received.size(), 1u);
 	EXPECT_EQ(received.front().message.size(), 64u);
-	EXPECT_TRUE(NetworkTestUtils::waitUntil(
-		[&] {
-			return transfer.status() == spk::Transfer::Status::Success;
-		},
-		std::chrono::seconds(5)));
+	EXPECT_TRUE(NetworkTestUtils::waitUntil(std::bind_front(&spk::Transfer::isComplete, transfer), std::chrono::seconds(5)));
+	EXPECT_EQ(transfer.status(), spk::Transfer::Status::Success);
 	const auto connection = server.connection(received.front().emitter);
 	EXPECT_THROW(server.sendTo(connection, makeMessage(65)), spk::Exception);
 	const auto reply = server.sendTo(connection, makeMessage(64));
 	EXPECT_EQ(NetworkTestUtils::collect(client.messages(), 1, std::chrono::seconds(5)).size(), 1u);
-	EXPECT_TRUE(NetworkTestUtils::waitUntil(
-		[&] {
-			return reply.status() == spk::Transfer::Status::Success;
-		},
-		std::chrono::seconds(5)));
+	EXPECT_TRUE(NetworkTestUtils::waitUntil(std::bind_front(&spk::Transfer::isComplete, reply), std::chrono::seconds(5)));
+	EXPECT_EQ(reply.status(), spk::Transfer::Status::Success);
 	client.disconnect();
 	server.stop();
 }
