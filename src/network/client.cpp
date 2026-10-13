@@ -417,12 +417,30 @@ namespace spk
 				throw Exception("Disconnect the current network session before connecting again.");
 			}
 			disconnect();
-			_session = _owner._beginConnection();
-			_active = true;
-			const auto deadline = std::chrono::steady_clock::now() + _handshakeTimeout;
-			_connector = std::jthread([this, address = std::string(address), port, deadline](std::stop_token stop) {
-				_connectWorker(address, port, deadline, stop);
-			});
+			{
+				const std::scoped_lock lock(_lifecycleMutex);
+				_session = _owner._beginConnection();
+				_active = true;
+			}
+			try
+			{
+				_owner._announcePending(_session);
+			} catch (...)
+			{
+				disconnect();
+				throw;
+			}
+			{
+				const std::scoped_lock lock(_lifecycleMutex);
+				if (!_active)
+				{
+					return _session;
+				}
+				const auto deadline = std::chrono::steady_clock::now() + _handshakeTimeout;
+				_connector = std::jthread([this, address = std::string(address), port, deadline](std::stop_token stop) {
+					_connectWorker(address, port, deadline, stop);
+				});
+			}
 			return _session;
 		}
 
@@ -659,8 +677,12 @@ namespace spk
 			_acceptIncoming = true;
 		}
 		connection._setStatus(Connection::Status::Pending);
-		_statusProvider.trigger(connection, Connection::Status::Pending, Connection::Error::None);
 		return connection;
+	}
+
+	void Client::_announcePending(Connection connection)
+	{
+		_statusProvider.trigger(connection, Connection::Status::Pending, Connection::Error::None);
 	}
 
 	void Client::_acceptConnection(Connection connection, Connection::ID id)
