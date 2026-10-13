@@ -30,6 +30,7 @@ TEST(TransportLimits, RejectsZeroSizedConfiguration)
 	EXPECT_THROW(server.setMaxMessageBytes(0), spk::Exception);
 	EXPECT_THROW(server.setMaxIncomingBytes(0), spk::Exception);
 	EXPECT_THROW(server.setGlobalMaxIncomingBytes(0), spk::Exception);
+	EXPECT_THROW(server.setGlobalMaxQueuedBytes(0), spk::Exception);
 	spk::NetworkInternal::PageScheduler scheduler;
 	EXPECT_THROW(scheduler.setMaxMessageBytes(0), spk::Exception);
 	EXPECT_THROW(client.setMaxPageBytes(0), spk::Exception);

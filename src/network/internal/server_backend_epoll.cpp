@@ -1135,6 +1135,10 @@ namespace spk::NetworkInternal
 
 			void setGlobalMaxQueuedBytes(std::size_t bytes) override
 			{
+				if (bytes == 0)
+				{
+					throw Exception("Global outgoing network memory limit must be positive.");
+				}
 				_maxGlobalQueuedBytes.store(bytes);
 				_commandBudget.setMaximum(bytes);
 			}
