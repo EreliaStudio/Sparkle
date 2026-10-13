@@ -35,6 +35,21 @@ TEST(HandshakeIntegration, PendingClientRejectsApplicationMessagesAndTimesOut)
 	client.disconnect();
 }
 
+TEST(HandshakeIntegration, ClientHandshakeTimeoutUpdateDoesNotExtendActiveAttempt)
+{
+	auto listener = spk::NetworkInternal::Socket::listenTCP(0);
+	spk::Client client;
+	client.setHandshakeTimeout(150ms);
+	const auto connection = client.connect("127.0.0.1", listener.localPort());
+	client.setHandshakeTimeout(5s);
+	const auto disconnected = [&] {
+		return connection.status() == spk::Connection::Status::Disconnected;
+	};
+	EXPECT_TRUE(NetworkTestUtils::waitUntil(disconnected, 2s));
+	EXPECT_EQ(connection.error(), spk::Connection::Error::Timeout);
+	client.disconnect();
+}
+
 TEST(HandshakeIntegration, ServerRejectsTargetedSendDuringPending)
 {
 	spk::Server server;
