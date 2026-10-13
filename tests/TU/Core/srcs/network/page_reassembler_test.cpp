@@ -296,6 +296,10 @@ TEST(PageReassembler, SharedBudgetRejectsOnlyNewTransferAndReclaimsOnClear)
 	EXPECT_EQ(budget->used(), 0u);
 	(void)second.expire(now + std::chrono::milliseconds(100));
 	EXPECT_FALSE(second.accept(fragment(*initial), now + std::chrono::milliseconds(101)).has_value());
+	EXPECT_EQ(budget->used(), 0u);
+	auto fresh = fragment(*initial);
+	++fresh.transferID;
+	EXPECT_FALSE(second.accept(fresh, now + std::chrono::milliseconds(101)).has_value());
 	EXPECT_EQ(budget->used(), charged);
 	second.clear();
 	EXPECT_EQ(budget->used(), 0u);
