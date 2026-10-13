@@ -1,5 +1,7 @@
 #pragma once
 
+#include "exception.hpp"
+
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
@@ -11,6 +13,9 @@ namespace spk::NetworkInternal
 {
 	class RetiredTransferIDs final
 	{
+	public:
+		inline static constexpr std::size_t MaximumSparseRanges = 4096;
+
 	private:
 		std::uint64_t _prefix = 0;
 		std::map<std::uint64_t, std::uint64_t> _ranges;
@@ -81,6 +86,10 @@ namespace spk::NetworkInternal
 			}
 			else
 			{
+				if (_ranges.size() >= MaximumSparseRanges)
+				{
+					throw spk::Exception("Network transfer replay history exceeded its sparse range limit.");
+				}
 				_ranges.emplace(id, id);
 			}
 			_compact();
