@@ -452,6 +452,7 @@ namespace spk
 				throw Exception("Handshake timeout must be positive.");
 			}
 			const std::scoped_lock lock(_lifecycleMutex);
+			const std::scoped_lock lock(_lifecycleMutex);
 			_handshakeTimeout = timeout;
 		}
 
