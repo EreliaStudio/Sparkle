@@ -533,3 +533,40 @@ TEST(PageReassembler, RetiredIDsAreScopedToOneSessionAndResetOnClear)
 	first.clear();
 	EXPECT_TRUE(first.accept(page).has_value());
 }
+
+TEST(RetiredTransferIDs, SparseHistoryIsBoundedWithoutExpiringOrForgettingIDs)
+{
+	using spk::NetworkInternal::RetiredTransferIDs;
+	RetiredTransferIDs retired;
+	for (std::uint64_t index = 1; index <= RetiredTransferIDs::MaximumSparseRanges; ++index)
+	{
+		retired.retire(index * 2);
+	}
+	EXPECT_EQ(retired.rangeCount(), RetiredTransferIDs::MaximumSparseRanges);
+	EXPECT_THROW(retired.retire((RetiredTransferIDs::MaximumSparseRanges + 1) * 2), spk::Exception);
+	EXPECT_TRUE(retired.contains(2));
+	EXPECT_TRUE(retired.contains(RetiredTransferIDs::MaximumSparseRanges * 2));
+	EXPECT_FALSE(retired.contains((RetiredTransferIDs::MaximumSparseRanges + 1) * 2));
+	retired.retire(1);
+	EXPECT_EQ(retired.rangeCount(), RetiredTransferIDs::MaximumSparseRanges - 1);
+	retired.retire((RetiredTransferIDs::MaximumSparseRanges + 1) * 2);
+	EXPECT_EQ(retired.rangeCount(), RetiredTransferIDs::MaximumSparseRanges);
+	EXPECT_TRUE(retired.contains(1));
+	EXPECT_TRUE(retired.contains(2));
+}
+
+TEST(PageReassembler, SparseRetirementExhaustionFailsClosedAndReleasesCompletedPayloads)
+{
+	using namespace spk::NetworkInternal;
+	PageReassembler assembler(16, 4096);
+	const auto payload = message(1, 214);
+	for (std::uint64_t index = 1; index <= RetiredTransferIDs::MaximumSparseRanges; ++index)
+	{
+		const PageFragment page{payload.header(), index * 2, 1, 0, payload.data()};
+		ASSERT_TRUE(assembler.accept(page).has_value());
+	}
+	const PageFragment excess{payload.header(), (RetiredTransferIDs::MaximumSparseRanges + 1) * 2, 1, 0, payload.data()};
+	EXPECT_THROW((void)assembler.accept(excess), spk::Exception);
+	EXPECT_EQ(assembler.pendingTransfers(), 0u);
+	EXPECT_EQ(assembler.reservedBytes(), 0u);
+}
