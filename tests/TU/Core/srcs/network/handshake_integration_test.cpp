@@ -436,3 +436,23 @@ TEST(HandshakeIntegration, NestedConnectionCallbackDisconnectCannotPublishStaleC
 	EXPECT_EQ(staleConnected.load(), 0u);
 	peer.close();
 }
+
+TEST(HandshakeIntegration, PendingCallbackCanCancelAttemptBeforeConnectorStarts)
+{
+	spk::Client client;
+	std::atomic_uint32_t pending = 0;
+	auto contract = client.subscribeToConnectionStatusChange(
+		[&](spk::Connection, spk::Connection::Status status, spk::Connection::Error) {
+			if (status == spk::Connection::Status::Pending)
+			{
+				++pending;
+				client.disconnect();
+			}
+		});
+	const auto connection = client.connect("127.0.0.1", 12345);
+	EXPECT_EQ(pending.load(), 1u);
+	EXPECT_EQ(connection.status(), spk::Connection::Status::Disconnected);
+	EXPECT_EQ(client.connection().status(), spk::Connection::Status::Disconnected);
+	EXPECT_FALSE(client.isConnected());
+	client.disconnect();
+}
