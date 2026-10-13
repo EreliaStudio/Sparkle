@@ -16,7 +16,8 @@ namespace spk::NetworkInternal
 		{
 			Command,
 			Transfer,
-			Frame
+			Frame,
+			InFlight
 		};
 
 	private:
@@ -25,7 +26,7 @@ namespace spk::NetworkInternal
 			mutable std::mutex mutex;
 			std::size_t maximum;
 			std::size_t used = 0;
-			std::array<std::size_t, 3> byStage{};
+			std::array<std::size_t, 4> byStage{};
 		};
 
 	public:

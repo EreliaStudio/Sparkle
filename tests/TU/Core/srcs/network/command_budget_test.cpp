@@ -65,3 +65,35 @@ TEST(CommandBudget, FrameReservationsRemainChargedDuringPartialWrites)
 	EXPECT_EQ(budget.used(Budget::Stage::Frame), 0u);
 	EXPECT_EQ(budget.used(), 0u);
 }
+
+TEST(CommandBudget, FrameReservationsTransitionToInFlightWithoutChangingTotal)
+{
+	using Budget = spk::NetworkInternal::CommandBudget;
+	Budget budget(128);
+	auto logical = budget.reserve(64, Budget::Stage::Transfer);
+	auto frame = budget.reserve(60, Budget::Stage::Frame);
+	EXPECT_EQ(budget.used(), 124u);
+	frame->transition(Budget::Stage::InFlight);
+	EXPECT_EQ(budget.used(Budget::Stage::Frame), 0u);
+	EXPECT_EQ(budget.used(Budget::Stage::InFlight), 60u);
+	EXPECT_THROW((void)budget.reserve(5), spk::Exception);
+	frame->transition(Budget::Stage::Frame);
+	EXPECT_EQ(budget.used(Budget::Stage::InFlight), 0u);
+	EXPECT_EQ(budget.used(Budget::Stage::Frame), 60u);
+	frame.reset();
+	logical.reset();
+	EXPECT_EQ(budget.used(), 0u);
+}
+
+TEST(CommandBudget, ReservationCanOutliveBudgetOwnerAndReleasesSafely)
+{
+	using Budget = spk::NetworkInternal::CommandBudget;
+	std::shared_ptr<Budget::Lease> lease;
+	{
+		Budget budget(64);
+		lease = budget.reserve(60, Budget::Stage::Frame);
+		EXPECT_EQ(budget.used(), 60u);
+	}
+	EXPECT_EQ(lease->bytes(), 60u);
+	lease.reset();
+}
