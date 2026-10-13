@@ -205,6 +205,7 @@ namespace spk
 			throw Exception("Cannot send to an empty connection set.");
 		}
 		NetworkInternal::OutgoingMessageValidator::validate(message, priority, _maxMessageBytes.load());
+		NetworkInternal::OutgoingMessageValidator::validatePolicy(policy);
 		auto batch = std::make_shared<NetworkInternal::ServerSendBatch>(message, priority, policy);
 		TransferResults results;
 		batch->recipients.reserve(connections.size());
@@ -233,11 +234,12 @@ namespace spk
 	Server::TransferResults Server::sendToAll(const Message &message, Message::Priority priority, Connection::OverflowPolicy policy)
 	{
 		NetworkInternal::OutgoingMessageValidator::validate(message, priority, _maxMessageBytes.load());
+		NetworkInternal::OutgoingMessageValidator::validatePolicy(policy);
 		auto batch = std::make_shared<NetworkInternal::ServerSendBatch>(message, priority, policy);
 		TransferResults results;
 		{
 			const std::scoped_lock lock(_connectionsMutex);
-			if (_connections.empty())
+			if (_connections.empty() && policy != Connection::OverflowPolicy::SkipRecipient)
 			{
 				throw Exception("Cannot broadcast without connected recipients.");
 			}
@@ -261,7 +263,10 @@ namespace spk
 				results.emplace(id, batch->recipients.back().transfer);
 			}
 		}
-		_impl->send(std::move(batch));
+		if (!batch->recipients.empty())
+		{
+			_impl->send(std::move(batch));
+		}
 		return results;
 	}
 

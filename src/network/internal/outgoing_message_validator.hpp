@@ -1,6 +1,7 @@
 #pragma once
 
 #include "exception.hpp"
+#include "network/connection.hpp"
 #include "network/message.hpp"
 
 #include <algorithm>
@@ -20,6 +21,15 @@ namespace spk::NetworkInternal
 			if (message.size() > maximumMessageBytes)
 			{
 				throw Exception("Outgoing logical message exceeds the network limit.");
+			}
+		}
+
+		static void validatePolicy(Connection::OverflowPolicy policy)
+		{
+			if (policy != Connection::OverflowPolicy::Reject && policy != Connection::OverflowPolicy::SkipRecipient &&
+				policy != Connection::OverflowPolicy::DisconnectRecipient)
+			{
+				throw Exception("Invalid network overflow policy.");
 			}
 		}
 

@@ -204,3 +204,31 @@ TEST(ServerTransferIntegration, RejectsImpossibleGlobalCommandQueueAdmissionSync
 	client.disconnect();
 	server.stop();
 }
+
+TEST(ServerTransferIntegration, InvalidOverflowPolicyThrowsWithoutSending)
+{
+	spk::Server server;
+	spk::Client client;
+	server.start(0);
+	const auto recipient = identify(server, client);
+	ASSERT_TRUE(recipient.isConnected());
+	const auto invalid = static_cast<spk::Connection::OverflowPolicy>(99);
+	EXPECT_THROW(server.sendToAll(makeMessage(160, 16), spk::Message::Priority::Normal, invalid), spk::Exception);
+	EXPECT_THROW(server.sendTo(spk::ConnectionSet{recipient}, makeMessage(161, 16), spk::Message::Priority::Normal, invalid), spk::Exception);
+	EXPECT_TRUE(NetworkTestUtils::collect(client.messages(), 1, 100ms).empty());
+	client.disconnect();
+	server.stop();
+}
+
+TEST(ServerTransferIntegration, ExplicitSkipRecipientCanBroadcastToEmptyAudience)
+{
+	spk::Server server;
+	server.start(0);
+	const auto results = server.sendToAll(
+		makeMessage(162, 16),
+		spk::Message::Priority::Normal,
+		spk::Connection::OverflowPolicy::SkipRecipient);
+	EXPECT_TRUE(results.empty());
+	EXPECT_THROW(server.sendToAll(makeMessage(163, 16)), spk::Exception);
+	server.stop();
+}

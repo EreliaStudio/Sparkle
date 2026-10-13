@@ -258,3 +258,30 @@ TEST(HandshakeIntegration, NegotiatesDifferentPageLimitsAndReassemblesMessages)
 	client.disconnect();
 	server.stop();
 }
+
+TEST(HandshakeIntegration, SkipRecipientBroadcastWithOnlyPendingClientsReturnsEmpty)
+{
+	spk::Server server;
+	std::atomic_bool pending = false;
+	auto contract = server.subscribeToConnectionStatusChange(
+		[&](spk::Connection, spk::Connection::Status status, spk::Connection::Error) {
+			if (status == spk::Connection::Status::Pending)
+			{
+				pending = true;
+			}
+		});
+	server.start(0);
+	auto socket = spk::NetworkInternal::Socket::connectTCP("127.0.0.1", server.port());
+	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
+		return pending.load();
+	}, 3s));
+	EXPECT_THROW(server.sendToAll(spk::Message::Writer(5).build()), spk::Exception);
+	const auto results = server.sendToAll(
+		spk::Message::Writer(5).build(),
+		spk::Message::Priority::Normal,
+		spk::Connection::OverflowPolicy::SkipRecipient);
+	EXPECT_TRUE(results.empty());
+	socket.close();
+	server.stop();
+}
+
