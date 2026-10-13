@@ -661,7 +661,16 @@ namespace spk::NetworkInternal
 				{
 					for (auto &recipient : batch.recipients)
 					{
-						(void)TransferCompletion::complete(recipient.transfer, spk::Transfer::Status::Rejected, spk::Transfer::Reason::QueueOverflow);
+						auto reason = spk::Transfer::Reason::QueueOverflow;
+						for (const auto &[declinedRecipient, declinedReason] : declined)
+						{
+							if (declinedRecipient == &recipient)
+							{
+								reason = declinedReason;
+								break;
+							}
+						}
+						(void)TransferCompletion::complete(recipient.transfer, spk::Transfer::Status::Rejected, reason);
 					}
 					return;
 				}
