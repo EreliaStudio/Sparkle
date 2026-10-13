@@ -201,3 +201,55 @@ TEST(NetworkPagedIntegration, IncompleteTransferExpiresWithoutDisconnectingServe
 	socket.close();
 	server.stop();
 }
+
+TEST(NetworkPagedIntegration, ConflictingPageFailsOnlyItsTransfer)
+{
+	using namespace spk::NetworkInternal;
+	spk::Server server;
+	server.start(0);
+	auto socket = Socket::connectTCP("127.0.0.1", server.port());
+	socket.sendAll(*Handshake::encode(Handshake::Kind::Hello));
+	std::array<std::byte, FrameHeaderSize + Handshake::PayloadSize> acceptance{};
+	ASSERT_TRUE(socket.receiveAllUntil(acceptance, std::chrono::steady_clock::now() + 3s, {}));
+	const auto accepted = Handshake::decode(acceptance);
+	ASSERT_TRUE(Handshake::validAcceptance(accepted));
+
+	spk::Message::Writer broken(910);
+	broken.setConnectionID(accepted.connectionID);
+	broken.resize(12);
+	PageScheduler scheduler;
+	(void)scheduler.enqueue(std::move(broken).build());
+	const auto first = scheduler.nextPage(4);
+	ASSERT_TRUE(first.has_value());
+	auto initial = encodePage(*first);
+	socket.sendAll(*initial);
+	auto conflicting = *initial;
+	conflicting[FrameHeaderSize + PageMetadataSize] = std::byte{0xEF};
+	socket.sendAll(conflicting);
+
+	std::array<std::byte, FrameHeaderSize + TransferResponse::PayloadSize> reply{};
+	ASSERT_TRUE(socket.receiveAllUntil(reply, std::chrono::steady_clock::now() + 3s, {}));
+	const auto failed = TransferResponse::decode(reply);
+	EXPECT_EQ(failed.transferID, first->transferID);
+	EXPECT_EQ(failed.status, spk::Transfer::Status::Failed);
+	EXPECT_EQ(failed.reason, spk::Transfer::Reason::ConflictingPage);
+	EXPECT_TRUE(server.isRunning());
+
+	spk::Message::Writer healthy(911);
+	healthy.setConnectionID(accepted.connectionID);
+	healthy.resize(3);
+	(void)scheduler.enqueue(std::move(healthy).build());
+	while (const auto page = scheduler.nextPage(4))
+	{
+		if (page->transferID != first->transferID)
+		{
+			socket.sendAll(*encodePage(*page));
+		}
+	}
+	const auto received = NetworkTestUtils::collect(server.messages(), 1, 3s);
+	ASSERT_EQ(received.size(), 1u);
+	EXPECT_EQ(received.front().message.type(), 911u);
+	EXPECT_EQ(received.front().emitter, accepted.connectionID);
+	socket.close();
+	server.stop();
+}
