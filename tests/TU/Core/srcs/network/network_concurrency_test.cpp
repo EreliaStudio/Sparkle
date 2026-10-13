@@ -543,3 +543,28 @@ TEST(NetworkConcurrencyTest, SendingToUnknownConnectionDoesNotAffectConnectedCli
 	client.disconnect();
 	server.stop();
 }
+
+TEST(NetworkConcurrencyTest, ClientCanDisconnectFromConnectedStatusCallback)
+{
+	spk::Server server;
+	spk::Client client;
+	std::atomic_bool completed = false;
+	auto contract = client.subscribeToConnectionStatusChange(
+		[&](spk::Connection, spk::Connection::Status status, spk::Connection::Error) {
+			if (status == spk::Connection::Status::Connected)
+			{
+				client.disconnect();
+				completed = true;
+			}
+		});
+	server.start(0);
+	const auto connection = client.connect("127.0.0.1", server.port());
+	const auto callbackCompleted = [&] {
+		return completed.load();
+	};
+	ASSERT_TRUE(NetworkTestUtils::waitUntil(callbackCompleted, 5s));
+	EXPECT_EQ(connection.status(), spk::Connection::Status::Disconnected);
+	EXPECT_FALSE(client.isConnected());
+	client.disconnect();
+	server.stop();
+}
