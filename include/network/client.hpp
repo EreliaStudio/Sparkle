@@ -66,6 +66,7 @@ namespace spk
 		void setMaxMessageBytes(std::size_t bytes);
 		// Incomplete reassembly budget: logical payload plus modeled transfer/page metadata.
 		// This is not a process-wide RSS or allocator-capacity limit.
+		// Counts incomplete logical payloads and modeled reassembly metadata, not allocator overhead.
 		void setMaxIncomingBytes(std::size_t bytes);
 		// Outgoing page payload is bounded by both the configured and negotiated limits.
 		void setMaxPageBytes(std::size_t bytes);
@@ -73,6 +74,7 @@ namespace spk
 		void setPageFailureLimits(PageFailureLimits limits);
 		// Synchronously rejects invalid or unaffordable submissions; accepted transfers
 		// report transport acknowledgment or failure asynchronously through the handle.
+		// Admission is synchronous; the returned transfer reports the asynchronous delivery outcome.
 		Transfer send(const Message &message, Message::Priority priority = Message::Priority::Normal);
 		[[nodiscard]] MessageQueue &messages() noexcept;
 		[[nodiscard]] MessageDispatcher &messageDispatcher() noexcept;
