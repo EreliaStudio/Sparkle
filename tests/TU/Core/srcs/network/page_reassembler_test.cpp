@@ -200,14 +200,17 @@ TEST(PageReassembler, ValidPagesRefreshTheIncomingInactivityDeadline)
 	(void)scheduler.enqueue(message(12, 8));
 	const auto first = scheduler.nextPage(4);
 	const auto second = scheduler.nextPage(4);
-	spk::NetworkInternal::PageReassembler assembler(100, 100, std::chrono::milliseconds(100));
+	auto budget = std::make_shared<spk::NetworkInternal::ReassemblyBudget>(4096);
+	spk::NetworkInternal::PageReassembler assembler(100, 4096, std::chrono::milliseconds(100), budget);
 	const auto now = spk::NetworkInternal::PageReassembler::Clock::now();
 	EXPECT_FALSE(assembler.accept(fragment(*first), now).has_value());
+	EXPECT_GT(budget->used(), 12u);
 	EXPECT_FALSE(assembler.accept(fragment(*second), now + std::chrono::milliseconds(90)).has_value());
 	assembler.expire(now + std::chrono::milliseconds(170));
 	EXPECT_EQ(assembler.pendingTransfers(), 1u);
 	assembler.expire(now + std::chrono::milliseconds(191));
 	EXPECT_EQ(assembler.pendingTransfers(), 0u);
+	EXPECT_EQ(budget->used(), 0u);
 }
 
 TEST(PageReassembler, TenConsecutiveMalformedTransfersReachAbuseThreshold)
@@ -234,13 +237,16 @@ TEST(PageReassembler, ExpiredTransferRejectsLatePagesWithoutReallocation)
 	(void)scheduler.enqueue(message(20, 17));
 	const auto first = scheduler.nextPage(5);
 	const auto later = scheduler.nextPage(5);
-	spk::NetworkInternal::PageReassembler assembler(100, 100, std::chrono::milliseconds(50));
+	auto budget = std::make_shared<spk::NetworkInternal::ReassemblyBudget>(4096);
+	spk::NetworkInternal::PageReassembler assembler(100, 4096, std::chrono::milliseconds(50), budget);
 	const auto now = spk::NetworkInternal::PageReassembler::Clock::now();
 	ASSERT_FALSE(assembler.accept(fragment(*first), now).has_value());
+	EXPECT_GT(budget->used(), 20u);
 	EXPECT_EQ(assembler.expire(now + std::chrono::milliseconds(50)).size(), 1u);
 	EXPECT_FALSE(assembler.accept(fragment(*later), now + std::chrono::milliseconds(51)).has_value());
 	EXPECT_EQ(assembler.pendingTransfers(), 0u);
 	EXPECT_EQ(assembler.reservedBytes(), 0u);
+	EXPECT_EQ(budget->used(), 0u);
 }
 
 TEST(PageReassembler, RuntimeInactivityTimeoutChangesExistingTransferDeadline)
