@@ -57,6 +57,17 @@ namespace spk::NetworkInternal
 			}
 		}
 
+		void cancelAdmission() noexcept
+		{
+			try
+			{
+				rejectAdmission(std::make_exception_ptr(Exception("Network server stopped before send admission.")));
+			} catch (...)
+			{
+				rejectAdmission(std::current_exception());
+			}
+		}
+
 		ServerSendBatch(const Message &message, Message::Priority priority, Connection::OverflowPolicy policy) :
 			message(message),
 			priority(priority),

@@ -660,11 +660,15 @@ namespace spk::NetworkInternal
 			{
 				for (Command &command : _takeCommands())
 				{
-					_processCommand(std::move(command));
 					if (_stopping)
 					{
-						return;
+						if (command.batch != nullptr)
+						{
+							command.batch->cancelAdmission();
+						}
+						continue;
 					}
+					_processCommand(std::move(command));
 				}
 			}
 
@@ -761,6 +765,13 @@ namespace spk::NetworkInternal
 				{
 					const std::scoped_lock lock(_commandMutex);
 					abandoned.swap(_commands);
+				}
+				for (Command &command : abandoned)
+				{
+					if (command.batch != nullptr)
+					{
+						command.batch->cancelAdmission();
+					}
 				}
 			}
 
