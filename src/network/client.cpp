@@ -311,6 +311,10 @@ namespace spk
 
 		Connection connect(std::string_view address, std::uint16_t port)
 		{
+			if (address.empty() || port == 0)
+			{
+				throw Exception("Client::connect requires a nonempty address and nonzero port.");
+			}
 			if (_active.load())
 			{
 				throw Exception("Disconnect the current network session before connecting again.");

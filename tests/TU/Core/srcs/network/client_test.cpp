@@ -27,3 +27,12 @@ TEST(ClientTest, TransferTimeoutConfigurationRejectsNonPositiveValues)
 	EXPECT_NO_THROW(client.setIncomingTransferTimeout(std::chrono::milliseconds(250)));
 	EXPECT_NO_THROW(client.setAcknowledgmentTimeout(std::chrono::milliseconds(250)));
 }
+
+TEST(ClientTest, ConnectRejectsInvalidArgumentsWithoutStartingAttempt)
+{
+	spk::Client client;
+	EXPECT_THROW((void)client.connect("", 1234), spk::Exception);
+	EXPECT_THROW((void)client.connect("127.0.0.1", 0), spk::Exception);
+	EXPECT_EQ(client.connection().status(), spk::Connection::Status::Disconnected);
+	EXPECT_FALSE(client.isConnected());
+}
