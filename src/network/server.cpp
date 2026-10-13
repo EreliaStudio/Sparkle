@@ -82,6 +82,18 @@ namespace spk
 			_backend->setGlobalMaxQueuedBytes(bytes);
 		}
 
+		void setMaxMessageBytes(std::size_t bytes)
+		{
+			_backend->setMaxMessageBytes(bytes);
+		}
+		void setMaxIncomingBytes(std::size_t bytes)
+		{
+			_backend->setMaxIncomingBytes(bytes);
+		}
+		void setGlobalMaxIncomingBytes(std::size_t bytes)
+		{
+			_backend->setGlobalMaxIncomingBytes(bytes);
+		}
 		void send(std::shared_ptr<NetworkInternal::ServerSendBatch> batch)
 		{
 			_backend->send(std::move(batch));
@@ -159,6 +171,19 @@ namespace spk
 		_impl->setGlobalMaxQueuedBytes(bytes);
 	}
 
+	void Server::setMaxMessageBytes(std::size_t bytes)
+	{
+		_impl->setMaxMessageBytes(bytes);
+		_maxMessageBytes.store(bytes);
+	}
+	void Server::setMaxIncomingBytes(std::size_t bytes)
+	{
+		_impl->setMaxIncomingBytes(bytes);
+	}
+	void Server::setGlobalMaxIncomingBytes(std::size_t bytes)
+	{
+		_impl->setGlobalMaxIncomingBytes(bytes);
+	}
 	Transfer Server::sendTo(const Connection &connection, const Message &message, Message::Priority priority)
 	{
 		const ConnectionSet recipients{connection};
@@ -171,7 +196,7 @@ namespace spk
 		{
 			throw Exception("Cannot send to an empty connection set.");
 		}
-		NetworkInternal::OutgoingMessageValidator::validate(message, priority);
+		NetworkInternal::OutgoingMessageValidator::validate(message, priority, _maxMessageBytes.load());
 		auto batch = std::make_shared<NetworkInternal::ServerSendBatch>(message, priority, policy);
 		TransferResults results;
 		batch->recipients.reserve(connections.size());
@@ -199,7 +224,7 @@ namespace spk
 
 	Server::TransferResults Server::sendToAll(const Message &message, Message::Priority priority, Connection::OverflowPolicy policy)
 	{
-		NetworkInternal::OutgoingMessageValidator::validate(message, priority);
+		NetworkInternal::OutgoingMessageValidator::validate(message, priority, _maxMessageBytes.load());
 		auto batch = std::make_shared<NetworkInternal::ServerSendBatch>(message, priority, policy);
 		TransferResults results;
 		{

@@ -7,7 +7,9 @@
 #include "network/transfer.hpp"
 #include "network/types.hpp"
 
+#include <atomic>
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <mutex>
@@ -33,6 +35,7 @@ namespace spk
 		StatusProvider _statusProvider;
 		mutable std::mutex _connectionsMutex;
 		std::unordered_map<ConnectionID, Connection> _connections;
+		std::atomic_size_t _maxMessageBytes = 128u * 1024u * 1024u;
 
 		void _publish(ReceivedMessage message);
 		void _notifyConnection(ConnectionID connection);
@@ -59,6 +62,9 @@ namespace spk
 		void setIncomingTransferTimeout(std::chrono::milliseconds timeout);
 		void setAcknowledgmentTimeout(std::chrono::milliseconds timeout);
 		void setGlobalMaxQueuedBytes(std::size_t bytes);
+		void setMaxMessageBytes(std::size_t bytes);
+		void setMaxIncomingBytes(std::size_t bytes);
+		void setGlobalMaxIncomingBytes(std::size_t bytes);
 		Transfer sendTo(const Connection &connection, const Message &message, Message::Priority priority = Message::Priority::Normal);
 		TransferResults sendTo(const ConnectionSet &connections, const Message &message, Message::Priority priority = Message::Priority::Normal, Connection::OverflowPolicy policy = Connection::OverflowPolicy::Reject);
 		TransferResults sendToAll(const Message &message, Message::Priority priority = Message::Priority::Normal, Connection::OverflowPolicy policy = Connection::OverflowPolicy::Reject);
