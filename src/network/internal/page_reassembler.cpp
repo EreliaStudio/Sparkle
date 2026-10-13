@@ -36,7 +36,7 @@ namespace spk::NetworkInternal
 		using Reason = PageReassemblyError::Reason;
 		if (page.transferID == 0)
 		{
-			throw PageReassemblyError(page.transferID, Reason::InvalidTransferID);
+			throw Exception("Network page has an invalid transfer ID.");
 		}
 		if (page.totalSize > _maxMessageBytes || page.totalSize > std::numeric_limits<std::size_t>::max())
 		{

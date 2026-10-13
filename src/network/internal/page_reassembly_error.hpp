@@ -11,7 +11,6 @@ namespace spk::NetworkInternal
 	public:
 		enum class Reason
 		{
-			InvalidTransferID,
 			DuplicatePage,
 			ConflictingPage,
 			OverlappingPage,

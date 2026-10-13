@@ -33,7 +33,6 @@ namespace spk
 			QueueOverflow,
 			InvalidRecipient,
 			ReceiverCapacity,
-			InvalidTransferID,
 			DuplicatePage,
 			ConflictingPage,
 			OverlappingPage,

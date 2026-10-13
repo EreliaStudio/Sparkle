@@ -10,8 +10,6 @@ namespace spk::NetworkInternal
 		using Target = spk::Transfer::Reason;
 		switch (reason)
 		{
-		case Source::InvalidTransferID:
-			return Target::InvalidTransferID;
 		case Source::DuplicatePage:
 			return Target::DuplicatePage;
 		case Source::ConflictingPage:
