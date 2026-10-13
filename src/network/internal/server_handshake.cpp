@@ -2,10 +2,13 @@
 
 #include "exception.hpp"
 
+#include <algorithm>
+
 namespace spk::NetworkInternal
 {
-	ServerHandshake::ServerHandshake(std::chrono::milliseconds timeout) :
-		_deadline(timeout)
+	ServerHandshake::ServerHandshake(std::chrono::milliseconds timeout, std::uint32_t maximumPageBytes) :
+		_deadline(timeout),
+		_maximumPageBytes(maximumPageBytes)
 	{
 	}
 
@@ -18,6 +21,7 @@ namespace spk::NetworkInternal
 		const auto packet = Handshake::decode(frame);
 		if (Handshake::validHello(packet))
 		{
+			_maximumPageBytes = std::min(_maximumPageBytes, packet.maximumPageBytes);
 			_state = State::Accepting;
 			return Handshake::Kind::Accepted;
 		}
@@ -59,6 +63,11 @@ namespace spk::NetworkInternal
 	Connection::Error ServerHandshake::error() const noexcept
 	{
 		return _error;
+	}
+
+	std::uint32_t ServerHandshake::maximumPageBytes() const noexcept
+	{
+		return _maximumPageBytes;
 	}
 
 	void ServerHandshake::fail(Connection::Error error) noexcept

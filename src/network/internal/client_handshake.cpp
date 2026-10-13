@@ -9,9 +9,11 @@
 
 namespace spk::NetworkInternal
 {
-	ClientHandshake::ClientHandshake(HandshakeDeadline::Clock::time_point expiresAt, std::stop_token stop) :
+	ClientHandshake::ClientHandshake(HandshakeDeadline::Clock::time_point expiresAt, std::stop_token stop,
+		std::uint32_t maximumPageBytes) :
 		_deadline(expiresAt),
-		_stop(stop)
+		_stop(stop),
+		_requestedPageBytes(maximumPageBytes)
 	{
 	}
 
@@ -68,12 +70,18 @@ namespace spk::NetworkInternal
 			_error = Connection::Error::Rejected;
 			throw Exception("Unexpected handshake control frame.");
 		}
+		if (packet.maximumPageBytes > _requestedPageBytes)
+		{
+			_error = Connection::Error::Rejected;
+			throw Exception("Server selected an unsupported page size.");
+		}
 		_id = packet.connectionID;
+		_negotiatedPageBytes = packet.maximumPageBytes;
 	}
 
 	void ClientHandshake::_negotiate(Socket &socket)
 	{
-		if (!socket.sendAllUntil(*Handshake::encode(Handshake::Kind::Hello), _deadline.expiresAt(), _stop))
+		if (!socket.sendAllUntil(*Handshake::encode(Handshake::Kind::Hello, Connection::InvalidID, Connection::Error::None, _requestedPageBytes), _deadline.expiresAt(), _stop))
 		{
 			throw Exception("Unable to send handshake request before deadline.");
 		}
@@ -87,7 +95,7 @@ namespace spk::NetworkInternal
 			Socket socket = Socket::connectTCP(address, port, _deadline.expiresAt(), _stop);
 			_error = Connection::Error::TransportFailure;
 			_negotiate(socket);
-			return {std::move(socket), _id, Connection::Error::None};
+			return {std::move(socket), _id, Connection::Error::None, _negotiatedPageBytes};
 		} catch (...)
 		{
 			if (_deadline.expired())

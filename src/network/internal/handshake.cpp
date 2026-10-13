@@ -6,8 +6,12 @@
 
 namespace spk::NetworkInternal
 {
-	std::shared_ptr<std::vector<std::byte>> Handshake::encode(Kind kind, Connection::ID id, Connection::Error error)
+	std::shared_ptr<std::vector<std::byte>> Handshake::encode(Kind kind, Connection::ID id, Connection::Error error, std::uint32_t maximumPageBytes)
 	{
+		if (maximumPageBytes == 0 || maximumPageBytes > MaximumSupportedPageBytes)
+		{
+			throw Exception("Invalid negotiated maximum page size.");
+		}
 		if ((kind == Kind::Hello && (id != Connection::InvalidID || error != Connection::Error::None)) ||
 			(kind == Kind::Accepted && (id == Connection::InvalidID || error != Connection::Error::None)) ||
 			(kind == Kind::Rejected && error == Connection::Error::None))
@@ -34,6 +38,7 @@ namespace spk::NetworkInternal
 		data[37] = std::byte{1};
 		data[38] = std::byte{0};
 		data[39] = static_cast<std::byte>(error);
+		write32(data + 40, maximumPageBytes);
 		return frame;
 	}
 
@@ -53,6 +58,7 @@ namespace spk::NetworkInternal
 		}
 		const auto error = static_cast<Connection::Error>(std::to_integer<std::uint8_t>(bytes[39]));
 		Packet packet{kind, header.connectionID, error};
+		packet.maximumPageBytes = read32(bytes.data() + 40);
 		if (bytes[32] != std::byte{'S'} || bytes[33] != std::byte{'P'} ||
 			bytes[34] != std::byte{'K'} || bytes[35] != std::byte{'H'})
 		{
@@ -61,6 +67,11 @@ namespace spk::NetworkInternal
 		else if (bytes[36] != std::byte{0} || bytes[37] != std::byte{1} || bytes[38] != std::byte{0})
 		{
 			packet.validationError = Connection::Error::VersionMismatch;
+		}
+		if (packet.validationError == Connection::Error::None &&
+			(packet.maximumPageBytes == 0 || packet.maximumPageBytes > MaximumSupportedPageBytes))
+		{
+			packet.validationError = Connection::Error::Rejected;
 		}
 		return packet;
 	}
