@@ -44,6 +44,8 @@ namespace spk
 		NetworkInternal::TransferReception _reception;
 		std::deque<std::shared_ptr<std::vector<std::byte>>> _responses;
 		std::atomic<Connection::ID> _remoteID = Connection::InvalidID;
+		std::atomic_size_t _maxMessageBytes = 128u * 1024u * 1024u;
+		std::atomic_size_t _maxIncomingBytes = 512u * 1024u * 1024u;
 
 		void _run()
 		{
@@ -382,6 +384,23 @@ namespace spk
 			_transfers.setAcknowledgmentTimeout(timeout);
 		}
 
+		void setMaxMessageBytes(std::size_t bytes)
+		{
+			if (bytes == 0)
+			{
+				throw Exception("Maximum network message size must be positive.");
+			}
+			const std::scoped_lock lock(_receiveMutex, _sendMutex);
+			_reception.setLimits(bytes, _maxIncomingBytes.load());
+			_transfers.setMaxMessageBytes(bytes);
+			_maxMessageBytes.store(bytes);
+		}
+		void setMaxIncomingBytes(std::size_t bytes)
+		{
+			const std::scoped_lock lock(_receiveMutex);
+			_reception.setLimits(_maxMessageBytes.load(), bytes);
+			_maxIncomingBytes.store(bytes);
+		}
 		void setPageFailureLimits(PageFailureLimits limits)
 		{
 			const std::scoped_lock lock(_receiveMutex);
@@ -453,6 +472,14 @@ namespace spk
 		_impl->setAcknowledgmentTimeout(timeout);
 	}
 
+	void Client::setMaxMessageBytes(std::size_t bytes)
+	{
+		_impl->setMaxMessageBytes(bytes);
+	}
+	void Client::setMaxIncomingBytes(std::size_t bytes)
+	{
+		_impl->setMaxIncomingBytes(bytes);
+	}
 	void Client::setPageFailureLimits(PageFailureLimits limits)
 	{
 		_impl->setPageFailureLimits(limits);

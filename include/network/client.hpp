@@ -9,6 +9,7 @@
 #include "network/transfer.hpp"
 
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <mutex>
@@ -57,6 +58,8 @@ namespace spk
 		void setHandshakeTimeout(std::chrono::milliseconds timeout);
 		void setIncomingTransferTimeout(std::chrono::milliseconds timeout);
 		void setAcknowledgmentTimeout(std::chrono::milliseconds timeout);
+		void setMaxMessageBytes(std::size_t bytes);
+		void setMaxIncomingBytes(std::size_t bytes);
 		void disconnect();
 		void setPageFailureLimits(PageFailureLimits limits);
 		Transfer send(const Message &message, Message::Priority priority = Message::Priority::Normal);
