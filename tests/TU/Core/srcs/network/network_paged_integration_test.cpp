@@ -584,23 +584,27 @@ TEST(NetworkPagedIntegration, SparseReplayHistoryExhaustionDisconnectsOnlyOffend
 		for (std::uint64_t index = first; index <= last; ++index)
 		{
 			ASSERT_TRUE(peer.receiveAllUntil(answer, std::chrono::steady_clock::now() + 5s, {}));
-			EXPECT_EQ(TransferResponse::decode(answer).transferID, index * 2);
+			const auto response = TransferResponse::decode(answer);
+			EXPECT_EQ(response.transferID, index * 2);
+			EXPECT_EQ(response.status, spk::Transfer::Status::Success);
 		}
 	}
 	write64(frame->data() + FrameHeaderSize, (Count + 1) * 2);
 	peer.sendAll(*frame);
-	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+	const auto disconnected = [&] {
 		return victim.status() == spk::Connection::Status::Disconnected;
-	}, 5s));
+	};
+	EXPECT_TRUE(NetworkTestUtils::waitUntil(disconnected, 5s));
 	EXPECT_TRUE(server.isRunning());
 	EXPECT_TRUE(healthy.isConnected());
 	auto transfer = healthy.send(makeMessage(999, 1));
 	const auto received = NetworkTestUtils::collect(server.messages(), Count + 1, 10s);
 	ASSERT_EQ(received.size(), Count + 1);
 	EXPECT_EQ(received.back().message.type(), 999u);
-	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+	const auto completed = [&] {
 		return transfer.isComplete();
-	}, 5s));
+	};
+	EXPECT_TRUE(NetworkTestUtils::waitUntil(completed, 5s));
 	EXPECT_EQ(transfer.status(), spk::Transfer::Status::Success);
 	peer.close();
 	healthy.disconnect();
