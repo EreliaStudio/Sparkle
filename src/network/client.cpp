@@ -38,6 +38,7 @@ namespace spk
 		std::jthread _reader;
 		std::jthread _sender;
 		std::jthread _expirationWorker;
+		std::mutex _lifecycleMutex;
 		std::mutex _receiveMutex;
 		std::mutex _expirationMutex;
 		std::condition_variable _expirationWake;
@@ -367,7 +368,6 @@ namespace spk
 			_expirationWorker = std::jthread([this] {
 				_expirationLoop();
 			});
-			_owner._setStatus(_session, Connection::Status::Connected);
 		}
 
 		void _connectWorker(std::string address, std::uint16_t port, std::chrono::steady_clock::time_point deadline, std::stop_token stop)
@@ -379,17 +379,24 @@ namespace spk
 				_remoteDisconnect(result.error);
 				return;
 			}
-			if (!_active || stop.stop_requested())
-			{
-				return;
-			}
 			try
 			{
-				_negotiatedPageBytes.store(result.maximumPageBytes);
-				_socket = std::move(result.socket);
-				_acceptRemoteID(result.id);
-				_owner._acceptConnection(_session, result.id);
-				_startWorkers();
+				{
+					const std::scoped_lock lock(_lifecycleMutex);
+					if (!_active || stop.stop_requested())
+					{
+						return;
+					}
+					_negotiatedPageBytes.store(result.maximumPageBytes);
+					_socket = std::move(result.socket);
+					_acceptRemoteID(result.id);
+					_owner._acceptConnection(_session, result.id);
+					_startWorkers();
+				}
+				if (_active)
+				{
+					_owner._setStatus(_session, Connection::Status::Connected);
+				}
 			} catch (...)
 			{
 				_remoteDisconnect();
@@ -427,11 +434,15 @@ namespace spk
 
 		void disconnect()
 		{
-			const bool notify = _active.exchange(false);
-			_connected = false;
+			bool notify = false;
+			{
+				const std::scoped_lock lock(_lifecycleMutex);
+				notify = _active.exchange(false);
+				_connected = false;
+				_socket.close();
+			}
 			_expirationWake.notify_all();
 			_owner._retireIncoming(_session);
-			_socket.close();
 			_sendAvailable.notify_all();
 			_joinWorkers();
 			_socket.close();
