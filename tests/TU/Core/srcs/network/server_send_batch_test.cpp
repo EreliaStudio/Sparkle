@@ -2,6 +2,10 @@
 
 #include <gtest/gtest.h>
 
+#include <chrono>
+#include <future>
+#include <memory>
+
 #include <utility>
 #include <vector>
 
@@ -24,4 +28,19 @@ TEST(ServerSendBatch, AtomicRejectionPreservesCausesAndIdentifiesCancelledRecipi
 	EXPECT_EQ(second.reason(), Reason::QueueOverflow);
 	EXPECT_EQ(third.status(), spk::Transfer::Status::Rejected);
 	EXPECT_EQ(third.reason(), Reason::InvalidRecipient);
+}
+
+TEST(ServerSendBatch, ExplicitShutdownCancellationUnblocksAWaiterWhileCallerOwnsBatch)
+{
+	using Batch = spk::NetworkInternal::ServerSendBatch;
+	const auto message = spk::Message::Writer(10).build();
+	auto batch = std::make_shared<Batch>(
+		message, spk::Message::Priority::Normal, spk::Connection::OverflowPolicy::Reject);
+	auto admission = batch->admission.get_future();
+	auto retained = batch;
+	batch->cancelAdmission();
+	EXPECT_EQ(admission.wait_for(std::chrono::milliseconds(0)), std::future_status::ready);
+	EXPECT_THROW(admission.get(), spk::Exception);
+	EXPECT_EQ(batch, retained);
+	batch->cancelAdmission();
 }
