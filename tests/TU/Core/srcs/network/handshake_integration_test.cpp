@@ -140,3 +140,37 @@ TEST(HandshakeIntegration, ServerUsesTimeoutConfiguredBeforeStart)
 	socket.close();
 	server.stop();
 }
+
+TEST(HandshakeIntegration, ExplicitSkipRecipientBroadcastDoesNotQueuePendingConnection)
+{
+	spk::Server server;
+	spk::Client ready;
+	std::atomic_bool pending = false;
+	auto contract = server.subscribeToConnectionStatusChange(
+		[&](spk::Connection, spk::Connection::Status status, spk::Connection::Error) {
+			if (status == spk::Connection::Status::Pending)
+			{
+				pending = true;
+			}
+		});
+	server.start(0);
+	ready.connect("127.0.0.1", server.port());
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(ready));
+	pending = false;
+	auto socket = spk::NetworkInternal::Socket::connectTCP("127.0.0.1", server.port());
+	const auto pendingObserved = [&] {
+		return pending.load();
+	};
+	ASSERT_TRUE(NetworkTestUtils::waitUntil(pendingObserved, 3s));
+	const auto results = server.sendToAll(
+		spk::Message::Writer(4).build(),
+		spk::Message::Priority::Normal,
+		spk::Connection::OverflowPolicy::SkipRecipient);
+	EXPECT_EQ(results.size(), 1u);
+	const auto received = NetworkTestUtils::collect(ready.messages(), 1, 3s);
+	ASSERT_EQ(received.size(), 1u);
+	EXPECT_EQ(received.front().type(), 4u);
+	socket.close();
+	ready.disconnect();
+	server.stop();
+}
