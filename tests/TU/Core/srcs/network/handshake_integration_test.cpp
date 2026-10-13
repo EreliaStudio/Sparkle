@@ -272,9 +272,10 @@ TEST(HandshakeIntegration, SkipRecipientBroadcastWithOnlyPendingClientsReturnsEm
 		});
 	server.start(0);
 	auto socket = spk::NetworkInternal::Socket::connectTCP("127.0.0.1", server.port());
-	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
+	const auto pendingObserved = [&] {
 		return pending.load();
-	}, 3s));
+	};
+	ASSERT_TRUE(NetworkTestUtils::waitUntil(pendingObserved, 3s));
 	EXPECT_THROW(server.sendToAll(spk::Message::Writer(5).build()), spk::Exception);
 	const auto results = server.sendToAll(
 		spk::Message::Writer(5).build(),
@@ -284,4 +285,3 @@ TEST(HandshakeIntegration, SkipRecipientBroadcastWithOnlyPendingClientsReturnsEm
 	socket.close();
 	server.stop();
 }
-
