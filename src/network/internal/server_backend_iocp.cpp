@@ -492,7 +492,7 @@ namespace spk::NetworkInternal
 				{
 					throw Exception("Cannot send to a pending network connection.");
 				}
-			auto tracked = session->transfers.enqueue(message.withConnectionID(session->id), priority, recipient.transfer);
+				auto tracked = session->transfers.enqueue(message.withConnectionID(session->id), priority, recipient.transfer);
 				try
 				{
 					const std::size_t bytes = recipient.reservation.bytes();
@@ -927,14 +927,14 @@ namespace spk::NetworkInternal
 					if (_sessions.contains(id))
 					{
 						session->transfers.expire();
-					for (auto reservation = session->outgoingReservations.begin(); reservation != session->outgoingReservations.end();)
-					{
-						const auto id = reservation->first;
-						++reservation;
-						if (!session->transfers.isTracked(id))
+						for (auto reservation = session->outgoingReservations.begin(); reservation != session->outgoingReservations.end();)
 						{
-							_releaseReservation(*session, id);
-						}
+							const auto id = reservation->first;
+							++reservation;
+							if (!session->transfers.isTracked(id))
+							{
+								_releaseReservation(*session, id);
+							}
 					}
 					}
 				}

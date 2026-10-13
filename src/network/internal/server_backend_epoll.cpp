@@ -541,7 +541,7 @@ namespace spk::NetworkInternal
 				{
 					throw Exception("Cannot send to a pending network connection.");
 				}
-			auto tracked = session->transfers.enqueue(message.withConnectionID(session->id), priority, recipient.transfer);
+				auto tracked = session->transfers.enqueue(message.withConnectionID(session->id), priority, recipient.transfer);
 				try
 				{
 					const std::size_t bytes = recipient.reservation.bytes();
