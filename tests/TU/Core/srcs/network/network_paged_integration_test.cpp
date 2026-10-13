@@ -11,11 +11,14 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <future>
 #include <stop_token>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -333,4 +336,37 @@ TEST(NetworkPagedIntegration, CompletedTransferReplayIsNotDispatchedTwice)
 	EXPECT_EQ(later.front().message.type(), 941u);
 	socket.close();
 	server.stop();
+}
+
+TEST(NetworkPagedIntegration, LateAcknowledgmentCannotChangeTimedOutTransfer)
+{
+	using namespace spk::NetworkInternal;
+	auto listener = Socket::listenTCP(0);
+	spk::Client client;
+	client.setAcknowledgmentTimeout(100ms);
+	const auto connection = client.connect("127.0.0.1", listener.localPort());
+	auto peer = listener.accept();
+	std::array<std::byte, FrameHeaderSize + Handshake::PayloadSize> hello{};
+	ASSERT_TRUE(peer.receiveAllUntil(hello, std::chrono::steady_clock::now() + 3s, {}));
+	peer.sendAll(*Handshake::encode(Handshake::Kind::Accepted, 987));
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(connection));
+
+	auto transfer = client.send(makeMessage(962, 8));
+	std::atomic_size_t callbacks = 0;
+	auto contract = transfer.subscribeToCompletion([&](spk::Transfer::Status, spk::Transfer::Reason) {
+		++callbacks;
+	});
+	ASSERT_TRUE(NetworkTestUtils::waitUntil(std::bind_front(&spk::Transfer::isComplete, transfer), 4s));
+	EXPECT_EQ(transfer.status(), spk::Transfer::Status::Indeterminate);
+	EXPECT_EQ(transfer.reason(), spk::Transfer::Reason::AcknowledgmentTimeout);
+	EXPECT_EQ(callbacks.load(), 1u);
+
+	const TransferResponse late{987, transfer.id(), spk::Transfer::Status::Success, spk::Transfer::Reason::None};
+	peer.sendAll(*late.encode());
+	std::this_thread::sleep_for(100ms);
+	EXPECT_EQ(transfer.status(), spk::Transfer::Status::Indeterminate);
+	EXPECT_EQ(callbacks.load(), 1u);
+	EXPECT_TRUE(client.isConnected());
+	client.disconnect();
+	peer.close();
 }
