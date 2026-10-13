@@ -401,3 +401,28 @@ TEST(PageReassembler, SharedBudgetIsAtomicAcrossConcurrentSessions)
 	}
 	EXPECT_EQ(budget->used(), 0u);
 }
+
+TEST(PageReassembler, ClearIsIdempotentAndAllowsNewTransfersWithSharedBudget)
+{
+	using namespace spk::NetworkInternal;
+	auto budget = std::make_shared<ReassemblyBudget>(4096);
+	PageReassembler assembler(1024, 4096, std::chrono::seconds(1), budget);
+	PageScheduler scheduler;
+	(void)scheduler.enqueue(message(128, 81));
+	const auto first = scheduler.nextPage(16);
+	ASSERT_TRUE(first.has_value());
+	EXPECT_FALSE(assembler.accept(fragment(*first)).has_value());
+	EXPECT_GT(budget->used(), 128u);
+	assembler.clear();
+	EXPECT_EQ(budget->used(), 0u);
+	EXPECT_EQ(assembler.pendingTransfers(), 0u);
+	assembler.clear();
+	EXPECT_EQ(budget->used(), 0u);
+	(void)scheduler.enqueue(message(64, 82));
+	const auto second = scheduler.nextPage(16);
+	ASSERT_TRUE(second.has_value());
+	EXPECT_FALSE(assembler.accept(fragment(*second)).has_value());
+	EXPECT_GT(budget->used(), 64u);
+	assembler.clear();
+	EXPECT_EQ(budget->used(), 0u);
+}

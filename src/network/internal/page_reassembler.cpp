@@ -267,6 +267,7 @@ namespace spk::NetworkInternal
 	void PageReassembler::clear() noexcept
 	{
 		_release(_chargedBytes);
+		_chargedBytes = 0;
 		_transfers.clear();
 		_retiredTransfers.clear();
 		_reservedBytes = 0;
