@@ -9,8 +9,8 @@
 #include <cstdint>
 #include <future>
 #include <thread>
-#include <vector>
 #include <utility>
+#include <vector>
 
 using namespace std::chrono_literals;
 

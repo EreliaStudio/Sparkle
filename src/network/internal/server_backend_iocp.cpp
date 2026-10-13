@@ -935,7 +935,7 @@ namespace spk::NetworkInternal
 							{
 								_releaseReservation(*session, id);
 							}
-					}
+						}
 					}
 				}
 			}

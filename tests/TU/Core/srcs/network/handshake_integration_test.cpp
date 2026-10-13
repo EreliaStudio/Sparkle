@@ -346,9 +346,10 @@ TEST(HandshakeIntegration, ServerCanSynchronouslySendFromConnectedCallback)
 	server.start(0);
 	client.connect("127.0.0.1", server.port());
 	ASSERT_TRUE(NetworkTestUtils::waitConnected(client));
-	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+	const auto callbackSent = [&] {
 		return sent.load();
-	}, 3s));
+	};
+	EXPECT_TRUE(NetworkTestUtils::waitUntil(callbackSent, 3s));
 	const auto received = NetworkTestUtils::collect(client.messages(), 1, 3s);
 	ASSERT_EQ(received.size(), 1u);
 	EXPECT_EQ(received.front().type(), 995u);
