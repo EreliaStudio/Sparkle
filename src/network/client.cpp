@@ -244,14 +244,17 @@ namespace spk
 
 		void _remoteDisconnect(Connection::Error error = Connection::Error::TransportFailure) noexcept
 		{
-			if (!_active.exchange(false))
 			{
-				return;
+				const std::scoped_lock lock(_lifecycleMutex, _sendMutex);
+				if (!_active.exchange(false))
+				{
+					return;
+				}
+				_connected = false;
+				_socket.close();
 			}
-			_connected = false;
 			_expirationWake.notify_all();
 			_owner._retireIncoming(_session);
-			_socket.close();
 			_sendAvailable.notify_all();
 			_transfers.clear();
 			{
@@ -436,7 +439,7 @@ namespace spk
 		{
 			bool notify = false;
 			{
-				const std::scoped_lock lock(_lifecycleMutex);
+				const std::scoped_lock lock(_lifecycleMutex, _sendMutex);
 				notify = _active.exchange(false);
 				_connected = false;
 				_socket.close();
