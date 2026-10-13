@@ -199,3 +199,23 @@ TEST(PageScheduler, EmptyMessageConsumesMinimumQueueCapacity)
 	spk::NetworkInternal::PageScheduler blocked(0);
 	EXPECT_THROW((void)blocked.enqueue(message(0)), spk::Exception);
 }
+
+TEST(PageScheduler, SustainedHighPriorityArrivalsCannotStarveAnExistingLowPriorityTransfer)
+{
+	spk::NetworkInternal::PageScheduler scheduler;
+	const auto low = scheduler.enqueue(message(64), spk::Message::Priority::Low);
+	std::size_t lowPages = 0;
+	std::size_t highPages = 0;
+	for (std::size_t tick = 0; tick < 700; ++tick)
+	{
+		const auto high = scheduler.enqueue(message(1), spk::Message::Priority::High);
+		const auto page = scheduler.nextPage(1);
+		ASSERT_TRUE(page.has_value());
+		lowPages += page->transferID == low ? 1u : 0u;
+		highPages += page->transferID != low ? 1u : 0u;
+		EXPECT_LE(lowPages, 64u);
+		(void)high;
+	}
+	EXPECT_EQ(lowPages, 64u);
+	EXPECT_GT(highPages, 0u);
+}
