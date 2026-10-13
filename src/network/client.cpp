@@ -297,11 +297,6 @@ namespace spk
 		{
 		}
 
-		~Impl()
-		{
-			disconnect();
-		}
-
 		[[nodiscard]] bool isConnected() const noexcept
 		{
 			return _connected.load() && _session.isConnected();
