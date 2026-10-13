@@ -264,6 +264,7 @@ namespace spk::NetworkInternal
 				auto session = std::make_shared<Session>(id, std::move(operation->acceptedSocket), _failureLimits, _handshakeTimeout, _incomingBudget);
 				session->reception.setInactivityTimeout(_incomingTransferTimeout);
 				session->reception.setLimits(_maxMessageBytes.load(), _maxIncomingBytes.load());
+				session->transfers.setMaxMessageBytes(_maxMessageBytes.load());
 				session->transfers.setAcknowledgmentTimeout(_acknowledgmentTimeout);
 				_associate(session->socket);
 				_sessions.emplace(id, session);
@@ -651,6 +652,7 @@ namespace spk::NetworkInternal
 					{
 						(void)id;
 						session->reception.setLimits(command.maxMessageBytes, command.maxIncomingBytes);
+						session->transfers.setMaxMessageBytes(command.maxMessageBytes);
 					}
 					return;
 				}
