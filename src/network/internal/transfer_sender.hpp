@@ -22,6 +22,7 @@ namespace spk::NetworkInternal
 		[[nodiscard]] bool acknowledge(const TransferResponse &response);
 		void expire(AcknowledgmentDeadlines::Clock::time_point now = AcknowledgmentDeadlines::Clock::now());
 		void setAcknowledgmentTimeout(std::chrono::milliseconds timeout);
+		[[nodiscard]] bool isTracked(spk::Transfer::ID id) const noexcept;
 		[[nodiscard]] std::size_t pendingTransfers() const noexcept;
 		[[nodiscard]] std::size_t pendingBytes() const noexcept;
 		void clear() noexcept;

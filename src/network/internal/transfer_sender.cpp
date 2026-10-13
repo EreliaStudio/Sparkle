@@ -63,6 +63,11 @@ namespace spk::NetworkInternal
 		_deadlines.setTimeout(timeout);
 	}
 
+	bool TransferSender::isTracked(spk::Transfer::ID id) const noexcept
+	{
+		return _pages.isTracked(id);
+	}
+
 	std::size_t TransferSender::pendingTransfers() const noexcept
 	{
 		return _pages.pendingTransfers();
