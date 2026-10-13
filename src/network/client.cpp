@@ -2,12 +2,15 @@
 
 #include "exception.hpp"
 #include "network/internal/client_handshake.hpp"
+#include "network/internal/command_budget.hpp"
 #include "network/internal/frame.hpp"
 #include "network/internal/handshake.hpp"
+#include "network/internal/outgoing_reservation.hpp"
 #include "network/internal/page.hpp"
 #include "network/internal/socket.hpp"
 #include "network/internal/transfer_reception.hpp"
 #include "network/internal/transfer_sender.hpp"
+#include "network/internal/transmission_frame.hpp"
 
 #include <algorithm>
 #include <array>
@@ -19,6 +22,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -42,7 +46,9 @@ namespace spk
 		std::condition_variable _sendAvailable;
 		NetworkInternal::TransferSender _transfers;
 		NetworkInternal::TransferReception _reception;
-		std::deque<std::shared_ptr<std::vector<std::byte>>> _responses;
+		std::deque<NetworkInternal::TransmissionFrame> _responses;
+		NetworkInternal::CommandBudget _outgoingBudget{64u * 1024u * 1024u};
+		std::unordered_map<spk::Transfer::ID, NetworkInternal::OutgoingReservation> _outgoingReservations;
 		std::atomic<Connection::ID> _remoteID = Connection::InvalidID;
 		std::atomic_size_t _maxMessageBytes = 128u * 1024u * 1024u;
 		std::atomic_size_t _maxIncomingBytes = 512u * 1024u * 1024u;
@@ -93,6 +99,10 @@ namespace spk
 				const auto response = NetworkInternal::TransferResponse::decode(frame);
 				_acceptRemoteID(response.connectionID);
 				(void)_transfers.acknowledge(response);
+				{
+					const std::scoped_lock lock(_sendMutex);
+					_outgoingReservations.erase(response.transferID);
+				}
 				return;
 			}
 			if (kind != 0)
@@ -128,13 +138,14 @@ namespace spk
 		void _queueResponse(const NetworkInternal::TransferResponse &response)
 		{
 			auto frame = response.encode();
+			auto reservation = _outgoingBudget.reserve(frame->size(), NetworkInternal::CommandBudget::Stage::Frame);
 			{
 				const std::scoped_lock lock(_sendMutex);
 				if (!_connected)
 				{
 					return;
 				}
-				_responses.push_back(std::move(frame));
+				_responses.push_back(NetworkInternal::TransmissionFrame{std::move(frame), 0, 0, std::move(reservation)});
 			}
 			_sendAvailable.notify_one();
 		}
@@ -169,6 +180,7 @@ namespace spk
 				while (_connected)
 				{
 					std::shared_ptr<std::vector<std::byte>> frame;
+					std::shared_ptr<NetworkInternal::CommandBudget::Lease> reservation;
 					std::uint64_t finalPage = 0;
 					{
 						std::unique_lock lock(_sendMutex);
@@ -181,28 +193,45 @@ namespace spk
 						}
 						if (!_responses.empty())
 						{
-							frame = std::move(_responses.front());
+							frame = std::move(_responses.front().bytes);
+							reservation = std::move(_responses.front().reservation);
 							_responses.pop_front();
 						}
-					}
-					if (frame == nullptr)
-					{
-						const auto page = _transfers.nextPage(std::min(_maxPageBytes.load(), _negotiatedPageBytes.load()));
-						if (page.has_value())
+						else
 						{
-							frame = NetworkInternal::encodePage(*page);
-							if (page->offset + page->length == page->totalSize)
+							const auto page = _transfers.nextPage(std::min(_maxPageBytes.load(), _negotiatedPageBytes.load()));
+							if (page.has_value())
 							{
-								finalPage = page->transferID;
+								const auto it = _outgoingReservations.find(page->transferID);
+								if (it == _outgoingReservations.end())
+								{
+									throw Exception("Missing client outgoing page reservation.");
+								}
+								frame = NetworkInternal::encodePage(*page);
+								reservation = it->second.frame;
+								if (page->offset + page->length == page->totalSize)
+								{
+									finalPage = page->transferID;
+								}
 							}
 						}
 					}
 					if (frame != nullptr)
 					{
+						if (reservation != nullptr)
+						{
+							reservation->transition(NetworkInternal::CommandBudget::Stage::InFlight);
+						}
 						_socket.sendAll(*frame);
+						if (reservation != nullptr)
+						{
+							reservation->transition(NetworkInternal::CommandBudget::Stage::Frame);
+						}
 						if (finalPage != 0)
 						{
 							_transfers.finalPageWritten(finalPage);
+							const std::scoped_lock lock(_sendMutex);
+							_outgoingReservations.erase(finalPage);
 						}
 					}
 				}
@@ -230,6 +259,7 @@ namespace spk
 			{
 				const std::scoped_lock lock(_sendMutex);
 				_responses.clear();
+				_outgoingReservations.clear();
 			}
 			try
 			{
@@ -299,6 +329,20 @@ namespace spk
 						_queueResponse(response);
 					}
 					_transfers.expire();
+					{
+						const std::scoped_lock lock(_sendMutex);
+						for (auto it = _outgoingReservations.begin(); it != _outgoingReservations.end();)
+						{
+							if (!_transfers.isTracked(it->first))
+							{
+								it = _outgoingReservations.erase(it);
+							}
+							else
+							{
+								++it;
+							}
+						}
+					}
 				}
 			});
 			_owner._setStatus(_session, Connection::Status::Connected);
@@ -372,6 +416,7 @@ namespace spk
 			{
 				const std::scoped_lock lock(_sendMutex);
 				_responses.clear();
+				_outgoingReservations.clear();
 			}
 			{
 				const std::scoped_lock lock(_receiveMutex);
@@ -429,13 +474,29 @@ namespace spk
 
 		Transfer send(const Message &message, Message::Priority priority)
 		{
-			const std::scoped_lock lock(_sendMutex);
+			std::unique_lock lock(_sendMutex);
 			if (!_connected || _session.status() != Connection::Status::Connected)
 			{
 				throw Exception("Cannot send through a pending or disconnected network client.");
 			}
-			_transfers.setMaxPendingBytes(_session.maxQueuedBytes());
-			Transfer transfer = _transfers.enqueue(message, priority);
+			const auto maximum = _session.maxQueuedBytes();
+			_outgoingBudget.setMaximum(maximum);
+			_transfers.setMaxPendingBytes(maximum);
+			auto reservation = NetworkInternal::OutgoingReservation::reserve(_outgoingBudget, message.size(), _negotiatedPageBytes.load());
+			Transfer transfer;
+			try
+			{
+				transfer = _transfers.enqueue(message, priority);
+				_outgoingReservations.emplace(transfer.id(), std::move(reservation));
+			} catch (...)
+			{
+				lock.unlock();
+				if (transfer.id() != Transfer::InvalidID)
+				{
+					(void)_transfers.fail(transfer.id(), Transfer::Status::Rejected, Transfer::Reason::QueueOverflow);
+				}
+				throw;
+			}
 			_sendAvailable.notify_one();
 			return transfer;
 		}
