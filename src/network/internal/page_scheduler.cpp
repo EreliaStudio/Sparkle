@@ -32,7 +32,8 @@ namespace spk::NetworkInternal
 	std::uint64_t PageScheduler::_enqueue(Message message, Message::Priority priority)
 	{
 		OutgoingMessageValidator::validate(message, priority);
-		if (_pendingBytes > _maxPendingBytes || message.size() > _maxPendingBytes - _pendingBytes)
+		const std::size_t bytes = std::max<std::size_t>(1, message.size());
+		if (_pendingBytes > _maxPendingBytes || bytes > _maxPendingBytes - _pendingBytes)
 		{
 			throw Exception("Outgoing pending transfer storage is saturated.");
 		}
@@ -41,7 +42,6 @@ namespace spk::NetworkInternal
 			throw Exception("Network transfer ID space is exhausted.");
 		}
 		const std::uint64_t id = _nextTransferID;
-		const std::size_t bytes = message.size();
 		_transfers[static_cast<std::size_t>(priority)].push_back(Transfer{std::move(message), id});
 		++_nextTransferID;
 		_pendingBytes += bytes;
@@ -80,7 +80,7 @@ namespace spk::NetworkInternal
 				{
 					continue;
 				}
-				_pendingBytes -= it->message.size();
+				_pendingBytes -= std::max<std::size_t>(1, it->message.size());
 				queue.erase(it);
 				return;
 			}
@@ -129,7 +129,7 @@ namespace spk::NetworkInternal
 		transfer.offset += length;
 		if (transfer.offset == transfer.message.size())
 		{
-			_pendingBytes -= transfer.message.size();
+			_pendingBytes -= std::max<std::size_t>(1, transfer.message.size());
 		}
 		else
 		{

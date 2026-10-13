@@ -184,3 +184,18 @@ TEST(PageScheduler, ClearLeavesRetainedTransfersIndeterminate)
 	scheduler.clear();
 	EXPECT_EQ(notified, 1);
 }
+
+TEST(PageScheduler, EmptyMessageConsumesMinimumQueueCapacity)
+{
+	spk::NetworkInternal::PageScheduler scheduler(1);
+	const auto first = scheduler.enqueue(message(0));
+	EXPECT_EQ(scheduler.pendingBytes(), 1u);
+	EXPECT_THROW((void)scheduler.enqueue(message(0)), spk::Exception);
+	const auto page = scheduler.nextPage(32);
+	ASSERT_TRUE(page.has_value());
+	EXPECT_EQ(page->transferID, first);
+	EXPECT_EQ(scheduler.pendingBytes(), 0u);
+	EXPECT_NO_THROW((void)scheduler.enqueue(message(0)));
+	spk::NetworkInternal::PageScheduler blocked(0);
+	EXPECT_THROW((void)blocked.enqueue(message(0)), spk::Exception);
+}
