@@ -38,7 +38,7 @@ namespace spk
 		std::jthread _reader;
 		std::jthread _sender;
 		std::jthread _expirationWorker;
-		std::mutex _lifecycleMutex;
+		mutable std::mutex _lifecycleMutex;
 		std::mutex _receiveMutex;
 		std::mutex _expirationMutex;
 		std::condition_variable _expirationWake;
@@ -303,6 +303,7 @@ namespace spk
 
 		[[nodiscard]] bool isConnected() const noexcept
 		{
+			const std::scoped_lock lock(_lifecycleMutex);
 			return _connected.load() && _session.isConnected();
 		}
 
@@ -450,6 +451,7 @@ namespace spk
 			{
 				throw Exception("Handshake timeout must be positive.");
 			}
+			const std::scoped_lock lock(_lifecycleMutex);
 			_handshakeTimeout = timeout;
 		}
 
