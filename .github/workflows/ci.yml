@@ -114,12 +114,18 @@ jobs:
       - uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
+      - name: Locate Clang sanitizer runtime
+        run: |
+          $resource = (clang-cl -print-resource-dir).Trim()
+          $runtime = Join-Path $resource 'lib/windows'
+          "LIB=$env:LIB;$runtime" >> $env:GITHUB_ENV
       - name: Configure Windows Core with AddressSanitizer
         run: >-
           cmake -S . -B build/network-asan -G Ninja
           -DCMAKE_CXX_COMPILER=clang-cl
           -DCMAKE_BUILD_TYPE=Release
           -DCMAKE_CXX_FLAGS=/fsanitize=address
+          '-DCMAKE_EXE_LINKER_FLAGS=/wholearchive:clang_rt.asan-x86_64.lib /wholearchive:clang_rt.asan_cxx-x86_64.lib'
           '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded'
           -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
           -DVCPKG_TARGET_TRIPLET=x64-windows-static
