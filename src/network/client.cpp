@@ -357,8 +357,20 @@ namespace spk
 			}
 		}
 
+		void setIncomingTransferTimeout(std::chrono::milliseconds timeout)
+		{
+			const std::scoped_lock lock(_receiveMutex);
+			_reception.setInactivityTimeout(timeout);
+		}
+
+		void setAcknowledgmentTimeout(std::chrono::milliseconds timeout)
+		{
+			_transfers.setAcknowledgmentTimeout(timeout);
+		}
+
 		void setPageFailureLimits(PageFailureLimits limits)
 		{
+			const std::scoped_lock lock(_receiveMutex);
 			_reception.configureFailureLimits(limits);
 		}
 
@@ -415,6 +427,16 @@ namespace spk
 	void Client::disconnect()
 	{
 		_impl->disconnect();
+	}
+
+	void Client::setIncomingTransferTimeout(std::chrono::milliseconds timeout)
+	{
+		_impl->setIncomingTransferTimeout(timeout);
+	}
+
+	void Client::setAcknowledgmentTimeout(std::chrono::milliseconds timeout)
+	{
+		_impl->setAcknowledgmentTimeout(timeout);
 	}
 
 	void Client::setPageFailureLimits(PageFailureLimits limits)

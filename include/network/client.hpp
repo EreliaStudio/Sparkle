@@ -53,6 +53,8 @@ namespace spk
 		[[nodiscard]] bool isConnected() const noexcept;
 		Connection connect(std::string_view address, std::uint16_t port);
 		void setHandshakeTimeout(std::chrono::milliseconds timeout);
+		void setIncomingTransferTimeout(std::chrono::milliseconds timeout);
+		void setAcknowledgmentTimeout(std::chrono::milliseconds timeout);
 		void disconnect();
 		void setPageFailureLimits(PageFailureLimits limits);
 		Transfer send(const Message &message, Message::Priority priority = Message::Priority::Normal);

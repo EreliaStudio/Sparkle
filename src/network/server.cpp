@@ -67,6 +67,16 @@ namespace spk
 			_backend->setHandshakeTimeout(timeout);
 		}
 
+		void setIncomingTransferTimeout(std::chrono::milliseconds timeout)
+		{
+			_backend->setIncomingTransferTimeout(timeout);
+		}
+
+		void setAcknowledgmentTimeout(std::chrono::milliseconds timeout)
+		{
+			_backend->setAcknowledgmentTimeout(timeout);
+		}
+
 		void setGlobalMaxQueuedBytes(std::size_t bytes)
 		{
 			_backend->setGlobalMaxQueuedBytes(bytes);
@@ -132,6 +142,16 @@ namespace spk
 	void Server::setHandshakeTimeout(std::chrono::milliseconds timeout)
 	{
 		_impl->setHandshakeTimeout(timeout);
+	}
+
+	void Server::setIncomingTransferTimeout(std::chrono::milliseconds timeout)
+	{
+		_impl->setIncomingTransferTimeout(timeout);
+	}
+
+	void Server::setAcknowledgmentTimeout(std::chrono::milliseconds timeout)
+	{
+		_impl->setAcknowledgmentTimeout(timeout);
 	}
 
 	void Server::setGlobalMaxQueuedBytes(std::size_t bytes)

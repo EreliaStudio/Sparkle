@@ -56,6 +56,8 @@ namespace spk
 		void stop();
 		void setPageFailureLimits(PageFailureLimits limits);
 		void setHandshakeTimeout(std::chrono::milliseconds timeout);
+		void setIncomingTransferTimeout(std::chrono::milliseconds timeout);
+		void setAcknowledgmentTimeout(std::chrono::milliseconds timeout);
 		void setGlobalMaxQueuedBytes(std::size_t bytes);
 		Transfer sendTo(const Connection &connection, const Message &message, Message::Priority priority = Message::Priority::Normal);
 		TransferResults sendTo(const ConnectionSet &connections, const Message &message, Message::Priority priority = Message::Priority::Normal, Connection::OverflowPolicy policy = Connection::OverflowPolicy::Reject);
