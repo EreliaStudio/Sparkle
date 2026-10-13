@@ -284,3 +284,57 @@ TEST(ServerTransferIntegration, ConcurrentBroadcastAdmissionsReturnBothCommitted
 	second.disconnect();
 	server.stop();
 }
+
+TEST(ServerTransferIntegration, SharedGlobalBudgetRejectsWholeBroadcastBeforeCommit)
+{
+	spk::Server server;
+	spk::Client first;
+	spk::Client second;
+	server.start(0);
+	ASSERT_TRUE(identify(server, first).isConnected());
+	ASSERT_TRUE(identify(server, second).isConnected());
+	server.setGlobalMaxQueuedBytes(400);
+	EXPECT_THROW(server.sendToAll(makeMessage(190, 80)), spk::Exception);
+	EXPECT_TRUE(NetworkTestUtils::collect(first.messages(), 1, 100ms).empty());
+	EXPECT_TRUE(NetworkTestUtils::collect(second.messages(), 1, 100ms).empty());
+	server.setGlobalMaxQueuedBytes(4096);
+	const auto results = server.sendToAll(makeMessage(191, 80));
+	ASSERT_EQ(results.size(), 2u);
+	EXPECT_EQ(NetworkTestUtils::collect(first.messages(), 1, 5s).size(), 1u);
+	EXPECT_EQ(NetworkTestUtils::collect(second.messages(), 1, 5s).size(), 1u);
+	for (const auto &[id, transfer] : results)
+	{
+		(void)id;
+		EXPECT_TRUE(finished(transfer, spk::Transfer::Status::Success));
+	}
+	first.disconnect();
+	second.disconnect();
+	server.stop();
+}
+
+TEST(ServerTransferIntegration, ShutdownUnblocksConcurrentAdmissionCallers)
+{
+	spk::Server server;
+	spk::Client client;
+	server.start(0);
+	ASSERT_TRUE(identify(server, client).isConnected());
+	std::vector<std::future<void>> calls;
+	for (std::size_t index = 0; index < 12; ++index)
+	{
+		calls.push_back(std::async(std::launch::async, [&server] {
+			try
+			{
+				(void)server.sendToAll(makeMessage(192, 256));
+			} catch (const spk::Exception &)
+			{
+			}
+		}));
+	}
+	server.stop();
+	for (auto &call : calls)
+	{
+		ASSERT_EQ(call.wait_for(5s), std::future_status::ready);
+		EXPECT_NO_THROW(call.get());
+	}
+	client.disconnect();
+}
