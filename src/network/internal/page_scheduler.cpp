@@ -31,7 +31,7 @@ namespace spk::NetworkInternal
 
 	std::uint64_t PageScheduler::_enqueue(Message message, Message::Priority priority)
 	{
-		OutgoingMessageValidator::validate(message, priority);
+		OutgoingMessageValidator::validate(message, priority, _maxMessageBytes);
 		const std::size_t bytes = std::max<std::size_t>(1, message.size());
 		if (_pendingBytes > _maxPendingBytes || bytes > _maxPendingBytes - _pendingBytes)
 		{
@@ -171,6 +171,16 @@ namespace spk::NetworkInternal
 	{
 		const std::scoped_lock lock(_mutex);
 		_maxPendingBytes = bytes;
+	}
+
+	void PageScheduler::setMaxMessageBytes(std::size_t bytes)
+	{
+		if (bytes == 0)
+		{
+			throw Exception("Maximum network message size must be positive.");
+		}
+		const std::scoped_lock lock(_mutex);
+		_maxMessageBytes = bytes;
 	}
 
 	void PageScheduler::clear() noexcept

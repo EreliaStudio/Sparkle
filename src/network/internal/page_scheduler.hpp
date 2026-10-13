@@ -28,6 +28,7 @@ namespace spk::NetworkInternal
 		std::unordered_map<std::uint64_t, spk::Transfer> _tracked;
 		std::size_t _pendingBytes = 0;
 		std::size_t _maxPendingBytes;
+		std::size_t _maxMessageBytes = 128u * 1024u * 1024u;
 		std::uint64_t _nextTransferID = 1;
 		std::size_t _turn = 0;
 
@@ -47,6 +48,7 @@ namespace spk::NetworkInternal
 		[[nodiscard]] bool isTracked(std::uint64_t id) const noexcept;
 		[[nodiscard]] std::size_t maxPendingBytes() const noexcept;
 		void setMaxPendingBytes(std::size_t bytes) noexcept;
+		void setMaxMessageBytes(std::size_t bytes);
 		void clear() noexcept;
 	};
 }

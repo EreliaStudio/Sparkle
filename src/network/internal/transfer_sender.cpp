@@ -20,6 +20,11 @@ namespace spk::NetworkInternal
 		_pages.setMaxPendingBytes(bytes);
 	}
 
+	void TransferSender::setMaxMessageBytes(std::size_t bytes)
+	{
+		_pages.setMaxMessageBytes(bytes);
+	}
+
 	std::optional<Page> TransferSender::nextPage(std::size_t maxPageBytes)
 	{
 		return _pages.nextPage(maxPageBytes);
