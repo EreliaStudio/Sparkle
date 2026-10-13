@@ -63,12 +63,17 @@ namespace spk
 		void setHandshakeTimeout(std::chrono::milliseconds timeout);
 		void setIncomingTransferTimeout(std::chrono::milliseconds timeout);
 		void setAcknowledgmentTimeout(std::chrono::milliseconds timeout);
+		// Shared outgoing ceiling across commands, logical transfers, encoded frames and in-flight writes.
+		// This is reserved transport accounting, not a bound on allocator or OS socket overhead.
 		void setGlobalMaxQueuedBytes(std::size_t bytes);
 		void setMaxMessageBytes(std::size_t bytes);
+		// Per-session incomplete payloads and modeled reassembly metadata; excludes allocator overhead.
 		void setMaxIncomingBytes(std::size_t bytes);
 		void setMaxPageBytes(std::size_t bytes);
+		// Shared incoming reassembly admission cap across all sessions (not total process memory).
 		void setGlobalMaxIncomingBytes(std::size_t bytes);
 		Transfer sendTo(const Connection &connection, const Message &message, Message::Priority priority = Message::Priority::Normal);
+		// Multi-recipient admission is atomic and completes before return, not remote acknowledgment.
 		TransferResults sendTo(const ConnectionSet &connections, const Message &message, Message::Priority priority = Message::Priority::Normal, Connection::OverflowPolicy policy = Connection::OverflowPolicy::Reject);
 		TransferResults sendToAll(const Message &message, Message::Priority priority = Message::Priority::Normal, Connection::OverflowPolicy policy = Connection::OverflowPolicy::Reject);
 		[[nodiscard]] MessageQueue &messages() noexcept;
