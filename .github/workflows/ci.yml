@@ -95,6 +95,9 @@ jobs:
         run: cmake --build build/core-test --target SparkleCoreTestSuite --parallel 4
       - name: Run Core tests
         run: ctest --test-dir build/core-test -R '^Core\.' --output-on-failure --no-tests=error --timeout 120 --parallel 2 --output-junit results.xml
+      - name: Repeat Windows Release connection stress
+        if: runner.os == 'Windows' && matrix.configuration == 'Release'
+        run: ctest --test-dir build/core-test -R '^Core[.]NetworkConcurrencyTest[.]ManyClientsConnectAndExchangeConcurrently$' --repeat until-fail:100 --timeout 120 --output-on-failure
       - name: Upload Core test evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -140,8 +143,12 @@ jobs:
         run: cmake --build build/network-asan --target SparkleCoreTestSuite --parallel 4
       - name: Repeat concurrent connections under ASan
         env:
-          ASAN_OPTIONS: detect_odr_violation=0:fast_unwind_on_malloc=0
+          ASAN_OPTIONS: detect_odr_violation=0:fast_unwind_on_malloc=0:windows_hook_rtl_allocators=false
         run: ctest --test-dir build/network-asan -R '^Core[.]NetworkConcurrencyTest[.]ManyClientsConnectAndExchangeConcurrently$' --repeat until-fail:30 --timeout 120 --output-on-failure
+      - name: Run destructor lifecycle regressions under ASan
+        env:
+          ASAN_OPTIONS: detect_odr_violation=0:fast_unwind_on_malloc=0:windows_hook_rtl_allocators=false
+        run: ctest --test-dir build/network-asan -R '^Core[.]NetworkConcurrencyTest[.]ClientDestructor' --repeat until-fail:10 --timeout 120 --output-on-failure
       - name: Upload sanitizer evidence
         if: always()
         uses: actions/upload-artifact@v4
