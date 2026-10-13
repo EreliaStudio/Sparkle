@@ -418,6 +418,8 @@ TEST(PageReassembler, ClearIsIdempotentAndAllowsNewTransfersWithSharedBudget)
 	EXPECT_EQ(assembler.pendingTransfers(), 0u);
 	assembler.clear();
 	EXPECT_EQ(budget->used(), 0u);
+	scheduler.clear();
+	EXPECT_EQ(scheduler.pendingTransfers(), 0u);
 	(void)scheduler.enqueue(message(64, 82));
 	const auto second = scheduler.nextPage(16);
 	ASSERT_TRUE(second.has_value());
