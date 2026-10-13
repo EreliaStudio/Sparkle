@@ -9,6 +9,7 @@
 #	include "network/internal/frame.hpp"
 #	include "network/internal/handshake.hpp"
 #	include "network/internal/server_handshake.hpp"
+#	include "network/internal/server_send_admission.hpp"
 #	include "network/internal/page.hpp"
 #	include "network/internal/transmission_frame.hpp"
 #	include "network/internal/transfer_reception.hpp"
@@ -734,121 +735,20 @@ namespace spk::NetworkInternal
 
 			void _sendBatch(ServerSendBatch &batch)
 			{
-				if (batch.allRecipients)
-				{
-					const auto connections = _callbacks.snapshotConnections();
-					if (connections.empty() && batch.policy != Connection::OverflowPolicy::SkipRecipient)
+				ServerSendAdmission<Session> admission(batch, _sessions, _commandBudget, _callbacks.snapshotConnections);
+				admission.run(
+					[this, &batch](const std::shared_ptr<Session> &session, ServerSendBatch::Recipient &recipient) {
+						_queueMessage(session, batch.message, batch.priority, recipient);
+					},
+					[this](const std::shared_ptr<Session> &session) {
+						if (!session->writeInFlight)
 					{
-						throw Exception("Cannot broadcast without connected recipients.");
+						_postWrite(session);
 					}
-					batch.recipients.reserve(connections.size());
-					for (const Connection &connection : connections)
-					{
-						const auto it = _sessions.find(connection.id());
-						if (!connection.isConnected() || it == _sessions.end() || !it->second->handshake.ready())
-						{
-							if (batch.policy == Connection::OverflowPolicy::SkipRecipient)
-							{
-								continue;
-							}
-							throw Exception("Cannot broadcast while a recipient is pending or disconnected.");
-						}
-						batch.recipients.push_back({connection, spk::Transfer{}});
-					}
-				}
-				struct Candidate
-				{
-					ServerSendBatch::Recipient *recipient;
-					std::shared_ptr<Session> session;
-				};
-				std::vector<Candidate> candidates;
-				std::vector<ConnectionID> overflowed;
-				std::vector<std::pair<ServerSendBatch::Recipient *, spk::Transfer::Reason>> declined;
-				const std::size_t logicalBytes = std::max<std::size_t>(1, batch.message.size());
-				for (auto &recipient : batch.recipients)
-				{
-					const auto it = _sessions.find(recipient.connection.id());
-					if (it == _sessions.end() || !it->second->handshake.ready())
-					{
-						throw Exception("Cannot send to an invalid, pending or disconnected recipient.");
-					}
-					const auto &session = it->second;
-					const auto frameBytes = OutgoingReservation::frameBytes(batch.message.size(), session->handshake.maximumPageBytes());
-					const std::size_t budget = recipient.connection.maxQueuedBytes();
-					const std::size_t used = session->reservedOutgoingBytes;
-					if (used > budget || logicalBytes + frameBytes > budget - used)
-					{
-						declined.push_back({&recipient, spk::Transfer::Reason::QueueOverflow});
-						if (batch.policy == Connection::OverflowPolicy::DisconnectRecipient)
-						{
-							overflowed.push_back(session->id);
-						}
-						continue;
-					}
-					try
-					{
-						recipient.reservation = OutgoingReservation::reserve(_commandBudget, batch.message.size(), session->handshake.maximumPageBytes());
-					} catch (const Exception &)
-					{
-						declined.push_back({&recipient, spk::Transfer::Reason::QueueOverflow});
-						if (batch.policy == Connection::OverflowPolicy::DisconnectRecipient)
-						{
-							overflowed.push_back(session->id);
-						}
-						continue;
-					}
-					candidates.push_back({&recipient, session});
-				}
-				if (!declined.empty() && batch.policy == Connection::OverflowPolicy::Reject)
-				{
-					for (auto &candidate : candidates)
-					{
-						candidate.recipient->reservation = {};
-					}
-					throw Exception("Insufficient capacity for atomic network broadcast admission.");
-				}
-				try
-				{
-					for (auto &candidate : candidates)
-					{
-						candidate.session->transfers.setMaxPendingBytes(candidate.recipient->connection.maxQueuedBytes());
-						_queueMessage(candidate.session, batch.message, batch.priority, *candidate.recipient);
-						candidate.recipient->admitted = true;
-					}
-				} catch (...)
-				{
-					for (auto &candidate : candidates)
-					{
-						if (candidate.recipient->admitted)
-						{
-							(void)candidate.session->transfers.fail(candidate.recipient->transfer.id(), spk::Transfer::Status::Rejected, spk::Transfer::Reason::QueueOverflow);
-							_releaseReservation(*candidate.session, candidate.recipient->transfer.id());
-						}
-						candidate.recipient->reservation = {};
-					}
-					throw Exception("Unable to commit atomic network send admission.");
-				}
-				for (const auto &candidate : candidates)
-				{
-					try
-					{
-						if (!candidate.session->writeInFlight)
-						{
-							_postWrite(candidate.session);
-						}
-					} catch (...)
-					{
-						_disconnect(candidate.session->id);
-					}
-				}
-				for (const ConnectionID id : overflowed)
-				{
-					_disconnect(id);
-				}
-				for (const auto &[recipient, reason] : declined)
-				{
-					(void)TransferCompletion::complete(recipient->transfer, spk::Transfer::Status::Rejected, reason);
-				}
+					},
+					[this](ConnectionID id) {
+						_disconnect(id);
+					});
 			}
 
 			void _beginStop() noexcept
