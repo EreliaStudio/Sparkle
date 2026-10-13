@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <future>
+#include <limits>
 #include <memory>
 #include <thread>
 #include <utility>
@@ -428,4 +429,89 @@ TEST(PageReassembler, ClearIsIdempotentAndAllowsNewTransfersWithSharedBudget)
 	EXPECT_GT(budget->used(), 64u);
 	assembler.clear();
 	EXPECT_EQ(budget->used(), 0u);
+}
+
+TEST(RetiredTransferIDs, CompressesSequentialIDsWithoutRetainingIndividualTombstones)
+{
+	spk::NetworkInternal::RetiredTransferIDs retired;
+	for (std::uint64_t id = 1; id <= 100000; ++id)
+	{
+		retired.retire(id);
+	}
+	EXPECT_EQ(retired.rangeCount(), 0u);
+	EXPECT_TRUE(retired.contains(1));
+	EXPECT_TRUE(retired.contains(512));
+	EXPECT_TRUE(retired.contains(100000));
+	EXPECT_FALSE(retired.contains(100001));
+	retired.clear();
+	EXPECT_FALSE(retired.contains(1));
+	EXPECT_EQ(retired.rangeCount(), 0u);
+}
+
+TEST(RetiredTransferIDs, MergesOutOfOrderRangesWithoutForgettingHoles)
+{
+	spk::NetworkInternal::RetiredTransferIDs retired;
+	retired.retire(2);
+	retired.retire(4);
+	EXPECT_EQ(retired.rangeCount(), 2u);
+	EXPECT_FALSE(retired.contains(1));
+	EXPECT_FALSE(retired.contains(3));
+	retired.retire(3);
+	EXPECT_EQ(retired.rangeCount(), 1u);
+	retired.retire(1);
+	EXPECT_EQ(retired.rangeCount(), 0u);
+	for (std::uint64_t id = 1; id <= 4; ++id)
+	{
+		EXPECT_TRUE(retired.contains(id));
+	}
+}
+
+TEST(RetiredTransferIDs, HandlesMaximumIDAndDuplicateRetirementWithoutOverflow)
+{
+	spk::NetworkInternal::RetiredTransferIDs retired;
+	const auto maximum = std::numeric_limits<std::uint64_t>::max();
+	retired.retire(maximum);
+	retired.retire(maximum - 1);
+	retired.retire(maximum);
+	EXPECT_EQ(retired.rangeCount(), 1u);
+	EXPECT_TRUE(retired.contains(maximum));
+	EXPECT_TRUE(retired.contains(maximum - 1));
+	EXPECT_FALSE(retired.contains(maximum - 2));
+	EXPECT_FALSE(retired.contains(0));
+}
+
+TEST(PageReassembler, RetiredTransferReplaysStaySuppressedBeyondTombstoneTimeoutAndCapacity)
+{
+	using namespace spk::NetworkInternal;
+	PageReassembler assembler(16, 4096, std::chrono::milliseconds(10));
+	const auto original = message(1, 211);
+	const auto originalPage = PageFragment{original.header(), 1, 1, 0, original.data()};
+	const auto now = PageReassembler::Clock::now();
+	ASSERT_TRUE(assembler.accept(originalPage, now).has_value());
+	for (std::uint64_t id = 2; id <= 2048; ++id)
+	{
+		const auto page = PageFragment{original.header(), id, 1, 0, original.data()};
+		ASSERT_TRUE(assembler.accept(page, now).has_value());
+	}
+	EXPECT_TRUE(assembler.expire(now + std::chrono::hours(24)).empty());
+	EXPECT_FALSE(assembler.accept(originalPage, now + std::chrono::hours(24)).has_value());
+	EXPECT_EQ(assembler.reservedBytes(), 0u);
+	EXPECT_EQ(assembler.pendingTransfers(), 0u);
+}
+
+TEST(PageReassembler, ExpiredAndFailedTransferIDsRemainProtectedForSessionLifetime)
+{
+	using namespace spk::NetworkInternal;
+	PageReassembler assembler(32, 4096, std::chrono::milliseconds(10));
+	const auto original = message(4, 212);
+	const auto now = PageReassembler::Clock::now();
+	const auto first = PageFragment{original.header(), 1, 4, 0, original.data().first(2)};
+	EXPECT_FALSE(assembler.accept(first, now).has_value());
+	EXPECT_EQ(assembler.expire(now + std::chrono::milliseconds(11)), (std::vector<std::uint64_t>{1}));
+	EXPECT_FALSE(assembler.accept(first, now + std::chrono::hours(24)).has_value());
+	const auto failed = PageFragment{original.header(), 2, 4, 1, original.data().first(2)};
+	EXPECT_THROW((void)assembler.accept(failed, now), PageReassemblyError);
+	const auto valid = PageFragment{original.header(), 2, 4, 0, original.data().first(2)};
+	EXPECT_FALSE(assembler.accept(valid, now + std::chrono::hours(24)).has_value());
+	EXPECT_EQ(assembler.pendingTransfers(), 0u);
 }

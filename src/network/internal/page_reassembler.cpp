@@ -39,21 +39,6 @@ namespace spk::NetworkInternal
 		clear();
 	}
 
-	void PageReassembler::_retire(std::uint64_t id, Clock::time_point now)
-	{
-		_retiredTransfers.insert_or_assign(id, now);
-		if (_retiredTransfers.size() > 1024)
-		{
-			const auto oldest = std::min_element(
-				_retiredTransfers.begin(),
-				_retiredTransfers.end(),
-				[](const auto &left, const auto &right) {
-					return left.second < right.second;
-				});
-			_retiredTransfers.erase(oldest);
-		}
-	}
-
 	void PageReassembler::_reserve(std::size_t bytes, std::uint64_t id)
 	{
 		if (_chargedBytes > _maxIncompleteBytes || bytes > _maxIncompleteBytes - _chargedBytes ||
@@ -193,7 +178,7 @@ namespace spk::NetworkInternal
 				_release(iterator->second.chargedBytes);
 				_transfers.erase(iterator);
 			}
-			_retire(page.transferID, now);
+			_retiredTransfers.retire(page.transferID);
 			if (error.reason() != PageReassemblyError::Reason::Capacity)
 			{
 				(void)_failureLimiter.malformedPage(page.data.size() + FrameHeaderSize + PageMetadataSize, now);
@@ -228,19 +213,8 @@ namespace spk::NetworkInternal
 			_reservedBytes -= iterator->second.writer.size();
 			_release(iterator->second.chargedBytes);
 			expired.push_back(iterator->first);
-			_retire(iterator->first, now);
+			_retiredTransfers.retire(iterator->first);
 			iterator = _transfers.erase(iterator);
-		}
-		for (auto iterator = _retiredTransfers.begin(); iterator != _retiredTransfers.end();)
-		{
-			if (now - iterator->second >= _timeout)
-			{
-				iterator = _retiredTransfers.erase(iterator);
-			}
-			else
-			{
-				++iterator;
-			}
 		}
 		return expired;
 	}
