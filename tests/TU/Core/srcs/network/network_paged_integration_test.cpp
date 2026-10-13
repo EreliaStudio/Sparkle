@@ -253,3 +253,43 @@ TEST(NetworkPagedIntegration, ConflictingPageFailsOnlyItsTransfer)
 	socket.close();
 	server.stop();
 }
+
+TEST(NetworkPagedIntegration, ServerGlobalIncomingLimitRejectsTransferWithoutClosingPeer)
+{
+	using namespace spk::NetworkInternal;
+	spk::Server server;
+	server.setGlobalMaxIncomingBytes(1);
+	server.start(0);
+	auto socket = Socket::connectTCP("127.0.0.1", server.port());
+	socket.sendAll(*Handshake::encode(Handshake::Kind::Hello));
+	std::array<std::byte, FrameHeaderSize + Handshake::PayloadSize> responseBytes{};
+	ASSERT_TRUE(socket.receiveAllUntil(responseBytes, std::chrono::steady_clock::now() + 3s, {}));
+	const auto accepted = Handshake::decode(responseBytes);
+	ASSERT_TRUE(Handshake::validAcceptance(accepted));
+
+	spk::Message::Writer oversized(930);
+	oversized.setConnectionID(accepted.connectionID);
+	oversized.resize(16);
+	const auto rejectedMessage = std::move(oversized).build();
+	socket.sendAll(*encodePage(Page{rejectedMessage, 1, rejectedMessage.size(), 0, 4}));
+	std::array<std::byte, FrameHeaderSize + TransferResponse::PayloadSize> rejectionBytes{};
+	ASSERT_TRUE(socket.receiveAllUntil(rejectionBytes, std::chrono::steady_clock::now() + 3s, {}));
+	const auto rejected = TransferResponse::decode(rejectionBytes);
+	EXPECT_EQ(rejected.status, spk::Transfer::Status::Rejected);
+	EXPECT_EQ(rejected.reason, spk::Transfer::Reason::ReceiverCapacity);
+	EXPECT_EQ(rejected.transferID, 1u);
+	EXPECT_TRUE(server.connection(accepted.connectionID).isConnected());
+
+	server.setGlobalMaxIncomingBytes(4096);
+	spk::Message::Writer healthy(931);
+	healthy.setConnectionID(accepted.connectionID);
+	healthy.resize(3);
+	const auto healthyMessage = std::move(healthy).build();
+	socket.sendAll(*encodePage(Page{healthyMessage, 2, healthyMessage.size(), 0, healthyMessage.size()}));
+	const auto received = NetworkTestUtils::collect(server.messages(), 1, 3s);
+	ASSERT_EQ(received.size(), 1u);
+	EXPECT_EQ(received.front().message.type(), 931u);
+	EXPECT_EQ(received.front().emitter, accepted.connectionID);
+	socket.close();
+	server.stop();
+}
