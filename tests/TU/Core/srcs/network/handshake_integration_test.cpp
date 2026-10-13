@@ -1,5 +1,6 @@
 #include "exception.hpp"
 #include "network/client.hpp"
+#include "network/internal/frame.hpp"
 #include "network/internal/handshake.hpp"
 #include "network/internal/socket.hpp"
 #include "network/server.hpp"
@@ -10,6 +11,7 @@
 #include <array>
 #include <atomic>
 #include <chrono>
+#include <stop_token>
 #include <utility>
 
 using namespace std::chrono_literals;
@@ -173,4 +175,61 @@ TEST(HandshakeIntegration, ExplicitSkipRecipientBroadcastDoesNotQueuePendingConn
 	socket.close();
 	ready.disconnect();
 	server.stop();
+}
+
+TEST(HandshakeIntegration, MalformedPeerDoesNotStopHealthyClientOrServer)
+{
+	using namespace spk::NetworkInternal;
+	spk::Server server;
+	spk::Client healthy;
+	server.start(0);
+	healthy.connect("127.0.0.1", server.port());
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(healthy));
+
+	std::atomic_bool disconnected = false;
+	auto contract = server.subscribeToConnectionStatusChange(
+		[&](spk::Connection, spk::Connection::Status status, spk::Connection::Error) {
+			if (status == spk::Connection::Status::Disconnected)
+			{
+				disconnected = true;
+			}
+		});
+	auto socket = Socket::connectTCP("127.0.0.1", server.port());
+	socket.sendAll(*Handshake::encode(Handshake::Kind::Hello));
+	std::array<std::byte, FrameHeaderSize + Handshake::PayloadSize> acceptance{};
+	ASSERT_TRUE(socket.receiveAllUntil(acceptance, std::chrono::steady_clock::now() + 3s, {}));
+	ASSERT_TRUE(Handshake::validAcceptance(Handshake::decode(acceptance)));
+
+	std::array<std::byte, FrameHeaderSize> malformed{};
+	malformed[0] = std::byte{'S'};
+	malformed[1] = std::byte{'P'};
+	malformed[2] = std::byte{'K'};
+	malformed[3] = std::byte{'N'};
+	write16(malformed.data() + 4, ProtocolVersion);
+	write32(malformed.data() + 28, MaximumPayloadSize + 1);
+	socket.sendAll(malformed);
+	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] { return disconnected.load(); }, 3s));
+	EXPECT_TRUE(server.isRunning());
+	EXPECT_TRUE(healthy.isConnected());
+
+	healthy.send(spk::Message::Writer(902).build());
+	const auto received = NetworkTestUtils::collect(server.messages(), 1, 3s);
+	ASSERT_EQ(received.size(), 1u);
+	EXPECT_EQ(received.front().message.type(), 902u);
+	socket.close();
+	healthy.disconnect();
+	server.stop();
+}
+
+TEST(HandshakeIntegration, CancelledHandshakeWriteDoesNotSendData)
+{
+	using namespace spk::NetworkInternal;
+	auto listener = Socket::listenTCP(0);
+	auto socket = Socket::connectTCP("127.0.0.1", listener.localPort());
+	std::stop_source cancellation;
+	cancellation.request_stop();
+	auto hello = Handshake::encode(Handshake::Kind::Hello);
+	EXPECT_FALSE(socket.sendAllUntil(*hello, std::chrono::steady_clock::now() + 3s, cancellation.get_token()));
+	EXPECT_TRUE(socket.valid());
+	socket.close();
 }

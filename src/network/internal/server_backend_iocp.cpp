@@ -845,11 +845,20 @@ namespace spk::NetworkInternal
 						&key,
 						&overlapped,
 						1000);
-					if (overlapped != nullptr || success)
+					try
 					{
-						_handleCompletion(success, bytes, key, overlapped);
+						if (overlapped != nullptr || success)
+						{
+							_handleCompletion(success, bytes, key, overlapped);
+						}
+						if (!_stopping)
+						{
+							_expireReassemblies();
+						}
+					} catch (...)
+					{
+						_beginStop();
 					}
-					_expireReassemblies();
 				}
 			}
 
