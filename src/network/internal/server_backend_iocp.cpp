@@ -358,9 +358,11 @@ namespace spk::NetworkInternal
 			void _queueHandshake(Session &session, Handshake::Kind kind, Connection::Error error = Connection::Error::None)
 			{
 				auto frame = Handshake::encode(kind, session.id, error, session.handshake.maximumPageBytes());
-				session.queuedBytes += frame->size();
 				auto reservation = _commandBudget.reserve(frame->size(), CommandBudget::Stage::Frame);
+				const std::size_t queuedBytes = frame->size();
 				session.outgoing.push_back(TransmissionFrame{std::move(frame), 0, static_cast<std::uint16_t>(kind), std::move(reservation)});
+				session.queuedBytes += queuedBytes;
+				session.queuedBytes += queuedBytes;
 				if (!session.writeInFlight)
 				{
 					_postWrite(_sessions.at(session.id));
@@ -388,8 +390,8 @@ namespace spk::NetworkInternal
 			void _queueResponse(Session &session, const TransferResponse &response)
 			{
 				auto frame = response.encode();
-				session.queuedBytes += frame->size();
 				auto reservation = _commandBudget.reserve(frame->size(), CommandBudget::Stage::Frame);
+				const std::size_t queuedBytes = frame->size();
 				session.outgoing.push_back(TransmissionFrame{std::move(frame), 0, 0, std::move(reservation)});
 				if (!session.writeInFlight)
 				{
@@ -851,26 +853,32 @@ namespace spk::NetworkInternal
 						}
 						continue;
 					}
-					for (const auto &response : session->reception.expire(id))
+					try
 					{
-						if (!_sessions.contains(id))
+						for (const auto &response : session->reception.expire(id))
 						{
-							break;
-						}
-						_queueResponse(*session, response);
-					}
-					if (_sessions.contains(id))
-					{
-						session->transfers.expire();
-						for (auto reservation = session->outgoingReservations.begin(); reservation != session->outgoingReservations.end();)
-						{
-							const auto id = reservation->first;
-							++reservation;
-							if (!session->transfers.isTracked(id))
+							if (!_sessions.contains(id))
 							{
-								_releaseReservation(*session, id);
+								break;
+							}
+							_queueResponse(*session, response);
+						}
+						if (_sessions.contains(id))
+						{
+							session->transfers.expire();
+							for (auto reservation = session->outgoingReservations.begin(); reservation != session->outgoingReservations.end();)
+							{
+								const auto id = reservation->first;
+								++reservation;
+								if (!session->transfers.isTracked(id))
+								{
+									_releaseReservation(*session, id);
+								}
 							}
 						}
+					} catch (...)
+					{
+						_disconnect(id);
 					}
 				}
 			}
