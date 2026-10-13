@@ -2,6 +2,7 @@
 
 #include "exception.hpp"
 #include "network/internal/command_budget.hpp"
+#include "network/internal/outgoing_reservation.hpp"
 #include "network/internal/transfer_completion.hpp"
 #include "network/types.hpp"
 
@@ -20,7 +21,7 @@ namespace spk::NetworkInternal
 			Connection connection;
 			Transfer transfer;
 			bool admitted = false;
-			std::shared_ptr<CommandBudget::Lease> reservation;
+			OutgoingReservation reservation;
 		};
 
 		Message message;
@@ -55,7 +56,6 @@ namespace spk::NetworkInternal
 			{
 			}
 		}
-
 
 		ServerSendBatch(const Message &message, Message::Priority priority, Connection::OverflowPolicy policy) :
 			message(message),

@@ -4,6 +4,7 @@
 
 #	include "exception.hpp"
 #	include "network/internal/command_budget.hpp"
+#	include "network/internal/outgoing_reservation.hpp"
 #	include "network/internal/connection_id.hpp"
 #	include "network/internal/frame.hpp"
 #	include "network/internal/handshake.hpp"
@@ -61,6 +62,8 @@ namespace spk::NetworkInternal
 			std::deque<TransmissionFrame> outgoing;
 			std::size_t outgoingOffset = 0;
 			std::size_t queuedBytes = 0;
+			std::size_t reservedOutgoingBytes = 0;
+			std::unordered_map<spk::Transfer::ID, OutgoingReservation> outgoingReservations;
 
 			Session(ConnectionID id, Socket socket, PageFailureLimits limits, std::chrono::milliseconds timeout, std::shared_ptr<ReassemblyBudget> sharedBudget, std::uint32_t maximumPageBytes) :
 				id(id),
@@ -550,14 +553,8 @@ namespace spk::NetworkInternal
 					const std::scoped_lock lock(_commandMutex);
 					if (command.batch != nullptr)
 					{
-						const std::size_t count = std::max<std::size_t>(1, command.batch->recipients.size());
 						const std::size_t bytes = std::max<std::size_t>(1, command.batch->message.size());
-						const std::size_t limit = _maxGlobalQueuedBytes.load();
-						if (count == 0 || bytes > limit / count)
-						{
-							throw Exception("Network outgoing command exceeds the global queue limit.");
-						}
-						command.reservation = _commandBudget.reserve(bytes * count);
+						command.reservation = _commandBudget.reserve(bytes, CommandBudget::Stage::Command);
 					}
 					_commands.push_back(std::move(command));
 				}
