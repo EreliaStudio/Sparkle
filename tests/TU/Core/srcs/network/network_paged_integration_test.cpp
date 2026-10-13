@@ -518,6 +518,10 @@ TEST(NetworkPagedIntegration, ExpirationResponseCapacityFailureDisconnectsOnlyAf
 	const auto accepted = Handshake::decode(reply);
 	ASSERT_TRUE(Handshake::validAcceptance(accepted));
 	const auto victim = server.connection(accepted.connectionID);
+	const auto ready = [&] {
+		return victim.isConnected();
+	};
+	ASSERT_TRUE(NetworkTestUtils::waitUntil(ready, 3s));
 	server.setGlobalMaxQueuedBytes(1);
 	spk::Message::Writer writer(996);
 	writer.setConnectionID(accepted.connectionID);
