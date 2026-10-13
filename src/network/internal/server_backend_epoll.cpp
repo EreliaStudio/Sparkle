@@ -3,6 +3,7 @@
 #if defined(__linux__) || defined(__ANDROID__)
 
 #	include "exception.hpp"
+#	include "network/internal/command_budget.hpp"
 #	include "network/internal/connection_id.hpp"
 #	include "network/internal/frame.hpp"
 #	include "network/internal/handshake.hpp"
@@ -90,6 +91,7 @@ namespace spk::NetworkInternal
 			std::chrono::milliseconds handshakeTimeout = Handshake::DefaultTimeout;
 			std::chrono::milliseconds transferTimeout = std::chrono::seconds(60);
 			std::shared_ptr<ServerSendBatch> batch;
+			std::shared_ptr<CommandBudget::Lease> reservation;
 			std::size_t maxMessageBytes = 128u * 1024u * 1024u;
 			std::size_t maxIncomingBytes = 512u * 1024u * 1024u;
 		};
@@ -105,6 +107,7 @@ namespace spk::NetworkInternal
 			int _epoll = -1;
 			int _wakeEvent = -1;
 			std::unordered_map<ConnectionID, std::shared_ptr<Session>> _sessions;
+			CommandBudget _commandBudget{256u * 1024u * 1024u};
 			std::mutex _commandMutex;
 			std::deque<Command> _commands;
 			PageFailureLimits _failureLimits;
@@ -543,6 +546,17 @@ namespace spk::NetworkInternal
 			{
 				{
 					const std::scoped_lock lock(_commandMutex);
+					if (command.batch != nullptr)
+					{
+						const std::size_t count = command.batch->recipients.size();
+						const std::size_t bytes = std::max<std::size_t>(1, command.batch->message.size());
+						const std::size_t limit = _maxGlobalQueuedBytes.load();
+						if (count == 0 || bytes > limit / count)
+						{
+							throw Exception("Network outgoing command exceeds the global queue limit.");
+						}
+						command.reservation = _commandBudget.reserve(bytes * count);
+					}
 					_commands.push_back(std::move(command));
 				}
 				_wake();
@@ -1051,6 +1065,7 @@ namespace spk::NetworkInternal
 			void setGlobalMaxQueuedBytes(std::size_t bytes) override
 			{
 				_maxGlobalQueuedBytes.store(bytes);
+				_commandBudget.setMaximum(bytes);
 			}
 
 			void _configureIncomingLimits(std::size_t messageBytes, std::size_t incomingBytes)
