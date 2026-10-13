@@ -30,6 +30,8 @@ namespace spk::NetworkInternal
 		virtual void stop() = 0;
 		virtual void setPageFailureLimits(PageFailureLimits limits) = 0;
 		virtual void setHandshakeTimeout(std::chrono::milliseconds timeout) = 0;
+		virtual void setIncomingTransferTimeout(std::chrono::milliseconds timeout) = 0;
+		virtual void setAcknowledgmentTimeout(std::chrono::milliseconds timeout) = 0;
 		virtual void setGlobalMaxQueuedBytes(std::size_t bytes) = 0;
 		virtual void send(std::shared_ptr<ServerSendBatch> batch) = 0;
 	};

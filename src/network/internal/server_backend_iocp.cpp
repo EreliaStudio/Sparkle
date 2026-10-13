@@ -94,6 +94,8 @@ namespace spk::NetworkInternal
 			Send,
 			ConfigureLimits,
 			ConfigureHandshakeTimeout,
+			ConfigureIncomingTransferTimeout,
+			ConfigureAcknowledgmentTimeout,
 			Stop
 		};
 
@@ -105,6 +107,7 @@ namespace spk::NetworkInternal
 			Message::Priority priority = Message::Priority::Normal;
 			PageFailureLimits limits;
 			std::chrono::milliseconds handshakeTimeout = Handshake::DefaultTimeout;
+			std::chrono::milliseconds transferTimeout = std::chrono::seconds(60);
 			std::shared_ptr<ServerSendBatch> batch;
 		};
 
@@ -123,6 +126,8 @@ namespace spk::NetworkInternal
 			std::deque<Command> _commands;
 			PageFailureLimits _failureLimits;
 			std::chrono::milliseconds _handshakeTimeout = Handshake::DefaultTimeout;
+			std::chrono::milliseconds _incomingTransferTimeout = std::chrono::seconds(60);
+			std::chrono::milliseconds _acknowledgmentTimeout = std::chrono::seconds(30);
 			std::atomic_size_t _maxGlobalQueuedBytes = 256u * 1024u * 1024u;
 			std::size_t _pendingOperations = 0;
 			bool _stopping = false;
@@ -249,6 +254,8 @@ namespace spk::NetworkInternal
 
 				const ConnectionID id = allocateConnectionID();
 				auto session = std::make_shared<Session>(id, std::move(operation->acceptedSocket), _failureLimits, _handshakeTimeout);
+				session->reception.setInactivityTimeout(_incomingTransferTimeout);
+				session->transfers.setAcknowledgmentTimeout(_acknowledgmentTimeout);
 				_associate(session->socket);
 				_sessions.emplace(id, session);
 				_postRead(session);
@@ -607,6 +614,26 @@ namespace spk::NetworkInternal
 					_handshakeTimeout = command.handshakeTimeout;
 					return;
 				}
+				if (command.kind == CommandKind::ConfigureIncomingTransferTimeout)
+				{
+					_incomingTransferTimeout = command.transferTimeout;
+					for (auto &[id, session] : _sessions)
+					{
+						(void)id;
+						session->reception.setInactivityTimeout(_incomingTransferTimeout);
+					}
+					return;
+				}
+				if (command.kind == CommandKind::ConfigureAcknowledgmentTimeout)
+				{
+					_acknowledgmentTimeout = command.transferTimeout;
+					for (auto &[id, session] : _sessions)
+					{
+						(void)id;
+						session->transfers.setAcknowledgmentTimeout(_acknowledgmentTimeout);
+					}
+					return;
+				}
 				_sendBatch(*command.batch);
 			}
 
@@ -953,6 +980,40 @@ namespace spk::NetworkInternal
 				Command command{};
 				command.kind = CommandKind::ConfigureHandshakeTimeout;
 				command.handshakeTimeout = timeout;
+				_enqueue(std::move(command));
+			}
+
+			void setIncomingTransferTimeout(std::chrono::milliseconds timeout) override
+			{
+				if (timeout.count() <= 0)
+				{
+					throw Exception("Incoming transfer inactivity timeout must be positive.");
+				}
+				if (!_running.load())
+				{
+					_incomingTransferTimeout = timeout;
+					return;
+				}
+				Command command{};
+				command.kind = CommandKind::ConfigureIncomingTransferTimeout;
+				command.transferTimeout = timeout;
+				_enqueue(std::move(command));
+			}
+
+			void setAcknowledgmentTimeout(std::chrono::milliseconds timeout) override
+			{
+				if (timeout.count() <= 0)
+				{
+					throw Exception("Acknowledgment timeout must be positive.");
+				}
+				if (!_running.load())
+				{
+					_acknowledgmentTimeout = timeout;
+					return;
+				}
+				Command command{};
+				command.kind = CommandKind::ConfigureAcknowledgmentTimeout;
+				command.transferTimeout = timeout;
 				_enqueue(std::move(command));
 			}
 
