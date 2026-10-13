@@ -515,3 +515,17 @@ TEST(PageReassembler, ExpiredAndFailedTransferIDsRemainProtectedForSessionLifeti
 	EXPECT_FALSE(assembler.accept(valid, now + std::chrono::hours(24)).has_value());
 	EXPECT_EQ(assembler.pendingTransfers(), 0u);
 }
+
+TEST(PageReassembler, RetiredIDsAreScopedToOneSessionAndResetOnClear)
+{
+	using namespace spk::NetworkInternal;
+	PageReassembler first;
+	PageReassembler second;
+	const auto original = message(1, 213);
+	const PageFragment page{original.header(), 1, original.size(), 0, original.data()};
+	ASSERT_TRUE(first.accept(page).has_value());
+	EXPECT_FALSE(first.accept(page).has_value());
+	ASSERT_TRUE(second.accept(page).has_value());
+	first.clear();
+	EXPECT_TRUE(first.accept(page).has_value());
+}
