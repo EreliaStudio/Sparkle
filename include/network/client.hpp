@@ -40,6 +40,7 @@ namespace spk
 		void _retireIncoming(Connection session);
 		void _acceptConnection(Connection connection, Connection::ID id);
 		[[nodiscard]] Connection _beginConnection();
+		void _announcePending(Connection connection);
 		void _setStatus(Connection connection, Connection::Status status, Connection::Error error = Connection::Error::None);
 
 	public:
