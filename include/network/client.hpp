@@ -33,8 +33,10 @@ namespace spk
 		StatusProvider _statusProvider;
 		mutable std::mutex _connectionMutex;
 		Connection _connection;
+		bool _acceptIncoming = false;
 
-		void _publish(Message message);
+		void _publish(Connection session, Message message);
+		void _retireIncoming(Connection session);
 		void _acceptConnection(Connection connection, Connection::ID id);
 		[[nodiscard]] Connection _beginConnection();
 		void _setStatus(Connection connection, Connection::Status status, Connection::Error error = Connection::Error::None);

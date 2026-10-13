@@ -97,7 +97,7 @@ namespace spk
 			writer.setConnectionID(header.connectionID);
 			writer.resize(header.payloadSize);
 			std::copy(frame.begin() + NetworkInternal::FrameHeaderSize, frame.end(), writer.data().begin());
-			_owner._publish(std::move(writer).build());
+			_owner._publish(_session, std::move(writer).build());
 			{
 				const std::scoped_lock lock(_receiveMutex);
 				_reception.successfulMessage();
@@ -142,7 +142,7 @@ namespace spk
 			}
 			if (received.message.has_value())
 			{
-				_owner._publish(std::move(*received.message));
+				_owner._publish(_session, std::move(*received.message));
 			}
 			if (received.response.has_value())
 			{
@@ -207,6 +207,7 @@ namespace spk
 				return;
 			}
 			_connected = false;
+			_owner._retireIncoming(_session);
 			_socket.close();
 			_sendAvailable.notify_all();
 			_transfers.clear();
@@ -337,6 +338,7 @@ namespace spk
 		{
 			const bool notify = _active.exchange(false);
 			_connected = false;
+			_owner._retireIncoming(_session);
 			_socket.close();
 			_sendAvailable.notify_all();
 			_joinWorkers();
@@ -464,19 +466,35 @@ namespace spk
 		_messageDispatcher.treatMessages(_messages);
 	}
 
-	void Client::_publish(Message message)
+	void Client::_publish(Connection session, Message message)
 	{
-		_messages.publish(std::move(message));
+		const std::scoped_lock lock(_connectionMutex);
+		if (_connection._data == session._data && _acceptIncoming)
+		{
+			_messages.publish(std::move(message));
+		}
+	}
+
+	void Client::_retireIncoming(Connection session)
+	{
+		std::vector<Message> discarded;
+		const std::scoped_lock lock(_connectionMutex);
+		if (_connection._data == session._data)
+		{
+			_acceptIncoming = false;
+			_messages.drain(discarded);
+		}
 	}
 
 	Connection Client::_beginConnection()
 	{
 		std::vector<Message> stale;
-		_messages.drain(stale);
 		Connection connection;
 		{
 			const std::scoped_lock lock(_connectionMutex);
+			_messages.drain(stale);
 			_connection = connection;
+			_acceptIncoming = true;
 		}
 		connection._setStatus(Connection::Status::Pending);
 		_statusProvider.trigger(connection, Connection::Status::Pending, Connection::Error::None);
