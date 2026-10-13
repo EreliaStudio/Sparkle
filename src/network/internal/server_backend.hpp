@@ -35,6 +35,7 @@ namespace spk::NetworkInternal
 		virtual void setGlobalMaxQueuedBytes(std::size_t bytes) = 0;
 		virtual void setMaxMessageBytes(std::size_t bytes) = 0;
 		virtual void setMaxIncomingBytes(std::size_t bytes) = 0;
+		virtual void setMaxPageBytes(std::size_t bytes) = 0;
 		virtual void setGlobalMaxIncomingBytes(std::size_t bytes) = 0;
 		virtual void send(std::shared_ptr<ServerSendBatch> batch) = 0;
 	};

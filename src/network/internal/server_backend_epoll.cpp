@@ -60,11 +60,11 @@ namespace spk::NetworkInternal
 			std::size_t queuedBytes = 0;
 
 			Session(ConnectionID id, Socket socket, PageFailureLimits limits, std::chrono::milliseconds timeout,
-				std::shared_ptr<ReassemblyBudget> sharedBudget) :
+				std::shared_ptr<ReassemblyBudget> sharedBudget, std::uint32_t maximumPageBytes) :
 				id(id),
 				socket(std::move(socket)),
 				reception(std::move(sharedBudget)),
-				handshake(timeout)
+				handshake(timeout, maximumPageBytes)
 			{
 				reception.configureFailureLimits(limits);
 			}
@@ -115,6 +115,7 @@ namespace spk::NetworkInternal
 			std::atomic_size_t _maxGlobalQueuedBytes = 256u * 1024u * 1024u;
 			std::atomic_size_t _maxMessageBytes = 128u * 1024u * 1024u;
 			std::atomic_size_t _maxIncomingBytes = 512u * 1024u * 1024u;
+			std::atomic_size_t _maxPageBytes = DefaultMaximumPageBytes;
 			std::shared_ptr<ReassemblyBudget> _incomingBudget = std::make_shared<ReassemblyBudget>();
 			bool _stopping = false;
 
@@ -226,7 +227,8 @@ namespace spk::NetworkInternal
 			{
 				socket.setNonBlocking(true);
 				const ConnectionID id = allocateConnectionID();
-				auto session = std::make_shared<Session>(id, std::move(socket), _failureLimits, _handshakeTimeout, _incomingBudget);
+				auto session = std::make_shared<Session>(id, std::move(socket), _failureLimits, _handshakeTimeout, _incomingBudget,
+					static_cast<std::uint32_t>(_maxPageBytes.load()));
 				session->reception.setInactivityTimeout(_incomingTransferTimeout);
 				session->reception.setLimits(_maxMessageBytes.load(), _maxIncomingBytes.load());
 				session->transfers.setMaxMessageBytes(_maxMessageBytes.load());
@@ -305,7 +307,7 @@ namespace spk::NetworkInternal
 
 			void _queueHandshake(Session &session, Handshake::Kind kind, Connection::Error error = Connection::Error::None)
 			{
-				auto frame = Handshake::encode(kind, session.id, error);
+				auto frame = Handshake::encode(kind, session.id, error, session.handshake.maximumPageBytes());
 				session.queuedBytes += frame->size();
 				session.outgoing.push_back(TransmissionFrame{std::move(frame), 0, static_cast<std::uint16_t>(kind)});
 				_modify(session, true);
@@ -370,7 +372,12 @@ namespace spk::NetworkInternal
 				}
 				else if (kind == PageFrameKind)
 				{
-					auto received = session.reception.accept(decodePage(std::span(data, frameSize)), session.id);
+					const auto page = decodePage(std::span(data, frameSize));
+					if (page.data.size() > session.handshake.maximumPageBytes())
+					{
+						throw Exception("Network page exceeds the negotiated maximum payload size.");
+					}
+					auto received = session.reception.accept(page, session.id);
 					if (received.message.has_value())
 					{
 						_publish(ReceivedMessage{session.id, received.message->withConnectionID(session.id)});
@@ -414,7 +421,8 @@ namespace spk::NetworkInternal
 				{
 					if (session->outgoing.empty())
 					{
-						auto page = session->transfers.nextPage(DefaultMaximumPageBytes);
+						auto page = session->transfers.nextPage(std::min(_maxPageBytes.load(),
+						static_cast<std::size_t>(session->handshake.maximumPageBytes())));
 						if (!page.has_value())
 						{
 							break;
@@ -1074,6 +1082,15 @@ namespace spk::NetworkInternal
 					throw Exception("Incoming reassembly budget must be positive.");
 				}
 				_configureIncomingLimits(_maxMessageBytes.load(), bytes);
+			}
+
+			void setMaxPageBytes(std::size_t bytes) override
+			{
+				if (bytes == 0 || bytes > MaximumSupportedPageBytes)
+				{
+					throw Exception("Network page size must be within the supported protocol limit.");
+				}
+				_maxPageBytes.store(bytes);
 			}
 
 			void setGlobalMaxIncomingBytes(std::size_t bytes) override

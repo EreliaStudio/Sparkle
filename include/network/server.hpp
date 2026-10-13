@@ -64,6 +64,7 @@ namespace spk
 		void setGlobalMaxQueuedBytes(std::size_t bytes);
 		void setMaxMessageBytes(std::size_t bytes);
 		void setMaxIncomingBytes(std::size_t bytes);
+		void setMaxPageBytes(std::size_t bytes);
 		void setGlobalMaxIncomingBytes(std::size_t bytes);
 		Transfer sendTo(const Connection &connection, const Message &message, Message::Priority priority = Message::Priority::Normal);
 		TransferResults sendTo(const ConnectionSet &connections, const Message &message, Message::Priority priority = Message::Priority::Normal, Connection::OverflowPolicy policy = Connection::OverflowPolicy::Reject);

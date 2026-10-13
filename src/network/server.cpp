@@ -90,6 +90,10 @@ namespace spk
 		{
 			_backend->setMaxIncomingBytes(bytes);
 		}
+		void setMaxPageBytes(std::size_t bytes)
+		{
+			_backend->setMaxPageBytes(bytes);
+		}
 		void setGlobalMaxIncomingBytes(std::size_t bytes)
 		{
 			_backend->setGlobalMaxIncomingBytes(bytes);
@@ -179,6 +183,10 @@ namespace spk
 	void Server::setMaxIncomingBytes(std::size_t bytes)
 	{
 		_impl->setMaxIncomingBytes(bytes);
+	}
+	void Server::setMaxPageBytes(std::size_t bytes)
+	{
+		_impl->setMaxPageBytes(bytes);
 	}
 	void Server::setGlobalMaxIncomingBytes(std::size_t bytes)
 	{
