@@ -1,14 +1,21 @@
 #include "network/client.hpp"
+#include "network/internal/handshake.hpp"
+#include "network/internal/page.hpp"
+#include "network/internal/page_scheduler.hpp"
+#include "network/internal/socket.hpp"
+#include "network/internal/transfer_response.hpp"
 #include "network/server.hpp"
 #include "network_test_utils.hpp"
 
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <future>
+#include <stop_token>
 #include <utility>
 #include <vector>
 
@@ -144,5 +151,53 @@ TEST(NetworkPagedIntegration, TransferSuccessRequiresReceiverAcknowledgment)
 	EXPECT_TRUE(client.isConnected());
 
 	client.disconnect();
+	server.stop();
+}
+
+TEST(NetworkPagedIntegration, IncompleteTransferExpiresWithoutDisconnectingServerSession)
+{
+	using namespace spk::NetworkInternal;
+	spk::Server server;
+	server.setIncomingTransferTimeout(100ms);
+	server.start(0);
+	auto socket = Socket::connectTCP("127.0.0.1", server.port());
+	socket.sendAll(*Handshake::encode(Handshake::Kind::Hello));
+	std::array<std::byte, FrameHeaderSize + Handshake::PayloadSize> helloResponse{};
+	ASSERT_TRUE(socket.receiveAllUntil(helloResponse, std::chrono::steady_clock::now() + 3s, {}));
+	const auto accepted = Handshake::decode(helloResponse);
+	ASSERT_TRUE(Handshake::validAcceptance(accepted));
+
+	spk::Message::Writer writer(900);
+	writer.setConnectionID(accepted.connectionID);
+	writer.resize(12);
+	PageScheduler scheduler;
+	(void)scheduler.enqueue(std::move(writer).build());
+	const auto first = scheduler.nextPage(4);
+	ASSERT_TRUE(first.has_value());
+	socket.sendAll(*encodePage(*first));
+	std::array<std::byte, FrameHeaderSize + TransferResponse::PayloadSize> reply{};
+	ASSERT_TRUE(socket.receiveAllUntil(reply, std::chrono::steady_clock::now() + 4s, {}));
+	const auto expired = TransferResponse::decode(reply);
+	EXPECT_EQ(expired.status, spk::Transfer::Status::Failed);
+	EXPECT_EQ(expired.reason, spk::Transfer::Reason::InactivityTimeout);
+	EXPECT_EQ(expired.transferID, first->transferID);
+	EXPECT_EQ(expired.connectionID, accepted.connectionID);
+
+	spk::Message::Writer healthy(901);
+	healthy.setConnectionID(accepted.connectionID);
+	healthy.resize(3);
+	(void)scheduler.enqueue(std::move(healthy).build());
+	while (const auto page = scheduler.nextPage(4))
+	{
+		if (page->transferID != first->transferID)
+		{
+			socket.sendAll(*encodePage(*page));
+		}
+	}
+	const auto received = NetworkTestUtils::collect(server.messages(), 1, 3s);
+	ASSERT_EQ(received.size(), 1u);
+	EXPECT_EQ(received.front().message.type(), 901u);
+	EXPECT_EQ(received.front().emitter, accepted.connectionID);
+	socket.close();
 	server.stop();
 }
