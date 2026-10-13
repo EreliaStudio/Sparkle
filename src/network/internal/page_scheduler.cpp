@@ -110,7 +110,7 @@ namespace spk::NetworkInternal
 
 	std::optional<Page> PageScheduler::nextPage(std::size_t maxPayloadBytes)
 	{
-		if (maxPayloadBytes == 0 || maxPayloadBytes > DefaultMaximumPageBytes)
+		if (maxPayloadBytes == 0 || maxPayloadBytes > MaximumSupportedPageBytes)
 		{
 			throw Exception("Invalid network page payload capacity.");
 		}

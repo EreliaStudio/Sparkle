@@ -14,7 +14,11 @@
 namespace spk::NetworkInternal
 {
 	inline constexpr std::size_t FrameHeaderSize = 32;
-	inline constexpr std::uint16_t ProtocolVersion = 3;
+	inline constexpr std::uint16_t ProtocolVersion = 4;
+	inline constexpr std::uint16_t PageFrameKind = 1;
+	inline constexpr std::size_t PageMetadataSize = 24;
+	inline constexpr std::size_t DefaultMaximumPageBytes = 64u * 1024u;
+	inline constexpr std::size_t MaximumSupportedPageBytes = 1024u * 1024u;
 	inline constexpr std::uint32_t MaximumPayloadSize = 32u * 1024u * 1024u;
 
 	struct FrameHeader
@@ -110,7 +114,9 @@ namespace spk::NetworkInternal
 		}
 
 		const std::uint32_t payloadSize = read32(bytes.data() + 28);
-		if (payloadSize > MaximumPayloadSize)
+		if (payloadSize > MaximumPayloadSize ||
+			(read16(bytes.data() + 6) == PageFrameKind &&
+			 payloadSize > PageMetadataSize + MaximumSupportedPageBytes))
 		{
 			throw Exception("Network frame payload exceeds the configured limit.");
 		}
