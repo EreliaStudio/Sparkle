@@ -22,6 +22,9 @@ namespace spk
 			result.onConnection = [&owner](ConnectionID connection) {
 				owner._notifyConnection(connection);
 			};
+			result.snapshotConnections = [&owner] {
+				return owner._snapshotConnections();
+			};
 			result.onReady = [&owner](ConnectionID connection) {
 				owner._notifyReady(connection);
 			};
@@ -117,6 +120,19 @@ namespace spk
 	Server::StatusContract Server::subscribeToConnectionStatusChange(StatusCallback callback)
 	{
 		return _statusProvider.subscribe(std::move(callback));
+	}
+
+	std::vector<Connection> Server::_snapshotConnections() const
+	{
+		const std::scoped_lock lock(_connectionsMutex);
+		std::vector<Connection> result;
+		result.reserve(_connections.size());
+		for (const auto &[id, connection] : _connections)
+		{
+			(void)id;
+			result.push_back(connection);
+		}
+		return result;
 	}
 
 	Connection Server::connection(ConnectionID id) const
@@ -236,36 +252,13 @@ namespace spk
 		NetworkInternal::OutgoingMessageValidator::validate(message, priority, _maxMessageBytes.load());
 		NetworkInternal::OutgoingMessageValidator::validatePolicy(policy);
 		auto batch = std::make_shared<NetworkInternal::ServerSendBatch>(message, priority, policy);
+		batch->allRecipients = true;
+		_impl->send(batch);
 		TransferResults results;
+		results.reserve(batch->recipients.size());
+		for (const auto &recipient : batch->recipients)
 		{
-			const std::scoped_lock lock(_connectionsMutex);
-			if (_connections.empty() && policy != Connection::OverflowPolicy::SkipRecipient)
-			{
-				throw Exception("Cannot broadcast without connected recipients.");
-			}
-			batch->recipients.reserve(_connections.size());
-			results.reserve(_connections.size());
-			for (const auto &[id, connection] : _connections)
-			{
-				if (!connection.isConnected())
-				{
-					if (policy == Connection::OverflowPolicy::SkipRecipient)
-					{
-						continue;
-					}
-					throw Exception("Cannot broadcast while a recipient is pending or disconnected.");
-				}
-				if (policy == Connection::OverflowPolicy::Reject)
-				{
-					NetworkInternal::OutgoingMessageValidator::validateCapacity(message, connection.maxQueuedBytes());
-				}
-				batch->recipients.push_back({connection, Transfer{}});
-				results.emplace(id, batch->recipients.back().transfer);
-			}
-		}
-		if (!batch->recipients.empty())
-		{
-			_impl->send(std::move(batch));
+			results.emplace(recipient.connection.id(), recipient.transfer);
 		}
 		return results;
 	}

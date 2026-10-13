@@ -1,9 +1,12 @@
 #pragma once
 
+#include "exception.hpp"
 #include "network/internal/command_budget.hpp"
 #include "network/internal/transfer_completion.hpp"
 #include "network/types.hpp"
 
+#include <exception>
+#include <future>
 #include <utility>
 #include <vector>
 
@@ -24,6 +27,35 @@ namespace spk::NetworkInternal
 		Message::Priority priority;
 		Connection::OverflowPolicy policy;
 		std::vector<Recipient> recipients;
+		bool allRecipients = false;
+		std::promise<void> admission;
+
+	private:
+		bool _admissionResolved = false;
+
+	public:
+		void acceptAdmission() noexcept
+		{
+			_admissionResolved = true;
+			try
+			{
+				admission.set_value();
+			} catch (...)
+			{
+			}
+		}
+
+		void rejectAdmission(std::exception_ptr error) noexcept
+		{
+			_admissionResolved = true;
+			try
+			{
+				admission.set_exception(error);
+			} catch (...)
+			{
+			}
+		}
+
 
 		ServerSendBatch(const Message &message, Message::Priority priority, Connection::OverflowPolicy policy) :
 			message(message),
@@ -51,6 +83,15 @@ namespace spk::NetworkInternal
 
 		~ServerSendBatch() noexcept
 		{
+			if (!_admissionResolved)
+			{
+				try
+				{
+					rejectAdmission(std::make_exception_ptr(Exception("Network send stopped before admission.")));
+				} catch (...)
+				{
+				}
+			}
 			for (Recipient &recipient : recipients)
 			{
 				if (!recipient.admitted)

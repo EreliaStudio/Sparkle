@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <vector>
 
 namespace spk::NetworkInternal
 {
@@ -15,6 +16,7 @@ namespace spk::NetworkInternal
 	{
 		std::function<void(ReceivedMessage)> onMessage;
 		std::function<void(ConnectionID)> onConnection;
+		std::function<std::vector<Connection>()> snapshotConnections;
 		std::function<void(ConnectionID)> onReady;
 		std::function<void(ConnectionID, Connection::Error)> onDisconnection;
 	};

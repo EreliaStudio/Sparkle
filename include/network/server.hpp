@@ -14,6 +14,7 @@
 #include <memory>
 #include <mutex>
 #include <unordered_map>
+#include <vector>
 
 namespace spk
 {
@@ -38,6 +39,7 @@ namespace spk
 		std::atomic_size_t _maxMessageBytes = 128u * 1024u * 1024u;
 
 		void _publish(ReceivedMessage message);
+		[[nodiscard]] std::vector<Connection> _snapshotConnections() const;
 		void _notifyConnection(ConnectionID connection);
 		void _notifyReady(ConnectionID connection);
 		void _notifyDisconnection(ConnectionID connection, Connection::Error error);
