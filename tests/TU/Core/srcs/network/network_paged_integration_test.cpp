@@ -429,3 +429,27 @@ TEST(NetworkPagedIntegration, GlobalIncomingBudgetIsSharedAcrossSimultaneousPeer
 	secondSocket.close();
 	server.stop();
 }
+
+TEST(NetworkPagedIntegration, DisconnectInterruptsBlockedClientPayloadWrite)
+{
+	using namespace spk::NetworkInternal;
+	auto listener = Socket::listenTCP(0);
+	spk::Client client;
+	const auto connection = client.connect("127.0.0.1", listener.localPort());
+	auto peer = listener.accept();
+	std::array<std::byte, FrameHeaderSize + Handshake::PayloadSize> hello{};
+	ASSERT_TRUE(peer.receiveAllUntil(hello, std::chrono::steady_clock::now() + 3s, {}));
+	peer.sendAll(*Handshake::encode(Handshake::Kind::Accepted, 988));
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(connection));
+	const auto transfer = client.send(makeMessage(980, 8u * 1024u * 1024u));
+	std::this_thread::sleep_for(100ms);
+	auto disconnected = std::async(std::launch::async, [&client] {
+		client.disconnect();
+	});
+	ASSERT_EQ(disconnected.wait_for(5s), std::future_status::ready);
+	EXPECT_NO_THROW(disconnected.get());
+	EXPECT_EQ(connection.status(), spk::Connection::Status::Disconnected);
+	EXPECT_TRUE(transfer.isComplete());
+	EXPECT_EQ(transfer.status(), spk::Transfer::Status::Indeterminate);
+	peer.close();
+}
