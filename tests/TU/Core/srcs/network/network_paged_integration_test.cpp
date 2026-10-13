@@ -278,6 +278,7 @@ TEST(NetworkPagedIntegration, ServerGlobalIncomingLimitRejectsTransferWithoutClo
 	EXPECT_EQ(rejected.status, spk::Transfer::Status::Rejected);
 	EXPECT_EQ(rejected.reason, spk::Transfer::Reason::ReceiverCapacity);
 	EXPECT_EQ(rejected.transferID, 1u);
+	socket.sendAll(*encodePage(Page{rejectedMessage, 1, rejectedMessage.size(), 4, 4}));
 	EXPECT_TRUE(server.connection(accepted.connectionID).isConnected());
 
 	server.setGlobalMaxIncomingBytes(4096);
@@ -290,6 +291,46 @@ TEST(NetworkPagedIntegration, ServerGlobalIncomingLimitRejectsTransferWithoutClo
 	ASSERT_EQ(received.size(), 1u);
 	EXPECT_EQ(received.front().message.type(), 931u);
 	EXPECT_EQ(received.front().emitter, accepted.connectionID);
+	socket.close();
+	server.stop();
+}
+
+TEST(NetworkPagedIntegration, CompletedTransferReplayIsNotDispatchedTwice)
+{
+	using namespace spk::NetworkInternal;
+	spk::Server server;
+	server.start(0);
+	auto socket = Socket::connectTCP("127.0.0.1", server.port());
+	socket.sendAll(*Handshake::encode(Handshake::Kind::Hello));
+	std::array<std::byte, FrameHeaderSize + Handshake::PayloadSize> acceptance{};
+	ASSERT_TRUE(socket.receiveAllUntil(acceptance, std::chrono::steady_clock::now() + 3s, {}));
+	const auto accepted = Handshake::decode(acceptance);
+	ASSERT_TRUE(Handshake::validAcceptance(accepted));
+
+	spk::Message::Writer writer(940);
+	writer.setConnectionID(accepted.connectionID);
+	writer.resize(3);
+	const auto message = std::move(writer).build();
+	const auto frame = encodePage(Page{message, 7, message.size(), 0, message.size()});
+	socket.sendAll(*frame);
+	std::array<std::byte, FrameHeaderSize + TransferResponse::PayloadSize> responseBytes{};
+	ASSERT_TRUE(socket.receiveAllUntil(responseBytes, std::chrono::steady_clock::now() + 3s, {}));
+	EXPECT_EQ(TransferResponse::decode(responseBytes).status, spk::Transfer::Status::Success);
+
+	socket.sendAll(*frame);
+	const auto received = NetworkTestUtils::collect(server.messages(), 2, 200ms);
+	ASSERT_EQ(received.size(), 1u);
+	EXPECT_EQ(received.front().message.type(), 940u);
+	EXPECT_TRUE(server.connection(accepted.connectionID).isConnected());
+
+	spk::Message::Writer next(941);
+	next.setConnectionID(accepted.connectionID);
+	next.resize(3);
+	const auto healthy = std::move(next).build();
+	socket.sendAll(*encodePage(Page{healthy, 8, healthy.size(), 0, healthy.size()}));
+	const auto later = NetworkTestUtils::collect(server.messages(), 1, 3s);
+	ASSERT_EQ(later.size(), 1u);
+	EXPECT_EQ(later.front().message.type(), 941u);
 	socket.close();
 	server.stop();
 }
