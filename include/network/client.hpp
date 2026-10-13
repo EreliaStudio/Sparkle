@@ -55,15 +55,24 @@ namespace spk
 		[[nodiscard]] StatusContract subscribeToConnectionStatusChange(StatusCallback callback);
 		[[nodiscard]] Connection connection() const;
 		[[nodiscard]] bool isConnected() const noexcept;
+		// Begins one asynchronous attempt; the returned handle is initially Pending.
+		// A previous attempt must be explicitly disconnected before reconnecting.
 		Connection connect(std::string_view address, std::uint16_t port);
+		// Applies to attempts started after this call, not an active handshake.
 		void setHandshakeTimeout(std::chrono::milliseconds timeout);
 		void setIncomingTransferTimeout(std::chrono::milliseconds timeout);
 		void setAcknowledgmentTimeout(std::chrono::milliseconds timeout);
+		// Maximum logical payload for both incoming and outgoing messages.
 		void setMaxMessageBytes(std::size_t bytes);
+		// Incomplete reassembly budget: logical payload plus modeled transfer/page metadata.
+		// This is not a process-wide RSS or allocator-capacity limit.
 		void setMaxIncomingBytes(std::size_t bytes);
+		// Outgoing page payload is bounded by both the configured and negotiated limits.
 		void setMaxPageBytes(std::size_t bytes);
 		void disconnect();
 		void setPageFailureLimits(PageFailureLimits limits);
+		// Synchronously rejects invalid or unaffordable submissions; accepted transfers
+		// report transport acknowledgment or failure asynchronously through the handle.
 		Transfer send(const Message &message, Message::Priority priority = Message::Priority::Normal);
 		[[nodiscard]] MessageQueue &messages() noexcept;
 		[[nodiscard]] MessageDispatcher &messageDispatcher() noexcept;
