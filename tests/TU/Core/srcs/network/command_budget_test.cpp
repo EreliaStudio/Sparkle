@@ -4,8 +4,11 @@
 
 #include <gtest/gtest.h>
 
+#include <atomic>
+#include <barrier>
 #include <cstddef>
 #include <memory>
+#include <thread>
 #include <utility>
 
 TEST(CommandBudget, RejectsOnlyNewReservationsAtCapacity)
@@ -96,4 +99,41 @@ TEST(CommandBudget, ReservationCanOutliveBudgetOwnerAndReleasesSafely)
 	}
 	EXPECT_EQ(lease->bytes(), 60u);
 	lease.reset();
+}
+
+TEST(CommandBudget, ConcurrentStagesCannotReserveBeyondSharedLimit)
+{
+	using Budget = spk::NetworkInternal::CommandBudget;
+	Budget budget(100);
+	std::barrier begin(3);
+	std::barrier attempted(3);
+	std::barrier release(3);
+	std::atomic_uint32_t accepted = 0;
+	std::atomic_uint32_t rejected = 0;
+	auto reserve = [&](Budget::Stage stage) {
+		std::shared_ptr<Budget::Lease> lease;
+		begin.arrive_and_wait();
+		try
+		{
+			lease = budget.reserve(60, stage);
+			++accepted;
+		} catch (const spk::Exception &)
+		{
+			++rejected;
+		}
+		attempted.arrive_and_wait();
+		release.arrive_and_wait();
+	};
+	std::jthread transfer(reserve, Budget::Stage::Transfer);
+	std::jthread frame(reserve, Budget::Stage::Frame);
+	begin.arrive_and_wait();
+	attempted.arrive_and_wait();
+	EXPECT_EQ(accepted.load(), 1u);
+	EXPECT_EQ(rejected.load(), 1u);
+	EXPECT_EQ(budget.used(), 60u);
+	EXPECT_EQ(budget.used(Budget::Stage::Transfer) + budget.used(Budget::Stage::Frame), 60u);
+	release.arrive_and_wait();
+	transfer.join();
+	frame.join();
+	EXPECT_EQ(budget.used(), 0u);
 }
