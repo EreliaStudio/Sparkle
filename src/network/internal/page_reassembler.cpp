@@ -182,6 +182,15 @@ namespace spk::NetworkInternal
 		return expired;
 	}
 
+	void PageReassembler::setInactivityTimeout(std::chrono::milliseconds timeout)
+	{
+		if (timeout.count() <= 0)
+		{
+			throw Exception("Incoming transfer inactivity timeout must be positive.");
+		}
+		_timeout = timeout;
+	}
+
 	void PageReassembler::clear() noexcept
 	{
 		_transfers.clear();

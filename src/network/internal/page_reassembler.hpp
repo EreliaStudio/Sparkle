@@ -51,6 +51,7 @@ namespace spk::NetworkInternal
 		[[nodiscard]] std::optional<Message> accept(const PageFragment &page, Clock::time_point now = Clock::now());
 		std::vector<std::uint64_t> expire(Clock::time_point now = Clock::now());
 		void clear() noexcept;
+		void setInactivityTimeout(std::chrono::milliseconds timeout);
 		[[nodiscard]] std::size_t reservedBytes() const noexcept;
 		[[nodiscard]] std::size_t pendingTransfers() const noexcept;
 		[[nodiscard]] bool failureLimitReached() const;

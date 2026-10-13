@@ -66,6 +66,11 @@ namespace spk::NetworkInternal
 		return responses;
 	}
 
+	void TransferReception::setInactivityTimeout(std::chrono::milliseconds timeout)
+	{
+		_reassembler.setInactivityTimeout(timeout);
+	}
+
 	void TransferReception::configureFailureLimits(PageFailureLimits limits)
 	{
 		_reassembler.configureFailureLimits(limits);

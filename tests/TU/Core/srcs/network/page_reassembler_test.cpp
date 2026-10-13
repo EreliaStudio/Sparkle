@@ -241,3 +241,19 @@ TEST(PageReassembler, ExpiredTransferRejectsLatePagesWithoutReallocation)
 	EXPECT_EQ(assembler.pendingTransfers(), 0u);
 	EXPECT_EQ(assembler.reservedBytes(), 0u);
 }
+
+TEST(PageReassembler, RuntimeInactivityTimeoutChangesExistingTransferDeadline)
+{
+	spk::NetworkInternal::PageScheduler scheduler;
+	(void)scheduler.enqueue(message(20, 61));
+	const auto first = scheduler.nextPage(5);
+	spk::NetworkInternal::PageReassembler assembler;
+	const auto now = spk::NetworkInternal::PageReassembler::Clock::now();
+	ASSERT_FALSE(assembler.accept(fragment(*first), now).has_value());
+	assembler.setInactivityTimeout(std::chrono::milliseconds(100));
+	EXPECT_TRUE(assembler.expire(now + std::chrono::milliseconds(99)).empty());
+	EXPECT_EQ(assembler.expire(now + std::chrono::milliseconds(100)).size(), 1u);
+	EXPECT_EQ(assembler.reservedBytes(), 0u);
+	EXPECT_THROW(assembler.setInactivityTimeout(std::chrono::milliseconds(0)), spk::Exception);
+	EXPECT_THROW(assembler.setInactivityTimeout(std::chrono::milliseconds(-1)), spk::Exception);
+}

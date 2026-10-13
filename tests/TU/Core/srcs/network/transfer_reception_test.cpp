@@ -69,3 +69,21 @@ TEST(TransferReception, TimeoutProducesTargetedFailure)
 	EXPECT_EQ(expired.front().reason, spk::Transfer::Reason::InactivityTimeout);
 	EXPECT_TRUE(reception.expire(56, now + std::chrono::seconds(61)).empty());
 }
+
+TEST(TransferReception, ConfigurableTimeoutProducesFailureForExpiredTransfer)
+{
+	spk::NetworkInternal::PageScheduler scheduler;
+	spk::NetworkInternal::TransferReception reception;
+	reception.setInactivityTimeout(std::chrono::milliseconds(100));
+	(void)scheduler.enqueue(message(12));
+	const auto first = scheduler.nextPage(4);
+	const auto second = scheduler.nextPage(4);
+	const auto now = spk::NetworkInternal::TransferReception::Clock::now();
+	ASSERT_FALSE(reception.accept(fragment(*first), 56, now).message.has_value());
+	ASSERT_FALSE(reception.accept(fragment(*second), 56, now + std::chrono::milliseconds(90)).message.has_value());
+	EXPECT_TRUE(reception.expire(56, now + std::chrono::milliseconds(150)).empty());
+	const auto expired = reception.expire(56, now + std::chrono::milliseconds(190));
+	ASSERT_EQ(expired.size(), 1u);
+	EXPECT_EQ(expired.front().reason, spk::Transfer::Reason::InactivityTimeout);
+	EXPECT_EQ(reception.reservedBytes(), 0u);
+}

@@ -28,6 +28,7 @@ namespace spk::NetworkInternal
 		[[nodiscard]] Result accept(const PageFragment &page, Connection::ID connectionID, Clock::time_point now = Clock::now());
 		[[nodiscard]] std::vector<TransferResponse> expire(Connection::ID connectionID, Clock::time_point now = Clock::now());
 		void configureFailureLimits(PageFailureLimits limits);
+		void setInactivityTimeout(std::chrono::milliseconds timeout);
 		[[nodiscard]] bool failureLimitReached() const;
 		void successfulMessage();
 		void clear() noexcept;
