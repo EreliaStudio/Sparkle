@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <span>
 #include <stop_token>
 #include <string_view>
@@ -47,6 +48,9 @@ namespace spk::NetworkInternal
 		[[nodiscard]] Socket accept() const;
 		[[nodiscard]] std::uint16_t localPort() const;
 		void setNonBlocking(bool value) const;
+		// An empty optional means the nonblocking socket would block.
+		[[nodiscard]] std::optional<std::size_t> sendSome(std::span<const std::byte> data) const;
+		[[nodiscard]] std::optional<ReceiveResult> receiveSome(std::span<std::byte> buffer) const;
 		void sendAll(std::span<const std::byte> data) const;
 		[[nodiscard]] bool sendAllUntil(std::span<const std::byte> data, std::chrono::steady_clock::time_point deadline, std::stop_token stop) const;
 		[[nodiscard]] ReceiveResult receive(std::span<std::byte> buffer) const;

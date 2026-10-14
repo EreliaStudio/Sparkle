@@ -472,38 +472,49 @@ namespace spk::NetworkInternal
 #endif
 	}
 
+	std::optional<std::size_t> Socket::sendSome(std::span<const std::byte> data) const
+	{
+		if (data.empty())
+		{
+			return 0;
+		}
+		const auto socket = static_cast<SystemSocket>(nativeHandle());
+		const int requested = static_cast<int>(std::min<std::size_t>(data.size(), INT_MAX));
+		while (true)
+		{
+#ifdef _WIN32
+			const int sent = ::send(socket, reinterpret_cast<const char *>(data.data()), requested, 0);
+#else
+			const int sent = static_cast<int>(::send(socket, data.data(), static_cast<std::size_t>(requested), MSG_NOSIGNAL));
+#endif
+			if (sent >= 0)
+			{
+				return static_cast<std::size_t>(sent);
+			}
+			const int error = lastSocketError();
+			if (interrupted(error))
+			{
+				continue;
+			}
+			if (waiting(error))
+			{
+				return std::nullopt;
+			}
+			throw Exception("Unable to send TCP data [" + std::to_string(error) + "].");
+		}
+	}
+
 	void Socket::sendAll(std::span<const std::byte> data) const
 	{
 		std::size_t offset = 0;
-		const SystemSocket handle = static_cast<SystemSocket>(nativeHandle());
 		while (offset < data.size())
 		{
-			const int requested = static_cast<int>(
-				std::min<std::size_t>(data.size() - offset, INT_MAX));
-#ifdef _WIN32
-			const int sent = ::send(
-				handle,
-				reinterpret_cast<const char *>(data.data() + offset),
-				requested,
-				0);
-#else
-			const int sent = static_cast<int>(::send(
-				handle,
-				data.data() + offset,
-				static_cast<std::size_t>(requested),
-				MSG_NOSIGNAL));
-#endif
-			if (sent > 0)
+			const auto sent = sendSome(data.subspan(offset));
+			if (!sent.has_value() || *sent == 0)
 			{
-				offset += static_cast<std::size_t>(sent);
-				continue;
+				throw Exception("Unable to complete blocking TCP send.");
 			}
-			const int error = lastSocketError();
-			if (sent < 0 && interrupted(error))
-			{
-				continue;
-			}
-			throw Exception("Unable to send TCP data [" + std::to_string(error) + "].");
+			offset += *sent;
 		}
 	}
 
@@ -516,20 +527,14 @@ namespace spk::NetworkInternal
 		{
 			while (offset < data.size() && waitForSocket(static_cast<SystemSocket>(nativeHandle()), true, deadline, stop))
 			{
-				const auto socket = static_cast<SystemSocket>(nativeHandle());
-				const int requested = static_cast<int>(std::min<std::size_t>(data.size() - offset, INT_MAX));
-#ifdef _WIN32
-				const int sent = ::send(socket, reinterpret_cast<const char *>(data.data() + offset), requested, 0);
-#else
-				const int sent = static_cast<int>(::send(socket, data.data() + offset, static_cast<std::size_t>(requested), MSG_NOSIGNAL));
-#endif
-				if (sent > 0)
+				const auto sent = sendSome(data.subspan(offset));
+				if (sent.has_value())
 				{
-					offset += static_cast<std::size_t>(sent);
-				}
-				else if (sent == 0 || (!waiting(lastSocketError()) && !interrupted(lastSocketError())))
-				{
-					throw Exception("Unable to send handshake data.");
+					if (*sent == 0)
+					{
+						throw Exception("Unable to send handshake data.");
+					}
+					offset += *sent;
 				}
 			}
 		} catch (...)
@@ -547,46 +552,46 @@ namespace spk::NetworkInternal
 		return offset == data.size();
 	}
 
-	Socket::ReceiveResult Socket::receive(std::span<std::byte> buffer) const
+	std::optional<Socket::ReceiveResult> Socket::receiveSome(std::span<std::byte> buffer) const
 	{
 		if (buffer.empty())
 		{
-			return {};
+			return ReceiveResult{};
 		}
-
-		const SystemSocket handle = static_cast<SystemSocket>(nativeHandle());
+		const auto socket = static_cast<SystemSocket>(nativeHandle());
+		const int requested = static_cast<int>(std::min<std::size_t>(buffer.size(), INT_MAX));
 		while (true)
 		{
-			const int requested = static_cast<int>(
-				std::min<std::size_t>(buffer.size(), INT_MAX));
 #ifdef _WIN32
-			const int received = ::recv(
-				handle,
-				reinterpret_cast<char *>(buffer.data()),
-				requested,
-				0);
+			const int received = ::recv(socket, reinterpret_cast<char *>(buffer.data()), requested, 0);
 #else
-			const int received = static_cast<int>(::recv(
-				handle,
-				buffer.data(),
-				static_cast<std::size_t>(requested),
-				0));
+			const int received = static_cast<int>(::recv(socket, buffer.data(), static_cast<std::size_t>(requested), 0));
 #endif
-			if (received > 0)
+			if (received >= 0)
 			{
-				return ReceiveResult{static_cast<std::size_t>(received), false};
-			}
-			if (received == 0)
-			{
-				return ReceiveResult{0, true};
+				return ReceiveResult{static_cast<std::size_t>(received), received == 0};
 			}
 			const int error = lastSocketError();
 			if (interrupted(error))
 			{
 				continue;
 			}
+			if (waiting(error))
+			{
+				return std::nullopt;
+			}
 			throw Exception("Unable to receive TCP data [" + std::to_string(error) + "].");
 		}
+	}
+
+	Socket::ReceiveResult Socket::receive(std::span<std::byte> buffer) const
+	{
+		const auto result = receiveSome(buffer);
+		if (!result.has_value())
+		{
+			throw Exception("Unable to complete blocking TCP receive.");
+		}
+		return *result;
 	}
 
 	bool Socket::receiveAll(std::span<std::byte> buffer) const
@@ -613,23 +618,14 @@ namespace spk::NetworkInternal
 		{
 			while (offset < buffer.size() && waitForSocket(static_cast<SystemSocket>(nativeHandle()), false, deadline, stop))
 			{
-				const auto socket = static_cast<SystemSocket>(nativeHandle());
-#ifdef _WIN32
-				const int received = ::recv(socket, reinterpret_cast<char *>(buffer.data() + offset), static_cast<int>(std::min<std::size_t>(buffer.size() - offset, INT_MAX)), 0);
-#else
-				const int received = static_cast<int>(::recv(socket, buffer.data() + offset, buffer.size() - offset, 0));
-#endif
-				if (received == 0)
+				const auto received = receiveSome(buffer.subspan(offset));
+				if (received.has_value())
 				{
-					break;
-				}
-				if (received > 0)
-				{
-					offset += static_cast<std::size_t>(received);
-				}
-				else if (!waiting(lastSocketError()) && !interrupted(lastSocketError()))
-				{
-					throw Exception("Unable to receive handshake data.");
+					if (received->disconnected)
+					{
+						break;
+					}
+					offset += received->size;
 				}
 			}
 		} catch (...)
