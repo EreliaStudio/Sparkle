@@ -80,6 +80,8 @@ namespace spk::NetworkInternal
 		ServerCallbacks _callbacks;
 		CommandBudget _commandBudget{256u * 1024u * 1024u};
 		std::mutex _commandMutex;
+		// Guarded by _commandMutex; only handshake completion/disconnection changes it.
+		std::size_t _readySessions = 0;
 		std::deque<Command> _commands;
 		PageFailureLimits _failureLimits;
 		std::chrono::milliseconds _handshakeTimeout = Handshake::DefaultTimeout;

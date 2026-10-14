@@ -74,7 +74,6 @@ namespace spk
 		void setPageFailureLimits(PageFailureLimits limits);
 		// Synchronously rejects invalid or unaffordable submissions; accepted transfers
 		// report transport acknowledgment or failure asynchronously through the handle.
-		// Admission is synchronous; the returned transfer reports the asynchronous delivery outcome.
 		Transfer send(const Message &message, Message::Priority priority = Message::Priority::Normal);
 		[[nodiscard]] MessageQueue &messages() noexcept;
 		[[nodiscard]] MessageDispatcher &messageDispatcher() noexcept;

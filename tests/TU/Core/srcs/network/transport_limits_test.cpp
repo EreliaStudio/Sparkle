@@ -95,8 +95,8 @@ TEST(TransportLimits, IncomingFrameHeadersEnforceNegotiatedBoundsBeforePayloadAl
 	EXPECT_NO_THROW(IncomingFrameValidator::validate(PageFrameKind, PageMetadataSize + 128, 128, 2048));
 	EXPECT_THROW(IncomingFrameValidator::validate(PageFrameKind, PageMetadataSize + 129, 128, 2048), spk::Exception);
 	EXPECT_THROW(IncomingFrameValidator::validate(PageFrameKind, PageMetadataSize - 1, 128, 2048), spk::Exception);
-	EXPECT_NO_THROW(IncomingFrameValidator::validate(TransferResponse::FrameKind, TransferResponse::PayloadSize, 128, 2048));
-	EXPECT_THROW(IncomingFrameValidator::validate(TransferResponse::FrameKind, 4096, 128, 2048), spk::Exception);
+	EXPECT_NO_THROW(IncomingFrameValidator::validate(TransferResponse::Codec::FrameKind, TransferResponse::Codec::PayloadSize, 128, 2048));
+	EXPECT_THROW(IncomingFrameValidator::validate(TransferResponse::Codec::FrameKind, 4096, 128, 2048), spk::Exception);
 	EXPECT_THROW(IncomingFrameValidator::validate(0, 2049, 128, 2048), spk::Exception);
 	EXPECT_THROW(IncomingFrameValidator::validate(99, 1, 128, 2048), spk::Exception);
 }

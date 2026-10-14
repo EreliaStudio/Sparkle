@@ -1,7 +1,9 @@
 #pragma once
 
 #include "exception.hpp"
+#include "network/internal/exception_reporting.hpp"
 #include "network/internal/server_send_batch.hpp"
+#include "network/internal/transfer_completion.hpp"
 
 #include <algorithm>
 #include <functional>
@@ -91,14 +93,13 @@ namespace spk::NetworkInternal
 				_decline(recipient, session->id);
 				return;
 			}
-			try
-			{
-				recipient.reservation = OutgoingReservation::reserve(_budget, _batch.message.size(), session->handshake.maximumPageBytes());
-			} catch (const Exception &)
+			auto reservation = OutgoingReservation::tryReserve(_budget, _batch.message.size(), session->handshake.maximumPageBytes());
+			if (!reservation.has_value())
 			{
 				_decline(recipient, session->id);
 				return;
 			}
+			recipient.reservation = std::move(*reservation);
 			_candidates.push_back({&recipient, session});
 		}
 
@@ -154,7 +155,7 @@ namespace spk::NetworkInternal
 			} catch (...)
 			{
 				_rollback();
-				throw Exception("Unable to commit atomic network send admission.");
+				throw Exception("Unable to commit atomic network send admission.", std::current_exception());
 			}
 		}
 
@@ -168,6 +169,7 @@ namespace spk::NetworkInternal
 					flush(candidate.session);
 				} catch (...)
 				{
+					reportCurrentException("Unable to write an admitted network send.");
 					disconnect(candidate.session->id);
 				}
 			}

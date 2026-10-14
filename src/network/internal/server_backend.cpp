@@ -2,6 +2,7 @@
 
 #include "exception.hpp"
 #include "network/internal/connection_id.hpp"
+#include "network/internal/exception_reporting.hpp"
 #include "network/internal/frame.hpp"
 #include "network/internal/incoming_frame_validator.hpp"
 #include "network/internal/page.hpp"
@@ -49,6 +50,7 @@ namespace spk::NetworkInternal
 			_callbacks.onConnection(id);
 		} catch (...)
 		{
+			NetworkInternal::reportCurrentException("Network server Pending callback failed.");
 		}
 	}
 
@@ -59,6 +61,7 @@ namespace spk::NetworkInternal
 			_callbacks.onReady(id);
 		} catch (...)
 		{
+			NetworkInternal::reportCurrentException("Network server Connected callback failed.");
 		}
 	}
 
@@ -69,6 +72,7 @@ namespace spk::NetworkInternal
 			_callbacks.onDisconnection(id, error);
 		} catch (...)
 		{
+			NetworkInternal::reportCurrentException("Network server Disconnected callback failed.");
 		}
 	}
 
@@ -79,6 +83,7 @@ namespace spk::NetworkInternal
 			_callbacks.onMessage(std::move(message));
 		} catch (...)
 		{
+			NetworkInternal::reportCurrentException("Network server receive publication failed.");
 		}
 	}
 
@@ -117,6 +122,10 @@ namespace spk::NetworkInternal
 	{
 		if (session.handshake.written(static_cast<Handshake::Kind>(kind)))
 		{
+			{
+				const std::scoped_lock lock(_commandMutex);
+				++_readySessions;
+			}
 			_notifyReady(session.id);
 		}
 		else
@@ -127,7 +136,7 @@ namespace spk::NetworkInternal
 
 	void ServerBackend::_queueResponse(Session &session, const TransferResponse &response)
 	{
-		auto frame = response.encode();
+		auto frame = TransferResponse::Codec::encode(response);
 		auto reservation = _commandBudget.reserve(frame->size(), CommandBudget::Stage::Frame);
 		const std::size_t queuedBytes = frame->size();
 		session.outgoing.push_back(TransmissionFrame{std::move(frame), 0, 0, std::move(reservation)});
@@ -187,9 +196,9 @@ namespace spk::NetworkInternal
 				_queueResponse(session, *received.response);
 			}
 		}
-		else if (kind == TransferResponse::FrameKind)
+		else if (kind == TransferResponse::Codec::FrameKind)
 		{
-			const auto response = TransferResponse::decode(std::span(data, frameSize));
+			const auto response = TransferResponse::Codec::decode(std::span(data, frameSize));
 			if (response.connectionID != session.id)
 			{
 				throw Exception("Transfer response has an incorrect connection ID.");
@@ -255,6 +264,11 @@ namespace spk::NetworkInternal
 
 		auto session = std::move(iterator->second);
 		_sessions.erase(iterator);
+		if (session->handshake.ready())
+		{
+			const std::scoped_lock lock(_commandMutex);
+			--_readySessions;
+		}
 		_unregisterSocket(session->socket);
 		session->socket.close();
 		session->transfers.clear();
@@ -286,6 +300,13 @@ namespace spk::NetworkInternal
 			}
 			if (command.batch != nullptr)
 			{
+				// Linearize an empty broadcast with backend readiness, before reserving
+				// or retaining any command payload. Pending peers are not recipients.
+				if (command.batch->allRecipients && command.batch->policy == Connection::OverflowPolicy::SkipRecipient && _readySessions == 0)
+				{
+					command.batch->acceptAdmission();
+					return;
+				}
 				const std::size_t bytes = std::max<std::size_t>(1, command.batch->message.size());
 				command.reservation = _commandBudget.reserve(bytes, CommandBudget::Stage::Command);
 			}
@@ -483,6 +504,7 @@ namespace spk::NetworkInternal
 				}
 			} catch (...)
 			{
+				reportCurrentException("Network server transfer expiration failed.");
 				_disconnect(id);
 			}
 		}
@@ -687,17 +709,18 @@ namespace spk::NetworkInternal
 		{
 			throw Exception("Unable to send through a stopped network server.");
 		}
-		if (_worker.get_id() == std::this_thread::get_id())
-		{
-			_sendBatch(*batch);
-			return;
-		}
-		auto admitted = batch->admission.get_future();
-		Command command{CommandKind::Send};
-		command.batch = std::move(batch);
-		_enqueue(std::move(command));
 		try
 		{
+			if (_worker.get_id() == std::this_thread::get_id())
+			{
+				_sendBatch(*batch);
+				batch->acceptAdmission();
+				return;
+			}
+			auto admitted = batch->admission.get_future();
+			Command command{CommandKind::Send};
+			command.batch = std::move(batch);
+			_enqueue(std::move(command));
 			admitted.get();
 		} catch (const Exception &)
 		{

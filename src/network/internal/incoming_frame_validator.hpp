@@ -23,7 +23,7 @@ namespace spk::NetworkInternal
 			{
 				return;
 			}
-			if (kind == TransferResponse::FrameKind && bytes == TransferResponse::PayloadSize)
+			if (kind == TransferResponse::Codec::FrameKind && bytes == TransferResponse::Codec::PayloadSize)
 			{
 				return;
 			}

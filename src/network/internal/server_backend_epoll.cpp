@@ -3,6 +3,7 @@
 #if defined(__linux__) || defined(__ANDROID__)
 
 #	include "exception.hpp"
+#	include "network/internal/exception_reporting.hpp"
 #	include "network/internal/connection_id.hpp"
 #	include <array>
 #	include <cstddef>
@@ -131,6 +132,7 @@ namespace spk::NetworkInternal
 					}
 				} catch (...)
 				{
+					reportCurrentException("Network epoll session receive failed.");
 					_disconnect(session->id);
 				}
 			}
@@ -215,6 +217,7 @@ namespace spk::NetworkInternal
 						_writeSession(session);
 					} catch (...)
 					{
+						reportCurrentException("Network epoll session write failed.");
 						_disconnect(id);
 					}
 				}
@@ -249,6 +252,7 @@ namespace spk::NetworkInternal
 					}
 				} catch (...)
 				{
+					reportCurrentException("Network epoll worker failed.");
 					_beginStop();
 				}
 			}

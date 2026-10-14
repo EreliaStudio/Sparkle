@@ -105,7 +105,7 @@ namespace
 		const auto probe = makeMessage(992, 1).withConnectionID(id);
 		// The probe ACK establishes that the earlier fragment on this stream was admitted.
 		peer.sendAll(*encodePage(Page{probe, 2, probe.size(), 0, probe.size()}));
-		ASSERT_EQ(TransferResponse::decode(receiveRawFrame(peer)).transferID, 2u);
+		ASSERT_EQ(TransferResponse::Codec::decode(receiveRawFrame(peer)).transferID, 2u);
 		if (target == ServerIncomingBudget::Session)
 		{
 			server.setMaxIncomingBytes(1);
@@ -118,14 +118,14 @@ namespace
 		const auto barrier = server.sendTo(server.connection(id), makeMessage(993, 1));
 		const auto barrierFrame = receiveRawFrame(peer);
 		ASSERT_EQ(decodePage(barrierFrame).transferID, barrier.id());
-		peer.sendAll(*TransferResponse{id, barrier.id(), spk::Transfer::Status::Success, spk::Transfer::Reason::None}.encode());
+		peer.sendAll(*TransferResponse::Codec::encode(TransferResponse{id, barrier.id(), spk::Transfer::Status::Success, spk::Transfer::Reason::None}));
 		peer.sendAll(*encodePage(Page{original, 3, original.size(), 0, 16}));
-		const auto rejected = TransferResponse::decode(receiveRawFrame(peer));
+		const auto rejected = TransferResponse::Codec::decode(receiveRawFrame(peer));
 		EXPECT_EQ(rejected.transferID, 3u);
 		EXPECT_EQ(rejected.status, spk::Transfer::Status::Rejected);
 		EXPECT_EQ(rejected.reason, spk::Transfer::Reason::ReceiverCapacity);
 		peer.sendAll(*encodePage(Page{original, 1, original.size(), 16, original.size() - 16}));
-		const auto completed = TransferResponse::decode(receiveRawFrame(peer));
+		const auto completed = TransferResponse::Codec::decode(receiveRawFrame(peer));
 		EXPECT_EQ(completed.transferID, 1u);
 		EXPECT_EQ(completed.status, spk::Transfer::Status::Success);
 		const auto received = NetworkTestUtils::collect(server.messages(), 2, 3s);
@@ -144,9 +144,9 @@ namespace
 		const auto recoveryBarrier = server.sendTo(server.connection(id), makeMessage(994, 1));
 		const auto recoveryFrame = receiveRawFrame(peer);
 		ASSERT_EQ(decodePage(recoveryFrame).transferID, recoveryBarrier.id());
-		peer.sendAll(*TransferResponse{id, recoveryBarrier.id(), spk::Transfer::Status::Success, spk::Transfer::Reason::None}.encode());
+		peer.sendAll(*TransferResponse::Codec::encode(TransferResponse{id, recoveryBarrier.id(), spk::Transfer::Status::Success, spk::Transfer::Reason::None}));
 		peer.sendAll(*encodePage(Page{probe, 4, probe.size(), 0, probe.size()}));
-		EXPECT_EQ(TransferResponse::decode(receiveRawFrame(peer)).status, spk::Transfer::Status::Success);
+		EXPECT_EQ(TransferResponse::Codec::decode(receiveRawFrame(peer)).status, spk::Transfer::Status::Success);
 		EXPECT_EQ(NetworkTestUtils::collect(server.messages(), 1, 3s).size(), 1u);
 		peer.close();
 		server.stop();
@@ -178,15 +178,15 @@ TEST(NetworkPagedIntegration, ClientBudgetReductionPreservesAcceptedTransfer)
 	const auto probe = makeMessage(996, 1).withConnectionID(989);
 	peer.sendAll(*encodePage(Page{original, 1, original.size(), 0, 16}));
 	peer.sendAll(*encodePage(Page{probe, 2, probe.size(), 0, probe.size()}));
-	ASSERT_EQ(TransferResponse::decode(receiveRawFrame(peer)).transferID, 2u);
+	ASSERT_EQ(TransferResponse::Codec::decode(receiveRawFrame(peer)).transferID, 2u);
 	client.setMaxIncomingBytes(1);
 	peer.sendAll(*encodePage(Page{original, 3, original.size(), 0, 16}));
-	const auto rejected = TransferResponse::decode(receiveRawFrame(peer));
+	const auto rejected = TransferResponse::Codec::decode(receiveRawFrame(peer));
 	EXPECT_EQ(rejected.transferID, 3u);
 	EXPECT_EQ(rejected.status, spk::Transfer::Status::Rejected);
 	EXPECT_EQ(rejected.reason, spk::Transfer::Reason::ReceiverCapacity);
 	peer.sendAll(*encodePage(Page{original, 1, original.size(), 16, original.size() - 16}));
-	const auto completed = TransferResponse::decode(receiveRawFrame(peer));
+	const auto completed = TransferResponse::Codec::decode(receiveRawFrame(peer));
 	EXPECT_EQ(completed.transferID, 1u);
 	EXPECT_EQ(completed.status, spk::Transfer::Status::Success);
 	const auto received = NetworkTestUtils::collect(client.messages(), 2, 3s);
@@ -195,7 +195,7 @@ TEST(NetworkPagedIntegration, ClientBudgetReductionPreservesAcceptedTransfer)
 	EXPECT_TRUE(client.isConnected());
 	client.setMaxIncomingBytes(smallIncomingBudget());
 	peer.sendAll(*encodePage(Page{probe, 4, probe.size(), 0, probe.size()}));
-	EXPECT_EQ(TransferResponse::decode(receiveRawFrame(peer)).status, spk::Transfer::Status::Success);
+	EXPECT_EQ(TransferResponse::Codec::decode(receiveRawFrame(peer)).status, spk::Transfer::Status::Success);
 	EXPECT_EQ(NetworkTestUtils::collect(client.messages(), 1, 3s).size(), 1u);
 	client.disconnect();
 	peer.close();
@@ -330,9 +330,9 @@ TEST(NetworkPagedIntegration, IncompleteTransferExpiresWithoutDisconnectingServe
 	const auto first = scheduler.nextPage(4);
 	ASSERT_TRUE(first.has_value());
 	socket.sendAll(*encodePage(*first));
-	std::array<std::byte, FrameHeaderSize + TransferResponse::PayloadSize> reply{};
+	std::array<std::byte, FrameHeaderSize + TransferResponse::Codec::PayloadSize> reply{};
 	ASSERT_TRUE(socket.receiveAllUntil(reply, std::chrono::steady_clock::now() + 4s, {}));
-	const auto expired = TransferResponse::decode(reply);
+	const auto expired = TransferResponse::Codec::decode(reply);
 	EXPECT_EQ(expired.status, spk::Transfer::Status::Failed);
 	EXPECT_EQ(expired.reason, spk::Transfer::Reason::InactivityTimeout);
 	EXPECT_EQ(expired.transferID, first->transferID);
@@ -382,9 +382,9 @@ TEST(NetworkPagedIntegration, ConflictingPageFailsOnlyItsTransfer)
 	conflicting[FrameHeaderSize + PageMetadataSize] = std::byte{0xEF};
 	socket.sendAll(conflicting);
 
-	std::array<std::byte, FrameHeaderSize + TransferResponse::PayloadSize> reply{};
+	std::array<std::byte, FrameHeaderSize + TransferResponse::Codec::PayloadSize> reply{};
 	ASSERT_TRUE(socket.receiveAllUntil(reply, std::chrono::steady_clock::now() + 3s, {}));
-	const auto failed = TransferResponse::decode(reply);
+	const auto failed = TransferResponse::Codec::decode(reply);
 	EXPECT_EQ(failed.transferID, first->transferID);
 	EXPECT_EQ(failed.status, spk::Transfer::Status::Failed);
 	EXPECT_EQ(failed.reason, spk::Transfer::Reason::ConflictingPage);
@@ -427,9 +427,9 @@ TEST(NetworkPagedIntegration, ServerGlobalIncomingLimitRejectsTransferWithoutClo
 	oversized.resize(16);
 	const auto rejectedMessage = std::move(oversized).build();
 	socket.sendAll(*encodePage(Page{rejectedMessage, 1, rejectedMessage.size(), 0, 4}));
-	std::array<std::byte, FrameHeaderSize + TransferResponse::PayloadSize> rejectionBytes{};
+	std::array<std::byte, FrameHeaderSize + TransferResponse::Codec::PayloadSize> rejectionBytes{};
 	ASSERT_TRUE(socket.receiveAllUntil(rejectionBytes, std::chrono::steady_clock::now() + 3s, {}));
-	const auto rejected = TransferResponse::decode(rejectionBytes);
+	const auto rejected = TransferResponse::Codec::decode(rejectionBytes);
 	EXPECT_EQ(rejected.status, spk::Transfer::Status::Rejected);
 	EXPECT_EQ(rejected.reason, spk::Transfer::Reason::ReceiverCapacity);
 	EXPECT_EQ(rejected.transferID, 1u);
@@ -468,9 +468,9 @@ TEST(NetworkPagedIntegration, CompletedTransferReplayIsNotDispatchedTwice)
 	const auto message = std::move(writer).build();
 	const auto frame = encodePage(Page{message, 7, message.size(), 0, message.size()});
 	socket.sendAll(*frame);
-	std::array<std::byte, FrameHeaderSize + TransferResponse::PayloadSize> responseBytes{};
+	std::array<std::byte, FrameHeaderSize + TransferResponse::Codec::PayloadSize> responseBytes{};
 	ASSERT_TRUE(socket.receiveAllUntil(responseBytes, std::chrono::steady_clock::now() + 3s, {}));
-	EXPECT_EQ(TransferResponse::decode(responseBytes).status, spk::Transfer::Status::Success);
+	EXPECT_EQ(TransferResponse::Codec::decode(responseBytes).status, spk::Transfer::Status::Success);
 
 	socket.sendAll(*frame);
 	const auto received = NetworkTestUtils::collect(server.messages(), 2, 200ms);
@@ -514,7 +514,7 @@ TEST(NetworkPagedIntegration, LateAcknowledgmentCannotChangeTimedOutTransfer)
 	EXPECT_EQ(callbacks.load(), 1u);
 
 	const TransferResponse late{987, transfer.id(), spk::Transfer::Status::Success, spk::Transfer::Reason::None};
-	peer.sendAll(*late.encode());
+	peer.sendAll(*TransferResponse::Codec::encode(late));
 	std::this_thread::sleep_for(100ms);
 	EXPECT_EQ(transfer.status(), spk::Transfer::Status::Indeterminate);
 	EXPECT_EQ(callbacks.load(), 1u);
@@ -556,11 +556,16 @@ TEST(NetworkPagedIntegration, GlobalIncomingBudgetIsSharedAcrossSimultaneousPeer
 	const auto first = prototype.withConnectionID(firstAcceptance.connectionID);
 	const auto second = prototype.withConnectionID(secondAcceptance.connectionID);
 	firstSocket.sendAll(*encodePage(Page{first, 1, first.size(), 0, 16}));
-	std::this_thread::sleep_for(100ms);
+	const auto barrier = makeMessage(971, 0).withConnectionID(firstAcceptance.connectionID);
+	firstSocket.sendAll(*encodePage(Page{barrier, 2, 0, 0, 0}));
+	const auto admitted = TransferResponse::Codec::decode(receiveRawFrame(firstSocket));
+	ASSERT_EQ(admitted.transferID, 2u);
+	ASSERT_EQ(admitted.status, spk::Transfer::Status::Success);
+	ASSERT_EQ(NetworkTestUtils::collect(server.messages(), 1, 3s).size(), 1u);
 	secondSocket.sendAll(*encodePage(Page{second, 1, second.size(), 0, 16}));
-	std::array<std::byte, FrameHeaderSize + TransferResponse::PayloadSize> responseBytes{};
+	std::array<std::byte, FrameHeaderSize + TransferResponse::Codec::PayloadSize> responseBytes{};
 	ASSERT_TRUE(secondSocket.receiveAllUntil(responseBytes, std::chrono::steady_clock::now() + 3s, {}));
-	const auto rejected = TransferResponse::decode(responseBytes);
+	const auto rejected = TransferResponse::Codec::decode(responseBytes);
 	EXPECT_EQ(rejected.status, spk::Transfer::Status::Rejected);
 	EXPECT_EQ(rejected.reason, spk::Transfer::Reason::ReceiverCapacity);
 	EXPECT_TRUE(server.connection(secondAcceptance.connectionID).isConnected());
@@ -591,7 +596,7 @@ TEST(NetworkPagedIntegration, DisconnectInterruptsBlockedClientPayloadWrite)
 	peer.sendAll(*Handshake::encode(Handshake::Kind::Accepted, 988));
 	ASSERT_TRUE(NetworkTestUtils::waitConnected(connection));
 	const auto transfer = client.send(makeMessage(980, 8u * 1024u * 1024u));
-	std::this_thread::sleep_for(100ms);
+	ASSERT_EQ(decodePage(receiveRawFrame(peer)).transferID, transfer.id());
 	auto disconnected = std::async(std::launch::async, [&client] {
 		client.disconnect();
 	});
@@ -620,7 +625,7 @@ TEST(NetworkPagedIntegration, ReplayOlderThanOneThousandCompletedTransfersNeverR
 	writer.resize(1);
 	const auto message = std::move(writer).build();
 	auto frame = encodePage(Page{message, 1, message.size(), 0, message.size()});
-	std::array<std::byte, FrameHeaderSize + TransferResponse::PayloadSize> answer{};
+	std::array<std::byte, FrameHeaderSize + TransferResponse::Codec::PayloadSize> answer{};
 	for (std::uint64_t first = 1; first <= 1200; first += 32)
 	{
 		const auto last = std::min<std::uint64_t>(1200, first + 31);
@@ -632,7 +637,7 @@ TEST(NetworkPagedIntegration, ReplayOlderThanOneThousandCompletedTransfersNeverR
 		for (std::uint64_t id = first; id <= last; ++id)
 		{
 			ASSERT_TRUE(socket.receiveAllUntil(answer, std::chrono::steady_clock::now() + 5s, {}));
-			const auto response = TransferResponse::decode(answer);
+			const auto response = TransferResponse::Codec::decode(answer);
 			ASSERT_EQ(response.transferID, id);
 			ASSERT_EQ(response.status, spk::Transfer::Status::Success);
 		}
@@ -642,7 +647,7 @@ TEST(NetworkPagedIntegration, ReplayOlderThanOneThousandCompletedTransfersNeverR
 	write64(frame->data() + FrameHeaderSize, 1201);
 	socket.sendAll(*frame);
 	ASSERT_TRUE(socket.receiveAllUntil(answer, std::chrono::steady_clock::now() + 5s, {}));
-	EXPECT_EQ(TransferResponse::decode(answer).transferID, 1201u);
+	EXPECT_EQ(TransferResponse::Codec::decode(answer).transferID, 1201u);
 	const auto messages = NetworkTestUtils::collect(server.messages(), 1201, 5s);
 	EXPECT_EQ(messages.size(), 1201u);
 	EXPECT_TRUE(NetworkTestUtils::collect(server.messages(), 1, 0ms).empty());
@@ -719,7 +724,7 @@ TEST(NetworkPagedIntegration, SparseReplayHistoryExhaustionDisconnectsOnlyOffend
 	writer.resize(1);
 	const auto message = std::move(writer).build();
 	auto frame = encodePage(Page{message, 2, message.size(), 0, message.size()});
-	std::array<std::byte, FrameHeaderSize + TransferResponse::PayloadSize> answer{};
+	std::array<std::byte, FrameHeaderSize + TransferResponse::Codec::PayloadSize> answer{};
 	constexpr auto Count = RetiredTransferIDs::MaximumSparseRanges;
 	for (std::uint64_t first = 1; first <= Count; first += 32)
 	{
@@ -732,7 +737,7 @@ TEST(NetworkPagedIntegration, SparseReplayHistoryExhaustionDisconnectsOnlyOffend
 		for (std::uint64_t index = first; index <= last; ++index)
 		{
 			ASSERT_TRUE(peer.receiveAllUntil(answer, std::chrono::steady_clock::now() + 5s, {}));
-			const auto response = TransferResponse::decode(answer);
+			const auto response = TransferResponse::Codec::decode(answer);
 			EXPECT_EQ(response.transferID, index * 2);
 			EXPECT_EQ(response.status, spk::Transfer::Status::Success);
 		}

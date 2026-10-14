@@ -37,3 +37,15 @@ TEST(OutgoingReservation, EmptyMessageStillReservesFullPageHeader)
 	EXPECT_EQ(reservation.logical->bytes(), 1u);
 	EXPECT_EQ(reservation.frame->bytes(), spk::NetworkInternal::FrameHeaderSize + spk::NetworkInternal::PageMetadataSize);
 }
+
+TEST(OutgoingReservation, TryReserveReturnsEmptyAndRollsBackInsufficientFrameHeadroom)
+{
+	using spk::NetworkInternal::CommandBudget;
+	using spk::NetworkInternal::OutgoingReservation;
+	CommandBudget budget(120);
+	EXPECT_FALSE(OutgoingReservation::tryReserve(budget, 100, 32).has_value());
+	EXPECT_EQ(budget.used(), 0u);
+	const auto recovered = OutgoingReservation::tryReserve(budget, 1, 32);
+	ASSERT_TRUE(recovered.has_value());
+	EXPECT_EQ(budget.used(), recovered->bytes());
+}

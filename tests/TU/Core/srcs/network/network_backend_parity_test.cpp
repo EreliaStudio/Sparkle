@@ -86,7 +86,7 @@ TEST(NetworkBackendParity, FragmentedAndCoalescedFramesPreserveMessagesAndAcknow
 	EXPECT_EQ(second.front().message.type(), 402u);
 	EXPECT_EQ(second.front().message.connectionID(), acceptance.connectionID);
 	EXPECT_EQ(second.front().message.reader().get<std::uint32_t>(), 29u);
-	const auto response = spk::NetworkInternal::TransferResponse::decode(receiveFrame(socket));
+	const auto response = spk::NetworkInternal::TransferResponse::Codec::decode(receiveFrame(socket));
 	EXPECT_EQ(response.transferID, 1u);
 	EXPECT_EQ(response.status, spk::Transfer::Status::Success);
 	EXPECT_EQ(response.connectionID, acceptance.connectionID);

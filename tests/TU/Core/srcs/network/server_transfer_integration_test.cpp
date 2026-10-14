@@ -427,3 +427,87 @@ TEST(ServerTransferIntegration, ExplicitTargetSetSkipReportsSaturatedRecipientWi
 	second.disconnect();
 	server.stop();
 }
+
+TEST(ServerTransferIntegration, EmptySkipBroadcastNeedsNoCommandCapacity)
+{
+	spk::Server server;
+	server.setGlobalMaxQueuedBytes(1);
+	server.start(0);
+	std::vector<std::future<spk::Server::TransferResults>> calls;
+	for (std::uint32_t index = 0; index < 8; ++index)
+	{
+		calls.push_back(std::async(std::launch::async, [&server, index] {
+			return server.sendToAll(makeMessage(210 + index, 128), spk::Message::Priority::Normal, spk::Connection::OverflowPolicy::SkipRecipient);
+		}));
+	}
+	for (auto &call : calls)
+	{
+		ASSERT_EQ(call.wait_for(3s), std::future_status::ready);
+		EXPECT_TRUE(call.get().empty());
+	}
+	EXPECT_THROW(server.sendToAll(makeMessage(220, 128)), spk::Exception);
+	EXPECT_THROW(server.sendToAll(makeMessage(220, 128), spk::Message::Priority::Normal, spk::Connection::OverflowPolicy::DisconnectRecipient), spk::Exception);
+	EXPECT_THROW(server.sendToAll(makeMessage(220, 128), static_cast<spk::Message::Priority>(99), spk::Connection::OverflowPolicy::SkipRecipient), spk::Exception);
+	server.stop();
+	EXPECT_THROW(server.sendToAll(makeMessage(220, 128), spk::Message::Priority::Normal, spk::Connection::OverflowPolicy::SkipRecipient), spk::Exception);
+}
+
+TEST(ServerTransferIntegration, AllPendingSkipBroadcastNeedsNoCommandCapacity)
+{
+	using namespace spk::NetworkInternal;
+	spk::ThreadSafeFIFO<spk::Connection> pending;
+	spk::Server server;
+	auto contract = server.subscribeToConnectionStatusChange([&](spk::Connection connection,
+																 spk::Connection::Status status,
+																 spk::Connection::Error) {
+		if (status == spk::Connection::Status::Pending)
+		{
+			pending.publish(connection);
+		}
+	});
+	server.start(0);
+	auto first = Socket::connectTCP("127.0.0.1", server.port());
+	auto second = Socket::connectTCP("127.0.0.1", server.port());
+	const auto connections = NetworkTestUtils::collect(pending, 2, 3s);
+	ASSERT_EQ(connections.size(), 2u);
+	server.setGlobalMaxQueuedBytes(1);
+	EXPECT_TRUE(server.sendToAll(makeMessage(221, 128), spk::Message::Priority::Normal, spk::Connection::OverflowPolicy::SkipRecipient).empty());
+	EXPECT_EQ(connections[0].status(), spk::Connection::Status::Pending);
+	EXPECT_EQ(connections[1].status(), spk::Connection::Status::Pending);
+	EXPECT_THROW(server.sendTo(connections[0], makeMessage(221, 128)), spk::Exception);
+	EXPECT_THROW(server.sendToAll(makeMessage(221, 128)), spk::Exception);
+	first.setNonBlocking(true);
+	second.setNonBlocking(true);
+	std::array<std::byte, 1> buffer{};
+	EXPECT_FALSE(first.receiveSome(buffer).has_value());
+	EXPECT_FALSE(second.receiveSome(buffer).has_value());
+	first.close();
+	second.close();
+	server.stop();
+}
+
+TEST(ServerTransferIntegration, SkipBroadcastTracksReadinessDisconnectAndRestart)
+{
+	spk::Server server;
+	spk::Client client;
+	server.start(0);
+	const auto connection = identify(server, client);
+	ASSERT_TRUE(connection.isConnected());
+	server.setGlobalMaxQueuedBytes(1);
+	EXPECT_THROW(server.sendToAll(makeMessage(222, 128), spk::Message::Priority::Normal, spk::Connection::OverflowPolicy::SkipRecipient), spk::Exception);
+	server.setGlobalMaxQueuedBytes(4096);
+	const auto results = server.sendToAll(makeMessage(223, 128), spk::Message::Priority::Normal, spk::Connection::OverflowPolicy::SkipRecipient);
+	ASSERT_EQ(results.size(), 1u);
+	EXPECT_TRUE(finished(results.at(connection.id()), spk::Transfer::Status::Success));
+	EXPECT_EQ(NetworkTestUtils::collect(client.messages(), 1, 3s).size(), 1u);
+	client.disconnect();
+	ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
+		return !connection.isConnected();
+	}));
+	server.setGlobalMaxQueuedBytes(1);
+	EXPECT_TRUE(server.sendToAll(makeMessage(224, 128), spk::Message::Priority::Normal, spk::Connection::OverflowPolicy::SkipRecipient).empty());
+	server.stop();
+	server.start(0);
+	EXPECT_TRUE(server.sendToAll(makeMessage(225, 128), spk::Message::Priority::Normal, spk::Connection::OverflowPolicy::SkipRecipient).empty());
+	server.stop();
+}

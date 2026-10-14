@@ -75,10 +75,7 @@ namespace spk
 		[[nodiscard]] Error error() const noexcept;
 		[[nodiscard]] bool isConnected() const noexcept;
 		// Per-session outgoing admission ceiling; zero prevents new message admissions.
-		// Lowering it does not evict transfers already accepted for transmission.
-		// Per-connection admission limit for pending application transfers, shared
-		// across copies of this handle. Does not revoke already admitted transfers.
-		// A zero limit prevents new application transfers from being admitted.
+		// Shared across handle copies; reductions preserve already accepted transfers.
 		[[nodiscard]] std::size_t maxQueuedBytes() const noexcept;
 		void setMaxQueuedBytes(std::size_t bytes) noexcept;
 		[[nodiscard]] StatusContract subscribeToStatusChange(StatusCallback callback);

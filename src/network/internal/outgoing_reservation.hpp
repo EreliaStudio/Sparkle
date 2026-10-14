@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <memory>
+#include <optional>
 
 namespace spk::NetworkInternal
 {
@@ -14,22 +15,12 @@ namespace spk::NetworkInternal
 		std::shared_ptr<CommandBudget::Lease> logical;
 		std::shared_ptr<CommandBudget::Lease> frame;
 
-		[[nodiscard]] std::size_t bytes() const noexcept
-		{
-			return (logical == nullptr ? 0 : logical->bytes()) + (frame == nullptr ? 0 : frame->bytes());
-		}
+		[[nodiscard]] std::size_t bytes() const noexcept;
 
-		[[nodiscard]] static std::size_t frameBytes(std::size_t messageBytes, std::size_t maxPageBytes) noexcept
-		{
-			return FrameHeaderSize + PageMetadataSize + std::min(messageBytes, maxPageBytes);
-		}
+		[[nodiscard]] static std::size_t frameBytes(std::size_t messageBytes, std::size_t maxPageBytes) noexcept;
 
-		[[nodiscard]] static OutgoingReservation reserve(CommandBudget &budget, std::size_t messageBytes, std::size_t maxPageBytes)
-		{
-			OutgoingReservation result;
-			result.logical = budget.reserve(std::max<std::size_t>(1, messageBytes), CommandBudget::Stage::Transfer);
-			result.frame = budget.reserve(frameBytes(messageBytes, maxPageBytes), CommandBudget::Stage::Frame);
-			return result;
-		}
+		[[nodiscard]] static OutgoingReservation reserve(CommandBudget &budget, std::size_t messageBytes, std::size_t maxPageBytes);
+
+		[[nodiscard]] static std::optional<OutgoingReservation> tryReserve(CommandBudget &budget, std::size_t messageBytes, std::size_t maxPageBytes);
 	};
 }

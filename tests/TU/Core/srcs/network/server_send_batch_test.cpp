@@ -1,5 +1,6 @@
 #include "network/internal/server_send_batch.hpp"
 
+#include "network/internal/transfer_completion.hpp"
 #include <gtest/gtest.h>
 
 #include <chrono>

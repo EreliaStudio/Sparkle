@@ -3,6 +3,7 @@
 #include "exception.hpp"
 #include "network/internal/client_handshake.hpp"
 #include "network/internal/command_budget.hpp"
+#include "network/internal/exception_reporting.hpp"
 #include "network/internal/frame.hpp"
 #include "network/internal/handshake.hpp"
 #include "network/internal/incoming_frame_validator.hpp"
@@ -88,6 +89,10 @@ namespace spk
 				}
 			} catch (...)
 			{
+				if (_connected)
+				{
+					NetworkInternal::reportCurrentException("Network client receive worker failed.");
+				}
 			}
 			_remoteDisconnect();
 		}
@@ -100,9 +105,9 @@ namespace spk
 				_receivePage(frame);
 				return;
 			}
-			if (kind == NetworkInternal::TransferResponse::FrameKind)
+			if (kind == NetworkInternal::TransferResponse::Codec::FrameKind)
 			{
-				const auto response = NetworkInternal::TransferResponse::decode(frame);
+				const auto response = NetworkInternal::TransferResponse::Codec::decode(frame);
 
 				(void)_transfers.acknowledge(response);
 				{
@@ -142,7 +147,7 @@ namespace spk
 
 		void _queueResponse(const NetworkInternal::TransferResponse &response)
 		{
-			auto frame = response.encode();
+			auto frame = NetworkInternal::TransferResponse::Codec::encode(response);
 			auto reservation = _outgoingBudget.reserve(frame->size(), NetworkInternal::CommandBudget::Stage::Frame);
 			{
 				const std::scoped_lock lock(_sendMutex);
@@ -238,6 +243,10 @@ namespace spk
 				}
 			} catch (...)
 			{
+				if (_connected)
+				{
+					NetworkInternal::reportCurrentException("Network client send worker failed.");
+				}
 			}
 			_remoteDisconnect();
 		}
@@ -271,6 +280,7 @@ namespace spk
 				_owner._setStatus(_session, Connection::Status::Disconnected, error);
 			} catch (...)
 			{
+				NetworkInternal::reportCurrentException("Network client Disconnected callback failed.");
 			}
 		}
 
@@ -356,6 +366,7 @@ namespace spk
 				}
 			} catch (...)
 			{
+				NetworkInternal::reportCurrentException("Network client transfer expiration failed.");
 				_remoteDisconnect();
 			}
 		}
@@ -403,6 +414,7 @@ namespace spk
 				}
 			} catch (...)
 			{
+				NetworkInternal::reportCurrentException("Network client connection startup or Connected callback failed.");
 				_remoteDisconnect();
 			}
 		}
@@ -630,7 +642,16 @@ namespace spk
 
 	Transfer Client::send(const Message &message, Message::Priority priority)
 	{
-		return _impl->send(message, priority);
+		try
+		{
+			return _impl->send(message, priority);
+		} catch (const Exception &)
+		{
+			throw;
+		} catch (...)
+		{
+			throw Exception("Network client send admission failed.", std::current_exception());
+		}
 	}
 
 	Client::MessageQueue &Client::messages() noexcept

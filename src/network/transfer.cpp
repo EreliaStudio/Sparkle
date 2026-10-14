@@ -1,5 +1,6 @@
 #include "network/transfer.hpp"
 
+#include "network/internal/exception_reporting.hpp"
 #include <atomic>
 #include <mutex>
 #include <utility>
@@ -103,6 +104,7 @@ namespace spk
 			_data->completionProvider.trigger(status, status == Status::Success ? Reason::None : reason);
 		} catch (...)
 		{
+			NetworkInternal::reportCurrentException("Network transfer completion callback failed.");
 		}
 		return true;
 	}

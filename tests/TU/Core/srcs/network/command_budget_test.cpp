@@ -137,3 +137,20 @@ TEST(CommandBudget, ConcurrentStagesCannotReserveBeyondSharedLimit)
 	frame.join();
 	EXPECT_EQ(budget.used(), 0u);
 }
+
+TEST(CommandBudget, TryReserveDistinguishesCapacityAndReclaimsSuccessfulReservations)
+{
+	using Budget = spk::NetworkInternal::CommandBudget;
+	Budget budget(16);
+	EXPECT_EQ(budget.tryReserve(17), nullptr);
+	EXPECT_EQ(budget.used(), 0u);
+	auto lease = budget.tryReserve(16, Budget::Stage::Transfer);
+	ASSERT_NE(lease, nullptr);
+	EXPECT_EQ(budget.tryReserve(1), nullptr);
+	EXPECT_EQ(budget.used(Budget::Stage::Transfer), 16u);
+	budget.setMaximum(1);
+	EXPECT_EQ(budget.tryReserve(1), nullptr);
+	lease.reset();
+	EXPECT_NE(budget.tryReserve(1), nullptr);
+	EXPECT_EQ(budget.used(), 0u);
+}

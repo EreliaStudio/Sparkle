@@ -3,6 +3,7 @@
 #ifdef _WIN32
 
 #	include "exception.hpp"
+#	include "network/internal/exception_reporting.hpp"
 #	include "network/internal/connection_id.hpp"
 #	include <array>
 #	include <cstddef>
@@ -188,6 +189,7 @@ namespace spk::NetworkInternal
 					_appendReceived(*session, operation.buffer.data(), static_cast<std::size_t>(bytes));
 				} catch (...)
 				{
+					reportCurrentException("Network IOCP session receive failed.");
 					_disconnect(session->id);
 					return;
 				}
@@ -311,6 +313,7 @@ namespace spk::NetworkInternal
 						}
 					} catch (...)
 					{
+						reportCurrentException("Network IOCP worker failed.");
 						_beginStop();
 					}
 				}

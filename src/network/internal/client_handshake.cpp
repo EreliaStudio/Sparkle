@@ -1,6 +1,7 @@
 #include "network/internal/client_handshake.hpp"
 
 #include "exception.hpp"
+#include "network/internal/exception_reporting.hpp"
 #include "network/internal/frame.hpp"
 #include "network/internal/handshake.hpp"
 
@@ -95,13 +96,17 @@ namespace spk::NetworkInternal
 			_error = Connection::Error::TransportFailure;
 			_negotiate(socket);
 			return {std::move(socket), _id, Connection::Error::None, _negotiatedPageBytes};
-		} catch (...)
+		} catch (const Exception &)
 		{
 			if (_deadline.expired())
 			{
 				_error = Connection::Error::Timeout;
 			}
 			return {{}, Connection::InvalidID, _error};
+		} catch (...)
+		{
+			reportCurrentException("Unexpected network client handshake failure.");
+			return {{}, Connection::InvalidID, Connection::Error::TransportFailure};
 		}
 	}
 }

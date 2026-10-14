@@ -1,7 +1,5 @@
 #pragma once
 
-#include "exception.hpp"
-
 #include <array>
 #include <cstddef>
 #include <memory>
@@ -44,76 +42,27 @@ namespace spk::NetworkInternal
 			Lease(const Lease &) = delete;
 			Lease &operator=(const Lease &) = delete;
 
-			~Lease()
-			{
-				if (_data != nullptr)
-				{
-					const std::scoped_lock lock(_data->mutex);
-					_data->used -= _bytes;
-					_data->byStage[static_cast<std::size_t>(_stage)] -= _bytes;
-				}
-			}
+			~Lease();
 
-			[[nodiscard]] std::size_t bytes() const noexcept
-			{
-				return _bytes;
-			}
+			[[nodiscard]] std::size_t bytes() const noexcept;
 
-			void transition(Stage stage) noexcept
-			{
-				if (_data == nullptr)
-				{
-					return;
-				}
-				const std::scoped_lock lock(_data->mutex);
-				_data->byStage[static_cast<std::size_t>(_stage)] -= _bytes;
-				_data->byStage[static_cast<std::size_t>(stage)] += _bytes;
-				_stage = stage;
-			}
+			void transition(Stage stage) noexcept;
 		};
 
 	private:
 		std::shared_ptr<Data> _data;
 
 	public:
-		explicit CommandBudget(std::size_t maximum) :
-			_data(std::make_shared<Data>())
-		{
-			_data->maximum = maximum;
-		}
+		explicit CommandBudget(std::size_t maximum);
 
-		[[nodiscard]] std::shared_ptr<Lease> reserve(std::size_t bytes, Stage stage = Stage::Command)
-		{
-			auto lease = std::make_shared<Lease>();
-			const std::scoped_lock lock(_data->mutex);
-			if (_data->used > _data->maximum || bytes > _data->maximum - _data->used)
-			{
-				throw Exception("Network outgoing memory budget is saturated.");
-			}
-			lease->_data = _data;
-			lease->_bytes = bytes;
-			lease->_stage = stage;
-			_data->used += bytes;
-			_data->byStage[static_cast<std::size_t>(stage)] += bytes;
-			return lease;
-		}
+		[[nodiscard]] std::shared_ptr<Lease> reserve(std::size_t bytes, Stage stage = Stage::Command);
+		// Budget exhaustion returns null; allocator failures propagate to admission.
+		[[nodiscard]] std::shared_ptr<Lease> tryReserve(std::size_t bytes, Stage stage = Stage::Command);
 
-		void setMaximum(std::size_t maximum) noexcept
-		{
-			const std::scoped_lock lock(_data->mutex);
-			_data->maximum = maximum;
-		}
+		void setMaximum(std::size_t maximum) noexcept;
 
-		[[nodiscard]] std::size_t used() const noexcept
-		{
-			const std::scoped_lock lock(_data->mutex);
-			return _data->used;
-		}
+		[[nodiscard]] std::size_t used() const noexcept;
 
-		[[nodiscard]] std::size_t used(Stage stage) const noexcept
-		{
-			const std::scoped_lock lock(_data->mutex);
-			return _data->byStage[static_cast<std::size_t>(stage)];
-		}
+		[[nodiscard]] std::size_t used(Stage stage) const noexcept;
 	};
 }
