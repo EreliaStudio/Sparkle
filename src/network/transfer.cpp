@@ -58,10 +58,11 @@ namespace spk
 		};
 		Status currentStatus;
 		Reason currentReason;
-		CompletionContract contract;
+		// Register before reading state so completion cannot be missed, without
+		// holding the state mutex while the provider may be dispatching callbacks.
+		auto contract = _data->completionProvider.subscribe(notify);
 		{
 			const std::scoped_lock lock(_data->mutex);
-			contract = _data->completionProvider.subscribe(notify);
 			currentStatus = _data->status;
 			currentReason = _data->reason;
 		}
