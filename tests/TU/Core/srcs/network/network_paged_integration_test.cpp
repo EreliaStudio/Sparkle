@@ -21,6 +21,7 @@
 #include <functional>
 #include <future>
 #include <memory>
+#include <span>
 #include <stop_token>
 #include <thread>
 #include <utility>
@@ -51,6 +52,153 @@ namespace
 			ASSERT_EQ(message.data()[index], static_cast<std::byte>(index % 251)) << index;
 		}
 	}
+
+	std::vector<std::byte> receiveRawFrame(spk::NetworkInternal::Socket &peer)
+	{
+		using namespace spk::NetworkInternal;
+		const auto deadline = std::chrono::steady_clock::now() + 3s;
+		std::array<std::byte, FrameHeaderSize> header{};
+		if (!peer.receiveAllUntil(header, deadline, {}))
+		{
+			throw spk::Exception("Timed out receiving a budget-regression frame header.");
+		}
+		const auto decoded = decode(header);
+		std::vector<std::byte> frame(FrameHeaderSize + decoded.payloadSize);
+		std::copy(header.begin(), header.end(), frame.begin());
+		if (!peer.receiveAllUntil(std::span(frame).subspan(FrameHeaderSize), deadline, {}))
+		{
+			throw spk::Exception("Timed out receiving a budget-regression frame payload.");
+		}
+		return frame;
+	}
+
+	std::size_t smallIncomingBudget()
+	{
+		using namespace spk::NetworkInternal;
+		auto budget = std::make_shared<ReassemblyBudget>(4096);
+		PageReassembler probe(4096, 4096, 60s, budget);
+		const auto small = makeMessage(990, 2);
+		(void)probe.accept(decodePage(*encodePage(Page{small, 1, small.size(), 0, 1})));
+		return budget->used();
+	}
+
+	enum class ServerIncomingBudget
+	{
+		Session,
+		Global
+	};
+
+	void verifyServerBudgetReduction(ServerIncomingBudget target)
+	{
+		using namespace spk::NetworkInternal;
+		spk::Server server;
+		server.setMaxIncomingBytes(4096);
+		server.setGlobalMaxIncomingBytes(4096);
+		server.start(0);
+		auto peer = Socket::connectTCP("127.0.0.1", server.port());
+		peer.sendAll(*Handshake::encode(Handshake::Kind::Hello));
+		const auto accepted = Handshake::decode(receiveRawFrame(peer));
+		ASSERT_TRUE(Handshake::validAcceptance(accepted));
+		const auto id = accepted.connectionID;
+		const auto original = makeMessage(991, 128).withConnectionID(id);
+		peer.sendAll(*encodePage(Page{original, 1, original.size(), 0, 16}));
+		const auto probe = makeMessage(992, 1).withConnectionID(id);
+		// The probe ACK establishes that the earlier fragment on this stream was admitted.
+		peer.sendAll(*encodePage(Page{probe, 2, probe.size(), 0, probe.size()}));
+		ASSERT_EQ(TransferResponse::decode(receiveRawFrame(peer)).transferID, 2u);
+		if (target == ServerIncomingBudget::Session)
+		{
+			server.setMaxIncomingBytes(1);
+		}
+		else
+		{
+			server.setGlobalMaxIncomingBytes(1);
+		}
+		// Synchronous send admission runs after the queued per-session configuration.
+		const auto barrier = server.sendTo(server.connection(id), makeMessage(993, 1));
+		const auto barrierFrame = receiveRawFrame(peer);
+		ASSERT_EQ(decodePage(barrierFrame).transferID, barrier.id());
+		peer.sendAll(*TransferResponse{id, barrier.id(), spk::Transfer::Status::Success, spk::Transfer::Reason::None}.encode());
+		peer.sendAll(*encodePage(Page{original, 3, original.size(), 0, 16}));
+		const auto rejected = TransferResponse::decode(receiveRawFrame(peer));
+		EXPECT_EQ(rejected.transferID, 3u);
+		EXPECT_EQ(rejected.status, spk::Transfer::Status::Rejected);
+		EXPECT_EQ(rejected.reason, spk::Transfer::Reason::ReceiverCapacity);
+		peer.sendAll(*encodePage(Page{original, 1, original.size(), 16, original.size() - 16}));
+		const auto completed = TransferResponse::decode(receiveRawFrame(peer));
+		EXPECT_EQ(completed.transferID, 1u);
+		EXPECT_EQ(completed.status, spk::Transfer::Status::Success);
+		const auto received = NetworkTestUtils::collect(server.messages(), 2, 3s);
+		ASSERT_EQ(received.size(), 2u);
+		EXPECT_EQ(received.back().message.type(), original.type());
+		expectPayload(received.back().message, original.size());
+		EXPECT_TRUE(server.connection(id).isConnected());
+		if (target == ServerIncomingBudget::Session)
+		{
+			server.setMaxIncomingBytes(smallIncomingBudget());
+		}
+		else
+		{
+			server.setGlobalMaxIncomingBytes(smallIncomingBudget());
+		}
+		const auto recoveryBarrier = server.sendTo(server.connection(id), makeMessage(994, 1));
+		const auto recoveryFrame = receiveRawFrame(peer);
+		ASSERT_EQ(decodePage(recoveryFrame).transferID, recoveryBarrier.id());
+		peer.sendAll(*TransferResponse{id, recoveryBarrier.id(), spk::Transfer::Status::Success, spk::Transfer::Reason::None}.encode());
+		peer.sendAll(*encodePage(Page{probe, 4, probe.size(), 0, probe.size()}));
+		EXPECT_EQ(TransferResponse::decode(receiveRawFrame(peer)).status, spk::Transfer::Status::Success);
+		EXPECT_EQ(NetworkTestUtils::collect(server.messages(), 1, 3s).size(), 1u);
+		peer.close();
+		server.stop();
+	}
+}
+
+TEST(NetworkPagedIntegration, ServerLocalBudgetReductionPreservesAcceptedTransfer)
+{
+	verifyServerBudgetReduction(ServerIncomingBudget::Session);
+}
+
+TEST(NetworkPagedIntegration, ServerGlobalBudgetReductionPreservesAcceptedTransfer)
+{
+	verifyServerBudgetReduction(ServerIncomingBudget::Global);
+}
+
+TEST(NetworkPagedIntegration, ClientBudgetReductionPreservesAcceptedTransfer)
+{
+	using namespace spk::NetworkInternal;
+	auto listener = Socket::listenTCP(0);
+	spk::Client client;
+	client.setMaxIncomingBytes(4096);
+	const auto connection = client.connect("127.0.0.1", listener.localPort());
+	auto peer = listener.accept();
+	EXPECT_EQ(Handshake::decode(receiveRawFrame(peer)).kind, Handshake::Kind::Hello);
+	peer.sendAll(*Handshake::encode(Handshake::Kind::Accepted, 989));
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(connection));
+	const auto original = makeMessage(995, 128).withConnectionID(989);
+	const auto probe = makeMessage(996, 1).withConnectionID(989);
+	peer.sendAll(*encodePage(Page{original, 1, original.size(), 0, 16}));
+	peer.sendAll(*encodePage(Page{probe, 2, probe.size(), 0, probe.size()}));
+	ASSERT_EQ(TransferResponse::decode(receiveRawFrame(peer)).transferID, 2u);
+	client.setMaxIncomingBytes(1);
+	peer.sendAll(*encodePage(Page{original, 3, original.size(), 0, 16}));
+	const auto rejected = TransferResponse::decode(receiveRawFrame(peer));
+	EXPECT_EQ(rejected.transferID, 3u);
+	EXPECT_EQ(rejected.status, spk::Transfer::Status::Rejected);
+	EXPECT_EQ(rejected.reason, spk::Transfer::Reason::ReceiverCapacity);
+	peer.sendAll(*encodePage(Page{original, 1, original.size(), 16, original.size() - 16}));
+	const auto completed = TransferResponse::decode(receiveRawFrame(peer));
+	EXPECT_EQ(completed.transferID, 1u);
+	EXPECT_EQ(completed.status, spk::Transfer::Status::Success);
+	const auto received = NetworkTestUtils::collect(client.messages(), 2, 3s);
+	ASSERT_EQ(received.size(), 2u);
+	expectPayload(received.back(), original.size());
+	EXPECT_TRUE(client.isConnected());
+	client.setMaxIncomingBytes(smallIncomingBudget());
+	peer.sendAll(*encodePage(Page{probe, 4, probe.size(), 0, probe.size()}));
+	EXPECT_EQ(TransferResponse::decode(receiveRawFrame(peer)).status, spk::Transfer::Status::Success);
+	EXPECT_EQ(NetworkTestUtils::collect(client.messages(), 1, 3s).size(), 1u);
+	client.disconnect();
+	peer.close();
 }
 
 TEST(NetworkPagedIntegration, LargeLogicalMessageCrossesFormerFrameLimit)

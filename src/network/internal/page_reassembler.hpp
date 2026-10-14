@@ -29,9 +29,11 @@ namespace spk::NetworkInternal
 			std::map<std::uint64_t, std::size_t> portions;
 			std::size_t receivedBytes = 0;
 			std::size_t chargedBytes = 0;
+			std::size_t maximumIncompleteBytes;
+			std::unique_ptr<ReassemblyBudget::Lease> reservation;
 			Clock::time_point updated;
 
-			explicit Transfer(const PageFragment &first, Clock::time_point now);
+			Transfer(const PageFragment &first, Clock::time_point now, std::size_t maximumIncompleteBytes, std::unique_ptr<ReassemblyBudget::Lease> &&reservation);
 		};
 
 		std::unordered_map<std::uint64_t, Transfer> _transfers;
@@ -46,7 +48,8 @@ namespace spk::NetworkInternal
 
 		void _validateNew(const PageFragment &page) const;
 		void _insert(Transfer &transfer, const PageFragment &page, Clock::time_point now);
-		void _reserve(std::size_t bytes, std::uint64_t id);
+		[[nodiscard]] std::size_t _transferCharge() const noexcept;
+		void _reserve(std::size_t bytes, std::uint64_t id, std::size_t maximum);
 		void _release(std::size_t bytes) noexcept;
 		[[nodiscard]] bool _duplicate(const Transfer &transfer, const PageFragment &page) const;
 

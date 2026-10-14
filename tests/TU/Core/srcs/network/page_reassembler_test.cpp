@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <future>
+#include <latch>
 #include <limits>
 #include <memory>
 #include <thread>
@@ -337,6 +338,186 @@ TEST(PageReassembler, RuntimeLimitsRejectInvalidSettingsWithoutChangingActiveRes
 	const auto first = scheduler.nextPage(4);
 	EXPECT_THROW((void)assembler.accept(fragment(*first)), spk::NetworkInternal::PageReassemblyError);
 	EXPECT_EQ(assembler.reservedBytes(), 0u);
+}
+
+TEST(PageReassembler, LowerLocalBudgetPreservesAcceptedTransferAndConstrainsNewAdmissions)
+{
+	using namespace spk::NetworkInternal;
+	auto budget = std::make_shared<ReassemblyBudget>(4096);
+	PageReassembler assembler(4096, 4096, std::chrono::seconds(60), budget);
+	const auto original = message(128, 111);
+	const Page first{original, 1, original.size(), 0, 16};
+	ASSERT_FALSE(assembler.accept(fragment(first)).has_value());
+	const auto reduced = budget->used();
+	assembler.setLimits(4096, reduced);
+	auto rejected = fragment(first);
+	rejected.transferID = 2;
+	EXPECT_THROW((void)assembler.accept(rejected), PageReassemblyError);
+	EXPECT_EQ(budget->used(), reduced);
+	const auto completed = assembler.accept(fragment(Page{original, 1, original.size(), 16, original.size() - 16}));
+	ASSERT_TRUE(completed.has_value());
+	ASSERT_EQ(completed->size(), original.size());
+	EXPECT_TRUE(std::equal(completed->data().begin(), completed->data().end(), original.data().begin()));
+	EXPECT_EQ(budget->used(), 0u);
+	EXPECT_EQ(assembler.reservedBytes(), 0u);
+	const auto tooLarge = message(reduced + 1, 112);
+	EXPECT_THROW((void)assembler.accept(fragment(Page{tooLarge, 3, tooLarge.size(), 0, 1})), PageReassemblyError);
+	const auto small = message(1, 113);
+	EXPECT_TRUE(assembler.accept(fragment(Page{small, 4, small.size(), 0, small.size()})).has_value());
+	EXPECT_EQ(budget->used(), 0u);
+}
+
+TEST(PageReassembler, LowerSharedBudgetPreservesAcceptedTransferAndConstrainsOtherSessions)
+{
+	using namespace spk::NetworkInternal;
+	auto budget = std::make_shared<ReassemblyBudget>(4096);
+	PageReassembler first(4096, 4096, std::chrono::seconds(60), budget);
+	PageReassembler second(4096, 4096, std::chrono::seconds(60), budget);
+	const auto original = message(128, 114);
+	const Page initial{original, 1, original.size(), 0, 16};
+	ASSERT_FALSE(first.accept(fragment(initial)).has_value());
+	const auto reduced = budget->used();
+	budget->setMaximum(reduced);
+	EXPECT_THROW((void)second.accept(fragment(initial)), PageReassemblyError);
+	EXPECT_EQ(budget->used(), reduced);
+	EXPECT_TRUE(first.accept(fragment(Page{original, 1, original.size(), 16, original.size() - 16})).has_value());
+	EXPECT_EQ(budget->used(), 0u);
+	const auto tooLarge = message(reduced + 1, 115);
+	EXPECT_THROW((void)second.accept(fragment(Page{tooLarge, 2, tooLarge.size(), 0, 1})), PageReassemblyError);
+	const auto small = message(1, 116);
+	EXPECT_TRUE(second.accept(fragment(Page{small, 3, small.size(), 0, small.size()})).has_value());
+	EXPECT_EQ(budget->used(), 0u);
+}
+
+TEST(PageReassembler, LowerLimitsStillBoundExistingTransferMetadata)
+{
+	using namespace spk::NetworkInternal;
+	auto budget = std::make_shared<ReassemblyBudget>(4096);
+	const auto original = message(128, 117);
+	const Page initial{original, 1, original.size(), 0, 16};
+	PageReassembler probe(4096, 4096, std::chrono::seconds(60), budget);
+	ASSERT_FALSE(probe.accept(fragment(initial)).has_value());
+	const auto exactFirstPageCharge = budget->used();
+	probe.clear();
+	PageReassembler assembler(4096, exactFirstPageCharge, std::chrono::seconds(60), budget);
+	ASSERT_FALSE(assembler.accept(fragment(initial)).has_value());
+	assembler.setLimits(4096, 1);
+	EXPECT_THROW((void)assembler.accept(fragment(Page{original, 1, original.size(), 16, 16})), PageReassemblyError);
+	EXPECT_EQ(assembler.reservedBytes(), 0u);
+	EXPECT_EQ(budget->used(), 0u);
+}
+
+TEST(PageReassembler, RaisedLocalAllowanceSurvivesLaterReduction)
+{
+	using namespace spk::NetworkInternal;
+	auto budget = std::make_shared<ReassemblyBudget>(4096);
+	const auto original = message(128, 118);
+	const Page initial{original, 1, original.size(), 0, 16};
+	PageReassembler probe(4096, 4096, std::chrono::seconds(60), budget);
+	ASSERT_FALSE(probe.accept(fragment(initial)).has_value());
+	const auto exactFirstPageCharge = budget->used();
+	probe.clear();
+	PageReassembler assembler(4096, exactFirstPageCharge, std::chrono::seconds(60), budget);
+	ASSERT_FALSE(assembler.accept(fragment(initial)).has_value());
+	assembler.setLimits(4096, 4096);
+	assembler.setLimits(4096, 1);
+	EXPECT_TRUE(assembler.accept(fragment(Page{original, 1, original.size(), 16, original.size() - 16})).has_value());
+	EXPECT_EQ(budget->used(), 0u);
+}
+
+TEST(PageReassembler, LoweredBudgetsReclaimFailedExpiredAndClearedTransfers)
+{
+	using namespace spk::NetworkInternal;
+	auto budget = std::make_shared<ReassemblyBudget>(4096);
+	PageReassembler assembler(4096, 4096, std::chrono::milliseconds(100), budget);
+	const auto original = message(128, 119);
+	const Page initial{original, 1, original.size(), 0, 16};
+	const auto now = PageReassembler::Clock::now();
+	ASSERT_FALSE(assembler.accept(fragment(initial), now).has_value());
+	assembler.setLimits(4096, 1);
+	budget->setMaximum(1);
+	EXPECT_THROW((void)assembler.accept(fragment(initial), now), PageReassemblyError);
+	EXPECT_EQ(budget->used(), 0u);
+	assembler.setLimits(4096, 4096);
+	budget->setMaximum(4096);
+	auto fresh = fragment(initial);
+	fresh.transferID = 2;
+	ASSERT_FALSE(assembler.accept(fresh, now).has_value());
+	assembler.setLimits(4096, 1);
+	budget->setMaximum(1);
+	EXPECT_EQ(assembler.expire(now + std::chrono::milliseconds(100)).size(), 1u);
+	EXPECT_EQ(budget->used(), 0u);
+	assembler.setLimits(4096, 4096);
+	budget->setMaximum(4096);
+	fresh.transferID = 3;
+	ASSERT_FALSE(assembler.accept(fresh, now).has_value());
+	assembler.setLimits(4096, 1);
+	budget->setMaximum(1);
+	assembler.clear();
+	EXPECT_EQ(budget->used(), 0u);
+	EXPECT_EQ(assembler.reservedBytes(), 0u);
+}
+
+TEST(PageReassembler, SharedBudgetReductionPreservesConcurrentAcceptedTransfers)
+{
+	using namespace spk::NetworkInternal;
+	constexpr std::size_t Count = 8;
+	auto budget = std::make_shared<ReassemblyBudget>(64u * 1024u);
+	const auto original = message(128, 120);
+	std::latch admitted(Count);
+	std::latch lowered(1);
+	std::atomic_bool valid = true;
+	std::vector<std::jthread> workers;
+	for (std::size_t index = 0; index < Count; ++index)
+	{
+		workers.emplace_back([&] {
+			PageReassembler assembler(4096, 4096, std::chrono::seconds(60), budget);
+			bool accepted = false;
+			try
+			{
+				accepted = !assembler.accept(fragment(Page{original, 1, original.size(), 0, 16})).has_value();
+			} catch (...)
+			{
+				valid = false;
+			}
+			admitted.count_down();
+			lowered.wait();
+			if (!accepted)
+			{
+				return;
+			}
+			try
+			{
+				(void)assembler.accept(fragment(Page{original, 2, original.size(), 0, 16}));
+				valid = false;
+			} catch (const PageReassemblyError &error)
+			{
+				if (error.reason() != PageReassemblyError::Reason::Capacity)
+				{
+					valid = false;
+				}
+			}
+			try
+			{
+				if (!assembler.accept(fragment(Page{original, 1, original.size(), 16, original.size() - 16})).has_value())
+				{
+					valid = false;
+				}
+			} catch (...)
+			{
+				valid = false;
+			}
+		});
+	}
+	admitted.wait();
+	budget->setMaximum(1);
+	lowered.count_down();
+	for (std::jthread &worker : workers)
+	{
+		worker.join();
+	}
+	EXPECT_TRUE(valid.load());
+	EXPECT_EQ(budget->used(), 0u);
 }
 
 TEST(PageReassembler, CompletedTransferPagesNeverRepublishTheSameLogicalMessage)

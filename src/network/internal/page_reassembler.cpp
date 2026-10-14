@@ -8,8 +8,10 @@
 
 namespace spk::NetworkInternal
 {
-	PageReassembler::Transfer::Transfer(const PageFragment &first, Clock::time_point now) :
+	PageReassembler::Transfer::Transfer(const PageFragment &first, Clock::time_point now, std::size_t maximumIncompleteBytes, std::unique_ptr<ReassemblyBudget::Lease> &&reservation) :
 		writer(first.header.messageType),
+		maximumIncompleteBytes(maximumIncompleteBytes),
+		reservation(std::move(reservation)),
 		updated(now)
 	{
 		writer.setRequestID(first.header.requestID);
@@ -39,10 +41,15 @@ namespace spk::NetworkInternal
 		clear();
 	}
 
-	void PageReassembler::_reserve(std::size_t bytes, std::uint64_t id)
+	std::size_t PageReassembler::_transferCharge() const noexcept
 	{
-		if (_chargedBytes > _maxIncompleteBytes || bytes > _maxIncompleteBytes - _chargedBytes ||
-			(_sharedBudget != nullptr && !_sharedBudget->reserve(bytes)))
+		// Model the shared lease and its list registration as transfer metadata.
+		return sizeof(Transfer) + (_sharedBudget == nullptr ? 0 : sizeof(ReassemblyBudget::Lease) + 3 * sizeof(void *));
+	}
+
+	void PageReassembler::_reserve(std::size_t bytes, std::uint64_t id, std::size_t maximum)
+	{
+		if (_chargedBytes > maximum || bytes > maximum - _chargedBytes)
 		{
 			throw PageReassemblyError(id, PageReassemblyError::Reason::Capacity);
 		}
@@ -52,10 +59,6 @@ namespace spk::NetworkInternal
 	void PageReassembler::_release(std::size_t bytes) noexcept
 	{
 		_chargedBytes -= bytes;
-		if (_sharedBudget != nullptr)
-		{
-			_sharedBudget->release(bytes);
-		}
 	}
 
 	void PageReassembler::_validateNew(const PageFragment &page) const
@@ -66,7 +69,7 @@ namespace spk::NetworkInternal
 			throw Exception("Network page has an invalid transfer ID.");
 		}
 		if (page.totalSize > _maxMessageBytes ||
-			page.totalSize > std::numeric_limits<std::size_t>::max() - sizeof(Transfer))
+			page.totalSize > std::numeric_limits<std::size_t>::max() - _transferCharge())
 		{
 			throw PageReassemblyError(page.transferID, Reason::InvalidLength);
 		}
@@ -80,7 +83,7 @@ namespace spk::NetworkInternal
 			throw PageReassemblyError(page.transferID, Reason::InvalidFirstPage);
 		}
 		if (_transfers.size() >= 512 ||
-			page.totalSize + sizeof(Transfer) > _maxIncompleteBytes - std::min(_chargedBytes, _maxIncompleteBytes))
+			page.totalSize + _transferCharge() > _maxIncompleteBytes - std::min(_chargedBytes, _maxIncompleteBytes))
 		{
 			throw PageReassemblyError(page.transferID, Reason::Capacity);
 		}
@@ -129,13 +132,22 @@ namespace spk::NetworkInternal
 			throw PageReassemblyError(page.transferID, Reason::OverlappingPage);
 		}
 		constexpr std::size_t PageCharge = sizeof(std::pair<const std::uint64_t, std::size_t>) + 3 * sizeof(void *);
-		_reserve(PageCharge, page.transferID);
+		_reserve(PageCharge, page.transferID, transfer.maximumIncompleteBytes);
+		if (transfer.reservation != nullptr && !transfer.reservation->reserve(PageCharge))
+		{
+			_release(PageCharge);
+			throw PageReassemblyError(page.transferID, Reason::Capacity);
+		}
 		try
 		{
 			transfer.portions.emplace(page.offset, page.data.size());
 		} catch (...)
 		{
 			_release(PageCharge);
+			if (transfer.reservation != nullptr)
+			{
+				transfer.reservation->release(PageCharge);
+			}
 			throw;
 		}
 		transfer.chargedBytes += PageCharge;
@@ -156,11 +168,16 @@ namespace spk::NetworkInternal
 			if (iterator == _transfers.end())
 			{
 				_validateNew(page);
-				const std::size_t charge = static_cast<std::size_t>(page.totalSize) + sizeof(Transfer);
-				_reserve(charge, page.transferID);
+				const std::size_t charge = static_cast<std::size_t>(page.totalSize) + _transferCharge();
+				_reserve(charge, page.transferID, _maxIncompleteBytes);
 				try
 				{
-					iterator = _transfers.try_emplace(page.transferID, page, now).first;
+					auto reservation = _sharedBudget == nullptr ? nullptr : _sharedBudget->reserve(charge);
+					if (_sharedBudget != nullptr && reservation == nullptr)
+					{
+						throw PageReassemblyError(page.transferID, PageReassemblyError::Reason::Capacity);
+					}
+					iterator = _transfers.try_emplace(page.transferID, page, now, _maxIncompleteBytes, std::move(reservation)).first;
 				} catch (...)
 				{
 					_release(charge);
@@ -236,6 +253,11 @@ namespace spk::NetworkInternal
 		}
 		_maxMessageBytes = maximumMessageBytes;
 		_maxIncompleteBytes = maximumIncompleteBytes;
+		for (auto &[id, transfer] : _transfers)
+		{
+			(void)id;
+			transfer.maximumIncompleteBytes = std::max(transfer.maximumIncompleteBytes, maximumIncompleteBytes);
+		}
 	}
 
 	void PageReassembler::clear() noexcept

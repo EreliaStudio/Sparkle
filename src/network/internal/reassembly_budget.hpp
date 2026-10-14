@@ -1,60 +1,51 @@
 #pragma once
 
-#include "exception.hpp"
-
 #include <cstddef>
-#include <mutex>
+#include <list>
+#include <memory>
 
 namespace spk::NetworkInternal
 {
 	class ReassemblyBudget final
 	{
 	private:
-		mutable std::mutex _mutex;
-		std::size_t _maximum;
-		std::size_t _used = 0;
+		struct Data;
 
 	public:
-		explicit ReassemblyBudget(std::size_t maximum = 2ull * 1024ull * 1024ull * 1024ull) :
-			_maximum(maximum)
+		class Lease final
 		{
-			if (maximum == 0)
-			{
-				throw Exception("Reassembly memory budget must be positive.");
-			}
-		}
+			friend class ReassemblyBudget;
 
-		[[nodiscard]] bool reserve(std::size_t bytes)
-		{
-			const std::scoped_lock lock(_mutex);
-			if (_used > _maximum || bytes > _maximum - _used)
-			{
-				return false;
-			}
-			_used += bytes;
-			return true;
-		}
+		private:
+			std::shared_ptr<Data> _data;
+			std::list<Lease *>::iterator _registration;
+			std::size_t _maximum = 0;
+			std::size_t _bytes = 0;
 
-		void release(std::size_t bytes) noexcept
-		{
-			const std::scoped_lock lock(_mutex);
-			_used -= bytes;
-		}
+			Lease() = default;
 
-		void setMaximum(std::size_t bytes)
-		{
-			if (bytes == 0)
-			{
-				throw Exception("Reassembly memory budget must be positive.");
-			}
-			const std::scoped_lock lock(_mutex);
-			_maximum = bytes;
-		}
+		public:
+			~Lease();
+			Lease(const Lease &) = delete;
+			Lease(Lease &&) = delete;
+			Lease &operator=(const Lease &) = delete;
+			Lease &operator=(Lease &&) = delete;
+			[[nodiscard]] bool reserve(std::size_t bytes);
+			void release(std::size_t bytes) noexcept;
+		};
 
-		[[nodiscard]] std::size_t used() const noexcept
-		{
-			const std::scoped_lock lock(_mutex);
-			return _used;
-		}
+	private:
+		std::shared_ptr<Data> _data;
+
+	public:
+		explicit ReassemblyBudget(std::size_t maximum = 2ull * 1024ull * 1024ull * 1024ull);
+		ReassemblyBudget(const ReassemblyBudget &) = delete;
+		ReassemblyBudget(ReassemblyBudget &&) = delete;
+		ReassemblyBudget &operator=(const ReassemblyBudget &) = delete;
+		ReassemblyBudget &operator=(ReassemblyBudget &&) = delete;
+		[[nodiscard]] std::unique_ptr<Lease> reserve(std::size_t bytes);
+		// Reductions constrain new leases; increases also extend existing allowances.
+		void setMaximum(std::size_t bytes);
+		[[nodiscard]] std::size_t used() const noexcept;
 	};
 }

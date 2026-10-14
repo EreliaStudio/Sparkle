@@ -72,12 +72,12 @@ namespace spk
 		// Maximum logical payload for outgoing messages and incoming messages.
 		void setMaxMessageBytes(std::size_t bytes);
 		// Per-session incomplete payloads and modeled reassembly metadata; excludes allocator overhead.
-		// Per-session incomplete reassembly: logical payload plus modeled metadata.
+		// Reductions constrain new transfers; accepted transfers retain their continuation allowance.
 		void setMaxIncomingBytes(std::size_t bytes);
 		void setMaxPageBytes(std::size_t bytes);
 		// Shared incoming reassembly admission cap across all sessions (not total process memory).
-		// Shared incomplete-reassembly charge across all connected peers.
 		// Neither incoming limit accounts for allocator capacity or socket buffers.
+		// Reductions preserve accepted-transfer allowances; increases also extend them.
 		void setGlobalMaxIncomingBytes(std::size_t bytes);
 		// Targeted send throws on invalid/Pending/disconnected handles or no capacity.
 		Transfer sendTo(const Connection &connection, const Message &message, Message::Priority priority = Message::Priority::Normal);
