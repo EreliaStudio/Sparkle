@@ -127,3 +127,29 @@ TEST(ServerSendAdmission, RollbackPreservesNestedQueueContext)
 {
 	verifyCommitFailure(true);
 }
+
+TEST(ServerSendAdmission, EmptyAudienceIsCompleteWithoutReservingOrCommitting)
+{
+	const std::unordered_map<spk::Connection::ID, std::shared_ptr<AdmissionSession>> sessions;
+	const std::function<std::vector<spk::Connection>()> snapshot = [] {
+		return std::vector<spk::Connection>{};
+	};
+	CommandBudget budget(1);
+	for (const auto policy : {spk::Connection::OverflowPolicy::Reject, spk::Connection::OverflowPolicy::SkipRecipient, spk::Connection::OverflowPolicy::DisconnectRecipient})
+	{
+		ServerSendBatch batch(spk::Message::Writer(282).build(), spk::Message::Priority::Normal, policy);
+		batch.allRecipients = true;
+		ServerSendAdmission<AdmissionSession> admission(batch, sessions, budget, snapshot);
+		EXPECT_NO_THROW(admission.run([](const auto &, auto &) {
+			FAIL() << "No recipient to queue.";
+		},
+									  [](const auto &) {
+										  FAIL() << "No recipient to flush.";
+									  },
+									  [](auto) {
+										  FAIL() << "No recipient to disconnect.";
+									  }));
+		EXPECT_TRUE(batch.recipients.empty());
+		EXPECT_EQ(budget.used(), 0u);
+	}
+}

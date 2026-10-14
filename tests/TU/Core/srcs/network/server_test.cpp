@@ -30,11 +30,11 @@ TEST(ServerTest, StartingRunningServerThrowsWithoutReplacingListener)
 	server.stop();
 }
 
-TEST(ServerTest, BroadcastWithoutRecipientsThrows)
+TEST(ServerTest, BroadcastWithoutRecipientsReturnsEmpty)
 {
 	spk::Server server;
 	server.start(0);
-	EXPECT_THROW(server.sendToAll(spk::Message::Writer(1).build()), spk::Exception);
+	EXPECT_TRUE(server.sendToAll(spk::Message::Writer(1).build()).empty());
 	EXPECT_THROW(server.sendTo(spk::ConnectionSet{}, spk::Message::Writer(1).build()), spk::Exception);
 	server.stop();
 }

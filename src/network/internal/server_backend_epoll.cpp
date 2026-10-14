@@ -107,7 +107,7 @@ namespace spk::NetworkInternal
 					static_cast<int>(session->socket.nativeHandle()),
 					_token(id),
 					EPOLLIN | EPOLLRDHUP | EPOLLERR);
-				_sessions.emplace(id, session);
+				_registerSession(session);
 				_notifyConnection(id);
 			}
 

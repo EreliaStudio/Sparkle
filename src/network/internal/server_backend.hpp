@@ -80,7 +80,8 @@ namespace spk::NetworkInternal
 		ServerCallbacks _callbacks;
 		CommandBudget _commandBudget{256u * 1024u * 1024u};
 		std::mutex _commandMutex;
-		// Guarded by _commandMutex; only handshake completion/disconnection changes it.
+		// Guarded by _commandMutex; track registered and handshake-ready sessions.
+		std::size_t _sessionCount = 0;
 		std::size_t _readySessions = 0;
 		std::deque<Command> _commands;
 		PageFailureLimits _failureLimits;
@@ -125,6 +126,7 @@ namespace spk::NetworkInternal
 		virtual void _unregisterSocket(const Socket &socket) noexcept;
 
 		[[nodiscard]] std::shared_ptr<Session> _makeSession(Socket socket);
+		void _registerSession(const std::shared_ptr<Session> &session);
 		void _notifyConnection(ConnectionID id) noexcept;
 		void _appendReceived(Session &session, const std::byte *data, std::size_t size);
 		[[nodiscard]] bool _prepareWrite(Session &session);

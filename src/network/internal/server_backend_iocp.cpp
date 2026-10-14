@@ -138,7 +138,7 @@ namespace spk::NetworkInternal
 				auto session = _makeSession(std::move(operation->acceptedSocket));
 				const ConnectionID id = session->id;
 				_associate(session->socket);
-				_sessions.emplace(id, session);
+				_registerSession(session);
 				_postRead(session);
 				_notifyConnection(id);
 				if (!_stopping)

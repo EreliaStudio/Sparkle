@@ -48,10 +48,6 @@ namespace spk::NetworkInternal
 				return;
 			}
 			const auto connections = _snapshot();
-			if (connections.empty() && _batch.policy != Connection::OverflowPolicy::SkipRecipient)
-			{
-				throw Exception("Cannot broadcast without connected recipients.");
-			}
 			_batch.recipients.reserve(connections.size());
 			for (const Connection &connection : connections)
 			{

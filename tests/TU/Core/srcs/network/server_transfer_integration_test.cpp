@@ -237,7 +237,7 @@ TEST(ServerTransferIntegration, ExplicitSkipRecipientCanBroadcastToEmptyAudience
 		spk::Message::Priority::Normal,
 		spk::Connection::OverflowPolicy::SkipRecipient);
 	EXPECT_TRUE(results.empty());
-	EXPECT_THROW(server.sendToAll(makeMessage(163, 16)), spk::Exception);
+	EXPECT_TRUE(server.sendToAll(makeMessage(163, 16)).empty());
 	server.stop();
 }
 
@@ -428,7 +428,7 @@ TEST(ServerTransferIntegration, ExplicitTargetSetSkipReportsSaturatedRecipientWi
 	server.stop();
 }
 
-TEST(ServerTransferIntegration, EmptySkipBroadcastNeedsNoCommandCapacity)
+TEST(ServerTransferIntegration, EmptyBroadcastNeedsNoCommandCapacityForEveryPolicy)
 {
 	spk::Server server;
 	server.setGlobalMaxQueuedBytes(1);
@@ -437,7 +437,7 @@ TEST(ServerTransferIntegration, EmptySkipBroadcastNeedsNoCommandCapacity)
 	for (std::uint32_t index = 0; index < 8; ++index)
 	{
 		calls.push_back(std::async(std::launch::async, [&server, index] {
-			return server.sendToAll(makeMessage(210 + index, 128), spk::Message::Priority::Normal, spk::Connection::OverflowPolicy::SkipRecipient);
+			return server.sendToAll(makeMessage(210 + index, 128), spk::Message::Priority::Normal, static_cast<spk::Connection::OverflowPolicy>(index % 3));
 		}));
 	}
 	for (auto &call : calls)
@@ -445,8 +445,9 @@ TEST(ServerTransferIntegration, EmptySkipBroadcastNeedsNoCommandCapacity)
 		ASSERT_EQ(call.wait_for(3s), std::future_status::ready);
 		EXPECT_TRUE(call.get().empty());
 	}
-	EXPECT_THROW(server.sendToAll(makeMessage(220, 128)), spk::Exception);
-	EXPECT_THROW(server.sendToAll(makeMessage(220, 128), spk::Message::Priority::Normal, spk::Connection::OverflowPolicy::DisconnectRecipient), spk::Exception);
+	EXPECT_TRUE(server.sendToAll(makeMessage(220, 128)).empty());
+	EXPECT_TRUE(server.sendToAll(makeMessage(220, 128), spk::Message::Priority::Normal, spk::Connection::OverflowPolicy::DisconnectRecipient).empty());
+	EXPECT_THROW(server.sendToAll(makeMessage(220, 128), spk::Message::Priority::Normal, static_cast<spk::Connection::OverflowPolicy>(99)), spk::Exception);
 	EXPECT_THROW(server.sendToAll(makeMessage(220, 128), static_cast<spk::Message::Priority>(99), spk::Connection::OverflowPolicy::SkipRecipient), spk::Exception);
 	server.stop();
 	EXPECT_THROW(server.sendToAll(makeMessage(220, 128), spk::Message::Priority::Normal, spk::Connection::OverflowPolicy::SkipRecipient), spk::Exception);
@@ -476,6 +477,7 @@ TEST(ServerTransferIntegration, AllPendingSkipBroadcastNeedsNoCommandCapacity)
 	EXPECT_EQ(connections[1].status(), spk::Connection::Status::Pending);
 	EXPECT_THROW(server.sendTo(connections[0], makeMessage(221, 128)), spk::Exception);
 	EXPECT_THROW(server.sendToAll(makeMessage(221, 128)), spk::Exception);
+	EXPECT_THROW(server.sendToAll(makeMessage(221, 128), spk::Message::Priority::Normal, spk::Connection::OverflowPolicy::DisconnectRecipient), spk::Exception);
 	first.setNonBlocking(true);
 	second.setNonBlocking(true);
 	std::array<std::byte, 1> buffer{};
@@ -505,9 +507,30 @@ TEST(ServerTransferIntegration, SkipBroadcastTracksReadinessDisconnectAndRestart
 		return !connection.isConnected();
 	}));
 	server.setGlobalMaxQueuedBytes(1);
-	EXPECT_TRUE(server.sendToAll(makeMessage(224, 128), spk::Message::Priority::Normal, spk::Connection::OverflowPolicy::SkipRecipient).empty());
+	EXPECT_TRUE(server.sendToAll(makeMessage(224, 128)).empty());
 	server.stop();
 	server.start(0);
-	EXPECT_TRUE(server.sendToAll(makeMessage(225, 128), spk::Message::Priority::Normal, spk::Connection::OverflowPolicy::SkipRecipient).empty());
+	EXPECT_TRUE(server.sendToAll(makeMessage(225, 128)).empty());
+	server.stop();
+}
+
+TEST(ServerTransferIntegration, EmptyBroadcastFromDisconnectionCallbackReturnsEmpty)
+{
+	std::promise<spk::Server::TransferResults> completed;
+	auto result = completed.get_future();
+	spk::Server server;
+	spk::Client client;
+	auto contract = server.subscribeToConnectionStatusChange([&](spk::Connection, spk::Connection::Status status, spk::Connection::Error) {
+		if (status == spk::Connection::Status::Disconnected)
+		{
+			completed.set_value(server.sendToAll(makeMessage(226, 128)));
+		}
+	});
+	server.start(0);
+	ASSERT_TRUE(identify(server, client).isConnected());
+	server.setGlobalMaxQueuedBytes(1);
+	client.disconnect();
+	ASSERT_EQ(result.wait_for(3s), std::future_status::ready);
+	EXPECT_TRUE(result.get().empty());
 	server.stop();
 }

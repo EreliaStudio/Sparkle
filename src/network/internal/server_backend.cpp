@@ -43,6 +43,13 @@ namespace spk::NetworkInternal
 		return session;
 	}
 
+	void ServerBackend::_registerSession(const std::shared_ptr<Session> &session)
+	{
+		const std::scoped_lock lock(_commandMutex);
+		_sessions.emplace(session->id, session);
+		++_sessionCount;
+	}
+
 	void ServerBackend::_notifyConnection(ConnectionID id) noexcept
 	{
 		try
@@ -263,11 +270,14 @@ namespace spk::NetworkInternal
 		}
 
 		auto session = std::move(iterator->second);
-		_sessions.erase(iterator);
-		if (session->handshake.ready())
 		{
 			const std::scoped_lock lock(_commandMutex);
-			--_readySessions;
+			_sessions.erase(iterator);
+			--_sessionCount;
+			if (session->handshake.ready())
+			{
+				--_readySessions;
+			}
 		}
 		_unregisterSocket(session->socket);
 		session->socket.close();
@@ -301,8 +311,8 @@ namespace spk::NetworkInternal
 			if (command.batch != nullptr)
 			{
 				// Linearize an empty broadcast with backend readiness, before reserving
-				// or retaining any command payload. Pending peers are not recipients.
-				if (command.batch->allRecipients && command.batch->policy == Connection::OverflowPolicy::SkipRecipient && _readySessions == 0)
+				// or retaining any command payload. Only SkipRecipient excludes Pending peers.
+				if (command.batch->allRecipients && (_sessionCount == 0 || (command.batch->policy == Connection::OverflowPolicy::SkipRecipient && _readySessions == 0)))
 				{
 					command.batch->acceptAdmission();
 					return;

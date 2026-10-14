@@ -85,7 +85,8 @@ namespace spk
 		// Returned transfer success means transport acknowledgment, not app receipt.
 		TransferResults sendTo(const ConnectionSet &connections, const Message &message, Message::Priority priority = Message::Priority::Normal, Connection::OverflowPolicy policy = Connection::OverflowPolicy::Reject);
 		// Applies the same admission policy to the backend's recipient snapshot.
-		// SkipRecipient excludes Pending peers and returns empty when no recipients remain.
+		// No clients returns an empty map immediately for every policy, with no traffic queued.
+		// Only SkipRecipient excludes Pending peers, also returning empty if none remain.
 		TransferResults sendToAll(const Message &message, Message::Priority priority = Message::Priority::Normal, Connection::OverflowPolicy policy = Connection::OverflowPolicy::Reject);
 		[[nodiscard]] MessageQueue &messages() noexcept;
 		[[nodiscard]] MessageDispatcher &messageDispatcher() noexcept;
