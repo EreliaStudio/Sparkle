@@ -26,6 +26,12 @@ namespace spk
 		using StatusCallback = StatusProvider::callback_type;
 		using StatusContract = StatusProvider::Contract;
 
+		enum class ConnectBehaviour
+		{
+			Throw,
+			DisconnectPrevious
+		};
+
 	private:
 		class Impl;
 		std::unique_ptr<Impl> _impl;
@@ -55,9 +61,7 @@ namespace spk
 		[[nodiscard]] StatusContract subscribeToConnectionStatusChange(StatusCallback callback);
 		[[nodiscard]] Connection connection() const;
 		[[nodiscard]] bool isConnected() const noexcept;
-		// Begins one asynchronous attempt; the returned handle is initially Pending.
-		// A previous attempt must be explicitly disconnected before reconnecting.
-		Connection connect(std::string_view address, std::uint16_t port);
+		Connection connect(std::string_view address, std::uint16_t port, ConnectBehaviour behaviour = ConnectBehaviour::Throw);
 		// Applies to attempts started after this call, not an active handshake.
 		void setHandshakeTimeout(std::chrono::milliseconds timeout);
 		void setIncomingTransferTimeout(std::chrono::milliseconds timeout);
