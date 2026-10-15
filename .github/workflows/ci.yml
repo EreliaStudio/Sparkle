@@ -40,7 +40,7 @@ jobs:
       - name: Export formatted networking sources
         shell: bash
         run: |
-          for path in src/network/client.cpp src/network/internal/client_session.hpp src/network/internal/client_session.cpp src/network/internal/client_reception.hpp src/network/internal/client_reception.cpp src/network/internal/client_transmission.hpp src/network/internal/client_transmission.cpp; do
+          for path in src/network/client.cpp src/network/internal/client_session.hpp src/network/internal/client_session.cpp src/network/internal/client_reception.hpp src/network/internal/client_reception.cpp src/network/internal/client_transmission.hpp src/network/internal/client_transmission.cpp tests/TU/Core/srcs/network/client_session_integration_test.cpp; do
             echo "SPARKLE_FORMAT_BEGIN:$path"
             clang-format --style=file "$path" | base64 -w0
             echo
