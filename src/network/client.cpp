@@ -284,6 +284,15 @@ namespace spk
 			}
 		}
 
+		[[nodiscard]] bool _onWorkerThread() const noexcept
+		{
+			const auto self = std::this_thread::get_id();
+			return (_connector.joinable() && _connector.get_id() == self) ||
+				(_reader.joinable() && _reader.get_id() == self) ||
+				(_sender.joinable() && _sender.get_id() == self) ||
+				(_expirationWorker.joinable() && _expirationWorker.get_id() == self);
+		}
+
 		void _joinWorkers()
 		{
 			if (_connector.joinable() && _connector.get_id() != std::this_thread::get_id())
@@ -424,6 +433,10 @@ namespace spk
 			if (address.empty() || port == 0)
 			{
 				throw Exception("Client::connect requires a nonempty address and nonzero port.");
+			}
+			if (_onWorkerThread())
+			{
+				throw Exception("Cannot begin a client connection from a transport worker callback.");
 			}
 			switch (behaviour)
 			{
