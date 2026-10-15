@@ -1,4 +1,6 @@
 #include "network/internal/client_session.hpp"
+#include "network/internal/client_reception.hpp"
+#include "network/internal/client_transmission.hpp"
 
 #include "exception.hpp"
 #include "network/internal/client_handshake.hpp"
@@ -40,20 +42,12 @@ namespace spk::NetworkInternal
 		std::jthread _sender;
 		std::jthread _expirationWorker;
 		mutable std::mutex _lifecycleMutex;
-		std::mutex _receiveMutex;
-		std::mutex _expirationMutex;
-		std::condition_variable _expirationWake;
 		std::atomic_bool _connected = false;
 		std::atomic_bool _active = false;
 		std::chrono::milliseconds _handshakeTimeout = NetworkInternal::Handshake::DefaultTimeout;
 		Connection _session;
-		std::mutex _sendMutex;
-		std::condition_variable _sendAvailable;
-		NetworkInternal::TransferSender _transfers;
-		NetworkInternal::TransferReception _reception;
-		std::deque<NetworkInternal::TransmissionFrame> _responses;
-		NetworkInternal::CommandBudget _outgoingBudget{64u * 1024u * 1024u};
-		std::unordered_map<spk::Transfer::ID, NetworkInternal::OutgoingReservation> _outgoingReservations;
+		ClientReception _reception;
+		ClientTransmission _transmission;
 		std::atomic<Connection::ID> _remoteID = Connection::InvalidID;
 		std::atomic_size_t _maxMessageBytes = 128u * 1024u * 1024u;
 		std::atomic_size_t _maxIncomingBytes = 512u * 1024u * 1024u;
@@ -99,36 +93,18 @@ namespace spk::NetworkInternal
 
 		void _receive(const NetworkInternal::FrameHeader &header, std::span<const std::byte> frame)
 		{
-			const auto kind = NetworkInternal::read16(frame.data() + 6);
-			if (kind == NetworkInternal::PageFrameKind)
+			auto received = _reception.accept(header, frame);
+			if (received.acknowledgment.has_value())
 			{
-				_receivePage(frame);
-				return;
+				_transmission.acknowledge(*received.acknowledgment);
 			}
-			if (kind == NetworkInternal::TransferResponse::Codec::FrameKind)
+			if (received.message.has_value())
 			{
-				const auto response = NetworkInternal::TransferResponse::Codec::decode(frame);
-
-				(void)_transfers.acknowledge(response);
-				{
-					const std::scoped_lock lock(_sendMutex);
-					_outgoingReservations.erase(response.transferID);
-				}
-				return;
+				_callbacks.publish(_session, std::move(*received.message));
 			}
-			if (kind != 0)
+			if (received.response.has_value())
 			{
-				throw Exception("Unknown network frame kind.");
-			}
-			Message::Writer writer(header.type);
-			writer.setRequestID(header.requestID);
-			writer.setConnectionID(header.connectionID);
-			writer.resize(header.payloadSize);
-			std::copy(frame.begin() + NetworkInternal::FrameHeaderSize, frame.end(), writer.data().begin());
-			_callbacks.publish(_session, std::move(writer).build());
-			{
-				const std::scoped_lock lock(_receiveMutex);
-				_reception.successfulMessage();
+				_queueResponse(*received.response);
 			}
 		}
 
@@ -147,35 +123,9 @@ namespace spk::NetworkInternal
 
 		void _queueResponse(const NetworkInternal::TransferResponse &response)
 		{
-			auto frame = NetworkInternal::TransferResponse::Codec::encode(response);
-			auto reservation = _outgoingBudget.reserve(frame->size(), NetworkInternal::CommandBudget::Stage::Frame);
+			if (_connected)
 			{
-				const std::scoped_lock lock(_sendMutex);
-				if (!_connected)
-				{
-					return;
-				}
-				_responses.push_back(NetworkInternal::TransmissionFrame{std::move(frame), 0, 0, std::move(reservation)});
-			}
-			_sendAvailable.notify_one();
-		}
-
-		void _receivePage(std::span<const std::byte> frame)
-		{
-			const auto page = NetworkInternal::decodePage(frame);
-
-			NetworkInternal::TransferReception::Result received;
-			{
-				const std::scoped_lock lock(_receiveMutex);
-				received = _reception.accept(page, page.header.connectionID);
-			}
-			if (received.message.has_value())
-			{
-				_callbacks.publish(_session, std::move(*received.message));
-			}
-			if (received.response.has_value())
-			{
-				_queueResponse(*received.response);
+				_transmission.queueResponse(response);
 			}
 		}
 
@@ -185,61 +135,21 @@ namespace spk::NetworkInternal
 			{
 				while (_connected)
 				{
-					std::shared_ptr<std::vector<std::byte>> frame;
-					std::shared_ptr<NetworkInternal::CommandBudget::Lease> reservation;
-					std::uint64_t finalPage = 0;
+					auto frame = _transmission.nextFrame(_connected, std::min(_maxPageBytes.load(), _negotiatedPageBytes.load()));
+					if (!frame.has_value())
 					{
-						std::unique_lock lock(_sendMutex);
-						_sendAvailable.wait(lock, [this] {
-							return !_connected || !_responses.empty() || _transfers.pendingTransfers() != 0;
-						});
-						if (!_connected)
-						{
-							break;
-						}
-						if (!_responses.empty())
-						{
-							frame = std::move(_responses.front().bytes);
-							reservation = std::move(_responses.front().reservation);
-							_responses.pop_front();
-						}
-						else
-						{
-							const auto page = _transfers.nextPage(std::min(_maxPageBytes.load(), _negotiatedPageBytes.load()));
-							if (page.has_value())
-							{
-								const auto it = _outgoingReservations.find(page->transferID);
-								if (it == _outgoingReservations.end())
-								{
-									throw Exception("Missing client outgoing page reservation.");
-								}
-								frame = NetworkInternal::encodePage(*page);
-								reservation = it->second.frame;
-								if (page->offset + page->length == page->totalSize)
-								{
-									finalPage = page->transferID;
-								}
-							}
-						}
+						break;
 					}
-					if (frame != nullptr)
+					if (frame->reservation != nullptr)
 					{
-						if (reservation != nullptr)
-						{
-							reservation->transition(NetworkInternal::CommandBudget::Stage::InFlight);
-						}
-						_socket.sendAll(*frame);
-						if (reservation != nullptr)
-						{
-							reservation->transition(NetworkInternal::CommandBudget::Stage::Frame);
-						}
-						if (finalPage != 0)
-						{
-							_transfers.finalPageWritten(finalPage);
-							const std::scoped_lock lock(_sendMutex);
-							_outgoingReservations.erase(finalPage);
-						}
+						frame->reservation->transition(NetworkInternal::CommandBudget::Stage::InFlight);
 					}
+					_socket.sendAll(*frame->bytes);
+					if (frame->reservation != nullptr)
+					{
+						frame->reservation->transition(NetworkInternal::CommandBudget::Stage::Frame);
+					}
+					_transmission.frameWritten(frame->finalPage);
 				}
 			} catch (...)
 			{
@@ -254,7 +164,7 @@ namespace spk::NetworkInternal
 		void _remoteDisconnect(Connection::Error error = Connection::Error::TransportFailure) noexcept
 		{
 			{
-				const std::scoped_lock lock(_lifecycleMutex, _sendMutex);
+				const std::scoped_lock lock(_lifecycleMutex);
 				if (!_active.exchange(false))
 				{
 					return;
@@ -264,17 +174,9 @@ namespace spk::NetworkInternal
 			}
 			_expirationWake.notify_all();
 			_callbacks.retireIncoming(_session);
-			_sendAvailable.notify_all();
-			_transfers.clear();
-			{
-				const std::scoped_lock lock(_receiveMutex);
-				_reception.clear();
-			}
-			{
-				const std::scoped_lock lock(_sendMutex);
-				_responses.clear();
-				_outgoingReservations.clear();
-			}
+			_transmission.wake();
+			_transmission.clear();
+			_reception.clear();
 			try
 			{
 				_callbacks.setStatus(_session, Connection::Status::Disconnected, error);
@@ -334,8 +236,8 @@ namespace spk::NetworkInternal
 			_reception.setLimits(settings.maxMessageBytes, settings.maxIncomingBytes);
 			_reception.setInactivityTimeout(settings.incomingTransferTimeout);
 			_reception.configureFailureLimits(settings.pageFailureLimits);
-			_transfers.setMaxMessageBytes(settings.maxMessageBytes);
-			_transfers.setAcknowledgmentTimeout(settings.acknowledgmentTimeout);
+			_transmission.setMaxMessageBytes(settings.maxMessageBytes);
+			_transmission.setAcknowledgmentTimeout(settings.acknowledgmentTimeout);
 		}
 
 		[[nodiscard]] bool active() const noexcept
@@ -354,35 +256,13 @@ namespace spk::NetworkInternal
 			return _connected.load() && _session.isConnected();
 		}
 
-		void _reclaimOutgoingReservations()
-		{
-			const std::scoped_lock lock(_sendMutex);
-			for (auto it = _outgoingReservations.begin(); it != _outgoingReservations.end();)
-			{
-				if (!_transfers.isTracked(it->first))
-				{
-					it = _outgoingReservations.erase(it);
-				}
-				else
-				{
-					++it;
-				}
-			}
-		}
-
 		void _expireTransfers()
 		{
-			std::vector<NetworkInternal::TransferResponse> responses;
-			{
-				const std::scoped_lock lock(_receiveMutex);
-				responses = _reception.expire(_remoteID.load());
-			}
-			for (const auto &response : responses)
+			for (const auto &response : _reception.expire(_remoteID.load()))
 			{
 				_queueResponse(response);
 			}
-			_transfers.expire();
-			_reclaimOutgoingReservations();
+			_transmission.expire();
 		}
 
 		void _expirationLoop() noexcept
@@ -410,6 +290,7 @@ namespace spk::NetworkInternal
 
 		void _startWorkers()
 		{
+			_transmission.start();
 			_connected = true;
 			_reader = std::jthread([this] {
 				_run();
@@ -521,7 +402,7 @@ namespace spk::NetworkInternal
 		{
 			bool notify = false;
 			{
-				const std::scoped_lock lock(_lifecycleMutex, _sendMutex);
+				const std::scoped_lock lock(_lifecycleMutex);
 				notify = _active.exchange(false);
 				_connected = false;
 				_socket.close();
@@ -531,19 +412,11 @@ namespace spk::NetworkInternal
 			{
 				_callbacks.retireIncoming(_session);
 			}
-			_sendAvailable.notify_all();
+			_transmission.wake();
 			_joinWorkers();
 			_socket.close();
-			_transfers.clear();
-			{
-				const std::scoped_lock lock(_sendMutex);
-				_responses.clear();
-				_outgoingReservations.clear();
-			}
-			{
-				const std::scoped_lock lock(_receiveMutex);
-				_reception.clear();
-			}
+			_transmission.clear();
+			_reception.clear();
 			_remoteID = Connection::InvalidID;
 			if (notify)
 			{
@@ -553,13 +426,12 @@ namespace spk::NetworkInternal
 
 		void setIncomingTransferTimeout(std::chrono::milliseconds timeout)
 		{
-			const std::scoped_lock lock(_receiveMutex);
 			_reception.setInactivityTimeout(timeout);
 		}
 
 		void setAcknowledgmentTimeout(std::chrono::milliseconds timeout)
 		{
-			_transfers.setAcknowledgmentTimeout(timeout);
+			_transmission.setAcknowledgmentTimeout(timeout);
 		}
 
 		void setMaxMessageBytes(std::size_t bytes)
@@ -568,11 +440,11 @@ namespace spk::NetworkInternal
 			{
 				throw Exception("Maximum network message size must be positive.");
 			}
-			const std::scoped_lock lock(_receiveMutex, _sendMutex);
 			_reception.setLimits(bytes, _maxIncomingBytes.load());
-			_transfers.setMaxMessageBytes(bytes);
+			_transmission.setMaxMessageBytes(bytes);
 			_maxMessageBytes.store(bytes);
 		}
+
 		void setMaxPageBytes(std::size_t bytes)
 		{
 			if (bytes == 0 || bytes > NetworkInternal::MaximumSupportedPageBytes)
@@ -584,44 +456,25 @@ namespace spk::NetworkInternal
 
 		void setMaxIncomingBytes(std::size_t bytes)
 		{
-			const std::scoped_lock lock(_receiveMutex);
 			_reception.setLimits(_maxMessageBytes.load(), bytes);
 			_maxIncomingBytes.store(bytes);
 		}
+
 		void setPageFailureLimits(PageFailureLimits limits)
 		{
-			const std::scoped_lock lock(_receiveMutex);
 			_reception.configureFailureLimits(limits);
 		}
 
 		Transfer send(const Message &message, Message::Priority priority)
 		{
-			std::unique_lock lock(_sendMutex);
+			const std::scoped_lock lock(_lifecycleMutex);
 			if (!_connected || _session.status() != Connection::Status::Connected)
 			{
 				throw Exception("Cannot send through a pending or disconnected network client.");
 			}
-			const auto maximum = _session.maxQueuedBytes();
-			_outgoingBudget.setMaximum(maximum);
-			_transfers.setMaxPendingBytes(maximum);
-			auto reservation = NetworkInternal::OutgoingReservation::reserve(_outgoingBudget, message.size(), _negotiatedPageBytes.load());
-			Transfer transfer;
-			try
-			{
-				transfer = _transfers.enqueue(message, priority);
-				_outgoingReservations.emplace(transfer.id(), std::move(reservation));
-			} catch (...)
-			{
-				lock.unlock();
-				if (transfer.id() != Transfer::InvalidID)
-				{
-					(void)_transfers.fail(transfer.id(), Transfer::Status::Rejected, Transfer::Reason::QueueOverflow);
-				}
-				throw;
-			}
-			_sendAvailable.notify_one();
-			return transfer;
+			return _transmission.send(message, priority, _session.maxQueuedBytes(), _negotiatedPageBytes.load());
 		}
+
 	};
 
 	ClientSession::ClientSession(Callbacks callbacks, const Settings &settings) :
