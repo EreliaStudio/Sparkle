@@ -45,15 +45,13 @@ namespace spk::NetworkInternal
 	void ClientTransmission::queueResponse(const TransferResponse &response)
 	{
 		auto frame = TransferResponse::Codec::encode(response);
-		auto reservation = _budget.reserve(frame->size(), CommandBudget::Stage::Frame);
+		const std::scoped_lock lock(_mutex);
+		if (!_accepting)
 		{
-			const std::scoped_lock lock(_mutex);
-			if (!_accepting)
-			{
-				return;
-			}
-			_responses.push_back(TransmissionFrame{std::move(frame), 0, 0, std::move(reservation)});
+			return;
 		}
+		auto reservation = _budget.reserve(frame->size(), CommandBudget::Stage::Frame);
+		_responses.push_back(TransmissionFrame{std::move(frame), 0, 0, std::move(reservation)});
 		_available.notify_one();
 	}
 
@@ -141,10 +139,12 @@ namespace spk::NetworkInternal
 
 	void ClientTransmission::clear() noexcept
 	{
+		{
+			const std::scoped_lock lock(_mutex);
+			_accepting = false;
+			_responses.clear();
+			_reservations.clear();
+		}
 		_transfers.clear();
-		const std::scoped_lock lock(_mutex);
-		_accepting = false;
-		_responses.clear();
-		_reservations.clear();
 	}
 }
