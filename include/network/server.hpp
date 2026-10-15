@@ -67,7 +67,6 @@ namespace spk
 		// This is reserved transport accounting, not a bound on allocator or OS socket overhead.
 		// Lowering the cap blocks future reservations without evicting accepted work.
 		void setGlobalMaxQueuedBytes(std::size_t bytes);
-		// Maximum logical payload for outgoing messages and incoming messages.
 		void setMaxMessageBytes(std::size_t bytes);
 		// Per-session incomplete payloads and modeled reassembly metadata; excludes allocator overhead.
 		// Reductions constrain new transfers; accepted transfers retain their continuation allowance.
@@ -84,7 +83,6 @@ namespace spk
 		// SkipRecipient reports capacity-limited explicit targets as Rejected transfers.
 		// Returned transfer success means transport acknowledgment, not app receipt.
 		TransferResults sendTo(const ConnectionSet &connections, const Message &message, Message::Priority priority = Message::Priority::Normal, Connection::OverflowPolicy policy = Connection::OverflowPolicy::Reject);
-		// Applies the same admission policy to the backend's recipient snapshot.
 		// No clients returns an empty map immediately for every policy, with no traffic queued.
 		// Only SkipRecipient excludes Pending peers, also returning empty if none remain.
 		TransferResults sendToAll(const Message &message, Message::Priority priority = Message::Priority::Normal, Connection::OverflowPolicy policy = Connection::OverflowPolicy::Reject);
