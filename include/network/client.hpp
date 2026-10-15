@@ -62,7 +62,6 @@ namespace spk
 		void setHandshakeTimeout(std::chrono::milliseconds timeout);
 		void setIncomingTransferTimeout(std::chrono::milliseconds timeout);
 		void setAcknowledgmentTimeout(std::chrono::milliseconds timeout);
-		// Maximum logical payload for both incoming and outgoing messages.
 		void setMaxMessageBytes(std::size_t bytes);
 		// Incomplete reassembly budget: logical payload plus modeled transfer/page metadata.
 		// This is not a process-wide RSS or allocator-capacity limit.
