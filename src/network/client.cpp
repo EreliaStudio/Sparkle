@@ -287,10 +287,19 @@ namespace spk
 		[[nodiscard]] bool _onWorkerThread() const noexcept
 		{
 			const auto self = std::this_thread::get_id();
-			return (_connector.joinable() && _connector.get_id() == self) ||
-				(_reader.joinable() && _reader.get_id() == self) ||
-				(_sender.joinable() && _sender.get_id() == self) ||
-				(_expirationWorker.joinable() && _expirationWorker.get_id() == self);
+			if (_connector.joinable() && _connector.get_id() == self)
+			{
+				return true;
+			}
+			if (_reader.joinable() && _reader.get_id() == self)
+			{
+				return true;
+			}
+			if (_sender.joinable() && _sender.get_id() == self)
+			{
+				return true;
+			}
+			return _expirationWorker.joinable() && _expirationWorker.get_id() == self;
 		}
 
 		void _joinWorkers()
