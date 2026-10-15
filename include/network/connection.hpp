@@ -79,8 +79,6 @@ namespace spk
 		[[nodiscard]] Status status() const noexcept;
 		[[nodiscard]] Error error() const noexcept;
 		[[nodiscard]] bool isConnected() const noexcept;
-		// Per-session outgoing admission ceiling; zero prevents new message admissions.
-		// Shared across handle copies; reductions preserve already accepted transfers.
 		[[nodiscard]] std::size_t maxQueuedBytes() const noexcept;
 		void setMaxQueuedBytes(std::size_t bytes, QueueLimitBehaviour behaviour = QueueLimitBehaviour::PreserveAcceptedTransfers);
 		[[nodiscard]] StatusContract subscribeToStatusChange(StatusCallback callback);
