@@ -149,6 +149,23 @@ TEST(HandshakeIntegration, ExplicitDisconnectPreviousReplacesConnectedClient)
 	first.stop();
 }
 
+TEST(HandshakeIntegration, ExplicitServerRestartDisconnectsPreviousClients)
+{
+	spk::Server server;
+	spk::Client client;
+	server.start(0);
+	const auto previous = client.connect("127.0.0.1", server.port());
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(previous));
+	server.start(0, spk::Server::StartBehaviour::Restart);
+	EXPECT_EQ(previous.status(), spk::Connection::Status::Disconnected);
+	EXPECT_TRUE(server.isRunning());
+	client.disconnect();
+	const auto replacement = client.connect("127.0.0.1", server.port());
+	EXPECT_TRUE(NetworkTestUtils::waitConnected(replacement));
+	client.disconnect();
+	server.stop();
+}
+
 TEST(HandshakeIntegration, ServerBroadcastRejectsPendingRecipient)
 {
 	spk::Server server;
