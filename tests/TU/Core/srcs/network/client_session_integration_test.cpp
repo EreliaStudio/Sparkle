@@ -47,11 +47,13 @@ TEST(ClientSessionIntegrationTest, NewAttemptPreservesSettingsAndRetiresPrevious
 		ASSERT_EQ(received.size(), 1u);
 		EXPECT_EQ(received.front().message.requestID(), index + 1);
 		EXPECT_EQ(received.front().message.size(), 2048u);
-		EXPECT_TRUE(std::all_of(
-			received.front().message.data().begin(),
-			received.front().message.data().end(),
-			[](std::byte value) { return value == std::byte{0x5a}; }));
-		ASSERT_TRUE(NetworkTestUtils::waitUntil([&] { return transfer.isComplete(); }, 5s));
+		EXPECT_TRUE(std::all_of(received.front().message.data().begin(), received.front().message.data().end(), [](std::byte value) {
+			return value == std::byte{0x5a};
+		}));
+		ASSERT_TRUE(NetworkTestUtils::waitUntil([&] {
+			return transfer.isComplete();
+		},
+												5s));
 		EXPECT_EQ(transfer.status(), spk::Transfer::Status::Success);
 		previous = connection;
 		client.disconnect();
