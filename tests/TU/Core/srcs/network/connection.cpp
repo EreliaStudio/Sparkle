@@ -21,6 +21,14 @@ TEST(Connection, CopiedHandlesShareConfiguration)
 	EXPECT_EQ(connection.maxQueuedBytes(), 5678u);
 }
 
+TEST(Connection, QueueLimitBehaviourRejectsUnknownValue)
+{
+	spk::Connection connection;
+	connection.setMaxQueuedBytes(2048, spk::Connection::QueueLimitBehaviour::PreserveAcceptedTransfers);
+	EXPECT_THROW(connection.setMaxQueuedBytes(1024, static_cast<spk::Connection::QueueLimitBehaviour>(99)), spk::Exception);
+	EXPECT_EQ(connection.maxQueuedBytes(), 2048u);
+}
+
 TEST(Connection, NewConnectionStartsDisconnected)
 {
 	spk::Connection connection;
