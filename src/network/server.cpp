@@ -156,8 +156,16 @@ namespace spk
 		return _impl->port();
 	}
 
-	void Server::start(std::uint16_t port)
+	void Server::start(std::uint16_t port, StartBehaviour behaviour)
 	{
+		if (behaviour != StartBehaviour::Throw && behaviour != StartBehaviour::Restart)
+		{
+			throw Exception("Unsupported server start behavior.");
+		}
+		if (behaviour == StartBehaviour::Restart && isRunning())
+		{
+			stop();
+		}
 		_impl->start(port);
 	}
 
@@ -208,10 +216,10 @@ namespace spk
 	{
 		_impl->setGlobalMaxIncomingBytes(bytes);
 	}
-	Transfer Server::sendTo(const Connection &connection, const Message &message, Message::Priority priority)
+	Transfer Server::sendTo(const Connection &connection, const Message &message, Message::Priority priority, Connection::OverflowPolicy policy)
 	{
 		const ConnectionSet recipients{connection};
-		return sendTo(recipients, message, priority).at(connection.id());
+		return sendTo(recipients, message, priority, policy).at(connection.id());
 	}
 
 	Server::TransferResults Server::sendTo(const ConnectionSet &connections, const Message &message, Message::Priority priority, Connection::OverflowPolicy policy)
