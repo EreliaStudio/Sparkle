@@ -17,6 +17,13 @@
 
 using namespace std::chrono_literals;
 
+TEST(HandshakeIntegration, SocketSendBehaviourRejectsUnknownValue)
+{
+	spk::NetworkInternal::Socket socket;
+	const auto behaviour = static_cast<spk::NetworkInternal::Socket::SendBehaviour>(99);
+	EXPECT_THROW((void)socket.sendSome({}, behaviour), spk::Exception);
+}
+
 TEST(HandshakeIntegration, PendingClientRejectsApplicationMessagesAndTimesOut)
 {
 	auto listener = spk::NetworkInternal::Socket::listenTCP(0);
