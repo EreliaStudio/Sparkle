@@ -236,7 +236,8 @@ jobs:
       - name: Repeat concurrent networking workload
         run: >-
           ctest --test-dir build/stress
-          -R '^Core[.]NetworkStressTest[.]ManyClientsConnectAndExchangeConcurrently          --repeat until-fail:20 --output-on-failure --no-tests=error --timeout 120
+          -R '^Core[.]NetworkStressTest[.]ManyClientsConnectAndExchangeConcurrently$'
+          --repeat until-fail:20 --output-on-failure --no-tests=error --timeout 120
       - name: Repeat deterministic randomized network workload
         run: >-
           ctest --test-dir build/stress -R '^Core[.]NetworkStressTest[.]SeededRandomPayloadsPreserveEveryByte$'
