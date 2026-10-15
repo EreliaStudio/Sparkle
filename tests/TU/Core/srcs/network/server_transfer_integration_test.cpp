@@ -200,6 +200,21 @@ TEST(ServerTransferIntegration, ExplicitSingleTargetSkipReturnsRejectedTransfer)
 	server.stop();
 }
 
+TEST(ServerTransferIntegration, SingleRecipientRejectsUnknownAdmissionBehaviour)
+{
+	spk::Server server;
+	spk::Client client;
+	server.start(0);
+	auto recipient = identify(server, client);
+	ASSERT_TRUE(recipient.isConnected());
+	const auto invalid = static_cast<spk::Server::SendBehaviour>(99);
+	EXPECT_THROW(server.sendTo(recipient, makeMessage(156, 1), spk::Message::Priority::Normal, spk::Connection::OverflowPolicy::Reject, invalid), spk::Exception);
+	EXPECT_TRUE(client.isConnected());
+	EXPECT_TRUE(NetworkTestUtils::collect(client.messages(), 1, 100ms).empty());
+	client.disconnect();
+	server.stop();
+}
+
 TEST(ServerTransferIntegration, InvalidPriorityThrowsBeforeScheduling)
 {
 	spk::Server server;
