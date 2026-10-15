@@ -530,6 +530,11 @@ namespace spk::NetworkInternal
 		return _port.load();
 	}
 
+	bool ServerBackend::isWorkerThread() const noexcept
+	{
+		return _worker.joinable() && _worker.get_id() == std::this_thread::get_id();
+	}
+
 	void ServerBackend::start(std::uint16_t port)
 	{
 		if (_running.load())
