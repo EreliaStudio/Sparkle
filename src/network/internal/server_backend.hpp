@@ -143,6 +143,7 @@ namespace spk::NetworkInternal
 	public:
 		virtual ~ServerBackend() = default;
 		[[nodiscard]] bool isRunning() const noexcept;
+		[[nodiscard]] bool isWorkerThread() const noexcept;
 		[[nodiscard]] std::uint16_t port() const noexcept;
 		void start(std::uint16_t port);
 		void stop();
