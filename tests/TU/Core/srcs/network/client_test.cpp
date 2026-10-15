@@ -31,6 +31,25 @@ TEST(ClientTest, TransferTimeoutConfigurationRejectsNonPositiveValues)
 	EXPECT_NO_THROW(client.setAcknowledgmentTimeout(std::chrono::milliseconds(250)));
 }
 
+TEST(ClientTest, ExplicitPoliciesRejectUnknownValues)
+{
+	spk::Client client;
+	const auto handshake = static_cast<spk::Client::HandshakeTimeoutBehaviour>(99);
+	const auto incoming = static_cast<spk::Client::IncomingBudgetBehaviour>(99);
+	const auto pageSize = static_cast<spk::Client::PageSizeBehaviour>(99);
+	const auto send = static_cast<spk::Client::SendBehaviour>(99);
+	const auto dispatch = static_cast<spk::Client::MessageDispatchBehaviour>(99);
+	EXPECT_THROW(client.setHandshakeTimeout(std::chrono::milliseconds(250), handshake), spk::Exception);
+	EXPECT_THROW(client.setMaxIncomingBytes(1024, incoming), spk::Exception);
+	EXPECT_THROW(client.setMaxPageBytes(4096, pageSize), spk::Exception);
+	EXPECT_THROW(client.send(spk::Message::Writer(1).build(), spk::Message::Priority::Normal, send), spk::Exception);
+	EXPECT_THROW(client.treatMessages(dispatch), spk::Exception);
+	EXPECT_NO_THROW(client.setHandshakeTimeout(std::chrono::milliseconds(250), spk::Client::HandshakeTimeoutBehaviour::FutureAttemptsOnly));
+	EXPECT_NO_THROW(client.setMaxIncomingBytes(1024, spk::Client::IncomingBudgetBehaviour::AccountPayloadAndMetadataPreservingAccepted));
+	EXPECT_NO_THROW(client.setMaxPageBytes(4096, spk::Client::PageSizeBehaviour::RespectNegotiatedLimit));
+	EXPECT_NO_THROW(client.treatMessages(spk::Client::MessageDispatchBehaviour::CallingThread));
+}
+
 TEST(ClientTest, ConnectRejectsInvalidArgumentsWithoutStartingAttempt)
 {
 	spk::Client client;
