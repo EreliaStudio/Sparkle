@@ -18,9 +18,6 @@ namespace spk
 		using ID = std::uint64_t;
 		inline static constexpr ID InvalidID = 0;
 
-		// Terminal Success means a transport acknowledgment, not application
-		// processing. Indeterminate means no conclusive acknowledgment arrived.
-		// A transfer reaches at most one terminal state and cannot be canceled.
 		enum class Status
 		{
 			Pending,
