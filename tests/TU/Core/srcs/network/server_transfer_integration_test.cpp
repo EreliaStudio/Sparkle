@@ -184,6 +184,22 @@ TEST(ServerTransferIntegration, TargetedSendThrowsImmediatelyWhenRecipientCannot
 	server.stop();
 }
 
+TEST(ServerTransferIntegration, ExplicitSingleTargetSkipReturnsRejectedTransfer)
+{
+	spk::Server server;
+	spk::Client client;
+	server.start(0);
+	const auto recipient = identify(server, client);
+	ASSERT_TRUE(recipient.isConnected());
+	recipient.setMaxQueuedBytes(1);
+	const auto transfer = server.sendTo(recipient, makeMessage(156, 200), spk::Message::Priority::Normal, spk::Connection::OverflowPolicy::SkipRecipient);
+	EXPECT_TRUE(finished(transfer, spk::Transfer::Status::Rejected));
+	EXPECT_TRUE(client.isConnected());
+	EXPECT_TRUE(NetworkTestUtils::collect(client.messages(), 1, 100ms).empty());
+	client.disconnect();
+	server.stop();
+}
+
 TEST(ServerTransferIntegration, InvalidPriorityThrowsBeforeScheduling)
 {
 	spk::Server server;
@@ -223,6 +239,7 @@ TEST(ServerTransferIntegration, InvalidOverflowPolicyThrowsWithoutSending)
 	const auto invalid = static_cast<spk::Connection::OverflowPolicy>(99);
 	EXPECT_THROW(server.sendToAll(makeMessage(160, 16), spk::Message::Priority::Normal, invalid), spk::Exception);
 	EXPECT_THROW(server.sendTo(spk::ConnectionSet{recipient}, makeMessage(161, 16), spk::Message::Priority::Normal, invalid), spk::Exception);
+	EXPECT_THROW(server.sendTo(recipient, makeMessage(161, 16), spk::Message::Priority::Normal, invalid), spk::Exception);
 	EXPECT_TRUE(NetworkTestUtils::collect(client.messages(), 1, 100ms).empty());
 	client.disconnect();
 	server.stop();
