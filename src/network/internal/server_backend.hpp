@@ -32,7 +32,6 @@ namespace spk::NetworkInternal
 		std::function<void(ConnectionID, Connection::Error)> onDisconnection;
 	};
 
-	// The worker owns transport state; platform backends implement only kernel I/O.
 	class ServerBackend
 	{
 	protected:
@@ -80,7 +79,6 @@ namespace spk::NetworkInternal
 		ServerCallbacks _callbacks;
 		CommandBudget _commandBudget{256u * 1024u * 1024u};
 		std::mutex _commandMutex;
-		// Guarded by _commandMutex; track registered and handshake-ready sessions.
 		std::size_t _sessionCount = 0;
 		std::size_t _readySessions = 0;
 		std::deque<Command> _commands;
