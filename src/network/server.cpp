@@ -167,12 +167,12 @@ namespace spk
 		{
 			throw Exception("Unsupported server start behavior.");
 		}
+		if (_impl->isWorkerThread())
+		{
+			throw Exception("Cannot start the network server from its transport worker callback.");
+		}
 		if (behaviour == StartBehaviour::Restart && isRunning())
 		{
-			if (_impl->isWorkerThread())
-			{
-				throw Exception("Cannot restart the network server from its transport worker callback.");
-			}
 			stop();
 		}
 		_impl->start(port);
