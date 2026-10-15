@@ -472,8 +472,12 @@ namespace spk::NetworkInternal
 #endif
 	}
 
-	std::optional<std::size_t> Socket::sendSome(std::span<const std::byte> data) const
+	std::optional<std::size_t> Socket::sendSome(std::span<const std::byte> data, SendBehaviour behaviour) const
 	{
+		if (behaviour != SendBehaviour::ReturnEmptyOnWouldBlock)
+		{
+			throw Exception("Unsupported TCP send behaviour.");
+		}
 		if (data.empty())
 		{
 			return 0;
