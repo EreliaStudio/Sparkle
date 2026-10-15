@@ -44,7 +44,6 @@ namespace spk::NetworkInternal
 		ReassemblyBudget &operator=(const ReassemblyBudget &) = delete;
 		ReassemblyBudget &operator=(ReassemblyBudget &&) = delete;
 		[[nodiscard]] std::unique_ptr<Lease> reserve(std::size_t bytes);
-		// Reductions constrain new leases; increases also extend existing allowances.
 		void setMaximum(std::size_t bytes);
 		[[nodiscard]] std::size_t used() const noexcept;
 	};
