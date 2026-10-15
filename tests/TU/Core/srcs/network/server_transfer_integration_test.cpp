@@ -189,7 +189,7 @@ TEST(ServerTransferIntegration, ExplicitSingleTargetSkipReturnsRejectedTransfer)
 	spk::Server server;
 	spk::Client client;
 	server.start(0);
-	const auto recipient = identify(server, client);
+	auto recipient = identify(server, client);
 	ASSERT_TRUE(recipient.isConnected());
 	recipient.setMaxQueuedBytes(1);
 	const auto transfer = server.sendTo(recipient, makeMessage(156, 200), spk::Message::Priority::Normal, spk::Connection::OverflowPolicy::SkipRecipient);
