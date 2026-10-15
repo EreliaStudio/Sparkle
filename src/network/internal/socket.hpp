@@ -16,6 +16,11 @@ namespace spk::NetworkInternal
 	public:
 		using NativeHandle = std::uintptr_t;
 
+		enum class SendBehaviour
+		{
+			ReturnEmptyOnWouldBlock
+		};
+
 		struct ReceiveResult
 		{
 			std::size_t size = 0;
@@ -48,7 +53,7 @@ namespace spk::NetworkInternal
 		[[nodiscard]] Socket accept() const;
 		[[nodiscard]] std::uint16_t localPort() const;
 		void setNonBlocking(bool value) const;
-		[[nodiscard]] std::optional<std::size_t> sendSome(std::span<const std::byte> data) const;
+		[[nodiscard]] std::optional<std::size_t> sendSome(std::span<const std::byte> data, SendBehaviour behaviour = SendBehaviour::ReturnEmptyOnWouldBlock) const;
 		[[nodiscard]] std::optional<ReceiveResult> receiveSome(std::span<std::byte> buffer) const;
 		void sendAll(std::span<const std::byte> data) const;
 		[[nodiscard]] bool sendAllUntil(std::span<const std::byte> data, std::chrono::steady_clock::time_point deadline, std::stop_token stop) const;
