@@ -114,7 +114,7 @@ namespace spk
 		void setMaxIncomingBytes(std::size_t bytes, IncomingBudgetBehaviour behaviour = IncomingBudgetBehaviour::AccountPayloadAndMetadataPreservingAccepted);
 		void setMaxPageBytes(std::size_t bytes, PageSizeBehaviour behaviour = PageSizeBehaviour::RespectNegotiatedLimit);
 		void setGlobalMaxIncomingBytes(std::size_t bytes, SharedIncomingBudgetBehaviour behaviour = SharedIncomingBudgetBehaviour::ShareAcrossSessionsPreservingAccepted);
-		Transfer sendTo(const Connection &connection, const Message &message, Message::Priority priority = Message::Priority::Normal, Connection::OverflowPolicy policy = Connection::OverflowPolicy::Reject);
+		Transfer sendTo(const Connection &connection, const Message &message, Message::Priority priority = Message::Priority::Normal, Connection::OverflowPolicy policy = Connection::OverflowPolicy::Reject, SendBehaviour behaviour = SendBehaviour::SynchronousAdmission);
 		TransferResults sendTo(const ConnectionSet &connections, const Message &message, Message::Priority priority = Message::Priority::Normal, Connection::OverflowPolicy policy = Connection::OverflowPolicy::Reject, SendBehaviour behaviour = SendBehaviour::SynchronousAdmission);
 		TransferResults sendToAll(const Message &message, Message::Priority priority = Message::Priority::Normal, Connection::OverflowPolicy policy = Connection::OverflowPolicy::Reject, SendBehaviour behaviour = SendBehaviour::SynchronousAdmission, EmptyAudienceBehaviour emptyAudience = EmptyAudienceBehaviour::ReturnEmpty);
 		[[nodiscard]] MessageQueue &messages() noexcept;
