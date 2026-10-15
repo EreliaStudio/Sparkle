@@ -187,7 +187,10 @@ TEST(HandshakeIntegration, ExplicitClientReplacementFromConnectedCallbackThrowsS
 		});
 	const auto connected = client.connect("127.0.0.1", server.port());
 	ASSERT_TRUE(NetworkTestUtils::waitConnected(connected));
-	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] { return rejected.load(); }, 3s));
+	const auto callbackRejected = [&] {
+		return rejected.load();
+	};
+	EXPECT_TRUE(NetworkTestUtils::waitUntil(callbackRejected, 3s));
 	EXPECT_TRUE(connected.isConnected());
 	client.disconnect();
 	server.stop();
@@ -214,7 +217,10 @@ TEST(HandshakeIntegration, ExplicitServerRestartFromConnectedCallbackThrowsSafel
 	spk::Client client;
 	const auto connected = client.connect("127.0.0.1", server.port());
 	ASSERT_TRUE(NetworkTestUtils::waitConnected(connected));
-	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] { return rejected.load(); }, 3s));
+	const auto callbackRejected = [&] {
+		return rejected.load();
+	};
+	EXPECT_TRUE(NetworkTestUtils::waitUntil(callbackRejected, 3s));
 	EXPECT_TRUE(server.isRunning());
 	client.disconnect();
 	server.stop();
