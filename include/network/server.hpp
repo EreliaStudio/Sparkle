@@ -34,6 +34,46 @@ namespace spk
 			Restart
 		};
 
+		enum class HandshakeTimeoutBehaviour
+		{
+			FutureAttemptsOnly
+		};
+
+		enum class OutgoingBudgetBehaviour
+		{
+			AccountReservedTransportStagesPreservingAccepted
+		};
+
+		enum class IncomingBudgetBehaviour
+		{
+			AccountPayloadAndMetadataPreservingAccepted
+		};
+
+		enum class SharedIncomingBudgetBehaviour
+		{
+			ShareAcrossSessionsPreservingAccepted
+		};
+
+		enum class PageSizeBehaviour
+		{
+			RespectNegotiatedLimit
+		};
+
+		enum class SendBehaviour
+		{
+			SynchronousAdmission
+		};
+
+		enum class EmptyAudienceBehaviour
+		{
+			ReturnEmpty
+		};
+
+		enum class MessageDispatchBehaviour
+		{
+			CallingThread
+		};
+
 	private:
 		class Impl;
 		std::unique_ptr<Impl> _impl;
@@ -66,34 +106,34 @@ namespace spk
 		void start(std::uint16_t port, StartBehaviour behaviour = StartBehaviour::Throw);
 		void stop();
 		void setPageFailureLimits(PageFailureLimits limits);
-		void setHandshakeTimeout(std::chrono::milliseconds timeout);
+		void setHandshakeTimeout(std::chrono::milliseconds timeout, HandshakeTimeoutBehaviour behaviour = HandshakeTimeoutBehaviour::FutureAttemptsOnly);
 		void setIncomingTransferTimeout(std::chrono::milliseconds timeout);
 		void setAcknowledgmentTimeout(std::chrono::milliseconds timeout);
 		// Shared outgoing ceiling across commands, logical transfers, encoded frames and in-flight writes.
 		// This is reserved transport accounting, not a bound on allocator or OS socket overhead.
 		// Lowering the cap blocks future reservations without evicting accepted work.
-		void setGlobalMaxQueuedBytes(std::size_t bytes);
+		void setGlobalMaxQueuedBytes(std::size_t bytes, OutgoingBudgetBehaviour behaviour = OutgoingBudgetBehaviour::AccountReservedTransportStagesPreservingAccepted);
 		void setMaxMessageBytes(std::size_t bytes);
 		// Per-session incomplete payloads and modeled reassembly metadata; excludes allocator overhead.
 		// Reductions constrain new transfers; accepted transfers retain their continuation allowance.
-		void setMaxIncomingBytes(std::size_t bytes);
-		void setMaxPageBytes(std::size_t bytes);
+		void setMaxIncomingBytes(std::size_t bytes, IncomingBudgetBehaviour behaviour = IncomingBudgetBehaviour::AccountPayloadAndMetadataPreservingAccepted);
+		void setMaxPageBytes(std::size_t bytes, PageSizeBehaviour behaviour = PageSizeBehaviour::RespectNegotiatedLimit);
 		// Shared incoming reassembly admission cap across all sessions (not total process memory).
 		// Neither incoming limit accounts for allocator capacity or socket buffers.
 		// Reductions preserve accepted-transfer allowances; increases also extend them.
-		void setGlobalMaxIncomingBytes(std::size_t bytes);
+		void setGlobalMaxIncomingBytes(std::size_t bytes, SharedIncomingBudgetBehaviour behaviour = SharedIncomingBudgetBehaviour::ShareAcrossSessionsPreservingAccepted);
 		Transfer sendTo(const Connection &connection, const Message &message, Message::Priority priority = Message::Priority::Normal, Connection::OverflowPolicy policy = Connection::OverflowPolicy::Reject);
 		// Synchronous admission: Reject is all-or-nothing and throws before return.
 		// Explicit targets must be valid and Connected, regardless of policy.
 		// SkipRecipient reports capacity-limited explicit targets as Rejected transfers.
 		// Returned transfer success means transport acknowledgment, not app receipt.
-		TransferResults sendTo(const ConnectionSet &connections, const Message &message, Message::Priority priority = Message::Priority::Normal, Connection::OverflowPolicy policy = Connection::OverflowPolicy::Reject);
+		TransferResults sendTo(const ConnectionSet &connections, const Message &message, Message::Priority priority = Message::Priority::Normal, Connection::OverflowPolicy policy = Connection::OverflowPolicy::Reject, SendBehaviour behaviour = SendBehaviour::SynchronousAdmission);
 		// No clients returns an empty map immediately for every policy, with no traffic queued.
 		// Only SkipRecipient excludes Pending peers, also returning empty if none remain.
-		TransferResults sendToAll(const Message &message, Message::Priority priority = Message::Priority::Normal, Connection::OverflowPolicy policy = Connection::OverflowPolicy::Reject);
+		TransferResults sendToAll(const Message &message, Message::Priority priority = Message::Priority::Normal, Connection::OverflowPolicy policy = Connection::OverflowPolicy::Reject, SendBehaviour behaviour = SendBehaviour::SynchronousAdmission, EmptyAudienceBehaviour emptyAudience = EmptyAudienceBehaviour::ReturnEmpty);
 		[[nodiscard]] MessageQueue &messages() noexcept;
 		[[nodiscard]] MessageDispatcher &messageDispatcher() noexcept;
 		// Dispatch a receive batch on the calling thread; do not also drain messages().
-		void treatMessages();
+		void treatMessages(MessageDispatchBehaviour behaviour = MessageDispatchBehaviour::CallingThread);
 	};
 }
