@@ -172,6 +172,7 @@ namespace spk::NetworkInternal
 					return;
 				}
 				_connected = false;
+				_transmission.stop();
 				_socket.close();
 			}
 			_expirationWake.notify_all();
@@ -407,6 +408,7 @@ namespace spk::NetworkInternal
 				const std::scoped_lock lock(_lifecycleMutex);
 				notify = _active.exchange(false);
 				_connected = false;
+				_transmission.stop();
 				_socket.close();
 			}
 			_expirationWake.notify_all();
