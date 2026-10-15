@@ -43,6 +43,11 @@ namespace spk
 			DisconnectRecipient
 		};
 
+		enum class QueueLimitBehaviour
+		{
+			PreserveAcceptedTransfers
+		};
+
 		struct Hash final
 		{
 			[[nodiscard]] std::size_t operator()(const Connection &connection) const noexcept;
@@ -77,7 +82,7 @@ namespace spk
 		// Per-session outgoing admission ceiling; zero prevents new message admissions.
 		// Shared across handle copies; reductions preserve already accepted transfers.
 		[[nodiscard]] std::size_t maxQueuedBytes() const noexcept;
-		void setMaxQueuedBytes(std::size_t bytes) noexcept;
+		void setMaxQueuedBytes(std::size_t bytes, QueueLimitBehaviour behaviour = QueueLimitBehaviour::PreserveAcceptedTransfers);
 		[[nodiscard]] StatusContract subscribeToStatusChange(StatusCallback callback);
 	};
 
