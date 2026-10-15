@@ -28,6 +28,12 @@ namespace spk
 		using StatusCallback = StatusProvider::callback_type;
 		using StatusContract = StatusProvider::Contract;
 
+		enum class StartBehaviour
+		{
+			Throw,
+			Restart
+		};
+
 	private:
 		class Impl;
 		std::unique_ptr<Impl> _impl;
@@ -57,7 +63,7 @@ namespace spk
 		[[nodiscard]] Connection connection(ConnectionID id) const;
 		[[nodiscard]] bool isRunning() const noexcept;
 		[[nodiscard]] std::uint16_t port() const noexcept;
-		void start(std::uint16_t port);
+		void start(std::uint16_t port, StartBehaviour behaviour = StartBehaviour::Throw);
 		void stop();
 		void setPageFailureLimits(PageFailureLimits limits);
 		void setHandshakeTimeout(std::chrono::milliseconds timeout);
@@ -76,8 +82,7 @@ namespace spk
 		// Neither incoming limit accounts for allocator capacity or socket buffers.
 		// Reductions preserve accepted-transfer allowances; increases also extend them.
 		void setGlobalMaxIncomingBytes(std::size_t bytes);
-		// Targeted send throws on invalid/Pending/disconnected handles or no capacity.
-		Transfer sendTo(const Connection &connection, const Message &message, Message::Priority priority = Message::Priority::Normal);
+		Transfer sendTo(const Connection &connection, const Message &message, Message::Priority priority = Message::Priority::Normal, Connection::OverflowPolicy policy = Connection::OverflowPolicy::Reject);
 		// Synchronous admission: Reject is all-or-nothing and throws before return.
 		// Explicit targets must be valid and Connected, regardless of policy.
 		// SkipRecipient reports capacity-limited explicit targets as Rejected transfers.
