@@ -115,6 +115,40 @@ TEST(HandshakeIntegration, ReconnectRequiresExplicitDisconnect)
 	server.stop();
 }
 
+TEST(HandshakeIntegration, ExplicitDisconnectPreviousReplacesPendingConnection)
+{
+	auto listener = spk::NetworkInternal::Socket::listenTCP(0);
+	spk::Server server;
+	server.start(0);
+	spk::Client client;
+	const auto previous = client.connect("127.0.0.1", listener.localPort());
+	ASSERT_EQ(previous.status(), spk::Connection::Status::Pending);
+	const auto replacement = client.connect("127.0.0.1", server.port(), spk::Client::ConnectBehaviour::DisconnectPrevious);
+	EXPECT_NE(previous, replacement);
+	EXPECT_EQ(previous.status(), spk::Connection::Status::Disconnected);
+	EXPECT_TRUE(NetworkTestUtils::waitConnected(replacement));
+	client.disconnect();
+	server.stop();
+}
+
+TEST(HandshakeIntegration, ExplicitDisconnectPreviousReplacesConnectedClient)
+{
+	spk::Server first;
+	spk::Server second;
+	first.start(0);
+	second.start(0);
+	spk::Client client;
+	const auto previous = client.connect("127.0.0.1", first.port());
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(previous));
+	const auto replacement = client.connect("127.0.0.1", second.port(), spk::Client::ConnectBehaviour::DisconnectPrevious);
+	EXPECT_NE(previous, replacement);
+	EXPECT_EQ(previous.status(), spk::Connection::Status::Disconnected);
+	EXPECT_TRUE(NetworkTestUtils::waitConnected(replacement));
+	client.disconnect();
+	second.stop();
+	first.stop();
+}
+
 TEST(HandshakeIntegration, ServerBroadcastRejectsPendingRecipient)
 {
 	spk::Server server;
