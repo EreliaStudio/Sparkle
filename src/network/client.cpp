@@ -628,8 +628,12 @@ namespace spk
 		return _impl->isConnected();
 	}
 
-	Connection Client::connect(std::string_view address, std::uint16_t port, ConnectBehaviour behaviour)
+	Connection Client::connect(std::string_view address, std::uint16_t port, ConnectBehaviour behaviour, ConnectAttemptBehaviour attempt)
 	{
+		if (attempt != ConnectAttemptBehaviour::ReturnPending)
+		{
+			throw Exception("Unsupported client connection attempt behaviour.");
+		}
 		return _impl->connect(address, port, behaviour);
 	}
 
