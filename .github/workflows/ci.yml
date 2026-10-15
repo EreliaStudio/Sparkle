@@ -93,11 +93,8 @@ jobs:
           -DCMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE=PRE_TEST
       - name: Build Core tests
         run: cmake --build build/core-test --target SparkleCoreTestSuite --parallel 4
-      - name: Run Core tests
-        run: ctest --test-dir build/core-test -R '^Core\.' --output-on-failure --no-tests=error --timeout 120 --parallel 2 --output-junit results.xml
-      - name: Repeat Windows Release connection stress
-        if: runner.os == 'Windows' && matrix.configuration == 'Release'
-        run: ctest --test-dir build/core-test -R '^Core[.]NetworkConcurrencyTest[.]ManyClientsConnectAndExchangeConcurrently$' --repeat until-fail:100 --timeout 120 --output-on-failure
+      - name: Run functional Core tests
+        run: ctest --test-dir build/core-test -R '^Core[.]' -E '^Core[.].*StressTest[.]' --output-on-failure --no-tests=error --timeout 120 --parallel 2 --output-junit results.xml
       - name: Upload Core test evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -108,25 +105,32 @@ jobs:
             build/core-test/results.xml
             build/core-test/CMakeFiles/CMakeConfigureLog.yaml
 
-  network-race-sanitizer:
-    name: Windows transport concurrency (ASan)
-    runs-on: windows-2022
-    timeout-minutes: 45
+  address-sanitizer:
+    name: AddressSanitizer and leak checks (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, ubuntu-24.04]
     steps:
       - uses: actions/checkout@v4
       - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
         with:
           arch: x64
-      - name: Locate Clang sanitizer runtime
+      - name: Locate Windows sanitizer runtime
+        if: runner.os == 'Windows'
         run: |
           $resource = (clang-cl -print-resource-dir).Trim()
           $runtime = Join-Path $resource 'lib/windows'
           "LIB=$env:LIB;$runtime" >> $env:GITHUB_ENV
           $symbolizer = Join-Path (Split-Path (Get-Command clang-cl).Source) 'llvm-symbolizer.exe'
           if (Test-Path $symbolizer) { "ASAN_SYMBOLIZER_PATH=$symbolizer" >> $env:GITHUB_ENV }
-      - name: Configure Windows Core with AddressSanitizer
+      - name: Configure Windows AddressSanitizer
+        if: runner.os == 'Windows'
         run: >-
-          cmake -S . -B build/network-asan -G Ninja
+          cmake -S . -B build/asan -G Ninja
           -DCMAKE_CXX_COMPILER=clang-cl
           -DCMAKE_BUILD_TYPE=Release
           '-DCMAKE_CXX_FLAGS=/fsanitize=address /EHsc /Zi /D_DISABLE_STRING_ANNOTATION /D_DISABLE_VECTOR_ANNOTATION'
@@ -139,24 +143,114 @@ jobs:
           -DSPARKLE_BUILD_GRAPHICS=OFF
           -DSPARKLE_BUILD_TESTS=ON
           -DCMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE=PRE_TEST
+      - name: Configure Linux AddressSanitizer and LeakSanitizer
+        if: runner.os == 'Linux'
+        run: >-
+          cmake -S . -B build/asan -G Ninja
+          -DCMAKE_CXX_COMPILER=clang++
+          -DCMAKE_BUILD_TYPE=Release
+          '-DCMAKE_CXX_FLAGS=-fsanitize=address -fno-omit-frame-pointer -g'
+          -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address
+          -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+          -DVCPKG_TARGET_TRIPLET=x64-linux
+          -DVCPKG_MANIFEST_NO_DEFAULT_FEATURES=ON
+          -DVCPKG_MANIFEST_FEATURES=tests
+          -DSPARKLE_BUILD_GRAPHICS=OFF
+          -DSPARKLE_BUILD_TESTS=ON
+          -DCMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE=PRE_TEST
       - name: Build sanitized Core tests
-        run: cmake --build build/network-asan --target SparkleCoreTestSuite --parallel 4
-      - name: Repeat concurrent connections under ASan
+        run: cmake --build build/asan --target SparkleCoreTestSuite --parallel 4
+      - name: Run memory-safety tests (Windows)
+        if: runner.os == 'Windows'
         env:
-          ASAN_OPTIONS: detect_odr_violation=0:fast_unwind_on_malloc=0:windows_hook_rtl_allocators=false
-        run: ctest --test-dir build/network-asan -R '^Core[.]NetworkConcurrencyTest[.]ManyClientsConnectAndExchangeConcurrently$' --repeat until-fail:30 --timeout 120 --output-on-failure
-      - name: Run destructor lifecycle regressions under ASan
+          ASAN_OPTIONS: detect_leaks=0:halt_on_error=1:detect_odr_violation=0:fast_unwind_on_malloc=0:windows_hook_rtl_allocators=false
+        run: >-
+          ctest --test-dir build/asan
+          -R '^Core[.](.*MemorySafetyTest[.]|NetworkConcurrencyTest[.]ClientDestructor)'
+          --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit results.xml
+      - name: Run memory-safety and leak tests (Linux)
+        if: runner.os == 'Linux'
         env:
-          ASAN_OPTIONS: detect_odr_violation=0:fast_unwind_on_malloc=0:windows_hook_rtl_allocators=false
-        run: ctest --test-dir build/network-asan -R '^Core[.]NetworkConcurrencyTest[.]ClientDestructor' --repeat until-fail:10 --timeout 120 --output-on-failure
-      - name: Upload sanitizer evidence
+          ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+        run: >-
+          ctest --test-dir build/asan
+          -R '^Core[.](.*MemorySafetyTest[.]|NetworkConcurrencyTest[.]ClientDestructor)'
+          --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit results.xml
+      - name: Upload sanitizer diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: windows-network-race-asan
+          name: core-asan-${{ matrix.os }}
           path: |
-            build/network-asan/Testing
-            build/network-asan/CMakeFiles/CMakeConfigureLog.yaml
+            build/asan/Testing
+            build/asan/results.xml
+            build/asan/CMakeFiles/CMakeConfigureLog.yaml
+
+  core-stress:
+    name: Core stress and randomized correctness (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, ubuntu-24.04]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
+        with:
+          arch: x64
+      - name: Configure Windows stress tests
+        if: runner.os == 'Windows'
+        run: >-
+          cmake -S . -B build/stress -G Ninja
+          -DCMAKE_CXX_COMPILER=clang-cl
+          -DCMAKE_BUILD_TYPE=Release
+          '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded'
+          -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+          -DVCPKG_TARGET_TRIPLET=x64-windows-static
+          -DVCPKG_MANIFEST_NO_DEFAULT_FEATURES=ON
+          -DVCPKG_MANIFEST_FEATURES=tests
+          -DSPARKLE_BUILD_GRAPHICS=OFF
+          -DSPARKLE_BUILD_TESTS=ON
+          -DCMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE=PRE_TEST
+      - name: Configure Linux stress tests
+        if: runner.os == 'Linux'
+        run: >-
+          cmake -S . -B build/stress -G Ninja
+          -DCMAKE_CXX_COMPILER=clang++
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+          -DVCPKG_TARGET_TRIPLET=x64-linux
+          -DVCPKG_MANIFEST_NO_DEFAULT_FEATURES=ON
+          -DVCPKG_MANIFEST_FEATURES=tests
+          -DSPARKLE_BUILD_GRAPHICS=OFF
+          -DSPARKLE_BUILD_TESTS=ON
+          -DCMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE=PRE_TEST
+      - name: Build Core stress tests
+        run: cmake --build build/stress --target SparkleCoreTestSuite --parallel 4
+      - name: Run stress suites
+        run: >-
+          ctest --test-dir build/stress -R '^Core[.].*StressTest[.]'
+          --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit results.xml
+      - name: Repeat concurrent networking workload
+        run: >-
+          ctest --test-dir build/stress
+          -R '^Core[.]NetworkConcurrencyTest[.]ManyClientsConnectAndExchangeConcurrently$'
+          --repeat until-fail:20 --output-on-failure --no-tests=error --timeout 120
+      - name: Repeat deterministic randomized network workload
+        run: >-
+          ctest --test-dir build/stress -R '^Core[.]NetworkStressTest[.]SeededRandomPayloadsPreserveEveryByte$'
+          --repeat until-fail:5 --output-on-failure --no-tests=error --timeout 120
+      - name: Upload stress evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-stress-${{ matrix.os }}
+          path: |
+            build/stress/Testing
+            build/stress/results.xml
+            build/stress/CMakeFiles/CMakeConfigureLog.yaml
 
   graphics-unit-tests:
     name: Graphics unit tests (${{ matrix.configuration }})
