@@ -140,7 +140,11 @@ namespace spk::NetworkInternal
 					auto frame = _transmission.nextFrame(_connected, std::min(_maxPageBytes.load(), _negotiatedPageBytes.load()));
 					if (!frame.has_value())
 					{
-						break;
+						if (!_connected)
+						{
+							break;
+						}
+						continue;
 					}
 					if (frame->reservation != nullptr)
 					{
