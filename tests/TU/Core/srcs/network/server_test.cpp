@@ -30,6 +30,28 @@ TEST(ServerTest, StartingRunningServerThrowsWithoutReplacingListener)
 	server.stop();
 }
 
+TEST(ServerTest, ExplicitRestartReplacesRunningServer)
+{
+	spk::Server server;
+	server.start(0);
+	EXPECT_NE(server.port(), 0u);
+	server.start(0, spk::Server::StartBehaviour::Restart);
+	EXPECT_TRUE(server.isRunning());
+	EXPECT_NE(server.port(), 0u);
+	server.stop();
+}
+
+TEST(ServerTest, RejectsUnsupportedStartBehaviourWithoutAffectingServer)
+{
+	spk::Server server;
+	server.start(0);
+	const auto originalPort = server.port();
+	EXPECT_THROW(server.start(0, static_cast<spk::Server::StartBehaviour>(99)), spk::Exception);
+	EXPECT_EQ(server.port(), originalPort);
+	EXPECT_TRUE(server.isRunning());
+	server.stop();
+}
+
 TEST(ServerTest, BroadcastWithoutRecipientsReturnsEmpty)
 {
 	spk::Server server;
@@ -51,6 +73,7 @@ TEST(ServerTest, RejectsInvalidConnectionHandle)
 	spk::Server server;
 	server.start(0);
 	EXPECT_THROW(server.sendTo(spk::Connection(), spk::Message::Writer(1).build()), spk::Exception);
+	EXPECT_THROW(server.sendTo(spk::Connection(), spk::Message::Writer(1).build(), spk::Message::Priority::Normal, spk::Connection::OverflowPolicy::SkipRecipient), spk::Exception);
 	server.stop();
 }
 
