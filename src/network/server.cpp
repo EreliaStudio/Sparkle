@@ -188,8 +188,12 @@ namespace spk
 		_impl->setPageFailureLimits(limits);
 	}
 
-	void Server::setHandshakeTimeout(std::chrono::milliseconds timeout)
+	void Server::setHandshakeTimeout(std::chrono::milliseconds timeout, HandshakeTimeoutBehaviour behaviour)
 	{
+		if (behaviour != HandshakeTimeoutBehaviour::FutureAttemptsOnly)
+		{
+			throw Exception("Unsupported server handshake timeout behaviour.");
+		}
 		_impl->setHandshakeTimeout(timeout);
 	}
 
@@ -203,8 +207,12 @@ namespace spk
 		_impl->setAcknowledgmentTimeout(timeout);
 	}
 
-	void Server::setGlobalMaxQueuedBytes(std::size_t bytes)
+	void Server::setGlobalMaxQueuedBytes(std::size_t bytes, OutgoingBudgetBehaviour behaviour)
 	{
+		if (behaviour != OutgoingBudgetBehaviour::AccountReservedTransportStagesPreservingAccepted)
+		{
+			throw Exception("Unsupported server outgoing budget behaviour.");
+		}
 		_impl->setGlobalMaxQueuedBytes(bytes);
 	}
 
@@ -213,16 +221,28 @@ namespace spk
 		_impl->setMaxMessageBytes(bytes);
 		_maxMessageBytes.store(bytes);
 	}
-	void Server::setMaxIncomingBytes(std::size_t bytes)
+	void Server::setMaxIncomingBytes(std::size_t bytes, IncomingBudgetBehaviour behaviour)
 	{
+		if (behaviour != IncomingBudgetBehaviour::AccountPayloadAndMetadataPreservingAccepted)
+		{
+			throw Exception("Unsupported server incoming budget behaviour.");
+		}
 		_impl->setMaxIncomingBytes(bytes);
 	}
-	void Server::setMaxPageBytes(std::size_t bytes)
+	void Server::setMaxPageBytes(std::size_t bytes, PageSizeBehaviour behaviour)
 	{
+		if (behaviour != PageSizeBehaviour::RespectNegotiatedLimit)
+		{
+			throw Exception("Unsupported server page size behaviour.");
+		}
 		_impl->setMaxPageBytes(bytes);
 	}
-	void Server::setGlobalMaxIncomingBytes(std::size_t bytes)
+	void Server::setGlobalMaxIncomingBytes(std::size_t bytes, SharedIncomingBudgetBehaviour behaviour)
 	{
+		if (behaviour != SharedIncomingBudgetBehaviour::ShareAcrossSessionsPreservingAccepted)
+		{
+			throw Exception("Unsupported server shared incoming budget behaviour.");
+		}
 		_impl->setGlobalMaxIncomingBytes(bytes);
 	}
 	Transfer Server::sendTo(const Connection &connection, const Message &message, Message::Priority priority, Connection::OverflowPolicy policy)
@@ -231,8 +251,12 @@ namespace spk
 		return sendTo(recipients, message, priority, policy).at(connection.id());
 	}
 
-	Server::TransferResults Server::sendTo(const ConnectionSet &connections, const Message &message, Message::Priority priority, Connection::OverflowPolicy policy)
+	Server::TransferResults Server::sendTo(const ConnectionSet &connections, const Message &message, Message::Priority priority, Connection::OverflowPolicy policy, SendBehaviour behaviour)
 	{
+		if (behaviour != SendBehaviour::SynchronousAdmission)
+		{
+			throw Exception("Unsupported server send behaviour.");
+		}
 		if (connections.empty())
 		{
 			throw Exception("Cannot send to an empty connection set.");
@@ -260,8 +284,12 @@ namespace spk
 		return results;
 	}
 
-	Server::TransferResults Server::sendToAll(const Message &message, Message::Priority priority, Connection::OverflowPolicy policy)
+	Server::TransferResults Server::sendToAll(const Message &message, Message::Priority priority, Connection::OverflowPolicy policy, SendBehaviour behaviour, EmptyAudienceBehaviour emptyAudience)
 	{
+		if (behaviour != SendBehaviour::SynchronousAdmission || emptyAudience != EmptyAudienceBehaviour::ReturnEmpty)
+		{
+			throw Exception("Unsupported server broadcast behaviour.");
+		}
 		NetworkInternal::OutgoingMessageValidator::validate(message, priority, _maxMessageBytes.load());
 		NetworkInternal::OutgoingMessageValidator::validatePolicy(policy);
 		auto batch = std::make_shared<NetworkInternal::ServerSendBatch>(message, priority, policy);
@@ -286,8 +314,12 @@ namespace spk
 		return _messageDispatcher;
 	}
 
-	void Server::treatMessages()
+	void Server::treatMessages(MessageDispatchBehaviour behaviour)
 	{
+		if (behaviour != MessageDispatchBehaviour::CallingThread)
+		{
+			throw Exception("Unsupported server message dispatch behaviour.");
+		}
 		_messageDispatcher.treatMessages(_messages);
 	}
 
