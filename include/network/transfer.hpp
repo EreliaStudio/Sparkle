@@ -21,10 +21,12 @@ namespace spk
 		enum class Status
 		{
 			Pending,
-			Success,
+			TransportAcknowledged,
+			Success = TransportAcknowledged,
 			Rejected,
 			Failed,
-			Indeterminate
+			NoConclusiveAcknowledgment,
+			Indeterminate = NoConclusiveAcknowledgment
 		};
 
 		enum class Reason
