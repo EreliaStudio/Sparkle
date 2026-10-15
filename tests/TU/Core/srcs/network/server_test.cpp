@@ -52,6 +52,30 @@ TEST(ServerTest, RejectsUnsupportedStartBehaviourWithoutAffectingServer)
 	server.stop();
 }
 
+TEST(ServerTest, ExplicitPoliciesRejectUnknownValues)
+{
+	spk::Server server;
+	const auto handshake = static_cast<spk::Server::HandshakeTimeoutBehaviour>(99);
+	const auto outgoing = static_cast<spk::Server::OutgoingBudgetBehaviour>(99);
+	const auto incoming = static_cast<spk::Server::IncomingBudgetBehaviour>(99);
+	const auto shared = static_cast<spk::Server::SharedIncomingBudgetBehaviour>(99);
+	const auto pageSize = static_cast<spk::Server::PageSizeBehaviour>(99);
+	const auto send = static_cast<spk::Server::SendBehaviour>(99);
+	const auto emptyAudience = static_cast<spk::Server::EmptyAudienceBehaviour>(99);
+	const auto dispatch = static_cast<spk::Server::MessageDispatchBehaviour>(99);
+	EXPECT_THROW(server.setHandshakeTimeout(std::chrono::milliseconds(250), handshake), spk::Exception);
+	EXPECT_THROW(server.setGlobalMaxQueuedBytes(4096, outgoing), spk::Exception);
+	EXPECT_THROW(server.setMaxIncomingBytes(4096, incoming), spk::Exception);
+	EXPECT_THROW(server.setGlobalMaxIncomingBytes(4096, shared), spk::Exception);
+	EXPECT_THROW(server.setMaxPageBytes(4096, pageSize), spk::Exception);
+	EXPECT_THROW(server.treatMessages(dispatch), spk::Exception);
+	server.start(0);
+	EXPECT_THROW(server.sendToAll(spk::Message::Writer(1).build(), spk::Message::Priority::Normal, spk::Connection::OverflowPolicy::Reject, send), spk::Exception);
+	EXPECT_THROW(server.sendToAll(spk::Message::Writer(1).build(), spk::Message::Priority::Normal, spk::Connection::OverflowPolicy::Reject, spk::Server::SendBehaviour::SynchronousAdmission, emptyAudience), spk::Exception);
+	EXPECT_TRUE(server.sendToAll(spk::Message::Writer(1).build(), spk::Message::Priority::Normal, spk::Connection::OverflowPolicy::Reject, spk::Server::SendBehaviour::SynchronousAdmission, spk::Server::EmptyAudienceBehaviour::ReturnEmpty).empty());
+	server.stop();
+}
+
 TEST(ServerTest, BroadcastWithoutRecipientsReturnsEmpty)
 {
 	spk::Server server;
