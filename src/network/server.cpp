@@ -245,10 +245,10 @@ namespace spk
 		}
 		_impl->setGlobalMaxIncomingBytes(bytes);
 	}
-	Transfer Server::sendTo(const Connection &connection, const Message &message, Message::Priority priority, Connection::OverflowPolicy policy)
+	Transfer Server::sendTo(const Connection &connection, const Message &message, Message::Priority priority, Connection::OverflowPolicy policy, SendBehaviour behaviour)
 	{
 		const ConnectionSet recipients{connection};
-		return sendTo(recipients, message, priority, policy).at(connection.id());
+		return sendTo(recipients, message, priority, policy, behaviour).at(connection.id());
 	}
 
 	Server::TransferResults Server::sendTo(const ConnectionSet &connections, const Message &message, Message::Priority priority, Connection::OverflowPolicy policy, SendBehaviour behaviour)
