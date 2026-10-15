@@ -32,15 +32,15 @@
 - Eliminate duplication **when it represents a shared concept**, not just because two pieces of code look similar.
 - Prefer a concrete implementation until the need for alternative implementations is real. Avoid YAGNI abstractions and speculative extensibility.
 - Keep APIs naturally readable without navigating a cascade of wrappers to learn what an operation does.
-- Prefer descriptive, precise names, even if longer. Comments should explain **why**, subtle invariants, or contracts that the API cannot express; code should express **what**.
+- Prefer descriptive, precise names, even if longer. New or modified headers must contain **zero explanatory comments**: encode behavior with types, names, enum policies, and explicit state/result types rather than explaining it beside a declaration.
 
 ### 1.2 Explicit behavior — STRONG
 
 - Methods must behave as their names imply. Do not silently reconnect, retry, subscribe, recover, perform unrelated work, or select surprising policies.
 - When several legitimate behaviors have materially different consequences, expose an explicit **enum class**, policy type, or method argument. Do not hide important decisions behind ambiguous booleans.
-- **Treat comments explaining an implicit behavior choice as an API-design warning.** Review every new or modified public method for an implicit policy (for example reconnect versus throw, restart versus throw, or recipient overflow handling). Where the caller has useful choices, expose a named policy enum at the call site, implement each alternative, and default to the conservative behavior (normally `Throw`/`Reject`). Validate unsupported enum values before changing state.
+- **Treat every hidden behavior as an API-design defect.** Review each new or modified public method for implicit choices (including handshake policy, size/budget accounting, lifetime of accepted work, reconnection, synchronous admission, message dispatch, and recipient selection). Express them in a named enum parameter with a documented-in-the-type default. A single-value enum is acceptable when that is the only supported policy today; future alternatives can then extend it. Validate unsupported enum values before changing state.
 - Prefer a policy enum nested in its owning API. Reuse an existing policy if its semantics already cover the case; do not create another enum, a boolean switch, or a parallel method with the same responsibility merely to avoid a comment.
-- Remove comments that only restate a choice now expressed by the API. Retain concise documentation for guarantees that a type cannot express, such as acknowledgment scope, memory-accounting limitations, and thread/lifetime constraints. Do not invent meaningless policy alternatives for fixed protocol invariants or mandatory safety rules.
+- Remove all explanatory comments from new or modified headers. When a fixed protocol constraint cannot support alternatives safely, either use an explicitly named one-value policy or a self-describing type/status; never expose an option that the implementation silently ignores. Keep genuinely necessary longer explanations in standalone documentation and tests, not next to declarations.
 - Optional parameters may have reasonable defaults; the requirement is to make **consequential** decisions visible.
 - Make invalid calls fail clearly and early. Do not silently transform an invalid operation into a different operation.
 - Prefer direct, simple code over architectural ceremony. Short methods (often around 25 lines) are a useful readability heuristic, **not** a rule requiring meaningless extraction.
