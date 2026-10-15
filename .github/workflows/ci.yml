@@ -232,7 +232,7 @@ jobs:
       - name: Run stress suites
         run: >-
           ctest --test-dir build/stress -R '^Core[.].*StressTest[.]'
-          --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit results.xml
+          --verbose --output-on-failure --no-tests=error --timeout 120 --parallel 1 --output-junit results.xml
       - name: Repeat concurrent networking workload
         run: >-
           ctest --test-dir build/stress
