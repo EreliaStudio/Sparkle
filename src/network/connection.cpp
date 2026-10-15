@@ -1,5 +1,7 @@
 #include "network/connection.hpp"
 
+#include "exception.hpp"
+
 #include <atomic>
 #include <functional>
 #include <mutex>
@@ -59,8 +61,12 @@ namespace spk
 		return _data->maxQueuedBytes.load();
 	}
 
-	void Connection::setMaxQueuedBytes(std::size_t bytes) noexcept
+	void Connection::setMaxQueuedBytes(std::size_t bytes, QueueLimitBehaviour behaviour)
 	{
+		if (behaviour != QueueLimitBehaviour::PreserveAcceptedTransfers)
+		{
+			throw Exception("Unsupported network queue limit behaviour.");
+		}
 		_data->maxQueuedBytes.store(bytes);
 	}
 
