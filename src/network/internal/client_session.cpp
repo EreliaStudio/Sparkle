@@ -480,7 +480,6 @@ namespace spk::NetworkInternal
 			}
 			return _transmission.send(message, priority, _session.maxQueuedBytes(), _negotiatedPageBytes.load());
 		}
-
 	};
 
 	ClientSession::ClientSession(Callbacks callbacks, const Settings &settings) :
