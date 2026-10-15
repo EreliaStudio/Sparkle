@@ -32,6 +32,11 @@ namespace spk
 			DisconnectPrevious
 		};
 
+		enum class ConnectAttemptBehaviour
+		{
+			ReturnPending
+		};
+
 		enum class HandshakeTimeoutBehaviour
 		{
 			FutureAttemptsOnly
@@ -86,7 +91,7 @@ namespace spk
 		[[nodiscard]] StatusContract subscribeToConnectionStatusChange(StatusCallback callback);
 		[[nodiscard]] Connection connection() const;
 		[[nodiscard]] bool isConnected() const noexcept;
-		Connection connect(std::string_view address, std::uint16_t port, ConnectBehaviour behaviour = ConnectBehaviour::Throw);
+		Connection connect(std::string_view address, std::uint16_t port, ConnectBehaviour behaviour = ConnectBehaviour::Throw, ConnectAttemptBehaviour attempt = ConnectAttemptBehaviour::ReturnPending);
 		void setHandshakeTimeout(std::chrono::milliseconds timeout, HandshakeTimeoutBehaviour behaviour = HandshakeTimeoutBehaviour::FutureAttemptsOnly);
 		void setIncomingTransferTimeout(std::chrono::milliseconds timeout);
 		void setAcknowledgmentTimeout(std::chrono::milliseconds timeout);
