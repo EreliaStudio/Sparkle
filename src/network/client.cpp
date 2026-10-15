@@ -20,7 +20,7 @@ namespace spk
 		NetworkInternal::ClientSession::Settings _settings;
 		std::uint64_t _generation = 0;
 
-		[[nodiscard]] NetworkInternal::ClientSession::Callbacks _callbacks()
+		[[nodiscard]] NetworkInternal::ClientSession::Callbacks _callbacks(std::uint64_t generation)
 		{
 			NetworkInternal::ClientSession::Callbacks callbacks;
 			callbacks.publish = [this](Connection session, Message message) {
@@ -32,10 +32,22 @@ namespace spk
 			callbacks.acceptConnection = [this](Connection session, Connection::ID id) {
 				_owner._acceptConnection(session, id);
 			};
-			callbacks.beginConnection = [this] {
+			callbacks.beginConnection = [this, generation] {
+				const std::scoped_lock lock(_mutex);
+				if (_generation != generation)
+				{
+					throw Exception("Client connection attempt was cancelled or superseded.");
+				}
 				return _owner._beginConnection();
 			};
-			callbacks.announcePending = [this](Connection session) {
+			callbacks.announcePending = [this, generation](Connection session) {
+				{
+					const std::scoped_lock lock(_mutex);
+					if (_generation != generation)
+					{
+						throw Exception("Client connection attempt was cancelled or superseded.");
+					}
+				}
 				_owner._announcePending(session);
 			};
 			callbacks.setStatus = [this](Connection session, Connection::Status status, Connection::Error error) {
@@ -104,7 +116,7 @@ namespace spk
 				{
 					throw Exception("Client connection attempt was superseded.");
 				}
-				session = std::make_shared<NetworkInternal::ClientSession>(_callbacks(), _settings);
+				session = std::make_shared<NetworkInternal::ClientSession>(_callbacks(generation), _settings);
 				_session = session;
 			}
 			return session->connect(address, port);
@@ -112,7 +124,12 @@ namespace spk
 
 		void disconnect()
 		{
-			const auto session = _current();
+			std::shared_ptr<NetworkInternal::ClientSession> session;
+			{
+				const std::scoped_lock lock(_mutex);
+				++_generation;
+				session = _session;
+			}
 			if (session != nullptr)
 			{
 				session->disconnect();
