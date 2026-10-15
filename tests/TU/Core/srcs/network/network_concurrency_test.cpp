@@ -499,7 +499,7 @@ TEST(NetworkConcurrencyTest, HandshakeTimeoutCanChangeWhileConnectionsStartAndSt
 	server.stop();
 }
 
-TEST(NetworkConcurrencyTest, ManyClientsConnectAndExchangeConcurrently)
+TEST(NetworkStressTest, ManyClientsConnectAndExchangeConcurrently)
 {
 	constexpr std::uint32_t ClientCount = 16;
 	spk::Server server;
