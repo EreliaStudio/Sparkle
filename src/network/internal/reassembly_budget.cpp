@@ -73,8 +73,12 @@ namespace spk::NetworkInternal
 		return lease;
 	}
 
-	void ReassemblyBudget::setMaximum(std::size_t bytes)
+	void ReassemblyBudget::setMaximum(std::size_t bytes, ResizeBehaviour behaviour)
 	{
+		if (behaviour != ResizeBehaviour::PreserveAcceptedLeases)
+		{
+			throw Exception("Unsupported reassembly budget resize behaviour.");
+		}
 		if (bytes == 0)
 		{
 			throw Exception("Reassembly memory budget must be positive.");
