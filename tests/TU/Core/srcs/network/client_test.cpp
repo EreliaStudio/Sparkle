@@ -56,6 +56,7 @@ TEST(ClientTest, ConnectRejectsInvalidArgumentsWithoutStartingAttempt)
 	EXPECT_THROW((void)client.connect("", 1234), spk::Exception);
 	EXPECT_THROW((void)client.connect("127.0.0.1", 0), spk::Exception);
 	EXPECT_THROW((void)client.connect("127.0.0.1", 1234, static_cast<spk::Client::ConnectBehaviour>(99)), spk::Exception);
+	EXPECT_THROW((void)client.connect("127.0.0.1", 1234, spk::Client::ConnectBehaviour::Throw, static_cast<spk::Client::ConnectAttemptBehaviour>(99)), spk::Exception);
 	EXPECT_EQ(client.connection().status(), spk::Connection::Status::Disconnected);
 	EXPECT_FALSE(client.isConnected());
 }
