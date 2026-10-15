@@ -45,6 +45,11 @@ namespace spk
 			return _backend->isRunning();
 		}
 
+		[[nodiscard]] bool isWorkerThread() const noexcept
+		{
+			return _backend->isWorkerThread();
+		}
+
 		[[nodiscard]] std::uint16_t port() const noexcept
 		{
 			return _backend->port();
@@ -164,6 +169,10 @@ namespace spk
 		}
 		if (behaviour == StartBehaviour::Restart && isRunning())
 		{
+			if (_impl->isWorkerThread())
+			{
+				throw Exception("Cannot restart the network server from its transport worker callback.");
+			}
 			stop();
 		}
 		_impl->start(port);
