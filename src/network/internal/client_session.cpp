@@ -328,7 +328,7 @@ namespace spk::NetworkInternal
 				}
 				if (_active)
 				{
-					_callbacks.setStatus(_session, Connection::Status::Connected);
+					_callbacks.setStatus(_session, Connection::Status::Connected, Connection::Error::None);
 				}
 			} catch (...)
 			{
@@ -420,7 +420,7 @@ namespace spk::NetworkInternal
 			_remoteID = Connection::InvalidID;
 			if (notify)
 			{
-				_callbacks.setStatus(_session, Connection::Status::Disconnected);
+				_callbacks.setStatus(_session, Connection::Status::Disconnected, Connection::Error::None);
 			}
 		}
 
@@ -487,20 +487,56 @@ namespace spk::NetworkInternal
 		_impl->disconnect();
 	}
 
-	bool ClientSession::active() const noexcept { return _impl->active(); }
-	bool ClientSession::isWorkerThread() const noexcept { return _impl->onWorkerThread(); }
-	bool ClientSession::isConnected() const noexcept { return _impl->isConnected(); }
+	bool ClientSession::active() const noexcept
+	{
+		return _impl->active();
+	}
+	bool ClientSession::isWorkerThread() const noexcept
+	{
+		return _impl->onWorkerThread();
+	}
+	bool ClientSession::isConnected() const noexcept
+	{
+		return _impl->isConnected();
+	}
 	Connection ClientSession::connect(std::string_view address, std::uint16_t port)
 	{
 		return _impl->connect(address, port, Client::ConnectBehaviour::Throw);
 	}
-	void ClientSession::disconnect() { _impl->disconnect(); }
-	void ClientSession::setHandshakeTimeout(std::chrono::milliseconds timeout) { _impl->setHandshakeTimeout(timeout); }
-	void ClientSession::setIncomingTransferTimeout(std::chrono::milliseconds timeout) { _impl->setIncomingTransferTimeout(timeout); }
-	void ClientSession::setAcknowledgmentTimeout(std::chrono::milliseconds timeout) { _impl->setAcknowledgmentTimeout(timeout); }
-	void ClientSession::setMaxMessageBytes(std::size_t bytes) { _impl->setMaxMessageBytes(bytes); }
-	void ClientSession::setMaxPageBytes(std::size_t bytes) { _impl->setMaxPageBytes(bytes); }
-	void ClientSession::setMaxIncomingBytes(std::size_t bytes) { _impl->setMaxIncomingBytes(bytes); }
-	void ClientSession::setPageFailureLimits(PageFailureLimits limits) { _impl->setPageFailureLimits(limits); }
-	Transfer ClientSession::send(const Message &message, Message::Priority priority) { return _impl->send(message, priority); }
+	void ClientSession::disconnect()
+	{
+		_impl->disconnect();
+	}
+	void ClientSession::setHandshakeTimeout(std::chrono::milliseconds timeout)
+	{
+		_impl->setHandshakeTimeout(timeout);
+	}
+	void ClientSession::setIncomingTransferTimeout(std::chrono::milliseconds timeout)
+	{
+		_impl->setIncomingTransferTimeout(timeout);
+	}
+	void ClientSession::setAcknowledgmentTimeout(std::chrono::milliseconds timeout)
+	{
+		_impl->setAcknowledgmentTimeout(timeout);
+	}
+	void ClientSession::setMaxMessageBytes(std::size_t bytes)
+	{
+		_impl->setMaxMessageBytes(bytes);
+	}
+	void ClientSession::setMaxPageBytes(std::size_t bytes)
+	{
+		_impl->setMaxPageBytes(bytes);
+	}
+	void ClientSession::setMaxIncomingBytes(std::size_t bytes)
+	{
+		_impl->setMaxIncomingBytes(bytes);
+	}
+	void ClientSession::setPageFailureLimits(PageFailureLimits limits)
+	{
+		_impl->setPageFailureLimits(limits);
+	}
+	Transfer ClientSession::send(const Message &message, Message::Priority priority)
+	{
+		return _impl->send(message, priority);
+	}
 }
