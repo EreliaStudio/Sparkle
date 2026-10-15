@@ -38,6 +38,9 @@
 
 - Methods must behave as their names imply. Do not silently reconnect, retry, subscribe, recover, perform unrelated work, or select surprising policies.
 - When several legitimate behaviors have materially different consequences, expose an explicit **enum class**, policy type, or method argument. Do not hide important decisions behind ambiguous booleans.
+- **Treat comments explaining an implicit behavior choice as an API-design warning.** Review every new or modified public method for an implicit policy (for example reconnect versus throw, restart versus throw, or recipient overflow handling). Where the caller has useful choices, expose a named policy enum at the call site, implement each alternative, and default to the conservative behavior (normally `Throw`/`Reject`). Validate unsupported enum values before changing state.
+- Prefer a policy enum nested in its owning API. Reuse an existing policy if its semantics already cover the case; do not create another enum, a boolean switch, or a parallel method with the same responsibility merely to avoid a comment.
+- Remove comments that only restate a choice now expressed by the API. Retain concise documentation for guarantees that a type cannot express, such as acknowledgment scope, memory-accounting limitations, and thread/lifetime constraints. Do not invent meaningless policy alternatives for fixed protocol invariants or mandatory safety rules.
 - Optional parameters may have reasonable defaults; the requirement is to make **consequential** decisions visible.
 - Make invalid calls fail clearly and early. Do not silently transform an invalid operation into a different operation.
 - Prefer direct, simple code over architectural ceremony. Short methods (often around 25 lines) are a useful readability heuristic, **not** a rule requiring meaningless extraction.
@@ -294,7 +297,7 @@ Traits are **inherited behavioral capabilities**, not a collection of free funct
 
 1. Read PR description, base branch, latest head, changed files, and relevant public APIs.
 2. Separate **contractual requirements** from architectural preferences and incidental current implementation.
-3. Trace main use cases and edge cases end to end: state transitions, ownership, error paths, synchronization, cleanup.
+3. Trace main use cases and edge cases end to end: state transitions, ownership, error paths, synchronization, cleanup. Audit new/modified method signatures for hidden conditional behavior; turn genuine caller-selectable branches into named policies and test every branch, its default, and invalid enum values.
 4. Identify each class's actual responsibility and reason for existence. Flag:
    - unrelated concerns mixed inside one class;
    - unnecessary forwarding/proxy layers;
