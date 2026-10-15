@@ -32,9 +32,10 @@ TEST(NetworkMemorySafetyTest, RepeatedPagedTransferSessionsReleaseResources)
 		ASSERT_EQ(received.size(), 1u);
 		EXPECT_EQ(received.front().message.size(), 65536u);
 		EXPECT_EQ(received.front().message.requestID(), index + 1);
-		EXPECT_TRUE(NetworkTestUtils::waitUntil([&] {
+		const auto completed = [&] {
 			return transfer.isComplete();
-		}, 5s));
+		};
+		EXPECT_TRUE(NetworkTestUtils::waitUntil(completed, 5s));
 		EXPECT_EQ(transfer.status(), spk::Transfer::Status::Success);
 	}
 	server.stop();
