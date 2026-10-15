@@ -166,6 +166,60 @@ TEST(HandshakeIntegration, ExplicitServerRestartDisconnectsPreviousClients)
 	server.stop();
 }
 
+TEST(HandshakeIntegration, ExplicitClientReplacementFromConnectedCallbackThrowsSafely)
+{
+	spk::Server server;
+	server.start(0);
+	spk::Client client;
+	std::atomic_bool rejected = false;
+	auto contract = client.subscribeToConnectionStatusChange(
+		[&](spk::Connection, spk::Connection::Status status, spk::Connection::Error) {
+			if (status == spk::Connection::Status::Connected)
+			{
+				try
+				{
+					(void)client.connect("127.0.0.1", server.port(), spk::Client::ConnectBehaviour::DisconnectPrevious);
+				} catch (const spk::Exception &)
+				{
+					rejected = true;
+				}
+			}
+		});
+	const auto connected = client.connect("127.0.0.1", server.port());
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(connected));
+	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] { return rejected.load(); }, 3s));
+	EXPECT_TRUE(connected.isConnected());
+	client.disconnect();
+	server.stop();
+}
+
+TEST(HandshakeIntegration, ExplicitServerRestartFromConnectedCallbackThrowsSafely)
+{
+	spk::Server server;
+	std::atomic_bool rejected = false;
+	auto contract = server.subscribeToConnectionStatusChange(
+		[&](spk::Connection, spk::Connection::Status status, spk::Connection::Error) {
+			if (status == spk::Connection::Status::Connected)
+			{
+				try
+				{
+					server.start(0, spk::Server::StartBehaviour::Restart);
+				} catch (const spk::Exception &)
+				{
+					rejected = true;
+				}
+			}
+		});
+	server.start(0);
+	spk::Client client;
+	const auto connected = client.connect("127.0.0.1", server.port());
+	ASSERT_TRUE(NetworkTestUtils::waitConnected(connected));
+	EXPECT_TRUE(NetworkTestUtils::waitUntil([&] { return rejected.load(); }, 3s));
+	EXPECT_TRUE(server.isRunning());
+	client.disconnect();
+	server.stop();
+}
+
 TEST(HandshakeIntegration, ServerBroadcastRejectsPendingRecipient)
 {
 	spk::Server server;
