@@ -333,11 +333,13 @@ TEST(NetworkStressTest, SeededSchedulerAccountsForRandomPagesAndPriorities)
 		const auto bytes = page->data();
 		EXPECT_TRUE(std::equal(bytes.begin(), bytes.end(), it->second.begin() + page->offset));
 		auto &marks = covered.at(page->transferID);
+		bool overlap = false;
 		for (std::size_t index = 0; index < page->length; ++index)
 		{
-			EXPECT_FALSE(marks[page->offset + index]);
+			overlap |= marks[page->offset + index];
 			marks[page->offset + index] = true;
 		}
+		EXPECT_FALSE(overlap);
 		actualBytes += page->length;
 	}
 	EXPECT_EQ(scheduler.pendingTransfers(), 0u);
