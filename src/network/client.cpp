@@ -22,13 +22,26 @@ namespace spk
 
 		[[nodiscard]] NetworkInternal::ClientSession::Callbacks _callbacks()
 		{
-			return {
-				[this](Connection session, Message message) { _owner._publish(session, std::move(message)); },
-				[this](Connection session) { _owner._retireIncoming(session); },
-				[this](Connection session, Connection::ID id) { _owner._acceptConnection(session, id); },
-				[this] { return _owner._beginConnection(); },
-				[this](Connection session) { _owner._announcePending(session); },
-				[this](Connection session, Connection::Status status, Connection::Error error) { _owner._setStatus(session, status, error); }};
+			NetworkInternal::ClientSession::Callbacks callbacks;
+			callbacks.publish = [this](Connection session, Message message) {
+				_owner._publish(session, std::move(message));
+			};
+			callbacks.retireIncoming = [this](Connection session) {
+				_owner._retireIncoming(session);
+			};
+			callbacks.acceptConnection = [this](Connection session, Connection::ID id) {
+				_owner._acceptConnection(session, id);
+			};
+			callbacks.beginConnection = [this] {
+				return _owner._beginConnection();
+			};
+			callbacks.announcePending = [this](Connection session) {
+				_owner._announcePending(session);
+			};
+			callbacks.setStatus = [this](Connection session, Connection::Status status, Connection::Error error) {
+				_owner._setStatus(session, status, error);
+			};
+			return callbacks;
 		}
 
 		[[nodiscard]] std::shared_ptr<NetworkInternal::ClientSession> _current() const
@@ -38,8 +51,15 @@ namespace spk
 		}
 
 	public:
-		explicit Impl(Client &owner) : _owner(owner) {}
-		~Impl() { disconnect(); }
+		explicit Impl(Client &owner) :
+			_owner(owner)
+		{
+		}
+
+		~Impl()
+		{
+			disconnect();
+		}
 
 		[[nodiscard]] bool isConnected() const noexcept
 		{
@@ -101,57 +121,102 @@ namespace spk
 
 		void setHandshakeTimeout(std::chrono::milliseconds timeout)
 		{
-			if (timeout.count() <= 0) throw Exception("Handshake timeout must be positive.");
+			if (timeout.count() <= 0)
+			{
+				throw Exception("Handshake timeout must be positive.");
+			}
 			const std::scoped_lock lock(_mutex);
-			if (_session != nullptr) _session->setHandshakeTimeout(timeout);
+			if (_session != nullptr)
+			{
+				_session->setHandshakeTimeout(timeout);
+			}
 			_settings.handshakeTimeout = timeout;
 		}
 		void setIncomingTransferTimeout(std::chrono::milliseconds timeout)
 		{
-			if (timeout.count() <= 0) throw Exception("Incoming transfer timeout must be positive.");
+			if (timeout.count() <= 0)
+			{
+				throw Exception("Incoming transfer timeout must be positive.");
+			}
 			const std::scoped_lock lock(_mutex);
-			if (_session != nullptr) _session->setIncomingTransferTimeout(timeout);
+			if (_session != nullptr)
+			{
+				_session->setIncomingTransferTimeout(timeout);
+			}
 			_settings.incomingTransferTimeout = timeout;
 		}
 		void setAcknowledgmentTimeout(std::chrono::milliseconds timeout)
 		{
-			if (timeout.count() <= 0) throw Exception("Acknowledgment timeout must be positive.");
+			if (timeout.count() <= 0)
+			{
+				throw Exception("Acknowledgment timeout must be positive.");
+			}
 			const std::scoped_lock lock(_mutex);
-			if (_session != nullptr) _session->setAcknowledgmentTimeout(timeout);
+			if (_session != nullptr)
+			{
+				_session->setAcknowledgmentTimeout(timeout);
+			}
 			_settings.acknowledgmentTimeout = timeout;
 		}
 		void setMaxMessageBytes(std::size_t bytes)
 		{
-			if (bytes == 0) throw Exception("Maximum network message size must be positive.");
+			if (bytes == 0)
+			{
+				throw Exception("Maximum network message size must be positive.");
+			}
 			const std::scoped_lock lock(_mutex);
-			if (_session != nullptr) _session->setMaxMessageBytes(bytes);
+			if (_session != nullptr)
+			{
+				_session->setMaxMessageBytes(bytes);
+			}
 			_settings.maxMessageBytes = bytes;
 		}
 		void setMaxPageBytes(std::size_t bytes)
 		{
-			if (bytes == 0 || bytes > NetworkInternal::MaximumSupportedPageBytes) throw Exception("Network page size must be within the supported protocol limit.");
+			if (bytes == 0 || bytes > NetworkInternal::MaximumSupportedPageBytes)
+			{
+				throw Exception("Network page size must be within the supported protocol limit.");
+			}
 			const std::scoped_lock lock(_mutex);
-			if (_session != nullptr) _session->setMaxPageBytes(bytes);
+			if (_session != nullptr)
+			{
+				_session->setMaxPageBytes(bytes);
+			}
 			_settings.maxPageBytes = bytes;
 		}
 		void setMaxIncomingBytes(std::size_t bytes)
 		{
-			if (bytes == 0) throw Exception("Maximum incomplete incoming bytes must be positive.");
+			if (bytes == 0)
+			{
+				throw Exception("Maximum incomplete incoming bytes must be positive.");
+			}
 			const std::scoped_lock lock(_mutex);
-			if (_session != nullptr) _session->setMaxIncomingBytes(bytes);
+			if (_session != nullptr)
+			{
+				_session->setMaxIncomingBytes(bytes);
+			}
 			_settings.maxIncomingBytes = bytes;
 		}
 		void setPageFailureLimits(PageFailureLimits limits)
 		{
-			if (!limits.valid()) throw Exception("Network failure limits must be positive.");
+			if (!limits.valid())
+			{
+				throw Exception("Network failure limits must be positive.");
+			}
 			const std::scoped_lock lock(_mutex);
-			if (_session != nullptr) _session->setPageFailureLimits(limits);
+			if (_session != nullptr)
+			{
+				_session->setPageFailureLimits(limits);
+			}
 			_settings.pageFailureLimits = limits;
 		}
 		Transfer send(const Message &message, Message::Priority priority)
 		{
 			auto session = _current();
-			if (session == nullptr) throw Exception("Cannot send through a pending or disconnected network client.");
+			if (session == nullptr)
+			{
+				throw Exception("Cannot send through a pending or disconnected network client.");
+			}
 			return session->send(message, priority);
 		}
 	};
